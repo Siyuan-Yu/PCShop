@@ -108,10 +108,11 @@ namespace PCShopSell.Game.Procedural
         private void BuildGround()
         {
             Cube("Asphalt", new Vector3(0, -0.1f, 0), new Vector3(WorldHalf * 2, 0.2f, WorldHalf * 2),
-                LitTex(new Color(0.16f, 0.17f, 0.19f), _asphaltTex, new Vector2(30, 30), 0.35f), false);
+                LitTex(new Color(0.16f, 0.17f, 0.19f), _asphaltTex, new Vector2(30, 30), _look.RoadSmoothness), false);
 
             float len = WorldHalf - RoadHalfWidth;
-            var pave = LitTex(new Color(0.60f, 0.61f, 0.64f), _paveTex, new Vector2(len / 6f, len / 6f), 0.15f);
+            var pave = LitTex(new Color(0.60f, 0.61f, 0.64f), _paveTex, new Vector2(len / 6f, len / 6f),
+                Mathf.Max(0.15f, _look.RoadSmoothness * 0.7f));
             var curb = Lit(new Color(0.68f, 0.68f, 0.70f), 0.2f);
 
             for (int sx = -1; sx <= 1; sx += 2)

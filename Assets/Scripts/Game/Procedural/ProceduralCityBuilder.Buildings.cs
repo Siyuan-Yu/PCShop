@@ -208,13 +208,13 @@ namespace PCShopSell.Game.Procedural
             Cube("SignBack", new Vector3(cx, 3.95f, frontZ - 0.05f), new Vector3(shopW * 0.86f, 0.9f, 0.16f),
                 Lit(new Color(0.07f, 0.07f, 0.09f), 0.3f), false);
             Cube("Sign", new Vector3(cx, 3.95f, frontZ - 0.16f), new Vector3(shopW * 0.78f, 0.62f, 0.1f),
-                Emissive(neon, _look.EmissiveIntensity * 1.1f), false);
+                Emissive(neon, _look.NeonBoost * _look.EmissiveIntensity * 1.1f), false);
 
             // 垂直挑牌（从侧面看得到）
             if (hero || _rng.NextDouble() < 0.4)
             {
                 Cube("BladeSign", new Vector3(cx - shopW / 2f - 0.2f, 5.4f, frontZ - 0.8f), new Vector3(0.16f, 2.2f, 1.1f),
-                    Emissive(neon2, _look.EmissiveIntensity * 1.2f), false);
+                    Emissive(neon2, _look.NeonBoost * _look.EmissiveIntensity * 1.2f), false);
                 Cube("BladeArm", new Vector3(cx - shopW / 2f - 0.2f, 6.55f, frontZ - 0.35f), new Vector3(0.1f, 0.1f, 0.9f),
                     Lit(new Color(0.15f, 0.15f, 0.17f), 0.4f, 0.4f), false);
             }
@@ -257,25 +257,30 @@ namespace PCShopSell.Game.Procedural
                     Cube("Monitor", new Vector3(sx1, 1.25f, frontZ - 2.3f), new Vector3(0.62f, 0.4f, 0.08f),
                         Lit(new Color(0.06f, 0.06f, 0.08f), 0.4f), false);
                     var scr = Quad("MonitorScreen", new Vector3(sx1, 1.25f, frontZ - 2.35f), new Vector3(-0.5f, 0.1f, -1f),
-                        new Vector3(0.55f, 0.34f, 1f), Emissive(c, _look.EmissiveIntensity * 0.9f));
+                        new Vector3(0.55f, 0.34f, 1f), Emissive(c, _look.NeonBoost * _look.EmissiveIntensity * 0.9f));
                     _ = scr;
                 }
             }
 
-            // 店门前补光
-            if (_look.LampsOn && _shopLights < 9)
+            // 店门前霓虹补光：招牌颜色的光洒在街面上
+            if (_look.LampsOn && _shopLights < 12)
             {
-                var l = new GameObject("ShopLight");
-                l.transform.SetParent(_root, false);
-                l.transform.position = new Vector3(cx, 2.4f, frontZ - 2.2f);
-                var light = l.AddComponent<Light>();
-                light.type = LightType.Point;
-                light.color = new Color(1f, 0.82f, 0.55f);
-                light.range = 9f;
-                light.intensity = _look.LampIntensity * 0.9f;
-                light.shadows = LightShadows.None;
+                AddPointLight("ShopNeonLight", new Vector3(cx, 3.2f, frontZ - 2.0f), neon, 11f, _look.NeonLightIntensity * 0.6f);
                 _shopLights++;
             }
+        }
+
+        private void AddPointLight(string name, Vector3 pos, Color color, float range, float intensity)
+        {
+            var l = new GameObject(name);
+            l.transform.SetParent(_root, false);
+            l.transform.position = pos;
+            var light = l.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = color;
+            light.range = range;
+            light.intensity = intensity;
+            light.shadows = LightShadows.None;
         }
 
         // ------------------------------------------------------------------ 屋顶
@@ -339,7 +344,7 @@ namespace PCShopSell.Game.Procedural
                 Cube("BoardLegL", new Vector3(bx - w * 0.25f, y + 1.0f, bz), new Vector3(0.18f, 2f, 0.18f), dark, false);
                 Cube("BoardLegR", new Vector3(bx + w * 0.25f, y + 1.0f, bz), new Vector3(0.18f, 2f, 0.18f), dark, false);
                 Cube("Board", new Vector3(bx, y + 3.0f, bz), new Vector3(w * 0.6f, 2.2f, 0.16f),
-                    Emissive(c, _look.EmissiveIntensity * 1.4f), false);
+                    Emissive(c, _look.NeonBoost * _look.EmissiveIntensity * 1.4f), false);
             }
 
             // 屋顶绿化
@@ -370,17 +375,17 @@ namespace PCShopSell.Game.Procedural
 
             // 顶部大招牌：双色霓虹条（暗示"电子城"）
             Cube("MallSignTop", new Vector3(cx, h - 1.2f, front - 0.25f), new Vector3(w * 0.85f, 1.8f, 0.35f),
-                Emissive(NeonPalette[1], _look.EmissiveIntensity * 1.6f), false);
+                Emissive(NeonPalette[1], _look.NeonBoost * _look.EmissiveIntensity * 1.6f), false);
             Cube("MallSignBar", new Vector3(cx, h - 3.0f, front - 0.25f), new Vector3(w * 0.85f, 0.4f, 0.3f),
-                Emissive(NeonPalette[0], _look.EmissiveIntensity * 1.6f), false);
+                Emissive(NeonPalette[0], _look.NeonBoost * _look.EmissiveIntensity * 1.6f), false);
 
             // 侧面竖向霓虹
             Cube("MallSideNeon", new Vector3(cx - w / 2f - 0.25f, h / 2f, front + 1.5f), new Vector3(0.3f, h * 0.9f, 0.5f),
-                Emissive(NeonPalette[3], _look.EmissiveIntensity * 1.3f), false);
+                Emissive(NeonPalette[3], _look.NeonBoost * _look.EmissiveIntensity * 1.3f), false);
 
             // 大屏幕
             Quad("MallScreen", new Vector3(cx + w * 0.22f, 8.2f, front - 0.06f), Vector3.back,
-                new Vector3(8f, 4.2f, 1f), Emissive(NeonPalette[2], _look.EmissiveIntensity * 0.9f));
+                new Vector3(8f, 4.2f, 1f), Emissive(NeonPalette[2], _look.NeonBoost * _look.EmissiveIntensity * 0.9f));
             Cube("MallScreenFrame", new Vector3(cx + w * 0.22f, 8.2f, front - 0.04f), new Vector3(8.4f, 4.6f, 0.1f),
                 Lit(new Color(0.06f, 0.06f, 0.08f), 0.4f), false);
 
@@ -389,14 +394,22 @@ namespace PCShopSell.Game.Procedural
             {
                 Color c = NeonPalette[(i * 2 + 1) % NeonPalette.Length];
                 Quad("Banner", new Vector3(cx - w * 0.38f + i * 2.1f, 9.2f, front - 0.06f), Vector3.back,
-                    new Vector3(1.2f, 4.4f, 1f), Emissive(c, _look.EmissiveIntensity * 0.8f));
+                    new Vector3(1.2f, 4.4f, 1f), Emissive(c, _look.NeonBoost * _look.EmissiveIntensity * 0.8f));
+            }
+
+            // 霓虹光照：青色、洋红、黄色三种光洒向街面和对面建筑
+            if (_look.LampsOn)
+            {
+                AddPointLight("MallCyanLight", new Vector3(cx, 11f, front - 3f), NeonPalette[1], 24f, _look.NeonLightIntensity * 1.6f);
+                AddPointLight("MallMagentaLight", new Vector3(cx - w * 0.3f, 6f, front - 3f), NeonPalette[0], 18f, _look.NeonLightIntensity * 1.2f);
+                AddPointLight("MallYellowLight", new Vector3(cx + w * 0.22f, 8f, front - 2.5f), NeonPalette[2], 16f, _look.NeonLightIntensity * 1.0f);
             }
 
             // 屋顶轮廓灯带
-            var led = Emissive(NeonPalette[1], _look.EmissiveIntensity * 1.2f);
+            var led = Emissive(NeonPalette[1], _look.NeonBoost * _look.EmissiveIntensity * 1.2f);
             Cube("LedFront", new Vector3(cx, h + 0.55f, front - 0.1f), new Vector3(w + 0.3f, 0.18f, 0.18f), led, false);
             Cube("LedLeft", new Vector3(cx - w / 2f - 0.1f, h + 0.55f, cz), new Vector3(0.18f, 0.18f, d + 0.2f),
-                Emissive(NeonPalette[0], _look.EmissiveIntensity * 1.2f), false);
+                Emissive(NeonPalette[0], _look.NeonBoost * _look.EmissiveIntensity * 1.2f), false);
 
             // 屋顶卫星天线
             var dish = Lit(new Color(0.80f, 0.82f, 0.85f), 0.5f, 0.2f);

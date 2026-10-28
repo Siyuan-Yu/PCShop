@@ -86,6 +86,7 @@ namespace PCShopSell.EditorTools
                     var city = builder.Build();
 
                     ApplyLook(look, cam, sun, volume);
+                    string probePath = BakeProbe(city, look);
 
                     // 全景
                     PlaceCamera(cam, new Vector3(0f, 2f, 0f), 34f);
@@ -97,9 +98,43 @@ namespace PCShopSell.EditorTools
                     Save(cam, Path.Combine(outDir, $"city_{look.Name}_closeup.png"));
 
                     UnityEngine.Object.DestroyImmediate(city);
+                    if (probePath != null) AssetDatabase.DeleteAsset(probePath);
                 }
             }
             Debug.Log("Preview images written to " + outDir);
+        }
+
+        /// <summary>烘焙一个覆盖整座城市的反射探针，让湿润路面和玻璃反射出霓虹。</summary>
+        private static string BakeProbe(GameObject city, CityLookProfile look)
+        {
+            foreach (var t in city.GetComponentsInChildren<Transform>())
+                GameObjectUtility.SetStaticEditorFlags(t.gameObject, StaticEditorFlags.ReflectionProbeStatic);
+
+            var go = new GameObject("CityProbe");
+            go.transform.SetParent(city.transform, false);
+            go.transform.position = new Vector3(0f, 6f, 0f);
+            var probe = go.AddComponent<ReflectionProbe>();
+            probe.mode = UnityEngine.Rendering.ReflectionProbeMode.Baked;
+            probe.resolution = 256;
+            probe.hdr = true;
+            probe.boxProjection = true;
+            probe.size = new Vector3(190f, 60f, 190f);
+            probe.center = Vector3.zero;
+            probe.intensity = 1f;
+            probe.importance = 1;
+            probe.clearFlags = UnityEngine.Rendering.ReflectionProbeClearFlags.SolidColor;
+            probe.backgroundColor = look.SkyColor;
+            probe.nearClipPlane = 0.3f;
+            probe.farClipPlane = 400f;
+
+            string path = "Assets/Settings/ProbeTemp_" + look.Name + ".exr";
+            bool ok = Lightmapping.BakeReflectionProbe(probe, path);
+            Debug.Log("DIAG probe bake " + look.Name + " ok=" + ok);
+            if (!ok) return null;
+
+            AssetDatabase.ImportAsset(path);
+            probe.bakedTexture = AssetDatabase.LoadAssetAtPath<Texture>(path);
+            return path;
         }
 
         private static void ApplyLook(CityLookProfile look, Camera cam, Light sun, Volume volume)
@@ -109,7 +144,11 @@ namespace PCShopSell.EditorTools
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientLight = look.AmbientColor;
             RenderSettings.skybox = null;
-            RenderSettings.fog = false;
+            RenderSettings.fog = look.Fog;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = look.FogColor;
+            RenderSettings.fogStartDistance = look.FogStart;
+            RenderSettings.fogEndDistance = look.FogEnd;
 
             sun.color = look.SunColor;
             sun.intensity = look.SunIntensity;
@@ -129,6 +168,23 @@ namespace PCShopSell.EditorTools
             grade.postExposure.Override(look.Exposure);
             grade.saturation.Override(look.Saturation);
             grade.contrast.Override(look.Contrast);
+
+            if (look.ChromaticAberration > 0f)
+            {
+                var ca = profile.Add<ChromaticAberration>(true);
+                ca.intensity.Override(look.ChromaticAberration);
+            }
+
+            if (look.FilmGrain > 0f)
+            {
+                var grain = profile.Add<FilmGrain>(true);
+                grain.type.Override(FilmGrainLookup.Thin1);
+                grain.intensity.Override(look.FilmGrain);
+            }
+
+            var smh = profile.Add<ShadowsMidtonesHighlights>(true);
+            smh.shadows.Override(look.ShadowTint);
+            smh.highlights.Override(look.HighlightTint);
 
             var vig = profile.Add<Vignette>(true);
             vig.intensity.Override(look.Vignette);

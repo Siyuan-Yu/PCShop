@@ -130,7 +130,7 @@ namespace PCShopSell.Game.Procedural
             Cube("BusBack", pos + new Vector3(0, 1.5f, 0.85f), new Vector3(4.0f, 2.8f, 0.08f), glass, false);
             // 灯箱广告
             Quad("BusAd", pos + new Vector3(1.2f, 1.6f, 0.78f), Vector3.back, new Vector3(1.3f, 2.0f, 1f),
-                Emissive(NeonPalette[_rng.Next(NeonPalette.Length)], _look.EmissiveIntensity * 0.9f));
+                Emissive(NeonPalette[_rng.Next(NeonPalette.Length)], _look.NeonBoost * _look.EmissiveIntensity * 0.9f));
             Cube("BusBench", pos + new Vector3(-0.5f, 0.55f, 0.35f), new Vector3(2.2f, 0.1f, 0.5f),
                 Lit(new Color(0.55f, 0.38f, 0.22f), 0.2f), false);
             Cube("BusSign", pos + new Vector3(-2.4f, 2.2f, -0.8f), new Vector3(0.7f, 0.9f, 0.08f),
@@ -186,7 +186,7 @@ namespace PCShopSell.Game.Procedural
             Cube("CartBody", pos + new Vector3(0, 0.95f, 0), new Vector3(2.0f, 1.0f, 1.2f), body, true);
             Cube("CartTop", pos + new Vector3(0, 1.5f, 0), new Vector3(2.1f, 0.1f, 1.3f), dark, false);
             Cube("CartStripe", pos + new Vector3(0, 0.95f, -0.62f), new Vector3(2.02f, 0.25f, 0.04f),
-                Emissive(neon, _look.EmissiveIntensity * 1.2f), false);
+                Emissive(neon, _look.NeonBoost * _look.EmissiveIntensity * 1.2f), false);
             Cylinder("CartWheelL", pos + new Vector3(-0.7f, 0.35f, 0), new Vector3(0.7f, 0.06f, 0.7f), dark).transform.rotation = Quaternion.Euler(0, 0, 90);
             Cylinder("CartWheelR", pos + new Vector3(0.7f, 0.35f, 0), new Vector3(0.7f, 0.06f, 0.7f), dark).transform.rotation = Quaternion.Euler(0, 0, 90);
             Cylinder("UmbrellaPole", pos + new Vector3(0, 2.2f, 0), new Vector3(0.06f, 1.2f, 0.06f), dark);

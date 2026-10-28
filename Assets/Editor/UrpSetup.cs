@@ -38,6 +38,8 @@ namespace PCShopSell.EditorTools
                 AssetDatabase.SaveAssets();
             }
 
+            EnsureSsao(renderer);
+
             var pipeline = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(PipelinePath);
             if (pipeline == null)
             {
@@ -62,9 +64,44 @@ namespace PCShopSell.EditorTools
             return pipeline;
         }
 
+        private static void EnsureSsao(UniversalRendererData renderer)
+        {
+            foreach (var f in renderer.rendererFeatures)
+                if (f != null && f.GetType().Name == "ScreenSpaceAmbientOcclusion") return;
+
+            // 该类在 URP 14 中是 internal，只能用反射创建。
+            var ssaoType = typeof(UniversalRendererData).Assembly.GetType(
+                "UnityEngine.Rendering.Universal.ScreenSpaceAmbientOcclusion");
+            if (ssaoType == null) { Debug.LogWarning("SSAO type not found"); return; }
+            var ssao = (ScriptableRendererFeature)ScriptableObject.CreateInstance(ssaoType);
+            ssao.name = "ScreenSpaceAmbientOcclusion";
+            AssetDatabase.AddObjectToAsset(ssao, renderer);
+
+            var ss = new SerializedObject(ssao);
+            SetFloat(ss, "m_Settings.Intensity", 1.6f);
+            SetFloat(ss, "m_Settings.Radius", 0.7f);
+            SetFloat(ss, "m_Settings.DirectLightingStrength", 0.25f);
+            ss.ApplyModifiedPropertiesWithoutUndo();
+
+            var so = new SerializedObject(renderer);
+            var features = so.FindProperty("m_RendererFeatures");
+            var map = so.FindProperty("m_RendererFeatureMap");
+            features.arraySize++;
+            features.GetArrayElementAtIndex(features.arraySize - 1).objectReferenceValue = ssao;
+            AssetDatabase.TryGetGUIDAndLocalFileIdentifier(ssao, out string _, out long localId);
+            map.arraySize++;
+            map.GetArrayElementAtIndex(map.arraySize - 1).longValue = localId;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            EditorUtility.SetDirty(renderer);
+            AssetDatabase.SaveAssets();
+        }
+
         private static void Configure(UniversalRenderPipelineAsset asset)
         {
             var so = new SerializedObject(asset);
+            SetBool(so, "m_ReflectionProbeBlending", true);
+            SetBool(so, "m_ReflectionProbeBoxProjection", true);
             SetInt(so, "m_MainLightShadowmapResolution", 4096);
             SetBool(so, "m_SoftShadowsSupported", true);
             SetBool(so, "m_SupportsHDR", true);
