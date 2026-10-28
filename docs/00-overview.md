@@ -1,0 +1,35 @@
+# PCShopSell（工作名）
+
+电脑硬件代理商模拟经营游戏。核心是"读行情、囤货/出货/装机赚钱"，赚到钱后可扩张分店、开其他业态、请主播推广、与主播培养关系。
+
+## 定位与差异化
+- 视角：代理商/渠道（B2B 价格、库存、现金流博弈），不是"摆货架"零售店。
+- 玩法核心：硬件价格受多因素驱动（币圈热度、AI 需求、新品周期、库存缺货、政策），玩家据此决定进货/装机时机。
+- 形态：2D、UI 驱动，参考"东京股神"这类低美术依赖的模拟经营。不做 3D。
+
+## 技术栈
+- Unity 2022.3.6f1（`D:\UnityEditor\2022.3.6f1`），uGUI。
+- 2D，Windows 先行，后接 Steamworks。
+- 逻辑分层：
+  - `Assets/Scripts/Core`：纯 C# 逻辑（价格模型、经济、存档数据），**不引用 UnityEngine**，可单元测试。
+  - `Assets/Scripts/Game`：Unity 层（UI、场景、输入、存档读写）。
+  - `Assets/Tests/EditMode`：针对 Core 的测试。
+  - 数据配置放 `Assets/Data`（JSON/ScriptableObject），商品、事件、主播等尽量数据化。
+
+## 合规原则（上架前必看）
+- 不使用真实品牌、型号、Logo；全部虚构。
+- 主播、恋爱对象全部原创，不影射真人（脸、名字、梗、声音）。
+- AI 美术：商用条款留档；保存提示词/原图/工具/日期；统一风格并做人工修整；Steam 内容调查如实披露预生成 AI 内容。
+- 不使用实时生成 AI 内容。
+- 不照搬竞品（含东京股神）的 UI 布局、角色、文案。
+
+## 目录
+```
+Assets/
+  Scripts/Core/      纯逻辑（无 UnityEngine）
+  Scripts/Game/      Unity 层
+  Data/              配置数据
+  Art/               美术（AI 生成资源需在 docs/asset-log.md 登记）
+  Tests/EditMode/    单元测试
+docs/                设计与规划文档
+```
