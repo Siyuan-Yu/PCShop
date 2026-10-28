@@ -1,11 +1,12 @@
 # PCShopSell（工作名）
 
-电脑城创业故事：从电脑城的小摊位起家，手装机赚第一桶金，靠行情、人脉和签约主播做大，最后建成自己的电脑乐园。2D、UI 驱动的模拟经营游戏，目标平台 Steam。
+电脑城创业故事：从电脑城的小摊位起家，手装机赚第一桶金，靠行情、人脉和签约主播做大，最后建成自己的电脑乐园。2D 模拟经营游戏（世界层 + 面板层 + 手操层），目标平台 Steam。
 
 ## 文档
 - [`docs/00-overview.md`](docs/00-overview.md)：概述与目录
 - [`docs/02-design.md`](docs/02-design.md)：设计文档（定位、竞品与差异化、成长曲线、系统、垂直切片）
 - [`docs/03-decisions.md`](docs/03-decisions.md)：决策记录（已定、已否决、默认假设、待办）
+- [`docs/04-3c-and-world.md`](docs/04-3c-and-world.md)：3C、世界层与地产设计
 - [`docs/01-roadmap.md`](docs/01-roadmap.md)：开发路线
 - [`docs/asset-log.md`](docs/asset-log.md)：AI 美术资源登记
 
