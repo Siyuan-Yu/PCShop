@@ -1,6 +1,6 @@
 # PCShopSell（工作名）
 
-电脑城创业故事：从电脑城的小摊位起家，手装机赚第一桶金，靠行情、人脉和签约主播做大，最后建成自己的电脑乐园。2D 模拟经营游戏（世界层 + 面板层 + 手操层），目标平台 Steam。
+电脑城创业故事：从商业街最偏的一间小电脑店起家，手装机赚第一桶金，靠行情、人脉和签约主播做大，最后建成自己的电脑乐园。3D 低多边形（固定斜俯视相机）模拟经营游戏（世界层 + 店内层 + 面板层 + 手操层），目标平台 Steam。
 
 ## 文档
 - [`docs/00-overview.md`](docs/00-overview.md)：概述与目录
@@ -13,7 +13,7 @@
 - [`docs/asset-log.md`](docs/asset-log.md)：AI 美术资源登记
 
 ## 技术
-- Unity 2022.3.6f1，uGUI，2D
+- Unity 2022.3.6f1，URP 14.0.8（3D 低多边形），uGUI + TextMeshPro
 - `Assets/Scripts/Core`：纯 C# 逻辑（无 UnityEngine 依赖）
 - `Assets/Scripts/Game`：Unity 层
 - `Assets/Tests/EditMode`：单元测试
@@ -25,4 +25,4 @@ Unity.exe -batchmode -nographics -projectPath <项目路径> -runTests -testPlat
 ```
 
 ## 状态
-M1 底座进行中：已完成 Money、日期/时刻/连续世界时钟、账本；世界层基础（路径图、A* 寻路、路径插值、移动耗时）已完成。
+M1 底座进行中：已完成 Money、日期/星期/时刻/连续世界时钟、账本；世界层基础（路径图、A* 寻路、路径插值、移动耗时）已完成；程序生成城市与 URP 光影预览已完成；城市布局数据（CityLayout）、时间控制（TimeController）、店铺营业模拟（ShopSimulation）、一局运行状态（GameSession）已完成并有测试。下一步：世界层灰盒的 Unity 部分（按数据生成商业街、玩家移动、店内结账）。

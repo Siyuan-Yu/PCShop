@@ -47,6 +47,14 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void Weekday_ContinuesAcrossMonthAndYear()
+        {
+            Assert.AreEqual(GameWeekday.Tuesday, GameDate.FromYmd(1, 1, 30).Weekday);
+            Assert.AreEqual(GameWeekday.Wednesday, GameDate.FromYmd(1, 2, 1).Weekday);
+            Assert.AreEqual(GameWeekday.Thursday, GameDate.FromYmd(2, 1, 1).Weekday);
+        }
+
+        [Test]
         public void MonthBoundaries_AreDetected()
         {
             Assert.IsTrue(GameDate.FromYmd(1, 5, 1).IsMonthStart);
