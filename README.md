@@ -7,6 +7,7 @@
 - [`docs/02-design.md`](docs/02-design.md)：设计文档（定位、竞品与差异化、成长曲线、系统、垂直切片）
 - [`docs/03-decisions.md`](docs/03-decisions.md)：决策记录（已定、已否决、默认假设、待办）
 - [`docs/04-3c-and-world.md`](docs/04-3c-and-world.md)：3C、世界层与地产设计
+- [`docs/05-player-life.md`](docs/05-player-life.md)：玩家角色、生活模拟、目标与失败
 - [`docs/01-roadmap.md`](docs/01-roadmap.md)：开发路线
 - [`docs/asset-log.md`](docs/asset-log.md)：AI 美术资源登记
 
