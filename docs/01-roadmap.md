@@ -18,7 +18,7 @@
 - [ ] 业态模板框架（数据配置 + 专属模块钩子）
 
 ## M1.5 世界层灰盒（详见 04-3c-and-world.md）
-- [ ] 路径图数据、A* 寻路、移动耗时计算（Core，带测试）
+- [x] 路径图（WorldMap）、A* 寻路（Pathfinder）、移动耗时（Transport/TravelCalculator/TravelPlanner，Core，带测试，含与 Floyd–Warshall 对照）
 - [ ] 玩家沿路径移动、相机跟随/缩放/总览
 - [ ] 建筑插槽与点击进入/返回面板
 - [ ] 一个区域（电脑城）+ 住所 + 一条街，占位图验证节奏
