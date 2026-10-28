@@ -23,4 +23,4 @@ Unity.exe -batchmode -nographics -projectPath <项目路径> -runTests -testPlat
 ```
 
 ## 状态
-M1 底座进行中：已完成 Money、日期/时钟/每日时间预算、账本；世界层基础（路径图、A* 寻路、移动耗时）已完成。
+M1 底座进行中：已完成 Money、日期/时刻/连续世界时钟、账本；世界层基础（路径图、A* 寻路、路径插值、移动耗时）已完成。

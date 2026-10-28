@@ -8,10 +8,9 @@ namespace PCShopSell.Core.World
     {
         Success,
         NoPath,
-        NotEnoughTime,
     }
 
-    /// <summary>一次出行的规划结果（尚未扣时间）。</summary>
+    /// <summary>一次出行的规划结果。</summary>
     public sealed class TravelPlan
     {
         public bool Found { get; }
@@ -59,10 +58,15 @@ namespace PCShopSell.Core.World
         }
     }
 
-    /// <summary>出行规划与结算：寻路 + 折算耗时 + 从每日时间预算中扣除。</summary>
+    /// <summary>
+    /// 出行规划。
+    /// 世界时间是连续的：走路和做其他事情一样推进同一个时钟，路上店铺照常营业。
+    /// 界面层通常边走边逐步推进时钟（让玩家实时看到顾客进店）；
+    /// 无需演出时（快速前往、测试）可调用 <see cref="Travel"/> 一次性推进。
+    /// </summary>
     public static class TravelPlanner
     {
-        /// <summary>只规划，不扣时间（用于界面预览"走过去要多久"）。</summary>
+        /// <summary>只规划，不推进时间（用于预览"走过去要多久"）。</summary>
         public static TravelPlan Plan(WorldMap map, string from, string to, Transport transport, double timeFactor = 1.0)
         {
             PathResult path = Pathfinder.FindPath(map, from, to);
@@ -73,19 +77,17 @@ namespace PCShopSell.Core.World
             return new TravelPlan(true, path.NodeIds, path.Distance, minutes);
         }
 
-        /// <summary>出行：时间足够则扣除并成功；否则失败且不改变预算。</summary>
-        public static TravelResult TryTravel(
-            WorldMap map, string from, string to, Transport transport, TimeBudget budget, double timeFactor = 1.0)
+        /// <summary>一次性出行：找到路径则把世界时钟推进相应分钟。</summary>
+        public static TravelResult Travel(
+            WorldMap map, string from, string to, Transport transport, GameClock clock, double timeFactor = 1.0)
         {
-            if (budget == null) throw new ArgumentNullException(nameof(budget));
+            if (clock == null) throw new ArgumentNullException(nameof(clock));
 
             TravelPlan plan = Plan(map, from, to, transport, timeFactor);
             if (!plan.Found)
                 return new TravelResult(TravelStatus.NoPath, plan);
 
-            if (!budget.TrySpend(plan.Minutes))
-                return new TravelResult(TravelStatus.NotEnoughTime, plan);
-
+            clock.Advance(plan.Minutes);
             return new TravelResult(TravelStatus.Success, plan);
         }
     }

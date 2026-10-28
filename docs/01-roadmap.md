@@ -9,7 +9,8 @@
 - [ ] 确认美术工具及商用条款
 
 ## M1 底座（纯 C#，带单元测试）
-- [x] 时间系统（日历 GameDate、时钟 GameClock、每日时间预算 TimeBudget）
+- [x] 时间系统：日历 GameDate、时刻 GameTimestamp、连续世界时钟 GameClock（分钟级，跨午夜自动分段，TimeAdvanced/DayAdvanced 事件）
+- [ ] 营业模拟与顾客事件（CustomerVisit），实时入账
 - [x] 账本（Money、Ledger：收入/支出/强制支出、按日期和类别统计）
 - [ ] 人物与关系（NPC 数据、关系值、标记）
 - [ ] 事件系统（数据驱动：条件/选项/后果）
@@ -19,9 +20,10 @@
 
 ## M1.5 世界层灰盒（详见 04-3c-and-world.md）
 - [x] 路径图（WorldMap）、A* 寻路（Pathfinder）、移动耗时（Transport/TravelCalculator/TravelPlanner，Core，带测试，含与 Floyd–Warshall 对照）
-- [ ] 玩家沿路径移动、相机跟随/缩放/总览/巡视模式
+- [x] 沿路径位置插值（PathWalker）
+- [ ] 玩家沿路径移动并推进世界时钟、相机跟随/缩放/总览、时间控制条（暂停/倍速）
 - [ ] 建筑插槽与点击进入/返回面板
-- [ ] 每日经营报告（DailyBusinessReport，Core）+ 顾客演出（CrowdDirector）+ 营业回放（灰盒）
+- [ ] 顾客演出（CrowdDirector，订阅顾客事件，灰盒）
 - [ ] 拍照模式、里程碑镜头（可后置）
 - [ ] 一个区域（电脑城）+ 住所 + 一条街，占位图验证节奏
 - [ ] 验证：走路耗时是否让取舍有感；世界层是否不拖沓

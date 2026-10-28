@@ -176,11 +176,12 @@ namespace PCShopSell.Tests
         }
     }
 
+
     public class TravelTests
     {
         private static WorldMap Street()
         {
-            // 住所 -- 电脑城：800 米
+            // 住所 -- 电脑城：800 米；电脑城 -- 远处：2000 米
             var map = new WorldMap();
             map.AddNode("home", 0, 0);
             map.AddNode("mall", 800, 0);
@@ -212,64 +213,133 @@ namespace PCShopSell.Tests
         [Test]
         public void TimeFactor_SlowsTravel()
         {
-            int normal = TravelCalculator.MinutesFor(800, Transports.Walk, 1.0);
-            int rainy = TravelCalculator.MinutesFor(800, Transports.Walk, 1.5);
-            Assert.AreEqual(10, normal);
-            Assert.AreEqual(15, rainy);
+            Assert.AreEqual(10, TravelCalculator.MinutesFor(800, Transports.Walk, 1.0));
+            Assert.AreEqual(15, TravelCalculator.MinutesFor(800, Transports.Walk, 1.5));
         }
 
         [Test]
-        public void Plan_DoesNotSpendTime()
+        public void Plan_DoesNotAdvanceClock()
         {
             var map = Street();
+            var clock = new GameClock(GameDate.FromYmd(1, 1, 1), 8 * 60);
             TravelPlan plan = TravelPlanner.Plan(map, "home", "mall", Transports.Walk);
             Assert.IsTrue(plan.Found);
             Assert.AreEqual(10, plan.Minutes);
             Assert.AreEqual(800.0, plan.Distance, 1e-9);
+            Assert.AreEqual(8 * 60, clock.MinuteOfDay);
         }
 
         [Test]
-        public void TryTravel_DeductsBudget()
+        public void Travel_AdvancesWorldClock()
         {
             var map = Street();
-            var budget = new TimeBudget(600);
-            TravelResult r = TravelPlanner.TryTravel(map, "home", "mall", Transports.Walk, budget);
+            var clock = new GameClock(GameDate.FromYmd(1, 1, 1), 8 * 60);
+            TravelResult r = TravelPlanner.Travel(map, "home", "mall", Transports.Walk, clock);
             Assert.IsTrue(r.IsSuccess);
-            Assert.AreEqual(590, budget.RemainingMinutes);
+            Assert.AreEqual(8 * 60 + 10, clock.MinuteOfDay);
         }
 
         [Test]
-        public void TryTravel_FailsWhenNotEnoughTime_AndKeepsBudget()
+        public void Travel_RaisesTimeAdvanced_SoShopsKeepRunningWhileWalking()
         {
             var map = Street();
-            var budget = new TimeBudget(5);
-            TravelResult r = TravelPlanner.TryTravel(map, "home", "mall", Transports.Walk, budget);
-            Assert.AreEqual(TravelStatus.NotEnoughTime, r.Status);
-            Assert.AreEqual(5, budget.RemainingMinutes);
+            var clock = new GameClock(GameDate.FromYmd(1, 1, 1), 8 * 60);
+            long advanced = 0;
+            clock.TimeAdvanced += (from, to) => advanced += from.MinutesUntil(to);
+
+            TravelPlanner.Travel(map, "home", "far", Transports.Walk, clock);
+
+            Assert.AreEqual(35, advanced);
         }
 
         [Test]
-        public void TryTravel_NoPath_ReturnsNoPath()
+        public void Travel_NoPath_DoesNotAdvanceClock()
         {
             var map = Street();
             map.AddNode("island", 9999, 9999);
-            var budget = new TimeBudget(600);
-            TravelResult r = TravelPlanner.TryTravel(map, "home", "island", Transports.Walk, budget);
+            var clock = new GameClock(GameDate.FromYmd(1, 1, 1), 8 * 60);
+            TravelResult r = TravelPlanner.Travel(map, "home", "island", Transports.Walk, clock);
             Assert.AreEqual(TravelStatus.NoPath, r.Status);
-            Assert.AreEqual(600, budget.RemainingMinutes);
+            Assert.AreEqual(8 * 60, clock.MinuteOfDay);
         }
 
         [Test]
-        public void CarMakesLongTripAffordable()
+        public void CarSavesWorldTime()
         {
             // 体现"车的价值"：同一段 2800 米，步行要 35 分钟，汽车只要 6 分钟。
             var map = Street();
-            var walkBudget = new TimeBudget(600);
-            var carBudget = new TimeBudget(600);
-            TravelPlanner.TryTravel(map, "home", "far", Transports.Walk, walkBudget);
-            TravelPlanner.TryTravel(map, "home", "far", Transports.Car, carBudget);
-            Assert.AreEqual(35, walkBudget.SpentMinutes);
-            Assert.AreEqual(6, carBudget.SpentMinutes);
+            var walkClock = new GameClock(GameDate.FromYmd(1, 1, 1), 8 * 60);
+            var carClock = new GameClock(GameDate.FromYmd(1, 1, 1), 8 * 60);
+            TravelPlanner.Travel(map, "home", "far", Transports.Walk, walkClock);
+            TravelPlanner.Travel(map, "home", "far", Transports.Car, carClock);
+            Assert.AreEqual(8 * 60 + 35, walkClock.MinuteOfDay);
+            Assert.AreEqual(8 * 60 + 6, carClock.MinuteOfDay);
+        }
+    }
+
+    public class PathWalkerTests
+    {
+        private static WorldMap L()
+        {
+            // a(0,0) -- b(100,0) -- c(100,50)
+            var map = new WorldMap();
+            map.AddNode("a", 0, 0);
+            map.AddNode("b", 100, 0);
+            map.AddNode("c", 100, 50);
+            map.AddEdge("a", "b");
+            map.AddEdge("b", "c");
+            return map;
+        }
+
+        [Test]
+        public void TotalLength_IsSumOfEdges()
+        {
+            var w = new PathWalker(L(), new[] { "a", "b", "c" });
+            Assert.AreEqual(150.0, w.TotalLength, 1e-9);
+        }
+
+        [Test]
+        public void PositionAt_InterpolatesAlongSegments()
+        {
+            var w = new PathWalker(L(), new[] { "a", "b", "c" });
+
+            MapPoint p0 = w.PositionAt(0);
+            Assert.AreEqual(0.0, p0.X, 1e-9);
+            Assert.AreEqual(0.0, p0.Y, 1e-9);
+
+            MapPoint mid1 = w.PositionAt(50);
+            Assert.AreEqual(50.0, mid1.X, 1e-9);
+            Assert.AreEqual(0.0, mid1.Y, 1e-9);
+
+            MapPoint onSecond = w.PositionAt(125);
+            Assert.AreEqual(100.0, onSecond.X, 1e-9);
+            Assert.AreEqual(25.0, onSecond.Y, 1e-9);
+        }
+
+        [Test]
+        public void PositionAt_ClampsToEnds()
+        {
+            var w = new PathWalker(L(), new[] { "a", "b", "c" });
+            MapPoint before = w.PositionAt(-10);
+            MapPoint after = w.PositionAt(9999);
+            Assert.AreEqual(0.0, before.X, 1e-9);
+            Assert.AreEqual(100.0, after.X, 1e-9);
+            Assert.AreEqual(50.0, after.Y, 1e-9);
+        }
+
+        [Test]
+        public void SingleNodePath_StaysPut()
+        {
+            var w = new PathWalker(L(), new[] { "b" });
+            Assert.AreEqual(0.0, w.TotalLength, 1e-9);
+            MapPoint p = w.PositionAt(50);
+            Assert.AreEqual(100.0, p.X, 1e-9);
+        }
+
+        [Test]
+        public void NonAdjacentNodes_Throw()
+        {
+            Assert.Throws<ArgumentException>(() => new PathWalker(L(), new[] { "a", "c" }));
         }
     }
 }
