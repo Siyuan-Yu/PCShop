@@ -8,6 +8,7 @@
 - [`docs/03-decisions.md`](docs/03-decisions.md)：决策记录（已定、已否决、默认假设、待办）
 - [`docs/04-3c-and-world.md`](docs/04-3c-and-world.md)：3C、世界层与地产设计
 - [`docs/05-player-life.md`](docs/05-player-life.md)：玩家角色、生活模拟、目标与失败
+- [`docs/06-art-and-rendering.md`](docs/06-art-and-rendering.md)：美术路线、光影方案、可替换性约定
 - [`docs/01-roadmap.md`](docs/01-roadmap.md)：开发路线
 - [`docs/asset-log.md`](docs/asset-log.md)：AI 美术资源登记
 
