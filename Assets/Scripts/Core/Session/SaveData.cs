@@ -87,6 +87,17 @@ namespace PCShopSell.Core.Session
         public int rentHikes;
         public string endingId;
         public int shopSize;
+
+        // 租铺子：0 = 旧存档（按开局那间店、按店面大小算月租），1 = 租着铺子，2 = 还没租
+        public int shopState;
+        public string leasePlace;
+        public long leaseRentCents;
+        public long leaseDepositCents;
+        public int leaseStartDay;
+        public SaveListing[] listings;
+        public string[] vacantPlaces;
+        public string realtyRng;
+
         public string[] relationIds;
         public double[] relationValues;
         public string[] giftIds;
@@ -323,6 +334,16 @@ namespace PCShopSell.Core.Session
         public double[] jins;
         public bool[] boxed;
         public int[] expireDays;
+    }
+
+    [Serializable]
+    public sealed class SaveListing
+    {
+        public string place;
+        public int size;
+        public long rentCents;
+        public int openDay;
+        public int closeDay;
     }
 
     [Serializable]

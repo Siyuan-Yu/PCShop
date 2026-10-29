@@ -43,6 +43,7 @@ namespace PCShopSell.Tests
                 new LayoutPlaceData { id = "stall", name = "CPU 档口", kind = "wholesaler", node = "mk", sells = "Cpu,Gpu" },
                 new LayoutPlaceData { id = "dealer", name = "车行", kind = "dealer", node = "dl" },
                 new LayoutPlaceData { id = "metro_b", name = "市场站", kind = "station", node = "st2" },
+                new LayoutPlaceData { id = "agency", name = "房产中介", kind = "agency", node = "st" },
             },
             patrols = new[] { new LayoutPatrolData { id = "p1", nodes = new[] { "s1", "st" } } },
         };
@@ -446,10 +447,11 @@ namespace PCShopSell.Tests
             string json = System.IO.File.ReadAllText("Assets/Resources/Data/city_layout.json");
             CityLayout city = CityLayout.FromData(UnityEngine.JsonUtility.FromJson<CityLayoutData>(json));
             var shops = city.OfKind(PlaceKind.Shop).ToList();
-            Assert.AreEqual(20, shops.Count);
+            Assert.AreEqual(19, shops.Count, "20 间门面，其中一间是房产中介");
+            Assert.AreEqual(1, city.OfKind(PlaceKind.Agency).Count());
             Assert.AreEqual(4, shops.Count(p => p.Size == PCShopSell.Core.Shop.ShopSize.Large));
             Assert.AreEqual(8, shops.Count(p => p.Size == PCShopSell.Core.Shop.ShopSize.Medium));
-            Assert.AreEqual(8, shops.Count(p => p.Size == PCShopSell.Core.Shop.ShopSize.Small));
+            Assert.AreEqual(7, shops.Count(p => p.Size == PCShopSell.Core.Shop.ShopSize.Small));
 
             var s = new GameSession(city, 1, Money.FromYuan(5000), GameTimestamp.From(new GameDate(0), 480));
             Assert.AreEqual(0.4, s.PlayerShop.LocationFactor, 1e-9, "玩家的店离地铁最远");

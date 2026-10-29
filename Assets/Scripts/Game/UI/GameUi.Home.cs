@@ -991,12 +991,14 @@ namespace PCShopSell.Game.UI
                     bool s = shop;
                     (Money fee, int minutes) = S.CourierQuote(s);
                     bool current = S.CourierToShop(DefaultDestIsShop) == s;
-                    Ui.Size(Ui.Button(w.Content, $"{(s ? "我的店里" : "家里")}{(current ? "  ✓" : "")}\n<size=13>每辆运费 {fee}，约 {minutes} 分钟到</size>", () =>
+                    bool can = !s || S.HasShop;
+                    string sub = can ? $"每辆运费 {fee}，约 {minutes} 分钟到" : "还没有店铺，去房产中介租一间才能送店里";
+                    Ui.Size(Ui.Button(w.Content, $"{(s ? "我的店里" : "家里")}{(current ? "  ✓" : "")}\n<size=13>{sub}</size>", () =>
                     {
                         S.CourierDest = s;
                         w.Close();
                         owner?.Rebuild();
-                    }, 18, current ? Ui.ButtonHot : Ui.ButtonBg), -1, 64);
+                    }, 18, current ? Ui.ButtonHot : Ui.ButtonBg, can), -1, 64);
                 }
                 Ui.Size(Ui.Button(w.Content, "取消", w.Close, 18), -1, 44);
             });

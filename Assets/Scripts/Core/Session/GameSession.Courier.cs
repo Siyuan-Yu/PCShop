@@ -79,8 +79,8 @@ namespace PCShopSell.Core.Session
         /// <summary>叫车送到哪：true = 店里，false = 家里，null = 按这家店的默认（档口送店里，其他送家里）。每进一家店重置。</summary>
         public bool? CourierDest { get; set; }
 
-        /// <summary>这家店叫车实际送到哪（defaultToShop 是这家店的默认）。</summary>
-        public bool CourierToShop(bool defaultToShop) => CourierDest ?? defaultToShop;
+        /// <summary>这家店叫车实际送到哪（defaultToShop 是这家店的默认）。还没租铺子时只能送家里。</summary>
+        public bool CourierToShop(bool defaultToShop) => HasShop && (CourierDest ?? defaultToShop);
 
         public IReadOnlyList<CourierRun> Couriers => _couriers;
 

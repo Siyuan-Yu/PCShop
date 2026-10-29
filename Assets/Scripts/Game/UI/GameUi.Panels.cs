@@ -19,8 +19,11 @@ namespace PCShopSell.Game.UI
         {
             switch (p.Kind)
             {
-                case PlaceKind.Shop when p.IsPlayerShop:
+                case PlaceKind.Shop when S.IsMyShop(p):
                     OpenDock();
+                    break;
+                case PlaceKind.Agency:
+                    OpenPlaceWindow(p, BuildAgency, 1120, 820);
                     break;
                 case PlaceKind.Home:
                     Toast("回到出租屋了。走近床、衣柜、电饭锅、纸箱或门，头顶出现提示时按 F；看房间信息点右上角“我的”。");
@@ -54,7 +57,7 @@ namespace PCShopSell.Game.UI
 
         private void OpenPlaceWindow(Place p, System.Action<Window, Place> build, float w = 640, float h = 520)
         {
-            OpenWindow(p.Name, w, h, win =>
+            OpenWindow(S.PlaceTitle(p), w, h, win =>
             {
                 if (S.CurrentPlace != p)
                 {
@@ -114,7 +117,7 @@ namespace PCShopSell.Game.UI
                     int count = n;
                     Ui.Size(Ui.Button(row, "买" + count, () =>
                     {
-                        if (S.BuyAtStall(p, pd, count)) Toast(S.SendByCourier ? $"买了 {pd.Name}×{count}，叫车送到店里" : $"买了 {pd.Name}×{count}，装上身");
+                        if (S.BuyAtStall(p, pd, count)) Toast(S.SendByCourier ? $"买了 {pd.Name}×{count}，叫车送到{(S.CourierToShop(true) ? "店里" : "家里")}" : $"买了 {pd.Name}×{count}，装上身");
                         w.Rebuild();
                     }, 16, Ui.ButtonHot, open && left >= count), 58);
                 }
@@ -179,6 +182,18 @@ namespace PCShopSell.Game.UI
 
         private void BuildNeighbour(Window w, Place p)
         {
+            if (S.IsVacant(p))
+            {
+                Line(w.Content, $"卷帘门拉着，门上贴着“{GameSession.VacantTitle}”。", 19);
+                Line(w.Content, $"规格：{GameSession.SizeName(p.Size)}（{PCShopSell.Core.Shop.RealEstate.SizeArea(p.Size)}），离地铁站约 {S.StationDistance(p):0} 米。", 18, Ui.Dim);
+                Line(w.Content, "联系人：安居房产中介。想租就去中介那里签约。", 18, Ui.Dim);
+                Ui.Size(Ui.Button(w.Content, "去房产中介", () =>
+                {
+                    w.Close();
+                    _ctrl.GoToPlace(S.City.FirstOfKind(PlaceKind.Agency));
+                }, 19, Ui.ButtonHot), -1, 46);
+                return;
+            }
             Line(w.Content, $"邻居的店：{p.Business}");
             string size = p.Size == PCShopSell.Core.Shop.ShopSize.Large ? "大（216㎡）" : p.Size == PCShopSell.Core.Shop.ShopSize.Medium ? "中（108㎡）" : "小（48㎡）";
             Line(w.Content, "规格：" + size, 18, Ui.Dim);
@@ -239,7 +254,7 @@ namespace PCShopSell.Game.UI
 
         public void OpenSystemPanel()
         {
-            OpenWindow("菜单", 560, 750, w =>
+            OpenWindow("菜单", 560, S.HasShop ? 750 : 800, w =>
             {
                 Line(w.Content, $"身家（现金 + 库存九折）：{S.NetWorth()}", 20);
                 GoalLine goal = S.NextGoal();
@@ -276,6 +291,14 @@ namespace PCShopSell.Game.UI
                     S.SetSmartphone(!S.HasSmartphone);
                     w.Rebuild();
                 }, 17, S.HasSmartphone ? Ui.Warn : Ui.ButtonBg), -1, 44);
+                if (!S.HasShop)
+                {
+                    Ui.Size(Ui.Button(w.Content, "作弊工具  直接租下街尾小店（回到旧开局：有店、有几件开局货）", () =>
+                    {
+                        S.DebugRentStarterShop();
+                        w.Rebuild();
+                    }, 17, Ui.ButtonBg), -1, 44);
+                }
                 Line(w.Content, "快捷键：空格 暂停 · 1–4 倍速 · 滚轮 缩放 · Esc 关闭窗口", 16, Ui.Dim);
             });
         }

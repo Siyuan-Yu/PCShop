@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -97,6 +97,7 @@ namespace PCShopSell.Core.Session
                 gameOverReason = GameOverReason,
             };
             SaveGrowth(d);
+            SaveRealty(d);
             return d;
         }
 
@@ -143,6 +144,7 @@ namespace PCShopSell.Core.Session
             Player.Skill = d.skill;
             _lastNewsReadDay = d.lastNewsReadDay;
 
+            RestoreRealty(d);
             PlayerShop.Stock.Clear();
             Fill(PlayerShop.Stock, d.shopStock);
             PlayerShop.Markup = d.markup;
@@ -152,7 +154,7 @@ namespace PCShopSell.Core.Session
                 new BuildOrder(o.id, o.tier, Money.FromCents(o.priceCents), new GameTimestamp(o.placedAt), new GameTimestamp(o.dueAt))),
                 d.nextOrderId);
             PlayerShop.RestoreDisplay(d.displayPcs);
-            PlayerShop.PlayerPresent = CurrentPlace == PlayerShopPlace;
+            PlayerShop.PlayerPresent = InPlayerShop;
 
             Online.Restore(d.discoveredStores ?? Array.Empty<string>(),
                 (d.storeRecords ?? Array.Empty<SaveStoreRecord>()).Select(r =>

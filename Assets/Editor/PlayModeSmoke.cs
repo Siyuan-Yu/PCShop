@@ -81,7 +81,8 @@ namespace PCShopSell.EditorTools
                     Debug.Log("PLAYSMOKE: boot ok, places=" + game.City.Places.Count + ", walking to shop");
                     Capture("play_01_start");
                     game.Session.Time.SetSpeed(8);
-                    game.GoToPlace(game.City.PlayerShop());
+                    game.Session.DebugRentStarterShop();
+                    game.GoToPlace(game.Session.PlayerShopPlace);
                 }
                 if (_enteredShop && _shots == 1 && game.InInterior)
                 {

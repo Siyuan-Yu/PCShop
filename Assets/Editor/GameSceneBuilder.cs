@@ -158,6 +158,19 @@ namespace PCShopSell.EditorTools
 
             GameSession s = _game.Session;
             Check(s.CurrentPlace == s.Home, "开局在家");
+            Check(!s.HasShop && s.Ledger.Balance.Yuan == 10000, "新游戏：还没有店、现金 ¥10,000");
+            _game.Ui.ShowIntro();
+            Frame(0.05f);
+            Shot("vs1_83_intro_no_shop");
+            Teleport(s, "agency");
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            Frame(0.05f);
+            Shot("vs1_84_agency");
+            Check(s.Listings.Any(l => l.PlaceId == "player_shop" && s.LeaseBlocker(l) == null), "中介挂着街尾空铺、现在就能签");
+            Check(s.Listings.Any(l => s.LeaseBlocker(l) != null && l.OpenDay > s.Clock.Today.TotalDays), "中介有现租户还没到期的铺子");
+            Teleport(s, "home");
+            Check(s.DebugRentStarterShop(), "作弊：直接租下街尾小店（回到旧开局）");
+            Check(s.HasShop && !s.PlayerShop.Stock.IsEmpty, "作弊后有店、有开局货");
             _game.Ui.CloseAllWindows();
             s.Leave();
             Shot("vs1_01_home_morning");
@@ -188,6 +201,7 @@ namespace PCShopSell.EditorTools
 
             // 不去结账：顾客拿着货到柜台排队，等烦了就把货放回货架再走
             for (int i = 0; i < 9000 && s.PlayerShop.Queue.Count == 0; i++) Frame(0.1f);
+            Log($"QUEUEDIAG now={s.Clock.Now} open={s.PlayerShop.IsOpen} inShop={s.InPlayerShop} customers={s.PlayerShop.TodayCustomers} lost={s.PlayerShop.TodayLost} rate={s.PlayerShop.ArrivalRatePerMinute(s.Clock.Now) * 60:0.00}/h lf={s.PlayerShop.LocationFactor} traffic={s.PlayerShop.TrafficMultiplier} size={s.PlayerShop.Size} stock={s.PlayerShop.Stock.UsedSpace}");
             Check(s.PlayerShop.Queue.Count > 0, "有顾客拿着货到柜台排队");
             Frame(1.5f);
             Shot("vs1_55_customer_wait");
@@ -801,12 +815,25 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Shot("vs1_10_month_end");
 
-            // 店面扩建 + 目标与人脉面板
+            // 在房产中介换到中型铺子（搬店）+ 目标与人脉面板
             g.Ledger.Credit(g.Clock.Today, "测试", PCShopSell.Core.Common.Money.FromYuan(500000), "演示用");
             g.PlayerShop.Reputation = 50;
-            Teleport(g, "player_shop");
             g.Clock.Restore(new PCShopSell.Core.Time.GameDate(130), 10 * 60);
-            Check(g.BuyExpansion(PCShopSell.Core.Shop.ShopSize.Medium), "扩建成中型店");
+            g.DebugAddListing("shop02", 130, 160);
+            Teleport(g, "agency");
+            Check(g.SignLease("shop02"), "在中介签下中型铺子，搬店");
+            Check(g.PlayerShopPlace.Id == "shop02" && g.PlayerShop.Size == PCShopSell.Core.Shop.ShopSize.Medium, "店搬到了中型铺子");
+            Check(g.IsVacant(g.City.GetPlace("player_shop")), "旧铺子变成招租");
+            _game.Ui.CloseModalWindows();
+            Teleport(g, "agency");
+            g.Leave();
+            g.ArriveAtNode("e19");
+            _game.Ui.CloseAllWindows();
+            _game.SnapCamera();
+            for (int i = 0; i < 6; i++) Frame(0.05f);
+            Shot("vs1_85_street_vacant");
+            Teleport(g, "shop02");
+            Check(g.InPlayerShop, "走进新铺子就是自己的店");
             _game.Ui.CloseModalWindows();
             Frame(0.05f);
             Shot("vs1_14_medium_shop");

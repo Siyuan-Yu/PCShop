@@ -15,7 +15,7 @@ namespace PCShopSell.Game.UI
                 RectTransform list = Ui.Scroll(w.Content, 700);
 
                 Ui.Size(Ui.Label(list, "三年之路", 22), -1, 34);
-                Ui.Size(Ui.Label(list, $"现在是第 {S.Clock.Today.TotalDays + 1} 天。身家 {S.NetWorth()}，店面 {GameSession.SizeName(S.PlayerShop.Size)}，店租 {S.CurrentShopRent}/月" +
+                Ui.Size(Ui.Label(list, $"现在是第 {S.Clock.Today.TotalDays + 1} 天。身家 {S.NetWorth()}，" + (S.HasShop ? $"店面 {GameSession.SizeName(S.PlayerShop.Size)}，店租 {S.CurrentShopRent}/月" : "还没有店铺（去房产中介租）") +
                                        (S.RentHikes > 0 ? $"（已涨租 {S.RentHikes} 次）" : ""), 16, TextAnchor.MiddleLeft, Ui.Dim), -1, 28);
                 foreach (GoalLine g in S.Goals())
                 {

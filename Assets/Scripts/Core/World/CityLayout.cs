@@ -53,7 +53,7 @@ namespace PCShopSell.Core.World
         public string id;
         public string name;
 
-        /// <summary>shop / home / wholesaler / station。</summary>
+        /// <summary>shop / home / wholesaler / station / dealer / agency（房产中介）。</summary>
         public string kind;
 
         /// <summary>入口所在的路径图节点。</summary>
@@ -80,6 +80,7 @@ namespace PCShopSell.Core.World
         Wholesaler,
         Station,
         Dealer,
+        Agency,
     }
 
     /// <summary>地点（店铺、住所、批发商、地铁站等），入口位于路径图的某个节点。</summary>
@@ -282,6 +283,7 @@ namespace PCShopSell.Core.World
                 case "wholesaler": return PlaceKind.Wholesaler;
                 case "station": return PlaceKind.Station;
                 case "dealer": return PlaceKind.Dealer;
+                case "agency": return PlaceKind.Agency;
                 default: return PlaceKind.Other;
             }
         }

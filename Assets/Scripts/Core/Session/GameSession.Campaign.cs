@@ -38,14 +38,15 @@ namespace PCShopSell.Core.Session
 
         public static string SizeName(ShopSize size) => size == ShopSize.Large ? "大型店" : size == ShopSize.Medium ? "中型店" : "小店";
 
-        /// <summary>现在每月实际交的店租：随店面大小、涨租次数、房东交情变化。</summary>
+        /// <summary>现在每月实际交的店租：签约时的月租，再随涨租次数、房东交情变化；没租铺子时为 0。</summary>
         public Money CurrentShopRent
         {
             get
             {
+                if (Lease == null) return Money.Zero;
                 double mult = 1.0 + Campaign.RentHikePerFail * Math.Min(3, RentHikes);
                 mult *= 1.0 - NpcPerks.RentDiscount(Relation(Npcs.Landlady));
-                return ShopExpansions.RentOf(PlayerShop.Size).Scale(mult);
+                return Lease.Rent.Scale(mult);
             }
         }
 
@@ -88,33 +89,6 @@ namespace PCShopSell.Core.Session
 
         /// <summary>现在最近的未完成目标（没有则返回 null）。</summary>
         public GoalLine NextGoal() => Goals().FirstOrDefault(g => g.State == GoalState.Pending);
-
-        // ---------- 店面扩建 ----------
-
-        public string ExpansionBlocker(ShopExpansionDef d)
-        {
-            if (PlayerShop.Size >= d.Size) return "已拥有";
-            if (d.Size != PlayerShop.Size + 1) return "需要先盘下中型店";
-            if (Clock.Today.TotalDays < d.MinDay) return $"第 {d.MinDay} 天以后才有机会";
-            if (PlayerShop.Reputation < d.MinReputation) return $"知名度要到 {d.MinReputation:0}";
-            if (Ledger.Balance < d.Price) return "钱不够";
-            return null;
-        }
-
-        public bool BuyExpansion(ShopSize size)
-        {
-            ShopExpansionDef d = ShopExpansions.Get(size);
-            if (d == null) return false;
-            if (!InPlayerShop) return Fail("要在自己的店里谈扩建。");
-            string blocker = ExpansionBlocker(d);
-            if (blocker != null) return Fail(blocker);
-            if (!Ledger.TryDebit(Clock.Today, "扩建", d.Price, d.Name)) return Fail("钱不够。");
-            PlayerShop.Size = size;
-            ApplyUpgrades();
-            ShopExpanded?.Invoke(size);
-            Popup?.Invoke("店面扩建完成", $"{d.Name} 办好了。以后月租 {CurrentShopRent}，客流和库存容量都上了一个台阶。");
-            return true;
-        }
 
         // ---------- 评估 ----------
 

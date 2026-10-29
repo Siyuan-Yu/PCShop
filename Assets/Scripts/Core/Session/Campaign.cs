@@ -67,8 +67,8 @@ namespace PCShopSell.Core.Session
             new MilestoneDef
             {
                 Id = "y2", Day = Year2Day, Title = "有名号的店",
-                Goal = $"第 {Year2Day} 天：身家 ≥ {Year2Wealth}，并且把店面扩建到中型以上",
-                Check = s => s.NetWorth() >= Year2Wealth && s.PlayerShop.Size != ShopSize.Small,
+                Goal = $"第 {Year2Day} 天：身家 ≥ {Year2Wealth}，并且在房产中介换到中型以上的铺面",
+                Check = s => s.NetWorth() >= Year2Wealth && s.HasShop && s.PlayerShop.Size != ShopSize.Small,
                 Progress = s => $"身家 {s.NetWorth()} / {Year2Wealth}　店面：{GameSession.SizeName(s.PlayerShop.Size)}",
                 PassText = "两年下来，电脑城里提起你的店都会说一句“靠谱”。知名度 +5。",
                 FailText = "两年了还是小打小闹，房东又提了租金。店租 +10%。",

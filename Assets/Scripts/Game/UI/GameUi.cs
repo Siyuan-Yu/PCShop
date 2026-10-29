@@ -50,7 +50,7 @@ namespace PCShopSell.Game.UI
         private readonly List<(RectTransform rt, Text text, Button button)> _queueLabels = new List<(RectTransform, Text, Button)>();
         private RectTransform _toastList;
 
-        private Text _dateText, _cashText, _statsText, _placeText, _hintText, _cargoText, _chaseText;
+        private Text _dateText, _cashText, _statsText, _placeText, _hintText, _cargoText, _chaseText, _shopGoText;
         private readonly List<(Button b, int speed)> _speedButtons = new List<(Button, int)>();
         private readonly List<(Button b, VehicleKind kind)> _vehicleButtons = new List<(Button, VehicleKind)>();
         private Button _pauseButton;
@@ -162,7 +162,8 @@ namespace PCShopSell.Game.UI
             }
             _cargoText = Ui.Size(Ui.Label(brow, "", 17), 170);
             Ui.Size(Ui.Label(brow, "快捷前往：", 17), 90);
-            Ui.Size(Ui.Button(brow, "去我的店", () => _ctrl.GoToPlace(S.PlayerShopPlace), 17, Ui.ButtonHot), 100);
+            Button shopGo = Ui.Size(Ui.Button(brow, "去我的店", () => _ctrl.GoToPlace(S.HasShop ? S.PlayerShopPlace : S.City.FirstOfKind(PlaceKind.Agency)), 17, Ui.ButtonHot), 100);
+            _shopGoText = shopGo.GetComponentInChildren<Text>();
             Ui.Size(Ui.Button(brow, "回家", () => _ctrl.GoToPlace(S.Home), 17), 70);
             Ui.Size(Ui.Button(brow, "电子市场", () => _ctrl.GoToPlace(S.City.GetPlace("stall_cpu")), 17), 100);
 
@@ -196,16 +197,17 @@ namespace PCShopSell.Game.UI
                 Place target = S.City.PlaceAtNode(S.Trip.TargetNode);
                 where = $"{S.CurrentVehicle.Name}前往 {(target != null ? target.Name : "路口")}";
             }
-            else if (S.CurrentPlace != null) where = "在 " + S.CurrentPlace.Name;
+            else if (S.CurrentPlace != null) where = "在 " + S.PlaceTitle(S.CurrentPlace);
             else where = "在街上";
-            string shopState = S.PlayerShop.IsOpen ? "<color=#7CE38B>店：营业中</color>" : "<color=#E0806A>店：关门</color>";
+            string shopState = !S.HasShop ? "<color=#FFD54A>还没有店铺</color>" : S.PlayerShop.IsOpen ? "<color=#7CE38B>店：营业中</color>" : "<color=#E0806A>店：关门</color>";
+            _shopGoText.text = S.HasShop ? "去我的店" : "房产中介";
             _placeText.text = where + "   " + shopState;
 
             if (S.IsGameOver) _hintText.text = "游戏结束：" + S.GameOverReason;
             else if (_ctrl.Placing) _hintText.text = "摆放家具：左键放下 · R 旋转 · 右键/Esc 放回 · X 收进背包 · 点已摆的家具可以挪动 · 右侧面板点“完成”结束";
             else if (_ctrl.InInterior) _hintText.text = "WASD 在店里走动 · 走到货架前按 F 查看货物 · 柜台边按 F（或点顾客头顶的“结账”）给顾客结账 · 走到门口按 F 出门 · 右侧面板管理店铺";
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimatedMinutes} 分钟 · 按 WASD 随时接管";
-            else if (S.NearbyPlace != null) _hintText.text = $"<color=#FFD54A>按 F 进入 {S.NearbyPlace.Name}</color>";
+            else if (S.NearbyPlace != null) _hintText.text = $"<color=#FFD54A>按 F 进入 {S.PlaceTitle(S.NearbyPlace)}</color>";
             else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#FFD54A>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : "WASD 在屋里走动 · 走近床、衣柜、电饭锅、纸箱、凳子（头顶出现提示按 F）· 房间信息、摆放家具看右上角“我的”";
             else if (S.CurrentPlace != null) _hintText.text = "按 WASD 离开 · 空格暂停";
             else _hintText.text = "WASD 自由走动 · 右键拖动/Q R 转视角 · V 复位 · 滚轮缩放 · 走到门口按 F 进入 · 空格暂停 · 下方按钮可快捷前往";
@@ -245,7 +247,7 @@ namespace PCShopSell.Game.UI
                     Place place = pv.Place;
                     bool important = place.Kind != PlaceKind.Shop || place.IsPlayerShop;
                     Button b = Ui.Button(_labelCanvas.transform, place.Name, () => Toast("用 WASD 走到门口，按 F 进入；也可以点下方的快捷前往按钮。"),
-                        important ? 18 : 15, place.IsPlayerShop ? new Color(0.1f, 0.55f, 0.5f, 0.92f) : new Color(0.1f, 0.12f, 0.16f, important ? 0.85f : 0.6f));
+                        important ? 18 : 15, LabelColor(place, important));
                     RectTransform rt = (RectTransform)b.transform;
                     rt.anchorMin = rt.anchorMax = Vector2.zero;
                     rt.pivot = new Vector2(0.5f, 0);
@@ -262,7 +264,17 @@ namespace PCShopSell.Game.UI
                 var canvasRt = (RectTransform)_labelCanvas.transform;
                 label.rt.anchoredPosition = local + canvasRt.rect.size * 0.5f;
                 label.text.text = LabelText(pv.Place);
+                label.rt.GetComponent<Image>().color = LabelColor(pv.Place, pv.Place.Kind != PlaceKind.Shop || pv.Place.IsPlayerShop);
             }
+        }
+
+        /// <summary>名牌底色：我的店青色，招租的铺子橙色，中介蓝色，其他深灰。</summary>
+        private Color LabelColor(Place p, bool important)
+        {
+            if (S.IsMyShop(p)) return new Color(0.1f, 0.55f, 0.5f, 0.92f);
+            if (S.IsVacant(p)) return new Color(0.75f, 0.42f, 0.1f, 0.9f);
+            if (p.Kind == PlaceKind.Agency) return new Color(0.15f, 0.35f, 0.7f, 0.92f);
+            return new Color(0.1f, 0.12f, 0.16f, important ? 0.85f : 0.6f);
         }
 
         private RectTransform _playerMark;
@@ -299,10 +311,12 @@ namespace PCShopSell.Game.UI
                     return p.Name + (S.IsWholesalerOpen ? "" : "\n<size=13><color=#E0806A>关门</color></size>");
                 case PlaceKind.Dealer:
                     return p.Name + (S.IsDealerOpen ? "" : "\n<size=13><color=#E0806A>关门</color></size>");
-                case PlaceKind.Shop when p.IsPlayerShop:
-                    return p.Name + (S.PlayerShop.IsOpen ? "\n<size=13><color=#7CE38B>营业中</color></size>" : "\n<size=13>关门</size>");
+                case PlaceKind.Shop when S.IsMyShop(p):
+                    return GameSession.MyShopName + (S.PlayerShop.IsOpen ? "\n<size=13><color=#7CE38B>营业中</color></size>" : "\n<size=13>关门</size>");
+                case PlaceKind.Agency:
+                    return p.Name + (S.HasShop ? "" : "\n<size=13><color=#FFD54A>先来这里租铺子</color></size>");
                 default:
-                    return p.Name;
+                    return S.PlaceTitle(p);
             }
         }
 
@@ -608,11 +622,28 @@ namespace PCShopSell.Game.UI
         /// <summary>开局介绍。</summary>
         public void ShowIntro()
         {
-            Popup("欢迎来到电脑城", "你在商业街最东头租了一间最小、离地铁最远的电脑店（48㎡），手里只有 ¥5,000。\n\n" +
-                                "· 去 2 公里外的电子市场档口进货，或者买部智能手机、装上 1788 app 网上进货（便宜但要等，可能有次品）\n" +
-                                "· 你在店里才营业：顾客挑好货会排队，点他们结账\n" +
+            OpenWindow("欢迎来到电脑城", 760, 560, w =>
+            {
+                Para(w.Content, "你揣着 ¥10,000 来到这条商业街，想开一家自己的电脑店。可现在还没有铺子。\n\n" +
+                                "· 先去商业街中段的「安居房产中介」看看在租的铺面：街尾的空铺最便宜（月租 ¥1,500），离地铁越近越贵，中型、大型铺子要有名气房东才肯租。签约要付首月租金 + 押金 + 中介费（各一个月租金）\n" +
+                                "· 有了店就去 2 公里外的电子市场档口进货，或者买部智能手机、装上 1788 app 网上进货（便宜但要等，可能有次品）\n" +
+                                "· 你在店里才营业：顾客挑好货到收银台排队，你站过去给他们结账\n" +
                                 "· 有人想装整机会下订单，配件齐了在店里装机交付\n" +
-                                "· 第一个月目标：第 30 天时身家 ≥ ¥8,000，并且雇到一个员工");
+                                "· 第一个月目标：第 30 天时身家 ≥ ¥8,000（押金也算），并且雇到一个员工", 18);
+                Ui.Size(Ui.Button(w.Content, S.HasShop ? "知道了" : "好，去找房产中介", () =>
+                {
+                    w.Close();
+                    if (!S.HasShop && !S.IsGameOver) _ctrl.GoToPlace(S.City.FirstOfKind(PlaceKind.Agency));
+                }, 20, Ui.ButtonHot), -1, 50);
+                if (!S.HasShop)
+                {
+                    Ui.Size(Ui.Button(w.Content, "（作弊 / 验收）跳过找铺子：直接租下街尾小店，回到旧开局", () =>
+                    {
+                        S.DebugRentStarterShop();
+                        w.Close();
+                    }, 16, Ui.ButtonBg), -1, 42);
+                }
+            });
         }
     }
 }

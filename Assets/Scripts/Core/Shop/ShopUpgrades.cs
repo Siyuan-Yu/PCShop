@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using PCShopSell.Core.Common;
 
 namespace PCShopSell.Core.Shop
@@ -74,48 +74,5 @@ namespace PCShopSell.Core.Shop
             if (owned.Contains(Shelf3)) extra += 30;
             return extra;
         }
-    }
-
-    /// <summary>店面扩建：盘下隔壁变成中型店，再打通整层变成大型店。客流、库存、租金都会涨。</summary>
-    public sealed class ShopExpansionDef
-    {
-        public ShopSize Size { get; }
-        public string Name { get; }
-        public string Description { get; }
-        public Money Price { get; }
-        public double MinReputation { get; }
-        public int MinDay { get; }
-        public Money MonthlyRent { get; }
-
-        public ShopExpansionDef(ShopSize size, string name, string description, long priceYuan, double minReputation, int minDay, long rentYuan)
-        {
-            Size = size;
-            Name = name;
-            Description = description;
-            Price = Money.FromYuan(priceYuan);
-            MinReputation = minReputation;
-            MinDay = minDay;
-            MonthlyRent = Money.FromYuan(rentYuan);
-        }
-    }
-
-    public static class ShopExpansions
-    {
-        public static readonly Money SmallRent = Money.FromYuan(1500);
-
-        public static readonly IReadOnlyList<ShopExpansionDef> All = new[]
-        {
-            new ShopExpansionDef(ShopSize.Medium, "盘下隔壁铺面（中型店）", "客流约 ×1.6，库存基础容量 120 格；月租涨到 ¥4,500。", 150000, 25, 120, 4500),
-            new ShopExpansionDef(ShopSize.Large, "整层打通（大型店）", "客流约 ×2.5，库存基础容量 300 格；月租涨到 ¥12,000。", 900000, 60, 400, 12000),
-        };
-
-        public static ShopExpansionDef Get(ShopSize size)
-        {
-            foreach (ShopExpansionDef d in All)
-                if (d.Size == size) return d;
-            return null;
-        }
-
-        public static Money RentOf(ShopSize size) => size == ShopSize.Small ? SmallRent : Get(size).MonthlyRent;
     }
 }

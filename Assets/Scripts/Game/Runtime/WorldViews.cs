@@ -222,7 +222,14 @@ namespace PCShopSell.Game.Runtime
         private readonly Transform _parent;
         private readonly System.Random _rng = new System.Random(11);
         private readonly float _minX, _maxX;
-        private readonly Vector3 _shopDoor;
+        private Vector3 _shopDoor;
+
+        /// <summary>玩家店门口（搬店后改到新铺子）。</summary>
+        public Vector3 ShopDoor
+        {
+            get => _shopDoor;
+            set => _shopDoor = value;
+        }
 
         private static readonly Color[] Clothes =
         {

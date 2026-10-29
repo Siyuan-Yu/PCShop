@@ -56,7 +56,7 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
-        /// <summary>店铺扩建成功（界面据此重建店内场景）。</summary>
+        /// <summary>签下（搬到）一间新铺子（界面据此重建店内场景、改街上顾客去的店门）。</summary>
         public event Action<ShopSize> ShopExpanded;
 
         public static string MetFlag(string npcId) => "met_" + npcId;

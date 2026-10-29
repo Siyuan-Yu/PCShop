@@ -141,6 +141,7 @@ namespace PCShopSell.Core.Session
         {
             string appBlock = AppBlocker(PhoneApps.Wholesale);
             if (appBlock != null) return Fail(appBlock);
+            if (!HasShop) return Fail("还没有店铺，1788 的货没地方送。先去商业街的房产中介租个铺子。");
             if (!Online.IsDiscovered(storeId)) return false;
             OnlineStore store = Online1788.GetStore(storeId);
 

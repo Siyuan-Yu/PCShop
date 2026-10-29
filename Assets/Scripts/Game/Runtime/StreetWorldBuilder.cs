@@ -135,6 +135,7 @@ namespace PCShopSell.Game.Runtime
             switch (p.Kind)
             {
                 case PlaceKind.Shop:
+                case PlaceKind.Agency:
                     vis.LabelPos = BuildShop(root, p, entrance);
                     break;
                 case PlaceKind.Station:

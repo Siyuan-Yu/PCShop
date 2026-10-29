@@ -123,7 +123,7 @@
     { "id": "shop08", "name": "好味快餐", "kind": "shop", "node": "e08", "size": "medium", "business": "快餐" },
     { "id": "shop09", "name": "阿芳理发", "kind": "shop", "node": "e09", "size": "small", "business": "理发" },
     { "id": "shop10", "name": "百姓药房", "kind": "shop", "node": "e10", "size": "medium", "business": "药店" },
-    { "id": "shop11", "name": "文具小铺", "kind": "shop", "node": "e11", "size": "small", "business": "文具" },
+    { "id": "agency", "name": "安居房产中介", "kind": "agency", "node": "e11", "size": "small", "business": "房产中介" },
     { "id": "shop12", "name": "宜居家具城", "kind": "shop", "node": "e12", "size": "large", "business": "家具" },
     { "id": "shop13", "name": "数码先锋", "kind": "shop", "node": "e13", "size": "medium", "business": "电脑" },
     { "id": "shop14", "name": "农贸市场", "kind": "shop", "node": "e14", "size": "small", "business": "农贸" },
@@ -132,7 +132,7 @@
     { "id": "shop17", "name": "便利蜂", "kind": "shop", "node": "e17", "size": "medium", "business": "便利店" },
     { "id": "shop18", "name": "五金杂货", "kind": "shop", "node": "e18", "size": "small", "business": "五金" },
     { "id": "shop19", "name": "烟酒茶行", "kind": "shop", "node": "e19", "size": "small", "business": "烟酒" },
-    { "id": "player_shop", "name": "我的电脑店", "kind": "shop", "node": "e20", "size": "small", "business": "电脑", "player": true },
+    { "id": "player_shop", "name": "街尾空铺", "kind": "shop", "node": "e20", "size": "small", "business": "空铺", "player": true },
 
     { "id": "home", "name": "城中村出租屋", "kind": "home", "node": "home" },
 

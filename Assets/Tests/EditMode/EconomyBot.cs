@@ -200,14 +200,16 @@ namespace PCShopSell.Tests
 
         private void Invest(int today)
         {
-            // 扩建：钱够并且留 ¥30,000 周转就买
-            foreach (var e in ShopExpansions.All)
+            // 换大铺子：中介那里有比现在大的、签得起并且还能留 ¥30,000 周转就搬
+            Place agency = _s.City.FirstOfKind(PlaceKind.Agency);
+            ShopListing bigger = agency == null ? null : _s.Listings
+                .Where(l => l.Size > _s.PlayerShop.Size && _s.LeaseBlocker(l) == null && _s.Ledger.Balance >= _s.LeaseCost(l) + Money.FromYuan(30000))
+                .OrderByDescending(l => l.Size).FirstOrDefault();
+            if (bigger != null)
             {
-                if (_s.ExpansionBlocker(e) == null && _s.Ledger.Balance >= e.Price + Money.FromYuan(30000))
-                {
-                    _s.BuyExpansion(e.Size);
-                    break;
-                }
+                Go(agency, 20);
+                _s.SignLease(bigger.PlaceId);
+                Go(_s.PlayerShopPlace, 10);
             }
 
             // 每隔几天给认识的人送份礼（钱富余时）

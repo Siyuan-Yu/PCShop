@@ -7,6 +7,7 @@ using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.Trade;
+using PCShopSell.Core.World;
 
 namespace PCShopSell.Tests
 {
@@ -223,88 +224,164 @@ namespace PCShopSell.Tests
         }
     }
 
-    public class ExpansionTests
+    public class RealtyTests
     {
-        private static GameSession InShop(long cash = 2000000, int day = 150)
+        private static GameSession NoShop(long cash = 10000)
         {
-            GameSession s = GameSessionTests.Make(cash);
-            GameSessionTests.Teleport(s, "pc");
-            s.Clock.Restore(new GameDate(day), 10 * 60);
+            CityLayout city = CityLayout.FromData(GameSessionTests.Layout());
+            var s = new GameSession(city, 7, Money.FromYuan(cash), GameTimestamp.From(new GameDate(0), 8 * 60), true, true, false);
+            PackTests.EmptyBag(s);
             return s;
         }
 
-        [Test]
-        public void Medium_NeedsDay_Reputation_AndMoney()
+        private static void CrossInto(GameSession s, int day)
         {
-            ShopExpansionDef med = ShopExpansions.Get(ShopSize.Medium);
-
-            GameSession early = InShop(day: 10);
-            early.PlayerShop.Reputation = 50;
-            StringAssert.Contains("天", early.ExpansionBlocker(med));
-
-            GameSession unknown = InShop();
-            unknown.PlayerShop.Reputation = 5;
-            StringAssert.Contains("知名度", unknown.ExpansionBlocker(med));
-
-            GameSession poor = InShop(1000);
-            poor.PlayerShop.Reputation = 50;
-            Assert.AreEqual("钱不够", poor.ExpansionBlocker(med));
-
-            GameSession ok = InShop();
-            ok.PlayerShop.Reputation = 50;
-            Assert.IsNull(ok.ExpansionBlocker(med));
+            s.Clock.Restore(new GameDate(day - 1), 23 * 60 + 30);
+            s.AdvanceClock(60);
         }
 
         [Test]
-        public void Large_NeedsMediumFirst()
+        public void NewGame_HasNoShop_StarterUnitListed()
         {
-            GameSession s = InShop(day: 500);
+            GameSession s = NoShop();
+            Assert.IsFalse(s.HasShop);
+            Assert.AreEqual(0, s.CurrentShopRent.Cents);
+            Assert.IsTrue(s.PlayerShop.Stock.IsEmpty, "没店就没有开局货");
+            Assert.IsTrue(s.IsVacant(s.PlayerShopPlace));
+            Assert.AreEqual(GameSession.VacantTitle, s.PlaceTitle(s.PlayerShopPlace));
+            ShopListing l = s.Listings.Single(x => x.PlaceId == "pc");
+            Assert.AreEqual(GameSession.ShopRent.Cents, l.Rent.Cents);
+            Assert.LessOrEqual(l.OpenDay, 0);
+
+            GameSessionTests.Teleport(s, "pc");
+            Assert.IsFalse(s.InPlayerShop, "空铺进去不是自己的店");
+            Assert.IsFalse(s.PlayerShop.IsOpen);
+            Assert.IsFalse(s.CourierToShop(true), "没店叫车只能送家里");
+        }
+
+        [Test]
+        public void SignLease_AtAgency_PaysRentDepositAndFee()
+        {
+            GameSession s = NoShop();
+            GameSessionTests.Teleport(s, "pc");
+            Assert.IsFalse(s.SignLease("pc"), "不在中介签不了");
+
+            GameSessionTests.Teleport(s, "agency");
+            Assert.IsTrue(s.SignLease("pc"));
+            Assert.IsTrue(s.HasShop);
+            Assert.AreEqual(10000 - 1500 * 3, s.Ledger.Balance.Yuan, "首月 + 押金 + 中介费");
+            Assert.AreEqual(1500, s.Lease.Deposit.Yuan);
+            Assert.AreEqual(s.Ledger.Balance.Yuan + 1500, s.NetWorth().Yuan, "押金算进身家");
+            Assert.AreEqual(GameSession.MyShopName, s.PlaceTitle(s.PlayerShopPlace));
+            Assert.IsFalse(s.Listings.Any(x => x.PlaceId == "pc"));
+
+            GameSessionTests.Teleport(s, "pc");
+            Assert.IsTrue(s.InPlayerShop);
+            Assert.IsTrue(s.PlayerShop.IsOpen);
+        }
+
+        [Test]
+        public void UpcomingListing_OpensOnDay_ThenExpires()
+        {
+            GameSession s = NoShop(200000);
             s.PlayerShop.Reputation = 80;
-            Assert.IsFalse(s.BuyExpansion(ShopSize.Large));
-            Assert.IsTrue(s.BuyExpansion(ShopSize.Medium));
-            Assert.IsTrue(s.BuyExpansion(ShopSize.Large));
-            Assert.AreEqual(ShopSize.Large, s.PlayerShop.Size);
+            s.DebugAddListing("tea", 5, 10, Money.FromYuan(9000));
+            Place tea = s.City.GetPlace("tea");
+            GameSessionTests.Teleport(s, "agency");
+            StringAssert.Contains("还没搬走", s.LeaseBlocker(s.Listings.Single(x => x.PlaceId == "tea")));
+            Assert.IsFalse(s.IsVacant(tea));
+
+            CrossInto(s, 5);
+            Assert.IsTrue(s.IsVacant(tea), "到期那天空出来");
+            Assert.IsNull(s.LeaseBlocker(s.Listings.Single(x => x.PlaceId == "tea")));
+
+            CrossInto(s, 11);
+            Assert.IsFalse(s.Listings.Any(x => x.PlaceId == "tea"), "过了挂牌期被别人租走");
+            Assert.IsFalse(s.IsVacant(tea));
         }
 
         [Test]
-        public void Buying_ChangesCapacityTrafficAndRent()
+        public void BigShop_NeedsReputation()
         {
-            GameSession s = InShop();
-            s.PlayerShop.Reputation = 50;
+            GameSession s = GameSessionTests.Make(200000);
+            ShopListing l = s.DebugAddListing("tea", 0, 30);
+            s.PlayerShop.Reputation = 10;
+            StringAssert.Contains("知名度", s.LeaseBlocker(l));
+            s.PlayerShop.Reputation = 80;
+            Assert.IsNull(s.LeaseBlocker(l));
+        }
+
+        [Test]
+        public void Moving_ChangesPlaceSizeTrafficAndRent()
+        {
+            GameSession s = GameSessionTests.Make(200000);
+            s.PlayerShop.Reputation = 80;
+            s.Clock.Restore(new GameDate(150), 10 * 60);
             double rate = s.PlayerShop.ArrivalRatePerMinute(GameTimestamp.From(new GameDate(150), 12 * 60));
-            Money cash = s.Ledger.Balance;
+            double lf = s.PlayerShop.LocationFactor;
+            ShopListing l = s.DebugAddListing("tea", 0, 200, Money.FromYuan(20000));
             ShopSize announced = ShopSize.Small;
             s.ShopExpanded += z => announced = z;
+            Money cash = s.Ledger.Balance;
+            Money cost = s.LeaseCost(l);
 
-            Assert.IsTrue(s.BuyExpansion(ShopSize.Medium));
-            Assert.AreEqual(ShopSize.Medium, announced);
-            Assert.AreEqual((cash - ShopExpansions.Get(ShopSize.Medium).Price).Cents, s.Ledger.Balance.Cents);
-            Assert.AreEqual(ShopSettings.Capacity(ShopSize.Medium), s.PlayerShop.Stock.Capacity, 1e-9);
-            Assert.AreEqual(ShopExpansions.Get(ShopSize.Medium).MonthlyRent.Cents, s.CurrentShopRent.Cents);
-            double after = s.PlayerShop.ArrivalRatePerMinute(GameTimestamp.From(new GameDate(150), 12 * 60));
-            Assert.AreEqual(1.6, after / rate, 1e-6);
+            GameSessionTests.Teleport(s, "agency");
+            Assert.IsTrue(s.SignLease("tea"));
+            Assert.AreEqual(ShopSize.Large, announced);
+            Assert.AreEqual("tea", s.PlayerShopPlace.Id);
+            Assert.AreEqual(ShopSize.Large, s.PlayerShop.Size);
+            Assert.AreEqual((cash - cost).Cents, s.Ledger.Balance.Cents);
+            Assert.AreEqual(20000 * 3 + 800, cost.Yuan, "首月 + 押金 + 中介费 + 搬家费（旧店没押金）");
+            Assert.AreEqual(20000, s.CurrentShopRent.Yuan);
+            Assert.AreEqual(ShopSettings.Capacity(ShopSize.Large), s.PlayerShop.Stock.Capacity, 1e-9);
+            Assert.Greater(s.PlayerShop.LocationFactor, lf, "离地铁更近");
+            Assert.Greater(s.PlayerShop.ArrivalRatePerMinute(GameTimestamp.From(new GameDate(150), 12 * 60)), rate);
+            Assert.IsTrue(s.IsVacant(s.City.GetPlace("pc")), "旧铺子空出来了");
+            Assert.IsFalse(s.PlayerShop.Stock.IsEmpty, "货跟着搬过去");
         }
 
         [Test]
-        public void MustBeInShop()
+        public void SaveLoad_KeepsLeaseListingsAndNoShopState()
         {
-            GameSession s = GameSessionTests.Make(2000000);
-            s.Clock.Restore(new GameDate(150), 10 * 60);
-            s.PlayerShop.Reputation = 50;
-            Assert.IsFalse(s.BuyExpansion(ShopSize.Medium));
+            GameSession a = NoShop();
+            a.DebugAddListing("tea", 40, 80, Money.FromYuan(7000));
+            GameSession la = GameSession.Load(a.City, a.CreateSave());
+            Assert.IsFalse(la.HasShop);
+            Assert.IsTrue(la.Listings.Any(x => x.PlaceId == "pc"));
+            Assert.AreEqual(7000, la.Listings.Single(x => x.PlaceId == "tea").Rent.Yuan);
+
+            GameSessionTests.Teleport(a, "agency");
+            a.SignLease("pc");
+            GameSession lb = GameSession.Load(a.City, a.CreateSave());
+            Assert.IsTrue(lb.HasShop);
+            Assert.AreEqual("pc", lb.PlayerShopPlace.Id);
+            Assert.AreEqual(a.Lease.Deposit.Cents, lb.Lease.Deposit.Cents);
+            Assert.AreEqual(a.CurrentShopRent.Cents, lb.CurrentShopRent.Cents);
         }
 
         [Test]
-        public void SaveLoad_KeepsSizeAndRent()
+        public void OldSave_WithoutLease_KeepsTheShop()
         {
-            GameSession s = InShop();
-            s.PlayerShop.Reputation = 50;
-            s.BuyExpansion(ShopSize.Medium);
-            s.BuyUpgrade(ShopUpgrades.Shelf1);
-            GameSession loaded = GameSession.Load(s.City, s.CreateSave());
-            Assert.AreEqual(ShopSize.Medium, loaded.PlayerShop.Size);
-            Assert.AreEqual(s.PlayerShop.Stock.Capacity, loaded.PlayerShop.Stock.Capacity, 1e-9);
-            Assert.AreEqual(s.CurrentShopRent.Cents, loaded.CurrentShopRent.Cents);
+            GameSession s = GameSessionTests.Make();
+            SaveData d = s.CreateSave();
+            d.shopState = 0;
+            d.listings = null;
+            d.vacantPlaces = null;
+            GameSession l = GameSession.Load(s.City, d);
+            Assert.IsTrue(l.HasShop);
+            Assert.AreEqual(GameSession.ShopRent.Cents, l.CurrentShopRent.Cents);
+        }
+
+        [Test]
+        public void DebugRentStarterShop_RecreatesOldStart()
+        {
+            GameSession s = NoShop();
+            Assert.IsTrue(s.DebugRentStarterShop());
+            Assert.IsTrue(s.HasShop);
+            Assert.AreEqual("pc", s.PlayerShopPlace.Id);
+            Assert.IsFalse(s.PlayerShop.Stock.IsEmpty, "送开局货");
+            Assert.AreEqual(10000 - 4500, s.Ledger.Balance.Yuan);
+            Assert.IsFalse(s.DebugRentStarterShop(), "有店了不能再用");
         }
     }
 

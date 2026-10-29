@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Time;
 
@@ -99,7 +99,7 @@ namespace PCShopSell.Core.Session
         {
             Trip = null;
             ClearEdge();
-            if (CurrentPlace == PlayerShopPlace) PlayerShop.PlayerPresent = false;
+            if (InPlayerShop) PlayerShop.PlayerPresent = false;
             PlayerNodeId = Home.NodeId;
             CurrentPlace = Home;
         }

@@ -20,7 +20,7 @@ namespace PCShopSell.Game
     public sealed partial class GameController : MonoBehaviour
     {
         public const ulong DefaultSeed = 20261028;
-        public static readonly Money StartingCash = Money.FromYuan(5000);
+        public static readonly Money StartingCash = Money.FromYuan(10000);
 
         public GameSession Session { get; private set; }
         public CityLayout City { get; private set; }
@@ -88,7 +88,7 @@ namespace PCShopSell.Game
 
         private GameSession NewSession() =>
             new GameSession(City, DefaultSeed + (ulong)DateTime.Now.Ticks % 100000, StartingCash,
-                GameTimestamp.From(new GameDate(0), GameSession.WakeUpMinute), true, false);
+                GameTimestamp.From(new GameDate(0), GameSession.WakeUpMinute), true, false, false);
 
         private void StartSession(GameSession s)
         {
@@ -131,6 +131,7 @@ namespace PCShopSell.Game
                 Vector3 door = World.Places[s.PlayerShopPlace.Id].Entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZ - 0.3f);
                 _crowd = new CrowdView(_actors, -95, 100, door, 34);
             }
+            SyncCrowdDoor();
 
             _wasRoomKind = RoomKind;
             SnapCamera();
@@ -592,17 +593,25 @@ namespace PCShopSell.Game
         private void OnEventRaised(EventDef def) => Ui.ShowEvent(def);
 
         /// <summary>店内场景按店面大小重建（扩建、读档时用）。</summary>
-        private void EnsureInterior(PCShopSell.Core.Shop.ShopSize size)
+        private void EnsureInterior(PCShopSell.Core.Shop.ShopSize size, bool rebuild = false)
         {
-            if (Interior != null && Interior.Size == size) return;
+            if (!rebuild && Interior != null && Interior.Size == size) return;
             Interior?.Destroy();
             Interior = new ShopInteriorView(_actors, size);
         }
 
+        /// <summary>签了新铺子（搬店）：店内场景按新铺面重建，街上顾客改往新店门走。</summary>
         private void OnShopExpanded(PCShopSell.Core.Shop.ShopSize size)
         {
-            EnsureInterior(size);
+            EnsureInterior(size, true);
+            SyncCrowdDoor();
             SnapCamera();
+        }
+
+        private void SyncCrowdDoor()
+        {
+            if (_crowd != null && World.Places.TryGetValue(Session.PlayerShopPlace.Id, out PlaceVisual pv))
+                _crowd.ShopDoor = pv.Entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZ - 0.3f);
         }
 
         /// <summary>切换场景时重设镜头：店内比较近、跟着老板，街上拉远。</summary>

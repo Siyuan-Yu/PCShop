@@ -41,7 +41,8 @@ namespace PCShopSell.Core.Session
         public CityLayout City { get; }
         public TimeController Time { get; }
         public ShopSimulation PlayerShop { get; }
-        public Place PlayerShopPlace { get; }
+        /// <summary>玩家的店所在的铺面（还没租时是开局那间街尾空铺）。在房产中介签了别的铺子就换成那间。</summary>
+        public Place PlayerShopPlace { get; private set; }
         public Place Home { get; }
         public PoliceSystem Police { get; }
         public Online1788 Online { get; }
@@ -77,7 +78,9 @@ namespace PCShopSell.Core.Session
         private bool _pendingFaint;
         private bool _pendingHospital;
 
-        public GameSession(CityLayout city, ulong seed, Money openingCash, GameTimestamp start, bool starterStock = true, bool smartphone = true)
+        /// <param name="startWithShop">假 = 新游戏：还没有店，要先去房产中介租铺子（starterStock 此时无效）。</param>
+        public GameSession(CityLayout city, ulong seed, Money openingCash, GameTimestamp start, bool starterStock = true, bool smartphone = true,
+            bool startWithShop = true)
         {
             City = city ?? throw new ArgumentNullException(nameof(city));
             PlayerShopPlace = city.PlayerShop() ?? throw new ArgumentException("布局里没有玩家的店。", nameof(city));
@@ -98,19 +101,27 @@ namespace PCShopSell.Core.Session
                 LocationFactor = ComputeLocationFactor(city, PlayerShopPlace),
                 EmployeeOnDuty = IsEmployeeOnDuty,
             };
-            PlayerShop.DayClosed += r => Notice?.Invoke(DayReportText(r));
+            PlayerShop.DayClosed += r =>
+            {
+                if (HasShop) Notice?.Invoke(DayReportText(r));
+            };
             PlayerShop.CustomerLeft += OnShopCustomerLeft;
             PlayerShop.OrderPlaced += o => Notice?.Invoke($"新装机订单：{PartCatalog.TierName(o.Tier)}整机 {o.Price}，两天内交付。");
             PlayerShop.OrderExpired += o => Popup?.Invoke("订单取消", $"{PartCatalog.TierName(o.Tier)}整机订单超时，顾客取消了订单，知名度下降。");
 
             _basePatience = PlayerShop.Settings.PatienceMinutes;
 
-            if (starterStock)
+            _realtyRng = new GameRandom(seed ^ 0x5EA1E57A7EUL);
+            if (startWithShop)
             {
-                PlayerShop.Stock.ForceAdd(PartCatalog.Get("ram0"), true, 3);
-                PlayerShop.Stock.ForceAdd(PartCatalog.Get("ssd0"), true, 3);
-                PlayerShop.Stock.ForceAdd(PartCatalog.Get("cpu0"), true, 1);
+                Lease = new ShopLease { PlaceId = PlayerShopPlace.Id, Rent = ShopRent, Deposit = Money.Zero, StartDay = start.Date.TotalDays };
+                if (starterStock) AddStarterStock();
             }
+            else
+            {
+                _vacant.Add(PlayerShopPlace.Id);
+            }
+            SeedListings(start.Date.TotalDays);
 
             Backpack.Food.Packed.Add(new FoodBatch { Id = "rice", Name = "白米饭", Hunger = Pantry.BaseBowlHunger, Count = StartLunchboxes, ExpireDay = start.Date.TotalDays + 1 });
             ApplyCargoLimit();
@@ -127,7 +138,7 @@ namespace PCShopSell.Core.Session
         /// <summary>玩家的画面坐标。</summary>
         public MapPoint PlayerPosition => Trip != null ? Trip.Position : OffNode ? _free.Value : City.ViewPosition(PlayerNodeId);
 
-        public bool InPlayerShop => CurrentPlace == PlayerShopPlace;
+        public bool InPlayerShop => Lease != null && CurrentPlace == PlayerShopPlace;
 
         /// <summary>按真实时间推进世界：出行中按路程推进时钟，否则按倍速推进。返回推进的整分钟数。</summary>
         public int Tick(double realSeconds)
@@ -179,7 +190,7 @@ namespace PCShopSell.Core.Session
                 throw new InvalidOperationException($"玩家不在 {place.Name} 门口。");
             CurrentPlace = place;
             CourierDest = null;
-            if (place == PlayerShopPlace)
+            if (InPlayerShop)
             {
                 PlayerShop.PlayerPresent = true;
             }
@@ -201,7 +212,7 @@ namespace PCShopSell.Core.Session
                 Fail(blocker);
                 return;
             }
-            if (CurrentPlace == PlayerShopPlace) PlayerShop.PlayerPresent = false;
+            if (InPlayerShop) PlayerShop.PlayerPresent = false;
             CurrentPlace = null;
             _mallCart.Clear();
             CloseCourierRuns();
@@ -243,7 +254,8 @@ namespace PCShopSell.Core.Session
             return Money.FromYuan((long)Math.Round(sum * 0.9));
         }
 
-        public Money NetWorth() => Ledger.Balance + InventoryValue();
+        /// <summary>身家：现金 + 库存九折 + 铺子押金（退租能拿回来）。</summary>
+        public Money NetWorth() => Ledger.Balance + InventoryValue() + (Lease?.Deposit ?? Money.Zero);
 
         public void Dispose()
         {
@@ -326,10 +338,11 @@ namespace PCShopSell.Core.Session
             if (today.IsMonthStart)
             {
                 if (HomeUtilities.IsPositive) Ledger.ForceDebit(today, "水电", HomeUtilities, "住处水电");
-                Ledger.ForceDebit(today, "房租", CurrentShopRent, "店铺月租");
+                if (HasShop) Ledger.ForceDebit(today, "房租", CurrentShopRent, "店铺月租");
                 Ledger.ForceDebit(today, "房租", HomeRent, "城中村月租");
-                Popup?.Invoke("交房租", $"店铺 {CurrentShopRent} + 出租屋 {HomeRent} 已扣款。");
+                Popup?.Invoke("交房租", HasShop ? $"店铺 {CurrentShopRent} + 出租屋 {HomeRent} 已扣款。" : $"出租屋 {HomeRent} 已扣款。（还没租铺子）");
             }
+            OnRealtyDay(today.TotalDays);
 
             if (today.TotalDays == 4 && Online.Discover("s_zhou"))
             {

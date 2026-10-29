@@ -105,7 +105,7 @@ namespace PCShopSell.Core.Session
         /// <summary>每天 9:00：库存（含在途）低于目标的 40% 就用手机在 1788 补到目标，次日 10:00 到。</summary>
         public void RunAutoRestock()
         {
-            if (_restock.Count == 0 || IsGameOver) return;
+            if (_restock.Count == 0 || IsGameOver || !HasShop) return;
             List<(PartDef part, int count)> needs = RestockNeeds();
             if (needs.Count == 0) return;
 
