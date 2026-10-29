@@ -80,6 +80,17 @@ namespace PCShopSell.Game.Runtime
         /// <summary>最近互动点头顶的世界坐标（给"可以交互"提示用）。</summary>
         public Vector3 NearbyWorld { get; private set; }
 
+        /// <summary>电饭锅头顶的世界坐标；屋里没有电饭锅则为空。</summary>
+        public Vector3? CookerWorld
+        {
+            get
+            {
+                foreach (Spot sp in _spots)
+                    if (sp.Id == Cooker) return Origin + new Vector3(sp.Area.center.x, sp.Height + 0.35f, sp.Area.center.y);
+                return null;
+            }
+        }
+
         public RoomFurniture Furniture => _furniture;
         public Transform Root => _root;
         public Vector3 Center => Origin + new Vector3(Width / 2, 0, Depth / 2);
@@ -337,6 +348,7 @@ namespace PCShopSell.Game.Runtime
                 label = "坐下";
             }
             if (best == Repair && s.RepairmanAtWork != null) label = "师傅正在修…";
+            if (best == Cooker && s.Pantry.CookedBowls > 0) label = "饭好了：取饭 / 装饭盒";
             if (best == Door && s.LeaveBlocker != null) label = "师傅在修东西，暂时不能出门";
             NearbyId = best;
             NearbyLabel = label;

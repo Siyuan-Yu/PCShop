@@ -24,7 +24,6 @@ namespace PCShopSell.Core.Session
 
     public sealed partial class GameSession
     {
-        public static readonly Money MealPrice = Money.FromYuan(15);
         public static readonly Money HospitalPerDay = Money.FromYuan(200);
         public const int HospitalDays = 2;
 
@@ -39,7 +38,6 @@ namespace PCShopSell.Core.Session
             if (!IsSleepTime) return Fail("白天睡不着，可以小睡一会儿。");
             int minutes = Clock.MinutesUntil(WakeUpMinute);
             SleepFor(minutes);
-            EatMeal("早饭");
             double hours = minutes / 60.0;
             Say($"睡了 {hours:0.#} 小时。" + (Player.SleepDebt > 0.5 ? $"还欠 {Player.SleepDebt:0.#} 小时觉，精力上限降低。" : ""));
             return true;

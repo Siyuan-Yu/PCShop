@@ -4,6 +4,7 @@ using NUnit.Framework;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
@@ -21,7 +22,16 @@ namespace PCShopSell.Tests
             places.Add(new LayoutPlaceData { id = "tobacco", name = "烟酒茶行", kind = "shop", node = "dl", size = "small", business = Gifts.TobaccoBusiness });
             places.Add(new LayoutPlaceData { id = "phone", name = "手机店", kind = "shop", node = "st2", size = "small", business = GameSession.PhoneBusiness });
             data.places = places.ToArray();
-            return new GameSession(CityLayout.FromData(data), 7, Money.FromYuan(cash), GameTimestamp.From(new GameDate(0), 9 * 60), true, phone);
+            var s = new GameSession(CityLayout.FromData(data), 7, Money.FromYuan(cash), GameTimestamp.From(new GameDate(0), 9 * 60), true, phone);
+            EmptyBag(s);
+            return s;
+        }
+
+        /// <summary>倒掉开局带的饭盒，好按整数算负重。</summary>
+        public static void EmptyBag(GameSession s)
+        {
+            s.Backpack.Food.Packed.Clear();
+            s.ApplyCargoLimit();
         }
 
         [Test]
@@ -47,8 +57,65 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.TakeFromBox(Gifts.Cig));
             Assert.AreEqual(1, s.Backpack.GiftCount(Gifts.Cig), "拿回背包一份");
             GameSessionTests.Teleport(s, "pc");
-            Assert.IsFalse(s.TakeFromBox(Gifts.Drink), "不在家不能用纸箱");
-            Assert.IsFalse(s.StoreInBox(Gifts.Drink), "不在家不能用纸箱");
+            Assert.IsFalse(s.TakeFromBox(Gifts.Drink), "店里拿的是储物柜，家里纸箱的东西拿不到");
+            Assert.IsTrue(s.StoreInBox(Gifts.Cig), "店里能放进储物柜");
+            Assert.AreEqual(1, s.ShopLocker.GiftCount(Gifts.Cig));
+            Assert.AreEqual(3, s.HomeBoxCount(Gifts.Drink), "家里纸箱不受影响");
+        }
+
+        [Test]
+        public void ShopLocker_And_CourierDest_SurviveSave()
+        {
+            GameSession s = Make();
+            GameSessionTests.Teleport(s, "pc");
+            s.Backpack.AddGift(Gifts.Cig, 2);
+            Assert.IsTrue(s.StoreInBox(Gifts.Cig, 2), "店里放进储物柜");
+            Assert.AreEqual(2, s.ShopLocker.GiftCount(Gifts.Cig));
+            Assert.AreEqual(0, s.HomeBoxCount(Gifts.Cig));
+            Assert.IsFalse(s.CourierToShop(false), "没选时按这家店的默认");
+            s.CourierDest = true;
+            Assert.IsTrue(s.CourierToShop(false), "选了送店里就送店里");
+
+            GameSession l = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));
+            Assert.AreEqual(2, l.ShopLocker.GiftCount(Gifts.Cig), "储物柜存档后还在");
+        }
+
+        [Test]
+        public void HomeBox_HoldsAnything_OnlyWeightLimit()
+        {
+            GameSession s = Make();
+            GameSessionTests.Teleport(s, "flat");
+            PartDef ram = PartCatalog.Get("ram0");
+            s.Cargo.ForceAdd(ram, true, 2);
+            s.Backpack.Food.RiceJin = 4;
+            s.Backpack.Food.AddIngredient("egg", 3, s.Clock.Today.TotalDays);
+            s.Backpack.Food.Packed.Add(new FoodBatch { Id = "rice", Name = "白米饭", Hunger = 22, Count = 2, ExpireDay = s.Clock.Today.TotalDays + 1 });
+            s.Backpack.AddFurniture("plant", 1);
+            s.ApplyCargoLimit();
+
+            Assert.IsTrue(s.StoreInBox("part:ram0:b", 2), "配件也能放");
+            Assert.IsTrue(s.StoreInBox("rice", 4), "米按斤放");
+            Assert.IsTrue(s.StoreInBox("ing:egg", 3));
+            Assert.IsTrue(s.StoreInBox("lunch", 2), "饭盒也能放");
+            Assert.IsTrue(s.StoreInBox("furn:plant"), "小家具也能放");
+            Assert.IsTrue(s.Backpack.IsEmpty && s.Cargo.IsEmpty, "背包清空了");
+            double kg = 2 * Stock.SpaceOf(ram, true, 1) * Backpack.KgPerSpace + 4 * Backpack.RiceKgPerJin + 3 * Backpack.IngredientKg("egg") + 2 * Backpack.LunchboxKg + FurnitureCatalog.Get("plant").WeightKg;
+            Assert.AreEqual(kg, s.HomeBoxKg, 1e-9);
+
+            s.Backpack.AddFurniture("desk", 1);
+            Assert.IsFalse(s.StoreInBox("furn:desk"), "25 公斤的书桌超过纸箱上限");
+            s.Backpack.TakeFurniture("desk", 1);
+            s.ApplyCargoLimit();
+
+            GameSession l = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));
+            Assert.AreEqual(kg, l.HomeBoxKg, 1e-9, "纸箱里的东西存档后都在");
+            Assert.AreEqual(2, l.HomeBoxParts.Count(ram, true));
+            Assert.AreEqual(2, l.HomeBox.Lunchboxes);
+
+            Assert.IsTrue(s.TakeFromBox("lunch"));
+            Assert.AreEqual(1, s.Backpack.Lunchboxes, "饭盒拿回背包");
+            Assert.IsTrue(s.TakeFromBox("part:ram0:b", 2));
+            Assert.AreEqual(2, s.Cargo.Count(ram, true));
         }
 
         [Test]

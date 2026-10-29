@@ -67,6 +67,7 @@ namespace PCShopSell.Core.Session
                     dueAt = o.DueAt.TotalMinutes,
                 }).ToArray(),
                 nextOrderId = PlayerShop.NextOrderId,
+                displayPcs = PlayerShop.DisplayPcs.Concat(PlayerShop.Queue.Where(c => c.DisplayTier >= 0).Select(c => c.DisplayTier)).ToArray(),
 
                 discoveredStores = Online.DiscoveredIds.ToArray(),
                 storeRecords = Online.Records.Select(kv => new SaveStoreRecord
@@ -150,6 +151,7 @@ namespace PCShopSell.Core.Session
             PlayerShop.RestoreOrders((d.orders ?? Array.Empty<SaveOrder>()).Select(o =>
                 new BuildOrder(o.id, o.tier, Money.FromCents(o.priceCents), new GameTimestamp(o.placedAt), new GameTimestamp(o.dueAt))),
                 d.nextOrderId);
+            PlayerShop.RestoreDisplay(d.displayPcs);
             PlayerShop.PlayerPresent = CurrentPlace == PlayerShopPlace;
 
             Online.Restore(d.discoveredStores ?? Array.Empty<string>(),

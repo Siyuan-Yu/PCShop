@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.World;
@@ -334,14 +335,10 @@ namespace PCShopSell.Game.UI
                 });
                 list.Add(new TalkOpt
                 {
-                    Label = "请他喝杯饮料（¥" + StaffTalk.GiftCostYuan + "）",
+                    Label = "送他点东西（从背包里挑）",
                     Blocker = S.StaffGiftBlocker(staff.Id),
                     Hot = true,
-                    Act = () =>
-                    {
-                        if (S.GiveStaffGift(staff)) ctx.Reply = staff.Name + "接过饮料笑了：“哎呀，太客气了。”";
-                        ctx.W.Rebuild();
-                    },
+                    Act = () => OpenStaffGiftPicker(staff, ctx),
                 });
                 list.Add(new TalkOpt
                 {
@@ -372,6 +369,30 @@ namespace PCShopSell.Game.UI
                 list.Add(new TalkOpt { Label = "看看货", Hot = true, Act = () => ctx.W.Close() });
                 return list;
             }, null, staff.Id);
+        }
+
+        /// <summary>从背包里挑一份礼品送给店员（一瓶饮料就够意思，贵的东西涨得多）。</summary>
+        private void OpenStaffGiftPicker(StaffDef staff, TalkCtx ctx)
+        {
+            var lines = S.Backpack.GiftLines.ToList();
+            OpenWindow("送" + staff.Name + "点什么", 520, 150 + 50 * lines.Count, w =>
+            {
+                Ui.Size(Ui.Label(w.Content, "背包里的东西（三天送一次）：", 16, TextAnchor.MiddleLeft, Ui.Dim), -1, 28);
+                foreach (var kv in S.Backpack.GiftLines.ToList())
+                {
+                    GiftDef g = Gifts.Get(kv.Key);
+                    if (g == null) continue;
+                    string id = kv.Key;
+                    Ui.Size(Ui.Button(w.Content, $"{g.Name} ×{kv.Value}   （熟络 +{GameSession.StaffGiftGain(g):0.#}）", () =>
+                    {
+                        if (S.GiveStaffGift(staff, id)) ctx.Reply = g.Id == Gifts.Soda || g.Id == Gifts.Drink
+                            ? staff.Name + "接过饮料笑了：“哎呀，太客气了。”"
+                            : staff.Name + "接过「" + g.Name + "」愣了一下：“这么破费干嘛……谢了啊。”";
+                        w.Close();
+                        ctx.W.Rebuild();
+                    }, 17), -1, 42);
+                }
+            });
         }
 
         /// <summary>和某个有交情的人交谈（档口老板、阿杰、熟人）。stall 不为空表示正在这个档口里，可以砍价；parent 是背后的窗口，操作后要刷新。</summary>

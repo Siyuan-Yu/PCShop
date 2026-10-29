@@ -11,14 +11,16 @@ namespace PCShopSell.Tests
     /// <summary>出租屋的家具、网购、家具城、做饭吃饭、店里装修。</summary>
     public class HomeTests
     {
-        internal static GameSession Make(long cash = 20000, int minute = 8 * 60)
+        internal static GameSession Make(long cash = 20000, int minute = 8 * 60, bool emptyBag = true)
         {
             CityLayoutData data = GameSessionTests.Layout();
             var places = data.places.ToList();
             places.Add(new LayoutPlaceData { id = "mall", name = "家具城", kind = "shop", node = "dl", size = "large", business = MallBiz });
             places.Add(new LayoutPlaceData { id = "farm", name = "农贸市场", kind = "shop", node = "st2", size = "small", business = FarmBiz });
             data.places = places.ToArray();
-            return new GameSession(CityLayout.FromData(data), 7, Money.FromYuan(cash), GameTimestamp.From(new GameDate(0), minute));
+            var s = new GameSession(CityLayout.FromData(data), 7, Money.FromYuan(cash), GameTimestamp.From(new GameDate(0), minute));
+            if (emptyBag) PackTests.EmptyBag(s);
+            return s;
         }
 
         private const string MallBiz = GameSession.MallBusiness;
@@ -121,6 +123,8 @@ namespace PCShopSell.Tests
             Assert.AreEqual(0, s.FurnitureInStock("plant"), "还背在身上，没到家");
             Assert.AreEqual(1, s.Backpack.FurnitureCount("plant"));
             GameSessionTests.Teleport(s, "flat");
+            Assert.AreEqual(1, s.Backpack.FurnitureCount("plant"), "到家也还在背包里");
+            Assert.IsTrue(s.UnloadBackpack());
             Assert.AreEqual(1, s.FurnitureInStock("plant"));
             Assert.AreEqual(0, s.Backpack.FurnitureCount("plant"));
             Assert.IsFalse(s.BuyFurnitureAtMall("bed_board"), "起始家具不卖");
@@ -479,12 +483,13 @@ namespace PCShopSell.Tests
             Assert.Greater(s.Player.Hunger, 30);
 
             Assert.IsTrue(s.PackLunch(2));
-            Assert.AreEqual(2, s.Pantry.PackedBowls);
+            Assert.AreEqual(2, s.Backpack.Lunchboxes);
             Assert.AreEqual(1, s.Pantry.CookedBowls);
 
+            s.Player.Hunger = 100;
             WaitDays(s, s.Clock.Today.TotalDays + 2);
             Assert.AreEqual(0, s.Pantry.CookedBowls, "没冰箱，隔夜的饭坏了");
-            Assert.AreEqual(0, s.Pantry.PackedBowls);
+            Assert.AreEqual(0, s.Backpack.Lunchboxes);
         }
 
         [Test]
@@ -512,13 +517,113 @@ namespace PCShopSell.Tests
             Assert.AreEqual(Pantry.StartRiceJin, s.Pantry.RiceJin, 1e-9, "还在背包里，没到家");
             Assert.AreEqual(2.0, s.Backpack.Food.RiceJin, 1e-9);
             GameSessionTests.Teleport(s, "flat");
-            Assert.AreEqual(Pantry.StartRiceJin + 2, s.Pantry.RiceJin, 1e-9, "回家放进厨房");
+            Assert.AreEqual(2.0, s.Backpack.Food.RiceJin, 1e-9, "回家也不会自己消失");
+            Assert.IsTrue(s.UnloadBackpack());
+            Assert.AreEqual(Pantry.StartRiceJin + 2, s.Pantry.RiceJin, 1e-9, "打开背包一键放进厨房");
             Assert.AreEqual(0.0, s.Backpack.Food.RiceJin, 1e-9);
             Assert.IsTrue(s.CookRice(1, "egg"));
             WaitMinutes(s, Pantry.CookMinutes);
             Assert.AreEqual(1, s.Pantry.IngredientCount("egg"));
             Assert.Greater(s.Pantry.Cooked.Last().Hunger, Pantry.BaseBowlHunger);
             Assert.AreEqual("鸡蛋焖饭", s.Pantry.Cooked.Last().Name);
+        }
+
+        [Test]
+        public void Courier_SendsFarmShoppingHome_OneFeePerVisit()
+        {
+            GameSession s = Make(2000);
+            GameSessionTests.Teleport(s, "farm");
+            Assert.IsFalse(s.UnloadBackpack(), "不在自己的地盘不能放下");
+            s.SendByCourier = true;
+            (Money fee, int minutes) = s.CourierQuote(false);
+            Money before = s.Ledger.Balance;
+            Assert.IsTrue(s.BuyRice(20));
+            Money rice = Pantry.RicePricePerJin.Scale(20);
+            Assert.AreEqual(rice + fee, before - s.Ledger.Balance, "第一样连运费");
+            Assert.IsTrue(s.BuyIngredient("egg", 3));
+            Assert.AreEqual(rice + fee + Ingredients.Get("egg").Price * 3, before - s.Ledger.Balance, "同一车不再收运费");
+            Assert.AreEqual(0.0, s.Backpack.Food.RiceJin, 1e-9, "叫车的不进背包");
+            Assert.AreEqual(1, s.Couriers.Count);
+            double rice0 = s.Pantry.RiceJin;
+            s.Leave();
+            WaitMinutes(s, minutes + 1);
+            Assert.AreEqual(0, s.Couriers.Count);
+            Assert.AreEqual(rice0 + 20, s.Pantry.RiceJin, 1e-9, "送进家里厨房");
+            Assert.AreEqual(3, s.Pantry.IngredientCount("egg"));
+        }
+
+        [Test]
+        public void Courier_CarFull_CallsNextCar_EachWithFee()
+        {
+            GameSession s = Make(20000);
+            GameSessionTests.Teleport(s, "mall");
+            s.SendByCourier = true;
+            Money fee = s.CourierQuote(false).fee;
+            Money price = FurnitureCatalog.Get("bed_good").Price;
+            Money before = s.Ledger.Balance;
+
+            Assert.IsTrue(s.BuyFurniture("bed_good"));
+            Assert.AreEqual(80, s.OpenCourierRun(false).LoadKg, 1e-9);
+            Assert.AreEqual(GameSession.CourierCapacityKg - 80, s.OpenCourierRun(false).FreeKg, 1e-9, "显示这辆还能装多少");
+            Assert.IsTrue(s.BuyFurniture("bed_good"));
+            Assert.AreEqual(1, s.CourierRunsHere(false), "第二张床还装得下");
+            Assert.AreEqual(price * 2 + fee, before - s.Ledger.Balance);
+            Assert.AreEqual(1, s.NewCarsNeeded(new CourierItem { Kind = CourierItemKind.Furniture, Id = "bed_good", Count = 1 }, false), "第三张装不下，要再叫一辆");
+
+            Assert.IsTrue(s.BuyFurniture("bed_good"));
+            Assert.AreEqual(2, s.CourierRunsHere(false), "装不下就叫第二辆");
+            Assert.AreEqual(80, s.OpenCourierRun(false).LoadKg, 1e-9, "新车从零开始装");
+            Assert.AreEqual(price * 3 + fee * 2, before - s.Ledger.Balance, "每辆车各收一次运费");
+            Assert.IsTrue(s.Couriers.All(r => r.LoadKg <= GameSession.CourierCapacityKg + 1e-9));
+
+            s.Leave();
+            WaitMinutes(s, s.CourierQuote(false).minutes + 30);
+            Assert.AreEqual(3, s.FurnitureInStock("bed_good"));
+            Assert.AreEqual(0, s.Couriers.Count);
+        }
+
+        [Test]
+        public void Courier_BigOrder_SplitsAcrossCars()
+        {
+            GameSession s = Make(20000);
+            GameSessionTests.Teleport(s, "farm");
+            s.SendByCourier = true;
+            Money fee = s.CourierQuote(false).fee;
+            Money before = s.Ledger.Balance;
+            double jin = GameSession.CourierCapacityKg / Backpack.RiceKgPerJin + 40;
+            Assert.IsTrue(s.BuyRice(jin));
+            Assert.AreEqual(2, s.Couriers.Count, "一车装不下的米分两车");
+            Assert.AreEqual(GameSession.CourierCapacityKg, s.Couriers[0].LoadKg, 1e-6);
+            Assert.AreEqual(Pantry.RicePricePerJin.Scale(jin) + fee * 2, before - s.Ledger.Balance);
+        }
+
+        [Test]
+        public void Mall_Backpack_OrCourierHome()
+        {
+            GameSession s = Make(20000);
+            GameSessionTests.Teleport(s, "mall");
+            Assert.IsFalse(s.BuyFurniture("sofa"), "背包装不下沙发");
+            Assert.IsTrue(s.BuyFurniture("plant"));
+            Assert.AreEqual(1, s.Backpack.FurnitureCount("plant"), "小件装进背包");
+            s.SendByCourier = true;
+            Assert.IsTrue(s.BuyFurniture("sofa"), "叫车就能买");
+            Assert.AreEqual(0, s.Backpack.FurnitureCount("sofa"));
+            Assert.AreEqual(1, s.Couriers.Count);
+        }
+
+        [Test]
+        public void Courier_SurvivesSave()
+        {
+            GameSession s = Make(2000);
+            GameSessionTests.Teleport(s, "farm");
+            s.SendByCourier = true;
+            Assert.IsTrue(s.BuyRice(5));
+            GameSession l = GameSession.Load(s.City, s.CreateSave());
+            Assert.AreEqual(1, l.Couriers.Count);
+            Assert.IsTrue(l.SendByCourier);
+            double rice0 = l.Pantry.RiceJin;
+            WaitMinutes(l, s.CourierQuote(false).minutes + 2);
+            Assert.AreEqual(rice0 + 5, l.Pantry.RiceJin, 1e-9);
         }
 
         [Test]
@@ -536,28 +641,55 @@ namespace PCShopSell.Tests
             GameSessionTests.Teleport(s, "flat");
             Assert.IsTrue(s.CookRice(1, null));
             WaitMinutes(s, Pantry.CookMinutes);
+            int start = s.Backpack.Lunchboxes;
             Assert.IsTrue(s.PackLunch(4));
+            Assert.AreEqual(start + 4, s.Backpack.Lunchboxes, "饭盒装进背包");
+            Assert.AreEqual(0, s.Pantry.PackedBowls);
             s.Leave();
             s.Player.Hunger = 20;
             Money before = s.Ledger.Balance;
             WaitMinutes(s, 12 * 60 - s.Clock.MinuteOfDay + 5);
             Assert.AreEqual(before, s.Ledger.Balance, "午饭吃的是饭盒，没花钱");
-            Assert.Less(s.Pantry.PackedBowls, 4);
+            Assert.Less(s.Backpack.Lunchboxes, start + 4);
+            Assert.Greater(s.Player.Hunger, 50);
+        }
+
+        [Test]
+        public void NoLunchbox_GoHungry_NoMoneySpent_TwoMealsADay()
+        {
+            GameSession s = Make(2000, 7 * 60);
+            s.Backpack.Food.Packed.Clear();
+            s.Player.Hunger = 80;
+            Money before = s.Ledger.Balance;
+            WaitMinutes(s, 60);
+            Assert.AreEqual(before, s.Ledger.Balance, "7:30 不再有早饭");
+            s.Player.Hunger = 20;
+            WaitMinutes(s, 12 * 60 - s.Clock.MinuteOfDay + 5);
+            Assert.AreEqual(before, s.Ledger.Balance, "没有饭盒也不会自动花钱买饭");
+            Assert.Less(s.Player.Hunger, 20.1, "没饭吃就饿着");
+        }
+
+        [Test]
+        public void Lunchboxes_ComeFromCooker_AndWeighOnBackpack()
+        {
+            GameSession s = Make(2000, 7 * 60, false);
+            Assert.AreEqual(GameSession.StartLunchboxes, s.Backpack.Lunchboxes, "开局带着两个饭盒");
+            double kg = s.CarriedKg;
+            GameSessionTests.Teleport(s, "flat");
+            Assert.IsTrue(s.CookRice(1, null));
+            WaitMinutes(s, Pantry.CookMinutes);
+            Assert.IsTrue(s.PackLunch(1));
+            Assert.AreEqual(kg + Backpack.LunchboxKg, s.CarriedKg, 1e-6);
+            s.Player.Hunger = 30;
+            Assert.IsTrue(s.EatLunchboxNow());
+            Assert.Greater(s.Player.Hunger, 30);
+            Assert.IsFalse(s.UnloadBackpack() && s.Backpack.Lunchboxes == 0, "放下东西时饭盒留在背包里");
+            Assert.AreEqual(GameSession.StartLunchboxes, s.Backpack.Lunchboxes);
         }
 
         private static void WaitMinutes(GameSession s, int minutes)
         {
             for (int i = 0; i < minutes; i++) s.AdvanceClock(1);
-        }
-
-        [Test]
-        public void OutsideMeal_StillWorks_WithoutFood()
-        {
-            GameSession s = Make(2000, 7 * 60);
-            s.Player.Hunger = 20;
-            Money before = s.Ledger.Balance;
-            WaitMinutes(s, 40);
-            Assert.AreEqual(GameSession.MealPrice, before - s.Ledger.Balance);
         }
 
         [Test]

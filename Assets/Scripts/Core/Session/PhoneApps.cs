@@ -34,7 +34,7 @@ namespace PCShopSell.Core.Session
             new PhoneAppDef(Schedule, "日历", "系统自带。约好的朋友、师傅上门、快递、焖饭一目了然，约会和师傅上门前 30 分钟会提醒。"),
             new PhoneAppDef(Shop, "网购", "买家具、衣服、礼品、大米，2 天后送到家。"),
             new PhoneAppDef(Chat, "聊天", "和认识的人聊两句，一定有回，涨一点交情（到 40 为止）。不装的话只能发短信，常常没人回。"),
-            new PhoneAppDef(Wholesale, "1788 进货", "网上批发进货，比档口便宜，次日到店（要在自己的店里下单）。"),
+            new PhoneAppDef(Wholesale, "1788 进货", "网上批发进货，比档口便宜，次日 10:00 送到店里；还能设自动补货。在哪都能下单。"),
         };
 
         /// <summary>刚买手机时自带的。</summary>

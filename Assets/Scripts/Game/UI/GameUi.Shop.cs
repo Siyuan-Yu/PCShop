@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -19,17 +19,15 @@ namespace PCShopSell.Game.UI
             Counter,
             Stock,
             Pricing,
-            Restock,
             Orders,
-            Online,
             Upgrades,
             Staff,
         }
 
         private static readonly (ShopTab tab, string name)[] Tabs =
         {
-            (ShopTab.Counter, "柜台"), (ShopTab.Stock, "库存"), (ShopTab.Pricing, "定价"), (ShopTab.Restock, "补货"),
-            (ShopTab.Orders, "装机单"), (ShopTab.Online, "1788"), (ShopTab.Upgrades, "升级"), (ShopTab.Staff, "招人"),
+            (ShopTab.Counter, "柜台"), (ShopTab.Stock, "库存"), (ShopTab.Pricing, "定价"),
+            (ShopTab.Orders, "装机单"), (ShopTab.Upgrades, "升级"), (ShopTab.Staff, "招人"),
         };
 
         private RectTransform _dock;
@@ -37,8 +35,6 @@ namespace PCShopSell.Game.UI
         private readonly List<(Button b, ShopTab tab)> _tabButtons = new List<(Button, ShopTab)>();
         private ShopTab _tab = ShopTab.Counter;
         private bool _dockHolding;
-        private string _onlineStore;
-        private readonly Dictionary<string, int> _cart = new Dictionary<string, int>();
 
         public bool DockOpen => _dock != null;
 
@@ -64,15 +60,45 @@ namespace PCShopSell.Game.UI
             _dockContent = Ui.Rect(_dock, "Content").Anchor(0, 0, 1, 1, 0, 60, 0, 58);
             Ui.VList(_dockContent, 6, 12);
 
-            Button leave = Ui.Button(_dock, "离开店铺（没人看店就关门）", () =>
-            {
-                CloseDock();
-                S.Leave();
-            }, 19, Ui.Warn);
+            bool staffed = S.IsEmployeeOnDuty(S.Clock.Now);
+            Button leave = Ui.Button(_dock, staffed ? "离开店铺（店员看店）" : "离开店铺（没人看店就关门）", ConfirmLeaveShop, 19, Ui.Warn);
             ((RectTransform)leave.transform).Anchor(0, 0, 1, 0, 12, 8, 12, -52);
 
             _tab = ShopTab.Counter;
             SelectTab(ShopTab.Counter);
+        }
+
+        private Window _leaveConfirm;
+
+        /// <summary>离开店铺前的二次确认：店里没人就关门，店员在班就照常营业。</summary>
+        public void ConfirmLeaveShop()
+        {
+            if (_leaveConfirm != null) return;
+            if (S.LeaveBlocker != null)
+            {
+                Toast(S.LeaveBlocker);
+                return;
+            }
+            bool staffed = S.IsEmployeeOnDuty(S.Clock.Now);
+            int inShop = S.PlayerShop.Queue.Count;
+            _leaveConfirm = OpenWindow("要离开店铺吗？", 620, 320, w =>
+            {
+                if (staffed)
+                    Para(w.Content, $"店员{S.Employee.Name}在班，你走了店<color=#7FD18B>照常营业</color>，顾客由他来接待、结账。", 19);
+                else
+                {
+                    Para(w.Content, "店里现在只有你一个人，你一走店就<color=#E0806A>关门</color>。", 19);
+                    Para(w.Content, inShop > 0 ? $"柜台前还有{inShop}个顾客在排队，他们会白等一场走掉；关门期间也不会有人进店。" : "关门期间不会有顾客进店。", 17, Ui.Dim);
+                    if (S.Employee != null) Para(w.Content, $"（店员{S.Employee.Name}现在不在班。）", 16, Ui.Dim);
+                }
+                RectTransform row = Ui.Row(w.Content, 50, 12);
+                Ui.Size(Ui.Button(row, "再待会儿", w.Close, 19), -1, -1, 1);
+                Ui.Size(Ui.Button(row, staffed ? "离开" : "关门离开", () =>
+                {
+                    w.Close();
+                    _ctrl.LeaveShop();
+                }, 19, Ui.Warn), -1, -1, 1);
+            }, onClosed: () => _leaveConfirm = null);
         }
 
         public void CloseDock()
@@ -114,21 +140,24 @@ namespace PCShopSell.Game.UI
             if (_tab == ShopTab.Counter) RebuildDock();
         }
 
+        private ShopTab? _scrollTab;
+
         public void RebuildDock()
         {
             if (_dock == null) return;
+            var scrolled = _scrollTab == _tab ? Ui.SaveScroll(_dockContent) : null;
+            _scrollTab = _tab;
             Ui.Clear(_dockContent);
             switch (_tab)
             {
                 case ShopTab.Counter: BuildCounter(); break;
                 case ShopTab.Stock: BuildStock(); break;
                 case ShopTab.Pricing: BuildPricing(); break;
-                case ShopTab.Restock: BuildRestock(); break;
                 case ShopTab.Orders: BuildOrders(); break;
-                case ShopTab.Online: BuildOnline(); break;
                 case ShopTab.Upgrades: BuildUpgrades(); break;
                 case ShopTab.Staff: BuildStaff(); break;
             }
+            Ui.RestoreScroll((RectTransform)_dockContent, _dockContent, scrolled);
         }
 
         private Transform C => _dockContent;
@@ -143,6 +172,9 @@ namespace PCShopSell.Game.UI
             if (S.Employee != null)
                 Line(C, $"店员 {S.Employee.Name}：{(S.IsEmployeeOnDuty(S.Clock.Now) ? "在岗" : "下班")}（你在店时你来收银）", 16, Ui.Dim);
 
+            bool atCounter = _ctrl.Interior != null && _ctrl.Interior.NearCounter;
+            if (shop.Queue.Count > 0)
+                Line(C, atCounter ? "你在收银台：点“结账”或按 F，把货交给顾客、收钱。" : "<color=#E0806A>顾客在收银台前排队等你。走到收银台后面才能结账。</color>", 16);
             RectTransform list = Ui.Scroll(C, 420);
             foreach (ShopCustomer c in shop.Queue)
             {
@@ -150,8 +182,8 @@ namespace PCShopSell.Game.UI
                 RectTransform row = Ui.Row(list, 44);
                 long waited = c.WaitingSince.MinutesUntil(S.Clock.Now);
                 string patience = waited >= shop.Settings.PatienceMinutes - 12 ? $"<color=#E0806A>等了 {waited} 分钟</color>" : $"等了 {waited} 分钟";
-                Ui.Size(Ui.Label(row, $"{c.Item?.Name}（{(c.ItemBoxed ? "盒装" : "散件")}） <color=#7CE38B>{c.Spend}</color>\n<size=14>{patience}</size>", 17), 360);
-                Ui.Size(Ui.Button(row, "结账", () => _ctrl.Checkout(cust.Id), 18, Ui.ButtonHot), 100);
+                Ui.Size(Ui.Label(row, $"{c.ItemName}（{(c.DisplayTier >= 0 ? "展示机" : c.ItemBoxed ? "盒装" : "散件")}） <color=#7CE38B>{c.Spend}</color>\n<size=14>{patience}</size>", 17), 360);
+                Ui.Size(Ui.Button(row, "结账", () => _ctrl.Checkout(cust.Id), 18, Ui.ButtonHot, atCounter), 100);
             }
             if (shop.Queue.Count == 0) Ui.Size(Ui.Label(list, "没人排队。顾客挑好货会过来，等太久就走。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
 
@@ -169,6 +201,8 @@ namespace PCShopSell.Game.UI
             ShopSimulation shop = S.PlayerShop;
             Line(C, $"已用 {shop.Stock.UsedSpace:0.#} / {shop.Stock.Capacity:0} 格（在途 {S.Online.PendingSpace():0.#} 格）", 19);
             Line(C, "盒装占 1 格、卖得贵、顾客更信任；拆成散件只占 0.4 格但便宜。显卡、电源机箱体积翻倍。拆了不能复原。", 15, Ui.Dim);
+            if (_ctrl.InInterior)
+                Ui.Size(Ui.Button(C, $"店里储物柜（{S.ShopLocker.WeightKg:0.#}/{GameSession.ShopLockerLimitKg:0} 公斤）", OpenShopLockerWindow, 17), -1, 42);
             RectTransform list = Ui.Scroll(C, 520);
             foreach (StockLine l in shop.Stock.Lines())
             {
@@ -190,7 +224,7 @@ namespace PCShopSell.Game.UI
                     }, 16), 60);
                 }
             }
-            if (shop.Stock.IsEmpty) Ui.Size(Ui.Label(list, "空空如也。去电子市场进货，或在 1788 下单。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
+            if (shop.Stock.IsEmpty) Ui.Size(Ui.Label(list, "空空如也。去电子市场进货，或用手机上的 1788 app 下单。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
         }
 
         // ---------- 定价 ----------
@@ -257,73 +291,6 @@ namespace PCShopSell.Game.UI
             }
             RefreshAll();
             Line(C, "加价越高赚得越多，但更多顾客会嫌贵走掉；热门配件可以压低价引流，冷门高价配件可以拉高。", 15, Ui.Dim);
-        }
-
-        // ---------- 补货 ----------
-
-        private void BuildRestock()
-        {
-            Line(C, "给配件设目标库存（0 = 不自动补）。每天 9:00 检查，库存（含在途）低于目标 40% 就用手机在 1788 自动补到目标，次日 10:00 到货。", 15, Ui.Dim);
-            string block = S.AppBlocker(PhoneApps.Wholesale);
-            Line(C, block == null ? "手机和 1788 都就绪，自动补货可用。" : "现在补不了货：" + block, 16, block == null ? Ui.Good : Ui.Warn);
-            Line(C, $"自动补货后至少留 {GameSession.RestockCashReserve} 现金；放不下仓位的会少补。", 15, Ui.Dim);
-
-            RectTransform storeRow = Ui.Row(C, 40);
-            Text storeText = Ui.Label(storeRow, "", 16);
-            Ui.Size(storeText, 360);
-            void RefreshStore()
-            {
-                string id = S.RestockStoreId;
-                storeText.text = id != null && S.Online.IsDiscovered(id)
-                    ? "下单的店：" + Online1788.GetStore(id).Name
-                    : "下单的店：自动（挑最便宜的，避开次品多的）";
-            }
-            Ui.Size(Ui.Button(storeRow, "换一家", () =>
-            {
-                var ids = new List<string> { null };
-                ids.AddRange(Online1788.Stores.Where(s => S.Online.IsDiscovered(s.Id)).Select(s => s.Id));
-                int i = ids.IndexOf(S.RestockStoreId);
-                S.RestockStoreId = ids[(i + 1) % ids.Count];
-                RefreshStore();
-            }, 16), 100);
-            RefreshStore();
-            if (!string.IsNullOrEmpty(S.LastRestockNote)) Line(C, S.LastRestockNote, 14, Ui.Dim);
-
-            RectTransform list = Ui.Scroll(C, 290);
-            foreach (PartDef part in PartCatalog.All)
-            {
-                PartDef p = part;
-                RectTransform row = Ui.Row(list, 40, 4);
-                Text name = Ui.Label(row, "", 15);
-                Ui.Size(name, 300);
-                Text tgt = Ui.Label(row, "", 16, TextAnchor.MiddleCenter);
-                Ui.Size(tgt, 60);
-                Button minus = Ui.Button(row, "−", null, 18);
-                Button plus = Ui.Button(row, "+", null, 18);
-                Ui.Size(minus, 40);
-                Ui.Size(plus, 40);
-
-                void Refresh()
-                {
-                    int have = S.PlayerShop.Stock.CountAll(p), pend = S.PendingOnlineCount(p.Id);
-                    string stock = have == 0 ? "<color=#E0806A>缺货</color>" : $"现有 {have}";
-                    name.text = $"<b>{p.Name}</b>　<size=13>{stock}{(pend > 0 ? $" · 在途 {pend}" : "")}</size>";
-                    int target = S.RestockTarget(p.Id);
-                    tgt.text = target == 0 ? "<color=#9AA3AD>关</color>" : target.ToString();
-                }
-
-                minus.onClick.AddListener(() =>
-                {
-                    S.SetRestockTarget(p.Id, S.RestockTarget(p.Id) - 2);
-                    Refresh();
-                });
-                plus.onClick.AddListener(() =>
-                {
-                    S.SetRestockTarget(p.Id, S.RestockTarget(p.Id) + 2);
-                    Refresh();
-                });
-                Refresh();
-            }
         }
 
         // ---------- 经营报表 ----------
@@ -397,71 +364,6 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(list, missing.Count == 0 ? "开始装机" : $"还缺 {missing.Count} 样配件", () => OpenBuildMinigame(order), 18, Ui.ButtonHot, missing.Count == 0), -1, 40);
             }
             if (shop.Orders.Count == 0) Ui.Size(Ui.Label(list, "暂时没有装机订单。约每 8 位顾客里有 1 位想装整机。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
-        }
-
-        // ---------- 1788 ----------
-
-        private void BuildOnline()
-        {
-            Line(C, "1788 进货平台（用智能手机下单）：比档口便宜，次日 10:00 到店，可能有次品。评分不一定可信。", 15, Ui.Dim);
-            string appBlock = S.AppBlocker(PhoneApps.Wholesale);
-            if (appBlock != null) Line(C, "<color=#E0806A>" + appBlock + "</color>", 17);
-            RectTransform stores = Ui.Scroll(C, 200);
-            foreach (OnlineStore st in Online1788.Stores.Where(x => S.Online.IsDiscovered(x.Id)))
-            {
-                OnlineStore store = st;
-                StoreRecord rec = S.Online.RecordOf(st.Id);
-                string mine = rec.ItemsReceived > 0 ? $"你的记录：收货 {rec.ItemsReceived} 件，次品 {rec.Defects} 件" : "你还没在这家买过";
-                Button b = Ui.Button(stores, $"{st.Name}  ★{st.ShownRating:0.0}  销量 {st.ShownSales}\n<size=14>{mine}</size>", () =>
-                {
-                    _onlineStore = store.Id;
-                    _cart.Clear();
-                    RebuildDock();
-                }, 16, _onlineStore == st.Id ? Ui.ButtonHot : Ui.ButtonBg);
-                Ui.Size(b, -1, 48);
-            }
-
-            if (_onlineStore == null || !S.Online.IsDiscovered(_onlineStore))
-            {
-                Line(C, "选一家店看看。", 17, Ui.Dim);
-                return;
-            }
-            OnlineStore s = Online1788.GetStore(_onlineStore);
-            Line(C, "评价：" + string.Join(" / ", s.Reviews), 15, Ui.Dim);
-
-            RectTransform list = Ui.Scroll(C, 250);
-            Money total = Online1788.ShippingFee;
-            double space = 0;
-            foreach (PartDef p in PartCatalog.All)
-            {
-                PartDef part = p;
-                Money price = S.OnlinePrice(s, p);
-                _cart.TryGetValue(p.Id, out int n);
-                total += price * n;
-                space += Stock.SpaceOf(p, true, n);
-                RectTransform row = Ui.Row(list, 34);
-                Ui.Size(Ui.Label(row, p.Name, 16), 210);
-                Ui.Size(Ui.Label(row, $"{price}", 16, TextAnchor.MiddleLeft, Ui.Good), 80);
-                Ui.Size(Ui.Label(row, $"市价 {S.Market.PriceOf(p)}", 13, TextAnchor.MiddleLeft, Ui.Dim), 90);
-                Ui.Size(Ui.Button(row, "-", () => AddToCart(part, -1), 18), 36);
-                Ui.Size(Ui.Label(row, n.ToString(), 17, TextAnchor.MiddleCenter), 30);
-                Ui.Size(Ui.Button(row, "+", () => AddToCart(part, 1), 18), 36);
-            }
-            RectTransform orow = Ui.Row(C, 46);
-            Ui.Size(Ui.Label(orow, $"合计 {total}（含运费 {Online1788.ShippingFee}） · {space:0.#} 格", 17), 330);
-            Ui.Size(Ui.Button(orow, "下单", () =>
-            {
-                var lines = _cart.Where(kv => kv.Value > 0).Select(kv => (PartCatalog.Get(kv.Key), kv.Value)).ToList();
-                if (S.PlaceOnlineOrder(_onlineStore, lines)) _cart.Clear();
-                RebuildDock();
-            }, 19, Ui.ButtonHot, _cart.Values.Any(v => v > 0)), 160);
-        }
-
-        private void AddToCart(PartDef p, int delta)
-        {
-            _cart.TryGetValue(p.Id, out int n);
-            _cart[p.Id] = Mathf.Max(0, n + delta);
-            RebuildDock();
         }
 
         // ---------- 升级 ----------

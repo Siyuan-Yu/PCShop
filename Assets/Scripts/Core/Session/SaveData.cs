@@ -42,6 +42,7 @@ namespace PCShopSell.Core.Session
         public int accepted;
         public SaveOrder[] orders;
         public int nextOrderId;
+        public int[] displayPcs;
 
         public string[] discoveredStores;
         public SaveStoreRecord[] storeRecords;
@@ -241,7 +242,11 @@ namespace PCShopSell.Core.Session
         public double riceJin;
         public SaveBatch[] ingredients;
         public SaveBatch[] cooked;
+        /// <summary>老存档：放在家里的饭盒（读档时转进背包）。</summary>
         public SaveBatch[] packed;
+        public SaveBatch[] packLunch;
+        public SaveCourier[] couriers;
+        public bool sendByCourier;
         public int renovationDay;
         public SaveBatch[] cooking;
         public long cookReadyMinute;
@@ -255,10 +260,35 @@ namespace PCShopSell.Core.Session
         public int[] giftCounts;
         public string[] boxGiftIds;
         public int[] boxGiftCounts;
+        public double boxRice;
+        public SaveBatch[] boxIngredients;
+        public SaveBatch[] boxLunch;
+        public string[] boxFurnIds;
+        public int[] boxFurnCounts;
+        public string[] boxPartIds;
+        public bool[] boxPartBoxed;
+        public int[] boxPartCounts;
         public string[] packFurnIds;
         public int[] packFurnCounts;
         public string[] mallStashIds;
         public int[] mallStashCounts;
+        public SaveStorage shopLocker;
+
+        /// <summary>叫车送到哪：0 = 按店默认，1 = 家里，2 = 店里。</summary>
+        public int courierDest;
+    }
+
+    /// <summary>一个储物处（店里储物柜）里的米菜、饭盒、礼品、家具。</summary>
+    [Serializable]
+    public sealed class SaveStorage
+    {
+        public string[] giftIds;
+        public int[] giftCounts;
+        public double rice;
+        public SaveBatch[] ingredients;
+        public SaveBatch[] lunch;
+        public string[] furnIds;
+        public int[] furnCounts;
     }
 
     [Serializable]
@@ -278,6 +308,21 @@ namespace PCShopSell.Core.Session
         public int count;
         public int dueDay;
         public bool toShop;
+    }
+
+    [Serializable]
+    public sealed class SaveCourier
+    {
+        public string fromId;
+        public string fromName;
+        public bool toShop;
+        public long dueMinute;
+        public int[] kinds;
+        public string[] ids;
+        public int[] counts;
+        public double[] jins;
+        public bool[] boxed;
+        public int[] expireDays;
     }
 
     [Serializable]

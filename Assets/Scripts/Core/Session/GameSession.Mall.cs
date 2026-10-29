@@ -303,6 +303,22 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
+        /// <summary>
+        /// 家具城买一件：和农贸市场一样，按 <see cref="SendByCourier"/> 选装进背包还是叫车送到家。
+        /// 背包装不下就只能叫车；一辆面包车装满了会再叫一辆。
+        /// </summary>
+        public bool BuyFurniture(string id)
+        {
+            FurnitureDef d = FurnitureCatalog.Get(id);
+            if (d == null || d.Starter) return false;
+            if (!AtMall) return Fail("要去家具城才能买。");
+            if (SendByCourier)
+                return PayAndSend("家具", d.Price, "「" + d.Name + "」", false, new CourierItem { Kind = CourierItemKind.Furniture, Id = id, Count = 1 });
+            if (d.WeightKg > FreeKg + 1e-9)
+                return Fail($"「{d.Name}」{d.WeightKg:0.#} 公斤，{CurrentVehicle.Name}只剩 {FreeKg:0.#} 公斤，装不下。切到“叫车送到家”吧。");
+            return BuyFurnitureAtMall(id);
+        }
+
         /// <summary>直接买一件自己带走（不走购物车）。背不动就买不了。</summary>
         public bool BuyFurnitureAtMall(string id)
         {

@@ -35,7 +35,7 @@ namespace PCShopSell.Game.UI
                     OpenPlaceWindow(p, BuildPhoneShop, 960, 700);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.FarmBusiness:
-                    OpenPlaceWindow(p, BuildFarm, 1060, 760);
+                    OpenPlaceWindow(p, BuildFarm, 1060, 820);
                     break;
                 case PlaceKind.Wholesaler:
                     OpenPlaceWindow(p, BuildStall, 980, 800);
@@ -84,15 +84,20 @@ namespace PCShopSell.Game.UI
             return t;
         }
 
+        /// <summary>多行说明：高度跟着换行撑开。</summary>
+        private static Text Para(Transform parent, string text, int size = 16, Color? color = null) =>
+            Ui.Label(parent, text, size, TextAnchor.UpperLeft, color);
+
         // ---------- 档口 ----------
 
         private void BuildStall(Window w, Place p)
         {
             bool open = S.IsWholesalerOpen;
             Line(w.Content, open ? "营业中（工作日 9:00–18:00）。批发价，只卖盒装正品。" : "<color=#E0806A>关门了（工作日 9:00–18:00 营业）</color>");
-            Line(w.Content, $"随身货：{S.Cargo.UsedSpace:0.#}/{S.Cargo.Capacity:0} 格；负重 {S.CarriedKg:0.#}/{S.CarryLimitKg:0.#} 公斤（{S.CurrentVehicle.Name}）   现金 {S.Ledger.Balance}", 18, Ui.Dim);
+            Line(w.Content, $"随身货：{S.Cargo.UsedSpace:0.#}/{S.Cargo.Capacity:0} 格（{S.CurrentVehicle.Name}）   现金 {S.Ledger.Balance}", 18, Ui.Dim);
+            CarryModeRow(w, w.Content, true);
 
-            RectTransform list = Ui.Scroll(w.Content, 470);
+            RectTransform list = Ui.Scroll(w.Content, 420);
             Ui.Size((RectTransform)list.parent.parent, -1, -1, 1);
             foreach (PartDef part in PartCatalog.All.Where(x => S.StallSells(p, x)))
             {
@@ -109,7 +114,7 @@ namespace PCShopSell.Game.UI
                     int count = n;
                     Ui.Size(Ui.Button(row, "买" + count, () =>
                     {
-                        if (S.BuyAtStall(p, pd, count)) Toast($"买了 {pd.Name}×{count}");
+                        if (S.BuyAtStall(p, pd, count)) Toast(S.SendByCourier ? $"买了 {pd.Name}×{count}，叫车送到店里" : $"买了 {pd.Name}×{count}，装上身");
                         w.Rebuild();
                     }, 16, Ui.ButtonHot, open && left >= count), 58);
                 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Finance;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Market;
 using PCShopSell.Core.Shop;
@@ -111,6 +112,9 @@ namespace PCShopSell.Core.Session
                 PlayerShop.Stock.ForceAdd(PartCatalog.Get("cpu0"), true, 1);
             }
 
+            Backpack.Food.Packed.Add(new FoodBatch { Id = "rice", Name = "白米饭", Hunger = Pantry.BaseBowlHunger, Count = StartLunchboxes, ExpireDay = start.Date.TotalDays + 1 });
+            ApplyCargoLimit();
+
             PlayerNodeId = Home.NodeId;
             CurrentPlace = Home;
             Police.RollDuty(Random);
@@ -162,7 +166,10 @@ namespace PCShopSell.Core.Session
 
         // ---------- 地点 ----------
 
-        /// <summary>进入地点（玩家必须站在它的入口节点上、没在路上）。进入自己的店即开门营业并卸货。</summary>
+        /// <summary>开局背包里带着的饭盒（昨晚焖的）。</summary>
+        public const int StartLunchboxes = 2;
+
+        /// <summary>进入地点（玩家必须站在它的入口节点上、没在路上）。进入自己的店即开门营业。背包里的东西不会自动放下，要打开背包一键放。</summary>
         public bool Enter(Place place)
         {
             if (place == null) throw new ArgumentNullException(nameof(place));
@@ -171,20 +178,16 @@ namespace PCShopSell.Core.Session
             if (place.NodeId != PlayerNodeId)
                 throw new InvalidOperationException($"玩家不在 {place.Name} 门口。");
             CurrentPlace = place;
+            CourierDest = null;
             if (place == PlayerShopPlace)
             {
                 PlayerShop.PlayerPresent = true;
-                UnloadCargo();
-                UnloadFurniture();
-            }
-            else if (place == Home)
-            {
-                UnloadFoodAtHome();
             }
             else if (place.Kind == PlaceKind.Wholesaler)
             {
                 MeetStallOwner(place);
             }
+            if (HasUnloadable) Say($"背包里带着东西，按 B 打开背包，一键全放到{UnloadTarget}。");
             return true;
         }
 
@@ -201,6 +204,7 @@ namespace PCShopSell.Core.Session
             if (CurrentPlace == PlayerShopPlace) PlayerShop.PlayerPresent = false;
             CurrentPlace = null;
             _mallCart.Clear();
+            CloseCourierRuns();
         }
 
         /// <summary>玩家直接站到某个节点（读档、测试用）。</summary>
@@ -264,7 +268,6 @@ namespace PCShopSell.Core.Session
 
             if (!_sleeping)
             {
-                if (Crosses(from, to, 7 * 60 + 30)) EatMeal("早饭");
                 if (Crosses(from, to, 12 * 60)) EatMeal("午饭");
                 if (Crosses(from, to, 18 * 60 + 30)) EatMeal("晚饭");
                 if (Crosses(from, to, FaintMinute)) _pendingFaint = true;
@@ -274,6 +277,7 @@ namespace PCShopSell.Core.Session
             if (Crosses(from, to, EventMinute)) RollDailyEvent(to.Date);
             CheckAppointments(to);
             DeliverOnlineOrders(to);
+            DeliverCouriers(to);
 
             if (!_sleeping && Player.Health < 15) _pendingHospital = true;
         }

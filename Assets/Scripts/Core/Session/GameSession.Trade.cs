@@ -71,12 +71,20 @@ namespace PCShopSell.Core.Session
             int remaining = StallRemaining(stall, part);
             if (count > remaining)
                 return Fail(remaining <= 0 ? $"老板说{part.Name}今天不能再多给你了，明天再来。" : $"老板说{part.Name}今天最多再给你 {remaining} 个。多来往，他会放心多给。");
-            if (!Cargo.CanAdd(part, true, count))
-                return Fail($"拿不动了：{CurrentVehicle.Name}最多 {CarryLimitKg:0.#} 公斤，现在已经 {CarriedKg:0.#} 公斤（还能装 {Cargo.FreeSpace * Backpack.KgPerSpace:0.#} 公斤的货）。");
             Money total = StallPrice(stall, part) * count;
-            if (!Ledger.TryDebit(Clock.Today, "进货", total, $"{stall.Name} {part.Name}×{count}"))
-                return Fail($"要 {total}，钱不够。");
-            Cargo.TryAdd(part, true, count);
+            if (SendByCourier)
+            {
+                if (!PayAndSend("进货", total, $"{stall.Name} {part.Name}×{count}", true, new CourierItem { Kind = CourierItemKind.Part, Id = part.Id, Count = count, Boxed = true }))
+                    return false;
+            }
+            else
+            {
+                if (!Cargo.CanAdd(part, true, count))
+                    return Fail($"拿不动了：{CurrentVehicle.Name}最多 {CarryLimitKg:0.#} 公斤，现在已经 {CarriedKg:0.#} 公斤（还能装 {Cargo.FreeSpace * Backpack.KgPerSpace:0.#} 公斤的货）。可以改成“叫车送到店里”。");
+                if (!Ledger.TryDebit(Clock.Today, "进货", total, $"{stall.Name} {part.Name}×{count}"))
+                    return Fail($"要 {total}，钱不够。");
+                Cargo.TryAdd(part, true, count);
+            }
             RecordStallPurchase(stall, part, count);
             AdvanceClock(2);
             return true;
@@ -85,9 +93,15 @@ namespace PCShopSell.Core.Session
         /// <summary>把随身的货卸进店里，放不下的留在身上。</summary>
         public void UnloadCargo()
         {
-            if (Cargo.IsEmpty) return;
+            int moved = MoveCargoToShop(out bool leftover);
+            if (moved > 0) Say($"卸货 {moved} 件进店。");
+            if (leftover) Say("店里放不下了，剩下的货还在身上。拆掉包装能省地方。");
+        }
+
+        private int MoveCargoToShop(out bool leftover)
+        {
             int moved = 0;
-            bool leftover = false;
+            leftover = false;
             foreach (StockLine l in Cargo.Lines())
             {
                 int n = Math.Min(l.Count, PlayerShop.Stock.MaxAddable(l.Part, l.Boxed));
@@ -99,8 +113,7 @@ namespace PCShopSell.Core.Session
                 }
                 if (n < l.Count) leftover = true;
             }
-            if (moved > 0) Say($"卸货 {moved} 件进店。");
-            if (leftover) Say("店里放不下了，剩下的货还在身上。拆掉包装能省地方。");
+            return moved;
         }
 
         private double BargainBonus(string stallId) =>
@@ -119,16 +132,15 @@ namespace PCShopSell.Core.Session
         public Money OnlinePrice(OnlineStore store, PartDef part) =>
             Online1788.PriceOf(store, Market.PriceOf(part)).Scale(1.0 - NpcPerks.OnlineDiscount(Relation(Npcs.Zhou)));
 
-        /// <summary>在店里的电脑上下单，次日 10:00 送到店里。</summary>
+        /// <summary>用手机上的 1788 app 下单（人在哪都行），次日 10:00 送到店里。</summary>
         public bool PlaceOnlineOrder(string storeId, IReadOnlyList<(PartDef part, int count)> lines) =>
             PlaceOnlineOrderCore(storeId, lines, true);
 
-        /// <summary>manual = 玩家在店里亲自下单（要在店里、花 5 分钟）；自动补货用手机下单，人在哪都行。</summary>
+        /// <summary>manual = 玩家亲自在手机上挑货下单（花 5 分钟）；自动补货是 app 定时下单。</summary>
         private bool PlaceOnlineOrderCore(string storeId, IReadOnlyList<(PartDef part, int count)> lines, bool manual)
         {
             string appBlock = AppBlocker(PhoneApps.Wholesale);
             if (appBlock != null) return Fail(appBlock);
-            if (manual && !InPlayerShop) return Fail("只能在店里下单（要在店里确认收货地址和仓位）。");
             if (!Online.IsDiscovered(storeId)) return false;
             OnlineStore store = Online1788.GetStore(storeId);
 

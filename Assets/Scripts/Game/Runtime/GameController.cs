@@ -182,13 +182,21 @@ namespace PCShopSell.Game
             if (Session.GoTo(p.NodeId)) _pendingEnter = p;
         }
 
+        /// <summary>收银：老板得站在收银台后面，把货交给顾客、收钱。不在收银台就收不了，顾客接着排队。</summary>
         public void Checkout(int customerId)
         {
-            if (Session.Checkout(customerId))
+            if (InInterior && !Interior.NearCounter)
             {
-                Ui.RebuildDock();
-                if (InInterior) Interior.WalkToCounter();
+                Ui.Toast("先走到收银台后面，才能给顾客交货收钱。");
+                return;
             }
+            if (Session.Checkout(customerId)) Ui.RebuildDock();
+        }
+
+        private void CounterInteract()
+        {
+            if (Session.PlayerShop.Queue.Count > 0) Checkout(Session.PlayerShop.Queue[0].Id);
+            else Ui.Toast("现在没人排队。顾客挑好货会拿到收银台前排队，你站在这里按 F 交货收钱。");
         }
 
         private void EnterPlace(Place p)
@@ -281,9 +289,9 @@ namespace PCShopSell.Game
                 Vector3 c = HomeRoom.Center + new Vector3(0, 0.8f, 0);
                 return c + (HomeRoom.OwnerWorld - HomeRoom.Center) * 0.35f;
             }
-            if (InInterior && _overview) return Interior.Center + new Vector3(0, 0.8f, 0);
+            if (InInterior && _overview) return Interior.ViewCenter + new Vector3(0, 0.8f, 0);
             if (InInterior)
-                return Interior.OwnerWorld + new Vector3(0, 0.8f, 0) + CameraRig.Rotation * Vector3.right * ((zoom > 0 ? zoom : Cam.orthographicSize) * Cam.aspect * 0.28f);
+                return Interior.OwnerWorld + new Vector3(0, 0.8f, -1.2f) + CameraRig.Rotation * Vector3.right * ((zoom > 0 ? zoom : Cam.orthographicSize) * Cam.aspect * 0.28f);
             Vector3 p = StreetWorldBuilder.ToWorld(Session.PlayerPosition);
             if (Session.CurrentPlace != null && World.Places.TryGetValue(Session.CurrentPlace.Id, out PlaceVisual pv)) p = pv.Entrance;
             return p + new Vector3(0, 1f, 0);
@@ -305,7 +313,8 @@ namespace PCShopSell.Game
                 if (InHome) HomeInteract(HomeRoom.NearbyId);
                 else if (InInterior)
                 {
-                    if (Interior.NearCounter && Session.PlayerShop.Queue.Count > 0) Checkout(Session.PlayerShop.Queue[0].Id);
+                    if (Interior.NearCounter) CounterInteract();
+                    else if (Interior.NearDoor) Ui.ConfirmLeaveShop();
                     else ShelfInteract();
                 }
                 else TryEnterNearby();
@@ -360,6 +369,11 @@ namespace PCShopSell.Game
             {
                 Session.SetSteer(0, 0);
                 Interior.MoveOwner(dir, dt);
+                if (Interior.OwnerOutside)
+                {
+                    Interior.StepBackInside();
+                    Ui.ConfirmLeaveShop();
+                }
                 return;
             }
             if (InHome)
@@ -436,10 +450,19 @@ namespace PCShopSell.Game
             }
             if (InInterior)
             {
-                if (Interior.NearCounter && Session.PlayerShop.Queue.Count > 0)
+                if (Interior.NearCounter)
                 {
+                    var queue = Session.PlayerShop.Queue;
                     world = Interior.CounterWorld;
-                    label = $"给顾客结账（{Session.PlayerShop.Queue.Count} 人排队）";
+                    label = queue.Count > 0
+                        ? $"收银：给顾客结账 {queue[0].ItemName} {queue[0].Spend}（{queue.Count} 人排队）"
+                        : "收银台（现在没人排队）";
+                    return true;
+                }
+                if (Interior.NearDoor)
+                {
+                    world = Interior.DoorWorld;
+                    label = Session.LeaveBlocker ?? (Session.Employee != null && Session.IsEmployeeOnDuty(Session.Clock.Now) ? "出门（店员看店）" : "出门（没人看店就关门）");
                     return true;
                 }
                 if (Interior.NearBench)
@@ -499,6 +522,19 @@ namespace PCShopSell.Game
             Session.Leave();
         }
 
+        /// <summary>从店门走出去回到街上；走不开（有事拦着）就退回门里。</summary>
+        public void LeaveShop()
+        {
+            Ui.CloseAllWindows();
+            Ui.CloseDock();
+            Session.Leave();
+            if (Session.InPlayerShop)
+            {
+                Interior.StepBackInside();
+                Ui.OpenDock();
+            }
+        }
+
         private void TryEnterNearby()
         {
             Place p = Session.NearbyPlace;
@@ -541,11 +577,10 @@ namespace PCShopSell.Game
             {
                 var cm = hit.collider.GetComponentInParent<CustomerMarker>();
                 if (cm != null) Checkout(cm.CustomerId);
-                else if (hit.collider.GetComponent<InteriorFloorMarker>() != null) Interior.WalkTo(hit.point);
                 return;
             }
 
-            // 街上不再点击移动：WASD 走路，F 进门。
+            // 整个游戏都不点击移动：WASD 走路，F 交互。
         }
 
         // ---------- 会话事件 ----------

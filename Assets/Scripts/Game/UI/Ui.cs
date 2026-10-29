@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -155,6 +156,30 @@ namespace PCShopSell.Game.UI
         }
 
         /// <summary>带竖向滚动的列表，返回放内容的容器（自动撑高）。</summary>
+        /// <summary>记下 root 里每个滚动列表滚到哪了（重建前调用）。</summary>
+        public static List<Vector2> SaveScroll(Transform root)
+        {
+            var l = new List<Vector2>();
+            foreach (ScrollRect sr in root.GetComponentsInChildren<ScrollRect>())
+                l.Add(sr.content != null ? sr.content.anchoredPosition : Vector2.zero);
+            return l;
+        }
+
+        /// <summary>重建后把滚动列表按顺序滚回原来的位置，买东西时列表不会跳回顶上。</summary>
+        public static void RestoreScroll(RectTransform layoutRoot, Transform root, List<Vector2> saved)
+        {
+            if (saved == null || saved.Count == 0) return;
+            ScrollRect[] now = root.GetComponentsInChildren<ScrollRect>();
+            if (now.Length == 0) return;
+            LayoutRebuilder.ForceRebuildLayoutImmediate(layoutRoot);
+            for (int i = 0; i < now.Length && i < saved.Count; i++)
+            {
+                if (now[i].content == null) continue;
+                now[i].StopMovement();
+                now[i].content.anchoredPosition = saved[i];
+            }
+        }
+
         public static RectTransform Scroll(Transform parent, float height = -1)
         {
             Image bg = Panel(parent, "Scroll", new Color(0, 0, 0, 0.18f));

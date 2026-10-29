@@ -152,11 +152,6 @@ namespace PCShopSell.Game.UI
                 Toast(blocker);
                 return;
             }
-            if (id == PhoneApps.Wholesale && !DockOpen)
-            {
-                Toast("1788 要在自己的店里坐到电脑前下单。去店里再打开。");
-                return;
-            }
             w.Close();
             switch (id)
             {
@@ -164,7 +159,7 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Schedule: OpenSchedulePanel(); break;
                 case PhoneApps.Shop: OpenOnlinePanel(); break;
                 case PhoneApps.Chat: OpenChatPanel(); break;
-                case PhoneApps.Wholesale: SelectTab(ShopTab.Online); break;
+                case PhoneApps.Wholesale: OpenWholesaleApp(); break;
             }
         }
 

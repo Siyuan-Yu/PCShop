@@ -175,8 +175,39 @@ namespace PCShopSell.Game.Runtime
             }
             return g;
         }
-        /// <summary>整机展示台：一张长桌，两套开着机的整机（显示器 + 主机 + 键盘）。正面朝 -z，台下铺地毯。</summary>
-        public static void BuildPcDesk(Transform parent, Vector3 pos, int seed)
+        /// <summary>展示台上的一个机位：一套整机（显示器 + 主机 + 键盘），屏幕颜色表示档次。</summary>
+        public sealed class PcSlot
+        {
+            public GameObject Root;
+            public Renderer Screen;
+            public Renderer Glass;
+        }
+
+        private static Material[] _tierScreens;
+        private static Material[] _tierGlass;
+
+        /// <summary>入门 / 中端 / 高端整机的屏幕颜色（蓝 / 青 / 紫）。</summary>
+        public static readonly Color[] TierColors = { new Color(0.3f, 1.0f, 1.8f), new Color(0.3f, 1.6f, 1.2f), new Color(1.3f, 0.4f, 1.8f) };
+
+        public static void SetSlotTier(PcSlot slot, int tier)
+        {
+            if (_tierScreens == null)
+            {
+                _tierScreens = new Material[3];
+                _tierGlass = new Material[3];
+                for (int i = 0; i < 3; i++)
+                {
+                    _tierScreens[i] = Mats.Glow(TierColors[i] * 0.2f, TierColors[i], false);
+                    _tierGlass[i] = Mats.Glow(TierColors[i] * 0.15f, TierColors[i] * 0.8f, false);
+                }
+            }
+            tier = Mathf.Clamp(tier, 0, 2);
+            slot.Screen.sharedMaterial = _tierScreens[tier];
+            slot.Glass.sharedMaterial = _tierGlass[tier];
+        }
+
+        /// <summary>整机展示台：一张长桌，两个机位。正面朝 -z，台下铺地毯，正面挂“整机现货”灯牌。返回两个机位（没摆机器时隐藏）。</summary>
+        public static List<PcSlot> BuildPcDesk(Transform parent, Vector3 pos)
         {
             var root = new GameObject("PcDesk").transform;
             root.SetParent(parent, false);
@@ -185,20 +216,25 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(root, "Rug", new Vector3(0, 0.012f, -0.3f), new Vector3(3.2f, 0.014f, 2.4f), Mats.Lit(new Color(0.22f, 0.3f, 0.5f)));
             Prims.Box(root, "Desk", new Vector3(0, 0.4f, 0), new Vector3(2.4f, 0.8f, 0.9f), Mats.Lit(new Color(0.5f, 0.4f, 0.3f)));
             Prims.Box(root, "DeskTop", new Vector3(0, 0.805f, 0), new Vector3(2.44f, 0.02f, 0.94f), Mats.Lit(new Color(0.75f, 0.75f, 0.78f), 0.5f));
+            Prims.Box(root, "Sign", new Vector3(0, 0.55f, -0.46f), new Vector3(1.6f, 0.22f, 0.02f), Mats.Glow(new Color(0.9f, 0.5f, 0.15f), new Color(2.4f, 1.2f, 0.3f), false));
 
-            Color[] screens = { new Color(0.3f, 1.0f, 1.8f), new Color(1.2f, 0.4f, 1.6f), new Color(0.4f, 1.5f, 0.6f), new Color(1.6f, 0.9f, 0.3f) };
+            var slots = new List<PcSlot>();
             for (int i = 0; i < 2; i++)
             {
                 float cx = i == 0 ? -0.6f : 0.6f;
-                Color sc = screens[(seed + i) % screens.Length];
-                Prims.Box(root, "Stand", new Vector3(cx - 0.1f, 0.88f, 0.12f), new Vector3(0.08f, 0.14f, 0.08f), Mats.Lit(new Color(0.12f, 0.12f, 0.14f)));
-                Prims.Box(root, "Screen", new Vector3(cx - 0.1f, 1.12f, 0.12f), new Vector3(0.62f, 0.38f, 0.03f), Mats.Glow(sc * 0.2f, sc, false));
-                Prims.Box(root, "Keyboard", new Vector3(cx - 0.1f, 0.82f, -0.2f), new Vector3(0.4f, 0.02f, 0.13f), Mats.Lit(new Color(0.85f, 0.85f, 0.88f)));
-                Prims.Box(root, "Tower", new Vector3(cx + 0.32f, 1.06f, 0.1f), new Vector3(0.26f, 0.5f, 0.4f), Mats.Lit(new Color(0.1f, 0.1f, 0.12f), 0.5f));
-                Prims.Box(root, "TowerGlass", new Vector3(cx + 0.32f, 1.08f, -0.102f), new Vector3(0.19f, 0.38f, 0.004f), Mats.Glow(sc * 0.15f, sc * 0.8f, false));
+                var g = new GameObject("PcSlot" + i).transform;
+                g.SetParent(root, false);
+                Prims.Box(g, "Stand", new Vector3(cx - 0.1f, 0.88f, 0.12f), new Vector3(0.08f, 0.14f, 0.08f), Mats.Lit(new Color(0.12f, 0.12f, 0.14f)));
+                GameObject screen = Prims.Box(g, "Screen", new Vector3(cx - 0.1f, 1.12f, 0.12f), new Vector3(0.62f, 0.38f, 0.03f), Mats.Lit(Color.black));
+                Prims.Box(g, "Keyboard", new Vector3(cx - 0.1f, 0.82f, -0.2f), new Vector3(0.4f, 0.02f, 0.13f), Mats.Lit(new Color(0.85f, 0.85f, 0.88f)));
+                Prims.Box(g, "Tower", new Vector3(cx + 0.32f, 1.06f, 0.1f), new Vector3(0.26f, 0.5f, 0.4f), Mats.Lit(new Color(0.1f, 0.1f, 0.12f), 0.5f));
+                GameObject glass = Prims.Box(g, "TowerGlass", new Vector3(cx + 0.32f, 1.08f, -0.102f), new Vector3(0.19f, 0.38f, 0.004f), Mats.Lit(Color.black));
+                Prims.Box(g, "Tag", new Vector3(cx, 0.84f, -0.42f), new Vector3(0.4f, 0.05f, 0.02f), Mats.Glow(new Color(0.9f, 0.8f, 0.2f), new Color(2.2f, 1.8f, 0.3f), false));
+                var slot = new PcSlot { Root = g.gameObject, Screen = screen.GetComponent<Renderer>(), Glass = glass.GetComponent<Renderer>() };
+                SetSlotTier(slot, 0);
+                slots.Add(slot);
             }
-            // 价签牌
-            Prims.Box(root, "Tag", new Vector3(0, 0.84f, -0.42f), new Vector3(0.5f, 0.05f, 0.02f), Mats.Glow(new Color(0.9f, 0.8f, 0.2f), new Color(2.2f, 1.8f, 0.3f), false));
+            return slots;
         }
     }
 }

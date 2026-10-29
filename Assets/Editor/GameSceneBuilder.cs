@@ -174,6 +174,15 @@ namespace PCShopSell.EditorTools
             Log("到店 " + s.Clock.Now);
 
             s.SetMarkup(1.1);
+            bool bubbled = false;
+            for (int i = 0; i < 9000 && !bubbled; i++)
+            {
+                Frame(0.1f);
+                bubbled = _game.Interior.Emotes.Any(e => e.Bubble && (e.Text.Contains("有货") || e.Text.Contains("没货") || e.Text.Contains("配件")));
+            }
+            Check(bubbled, "顾客进店后头顶有对话气泡：想买什么、有没有货");
+            Frame(0.1f);
+            Shot("vs1_80_customer_bubble");
             for (int i = 0; i < 400 && s.PlayerShop.Queue.Count == 0; i++) Frame(0.1f);
             Shot("vs1_02_shop_interior");
 
@@ -182,12 +191,35 @@ namespace PCShopSell.EditorTools
             Check(s.PlayerShop.Queue.Count > 0, "有顾客拿着货到柜台排队");
             Frame(1.5f);
             Shot("vs1_55_customer_wait");
-            // 拉远看整间店：展示桌靠后墙，柜台到门口留出排队的路
+            // 拉远看整间店：展示桌在正中间，柜台到门口留出排队的路
             _game.Ui.CloseDock();
             _game.DebugShopOverview(true);
             for (int i = 0; i < 8; i++) Frame(0.1f);
             Shot("vs1_70_shop_overview");
             _game.DebugShopOverview(false);
+            // 走到店门口：能看到门外的街，按 F 或接着往外走就出门
+            _game.Interior.StandAtDoor();
+            for (int i = 0; i < 10; i++) Frame(0.1f);
+            Check(_game.TryGetInteract(out _, out string doorHint) && doorHint.Contains("出门"), "店门口有“出门”提示");
+            Shot("vs1_77_shop_door");
+            for (int i = 0; i < 20 && !_game.Interior.OwnerOutside; i++) _game.Interior.MoveOwner(UnityEngine.Vector3.back, 0.1f);
+            Check(_game.Interior.OwnerOutside, "老板能从店门走出去");
+            _game.Interior.StepBackInside();
+            _game.Ui.ConfirmLeaveShop();
+            Frame(0.05f);
+            Check(_game.Ui.AnyModalOpen && s.InPlayerShop, "出门前先问要不要离开（没人看店会关门）");
+            Shot("vs1_78_leave_confirm");
+            _game.Ui.CloseModalWindows();
+            _game.Interior.StandAtCounter();
+            Frame(0.1f);
+            Check(_game.Interior.NearCounter, "回到柜台");
+            bool counterOk = _game.TryGetInteract(out _, out string emptyCounter);
+            Log($"COUNTER ok={counterOk} label={emptyCounter} modal={_game.Ui.AnyModalOpen} near={_game.Interior.NearCounter} inShop={_game.InInterior}");
+            Check(counterOk && emptyCounter.Contains("收银"), "收银台随时能交互");
+            {
+                var shelfCats = _game.Interior.ShelfCategories;
+                Check(shelfCats.Count == 6 && shelfCats.Distinct().Count() == 6, $"每类配件只有一个货架（{string.Join(",", shelfCats)}）");
+            }
             _game.Ui.OpenDock();
             Frame(0.1f);
             int lostBefore = s.PlayerShop.TodayLost;
@@ -204,6 +236,13 @@ namespace PCShopSell.EditorTools
                 {
                     if (sold == 0)
                     {
+                        int queued = s.PlayerShop.Queue.Count;
+                        _game.Interior.StandAtShelf(0);
+                        Frame(0.05f);
+                        _game.Checkout(s.PlayerShop.Queue[0].Id);
+                        Check(s.PlayerShop.Queue.Count == queued, "老板不在收银台时没法结账，顾客接着排队");
+                        _game.Interior.StandAtCounter();
+                        Frame(0.05f);
                         Check(_game.TryGetInteract(out _, out string counterHint) && counterHint.Contains("结账"), "柜台边有“给顾客结账”提示");
                         Shot("vs1_57_counter_hint");
                     }
@@ -287,7 +326,24 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Check(_game.Ui.AnyModalOpen, "展示台窗口打开");
             Shot("vs1_62_display");
+            // 用库存配件装两台整机摆到店中间的展示台：顾客能直接买走，想买整机的人也变多
+            double chanceEmpty = s.PlayerShop.BuildChance;
+            for (int tier = 0; tier < 2; tier++)
+            {
+                foreach (var p in PartCatalog.BuildList(tier)) s.PlayerShop.Stock.ForceAdd(p, true, 1);
+                while (s.PlayerShop.DisplayPcs.Count > 0 && s.PlayerShop.DisplayPcs.Count >= s.PlayerShop.DisplaySlots) s.PlayerShop.DisassembleDisplay(s.PlayerShop.DisplayPcs[0]);
+                Check(s.AssembleDisplayPc(tier), "装一台整机摆上展示台");
+            }
+            Check(s.PlayerShop.BuildChance > chanceEmpty * 1.5, "展示台上有整机，想买整机的顾客比例变高");
+            _game.Ui.RebuildWindows();
+            Frame(0.05f);
+            Shot("vs1_81_display_assembled");
             _game.Ui.CloseModalWindows();
+            _game.Ui.CloseDock();
+            _game.DebugShopOverview(true);
+            for (int i = 0; i < 8; i++) Frame(0.6f);
+            Shot("vs1_82_display_center");
+            _game.DebugShopOverview(false);
 
             Teleport(s, "player_shop");
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
@@ -388,9 +444,15 @@ namespace PCShopSell.EditorTools
             _game.Ui.DebugSelectTab(2);
             Frame(0.05f);
             Shot("vs1_58_per_part_pricing");
-            _game.Ui.DebugSelectTab(3);
+            _game.Ui.OpenWholesaleApp(true);
             Frame(0.05f);
+            Check(_game.Ui.AnyModalOpen, "手机 1788 app 的自动补货页打开");
             Shot("vs1_59_auto_restock");
+            _game.Ui.CloseModalWindows();
+            _game.Ui.OpenWholesaleApp();
+            Frame(0.05f);
+            Shot("vs1_79_1788_app");
+            _game.Ui.CloseModalWindows();
             Check(s.PlayerShop.MarkupOf(PartCatalog.Get("gpu1")) > s.PlayerShop.MarkupOf(PartCatalog.Get("ram0")), "按配件单独定价");
             for (int back = 1; back <= 3 && s.Clock.Today.TotalDays - back >= 0; back++)
             {
@@ -452,6 +514,7 @@ namespace PCShopSell.EditorTools
             _game.Ui.CloseAllWindows();
             s.SetSmartphone(true);
             int repairEntries = s.Ledger.Entries.Count(e => e.Category == "维修");
+            Feed(s);
             s.AdvanceClock(5 * 60 + 10);
             _game.Ui.CloseAllWindows();
             Check(s.RepairmanAtWork != null && s.BrokenHomeItems().Any(), "师傅到了，正在修");
@@ -537,6 +600,22 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Shot("vs1_37_cooker_ready");
             _game.Ui.CloseAllWindows();
+            Frame(0.1f);
+            Check(_game.HomeRoom.CookerWorld != null, "屋里有电饭锅的位置");
+            Shot("vs1_74_rice_ready");
+            int boxes = s.Backpack.Lunchboxes;
+            Check(s.PackLunch(s.Pantry.CookedBowls), "饭全部装进饭盒");
+            Check(s.Backpack.Lunchboxes == boxes + 4 && s.Pantry.CookedBowls == 0, "饭盒放进背包");
+            s.Backpack.Food.RiceJin = 3;
+            s.Backpack.AddGift(PCShopSell.Core.Home.Gifts.Soda, 2);
+            _game.Ui.ToggleBackpack();
+            Frame(0.05f);
+            Shot("vs1_75_backpack_lunch");
+            _game.Ui.CloseAllWindows();
+            Check(s.UnloadBackpack(), "在家一键把背包里的东西放下");
+            Check(s.Backpack.Food.RiceJin == 0 && s.Backpack.Lunchboxes == boxes + 4, "米进了厨房，饭盒留在背包");
+            s.Backpack.ClearGifts();
+            s.Pantry.RiceJin = 4;
 
             // “我的”信息菜单、网购
             _game.Ui.OpenMyPanel();
@@ -556,35 +635,27 @@ namespace PCShopSell.EditorTools
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
             Frame(0.05f);
             Shot("vs1_28_mall");
-            foreach (string id in new[] { "bed_spring", "aircon", "sofa", "shop_sofa", "shop_led" })
-            {
-                Check(s.BuyFurnitureByTruck(id), "叫货车拖 " + id);
-            }
-            foreach (string id in new[] { "curtain", "plant", "rug", "poster", "shop_plant", "shop_poster", "shop_dispenser" })
+            s.SendByCourier = true;
+            foreach (string id in new[] { "bed_spring", "aircon", "sofa", "shop_sofa", "shop_led", "bed_good", "bed_good", "bed_good", "aircon" })
+                Check(s.BuyFurniture(id), "叫车送 " + id);
+            Check(s.CourierRunsHere(false) == 3, "一辆面包车装不下，一共叫了 3 辆");
+            Check(s.OpenCourierRun(false).LoadKg <= GameSession.CourierCapacityKg, "每辆车不超载");
+            _game.Ui.RebuildWindows();
+            Frame(0.05f);
+            Shot("vs1_66_mall_courier");
+            s.SendByCourier = false;
+            foreach (string id in new[] { "curtain", "plant", "rug", "poster", "shop_plant", "shop_poster", "shop_dispenser", "plant" })
             {
                 Teleport(s, "home");
+                if (s.HasUnloadable) Check(s.UnloadBackpack(), "到家一键放下背着的家具");
                 Teleport(s, "shop12");
-                Check(s.BuyFurnitureAtMall(id), "家具城买 " + id);
+                Check(s.BuyFurniture(id), "家具城买了装进背包 " + id);
             }
-            s.MallCartAdd("bed_good", 3);
-            s.MallCartAdd("aircon", 2);
-            s.MallCartAdd("plant", 2);
-            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            _game.Ui.RebuildWindows();
             Frame(0.05f);
-            Shot("vs1_66_mall_cart");
-            _game.Ui.OpenMallCheckout();
-            Frame(0.05f);
-            Shot("vs1_67_mall_checkout");
-            s.Ledger.Credit(s.Clock.Today, "测试", PCShopSell.Core.Common.Money.FromYuan(20000), "演示");
-            Check(s.CheckoutMall(PCShopSell.Core.Session.MallCarry.Stay), "家具城结算：先全部寄存在店里");
-            Check(s.MallStashCount == 7, "寄存了 7 件");
-            _game.Ui.CloseAllWindows();
-            Teleport(s, "home");
-            Teleport(s, "shop12");
-            _game.Ui.OnEnteredPlace(s.CurrentPlace);
-            Frame(0.05f);
-            Shot("vs1_68_mall_stash");
-            Check(s.CallTruckForStash(), "寄存的货叫货车送回家");
+            Shot("vs1_67_mall_backpack");
+            s.AdvanceClock(s.CourierQuote(false).minutes + 10);
+            Check(s.FurnitureInStock("bed_good") == 3, "三辆车把家具都送到家了");
             _game.Ui.CloseAllWindows();
             Teleport(s, "shop14");
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
@@ -592,6 +663,17 @@ namespace PCShopSell.EditorTools
             Shot("vs1_29_farm");
             Check(s.BuyIngredient("egg", 2), "农贸市场买鸡蛋");
             Check(s.BuyGift("fruit"), "农贸市场买水果");
+            Check(s.Backpack.Food.IngredientCount("egg") == 2, "买的鸡蛋装进背包");
+            s.SendByCourier = true;
+            double homeRice = s.Pantry.RiceJin;
+            Check(s.BuyRice(10), "叫车送 10 斤米回家");
+            Check(s.Couriers.Count == 1 && Math.Abs(s.Backpack.Food.RiceJin) < 1e-9, "叫车的米不进背包");
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            Frame(0.05f);
+            Shot("vs1_76_farm_courier");
+            s.SendByCourier = false;
+            s.AdvanceClock(s.CourierQuote(false).minutes + 5);
+            Check(Math.Abs(s.Pantry.RiceJin - homeRice - 10) < 1e-6, "车把米送进了家里厨房");
             _game.Ui.CloseAllWindows();
 
             // 烟酒茶行、手机店、背包
@@ -601,6 +683,21 @@ namespace PCShopSell.EditorTools
             Shot("vs1_32_tobacco");
             Check(s.BuyGift("cig"), "烟酒茶行买烟");
             Check(s.BuyGift("wine"), "烟酒茶行买酒");
+            {
+                var sr = UnityEngine.Object.FindObjectsOfType<UnityEngine.UI.ScrollRect>().FirstOrDefault(x => x.content != null && x.content.rect.height > x.viewport.rect.height + 20);
+                Check(sr != null, "烟酒茶行的商品列表能滚动");
+                if (sr != null)
+                {
+                    sr.verticalNormalizedPosition = 0f;
+                    float y = sr.content.anchoredPosition.y;
+                    _game.Ui.RebuildWindows();
+                    Frame(0.05f);
+                    Canvas.ForceUpdateCanvases();
+                    var sr2 = UnityEngine.Object.FindObjectsOfType<UnityEngine.UI.ScrollRect>().FirstOrDefault(x => x != sr && x.content != null && x.isActiveAndEnabled);
+                    if (sr2 != null) Log($"SCROLL content={sr2.content.rect.height:0} view={sr2.viewport.rect.height:0} y={sr2.content.anchoredPosition.y:0}");
+                    Check(sr2 != null && Mathf.Abs(sr2.content.anchoredPosition.y - y) < 2f, $"买完东西列表不跳回顶上（{y:0} → {(sr2 != null ? sr2.content.anchoredPosition.y : -1):0}）");
+                }
+            }
             _game.Ui.CloseAllWindows();
             s.SetSmartphone(false);
             Teleport(s, "shop04");
@@ -734,8 +831,9 @@ namespace PCShopSell.EditorTools
             Shot("vs1_16_stall_owner");
             var gpuClerk = PCShopSell.Core.Session.Rosters.GpuClerk;
             Check(g.StaffChat(gpuClerk) != null, "和店员闲聊");
-            Check(g.GiveStaffGift(gpuClerk), "请店员喝饮料");
-            Check(g.StaffRapport(gpuClerk.Id) >= 5, "店员熟络度涨了");
+            g.Backpack.AddGift(PCShopSell.Core.Home.Gifts.Soda, 1);
+            Check(g.GiveStaffGift(gpuClerk, PCShopSell.Core.Home.Gifts.Soda), "送店员一瓶背包里的饮料");
+            Check(g.StaffRapport(gpuClerk.Id) >= 3, "店员熟络度涨了");
             _game.Ui.OpenGreeterDialogue(g.CurrentPlace);
             Frame(0.05f);
             Shot("vs1_65_staff_talk");
@@ -802,6 +900,14 @@ namespace PCShopSell.EditorTools
             s.Leave();
             s.ArriveAtNode(p.NodeId);
             s.Enter(p);
+            Feed(s);
+        }
+
+        /// <summary>冒烟一路快进好几天、不做饭：直接喂饱，免得饿进医院打乱流程。</summary>
+        private static void Feed(GameSession s)
+        {
+            s.Player.Hunger = 100;
+            s.Player.Health = 100;
         }
 
         private static void Run(Func<bool> until, int maxFrames)

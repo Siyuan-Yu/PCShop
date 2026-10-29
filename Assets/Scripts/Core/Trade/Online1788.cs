@@ -75,7 +75,7 @@ namespace PCShopSell.Core.Trade
         public long TotalCents;
     }
 
-    /// <summary>"1788" 进货平台：比档口便宜，但第二天才到，还可能收到次品。只能在店里的电脑上下单。</summary>
+    /// <summary>"1788" 进货平台：比档口便宜，但第二天才到，还可能收到次品。用智能手机上的 1788 app 下单。</summary>
     public sealed class Online1788
     {
         public const int DeliveryMinuteOfDay = 10 * 60;

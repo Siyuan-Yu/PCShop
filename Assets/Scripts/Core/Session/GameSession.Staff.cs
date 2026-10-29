@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
 
 namespace PCShopSell.Core.Session
 {
@@ -77,19 +78,27 @@ namespace PCShopSell.Core.Session
         {
             if (_staffGiftDay.TryGetValue(staffId, out int last) && Clock.Today.TotalDays - last < StaffTalk.GiftCooldownDays)
                 return $"{StaffTalk.GiftCooldownDays - (Clock.Today.TotalDays - last)} 天后才能再送";
-            if (Ledger.Balance < Money.FromYuan(StaffTalk.GiftCostYuan)) return "钱不够";
+            if (!Backpack.GiftLines.Any()) return "背包里没有能送的东西（去烟酒茶行买瓶饮料）";
             return null;
         }
 
-        /// <summary>请店员喝杯饮料：花 ¥30，熟络度 +4，三天一次。</summary>
-        public bool GiveStaffGift(StaffDef staff)
+        /// <summary>送一份礼品熟络度涨多少：一瓶饮料（¥5）约 +2，¥30 的东西 +4，越贵越多，最多 +10。</summary>
+        public static double StaffGiftGain(GiftDef g) =>
+            StaffTalk.GiftGain * Math.Max(0.5, Math.Min(2.5, g.Price.Yuan / (double)StaffTalk.GiftCostYuan));
+
+        /// <summary>从背包里拿一份礼品送给店员，三天一次。</summary>
+        public bool GiveStaffGift(StaffDef staff, string giftId)
         {
             string blocker = StaffGiftBlocker(staff.Id);
             if (blocker != null) return Fail(blocker);
-            if (!Ledger.TryDebit(Clock.Today, "人情", Money.FromYuan(StaffTalk.GiftCostYuan), "给" + staff.Name + "的小礼物")) return Fail("钱不够。");
+            GiftDef g = Gifts.Get(giftId);
+            if (g == null || !Backpack.TakeGift(giftId)) return Fail("背包里没有这个。");
+            ApplyCargoLimit();
             _staffGiftDay[staff.Id] = Clock.Today.TotalDays;
-            AddStaffRapport(staff.Id, StaffTalk.GiftGain + EffectiveCharm * 0.02);
-            Say($"{staff.Name}接过饮料笑了：“哎呀，太客气了。”");
+            AddStaffRapport(staff.Id, StaffGiftGain(g) + EffectiveCharm * 0.02);
+            Say(g.Id == Gifts.Soda || g.Id == Gifts.Drink
+                ? $"{staff.Name}接过饮料笑了：“哎呀，太客气了。”"
+                : $"{staff.Name}接过「{g.Name}」愣了一下：“这么破费干嘛……谢了啊。”");
             return true;
         }
 

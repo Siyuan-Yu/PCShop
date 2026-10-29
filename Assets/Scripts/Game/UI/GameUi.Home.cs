@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
@@ -48,26 +48,40 @@ namespace PCShopSell.Game.UI
 
         private string _boxSel, _boxSide;
 
-        private System.Collections.Generic.List<BagStack> CollectBox()
+        private static readonly Stock NoParts = new Stock(0);
+
+        private System.Collections.Generic.List<BagStack> CollectBox() =>
+            S.InPlayerShop ? CollectStacks(S.ShopLocker, NoParts) : CollectStacks(S.HomeBox, S.HomeBoxParts);
+
+        /// <summary>店里的储物柜（右侧面板“库存”页和背包里都能打开）：吃的、礼品等放这里，配件放进来直接上货架。</summary>
+        public void OpenShopLockerWindow()
         {
-            var l = new System.Collections.Generic.List<BagStack>();
-            foreach (var kv in S.HomeBoxLines)
+            _boxSel = null;
+            _boxSide = null;
+            OpenWindow("店里储物柜", 780, 760, win =>
             {
-                GiftDef gd = Gifts.Get(kv.Key);
-                double kg = gd.WeightKg * kv.Value;
-                l.Add(new BagStack { Key = "gift:" + kv.Key, Name = gd.Name, Kind = "礼品", Count = kv.Value, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = new Color(0.70f, 0.52f, 0.18f) });
-            }
-            return l;
+                if (!_ctrl.InInterior)
+                {
+                    win.Close();
+                    return;
+                }
+                BuildStorage(win);
+                Ui.Size(Ui.Button(win.Content, "关闭", () => win.Close(), 20), -1, 46);
+            });
         }
 
-        /// <summary>纸箱：上面是纸箱的格子，下面是背包的格子；点一格选中，再放进去 / 拿出来。</summary>
+        /// <summary>储物处（家里纸箱 / 店里储物柜）：上面是储物处的格子，下面是背包的格子；点一格选中，再放进去 / 拿出来。</summary>
         private void BuildStorage(Window w)
         {
-            double boxKg = S.HomeBoxKg, boxLimit = GameSession.HomeBoxLimitKg;
-            Line(w.Content, $"搬家时留下的纸箱，只能放礼品。最多放 {boxLimit:0.#} 公斤；目前放了 {boxKg:0.#} 公斤。点一格选中，再放进去或拿出来。", 16, Ui.Dim);
+            bool shop = S.InPlayerShop;
+            double boxKg = shop ? S.ShopLocker.WeightKg : S.HomeBoxKg;
+            double boxLimit = shop ? GameSession.ShopLockerLimitKg : GameSession.HomeBoxLimitKg;
+            Line(w.Content, shop
+                ? $"柜台下的储物柜：吃的、礼品、小家具都能放，最多 {boxLimit:0.#} 公斤（现在 {boxKg:0.#}）；配件放进来直接上货架。吃的隔天也会坏。"
+                : $"搬家时留下的纸箱，背包里的东西都能放，最多 {boxLimit:0.#} 公斤；目前放了 {boxKg:0.#} 公斤。吃的放这里隔天也会坏。", 16, Ui.Dim);
             Ui.Bar(w.Content, (float)(boxKg / boxLimit), boxKg > boxLimit * 0.85 ? Ui.Warn : Ui.Accent, 700, 10);
 
-            Line(w.Content, "—— 纸箱 ——", 17, Ui.Accent);
+            Line(w.Content, shop ? "—— 储物柜 ——" : "—— 纸箱 ——", 17, Ui.Accent);
             var boxStacks = CollectBox();
             BagGrid(w.Content, boxStacks, Mathf.CeilToInt((float)(boxLimit / Backpack.KgPerSpace)), _boxSide == "box" ? _boxSel : null, key =>
             {
@@ -94,22 +108,19 @@ namespace PCShopSell.Game.UI
             else
             {
                 Ui.Size(Ui.Label(bottom, $"<b>{pick.Name}</b> ×{pick.Count}　{pick.Kg:0.#} 公斤", 17), 330, -1, 1);
-                string id = pick.Key.StartsWith("gift:") ? pick.Key.Substring(5) : null;
-                if (id == null)
+                string key = pick.Key;
+                int n = pick.Count;
+                string one = key == "rice" ? "1 斤" : "一份";
+                if (_boxSide == "box")
                 {
-                    Ui.Size(Ui.Label(bottom, "纸箱里只能放礼品", 15, TextAnchor.MiddleLeft, Ui.Warn), 200);
-                }
-                else if (_boxSide == "box")
-                {
-                    int n = pick.Count;
-                    Ui.Size(Ui.Button(bottom, "拿一份", () => { S.TakeFromBox(id); w.Rebuild(); }, 16, Ui.ButtonHot), 100);
-                    Ui.Size(Ui.Button(bottom, "全拿出来", () => { S.TakeFromBox(id, n); w.Rebuild(); }, 16, Ui.ButtonBg), 110);
+                    Ui.Size(Ui.Button(bottom, "拿" + one, () => { S.TakeFromBox(key); w.Rebuild(); }, 16, Ui.ButtonHot), 100);
+                    Ui.Size(Ui.Button(bottom, "全拿出来", () => { S.TakeFromBox(key, n); w.Rebuild(); }, 16, Ui.ButtonBg), 110);
                 }
                 else
                 {
-                    int n = pick.Count;
-                    Ui.Size(Ui.Button(bottom, "放一份", () => { S.StoreInBox(id); w.Rebuild(); }, 16, Ui.ButtonHot), 100);
-                    Ui.Size(Ui.Button(bottom, "全放进去", () => { S.StoreInBox(id, n); w.Rebuild(); }, 16, Ui.ButtonBg), 110);
+                    bool toShelf = shop && key.StartsWith("part:");
+                    Ui.Size(Ui.Button(bottom, toShelf ? "上货架一件" : "放" + one, () => { S.StoreInBox(key); w.Rebuild(); }, 16, Ui.ButtonHot), 100);
+                    Ui.Size(Ui.Button(bottom, toShelf ? "全上货架" : "全放进去", () => { S.StoreInBox(key, n); w.Rebuild(); }, 16, Ui.ButtonBg), 110);
                 }
             }
         }
@@ -144,11 +155,13 @@ namespace PCShopSell.Game.UI
         private string _bagSel;
         private const int BagColumns = 8;
 
-        private System.Collections.Generic.List<BagStack> CollectBag()
+        private System.Collections.Generic.List<BagStack> CollectBag() => CollectStacks(S.Backpack, S.Cargo);
+
+        /// <summary>背包 / 纸箱里的东西摊成一叠一叠（配件、米菜、饭盒、礼品、家具）。</summary>
+        private static System.Collections.Generic.List<BagStack> CollectStacks(Backpack bag, Stock parts)
         {
             var l = new System.Collections.Generic.List<BagStack>();
-            Backpack bag = S.Backpack;
-            foreach (StockLine s in S.Cargo.Lines())
+            foreach (StockLine s in parts.Lines())
             {
                 double space = Stock.SpaceOf(s.Part, s.Boxed, s.Count);
                 l.Add(new BagStack
@@ -164,6 +177,11 @@ namespace PCShopSell.Game.UI
                 int n = g.Sum(b => b.Count);
                 double kg = n * Backpack.IngredientKg(g.Key);
                 l.Add(new BagStack { Key = "ing:" + g.Key, Name = g.First().Name, Kind = "买的米和菜", Count = n, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = new Color(0.30f, 0.55f, 0.30f) });
+            }
+            if (bag.Lunchboxes > 0)
+            {
+                double kg = bag.Lunchboxes * Backpack.LunchboxKg;
+                l.Add(new BagStack { Key = "lunch", Name = "饭盒", Kind = "从电饭锅装的饭（饭点自动吃，也可以现在吃一个）", Count = bag.Lunchboxes, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = new Color(0.62f, 0.40f, 0.30f) });
             }
             foreach (var kv in bag.GiftLines)
             {
@@ -249,13 +267,43 @@ namespace PCShopSell.Game.UI
                 {
                     _bagSel = key;
                     w.Rebuild();
-                }, 440);
+                }, 360);
 
                 BagStack pick = stacks.FirstOrDefault(s => s.Key == _bagSel);
                 if (pick != null)
                     Line(w.Content, $"<b>{pick.Name}</b> ×{pick.Count}　占 {Mathf.Max(1, Mathf.CeilToInt((float)(pick.Space - 1e-6)))} 格　{pick.Kg:0.#} 公斤\n<color=#9AA3AD>{pick.Kind}</color>", 17);
                 else
                     Line(w.Content, stacks.Count == 0 ? "背包是空的。去买点东西：礼品在烟酒茶行 / 农贸市场 / 手机网购，进货在电子市场。" : "点一格看详情。", 17, Ui.Dim);
+                Line(w.Content, $"每天 12:00、18:30 饿两次，饭点先吃带着的饭盒（在家吃锅里的）。现在带着 {S.Backpack.Lunchboxes} 盒。", 15, S.Backpack.Lunchboxes < 2 ? Ui.Warn : Ui.Dim);
+
+                RectTransform acts = Ui.Row(w.Content, 46);
+                if (S.Backpack.Lunchboxes > 0)
+                    Ui.Size(Ui.Button(acts, "吃一个饭盒", () =>
+                    {
+                        S.EatLunchboxNow();
+                        w.Rebuild();
+                    }, 18), 180);
+                string target = S.UnloadTarget;
+                if (target != null)
+                {
+                    bool can = S.HasUnloadable;
+                    Ui.Size(Ui.Button(acts, "一键全放到" + target, () =>
+                    {
+                        S.UnloadBackpack();
+                        _bagSel = null;
+                        w.Rebuild();
+                    }, 18, Ui.ButtonHot, can), 260);
+                    if (S.InPlayerShop)
+                        Ui.Size(Ui.Button(acts, "店里储物柜", () =>
+                        {
+                            w.Close();
+                            OpenShopLockerWindow();
+                        }, 17, Ui.ButtonBg), 160);
+                    else if (!can && stacks.Count > 0)
+                        Ui.Size(Ui.Label(acts, "家里放米菜、礼品和家具；配件要拿到店里（或放进纸箱）。", 14, TextAnchor.MiddleLeft, Ui.Warn), 260);
+                }
+                else
+                    Ui.Size(Ui.Label(acts, "回到自己的店或家里，才能把东西放下。", 15, TextAnchor.MiddleLeft, Ui.Dim), 360);
                 Ui.Size(Ui.Button(w.Content, "关闭", w.Close, 20), -1, 46);
             });
         }
@@ -530,7 +578,7 @@ namespace PCShopSell.Game.UI
             S.RefreshCooking();
             Pantry pan = S.Pantry;
             PlayerStats st = S.Player;
-            Line(w.Content, $"饥饿 {st.Hunger:0}  健康 {st.Health:0}   米缸：{pan.RiceJin:0.#} 斤（1 斤约 {Pantry.BowlsPerJin} 碗）   饭盒：{pan.PackedBowls} 碗（带出门，饭点优先吃）", 17);
+            Line(w.Content, $"饥饿 {st.Hunger:0}  健康 {st.Health:0}   米缸：{pan.RiceJin:0.#} 斤（1 斤约 {Pantry.BowlsPerJin} 碗）   背包里的饭盒：{S.Backpack.Lunchboxes} 盒", 17);
 
             // 正在焖：只显示进度，什么都不能动
             if (pan.Cooking != null)
@@ -563,7 +611,7 @@ namespace PCShopSell.Game.UI
                     S.PackLunch(pan.CookedBowls);
                     w.Rebuild();
                 }, 18, Ui.ButtonBg, pan.CookedBowls > 0), 170);
-                Line(w.Content, "锅里的饭取完（吃掉或装进饭盒）之后，才能再焖新的一锅。", 15, Ui.Dim);
+                Line(w.Content, $"饭盒装进背包（每盒 {Backpack.LunchboxKg:0.#} 公斤，算负重）。每天 12:00、18:30 饿两次，出门要带够饭盒，不然只能饿着。锅里的饭取完才能再焖新的一锅。", 15, Ui.Dim);
                 return;
             }
 
@@ -629,7 +677,7 @@ namespace PCShopSell.Game.UI
                 Line(list, "—— 我 ——", 18, Ui.Accent);
                 Line(list, $"饥饿 {st.Hunger:0}  精力 {st.Energy:0}/{st.MaxEnergy:0}  健康 {st.Health:0}  欠觉 {st.SleepDebt:0.#} 小时", 17, Ui.Dim);
                 Line(list, $"智力 {st.Intelligence}  魅力 {S.EffectiveCharm}（衣着 +{S.Outfit.CharmBonus}）  技术 {st.Skill}   现金 {S.Ledger.Balance}", 17, Ui.Dim);
-                Line(list, "三餐（7:30 / 12:00 / 18:30）：先吃饭盒，在家就吃自己做的，都没有就在外面吃，每顿 " + GameSession.MealPrice, 15, Ui.Dim);
+                Line(list, "每天饿两次（12:00 / 18:30）：在家吃锅里的饭，出门吃背包里的饭盒；都没有就饿着。", 15, Ui.Dim);
 
                 Line(list, "—— 出租屋 ——", 18, Ui.Accent);
                 Line(list, $"月租 {GameSession.HomeRent}；睡眠恢复 ×{S.HomeSleepQuality:0.##}；" + (S.HomeUtilities.IsPositive ? $"水电 {S.HomeUtilities}/月" : "不用交水电（没有电器）"), 17);
@@ -641,14 +689,15 @@ namespace PCShopSell.Game.UI
                 Backpack bag = S.Backpack;
                 var bagIngs = bag.Food.Ingredient.GroupBy(b => b.Id).ToList();
                 string bagFood = (bag.Food.RiceJin > 0 ? $"大米 {bag.Food.RiceJin:0.#} 斤" : "") + (bagIngs.Count > 0 ? "  " + string.Join("、", bagIngs.Select(g => $"{g.First().Name}×{g.Sum(b => b.Count)}")) : "");
-                Line(list, "买的菜米：" + (bagFood.Trim().Length == 0 ? "没有" : bagFood.Trim()) + "（回家自动放进厨房）", 16);
+                Line(list, "买的菜米：" + (bagFood.Trim().Length == 0 ? "没有" : bagFood.Trim()) + "（回家打开背包一键放进厨房）", 16);
+                Line(list, $"饭盒：{bag.Lunchboxes} 盒", 16, bag.Lunchboxes < 2 ? Ui.Warn : Ui.TextColor);
                 var bagFurn = bag.FurnitureLines.ToList();
-                if (bagFurn.Count > 0) Line(list, "背着的家具：" + string.Join("、", bagFurn.Select(kv => FurnitureLabel(kv.Key, kv.Value))) + "（回家或回店里放进家具背包）", 16);
+                if (bagFurn.Count > 0) Line(list, "背着的家具：" + string.Join("、", bagFurn.Select(kv => FurnitureLabel(kv.Key, kv.Value))) + "（回家或回店里打开背包一键放下）", 16);
                 Line(list, "礼品：" + (bag.GiftLines.Count() == 0 ? "没有。去烟酒茶行、农贸市场买，或者网购。" : string.Join("、", bag.GiftLines.Select(kv => $"{Gifts.Get(kv.Key).Name}×{kv.Value}"))), 16);
 
                 Line(list, "—— 吃的 ——", 18, Ui.Accent);
                 Pantry pan = S.Pantry;
-                Line(list, $"大米 {pan.RiceJin:0.#} 斤   做好的饭 {pan.CookedBowls} 碗   饭盒 {pan.PackedBowls} 碗", 17);
+                Line(list, $"大米 {pan.RiceJin:0.#} 斤   锅里做好的饭 {pan.CookedBowls} 碗", 17);
                 if (pan.Cooking != null) Line(list, $"电饭锅正在焖饭，还剩 {pan.CookMinutesLeft(S.Clock.Now.TotalMinutes)} 分钟。", 16, Ui.Warn);
                 var ings = pan.Ingredient.GroupBy(b => b.Id).ToList();
                 Line(list, "食材：" + (ings.Count == 0 ? "没有" : string.Join("、", ings.Select(g => $"{g.First().Name}×{g.Sum(b => b.Count)}"))) + "。没有冰箱，放不久；去农贸市场买。", 15, Ui.Dim);
@@ -664,6 +713,11 @@ namespace PCShopSell.Game.UI
                 {
                     int left = Mathf.Max(0, p.DueDay - S.Clock.Today.TotalDays);
                     Line(list, $"· {ParcelName(p)}，还要 {left} 天", 16);
+                }
+                foreach (CourierRun r in S.Couriers)
+                {
+                    long left = System.Math.Max(0, r.DueMinute - S.Clock.Now.TotalMinutes);
+                    Line(list, $"· 叫的车：从{r.FromName}送到{(r.ToShop ? "店里" : "家里")}，{r.Items.Count} 样东西，约 {left} 分钟到", 16);
                 }
 
                 Line(list, "—— 店里的摆设 ——", 18, Ui.Accent);
@@ -821,48 +875,22 @@ namespace PCShopSell.Game.UI
 
         private void BuildMall(Window w, Place p)
         {
-            Line(w.Content, "先放进购物车，一起结算。按来时的载具装格子（1 格 = 2 公斤），装不下的叫货车（每辆 ¥120、限 200 公斤，明早到家）或先寄存在店里，改天自己搬。线上同款便宜 15%，2 天到家。", 15, Ui.Dim);
-            Line(w.Content, $"现金 {S.Ledger.Balance}   来时的载具：{S.CurrentVehicle.Name}（{S.CurrentVehicle.CargoCapacity:0.#} 格），还空 {S.FreeKg / Backpack.KgPerSpace:0.#} 格", 17);
-            CellStrip(w.Content, S.CurrentVehicle.CargoCapacity, S.CarriedKg / Backpack.KgPerSpace, 0);
+            Para(w.Content, "和农贸市场一样：先选好买了怎么拿，再一件件买。装进背包要背得动；背包装不下就叫车送到家（每辆面包车最多装 200 公斤，装满了再叫下一辆，每辆收一次运费）。线上同款便宜 15%，2 天到家。", 15, Ui.Dim);
+            Line(w.Content, $"现金 {S.Ledger.Balance}　　来时的载具：{S.CurrentVehicle.Name}，还能背 {S.FreeKg:0.#} 公斤", 17);
+            CarryModeRow(w, w.Content, false);
             bool hasStash = S.MallStashCount > 0;
-            RectTransform list = Ui.Scroll(w.Content, hasStash ? 250 : 340);
+            RectTransform list = Ui.Scroll(w.Content, hasStash ? 240 : 380);
             Line(list, "—— 家里用 ——", 18, Ui.Accent);
             foreach (FurnitureDef f in FurnitureCatalog.Purchasable(false)) MallRow(w, list, f);
             Line(list, "—— 店里的摆设（摆放要歇业装修一天）——", 18, Ui.Accent);
             foreach (FurnitureDef f in FurnitureCatalog.Purchasable(true)) MallRow(w, list, f);
 
             if (hasStash) BuildMallStash(w);
-
-            // 购物车栏
-            RectTransform bar = Ui.Row(w.Content, 56, 8);
-            int cartCount = S.MallCartCount;
-            string summary = cartCount == 0
-                ? "购物车是空的"
-                : $"购物车 {cartCount} 件　{S.MallCartGoods}　共 {S.MallCartKg:0.#} 公斤（货车 {GameSession.TrucksNeeded(S.MallCart)} 辆可装下）";
-            Ui.Size(Ui.Label(bar, summary, 18, TextAnchor.MiddleLeft, cartCount == 0 ? Ui.Dim : Ui.TextColor), -1, -1, 1);
-            Ui.Size(Ui.Button(bar, "清空", () =>
-            {
-                S.MallCartClear();
-                w.Rebuild();
-            }, 17, Ui.ButtonBg, cartCount > 0), 90);
-            Ui.Size(Ui.Button(bar, "去结算", () => OpenMallCheckout(w), 19, Ui.ButtonHot, cartCount > 0), 150);
         }
 
-        private static readonly Color CellUsed = new Color(0.46f, 0.5f, 0.56f);
         private static readonly Color CellFree = new Color(0.16f, 0.18f, 0.22f);
 
-        /// <summary>载具的格子：灰的是已装的，黄的是这次要装的，暗的是空的。</summary>
-        private void CellStrip(Transform parent, double total, double used, double adding)
-        {
-            int n = Mathf.Max(1, Mathf.CeilToInt((float)total));
-            int u = Mathf.Min(n, Mathf.CeilToInt((float)(used - 1e-6)));
-            int a = Mathf.Min(n - u, Mathf.CeilToInt((float)(adding - 1e-6)));
-            RectTransform row = Ui.Row(parent, 22, 3);
-            for (int i = 0; i < n; i++)
-                Ui.Size(Ui.Panel(row, "Cell", i < u ? CellUsed : i < u + a ? Ui.Accent : CellFree), 14, 18);
-        }
-
-        /// <summary>寄存在店里的货：自己来搬（装不下就分几趟），或者全叫货车送回家。</summary>
+        /// <summary>以前寄存在店里的货：自己来搬（装不下就分几趟），或者全叫货车送回家。</summary>
         private void BuildMallStash(Window w)
         {
             Line(w.Content, $"—— 寄存在店里的货（已付过钱，不过期）{S.MallStashCount} 件，共 {S.MallStashKg:0.#} 公斤 ——", 17, Ui.Accent);
@@ -871,7 +899,7 @@ namespace PCShopSell.Game.UI
             {
                 FurnitureDef d = FurnitureCatalog.Get(l.Id);
                 RectTransform row = Ui.Row(stash, 40);
-                Ui.Size(Ui.Label(row, $"{d.Name} ×{l.Count}　<size=14><color=#A8B0BA>每件 {d.WeightKg:0.#} 公斤，占 {d.WeightKg / Backpack.KgPerSpace:0.#} 格</color></size>", 17), -1, -1, 1);
+                Ui.Size(Ui.Label(row, $"{d.Name} ×{l.Count}　<size=14><color=#A8B0BA>每件 {d.WeightKg:0.#} 公斤</color></size>", 17), -1, -1, 1);
                 bool fits = d.WeightKg <= S.FreeKg + 1e-9;
                 Ui.Size(Ui.Button(row, fits ? "搬走 1 件" : "装不下", () =>
                 {
@@ -895,86 +923,112 @@ namespace PCShopSell.Game.UI
         private void MallRow(Window w, RectTransform list, FurnitureDef def)
         {
             RectTransform row = Ui.Row(list, 58);
-            Ui.Size(Ui.Label(row, $"{def.Name}  <size=14><color=#A8B0BA>重 {def.WeightKg:0.#} 公斤</color></size>\n<size=14><color=#A8B0BA>{def.Description}</color></size>", 18), 410);
+            Ui.Size(Ui.Label(row, $"{def.Name}  <size=14><color=#A8B0BA>重 {def.WeightKg:0.#} 公斤</color></size>\n<size=14><color=#A8B0BA>{def.Description}</color></size>", 18), 430);
             Ui.Size(Ui.Label(row, def.Price.ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 90);
             int have = S.FurnitureInStock(def.Id) + S.Backpack.FurnitureCount(def.Id);
-            Ui.Size(Ui.Label(row, have > 0 ? $"已有 ×{have}" : "", 14, TextAnchor.MiddleLeft, Ui.Dim), 66);
-            int inCart = S.MallCartOf(def.Id);
-            Ui.Size(Ui.Button(row, "−", () =>
+            Ui.Size(Ui.Label(row, have > 0 ? $"已有 ×{have}" : "", 14, TextAnchor.MiddleLeft, Ui.Dim), 70);
+            string label;
+            bool ok;
+            if (S.SendByCourier)
             {
-                S.MallCartRemove(def.Id);
-                w.Rebuild();
-            }, 20, Ui.ButtonBg, inCart > 0), 44);
-            Ui.Size(Ui.Label(row, inCart > 0 ? inCart.ToString() : "", 19, TextAnchor.MiddleCenter, Ui.Accent), 36);
-            Ui.Size(Ui.Button(row, "＋", () =>
+                bool dest = S.CourierToShop(false);
+                int cars = S.NewCarsNeeded(new CourierItem { Kind = CourierItemKind.Furniture, Id = def.Id, Count = 1 }, dest);
+                ok = cars >= 0;
+                label = !ok ? "一车装不下" : cars == 0 ? "买，装上这辆车" : S.CourierRunOpen(dest) ? $"买（再叫一辆 +{S.CourierQuote(dest).fee}）" : $"买（叫车 +{S.CourierQuote(dest).fee}）";
+            }
+            else
             {
-                S.MallCartAdd(def.Id);
+                ok = def.WeightKg <= S.FreeKg + 1e-9;
+                label = ok ? "买，装进背包" : "背包装不下";
+            }
+            Ui.Size(Ui.Button(row, label, () =>
+            {
+                S.BuyFurniture(def.Id);
                 w.Rebuild();
-            }, 20, Ui.ButtonHot), 44);
+            }, 16, Ui.ButtonHot, ok), 220);
         }
 
-        /// <summary>结算窗口（自动测试用：不带父窗口）。</summary>
-        public void OpenMallCheckout() => OpenMallCheckout(null);
-
         /// <summary>
-        /// 结算：东西先往来时的载具格子里装；装不下的，选叫货车、或先寄存在店里改天自己来搬。
+        /// 买了怎么拿：装进背包自己带，或者叫车。叫车时右边是“送到”下拉框（家里 / 我的店里），每家店都能选；
+        /// defaultToShop 是这家店默认送去的地方（档口默认店里，其他默认家里）。
         /// </summary>
-        private void OpenMallCheckout(Window parent)
+        public void CarryModeRow(Window w, Transform parent, bool defaultToShop)
         {
-            OpenWindow("结算", 800, 840, w =>
+            bool toShop = S.CourierToShop(defaultToShop);
+            (Money fee, int minutes) = S.CourierQuote(toShop);
+            RectTransform row = Ui.Row(parent, 50);
+            Ui.Size(Ui.Label(row, "买了：", 17, TextAnchor.MiddleLeft, Ui.Dim), 60);
+            Ui.Size(Ui.Button(row, $"装进背包\n<size=13>负重 {S.CarriedKg:0.#}/{S.CarryLimitKg:0.#} 公斤</size>", () =>
             {
-                VehicleSpec v = S.CurrentVehicle;
-                Line(w.Content, $"现金 {S.Ledger.Balance}　　来时的载具：{v.Name}（{v.CargoCapacity:0.#} 格），还空 {S.FreeKg / Backpack.KgPerSpace:0.#} 格　<size=14>灰=已装　黄=这次装上　暗=空</size>", 16, Ui.Dim);
-                MallPlan fit = S.PlanMallCheckout(MallCarry.SplitStay);
-                CellStrip(w.Content, v.CargoCapacity, S.CarriedKg / Backpack.KgPerSpace, fit.SelfKg / Backpack.KgPerSpace);
-                RectTransform items = Ui.Scroll(w.Content, 120);
-                foreach (MallCartLine l in S.MallCart)
+                S.SendByCourier = false;
+                w.Rebuild();
+            }, 16, S.SendByCourier ? Ui.ButtonBg : Ui.ButtonHot), 200);
+            CourierRun open = S.OpenCourierRun(toShop);
+            string sub = open != null ? $"这辆还能装 {open.FreeKg:0.#} 公斤" : $"每辆运费 {fee}，最多装 {GameSession.CourierCapacityKg:0} 公斤";
+            Ui.Size(Ui.Button(row, $"叫车送货\n<size=13>{sub}</size>", () =>
+            {
+                S.SendByCourier = true;
+                w.Rebuild();
+            }, 16, S.SendByCourier ? Ui.ButtonHot : Ui.ButtonBg), 230);
+            if (S.SendByCourier)
+            {
+                Ui.Size(Ui.Label(row, "送到", 16, TextAnchor.MiddleRight, Ui.Dim), 44);
+                Ui.Size(Ui.Button(row, $"{(toShop ? "我的店里" : "家里")}  ▼", () => OpenCourierDestMenu(w), 17, new Color(0.2f, 0.24f, 0.3f)), 150);
+                Para(parent, toShop
+                    ? "送到店里：配件直接上货架；吃的、礼品放进店里储物柜；家具进“我的”里待摆放。"
+                    : "送到家里：米和菜进厨房；礼品、配件放进纸箱；家具进“我的”里待摆放。", 14, Ui.Dim);
+                CourierLoadBar(parent, toShop);
+            }
+        }
+
+        /// <summary>“送到”下拉框展开：两个地址，各自的运费和大概多久到。</summary>
+        private void OpenCourierDestMenu(Window owner)
+        {
+            OpenWindow("叫车送到哪", 560, 300, w =>
+            {
+                foreach (bool shop in new[] { false, true })
                 {
-                    FurnitureDef d = FurnitureCatalog.Get(l.Id);
-                    Line(items, $"{d.Name} ×{l.Count}　　{d.Price * l.Count}　　占 {d.WeightKg * l.Count / Backpack.KgPerSpace:0.#} 格（{d.WeightKg * l.Count:0.#} 公斤）", 17);
+                    bool s = shop;
+                    (Money fee, int minutes) = S.CourierQuote(s);
+                    bool current = S.CourierToShop(DefaultDestIsShop) == s;
+                    Ui.Size(Ui.Button(w.Content, $"{(s ? "我的店里" : "家里")}{(current ? "  ✓" : "")}\n<size=13>每辆运费 {fee}，约 {minutes} 分钟到</size>", () =>
+                    {
+                        S.CourierDest = s;
+                        w.Close();
+                        owner?.Rebuild();
+                    }, 18, current ? Ui.ButtonHot : Ui.ButtonBg), -1, 64);
                 }
-                RectTransform addr = Ui.Row(w.Content, 38, 8);
-                Ui.Size(Ui.Label(addr, $"货车送货地址：<color=#E3B347>{S.DeliveryName}</color>　<size=14><color=#A8B0BA>（买的家具两边都能摆，送到店里省得自己搬）</color></size>", 17, TextAnchor.MiddleLeft), -1, -1, 1);
-                Ui.Size(Ui.Button(addr, "改送：" + (S.DeliverToShop ? "家" : "我的店"), () => { S.ToggleDeliveryAddress(); w.Rebuild(); }, 17), 150);
-                Line(w.Content, $"合计 {S.MallCartGoods}　共 {S.MallCartKg / Backpack.KgPerSpace:0.#} 格　这次能装上 {fit.SelfCount}/{S.MallCartCount} 件", 20, Ui.Accent);
-
-                CheckoutOption(w, parent, MallCarry.Self, "全部装进载具",
-                    plan => $"全部放进背包 / 载具：占 {plan.SelfKg / Backpack.KgPerSpace:0.#} 格。付 {plan.Total}。");
-                CheckoutOption(w, parent, MallCarry.SplitStay, "能装的装走，剩下的寄存在店里",
-                    plan => $"装走 {plan.SelfCount} 件，其余 {plan.StashCount} 件寄存在店里（不过期、不收费），改天自己来搬，分几趟都行。付 {plan.Total}。");
-                CheckoutOption(w, parent, MallCarry.Split, "能装的装走，剩下的叫货车",
-                    plan => $"装走 {plan.SelfCount} 件，其余 {plan.TruckCount} 件叫 {plan.Trucks} 辆货车（运费 {plan.TruckFees}），明早送到{S.DeliveryName}。付 {plan.Total}。");
-                CheckoutOption(w, parent, MallCarry.Truck, "全部叫货车",
-                    plan => $"{plan.TruckKg:0.#} 公斤，要 {plan.Trucks} 辆货车（每辆 ¥120、最多 {GameSession.TruckCapacityKg:0} 公斤），明早送到{S.DeliveryName}。付 {plan.Total}。");
-                CheckoutOption(w, parent, MallCarry.Stay, "先全部寄存在店里",
-                    plan => $"{plan.StashCount} 件都先放店里，之后自己来搬（或到时再叫货车）。付 {plan.Total}。");
-
-                Ui.Size(Ui.Button(w.Content, "再看看", w.Close, 19), -1, 44);
+                Ui.Size(Ui.Button(w.Content, "取消", w.Close, 18), -1, 44);
             });
         }
 
-        private void CheckoutOption(Window w, Window parent, MallCarry mode, string title, System.Func<MallPlan, string> describe)
+        private bool DefaultDestIsShop => S.CurrentPlace != null && S.CurrentPlace.Kind == PlaceKind.Wholesaler;
+
+        /// <summary>当前叫的这辆车装了多少、还能装多少（灰=已装，暗=空）。</summary>
+        private void CourierLoadBar(Transform parent, bool toShop)
         {
-            MallPlan plan = S.PlanMallCheckout(mode);
-            RectTransform row = Ui.Row(w.Content, 70, 10);
-            string desc = plan.Blocker != null ? $"<color=#E0806A>{plan.Blocker}</color>" : "<color=#A8B0BA>" + describe(plan) + "</color>";
-            Ui.Size(Ui.Label(row, $"<b>{title}</b>\n<size=15>{desc}</size>", 19, TextAnchor.MiddleLeft), -1, -1, 1);
-            Ui.Size(Ui.Button(row, "就这样", () =>
+            CourierRun open = S.OpenCourierRun(toShop);
+            (Money fee, int minutes) = S.CourierQuote(toShop);
+            double cap = GameSession.CourierCapacityKg;
+            if (open == null)
             {
-                if (S.CheckoutMall(mode))
-                {
-                    w.Close();
-                    parent?.Rebuild();
-                    Toast("买好了。");
-                }
-                else w.Rebuild();
-            }, 19, Ui.ButtonHot, plan.Blocker == null), 130);
+                Para(parent, $"还没叫车。买第一件时叫一辆面包车（运费 {fee}，最多装 {cap:0} 公斤，约 {minutes} 分钟到）；装不下了会再叫一辆，再收一次运费。", 14, Ui.Dim);
+                return;
+            }
+            int n = S.CourierRunsHere(toShop);
+            Line(parent, $"在这家叫了 {n} 辆车。当前第 {n} 辆：已装 <color=#E3B347>{open.LoadKg:0.#}</color> / {cap:0} 公斤，还能装 <color=#7FD18B>{open.FreeKg:0.#}</color> 公斤", 15);
+            RectTransform row = Ui.Row(parent, 16, 2);
+            int cells = 40;
+            int used = Mathf.Clamp(Mathf.CeilToInt((float)(open.LoadKg / cap * cells - 1e-6)), 0, cells);
+            for (int i = 0; i < cells; i++)
+                Ui.Size(Ui.Panel(row, "Load", i < used ? Ui.Accent : CellFree), 12, 12);
         }
 
         private void BuildTobacco(Window w, Place p)
         {
-            Line(w.Content, "烟酒茶行：现场付钱，买了放进背包，再去送人。网购便宜 15%，但要等 2 天。", 16, Ui.Dim);
-            Line(w.Content, $"现金 {S.Ledger.Balance}   负重 {S.CarriedKg:0.#}/{S.CarryLimitKg:0.#} 公斤", 18, Ui.Dim);
+            Line(w.Content, "烟酒茶行：现场付钱，装进背包带走，或者叫车送到家里 / 店里。网购便宜 15%，但要等 2 天。", 16, Ui.Dim);
+            Line(w.Content, $"现金 {S.Ledger.Balance}", 18, Ui.Dim);
+            CarryModeRow(w, w.Content, false);
             RectTransform list = Ui.Scroll(w.Content, 380);
             foreach (GiftDef def in Gifts.All.Where(x => x.SoldAt == Gifts.TobaccoBusiness)) ShopGiftRow(w, list, def, true);
         }
@@ -988,7 +1042,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(row, have > 0 ? $"背包 ×{have}" : "", 15, TextAnchor.MiddleLeft, Ui.Dim), 80);
             Ui.Size(Ui.Button(row, "买", () =>
             {
-                if (S.BuyGift(def.Id)) Toast($"买了 {def.Name}");
+                if (S.BuyGift(def.Id)) Toast(S.SendByCourier ? $"买了 {def.Name}，叫车送回家" : $"买了 {def.Name}，放进背包");
                 w.Rebuild();
             }, 17, Ui.ButtonHot, open), 70);
         }
@@ -1016,8 +1070,9 @@ namespace PCShopSell.Game.UI
         {
             bool open = S.IsFarmMarketOpen;
             Line(w.Content, open ? "营业中（每天 6:00–18:00）。米按斤卖，菜、蛋、肉当天最新鲜。" : "<color=#E0806A>收摊了（每天 6:00–18:00）</color>");
-            Line(w.Content, $"现金 {S.Ledger.Balance}   家里：大米 {S.Pantry.RiceJin:0.#} 斤   负重 {S.CarriedKg:0.#}/{S.CarryLimitKg:0.#} 公斤", 18, Ui.Dim);
-            Line(w.Content, "买的东西放进背包，回家自动放进厨房；太重了拿不动。家里没有冰箱，买多了会放坏。", 15, Ui.Dim);
+            Line(w.Content, $"现金 {S.Ledger.Balance}   大米：背包 {S.Backpack.Food.RiceJin:0.#} 斤 / 家里 {S.Pantry.RiceJin:0.#} 斤", 18, Ui.Dim);
+            Line(w.Content, "装进背包的要自己背回家，再打开背包一键放进厨房；叫车的直接送进家里厨房。家里没有冰箱，买多了会放坏。", 15, Ui.Dim);
+            CarryModeRow(w, w.Content, false);
 
             RectTransform rrow = Ui.Row(w.Content, 50);
             Ui.Size(Ui.Label(rrow, $"大米 {Pantry.RicePricePerJin}/斤", 19), 200);
@@ -1039,7 +1094,7 @@ namespace PCShopSell.Game.UI
                 RectTransform row = Ui.Row(w.Content, 56);
                 Ui.Size(Ui.Label(row, $"{d.Name}（{d.Unit}）\n<size=14><color=#A8B0BA>可焖「{d.DishName}」，保质 {d.ShelfDays} 天</color></size>", 18), 380);
                 Ui.Size(Ui.Label(row, d.Price.ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 80);
-                Ui.Size(Ui.Label(row, $"家里 ×{S.Pantry.IngredientCount(d.Id) + S.Backpack.Food.IngredientCount(d.Id)}", 15, TextAnchor.MiddleLeft, Ui.Dim), 90);
+                Ui.Size(Ui.Label(row, $"背包 ×{S.Backpack.Food.IngredientCount(d.Id)}\n家里 ×{S.Pantry.IngredientCount(d.Id)}", 14, TextAnchor.MiddleLeft, Ui.Dim), 90);
                 foreach (int n in new[] { 1, 3 })
                 {
                     int count = n;

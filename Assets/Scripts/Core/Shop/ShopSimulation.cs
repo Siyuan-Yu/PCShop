@@ -98,6 +98,12 @@ namespace PCShopSell.Core.Shop
         public bool ItemBoxed { get; internal set; }
         public Money Spend { get; internal set; }
 
+        /// <summary>从展示台上直接抱走的整机档次；-1 表示不是买展示机。</summary>
+        public int DisplayTier { get; internal set; } = -1;
+
+        /// <summary>排队时手里拿的东西的名字（配件或整机）。</summary>
+        public string ItemName => DisplayTier >= 0 ? PartCatalog.TierName(DisplayTier) + "整机" : Item?.Name;
+
         internal ShopCustomer(int id, CustomerIntent intent, PartCategory category, int buildTier,
             GameTimestamp arrivedAt, GameTimestamp readyAt, bool carriesCash)
         {
@@ -150,8 +156,11 @@ namespace PCShopSell.Core.Shop
         /// <summary>顾客身上带现金的概率；只收现金时，没带的人挑完就走。</summary>
         public double CashCarryChance = 0.8;
 
-        /// <summary>进店顾客里想装整机的比例。</summary>
+        /// <summary>进店顾客里想装整机的比例（展示台空着时）。</summary>
         public double BuildOrderChance = 0.06;
+
+        /// <summary>展示台上每摆一台整机，想装整机的顾客比例多这么多倍（曝光度）。</summary>
+        public double DisplayExposurePerPc = 0.5;
 
         public int BuildOrderDueDays = 2;
 
@@ -172,6 +181,17 @@ namespace PCShopSell.Core.Shop
             0.35, 0.6, 0.9, 1.0, 1.0, 0.9, 0.85, 0.9,
             1.0, 1.0, 1.0, 0.9, 0.7, 0.4, 0.15, 0.05,
         };
+
+        /// <summary>展示台能摆几台整机（店中间的展示桌，每张两台）。</summary>
+        public static int DisplaySlots(ShopSize size)
+        {
+            switch (size)
+            {
+                case ShopSize.Medium: return 4;
+                case ShopSize.Large: return 8;
+                default: return 2;
+            }
+        }
 
         public static double SizeFactor(ShopSize size)
         {
@@ -405,6 +425,46 @@ namespace PCShopSell.Core.Shop
             return true;
         }
 
+        private readonly List<int> _display = new List<int>();
+
+        /// <summary>摆在展示台上的整机（档次），顾客能直接买走。</summary>
+        public IReadOnlyList<int> DisplayPcs => _display;
+
+        public int DisplaySlots => ShopSettings.DisplaySlots(Size);
+
+        public int DisplayCount(int tier) => _display.FindAll(t => t == tier).Count;
+
+        /// <summary>现在进店顾客里想装整机的比例：展示台上的整机越多越高。</summary>
+        public double BuildChance => Math.Min(1.0, Settings.BuildOrderChance * (1.0 + Settings.DisplayExposurePerPc * _display.Count));
+
+        /// <summary>装一台整机摆到展示台上：从库存扣一套配件。没空位或缺配件返回 false。</summary>
+        public bool AssembleForDisplay(int tier)
+        {
+            if (_display.Count >= DisplaySlots) return false;
+            var parts = PartCatalog.BuildList(tier);
+            foreach (PartDef p in parts)
+                if (Stock.CountAll(p) == 0) return false;
+            foreach (PartDef p in parts) Stock.TakeOne(p);
+            _display.Add(tier);
+            return true;
+        }
+
+        /// <summary>把展示台上的一台拆回散件放进库存。</summary>
+        public bool DisassembleDisplay(int tier)
+        {
+            if (!_display.Remove(tier)) return false;
+            foreach (PartDef p in PartCatalog.BuildList(tier)) Stock.ForceAdd(p, false, 1);
+            return true;
+        }
+
+        public void RestoreDisplay(IEnumerable<int> tiers)
+        {
+            _display.Clear();
+            if (tiers == null) return;
+            foreach (int t in tiers)
+                if (t >= 0 && t <= 2) _display.Add(t);
+        }
+
         public void Dispose()
         {
             _clock.TimeAdvanced -= OnTimeAdvanced;
@@ -483,7 +543,7 @@ namespace PCShopSell.Core.Shop
 
         private void Spawn(GameTimestamp now)
         {
-            bool build = Random.Chance(Settings.BuildOrderChance);
+            bool build = Random.Chance(BuildChance);
             PartCategory cat = PartCatalog.Categories[Random.Next(0, PartCatalog.Categories.Length)];
             int tier = PickTier();
             int browse = Random.Next(Settings.MinBrowseMinutes, Settings.MaxBrowseMinutes + 1);
@@ -510,6 +570,7 @@ namespace PCShopSell.Core.Shop
                     Leave(c, LeaveReason.TooExpensive);
                     return;
                 }
+                if (TryTakeDisplay(c, now)) return;
                 Money price = BuildPrice(c.BuildTier);
                 var order = new BuildOrder(NextOrderId++, c.BuildTier, price, now, now.AddMinutes(Settings.BuildOrderDueDays * GameTimestamp.MinutesPerDay));
                 _orders.Add(order);
@@ -547,6 +608,27 @@ namespace PCShopSell.Core.Shop
             c.WaitingSince = now;
             _queue.Add(c);
             CustomerReadyToPay?.Invoke(c);
+        }
+
+        /// <summary>展示台上有想要的档次（没有就一半人退而求其次买相邻档次）：直接抱走去排队结账。</summary>
+        private bool TryTakeDisplay(ShopCustomer c, GameTimestamp now)
+        {
+            int tier = -1;
+            if (_display.Contains(c.BuildTier)) tier = c.BuildTier;
+            else
+            {
+                foreach (int t in _display)
+                    if (Math.Abs(t - c.BuildTier) == 1 && Random.Chance(0.5)) { tier = t; break; }
+            }
+            if (tier < 0 || !CanPay(c)) return false;
+            _display.Remove(tier);
+            c.DisplayTier = tier;
+            c.Spend = BuildPrice(tier);
+            c.State = CustomerState.WaitingCheckout;
+            c.WaitingSince = now;
+            _queue.Add(c);
+            CustomerReadyToPay?.Invoke(c);
+            return true;
         }
 
         /// <summary>从想要的品类里挑一件有货的（优先想要的档次）；没货时有一半人会改买别的品类。</summary>
@@ -601,10 +683,18 @@ namespace PCShopSell.Core.Shop
             _queue.Remove(c);
             _active.Remove(c);
             c.State = CustomerState.Paid;
-            _ledger.Credit(_clock.Today, SalesCategory, c.Spend, c.Item.Name + (c.ItemBoxed ? "（盒装）" : "（散件）"));
+            if (c.DisplayTier >= 0)
+            {
+                _ledger.Credit(_clock.Today, BuildCategory, c.Spend, $"{c.ItemName}（展示机）");
+                Reputation += BuildReputationGain;
+            }
+            else
+            {
+                _ledger.Credit(_clock.Today, SalesCategory, c.Spend, c.Item.Name + (c.ItemBoxed ? "（盒装）" : "（散件）"));
+                Reputation += SaleReputationGain;
+            }
             TodaySales += c.Spend;
             _day.Paid++;
-            Reputation += SaleReputationGain;
             CustomerPaid?.Invoke(c);
         }
 
@@ -614,6 +704,11 @@ namespace PCShopSell.Core.Shop
             {
                 Stock.ForceAdd(c.Item, c.ItemBoxed, 1);
                 c.Item = null;
+            }
+            if (c.State == CustomerState.WaitingCheckout && c.DisplayTier >= 0)
+            {
+                _display.Add(c.DisplayTier);
+                c.DisplayTier = -1;
             }
             if (reason == LeaveReason.Impatient) Reputation -= 0.3;
             _active.Remove(c);

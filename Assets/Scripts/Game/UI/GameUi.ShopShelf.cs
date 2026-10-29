@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -212,7 +212,7 @@ namespace PCShopSell.Game.UI
         /// <summary>走到货架前按 F：一座木货架，上层摆整盒、下层摆散件，入门 / 主流 / 高端各一格，价签在板边。</summary>
         public void OpenShelfWindow(PartCategory cat)
         {
-            OpenWindow("货架：" + PartCatalog.CategoryName(cat), 980, 740, w =>
+            OpenWindow("货架：" + PartCatalog.CategoryName(cat), 980, 812, w =>
             {
                 ShopSimulation shop = S.PlayerShop;
                 Stock st = shop.Stock;
@@ -242,8 +242,32 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Panel(frame.transform, "Gap", WoodDark), -1, 8);
                 }
 
+                RectTransform prices = Ui.Row(w.Content, 64, 8);
+                foreach (PartDef p in parts) ShelfPriceBox(w, prices, p, shop);
+
                 Ui.Size(Ui.Button(w.Content, "关闭", w.Close, 20), -1, 46);
             });
+        }
+
+        /// <summary>货架下面的调价：每件配件单独 −/+ 加价，“跟随”回到全局加价。改了马上生效，价签跟着变。</summary>
+        private void ShelfPriceBox(Window w, Transform row, PartDef p, ShopSimulation shop)
+        {
+            Image box = Ui.Panel(row, "Price", new Color(0.13f, 0.14f, 0.17f));
+            Ui.Size(box, 296, 64);
+            RectTransform inner = Ui.Row(box.transform, 64, 4);
+            inner.Fill(4);
+            bool own = shop.HasPartMarkup(p);
+            double m = shop.MarkupOf(p);
+            Text info = Ui.Label(inner, $"市价 {S.Market.PriceOf(p)}　<b>{m:0.00}×</b>{(own ? "" : "<size=12>（跟随）</size>")}\n<size=12><color=#9AA3AD>顾客愿买约 {ShopSettings.BuyChance(m) * 100:0}%</color></size>", 14);
+            Ui.Size(info, 150);
+            void Set(double? v)
+            {
+                shop.SetPartMarkup(p, v);
+                w.Rebuild();
+            }
+            Ui.Size(Ui.Button(inner, "−", () => Set(Mathf.Round((float)m * 20 - 1) / 20f), 20, Ui.ButtonBg, m > 0.9 + 1e-6), 34);
+            Ui.Size(Ui.Button(inner, "+", () => Set(Mathf.Round((float)m * 20 + 1) / 20f), 20, Ui.ButtonBg, m < 1.6 - 1e-6), 34);
+            Ui.Size(Ui.Button(inner, "跟随", () => Set(null), 13, Ui.ButtonBg, own), 54);
         }
 
         private void BuildShelfSlot(Transform row, PartDef p, bool boxed, ShopSimulation shop)
@@ -287,7 +311,7 @@ namespace PCShopSell.Game.UI
             }
 
             string tag = have == 0
-                ? "<color=#B33A2A>缺货</color>"
+                ? $"<b>{shop.PriceOf(p, boxed)}</b>　<color=#B33A2A>缺货</color>"
                 : $"<b>{shop.PriceOf(p, boxed)}</b>　×{have}";
             // 标记：整盒（纸箱色）/ 散件（蓝灰色）
             Image mark = Ui.Panel(rt, "Mark", boxed ? CardboardColor : new Color(0.36f, 0.5f, 0.68f));
@@ -301,10 +325,13 @@ namespace PCShopSell.Game.UI
         /// <summary>展示台上的整机：三台开着的整机并排，屏幕上是档次和成交价，台面下的牌子写配置、配件齐不齐。</summary>
         public void OpenDisplayWindow()
         {
-            OpenWindow("整机展示台", 960, 720, w =>
+            OpenWindow("整机展示台", 960, 800, w =>
             {
                 ShopSimulation shop = S.PlayerShop;
-                Line(w.Content, "顾客看中展台上的整机，会下装机单：离店后两天内你按配置装好才收钱（超时取消、掉知名度）。配件从库存里出，先备齐。", 15, Ui.Dim);
+                int shown = shop.DisplayPcs.Count;
+                Para(w.Content, "用库存配件装好整机摆上展示台（店正中间）：想买整机的顾客看到就直接抱去收银台结账，不用等你装。" +
+                                "展台上的机器越多越显眼，进店的人里想买整机的也越多；展台没有合适的，顾客才下装机单（两天内装好交付）。", 15, Ui.Dim);
+                Line(w.Content, $"展台上 <b>{shown}/{shop.DisplaySlots}</b> 台　·　想买整机的顾客占 <b>{shop.BuildChance:P0}</b>（展台空着时 {shop.Settings.BuildOrderChance:P0}）", 17);
 
                 Image table = Ui.Panel(w.Content, "Table", new Color(0.11f, 0.12f, 0.14f));
                 Ui.Size(table, -1, 470);
@@ -312,6 +339,26 @@ namespace PCShopSell.Game.UI
                 row.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(10, 10, 10, 10);
                 row.Fill();
                 for (int tier = 0; tier < 3; tier++) BuildDisplayStand(row, tier, shop);
+
+                RectTransform acts = Ui.Row(w.Content, 46, 10);
+                acts.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(10, 10, 0, 0);
+                for (int tier = 0; tier < 3; tier++)
+                {
+                    int t = tier;
+                    bool ready = PartCatalog.BuildList(t).All(p => shop.Stock.CountAll(p) > 0);
+                    bool canAdd = ready && shown < shop.DisplaySlots;
+                    Ui.Size(Ui.Button(acts, "装一台摆上去", () =>
+                    {
+                        if (S.AssembleDisplayPc(t)) Toast($"{PartCatalog.TierName(t)}整机摆上展示台了");
+                        RebuildWindows();
+                    }, 17, canAdd ? Ui.ButtonHot : Ui.ButtonBg, canAdd), 196);
+                    bool has = shop.DisplayCount(t) > 0;
+                    Ui.Size(Ui.Button(acts, "拆回配件", () =>
+                    {
+                        S.DisassembleDisplayPc(t);
+                        RebuildWindows();
+                    }, 15, Ui.ButtonBg, has), 92);
+                }
 
                 int orders = shop.Orders.Count;
                 Line(w.Content, orders > 0 ? $"现在有 {orders} 个装机单等你装。" : "现在没有装机单。", 17, orders > 0 ? Ui.Warn : Ui.Dim);
@@ -352,8 +399,10 @@ namespace PCShopSell.Game.UI
             sn.rectTransform.Anchor(0, 0.55f, 1, 1);
             Text sp = Ui.Label(screen.transform, shop.BuildPrice(tier).ToString(), 30, TextAnchor.MiddleCenter, new Color(0.7f, 1f, 0.75f));
             sp.rectTransform.Anchor(0, 0.25f, 1, 0.58f);
-            Text ss = Ui.Label(screen.transform, ready ? "配件齐，随时能装" : $"还缺 {missing.Count} 样配件", 16,
-                TextAnchor.MiddleCenter, ready ? new Color(0.85f, 1f, 0.88f) : new Color(1f, 0.78f, 0.65f));
+            int onShow = shop.DisplayCount(tier);
+            string status = (onShow > 0 ? $"展台上 {onShow} 台 · " : "展台上没有 · ") + (ready ? "配件齐" : $"缺 {missing.Count} 样");
+            Text ss = Ui.Label(screen.transform, status, 16,
+                TextAnchor.MiddleCenter, onShow > 0 || ready ? new Color(0.85f, 1f, 0.88f) : new Color(1f, 0.78f, 0.65f));
             ss.rectTransform.Anchor(0, 0, 1, 0.26f);
             // 支架 + 键盘 + 台面
             Chip(rt, new Color(0.3f, 0.3f, 0.34f), 0.44f, 0.52f, 0.56f, 0.56f);

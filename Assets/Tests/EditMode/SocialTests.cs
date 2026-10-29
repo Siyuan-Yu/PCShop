@@ -2,6 +2,7 @@ using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
@@ -470,18 +471,26 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void StaffGift_CostsMoney_AndHasCooldown()
+        public void StaffGift_NeedsGiftInBackpack_NoMoneyDebited_AndHasCooldown()
         {
             GameSession s = Make(cash: 1000);
             StaffDef c = Rosters.CpuClerk;
+            StringAssert.Contains("背包里没有", s.StaffGiftBlocker(c.Id), "没买东西不能送");
+            Assert.IsFalse(s.GiveStaffGift(c, Gifts.Soda));
+            s.Backpack.AddGift(Gifts.Soda, 2);
             Money before = s.Ledger.Balance;
-            Assert.IsTrue(s.GiveStaffGift(c));
-            Assert.Less(s.Ledger.Balance.Cents, before.Cents);
-            Assert.GreaterOrEqual(s.StaffRapport(c.Id), 4);
+            Assert.IsTrue(s.GiveStaffGift(c, Gifts.Soda));
+            Assert.AreEqual(before, s.Ledger.Balance, "送礼不扣钱，送的是背包里买好的东西");
+            Assert.AreEqual(1, s.Backpack.GiftCount(Gifts.Soda));
+            Assert.GreaterOrEqual(s.StaffRapport(c.Id), 2);
             Assert.IsNotNull(s.StaffGiftBlocker(c.Id));
-            Assert.IsFalse(s.GiveStaffGift(c));
+            Assert.IsFalse(s.GiveStaffGift(c, Gifts.Soda));
             s.AdvanceClock(StaffTalk.GiftCooldownDays * 24 * 60);
             Assert.IsNull(s.StaffGiftBlocker(c.Id));
+            s.Backpack.AddGift(Gifts.Wine, 1);
+            int r0 = s.StaffRapport(c.Id);
+            Assert.IsTrue(s.GiveStaffGift(c, Gifts.Wine));
+            Assert.GreaterOrEqual(s.StaffRapport(c.Id) - r0, 9, "贵的礼涨得多");
         }
 
         [Test]
@@ -495,7 +504,7 @@ namespace PCShopSell.Tests
             GameSession s = Make(cash: 100000);
             StaffDef c = Rosters.GpuClerk;
             StringAssert.Contains("解锁", s.StaffStoryBlocker(c.Id));
-            for (int i = 0; i < 12; i++) { s.AdvanceClock(24 * 60); s.StaffChat(c); s.GiveStaffGift(c); }
+            for (int i = 0; i < 12; i++) { s.AdvanceClock(24 * 60); s.StaffChat(c); s.Backpack.AddGift(Gifts.Snack, 1); s.GiveStaffGift(c, Gifts.Snack); }
             Assert.GreaterOrEqual(s.StaffRapport(c.Id), StaffTalk.StoryUnlock[0]);
             Assert.IsNull(s.StaffStoryBlocker(c.Id));
             Assert.IsNotEmpty(s.StaffStory(c));
@@ -509,7 +518,7 @@ namespace PCShopSell.Tests
             GameSession s = Make(cash: 100000);
             PlaceRoster r = Rosters.For(s.City.GetPlace(Stall));
             s.Meet(Npcs.Li, 10);
-            for (int i = 0; i < 25; i++) { s.AdvanceClock(24 * 60); s.StaffChat(r.Greeter); s.GiveStaffGift(r.Greeter); }
+            for (int i = 0; i < 25; i++) { s.AdvanceClock(24 * 60); s.StaffChat(r.Greeter); s.Backpack.AddGift(Gifts.Snack, 1); s.GiveStaffGift(r.Greeter, Gifts.Snack); }
             int rapport = s.StaffRapport(r.Greeter.Id);
             Assert.GreaterOrEqual(rapport, 30);
             GameSession l = GameSession.Load(s.City, s.CreateSave());

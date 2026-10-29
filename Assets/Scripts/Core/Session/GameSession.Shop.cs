@@ -74,6 +74,29 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
+        /// <summary>用库存配件装一台整机摆上展示台：顾客能直接买走，也能吸引更多装机客。</summary>
+        public bool AssembleDisplayPc(int tier)
+        {
+            if (!InPlayerShop) return Fail("得在店里才能装。");
+            if (PlayerShop.DisplayPcs.Count >= PlayerShop.DisplaySlots) return Fail($"展示台摆满了（{PlayerShop.DisplaySlots} 台）。");
+            if (!PlayerShop.AssembleForDisplay(tier)) return Fail("配件不齐，装不了。");
+            int minutes = Math.Max(20, 60 - Player.Skill / 3 + (Player.Tired ? 15 : 0));
+            Player.Skill = Math.Min(100, Player.Skill + 1);
+            AdvanceClock(minutes);
+            Say($"装好一台{PartCatalog.TierName(tier)}整机摆上展示台，用时 {minutes} 分钟。");
+            return true;
+        }
+
+        /// <summary>把展示台上的一台拆回散件。</summary>
+        public bool DisassembleDisplayPc(int tier)
+        {
+            if (!InPlayerShop) return Fail("得在店里才能拆。");
+            if (!PlayerShop.DisassembleDisplay(tier)) return Fail("展示台上没有这一档的整机。");
+            AdvanceClock(15);
+            Say($"把{PartCatalog.TierName(tier)}整机拆回了散件。");
+            return true;
+        }
+
         /// <summary>装机报价（市场价合计 + 手工费），用于界面显示配件需求。</summary>
         public List<PartDef> MissingParts(BuildOrder order) => PlayerShop.MissingParts(order);
 

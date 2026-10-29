@@ -27,8 +27,10 @@ namespace PCShopSell.Game.UI
         public void Rebuild()
         {
             if (Closed) return;
+            var scrolled = Ui.SaveScroll(Content);
             Ui.Clear(Content);
             Builder?.Invoke(this);
+            Ui.RestoreScroll(Root, Content, scrolled);
         }
 
         public void Close() => Owner.CloseWindow(this);
@@ -58,6 +60,12 @@ namespace PCShopSell.Game.UI
         private GameSession S => _ctrl.Session;
 
         public bool AnyModalOpen => _windows.Count > 0;
+
+        /// <summary>冒烟 / 调试：刷新所有打开的窗口。</summary>
+        public void RebuildWindows()
+        {
+            foreach (Window w in _windows.ToArray()) w.Rebuild();
+        }
 
         /// <summary>鼠标是否在 UI 上（这时不处理场景点击）。</summary>
         public static bool PointerOverUi => EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
@@ -195,7 +203,7 @@ namespace PCShopSell.Game.UI
 
             if (S.IsGameOver) _hintText.text = "游戏结束：" + S.GameOverReason;
             else if (_ctrl.Placing) _hintText.text = "摆放家具：左键放下 · R 旋转 · 右键/Esc 放回 · X 收进背包 · 点已摆的家具可以挪动 · 右侧面板点“完成”结束";
-            else if (_ctrl.InInterior) _hintText.text = "WASD 在店里走动，点地板也行 · 走到货架前按 F 查看货物 · 点击头顶有黄球的顾客结账 · 右侧面板管理店铺";
+            else if (_ctrl.InInterior) _hintText.text = "WASD 在店里走动 · 走到货架前按 F 查看货物 · 柜台边按 F（或点顾客头顶的“结账”）给顾客结账 · 走到门口按 F 出门 · 右侧面板管理店铺";
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimatedMinutes} 分钟 · 按 WASD 随时接管";
             else if (S.NearbyPlace != null) _hintText.text = $"<color=#FFD54A>按 F 进入 {S.NearbyPlace.Name}</color>";
             else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#FFD54A>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : "WASD 在屋里走动 · 走近床、衣柜、电饭锅、纸箱、凳子（头顶出现提示按 F）· 房间信息、摆放家具看右上角“我的”";
@@ -300,19 +308,52 @@ namespace PCShopSell.Game.UI
 
         private readonly System.Collections.Generic.List<Text> _emoteLabels = new System.Collections.Generic.List<Text>();
 
-        /// <summary>顾客头顶的小字：想买什么 / 为什么走了 / +¥。</summary>
+        private readonly System.Collections.Generic.List<ShopInteriorView.EmoteInfo> _emoteBuf = new System.Collections.Generic.List<ShopInteriorView.EmoteInfo>();
+
+        /// <summary>头顶的小字：店里顾客想买什么 / 为什么走了 / +¥；家里电饭锅饭好了一直跳着闪，直到把饭取完。</summary>
         private void UpdateEmoteLabels()
         {
             int n = 0;
-            if (_ctrl.InInterior)
+            _emoteBuf.Clear();
+            if (_ctrl.InInterior) _emoteBuf.AddRange(_ctrl.Interior.Emotes);
+            if (_ctrl.InHome && S.Pantry.CookedBowls > 0 && _ctrl.HomeRoom.CookerWorld is Vector3 cooker)
+            {
+                float t = Time.unscaledTime;
+                float bob = Mathf.Abs(Mathf.Sin(t * 4f)) * 0.35f;
+                float blink = 0.35f + 0.65f * (0.5f + 0.5f * Mathf.Sin(t * 9f));
+                _emoteBuf.Add(new ShopInteriorView.EmoteInfo
+                {
+                    Pos = cooker + Vector3.up * bob,
+                    Text = $"<b>饭好了！</b>\n<size=16>{S.Pantry.CookedBowls} 碗，按 F 取饭</size>",
+                    Color = new Color(1f, 0.85f, 0.25f, blink),
+                    Size = 26,
+                });
+            }
+            int nb = 0;
+            if (_emoteBuf.Count > 0)
             {
                 var canvasRt = (RectTransform)_labelCanvas.transform;
-                foreach (var e in _ctrl.Interior.Emotes)
+                foreach (var e in _emoteBuf)
                 {
+                    if (e.Bubble)
+                    {
+                        if (nb >= _bubbles.Count) _bubbles.Add(NewBubble());
+                        var (brt, btext) = _bubbles[nb++];
+                        btext.text = e.Text;
+                        btext.fontSize = e.Size;
+                        btext.color = e.Color;
+                        Vector3 bsp = _ctrl.Cam.WorldToScreenPoint(e.Pos);
+                        RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRt, bsp, LabelCam, out Vector2 blocal);
+                        brt.anchoredPosition = blocal + canvasRt.rect.size * 0.5f;
+                        brt.gameObject.SetActive(bsp.z > 0);
+                        continue;
+                    }
                     if (n >= _emoteLabels.Count)
                     {
                         Text lt = Ui.Label(_labelCanvas.transform, "", 14, TextAnchor.LowerCenter);
                         lt.horizontalOverflow = HorizontalWrapMode.Overflow;
+                        lt.verticalOverflow = VerticalWrapMode.Overflow;
+                        lt.supportRichText = true;
                         lt.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.85f);
                         RectTransform r = lt.rectTransform;
                         r.anchorMin = r.anchorMax = Vector2.zero;
@@ -332,6 +373,48 @@ namespace PCShopSell.Game.UI
                 }
             }
             for (; n < _emoteLabels.Count; n++) _emoteLabels[n].gameObject.SetActive(false);
+            for (; nb < _bubbles.Count; nb++) _bubbles[nb].rt.gameObject.SetActive(false);
+        }
+
+        private readonly System.Collections.Generic.List<(RectTransform rt, Text text)> _bubbles = new System.Collections.Generic.List<(RectTransform, Text)>();
+
+        /// <summary>白底圆角的对话气泡，底下一个小尖角指着说话的人；大小跟着字数走。</summary>
+        private (RectTransform, Text) NewBubble()
+        {
+            Color bg = new Color(0.98f, 0.97f, 0.93f, 0.96f);
+            Image panel = Ui.Panel(_labelCanvas.transform, "Bubble", bg);
+            panel.raycastTarget = false;
+            RectTransform rt = panel.rectTransform;
+            rt.anchorMin = rt.anchorMax = Vector2.zero;
+            rt.pivot = new Vector2(0.5f, 0);
+            var h = panel.gameObject.AddComponent<HorizontalLayoutGroup>();
+            h.padding = new RectOffset(12, 12, 6, 7);
+            h.childControlWidth = true;
+            h.childControlHeight = true;
+            h.childForceExpandWidth = false;
+            h.childForceExpandHeight = false;
+            var fit = panel.gameObject.AddComponent<ContentSizeFitter>();
+            fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            panel.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.35f);
+
+            Image tail = Ui.Panel(rt, "Tail", bg);
+            tail.raycastTarget = false;
+            tail.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            RectTransform trt = tail.rectTransform;
+            trt.anchorMin = trt.anchorMax = new Vector2(0.5f, 0);
+            trt.sizeDelta = new Vector2(12, 12);
+            trt.anchoredPosition = new Vector2(0, -1);
+            trt.localRotation = Quaternion.Euler(0, 0, 45);
+
+            Text text = Ui.Label(rt, "", 16, TextAnchor.MiddleCenter);
+            text.raycastTarget = false;
+            text.supportRichText = true;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.lineSpacing = 1.05f;
+            rt.anchoredPosition = new Vector2(-9999, -9999);
+            return (rt, text);
         }
 
         /// <summary>Esc：关掉最上面一层窗口。返回有没有关。</summary>
@@ -367,7 +450,8 @@ namespace PCShopSell.Game.UI
                     button.onClick.RemoveAllListeners();
                     button.onClick.AddListener(() => _ctrl.Checkout(id));
                     var c = FindCustomer(id);
-                    text.text = c != null ? $"结账 {c.Spend}\n<size=12>{c.Item?.Name}</size>" : "结账";
+                    string act = _ctrl.Interior.NearCounter ? "结账" : "等你到收银台";
+                    text.text = c != null ? $"{act} {c.Spend}\n<size=12>{c.ItemName}</size>" : act;
                     Vector3 sp = _ctrl.Cam.WorldToScreenPoint(kv.Value);
                     RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)_labelCanvas.transform, sp, LabelCam, out Vector2 local);
                     lrt.anchoredPosition = local + ((RectTransform)_labelCanvas.transform).rect.size * 0.5f;
@@ -525,7 +609,7 @@ namespace PCShopSell.Game.UI
         public void ShowIntro()
         {
             Popup("欢迎来到电脑城", "你在商业街最东头租了一间最小、离地铁最远的电脑店（48㎡），手里只有 ¥5,000。\n\n" +
-                                "· 去 2 公里外的电子市场档口进货，或者在店里电脑上用 1788 网购（便宜但要等，可能有次品）\n" +
+                                "· 去 2 公里外的电子市场档口进货，或者买部智能手机、装上 1788 app 网上进货（便宜但要等，可能有次品）\n" +
                                 "· 你在店里才营业：顾客挑好货会排队，点他们结账\n" +
                                 "· 有人想装整机会下订单，配件齐了在店里装机交付\n" +
                                 "· 第一个月目标：第 30 天时身家 ≥ ¥8,000，并且雇到一个员工");

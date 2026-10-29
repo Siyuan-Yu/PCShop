@@ -36,6 +36,7 @@ namespace PCShopSell.Core.Home
         public const string Drink = "drink";
         public const string Snack = "snack";
         public const string Baijiu = "baijiu";
+        public const string Soda = "soda";
 
         public const string TobaccoBusiness = "烟酒";
         public const string FarmBusiness = "农贸";
@@ -48,6 +49,7 @@ namespace PCShopSell.Core.Home
             new GiftDef(Baijiu, "两瓶白酒", "实在人喝的酒，有点沉。", 160, 1.6, TobaccoBusiness),
             new GiftDef(Drink, "一箱饮料", "一整箱，很沉。", 100, 6.0, TobaccoBusiness),
             new GiftDef(Snack, "一盒点心", "精致的点心盒。", 120, 0.8, TobaccoBusiness),
+            new GiftDef(Soda, "一瓶饮料", "冰镇的瓶装饮料，请店员喝正合适。", 5, 0.5, TobaccoBusiness),
             new GiftDef(Fruit, "一箱水果", "农贸市场的时令水果，一箱也不轻。", 120, 3.0, FarmBusiness),
         };
 
@@ -60,7 +62,8 @@ namespace PCShopSell.Core.Home
 
     /// <summary>
     /// 出门背着的背包：有承重（和载具的载货一起算，1 格 = 2 公斤）。
-    /// 装着刚买的米和菜（回家自动放进厨房）、送人的礼品；进货的配件在载具的 <c>Cargo</c> 里，两边合计受承重限制。
+    /// 装着刚买的米和菜、从电饭锅装的饭盒、送人的礼品；进货的配件在载具的 <c>Cargo</c> 里，两边合计受承重限制。
+    /// 背包里的东西不会自己消失：回到家或自己的店里，打开背包一键放下。
     /// </summary>
     public sealed class Backpack
     {
@@ -69,8 +72,12 @@ namespace PCShopSell.Core.Home
 
         public const double RiceKgPerJin = 0.5;
 
-        /// <summary>刚买、还没带回家的米和食材。</summary>
+        public const double LunchboxKg = 0.5;
+
+        /// <summary>刚买、还没放进厨房的米和食材；<c>Food.Packed</c> 是带在身上的饭盒（饭点从这里吃）。</summary>
         public readonly Pantry Food = new Pantry { RiceJin = 0 };
+
+        public int Lunchboxes => Food.PackedBowls;
 
         private readonly Dictionary<string, int> _gifts = new Dictionary<string, int>();
         private readonly Dictionary<string, int> _furniture = new Dictionary<string, int>();
@@ -84,6 +91,15 @@ namespace PCShopSell.Core.Home
         {
             if (count <= 0 || FurnitureCatalog.Get(id) == null) return;
             _furniture[id] = FurnitureCount(id) + count;
+        }
+
+        public bool TakeFurniture(string id, int count)
+        {
+            int have = FurnitureCount(id);
+            if (count <= 0 || have < count) return false;
+            if (have == count) _furniture.Remove(id);
+            else _furniture[id] = have - count;
+            return true;
         }
 
         public void ClearFurniture() => _furniture.Clear();
@@ -127,13 +143,14 @@ namespace PCShopSell.Core.Home
         public double WeightKg =>
             Food.RiceJin * RiceKgPerJin
             + Food.Ingredient.Sum(b => b.Count * IngredientKg(b.Id))
+            + Food.PackedBowls * LunchboxKg
             + _gifts.Sum(kv => kv.Value * (Gifts.Get(kv.Key)?.WeightKg ?? 0))
             + _furniture.Sum(kv => kv.Value * (FurnitureCatalog.Get(kv.Key)?.WeightKg ?? 0));
 
         /// <summary>折合成“格”（和载具的载货容量同一单位）。</summary>
         public double Space => WeightKg / KgPerSpace;
 
-        public bool IsEmpty => Food.RiceJin <= 0 && Food.Ingredient.Count == 0 && !GiftLines.Any() && !FurnitureLines.Any();
+        public bool IsEmpty => Food.RiceJin <= 0 && Food.Ingredient.Count == 0 && Food.Packed.Count == 0 && !GiftLines.Any() && !FurnitureLines.Any();
 
         public void ClearGifts() => _gifts.Clear();
     }

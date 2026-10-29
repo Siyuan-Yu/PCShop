@@ -154,6 +154,75 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void DisplayPc_AssembleUsesParts_DisassembleReturnsLoose_SlotsLimited()
+        {
+            Rig r = Make(BusySettings());
+            PartDef cpu = PartCatalog.BuildList(1).First();
+            int before = r.Shop.Stock.CountAll(cpu);
+            Assert.IsTrue(r.Shop.AssembleForDisplay(1));
+            Assert.AreEqual(before - 1, r.Shop.Stock.CountAll(cpu));
+            Assert.AreEqual(1, r.Shop.DisplayCount(1));
+            Assert.IsTrue(r.Shop.DisassembleDisplay(1));
+            Assert.AreEqual(before, r.Shop.Stock.CountAll(cpu));
+            Assert.AreEqual(1, r.Shop.Stock.Count(cpu, false));
+            Assert.IsFalse(r.Shop.DisassembleDisplay(1));
+
+            for (int i = 0; i < r.Shop.DisplaySlots; i++) Assert.IsTrue(r.Shop.AssembleForDisplay(0));
+            Assert.IsFalse(r.Shop.AssembleForDisplay(0));
+
+            Rig empty = Make(BusySettings(), stock: false);
+            Assert.IsFalse(empty.Shop.AssembleForDisplay(0));
+        }
+
+        [Test]
+        public void DisplayPc_RaisesBuildChance()
+        {
+            var settings = BusySettings();
+            settings.BuildOrderChance = 0.06;
+            Rig r = Make(settings);
+            double baseChance = r.Shop.BuildChance;
+            r.Shop.AssembleForDisplay(0);
+            r.Shop.AssembleForDisplay(1);
+            Assert.AreEqual(0.06, baseChance, 1e-9);
+            Assert.Greater(r.Shop.BuildChance, baseChance * 1.9);
+        }
+
+        [Test]
+        public void BuildCustomer_BuysDisplayPcDirectly_LeavingPutsItBack()
+        {
+            var settings = BusySettings();
+            settings.BuildOrderChance = 1.0;
+            Rig r = Make(settings);
+            for (int i = 0; i < 3; i++)
+            {
+                r.Shop.AssembleForDisplay(0);
+                r.Shop.AssembleForDisplay(1);
+            }
+            r.Shop.AssembleForDisplay(2);
+            r.Shop.AssembleForDisplay(2);
+            r.Shop.PlayerPresent = true;
+            r.Clock.Advance(3);
+
+            var buyers = r.Shop.Queue.Where(c => c.DisplayTier >= 0).ToList();
+            Assert.Greater(buyers.Count, 0);
+            Assert.AreEqual(8 - buyers.Count, r.Shop.DisplayPcs.Count);
+            ShopCustomer b = buyers[0];
+            Assert.AreEqual(r.Shop.BuildPrice(b.DisplayTier), b.Spend);
+            StringAssert.Contains("整机", b.ItemName);
+
+            r.Shop.Checkout(b.Id);
+            Assert.AreEqual(b.Spend, r.Ledger.Balance);
+            Assert.AreEqual(CustomerState.Paid, b.State);
+
+            int waiting = r.Shop.Queue.Count(c => c.DisplayTier >= 0);
+            int shown = r.Shop.DisplayPcs.Count;
+            r.Shop.Settings.BaseCustomersPerHour = 0;
+            r.Clock.Advance(10);
+            Assert.AreEqual(0, r.Shop.Queue.Count);
+            Assert.AreEqual(shown + waiting, r.Shop.DisplayPcs.Count);
+        }
+
+        [Test]
         public void DayClosed_ReportsPaidAndLostByReason()
         {
             Rig r = Make(BusySettings(), stock: false);

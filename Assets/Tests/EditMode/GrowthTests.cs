@@ -177,9 +177,9 @@ namespace PCShopSell.Tests
         {
             GameSession s = GameSessionTests.Make(5000);
             s.ScheduleCredit(3, Money.FromYuan(800), "还钱");
-            while (s.Clock.Today.TotalDays < 2) s.AdvanceClock(60);
+            while (s.Clock.Today.TotalDays < 2) { s.Player.Hunger = 100; s.AdvanceClock(60); }
             Assert.IsFalse(s.Ledger.Entries.Any(e => e.Memo == "还钱"));
-            while (s.Clock.Today.TotalDays < 4) s.AdvanceClock(60);
+            while (s.Clock.Today.TotalDays < 4) { s.Player.Hunger = 100; s.AdvanceClock(60); }
             Assert.IsTrue(s.Ledger.Entries.Any(e => e.Memo == "还钱" && e.Amount == Money.FromYuan(800)));
         }
     }

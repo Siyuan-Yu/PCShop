@@ -47,10 +47,12 @@ namespace PCShopSell.Tests
             patrols = new[] { new LayoutPatrolData { id = "p1", nodes = new[] { "s1", "st" } } },
         };
 
-        internal static GameSession Make(long cash = 5000, int minute = 8 * 60)
+        internal static GameSession Make(long cash = 5000, int minute = 8 * 60, bool emptyBag = true)
         {
             CityLayout city = CityLayout.FromData(Layout());
-            return new GameSession(city, 7, Money.FromYuan(cash), GameTimestamp.From(new GameDate(0), minute));
+            var s = new GameSession(city, 7, Money.FromYuan(cash), GameTimestamp.From(new GameDate(0), minute));
+            if (emptyBag) PackTests.EmptyBag(s);
+            return s;
         }
 
         /// <summary>按 1 倍速一帧帧推进直到到达（或超时）。</summary>
@@ -168,12 +170,14 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void Meals_AreBoughtAutomatically()
+        public void Meals_EatTheStartingLunchboxes_WithoutPaying()
         {
-            GameSession s = Make();
+            GameSession s = Make(emptyBag: false);
+            Assert.AreEqual(GameSession.StartLunchboxes, s.Backpack.Lunchboxes);
             s.Player.Hunger = 30;
             s.AdvanceClock(5 * 60);
-            Assert.IsTrue(s.Ledger.Balance < Money.FromYuan(5000));
+            Assert.AreEqual(Money.FromYuan(5000), s.Ledger.Balance, "吃的是背包里的饭盒");
+            Assert.Less(s.Backpack.Lunchboxes, GameSession.StartLunchboxes);
             Assert.Greater(s.Player.Hunger, 30);
         }
 
@@ -215,8 +219,29 @@ namespace PCShopSell.Tests
             Assert.IsFalse(s.BuyAtStall(stall, PartCatalog.Get("gpu0"), 5), "走路带不了这么多显卡");
 
             Teleport(s, "pc");
+            Assert.AreEqual(2, s.Cargo.Count(cpu, true), "进店不会自动卸货");
+            Assert.IsTrue(s.UnloadBackpack());
             Assert.AreEqual(0, s.Cargo.Count(cpu, true));
             Assert.AreEqual(2, s.PlayerShop.Stock.Count(cpu, true));
+        }
+
+        [Test]
+        public void StallPurchase_ByCourier_ArrivesAtShop()
+        {
+            GameSession s = Make();
+            s.Clock.AdvanceTo(10 * 60);
+            Teleport(s, "stall");
+            Place stall = s.CurrentPlace;
+            PartDef cpu = PartCatalog.Get("cpu1");
+            s.SendByCourier = true;
+            (Money fee, int minutes) = s.CourierQuote(true);
+            Assert.IsTrue(fee.IsPositive);
+            Assert.IsTrue(s.BuyAtStall(stall, cpu, 2));
+            Assert.AreEqual(0, s.Cargo.Count(cpu, true), "叫车的不上身");
+            int before = s.PlayerShop.Stock.Count(cpu, true);
+            s.Leave();
+            s.AdvanceClock(minutes + 1);
+            Assert.AreEqual(before + 2, s.PlayerShop.Stock.Count(cpu, true));
         }
 
         [Test]
@@ -231,13 +256,12 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void Online_OnlyFromShop_DeliveredNextMorning()
+        public void Online_FromPhoneAnywhere_DeliveredNextMorning()
         {
             GameSession s = Make();
             PartDef ram = PartCatalog.Get("ram1");
-            Assert.IsFalse(s.PlaceOnlineOrder("s_star", new[] { (ram, 2) }));
-            Teleport(s, "pc");
             int before = s.PlayerShop.Stock.CountAll(ram);
+            Assert.IsFalse(s.InPlayerShop, "不在店里也能用手机下单");
             Assert.IsTrue(s.PlaceOnlineOrder("s_star", new[] { (ram, 2) }));
             Assert.IsFalse(s.PlaceOnlineOrder("s_zhou", new[] { (ram, 1) }), "还没发现这家");
             s.Leave();
@@ -397,6 +421,23 @@ namespace PCShopSell.Tests
             Assert.IsTrue(l.PlayerShop.IsOpen);
             Assert.AreEqual(s.Market.Index(PartCategory.Gpu), l.Market.Index(PartCategory.Gpu), 1e-12);
             Assert.AreEqual(s.Random.State, l.Random.State);
+        }
+
+        [Test]
+        public void DisplayPc_AssembledInShop_SurvivesSave()
+        {
+            GameSession s = Make();
+            s.Clock.AdvanceTo(10 * 60);
+            Teleport(s, "pc");
+            foreach (PartDef p in PartCatalog.BuildList(0)) s.PlayerShop.Stock.ForceAdd(p, true, 1);
+            var t0 = s.Clock.Now;
+            Assert.IsTrue(s.AssembleDisplayPc(0));
+            Assert.Greater(t0.MinutesUntil(s.Clock.Now), 0);
+            Assert.IsFalse(s.AssembleDisplayPc(0));
+
+            GameSession l = GameSession.Load(s.City, s.CreateSave());
+            Assert.AreEqual(1, l.PlayerShop.DisplayPcs.Count);
+            Assert.AreEqual(0, l.PlayerShop.DisplayPcs[0]);
         }
 
         [Test]
