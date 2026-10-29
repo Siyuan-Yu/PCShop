@@ -320,7 +320,12 @@ namespace PCShopSell.EditorTools
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
             Frame(0.05f);
             Shot("vs1_28_mall");
-            foreach (string id in new[] { "bed_spring", "aircon", "curtain", "sofa", "plant", "rug", "poster", "shop_plant", "shop_sofa", "shop_poster", "shop_led", "shop_dispenser" })
+            foreach (string id in new[] { "bed_spring", "aircon", "sofa", "shop_sofa", "shop_led" })
+            {
+                Check(!s.BuyFurnitureAtMall(id), "太大件背包装不下 " + id);
+                Check(s.BuyFurnitureByTruck(id), "叫货车拖 " + id);
+            }
+            foreach (string id in new[] { "curtain", "plant", "rug", "poster", "shop_plant", "shop_poster", "shop_dispenser" })
                 Check(s.BuyFurnitureAtMall(id), "家具城买 " + id);
             _game.Ui.CloseAllWindows();
             Teleport(s, "shop14");
@@ -350,6 +355,13 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Shot("vs1_34_backpack");
             _game.Ui.CloseAllWindows();
+
+            // 货车明早把大件送到家
+            s.Clock.Restore(s.Clock.Today, 23 * 60 + 30);
+            s.AdvanceClock(60);
+            s.Clock.Restore(s.Clock.Today, 10 * 60);
+            _game.Ui.CloseAllWindows();
+            Check(s.FurnitureInStock("sofa") == 1 && s.FurnitureInStock("bed_spring") == 1, "货车送到了大件家具");
 
             // 回家摆家具：先收起硬板床，再摆弹簧床、空调、窗帘、沙发
             Teleport(s, "home");

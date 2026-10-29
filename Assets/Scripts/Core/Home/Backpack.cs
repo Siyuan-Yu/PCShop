@@ -73,6 +73,20 @@ namespace PCShopSell.Core.Home
         public readonly Pantry Food = new Pantry { RiceJin = 0 };
 
         private readonly Dictionary<string, int> _gifts = new Dictionary<string, int>();
+        private readonly Dictionary<string, int> _furniture = new Dictionary<string, int>();
+
+        /// <summary>背着的轻便家具（带回家 / 带回店里才放进家具库）。</summary>
+        public IEnumerable<KeyValuePair<string, int>> FurnitureLines => _furniture.Where(kv => kv.Value > 0);
+
+        public int FurnitureCount(string id) => _furniture.TryGetValue(id, out int n) ? n : 0;
+
+        public void AddFurniture(string id, int count)
+        {
+            if (count <= 0 || FurnitureCatalog.Get(id) == null) return;
+            _furniture[id] = FurnitureCount(id) + count;
+        }
+
+        public void ClearFurniture() => _furniture.Clear();
 
         public IEnumerable<KeyValuePair<string, int>> GiftLines => _gifts.Where(kv => kv.Value > 0);
 
@@ -113,12 +127,13 @@ namespace PCShopSell.Core.Home
         public double WeightKg =>
             Food.RiceJin * RiceKgPerJin
             + Food.Ingredient.Sum(b => b.Count * IngredientKg(b.Id))
-            + _gifts.Sum(kv => kv.Value * (Gifts.Get(kv.Key)?.WeightKg ?? 0));
+            + _gifts.Sum(kv => kv.Value * (Gifts.Get(kv.Key)?.WeightKg ?? 0))
+            + _furniture.Sum(kv => kv.Value * (FurnitureCatalog.Get(kv.Key)?.WeightKg ?? 0));
 
         /// <summary>折合成“格”（和载具的载货容量同一单位）。</summary>
         public double Space => WeightKg / KgPerSpace;
 
-        public bool IsEmpty => Food.RiceJin <= 0 && Food.Ingredient.Count == 0 && !GiftLines.Any();
+        public bool IsEmpty => Food.RiceJin <= 0 && Food.Ingredient.Count == 0 && !GiftLines.Any() && !FurnitureLines.Any();
 
         public void ClearGifts() => _gifts.Clear();
     }

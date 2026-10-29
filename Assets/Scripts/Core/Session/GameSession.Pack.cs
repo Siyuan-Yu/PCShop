@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 
@@ -77,8 +78,20 @@ namespace PCShopSell.Core.Session
 
         // ---------- 回家把菜米放进厨房 ----------
 
+        /// <summary>背着的轻便家具放进家具库（回家、回店里时）。</summary>
+        private void UnloadFurniture()
+        {
+            var lines = Backpack.FurnitureLines.ToList();
+            if (lines.Count == 0) return;
+            foreach (var kv in lines) AddFurniture(kv.Key, kv.Value);
+            Backpack.ClearFurniture();
+            ApplyCargoLimit();
+            Say("背着的家具放进了家具背包，点“我的”→摆放家具。");
+        }
+
         private void UnloadFoodAtHome()
         {
+            UnloadFurniture();
             Pantry food = Backpack.Food;
             if (food.RiceJin <= 0 && food.Ingredient.Count == 0) return;
             double rice = food.RiceJin;

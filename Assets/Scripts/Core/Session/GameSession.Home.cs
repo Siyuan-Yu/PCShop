@@ -100,15 +100,31 @@ namespace PCShopSell.Core.Session
 
         // ---------- 买 ----------
 
-        /// <summary>去家具城买：原价，当天就搬进家里的“背包”。</summary>
+        /// <summary>去家具城买：原价。轻便的自己背回去（算负重）；太大件的塞不进背包，得用 <see cref="BuyFurnitureByTruck"/>。</summary>
         public bool BuyFurnitureAtMall(string id)
         {
             FurnitureDef d = FurnitureCatalog.Get(id);
             if (d == null || d.Starter) return false;
             if (CurrentPlace == null || CurrentPlace.Business != MallBusiness) return Fail("要去家具城才能买。");
+            if (d.IsHeavy) return Fail($"「{d.Name}」重 {d.WeightKg:0.#} 公斤，太大件了，背包装不下。要叫货车拖回去（运费 {FurnitureCatalog.TruckFee}）。");
+            if (!CanCarry(d.WeightKg)) return false;
             if (!Ledger.TryDebit(Clock.Today, "家具", d.Price, d.Name)) return Fail("钱不够。");
-            AddFurniture(id, 1);
-            Say($"买了「{d.Name}」，放进了家具背包。回家（或回店里）点“我的”→摆放家具。");
+            Backpack.AddFurniture(id, 1);
+            ApplyCargoLimit();
+            Say($"买了「{d.Name}」，背在身上（{d.WeightKg:0.#} 公斤）。回家（或回店里）自动放进家具背包。");
+            return true;
+        }
+
+        /// <summary>太大件的家具：原价 + 运费，叫货车拖走，明天早上送到家门口（进家具背包）。</summary>
+        public bool BuyFurnitureByTruck(string id)
+        {
+            FurnitureDef d = FurnitureCatalog.Get(id);
+            if (d == null || d.Starter) return false;
+            if (CurrentPlace == null || CurrentPlace.Business != MallBusiness) return Fail("要去家具城才能买。");
+            if (!d.IsHeavy) return Fail("这件不重，自己背回去就行。");
+            if (!Ledger.TryDebit(Clock.Today, "家具", d.Price + FurnitureCatalog.TruckFee, d.Name + "（含货车运费）")) return Fail("钱不够。");
+            _parcels.Add(new Parcel { Kind = ParcelKind.Furniture, Id = id, Count = 1, DueDay = Clock.Today.TotalDays + 1 });
+            Say($"买了「{d.Name}」，叫了货车，明天早上送到家。");
             return true;
         }
 
@@ -424,6 +440,8 @@ namespace PCShopSell.Core.Session
                 renovationDay = _renovationDay,
                 packRice = Backpack.Food.RiceJin,
                 packIngredients = ToSave(Backpack.Food.Ingredient),
+                packFurnIds = Backpack.FurnitureLines.Select(kv => kv.Key).ToArray(),
+                packFurnCounts = Backpack.FurnitureLines.Select(kv => kv.Value).ToArray(),
                 giftIds = Backpack.GiftLines.Select(kv => kv.Key).ToArray(),
                 giftCounts = Backpack.GiftLines.Select(kv => kv.Value).ToArray(),
             };
@@ -436,6 +454,7 @@ namespace PCShopSell.Core.Session
             Backpack.Food.RiceJin = 0;
             Backpack.Food.Ingredient.Clear();
             Backpack.ClearGifts();
+            Backpack.ClearFurniture();
             _furnStock.Clear();
             _homeLayout.Clear();
             _shopLayout.Clear();
@@ -474,6 +493,9 @@ namespace PCShopSell.Core.Session
             string[] gids = h.giftIds ?? Array.Empty<string>();
             for (int i = 0; i < gids.Length; i++)
                 if (h.giftCounts != null && i < h.giftCounts.Length) Backpack.AddGift(gids[i], h.giftCounts[i]);
+            string[] fids = h.packFurnIds ?? Array.Empty<string>();
+            for (int i = 0; i < fids.Length; i++)
+                if (h.packFurnCounts != null && i < h.packFurnCounts.Length) Backpack.AddFurniture(fids[i], h.packFurnCounts[i]);
             ApplyCargoLimit();
         }
     }

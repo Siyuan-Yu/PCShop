@@ -173,6 +173,7 @@ namespace PCShopSell.Core.Session
             {
                 PlayerShop.PlayerPresent = true;
                 UnloadCargo();
+                UnloadFurniture();
             }
             else if (place == Home)
             {

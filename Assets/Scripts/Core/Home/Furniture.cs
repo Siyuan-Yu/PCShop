@@ -37,6 +37,11 @@ namespace PCShopSell.Core.Home
         public double Depth { get; }
         public FurnitureRole Role { get; set; }
 
+        /// <summary>重量（公斤）。超过 <see cref="FurnitureCatalog.HeavyKg"/> 的塞不进背包，得叫货车拉。</summary>
+        public double WeightKg { get; set; }
+
+        public bool IsHeavy => WeightKg > FurnitureCatalog.HeavyKg;
+
         /// <summary>床的睡眠质量（只看摆出来的最好的那张床）。</summary>
         public double BedQuality { get; set; }
 
@@ -84,6 +89,19 @@ namespace PCShopSell.Core.Home
         public const string TableCooker = "table_cooker";
         public const string Curtain = "curtain";
 
+        /// <summary>单件超过这个重量就太大件，没法放进背包。</summary>
+        public const double HeavyKg = 20;
+
+        /// <summary>叫货车送货的运费（一趟一件，次日早上送到）。</summary>
+        public static readonly Money TruckFee = Money.FromYuan(120);
+
+        private static readonly Dictionary<string, double> Weights = new Dictionary<string, double>
+        {
+            { "bed_spring", 45 }, { "bed_good", 80 }, { "wardrobe_wood", 50 }, { "fan_new", 4 }, { "aircon", 30 },
+            { Curtain, 1.5 }, { "rug", 3 }, { "plant", 5 }, { "desk", 25 }, { "sofa", 40 }, { "poster", 0.3 },
+            { "shop_plant", 6 }, { "shop_sofa", 40 }, { "shop_dispenser", 18 }, { "shop_poster", 0.5 }, { "shop_led", 22 },
+        };
+
         public static readonly IReadOnlyList<FurnitureDef> All = Build();
 
         private static IReadOnlyList<FurnitureDef> Build()
@@ -122,6 +140,7 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef("shop_dispenser", "饮水机", "顾客多等 3 分钟。", 350, FurnitureSlot.Floor, 0.5, 0.5, true) { Appeal = 1, PatienceBonus = 3 });
             Add(new FurnitureDef("shop_poster", "品牌海报", "客流 +。", 120, FurnitureSlot.Wall, 1.0, 0.05, true) { Appeal = 1 });
             Add(new FurnitureDef("shop_led", "LED 灯屏", "夜里很显眼。客流 ++。", 900, FurnitureSlot.Wall, 1.6, 0.1, true) { Appeal = 3 });
+            foreach (FurnitureDef d in l) d.WeightKg = Weights.TryGetValue(d.Id, out double kg) ? kg : 10;
             return l;
         }
 

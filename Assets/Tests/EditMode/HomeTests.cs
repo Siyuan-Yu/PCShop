@@ -106,10 +106,44 @@ namespace PCShopSell.Tests
             Assert.IsFalse(s.BuyFurnitureAtMall("sofa"), "不在家具城");
             GameSessionTests.Teleport(s, "mall");
             Money before = s.Ledger.Balance;
-            Assert.IsTrue(s.BuyFurnitureAtMall("sofa"));
-            Assert.AreEqual(Money.FromYuan(800), before - s.Ledger.Balance);
-            Assert.AreEqual(1, s.FurnitureInStock("sofa"));
+            Assert.IsTrue(s.BuyFurnitureAtMall("plant"));
+            Assert.AreEqual(Money.FromYuan(60), before - s.Ledger.Balance);
+            Assert.AreEqual(0, s.FurnitureInStock("plant"), "还背在身上，没到家");
+            Assert.AreEqual(1, s.Backpack.FurnitureCount("plant"));
+            GameSessionTests.Teleport(s, "flat");
+            Assert.AreEqual(1, s.FurnitureInStock("plant"));
+            Assert.AreEqual(0, s.Backpack.FurnitureCount("plant"));
             Assert.IsFalse(s.BuyFurnitureAtMall("bed_board"), "起始家具不卖");
+        }
+
+        [Test]
+        public void HeavyFurniture_DoesNotFitBackpack_NeedsTruck()
+        {
+            GameSession s = Make();
+            GameSessionTests.Teleport(s, "mall");
+            Assert.IsTrue(FurnitureCatalog.Get("sofa").IsHeavy);
+            Assert.IsFalse(s.BuyFurnitureAtMall("sofa"), "太大件，背包装不下");
+            Assert.IsFalse(s.BuyFurnitureByTruck("plant"), "轻的不用货车");
+            Money before = s.Ledger.Balance;
+            Assert.IsTrue(s.BuyFurnitureByTruck("sofa"));
+            Assert.AreEqual(Money.FromYuan(800) + FurnitureCatalog.TruckFee, before - s.Ledger.Balance);
+            Assert.AreEqual(0, s.Backpack.WeightKg, 1e-9, "货车拉的，不占背包");
+            Assert.AreEqual(0, s.FurnitureInStock("sofa"));
+            GameSessionTests.Teleport(s, "flat");
+            int day = s.Clock.Today.TotalDays + 2;
+            while (s.Clock.Today.TotalDays < day) s.AdvanceClock(60);
+            Assert.AreEqual(1, s.FurnitureInStock("sofa"), "次日送到");
+        }
+
+        [Test]
+        public void Mall_LightFurniture_CountsTowardBackpackWeight_AndSurvivesSave()
+        {
+            GameSession s = Make();
+            GameSessionTests.Teleport(s, "mall");
+            Assert.IsTrue(s.BuyFurnitureAtMall("fan_new"));
+            Assert.AreEqual(FurnitureCatalog.Get("fan_new").WeightKg, s.Backpack.WeightKg, 1e-9);
+            GameSession l = GameSession.Load(s.City, UnityEngine.JsonUtility.FromJson<SaveData>(UnityEngine.JsonUtility.ToJson(s.CreateSave())));
+            Assert.AreEqual(1, l.Backpack.FurnitureCount("fan_new"));
         }
 
         [Test]

@@ -218,6 +218,8 @@ namespace PCShopSell.Core.Session
         public SaveBatch[] packIngredients;
         public string[] giftIds;
         public int[] giftCounts;
+        public string[] packFurnIds;
+        public int[] packFurnCounts;
     }
 
     [Serializable]

@@ -181,6 +181,8 @@ namespace PCShopSell.Game.UI
                 var bagIngs = bag.Food.Ingredient.GroupBy(b => b.Id).ToList();
                 string bagFood = (bag.Food.RiceJin > 0 ? $"大米 {bag.Food.RiceJin:0.#} 斤" : "") + (bagIngs.Count > 0 ? "  " + string.Join("、", bagIngs.Select(g => $"{g.First().Name}×{g.Sum(b => b.Count)}")) : "");
                 Line(list, "买的菜米：" + (bagFood.Trim().Length == 0 ? "没有" : bagFood.Trim()) + "（回家自动放进厨房）", 16);
+                var bagFurn = bag.FurnitureLines.ToList();
+                if (bagFurn.Count > 0) Line(list, "背着的家具：" + string.Join("、", bagFurn.Select(kv => FurnitureLabel(kv.Key, kv.Value))) + "（回家或回店里放进家具背包）", 16);
                 Line(list, "礼品：" + (bag.GiftLines.Count() == 0 ? "没有。去烟酒茶行、农贸市场买，或者网购。" : string.Join("、", bag.GiftLines.Select(kv => $"{Gifts.Get(kv.Key).Name}×{kv.Value}"))), 16);
 
                 Line(list, "—— 吃的 ——", 18, Ui.Accent);
@@ -195,7 +197,7 @@ namespace PCShopSell.Game.UI
                 foreach (var kv in stock) Line(list, "· " + FurnitureLabel(kv.Key, kv.Value) + (FurnitureCatalog.Get(kv.Key).ForShop ? "（店里用）" : "（家里用）"), 16);
 
                 Line(list, "—— 在路上的包裹 ——", 18, Ui.Accent);
-                if (S.Parcels.Count == 0) Line(list, "没有。网购下单后 " + GameSession.DeliveryDays + " 天送到家。", 15, Ui.Dim);
+                if (S.Parcels.Count == 0) Line(list, "没有。网购 " + GameSession.DeliveryDays + " 天送到家；家具城叫的货车明早到。", 15, Ui.Dim);
                 foreach (Parcel p in S.Parcels)
                 {
                     int left = Mathf.Max(0, p.DueDay - S.Clock.Today.TotalDays);
@@ -356,8 +358,8 @@ namespace PCShopSell.Game.UI
 
         private void BuildMall(Window w, Place p)
         {
-            Line(w.Content, "宜居家具城：现场付钱，当天带回家（放进家具背包）。线上同款便宜 15%，但要等 2 天。", 16, Ui.Dim);
-            Line(w.Content, $"现金 {S.Ledger.Balance}", 18);
+            Line(w.Content, "宜居家具城：现场付钱。轻便的自己背回去；超过 20 公斤的太大件，塞不进背包，得叫货车拖（运费 ¥120，明早送到家）。线上同款便宜 15%，2 天快递到家。", 16, Ui.Dim);
+            Line(w.Content, $"现金 {S.Ledger.Balance}   负重 {S.CarriedKg:0.#}/{S.CarryLimitKg:0.#} 公斤", 18);
             RectTransform list = Ui.Scroll(w.Content, 520);
             Line(list, "—— 家里用 ——", 18, Ui.Accent);
             foreach (FurnitureDef f in FurnitureCatalog.Purchasable(false)) MallRow(w, list, f);
@@ -368,15 +370,26 @@ namespace PCShopSell.Game.UI
         private void MallRow(Window w, RectTransform list, FurnitureDef def)
         {
             RectTransform row = Ui.Row(list, 58);
-            Ui.Size(Ui.Label(row, $"{def.Name}\n<size=14><color=#A8B0BA>{def.Description}</color></size>", 18), 480);
-            Ui.Size(Ui.Label(row, def.Price.ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 100);
-            int have = S.FurnitureInStock(def.Id);
-            Ui.Size(Ui.Label(row, have > 0 ? $"背包 ×{have}" : "", 15, TextAnchor.MiddleLeft, Ui.Dim), 80);
-            Ui.Size(Ui.Button(row, "买", () =>
+            Ui.Size(Ui.Label(row, $"{def.Name}  <size=14><color={(def.IsHeavy ? "#E0A86A" : "#A8B0BA")}>重 {def.WeightKg:0.#} 公斤{(def.IsHeavy ? "（太大件）" : "")}</color></size>\n<size=14><color=#A8B0BA>{def.Description}</color></size>", 18), 430);
+            Ui.Size(Ui.Label(row, def.Price.ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 90);
+            int have = S.FurnitureInStock(def.Id) + S.Backpack.FurnitureCount(def.Id);
+            Ui.Size(Ui.Label(row, have > 0 ? $"背包 ×{have}" : "", 15, TextAnchor.MiddleLeft, Ui.Dim), 70);
+            if (def.IsHeavy)
             {
-                S.BuyFurnitureAtMall(def.Id);
-                w.Rebuild();
-            }, 17, Ui.ButtonHot), 70);
+                Ui.Size(Ui.Button(row, $"叫货车 +{FurnitureCatalog.TruckFee}", () =>
+                {
+                    if (S.BuyFurnitureByTruck(def.Id)) Toast($"叫了货车，{def.Name}明早送到家。");
+                    w.Rebuild();
+                }, 16, Ui.Warn), 130);
+            }
+            else
+            {
+                Ui.Size(Ui.Button(row, "买", () =>
+                {
+                    S.BuyFurnitureAtMall(def.Id);
+                    w.Rebuild();
+                }, 17, Ui.ButtonHot), 130);
+            }
         }
 
         private void BuildTobacco(Window w, Place p)
