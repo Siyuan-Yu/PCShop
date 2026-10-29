@@ -40,7 +40,7 @@ namespace PCShopSell.Core.Session
         /// <summary>档口今天的批发价。</summary>
         public Money StallPrice(Place stall, PartDef part)
         {
-            double f = StallBaseFactor + StallVariation(stall.Id) - BargainBonus(stall.Id);
+            double f = StallBaseFactor + StallVariation(stall.Id) - BargainBonus(stall.Id) - NpcPerks.StallDiscount(Relation(Npcs.Jie));
             return Money.FromYuan((long)Math.Round(Market.PriceOf(part).Yuan * f));
         }
 
@@ -111,7 +111,8 @@ namespace PCShopSell.Core.Session
 
         // ---------- 1788 ----------
 
-        public Money OnlinePrice(OnlineStore store, PartDef part) => Online1788.PriceOf(store, Market.PriceOf(part));
+        public Money OnlinePrice(OnlineStore store, PartDef part) =>
+            Online1788.PriceOf(store, Market.PriceOf(part)).Scale(1.0 - NpcPerks.OnlineDiscount(Relation(Npcs.Zhou)));
 
         /// <summary>在店里的电脑上下单，次日 10:00 送到店里。</summary>
         public bool PlaceOnlineOrder(string storeId, IReadOnlyList<(PartDef part, int count)> lines)

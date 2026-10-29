@@ -300,6 +300,23 @@ namespace PCShopSell.EditorTools
             Check(g.MonthGoalEvaluated || g.IsGameOver, "第 30 天评估月目标");
             Frame(0.05f);
             Shot("vs1_10_month_end");
+
+            // 店面扩建 + 目标与人脉面板
+            g.Ledger.Credit(g.Clock.Today, "测试", PCShopSell.Core.Common.Money.FromYuan(500000), "演示用");
+            g.PlayerShop.Reputation = 50;
+            Teleport(g, "player_shop");
+            g.Clock.Restore(new PCShopSell.Core.Time.GameDate(130), 10 * 60);
+            Check(g.BuyExpansion(PCShopSell.Core.Shop.ShopSize.Medium), "扩建成中型店");
+            _game.Ui.CloseModalWindows();
+            Frame(0.05f);
+            Shot("vs1_14_medium_shop");
+            g.Meet(PCShopSell.Core.Session.Npcs.Zhang, 40);
+            g.Meet(PCShopSell.Core.Session.Npcs.Lin, 62);
+            g.Meet(PCShopSell.Core.Session.Npcs.Landlady, 20);
+            _game.Ui.OpenGoalsPanel();
+            Frame(0.05f);
+            Shot("vs1_15_goals");
+            _game.Ui.CloseAllWindows();
         }
 
         private static void Teleport(GameSession s, string placeId)

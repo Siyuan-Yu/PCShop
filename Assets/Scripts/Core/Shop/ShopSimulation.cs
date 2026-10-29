@@ -109,7 +109,7 @@ namespace PCShopSell.Core.Shop
     public sealed class ShopSettings
     {
         /// <summary>位置最好、规格系数为 1、知名度为 0 时，高峰时段每小时进店人数。</summary>
-        public double BaseCustomersPerHour = 10;
+        public double BaseCustomersPerHour = 2;
 
         public double WeekendMultiplier = 1.5;
         public int MinBrowseMinutes = 3;
@@ -188,6 +188,13 @@ namespace PCShopSell.Core.Shop
     /// </summary>
     public sealed class ShopSimulation : IDisposable
     {
+        /// <summary>知名度涨幅：每笔散件成交、每单整机交付。数值偏小，让知名度要经营大半年才满。</summary>
+        public const double SaleReputationGain = 0.012;
+        public const double BuildReputationGain = 0.4;
+
+        /// <summary>知名度每天自然衰减，不经营就会掉。</summary>
+        public const double DailyReputationRetention = 0.998;
+
         public const string SalesCategory = "零售";
         public const string BuildCategory = "装机";
 
@@ -207,7 +214,7 @@ namespace PCShopSell.Core.Shop
         public ShopSettings Settings { get; }
         public GameRandom Random { get; }
         public Stock Stock { get; }
-        public ShopSize Size { get; }
+        public ShopSize Size { get; set; }
         public double LocationFactor { get; set; } = 1.0;
 
         /// <summary>招牌灯箱之类的升级带来的客流倍数。</summary>
@@ -331,7 +338,7 @@ namespace PCShopSell.Core.Shop
             _orders.Remove(o);
             _ledger.Credit(_clock.Today, BuildCategory, o.Price, $"{PartCatalog.TierName(o.Tier)}整机");
             TodaySales += o.Price;
-            Reputation += 1.5;
+            Reputation += BuildReputationGain;
             return true;
         }
 
@@ -354,6 +361,7 @@ namespace PCShopSell.Core.Shop
             TodayCustomers = 0;
             TodayLost = 0;
             TodaySales = Money.Zero;
+            Reputation *= DailyReputationRetention;
         }
 
         private void OnTimeAdvanced(GameTimestamp from, GameTimestamp to)
@@ -523,7 +531,7 @@ namespace PCShopSell.Core.Shop
             c.State = CustomerState.Paid;
             _ledger.Credit(_clock.Today, SalesCategory, c.Spend, c.Item.Name + (c.ItemBoxed ? "（盒装）" : "（散件）"));
             TodaySales += c.Spend;
-            Reputation += 0.2;
+            Reputation += SaleReputationGain;
             CustomerPaid?.Invoke(c);
         }
 

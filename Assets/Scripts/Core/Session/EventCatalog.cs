@@ -20,7 +20,7 @@ namespace PCShopSell.Core.Session
         private static bool CanPay(GameSession s, long yuan) => s.Ledger.Balance >= Y(yuan);
 
         /// <summary>从店里随机拿走一件货，返回名字；店里没货返回 null。</summary>
-        private static string LoseRandomItem(GameSession s)
+        internal static string LoseRandomItem(GameSession s)
         {
             List<StockLine> lines = s.PlayerShop.Stock.Lines();
             if (lines.Count == 0) return null;
@@ -29,7 +29,7 @@ namespace PCShopSell.Core.Session
             return l.Part.Name;
         }
 
-        public static readonly IReadOnlyList<EventDef> All = new List<EventDef>
+        private static readonly IReadOnlyList<EventDef> Base = new List<EventDef>
         {
             new EventDef
             {
@@ -214,7 +214,7 @@ namespace PCShopSell.Core.Session
             new EventDef
             {
                 Id = "rival", Title = "隔壁打价格战", MinDay = 7, CooldownDays = 14, Weight = 8,
-                When = s => s.PlayerShop.Markup > 1.2,
+                When = s => s.PlayerShop.Markup > 1.2 && s.Relation(Npcs.Jie) < NpcPerks.JieNoPriceWar,
                 Body = "隔壁电脑店在门口挂出了特价牌，写着\"全场比别家便宜一成\"。有顾客进来先问你能不能也降。",
                 Choices =
                 {
@@ -438,6 +438,9 @@ namespace PCShopSell.Core.Session
                 },
             },
         };
+
+        /// <summary>全部事件：通用事件 + 围绕固定人物的事件。</summary>
+        public static readonly IReadOnlyList<EventDef> All = Base.Concat(NpcEvents.All).ToList();
 
         public static EventDef Get(string id) => All.FirstOrDefault(e => e.Id == id);
     }

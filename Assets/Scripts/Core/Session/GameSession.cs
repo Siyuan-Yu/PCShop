@@ -262,22 +262,33 @@ namespace PCShopSell.Core.Session
 
             PayWages(previous);
             ProcessScheduledCredits(today);
+            DecayRelations();
             if (today.IsMonthStart)
             {
                 if (HomeComfort > 0) Ledger.ForceDebit(today, "水电", HomeComforts.MonthlyUtilities(HomeComfort), "住处水电");
-                Ledger.ForceDebit(today, "房租", ShopRent, "店铺月租");
+                Ledger.ForceDebit(today, "房租", CurrentShopRent, "店铺月租");
                 Ledger.ForceDebit(today, "房租", HomeRent, "城中村月租");
-                Popup?.Invoke("交房租", $"店铺 {ShopRent} + 出租屋 {HomeRent} 已扣款。");
+                Popup?.Invoke("交房租", $"店铺 {CurrentShopRent} + 出租屋 {HomeRent} 已扣款。");
             }
 
             if (today.TotalDays == 4 && Online.Discover("s_zhou"))
+            {
+                Meet(Npcs.Jie, 20);
+                Meet(Npcs.Zhou, 10);
                 Popup?.Invoke("同行的建议", "隔壁手机店的老板说：\"别在 1788 上看评分，评分都是刷的。去搜'老周电子'，我们都在他那拿货。\"\n（1788 上出现了新店铺）");
+            }
 
             if (!MonthGoalEvaluated && today.TotalDays >= MonthGoalDay) EvaluateMonthGoal();
+            EvaluateCampaign(today);
 
             if (Ledger.Balance.IsNegative)
             {
                 NegativeCashDays++;
+                if (NegativeCashDays >= 2 && TryFriendBailout() && !Ledger.Balance.IsNegative)
+                {
+                    NegativeCashDays = 0;
+                    return;
+                }
                 if (NegativeCashDays >= BankruptDays)
                 {
                     SetGameOver($"连续 {BankruptDays} 天资金为负，店铺倒闭了。");

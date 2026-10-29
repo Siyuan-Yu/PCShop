@@ -109,7 +109,7 @@ namespace PCShopSell.Core.Session
             if (_upgrades.Contains(ShopUpgrades.SelfCheckout)) acc |= PaymentMethods.SelfCheckout;
             PlayerShop.Accepted = acc;
             PlayerShop.Stock.Capacity = ShopSettings.Capacity(PlayerShop.Size) + ShopUpgrades.ExtraCapacity(_upgrades);
-            PlayerShop.TrafficMultiplier = _upgrades.Contains(ShopUpgrades.Sign) ? ShopUpgrades.SignTrafficBonus : 1.0;
+            PlayerShop.TrafficMultiplier = (_upgrades.Contains(ShopUpgrades.Sign) ? ShopUpgrades.SignTrafficBonus : 1.0) * NpcTrafficMultiplier();
             PlayerShop.Settings.PatienceMinutes = _basePatience + (_upgrades.Contains(ShopUpgrades.AirCon) ? ShopUpgrades.AirConPatienceBonus : 0);
         }
 
@@ -176,6 +176,8 @@ namespace PCShopSell.Core.Session
 
         private void RestoreGrowth(SaveData d)
         {
+            RestoreCampaign(d);
+            RestoreNpcs(d);
             _upgrades.Clear();
             foreach (string id in d.upgrades ?? Array.Empty<string>())
                 if (ShopUpgrades.Exists(id)) _upgrades.Add(id);
@@ -210,6 +212,8 @@ namespace PCShopSell.Core.Session
             d.scheduledCents = _scheduledCredits.Select(c => c.cents).ToArray();
             d.scheduledMemos = _scheduledCredits.Select(c => c.memo).ToArray();
             SaveEvents(d);
+            SaveCampaign(d);
+            SaveNpcs(d);
         }
     }
 }

@@ -69,6 +69,17 @@ namespace PCShopSell.Core.Session
         public string[] eventIds;
         public int[] eventLastDays;
         public int[] eventCounts;
+
+        // 长线目标 / 人脉 / 扩建
+        public string[] milestoneIds;
+        public bool[] milestonePassed;
+        public int rentHikes;
+        public string endingId;
+        public int shopSize;
+        public string[] relationIds;
+        public double[] relationValues;
+        public string[] giftIds;
+        public int[] giftDays;
     }
 
     [Serializable]

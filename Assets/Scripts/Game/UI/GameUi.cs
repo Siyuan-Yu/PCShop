@@ -122,8 +122,9 @@ namespace PCShopSell.Game.UI
                 _speedButtons.Add((b, speed));
             }
 
-            _placeText = Ui.Size(Ui.Label(row, "", 20, TextAnchor.MiddleCenter), 330, -1, 1);
-            _statsText = Ui.Size(Ui.Label(row, "", 18, TextAnchor.MiddleRight), 470);
+            _placeText = Ui.Size(Ui.Label(row, "", 20, TextAnchor.MiddleCenter), 250, -1, 1);
+            _statsText = Ui.Size(Ui.Label(row, "", 18, TextAnchor.MiddleRight), 440);
+            Ui.Size(Ui.Button(row, "目标", OpenGoalsPanel, 18), 80);
             Ui.Size(Ui.Button(row, "行情", OpenMarketPanel, 18, Ui.ButtonHot), 80);
             Ui.Size(Ui.Button(row, "菜单", OpenSystemPanel, 18), 80);
 

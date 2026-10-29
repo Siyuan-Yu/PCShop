@@ -12,6 +12,7 @@
 - [`docs/01-roadmap.md`](docs/01-roadmap.md)：开发路线
 - [`docs/07-vs1-acceptance.md`](docs/07-vs1-acceptance.md)：VS1 验收说明（怎么玩、验收清单、数值位置）
 - [`docs/08-current-status.md`](docs/08-current-status.md)：当前状态（已完成、代码结构、怎么跑测试、已知问题、下一步）
+- [`docs/09-campaign-and-balance.md`](docs/09-campaign-and-balance.md)：三年长线目标、结局、店面扩建、固定人物与交情、数值校准
 - [`docs/asset-log.md`](docs/asset-log.md)：AI 美术资源登记
 
 ## 技术

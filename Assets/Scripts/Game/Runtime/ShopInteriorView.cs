@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
@@ -41,6 +41,7 @@ namespace PCShopSell.Game.Runtime
         private readonly Vector3 _queueDir;
         private float _stockTimer;
 
+        public ShopSize Size { get; }
         public float Width { get; }
         public float Depth { get; }
         public Vector3 Center => Origin + new Vector3(Width / 2, 0, Depth / 2);
@@ -58,6 +59,7 @@ namespace PCShopSell.Game.Runtime
 
         public ShopInteriorView(Transform parent, ShopSize size)
         {
+            Size = size;
             _root = new GameObject("ShopInterior").transform;
             _root.SetParent(parent, false);
             _root.position = Origin;
@@ -214,6 +216,13 @@ namespace PCShopSell.Game.Runtime
         {
             Color[] c = { new Color(0.8f, 0.2f, 0.25f), new Color(0.2f, 0.4f, 0.8f), new Color(0.9f, 0.9f, 0.9f), new Color(0.25f, 0.25f, 0.25f), new Color(0.6f, 0.3f, 0.7f), new Color(0.3f, 0.7f, 0.4f) };
             return c[_rng.Next(c.Length)];
+        }
+
+        /// <summary>整个店内场景销毁（店面扩建后换一个新尺寸的）。</summary>
+        public void Destroy()
+        {
+            Clear();
+            Kill.It(_root.gameObject);
         }
 
         public void Clear()

@@ -276,8 +276,13 @@ namespace PCShopSell.Game.UI
             OpenWindow("菜单", 560, 620, w =>
             {
                 Line(w.Content, $"身家（现金 + 库存九折）：{S.NetWorth()}", 20);
-                Line(w.Content, $"第一个月目标：第 30 天身家 ≥ {GameSession.MonthGoalNetWorth}，并雇到员工", 17, Ui.Dim);
-                if (S.MonthGoalEvaluated) Line(w.Content, S.MonthGoalPassed ? "目标：已达成" : "目标：未达成", 18, S.MonthGoalPassed ? Ui.Good : Ui.Warn);
+                GoalLine goal = S.NextGoal();
+                if (goal != null)
+                {
+                    Line(w.Content, $"下一个目标：{goal.Title}（第 {goal.Day} 天）", 17, Ui.Dim);
+                    Line(w.Content, goal.Progress, 16, Ui.Dim);
+                }
+                Ui.Size(Ui.Button(w.Content, "目标与人脉", OpenGoalsPanel, 20, Ui.ButtonHot), -1, 48);
                 Ui.Size(Ui.Button(w.Content, S.CanSave ? "存档" : "路上不能存档", () =>
                 {
                     if (_ctrl.SaveGame()) Toast("已存档。");

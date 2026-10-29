@@ -323,6 +323,20 @@ namespace PCShopSell.Game.UI
         {
             Line(C, $"给小店添点家当。现金 {S.Ledger.Balance}。买一次永久生效。", 16, Ui.Dim);
             RectTransform list = Ui.Scroll(C, 430);
+            foreach (ShopExpansionDef ex in ShopExpansions.All)
+            {
+                ShopExpansionDef e = ex;
+                bool has = S.PlayerShop.Size >= e.Size;
+                string blocker = S.ExpansionBlocker(e);
+                RectTransform erow = Ui.Row(list, 70);
+                string status = has ? "<color=#7CE38B>已拥有</color>" : blocker == null ? $"<color=#7CE38B>{e.Price}</color>" : $"{e.Price}  <color=#E0806A>{blocker}</color>";
+                Ui.Size(Ui.Label(erow, $"<b>{e.Name}</b>  {status}\n<size=14>{e.Description}</size>", 17), 420);
+                Ui.Size(Ui.Button(erow, has ? "已买" : "扩建", () =>
+                {
+                    S.BuyExpansion(e.Size);
+                    RebuildDock();
+                }, 18, Ui.ButtonHot, !has && blocker == null), 90);
+            }
             foreach (ShopUpgradeDef def in ShopUpgrades.All)
             {
                 ShopUpgradeDef u = def;

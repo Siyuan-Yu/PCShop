@@ -89,17 +89,20 @@ namespace PCShopSell.Game
                 Session.Notice -= OnNotice;
                 Session.Popup -= OnPopup;
                 Session.EventRaised -= OnEventRaised;
+                Session.ShopExpanded -= OnShopExpanded;
                 Session.TripArrived -= OnTripArrived;
                 Session.PlayerShop.CustomerArrived -= OnCustomerArrived;
                 Session.Clock.DayAdvanced -= OnDayAdvanced;
                 Session.Dispose();
             }
             Interior.Clear();
+            EnsureInterior(s.PlayerShop.Size);
 
             Session = s;
             s.Notice += OnNotice;
             s.Popup += OnPopup;
             s.EventRaised += OnEventRaised;
+            s.ShopExpanded += OnShopExpanded;
             s.EventsEnabled = _eventsOn;
             s.TripArrived += OnTripArrived;
             s.PlayerShop.CustomerArrived += OnCustomerArrived;
@@ -296,6 +299,20 @@ namespace PCShopSell.Game
         private void OnNotice(string m) => Ui.Toast(m);
 
         private void OnEventRaised(EventDef def) => Ui.ShowEvent(def);
+
+        /// <summary>店内场景按店面大小重建（扩建、读档时用）。</summary>
+        private void EnsureInterior(PCShopSell.Core.Shop.ShopSize size)
+        {
+            if (Interior != null && Interior.Size == size) return;
+            Interior?.Destroy();
+            Interior = new ShopInteriorView(_actors, size);
+        }
+
+        private void OnShopExpanded(PCShopSell.Core.Shop.ShopSize size)
+        {
+            EnsureInterior(size);
+            _rig.Snap(FocusPoint(), InInterior ? Interior.CameraSize : 16f);
+        }
 
         private void OnPopup(string title, string body)
         {
