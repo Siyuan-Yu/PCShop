@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.Trade;
@@ -71,7 +72,7 @@ namespace PCShopSell.Core.Session
             if (count > remaining)
                 return Fail(remaining <= 0 ? $"老板说{part.Name}今天不能再多给你了，明天再来。" : $"老板说{part.Name}今天最多再给你 {remaining} 个。多来往，他会放心多给。");
             if (!Cargo.CanAdd(part, true, count))
-                return Fail($"{CurrentVehicle.Name}装不下了（剩 {Cargo.FreeSpace:0.#} 格）。");
+                return Fail($"拿不动了：{CurrentVehicle.Name}最多 {CarryLimitKg:0.#} 公斤，现在已经 {CarriedKg:0.#} 公斤（还能装 {Cargo.FreeSpace * Backpack.KgPerSpace:0.#} 公斤的货）。");
             Money total = StallPrice(stall, part) * count;
             if (!Ledger.TryDebit(Clock.Today, "进货", total, $"{stall.Name} {part.Name}×{count}"))
                 return Fail($"要 {total}，钱不够。");
@@ -121,7 +122,8 @@ namespace PCShopSell.Core.Session
         /// <summary>在店里的电脑上下单，次日 10:00 送到店里。</summary>
         public bool PlaceOnlineOrder(string storeId, IReadOnlyList<(PartDef part, int count)> lines)
         {
-            if (!InPlayerShop) return Fail("只能在店里的电脑上下单（按键机上不了 1788）。");
+            if (!HasSmartphone) return Fail(NoPhoneMessage);
+            if (!InPlayerShop) return Fail("只能在店里下单（要在店里确认收货地址和仓位）。");
             if (!Online.IsDiscovered(storeId)) return false;
             OnlineStore store = Online1788.GetStore(storeId);
 

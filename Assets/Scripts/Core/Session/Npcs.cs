@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
 
 namespace PCShopSell.Core.Session
 {
@@ -17,6 +18,9 @@ namespace PCShopSell.Core.Session
         public Money GiftPrice { get; }
         public string GiftReply { get; }
 
+        /// <summary>送的是背包里的一件礼品（<see cref="Gifts"/>）；为空表示是当面请吃一顿，直接付钱。</summary>
+        public string GiftItemId { get; }
+
         /// <summary>如果是档口老板，这里是他的档口 ID。</summary>
         public string StallId { get; }
 
@@ -32,7 +36,7 @@ namespace PCShopSell.Core.Session
         public bool IsTipster => Reliability > 0;
 
         public NpcDef(string id, string name, string role, string intro, string giftName, long giftYuan, string giftReply,
-            string stallId = null, double reliability = 0, string likes = null, string firstMeet = null)
+            string stallId = null, double reliability = 0, string likes = null, string firstMeet = null, string giftItemId = null)
         {
             Id = id;
             Name = name;
@@ -45,6 +49,7 @@ namespace PCShopSell.Core.Session
             Reliability = reliability;
             Likes = likes;
             FirstMeet = firstMeet;
+            GiftItemId = giftItemId;
         }
     }
 
@@ -69,22 +74,22 @@ namespace PCShopSell.Core.Session
 
         public static readonly IReadOnlyList<NpcDef> All = new[]
         {
-            new NpcDef(Zhang, "老张", "熟客，附近中学的老师", "第一个常来的熟客，认准你这家店。", "一条好烟", 100, "老张笑得合不拢嘴：\"你这小子，会来事。\"", likes: Activities.Hike),
-            new NpcDef(Landlady, "李姐", "房东，住楼上", "你的店面和出租屋都是她的。", "一箱水果", 120, "李姐掂了掂水果：\"哎呀，这么客气，下个月的事好商量。\"", likes: Activities.Dinner),
-            new NpcDef(Zhou, "老周", "电子市场老货商", "在 1788 上开店的老货商，认识半个市场。", "两瓶好酒", 200, "老周拍拍你肩膀：\"后生可畏，以后进货找我，给你实价。\"", reliability: 0.75, likes: Activities.Dinner),
+            new NpcDef(Zhang, "老张", "熟客，附近中学的老师", "第一个常来的熟客，认准你这家店。", "一条好烟", 100, "老张笑得合不拢嘴：\"你这小子，会来事。\"", likes: Activities.Hike, giftItemId: Gifts.Cig),
+            new NpcDef(Landlady, "李姐", "房东，住楼上", "你的店面和出租屋都是她的。", "一箱水果", 120, "李姐掂了掂水果：\"哎呀，这么客气，下个月的事好商量。\"", likes: Activities.Dinner, giftItemId: Gifts.Fruit),
+            new NpcDef(Zhou, "老周", "电子市场老货商", "在 1788 上开店的老货商，认识半个市场。", "两瓶好酒", 200, "老周拍拍你肩膀：\"后生可畏，以后进货找我，给你实价。\"", reliability: 0.75, likes: Activities.Dinner, giftItemId: Gifts.Wine),
             new NpcDef(Jie, "阿杰", "隔壁手机店老板", "年纪相仿的同行，嘴上不饶人，心里有数。", "一顿烧烤", 150, "阿杰咬着串：\"行，以后有事言语一声。\"", reliability: 0.50, likes: Activities.Ktv),
-            new NpcDef(Li, "老李", "CPU 档口老板", "市场里最老的档口，做 CPU 和主板二十年了，说话慢，但很少看走眼。", "一条好烟", 150,
+            new NpcDef(Li, "老李", "CPU 档口老板", "市场里最老的档口，做 CPU 和主板二十年了，说话慢，但很少看走眼。", "一条名烟", 150,
                 "老李接过烟，在耳朵上夹了一下：\"小伙子，下次给你留好货。\"", Stalls.Cpu, 0.80, Activities.Fishing,
-                "老李眯着眼打量你：\"新面孔？先看货，别急。\""),
+                "老李眯着眼打量你：\"新面孔？先看货，别急。\"", Gifts.CigHi),
             new NpcDef(Wang, "阿王", "显卡王档口老板", "显卡档口的大嗓门，消息灵通，不过嘴上没把门，说的不一定准。", "一箱饮料", 100,
                 "阿王哈哈大笑：\"够意思！以后显卡找我，价钱好说！\"", Stalls.Gpu, 0.55, Activities.Ktv,
-                "阿王扯着嗓子：\"来来来，显卡看一看！新来的？给你个好价！\""),
+                "阿王扯着嗓子：\"来来来，显卡看一看！新来的？给你个好价！\"", Gifts.Drink),
             new NpcDef(Qian, "钱姐", "存储专营老板娘", "内存和硬盘档口的老板娘，精明细致，账目清楚。", "一盒点心", 120,
                 "钱姐笑着收下：\"还挺会来事，以后多照顾你。\"", Stalls.Memory, 0.70, Activities.Dinner,
-                "钱姐头也不抬地敲着计算器：\"要什么货？先说清楚数量。\""),
+                "钱姐头也不抬地敲着计算器：\"要什么货？先说清楚数量。\"", Gifts.Snack),
             new NpcDef(Sun, "老孙", "机箱电源城老板", "做机箱电源的实在人，货量大，价格死板，但从不坑人。", "两瓶白酒", 160,
                 "老孙搓搓手：\"这怎么好意思，下回来我给你算便宜点。\"", Stalls.PowerCase, 0.65, Activities.Snack,
-                "老孙从货堆后探出头：\"电源机箱？这边，实在价，不二价。\""),
+                "老孙从货堆后探出头：\"电源机箱？这边，实在价，不二价。\"", Gifts.Baijiu),
             new NpcDef(Lin, "小林", "发小，在外面打工", "从小一起长大的朋友，听说你开了店就常来看你。", "一顿夜宵", 100, "小林边吃边笑：\"还是你够意思。\"", likes: Activities.Snack),
         };
 

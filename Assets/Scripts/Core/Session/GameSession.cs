@@ -76,12 +76,13 @@ namespace PCShopSell.Core.Session
         private bool _pendingFaint;
         private bool _pendingHospital;
 
-        public GameSession(CityLayout city, ulong seed, Money openingCash, GameTimestamp start, bool starterStock = true)
+        public GameSession(CityLayout city, ulong seed, Money openingCash, GameTimestamp start, bool starterStock = true, bool smartphone = true)
         {
             City = city ?? throw new ArgumentNullException(nameof(city));
             PlayerShopPlace = city.PlayerShop() ?? throw new ArgumentException("布局里没有玩家的店。", nameof(city));
             Home = city.FirstOfKind(PlaceKind.Home) ?? throw new ArgumentException("布局里没有住所。", nameof(city));
 
+            HasSmartphone = smartphone;
             Random = new GameRandom(seed);
             Clock = new GameClock(start.Date, start.MinuteOfDay);
             Ledger = new Ledger(openingCash);
@@ -172,6 +173,10 @@ namespace PCShopSell.Core.Session
             {
                 PlayerShop.PlayerPresent = true;
                 UnloadCargo();
+            }
+            else if (place == Home)
+            {
+                UnloadFoodAtHome();
             }
             else if (place.Kind == PlaceKind.Wholesaler)
             {

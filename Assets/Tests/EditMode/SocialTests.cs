@@ -193,9 +193,12 @@ namespace PCShopSell.Tests
             s.Meet(Npcs.Li, 5);
             Assert.IsNotNull(s.TipBlocker(Npcs.Li), "交情不够");
             s.AddRelation(Npcs.Li, 20);
+            Assert.IsNotNull(s.TipBlocker(Npcs.Li), "没带烟");
+            s.Backpack.AddGift(PCShopSell.Core.Home.Gifts.Cig, 1);
             Money before = s.Ledger.Balance;
             Assert.IsTrue(s.AskForTip(Npcs.Li));
-            Assert.AreEqual((before - GameSession.TipCost).Cents, s.Ledger.Balance.Cents);
+            Assert.AreEqual(0, s.Backpack.CigaretteCount, "递出去一包烟");
+            Assert.AreEqual(before.Cents, s.Ledger.Balance.Cents);
             Assert.AreEqual(1, s.Tips.Count);
             Assert.IsFalse(s.AskForTip(Npcs.Li), "冷却中");
             Assert.IsNotNull(s.TipBlocker(Npcs.Zhang), "老张不爱聊这个");
@@ -206,6 +209,7 @@ namespace PCShopSell.Tests
         {
             GameSession s = Make();
             s.Meet(Npcs.Li, 30);
+            s.Backpack.AddGift(PCShopSell.Core.Home.Gifts.Cig, 1);
             s.AskForTip(Npcs.Li);
             Assert.AreEqual(TipOutcome.Pending, s.Tips[0].Outcome);
             for (int i = 0; i < GameSession.TipResolveDays + 1; i++)
@@ -257,6 +261,7 @@ namespace PCShopSell.Tests
             Place stall = s.City.GetPlace(Stall);
             s.AddRelation(Npcs.Li, 80);
             s.BuyAtStall(stall, CpuPart(), 3);
+            s.Backpack.AddGift(PCShopSell.Core.Home.Gifts.Cig, 1);
             s.AskForTip(Npcs.Li);
             s.Leave();
             Assert.IsTrue(ForceInvite(s, Npcs.Li, OutingSlot.Weekend));

@@ -44,6 +44,11 @@ namespace PCShopSell.Core.Session
             if (!IsMet(npcId)) return "还没认识";
             if (_giftDays.TryGetValue(npcId, out int last) && Clock.Today.TotalDays - last < Npcs.GiftCooldownDays)
                 return $"{Npcs.GiftCooldownDays - (Clock.Today.TotalDays - last)} 天后才能再送";
+            if (n.GiftItemId != null)
+            {
+                if (Backpack.GiftCount(n.GiftItemId) <= 0) return "没带" + n.GiftName;
+                return null;
+            }
             if (Ledger.Balance < n.GiftPrice) return "钱不够";
             return null;
         }
@@ -53,7 +58,12 @@ namespace PCShopSell.Core.Session
             string blocker = GiftBlocker(npcId);
             if (blocker != null) return Fail(blocker);
             NpcDef n = Npcs.Get(npcId);
-            if (!Ledger.TryDebit(Clock.Today, "人情", n.GiftPrice, n.GiftName)) return Fail("钱不够。");
+            if (n.GiftItemId != null)
+            {
+                if (!Backpack.TakeGift(n.GiftItemId)) return Fail("没带" + n.GiftName + "。");
+                ApplyCargoLimit();
+            }
+            else if (!Ledger.TryDebit(Clock.Today, "人情", n.GiftPrice, n.GiftName)) return Fail("钱不够。");
             _giftDays[npcId] = Clock.Today.TotalDays;
             AddRelation(npcId, Npcs.GiftGain + EffectiveCharm * 0.02);
             Say(n.GiftReply);

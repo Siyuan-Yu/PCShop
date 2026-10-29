@@ -217,7 +217,7 @@ namespace PCShopSell.Game.UI
                 if (kind == VehicleKind.Tricycle && S.TricycleImpounded) name = "三轮(扣)";
                 t.text = name;
             }
-            _cargoText.text = $"随身货 {S.Cargo.UsedSpace:0.#}/{S.Cargo.Capacity:0} 格";
+            _cargoText.text = $"负重 {S.CarriedKg:0.#}/{S.CarryLimitKg:0.#} 公斤";
         }
 
         // ---------- 地点名牌 ----------

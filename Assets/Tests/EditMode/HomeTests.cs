@@ -197,8 +197,11 @@ namespace PCShopSell.Tests
             GameSessionTests.Teleport(s, "farm");
             Assert.IsTrue(s.BuyIngredient("egg", 2));
             Assert.IsTrue(s.BuyRice(2));
-            Assert.AreEqual(7.0, s.Pantry.RiceJin, 1e-9);
+            Assert.AreEqual(Pantry.StartRiceJin, s.Pantry.RiceJin, 1e-9, "还在背包里，没到家");
+            Assert.AreEqual(2.0, s.Backpack.Food.RiceJin, 1e-9);
             GameSessionTests.Teleport(s, "flat");
+            Assert.AreEqual(Pantry.StartRiceJin + 2, s.Pantry.RiceJin, 1e-9, "回家放进厨房");
+            Assert.AreEqual(0.0, s.Backpack.Food.RiceJin, 1e-9);
             Assert.IsTrue(s.CookRice(1, "egg"));
             Assert.AreEqual(1, s.Pantry.IngredientCount("egg"));
             Assert.Greater(s.Pantry.Cooked.Last().Hunger, Pantry.BaseBowlHunger);

@@ -13,6 +13,7 @@ namespace PCShopSell.Core.Session
         Furniture,
         Outfit,
         Rice,
+        Gift,
     }
 
     /// <summary>网购的快递，到了日子送进家里。</summary>
@@ -121,6 +122,9 @@ namespace PCShopSell.Core.Session
                 case ParcelKind.Outfit:
                     OutfitDef o = Outfits.Get(id);
                     return o == null ? Money.Zero : o.Price.Scale(OnlineDiscount);
+                case ParcelKind.Gift:
+                    GiftDef g = Gifts.Get(id);
+                    return g == null ? Money.Zero : g.Price.Scale(OnlineDiscount);
                 default:
                     return RiceBagPrice;
             }
@@ -130,6 +134,7 @@ namespace PCShopSell.Core.Session
         public bool OrderOnline(ParcelKind kind, string id, int count = 1)
         {
             if (IsGameOver || count <= 0) return false;
+            if (!HasSmartphone) return Fail(NoPhoneMessage);
             string name;
             switch (kind)
             {
@@ -144,6 +149,11 @@ namespace PCShopSell.Core.Session
                     if (_ownedOutfits.Contains(id) || _parcels.Any(p => p.Kind == ParcelKind.Outfit && p.Id == id)) return Fail("这件已经有了（或者在路上）。");
                     name = o.Name;
                     count = 1;
+                    break;
+                case ParcelKind.Gift:
+                    GiftDef gd = Gifts.Get(id);
+                    if (gd == null) return false;
+                    name = gd.Name;
                     break;
                 default:
                     name = "大米 10 斤";
@@ -176,6 +186,11 @@ namespace PCShopSell.Core.Session
                     case ParcelKind.Outfit:
                         _ownedOutfits.Add(p.Id);
                         what = Outfits.Get(p.Id).Name + "（在衣柜里换上）";
+                        break;
+                    case ParcelKind.Gift:
+                        Backpack.AddGift(p.Id, p.Count);
+                        ApplyCargoLimit();
+                        what = Gifts.Get(p.Id).Name + (p.Count > 1 ? "×" + p.Count : "") + "（已放进背包）";
                         break;
                     default:
                         Pantry.RiceJin += RiceBagJin * p.Count;
@@ -270,9 +285,12 @@ namespace PCShopSell.Core.Session
         {
             if (!AtFarmMarket) return Fail("要去农贸市场买。");
             if (!IsFarmMarketOpen) return Fail("农贸市场收摊了（6:00–18:00）。");
+            if (jin <= 0) return false;
+            if (!CanCarry(jin * Backpack.RiceKgPerJin)) return false;
             Money cost = Pantry.RicePricePerJin.Scale(jin);
             if (!Ledger.TryDebit(Clock.Today, "买菜", cost, $"大米 {jin:0.#} 斤")) return Fail("钱不够。");
-            Pantry.RiceJin += jin;
+            Backpack.Food.RiceJin += jin;
+            ApplyCargoLimit();
             return true;
         }
 
@@ -282,8 +300,10 @@ namespace PCShopSell.Core.Session
             if (d == null || count <= 0) return false;
             if (!AtFarmMarket) return Fail("要去农贸市场买。");
             if (!IsFarmMarketOpen) return Fail("农贸市场收摊了（6:00–18:00）。");
+            if (!CanCarry(Backpack.IngredientKg(id) * count)) return false;
             if (!Ledger.TryDebit(Clock.Today, "买菜", d.Price * count, $"{d.Name}×{count}")) return Fail("钱不够。");
-            Pantry.AddIngredient(id, count, Clock.Today.TotalDays);
+            Backpack.Food.AddIngredient(id, count, Clock.Today.TotalDays);
+            ApplyCargoLimit();
             return true;
         }
 
@@ -365,6 +385,7 @@ namespace PCShopSell.Core.Session
             List<string> lost = Pantry.Spoil(today.TotalDays);
             if (lost.Count > 0) Say("放坏扔掉了：" + string.Join("、", lost) + "。");
             if (_renovationDay != today.TotalDays) PlayerShop.ForcedClosed = false;
+            SpoilBackpackFood(today.TotalDays);
         }
 
         // ---------- 存档 ----------
@@ -401,11 +422,20 @@ namespace PCShopSell.Core.Session
                 cooked = ToSave(Pantry.Cooked),
                 packed = ToSave(Pantry.Packed),
                 renovationDay = _renovationDay,
+                packRice = Backpack.Food.RiceJin,
+                packIngredients = ToSave(Backpack.Food.Ingredient),
+                giftIds = Backpack.GiftLines.Select(kv => kv.Key).ToArray(),
+                giftCounts = Backpack.GiftLines.Select(kv => kv.Value).ToArray(),
             };
+            d.noPhone = !HasSmartphone;
         }
 
         private void RestoreHomeData(SaveData d)
         {
+            HasSmartphone = !d.noPhone;
+            Backpack.Food.RiceJin = 0;
+            Backpack.Food.Ingredient.Clear();
+            Backpack.ClearGifts();
             _furnStock.Clear();
             _homeLayout.Clear();
             _shopLayout.Clear();
@@ -423,6 +453,7 @@ namespace PCShopSell.Core.Session
                 if (d.homeComfort >= 1) AddFurniture("bed_spring", 1);
                 if (d.homeComfort >= 2) AddFurniture("aircon", 1);
                 if (d.homeComfort >= 3) AddFurniture(FurnitureCatalog.Curtain, 1);
+                ApplyCargoLimit();
                 return;
             }
             string[] ids = h.stockIds ?? Array.Empty<string>();
@@ -438,6 +469,12 @@ namespace PCShopSell.Core.Session
             FromSave(h.packed, Pantry.Packed);
             _renovationDay = h.renovationDay;
             PlayerShop.ForcedClosed = _renovationDay == Clock.Today.TotalDays;
+            Backpack.Food.RiceJin = h.packRice;
+            FromSave(h.packIngredients, Backpack.Food.Ingredient);
+            string[] gids = h.giftIds ?? Array.Empty<string>();
+            for (int i = 0; i < gids.Length; i++)
+                if (h.giftCounts != null && i < h.giftCounts.Length) Backpack.AddGift(gids[i], h.giftCounts[i]);
+            ApplyCargoLimit();
         }
     }
 }

@@ -188,6 +188,7 @@ namespace PCShopSell.EditorTools
 
             Teleport(s, "player_shop");
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            s.SetSmartphone(true);
             s.PlaceOnlineOrder("s_mid", new[] { (PartCatalog.Get("ram0"), 3) });
 
             // 打车去电子市场进货
@@ -327,6 +328,27 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Shot("vs1_29_farm");
             Check(s.BuyIngredient("egg", 2), "农贸市场买鸡蛋");
+            Check(s.BuyGift("fruit"), "农贸市场买水果");
+            _game.Ui.CloseAllWindows();
+
+            // 烟酒茶行、手机店、背包
+            Teleport(s, "shop19");
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            Frame(0.05f);
+            Shot("vs1_32_tobacco");
+            Check(s.BuyGift("cig"), "烟酒茶行买烟");
+            Check(s.BuyGift("wine"), "烟酒茶行买酒");
+            _game.Ui.CloseAllWindows();
+            s.SetSmartphone(false);
+            Teleport(s, "shop04");
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            Frame(0.05f);
+            Shot("vs1_33_phone_shop");
+            Check(s.BuySmartphone(), "手机店买智能手机");
+            _game.Ui.CloseAllWindows();
+            _game.Ui.OpenMyPanel();
+            Frame(0.05f);
+            Shot("vs1_34_backpack");
             _game.Ui.CloseAllWindows();
 
             // 回家摆家具：先收起硬板床，再摆弹簧床、空调、窗帘、沙发

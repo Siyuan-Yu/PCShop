@@ -30,13 +30,13 @@ namespace PCShopSell.Game.UI
 
             RectTransform row = Ui.Row(w.Content, 44);
             string gift = S.GiftBlocker(n.Id);
-            Ui.Size(Ui.Button(row, gift == null ? $"送{n.GiftName} {n.GiftPrice}" : gift, () =>
+            Ui.Size(Ui.Button(row, gift == null ? GiftLabel(n) : gift, () =>
             {
                 S.GiveGift(n.Id);
                 w.Rebuild();
             }, 15, Ui.ButtonHot, gift == null), 230);
             string tip = S.TipBlocker(n.Id);
-            Ui.Size(Ui.Button(row, tip == null ? $"递烟打听行情 {GameSession.TipCost}" : tip, () =>
+            Ui.Size(Ui.Button(row, tip == null ? "递烟打听行情（用掉一包烟）" : tip, () =>
             {
                 S.AskForTip(n.Id);
                 w.Rebuild();

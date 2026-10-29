@@ -43,9 +43,13 @@ namespace PCShopSell.Tests
             GameSession s = Make();
             Assert.IsFalse(s.GiveGift(Npcs.Zhang), "没认识的人不能送礼");
             s.Meet(Npcs.Zhang, 20);
+            Assert.IsNotNull(s.GiftBlocker(Npcs.Zhang), "背包里没烟，送不了");
+            Assert.IsFalse(s.GiveGift(Npcs.Zhang));
+            s.Backpack.AddGift(PCShopSell.Core.Home.Gifts.Cig, 2);
             Money before = s.Ledger.Balance;
             Assert.IsTrue(s.GiveGift(Npcs.Zhang));
-            Assert.AreEqual((before - Npcs.Get(Npcs.Zhang).GiftPrice).Cents, s.Ledger.Balance.Cents);
+            Assert.AreEqual(before.Cents, s.Ledger.Balance.Cents, "送的是背包里的烟，不再当场花钱");
+            Assert.AreEqual(1, s.Backpack.GiftCount(PCShopSell.Core.Home.Gifts.Cig));
             Assert.Greater(s.Relation(Npcs.Zhang), 22);
             Assert.IsFalse(s.GiveGift(Npcs.Zhang), "冷却期内不能再送");
             s.Clock.Restore(s.Clock.Today.AddDays(Npcs.GiftCooldownDays), 9 * 60);
@@ -53,7 +57,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void Gift_NeedsMoney()
+        public void Gift_MealStillPaidOnTheSpot()
         {
             GameSession s = Make(50);
             s.Meet(Npcs.Jie, 20);
@@ -456,6 +460,7 @@ namespace PCShopSell.Tests
             GameSession s = Make();
             GameSessionTests.Teleport(s, "pc");
             s.Meet(Npcs.Zhang, 20);
+            s.Backpack.AddGift(PCShopSell.Core.Home.Gifts.Cig, 1);
             s.GiveGift(Npcs.Zhang);
             CrossInto(s, Campaign.Year1Day);
             CrossInto(s, Campaign.TotalDays);

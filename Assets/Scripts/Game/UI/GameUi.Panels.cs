@@ -2,6 +2,7 @@ using System.Linq;
 using System.Text;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Market;
 using PCShopSell.Core.Session;
@@ -26,6 +27,12 @@ namespace PCShopSell.Game.UI
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.MallBusiness:
                     OpenPlaceWindow(p, BuildMall, 900, 780);
+                    break;
+                case PlaceKind.Shop when p.Business == Gifts.TobaccoBusiness:
+                    OpenPlaceWindow(p, BuildTobacco, 760, 640);
+                    break;
+                case PlaceKind.Shop when p.Business == GameSession.PhoneBusiness:
+                    OpenPlaceWindow(p, BuildPhoneShop, 700, 420);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.FarmBusiness:
                     OpenPlaceWindow(p, BuildFarm, 760, 720);
@@ -75,7 +82,7 @@ namespace PCShopSell.Game.UI
         {
             bool open = S.IsWholesalerOpen;
             Line(w.Content, open ? "营业中（工作日 9:00–18:00）。批发价，只卖盒装正品。" : "<color=#E0806A>关门了（工作日 9:00–18:00 营业）</color>");
-            Line(w.Content, $"随身货：{S.Cargo.UsedSpace:0.#}/{S.Cargo.Capacity:0} 格（{S.CurrentVehicle.Name}）   现金 {S.Ledger.Balance}", 18, Ui.Dim);
+            Line(w.Content, $"随身货：{S.Cargo.UsedSpace:0.#}/{S.Cargo.Capacity:0} 格；负重 {S.CarriedKg:0.#}/{S.CarryLimitKg:0.#} 公斤（{S.CurrentVehicle.Name}）   现金 {S.Ledger.Balance}", 18, Ui.Dim);
 
             BuildOwnerRow(w, p);
 
@@ -233,7 +240,7 @@ namespace PCShopSell.Game.UI
 
         public void OpenSystemPanel()
         {
-            OpenWindow("菜单", 560, 620, w =>
+            OpenWindow("菜单", 560, 690, w =>
             {
                 Line(w.Content, $"身家（现金 + 库存九折）：{S.NetWorth()}", 20);
                 GoalLine goal = S.NextGoal();
@@ -251,6 +258,11 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content, "重新开始", () => _ctrl.NewGame(), 20, Ui.Warn), -1, 48);
                 Ui.Size(Ui.Button(w.Content, "玩法说明", ShowIntro, 20), -1, 48);
                 Ui.Size(Ui.Button(w.Content, "账本（最近 30 条）", OpenLedger, 20), -1, 48);
+                Ui.Size(Ui.Button(w.Content, $"作弊工具  [{(S.HasSmartphone ? "x" : " ")}] 立即拥有智能手机（解锁网购、1788）", () =>
+                {
+                    S.SetSmartphone(!S.HasSmartphone);
+                    w.Rebuild();
+                }, 17, S.HasSmartphone ? Ui.Warn : Ui.ButtonBg), -1, 44);
                 Line(w.Content, "快捷键：空格 暂停 · 1–4 倍速 · 滚轮 缩放 · Esc 关闭窗口", 16, Ui.Dim);
             });
         }

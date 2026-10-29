@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
@@ -31,10 +32,10 @@ namespace PCShopSell.Core.Session
             if (!Owns(kind)) return Fail($"你还没有{Vehicles.Get(kind).Name}。");
             if (kind == VehicleKind.Tricycle && TricycleImpounded) return Fail("三轮车被交警扣了，去车行交 ¥500 赎回。");
             VehicleSpec v = Vehicles.Get(kind);
-            if (Cargo.UsedSpace > v.CargoCapacity + 1e-9)
-                return Fail($"随身的货太多（{Cargo.UsedSpace:0.#} 格），{v.Name}只能带 {v.CargoCapacity:0.#} 格。");
+            if (CarriedKg > v.CargoCapacity * Backpack.KgPerSpace + 1e-9)
+                return Fail($"身上的东西太重（{CarriedKg:0.#} 公斤），{v.Name}最多带 {v.CargoCapacity * Backpack.KgPerSpace:0.#} 公斤。");
             Vehicle = kind;
-            Cargo.Capacity = v.CargoCapacity;
+            ApplyCargoLimit();
             return true;
         }
 
@@ -142,7 +143,7 @@ namespace PCShopSell.Core.Session
             {
                 TricycleImpounded = true;
                 Vehicle = VehicleKind.Walk;
-                Cargo.Capacity = Vehicles.Walk.CargoCapacity;
+                ApplyCargoLimit();
                 if (Trip != null) Trip.ChangeVehicle(Vehicles.Walk);
                 body += $"\n三轮车被扣了！货只能自己扛（走得慢）。去车行交 {PoliceSystem.RedeemFee} 可以赎回。";
             }

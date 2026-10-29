@@ -214,7 +214,15 @@ namespace PCShopSell.Tests
             if (_s.Ledger.Balance > Money.FromYuan(8000))
             {
                 foreach (NpcDef n in Npcs.All)
-                    if (_s.GiftBlocker(n.Id) == null) _s.GiveGift(n.Id);
+                {
+                    string why = _s.GiftBlocker(n.Id);
+                    if (why != null && why.StartsWith("没带") && _s.Ledger.TryDebit(_s.Clock.Today, "人情", n.GiftPrice, n.GiftName))
+                    {
+                        _s.Backpack.AddGift(n.GiftItemId, 1);
+                        why = _s.GiftBlocker(n.Id);
+                    }
+                    if (why == null) _s.GiveGift(n.Id);
+                }
             }
         }
 

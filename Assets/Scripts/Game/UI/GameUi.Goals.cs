@@ -52,7 +52,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Label(row, $"{Npcs.LevelName(rel)} {rel}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
                     Ui.Bar(row, rel / 100f, Ui.Accent, 120, 14);
                     string blocker = S.GiftBlocker(n.Id);
-                    Ui.Size(Ui.Button(row, blocker == null ? $"送{n.GiftName} {n.GiftPrice}" : blocker, () =>
+                    Ui.Size(Ui.Button(row, blocker == null ? GiftLabel(n) : blocker, () =>
                     {
                         S.GiveGift(n.Id);
                         w.Rebuild();

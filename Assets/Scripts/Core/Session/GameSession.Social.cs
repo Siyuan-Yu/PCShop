@@ -245,7 +245,7 @@ namespace PCShopSell.Core.Session
             if (Relation(npcId) < MinTipRelation) return $"交情不够（要 {MinTipRelation}）";
             if (_tipDay.TryGetValue(npcId, out int last) && Clock.Today.TotalDays - last < TipCooldownDays)
                 return $"刚问过，{TipCooldownDays - (Clock.Today.TotalDays - last)} 天后再问";
-            if (Ledger.Balance < TipCost) return "钱不够（递烟钱）";
+            if (Backpack.CigaretteCount <= 0) return "没带烟（烟酒茶行买，或网购）";
             return null;
         }
 
@@ -255,7 +255,8 @@ namespace PCShopSell.Core.Session
             string blocker = TipBlocker(npcId);
             if (blocker != null) return Fail(blocker);
             NpcDef n = Npcs.Get(npcId);
-            Ledger.ForceDebit(Clock.Today, "人情", TipCost, "递烟打听行情");
+            Backpack.TakeCigarette();
+            ApplyCargoLimit();
             AdvanceClock(5);
             string text = CreateTip(n);
             Popup?.Invoke(n.Name + "的消息", text);

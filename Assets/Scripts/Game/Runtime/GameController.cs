@@ -87,7 +87,7 @@ namespace PCShopSell.Game
 
         private GameSession NewSession() =>
             new GameSession(City, DefaultSeed + (ulong)DateTime.Now.Ticks % 100000, StartingCash,
-                GameTimestamp.From(new GameDate(0), GameSession.WakeUpMinute));
+                GameTimestamp.From(new GameDate(0), GameSession.WakeUpMinute), true, false);
 
         private void StartSession(GameSession s)
         {

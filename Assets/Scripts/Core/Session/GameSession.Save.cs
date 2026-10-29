@@ -103,7 +103,7 @@ namespace PCShopSell.Core.Session
         {
             if (d == null) throw new ArgumentNullException(nameof(d));
             ulong rng = ulong.Parse(d.rngState ?? "1", System.Globalization.CultureInfo.InvariantCulture);
-            var s = new GameSession(city, rng, Money.Zero, GameTimestamp.From(new GameDate(d.day), d.minute), false);
+            var s = new GameSession(city, rng, Money.Zero, GameTimestamp.From(new GameDate(d.day), d.minute), false, !d.noPhone);
             s.Restore(d, rng);
             return s;
         }

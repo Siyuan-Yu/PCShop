@@ -251,7 +251,8 @@ namespace PCShopSell.Game.UI
 
         private void BuildOnline()
         {
-            Line(C, "1788 进货平台（店里电脑）：比档口便宜，次日 10:00 到店，可能有次品。评分不一定可信。", 15, Ui.Dim);
+            Line(C, "1788 进货平台（用智能手机下单）：比档口便宜，次日 10:00 到店，可能有次品。评分不一定可信。", 15, Ui.Dim);
+            if (!S.HasSmartphone) Line(C, "<color=#E0806A>你还没有智能手机，下不了单。去街上的手机店买一部。</color>", 17);
             RectTransform stores = Ui.Scroll(C, 200);
             foreach (OnlineStore st in Online1788.Stores.Where(x => S.Online.IsDiscovered(x.Id)))
             {

@@ -63,6 +63,8 @@ namespace PCShopSell.Core.Session
         public string outfitEquipped;
         public int homeComfort;
         public SaveHome home;
+        /// <summary>没有智能手机（旧存档没有这个字段，视为有）。</summary>
+        public bool noPhone;
         public string[] flags;
         public int[] scheduledDays;
         public long[] scheduledCents;
@@ -212,6 +214,10 @@ namespace PCShopSell.Core.Session
         public SaveBatch[] cooked;
         public SaveBatch[] packed;
         public int renovationDay;
+        public double packRice;
+        public SaveBatch[] packIngredients;
+        public string[] giftIds;
+        public int[] giftCounts;
     }
 
     [Serializable]
