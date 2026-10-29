@@ -273,7 +273,10 @@ namespace PCShopSell.Core.Shop
             _clock.DayAdvanced += OnDayAdvanced;
         }
 
-        public bool IsOpenAt(GameTimestamp t) => PlayerPresent || EmployeeOnDuty(t);
+        /// <summary>装修歇业：当天不营业。</summary>
+        public bool ForcedClosed { get; set; }
+
+        public bool IsOpenAt(GameTimestamp t) => !ForcedClosed && (PlayerPresent || EmployeeOnDuty(t));
 
         public bool IsOpen => IsOpenAt(_clock.Now);
 

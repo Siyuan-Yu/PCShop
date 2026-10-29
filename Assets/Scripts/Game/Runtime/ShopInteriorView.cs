@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
@@ -65,6 +66,19 @@ namespace PCShopSell.Game.Runtime
         private bool _wasOn;
         private readonly List<GameObject> _buildGlow = new List<GameObject>();
         private readonly List<Rect> _blockers = new List<Rect>();
+        private RoomFurniture _decor;
+
+        /// <summary>摆出来的店内摆设（装修后由玩家摆放）。</summary>
+        public RoomFurniture Furniture => _decor;
+        public Transform Root => _root;
+
+        /// <summary>店里固定的东西（柜台、装机台、展示桌）占的地，摆放摆设时不能压上去。</summary>
+        public List<RectD> FixedBlockers()
+        {
+            var l = new List<RectD>();
+            foreach (Rect r in _blockers) l.Add(new RectD(r.xMin, r.yMin, r.xMax, r.yMax));
+            return l;
+        }
 
         /// <summary>顾客 ID → 世界坐标头顶位置（给 UI 标签用）。</summary>
         public IEnumerable<KeyValuePair<int, Vector3>> QueueHeads()
@@ -82,6 +96,7 @@ namespace PCShopSell.Game.Runtime
             _root = new GameObject("ShopInterior").transform;
             _root.SetParent(parent, false);
             _root.position = Origin;
+            _decor = new RoomFurniture(_root);
 
             (Width, Depth) = size == ShopSize.Large ? (18f, 12f) : size == ShopSize.Medium ? (12f, 9f) : (8f, 6f);
             float w = Width, d = Depth;
@@ -245,6 +260,8 @@ namespace PCShopSell.Game.Runtime
         {
             foreach (Rect r in _blockers)
                 if (r.Contains(new Vector2(p.x, p.z))) return true;
+            foreach (Rect r in _decor.Blockers)
+                if (r.Contains(new Vector2(p.x, p.z))) return true;
             return false;
         }
 
@@ -273,6 +290,7 @@ namespace PCShopSell.Game.Runtime
         public void Update(GameSession s, float dt, float realDt)
         {
             ShopSimulation shop = s.PlayerShop;
+            _decor.Sync(s.ShopLayout, s.ShopRoom);
             _owner.SetActive(s.InPlayerShop);
             MoveOwner(realDt);
             bool building = shop.Orders.Count > 0;

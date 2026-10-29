@@ -82,7 +82,7 @@ namespace PCShopSell.Core.Session
             PlayerStats p = Player;
             if (_sleeping)
             {
-                p.Energy = Math.Min(p.MaxEnergy, p.Energy + 12.5 * h * HomeComforts.SleepQuality(HomeComfort));
+                p.Energy = Math.Min(p.MaxEnergy, p.Energy + 12.5 * h * HomeSleepQuality);
                 p.Hunger = Math.Max(0, p.Hunger - 2 * h);
             }
             else
@@ -95,17 +95,6 @@ namespace PCShopSell.Core.Session
             if (p.Energy <= 0) p.Health -= 2 * h;
             if (p.Hunger > 30 && p.Energy > 0) p.Health = Math.Min(100, p.Health + 0.5 * h);
             p.Health = Math.Max(0, p.Health);
-        }
-
-        private void EatMeal(string meal)
-        {
-            if (Player.Hunger >= 90) return;
-            if (!Ledger.TryDebit(Clock.Today, "吃饭", MealPrice, meal))
-            {
-                Say($"没钱吃{meal}了……");
-                return;
-            }
-            Player.Hunger = Math.Min(100, Player.Hunger + 45);
         }
 
         private void SendHome()

@@ -11,7 +11,7 @@ namespace PCShopSell.Core.Session
     /// </summary>
     public sealed partial class GameSession
     {
-        /// <summary>走到离某地点入口这么近（画面米）就能按 E 进去。</summary>
+        /// <summary>走到离某地点入口这么近（画面米）就能按 F 进去。</summary>
         public const double EnterRadius = 6.0;
 
         /// <summary>商业街、连接路（两端都在 y=0 那条线上的路）走廊半宽：含两侧人行道。</summary>
@@ -223,7 +223,7 @@ namespace PCShopSell.Core.Session
         public bool EnterNearby()
         {
             Place p = NearbyPlace;
-            if (p == null) return Fail("附近没有能进的地方。走到门口再按 E。");
+            if (p == null) return Fail("附近没有能进的地方。走到门口再按 F。");
             PlayerNodeId = p.NodeId;
             ClearEdge();
             return Enter(p);

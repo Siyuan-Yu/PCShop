@@ -110,8 +110,10 @@ namespace PCShopSell.Tests
             s.BuyUpgrade(ShopUpgrades.Shelf1);
             s.Flags.Add("x_flag");
             GameSessionTests.Teleport(s, "flat");
-            s.BuyOutfit("shirt");
-            s.UpgradeHome();
+            Assert.IsTrue(s.OrderOnline(ParcelKind.Outfit, "shirt"));
+            Assert.IsTrue(s.OrderOnline(ParcelKind.Furniture, "bed_spring"));
+            while (s.Clock.Today.TotalDays < 3) s.AdvanceClock(60);
+            Assert.IsTrue(s.Equip("shirt"));
 
             SaveData d = s.CreateSave();
             GameSession loaded = GameSession.Load(s.City, d);
@@ -119,7 +121,8 @@ namespace PCShopSell.Tests
             Assert.AreEqual(s.PlayerShop.Stock.Capacity, loaded.PlayerShop.Stock.Capacity, 1e-9);
             Assert.AreEqual(s.PlayerShop.Accepted, loaded.PlayerShop.Accepted);
             Assert.AreEqual("shirt", loaded.EquippedOutfit);
-            Assert.AreEqual(1, loaded.HomeComfort);
+            Assert.AreEqual(1, loaded.FurnitureInStock("bed_spring"));
+            Assert.AreEqual(s.HomeLayout.Count, loaded.HomeLayout.Count);
             Assert.IsTrue(loaded.Flags.Contains("x_flag"));
         }
     }
@@ -127,15 +130,15 @@ namespace PCShopSell.Tests
     public class LifeGrowthTests
     {
         [Test]
-        public void Outfit_AddsCharm_AndNeedsHome()
+        public void Outfit_ArrivesByParcel_AndAddsCharm()
         {
             GameSession s = GameSessionTests.Make(5000);
-            GameSessionTests.Teleport(s, "pc");
-            Assert.IsFalse(s.BuyOutfit("suit"), "不在家不能换衣服");
-            GameSessionTests.Teleport(s, "flat");
             int charm = s.Player.Charm;
             Assert.AreEqual(charm, s.EffectiveCharm);
-            Assert.IsTrue(s.BuyOutfit("suit"));
+            Assert.IsTrue(s.OrderOnline(ParcelKind.Outfit, "suit"));
+            Assert.IsFalse(s.Equip("suit"), "快递还没到");
+            while (s.Clock.Today.TotalDays < 2) s.AdvanceClock(60);
+            Assert.IsTrue(s.Equip("suit"));
             Assert.AreEqual(charm + 7, s.EffectiveCharm);
             Assert.IsTrue(s.Equip(Outfits.Default));
             Assert.AreEqual(charm, s.EffectiveCharm);
@@ -146,7 +149,7 @@ namespace PCShopSell.Tests
         public void Outfit_CannotBeBoughtWithoutMoney()
         {
             GameSession s = GameSessionTests.Make(100);
-            Assert.IsFalse(s.BuyOutfit("suit"));
+            Assert.IsFalse(s.OrderOnline(ParcelKind.Outfit, "suit"));
             Assert.AreEqual(Outfits.Default, s.EquippedOutfit);
         }
 
@@ -155,10 +158,7 @@ namespace PCShopSell.Tests
         {
             GameSession a = GameSessionTests.Make(20000, 22 * 60);
             GameSession b = GameSessionTests.Make(20000, 22 * 60);
-            Assert.IsTrue(b.UpgradeHome());
-            Assert.IsTrue(b.UpgradeHome());
-            Assert.IsTrue(b.UpgradeHome());
-            Assert.IsFalse(b.UpgradeHome(), "最高三档");
+            HomeTests.FurnishBetter(b);
             a.Player.Energy = 20;
             b.Player.Energy = 20;
             a.Nap();

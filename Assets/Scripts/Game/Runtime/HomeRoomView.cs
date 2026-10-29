@@ -1,25 +1,25 @@
 using System.Collections.Generic;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
 {
-    /// <summary>挂在家具上，点击时触发对应的互动。</summary>
+    /// <summary>挂在门上，点击时触发"出门"。</summary>
     public sealed class HomeFurniture : MonoBehaviour
     {
         public string Id;
     }
 
     /// <summary>
-    /// 开局住的城中村出租屋（一间真实的小屋）：又破又旧，只有一张硬板床、一个布衣柜、一张折叠小桌和一个坏风扇。
-    /// 放在远离城市的位置，回家时镜头切过来。床 = 睡觉，衣柜 = 换衣服，桌子 = 看状态，门 = 出门。
-    /// 住处改善后屋里会跟着变：新床垫 → 二手空调、风扇修好 → 窗帘、热水器。
+    /// 开局住的城中村出租屋（一间真实的小屋）：又破又旧。屋里的家具全部来自 <c>GameSession.HomeLayout</c>（可以摆放、更换），
+    /// 这里只负责墙、地、窗、门、灯，以及按布局摆出家具、走路碰撞和"够得着的互动点"（床、衣柜、电饭锅、门）。
     /// </summary>
     public sealed class HomeRoomView
     {
         public const string Bed = "bed";
         public const string Wardrobe = "wardrobe";
-        public const string Table = "table";
+        public const string Cooker = "cooker";
         public const string Door = "door";
 
         public static readonly Vector3 Origin = new Vector3(600, 0, -470);
@@ -30,31 +30,45 @@ namespace PCShopSell.Game.Runtime
         /// <summary>刚好看到整间屋子的镜头大小（缩放上限）。</summary>
         public static float CameraSize => Mathf.Max(Width, Depth) * 0.62f + 1.5f;
 
+        /// <summary>家具的玩法角色对应的互动 ID。</summary>
+        public static string RoleId(FurnitureRole role)
+        {
+            switch (role)
+            {
+                case FurnitureRole.Bed: return Bed;
+                case FurnitureRole.Wardrobe: return Wardrobe;
+                case FurnitureRole.Cooker: return Cooker;
+                default: return null;
+            }
+        }
+
         private struct Spot
         {
             public string Id;
             public string Label;
             public Rect Area;
+            public float Height;
         }
 
         private readonly Transform _root;
         private readonly GameObject _owner;
-        private readonly List<Rect> _blockers = new List<Rect>();
         private readonly List<Spot> _spots = new List<Spot>();
-        private readonly List<GameObject>[] _levelOnly = { new List<GameObject>(), new List<GameObject>(), new List<GameObject>(), new List<GameObject>() };
-        private readonly List<GameObject>[] _levelFrom = { new List<GameObject>(), new List<GameObject>(), new List<GameObject>(), new List<GameObject>() };
         private readonly Material _windowMat;
         private readonly Light _windowLight;
-        private Transform _fanHead;
-        private Transform _blades;
-        private int _level = -1;
+        private readonly RoomFurniture _furniture;
+        private readonly Rect _doorArea = new Rect(Width - 0.2f, 0.5f, 0.2f, 1.0f);
         private bool _wasOn;
 
-        /// <summary>老板脚边最近的、够得着的家具 ID；没有则为空。</summary>
+        /// <summary>老板脚边最近的、够得着的互动点 ID；没有则为空。</summary>
         public string NearbyId { get; private set; }
 
         public string NearbyLabel { get; private set; }
 
+        /// <summary>最近互动点头顶的世界坐标（给"可以交互"提示用）。</summary>
+        public Vector3 NearbyWorld { get; private set; }
+
+        public RoomFurniture Furniture => _furniture;
+        public Transform Root => _root;
         public Vector3 Center => Origin + new Vector3(Width / 2, 0, Depth / 2);
         public Vector3 OwnerWorld => _owner.transform.position;
 
@@ -87,6 +101,8 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(_root, "Peeling", new Vector3(1.0f, 1.55f, d - 0.014f), new Vector3(0.6f, 0.5f, 0.01f), Mats.Lit(new Color(0.84f, 0.81f, 0.7f), 0.05f));
             Prims.Box(_root, "Mold", new Vector3(w - 0.014f, 2.3f, 1.9f), new Vector3(0.01f, 0.7f, 0.9f), Mats.Lit(new Color(0.48f, 0.5f, 0.4f), 0.05f));
             Prims.Box(_root, "Calendar", new Vector3(5.3f, 1.55f, d - 0.02f), new Vector3(0.32f, 0.45f, 0.02f), Mats.Lit(new Color(0.8f, 0.25f, 0.2f)));
+            // 墙上钉的一根晾衣绳
+            Prims.Box(_root, "Line", new Vector3(w * 0.5f, 2.1f, Depth - 0.06f), new Vector3(2.0f, 0.015f, 0.015f), Mats.Lit(new Color(0.2f, 0.2f, 0.2f)));
 
             // ---------- 灯 ----------
             Prims.Box(_root, "BulbWire", new Vector3(w * 0.5f, 2.78f, d * 0.5f), new Vector3(0.02f, 0.44f, 0.02f), Mats.Lit(new Color(0.1f, 0.1f, 0.1f)));
@@ -117,31 +133,12 @@ namespace PCShopSell.Game.Runtime
             _windowLight.color = new Color(0.7f, 0.82f, 1f);
             _windowLight.intensity = 0f;
 
-            BuildBed();
-            BuildWardrobe();
-            BuildTable();
             BuildDoor();
-            BuildFan();
-            BuildClutter();
-            BuildUpgrades();
 
-            _blockers.Add(new Rect(0f, d - 1.15f, 2.25f, 1.15f));         // 床
-            _blockers.Add(new Rect(w - 0.65f, 2.5f, 0.65f, 1.2f));        // 衣柜
-            _blockers.Add(new Rect(3.95f, d - 0.8f, 1.3f, 0.8f));         // 桌子
-            _blockers.Add(new Rect(0f, 0f, 1.1f, 1.0f));                  // 纸箱和盆
-            _blockers.Add(new Rect(2.3f, 1.7f, 0.4f, 0.4f));              // 风扇
-
-            _spots.Add(new Spot { Id = Bed, Label = "睡觉 / 小睡", Area = new Rect(0f, d - 1.15f, 2.25f, 1.15f) });
-            _spots.Add(new Spot { Id = Wardrobe, Label = "打开衣柜", Area = new Rect(w - 0.65f, 2.5f, 0.65f, 1.2f) });
-            _spots.Add(new Spot { Id = Table, Label = "看看自己（状态）", Area = new Rect(3.95f, d - 0.8f, 1.3f, 0.8f) });
-            _spots.Add(new Spot { Id = Door, Label = "出门，回到街上", Area = new Rect(w - 0.2f, 0.5f, 0.2f, 1.0f) });
-
+            _furniture = new RoomFurniture(_root);
             _owner = Prims.Figure(_root, "Owner", new Color(0.95f, 0.55f, 0.15f), new Color(0.95f, 0.8f, 0.65f), 1.05f);
             ResetOwner();
-            ApplyLevel(0);
         }
-
-        // ---------- 家具 ----------
 
         private void Stain(string name, Vector3 pos, Vector3 size, Color c, float yaw)
         {
@@ -149,146 +146,50 @@ namespace PCShopSell.Game.Runtime
             go.transform.localRotation = Quaternion.Euler(0, yaw, 0);
         }
 
-        private GameObject Furniture(string id, string name, Vector3 center, Vector3 size, Color c, float smooth = 0.1f, float metallic = 0f)
+        private GameObject Piece(string id, string name, Vector3 center, Vector3 size, Color c, float smooth = 0.1f, float metallic = 0f)
         {
             GameObject go = Prims.Box(_root, name, center, size, Mats.Lit(c, smooth, metallic), id != null);
             if (id != null) go.AddComponent<HomeFurniture>().Id = id;
             return go;
         }
 
-        /// <summary>只在某个住处档位显示（levelOnly），或从某档起一直显示（from）。</summary>
-        private GameObject Only(int level, GameObject go)
-        {
-            _levelOnly[level].Add(go);
-            return go;
-        }
-
-        private GameObject From(int level, GameObject go)
-        {
-            _levelFrom[level].Add(go);
-            return go;
-        }
-
-        private void BuildBed()
-        {
-            float d = Depth;
-            Color metal = new Color(0.22f, 0.22f, 0.25f);
-            foreach (Vector2 c in new[] { new Vector2(0.1f, d - 0.1f), new Vector2(2.0f, d - 0.1f), new Vector2(0.1f, d - 1.0f), new Vector2(2.0f, d - 1.0f) })
-                Furniture(null, "BedLeg", new Vector3(c.x, 0.15f, c.y), new Vector3(0.06f, 0.3f, 0.06f), metal, 0.3f, 0.5f);
-            Furniture(Bed, "BedBoard", new Vector3(1.05f, 0.33f, d - 0.55f), new Vector3(2.0f, 0.06f, 1.0f), new Color(0.45f, 0.33f, 0.22f));
-            Furniture(Bed, "BedHead", new Vector3(0.07f, 0.65f, d - 0.55f), new Vector3(0.08f, 0.6f, 1.0f), metal, 0.3f, 0.5f);
-
-            // 开局：薄薄一层发黄的旧床垫、发灰的枕头和格子被
-            Only(0, Furniture(Bed, "OldMattress", new Vector3(1.15f, 0.40f, d - 0.55f), new Vector3(1.8f, 0.08f, 0.92f), new Color(0.62f, 0.6f, 0.5f), 0.02f));
-            Only(0, Furniture(null, "OldMattressStain", new Vector3(1.3f, 0.445f, d - 0.5f), new Vector3(0.5f, 0.01f, 0.4f), new Color(0.5f, 0.46f, 0.36f), 0.02f));
-            Only(0, Furniture(null, "OldPillow", new Vector3(0.45f, 0.47f, d - 0.55f), new Vector3(0.38f, 0.1f, 0.6f), new Color(0.72f, 0.7f, 0.64f), 0.02f));
-            Only(0, Furniture(null, "OldBlanket", new Vector3(1.55f, 0.46f, d - 0.55f), new Vector3(0.95f, 0.06f, 0.9f), new Color(0.55f, 0.38f, 0.3f), 0.02f));
-            // 新床垫之后：厚一点、干净
-            From(1, Furniture(Bed, "NewMattress", new Vector3(1.15f, 0.47f, d - 0.55f), new Vector3(1.85f, 0.22f, 0.94f), new Color(0.45f, 0.62f, 0.74f), 0.05f));
-            From(1, Furniture(null, "NewPillow", new Vector3(0.45f, 0.64f, d - 0.55f), new Vector3(0.38f, 0.12f, 0.6f), new Color(0.9f, 0.9f, 0.88f), 0.05f));
-            Only(1, Furniture(null, "Blanket1", new Vector3(1.55f, 0.6f, d - 0.55f), new Vector3(0.95f, 0.07f, 0.92f), new Color(0.55f, 0.45f, 0.4f), 0.05f));
-            Only(2, Furniture(null, "Blanket2", new Vector3(1.55f, 0.6f, d - 0.55f), new Vector3(0.95f, 0.07f, 0.92f), new Color(0.4f, 0.5f, 0.65f), 0.05f));
-            From(3, Furniture(null, "Blanket3", new Vector3(1.55f, 0.6f, d - 0.55f), new Vector3(0.95f, 0.07f, 0.92f), new Color(0.3f, 0.55f, 0.6f), 0.05f));
-        }
-
-        private void BuildWardrobe()
-        {
-            float w = Width;
-            Furniture(Wardrobe, "Wardrobe", new Vector3(w - 0.35f, 0.85f, 3.1f), new Vector3(0.6f, 1.7f, 1.1f), new Color(0.48f, 0.5f, 0.56f), 0.05f);
-            Furniture(null, "WardrobeSeam", new Vector3(w - 0.665f, 0.85f, 3.1f), new Vector3(0.02f, 1.6f, 0.03f), new Color(0.25f, 0.26f, 0.3f));
-            Furniture(null, "WardrobeSeam2", new Vector3(w - 0.665f, 0.85f, 3.65f), new Vector3(0.02f, 1.6f, 0.03f), new Color(0.3f, 0.31f, 0.35f));
-            Furniture(null, "WardrobeHandle", new Vector3(w - 0.68f, 0.9f, 3.02f), new Vector3(0.03f, 0.18f, 0.03f), new Color(0.75f, 0.75f, 0.78f), 0.5f, 0.6f);
-            Furniture(null, "WardrobeHandle2", new Vector3(w - 0.68f, 0.9f, 3.18f), new Vector3(0.03f, 0.18f, 0.03f), new Color(0.75f, 0.75f, 0.78f), 0.5f, 0.6f);
-            Furniture(null, "WardrobeTop", new Vector3(w - 0.4f, 1.78f, 3.1f), new Vector3(0.45f, 0.16f, 0.8f), new Color(0.68f, 0.58f, 0.4f)); // 顶上塞着的旧纸箱
-        }
-
-        private void BuildTable()
-        {
-            float d = Depth;
-            Color wood = new Color(0.55f, 0.45f, 0.32f);
-            Furniture(Table, "TableTop", new Vector3(4.6f, 0.72f, d - 0.38f), new Vector3(1.2f, 0.05f, 0.6f), wood, 0.1f);
-            foreach (Vector2 c in new[] { new Vector2(4.05f, d - 0.12f), new Vector2(5.15f, d - 0.12f), new Vector2(4.05f, d - 0.64f), new Vector2(5.15f, d - 0.64f) })
-                Furniture(null, "TableLeg", new Vector3(c.x, 0.36f, c.y), new Vector3(0.04f, 0.72f, 0.04f), new Color(0.3f, 0.3f, 0.32f), 0.3f, 0.5f);
-            Prims.Shape(PrimitiveType.Cylinder, _root, "RiceCooker", new Vector3(4.25f, 0.88f, d - 0.38f), new Vector3(0.34f, 0.15f, 0.34f), Mats.Lit(new Color(0.86f, 0.86f, 0.8f), 0.3f));
-            Prims.Box(_root, "CookerLight", new Vector3(4.25f, 0.9f, d - 0.54f), new Vector3(0.05f, 0.03f, 0.02f), Mats.Glow(new Color(0.6f, 0.1f, 0.1f), new Color(3f, 0.3f, 0.2f), false));
-            Prims.Shape(PrimitiveType.Cylinder, _root, "Bowl", new Vector3(4.85f, 0.77f, d - 0.4f), new Vector3(0.2f, 0.04f, 0.2f), Mats.Lit(new Color(0.9f, 0.9f, 0.92f), 0.4f));
-            Prims.Shape(PrimitiveType.Cylinder, _root, "Mug", new Vector3(5.1f, 0.8f, d - 0.3f), new Vector3(0.1f, 0.06f, 0.1f), Mats.Lit(new Color(0.3f, 0.5f, 0.7f), 0.4f));
-            // 塑料矮凳
-            Prims.Shape(PrimitiveType.Cylinder, _root, "Stool", new Vector3(4.4f, 0.2f, d - 1.25f), new Vector3(0.34f, 0.2f, 0.34f), Mats.Lit(new Color(0.7f, 0.25f, 0.2f), 0.3f));
-        }
-
         private void BuildDoor()
         {
             float w = Width;
-            Furniture(null, "DoorFrame", new Vector3(w - 0.03f, 1.05f, 1.0f), new Vector3(0.05f, 2.1f, 1.05f), new Color(0.3f, 0.22f, 0.15f));
-            Furniture(Door, "Door", new Vector3(w - 0.07f, 1.0f, 1.0f), new Vector3(0.06f, 2.0f, 0.9f), new Color(0.42f, 0.3f, 0.2f), 0.1f);
-            Furniture(null, "DoorPeel", new Vector3(w - 0.108f, 0.7f, 0.8f), new Vector3(0.01f, 0.6f, 0.35f), new Color(0.55f, 0.42f, 0.3f));
-            Furniture(null, "DoorHandle", new Vector3(w - 0.12f, 1.0f, 0.65f), new Vector3(0.05f, 0.05f, 0.1f), new Color(0.75f, 0.7f, 0.5f), 0.5f, 0.6f);
+            Piece(null, "DoorFrame", new Vector3(w - 0.03f, 1.05f, 1.0f), new Vector3(0.05f, 2.1f, 1.05f), new Color(0.3f, 0.22f, 0.15f));
+            Piece(Door, "Door", new Vector3(w - 0.07f, 1.0f, 1.0f), new Vector3(0.06f, 2.0f, 0.9f), new Color(0.42f, 0.3f, 0.2f), 0.1f);
+            Piece(null, "DoorPeel", new Vector3(w - 0.108f, 0.7f, 0.8f), new Vector3(0.01f, 0.6f, 0.35f), new Color(0.55f, 0.42f, 0.3f));
+            Piece(null, "DoorHandle", new Vector3(w - 0.12f, 1.0f, 0.65f), new Vector3(0.05f, 0.05f, 0.1f), new Color(0.75f, 0.7f, 0.5f), 0.5f, 0.6f);
             Prims.Box(_root, "ExitMark", new Vector3(w - 0.11f, 2.3f, 1.0f), new Vector3(0.01f, 0.2f, 0.5f), Mats.Glow(new Color(0.1f, 0.4f, 0.2f), new Color(0.4f, 2f, 0.9f), false));
         }
 
-        private void BuildFan()
-        {
-            Furniture(null, "FanBase", new Vector3(2.5f, 0.03f, 1.9f), new Vector3(0.38f, 0.05f, 0.38f), new Color(0.5f, 0.5f, 0.53f), 0.2f, 0.3f);
-            Furniture(null, "FanPole", new Vector3(2.5f, 0.55f, 1.9f), new Vector3(0.05f, 1.0f, 0.05f), new Color(0.55f, 0.55f, 0.58f), 0.3f, 0.4f);
-            var head = new GameObject("FanHead");
-            head.transform.SetParent(_root, false);
-            head.transform.localPosition = new Vector3(2.5f, 1.1f, 1.9f);
-            _fanHead = head.transform;
-            GameObject cage = Prims.Shape(PrimitiveType.Cylinder, _fanHead, "Cage", Vector3.zero, new Vector3(0.45f, 0.025f, 0.45f), Mats.Lit(new Color(0.75f, 0.75f, 0.78f), 0.3f, 0.4f));
-            cage.transform.localRotation = Quaternion.Euler(0, 0, 90);
-            var blades = new GameObject("Blades");
-            blades.transform.SetParent(_fanHead, false);
-            blades.transform.localPosition = new Vector3(-0.02f, 0, 0);
-            _blades = blades.transform;
-            Material bm = Mats.Lit(new Color(0.55f, 0.65f, 0.75f), 0.2f);
-            Prims.Box(_blades, "BladeA", Vector3.zero, new Vector3(0.015f, 0.36f, 0.07f), bm);
-            Prims.Box(_blades, "BladeB", Vector3.zero, new Vector3(0.015f, 0.07f, 0.36f), bm);
-        }
+        // ---------- 家具与互动点 ----------
 
-        private void BuildClutter()
+        /// <summary>按当前布局重建家具，并重新算互动点。</summary>
+        private void SyncFurniture(GameSession s)
         {
-            float w = Width;
-            // 左前角：纸箱、红塑料盆、水桶
-            Furniture(null, "Box1", new Vector3(0.45f, 0.28f, 0.45f), new Vector3(0.7f, 0.56f, 0.6f), new Color(0.7f, 0.58f, 0.4f), 0.02f);
-            Furniture(null, "Box2", new Vector3(0.35f, 0.7f, 0.4f), new Vector3(0.5f, 0.28f, 0.45f), new Color(0.66f, 0.54f, 0.37f), 0.02f);
-            Prims.Shape(PrimitiveType.Cylinder, _root, "Basin", new Vector3(0.95f, 0.1f, 0.4f), new Vector3(0.45f, 0.1f, 0.45f), Mats.Lit(new Color(0.8f, 0.3f, 0.25f), 0.3f));
-            Prims.Shape(PrimitiveType.Cylinder, _root, "Bucket", new Vector3(0.9f, 0.2f, 0.85f), new Vector3(0.3f, 0.2f, 0.3f), Mats.Lit(new Color(0.25f, 0.45f, 0.7f), 0.3f));
-            // 门边的垃圾袋
-            Prims.Shape(PrimitiveType.Sphere, _root, "Trash", new Vector3(w - 0.6f, 0.25f, 1.9f), new Vector3(0.45f, 0.5f, 0.45f), Mats.Lit(new Color(0.12f, 0.12f, 0.13f), 0.5f));
-            // 墙上钉的一根晾衣绳和两件旧衣服
-            Prims.Box(_root, "Line", new Vector3(w * 0.5f, 2.1f, Depth - 0.06f), new Vector3(2.0f, 0.015f, 0.015f), Mats.Lit(new Color(0.2f, 0.2f, 0.2f)));
-        }
-
-        private void BuildUpgrades()
-        {
-            float w = Width, d = Depth;
-            // 二手空调（挂在床上方）
-            From(2, Furniture(null, "AirCon", new Vector3(1.2f, 2.4f, d - 0.15f), new Vector3(1.1f, 0.3f, 0.25f), new Color(0.88f, 0.88f, 0.86f), 0.3f));
-            From(2, Prims.Box(_root, "AirConLed", new Vector3(1.55f, 2.4f, d - 0.285f), new Vector3(0.06f, 0.03f, 0.02f), Mats.Glow(new Color(0.1f, 0.4f, 0.1f), new Color(0.3f, 3f, 0.6f), false)));
-            // 窗帘
-            From(3, Furniture(null, "CurtainL", new Vector3(2.45f, 1.75f, d - 0.13f), new Vector3(0.28f, 1.4f, 0.04f), new Color(0.6f, 0.4f, 0.45f), 0.02f));
-            From(3, Furniture(null, "CurtainR", new Vector3(3.85f, 1.75f, d - 0.13f), new Vector3(0.28f, 1.4f, 0.04f), new Color(0.6f, 0.4f, 0.45f), 0.02f));
-            From(3, Furniture(null, "CurtainRod", new Vector3(3.15f, 2.45f, d - 0.13f), new Vector3(1.6f, 0.03f, 0.03f), new Color(0.3f, 0.3f, 0.32f), 0.3f, 0.5f));
-            // 热水器
-            From(3, Furniture(null, "Heater", new Vector3(w - 0.2f, 2.0f, 4.15f), new Vector3(0.3f, 0.55f, 0.4f), new Color(0.9f, 0.9f, 0.92f), 0.4f));
-            // 小书桌上的台灯（在桌上）
-            From(3, Prims.Box(_root, "DeskLamp", new Vector3(5.1f, 0.95f, d - 0.5f), new Vector3(0.08f, 0.35f, 0.08f), Mats.Lit(new Color(0.2f, 0.2f, 0.25f), 0.3f, 0.5f)));
-            From(3, Prims.Box(_root, "DeskLampHead", new Vector3(5.1f, 1.15f, d - 0.5f), new Vector3(0.22f, 0.06f, 0.18f), Mats.Glow(new Color(0.9f, 0.9f, 0.7f), new Color(3f, 2.8f, 1.8f), false)));
-        }
-
-        private void ApplyLevel(int level)
-        {
-            level = Mathf.Clamp(level, 0, 3);
-            if (level == _level) return;
-            _level = level;
-            for (int i = 0; i < 4; i++)
+            if (!_furniture.Sync(s.HomeLayout, RoomSpec.Home)) return;
+            _spots.Clear();
+            bool hasBed = false;
+            foreach (PlacedFurniture p in s.HomeLayout)
             {
-                foreach (GameObject go in _levelOnly[i]) go.SetActive(i == level);
-                foreach (GameObject go in _levelFrom[i]) go.SetActive(level >= i);
+                FurnitureDef def = FurnitureCatalog.Get(p.Id);
+                string id = def == null ? null : RoleId(def.Role);
+                if (id == null) continue;
+                if (def.Role == FurnitureRole.Bed) hasBed = true;
+                RectD f = RoomPlanner.Footprint(RoomSpec.Home, def, p);
+                string label = def.Role == FurnitureRole.Bed ? "睡觉 / 小睡" : def.Role == FurnitureRole.Wardrobe ? "打开衣柜" : "电饭锅：做饭 / 吃饭";
+                _spots.Add(new Spot
+                {
+                    Id = id,
+                    Label = label,
+                    Area = new Rect((float)f.MinX, (float)f.MinZ, (float)(f.MaxX - f.MinX), (float)(f.MaxZ - f.MinZ)),
+                    Height = def.Role == FurnitureRole.Bed ? 1.1f : def.Role == FurnitureRole.Wardrobe ? 2.2f : 1.5f,
+                });
             }
-            // 风扇：开局是坏的（头耷拉着、不转）；二手空调之后修好
-            _fanHead.localRotation = level >= 2 ? Quaternion.identity : Quaternion.Euler(0, 0, -38f);
+            // 没有床也能睡：打地铺
+            if (!hasBed) _spots.Add(new Spot { Id = Bed, Label = "打地铺睡觉", Area = new Rect(2.2f, 2.0f, 1.6f, 0.6f), Height = 0.6f });
+            _spots.Add(new Spot { Id = Door, Label = "出门，回到街上", Area = _doorArea, Height = 2.5f });
         }
 
         // ---------- 走动 ----------
@@ -332,7 +233,7 @@ namespace PCShopSell.Game.Runtime
 
         private bool Blocked(Vector3 p)
         {
-            foreach (Rect r in _blockers)
+            foreach (Rect r in _furniture.Blockers)
                 if (r.Contains(new Vector2(p.x, p.z))) return true;
             return false;
         }
@@ -346,8 +247,7 @@ namespace PCShopSell.Game.Runtime
 
         public void Update(GameSession s, float realDt, float minuteOfDay)
         {
-            ApplyLevel(s.HomeComfort);
-            if (_level >= 2) _blades.Rotate(Vector3.right, 900f * realDt, Space.Self);
+            SyncFurniture(s);
 
             // 窗外的天光：白天亮、夜里黑
             float hour = minuteOfDay / 60f;
@@ -355,10 +255,11 @@ namespace PCShopSell.Game.Runtime
             _windowMat.SetColor("_EmissionColor", Color.Lerp(new Color(0.03f, 0.04f, 0.07f), new Color(1.3f, 1.55f, 1.9f), day));
             _windowLight.intensity = day * 0.9f;
 
-            // 够得着的家具
+            // 够得着的互动点
             Vector3 lp = _owner.transform.localPosition;
             Vector2 at = new Vector2(lp.x, lp.z);
             string best = null, label = null;
+            Vector3 world = Vector3.zero;
             float bestDist = 0.75f;
             foreach (Spot sp in _spots)
             {
@@ -368,10 +269,12 @@ namespace PCShopSell.Game.Runtime
                     bestDist = dd;
                     best = sp.Id;
                     label = sp.Label;
+                    world = Origin + new Vector3(sp.Area.center.x, sp.Height, sp.Area.center.y);
                 }
             }
             NearbyId = best;
             NearbyLabel = label;
+            NearbyWorld = world;
         }
 
         public void Destroy() => Kill.It(_root.gameObject);

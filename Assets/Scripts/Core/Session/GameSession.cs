@@ -273,13 +273,14 @@ namespace PCShopSell.Core.Session
             }
             Police.RollDuty(Random);
             ResolveTips(today);
+            OnHomeDayAdvanced(today);
 
             PayWages(previous);
             ProcessScheduledCredits(today);
             DecayRelations();
             if (today.IsMonthStart)
             {
-                if (HomeComfort > 0) Ledger.ForceDebit(today, "水电", HomeComforts.MonthlyUtilities(HomeComfort), "住处水电");
+                if (HomeUtilities.IsPositive) Ledger.ForceDebit(today, "水电", HomeUtilities, "住处水电");
                 Ledger.ForceDebit(today, "房租", CurrentShopRent, "店铺月租");
                 Ledger.ForceDebit(today, "房租", HomeRent, "城中村月租");
                 Popup?.Invoke("交房租", $"店铺 {CurrentShopRent} + 出租屋 {HomeRent} 已扣款。");

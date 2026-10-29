@@ -41,24 +41,6 @@ namespace PCShopSell.Core.Session
         public static OutfitDef Get(string id) => All.FirstOrDefault(o => o.Id == id);
     }
 
-    /// <summary>住处改善的档位（0 为开局状态）。</summary>
-    public static class HomeComforts
-    {
-        public const int MaxLevel = 3;
-
-        private static readonly long[] Prices = { 0, 400, 900, 1800 };
-        private static readonly string[] Names = { "硬板床、电风扇坏了", "换了新床垫", "装了二手空调", "整套租房改造（窗帘、书桌、热水器）" };
-
-        public static Money UpgradePrice(int toLevel) => Money.FromYuan(Prices[toLevel]);
-        public static string Name(int level) => Names[Math.Max(0, Math.Min(MaxLevel, level))];
-
-        /// <summary>睡眠时精力恢复的倍数。</summary>
-        public static double SleepQuality(int level) => 1.0 + 0.12 * level;
-
-        /// <summary>每月多付的水电费。</summary>
-        public static Money MonthlyUtilities(int level) => Money.FromYuan(40L * level);
-    }
-
     public sealed partial class GameSession
     {
         private readonly HashSet<string> _upgrades = new HashSet<string>();
@@ -68,7 +50,6 @@ namespace PCShopSell.Core.Session
         public IReadOnlyCollection<string> Upgrades => _upgrades;
         public IReadOnlyCollection<string> OwnedOutfits => _ownedOutfits;
         public string EquippedOutfit { get; private set; } = Outfits.Default;
-        public int HomeComfort { get; private set; }
 
         /// <summary>一次性标记（事件里用来记"做过什么"）。</summary>
         public HashSet<string> Flags { get; } = new HashSet<string>();
@@ -109,8 +90,8 @@ namespace PCShopSell.Core.Session
             if (_upgrades.Contains(ShopUpgrades.SelfCheckout)) acc |= PaymentMethods.SelfCheckout;
             PlayerShop.Accepted = acc;
             PlayerShop.Stock.Capacity = ShopSettings.Capacity(PlayerShop.Size) + ShopUpgrades.ExtraCapacity(_upgrades);
-            PlayerShop.TrafficMultiplier = (_upgrades.Contains(ShopUpgrades.Sign) ? ShopUpgrades.SignTrafficBonus : 1.0) * NpcTrafficMultiplier();
-            PlayerShop.Settings.PatienceMinutes = _basePatience + (_upgrades.Contains(ShopUpgrades.AirCon) ? ShopUpgrades.AirConPatienceBonus : 0);
+            PlayerShop.TrafficMultiplier = (_upgrades.Contains(ShopUpgrades.Sign) ? ShopUpgrades.SignTrafficBonus : 1.0) * NpcTrafficMultiplier() * ShopDecorTrafficMultiplier;
+            PlayerShop.Settings.PatienceMinutes = _basePatience + (_upgrades.Contains(ShopUpgrades.AirCon) ? ShopUpgrades.AirConPatienceBonus : 0) + ShopDecorPatience;
         }
 
         // ---------- 衣着 ----------
@@ -120,37 +101,11 @@ namespace PCShopSell.Core.Session
         /// <summary>基础魅力 + 衣服加成。</summary>
         public int EffectiveCharm => Player.Charm + Outfit.CharmBonus;
 
-        public bool BuyOutfit(string id)
-        {
-            OutfitDef o = Outfits.Get(id);
-            if (o == null) return false;
-            if (CurrentPlace != Home) return Fail("在家才能换衣服。");
-            if (_ownedOutfits.Contains(id)) return Fail("已经有这件了。");
-            if (!Ledger.TryDebit(Clock.Today, "衣着", o.Price, o.Name)) return Fail("钱不够。");
-            _ownedOutfits.Add(id);
-            EquippedOutfit = id;
-            Say($"买了「{o.Name}」，魅力 +{o.CharmBonus}。");
-            return true;
-        }
-
+        /// <summary>换上一件已经有的衣服（在衣柜里）。</summary>
         public bool Equip(string id)
         {
             if (!_ownedOutfits.Contains(id)) return false;
             EquippedOutfit = id;
-            return true;
-        }
-
-        // ---------- 住处 ----------
-
-        public bool UpgradeHome()
-        {
-            if (CurrentPlace != Home) return Fail("在家才能收拾屋子。");
-            if (HomeComfort >= HomeComforts.MaxLevel) return Fail("已经收拾得很好了。");
-            int next = HomeComfort + 1;
-            Money price = HomeComforts.UpgradePrice(next);
-            if (!Ledger.TryDebit(Clock.Today, "住处", price, HomeComforts.Name(next))) return Fail("钱不够。");
-            HomeComfort = next;
-            Say($"住处改善了：{HomeComforts.Name(next)}。睡得更好了。");
             return true;
         }
 
@@ -189,7 +144,7 @@ namespace PCShopSell.Core.Session
             foreach (string id in d.outfits ?? Array.Empty<string>())
                 if (Outfits.Get(id) != null) _ownedOutfits.Add(id);
             EquippedOutfit = d.outfitEquipped != null && _ownedOutfits.Contains(d.outfitEquipped) ? d.outfitEquipped : Outfits.Default;
-            HomeComfort = Math.Max(0, Math.Min(HomeComforts.MaxLevel, d.homeComfort));
+            RestoreHomeData(d);
 
             Flags.Clear();
             foreach (string f in d.flags ?? Array.Empty<string>()) Flags.Add(f);
@@ -207,7 +162,8 @@ namespace PCShopSell.Core.Session
             d.upgrades = _upgrades.ToArray();
             d.outfits = _ownedOutfits.ToArray();
             d.outfitEquipped = EquippedOutfit;
-            d.homeComfort = HomeComfort;
+            d.homeComfort = 0;
+            SaveHomeData(d);
             d.flags = Flags.ToArray();
             d.scheduledDays = _scheduledCredits.Select(c => c.day).ToArray();
             d.scheduledCents = _scheduledCredits.Select(c => c.cents).ToArray();

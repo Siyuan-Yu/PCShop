@@ -85,6 +85,8 @@ namespace PCShopSell.Game.UI
             UpdateHud();
             UpdateLabels();
             UpdatePlayerMarker();
+            UpdateInteractMarker();
+            UpdatePlacementStatus();
             UpdateQueueLabels();
             UpdateToasts();
             _slowTimer -= dt;
@@ -112,7 +114,7 @@ namespace PCShopSell.Game.UI
             h.childForceExpandWidth = false;
             h.childAlignment = TextAnchor.MiddleLeft;
 
-            _dateText = Ui.Size(Ui.Label(row, "", 24), 330);
+            _dateText = Ui.Size(Ui.Label(row, "", 24), 290);
             _cashText = Ui.Size(Ui.Label(row, "", 26, TextAnchor.MiddleLeft, Ui.Good), 190);
 
             _pauseButton = Ui.Size(Ui.Button(row, "暂停", () => S.Time.TogglePause(), 18), 70);
@@ -123,11 +125,13 @@ namespace PCShopSell.Game.UI
                 _speedButtons.Add((b, speed));
             }
 
-            _placeText = Ui.Size(Ui.Label(row, "", 20, TextAnchor.MiddleCenter), 250, -1, 1);
-            _statsText = Ui.Size(Ui.Label(row, "", 18, TextAnchor.MiddleRight), 440);
-            Ui.Size(Ui.Button(row, "目标", OpenGoalsPanel, 18), 80);
-            Ui.Size(Ui.Button(row, "行情", OpenMarketPanel, 18, Ui.ButtonHot), 80);
-            Ui.Size(Ui.Button(row, "菜单", OpenSystemPanel, 18), 80);
+            _placeText = Ui.Size(Ui.Label(row, "", 20, TextAnchor.MiddleCenter), 230, -1, 1);
+            _statsText = Ui.Size(Ui.Label(row, "", 18, TextAnchor.MiddleRight), 330);
+            Ui.Size(Ui.Button(row, "我的", OpenMyPanel, 18, Ui.ButtonHot), 66);
+            Ui.Size(Ui.Button(row, "网购", OpenOnlinePanel, 18), 66);
+            Ui.Size(Ui.Button(row, "目标", OpenGoalsPanel, 18), 66);
+            Ui.Size(Ui.Button(row, "行情", OpenMarketPanel, 18, Ui.ButtonHot), 66);
+            Ui.Size(Ui.Button(row, "菜单", OpenSystemPanel, 18), 66);
 
             Image bottom = Ui.Panel(root, "BottomBar", Ui.PanelBg);
             bottom.rectTransform.Anchor(0, 0, 0, 0, 0, 0, -1180, -58);
@@ -187,12 +191,13 @@ namespace PCShopSell.Game.UI
             _placeText.text = where + "   " + shopState;
 
             if (S.IsGameOver) _hintText.text = "游戏结束：" + S.GameOverReason;
+            else if (_ctrl.Placing) _hintText.text = "摆放家具：左键放下 · R 旋转 · 右键/Esc 放回 · X 收进背包 · 点已摆的家具可以挪动 · 右侧面板点“完成”结束";
             else if (_ctrl.InInterior) _hintText.text = "WASD 在店里走动，点地板也行 · 点击头顶有黄球的顾客结账 · 右侧面板管理店铺";
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimatedMinutes} 分钟 · 按 WASD 随时接管";
-            else if (S.NearbyPlace != null) _hintText.text = $"<color=#FFD54A>按 E 进入 {S.NearbyPlace.Name}</color>";
-            else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#FFD54A>按 E：{_ctrl.HomeRoom.NearbyLabel}</color>" : "WASD 在屋里走动 · 走到床边睡觉、衣柜换衣服、小桌看状态、门口出门（按 E）";
+            else if (S.NearbyPlace != null) _hintText.text = $"<color=#FFD54A>按 F 进入 {S.NearbyPlace.Name}</color>";
+            else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#FFD54A>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : "WASD 在屋里走动 · 走近床、衣柜、电饭锅（头顶出现提示按 F）· 房间信息、摆放家具看右上角“我的”";
             else if (S.CurrentPlace != null) _hintText.text = "按 WASD 离开 · 空格暂停";
-            else _hintText.text = "WASD 自由走动 · 右键拖动/Q R 转视角 · V 复位 · 滚轮缩放 · 走到门口按 E 进入 · 空格暂停 · 下方按钮可快捷前往";
+            else _hintText.text = "WASD 自由走动 · 右键拖动/Q R 转视角 · V 复位 · 滚轮缩放 · 走到门口按 F 进入 · 空格暂停 · 下方按钮可快捷前往";
 
             _chaseText.gameObject.SetActive(S.Police.AnyChasing && S.CurrentPlace == null);
         }
@@ -228,7 +233,7 @@ namespace PCShopSell.Game.UI
                 {
                     Place place = pv.Place;
                     bool important = place.Kind != PlaceKind.Shop || place.IsPlayerShop;
-                    Button b = Ui.Button(_labelCanvas.transform, place.Name, () => Toast("用 WASD 走到门口，按 E 进入；也可以点下方的快捷前往按钮。"),
+                    Button b = Ui.Button(_labelCanvas.transform, place.Name, () => Toast("用 WASD 走到门口，按 F 进入；也可以点下方的快捷前往按钮。"),
                         important ? 18 : 15, place.IsPlayerShop ? new Color(0.1f, 0.55f, 0.5f, 0.92f) : new Color(0.1f, 0.12f, 0.16f, important ? 0.85f : 0.6f));
                     RectTransform rt = (RectTransform)b.transform;
                     rt.anchorMin = rt.anchorMax = Vector2.zero;

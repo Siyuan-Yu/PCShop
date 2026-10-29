@@ -289,11 +289,81 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Shot("vs1_23_bed");
             _game.Ui.CloseAllWindows();
-            while (s.HomeComfort < 3) { s.Ledger.Credit(s.Clock.Today, "测试", PCShopSell.Core.Common.Money.FromYuan(5000), "演示"); s.UpgradeHome(); }
-            for (int i = 0; i < 10; i++) Frame(0.05f);
-            Shot("vs1_24_home_upgraded");
+
+            // 电饭锅：真做饭（开局 5 斤米）
+            Check(Math.Abs(s.Pantry.RiceJin - 5) < 1e-6, "开局 5 斤米");
+            _game.HomeInteract(PCShopSell.Game.Runtime.HomeRoomView.Cooker);
+            Frame(0.05f);
+            Check(_game.Ui.AnyModalOpen, "电饭锅窗口打开");
+            Check(s.CookRice(1, null), "焖一斤米");
+            _game.Ui.CloseModalWindows();
+            _game.HomeInteract(PCShopSell.Game.Runtime.HomeRoomView.Cooker);
+            Frame(0.05f);
+            Shot("vs1_25_cooker");
             _game.Ui.CloseAllWindows();
 
+            // “我的”信息菜单、网购
+            _game.Ui.OpenMyPanel();
+            Frame(0.05f);
+            Shot("vs1_26_my");
+            _game.Ui.CloseAllWindows();
+            _game.Ui.OpenOnlinePanel();
+            Frame(0.05f);
+            Shot("vs1_27_online");
+            _game.Ui.CloseAllWindows();
+
+            // 家具城（线下买）、农贸市场
+            s.Ledger.Credit(s.Clock.Today, "测试", PCShopSell.Core.Common.Money.FromYuan(20000), "演示");
+            s.Clock.Restore(s.Clock.Today, 10 * 60);
+            Teleport(s, "shop12");
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            Frame(0.05f);
+            Shot("vs1_28_mall");
+            foreach (string id in new[] { "bed_spring", "aircon", "curtain", "sofa", "plant", "rug", "poster", "shop_plant", "shop_sofa", "shop_poster", "shop_led", "shop_dispenser" })
+                Check(s.BuyFurnitureAtMall(id), "家具城买 " + id);
+            _game.Ui.CloseAllWindows();
+            Teleport(s, "shop14");
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            Frame(0.05f);
+            Shot("vs1_29_farm");
+            Check(s.BuyIngredient("egg", 2), "农贸市场买鸡蛋");
+            _game.Ui.CloseAllWindows();
+
+            // 回家摆家具：先收起硬板床，再摆弹簧床、空调、窗帘、沙发
+            Teleport(s, "home");
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            for (int i = 0; i < 10; i++) Frame(0.05f);
+            Check(_game.BeginPlacement(false), "进入摆放模式");
+            Check(s.StoreFurniture(false, 0), "收起硬板床");
+            _game.SelectStock("sofa");
+            Frame(0.05f);
+            Shot("vs1_30_placing");
+            var home = PCShopSell.Core.Home.RoomSpec.Home;
+            Check(s.PlaceFromStock(false, "bed_spring", PCShopSell.Core.Home.RoomPlanner.Snap(home, PCShopSell.Core.Home.FurnitureCatalog.Get("bed_spring"), 1.05, 4.0, 0)), "摆弹簧床");
+            Check(s.PlaceFromStock(false, "aircon", PCShopSell.Core.Home.RoomPlanner.Snap(home, PCShopSell.Core.Home.FurnitureCatalog.Get("aircon"), 1.25, 0, 0)), "挂空调");
+            Check(s.PlaceFromStock(false, "curtain", PCShopSell.Core.Home.RoomPlanner.Snap(home, PCShopSell.Core.Home.FurnitureCatalog.Get("curtain"), 3.15, 0, 0)), "挂窗帘");
+            Check(s.PlaceFromStock(false, "sofa", PCShopSell.Core.Home.RoomPlanner.Snap(home, PCShopSell.Core.Home.FurnitureCatalog.Get("sofa"), 2.75, 1.0, 0)), "摆沙发");
+            Check(s.PlaceFromStock(false, "rug", PCShopSell.Core.Home.RoomPlanner.Snap(home, PCShopSell.Core.Home.FurnitureCatalog.Get("rug"), 2.75, 2.7, 0)), "铺地毯");
+            _game.EndPlacement();
+            for (int i = 0; i < 10; i++) Frame(0.05f);
+            Check(_game.Ui != null && !_game.Placing, "摆放结束");
+            Shot("vs1_24_home_furnished");
+            _game.Ui.CloseAllWindows();
+
+            // 店里摆设：歇业装修一天
+            Teleport(s, "player_shop");
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            Check(s.BeginRenovation(), "歇业装修");
+            Check(_game.BeginPlacement(true), "店里进入摆放模式");
+            var shopRoom = s.ShopRoom;
+            Check(s.PlaceFromStock(true, "shop_sofa", PCShopSell.Core.Home.RoomPlanner.Snap(shopRoom, PCShopSell.Core.Home.FurnitureCatalog.Get("shop_sofa"), 4.5, 1.0, 0), _game.Interior.FixedBlockers()), "摆等候沙发");
+            Check(s.PlaceFromStock(true, "shop_plant", PCShopSell.Core.Home.RoomPlanner.Snap(shopRoom, PCShopSell.Core.Home.FurnitureCatalog.Get("shop_plant"), 6.4, 1.0, 0), _game.Interior.FixedBlockers()), "摆绿植");
+            Check(s.PlaceFromStock(true, "shop_led", PCShopSell.Core.Home.RoomPlanner.Snap(shopRoom, PCShopSell.Core.Home.FurnitureCatalog.Get("shop_led"), 4.0, 0, 0)), "挂 LED");
+            for (int i = 0; i < 10; i++) Frame(0.05f);
+            Shot("vs1_31_shop_decor");
+            _game.EndPlacement();
+            _game.Ui.CloseAllWindows();
+            Check(!s.PlayerShop.IsOpen, "装修当天店歇业");
             // 存档 / 读档
             Teleport(s, "home");
             SaveStore.Save(s);
@@ -352,7 +422,7 @@ namespace PCShopSell.EditorTools
             Shot("vs1_18_tips");
             _game.Ui.CloseAllWindows();
 
-            // WASD 自由走路（街道范围内任意方向），靠近店门时提示按 E
+            // WASD 自由走路（街道范围内任意方向），靠近店门时提示按 F
             g.Leave();
             g.SetVehicle(PCShopSell.Core.Session.VehicleKind.Walk);
             g.ArriveAtNode("e05");

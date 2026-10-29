@@ -62,6 +62,7 @@ namespace PCShopSell.Core.Session
         public string[] outfits;
         public string outfitEquipped;
         public int homeComfort;
+        public SaveHome home;
         public string[] flags;
         public int[] scheduledDays;
         public long[] scheduledCents;
@@ -195,5 +196,50 @@ namespace PCShopSell.Core.Session
         public long wage;
         public int checkoutMinutes;
         public string description;
+    }
+
+    [Serializable]
+    public sealed class SaveHome
+    {
+        public bool saved;
+        public string[] stockIds;
+        public int[] stockCounts;
+        public SavePlaced[] homeLayout;
+        public SavePlaced[] shopLayout;
+        public SaveParcel[] parcels;
+        public double riceJin;
+        public SaveBatch[] ingredients;
+        public SaveBatch[] cooked;
+        public SaveBatch[] packed;
+        public int renovationDay;
+    }
+
+    [Serializable]
+    public sealed class SavePlaced
+    {
+        public string id;
+        public double x;
+        public double z;
+        public int rot;
+    }
+
+    [Serializable]
+    public sealed class SaveParcel
+    {
+        public int kind;
+        public string id;
+        public int count;
+        public int dueDay;
+    }
+
+    [Serializable]
+    public sealed class SaveBatch
+    {
+        public string id;
+        public string name;
+        public double hunger;
+        public double health;
+        public int count;
+        public int expireDay;
     }
 }

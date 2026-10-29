@@ -1,5 +1,6 @@
 using System;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
@@ -15,7 +16,7 @@ namespace PCShopSell.Game
     /// 游戏入口：读城市布局 → 生成街区 → 开一局（或读档）→ 每帧推进会话、同步画面、处理点击。
     /// 场景里只需要这一个组件（相机、灯光、后处理没有的话会自己建）。
     /// </summary>
-    public sealed class GameController : MonoBehaviour
+    public sealed partial class GameController : MonoBehaviour
     {
         public const ulong DefaultSeed = 20261028;
         public static readonly Money StartingCash = Money.FromYuan(5000);
@@ -201,7 +202,8 @@ namespace PCShopSell.Game
             float dt = Time.unscaledDeltaTime;
             HandleKeys();
             HandleMovement(dt);
-            if (!Ui.AnyModalOpen) HandleClicks();
+            UpdatePlacement();
+            if (!Ui.AnyModalOpen && !Placing) HandleClicks();
 
             Session.Tick(dt);
             if (_autosaveDue && Session.CanSave && !Session.IsGameOver)
@@ -281,7 +283,7 @@ namespace PCShopSell.Game
             if (Input.GetKeyDown(KeyCode.Alpha4)) Session.Time.SetSpeed(8);
             if (!GameUi.PointerOverUi) _rig.Zoom(Input.mouseScrollDelta.y);
             HandleCameraOrbit();
-            if (Input.GetKeyDown(KeyCode.E) && !Ui.AnyModalOpen && !Session.IsGameOver)
+            if (Input.GetKeyDown(KeyCode.F) && !Ui.AnyModalOpen && !Session.IsGameOver && !Placing)
             {
                 if (InHome) HomeInteract(HomeRoom.NearbyId);
                 else if (!InInterior) TryEnterNearby();
@@ -365,7 +367,7 @@ namespace PCShopSell.Game
             Session.SetSteer(dir.x, dir.z);
         }
 
-        /// <summary>出租屋里的互动：床 = 睡觉，衣柜 = 换衣服，桌子 = 看状态，门 = 出门。</summary>
+        /// <summary>出租屋里的互动：床 = 睡觉，衣柜 = 换衣服，电饭锅 = 做饭，门 = 出门。查看房间信息用右上角“我的”。</summary>
         public void HomeInteract(string id)
         {
             switch (id)
@@ -376,16 +378,37 @@ namespace PCShopSell.Game
                 case HomeRoomView.Wardrobe:
                     Ui.OpenWardrobeWindow();
                     break;
-                case HomeRoomView.Table:
-                    Ui.OpenStatusWindow();
+                case HomeRoomView.Cooker:
+                    Ui.OpenCookerWindow();
                     break;
                 case HomeRoomView.Door:
                     LeaveHome();
                     break;
                 default:
-                    Ui.Toast("走到床、衣柜、小桌或门边，按 E。");
+                    Ui.Toast("走到床、衣柜、电饭锅或门边，按 F。");
                     break;
             }
+        }
+
+        /// <summary>现在能交互的东西：头顶提示的位置和文字。没有则返回 false。</summary>
+        public bool TryGetInteract(out Vector3 world, out string label)
+        {
+            world = Vector3.zero;
+            label = null;
+            if (Session == null || Session.IsGameOver || Ui.AnyModalOpen || Placing) return false;
+            if (InHome)
+            {
+                if (HomeRoom.NearbyId == null) return false;
+                world = HomeRoom.NearbyWorld;
+                label = HomeRoom.NearbyLabel;
+                return true;
+            }
+            if (InInterior) return false;
+            Place p = Session.NearbyPlace;
+            if (p == null || Session.CurrentPlace != null || !World.Places.TryGetValue(p.Id, out PlaceVisual pv)) return false;
+            world = pv.Entrance + new Vector3(0, 3.4f, 0);
+            label = "进入 " + p.Name;
+            return true;
         }
 
         public void LeaveHome()
@@ -399,7 +422,7 @@ namespace PCShopSell.Game
             Place p = Session.NearbyPlace;
             if (p == null)
             {
-                Ui.Toast("附近没有能进的地方，走到门口再按 E。");
+                Ui.Toast("附近没有能进的地方，走到门口再按 F。");
                 return;
             }
             Session.SetSteer(0, 0);
@@ -415,11 +438,19 @@ namespace PCShopSell.Game
 
             if (InHome)
             {
+                string clicked = null;
                 var hf = hit.collider.GetComponentInParent<HomeFurniture>();
-                if (hf != null)
+                if (hf != null) clicked = hf.Id;
+                var pv = hit.collider.GetComponentInParent<PlacedVisual>();
+                if (pv != null)
                 {
-                    if (HomeRoom.NearbyId == hf.Id) HomeInteract(hf.Id);
-                    else Ui.Toast("再走近一点。");
+                    FurnitureDef fd = FurnitureCatalog.Get(pv.FurnitureId);
+                    clicked = fd == null ? null : HomeRoomView.RoleId(fd.Role);
+                }
+                if (clicked != null)
+                {
+                    if (HomeRoom.NearbyId == clicked) HomeInteract(clicked);
+                    else Ui.Toast("再走近一点，按 F。");
                 }
                 return;
             }
@@ -432,7 +463,7 @@ namespace PCShopSell.Game
                 return;
             }
 
-            // 街上不再点击移动：WASD 走路，E 进门。
+            // 街上不再点击移动：WASD 走路，F 进门。
         }
 
         // ---------- 会话事件 ----------
