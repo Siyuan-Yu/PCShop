@@ -104,6 +104,7 @@ namespace PCShopSell.Game.Runtime
         private readonly GameObject _tricycle;
         private readonly GameObject _taxi;
         private float _bob;
+        private string _dressed;
 
         public Vector3 Position => _root.transform.position;
 
@@ -137,6 +138,11 @@ namespace PCShopSell.Game.Runtime
             bool visible = s.CurrentPlace == null;
             _root.SetActive(visible);
             if (!visible) return;
+            if (_dressed != s.EquippedOutfit)
+            {
+                _dressed = s.EquippedOutfit;
+                Prims.Dress(_figure, _dressed);
+            }
 
             Vector3 p = StreetWorldBuilder.ToWorld(s.PlayerPosition);
             _root.transform.position = p;

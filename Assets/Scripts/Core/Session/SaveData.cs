@@ -33,6 +33,11 @@ namespace PCShopSell.Core.Session
 
         public SaveStockLine[] shopStock;
         public double markup;
+        public string[] partMarkupIds;
+        public double[] partMarkupValues;
+        public string[] restockIds;
+        public int[] restockTargets;
+        public string restockStore;
         public double reputation;
         public int accepted;
         public SaveOrder[] orders;
@@ -65,6 +70,8 @@ namespace PCShopSell.Core.Session
         public SaveHome home;
         /// <summary>没有智能手机（旧存档没有这个字段，视为有）。</summary>
         public bool noPhone;
+        /// <summary>手机里装的 app（旧存档没有这个字段，视为全装了）。</summary>
+        public string[] apps;
         public string[] flags;
         public int[] scheduledDays;
         public long[] scheduledCents;
@@ -83,6 +90,8 @@ namespace PCShopSell.Core.Session
         public double[] relationValues;
         public string[] giftIds;
         public int[] giftDays;
+        public string[] chatIds;
+        public int[] chatDays;
         public SaveSocial social;
     }
 
@@ -214,10 +223,18 @@ namespace PCShopSell.Core.Session
         public SaveBatch[] cooked;
         public SaveBatch[] packed;
         public int renovationDay;
+        public SaveBatch[] cooking;
+        public long cookReadyMinute;
+        public string[] visitTargets;
+        public long[] visitStarts;
+        public long[] visitPrices;
+        public long[] visitWorkStarts;
         public double packRice;
         public SaveBatch[] packIngredients;
         public string[] giftIds;
         public int[] giftCounts;
+        public string[] boxGiftIds;
+        public int[] boxGiftCounts;
         public string[] packFurnIds;
         public int[] packFurnCounts;
     }

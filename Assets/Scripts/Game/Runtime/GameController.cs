@@ -1,4 +1,5 @@
 using System;
+using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
@@ -283,10 +284,17 @@ namespace PCShopSell.Game
             if (Input.GetKeyDown(KeyCode.Alpha4)) Session.Time.SetSpeed(8);
             if (!GameUi.PointerOverUi) _rig.Zoom(Input.mouseScrollDelta.y);
             HandleCameraOrbit();
+            if (Input.GetKeyDown(KeyCode.Escape) && !Placing && Ui.AnyModalOpen) Ui.CloseTopWindow();
+            if (Input.GetKeyDown(KeyCode.B) && !Session.IsGameOver && !Placing) Ui.ToggleBackpack();
             if (Input.GetKeyDown(KeyCode.F) && !Ui.AnyModalOpen && !Session.IsGameOver && !Placing)
             {
                 if (InHome) HomeInteract(HomeRoom.NearbyId);
-                else if (!InInterior) TryEnterNearby();
+                else if (InInterior)
+                {
+                    if (Interior.NearCounter && Session.PlayerShop.Queue.Count > 0) Checkout(Session.PlayerShop.Queue[0].Id);
+                    else ShelfInteract();
+                }
+                else TryEnterNearby();
             }
         }
 
@@ -367,7 +375,7 @@ namespace PCShopSell.Game
             Session.SetSteer(dir.x, dir.z);
         }
 
-        /// <summary>出租屋里的互动：床 = 睡觉，衣柜 = 换衣服，电饭锅 = 做饭，门 = 出门。查看房间信息用右上角“我的”。</summary>
+        /// <summary>出租屋里的互动：床 = 睡觉，衣柜 = 换衣服，电饭锅 = 做饭，凳子 / 沙发 = 坐下歇，门 = 出门。查看房间信息用右上角“我的”。</summary>
         public void HomeInteract(string id)
         {
             switch (id)
@@ -380,6 +388,15 @@ namespace PCShopSell.Game
                     break;
                 case HomeRoomView.Cooker:
                     Ui.OpenCookerWindow();
+                    break;
+                case HomeRoomView.Repair:
+                    Ui.OpenRepairWindow();
+                    break;
+                case HomeRoomView.Storage:
+                    Ui.OpenStorageWindow();
+                    break;
+                case HomeRoomView.Seat:
+                    HomeRoom.ToggleSit();
                     break;
                 case HomeRoomView.Door:
                     LeaveHome();
@@ -403,12 +420,40 @@ namespace PCShopSell.Game
                 label = HomeRoom.NearbyLabel;
                 return true;
             }
-            if (InInterior) return false;
+            if (InInterior)
+            {
+                if (Interior.NearCounter && Session.PlayerShop.Queue.Count > 0)
+                {
+                    world = Interior.CounterWorld;
+                    label = $"给顾客结账（{Session.PlayerShop.Queue.Count} 人排队）";
+                    return true;
+                }
+                if (Interior.NearbyShelf == null) return false;
+                world = Interior.NearbyShelfWorld;
+                PartCategory shelfCat = Interior.NearbyShelf.Value;
+                int shelfHave = 0;
+                foreach (var sl in Session.PlayerShop.Stock.Lines())
+                    if (sl.Part.Category == shelfCat) shelfHave += sl.Count;
+                label = "查看货架：" + PartCatalog.CategoryName(shelfCat)
+                    + (shelfHave == 0 ? "（缺货！）" : shelfHave <= 2 ? "（快没了）" : "");
+                return true;
+            }
             Place p = Session.NearbyPlace;
             if (p == null || Session.CurrentPlace != null || !World.Places.TryGetValue(p.Id, out PlaceVisual pv)) return false;
             world = pv.Entrance + new Vector3(0, 3.4f, 0);
             label = "进入 " + p.Name;
             return true;
+        }
+
+        /// <summary>店里走到货架前按 F：看这个货架上摆的什么、还剩多少。</summary>
+        private void ShelfInteract()
+        {
+            if (Interior.NearbyShelf == null)
+            {
+                Ui.Toast("走到货架跟前按 F，可以看上面摆了什么。");
+                return;
+            }
+            Ui.OpenShelfWindow(Interior.NearbyShelf.Value);
         }
 
         public void LeaveHome()

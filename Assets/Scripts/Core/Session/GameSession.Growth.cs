@@ -102,6 +102,12 @@ namespace PCShopSell.Core.Session
         public int EffectiveCharm => Player.Charm + Outfit.CharmBonus;
 
         /// <summary>换上一件已经有的衣服（在衣柜里）。</summary>
+        /// <summary>调试 / 冒烟：直接拥有一件衣服。</summary>
+        public void GrantOutfit(string id)
+        {
+            if (Outfits.Get(id) != null) _ownedOutfits.Add(id);
+        }
+
         public bool Equip(string id)
         {
             if (!_ownedOutfits.Contains(id)) return false;
@@ -155,6 +161,7 @@ namespace PCShopSell.Core.Session
                 _scheduledCredits.Add((d.scheduledDays[i], d.scheduledCents[i], d.scheduledMemos[i]));
 
             RestoreEvents(d);
+            RestoreRestock(d);
         }
 
         private void SaveGrowth(SaveData d)
@@ -169,6 +176,7 @@ namespace PCShopSell.Core.Session
             d.scheduledCents = _scheduledCredits.Select(c => c.cents).ToArray();
             d.scheduledMemos = _scheduledCredits.Select(c => c.memo).ToArray();
             SaveEvents(d);
+            SaveRestock(d);
             SaveCampaign(d);
             SaveNpcs(d);
             SaveSocial(d);

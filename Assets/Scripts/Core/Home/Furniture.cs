@@ -21,6 +21,10 @@ namespace PCShopSell.Core.Home
         Bed,
         Wardrobe,
         Cooker,
+        Seat,
+        Broken,
+        /// <summary>纸箱：可以存取东西（有重量限制）。</summary>
+        Storage,
     }
 
     /// <summary>一件家具的定义。尺寸单位米：Width 是朝向摆正时左右的宽度，Depth 是前后的进深。</summary>
@@ -39,6 +43,11 @@ namespace PCShopSell.Core.Home
 
         /// <summary>重量（公斤）。超过 <see cref="FurnitureCatalog.HeavyKg"/> 的塞不进背包，得叫货车拉。</summary>
         public double WeightKg { get; set; }
+
+        /// <summary>坏掉的家电：找人上门修好之后变成什么、基础上门费（晚上加收）。</summary>
+        public string RepairInto { get; set; }
+
+        public Money RepairCost { get; set; }
 
         public bool IsHeavy => WeightKg > FurnitureCatalog.HeavyKg;
 
@@ -117,9 +126,10 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef(BedBoard, "硬板床", "一块木板加一层薄褥子。", 0, FurnitureSlot.Floor, 2.0, 1.0, false, true) { Role = FurnitureRole.Bed, BedQuality = 1.0 });
             Add(new FurnitureDef(WardrobeCloth, "布衣柜", "拉链布衣柜，塑料骨架。", 0, FurnitureSlot.Floor, 1.1, 0.6, false, true) { Role = FurnitureRole.Wardrobe });
             Add(new FurnitureDef(TableCooker, "折叠小桌（电饭锅）", "吃饭、做饭都在这张小桌上。", 0, FurnitureSlot.Floor, 1.2, 0.6, false, true) { Role = FurnitureRole.Cooker });
-            Add(new FurnitureDef("stool", "塑料矮凳", "红色塑料凳。", 0, FurnitureSlot.Floor, 0.4, 0.4, false, true));
-            Add(new FurnitureDef("fan_broken", "坏电风扇", "摇头的地方卡住了，一直耷拉着。", 0, FurnitureSlot.Floor, 0.45, 0.45, false, true));
-            Add(new FurnitureDef("junk", "纸箱和塑料盆", "搬家时留下的杂物。", 0, FurnitureSlot.Floor, 0.9, 0.9, false, true));
+            Add(new FurnitureDef("stool", "塑料矮凳", "红色塑料凳，可以坐。", 0, FurnitureSlot.Floor, 0.4, 0.4, false, true) { Role = FurnitureRole.Seat });
+            Add(new FurnitureDef("fan_broken", "坏电风扇", "摇头的地方卡住了，一直耷拉着。找人上门能修好。", 0, FurnitureSlot.Floor, 0.45, 0.45, false, true) { Role = FurnitureRole.Broken, RepairInto = "fan_fixed", RepairCost = Money.FromYuan(60) });
+            Add(new FurnitureDef("fan_fixed", "电风扇（修好了）", "修好的旧电风扇，能转。睡眠 +0.05，水电 +¥10/月。", 0, FurnitureSlot.Floor, 0.45, 0.45, false, true) { SleepBonus = 0.05, Utilities = Money.FromYuan(10) });
+            Add(new FurnitureDef("junk", "纸箱和塑料盆", "搬家时留下的杂物。纸箱里能放东西。", 0, FurnitureSlot.Floor, 0.9, 0.9, false, true) { Role = FurnitureRole.Storage });
 
             // ---- 出租屋：可以买 ----
             Add(new FurnitureDef("bed_spring", "弹簧床", "有像样的床垫，睡着不硌人。睡眠质量 ×1.12。", 900, FurnitureSlot.Floor, 2.0, 1.1) { Role = FurnitureRole.Bed, BedQuality = 1.12 });
@@ -131,7 +141,7 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef("rug", "小地毯", "遮住一块难看的地面。", 120, FurnitureSlot.Flat, 1.6, 1.2) { Appeal = 1 });
             Add(new FurnitureDef("plant", "绿萝盆栽", "屋里有点生气。", 60, FurnitureSlot.Floor, 0.4, 0.4) { Appeal = 1 });
             Add(new FurnitureDef("desk", "书桌", "放电脑或者看书。", 350, FurnitureSlot.Floor, 1.2, 0.6) { Appeal = 1 });
-            Add(new FurnitureDef("sofa", "小沙发", "可以窝着。", 800, FurnitureSlot.Floor, 1.6, 0.8) { Appeal = 2 });
+            Add(new FurnitureDef("sofa", "小沙发", "可以窝着，也能坐。", 800, FurnitureSlot.Floor, 1.6, 0.8) { Appeal = 2, Role = FurnitureRole.Seat });
             Add(new FurnitureDef("poster", "墙上海报", "盖住墙上的水渍。", 40, FurnitureSlot.Wall, 0.7, 0.05) { Appeal = 1 });
 
             // ---- 店里的摆设：装修要歇业一天 ----

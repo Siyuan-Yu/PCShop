@@ -20,6 +20,9 @@ namespace PCShopSell.Game.Runtime
         public const string Bed = "bed";
         public const string Wardrobe = "wardrobe";
         public const string Cooker = "cooker";
+        public const string Seat = "seat";
+        public const string Repair = "repair";
+        public const string Storage = "storage";
         public const string Door = "door";
 
         public static readonly Vector3 Origin = new Vector3(600, 0, -470);
@@ -38,6 +41,9 @@ namespace PCShopSell.Game.Runtime
                 case FurnitureRole.Bed: return Bed;
                 case FurnitureRole.Wardrobe: return Wardrobe;
                 case FurnitureRole.Cooker: return Cooker;
+                case FurnitureRole.Seat: return Seat;
+                case FurnitureRole.Broken: return Repair;
+                case FurnitureRole.Storage: return Storage;
                 default: return null;
             }
         }
@@ -58,6 +64,13 @@ namespace PCShopSell.Game.Runtime
         private readonly RoomFurniture _furniture;
         private readonly Rect _doorArea = new Rect(Width - 0.2f, 0.5f, 0.2f, 1.0f);
         private bool _wasOn;
+        private string _dressed;
+        private GameObject _repairman;
+        private Vector3 _repairWork;
+        private bool _repairmanIn;
+        private bool _sitting;
+        private Vector3 _standPos;
+        private Rect _seatArea;
 
         /// <summary>老板脚边最近的、够得着的互动点 ID；没有则为空。</summary>
         public string NearbyId { get; private set; }
@@ -178,13 +191,13 @@ namespace PCShopSell.Game.Runtime
                 if (id == null) continue;
                 if (def.Role == FurnitureRole.Bed) hasBed = true;
                 RectD f = RoomPlanner.Footprint(RoomSpec.Home, def, p);
-                string label = def.Role == FurnitureRole.Bed ? "睡觉 / 小睡" : def.Role == FurnitureRole.Wardrobe ? "打开衣柜" : "电饭锅：做饭 / 吃饭";
+                string label = def.Role == FurnitureRole.Bed ? "睡觉 / 小睡" : def.Role == FurnitureRole.Wardrobe ? "打开衣柜" : def.Role == FurnitureRole.Seat ? "坐下" : def.Role == FurnitureRole.Broken ? "坏了：约师傅上门修" : def.Role == FurnitureRole.Storage ? "纸箱：存取东西" : "电饭锅：做饭 / 吃饭";
                 _spots.Add(new Spot
                 {
                     Id = id,
                     Label = label,
                     Area = new Rect((float)f.MinX, (float)f.MinZ, (float)(f.MaxX - f.MinX), (float)(f.MaxZ - f.MinZ)),
-                    Height = def.Role == FurnitureRole.Bed ? 1.1f : def.Role == FurnitureRole.Wardrobe ? 2.2f : 1.5f,
+                    Height = def.Role == FurnitureRole.Bed ? 1.1f : def.Role == FurnitureRole.Wardrobe ? 2.2f : def.Role == FurnitureRole.Seat || def.Role == FurnitureRole.Broken || def.Role == FurnitureRole.Storage ? 1.0f : 1.5f,
                 });
             }
             // 没有床也能睡：打地铺
@@ -194,8 +207,40 @@ namespace PCShopSell.Game.Runtime
 
         // ---------- 走动 ----------
 
+        public bool IsSitting => _sitting;
+
+        /// <summary>坐下 / 站起来：只是个动作，没有任何数值效果。坐下时挪到最近那个座位上，站起来回到原来站的地方。</summary>
+        public void ToggleSit()
+        {
+            Transform tr = _owner.transform;
+            if (_sitting)
+            {
+                StandUp();
+                return;
+            }
+            if (NearbyId != Seat) return;
+            _standPos = tr.localPosition;
+            _sitting = true;
+            Vector3 c = new Vector3(_seatArea.center.x, 0f, _seatArea.center.y);
+            tr.localPosition = c;
+            tr.localScale = new Vector3(1f, 0.72f, 1f);
+            Vector3 toCenter = new Vector3(Width / 2 - c.x, 0, Depth / 2 - c.z);
+            if (toCenter.sqrMagnitude > 1e-4f) tr.localRotation = Quaternion.LookRotation(toCenter);
+        }
+
+        private void StandUp()
+        {
+            if (!_sitting) return;
+            _sitting = false;
+            Transform tr = _owner.transform;
+            tr.localScale = Vector3.one;
+            tr.localPosition = _standPos;
+        }
+
         public void ResetOwner()
         {
+            _sitting = false;
+            _owner.transform.localScale = Vector3.one;
             _owner.transform.localPosition = new Vector3(Width - 1.15f, 0, 1.3f);
             _owner.transform.localRotation = Quaternion.LookRotation(new Vector3(-1, 0, 0.3f));
         }
@@ -212,6 +257,7 @@ namespace PCShopSell.Game.Runtime
         {
             Vector3 d = new Vector3(worldDir.x, 0, worldDir.z);
             if (d.sqrMagnitude < 1e-4f) return;
+            StandUp();
             d.Normalize();
             Transform tr = _owner.transform;
             Vector3 p = tr.localPosition;
@@ -247,7 +293,13 @@ namespace PCShopSell.Game.Runtime
 
         public void Update(GameSession s, float realDt, float minuteOfDay)
         {
+            if (_dressed != s.EquippedOutfit)
+            {
+                _dressed = s.EquippedOutfit;
+                Prims.Dress(_owner, _dressed);
+            }
             SyncFurniture(s);
+            UpdateRepairman(s, realDt);
 
             // 窗外的天光：白天亮、夜里黑
             float hour = minuteOfDay / 60f;
@@ -272,9 +324,77 @@ namespace PCShopSell.Game.Runtime
                     world = Origin + new Vector3(sp.Area.center.x, sp.Height, sp.Area.center.y);
                 }
             }
+            if (_sitting)
+            {
+                best = Seat;
+                label = "站起来";
+                world = _owner.transform.localPosition + new Vector3(0, 1.2f, 0) + Origin;
+            }
+            else if (best == Seat)
+            {
+                foreach (Spot sp in _spots)
+                    if (sp.Id == Seat && DistToRect(at, sp.Area) <= bestDist + 1e-4f) _seatArea = sp.Area;
+                label = "坐下";
+            }
+            if (best == Repair && s.RepairmanAtWork != null) label = "师傅正在修…";
             NearbyId = best;
             NearbyLabel = label;
             NearbyWorld = world;
+        }
+
+        // ---------- 上门的师傅 ----------
+
+        /// <summary>师傅进门干活：从门口走到坏掉的东西旁边，蹲着修一阵，修完走回门口离开。他不能交互。</summary>
+        private void UpdateRepairman(GameSession s, float dt)
+        {
+            HomeVisit v = s.RepairmanAtWork;
+            if (v == null)
+            {
+                if (_repairman != null) _repairman.SetActive(false);
+                _repairmanIn = false;
+                return;
+            }
+            Vector3 door = new Vector3(Width - 0.55f, 0, 1.0f);
+            if (_repairman == null)
+            {
+                _repairman = Prims.Figure(_root, "Repairman", new Color(0.2f, 0.4f, 0.65f), new Color(0.9f, 0.75f, 0.6f), 1.05f);
+                Prims.Shape(PrimitiveType.Sphere, _repairman.transform, "Hat", new Vector3(0, 1.45f, 0) * 1.05f, new Vector3(0.38f, 0.2f, 0.38f) * 1.05f, Mats.Lit(new Color(0.95f, 0.8f, 0.1f)));
+                Prims.Box(_repairman.transform, "Toolbox", new Vector3(0.28f, 0.12f, 0.1f) * 1.05f, new Vector3(0.28f, 0.2f, 0.16f) * 1.05f, Mats.Lit(new Color(0.8f, 0.15f, 0.1f)));
+            }
+            if (!_repairmanIn)
+            {
+                _repairmanIn = true;
+                _repairman.SetActive(true);
+                _repairman.transform.localPosition = door;
+                _repairman.transform.localScale = Vector3.one;
+                _repairWork = new Vector3(Width / 2, 0, Depth / 2);
+                foreach (Spot sp in _spots)
+                    if (sp.Id == Repair)
+                    {
+                        // 站在坏东西朝屋里的那一侧
+                        Vector3 c = new Vector3(sp.Area.center.x, 0, sp.Area.center.y);
+                        Vector3 toRoom = new Vector3(Width / 2 - c.x, 0, Depth / 2 - c.z).normalized;
+                        _repairWork = c + toRoom * (Mathf.Max(sp.Area.width, sp.Area.height) * 0.5f + 0.35f);
+                    }
+            }
+
+            float progress = Mathf.Clamp01((float)(s.Clock.Now.TotalMinutes - v.WorkStart) / GameSession.RepairWorkMinutes);
+            bool leaving = progress >= 0.9f;
+            Vector3 target = leaving ? door : _repairWork;
+            Transform tr = _repairman.transform;
+            Vector3 delta = target - tr.localPosition;
+            bool moving = delta.sqrMagnitude > 0.01f;
+            if (moving)
+            {
+                tr.localPosition = Vector3.MoveTowards(tr.localPosition, target, 2.2f * dt);
+                tr.localRotation = Quaternion.LookRotation(delta.normalized);
+                tr.localScale = Vector3.one;
+            }
+            else if (!leaving)
+            {
+                // 蹲在东西前面敲敲打打
+                tr.localScale = new Vector3(1f, 0.78f + 0.04f * Mathf.Sin(Time.time * 9f), 1f);
+            }
         }
 
         public void Destroy() => Kill.It(_root.gameObject);

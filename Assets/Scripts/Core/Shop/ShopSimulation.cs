@@ -50,6 +50,23 @@ namespace PCShopSell.Core.Shop
         OrderPlaced,
     }
 
+    /// <summary>一天营业结束时的小结（给“昨日营业”提示用）。</summary>
+    public sealed class DayReport
+    {
+        public GameDate Date;
+        public int Customers;
+        public int Paid;
+        public Money Revenue;
+        public int Orders;
+        public int LostTooExpensive;
+        public int LostImpatient;
+        public int LostNoStock;
+        public int LostNoCash;
+        public int LostClosed;
+
+        public int Lost => LostTooExpensive + LostImpatient + LostNoStock + LostNoCash + LostClosed;
+    }
+
     public sealed class ShopCustomer
     {
         public int Id { get; }
@@ -112,11 +129,12 @@ namespace PCShopSell.Core.Shop
         public double BaseCustomersPerHour = 2;
 
         public double WeekendMultiplier = 1.5;
-        public int MinBrowseMinutes = 3;
-        public int MaxBrowseMinutes = 12;
+        /// <summary>逛店时间（游戏分钟）。1 倍速下 1 游戏分钟只有 0.25 秒，给顾客留够走到货架、拿货的时间。</summary>
+        public int MinBrowseMinutes = 8;
+        public int MaxBrowseMinutes = 25;
 
         /// <summary>排队等结账超过这么多分钟就走。</summary>
-        public int PatienceMinutes = 15;
+        public int PatienceMinutes = 40;
 
         /// <summary>顾客身上带现金的概率；只收现金时，没带的人挑完就走。</summary>
         public double CashCarryChance = 0.8;
@@ -234,6 +252,30 @@ namespace PCShopSell.Core.Shop
             set => _markup = Math.Max(0.9, Math.Min(1.6, value));
         }
 
+        private readonly Dictionary<string, double> _partMarkups = new Dictionary<string, double>();
+
+        /// <summary>单独定过价的配件（配件 id → 加价倍率）；没单独定的跟全局加价。</summary>
+        public IReadOnlyDictionary<string, double> PartMarkups => _partMarkups;
+
+        public bool HasPartMarkup(PartDef part) => _partMarkups.ContainsKey(part.Id);
+
+        /// <summary>这件配件现在用的加价倍率。</summary>
+        public double MarkupOf(PartDef part) => _partMarkups.TryGetValue(part.Id, out double m) ? m : _markup;
+
+        /// <summary>给一件配件单独定价；null = 恢复跟随全局加价。</summary>
+        public void SetPartMarkup(PartDef part, double? markup)
+        {
+            if (markup == null) _partMarkups.Remove(part.Id);
+            else _partMarkups[part.Id] = Math.Max(0.9, Math.Min(1.6, markup.Value));
+        }
+
+        public void RestorePartMarkups(IEnumerable<KeyValuePair<string, double>> items)
+        {
+            _partMarkups.Clear();
+            if (items == null) return;
+            foreach (var kv in items) _partMarkups[kv.Key] = Math.Max(0.9, Math.Min(1.6, kv.Value));
+        }
+
         public PaymentMethods Accepted { get; set; } = PaymentMethods.Cash;
 
         /// <summary>玩家是否在店里。</summary>
@@ -255,6 +297,10 @@ namespace PCShopSell.Core.Shop
         public event Action<ShopCustomer> CustomerReadyToPay;
         public event Action<ShopCustomer> CustomerPaid;
         public event Action<ShopCustomer> CustomerLeft;
+
+        /// <summary>每天零点前触发一次：昨天的营业小结（当天有顾客才触发）。</summary>
+        public event Action<DayReport> DayClosed;
+        private DayReport _day = new DayReport();
         public event Action<BuildOrder> OrderPlaced;
         public event Action<BuildOrder> OrderExpired;
 
@@ -283,7 +329,7 @@ namespace PCShopSell.Core.Shop
         /// <summary>当前售价。</summary>
         public Money PriceOf(PartDef part, bool boxed)
         {
-            double k = _markup * (boxed ? 1.0 + Settings.BoxedPremium : 1.0);
+            double k = MarkupOf(part) * (boxed ? 1.0 + Settings.BoxedPremium : 1.0);
             return Money.FromYuan((long)Math.Round(_market.PriceOf(part).Yuan * k));
         }
 
@@ -361,6 +407,14 @@ namespace PCShopSell.Core.Shop
 
         private void OnDayAdvanced(GameDate previous, GameDate today)
         {
+            if (TodayCustomers > 0)
+            {
+                _day.Date = previous;
+                _day.Customers = TodayCustomers;
+                _day.Revenue = TodaySales;
+                DayClosed?.Invoke(_day);
+            }
+            _day = new DayReport();
             TodayCustomers = 0;
             TodayLost = 0;
             TodaySales = Money.Zero;
@@ -457,7 +511,7 @@ namespace PCShopSell.Core.Shop
                 return;
             }
 
-            double leave = 1.0 - ShopSettings.BuyChance(_markup);
+            double leave = 1.0 - ShopSettings.BuyChance(MarkupOf(c.Item));
             if (c.ItemBoxed) leave *= Settings.BoxedTrust;
             if (Random.Chance(leave))
             {
@@ -534,6 +588,7 @@ namespace PCShopSell.Core.Shop
             c.State = CustomerState.Paid;
             _ledger.Credit(_clock.Today, SalesCategory, c.Spend, c.Item.Name + (c.ItemBoxed ? "（盒装）" : "（散件）"));
             TodaySales += c.Spend;
+            _day.Paid++;
             Reputation += SaleReputationGain;
             CustomerPaid?.Invoke(c);
         }
@@ -551,6 +606,15 @@ namespace PCShopSell.Core.Shop
             c.State = CustomerState.Left;
             c.Reason = reason;
             if (countAsLost) TodayLost++;
+            switch (reason)
+            {
+                case LeaveReason.TooExpensive: _day.LostTooExpensive++; break;
+                case LeaveReason.Impatient: _day.LostImpatient++; break;
+                case LeaveReason.NoStock: _day.LostNoStock++; break;
+                case LeaveReason.NoCash: _day.LostNoCash++; break;
+                case LeaveReason.ShopClosed: _day.LostClosed++; break;
+                case LeaveReason.OrderPlaced: _day.Orders++; break;
+            }
             CustomerLeft?.Invoke(c);
         }
 

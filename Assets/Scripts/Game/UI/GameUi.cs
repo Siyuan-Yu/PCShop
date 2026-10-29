@@ -21,6 +21,7 @@ namespace PCShopSell.Game.UI
         public Action OnClosed;
         public bool Holds;
         public bool Closed;
+        public bool Closable = true;
         internal GameUi Owner;
 
         public void Rebuild()
@@ -114,8 +115,8 @@ namespace PCShopSell.Game.UI
             h.childForceExpandWidth = false;
             h.childAlignment = TextAnchor.MiddleLeft;
 
-            _dateText = Ui.Size(Ui.Label(row, "", 24), 290);
-            _cashText = Ui.Size(Ui.Label(row, "", 26, TextAnchor.MiddleLeft, Ui.Good), 190);
+            _dateText = Ui.Size(Ui.Label(row, "", 24), 270);
+            _cashText = Ui.Size(Ui.Label(row, "", 26, TextAnchor.MiddleLeft, Ui.Good), 180);
 
             _pauseButton = Ui.Size(Ui.Button(row, "暂停", () => S.Time.TogglePause(), 18), 70);
             foreach (int sp in TimeController.Speeds)
@@ -125,10 +126,12 @@ namespace PCShopSell.Game.UI
                 _speedButtons.Add((b, speed));
             }
 
-            _placeText = Ui.Size(Ui.Label(row, "", 20, TextAnchor.MiddleCenter), 230, -1, 1);
+            _placeText = Ui.Size(Ui.Label(row, "", 20, TextAnchor.MiddleCenter), 260, -1, 1);
             _statsText = Ui.Size(Ui.Label(row, "", 18, TextAnchor.MiddleRight), 330);
             Ui.Size(Ui.Button(row, "我的", OpenMyPanel, 18, Ui.ButtonHot), 66);
-            Ui.Size(Ui.Button(row, "网购", OpenOnlinePanel, 18), 66);
+            Ui.Size(Ui.Button(row, "背包 B", ToggleBackpack, 18), 78);
+            Ui.Size(Ui.Button(row, "日程", OpenSchedulePanel, 18), 66);
+            Ui.Size(Ui.Button(row, "手机", OpenPhone, 18), 66);
             Ui.Size(Ui.Button(row, "目标", OpenGoalsPanel, 18), 66);
             Ui.Size(Ui.Button(row, "行情", OpenMarketPanel, 18, Ui.ButtonHot), 66);
             Ui.Size(Ui.Button(row, "菜单", OpenSystemPanel, 18), 66);
@@ -192,10 +195,10 @@ namespace PCShopSell.Game.UI
 
             if (S.IsGameOver) _hintText.text = "游戏结束：" + S.GameOverReason;
             else if (_ctrl.Placing) _hintText.text = "摆放家具：左键放下 · R 旋转 · 右键/Esc 放回 · X 收进背包 · 点已摆的家具可以挪动 · 右侧面板点“完成”结束";
-            else if (_ctrl.InInterior) _hintText.text = "WASD 在店里走动，点地板也行 · 点击头顶有黄球的顾客结账 · 右侧面板管理店铺";
+            else if (_ctrl.InInterior) _hintText.text = "WASD 在店里走动，点地板也行 · 走到货架前按 F 查看货物 · 点击头顶有黄球的顾客结账 · 右侧面板管理店铺";
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimatedMinutes} 分钟 · 按 WASD 随时接管";
             else if (S.NearbyPlace != null) _hintText.text = $"<color=#FFD54A>按 F 进入 {S.NearbyPlace.Name}</color>";
-            else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#FFD54A>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : "WASD 在屋里走动 · 走近床、衣柜、电饭锅（头顶出现提示按 F）· 房间信息、摆放家具看右上角“我的”";
+            else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#FFD54A>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : "WASD 在屋里走动 · 走近床、衣柜、电饭锅、纸箱、凳子（头顶出现提示按 F）· 房间信息、摆放家具看右上角“我的”";
             else if (S.CurrentPlace != null) _hintText.text = "按 WASD 离开 · 空格暂停";
             else _hintText.text = "WASD 自由走动 · 右键拖动/Q R 转视角 · V 复位 · 滚轮缩放 · 走到门口按 F 进入 · 空格暂停 · 下方按钮可快捷前往";
 
@@ -295,8 +298,55 @@ namespace PCShopSell.Game.UI
             }
         }
 
+        private readonly System.Collections.Generic.List<Text> _emoteLabels = new System.Collections.Generic.List<Text>();
+
+        /// <summary>顾客头顶的小字：想买什么 / 为什么走了 / +¥。</summary>
+        private void UpdateEmoteLabels()
+        {
+            int n = 0;
+            if (_ctrl.InInterior)
+            {
+                var canvasRt = (RectTransform)_labelCanvas.transform;
+                foreach (var e in _ctrl.Interior.Emotes)
+                {
+                    if (n >= _emoteLabels.Count)
+                    {
+                        Text lt = Ui.Label(_labelCanvas.transform, "", 14, TextAnchor.LowerCenter);
+                        lt.horizontalOverflow = HorizontalWrapMode.Overflow;
+                        lt.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.85f);
+                        RectTransform r = lt.rectTransform;
+                        r.anchorMin = r.anchorMax = Vector2.zero;
+                        r.pivot = new Vector2(0.5f, 0);
+                        r.sizeDelta = new Vector2(260, 28);
+                        _emoteLabels.Add(lt);
+                    }
+                    Text label = _emoteLabels[n];
+                    label.text = e.Text;
+                    label.fontSize = e.Size;
+                    label.color = e.Color;
+                    Vector3 sp = _ctrl.Cam.WorldToScreenPoint(e.Pos);
+                    RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRt, sp, LabelCam, out Vector2 local);
+                    label.rectTransform.anchoredPosition = local + canvasRt.rect.size * 0.5f;
+                    label.gameObject.SetActive(sp.z > 0);
+                    n++;
+                }
+            }
+            for (; n < _emoteLabels.Count; n++) _emoteLabels[n].gameObject.SetActive(false);
+        }
+
+        /// <summary>Esc：关掉最上面一层窗口。返回有没有关。</summary>
+        public bool CloseTopWindow()
+        {
+            if (_windows.Count == 0) return false;
+            Window top = _windows[_windows.Count - 1];
+            if (!top.Closable) return false;
+            top.Close();
+            return true;
+        }
+
         private void UpdateQueueLabels()
         {
+            UpdateEmoteLabels();
             int i = 0;
             if (_ctrl.InInterior)
             {
@@ -386,7 +436,7 @@ namespace PCShopSell.Game.UI
 
         public Window OpenWindow(string title, float width, float height, Action<Window> builder, bool holds = true, bool closable = true, Action onClosed = null)
         {
-            var w = new Window { Builder = builder, Holds = holds, Owner = this, OnClosed = onClosed };
+            var w = new Window { Builder = builder, Holds = holds, Owner = this, OnClosed = onClosed, Closable = closable };
             Image dim = Ui.Panel(_modalCanvas.transform, "Window_" + title, new Color(0, 0, 0, 0.35f));
             dim.rectTransform.Fill();
             Image panel = Ui.Panel(dim.transform, "Panel", Ui.PanelBg);

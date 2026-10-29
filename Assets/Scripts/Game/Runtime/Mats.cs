@@ -211,6 +211,59 @@ namespace PCShopSell.Game.Runtime
             return root;
         }
 
+        /// <summary>
+        /// 按衣服给 Figure 换装：T 恤（橙）/ 衬衫（白）/ 夹克（棕）/ 西装（深灰 + 领带），
+        /// 同时给所有小人统一加上裤子和头发。可以反复调用，旧的衣着配件会被换掉。
+        /// </summary>
+        public static void Dress(GameObject figure, string outfitId)
+        {
+            Transform t = figure.transform;
+            Transform body = t.Find("Body");
+            Transform head = t.Find("Head");
+            if (body == null || head == null) return;
+            float s = head.localScale.x / 0.32f;
+            for (int i = t.childCount - 1; i >= 0; i--)
+            {
+                Transform c = t.GetChild(i);
+                if (!c.name.StartsWith("Outfit_")) continue;
+                c.gameObject.SetActive(false);
+                Kill.It(c.gameObject);
+            }
+
+            Color top, pants;
+            switch (outfitId)
+            {
+                case "shirt": top = new Color(0.92f, 0.93f, 0.95f); pants = new Color(0.20f, 0.22f, 0.30f); break;
+                case "jacket": top = new Color(0.36f, 0.27f, 0.18f); pants = new Color(0.18f, 0.22f, 0.35f); break;
+                case "suit": top = new Color(0.17f, 0.19f, 0.26f); pants = new Color(0.14f, 0.15f, 0.20f); break;
+                default: top = new Color(0.95f, 0.55f, 0.15f); pants = new Color(0.30f, 0.35f, 0.45f); break;
+            }
+            body.GetComponent<Renderer>().sharedMaterial = Mats.Lit(top);
+
+            void Add(string n, Vector3 p, Vector3 sz, Color c) => Box(t, "Outfit_" + n, p * s, sz * s, Mats.Lit(c));
+            Add("Pants", new Vector3(0, 0.2f, 0), new Vector3(0.32f, 0.4f, 0.26f), pants);
+            Shape(PrimitiveType.Sphere, t, "Outfit_Hair", new Vector3(0, 1.38f, -0.02f) * s, new Vector3(0.34f, 0.22f, 0.34f) * s, Mats.Lit(new Color(0.12f, 0.09f, 0.07f)));
+
+            switch (outfitId)
+            {
+                case "shirt":
+                    Add("Collar", new Vector3(0, 1.0f, 0.0f), new Vector3(0.26f, 0.06f, 0.2f), Color.white);
+                    Add("Buttons", new Vector3(0, 0.7f, 0.17f), new Vector3(0.03f, 0.5f, 0.02f), new Color(0.7f, 0.72f, 0.78f));
+                    break;
+                case "jacket":
+                    Add("Collar", new Vector3(0, 1.0f, 0.0f), new Vector3(0.3f, 0.07f, 0.24f), new Color(0.28f, 0.2f, 0.13f));
+                    Add("Zip", new Vector3(0, 0.66f, 0.17f), new Vector3(0.03f, 0.6f, 0.02f), new Color(0.8f, 0.78f, 0.7f));
+                    Add("Pocket", new Vector3(0.12f, 0.45f, 0.14f), new Vector3(0.1f, 0.12f, 0.03f), new Color(0.28f, 0.2f, 0.13f));
+                    break;
+                case "suit":
+                    Add("Shirt", new Vector3(0, 0.82f, 0.16f), new Vector3(0.11f, 0.34f, 0.02f), Color.white);
+                    Add("Tie", new Vector3(0, 0.74f, 0.175f), new Vector3(0.05f, 0.36f, 0.02f), new Color(0.75f, 0.12f, 0.15f));
+                    Add("LapelL", new Vector3(-0.08f, 0.8f, 0.165f), new Vector3(0.05f, 0.34f, 0.02f), new Color(0.1f, 0.11f, 0.15f));
+                    Add("LapelR", new Vector3(0.08f, 0.8f, 0.165f), new Vector3(0.05f, 0.34f, 0.02f), new Color(0.1f, 0.11f, 0.15f));
+                    break;
+            }
+        }
+
         /// <summary>扇形网格（视野锥），在 XZ 平面，朝 +Z。</summary>
         public static Mesh Fan(float radius, float halfAngleDeg, int segments = 16)
         {

@@ -47,6 +47,16 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void GrantOutfit_ThenEquip_Works()
+        {
+            GameSession s = Make();
+            Assert.IsFalse(s.Equip("suit"));
+            s.GrantOutfit("suit");
+            Assert.IsTrue(s.Equip("suit"));
+            Assert.AreEqual("suit", s.EquippedOutfit);
+        }
+
+        [Test]
         public void StartLayout_IsValid_AndHasBedWardrobeCooker()
         {
             GameSession s = Make();
@@ -114,6 +124,124 @@ namespace PCShopSell.Tests
             Assert.AreEqual(1, s.FurnitureInStock("plant"));
             Assert.AreEqual(0, s.Backpack.FurnitureCount("plant"));
             Assert.IsFalse(s.BuyFurnitureAtMall("bed_board"), "起始家具不卖");
+        }
+
+        private static long At(GameSession s, int dayOffset, int hour) => (long)(s.Clock.Today.TotalDays + dayOffset) * 1440 + hour * 60;
+
+        [Test]
+        public void Repair_MustBeBooked_WithLeadTime_AndNightCostsHalfMore()
+        {
+            GameSession s = Make(20000, 10 * 60);
+            GameSessionTests.Teleport(s, "flat");
+            Assert.AreEqual("fan_broken", s.BrokenHomeItems().Single());
+            FurnitureDef broken = FurnitureCatalog.Get("fan_broken");
+            Assert.AreEqual(Money.FromYuan(60), s.RepairPrice(broken, At(s, 0, 13)), "白天平价");
+            Assert.AreEqual(Money.FromYuan(90), s.RepairPrice(broken, At(s, 0, 19)), "晚上加收 50%");
+            Assert.AreEqual(Money.FromYuan(90), s.RepairPrice(broken, At(s, 1, 5) ), "凌晨也算晚上");
+
+            Assert.IsFalse(s.BookRepair("fan_broken", At(s, 0, 10) + 30), "至少提前 1 小时");
+            Assert.IsFalse(s.BookRepair("fan_broken", At(s, 1, 3)), "半夜师傅不上门");
+            Assert.IsFalse(s.BookRepair("fan_broken", At(s, 5, 10)), "只能约 3 天内");
+            Assert.IsFalse(s.BookRepair("stool", At(s, 0, 14)), "没坏的不能约");
+            Money before = s.Ledger.Balance;
+            Assert.IsTrue(s.BookRepair("fan_broken", At(s, 0, 19)));
+            Assert.AreEqual((before - Money.FromYuan(90)).Cents, s.Ledger.Balance.Cents, "下单就付上门费");
+            Assert.IsFalse(s.BookRepair("fan_broken", At(s, 0, 20)), "已经约了");
+            Assert.IsTrue(s.CancelRepair("fan_broken"));
+            Assert.AreEqual(0, s.HomeVisits.Count);
+            Assert.AreEqual((before - Money.FromYuan(90)).Cents, s.Ledger.Balance.Cents, "取消不退款（黑心）");
+        }
+
+        [Test]
+        public void Repair_CannotBookWithoutEnoughMoney()
+        {
+            GameSession s = Make(40, 10 * 60);
+            GameSessionTests.Teleport(s, "flat");
+            Assert.IsFalse(s.BookRepair("fan_broken", At(s, 0, 13)), "付不起上门费");
+            Assert.AreEqual(0, s.HomeVisits.Count);
+        }
+
+        [Test]
+        public void Repair_Visit_FixesWhenSomeoneIsHome()
+        {
+            GameSession s = Make(20000, 10 * 60);
+            GameSessionTests.Teleport(s, "flat");
+            Assert.IsTrue(s.BookRepair("fan_broken", At(s, 0, 13)));
+            Money before = s.Ledger.Balance;
+            WaitMinutes(s, 2 * 60 + 50);
+            Assert.AreEqual("fan_broken", s.HomeLayout.Select(p => p.Id).First(id => id.StartsWith("fan_")), "还没到点");
+            Assert.IsNull(s.RepairmanAtWork);
+            WaitMinutes(s, 15);
+            Assert.IsNotNull(s.RepairmanAtWork, "师傅进门了");
+            Assert.AreEqual(1, s.BrokenHomeItems().Count(), "还在修，没好");
+            Assert.IsFalse(s.CancelRepair("fan_broken"), "师傅在干活，取消不了");
+            Assert.IsTrue(s.Schedule().Any(e => e.Kind == "repairing"));
+            WaitMinutes(s, GameSession.RepairWorkMinutes);
+            Assert.AreEqual(0, s.BrokenHomeItems().Count());
+            Assert.AreEqual(0, s.HomeVisits.Count, "修好走人");
+            Assert.AreEqual(1, s.Ledger.Entries.Count(e => e.Category == "维修"), "只有下单时扣的那一笔，修好不再收");
+            Assert.AreEqual(-Money.FromYuan(60).Cents, s.Ledger.Entries.Single(e => e.Category == "维修").Amount.Cents);
+        }
+
+        [Test]
+        public void Repair_Visit_NobodyHome_NoShowFee_AndStillBroken()
+        {
+            GameSession s = Make(20000, 10 * 60);
+            GameSessionTests.Teleport(s, "flat");
+            Assert.IsTrue(s.BookRepair("fan_broken", At(s, 0, 13)));
+            GameSessionTests.Teleport(s, "pc");
+            Money before = s.Ledger.Balance;
+            WaitMinutes(s, 3 * 60 + 20);
+            Assert.AreEqual(1, s.BrokenHomeItems().Count(), "没人在家，没修");
+            Assert.AreEqual(-Money.FromYuan(60).Cents, s.Ledger.Entries.Where(e => e.Category == "维修").Sum(e => e.Amount.Cents), "白跑一趟，上门费不退");
+            Assert.AreEqual(0, s.HomeVisits.Count);
+        }
+
+        [Test]
+        public void Repair_Visit_GetHomeWithinGrace_StillFixed()
+        {
+            GameSession s = Make(20000, 10 * 60);
+            GameSessionTests.Teleport(s, "flat");
+            Assert.IsTrue(s.BookRepair("fan_broken", At(s, 0, 13)));
+            GameSessionTests.Teleport(s, "pc");
+            WaitMinutes(s, 3 * 60 + 8);
+            Assert.AreEqual(1, s.HomeVisits.Count, "师傅在门口等");
+            GameSessionTests.Teleport(s, "flat");
+            WaitMinutes(s, 2);
+            Assert.IsNotNull(s.RepairmanAtWork, "宽限期内回到家，师傅才进门");
+            WaitMinutes(s, GameSession.RepairWorkMinutes);
+            Assert.AreEqual(0, s.BrokenHomeItems().Count());
+        }
+
+        [Test]
+        public void Repair_Visit_BrokeCannotPay_AndSurvivesSave_AndShowsInSchedule()
+        {
+            GameSession s = Make(20000, 10 * 60);
+            GameSessionTests.Teleport(s, "flat");
+            Assert.IsTrue(s.OrderOnline(ParcelKind.Furniture, "sofa"));
+            Assert.IsTrue(s.BookRepair("fan_broken", At(s, 1, 9)));
+            GameSession l = GameSession.Load(s.City, UnityEngine.JsonUtility.FromJson<SaveData>(UnityEngine.JsonUtility.ToJson(s.CreateSave())));
+            Assert.AreEqual(1, l.HomeVisits.Count);
+            Assert.AreEqual(s.HomeVisits[0].StartMinute, l.HomeVisits[0].StartMinute);
+            Assert.AreEqual(Money.FromYuan(60), l.HomeVisits[0].Price);
+            var entries = l.Schedule();
+            Assert.IsTrue(entries.Any(e => e.Kind == "repair"));
+            Assert.AreEqual(-1, l.HomeVisits[0].WorkStart);
+            Assert.IsTrue(entries.Any(e => e.Kind == "parcel"));
+            Assert.IsTrue(entries.SequenceEqual(entries.OrderBy(e => e.Minute).ThenBy(e => e.Kind, System.StringComparer.Ordinal)), "按时间排序");
+        }
+
+        [Test]
+        public void Repair_WorkingVisit_SurvivesSave()
+        {
+            GameSession s = Make(20000, 10 * 60);
+            GameSessionTests.Teleport(s, "flat");
+            Assert.IsTrue(s.BookRepair("fan_broken", At(s, 0, 13)));
+            WaitMinutes(s, 3 * 60 + 10);
+            Assert.IsNotNull(s.RepairmanAtWork);
+            GameSession l = GameSession.Load(s.City, UnityEngine.JsonUtility.FromJson<SaveData>(UnityEngine.JsonUtility.ToJson(s.CreateSave())));
+            Assert.IsNotNull(l.RepairmanAtWork);
+            Assert.AreEqual(s.RepairmanAtWork.WorkStart, l.RepairmanAtWork.WorkStart);
         }
 
         [Test]
@@ -193,9 +321,20 @@ namespace PCShopSell.Tests
             s.Player.Hunger = 30;
             long t0 = s.Clock.Now.TotalMinutes;
             Assert.IsTrue(s.CookRice(1, null));
-            Assert.AreEqual(4.0, s.Pantry.RiceJin, 1e-9);
-            Assert.AreEqual(4, s.Pantry.CookedBowls);
-            Assert.GreaterOrEqual(s.Clock.Now.TotalMinutes - t0, Pantry.CookMinutes);
+            Assert.AreEqual(4.0, s.Pantry.RiceJin, 1e-9, "米马上用掉");
+            Assert.AreEqual(t0, s.Clock.Now.TotalMinutes, "点了就开始焖，时间不会卡住");
+            Assert.AreEqual(0, s.Pantry.CookedBowls, "还没焖好");
+            Assert.AreEqual(Pantry.CookMinutes, s.Pantry.CookMinutesLeft(t0));
+            Assert.IsFalse(s.EatBowlAtHome(), "焖饭期间锅里没饭可取");
+            Assert.IsFalse(s.PackLunch(1));
+            Assert.IsFalse(s.CookRice(1, null), "焖饭期间不能再放米");
+            WaitMinutes(s, 15);
+            Assert.AreEqual(Pantry.CookMinutes - 15, s.Pantry.CookMinutesLeft(s.Clock.Now.TotalMinutes));
+            Assert.AreEqual(0, s.Pantry.CookedBowls);
+            WaitMinutes(s, Pantry.CookMinutes - 15);
+            Assert.IsNull(s.Pantry.Cooking);
+            Assert.AreEqual(4, s.Pantry.CookedBowls, "40 分钟后饭好了");
+            Assert.IsFalse(s.CookRice(1, null), "锅里的饭没取完不能再焖");
             Assert.IsTrue(s.EatBowlAtHome());
             Assert.AreEqual(3, s.Pantry.CookedBowls);
             Assert.Greater(s.Player.Hunger, 30);
@@ -237,6 +376,7 @@ namespace PCShopSell.Tests
             Assert.AreEqual(Pantry.StartRiceJin + 2, s.Pantry.RiceJin, 1e-9, "回家放进厨房");
             Assert.AreEqual(0.0, s.Backpack.Food.RiceJin, 1e-9);
             Assert.IsTrue(s.CookRice(1, "egg"));
+            WaitMinutes(s, Pantry.CookMinutes);
             Assert.AreEqual(1, s.Pantry.IngredientCount("egg"));
             Assert.Greater(s.Pantry.Cooked.Last().Hunger, Pantry.BaseBowlHunger);
             Assert.AreEqual("鸡蛋焖饭", s.Pantry.Cooked.Last().Name);
@@ -256,6 +396,7 @@ namespace PCShopSell.Tests
             GameSession s = Make(2000, 7 * 60);
             GameSessionTests.Teleport(s, "flat");
             Assert.IsTrue(s.CookRice(1, null));
+            WaitMinutes(s, Pantry.CookMinutes);
             Assert.IsTrue(s.PackLunch(4));
             s.Leave();
             s.Player.Hunger = 20;
@@ -316,12 +457,16 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.OrderOnline(ParcelKind.Rice, "rice"));
             GameSessionTests.Teleport(s, "flat");
             Assert.IsTrue(s.CookRice(1, null));
+            WaitMinutes(s, 10);
             Assert.IsTrue(s.StoreFurniture(false, 3)); // 塑料凳进背包
 
             GameSession loaded = GameSession.Load(s.City, s.CreateSave());
             Assert.AreEqual(s.HomeLayout.Count, loaded.HomeLayout.Count);
             Assert.AreEqual(1, loaded.FurnitureInStock("stool"));
             Assert.AreEqual(2, loaded.Parcels.Count);
+            Assert.IsNotNull(loaded.Pantry.Cooking, "存档时还在焖");
+            Assert.AreEqual(Pantry.CookMinutes - 10, loaded.Pantry.CookMinutesLeft(loaded.Clock.Now.TotalMinutes));
+            WaitMinutes(loaded, Pantry.CookMinutes - 10);
             Assert.AreEqual(4, loaded.Pantry.CookedBowls);
             Assert.AreEqual(s.Pantry.RiceJin, loaded.Pantry.RiceJin, 1e-9);
         }

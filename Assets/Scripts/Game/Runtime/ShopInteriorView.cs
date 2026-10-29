@@ -33,6 +33,69 @@ namespace PCShopSell.Game.Runtime
             public Vector3 Target;
             public bool Leaving;
             public GameObject Bubble;
+
+            /// <summary>0 = 逛货架；1 = 挑中了，去货架前拿货；2 = 拿着货排队等结账。</summary>
+            public int Phase;
+            public Vector3 PickSpot;
+            public PartCategory ItemCat;
+            public GameObject Held;
+            public float BrowseTimer;
+            public bool Build;
+
+            /// <summary>离开时的路线；dropFirst 表示先走到货架前把货放回去。</summary>
+            public bool DropFirst;
+            public bool Dropped;
+
+            public PartCategory Want;
+            public string Spend;
+            public string Emote;
+            public Color EmoteColor;
+            public float EmoteUntil;
+        }
+
+        /// <summary>顾客头顶的小字（想买什么、为什么走了、收了多少钱）。</summary>
+        public struct EmoteInfo
+        {
+            public Vector3 Pos;
+            public string Text;
+            public Color Color;
+            public int Size;
+        }
+
+        private sealed class Pop
+        {
+            public Vector3 Start;
+            public string Text;
+            public float T0;
+        }
+
+        private readonly List<Pop> _pops = new List<Pop>();
+        private readonly List<EmoteInfo> _emotes = new List<EmoteInfo>();
+        private float _now;
+
+        /// <summary>本帧所有要显示的头顶小字。</summary>
+        public IReadOnlyList<EmoteInfo> Emotes => _emotes;
+
+        /// <summary>老板站在柜台旁边（能给排队的人结账）。</summary>
+        public bool NearCounter { get; private set; }
+
+        public Vector3 CounterWorld => Origin + new Vector3(0.9f, 2.3f, CounterZ);
+
+        private static string LeaveText(LeaveReason r, out Color color)
+        {
+            color = new Color(1f, 0.55f, 0.45f);
+            switch (r)
+            {
+                case LeaveReason.Impatient: return "等太久了！";
+                case LeaveReason.TooExpensive: return "太贵了……";
+                case LeaveReason.NoStock: return "怎么没货？";
+                case LeaveReason.NoCash: return "没带现金";
+                case LeaveReason.ShopClosed: return "关门了？";
+                case LeaveReason.OrderPlaced:
+                    color = new Color(0.5f, 0.95f, 0.6f);
+                    return "下单了，装好叫我";
+                default: return null;
+            }
         }
 
         private readonly Transform _root;
@@ -47,6 +110,72 @@ namespace PCShopSell.Game.Runtime
         private readonly Vector3 _counterFront;
         private readonly Vector3 _queueDir;
         private float _stockTimer;
+        private ShopSimulation _hooked;
+        private readonly Dictionary<int, LeaveReason> _leaveReasons = new Dictionary<int, LeaveReason>();
+
+        private void OnCustomerLeft(ShopCustomer c) => _leaveReasons[c.Id] = c.Reason;
+
+        private void Hook(ShopSimulation shop)
+        {
+            if (_hooked == shop) return;
+            if (_hooked != null) _hooked.CustomerLeft -= OnCustomerLeft;
+            _hooked = shop;
+            _leaveReasons.Clear();
+            if (shop != null) shop.CustomerLeft += OnCustomerLeft;
+        }
+
+        /// <summary>某个品类的货架前（离 from 最近的那个）；没有这个品类的货架就随便一个。</summary>
+        private Vector3 ShelfSpotFor(PartCategory cat, Vector3 from, System.Random rng = null)
+        {
+            var spots = new List<Vector3>();
+            for (int i = 0; i < _shelves.Count && i < _shelfSpots.Count; i++)
+                if (_shelves[i].Category == cat) spots.Add(_shelfSpots[i]);
+            if (spots.Count == 0) return _shelfSpots.Count > 0 ? _shelfSpots[0] : Center;
+            if (rng != null) return spots[rng.Next(spots.Count)];
+            Vector3 best = spots[0];
+            float bd = float.MaxValue;
+            foreach (Vector3 s in spots)
+            {
+                float d = (s - from).sqrMagnitude;
+                if (d < bd) { bd = d; best = s; }
+            }
+            return best;
+        }
+
+        private Vector3 RandomDeskSpot()
+        {
+            int deskCount = _shelfSpots.Count - _shelves.Count;
+            if (deskCount <= 0) return Center;
+            return _shelfSpots[_shelves.Count + _rng.Next(deskCount)];
+        }
+
+        private Vector3 Jitter(Vector3 p) => p + new Vector3((float)_rng.NextDouble() * 0.6f - 0.3f, 0, (float)_rng.NextDouble() * 0.3f - 0.15f);
+
+        private static bool Reached(Visitor v)
+        {
+            Vector3 d = v.Go.transform.position - v.Target;
+            d.y = 0;
+            return d.sqrMagnitude < 0.04f;
+        }
+
+        private static Color CategoryColor(PartCategory c)
+        {
+            switch (c)
+            {
+                case PartCategory.Gpu: return new Color(0.12f, 0.12f, 0.14f);
+                case PartCategory.Cpu: return new Color(0.85f, 0.55f, 0.15f);
+                case PartCategory.Memory: return new Color(0.2f, 0.65f, 0.35f);
+                case PartCategory.Storage: return new Color(0.25f, 0.45f, 0.85f);
+                case PartCategory.PowerCase: return new Color(0.75f, 0.75f, 0.78f);
+                default: return new Color(0.7f, 0.25f, 0.3f);
+            }
+        }
+
+        private void ShowHeld(Visitor v)
+        {
+            if (v.Held != null) return;
+            v.Held = Prims.Box(v.Go.transform, "Held", new Vector3(0, 0.95f, 0.38f), new Vector3(0.3f, 0.2f, 0.36f), Mats.Lit(CategoryColor(v.ItemCat), 0.5f));
+        }
 
         public ShopSize Size { get; }
         public float Width { get; }
@@ -287,12 +416,56 @@ namespace PCShopSell.Game.Runtime
             tr.localRotation = Quaternion.Slerp(tr.localRotation, Quaternion.LookRotation(dv / m), 0.35f);
         }
 
+        private string _dressed;
+
+        /// <summary>冒烟 / 调试：直接站到第 i 个货架前面。</summary>
+        public void StandAtShelf(int i)
+        {
+            if (i < 0 || i >= _shelfSpots.Count) return;
+            _path.Clear();
+            _owner.transform.localPosition = _shelfSpots[i] - Origin;
+        }
+
+        /// <summary>走到货架跟前时，能查看的那个货架的品类；没靠近则为空。</summary>
+        public PartCategory? NearbyShelf { get; private set; }
+
+        /// <summary>靠近的货架头顶的世界坐标（给“按 F”提示用）。</summary>
+        public Vector3 NearbyShelfWorld { get; private set; }
+
+        private void UpdateNearbyShelf(bool active)
+        {
+            NearbyShelf = null;
+            NearCounter = false;
+            if (!active) return;
+            Vector3 op = _owner.transform.localPosition;
+            NearCounter = op.x < 2.7f && Mathf.Abs(op.z - CounterZ) < CounterLength / 2 + 0.9f;
+            Vector3 lp = _owner.transform.localPosition;
+            float best = 1.5f;
+            foreach (ShelfDisplay sh in _shelves)
+            {
+                float dd = new Vector2(lp.x - sh.Pos.x, lp.z - sh.Pos.z).magnitude;
+                if (dd >= best) continue;
+                best = dd;
+                NearbyShelf = sh.Category;
+                NearbyShelfWorld = Origin + sh.Pos + new Vector3(0, 2.3f, 0);
+            }
+        }
+
         public void Update(GameSession s, float dt, float realDt)
         {
+            if (_leaveReasons.Count > 200) _leaveReasons.Clear();
+            _now += realDt;
+            _emotes.Clear();
+            if (_dressed != s.EquippedOutfit)
+            {
+                _dressed = s.EquippedOutfit;
+                Prims.Dress(_owner, _dressed);
+            }
             ShopSimulation shop = s.PlayerShop;
             _decor.Sync(s.ShopLayout, s.ShopRoom);
             _owner.SetActive(s.InPlayerShop);
             MoveOwner(realDt);
+            UpdateNearbyShelf(s.InPlayerShop);
             bool building = shop.Orders.Count > 0;
             foreach (GameObject g in _buildGlow) g.SetActive(building);
             _clerk.SetActive(s.Employee != null && s.IsEmployeeOnDuty(s.Clock.Now));
@@ -304,6 +477,11 @@ namespace PCShopSell.Game.Runtime
                 var counts = new Dictionary<PartCategory, int>();
                 foreach (var line in shop.Stock.Lines())
                     counts[line.Part.Category] = (counts.TryGetValue(line.Part.Category, out int n) ? n : 0) + line.Count;
+                // 顾客还在走去拿货的路上：货架上还摆着；正在走去放回去的：货架上还没有
+                foreach (Visitor pv in _visitors.Values)
+                    if (pv.Phase == 1) counts[pv.ItemCat] = (counts.TryGetValue(pv.ItemCat, out int a1) ? a1 : 0) + 1;
+                foreach (Visitor pv in _leaving)
+                    if (pv.DropFirst && !pv.Dropped) counts[pv.ItemCat] = Mathf.Max(0, (counts.TryGetValue(pv.ItemCat, out int a2) ? a2 : 0) - 1);
                 foreach (ShelfDisplay sh in _shelves)
                 {
                     // 空货架会留几件样品，有货时按库存多少摆满
@@ -312,6 +490,7 @@ namespace PCShopSell.Game.Runtime
                     for (int i = 0; i < sh.Items.Count; i++) sh.Items[i].SetActive(i < show);
                 }
             }
+            Hook(shop);
             var alive = new HashSet<int>();
             int queueIndex = 0;
             var queueIds = new Dictionary<int, int>();
@@ -331,13 +510,58 @@ namespace PCShopSell.Game.Runtime
                     v.Go.AddComponent<CustomerMarker>().CustomerId = c.Id;
                     v.Bubble = Prims.Shape(PrimitiveType.Sphere, v.Go.transform, "Bubble", new Vector3(0, 1.85f, 0), Vector3.one * 0.28f,
                         Mats.Glow(new Color(1f, 0.8f, 0.1f), new Color(3f, 2.2f, 0.2f), false));
-                    v.Target = _shelfSpots.Count > 0 ? _shelfSpots[_rng.Next(_shelfSpots.Count)] + new Vector3((float)_rng.NextDouble() * 0.6f - 0.3f, 0, (float)_rng.NextDouble() * 0.4f - 0.2f) : Center;
+                    v.Build = c.Intent == CustomerIntent.Build;
+                    v.Want = c.DesiredCategory;
+                    v.Target = _shelfSpots.Count == 0 ? Center
+                        : v.Build ? Jitter(RandomDeskSpot())
+                        : Jitter(ShelfSpotFor(c.DesiredCategory, _door, _rng));
+                    v.BrowseTimer = 0.5f + (float)_rng.NextDouble() * 1.5f;
                     _visitors[c.Id] = v;
                 }
+
+                if (c.Spend.IsPositive) v.Spend = c.Spend.ToString();
                 bool waiting = queueIds.TryGetValue(c.Id, out int qi);
-                v.Bubble.SetActive(waiting);
-                if (waiting) v.Target = _counterFront + _queueDir * (qi * 0.75f);
+                v.Bubble.SetActive(waiting && v.Phase == 2);
+                if (waiting && c.Item != null)
+                {
+                    if (v.Phase == 0)
+                    {
+                        // 挑中了：先去货架前把货拿下来
+                        v.ItemCat = c.Item.Category;
+                        v.PickSpot = Jitter(ShelfSpotFor(v.ItemCat, v.Go.transform.position));
+                        v.Target = v.PickSpot;
+                        v.Phase = 1;
+                    }
+                    if (v.Phase == 1 && Reached(v))
+                    {
+                        ShowHeld(v);
+                        v.Phase = 2;
+                    }
+                    if (v.Phase == 2) v.Target = _counterFront + _queueDir * (qi * 0.75f);
+                }
+                else if (v.Phase == 0 && Reached(v) && _shelfSpots.Count > 0)
+                {
+                    // 逛：站一会儿，再挪到别的货架前看看
+                    v.BrowseTimer -= dt;
+                    if (v.BrowseTimer <= 0)
+                    {
+                        v.BrowseTimer = 1f + (float)_rng.NextDouble() * 2f;
+                        v.Target = v.Build ? Jitter(RandomDeskSpot())
+                            : _rng.NextDouble() < 0.6 ? Jitter(ShelfSpotFor(c.DesiredCategory, v.Go.transform.position, _rng))
+                            : Jitter(_shelfSpots[_rng.Next(_shelves.Count > 0 ? _shelves.Count : _shelfSpots.Count)]);
+                    }
+                }
                 Move(v, dt);
+
+                // 逛的时候头顶写着想买什么，缺货一眼就能看出来
+                if (v.Phase == 0)
+                    _emotes.Add(new EmoteInfo
+                    {
+                        Pos = v.Go.transform.position + Vector3.up * 2.15f,
+                        Text = v.Build ? "想装整机" : "想买：" + PartCatalog.CategoryName(v.Want),
+                        Color = new Color(0.85f, 0.9f, 1f, 0.9f),
+                        Size = 17,
+                    });
             }
 
             var gone = new List<int>();
@@ -350,20 +574,52 @@ namespace PCShopSell.Game.Runtime
                 Visitor v = _visitors[id];
                 _visitors.Remove(id);
                 v.Leaving = true;
-                v.Target = _door + new Vector3(-1.5f, 0, -1.5f);
                 v.Bubble.SetActive(false);
                 Kill.It(v.Go.GetComponent<Collider>());
+                // 付了钱的拿着货走；等烦了 / 关门 / 嫌贵的，先把货放回货架再走
+                bool paid = !_leaveReasons.ContainsKey(id);
+                if (paid && v.Spend != null)
+                    _pops.Add(new Pop { Start = _counterFront + new Vector3(-0.4f, 1.8f, 0), Text = "+" + v.Spend, T0 = _now });
+                else if (_leaveReasons.TryGetValue(id, out LeaveReason lr))
+                {
+                    v.Emote = LeaveText(lr, out v.EmoteColor);
+                    v.EmoteUntil = _now + 2.6f;
+                }
+                v.DropFirst = !paid && v.Held != null;
+                v.Target = v.DropFirst ? v.PickSpot : _door + new Vector3(-1.5f, 0, -1.5f);
+                _leaveReasons.Remove(id);
                 _leaving.Add(v);
             }
             for (int i = _leaving.Count - 1; i >= 0; i--)
             {
                 Visitor v = _leaving[i];
                 Move(v, dt);
-                if ((v.Go.transform.position - v.Target).sqrMagnitude < 0.05f)
+                if (v.DropFirst && !v.Dropped && Reached(v))
                 {
-                    Kill.It(v.Go);
-                    _leaving.RemoveAt(i);
+                    v.Dropped = true;
+                    if (v.Held != null) Kill.It(v.Held);
+                    v.Held = null;
+                    v.Target = _door + new Vector3(-1.5f, 0, -1.5f);
+                    continue;
                 }
+                if (!v.DropFirst || v.Dropped)
+                {
+                    if ((v.Go.transform.position - v.Target).sqrMagnitude < 0.05f)
+                    {
+                        Kill.It(v.Go);
+                        _leaving.RemoveAt(i);
+                        continue;
+                    }
+                }
+                if (v.Emote != null && _now < v.EmoteUntil)
+                    _emotes.Add(new EmoteInfo { Pos = v.Go.transform.position + Vector3.up * 2.3f, Text = v.Emote, Color = v.EmoteColor, Size = 22 });
+            }
+
+            for (int i = _pops.Count - 1; i >= 0; i--)
+            {
+                float age = _now - _pops[i].T0;
+                if (age > 1.8f) { _pops.RemoveAt(i); continue; }
+                _emotes.Add(new EmoteInfo { Pos = _pops[i].Start + Vector3.up * (age * 0.7f), Text = _pops[i].Text, Color = new Color(0.55f, 1f, 0.6f, 1f - age / 2.2f), Size = 28 });
             }
         }
 
@@ -373,7 +629,7 @@ namespace PCShopSell.Game.Runtime
             Vector3 d = v.Target - p;
             float m = d.magnitude;
             if (m < 0.02f) return;
-            v.Go.transform.position = p + d / m * Mathf.Min(m, 2.0f * dt);
+            v.Go.transform.position = p + d / m * Mathf.Min(m, 3.0f * dt);
             v.Go.transform.rotation = Quaternion.LookRotation(d / m);
         }
 
@@ -386,6 +642,7 @@ namespace PCShopSell.Game.Runtime
         /// <summary>整个店内场景销毁（店面扩建后换一个新尺寸的）。</summary>
         public void Destroy()
         {
+            Hook(null);
             Clear();
             Kill.It(_root.gameObject);
         }

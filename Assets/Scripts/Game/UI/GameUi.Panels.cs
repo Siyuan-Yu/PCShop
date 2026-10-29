@@ -23,7 +23,7 @@ namespace PCShopSell.Game.UI
                     OpenDock();
                     break;
                 case PlaceKind.Home:
-                    Toast("回到出租屋了。走近床、衣柜、电饭锅或门，头顶出现提示时按 F；看房间信息点右上角“我的”。");
+                    Toast("回到出租屋了。走近床、衣柜、电饭锅、纸箱或门，头顶出现提示时按 F；看房间信息点右上角“我的”。");
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.MallBusiness:
                     OpenPlaceWindow(p, BuildMall, 900, 780);
@@ -258,7 +258,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content, "重新开始", () => _ctrl.NewGame(), 20, Ui.Warn), -1, 48);
                 Ui.Size(Ui.Button(w.Content, "玩法说明", ShowIntro, 20), -1, 48);
                 Ui.Size(Ui.Button(w.Content, "账本（最近 30 条）", OpenLedger, 20), -1, 48);
-                Ui.Size(Ui.Button(w.Content, $"作弊工具  [{(S.HasSmartphone ? "x" : " ")}] 立即拥有智能手机（解锁网购、1788）", () =>
+                Ui.Size(Ui.Button(w.Content, $"作弊工具  [{(S.HasSmartphone ? "x" : " ")}] 立即拥有智能手机（所有 app 都装好）", () =>
                 {
                     S.SetSmartphone(!S.HasSmartphone);
                     w.Rebuild();

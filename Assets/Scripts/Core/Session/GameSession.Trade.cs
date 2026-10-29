@@ -120,10 +120,15 @@ namespace PCShopSell.Core.Session
             Online1788.PriceOf(store, Market.PriceOf(part)).Scale(1.0 - NpcPerks.OnlineDiscount(Relation(Npcs.Zhou)));
 
         /// <summary>在店里的电脑上下单，次日 10:00 送到店里。</summary>
-        public bool PlaceOnlineOrder(string storeId, IReadOnlyList<(PartDef part, int count)> lines)
+        public bool PlaceOnlineOrder(string storeId, IReadOnlyList<(PartDef part, int count)> lines) =>
+            PlaceOnlineOrderCore(storeId, lines, true);
+
+        /// <summary>manual = 玩家在店里亲自下单（要在店里、花 5 分钟）；自动补货用手机下单，人在哪都行。</summary>
+        private bool PlaceOnlineOrderCore(string storeId, IReadOnlyList<(PartDef part, int count)> lines, bool manual)
         {
-            if (!HasSmartphone) return Fail(NoPhoneMessage);
-            if (!InPlayerShop) return Fail("只能在店里下单（要在店里确认收货地址和仓位）。");
+            string appBlock = AppBlocker(PhoneApps.Wholesale);
+            if (appBlock != null) return Fail(appBlock);
+            if (manual && !InPlayerShop) return Fail("只能在店里下单（要在店里确认收货地址和仓位）。");
             if (!Online.IsDiscovered(storeId)) return false;
             OnlineStore store = Online1788.GetStore(storeId);
 
@@ -148,11 +153,11 @@ namespace PCShopSell.Core.Session
             Online.NextOrderId++;
             Online.TotalOrders++;
             Online.AddPending(order);
-            Say($"下单成功，{total}，明天 10:00 送到店里。");
+            Say(manual ? $"下单成功，{total}，明天 10:00 送到店里。" : $"自动补货下单：{store.Name}，{total}，明天 10:00 送到店里。");
 
             if (Online.TotalOrders == 2 && Online.Discover("s_flash"))
                 Say("1788 首页给你推荐了一家新店：闪电优选。");
-            AdvanceClock(5);
+            if (manual) AdvanceClock(5);
             return true;
         }
 

@@ -8,6 +8,8 @@ namespace PCShopSell.Game.Runtime
     internal sealed class ShelfDisplay
     {
         public PartCategory Category;
+        /// <summary>货架在店内的局部位置（店内根节点坐标）。</summary>
+        public Vector3 Pos;
         public readonly List<GameObject> Items = new List<GameObject>();
     }
 
@@ -48,7 +50,7 @@ namespace PCShopSell.Game.Runtime
             Color cc = CategoryColor(cat);
             Prims.Box(root, "Sign", new Vector3(0, 1.93f, -0.1f), new Vector3(1.0f, 0.14f, 0.04f), Mats.Glow(cc * 0.6f, cc * 1.6f, false));
 
-            var display = new ShelfDisplay { Category = cat };
+            var display = new ShelfDisplay { Category = cat, Pos = pos };
             for (int r = 0; r < Rows; r++)
             for (int c = 0; c < Columns; c++)
             {

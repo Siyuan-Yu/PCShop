@@ -61,7 +61,14 @@ namespace PCShopSell.Core.Home
         public FoodBatch Clone() => new FoodBatch { Id = Id, Name = Name, Hunger = Hunger, Health = Health, Count = Count, ExpireDay = ExpireDay };
     }
 
-    /// <summary>家里的粮食：米（5 斤开局）、食材、电饭锅里做好的饭、打包带走的饭盒。</summary>
+    /// <summary>电饭锅里正在焖的一锅：到点才好，好了才能取。</summary>
+    public sealed class CookJob
+    {
+        public FoodBatch Batch;
+        public long ReadyMinute;
+    }
+
+    /// <summary>家里的粮食：米（5 斤开局）、食材、电饭锅里焖着 / 焖好的饭、打包带走的饭盒。</summary>
     public sealed class Pantry
     {
         public const double StartRiceJin = 5;
@@ -78,6 +85,12 @@ namespace PCShopSell.Core.Home
 
         public int IngredientCount(string id) => Ingredient.Where(b => b.Id == id).Sum(b => b.Count);
 
+        /// <summary>电饭锅里正在焖的饭（没有就是 null）。</summary>
+        public CookJob Cooking;
+
+        /// <summary>锅里正在焖，或者焖好的饭还没取完：这时不能再焖新的一锅。</summary>
+        public bool PotBusy => Cooking != null || CookedBowls > 0;
+
         public int CookedBowls => Cooked.Sum(b => b.Count);
 
         public int PackedBowls => Packed.Sum(b => b.Count);
@@ -89,10 +102,12 @@ namespace PCShopSell.Core.Home
             Ingredient.Add(new FoodBatch { Id = id, Name = d.Name, Count = count, ExpireDay = today + d.ShelfDays });
         }
 
-        /// <summary>用几斤米（可选一样食材）焖一锅饭。返回 false 时 error 里是原因。</summary>
-        public bool Cook(double jin, string ingredientId, int today, out string error)
+        /// <summary>用几斤米（可选一样食材）开始焖一锅饭：米和食材马上用掉，要等 <see cref="CookMinutes"/> 分钟才好。返回 false 时 error 里是原因。</summary>
+        public bool StartCook(double jin, string ingredientId, long nowMinute, out string error)
         {
             error = null;
+            if (Cooking != null) { error = "锅里正在焖饭。"; return false; }
+            if (CookedBowls > 0) { error = "锅里还有焖好的饭，先吃掉或者装进饭盒。"; return false; }
             if (jin < 0.5 - 1e-9) { error = "至少放半斤米。"; return false; }
             if (RiceJin + 1e-9 < jin) { error = "米不够了。"; return false; }
             IngredientDef ing = ingredientId == null ? null : Ingredients.Get(ingredientId);
@@ -102,16 +117,33 @@ namespace PCShopSell.Core.Home
             RiceJin -= jin;
             if (ing != null) Remove(Ingredient, ingredientId, need);
             int bowls = Math.Max(1, (int)Math.Round(jin * BowlsPerJin));
-            Cooked.Add(new FoodBatch
+            Cooking = new CookJob
             {
-                Id = ing?.Id ?? "rice",
-                Name = ing?.DishName ?? "白米饭",
-                Hunger = BaseBowlHunger + (ing?.HungerBonus ?? 0),
-                Health = ing?.HealthBonus ?? 0,
-                Count = bowls,
-                ExpireDay = today + 1,
-            });
+                ReadyMinute = nowMinute + CookMinutes,
+                Batch = new FoodBatch
+                {
+                    Id = ing?.Id ?? "rice",
+                    Name = ing?.DishName ?? "白米饭",
+                    Hunger = BaseBowlHunger + (ing?.HungerBonus ?? 0),
+                    Health = ing?.HealthBonus ?? 0,
+                    Count = bowls,
+                },
+            };
             return true;
+        }
+
+        /// <summary>还要焖多少分钟（没在焖返回 0）。</summary>
+        public long CookMinutesLeft(long nowMinute) => Cooking == null ? 0 : Math.Max(0, Cooking.ReadyMinute - nowMinute);
+
+        /// <summary>到点了就把这一锅放进“做好的饭”，返回这一批；还没好返回 null。做好的饭放不过第二天。</summary>
+        public FoodBatch FinishCook(long nowMinute)
+        {
+            if (Cooking == null || nowMinute < Cooking.ReadyMinute) return null;
+            FoodBatch b = Cooking.Batch;
+            b.ExpireDay = (int)(Cooking.ReadyMinute / (24 * 60)) + 1;
+            Cooked.Add(b);
+            Cooking = null;
+            return b;
         }
 
         private static void Remove(List<FoodBatch> list, string id, int count)

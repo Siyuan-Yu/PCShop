@@ -13,6 +13,12 @@ namespace PCShopSell.Core.Time
         /// <summary>单次 Tick 最多计入的真实秒数，避免卡顿一帧后时间猛跳。</summary>
         public const double MaxTickSeconds = 0.25;
 
+        /// <summary>
+        /// 1× 下 1 游戏分钟的真实秒数。要和出行时的时钟速度（画面速度 × 路程折算）大致一致，
+        /// 否则“走路时时间慢、站着不动时间飞快”。步行约 1.4 游戏分钟/秒，所以取 0.7。
+        /// </summary>
+        public const double DefaultSecondsPerMinute = 0.7;
+
         private double _secondsPerMinute;
         private double _fraction;
         private int _holds;
@@ -39,7 +45,7 @@ namespace PCShopSell.Core.Time
         /// <summary>上一次 Tick 推进的游戏分钟（含小数），用于画面平滑移动。</summary>
         public double LastDeltaMinutes { get; private set; }
 
-        public TimeController(double secondsPerMinuteAt1x = 0.25)
+        public TimeController(double secondsPerMinuteAt1x = DefaultSecondsPerMinute)
         {
             SecondsPerMinuteAt1x = secondsPerMinuteAt1x;
         }

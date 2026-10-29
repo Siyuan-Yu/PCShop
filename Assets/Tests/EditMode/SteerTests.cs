@@ -108,7 +108,7 @@ namespace PCShopSell.Tests
         {
             GameSession s = AtStreet("s1");
             Walk(s, 0, 1, 100); // 贴着店面一侧的人行道站着，离门口 4 米多
-            Walk(s, -1, 0, 3); // 往西走一点
+            Walk(s, -1, 0, 3, 0.05); // 往西走一点
             Assert.IsNotNull(s.NearbyPlace);
             Assert.AreEqual("tea", s.NearbyPlace.Id);
             Assert.IsTrue(s.EnterNearby());

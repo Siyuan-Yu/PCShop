@@ -37,7 +37,8 @@ namespace PCShopSell.Game.Runtime
                     Prims.Shape(PrimitiveType.Cylinder, root, "Stool", new Vector3(0, 0.2f, 0), new Vector3(0.34f, 0.2f, 0.34f), Mats.Lit(new Color(0.7f, 0.25f, 0.2f), 0.3f), c);
                     break;
                 case "fan_broken": Fan(root, c, true); break;
-                case "fan_new": Fan(root, c, false); break;
+                case "fan_new":
+                case "fan_fixed": Fan(root, c, false); break;
                 case "junk": Junk(root, c); break;
                 case "aircon": AirCon(root); break;
                 case FurnitureCatalog.Curtain: Curtain(root); break;

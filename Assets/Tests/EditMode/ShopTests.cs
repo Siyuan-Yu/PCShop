@@ -154,6 +154,25 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void DayClosed_ReportsPaidAndLostByReason()
+        {
+            Rig r = Make(BusySettings(), stock: false);
+            DayReport report = null;
+            r.Shop.DayClosed += d => report = d;
+            r.Shop.PlayerPresent = true;
+            r.Clock.Advance(5);
+            r.Shop.PlayerPresent = false;
+            r.Clock.Advance(24 * 60);
+            Assert.IsNotNull(report, "过了零点要结算昨天");
+            Assert.Greater(report.Customers, 0);
+            Assert.Greater(report.LostNoStock, 0);
+            Assert.AreEqual(0, report.Paid);
+            StringAssert.Contains("没货", PCShopSell.Core.Session.GameSession.DayReportText(report));
+            StringAssert.Contains("进货", PCShopSell.Core.Session.GameSession.DayReportText(report));
+            Assert.AreEqual(0, r.Shop.TodayCustomers, "新的一天从零开始");
+        }
+
+        [Test]
         public void EmptyShop_CustomersLeaveForNoStock()
         {
             Rig r = Make(BusySettings(), stock: false);

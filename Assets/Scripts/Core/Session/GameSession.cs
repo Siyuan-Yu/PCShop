@@ -82,7 +82,7 @@ namespace PCShopSell.Core.Session
             PlayerShopPlace = city.PlayerShop() ?? throw new ArgumentException("布局里没有玩家的店。", nameof(city));
             Home = city.FirstOfKind(PlaceKind.Home) ?? throw new ArgumentException("布局里没有住所。", nameof(city));
 
-            HasSmartphone = smartphone;
+            SetSmartphone(smartphone);
             Random = new GameRandom(seed);
             Clock = new GameClock(start.Date, start.MinuteOfDay);
             Ledger = new Ledger(openingCash);
@@ -97,6 +97,8 @@ namespace PCShopSell.Core.Session
                 LocationFactor = ComputeLocationFactor(city, PlayerShopPlace),
                 EmployeeOnDuty = IsEmployeeOnDuty,
             };
+            PlayerShop.DayClosed += r => Notice?.Invoke(DayReportText(r));
+            PlayerShop.CustomerLeft += OnShopCustomerLeft;
             PlayerShop.OrderPlaced += o => Notice?.Invoke($"新装机订单：{PartCatalog.TierName(o.Tier)}整机 {o.Price}，两天内交付。");
             PlayerShop.OrderExpired += o => Popup?.Invoke("订单取消", $"{PartCatalog.TierName(o.Tier)}整机订单超时，顾客取消了订单，知名度下降。");
 
@@ -245,6 +247,10 @@ namespace PCShopSell.Core.Session
         {
             int minutes = (int)from.MinutesUntil(to);
             UpdateBody(minutes);
+            UpdateCooking(to);
+            CheckCalendarReminders(from, to);
+            if (Crosses(from, to, RestockCheckMinute)) RunAutoRestock();
+            CheckHomeVisits(from, to);
 
             if (CurrentPlace != Home && Crosses(from, to, BedtimeReminderMinute))
                 Notice?.Invoke("23:00 了，该回家睡觉了。凌晨 4 点还不睡会晕倒。");
@@ -263,6 +269,28 @@ namespace PCShopSell.Core.Session
             DeliverOnlineOrders(to);
 
             if (!_sleeping && Player.Health < 15) _pendingHospital = true;
+        }
+
+        /// <summary>昨日营业小结：成交多少、流失多少、为什么，再给一句建议。</summary>
+        public static string DayReportText(DayReport r)
+        {
+            string s = $"昨日营业：进店 {r.Customers} 人，成交 {r.Paid} 单，营业额 {r.Revenue}";
+            if (r.Orders > 0) s += $"，装机单 {r.Orders} 个";
+            if (r.Lost > 0)
+            {
+                var why = new System.Collections.Generic.List<string>();
+                if (r.LostTooExpensive > 0) why.Add($"嫌贵 {r.LostTooExpensive}");
+                if (r.LostImpatient > 0) why.Add($"等太久 {r.LostImpatient}");
+                if (r.LostNoStock > 0) why.Add($"没货 {r.LostNoStock}");
+                if (r.LostNoCash > 0) why.Add($"没带现金 {r.LostNoCash}");
+                if (r.LostClosed > 0) why.Add($"关门 {r.LostClosed}");
+                s += $"，走了 {r.Lost} 人（{string.Join("、", why)}）";
+            }
+            s += "。";
+            if (r.LostNoStock >= 1) s += "有人因为缺货空手走了，该进货了。";
+            else if (r.LostImpatient >= 2) s += "排队的人等烦了，记得及时结账或者雇个人。";
+            else if (r.LostTooExpensive >= 2 && r.LostTooExpensive >= r.Paid) s += "嫌贵的人不少，可以降一点加价。";
+            return s;
         }
 
         private void OnDayAdvanced(GameDate previous, GameDate today)
