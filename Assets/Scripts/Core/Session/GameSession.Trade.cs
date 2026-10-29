@@ -40,7 +40,7 @@ namespace PCShopSell.Core.Session
         /// <summary>档口今天的批发价。</summary>
         public Money StallPrice(Place stall, PartDef part)
         {
-            double f = StallBaseFactor + StallVariation(stall.Id) - BargainBonus(stall.Id) - NpcPerks.StallDiscount(Relation(Npcs.Jie));
+            double f = StallBaseFactor + StallVariation(stall.Id) - BargainBonus(stall.Id) - NpcPerks.StallDiscount(Relation(Npcs.Jie)) - StallOwnerDiscount(stall);
             return Money.FromYuan((long)Math.Round(Market.PriceOf(part).Yuan * f));
         }
 
@@ -67,12 +67,16 @@ namespace PCShopSell.Core.Session
             if (CurrentPlace != stall || !StallSells(stall, part)) return Fail("这家档口不卖这个。");
             if (!IsWholesalerOpen) return Fail("批发市场工作日 9:00–18:00 营业。");
             if (count <= 0) return false;
+            int remaining = StallRemaining(stall, part);
+            if (count > remaining)
+                return Fail(remaining <= 0 ? $"老板说{part.Name}今天不能再多给你了，明天再来。" : $"老板说{part.Name}今天最多再给你 {remaining} 个。多来往，他会放心多给。");
             if (!Cargo.CanAdd(part, true, count))
                 return Fail($"{CurrentVehicle.Name}装不下了（剩 {Cargo.FreeSpace:0.#} 格）。");
             Money total = StallPrice(stall, part) * count;
             if (!Ledger.TryDebit(Clock.Today, "进货", total, $"{stall.Name} {part.Name}×{count}"))
                 return Fail($"要 {total}，钱不够。");
             Cargo.TryAdd(part, true, count);
+            RecordStallPurchase(stall, part, count);
             AdvanceClock(2);
             return true;
         }

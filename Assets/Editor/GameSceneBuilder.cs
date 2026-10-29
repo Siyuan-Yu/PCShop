@@ -317,6 +317,26 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Shot("vs1_15_goals");
             _game.Ui.CloseAllWindows();
+
+            // 进货渠道的人：档口老板、约出去玩、小道消息
+            var d = new PCShopSell.Core.Time.GameDate(131);
+            while (d.IsWeekend) d = d.AddDays(1);
+            g.Clock.Restore(d, 10 * 60);
+            Teleport(g, "stall_gpu");
+            g.AddRelation(PCShopSell.Core.Session.Npcs.Wang, 45);
+            g.AskForTip(PCShopSell.Core.Session.Npcs.Wang);
+            _game.Ui.CloseModalWindows();
+            _game.Ui.OnEnteredPlace(g.CurrentPlace);
+            Frame(0.05f);
+            Shot("vs1_16_stall_owner");
+            _game.Ui.OpenInvitePanel(PCShopSell.Core.Session.Npcs.Wang);
+            Frame(0.05f);
+            Shot("vs1_17_invite");
+            _game.Ui.CloseAllWindows();
+            _game.Ui.OpenMarketPanel();
+            Frame(0.05f);
+            Shot("vs1_18_tips");
+            _game.Ui.CloseAllWindows();
         }
 
         private static void Teleport(GameSession s, string placeId)

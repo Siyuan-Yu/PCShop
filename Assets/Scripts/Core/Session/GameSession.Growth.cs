@@ -178,6 +178,7 @@ namespace PCShopSell.Core.Session
         {
             RestoreCampaign(d);
             RestoreNpcs(d);
+            RestoreSocial(d);
             _upgrades.Clear();
             foreach (string id in d.upgrades ?? Array.Empty<string>())
                 if (ShopUpgrades.Exists(id)) _upgrades.Add(id);
@@ -214,6 +215,7 @@ namespace PCShopSell.Core.Session
             SaveEvents(d);
             SaveCampaign(d);
             SaveNpcs(d);
+            SaveSocial(d);
         }
     }
 }

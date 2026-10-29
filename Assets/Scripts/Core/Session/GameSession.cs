@@ -166,6 +166,10 @@ namespace PCShopSell.Core.Session
                 PlayerShop.PlayerPresent = true;
                 UnloadCargo();
             }
+            else if (place.Kind == PlaceKind.Wholesaler)
+            {
+                MeetStallOwner(place);
+            }
             return true;
         }
 
@@ -241,6 +245,7 @@ namespace PCShopSell.Core.Session
 
             if (Crosses(from, to, CandidateMinute)) OnCandidateHour(to.Date);
             if (Crosses(from, to, EventMinute)) RollDailyEvent(to.Date);
+            CheckAppointments(to);
             DeliverOnlineOrders(to);
 
             if (!_sleeping && Player.Health < 15) _pendingHospital = true;
@@ -259,6 +264,7 @@ namespace PCShopSell.Core.Session
                 }
             }
             Police.RollDuty(Random);
+            ResolveTips(today);
 
             PayWages(previous);
             ProcessScheduledCredits(today);

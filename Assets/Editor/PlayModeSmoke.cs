@@ -117,6 +117,15 @@ namespace PCShopSell.EditorTools
                         }
                         game.Ui.CloseModalWindows();
                     }
+                    // 人脉：目标面板、约人窗口、行情小道消息
+                    foreach (var n in PCShopSell.Core.Session.Npcs.All) game.Session.Meet(n.Id, 40);
+                    game.Ui.OpenGoalsPanel();
+                    game.Ui.CloseAllWindows();
+                    game.Ui.OpenInvitePanel(PCShopSell.Core.Session.Npcs.Li);
+                    game.Ui.CloseAllWindows();
+                    game.Session.AskForTip(PCShopSell.Core.Session.Npcs.Li);
+                    game.Ui.CloseModalWindows();
+                    game.Ui.OpenMarketPanel();
                     game.Ui.CloseAllWindows();
                     game.GoToPlace(game.City.GetPlace("home"));
                     _step = 3;

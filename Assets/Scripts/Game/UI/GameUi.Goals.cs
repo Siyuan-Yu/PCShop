@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using PCShopSell.Core.Session;
 using UnityEngine;
 using UnityEngine.UI;
@@ -30,6 +30,13 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(list, $"回看三年结局：{e.Title}", () => Popup("三年之后：" + e.Title, S.ComposeEpilogue(e)), 18, Ui.ButtonHot), -1, 44);
                 }
 
+                if (S.Appointments.Count > 0)
+                {
+                    Ui.Size(Ui.Label(list, "约好的行程", 22), -1, 40);
+                    foreach (Appointment a in S.Appointments)
+                        Ui.Size(Ui.Label(list, $"{S.DescribeDay(a.Day)} {GameSession.SlotName(a.Slot)}　和{Npcs.Get(a.NpcId).Name}", 17, TextAnchor.MiddleLeft, Ui.Good), -1, 30);
+                }
+
                 Ui.Size(Ui.Label(list, "认识的人", 22), -1, 40);
                 foreach (NpcDef def in Npcs.All)
                 {
@@ -41,16 +48,19 @@ namespace PCShopSell.Game.UI
                     }
                     int rel = S.Relation(n.Id);
                     RectTransform row = Ui.Row(list, 44);
-                    Ui.Size(Ui.Label(row, $"<b>{n.Name}</b>  {n.Role}", 18), 320);
-                    Ui.Size(Ui.Label(row, $"{Npcs.LevelName(rel)} {rel}", 17, TextAnchor.MiddleLeft, Ui.Good), 120);
-                    Ui.Bar(row, rel / 100f, Ui.Accent, 220, 14);
+                    Ui.Size(Ui.Label(row, $"<b>{n.Name}</b>  {n.Role}", 17), 270);
+                    Ui.Size(Ui.Label(row, $"{Npcs.LevelName(rel)} {rel}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
+                    Ui.Bar(row, rel / 100f, Ui.Accent, 120, 14);
                     string blocker = S.GiftBlocker(n.Id);
                     Ui.Size(Ui.Button(row, blocker == null ? $"送{n.GiftName} {n.GiftPrice}" : blocker, () =>
                     {
                         S.GiveGift(n.Id);
                         w.Rebuild();
-                    }, 15, Ui.ButtonHot, blocker == null), 200);
-                    Ui.Size(Ui.Label(list, "<size=14><color=#9AA3AD>" + NpcPerks.Describe(n.Id) + "</color></size>", 14), -1, 24);
+                    }, 14, Ui.ButtonHot, blocker == null), 170);
+                    Ui.Size(Ui.Button(row, "约出去", () => OpenInviteWindow(n, w), 14, Ui.ButtonBg), 80);
+                    string perk = NpcPerks.Describe(n.Id);
+                    if (n.IsTipster) perk += "　" + TrustText(n);
+                    Ui.Size(Ui.Label(list, "<size=14><color=#9AA3AD>" + perk + "</color></size>", 14), -1, 24);
                 }
             });
         }

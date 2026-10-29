@@ -80,6 +80,42 @@ namespace PCShopSell.Core.Session
         public double[] relationValues;
         public string[] giftIds;
         public int[] giftDays;
+        public SaveSocial social;
+    }
+
+    /// <summary>档口老板、约会、行情消息相关的存档。</summary>
+    [Serializable]
+    public sealed class SaveSocial
+    {
+        public string[] apptNpc;
+        public int[] apptSlot;
+        public int[] apptDay;
+
+        public string[] tipNpc;
+        public int[] tipCategory;
+        public int[] tipDirection;
+        public int[] tipIssued;
+        public int[] tipResolve;
+        public double[] tipIndex;
+        public int[] tipOutcome;
+
+        public string[] outingIds;
+        public int[] outingDays;
+        public string[] inviteTryIds;
+        public int[] inviteTryDays;
+        public string[] tipDayIds;
+        public int[] tipDays;
+        public string[] scoreIds;
+        public int[] scoreRight;
+        public int[] scoreWrong;
+        public string[] boughtKeys;
+        public int[] boughtDays;
+        public int[] boughtCounts;
+
+        public double[] marketBias;
+        public int[] shockDays;
+        public int[] shockCategories;
+        public double[] shockDeltas;
     }
 
     [Serializable]

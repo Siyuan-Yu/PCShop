@@ -25,7 +25,7 @@ namespace PCShopSell.Game.UI
                     OpenPlaceWindow(p, BuildHome, 760, 760);
                     break;
                 case PlaceKind.Wholesaler:
-                    OpenPlaceWindow(p, BuildStall, 860, 720);
+                    OpenPlaceWindow(p, BuildStall, 860, 800);
                     break;
                 case PlaceKind.Dealer:
                     OpenPlaceWindow(p, BuildDealer);
@@ -122,17 +122,21 @@ namespace PCShopSell.Game.UI
             Line(w.Content, open ? "营业中（工作日 9:00–18:00）。批发价，只卖盒装正品。" : "<color=#E0806A>关门了（工作日 9:00–18:00 营业）</color>");
             Line(w.Content, $"随身货：{S.Cargo.UsedSpace:0.#}/{S.Cargo.Capacity:0} 格（{S.CurrentVehicle.Name}）   现金 {S.Ledger.Balance}", 18, Ui.Dim);
 
-            RectTransform list = Ui.Scroll(w.Content, 380);
+            BuildOwnerRow(w, p);
+
+            RectTransform list = Ui.Scroll(w.Content, 330);
             foreach (PartDef part in PartCatalog.All.Where(x => S.StallSells(p, x)))
             {
                 PartDef pd = part;
                 Money price = S.StallPrice(p, pd);
                 Money market = S.Market.PriceOf(pd);
                 RectTransform row = Ui.Row(list, 44);
-                Ui.Size(Ui.Label(row, $"{pd.Name}", 18), 250);
+                Ui.Size(Ui.Label(row, $"{pd.Name}", 18), 220);
                 Ui.Size(Ui.Label(row, $"{price}", 19, TextAnchor.MiddleLeft, Ui.Good), 100);
                 Ui.Size(Ui.Label(row, $"市价 {market}", 15, TextAnchor.MiddleLeft, Ui.Dim), 120);
                 Ui.Size(Ui.Label(row, $"{Stock.SpaceOf(pd, true, 1):0.#}格", 15, TextAnchor.MiddleLeft, Ui.Dim), 50);
+                int left = S.StallRemaining(p, pd);
+                Ui.Size(Ui.Label(row, $"今日余 {left}", 15, TextAnchor.MiddleLeft, left == 0 ? Ui.Warn : Ui.Dim), 90);
                 foreach (int n in new[] { 1, 5 })
                 {
                     int count = n;
@@ -140,7 +144,7 @@ namespace PCShopSell.Game.UI
                     {
                         if (S.BuyAtStall(p, pd, count)) Toast($"买了 {pd.Name}×{count}");
                         w.Rebuild();
-                    }, 17, Ui.ButtonHot, open), 70);
+                    }, 17, Ui.ButtonHot, open && left >= count), 70);
                 }
             }
 
@@ -226,7 +230,7 @@ namespace PCShopSell.Game.UI
         public void OpenMarketPanel()
         {
             S.ReadNews();
-            OpenWindow("行情与新闻", 900, 760, w =>
+            OpenWindow("行情与新闻", 900, 880, w =>
             {
                 Line(w.Content, "新闻 → 宏观指标 → 配件价格。读懂新闻，提前囤货或清货。", 18, Ui.Dim);
                 foreach (MacroFactor f in new[] { MacroFactor.Crypto, MacroFactor.AiDemand, MacroFactor.NewGeneration })
@@ -247,13 +251,14 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Label(row, Sparkline(S.Market.History(c)), 18, TextAnchor.MiddleLeft, Ui.Dim), 520);
                 }
                 Line(w.Content, "最近新闻：", 18);
-                RectTransform list = Ui.Scroll(w.Content, 240);
+                RectTransform list = Ui.Scroll(w.Content, 150);
                 foreach (NewsItem n in S.Market.News.Reverse().Take(20))
                 {
                     Text t = Ui.Label(list, $"<color=#9AA3AD>{n.Date}</color>  {n.Headline}", 17);
                     Ui.Size(t, -1, 26);
                 }
                 if (S.Market.News.Count == 0) Ui.Size(Ui.Label(list, "暂时风平浪静。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 26);
+                BuildTipsSection(w);
             });
         }
 

@@ -69,6 +69,12 @@ namespace PCShopSell.Core.Market
         private readonly Dictionary<PartCategory, double> _index = new Dictionary<PartCategory, double>();
         private readonly Dictionary<PartCategory, List<double>> _history = new Dictionary<PartCategory, List<double>>();
         private readonly List<NewsItem> _news = new List<NewsItem>();
+        private readonly Dictionary<PartCategory, double> _bias = new Dictionary<PartCategory, double>();
+        private readonly List<(int day, PartCategory category, double delta)> _shocks = new List<(int, PartCategory, double)>();
+
+        /// <summary>每天衰减后保留的比例：小道消息带来的短期价格偏移会逐渐消退。</summary>
+        public const double BiasRetention = 0.88;
+        public const double MaxBias = 0.30;
 
         public IReadOnlyList<NewsItem> News => _news;
         public GameRandom Random => _rng;
@@ -111,6 +117,8 @@ namespace PCShopSell.Core.Market
             for (int i = 0; i < _factor.Length; i++)
                 _factor[i] = Clamp(_factor[i] * 0.9 + _rng.Gaussian(0.05));
 
+            ApplyBias(today);
+
             NewsItem scripted = ScriptedNews(today);
             if (scripted != null) Apply(scripted);
             else if (_rng.Chance(0.3)) Apply(RandomNews(today));
@@ -133,6 +141,47 @@ namespace PCShopSell.Core.Market
         }
 
         public double[] FactorValues() => (double[])_factor.Clone();
+
+        public IReadOnlyList<(int day, PartCategory category, double delta)> PendingShocks => _shocks;
+
+        /// <summary>安排一次品类的短期价格冲击：到了那天价格被推高/压低一截，之后逐日回落。</summary>
+        public void ScheduleShock(GameDate day, PartCategory category, double delta)
+        {
+            _shocks.Add((day.TotalDays, category, delta));
+        }
+
+        public double BiasOf(PartCategory c) => _bias.TryGetValue(c, out double b) ? b : 0;
+
+        /// <summary>按品类顺序导出当前偏移，存档用。</summary>
+        public double[] BiasValues()
+        {
+            var r = new double[PartCatalog.Categories.Length];
+            for (int i = 0; i < r.Length; i++) r[i] = BiasOf(PartCatalog.Categories[i]);
+            return r;
+        }
+
+        /// <summary>读档：恢复偏移与待生效的冲击，并按现在的偏移重算价格指数（不追加历史）。</summary>
+        public void RestoreBias(double[] bias, IEnumerable<(int day, PartCategory category, double delta)> shocks)
+        {
+            _bias.Clear();
+            for (int i = 0; bias != null && i < bias.Length && i < PartCatalog.Categories.Length; i++)
+                if (bias[i] != 0) _bias[PartCatalog.Categories[i]] = bias[i];
+            _shocks.Clear();
+            _shocks.AddRange(shocks);
+            foreach (PartCategory c in PartCatalog.Categories) _index[c] = ComputeIndex(c);
+        }
+
+        private void ApplyBias(GameDate today)
+        {
+            foreach (PartCategory c in new List<PartCategory>(_bias.Keys)) _bias[c] *= BiasRetention;
+            for (int i = _shocks.Count - 1; i >= 0; i--)
+            {
+                if (_shocks[i].day > today.TotalDays) continue;
+                PartCategory c = _shocks[i].category;
+                _bias[c] = Math.Max(-MaxBias, Math.Min(MaxBias, BiasOf(c) + _shocks[i].delta));
+                _shocks.RemoveAt(i);
+            }
+        }
 
         /// <summary>第一个月固定的一次行情波动：第 10 天矿潮，第 20 天新品发布。</summary>
         private static NewsItem ScriptedNews(GameDate today)
@@ -177,6 +226,7 @@ namespace PCShopSell.Core.Market
             double[] s = Sensitivity[c];
             double v = 1.0;
             for (int i = 0; i < _factor.Length; i++) v += s[i] * _factor[i];
+            v += BiasOf(c);
             return Math.Max(0.6, Math.Min(1.8, v));
         }
 
