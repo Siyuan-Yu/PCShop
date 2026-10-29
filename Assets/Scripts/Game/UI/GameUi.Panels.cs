@@ -219,7 +219,7 @@ namespace PCShopSell.Game.UI
         private void BuildNeighbour(Window w, Place p)
         {
             Line(w.Content, $"邻居的店：{p.Business}");
-            string size = p.Size == PCShopSell.Core.Shop.ShopSize.Large ? "大（96㎡）" : p.Size == PCShopSell.Core.Shop.ShopSize.Medium ? "中（36㎡）" : "小（12㎡）";
+            string size = p.Size == PCShopSell.Core.Shop.ShopSize.Large ? "大（216㎡）" : p.Size == PCShopSell.Core.Shop.ShopSize.Medium ? "中（108㎡）" : "小（48㎡）";
             Line(w.Content, "规格：" + size, 18, Ui.Dim);
             if (p.Business == "电脑") Line(w.Content, "同行。老板瞥了你一眼，没说话。", 18, Ui.Dim);
             else Line(w.Content, "生意不错。以后也许能在这里认识些人。", 18, Ui.Dim);

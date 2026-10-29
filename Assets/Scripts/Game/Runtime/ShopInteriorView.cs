@@ -12,8 +12,13 @@ namespace PCShopSell.Game.Runtime
         public int CustomerId;
     }
 
+    /// <summary>店内地板：点击地板让老板走过去。</summary>
+    public sealed class InteriorFloorMarker : MonoBehaviour
+    {
+    }
+
     /// <summary>
-    /// 玩家店铺的室内（按规格生成：小 12㎡ / 中 36㎡ / 大 96㎡）。放在远离城市的位置，进店时镜头切过来。
+    /// 玩家店铺的室内（按规格生成：小 48㎡ / 中 108㎡ / 大 216㎡）。放在远离城市的位置，进店时镜头切过来。
     /// 顾客进门 → 去货架前挑货 → 到柜台前排队（头顶有 ¥）→ 结账后出门。
     /// </summary>
     public sealed class ShopInteriorView
@@ -45,7 +50,19 @@ namespace PCShopSell.Game.Runtime
         public float Width { get; }
         public float Depth { get; }
         public Vector3 Center => Origin + new Vector3(Width / 2, 0, Depth / 2);
+        /// <summary>刚好看到整间店的镜头大小（缩放上限）。</summary>
         public float CameraSize => Mathf.Max(Width, Depth) * 0.62f + 1.5f;
+
+        /// <summary>进店时默认的镜头大小：比较近，跟着老板走。</summary>
+        public const float DefaultZoom = 5.5f;
+        public const float MinZoom = 3.2f;
+
+        public Vector3 OwnerWorld => _owner.transform.position;
+        private float CounterZ => Depth * 0.55f;
+        private float CounterLength => Mathf.Min(2.2f, Depth * 0.5f);
+        private readonly List<Vector3> _path = new List<Vector3>();
+        private bool _wasOn;
+        private readonly List<GameObject> _buildGlow = new List<GameObject>();
 
         /// <summary>顾客 ID → 世界坐标头顶位置（给 UI 标签用）。</summary>
         public IEnumerable<KeyValuePair<int, Vector3>> QueueHeads()
@@ -64,10 +81,19 @@ namespace PCShopSell.Game.Runtime
             _root.SetParent(parent, false);
             _root.position = Origin;
 
-            (Width, Depth) = size == ShopSize.Large ? (12f, 8f) : size == ShopSize.Medium ? (6f, 6f) : (4f, 3f);
+            (Width, Depth) = size == ShopSize.Large ? (18f, 12f) : size == ShopSize.Medium ? (12f, 9f) : (8f, 6f);
             float w = Width, d = Depth;
 
-            Prims.Box(_root, "Floor", new Vector3(w / 2, -0.05f, d / 2), new Vector3(w, 0.1f, d), Mats.Lit(new Color(0.78f, 0.76f, 0.72f), 0.4f));
+            GameObject floor = Prims.Box(_root, "Floor", new Vector3(w / 2, -0.05f, d / 2), new Vector3(w, 0.1f, d), Mats.Lit(new Color(0.78f, 0.76f, 0.72f), 0.4f), true);
+            floor.AddComponent<InteriorFloorMarker>();
+            Material tileMat = Mats.Lit(new Color(0.7f, 0.69f, 0.66f), 0.4f);
+            for (int tx = 0; tx * 2f < w; tx++)
+            for (int tz = 0; tz * 2f < d; tz++)
+            {
+                if ((tx + tz) % 2 != 0) continue;
+                float sx = Mathf.Min(2f, w - tx * 2f), sz = Mathf.Min(2f, d - tz * 2f);
+                Prims.Box(_root, "Tile", new Vector3(tx * 2f + sx / 2, 0.005f, tz * 2f + sz / 2), new Vector3(sx, 0.012f, sz), tileMat);
+            }
             Prims.Box(_root, "Outside", new Vector3(w / 2, -0.1f, d / 2), new Vector3(w + 30, 0.05f, d + 30), Mats.Lit(new Color(0.12f, 0.12f, 0.14f)));
             Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), Mats.Lit(new Color(0.86f, 0.88f, 0.9f)));
             Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), Mats.Lit(new Color(0.8f, 0.83f, 0.86f)));
@@ -75,14 +101,19 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(_root, "WallFrontLow", new Vector3(w / 2 + 0.6f, 0.3f, -0.05f), new Vector3(w - 1.2f, 0.6f, 0.1f), Mats.Lit(new Color(0.6f, 0.6f, 0.62f)));
             Prims.Box(_root, "Poster", new Vector3(w * 0.3f, 2f, d - 0.01f), new Vector3(1.2f, 0.8f, 0.02f), Mats.Glow(new Color(0.2f, 0.6f, 0.9f), new Color(0.4f, 1.2f, 1.8f), false));
 
-            var lampGo = new GameObject("CeilingLight");
-            lampGo.transform.SetParent(_root, false);
-            lampGo.transform.localPosition = new Vector3(w / 2, 2.8f, d / 2);
-            var lamp = lampGo.AddComponent<Light>();
-            lamp.type = LightType.Point;
-            lamp.range = Mathf.Max(w, d) * 1.5f;
-            lamp.intensity = 2.2f;
-            lamp.color = new Color(1f, 0.95f, 0.85f);
+            int lampsX = Mathf.Max(1, Mathf.CeilToInt(w / 6f)), lampsZ = Mathf.Max(1, Mathf.CeilToInt(d / 6f));
+            for (int lx = 0; lx < lampsX; lx++)
+            for (int lz = 0; lz < lampsZ; lz++)
+            {
+                var lampGo = new GameObject("CeilingLight");
+                lampGo.transform.SetParent(_root, false);
+                lampGo.transform.localPosition = new Vector3(w * (lx + 0.5f) / lampsX, 2.8f, d * (lz + 0.5f) / lampsZ);
+                var lamp = lampGo.AddComponent<Light>();
+                lamp.type = LightType.Point;
+                lamp.range = 9f;
+                lamp.intensity = lampsX * lampsZ > 1 ? 1.6f : 2.2f;
+                lamp.color = new Color(1f, 0.95f, 0.85f);
+            }
 
             // 货架：沿后墙和右墙
             Material shelfMat = Mats.Lit(new Color(0.45f, 0.35f, 0.25f));
@@ -111,6 +142,30 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(_root, "Monitor", counter + new Vector3(0, 0.75f, 0.2f), new Vector3(0.1f, 0.45f, 0.6f), Mats.Glow(new Color(0.1f, 0.1f, 0.12f), new Color(0.3f, 0.8f, 1.5f), false));
             Prims.Box(_root, "Register", counter + new Vector3(0, 0.6f, -0.5f), new Vector3(0.35f, 0.2f, 0.35f), Mats.Lit(new Color(0.15f, 0.15f, 0.15f)));
 
+            // 装机台（靠左墙后部）：有装机单时屏幕亮着
+            Prims.Box(_root, "Workbench", new Vector3(0.7f, 0.45f, d - 0.9f), new Vector3(0.9f, 0.9f, 1.5f), Mats.Lit(new Color(0.36f, 0.38f, 0.42f), 0.5f));
+            Prims.Box(_root, "BenchCase", new Vector3(0.7f, 1.15f, d - 1.3f), new Vector3(0.4f, 0.5f, 0.6f), Mats.Lit(new Color(0.12f, 0.12f, 0.14f), 0.6f));
+            _buildGlow.Add(Prims.Box(_root, "BenchScreen", new Vector3(0.7f, 1.2f, d - 0.5f), new Vector3(0.08f, 0.4f, 0.5f), Mats.Glow(new Color(0.1f, 0.1f, 0.12f), new Color(0.2f, 1.4f, 0.6f), false)));
+            Prims.Box(_root, "BenchParts", new Vector3(0.55f, 0.95f, d - 1.9f), new Vector3(0.4f, 0.08f, 0.4f), Mats.Lit(new Color(0.15f, 0.5f, 0.3f)));
+
+            // 中间的展示台：中、大店更多
+            var tables = new List<Vector2>();
+            if (size == ShopSize.Small) tables.Add(new Vector2(w * 0.55f, d * 0.4f));
+            else if (size == ShopSize.Medium) { tables.Add(new Vector2(w * 0.4f, d * 0.35f)); tables.Add(new Vector2(w * 0.65f, d * 0.6f)); }
+            else
+            {
+                tables.Add(new Vector2(w * 0.3f, d * 0.3f)); tables.Add(new Vector2(w * 0.55f, d * 0.3f));
+                tables.Add(new Vector2(w * 0.4f, d * 0.65f)); tables.Add(new Vector2(w * 0.68f, d * 0.6f));
+            }
+            Material tableMat = Mats.Lit(new Color(0.5f, 0.4f, 0.3f));
+            foreach (Vector2 t in tables)
+            {
+                Prims.Box(_root, "Table", new Vector3(t.x, 0.4f, t.y), new Vector3(1.8f, 0.8f, 0.9f), tableMat);
+                for (int k = 0; k < 4; k++)
+                    _shelfItems.Add(Prims.Box(_root, "Item", new Vector3(t.x - 0.6f + k * 0.4f, 0.97f, t.y), new Vector3(0.3f, 0.34f, 0.3f), Mats.Lit(ItemColor())));
+                _shelfSpots.Add(Origin + new Vector3(t.x, 0, t.y - 0.9f));
+            }
+
             _owner = Prims.Figure(_root, "Owner", new Color(0.95f, 0.55f, 0.15f), new Color(0.95f, 0.8f, 0.65f), 1.05f);
             _owner.transform.localPosition = new Vector3(0.35f, 0, d * 0.55f);
             _owner.transform.localRotation = Quaternion.LookRotation(Vector3.right);
@@ -129,12 +184,68 @@ namespace PCShopSell.Game.Runtime
             return c[_rng.Next(c.Length)];
         }
 
-        public void SetActive(bool on) => _root.gameObject.SetActive(on);
+        public void SetActive(bool on)
+        {
+            _root.gameObject.SetActive(on);
+            if (on && !_wasOn)
+            {
+                _path.Clear();
+                _owner.transform.localPosition = new Vector3(0.35f, 0, CounterZ);
+                _owner.transform.localRotation = Quaternion.LookRotation(Vector3.right);
+            }
+            _wasOn = on;
+        }
 
-        public void Update(GameSession s, float dt)
+        /// <summary>点击地板：老板走过去（会绕开柜台）。</summary>
+        public void WalkTo(Vector3 world)
+        {
+            Vector3 t = world - Origin;
+            t.y = 0;
+            t.x = Mathf.Clamp(t.x, 0.35f, Width - 0.9f);
+            t.z = Mathf.Clamp(t.z, 0.4f, Depth - 1.2f);
+            bool toBehind = InCounterRange(t.z) && t.x < 1.5f;
+            if (toBehind) t.x = 0.35f;
+            Vector3 from = _owner.transform.localPosition;
+            bool fromBehind = InCounterRange(from.z) && from.x < 0.7f;
+            _path.Clear();
+            if (fromBehind != toBehind)
+            {
+                float zLow = Mathf.Max(0.4f, CounterZ - CounterLength / 2 - 0.5f);
+                if (fromBehind) { _path.Add(new Vector3(0.35f, 0, zLow)); _path.Add(new Vector3(1.7f, 0, zLow)); }
+                else { _path.Add(new Vector3(1.7f, 0, zLow)); _path.Add(new Vector3(0.35f, 0, zLow)); }
+            }
+            _path.Add(t);
+        }
+
+        /// <summary>回到柜台后面。</summary>
+        public void WalkToCounter() => WalkTo(Origin + new Vector3(0.35f, 0, CounterZ));
+
+        private bool InCounterRange(float z) => z > CounterZ - CounterLength / 2 - 0.2f && z < CounterZ + CounterLength / 2 + 0.2f;
+
+        private void MoveOwner(float realDt)
+        {
+            if (_path.Count == 0) return;
+            Transform tr = _owner.transform;
+            Vector3 p = tr.localPosition;
+            Vector3 dv = _path[0] - p;
+            float m = dv.magnitude;
+            if (m < 0.05f)
+            {
+                _path.RemoveAt(0);
+                if (_path.Count == 0 && p.x < 0.7f) tr.localRotation = Quaternion.LookRotation(Vector3.right);
+                return;
+            }
+            tr.localPosition = p + dv / m * Mathf.Min(m, 3.2f * realDt);
+            tr.localRotation = Quaternion.Slerp(tr.localRotation, Quaternion.LookRotation(dv / m), 0.35f);
+        }
+
+        public void Update(GameSession s, float dt, float realDt)
         {
             ShopSimulation shop = s.PlayerShop;
             _owner.SetActive(s.InPlayerShop);
+            MoveOwner(realDt);
+            bool building = shop.Orders.Count > 0;
+            foreach (GameObject g in _buildGlow) g.SetActive(building);
             _clerk.SetActive(s.Employee != null && s.IsEmployeeOnDuty(s.Clock.Now));
 
             _stockTimer -= dt;

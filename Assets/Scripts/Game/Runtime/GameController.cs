@@ -122,7 +122,7 @@ namespace PCShopSell.Game
             }
 
             _wasInterior = InInterior;
-            _rig.Snap(FocusPoint(), InInterior ? Interior.CameraSize : 16f);
+            SnapCamera();
             if (s.CurrentPlace != null && !s.IsGameOver) Ui.OnEnteredPlace(s.CurrentPlace);
         }
 
@@ -173,7 +173,11 @@ namespace PCShopSell.Game
 
         public void Checkout(int customerId)
         {
-            if (Session.Checkout(customerId)) Ui.RebuildDock();
+            if (Session.Checkout(customerId))
+            {
+                Ui.RebuildDock();
+                if (InInterior) Interior.WalkToCounter();
+            }
         }
 
         private void EnterPlace(Place p)
@@ -225,12 +229,12 @@ namespace PCShopSell.Game
             _avatar.Update(Session, dt);
             _police.Update(!interior);
             _crowd.Update(worldDt, !interior);
-            if (interior) Interior.Update(Session, worldDt);
+            if (interior) Interior.Update(Session, worldDt, dt);
 
             if (interior != _wasInterior)
             {
-                _rig.Snap(FocusPoint(), interior ? Interior.CameraSize : 16f);
                 _wasInterior = interior;
+                SnapCamera();
             }
             else
             {
@@ -243,10 +247,10 @@ namespace PCShopSell.Game
             _wasChasing = chasing;
         }
 
-        private Vector3 FocusPoint()
+        private Vector3 FocusPoint(float zoom = -1f)
         {
             if (InInterior)
-                return Interior.Center + new Vector3(0, 0.8f, 0) + CameraRig.Rotation * Vector3.right * (Interior.CameraSize * Cam.aspect * 0.28f);
+                return Interior.OwnerWorld + new Vector3(0, 0.8f, 0) + CameraRig.Rotation * Vector3.right * ((zoom > 0 ? zoom : Cam.orthographicSize) * Cam.aspect * 0.28f);
             Vector3 p = StreetWorldBuilder.ToWorld(Session.PlayerPosition);
             if (Session.CurrentPlace != null && World.Places.TryGetValue(Session.CurrentPlace.Id, out PlaceVisual pv)) p = pv.Entrance;
             return p + new Vector3(0, 1f, 0);
@@ -272,6 +276,7 @@ namespace PCShopSell.Game
             {
                 var cm = hit.collider.GetComponentInParent<CustomerMarker>();
                 if (cm != null) Checkout(cm.CustomerId);
+                else if (hit.collider.GetComponent<InteriorFloorMarker>() != null) Interior.WalkTo(hit.point);
                 return;
             }
 
@@ -311,7 +316,18 @@ namespace PCShopSell.Game
         private void OnShopExpanded(PCShopSell.Core.Shop.ShopSize size)
         {
             EnsureInterior(size);
-            _rig.Snap(FocusPoint(), InInterior ? Interior.CameraSize : 16f);
+            SnapCamera();
+        }
+
+        /// <summary>切换场景时重设镜头：店内比较近、跟着老板，街上拉远。</summary>
+        private void SnapCamera()
+        {
+            bool interior = InInterior;
+            _rig.MinSize = interior ? ShopInteriorView.MinZoom : 5f;
+            _rig.MaxSize = interior ? Interior.CameraSize : 60f;
+            float size = interior ? Mathf.Min(ShopInteriorView.DefaultZoom, Interior.CameraSize) : 16f;
+            _wasInterior = interior;
+            _rig.Snap(FocusPoint(size), size);
         }
 
         private void OnPopup(string title, string body)
