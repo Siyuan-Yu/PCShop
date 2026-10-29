@@ -234,7 +234,7 @@ namespace PCShopSell.Game.UI
 
         public void OpenSystemPanel()
         {
-            OpenWindow("菜单", 560, 690, w =>
+            OpenWindow("菜单", 560, 750, w =>
             {
                 Line(w.Content, $"身家（现金 + 库存九折）：{S.NetWorth()}", 20);
                 GoalLine goal = S.NextGoal();
@@ -250,6 +250,20 @@ namespace PCShopSell.Game.UI
                 }, 20, Ui.ButtonHot, S.CanSave), -1, 48);
                 Ui.Size(Ui.Button(w.Content, "读档", () => _ctrl.LoadGame(), 20, Ui.ButtonBg, SaveStore.Exists), -1, 48);
                 Ui.Size(Ui.Button(w.Content, "重新开始", () => _ctrl.NewGame(), 20, Ui.Warn), -1, 48);
+                RectTransform sfx = Ui.Row(w.Content, 48, 8);
+                Ui.Size(Ui.Button(sfx, PCShopSell.Game.Runtime.SoundFx.Muted ? "音效：关" : "音效：开", () =>
+                {
+                    PCShopSell.Game.Runtime.SoundFx.Muted = !PCShopSell.Game.Runtime.SoundFx.Muted;
+                    PCShopSell.Game.Runtime.SoundFx.Play(PCShopSell.Game.Runtime.Sfx.Coin);
+                    w.Rebuild();
+                }, 20), -1, -1, 1);
+                Ui.Size(Ui.Button(sfx, $"音量 {PCShopSell.Game.Runtime.SoundFx.Volume * 100:0}%", () =>
+                {
+                    float v = PCShopSell.Game.Runtime.SoundFx.Volume + 0.2f;
+                    PCShopSell.Game.Runtime.SoundFx.Volume = v > 1.01f ? 0.2f : v;
+                    PCShopSell.Game.Runtime.SoundFx.Play(PCShopSell.Game.Runtime.Sfx.Coin);
+                    w.Rebuild();
+                }, 20, Ui.ButtonBg, !PCShopSell.Game.Runtime.SoundFx.Muted), -1, -1, 1);
                 Ui.Size(Ui.Button(w.Content, "玩法说明", ShowIntro, 20), -1, 48);
                 Ui.Size(Ui.Button(w.Content, "账本（最近 30 条）", OpenLedger, 20), -1, 48);
                 Ui.Size(Ui.Button(w.Content, $"作弊工具  [{(S.HasSmartphone ? "x" : " ")}] 立即拥有智能手机（所有 app 都装好）", () =>

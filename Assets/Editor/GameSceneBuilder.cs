@@ -244,6 +244,12 @@ namespace PCShopSell.EditorTools
                 if (boxedN[i] > 0) s.PlayerShop.Stock.ForceAdd(shelfParts[i], true, boxedN[i]);
                 if (looseN[i] > 0) s.PlayerShop.Stock.ForceAdd(shelfParts[i], false, looseN[i]);
             }
+            // 店里货架上的 3D 摆货：上层整盒、下两层散件
+            _game.Ui.CloseDock();
+            _game.Interior.StandAtShelf(0);
+            Frame(0.8f);
+            Shot("vs1_73_shelf_3d");
+            _game.Ui.OpenDock();
             _game.Ui.OpenShelfWindow(_game.Interior.NearbyShelf.Value);
             Frame(0.05f);
             Shot("vs1_69_shelf_stocked");
@@ -354,6 +360,17 @@ namespace PCShopSell.EditorTools
             _game.Ui.OpenBuildMinigame(orderField);
             Frame(0.05f);
             Shot("vs1_09_build_minigame");
+            _game.Ui.CloseAllWindows();
+            // 装机台：走到左后角的装机台按 F，开装机单窗口
+            _game.Interior.StandAtBench();
+            Frame(0.05f);
+            Check(_game.Interior.NearBench, "走到装机台前能交互");
+            Check(_game.TryGetInteract(out _, out string benchLabel) && benchLabel.Contains("装机台"), "装机台头顶有提示");
+            Shot("vs1_71_bench_hint");
+            _game.Ui.OpenBenchWindow();
+            Frame(0.05f);
+            Check(_game.Ui.AnyModalOpen, "装机台窗口打开");
+            Shot("vs1_72_bench");
             _game.Ui.CloseAllWindows();
             Check(s.CompleteBuild(orderField.Id, 1), "交付装机订单");
 
@@ -715,6 +732,10 @@ namespace PCShopSell.EditorTools
             _game.Ui.OnEnteredPlace(g.CurrentPlace);
             Frame(0.05f);
             Shot("vs1_16_stall_owner");
+            var gpuClerk = PCShopSell.Core.Session.Rosters.GpuClerk;
+            Check(g.StaffChat(gpuClerk) != null, "和店员闲聊");
+            Check(g.GiveStaffGift(gpuClerk), "请店员喝饮料");
+            Check(g.StaffRapport(gpuClerk.Id) >= 5, "店员熟络度涨了");
             _game.Ui.OpenGreeterDialogue(g.CurrentPlace);
             Frame(0.05f);
             Shot("vs1_65_staff_talk");

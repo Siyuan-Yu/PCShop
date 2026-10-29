@@ -38,6 +38,7 @@ namespace PCShopSell.Game.Runtime
             public int Phase;
             public Vector3 PickSpot;
             public PartCategory ItemCat;
+            public bool ItemBoxed;
             public GameObject Held;
             public float BrowseTimer;
             public bool Build;
@@ -48,6 +49,7 @@ namespace PCShopSell.Game.Runtime
 
             public PartCategory Want;
             public string Spend;
+            public string Profile;
             public string Emote;
             public Color EmoteColor;
             public float EmoteUntil;
@@ -113,15 +115,50 @@ namespace PCShopSell.Game.Runtime
         private ShopSimulation _hooked;
         private readonly Dictionary<int, LeaveReason> _leaveReasons = new Dictionary<int, LeaveReason>();
 
+        private readonly Dictionary<int, PayChannel> _payChannels = new Dictionary<int, PayChannel>();
+
         private void OnCustomerLeft(ShopCustomer c) => _leaveReasons[c.Id] = c.Reason;
+
+        private void OnCustomerPaid(ShopCustomer c)
+        {
+            _payChannels[c.Id] = c.PaidWith;
+            SoundFx.Play(Sfx.Coin);
+        }
+
+        private void OnCustomerArrived(ShopCustomer c) => SoundFx.Play(Sfx.Bell);
+
+        private static string PayText(PayChannel p)
+        {
+            switch (p)
+            {
+                case PayChannel.QrCode: return "扫码";
+                case PayChannel.SelfCheckout: return "自助";
+                default: return "现金";
+            }
+        }
+
+        /// <summary>顾客的类型：决定衣服颜色、身高和头顶的称呼（装机党、游戏玩家、DIY 爱好者、办公族、学生）。</summary>
+        private static string ProfileOf(ShopCustomer c, out Color shirt)
+        {
+            if (c.Intent == CustomerIntent.Build) { shirt = new Color(0.92f, 0.55f, 0.15f); return "装机党"; }
+            switch (c.DesiredCategory)
+            {
+                case PartCategory.Gpu: shirt = new Color(0.55f, 0.3f, 0.78f); return "游戏玩家";
+                case PartCategory.Cpu:
+                case PartCategory.Motherboard: shirt = new Color(0.25f, 0.66f, 0.4f); return "DIY 爱好者";
+                case PartCategory.Memory:
+                case PartCategory.Storage: shirt = new Color(0.35f, 0.5f, 0.72f); return "办公族";
+                default: shirt = new Color(0.2f, 0.66f, 0.72f); return "学生";
+            }
+        }
 
         private void Hook(ShopSimulation shop)
         {
             if (_hooked == shop) return;
-            if (_hooked != null) _hooked.CustomerLeft -= OnCustomerLeft;
+            if (_hooked != null) { _hooked.CustomerLeft -= OnCustomerLeft; _hooked.CustomerPaid -= OnCustomerPaid; _hooked.CustomerArrived -= OnCustomerArrived; }
             _hooked = shop;
             _leaveReasons.Clear();
-            if (shop != null) shop.CustomerLeft += OnCustomerLeft;
+            if (shop != null) { shop.CustomerLeft += OnCustomerLeft; shop.CustomerPaid += OnCustomerPaid; shop.CustomerArrived += OnCustomerArrived; }
         }
 
         /// <summary>某个品类的货架前（离 from 最近的那个）；没有这个品类的货架就随便一个。</summary>
@@ -219,6 +256,32 @@ namespace PCShopSell.Game.Runtime
             }
         }
 
+        /// <summary>摆设：门边两盆绿植、地毯、墙上的钟和海报，让店里不那么空。</summary>
+        private void BuildDecor(float w, float d, float doorX)
+        {
+            Material pot = Mats.Lit(new Color(0.55f, 0.32f, 0.2f), 0.4f);
+            Material leaf = Mats.Lit(new Color(0.22f, 0.5f, 0.28f), 0.3f);
+            Material leaf2 = Mats.Lit(new Color(0.3f, 0.62f, 0.34f), 0.3f);
+            foreach (float px in new[] { doorX - 1.3f, doorX + 1.3f })
+            {
+                Prims.Shape(PrimitiveType.Cylinder, _root, "PlantPot", new Vector3(px, 0.2f, 0.4f), new Vector3(0.38f, 0.2f, 0.38f), pot);
+                Prims.Shape(PrimitiveType.Sphere, _root, "PlantLeaf", new Vector3(px, 0.62f, 0.4f), new Vector3(0.55f, 0.5f, 0.55f), leaf);
+                Prims.Shape(PrimitiveType.Sphere, _root, "PlantLeaf", new Vector3(px + 0.08f, 0.92f, 0.36f), new Vector3(0.36f, 0.34f, 0.36f), leaf2);
+            }
+
+            float rugW = Mathf.Min(3f, w * 0.3f);
+            Prims.Box(_root, "Rug", new Vector3(w * 0.5f, 0.02f, d * 0.36f), new Vector3(rugW, 0.012f, 1.8f), Mats.Lit(new Color(0.34f, 0.42f, 0.52f), 0.2f));
+            Prims.Box(_root, "RugEdge", new Vector3(w * 0.5f, 0.026f, d * 0.36f), new Vector3(rugW - 0.3f, 0.008f, 1.5f), Mats.Lit(new Color(0.42f, 0.5f, 0.6f), 0.2f));
+
+            // 后墙：挂钟 + 海报
+            Prims.Shape(PrimitiveType.Cylinder, _root, "Clock", new Vector3(w * 0.62f, 2.45f, d - 0.03f), new Vector3(0.42f, 0.02f, 0.42f), Mats.Lit(new Color(0.95f, 0.95f, 0.92f), 0.3f)).transform.localRotation = Quaternion.Euler(90f, 0, 0);
+            Prims.Box(_root, "ClockHandH", new Vector3(w * 0.62f, 2.5f, d - 0.05f), new Vector3(0.025f, 0.12f, 0.01f), Mats.Lit(new Color(0.1f, 0.1f, 0.12f)));
+            Prims.Box(_root, "ClockHandM", new Vector3(w * 0.62f + 0.05f, 2.45f, d - 0.05f), new Vector3(0.1f, 0.02f, 0.01f), Mats.Lit(new Color(0.1f, 0.1f, 0.12f)));
+            Prims.Box(_root, "PosterB", new Vector3(w * 0.78f, 2.4f, d - 0.01f), new Vector3(0.7f, 0.9f, 0.02f), Mats.Glow(new Color(0.9f, 0.4f, 0.3f), new Color(1.6f, 0.6f, 0.4f), false));
+            // 右墙海报
+            Prims.Box(_root, "PosterR", new Vector3(w - 0.01f, 2.4f, d * 0.5f), new Vector3(0.02f, 0.7f, 1.0f), Mats.Glow(new Color(0.5f, 0.8f, 0.4f), new Color(0.7f, 1.4f, 0.6f), false));
+        }
+
         public ShopInteriorView(Transform parent, ShopSize size)
         {
             Size = size;
@@ -255,6 +318,8 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(_root, "DoorPostR", new Vector3(doorX + 0.72f, 0.7f, -0.05f), new Vector3(0.1f, 1.4f, 0.14f), doorPost);
             Prims.Box(_root, "DoorSign", new Vector3(doorX, 1.55f, -0.05f), new Vector3(1.5f, 0.2f, 0.05f), Mats.Glow(new Color(0.9f, 0.5f, 0.15f), new Color(2.4f, 1.3f, 0.3f), false));
             Prims.Box(_root, "Poster", new Vector3(w * 0.3f, 2f, d - 0.01f), new Vector3(1.2f, 0.8f, 0.02f), Mats.Glow(new Color(0.2f, 0.6f, 0.9f), new Color(0.4f, 1.2f, 1.8f), false));
+
+            BuildDecor(w, d, doorX);
 
             int lampsX = Mathf.Max(1, Mathf.CeilToInt(w / 6f)), lampsZ = Mathf.Max(1, Mathf.CeilToInt(d / 6f));
             for (int lx = 0; lx < lampsX; lx++)
@@ -454,11 +519,24 @@ namespace PCShopSell.Game.Runtime
 
         public Vector3 NearDisplayWorld { get; private set; }
 
+        /// <summary>站在装机台旁边（能按 F 开装机单和装机小游戏）。</summary>
+        public bool NearBench { get; private set; }
+
+        public Vector3 NearBenchWorld { get; private set; }
+
+        /// <summary>冒烟 / 调试：直接站到装机台前面（柜台后面的过道里）。</summary>
+        public void StandAtBench()
+        {
+            _path.Clear();
+            _owner.transform.localPosition = new Vector3(0.35f, 0, Depth - 1.95f);
+        }
+
         private void UpdateNearbyShelf(bool active)
         {
             NearbyShelf = null;
             NearCounter = false;
             NearDisplay = false;
+            NearBench = false;
             if (!active) return;
             Vector3 op = _owner.transform.localPosition;
             NearCounter = op.x < 2.2f && Mathf.Abs(op.z - CounterZ) < CounterLength / 2 + 0.9f;
@@ -484,11 +562,24 @@ namespace PCShopSell.Game.Runtime
                 NearDisplay = true;
                 NearDisplayWorld = Origin + new Vector3(tb.x, 1.9f, tb.y);
             }
+            // 装机台：靠左墙后部，离台边 1.0 米以内；和展示桌都够得着时取近的
+            {
+                float bdx = Mathf.Max(0f - lp.x, lp.x - 0.9f, 0f);
+                float bdz = Mathf.Max((Depth - 1.7f) - lp.z, lp.z - (Depth - 0.1f), 0f);
+                float bd = Mathf.Sqrt(bdx * bdx + bdz * bdz);
+                if (bd < 1.0f && (!NearDisplay || bd <= bestTable))
+                {
+                    NearBench = true;
+                    NearDisplay = false;
+                    NearBenchWorld = Origin + new Vector3(0.45f, 2.0f, Depth - 0.9f);
+                }
+            }
         }
 
         public void Update(GameSession s, float dt, float realDt)
         {
             if (_leaveReasons.Count > 200) _leaveReasons.Clear();
+            if (_payChannels.Count > 200) _payChannels.Clear();
             _now += realDt;
             _emotes.Clear();
             if (_dressed != s.EquippedOutfit)
@@ -509,20 +600,24 @@ namespace PCShopSell.Game.Runtime
             if (_stockTimer <= 0)
             {
                 _stockTimer = 0.5f;
-                var counts = new Dictionary<PartCategory, int>();
+                var counts = new Dictionary<(PartCategory, bool), int>();
+                void Bump((PartCategory, bool) k, int d) => counts[k] = Mathf.Max(0, (counts.TryGetValue(k, out int n0) ? n0 : 0) + d);
                 foreach (var line in shop.Stock.Lines())
-                    counts[line.Part.Category] = (counts.TryGetValue(line.Part.Category, out int n) ? n : 0) + line.Count;
+                    Bump((line.Part.Category, line.Boxed), line.Count);
                 // 顾客还在走去拿货的路上：货架上还摆着；正在走去放回去的：货架上还没有
                 foreach (Visitor pv in _visitors.Values)
-                    if (pv.Phase == 1) counts[pv.ItemCat] = (counts.TryGetValue(pv.ItemCat, out int a1) ? a1 : 0) + 1;
+                    if (pv.Phase == 1) Bump((pv.ItemCat, pv.ItemBoxed), 1);
                 foreach (Visitor pv in _leaving)
-                    if (pv.DropFirst && !pv.Dropped) counts[pv.ItemCat] = Mathf.Max(0, (counts.TryGetValue(pv.ItemCat, out int a2) ? a2 : 0) - 1);
+                    if (pv.DropFirst && !pv.Dropped) Bump((pv.ItemCat, pv.ItemBoxed), -1);
                 foreach (ShelfDisplay sh in _shelves)
                 {
-                    // 空货架会留几件样品，有货时按库存多少摆满
-                    int stock = counts.TryGetValue(sh.Category, out int have) ? have : 0;
-                    int show = Mathf.Min(sh.Items.Count, stock > 0 ? 3 + stock : 2);
-                    for (int i = 0; i < sh.Items.Count; i++) sh.Items[i].SetActive(i < show);
+                    int boxedHave = counts.TryGetValue((sh.Category, true), out int bh) ? bh : 0;
+                    int looseHave = counts.TryGetValue((sh.Category, false), out int lh) ? lh : 0;
+                    // 整盒摆在最上层，散件摆在下面两层；完全没货时留两件散件样品
+                    int showBoxed = Mathf.Min(sh.BoxedItems.Count, boxedHave);
+                    int showLoose = Mathf.Min(sh.LooseItems.Count, boxedHave + looseHave == 0 ? 2 : looseHave);
+                    for (int i = 0; i < sh.BoxedItems.Count; i++) sh.BoxedItems[i].SetActive(i < showBoxed);
+                    for (int i = 0; i < sh.LooseItems.Count; i++) sh.LooseItems[i].SetActive(i < showLoose);
                 }
             }
             Hook(shop);
@@ -536,7 +631,14 @@ namespace PCShopSell.Game.Runtime
                 alive.Add(c.Id);
                 if (!_visitors.TryGetValue(c.Id, out Visitor v))
                 {
-                    v = new Visitor { Go = Prims.Figure(_root, "Customer" + c.Id, RandomColor(), new Color(0.92f, 0.78f, 0.62f), 0.95f) };
+                    string profile = ProfileOf(c, out Color shirt);
+                    float shade = 0.85f + (c.Id * 37 % 100) / 100f * 0.3f;
+                    Color[] skins = { new Color(0.92f, 0.78f, 0.62f), new Color(0.85f, 0.66f, 0.5f), new Color(0.98f, 0.84f, 0.72f) };
+                    v = new Visitor
+                    {
+                        Go = Prims.Figure(_root, "Customer" + c.Id, new Color(shirt.r * shade, shirt.g * shade, shirt.b * shade), skins[c.Id % skins.Length], 0.9f + (c.Id * 53 % 100) / 100f * 0.15f),
+                        Profile = profile,
+                    };
                     v.Go.transform.position = _door;
                     var col = v.Go.AddComponent<CapsuleCollider>();
                     col.center = new Vector3(0, 0.8f, 0);
@@ -563,6 +665,7 @@ namespace PCShopSell.Game.Runtime
                     {
                         // 挑中了：先去货架前把货拿下来
                         v.ItemCat = c.Item.Category;
+                        v.ItemBoxed = c.ItemBoxed;
                         v.PickSpot = Jitter(ShelfSpotFor(v.ItemCat, v.Go.transform.position));
                         v.Target = v.PickSpot;
                         v.Phase = 1;
@@ -593,7 +696,7 @@ namespace PCShopSell.Game.Runtime
                     _emotes.Add(new EmoteInfo
                     {
                         Pos = v.Go.transform.position + Vector3.up * 2.15f,
-                        Text = v.Build ? "想装整机" : "想买：" + PartCatalog.CategoryName(v.Want),
+                        Text = v.Profile + " · " + (v.Build ? "想装整机" : "想买：" + PartCatalog.CategoryName(v.Want)),
                         Color = new Color(0.85f, 0.9f, 1f, 0.9f),
                         Size = 17,
                     });
@@ -614,7 +717,7 @@ namespace PCShopSell.Game.Runtime
                 // 付了钱的拿着货走；等烦了 / 关门 / 嫌贵的，先把货放回货架再走
                 bool paid = !_leaveReasons.ContainsKey(id);
                 if (paid && v.Spend != null)
-                    _pops.Add(new Pop { Start = _counterFront + new Vector3(-0.4f, 1.8f, 0), Text = "+" + v.Spend, T0 = _now });
+                    _pops.Add(new Pop { Start = _counterFront + new Vector3(-0.4f, 1.8f, 0), Text = "+" + v.Spend + (_payChannels.TryGetValue(id, out PayChannel pc) ? " " + PayText(pc) : ""), T0 = _now });
                 else if (_leaveReasons.TryGetValue(id, out LeaveReason lr))
                 {
                     v.Emote = LeaveText(lr, out v.EmoteColor);

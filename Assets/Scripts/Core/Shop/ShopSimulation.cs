@@ -25,6 +25,14 @@ namespace PCShopSell.Core.Shop
         SelfCheckout = 4,
     }
 
+    /// <summary>顾客这一单实际的付款方式。</summary>
+    public enum PayChannel
+    {
+        Cash,
+        QrCode,
+        SelfCheckout,
+    }
+
     public enum CustomerIntent
     {
         Retail,
@@ -76,6 +84,9 @@ namespace PCShopSell.Core.Shop
         public GameTimestamp ArrivedAt { get; }
         public GameTimestamp ReadyAt { get; }
         public bool CarriesCash { get; }
+
+        /// <summary>结账时用的付款方式（结账后才有值）。</summary>
+        public PayChannel PaidWith { get; internal set; }
 
         public CustomerState State { get; internal set; }
         public LeaveReason Reason { get; internal set; }
@@ -458,7 +469,7 @@ namespace PCShopSell.Core.Shop
 
             // 自助结账平台：每分钟自动给排头的顾客结一单，不用点（仍然需要有人在店里营业）。
             if ((Accepted & PaymentMethods.SelfCheckout) != 0 && _queue.Count > 0)
-                CompleteSale(_queue[0]);
+                CompleteSale(_queue[0], true);
             else if (!PlayerPresent && EmployeeOnDuty(now))
             {
                 if (_employeeBusyMinutes > 0) _employeeBusyMinutes--;
@@ -584,8 +595,9 @@ namespace PCShopSell.Core.Shop
             return c.CarriesCash && (Accepted & PaymentMethods.Cash) != 0;
         }
 
-        private void CompleteSale(ShopCustomer c)
+        private void CompleteSale(ShopCustomer c, bool selfCheckout = false)
         {
+            c.PaidWith = selfCheckout ? PayChannel.SelfCheckout : c.CarriesCash && (Accepted & PaymentMethods.Cash) != 0 ? PayChannel.Cash : PayChannel.QrCode;
             _queue.Remove(c);
             _active.Remove(c);
             c.State = CustomerState.Paid;

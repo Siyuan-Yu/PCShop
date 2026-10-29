@@ -120,7 +120,7 @@ namespace PCShopSell.Core.Session
             if (blocker != null) { Fail(blocker); return null; }
             NpcDef boss = r.Boss;
             _staffDays[boss.Id] = Clock.Today.TotalDays;
-            AddRelation(boss.Id, StaffBossGain);
+            AddRelation(boss.Id, StaffBossGain + StaffTalk.BossBonus(StaffRapport(r.Greeter.Id)));
             ActivityDef like = boss.Likes == null ? null : Activities.Get(boss.Likes);
             string hint = like != null ? $"他爱{like.Name}，" : "";
             string text = $"{r.Greeter.Name}压低声音：“{boss.Name}啊？{hint}也爱收{boss.GiftName}。我帮你在他跟前提过你了。”";
@@ -142,6 +142,7 @@ namespace PCShopSell.Core.Session
             d.insiderDays = d.insiderIds.Select(k => _insiderDays[k]).ToArray();
             d.staffIds = _staffDays.Keys.ToArray();
             d.staffDays = d.staffIds.Select(k => _staffDays[k]).ToArray();
+            SaveStaffRapport(d);
         }
 
         private void RestoreTalk(SaveData d)
@@ -151,6 +152,7 @@ namespace PCShopSell.Core.Session
             ReadDict(_lifeDays, d.lifeDayIds, d.lifeDays);
             ReadDict(_insiderDays, d.insiderIds, d.insiderDays);
             ReadDict(_staffDays, d.staffIds, d.staffDays);
+            RestoreStaffRapport(d);
         }
     }
 }

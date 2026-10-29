@@ -49,7 +49,7 @@ namespace PCShopSell.Core.Session
     /// <summary>
     /// 家具城：东西随便挑进购物车，最后一起结算；结算时再决定怎么运。
     /// 能装多少看来时的出行方式（载具的格子，1 格 = 2 公斤，和背包、进货的配件共用）；
-    /// 装不下的可以叫货车（每辆 ¥120、最多装 200 公斤，买多了要多辆，明早送到家），也可以先寄存在店里，改天自己来搬（可以分好几趟，不过期）。
+    /// 装不下的可以叫货车（每辆 ¥120、最多装 200 公斤，买多了要多辆，早早送到家），也可以先寄存在店里，改天自己来搬（可以分好几趟，不过期）。
     /// </summary>
     public sealed partial class GameSession
     {
@@ -240,12 +240,25 @@ namespace PCShopSell.Core.Session
             return taken;
         }
 
+        public const string DeliverToShopFlag = "deliver_to_shop";
+
+        /// <summary>货车送货地址：true = 我的店，false = 家。</summary>
+        public bool DeliverToShop => Flags.Contains(DeliverToShopFlag);
+
+        public string DeliveryName => DeliverToShop ? "店里" : "家";
+
+        public void ToggleDeliveryAddress()
+        {
+            if (DeliverToShop) Flags.Remove(DeliverToShopFlag); else Flags.Add(DeliverToShopFlag);
+            Say("货车以后送到：" + DeliveryName + "。");
+        }
+
         /// <summary>把寄存的货全部叫货车拉回家要几辆。</summary>
         public int StashTrucksNeeded => _mallStash.Count == 0 ? 0 : TrucksNeeded(_mallStash);
 
         public Money StashTruckFee => FurnitureCatalog.TruckFee * StashTrucksNeeded;
 
-        /// <summary>寄存的货全部叫货车，明早送到家（运费另付）。</summary>
+        /// <summary>寄存的货全部叫货车，早早送到{DeliveryName}（运费另付）。</summary>
         public bool CallTruckForStash()
         {
             if (!AtMall) return Fail("要去家具城才能叫货车拉自己寄存的货。");
@@ -254,14 +267,14 @@ namespace PCShopSell.Core.Session
             Money fee = StashTruckFee;
             if (!Ledger.TryDebit(Clock.Today, "家具", fee, $"货车运费（寄存的货，{trucks} 辆）")) return Fail("钱不够。");
             foreach (MallCartLine l in _mallStash)
-                _parcels.Add(new Parcel { Kind = ParcelKind.Furniture, Id = l.Id, Count = l.Count, DueDay = Clock.Today.TotalDays + 1 });
+                _parcels.Add(new Parcel { Kind = ParcelKind.Furniture, Id = l.Id, Count = l.Count, DueDay = Clock.Today.TotalDays + 1, ToShop = DeliverToShop });
             int n = MallStashCount;
             _mallStash.Clear();
-            Say($"叫了 {trucks} 辆货车（{fee}），把寄存的 {n} 件明早送到家。");
+            Say($"叫了 {trucks} 辆货车（{fee}），把寄存的 {n} 件早早送到{DeliveryName}。");
             return true;
         }
 
-        /// <summary>结算购物车：付钱，自己带的放进背包，货车拉的明早送到家，清空购物车。</summary>
+        /// <summary>结算购物车：付钱，自己带的放进背包，货车拉的早早送到家，清空购物车。</summary>
         public bool CheckoutMall(MallCarry mode)
         {
             if (!AtMall) return Fail("要去家具城才能买。");
@@ -278,13 +291,13 @@ namespace PCShopSell.Core.Session
             foreach (MallCartLine l in plan.SelfItems) Backpack.AddFurniture(l.Id, l.Count);
             if (plan.SelfItems.Count > 0) ApplyCargoLimit();
             foreach (MallCartLine l in plan.TruckItems)
-                _parcels.Add(new Parcel { Kind = ParcelKind.Furniture, Id = l.Id, Count = l.Count, DueDay = Clock.Today.TotalDays + 1 });
+                _parcels.Add(new Parcel { Kind = ParcelKind.Furniture, Id = l.Id, Count = l.Count, DueDay = Clock.Today.TotalDays + 1, ToShop = DeliverToShop });
             foreach (MallCartLine l in plan.StashItems) AddStash(l.Id, l.Count);
             if (clearCart) _mallCart.Clear();
 
             var parts = new List<string>();
             if (plan.SelfCount > 0) parts.Add($"{plan.SelfCount} 件自己带走（{plan.SelfKg:0.#} 公斤，回家或回店里自动放进家具背包）");
-            if (plan.TruckCount > 0) parts.Add($"{plan.TruckCount} 件叫了 {plan.Trucks} 辆货车（{plan.TruckFees}），明早送到家");
+            if (plan.TruckCount > 0) parts.Add($"{plan.TruckCount} 件叫了 {plan.Trucks} 辆货车（{plan.TruckFees}），早早送到{DeliveryName}");
             if (plan.StashCount > 0) parts.Add($"{plan.StashCount} 件寄存在店里，改天自己来搬");
             Say($"买了 {what}。" + string.Join("；", parts) + "。");
             return true;
@@ -299,7 +312,7 @@ namespace PCShopSell.Core.Session
             return CheckoutLines(new List<MallCartLine> { new MallCartLine { Id = id, Count = 1 } }, MallCarry.Self, false);
         }
 
-        /// <summary>直接买一件叫货车拉（运费 ¥120，明早送到家）。</summary>
+        /// <summary>直接买一件叫货车拉（运费 ¥120，早早送到家）。</summary>
         public bool BuyFurnitureByTruck(string id)
         {
             FurnitureDef d = FurnitureCatalog.Get(id);

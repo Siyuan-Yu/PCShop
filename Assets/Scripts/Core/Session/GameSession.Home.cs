@@ -23,6 +23,9 @@ namespace PCShopSell.Core.Session
         public string Id;
         public int Count;
         public int DueDay;
+
+        /// <summary>货车送到店里（而不是家里）。</summary>
+        public bool ToShop;
     }
 
     /// <summary>
@@ -188,7 +191,7 @@ namespace PCShopSell.Core.Session
                         what = $"大米 {RiceBagJin * p.Count:0} 斤";
                         break;
                 }
-                Popup?.Invoke("快递到了", "放在门口：" + what);
+                Popup?.Invoke(p.ToShop ? "货车到店里了" : "快递到了", (p.ToShop ? "卸在店门口，工人已经帮你搬进仓库：" : "放在门口：") + what);
             }
         }
 
@@ -415,7 +418,7 @@ namespace PCShopSell.Core.Session
                 stockCounts = _furnStock.Where(kv => kv.Value > 0).Select(kv => kv.Value).ToArray(),
                 homeLayout = ToSave(_homeLayout),
                 shopLayout = ToSave(_shopLayout),
-                parcels = _parcels.Select(p => new SaveParcel { kind = (int)p.Kind, id = p.Id, count = p.Count, dueDay = p.DueDay }).ToArray(),
+                parcels = _parcels.Select(p => new SaveParcel { kind = (int)p.Kind, id = p.Id, count = p.Count, dueDay = p.DueDay, toShop = p.ToShop }).ToArray(),
                 riceJin = Pantry.RiceJin,
                 ingredients = ToSave(Pantry.Ingredient),
                 cooked = ToSave(Pantry.Cooked),
@@ -484,7 +487,7 @@ namespace PCShopSell.Core.Session
             _homeLayout.AddRange(FromSave(h.homeLayout));
             _shopLayout.AddRange(FromSave(h.shopLayout));
             foreach (SaveParcel p in h.parcels ?? Array.Empty<SaveParcel>())
-                _parcels.Add(new Parcel { Kind = (ParcelKind)p.kind, Id = p.id, Count = p.count, DueDay = p.dueDay });
+                _parcels.Add(new Parcel { Kind = (ParcelKind)p.kind, Id = p.id, Count = p.count, DueDay = p.dueDay, ToShop = p.toShop });
             Pantry.RiceJin = h.riceJin;
             FromSave(h.ingredients, Pantry.Ingredient);
             FromSave(h.cooked, Pantry.Cooked);

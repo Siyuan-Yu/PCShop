@@ -278,6 +278,29 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void Mall_TruckCanDeliverToTheShop_AndSurvivesSave()
+        {
+            GameSession s = Make();
+            GameSessionTests.Teleport(s, "mall");
+            Assert.IsFalse(s.DeliverToShop);
+            s.ToggleDeliveryAddress();
+            Assert.IsTrue(s.DeliverToShop);
+            Assert.AreEqual("店里", s.DeliveryName);
+            var popups = new System.Collections.Generic.List<string>();
+            s.Popup += (title, body) => popups.Add(title);
+            s.MallCartAdd("sofa");
+            Assert.IsTrue(s.CheckoutMall(MallCarry.Truck));
+            Assert.IsTrue(s.Parcels.Any(p => p.ToShop));
+            GameSession l = GameSession.Load(s.City, s.CreateSave());
+            Assert.IsTrue(l.DeliverToShop);
+            Assert.IsTrue(l.Parcels.Any(p => p.ToShop), "货车送店里的标记存档保留");
+            int day = s.Clock.Today.TotalDays + 2;
+            while (s.Clock.Today.TotalDays < day) s.AdvanceClock(60);
+            Assert.AreEqual(1, s.FurnitureInStock("sofa"));
+            CollectionAssert.Contains(popups, "货车到店里了");
+        }
+
+        [Test]
         public void Mall_BuyingTooMuch_NeedsSeveralTrucks()
         {
             GameSession s = Make(200000);

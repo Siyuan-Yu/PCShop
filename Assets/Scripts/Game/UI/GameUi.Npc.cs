@@ -148,7 +148,16 @@ namespace PCShopSell.Game.UI
             if (!greeterIsTop)
             {
                 OrgLink(chart.transform);
-                OrgNode(chart.transform, greeter.Id, greeter.Name, greeter.Role.EndsWith("导购") ? "导购" : "店员", false, false, () => OpenStaffDialogue(greeter, r, p, w));
+                RectTransform clerks = Ui.Row(chart.transform, 104, 0);
+                clerks.GetComponent<HorizontalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
+                var tier = new List<StaffDef> { greeter };
+                tier.AddRange(r.Others);
+                foreach (StaffDef member in tier)
+                {
+                    StaffDef m = member;
+                    string title = m.Role.EndsWith("导购") ? "导购" : m.Role.EndsWith("学徒") ? "学徒" : m.Role.EndsWith("员") && m != greeter ? m.Role.Substring(m.Role.Length - 3) : "店员";
+                    OrgNodeIn(clerks, m.Id, m.Name, title, false, false, () => OpenStaffDialogue(m, r, p, w));
+                }
             }
             notes.Add("<color=#9AA3AD>点头像和他说话</color>");
 
@@ -167,6 +176,11 @@ namespace PCShopSell.Game.UI
         {
             RectTransform row = Ui.Row(parent, 104, 0);
             row.GetComponent<HorizontalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
+            OrgNodeIn(row, portraitId, name, title, top, locked, onClick);
+        }
+
+        private void OrgNodeIn(Transform row, string portraitId, string name, string title, bool top, bool locked, System.Action onClick)
+        {
             RectTransform col = Ui.Rect(row, "Node");
             Ui.VList(col, 1, 0);
             Ui.Size(col, 72, -1, 0);
@@ -233,10 +247,10 @@ namespace PCShopSell.Game.UI
         /// 对话框：上面左边是人物头像、右边是他说的话；下面一列居中的选项，点一个选项他就回一句；不够条件的选项灰着写明原因。
         /// </summary>
         private void OpenDialogue(string portraitId, string name, string role, NpcDef npc, string greeting, int optionCount,
-            System.Func<TalkCtx, List<TalkOpt>> makeOptions, string firstReply = null)
+            System.Func<TalkCtx, List<TalkOpt>> makeOptions, string firstReply = null, string rapportId = null)
         {
             var ctx = new TalkCtx { Reply = firstReply };
-            float height = 440 + 46 * optionCount + (npc != null ? 66 : 0);
+            float height = 440 + 46 * optionCount + (npc != null ? 66 : rapportId != null ? 36 : 0);
             OpenWindow(name + "　" + role, 700, height, w =>
             {
                 ctx.W = w;
@@ -253,6 +267,14 @@ namespace PCShopSell.Game.UI
                     RectTransform relRow = Ui.Row(say, 26);
                     Ui.Size(Ui.Label(relRow, $"{Npcs.LevelName(rel)} {rel}", 17, TextAnchor.MiddleLeft, Ui.Good), 110);
                     Ui.Bar(relRow, rel / 100f, Ui.Accent, 200, 14);
+                    bubbleHeight -= 32;
+                }
+                if (npc == null && rapportId != null)
+                {
+                    int rap = S.StaffRapport(rapportId);
+                    RectTransform relRow = Ui.Row(say, 26);
+                    Ui.Size(Ui.Label(relRow, $"{StaffTalk.LevelName(rap)} {rap}", 17, TextAnchor.MiddleLeft, Ui.Good), 110);
+                    Ui.Bar(relRow, rap / 100f, Ui.Accent, 200, 14);
                     bubbleHeight -= 32;
                 }
                 Image bubble = Ui.Panel(say, "Bubble", new Color(0.16f, 0.18f, 0.22f, 1f));
@@ -293,20 +315,42 @@ namespace PCShopSell.Game.UI
         /// <summary>和店员（或直接接待的小店老板）说话。</summary>
         private void OpenStaffDialogue(StaffDef staff, PlaceRoster roster, Place place, Window parent)
         {
-            int chats = 0;
             string greeting = staff.LineFor(S.Clock.Today.TotalDays);
             bool asksBoss = roster.BossNpcId != null && staff == roster.Greeter;
-            int count = 2 + (asksBoss ? 1 : 0);
+            int count = 4 + (asksBoss ? 1 : 0);
             OpenDialogue(staff.Id, staff.Name, staff.Role, null, greeting, count, ctx =>
             {
                 var list = new List<TalkOpt>();
                 list.Add(new TalkOpt
                 {
-                    Label = "随便聊聊",
+                    Label = "随便聊聊（8 分钟）",
+                    Blocker = S.StaffChatBlocker(staff.Id),
                     Act = () =>
                     {
-                        chats++;
-                        ctx.Reply = staff.Name + "：“" + staff.LineFor(S.Clock.Today.TotalDays + chats) + "”";
+                        string r = S.StaffChat(staff);
+                        if (r != null) ctx.Reply = r;
+                        ctx.W.Rebuild();
+                    },
+                });
+                list.Add(new TalkOpt
+                {
+                    Label = "请他喝杯饮料（¥" + StaffTalk.GiftCostYuan + "）",
+                    Blocker = S.StaffGiftBlocker(staff.Id),
+                    Hot = true,
+                    Act = () =>
+                    {
+                        if (S.GiveStaffGift(staff)) ctx.Reply = staff.Name + "接过饮料笑了：“哎呀，太客气了。”";
+                        ctx.W.Rebuild();
+                    },
+                });
+                list.Add(new TalkOpt
+                {
+                    Label = "听他讲讲自己的事（30 分钟）",
+                    Blocker = S.StaffStoryBlocker(staff.Id),
+                    Act = () =>
+                    {
+                        string r = S.StaffStory(staff);
+                        if (r != null) ctx.Reply = r;
                         ctx.W.Rebuild();
                     },
                 });
@@ -327,7 +371,7 @@ namespace PCShopSell.Game.UI
                 }
                 list.Add(new TalkOpt { Label = "看看货", Hot = true, Act = () => ctx.W.Close() });
                 return list;
-            });
+            }, null, staff.Id);
         }
 
         /// <summary>和某个有交情的人交谈（档口老板、阿杰、熟人）。stall 不为空表示正在这个档口里，可以砍价；parent 是背后的窗口，操作后要刷新。</summary>

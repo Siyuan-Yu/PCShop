@@ -96,6 +96,7 @@ namespace PCShopSell.Game
             if (Session != null)
             {
                 Session.Notice -= OnNotice;
+                Session.Failed -= OnFailed;
                 Session.Popup -= OnPopup;
                 Session.EventRaised -= OnEventRaised;
                 Session.ShopExpanded -= OnShopExpanded;
@@ -109,6 +110,7 @@ namespace PCShopSell.Game
 
             Session = s;
             s.Notice += OnNotice;
+            s.Failed += OnFailed;
             s.Popup += OnPopup;
             s.EventRaised += OnEventRaised;
             s.ShopExpanded += OnShopExpanded;
@@ -440,6 +442,13 @@ namespace PCShopSell.Game
                     label = $"给顾客结账（{Session.PlayerShop.Queue.Count} 人排队）";
                     return true;
                 }
+                if (Interior.NearBench)
+                {
+                    int n = Session.PlayerShop.Orders.Count;
+                    world = Interior.NearBenchWorld;
+                    label = n > 0 ? $"装机台（{n} 个装机单）" : "装机台（暂时没有装机单）";
+                    return true;
+                }
                 if (Interior.NearbyShelf == null)
                 {
                     if (!Interior.NearDisplay) return false;
@@ -466,6 +475,11 @@ namespace PCShopSell.Game
         /// <summary>店里走到货架前按 F：看这个货架上摆的什么、还剩多少。</summary>
         private void ShelfInteract()
         {
+            if (Interior.NearBench)
+            {
+                Ui.OpenBenchWindow();
+                return;
+            }
             if (Interior.NearbyShelf == null)
             {
                 if (Interior.NearDisplay)
@@ -537,6 +551,8 @@ namespace PCShopSell.Game
         // ---------- 会话事件 ----------
 
         private void OnNotice(string m) => Ui.Toast(m);
+
+        private void OnFailed(string m) => SoundFx.Play(Sfx.Error);
 
         private void OnEventRaised(EventDef def) => Ui.ShowEvent(def);
 

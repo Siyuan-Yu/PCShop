@@ -102,6 +102,16 @@ namespace PCShopSell.Core.Session
         public int[] insiderDays;
         public string[] staffIds;
         public int[] staffDays;
+        public string[] rapIds;
+        public double[] rapValues;
+        public string[] rapChatIds;
+        public int[] rapChatDays;
+        public string[] rapGiftIds;
+        public int[] rapGiftDays;
+        public string[] rapStoryIds;
+        public int[] rapStoryCounts;
+        public string[] rapStoryDayIds;
+        public int[] rapStoryDays;
         public SaveSocial social;
     }
 
@@ -267,6 +277,7 @@ namespace PCShopSell.Core.Session
         public string id;
         public int count;
         public int dueDay;
+        public bool toShop;
     }
 
     [Serializable]

@@ -399,8 +399,12 @@ namespace PCShopSell.Core.Session
             return from.TotalMinutes <= mark && mark < to.TotalMinutes;
         }
 
+        /// <summary>操作失败（界面据此出提示音）。</summary>
+        public event Action<string> Failed;
+
         private bool Fail(string message)
         {
+            Failed?.Invoke(message);
             Notice?.Invoke(message);
             return false;
         }

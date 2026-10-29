@@ -452,5 +452,83 @@ namespace PCShopSell.Tests
             GameSession l = GameSession.Load(s.City, s.CreateSave());
             Assert.AreEqual("今天问过了", l.StaffBossBlocker(r));
         }
+
+        // ---------- 店员的熟络度 ----------
+
+        [Test]
+        public void StaffChat_OncePerDay_RaisesRapportUpToCap()
+        {
+            GameSession s = Make();
+            StaffDef c = Rosters.CpuClerk;
+            Assert.AreEqual(0, s.StaffRapport(c.Id));
+            StringAssert.Contains("小慧", s.StaffChat(c));
+            Assert.AreEqual(1, s.StaffRapport(c.Id));
+            Assert.AreEqual("今天聊过了", s.StaffChatBlocker(c.Id));
+            Assert.IsNull(s.StaffChat(c));
+            for (int i = 0; i < 40; i++) { s.AdvanceClock(24 * 60); s.StaffChat(c); }
+            Assert.LessOrEqual(s.StaffRapport(c.Id), StaffTalk.ChatMaxRapport + 1, "光闲聊涨到 40 就停");
+        }
+
+        [Test]
+        public void StaffGift_CostsMoney_AndHasCooldown()
+        {
+            GameSession s = Make(cash: 1000);
+            StaffDef c = Rosters.CpuClerk;
+            Money before = s.Ledger.Balance;
+            Assert.IsTrue(s.GiveStaffGift(c));
+            Assert.Less(s.Ledger.Balance.Cents, before.Cents);
+            Assert.GreaterOrEqual(s.StaffRapport(c.Id), 4);
+            Assert.IsNotNull(s.StaffGiftBlocker(c.Id));
+            Assert.IsFalse(s.GiveStaffGift(c));
+            s.AdvanceClock(StaffTalk.GiftCooldownDays * 24 * 60);
+            Assert.IsNull(s.StaffGiftBlocker(c.Id));
+        }
+
+        [Test]
+        public void StaffStories_UnlockWithRapport_AndEveryStaffHasThree()
+        {
+            foreach (StaffDef st in Rosters.All)
+            {
+                Assert.AreEqual(3, Rosters.StoriesOf(st.Id)?.Length, st.Id);
+                Assert.AreSame(st, Rosters.Get(st.Id));
+            }
+            GameSession s = Make(cash: 100000);
+            StaffDef c = Rosters.GpuClerk;
+            StringAssert.Contains("解锁", s.StaffStoryBlocker(c.Id));
+            for (int i = 0; i < 12; i++) { s.AdvanceClock(24 * 60); s.StaffChat(c); s.GiveStaffGift(c); }
+            Assert.GreaterOrEqual(s.StaffRapport(c.Id), StaffTalk.StoryUnlock[0]);
+            Assert.IsNull(s.StaffStoryBlocker(c.Id));
+            Assert.IsNotEmpty(s.StaffStory(c));
+            Assert.AreEqual(1, s.StaffStoriesHeard(c.Id));
+            Assert.AreEqual("今天聊过了", s.StaffStoryBlocker(c.Id));
+        }
+
+        [Test]
+        public void StaffRapport_SurvivesSave_AndMakesBossTalkWorthMore()
+        {
+            GameSession s = Make(cash: 100000);
+            PlaceRoster r = Rosters.For(s.City.GetPlace(Stall));
+            s.Meet(Npcs.Li, 10);
+            for (int i = 0; i < 25; i++) { s.AdvanceClock(24 * 60); s.StaffChat(r.Greeter); s.GiveStaffGift(r.Greeter); }
+            int rapport = s.StaffRapport(r.Greeter.Id);
+            Assert.GreaterOrEqual(rapport, 30);
+            GameSession l = GameSession.Load(s.City, s.CreateSave());
+            Assert.AreEqual(rapport, l.StaffRapport(r.Greeter.Id));
+            Assert.AreEqual("今天聊过了", l.StaffChatBlocker(r.Greeter.Id));
+
+            int before = s.Relation(Npcs.Li);
+            s.AdvanceClock(24 * 60);
+            s.AskStaffAboutBoss(r);
+            Assert.GreaterOrEqual(s.Relation(Npcs.Li) - before, 1, "熟络之后替你说话更有分量");
+        }
+
+        [Test]
+        public void Roster_ExtraStaffShareTheTier()
+        {
+            Assert.AreEqual(1, Rosters.For(MakePlace(Stalls.Gpu)).Others.Length);
+            Assert.AreEqual(0, Rosters.For(MakePlace(Stalls.Cpu)).Others.Length);
+        }
+
+        private static Place MakePlace(string id) => new Place(id, id, PlaceKind.Wholesaler, "mk");
     }
 }

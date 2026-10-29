@@ -885,7 +885,7 @@ namespace PCShopSell.Game.UI
                 S.TakeStashWhatFits();
                 w.Rebuild();
             }, 17, Ui.ButtonHot), 170);
-            Ui.Size(Ui.Button(bar, $"全部叫货车送回家（{S.StashTruckFee}，{S.StashTrucksNeeded} 辆）", () =>
+            Ui.Size(Ui.Button(bar, $"全部叫货车送到{S.DeliveryName}（{S.StashTruckFee}，{S.StashTrucksNeeded} 辆）", () =>
             {
                 S.CallTruckForStash();
                 w.Rebuild();
@@ -921,7 +921,7 @@ namespace PCShopSell.Game.UI
         /// </summary>
         private void OpenMallCheckout(Window parent)
         {
-            OpenWindow("结算", 800, 800, w =>
+            OpenWindow("结算", 800, 840, w =>
             {
                 VehicleSpec v = S.CurrentVehicle;
                 Line(w.Content, $"现金 {S.Ledger.Balance}　　来时的载具：{v.Name}（{v.CargoCapacity:0.#} 格），还空 {S.FreeKg / Backpack.KgPerSpace:0.#} 格　<size=14>灰=已装　黄=这次装上　暗=空</size>", 16, Ui.Dim);
@@ -933,6 +933,9 @@ namespace PCShopSell.Game.UI
                     FurnitureDef d = FurnitureCatalog.Get(l.Id);
                     Line(items, $"{d.Name} ×{l.Count}　　{d.Price * l.Count}　　占 {d.WeightKg * l.Count / Backpack.KgPerSpace:0.#} 格（{d.WeightKg * l.Count:0.#} 公斤）", 17);
                 }
+                RectTransform addr = Ui.Row(w.Content, 38, 8);
+                Ui.Size(Ui.Label(addr, $"货车送货地址：<color=#E3B347>{S.DeliveryName}</color>　<size=14><color=#A8B0BA>（买的家具两边都能摆，送到店里省得自己搬）</color></size>", 17, TextAnchor.MiddleLeft), -1, -1, 1);
+                Ui.Size(Ui.Button(addr, "改送：" + (S.DeliverToShop ? "家" : "我的店"), () => { S.ToggleDeliveryAddress(); w.Rebuild(); }, 17), 150);
                 Line(w.Content, $"合计 {S.MallCartGoods}　共 {S.MallCartKg / Backpack.KgPerSpace:0.#} 格　这次能装上 {fit.SelfCount}/{S.MallCartCount} 件", 20, Ui.Accent);
 
                 CheckoutOption(w, parent, MallCarry.Self, "全部装进载具",
@@ -940,9 +943,9 @@ namespace PCShopSell.Game.UI
                 CheckoutOption(w, parent, MallCarry.SplitStay, "能装的装走，剩下的寄存在店里",
                     plan => $"装走 {plan.SelfCount} 件，其余 {plan.StashCount} 件寄存在店里（不过期、不收费），改天自己来搬，分几趟都行。付 {plan.Total}。");
                 CheckoutOption(w, parent, MallCarry.Split, "能装的装走，剩下的叫货车",
-                    plan => $"装走 {plan.SelfCount} 件，其余 {plan.TruckCount} 件叫 {plan.Trucks} 辆货车（运费 {plan.TruckFees}），明早送到家。付 {plan.Total}。");
+                    plan => $"装走 {plan.SelfCount} 件，其余 {plan.TruckCount} 件叫 {plan.Trucks} 辆货车（运费 {plan.TruckFees}），明早送到{S.DeliveryName}。付 {plan.Total}。");
                 CheckoutOption(w, parent, MallCarry.Truck, "全部叫货车",
-                    plan => $"{plan.TruckKg:0.#} 公斤，要 {plan.Trucks} 辆货车（每辆 ¥120、最多 {GameSession.TruckCapacityKg:0} 公斤），明早送到家。付 {plan.Total}。");
+                    plan => $"{plan.TruckKg:0.#} 公斤，要 {plan.Trucks} 辆货车（每辆 ¥120、最多 {GameSession.TruckCapacityKg:0} 公斤），明早送到{S.DeliveryName}。付 {plan.Total}。");
                 CheckoutOption(w, parent, MallCarry.Stay, "先全部寄存在店里",
                     plan => $"{plan.StashCount} 件都先放店里，之后自己来搬（或到时再叫货车）。付 {plan.Total}。");
 
