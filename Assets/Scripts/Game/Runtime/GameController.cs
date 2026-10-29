@@ -163,7 +163,7 @@ namespace PCShopSell.Game
                 Ui.CloseDock();
                 Session.Leave();
             }
-            if (Session.Trip == null && Session.PlayerNodeId == p.NodeId)
+            if (Session.Trip == null && !Session.OffNode && Session.PlayerNodeId == p.NodeId)
             {
                 EnterPlace(p);
                 return;
@@ -193,6 +193,7 @@ namespace PCShopSell.Game
             if (!_bootstrapped || Session == null) return;
             float dt = Time.unscaledDeltaTime;
             HandleKeys();
+            HandleMovement(dt);
             if (!Ui.AnyModalOpen) HandleClicks();
 
             Session.Tick(dt);
@@ -264,6 +265,75 @@ namespace PCShopSell.Game
             if (Input.GetKeyDown(KeyCode.Alpha3)) Session.Time.SetSpeed(4);
             if (Input.GetKeyDown(KeyCode.Alpha4)) Session.Time.SetSpeed(8);
             if (!GameUi.PointerOverUi) _rig.Zoom(Input.mouseScrollDelta.y);
+            if (Input.GetKeyDown(KeyCode.E) && !InInterior && !Ui.AnyModalOpen && !Session.IsGameOver) TryEnterNearby();
+        }
+
+        // ---------- WASD 走路 ----------
+
+        private bool _taxiHinted;
+
+        /// <summary>WASD / 方向键。按屏幕方向走：W 是屏幕往上。街上沿路网走，店里在店内走。</summary>
+        private void HandleMovement(float dt)
+        {
+            if (Ui.AnyModalOpen || Session.IsGameOver)
+            {
+                Session.SetSteer(0, 0);
+                return;
+            }
+            float h = (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow) ? 1f : 0f) - (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow) ? 1f : 0f);
+            float v = (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow) ? 1f : 0f) - (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow) ? 1f : 0f);
+            if (Mathf.Abs(h) < 0.01f && Mathf.Abs(v) < 0.01f)
+            {
+                Session.SetSteer(0, 0);
+                return;
+            }
+
+            Vector3 fwd = Cam.transform.forward;
+            fwd.y = 0;
+            fwd.Normalize();
+            Vector3 right = Cam.transform.right;
+            right.y = 0;
+            right.Normalize();
+            Vector3 dir = fwd * v + right * h;
+
+            if (InInterior)
+            {
+                Session.SetSteer(0, 0);
+                Interior.MoveOwner(dir, dt);
+                return;
+            }
+
+            if (!Session.CanSteer)
+            {
+                if (!_taxiHinted)
+                {
+                    _taxiHinted = true;
+                    Ui.Toast("打车由司机开：点下方“去…”按钮。想自己走，换成步行、小电驴或三轮车。");
+                }
+                Session.SetSteer(0, 0);
+                return;
+            }
+
+            if (Session.CurrentPlace != null)
+            {
+                Ui.CloseDock();
+                Session.Leave();
+            }
+            _pendingEnter = null;
+            Session.SetSteer(dir.x, dir.z);
+        }
+
+        private void TryEnterNearby()
+        {
+            Place p = Session.NearbyPlace;
+            if (p == null)
+            {
+                Ui.Toast("附近没有能进的地方，走到门口再按 E。");
+                return;
+            }
+            Session.SetSteer(0, 0);
+            if (Session.Trip != null) Session.StopTrip();
+            if (Session.EnterNearby()) Ui.OnEnteredPlace(p);
         }
 
         private void HandleClicks()
@@ -280,23 +350,7 @@ namespace PCShopSell.Game
                 return;
             }
 
-            var pm = hit.collider.GetComponent<PlaceMarker>();
-            if (pm != null)
-            {
-                GoToPlace(City.GetPlace(pm.PlaceId));
-                return;
-            }
-            if (hit.collider.GetComponent<GroundMarker>() != null)
-            {
-                if (Session.CurrentPlace != null)
-                {
-                    Ui.CloseDock();
-                    Session.Leave();
-                }
-                string node = City.NearestNode(hit.point.x, hit.point.z);
-                _pendingEnter = null;
-                Session.GoTo(node);
-            }
+            // 街上不再点击移动：WASD 走路，E 进门。
         }
 
         // ---------- 会话事件 ----------

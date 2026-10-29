@@ -64,6 +64,7 @@ namespace PCShopSell.Game.Runtime
         private readonly List<Vector3> _path = new List<Vector3>();
         private bool _wasOn;
         private readonly List<GameObject> _buildGlow = new List<GameObject>();
+        private readonly List<Rect> _blockers = new List<Rect>();
 
         /// <summary>顾客 ID → 世界坐标头顶位置（给 UI 标签用）。</summary>
         public IEnumerable<KeyValuePair<int, Vector3>> QueueHeads()
@@ -160,6 +161,10 @@ namespace PCShopSell.Game.Runtime
                 ShopFixtures.BuildPcDesk(_root, new Vector3(tb.x, 0, tb.y), deskNo++);
                 _shelfSpots.Add(Origin + new Vector3(tb.x, 0, tb.y - 1.0f));
             }
+            _blockers.Add(new Rect(0.5f, CounterZ - CounterLength / 2 - 0.15f, 0.95f, CounterLength + 0.3f));
+            _blockers.Add(new Rect(0f, d - 1.7f, 0.9f, 1.6f));
+            foreach (Vector2 tb in tables) _blockers.Add(new Rect(tb.x - 1.4f, tb.y - 0.6f, 2.8f, 1.2f));
+
             _owner = Prims.Figure(_root, "Owner", new Color(0.95f, 0.55f, 0.15f), new Color(0.95f, 0.8f, 0.65f), 1.05f);
             _owner.transform.localPosition = new Vector3(0.35f, 0, d * 0.55f);
             _owner.transform.localRotation = Quaternion.LookRotation(Vector3.right);
@@ -209,6 +214,38 @@ namespace PCShopSell.Game.Runtime
                 else { _path.Add(new Vector3(1.7f, 0, zLow)); _path.Add(new Vector3(0.35f, 0, zLow)); }
             }
             _path.Add(t);
+        }
+
+        /// <summary>WASD：按世界方向走一步，会被柜台、装机台、展示桌挡住（沿墙滑动）。</summary>
+        public void MoveOwner(Vector3 worldDir, float realDt)
+        {
+            Vector3 d = new Vector3(worldDir.x, 0, worldDir.z);
+            if (d.sqrMagnitude < 1e-4f) return;
+            d.Normalize();
+            _path.Clear();
+            Transform tr = _owner.transform;
+            Vector3 p = tr.localPosition;
+            float step = 3.2f * realDt;
+            Vector3 tx = p + new Vector3(d.x * step, 0, 0);
+            if (CanStand(tx, p)) p = tx;
+            Vector3 tz = p + new Vector3(0, 0, d.z * step);
+            if (CanStand(tz, p)) p = tz;
+            tr.localPosition = p;
+            tr.localRotation = Quaternion.Slerp(tr.localRotation, Quaternion.LookRotation(d), 0.35f);
+        }
+
+        private bool CanStand(Vector3 to, Vector3 from)
+        {
+            if (to.x < 0.3f || to.x > Width - 0.9f || to.z < 0.4f || to.z > Depth - 1.2f) return false;
+            if (!Blocked(to)) return true;
+            return Blocked(from); // 已经卡在里面时允许走出来
+        }
+
+        private bool Blocked(Vector3 p)
+        {
+            foreach (Rect r in _blockers)
+                if (r.Contains(new Vector2(p.x, p.z))) return true;
+            return false;
         }
 
         /// <summary>回到柜台后面。</summary>

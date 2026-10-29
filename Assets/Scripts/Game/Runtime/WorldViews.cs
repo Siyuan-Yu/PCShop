@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.World;
 using UnityEngine;
@@ -97,9 +97,9 @@ namespace PCShopSell.Game.Runtime
 
             Vector3 p = StreetWorldBuilder.ToWorld(s.PlayerPosition);
             _root.transform.position = p;
-            if (s.Trip != null)
+            if (s.IsWalking)
             {
-                var dir = new Vector3((float)s.Trip.DirX, 0, (float)s.Trip.DirY);
+                var dir = s.Trip != null ? new Vector3((float)s.Trip.DirX, 0, (float)s.Trip.DirY) : new Vector3((float)s.HeadingX, 0, (float)s.HeadingY);
                 if (dir.sqrMagnitude > 0.01f)
                     _root.transform.rotation = Quaternion.Slerp(_root.transform.rotation, Quaternion.LookRotation(dir), 1f - Mathf.Exp(-dt * 12f));
                 _bob += dt * 12f;
@@ -111,7 +111,7 @@ namespace PCShopSell.Game.Runtime
             _taxi.SetActive(v == VehicleKind.Taxi && s.Trip != null);
             _figure.SetActive(!(v == VehicleKind.Taxi && s.Trip != null));
             float lift = v == VehicleKind.EBike || v == VehicleKind.Tricycle ? 0.35f : 0f;
-            float bob = s.Trip != null && v == VehicleKind.Walk ? Mathf.Abs(Mathf.Sin(_bob)) * 0.12f : 0f;
+            float bob = s.IsWalking && v == VehicleKind.Walk ? Mathf.Abs(Mathf.Sin(_bob)) * 0.12f : 0f;
             _figure.transform.localPosition = new Vector3(0, lift + bob, 0);
         }
     }

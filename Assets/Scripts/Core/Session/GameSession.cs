@@ -118,20 +118,26 @@ namespace PCShopSell.Core.Session
         public VehicleSpec CurrentVehicle => Vehicles.Get(Vehicle);
 
         /// <summary>玩家的画面坐标。</summary>
-        public MapPoint PlayerPosition => Trip != null ? Trip.Position : City.ViewPosition(PlayerNodeId);
+        public MapPoint PlayerPosition => Trip != null ? Trip.Position : OffNode ? PositionOnEdge : City.ViewPosition(PlayerNodeId);
 
         public bool InPlayerShop => CurrentPlace == PlayerShopPlace;
 
         /// <summary>按真实时间推进世界：出行中按路程推进时钟，否则按倍速推进。返回推进的整分钟数。</summary>
         public int Tick(double realSeconds)
         {
+            _manualMoving = false;
             if (IsGameOver || !Time.IsRunning || realSeconds <= 0) return 0;
             double scaled = Math.Min(realSeconds, TimeController.MaxTickSeconds) * Time.Speed;
 
             int minutes;
+            if (SteerActive && Trip != null) BreakTripToEdge();
             if (Trip != null)
             {
                 minutes = StepTrip(scaled);
+            }
+            else if (SteerActive && StepManual(scaled, out minutes))
+            {
+                _manualMoving = true;
             }
             else
             {
@@ -158,6 +164,7 @@ namespace PCShopSell.Core.Session
         {
             if (place == null) throw new ArgumentNullException(nameof(place));
             if (Trip != null) return Fail("还在路上。");
+            if (OffNode) return Fail("还没走到门口。");
             if (place.NodeId != PlayerNodeId)
                 throw new InvalidOperationException($"玩家不在 {place.Name} 门口。");
             CurrentPlace = place;
@@ -186,6 +193,7 @@ namespace PCShopSell.Core.Session
         {
             City.Map.GetNode(nodeId);
             PlayerNodeId = nodeId;
+            ClearEdge();
         }
 
         public bool IsWholesalerOpen => IsOpenWeekday(WholesalerOpenMinute, WholesalerCloseMinute);

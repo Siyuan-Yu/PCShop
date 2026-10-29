@@ -337,6 +337,27 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Shot("vs1_18_tips");
             _game.Ui.CloseAllWindows();
+
+            // WASD 走路：在商业街上沿路网走，靠近店门时提示按 E
+            g.Leave();
+            g.SetVehicle(PCShopSell.Core.Session.VehicleKind.Walk);
+            g.ArriveAtNode("e05");
+            g.Clock.Restore(g.Clock.Today, 14 * 60);
+            bool walked = false;
+            foreach (var dir in new[] { (1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0) })
+            {
+                g.SetSteer(dir.Item1, dir.Item2);
+                for (int i = 0; i < 30; i++) Frame(0.05f);
+                if (g.PlayerNodeId != "e05" || g.OffNode) { walked = true; break; }
+            }
+            g.SetSteer(0, 0);
+            Check(walked, "WASD 能在街上走起来");
+            for (int i = 0; i < 10; i++) Frame(0.05f);
+            Shot("vs1_19_wasd_street");
+            g.ArriveAtNode("e06");
+            Frame(0.05f);
+            Check(g.NearbyPlace != null, "走到门口附近能进门");
+            Shot("vs1_20_press_e");
         }
 
         private static void Teleport(GameSession s, string placeId)

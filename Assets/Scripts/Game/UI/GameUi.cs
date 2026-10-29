@@ -145,6 +145,7 @@ namespace PCShopSell.Game.UI
                 _vehicleButtons.Add((b, kind));
             }
             _cargoText = Ui.Size(Ui.Label(brow, "", 17), 170);
+            Ui.Size(Ui.Label(brow, "快捷前往：", 17), 90);
             Ui.Size(Ui.Button(brow, "去我的店", () => _ctrl.GoToPlace(S.PlayerShopPlace), 17, Ui.ButtonHot), 100);
             Ui.Size(Ui.Button(brow, "回家", () => _ctrl.GoToPlace(S.Home), 17), 70);
             Ui.Size(Ui.Button(brow, "电子市场", () => _ctrl.GoToPlace(S.City.GetPlace("stall_cpu")), 17), 100);
@@ -185,9 +186,11 @@ namespace PCShopSell.Game.UI
             _placeText.text = where + "   " + shopState;
 
             if (S.IsGameOver) _hintText.text = "游戏结束：" + S.GameOverReason;
-            else if (_ctrl.InInterior) _hintText.text = "点击头顶有黄球的顾客结账 · 右侧面板管理店铺";
-            else if (S.Trip != null) _hintText.text = $"约 {S.Trip.EstimatedMinutes} 分钟路程 · 可以随时点别处改道";
-            else _hintText.text = "点击地面行走 · 点击建筑或名牌前往并进入 · 滚轮缩放 · 空格暂停";
+            else if (_ctrl.InInterior) _hintText.text = "WASD 在店里走动，点地板也行 · 点击头顶有黄球的顾客结账 · 右侧面板管理店铺";
+            else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimatedMinutes} 分钟 · 按 WASD 随时接管";
+            else if (S.NearbyPlace != null) _hintText.text = $"<color=#FFD54A>按 E 进入 {S.NearbyPlace.Name}</color>";
+            else if (S.CurrentPlace != null) _hintText.text = "按 WASD 离开 · 空格暂停";
+            else _hintText.text = "WASD 走路（沿街道） · 走到门口按 E 进入 · 滚轮缩放 · 空格暂停 · 下方按钮可快捷前往";
 
             _chaseText.gameObject.SetActive(S.Police.AnyChasing && S.CurrentPlace == null);
         }
@@ -223,7 +226,7 @@ namespace PCShopSell.Game.UI
                 {
                     Place place = pv.Place;
                     bool important = place.Kind != PlaceKind.Shop || place.IsPlayerShop;
-                    Button b = Ui.Button(_labelCanvas.transform, place.Name, () => _ctrl.GoToPlace(place),
+                    Button b = Ui.Button(_labelCanvas.transform, place.Name, () => Toast("用 WASD 走到门口，按 E 进入；也可以点下方的快捷前往按钮。"),
                         important ? 18 : 15, place.IsPlayerShop ? new Color(0.1f, 0.55f, 0.5f, 0.92f) : new Color(0.1f, 0.12f, 0.16f, important ? 0.85f : 0.6f));
                     RectTransform rt = (RectTransform)b.transform;
                     rt.anchorMin = rt.anchorMax = Vector2.zero;

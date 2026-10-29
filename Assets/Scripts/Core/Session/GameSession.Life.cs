@@ -111,6 +111,7 @@ namespace PCShopSell.Core.Session
         private void SendHome()
         {
             Trip = null;
+            ClearEdge();
             if (CurrentPlace == PlayerShopPlace) PlayerShop.PlayerPresent = false;
             PlayerNodeId = Home.NodeId;
             CurrentPlace = Home;

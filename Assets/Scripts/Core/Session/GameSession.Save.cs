@@ -182,6 +182,7 @@ namespace PCShopSell.Core.Session
             GameOverReason = d.gameOverReason;
             RestoreGrowth(d);
             Trip = null;
+            ClearEdge();
         }
 
         private static SaveStockLine[] Lines(Stock stock) =>

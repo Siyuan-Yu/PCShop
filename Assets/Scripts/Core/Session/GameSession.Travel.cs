@@ -44,7 +44,7 @@ namespace PCShopSell.Core.Session
             meters = 0;
             minutes = 0;
             fare = Money.Zero;
-            string from = Trip != null ? Trip.NextNode : PlayerNodeId;
+            string from = Trip != null ? Trip.NextNode : OffNode ? NearestEnd() : PlayerNodeId;
             PathResult path = Pathfinder.FindPath(City.Map, from, targetNode);
             if (!path.Found) return false;
             meters = path.Distance;
@@ -59,7 +59,7 @@ namespace PCShopSell.Core.Session
         {
             if (IsGameOver) return false;
             if (!City.Map.HasNode(targetNode)) return false;
-            if (Trip == null && targetNode == PlayerNodeId)
+            if (Trip == null && !OffNode && targetNode == PlayerNodeId)
             {
                 if (CurrentPlace != null) Leave();
                 return true;
@@ -73,6 +73,12 @@ namespace PCShopSell.Core.Session
                 start = Trip.Position;
                 scale = Trip.CurrentGameScale;
                 from = Trip.NextNode;
+            }
+            else if (OffNode)
+            {
+                start = PlayerPosition;
+                scale = _edgeGameScale;
+                from = NearestEnd();
             }
             else
             {
@@ -94,6 +100,7 @@ namespace PCShopSell.Core.Session
 
             if (CurrentPlace != null) Leave();
             Trip = new Trip(City, start, scale, path.NodeIds, v);
+            ClearEdge();
             return true;
         }
 
@@ -159,6 +166,7 @@ namespace PCShopSell.Core.Session
             AdvanceClock(MetroMinutes);
             if (IsGameOver || CurrentPlace == Home) return true;
             PlayerNodeId = other.NodeId;
+            ClearEdge();
             CurrentPlace = other;
             Say($"坐地铁到了{other.Name}（{MetroMinutes} 分钟，{MetroFare}）");
             return true;
