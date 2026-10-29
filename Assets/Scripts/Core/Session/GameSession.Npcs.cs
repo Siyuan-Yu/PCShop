@@ -143,6 +143,7 @@ namespace PCShopSell.Core.Session
             d.giftDays = d.giftIds.Select(k => _giftDays[k]).ToArray();
             d.chatIds = _chatDays.Keys.ToArray();
             d.chatDays = d.chatIds.Select(k => _chatDays[k]).ToArray();
+            SaveTalk(d);
         }
 
         private void RestoreNpcs(SaveData d)
@@ -157,6 +158,7 @@ namespace PCShopSell.Core.Session
             _chatDays.Clear();
             n = Math.Min(d.chatIds?.Length ?? 0, d.chatDays?.Length ?? 0);
             for (int i = 0; i < n; i++) _chatDays[d.chatIds[i]] = d.chatDays[i];
+            RestoreTalk(d);
         }
     }
 }

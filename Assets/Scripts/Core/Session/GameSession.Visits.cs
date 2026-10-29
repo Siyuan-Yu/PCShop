@@ -79,6 +79,19 @@ namespace PCShopSell.Core.Session
         public HomeVisit VisitFor(string targetId) => _visits.FirstOrDefault(v => v.TargetId == targetId);
 
         /// <summary>师傅正在屋里修东西（这期间不能取消、不能再约）。</summary>
+        /// <summary>师傅正在屋里修东西时不能出门；能出门返回 null。</summary>
+        public string LeaveBlocker
+        {
+            get
+            {
+                if (CurrentPlace == null || CurrentPlace != Home) return null;
+                HomeVisit v = RepairmanAtWork;
+                if (v == null) return null;
+                FurnitureDef d = FurnitureCatalog.Get(v.TargetId);
+                return $"师傅正在屋里修{(d != null ? "「" + d.Name + "」" : "东西")}，还要约 {RepairWorkMinutesLeft(v)} 分钟，修好之前不能出门。";
+            }
+        }
+
         public HomeVisit RepairmanAtWork => _visits.FirstOrDefault(v => v.Working);
 
         public long RepairWorkMinutesLeft(HomeVisit v) => Math.Max(0, v.WorkStart + RepairWorkMinutes - Clock.Now.TotalMinutes);

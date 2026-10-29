@@ -100,33 +100,7 @@ namespace PCShopSell.Core.Session
 
         // ---------- 买 ----------
 
-        /// <summary>去家具城买：原价。轻便的自己背回去（算负重）；太大件的塞不进背包，得用 <see cref="BuyFurnitureByTruck"/>。</summary>
-        public bool BuyFurnitureAtMall(string id)
-        {
-            FurnitureDef d = FurnitureCatalog.Get(id);
-            if (d == null || d.Starter) return false;
-            if (CurrentPlace == null || CurrentPlace.Business != MallBusiness) return Fail("要去家具城才能买。");
-            if (d.IsHeavy) return Fail($"「{d.Name}」重 {d.WeightKg:0.#} 公斤，太大件了，背包装不下。要叫货车拖回去（运费 {FurnitureCatalog.TruckFee}）。");
-            if (!CanCarry(d.WeightKg)) return false;
-            if (!Ledger.TryDebit(Clock.Today, "家具", d.Price, d.Name)) return Fail("钱不够。");
-            Backpack.AddFurniture(id, 1);
-            ApplyCargoLimit();
-            Say($"买了「{d.Name}」，背在身上（{d.WeightKg:0.#} 公斤）。回家（或回店里）自动放进家具背包。");
-            return true;
-        }
-
-        /// <summary>太大件的家具：原价 + 运费，叫货车拖走，明天早上送到家门口（进家具背包）。</summary>
-        public bool BuyFurnitureByTruck(string id)
-        {
-            FurnitureDef d = FurnitureCatalog.Get(id);
-            if (d == null || d.Starter) return false;
-            if (CurrentPlace == null || CurrentPlace.Business != MallBusiness) return Fail("要去家具城才能买。");
-            if (!d.IsHeavy) return Fail("这件不重，自己背回去就行。");
-            if (!Ledger.TryDebit(Clock.Today, "家具", d.Price + FurnitureCatalog.TruckFee, d.Name + "（含货车运费）")) return Fail("钱不够。");
-            _parcels.Add(new Parcel { Kind = ParcelKind.Furniture, Id = id, Count = 1, DueDay = Clock.Today.TotalDays + 1 });
-            Say($"买了「{d.Name}」，叫了货车，明天早上送到家。");
-            return true;
-        }
+        // 家具城的买法（购物车、结算、货车）见 GameSession.Mall.cs。
 
         public Money OnlinePrice(ParcelKind kind, string id)
         {
@@ -461,6 +435,8 @@ namespace PCShopSell.Core.Session
                 giftCounts = Backpack.GiftLines.Select(kv => kv.Value).ToArray(),
                 boxGiftIds = HomeBoxLines.Select(kv => kv.Key).ToArray(),
                 boxGiftCounts = HomeBoxLines.Select(kv => kv.Value).ToArray(),
+                mallStashIds = _mallStash.Select(l => l.Id).ToArray(),
+                mallStashCounts = _mallStash.Select(l => l.Count).ToArray(),
             };
             d.noPhone = !HasSmartphone;
             d.apps = _apps.ToArray();
@@ -483,6 +459,7 @@ namespace PCShopSell.Core.Session
             _homeLayout.Clear();
             _shopLayout.Clear();
             _parcels.Clear();
+            _mallStash.Clear();
             SaveHome h = d.home;
             if (h == null || !h.saved)
             {
@@ -537,6 +514,9 @@ namespace PCShopSell.Core.Session
             string[] fids = h.packFurnIds ?? Array.Empty<string>();
             for (int i = 0; i < fids.Length; i++)
                 if (h.packFurnCounts != null && i < h.packFurnCounts.Length) Backpack.AddFurniture(fids[i], h.packFurnCounts[i]);
+            string[] sids = h.mallStashIds ?? Array.Empty<string>();
+            for (int i = 0; i < sids.Length; i++)
+                if (h.mallStashCounts != null && i < h.mallStashCounts.Length && h.mallStashCounts[i] > 0 && FurnitureCatalog.Get(sids[i]) != null) AddStash(sids[i], h.mallStashCounts[i]);
             ApplyCargoLimit();
         }
     }

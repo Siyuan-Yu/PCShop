@@ -60,6 +60,8 @@ namespace PCShopSell.Core.Session
         {
             if (IsGameOver) return false;
             if (!City.Map.HasNode(targetNode)) return false;
+            string leaveBlock = LeaveBlocker;
+            if (leaveBlock != null) return Fail(leaveBlock);
             if (Trip == null && !OffNode && targetNode == PlayerNodeId)
             {
                 if (CurrentPlace != null) Leave();

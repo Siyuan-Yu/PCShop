@@ -498,7 +498,6 @@ namespace PCShopSell.EditorTools
             Shot("vs1_28_mall");
             foreach (string id in new[] { "bed_spring", "aircon", "sofa", "shop_sofa", "shop_led" })
             {
-                Check(!s.BuyFurnitureAtMall(id), "太大件背包装不下 " + id);
                 Check(s.BuyFurnitureByTruck(id), "叫货车拖 " + id);
             }
             foreach (string id in new[] { "curtain", "plant", "rug", "poster", "shop_plant", "shop_poster", "shop_dispenser" })
@@ -507,6 +506,25 @@ namespace PCShopSell.EditorTools
                 Teleport(s, "shop12");
                 Check(s.BuyFurnitureAtMall(id), "家具城买 " + id);
             }
+            s.MallCartAdd("bed_good", 3);
+            s.MallCartAdd("aircon", 2);
+            s.MallCartAdd("plant", 2);
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            Frame(0.05f);
+            Shot("vs1_66_mall_cart");
+            _game.Ui.OpenMallCheckout();
+            Frame(0.05f);
+            Shot("vs1_67_mall_checkout");
+            s.Ledger.Credit(s.Clock.Today, "测试", PCShopSell.Core.Common.Money.FromYuan(20000), "演示");
+            Check(s.CheckoutMall(PCShopSell.Core.Session.MallCarry.Stay), "家具城结算：先全部寄存在店里");
+            Check(s.MallStashCount == 7, "寄存了 7 件");
+            _game.Ui.CloseAllWindows();
+            Teleport(s, "home");
+            Teleport(s, "shop12");
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            Frame(0.05f);
+            Shot("vs1_68_mall_stash");
+            Check(s.CallTruckForStash(), "寄存的货叫货车送回家");
             _game.Ui.CloseAllWindows();
             Teleport(s, "shop14");
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
@@ -654,10 +672,20 @@ namespace PCShopSell.EditorTools
             _game.Ui.OnEnteredPlace(g.CurrentPlace);
             Frame(0.05f);
             Shot("vs1_16_stall_owner");
+            _game.Ui.OpenGreeterDialogue(g.CurrentPlace);
+            Frame(0.05f);
+            Shot("vs1_65_staff_talk");
+            _game.Ui.CloseTopWindow();
             _game.Ui.OpenNpcWindow(PCShopSell.Core.Session.Npcs.Get(PCShopSell.Core.Session.Npcs.Wang), g.CurrentPlace, null);
             Frame(0.05f);
             Check(PCShopSell.Game.UI.GameUi.PortraitOf(PCShopSell.Core.Session.Npcs.Wang) != null, "有人物立绘");
             Shot("vs1_63_npc_talk");
+            _game.Ui.CloseModalWindows();
+            string lifeStory = g.LifeTalk(PCShopSell.Core.Session.Npcs.Wang);
+            Check(!string.IsNullOrEmpty(lifeStory), "聊聊人生能听到故事");
+            _game.Ui.OpenNpcWindow(PCShopSell.Core.Session.Npcs.Get(PCShopSell.Core.Session.Npcs.Wang), g.CurrentPlace, null, lifeStory);
+            Frame(0.05f);
+            Shot("vs1_64_npc_life");
             _game.Ui.CloseModalWindows();
             _game.Ui.OpenInvitePanel(PCShopSell.Core.Session.Npcs.Wang);
             Frame(0.05f);

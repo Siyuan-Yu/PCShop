@@ -92,6 +92,16 @@ namespace PCShopSell.Core.Session
         public int[] giftDays;
         public string[] chatIds;
         public int[] chatDays;
+        public string[] talkIds;
+        public int[] talkDays;
+        public string[] lifeIds;
+        public int[] lifeCounts;
+        public string[] lifeDayIds;
+        public int[] lifeDays;
+        public string[] insiderIds;
+        public int[] insiderDays;
+        public string[] staffIds;
+        public int[] staffDays;
         public SaveSocial social;
     }
 
@@ -237,6 +247,8 @@ namespace PCShopSell.Core.Session
         public int[] boxGiftCounts;
         public string[] packFurnIds;
         public int[] packFurnCounts;
+        public string[] mallStashIds;
+        public int[] mallStashCounts;
     }
 
     [Serializable]

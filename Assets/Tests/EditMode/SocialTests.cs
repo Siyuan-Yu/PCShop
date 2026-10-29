@@ -293,5 +293,164 @@ namespace PCShopSell.Tests
             Assert.AreEqual(0, l.Appointments.Count);
             Assert.AreEqual(0, l.Tips.Count);
         }
+
+        // ---------- 点人物后的交谈选项 ----------
+
+        [Test]
+        public void SmallTalk_OncePerDay_GainsRelation_AndTakesTenMinutes()
+        {
+            GameSession s = Make();
+            Assert.IsNotNull(s.SmallTalkBlocker(Npcs.Li), "没认识不能聊");
+            s.Meet(Npcs.Li, 20);
+            Assert.IsNull(s.SmallTalkBlocker(Npcs.Li));
+            double before = s.Relation(Npcs.Li);
+            GameTimestamp t0 = s.Clock.Now;
+            string line = s.SmallTalk(Npcs.Li);
+            Assert.IsNotEmpty(line);
+            Assert.AreEqual(10, (int)(s.Clock.Now.TotalMinutes - t0.TotalMinutes));
+            Assert.AreEqual("今天聊过了", s.SmallTalkBlocker(Npcs.Li));
+            Assert.IsNull(s.SmallTalk(Npcs.Li));
+            s.AdvanceClock(24 * 60);
+            Assert.IsNull(s.SmallTalkBlocker(Npcs.Li));
+            Assert.GreaterOrEqual(s.Relation(Npcs.Li), before);
+        }
+
+        [Test]
+        public void SmallTalk_StopsGainingAtTheCap()
+        {
+            GameSession s = Make();
+            s.Meet(Npcs.Li, NpcTalk.SmallTalkMaxRelation);
+            int rel = s.Relation(Npcs.Li);
+            s.SmallTalk(Npcs.Li);
+            Assert.AreEqual(rel, s.Relation(Npcs.Li));
+        }
+
+        [Test]
+        public void LifeTalk_UnlocksChapterByChapter_WithRelation()
+        {
+            GameSession s = Make();
+            s.Meet(Npcs.Li, 20);
+            StringAssert.Contains("30", s.LifeBlocker(Npcs.Li));
+            Assert.IsNull(s.LifeTalk(Npcs.Li));
+
+            s.AddRelation(Npcs.Li, 10);
+            Assert.IsNull(s.LifeBlocker(Npcs.Li));
+            string story = s.LifeTalk(Npcs.Li);
+            Assert.AreEqual(NpcTalk.LifeStory(Npcs.Li, 0), story);
+            Assert.AreEqual(1, s.LifeChaptersHeard(Npcs.Li));
+            // 第二天交情不到 50，不肯讲下一段
+            s.AdvanceClock(24 * 60);
+            StringAssert.Contains("50", s.LifeBlocker(Npcs.Li));
+            s.AddRelation(Npcs.Li, 30);
+            Assert.AreEqual(NpcTalk.LifeStory(Npcs.Li, 1), s.LifeTalk(Npcs.Li));
+            s.AdvanceClock(24 * 60);
+            s.AddRelation(Npcs.Li, 30);
+            Assert.AreEqual(NpcTalk.LifeStory(Npcs.Li, 2), s.LifeTalk(Npcs.Li));
+            s.AdvanceClock(24 * 60);
+            s.AddRelation(Npcs.Li, 30);
+            Assert.AreEqual("他的故事你都听过了", s.LifeBlocker(Npcs.Li));
+        }
+
+        [Test]
+        public void EveryNpc_HasSmallTalkAndThreeLifeChapters()
+        {
+            foreach (NpcDef n in Npcs.All)
+            {
+                for (int d = 0; d < 4; d++) Assert.IsNotEmpty(NpcTalk.SmallTalkLine(n.Id, d), n.Id);
+                for (int c = 0; c < NpcTalk.LifeChapterTotal; c++) Assert.IsNotNull(NpcTalk.LifeStory(n.Id, c), n.Id + c);
+            }
+        }
+
+        [Test]
+        public void Insider_NeedsHighRelation_NoCigarette_AndIsAlwaysTrue()
+        {
+            GameSession s = Make();
+            s.Meet(Npcs.Li, 40);
+            StringAssert.Contains("60", s.InsiderBlocker(Npcs.Li));
+            Assert.IsNull(s.AskInsider(Npcs.Li));
+
+            s.AddRelation(Npcs.Li, 30);
+            Assert.IsNull(s.InsiderBlocker(Npcs.Li), "不用带烟");
+            int shocksBefore = s.Market.PendingShocks.Count;
+            string text = s.AskInsider(Npcs.Li);
+            Assert.IsNotEmpty(text);
+            Assert.AreEqual(shocksBefore + 1, s.Market.PendingShocks.Count, "说的是真话：行情会真的动");
+            Assert.AreEqual(1, s.Tips.Count);
+            StringAssert.Contains("天后再问", s.InsiderBlocker(Npcs.Li));
+
+            s.Meet(Npcs.Zhang, 90);
+            Assert.AreEqual("他不爱聊这个", s.InsiderBlocker(Npcs.Zhang));
+        }
+
+        [Test]
+        public void TalkProgress_SurvivesSaveAndLoad()
+        {
+            GameSession s = Make();
+            s.Meet(Npcs.Li, 60);
+            s.SmallTalk(Npcs.Li);
+            s.LifeTalk(Npcs.Li);
+            s.AskInsider(Npcs.Li);
+            GameSession l = GameSession.Load(s.City, s.CreateSave());
+            Assert.AreEqual("今天聊过了", l.SmallTalkBlocker(Npcs.Li));
+            Assert.AreEqual(1, l.LifeChaptersHeard(Npcs.Li));
+            Assert.IsNotNull(l.InsiderBlocker(Npcs.Li));
+        }
+
+        // ---------- 店里的人：店员接待，老板交情够了才见得到 ----------
+
+        [Test]
+        public void StallRoster_ClerkGreets_BossNeedsRelation()
+        {
+            GameSession s = Make();
+            PlaceRoster r = Rosters.For(s.City.GetPlace(Stall));
+            Assert.IsNotNull(r);
+            Assert.AreEqual("staff_cpu", r.Greeter.Id);
+            Assert.AreEqual(Npcs.Li, r.BossNpcId);
+            Assert.AreEqual(Rosters.StallBossGate, r.BossGate);
+
+            Assert.IsFalse(s.BossReachable(r), "还没认识老板");
+            Assert.IsNotNull(s.StaffBossBlocker(r));
+
+            s.Meet(Npcs.Li, 10);
+            Assert.IsFalse(s.BossReachable(r), "交情不够，老板不出来");
+            Assert.IsNull(s.StaffBossBlocker(r));
+
+            int before = s.Relation(Npcs.Li);
+            StringAssert.Contains("老李", s.AskStaffAboutBoss(r));
+            Assert.AreEqual("今天问过了", s.StaffBossBlocker(r));
+            Assert.IsNull(s.AskStaffAboutBoss(r));
+
+            for (int i = 0; i < 6 && !s.BossReachable(r); i++)
+            {
+                s.AdvanceClock(24 * 60);
+                s.AskStaffAboutBoss(r);
+            }
+            Assert.IsTrue(s.BossReachable(r), "跟店员聊几天，老板肯见了");
+            Assert.Greater(s.Relation(Npcs.Li), before);
+            StringAssert.Contains("直接找他", s.StaffBossBlocker(r));
+        }
+
+        [Test]
+        public void Roster_NullForNoPlace_AndEveryStallHasClerk()
+        {
+            Assert.IsNull(Rosters.For(null));
+            foreach (string id in new[] { Stalls.Cpu, Stalls.Gpu, Stalls.Memory, Stalls.PowerCase })
+            {
+                Assert.IsNotNull(Npcs.OwnerOf(id), id);
+            }
+            Assert.IsNotEmpty(Rosters.CpuClerk.LineFor(5));
+            Assert.IsNotEmpty(Rosters.GpuClerk.LineFor(-1));
+        }
+
+        [Test]
+        public void StaffTalkProgress_SurvivesSaveAndLoad()
+        {
+            GameSession s = Make();
+            PlaceRoster r = Rosters.For(s.City.GetPlace(Stall));
+            s.Meet(Npcs.Li, 10);
+            s.AskStaffAboutBoss(r);
+            GameSession l = GameSession.Load(s.City, s.CreateSave());
+            Assert.AreEqual("今天问过了", l.StaffBossBlocker(r));
+        }
     }
 }

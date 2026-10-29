@@ -337,6 +337,7 @@ namespace PCShopSell.Game.Runtime
                 label = "坐下";
             }
             if (best == Repair && s.RepairmanAtWork != null) label = "师傅正在修…";
+            if (best == Door && s.LeaveBlocker != null) label = "师傅在修东西，暂时不能出门";
             NearbyId = best;
             NearbyLabel = label;
             NearbyWorld = world;

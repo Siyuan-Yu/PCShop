@@ -821,38 +821,151 @@ namespace PCShopSell.Game.UI
 
         private void BuildMall(Window w, Place p)
         {
-            Line(w.Content, "宜居家具城：现场付钱。轻便的自己背回去；超过 20 公斤的太大件，塞不进背包，得叫货车拖（运费 ¥120，明早送到家）。线上同款便宜 15%，2 天快递到家。", 16, Ui.Dim);
-            Line(w.Content, $"现金 {S.Ledger.Balance}   负重 {S.CarriedKg:0.#}/{S.CarryLimitKg:0.#} 公斤", 18);
-            RectTransform list = Ui.Scroll(w.Content, 520);
+            Line(w.Content, "先放进购物车，一起结算。按来时的载具装格子（1 格 = 2 公斤），装不下的叫货车（每辆 ¥120、限 200 公斤，明早到家）或先寄存在店里，改天自己搬。线上同款便宜 15%，2 天到家。", 15, Ui.Dim);
+            Line(w.Content, $"现金 {S.Ledger.Balance}   来时的载具：{S.CurrentVehicle.Name}（{S.CurrentVehicle.CargoCapacity:0.#} 格），还空 {S.FreeKg / Backpack.KgPerSpace:0.#} 格", 17);
+            CellStrip(w.Content, S.CurrentVehicle.CargoCapacity, S.CarriedKg / Backpack.KgPerSpace, 0);
+            bool hasStash = S.MallStashCount > 0;
+            RectTransform list = Ui.Scroll(w.Content, hasStash ? 250 : 340);
             Line(list, "—— 家里用 ——", 18, Ui.Accent);
             foreach (FurnitureDef f in FurnitureCatalog.Purchasable(false)) MallRow(w, list, f);
             Line(list, "—— 店里的摆设（摆放要歇业装修一天）——", 18, Ui.Accent);
             foreach (FurnitureDef f in FurnitureCatalog.Purchasable(true)) MallRow(w, list, f);
+
+            if (hasStash) BuildMallStash(w);
+
+            // 购物车栏
+            RectTransform bar = Ui.Row(w.Content, 56, 8);
+            int cartCount = S.MallCartCount;
+            string summary = cartCount == 0
+                ? "购物车是空的"
+                : $"购物车 {cartCount} 件　{S.MallCartGoods}　共 {S.MallCartKg:0.#} 公斤（货车 {GameSession.TrucksNeeded(S.MallCart)} 辆可装下）";
+            Ui.Size(Ui.Label(bar, summary, 18, TextAnchor.MiddleLeft, cartCount == 0 ? Ui.Dim : Ui.TextColor), -1, -1, 1);
+            Ui.Size(Ui.Button(bar, "清空", () =>
+            {
+                S.MallCartClear();
+                w.Rebuild();
+            }, 17, Ui.ButtonBg, cartCount > 0), 90);
+            Ui.Size(Ui.Button(bar, "去结算", () => OpenMallCheckout(w), 19, Ui.ButtonHot, cartCount > 0), 150);
+        }
+
+        private static readonly Color CellUsed = new Color(0.46f, 0.5f, 0.56f);
+        private static readonly Color CellFree = new Color(0.16f, 0.18f, 0.22f);
+
+        /// <summary>载具的格子：灰的是已装的，黄的是这次要装的，暗的是空的。</summary>
+        private void CellStrip(Transform parent, double total, double used, double adding)
+        {
+            int n = Mathf.Max(1, Mathf.CeilToInt((float)total));
+            int u = Mathf.Min(n, Mathf.CeilToInt((float)(used - 1e-6)));
+            int a = Mathf.Min(n - u, Mathf.CeilToInt((float)(adding - 1e-6)));
+            RectTransform row = Ui.Row(parent, 22, 3);
+            for (int i = 0; i < n; i++)
+                Ui.Size(Ui.Panel(row, "Cell", i < u ? CellUsed : i < u + a ? Ui.Accent : CellFree), 14, 18);
+        }
+
+        /// <summary>寄存在店里的货：自己来搬（装不下就分几趟），或者全叫货车送回家。</summary>
+        private void BuildMallStash(Window w)
+        {
+            Line(w.Content, $"—— 寄存在店里的货（已付过钱，不过期）{S.MallStashCount} 件，共 {S.MallStashKg:0.#} 公斤 ——", 17, Ui.Accent);
+            RectTransform stash = Ui.Scroll(w.Content, 100);
+            foreach (MallCartLine l in S.MallStash.ToList())
+            {
+                FurnitureDef d = FurnitureCatalog.Get(l.Id);
+                RectTransform row = Ui.Row(stash, 40);
+                Ui.Size(Ui.Label(row, $"{d.Name} ×{l.Count}　<size=14><color=#A8B0BA>每件 {d.WeightKg:0.#} 公斤，占 {d.WeightKg / Backpack.KgPerSpace:0.#} 格</color></size>", 17), -1, -1, 1);
+                bool fits = d.WeightKg <= S.FreeKg + 1e-9;
+                Ui.Size(Ui.Button(row, fits ? "搬走 1 件" : "装不下", () =>
+                {
+                    S.TakeFromStash(l.Id);
+                    w.Rebuild();
+                }, 16, Ui.ButtonHot, fits), 110);
+            }
+            RectTransform bar = Ui.Row(w.Content, 44, 8);
+            Ui.Size(Ui.Button(bar, "能搬的全搬走", () =>
+            {
+                S.TakeStashWhatFits();
+                w.Rebuild();
+            }, 17, Ui.ButtonHot), 170);
+            Ui.Size(Ui.Button(bar, $"全部叫货车送回家（{S.StashTruckFee}，{S.StashTrucksNeeded} 辆）", () =>
+            {
+                S.CallTruckForStash();
+                w.Rebuild();
+            }, 17, Ui.ButtonBg, S.Ledger.Balance.Cents >= S.StashTruckFee.Cents), -1, -1, 1);
         }
 
         private void MallRow(Window w, RectTransform list, FurnitureDef def)
         {
             RectTransform row = Ui.Row(list, 58);
-            Ui.Size(Ui.Label(row, $"{def.Name}  <size=14><color={(def.IsHeavy ? "#E0A86A" : "#A8B0BA")}>重 {def.WeightKg:0.#} 公斤{(def.IsHeavy ? "（太大件）" : "")}</color></size>\n<size=14><color=#A8B0BA>{def.Description}</color></size>", 18), 430);
+            Ui.Size(Ui.Label(row, $"{def.Name}  <size=14><color=#A8B0BA>重 {def.WeightKg:0.#} 公斤</color></size>\n<size=14><color=#A8B0BA>{def.Description}</color></size>", 18), 410);
             Ui.Size(Ui.Label(row, def.Price.ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 90);
             int have = S.FurnitureInStock(def.Id) + S.Backpack.FurnitureCount(def.Id);
-            Ui.Size(Ui.Label(row, have > 0 ? $"背包 ×{have}" : "", 15, TextAnchor.MiddleLeft, Ui.Dim), 70);
-            if (def.IsHeavy)
+            Ui.Size(Ui.Label(row, have > 0 ? $"已有 ×{have}" : "", 14, TextAnchor.MiddleLeft, Ui.Dim), 66);
+            int inCart = S.MallCartOf(def.Id);
+            Ui.Size(Ui.Button(row, "−", () =>
             {
-                Ui.Size(Ui.Button(row, $"叫货车 +{FurnitureCatalog.TruckFee}", () =>
-                {
-                    if (S.BuyFurnitureByTruck(def.Id)) Toast($"叫了货车，{def.Name}明早送到家。");
-                    w.Rebuild();
-                }, 15, Ui.Warn), 150);
-            }
-            else
+                S.MallCartRemove(def.Id);
+                w.Rebuild();
+            }, 20, Ui.ButtonBg, inCart > 0), 44);
+            Ui.Size(Ui.Label(row, inCart > 0 ? inCart.ToString() : "", 19, TextAnchor.MiddleCenter, Ui.Accent), 36);
+            Ui.Size(Ui.Button(row, "＋", () =>
             {
-                Ui.Size(Ui.Button(row, "买", () =>
+                S.MallCartAdd(def.Id);
+                w.Rebuild();
+            }, 20, Ui.ButtonHot), 44);
+        }
+
+        /// <summary>结算窗口（自动测试用：不带父窗口）。</summary>
+        public void OpenMallCheckout() => OpenMallCheckout(null);
+
+        /// <summary>
+        /// 结算：东西先往来时的载具格子里装；装不下的，选叫货车、或先寄存在店里改天自己来搬。
+        /// </summary>
+        private void OpenMallCheckout(Window parent)
+        {
+            OpenWindow("结算", 800, 800, w =>
+            {
+                VehicleSpec v = S.CurrentVehicle;
+                Line(w.Content, $"现金 {S.Ledger.Balance}　　来时的载具：{v.Name}（{v.CargoCapacity:0.#} 格），还空 {S.FreeKg / Backpack.KgPerSpace:0.#} 格　<size=14>灰=已装　黄=这次装上　暗=空</size>", 16, Ui.Dim);
+                MallPlan fit = S.PlanMallCheckout(MallCarry.SplitStay);
+                CellStrip(w.Content, v.CargoCapacity, S.CarriedKg / Backpack.KgPerSpace, fit.SelfKg / Backpack.KgPerSpace);
+                RectTransform items = Ui.Scroll(w.Content, 120);
+                foreach (MallCartLine l in S.MallCart)
                 {
-                    S.BuyFurnitureAtMall(def.Id);
-                    w.Rebuild();
-                }, 17, Ui.ButtonHot), 130);
-            }
+                    FurnitureDef d = FurnitureCatalog.Get(l.Id);
+                    Line(items, $"{d.Name} ×{l.Count}　　{d.Price * l.Count}　　占 {d.WeightKg * l.Count / Backpack.KgPerSpace:0.#} 格（{d.WeightKg * l.Count:0.#} 公斤）", 17);
+                }
+                Line(w.Content, $"合计 {S.MallCartGoods}　共 {S.MallCartKg / Backpack.KgPerSpace:0.#} 格　这次能装上 {fit.SelfCount}/{S.MallCartCount} 件", 20, Ui.Accent);
+
+                CheckoutOption(w, parent, MallCarry.Self, "全部装进载具",
+                    plan => $"全部放进背包 / 载具：占 {plan.SelfKg / Backpack.KgPerSpace:0.#} 格。付 {plan.Total}。");
+                CheckoutOption(w, parent, MallCarry.SplitStay, "能装的装走，剩下的寄存在店里",
+                    plan => $"装走 {plan.SelfCount} 件，其余 {plan.StashCount} 件寄存在店里（不过期、不收费），改天自己来搬，分几趟都行。付 {plan.Total}。");
+                CheckoutOption(w, parent, MallCarry.Split, "能装的装走，剩下的叫货车",
+                    plan => $"装走 {plan.SelfCount} 件，其余 {plan.TruckCount} 件叫 {plan.Trucks} 辆货车（运费 {plan.TruckFees}），明早送到家。付 {plan.Total}。");
+                CheckoutOption(w, parent, MallCarry.Truck, "全部叫货车",
+                    plan => $"{plan.TruckKg:0.#} 公斤，要 {plan.Trucks} 辆货车（每辆 ¥120、最多 {GameSession.TruckCapacityKg:0} 公斤），明早送到家。付 {plan.Total}。");
+                CheckoutOption(w, parent, MallCarry.Stay, "先全部寄存在店里",
+                    plan => $"{plan.StashCount} 件都先放店里，之后自己来搬（或到时再叫货车）。付 {plan.Total}。");
+
+                Ui.Size(Ui.Button(w.Content, "再看看", w.Close, 19), -1, 44);
+            });
+        }
+
+        private void CheckoutOption(Window w, Window parent, MallCarry mode, string title, System.Func<MallPlan, string> describe)
+        {
+            MallPlan plan = S.PlanMallCheckout(mode);
+            RectTransform row = Ui.Row(w.Content, 70, 10);
+            string desc = plan.Blocker != null ? $"<color=#E0806A>{plan.Blocker}</color>" : "<color=#A8B0BA>" + describe(plan) + "</color>";
+            Ui.Size(Ui.Label(row, $"<b>{title}</b>\n<size=15>{desc}</size>", 19, TextAnchor.MiddleLeft), -1, -1, 1);
+            Ui.Size(Ui.Button(row, "就这样", () =>
+            {
+                if (S.CheckoutMall(mode))
+                {
+                    w.Close();
+                    parent?.Rebuild();
+                    Toast("买好了。");
+                }
+                else w.Rebuild();
+            }, 19, Ui.ButtonHot, plan.Blocker == null), 130);
         }
 
         private void BuildTobacco(Window w, Place p)

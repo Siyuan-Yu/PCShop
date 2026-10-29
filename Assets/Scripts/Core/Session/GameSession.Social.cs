@@ -266,11 +266,11 @@ namespace PCShopSell.Core.Session
         /// <summary>这个人这次说真话的概率：本来的靠谱度 + 交情带来的信任。</summary>
         public double TipTruthChance(NpcDef n) => Math.Min(0.95, n.Reliability + Relation(n.Id) * 0.002);
 
-        private string CreateTip(NpcDef n)
+        private string CreateTip(NpcDef n, bool forceReal = false)
         {
             PartCategory cat = PickTipCategory(n);
             int dir = Random.Chance(0.55) ? 1 : -1;
-            bool real = Random.Chance(TipTruthChance(n));
+            bool real = forceReal || Random.Chance(TipTruthChance(n));
 
             var tip = new MarketTip
             {

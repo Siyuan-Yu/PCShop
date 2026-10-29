@@ -26,22 +26,22 @@ namespace PCShopSell.Game.UI
                     Toast("回到出租屋了。走近床、衣柜、电饭锅、纸箱或门，头顶出现提示时按 F；看房间信息点右上角“我的”。");
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.MallBusiness:
-                    OpenPlaceWindow(p, BuildMall, 1120, 780);
+                    OpenPlaceWindow(p, BuildMall, 1140, 780);
                     break;
                 case PlaceKind.Shop when p.Business == Gifts.TobaccoBusiness:
-                    OpenPlaceWindow(p, BuildTobacco, 1020, 640);
+                    OpenPlaceWindow(p, BuildTobacco, 1040, 640);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.PhoneBusiness:
-                    OpenPlaceWindow(p, BuildPhoneShop, 920, 620);
+                    OpenPlaceWindow(p, BuildPhoneShop, 960, 700);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.FarmBusiness:
-                    OpenPlaceWindow(p, BuildFarm, 1040, 760);
+                    OpenPlaceWindow(p, BuildFarm, 1060, 760);
                     break;
                 case PlaceKind.Wholesaler:
-                    OpenPlaceWindow(p, BuildStall, 860, 800);
+                    OpenPlaceWindow(p, BuildStall, 980, 800);
                     break;
                 case PlaceKind.Dealer:
-                    OpenPlaceWindow(p, BuildDealer, 940, 640);
+                    OpenPlaceWindow(p, BuildDealer, 960, 640);
                     break;
                 case PlaceKind.Station:
                     OpenPlaceWindow(p, BuildStation);
@@ -61,7 +61,7 @@ namespace PCShopSell.Game.UI
                     win.Close();
                     return;
                 }
-                RectTransform frame = BuildKeeperFrame(win, p, h - 170);
+                RectTransform frame = BuildRosterFrame(win, p, h - 170);
                 if (frame != null)
                 {
                     RectTransform original = win.Content;
@@ -92,26 +92,7 @@ namespace PCShopSell.Game.UI
             Line(w.Content, open ? "营业中（工作日 9:00–18:00）。批发价，只卖盒装正品。" : "<color=#E0806A>关门了（工作日 9:00–18:00 营业）</color>");
             Line(w.Content, $"随身货：{S.Cargo.UsedSpace:0.#}/{S.Cargo.Capacity:0} 格；负重 {S.CarriedKg:0.#}/{S.CarryLimitKg:0.#} 公斤（{S.CurrentVehicle.Name}）   现金 {S.Ledger.Balance}", 18, Ui.Dim);
 
-            RectTransform body = Ui.Row(w.Content, 560, 12);
-            NpcDef owner = Npcs.OwnerOf(p.Id);
-            if (owner != null)
-            {
-                bool met = S.IsMet(owner.Id);
-                RectTransform left = Ui.Rect(body, "Owner");
-                Ui.VList(left, 6, 0);
-                Ui.Size(left, 250, -1, 0);
-                left.GetComponent<LayoutElement>().minWidth = 250;
-                PortraitCard(left, owner, 250, () => OpenNpcWindow(owner, p, w), !met);
-                if (met)
-                {
-                    int rel = S.Relation(owner.Id);
-                    Ui.Size(Ui.Label(left, $"{Npcs.LevelName(rel)} {rel}　进价 -{NpcPerks.OwnerDiscount(rel) * 100:0.#}%", 15, TextAnchor.MiddleCenter, Ui.Good), -1, 24);
-                    Ui.Size(Ui.Label(left, $"每样每天最多 {NpcPerks.StallQuota(rel)} 个", 14, TextAnchor.MiddleCenter, Ui.Dim), -1, 22);
-                    Ui.Size(Ui.Label(left, "点头像聊聊：送礼、打听行情、约出去玩、砍价", 13, TextAnchor.MiddleCenter, Ui.Dim), -1, 38);
-                }
-            }
-
-            RectTransform list = Ui.Scroll(body, 560);
+            RectTransform list = Ui.Scroll(w.Content, 470);
             Ui.Size((RectTransform)list.parent.parent, -1, -1, 1);
             foreach (PartDef part in PartCatalog.All.Where(x => S.StallSells(p, x)))
             {

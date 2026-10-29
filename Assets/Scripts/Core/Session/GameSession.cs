@@ -192,8 +192,15 @@ namespace PCShopSell.Core.Session
         public void Leave()
         {
             if (CurrentPlace == null) return;
+            string blocker = LeaveBlocker;
+            if (blocker != null)
+            {
+                Fail(blocker);
+                return;
+            }
             if (CurrentPlace == PlayerShopPlace) PlayerShop.PlayerPresent = false;
             CurrentPlace = null;
+            _mallCart.Clear();
         }
 
         /// <summary>玩家直接站到某个节点（读档、测试用）。</summary>

@@ -176,7 +176,16 @@ namespace PCShopSell.Tests
             Assert.AreEqual(1, s.BrokenHomeItems().Count(), "还在修，没好");
             Assert.IsFalse(s.CancelRepair("fan_broken"), "师傅在干活，取消不了");
             Assert.IsTrue(s.Schedule().Any(e => e.Kind == "repairing"));
+            Assert.IsNotNull(s.LeaveBlocker, "师傅在屋里干活，不能出门");
+            s.Leave();
+            Assert.AreEqual(s.Home, s.CurrentPlace, "Leave 被拦住");
+            Assert.IsFalse(s.GoTo("pc"), "出发也被拦住");
+            Assert.AreEqual(s.Home, s.CurrentPlace);
             WaitMinutes(s, GameSession.RepairWorkMinutes);
+            Assert.IsNull(s.LeaveBlocker, "修好了可以出门");
+            s.Leave();
+            Assert.IsNull(s.CurrentPlace);
+            GameSessionTests.Teleport(s, "flat");
             Assert.AreEqual(0, s.BrokenHomeItems().Count());
             Assert.AreEqual(0, s.HomeVisits.Count, "修好走人");
             Assert.AreEqual(1, s.Ledger.Entries.Count(e => e.Category == "维修"), "只有下单时扣的那一笔，修好不再收");
@@ -245,22 +254,129 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void HeavyFurniture_DoesNotFitBackpack_NeedsTruck()
+        public void HeavyFurniture_WalkingCannotCarry_NeedsTruck_AndArrivesNextDay()
         {
             GameSession s = Make();
             GameSessionTests.Teleport(s, "mall");
-            Assert.IsTrue(FurnitureCatalog.Get("sofa").IsHeavy);
-            Assert.IsFalse(s.BuyFurnitureAtMall("sofa"), "太大件，背包装不下");
-            Assert.IsFalse(s.BuyFurnitureByTruck("plant"), "轻的不用货车");
+            Assert.Greater(FurnitureCatalog.Get("sofa").WeightKg, s.FreeKg, "走路背不动沙发");
+            Assert.IsFalse(s.BuyFurnitureAtMall("sofa"), "只有一个人又没载具，带不走");
+            Assert.IsTrue(s.MallCartAdd("sofa"));
+            Assert.IsNotNull(s.PlanMallCheckout(MallCarry.Self).Blocker);
+            MallPlan truck = s.PlanMallCheckout(MallCarry.Truck);
+            Assert.IsNull(truck.Blocker);
+            Assert.AreEqual(1, truck.Trucks);
             Money before = s.Ledger.Balance;
-            Assert.IsTrue(s.BuyFurnitureByTruck("sofa"));
+            Assert.IsTrue(s.CheckoutMall(MallCarry.Truck));
             Assert.AreEqual(Money.FromYuan(800) + FurnitureCatalog.TruckFee, before - s.Ledger.Balance);
             Assert.AreEqual(0, s.Backpack.WeightKg, 1e-9, "货车拉的，不占背包");
+            Assert.AreEqual(0, s.MallCartCount, "结算后购物车清空");
             Assert.AreEqual(0, s.FurnitureInStock("sofa"));
             GameSessionTests.Teleport(s, "flat");
             int day = s.Clock.Today.TotalDays + 2;
             while (s.Clock.Today.TotalDays < day) s.AdvanceClock(60);
             Assert.AreEqual(1, s.FurnitureInStock("sofa"), "次日送到");
+        }
+
+        [Test]
+        public void Mall_BuyingTooMuch_NeedsSeveralTrucks()
+        {
+            GameSession s = Make(200000);
+            GameSessionTests.Teleport(s, "mall");
+            double bed = FurnitureCatalog.Get("bed_good").WeightKg;
+            Assert.LessOrEqual(bed, GameSession.TruckCapacityKg);
+            s.MallCartAdd("bed_good", 5);
+            MallPlan plan = s.PlanMallCheckout(MallCarry.Truck);
+            Assert.AreEqual(GameSession.TrucksNeeded(s.MallCart), plan.Trucks);
+            Assert.GreaterOrEqual(plan.Trucks, (int)System.Math.Ceiling(bed * 5 / GameSession.TruckCapacityKg));
+            Assert.Greater(plan.Trucks, 1, "一辆装不下");
+            Assert.AreEqual(FurnitureCatalog.TruckFee * plan.Trucks, plan.TruckFees);
+            Money before = s.Ledger.Balance;
+            Assert.IsTrue(s.CheckoutMall(MallCarry.Truck));
+            Assert.AreEqual(plan.Total, before - s.Ledger.Balance);
+        }
+
+        [Test]
+        public void Mall_SplitCheckout_CarriesWhatFits_TrucksTheRest()
+        {
+            GameSession s = Make(50000);
+            GameSessionTests.Teleport(s, "mall");
+            s.MallCartAdd("poster", 2);
+            s.MallCartAdd("sofa");
+            MallPlan split = s.PlanMallCheckout(MallCarry.Split);
+            Assert.IsNull(split.Blocker);
+            Assert.AreEqual(2, split.SelfCount, "轻的海报自己带");
+            Assert.AreEqual(1, split.TruckCount, "沙发叫货车");
+            Assert.AreEqual(1, split.Trucks);
+            Assert.IsTrue(s.CheckoutMall(MallCarry.Split));
+            Assert.AreEqual(2, s.Backpack.FurnitureCount("poster"));
+            Assert.AreEqual(1, s.Parcels.Count);
+        }
+
+        [Test]
+        public void Mall_SplitStay_LoadsWhatFits_LeavesRestInStore_NoTruckFee_AndSurvivesSave()
+        {
+            GameSession s = Make(50000);
+            GameSessionTests.Teleport(s, "mall");
+            s.MallCartAdd("poster", 2);
+            s.MallCartAdd("sofa");
+            MallPlan plan = s.PlanMallCheckout(MallCarry.SplitStay);
+            Assert.IsNull(plan.Blocker);
+            Assert.AreEqual(2, plan.SelfCount);
+            Assert.AreEqual(1, plan.StashCount);
+            Assert.AreEqual(Money.Zero, plan.TruckFees, "寄存不收运费");
+            Money before = s.Ledger.Balance;
+            Assert.IsTrue(s.CheckoutMall(MallCarry.SplitStay));
+            Assert.AreEqual(FurnitureCatalog.Get("poster").Price * 2 + FurnitureCatalog.Get("sofa").Price, before - s.Ledger.Balance);
+            Assert.AreEqual(2, s.Backpack.FurnitureCount("poster"));
+            Assert.AreEqual(1, s.MallStashCount);
+            Assert.AreEqual(0, s.Parcels.Count);
+
+            GameSession l = GameSession.Load(s.City, UnityEngine.JsonUtility.FromJson<SaveData>(UnityEngine.JsonUtility.ToJson(s.CreateSave())));
+            Assert.AreEqual(1, l.MallStashCount, "寄存的货存档后还在");
+        }
+
+        [Test]
+        public void Mall_Stash_TakeInSeveralTrips_OrCallTruck_AndOnlyAtTheMall()
+        {
+            GameSession s = Make(50000);
+            GameSessionTests.Teleport(s, "mall");
+            s.MallCartAdd("poster", 2);
+            s.MallCartAdd("sofa");
+            Assert.IsTrue(s.CheckoutMall(MallCarry.Stay), "什么都不带，全寄存");
+            Assert.AreEqual(3, s.MallStashCount);
+            Assert.AreEqual(0, s.Backpack.WeightKg, 1e-9);
+
+            Assert.IsFalse(s.TakeFromStash("sofa"), "走路背不动沙发");
+            Assert.AreEqual(2, s.TakeStashWhatFits(), "轻的海报搬得动");
+            Assert.AreEqual(1, s.MallStashCount);
+            Assert.AreEqual(2, s.Backpack.FurnitureCount("poster"));
+            Assert.AreEqual(0, s.TakeStashWhatFits(), "沙发还是搬不动");
+
+            GameSessionTests.Teleport(s, "flat");
+            Assert.IsFalse(s.CallTruckForStash(), "不在家具城不能叫车拉寄存的货");
+            Assert.IsFalse(s.TakeFromStash("sofa"));
+            GameSessionTests.Teleport(s, "mall");
+            Money before = s.Ledger.Balance;
+            Assert.IsTrue(s.CallTruckForStash());
+            Assert.AreEqual(FurnitureCatalog.TruckFee, before - s.Ledger.Balance);
+            Assert.AreEqual(0, s.MallStashCount);
+            Assert.AreEqual(1, s.Parcels.Count);
+        }
+
+        [Test]
+        public void Mall_Cart_OnlyAtTheMall_AndClearedOnLeaving()
+        {
+            GameSession s = Make();
+            Assert.IsFalse(s.MallCartAdd("plant"), "不在家具城");
+            GameSessionTests.Teleport(s, "mall");
+            Assert.IsFalse(s.MallCartAdd("bed_board"), "起始家具不卖");
+            Assert.IsTrue(s.MallCartAdd("plant", 2));
+            Assert.AreEqual(2, s.MallCartOf("plant"));
+            Assert.IsTrue(s.MallCartRemove("plant"));
+            Assert.AreEqual(1, s.MallCartOf("plant"));
+            Assert.AreEqual("购物车是空的", new GameSession(s.City, 1, Money.FromYuan(10), s.Clock.Now).PlanMallCheckout(MallCarry.Self).Blocker);
+            s.Leave();
+            Assert.AreEqual(0, s.MallCartCount);
         }
 
         [Test]
