@@ -22,7 +22,7 @@ namespace PCShopSell.Game.UI
                     OpenDock();
                     break;
                 case PlaceKind.Home:
-                    OpenPlaceWindow(p, BuildHome, 760, 760);
+                    Toast("回到出租屋了。床：睡觉；衣柜：换衣服；小桌：看状态；门：出门。走近按 E。");
                     break;
                 case PlaceKind.Wholesaler:
                     OpenPlaceWindow(p, BuildStall, 860, 800);
@@ -65,13 +65,41 @@ namespace PCShopSell.Game.UI
 
         // ---------- 家 ----------
 
-        private void BuildHome(Window w, Place p)
+        /// <summary>在出租屋里打开的小窗口：不会离开屋子，关掉就回到屋里。</summary>
+        private void OpenRoomWindow(string title, float w, float h, System.Action<Window> build)
+        {
+            OpenWindow(title, w, h, win =>
+            {
+                if (!_ctrl.InHome)
+                {
+                    win.Close();
+                    return;
+                }
+                build(win);
+                Ui.Size(Ui.Button(win.Content, "关闭", () => win.Close(), 20), -1, 46);
+            }, true, true);
+        }
+
+        public void OpenBedWindow() => OpenRoomWindow("硬板床", 700, 400, BuildBed);
+
+        public void OpenWardrobeWindow() => OpenRoomWindow("布衣柜", 700, 480, BuildWardrobe);
+
+        public void OpenStatusWindow() => OpenRoomWindow("出租屋", 700, 360, BuildStatus);
+
+        private void BuildStatus(Window w)
         {
             PlayerStats st = S.Player;
-            Line(w.Content, "城中村出租屋：一张床，一个电饭锅。月租 " + GameSession.HomeRent);
+            Line(w.Content, "城中村出租屋：十来平米，一张床、一个电饭锅。月租 " + GameSession.HomeRent);
             Line(w.Content, $"饥饿 {st.Hunger:0}  精力 {st.Energy:0}/{st.MaxEnergy:0}  健康 {st.Health:0}  欠觉 {st.SleepDebt:0.#} 小时", 18, Ui.Dim);
             Line(w.Content, $"智力 {st.Intelligence}  魅力 {st.Charm}  技术 {st.Skill}", 18, Ui.Dim);
             Line(w.Content, "三餐（7:30 / 12:00 / 18:30）自动在外面吃，每顿 " + GameSession.MealPrice, 17, Ui.Dim);
+            Line(w.Content, $"住处：{HomeComforts.Name(S.HomeComfort)}", 17, Ui.Dim);
+        }
+
+        private void BuildBed(Window w)
+        {
+            PlayerStats st = S.Player;
+            Line(w.Content, $"精力 {st.Energy:0}/{st.MaxEnergy:0}  欠觉 {st.SleepDebt:0.#} 小时", 18, Ui.Dim);
             RectTransform row = Ui.Row(w.Content, 54);
             Ui.Size(Ui.Button(row, "睡到明早 8:00", () =>
             {
@@ -97,6 +125,10 @@ namespace PCShopSell.Game.UI
                 }, 18, Ui.ButtonHot), -1, 44);
             }
 
+        }
+
+        private void BuildWardrobe(Window w)
+        {
             // 衣橱
             Line(w.Content, $"衣橱（当前魅力 {S.EffectiveCharm}，其中衣着加成 +{S.Outfit.CharmBonus}）：", 18);
             foreach (OutfitDef def in Outfits.All)

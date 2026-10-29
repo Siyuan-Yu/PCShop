@@ -26,7 +26,13 @@ namespace PCShopSell.Game
         public ShopInteriorView Interior { get; private set; }
         public Camera Cam { get; private set; }
         public GameUi Ui { get; private set; }
+        public HomeRoomView HomeRoom { get; private set; }
         public bool InInterior => Session != null && Session.InPlayerShop;
+        /// <summary>在自己的出租屋里（真实的小屋，不是街上弹窗）。</summary>
+        public bool InHome => Session != null && Session.CurrentPlace != null && Session.CurrentPlace == Session.Home;
+        /// <summary>在任意室内场景（店里或家里）：街道隐藏，镜头跟着老板。</summary>
+        public bool InRoom => InInterior || InHome;
+        private int RoomKind => InInterior ? 1 : InHome ? 2 : 0;
 
         private CameraRig _rig;
         private DayNightLighting _lighting;
@@ -37,7 +43,7 @@ namespace PCShopSell.Game
         private Transform _policeRoot;
         private Place _pendingEnter;
         private bool _wasChasing;
-        private bool _wasInterior;
+        private int _wasRoomKind;
         private bool _autosaveDue;
         private bool _bootstrapped;
         private bool _eventsOn;
@@ -67,6 +73,7 @@ namespace PCShopSell.Game
             _actors = new GameObject("Actors").transform;
             _avatar = new AvatarView(_actors);
             Interior = new ShopInteriorView(_actors, City.PlayerShop().Size);
+            HomeRoom = new HomeRoomView(_actors);
             Ui = new GameUi(this);
 
             StartSession(NewSession());
@@ -121,7 +128,7 @@ namespace PCShopSell.Game
                 _crowd = new CrowdView(_actors, -95, 100, door, 34);
             }
 
-            _wasInterior = InInterior;
+            _wasRoomKind = RoomKind;
             SnapCamera();
             if (s.CurrentPlace != null && !s.IsGameOver) Ui.OnEnteredPlace(s.CurrentPlace);
         }
@@ -224,24 +231,27 @@ namespace PCShopSell.Game
         private void SyncViews(float dt)
         {
             bool interior = InInterior;
+            bool room = InRoom;
             float worldDt = Session.Time.IsRunning ? dt * Session.Time.Speed : 0f;
             Interior.SetActive(interior);
-            World.Root.SetActive(!interior);
+            HomeRoom.SetActive(InHome);
+            World.Root.SetActive(!room);
             _avatar.Update(Session, dt);
-            _police.Update(!interior);
-            _crowd.Update(worldDt, !interior);
+            _police.Update(!room);
+            _crowd.Update(worldDt, !room);
             if (interior) Interior.Update(Session, worldDt, dt);
+            if (InHome) HomeRoom.Update(Session, dt, Session.Clock.MinuteOfDay);
 
-            if (interior != _wasInterior)
+            if (RoomKind != _wasRoomKind)
             {
-                _wasInterior = interior;
+                _wasRoomKind = RoomKind;
                 SnapCamera();
             }
             else
             {
                 _rig.Follow(FocusPoint(), dt);
             }
-            _lighting.Apply(Session.Clock.MinuteOfDay, interior);
+            _lighting.Apply(Session.Clock.MinuteOfDay, room);
 
             bool chasing = Session.Police.AnyChasing;
             if (chasing && !_wasChasing) Ui.Toast("被交警发现了！");
@@ -250,6 +260,11 @@ namespace PCShopSell.Game
 
         private Vector3 FocusPoint(float zoom = -1f)
         {
+            if (InHome)
+            {
+                Vector3 c = HomeRoom.Center + new Vector3(0, 0.8f, 0);
+                return c + (HomeRoom.OwnerWorld - HomeRoom.Center) * 0.35f;
+            }
             if (InInterior)
                 return Interior.OwnerWorld + new Vector3(0, 0.8f, 0) + CameraRig.Rotation * Vector3.right * ((zoom > 0 ? zoom : Cam.orthographicSize) * Cam.aspect * 0.28f);
             Vector3 p = StreetWorldBuilder.ToWorld(Session.PlayerPosition);
@@ -266,7 +281,11 @@ namespace PCShopSell.Game
             if (Input.GetKeyDown(KeyCode.Alpha4)) Session.Time.SetSpeed(8);
             if (!GameUi.PointerOverUi) _rig.Zoom(Input.mouseScrollDelta.y);
             HandleCameraOrbit();
-            if (Input.GetKeyDown(KeyCode.E) && !InInterior && !Ui.AnyModalOpen && !Session.IsGameOver) TryEnterNearby();
+            if (Input.GetKeyDown(KeyCode.E) && !Ui.AnyModalOpen && !Session.IsGameOver)
+            {
+                if (InHome) HomeInteract(HomeRoom.NearbyId);
+                else if (!InInterior) TryEnterNearby();
+            }
         }
 
         // ---------- 镜头旋转 ----------
@@ -276,7 +295,7 @@ namespace PCShopSell.Game
         /// <summary>街上自由切换视角：右键拖动旋转/俯仰，Q / R 左右转，V 复位。</summary>
         private void HandleCameraOrbit()
         {
-            if (InInterior || Ui.AnyModalOpen) { _orbiting = false; return; }
+            if (InRoom || Ui.AnyModalOpen) { _orbiting = false; return; }
             if (Input.GetMouseButtonDown(1) && !GameUi.PointerOverUi) _orbiting = true;
             if (!Input.GetMouseButton(1)) _orbiting = false;
             if (_orbiting) _rig.Orbit(Input.GetAxis("Mouse X") * 4f, -Input.GetAxis("Mouse Y") * 3f);
@@ -319,6 +338,12 @@ namespace PCShopSell.Game
                 Interior.MoveOwner(dir, dt);
                 return;
             }
+            if (InHome)
+            {
+                Session.SetSteer(0, 0);
+                HomeRoom.MoveOwner(dir, dt);
+                return;
+            }
 
             if (!Session.CanSteer)
             {
@@ -340,6 +365,35 @@ namespace PCShopSell.Game
             Session.SetSteer(dir.x, dir.z);
         }
 
+        /// <summary>出租屋里的互动：床 = 睡觉，衣柜 = 换衣服，桌子 = 看状态，门 = 出门。</summary>
+        public void HomeInteract(string id)
+        {
+            switch (id)
+            {
+                case HomeRoomView.Bed:
+                    Ui.OpenBedWindow();
+                    break;
+                case HomeRoomView.Wardrobe:
+                    Ui.OpenWardrobeWindow();
+                    break;
+                case HomeRoomView.Table:
+                    Ui.OpenStatusWindow();
+                    break;
+                case HomeRoomView.Door:
+                    LeaveHome();
+                    break;
+                default:
+                    Ui.Toast("走到床、衣柜、小桌或门边，按 E。");
+                    break;
+            }
+        }
+
+        public void LeaveHome()
+        {
+            Ui.CloseAllWindows();
+            Session.Leave();
+        }
+
         private void TryEnterNearby()
         {
             Place p = Session.NearbyPlace;
@@ -358,6 +412,17 @@ namespace PCShopSell.Game
             if (!Input.GetMouseButtonDown(0) || GameUi.PointerOverUi) return;
             Ray ray = Cam.ScreenPointToRay(Input.mousePosition);
             if (!Physics.Raycast(ray, out RaycastHit hit, 1000f)) return;
+
+            if (InHome)
+            {
+                var hf = hit.collider.GetComponentInParent<HomeFurniture>();
+                if (hf != null)
+                {
+                    if (HomeRoom.NearbyId == hf.Id) HomeInteract(hf.Id);
+                    else Ui.Toast("再走近一点。");
+                }
+                return;
+            }
 
             if (InInterior)
             {
@@ -394,11 +459,12 @@ namespace PCShopSell.Game
         public void SnapCamera()
         {
             bool interior = InInterior;
-            _rig.SetInterior(interior);
-            _rig.MinSize = interior ? ShopInteriorView.MinZoom : 5f;
-            _rig.MaxSize = interior ? Interior.CameraSize : 60f;
-            float size = interior ? Mathf.Min(ShopInteriorView.DefaultZoom, Interior.CameraSize) : 16f;
-            _wasInterior = interior;
+            bool home = InHome;
+            _rig.SetInterior(interior || home);
+            _rig.MinSize = home ? HomeRoomView.MinZoom : interior ? ShopInteriorView.MinZoom : 5f;
+            _rig.MaxSize = home ? HomeRoomView.CameraSize : interior ? Interior.CameraSize : 60f;
+            float size = home ? HomeRoomView.DefaultZoom : interior ? Mathf.Min(ShopInteriorView.DefaultZoom, Interior.CameraSize) : 16f;
+            _wasRoomKind = RoomKind;
             _rig.Snap(FocusPoint(size), size);
         }
 

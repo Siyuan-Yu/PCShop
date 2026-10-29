@@ -190,6 +190,7 @@ namespace PCShopSell.Game.UI
             else if (_ctrl.InInterior) _hintText.text = "WASD 在店里走动，点地板也行 · 点击头顶有黄球的顾客结账 · 右侧面板管理店铺";
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimatedMinutes} 分钟 · 按 WASD 随时接管";
             else if (S.NearbyPlace != null) _hintText.text = $"<color=#FFD54A>按 E 进入 {S.NearbyPlace.Name}</color>";
+            else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#FFD54A>按 E：{_ctrl.HomeRoom.NearbyLabel}</color>" : "WASD 在屋里走动 · 走到床边睡觉、衣柜换衣服、小桌看状态、门口出门（按 E）";
             else if (S.CurrentPlace != null) _hintText.text = "按 WASD 离开 · 空格暂停";
             else _hintText.text = "WASD 自由走动 · 右键拖动/Q R 转视角 · V 复位 · 滚轮缩放 · 走到门口按 E 进入 · 空格暂停 · 下方按钮可快捷前往";
 
@@ -219,7 +220,7 @@ namespace PCShopSell.Game.UI
         private void UpdateLabels()
         {
             Camera cam = _ctrl.Cam;
-            bool show = !_ctrl.InInterior;
+            bool show = !_ctrl.InRoom;
             foreach (var kv in _ctrl.World.Places)
             {
                 PlaceVisual pv = kv.Value;
@@ -264,7 +265,7 @@ namespace PCShopSell.Game.UI
                 _playerMark.sizeDelta = new Vector2(34, 24);
             }
             Camera cam = _ctrl.Cam;
-            bool show = !_ctrl.InInterior && S.CurrentPlace == null;
+            bool show = !_ctrl.InRoom && S.CurrentPlace == null;
             Vector3 sp = cam.WorldToScreenPoint(StreetWorldBuilder.ToWorld(S.PlayerPosition, 2.6f));
             show &= sp.z > 0;
             _playerMark.gameObject.SetActive(show);

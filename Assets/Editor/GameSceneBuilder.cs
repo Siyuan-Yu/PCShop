@@ -277,7 +277,21 @@ namespace PCShopSell.EditorTools
             Teleport(s, "home");
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
             Frame(0.05f);
+            for (int i = 0; i < 10; i++) Frame(0.05f);
+            Check(_game.InHome, "回家后在真实的出租屋里");
             Shot("vs1_13_home");
+            _game.HomeInteract(PCShopSell.Game.Runtime.HomeRoomView.Wardrobe);
+            Frame(0.05f);
+            Check(_game.Ui.AnyModalOpen, "衣柜窗口打开");
+            Shot("vs1_22_wardrobe");
+            _game.Ui.CloseAllWindows();
+            _game.HomeInteract(PCShopSell.Game.Runtime.HomeRoomView.Bed);
+            Frame(0.05f);
+            Shot("vs1_23_bed");
+            _game.Ui.CloseAllWindows();
+            while (s.HomeComfort < 3) { s.Ledger.Credit(s.Clock.Today, "测试", PCShopSell.Core.Common.Money.FromYuan(5000), "演示"); s.UpgradeHome(); }
+            for (int i = 0; i < 10; i++) Frame(0.05f);
+            Shot("vs1_24_home_upgraded");
             _game.Ui.CloseAllWindows();
 
             // 存档 / 读档
