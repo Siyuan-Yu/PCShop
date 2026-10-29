@@ -49,11 +49,16 @@ powershell -File tools\run-smoke.ps1 -CopyShots      # 冒烟测试 + 截图拷�
 
 Unity 路径默认是 `D:\UnityEditor\2022.3.6f1\Editor\Unity.exe`，可用 `-Unity` 参数改。冒烟测试需要显卡，不能加 `-nographics`。
 
+## 2026-10-29 补充
+- 修复 `Main.unity` 里 `Game` 物体脚本引用丢失（点 Play 什么都没有的原因），新增 `GameSceneBuilder.VerifyMainSceneFromBatch` 校验。
+- 新增 `PlayModeSmoke`（`Assets/Editor/PlayModeSmoke.cs`）：真正进 Play 模式跑 `Main.unity`，走到店里、8 倍速运行，检查零报错。命令：`Unity -batchmode -projectPath F:\PCShopSell -executeMethod PCShopSell.EditorTools.PlayModeSmoke.RunFromBatch`（不能带 `-nographics`）。批处理里没有 Game 视图，所以不出截图。
+- 街区画面升级：地面/路面/人行道加噪点质感；商铺上层、城中村、背景楼、电子市场大楼都有窗户（夜里亮灯，每栋亮的不一样）；屋顶有空调外机和水箱；每隔一家店在门口有一盏招牌颜色的夜间点光。
+
 ## 已知问题与限制
 - 美术是灰盒：人物是胶囊，建筑是方块，没有音效。
 - 只有一个存档位，存在 `Application.persistentDataPath/save1.json`。
 - 字体用系统的微软雅黑，暂时没导入思源黑体和 TextMeshPro。
-- 批处理截图里，店内"结账"标签和顾客位置有偏差。这是批处理画布尺寸的问题，正常 Play 时应该对齐，验收时请顺便确认。
+- 批处理截图里，店内"结账"标签和顾客位置有偏差。这是批处理里把画布改成相机模式造成的，正常 Play 用的是全屏叠加画布，坐标换算已核对过代码；验收时请顺便确认。
 - 数值都是起步默认值，没调过平衡。冒烟测试里的脚本玩家一个月后现金为负，这不代表真实玩法的难度。
 - 长线目标（约 3 年）、多结局、事件系统、人物关系还没做。
 
