@@ -3,7 +3,7 @@
 ## 怎么跑
 1. Unity 2022.3.6f1 打开工程，打开 `Assets/Scenes/Main.unity`，点 Play。
 2. 首次进入会弹开局说明；有存档时会问"继续 / 新游戏"。
-3. 场景是空的也没关系：所有世界、灯光、UI 都由 `GameController` 运行时按 `Assets/Resources/Data/city_layout.json` 生成。场景可用菜单重新生成（编辑器脚本 `GameSceneBuilder.CreateScene`）。
+3. 场景里只有相机、灯光、后期和一个 `Game` 物体（挂 `GameController`），其余在 Play 时才生成；如果 `Game` 上显示 Missing Script，说明脚本引用丢了，可用菜单 `PCShopSell/Create Main Scene` 重新生成，或运行 `GameSceneBuilder.VerifyMainSceneFromBatch` 校验。所有世界、灯光、UI 都由 `GameController` 运行时按 `Assets/Resources/Data/city_layout.json` 生成：所有世界、灯光、UI 都由 `GameController` 运行时按 `Assets/Resources/Data/city_layout.json` 生成。场景可用菜单重新生成（编辑器脚本 `GameSceneBuilder.CreateScene`）。
 
 ## 操作
 | 操作 | 作用 |

@@ -78,6 +78,37 @@ namespace PCShopSell.EditorTools
             return cam;
         }
 
+        /// <summary>
+        /// 校验真正的 Main.unity：能打开、没有丢失脚本、场景里有 GameController 并能搭起整个游戏。
+        /// （冒烟测试用的是新建的空场景，发现不了 Main.unity 里脚本引用丢失的问题。）
+        /// </summary>
+        public static void VerifyMainSceneFromBatch()
+        {
+            int code = 0;
+            try
+            {
+                Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+                int missing = 0;
+                foreach (GameObject root in scene.GetRootGameObjects())
+                    foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+                        missing += GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(t.gameObject);
+                var game = UnityEngine.Object.FindObjectOfType<GameController>();
+                Debug.Log($"VERIFY missingScripts={missing} gameController={(game != null)}");
+                if (missing > 0 || game == null) code = 1;
+                else
+                {
+                    game.Bootstrap(false);
+                    Debug.Log($"VERIFY bootstrapped places={game.City.Places.Count} session={(game.Session != null)}");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                code = 1;
+            }
+            EditorApplication.Exit(code);
+        }
+
         // ---------- 冒烟测试 ----------
 
         public static void SmokeFromBatch()
