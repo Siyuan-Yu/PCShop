@@ -72,41 +72,41 @@ namespace PCShopSell.Game.Runtime
             Material silver = Mats.Lit(new Color(0.8f, 0.82f, 0.85f), 0.6f);
             switch (cat)
             {
+                // 尺寸按真实配件：显卡约 30×13 cm、CPU 盒约 12×13 cm、内存条约 13×3 cm、2.5 寸硬盘 10×7 cm、ATX 主板盒约 31×27 cm
                 case PartCategory.Gpu:
-                    Prims.Box(t, "Body", new Vector3(0, 0.05f, 0), new Vector3(0.30f, 0.09f, 0.20f), dark);
-                    Prims.Shape(PrimitiveType.Cylinder, t, "FanL", new Vector3(-0.075f, 0.098f, 0), new Vector3(0.11f, 0.004f, 0.11f), silver);
-                    Prims.Shape(PrimitiveType.Cylinder, t, "FanR", new Vector3(0.075f, 0.098f, 0), new Vector3(0.11f, 0.004f, 0.11f), silver);
-                    Prims.Box(t, "Stripe", new Vector3(0, 0.05f, -0.102f), new Vector3(0.30f, 0.02f, 0.006f), Mats.Lit(new Color(0.85f, 0.2f, 0.2f)));
-                    Prims.Box(t, "Bracket", new Vector3(-0.152f, 0.06f, 0.02f), new Vector3(0.006f, 0.12f, 0.16f), silver);
+                    Prims.Box(t, "Body", new Vector3(0, 0.022f, 0), new Vector3(0.30f, 0.044f, 0.13f), dark);
+                    Prims.Shape(PrimitiveType.Cylinder, t, "FanL", new Vector3(-0.075f, 0.046f, 0), new Vector3(0.06f, 0.004f, 0.06f), silver);
+                    Prims.Shape(PrimitiveType.Cylinder, t, "FanR", new Vector3(0.075f, 0.046f, 0), new Vector3(0.06f, 0.004f, 0.06f), silver);
+                    Prims.Box(t, "Stripe", new Vector3(0, 0.03f, -0.067f), new Vector3(0.30f, 0.02f, 0.006f), Mats.Lit(new Color(0.85f, 0.2f, 0.2f)));
+                    Prims.Box(t, "Bracket", new Vector3(-0.152f, 0.06f, 0f), new Vector3(0.006f, 0.12f, 0.11f), silver);
                     break;
                 case PartCategory.Cpu:
-                    Prims.Box(t, "Box", new Vector3(0, 0.09f, 0), new Vector3(0.20f, 0.18f, 0.12f), Mats.Lit(new Color(0.15f, 0.32f, 0.75f)));
-                    Prims.Box(t, "Chip", new Vector3(0, 0.09f, -0.062f), new Vector3(0.10f, 0.10f, 0.005f), silver);
-                    Prims.Box(t, "Gold", new Vector3(0, 0.09f, -0.066f), new Vector3(0.04f, 0.04f, 0.004f), Mats.Lit(new Color(0.9f, 0.7f, 0.2f), 0.7f));
+                    Prims.Box(t, "Box", new Vector3(0, 0.065f, 0), new Vector3(0.12f, 0.13f, 0.07f), Mats.Lit(new Color(0.15f, 0.32f, 0.75f)));
+                    Prims.Box(t, "Chip", new Vector3(0, 0.065f, -0.037f), new Vector3(0.06f, 0.06f, 0.005f), silver);
+                    Prims.Box(t, "Gold", new Vector3(0, 0.065f, -0.04f), new Vector3(0.025f, 0.025f, 0.004f), Mats.Lit(new Color(0.9f, 0.7f, 0.2f), 0.7f));
                     break;
                 case PartCategory.Memory:
                     for (int s = 0; s < 2; s++)
                     {
-                        float z = s == 0 ? -0.05f : 0.05f;
-                        Prims.Box(t, "Stick", new Vector3(0, 0.04f, z), new Vector3(0.28f, 0.07f, 0.012f), Mats.Lit(new Color(0.1f, 0.4f, 0.25f)));
+                        float z = s == 0 ? -0.03f : 0.03f;
+                        Prims.Box(t, "Stick", new Vector3(0, 0.02f, z), new Vector3(0.133f, 0.032f, 0.006f), Mats.Lit(new Color(0.1f, 0.4f, 0.25f)));
                         for (int k = 0; k < 4; k++)
-                            Prims.Box(t, "Chip", new Vector3(-0.09f + k * 0.06f, 0.045f, z - 0.01f), new Vector3(0.045f, 0.05f, 0.012f), dark);
-                        Prims.Box(t, "Gold", new Vector3(0, 0.003f, z), new Vector3(0.26f, 0.008f, 0.014f), Mats.Lit(new Color(0.9f, 0.7f, 0.2f), 0.7f));
+                            Prims.Box(t, "Chip", new Vector3(-0.045f + k * 0.03f, 0.022f, z - 0.005f), new Vector3(0.022f, 0.02f, 0.006f), dark);
+                        Prims.Box(t, "Gold", new Vector3(0, 0.002f, z), new Vector3(0.12f, 0.004f, 0.008f), Mats.Lit(new Color(0.9f, 0.7f, 0.2f), 0.7f));
                     }
                     break;
                 case PartCategory.Storage:
-                    for (int s = 0; s < 2; s++)
+                    for (int s = 0; s < 3; s++)
                     {
-                        Prims.Box(t, "Ssd", new Vector3(0, 0.015f + s * 0.034f, 0), new Vector3(0.26f, 0.03f, 0.17f), dark);
-                        Prims.Box(t, "Label", new Vector3(0, 0.031f + s * 0.034f, 0), new Vector3(0.18f, 0.004f, 0.10f), Mats.Lit(new Color(0.9f, 0.6f, 0.15f)));
+                        Prims.Box(t, "Ssd", new Vector3(0, 0.005f + s * 0.011f, 0), new Vector3(0.10f, 0.01f, 0.07f), dark);
+                        Prims.Box(t, "Label", new Vector3(0, 0.0105f + s * 0.011f, 0), new Vector3(0.07f, 0.002f, 0.045f), Mats.Lit(new Color(0.9f, 0.6f, 0.15f)));
                     }
                     break;
                 case PartCategory.Motherboard:
-                    Prims.Box(t, "Box", new Vector3(0, 0.17f, 0), new Vector3(0.30f, 0.34f, 0.07f), dark);
-                    Prims.Box(t, "Print", new Vector3(0, 0.17f, -0.037f), new Vector3(0.24f, 0.28f, 0.004f), Mats.Lit(new Color(0.15f, 0.55f, 0.35f)));
-                    Prims.Box(t, "Socket", new Vector3(0, 0.2f, -0.041f), new Vector3(0.09f, 0.09f, 0.004f), silver);
-                    break;
-                default: // 电源机箱
+                    Prims.Box(t, "Box", new Vector3(0, 0.135f, 0), new Vector3(0.31f, 0.27f, 0.07f), dark);
+                    Prims.Box(t, "Print", new Vector3(0, 0.135f, -0.037f), new Vector3(0.25f, 0.21f, 0.004f), Mats.Lit(new Color(0.15f, 0.55f, 0.35f)));
+                    Prims.Box(t, "Socket", new Vector3(0, 0.16f, -0.041f), new Vector3(0.07f, 0.07f, 0.004f), silver);
+                    break;                default: // 电源机箱
                     Prims.Box(t, "Case", new Vector3(0, 0.25f, 0), new Vector3(0.26f, 0.5f, 0.28f), dark);
                     Prims.Box(t, "Glass", new Vector3(0, 0.27f, -0.142f), new Vector3(0.19f, 0.36f, 0.004f), Mats.Glow(new Color(0.1f, 0.3f, 0.4f), new Color(0.3f, 1.2f, 1.6f), false));
                     Prims.Box(t, "Psu", new Vector3(0, 0.04f, -0.142f), new Vector3(0.19f, 0.06f, 0.004f), Mats.Lit(new Color(0.3f, 0.3f, 0.34f)));

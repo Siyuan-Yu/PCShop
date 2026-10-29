@@ -182,6 +182,14 @@ namespace PCShopSell.EditorTools
             Check(s.PlayerShop.Queue.Count > 0, "有顾客拿着货到柜台排队");
             Frame(1.5f);
             Shot("vs1_55_customer_wait");
+            // 拉远看整间店：展示桌靠后墙，柜台到门口留出排队的路
+            _game.Ui.CloseDock();
+            _game.DebugShopOverview(true);
+            for (int i = 0; i < 8; i++) Frame(0.1f);
+            Shot("vs1_70_shop_overview");
+            _game.DebugShopOverview(false);
+            _game.Ui.OpenDock();
+            Frame(0.1f);
             int lostBefore = s.PlayerShop.TodayLost;
             for (int i = 0; i < 9000 && s.PlayerShop.Queue.Count > 0; i++) Frame(0.1f);
             Check(s.PlayerShop.TodayLost > lostBefore, "排太久顾客不买了");
@@ -228,6 +236,41 @@ namespace PCShopSell.EditorTools
             Check(_game.Ui.AnyModalOpen, "货架窗口打开");
             Shot("vs1_51_shelf");
             _game.Ui.CloseModalWindows();
+            // 摆满货的货架：整盒 / 散件各不同数量，截图后再拿走
+            var shelfParts = PartCatalog.InCategory(_game.Interior.NearbyShelf.Value).OrderBy(p => p.Tier).ToList();
+            int[] boxedN = { 5, 2, 0 }, looseN = { 3, 7, 1 };
+            for (int i = 0; i < shelfParts.Count; i++)
+            {
+                if (boxedN[i] > 0) s.PlayerShop.Stock.ForceAdd(shelfParts[i], true, boxedN[i]);
+                if (looseN[i] > 0) s.PlayerShop.Stock.ForceAdd(shelfParts[i], false, looseN[i]);
+            }
+            _game.Ui.OpenShelfWindow(_game.Interior.NearbyShelf.Value);
+            Frame(0.05f);
+            Shot("vs1_69_shelf_stocked");
+            _game.Ui.CloseModalWindows();
+            for (int i = 0; i < shelfParts.Count; i++)
+            {
+                if (boxedN[i] > 0) s.PlayerShop.Stock.TryRemove(shelfParts[i], true, boxedN[i]);
+                if (looseN[i] > 0) s.PlayerShop.Stock.TryRemove(shelfParts[i], false, looseN[i]);
+            }
+            foreach (PartCategory tc in new[] { PartCategory.Cpu, PartCategory.Memory, PartCategory.Storage, PartCategory.PowerCase, PartCategory.Motherboard })
+            {
+                var tps = PartCatalog.InCategory(tc).OrderBy(p => p.Tier).ToList();
+                for (int i = 0; i < tps.Count; i++)
+                {
+                    s.PlayerShop.Stock.ForceAdd(tps[i], true, 2);
+                    s.PlayerShop.Stock.ForceAdd(tps[i], false, 3);
+                }
+                _game.Ui.OpenShelfWindow(tc);
+                Frame(0.05f);
+                Shot("dbg_shelf_" + tc);
+                _game.Ui.CloseModalWindows();
+                for (int i = 0; i < tps.Count; i++)
+                {
+                    s.PlayerShop.Stock.TryRemove(tps[i], true, 2);
+                    s.PlayerShop.Stock.TryRemove(tps[i], false, 3);
+                }
+            }
             // 整机展示台：靠近也能按 F 看
             _game.Interior.StandAtDisplay();
             Frame(0.05f);

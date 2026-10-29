@@ -261,6 +261,17 @@ namespace PCShopSell.Game
             _wasChasing = chasing;
         }
 
+        private bool _overview;
+
+        /// <summary>冒烟 / 调试：店里镜头拉到看全整间店（开 / 关）。</summary>
+        public void DebugShopOverview(bool on)
+        {
+            _overview = on;
+            if (!InInterior) return;
+            float size = on ? Interior.CameraSize : Mathf.Min(ShopInteriorView.DefaultZoom, Interior.CameraSize);
+            _rig.Snap(FocusPoint(size), size);
+        }
+
         private Vector3 FocusPoint(float zoom = -1f)
         {
             if (InHome)
@@ -268,6 +279,7 @@ namespace PCShopSell.Game
                 Vector3 c = HomeRoom.Center + new Vector3(0, 0.8f, 0);
                 return c + (HomeRoom.OwnerWorld - HomeRoom.Center) * 0.35f;
             }
+            if (InInterior && _overview) return Interior.Center + new Vector3(0, 0.8f, 0);
             if (InInterior)
                 return Interior.OwnerWorld + new Vector3(0, 0.8f, 0) + CameraRig.Rotation * Vector3.right * ((zoom > 0 ? zoom : Cam.orthographicSize) * Cam.aspect * 0.28f);
             Vector3 p = StreetWorldBuilder.ToWorld(Session.PlayerPosition);

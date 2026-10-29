@@ -109,7 +109,6 @@ namespace PCShopSell.Game.Runtime
         private readonly GameObject _clerk;
         private readonly Vector3 _door;
         private readonly Vector3 _counterFront;
-        private readonly Vector3 _queueDir;
         private float _stockTimer;
         private ShopSimulation _hooked;
         private readonly Dictionary<int, LeaveReason> _leaveReasons = new Dictionary<int, LeaveReason>();
@@ -245,7 +244,16 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), Mats.Lit(new Color(0.86f, 0.88f, 0.9f)));
             Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), Mats.Lit(new Color(0.8f, 0.83f, 0.86f)));
             Prims.Box(_root, "WallLeftLow", new Vector3(-0.05f, 0.3f, d / 2), new Vector3(0.1f, 0.6f, d), Mats.Lit(new Color(0.6f, 0.6f, 0.62f)));
-            Prims.Box(_root, "WallFrontLow", new Vector3(w / 2 + 0.6f, 0.3f, -0.05f), new Vector3(w - 1.2f, 0.6f, 0.1f), Mats.Lit(new Color(0.6f, 0.6f, 0.62f)));
+            // 大门开在货架这一侧（右前方），收银台在左边：顾客进门先逛货架，再回左边结账
+            float doorX = w - 3.0f;
+            Material lowWall = Mats.Lit(new Color(0.6f, 0.6f, 0.62f));
+            Prims.Box(_root, "WallFrontLowA", new Vector3((doorX - 0.7f) / 2, 0.3f, -0.05f), new Vector3(doorX - 0.7f, 0.6f, 0.1f), lowWall);
+            Prims.Box(_root, "WallFrontLowB", new Vector3((doorX + 0.7f + w) / 2, 0.3f, -0.05f), new Vector3(w - doorX - 0.7f, 0.6f, 0.1f), lowWall);
+            Prims.Box(_root, "DoorMat", new Vector3(doorX, 0.012f, 0.45f), new Vector3(1.3f, 0.014f, 0.8f), Mats.Lit(new Color(0.35f, 0.18f, 0.16f)));
+            Material doorPost = Mats.Lit(new Color(0.3f, 0.32f, 0.36f), 0.5f);
+            Prims.Box(_root, "DoorPostL", new Vector3(doorX - 0.72f, 0.7f, -0.05f), new Vector3(0.1f, 1.4f, 0.14f), doorPost);
+            Prims.Box(_root, "DoorPostR", new Vector3(doorX + 0.72f, 0.7f, -0.05f), new Vector3(0.1f, 1.4f, 0.14f), doorPost);
+            Prims.Box(_root, "DoorSign", new Vector3(doorX, 1.55f, -0.05f), new Vector3(1.5f, 0.2f, 0.05f), Mats.Glow(new Color(0.9f, 0.5f, 0.15f), new Color(2.4f, 1.3f, 0.3f), false));
             Prims.Box(_root, "Poster", new Vector3(w * 0.3f, 2f, d - 0.01f), new Vector3(1.2f, 0.8f, 0.02f), Mats.Glow(new Color(0.2f, 0.6f, 0.9f), new Color(0.4f, 1.2f, 1.8f), false));
 
             int lampsX = Mathf.Max(1, Mathf.CeilToInt(w / 6f)), lampsZ = Mathf.Max(1, Mathf.CeilToInt(d / 6f));
@@ -262,13 +270,17 @@ namespace PCShopSell.Game.Runtime
                 lamp.color = new Color(1f, 0.95f, 0.85f);
             }
 
-            // 货架：沿后墙和右墙，每个货架摆一类配件（显卡、CPU、内存、硬盘、机箱电源、主板轮流）
+            // 布局：整机展示桌靠后墙（顾客逛完不挡路），货架沿后墙剩下的位置、右墙和左墙前部；
+            // 柜台前到门口这一片留空，给顾客排队结账。
+            int deskCount = size == ShopSize.Small ? 1 : size == ShopSize.Medium ? 2 : 4;
+            var tables = new List<Vector2>();
+            for (int i = 0; i < deskCount; i++) tables.Add(new Vector2(2.5f + i * 3.0f, d - 0.55f));
+
+            // 货架：每个货架摆一类配件（显卡、CPU、内存、硬盘、机箱电源、主板轮流）
             PartCategory[] cats = { PartCategory.Gpu, PartCategory.Cpu, PartCategory.Memory, PartCategory.Storage, PartCategory.PowerCase, PartCategory.Motherboard };
             int shelfNo = 0;
-            int backShelves = Mathf.Max(1, Mathf.FloorToInt((w - 2.8f) / 1.6f) + 1);
-            for (int i = 0; i < backShelves; i++)
+            for (float x = tables[tables.Count - 1].x + 2.5f; x <= w - 0.9f; x += 1.6f)
             {
-                float x = 1.5f + i * 1.6f;
                 _shelves.Add(ShopFixtures.BuildShelf(_root, new Vector3(x, 0, d - 0.2f), 0f, cats[shelfNo++ % cats.Length]));
                 _shelfSpots.Add(Origin + new Vector3(x, 0, d - 1.2f));
             }
@@ -279,6 +291,9 @@ namespace PCShopSell.Game.Runtime
                 _shelves.Add(ShopFixtures.BuildShelf(_root, new Vector3(w - 0.2f, 0, z), 90f, cats[shelfNo++ % cats.Length]));
                 _shelfSpots.Add(Origin + new Vector3(w - 1.2f, 0, z));
             }
+            // 左墙前部（柜台前面）再摆一个，离排队的路线远
+            _shelves.Add(ShopFixtures.BuildShelf(_root, new Vector3(0.2f, 0, 1.0f), 270f, cats[shelfNo++ % cats.Length]));
+            _shelfSpots.Add(Origin + new Vector3(1.2f, 0, 1.0f));
             // 柜台 + 电脑（靠左前方）
             Vector3 counter = new Vector3(0.9f, 0.5f, d * 0.55f);
             Prims.Box(_root, "Counter", counter, new Vector3(0.8f, 1.0f, Mathf.Min(2.2f, d * 0.5f)), Mats.Lit(new Color(0.3f, 0.32f, 0.36f), 0.5f));
@@ -291,15 +306,7 @@ namespace PCShopSell.Game.Runtime
             _buildGlow.Add(Prims.Box(_root, "BenchScreen", new Vector3(0.45f, 1.2f, d - 0.5f), new Vector3(0.06f, 0.4f, 0.45f), Mats.Glow(new Color(0.1f, 0.1f, 0.12f), new Color(0.2f, 1.4f, 0.6f), false)));
             Prims.Box(_root, "BenchParts", new Vector3(0.4f, 0.95f, d - 1.0f), new Vector3(0.3f, 0.08f, 0.3f), Mats.Lit(new Color(0.15f, 0.5f, 0.3f)));
 
-            // 整机展示区：中间的长桌，上面是开着机的整机；中、大店更多
-            var tables = new List<Vector2>();
-            if (size == ShopSize.Small) tables.Add(new Vector2(w * 0.58f, d * 0.42f));
-            else if (size == ShopSize.Medium) { tables.Add(new Vector2(w * 0.4f, d * 0.35f)); tables.Add(new Vector2(w * 0.68f, d * 0.6f)); }
-            else
-            {
-                tables.Add(new Vector2(w * 0.3f, d * 0.3f)); tables.Add(new Vector2(w * 0.55f, d * 0.3f));
-                tables.Add(new Vector2(w * 0.4f, d * 0.65f)); tables.Add(new Vector2(w * 0.68f, d * 0.6f));
-            }
+            // 整机展示区：靠后墙的长桌，上面是开着机的整机
             int deskNo = 0;
             _tables.Clear();
             foreach (Vector2 tb in tables)
@@ -319,9 +326,8 @@ namespace PCShopSell.Game.Runtime
             _clerk.transform.localPosition = new Vector3(0.35f, 0, d * 0.55f - 0.8f);
             _clerk.transform.localRotation = Quaternion.LookRotation(Vector3.right);
 
-            _door = Origin + new Vector3(0.6f, 0, -0.6f);
+            _door = Origin + new Vector3(doorX, 0, -0.6f);
             _counterFront = Origin + new Vector3(1.8f, 0, d * 0.55f);
-            _queueDir = new Vector3(0.75f, 0, -0.6f).normalized;
         }
 
         private Color ItemColor()
@@ -455,7 +461,7 @@ namespace PCShopSell.Game.Runtime
             NearDisplay = false;
             if (!active) return;
             Vector3 op = _owner.transform.localPosition;
-            NearCounter = op.x < 2.7f && Mathf.Abs(op.z - CounterZ) < CounterLength / 2 + 0.9f;
+            NearCounter = op.x < 2.2f && Mathf.Abs(op.z - CounterZ) < CounterLength / 2 + 0.9f;
             Vector3 lp = _owner.transform.localPosition;
             float best = 1.5f;
             foreach (ShelfDisplay sh in _shelves)
@@ -566,7 +572,7 @@ namespace PCShopSell.Game.Runtime
                         ShowHeld(v);
                         v.Phase = 2;
                     }
-                    if (v.Phase == 2) v.Target = _counterFront + _queueDir * (qi * 0.75f);
+                    if (v.Phase == 2) v.Target = QueueSpot(qi);
                 }
                 else if (v.Phase == 0 && Reached(v) && _shelfSpots.Count > 0)
                 {
@@ -615,7 +621,7 @@ namespace PCShopSell.Game.Runtime
                     v.EmoteUntil = _now + 2.6f;
                 }
                 v.DropFirst = !paid && v.Held != null;
-                v.Target = v.DropFirst ? v.PickSpot : _door + new Vector3(-1.5f, 0, -1.5f);
+                v.Target = v.DropFirst ? v.PickSpot : _door + new Vector3(0, 0, -2.0f);
                 _leaveReasons.Remove(id);
                 _leaving.Add(v);
             }
@@ -628,7 +634,7 @@ namespace PCShopSell.Game.Runtime
                     v.Dropped = true;
                     if (v.Held != null) Kill.It(v.Held);
                     v.Held = null;
-                    v.Target = _door + new Vector3(-1.5f, 0, -1.5f);
+                    v.Target = _door + new Vector3(0, 0, -2.0f);
                     continue;
                 }
                 if (!v.DropFirst || v.Dropped)
@@ -650,6 +656,15 @@ namespace PCShopSell.Game.Runtime
                 if (age > 1.8f) { _pops.RemoveAt(i); continue; }
                 _emotes.Add(new EmoteInfo { Pos = _pops[i].Start + Vector3.up * (age * 0.7f), Text = _pops[i].Text, Color = new Color(0.55f, 1f, 0.6f, 1f - age / 2.2f), Size = 28 });
             }
+        }
+
+        /// <summary>排队的第 k 个位置：从柜台前往前墙方向排，排到离前墙 1.9 米处再往右拐。</summary>
+        private Vector3 QueueSpot(int k)
+        {
+            float run = k * 0.75f;
+            float straight = Mathf.Max(0f, _counterFront.z - Origin.z - 1.9f);
+            if (run <= straight) return _counterFront + new Vector3(0, 0, -run);
+            return new Vector3(_counterFront.x + (run - straight), _counterFront.y, Origin.z + 1.9f);
         }
 
         private static void Move(Visitor v, float dt)
