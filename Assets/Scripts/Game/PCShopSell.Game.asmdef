@@ -2,7 +2,10 @@
     "name": "PCShopSell.Game",
     "rootNamespace": "PCShopSell.Game",
     "references": [
-        "PCShopSell.Core"
+        "PCShopSell.Core",
+        "UnityEngine.UI",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

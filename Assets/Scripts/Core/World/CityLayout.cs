@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Shop;
 
 namespace PCShopSell.Core.World
@@ -17,6 +18,7 @@ namespace PCShopSell.Core.World
         public LayoutNodeData[] nodes;
         public LayoutEdgeData[] edges;
         public LayoutPlaceData[] places;
+        public LayoutPatrolData[] patrols;
     }
 
     [Serializable]
@@ -32,6 +34,17 @@ namespace PCShopSell.Core.World
     {
         public string a;
         public string b;
+
+        /// <summary>实际路程（画面米，乘 distanceScale 前）；0 表示取直线距离。用于把很长的连接路在画面上压缩。</summary>
+        public double length;
+    }
+
+    /// <summary>交警巡逻路线：沿节点来回走。</summary>
+    [Serializable]
+    public sealed class LayoutPatrolData
+    {
+        public string id;
+        public string[] nodes;
     }
 
     [Serializable]
@@ -54,6 +67,9 @@ namespace PCShopSell.Core.World
 
         /// <summary>是否为玩家的店。</summary>
         public bool player;
+
+        /// <summary>档口卖的品类，逗号分隔（Cpu,Gpu…）。</summary>
+        public string sells;
     }
 
     public enum PlaceKind
@@ -63,6 +79,7 @@ namespace PCShopSell.Core.World
         Home,
         Wholesaler,
         Station,
+        Dealer,
     }
 
     /// <summary>地点（店铺、住所、批发商、地铁站等），入口位于路径图的某个节点。</summary>
@@ -75,9 +92,11 @@ namespace PCShopSell.Core.World
         public ShopSize Size { get; }
         public string Business { get; }
         public bool IsPlayerShop { get; }
+        public IReadOnlyList<PartCategory> Sells { get; }
 
         public Place(string id, string name, PlaceKind kind, string nodeId,
-            ShopSize size = ShopSize.Small, string business = null, bool isPlayerShop = false)
+            ShopSize size = ShopSize.Small, string business = null, bool isPlayerShop = false,
+            IReadOnlyList<PartCategory> sells = null)
         {
             Id = id;
             Name = name;
@@ -86,6 +105,19 @@ namespace PCShopSell.Core.World
             Size = size;
             Business = business;
             IsPlayerShop = isPlayerShop;
+            Sells = sells ?? Array.Empty<PartCategory>();
+        }
+    }
+
+    public sealed class PatrolRoute
+    {
+        public string Id { get; }
+        public IReadOnlyList<string> NodeIds { get; }
+
+        public PatrolRoute(string id, IReadOnlyList<string> nodeIds)
+        {
+            Id = id;
+            NodeIds = nodeIds;
         }
     }
 
@@ -97,10 +129,30 @@ namespace PCShopSell.Core.World
     {
         private readonly Dictionary<string, Place> _places = new Dictionary<string, Place>();
         private readonly List<Place> _placeList = new List<Place>();
+        private readonly List<PatrolRoute> _patrols = new List<PatrolRoute>();
 
         public WorldMap Map { get; }
         public double DistanceScale { get; }
         public IReadOnlyList<Place> Places => _placeList;
+        public IReadOnlyList<PatrolRoute> Patrols => _patrols;
+
+        public IEnumerable<Place> OfKind(PlaceKind kind)
+        {
+            foreach (Place p in _placeList)
+            {
+                if (p.Kind == kind) yield return p;
+            }
+        }
+
+        /// <summary>入口在该节点上的地点；没有则返回 null。</summary>
+        public Place PlaceAtNode(string nodeId)
+        {
+            foreach (Place p in _placeList)
+            {
+                if (p.NodeId == nodeId) return p;
+            }
+            return null;
+        }
 
         private CityLayout(WorldMap map, double distanceScale)
         {
@@ -123,10 +175,28 @@ namespace PCShopSell.Core.World
             if (data.edges != null)
             {
                 foreach (LayoutEdgeData e in data.edges)
-                    map.AddEdge(e.a, e.b);
+                {
+                    double? len = e.length > 0 ? e.length * data.distanceScale : (double?)null;
+                    if (len.HasValue && len.Value < map.StraightDistance(e.a, e.b))
+                        len = null;
+                    map.AddEdge(e.a, e.b, len);
+                }
             }
 
             var layout = new CityLayout(map, data.distanceScale);
+            if (data.patrols != null)
+            {
+                foreach (LayoutPatrolData pr in data.patrols)
+                {
+                    if (pr.nodes == null || pr.nodes.Length < 2)
+                        throw new ArgumentException($"巡逻路线 {pr.id} 至少需要两个节点。");
+                    foreach (string n in pr.nodes)
+                    {
+                        if (!map.HasNode(n)) throw new ArgumentException($"巡逻路线 {pr.id} 的节点不存在：{n}");
+                    }
+                    layout._patrols.Add(new PatrolRoute(pr.id, pr.nodes));
+                }
+            }
             if (data.places != null)
             {
                 foreach (LayoutPlaceData p in data.places)
@@ -139,7 +209,7 @@ namespace PCShopSell.Core.World
                         throw new ArgumentException($"地点 {p.id} 的入口节点不存在：{p.node}");
 
                     var place = new Place(p.id, p.name ?? p.id, ParseKind(p.kind), p.node,
-                        ParseSize(p.size), p.business, p.player);
+                        ParseSize(p.size), p.business, p.player, ParseSells(p.sells));
                     layout._places.Add(place.Id, place);
                     layout._placeList.Add(place);
                 }
@@ -211,8 +281,21 @@ namespace PCShopSell.Core.World
                 case "home": return PlaceKind.Home;
                 case "wholesaler": return PlaceKind.Wholesaler;
                 case "station": return PlaceKind.Station;
+                case "dealer": return PlaceKind.Dealer;
                 default: return PlaceKind.Other;
             }
+        }
+
+        private static IReadOnlyList<PartCategory> ParseSells(string sells)
+        {
+            var list = new List<PartCategory>();
+            if (string.IsNullOrEmpty(sells)) return list;
+            foreach (string s in sells.Split(','))
+            {
+                if (Enum.TryParse(s.Trim(), true, out PartCategory c)) list.Add(c);
+                else throw new ArgumentException($"未知的配件品类：{s}");
+            }
+            return list;
         }
 
         private static ShopSize ParseSize(string size)

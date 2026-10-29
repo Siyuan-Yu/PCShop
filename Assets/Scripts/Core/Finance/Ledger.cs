@@ -99,6 +99,14 @@ namespace PCShopSell.Core.Finance
             return sum;
         }
 
+        /// <summary>读档：替换全部账目和余额。</summary>
+        public void Restore(Money balance, IEnumerable<LedgerEntry> entries)
+        {
+            _entries.Clear();
+            if (entries != null) _entries.AddRange(entries);
+            Balance = balance;
+        }
+
         private LedgerEntry Append(GameDate date, string category, Money signedAmount, string memo)
         {
             Balance += signedAmount;

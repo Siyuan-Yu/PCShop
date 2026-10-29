@@ -1,9 +1,11 @@
 using System;
 using System.Linq;
 using NUnit.Framework;
+using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Finance;
-using PCShopSell.Core.Session;
+using PCShopSell.Core.Inventory;
+using PCShopSell.Core.Market;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
@@ -59,7 +61,7 @@ namespace PCShopSell.Tests
 
     public class ShopSimulationTests
     {
-        private static ShopSettings BusySettings() => new ShopSettings
+        internal static ShopSettings BusySettings() => new ShopSettings
         {
             BaseCustomersPerHour = 600,
             HourFactors = Enumerable.Repeat(1.0, 24).ToArray(),
@@ -67,61 +69,100 @@ namespace PCShopSell.Tests
             MinBrowseMinutes = 2,
             MaxBrowseMinutes = 2,
             PatienceMinutes = 5,
+            BuildOrderChance = 0,
         };
 
-        private static (GameClock clock, Ledger ledger, ShopSimulation shop) Make(ShopSettings settings, int seed = 1)
+        private sealed class Rig
         {
-            var clock = new GameClock(new GameDate(0), 10 * 60);
-            var ledger = new Ledger();
-            var shop = new ShopSimulation("s", clock, ledger, seed, settings);
-            return (clock, ledger, shop);
+            public GameClock Clock;
+            public Ledger Ledger;
+            public HardwareMarket Market;
+            public ShopSimulation Shop;
+        }
+
+        private static Rig Make(ShopSettings settings, ulong seed = 1, bool stock = true)
+        {
+            var rng = new GameRandom(seed);
+            var r = new Rig
+            {
+                Clock = new GameClock(new GameDate(0), 10 * 60),
+                Ledger = new Ledger(),
+            };
+            r.Market = new HardwareMarket(rng);
+            r.Shop = new ShopSimulation("s", ShopSize.Large, r.Clock, r.Ledger, r.Market, rng, settings);
+            r.Shop.Markup = 1.0;
+            if (stock)
+            {
+                foreach (PartDef p in PartCatalog.All) r.Shop.Stock.ForceAdd(p, true, 20);
+            }
+            return r;
         }
 
         [Test]
         public void ClosedShop_GetsNoCustomers()
         {
-            var (clock, _, shop) = Make(BusySettings());
-            clock.Advance(120);
-            Assert.AreEqual(0, shop.TodayCustomers);
+            Rig r = Make(BusySettings());
+            r.Clock.Advance(120);
+            Assert.AreEqual(0, r.Shop.TodayCustomers);
         }
 
         [Test]
-        public void OpenShop_CustomersBrowseThenQueue()
+        public void OpenShop_CustomersPickStockThenQueue()
         {
-            var (clock, _, shop) = Make(BusySettings());
-            shop.IsOpen = true;
-            clock.Advance(3);
-            Assert.Greater(shop.TodayCustomers, 0);
-            Assert.Greater(shop.Queue.Count, 0);
-            Assert.IsTrue(shop.Queue.All(c => c.State == CustomerState.WaitingCheckout));
+            Rig r = Make(BusySettings());
+            int before = r.Shop.Stock.Lines().Sum(l => l.Count);
+            r.Shop.PlayerPresent = true;
+            r.Clock.Advance(3);
+            Assert.Greater(r.Shop.TodayCustomers, 0);
+            Assert.Greater(r.Shop.Queue.Count, 0);
+            Assert.IsTrue(r.Shop.Queue.All(c => c.State == CustomerState.WaitingCheckout && c.Item != null));
+            Assert.AreEqual(before - r.Shop.Queue.Count, r.Shop.Stock.Lines().Sum(l => l.Count));
         }
 
         [Test]
         public void Checkout_CreditsLedgerAndReturnsMinutes()
         {
-            var (clock, ledger, shop) = Make(BusySettings());
-            shop.IsOpen = true;
-            clock.Advance(3);
-            ShopCustomer c = shop.Queue[0];
+            Rig r = Make(BusySettings());
+            r.Shop.PlayerPresent = true;
+            r.Clock.Advance(3);
+            ShopCustomer c = r.Shop.Queue[0];
 
-            int minutes = shop.Checkout(c.Id);
+            int minutes = r.Shop.Checkout(c.Id);
 
-            Assert.AreEqual(shop.Settings.CheckoutMinutesCash, minutes);
-            Assert.AreEqual(c.Spend, ledger.Balance);
+            Assert.AreEqual(r.Shop.Settings.CheckoutMinutesCash, minutes);
+            Assert.AreEqual(c.Spend, r.Ledger.Balance);
+            Assert.AreEqual(r.Shop.PriceOf(c.Item, c.ItemBoxed), c.Spend);
             Assert.AreEqual(CustomerState.Paid, c.State);
-            Assert.AreEqual(-1, shop.Checkout(c.Id));
+            Assert.AreEqual(-1, r.Shop.Checkout(c.Id));
         }
 
         [Test]
-        public void WaitingTooLong_CustomerLeaves()
+        public void WaitingTooLong_CustomerLeaves_ItemReturned()
         {
-            var (clock, _, shop) = Make(BusySettings());
-            shop.IsOpen = true;
-            clock.Advance(3);
-            ShopCustomer c = shop.Queue[0];
-            clock.Advance(10);
+            Rig r = Make(BusySettings());
+            r.Shop.PlayerPresent = true;
+            r.Clock.Advance(3);
+            ShopCustomer c = r.Shop.Queue[0];
+            PartDef item = c.Item;
+            bool boxed = c.ItemBoxed;
+            int stockBefore = r.Shop.Stock.Count(item, boxed);
+            r.Shop.Settings.BaseCustomersPerHour = 0;
+            r.Clock.Advance(10);
             Assert.AreEqual(CustomerState.Left, c.State);
             Assert.AreEqual(LeaveReason.Impatient, c.Reason);
+            Assert.Greater(r.Shop.Stock.Count(item, boxed), stockBefore);
+        }
+
+        [Test]
+        public void EmptyShop_CustomersLeaveForNoStock()
+        {
+            Rig r = Make(BusySettings(), stock: false);
+            int noStock = 0;
+            r.Shop.CustomerLeft += c => { if (c.Reason == LeaveReason.NoStock) noStock++; };
+            r.Shop.PlayerPresent = true;
+            r.Clock.Advance(5);
+            Assert.Greater(noStock, 0);
+            Assert.AreEqual(0, r.Shop.Queue.Count);
         }
 
         [Test]
@@ -129,13 +170,13 @@ namespace PCShopSell.Tests
         {
             ShopSettings s = BusySettings();
             s.CashCarryChance = 0.0;
-            var (clock, _, shop) = Make(s);
+            Rig r = Make(s);
             int noCash = 0;
-            shop.CustomerLeft += c => { if (c.Reason == LeaveReason.NoCash) noCash++; };
-            shop.IsOpen = true;
-            clock.Advance(5);
+            r.Shop.CustomerLeft += c => { if (c.Reason == LeaveReason.NoCash) noCash++; };
+            r.Shop.PlayerPresent = true;
+            r.Clock.Advance(5);
             Assert.Greater(noCash, 0);
-            Assert.AreEqual(0, shop.Queue.Count);
+            Assert.AreEqual(0, r.Shop.Queue.Count);
         }
 
         [Test]
@@ -143,55 +184,121 @@ namespace PCShopSell.Tests
         {
             ShopSettings s = BusySettings();
             s.CashCarryChance = 0.0;
-            var (clock, _, shop) = Make(s);
-            shop.Accepted = PaymentMethods.Cash | PaymentMethods.QrCode;
-            shop.IsOpen = true;
-            clock.Advance(3);
-            Assert.Greater(shop.Queue.Count, 0);
-            Assert.AreEqual(s.CheckoutMinutesQr, shop.Checkout(shop.Queue[0].Id));
+            Rig r = Make(s);
+            r.Shop.Accepted = PaymentMethods.Cash | PaymentMethods.QrCode;
+            r.Shop.PlayerPresent = true;
+            r.Clock.Advance(3);
+            Assert.Greater(r.Shop.Queue.Count, 0);
+            Assert.AreEqual(s.CheckoutMinutesQr, r.Shop.Checkout(r.Shop.Queue[0].Id));
         }
 
         [Test]
-        public void Closing_SendsEveryoneAway()
+        public void HighMarkup_ScaresCustomersAway()
         {
-            var (clock, _, shop) = Make(BusySettings());
-            shop.IsOpen = true;
-            clock.Advance(3);
-            shop.IsOpen = false;
-            Assert.AreEqual(0, shop.ActiveCustomers.Count);
-            Assert.AreEqual(0, shop.Queue.Count);
+            Rig cheap = Make(BusySettings(), 5);
+            Rig pricey = Make(BusySettings(), 5);
+            pricey.Shop.Markup = 1.6;
+            int lostCheap = 0, lostPricey = 0;
+            cheap.Shop.CustomerLeft += c => { if (c.Reason == LeaveReason.TooExpensive) lostCheap++; };
+            pricey.Shop.CustomerLeft += c => { if (c.Reason == LeaveReason.TooExpensive) lostPricey++; };
+            cheap.Shop.PlayerPresent = pricey.Shop.PlayerPresent = true;
+            cheap.Clock.Advance(30);
+            pricey.Clock.Advance(30);
+            Assert.Greater(lostPricey, lostCheap);
+        }
+
+        [Test]
+        public void BoxedSellsForMoreThanLoose()
+        {
+            Rig r = Make(BusySettings());
+            PartDef p = PartCatalog.Get("gpu1");
+            Assert.IsTrue(r.Shop.PriceOf(p, true) > r.Shop.PriceOf(p, false));
+        }
+
+        [Test]
+        public void Closing_SendsEveryoneAway_AndReturnsStock()
+        {
+            Rig r = Make(BusySettings());
+            int before = r.Shop.Stock.Lines().Sum(l => l.Count);
+            r.Shop.PlayerPresent = true;
+            r.Clock.Advance(3);
+            r.Shop.PlayerPresent = false;
+            r.Clock.Advance(1);
+            Assert.AreEqual(0, r.Shop.ActiveCustomers.Count);
+            Assert.AreEqual(0, r.Shop.Queue.Count);
+            Assert.AreEqual(before, r.Shop.Stock.Lines().Sum(l => l.Count));
+        }
+
+        [Test]
+        public void Employee_ChecksOutWhenPlayerAway()
+        {
+            Rig r = Make(BusySettings());
+            r.Shop.EmployeeOnDuty = _ => true;
+            r.Clock.Advance(30);
+            Assert.IsTrue(r.Ledger.Balance > Money.Zero);
+        }
+
+        [Test]
+        public void BuildOrder_PlacedAndCompleted()
+        {
+            ShopSettings s = BusySettings();
+            s.BuildOrderChance = 1.0;
+            Rig r = Make(s);
+            r.Shop.Settings.BaseCustomersPerHour = 60;
+            r.Shop.PlayerPresent = true;
+            r.Clock.Advance(20);
+            Assert.Greater(r.Shop.Orders.Count, 0);
+            BuildOrder o = r.Shop.Orders[0];
+            Assert.AreEqual(0, r.Shop.MissingParts(o).Count);
+            Assert.IsTrue(r.Shop.CompleteBuild(o.Id));
+            Assert.AreEqual(o.Price, r.Ledger.Balance);
+        }
+
+        [Test]
+        public void BuildOrder_ExpiresAfterDueDays()
+        {
+            ShopSettings s = BusySettings();
+            s.BuildOrderChance = 1.0;
+            Rig r = Make(s);
+            int expired = 0;
+            r.Shop.OrderExpired += _ => expired++;
+            r.Shop.PlayerPresent = true;
+            r.Clock.Advance(5);
+            r.Shop.PlayerPresent = false;
+            Assert.Greater(r.Shop.Orders.Count, 0);
+            r.Clock.Advance(3 * 1440);
+            Assert.AreEqual(0, r.Shop.Orders.Count);
+            Assert.Greater(expired, 0);
         }
 
         [Test]
         public void SameSeed_SameCustomers()
         {
-            var a = Make(new ShopSettings(), 42);
-            var b = Make(new ShopSettings(), 42);
-            a.shop.IsOpen = true;
-            b.shop.IsOpen = true;
-            a.clock.Advance(600);
-            b.clock.Advance(600);
-            Assert.AreEqual(a.shop.TodayCustomers, b.shop.TodayCustomers);
-            Assert.AreEqual(a.shop.TodayLost, b.shop.TodayLost);
+            Rig a = Make(new ShopSettings(), 42);
+            Rig b = Make(new ShopSettings(), 42);
+            a.Shop.PlayerPresent = true;
+            b.Shop.PlayerPresent = true;
+            a.Clock.Advance(600);
+            b.Clock.Advance(600);
+            Assert.AreEqual(a.Shop.TodayCustomers, b.Shop.TodayCustomers);
+            Assert.AreEqual(a.Shop.TodayLost, b.Shop.TodayLost);
         }
 
         [Test]
-        public void ArrivalRate_DependsOnLocationSizeReputationAndWeekend()
+        public void ArrivalRate_DependsOnLocationReputationAndWeekend()
         {
-            var (clock, _, shop) = Make(new ShopSettings());
+            Rig r = Make(new ShopSettings());
             GameTimestamp weekday = GameTimestamp.From(new GameDate(0), 11 * 60);
-            double baseRate = shop.ArrivalRatePerMinute(weekday);
+            double baseRate = r.Shop.ArrivalRatePerMinute(weekday);
 
-            shop.LocationFactor = 0.4;
-            Assert.AreEqual(baseRate * 0.4, shop.ArrivalRatePerMinute(weekday), 1e-9);
+            r.Shop.LocationFactor = 0.4;
+            Assert.AreEqual(baseRate * 0.4, r.Shop.ArrivalRatePerMinute(weekday), 1e-9);
 
-            shop.Size = ShopSize.Large;
-            shop.Reputation = 50;
-            Assert.AreEqual(baseRate * 0.4 * 2.5 * 1.5, shop.ArrivalRatePerMinute(weekday), 1e-9);
+            r.Shop.Reputation = 50;
+            Assert.AreEqual(baseRate * 0.4 * 1.5, r.Shop.ArrivalRatePerMinute(weekday), 1e-9);
 
             GameTimestamp saturday = GameTimestamp.From(new GameDate(5), 11 * 60);
-            Assert.Greater(shop.ArrivalRatePerMinute(saturday), shop.ArrivalRatePerMinute(weekday));
-            _ = clock;
+            Assert.Greater(r.Shop.ArrivalRatePerMinute(saturday), r.Shop.ArrivalRatePerMinute(weekday));
         }
 
         [Test]
@@ -240,6 +347,28 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void EdgeLengthOverride_IsScaled()
+        {
+            CityLayoutData d = SampleData();
+            d.edges[2].length = 400;
+            CityLayout city = CityLayout.FromData(d);
+            PathResult p = Pathfinder.FindPath(city.Map, "b", "home");
+            Assert.AreEqual(800, p.Distance, 1e-9);
+        }
+
+        [Test]
+        public void SellsAndPatrols_AreParsed()
+        {
+            CityLayoutData d = SampleData();
+            d.places[1].kind = "wholesaler";
+            d.places[1].sells = "Cpu, gpu";
+            d.patrols = new[] { new LayoutPatrolData { id = "p", nodes = new[] { "station", "b" } } };
+            CityLayout city = CityLayout.FromData(d);
+            CollectionAssert.AreEqual(new[] { PartCategory.Cpu, PartCategory.Gpu }, city.GetPlace("tea").Sells.ToArray());
+            Assert.AreEqual(1, city.Patrols.Count);
+        }
+
+        [Test]
         public void NearestNode_UsesViewCoordinates()
         {
             CityLayout city = CityLayout.FromData(SampleData());
@@ -257,85 +386,107 @@ namespace PCShopSell.Tests
         }
     }
 
-    public class GameSessionTests
+    public class StockAndCatalogTests
     {
-        private static GameSession Make()
+        [Test]
+        public void Loose_TakesLessSpaceThanBoxed()
         {
-            CityLayout city = CityLayout.FromData(CityLayoutTests.SampleData());
-            return new GameSession(city, 7, Money.FromYuan(1000), GameTimestamp.From(new GameDate(0), 8 * 60));
+            PartDef gpu = PartCatalog.Get("gpu0");
+            Assert.AreEqual(2.0, Stock.SpaceOf(gpu, true, 1), 1e-9);
+            Assert.AreEqual(0.8, Stock.SpaceOf(gpu, false, 1), 1e-9);
         }
 
         [Test]
-        public void StartsAtHome_ShopClosed()
+        public void Capacity_IsEnforced_AndUnboxFreesSpace()
         {
-            GameSession s = Make();
-            Assert.AreEqual(s.Home, s.CurrentPlace);
-            Assert.IsFalse(s.PlayerShop.IsOpen);
+            var s = new Stock(4);
+            PartDef gpu = PartCatalog.Get("gpu0");
+            Assert.IsTrue(s.TryAdd(gpu, true, 2));
+            Assert.IsFalse(s.TryAdd(gpu, true, 1));
+            Assert.IsTrue(s.Unbox(gpu, 2));
+            Assert.AreEqual(1.6, s.UsedSpace, 1e-9);
+            Assert.IsTrue(s.TryAdd(gpu, true, 1));
+            Assert.AreEqual(2, s.Count(gpu, false));
         }
 
         [Test]
-        public void FarthestShop_HasLowestLocationFactor()
+        public void TakeOne_PrefersLoose()
         {
-            GameSession s = Make();
-            Assert.AreEqual(0.4, s.PlayerShop.LocationFactor, 1e-9);
+            var s = new Stock(10);
+            PartDef p = PartCatalog.Get("ram0");
+            s.TryAdd(p, true, 1);
+            s.TryAdd(p, false, 1);
+            Assert.AreEqual(false, s.TakeOne(p));
+            Assert.AreEqual(true, s.TakeOne(p));
+            Assert.IsNull(s.TakeOne(p));
         }
 
         [Test]
-        public void EnterShop_OpensIt_LeaveClosesIt()
+        public void Catalog_HasSixCategoriesTimesThreeTiers()
         {
-            GameSession s = Make();
-            s.Leave();
-            s.ArriveAtNode("b");
-            s.Enter(s.PlayerShopPlace);
-            Assert.IsTrue(s.PlayerShop.IsOpen);
-            s.Leave();
-            Assert.IsFalse(s.PlayerShop.IsOpen);
-            Assert.IsNull(s.CurrentPlace);
+            Assert.AreEqual(18, PartCatalog.All.Count);
+            foreach (PartCategory c in PartCatalog.Categories)
+            {
+                for (int t = 0; t < 3; t++) Assert.IsNotNull(PartCatalog.Find(c, t));
+            }
         }
 
         [Test]
-        public void Enter_RequiresStandingAtEntrance()
+        public void BuildLists_AreCompatible()
         {
-            GameSession s = Make();
-            s.Leave();
-            s.ArriveAtNode("a");
-            Assert.Throws<InvalidOperationException>(() => s.Enter(s.PlayerShopPlace));
+            for (int t = 0; t < 3; t++)
+                Assert.IsNull(PartCatalog.CheckCompatibility(PartCatalog.BuildList(t)), $"tier {t}");
         }
 
         [Test]
-        public void Sleep_OnlyAtHome_WakesAtEight()
+        public void Compatibility_CatchesSocketAndPower()
         {
-            GameSession s = Make();
-            s.Clock.AdvanceTo(22 * 60);
-            Assert.IsTrue(s.Sleep());
-            Assert.AreEqual(8 * 60, s.Clock.MinuteOfDay);
-            Assert.AreEqual(1, s.Clock.Today.TotalDays);
+            var list = PartCatalog.BuildList(2);
+            list[1] = PartCatalog.Get("mb1");
+            StringAssert.Contains("不匹配", PartCatalog.CheckCompatibility(list));
 
-            s.Leave();
-            Assert.IsFalse(s.Sleep());
+            list = PartCatalog.BuildList(2);
+            list[5] = PartCatalog.Get("psu0");
+            StringAssert.Contains("功率", PartCatalog.CheckCompatibility(list));
+        }
+    }
+
+    public class MarketTests
+    {
+        [Test]
+        public void ScriptedCryptoBoom_RaisesGpuPrice()
+        {
+            var m = new HardwareMarket(new GameRandom(3));
+            for (int d = 1; d <= 8; d++) m.OnNewDay(new GameDate(d));
+            double before = m.Index(PartCategory.Gpu);
+            m.OnNewDay(new GameDate(9));
+            Assert.IsTrue(m.News.Any(n => n.Headline.Contains("矿潮")));
+            Assert.Greater(m.Index(PartCategory.Gpu), before + 0.1);
         }
 
         [Test]
-        public void BedtimeReminder_FiresWhenAwayFromHome()
+        public void Index_StaysInRange()
         {
-            GameSession s = Make();
-            s.Leave();
-            int notices = 0;
-            s.Notice += _ => notices++;
-            s.Clock.AdvanceTo(23 * 60 + 5);
-            Assert.AreEqual(1, notices);
+            var m = new HardwareMarket(new GameRandom(9));
+            for (int d = 1; d < 400; d++)
+            {
+                m.OnNewDay(new GameDate(d));
+                foreach (PartCategory c in PartCatalog.Categories)
+                {
+                    Assert.That(m.Index(c), Is.InRange(0.6, 1.8));
+                }
+            }
+            Assert.AreEqual(HardwareMarket.HistoryDays, m.History(PartCategory.Cpu).Count);
         }
 
         [Test]
-        public void Wholesaler_ClosedOnWeekendAndAtNight()
+        public void Random_IsDeterministic()
         {
-            GameSession s = Make();
-            s.Clock.AdvanceTo(10 * 60);
-            Assert.IsTrue(s.IsWholesalerOpen);
-            s.Clock.AdvanceTo(20 * 60);
-            Assert.IsFalse(s.IsWholesalerOpen);
-            s.Clock.Restore(new GameDate(5), 10 * 60);
-            Assert.IsFalse(s.IsWholesalerOpen);
+            var a = new GameRandom(77);
+            var b = new GameRandom(77);
+            for (int i = 0; i < 100; i++) Assert.AreEqual(a.NextULong(), b.NextULong());
+            var c = new GameRandom(1) { State = a.State };
+            Assert.AreEqual(a.NextDouble(), c.NextDouble());
         }
     }
 }

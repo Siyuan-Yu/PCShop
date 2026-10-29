@@ -1,0 +1,140 @@
+using System;
+
+namespace PCShopSell.Core.Session
+{
+    /// <summary>存档格式。字段为公开小写，可直接用 Unity JsonUtility 序列化。出行中、店里的顾客不存。</summary>
+    [Serializable]
+    public sealed class SaveData
+    {
+        public int version = 1;
+        public string savedAt;
+        /// <summary>随机数状态（ulong 的十进制字符串，避免 JSON 精度问题）。</summary>
+        public string rngState;
+        public int day;
+        public int minute;
+
+        public long balanceCents;
+        public SaveLedgerEntry[] ledger;
+
+        public double[] marketFactors;
+        public SaveNews[] news;
+        public SaveHistory[] history;
+
+        public string playerNode;
+        public string currentPlace;
+        public int vehicle;
+        public int[] ownedVehicles;
+        public bool tricycleImpounded;
+        public SaveStockLine[] cargo;
+
+        public double hunger, energy, health, sleepDebt;
+        public int intelligence, charm, skill;
+        public int lastNewsReadDay;
+
+        public SaveStockLine[] shopStock;
+        public double markup;
+        public double reputation;
+        public int accepted;
+        public SaveOrder[] orders;
+        public int nextOrderId;
+
+        public string[] discoveredStores;
+        public SaveStoreRecord[] storeRecords;
+        public SaveOnlineOrder[] onlineOrders;
+        public int nextOnlineOrderId;
+        public int totalOnlineOrders;
+
+        public SaveBargain[] bargains;
+
+        public SaveEmployee employee;
+        public bool hasEmployee;
+        public bool everHired;
+        public SaveEmployee[] candidates;
+        public int jobAdDay;
+
+        public bool monthGoalEvaluated;
+        public bool monthGoalPassed;
+        public int negativeCashDays;
+        public bool gameOver;
+        public string gameOverReason;
+    }
+
+    [Serializable]
+    public sealed class SaveLedgerEntry
+    {
+        public int day;
+        public string category;
+        public long cents;
+        public string memo;
+        public long balanceAfter;
+    }
+
+    [Serializable]
+    public sealed class SaveNews
+    {
+        public int day;
+        public string headline;
+        public int factor;
+        public double shock;
+    }
+
+    [Serializable]
+    public sealed class SaveHistory
+    {
+        public int category;
+        public double[] values;
+    }
+
+    [Serializable]
+    public sealed class SaveStockLine
+    {
+        public string part;
+        public bool boxed;
+        public int count;
+    }
+
+    [Serializable]
+    public sealed class SaveOrder
+    {
+        public int id;
+        public int tier;
+        public long priceCents;
+        public long placedAt;
+        public long dueAt;
+    }
+
+    [Serializable]
+    public sealed class SaveStoreRecord
+    {
+        public string store;
+        public int received;
+        public int defects;
+    }
+
+    [Serializable]
+    public sealed class SaveOnlineOrder
+    {
+        public int id;
+        public string store;
+        public long deliverAt;
+        public long totalCents;
+        public SaveStockLine[] lines;
+    }
+
+    [Serializable]
+    public sealed class SaveBargain
+    {
+        public string stall;
+        public int day;
+        public double bonus;
+    }
+
+    [Serializable]
+    public sealed class SaveEmployee
+    {
+        public string name;
+        public long wage;
+        public int checkoutMinutes;
+        public string description;
+    }
+}

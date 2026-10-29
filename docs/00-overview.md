@@ -2,7 +2,7 @@
 
 电脑城创业故事：从商业街最偏的一间小电脑店起家，手装机赚第一桶金，靠行情、人脉和签约主播做大，最后建成自己的电脑乐园（园区）。
 
-> 详细设计见 `docs/02-design.md`，路线见 `docs/01-roadmap.md`，决策见 `docs/03-decisions.md`，3C 与世界层见 `docs/04-3c-and-world.md`，角色与生活见 `docs/05-player-life.md`，美术与渲染见 `docs/06-art-and-rendering.md`。若有冲突以这些文档为准。
+> 详细设计见 `docs/02-design.md`，路线见 `docs/01-roadmap.md`，决策见 `docs/03-decisions.md`，3C 与世界层见 `docs/04-3c-and-world.md`，角色与生活见 `docs/05-player-life.md`，美术与渲染见 `docs/06-art-and-rendering.md`，VS1 验收说明与实际数值见 `docs/07-vs1-acceptance.md`。若有冲突以这些文档为准。
 
 ## 定位与差异化
 - 开局固定为商业街上最小、离地铁站最远的电脑店：自己守店、收现金、手装机；雇人后才能离开小店持续营业。不是"摆货架"零售店。

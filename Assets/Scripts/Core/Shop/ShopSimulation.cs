@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Finance;
+using PCShopSell.Core.Inventory;
+using PCShopSell.Core.Market;
 using PCShopSell.Core.Time;
 
 namespace PCShopSell.Core.Shop
@@ -22,6 +25,12 @@ namespace PCShopSell.Core.Shop
         SelfCheckout = 4,
     }
 
+    public enum CustomerIntent
+    {
+        Retail,
+        Build,
+    }
+
     public enum CustomerState
     {
         Browsing,
@@ -36,28 +45,64 @@ namespace PCShopSell.Core.Shop
         Impatient,
         NoCash,
         ShopClosed,
+        NoStock,
+        TooExpensive,
+        OrderPlaced,
     }
 
     public sealed class ShopCustomer
     {
         public int Id { get; }
+        public CustomerIntent Intent { get; }
+        public PartCategory DesiredCategory { get; }
+        public int BuildTier { get; }
         public GameTimestamp ArrivedAt { get; }
         public GameTimestamp ReadyAt { get; }
-        public Money Spend { get; }
         public bool CarriesCash { get; }
+
         public CustomerState State { get; internal set; }
         public LeaveReason Reason { get; internal set; }
         public GameTimestamp WaitingSince { get; internal set; }
 
-        internal ShopCustomer(int id, GameTimestamp arrivedAt, GameTimestamp readyAt, Money spend, bool carriesCash)
+        /// <summary>挑中的货（排队时已从货架上拿下）。</summary>
+        public PartDef Item { get; internal set; }
+
+        public bool ItemBoxed { get; internal set; }
+        public Money Spend { get; internal set; }
+
+        internal ShopCustomer(int id, CustomerIntent intent, PartCategory category, int buildTier,
+            GameTimestamp arrivedAt, GameTimestamp readyAt, bool carriesCash)
         {
             Id = id;
+            Intent = intent;
+            DesiredCategory = category;
+            BuildTier = buildTier;
             ArrivedAt = arrivedAt;
             ReadyAt = readyAt;
-            Spend = spend;
             CarriesCash = carriesCash;
             State = CustomerState.Browsing;
         }
+    }
+
+    /// <summary>装机订单：顾客下单后离开，玩家装好后自动交付收款；超过期限顾客取消。</summary>
+    public sealed class BuildOrder
+    {
+        public int Id { get; }
+        public int Tier { get; }
+        public Money Price { get; }
+        public GameTimestamp PlacedAt { get; }
+        public GameTimestamp DueAt { get; }
+
+        public BuildOrder(int id, int tier, Money price, GameTimestamp placedAt, GameTimestamp dueAt)
+        {
+            Id = id;
+            Tier = tier;
+            Price = price;
+            PlacedAt = placedAt;
+            DueAt = dueAt;
+        }
+
+        public static Money LaborFee(int tier) => Money.FromYuan(tier == 0 ? 150 : tier == 1 ? 220 : 320);
     }
 
     /// <summary>营业参数。数值均为占位，等原型试玩后平衡。</summary>
@@ -73,14 +118,23 @@ namespace PCShopSell.Core.Shop
         /// <summary>排队等结账超过这么多分钟就走。</summary>
         public int PatienceMinutes = 15;
 
-        public long MinSpendYuan = 20;
-        public long MaxSpendYuan = 300;
-
         /// <summary>顾客身上带现金的概率；只收现金时，没带的人挑完就走。</summary>
         public double CashCarryChance = 0.8;
 
+        /// <summary>进店顾客里想装整机的比例。</summary>
+        public double BuildOrderChance = 0.06;
+
+        public int BuildOrderDueDays = 2;
+
         public int CheckoutMinutesCash = 2;
         public int CheckoutMinutesQr = 1;
+        public int EmployeeCheckoutMinutes = 3;
+
+        /// <summary>盒装比散件贵的比例。</summary>
+        public double BoxedPremium = 0.12;
+
+        /// <summary>盒装让顾客犹豫离开的概率乘以这个系数。</summary>
+        public double BoxedTrust = 0.85;
 
         /// <summary>每小时客流系数（0~23 点）。营业时间由店主决定，夜里几乎没人。</summary>
         public double[] HourFactors =
@@ -100,6 +154,17 @@ namespace PCShopSell.Core.Shop
             }
         }
 
+        /// <summary>库存容量（格）。</summary>
+        public static double Capacity(ShopSize size)
+        {
+            switch (size)
+            {
+                case ShopSize.Medium: return 120;
+                case ShopSize.Large: return 300;
+                default: return 40;
+            }
+        }
+
         /// <summary>离地铁站越远客流越低：最近为 1，最远为 0.4。</summary>
         public static double LocationFactor(double distanceToStation, double maxDistance)
         {
@@ -107,39 +172,70 @@ namespace PCShopSell.Core.Shop
             double t = Math.Max(0, Math.Min(1, distanceToStation / maxDistance));
             return 1.0 - 0.6 * t;
         }
+
+        /// <summary>按加价倍率算顾客愿意买的概率（加价越高越低）。</summary>
+        public static double BuyChance(double markup)
+        {
+            return Math.Max(0.05, Math.Min(0.97, 0.95 - (markup - 1.0) * 1.6));
+        }
     }
 
     /// <summary>
-    /// 一家店的营业模拟：按世界时钟逐分钟生成顾客，顾客挑货后排队等结账；
-    /// 结账（玩家点击、员工或自助结账）后才入账，等太久或付不了钱就离开。
-    /// 没人值守时关门，店里的顾客全部离开。
+    /// 一家店的营业模拟：按世界时钟逐分钟生成顾客。
+    /// 散件顾客挑货（从货架拿下）后排队等结账，结账（玩家点击或员工）后才入账；
+    /// 等太久、付不了钱或嫌贵就离开，拿下的货放回货架。
+    /// 装机顾客下订单后离开，由玩家装好交付。没人值守时关门。
     /// </summary>
     public sealed class ShopSimulation : IDisposable
     {
         public const string SalesCategory = "零售";
+        public const string BuildCategory = "装机";
 
         private readonly GameClock _clock;
         private readonly Ledger _ledger;
-        private readonly Random _rng;
+        private readonly HardwareMarket _market;
         private readonly List<ShopCustomer> _active = new List<ShopCustomer>();
         private readonly List<ShopCustomer> _queue = new List<ShopCustomer>();
-        private int _nextId = 1;
-        private bool _attended;
+        private readonly List<BuildOrder> _orders = new List<BuildOrder>();
+        private int _nextCustomerId = 1;
+        private int _employeeBusyMinutes;
+        private bool _wasOpen;
+        private double _reputation;
+        private double _markup = 1.15;
 
         public string ShopId { get; }
         public ShopSettings Settings { get; }
-        public ShopSize Size { get; set; }
+        public GameRandom Random { get; }
+        public Stock Stock { get; }
+        public ShopSize Size { get; }
         public double LocationFactor { get; set; } = 1.0;
 
         /// <summary>知名度 0~100，每 10 点约增加 10% 客流。</summary>
-        public double Reputation { get; set; }
+        public double Reputation
+        {
+            get => _reputation;
+            set => _reputation = Math.Max(0, Math.Min(100, value));
+        }
+
+        /// <summary>售价 = 市场价 × 加价倍率（盒装再加溢价）。范围 0.9~1.6。</summary>
+        public double Markup
+        {
+            get => _markup;
+            set => _markup = Math.Max(0.9, Math.Min(1.6, value));
+        }
 
         public PaymentMethods Accepted { get; set; } = PaymentMethods.Cash;
 
-        public IReadOnlyList<ShopCustomer> ActiveCustomers => _active;
+        /// <summary>玩家是否在店里。</summary>
+        public bool PlayerPresent { get; set; }
 
-        /// <summary>排队等结账的顾客，按到达柜台的先后排序。</summary>
+        /// <summary>员工此刻是否在岗（由会话按值班时间提供）。</summary>
+        public Func<GameTimestamp, bool> EmployeeOnDuty { get; set; } = _ => false;
+
+        public IReadOnlyList<ShopCustomer> ActiveCustomers => _active;
         public IReadOnlyList<ShopCustomer> Queue => _queue;
+        public IReadOnlyList<BuildOrder> Orders => _orders;
+        public int NextOrderId { get; private set; } = 1;
 
         public int TodayCustomers { get; private set; }
         public int TodayLost { get; private set; }
@@ -149,28 +245,41 @@ namespace PCShopSell.Core.Shop
         public event Action<ShopCustomer> CustomerReadyToPay;
         public event Action<ShopCustomer> CustomerPaid;
         public event Action<ShopCustomer> CustomerLeft;
+        public event Action<BuildOrder> OrderPlaced;
+        public event Action<BuildOrder> OrderExpired;
 
-        public ShopSimulation(string shopId, GameClock clock, Ledger ledger, int seed, ShopSettings settings = null)
+        public ShopSimulation(string shopId, ShopSize size, GameClock clock, Ledger ledger, HardwareMarket market,
+            GameRandom random, ShopSettings settings = null)
         {
             ShopId = shopId;
+            Size = size;
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _ledger = ledger ?? throw new ArgumentNullException(nameof(ledger));
-            _rng = new Random(seed);
+            _market = market ?? throw new ArgumentNullException(nameof(market));
+            Random = random ?? throw new ArgumentNullException(nameof(random));
             Settings = settings ?? new ShopSettings();
+            Stock = new Stock(ShopSettings.Capacity(size));
             _clock.TimeAdvanced += OnTimeAdvanced;
             _clock.DayAdvanced += OnDayAdvanced;
         }
 
-        /// <summary>有人值守才营业。置为 false 时关门，店里的顾客全部离开。</summary>
-        public bool IsOpen
+        public bool IsOpenAt(GameTimestamp t) => PlayerPresent || EmployeeOnDuty(t);
+
+        public bool IsOpen => IsOpenAt(_clock.Now);
+
+        /// <summary>当前售价。</summary>
+        public Money PriceOf(PartDef part, bool boxed)
         {
-            get => _attended;
-            set
-            {
-                if (_attended == value) return;
-                _attended = value;
-                if (!value) CloseAll();
-            }
+            double k = _markup * (boxed ? 1.0 + Settings.BoxedPremium : 1.0);
+            return Money.FromYuan((long)Math.Round(_market.PriceOf(part).Yuan * k));
+        }
+
+        /// <summary>装机订单报价：配件市场价合计 + 手工费。</summary>
+        public Money QuoteBuild(int tier)
+        {
+            Money sum = Money.Zero;
+            foreach (PartDef p in PartCatalog.BuildList(tier)) sum += _market.PriceOf(p);
+            return sum + BuildOrder.LaborFee(tier);
         }
 
         /// <summary>当前时刻每分钟来客的期望人数。</summary>
@@ -186,28 +295,54 @@ namespace PCShopSell.Core.Shop
         }
 
         /// <summary>
-        /// 给排队的顾客结账：入账，返回这次结账耗费的游戏分钟（由调用方推进时钟）。
+        /// 玩家给排队的顾客结账：入账，返回这次结账耗费的游戏分钟（由调用方推进时钟）。
         /// 顾客不在队列中时返回 -1。
         /// </summary>
         public int Checkout(int customerId)
         {
             ShopCustomer c = _queue.Find(x => x.Id == customerId);
             if (c == null) return -1;
-
             bool cash = c.CarriesCash && (Accepted & PaymentMethods.Cash) != 0;
-            _queue.Remove(c);
-            _active.Remove(c);
-            c.State = CustomerState.Paid;
-            _ledger.Credit(_clock.Today, SalesCategory, c.Spend, "散件零售");
-            TodaySales += c.Spend;
-            CustomerPaid?.Invoke(c);
+            CompleteSale(c);
             return cash ? Settings.CheckoutMinutesCash : Settings.CheckoutMinutesQr;
+        }
+
+        /// <summary>装这单还缺哪些配件（空列表表示配件齐了）。</summary>
+        public List<PartDef> MissingParts(BuildOrder order)
+        {
+            var missing = new List<PartDef>();
+            foreach (PartDef p in PartCatalog.BuildList(order.Tier))
+            {
+                if (Stock.CountAll(p) == 0) missing.Add(p);
+            }
+            return missing;
+        }
+
+        /// <summary>交付装好的整机：扣配件、收款、涨知名度。配件不齐返回 false。</summary>
+        public bool CompleteBuild(int orderId)
+        {
+            BuildOrder o = _orders.Find(x => x.Id == orderId);
+            if (o == null || MissingParts(o).Count > 0) return false;
+            foreach (PartDef p in PartCatalog.BuildList(o.Tier)) Stock.TakeOne(p);
+            _orders.Remove(o);
+            _ledger.Credit(_clock.Today, BuildCategory, o.Price, $"{PartCatalog.TierName(o.Tier)}整机");
+            TodaySales += o.Price;
+            Reputation += 1.5;
+            return true;
         }
 
         public void Dispose()
         {
             _clock.TimeAdvanced -= OnTimeAdvanced;
             _clock.DayAdvanced -= OnDayAdvanced;
+        }
+
+        /// <summary>读档时恢复订单。</summary>
+        public void RestoreOrders(IEnumerable<BuildOrder> orders, int nextOrderId)
+        {
+            _orders.Clear();
+            _orders.AddRange(orders);
+            NextOrderId = nextOrderId;
         }
 
         private void OnDayAdvanced(GameDate previous, GameDate today)
@@ -219,48 +354,153 @@ namespace PCShopSell.Core.Shop
 
         private void OnTimeAdvanced(GameTimestamp from, GameTimestamp to)
         {
-            if (!_attended) return;
             for (long m = from.TotalMinutes; m < to.TotalMinutes; m++)
                 StepMinute(new GameTimestamp(m));
         }
 
         private void StepMinute(GameTimestamp now)
         {
-            if (_rng.NextDouble() < ArrivalRatePerMinute(now))
+            ExpireOrders(now);
+
+            bool open = IsOpenAt(now);
+            if (!open)
+            {
+                if (_wasOpen) CloseAll();
+                _wasOpen = false;
+                return;
+            }
+            _wasOpen = true;
+
+            if (Random.Chance(ArrivalRatePerMinute(now)))
                 Spawn(now);
 
             for (int i = _active.Count - 1; i >= 0; i--)
             {
                 ShopCustomer c = _active[i];
                 if (c.State == CustomerState.Browsing && now >= c.ReadyAt)
-                {
-                    if (!CanPay(c))
-                    {
-                        Leave(c, LeaveReason.NoCash);
-                        continue;
-                    }
-                    c.State = CustomerState.WaitingCheckout;
-                    c.WaitingSince = now;
-                    _queue.Add(c);
-                    CustomerReadyToPay?.Invoke(c);
-                }
+                    Decide(c, now);
                 else if (c.State == CustomerState.WaitingCheckout &&
                          c.WaitingSince.MinutesUntil(now) >= Settings.PatienceMinutes)
-                {
                     Leave(c, LeaveReason.Impatient);
+            }
+
+            if (!PlayerPresent && EmployeeOnDuty(now))
+            {
+                if (_employeeBusyMinutes > 0) _employeeBusyMinutes--;
+                else if (_queue.Count > 0)
+                {
+                    CompleteSale(_queue[0]);
+                    _employeeBusyMinutes = Settings.EmployeeCheckoutMinutes;
                 }
             }
         }
 
         private void Spawn(GameTimestamp now)
         {
-            int browse = _rng.Next(Settings.MinBrowseMinutes, Settings.MaxBrowseMinutes + 1);
-            long spend = Settings.MinSpendYuan + (long)(_rng.NextDouble() * (Settings.MaxSpendYuan - Settings.MinSpendYuan));
-            bool cash = _rng.NextDouble() < Settings.CashCarryChance;
-            var c = new ShopCustomer(_nextId++, now, now.AddMinutes(browse), Money.FromYuan(spend), cash);
+            bool build = Random.Chance(Settings.BuildOrderChance);
+            PartCategory cat = PartCatalog.Categories[Random.Next(0, PartCatalog.Categories.Length)];
+            int tier = PickTier();
+            int browse = Random.Next(Settings.MinBrowseMinutes, Settings.MaxBrowseMinutes + 1);
+            bool cash = Random.Chance(Settings.CashCarryChance);
+            var c = new ShopCustomer(_nextCustomerId++, build ? CustomerIntent.Build : CustomerIntent.Retail,
+                cat, tier, now, now.AddMinutes(browse), cash);
             _active.Add(c);
             TodayCustomers++;
             CustomerArrived?.Invoke(c);
+        }
+
+        private int PickTier()
+        {
+            double r = Random.NextDouble();
+            return r < 0.55 ? 0 : r < 0.9 ? 1 : 2;
+        }
+
+        private void Decide(ShopCustomer c, GameTimestamp now)
+        {
+            if (c.Intent == CustomerIntent.Build)
+            {
+                if (!Random.Chance(ShopSettings.BuyChance(_markup)))
+                {
+                    Leave(c, LeaveReason.TooExpensive);
+                    return;
+                }
+                Money price = Money.FromYuan((long)Math.Round(QuoteBuild(c.BuildTier).Yuan * _markup / 1.15));
+                var order = new BuildOrder(NextOrderId++, c.BuildTier, price, now, now.AddMinutes(Settings.BuildOrderDueDays * GameTimestamp.MinutesPerDay));
+                _orders.Add(order);
+                OrderPlaced?.Invoke(order);
+                Leave(c, LeaveReason.OrderPlaced, countAsLost: false);
+                return;
+            }
+
+            if (!PickItem(c))
+            {
+                Reputation -= 0.1;
+                Leave(c, LeaveReason.NoStock);
+                return;
+            }
+
+            double leave = 1.0 - ShopSettings.BuyChance(_markup);
+            if (c.ItemBoxed) leave *= Settings.BoxedTrust;
+            if (Random.Chance(leave))
+            {
+                Stock.ForceAdd(c.Item, c.ItemBoxed, 1);
+                c.Item = null;
+                Leave(c, LeaveReason.TooExpensive);
+                return;
+            }
+
+            if (!CanPay(c))
+            {
+                Stock.ForceAdd(c.Item, c.ItemBoxed, 1);
+                c.Item = null;
+                Leave(c, LeaveReason.NoCash);
+                return;
+            }
+
+            c.State = CustomerState.WaitingCheckout;
+            c.WaitingSince = now;
+            _queue.Add(c);
+            CustomerReadyToPay?.Invoke(c);
+        }
+
+        /// <summary>从想要的品类里挑一件有货的（优先想要的档次）；没货时有一半人会改买别的品类。</summary>
+        private bool PickItem(ShopCustomer c)
+        {
+            if (TryPickIn(c, c.DesiredCategory)) return true;
+            if (!Random.Chance(0.5)) return false;
+            foreach (PartCategory cat in PartCatalog.Categories)
+            {
+                if (cat != c.DesiredCategory && TryPickIn(c, cat)) return true;
+            }
+            return false;
+        }
+
+        private bool TryPickIn(ShopCustomer c, PartCategory cat)
+        {
+            var candidates = new List<(PartDef part, bool boxed)>();
+            foreach (PartDef p in PartCatalog.InCategory(cat))
+            {
+                if (Stock.Count(p, true) > 0) candidates.Add((p, true));
+                if (Stock.Count(p, false) > 0) candidates.Add((p, false));
+            }
+            if (candidates.Count == 0) return false;
+
+            (PartDef part, bool boxed) pick = candidates[0];
+            int bestDiff = int.MaxValue;
+            foreach (var cand in candidates)
+            {
+                int diff = Math.Abs(cand.part.Tier - c.BuildTier) * 2 + Random.Next(0, 2);
+                if (diff < bestDiff)
+                {
+                    bestDiff = diff;
+                    pick = cand;
+                }
+            }
+            Stock.TryRemove(pick.part, pick.boxed, 1);
+            c.Item = pick.part;
+            c.ItemBoxed = pick.boxed;
+            c.Spend = PriceOf(pick.part, pick.boxed);
+            return true;
         }
 
         private bool CanPay(ShopCustomer c)
@@ -269,14 +509,43 @@ namespace PCShopSell.Core.Shop
             return c.CarriesCash && (Accepted & PaymentMethods.Cash) != 0;
         }
 
-        private void Leave(ShopCustomer c, LeaveReason reason)
+        private void CompleteSale(ShopCustomer c)
         {
+            _queue.Remove(c);
+            _active.Remove(c);
+            c.State = CustomerState.Paid;
+            _ledger.Credit(_clock.Today, SalesCategory, c.Spend, c.Item.Name + (c.ItemBoxed ? "（盒装）" : "（散件）"));
+            TodaySales += c.Spend;
+            Reputation += 0.2;
+            CustomerPaid?.Invoke(c);
+        }
+
+        private void Leave(ShopCustomer c, LeaveReason reason, bool countAsLost = true)
+        {
+            if (c.State == CustomerState.WaitingCheckout && c.Item != null)
+            {
+                Stock.ForceAdd(c.Item, c.ItemBoxed, 1);
+                c.Item = null;
+            }
+            if (reason == LeaveReason.Impatient) Reputation -= 0.3;
             _active.Remove(c);
             _queue.Remove(c);
             c.State = CustomerState.Left;
             c.Reason = reason;
-            TodayLost++;
+            if (countAsLost) TodayLost++;
             CustomerLeft?.Invoke(c);
+        }
+
+        private void ExpireOrders(GameTimestamp now)
+        {
+            for (int i = _orders.Count - 1; i >= 0; i--)
+            {
+                BuildOrder o = _orders[i];
+                if (now < o.DueAt) continue;
+                _orders.RemoveAt(i);
+                Reputation -= 3;
+                OrderExpired?.Invoke(o);
+            }
         }
 
         private void CloseAll()
