@@ -1,29 +1,41 @@
 using System;
+using System.Collections.Generic;
 using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
     /// <summary>
-    /// 手动走路（WASD）。玩家沿着街道路网走：在路口按方向键选下一条路，在路中间可以停下，也可以掉头。
-    /// 时间照旧按走过的路程折算；停下不动时按倍速走。
+    /// 手动走路（WASD）。街道是沿路网的一条条"走廊"（商业街两侧人行道宽，小路窄），
+    /// 玩家可以在走廊里朝任何方向自由走，碰到走廊边缘就贴着边滑，不会走进楼里或草地。
+    /// 时间按走过的路程折算：压缩连接路上画面走一米等于游戏里好几米。
     /// </summary>
     public sealed partial class GameSession
     {
         /// <summary>走到离某地点入口这么近（画面米）就能按 E 进去。</summary>
-        public const double EnterRadius = 3.0;
+        public const double EnterRadius = 6.0;
 
-        private const double TurnMinDot = 0.35;
-        private const double KeepGoingMinDot = 0.3;
+        /// <summary>商业街、连接路（两端都在 y=0 那条线上的路）走廊半宽：含两侧人行道。</summary>
+        public const double MainStreetHalfWidth = 4.2;
 
-        private string _edgeA, _edgeB;
-        private double _edgeT, _edgeLen, _edgeGameScale = 1;
+        /// <summary>城中村等小路的走廊半宽。</summary>
+        public const double SideRoadHalfWidth = 2.0;
+
+        private struct Corridor
+        {
+            public MapPoint A, B;
+            public double HalfWidth;
+            public double Scale; // 游戏米 / 画面米
+        }
+
+        private List<Corridor> _corridors;
+        private MapPoint? _free;
         private bool _steering;
         private double _steerX, _steerY;
         private double _meterCarry;
         private bool _manualMoving;
 
-        /// <summary>现在是否不在路口、停在两个路口之间。</summary>
-        public bool OffNode => _edgeA != null;
+        /// <summary>现在不是正好站在某个路口上（手动走到了路中间）。</summary>
+        public bool OffNode => _free.HasValue;
 
         /// <summary>玩家正在自己走（WASD）或在自动前往的路上。</summary>
         public bool IsWalking => Trip != null || _manualMoving;
@@ -52,29 +64,37 @@ namespace PCShopSell.Core.Session
 
         private bool SteerActive => _steering && CanSteer && CurrentPlace == null;
 
-        public MapPoint PositionOnEdge
-        {
-            get
-            {
-                MapPoint a = City.ViewPosition(_edgeA), b = City.ViewPosition(_edgeB);
-                return new MapPoint(a.X + (b.X - a.X) * _edgeT, a.Y + (b.Y - a.Y) * _edgeT);
-            }
-        }
-
-        private string NearestEnd() => _edgeT < 0.5 ? _edgeA : _edgeB;
-
         private void ClearEdge()
         {
-            _edgeA = _edgeB = null;
-            _edgeT = 0;
-            _edgeGameScale = 1;
+            _free = null;
         }
 
-        private double GameEdgeLength(string a, string b)
+        // ---------- 走廊 ----------
+
+        private List<Corridor> Corridors()
         {
-            foreach (WorldEdge e in City.Map.NeighborsOf(a))
-                if (e.To == b) return e.Length;
-            return -1;
+            if (_corridors != null) return _corridors;
+            _corridors = new List<Corridor>();
+            var done = new HashSet<string>();
+            foreach (WorldNode n in City.Map.Nodes)
+            {
+                foreach (WorldEdge e in City.Map.NeighborsOf(n.Id))
+                {
+                    string key = string.CompareOrdinal(n.Id, e.To) < 0 ? n.Id + "|" + e.To : e.To + "|" + n.Id;
+                    if (!done.Add(key)) continue;
+                    MapPoint a = City.ViewPosition(n.Id), b = City.ViewPosition(e.To);
+                    double view = Dist(a, b);
+                    bool main = Math.Abs(a.Y) < 0.1 && Math.Abs(b.Y) < 0.1;
+                    _corridors.Add(new Corridor
+                    {
+                        A = a,
+                        B = b,
+                        HalfWidth = main ? MainStreetHalfWidth : SideRoadHalfWidth,
+                        Scale = view < 1e-6 ? 1 : e.Length / view,
+                    });
+                }
+            }
+            return _corridors;
         }
 
         private static double Dist(MapPoint a, MapPoint b)
@@ -83,51 +103,68 @@ namespace PCShopSell.Core.Session
             return Math.Sqrt(dx * dx + dy * dy);
         }
 
-        private void BeginEdge(string from, string to, double t)
+        private static MapPoint ClosestOnSegment(MapPoint a, MapPoint b, MapPoint p)
         {
-            _edgeA = from;
-            _edgeB = to;
-            _edgeLen = Dist(City.ViewPosition(from), City.ViewPosition(to));
-            double game = GameEdgeLength(from, to);
-            _edgeGameScale = _edgeLen < 1e-6 || game < 0 ? 1 : game / _edgeLen;
-            _edgeT = t;
+            double dx = b.X - a.X, dy = b.Y - a.Y;
+            double l2 = dx * dx + dy * dy;
+            if (l2 < 1e-12) return a;
+            double t = ((p.X - a.X) * dx + (p.Y - a.Y) * dy) / l2;
+            t = Math.Max(0, Math.Min(1, t));
+            return new MapPoint(a.X + dx * t, a.Y + dy * t);
         }
 
-        /// <summary>手动接管：把正在进行的自动前往转成"在某条路上"的状态。</summary>
-        private void BreakTripToEdge()
+        /// <summary>把想去的点限制进走廊里：在走廊内就原样，否则贴着最近走廊的边。scale 是那里的"游戏米/画面米"。</summary>
+        private MapPoint Constrain(MapPoint want, out double scale)
         {
-            Trip trip = Trip;
-            MapPoint pos = trip.Position;
-            string behind = PlayerNodeId, ahead = trip.NextNode;
-            Trip = null;
-            if (behind != ahead && GameEdgeLength(behind, ahead) >= 0)
+            scale = 1;
+            double nearestDist = double.MaxValue;
+            double bestOver = double.MaxValue;
+            MapPoint clamped = want;
+            bool inside = false;
+            foreach (Corridor c in Corridors())
             {
-                BeginEdge(behind, ahead, 0);
-                _edgeT = _edgeLen < 1e-6 ? 0 : Math.Max(0, Math.Min(1, Dist(City.ViewPosition(behind), pos) / _edgeLen));
-                return;
-            }
-            PlayerNodeId = ahead;
-            ClearEdge();
-        }
-
-        private string PickEdge(string node)
-        {
-            MapPoint a = City.ViewPosition(node);
-            string best = null;
-            double bestDot = TurnMinDot;
-            foreach (WorldEdge e in City.Map.NeighborsOf(node))
-            {
-                MapPoint b = City.ViewPosition(e.To);
-                double len = Dist(a, b);
-                if (len < 1e-6) continue;
-                double dot = ((b.X - a.X) * _steerX + (b.Y - a.Y) * _steerY) / len;
-                if (dot > bestDot)
+                MapPoint q = ClosestOnSegment(c.A, c.B, want);
+                double d = Dist(q, want);
+                if (d < nearestDist)
                 {
-                    bestDot = dot;
-                    best = e.To;
+                    nearestDist = d;
+                    scale = c.Scale;
+                }
+                double over = d - c.HalfWidth;
+                if (over <= 0) inside = true;
+                else if (over < bestOver)
+                {
+                    bestOver = over;
+                    double k = c.HalfWidth / d;
+                    clamped = new MapPoint(q.X + (want.X - q.X) * k, q.Y + (want.Y - q.Y) * k);
+                }
+            }
+            return inside ? want : clamped;
+        }
+
+        private string NearestNodeTo(MapPoint p)
+        {
+            string best = PlayerNodeId;
+            double bd = double.MaxValue;
+            foreach (WorldNode n in City.Map.Nodes)
+            {
+                double d = Dist(p, City.ViewPosition(n.Id));
+                if (d < bd)
+                {
+                    bd = d;
+                    best = n.Id;
                 }
             }
             return best;
+        }
+
+        /// <summary>手动接管：把正在进行的自动前往转成"站在原地"的自由状态。</summary>
+        private void BreakTripToEdge()
+        {
+            MapPoint pos = Trip.Position;
+            Trip = null;
+            _free = pos;
+            PlayerNodeId = NearestNodeTo(pos);
         }
 
         /// <summary>按方向走一步。返回是否真的走动了；minutes 是这一步折算出的游戏分钟。</summary>
@@ -136,46 +173,18 @@ namespace PCShopSell.Core.Session
             minutes = 0;
             VehicleSpec v = CurrentVehicle;
             double budget = v.VisualSpeed * scaledSeconds;
-            double moved = 0, meters = 0;
-            while (budget > 1e-9)
-            {
-                if (_edgeA == null)
-                {
-                    string next = PickEdge(PlayerNodeId);
-                    if (next == null) break;
-                    BeginEdge(PlayerNodeId, next, 0);
-                }
-                MapPoint a = City.ViewPosition(_edgeA), b = City.ViewPosition(_edgeB);
-                if (_edgeLen < 1e-6)
-                {
-                    PlayerNodeId = _edgeB;
-                    ClearEdge();
-                    continue;
-                }
-                double ex = (b.X - a.X) / _edgeLen, ey = (b.Y - a.Y) / _edgeLen;
-                double dot = ex * _steerX + ey * _steerY;
-                int sign = dot > KeepGoingMinDot ? 1 : dot < -KeepGoingMinDot ? -1 : 0;
-                if (sign == 0) break;
+            MapPoint from = PlayerPosition;
+            MapPoint want = new MapPoint(from.X + _steerX * budget, from.Y + _steerY * budget);
+            MapPoint res = Constrain(want, out double scale);
+            double moved = Dist(from, res);
+            if (moved < 1e-6) return false;
 
-                double pos = _edgeT * _edgeLen;
-                double room = sign > 0 ? _edgeLen - pos : pos;
-                double m = Math.Min(budget, room);
-                pos += sign * m;
-                budget -= m;
-                moved += m;
-                meters += m * _edgeGameScale;
-                _edgeT = pos / _edgeLen;
-                HeadingX = sign * ex;
-                HeadingY = sign * ey;
-                if (room - m <= 1e-9)
-                {
-                    PlayerNodeId = sign > 0 ? _edgeB : _edgeA;
-                    ClearEdge();
-                }
-            }
+            _free = res;
+            PlayerNodeId = NearestNodeTo(res);
+            HeadingX = (res.X - from.X) / moved;
+            HeadingY = (res.Y - from.Y) / moved;
 
-            if (moved <= 1e-9) return false;
-            _meterCarry += meters;
+            _meterCarry += moved * scale;
             int due = (int)Math.Floor(_meterCarry / v.SpeedPerMinute + 1e-9);
             if (due > 0)
             {

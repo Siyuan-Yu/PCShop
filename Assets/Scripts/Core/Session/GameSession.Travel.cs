@@ -44,7 +44,7 @@ namespace PCShopSell.Core.Session
             meters = 0;
             minutes = 0;
             fare = Money.Zero;
-            string from = Trip != null ? Trip.NextNode : OffNode ? NearestEnd() : PlayerNodeId;
+            string from = Trip != null ? Trip.NextNode : PlayerNodeId;
             PathResult path = Pathfinder.FindPath(City.Map, from, targetNode);
             if (!path.Found) return false;
             meters = path.Distance;
@@ -77,8 +77,8 @@ namespace PCShopSell.Core.Session
             else if (OffNode)
             {
                 start = PlayerPosition;
-                scale = _edgeGameScale;
-                from = NearestEnd();
+                Constrain(start, out scale);
+                from = PlayerNodeId;
             }
             else
             {

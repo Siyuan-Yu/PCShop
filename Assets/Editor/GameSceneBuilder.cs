@@ -338,7 +338,7 @@ namespace PCShopSell.EditorTools
             Shot("vs1_18_tips");
             _game.Ui.CloseAllWindows();
 
-            // WASD 走路：在商业街上沿路网走，靠近店门时提示按 E
+            // WASD 自由走路（街道范围内任意方向），靠近店门时提示按 E
             g.Leave();
             g.SetVehicle(PCShopSell.Core.Session.VehicleKind.Walk);
             g.ArriveAtNode("e05");
@@ -358,6 +358,18 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Check(g.NearbyPlace != null, "走到门口附近能进门");
             Shot("vs1_20_press_e");
+
+            // 自由视角：转到另一侧、俯仰，并在人行道边自由走
+            PCShopSell.Game.Runtime.CameraRig.Yaw = 120f;
+            PCShopSell.Game.Runtime.CameraRig.Pitch = 50f;
+            g.SetSteer(0, 1);
+            for (int i = 0; i < 20; i++) Frame(0.05f);
+            g.SetSteer(0, 0);
+            _game.SnapCamera();
+            for (int i = 0; i < 5; i++) Frame(0.05f);
+            Shot("vs1_21_free_camera");
+            PCShopSell.Game.Runtime.CameraRig.Yaw = 45f;
+            PCShopSell.Game.Runtime.CameraRig.Pitch = 35f;
         }
 
         private static void Teleport(GameSession s, string placeId)

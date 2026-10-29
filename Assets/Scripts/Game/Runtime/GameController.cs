@@ -265,14 +265,31 @@ namespace PCShopSell.Game
             if (Input.GetKeyDown(KeyCode.Alpha3)) Session.Time.SetSpeed(4);
             if (Input.GetKeyDown(KeyCode.Alpha4)) Session.Time.SetSpeed(8);
             if (!GameUi.PointerOverUi) _rig.Zoom(Input.mouseScrollDelta.y);
+            HandleCameraOrbit();
             if (Input.GetKeyDown(KeyCode.E) && !InInterior && !Ui.AnyModalOpen && !Session.IsGameOver) TryEnterNearby();
+        }
+
+        // ---------- 镜头旋转 ----------
+
+        private bool _orbiting;
+
+        /// <summary>街上自由切换视角：右键拖动旋转/俯仰，Q / R 左右转，V 复位。</summary>
+        private void HandleCameraOrbit()
+        {
+            if (InInterior || Ui.AnyModalOpen) { _orbiting = false; return; }
+            if (Input.GetMouseButtonDown(1) && !GameUi.PointerOverUi) _orbiting = true;
+            if (!Input.GetMouseButton(1)) _orbiting = false;
+            if (_orbiting) _rig.Orbit(Input.GetAxis("Mouse X") * 4f, -Input.GetAxis("Mouse Y") * 3f);
+            float k = (Input.GetKey(KeyCode.R) ? 1f : 0f) - (Input.GetKey(KeyCode.Q) ? 1f : 0f);
+            if (Mathf.Abs(k) > 0.01f) _rig.Orbit(k * 100f * Time.unscaledDeltaTime, 0f);
+            if (Input.GetKeyDown(KeyCode.V)) _rig.ResetView();
         }
 
         // ---------- WASD 走路 ----------
 
         private bool _taxiHinted;
 
-        /// <summary>WASD / 方向键。按屏幕方向走：W 是屏幕往上。街上沿路网走，店里在店内走。</summary>
+        /// <summary>WASD / 方向键。相对镜头方向走：W 是屏幕往上（镜头怎么转，方向跟着转）。街上在街道范围内自由走，店里在店内走。</summary>
         private void HandleMovement(float dt)
         {
             if (Ui.AnyModalOpen || Session.IsGameOver)
@@ -374,9 +391,10 @@ namespace PCShopSell.Game
         }
 
         /// <summary>切换场景时重设镜头：店内比较近、跟着老板，街上拉远。</summary>
-        private void SnapCamera()
+        public void SnapCamera()
         {
             bool interior = InInterior;
+            _rig.SetInterior(interior);
             _rig.MinSize = interior ? ShopInteriorView.MinZoom : 5f;
             _rig.MaxSize = interior ? Interior.CameraSize : 60f;
             float size = interior ? Mathf.Min(ShopInteriorView.DefaultZoom, Interior.CameraSize) : 16f;

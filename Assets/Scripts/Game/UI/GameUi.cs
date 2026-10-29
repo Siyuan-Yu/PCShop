@@ -84,6 +84,7 @@ namespace PCShopSell.Game.UI
             _uiTime += dt;
             UpdateHud();
             UpdateLabels();
+            UpdatePlayerMarker();
             UpdateQueueLabels();
             UpdateToasts();
             _slowTimer -= dt;
@@ -190,7 +191,7 @@ namespace PCShopSell.Game.UI
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimatedMinutes} 分钟 · 按 WASD 随时接管";
             else if (S.NearbyPlace != null) _hintText.text = $"<color=#FFD54A>按 E 进入 {S.NearbyPlace.Name}</color>";
             else if (S.CurrentPlace != null) _hintText.text = "按 WASD 离开 · 空格暂停";
-            else _hintText.text = "WASD 走路（沿街道） · 走到门口按 E 进入 · 滚轮缩放 · 空格暂停 · 下方按钮可快捷前往";
+            else _hintText.text = "WASD 自由走动 · 右键拖动/Q R 转视角 · V 复位 · 滚轮缩放 · 走到门口按 E 进入 · 空格暂停 · 下方按钮可快捷前往";
 
             _chaseText.gameObject.SetActive(S.Police.AnyChasing && S.CurrentPlace == null);
         }
@@ -245,6 +246,32 @@ namespace PCShopSell.Game.UI
                 label.rt.anchoredPosition = local + canvasRt.rect.size * 0.5f;
                 label.text.text = LabelText(pv.Place);
             }
+        }
+
+        private RectTransform _playerMark;
+
+        /// <summary>街上头顶的"我"标记：镜头转到建筑背后时，人被楼挡住也找得到自己。</summary>
+        private void UpdatePlayerMarker()
+        {
+            if (_playerMark == null)
+            {
+                Button b = Ui.Button(_labelCanvas.transform, "我", null, 16, new Color(0.95f, 0.75f, 0.1f, 0.9f));
+                b.image.raycastTarget = false;
+                foreach (Text t in b.GetComponentsInChildren<Text>()) t.raycastTarget = false;
+                _playerMark = (RectTransform)b.transform;
+                _playerMark.anchorMin = _playerMark.anchorMax = Vector2.zero;
+                _playerMark.pivot = new Vector2(0.5f, 0);
+                _playerMark.sizeDelta = new Vector2(34, 24);
+            }
+            Camera cam = _ctrl.Cam;
+            bool show = !_ctrl.InInterior && S.CurrentPlace == null;
+            Vector3 sp = cam.WorldToScreenPoint(StreetWorldBuilder.ToWorld(S.PlayerPosition, 2.6f));
+            show &= sp.z > 0;
+            _playerMark.gameObject.SetActive(show);
+            if (!show) return;
+            var canvasRt = (RectTransform)_labelCanvas.transform;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRt, sp, LabelCam, out Vector2 local);
+            _playerMark.anchoredPosition = local + canvasRt.rect.size * 0.5f;
         }
 
         private string LabelText(Place p)

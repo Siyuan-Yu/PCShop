@@ -118,7 +118,7 @@ namespace PCShopSell.Core.Session
         public VehicleSpec CurrentVehicle => Vehicles.Get(Vehicle);
 
         /// <summary>玩家的画面坐标。</summary>
-        public MapPoint PlayerPosition => Trip != null ? Trip.Position : OffNode ? PositionOnEdge : City.ViewPosition(PlayerNodeId);
+        public MapPoint PlayerPosition => Trip != null ? Trip.Position : OffNode ? _free.Value : City.ViewPosition(PlayerNodeId);
 
         public bool InPlayerShop => CurrentPlace == PlayerShopPlace;
 

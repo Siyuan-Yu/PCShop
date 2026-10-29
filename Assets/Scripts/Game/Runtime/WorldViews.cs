@@ -5,10 +5,20 @@ using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
 {
-    /// <summary>固定斜俯视正交镜头：俯角 35°、偏航 45°，平滑跟随目标，滚轮缩放。</summary>
+    /// <summary>斜俯视正交镜头：默认俯角 35°、偏航 45°。街上可以旋转/俯仰（右键拖动、Q/R），店内固定；平滑跟随目标，滚轮缩放。</summary>
     public sealed class CameraRig
     {
-        public static readonly Quaternion Rotation = Quaternion.Euler(35f, 45f, 0f);
+        public const float DefaultYaw = 45f;
+        public const float DefaultPitch = 35f;
+        public const float MinPitch = 18f;
+        public const float MaxPitch = 78f;
+
+        public static float Yaw = DefaultYaw;
+        public static float Pitch = DefaultPitch;
+        public static Quaternion Rotation => Quaternion.Euler(Pitch, Yaw, 0f);
+
+        private bool _locked;
+        private float _streetYaw = DefaultYaw, _streetPitch = DefaultPitch;
         private readonly Camera _cam;
         private Vector3 _focus;
         public float Size = 16f;
@@ -30,6 +40,39 @@ namespace PCShopSell.Game.Runtime
             Size = size;
             _cam.orthographicSize = size;
             Apply();
+        }
+
+        /// <summary>进出店铺：店内固定默认视角，出来时恢复街上的视角。</summary>
+        public void SetInterior(bool interior)
+        {
+            if (interior == _locked) return;
+            _locked = interior;
+            if (interior)
+            {
+                _streetYaw = Yaw;
+                _streetPitch = Pitch;
+                Yaw = DefaultYaw;
+                Pitch = DefaultPitch;
+            }
+            else
+            {
+                Yaw = _streetYaw;
+                Pitch = _streetPitch;
+            }
+        }
+
+        public void Orbit(float dYaw, float dPitch)
+        {
+            if (_locked) return;
+            Yaw = Mathf.Repeat(Yaw + dYaw, 360f);
+            Pitch = Mathf.Clamp(Pitch + dPitch, MinPitch, MaxPitch);
+        }
+
+        public void ResetView()
+        {
+            if (_locked) return;
+            Yaw = DefaultYaw;
+            Pitch = DefaultPitch;
         }
 
         public void Zoom(float scroll)
