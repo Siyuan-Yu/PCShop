@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
@@ -37,7 +38,7 @@ namespace PCShopSell.Game.Runtime
         private readonly Dictionary<int, Visitor> _visitors = new Dictionary<int, Visitor>();
         private readonly List<Visitor> _leaving = new List<Visitor>();
         private readonly List<Vector3> _shelfSpots = new List<Vector3>();
-        private readonly List<GameObject> _shelfItems = new List<GameObject>();
+        private readonly List<ShelfDisplay> _shelves = new List<ShelfDisplay>();
         private readonly System.Random _rng = new System.Random(5);
         private readonly GameObject _owner;
         private readonly GameObject _clerk;
@@ -115,27 +116,23 @@ namespace PCShopSell.Game.Runtime
                 lamp.color = new Color(1f, 0.95f, 0.85f);
             }
 
-            // 货架：沿后墙和右墙
-            Material shelfMat = Mats.Lit(new Color(0.45f, 0.35f, 0.25f));
-            int backShelves = Mathf.Max(1, Mathf.FloorToInt((w - 1.5f) / 1.6f));
+            // 货架：沿后墙和右墙，每个货架摆一类配件（显卡、CPU、内存、硬盘、机箱电源、主板轮流）
+            PartCategory[] cats = { PartCategory.Gpu, PartCategory.Cpu, PartCategory.Memory, PartCategory.Storage, PartCategory.PowerCase, PartCategory.Motherboard };
+            int shelfNo = 0;
+            int backShelves = Mathf.Max(1, Mathf.FloorToInt((w - 2.8f) / 1.6f) + 1);
             for (int i = 0; i < backShelves; i++)
             {
-                float x = 1.3f + i * 1.6f;
-                Prims.Box(_root, "Shelf", new Vector3(x, 0.9f, d - 0.2f), new Vector3(1.4f, 1.8f, 0.3f), shelfMat);
+                float x = 1.5f + i * 1.6f;
+                _shelves.Add(ShopFixtures.BuildShelf(_root, new Vector3(x, 0, d - 0.2f), 0f, cats[shelfNo++ % cats.Length]));
                 _shelfSpots.Add(Origin + new Vector3(x, 0, d - 1.2f));
-                for (int k = 0; k < 6; k++)
-                    _shelfItems.Add(Prims.Box(_root, "Item", new Vector3(x - 0.5f + (k % 3) * 0.5f, 0.45f + (k / 3) * 0.7f, d - 0.5f), new Vector3(0.38f, 0.38f, 0.3f), Mats.Lit(ItemColor())));
             }
-            int sideShelves = Mathf.Max(0, Mathf.FloorToInt((d - 2f) / 1.6f));
+            int sideShelves = Mathf.Max(0, Mathf.FloorToInt((d - 2.25f) / 1.6f) + 1);
             for (int i = 0; i < sideShelves; i++)
             {
                 float z = 1.0f + i * 1.6f;
-                Prims.Box(_root, "Shelf", new Vector3(w - 0.2f, 0.9f, z), new Vector3(0.3f, 1.8f, 1.4f), shelfMat);
+                _shelves.Add(ShopFixtures.BuildShelf(_root, new Vector3(w - 0.2f, 0, z), 90f, cats[shelfNo++ % cats.Length]));
                 _shelfSpots.Add(Origin + new Vector3(w - 1.2f, 0, z));
-                for (int k = 0; k < 6; k++)
-                    _shelfItems.Add(Prims.Box(_root, "Item", new Vector3(w - 0.5f, 0.45f + (k / 3) * 0.7f, z - 0.5f + (k % 3) * 0.5f), new Vector3(0.3f, 0.38f, 0.38f), Mats.Lit(ItemColor())));
             }
-
             // 柜台 + 电脑（靠左前方）
             Vector3 counter = new Vector3(0.9f, 0.5f, d * 0.55f);
             Prims.Box(_root, "Counter", counter, new Vector3(0.8f, 1.0f, Mathf.Min(2.2f, d * 0.5f)), Mats.Lit(new Color(0.3f, 0.32f, 0.36f), 0.5f));
@@ -143,29 +140,26 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(_root, "Register", counter + new Vector3(0, 0.6f, -0.5f), new Vector3(0.35f, 0.2f, 0.35f), Mats.Lit(new Color(0.15f, 0.15f, 0.15f)));
 
             // 装机台（靠左墙后部）：有装机单时屏幕亮着
-            Prims.Box(_root, "Workbench", new Vector3(0.7f, 0.45f, d - 0.9f), new Vector3(0.9f, 0.9f, 1.5f), Mats.Lit(new Color(0.36f, 0.38f, 0.42f), 0.5f));
-            Prims.Box(_root, "BenchCase", new Vector3(0.7f, 1.15f, d - 1.3f), new Vector3(0.4f, 0.5f, 0.6f), Mats.Lit(new Color(0.12f, 0.12f, 0.14f), 0.6f));
-            _buildGlow.Add(Prims.Box(_root, "BenchScreen", new Vector3(0.7f, 1.2f, d - 0.5f), new Vector3(0.08f, 0.4f, 0.5f), Mats.Glow(new Color(0.1f, 0.1f, 0.12f), new Color(0.2f, 1.4f, 0.6f), false)));
-            Prims.Box(_root, "BenchParts", new Vector3(0.55f, 0.95f, d - 1.9f), new Vector3(0.4f, 0.08f, 0.4f), Mats.Lit(new Color(0.15f, 0.5f, 0.3f)));
+            Prims.Box(_root, "Workbench", new Vector3(0.45f, 0.45f, d - 0.9f), new Vector3(0.6f, 0.9f, 1.3f), Mats.Lit(new Color(0.36f, 0.38f, 0.42f), 0.5f));
+            Prims.Box(_root, "BenchCase", new Vector3(0.45f, 1.15f, d - 1.2f), new Vector3(0.35f, 0.5f, 0.5f), Mats.Lit(new Color(0.12f, 0.12f, 0.14f), 0.6f));
+            _buildGlow.Add(Prims.Box(_root, "BenchScreen", new Vector3(0.45f, 1.2f, d - 0.5f), new Vector3(0.06f, 0.4f, 0.45f), Mats.Glow(new Color(0.1f, 0.1f, 0.12f), new Color(0.2f, 1.4f, 0.6f), false)));
+            Prims.Box(_root, "BenchParts", new Vector3(0.4f, 0.95f, d - 1.0f), new Vector3(0.3f, 0.08f, 0.3f), Mats.Lit(new Color(0.15f, 0.5f, 0.3f)));
 
-            // 中间的展示台：中、大店更多
+            // 整机展示区：中间的长桌，上面是开着机的整机；中、大店更多
             var tables = new List<Vector2>();
-            if (size == ShopSize.Small) tables.Add(new Vector2(w * 0.55f, d * 0.4f));
-            else if (size == ShopSize.Medium) { tables.Add(new Vector2(w * 0.4f, d * 0.35f)); tables.Add(new Vector2(w * 0.65f, d * 0.6f)); }
+            if (size == ShopSize.Small) tables.Add(new Vector2(w * 0.58f, d * 0.42f));
+            else if (size == ShopSize.Medium) { tables.Add(new Vector2(w * 0.4f, d * 0.35f)); tables.Add(new Vector2(w * 0.68f, d * 0.6f)); }
             else
             {
                 tables.Add(new Vector2(w * 0.3f, d * 0.3f)); tables.Add(new Vector2(w * 0.55f, d * 0.3f));
                 tables.Add(new Vector2(w * 0.4f, d * 0.65f)); tables.Add(new Vector2(w * 0.68f, d * 0.6f));
             }
-            Material tableMat = Mats.Lit(new Color(0.5f, 0.4f, 0.3f));
-            foreach (Vector2 t in tables)
+            int deskNo = 0;
+            foreach (Vector2 tb in tables)
             {
-                Prims.Box(_root, "Table", new Vector3(t.x, 0.4f, t.y), new Vector3(1.8f, 0.8f, 0.9f), tableMat);
-                for (int k = 0; k < 4; k++)
-                    _shelfItems.Add(Prims.Box(_root, "Item", new Vector3(t.x - 0.6f + k * 0.4f, 0.97f, t.y), new Vector3(0.3f, 0.34f, 0.3f), Mats.Lit(ItemColor())));
-                _shelfSpots.Add(Origin + new Vector3(t.x, 0, t.y - 0.9f));
+                ShopFixtures.BuildPcDesk(_root, new Vector3(tb.x, 0, tb.y), deskNo++);
+                _shelfSpots.Add(Origin + new Vector3(tb.x, 0, tb.y - 1.0f));
             }
-
             _owner = Prims.Figure(_root, "Owner", new Color(0.95f, 0.55f, 0.15f), new Color(0.95f, 0.8f, 0.65f), 1.05f);
             _owner.transform.localPosition = new Vector3(0.35f, 0, d * 0.55f);
             _owner.transform.localRotation = Quaternion.LookRotation(Vector3.right);
@@ -252,12 +246,17 @@ namespace PCShopSell.Game.Runtime
             if (_stockTimer <= 0)
             {
                 _stockTimer = 0.5f;
-                int items = 0;
-                foreach (var line in shop.Stock.Lines()) items += line.Count;
-                int show = Mathf.Min(_shelfItems.Count, items);
-                for (int i = 0; i < _shelfItems.Count; i++) _shelfItems[i].SetActive(i < show);
+                var counts = new Dictionary<PartCategory, int>();
+                foreach (var line in shop.Stock.Lines())
+                    counts[line.Part.Category] = (counts.TryGetValue(line.Part.Category, out int n) ? n : 0) + line.Count;
+                foreach (ShelfDisplay sh in _shelves)
+                {
+                    // 空货架会留几件样品，有货时按库存多少摆满
+                    int stock = counts.TryGetValue(sh.Category, out int have) ? have : 0;
+                    int show = Mathf.Min(sh.Items.Count, stock > 0 ? 3 + stock : 2);
+                    for (int i = 0; i < sh.Items.Count; i++) sh.Items[i].SetActive(i < show);
+                }
             }
-
             var alive = new HashSet<int>();
             int queueIndex = 0;
             var queueIds = new Dictionary<int, int>();
