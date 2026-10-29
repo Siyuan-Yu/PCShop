@@ -22,7 +22,7 @@ namespace PCShopSell.Game.UI
                     OpenDock();
                     break;
                 case PlaceKind.Home:
-                    OpenPlaceWindow(p, BuildHome);
+                    OpenPlaceWindow(p, BuildHome, 760, 760);
                     break;
                 case PlaceKind.Wholesaler:
                     OpenPlaceWindow(p, BuildStall, 860, 720);
@@ -84,6 +84,34 @@ namespace PCShopSell.Game.UI
                 w.Rebuild();
             }, 20), 200);
             Line(w.Content, "凌晨 4 点还不睡会晕倒；睡不够 7 小时会欠觉，精力上限降低。", 16, Ui.Dim);
+
+            // 住处改善
+            Line(w.Content, $"住处：{HomeComforts.Name(S.HomeComfort)}（睡眠恢复 ×{HomeComforts.SleepQuality(S.HomeComfort):0.##}" + (S.HomeComfort > 0 ? $"，水电 {HomeComforts.MonthlyUtilities(S.HomeComfort)}/月" : "") + "）", 18);
+            if (S.HomeComfort < HomeComforts.MaxLevel)
+            {
+                Money cost = HomeComforts.UpgradePrice(S.HomeComfort + 1);
+                Ui.Size(Ui.Button(w.Content, $"改善住处：{HomeComforts.Name(S.HomeComfort + 1)}（{cost}）", () =>
+                {
+                    S.UpgradeHome();
+                    w.Rebuild();
+                }, 18, Ui.ButtonHot), -1, 44);
+            }
+
+            // 衣橱
+            Line(w.Content, $"衣橱（当前魅力 {S.EffectiveCharm}，其中衣着加成 +{S.Outfit.CharmBonus}）：", 18);
+            foreach (OutfitDef def in Outfits.All)
+            {
+                OutfitDef o = def;
+                bool has = S.OwnedOutfits.Contains(o.Id);
+                bool worn = S.EquippedOutfit == o.Id;
+                RectTransform orow = Ui.Row(w.Content, 40);
+                Ui.Size(Ui.Label(orow, $"{o.Name}  魅力 +{o.CharmBonus}" + (has ? "" : $"  {o.Price}"), 17, TextAnchor.MiddleLeft, worn ? Ui.Good : (Color?)null), 420);
+                Ui.Size(Ui.Button(orow, worn ? "穿着中" : has ? "换上" : "购买", () =>
+                {
+                    if (has) S.Equip(o.Id); else S.BuyOutfit(o.Id);
+                    w.Rebuild();
+                }, 17, Ui.ButtonHot, !worn), 120);
+            }
         }
 
         // ---------- 档口 ----------

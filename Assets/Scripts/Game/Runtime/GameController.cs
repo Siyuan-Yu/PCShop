@@ -40,6 +40,7 @@ namespace PCShopSell.Game
         private bool _wasInterior;
         private bool _autosaveDue;
         private bool _bootstrapped;
+        private bool _eventsOn;
         private bool _gameOverShown;
 
         private void Start()
@@ -52,6 +53,7 @@ namespace PCShopSell.Game
         {
             if (_bootstrapped) return;
             _bootstrapped = true;
+            _eventsOn = showMenus;
             Application.targetFrameRate = 60;
 
             var json = Resources.Load<TextAsset>("Data/city_layout");
@@ -86,6 +88,7 @@ namespace PCShopSell.Game
             {
                 Session.Notice -= OnNotice;
                 Session.Popup -= OnPopup;
+                Session.EventRaised -= OnEventRaised;
                 Session.TripArrived -= OnTripArrived;
                 Session.PlayerShop.CustomerArrived -= OnCustomerArrived;
                 Session.Clock.DayAdvanced -= OnDayAdvanced;
@@ -96,6 +99,8 @@ namespace PCShopSell.Game
             Session = s;
             s.Notice += OnNotice;
             s.Popup += OnPopup;
+            s.EventRaised += OnEventRaised;
+            s.EventsEnabled = _eventsOn;
             s.TripArrived += OnTripArrived;
             s.PlayerShop.CustomerArrived += OnCustomerArrived;
             s.Clock.DayAdvanced += OnDayAdvanced;
@@ -290,12 +295,15 @@ namespace PCShopSell.Game
 
         private void OnNotice(string m) => Ui.Toast(m);
 
+        private void OnEventRaised(EventDef def) => Ui.ShowEvent(def);
+
         private void OnPopup(string title, string body)
         {
             if (title == "你晕倒了" || title == "住院了")
             {
                 Ui.CloseAllWindows();
                 _pendingEnter = null;
+                if (Session.PendingEvent != null) Ui.ShowEvent(Session.PendingEvent);
                 Ui.Popup(title, body);
                 if (Session.CurrentPlace != null) Ui.OnEnteredPlace(Session.CurrentPlace);
                 return;

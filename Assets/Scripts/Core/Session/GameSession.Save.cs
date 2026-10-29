@@ -15,7 +15,7 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
-        public bool CanSave => Trip == null;
+        public bool CanSave => Trip == null && PendingEvent == null;
 
         public SaveData CreateSave()
         {
@@ -95,6 +95,7 @@ namespace PCShopSell.Core.Session
                 gameOver = IsGameOver,
                 gameOverReason = GameOverReason,
             };
+            SaveGrowth(d);
             return d;
         }
 
@@ -179,6 +180,7 @@ namespace PCShopSell.Core.Session
             NegativeCashDays = d.negativeCashDays;
             IsGameOver = d.gameOver;
             GameOverReason = d.gameOverReason;
+            RestoreGrowth(d);
             Trip = null;
         }
 

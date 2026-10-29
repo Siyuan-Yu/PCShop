@@ -52,7 +52,7 @@ namespace PCShopSell.Core.Session
         {
             if (stall == null || stall.Kind != PlaceKind.Wholesaler || CurrentPlace != stall) return BargainResult.NotAllowed;
             if (HasBargainedToday(stall)) return BargainResult.AlreadyTried;
-            double chance = 0.35 + Player.Charm * 0.01 + (Player.Tired ? -0.15 : 0);
+            double chance = 0.35 + EffectiveCharm * 0.01 + (Player.Tired ? -0.15 : 0);
             AdvanceClock(5);
             bool ok = Random.Chance(Math.Max(0.05, Math.Min(0.9, chance)));
             double bonus = ok ? Random.Range(0.03, 0.07) : -0.01;

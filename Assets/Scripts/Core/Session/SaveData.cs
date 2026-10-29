@@ -57,6 +57,18 @@ namespace PCShopSell.Core.Session
         public int negativeCashDays;
         public bool gameOver;
         public string gameOverReason;
+
+        public string[] upgrades;
+        public string[] outfits;
+        public string outfitEquipped;
+        public int homeComfort;
+        public string[] flags;
+        public int[] scheduledDays;
+        public long[] scheduledCents;
+        public string[] scheduledMemos;
+        public string[] eventIds;
+        public int[] eventLastDays;
+        public int[] eventCounts;
     }
 
     [Serializable]

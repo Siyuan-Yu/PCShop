@@ -210,6 +210,9 @@ namespace PCShopSell.Core.Shop
         public ShopSize Size { get; }
         public double LocationFactor { get; set; } = 1.0;
 
+        /// <summary>招牌灯箱之类的升级带来的客流倍数。</summary>
+        public double TrafficMultiplier { get; set; } = 1.0;
+
         /// <summary>知名度 0~100，每 10 点约增加 10% 客流。</summary>
         public double Reputation
         {
@@ -289,6 +292,7 @@ namespace PCShopSell.Core.Shop
                              * Settings.HourFactors[at.Hour]
                              * ShopSettings.SizeFactor(Size)
                              * LocationFactor
+                             * TrafficMultiplier
                              * (1.0 + Reputation / 100.0)
                              * (at.Date.IsWeekend ? Settings.WeekendMultiplier : 1.0);
             return perHour / 60.0;
@@ -384,7 +388,10 @@ namespace PCShopSell.Core.Shop
                     Leave(c, LeaveReason.Impatient);
             }
 
-            if (!PlayerPresent && EmployeeOnDuty(now))
+            // 自助结账平台：每分钟自动给排头的顾客结一单，不用点（仍然需要有人在店里营业）。
+            if ((Accepted & PaymentMethods.SelfCheckout) != 0 && _queue.Count > 0)
+                CompleteSale(_queue[0]);
+            else if (!PlayerPresent && EmployeeOnDuty(now))
             {
                 if (_employeeBusyMinutes > 0) _employeeBusyMinutes--;
                 else if (_queue.Count > 0)

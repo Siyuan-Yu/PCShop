@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
@@ -406,6 +406,32 @@ namespace PCShopSell.Game.UI
                 Ui.Size(t, -1, 230);
                 Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 20, Ui.ButtonHot), -1, 48);
             });
+        }
+
+        /// <summary>随机事件：必须选一个选项才能继续（不可关闭）。</summary>
+        public void ShowEvent(EventDef def)
+        {
+            float h = 250 + def.Choices.Count * 62;
+            OpenWindow(def.Title, 720, h, w =>
+            {
+                if (S == null || S.PendingEvent != def)
+                {
+                    w.Close();
+                    return;
+                }
+                Ui.Size(Ui.Label(w.Content, def.Body, 20, TextAnchor.UpperLeft), -1, 150);
+                for (int i = 0; i < def.Choices.Count; i++)
+                {
+                    int idx = i;
+                    EventChoice c = def.Choices[i];
+                    bool ok = S.IsChoiceEnabled(c);
+                    string label = ok ? c.Text : $"{c.Text}\n<size=14><color=#E0806A>{c.DisabledReason}</color></size>";
+                    Ui.Size(Ui.Button(w.Content, label, () =>
+                    {
+                        if (S.ResolveEvent(idx)) w.Close();
+                    }, 19, ok ? Ui.ButtonHot : Ui.ButtonBg, ok), -1, ok ? 52 : 58);
+                }
+            }, true, false);
         }
 
         /// <summary>开局介绍。</summary>

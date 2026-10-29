@@ -99,6 +99,8 @@ namespace PCShopSell.Core.Session
             PlayerShop.OrderPlaced += o => Notice?.Invoke($"新装机订单：{PartCatalog.TierName(o.Tier)}整机 {o.Price}，两天内交付。");
             PlayerShop.OrderExpired += o => Popup?.Invoke("订单取消", $"{PartCatalog.TierName(o.Tier)}整机订单超时，顾客取消了订单，知名度下降。");
 
+            _basePatience = PlayerShop.Settings.PatienceMinutes;
+
             if (starterStock)
             {
                 PlayerShop.Stock.ForceAdd(PartCatalog.Get("ram0"), true, 3);
@@ -238,6 +240,7 @@ namespace PCShopSell.Core.Session
             }
 
             if (Crosses(from, to, CandidateMinute)) OnCandidateHour(to.Date);
+            if (Crosses(from, to, EventMinute)) RollDailyEvent(to.Date);
             DeliverOnlineOrders(to);
 
             if (!_sleeping && Player.Health < 15) _pendingHospital = true;
@@ -258,8 +261,10 @@ namespace PCShopSell.Core.Session
             Police.RollDuty(Random);
 
             PayWages(previous);
+            ProcessScheduledCredits(today);
             if (today.IsMonthStart)
             {
+                if (HomeComfort > 0) Ledger.ForceDebit(today, "水电", HomeComforts.MonthlyUtilities(HomeComfort), "住处水电");
                 Ledger.ForceDebit(today, "房租", ShopRent, "店铺月租");
                 Ledger.ForceDebit(today, "房租", HomeRent, "城中村月租");
                 Popup?.Invoke("交房租", $"店铺 {ShopRent} + 出租屋 {HomeRent} 已扣款。");

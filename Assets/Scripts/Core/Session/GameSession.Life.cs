@@ -82,7 +82,7 @@ namespace PCShopSell.Core.Session
             PlayerStats p = Player;
             if (_sleeping)
             {
-                p.Energy = Math.Min(p.MaxEnergy, p.Energy + 12.5 * h);
+                p.Energy = Math.Min(p.MaxEnergy, p.Energy + 12.5 * h * HomeComforts.SleepQuality(HomeComfort));
                 p.Hunger = Math.Max(0, p.Hunger - 2 * h);
             }
             else

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -21,13 +21,14 @@ namespace PCShopSell.Game.UI
             Pricing,
             Orders,
             Online,
+            Upgrades,
             Staff,
         }
 
         private static readonly (ShopTab tab, string name)[] Tabs =
         {
             (ShopTab.Counter, "柜台"), (ShopTab.Stock, "库存"), (ShopTab.Pricing, "定价"),
-            (ShopTab.Orders, "装机单"), (ShopTab.Online, "1788"), (ShopTab.Staff, "招人"),
+            (ShopTab.Orders, "装机单"), (ShopTab.Online, "1788"), (ShopTab.Upgrades, "升级"), (ShopTab.Staff, "招人"),
         };
 
         private RectTransform _dock;
@@ -82,6 +83,14 @@ namespace PCShopSell.Game.UI
             _dock = null;
         }
 
+        /// <summary>自动化冒烟用：切换商店面板的标签页（按枚举序号）。</summary>
+        public int DebugTabCount => System.Enum.GetValues(typeof(ShopTab)).Length;
+
+        public void DebugSelectTab(int index)
+        {
+            if (_dock != null) SelectTab((ShopTab)index);
+        }
+
         private void SelectTab(ShopTab tab)
         {
             _tab = tab;
@@ -115,6 +124,7 @@ namespace PCShopSell.Game.UI
                 case ShopTab.Pricing: BuildPricing(); break;
                 case ShopTab.Orders: BuildOrders(); break;
                 case ShopTab.Online: BuildOnline(); break;
+                case ShopTab.Upgrades: BuildUpgrades(); break;
                 case ShopTab.Staff: BuildStaff(); break;
             }
         }
@@ -127,7 +137,7 @@ namespace PCShopSell.Game.UI
         {
             ShopSimulation shop = S.PlayerShop;
             Line(C, $"今日进店 {shop.TodayCustomers} 人 · 流失 {shop.TodayLost} 人 · 营业额 {shop.TodaySales}", 18);
-            Line(C, $"店里 {shop.ActiveCustomers.Count} 位顾客，{shop.Queue.Count} 位在排队结账（只收现金）", 17, Ui.Dim);
+            Line(C, $"店里 {shop.ActiveCustomers.Count} 位顾客，{shop.Queue.Count} 位在排队结账（{PaymentText(shop.Accepted)}）", 17, Ui.Dim);
             if (S.Employee != null)
                 Line(C, $"店员 {S.Employee.Name}：{(S.IsEmployeeOnDuty(S.Clock.Now) ? "在岗" : "下班")}（你在店时你来收银）", 16, Ui.Dim);
 
@@ -219,7 +229,7 @@ namespace PCShopSell.Game.UI
         {
             ShopSimulation shop = S.PlayerShop;
             Line(C, "顾客下单后离开，两天内装好交付才收钱；超时取消、掉知名度。配件从库存里出。", 15, Ui.Dim);
-            RectTransform list = Ui.Scroll(C, 560);
+            RectTransform list = Ui.Scroll(C, 430);
             foreach (BuildOrder o in shop.Orders)
             {
                 BuildOrder order = o;
@@ -298,6 +308,35 @@ namespace PCShopSell.Game.UI
             _cart.TryGetValue(p.Id, out int n);
             _cart[p.Id] = Mathf.Max(0, n + delta);
             RebuildDock();
+        }
+
+        // ---------- 升级 ----------
+
+        private static string PaymentText(PaymentMethods m)
+        {
+            if ((m & PaymentMethods.SelfCheckout) != 0) return "自助结账，自动收款";
+            if ((m & PaymentMethods.QrCode) != 0) return "现金 + 收款码";
+            return "只收现金";
+        }
+
+        private void BuildUpgrades()
+        {
+            Line(C, $"给小店添点家当。现金 {S.Ledger.Balance}。买一次永久生效。", 16, Ui.Dim);
+            RectTransform list = Ui.Scroll(C, 430);
+            foreach (ShopUpgradeDef def in ShopUpgrades.All)
+            {
+                ShopUpgradeDef u = def;
+                bool owned = S.HasUpgrade(u.Id);
+                string blocker = S.UpgradeBlocker(u);
+                RectTransform row = Ui.Row(list, 62);
+                string status = owned ? "<color=#7CE38B>已拥有</color>" : blocker == null ? $"<color=#7CE38B>{u.Price}</color>" : $"{u.Price}  <color=#E0806A>{blocker}</color>";
+                Ui.Size(Ui.Label(row, $"<b>{u.Name}</b>  {status}\n<size=14>{u.Description}</size>", 17), 420);
+                Ui.Size(Ui.Button(row, owned ? "已买" : "购买", () =>
+                {
+                    S.BuyUpgrade(u.Id);
+                    RebuildDock();
+                }, 18, Ui.ButtonHot, !owned && blocker == null), 90);
+            }
         }
 
         // ---------- 招人 ----------

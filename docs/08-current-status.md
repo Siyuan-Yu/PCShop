@@ -54,13 +54,19 @@ Unity 路径默认是 `D:\UnityEditor\2022.3.6f1\Editor\Unity.exe`，可用 `-Un
 - 新增 `PlayModeSmoke`（`Assets/Editor/PlayModeSmoke.cs`）：真正进 Play 模式跑 `Main.unity`，走到店里、8 倍速运行，检查零报错。命令：`Unity -batchmode -projectPath F:\PCShopSell -executeMethod PCShopSell.EditorTools.PlayModeSmoke.RunFromBatch`（不能带 `-nographics`）。批处理里没有 Game 视图，所以不出截图。
 - 街区画面升级：地面/路面/人行道加噪点质感；商铺上层、城中村、背景楼、电子市场大楼都有窗户（夜里亮灯，每栋亮的不一样）；屋顶有空调外机和水箱；每隔一家店在门口有一盏招牌颜色的夜间点光。
 
+## 2026-10-29 内容补充（第二批）
+- 店铺升级 9 项（`Core/Shop/ShopUpgrades.cs`）：收款码、自助结账、货架扩容 ×3、招牌灯箱、空调、监控；店内面板新增“升级”页，柜台提示随支付方式变化。
+- 随机事件 12 个（`Core/Session/EventCatalog.cs`、`GameSession.Events.cs`）：每天 11:00 判定，弹出必选窗口；事件冷却/历史/待还款都进存档。仅真实游玩启用（`EventsEnabled`），脚本冒烟默认不触发以保证可重复。
+- 衣橱与住处（`GameSession.Growth.cs`）：4 档衣着（魅力加成）、3 档住处（睡眠恢复 + 每月水电）；家里面板新增对应入口。
+- 测试：单元测试 142 个全过（新增 `GrowthTests`）；冒烟新增截图 `vs1_11_upgrades / vs1_12_event / vs1_13_home`；PlayModeSmoke 增加遍历全部商店标签页、全部事件的流程，0 报错。
+
 ## 已知问题与限制
 - 美术是灰盒：人物是胶囊，建筑是方块，没有音效。
 - 只有一个存档位，存在 `Application.persistentDataPath/save1.json`。
 - 字体用系统的微软雅黑，暂时没导入思源黑体和 TextMeshPro。
 - 批处理截图里，店内"结账"标签和顾客位置有偏差。这是批处理里把画布改成相机模式造成的，正常 Play 用的是全屏叠加画布，坐标换算已核对过代码；验收时请顺便确认。
 - 数值都是起步默认值，没调过平衡。冒烟测试里的脚本玩家一个月后现金为负，这不代表真实玩法的难度。
-- 长线目标（约 3 年）、多结局、事件系统、人物关系还没做。
+- 长线目标（约 3 年）、多结局、人物关系还没做。
 
 ## 下一步
 1. 试玩验收 VS1，收集这些反馈：手感、节奏、行情可不可读、守店烦不烦、交警好不好玩、数值难度。

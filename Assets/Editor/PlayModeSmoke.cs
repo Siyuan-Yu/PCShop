@@ -23,6 +23,7 @@ namespace PCShopSell.EditorTools
         private static int _frame;
         private static bool _enteredShop;
         private static int _shots;
+        private static int _step;
 
         static PlayModeSmoke()
         {
@@ -86,7 +87,51 @@ namespace PCShopSell.EditorTools
                 {
                     Capture("play_02_in_shop");
                 }
-                if (elapsed > 40 || (_enteredShop && game.InInterior && elapsed > 25))
+                if (_enteredShop && game.InInterior && elapsed > 12 && _step == 0)
+                {
+                    // 遍历商店面板的每个标签页，最后停在「升级」
+                    for (int i = 0; i < game.Ui.DebugTabCount; i++) game.Ui.DebugSelectTab(i);
+                    game.Ui.DebugSelectTab(game.Ui.DebugTabCount - 2);
+                    Capture("play_03_upgrades");
+                    _step = 1;
+                }
+                else if (_step == 1)
+                {
+                    game.Ui.CloseAllWindows();
+                    game.Session.RaiseEvent("inspection");
+                    Capture("play_04_event");
+                    _step = 2;
+                }
+                else if (_step == 2)
+                {
+                    // 把整个事件库逐个弹出再随便选第一个可选的，确认窗口/结算都不报错
+                    game.Ui.CloseModalWindows();
+                    foreach (var def in PCShopSell.Core.Session.EventCatalog.All)
+                    {
+                        game.Session.RaiseEvent(def.Id);
+                        for (int i = 0; i < def.Choices.Count; i++)
+                        {
+                            if (!game.Session.IsChoiceEnabled(def.Choices[i])) continue;
+                            game.Session.ResolveEvent(i);
+                            break;
+                        }
+                        game.Ui.CloseModalWindows();
+                    }
+                    game.Ui.CloseAllWindows();
+                    game.GoToPlace(game.City.GetPlace("home"));
+                    _step = 3;
+                }
+                else if (_step == 3 && game.Session.CurrentPlace != null && game.Session.CurrentPlace.Kind == PCShopSell.Core.World.PlaceKind.Home && game.Session.Trip == null)
+                {
+                    Capture("play_05_home");
+                    _step = 4;
+                }
+                else if (_step == 4)
+                {
+                    Debug.Log($"PLAYSMOKE: day={game.Session.Clock.Now.Date.TotalDays} minute={game.Session.Clock.MinuteOfDay} cash={game.Session.Ledger.Balance}");
+                    Finish(SessionState.GetInt(ErrorsKey, 0) > 0 ? 1 : 0);
+                }
+                if (elapsed > 90)
                 {
                     Debug.Log($"PLAYSMOKE: day={game.Session.Clock.Now.Date.TotalDays} minute={game.Session.Clock.MinuteOfDay} inShop={game.InInterior} cash={game.Session.Ledger.Balance}");
                     Finish(SessionState.GetInt(ErrorsKey, 0) > 0 ? 1 : 0);

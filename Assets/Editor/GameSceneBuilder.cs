@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -258,6 +258,27 @@ namespace PCShopSell.EditorTools
             Shot("vs1_09_build_minigame");
             _game.Ui.CloseAllWindows();
             Check(s.CompleteBuild(orderField.Id, 1), "交付装机订单");
+
+            // 新内容：升级面板 / 随机事件窗口 / 家里的衣橱
+            Teleport(s, "player_shop");
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            _game.Ui.DebugSelectTab(_game.Ui.DebugTabCount - 2);
+            Frame(0.05f);
+            Shot("vs1_11_upgrades");
+            _game.Ui.CloseAllWindows();
+            s.RaiseEvent("students");
+            Frame(0.05f);
+            Shot("vs1_12_event");
+            Check(s.PendingEvent != null, "事件弹出后等待玩家选择");
+            _game.Ui.CloseModalWindows();
+            s.ResolveEvent(s.PendingEvent.Choices.Count - 1);
+            _game.Ui.CloseModalWindows();
+            Check(s.PendingEvent == null, "事件已结算");
+            Teleport(s, "home");
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            Frame(0.05f);
+            Shot("vs1_13_home");
+            _game.Ui.CloseAllWindows();
 
             // 存档 / 读档
             Teleport(s, "home");
