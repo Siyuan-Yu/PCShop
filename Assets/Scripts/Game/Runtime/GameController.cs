@@ -428,7 +428,13 @@ namespace PCShopSell.Game
                     label = $"给顾客结账（{Session.PlayerShop.Queue.Count} 人排队）";
                     return true;
                 }
-                if (Interior.NearbyShelf == null) return false;
+                if (Interior.NearbyShelf == null)
+                {
+                    if (!Interior.NearDisplay) return false;
+                    world = Interior.NearDisplayWorld;
+                    label = Session.PlayerShop.Orders.Count > 0 ? $"查看整机展示（{Session.PlayerShop.Orders.Count} 个装机单）" : "查看整机展示";
+                    return true;
+                }
                 world = Interior.NearbyShelfWorld;
                 PartCategory shelfCat = Interior.NearbyShelf.Value;
                 int shelfHave = 0;
@@ -450,7 +456,12 @@ namespace PCShopSell.Game
         {
             if (Interior.NearbyShelf == null)
             {
-                Ui.Toast("走到货架跟前按 F，可以看上面摆了什么。");
+                if (Interior.NearDisplay)
+                {
+                    Ui.OpenDisplayWindow();
+                    return;
+                }
+                Ui.Toast("走到货架或整机展示台跟前按 F，可以看摆了什么。");
                 return;
             }
             Ui.OpenShelfWindow(Interior.NearbyShelf.Value);

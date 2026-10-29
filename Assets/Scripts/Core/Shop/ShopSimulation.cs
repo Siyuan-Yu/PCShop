@@ -333,6 +333,9 @@ namespace PCShopSell.Core.Shop
             return Money.FromYuan((long)Math.Round(_market.PriceOf(part).Yuan * k));
         }
 
+        /// <summary>顾客下装机单时的成交价（报价 × 加价，整机不收盒装溢价）。</summary>
+        public Money BuildPrice(int tier) => Money.FromYuan((long)Math.Round(QuoteBuild(tier).Yuan * _markup / 1.15));
+
         /// <summary>装机订单报价：配件市场价合计 + 手工费。</summary>
         public Money QuoteBuild(int tier)
         {
@@ -496,7 +499,7 @@ namespace PCShopSell.Core.Shop
                     Leave(c, LeaveReason.TooExpensive);
                     return;
                 }
-                Money price = Money.FromYuan((long)Math.Round(QuoteBuild(c.BuildTier).Yuan * _markup / 1.15));
+                Money price = BuildPrice(c.BuildTier);
                 var order = new BuildOrder(NextOrderId++, c.BuildTier, price, now, now.AddMinutes(Settings.BuildOrderDueDays * GameTimestamp.MinutesPerDay));
                 _orders.Add(order);
                 OrderPlaced?.Invoke(order);

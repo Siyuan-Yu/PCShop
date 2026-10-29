@@ -47,17 +47,12 @@ namespace PCShopSell.Game.UI
                         continue;
                     }
                     int rel = S.Relation(n.Id);
-                    RectTransform row = Ui.Row(list, 44);
+                    RectTransform row = Ui.Row(list, 56);
+                    PortraitThumb(row, n, 52, () => OpenNpcWindow(n, null, w));
                     Ui.Size(Ui.Label(row, $"<b>{n.Name}</b>  {n.Role}", 17), 270);
                     Ui.Size(Ui.Label(row, $"{Npcs.LevelName(rel)} {rel}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
                     Ui.Bar(row, rel / 100f, Ui.Accent, 120, 14);
-                    string blocker = S.GiftBlocker(n.Id);
-                    Ui.Size(Ui.Button(row, blocker == null ? GiftLabel(n) : blocker, () =>
-                    {
-                        S.GiveGift(n.Id);
-                        w.Rebuild();
-                    }, 14, Ui.ButtonHot, blocker == null), 170);
-                    Ui.Size(Ui.Button(row, "约出去", () => OpenInviteWindow(n, w), 14, Ui.ButtonBg), 80);
+                    Ui.Size(Ui.Button(row, "交谈", () => OpenNpcWindow(n, null, w), 16, Ui.ButtonHot), 90);
                     string perk = NpcPerks.Describe(n.Id);
                     if (n.IsTipster) perk += "　" + TrustText(n);
                     Ui.Size(Ui.Label(list, "<size=14><color=#9AA3AD>" + perk + "</color></size>", 14), -1, 24);

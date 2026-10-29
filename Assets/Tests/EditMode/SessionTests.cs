@@ -110,8 +110,8 @@ namespace PCShopSell.Tests
             Assert.IsNull(s.CurrentPlace);
             RunTrip(s);
             Assert.AreEqual("pc", s.PlayerNodeId);
-            // 500 米 ÷ 80 米/分钟 = 6.25 → 7 分钟
-            Assert.AreEqual(8 * 60 + 7, s.Clock.MinuteOfDay);
+            // 500 米 ÷ 49 米/分钟（约 3 公里/小时）≈ 10.2 → 11 分钟
+            Assert.AreEqual(8 * 60 + 11, s.Clock.MinuteOfDay);
         }
 
         [Test]

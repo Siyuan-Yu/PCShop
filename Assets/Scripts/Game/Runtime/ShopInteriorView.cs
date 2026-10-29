@@ -102,6 +102,7 @@ namespace PCShopSell.Game.Runtime
         private readonly Dictionary<int, Visitor> _visitors = new Dictionary<int, Visitor>();
         private readonly List<Visitor> _leaving = new List<Visitor>();
         private readonly List<Vector3> _shelfSpots = new List<Vector3>();
+        private readonly List<Vector2> _tables = new List<Vector2>();
         private readonly List<ShelfDisplay> _shelves = new List<ShelfDisplay>();
         private readonly System.Random _rng = new System.Random(5);
         private readonly GameObject _owner;
@@ -300,8 +301,10 @@ namespace PCShopSell.Game.Runtime
                 tables.Add(new Vector2(w * 0.4f, d * 0.65f)); tables.Add(new Vector2(w * 0.68f, d * 0.6f));
             }
             int deskNo = 0;
+            _tables.Clear();
             foreach (Vector2 tb in tables)
             {
+                _tables.Add(tb);
                 ShopFixtures.BuildPcDesk(_root, new Vector3(tb.x, 0, tb.y), deskNo++);
                 _shelfSpots.Add(Origin + new Vector3(tb.x, 0, tb.y - 1.0f));
             }
@@ -426,16 +429,30 @@ namespace PCShopSell.Game.Runtime
             _owner.transform.localPosition = _shelfSpots[i] - Origin;
         }
 
+        /// <summary>冒烟 / 调试：直接站到整机展示台前。</summary>
+        public void StandAtDisplay()
+        {
+            if (_tables.Count == 0) return;
+            _path.Clear();
+            _owner.transform.localPosition = new Vector3(_tables[0].x, 0, _tables[0].y - 1.0f);
+        }
+
         /// <summary>走到货架跟前时，能查看的那个货架的品类；没靠近则为空。</summary>
         public PartCategory? NearbyShelf { get; private set; }
 
         /// <summary>靠近的货架头顶的世界坐标（给“按 F”提示用）。</summary>
         public Vector3 NearbyShelfWorld { get; private set; }
 
+        /// <summary>站在整机展示台旁边（能按 F 看展示的整机和装机单）。</summary>
+        public bool NearDisplay { get; private set; }
+
+        public Vector3 NearDisplayWorld { get; private set; }
+
         private void UpdateNearbyShelf(bool active)
         {
             NearbyShelf = null;
             NearCounter = false;
+            NearDisplay = false;
             if (!active) return;
             Vector3 op = _owner.transform.localPosition;
             NearCounter = op.x < 2.7f && Mathf.Abs(op.z - CounterZ) < CounterLength / 2 + 0.9f;
@@ -448,6 +465,18 @@ namespace PCShopSell.Game.Runtime
                 best = dd;
                 NearbyShelf = sh.Category;
                 NearbyShelfWorld = Origin + sh.Pos + new Vector3(0, 2.3f, 0);
+            }
+            // 展示台：长桌 2.8×1.2，离桌边 1.0 米以内
+            float bestTable = 1.0f;
+            foreach (Vector2 tb in _tables)
+            {
+                float dx = Mathf.Max(Mathf.Abs(lp.x - tb.x) - 1.4f, 0f);
+                float dz = Mathf.Max(Mathf.Abs(lp.z - tb.y) - 0.6f, 0f);
+                float dd = Mathf.Sqrt(dx * dx + dz * dz);
+                if (dd >= bestTable) continue;
+                bestTable = dd;
+                NearDisplay = true;
+                NearDisplayWorld = Origin + new Vector3(tb.x, 1.9f, tb.y);
             }
         }
 

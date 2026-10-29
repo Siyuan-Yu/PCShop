@@ -160,6 +160,43 @@ namespace PCShopSell.Game.UI
             });
         }
 
+        // ---------- 整机展示台 ----------
+
+        /// <summary>展示台上的整机：三个档次各自的配置、报价、手头配件齐不齐。</summary>
+        public void OpenDisplayWindow()
+        {
+            OpenWindow("整机展示台", 880, 640, w =>
+            {
+                ShopSimulation shop = S.PlayerShop;
+                Line(w.Content, "顾客看中展台上的整机，会下装机单：离店后两天内你按配置装好才收钱（超时取消、掉知名度）。配件从库存里出，先备齐。", 16, Ui.Dim);
+                RectTransform list = Ui.Scroll(w.Content, 400);
+                for (int tier = 0; tier < 3; tier++)
+                {
+                    var parts = PartCatalog.BuildList(tier);
+                    var missing = parts.Where(p => shop.Stock.CountAll(p) == 0).ToList();
+                    string state = missing.Count == 0
+                        ? "<color=#7CE38B>配件齐，随时能装</color>"
+                        : "<color=#E0806A>缺 " + string.Join("、", missing.Select(p => PartCatalog.CategoryName(p.Category))) + "</color>";
+                    Money cost = Money.Zero;
+                    foreach (PartDef p in parts) cost += S.Market.PriceOf(p);
+                    RectTransform row = Ui.Row(list, 118);
+                    Ui.Size(Ui.Label(row, $"<b>{PartCatalog.TierName(tier)}整机</b>\n成交价约 <color=#7CE38B>{shop.BuildPrice(tier)}</color>\n<size=14>配件市价合计 {cost}\n{state}</size>", 18), 300);
+                    Ui.Size(Ui.Label(row, "<size=14><color=#9AA3AD>" + string.Join("\n", parts.Select(p => $"{PartCatalog.CategoryName(p.Category)}：{p.Name}（库存 {shop.Stock.CountAll(p)}）")) + "</color></size>", 14), 480);
+                }
+                int orders = shop.Orders.Count;
+                Line(w.Content, orders > 0 ? $"现在有 {orders} 个装机单等你装。" : "现在没有装机单。", 17, orders > 0 ? Ui.Warn : Ui.Dim);
+                RectTransform bar = Ui.Row(w.Content, 46);
+                if (orders > 0)
+                    Ui.Size(Ui.Button(bar, "去处理装机单", () =>
+                    {
+                        w.Close();
+                        OpenDock();
+                        SelectTab(ShopTab.Orders);
+                    }, 19, Ui.ButtonHot), 300);
+                Ui.Size(Ui.Button(bar, "关闭", w.Close, 19), 200);
+            });
+        }
+
         // ---------- 柜台 ----------
 
         private void BuildCounter()

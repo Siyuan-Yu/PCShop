@@ -44,7 +44,7 @@ namespace PCShopSell.Core.Session
 
     public static class Vehicles
     {
-        public static readonly VehicleSpec Walk = new VehicleSpec(VehicleKind.Walk, "步行", 80, 6, 0, 18, false);
+        public static readonly VehicleSpec Walk = new VehicleSpec(VehicleKind.Walk, "步行", 49, 6, 0, 11, false);
         public static readonly VehicleSpec Taxi = new VehicleSpec(VehicleKind.Taxi, "打车", 400, 15, 0, 48, false);
         public static readonly VehicleSpec EBike = new VehicleSpec(VehicleKind.EBike, "小电驴", 250, 10, 1800, 34, false);
         public static readonly VehicleSpec Tricycle = new VehicleSpec(VehicleKind.Tricycle, "三轮车", 200, 40, 2500, 30, true);

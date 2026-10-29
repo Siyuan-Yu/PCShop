@@ -188,7 +188,7 @@ namespace PCShopSell.EditorTools
             Frame(0.3f);
             Shot("vs1_56_customer_putback");
             int sold = 0;
-            for (int i = 0; i < 4000 && sold < 3; i++)
+            for (int i = 0; i < 9000 && sold < 3; i++)
             {
                 _game.Ui.CloseModalWindows();
                 Frame(0.1f);
@@ -204,12 +204,20 @@ namespace PCShopSell.EditorTools
                 }
             }
             Log($"卖出 {sold} 单，现金 {s.Ledger.Balance}，时间 {s.Clock.Now}");
+            if (sold == 0)
+                Log($"DIAG open={s.PlayerShop.IsOpen} inShop={s.InPlayerShop} customers={s.PlayerShop.TodayCustomers} lost={s.PlayerShop.TodayLost} active={s.PlayerShop.ActiveCustomers.Count} stock={s.PlayerShop.Stock.UsedSpace} fame={s.PlayerShop.Reputation} markup={s.PlayerShop.Markup} trip={(s.Trip != null)}");
             Check(sold > 0, "有顾客结账");
 
             _game.Ui.RebuildDock();
             Shot("vs1_03_shop_counter");
 
             // 走到货架前：头顶提示，按 F 看货
+            if (!s.InPlayerShop)
+            {
+                Teleport(s, "player_shop");
+                _game.Ui.OnEnteredPlace(s.CurrentPlace);
+                Frame(0.3f);
+            }
             _game.Interior.StandAtShelf(0);
             _game.Ui.CloseAllWindows();
             Frame(0.05f);
@@ -219,6 +227,17 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Check(_game.Ui.AnyModalOpen, "货架窗口打开");
             Shot("vs1_51_shelf");
+            _game.Ui.CloseModalWindows();
+            // 整机展示台：靠近也能按 F 看
+            _game.Interior.StandAtDisplay();
+            Frame(0.05f);
+            Check(_game.Interior.NearDisplay && _game.Interior.NearbyShelf == null, "走到展示台前能交互");
+            Check(_game.TryGetInteract(out _, out string displayLabel) && displayLabel.Contains("整机展示"), "展示台头顶有提示");
+            Shot("vs1_61_display_hint");
+            _game.Ui.OpenDisplayWindow();
+            Frame(0.05f);
+            Check(_game.Ui.AnyModalOpen, "展示台窗口打开");
+            Shot("vs1_62_display");
             _game.Ui.CloseModalWindows();
 
             Teleport(s, "player_shop");
@@ -635,6 +654,11 @@ namespace PCShopSell.EditorTools
             _game.Ui.OnEnteredPlace(g.CurrentPlace);
             Frame(0.05f);
             Shot("vs1_16_stall_owner");
+            _game.Ui.OpenNpcWindow(PCShopSell.Core.Session.Npcs.Get(PCShopSell.Core.Session.Npcs.Wang), g.CurrentPlace, null);
+            Frame(0.05f);
+            Check(PCShopSell.Game.UI.GameUi.PortraitOf(PCShopSell.Core.Session.Npcs.Wang) != null, "有人物立绘");
+            Shot("vs1_63_npc_talk");
+            _game.Ui.CloseModalWindows();
             _game.Ui.OpenInvitePanel(PCShopSell.Core.Session.Npcs.Wang);
             Frame(0.05f);
             Shot("vs1_17_invite");

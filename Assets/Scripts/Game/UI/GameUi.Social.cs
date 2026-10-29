@@ -16,35 +16,6 @@ namespace PCShopSell.Game.UI
             return right + wrong == 0 ? "消息：还没验证过" : $"消息：{right + wrong} 条里应验 {right} 条";
         }
 
-        private void BuildOwnerRow(Window w, Place p)
-        {
-            NpcDef n = Npcs.OwnerOf(p.Id);
-            if (n == null || !S.IsMet(n.Id)) return;
-            int rel = S.Relation(n.Id);
-            double discount = NpcPerks.OwnerDiscount(rel);
-
-            RectTransform info = Ui.Row(w.Content, 32);
-            Ui.Size(Ui.Label(info, $"<b>{n.Name}</b>（{n.Role}）  {Npcs.LevelName(rel)} {rel}", 17), 420);
-            Ui.Bar(info, rel / 100f, Ui.Accent, 140, 14);
-            Ui.Size(Ui.Label(info, $"进价 -{discount * 100:0.#}%　每样每天 {NpcPerks.StallQuota(rel)} 个", 15, TextAnchor.MiddleLeft, Ui.Good), 280);
-
-            RectTransform row = Ui.Row(w.Content, 44);
-            string gift = S.GiftBlocker(n.Id);
-            Ui.Size(Ui.Button(row, gift == null ? GiftLabel(n) : gift, () =>
-            {
-                S.GiveGift(n.Id);
-                w.Rebuild();
-            }, 15, Ui.ButtonHot, gift == null), 230);
-            string tip = S.TipBlocker(n.Id);
-            Ui.Size(Ui.Button(row, tip == null ? "递烟打听行情（用掉一包烟）" : tip, () =>
-            {
-                S.AskForTip(n.Id);
-                w.Rebuild();
-            }, 15, Ui.ButtonBg, tip == null), 230);
-            Ui.Size(Ui.Button(row, "约出去玩", () => OpenInviteWindow(n, w), 15, Ui.ButtonBg), 140);
-            Ui.Size(Ui.Label(row, TrustText(n), 14, TextAnchor.MiddleLeft, Ui.Dim), 200);
-        }
-
         public void OpenInvitePanel(string npcId) => OpenInviteWindow(Npcs.Get(npcId), null);
 
         /// <summary>约某人晚上或周末出去玩。对方答不答应看交情和魅力。</summary>

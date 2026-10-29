@@ -68,14 +68,14 @@ namespace PCShopSell.Tests
         {
             GameSession s = AtStreet("pc");
             long before = s.Clock.Now.TotalMinutes;
-            // pc -> home：游戏里 500 米，走路 80 米/分钟 ≈ 6.25 分钟
+            // pc -> home：游戏里 500 米，走路 49 米/分钟 ≈ 10.2 分钟
             s.SetSteer(0, -1);
             for (int i = 0; i < 300 && s.PlayerPosition.Y > -49.99; i++) s.Tick(0.1);
             s.SetSteer(0, 0);
             Assert.AreEqual("home", s.PlayerNodeId);
             long used = s.Clock.Now.TotalMinutes - before;
-            Assert.GreaterOrEqual(used, 6);
-            Assert.LessOrEqual(used, 7);
+            Assert.GreaterOrEqual(used, 10);
+            Assert.LessOrEqual(used, 11);
         }
 
         [Test]

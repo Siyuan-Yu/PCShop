@@ -26,22 +26,22 @@ namespace PCShopSell.Game.UI
                     Toast("回到出租屋了。走近床、衣柜、电饭锅、纸箱或门，头顶出现提示时按 F；看房间信息点右上角“我的”。");
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.MallBusiness:
-                    OpenPlaceWindow(p, BuildMall, 900, 780);
+                    OpenPlaceWindow(p, BuildMall, 1120, 780);
                     break;
                 case PlaceKind.Shop when p.Business == Gifts.TobaccoBusiness:
-                    OpenPlaceWindow(p, BuildTobacco, 760, 640);
+                    OpenPlaceWindow(p, BuildTobacco, 1020, 640);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.PhoneBusiness:
-                    OpenPlaceWindow(p, BuildPhoneShop, 700, 420);
+                    OpenPlaceWindow(p, BuildPhoneShop, 920, 620);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.FarmBusiness:
-                    OpenPlaceWindow(p, BuildFarm, 760, 720);
+                    OpenPlaceWindow(p, BuildFarm, 1040, 760);
                     break;
                 case PlaceKind.Wholesaler:
                     OpenPlaceWindow(p, BuildStall, 860, 800);
                     break;
                 case PlaceKind.Dealer:
-                    OpenPlaceWindow(p, BuildDealer);
+                    OpenPlaceWindow(p, BuildDealer, 940, 640);
                     break;
                 case PlaceKind.Station:
                     OpenPlaceWindow(p, BuildStation);
@@ -61,7 +61,15 @@ namespace PCShopSell.Game.UI
                     win.Close();
                     return;
                 }
-                build(win, p);
+                RectTransform frame = BuildKeeperFrame(win, p, h - 170);
+                if (frame != null)
+                {
+                    RectTransform original = win.Content;
+                    win.Content = frame;
+                    build(win, p);
+                    win.Content = original;
+                }
+                else build(win, p);
                 Ui.Size(Ui.Button(win.Content, "离开，回到街上", () => win.Close(), 20), -1, 46);
             }, true, true, () =>
             {
@@ -84,21 +92,37 @@ namespace PCShopSell.Game.UI
             Line(w.Content, open ? "营业中（工作日 9:00–18:00）。批发价，只卖盒装正品。" : "<color=#E0806A>关门了（工作日 9:00–18:00 营业）</color>");
             Line(w.Content, $"随身货：{S.Cargo.UsedSpace:0.#}/{S.Cargo.Capacity:0} 格；负重 {S.CarriedKg:0.#}/{S.CarryLimitKg:0.#} 公斤（{S.CurrentVehicle.Name}）   现金 {S.Ledger.Balance}", 18, Ui.Dim);
 
-            BuildOwnerRow(w, p);
+            RectTransform body = Ui.Row(w.Content, 560, 12);
+            NpcDef owner = Npcs.OwnerOf(p.Id);
+            if (owner != null)
+            {
+                bool met = S.IsMet(owner.Id);
+                RectTransform left = Ui.Rect(body, "Owner");
+                Ui.VList(left, 6, 0);
+                Ui.Size(left, 250, -1, 0);
+                left.GetComponent<LayoutElement>().minWidth = 250;
+                PortraitCard(left, owner, 250, () => OpenNpcWindow(owner, p, w), !met);
+                if (met)
+                {
+                    int rel = S.Relation(owner.Id);
+                    Ui.Size(Ui.Label(left, $"{Npcs.LevelName(rel)} {rel}　进价 -{NpcPerks.OwnerDiscount(rel) * 100:0.#}%", 15, TextAnchor.MiddleCenter, Ui.Good), -1, 24);
+                    Ui.Size(Ui.Label(left, $"每样每天最多 {NpcPerks.StallQuota(rel)} 个", 14, TextAnchor.MiddleCenter, Ui.Dim), -1, 22);
+                    Ui.Size(Ui.Label(left, "点头像聊聊：送礼、打听行情、约出去玩、砍价", 13, TextAnchor.MiddleCenter, Ui.Dim), -1, 38);
+                }
+            }
 
-            RectTransform list = Ui.Scroll(w.Content, 330);
+            RectTransform list = Ui.Scroll(body, 560);
+            Ui.Size((RectTransform)list.parent.parent, -1, -1, 1);
             foreach (PartDef part in PartCatalog.All.Where(x => S.StallSells(p, x)))
             {
                 PartDef pd = part;
                 Money price = S.StallPrice(p, pd);
                 Money market = S.Market.PriceOf(pd);
-                RectTransform row = Ui.Row(list, 44);
-                Ui.Size(Ui.Label(row, $"{pd.Name}", 18), 220);
-                Ui.Size(Ui.Label(row, $"{price}", 19, TextAnchor.MiddleLeft, Ui.Good), 100);
-                Ui.Size(Ui.Label(row, $"市价 {market}", 15, TextAnchor.MiddleLeft, Ui.Dim), 120);
-                Ui.Size(Ui.Label(row, $"{Stock.SpaceOf(pd, true, 1):0.#}格", 15, TextAnchor.MiddleLeft, Ui.Dim), 50);
+                RectTransform row = Ui.Row(list, 50);
+                Ui.Size(Ui.Label(row, $"{pd.Name}\n<size=13><color=#9AA3AD>市价 {market} · {Stock.SpaceOf(pd, true, 1):0.#}格</color></size>", 17), 210);
+                Ui.Size(Ui.Label(row, $"{price}", 18, TextAnchor.MiddleLeft, Ui.Good), 84);
                 int left = S.StallRemaining(p, pd);
-                Ui.Size(Ui.Label(row, $"今日余 {left}", 15, TextAnchor.MiddleLeft, left == 0 ? Ui.Warn : Ui.Dim), 90);
+                Ui.Size(Ui.Label(row, $"余 {left}", 14, TextAnchor.MiddleLeft, left == 0 ? Ui.Warn : Ui.Dim), 52);
                 foreach (int n in new[] { 1, 5 })
                 {
                     int count = n;
@@ -106,20 +130,9 @@ namespace PCShopSell.Game.UI
                     {
                         if (S.BuyAtStall(p, pd, count)) Toast($"买了 {pd.Name}×{count}");
                         w.Rebuild();
-                    }, 17, Ui.ButtonHot, open && left >= count), 70);
+                    }, 16, Ui.ButtonHot, open && left >= count), 58);
                 }
             }
-
-            RectTransform brow = Ui.Row(w.Content, 50);
-            bool tried = S.HasBargainedToday(p);
-            Ui.Size(Ui.Button(brow, tried ? "今天砍过价了" : "跟老板砍价", () =>
-            {
-                BargainResult r = S.Bargain(p);
-                if (r == BargainResult.Success) Toast("砍价成功！今天这家便宜了几个点。");
-                else if (r == BargainResult.Failed) Toast("老板不乐意：\"爱买不买。\" 今天还涨了 1%。");
-                w.Rebuild();
-            }, 19, Ui.ButtonBg, open && !tried), 220);
-            Ui.Size(Ui.Label(brow, $"成功率看魅力（{S.Player.Charm}），太累会降低", 16, TextAnchor.MiddleLeft, Ui.Dim), 400);
         }
 
         // ---------- 车行 ----------
