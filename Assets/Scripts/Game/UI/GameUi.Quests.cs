@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using PCShopSell.Core.Session;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,12 +13,19 @@ namespace PCShopSell.Game.UI
         private string _questSeen;
         private bool _questInitialized;
         private Window _questWindow;
+        private Window _questPopup;
+        private bool _questHidden;
+
+        /// <summary>任务完成 / 换任务时强制弹窗（冒烟测试脚本会关掉，免得挡住脚本流程）。</summary>
+        public bool QuestPopups = true;
 
         public void ResetGuideState()
         {
             _questSeen = null;
             _questInitialized = false;
             _questWindow = null;
+            _questPopup = null;
+            _questHidden = false;
             _businessTab = 0;
             _showAllBusinessTabs = false;
         }
@@ -30,13 +38,33 @@ namespace PCShopSell.Game.UI
             btn.targetGraphic = _questPanel;
             btn.onClick.AddListener(OpenQuestWindow);
             _questText = Ui.Label(_questPanel.transform, "", 16, TextAnchor.UpperLeft);
-            _questText.rectTransform.Anchor(0, 0, 1, 1, 14, 54, 14, 12);
+            _questText.rectTransform.Anchor(0, 0, 1, 1, 14, 54, 44, 12);
             _questText.horizontalOverflow = HorizontalWrapMode.Wrap;
             _questText.verticalOverflow = VerticalWrapMode.Truncate;
             var help = Ui.Button(_questPanel.transform, "怎么做", OpenQuestWindow, 16);
             ((RectTransform)help.transform).Anchor(0, 0, 1, 0, 12, 10, 12, -46);
+            var close = Ui.Button(_questPanel.transform, "×", () =>
+            {
+                _questHidden = true;
+                UpdateQuestTracker();
+                Toast("任务条收起来了，点顶栏“任务”（或按 T）随时再打开。");
+            }, 20);
+            ((RectTransform)close.transform).Anchor(1, 1, 1, 1, -38, -36, 6, 6);
+            close.Tip("收起任务条（顶栏“任务”按钮可重新打开）");
             _questPanel.gameObject.SetActive(false);
         }
+
+        /// <summary>顶栏“任务”按钮：打开当前任务说明，并重新显示左上角的任务条。</summary>
+        public void OpenQuests()
+        {
+            _questHidden = false;
+            UpdateQuestTracker();
+            if (_questWindow != null && !_questWindow.Closed) { _questWindow.Rebuild(); return; }
+            _questWindow = OpenWindow("当前任务", 700, 520, BuildGuideWindow, onClosed: () => _questWindow = null);
+        }
+
+        /// <summary>冒烟截图用：弹出“完成了租铺任务、接下来去家具城”的任务完成窗口。</summary>
+        public void DebugQuestPopup() => OpenQuestPopup(Quests.Get("rent"), Quests.Get("mall"));
 
         public string QuestTrackerText => _questPanel != null && _questPanel.gameObject.activeSelf ? _questText.text : null;
         public void DebugRefreshQuests() => UpdateQuestTracker();
@@ -47,14 +75,14 @@ namespace PCShopSell.Game.UI
             QuestDef q = S.CurrentQuest();
             if (_questInitialized && _questSeen != q?.Id && !S.IsGameOver)
             {
-                if (_questSeen != null && S.QuestCompleted(_questSeen))
-                    Toast($"<color=#A9C9A9>完成：{Quests.Get(_questSeen).Title}</color>" + (q != null ? $"\n接下来：{q.Title}" : "\n继续经营小店吧。"));
-                else if (q != null)
-                    Toast("新任务：" + q.Title);
+                QuestDef done = _questSeen != null && S.QuestCompleted(_questSeen) ? Quests.Get(_questSeen) : null;
+                if (QuestPopups && (done != null || q != null)) OpenQuestPopup(done, q);
+                else if (done != null) Toast($"<color=#A9C9A9>完成：{done.Title}</color>" + (q != null ? $"\n接下来：{q.Title}" : "\n继续经营小店吧。"));
+                else if (q != null) Toast("新任务：" + q.Title);
             }
             _questInitialized = true;
             _questSeen = q?.Id;
-            _questPanel.gameObject.SetActive(q != null && !S.IsGameOver && !_ctrl.Placing);
+            _questPanel.gameObject.SetActive(q != null && !_questHidden && !S.IsGameOver && !_ctrl.Placing);
             _questText.text = q == null ? "" : $"<b><color=#DDC18B>{q.Title}</color></b>\n{q.Short}\n<size=14><color=#ABB5A8>{q.Progress(S).Split('\n')[0]}</color></size>";
         }
 
@@ -63,7 +91,33 @@ namespace PCShopSell.Game.UI
             UpdateQuestTracker();
             if (S.CurrentQuest() == null) return;
             if (_questWindow != null && !_questWindow.Closed) { _questWindow.Rebuild(); return; }
-            _questWindow = OpenWindow("当前任务", 700, 480, BuildGuideWindow, onClosed: () => _questWindow = null);
+            _questWindow = OpenWindow("当前任务", 700, 520, BuildGuideWindow, onClosed: () => _questWindow = null);
+        }
+
+        /// <summary>完成一个任务（或来了新任务）时强制弹出：完成了什么、拿到什么奖励、接下来做什么。</summary>
+        private void OpenQuestPopup(QuestDef done, QuestDef next)
+        {
+            if (_questPopup != null && !_questPopup.Closed) _questPopup.Close();
+            _questPopup = OpenWindow(done != null ? "任务完成" : "新任务", 700, 560, w =>
+            {
+                if (done != null)
+                {
+                    Line(w.Content, "✓ " + done.Title, 23, Ui.Good);
+                    if (done.Reward != null) Para(w.Content, "<b>奖励</b>：" + done.Reward, 18, Ui.Accent);
+                }
+                if (next == null)
+                {
+                    Para(w.Content, "暂时没有新任务，继续经营小店吧。有新的经营目标时会再弹出来。", 18, Ui.Dim);
+                    Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
+                    return;
+                }
+                Line(w.Content, (done != null ? "接下来：" : "") + next.Title, 21, Ui.Accent);
+                Para(w.Content, GuideLocation(next.Target), 16, Ui.Accent);
+                Para(w.Content, next.Hint, 17);
+                if (next.Reward != null) Para(w.Content, "完成奖励：" + next.Reward, 16, Ui.Good);
+                Para(w.Content, next.Progress(S), 15, Ui.Dim);
+                Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
+            }, onClosed: () => _questPopup = null);
         }
 
         private void BuildGuideWindow(Window w)
@@ -71,7 +125,8 @@ namespace PCShopSell.Game.UI
             var q = S.CurrentQuest();
             if (q == null)
             {
-                Para(w.Content, "这一步已经完成，继续经营吧。", 20);
+                int n = Quests.All.Count(x => S.QuestCompleted(x.Id));
+                Para(w.Content, $"暂时没有新任务（已完成 {n} 个）。继续经营，达到下一阶段的条件时会弹出新任务。", 20);
                 Ui.Size(Ui.Button(w.Content, "继续", w.Close, 18, Ui.ButtonHot), -1, 42);
                 return;
             }
@@ -79,6 +134,7 @@ namespace PCShopSell.Game.UI
             // Guidance explains where/how; it must never move the player or open a destination page.
             Para(w.Content, GuideLocation(q.Target), 17, Ui.Accent);
             Para(w.Content, q.Hint, 18);
+            if (q.Reward != null) Para(w.Content, "完成奖励：" + q.Reward, 16, Ui.Good);
             Para(w.Content, q.Progress(S), 16, Ui.Dim);
             if (q.Target == QuestTarget.Enterprise)
                 Para(w.Content, "已有合同：回到主店，在右侧“订单”页查看要装的电脑。", 15, Ui.Dim);
@@ -86,7 +142,14 @@ namespace PCShopSell.Game.UI
                 Para(w.Content, "与老周来往：顶栏“菜单” → “目标与人脉”。", 15, Ui.Dim);
             if (S.HasShop && NeedsTimeHint(q.Target))
                 Para(w.Content, "等顾客、招聘或到货时，关闭弹窗；在店内可手动切到“柜台”页，让时间继续。", 15, Ui.Dim);
-            Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
+            var row = Ui.Row(w.Content, 42, 8);
+            Ui.Size(Ui.Button(row, _questHidden ? "在左上角显示任务条" : "收起左上角任务条", () =>
+            {
+                _questHidden = !_questHidden;
+                UpdateQuestTracker();
+                w.Rebuild();
+            }, 16), -1, 42, 1);
+            Ui.Size(Ui.Button(row, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42, 1);
         }
 
         private static void ResetGuideScroll(Window w)
@@ -139,6 +202,7 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Counter: return "位置：自己的店铺 · 收银台。走近柜台，顾客排队时按 F 结账。";
                 case QuestTarget.Staff: return "位置：自己的店铺 → 右侧“招人”页。";
                 case QuestTarget.PhoneShop: return "地点：商业街 · 手机店。沿街找招牌，走到门口按 F 进入。";
+                case QuestTarget.Mall: return "地点：商业街 · 宜居家具城。沿街找招牌，走到门口按 F 进入。";
                 case QuestTarget.Upgrades: return "位置：自己的店铺 → 右侧“升级”页。";
                 case QuestTarget.Pricing: return "位置：自己的店铺 → 右侧“定价”页。";
                 case QuestTarget.Orders: return "位置：自己的店铺 → 右侧“订单”页。";

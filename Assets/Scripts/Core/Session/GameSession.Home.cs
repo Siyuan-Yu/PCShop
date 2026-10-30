@@ -163,7 +163,7 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
-        private void AddFurniture(string id, int count)
+        internal void AddFurniture(string id, int count)
         {
             id = FurnitureCatalog.Canonical(id);
             _furnStock[id] = FurnitureInStock(id) + count;

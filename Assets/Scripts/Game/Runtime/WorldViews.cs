@@ -267,6 +267,33 @@ namespace PCShopSell.Game.Runtime
             public Vector3 Target;
             public float Speed;
             public bool VanishOnArrive;
+            public int Id;
+        }
+
+        private int _nextId;
+
+        /// <summary>正在和玩家说话的行人（停下来面向玩家）；没有是 -1。</summary>
+        public int Talking { get; set; } = -1;
+
+        public Vector3 TalkFace { get; set; }
+
+        /// <summary>离 pos 最近、radius 以内的行人（不算正要进店的顾客）。</summary>
+        public bool Nearest(Vector3 pos, float radius, out int id, out Vector3 world)
+        {
+            id = -1;
+            world = Vector3.zero;
+            float best = radius;
+            foreach (Walker w in _walkers)
+            {
+                if (w.VanishOnArrive || !w.Go.activeSelf) continue;
+                Vector3 p = w.Go.transform.position;
+                float d = new Vector2(p.x - pos.x, p.z - pos.z).magnitude;
+                if (d >= best) continue;
+                best = d;
+                id = w.Id;
+                world = p;
+            }
+            return id >= 0;
         }
 
         private readonly List<Walker> _walkers = new List<Walker>();
@@ -320,6 +347,13 @@ namespace PCShopSell.Game.Runtime
                 Walker w = _walkers[i];
                 w.Go.SetActive(visible);
                 Vector3 p = w.Go.transform.position;
+                if (w.Id == Talking)
+                {
+                    Vector3 face = TalkFace - p;
+                    face.y = 0;
+                    if (face.sqrMagnitude > 0.01f) w.Go.transform.rotation = Quaternion.LookRotation(face.normalized);
+                    continue;
+                }
                 Vector3 d = w.Target - p;
                 if (d.magnitude < 0.2f)
                 {
@@ -349,7 +383,7 @@ namespace PCShopSell.Game.Runtime
         {
             GameObject go = Prims.Figure(_parent, "Pedestrian", Clothes[_rng.Next(Clothes.Length)], new Color(0.92f, 0.78f, 0.62f), 0.95f);
             go.transform.position = at;
-            return new Walker { Go = go, Speed = 1.0f + (float)_rng.NextDouble() * 0.8f };
+            return new Walker { Go = go, Speed = 1.0f + (float)_rng.NextDouble() * 0.8f, Id = _nextId++ };
         }
     }
 }

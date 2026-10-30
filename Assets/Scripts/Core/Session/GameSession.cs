@@ -124,6 +124,7 @@ namespace PCShopSell.Core.Session
                 Lease = new ShopLease { PlaceId = PlayerShopPlace.Id, Rent = ShopRent, Deposit = Money.Zero, StartDay = start.Date.TotalDays };
                 if (starterStock) AddStarterStock();
                 FitStarterShop();
+                SkipOpeningQuests();
             }
             else
             {
@@ -306,7 +307,7 @@ namespace PCShopSell.Core.Session
         public Money VehicleValue => Money.FromCents(_owned.Sum(v => Vehicles.Get(v).Price.Scale(.6).Cents));
         public Money ContractDeposits => Money.FromCents(_contracts.Where(x => x.Accepted && !x.Settled).Sum(x => Money.FromCents(x.DepositCents).Scale((double)(x.Count - x.Failed) / Math.Max(1, x.Count)).Cents));
         public Money TotalDebt => SupplierDebtTotal + MortgageDebt;
-        public Money NetWorth() => Ledger.Balance + InventoryValue() + (Lease?.Deposit ?? Money.Zero) + ContractDeposits
+        public Money NetWorth() => Ledger.Balance + InventoryValue() + (Lease?.Deposit ?? Money.Zero) + (PendingLease?.Deposit ?? Money.Zero) + ContractDeposits
             + VehicleValue + VentureValue + PropertyValue + Money.FromCents(HomePriceCents) + FundValue - TotalDebt;
 
         public void Dispose()
@@ -394,7 +395,14 @@ namespace PCShopSell.Core.Session
                 if (HomeUtilities.IsPositive) Ledger.ForceDebit(today, "水电", HomeUtilities, "住处水电");
                 if (HasShop && CurrentShopRent.IsPositive) Ledger.ForceDebit(today, "房租", CurrentShopRent, "店铺月租");
                 if (CurrentHomeRent.IsPositive) Ledger.ForceDebit(today, "房租", CurrentHomeRent, HomeTitle + "月租");
-                Popup?.Invoke("交房租", HasShop ? $"店铺 {CurrentShopRent} + 出租屋 {CurrentHomeRent} 已扣款。" : $"出租屋 {CurrentHomeRent} 已扣款。（还没租铺子）");
+                string pending = "";
+                if (PendingLease != null)
+                {
+                    Place pp = City.GetPlace(PendingLease.PlaceId);
+                    Ledger.ForceDebit(today, "房租", PendingLease.Rent, $"{pp.Name} 月租（还没交房）");
+                    pending = $"\n提前签的{pp.Name} {PendingLease.Rent} 也扣了（第 {PendingLease.StartDay + 1} 天才交房）。";
+                }
+                Popup?.Invoke("交房租", (HasShop ? $"店铺 {CurrentShopRent} + 出租屋 {CurrentHomeRent} 已扣款。" : $"出租屋 {CurrentHomeRent} 已扣款。（还没搬进铺子）") + pending);
             }
             OnRealtyDay(today.TotalDays);
             OnBusinessDay(previous, today);

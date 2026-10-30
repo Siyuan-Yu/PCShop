@@ -4,7 +4,7 @@ using PCShopSell.Core.Common;
 namespace PCShopSell.Core.Shop
 {
     /// <summary>
-    /// 房产中介挂出来的一间铺面。OpenDay 之前现租户还没搬走（只能先看，不能签）；
+    /// 房产中介挂出来的一间铺面。OpenDay 之前现租户还没搬走：可以提前签，但要到 OpenDay 才能搬进去，租金从签约起算；
     /// 过了 CloseDay 还没人签就被别人租走了。
     /// </summary>
     public sealed class ShopListing
@@ -16,13 +16,14 @@ namespace PCShopSell.Core.Shop
         public int CloseDay;
     }
 
-    /// <summary>玩家正在租的铺子。押金退租 / 换铺时退还。</summary>
+    /// <summary>玩家正在租的铺子。押金退租 / 换铺时退还。提前签下的铺子 StartDay 是交房（能搬进去）那天。</summary>
     public sealed class ShopLease
     {
         public string PlaceId;
         public Money Rent;
         public Money Deposit;
         public int StartDay;
+        public int SignedDay;
     }
 
     /// <summary>

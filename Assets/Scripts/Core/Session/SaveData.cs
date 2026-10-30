@@ -103,6 +103,13 @@ namespace PCShopSell.Core.Session
         public long leaseRentCents;
         public long leaseDepositCents;
         public int leaseStartDay;
+        public int shopOpenMinute;
+        public int shopCloseMinute;
+        public string pendingPlace;
+        public long pendingRentCents;
+        public long pendingDepositCents;
+        public int pendingStartDay;
+        public int pendingSignedDay;
         public SaveListing[] listings;
         public string[] vacantPlaces;
         public string realtyRng;

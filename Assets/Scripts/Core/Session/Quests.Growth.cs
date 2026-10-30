@@ -9,7 +9,7 @@ namespace PCShopSell.Core.Session
 {
     public enum QuestTarget
     {
-        Agency, Renovate, Stock, Market, Counter, Staff, PhoneShop, Upgrades,
+        Agency, Renovate, Stock, Market, Counter, Staff, PhoneShop, Upgrades, Mall,
         Pricing, Orders, Restock, Finance, Enterprise, Direct, Ventures, Park, Creators, Property
     }
 
@@ -115,7 +115,15 @@ namespace PCShopSell.Core.Session
             Flags.RemoveWhere(f => f.StartsWith("tutorial:track:", StringComparison.Ordinal) || f.StartsWith("tutorial:defer:", StringComparison.Ordinal));
             // Observe every milestone, including out-of-order achievements; all flags use the existing save format.
             foreach (var q in Quests.All)
-                if (!QuestCompleted(q.Id) && q.Done(this)) Flags.Add("tutorial:" + q.Id);
+                if (!QuestCompleted(q.Id) && q.Done(this))
+                {
+                    Flags.Add("tutorial:" + q.Id);
+                    if (q.Grant != null)
+                    {
+                        q.Grant(this);
+                        Say($"任务完成「{q.Title}」，奖励：{q.Reward}。");
+                    }
+                }
         }
         public void VisitQuestTarget(QuestTarget target)
         {

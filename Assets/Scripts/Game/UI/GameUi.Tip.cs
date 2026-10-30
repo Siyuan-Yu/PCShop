@@ -84,6 +84,7 @@ namespace PCShopSell.Game.UI
                 case KeyCode.P: OpenPhone(); return true;
                 case KeyCode.J: OpenBusinessPanel(); return true;
                 case KeyCode.H: OpenMarketPanel(); return true;
+                case KeyCode.T: OpenQuests(); return true;
                 case KeyCode.Escape: OpenSystemPanel(); return true;
             }
             return false;

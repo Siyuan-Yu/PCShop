@@ -3,6 +3,7 @@ using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
+using PCShopSell.Core.Shop;
 using PCShopSell.Core.World;
 using PCShopSell.Game.Runtime;
 using UnityEngine;
@@ -920,6 +921,7 @@ namespace PCShopSell.Game.UI
                 foreach (FurnitureDef f in FurnitureCatalog.Purchasable(true).Where(x => x.IsFixture)) MallRow(w, list, f);
                 Line(list, "—— 店里的装饰（摆放要歇业装修一天）——", 18, Ui.Accent);
                 foreach (FurnitureDef f in FurnitureCatalog.Purchasable(true).Where(x => !x.IsFixture)) MallRow(w, list, f);
+                UpgradeSaleRows(w, list, ShopUpgrades.FurnitureMall);
             }
 
             // 还在毛坯里的时候，先给店面设施
@@ -1114,6 +1116,27 @@ namespace PCShopSell.Game.UI
                 if (S.BuySmartphone()) Toast("买了智能手机。");
                 w.Rebuild();
             }, 17, Ui.ButtonHot, !S.HasSmartphone), 80);
+            UpgradeSaleRows(w, w.Content, ShopUpgrades.PhoneShop);
+        }
+
+        /// <summary>这家店卖的店铺设备（收款码、空调……）：买了当场装到自己店里。</summary>
+        private void UpgradeSaleRows(Window w, Transform parent, string business)
+        {
+            Line(parent, "—— 给你的店添设备（买了当天装好）——", 18, Ui.Accent);
+            foreach (ShopUpgradeDef u in ShopUpgrades.SoldBy(business))
+            {
+                bool owned = S.HasUpgrade(u.Id);
+                string blocker = owned ? null : S.UpgradeBlocker(u);
+                RectTransform row = Ui.Row(parent, blocker != null ? 96 : 76);
+                string tail = blocker != null ? $"\n<size=14><color=#D79780>{blocker}</color></size>" : "";
+                Ui.Size(Ui.Label(row, $"{u.Name}\n<size=14><color=#A8B0BA>{u.Description}</color></size>{tail}", 17), 400);
+                Ui.Size(Ui.Label(row, u.Price.ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 90);
+                Ui.Size(Ui.Button(row, owned ? "已装好" : "买", () =>
+                {
+                    S.BuyUpgrade(u.Id);
+                    w.Rebuild();
+                }, 17, Ui.ButtonHot, !owned && blocker == null), 80);
+            }
         }
 
         private static string GiftLabel(NpcDef n)

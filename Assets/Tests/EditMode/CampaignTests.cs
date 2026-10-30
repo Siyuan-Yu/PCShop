@@ -271,9 +271,8 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.HasShop);
             Assert.AreEqual(10000 - 1500 * 3, s.Ledger.Balance.Yuan, "首月 + 押金 + 中介费");
             Assert.AreEqual(1500, s.Lease.Deposit.Yuan);
-            // 身家 = 现金 + 押金 + 房东送的 CPU / 显卡的货值
-            Assert.Greater(s.NetWorth().Yuan, s.Ledger.Balance.Yuan + 1500, "押金算进身家");
-            Assert.Less(s.NetWorth().Yuan, s.Ledger.Balance.Yuan + 1500 + 1500, "多出来的只是送的那 2 件货");
+            // 身家 = 现金 + 押金（租铺不再送货，配件是家具城任务的奖励）
+            Assert.AreEqual(s.Ledger.Balance.Yuan + 1500, s.NetWorth().Yuan, "押金算进身家");
             Assert.AreEqual(GameSession.MyShopName, s.PlaceTitle(s.PlayerShopPlace));
             Assert.IsFalse(s.Listings.Any(x => x.PlaceId == "pc"));
 
@@ -290,7 +289,7 @@ namespace PCShopSell.Tests
             s.DebugAddListing("tea", 5, 10, Money.FromYuan(9000));
             Place tea = s.City.GetPlace("tea");
             GameSessionTests.Teleport(s, "agency");
-            StringAssert.Contains("还没搬走", s.LeaseBlocker(s.Listings.Single(x => x.PlaceId == "tea")));
+            Assert.IsTrue(s.IsAdvance(s.Listings.Single(x => x.PlaceId == "tea")), "现租户还没搬走");
             Assert.IsFalse(s.IsVacant(tea));
 
             CrossInto(s, 5);
@@ -300,6 +299,34 @@ namespace PCShopSell.Tests
             CrossInto(s, 11);
             Assert.IsFalse(s.Listings.Any(x => x.PlaceId == "tea"), "过了挂牌期被别人租走");
             Assert.IsFalse(s.IsVacant(tea));
+        }
+
+        [Test]
+        public void AdvanceLease_PaysNow_RentRuns_MovesInOnOpenDay()
+        {
+            GameSession s = NoShop(200000);
+            s.PlayerShop.Reputation = 80;
+            s.DebugAddListing("tea", 40, 60, Money.FromYuan(2000));
+            GameSessionTests.Teleport(s, "agency");
+            Money before = s.Ledger.Balance;
+            Assert.IsTrue(s.SignLease("tea"), "还没空出来的铺子也能提前签");
+            Assert.AreEqual((before - Money.FromYuan(6000)).Cents, s.Ledger.Balance.Cents, "首月 + 押金 + 中介费当场付");
+            Assert.IsFalse(s.HasShop, "签了也还没店");
+            Assert.IsNotNull(s.PendingLease);
+            StringAssert.Contains("交房前不能再签", s.LeaseBlocker(s.DebugAddListing("pc", 0, 30)));
+
+            GameSession loaded = GameSession.Load(s.City, s.CreateSave());
+            Assert.AreEqual("tea", loaded.PendingLease.PlaceId, "提前签的租约存档");
+            Assert.AreEqual(40, loaded.PendingLease.StartDay);
+
+            s.Leave();
+            CrossInto(s, 30);
+            Assert.IsFalse(s.HasShop);
+            Assert.IsTrue(s.Ledger.Entries.Any(e => e.Category == "房租" && (e.Memo ?? "").Contains("还没交房")), "交房前的月租照扣");
+            CrossInto(s, 40);
+            Assert.IsTrue(s.HasShop, "交房那天自动搬进去");
+            Assert.AreEqual("tea", s.PlayerShopPlace.Id);
+            Assert.IsNull(s.PendingLease);
         }
 
         [Test]

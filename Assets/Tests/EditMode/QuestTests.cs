@@ -16,13 +16,17 @@ namespace PCShopSell.Tests
         private static GameSession Make(bool startWithShop, long cash = 30000)
         {
             CityLayoutData data = GameSessionTests.Layout();
+            data.places = data.places.Concat(new[]
+            {
+                new LayoutPlaceData { id = "phone", name = "手机店", kind = "shop", node = "dl", size = "small", business = GameSession.PhoneBusiness },
+            }).ToArray();
             return new GameSession(CityLayout.FromData(data), 7, Money.FromYuan(cash), GameTimestamp.From(new GameDate(0), 8 * 60), true, true, startWithShop);
         }
 
         [Test]
         public void Quests_AreInOrder_AndHaveText()
         {
-            CollectionAssert.AreEqual(new[] { "rent", "buy", "place", "shelf", "stock", "sale", "hire", "phone", "qr" }, Quests.All.Take(9).Select(q => q.Id).ToArray());
+            CollectionAssert.AreEqual(new[] { "rent", "mall", "place", "shelf", "stock", "sale", "hire", "phone", "qr" }, Quests.All.Take(9).Select(q => q.Id).ToArray());
             Assert.AreEqual(23, Quests.All.Count);
             Assert.AreEqual(Quests.All.Count, Quests.All.Select(q => q.Id).Distinct().Count());
             foreach (QuestDef q in Quests.All)
@@ -41,12 +45,17 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void RentGift_IsEnoughForMinimumOpeningTutorial()
+        public void RentReward_ThenMallQuest_ThenPlaceFixtures()
         {
             GameSession s = Make(false);
             GameSessionTests.Teleport(s, "agency");
             Assert.IsTrue(s.SignLease("pc"));
+            Assert.AreEqual(1, s.FurnitureInStock(FurnitureCatalog.Shelf), "租铺任务奖励一个货架");
+            Assert.AreEqual(1, s.FurnitureInStock(FurnitureCatalog.ShopCounter), "和一个收银台");
+            Assert.AreEqual("mall", s.CurrentQuest().Id);
+            s.Flags.Add(GameSession.MallBoughtFlag);
             Assert.AreEqual("place", s.CurrentQuest().Id);
+            Assert.AreEqual(1, s.PlayerShop.Stock.CountAll(PartCatalog.Get("gpu0")), "家具城任务奖励显卡");
             StringAssert.Contains("货架 0/1", s.CurrentQuest().Progress(s));
         }
 
@@ -107,6 +116,8 @@ namespace PCShopSell.Tests
             s.SetSmartphone(true);
             Assert.AreEqual("qr", s.CurrentQuest().Id);
             GameSessionTests.Teleport(s, "pc");
+            Assert.IsFalse(s.BuyUpgrade(ShopUpgrades.Qr), "店里不能直接买收款码");
+            GameSessionTests.Teleport(s, "phone");
             Assert.IsTrue(s.BuyUpgrade(ShopUpgrades.Qr));
             Assert.AreEqual("pricing", s.CurrentQuest().Id);
             Assert.AreEqual(9, s.QuestIndex());

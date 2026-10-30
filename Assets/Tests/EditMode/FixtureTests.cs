@@ -104,20 +104,33 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void FirstLease_GivesAShelfAndCounter_SoABrokePlayerCanStillOpen()
+        public void RentQuestReward_GivesAShelfAndCounter_SoABrokePlayerCanStillOpen()
         {
             GameSession s = Rented();
             Assert.AreEqual(1, s.FurnitureInStock(FurnitureCatalog.Shelf));
             Assert.AreEqual(1, s.FurnitureInStock(FurnitureCatalog.ShopCounter));
-            Assert.IsTrue(s.Flags.Contains(GameSession.LeaseGiftFlag));
-            Assert.AreEqual(1, s.PlayerShop.Stock.CountAll(PartCatalog.Get("cpu0")), "送了 1 个 CPU");
-            Assert.AreEqual(1, s.PlayerShop.Stock.CountAll(PartCatalog.Get("gpu0")), "送了 1 张显卡");
+            Assert.IsTrue(s.QuestCompleted("rent"));
+            Assert.AreEqual(0, s.PlayerShop.Stock.CountAll(PartCatalog.Get("cpu0")), "配件是家具城任务的奖励，租铺不送");
 
             GameSessionTests.Teleport(s, "pc");
             Assert.IsTrue(s.BeginRenovation());
             Assert.IsTrue(s.PlaceFromStock(true, FurnitureCatalog.ShopCounter, At(s, FurnitureCatalog.ShopCounter, 0.9, 3.3, 3)));
             Assert.IsTrue(s.PlaceFromStock(true, FurnitureCatalog.Shelf, At(s, FurnitureCatalog.Shelf, 3, 5.8, 0)));
             Assert.IsTrue(s.ShopFitted, "只靠送的两样就够开业");
+        }
+
+        [Test]
+        public void MallQuest_AnyPurchase_RewardsCpuAndGpu()
+        {
+            GameSession s = Rented();
+            Assert.AreEqual("mall", s.CurrentQuest().Id);
+            GameSessionTests.Teleport(s, "mall");
+            s.SendByCourier = true;
+            Assert.IsTrue(s.BuyFurniture(FurnitureCatalog.Purchasable(true).First().Id));
+            Assert.IsTrue(s.QuestCompleted("mall"));
+            Assert.AreEqual(1, s.PlayerShop.Stock.CountAll(PartCatalog.Get("cpu0")));
+            Assert.AreEqual(1, s.PlayerShop.Stock.CountAll(PartCatalog.Get("gpu0")));
+            Assert.AreEqual("place", s.CurrentQuest().Id);
         }
 
         [Test]

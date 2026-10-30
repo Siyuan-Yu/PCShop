@@ -62,6 +62,8 @@ namespace PCShopSell.Core.Session
                 shopGoodsIds = PlayerShop.Stock.GoodsLines().Select(kv => kv.Key).ToArray(),
                 shopGoodsCounts = PlayerShop.Stock.GoodsLines().Select(kv => kv.Value).ToArray(),
                 markup = PlayerShop.Markup,
+                shopOpenMinute = PlayerShop.OpenMinute,
+                shopCloseMinute = PlayerShop.CloseMinute,
                 reputation = PlayerShop.Reputation,
                 accepted = (int)PlayerShop.Accepted,
                 orders = PlayerShop.Orders.Select(o => new SaveOrder
@@ -157,6 +159,7 @@ namespace PCShopSell.Core.Session
             for (int i = 0; i < goodsIds.Length && d.shopGoodsCounts != null && i < d.shopGoodsCounts.Length; i++)
                 PlayerShop.Stock.ForceAddGoods(goodsIds[i], d.shopGoodsCounts[i]);
             PlayerShop.Markup = d.markup;
+            if (d.shopCloseMinute > 0) PlayerShop.SetHours(d.shopOpenMinute, d.shopCloseMinute);
             PlayerShop.Reputation = d.reputation;
             PlayerShop.Accepted = (PaymentMethods)d.accepted;
             PlayerShop.RestoreOrders((d.orders ?? Array.Empty<SaveOrder>()).Select(o =>

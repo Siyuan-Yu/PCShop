@@ -33,6 +33,12 @@ namespace PCShopSell.Core.Session
 
         /// <summary>进度文字（例如“货架 3/6”）。</summary>
         public Func<GameSession, string> Progress;
+
+        /// <summary>完成奖励的说明；没有奖励为 null。</summary>
+        public string Reward;
+
+        /// <summary>完成时发奖励（只发一次，记在完成记号里）。</summary>
+        public Action<GameSession> Grant;
     }
 
     public static partial class Quests
@@ -43,23 +49,37 @@ namespace PCShopSell.Core.Session
             {
                 Id = "rent", Title = "租一间铺子", Target = QuestTarget.Agency,
                 Short = "去商业街的「安居房产中介」挑一间铺面签约",
-                Hint = "先出门到商业街，找到“安居房产中介”的招牌，走到门口按 F 进入，挑一间铺面签约。要付首月租金、押金和中介费；留些钱作为开业后的进货和周转资金。",
+                Hint = "先出门到商业街，找到“安居房产中介”的招牌，走到门口按 F 进入，挑一间铺面签约。要付首月租金、押金和中介费；留些钱作为开业后的进货和周转资金。注意看清“多少天后可租”：那种铺子签了要等现租户搬走才能进去，房租却从签约起算。",
                 Done = s => s.HasShop,
-                Progress = s => $"现金 {s.Ledger.Balance}",
+                Progress = s => s.PendingLease != null
+                    ? $"已提前签下{s.City.GetPlace(s.PendingLease.PlaceId).Name}，第 {s.PendingLease.StartDay + 1} 天才交房；想早点开业，再找一间马上能进的"
+                    : $"现金 {s.Ledger.Balance}",
+                Reward = "一个货架 + 一个收银台（放进“我的”里待摆放）",
+                Grant = s =>
+                {
+                    s.AddFurniture(FurnitureCatalog.Shelf, 1);
+                    s.AddFurniture(FurnitureCatalog.ShopCounter, 1);
+                },
             },
             new QuestDef
             {
-                Id = "buy", Title = "准备最低开业设施", Target = QuestTarget.Renovate,
-                Short = "准备一个收银台和一个货架；首次租铺已赠送",
-                Hint = "首次租铺送一个收银台和一个货架，在待安装家具里。先用它们开业赚钱；展示桌、装机台和更多货架以后再去家具城购买，不必一次买齐。",
-                Done = s => FitDone(s, false),
-                Progress = s => FitText(s, false),
+                Id = "mall", Title = "去家具城添置东西", Target = QuestTarget.Mall,
+                Short = "去商业街的「宜居家具城」买任意一件家具",
+                Hint = "奖励的一个货架只能摆一类配件，想卖得多还得添货架、展示桌、装机台；家里也缺床和凳子。去商业街的“宜居家具城”，走到门口按 F 进入，买任意一件东西就算完成（装背包或叫车都行），不用照着清单买齐。",
+                Done = s => s.HasShop && s.Flags.Contains(GameSession.MallBoughtFlag),
+                Progress = s => s.Flags.Contains(GameSession.MallBoughtFlag) ? "已经在家具城买过东西" : "还没在家具城买过东西",
+                Reward = "1 个入门 CPU + 1 张入门显卡（直接放进店里后仓）",
+                Grant = s =>
+                {
+                    s.PlayerShop.Stock.ForceAdd(PartCatalog.Get("cpu0"), true, 1);
+                    s.PlayerShop.Stock.ForceAdd(PartCatalog.Get("gpu0"), true, 1);
+                },
             },
             new QuestDef
             {
                 Id = "place", Title = "歇业装修，把设施摆好", Target = QuestTarget.Renovate,
                 Short = "回店里打开右侧“装修”页，摆好收银台和一个货架",
-                Hint = "货车把东西送到店里后，回到自己的店，打开右侧“装修”页（今天歇业），在右侧列表选家具、点地上摆下；货架靠墙摆，收银台放门边。摆完点“完成”，第二天才能开业。",
+                Hint = "回到自己的店，打开右侧“装修”页（今天歇业），在右侧列表选家具、点地上摆下；货架靠墙摆，收银台放门边。摆完点“完成”，第二天才能开业。",
                 Done = s => FitDone(s, true),
                 Progress = s => FitText(s, true),
             },
@@ -74,8 +94,8 @@ namespace PCShopSell.Core.Session
             new QuestDef
             {
                 Id = "stock", Title = "进第一批货", Target = QuestTarget.Market,
-                Short = "先销售租铺赠送的配件；没有货再去档口补货",
-                Hint = "先用租铺赠送的 CPU 和显卡开业。缺货时去电子市场，走近配件档口按 F 进入购买，用背包或三轮车带回来，到店里放进后仓，货架会自动摆上。有了智能手机、装上 1788 app 也能网上批发，便宜但要等一天。",
+                Short = "先卖任务奖励的配件；没有货再去档口补货",
+                Hint = "先用家具城任务奖励的 CPU 和显卡开业。缺货时去电子市场，走近配件档口按 F 进入购买，用背包或三轮车带回来，到店里放进后仓，货架会自动摆上。有了智能手机、装上 1788 app 也能网上批发，便宜但要等一天。",
                 Done = s => StockCount(s) >= 1,
                 Progress = s => $"后仓 {StockCount(s)} 件，覆盖 {StockCategories(s)} 类配件（至少 1 件即可开始）",
             },
@@ -105,9 +125,9 @@ namespace PCShopSell.Core.Session
             },
             new QuestDef
             {
-                Id = "qr", Title = "开通收款码", Target = QuestTarget.Upgrades,
-                Short = "店内“升级”页开通收款码（¥200）",
-                Hint = "在店内右侧面板“升级”页开通收款码（¥200）。不带现金的顾客也能买单，结账更快，排队的人更少。",
+                Id = "qr", Title = "开通收款码", Target = QuestTarget.PhoneShop,
+                Short = "去「手机店」给店里开通收款码（¥200）",
+                Hint = "收款码在街上的「手机店」办理（¥200），办好当场就能用。不带现金的顾客也能买单，结账更快，排队的人更少。店里“升级”页能看到还有哪些设备可以添、各在哪里买。",
                 Done = s => s.HasUpgrade(ShopUpgrades.Qr),
                 Progress = s => s.HasUpgrade(ShopUpgrades.Qr) ? "已开通" : "还没开通",
             },

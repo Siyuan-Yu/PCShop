@@ -175,6 +175,30 @@ namespace PCShopSell.Game.UI
 
         // ---------- 柜台 ----------
 
+        /// <summary>营业时间：开门 / 关门各按小时调，或者不限时（有人看店就开）。不在营业时间里，人在店里也不开门。</summary>
+        private void ShopHoursRow(ShopSimulation shop)
+        {
+            const int day = 24 * 60;
+            int open = shop.AllDay ? 9 * 60 : shop.OpenMinute;
+            int close = shop.AllDay ? 21 * 60 : shop.CloseMinute;
+            void Set(int o, int c)
+            {
+                shop.SetHours(((o % day) + day) % day, ((c - 1 + day) % day) + 1);
+                RebuildDock();
+            }
+            RectTransform row = Ui.Row(C, 36, 6);
+            string text = shop.AllDay ? "营业时间：不限（有人看店就开）" : $"营业时间：{Ui.Hm(shop.OpenMinute)}–{Ui.Hm(shop.CloseMinute % day)}{(shop.CloseMinute <= shop.OpenMinute ? "（过夜）" : "")}";
+            Ui.Size(Ui.Label(row, text, 16), -1, 36, 1);
+            Ui.Size(Ui.Button(row, "开门−1h", () => Set(open - 60, close), 14), 72, 34).Tip("开门时间提前 1 小时");
+            Ui.Size(Ui.Button(row, "开门+1h", () => Set(open + 60, close), 14), 72, 34).Tip("开门时间推后 1 小时");
+            Ui.Size(Ui.Button(row, "关门−1h", () => Set(open, close - 60), 14), 72, 34).Tip("关门时间提前 1 小时");
+            Ui.Size(Ui.Button(row, "关门+1h", () => Set(open, close + 60), 14), 72, 34).Tip("关门时间推后 1 小时");
+            Ui.Size(Ui.Button(row, "不限时", () => { shop.SetHours(0, day); RebuildDock(); }, 14, shop.AllDay ? Ui.ButtonHot : Ui.ButtonBg), 64, 34)
+                .Tip("不限营业时间：你在店里或店员在班就开门");
+            if (!shop.AllDay && !shop.InHours(S.Clock.Now))
+                Line(C, $"现在不在营业时间，{Ui.Hm(shop.OpenMinute)} 才开门；人在店里也不接客。", 15, new Color32(231, 160, 135, 255));
+        }
+
         private void BuildCounter()
         {
             ShopSimulation shop = S.PlayerShop;
@@ -182,6 +206,7 @@ namespace PCShopSell.Game.UI
             FitBanner(C);
             Line(C, $"今日进店 {shop.TodayCustomers} 人 · 流失 {shop.TodayLost} 人 · 营业额 {shop.TodaySales}", 18);
             Line(C, $"店里 {shop.ActiveCustomers.Count} 位顾客，{shop.Queue.Count} 位在排队结账（{PaymentText(shop.Accepted)}）", 17, Ui.Dim);
+            ShopHoursRow(shop);
             if (S.Employee != null)
                 Line(C, $"店员 {S.Employee.Name}：{(S.Employee.OnDuty(S.Clock.Now) ? "在岗" : "下班")}（在班持续收银，你可以协助或装机）", 16, Ui.Dim);
 
@@ -475,26 +500,18 @@ namespace PCShopSell.Game.UI
 
         private void BuildUpgrades()
         {
-            Line(C, $"给小店添点家当。现金 {S.Ledger.Balance}。买一次永久生效（搬店也跟着走）。", 16, Ui.Dim);
-            Line(C, $"现在：{GameSession.SizeName(S.PlayerShop.Size)}，月租 {S.CurrentShopRent}。想换大铺子或者换个好位置，去商业街中段的「安居房产中介」看在租的铺面。", 15, Ui.Accent);
+            Para(C, "店里还能添的设备。这里只是清单，要去对应的店里买，买了当天装好，搬店也跟着走。", 16, Ui.Dim);
+            Para(C, $"现在：{GameSession.SizeName(S.PlayerShop.Size)}，月租 {S.CurrentShopRent}。想换大铺子或者换个好位置，去商业街中段的「安居房产中介」看在租的铺面。", 15, Ui.Accent);
             RectTransform list = Ui.Scroll(C, 400);
-            foreach (ShopUpgradeDef def in ShopUpgrades.All)
+            foreach (ShopUpgradeDef u in ShopUpgrades.All.Where(x => x.Offered))
             {
-                ShopUpgradeDef u = def;
                 bool owned = S.HasUpgrade(u.Id);
-                bool reward = u.Id == ShopUpgrades.SelfCheckout;
-                if (!u.Offered && !(reward && owned)) continue; // 手机去手机店、货架去家具城；自助结账是任务奖励，拿到了才显示
-                string blocker = S.UpgradeBlocker(u);
-                RectTransform row = Ui.Row(list, 62);
-                string status = owned ? "<color=#A9C9A9>已拥有</color>" : blocker == null ? $"<color=#A9C9A9>{u.Price}</color>" : $"{u.Price}  <color=#D79780>{blocker}</color>";
-                Ui.Size(Ui.Label(row, $"<b>{u.Name}</b>  {status}\n<size=14>{u.Description}</size>", 17), 420);
-                Ui.Size(Ui.Button(row, owned ? "已拥有" : "购买", () =>
-                {
-                    S.BuyUpgrade(u.Id);
-                    RebuildDock();
-                }, 18, Ui.ButtonHot, !owned && blocker == null), 90);
+                string blocker = owned ? null : S.UpgradeBlocker(u);
+                string status = owned ? "<color=#A9C9A9>已装好</color>"
+                    : $"{u.Price}　去<color=#DDC18B>{u.SoldAtName}</color>买" + (blocker != null && blocker != "钱不够" ? $"　<color=#D79780>{blocker}</color>" : "");
+                Para(list, $"<b>{u.Name}</b>　{status}\n<size=14>{u.Description}</size>", 17);
             }
-            Line(list, "智能手机去街上的手机店买；更大更结实的货架去家具城买；自助结账可在知名度 8 后购买，一年目标达标也会赠送。", 14, Ui.Dim);
+            Para(list, "智能手机、收款码、自助结账、监控在街上的手机店；招牌灯箱、空调和更大更结实的货架在宜居家具城。自助结账一年目标达标也会赠送。", 14, Ui.Dim);
         }
 
         // ---------- 招人 ----------

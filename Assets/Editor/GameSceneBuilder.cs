@@ -128,6 +128,7 @@ namespace PCShopSell.EditorTools
             Camera cam = BuildRig();
             _game = new GameObject("Game").AddComponent<GameController>();
             _game.Bootstrap(false, 7);
+            _game.Ui.QuestPopups = false;
             foreach (Canvas c in _game.Ui.Canvases)
             {
                 c.renderMode = RenderMode.ScreenSpaceCamera;
@@ -270,6 +271,7 @@ namespace PCShopSell.EditorTools
             Camera cam = BuildRig();
             _game = new GameObject("Game").AddComponent<GameController>();
             _game.Bootstrap(false, 7); // Repeatable world/customer sequence; normal play still uses a fresh seed.
+            _game.Ui.QuestPopups = false;
             foreach (Canvas c in _game.Ui.Canvases)
             {
                 c.renderMode = RenderMode.ScreenSpaceCamera;
@@ -1078,6 +1080,19 @@ namespace PCShopSell.EditorTools
             _game.SnapCamera();
             for (int i = 0; i < 6; i++) Frame(0.05f);
             Shot("vs1_85_street_vacant");
+            _game.Ui.OpenPasserbyTalk(3, null);
+            Frame(0.05f);
+            Check(_game.Ui.AnyModalOpen, "能和路人说话");
+            Shot("vs1_123_passerby_talk");
+            _game.Ui.CloseAllWindows();
+            {
+                Place phoneShop = g.City.Places.First(p => p.Business == GameSession.PhoneBusiness);
+                Teleport(g, phoneShop.Id);
+                _game.Ui.OnEnteredPlace(phoneShop);
+                Frame(0.05f);
+                Shot("vs1_124_phone_shop_upgrades");
+                _game.Ui.CloseAllWindows();
+            }
             Teleport(g, "shop02");
             Check(g.InPlayerShop, "走进新铺子就是自己的店");
             _game.Ui.CloseModalWindows();
@@ -1210,6 +1225,36 @@ namespace PCShopSell.EditorTools
             _game.Ui.DebugSelectTab(5);
             Frame(0.05f);
             Shot("vs1_99_upgrades_tab");
+            Check(!g.BuyUpgrade(PCShopSell.Core.Shop.ShopUpgrades.Sign), "店里的升级页只能看、不能买");
+            _game.Ui.DebugSelectTab(0);
+            g.PlayerShop.SetHours(9 * 60, 21 * 60);
+            _game.Ui.DebugSelectTab(0);
+            Frame(0.05f);
+            Shot("vs1_120_shop_hours");
+            Check(g.PlayerShop.InHours(g.Clock.Now) == (g.Clock.MinuteOfDay >= 9 * 60 && g.Clock.MinuteOfDay < 21 * 60), "营业时间生效");
+            g.PlayerShop.SetHours(0, 24 * 60);
+            _game.Ui.CloseDock();
+            {
+                _game.Interior.StandAtShelf(6);
+                Frame(0.1f);
+                Vector3 target = _game.Interior.NearbyShelfWorld - new Vector3(0, 1.3f, 0);
+                Ray ray = _game.Cam.ScreenPointToRay(_game.Cam.WorldToScreenPoint(target));
+                Check(_game.Interior.PickFixture(ray, out int pickIx, out _, out _) == FixturePick.Shelf && pickIx == g.ShelfIndexes()[6], "鼠标指着货架能选中它（左键打开）");
+            }
+            _game.Ui.DebugQuestPopup();
+            Frame(0.05f);
+            Shot("vs1_121_quest_popup");
+            _game.Ui.CloseModalWindows();
+            {
+                var keepDay = g.Clock.Today;
+                int keepMin = g.Clock.MinuteOfDay;
+                g.Clock.Restore(keepDay, 2 * 60 + 30);
+                Frame(0.02f);
+                Shot("vs1_122_sleep_banner");
+                g.Clock.Restore(keepDay, keepMin);
+                Frame(0.02f);
+            }
+            _game.Ui.OpenDock();
             _game.Ui.DebugSelectTab(4);
             Frame(0.05f);
             Shot("vs1_103_renovate_tab");
@@ -1408,8 +1453,8 @@ namespace PCShopSell.EditorTools
             }
 
             // Tutorials explain the normal controls; they never travel or select a gameplay page.
-            Teleport(staffed, staffed.PlayerShopPlace.Id);
-            if (!staffed.HasUpgrade(PCShopSell.Core.Shop.ShopUpgrades.Qr)) Check(staffed.BuyUpgrade(PCShopSell.Core.Shop.ShopUpgrades.Qr), "完成收款码后才接续经营教学");
+            Teleport(staffed, staffed.City.Places.First(p => p.Business == GameSession.PhoneBusiness).Id);
+            if (!staffed.HasUpgrade(PCShopSell.Core.Shop.ShopUpgrades.Qr)) Check(staffed.BuyUpgrade(PCShopSell.Core.Shop.ShopUpgrades.Qr), "去手机店开通收款码后才接续经营教学");
             staffed.Leave();
             Check(staffed.CurrentQuest()?.Id == "pricing", "基础开店结束自然派发定价教学");
             _game.Ui.OpenQuestWindow();
@@ -1469,7 +1514,8 @@ namespace PCShopSell.EditorTools
             if (window == null) return;
             var labels = window.GetComponentsInChildren<UnityEngine.UI.Button>()
                 .Select(b => b.GetComponentInChildren<UnityEngine.UI.Text>()?.text).ToArray();
-            Check(labels.Length == 2 && labels.All(t => t == "关闭" || t == "知道了"), "教学窗口只含关闭和知道了，不含出行或页面跳转按钮");
+            Check(labels.Length == 3 && labels.All(t => t == "关闭" || t == "知道了" || t == "收起左上角任务条" || t == "在左上角显示任务条"),
+                "教学窗口只含关闭、知道了和收起任务条，不含出行或页面跳转按钮");
         }
 
         private static UnityEngine.UI.Button AgencyButton(string name) => _game.Ui.Canvases
@@ -1502,7 +1548,7 @@ namespace PCShopSell.EditorTools
                 Check(AgencyButton("AgencyPin_" + listing.PlaceId) != null, "挂牌铺面有价格客流牌：" + listing.PlaceId);
             var future = s.Listings.First(l => l.OpenDay > s.Clock.Today.TotalDays);
             ClickAgency("AgencyLot_" + future.PlaceId);
-            Check(AgencyButton("AgencyReviewLease")?.interactable == false, "未到期铺面可以看、不能签");
+            Check(AgencyButton("AgencyReviewLease")?.interactable == true, "未到期铺面也可以提前签");
             Shot("vs1_agency_future");
             var unlisted = s.City.Places.First(p => p.Kind == PlaceKind.Shop && !s.Listings.Any(l => l.PlaceId == p.Id));
             ClickAgency("AgencyLot_" + unlisted.Id);
@@ -1567,6 +1613,7 @@ namespace PCShopSell.EditorTools
             Camera cam = BuildRig();
             _game = new GameObject("Game").AddComponent<GameController>();
             _game.Bootstrap(false, 7);
+            _game.Ui.QuestPopups = false;
             foreach (Canvas c in _game.Ui.Canvases)
             {
                 c.renderMode = RenderMode.ScreenSpaceCamera;

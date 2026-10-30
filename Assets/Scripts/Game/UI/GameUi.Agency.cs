@@ -59,6 +59,7 @@ namespace PCShopSell.Game.UI
         {
             if (p.Kind == PlaceKind.Agency) return "房产中介 · 你在这里";
             if (S.IsMyShop(p)) return "我的主店";
+            if (S.IsPendingShop(p)) return $"已提前签下 · {S.PendingLease.StartDay - S.Clock.Today.TotalDays} 天后交房";
             if (S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null) return "我的经营资产";
             if (listing == null) return S.IsVacant(p) ? "空置 · 暂未挂牌" : "营业中 · 暂未挂牌";
             int wait = listing.OpenDay - S.Clock.Today.TotalDays;
@@ -84,7 +85,8 @@ namespace PCShopSell.Game.UI
                 Para(parent, "你正在小陈的办公室里看房。地图包含商业街全部沿街铺面；绿色是正在出租，棕色是租约尚未到期。点选铺面即可看报价与户型。", 18, Ui.Dim);
                 return;
             }
-            Money? rent = l != null ? l.Rent : mine ? (Money?)S.CurrentShopRent : null;
+            bool pending = S.IsPendingShop(p);
+            Money? rent = l != null ? l.Rent : mine ? (Money?)S.CurrentShopRent : pending ? (Money?)S.PendingLease.Rent : null;
             var metrics = Ui.Row(parent, 60, 12);
             Ui.Size(Ui.Label(metrics, $"<size=14>每月租金</size>\n<b>{(rent.HasValue ? rent.Value.ToString() : "未挂牌")}</b>", 27), -1, 60, 1);
             Ui.Size(Ui.Label(metrics, $"<size=14>室内面积 · {GameSession.SizeName(p.Size)}</size>\n<b>{RealEstate.SizeArea(p.Size)}</b>", 27), -1, 60, 1);
@@ -97,6 +99,7 @@ namespace PCShopSell.Game.UI
             if (l == null)
             {
                 string explanation = mine ? $"这是你现在经营的主店。已交押金 {S.Lease.Deposit}。\n想换地方，点地图上正在出租的铺面。"
+                    : pending ? $"你已经提前签下这间，押金 {S.PendingLease.Deposit}。现租户第 {S.PendingLease.StartDay + 1} 天搬走，那天自动交房、搬进去；在那之前房租照交。"
                     : S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null ? "这间铺面已经纳入你的经营资产，可在“分店 / 物业 / 住处”里管理。"
                     : "这间铺面目前没有出租报价。你可以先了解位置和户型，等它挂牌后再来询价。";
                 Para(parent, explanation, 18, Ui.Dim);
@@ -110,9 +113,11 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(parent, remaining.IsNegative ? $"现金还差 {remaining.Abs()}" : $"付清后剩余现金 {remaining}", 17,
                 TextAnchor.MiddleLeft, remaining.IsNegative ? new Color32(231, 160, 135, 255) : Ui.Good), -1, 24);
             string blocker = S.LeaseBlocker(l);
-            string state = blocker ?? $"挂牌还剩 {l.CloseDay - S.Clock.Today.TotalDays + 1} 天 · 可以签约";
+            bool advance = S.IsAdvance(l);
+            string state = blocker ?? (advance ? $"现租户还没搬走，第 {l.OpenDay + 1} 天才能进 · 可以先签" : $"挂牌还剩 {l.CloseDay - S.Clock.Today.TotalDays + 1} 天 · 可以签约");
             Ui.Size(Ui.Label(parent, state, 16, TextAnchor.MiddleLeft, blocker == null ? Ui.Good : Ui.Accent), -1, 38);
-            var sign = Ui.Button(parent, S.HasShop ? "核对费用，签约搬店" : "核对费用，租下这间", () => ConfirmAgencyLease(w, p.Id), 19,
+            string signText = advance ? "核对费用，提前签下" : S.HasShop ? "核对费用，签约搬店" : "核对费用，租下这间";
+            var sign = Ui.Button(parent, signText, () => ConfirmAgencyLease(w, p.Id), 19,
                 Ui.ButtonHot, blocker == null);
             sign.name = "AgencyReviewLease";
             Ui.Size(sign, -1, 44);
@@ -123,7 +128,7 @@ namespace PCShopSell.Game.UI
             AgencyFeeLine(parent, "首月租金", l.Rent.ToString());
             AgencyFeeLine(parent, "押金（退租时退还）", RealEstate.Deposit(l.Rent).ToString());
             AgencyFeeLine(parent, S.AgentDiscount > 0 ? $"中介费（已减 {S.AgentDiscount * 100:0.#}%）" : "中介费", S.AgentFeeFor(l.Rent).ToString());
-            if (S.HasShop)
+            if (S.HasShop && !S.IsAdvance(l))
             {
                 AgencyFeeLine(parent, "搬家费", RealEstate.MoveFee.ToString());
                 AgencyFeeLine(parent, "退回旧铺押金", "− " + S.Lease.Deposit);
@@ -152,8 +157,10 @@ namespace PCShopSell.Game.UI
                 Line(confirm.Content, $"{AgencySettlement(quotedCost)}　剩余 {S.Ledger.Balance - quotedCost}", 23, Ui.Good);
                 Para(confirm.Content, S.HasShop
                     ? "签约后主店迁到这里，旧铺退租。库存随店搬迁，已摆家具收回“我的”，需要重新装修。"
-                    : "首次租铺附赠货架、收银台，以及 CPU、显卡各一件。签好后自己到店里，摆好设施再开业。", 17);
-                Para(confirm.Content, "以后每月 1 日交租，押金退租换铺时退还。", 16, Ui.Dim);
+                    : "铺子是毛坯的，签好后自己到店里，摆好收银台和货架再开业。", 17);
+                string fine = "以后每月 1 日交租，押金退租换铺时退还。";
+                if (S.IsAdvance(listing)) fine += $"现租户第 {listing.OpenDay + 1} 天才搬走，到那天才能搬进去，房租从签约当天算起。";
+                Para(confirm.Content, fine, 14, Ui.Dim);
                 var row = Ui.Row(confirm.Content, 46, 10);
                 Ui.Size(Ui.Button(row, "再看看", confirm.Close, 18), -1, 46, 1);
                 var pay = Ui.Button(row, quotedCost.IsNegative ? "确认签约并结算" : "确认签约并付款", () =>
@@ -166,7 +173,7 @@ namespace PCShopSell.Game.UI
                         parent.Rebuild();
                         return;
                     }
-                    if (S.SignLease(placeId)) Toast("签约完成，可以自行到新店装修了。");
+                    if (S.SignLease(placeId) && S.PendingLease == null) Toast("签约完成，可以自行到新店装修了。");
                     parent.Rebuild();
                 }, 18, Ui.ButtonHot);
                 pay.name = "AgencyConfirmLease";

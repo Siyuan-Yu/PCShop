@@ -451,7 +451,29 @@ namespace PCShopSell.Core.Shop
         /// <summary>店里还没摆好必需的设施（收银台、货架）：不能营业。</summary>
         public bool NotFitted { get; set; }
 
-        public bool IsOpenAt(GameTimestamp t) => !ForcedClosed && !NotFitted && (PlayerPresent || EmployeeOnDuty(t));
+        /// <summary>店主定的营业时间（一天里的分钟）。开门 0、关门 1440 = 不限时，有人看店就开。关门比开门早表示过夜营业。</summary>
+        public int OpenMinute { get; private set; }
+        public int CloseMinute { get; private set; } = 24 * 60;
+
+        public bool AllDay => OpenMinute == 0 && CloseMinute == 24 * 60;
+
+        public void SetHours(int open, int close)
+        {
+            open = Math.Max(0, Math.Min(24 * 60 - 1, open));
+            close = Math.Max(1, Math.Min(24 * 60, close));
+            if (open == close) close = open + 60 > 24 * 60 ? open + 60 - 24 * 60 : open + 60;
+            OpenMinute = open;
+            CloseMinute = close;
+        }
+
+        public bool InHours(GameTimestamp t)
+        {
+            if (AllDay) return true;
+            int m = t.MinuteOfDay;
+            return OpenMinute < CloseMinute ? m >= OpenMinute && m < CloseMinute : m >= OpenMinute || m < CloseMinute;
+        }
+
+        public bool IsOpenAt(GameTimestamp t) => !ForcedClosed && !NotFitted && InHours(t) && (PlayerPresent || EmployeeOnDuty(t));
 
         public bool IsOpen => IsOpenAt(_clock.Now);
 

@@ -167,8 +167,8 @@ namespace PCShopSell.Tests
                 if (def.Offered && _s.UpgradeBlocker(def) != null) continue;
                 if (!def.Offered && ((def.Requires != null && !_s.HasUpgrade(def.Requires)) || _s.PlayerShop.Reputation < def.MinReputation)) continue;
                 if (_s.Ledger.Balance < def.Price + Money.FromYuan(1500)) break;
-                if (def.Offered) _s.BuyUpgrade(id);
-                else if (_s.Ledger.TryDebit(_s.Clock.Today, "装修", def.Price, def.Name)) _s.GrantUpgrade(id);
+                // 升级要去手机店 / 家具城买：机器人不跑腿，按原价扣钱直接装上
+                if (_s.Ledger.TryDebit(_s.Clock.Today, "装修", def.Price, def.Name)) _s.GrantUpgrade(id);
                 break;
             }
 

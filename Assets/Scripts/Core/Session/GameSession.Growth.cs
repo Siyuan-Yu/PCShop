@@ -63,6 +63,7 @@ namespace PCShopSell.Core.Session
         {
             if (_upgrades.Contains(u.Id)) return "已拥有";
             if (!u.Offered) return "这里不卖";
+            if (!HasShop) return "先去房产中介租一间铺子";
             if (u.NeedsSmartphone && !HasSmartphone) return "先去手机店买智能手机";
             if (u.Requires != null && !_upgrades.Contains(u.Requires)) return "需要先买：" + ShopUpgrades.Get(u.Requires).Name;
             if (PlayerShop.Reputation < u.MinReputation) return $"知名度要到 {u.MinReputation:0}";
@@ -82,13 +83,13 @@ namespace PCShopSell.Core.Session
         {
             ShopUpgradeDef u = ShopUpgrades.Get(id);
             if (u == null) return false;
-            if (!InPlayerShop) return Fail("要在自己的店里装修。");
+            if (CurrentPlace == null || CurrentPlace.Business != u.SoldAt) return Fail($"「{u.Name}」要去{u.SoldAtName}买。");
             string blocker = UpgradeBlocker(u);
             if (blocker != null) return Fail(blocker);
             if (!Ledger.TryDebit(Clock.Today, "装修", u.Price, u.Name)) return Fail("钱不够。");
             _upgrades.Add(id);
             ApplyUpgrades();
-            Say($"买了「{u.Name}」。");
+            Say($"买了「{u.Name}」，当天给你装到店里了。");
             return true;
         }
 

@@ -10,6 +10,9 @@ using UnityEngine;
 namespace PCShopSell.Game.Runtime
 {
     /// <summary>挂在店内顾客身上，点击排队的顾客即结账。</summary>
+    /// <summary>鼠标在店里指着的设施。</summary>
+    public enum FixturePick { None, Shelf, Display, Bench }
+
     public sealed class CustomerMarker : MonoBehaviour
     {
         public int CustomerId;
@@ -153,7 +156,9 @@ namespace PCShopSell.Game.Runtime
         private bool _hasCounter;
         private bool _hasBench;
         private int _fxVersion = -1;
-        private readonly List<Rect> _deskFoots = new List<Rect>();        private float _stockTimer;
+        private readonly List<Rect> _deskFoots = new List<Rect>();
+        private readonly List<(Rect foot, ShelfDisplay shelf)> _shelfFoots = new List<(Rect, ShelfDisplay)>();
+        private float _stockTimer;
         private ShopSimulation _hooked;
         private readonly Dictionary<int, LeaveReason> _leaveReasons = new Dictionary<int, LeaveReason>();
 
@@ -824,6 +829,34 @@ namespace PCShopSell.Game.Runtime
             }
         }
 
+        /// <summary>
+        /// 鼠标指着的设施（货架 / 整机展示桌 / 装机台），按占地矩形 + 高度做射线检测，取最近的。
+        /// 货架给出布局下标；world 是头顶提示的位置。
+        /// </summary>
+        public FixturePick PickFixture(Ray ray, out int shelfIndex, out string shelfKind, out Vector3 world)
+        {
+            FixturePick pick = FixturePick.None;
+            float best = float.MaxValue;
+            Vector3 at = Vector3.zero;
+            ShelfDisplay hit = null;
+            void Try(Rect r, float height, FixturePick kind, ShelfDisplay sh)
+            {
+                var b = new Bounds(Origin + new Vector3(r.center.x, height / 2f, r.center.y), new Vector3(r.width, height, r.height));
+                if (!b.IntersectRay(ray, out float d) || d >= best) return;
+                best = d;
+                pick = kind;
+                at = Origin + new Vector3(r.center.x, height + 0.3f, r.center.y);
+                hit = sh;
+            }
+            foreach (var (foot, sh) in _shelfFoots) Try(foot, 2.0f, FixturePick.Shelf, sh);
+            foreach (Rect r in _deskFoots) Try(r, 1.6f, FixturePick.Display, null);
+            if (_hasBench) Try(_benchFoot, 1.7f, FixturePick.Bench, null);
+            world = at;
+            shelfIndex = hit != null ? hit.LayoutIndex : -1;
+            shelfKind = hit?.KindId;
+            return pick;
+        }
+
         /// <summary>点到矩形（x/y = 店内局部 x/z）的距离，在里面是 0。</summary>
         private static float DistToRect(Rect r, Vector3 p)
         {
@@ -840,6 +873,7 @@ namespace PCShopSell.Game.Runtime
         {
             _fxVersion = _decor.Version;
             _shelves.Clear();
+            _shelfFoots.Clear();
             _shelfSpots.Clear();
             _tables.Clear();
             _pcSlots.Clear();
@@ -863,6 +897,7 @@ namespace PCShopSell.Game.Runtime
                         h.Shelf.Pos = pos;
                         h.Shelf.LayoutIndex = e.Go.GetComponent<PlacedVisual>().Index;
                         _shelves.Add(h.Shelf);
+                        _shelfFoots.Add((e.Foot, h.Shelf));
                         _shelfSpots.Add(Origin + pos + front * 1.0f);
                         break;
                     case FixtureKind.Display:

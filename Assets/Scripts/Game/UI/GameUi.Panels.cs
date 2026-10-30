@@ -37,7 +37,7 @@ namespace PCShopSell.Game.UI
                     OpenPlaceWindow(p, BuildTobacco, 1040, 640);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.PhoneBusiness:
-                    OpenPlaceWindow(p, BuildPhoneShop, 960, 700);
+                    OpenPlaceWindow(p, BuildPhoneShop, 960, 860);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.FarmBusiness:
                     OpenPlaceWindow(p, BuildFarm, 1060, 820);

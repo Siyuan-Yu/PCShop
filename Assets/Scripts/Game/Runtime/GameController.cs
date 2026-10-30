@@ -340,7 +340,7 @@ namespace PCShopSell.Game
         // ---------- 镜头旋转 ----------
 
         private bool _orbiting;
-        private static readonly KeyCode[] HotkeyPanels = { KeyCode.M, KeyCode.C, KeyCode.P, KeyCode.J, KeyCode.H };
+        private static readonly KeyCode[] HotkeyPanels = { KeyCode.M, KeyCode.C, KeyCode.P, KeyCode.J, KeyCode.H, KeyCode.T };
 
         /// <summary>街上自由切换视角：右键拖动旋转/俯仰，Q / E 左右转，V 复位。</summary>
         private void HandleCameraOrbit()
@@ -480,6 +480,18 @@ namespace PCShopSell.Game
             }
             if (InInterior)
             {
+                if (Session.InPlayerShop && !GameUi.PointerOverUi)
+                {
+                    FixturePick hover = Interior.PickFixture(Cam.ScreenPointToRay(Input.mousePosition), out _, out string kindId, out Vector3 at);
+                    if (hover != FixturePick.None)
+                    {
+                        world = at;
+                        ShelfKind hk = ShelfKinds.Get(kindId);
+                        label = hover == FixturePick.Shelf ? (hk == null ? "货架（还没设置摆什么）· 左键设置" : $"货架：{hk.Name} · 左键查看 / 设置")
+                            : hover == FixturePick.Display ? "整机展示台 · 左键查看" : "装机台 · 左键打开";
+                        return true;
+                    }
+                }
                 if (Interior.NearCounter)
                 {
                     var queue = Session.PlayerShop.Queue;
@@ -513,6 +525,12 @@ namespace PCShopSell.Game
                 ShelfKind shelfKind = ShelfKinds.Get(Interior.NearbyShelfKind);
                 if (shelfKind == null) label = "货架（还没设置摆什么，按 F 设置）";
                 else label = $"货架：{shelfKind.Name}（货架上 {Session.PlayerShop.ShelfFillOf(shelfKind).Total} 件，按 F 查看 / 设置）";
+                return true;
+            }
+            if (NearPasserby(out _, out Vector3 pw))
+            {
+                world = pw + new Vector3(0, 2.2f, 0);
+                label = "和路人聊聊";
                 return true;
             }
             Place p = Session.NearbyPlace;
@@ -562,8 +580,32 @@ namespace PCShopSell.Game
             }
         }
 
+        /// <summary>街上身边 1.3 米内的路人（比门口更近时优先和人说话）。</summary>
+        private bool NearPasserby(out int id, out Vector3 world)
+        {
+            id = -1;
+            world = Vector3.zero;
+            if (_crowd == null || InRoom || Session.CurrentPlace != null) return false;
+            return _crowd.Nearest(StreetWorldBuilder.ToWorld(Session.PlayerPosition), 1.3f, out id, out world);
+        }
+
+        /// <summary>和路人说话：他停下来面向你，窗口关掉后接着走。</summary>
+        private void TalkToPasserby(int id)
+        {
+            Session.SetSteer(0, 0);
+            if (Session.Trip != null) Session.StopTrip();
+            _crowd.Talking = id;
+            _crowd.TalkFace = StreetWorldBuilder.ToWorld(Session.PlayerPosition);
+            Ui.OpenPasserbyTalk(id, () => { if (_crowd.Talking == id) _crowd.Talking = -1; });
+        }
+
         private void TryEnterNearby()
         {
+            if (NearPasserby(out int pid, out _))
+            {
+                TalkToPasserby(pid);
+                return;
+            }
             Place p = Session.NearbyPlace;
             if (p == null)
             {
@@ -590,6 +632,13 @@ namespace PCShopSell.Game
                         Checkout(cm.CustomerId);
                         return;
                     }
+                }
+                if (Ui.AnyModalOpen || Placing || !Session.InPlayerShop) return;
+                switch (Interior.PickFixture(ray, out int shelf, out _, out _))
+                {
+                    case FixturePick.Shelf: Ui.OpenShelfWindow(shelf); break;
+                    case FixturePick.Display: Ui.OpenDisplayWindow(); break;
+                    case FixturePick.Bench: Ui.OpenBenchWindow(); break;
                 }
                 return;
             }
