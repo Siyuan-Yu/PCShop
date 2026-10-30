@@ -2,6 +2,7 @@
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
@@ -20,6 +21,7 @@ namespace PCShopSell.Game.UI
             Stock,
             Pricing,
             Orders,
+            Renovate,
             Upgrades,
             Staff,
         }
@@ -27,7 +29,7 @@ namespace PCShopSell.Game.UI
         private static readonly (ShopTab tab, string name)[] Tabs =
         {
             (ShopTab.Counter, "柜台"), (ShopTab.Stock, "库存"), (ShopTab.Pricing, "定价"),
-            (ShopTab.Orders, "装机单"), (ShopTab.Upgrades, "升级"), (ShopTab.Staff, "招人"),
+            (ShopTab.Orders, "订单"), (ShopTab.Renovate, "装修"), (ShopTab.Upgrades, "升级"), (ShopTab.Staff, "招人"),
         };
 
         private RectTransform _dock;
@@ -154,6 +156,7 @@ namespace PCShopSell.Game.UI
                 case ShopTab.Stock: BuildStock(); break;
                 case ShopTab.Pricing: BuildPricing(); break;
                 case ShopTab.Orders: BuildOrders(); break;
+                case ShopTab.Renovate: BuildRenovate(); break;
                 case ShopTab.Upgrades: BuildUpgrades(); break;
                 case ShopTab.Staff: BuildStaff(); break;
             }
@@ -167,6 +170,8 @@ namespace PCShopSell.Game.UI
         private void BuildCounter()
         {
             ShopSimulation shop = S.PlayerShop;
+            bool fitBanner = !S.ShopFitted || S.IsRenovating;
+            FitBanner(C);
             Line(C, $"今日进店 {shop.TodayCustomers} 人 · 流失 {shop.TodayLost} 人 · 营业额 {shop.TodaySales}", 18);
             Line(C, $"店里 {shop.ActiveCustomers.Count} 位顾客，{shop.Queue.Count} 位在排队结账（{PaymentText(shop.Accepted)}）", 17, Ui.Dim);
             if (S.Employee != null)
@@ -175,20 +180,20 @@ namespace PCShopSell.Game.UI
             bool atCounter = _ctrl.Interior != null && _ctrl.Interior.NearCounter;
             if (shop.Queue.Count > 0)
                 Line(C, atCounter ? "你在收银台：点“结账”或按 F，把货交给顾客、收钱。" : "<color=#E0806A>顾客在收银台前排队等你。走到收银台后面才能结账。</color>", 16);
-            RectTransform list = Ui.Scroll(C, 420);
+            RectTransform list = Ui.Scroll(C, fitBanner ? 200 : 420);
             foreach (ShopCustomer c in shop.Queue)
             {
                 ShopCustomer cust = c;
                 RectTransform row = Ui.Row(list, 44);
                 long waited = c.WaitingSince.MinutesUntil(S.Clock.Now);
                 string patience = waited >= shop.Settings.PatienceMinutes - 12 ? $"<color=#E0806A>等了 {waited} 分钟</color>" : $"等了 {waited} 分钟";
-                Ui.Size(Ui.Label(row, $"{c.ItemName}（{(c.DisplayTier >= 0 ? "展示机" : c.ItemBoxed ? "盒装" : "散件")}） <color=#7CE38B>{c.Spend}</color>\n<size=14>{patience}</size>", 17), 360);
+                Ui.Size(Ui.Label(row, $"{c.ItemName}（{(c.DisplayTier >= 0 ? "展示机" : c.GoodsId != null ? "杂货" : c.ItemBoxed ? "盒装" : "散件")}） <color=#7CE38B>{c.Spend}</color>\n<size=14>{patience}</size>", 17), 360);
                 Ui.Size(Ui.Button(row, "结账", () => _ctrl.Checkout(cust.Id), 18, Ui.ButtonHot, atCounter), 100);
             }
             if (shop.Queue.Count == 0) Ui.Size(Ui.Label(list, "没人排队。顾客挑好货会过来，等太久就走。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
 
             int orders = shop.Orders.Count;
-            if (orders > 0) Line(C, $"有 {orders} 个装机订单等你装（去'装机单'页）", 18, Ui.Warn);
+            if (orders > 0) Line(C, $"有 {orders} 个订单等你处理（去“订单”页）", 18, Ui.Warn);
             if (S.Online.Pending.Count > 0) Line(C, $"1788 有 {S.Online.Pending.Count} 单在路上，明天 10:00 送到", 17, Ui.Dim);
             Line(C, $"库存 {shop.Stock.UsedSpace:0.#}/{shop.Stock.Capacity:0} 格 · 全局加价 {shop.Markup:0.00}×", 17, Ui.Dim);
             Ui.Size(Ui.Button(C, "经营报表（近 14 天收入曲线）", OpenReportWindow, 18), -1, 40);
@@ -199,11 +204,80 @@ namespace PCShopSell.Game.UI
         private void BuildStock()
         {
             ShopSimulation shop = S.PlayerShop;
-            Line(C, $"已用 {shop.Stock.UsedSpace:0.#} / {shop.Stock.Capacity:0} 格（在途 {S.Online.PendingSpace():0.#} 格）", 19);
-            Line(C, "盒装占 1 格、卖得贵、顾客更信任；拆成散件只占 0.4 格但便宜。显卡、电源机箱体积翻倍。拆了不能复原。", 15, Ui.Dim);
+            Line(C, $"后仓仓位 {shop.Stock.UsedSpace:0.#} / {shop.Stock.Capacity:0} 格（在途 {S.Online.PendingSpace():0.#} 格）　顾客只买货架上摆着的", 19);
+            Ui.Bar(C, shop.Stock.Capacity > 0 ? (float)(shop.Stock.UsedSpace / shop.Stock.Capacity) : 0f, Ui.Accent, 280, 10);
+
+            // 货架：一行一个，点“选择摆什么”弹出选择，点“查看”看货架上摆的样子
+            Line(C, "—— 货架（每个货架摆一类货，顾客只买货架上摆着的）——", 16, Ui.Dim);
+            var shelfIdx = S.ShelfIndexes();
+            if (shelfIdx.Count == 0) Line(C, "店里还没有货架：去家具城买，在“装修”页进入编辑模式摆好。", 16, Ui.Warn);
+            for (int si = 0; si < shelfIdx.Count; si++)
+            {
+                int layoutIdx = shelfIdx[si];
+                ShelfKind sk = S.ShelfKindAt(layoutIdx);
+                FurnitureDef sdef = FurnitureCatalog.Get(S.ShopLayout[layoutIdx].Id);
+                string tier = sdef != null && sdef.ShelfKg > ShelfKinds.CapacityKg ? (sdef.ShelfKg >= 160 ? "重型" : "加固") : "普通";
+                RectTransform srow = Ui.Row(C, 38, 4);
+                Ui.Size(Ui.Label(srow, $"<b>{si + 1}号</b> <size=12><color=#9AA3AD>{tier}</color></size>", 16, TextAnchor.MiddleLeft), 78);
+                Ui.Size(Ui.Button(srow, sk == null ? "选择摆什么 ▾" : sk.Name + "  ▾", () => OpenShelfKindChooser(layoutIdx), 16, sk == null ? Ui.Warn : Ui.ButtonBg), 150);
+                string load = "";
+                if (sk != null)
+                {
+                    ShelfFill sf = shop.ShelfFillOf(sk);
+                    int same = Mathf.Max(1, S.ShelvesOfKind(sk.Id));
+                    load = $"{sf.UsedKg:0.#}/{sf.CapacityKg:0} 公斤{(same > 1 ? $"（{same} 个共用）" : "")}";
+                }
+                Ui.Size(Ui.Label(srow, load, 14, TextAnchor.MiddleLeft, Ui.Dim), 178);
+                Ui.Size(Ui.Button(srow, "查看", () => OpenShelfWindow(layoutIdx), 15, sk == null ? Ui.ButtonBg : Ui.ButtonHot, sk != null), 66);
+            }
+
+            // 店里现有的东西：只列有货的，数量写明白（没有的不显示）
+            Line(C, "—— 店里现有（件）——", 16, Ui.Dim);
+            PartCategory[] cats = { PartCategory.Gpu, PartCategory.Cpu, PartCategory.Memory, PartCategory.Storage, PartCategory.PowerCase, PartCategory.Motherboard };
+            bool anything = false;
+            foreach (PartCategory cat in cats)
+            {
+                int boxedN = 0, looseN = 0;
+                foreach (StockLine sl in shop.Stock.Lines())
+                {
+                    if (sl.Part.Category != cat) continue;
+                    if (sl.Boxed) boxedN += sl.Count; else looseN += sl.Count;
+                }
+                int total = boxedN + looseN;
+                if (total == 0) continue;
+                anything = true;
+                RectTransform sum = Ui.Row(C, 32, 4);
+                Ui.Size(Ui.Label(sum, "<b>" + PartCatalog.CategoryName(cat) + "</b>", 16, TextAnchor.MiddleLeft), 64);
+                if (boxedN > 0)
+                {
+                    Image bBadge = Ui.Panel(sum, "Boxed", CardboardColor);
+                    Ui.Size(bBadge, 76, 26);
+                    Ui.Label(bBadge.transform, "整盒 " + boxedN, 14, TextAnchor.MiddleCenter, new Color(0.25f, 0.15f, 0.05f)).rectTransform.Fill(1);
+                }
+                if (looseN > 0)
+                {
+                    Image lBadge = Ui.Panel(sum, "Loose", new Color(0.36f, 0.5f, 0.68f));
+                    Ui.Size(lBadge, 76, 26);
+                    Ui.Label(lBadge.transform, "散件 " + looseN, 14, TextAnchor.MiddleCenter, Color.white).rectTransform.Fill(1);
+                }
+                int onShelf = shop.ShelfFillOf(cat).Total;
+                Ui.Size(Ui.Label(sum, $"共 {total} 件　" + (S.ShelvesOfKind(ShelfKinds.ForCategory(cat).Id) == 0 ? "<color=#E0806A>没有货架，卖不出去</color>" : $"货架上 {onShelf} 件"), 15, TextAnchor.MiddleLeft, Ui.Dim), 260);
+            }
+            foreach (ShelfKind gk in ShelfKinds.GoodsKinds)
+            {
+                int gTotal = gk.GiftIds.Sum(id => shop.Stock.GoodsCount(id));
+                if (gTotal == 0) continue;
+                anything = true;
+                RectTransform sum = Ui.Row(C, 32, 4);
+                Ui.Size(Ui.Label(sum, "<b>" + gk.Name + "</b>", 16, TextAnchor.MiddleLeft), 64);
+                Ui.Size(Ui.Label(sum, $"共 {gTotal} 件　" + (S.ShelvesOfKind(gk.Id) == 0 ? "<color=#E0806A>没有货架，卖不出去</color>" : $"货架上 {shop.ShelfFillOf(gk).Total} 件"), 15, TextAnchor.MiddleLeft, Ui.Dim), 420);
+            }
+            if (!anything) Line(C, "店里一件货都没有。", 16, Ui.Dim);
+            Line(C, "盒装占 1 格、卖得贵；拆成散件占 0.5 格但便宜，拆了不能复原。", 14, Ui.Dim);
+            Line(C, "—— 明细 ——", 16, Ui.Dim);
             if (_ctrl.InInterior)
                 Ui.Size(Ui.Button(C, $"店里储物柜（{S.ShopLocker.WeightKg:0.#}/{GameSession.ShopLockerLimitKg:0} 公斤）", OpenShopLockerWindow, 17), -1, 42);
-            RectTransform list = Ui.Scroll(C, 520);
+            RectTransform list = Ui.Scroll(C, 250);
             foreach (StockLine l in shop.Stock.Lines())
             {
                 StockLine line = l;
@@ -223,6 +297,18 @@ namespace PCShopSell.Game.UI
                         RebuildDock();
                     }, 16), 60);
                 }
+            }
+            foreach (var kv in shop.Stock.GoodsLines())
+            {
+                string gid = kv.Key;
+                RectTransform row = Ui.Row(list, 40);
+                Ui.Size(Ui.Label(row, $"{Gifts.Get(gid).Name} <color=#9AA3AD>杂货</color> ×{kv.Value}", 17), 280);
+                Ui.Size(Ui.Label(row, $"售 {shop.GoodsPriceOf(gid)}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
+                Ui.Size(Ui.Button(row, "收回 1", () =>
+                {
+                    S.UnlistGoods(gid, 1);
+                    RebuildDock();
+                }, 16), 80);
             }
             if (shop.Stock.IsEmpty) Ui.Size(Ui.Label(list, "空空如也。去电子市场进货，或用手机上的 1788 app 下单。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
         }
@@ -342,12 +428,12 @@ namespace PCShopSell.Game.UI
             });
         }
 
-        // ---------- 装机单 ----------
+        // ---------- 订单 ----------
 
         private void BuildOrders()
         {
             ShopSimulation shop = S.PlayerShop;
-            Line(C, "顾客下单后离开，两天内装好交付才收钱；超时取消、掉知名度。配件从库存里出。", 15, Ui.Dim);
+            Line(C, "顾客下的订单都在这里（目前是装机订单）：两天内做好交付才收钱，超时取消、掉知名度。配件从库存里出。", 15, Ui.Dim);
             RectTransform list = Ui.Scroll(C, 430);
             foreach (BuildOrder o in shop.Orders)
             {
@@ -363,7 +449,7 @@ namespace PCShopSell.Game.UI
                 }
                 Ui.Size(Ui.Button(list, missing.Count == 0 ? "开始装机" : $"还缺 {missing.Count} 样配件", () => OpenBuildMinigame(order), 18, Ui.ButtonHot, missing.Count == 0), -1, 40);
             }
-            if (shop.Orders.Count == 0) Ui.Size(Ui.Label(list, "暂时没有装机订单。约每 8 位顾客里有 1 位想装整机。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
+            if (shop.Orders.Count == 0) Ui.Size(Ui.Label(list, "暂时没有订单。约每 8 位顾客里有 1 位想要装整机，装机订单会出现在这里。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
         }
 
         // ---------- 升级 ----------
@@ -384,16 +470,19 @@ namespace PCShopSell.Game.UI
             {
                 ShopUpgradeDef u = def;
                 bool owned = S.HasUpgrade(u.Id);
+                bool reward = u.Id == ShopUpgrades.SelfCheckout;
+                if (!u.Offered && !(reward && owned)) continue; // 手机去手机店、货架去家具城；自助结账是任务奖励，拿到了才显示
                 string blocker = S.UpgradeBlocker(u);
                 RectTransform row = Ui.Row(list, 62);
                 string status = owned ? "<color=#7CE38B>已拥有</color>" : blocker == null ? $"<color=#7CE38B>{u.Price}</color>" : $"{u.Price}  <color=#E0806A>{blocker}</color>";
                 Ui.Size(Ui.Label(row, $"<b>{u.Name}</b>  {status}\n<size=14>{u.Description}</size>", 17), 420);
-                Ui.Size(Ui.Button(row, owned ? "已买" : "购买", () =>
+                Ui.Size(Ui.Button(row, owned ? (reward ? "奖励" : "已买") : "购买", () =>
                 {
                     S.BuyUpgrade(u.Id);
                     RebuildDock();
                 }, 18, Ui.ButtonHot, !owned && blocker == null), 90);
             }
+            Line(list, "智能手机去街上的手机店买；更大更结实的货架去家具城买；自助结账平台是任务奖励（一年目标达标就送）。", 14, Ui.Dim);
         }
 
         // ---------- 招人 ----------

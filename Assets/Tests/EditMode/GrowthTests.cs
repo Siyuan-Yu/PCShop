@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -18,24 +18,25 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void Upgrades_NeedPrerequisites()
+        public void Qr_NeedsTheRealSmartphone()
         {
             GameSession s = InShop();
+            s.SetSmartphone(false);
             Assert.IsFalse(s.BuyUpgrade(ShopUpgrades.Qr), "没手机不能开通收款码");
-            Assert.IsTrue(s.BuyUpgrade(ShopUpgrades.Phone));
+            s.SetSmartphone(true);
             Assert.IsTrue(s.BuyUpgrade(ShopUpgrades.Qr));
             Assert.AreEqual(PaymentMethods.Cash | PaymentMethods.QrCode, s.PlayerShop.Accepted);
         }
 
         [Test]
-        public void SelfCheckout_NeedsReputation()
+        public void SelfCheckout_IsAReward_NotForSale()
         {
             GameSession s = InShop();
-            s.BuyUpgrade(ShopUpgrades.Phone);
             s.BuyUpgrade(ShopUpgrades.Qr);
-            Assert.IsFalse(s.BuyUpgrade(ShopUpgrades.SelfCheckout));
+            Assert.IsFalse(s.BuyUpgrade(ShopUpgrades.SelfCheckout), "自助结账不能买，只能当任务奖励拿");
             s.PlayerShop.Reputation = 10;
-            Assert.IsTrue(s.BuyUpgrade(ShopUpgrades.SelfCheckout));
+            Assert.IsFalse(s.BuyUpgrade(ShopUpgrades.SelfCheckout));
+            Assert.IsTrue(s.GrantUpgrade(ShopUpgrades.SelfCheckout));
             Assert.IsTrue((s.PlayerShop.Accepted & PaymentMethods.SelfCheckout) != 0);
         }
 
@@ -43,7 +44,8 @@ namespace PCShopSell.Tests
         public void Buying_DebitsLedger_AndNeedsMoney()
         {
             GameSession s = InShop(700);
-            Assert.IsFalse(s.BuyUpgrade(ShopUpgrades.Shelf1), "只有 ¥700 买不起 ¥1000 的扩容");
+            Assert.IsFalse(s.BuyUpgrade(ShopUpgrades.Shelf1), "货架扩容不卖了（去家具城买更好的货架）");
+            Assert.IsFalse(s.BuyUpgrade(ShopUpgrades.Phone), "手机去手机店买");
             Money before = s.Ledger.Balance;
             Assert.IsTrue(s.BuyUpgrade(ShopUpgrades.Cctv));
             Assert.AreEqual((before - ShopUpgrades.Get(ShopUpgrades.Cctv).Price).Cents, s.Ledger.Balance.Cents);
@@ -57,14 +59,14 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void ShelfUpgrades_RaiseCapacity()
+        public void LegacyShelfUpgrades_FromOldSaves_StillRaiseCapacity()
         {
             GameSession s = InShop();
             double basic = s.PlayerShop.Stock.Capacity;
-            s.BuyUpgrade(ShopUpgrades.Shelf1);
+            s.GrantUpgrade(ShopUpgrades.Shelf1);
             Assert.AreEqual(basic + 20, s.PlayerShop.Stock.Capacity, 1e-9);
-            s.BuyUpgrade(ShopUpgrades.Shelf2);
-            s.BuyUpgrade(ShopUpgrades.Shelf3);
+            s.GrantUpgrade(ShopUpgrades.Shelf2);
+            s.GrantUpgrade(ShopUpgrades.Shelf3);
             Assert.AreEqual(basic + 70, s.PlayerShop.Stock.Capacity, 1e-9);
         }
 
@@ -87,9 +89,8 @@ namespace PCShopSell.Tests
             s.PlayerShop.Stock.ForceAdd(ram, true, 50);
             s.PlayerShop.Markup = 0.9;
             s.PlayerShop.Reputation = 10;
-            s.BuyUpgrade(ShopUpgrades.Phone);
             s.BuyUpgrade(ShopUpgrades.Qr);
-            s.BuyUpgrade(ShopUpgrades.SelfCheckout);
+            s.GrantUpgrade(ShopUpgrades.SelfCheckout);
 
             int maxQueue = 0;
             for (int i = 0; i < 12 * 60; i++)
@@ -105,9 +106,8 @@ namespace PCShopSell.Tests
         public void SaveLoad_KeepsUpgradesOutfitsHomeAndFlags()
         {
             GameSession s = InShop();
-            s.BuyUpgrade(ShopUpgrades.Phone);
             s.BuyUpgrade(ShopUpgrades.Qr);
-            s.BuyUpgrade(ShopUpgrades.Shelf1);
+            s.GrantUpgrade(ShopUpgrades.Shelf1);
             s.Flags.Add("x_flag");
             GameSessionTests.Teleport(s, "flat");
             Assert.IsTrue(s.OrderOnline(ParcelKind.Outfit, "shirt"));

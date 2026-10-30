@@ -23,7 +23,7 @@ namespace PCShopSell.Game.UI
                     OpenDock();
                     break;
                 case PlaceKind.Agency:
-                    OpenPlaceWindow(p, BuildAgency, 1120, 820);
+                    OpenPlaceWindow(p, BuildAgency, 1180, 820);
                     break;
                 case PlaceKind.Home:
                     Toast("回到出租屋了。走近床、衣柜、电饭锅、纸箱或门，头顶出现提示时按 F；看房间信息点右上角“我的”。");

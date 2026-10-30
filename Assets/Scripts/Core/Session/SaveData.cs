@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace PCShopSell.Core.Session
 {
@@ -32,6 +32,8 @@ namespace PCShopSell.Core.Session
         public int lastNewsReadDay;
 
         public SaveStockLine[] shopStock;
+        public string[] shopGoodsIds;
+        public int[] shopGoodsCounts;
         public double markup;
         public string[] partMarkupIds;
         public double[] partMarkupValues;
@@ -221,6 +223,7 @@ namespace PCShopSell.Core.Session
         public string store;
         public long deliverAt;
         public long totalCents;
+        public bool toHome;
         public SaveStockLine[] lines;
     }
 
@@ -245,6 +248,8 @@ namespace PCShopSell.Core.Session
     public sealed class SaveHome
     {
         public bool saved;
+        /// <summary>店面设施版本：0 = 旧存档（设施是店里自带的），1 = 设施是自己买、自己摆的家具。</summary>
+        public int fixturesV;
         public string[] stockIds;
         public int[] stockCounts;
         public SavePlaced[] homeLayout;
@@ -309,6 +314,8 @@ namespace PCShopSell.Core.Session
         public double x;
         public double z;
         public int rot;
+        /// <summary>货架摆哪类货（ShelfKinds 的 id）。</summary>
+        public string item;
     }
 
     [Serializable]

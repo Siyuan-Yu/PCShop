@@ -73,6 +73,28 @@ namespace PCShopSell.Core.Session
             ApplyUpgrades();
         }
 
+        /// <summary>当面要联系方式至少要多熟（档口老板走进去就是脸熟，到这个数才好意思开口）。</summary>
+        public const int ContactMinRelation = 10;
+
+        /// <summary>现在能不能向他要联系方式；能返回 null。</summary>
+        public string ContactBlocker(string npcId)
+        {
+            if (Npcs.Get(npcId) == null) return "没这个人";
+            if (IsMet(npcId)) return "已经存了联系方式";
+            if (Relation(npcId) < ContactMinRelation) return $"还不够熟（交情 {ContactMinRelation}）";
+            return null;
+        }
+
+        /// <summary>和他聊天时当面要联系方式：成功后他才出现在通讯录里、能约出去、送礼。</summary>
+        public bool AskContact(string npcId)
+        {
+            string blocker = ContactBlocker(npcId);
+            if (blocker != null) return Fail(blocker);
+            Meet(npcId, ContactMinRelation);
+            Say($"和{Npcs.Get(npcId).Name}互相留了联系方式，存进了通讯录。");
+            return true;
+        }
+
         public void AddRelation(string npcId, double delta)
         {
             double cur = _relations.TryGetValue(npcId, out double v) ? v : 0;

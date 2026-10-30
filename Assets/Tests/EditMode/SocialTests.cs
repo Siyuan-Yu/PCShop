@@ -33,16 +33,26 @@ namespace PCShopSell.Tests
         private static void GoToStall(GameSession s) => GameSessionTests.Teleport(s, Stall);
 
         [Test]
-        public void EnteringOwnersStall_MeetsTheOwner_WithAPopup()
+        public void EnteringOwnersStall_OnlyMakesYouFamiliar_ContactIsAskedForInPerson()
         {
             GameSession s = Make();
             string popup = null;
             s.Popup += (title, body) => popup = title;
             Assert.IsFalse(s.IsMet(Npcs.Li));
+            Assert.IsNotNull(s.ContactBlocker(Npcs.Li), "没进过档口，不熟不好意思开口");
             GoToStall(s);
+            Assert.IsFalse(s.IsMet(Npcs.Li), "进了档口、买了东西也不会自动有联系方式");
+            Assert.AreEqual(10, s.Relation(Npcs.Li), "只是脸熟");
+            Assert.IsNull(popup, "没有弹“认识了”");
+            Place stall = s.City.GetPlace(Stall);
+            s.BuyAtStall(stall, CpuPart(), 1);
+            Assert.IsFalse(s.IsMet(Npcs.Li), "买东西不会存联系方式");
+
+            Assert.IsNull(s.ContactBlocker(Npcs.Li));
+            Assert.IsTrue(s.AskContact(Npcs.Li), "当面要才有");
             Assert.IsTrue(s.IsMet(Npcs.Li));
             Assert.AreEqual(10, s.Relation(Npcs.Li));
-            StringAssert.Contains("老李", popup);
+            Assert.IsFalse(s.AskContact(Npcs.Li), "已经存了");
         }
 
         [Test]
@@ -260,6 +270,7 @@ namespace PCShopSell.Tests
             GameSession s = Make();
             GoToStall(s);
             Place stall = s.City.GetPlace(Stall);
+            Assert.IsTrue(s.AskContact(Npcs.Li));
             s.AddRelation(Npcs.Li, 80);
             s.BuyAtStall(stall, CpuPart(), 3);
             s.Backpack.AddGift(PCShopSell.Core.Home.Gifts.Cig, 1);
@@ -409,10 +420,10 @@ namespace PCShopSell.Tests
             Assert.AreEqual(Npcs.Li, r.BossNpcId);
             Assert.AreEqual(Rosters.StallBossGate, r.BossGate);
 
-            Assert.IsFalse(s.BossReachable(r), "还没认识老板");
-            Assert.IsNotNull(s.StaffBossBlocker(r));
-
-            s.Meet(Npcs.Li, 10);
+            Assert.IsFalse(s.BossReachable(r), "交情不够，老板不出来");
+            Assert.IsNull(s.StaffBossBlocker(r), "不用先存联系方式，直接找店员聊老板");
+            Assert.IsFalse(s.IsMet(Npcs.Li));
+            s.AddRelation(Npcs.Li, 10);
             Assert.IsFalse(s.BossReachable(r), "交情不够，老板不出来");
             Assert.IsNull(s.StaffBossBlocker(r));
 

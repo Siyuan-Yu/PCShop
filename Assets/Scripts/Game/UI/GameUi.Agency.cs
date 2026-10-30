@@ -13,8 +13,11 @@ namespace PCShopSell.Game.UI
         {
             int today = S.Clock.Today.TotalDays;
             Para(w.Content, "中介小陈：“商业街上的铺子都在我这儿挂着。离地铁越近人越多、租金越贵；大铺子房东要看你的名气。" +
-                            "签约一次付清：首月租金 + 押金（一个月）+ 中介费（一个月），押金退租换铺时退给你。" +
+                            "签约一次付清：首月租金 + 押金（一个月）+ 中介费（标价一个月房租，跟我混熟了能打折），押金退租换铺时退给你。租下来是毛坯，货架收银台得自己去家具城置办。" +
                             "有的铺子老租户还没到期，先给你挂着，到期就能签；挂牌到期没人签，就被别人租走了。”", 16, Ui.Dim);
+            int rapport = S.AgentRapport;
+            double off = S.AgentDiscount;
+            Line(w.Content, $"和小陈：{StaffTalk.LevelName(rapport)}（熟络 {rapport}）　中介费折扣 {(off > 0 ? $"<color=#7CE38B>{off * 100:0.#}% off</color>" : "暂无")}　<size=14><color=#9AA3AD>每点熟络省 {RealEstate.AgentDiscountPerRapport * 100:0.#}%，最多 {RealEstate.MaxAgentDiscount * 100:0}%；点左边头像和他聊聊、送点小礼物、听他讲讲自己</color></size>", 16);
             if (S.HasShop)
             {
                 Place mine = S.PlayerShopPlace;
@@ -40,10 +43,11 @@ namespace PCShopSell.Game.UI
                 string who = S.IsVacant(place) ? "空铺" : $"现在是「{place.Name}」";
                 string text =
                     $"<b>{UnitName(place)}</b>  {GameSession.SizeName(l.Size)} {RealEstate.SizeArea(l.Size)}  <size=14><color=#9AA3AD>{who}</color></size>\n" +
-                    $"<size=15>离地铁站约 {S.StationDistance(place):0} 米 · 客流系数 ×{S.LocationFactorOf(place):0.00} · 月租 <color=#7CE38B>{l.Rent}</color>　签约付 {RealEstate.SignCost(l.Rent)}</size>\n" +
+                    $"<size=15>离地铁站约 {S.StationDistance(place):0} 米 · 客流系数 ×{S.LocationFactorOf(place):0.00} · 月租 <color=#7CE38B>{l.Rent}</color></size>\n" +
+                    $"<size=15>首月 {l.Rent} + 押金 {RealEstate.Deposit(l.Rent)} + 中介费 {S.AgentFeeFor(l.Rent)}{(off > 0 ? $"<color=#7CE38B>（标价 {RealEstate.AgentFee(l.Rent)}）</color>" : "")}</size>\n" +
                     $"<size=15>{when}{(blocker != null && open ? $"　<color=#E0806A>{blocker}</color>" : "")}</size>";
-                RectTransform row = Ui.Row(list, 88);
-                Ui.Size(Ui.Label(row, text, 17), 760);
+                RectTransform row = Ui.Row(list, 104);
+                Ui.Size(Ui.Label(row, text, 17), 560);
                 Ui.Size(Ui.Button(row, "去看看", () =>
                 {
                     w.Close();

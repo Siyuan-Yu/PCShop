@@ -1,5 +1,6 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
+using PCShopSell.Core.Home;
 using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
@@ -8,6 +9,22 @@ namespace PCShopSell.Game.Runtime
     internal sealed class ShelfDisplay
     {
         public PartCategory Category;
+
+        /// <summary>摆的是杂货（烟酒饮料之类），不对应哪类配件。</summary>
+        public bool Goods;
+
+        /// <summary>货架还没设置摆什么：空架子。</summary>
+        public bool Unset;
+
+        /// <summary>设置的货类（ShelfKinds 的 id），没设置是 null。</summary>
+        public string KindId;
+
+        /// <summary>这个货架在店面布局里的下标。</summary>
+        public int LayoutIndex;
+
+        /// <summary>杂货架上的货（按杂货总件数一件件亮出来）。</summary>
+        public readonly List<GameObject> GoodsItems = new List<GameObject>();
+
         /// <summary>货架在店内的局部位置（店内根节点坐标）。</summary>
         public Vector3 Pos;
         /// <summary>最上层摆的整盒。</summary>
@@ -15,6 +32,9 @@ namespace PCShopSell.Game.Runtime
 
         /// <summary>下面两层摆的散件（先摆下一层再摆上一层）。</summary>
         public readonly List<GameObject> LooseItems = new List<GameObject>();
+
+        /// <summary>整个货架一件货都没有时亮起的红色“缺货”条。</summary>
+        public GameObject EmptyMark;
     }
 
     /// <summary>店内陈设：分品类的货架（显卡、CPU、内存、硬盘、主板、机箱电源）和整机展示台。全是积木拼的低模。</summary>
@@ -69,6 +89,8 @@ namespace PCShopSell.Game.Runtime
             // 下面两层：散件
             AddRow(root, cat, false, BoardCenters[0] + 0.02f, display.LooseItems);
             AddRow(root, cat, false, BoardCenters[1] + 0.02f, display.LooseItems);
+            display.EmptyMark = Prims.Box(root, "EmptyMark", new Vector3(0, 0.98f, -0.2f), new Vector3(1.1f, 0.2f, 0.02f), Mats.Glow(new Color(0.8f, 0.15f, 0.1f), new Color(3f, 0.4f, 0.25f), false));
+            display.EmptyMark.SetActive(false);
             return display;
         }
 
@@ -96,6 +118,122 @@ namespace PCShopSell.Game.Runtime
         }
 
         private static Material BoxMat(PartCategory cat) => Mats.Lit(CategoryColor(cat) * 0.9f);
+
+        /// <summary>
+        /// 杂货架：和配件货架同款木架，三层都摆杂货（烟盒、酒瓶、饮料瓶、点心盒、水果），亮出几件看杂货一共有多少。
+        /// </summary>
+        public static ShelfDisplay BuildGoodsShelf(Transform parent, string kindId)
+        {
+            var root = new GameObject("Shelf_" + kindId).transform;
+            root.SetParent(parent, false);
+
+            Material wood = Mats.Lit(new Color(0.45f, 0.35f, 0.25f));
+            Material frame = Mats.Lit(new Color(0.3f, 0.32f, 0.36f), 0.5f);
+            Prims.Box(root, "Back", new Vector3(0, 0.9f, 0.175f), new Vector3(1.4f, 1.8f, 0.05f), wood);
+            Prims.Box(root, "PostL", new Vector3(-0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);
+            Prims.Box(root, "PostR", new Vector3(0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);
+            foreach (float y in BoardCenters) Prims.Box(root, "Board", new Vector3(0, y, 0f), new Vector3(1.4f, 0.04f, 0.36f), wood);
+            int model = GoodsModelOf(kindId);
+            Color cc = GoodsColor(kindId);
+            Prims.Box(root, "Sign", new Vector3(0, 1.93f, -0.1f), new Vector3(1.0f, 0.14f, 0.04f), Mats.Glow(cc * 0.6f, cc * 1.6f, false));
+
+            var display = new ShelfDisplay { Goods = true, Category = PartCategory.Gpu, KindId = kindId };
+            const int perRow = 7;
+            for (int r = 0; r < 3; r++)
+                for (int c = 0; c < perRow; c++)
+                {
+                    float x = (c - (perRow - 1) / 2f) * 0.18f;
+                    display.GoodsItems.Add(GoodsModel(root, model, new Vector3(x, BoardCenters[r] + 0.02f, -0.01f)));
+                }
+            display.EmptyMark = Prims.Box(root, "EmptyMark", new Vector3(0, 0.98f, -0.2f), new Vector3(1.1f, 0.2f, 0.02f), Mats.Glow(new Color(0.8f, 0.15f, 0.1f), new Color(3f, 0.4f, 0.25f), false));
+            display.EmptyMark.SetActive(false);
+            return display;
+        }
+
+        private static int GoodsModelOf(string kindId)
+        {
+            switch (kindId)
+            {
+                case "smoke": return 0;
+                case "liquor": return 1;
+                case "drink": return 2;
+                case "snack": return 3;
+                default: return 4;
+            }
+        }
+
+        public static Color GoodsColor(string kindId)
+        {
+            switch (kindId)
+            {
+                case "smoke": return new Color(0.9f, 0.3f, 0.3f);
+                case "liquor": return new Color(0.3f, 0.75f, 0.45f);
+                case "drink": return new Color(0.35f, 0.7f, 0.95f);
+                case "snack": return new Color(0.95f, 0.65f, 0.25f);
+                default: return new Color(0.95f, 0.8f, 0.3f);
+            }
+        }
+
+        /// <summary>还没设置摆什么的货架：光架子，招牌是灰的。</summary>
+        public static ShelfDisplay BuildEmptyShelf(Transform parent)
+        {
+            var root = new GameObject("Shelf_Unset").transform;
+            root.SetParent(parent, false);
+            Material wood = Mats.Lit(new Color(0.45f, 0.35f, 0.25f));
+            Material frame = Mats.Lit(new Color(0.3f, 0.32f, 0.36f), 0.5f);
+            Prims.Box(root, "Back", new Vector3(0, 0.9f, 0.175f), new Vector3(1.4f, 1.8f, 0.05f), wood);
+            Prims.Box(root, "PostL", new Vector3(-0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);
+            Prims.Box(root, "PostR", new Vector3(0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);
+            foreach (float y in BoardCenters) Prims.Box(root, "Board", new Vector3(0, y, 0f), new Vector3(1.4f, 0.04f, 0.36f), wood);
+            Prims.Box(root, "Sign", new Vector3(0, 1.93f, -0.1f), new Vector3(1.0f, 0.14f, 0.04f), Mats.Lit(new Color(0.45f, 0.45f, 0.48f)));
+            return new ShelfDisplay { Unset = true, Category = PartCategory.Gpu };
+        }
+
+        /// <summary>按设置的货类造货架：没设置是空架子，配件类摆那类配件，杂货类摆对应的杂货。</summary>
+        public static ShelfDisplay BuildShelfFor(Transform parent, string kindId)
+        {
+            Core.Inventory.ShelfKind k = Core.Inventory.ShelfKinds.Get(kindId);
+            if (k == null) return BuildEmptyShelf(parent);
+            if (k.IsGoods) return BuildGoodsShelf(parent, k.Id);
+            ShelfDisplay d = BuildShelf(parent, Vector3.zero, 0f, k.Category);
+            d.KindId = k.Id;
+            return d;
+        }
+
+        /// <summary>一件杂货的小模型：0 烟盒、1 酒瓶、2 饮料瓶、3 点心盒、4 水果。</summary>
+        private static GameObject GoodsModel(Transform parent, int kind, Vector3 pos)
+        {
+            var g = new GameObject("Goods" + kind);
+            Transform t = g.transform;
+            t.SetParent(parent, false);
+            t.localPosition = pos;
+            switch (kind)
+            {
+                case 0:
+                    Prims.Box(t, "Pack", new Vector3(0, 0.07f, 0), new Vector3(0.12f, 0.14f, 0.05f), Mats.Lit(new Color(0.8f, 0.15f, 0.15f)));
+                    Prims.Box(t, "Band", new Vector3(0, 0.09f, -0.026f), new Vector3(0.12f, 0.03f, 0.004f), Mats.Lit(new Color(0.95f, 0.8f, 0.3f)));
+                    break;
+                case 1:
+                    Prims.Shape(PrimitiveType.Cylinder, t, "Bottle", new Vector3(0, 0.14f, 0), new Vector3(0.07f, 0.14f, 0.07f), Mats.Lit(new Color(0.15f, 0.4f, 0.25f), 0.6f));
+                    Prims.Shape(PrimitiveType.Cylinder, t, "Neck", new Vector3(0, 0.33f, 0), new Vector3(0.03f, 0.05f, 0.03f), Mats.Lit(new Color(0.15f, 0.4f, 0.25f), 0.6f));
+                    Prims.Box(t, "Label", new Vector3(0, 0.12f, -0.036f), new Vector3(0.06f, 0.09f, 0.004f), Mats.Lit(new Color(0.95f, 0.93f, 0.86f)));
+                    break;
+                case 2:
+                    Prims.Shape(PrimitiveType.Cylinder, t, "Bottle", new Vector3(0, 0.11f, 0), new Vector3(0.06f, 0.11f, 0.06f), Mats.Lit(new Color(0.3f, 0.65f, 0.9f), 0.6f));
+                    Prims.Shape(PrimitiveType.Cylinder, t, "Cap", new Vector3(0, 0.23f, 0), new Vector3(0.03f, 0.015f, 0.03f), Mats.Lit(new Color(0.9f, 0.9f, 0.92f)));
+                    break;
+                case 3:
+                    Prims.Box(t, "Box", new Vector3(0, 0.04f, 0), new Vector3(0.14f, 0.08f, 0.1f), Mats.Lit(new Color(0.9f, 0.62f, 0.25f)));
+                    Prims.Box(t, "Ribbon", new Vector3(0, 0.04f, -0.052f), new Vector3(0.02f, 0.08f, 0.004f), Mats.Lit(new Color(0.85f, 0.2f, 0.25f)));
+                    break;
+                default:
+                    Prims.Box(t, "Crate", new Vector3(0, 0.05f, 0), new Vector3(0.15f, 0.1f, 0.11f), Mats.Lit(new Color(0.6f, 0.45f, 0.28f)));
+                    Prims.Shape(PrimitiveType.Sphere, t, "Fruit", new Vector3(-0.03f, 0.115f, 0), Vector3.one * 0.07f, Mats.Lit(new Color(0.9f, 0.3f, 0.2f)));
+                    Prims.Shape(PrimitiveType.Sphere, t, "Fruit2", new Vector3(0.035f, 0.115f, 0), Vector3.one * 0.07f, Mats.Lit(new Color(0.95f, 0.65f, 0.15f)));
+                    break;
+            }
+            return g;
+        }
 
         /// <summary>
         /// 一件配件的小模型，脚底在 pos，正面朝 -z。尺寸按真实配件：
@@ -236,5 +374,64 @@ namespace PCShopSell.Game.Runtime
             }
             return slots;
         }
+
+        /// <summary>
+        /// 一件店面设施的模型（货架 / 收银台 / 展示桌 / 装机操作台），局部坐标：原点在占地中心的地面上，正面朝 -z，
+        /// 摆放时由 <see cref="FurnitureVisuals.Place"/> 按 Rot 转。要拿到的东西（货架陈列、机位、发光屏幕）挂在 <see cref="FixtureHandle"/> 上。
+        /// </summary>
+        public static void BuildFixture(Transform root, FurnitureDef def, bool collider, string kindId = null)
+        {
+            var h = root.gameObject.AddComponent<FixtureHandle>();
+            h.Kind = def.Fixture;
+            float w = (float)def.Width, d = (float)def.Depth;
+            float pickH = 1.2f;
+            switch (def.Fixture)
+            {
+                case FixtureKind.Shelf:
+                    h.Shelf = BuildShelfFor(root, kindId);
+                    if (def.ShelfKg > Core.Inventory.ShelfKinds.CapacityKg)
+                    {
+                        // 加固（蓝）/ 重型（橙）货架：两边加粗的立柱，一眼能和普通货架分开
+                        Color tier = def.Id == Core.Home.FurnitureCatalog.RackHeavy ? new Color(0.9f, 0.5f, 0.1f) : new Color(0.2f, 0.45f, 0.85f);
+                        Prims.Box(root, "TierPostL", new Vector3(-0.74f, 0.93f, 0f), new Vector3(0.09f, 1.86f, 0.42f), Mats.Lit(tier, 0.4f));
+                        Prims.Box(root, "TierPostR", new Vector3(0.74f, 0.93f, 0f), new Vector3(0.09f, 1.86f, 0.42f), Mats.Lit(tier, 0.4f));
+                    }
+                    pickH = 2.0f;
+                    break;
+                case FixtureKind.Counter:
+                    Prims.Box(root, "Counter", new Vector3(0, 0.5f, 0), new Vector3(w, 1.0f, d), Mats.Lit(new Color(0.3f, 0.32f, 0.36f), 0.5f));
+                    Prims.Box(root, "Monitor", new Vector3(0.2f, 1.25f, 0.05f), new Vector3(0.6f, 0.45f, 0.1f), Mats.Glow(new Color(0.1f, 0.1f, 0.12f), new Color(0.3f, 0.8f, 1.5f), false));
+                    Prims.Box(root, "Register", new Vector3(-0.5f, 1.1f, -0.05f), new Vector3(0.35f, 0.2f, 0.35f), Mats.Lit(new Color(0.15f, 0.15f, 0.15f)));
+                    break;
+                case FixtureKind.Display:
+                    h.Slots.AddRange(BuildPcDesk(root, Vector3.zero));
+                    pickH = 1.5f;
+                    break;
+                default: // 装机操作台：有装机单时屏幕亮着
+                    Prims.Box(root, "Workbench", new Vector3(0, 0.45f, 0), new Vector3(w, 0.9f, d), Mats.Lit(new Color(0.36f, 0.38f, 0.42f), 0.5f));
+                    Prims.Box(root, "BenchCase", new Vector3(-0.3f, 1.15f, 0), new Vector3(0.5f, 0.5f, 0.35f), Mats.Lit(new Color(0.12f, 0.12f, 0.14f), 0.6f));
+                    h.Glow.Add(Prims.Box(root, "BenchScreen", new Vector3(0.4f, 1.2f, 0), new Vector3(0.45f, 0.4f, 0.06f), Mats.Glow(new Color(0.1f, 0.1f, 0.12f), new Color(0.2f, 1.4f, 0.6f), false)));
+                    Prims.Box(root, "BenchParts", new Vector3(-0.1f, 0.95f, -0.05f), new Vector3(0.3f, 0.08f, 0.3f), Mats.Lit(new Color(0.15f, 0.5f, 0.3f)));
+                    break;
+            }
+            if (collider)
+            {
+                // 摆放模式里点它就能拾起：整个占地一个盒子碰撞体
+                var pick = new GameObject("Pick");
+                pick.transform.SetParent(root, false);
+                var bc = pick.AddComponent<BoxCollider>();
+                bc.center = new Vector3(0, pickH / 2f, 0);
+                bc.size = new Vector3(w, pickH, d);
+            }
+        }
+    }
+
+    /// <summary>挂在店面设施模型上，把里面要用到的东西（货架陈列、展示机位、发光屏）交给店内场景。</summary>
+    internal sealed class FixtureHandle : MonoBehaviour
+    {
+        public FixtureKind Kind;
+        public ShelfDisplay Shelf;
+        public readonly List<ShopFixtures.PcSlot> Slots = new List<ShopFixtures.PcSlot>();
+        public readonly List<GameObject> Glow = new List<GameObject>();
     }
 }

@@ -131,7 +131,7 @@ namespace PCShopSell.Game.UI
                 else
                 {
                     OrgNode(chart.transform, bossNpc.Id, "？？？", "老板", true, true, null);
-                    notes.Add("<color=#E0806A>" + (!S.IsMet(bossNpc.Id) ? "老板：还没认识" : $"老板：交情 {r.BossGate} 才肯见你（现在 {S.Relation(bossNpc.Id)}）") + "</color>");
+                    notes.Add("<color=#E0806A>" + $"老板：交情 {r.BossGate} 才肯见你（现在 {S.Relation(bossNpc.Id)}）" + "</color>");
                     notes.Add("找店员聊聊老板的事，替你说几句好话，交情够了他自然肯出来。");
                 }
             }
@@ -400,10 +400,26 @@ namespace PCShopSell.Game.UI
         {
             int rel0 = S.Relation(n.Id);
             string greeting = rel0 < 20 && !string.IsNullOrEmpty(n.FirstMeet) ? n.FirstMeet : n.Intro;
-            int count = 4 + (n.IsTipster ? 2 : 0) + (stall != null ? 1 : 0);
+            int count = 4 + (n.IsTipster ? 2 : 0) + (stall != null ? 1 : 0) + (S.IsMet(n.Id) ? 0 : 1);
             OpenDialogue(n.Id, n.Name, n.Role, n, greeting, count, ctx =>
             {
                 var o = new List<TalkOpt>();
+                if (!S.IsMet(n.Id))
+                {
+                    // 联系方式得当面要，不是进店买了东西就自动有
+                    o.Add(new TalkOpt
+                    {
+                        Label = "要个联系方式（存进通讯录）",
+                        Blocker = S.ContactBlocker(n.Id),
+                        Hot = true,
+                        Act = () =>
+                        {
+                            if (S.AskContact(n.Id)) ctx.Reply = n.Name + "：“行，存一下，以后有事打电话。”\n" + (n.FirstMeet ?? n.Intro);
+                            ctx.W.Rebuild();
+                            parent?.Rebuild();
+                        },
+                    });
+                }
                 o.Add(new TalkOpt
                 {
                     Label = "随便闲聊（10 分钟）",

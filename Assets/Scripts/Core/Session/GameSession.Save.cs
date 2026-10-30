@@ -58,6 +58,8 @@ namespace PCShopSell.Core.Session
                 lastNewsReadDay = _lastNewsReadDay,
 
                 shopStock = Lines(PlayerShop.Stock),
+                shopGoodsIds = PlayerShop.Stock.GoodsLines().Select(kv => kv.Key).ToArray(),
+                shopGoodsCounts = PlayerShop.Stock.GoodsLines().Select(kv => kv.Value).ToArray(),
                 markup = PlayerShop.Markup,
                 reputation = PlayerShop.Reputation,
                 accepted = (int)PlayerShop.Accepted,
@@ -76,7 +78,7 @@ namespace PCShopSell.Core.Session
                 }).ToArray(),
                 onlineOrders = Online.Pending.Select(o => new SaveOnlineOrder
                 {
-                    id = o.Id, store = o.StoreId, deliverAt = o.DeliverAtMinute, totalCents = o.TotalCents,
+                    id = o.Id, store = o.StoreId, deliverAt = o.DeliverAtMinute, totalCents = o.TotalCents, toHome = o.ToHome,
                     lines = o.Lines.Select(l => new SaveStockLine { part = l.PartId, boxed = true, count = l.Count }).ToArray(),
                 }).ToArray(),
                 nextOnlineOrderId = Online.NextOrderId,
@@ -147,6 +149,9 @@ namespace PCShopSell.Core.Session
             RestoreRealty(d);
             PlayerShop.Stock.Clear();
             Fill(PlayerShop.Stock, d.shopStock);
+            string[] goodsIds = d.shopGoodsIds ?? Array.Empty<string>();
+            for (int i = 0; i < goodsIds.Length && d.shopGoodsCounts != null && i < d.shopGoodsCounts.Length; i++)
+                PlayerShop.Stock.ForceAddGoods(goodsIds[i], d.shopGoodsCounts[i]);
             PlayerShop.Markup = d.markup;
             PlayerShop.Reputation = d.reputation;
             PlayerShop.Accepted = (PaymentMethods)d.accepted;
@@ -161,7 +166,7 @@ namespace PCShopSell.Core.Session
                     new KeyValuePair<string, StoreRecord>(r.store, new StoreRecord { ItemsReceived = r.received, Defects = r.defects })),
                 (d.onlineOrders ?? Array.Empty<SaveOnlineOrder>()).Select(o =>
                 {
-                    var order = new OnlineOrder { Id = o.id, StoreId = o.store, DeliverAtMinute = o.deliverAt, TotalCents = o.totalCents };
+                    var order = new OnlineOrder { Id = o.id, StoreId = o.store, DeliverAtMinute = o.deliverAt, TotalCents = o.totalCents, ToHome = o.toHome };
                     foreach (SaveStockLine l in o.lines ?? Array.Empty<SaveStockLine>())
                         order.Lines.Add(new OnlineOrderLine { PartId = l.part, Count = l.count });
                     return order;

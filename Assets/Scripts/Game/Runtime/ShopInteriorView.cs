@@ -35,6 +35,12 @@ namespace PCShopSell.Game.Runtime
             public Vector3 PickSpot;
             public PartCategory ItemCat;
             public bool ItemBoxed;
+
+            /// <summary>拿的是杂货架上的杂货（不是配件）。</summary>
+            public bool IsGoods;
+
+            /// <summary>拿的杂货属于哪类货架（ShelfKinds 的 id）。</summary>
+            public string GoodsKind;
             public GameObject Held;
             public float BrowseTimer;
             public bool Build;
@@ -95,7 +101,8 @@ namespace PCShopSell.Game.Runtime
         /// <summary>老板站在柜台旁边（能给排队的人结账）。</summary>
         public bool NearCounter { get; private set; }
 
-        public Vector3 CounterWorld => Origin + new Vector3(0.9f, 2.3f, CounterZ);
+        /// <summary>收银台头顶的位置（给“按 F 收银”提示用）；还没摆收银台就在老位置。</summary>
+        public Vector3 CounterWorld => Origin + new Vector3(_counterPos.x, 2.3f, _counterPos.y);
 
         private static string LeaveText(LeaveReason r, out Color color)
         {
@@ -129,8 +136,23 @@ namespace PCShopSell.Game.Runtime
         private readonly GameObject _clerk;
         private readonly Vector3 _door;
         private readonly float _doorX;
-        private readonly Vector3 _counterFront;
-        private float _stockTimer;
+        private Vector3 _counterFront;
+        /// <summary>老板站在收银台后面的位置（店内局部坐标）。</summary>
+        private Vector3 _counterBack;
+        /// <summary>排队往哪个方向排（沿收银台长边，朝前墙 / 门的那一头）。</summary>
+        private Vector3 _queueDir;
+        private Vector2 _counterPos = new Vector2(0.9f, 3.3f);
+        private Rect _counterFoot;
+        private Quaternion _counterRot = Quaternion.identity;
+        private Vector2 _counterSize = new Vector2(2.2f, 0.8f);
+        private Rect _benchFoot;
+        private Vector2 _benchPos;
+        private Vector3 _benchFront;
+        private Vector3 _deskFront;
+        private bool _hasCounter;
+        private bool _hasBench;
+        private int _fxVersion = -1;
+        private readonly List<Rect> _deskFoots = new List<Rect>();        private float _stockTimer;
         private ShopSimulation _hooked;
         private readonly Dictionary<int, LeaveReason> _leaveReasons = new Dictionary<int, LeaveReason>();
 
@@ -184,8 +206,9 @@ namespace PCShopSell.Game.Runtime
         private Vector3 ShelfSpotFor(PartCategory cat, Vector3 from, System.Random rng = null)
         {
             var spots = new List<Vector3>();
+            string kindId = ShelfKinds.ForCategory(cat).Id;
             for (int i = 0; i < _shelves.Count && i < _shelfSpots.Count; i++)
-                if (_shelves[i].Category == cat) spots.Add(_shelfSpots[i]);
+                if (_shelves[i].KindId == kindId) spots.Add(_shelfSpots[i]);
             if (spots.Count == 0) return _shelfSpots.Count > 0 ? _shelfSpots[0] : Center;
             if (rng != null) return spots[rng.Next(spots.Count)];
             Vector3 best = spots[0];
@@ -194,6 +217,21 @@ namespace PCShopSell.Game.Runtime
             {
                 float d = (s - from).sqrMagnitude;
                 if (d < bd) { bd = d; best = s; }
+            }
+            return best;
+        }
+
+        /// <summary>摆着这类杂货的货架前（离 from 最近的那个）；找不到就去收银台前。</summary>
+        private Vector3 GoodsShelfSpot(string kindId, Vector3 from)
+        {
+            bool found = false;
+            Vector3 best = _counterFront;
+            float bd = float.MaxValue;
+            for (int i = 0; i < _shelves.Count && i < _shelfSpots.Count; i++)
+            {
+                if (_shelves[i].KindId != kindId) continue;
+                float d = (_shelfSpots[i] - from).sqrMagnitude;
+                if (!found || d < bd) { found = true; bd = d; best = _shelfSpots[i]; }
             }
             return best;
         }
@@ -246,6 +284,11 @@ namespace PCShopSell.Game.Runtime
                 v.Held = Prims.Box(v.Go.transform, "HeldPc", new Vector3(0, 0.95f, 0.4f), new Vector3(0.3f, 0.5f, 0.42f), Mats.Lit(new Color(0.1f, 0.1f, 0.12f), 0.5f));
                 return;
             }
+            if (v.IsGoods)
+            {
+                v.Held = Prims.Box(v.Go.transform, "HeldGoods", new Vector3(0, 0.95f, 0.36f), new Vector3(0.18f, 0.22f, 0.14f), Mats.Lit(new Color(0.92f, 0.78f, 0.35f), 0.4f));
+                return;
+            }
             v.Held = Prims.Box(v.Go.transform, "Held", new Vector3(0, 0.95f, 0.38f), new Vector3(0.3f, 0.2f, 0.36f), Mats.Lit(CategoryColor(v.ItemCat), 0.5f));
         }
 
@@ -261,24 +304,20 @@ namespace PCShopSell.Game.Runtime
         public const float MinZoom = 3.2f;
 
         public Vector3 OwnerWorld => _owner.transform.position;
-        private float CounterZ => Depth * 0.55f;
-        private float CounterLength => Mathf.Min(2.2f, Depth * 0.5f);
         private bool _wasOn;
         private readonly List<GameObject> _buildGlow = new List<GameObject>();
-        private readonly List<Rect> _blockers = new List<Rect>();
+        // 营业 / 关门的区别：门头招牌（绿 / 暗红）、门口挂牌、顶灯亮度
+        private GameObject _signOpen, _signClosed, _doorHang;
+        private readonly List<Light> _ceilingLights = new List<Light>();
+        private float _openBlend = 1f;
         private RoomFurniture _decor;
 
         /// <summary>摆出来的店内摆设（装修后由玩家摆放）。</summary>
         public RoomFurniture Furniture => _decor;
         public Transform Root => _root;
 
-        /// <summary>店里固定的东西（柜台、装机台、展示桌）占的地，摆放摆设时不能压上去。</summary>
-        public List<RectD> FixedBlockers()
-        {
-            var l = new List<RectD>();
-            foreach (Rect r in _blockers) l.Add(new RectD(r.xMin, r.yMin, r.xMax, r.yMax));
-            return l;
-        }
+        /// <summary>店里不能挪的东西占的地，摆放时不能压上去。现在柜台、货架这些都是摆出来的家具，自己参与碰撞检测，所以这里是空的。</summary>
+        public List<RectD> FixedBlockers() => new List<RectD>();
 
         /// <summary>顾客 ID → 世界坐标头顶位置（给 UI 标签用）。</summary>
         public IEnumerable<KeyValuePair<int, Vector3>> QueueHeads()
@@ -290,7 +329,7 @@ namespace PCShopSell.Game.Runtime
             }
         }
 
-        /// <summary>摆设：门边两盆绿植、地毯、墙上的钟和海报，让店里不那么空。</summary>
+        /// <summary>摆设：门边两盆绿植、地毯、墙上的钟，让店里不那么空。</summary>
         private void BuildDecor(float w, float d, float doorX)
         {
             Material pot = Mats.Lit(new Color(0.55f, 0.32f, 0.2f), 0.4f);
@@ -303,13 +342,10 @@ namespace PCShopSell.Game.Runtime
                 Prims.Shape(PrimitiveType.Sphere, _root, "PlantLeaf", new Vector3(px + 0.08f, 0.92f, 0.36f), new Vector3(0.36f, 0.34f, 0.36f), leaf2);
             }
 
-            // 后墙：挂钟 + 海报
+            // 后墙：挂钟（海报 / 灯屏是玩家自己买来挂的家具）
             Prims.Shape(PrimitiveType.Cylinder, _root, "Clock", new Vector3(w * 0.62f, 2.45f, d - 0.03f), new Vector3(0.42f, 0.02f, 0.42f), Mats.Lit(new Color(0.95f, 0.95f, 0.92f), 0.3f)).transform.localRotation = Quaternion.Euler(90f, 0, 0);
             Prims.Box(_root, "ClockHandH", new Vector3(w * 0.62f, 2.5f, d - 0.05f), new Vector3(0.025f, 0.12f, 0.01f), Mats.Lit(new Color(0.1f, 0.1f, 0.12f)));
             Prims.Box(_root, "ClockHandM", new Vector3(w * 0.62f + 0.05f, 2.45f, d - 0.05f), new Vector3(0.1f, 0.02f, 0.01f), Mats.Lit(new Color(0.1f, 0.1f, 0.12f)));
-            Prims.Box(_root, "PosterB", new Vector3(w * 0.78f, 2.4f, d - 0.01f), new Vector3(0.7f, 0.9f, 0.02f), Mats.Glow(new Color(0.9f, 0.4f, 0.3f), new Color(1.6f, 0.6f, 0.4f), false));
-            // 右墙海报
-            Prims.Box(_root, "PosterR", new Vector3(w - 0.01f, 2.4f, d * 0.5f), new Vector3(0.02f, 0.7f, 1.0f), Mats.Glow(new Color(0.5f, 0.8f, 0.4f), new Color(0.7f, 1.4f, 0.6f), false));
         }
 
         // ---------- 门外的街 ----------
@@ -548,8 +584,16 @@ namespace PCShopSell.Game.Runtime
             Material doorPost = Mats.Lit(new Color(0.3f, 0.32f, 0.36f), 0.5f);
             Prims.Box(_root, "DoorPostL", new Vector3(doorX - 0.72f, 0.7f, -0.05f), new Vector3(0.1f, 1.4f, 0.14f), doorPost);
             Prims.Box(_root, "DoorPostR", new Vector3(doorX + 0.72f, 0.7f, -0.05f), new Vector3(0.1f, 1.4f, 0.14f), doorPost);
-            Prims.Box(_root, "DoorSign", new Vector3(doorX, 1.55f, -0.05f), new Vector3(1.5f, 0.2f, 0.05f), Mats.Glow(new Color(0.9f, 0.5f, 0.15f), new Color(2.4f, 1.3f, 0.3f), false));
-            Prims.Box(_root, "Poster", new Vector3(w * 0.3f, 2f, d - 0.01f), new Vector3(1.2f, 0.8f, 0.02f), Mats.Glow(new Color(0.2f, 0.6f, 0.9f), new Color(0.4f, 1.2f, 1.8f), false));
+            _signOpen = Prims.Box(_root, "DoorSignOpen", new Vector3(doorX, 1.55f, -0.05f), new Vector3(1.5f, 0.2f, 0.05f), Mats.Glow(new Color(0.25f, 0.8f, 0.4f), new Color(0.5f, 2.6f, 0.9f), false));
+            _signClosed = Prims.Box(_root, "DoorSignClosed", new Vector3(doorX, 1.55f, -0.05f), new Vector3(1.5f, 0.2f, 0.05f), Mats.Lit(new Color(0.32f, 0.12f, 0.12f), 0.2f));
+            // 门口的红色“休息中”挂牌（关门时才有）：挂在门框上，一眼看出没营业
+            _doorHang = new GameObject("DoorClosedHang");
+            _doorHang.transform.SetParent(_root, false);
+            Prims.Box(_doorHang.transform, "Board", new Vector3(doorX, 1.15f, -0.12f), new Vector3(0.7f, 0.32f, 0.04f), Mats.Glow(new Color(0.85f, 0.2f, 0.18f), new Color(1.8f, 0.2f, 0.15f), false));
+            Prims.Box(_doorHang.transform, "Cord", new Vector3(doorX, 1.38f, -0.12f), new Vector3(0.03f, 0.2f, 0.03f), Mats.Lit(new Color(0.2f, 0.2f, 0.2f)));
+            // 关门时拉一道红白拦带横在门口
+            Prims.Box(_doorHang.transform, "Tape", new Vector3(doorX, 0.85f, -0.1f), new Vector3(1.34f, 0.07f, 0.03f), Mats.Lit(new Color(0.9f, 0.25f, 0.2f), 0.2f));
+            Prims.Box(_doorHang.transform, "Tape2", new Vector3(doorX, 0.55f, -0.1f), new Vector3(1.34f, 0.07f, 0.03f), Mats.Lit(new Color(0.95f, 0.95f, 0.95f), 0.2f));
 
             BuildDecor(w, d, doorX);
 
@@ -565,85 +609,22 @@ namespace PCShopSell.Game.Runtime
                 lamp.range = 9f;
                 lamp.intensity = lampsX * lampsZ > 1 ? 1.6f : 2.2f;
                 lamp.color = new Color(1f, 0.95f, 0.85f);
+                _ceilingLights.Add(lamp);
             }
 
-            // 布局：整机展示桌摆在店正中间（一进门就看到），货架沿后墙、右墙和左墙前部；
-            // 柜台前到门口这一片留空，给顾客排队结账。
-            var tables = new List<Vector2>();
-            if (size == ShopSize.Small) tables.Add(new Vector2(w / 2 - 0.1f, d / 2 + 0.1f));
-            else if (size == ShopSize.Medium)
-            {
-                tables.Add(new Vector2(w / 2 - 1.5f, d / 2));
-                tables.Add(new Vector2(w / 2 + 1.5f, d / 2));
-            }
-            else
-            {
-                foreach (float tz in new[] { d / 2 - 1.5f, d / 2 + 1.5f })
-                {
-                    tables.Add(new Vector2(w / 2 - 1.5f, tz));
-                    tables.Add(new Vector2(w / 2 + 1.5f, tz));
-                }
-            }
-
-            // 货架：每类配件一个货架（显卡、CPU、内存、硬盘、机箱电源、主板），沿后墙和右墙均匀摆开
-            PartCategory[] cats = { PartCategory.Gpu, PartCategory.Cpu, PartCategory.Memory, PartCategory.Storage, PartCategory.PowerCase, PartCategory.Motherboard };
-            int backCount = size == ShopSize.Small ? 4 : 3;
-            int shelfNo = 0;
-            for (int i = 0; i < backCount; i++)
-            {
-                float x = Mathf.Lerp(1.9f, w - 0.9f, i / (float)(backCount - 1));
-                _shelves.Add(ShopFixtures.BuildShelf(_root, new Vector3(x, 0, d - 0.2f), 0f, cats[shelfNo++]));
-                _shelfSpots.Add(Origin + new Vector3(x, 0, d - 1.2f));
-            }
-            int sideCount = cats.Length - backCount;
-            for (int i = 0; i < sideCount; i++)
-            {
-                float z = Mathf.Lerp(1.0f, d - 2.25f, sideCount == 1 ? 0f : i / (float)(sideCount - 1));
-                _shelves.Add(ShopFixtures.BuildShelf(_root, new Vector3(w - 0.2f, 0, z), 90f, cats[shelfNo++]));
-                _shelfSpots.Add(Origin + new Vector3(w - 1.2f, 0, z));
-            }
-            // 柜台 + 电脑（靠左前方）
-            Vector3 counter = new Vector3(0.9f, 0.5f, d * 0.55f);
-            Prims.Box(_root, "Counter", counter, new Vector3(0.8f, 1.0f, Mathf.Min(2.2f, d * 0.5f)), Mats.Lit(new Color(0.3f, 0.32f, 0.36f), 0.5f));
-            Prims.Box(_root, "Monitor", counter + new Vector3(0, 0.75f, 0.2f), new Vector3(0.1f, 0.45f, 0.6f), Mats.Glow(new Color(0.1f, 0.1f, 0.12f), new Color(0.3f, 0.8f, 1.5f), false));
-            Prims.Box(_root, "Register", counter + new Vector3(0, 0.6f, -0.5f), new Vector3(0.35f, 0.2f, 0.35f), Mats.Lit(new Color(0.15f, 0.15f, 0.15f)));
-
-            // 装机台（靠左墙后部）：有装机单时屏幕亮着
-            Prims.Box(_root, "Workbench", new Vector3(0.45f, 0.45f, d - 0.9f), new Vector3(0.6f, 0.9f, 1.3f), Mats.Lit(new Color(0.36f, 0.38f, 0.42f), 0.5f));
-            Prims.Box(_root, "BenchCase", new Vector3(0.45f, 1.15f, d - 1.2f), new Vector3(0.35f, 0.5f, 0.5f), Mats.Lit(new Color(0.12f, 0.12f, 0.14f), 0.6f));
-            _buildGlow.Add(Prims.Box(_root, "BenchScreen", new Vector3(0.45f, 1.2f, d - 0.5f), new Vector3(0.06f, 0.4f, 0.45f), Mats.Glow(new Color(0.1f, 0.1f, 0.12f), new Color(0.2f, 1.4f, 0.6f), false)));
-            Prims.Box(_root, "BenchParts", new Vector3(0.4f, 0.95f, d - 1.0f), new Vector3(0.3f, 0.08f, 0.3f), Mats.Lit(new Color(0.15f, 0.5f, 0.3f)));
-
-            // 整机展示区：店中间的长桌，摆上去的整机开着机，顾客能直接买走
-            _tables.Clear();
-            foreach (Vector2 tb in tables)
-            {
-                _tables.Add(tb);
-                _pcSlots.AddRange(ShopFixtures.BuildPcDesk(_root, new Vector3(tb.x, 0, tb.y)));
-                _shelfSpots.Add(Origin + new Vector3(tb.x, 0, tb.y - 1.15f));
-            }
-            _blockers.Add(new Rect(0.5f, CounterZ - CounterLength / 2 - 0.15f, 0.95f, CounterLength + 0.3f));
-            _blockers.Add(new Rect(0f, d - 1.7f, 0.9f, 1.6f));
-            foreach (Vector2 tb in tables) _blockers.Add(new Rect(tb.x - 1.4f, tb.y - 0.6f, 2.8f, 1.2f));
-            // 顾客绕着走的区域：同一排的桌子连成一块
-            var rows = new Dictionary<float, Rect>();
-            foreach (Vector2 tb in tables)
-            {
-                var r = new Rect(tb.x - 1.25f, tb.y - 0.5f, 2.5f, 1.0f);
-                rows[tb.y] = rows.TryGetValue(tb.y, out Rect old) ? Rect.MinMaxRect(Mathf.Min(old.xMin, r.xMin), r.yMin, Mathf.Max(old.xMax, r.xMax), r.yMax) : r;
-            }
-            foreach (Rect r in rows.Values) _walkAround.Add(new Rect(r.x + Origin.x, r.y + Origin.z, r.width, r.height));
-
+            // 铺子租下来是空的：货架、收银台、展示桌、装机操作台都是玩家自己买、自己摆的家具，
+            // 摆好后由 RebuildFixtures 从布局里认出来（顾客逛哪、排队站哪、老板站哪都跟着摆放走）。
             _owner = Prims.Figure(_root, "Owner", new Color(0.95f, 0.55f, 0.15f), new Color(0.95f, 0.8f, 0.65f), 1.05f);
-            _owner.transform.localPosition = new Vector3(0.35f, 0, d * 0.55f);
-            _owner.transform.localRotation = Quaternion.LookRotation(Vector3.right);
+            _owner.transform.localPosition = new Vector3(_doorX = doorX, 0, 0.9f);
+            _owner.transform.localRotation = Quaternion.LookRotation(Vector3.forward);
             _clerk = Prims.Figure(_root, "Clerk", new Color(0.3f, 0.6f, 0.35f), new Color(0.95f, 0.8f, 0.65f), 1.0f);
             _clerk.transform.localPosition = new Vector3(0.35f, 0, d * 0.55f - 0.8f);
             _clerk.transform.localRotation = Quaternion.LookRotation(Vector3.right);
 
-            _doorX = doorX;
             _door = Origin + new Vector3(doorX, 0, -0.6f);
             _counterFront = Origin + new Vector3(1.8f, 0, d * 0.55f);
+            _counterBack = new Vector3(0.35f, 0, d * 0.55f);
+            _queueDir = Vector3.back;
         }
 
         private Color ItemColor()
@@ -678,7 +659,7 @@ namespace PCShopSell.Game.Runtime
             d.Normalize();
             Transform tr = _owner.transform;
             Vector3 p = tr.localPosition;
-            float step = 3.2f * realDt;
+            float step = 4.8f * realDt;   // 世界整体加快 3 倍后，老板在店里走也稍微快一点（太快不好操作）
             Vector3 tx = p + new Vector3(d.x * step, 0, 0);
             if (CanStand(tx, p)) p = tx;
             Vector3 tz = p + new Vector3(0, 0, d.z * step);
@@ -689,8 +670,8 @@ namespace PCShopSell.Game.Runtime
 
         private bool CanStand(Vector3 to, Vector3 from)
         {
-            bool doorway = Mathf.Abs(to.x - _doorX) < 0.5f && to.z >= -0.7f && to.z < 0.4f;
-            if (to.x < 0.3f || to.x > Width - 0.9f || (to.z < 0.4f && !doorway) || to.z > Depth - 1.2f) return false;
+            bool doorway = Mathf.Abs(to.x - _doorX) < 0.5f && to.z >= -1.1f && to.z < 0.4f;
+            if (to.x < 0.3f || to.x > Width - 0.3f || (to.z < 0.4f && !doorway) || to.z > Depth - 0.3f) return false;
             if (doorway) return true;
             if (!Blocked(to)) return true;
             return Blocked(from); // 已经卡在里面时允许走出来
@@ -698,8 +679,6 @@ namespace PCShopSell.Game.Runtime
 
         private bool Blocked(Vector3 p)
         {
-            foreach (Rect r in _blockers)
-                if (r.Contains(new Vector2(p.x, p.z))) return true;
             foreach (Rect r in _decor.Blockers)
                 if (r.Contains(new Vector2(p.x, p.z))) return true;
             return false;
@@ -733,13 +712,17 @@ namespace PCShopSell.Game.Runtime
         /// <summary>冒烟 / 调试：直接站到柜台后面。</summary>
         public void StandAtCounter()
         {
-            _owner.transform.localPosition = new Vector3(0.35f, 0, CounterZ);
-            _owner.transform.localRotation = Quaternion.LookRotation(Vector3.right);
+            _owner.transform.localPosition = _counterBack;
+            _owner.transform.localRotation = Quaternion.LookRotation(_counterFront - Origin - _counterBack + new Vector3(0.001f, 0, 0));
         }
 
         private string _dressed;
 
-        public List<PartCategory> ShelfCategories => _shelves.ConvertAll(s => s.Category);
+        /// <summary>店里认出来的每个货架设置的货类（没设置的是 null）。</summary>
+        public List<string> ShelfKindIds => _shelves.ConvertAll(s => s.KindId);
+
+        /// <summary>摆了几个货架。</summary>
+        public int ShelfCount => _shelves.Count;
 
         /// <summary>冒烟用：顾客在没到目标时原地打转的最长时间（游戏帧时间，秒）。</summary>
         public float MaxStuckSeconds { get; set; }
@@ -758,11 +741,16 @@ namespace PCShopSell.Game.Runtime
         public void StandAtDisplay()
         {
             if (_tables.Count == 0) return;
-            _owner.transform.localPosition = new Vector3(_tables[0].x, 0, _tables[0].y - 1.0f);
+            _owner.transform.localPosition = _deskFront;
         }
 
-        /// <summary>走到货架跟前时，能查看的那个货架的品类；没靠近则为空。</summary>
-        public PartCategory? NearbyShelf { get; private set; }
+        /// <summary>走到货架跟前时，那个货架在店面布局里的下标；没靠近是 -1。</summary>
+        public int NearbyShelf { get; private set; } = -1;
+
+        /// <summary>靠近的货架摆的货类（没设置是 null）。</summary>
+        public string NearbyShelfKind { get; private set; }
+
+        public bool NearShelf => NearbyShelf >= 0;
 
         /// <summary>靠近的货架头顶的世界坐标（给“按 F”提示用）。</summary>
         public Vector3 NearbyShelfWorld { get; private set; }
@@ -780,18 +768,24 @@ namespace PCShopSell.Game.Runtime
         /// <summary>冒烟 / 调试：直接站到装机台正前方。</summary>
         public void StandAtBench()
         {
-            _owner.transform.localPosition = new Vector3(1.4f, 0, Depth - 0.9f);
+            if (_hasBench) _owner.transform.localPosition = _benchFront;
         }
 
         private void UpdateNearbyShelf(bool active)
         {
-            NearbyShelf = null;
+            NearbyShelf = -1;
+            NearbyShelfKind = null;
             NearCounter = false;
             NearDisplay = false;
             NearBench = false;
             if (!active) return;
             Vector3 op = _owner.transform.localPosition;
-            NearCounter = op.x < 2.3f && Mathf.Abs(op.z - CounterZ) < CounterLength / 2 + 0.3f;
+            if (_hasCounter)
+            {
+                // 收银台自己的坐标系里：沿长边不超出两端 0.3 米，前面（顾客那侧）1 米内、后面（老板那侧）0.6 米内都算站在柜台边
+                Vector3 rel = Quaternion.Inverse(_counterRot) * (op - new Vector3(_counterPos.x, 0, _counterPos.y));
+                NearCounter = Mathf.Abs(rel.x) < _counterSize.x / 2f + 0.3f && rel.z > -(_counterSize.y / 2f + 1.0f) && rel.z < _counterSize.y / 2f + 0.6f;
+            }
             Vector3 lp = _owner.transform.localPosition;
             float best = 1.5f;
             foreach (ShelfDisplay sh in _shelves)
@@ -799,33 +793,124 @@ namespace PCShopSell.Game.Runtime
                 float dd = new Vector2(lp.x - sh.Pos.x, lp.z - sh.Pos.z).magnitude;
                 if (dd >= best) continue;
                 best = dd;
-                NearbyShelf = sh.Category;
+                NearbyShelf = sh.LayoutIndex;
+                NearbyShelfKind = sh.KindId;
                 NearbyShelfWorld = Origin + sh.Pos + new Vector3(0, 2.3f, 0);
             }
-            // 展示台：长桌 2.8×1.2，离桌边 1.0 米以内
+            // 展示桌：离桌边 1.0 米以内
             float bestTable = 1.0f;
-            foreach (Vector2 tb in _tables)
+            for (int i = 0; i < _deskFoots.Count; i++)
             {
-                float dx = Mathf.Max(Mathf.Abs(lp.x - tb.x) - 1.4f, 0f);
-                float dz = Mathf.Max(Mathf.Abs(lp.z - tb.y) - 0.6f, 0f);
-                float dd = Mathf.Sqrt(dx * dx + dz * dz);
+                float dd = DistToRect(_deskFoots[i], lp);
                 if (dd >= bestTable) continue;
                 bestTable = dd;
                 NearDisplay = true;
-                NearDisplayWorld = Origin + new Vector3(tb.x, 1.9f, tb.y);
+                NearDisplayWorld = Origin + new Vector3(_deskFoots[i].center.x, 1.9f, _deskFoots[i].center.y);
             }
-            // 装机台：靠左墙后部，离台边 1.0 米以内；和展示桌都够得着时取近的
+            // 装机操作台：离台边 1.0 米以内；和展示桌都够得着时取近的
+            if (_hasBench)
             {
-                float bdx = Mathf.Max(0f - lp.x, lp.x - 0.9f, 0f);
-                float bdz = Mathf.Max((Depth - 1.7f) - lp.z, lp.z - (Depth - 0.1f), 0f);
-                float bd = Mathf.Sqrt(bdx * bdx + bdz * bdz);
+                float bd = DistToRect(_benchFoot, lp);
                 if (bd < 1.0f && (!NearDisplay || bd <= bestTable))
                 {
                     NearBench = true;
                     NearDisplay = false;
-                    NearBenchWorld = Origin + new Vector3(0.45f, 2.0f, Depth - 0.9f);
+                    NearBenchWorld = Origin + new Vector3(_benchPos.x, 2.0f, _benchPos.y);
                 }
             }
+        }
+
+        /// <summary>点到矩形（x/y = 店内局部 x/z）的距离，在里面是 0。</summary>
+        private static float DistToRect(Rect r, Vector3 p)
+        {
+            float dx = Mathf.Max(r.xMin - p.x, p.x - r.xMax, 0f);
+            float dz = Mathf.Max(r.yMin - p.z, p.z - r.yMax, 0f);
+            return Mathf.Sqrt(dx * dx + dz * dz);
+        }
+
+        /// <summary>
+        /// 布局变了：从摆出来的家具里重新认出货架、收银台、展示桌、操作台，
+        /// 并重算顾客逛货架的站位、绕行区域、排队的位置和老板站柜台的位置。
+        /// </summary>
+        private void RebuildFixtures()
+        {
+            _fxVersion = _decor.Version;
+            _shelves.Clear();
+            _shelfSpots.Clear();
+            _tables.Clear();
+            _pcSlots.Clear();
+            _buildGlow.Clear();
+            _deskFoots.Clear();
+            _walkAround.Clear();
+            _hasCounter = false;
+            _hasBench = false;
+            var deskSpots = new List<Vector3>();
+            foreach (RoomFurniture.Entry e in _decor.Entries)
+            {
+                if (!e.Def.IsFixture) continue;
+                var h = e.Go.GetComponent<FixtureHandle>();
+                if (h == null) continue;
+                var pos = new Vector3((float)e.Placed.X, 0, (float)e.Placed.Z);
+                Quaternion rot = Quaternion.Euler(0, 90f * e.Placed.Rot, 0);
+                Vector3 front = rot * Vector3.back; // 设施的正面
+                switch (e.Def.Fixture)
+                {
+                    case FixtureKind.Shelf:
+                        h.Shelf.Pos = pos;
+                        h.Shelf.LayoutIndex = e.Go.GetComponent<PlacedVisual>().Index;
+                        _shelves.Add(h.Shelf);
+                        _shelfSpots.Add(Origin + pos + front * 1.0f);
+                        break;
+                    case FixtureKind.Display:
+                        _tables.Add(new Vector2(pos.x, pos.z));
+                        _deskFoots.Add(e.Foot);
+                        _pcSlots.AddRange(h.Slots);
+                        deskSpots.Add(Origin + pos + front * 1.15f);
+                        break;
+                    case FixtureKind.Counter:
+                        if (_hasCounter) break; // 摆了好几个收银台：只认第一个
+                        _hasCounter = true;
+                        _counterPos = new Vector2(pos.x, pos.z);
+                        _counterFoot = e.Foot;
+                        _counterRot = rot;
+                        _counterSize = new Vector2((float)e.Def.Width, (float)e.Def.Depth);
+                        _counterFront = Origin + pos + front * 0.9f;
+                        _counterBack = pos - front * 0.55f;
+                        // 沿收银台长边排队，朝前墙（门）那头排
+                        Vector3 axis = rot * Vector3.right;
+                        _queueDir = axis.z < 0 ? axis : -axis;
+                        if (Mathf.Abs(axis.z) < 0.1f) _queueDir = _doorX >= pos.x ? Vector3.right : Vector3.left;
+                        _clerk.transform.localPosition = _counterBack + _queueDir * 0.8f;
+                        _clerk.transform.localRotation = Quaternion.LookRotation(front);
+                        break;
+                    case FixtureKind.Bench:
+                        if (_hasBench) break;
+                        _hasBench = true;
+                        _benchPos = new Vector2(pos.x, pos.z);
+                        _benchFoot = e.Foot;
+                        _benchFront = pos + front * 0.95f;
+                        break;
+                }
+                h.Glow.RemoveAll(g => g == null);
+                _buildGlow.AddRange(h.Glow);
+            }
+            _shelfSpots.AddRange(deskSpots);
+            _deskFront = _deskFoots.Count > 0 ? new Vector3(_deskFoots[0].center.x, 0, _deskFoots[0].yMin - 0.4f) : Vector3.zero;
+            if (_tables.Count > 0) _deskFront = deskSpots[0] - Origin;
+            // 顾客走路绕开所有地面家具（货架、柜台、展示桌、沙发……）
+            foreach (Rect r in _decor.Blockers) _walkAround.Add(new Rect(r.x + Origin.x, r.y + Origin.z, r.width, r.height));
+            _stockTimer = 0f;
+        }
+        /// <summary>营业：门头绿招牌、顶灯全亮；关门：门头变暗红、挂“休息中”牌 + 拦带、顶灯调暗。</summary>
+        private void UpdateOpenLook(bool open, float realDt)
+        {
+            _openBlend = Mathf.MoveTowards(_openBlend, open ? 1f : 0f, realDt * 2f);
+            if (_signOpen != null) _signOpen.SetActive(open);
+            if (_signClosed != null) _signClosed.SetActive(!open);
+            if (_doorHang != null) _doorHang.SetActive(!open);
+            float k = Mathf.Lerp(0.3f, 1f, _openBlend);
+            float baseI = _ceilingLights.Count > 1 ? 1.6f : 2.2f;
+            foreach (Light l in _ceilingLights) l.intensity = baseI * k;
         }
 
         public void Update(GameSession s, float dt, float realDt)
@@ -841,7 +926,9 @@ namespace PCShopSell.Game.Runtime
             }
             UpdateStreet(realDt, s.Clock.MinuteOfDay);
             ShopSimulation shop = s.PlayerShop;
+            UpdateOpenLook(shop.IsOpen, realDt);
             _decor.Sync(s.ShopLayout, s.ShopRoom);
+            if (_fxVersion != _decor.Version) RebuildFixtures();
             _owner.SetActive(s.InPlayerShop);
             UpdateNearbyShelf(s.InPlayerShop);
             bool building = shop.Orders.Count > 0;
@@ -854,20 +941,31 @@ namespace PCShopSell.Game.Runtime
                 _stockTimer = 0.5f;
                 var counts = new Dictionary<(PartCategory, bool), int>();
                 void Bump((PartCategory, bool) k, int d) => counts[k] = Mathf.Max(0, (counts.TryGetValue(k, out int n0) ? n0 : 0) + d);
-                foreach (var line in shop.Stock.Lines())
-                    Bump((line.Part.Category, line.Boxed), line.Count);
+                // 只数货架上摆着的（后仓里的不算）
+                foreach (PartCategory cat in PartCatalog.Categories)
+                    foreach (var line in shop.ShelfFillOf(cat).Parts)
+                        Bump((cat, line.Boxed), line.Count);
+                var goodsOn = new Dictionary<string, int>();
+                void BumpGoods(string kind, int d)
+                {
+                    if (kind != null) goodsOn[kind] = Mathf.Max(0, (goodsOn.TryGetValue(kind, out int g0) ? g0 : 0) + d);
+                }
+                foreach (ShelfKind gk in ShelfKinds.GoodsKinds)
+                    foreach (var kv in shop.ShelfFillOf(gk).Goods) BumpGoods(gk.Id, kv.Value);
                 // 顾客还在走去拿货的路上：货架上还摆着；正在走去放回去的：货架上还没有
                 var pcs = new List<int>(shop.DisplayPcs);
                 foreach (Visitor pv in _visitors.Values)
                     if (pv.Phase == 1)
                     {
                         if (pv.DisplayPc) pcs.Add(pv.PcTier);
+                        else if (pv.IsGoods) BumpGoods(pv.GoodsKind, 1);
                         else Bump((pv.ItemCat, pv.ItemBoxed), 1);
                     }
                 foreach (Visitor pv in _leaving)
                     if (pv.DropFirst && !pv.Dropped)
                     {
                         if (pv.DisplayPc) pcs.Remove(pv.PcTier);
+                        else if (pv.IsGoods) BumpGoods(pv.GoodsKind, -1);
                         else Bump((pv.ItemCat, pv.ItemBoxed), -1);
                     }
                 pcs.Sort();
@@ -879,11 +977,26 @@ namespace PCShopSell.Game.Runtime
                 }
                 foreach (ShelfDisplay sh in _shelves)
                 {
-                    int boxedHave = counts.TryGetValue((sh.Category, true), out int bh) ? bh : 0;
-                    int looseHave = counts.TryGetValue((sh.Category, false), out int lh) ? lh : 0;
-                    // 整盒摆在最上层，散件摆在下面两层；完全没货时留两件散件样品
+                    if (sh.Unset) continue; // 没设置摆什么：空架子
+                    // 同一类货有几个货架，货就摊给它们（每个显示一份）
+                    int same = 0;
+                    foreach (ShelfDisplay o in _shelves)
+                        if (o.KindId == sh.KindId) same++;
+                    same = Mathf.Max(1, same);
+                    if (sh.Goods)
+                    {
+                        // 杂货架：这类杂货一共几件就亮几件（最多摆满三层）
+                        int goodsTotal = goodsOn.TryGetValue(sh.KindId, out int gt) ? (gt + same - 1) / same : 0;
+                        if (sh.EmptyMark != null) sh.EmptyMark.SetActive(goodsTotal == 0);
+                        for (int i = 0; i < sh.GoodsItems.Count; i++) sh.GoodsItems[i].SetActive(i < goodsTotal);
+                        continue;
+                    }
+                    int boxedHave = counts.TryGetValue((sh.Category, true), out int bh) ? (bh + same - 1) / same : 0;
+                    int looseHave = counts.TryGetValue((sh.Category, false), out int lh) ? (lh + same - 1) / same : 0;
+                    // 整盒摆在最上层，散件摆在下面两层；一件都没有就板上全空，亮红色“缺货”条
                     int showBoxed = Mathf.Min(sh.BoxedItems.Count, boxedHave);
-                    int showLoose = Mathf.Min(sh.LooseItems.Count, boxedHave + looseHave == 0 ? 2 : looseHave);
+                    int showLoose = Mathf.Min(sh.LooseItems.Count, looseHave);
+                    if (sh.EmptyMark != null) sh.EmptyMark.SetActive(boxedHave + looseHave == 0);
                     for (int i = 0; i < sh.BoxedItems.Count; i++) sh.BoxedItems[i].SetActive(i < showBoxed);
                     for (int i = 0; i < sh.LooseItems.Count; i++) sh.LooseItems[i].SetActive(i < showLoose);
                 }
@@ -928,16 +1041,22 @@ namespace PCShopSell.Game.Runtime
                 if (c.Spend.IsPositive) v.Spend = c.Spend.ToString();
                 bool waiting = queueIds.TryGetValue(c.Id, out int qi);
                 v.Bubble.SetActive(waiting && v.Phase == 2);
-                if (waiting && (c.Item != null || c.DisplayTier >= 0))
+                if (waiting && (c.Item != null || c.DisplayTier >= 0 || c.GoodsId != null))
                 {
                     if (v.Phase == 0)
                     {
                         // 挑中了：先去货架 / 展示台前把货拿下来
                         v.DisplayPc = c.DisplayTier >= 0;
+                        v.IsGoods = c.GoodsId != null;
                         if (v.DisplayPc)
                         {
                             v.PcTier = c.DisplayTier;
                             v.PickSpot = NearestDeskSpot(v.Go.transform.position);
+                        }
+                        else if (v.IsGoods)
+                        {
+                            v.GoodsKind = ShelfKinds.ForGift(c.GoodsId)?.Id;
+                            v.PickSpot = Jitter(GoodsShelfSpot(v.GoodsKind, v.Go.transform.position));
                         }
                         else
                         {
@@ -1062,6 +1181,8 @@ namespace PCShopSell.Game.Runtime
             if (v.Phase == 2) return null;
             if (v.Phase == 1 && c.DisplayTier >= 0)
                 return $"展示台这台我要了！\n<b>{c.ItemName}</b>\n<color={Ok}>{c.Spend}</color>";
+            if (v.Phase == 1 && c.GoodsId != null)
+                return $"顺手拿一个！\n<b>{c.ItemName}</b>\n<color={Ok}>{shop.GoodsPriceOf(c.GoodsId)}</color>";
             if (v.Phase == 1 && c.Item != null)
                 return $"就要这个！\n<b>{c.Item.Name}</b>（{(c.ItemBoxed ? "盒装" : "散件")}）\n<color={Ok}>{shop.PriceOf(c.Item, c.ItemBoxed)}</color>";
             string browsing = BrowseLine(c, now);
@@ -1076,10 +1197,8 @@ namespace PCShopSell.Game.Runtime
                 string parts = missing == 0 ? $"<color={Ok}>✓ 配件都有，可以下单装</color>" : $"<color={Bad}>✗ 展台没有，店里还缺 {missing} 样配件</color>";
                 return $"<size=13>{v.Profile}</size>\n想装一台<b>{tierName}</b>整机\n{parts}\n{browsing}";
             }
-            int have = 0;
-            foreach (var line in shop.Stock.Lines())
-                if (line.Part.Category == c.DesiredCategory) have += line.Count;
-            string stock = have > 0 ? $"<color={Ok}>✓ 有货（{have} 件）</color>" : $"<color={Bad}>✗ 没货……</color>";
+            int have = shop.ShelfFillOf(c.DesiredCategory).Total;
+            string stock = have > 0 ? $"<color={Ok}>货架上有 {have} 件</color>" : $"<color={Bad}>货架上有 0 件</color>";
             return $"<size=13>{v.Profile}</size>\n想买<b>{PartCatalog.CategoryName(c.DesiredCategory)}</b>\n{stock}\n{browsing}";
         }
 
@@ -1092,15 +1211,25 @@ namespace PCShopSell.Game.Runtime
             return $"<size=13><color=#6B6F78>正在挑、比价格… {pct}%</color></size>";
         }
 
-        /// <summary>排队的第 k 个位置：从柜台前往前墙方向排，排到离前墙 1.9 米处再往右拐。</summary>
+        /// <summary>排队的第 k 个位置：从收银台前沿着收银台长边往前墙方向排，排到离前墙 1.9 米处（或碰到店边）再往门口那头拐。</summary>
         private Vector3 QueueSpot(int k)
         {
             float run = k * 0.75f;
-            float straight = Mathf.Max(0f, _counterFront.z - Origin.z - 1.9f);
-            if (run <= straight) return _counterFront + new Vector3(0, 0, -run);
-            return new Vector3(_counterFront.x + (run - straight), _counterFront.y, Origin.z + 1.9f);
+            Vector3 p = _counterFront;
+            Vector3 q = _queueDir;
+            // 沿 q 能直着走多远：直到离前墙 1.9 米，或离左右墙 0.9 米
+            float straight = 40f;
+            if (q.z < -0.1f) straight = Mathf.Min(straight, Mathf.Max(0f, (p.z - Origin.z - 1.9f) / -q.z));
+            if (q.x > 0.1f) straight = Mathf.Min(straight, Mathf.Max(0f, (Origin.x + Width - 0.9f - p.x) / q.x));
+            if (q.x < -0.1f) straight = Mathf.Min(straight, Mathf.Max(0f, (p.x - Origin.x - 0.9f) / -q.x));
+            if (run <= straight) return p + q * run;
+            Vector3 end = p + q * straight;
+            end.z = Mathf.Max(end.z, Origin.z + 1.9f);
+            float side = Origin.x + _doorX >= end.x ? 1f : -1f;
+            if (Mathf.Abs(q.x) > 0.1f) side = Mathf.Sign(q.x);
+            float x = Mathf.Clamp(end.x + side * (run - straight), Origin.x + 0.9f, Origin.x + Width - 0.9f);
+            return new Vector3(x, p.y, end.z);
         }
-
         private void Move(Visitor v, float dt)
         {
             Vector3 p = v.Go.transform.position;

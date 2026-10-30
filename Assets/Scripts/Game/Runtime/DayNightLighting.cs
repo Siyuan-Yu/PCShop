@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using PCShopSell.Game.Procedural;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -69,6 +69,23 @@ namespace PCShopSell.Game.Runtime
             if (h < 7.5f) return 1 - Mathf.InverseLerp(5.5f, 7.5f, h);
             if (h >= 17.5f) return Mathf.InverseLerp(17.5f, 19.5f, h);
             return 0;
+        }
+
+        private LightShadows? _sunShadows;
+
+        /// <summary>编辑模式（俯视图）：关掉太阳阴影，墙的长影子不会盖住房间；退出时恢复。</summary>
+        public void SetEditView(bool on)
+        {
+            if (on)
+            {
+                if (_sunShadows == null) _sunShadows = _sun.shadows;
+                _sun.shadows = LightShadows.None;
+            }
+            else if (_sunShadows != null)
+            {
+                _sun.shadows = _sunShadows.Value;
+                _sunShadows = null;
+            }
         }
 
         /// <param name="interior">在店里时用暖色室内光。</param>

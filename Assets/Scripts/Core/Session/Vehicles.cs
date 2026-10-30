@@ -11,7 +11,7 @@ namespace PCShopSell.Core.Session
         Tricycle,
     }
 
-    /// <summary>出行方式参数。速度为游戏内米/分钟；画面速度为画面米/真实秒（1 倍速）。</summary>
+    /// <summary>出行方式参数。速度为游戏内米/分钟；画面速度为画面米/真实秒（1 倍速）；街上的画面速度已比最初慢一半（游戏内每公里耗时不变）。</summary>
     public sealed class VehicleSpec
     {
         public VehicleKind Kind { get; }
@@ -44,10 +44,10 @@ namespace PCShopSell.Core.Session
 
     public static class Vehicles
     {
-        public static readonly VehicleSpec Walk = new VehicleSpec(VehicleKind.Walk, "步行", 49, 6, 0, 11, false);
-        public static readonly VehicleSpec Taxi = new VehicleSpec(VehicleKind.Taxi, "打车", 400, 15, 0, 48, false);
-        public static readonly VehicleSpec EBike = new VehicleSpec(VehicleKind.EBike, "小电驴", 250, 10, 1800, 34, false);
-        public static readonly VehicleSpec Tricycle = new VehicleSpec(VehicleKind.Tricycle, "三轮车", 200, 40, 2500, 30, true);
+        public static readonly VehicleSpec Walk = new VehicleSpec(VehicleKind.Walk, "步行", 49, 6, 0, 5.5, false);
+        public static readonly VehicleSpec Taxi = new VehicleSpec(VehicleKind.Taxi, "打车", 400, 15, 0, 24, false);
+        public static readonly VehicleSpec EBike = new VehicleSpec(VehicleKind.EBike, "小电驴", 250, 10, 1800, 17, false);
+        public static readonly VehicleSpec Tricycle = new VehicleSpec(VehicleKind.Tricycle, "三轮车", 200, 40, 2500, 15, true);
 
         public static readonly VehicleSpec[] All = { Walk, Taxi, EBike, Tricycle };
 

@@ -702,7 +702,7 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.OrderOnline(ParcelKind.Furniture, "shop_led"));
             WaitDays(s, 2);
             GameSessionTests.Teleport(s, "pc");
-            PlacedFurniture plant = RoomPlanner.Snap(s.ShopRoom, FurnitureCatalog.Get("shop_plant"), 3, 3, 0);
+            PlacedFurniture plant = RoomPlanner.Snap(s.ShopRoom, FurnitureCatalog.Get("shop_plant"), 6.5, 2.0, 0);
             Assert.IsFalse(s.PlaceFromStock(true, "shop_plant", plant), "没歇业装修不能摆");
             Assert.IsTrue(s.BeginRenovation());
             Assert.IsTrue(s.IsRenovating);

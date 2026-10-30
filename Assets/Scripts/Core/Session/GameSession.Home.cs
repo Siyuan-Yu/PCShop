@@ -4,6 +4,7 @@ using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
 
@@ -61,7 +62,7 @@ namespace PCShopSell.Core.Session
 
         public IEnumerable<KeyValuePair<string, int>> FurnitureStock => _furnStock.Where(kv => kv.Value > 0);
 
-        public int FurnitureInStock(string id) => _furnStock.TryGetValue(id, out int n) ? n : 0;
+        public int FurnitureInStock(string id) => _furnStock.TryGetValue(FurnitureCatalog.Canonical(id), out int n) ? n : 0;
 
         public RoomSpec ShopRoom => RoomSpec.ForShop(PlayerShop.Size);
 
@@ -162,7 +163,11 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
-        private void AddFurniture(string id, int count) => _furnStock[id] = FurnitureInStock(id) + count;
+        private void AddFurniture(string id, int count)
+        {
+            id = FurnitureCatalog.Canonical(id);
+            _furnStock[id] = FurnitureInStock(id) + count;
+        }
 
         private void DeliverParcels(GameDate today)
         {
@@ -235,6 +240,7 @@ namespace PCShopSell.Core.Session
         /// <summary>把背包里的家具摆出来。</summary>
         public bool PlaceFromStock(bool shop, string id, PlacedFurniture at, IReadOnlyList<RectD> extra = null)
         {
+            id = FurnitureCatalog.Canonical(id);
             FurnitureDef def = FurnitureCatalog.Get(id);
             if (def == null || FurnitureInStock(id) <= 0) return false;
             if (!CanEdit(shop)) return false;
@@ -459,11 +465,16 @@ namespace PCShopSell.Core.Session
         // ---------- 存档 ----------
 
         private static SavePlaced[] ToSave(IEnumerable<PlacedFurniture> l) =>
-            l.Select(p => new SavePlaced { id = p.Id, x = p.X, z = p.Z, rot = p.Rot }).ToArray();
+            l.Select(p => new SavePlaced { id = p.Id, x = p.X, z = p.Z, rot = p.Rot, item = p.Item }).ToArray();
 
+        /// <summary>读布局：老存档里按类别分的货架（shelf_gpu……）变成设好类别的通用货架，老杂货架变成没设置的货架。</summary>
         private static List<PlacedFurniture> FromSave(SavePlaced[] a) =>
             (a ?? Array.Empty<SavePlaced>()).Where(p => FurnitureCatalog.Get(p.id) != null)
-                .Select(p => new PlacedFurniture { Id = p.id, X = p.x, Z = p.z, Rot = p.rot }).ToList();
+                .Select(p => new PlacedFurniture
+                {
+                    Id = FurnitureCatalog.Canonical(p.id), X = p.x, Z = p.z, Rot = p.rot,
+                    Item = ShelfKinds.Get(p.item) != null ? p.item : FurnitureCatalog.LegacyShelfKind(p.id),
+                }).ToList();
 
         private static SaveBatch[] ToSave(IEnumerable<FoodBatch> l) =>
             l.Select(b => new SaveBatch { id = b.Id, name = b.Name, hunger = b.Hunger, health = b.Health, count = b.Count, expireDay = b.ExpireDay }).ToArray();
@@ -480,6 +491,7 @@ namespace PCShopSell.Core.Session
             d.home = new SaveHome
             {
                 saved = true,
+                fixturesV = 1,
                 stockIds = _furnStock.Where(kv => kv.Value > 0).Select(kv => kv.Key).ToArray(),
                 stockCounts = _furnStock.Where(kv => kv.Value > 0).Select(kv => kv.Value).ToArray(),
                 homeLayout = ToSave(_homeLayout),
@@ -621,7 +633,7 @@ namespace PCShopSell.Core.Session
                 if (h.packFurnCounts != null && i < h.packFurnCounts.Length) Backpack.AddFurniture(fids[i], h.packFurnCounts[i]);
             string[] sids = h.mallStashIds ?? Array.Empty<string>();
             for (int i = 0; i < sids.Length; i++)
-                if (h.mallStashCounts != null && i < h.mallStashCounts.Length && h.mallStashCounts[i] > 0 && FurnitureCatalog.Get(sids[i]) != null) AddStash(sids[i], h.mallStashCounts[i]);
+                if (h.mallStashCounts != null && i < h.mallStashCounts.Length && h.mallStashCounts[i] > 0 && FurnitureCatalog.Get(sids[i]) != null) AddStash(FurnitureCatalog.Canonical(sids[i]), h.mallStashCounts[i]);
             ApplyCargoLimit();
         }
     }

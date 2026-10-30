@@ -481,7 +481,7 @@ namespace PCShopSell.Tests
         {
             PartDef gpu = PartCatalog.Get("gpu0");
             Assert.AreEqual(2.0, Stock.SpaceOf(gpu, true, 1), 1e-9);
-            Assert.AreEqual(0.8, Stock.SpaceOf(gpu, false, 1), 1e-9);
+            Assert.AreEqual(1.0, Stock.SpaceOf(gpu, false, 1), 1e-9, "散件重量是盒装的一半");
         }
 
         [Test]
@@ -492,7 +492,7 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.TryAdd(gpu, true, 2));
             Assert.IsFalse(s.TryAdd(gpu, true, 1));
             Assert.IsTrue(s.Unbox(gpu, 2));
-            Assert.AreEqual(1.6, s.UsedSpace, 1e-9);
+            Assert.AreEqual(2.0, s.UsedSpace, 1e-9);
             Assert.IsTrue(s.TryAdd(gpu, true, 1));
             Assert.AreEqual(2, s.Count(gpu, false));
         }

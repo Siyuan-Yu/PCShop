@@ -17,7 +17,13 @@ namespace PCShopSell.Core.Shop
         /// <summary>需要的最低知名度。</summary>
         public double MinReputation { get; }
 
-        public ShopUpgradeDef(string id, string name, string description, long priceYuan, string requires = null, double minReputation = 0)
+        /// <summary>能不能在店里的升级页直接买。不能的：老存档里买过的照样生效；新玩法里换了拿法（手机去手机店、货架去家具城、自助结账是任务奖励）。</summary>
+        public bool Offered { get; }
+
+        /// <summary>要先有智能手机（去手机店买）。</summary>
+        public bool NeedsSmartphone { get; }
+
+        public ShopUpgradeDef(string id, string name, string description, long priceYuan, string requires = null, double minReputation = 0, bool offered = true, bool needsSmartphone = false)
         {
             Id = id;
             Name = name;
@@ -25,6 +31,8 @@ namespace PCShopSell.Core.Shop
             Price = Money.FromYuan(priceYuan);
             Requires = requires;
             MinReputation = minReputation;
+            Offered = offered;
+            NeedsSmartphone = needsSmartphone;
         }
     }
 
@@ -45,16 +53,23 @@ namespace PCShopSell.Core.Shop
 
         public static readonly IReadOnlyList<ShopUpgradeDef> All = new[]
         {
-            new ShopUpgradeDef(Phone, "智能手机", "换掉按键机。本身不赚钱，但是开通收款码的前提。", 1200),
-            new ShopUpgradeDef(Qr, "开通收款码", "没带现金的顾客也能买单，结账也更快（1 分钟一单）。", 200, Phone),
-            new ShopUpgradeDef(SelfCheckout, "自助结账平台", "排队的顾客自动结账，不用你一单一单点；仍然要有人在店里营业。", 4500, Qr, 8),
-            new ShopUpgradeDef(Shelf1, "货架扩容 I", "库存容量 +20 格。", 1000),
-            new ShopUpgradeDef(Shelf2, "货架扩容 II", "库存容量再 +20 格。", 2000, Shelf1),
-            new ShopUpgradeDef(Shelf3, "货架扩容 III", "库存容量再 +30 格。", 3500, Shelf2),
+            new ShopUpgradeDef(Phone, "智能手机", "换掉按键机。本身不赚钱，但是开通收款码的前提。", 1200, null, 0, false),
+            new ShopUpgradeDef(Qr, "开通收款码", "没带现金的顾客也能买单，结账也更快（1 分钟一单）。需要先有智能手机（去手机店买）。", 200, null, 0, true, true),
+            new ShopUpgradeDef(SelfCheckout, "自助结账平台", "排队的顾客自动结账，不用你一单一单点；仍然要有人在店里营业。", 4500, Qr, 8, false),
+            new ShopUpgradeDef(Shelf1, "货架扩容 I", "库存容量 +20 格。", 1000, null, 0, false),
+            new ShopUpgradeDef(Shelf2, "货架扩容 II", "库存容量再 +20 格。", 2000, Shelf1, 0, false),
+            new ShopUpgradeDef(Shelf3, "货架扩容 III", "库存容量再 +30 格。", 3500, Shelf2, 0, false),
             new ShopUpgradeDef(Sign, "招牌灯箱", "夜里也亮的招牌，客流约 +15%。", 900),
             new ShopUpgradeDef(AirCon, "空调", "顾客排队更有耐心（多等 5 分钟才走）。", 1800),
             new ShopUpgradeDef(Cctv, "监控摄像头", "小偷不敢来了。", 600),
         };
+
+        /// <summary>升级页上能直接买的。</summary>
+        public static IEnumerable<ShopUpgradeDef> OfferedList()
+        {
+            foreach (ShopUpgradeDef u in All)
+                if (u.Offered) yield return u;
+        }
 
         public static ShopUpgradeDef Get(string id)
         {

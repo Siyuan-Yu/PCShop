@@ -69,7 +69,7 @@ namespace PCShopSell.Core.Session
         /// <summary>签这一间当场要付多少（已开着店的话加搬家费、减去退回的旧押金）。</summary>
         public Money LeaseCost(ShopListing l)
         {
-            Money cost = RealEstate.SignCost(l.Rent);
+            Money cost = l.Rent + RealEstate.Deposit(l.Rent) + AgentFeeFor(l.Rent);
             if (Lease != null) cost = cost + RealEstate.MoveFee - Lease.Deposit;
             return cost;
         }
@@ -107,19 +107,35 @@ namespace PCShopSell.Core.Session
             PaySigning(l.Rent, place);
             if (moving) Ledger.ForceDebit(Clock.Today, "搬家", RealEstate.MoveFee, "搬店");
             MoveInto(place, l.Rent, deposit);
+            // 第一次租铺子：房东送一个货架 + 一个收银台，哪怕把钱花光了也能摆出最低开业的摊子，不会卡死
+            bool gifted = !moving && Flags.Add(LeaseGiftFlag);
+            if (gifted)
+            {
+                AddFurniture(FurnitureCatalog.Shelf, 1);
+                AddFurniture(FurnitureCatalog.ShopCounter, 1);
+                // 再送 1 个 CPU + 1 张显卡进后仓：卖掉就是第一笔进货的本钱，钱花光了也不会没货可卖
+                PlayerShop.Stock.ForceAdd(PartCatalog.Get("cpu0"), true, 1);
+                PlayerShop.Stock.ForceAdd(PartCatalog.Get("gpu0"), true, 1);
+            }
             Show(moving ? "搬店完成" : "签约成功",
                 $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）租下来了，月租 {l.Rent}，押金 {deposit}。\n" +
-                (moving ? "货、储物柜、展示机都搬过去了；原来店里摆的家具收回了“我的”，要重新摆。\n" : "进去收拾一下就能开门：先去电子市场档口进货，或者用手机 1788 下单。\n") +
-                "以后每月 1 号交房租。");
+                (moving ? "货、储物柜、展示机都搬过去了；原来店里摆的家具、货架、收银台都收回了“我的”，要在新店里重新摆。\n"
+                        : "这是间毛坯铺子：房东送了你一个货架和一个收银台（在“我的”里），还有 1 个 CPU、1 张显卡放在后仓，回店里歇业装修时摆好就能开业；想卖得多，再去家具城买货架（每类配件一个）、展示桌、装机操作台。\n") +
+                "至少摆好收银台和一个货架才能营业。以后每月 1 号交房租。");
             return true;
         }
+
+        /// <summary>第一次租铺子送过货架、收银台和 CPU、显卡各 1 的记号。</summary>
+        public const string LeaseGiftFlag = "lease_gift";
 
         private void PaySigning(Money rent, Place place)
         {
             GameDate today = Clock.Today;
             Ledger.ForceDebit(today, "房租", rent, $"{place.Name} 首月租金");
             Ledger.ForceDebit(today, "押金", RealEstate.Deposit(rent), $"{place.Name} 押金");
-            Ledger.ForceDebit(today, "中介费", RealEstate.AgentFee(rent), "安居房产中介");
+            Money fee = AgentFeeFor(rent);
+            double off = AgentDiscount;
+            Ledger.ForceDebit(today, "中介费", fee, off > 0 ? $"安居房产中介（熟人价 {off * 100:0.#}% 折扣）" : "安居房产中介");
         }
 
         private void MoveInto(Place place, Money rent, Money deposit)
@@ -157,8 +173,9 @@ namespace PCShopSell.Core.Session
             Place start = City.PlayerShop();
             PaySigning(ShopRent, start);
             MoveInto(start, ShopRent, RealEstate.Deposit(ShopRent));
+            FitStarterShop();
             if (PlayerShop.Stock.IsEmpty) AddStarterStock();
-            Say("（作弊）直接租下了街尾小店，送了几件开局的货。");
+            Say("（作弊）直接租下了街尾小店，货架收银台都已摆好，送了几件开局的货。");
             return true;
         }
 

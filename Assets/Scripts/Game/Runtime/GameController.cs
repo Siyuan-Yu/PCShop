@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
@@ -237,22 +238,27 @@ namespace PCShopSell.Game
         /// <summary>不依赖 Update 的推进（自动化测试用）。</summary>
         public void Step(float dt)
         {
+            UpdatePlacement();
             Session.Tick(dt);
             SyncViews(dt);
             Ui.Update(dt);
         }
 
+        private ShopBeacon _beacon;
+        public bool ShopBeaconVisible => _beacon != null && _beacon.Visible;
+
         private void SyncViews(float dt)
         {
             bool interior = InInterior;
             bool room = InRoom;
-            float worldDt = Session.Time.IsRunning ? dt * Session.Time.Speed : 0f;
+            float worldDt = Session.Time.IsRunning ? dt * Session.Time.Speed * (float)TimeController.WorldRate : 0f;
             Interior.SetActive(interior);
             HomeRoom.SetActive(InHome);
             World.Root.SetActive(!room);
             _avatar.Update(Session, dt);
             _police.Update(!room);
             _crowd.Update(worldDt, !room);
+            (_beacon ?? (_beacon = new ShopBeacon(World.Root.transform))).Update(Session, World, dt);
             if (interior) Interior.Update(Session, worldDt, dt);
             if (InHome) HomeRoom.Update(Session, dt, Session.Clock.MinuteOfDay);
 
@@ -285,6 +291,7 @@ namespace PCShopSell.Game
 
         private Vector3 FocusPoint(float zoom = -1f)
         {
+            if (Placing && _rig.Edit) return EditFocus(zoom > 0 ? zoom : _rig.Size);
             if (InHome)
             {
                 Vector3 c = HomeRoom.Center + new Vector3(0, 0.8f, 0);
@@ -329,6 +336,19 @@ namespace PCShopSell.Game
         /// <summary>街上自由切换视角：右键拖动旋转/俯仰，Q / R 左右转，V 复位。</summary>
         private void HandleCameraOrbit()
         {
+            if (Placing)
+            {
+                // 编辑模式：中键拖动（或手里没拿家具时右键拖动）旋转 / 俯仰，Q / E 左右转，V 复位。右键在手里有家具时是“放回”，不能拿来转。
+                bool drag = Input.GetMouseButton(2) || (_placeId == null && Input.GetMouseButton(1));
+                bool start = Input.GetMouseButtonDown(2) || (_placeId == null && Input.GetMouseButtonDown(1));
+                if (start && !GameUi.PointerOverUi) _orbiting = true;
+                if (!drag) _orbiting = false;
+                if (_orbiting) _rig.Orbit(Input.GetAxis("Mouse X") * 4f, -Input.GetAxis("Mouse Y") * 3f);
+                float ke = (Input.GetKey(KeyCode.E) ? 1f : 0f) - (Input.GetKey(KeyCode.Q) ? 1f : 0f);
+                if (Mathf.Abs(ke) > 0.01f) _rig.Orbit(ke * 100f * Time.unscaledDeltaTime, 0f);
+                if (Input.GetKeyDown(KeyCode.V)) _rig.ResetView();
+                return;
+            }
             if (InRoom || Ui.AnyModalOpen) { _orbiting = false; return; }
             if (Input.GetMouseButtonDown(1) && !GameUi.PointerOverUi) _orbiting = true;
             if (!Input.GetMouseButton(1)) _orbiting = false;
@@ -473,7 +493,7 @@ namespace PCShopSell.Game
                     label = n > 0 ? $"装机台（{n} 个装机单）" : "装机台（暂时没有装机单）";
                     return true;
                 }
-                if (Interior.NearbyShelf == null)
+                if (!Interior.NearShelf)
                 {
                     if (!Interior.NearDisplay) return false;
                     world = Interior.NearDisplayWorld;
@@ -481,12 +501,9 @@ namespace PCShopSell.Game
                     return true;
                 }
                 world = Interior.NearbyShelfWorld;
-                PartCategory shelfCat = Interior.NearbyShelf.Value;
-                int shelfHave = 0;
-                foreach (var sl in Session.PlayerShop.Stock.Lines())
-                    if (sl.Part.Category == shelfCat) shelfHave += sl.Count;
-                label = "查看货架：" + PartCatalog.CategoryName(shelfCat)
-                    + (shelfHave == 0 ? "（缺货！）" : shelfHave <= 2 ? "（快没了）" : "");
+                ShelfKind shelfKind = ShelfKinds.Get(Interior.NearbyShelfKind);
+                if (shelfKind == null) label = "货架（还没设置摆什么，按 F 设置）";
+                else label = $"货架：{shelfKind.Name}（货架上 {Session.PlayerShop.ShelfFillOf(shelfKind).Total} 件，按 F 查看 / 设置）";
                 return true;
             }
             Place p = Session.NearbyPlace;
@@ -504,7 +521,7 @@ namespace PCShopSell.Game
                 Ui.OpenBenchWindow();
                 return;
             }
-            if (Interior.NearbyShelf == null)
+            if (!Interior.NearShelf)
             {
                 if (Interior.NearDisplay)
                 {
@@ -514,7 +531,7 @@ namespace PCShopSell.Game
                 Ui.Toast("走到货架或整机展示台跟前按 F，可以看摆了什么。");
                 return;
             }
-            Ui.OpenShelfWindow(Interior.NearbyShelf.Value);
+            Ui.OpenShelfWindow(Interior.NearbyShelf);
         }
 
         public void LeaveHome()
@@ -553,6 +570,20 @@ namespace PCShopSell.Game
         {
             if (!Input.GetMouseButtonDown(0) || GameUi.PointerOverUi) return;
             Ray ray = Cam.ScreenPointToRay(Input.mousePosition);
+            if (InInterior)
+            {
+                // 货架、柜台的碰撞体也在场景里：从所有命中里挑顾客
+                foreach (RaycastHit h in Physics.RaycastAll(ray, 1000f))
+                {
+                    var cm = h.collider.GetComponentInParent<CustomerMarker>();
+                    if (cm != null)
+                    {
+                        Checkout(cm.CustomerId);
+                        return;
+                    }
+                }
+                return;
+            }
             if (!Physics.Raycast(ray, out RaycastHit hit, 1000f)) return;
 
             if (InHome)
@@ -571,13 +602,6 @@ namespace PCShopSell.Game
                     if (HomeRoom.NearbyId == clicked) HomeInteract(clicked);
                     else Ui.Toast("再走近一点，按 F。");
                 }
-                return;
-            }
-
-            if (InInterior)
-            {
-                var cm = hit.collider.GetComponentInParent<CustomerMarker>();
-                if (cm != null) Checkout(cm.CustomerId);
                 return;
             }
 
@@ -615,16 +639,20 @@ namespace PCShopSell.Game
         }
 
         /// <summary>切换场景时重设镜头：店内比较近、跟着老板，街上拉远。</summary>
-        public void SnapCamera()
+        public void SnapCamera(bool smooth = false)
         {
             bool interior = InInterior;
             bool home = InHome;
+            bool editing = Placing && _rig.Edit;
+            if (editing) _rig.SetEdit(false);
             _rig.SetInterior(interior || home);
             _rig.MinSize = home ? HomeRoomView.MinZoom : interior ? ShopInteriorView.MinZoom : 5f;
             _rig.MaxSize = home ? HomeRoomView.CameraSize : interior ? Interior.CameraSize : 60f;
             float size = home ? HomeRoomView.DefaultZoom : interior ? Mathf.Min(ShopInteriorView.DefaultZoom, Interior.CameraSize) : 16f;
             _wasRoomKind = RoomKind;
-            _rig.Snap(FocusPoint(size), size);
+            if (smooth) _rig.Size = size;
+            else _rig.Snap(FocusPoint(size), size);
+            if (editing) EnterEditView(true);
         }
 
         private void OnPopup(string title, string body)

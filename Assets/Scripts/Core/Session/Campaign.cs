@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Shop;
@@ -58,10 +58,10 @@ namespace PCShopSell.Core.Session
             new MilestoneDef
             {
                 Id = "y1", Day = Year1Day, Title = "站稳一年",
-                Goal = $"第 {Year1Day} 天：身家 ≥ {Year1Wealth}，知名度 ≥ {Year1Reputation:0}",
+                Goal = $"第 {Year1Day} 天：身家 ≥ {Year1Wealth}，知名度 ≥ {Year1Reputation:0}（奖励：自助结账平台）",
                 Check = s => s.NetWorth() >= Year1Wealth && s.PlayerShop.Reputation >= Year1Reputation,
                 Progress = s => $"身家 {s.NetWorth()} / {Year1Wealth}　知名度 {s.PlayerShop.Reputation:0} / {Year1Reputation:0}",
-                PassText = "一年了，这条街上没人再把你当过路的。知名度 +5。",
+                PassText = "一年了，这条街上没人再把你当过路的。知名度 +5，店里解锁「自助结账平台」：排队的顾客自动结账。",
                 FailText = "一年过去，生意不上不下。房东嘀咕着要涨租，店租 +10%。",
             },
             new MilestoneDef

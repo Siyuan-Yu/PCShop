@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.Trade;
@@ -47,8 +48,9 @@ namespace PCShopSell.Core.Session
         {
             int n = 0;
             foreach (OnlineOrder o in Online.Pending)
-                foreach (OnlineOrderLine l in o.Lines)
-                    if (l.PartId == partId) n += l.Count;
+                if (!o.ToHome)   // 送家里的不算店里的库存
+                    foreach (OnlineOrderLine l in o.Lines)
+                        if (l.PartId == partId) n += l.Count;
             return n;
         }
 
@@ -158,7 +160,7 @@ namespace PCShopSell.Core.Session
             double[] vals = d.partMarkupValues ?? Array.Empty<double>();
             var list = new List<KeyValuePair<string, double>>();
             for (int i = 0; i < ids.Length && i < vals.Length; i++)
-                if (PartCatalog.Get(ids[i]) != null) list.Add(new KeyValuePair<string, double>(ids[i], vals[i]));
+                if (ids[i].StartsWith("g:") ? Gifts.Get(ids[i].Substring(2)) != null : PartCatalog.Exists(ids[i])) list.Add(new KeyValuePair<string, double>(ids[i], vals[i]));
             PlayerShop.RestorePartMarkups(list);
 
             _restock.Clear();

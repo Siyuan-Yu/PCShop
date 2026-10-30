@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Finance;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Market;
 using PCShopSell.Core.Time;
@@ -95,6 +96,9 @@ namespace PCShopSell.Core.Shop
         /// <summary>挑中的货（排队时已从货架上拿下）。</summary>
         public PartDef Item { get; internal set; }
 
+        /// <summary>顺手挑了一件杂货（礼品 id）；没有就是 null。杂货和配件不会同时拿。</summary>
+        public string GoodsId { get; internal set; }
+
         public bool ItemBoxed { get; internal set; }
         public Money Spend { get; internal set; }
 
@@ -102,7 +106,7 @@ namespace PCShopSell.Core.Shop
         public int DisplayTier { get; internal set; } = -1;
 
         /// <summary>排队时手里拿的东西的名字（配件或整机）。</summary>
-        public string ItemName => DisplayTier >= 0 ? PartCatalog.TierName(DisplayTier) + "整机" : Item?.Name;
+        public string ItemName => DisplayTier >= 0 ? PartCatalog.TierName(DisplayTier) + "整机" : GoodsId != null ? Gifts.Get(GoodsId)?.Name : Item?.Name;
 
         internal ShopCustomer(int id, CustomerIntent intent, PartCategory category, int buildTier,
             GameTimestamp arrivedAt, GameTimestamp readyAt, bool carriesCash)
@@ -167,6 +171,15 @@ namespace PCShopSell.Core.Shop
         public int CheckoutMinutesCash = 2;
         public int CheckoutMinutesQr = 1;
         public int EmployeeCheckoutMinutes = 3;
+
+        /// <summary>零售顾客逛店时，顺手看一眼杂货架的概率（只有杂货架上有货才算）。他们是来买电脑配件的，所以很低。</summary>
+        public double GoodsImpulseChance = 0.08;
+
+        /// <summary>想买的配件没货时，改看杂货架的概率。</summary>
+        public double GoodsFallbackChance = 0.2;
+
+        /// <summary>杂货的“愿买概率”要再乘这个系数：来买配件的人，多半不买别的。</summary>
+        public double GoodsBuyFactor = 0.5;
 
         /// <summary>盒装比散件贵的比例。</summary>
         public double BoxedPremium = 0.12;
@@ -300,6 +313,74 @@ namespace PCShopSell.Core.Shop
             else _partMarkups[part.Id] = Math.Max(0.9, Math.Min(1.6, markup.Value));
         }
 
+        // ---------- 杂货 ----------
+
+        // ---------- 货架 ----------
+
+        private Dictionary<string, double> _shelfKg;
+
+        /// <summary>
+        /// 每类货的货架总载重（公斤，会话按摆放更新）。设了以后顾客只买货架上摆着的：
+        /// 某类货没有货架就买不到。没设（null，单元测试里）= 后仓的货都能买。
+        /// </summary>
+        public void SetShelfCapacity(IReadOnlyDictionary<string, double> kgByKind)
+        {
+            _shelfKg = kgByKind == null ? null : new Dictionary<string, double>(kgByKind.Count);
+            if (kgByKind != null)
+                foreach (var kv in kgByKind) _shelfKg[kv.Key] = kv.Value;
+        }
+
+        public bool ShelvesManaged => _shelfKg != null;
+
+        /// <summary>这类货的货架总载重（公斤）。</summary>
+        public double ShelfCapacityOf(ShelfKind kind)
+        {
+            if (_shelfKg == null) return double.PositiveInfinity;
+            return _shelfKg.TryGetValue(kind.Id, out double kg) ? kg : 0;
+        }
+
+        /// <summary>这类货现在在货架上摆着哪些（后仓里没摆上去的不算）。</summary>
+        public ShelfFill ShelfFillOf(ShelfKind kind) => ShelfPlanner.Fill(Stock, kind, ShelfCapacityOf(kind));
+
+        public ShelfFill ShelfFillOf(PartCategory cat) => ShelfFillOf(ShelfKinds.ForCategory(cat));
+
+        /// <summary>货架上摆着的所有杂货（各类杂货架加起来）。</summary>
+        public List<KeyValuePair<string, int>> GoodsOnShelves()
+        {
+            var list = new List<KeyValuePair<string, int>>();
+            foreach (ShelfKind k in ShelfKinds.GoodsKinds) list.AddRange(ShelfFillOf(k).Goods);
+            return list;
+        }
+
+        /// <summary>某种配件（盒装 + 散件）在货架上摆着几件。</summary>
+        public int OnShelf(PartDef part) => ShelfFillOf(part.Category).PartCount(part);
+
+        public int OnShelfGoods(string giftId)
+        {
+            ShelfKind k = ShelfKinds.ForGift(giftId);
+            return k == null ? 0 : ShelfFillOf(k).GoodsCount(giftId);
+        }
+
+        private static string GoodsKey(string id) => "g:" + id;
+
+        public bool HasGoodsMarkup(string id) => _partMarkups.ContainsKey(GoodsKey(id));
+
+        public double MarkupOfGoods(string id) => _partMarkups.TryGetValue(GoodsKey(id), out double m) ? m : _markup;
+
+        public void SetGoodsMarkup(string id, double? markup)
+        {
+            if (markup == null) _partMarkups.Remove(GoodsKey(id));
+            else _partMarkups[GoodsKey(id)] = Math.Max(0.9, Math.Min(1.6, markup.Value));
+        }
+
+        /// <summary>杂货现在的售价 = 进价（礼品标价）× 加价倍率。</summary>
+        public Money GoodsPriceOf(string id)
+        {
+            GiftDef g = Gifts.Get(id);
+            if (g == null) return Money.Zero;
+            return Money.FromYuan(Math.Max(1, (long)Math.Round(g.Price.Yuan * MarkupOfGoods(id))));
+        }
+
         public void RestorePartMarkups(IEnumerable<KeyValuePair<string, double>> items)
         {
             _partMarkups.Clear();
@@ -353,7 +434,10 @@ namespace PCShopSell.Core.Shop
         /// <summary>装修歇业：当天不营业。</summary>
         public bool ForcedClosed { get; set; }
 
-        public bool IsOpenAt(GameTimestamp t) => !ForcedClosed && (PlayerPresent || EmployeeOnDuty(t));
+        /// <summary>店里还没摆好必需的设施（收银台、货架）：不能营业。</summary>
+        public bool NotFitted { get; set; }
+
+        public bool IsOpenAt(GameTimestamp t) => !ForcedClosed && !NotFitted && (PlayerPresent || EmployeeOnDuty(t));
 
         public bool IsOpen => IsOpenAt(_clock.Now);
 
@@ -430,7 +514,10 @@ namespace PCShopSell.Core.Shop
         /// <summary>摆在展示台上的整机（档次），顾客能直接买走。</summary>
         public IReadOnlyList<int> DisplayPcs => _display;
 
-        public int DisplaySlots => ShopSettings.DisplaySlots(Size);
+        /// <summary>店里实际摆出来的整机展示桌数（每张两个机位）；没设置时按铺面大小。</summary>
+        public int? FixedDisplayDesks { get; set; }
+
+        public int DisplaySlots => FixedDisplayDesks.HasValue ? FixedDisplayDesks.Value * 2 : ShopSettings.DisplaySlots(Size);
 
         public int DisplayCount(int tier) => _display.FindAll(t => t == tier).Count;
 
@@ -579,8 +666,13 @@ namespace PCShopSell.Core.Shop
                 return;
             }
 
+            // 逛的时候顺手看一眼杂货架（只有少数人会买）
+            if (GoodsOnSale && Random.Chance(Settings.GoodsImpulseChance) && TryTakeGoods(c, now)) return;
+
             if (!PickItem(c))
             {
+                // 想要的配件没货：偶尔有人看看杂货架，买点别的
+                if (GoodsOnSale && Random.Chance(Settings.GoodsFallbackChance) && TryTakeGoods(c, now)) return;
                 Reputation -= 0.1;
                 Leave(c, LeaveReason.NoStock);
                 return;
@@ -608,6 +700,34 @@ namespace PCShopSell.Core.Shop
             c.WaitingSince = now;
             _queue.Add(c);
             CustomerReadyToPay?.Invoke(c);
+        }
+
+        /// <summary>货架上摆着杂货：顾客才有机会买杂货。</summary>
+        private bool GoodsOnSale => Stock.GoodsTotal > 0 && GoodsOnShelves().Count > 0;
+
+        /// <summary>
+        /// 从杂货架上挑一件（随机一种）。配件顾客对杂货兴趣不大：愿买概率要再打折。
+        /// 没看上返回 false（顾客该干嘛干嘛）；看上了但付不了钱，顾客直接走掉并返回 true。
+        /// </summary>
+        private bool TryTakeGoods(ShopCustomer c, GameTimestamp now)
+        {
+            List<KeyValuePair<string, int>> lines = GoodsOnShelves();
+            if (lines.Count == 0) return false;
+            string id = lines[Random.Next(0, lines.Count)].Key;
+            if (!Random.Chance(ShopSettings.BuyChance(MarkupOfGoods(id)) * Settings.GoodsBuyFactor)) return false;
+            if (!CanPay(c))
+            {
+                Leave(c, LeaveReason.NoCash);
+                return true;
+            }
+            Stock.TryRemoveGoods(id, 1);
+            c.GoodsId = id;
+            c.Spend = GoodsPriceOf(id);
+            c.State = CustomerState.WaitingCheckout;
+            c.WaitingSince = now;
+            _queue.Add(c);
+            CustomerReadyToPay?.Invoke(c);
+            return true;
         }
 
         /// <summary>展示台上有想要的档次（没有就一半人退而求其次买相邻档次）：直接抱走去排队结账。</summary>
@@ -646,11 +766,7 @@ namespace PCShopSell.Core.Shop
         private bool TryPickIn(ShopCustomer c, PartCategory cat)
         {
             var candidates = new List<(PartDef part, bool boxed)>();
-            foreach (PartDef p in PartCatalog.InCategory(cat))
-            {
-                if (Stock.Count(p, true) > 0) candidates.Add((p, true));
-                if (Stock.Count(p, false) > 0) candidates.Add((p, false));
-            }
+            foreach (StockLine l in ShelfFillOf(cat).Parts) candidates.Add((l.Part, l.Boxed));
             if (candidates.Count == 0) return false;
 
             (PartDef part, bool boxed) pick = candidates[0];
@@ -688,6 +804,11 @@ namespace PCShopSell.Core.Shop
                 _ledger.Credit(_clock.Today, BuildCategory, c.Spend, $"{c.ItemName}（展示机）");
                 Reputation += BuildReputationGain;
             }
+            else if (c.GoodsId != null)
+            {
+                _ledger.Credit(_clock.Today, SalesCategory, c.Spend, c.ItemName + "（杂货）");
+                Reputation += SaleReputationGain * 0.5;
+            }
             else
             {
                 _ledger.Credit(_clock.Today, SalesCategory, c.Spend, c.Item.Name + (c.ItemBoxed ? "（盒装）" : "（散件）"));
@@ -704,6 +825,11 @@ namespace PCShopSell.Core.Shop
             {
                 Stock.ForceAdd(c.Item, c.ItemBoxed, 1);
                 c.Item = null;
+            }
+            if (c.State == CustomerState.WaitingCheckout && c.GoodsId != null)
+            {
+                Stock.ForceAddGoods(c.GoodsId, 1);
+                c.GoodsId = null;
             }
             if (c.State == CustomerState.WaitingCheckout && c.DisplayTier >= 0)
             {

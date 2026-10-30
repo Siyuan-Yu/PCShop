@@ -57,9 +57,20 @@ namespace PCShopSell.Core.Shop
 
         public static Money Deposit(Money rent) => rent;
 
+        /// <summary>中介费标价：一个月房租。</summary>
         public static Money AgentFee(Money rent) => rent;
 
-        /// <summary>签约当场要付的钱（首月 + 押金 + 中介费）。</summary>
+        /// <summary>和中介小陈熟络度每点能打的折扣（0.5%），封顶 <see cref="MaxAgentDiscount"/>。</summary>
+        public const double AgentDiscountPerRapport = 0.005;
+
+        public const double MaxAgentDiscount = 0.5;
+
+        public static double AgentDiscount(int rapport) => Math.Max(0, Math.Min(MaxAgentDiscount, rapport * AgentDiscountPerRapport));
+
+        /// <summary>按熟络度打折后的中介费，取整到元。</summary>
+        public static Money AgentFeeAfter(Money rent, int rapport) => Money.FromYuan((long)Math.Round(AgentFee(rent).Yuan * (1.0 - AgentDiscount(rapport))));
+
+        /// <summary>签约当场要付的钱（首月 + 押金 + 中介费，中介费按标价；真实价格要看和中介的熟络度）。</summary>
         public static Money SignCost(Money rent) => rent + Deposit(rent) + AgentFee(rent);
 
         /// <summary>房东要看的知名度（大铺子不租给没名气的）。</summary>

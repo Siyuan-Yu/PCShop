@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -116,6 +116,7 @@ namespace PCShopSell.Core.Session
             {
                 Lease = new ShopLease { PlaceId = PlayerShopPlace.Id, Rent = ShopRent, Deposit = Money.Zero, StartDay = start.Date.TotalDays };
                 if (starterStock) AddStarterStock();
+                FitStarterShop();
             }
             else
             {
@@ -145,7 +146,7 @@ namespace PCShopSell.Core.Session
         {
             _manualMoving = false;
             if (IsGameOver || !Time.IsRunning || realSeconds <= 0) return 0;
-            double scaled = Math.Min(realSeconds, TimeController.MaxTickSeconds) * Time.Speed;
+            double scaled = Math.Min(realSeconds, TimeController.MaxTickSeconds) * Time.Speed * TimeController.WorldRate;
 
             int minutes;
             if (SteerActive && Trip != null) BreakTripToEdge();
@@ -251,6 +252,7 @@ namespace PCShopSell.Core.Session
             double sum = 0;
             foreach (StockLine l in PlayerShop.Stock.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
             foreach (StockLine l in Cargo.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
+            foreach (var kv in PlayerShop.Stock.GoodsLines()) sum += (Gifts.Get(kv.Key)?.Price.Yuan ?? 0) * kv.Value;
             return Money.FromYuan((long)Math.Round(sum * 0.9));
         }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
+using PCShopSell.Core.Home;
 
 namespace PCShopSell.Core.Inventory
 {
@@ -20,16 +21,19 @@ namespace PCShopSell.Core.Inventory
 
     /// <summary>
     /// 有容量限制的库存（店铺货架、载具货箱）。容量单位为"格"：
-    /// 盒装占 1 格，散件占 0.4 格，再乘配件的大小倍率（显卡、电源机箱为 2）。
+    /// 盒装占 1 格（2 公斤），散件占 0.5 格（重量减半），再乘配件的大小倍率（显卡、电源机箱为 2）。
     /// </summary>
     public sealed class Stock
     {
         public const double BoxedSpace = 1.0;
-        public const double LooseSpace = 0.4;
+        public const double LooseSpace = 0.5;
         private const double Epsilon = 1e-9;
 
         private readonly Dictionary<string, int> _boxed = new Dictionary<string, int>();
         private readonly Dictionary<string, int> _loose = new Dictionary<string, int>();
+
+        /// <summary>杂货（烟酒、饮料、水果……礼品都能拿来卖）：礼品 id → 件数。</summary>
+        private readonly Dictionary<string, int> _goods = new Dictionary<string, int>();
 
         public double Capacity { get; set; }
 
@@ -50,13 +54,70 @@ namespace PCShopSell.Core.Inventory
                 double used = 0;
                 foreach (var kv in _boxed) used += SpaceOf(PartCatalog.Get(kv.Key), true, kv.Value);
                 foreach (var kv in _loose) used += SpaceOf(PartCatalog.Get(kv.Key), false, kv.Value);
+                foreach (var kv in _goods) used += GoodsSpace(kv.Key, kv.Value);
                 return used;
             }
         }
 
         public double FreeSpace => Math.Max(0, Capacity - UsedSpace);
 
-        public bool IsEmpty => _boxed.Count == 0 && _loose.Count == 0;
+        public bool IsEmpty => _boxed.Count == 0 && _loose.Count == 0 && _goods.Count == 0;
+
+        // ---------- 杂货 ----------
+
+        /// <summary>一件杂货占几格：按重量算，1 格 = 2 公斤，最少 0.1 格。</summary>
+        public static double GoodsSpace(string id, int count)
+        {
+            double kg = Gifts.Get(id)?.WeightKg ?? 1.0;
+            return count * Math.Max(0.1, kg / Backpack.KgPerSpace);
+        }
+
+        public int GoodsCount(string id) => _goods.TryGetValue(id, out int n) ? n : 0;
+
+        public int GoodsTotal
+        {
+            get
+            {
+                int n = 0;
+                foreach (var kv in _goods) n += kv.Value;
+                return n;
+            }
+        }
+
+        /// <summary>摆着的杂货（按礼品表的顺序）。</summary>
+        public List<KeyValuePair<string, int>> GoodsLines()
+        {
+            var list = new List<KeyValuePair<string, int>>();
+            foreach (GiftDef g in Gifts.All)
+                if (GoodsCount(g.Id) > 0) list.Add(new KeyValuePair<string, int>(g.Id, GoodsCount(g.Id)));
+            return list;
+        }
+
+        public bool CanAddGoods(string id, int count) =>
+            Gifts.Get(id) != null && count > 0 && GoodsSpace(id, count) <= FreeSpace + Epsilon;
+
+        public bool TryAddGoods(string id, int count)
+        {
+            if (!CanAddGoods(id, count)) return false;
+            _goods[id] = GoodsCount(id) + count;
+            return true;
+        }
+
+        /// <summary>不检查容量地放入杂货（读档、顾客放回用）。</summary>
+        public void ForceAddGoods(string id, int count)
+        {
+            if (count <= 0 || Gifts.Get(id) == null) return;
+            _goods[id] = GoodsCount(id) + count;
+        }
+
+        public bool TryRemoveGoods(string id, int count)
+        {
+            int have = GoodsCount(id);
+            if (count <= 0 || have < count) return false;
+            if (have == count) _goods.Remove(id);
+            else _goods[id] = have - count;
+            return true;
+        }
 
         public int Count(PartDef part, bool boxed)
         {
@@ -137,6 +198,7 @@ namespace PCShopSell.Core.Inventory
         {
             _boxed.Clear();
             _loose.Clear();
+            _goods.Clear();
         }
     }
 }

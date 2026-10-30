@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -62,10 +62,20 @@ namespace PCShopSell.Core.Session
         public string UpgradeBlocker(ShopUpgradeDef u)
         {
             if (_upgrades.Contains(u.Id)) return "已拥有";
+            if (!u.Offered) return "这里不卖";
+            if (u.NeedsSmartphone && !HasSmartphone) return "先去手机店买智能手机";
             if (u.Requires != null && !_upgrades.Contains(u.Requires)) return "需要先买：" + ShopUpgrades.Get(u.Requires).Name;
             if (PlayerShop.Reputation < u.MinReputation) return $"知名度要到 {u.MinReputation:0}";
             if (Ledger.Balance < u.Price) return "钱不够";
             return null;
+        }
+
+        /// <summary>直接得到一项升级（任务奖励、老存档迁移、测试用），不扣钱。</summary>
+        public bool GrantUpgrade(string id)
+        {
+            if (!ShopUpgrades.Exists(id)) return false;
+            if (_upgrades.Add(id)) ApplyUpgrades();
+            return true;
         }
 
         public bool BuyUpgrade(string id)
@@ -89,9 +99,10 @@ namespace PCShopSell.Core.Session
             if (_upgrades.Contains(ShopUpgrades.Qr)) acc |= PaymentMethods.QrCode;
             if (_upgrades.Contains(ShopUpgrades.SelfCheckout)) acc |= PaymentMethods.SelfCheckout;
             PlayerShop.Accepted = acc;
-            PlayerShop.Stock.Capacity = ShopSettings.Capacity(PlayerShop.Size) + ShopUpgrades.ExtraCapacity(_upgrades);
+            PlayerShop.Stock.Capacity = ShopSettings.Capacity(PlayerShop.Size) + ShopUpgrades.ExtraCapacity(_upgrades) + ShelfStockBonus();
             PlayerShop.TrafficMultiplier = (_upgrades.Contains(ShopUpgrades.Sign) ? ShopUpgrades.SignTrafficBonus : 1.0) * NpcTrafficMultiplier() * ShopDecorTrafficMultiplier;
             PlayerShop.Settings.PatienceMinutes = _basePatience + (_upgrades.Contains(ShopUpgrades.AirCon) ? ShopUpgrades.AirConPatienceBonus : 0) + ShopDecorPatience;
+            UpdateShopFit();
         }
 
         // ---------- 衣着 ----------
@@ -151,6 +162,7 @@ namespace PCShopSell.Core.Session
                 if (Outfits.Get(id) != null) _ownedOutfits.Add(id);
             EquippedOutfit = d.outfitEquipped != null && _ownedOutfits.Contains(d.outfitEquipped) ? d.outfitEquipped : Outfits.Default;
             RestoreHomeData(d);
+            MigrateShopFixtures(d);
 
             Flags.Clear();
             foreach (string f in d.flags ?? Array.Empty<string>()) Flags.Add(f);

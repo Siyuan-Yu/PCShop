@@ -42,12 +42,17 @@ namespace PCShopSell.Core.Session
 
         // ---------- 认识档口老板 ----------
 
+        /// <summary>
+        /// 第一次走进档口：只是脸熟（暗里的交情 10），<b>不会</b>自动存联系方式。
+        /// 要联系方式得等老板肯见你、点开和他聊天时当面开口要（<see cref="AskContact"/>）。
+        /// </summary>
         private void MeetStallOwner(Place stall)
         {
             NpcDef owner = Npcs.OwnerOf(stall.Id);
             if (owner == null || IsMet(owner.Id)) return;
-            Meet(owner.Id, 10);
-            Popup?.Invoke("认识了" + owner.Name, (owner.FirstMeet ?? owner.Intro) + $"\n\n（{owner.Name}：{owner.Role}。去“目标与人脉”或档口面板里可以送礼、约出去玩、打听行情。）");
+            string seen = "seen_" + owner.Id;
+            if (!Flags.Add(seen)) return;
+            if (Relation(owner.Id) < 10) _relations[owner.Id] = 10;
         }
 
         // ---------- 进价与额度 ----------

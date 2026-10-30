@@ -160,11 +160,19 @@ namespace PCShopSell.Core.Session
             "货车到了我喊您。",
         });
 
+        public static readonly StaffDef AgentChen = new StaffDef("keeper_agent", "小陈", "房产中介", new[]
+        {
+            "铺子都在我这儿挂着，想租哪间说一声。",
+            "中介费是一个月房租，熟人嘛……好说话。",
+            "租下来是毛坯，货架收银台得自己去家具城置办。",
+            "离地铁越近人越多，租金也越贵，这是行情。",
+        }, true);
+
         /// <summary>全部店员，按 id 查。</summary>
         public static readonly StaffDef[] All =
         {
             CpuClerk, GpuClerk, MemClerk, PsuClerk, PhoneClerk, MallGuide, MallManager,
-            TobaccoBoss, FarmBoss, DealerBoss, GpuAssistant, PhoneApprentice, MallPorter,
+            TobaccoBoss, FarmBoss, DealerBoss, GpuAssistant, PhoneApprentice, MallPorter, AgentChen,
         };
 
         public static StaffDef Get(string id)
@@ -191,14 +199,17 @@ namespace PCShopSell.Core.Session
                 case "staff_gpu2": return new[] { "小凯是强哥徒弟，刚来时拆箱撕掉了包装上的防伪标，被骂了三天。", "他把每块卡的序列号都记在手机里：“万一出问题，我一眼就能查。”", "他想学维修，强哥答应以后教他：“强哥嘴上骂，其实都在偷偷带我。”" };
                 case "keeper_phone2": return new[] { "小乐是附近技校的学生，周末来手机店实习，一边学一边攒生活费。", "他第一次独自贴膜的时候紧张得手抖，贴了三次才成功，小唐在旁边偷偷给他鼓劲。", "他说毕业后想去大厂做售后：“可这里才是我学会笑着跟人说话的地方。”" };
                 case "staff_mall2": return new[] { "阿旺有一身蛮力，一个人能扛起一台冰箱，老板娘说他是活货梯。", "他有个习惯：搬完货会把地扫干净，说客人踩脏的地方也是门面。", "他攒钱想给家里的老房子换个新沙发：“让我妈坐着看电视。”" };
+                case "keeper_agent": return new[] { "小陈入行三年，头一个月一单没开，蹲在商业街的台阶上啃冷包子，是一位卖了半辈子菜的大婶塞给他一瓶水。", "他说中介这行最怕两头不讨好：房东嫌价低，租客嫌价高。“所以我只信一条：把话说在前头，谁也不吃亏。”", "他最得意的一单是帮一个刚毕业的小伙租下街尾小铺，后来那小伙回头请他吃饭：“没有你，我哪有今天。”那顿饭他记到现在。" };
                 default: return null;
             }
         }
+
         /// <summary>这个地点能找到的人；没有（街边、家里、自己的店）返回 null。</summary>
         public static PlaceRoster For(Place p)
         {
             if (p == null) return null;
             if (p.Kind == PlaceKind.Dealer) return new PlaceRoster(DealerBoss);
+            if (p.Kind == PlaceKind.Agency) return new PlaceRoster(AgentChen);
             if (p.Kind == PlaceKind.Wholesaler)
             {
                 NpcDef owner = Npcs.OwnerOf(p.Id);

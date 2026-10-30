@@ -107,7 +107,7 @@ namespace PCShopSell.Game.UI
             }
             else
             {
-                Ui.Size(Ui.Label(bottom, $"<b>{pick.Name}</b> ×{pick.Count}　{pick.Kg:0.#} 公斤", 17), 330, -1, 1);
+                Ui.Size(Ui.Label(bottom, $"<b>{pick.Name}</b> ×{pick.Count}　{pick.Kg:0.#} 公斤", 17), shop && pick.Key.StartsWith("gift:") ? 220 : 330, -1, 1);
                 string key = pick.Key;
                 int n = pick.Count;
                 string one = key == "rice" ? "1 斤" : "一份";
@@ -115,12 +115,24 @@ namespace PCShopSell.Game.UI
                 {
                     Ui.Size(Ui.Button(bottom, "拿" + one, () => { S.TakeFromBox(key); w.Rebuild(); }, 16, Ui.ButtonHot), 100);
                     Ui.Size(Ui.Button(bottom, "全拿出来", () => { S.TakeFromBox(key, n); w.Rebuild(); }, 16, Ui.ButtonBg), 110);
+                    if (shop && key.StartsWith("gift:"))
+                    {
+                        string gid = key.Substring(5);
+                        Ui.Size(Ui.Button(bottom, "上架卖", () => { S.ListGoods(gid, 1); w.Rebuild(); }, 16, Ui.ButtonHot), 80);
+                        Ui.Size(Ui.Button(bottom, "全上架", () => { S.ListGoods(gid, n); w.Rebuild(); }, 16, Ui.ButtonBg), 80);
+                    }
                 }
                 else
                 {
                     bool toShelf = shop && key.StartsWith("part:");
                     Ui.Size(Ui.Button(bottom, toShelf ? "上货架一件" : "放" + one, () => { S.StoreInBox(key); w.Rebuild(); }, 16, Ui.ButtonHot), 100);
                     Ui.Size(Ui.Button(bottom, toShelf ? "全上货架" : "全放进去", () => { S.StoreInBox(key, n); w.Rebuild(); }, 16, Ui.ButtonBg), 110);
+                    if (shop && key.StartsWith("gift:"))
+                    {
+                        string gid = key.Substring(5);
+                        Ui.Size(Ui.Button(bottom, "上架卖", () => { S.ListGoods(gid, 1); w.Rebuild(); }, 16, Ui.ButtonHot), 80);
+                        Ui.Size(Ui.Button(bottom, "全上架", () => { S.ListGoods(gid, n); w.Rebuild(); }, 16, Ui.ButtonBg), 80);
+                    }
                 }
             }
         }
@@ -287,20 +299,24 @@ namespace PCShopSell.Game.UI
                 if (target != null)
                 {
                     bool can = S.HasUnloadable;
-                    Ui.Size(Ui.Button(acts, "一键全放到" + target, () =>
-                    {
-                        S.UnloadBackpack();
-                        _bagSel = null;
-                        w.Rebuild();
-                    }, 18, Ui.ButtonHot, can), 260);
+                    if (can)
+                        Ui.Size(Ui.Button(acts, "一键全放到" + target, () =>
+                        {
+                            S.UnloadBackpack();
+                            _bagSel = null;
+                            w.Rebuild();
+                        }, 18, Ui.ButtonHot), 260);
+                    else
+                        // 没东西可放就不摆一个点不动的灰按钮，直接说为什么
+                        Ui.Size(Ui.Label(acts, S.InPlayerShop
+                            ? "没有要放下的东西（饭盒一直带在身上）。"
+                            : "没有要放在家里的东西：饭盒一直带在身上（饭点自动吃），配件要拿到店里。", 14, TextAnchor.MiddleLeft, Ui.Dim), S.InPlayerShop ? 260 : 440);
                     if (S.InPlayerShop)
                         Ui.Size(Ui.Button(acts, "店里储物柜", () =>
                         {
                             w.Close();
                             OpenShopLockerWindow();
                         }, 17, Ui.ButtonBg), 160);
-                    else if (!can && stacks.Count > 0)
-                        Ui.Size(Ui.Label(acts, "家里放米菜、礼品和家具；配件要拿到店里（或放进纸箱）。", 14, TextAnchor.MiddleLeft, Ui.Warn), 260);
                 }
                 else
                     Ui.Size(Ui.Label(acts, "回到自己的店或家里，才能把东西放下。", 15, TextAnchor.MiddleLeft, Ui.Dim), 360);
@@ -722,6 +738,7 @@ namespace PCShopSell.Game.UI
 
                 Line(list, "—— 店里的摆设 ——", 18, Ui.Accent);
                 Line(list, $"装饰分 {S.ShopDecorAppeal:0}，客流 ×{S.ShopDecorTrafficMultiplier:0.00}，顾客多等 {S.ShopDecorPatience} 分钟。摆放店里的东西要歇业装修一天。", 16);
+                if (S.HasShop) Para(list, FitChecklistText(), 15);
                 if (S.IsRenovating) Line(list, "今天正在装修，店不营业。", 16, Ui.Warn);
             });
         }
@@ -755,6 +772,13 @@ namespace PCShopSell.Game.UI
             }
             if (S.IsRenovating)
             {
+                _ctrl.BeginPlacement(true);
+                return;
+            }
+            if (!S.ShopFitted)
+            {
+                // 毛坯铺子本来就没开张，不用再确认
+                if (!S.BeginRenovation()) return;
                 _ctrl.BeginPlacement(true);
                 return;
             }
@@ -880,11 +904,32 @@ namespace PCShopSell.Game.UI
             CarryModeRow(w, w.Content, false);
             bool hasStash = S.MallStashCount > 0;
             RectTransform list = Ui.Scroll(w.Content, hasStash ? 240 : 380);
-            Line(list, "—— 家里用 ——", 18, Ui.Accent);
-            foreach (FurnitureDef f in FurnitureCatalog.Purchasable(false)) MallRow(w, list, f);
-            Line(list, "—— 店里的摆设（摆放要歇业装修一天）——", 18, Ui.Accent);
-            foreach (FurnitureDef f in FurnitureCatalog.Purchasable(true)) MallRow(w, list, f);
+            void HomeSection()
+            {
+                Line(list, "—— 家里用 ——", 18, Ui.Accent);
+                foreach (FurnitureDef f in FurnitureCatalog.Purchasable(false)) MallRow(w, list, f);
+            }
 
+            void ShopSection()
+            {
+                Line(list, "—— 店面设施（租来的铺子是空的，开店必备，买回去歇业装修时摆好）——", 18, Ui.Accent);
+                if (S.HasShop) Para(list, FitChecklistText(), 14, Ui.Dim);
+                foreach (FurnitureDef f in FurnitureCatalog.Purchasable(true).Where(x => x.IsFixture)) MallRow(w, list, f);
+                Line(list, "—— 店里的装饰（摆放要歇业装修一天）——", 18, Ui.Accent);
+                foreach (FurnitureDef f in FurnitureCatalog.Purchasable(true).Where(x => !x.IsFixture)) MallRow(w, list, f);
+            }
+
+            // 还在毛坯里的时候，先给店面设施
+            if (S.HasShop && !S.ShopFitted)
+            {
+                ShopSection();
+                HomeSection();
+            }
+            else
+            {
+                HomeSection();
+                ShopSection();
+            }
             if (hasStash) BuildMallStash(w);
         }
 
@@ -926,7 +971,9 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(row, $"{def.Name}  <size=14><color=#A8B0BA>重 {def.WeightKg:0.#} 公斤</color></size>\n<size=14><color=#A8B0BA>{def.Description}</color></size>", 18), 430);
             Ui.Size(Ui.Label(row, def.Price.ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 90);
             int have = S.FurnitureInStock(def.Id) + S.Backpack.FurnitureCount(def.Id);
-            Ui.Size(Ui.Label(row, have > 0 ? $"已有 ×{have}" : "", 14, TextAnchor.MiddleLeft, Ui.Dim), 70);
+            int placedShop = def.ForShop ? S.ShopLayout.Count(p => p.Id == def.Id) : 0;
+            string haveText = (have > 0 ? $"已有 ×{have}" : "") + (have > 0 && placedShop > 0 ? "\n" : "") + (placedShop > 0 ? $"已摆 ×{placedShop}" : "");
+            Ui.Size(Ui.Label(row, haveText, 14, TextAnchor.MiddleLeft, Ui.Dim), 80);
             string label;
             bool ok;
             if (S.SendByCourier)
@@ -973,7 +1020,7 @@ namespace PCShopSell.Game.UI
             if (S.SendByCourier)
             {
                 Ui.Size(Ui.Label(row, "送到", 16, TextAnchor.MiddleRight, Ui.Dim), 44);
-                Ui.Size(Ui.Button(row, $"{(toShop ? "我的店里" : "家里")}  ▼", () => OpenCourierDestMenu(w), 17, new Color(0.2f, 0.24f, 0.3f)), 150);
+                Ui.Size(Ui.Button(row, $"{(toShop ? ShopDestName : "家里")}  ▼", () => OpenCourierDestMenu(w), 15, new Color(0.2f, 0.24f, 0.3f)), 190);
                 Para(parent, toShop
                     ? "送到店里：配件直接上货架；吃的、礼品放进店里储物柜；家具进“我的”里待摆放。"
                     : "送到家里：米和菜进厨房；礼品、配件放进纸箱；家具进“我的”里待摆放。", 14, Ui.Dim);
@@ -993,7 +1040,7 @@ namespace PCShopSell.Game.UI
                     bool current = S.CourierToShop(DefaultDestIsShop) == s;
                     bool can = !s || S.HasShop;
                     string sub = can ? $"每辆运费 {fee}，约 {minutes} 分钟到" : "还没有店铺，去房产中介租一间才能送店里";
-                    Ui.Size(Ui.Button(w.Content, $"{(s ? "我的店里" : "家里")}{(current ? "  ✓" : "")}\n<size=13>{sub}</size>", () =>
+                    Ui.Size(Ui.Button(w.Content, $"{(s ? ShopDestName : "家里")}{(current ? "  ✓" : "")}\n<size=13>{sub}</size>", () =>
                     {
                         S.CourierDest = s;
                         w.Close();
@@ -1003,6 +1050,9 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content, "取消", w.Close, 18), -1, 44);
             });
         }
+
+        /// <summary>“送到”里店的名字：带上铺子的名字（现在只能同时租一间，搬店后跟着换）。</summary>
+        private string ShopDestName => S.HasShop ? $"我的店里（{S.PlayerShopPlace.Name}）" : "我的店里";
 
         private bool DefaultDestIsShop => S.CurrentPlace != null && S.CurrentPlace.Kind == PlaceKind.Wholesaler;
 
@@ -1142,8 +1192,10 @@ namespace PCShopSell.Game.UI
             bool shop = _ctrl.PlacingShop;
             Text title = Ui.Label(_placePanel, shop ? "装修店面（今天歇业）" : "摆放家具", 22, TextAnchor.MiddleLeft, Ui.Accent);
             Ui.Size(title, -1, 34);
-            Text help = Ui.Label(_placePanel, "左键：放下  ·  R：旋转\n右键 / Esc：放回  ·  X：收进背包\n点已经摆好的家具可以拿起来挪", 15, TextAnchor.UpperLeft, Ui.Dim);
-            Ui.Size(help, -1, 64);
+            Text mode = Ui.Label(_placePanel, "编辑模式 · 俯视图　格线 1 米，摆放吸附 0.25 米", 15, TextAnchor.MiddleLeft, new Color(0.45f, 0.9f, 1f));
+            Ui.Size(mode, -1, 24);
+            Text help = Ui.Label(_placePanel, "左键：放下  ·  R：旋转（墙面的自动挂最近的墙）\n右键 / Esc：放回  ·  X：收进背包  ·  滚轮：缩放\n中键拖动 / Q E：转视角  ·  V：复位视角\n点已经摆好的家具（含墙上的海报）可以拿起来挪", 15, TextAnchor.UpperLeft, Ui.Dim);
+            Ui.Size(help, -1, 84);
             _placeStatus = Ui.Label(_placePanel, "", 16, TextAnchor.UpperLeft);
             Ui.Size(_placeStatus, -1, 56);
 

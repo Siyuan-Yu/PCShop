@@ -85,16 +85,18 @@ namespace PCShopSell.Core.Home
         /// <summary>背着的轻便家具（带回家 / 带回店里才放进家具库）。</summary>
         public IEnumerable<KeyValuePair<string, int>> FurnitureLines => _furniture.Where(kv => kv.Value > 0);
 
-        public int FurnitureCount(string id) => _furniture.TryGetValue(id, out int n) ? n : 0;
+        public int FurnitureCount(string id) => _furniture.TryGetValue(FurnitureCatalog.Canonical(id), out int n) ? n : 0;
 
         public void AddFurniture(string id, int count)
         {
+            id = FurnitureCatalog.Canonical(id);
             if (count <= 0 || FurnitureCatalog.Get(id) == null) return;
             _furniture[id] = FurnitureCount(id) + count;
         }
 
         public bool TakeFurniture(string id, int count)
         {
+            id = FurnitureCatalog.Canonical(id);
             int have = FurnitureCount(id);
             if (count <= 0 || have < count) return false;
             if (have == count) _furniture.Remove(id);

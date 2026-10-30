@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -15,6 +15,7 @@ namespace PCShopSell.Game.UI
     {
         private bool _wholesaleRestockPage;
         private string _onlineStore;
+        private bool _onlineToHome;   // 1788 送到哪：false = 店里，true = 家里
         private readonly Dictionary<string, int> _cart = new Dictionary<string, int>();
 
         public void OpenWholesaleApp(bool restockPage = false)
@@ -39,7 +40,14 @@ namespace PCShopSell.Game.UI
         private void BuildOnline(Window w)
         {
             Transform c = w.Content;
-            Para(c, "比档口便宜，下单后次日 10:00 送到店里，可能有次品。评分不一定可信，自己买过才知道。", 15, Ui.Dim);
+            Para(c, "比档口便宜，下单后次日 10:00 送货上门，可能有次品。评分不一定可信，自己买过才知道。", 15, Ui.Dim);
+            if (!S.HasShop) _onlineToHome = true;
+            RectTransform dest = Ui.Row(c, 48, 6);
+            Ui.Size(Ui.Label(dest, "送到", 16, TextAnchor.MiddleRight, Ui.Dim), 50);
+            Ui.Size(Ui.Button(dest, $"{ShopDestName}\n<size=13>配件直接上货架</size>", () => { _onlineToHome = false; w.Rebuild(); }, 16,
+                _onlineToHome ? Ui.ButtonBg : Ui.ButtonHot, S.HasShop), -1, -1, 1);
+            Ui.Size(Ui.Button(dest, "家里\n<size=13>放在家里的纸箱，自己带去店里</size>", () => { _onlineToHome = true; w.Rebuild(); }, 16,
+                _onlineToHome ? Ui.ButtonHot : Ui.ButtonBg), -1, -1, 1);
             RectTransform stores = Ui.Scroll(c, 190);
             foreach (OnlineStore st in Online1788.Stores.Where(x => S.Online.IsDiscovered(x.Id)))
             {
@@ -63,7 +71,7 @@ namespace PCShopSell.Game.UI
             OnlineStore s = Online1788.GetStore(_onlineStore);
             Line(c, "评价：" + string.Join(" / ", s.Reviews), 15, Ui.Dim);
 
-            RectTransform list = Ui.Scroll(c, 330);
+            RectTransform list = Ui.Scroll(c, 280);
             Money total = Online1788.ShippingFee;
             double space = 0;
             foreach (PartDef p in PartCatalog.All)
@@ -83,11 +91,12 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(row, "+", () => { AddToCart(part, 1); w.Rebuild(); }, 18), 36);
             }
             RectTransform orow = Ui.Row(c, 46);
-            Ui.Size(Ui.Label(orow, $"合计 {total}（含运费 {Online1788.ShippingFee}） · {space:0.#} 格　店里仓位还空 {S.PlayerShop.Stock.FreeSpace:0.#} 格", 16), -1, -1, 1);
+            string room = _onlineToHome ? "送家里不占店里仓位" : $"店里仓位还空 {S.PlayerShop.Stock.FreeSpace:0.#} 格";
+            Ui.Size(Ui.Label(orow, $"合计 {total}（含运费 {Online1788.ShippingFee}） · {space:0.#} 格　送到{(_onlineToHome ? "家里" : "店里")}　{room}", 16), -1, -1, 1);
             Ui.Size(Ui.Button(orow, "下单", () =>
             {
                 var lines = _cart.Where(kv => kv.Value > 0).Select(kv => (PartCatalog.Get(kv.Key), kv.Value)).ToList();
-                if (S.PlaceOnlineOrder(_onlineStore, lines)) _cart.Clear();
+                if (S.PlaceOnlineOrder(_onlineStore, lines, _onlineToHome)) _cart.Clear();
                 w.Rebuild();
             }, 19, Ui.ButtonHot, _cart.Values.Any(v => v > 0)), 140);
         }
@@ -146,7 +155,7 @@ namespace PCShopSell.Game.UI
                 void Refresh()
                 {
                     int have = S.PlayerShop.Stock.CountAll(p), pend = S.PendingOnlineCount(p.Id);
-                    string stock = have == 0 ? "<color=#E0806A>缺货</color>" : $"店里有 {have}";
+                    string stock = have == 0 ? "<color=#E0806A>店里有 0 件</color>" : $"店里有 {have} 件";
                     name.text = $"<b>{p.Name}</b>　<size=13>{stock}{(pend > 0 ? $" · 路上 {pend}" : "")}</size>";
                     int target = S.RestockTarget(p.Id);
                     tgt.text = target == 0 ? "<color=#9AA3AD>关</color>" : target.ToString();

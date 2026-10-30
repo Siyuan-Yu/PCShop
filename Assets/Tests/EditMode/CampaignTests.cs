@@ -271,13 +271,15 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.HasShop);
             Assert.AreEqual(10000 - 1500 * 3, s.Ledger.Balance.Yuan, "首月 + 押金 + 中介费");
             Assert.AreEqual(1500, s.Lease.Deposit.Yuan);
-            Assert.AreEqual(s.Ledger.Balance.Yuan + 1500, s.NetWorth().Yuan, "押金算进身家");
+            // 身家 = 现金 + 押金 + 房东送的 CPU / 显卡的货值
+            Assert.Greater(s.NetWorth().Yuan, s.Ledger.Balance.Yuan + 1500, "押金算进身家");
+            Assert.Less(s.NetWorth().Yuan, s.Ledger.Balance.Yuan + 1500 + 1500, "多出来的只是送的那 2 件货");
             Assert.AreEqual(GameSession.MyShopName, s.PlaceTitle(s.PlayerShopPlace));
             Assert.IsFalse(s.Listings.Any(x => x.PlaceId == "pc"));
 
             GameSessionTests.Teleport(s, "pc");
             Assert.IsTrue(s.InPlayerShop);
-            Assert.IsTrue(s.PlayerShop.IsOpen);
+            Assert.IsFalse(s.PlayerShop.IsOpen, "租来的是毛坯铺子，没摆收银台和货架开不了业");
         }
 
         [Test]
@@ -417,6 +419,8 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.MilestonePassed("y1"));
             Assert.AreEqual(0, s.RentHikes);
             Assert.Greater(s.PlayerShop.Reputation, 40);
+            Assert.IsTrue(s.HasUpgrade(PCShopSell.Core.Shop.ShopUpgrades.SelfCheckout), "站稳一年奖励自助结账平台");
+            Assert.IsTrue((s.PlayerShop.Accepted & PCShopSell.Core.Shop.PaymentMethods.SelfCheckout) != 0);
         }
 
         [Test]
@@ -432,6 +436,7 @@ namespace PCShopSell.Tests
             Assert.AreEqual(GameSession.ShopRent.Scale(1.1).Cents, s.CurrentShopRent.Cents);
             Assert.IsTrue(popups.Any(t => t.Contains("未达标")));
             Assert.IsFalse(s.IsGameOver, "没达标不会直接结束游戏");
+            Assert.IsFalse(s.HasUpgrade(PCShopSell.Core.Shop.ShopUpgrades.SelfCheckout), "没达标就没有奖励");
         }
 
         [Test]

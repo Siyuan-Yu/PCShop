@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
@@ -96,6 +96,7 @@ namespace PCShopSell.Game.UI
             UpdatePlayerMarker();
             UpdateInteractMarker();
             UpdatePlacementStatus();
+            UpdateEditHud();
             UpdateQueueLabels();
             UpdateToasts();
             _slowTimer -= dt;
@@ -103,6 +104,7 @@ namespace PCShopSell.Game.UI
             {
                 _slowTimer = 0.4f;
                 UpdateVehicleButtons();
+                UpdateQuestTracker();
                 if (!Input.GetMouseButton(0)) RefreshDock();
             }
         }
@@ -170,6 +172,8 @@ namespace PCShopSell.Game.UI
             _hintText = Ui.Label(root, "", 18, TextAnchor.MiddleLeft, new Color(1, 1, 1, 0.85f));
             _hintText.rectTransform.Anchor(0, 0, 0, 0, 16, 62, -1100, -92);
 
+            BuildQuestTracker(root);
+
             _chaseText = Ui.Label(root, "交警在追你！快跑或者躲进店里！", 34, TextAnchor.MiddleCenter, new Color(1f, 0.3f, 0.25f));
             _chaseText.rectTransform.Anchor(0.2f, 1, 0.8f, 1, 0, -150, 0, 80);
             _chaseText.gameObject.SetActive(false);
@@ -204,7 +208,7 @@ namespace PCShopSell.Game.UI
             _placeText.text = where + "   " + shopState;
 
             if (S.IsGameOver) _hintText.text = "游戏结束：" + S.GameOverReason;
-            else if (_ctrl.Placing) _hintText.text = "摆放家具：左键放下 · R 旋转 · 右键/Esc 放回 · X 收进背包 · 点已摆的家具可以挪动 · 右侧面板点“完成”结束";
+            else if (_ctrl.Placing) _hintText.text = "摆放家具：左键放下 · R 旋转 · 右键/Esc 放回 · X 收进背包 · 点已摆的家具可以挪动 · 中键拖动 / Q E 转视角 · V 复位 · 右侧面板点“完成”结束";
             else if (_ctrl.InInterior) _hintText.text = "WASD 在店里走动 · 走到货架前按 F 查看货物 · 柜台边按 F（或点顾客头顶的“结账”）给顾客结账 · 走到门口按 F 出门 · 右侧面板管理店铺";
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimatedMinutes} 分钟 · 按 WASD 随时接管";
             else if (S.NearbyPlace != null) _hintText.text = $"<color=#FFD54A>按 F 进入 {S.PlaceTitle(S.NearbyPlace)}</color>";
@@ -491,7 +495,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildToasts()
         {
-            _toastList = Ui.Rect(_toastCanvas.transform, "Toasts").Anchor(0, 1, 0, 1, 16, -520, -476, 76);
+            _toastList = Ui.Rect(_toastCanvas.transform, "Toasts").Anchor(0, 1, 0, 1, 16, -620, -476, 220);
             var v = _toastList.gameObject.AddComponent<VerticalLayoutGroup>();
             v.spacing = 4;
             v.childControlHeight = true;
@@ -624,17 +628,13 @@ namespace PCShopSell.Game.UI
         {
             OpenWindow("欢迎来到电脑城", 760, 560, w =>
             {
-                Para(w.Content, "你揣着 ¥10,000 来到这条商业街，想开一家自己的电脑店。可现在还没有铺子。\n\n" +
-                                "· 先去商业街中段的「安居房产中介」看看在租的铺面：街尾的空铺最便宜（月租 ¥1,500），离地铁越近越贵，中型、大型铺子要有名气房东才肯租。签约要付首月租金 + 押金 + 中介费（各一个月租金）\n" +
+                Para(w.Content, "你揣着 ¥10,000 来到这条商业街，想开一家自己的电脑店。可现在还没有铺子，你先住在自己的出租屋里。\n\n" +
+                                "· 什么时候出门、先做什么，都由你自己决定。想开店了，就去商业街中段的「安居房产中介」看看在租的铺面：街尾的空铺最便宜（月租 ¥1,500），离地铁越近越贵，中型、大型铺子要有名气房东才肯租。签约要付首月租金 + 押金 + 中介费（各一个月租金）\n" +
                                 "· 有了店就去 2 公里外的电子市场档口进货，或者买部智能手机、装上 1788 app 网上进货（便宜但要等，可能有次品）\n" +
                                 "· 你在店里才营业：顾客挑好货到收银台排队，你站过去给他们结账\n" +
                                 "· 有人想装整机会下订单，配件齐了在店里装机交付\n" +
                                 "· 第一个月目标：第 30 天时身家 ≥ ¥8,000（押金也算），并且雇到一个员工", 18);
-                Ui.Size(Ui.Button(w.Content, S.HasShop ? "知道了" : "好，去找房产中介", () =>
-                {
-                    w.Close();
-                    if (!S.HasShop && !S.IsGameOver) _ctrl.GoToPlace(S.City.FirstOfKind(PlaceKind.Agency));
-                }, 20, Ui.ButtonHot), -1, 50);
+                Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 20, Ui.ButtonHot), -1, 50);
                 if (!S.HasShop)
                 {
                     Ui.Size(Ui.Button(w.Content, "（作弊 / 验收）跳过找铺子：直接租下街尾小店，回到旧开局", () =>

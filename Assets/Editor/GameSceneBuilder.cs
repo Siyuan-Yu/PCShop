@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -166,8 +166,21 @@ namespace PCShopSell.EditorTools
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
             Frame(0.05f);
             Shot("vs1_84_agency");
+            _game.Ui.DebugRefreshQuests();
+            Check((_game.Ui.QuestTrackerText ?? "").Contains("租一间铺子"), "任务条：新游戏先去租铺子：" + _game.Ui.QuestTrackerText);
             Check(s.Listings.Any(l => l.PlaceId == "player_shop" && s.LeaseBlocker(l) == null), "中介挂着街尾空铺、现在就能签");
             Check(s.Listings.Any(l => s.LeaseBlocker(l) != null && l.OpenDay > s.Clock.Today.TotalDays), "中介有现租户还没到期的铺子");
+            Check(PCShopSell.Game.UI.GameUi.PortraitOf(PCShopSell.Core.Session.Rosters.AgentChen.Id) != null, "中介小陈有立绘");
+            Check(s.AgentDiscount == 0, "没熟之前中介费按标价");
+            Check(s.StaffChat(PCShopSell.Core.Session.Rosters.AgentChen) != null, "和中介小陈闲聊");
+            s.Backpack.AddGift(PCShopSell.Core.Home.Gifts.Soda, 1);
+            Check(s.GiveStaffGift(PCShopSell.Core.Session.Rosters.AgentChen, PCShopSell.Core.Home.Gifts.Soda), "送中介一瓶饮料");
+            Check(s.AgentDiscount > 0, "聊熟了中介费有折扣");
+            _game.Ui.CloseAllWindows();
+            Teleport(s, "agency");
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            Frame(0.05f);
+            Shot("vs1_93_agency_discount");
             Teleport(s, "home");
             Check(s.DebugRentStarterShop(), "作弊：直接租下街尾小店（回到旧开局）");
             Check(s.HasShop && !s.PlayerShop.Stock.IsEmpty, "作弊后有店、有开局货");
@@ -182,7 +195,7 @@ namespace PCShopSell.EditorTools
             while (s.Trip != null && ff < 3000) { Frame(0.05f); ff++; }
             double walkRate = (s.Clock.Now.TotalMinutes - mm0) / (ff * 0.05), idleRate = 1.0 / s.Time.SecondsPerMinuteAt1x;
             Log($"TRIPRATE 步行 {walkRate:0.00} 游戏分钟/秒，站着 {idleRate:0.00}");
-            Check(walkRate > idleRate * 0.6 && walkRate < idleRate * 1.6, "走路和站着时钟速度接近");
+            Check(walkRate > idleRate * 0.3 && walkRate < idleRate * 0.8, "走路时钟速度约为站着的一半（画面速度已减半，每公里耗时不变）");
             Check(s.InPlayerShop, "走到店里并进店");
             Log("到店 " + s.Clock.Now);
 
@@ -191,7 +204,7 @@ namespace PCShopSell.EditorTools
             for (int i = 0; i < 9000 && !bubbled; i++)
             {
                 Frame(0.1f);
-                bubbled = _game.Interior.Emotes.Any(e => e.Bubble && (e.Text.Contains("有货") || e.Text.Contains("没货") || e.Text.Contains("配件")));
+                bubbled = _game.Interior.Emotes.Any(e => e.Bubble && (e.Text.Contains("有货") || e.Text.Contains("没货") || e.Text.Contains("配件") || e.Text.Contains("货架上有")));
             }
             Check(bubbled, "顾客进店后头顶有对话气泡：想买什么、有没有货");
             Frame(0.1f);
@@ -231,8 +244,8 @@ namespace PCShopSell.EditorTools
             Log($"COUNTER ok={counterOk} label={emptyCounter} modal={_game.Ui.AnyModalOpen} near={_game.Interior.NearCounter} inShop={_game.InInterior}");
             Check(counterOk && emptyCounter.Contains("收银"), "收银台随时能交互");
             {
-                var shelfCats = _game.Interior.ShelfCategories;
-                Check(shelfCats.Count == 6 && shelfCats.Distinct().Count() == 6, $"每类配件只有一个货架（{string.Join(",", shelfCats)}）");
+                var shelfKinds = _game.Interior.ShelfKindIds;
+                Check(shelfKinds.Count == 6 && shelfKinds.Distinct().Count() == 6, $"标准店有 6 个货架，各摆一类配件（{string.Join(",", shelfKinds)}）");
             }
             _game.Ui.OpenDock();
             Frame(0.1f);
@@ -282,15 +295,27 @@ namespace PCShopSell.EditorTools
             _game.Interior.StandAtShelf(0);
             _game.Ui.CloseAllWindows();
             Frame(0.05f);
-            Check(_game.Interior.NearbyShelf != null, "走到货架前能交互");
+            Check(_game.Interior.NearShelf, "走到货架前能交互");
             Shot("vs1_50_shelf_hint");
-            _game.Ui.OpenShelfWindow(_game.Interior.NearbyShelf.Value);
+            PartCategory shelfCat = PCShopSell.Core.Inventory.ShelfKinds.Get(_game.Interior.NearbyShelfKind).Category;
+            int shelfLayoutIdx = _game.Interior.NearbyShelf;
+            {
+                // 这个货架一件货都没有：3D 货架板上全空 + 红色缺货条
+                var emptyCat = shelfCat;
+                bool hadAny = PartCatalog.InCategory(emptyCat).Any(p => s.PlayerShop.Stock.CountAll(p) > 0);
+                Log("SHELFEMPTY 货架 " + emptyCat + " 开局是否有货：" + hadAny);
+                _game.Ui.CloseDock();
+                Frame(0.8f);
+                Shot("vs1_86_shelf_3d_empty");
+                _game.Ui.OpenDock();
+            }
+            _game.Ui.OpenShelfWindow(shelfLayoutIdx);
             Frame(0.05f);
             Check(_game.Ui.AnyModalOpen, "货架窗口打开");
             Shot("vs1_51_shelf");
             _game.Ui.CloseModalWindows();
             // 摆满货的货架：整盒 / 散件各不同数量，截图后再拿走
-            var shelfParts = PartCatalog.InCategory(_game.Interior.NearbyShelf.Value).OrderBy(p => p.Tier).ToList();
+            var shelfParts = PartCatalog.InCategory(shelfCat).OrderBy(p => p.Tier).ToList();
             int[] boxedN = { 5, 2, 0 }, looseN = { 3, 7, 1 };
             for (int i = 0; i < shelfParts.Count; i++)
             {
@@ -303,10 +328,13 @@ namespace PCShopSell.EditorTools
             Frame(0.8f);
             Shot("vs1_73_shelf_3d");
             _game.Ui.OpenDock();
-            _game.Ui.OpenShelfWindow(_game.Interior.NearbyShelf.Value);
+            _game.Ui.OpenShelfWindow(shelfLayoutIdx);
             Frame(0.05f);
             Shot("vs1_69_shelf_stocked");
             _game.Ui.CloseModalWindows();
+            _game.Ui.DebugSelectTab(1);
+            Frame(0.05f);
+            Shot("vs1_87_stock_tab");
             for (int i = 0; i < shelfParts.Count; i++)
             {
                 if (boxedN[i] > 0) s.PlayerShop.Stock.TryRemove(shelfParts[i], true, boxedN[i]);
@@ -320,7 +348,7 @@ namespace PCShopSell.EditorTools
                     s.PlayerShop.Stock.ForceAdd(tps[i], true, 2);
                     s.PlayerShop.Stock.ForceAdd(tps[i], false, 3);
                 }
-                _game.Ui.OpenShelfWindow(tc);
+                _game.Ui.OpenShelfWindow(s.ShelfIndexes().First(ix => s.ShelfKindAt(ix).Id == PCShopSell.Core.Inventory.ShelfKinds.ForCategory(tc).Id));
                 Frame(0.05f);
                 Shot("dbg_shelf_" + tc);
                 _game.Ui.CloseModalWindows();
@@ -333,7 +361,7 @@ namespace PCShopSell.EditorTools
             // 整机展示台：靠近也能按 F 看
             _game.Interior.StandAtDisplay();
             Frame(0.05f);
-            Check(_game.Interior.NearDisplay && _game.Interior.NearbyShelf == null, "走到展示台前能交互");
+            Check(_game.Interior.NearDisplay && !_game.Interior.NearShelf, "走到展示台前能交互");
             Check(_game.TryGetInteract(out _, out string displayLabel) && displayLabel.Contains("整机展示"), "展示台头顶有提示");
             Shot("vs1_61_display_hint");
             _game.Ui.OpenDisplayWindow();
@@ -766,8 +794,12 @@ namespace PCShopSell.EditorTools
             Check(_game.BeginPlacement(false), "进入摆放模式");
             Check(s.StoreFurniture(false, 0), "收起硬板床");
             _game.SelectStock("sofa");
-            Frame(0.05f);
+            _game.DebugCursorLocal = new Vector3(2.75f, 0, 1.0f);
+            for (int i = 0; i < 45; i++) Frame(0.05f);
+            Check(PCShopSell.Game.Runtime.CameraRig.Pitch > 54f && _game.EditRoom != null, "编辑模式：镜头转成 55° 斜俯视");
+            Check(_game.EditHover, "编辑模式：有鼠标坐标读数");
             Shot("vs1_30_placing");
+            _game.DebugCursorLocal = null;
             var home = PCShopSell.Core.Home.RoomSpec.Home;
             Check(s.PlaceFromStock(false, "bed_spring", PCShopSell.Core.Home.RoomPlanner.Snap(home, PCShopSell.Core.Home.FurnitureCatalog.Get("bed_spring"), 1.05, 4.0, 0)), "摆弹簧床");
             Check(s.PlaceFromStock(false, "aircon", PCShopSell.Core.Home.RoomPlanner.Snap(home, PCShopSell.Core.Home.FurnitureCatalog.Get("aircon"), 1.25, 0, 0)), "挂空调");
@@ -777,6 +809,7 @@ namespace PCShopSell.EditorTools
             _game.EndPlacement();
             for (int i = 0; i < 10; i++) Frame(0.05f);
             Check(_game.Ui != null && !_game.Placing, "摆放结束");
+            Check(PCShopSell.Game.Runtime.CameraRig.Pitch < 60f, "摆放结束镜头恢复斜视角");
             Shot("vs1_24_home_furnished");
             _game.Ui.CloseAllWindows();
 
@@ -786,10 +819,19 @@ namespace PCShopSell.EditorTools
             Check(s.BeginRenovation(), "歇业装修");
             Check(_game.BeginPlacement(true), "店里进入摆放模式");
             var shopRoom = s.ShopRoom;
-            Check(s.PlaceFromStock(true, "shop_sofa", PCShopSell.Core.Home.RoomPlanner.Snap(shopRoom, PCShopSell.Core.Home.FurnitureCatalog.Get("shop_sofa"), 4.5, 1.0, 0), _game.Interior.FixedBlockers()), "摆等候沙发");
+            Check(s.PlaceFromStock(true, "shop_sofa", PCShopSell.Core.Home.RoomPlanner.Snap(shopRoom, PCShopSell.Core.Home.FurnitureCatalog.Get("shop_sofa"), 2.3, 0.8, 0), _game.Interior.FixedBlockers()), "摆等候沙发");
             Check(s.PlaceFromStock(true, "shop_plant", PCShopSell.Core.Home.RoomPlanner.Snap(shopRoom, PCShopSell.Core.Home.FurnitureCatalog.Get("shop_plant"), 6.4, 1.0, 0), _game.Interior.FixedBlockers()), "摆绿植");
             Check(s.PlaceFromStock(true, "shop_led", PCShopSell.Core.Home.RoomPlanner.Snap(shopRoom, PCShopSell.Core.Home.FurnitureCatalog.Get("shop_led"), 4.0, 0, 0)), "挂 LED");
-            for (int i = 0; i < 10; i++) Frame(0.05f);
+            for (int i = 0; i < 60; i++) Frame(0.05f);
+            Check(_game.DebugPickWallAt(new UnityEngine.Vector3(4.0f, 2.0f, (float)shopRoom.Depth - 0.02f)) >= 0, "编辑模式：点墙上的 LED 灯屏能选中");
+            Check(_game.DebugPickWallAt(new UnityEngine.Vector3(1.0f, 2.0f, (float)shopRoom.Depth - 0.02f)) < 0, "编辑模式：点墙上没家具的地方选不中");
+            float yaw0 = PCShopSell.Game.Runtime.CameraRig.Yaw;
+            _game.DebugOrbit(40f, -10f);
+            for (int i = 0; i < 40; i++) Frame(0.05f);
+            Check(System.Math.Abs(PCShopSell.Game.Runtime.CameraRig.Yaw - yaw0) > 30f, "编辑模式：能转视角");
+            Shot("vs1_105_edit_rotated");
+            _game.DebugOrbit(-40f, 10f);
+            for (int i = 0; i < 40; i++) Frame(0.05f);
             Shot("vs1_31_shop_decor");
             _game.EndPlacement();
             _game.Ui.CloseAllWindows();
@@ -837,6 +879,143 @@ namespace PCShopSell.EditorTools
             _game.Ui.CloseModalWindows();
             Frame(0.05f);
             Shot("vs1_14_medium_shop");
+            // 新签的铺子是毛坯：设施要去家具城买、回店里歇业装修时摆好，摆完第二天才开业
+            Check(!g.ShopFitted && g.ShopLayout.Count == 0, "新签的铺子是毛坯：一件设施都没有");
+            Check(!g.PlayerShop.IsOpen && g.PlayerShop.NotFitted, "毛坯铺子开不了业");
+            _game.Ui.OpenDock();
+            Frame(0.1f);
+            _game.Ui.DebugRefreshQuests();
+            Check((_game.Ui.QuestTrackerText ?? "").Contains("家具城"), "任务条：租好后去家具城买设施：" + _game.Ui.QuestTrackerText);
+            Shot("vs1_88_bare_shop");
+            _game.Ui.OpenQuestWindow();
+            Frame(0.05f);
+            Check(_game.Ui.AnyModalOpen, "点任务条打开这一步的说明");
+            Shot("vs1_100_quest_window");
+            _game.Ui.CloseModalWindows();
+            _game.Ui.CloseAllWindows();
+            _game.Ui.CloseDock();
+            Teleport(g, "shop12");
+            g.SendByCourier = true;
+            {
+                var fixtureIds = new System.Collections.Generic.List<string> { PCShopSell.Core.Home.FurnitureCatalog.ShopCounter, PCShopSell.Core.Home.FurnitureCatalog.ShopDisplay, PCShopSell.Core.Home.FurnitureCatalog.ShopDisplay, PCShopSell.Core.Home.FurnitureCatalog.ShopBench };
+                for (int k = 0; k < 5; k++) fixtureIds.Add(PCShopSell.Core.Home.FurnitureCatalog.Shelf); // 5 个普通货架 + 加固 + 重型（各摆一类货）
+                fixtureIds.Add(PCShopSell.Core.Home.FurnitureCatalog.RackStrong);
+                fixtureIds.Add(PCShopSell.Core.Home.FurnitureCatalog.RackHeavy);
+                foreach (string id in fixtureIds) Check(g.BuyFurniture(id), "家具城买店面设施 " + id);
+            }
+            _game.Ui.OnEnteredPlace(g.CurrentPlace);
+            Frame(0.05f);
+            _game.Ui.DebugRefreshQuests();
+            Check((_game.Ui.QuestTrackerText ?? "").Contains("摆好"), "任务条：买齐了就去摆好：" + _game.Ui.QuestTrackerText);
+            Shot("vs1_89_mall_fixtures");
+            _game.Ui.CloseAllWindows();
+            g.SendByCourier = false;
+            g.AdvanceClock(g.CourierQuote(false).minutes + g.CourierQuote(true).minutes + 30);
+            Check(g.FurnitureInStock(PCShopSell.Core.Home.FurnitureCatalog.ShopCounter) >= 1 && g.FurnitureInStock(PCShopSell.Core.Home.FurnitureCatalog.ShopDisplay) >= 2, "货车把设施送到了（还有旧店搬来的那套）");
+            Teleport(g, "shop02");
+            _game.Ui.CloseModalWindows();
+            Check(g.BeginRenovation(), "进店歇业装修");
+            Check(_game.BeginPlacement(true), "店里进入摆放模式");
+            {
+                var room = g.ShopRoom;
+                bool PutFixture(string id, double x, double z, int rot) =>
+                    g.PlaceFromStock(true, id, PCShopSell.Core.Home.RoomPlanner.Snap(room, PCShopSell.Core.Home.FurnitureCatalog.Get(id), x, z, rot));
+                Check(PutFixture(PCShopSell.Core.Home.FurnitureCatalog.ShopCounter, 0.9, 4.95, 3), "摆收银台");
+                Check(!g.ShopFitted, "只有收银台还不能开业");
+                _game.SelectStock(PCShopSell.Core.Home.FurnitureCatalog.Shelf);
+                _game.DebugCursorLocal = new Vector3(5.5f, 0, 3.2f);
+                for (int i = 0; i < 45; i++) Frame(0.05f);
+                Shot("vs1_90_placing_fixtures");
+                _game.DebugCursorLocal = null;
+                var cats = PCShopSell.Core.Home.FurnitureCatalog.ShelfCategories;
+                double[] backX = { 2.5, 4.5, 6.5 }, sideZ = { 2.5, 4.5, 6.5 };
+                for (int k = 0; k < 3; k++) Check(PutFixture(PCShopSell.Core.Home.FurnitureCatalog.Shelf, backX[k], 8.8, 0), "摆后墙货架 " + k);
+                for (int k = 0; k < 3; k++) Check(PutFixture(k == 2 ? PCShopSell.Core.Home.FurnitureCatalog.RackStrong : PCShopSell.Core.Home.FurnitureCatalog.Shelf, 11.8, sideZ[k], 1), "摆右墙货架 " + k);
+                Check(PutFixture(PCShopSell.Core.Home.FurnitureCatalog.ShopDisplay, 4.5, 4.5, 0), "摆展示桌 1");
+                Check(PutFixture(PCShopSell.Core.Home.FurnitureCatalog.ShopDisplay, 7.5, 4.5, 0), "摆展示桌 2");
+                Check(PutFixture(PCShopSell.Core.Home.FurnitureCatalog.ShopBench, 0.45, 8.1, 3), "摆装机操作台");
+                Check(PutFixture(PCShopSell.Core.Home.FurnitureCatalog.RackHeavy, 8.5, 8.8, 0), "摆第 7 个货架（重型）");
+            }
+            Check(g.ShopFitted && g.ShopFitGap() == null, "收银台和货架摆好了");
+            Check(g.ShelfIndexes().Count == 7 && g.ShelfIndexes().All(ix => g.ShelfKindAt(ix) == null), "新摆的货架都还没设置摆什么");
+            Check(g.PlayerShop.DisplaySlots == 4, "两张展示桌 = 4 个机位");
+            for (int i = 0; i < 10; i++) Frame(0.05f);
+            Shot("vs1_91_fixtures_placed");
+            _game.EndPlacement();
+            _game.Ui.CloseAllWindows();
+            for (int i = 0; i < 10; i++) Frame(0.05f);
+            Check(!g.PlayerShop.IsOpen, "摆完当天还在歇业装修");
+            Check(_game.Interior.ShelfCount == 7, "店内场景按摆放认出 7 个货架");
+            _game.Interior.StandAtCounter();
+            Frame(0.05f);
+            Check(_game.Interior.NearCounter, "站到摆好的收银台后面能收银");
+            _game.Interior.StandAtBench();
+            Frame(0.05f);
+            Check(_game.Interior.NearBench, "站到摆好的操作台前能装机");
+            _game.Interior.StandAtDisplay();
+            Frame(0.05f);
+            Check(_game.Interior.NearDisplay, "站到摆好的展示桌前能看整机");
+            _game.Interior.StandAtDoor();
+            Frame(0.05f);
+            _game.Ui.DebugRefreshQuests();
+            Check((_game.Ui.QuestTrackerText ?? "").Contains("设置"), "任务条：摆好后去设置货架：" + _game.Ui.QuestTrackerText);
+            Shot("vs1_92_fitted_shop");
+            g.Leave();
+            g.AdvanceClock(24 * 60);
+            Teleport(g, "shop02");
+            Check(g.PlayerShop.IsOpen && !g.IsRenovating, "摆完第二天开业");
+            _game.Ui.CloseModalWindows();
+            // 货架：新摆的都是空架子，走到货架前按 F 设置摆什么（只能摆一种货）
+            _game.Ui.CloseDock();
+            _game.Interior.StandAtShelf(0);
+            Frame(0.8f);
+            Check(_game.Interior.NearShelf && _game.Interior.NearbyShelfKind == null, "新货架还没设置摆什么");
+            Check(_game.TryGetInteract(out _, out string unsetHint) && unsetHint.Contains("还没设置"), "头顶提示：还没设置摆什么：" + unsetHint);
+            Shot("vs1_97_shelf_unset_3d");
+            _game.Ui.OpenShelfWindow(g.ShelfIndexes()[0]);
+            Frame(0.05f);
+            Shot("vs1_98_shelf_unset_window");
+            _game.Ui.CloseModalWindows();
+            var shelfIdx = g.ShelfIndexes();
+            var shelfCatsAll = PCShopSell.Core.Home.FurnitureCatalog.ShelfCategories;
+            for (int k = 0; k < 6; k++) Check(g.SetShelfKind(shelfIdx[k], PCShopSell.Core.Inventory.ShelfKinds.ForCategory(shelfCatsAll[k]).Id), "设置货架 " + k);
+            Check(g.SetShelfKind(shelfIdx[6], "drink"), "第 7 个货架摆饮料");
+            Frame(0.5f);
+            Check(_game.Interior.ShelfKindIds.Count(x => x != null) == 7, "店内场景认出 7 个货架都设置了");
+            // 杂货：什么礼品都能放进店里，有对应货架才摆得上去卖；来买配件的人多半不买
+            g.ShopLocker.AddGift(PCShopSell.Core.Home.Gifts.Soda, 6);
+            g.ShopLocker.AddGift(PCShopSell.Core.Home.Gifts.Cig, 3);
+            g.ShopLocker.AddGift(PCShopSell.Core.Home.Gifts.Fruit, 1);
+            Check(g.ListGoods(PCShopSell.Core.Home.Gifts.Soda, 6) && g.ListGoods(PCShopSell.Core.Home.Gifts.Cig, 2), "饮料、烟放进店里");
+            Check(g.PlayerShop.OnShelfGoods(PCShopSell.Core.Home.Gifts.Soda) == 6 && g.PlayerShop.OnShelfGoods(PCShopSell.Core.Home.Gifts.Cig) == 0, "饮料货架摆上了饮料，没有烟货架烟就摆不上");
+            g.SetGoodsMarkup(PCShopSell.Core.Home.Gifts.Cig, 1.3);
+            _game.Interior.StandAtShelf(6);
+            Frame(0.8f);
+            Check(_game.Interior.NearShelf && _game.Interior.NearbyShelfKind == "drink", "走到饮料货架前能交互");
+            Check(_game.TryGetInteract(out _, out string goodsHint) && goodsHint.Contains("饮料") && goodsHint.Contains("6"), "货架头顶提示写明几件：" + goodsHint);
+            Shot("vs1_94_goods_shelf_3d");
+            _game.Ui.OpenShelfWindow(g.ShelfIndexes()[6]);
+            Frame(0.05f);
+            Check(_game.Ui.AnyModalOpen, "货架窗口打开");
+            Shot("vs1_95_goods_shelf");
+            _game.Ui.CloseModalWindows();
+            _game.Ui.OpenDock();
+            _game.Ui.DebugSelectTab(1);
+            Frame(0.05f);
+            Shot("vs1_96_stock_tab_counts");
+            _game.Ui.DebugSelectTab(5);
+            Frame(0.05f);
+            Shot("vs1_99_upgrades_tab");
+            _game.Ui.DebugSelectTab(4);
+            Frame(0.05f);
+            Shot("vs1_103_renovate_tab");
+            _game.Ui.DebugSelectTab(1);
+            _game.Ui.OpenShelfKindChooser(g.ShelfIndexes()[0]);
+            Frame(0.05f);
+            Shot("vs1_104_shelf_kind_chooser");
+            _game.Ui.CloseModalWindows();
+            Check(g.PlayerShop.ShelfCapacityOf(PCShopSell.Core.Inventory.ShelfKinds.Get("drink")) == 160 && g.PlayerShop.Stock.Capacity >= PCShopSell.Core.Shop.ShopSettings.Capacity(g.PlayerShop.Size) + 30, "重型货架能放 160 公斤，加固 + 重型让后仓多 30 格");
+            _game.Ui.CloseAllWindows();
             g.Meet(PCShopSell.Core.Session.Npcs.Zhang, 40);
             g.Meet(PCShopSell.Core.Session.Npcs.Lin, 62);
             g.Meet(PCShopSell.Core.Session.Npcs.Landlady, 20);
@@ -850,6 +1029,13 @@ namespace PCShopSell.EditorTools
             while (d.IsWeekend) d = d.AddDays(1);
             g.Clock.Restore(d, 10 * 60);
             Teleport(g, "stall_gpu");
+            Check(!g.IsMet(PCShopSell.Core.Session.Npcs.Wang), "进档口、买东西不会自动存老板的联系方式");
+            _game.Ui.CloseModalWindows();
+            _game.Ui.OpenNpcWindow(PCShopSell.Core.Session.Npcs.Get(PCShopSell.Core.Session.Npcs.Wang), g.CurrentPlace, null);
+            Frame(0.05f);
+            Shot("vs1_101_ask_contact");
+            _game.Ui.CloseModalWindows();
+            Check(g.AskContact(PCShopSell.Core.Session.Npcs.Wang) && g.IsMet(PCShopSell.Core.Session.Npcs.Wang), "聊天时当面要联系方式");
             g.AddRelation(PCShopSell.Core.Session.Npcs.Wang, 45);
             g.AskForTip(PCShopSell.Core.Session.Npcs.Wang);
             _game.Ui.CloseModalWindows();
@@ -901,6 +1087,14 @@ namespace PCShopSell.EditorTools
             Check(walked, "WASD 能在街上走起来");
             for (int i = 0; i < 10; i++) Frame(0.05f);
             Shot("vs1_19_wasd_street");
+            // 自己租的铺子门前有青色光柱，一眼能认出来
+            g.ArriveAtNode(g.City.GetPlace(g.PlayerShopPlace.Id).NodeId);
+            g.Clock.Restore(g.Clock.Today, 19 * 60);
+            _game.SnapCamera();
+            for (int i = 0; i < 10; i++) Frame(0.05f);
+            Check(_game.ShopBeaconVisible, "自己的铺子门前有醒目标记");
+            Shot("vs1_102_player_shop_beacon");
+            g.Clock.Restore(g.Clock.Today, 14 * 60);
             g.ArriveAtNode("e06");
             Frame(0.05f);
             Check(g.NearbyPlace != null, "走到门口附近能进门");

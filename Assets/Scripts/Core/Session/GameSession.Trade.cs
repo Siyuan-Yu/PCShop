@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using PCShopSell.Core.Catalog;
@@ -132,22 +132,22 @@ namespace PCShopSell.Core.Session
         public Money OnlinePrice(OnlineStore store, PartDef part) =>
             Online1788.PriceOf(store, Market.PriceOf(part)).Scale(1.0 - NpcPerks.OnlineDiscount(Relation(Npcs.Zhou)));
 
-        /// <summary>用手机上的 1788 app 下单（人在哪都行），次日 10:00 送到店里。</summary>
-        public bool PlaceOnlineOrder(string storeId, IReadOnlyList<(PartDef part, int count)> lines) =>
-            PlaceOnlineOrderCore(storeId, lines, true);
+        /// <summary>用手机上的 1788 app 下单（人在哪都行），次日 10:00 送到店里或家里（toHome）。</summary>
+        public bool PlaceOnlineOrder(string storeId, IReadOnlyList<(PartDef part, int count)> lines, bool toHome = false) =>
+            PlaceOnlineOrderCore(storeId, lines, true, toHome);
 
         /// <summary>manual = 玩家亲自在手机上挑货下单（花 5 分钟）；自动补货是 app 定时下单。</summary>
-        private bool PlaceOnlineOrderCore(string storeId, IReadOnlyList<(PartDef part, int count)> lines, bool manual)
+        private bool PlaceOnlineOrderCore(string storeId, IReadOnlyList<(PartDef part, int count)> lines, bool manual, bool toHome = false)
         {
             string appBlock = AppBlocker(PhoneApps.Wholesale);
             if (appBlock != null) return Fail(appBlock);
-            if (!HasShop) return Fail("还没有店铺，1788 的货没地方送。先去商业街的房产中介租个铺子。");
+            if (!toHome && !HasShop) return Fail("还没有店铺，货没地方送店里。先去商业街的房产中介租个铺子，或者选“送到家里”。");
             if (!Online.IsDiscovered(storeId)) return false;
             OnlineStore store = Online1788.GetStore(storeId);
 
             Money total = Online1788.ShippingFee;
             double space = 0;
-            var order = new OnlineOrder { Id = Online.NextOrderId, StoreId = storeId };
+            var order = new OnlineOrder { Id = Online.NextOrderId, StoreId = storeId, ToHome = toHome };
             foreach (var (part, count) in lines)
             {
                 if (count <= 0) continue;
@@ -157,7 +157,7 @@ namespace PCShopSell.Core.Session
             }
             if (order.Lines.Count == 0) return Fail("购物车是空的。");
             double free = PlayerShop.Stock.FreeSpace - Online.PendingSpace();
-            if (space > free + 1e-9) return Fail($"店里放不下（需要 {space:0.#} 格，只剩 {Math.Max(0, free):0.#} 格）。");
+            if (!toHome && space > free + 1e-9) return Fail($"店里放不下（需要 {space:0.#} 格，只剩 {Math.Max(0, free):0.#} 格）。");
             if (!Ledger.TryDebit(Clock.Today, "进货", total, $"1788 {store.Name}")) return Fail($"要 {total}（含运费），钱不够。");
 
             GameDate next = Clock.Today.AddDays(1);
@@ -166,7 +166,8 @@ namespace PCShopSell.Core.Session
             Online.NextOrderId++;
             Online.TotalOrders++;
             Online.AddPending(order);
-            Say(manual ? $"下单成功，{total}，明天 10:00 送到店里。" : $"自动补货下单：{store.Name}，{total}，明天 10:00 送到店里。");
+            string where = toHome ? "家里（放在纸箱里）" : "店里";
+            Say(manual ? $"下单成功，{total}，明天 10:00 送到{where}。" : $"自动补货下单：{store.Name}，{total}，明天 10:00 送到店里。");
 
             if (Online.TotalOrders == 2 && Online.Discover("s_flash"))
                 Say("1788 首页给你推荐了一家新店：闪电优选。");
@@ -196,14 +197,15 @@ namespace PCShopSell.Core.Session
                         }
                         else
                         {
-                            PlayerShop.Stock.ForceAdd(part, true, 1);
+                            if (o.ToHome) HomeBoxParts.ForceAdd(part, true, 1);
+                            else PlayerShop.Stock.ForceAdd(part, true, 1);
                             good++;
                         }
                     }
                 }
                 rec.ItemsReceived += good + bad;
                 rec.Defects += bad;
-                string body = $"{store.Name} 的货到了：{good} 件完好。";
+                string body = $"{store.Name} 的货到了（{(o.ToHome ? "送到家里，放在纸箱里，要自己带去店里" : "已上店里货架")}）：{good} 件完好。";
                 if (bad > 0) body += $"\n{bad} 件是次品，只能扔掉：{badNames}";
                 Show("1788 到货", body);
             }

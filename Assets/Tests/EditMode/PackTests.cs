@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Catalog;
@@ -210,6 +210,31 @@ namespace PCShopSell.Tests
             Assert.IsFalse(s.PlaceOnlineOrder("s_mid", new[] { (part, 1) }), "没装 1788 app");
             Assert.IsTrue(s.InstallApp(PhoneApps.Wholesale));
             Assert.IsTrue(s.PlaceOnlineOrder("s_mid", new[] { (part, 1) }));
+        }
+
+        [Test]
+        public void Online1788_CanDeliverToHome()
+        {
+            GameSession s = Make(false);
+            GameSessionTests.Teleport(s, "phone");
+            s.BuySmartphone();
+            Assert.IsTrue(s.InstallApp(PhoneApps.Wholesale));
+            var part = PartCatalog.Get("ssd1");
+            int shopBefore = s.PlayerShop.Stock.CountAll(part), homeBefore = s.HomeBoxParts.CountAll(part);
+            Assert.IsTrue(s.PlaceOnlineOrder("s_mid", new[] { (part, 2) }, true), "送家里下单");
+            Assert.AreEqual(0, s.PendingOnlineCount(part.Id), "送家里的不算店里的在途库存");
+            Assert.AreEqual(0, s.Online.PendingSpace(), 1e-9, "送家里的不占店里仓位");
+
+            // 存档往返：送哪里要保留
+            GameSession loaded = GameSession.Load(s.City, s.CreateSave());
+            Assert.IsTrue(loaded.Online.Pending[0].ToHome);
+
+            s.Clock.Restore(s.Clock.Today.AddDays(2), 12 * 60);
+            s.AdvanceClock(1);
+            int homeGot = s.HomeBoxParts.CountAll(part) - homeBefore;
+            Assert.AreEqual(shopBefore, s.PlayerShop.Stock.CountAll(part), "没送到店里");
+            Assert.Greater(homeGot, -1);
+            Assert.AreEqual(0, s.Online.Pending.Count, "订单已送达");
         }
 
         [Test]

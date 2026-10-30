@@ -19,12 +19,17 @@ namespace PCShopSell.Game.Runtime
     {
         private static readonly Color Metal = new Color(0.22f, 0.22f, 0.25f);
 
-        public static GameObject Build(Transform parent, FurnitureDef def, bool collider)
+        public static GameObject Build(Transform parent, FurnitureDef def, bool collider, string shelfKind = null)
         {
             var root = new GameObject("F_" + def.Id).transform;
             root.SetParent(parent, false);
             float w = (float)def.Width, d = (float)def.Depth;
             bool c = collider;
+            if (def.IsFixture)
+            {
+                ShopFixtures.BuildFixture(root, def, c, shelfKind);
+                return root.gameObject;
+            }
             switch (def.Id)
             {
                 case FurnitureCatalog.BedBoard: Bed(root, w, d, c, 0); break;
@@ -260,6 +265,22 @@ namespace PCShopSell.Game.Runtime
         /// <summary>地面家具的占地（走路用，x/y = 房间局部 x/z）。</summary>
         public readonly List<Rect> Blockers = new List<Rect>();
 
+        /// <summary>摆出来的每一件：模型、定义、摆放（店内场景从里面找货架、收银台这些设施）。</summary>
+        public sealed class Entry
+        {
+            public GameObject Go;
+            public FurnitureDef Def;
+            public PlacedFurniture Placed;
+            /// <summary>地面家具的占地（房间局部 x/z）；墙面、薄地面没有。</summary>
+            public Rect Foot;
+            public bool HasFoot;
+        }
+
+        public readonly List<Entry> Entries = new List<Entry>();
+
+        /// <summary>布局重建过几次（店内场景据此刷新设施数据）。</summary>
+        public int Version { get; private set; }
+
         public RoomFurniture(Transform parent)
         {
             _parent = parent;
@@ -269,7 +290,7 @@ namespace PCShopSell.Game.Runtime
         public bool Sync(IReadOnlyList<PlacedFurniture> layout, RoomSpec room)
         {
             var sb = new System.Text.StringBuilder();
-            foreach (PlacedFurniture p in layout) sb.Append(p.Id).Append(':').Append(p.X).Append(':').Append(p.Z).Append(':').Append(p.Rot).Append(';');
+            foreach (PlacedFurniture p in layout) sb.Append(p.Id).Append(':').Append(p.X).Append(':').Append(p.Z).Append(':').Append(p.Rot).Append(':').Append(p.Item).Append(';');
             string sig = sb.ToString();
             if (sig == _signature) return false;
             _signature = sig;
@@ -277,20 +298,27 @@ namespace PCShopSell.Game.Runtime
             foreach (GameObject go in _items) Kill.It(go);
             _items.Clear();
             Blockers.Clear();
+            Entries.Clear();
+            Version++;
             for (int i = 0; i < layout.Count; i++)
             {
                 FurnitureDef def = FurnitureCatalog.Get(layout[i].Id);
                 if (def == null) continue;
-                GameObject go = FurnitureVisuals.Build(_parent, def, true);
+                GameObject go = FurnitureVisuals.Build(_parent, def, true, layout[i].Item);
                 FurnitureVisuals.Place(go, def, layout[i], room);
                 var pv = go.AddComponent<PlacedVisual>();
                 pv.Index = i;
                 pv.FurnitureId = def.Id;
                 _items.Add(go);
+                var entry = new Entry { Go = go, Def = def, Placed = layout[i] };
+                Entries.Add(entry);
                 if (def.Slot == FurnitureSlot.Floor)
                 {
                     RectD f = RoomPlanner.Footprint(room, def, layout[i]);
-                    Blockers.Add(new Rect((float)f.MinX, (float)f.MinZ, (float)(f.MaxX - f.MinX), (float)(f.MaxZ - f.MinZ)));
+                    var foot = new Rect((float)f.MinX, (float)f.MinZ, (float)(f.MaxX - f.MinX), (float)(f.MaxZ - f.MinZ));
+                    Blockers.Add(foot);
+                    entry.Foot = foot;
+                    entry.HasFoot = true;
                 }
             }
             return true;
@@ -315,6 +343,8 @@ namespace PCShopSell.Game.Runtime
         {
             foreach (GameObject go in _items) Kill.It(go);
             _items.Clear();
+            Entries.Clear();
+            Blockers.Clear();
             _signature = "";
         }
     }

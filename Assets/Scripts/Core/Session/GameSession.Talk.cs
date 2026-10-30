@@ -96,18 +96,17 @@ namespace PCShopSell.Core.Session
 
         // ---------- 店员与老板 ----------
 
-        /// <summary>老板肯不肯见你：认识他、且交情够了。没有交情系统的小店老板一直在柜台，直接可见。</summary>
+        /// <summary>老板肯不肯见你：交情够了（不用先存联系方式，联系方式是见面聊的时候再要）。没有交情系统的小店老板一直在柜台，直接可见。</summary>
         public bool BossReachable(PlaceRoster r)
         {
             if (r == null || r.BossNpcId == null) return false;
-            return IsMet(r.BossNpcId) && Relation(r.BossNpcId) >= r.BossGate;
+            return Relation(r.BossNpcId) >= r.BossGate;
         }
 
         /// <summary>找店员打听老板的事现在不能的原因；能就返回 null。</summary>
         public string StaffBossBlocker(PlaceRoster r)
         {
             if (r == null || r.BossNpcId == null) return "这里没有别的老板";
-            if (!IsMet(r.BossNpcId)) return "还没听说过老板";
             if (BossReachable(r)) return "老板肯见你了，直接找他";
             if (_staffDays.TryGetValue(r.BossNpcId, out int last) && last == Clock.Today.TotalDays) return "今天问过了";
             return null;

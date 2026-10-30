@@ -73,6 +73,9 @@ namespace PCShopSell.Core.Trade
         public List<OnlineOrderLine> Lines = new List<OnlineOrderLine>();
         public long DeliverAtMinute;
         public long TotalCents;
+
+        /// <summary>送到家里（放在家里纸箱）；否则送到店里上货架。</summary>
+        public bool ToHome;
     }
 
     /// <summary>"1788" 进货平台：比档口便宜，但第二天才到，还可能收到次品。用智能手机上的 1788 app 下单。</summary>
@@ -165,12 +168,13 @@ namespace PCShopSell.Core.Trade
             return due;
         }
 
-        /// <summary>还没送到的货要占的空间。</summary>
+        /// <summary>还没送到店里的货要占的空间（送家里的不占店里的仓位）。</summary>
         public double PendingSpace()
         {
             double s = 0;
             foreach (OnlineOrder o in _pending)
             {
+                if (o.ToHome) continue;
                 foreach (OnlineOrderLine l in o.Lines)
                     s += Inventory.Stock.SpaceOf(PartCatalog.Get(l.PartId), true, l.Count);
             }

@@ -1,11 +1,11 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.World;
 using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
 {
-    /// <summary>斜俯视正交镜头：默认俯角 35°、偏航 45°。街上可以旋转/俯仰（右键拖动、Q/R），店内固定；平滑跟随目标，滚轮缩放。</summary>
+    /// <summary>鏂滀刊瑙嗘浜ら暅澶达細榛樿淇 35掳銆佸亸鑸?45掳銆傝涓婂彲浠ユ棆杞?淇话锛堝彸閿嫋鍔ㄣ€丵/R锛夛紝搴楀唴鍥哄畾锛涘钩婊戣窡闅忕洰鏍囷紝婊氳疆缂╂斁銆?/summary>
     public sealed class CameraRig
     {
         public const float DefaultYaw = 45f;
@@ -31,18 +31,20 @@ namespace PCShopSell.Game.Runtime
             _cam.orthographic = true;
             _cam.nearClipPlane = 0.1f;
             _cam.farClipPlane = 600f;
+            _curRot = Rotation;
             _cam.transform.rotation = Rotation;
         }
 
         public void Snap(Vector3 focus, float size)
         {
+            _curRot = Rotation;
             _focus = focus;
             Size = size;
             _cam.orthographicSize = size;
             Apply();
         }
 
-        /// <summary>进出店铺：店内固定默认视角，出来时恢复街上的视角。</summary>
+        /// <summary>杩涘嚭搴楅摵锛氬簵鍐呭浐瀹氶粯璁よ瑙掞紝鍑烘潵鏃舵仮澶嶈涓婄殑瑙嗚銆?/summary>
         public void SetInterior(bool interior)
         {
             if (interior == _locked) return;
@@ -61,15 +63,52 @@ namespace PCShopSell.Game.Runtime
             }
         }
 
+        /// <summary>缂栬緫妯″紡鐨勪刊瑙掞細70掳锛屼刊瑙嗕絾杩樼湅寰楀嚭瀹跺叿鐨勭珛闈€?/summary>
+        public const float EditPitch = 55f;
+        private Quaternion _curRot = Quaternion.Euler(DefaultPitch, DefaultYaw, 0f);
+        private float _slowTurn;
+
+        private bool _edit;
+        private float _editYaw, _editPitch;
+
+        /// <summary>瑁呬慨 / 鎽嗗鍏风殑缂栬緫妯″紡锛氶暅澶磋浆鎴愭涓婃柟淇锛堝睆骞曞彸 = 鎴块棿 X锛屽睆骞曚笂 = 鎴块棿 Z锛夛紱閫€鍑烘椂鎭㈠鍘熸潵鐨勮瑙掋€?/summary>
+        public bool Edit => _edit;
+
+        public void SetEdit(bool on)
+        {
+            if (on == _edit) return;
+            _edit = on;
+            if (on)
+            {
+                _editYaw = Yaw;
+                _editPitch = Pitch;
+                Yaw = 0f;
+                Pitch = EditPitch;
+                _slowTurn = 1.6f;
+            }
+            else
+            {
+                _slowTurn = 1.6f;
+                Yaw = _editYaw;
+                Pitch = _editPitch;
+            }
+        }
+
         public void Orbit(float dYaw, float dPitch)
         {
-            if (_locked) return;
+            if (_locked && !_edit) return;
             Yaw = Mathf.Repeat(Yaw + dYaw, 360f);
             Pitch = Mathf.Clamp(Pitch + dPitch, MinPitch, MaxPitch);
         }
 
         public void ResetView()
         {
+            if (_edit)
+            {
+                Yaw = 0f;
+                Pitch = EditPitch;
+                return;
+            }
             if (_locked) return;
             Yaw = DefaultYaw;
             Pitch = DefaultPitch;
@@ -83,19 +122,23 @@ namespace PCShopSell.Game.Runtime
 
         public void Follow(Vector3 focus, float dt)
         {
-            _focus = Vector3.Lerp(_focus, focus, 1f - Mathf.Exp(-dt * 6f));
+            _focus = Vector3.Lerp(_focus, focus, 1f - Mathf.Exp(-dt * (_slowTurn > 0 ? 4f : 6f)));
+            // 瑙嗚骞虫粦杞繃鍘伙紙杩涘嚭缂栬緫妯″紡鏃舵參涓€鐐癸紝鍍忛暅澶寸紦缂撴姮璧锋潵锛?
+            float rate = _slowTurn > 0 ? 3.5f : 14f;
+            _slowTurn -= dt;
+            _curRot = Quaternion.Slerp(_curRot, Rotation, 1f - Mathf.Exp(-dt * rate));
             Apply();
         }
 
         private void Apply()
         {
             _cam.orthographicSize = Mathf.Lerp(_cam.orthographicSize, Size, 0.25f);
-            _cam.transform.rotation = Rotation;
-            _cam.transform.position = _focus - Rotation * Vector3.forward * 120f;
+            _cam.transform.rotation = _curRot;
+            _cam.transform.position = _focus - _curRot * Vector3.forward * 120f;
         }
     }
 
-    /// <summary>玩家小人 + 载具。</summary>
+    /// <summary>鐜╁灏忎汉 + 杞藉叿銆?/summary>
     public sealed class AvatarView
     {
         private readonly GameObject _root;
@@ -165,7 +208,7 @@ namespace PCShopSell.Game.Runtime
         }
     }
 
-    /// <summary>交警与视野扇形。</summary>
+    /// <summary>浜よ涓庤閲庢墖褰€?/summary>
     public sealed class PoliceView
     {
         private readonly List<(Officer o, GameObject go, MeshRenderer cone)> _items = new List<(Officer, GameObject, MeshRenderer)>();
@@ -207,7 +250,7 @@ namespace PCShopSell.Game.Runtime
         }
     }
 
-    /// <summary>街上的行人（纯装饰），以及走进玩家店里的顾客。</summary>
+    /// <summary>琛椾笂鐨勮浜猴紙绾楗帮級锛屼互鍙婅蛋杩涚帺瀹跺簵閲岀殑椤惧銆?/summary>
     public sealed class CrowdView
     {
         private sealed class Walker
@@ -224,7 +267,7 @@ namespace PCShopSell.Game.Runtime
         private readonly float _minX, _maxX;
         private Vector3 _shopDoor;
 
-        /// <summary>玩家店门口（搬店后改到新铺子）。</summary>
+        /// <summary>鐜╁搴楅棬鍙ｏ紙鎼簵鍚庢敼鍒版柊閾哄瓙锛夈€?/summary>
         public Vector3 ShopDoor
         {
             get => _shopDoor;
@@ -251,7 +294,7 @@ namespace PCShopSell.Game.Runtime
             }
         }
 
-        /// <summary>有顾客进玩家的店：从街上某处走向店门。</summary>
+        /// <summary>鏈夐【瀹㈣繘鐜╁鐨勫簵锛氫粠琛椾笂鏌愬璧板悜搴楅棬銆?/summary>
         public void SendShopper()
         {
             float x = Mathf.Lerp(_minX, _maxX, 0.55f + (float)_rng.NextDouble() * 0.45f);

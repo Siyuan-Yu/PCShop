@@ -19,8 +19,8 @@ namespace PCShopSell.Core.Session
     /// </summary>
     public sealed class Officer
     {
-        public const double PatrolSpeed = 4;
-        public const double ChaseSpeed = 16.5;
+        public const double PatrolSpeed = 2;
+        public const double ChaseSpeed = 8.25;
         public const double SightRange = 13;
         public const double SightHalfAngleDeg = 40;
         public const double CatchDistance = 1.3;

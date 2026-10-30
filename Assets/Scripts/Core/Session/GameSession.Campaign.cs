@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -102,6 +102,7 @@ namespace PCShopSell.Core.Session
                 if (ok)
                 {
                     PlayerShop.Reputation += Campaign.PassReputationBonus;
+                    if (m.Id == "y1") GrantUpgrade(ShopUpgrades.SelfCheckout);
                     Popup?.Invoke($"{m.Title}：达标", $"{m.Progress(this)}\n\n{m.PassText}");
                 }
                 else

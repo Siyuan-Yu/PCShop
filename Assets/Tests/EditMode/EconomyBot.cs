@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -27,7 +27,7 @@ namespace PCShopSell.Tests
 
         private static readonly string[] UpgradeOrder =
         {
-            ShopUpgrades.Shelf1, ShopUpgrades.Sign, ShopUpgrades.Phone, ShopUpgrades.Qr,
+            ShopUpgrades.Shelf1, ShopUpgrades.Sign, ShopUpgrades.Qr,
             ShopUpgrades.AirCon, ShopUpgrades.Cctv, ShopUpgrades.Shelf2, ShopUpgrades.SelfCheckout, ShopUpgrades.Shelf3,
         };
 
@@ -163,9 +163,12 @@ namespace PCShopSell.Tests
                 if (_lazy && id != ShopUpgrades.Shelf1 && id != ShopUpgrades.Sign) continue;
                 if (_s.HasUpgrade(id)) continue;
                 ShopUpgradeDef def = ShopUpgrades.All.First(u => u.Id == id);
-                if (_s.UpgradeBlocker(def) != null) continue;
+                // 货架扩容 / 自助结账现在不在升级页卖了：机器人按老价格直接买，保持数值校准不变
+                if (def.Offered && _s.UpgradeBlocker(def) != null) continue;
+                if (!def.Offered && ((def.Requires != null && !_s.HasUpgrade(def.Requires)) || _s.PlayerShop.Reputation < def.MinReputation)) continue;
                 if (_s.Ledger.Balance < def.Price + Money.FromYuan(1500)) break;
-                _s.BuyUpgrade(id);
+                if (def.Offered) _s.BuyUpgrade(id);
+                else if (_s.Ledger.TryDebit(_s.Clock.Today, "装修", def.Price, def.Name)) _s.GrantUpgrade(id);
                 break;
             }
 

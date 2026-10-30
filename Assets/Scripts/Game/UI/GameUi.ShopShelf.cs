@@ -209,46 +209,114 @@ namespace PCShopSell.Game.UI
 
         // ---------- 货架 ----------
 
-        /// <summary>走到货架前按 F：一座木货架，上层摆整盒、下层摆散件，入门 / 主流 / 高端各一格，价签在板边。</summary>
-        public void OpenShelfWindow(PartCategory cat)
+        /// <summary>走到货架前按 F：先选这个货架摆哪一类货；配件类是一座木货架（上层整盒、下层散件，入门 / 主流 / 高端各一格），杂货类是一张清单。</summary>
+        public void OpenShelfWindow(int layoutIndex)
         {
-            OpenWindow("货架：" + PartCatalog.CategoryName(cat), 980, 812, w =>
+            OpenWindow("货架", 1000, 1000, w =>
             {
                 ShopSimulation shop = S.PlayerShop;
                 Stock st = shop.Stock;
-                var parts = PartCatalog.InCategory(cat).OrderBy(p => p.Tier).ToList();
-                int count = parts.Sum(p => st.CountAll(p));
-                Line(w.Content, $"整店仓位 {st.UsedSpace:0.#}/{st.Capacity:0.#} 格，还剩 {st.FreeSpace:0.#} 格（所有货架共用）。"
-                    + (count == 0 ? "  <color=#F07A5A>这个货架空了，只摆着样品。</color>" : ""), 16, Ui.Dim);
+                ShelfKind kind = S.ShelfKindAt(layoutIndex);
 
-                Image frame = Ui.Panel(w.Content, "Shelf", WoodDark);
-                Ui.Size(frame, -1, 540);
-                Ui.VList(frame.rectTransform, 0, 12);
+                RectTransform head = Ui.Row(w.Content, 44, 8);
+                Ui.Size(Ui.Label(head, kind == null ? "这个货架还空着" : "这个货架摆：<b>" + kind.Name + "</b>", 19, TextAnchor.MiddleLeft), -1, -1, 1);
+                Ui.Size(Ui.Button(head, kind == null ? "选择摆什么" : "换品类", () => OpenShelfKindChooser(layoutIndex, w), 17, kind == null ? Ui.ButtonHot : Ui.ButtonBg), 160);
 
-                // 横梁招牌
-                Image sign = Ui.Panel(frame.transform, "Sign", WoodLight);
-                Ui.Size(sign, -1, 34);
-                Text st1 = Ui.Label(sign.transform, "<b>" + PartCatalog.CategoryName(cat) + "</b>　整盒在上层，散件在下层", 18, TextAnchor.MiddleCenter, new Color(0.18f, 0.11f, 0.05f));
-                st1.rectTransform.Fill(2);
-                Ui.Size(Ui.Panel(frame.transform, "Gap", WoodDark), -1, 6);
-
-                for (int board = 0; board < 2; board++)
+                if (kind == null)
                 {
-                    bool boxed = board == 0;
-                    RectTransform row = Ui.Row(frame.transform, 205, 8);
-                    foreach (PartDef p in parts)
-                        BuildShelfSlot(row, p, boxed, shop);
-                    Ui.Size(Ui.Panel(frame.transform, "Plank", WoodLight), -1, 14);
-                    Ui.Size(Ui.Panel(frame.transform, "Gap", WoodDark), -1, 8);
+                    Para(w.Content, "选一类货：店里这一类的货（盒装、散件都算同一类）就会自动摆上来。没有对应货架的货，顾客买不到。", 17, Ui.Warn);
+                    Ui.Size(Ui.Button(w.Content, "关闭", w.Close, 20), -1, 46);
+                    return;
                 }
 
-                RectTransform prices = Ui.Row(w.Content, 64, 8);
-                foreach (PartDef p in parts) ShelfPriceBox(w, prices, p, shop);
+                ShelfFill fill = shop.ShelfFillOf(kind);
+                int same = S.ShelvesOfKind(kind.Id);
+                int back = kind.IsParts ? PartCatalog.InCategory(kind.Category).Sum(p => st.CountAll(p)) : kind.GiftIds.Sum(id => st.GoodsCount(id));
+                Line(w.Content, $"摆「{kind.Name}」的货架共 <b>{same}</b> 个，一共能放 {fill.CapacityKg:0} 公斤，已摆 <b>{fill.UsedKg:0.#}</b> 公斤 / <b>{fill.Total}</b> 件"
+                    + (back > fill.Total ? $"　<color=#FFD54A>后仓还有 {back - fill.Total} 件没摆上（货架装满了）</color>" : ""), 16);
+                Line(w.Content, $"整店后仓 {st.UsedSpace:0.#}/{st.Capacity:0.#} 格，还剩 {st.FreeSpace:0.#} 格（所有货共用）", 15, Ui.Dim);
 
+                if (kind.IsParts) BuildPartShelfBody(w, kind, fill);
+                else BuildGoodsShelfBody(w, kind, fill);
                 Ui.Size(Ui.Button(w.Content, "关闭", w.Close, 20), -1, 46);
             });
         }
 
+        /// <summary>选这个货架摆哪一类货：一个小窗口，点哪类就是哪类。owner 是从货架窗口打开的就一起刷新。</summary>
+        public void OpenShelfKindChooser(int layoutIndex, Window owner = null)
+        {
+            OpenWindow("这个货架摆什么", 640, 640, w =>
+            {
+                ShopSimulation shop = S.PlayerShop;
+                ShelfKind cur = S.ShelfKindAt(layoutIndex);
+                Line(w.Content, "一个货架只摆一类货；选好后后仓里这类货（盒装散件都算）自动摆上来。", 15, Ui.Dim);
+                void Pick(string id)
+                {
+                    S.SetShelfKind(layoutIndex, id);
+                    w.Close();
+                    owner?.Rebuild();
+                    RebuildDock();
+                }
+                void KindRows(string title, IEnumerable<ShelfKind> kinds)
+                {
+                    Line(w.Content, title, 16, Ui.Accent);
+                    RectTransform row = null;
+                    int n = 0;
+                    foreach (ShelfKind k in kinds)
+                    {
+                        if (n++ % 2 == 0) row = Ui.Row(w.Content, 56, 6);
+                        ShelfKind kk = k;
+                        bool on = cur != null && cur.Id == k.Id;
+                        int back = k.IsParts ? PartCatalog.InCategory(k.Category).Sum(p => shop.Stock.CountAll(p)) : k.GiftIds.Sum(id => shop.Stock.GoodsCount(id));
+                        int shelves = S.ShelvesOfKind(k.Id);
+                        string sub = $"后仓 {back} 件 · {(shelves == 0 ? "还没有货架" : shelves + " 个货架")}";
+                        Ui.Size(Ui.Button(row, $"{k.Name}{(on ? "  ✓" : "")}\n<size=13>{sub}</size>", () => Pick(kk.Id), 17, on ? Ui.ButtonHot : Ui.ButtonBg), -1, -1, 1);
+                    }
+                    if (n % 2 == 1) Ui.Size(Ui.Rect(row, "Pad"), -1, -1, 1);
+                }
+                KindRows("电脑配件", ShelfKinds.PartKinds);
+                KindRows("杂货", ShelfKinds.GoodsKinds);
+                RectTransform row = Ui.Row(w.Content, 46, 8);
+                Ui.Size(Ui.Button(row, "清空这个货架", () => Pick(null), 17, Ui.ButtonBg, cur != null), -1, -1, 1);
+                Ui.Size(Ui.Button(row, "取消", w.Close, 17), 160);
+            });
+        }
+
+        private void BuildPartShelfBody(Window w, ShelfKind kind, ShelfFill fill)
+        {
+            ShopSimulation shop = S.PlayerShop;
+            PartCategory cat = kind.Category;
+            var parts = PartCatalog.InCategory(cat).OrderBy(p => p.Tier).ToList();
+
+            Image frame = Ui.Panel(w.Content, "Shelf", WoodDark);
+            Ui.Size(frame, -1, 540);
+            Ui.VList(frame.rectTransform, 0, 12);
+
+            // 横梁招牌
+            Image sign = Ui.Panel(frame.transform, "Sign", WoodLight);
+            Ui.Size(sign, -1, 34);
+            Text st1 = Ui.Label(sign.transform, "<b>" + kind.Name + "</b>　整盒在上层，散件在下层", 18, TextAnchor.MiddleCenter, new Color(0.18f, 0.11f, 0.05f));
+            st1.rectTransform.Fill(2);
+            Ui.Size(Ui.Panel(frame.transform, "Gap", WoodDark), -1, 6);
+
+            for (int board = 0; board < 2; board++)
+            {
+                bool boxed = board == 0;
+                RectTransform row = Ui.Row(frame.transform, 205, 8);
+                foreach (PartDef p in parts)
+                    BuildShelfSlot(row, p, boxed, shop, fill);
+                Ui.Size(Ui.Panel(frame.transform, "Plank", WoodLight), -1, 14);
+                Ui.Size(Ui.Panel(frame.transform, "Gap", WoodDark), -1, 8);
+            }
+
+            RectTransform prices = Ui.Row(w.Content, 64, 8);
+            foreach (PartDef p in parts)
+            {
+                // 货架上没有的就不显示（价格在定价页里调）
+                if (fill.PartCount(p) > 0) ShelfPriceBox(w, prices, p, shop);
+                else Ui.Size(Ui.Rect(prices, "NoGoods"), 296, 64);
+            }
+        }
         /// <summary>货架下面的调价：每件配件单独 −/+ 加价，“跟随”回到全局加价。改了马上生效，价签跟着变。</summary>
         private void ShelfPriceBox(Window w, Transform row, PartDef p, ShopSimulation shop)
         {
@@ -270,12 +338,18 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(inner, "跟随", () => Set(null), 13, Ui.ButtonBg, own), 54);
         }
 
-        private void BuildShelfSlot(Transform row, PartDef p, bool boxed, ShopSimulation shop)
+        private void BuildShelfSlot(Transform row, PartDef p, bool boxed, ShopSimulation shop, ShelfFill fill)
         {
-            int have = shop.Stock.Count(p, boxed);
+            int have = fill.PartCount(p, boxed);
             Image slot = Ui.Panel(row, "Slot", ShelfBack);
             Ui.Size(slot, 296, 205);
             RectTransform rt = slot.rectTransform;
+            if (have == 0)
+            {
+                // 板上没有的：空位，什么都不写
+                slot.color = new Color(ShelfBack.r * 0.6f, ShelfBack.g * 0.6f, ShelfBack.b * 0.6f, 1f);
+                return;
+            }
 
             Color[] tierCol = { new Color(0.55f, 0.58f, 0.64f), new Color(0.2f, 0.7f, 0.65f), new Color(0.9f, 0.7f, 0.25f) };
             Chip(rt, tierCol[Mathf.Clamp(p.Tier, 0, 2)], 0, 0.975f, 1, 1);
@@ -290,29 +364,22 @@ namespace PCShopSell.Game.UI
             int cols = Mathf.Max(1, Mathf.FloorToInt((areaW + gx) / (cell.x + gx)));
             int rowsN = Mathf.Max(1, Mathf.FloorToInt((areaH + gy) / (cell.y + gy)));
             int cap = Mathf.Min(cols * rowsN, 12);
-            int slots = have == 0 ? 1 : Mathf.Min(have, cap);
+            int slots = Mathf.Min(have, cap);
             for (int i = 0; i < slots; i++)
             {
                 int cx = i % cols, cy = i / cols;
-                RectTransform ic = PartIcon(items, p.Category, boxed, have == 0 ? 0.22f : 1f);
+                RectTransform ic = PartIcon(items, p.Category, boxed, 1f);
                 ic.anchorMin = ic.anchorMax = Vector2.zero;
                 ic.pivot = Vector2.zero;
                 ic.anchoredPosition = new Vector2(4 + cx * (cell.x + gx), 2 + cy * (cell.y + gy));
             }
-            if (have == 0)
-            {
-                Text none = Ui.Label(items, "缺货", 22, TextAnchor.MiddleCenter, new Color(0.94f, 0.48f, 0.35f));
-                none.rectTransform.Anchor(0.5f, 0, 1, 1);
-            }
-            else if (have > cap)
+            if (have > cap)
             {
                 Text more = Ui.Label(items, "…", 20, TextAnchor.MiddleCenter, new Color(0.8f, 0.8f, 0.82f));
                 more.rectTransform.Anchor(0.9f, 0.7f, 1, 1);
             }
 
-            string tag = have == 0
-                ? $"<b>{shop.PriceOf(p, boxed)}</b>　<color=#B33A2A>缺货</color>"
-                : $"<b>{shop.PriceOf(p, boxed)}</b>　×{have}";
+            string tag = $"<b>{shop.PriceOf(p, boxed)}</b>　共 {have} 件";
             // 标记：整盒（纸箱色）/ 散件（蓝灰色）
             Image mark = Ui.Panel(rt, "Mark", boxed ? CardboardColor : new Color(0.36f, 0.5f, 0.68f));
             mark.rectTransform.Anchor(0.04f, 0.04f, 0.27f, 0.23f);
@@ -361,10 +428,10 @@ namespace PCShopSell.Game.UI
                 }
 
                 int orders = shop.Orders.Count;
-                Line(w.Content, orders > 0 ? $"现在有 {orders} 个装机单等你装。" : "现在没有装机单。", 17, orders > 0 ? Ui.Warn : Ui.Dim);
+                Line(w.Content, orders > 0 ? $"现在有 {orders} 个订单等你处理。" : "现在没有订单。", 17, orders > 0 ? Ui.Warn : Ui.Dim);
                 RectTransform bar = Ui.Row(w.Content, 46);
                 if (orders > 0)
-                    Ui.Size(Ui.Button(bar, "去处理装机单", () =>
+                    Ui.Size(Ui.Button(bar, "去处理订单", () =>
                     {
                         w.Close();
                         OpenDock();
