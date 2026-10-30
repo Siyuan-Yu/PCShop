@@ -177,12 +177,12 @@ namespace PCShopSell.Game
                 Ui.CloseDock();
                 Session.Leave();
             }
-            if (Session.Trip == null && !Session.OffNode && Session.PlayerNodeId == p.NodeId)
+            if (Session.Trip == null && Session.NearbyPlace == p)
             {
                 EnterPlace(p);
                 return;
             }
-            if (Session.GoTo(p.NodeId)) _pendingEnter = p;
+            if (Session.GoTo(p)) _pendingEnter = p;
         }
 
         /// <summary>收银：老板得站在收银台后面，把货交给顾客、收钱。不在收银台就收不了，顾客接着排队。</summary>

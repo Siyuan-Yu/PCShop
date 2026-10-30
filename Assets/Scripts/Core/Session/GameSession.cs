@@ -194,7 +194,11 @@ namespace PCShopSell.Core.Session
         {
             if (place == null) throw new ArgumentNullException(nameof(place));
             if (Trip != null) return Fail("还在路上。");
-            if (OffNode) return Fail("还没走到门口。");
+            if (OffNode)
+            {
+                if (place.NodeId != PlayerNodeId || Dist(PlayerPosition, DoorOf(place)) >= EnterRadius) return Fail("还没走到门口。");
+                ClearEdge();
+            }
             if (place.NodeId != PlayerNodeId)
                 throw new InvalidOperationException($"玩家不在 {place.Name} 门口。");
             CurrentPlace = place;
@@ -222,7 +226,10 @@ namespace PCShopSell.Core.Session
                 return;
             }
             if (InPlayerShop) PlayerShop.PlayerPresent = false;
+            Place left = CurrentPlace;
             CurrentPlace = null;
+            MapPoint stand = StandOf(left);
+            if (left.NodeId == PlayerNodeId && Dist(stand, City.ViewPosition(left.NodeId)) > 1e-3) _free = stand;
             _mallCart.Clear();
             CloseCourierRuns();
         }

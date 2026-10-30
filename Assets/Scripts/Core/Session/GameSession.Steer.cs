@@ -28,6 +28,29 @@ namespace PCShopSell.Core.Session
             return p.Kind == PlaceKind.Home ? new MapPoint(n.X + 2, n.Y) : n;
         }
 
+        /// <summary>自动前往时站的门前位置：门口往路这边退半米，正好在人行道上。</summary>
+        public MapPoint StandOf(Place p)
+        {
+            MapPoint door = DoorOf(p), n = City.ViewPosition(p.NodeId);
+            double d = Dist(door, n);
+            if (d < 1e-6) return door;
+            double k = Math.Min(DoorStandBack, d) / d;
+            return new MapPoint(door.X + (n.X - door.X) * k, door.Y + (n.Y - door.Y) * k);
+        }
+
+        private const double DoorStandBack = 0.5;
+
+        /// <summary>步行的人行道离门面多远：y=0 那条路上自动走沿北侧（店门那侧）人行道走。</summary>
+        public const double SidewalkInset = 0.8;
+
+        /// <summary>自动前往经过某个节点时实际走的点：步行走人行道，其余交通方式走马路。</summary>
+        private MapPoint LaneOf(string nodeId, VehicleKind kind)
+        {
+            MapPoint n = City.ViewPosition(nodeId);
+            if (kind != VehicleKind.Walk || Math.Abs(n.Y) >= 0.1) return n;
+            return new MapPoint(n.X, FrontYAt(n.X) - SidewalkInset);
+        }
+
         /// <summary>商业街走廊半宽（含两侧人行道）。商业街的路是连接路的两倍宽。</summary>
         public const double MainStreetHalfWidth = 7.7;
 

@@ -55,14 +55,20 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
+        /// <summary>出发去某个地点，一直走到它门口的人行道上（到了再进门）。</summary>
+        public bool GoTo(Place place) => GoTo(place.NodeId, StandOf(place));
+
         /// <summary>出发去某节点（路上可以随时改目的地，从下一个路口接着走）。打车先付车费。</summary>
-        public bool GoTo(string targetNode)
+        public bool GoTo(string targetNode) => GoTo(targetNode, null);
+
+        private bool GoTo(string targetNode, MapPoint? end)
         {
             if (IsGameOver) return false;
             if (!City.Map.HasNode(targetNode)) return false;
             string leaveBlock = LeaveBlocker;
             if (leaveBlock != null) return Fail(leaveBlock);
-            if (Trip == null && !OffNode && targetNode == PlayerNodeId)
+            bool insideHere = CurrentPlace != null && CurrentPlace.NodeId == PlayerNodeId && (!end.HasValue || Dist(StandOf(CurrentPlace), end.Value) < 1e-6);
+            if (Trip == null && targetNode == PlayerNodeId && (insideHere || (end.HasValue ? Dist(PlayerPosition, end.Value) < 1e-6 : !OffNode)))
             {
                 if (CurrentPlace != null) Leave();
                 return true;
@@ -76,6 +82,12 @@ namespace PCShopSell.Core.Session
                 start = Trip.Position;
                 scale = Trip.CurrentGameScale;
                 from = Trip.NextNode;
+            }
+            else if (CurrentPlace != null && CurrentPlace.NodeId == PlayerNodeId)
+            {
+                start = StandOf(CurrentPlace);
+                scale = 1;
+                from = PlayerNodeId;
             }
             else if (OffNode)
             {
@@ -102,7 +114,8 @@ namespace PCShopSell.Core.Session
             }
 
             if (CurrentPlace != null) Leave();
-            Trip = new Trip(City, start, scale, path.NodeIds, v);
+            VehicleKind kind = v.Kind;
+            Trip = new Trip(City, start, scale, path.NodeIds, v, n => LaneOf(n, kind), end);
             ClearEdge();
             return true;
         }
@@ -122,8 +135,10 @@ namespace PCShopSell.Core.Session
             string target = Trip.TargetNode;
             if (arrived)
             {
+                MapPoint end = Trip.Position;
                 PlayerNodeId = target;
                 Trip = null;
+                if (Dist(end, City.ViewPosition(target)) > 1e-3) _free = end;
             }
             if (minutes > 0) AdvanceClock(minutes);
             if (arrived && !IsGameOver && CurrentPlace == null && PlayerNodeId == target) TripArrived?.Invoke(target);

@@ -44,8 +44,10 @@ namespace PCShopSell.Tests
                 else s.SetSteer(-1, 0);
                 for (int i = 0; i < 10; i++) s.Tick(.1);
                 // Previously 5.5 visual units/sec, multiplied by the world's 3x movement rate.
-                Assert.That(s.PlayerPosition.X, Is.EqualTo(-8.25).Within(.0001));
-                Assert.That(s.PlayerPosition.Y, Is.Zero.Within(.0001));
+                // 自动前往先从路中间走到人行道（7.2）再沿人行道走，总路程一样是 8.25。
+                double lane = automatic ? GameSession.ShoppingFrontY - GameSession.SidewalkInset : 0;
+                Assert.That(s.PlayerPosition.X, Is.EqualTo(-(8.25 - lane)).Within(.0001));
+                Assert.That(s.PlayerPosition.Y, Is.EqualTo(lane).Within(.0001));
             }
         }
 
@@ -159,7 +161,51 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.GoTo("pc"));
             GameSessionTests.RunTrip(s);
             Assert.AreEqual("pc", s.PlayerNodeId);
-            Assert.IsFalse(s.OffNode);
+            Assert.AreEqual(20, s.PlayerPosition.X, 1e-6);
+            Assert.AreEqual(GameSession.ShoppingFrontY - GameSession.SidewalkInset, s.PlayerPosition.Y, 1e-6, "步行停在人行道上");
+        }
+
+        [Test]
+        public void GoToPlace_WalksOnSidewalk_AndStopsAtDoor()
+        {
+            GameSession s = AtStreet("st");
+            Place pc = s.City.GetPlace("pc");
+            Assert.IsTrue(s.GoTo(pc));
+            double sidewalk = GameSession.ShoppingFrontY - GameSession.SidewalkInset;
+            for (int i = 0; i < 200 && s.Trip != null; i++)
+            {
+                s.Tick(0.05);
+                if (s.Trip != null && s.PlayerPosition.X > 1) Assert.GreaterOrEqual(s.PlayerPosition.Y, sidewalk - 1e-6, "不走马路中间");
+            }
+            Assert.IsNull(s.Trip);
+            MapPoint door = s.DoorOf(pc);
+            Assert.Less(System.Math.Abs(s.PlayerPosition.X - door.X) + System.Math.Abs(s.PlayerPosition.Y - door.Y), 1.0, "停在门口");
+            Assert.AreSame(pc, s.NearbyPlace);
+            Assert.IsTrue(s.Enter(pc));
+        }
+
+        [Test]
+        public void Leave_PutsPlayerAtDoor_NotRoadCentre()
+        {
+            GameSession s = AtStreet("s1");
+            Place tea = s.City.GetPlace("tea");
+            Assert.IsTrue(s.Enter(tea));
+            s.Leave();
+            Assert.IsTrue(s.OffNode);
+            Assert.Greater(s.PlayerPosition.Y, GameSession.ShoppingFrontY - 1);
+            Assert.AreSame(tea, s.NearbyPlace);
+        }
+
+        [Test]
+        public void GoToPlace_FromInsideAnotherShop_LeavesByTheDoor()
+        {
+            GameSession s = AtStreet("s1");
+            Assert.IsTrue(s.Enter(s.City.GetPlace("tea")));
+            Place pc = s.City.GetPlace("pc");
+            Assert.IsTrue(s.GoTo(pc));
+            Assert.Greater(s.PlayerPosition.Y, GameSession.ShoppingFrontY - 1, "从店门口出发");
+            GameSessionTests.RunTrip(s);
+            Assert.AreSame(pc, s.NearbyPlace);
         }
 
         [Test]

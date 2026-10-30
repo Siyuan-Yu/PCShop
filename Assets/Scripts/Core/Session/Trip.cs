@@ -35,7 +35,10 @@ namespace PCShopSell.Core.Session
 
         /// <param name="start">起点的画面坐标（可以在两节点之间）。</param>
         /// <param name="startGameScale">起点到第一个节点这段的"游戏米/画面米"比例。</param>
-        internal Trip(CityLayout city, MapPoint start, double startGameScale, IReadOnlyList<string> path, VehicleSpec vehicle)
+        /// <param name="pointOf">路过每个节点时实际走的点（步行走人行道，不走路中间）；null 就走节点本身。</param>
+        /// <param name="end">最后再走到这里（目的地门口）；null 就停在最后一个节点。</param>
+        internal Trip(CityLayout city, MapPoint start, double startGameScale, IReadOnlyList<string> path, VehicleSpec vehicle,
+            Func<string, MapPoint> pointOf = null, MapPoint? end = null)
         {
             Vehicle = vehicle;
             TargetNode = path[path.Count - 1];
@@ -44,7 +47,7 @@ namespace PCShopSell.Core.Session
 
             for (int i = 0; i < path.Count; i++)
             {
-                MapPoint p = city.ViewPosition(path[i]);
+                MapPoint p = pointOf != null ? pointOf(path[i]) : city.ViewPosition(path[i]);
                 MapPoint prev = _points[_points.Count - 1];
                 double view = Dist(prev, p);
                 double game;
@@ -60,6 +63,18 @@ namespace PCShopSell.Core.Session
                 _nodeAt.Add(path[i]);
                 _viewLen.Add(view);
                 _gameLen.Add(game);
+            }
+
+            if (end.HasValue)
+            {
+                double view = Dist(_points[_points.Count - 1], end.Value);
+                if (view > 1e-6)
+                {
+                    _points.Add(end.Value);
+                    _nodeAt.Add(null);
+                    _viewLen.Add(view);
+                    _gameLen.Add(view);
+                }
             }
 
             double tv = 0, tg = 0;
