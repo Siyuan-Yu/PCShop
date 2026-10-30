@@ -100,7 +100,7 @@ namespace PCShopSell.Core.Session
             if (_upgrades.Contains(ShopUpgrades.SelfCheckout)) acc |= PaymentMethods.SelfCheckout;
             PlayerShop.Accepted = acc;
             PlayerShop.Stock.Capacity = ShopSettings.Capacity(PlayerShop.Size) + ShopUpgrades.ExtraCapacity(_upgrades) + ShelfStockBonus();
-            PlayerShop.TrafficMultiplier = (_upgrades.Contains(ShopUpgrades.Sign) ? ShopUpgrades.SignTrafficBonus : 1.0) * NpcTrafficMultiplier() * ShopDecorTrafficMultiplier;
+            PlayerShop.TrafficMultiplier = (_upgrades.Contains(ShopUpgrades.Sign) ? ShopUpgrades.SignTrafficBonus : 1.0) * NpcTrafficMultiplier() * ShopDecorTrafficMultiplier * CreatorTrafficMultiplier;
             PlayerShop.Settings.PatienceMinutes = _basePatience + (_upgrades.Contains(ShopUpgrades.AirCon) ? ShopUpgrades.AirConPatienceBonus : 0) + ShopDecorPatience;
             UpdateShopFit();
         }
@@ -110,7 +110,7 @@ namespace PCShopSell.Core.Session
         public OutfitDef Outfit => Outfits.Get(EquippedOutfit) ?? Outfits.Get(Outfits.Default);
 
         /// <summary>基础魅力 + 衣服加成。</summary>
-        public int EffectiveCharm => Player.Charm + Outfit.CharmBonus;
+        public int EffectiveCharm => Player.Charm + Outfit.CharmBonus + (_owned.Contains(VehicleKind.Car) ? 2 : 0);
 
         /// <summary>换上一件已经有的衣服（在衣柜里）。</summary>
         /// <summary>调试 / 冒烟：直接拥有一件衣服。</summary>

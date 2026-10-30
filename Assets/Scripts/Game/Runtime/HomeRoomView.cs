@@ -64,6 +64,7 @@ namespace PCShopSell.Game.Runtime
         private readonly RoomFurniture _furniture;
         private readonly Rect _doorArea = new Rect(Width - 0.2f, 0.5f, 0.2f, 1.0f);
         private bool _wasOn;
+        private int _homeTier = -1;
         private string _dressed;
         private GameObject _repairman;
         private Vector3 _repairWork;
@@ -105,14 +106,14 @@ namespace PCShopSell.Game.Runtime
 
             // ---------- 地面、墙 ----------
             Prims.Box(_root, "Floor", new Vector3(w / 2, -0.05f, d / 2), new Vector3(w, 0.1f, d), Mats.LitTex(new Color(0.52f, 0.47f, 0.41f), new Vector2(4, 3), 0.05f));
-            Prims.Box(_root, "Outside", new Vector3(w / 2, -0.1f, d / 2), new Vector3(w + 30, 0.05f, d + 30), Mats.Lit(new Color(0.1f, 0.1f, 0.12f)));
+            Prims.Box(_root, "Outside", new Vector3(w / 2, -0.1f, d / 2), new Vector3(w + 30, 0.05f, d + 30), Mats.Lit(ArtDirection.Ink));
             Stain("FloorStain1", new Vector3(2.9f, 0.007f, 2.1f), new Vector3(1.1f, 0.01f, 0.7f), new Color(0.40f, 0.36f, 0.31f), 20f);
             Stain("FloorStain2", new Vector3(4.8f, 0.007f, 3.0f), new Vector3(0.7f, 0.01f, 0.5f), new Color(0.43f, 0.39f, 0.33f), -30f);
             Stain("Crack1", new Vector3(3.6f, 0.008f, 1.0f), new Vector3(1.6f, 0.01f, 0.03f), new Color(0.25f, 0.22f, 0.2f), 25f);
             Stain("Crack2", new Vector3(1.4f, 0.008f, 2.5f), new Vector3(1.0f, 0.01f, 0.03f), new Color(0.25f, 0.22f, 0.2f), -50f);
 
-            Color wallUpper = new Color(0.76f, 0.72f, 0.58f);
-            Color wallDado = new Color(0.43f, 0.54f, 0.47f);
+            Color wallUpper = ArtDirection.Cream;
+            Color wallDado = ArtDirection.Sage;
             Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), Mats.LitTex(wallUpper, new Vector2(3, 1), 0.05f));
             Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), Mats.LitTex(wallUpper * 0.93f, new Vector2(3, 1), 0.05f));
             Prims.Box(_root, "DadoBack", new Vector3(w / 2, 0.55f, d - 0.01f), new Vector3(w, 1.1f, 0.02f), Mats.Lit(wallDado, 0.05f));
@@ -232,6 +233,7 @@ namespace PCShopSell.Game.Runtime
             if (NearbyId != Seat) return;
             _standPos = tr.localPosition;
             _sitting = true;
+            _owner.GetComponent<FigureMotion>().LocomotionEnabled = false;
             Vector3 c = new Vector3(_seatArea.center.x, 0f, _seatArea.center.y);
             tr.localPosition = c;
             tr.localScale = new Vector3(1f, 0.72f, 1f);
@@ -244,6 +246,7 @@ namespace PCShopSell.Game.Runtime
             if (!_sitting) return;
             _sitting = false;
             Transform tr = _owner.transform;
+            _owner.GetComponent<FigureMotion>().LocomotionEnabled = true;
             tr.localScale = Vector3.one;
             tr.localPosition = _standPos;
         }
@@ -251,6 +254,8 @@ namespace PCShopSell.Game.Runtime
         public void ResetOwner()
         {
             _sitting = false;
+            _owner.GetComponent<FigureMotion>().LocomotionEnabled = true;
+            _owner.GetComponent<FigureMotion>().ResetMotion();
             _owner.transform.localScale = Vector3.one;
             _owner.transform.localPosition = new Vector3(Width - 1.15f, 0, 1.3f);
             _owner.transform.localRotation = Quaternion.LookRotation(new Vector3(-1, 0, 0.3f));
@@ -278,7 +283,7 @@ namespace PCShopSell.Game.Runtime
             Vector3 tz = p + new Vector3(0, 0, d.z * step);
             if (CanStand(tz, p)) p = tz;
             tr.localPosition = p;
-            tr.localRotation = Quaternion.Slerp(tr.localRotation, Quaternion.LookRotation(d), 0.35f);
+            tr.localRotation = Quaternion.Slerp(tr.localRotation, Quaternion.LookRotation(d), 1f - Mathf.Exp(-12f * realDt));
         }
 
         private bool CanStand(Vector3 to, Vector3 from)
@@ -304,13 +309,23 @@ namespace PCShopSell.Game.Runtime
 
         public void Update(GameSession s, float realDt, float minuteOfDay)
         {
+            if (_homeTier != s.HomeTier)
+            {
+                _homeTier = s.HomeTier;
+                foreach (string name in new[] { "FloorStain1", "FloorStain2", "Crack1", "Crack2", "LeakStain", "LeakStain2", "Peeling", "Mold" })
+                { var t = _root.Find(name); if (t != null) t.gameObject.SetActive(_homeTier == 0); }
+                var floor = _root.Find("Floor").GetComponent<Renderer>();
+                floor.sharedMaterial = Mats.Lit(_homeTier == 2 ? ArtDirection.Wood : _homeTier == 1 ? ArtDirection.Cream : new Color(.52f, .47f, .41f));
+                foreach (string name in new[] { "DadoBack", "DadoRight" })
+                    _root.Find(name).GetComponent<Renderer>().sharedMaterial = Mats.Lit(_homeTier == 2 ? ArtDirection.Blue : ArtDirection.Sage);
+            }
             if (_dressed != s.EquippedOutfit)
             {
                 _dressed = s.EquippedOutfit;
                 Prims.Dress(_owner, _dressed);
             }
             SyncFurniture(s);
-            UpdateRepairman(s, realDt);
+            UpdateRepairman(s, s.Time.IsRunning ? realDt : 0f);
 
             // 窗外的天光：白天亮、夜里黑
             float hour = minuteOfDay / 60f;

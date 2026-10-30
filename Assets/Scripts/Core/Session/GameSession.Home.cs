@@ -80,7 +80,7 @@ namespace PCShopSell.Core.Session
                 double bed = defs.Where(d => d.Role == FurnitureRole.Bed).Select(d => d.BedQuality).DefaultIfEmpty(NoBedSleepQuality).Max();
                 double bonus = defs.Sum(d => d.SleepBonus);
                 double appeal = defs.Sum(d => d.Appeal);
-                return bed + bonus + Math.Min(0.08, 0.01 * appeal);
+                return bed + bonus + Math.Min(0.08, 0.01 * appeal) + HomeTier * .08;
             }
         }
 
@@ -246,6 +246,7 @@ namespace PCShopSell.Core.Session
             if (!CanEdit(shop)) return false;
             string err = PlacementError(shop, def, at, -1, extra);
             if (err != null) return Fail(err);
+            RememberLayout(shop);
             _furnStock[id] = FurnitureInStock(id) - 1;
             LayoutOf(shop).Add(new PlacedFurniture { Id = id, X = at.X, Z = at.Z, Rot = at.Rot });
             if (shop) ApplyUpgrades();
@@ -259,6 +260,7 @@ namespace PCShopSell.Core.Session
             FurnitureDef def = FurnitureCatalog.Get(l[index].Id);
             string err = PlacementError(shop, def, at, index, extra);
             if (err != null) return Fail(err);
+            RememberLayout(shop);
             l[index].X = at.X;
             l[index].Z = at.Z;
             l[index].Rot = at.Rot;
@@ -270,6 +272,7 @@ namespace PCShopSell.Core.Session
         {
             List<PlacedFurniture> l = LayoutOf(shop);
             if (index < 0 || index >= l.Count || !CanEdit(shop)) return false;
+            RememberLayout(shop);
             AddFurniture(l[index].Id, 1);
             l.RemoveAt(index);
             if (shop) ApplyUpgrades();
@@ -386,6 +389,9 @@ namespace PCShopSell.Core.Session
         /// <summary>
         /// 每天饿两次（12:00、18:30）。在家且锅里有饭就吃锅里的，否则吃背包里的饭盒；都没有就只能饿着。
         /// </summary>
+        public bool MealDeliveryEnabled => Flags.Contains("life:meal-delivery");
+        public void ToggleMealDelivery() { if (!Flags.Remove("life:meal-delivery")) Flags.Add("life:meal-delivery"); }
+
         private void EatMeal(string meal)
         {
             if (Player.Hunger >= 90) return;
@@ -400,6 +406,12 @@ namespace PCShopSell.Core.Session
                 Player.Hunger = Math.Min(100, Player.Hunger + EatFrom(Backpack.Food.Packed));
                 ApplyCargoLimit();
                 Say($"{meal}吃了背包里的饭盒，还剩 {Backpack.Lunchboxes} 盒。");
+                return;
+            }
+            if (MealDeliveryEnabled && HasSmartphone && Ledger.TryDebit(Clock.Today, "餐饮", Money.FromYuan(25), meal + "送餐"))
+            {
+                Player.Hunger = Math.Min(100, Player.Hunger + 65);
+                Say($"{meal}送餐到了，花费 ¥25。优先吃自带饭，没有才送餐。");
                 return;
             }
             Say($"该吃{meal}了，可背包里没有饭盒……饿着。回家焖饭，装几盒饭带在身上。");

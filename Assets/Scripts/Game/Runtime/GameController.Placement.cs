@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Game.Runtime;
@@ -16,9 +16,8 @@ namespace PCShopSell.Game
         private int _placeIndex = -1;
         private int _placeRot;
         private GameObject _ghost;
-        private readonly List<Renderer> _ghostRenderers = new List<Renderer>();
+        private PlacementOutline _ghostOutline;
         private bool _ghostValid;
-        private Material _ghostOk, _ghostBad;
         private PlacedFurniture _ghostAt;
 
         /// <summary>正在摆放家具。</summary>
@@ -48,6 +47,7 @@ namespace PCShopSell.Game
             if (shop ? !InInterior || !Session.IsRenovating : !InHome) return false;
             Ui.CloseAllWindows();
             _placeShop = shop;
+            Session.BeginLayoutHistory(shop);
             Placing = true;
             _placeId = null;
             _placeIndex = -1;
@@ -67,6 +67,7 @@ namespace PCShopSell.Game
             if (!Placing) return;
             CancelGhost();
             Placing = false;
+            Session.EndLayoutHistory();
             LeaveEditView();
             if (_placeHeld)
             {
@@ -92,6 +93,14 @@ namespace PCShopSell.Game
             Ui.RefreshPlacementPanel();
         }
 
+        public void UndoPlacement(bool redo = false)
+        {
+            if (!Placing) return;
+            CancelGhost();
+            if (redo) Session.RedoLayout(); else Session.UndoLayout();
+            Ui.RefreshPlacementPanel();
+        }
+
         public void RotateGhost()
         {
             if (!Placing || _placeId == null) return;
@@ -113,28 +122,32 @@ namespace PCShopSell.Game
         {
             FurnitureDef def = FurnitureCatalog.Get(_placeId);
             if (def == null) return;
-            if (_ghostOk == null)
-            {
-                _ghostOk = Mats.Unlit(new Color(0.3f, 0.9f, 0.45f));
-                _ghostBad = Mats.Unlit(new Color(0.95f, 0.3f, 0.25f));
-            }
             Transform parent = _placeShop ? Interior.Root : HomeRoom.Root;
-            _ghost = FurnitureVisuals.Build(parent, def, false);
-            _ghostRenderers.Clear();
-            _ghostRenderers.AddRange(_ghost.GetComponentsInChildren<Renderer>());
-            foreach (Renderer r in _ghostRenderers)
-            {
+            string shelfKind = _placeIndex >= 0 ? PlaceLayout[_placeIndex].Item : null;
+            _ghost = FurnitureVisuals.Build(parent, def, false, shelfKind);
+            foreach (Renderer r in _ghost.GetComponentsInChildren<Renderer>())
                 r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                r.sharedMaterial = _ghostOk;
+            _ghostOutline = PlacementOutline.Attach(_ghost);
+            // Do not flash a preview at the room origin before the first pointer update.
+            _ghost.SetActive(false);
+            _ghostAt = null;
+        }
+
+        private void DestroyGhost()
+        {
+            if (_ghost != null)
+            {
+                _ghost.SetActive(false);
+                Kill.It(_ghost);
             }
+            _ghost = null;
+            _ghostOutline = null;
             _ghostAt = null;
         }
 
         private void CancelGhost()
         {
-            if (_ghost != null) Kill.It(_ghost);
-            _ghost = null;
-            _ghostRenderers.Clear();
+            DestroyGhost();
             if (_placeIndex >= 0 && Placing) PlaceVisuals?.ShowAll();
             _placeId = null;
             _placeIndex = -1;
@@ -278,6 +291,8 @@ namespace PCShopSell.Game
                 return;
             }
 
+            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKeyDown(KeyCode.Z)) { UndoPlacement(); return; }
+            if ((Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && Input.GetKeyDown(KeyCode.Y)) { UndoPlacement(true); return; }
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 if (_placeId != null)
@@ -317,8 +332,7 @@ namespace PCShopSell.Game
                 _ghost.SetActive(true);
                 PlaceError = Session.PlacementError(_placeShop, def, at, _placeIndex, _placeShop ? Interior.FixedBlockers() : null);
                 _ghostValid = PlaceError == null;
-                Material m = _ghostValid ? _ghostOk : _ghostBad;
-                foreach (Renderer r in _ghostRenderers) r.sharedMaterial = m;
+                _ghostOutline.SetValid(_ghostValid);
 
                 if (Input.GetMouseButtonDown(0) && _ghostValid) ConfirmPlace(def, at);
             }
@@ -352,9 +366,7 @@ namespace PCShopSell.Game
             else
             {
                 if (_placeIndex >= 0) PlaceVisuals.ShowAll();
-                if (_ghost != null) Kill.It(_ghost);
-                _ghost = null;
-                _ghostRenderers.Clear();
+                DestroyGhost();
                 _placeId = null;
                 _placeIndex = -1;
                 PlaceError = null;
@@ -448,7 +460,12 @@ namespace PCShopSell.Game
                 }
             }
             if (index < 0) return;
-            PlacedFurniture p = layout[index];
+            PickUpFurniture(index);
+        }
+
+        private void PickUpFurniture(int index)
+        {
+            PlacedFurniture p = PlaceLayout[index];
             _placeId = p.Id;
             _placeIndex = index;
             _placeRot = p.Rot;

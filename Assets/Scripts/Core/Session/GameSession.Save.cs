@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -20,6 +20,7 @@ namespace PCShopSell.Core.Session
         public SaveData CreateSave()
         {
             if (!CanSave) throw new InvalidOperationException("出行途中不能存档。");
+            QuestIndex(); // 固化已完成教学，再序列化 flags。
             var d = new SaveData
             {
                 rngState = Random.State.ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -65,8 +66,8 @@ namespace PCShopSell.Core.Session
                 accepted = (int)PlayerShop.Accepted,
                 orders = PlayerShop.Orders.Select(o => new SaveOrder
                 {
-                    id = o.Id, tier = o.Tier, priceCents = o.Price.Cents, placedAt = o.PlacedAt.TotalMinutes,
-                    dueAt = o.DueAt.TotalMinutes,
+                    id = o.Id, contractId = o.ContractId, tier = o.Tier, priceCents = o.Price.Cents, placedAt = o.PlacedAt.TotalMinutes,
+                    dueAt = o.DueAt.TotalMinutes, partsReserved = o.PartsReserved, mistakes = o.Mistakes, employeeMinutesLeft = o.EmployeeMinutesLeft,
                 }).ToArray(),
                 nextOrderId = PlayerShop.NextOrderId,
                 displayPcs = PlayerShop.DisplayPcs.Concat(PlayerShop.Queue.Where(c => c.DisplayTier >= 0).Select(c => c.DisplayTier)).ToArray(),
@@ -88,6 +89,8 @@ namespace PCShopSell.Core.Session
 
                 hasEmployee = Employee != null,
                 employee = Employee != null ? ToSave(Employee) : null,
+                hasAssembler = Assembler != null,
+                assembler = Assembler != null ? ToSave(Assembler) : null,
                 everHired = EverHired,
                 candidates = _candidates.Select(ToSave).ToArray(),
                 jobAdDay = JobAdDay,
@@ -100,6 +103,7 @@ namespace PCShopSell.Core.Session
             };
             SaveGrowth(d);
             SaveRealty(d);
+            SaveBusiness(d);
             return d;
         }
 
@@ -156,7 +160,7 @@ namespace PCShopSell.Core.Session
             PlayerShop.Reputation = d.reputation;
             PlayerShop.Accepted = (PaymentMethods)d.accepted;
             PlayerShop.RestoreOrders((d.orders ?? Array.Empty<SaveOrder>()).Select(o =>
-                new BuildOrder(o.id, o.tier, Money.FromCents(o.priceCents), new GameTimestamp(o.placedAt), new GameTimestamp(o.dueAt))),
+                new BuildOrder(o.id, o.tier, Money.FromCents(o.priceCents), new GameTimestamp(o.placedAt), new GameTimestamp(o.dueAt)) { ContractId = o.contractId, PartsReserved = o.partsReserved, Mistakes = Math.Max(0, o.mistakes), EmployeeMinutesLeft = Math.Max(0, o.employeeMinutesLeft) }),
                 d.nextOrderId);
             PlayerShop.RestoreDisplay(d.displayPcs);
             PlayerShop.PlayerPresent = InPlayerShop;
@@ -179,6 +183,7 @@ namespace PCShopSell.Core.Session
 
             Employee = d.hasEmployee && d.employee != null ? FromSave(d.employee) : null;
             if (Employee != null) PlayerShop.Settings.EmployeeCheckoutMinutes = Employee.CheckoutMinutes;
+            Assembler = !d.hasAssembler || d.assembler == null ? null : FromSave(d.assembler);
             EverHired = d.everHired;
             _candidates.Clear();
             foreach (SaveEmployee e in d.candidates ?? Array.Empty<SaveEmployee>()) _candidates.Add(FromSave(e));
@@ -190,6 +195,7 @@ namespace PCShopSell.Core.Session
             IsGameOver = d.gameOver;
             GameOverReason = d.gameOverReason;
             RestoreGrowth(d);
+            RestoreBusiness(d);
             Trip = null;
             ClearEdge();
         }
@@ -207,12 +213,14 @@ namespace PCShopSell.Core.Session
 
         private static SaveEmployee ToSave(Employee e) => new SaveEmployee
         {
-            name = e.Name, wage = e.DailyWageYuan, checkoutMinutes = e.CheckoutMinutes, description = e.Description,
+            name = e.Name, wage = e.DailyWageYuan, checkoutMinutes = e.CheckoutMinutes, description = e.Description, shiftStart = e.ShiftStart, shiftEnd = e.ShiftEnd, buildsCompleted = e.BuildsCompleted,
         };
 
         private static Employee FromSave(SaveEmployee e) => new Employee
         {
             Name = e.name, DailyWageYuan = e.wage, CheckoutMinutes = e.checkoutMinutes, Description = e.description,
+            ShiftStart = e.shiftEnd > e.shiftStart ? e.shiftStart : DutyStartMinute,
+            ShiftEnd = e.shiftEnd > e.shiftStart ? e.shiftEnd : DutyEndMinute, BuildsCompleted = Math.Max(0, e.buildsCompleted),
         };
     }
 }

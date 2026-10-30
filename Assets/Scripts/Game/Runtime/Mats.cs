@@ -33,6 +33,7 @@ namespace PCShopSell.Game.Runtime
         /// <summary>发光材质。nightOnly 为真时白天几乎不亮，夜里亮起来。</summary>
         public static Material Glow(Color baseColor, Color emission, bool nightOnly = true)
         {
+            emission *= 0.5f;
             string key = $"G{baseColor}{emission}{nightOnly}";
             if (Cache.TryGetValue(key, out Material m) && m != null) return m;
             m = new Material(LitShader) { name = key };
@@ -180,6 +181,8 @@ namespace PCShopSell.Game.Runtime
         public static GameObject Box(Transform parent, string name, Vector3 center, Vector3 size, Material mat, bool collider = false)
         {
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            if (Mathf.Min(size.x, Mathf.Min(size.y, size.z)) >= 0.035f && Mathf.Max(size.x, Mathf.Max(size.y, size.z)) <= 3.5f)
+                go.GetComponent<MeshFilter>().sharedMesh = ArtDirection.BeveledBox(size);
             go.name = name;
             if (!collider) Object.DestroyImmediate(go.GetComponent<Collider>());
             go.transform.SetParent(parent, false);
@@ -201,13 +204,79 @@ namespace PCShopSell.Game.Runtime
             return go;
         }
 
-        /// <summary>低多边形小人：身体 + 头。脚底在原点。</summary>
+        public static void SignText(Transform parent, string text, Vector3 at, float width, float height, Color color)
+        {
+            var canvas = new GameObject("Painted lettering", typeof(RectTransform), typeof(Canvas));
+            canvas.transform.SetParent(parent, false);
+            canvas.transform.localPosition = at;
+            canvas.transform.localScale = Vector3.one * 0.01f;
+            canvas.GetComponent<Canvas>().renderMode = RenderMode.WorldSpace;
+            var rect = (RectTransform)canvas.transform; rect.sizeDelta = new Vector2(width * 100, height * 100);
+            var label = PCShopSell.Game.UI.Ui.Label(rect, text, Mathf.RoundToInt(Mathf.Min(height * 76, width * 90 / Mathf.Max(1, text.Length))), TextAnchor.MiddleCenter, color);
+            label.fontStyle = FontStyle.Bold;
+            PCShopSell.Game.UI.Ui.Fill(label.rectTransform);
+        }
+
+        public static GameObject ParkedCar(Transform parent, Vector3 at, Color paint)
+        {
+            var root = new GameObject("Parked car").transform; root.SetParent(parent, false); root.localPosition = at; root.localRotation = Quaternion.Euler(0, 90, 0);
+            Box(root, "Body", new Vector3(0, 0.52f, 0), new Vector3(1.55f, 0.48f, 3.4f), Mats.Lit(paint, 0.3f));
+            Box(root, "Cabin", new Vector3(0, 0.94f, -0.15f), new Vector3(1.34f, 0.52f, 1.75f), Mats.Lit(ArtDirection.Ink, 0.35f));
+            Box(root, "Roof", new Vector3(0, 1.22f, -0.2f), new Vector3(1.38f, 0.08f, 1.35f), Mats.Lit(paint));
+            foreach (int side in new[] { -1, 1 })
+            {
+                foreach (int axle in new[] { -1, 1 })
+                {
+                    var wheel = Shape(PrimitiveType.Cylinder, root, "Wheel", new Vector3(side * 0.78f, 0.3f, axle * 1.02f), new Vector3(0.52f, 0.10f, 0.52f), Mats.Lit(ArtDirection.Ink));
+                    wheel.transform.localRotation = Quaternion.Euler(0, 0, 90);
+                    var hub = Shape(PrimitiveType.Cylinder, root, "Hub", new Vector3(side * 0.89f, 0.3f, axle * 1.02f), new Vector3(0.25f, 0.012f, 0.25f), Mats.Lit(ArtDirection.Cream));
+                    hub.transform.localRotation = Quaternion.Euler(0, 0, 90);
+                }
+                Box(root, "Headlight", new Vector3(side * 0.5f, 0.6f, 1.71f), new Vector3(0.32f, 0.14f, 0.025f), Mats.Lit(ArtDirection.Cream));
+                Box(root, "TailLight", new Vector3(side * 0.5f, 0.6f, -1.71f), new Vector3(0.28f, 0.12f, 0.025f), Mats.Lit(ArtDirection.Clay));
+            }
+            Box(root, "Plate", new Vector3(0, 0.42f, 1.72f), new Vector3(0.35f, 0.12f, 0.02f), Mats.Lit(ArtDirection.Blue));
+            return root.gameObject;
+        }
+
+        /// <summary>低多边形小人：有清晰衣着和肢体轮廓，脚底在原点。</summary>
         public static GameObject Figure(Transform parent, string name, Color body, Color head, float scale = 1f)
         {
             var root = new GameObject(name);
             root.transform.SetParent(parent, false);
-            Shape(PrimitiveType.Capsule, root.transform, "Body", new Vector3(0, 0.55f, 0) * scale, new Vector3(0.45f, 0.55f, 0.35f) * scale, Mats.Lit(body));
-            Shape(PrimitiveType.Sphere, root.transform, "Head", new Vector3(0, 1.3f, 0) * scale, Vector3.one * 0.32f * scale, Mats.Lit(head));
+            Transform Joint(Transform parentJoint, string id, Vector3 at)
+            {
+                var joint = new GameObject(id).transform;
+                joint.SetParent(parentJoint, false);
+                joint.localPosition = at;
+                return joint;
+            }
+            Transform visual = Joint(root.transform, "Visual", Vector3.zero);
+            visual.localScale = Vector3.one * scale;
+            Transform t = Joint(visual, "Torso", Vector3.zero);
+            Color shirt = Color.Lerp(body, ArtDirection.Cream, 0.22f);
+            GameObject Part(string id, Vector3 p, Vector3 sz, Color c) => Box(t, id, p, sz, Mats.Lit(c, 0.12f));
+            Part("Body", new Vector3(0, 0.82f, 0), new Vector3(0.39f, 0.57f, 0.27f), shirt);
+            foreach (int side in new[] { -1, 1 })
+            {
+                string suffix = side < 0 ? "L" : "R";
+                Transform hip = Joint(visual, "Hip" + suffix, new Vector3(side * .105f, .56f, 0));
+                Box(hip, "Leg" + suffix, new Vector3(0, -.125f, 0), new Vector3(.16f, .25f, .22f), Mats.Lit(ArtDirection.Ink));
+                Transform knee = Joint(hip, "Knee" + suffix, new Vector3(0, -.25f, 0));
+                Box(knee, "Shin" + suffix, new Vector3(0, -.125f, 0), new Vector3(.15f, .25f, .20f), Mats.Lit(ArtDirection.Ink));
+                Transform foot = Joint(knee, "Foot" + suffix, new Vector3(0, -.25f, 0));
+                Box(foot, "Shoe", new Vector3(0, -.005f, .055f), new Vector3(.18f, .15f, .31f), Mats.Lit(ArtDirection.Hex("423F38")));
+                Transform shoulder = Joint(t, "Shoulder" + suffix, new Vector3(side * .245f, 1.025f, 0));
+                Box(shoulder, "Sleeve" + suffix, new Vector3(0, -.175f, 0), new Vector3(.15f, .35f, .23f), Mats.Lit(shirt));
+                Box(shoulder, "Hand", new Vector3(0, -.405f, .015f), new Vector3(.12f, .16f, .15f), Mats.Lit(head));
+            }
+            Part("Neck", new Vector3(0, 1.13f, 0), new Vector3(0.12f, 0.12f, 0.12f), head);
+            Shape(PrimitiveType.Sphere, t, "Head", new Vector3(0, 1.3f, 0), Vector3.one * 0.32f, Mats.Lit(head));
+            Shape(PrimitiveType.Sphere, t, "Hair", new Vector3(0, 1.425f, -0.025f), new Vector3(0.35f, 0.18f, 0.34f), Mats.Lit(ArtDirection.Hex("443B32")));
+            Part("Fringe", new Vector3(-0.06f, 1.405f, 0.105f), new Vector3(0.22f, 0.09f, 0.1f), ArtDirection.Hex("443B32"));
+            Part("Nose", new Vector3(0, 1.29f, 0.164f), new Vector3(0.045f, 0.05f, 0.05f), head);
+            foreach (int side in new[] { -1, 1 }) Part("Eye", new Vector3(side * 0.065f, 1.34f, 0.143f), new Vector3(0.023f, 0.026f, 0.015f), ArtDirection.Ink);
+            root.AddComponent<FigureMotion>().Initialize(visual, t, scale);
             return root;
         }
 
@@ -217,7 +286,8 @@ namespace PCShopSell.Game.Runtime
         /// </summary>
         public static void Dress(GameObject figure, string outfitId)
         {
-            Transform t = figure.transform;
+            var motion = figure.GetComponent<FigureMotion>();
+            Transform t = motion.Torso;
             Transform body = t.Find("Body");
             Transform head = t.Find("Head");
             if (body == null || head == null) return;
@@ -236,13 +306,12 @@ namespace PCShopSell.Game.Runtime
                 case "shirt": top = new Color(0.92f, 0.93f, 0.95f); pants = new Color(0.20f, 0.22f, 0.30f); break;
                 case "jacket": top = new Color(0.36f, 0.27f, 0.18f); pants = new Color(0.18f, 0.22f, 0.35f); break;
                 case "suit": top = new Color(0.17f, 0.19f, 0.26f); pants = new Color(0.14f, 0.15f, 0.20f); break;
-                default: top = new Color(0.95f, 0.55f, 0.15f); pants = new Color(0.30f, 0.35f, 0.45f); break;
+                default: top = ArtDirection.Clay; pants = new Color(0.30f, 0.35f, 0.45f); break;
             }
             body.GetComponent<Renderer>().sharedMaterial = Mats.Lit(top);
 
             void Add(string n, Vector3 p, Vector3 sz, Color c) => Box(t, "Outfit_" + n, p * s, sz * s, Mats.Lit(c));
-            Add("Pants", new Vector3(0, 0.2f, 0), new Vector3(0.32f, 0.4f, 0.26f), pants);
-            Shape(PrimitiveType.Sphere, t, "Outfit_Hair", new Vector3(0, 1.38f, -0.02f) * s, new Vector3(0.34f, 0.22f, 0.34f) * s, Mats.Lit(new Color(0.12f, 0.09f, 0.07f)));
+            motion.RecolorLimbs(Mats.Lit(pants), Mats.Lit(top));
 
             switch (outfitId)
             {

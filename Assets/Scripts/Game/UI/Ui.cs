@@ -9,15 +9,35 @@ namespace PCShopSell.Game.UI
     /// <summary>用代码搭 uGUI 的小工具。灰盒阶段字体用系统微软雅黑。</summary>
     public static class Ui
     {
-        public static readonly Color PanelBg = new Color(0.09f, 0.10f, 0.13f, 0.94f);
-        public static readonly Color PanelBg2 = new Color(0.15f, 0.17f, 0.21f, 0.96f);
-        public static readonly Color Accent = new Color(0.18f, 0.75f, 0.70f);
-        public static readonly Color ButtonBg = new Color(0.24f, 0.27f, 0.33f);
-        public static readonly Color ButtonHot = new Color(0.20f, 0.55f, 0.52f);
-        public static readonly Color Warn = new Color(0.95f, 0.45f, 0.30f);
-        public static readonly Color Good = new Color(0.45f, 0.9f, 0.5f);
-        public static readonly Color Dim = new Color(0.65f, 0.68f, 0.72f);
-        public static readonly Color TextColor = new Color(0.94f, 0.95f, 0.96f);
+        public static readonly Color PanelBg = Tone("202E2D");
+        public static readonly Color PanelBg2 = Tone("2B3D3A");
+        public static readonly Color Accent = Tone("DDC18B");
+        public static readonly Color ButtonBg = Tone("374945");
+        public static readonly Color ButtonHot = Tone("547469");
+        public static readonly Color Warn = Tone("A65E49");
+        public static readonly Color Good = Tone("A9C9A9");
+        public static readonly Color Dim = Tone("ABB5A8");
+        public static readonly Color TextColor = Tone("F1E9D7");
+        private static Color Tone(string hex) { ColorUtility.TryParseHtmlString("#" + hex, out var c); return c; }
+        private static Sprite _card;
+        private static Sprite Card
+        {
+            get
+            {
+                if (_card != null) return _card;
+                const int n = 64; const float radius = 10;
+                var texture = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Enamel card", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                var pixels = new Color[n * n];
+                for (int y = 0; y < n; y++) for (int x = 0; x < n; x++)
+                {
+                    float dx = Mathf.Max(Mathf.Abs(x - 31.5f) - (32 - radius), 0);
+                    float dy = Mathf.Max(Mathf.Abs(y - 31.5f) - (32 - radius), 0);
+                    pixels[y * n + x] = new Color(1, 1, 1, Mathf.Clamp01(radius - Mathf.Sqrt(dx * dx + dy * dy)));
+                }
+                texture.SetPixels(pixels); texture.Apply();
+                return _card = Sprite.Create(texture, new Rect(0, 0, n, n), Vector2.one * 0.5f, 100, 0, SpriteMeshType.FullRect, new Vector4(12, 12, 12, 12));
+            }
+        }
 
         private static Font _font;
 
@@ -79,6 +99,16 @@ namespace PCShopSell.Game.UI
             RectTransform rt = Rect(parent, name);
             var img = rt.gameObject.AddComponent<Image>();
             img.color = color;
+            if (name == "Button" || name == "Panel" || name == "ShopDock" || name == "Toast" || name == "Bubble" || name == "QuestTracker" || name == "Portrait")
+            {
+                img.sprite = Card; img.type = Image.Type.Sliced;
+                if (name != "Bubble")
+                {
+                    var line = rt.gameObject.AddComponent<Outline>();
+                    line.effectColor = new Color(0.8f, 0.76f, 0.6f, name == "Button" ? 0.10f : 0.22f);
+                    line.effectDistance = new Vector2(0.65f, -0.65f);
+                }
+            }
             return img;
         }
 
@@ -103,14 +133,15 @@ namespace PCShopSell.Game.UI
             Image img = Panel(parent, "Button", bg ?? ButtonBg);
             var b = img.gameObject.AddComponent<Button>();
             ColorBlock cb = b.colors;
-            cb.highlightedColor = new Color(1.25f, 1.25f, 1.25f);
+            cb.highlightedColor = new Color(1.15f, 1.13f, 1.08f);
+            cb.fadeDuration = 0.12f;
             cb.pressedColor = new Color(0.8f, 0.8f, 0.8f);
             cb.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.6f);
             b.colors = cb;
             b.interactable = interactable;
             if (onClick != null) b.onClick.AddListener(() => onClick());
             Text t = Label(img.transform, text, size, TextAnchor.MiddleCenter);
-            t.rectTransform.Fill(4);
+            t.rectTransform.Fill(6);
             if (!interactable) t.color = Dim;
             return b;
         }

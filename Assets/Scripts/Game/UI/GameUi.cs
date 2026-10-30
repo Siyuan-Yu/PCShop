@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
@@ -27,10 +27,10 @@ namespace PCShopSell.Game.UI
         public void Rebuild()
         {
             if (Closed) return;
-            var scrolled = Ui.SaveScroll(Content);
+            var scrolled = Ui.SaveScroll(Root);
             Ui.Clear(Content);
             Builder?.Invoke(this);
-            Ui.RestoreScroll(Root, Content, scrolled);
+            Ui.RestoreScroll(Root, Root, scrolled);
         }
 
         public void Close() => Owner.CloseWindow(this);
@@ -78,7 +78,7 @@ namespace PCShopSell.Game.UI
             _hudCanvas = Ui.CreateCanvas("UI_Hud", 10);
             _dockCanvas = Ui.CreateCanvas("UI_Dock", 20);
             _modalCanvas = Ui.CreateCanvas("UI_Modal", 30);
-            _toastCanvas = Ui.CreateCanvas("UI_Toast", 40);
+            _toastCanvas = Ui.CreateCanvas("UI_Toast", 25);
             BuildHud();
             BuildToasts();
         }
@@ -142,12 +142,12 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(row, "背包 B", ToggleBackpack, 18), 78);
             Ui.Size(Ui.Button(row, "日程", OpenSchedulePanel, 18), 66);
             Ui.Size(Ui.Button(row, "手机", OpenPhone, 18), 66);
-            Ui.Size(Ui.Button(row, "目标", OpenGoalsPanel, 18), 66);
+            Ui.Size(Ui.Button(row, "经营", OpenBusinessPanel, 18), 66);
             Ui.Size(Ui.Button(row, "行情", OpenMarketPanel, 18, Ui.ButtonHot), 66);
             Ui.Size(Ui.Button(row, "菜单", OpenSystemPanel, 18), 66);
 
             Image bottom = Ui.Panel(root, "BottomBar", Ui.PanelBg);
-            bottom.rectTransform.Anchor(0, 0, 0, 0, 0, 0, -1180, -58);
+            bottom.rectTransform.Anchor(0, 0, 0, 0, 0, 0, -1360, -58);
             RectTransform brow = Ui.Rect(bottom.transform, "Row").Fill();
             var bh = brow.gameObject.AddComponent<HorizontalLayoutGroup>();
             bh.padding = new RectOffset(12, 12, 8, 8);
@@ -169,8 +169,11 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(brow, "回家", () => _ctrl.GoToPlace(S.Home), 17), 70);
             Ui.Size(Ui.Button(brow, "电子市场", () => _ctrl.GoToPlace(S.City.GetPlace("stall_cpu")), 17), 100);
 
-            _hintText = Ui.Label(root, "", 18, TextAnchor.MiddleLeft, new Color(1, 1, 1, 0.85f));
-            _hintText.rectTransform.Anchor(0, 0, 0, 0, 16, 62, -1100, -92);
+            Image hint = Ui.Panel(root, "HintStrip", new Color(0.12f, 0.18f, 0.17f, 0.93f));
+            hint.rectTransform.Anchor(0, 0, 0, 0, 16, 70, -1136, -122);
+            hint.raycastTarget = false;
+            _hintText = Ui.Label(hint.transform, "", 16, TextAnchor.MiddleLeft, Ui.TextColor);
+            _hintText.rectTransform.Fill(10);
 
             BuildQuestTracker(root);
 
@@ -186,9 +189,9 @@ namespace PCShopSell.Game.UI
             _cashText.text = S.Ledger.Balance.ToString();
             _cashText.color = S.Ledger.Balance.IsNegative ? Ui.Warn : Ui.Good;
 
-            bool paused = S.Time.IsUserPaused;
+            bool paused = !S.Time.IsRunning;
             _pauseButton.image.color = paused ? Ui.Warn : Ui.ButtonBg;
-            _pauseButton.GetComponentInChildren<Text>().text = paused ? "继续" : "暂停";
+            _pauseButton.GetComponentInChildren<Text>().text = S.Time.IsHeld ? "查看中" : (S.Time.IsUserPaused ? "继续" : "暂停");
             foreach (var (b, speed) in _speedButtons)
                 b.image.color = !paused && S.Time.Speed == speed ? Ui.ButtonHot : Ui.ButtonBg;
 
@@ -203,7 +206,7 @@ namespace PCShopSell.Game.UI
             }
             else if (S.CurrentPlace != null) where = "在 " + S.PlaceTitle(S.CurrentPlace);
             else where = "在街上";
-            string shopState = !S.HasShop ? "<color=#FFD54A>还没有店铺</color>" : S.PlayerShop.IsOpen ? "<color=#7CE38B>店：营业中</color>" : "<color=#E0806A>店：关门</color>";
+            string shopState = !S.HasShop ? "<color=#DDC18B>还没有店铺</color>" : S.PlayerShop.IsOpen ? "<color=#A9C9A9>店：营业中</color>" : "<color=#D79780>店：关门</color>";
             _shopGoText.text = S.HasShop ? "去我的店" : "房产中介";
             _placeText.text = where + "   " + shopState;
 
@@ -211,10 +214,10 @@ namespace PCShopSell.Game.UI
             else if (_ctrl.Placing) _hintText.text = "摆放家具：左键放下 · R 旋转 · 右键/Esc 放回 · X 收进背包 · 点已摆的家具可以挪动 · 中键拖动 / Q E 转视角 · V 复位 · 右侧面板点“完成”结束";
             else if (_ctrl.InInterior) _hintText.text = "WASD 在店里走动 · 走到货架前按 F 查看货物 · 柜台边按 F（或点顾客头顶的“结账”）给顾客结账 · 走到门口按 F 出门 · 右侧面板管理店铺";
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimatedMinutes} 分钟 · 按 WASD 随时接管";
-            else if (S.NearbyPlace != null) _hintText.text = $"<color=#FFD54A>按 F 进入 {S.PlaceTitle(S.NearbyPlace)}</color>";
-            else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#FFD54A>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : "WASD 在屋里走动 · 走近床、衣柜、电饭锅、纸箱、凳子（头顶出现提示按 F）· 房间信息、摆放家具看右上角“我的”";
+            else if (S.NearbyPlace != null) _hintText.text = $"<color=#DDC18B>按 F 进入 {S.PlaceTitle(S.NearbyPlace)}</color>";
+            else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#DDC18B>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : "WASD 在屋里走动 · 走近床、衣柜、电饭锅、纸箱、凳子（头顶出现提示按 F）· 房间信息、摆放家具看右上角“我的”";
             else if (S.CurrentPlace != null) _hintText.text = "按 WASD 离开 · 空格暂停";
-            else _hintText.text = "WASD 自由走动 · 右键拖动/Q R 转视角 · V 复位 · 滚轮缩放 · 走到门口按 F 进入 · 空格暂停 · 下方按钮可快捷前往";
+            else _hintText.text = "WASD 自由走动 · 右键拖动/Q E 转视角 · V 复位 · 滚轮缩放 · 走到门口按 F 进入 · 空格暂停 · 下方按钮可快捷前往";
 
             _chaseText.gameObject.SetActive(S.Police.AnyChasing && S.CurrentPlace == null);
         }
@@ -246,11 +249,12 @@ namespace PCShopSell.Game.UI
             foreach (var kv in _ctrl.World.Places)
             {
                 PlaceVisual pv = kv.Value;
+                if (pv.Sign != null) pv.Sign.text = S.PlaceTitle(pv.Place);
                 if (!_labels.TryGetValue(kv.Key, out var label))
                 {
                     Place place = pv.Place;
                     bool important = place.Kind != PlaceKind.Shop || place.IsPlayerShop;
-                    Button b = Ui.Button(_labelCanvas.transform, place.Name, () => Toast("用 WASD 走到门口，按 F 进入；也可以点下方的快捷前往按钮。"),
+                    Button b = Ui.Button(_labelCanvas.transform, place.Name, () => OpenStreetPlace(place),
                         important ? 18 : 15, LabelColor(place, important));
                     RectTransform rt = (RectTransform)b.transform;
                     rt.anchorMin = rt.anchorMax = Vector2.zero;
@@ -268,13 +272,30 @@ namespace PCShopSell.Game.UI
                 var canvasRt = (RectTransform)_labelCanvas.transform;
                 label.rt.anchoredPosition = local + canvasRt.rect.size * 0.5f;
                 label.text.text = LabelText(pv.Place);
+                bool owned = S.IsMyShop(pv.Place) || S.VentureAt(pv.Place.Id) != null || S.PropertyAt(pv.Place.Id) != null;
+                bool major = owned || pv.Place.Kind != PlaceKind.Shop || pv.Place.IsPlayerShop;
+                label.rt.sizeDelta = new Vector2(major ? 180 : 120, major ? 52 : 30);
+                label.text.fontSize = major ? 18 : 15;
                 label.rt.GetComponent<Image>().color = LabelColor(pv.Place, pv.Place.Kind != PlaceKind.Shop || pv.Place.IsPlayerShop);
             }
         }
 
         /// <summary>名牌底色：我的店青色，招租的铺子橙色，中介蓝色，其他深灰。</summary>
+        private void OpenStreetPlace(Place p)
+        {
+            if (S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null && !S.IsMyShop(p))
+            {
+                _businessTab = p.Id == S.ParkPlaceId ? 6 : S.VentureAt(p.Id) != null ? 3 : 5;
+                OpenBusinessPanel();
+            }
+            else _ctrl.GoToPlace(p);
+        }
+
         private Color LabelColor(Place p, bool important)
         {
+            var venture = S.VentureAt(p.Id);
+            if (venture != null) return venture.Paused ? Ui.Warn : Ui.ButtonHot;
+            if (S.PropertyAt(p.Id) != null) return Ui.ButtonHot;
             if (S.IsMyShop(p)) return new Color(0.1f, 0.55f, 0.5f, 0.92f);
             if (S.IsVacant(p)) return new Color(0.75f, 0.42f, 0.1f, 0.9f);
             if (p.Kind == PlaceKind.Agency) return new Color(0.15f, 0.35f, 0.7f, 0.92f);
@@ -309,16 +330,20 @@ namespace PCShopSell.Game.UI
 
         private string LabelText(Place p)
         {
+            var venture = S.VentureAt(p.Id);
+            if (venture != null) return S.PlaceTitle(p) + (venture.Paused ? "\n<size=13><color=#D79780>停业 · 点击管理</color></size>" : "\n<size=13>营业中 · 点击管理</size>");
+            if (p.Id == S.ParkPlaceId) return "电脑乐园\n<size=13>点击查看布局</size>";
+            if (S.PropertyAt(p.Id) != null && !S.IsMyShop(p)) return "我的物业\n<size=13>托管出租中</size>";
             switch (p.Kind)
             {
                 case PlaceKind.Wholesaler:
-                    return p.Name + (S.IsWholesalerOpen ? "" : "\n<size=13><color=#E0806A>关门</color></size>");
+                    return p.Name + (S.IsWholesalerOpen ? "" : "\n<size=13><color=#D79780>关门</color></size>");
                 case PlaceKind.Dealer:
-                    return p.Name + (S.IsDealerOpen ? "" : "\n<size=13><color=#E0806A>关门</color></size>");
+                    return p.Name + (S.IsDealerOpen ? "" : "\n<size=13><color=#D79780>关门</color></size>");
                 case PlaceKind.Shop when S.IsMyShop(p):
-                    return GameSession.MyShopName + (S.PlayerShop.IsOpen ? "\n<size=13><color=#7CE38B>营业中</color></size>" : "\n<size=13>关门</size>");
+                    return GameSession.MyShopName + (S.PlayerShop.IsOpen ? "\n<size=13><color=#A9C9A9>营业中</color></size>" : "\n<size=13>关门</size>");
                 case PlaceKind.Agency:
-                    return p.Name + (S.HasShop ? "" : "\n<size=13><color=#FFD54A>先来这里租铺子</color></size>");
+                    return p.Name + (S.HasShop ? "" : "\n<size=13><color=#DDC18B>先来这里租铺子</color></size>");
                 default:
                     return S.PlaceTitle(p);
             }
@@ -414,7 +439,7 @@ namespace PCShopSell.Game.UI
             var fit = panel.gameObject.AddComponent<ContentSizeFitter>();
             fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            panel.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.35f);
+            panel.gameObject.AddComponent<Outline>().effectColor = new Color(0.04f, 0.08f, 0.07f, 0.55f);
 
             Image tail = Ui.Panel(rt, "Tail", bg);
             tail.raycastTarget = false;
@@ -495,7 +520,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildToasts()
         {
-            _toastList = Ui.Rect(_toastCanvas.transform, "Toasts").Anchor(0, 1, 0, 1, 16, -620, -476, 220);
+            _toastList = Ui.Rect(_toastCanvas.transform, "Toasts").Anchor(0, 1, 0, 1, 16, -684, -476, 284);
             var v = _toastList.gameObject.AddComponent<VerticalLayoutGroup>();
             v.spacing = 4;
             v.childControlHeight = true;
@@ -504,18 +529,34 @@ namespace PCShopSell.Game.UI
             v.childAlignment = TextAnchor.UpperLeft;
         }
 
+        private readonly List<string> _noticeHistory = new List<string>();
+        private string _lastToast;
+        private float _lastToastAt;
+        public void OpenNoticeHistory()
+        {
+            OpenWindow("通知记录（本次会话）", 850, 700, w =>
+            {
+                var list = Ui.Scroll(w.Content, 590);
+                for (int i = _noticeHistory.Count - 1; i >= 0; i--) Para(list, _noticeHistory[i], 16);
+                if (_noticeHistory.Count == 0) Line(list, "还没有通知。", 18, Ui.Dim);
+            });
+        }
         public void Toast(string message)
         {
-            Image bg = Ui.Panel(_toastList, "Toast", new Color(0.05f, 0.06f, 0.08f, 0.8f));
+            if (_lastToast == message && _uiTime - _lastToastAt < 8) return;
+            _lastToast = message; _lastToastAt = _uiTime;
+            _noticeHistory.Add((S == null ? "" : S.Clock.Now + "　") + message);
+            if (_noticeHistory.Count > 150) _noticeHistory.RemoveAt(0);
+            Image bg = Ui.Panel(_toastList, "Toast", new Color(0.12f, 0.17f, 0.16f, 0.96f));
             var fit = bg.gameObject.AddComponent<VerticalLayoutGroup>();
-            fit.padding = new RectOffset(10, 10, 4, 4);
+            fit.padding = new RectOffset(14, 14, 10, 10);
             fit.childControlHeight = true;
             fit.childControlWidth = true;
             fit.childForceExpandHeight = false;
             Text t = Ui.Label(bg.transform, message, 16);
             t.horizontalOverflow = HorizontalWrapMode.Wrap;
             _toasts.Add((bg.gameObject, _uiTime + 5f));
-            if (_toasts.Count > 5)
+            if (_toasts.Count > 3)
             {
                 Kill.It(_toasts[0].go);
                 _toasts.RemoveAt(0);
@@ -539,18 +580,23 @@ namespace PCShopSell.Game.UI
         public Window OpenWindow(string title, float width, float height, Action<Window> builder, bool holds = true, bool closable = true, Action onClosed = null)
         {
             var w = new Window { Builder = builder, Holds = holds, Owner = this, OnClosed = onClosed, Closable = closable };
-            Image dim = Ui.Panel(_modalCanvas.transform, "Window_" + title, new Color(0, 0, 0, 0.35f));
+            Image dim = Ui.Panel(_modalCanvas.transform, "Window_" + title, new Color(0.04f, 0.08f, 0.07f, 0.55f));
             dim.rectTransform.Fill();
             Image panel = Ui.Panel(dim.transform, "Panel", Ui.PanelBg);
             RectTransform prt = panel.rectTransform;
             prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0.5f);
+            Vector2 available = ((RectTransform)_modalCanvas.transform).rect.size;
+            float fit = Mathf.Min(1f, Mathf.Min((available.x - 32) / width, (available.y - 32) / height));
             prt.sizeDelta = new Vector2(width, height);
+            prt.localScale = Vector3.one * Mathf.Max(0.25f, fit);
             prt.anchoredPosition = new Vector2(0, -10 * _windows.Count);
 
             Image bar = Ui.Panel(prt, "TitleBar", Ui.PanelBg2);
             bar.rectTransform.Anchor(0, 1, 1, 1, 0, -50, 0, 0);
             w.TitleText = Ui.Label(bar.transform, title, 24);
-            w.TitleText.rectTransform.Fill(16);
+            w.TitleText.rectTransform.Anchor(0, 0, 1, 1, 24, 0, 112, 0);
+            w.TitleText.fontStyle = FontStyle.Bold;
+            Ui.Panel(prt, "BrassRule", Ui.Accent).rectTransform.Anchor(0, 1, 1, 1, 20, -51, 20, 49);
             if (closable)
             {
                 Button close = Ui.Button(bar.transform, "关闭", w.Close, 18, Ui.Warn);
@@ -558,8 +604,10 @@ namespace PCShopSell.Game.UI
             }
 
             w.Root = dim.rectTransform;
-            w.Content = Ui.Rect(prt, "Content").Anchor(0, 0, 1, 1, 0, 0, 0, 50);
-            Ui.VList(w.Content, 8, 16);
+            w.Content = Ui.Scroll(prt);
+            ((RectTransform)w.Content.parent.parent).Anchor(0, 0, 1, 1, 0, 0, 0, 50);
+            var contentLayout = w.Content.GetComponent<VerticalLayoutGroup>();
+            contentLayout.spacing = 8; contentLayout.padding = new RectOffset(16, 16, 16, 16);
             _windows.Add(w);
             if (holds) S?.Time.Hold();
             w.Rebuild();
@@ -614,7 +662,7 @@ namespace PCShopSell.Game.UI
                     int idx = i;
                     EventChoice c = def.Choices[i];
                     bool ok = S.IsChoiceEnabled(c);
-                    string label = ok ? c.Text : $"{c.Text}\n<size=14><color=#E0806A>{c.DisabledReason}</color></size>";
+                    string label = ok ? c.Text : $"{c.Text}\n<size=14><color=#D79780>{c.DisabledReason}</color></size>";
                     Ui.Size(Ui.Button(w.Content, label, () =>
                     {
                         if (S.ResolveEvent(idx)) w.Close();
@@ -626,15 +674,12 @@ namespace PCShopSell.Game.UI
         /// <summary>开局介绍。</summary>
         public void ShowIntro()
         {
-            OpenWindow("欢迎来到电脑城", 760, 560, w =>
+            OpenWindow("欢迎来到电脑城", 680, 400, w =>
             {
-                Para(w.Content, "你揣着 ¥10,000 来到这条商业街，想开一家自己的电脑店。可现在还没有铺子，你先住在自己的出租屋里。\n\n" +
-                                "· 什么时候出门、先做什么，都由你自己决定。想开店了，就去商业街中段的「安居房产中介」看看在租的铺面：街尾的空铺最便宜（月租 ¥1,500），离地铁越近越贵，中型、大型铺子要有名气房东才肯租。签约要付首月租金 + 押金 + 中介费（各一个月租金）\n" +
-                                "· 有了店就去 2 公里外的电子市场档口进货，或者买部智能手机、装上 1788 app 网上进货（便宜但要等，可能有次品）\n" +
-                                "· 你在店里才营业：顾客挑好货到收银台排队，你站过去给他们结账\n" +
-                                "· 有人想装整机会下订单，配件齐了在店里装机交付\n" +
-                                "· 第一个月目标：第 30 天时身家 ≥ ¥8,000（押金也算），并且雇到一个员工", 18);
-                Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 20, Ui.ButtonHot), -1, 50);
+                Para(w.Content, S.HasShop ? "照顾好自己，也照顾好小店。新的任务会随着经营进展出现。" : "你带着 ¥10,000 来到电脑城，想开一家自己的电脑店。先安顿下来，出门去「安居房产中介」找一间负担得起的铺子。", 20);
+                Para(w.Content, "WASD 移动，沿街看招牌寻找店铺；靠近门或家具按 F 交互。", 18);
+                Para(w.Content, "左上角只提示眼前的一件事；需要说明时点“怎么做”。", 17, Ui.Accent);
+                Ui.Size(Ui.Button(w.Content, "开始经营", w.Close, 20, Ui.ButtonHot), -1, 50);
                 if (!S.HasShop)
                 {
                     Ui.Size(Ui.Button(w.Content, "（作弊 / 验收）跳过找铺子：直接租下街尾小店，回到旧开局", () =>

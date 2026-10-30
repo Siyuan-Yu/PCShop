@@ -249,6 +249,8 @@ namespace PCShopSell.Tests
         public void MarketShock_MovesCategoryPrice_ThenFades()
         {
             GameSession s = Make();
+            s.Market.OutlookEnabled = false;
+            s.Market.RestoreBias(new double[6], new (int day, PartCategory category, double delta)[0]);
             double start = s.Market.Index(PartCategory.Cpu);
             s.Market.ScheduleShock(s.Clock.Today.AddDays(1), PartCategory.Cpu, 0.15);
             s.Clock.Restore(s.Clock.Today.AddDays(1), 23 * 60 + 30);
@@ -386,7 +388,7 @@ namespace PCShopSell.Tests
             int shocksBefore = s.Market.PendingShocks.Count;
             string text = s.AskInsider(Npcs.Li);
             Assert.IsNotEmpty(text);
-            Assert.AreEqual(shocksBefore + 1, s.Market.PendingShocks.Count, "说的是真话：行情会真的动");
+            Assert.AreEqual(shocksBefore, s.Market.PendingShocks.Count, "询问消息不能制造行情");
             Assert.AreEqual(1, s.Tips.Count);
             StringAssert.Contains("天后再问", s.InsiderBlocker(Npcs.Li));
 

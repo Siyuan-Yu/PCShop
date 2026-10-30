@@ -156,7 +156,7 @@ namespace PCShopSell.Core.Session
                 order.Lines.Add(new OnlineOrderLine { PartId = part.Id, Count = count });
             }
             if (order.Lines.Count == 0) return Fail("购物车是空的。");
-            double free = PlayerShop.Stock.FreeSpace - Online.PendingSpace();
+            double free = PlayerShop.Stock.FreeSpace - IncomingShopSpace;
             if (!toHome && space > free + 1e-9) return Fail($"店里放不下（需要 {space:0.#} 格，只剩 {Math.Max(0, free):0.#} 格）。");
             if (!Ledger.TryDebit(Clock.Today, "进货", total, $"1788 {store.Name}")) return Fail($"要 {total}（含运费），钱不够。");
 

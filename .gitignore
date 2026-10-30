@@ -114,3 +114,5 @@ InitTestScene*.unity*
 steam_appid.txt
 .DS_Store
 Thumbs.db
+
+/work/

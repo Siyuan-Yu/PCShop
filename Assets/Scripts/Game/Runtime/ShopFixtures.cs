@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
 using UnityEngine;
@@ -48,12 +48,12 @@ namespace PCShopSell.Game.Runtime
         {
             switch (c)
             {
-                case PartCategory.Gpu: return new Color(0.85f, 0.25f, 0.25f);
-                case PartCategory.Cpu: return new Color(0.2f, 0.45f, 0.9f);
-                case PartCategory.Memory: return new Color(0.2f, 0.75f, 0.4f);
-                case PartCategory.Storage: return new Color(0.95f, 0.65f, 0.15f);
-                case PartCategory.Motherboard: return new Color(0.6f, 0.35f, 0.85f);
-                default: return new Color(0.2f, 0.8f, 0.85f);
+                case PartCategory.Gpu: return ArtDirection.Clay;
+                case PartCategory.Cpu: return ArtDirection.Blue;
+                case PartCategory.Memory: return ArtDirection.Sage;
+                case PartCategory.Storage: return ArtDirection.Brass;
+                case PartCategory.Motherboard: return ArtDirection.Hex("958593");
+                default: return ArtDirection.Hex("63988F");
             }
         }
 
@@ -68,18 +68,19 @@ namespace PCShopSell.Game.Runtime
             root.localPosition = pos;
             root.localRotation = Quaternion.Euler(0, yawDeg, 0);
 
-            Material wood = Mats.Lit(new Color(0.45f, 0.35f, 0.25f));
-            Material frame = Mats.Lit(new Color(0.3f, 0.32f, 0.36f), 0.5f);
+            Material wood = Mats.Lit(ArtDirection.Wood);
+            Material frame = Mats.Lit(ArtDirection.Ink, 0.5f);
             Prims.Box(root, "Back", new Vector3(0, 0.9f, 0.175f), new Vector3(1.4f, 1.8f, 0.05f), wood);
             Prims.Box(root, "PostL", new Vector3(-0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);
             Prims.Box(root, "PostR", new Vector3(0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);
             foreach (float y in BoardCenters) Prims.Box(root, "Board", new Vector3(0, y, 0f), new Vector3(1.4f, 0.04f, 0.36f), wood);
             Color cc = CategoryColor(cat);
-            Prims.Box(root, "Sign", new Vector3(0, 1.93f, -0.1f), new Vector3(1.0f, 0.14f, 0.04f), Mats.Glow(cc * 0.6f, cc * 1.6f, false));
+            Prims.Box(root, "Sign", new Vector3(0, 1.93f, -0.1f), new Vector3(1.0f, 0.14f, 0.04f), Mats.Lit(cc));
 
+            Prims.SignText(root, PartCatalog.CategoryName(cat), new Vector3(0, 1.93f, -0.125f), 0.9f, 0.13f, ArtDirection.Cream);
             // 板边的标记：整盒层纸箱色，散件层蓝灰色
-            Material boxedTag = Mats.Lit(new Color(0.8f, 0.62f, 0.38f));
-            Material looseTag = Mats.Lit(new Color(0.36f, 0.5f, 0.68f));
+            Material boxedTag = Mats.Lit(ArtDirection.Brass);
+            Material looseTag = Mats.Lit(ArtDirection.Blue);
             for (int r = 0; r < Rows; r++)
                 Prims.Box(root, "Tag", new Vector3(0, BoardCenters[r] - 0.002f, -0.185f), new Vector3(1.38f, 0.035f, 0.012f), r == Rows - 1 ? boxedTag : looseTag);
 
@@ -127,15 +128,15 @@ namespace PCShopSell.Game.Runtime
             var root = new GameObject("Shelf_" + kindId).transform;
             root.SetParent(parent, false);
 
-            Material wood = Mats.Lit(new Color(0.45f, 0.35f, 0.25f));
-            Material frame = Mats.Lit(new Color(0.3f, 0.32f, 0.36f), 0.5f);
+            Material wood = Mats.Lit(ArtDirection.Wood);
+            Material frame = Mats.Lit(ArtDirection.Ink, 0.5f);
             Prims.Box(root, "Back", new Vector3(0, 0.9f, 0.175f), new Vector3(1.4f, 1.8f, 0.05f), wood);
             Prims.Box(root, "PostL", new Vector3(-0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);
             Prims.Box(root, "PostR", new Vector3(0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);
             foreach (float y in BoardCenters) Prims.Box(root, "Board", new Vector3(0, y, 0f), new Vector3(1.4f, 0.04f, 0.36f), wood);
             int model = GoodsModelOf(kindId);
             Color cc = GoodsColor(kindId);
-            Prims.Box(root, "Sign", new Vector3(0, 1.93f, -0.1f), new Vector3(1.0f, 0.14f, 0.04f), Mats.Glow(cc * 0.6f, cc * 1.6f, false));
+            Prims.Box(root, "Sign", new Vector3(0, 1.93f, -0.1f), new Vector3(1.0f, 0.14f, 0.04f), Mats.Lit(cc));
 
             var display = new ShelfDisplay { Goods = true, Category = PartCategory.Gpu, KindId = kindId };
             const int perRow = 7;
@@ -179,8 +180,8 @@ namespace PCShopSell.Game.Runtime
         {
             var root = new GameObject("Shelf_Unset").transform;
             root.SetParent(parent, false);
-            Material wood = Mats.Lit(new Color(0.45f, 0.35f, 0.25f));
-            Material frame = Mats.Lit(new Color(0.3f, 0.32f, 0.36f), 0.5f);
+            Material wood = Mats.Lit(ArtDirection.Wood);
+            Material frame = Mats.Lit(ArtDirection.Ink, 0.5f);
             Prims.Box(root, "Back", new Vector3(0, 0.9f, 0.175f), new Vector3(1.4f, 1.8f, 0.05f), wood);
             Prims.Box(root, "PostL", new Vector3(-0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);
             Prims.Box(root, "PostR", new Vector3(0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);
@@ -229,7 +230,7 @@ namespace PCShopSell.Game.Runtime
                 default:
                     Prims.Box(t, "Crate", new Vector3(0, 0.05f, 0), new Vector3(0.15f, 0.1f, 0.11f), Mats.Lit(new Color(0.6f, 0.45f, 0.28f)));
                     Prims.Shape(PrimitiveType.Sphere, t, "Fruit", new Vector3(-0.03f, 0.115f, 0), Vector3.one * 0.07f, Mats.Lit(new Color(0.9f, 0.3f, 0.2f)));
-                    Prims.Shape(PrimitiveType.Sphere, t, "Fruit2", new Vector3(0.035f, 0.115f, 0), Vector3.one * 0.07f, Mats.Lit(new Color(0.95f, 0.65f, 0.15f)));
+                    Prims.Shape(PrimitiveType.Sphere, t, "Fruit2", new Vector3(0.035f, 0.115f, 0), Vector3.one * 0.07f, Mats.Lit(ArtDirection.Brass));
                     break;
             }
             return g;
@@ -351,11 +352,12 @@ namespace PCShopSell.Game.Runtime
             root.SetParent(parent, false);
             root.localPosition = pos;
 
-            Prims.Box(root, "Rug", new Vector3(0, 0.012f, -0.3f), new Vector3(3.2f, 0.014f, 2.4f), Mats.Lit(new Color(0.22f, 0.3f, 0.5f)));
-            Prims.Box(root, "Desk", new Vector3(0, 0.4f, 0), new Vector3(2.4f, 0.8f, 0.9f), Mats.Lit(new Color(0.5f, 0.4f, 0.3f)));
-            Prims.Box(root, "DeskTop", new Vector3(0, 0.805f, 0), new Vector3(2.44f, 0.02f, 0.94f), Mats.Lit(new Color(0.75f, 0.75f, 0.78f), 0.5f));
-            Prims.Box(root, "Sign", new Vector3(0, 0.55f, -0.46f), new Vector3(1.6f, 0.22f, 0.02f), Mats.Glow(new Color(0.9f, 0.5f, 0.15f), new Color(2.4f, 1.2f, 0.3f), false));
+            Prims.Box(root, "Rug", new Vector3(0, 0.012f, -0.3f), new Vector3(3.2f, 0.014f, 2.4f), Mats.Lit(ArtDirection.Sage));
+            Prims.Box(root, "Desk", new Vector3(0, 0.4f, 0), new Vector3(2.4f, 0.8f, 0.9f), Mats.Lit(ArtDirection.Wood));
+            Prims.Box(root, "DeskTop", new Vector3(0, 0.805f, 0), new Vector3(2.44f, 0.02f, 0.94f), Mats.Lit(ArtDirection.Cream, 0.5f));
+            Prims.Box(root, "Sign", new Vector3(0, 0.55f, -0.46f), new Vector3(1.6f, 0.22f, 0.02f), Mats.Lit(ArtDirection.Ink));
 
+            Prims.SignText(root, "整 机 现 货", new Vector3(0, 0.55f, -0.477f), 1.45f, 0.17f, ArtDirection.Cream);
             var slots = new List<PcSlot>();
             for (int i = 0; i < 2; i++)
             {
@@ -367,7 +369,7 @@ namespace PCShopSell.Game.Runtime
                 Prims.Box(g, "Keyboard", new Vector3(cx - 0.1f, 0.82f, -0.2f), new Vector3(0.4f, 0.02f, 0.13f), Mats.Lit(new Color(0.85f, 0.85f, 0.88f)));
                 Prims.Box(g, "Tower", new Vector3(cx + 0.32f, 1.06f, 0.1f), new Vector3(0.26f, 0.5f, 0.4f), Mats.Lit(new Color(0.1f, 0.1f, 0.12f), 0.5f));
                 GameObject glass = Prims.Box(g, "TowerGlass", new Vector3(cx + 0.32f, 1.08f, -0.102f), new Vector3(0.19f, 0.38f, 0.004f), Mats.Lit(Color.black));
-                Prims.Box(g, "Tag", new Vector3(cx, 0.84f, -0.42f), new Vector3(0.4f, 0.05f, 0.02f), Mats.Glow(new Color(0.9f, 0.8f, 0.2f), new Color(2.2f, 1.8f, 0.3f), false));
+                Prims.Box(g, "Tag", new Vector3(cx, 0.84f, -0.42f), new Vector3(0.4f, 0.05f, 0.02f), Mats.Lit(ArtDirection.Cream));
                 var slot = new PcSlot { Root = g.gameObject, Screen = screen.GetComponent<Renderer>(), Glass = glass.GetComponent<Renderer>() };
                 SetSlotTier(slot, 0);
                 slots.Add(slot);
@@ -392,15 +394,22 @@ namespace PCShopSell.Game.Runtime
                     if (def.ShelfKg > Core.Inventory.ShelfKinds.CapacityKg)
                     {
                         // 加固（蓝）/ 重型（橙）货架：两边加粗的立柱，一眼能和普通货架分开
-                        Color tier = def.Id == Core.Home.FurnitureCatalog.RackHeavy ? new Color(0.9f, 0.5f, 0.1f) : new Color(0.2f, 0.45f, 0.85f);
+                        Color tier = def.Id == Core.Home.FurnitureCatalog.RackHeavy ? ArtDirection.Brass : ArtDirection.Blue;
                         Prims.Box(root, "TierPostL", new Vector3(-0.74f, 0.93f, 0f), new Vector3(0.09f, 1.86f, 0.42f), Mats.Lit(tier, 0.4f));
                         Prims.Box(root, "TierPostR", new Vector3(0.74f, 0.93f, 0f), new Vector3(0.09f, 1.86f, 0.42f), Mats.Lit(tier, 0.4f));
                     }
                     pickH = 2.0f;
                     break;
                 case FixtureKind.Counter:
-                    Prims.Box(root, "Counter", new Vector3(0, 0.5f, 0), new Vector3(w, 1.0f, d), Mats.Lit(new Color(0.3f, 0.32f, 0.36f), 0.5f));
-                    Prims.Box(root, "Monitor", new Vector3(0.2f, 1.25f, 0.05f), new Vector3(0.6f, 0.45f, 0.1f), Mats.Glow(new Color(0.1f, 0.1f, 0.12f), new Color(0.3f, 0.8f, 1.5f), false));
+                    Prims.Box(root, "Counter", new Vector3(0, 0.47f, 0), new Vector3(w, 0.94f, d), Mats.Lit(ArtDirection.Sage, 0.15f));
+                    Prims.Box(root, "CounterTop", new Vector3(0, 0.97f, 0), new Vector3(w + 0.08f, 0.09f, d + 0.06f), Mats.Lit(ArtDirection.Cream, 0.24f));
+                    Prims.Box(root, "CounterPlinth", new Vector3(0, 0.06f, 0), new Vector3(w - 0.08f, 0.12f, d - 0.04f), Mats.Lit(ArtDirection.Ink));
+                    for (float x = -w / 2 + 0.12f; x < w / 2; x += 0.18f)
+                        Prims.Box(root, "CounterFlute", new Vector3(x, 0.48f, -d / 2 - 0.009f), new Vector3(0.012f, 0.68f, 0.018f), Mats.Lit(ArtDirection.Ink));
+                    Prims.Box(root, "CounterBadge", new Vector3(0, 0.64f, -d / 2 - 0.025f), new Vector3(0.42f, 0.15f, 0.025f), Mats.Lit(ArtDirection.Brass));
+                    Prims.Box(root, "Monitor", new Vector3(0.2f, 1.25f, 0.05f), new Vector3(0.6f, 0.45f, 0.1f), Mats.Lit(ArtDirection.Cream));
+                    Prims.Box(root, "TerminalScreen", new Vector3(0.2f, 1.26f, -0.006f), new Vector3(0.51f, 0.32f, 0.012f), Mats.Glow(ArtDirection.Ink, ArtDirection.Sage * 0.4f, false));
+                    for (int line = 0; line < 3; line++) Prims.Box(root, "TerminalText", new Vector3(0.14f, 1.33f - line * 0.06f, -0.015f), new Vector3(0.28f - line * 0.045f, 0.014f, 0.008f), Mats.Lit(ArtDirection.Cream));
                     Prims.Box(root, "Register", new Vector3(-0.5f, 1.1f, -0.05f), new Vector3(0.35f, 0.2f, 0.35f), Mats.Lit(new Color(0.15f, 0.15f, 0.15f)));
                     break;
                 case FixtureKind.Display:
@@ -408,7 +417,9 @@ namespace PCShopSell.Game.Runtime
                     pickH = 1.5f;
                     break;
                 default: // 装机操作台：有装机单时屏幕亮着
-                    Prims.Box(root, "Workbench", new Vector3(0, 0.45f, 0), new Vector3(w, 0.9f, d), Mats.Lit(new Color(0.36f, 0.38f, 0.42f), 0.5f));
+                    Prims.Box(root, "Workbench", new Vector3(0, 0.45f, 0), new Vector3(w, 0.9f, d), Mats.Lit(ArtDirection.Ink, 0.15f));
+                    Prims.Box(root, "BenchTop", new Vector3(0, 0.92f, 0), new Vector3(w + 0.04f, 0.06f, d + 0.04f), Mats.Lit(ArtDirection.Wood));
+                    Prims.Box(root, "RepairMat", new Vector3(0, 0.958f, -0.05f), new Vector3(w * 0.7f, 0.012f, d * 0.65f), Mats.Lit(ArtDirection.Sage));
                     Prims.Box(root, "BenchCase", new Vector3(-0.3f, 1.15f, 0), new Vector3(0.5f, 0.5f, 0.35f), Mats.Lit(new Color(0.12f, 0.12f, 0.14f), 0.6f));
                     h.Glow.Add(Prims.Box(root, "BenchScreen", new Vector3(0.4f, 1.2f, 0), new Vector3(0.45f, 0.4f, 0.06f), Mats.Glow(new Color(0.1f, 0.1f, 0.12f), new Color(0.2f, 1.4f, 0.6f), false)));
                     Prims.Box(root, "BenchParts", new Vector3(-0.1f, 0.95f, -0.05f), new Vector3(0.3f, 0.08f, 0.3f), Mats.Lit(new Color(0.15f, 0.5f, 0.3f)));

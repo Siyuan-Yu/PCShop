@@ -1,4 +1,4 @@
-# 在工程镜像里跑冒烟测试并截图（需要图形，不能加 -nographics）。
+﻿# 在工程镜像里跑冒烟测试并截图（需要图形，不能加 -nographics）。
 # 截图输出到 <镜像>\docs\previews\vs1_*.png，加 -CopyShots 会拷回本工程。
 # 也可以用 -Method PCShopSell.EditorTools.GameSceneBuilder.CreateSceneFromBatch 重新生成 Main 场景。
 param(
@@ -10,11 +10,12 @@ param(
 $src = (Resolve-Path "$PSScriptRoot\..").Path
 New-Item -ItemType Directory -Force $Mirror | Out-Null
 $dst = (Resolve-Path $Mirror).Path
+if ($dst -eq $src -or $src.StartsWith($dst + "\")) { throw "Mirror must not be the source or its parent" }
 foreach ($d in "Assets", "Packages", "ProjectSettings") {
     robocopy "$src\$d" "$dst\$d" /MIR /NFL /NDL /NJH /NJS /NP /R:0 /W:0 | Out-Null
 }
 $log = "$env:TEMP\pcshop-smoke.log"
-$p = Start-Process -FilePath $Unity -ArgumentList '-batchmode', '-projectPath', "`"$dst`"", '-executeMethod', $Method, '-logFile', "`"$log`"" -PassThru
+$p = Start-Process -WindowStyle Hidden -FilePath $Unity -ArgumentList '-batchmode', '-projectPath', "`"$dst`"", '-executeMethod', $Method, '-logFile', "`"$log`"" -PassThru
 $p.WaitForExit()
 "exit $($p.ExitCode)"
 Get-Content $log -Encoding UTF8 | Select-String "SMOKE|error CS|Exception" | Where-Object { $_ -notmatch "GameSceneBuilder:" } | ForEach-Object { $_.Line }

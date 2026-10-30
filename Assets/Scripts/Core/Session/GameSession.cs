@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -92,6 +93,7 @@ namespace PCShopSell.Core.Session
             Ledger = new Ledger(openingCash);
             Time = new TimeController();
             Market = new HardwareMarket(Random);
+            Market.EnsureOutlook(start.Date);
             Online = new Online1788();
             Police = new PoliceSystem(city);
             Cargo = new Stock(Vehicles.Walk.CargoCapacity);
@@ -101,11 +103,16 @@ namespace PCShopSell.Core.Session
                 LocationFactor = ComputeLocationFactor(city, PlayerShopPlace),
                 EmployeeOnDuty = IsEmployeeOnDuty,
             };
+            PlayerShop.WorkMinute = UpdateEmployeeWork;
+            PlayerShop.EmployeeBusy = () => _employeeBuilding;
             PlayerShop.DayClosed += r =>
             {
                 if (HasShop) Notice?.Invoke(DayReportText(r));
             };
             PlayerShop.CustomerLeft += OnShopCustomerLeft;
+            PlayerShop.OrderCompleted += o => { Flags.Add("tutorial:build"); ContractOrderResult(o, true); };
+            PlayerShop.OrderCancelled += o => ContractOrderResult(o, false);
+            PlayerShop.OrderExpired += o => ContractOrderResult(o, false);
             PlayerShop.OrderPlaced += o => Notice?.Invoke($"新装机订单：{PartCatalog.TierName(o.Tier)}整机 {o.Price}，两天内交付。");
             PlayerShop.OrderExpired += o => Popup?.Invoke("订单取消", $"{PartCatalog.TierName(o.Tier)}整机订单超时，顾客取消了订单，知名度下降。");
 
@@ -253,11 +260,30 @@ namespace PCShopSell.Core.Session
             foreach (StockLine l in PlayerShop.Stock.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
             foreach (StockLine l in Cargo.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
             foreach (var kv in PlayerShop.Stock.GoodsLines()) sum += (Gifts.Get(kv.Key)?.Price.Yuan ?? 0) * kv.Value;
+            foreach (var order in PlayerShop.Orders) if (order.PartsReserved)
+                foreach (var p in PartCatalog.BuildList(order.Tier)) sum += Market.PriceOf(p).Yuan;
+            foreach (var l in HomeBoxParts.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
+            foreach (int tier in PlayerShop.DisplayPcs)
+                foreach (var p in PartCatalog.BuildList(tier)) sum += Market.PriceOf(p).Yuan;
+            foreach (var c in PlayerShop.Queue)
+            {
+                if (c.DisplayTier >= 0) foreach (var p in PartCatalog.BuildList(c.DisplayTier)) sum += Market.PriceOf(p).Yuan;
+                else if (c.Item != null) sum += Market.PriceOf(c.Item).Yuan;
+                else if (c.GoodsId != null) sum += Gifts.Get(c.GoodsId)?.Price.Yuan ?? 0;
+            }
+            foreach (var o in Online.Pending) foreach (var l in o.Lines) sum += Market.PriceOf(PartCatalog.Get(l.PartId)).Yuan * l.Count;
+            foreach (var r in Couriers) foreach (var l in r.Items)
+                if (l.Kind == CourierItemKind.Part) sum += Market.PriceOf(PartCatalog.Get(l.Id)).Yuan * l.Count;
+            foreach (var o in DirectShipments) sum += Market.PriceOf(PartCatalog.Get(o.PartId)).Yuan * o.Count;
             return Money.FromYuan((long)Math.Round(sum * 0.9));
         }
 
         /// <summary>身家：现金 + 库存九折 + 铺子押金（退租能拿回来）。</summary>
-        public Money NetWorth() => Ledger.Balance + InventoryValue() + (Lease?.Deposit ?? Money.Zero);
+        public Money VehicleValue => Money.FromCents(_owned.Sum(v => Vehicles.Get(v).Price.Scale(.6).Cents));
+        public Money ContractDeposits => Money.FromCents(_contracts.Where(x => x.Accepted && !x.Settled).Sum(x => Money.FromCents(x.DepositCents).Scale((double)(x.Count - x.Failed) / Math.Max(1, x.Count)).Cents));
+        public Money TotalDebt => SupplierDebtTotal + MortgageDebt;
+        public Money NetWorth() => Ledger.Balance + InventoryValue() + (Lease?.Deposit ?? Money.Zero) + ContractDeposits
+            + VehicleValue + VentureValue + PropertyValue + Money.FromCents(HomePriceCents) + FundValue - TotalDebt;
 
         public void Dispose()
         {
@@ -292,6 +318,8 @@ namespace PCShopSell.Core.Session
             CheckAppointments(to);
             DeliverOnlineOrders(to);
             DeliverCouriers(to);
+            DeliverDirect(to);
+            if (from.Date == to.Date) TrackCreatorCampaigns(to);
 
             if (!_sleeping && Player.Health < 15) _pendingHospital = true;
         }
@@ -340,11 +368,12 @@ namespace PCShopSell.Core.Session
             if (today.IsMonthStart)
             {
                 if (HomeUtilities.IsPositive) Ledger.ForceDebit(today, "水电", HomeUtilities, "住处水电");
-                if (HasShop) Ledger.ForceDebit(today, "房租", CurrentShopRent, "店铺月租");
-                Ledger.ForceDebit(today, "房租", HomeRent, "城中村月租");
-                Popup?.Invoke("交房租", HasShop ? $"店铺 {CurrentShopRent} + 出租屋 {HomeRent} 已扣款。" : $"出租屋 {HomeRent} 已扣款。（还没租铺子）");
+                if (HasShop && CurrentShopRent.IsPositive) Ledger.ForceDebit(today, "房租", CurrentShopRent, "店铺月租");
+                if (CurrentHomeRent.IsPositive) Ledger.ForceDebit(today, "房租", CurrentHomeRent, HomeTitle + "月租");
+                Popup?.Invoke("交房租", HasShop ? $"店铺 {CurrentShopRent} + 出租屋 {CurrentHomeRent} 已扣款。" : $"出租屋 {CurrentHomeRent} 已扣款。（还没租铺子）");
             }
             OnRealtyDay(today.TotalDays);
+            OnBusinessDay(previous, today);
 
             if (today.TotalDays == 4 && Online.Discover("s_zhou"))
             {
@@ -383,7 +412,7 @@ namespace PCShopSell.Core.Session
             Money worth = NetWorth();
             bool hired = Employee != null || EverHired;
             MonthGoalPassed = worth >= MonthGoalNetWorth && hired;
-            string body = $"身家（现金 + 库存九折）：{worth}（目标 {MonthGoalNetWorth}）\n" +
+            string body = $"身家（现金 + 库存 + 押金 + 经营及投资资产 − 负债）：{worth}（目标 {MonthGoalNetWorth}）\n" +
                           $"雇到员工：{(hired ? "是" : "否")}\n\n" +
                           (MonthGoalPassed ? "第一个月站稳了脚跟！可以继续经营。" : "第一个月没达标。可以继续经营，但房东和同行都在看着你。");
             Popup?.Invoke(MonthGoalPassed ? "第一个月：达标" : "第一个月：未达标", body);

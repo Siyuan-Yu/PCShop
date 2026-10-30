@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
@@ -134,6 +134,7 @@ namespace PCShopSell.Game.Runtime
         private readonly System.Random _rng = new System.Random(5);
         private readonly GameObject _owner;
         private readonly GameObject _clerk;
+        private readonly GameObject _assembler;
         private readonly Vector3 _door;
         private readonly float _doorX;
         private Vector3 _counterFront;
@@ -362,7 +363,6 @@ namespace PCShopSell.Game.Runtime
             public GameObject Go;
             public Vector3 Target;
             public float Speed;
-            public float Bob;
         }
 
         private readonly List<Walker> _walkers = new List<Walker>();
@@ -478,9 +478,8 @@ namespace PCShopSell.Game.Runtime
                     _walkers.RemoveAt(i);
                     continue;
                 }
-                wk.Bob += realDt * wk.Speed * 6f;
                 Vector3 p = tr.position + dv / m * Mathf.Min(m, wk.Speed * realDt);
-                p.y = Origin.y + Mathf.Abs(Mathf.Sin(wk.Bob)) * 0.04f;
+                p.y = Origin.y;
                 tr.position = p;
                 tr.rotation = Quaternion.LookRotation(dv / m);
             }
@@ -562,22 +561,26 @@ namespace PCShopSell.Game.Runtime
             (Width, Depth) = size == ShopSize.Large ? (18f, 12f) : size == ShopSize.Medium ? (12f, 9f) : (8f, 6f);
             float w = Width, d = Depth;
 
-            Prims.Box(_root, "Floor", new Vector3(w / 2, -0.05f, d / 2), new Vector3(w, 0.1f, d), Mats.Lit(new Color(0.78f, 0.76f, 0.72f), 0.4f), true);
-            Material tileMat = Mats.Lit(new Color(0.7f, 0.69f, 0.66f), 0.4f);
-            for (int tx = 0; tx * 2f < w; tx++)
-            for (int tz = 0; tz * 2f < d; tz++)
+            Prims.Box(_root, "Floor", new Vector3(w / 2, -0.05f, d / 2), new Vector3(w, 0.1f, d), Mats.Lit(ArtDirection.Hex("B4AA95"), 0.12f), true);
+            Material tileMat = Mats.LitTex(ArtDirection.Cream, new Vector2(1, 1), 0.16f);
+            const float tile = 0.8f;
+            for (int tx = 0; tx * tile < w; tx++)
+            for (int tz = 0; tz * tile < d; tz++)
             {
-                if ((tx + tz) % 2 != 0) continue;
-                float sx = Mathf.Min(2f, w - tx * 2f), sz = Mathf.Min(2f, d - tz * 2f);
-                Prims.Box(_root, "Tile", new Vector3(tx * 2f + sx / 2, 0.005f, tz * 2f + sz / 2), new Vector3(sx, 0.012f, sz), tileMat);
+                float sx = Mathf.Min(tile, w - tx * tile), sz = Mathf.Min(tile, d - tz * tile);
+                Prims.Box(_root, "Tile", new Vector3(tx * tile + sx / 2, 0.005f, tz * tile + sz / 2), new Vector3(sx - 0.012f, 0.012f, sz - 0.012f), tileMat);
             }
             BuildStreet(w, d, w - 3.0f);
-            Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), Mats.Lit(new Color(0.86f, 0.88f, 0.9f)));
-            Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), Mats.Lit(new Color(0.8f, 0.83f, 0.86f)));
-            Prims.Box(_root, "WallLeftLow", new Vector3(-0.05f, 0.3f, d / 2), new Vector3(0.1f, 0.6f, d), Mats.Lit(new Color(0.6f, 0.6f, 0.62f)));
+            Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), Mats.Lit(ArtDirection.Cream));
+            Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), Mats.Lit(ArtDirection.Hex("CECDBB")));
+            Prims.Box(_root, "WallLeftLow", new Vector3(-0.05f, 0.3f, d / 2), new Vector3(0.1f, 0.6f, d), Mats.Lit(ArtDirection.Sage));
+            Prims.Box(_root, "WallDadoBack", new Vector3(w / 2, 0.38f, d - 0.015f), new Vector3(w, 0.76f, 0.025f), Mats.Lit(ArtDirection.Sage));
+            Prims.Box(_root, "WallDadoRight", new Vector3(w - 0.015f, 0.38f, d / 2), new Vector3(0.025f, 0.76f, d), Mats.Lit(ArtDirection.Sage));
+            Prims.Box(_root, "BrassRailBack", new Vector3(w / 2, 0.78f, d - 0.035f), new Vector3(w, 0.035f, 0.035f), Mats.Lit(ArtDirection.Brass, 0.3f, 0.3f));
+            Prims.Box(_root, "BrassRailRight", new Vector3(w - 0.035f, 0.78f, d / 2), new Vector3(0.035f, 0.035f, d), Mats.Lit(ArtDirection.Brass, 0.3f, 0.3f));
             // 大门开在货架这一侧（右前方），收银台在左边：顾客进门先逛货架，再回左边结账
             float doorX = w - 3.0f;
-            Material lowWall = Mats.Lit(new Color(0.6f, 0.6f, 0.62f));
+            Material lowWall = Mats.Lit(ArtDirection.Sage);
             Prims.Box(_root, "WallFrontLowA", new Vector3((doorX - 0.7f) / 2, 0.3f, -0.05f), new Vector3(doorX - 0.7f, 0.6f, 0.1f), lowWall);
             Prims.Box(_root, "WallFrontLowB", new Vector3((doorX + 0.7f + w) / 2, 0.3f, -0.05f), new Vector3(w - doorX - 0.7f, 0.6f, 0.1f), lowWall);
             Prims.Box(_root, "DoorMat", new Vector3(doorX, 0.012f, 0.45f), new Vector3(1.3f, 0.014f, 0.8f), Mats.Lit(new Color(0.35f, 0.18f, 0.16f)));
@@ -620,6 +623,7 @@ namespace PCShopSell.Game.Runtime
             _clerk = Prims.Figure(_root, "Clerk", new Color(0.3f, 0.6f, 0.35f), new Color(0.95f, 0.8f, 0.65f), 1.0f);
             _clerk.transform.localPosition = new Vector3(0.35f, 0, d * 0.55f - 0.8f);
             _clerk.transform.localRotation = Quaternion.LookRotation(Vector3.right);
+            _assembler = Prims.Figure(_root, "Assembler", new Color(0.3f, 0.45f, 0.75f), new Color(0.95f, 0.8f, 0.65f), 1.0f);
 
             _door = Origin + new Vector3(doorX, 0, -0.6f);
             _counterFront = Origin + new Vector3(1.8f, 0, d * 0.55f);
@@ -659,13 +663,13 @@ namespace PCShopSell.Game.Runtime
             d.Normalize();
             Transform tr = _owner.transform;
             Vector3 p = tr.localPosition;
-            float step = 4.8f * realDt;   // 世界整体加快 3 倍后，老板在店里走也稍微快一点（太快不好操作）
+            float step = 4.8f * realDt;
             Vector3 tx = p + new Vector3(d.x * step, 0, 0);
             if (CanStand(tx, p)) p = tx;
             Vector3 tz = p + new Vector3(0, 0, d.z * step);
             if (CanStand(tz, p)) p = tz;
             tr.localPosition = p;
-            tr.localRotation = Quaternion.Slerp(tr.localRotation, Quaternion.LookRotation(d), 0.35f);
+            tr.localRotation = Quaternion.Slerp(tr.localRotation, Quaternion.LookRotation(d), 1f - Mathf.Exp(-12f * realDt));
         }
 
         private bool CanStand(Vector3 to, Vector3 from)
@@ -924,7 +928,7 @@ namespace PCShopSell.Game.Runtime
                 _dressed = s.EquippedOutfit;
                 Prims.Dress(_owner, _dressed);
             }
-            UpdateStreet(realDt, s.Clock.MinuteOfDay);
+            UpdateStreet(s.Time.IsRunning ? realDt : 0f, s.Clock.MinuteOfDay);
             ShopSimulation shop = s.PlayerShop;
             UpdateOpenLook(shop.IsOpen, realDt);
             _decor.Sync(s.ShopLayout, s.ShopRoom);
@@ -933,7 +937,14 @@ namespace PCShopSell.Game.Runtime
             UpdateNearbyShelf(s.InPlayerShop);
             bool building = shop.Orders.Count > 0;
             foreach (GameObject g in _buildGlow) g.SetActive(building);
-            _clerk.SetActive(s.Employee != null && s.IsEmployeeOnDuty(s.Clock.Now));
+            _clerk.SetActive(s.Employee != null && s.Employee.OnDuty(s.Clock.Now));
+            _assembler.SetActive(s.Assembler != null && s.Assembler.OnDuty(s.Clock.Now));
+            _assembler.transform.localPosition = _hasBench ? _benchFront : _counterBack;
+            if (_hasBench)
+            {
+                Vector3 toward = new Vector3(_benchPos.x, 0, _benchPos.y) - _benchFront;
+                if (toward.sqrMagnitude > 0.01f) _assembler.transform.localRotation = Quaternion.LookRotation(toward);
+            }
 
             _stockTimer -= dt;
             if (_stockTimer <= 0)

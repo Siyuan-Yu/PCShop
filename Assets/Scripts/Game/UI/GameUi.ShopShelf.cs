@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -233,7 +233,7 @@ namespace PCShopSell.Game.UI
                 int same = S.ShelvesOfKind(kind.Id);
                 int back = kind.IsParts ? PartCatalog.InCategory(kind.Category).Sum(p => st.CountAll(p)) : kind.GiftIds.Sum(id => st.GoodsCount(id));
                 Line(w.Content, $"摆「{kind.Name}」的货架共 <b>{same}</b> 个，一共能放 {fill.CapacityKg:0} 公斤，已摆 <b>{fill.UsedKg:0.#}</b> 公斤 / <b>{fill.Total}</b> 件"
-                    + (back > fill.Total ? $"　<color=#FFD54A>后仓还有 {back - fill.Total} 件没摆上（货架装满了）</color>" : ""), 16);
+                    + (back > fill.Total ? $"　<color=#DDC18B>后仓还有 {back - fill.Total} 件没摆上（货架装满了）</color>" : ""), 16);
                 Line(w.Content, $"整店后仓 {st.UsedSpace:0.#}/{st.Capacity:0.#} 格，还剩 {st.FreeSpace:0.#} 格（所有货共用）", 15, Ui.Dim);
 
                 if (kind.IsParts) BuildPartShelfBody(w, kind, fill);
@@ -326,7 +326,7 @@ namespace PCShopSell.Game.UI
             inner.Fill(4);
             bool own = shop.HasPartMarkup(p);
             double m = shop.MarkupOf(p);
-            Text info = Ui.Label(inner, $"市价 {S.Market.PriceOf(p)}　<b>{m:0.00}×</b>{(own ? "" : "<size=12>（跟随）</size>")}\n<size=12><color=#9AA3AD>顾客愿买约 {ShopSettings.BuyChance(m) * 100:0}%</color></size>", 14);
+            Text info = Ui.Label(inner, $"市价 {S.Market.PriceOf(p)}　<b>{m:0.00}×</b>{(own ? "" : "<size=12>（跟随）</size>")}\n<size=12><color=#ABB5A8>顾客愿买约 {ShopSettings.BuyChance(m) * 100:0}%</color></size>", 14);
             Ui.Size(info, 150);
             void Set(double? v)
             {

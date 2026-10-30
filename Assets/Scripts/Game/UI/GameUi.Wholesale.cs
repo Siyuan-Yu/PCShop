@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -44,7 +44,7 @@ namespace PCShopSell.Game.UI
             if (!S.HasShop) _onlineToHome = true;
             RectTransform dest = Ui.Row(c, 48, 6);
             Ui.Size(Ui.Label(dest, "送到", 16, TextAnchor.MiddleRight, Ui.Dim), 50);
-            Ui.Size(Ui.Button(dest, $"{ShopDestName}\n<size=13>配件直接上货架</size>", () => { _onlineToHome = false; w.Rebuild(); }, 16,
+            Ui.Size(Ui.Button(dest, $"{ShopDestName}\n<size=13>配件入后仓，已设类别的货架自动补货</size>", () => { _onlineToHome = false; w.Rebuild(); }, 16,
                 _onlineToHome ? Ui.ButtonBg : Ui.ButtonHot, S.HasShop), -1, -1, 1);
             Ui.Size(Ui.Button(dest, "家里\n<size=13>放在家里的纸箱，自己带去店里</size>", () => { _onlineToHome = true; w.Rebuild(); }, 16,
                 _onlineToHome ? Ui.ButtonHot : Ui.ButtonBg), -1, -1, 1);
@@ -57,7 +57,6 @@ namespace PCShopSell.Game.UI
                 Button b = Ui.Button(stores, $"{st.Name}  ★{st.ShownRating:0.0}  销量 {st.ShownSales}\n<size=14>{mine}</size>", () =>
                 {
                     _onlineStore = store.Id;
-                    _cart.Clear();
                     w.Rebuild();
                 }, 16, _onlineStore == st.Id ? Ui.ButtonHot : Ui.ButtonBg);
                 Ui.Size(b, -1, 48);
@@ -110,10 +109,16 @@ namespace PCShopSell.Game.UI
         private void BuildRestock(Window w)
         {
             Transform c = w.Content;
+            GuideHint(c, QuestTarget.Restock, w.Rebuild);
             Para(c, "<b>自动补货是什么？</b> 给每样配件定一个“常备几件”。每天早上 9:00，1788 自动看一眼店里的库存（含还在路上的），"
                 + "哪样低于常备数的 40%，就自动下单补到常备数，第二天 10:00 送到店里。设成“关”就不自动补，全靠你自己进货。", 15, Ui.Dim);
-            Para(c, $"自动下单后至少给你留 {GameSession.RestockCashReserve} 现金；店里仓位放不下的会少补。", 15, Ui.Dim);
+            Para(c, $"自动下单后至少给你留 {S.EffectiveRestockReserve} 现金；店里仓位放不下的会少补。", 15, Ui.Dim);
 
+            RectTransform policy = Ui.Row(c, 38);
+            Ui.Size(Ui.Button(policy, $"运营资金保留 {S.RestockReserveDays} 天", () => { S.RestockReserveDays = (S.RestockReserveDays + 7) % 28; w.Rebuild(); }, 16), 230);
+            Ui.Size(Ui.Button(policy, $"现金底线 ¥{S.RestockReserveYuan}", () => { S.RestockReserveYuan = S.RestockReserveYuan >= 5000 ? 500 : S.RestockReserveYuan + 500; w.Rebuild(); }, 16), 220);
+            Ui.Size(Ui.Button(policy, S.RestockDailyBudgetYuan == 0 ? "每日预算：不限" : $"每日预算 ¥{S.RestockDailyBudgetYuan}", () => { S.RestockDailyBudgetYuan = S.RestockDailyBudgetYuan >= 10000 ? 0 : S.RestockDailyBudgetYuan + 2000; w.Rebuild(); }, 16), 220);
+            if (!string.IsNullOrEmpty(S.LastRestockNote)) Line(c, S.LastRestockNote, 14, Ui.Accent);
             RectTransform storeRow = Ui.Row(c, 40);
             Text storeText = Ui.Label(storeRow, "", 16);
             Ui.Size(storeText, -1, -1, 1);
@@ -138,7 +143,7 @@ namespace PCShopSell.Game.UI
             RectTransform head = Ui.Row(c, 26, 4);
             Ui.Size(Ui.Label(head, "配件", 14, TextAnchor.MiddleLeft, Ui.Dim), 420);
             Ui.Size(Ui.Label(head, "常备几件", 14, TextAnchor.MiddleCenter, Ui.Dim), 150);
-            RectTransform list = Ui.Scroll(c, 420);
+            RectTransform list = Ui.Scroll(c, 330);
             foreach (PartDef part in PartCatalog.All)
             {
                 PartDef p = part;
@@ -155,10 +160,10 @@ namespace PCShopSell.Game.UI
                 void Refresh()
                 {
                     int have = S.PlayerShop.Stock.CountAll(p), pend = S.PendingOnlineCount(p.Id);
-                    string stock = have == 0 ? "<color=#E0806A>店里有 0 件</color>" : $"店里有 {have} 件";
+                    string stock = have == 0 ? "<color=#D79780>店里有 0 件</color>" : $"店里有 {have} 件";
                     name.text = $"<b>{p.Name}</b>　<size=13>{stock}{(pend > 0 ? $" · 路上 {pend}" : "")}</size>";
                     int target = S.RestockTarget(p.Id);
-                    tgt.text = target == 0 ? "<color=#9AA3AD>关</color>" : target.ToString();
+                    tgt.text = target == 0 ? "<color=#ABB5A8>关</color>" : target.ToString();
                 }
 
                 minus.onClick.AddListener(() =>

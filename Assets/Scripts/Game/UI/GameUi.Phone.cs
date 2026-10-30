@@ -181,7 +181,7 @@ namespace PCShopSell.Game.UI
                 bool have = S.HasApp(a.Id);
                 RectTransform row = Ui.Row(list, 84, 8);
                 Ui.Size(Ui.Button(row, $"<size=28><b>{AppGlyph(a.Id)}</b></size>", null, 22, AppColor(a.Id), false), 64, 64);
-                Ui.Size(Ui.Label(row, $"<b>{a.Name}</b>\n<size=14><color=#9AA3AD>{a.Description}</color></size>", 18), 200, -1, 1);
+                Ui.Size(Ui.Label(row, $"<b>{a.Name}</b>\n<size=14><color=#ABB5A8>{a.Description}</color></size>", 18), 200, -1, 1);
                 Ui.Size(Ui.Button(row, have ? "已安装" : "下载", () =>
                 {
                     S.InstallApp(a.Id);

@@ -124,6 +124,16 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
+        public bool WaitForRepair()
+        {
+            if (CurrentPlace != Home) return Fail("需要在家等候。");
+            var work = _visits.Where(v => v.Working).ToList();
+            if (work.Count == 0) return false;
+            int minutes = (int)Math.Max(1, work.Max(v => v.WorkStart + RepairWorkMinutes) - Clock.Now.TotalMinutes);
+            AdvanceClock(minutes + 1);
+            return true;
+        }
+
         public bool CancelRepair(string targetId)
         {
             HomeVisit v = VisitFor(targetId);

@@ -17,6 +17,7 @@ namespace PCShopSell.Game.Runtime
         private readonly Renderer _footRenderer;
         private readonly Material _ok, _bad;
         private readonly float _w, _d;
+        private readonly List<Mesh> _meshes = new List<Mesh>();
 
         private const float GridY = 0.035f;
 
@@ -46,7 +47,15 @@ namespace PCShopSell.Game.Runtime
 
             _crossX = Strip("CrossX", new Vector3(_w, 0.012f, 0.03f), cross);
             _crossZ = Strip("CrossZ", new Vector3(0.03f, 0.012f, _d), cross);
-            _foot = Strip("Footprint", Vector3.one, _ok);
+            // A thin footprint frame leaves both the floor and the furniture's own finish visible.
+            var footVertices = new List<Vector3>();
+            var footTriangles = new List<int>();
+            const float edge = 0.015f;
+            Quad(footVertices, footTriangles, -.5f, -.5f, .5f, -.5f + edge);
+            Quad(footVertices, footTriangles, -.5f, .5f - edge, .5f, .5f);
+            Quad(footVertices, footTriangles, -.5f, -.5f + edge, -.5f + edge, .5f - edge);
+            Quad(footVertices, footTriangles, .5f - edge, -.5f + edge, .5f, .5f - edge);
+            _foot = MeshObject("Footprint", Build(footVertices, footTriangles), _ok).transform;
             _footRenderer = _foot.GetComponent<Renderer>();
             _crossX.gameObject.SetActive(false);
             _crossZ.gameObject.SetActive(false);
@@ -113,6 +122,7 @@ namespace PCShopSell.Game.Runtime
 
         private GameObject MeshObject(string name, Mesh mesh, Material mat)
         {
+            _meshes.Add(mesh);
             var go = new GameObject(name);
             go.transform.SetParent(_root.transform, false);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
@@ -163,7 +173,13 @@ namespace PCShopSell.Game.Runtime
 
         public void Destroy()
         {
-            if (_root != null) Kill.It(_root);
+            if (_root != null)
+            {
+                _root.SetActive(false);
+                Kill.It(_root);
+            }
+            foreach (Mesh mesh in _meshes) Kill.It(mesh);
+            _meshes.Clear();
         }
     }
 }

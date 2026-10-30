@@ -22,6 +22,12 @@ namespace PCShopSell.Core.Session
         /// <summary>自动补货之后至少还要剩这么多现金，免得把房租钱花光。</summary>
         public static readonly Money RestockCashReserve = Money.FromYuan(500);
 
+        public long RestockReserveYuan { get; set; } = 500;
+        public int RestockReserveDays { get; set; } = 7;
+        public long RestockDailyBudgetYuan { get; set; }
+        public Money EffectiveRestockReserve => Money.FromYuan(Math.Max(Math.Max(500, RestockReserveYuan),
+            (long)Math.Ceiling((CurrentShopRent.Yuan / 30.0 + CurrentHomeRent.Yuan / 30.0 + (Employee?.DailyWageYuan ?? 0) + (Assembler?.DailyWageYuan ?? 0) + McnDailyWages + (_owned.Contains(VehicleKind.Car) ? 40 : 0) + (_owned.Contains(VehicleKind.Van) ? 60 : 0)) * Math.Max(0, RestockReserveDays)))) + UpcomingBusinessPayments(RestockReserveDays);
+
         private readonly Dictionary<string, int> _restock = new Dictionary<string, int>();
         private readonly Dictionary<PartCategory, int> _noStockAlertDay = new Dictionary<PartCategory, int>();
 
@@ -51,7 +57,10 @@ namespace PCShopSell.Core.Session
                 if (!o.ToHome)   // 送家里的不算店里的库存
                     foreach (OnlineOrderLine l in o.Lines)
                         if (l.PartId == partId) n += l.Count;
-            return n;
+            foreach (var r in Couriers) if (r.ToShop)
+                foreach (var item in r.Items)
+                    if (item.Kind == CourierItemKind.Part && item.Id == partId) n += item.Count;
+            return n + DirectShipments.Where(x => x.PartId == partId).Sum(x => x.Count);
         }
 
         /// <summary>店里现有 + 在路上。</summary>
@@ -63,7 +72,10 @@ namespace PCShopSell.Core.Session
             int today = Clock.Today.TotalDays;
             if (_noStockAlertDay.TryGetValue(c.DesiredCategory, out int d) && d == today) return;
             _noStockAlertDay[c.DesiredCategory] = today;
-            Say($"有顾客想买{PartCatalog.CategoryName(c.DesiredCategory)}，但店里没货，空手走了。");
+            string reason = ShelvesOfKind(ShelfKinds.ForCategory(c.DesiredCategory).Id) == 0 ? "没有设置对应货架"
+                : PartCatalog.All.Any(p => p.Category == c.DesiredCategory && PlayerShop.Stock.CountAll(p) > 0) ? "货架容量或型号不能满足需求"
+                : PartCatalog.All.Any(p => p.Category == c.DesiredCategory && PendingOnlineCount(p.Id) > 0) ? "货物还在配送中" : "库存售罄";
+            Say($"有顾客想买{PartCatalog.CategoryName(c.DesiredCategory)}，但{reason}，空手走了。");
         }
 
         /// <summary>自动补货用哪家店：指定的，或者已发现的里最便宜的（排除亲眼见过次品多的）。</summary>
@@ -118,22 +130,26 @@ namespace PCShopSell.Core.Session
             if (store == null) { Note("自动补货没执行：没有能下单的店。"); return; }
 
             // 先按缺得最厉害的排，一个个往里放，放不下仓位的就少补
-            double free = PlayerShop.Stock.FreeSpace - Online.PendingSpace();
+            double free = PlayerShop.Stock.FreeSpace - IncomingShopSpace;
+            long budget = Math.Max(0, Ledger.Balance.Cents - EffectiveRestockReserve.Cents - Online1788.ShippingFee.Cents);
+            if (RestockDailyBudgetYuan > 0) budget = Math.Min(budget, Math.Max(0, RestockDailyBudgetYuan * 100 - Online1788.ShippingFee.Cents));
             var lines = new List<(PartDef part, int count)>();
             foreach (var (part, count) in needs)
             {
                 double each = PCShopSell.Core.Inventory.Stock.SpaceOf(part, true, 1);
                 int fit = each <= 0 ? count : (int)Math.Floor((free + 1e-9) / each);
-                int n = Math.Min(count, fit);
+                long price = Math.Max(1, OnlinePrice(store, part).Cents);
+                int n = (int)Math.Min(Math.Min(count, fit), budget / price);
                 if (n <= 0) continue;
                 free -= n * each;
+                budget -= n * price;
                 lines.Add((part, n));
             }
-            if (lines.Count == 0) { Note("自动补货没执行：店里放不下了，先腾点仓位。"); return; }
+            if (lines.Count == 0) { Note("自动补货没执行：可用预算或仓位不足，检查现金保留额和库存。"); return; }
 
             Money total = Online1788.ShippingFee;
             foreach (var (part, count) in lines) total += OnlinePrice(store, part) * count;
-            if (!Ledger.CanAfford(total + RestockCashReserve)) { Note($"自动补货没执行：要 {total}，扣掉后现金会低于 {RestockCashReserve}，先不补。"); return; }
+            if (!Ledger.CanAfford(total + EffectiveRestockReserve)) { Note($"自动补货没执行：要 {total}，扣掉后现金会低于 {EffectiveRestockReserve}，先不补。"); return; }
 
             if (PlaceOnlineOrderCore(store.Id, lines, false))
                 LastRestockNote = $"{Clock.Today} 自动补货：{store.Name}，{lines.Sum(l => l.count)} 件，{total}。";
@@ -152,6 +168,10 @@ namespace PCShopSell.Core.Session
             d.restockIds = _restock.Keys.ToArray();
             d.restockTargets = _restock.Values.ToArray();
             d.restockStore = RestockStoreId;
+            d.hasRestockPolicy = true;
+            d.restockReserveYuan = RestockReserveYuan;
+            d.restockReserveDays = RestockReserveDays;
+            d.restockDailyBudgetYuan = RestockDailyBudgetYuan;
         }
 
         private void RestoreRestock(SaveData d)
@@ -169,6 +189,7 @@ namespace PCShopSell.Core.Session
             for (int i = 0; i < rids.Length && i < rt.Length; i++)
                 if (PartCatalog.Get(rids[i]) != null && rt[i] > 0) _restock[rids[i]] = Math.Min(RestockMaxTarget, rt[i]);
             RestockStoreId = d.restockStore;
+            if (d.hasRestockPolicy) { RestockReserveYuan = Math.Max(500, d.restockReserveYuan); RestockReserveDays = Math.Max(0, Math.Min(30, d.restockReserveDays)); RestockDailyBudgetYuan = Math.Max(0, d.restockDailyBudgetYuan); }
         }
     }
 }

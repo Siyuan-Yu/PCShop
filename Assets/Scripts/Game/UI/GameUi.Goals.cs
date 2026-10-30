@@ -20,9 +20,9 @@ namespace PCShopSell.Game.UI
                                        (S.RentHikes > 0 ? $"（已涨租 {S.RentHikes} 次）" : ""), 16, TextAnchor.MiddleLeft, Ui.Dim), -1, 28);
                 foreach (GoalLine g in S.Goals())
                 {
-                    string mark = g.State == GoalState.Passed ? "<color=#7CE38B>✔ 达成</color>" :
-                        g.State == GoalState.Failed ? "<color=#E0806A>✘ 未达成</color>" : "<color=#9AA3AD>进行中</color>";
-                    Text t = Ui.Label(list, $"<b>{g.Title}</b>  {mark}\n<size=15>{g.Goal}</size>\n<size=15><color=#9AA3AD>{g.Progress}</color></size>", 18);
+                    string mark = g.State == GoalState.Passed ? "<color=#A9C9A9>✔ 达成</color>" :
+                        g.State == GoalState.Failed ? "<color=#D79780>✘ 未达成</color>" : "<color=#ABB5A8>进行中</color>";
+                    Text t = Ui.Label(list, $"<b>{g.Title}</b>  {mark}\n<size=15>{g.Goal}</size>\n<size=15><color=#ABB5A8>{g.Progress}</color></size>", 18);
                     Ui.Size(t, -1, 82);
                 }
                 if (S.EndingId != null)
@@ -44,7 +44,7 @@ namespace PCShopSell.Game.UI
                     NpcDef n = def;
                     if (!S.IsMet(n.Id))
                     {
-                        Ui.Size(Ui.Label(list, $"<color=#9AA3AD>？？？　（还没遇到。留心店里的随机事件）</color>", 17), -1, 34);
+                        Ui.Size(Ui.Label(list, $"<color=#ABB5A8>？？？　（还没遇到。留心店里的随机事件）</color>", 17), -1, 34);
                         continue;
                     }
                     int rel = S.Relation(n.Id);
@@ -56,7 +56,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(row, "交谈", () => OpenNpcWindow(n, null, w), 16, Ui.ButtonHot), 90);
                     string perk = NpcPerks.Describe(n.Id);
                     if (n.IsTipster) perk += "　" + TrustText(n);
-                    Ui.Size(Ui.Label(list, "<size=14><color=#9AA3AD>" + perk + "</color></size>", 14), -1, 24);
+                    Ui.Size(Ui.Label(list, "<size=14><color=#ABB5A8>" + perk + "</color></size>", 14), -1, 24);
                 }
             });
         }

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PCShopSell.Core.Common;
 
 namespace PCShopSell.Core.Shop
@@ -55,7 +55,7 @@ namespace PCShopSell.Core.Shop
         {
             new ShopUpgradeDef(Phone, "智能手机", "换掉按键机。本身不赚钱，但是开通收款码的前提。", 1200, null, 0, false),
             new ShopUpgradeDef(Qr, "开通收款码", "没带现金的顾客也能买单，结账也更快（1 分钟一单）。需要先有智能手机（去手机店买）。", 200, null, 0, true, true),
-            new ShopUpgradeDef(SelfCheckout, "自助结账平台", "排队的顾客自动结账，不用你一单一单点；仍然要有人在店里营业。", 4500, Qr, 8, false),
+            new ShopUpgradeDef(SelfCheckout, "自助结账平台", "排队的顾客自动结账，不用你一单一单点；仍然要有人在店里营业。", 4500, Qr, 8, true),
             new ShopUpgradeDef(Shelf1, "货架扩容 I", "库存容量 +20 格。", 1000, null, 0, false),
             new ShopUpgradeDef(Shelf2, "货架扩容 II", "库存容量再 +20 格。", 2000, Shelf1, 0, false),
             new ShopUpgradeDef(Shelf3, "货架扩容 III", "库存容量再 +30 格。", 3500, Shelf2, 0, false),

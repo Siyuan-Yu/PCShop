@@ -10,6 +10,8 @@ namespace PCShopSell.Core.Finance
         public GameDate Date;
         public Money Revenue;
         public Money Expense;
+        public Money OtherIncome;
+        public Money CashChange => Revenue + OtherIncome - Expense;
 
         public Money Net => Revenue - Expense;
     }
@@ -39,6 +41,7 @@ namespace PCShopSell.Core.Finance
                 if (e.Amount.IsPositive)
                 {
                     if (e.Category == RetailCategory || e.Category == BuildCategory) list[idx].Revenue += e.Amount;
+                    else list[idx].OtherIncome += e.Amount;
                 }
                 else
                 {

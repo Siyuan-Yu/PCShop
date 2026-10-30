@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -29,13 +29,13 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void SelfCheckout_IsAReward_NotForSale()
+        public void SelfCheckout_CanBePurchasedAfterReputationUnlock()
         {
             GameSession s = InShop();
             s.BuyUpgrade(ShopUpgrades.Qr);
-            Assert.IsFalse(s.BuyUpgrade(ShopUpgrades.SelfCheckout), "自助结账不能买，只能当任务奖励拿");
+            Assert.IsFalse(s.BuyUpgrade(ShopUpgrades.SelfCheckout), "知名度不足时不能购买");
             s.PlayerShop.Reputation = 10;
-            Assert.IsFalse(s.BuyUpgrade(ShopUpgrades.SelfCheckout));
+            Assert.IsTrue(s.BuyUpgrade(ShopUpgrades.SelfCheckout));
             Assert.IsTrue(s.GrantUpgrade(ShopUpgrades.SelfCheckout));
             Assert.IsTrue((s.PlayerShop.Accepted & PaymentMethods.SelfCheckout) != 0);
         }

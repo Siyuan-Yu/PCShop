@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
@@ -58,7 +58,7 @@ namespace PCShopSell.Game
         }
 
         /// <summary>搭好整个游戏。showMenus 为假时不弹开局窗口（自动化测试用）。</summary>
-        public void Bootstrap(bool showMenus)
+        public void Bootstrap(bool showMenus, ulong? seed = null)
         {
             if (_bootstrapped) return;
             _bootstrapped = true;
@@ -79,7 +79,7 @@ namespace PCShopSell.Game
             HomeRoom = new HomeRoomView(_actors);
             Ui = new GameUi(this);
 
-            StartSession(NewSession());
+            StartSession(NewSession(seed));
             if (showMenus)
             {
                 if (SaveStore.Exists) Ui.ShowStartChoice();
@@ -87,8 +87,8 @@ namespace PCShopSell.Game
             }
         }
 
-        private GameSession NewSession() =>
-            new GameSession(City, DefaultSeed + (ulong)DateTime.Now.Ticks % 100000, StartingCash,
+        private GameSession NewSession(ulong? seed = null) =>
+            new GameSession(City, seed ?? (DefaultSeed + (ulong)DateTime.Now.Ticks % 100000), StartingCash,
                 GameTimestamp.From(new GameDate(0), GameSession.WakeUpMinute), true, false, false);
 
         private void StartSession(GameSession s)
@@ -110,6 +110,7 @@ namespace PCShopSell.Game
             EnsureInterior(s.PlayerShop.Size);
 
             Session = s;
+            Ui.ResetGuideState();
             s.Notice += OnNotice;
             s.Failed += OnFailed;
             s.Popup += OnPopup;
@@ -150,20 +151,19 @@ namespace PCShopSell.Game
         public bool SaveGame()
         {
             if (!Session.CanSave) return false;
-            SaveStore.Save(Session);
-            return true;
+            return SaveStore.TrySave(Session);
         }
 
-        public void LoadGame()
+        public void LoadGame(bool automatic = false)
         {
-            GameSession s = SaveStore.Load(City);
+            GameSession s = SaveStore.Load(City, automatic);
             if (s == null)
             {
-                Ui.Toast("没有存档。");
+                Ui.Toast(SaveStore.LastLoadMessage);
                 return;
             }
             StartSession(s);
-            Ui.Toast("读档成功。");
+            Ui.Toast(SaveStore.LastLoadMessage);
         }
 
         /// <summary>前往某地并在到达后进入。已经在门口就直接进去。</summary>
@@ -222,8 +222,7 @@ namespace PCShopSell.Game
             if (_autosaveDue && Session.CanSave && !Session.IsGameOver)
             {
                 _autosaveDue = false;
-                SaveStore.Save(Session);
-                Ui.Toast("已自动存档。");
+                Ui.Toast(SaveStore.TrySave(Session, true) ? "已自动存档。" : SaveStore.LastSaveMessage);
             }
             if (Session.IsGameOver && !_gameOverShown)
             {
@@ -261,6 +260,7 @@ namespace PCShopSell.Game
             (_beacon ?? (_beacon = new ShopBeacon(World.Root.transform))).Update(Session, World, dt);
             if (interior) Interior.Update(Session, worldDt, dt);
             if (InHome) HomeRoom.Update(Session, dt, Session.Clock.MinuteOfDay);
+            FigureMotion.AdvanceAll(dt, Session.Time.IsRunning);
 
             if (RoomKind != _wasRoomKind)
             {
@@ -333,7 +333,7 @@ namespace PCShopSell.Game
 
         private bool _orbiting;
 
-        /// <summary>街上自由切换视角：右键拖动旋转/俯仰，Q / R 左右转，V 复位。</summary>
+        /// <summary>街上自由切换视角：右键拖动旋转/俯仰，Q / E 左右转，V 复位。</summary>
         private void HandleCameraOrbit()
         {
             if (Placing)
@@ -353,7 +353,7 @@ namespace PCShopSell.Game
             if (Input.GetMouseButtonDown(1) && !GameUi.PointerOverUi) _orbiting = true;
             if (!Input.GetMouseButton(1)) _orbiting = false;
             if (_orbiting) _rig.Orbit(Input.GetAxis("Mouse X") * 4f, -Input.GetAxis("Mouse Y") * 3f);
-            float k = (Input.GetKey(KeyCode.R) ? 1f : 0f) - (Input.GetKey(KeyCode.Q) ? 1f : 0f);
+            float k = (Input.GetKey(KeyCode.E) ? 1f : 0f) - (Input.GetKey(KeyCode.Q) ? 1f : 0f);
             if (Mathf.Abs(k) > 0.01f) _rig.Orbit(k * 100f * Time.unscaledDeltaTime, 0f);
             if (Input.GetKeyDown(KeyCode.V)) _rig.ResetView();
         }
@@ -483,7 +483,7 @@ namespace PCShopSell.Game
                 if (Interior.NearDoor)
                 {
                     world = Interior.DoorWorld;
-                    label = Session.LeaveBlocker ?? (Session.Employee != null && Session.IsEmployeeOnDuty(Session.Clock.Now) ? "出门（店员看店）" : "出门（没人看店就关门）");
+                    label = Session.LeaveBlocker ?? (Session.IsEmployeeOnDuty(Session.Clock.Now) ? "出门（店员看店）" : "出门（没人看店就关门）");
                     return true;
                 }
                 if (Interior.NearBench)

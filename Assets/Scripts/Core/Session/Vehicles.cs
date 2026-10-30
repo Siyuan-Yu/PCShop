@@ -9,6 +9,8 @@ namespace PCShopSell.Core.Session
         Taxi,
         EBike,
         Tricycle,
+        Car,
+        Van,
     }
 
     /// <summary>出行方式参数。速度为游戏内米/分钟；画面速度为画面米/真实秒（1 倍速）；街上的画面速度已比最初慢一半（游戏内每公里耗时不变）。</summary>
@@ -44,12 +46,16 @@ namespace PCShopSell.Core.Session
 
     public static class Vehicles
     {
-        public static readonly VehicleSpec Walk = new VehicleSpec(VehicleKind.Walk, "步行", 49, 6, 0, 5.5, false);
+        // Street walking presentation only; indoor movement has its own unchanged speed.
+        public const double StreetWalkSpeedMultiplier = .5;
+        public static readonly VehicleSpec Walk = new VehicleSpec(VehicleKind.Walk, "步行", 49, 6, 0, 5.5 * StreetWalkSpeedMultiplier, false);
         public static readonly VehicleSpec Taxi = new VehicleSpec(VehicleKind.Taxi, "打车", 400, 15, 0, 24, false);
         public static readonly VehicleSpec EBike = new VehicleSpec(VehicleKind.EBike, "小电驴", 250, 10, 1800, 17, false);
         public static readonly VehicleSpec Tricycle = new VehicleSpec(VehicleKind.Tricycle, "三轮车", 200, 40, 2500, 15, true);
 
-        public static readonly VehicleSpec[] All = { Walk, Taxi, EBike, Tricycle };
+        public static readonly VehicleSpec Car = new VehicleSpec(VehicleKind.Car, "小轿车", 360, 18, 68000, 23, false);
+        public static readonly VehicleSpec Van = new VehicleSpec(VehicleKind.Van, "小货车", 320, 80, 46000, 21, false);
+        public static readonly VehicleSpec[] All = { Walk, Taxi, EBike, Tricycle, Car, Van };
 
         public static VehicleSpec Get(VehicleKind kind)
         {
@@ -58,6 +64,8 @@ namespace PCShopSell.Core.Session
                 case VehicleKind.Taxi: return Taxi;
                 case VehicleKind.EBike: return EBike;
                 case VehicleKind.Tricycle: return Tricycle;
+                case VehicleKind.Car: return Car;
+                case VehicleKind.Van: return Van;
                 default: return Walk;
             }
         }

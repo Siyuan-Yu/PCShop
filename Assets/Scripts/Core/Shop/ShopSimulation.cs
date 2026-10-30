@@ -130,6 +130,10 @@ namespace PCShopSell.Core.Shop
         public Money Price { get; }
         public GameTimestamp PlacedAt { get; }
         public GameTimestamp DueAt { get; }
+        public string ContractId;
+        public bool PartsReserved;
+        public int Mistakes;
+        public int EmployeeMinutesLeft;
 
         public BuildOrder(int id, int tier, Money price, GameTimestamp placedAt, GameTimestamp dueAt)
         {
@@ -415,6 +419,16 @@ namespace PCShopSell.Core.Shop
         private DayReport _day = new DayReport();
         public event Action<BuildOrder> OrderPlaced;
         public event Action<BuildOrder> OrderExpired;
+        public event Action<BuildOrder> OrderCompleted;
+        public event Action<BuildOrder> OrderCancelled;
+
+        public BuildOrder AddContractOrder(string contractId, int tier, Money price, GameTimestamp due)
+        {
+            if (tier < 0 || tier >= PartCatalog.TierCount || !price.IsPositive || due <= _clock.Now) throw new ArgumentException("合同订单参数无效");
+            var order = new BuildOrder(NextOrderId++, tier, price, _clock.Now, due) { ContractId = contractId };
+            _orders.Add(order);
+            return order;
+        }
 
         public ShopSimulation(string shopId, ShopSize size, GameClock clock, Ledger ledger, HardwareMarket market,
             GameRandom random, ShopSettings settings = null)
@@ -489,6 +503,7 @@ namespace PCShopSell.Core.Shop
         public List<PartDef> MissingParts(BuildOrder order)
         {
             var missing = new List<PartDef>();
+            if (order.PartsReserved) return missing;
             foreach (PartDef p in PartCatalog.BuildList(order.Tier))
             {
                 if (Stock.CountAll(p) == 0) missing.Add(p);
@@ -497,18 +512,50 @@ namespace PCShopSell.Core.Shop
         }
 
         /// <summary>交付装好的整机：扣配件、收款、涨知名度。配件不齐返回 false。</summary>
-        public bool CompleteBuild(int orderId)
+        public bool CompleteBuild(int orderId, GameTimestamp? completedAt = null)
         {
             BuildOrder o = _orders.Find(x => x.Id == orderId);
-            if (o == null || MissingParts(o).Count > 0) return false;
-            foreach (PartDef p in PartCatalog.BuildList(o.Tier)) Stock.TakeOne(p);
+            GameTimestamp at = completedAt ?? _clock.Now;
+            if (o == null || at >= o.DueAt || MissingParts(o).Count > 0) return false;
+            if (!o.PartsReserved) foreach (PartDef p in PartCatalog.BuildList(o.Tier)) Stock.TakeOne(p);
             _orders.Remove(o);
-            _ledger.Credit(_clock.Today, BuildCategory, o.Price, $"{PartCatalog.TierName(o.Tier)}整机");
+            _ledger.Credit(at.Date, BuildCategory, o.Price, $"{PartCatalog.TierName(o.Tier)}整机");
             TodaySales += o.Price;
             Reputation += BuildReputationGain;
+            OrderCompleted?.Invoke(o);
             return true;
         }
 
+        public bool ReserveBuild(int id)
+        {
+            BuildOrder o = _orders.Find(x => x.Id == id);
+            if (o == null || MissingParts(o).Count > 0) return false;
+            if (o.PartsReserved) return true;
+            foreach (PartDef p in PartCatalog.BuildList(o.Tier)) Stock.TakeOne(p);
+            o.PartsReserved = true;
+            return true;
+        }
+
+        public bool CancelBuild(int id)
+        {
+            BuildOrder o = _orders.Find(x => x.Id == id);
+            if (o == null) return false;
+            ReturnReservedParts(o);
+            _orders.Remove(o);
+            Reputation = Math.Max(0, Reputation - 1);
+            OrderCancelled?.Invoke(o);
+            return true;
+        }
+
+        private void ReturnReservedParts(BuildOrder order)
+        {
+            if (!order.PartsReserved) return;
+            foreach (PartDef p in PartCatalog.BuildList(order.Tier)) Stock.ForceAdd(p, false, 1);
+            order.PartsReserved = false;
+        }
+
+        public Action<GameTimestamp> WorkMinute;
+        public Func<bool> EmployeeBusy = () => false;
         private readonly List<int> _display = new List<int>();
 
         /// <summary>摆在展示台上的整机（档次），顾客能直接买走。</summary>
@@ -586,6 +633,7 @@ namespace PCShopSell.Core.Shop
         {
             for (long m = from.TotalMinutes; m < to.TotalMinutes; m++)
                 StepMinute(new GameTimestamp(m));
+            ExpireOrders(to);
         }
 
         private void StepMinute(GameTimestamp now)
@@ -600,6 +648,7 @@ namespace PCShopSell.Core.Shop
                 return;
             }
             _wasOpen = true;
+            WorkMinute?.Invoke(now);
 
             if (Random.Chance(ArrivalRatePerMinute(now)))
                 Spawn(now);
@@ -617,7 +666,7 @@ namespace PCShopSell.Core.Shop
             // 自助结账平台：每分钟自动给排头的顾客结一单，不用点（仍然需要有人在店里营业）。
             if ((Accepted & PaymentMethods.SelfCheckout) != 0 && _queue.Count > 0)
                 CompleteSale(_queue[0], true);
-            else if (!PlayerPresent && EmployeeOnDuty(now))
+            else if (EmployeeOnDuty(now) && !EmployeeBusy())
             {
                 if (_employeeBusyMinutes > 0) _employeeBusyMinutes--;
                 else if (_queue.Count > 0)
@@ -860,6 +909,7 @@ namespace PCShopSell.Core.Shop
             {
                 BuildOrder o = _orders[i];
                 if (now < o.DueAt) continue;
+                ReturnReservedParts(o);
                 _orders.RemoveAt(i);
                 Reputation -= 3;
                 OrderExpired?.Invoke(o);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -6,7 +6,9 @@ using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
+using PCShopSell.Core.Home;
 using PCShopSell.Game;
+using PCShopSell.Game.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -112,8 +114,127 @@ namespace PCShopSell.EditorTools
 
         // ---------- 冒烟测试 ----------
 
-        public static void SmokeFromBatch()
+        public static void SmokeFromBatch() => RunSmokeBatch(Smoke);
+        public static void AgencyFromBatch() => RunSmokeBatch(SmokeAgency);
+        public static void PlacementFromBatch() => RunSmokeBatch(SmokePlacement);
+
+        private static void SmokePlacement()
         {
+            _outDir = Path.GetFullPath(Path.Combine(Application.dataPath, "../docs/previews"));
+            Directory.CreateDirectory(_outDir);
+            ShaderUtil.allowAsyncCompilation = false;
+            UrpSetup.Ensure();
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            Camera cam = BuildRig();
+            _game = new GameObject("Game").AddComponent<GameController>();
+            _game.Bootstrap(false, 7);
+            foreach (Canvas c in _game.Ui.Canvases)
+            {
+                c.renderMode = RenderMode.ScreenSpaceCamera;
+                c.worldCamera = cam;
+                c.planeDistance = 1f;
+            }
+            var s = _game.Session;
+            Teleport(s, "agency");
+            Check(s.SignLease("player_shop"), "预览：租下小店，获得开局设施");
+            Teleport(s, "player_shop");
+            Frame(.05f);
+            Check(s.BeginRenovation() && _game.BeginPlacement(true), "预览：进入店面装修");
+            _game.DebugOrbit(18f, 0);
+            _game.SelectStock(FurnitureCatalog.ShopCounter);
+            _game.DebugCursorLocal = new Vector3(2.5f, 0, 2.75f);
+            for (int i = 0; i < 45; i++) Frame(.05f);
+            var outline = UnityEngine.Object.FindObjectOfType<PlacementOutline>();
+            Check(outline != null && outline.IsValid && _game.PlaceError == null, "空位置显示可放置轮廓");
+            CheckPreviewMaterials(outline, FurnitureCatalog.ShopCounter);
+            Shot("vs1_placement_counter_valid");
+            _game.DebugCursorLocal = new Vector3(4.5f, 0, 1.0f);
+            Frame(.05f);
+            Check(!outline.IsValid && _game.PlaceError != null, "挡住门口立即切换不可放置轮廓");
+            CheckPreviewMaterials(outline, FurnitureCatalog.ShopCounter);
+            Shot("vs1_placement_counter_invalid");
+            _game.DebugCursorLocal = new Vector3(2.5f, 0, 2.75f);
+            _game.RotateGhost();
+            Frame(.05f);
+            Check(outline.IsValid && _game.EditGhostAt.Rot == 1, "移回空地、旋转后恢复绿色轮廓");
+            Shot("vs1_placement_counter_rotated", 1280, 720);
+            typeof(GameController).GetMethod("ConfirmPlace", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .Invoke(_game, new object[] { FurnitureCatalog.Get(FurnitureCatalog.ShopCounter), _game.EditGhostAt });
+            Frame(.05f);
+            Check(s.ShopLayout.Any(p => p.Id == FurnitureCatalog.ShopCounter) && UnityEngine.Object.FindObjectOfType<PlacementOutline>() == null,
+                "确认摆放后家具正常落地、轮廓立即清除");
+            int counter = s.ShopLayout.ToList().FindIndex(p => p.Id == FurnitureCatalog.ShopCounter);
+            var counterVisual = _game.Interior.Furniture.Entries.First(e => e.Def.Id == FurnitureCatalog.ShopCounter).Go;
+            typeof(GameController).GetMethod("PickUpFurniture", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .Invoke(_game, new object[] { counter });
+            _game.DebugCursorLocal = new Vector3(2.5f, 0, 4.0f);
+            Frame(.05f);
+            outline = UnityEngine.Object.FindObjectOfType<PlacementOutline>();
+            Check(_game.PlaceHoldsPlaced && !counterVisual.activeSelf && outline.IsValid, "拿起原有家具只显示移动预览，原位置暂时隐藏");
+            CheckPreviewMaterials(outline, FurnitureCatalog.ShopCounter);
+            _game.SelectStock(FurnitureCatalog.Shelf);
+            Frame(.05f);
+            Check(counterVisual.activeSelf && UnityEngine.Object.FindObjectsOfType<PlacementOutline>().Length == 1, "改选货架时旧柜台恢复、上一件轮廓清除");
+            outline = UnityEngine.Object.FindObjectOfType<PlacementOutline>();
+            CheckPreviewMaterials(outline, FurnitureCatalog.Shelf);
+            _game.DebugCursorLocal = new Vector3(4.5f, 0, 3.75f);
+            Frame(.05f);
+            Shot("vs1_placement_shelf");
+            _game.EndPlacement();
+            Check(!UnityEngine.Object.FindObjectsOfType<PlacementOutline>().Any(), "退出装修不残留预览");
+
+            Teleport(s, "shop12");
+            s.SendByCourier = true;
+            Check(s.BuyFurniture("aircon"), "购买墙面空调用于预览验收");
+            s.AdvanceClock(s.CourierQuote(true).minutes + 30);
+            s.SendByCourier = false;
+
+            Teleport(s, "home");
+            Frame(.05f);
+            Check(_game.BeginPlacement(false), "预览：进入家中摆放");
+            int stool = s.HomeLayout.ToList().FindIndex(p => p.Id == "stool");
+            Check(s.StoreFurniture(false, stool), "把已有圆凳收起再挪动");
+            _game.SelectStock("stool");
+            _game.DebugCursorLocal = new Vector3(3.5f, 0, 2.5f);
+            for (int i = 0; i < 45; i++) Frame(.05f);
+            outline = UnityEngine.Object.FindObjectOfType<PlacementOutline>();
+            Check(outline != null && outline.IsValid, "家中圆形家具也能预览轮廓");
+            CheckPreviewMaterials(outline, "stool");
+            Shot("vs1_placement_home_stool");
+            _game.SelectStock("aircon");
+            _game.DebugCursorLocal = new Vector3(1.25f, 0, 4.5f);
+            Frame(.05f);
+            outline = UnityEngine.Object.FindObjectOfType<PlacementOutline>();
+            Check(outline.IsValid && _game.EditGhostAt.Rot == 0, "墙面家具在可用墙段显示绿边");
+            CheckPreviewMaterials(outline, "aircon");
+            Shot("vs1_placement_wall_valid");
+            _game.DebugCursorLocal = new Vector3(3.25f, 0, 4.5f);
+            Frame(.05f);
+            Check(!outline.IsValid, "墙面家具挡住窗户显示红边");
+            Shot("vs1_placement_wall_invalid");
+            _game.EndPlacement();
+            _game.DebugCursorLocal = null;
+            Check(Resources.FindObjectsOfTypeAll<Material>().All(m => !m.name.StartsWith("PlacementOutline "))
+                && Resources.FindObjectsOfTypeAll<Mesh>().All(m => m.name != "PlacementOutline silhouette"), "切换、放下和取消后释放全部预览材质与网格");
+            Shader shader = Resources.Load<Shader>("Shaders/PlacementOutline");
+            Check(shader != null && !ShaderUtil.ShaderHasError(shader), "Resources 中的轮廓 Shader 正确编译");
+        }
+
+        private static void CheckPreviewMaterials(PlacementOutline outline, string id)
+        {
+            Check(outline != null, "存在家具预览：" + id);
+            if (outline == null) return;
+            var reference = FurnitureVisuals.Build(null, FurnitureCatalog.Get(id), false);
+            var actual = outline.GetComponentsInChildren<Renderer>().Where(r => !r.name.StartsWith("PlacementOutline ")).ToArray();
+            var expected = reference.GetComponentsInChildren<Renderer>();
+            Check(actual.Length == expected.Length && actual.Zip(expected, (a, b) => a.sharedMaterials.SequenceEqual(b.sharedMaterials)).All(x => x),
+                "预览与正常家具使用完全相同的材质：" + id);
+            Kill.It(reference);
+        }
+
+        private static void RunSmokeBatch(Action run)
+        {
+            SaveStore.DirectoryOverride = System.IO.Path.GetFullPath("work/smoke-saves");
             int errors = 0;
             Application.LogCallback onLog = (msg, stack, type) =>
             {
@@ -123,7 +244,7 @@ namespace PCShopSell.EditorTools
             int code = 0;
             try
             {
-                Smoke();
+                run();
             }
             catch (Exception e)
             {
@@ -148,7 +269,7 @@ namespace PCShopSell.EditorTools
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             Camera cam = BuildRig();
             _game = new GameObject("Game").AddComponent<GameController>();
-            _game.Bootstrap(false);
+            _game.Bootstrap(false, 7); // Repeatable world/customer sequence; normal play still uses a fresh seed.
             foreach (Canvas c in _game.Ui.Canvases)
             {
                 c.renderMode = RenderMode.ScreenSpaceCamera;
@@ -160,12 +281,33 @@ namespace PCShopSell.EditorTools
             Check(s.CurrentPlace == s.Home, "开局在家");
             Check(!s.HasShop && s.Ledger.Balance.Yuan == 10000, "新游戏：还没有店、现金 ¥10,000");
             _game.Ui.ShowIntro();
+            ClickGuideButton("开始经营");
+            _game.Ui.DebugRefreshQuests();
+            Check(!_game.Ui.AnyModalOpen && !_game.Session.Time.IsHeld, "开始经营直接回到游戏，不自动打开教学目录");
+            Check(s.CurrentQuest()?.Id == "rent", "新游戏只派发租铺任务");
+            Shot("vs1_guide_start");
+            SmokeHomeMotion();
+            _game.Ui.OpenQuestWindow();
+            Check(GuideButton("前往这一步") == null && GuideButton("跟踪这一步") == null && GuideButton("电脑乐园") == null, "任务条没有快捷前往，也没有章节和任意选任务");
+            CheckGuideReadOnly();
+            Shot("vs1_guide_first_task");
+            ClickGuideButton("知道了");
+            Check(s.CurrentPlace == s.Home && s.Trip == null && !s.Time.IsHeld, "关闭租铺说明只回到原地，不发起出行或残留暂停");
+            _game.Ui.OpenBusinessPanel();
+            Check(GuideButton("已了解，完成这一步") == null, "初期打开资产页不提前发现金流教学");
+            Check(GuideButton("展开全部 7 项") != null && GuideButton("直供采购") == null, "新手经营页优先展示近期项目");
+            ClickGuideButton("展开全部 7 项");
+            Check(GuideButton("直供采购") != null && GuideButton("园区布局") != null, "远期玩法可以主动展开，不被教学硬锁");
+            ClickGuideButton("收起远期项目");
+            _game.Ui.CloseAllWindows();
+            _game.Ui.ShowIntro();
             Frame(0.05f);
             Shot("vs1_83_intro_no_shop");
             Teleport(s, "agency");
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
             Frame(0.05f);
             Shot("vs1_84_agency");
+            SmokeAgencySelection(s);
             _game.Ui.DebugRefreshQuests();
             Check((_game.Ui.QuestTrackerText ?? "").Contains("租一间铺子"), "任务条：新游戏先去租铺子：" + _game.Ui.QuestTrackerText);
             Check(s.Listings.Any(l => l.PlaceId == "player_shop" && s.LeaseBlocker(l) == null), "中介挂着街尾空铺、现在就能签");
@@ -195,7 +337,7 @@ namespace PCShopSell.EditorTools
             while (s.Trip != null && ff < 3000) { Frame(0.05f); ff++; }
             double walkRate = (s.Clock.Now.TotalMinutes - mm0) / (ff * 0.05), idleRate = 1.0 / s.Time.SecondsPerMinuteAt1x;
             Log($"TRIPRATE 步行 {walkRate:0.00} 游戏分钟/秒，站着 {idleRate:0.00}");
-            Check(walkRate > idleRate * 0.3 && walkRate < idleRate * 0.8, "走路时钟速度约为站着的一半（画面速度已减半，每公里耗时不变）");
+            Check(walkRate > idleRate * 0.15 && walkRate < idleRate * 0.4, "步行画面速度再次减半，每公里游戏耗时不变");
             Check(s.InPlayerShop, "走到店里并进店");
             Log("到店 " + s.Clock.Now);
 
@@ -229,7 +371,13 @@ namespace PCShopSell.EditorTools
             for (int i = 0; i < 10; i++) Frame(0.1f);
             Check(_game.TryGetInteract(out _, out string doorHint) && doorHint.Contains("出门"), "店门口有“出门”提示");
             Shot("vs1_77_shop_door");
-            for (int i = 0; i < 20 && !_game.Interior.OwnerOutside; i++) _game.Interior.MoveOwner(UnityEngine.Vector3.back, 0.1f);
+            for (int i = 0; i < 20 && !_game.Interior.OwnerOutside; i++)
+            {
+                _game.Interior.MoveOwner(UnityEngine.Vector3.back, 0.1f);
+                _game.Step(0);
+                PCShopSell.Game.Runtime.FigureMotion.AdvanceAll(.1f, true);
+            }
+            Check(_game.Interior.Root.Find("Owner").GetComponent<PCShopSell.Game.Runtime.FigureMotion>().WalkBlend > .5f, "店内走动播放迈步和摆臂");
             Check(_game.Interior.OwnerOutside, "老板能从店门走出去");
             _game.Interior.StepBackInside();
             _game.Ui.ConfirmLeaveShop();
@@ -254,6 +402,15 @@ namespace PCShopSell.EditorTools
             Check(s.PlayerShop.TodayLost > lostBefore, "排太久顾客不买了");
             Frame(0.3f);
             Shot("vs1_56_customer_putback");
+            // Checkout is tested with a stocked daytime shop. Sparse starter stock and a random
+            // late-night return must not turn this UI test into a multi-day survival simulation.
+            Teleport(s, "player_shop");
+            s.Clock.Restore(s.Clock.Today, 10 * 60);
+            foreach (var p in PartCatalog.All) s.PlayerShop.Stock.ForceAdd(p, true, 2);
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            _game.Interior.StandAtCounter();
+            double checkoutTestRate = s.PlayerShop.Settings.BaseCustomersPerHour;
+            s.PlayerShop.Settings.BaseCustomersPerHour = 12;
             int sold = 0;
             for (int i = 0; i < 9000 && sold < 3; i++)
             {
@@ -273,10 +430,12 @@ namespace PCShopSell.EditorTools
                         Check(_game.TryGetInteract(out _, out string counterHint) && counterHint.Contains("结账"), "柜台边有“给顾客结账”提示");
                         Shot("vs1_57_counter_hint");
                     }
+                    var cashBeforeSale = s.Ledger.Balance;
                     _game.Checkout(s.PlayerShop.Queue[0].Id);
-                    sold++;
+                    if (s.Ledger.Balance > cashBeforeSale) sold++;
                 }
             }
+            s.PlayerShop.Settings.BaseCustomersPerHour = checkoutTestRate;
             Log($"卖出 {sold} 单，现金 {s.Ledger.Balance}，时间 {s.Clock.Now}");
             if (sold == 0)
                 Log($"DIAG open={s.PlayerShop.IsOpen} inShop={s.InPlayerShop} customers={s.PlayerShop.TodayCustomers} lost={s.PlayerShop.TodayLost} active={s.PlayerShop.ActiveCustomers.Count} stock={s.PlayerShop.Stock.UsedSpace} fame={s.PlayerShop.Reputation} markup={s.PlayerShop.Markup} trip={(s.Trip != null)}");
@@ -369,6 +528,10 @@ namespace PCShopSell.EditorTools
             Check(_game.Ui.AnyModalOpen, "展示台窗口打开");
             Shot("vs1_62_display");
             // 用库存配件装两台整机摆到店中间的展示台：顾客能直接买走，想买整机的人也变多
+            // The preceding sale loop can finish near 04:00. Keep this isolated assembly check
+            // in daytime so forced overnight rest cannot move the player home between builds.
+            s.Clock.Restore(s.Clock.Today, 10 * 60);
+            Feed(s);
             double chanceEmpty = s.PlayerShop.BuildChance;
             for (int tier = 0; tier < 2; tier++)
             {
@@ -839,6 +1002,14 @@ namespace PCShopSell.EditorTools
             // 存档 / 读档
             Teleport(s, "home");
             SaveStore.Save(s);
+            string manualJson = File.ReadAllText(SaveStore.PathOf);
+            SaveStore.Save(s, true);
+            Check(File.ReadAllText(SaveStore.PathOf) == manualJson, "自动存档不会覆盖手动存档");
+            SaveStore.Save(s); // create the backup in the isolated smoke directory
+            File.WriteAllText(SaveStore.PathOf, "{broken-json");
+            using (var recovered = SaveStore.Load(s.City))
+                Check(recovered != null && recovered.Ledger.Balance == s.Ledger.Balance && SaveStore.LastLoadMessage.Contains("备用"), "主存档损坏时可从备份恢复");
+            File.WriteAllText(SaveStore.PathOf, manualJson);
             _game.LoadGame();
             Check(_game.Session.Ledger.Balance == s.Ledger.Balance, "读档后余额一致");
 
@@ -885,7 +1056,7 @@ namespace PCShopSell.EditorTools
             _game.Ui.OpenDock();
             Frame(0.1f);
             _game.Ui.DebugRefreshQuests();
-            Check((_game.Ui.QuestTrackerText ?? "").Contains("家具城"), "任务条：租好后去家具城买设施：" + _game.Ui.QuestTrackerText);
+            Check(g.CurrentQuest() == null || (g.CurrentQuest().Id != "rent" && g.CurrentQuest().Id != "buy"), "搬家不重置已完成教学");
             Shot("vs1_88_bare_shop");
             _game.Ui.OpenQuestWindow();
             Frame(0.05f);
@@ -906,7 +1077,7 @@ namespace PCShopSell.EditorTools
             _game.Ui.OnEnteredPlace(g.CurrentPlace);
             Frame(0.05f);
             _game.Ui.DebugRefreshQuests();
-            Check((_game.Ui.QuestTrackerText ?? "").Contains("摆好"), "任务条：买齐了就去摆好：" + _game.Ui.QuestTrackerText);
+            Check(g.CurrentQuest() == null || g.CurrentQuest().Id != "buy", "追加家具不重置采购教学");
             Shot("vs1_89_mall_fixtures");
             _game.Ui.CloseAllWindows();
             g.SendByCourier = false;
@@ -958,7 +1129,7 @@ namespace PCShopSell.EditorTools
             _game.Interior.StandAtDoor();
             Frame(0.05f);
             _game.Ui.DebugRefreshQuests();
-            Check((_game.Ui.QuestTrackerText ?? "").Contains("设置"), "任务条：摆好后去设置货架：" + _game.Ui.QuestTrackerText);
+            Check(g.ShopFitted, "摆放后满足最低开业条件");
             Shot("vs1_92_fitted_shop");
             g.Leave();
             g.AdvanceClock(24 * 60);
@@ -1085,6 +1256,7 @@ namespace PCShopSell.EditorTools
             }
             g.SetSteer(0, 0);
             Check(walked, "WASD 能在街上走起来");
+            Check(UnityEngine.Object.FindObjectsOfType<PCShopSell.Game.Runtime.FigureMotion>().Any(m => m.transform.parent != null && m.transform.parent.name == "Player" && m.WalkBlend > .5f), "街道角色实际移动时播放迈步动画");
             for (int i = 0; i < 10; i++) Frame(0.05f);
             Shot("vs1_19_wasd_street");
             // 自己租的铺子门前有青色光柱，一眼能认出来
@@ -1111,6 +1283,371 @@ namespace PCShopSell.EditorTools
             Shot("vs1_21_free_camera");
             PCShopSell.Game.Runtime.CameraRig.Yaw = 45f;
             PCShopSell.Game.Runtime.CameraRig.Pitch = 35f;
+
+            // Dedicated staff UI and runtime models; fixture is saved only in the isolated smoke directory.
+            var staffSave = g.CreateSave();
+            staffSave.hasEmployee = true;
+            staffSave.employee = new SaveEmployee { name = "收银小陈", wage = 150, checkoutMinutes = 2 };
+            staffSave.hasAssembler = true;
+            staffSave.assembler = new SaveEmployee { name = "装机小王", wage = 210, checkoutMinutes = 3, buildsCompleted = 8 };
+            File.WriteAllText(SaveStore.PathOf, JsonUtility.ToJson(staffSave));
+            _game.LoadGame();
+            var staffed = _game.Session;
+            staffed.Clock.Restore(staffed.Clock.Today, 14 * 60);
+            Teleport(staffed, staffed.PlayerShopPlace.Id);
+            Frame(0.05f);
+            _game.Ui.OpenDock();
+            _game.Ui.DebugSelectTab(6);
+            Frame(0.05f);
+            Check(staffed.Employee != null && staffed.Assembler != null, "两个岗位真实 JSON 存档后都能恢复");
+            Shot("vs1_106_dual_staff");
+
+            // Business systems exercise the actual session and UI, in the isolated smoke save.
+            _game.Ui.CloseAllWindows();
+            staffed.Ledger.Credit(staffed.Clock.Today, "验收", Money.FromYuan(1000000), "经营系统验收资金");
+            staffed.PlayerShop.Reputation = 40;
+            staffed.Meet(Npcs.Zhou, 80);
+            Check(staffed.SignDirectAgreement(), "直供协议解锁");
+            Check(staffed.OrderDirect("cpu0", 3, true), "直供赊购产生在途和尾款");
+            staffed.RefreshEnterpriseOffer();
+            var contract = staffed.EnterpriseContracts.FirstOrDefault(x => !x.Accepted);
+            Check(contract != null && staffed.AcceptEnterprise(contract.Id), "企业订单进入装机队列");
+            Check(staffed.StartCreatorCampaign("momo"), "创作者推广启用");
+            Check(staffed.TradeFund(10, true), "指数投资有持仓");
+            var agency = staffed.City.FirstOfKind(PlaceKind.Agency);
+            Teleport(staffed, agency.Id);
+            _game.Ui.CloseAllWindows();
+            var unit = staffed.Listings.FirstOrDefault(x => x.PlaceId != staffed.PlayerShopPlace.Id);
+            if (unit != null)
+            {
+                staffed.DebugAddListing(unit.PlaceId, staffed.Clock.Today.TotalDays, staffed.Clock.Today.TotalDays + 30, Money.FromYuan(1800));
+                Check(staffed.OpenVenture(unit.PlaceId, "branch"), "分店占用真实铺面");
+            }
+            Check(staffed.BuyProperty(staffed.PlayerShopPlace.Id, true), "主店按揭购置物业");
+            Check(staffed.ChangeHomeTier(2), "升级安静公寓");
+            staffed.Ledger.Credit(staffed.Clock.Today, "验收", Money.FromYuan(2000000), "园区验收资金");
+            var parkSite = staffed.City.Places.FirstOrDefault(x => x.Kind == PlaceKind.Shop && x.Size == PCShopSell.Core.Shop.ShopSize.Large && !staffed.IsMyShop(x) && staffed.VentureAt(x.Id) == null && staffed.PropertyAt(x.Id) == null);
+            if (parkSite != null)
+            {
+                staffed.DebugAddListing(parkSite.Id, staffed.Clock.Today.TotalDays, staffed.Clock.Today.TotalDays + 30, Money.FromYuan(4000));
+                Check(staffed.BuyPark(parkSite.Id), "园区买地改造");
+                staffed.Clock.Restore(staffed.Clock.Today.AddDays(7), 14 * 60);
+                Check(staffed.OpenParkUnit(0, "flowers"), "园区花店入驻");
+                Check(staffed.OpenParkUnit(1, "food"), "园区餐饮入驻");
+                Check(staffed.ParkTrafficBonus(staffed.ParkUnit(0)) > 1, "不同业态相邻导流");
+            }
+            Check(staffed.FoundMcn(), "MCN 工作室成立");
+            staffed.Creator("momo").Relationship = 40;
+            staffed.Creator("momo").Resources = 60;
+            staffed.Creator("momo").Affection = 60;
+            Check(staffed.SignMcnCreator("momo"), "MCN 创作者合约");
+            for (int tab = 0; tab < 7; tab++)
+            {
+                _game.Ui.CloseAllWindows();
+                _game.Ui.DebugOpenBusiness(tab);
+                Frame(0.05f);
+                Shot("vs1_business_" + tab);
+            }
+            _game.Ui.CloseAllWindows();
+            Teleport(staffed, staffed.Home.Id);
+            Frame(0.05f);
+            Shot("vs1_business_home");
+            var dealer = staffed.City.FirstOfKind(PlaceKind.Dealer);
+            Teleport(staffed, dealer.Id);
+            staffed.Clock.Restore(staffed.Clock.Today, 14 * 60);
+            Check(staffed.BuyVehicle(VehicleKind.Van), "购入合法小货车");
+            Check(staffed.SetVehicle(VehicleKind.Van), "切换合法小货车");
+            _game.Ui.CloseAllWindows();
+            staffed.Leave();
+            Frame(0.05f);
+            Frame(0.4f);
+            Shot("vs1_business_van");
+            _game.Ui.DebugOpenCreator("momo");
+            Frame(0.05f);
+            Shot("vs1_business_creator");
+            _game.Ui.CloseAllWindows();
+            var businessSave = staffed.CreateSave();
+            var roundTrip = JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(businessSave));
+            using (var restored = GameSession.Load(staffed.City, roundTrip))
+            {
+                Check(restored.TotalDebt == staffed.TotalDebt && restored.NetWorth() == staffed.NetWorth(), "经营资产负债真实 JSON 往返守恒");
+                Check(restored.Vehicle == VehicleKind.Van && restored.HomeTier == 2, "住房与载具恢复");
+            }
+
+            // Tutorials explain the normal controls; they never travel or select a gameplay page.
+            Teleport(staffed, staffed.PlayerShopPlace.Id);
+            if (!staffed.HasUpgrade(PCShopSell.Core.Shop.ShopUpgrades.Qr)) Check(staffed.BuyUpgrade(PCShopSell.Core.Shop.ShopUpgrades.Qr), "完成收款码后才接续经营教学");
+            staffed.Leave();
+            Check(staffed.CurrentQuest()?.Id == "pricing", "基础开店结束自然派发定价教学");
+            _game.Ui.OpenQuestWindow();
+            CheckGuideReadOnly();
+            Shot("vs1_guide_route");
+            ClickGuideButton("知道了");
+            Check(!staffed.InPlayerShop && staffed.Trip == null && !_game.Ui.DockOpen, "阅读定价说明不自动回店或打开页面");
+            Teleport(staffed, staffed.PlayerShopPlace.Id);
+            _game.Ui.OpenDock();
+            ClickGuideButton("› 定价");
+            Check(staffed.InPlayerShop && _game.Ui.DockOpen && GuideButton("已了解，完成这一步") != null, "玩家手动进入定价页后才显示阅读确认");
+            Shot("vs1_guide_pricing");
+            var guideCash = staffed.Ledger.Balance;
+            ClickGuideButton("已了解，完成这一步");
+            Check(staffed.QuestCompleted("pricing") && staffed.Ledger.Balance == guideCash, "阅读定价完成教学，不自动改价或扣钱");
+            _game.Ui.CloseAllWindows();
+            Check(!staffed.Time.IsHeld, "关闭教学及店铺页后释放暂停");
+
+            Check(staffed.CurrentQuest()?.Id == "restock", "已经交付整机后自然派发补货教学");
+            _game.Ui.OpenQuestWindow();
+            CheckGuideReadOnly();
+            ClickGuideButton("知道了");
+            ClickGuideButton("手机");
+            ClickGuideButton("<size=34><b>批</b></size>\n<size=13>1788 进货</size>");
+            ClickGuideButton("自动补货");
+            Check(GuideButton("进货") != null && GuideButton("自动补货") != null && GuideButton("回主店柜台，继续营业 / 等待") == null, "从手机手动进入补货页，页面教学没有回店捷径");
+            Shot("vs1_guide_restock");
+            _game.Ui.CloseAllWindows();
+            Check(staffed.InPlayerShop && !staffed.Time.IsHeld && !_game.Ui.AnyModalOpen, "手动关闭补货页后原地继续经营，无残留暂停");
+
+            // Developed-save fixture: earlier lessons finished, and the park has actually been bought.
+            foreach (var q in Quests.All.TakeWhile(q => q.Id != "park_plan")) staffed.Flags.Add("tutorial:" + q.Id);
+            Check(staffed.HasPark && staffed.CurrentQuest()?.Id == "park_plan", "已进入园区经营阶段才出现园区说明");
+            _game.Ui.OpenQuestWindow();
+            CheckGuideReadOnly();
+            Shot("vs1_guide_park");
+            ClickGuideButton("知道了");
+            Check(!staffed.QuestCompleted("park_plan") && staffed.CurrentQuest()?.Id == "park_plan", "关闭说明不会跳过或自动完成任务");
+            ClickGuideButton("经营");
+            ClickGuideButton("› 园区布局");
+            Check(GuideButton("已了解，完成这一步") != null, "园区页显示预算教学确认");
+            ClickGuideButton("已了解，完成这一步");
+            Check(staffed.QuestCompleted("park_plan"), "当前教学完成后自然切换");
+            _game.Ui.CloseAllWindows();
+            Check(!staffed.Time.IsHeld, "多次打开指南没有残留暂停");
+            foreach (var q in Quests.All) staffed.Flags.Add("tutorial:" + q.Id);
+            _game.Ui.DebugRefreshQuests();
+            _game.Ui.OpenQuestWindow();
+            Check(_game.Ui.QuestTrackerText == null && !_game.Ui.AnyModalOpen, "任务结束后隐藏提示，没有回看目录");
+
+        }
+
+        private static void CheckGuideReadOnly()
+        {
+            var window = GameObject.Find("Window_当前任务");
+            Check(window != null, "当前任务说明已打开");
+            if (window == null) return;
+            var labels = window.GetComponentsInChildren<UnityEngine.UI.Button>()
+                .Select(b => b.GetComponentInChildren<UnityEngine.UI.Text>()?.text).ToArray();
+            Check(labels.Length == 2 && labels.All(t => t == "关闭" || t == "知道了"), "教学窗口只含关闭和知道了，不含出行或页面跳转按钮");
+        }
+
+        private static UnityEngine.UI.Button AgencyButton(string name) => _game.Ui.Canvases
+            .SelectMany(c => c.GetComponentsInChildren<UnityEngine.UI.Button>())
+            .LastOrDefault(b => b.gameObject.activeInHierarchy && b.name == name);
+
+        private static void ClickAgency(string name)
+        {
+            var button = AgencyButton(name);
+            Check(button != null && button.interactable, "选址图按钮可用：" + name);
+            if (button != null)
+            {
+                var scroll = button.GetComponentInParent<UnityEngine.UI.ScrollRect>();
+                var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(scroll.viewport, button.transform);
+                Rect view = scroll.viewport.rect;
+                Check(bounds.min.x >= view.xMin - 1 && bounds.max.x <= view.xMax + 1 && bounds.min.y >= view.yMin - 1 && bounds.max.y <= view.yMax + 1,
+                    "选址按钮完整显示在可点击区域：" + name);
+            }
+            if (button != null && button.interactable) button.onClick.Invoke();
+            Canvas.ForceUpdateCanvases();
+        }
+
+        private static void SmokeAgencySelection(GameSession s)
+        {
+            Place agency = s.CurrentPlace;
+            Money balance = s.Ledger.Balance;
+            foreach (var unit in s.City.Places.Where(p => p.Kind == PlaceKind.Shop || p.Kind == PlaceKind.Agency))
+                Check(AgencyButton("AgencyLot_" + unit.Id) != null, "片区包含沿街地点：" + unit.Id);
+            foreach (var listing in s.Listings)
+                Check(AgencyButton("AgencyPin_" + listing.PlaceId) != null, "挂牌铺面有价格客流牌：" + listing.PlaceId);
+            var future = s.Listings.First(l => l.OpenDay > s.Clock.Today.TotalDays);
+            ClickAgency("AgencyLot_" + future.PlaceId);
+            Check(AgencyButton("AgencyReviewLease")?.interactable == false, "未到期铺面可以看、不能签");
+            Shot("vs1_agency_future");
+            var unlisted = s.City.Places.First(p => p.Kind == PlaceKind.Shop && !s.Listings.Any(l => l.PlaceId == p.Id));
+            ClickAgency("AgencyLot_" + unlisted.Id);
+            Check(AgencyButton("AgencyReviewLease") == null, "未挂牌铺面没有签约按钮");
+            ClickAgency("AgencyPin_player_shop");
+            ClickAgency("AgencyReviewLease");
+            Check(!s.HasShop && s.Ledger.Balance == balance, "核对费用前不扣款、不租下");
+            Shot("vs1_agency_confirm");
+            ClickGuideButton("再看看");
+            Check(!s.HasShop && s.Ledger.Balance == balance && s.CurrentPlace == agency && s.Trip == null,
+                "点选、核价、取消始终留在中介且不扣款");
+            Shot("vs1_agency_map");
+            SmokeAgencyMapControls(s);
+        }
+
+        private static void SmokeAgencyMapControls(GameSession s)
+        {
+            Vector3 cameraPosition = _game.Cam.transform.position;
+            Quaternion rotation = _game.Cam.transform.rotation;
+            float size = _game.Cam.orthographicSize;
+            ClickAgency("AgencyFocusUnit");
+            var map = UnityEngine.Object.FindObjectOfType<PCShopSell.Game.UI.AgencyStreetMap>();
+            Check(map != null && map.Zoom > 2, "可以放大选中建筑查看周围关系");
+            Shot("vs1_agency_birdseye_close");
+            var eventData = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current)
+            { position = new Vector2(700, 500), button = UnityEngine.EventSystems.PointerEventData.InputButton.Left };
+            eventData.pointerPressRaycast = new UnityEngine.EventSystems.RaycastResult
+            { module = map.GetComponentInParent<UnityEngine.UI.GraphicRaycaster>(), gameObject = map.gameObject };
+            map.OnBeginDrag(eventData);
+            eventData.position += new Vector2(60, 30);
+            map.OnDrag(eventData);
+            map.OnEndDrag(eventData);
+            eventData.scrollDelta = new Vector2(0, 1);
+            float previousZoom = map.Zoom;
+            map.OnScroll(eventData);
+            Check(map.Zoom > previousZoom, "鸟瞰图滚轮缩放生效");
+            ClickAgency("AgencyResetView");
+            map = UnityEngine.Object.FindObjectOfType<PCShopSell.Game.UI.AgencyStreetMap>();
+            Check(map.Zoom == 1, "一键恢复完整街区视图");
+            var renderer = _game.World.Places["player_shop"].Root.transform.Find("Body").GetComponent<Renderer>();
+            Vector3 roof = renderer.bounds.center; roof.y = renderer.bounds.max.y + .01f;
+            Vector2 point = map.Project(roof);
+            Check(map.PlaceAt(new Vector2(point.x / map.Width, 1 - point.y / map.Height)) == "player_shop", "通过真实三维建筑射线识别目标铺面");
+            var canvas = map.GetComponentInParent<Canvas>();
+            eventData.position = RectTransformUtility.WorldToScreenPoint(canvas.worldCamera, map.transform.TransformPoint(new Vector3(point.x, -point.y, 0)));
+            map.OnPointerDown(eventData);
+            map.OnPointerClick(eventData);
+            Check(AgencyButton("AgencyReviewLease")?.interactable == true, "直接点三维建筑可以选房，拖动结束后仍可点击");
+            Check(_game.Cam.transform.position == cameraPosition && _game.Cam.transform.rotation == rotation && _game.Cam.orthographicSize == size,
+                "查看鸟瞰图不改变主场景镜头");
+            Check(s.InAgency && s.Trip == null, "缩放拖动和点楼都不触发人物出行");
+            Check(UnityEngine.Object.FindObjectsOfType<Camera>().Count(c => c.name == "AgencyStreetCamera") == 1, "重建选房页只保留一个预览相机");
+        }
+
+        private static void SmokeAgency()
+        {
+            _outDir = Path.GetFullPath(Path.Combine(Application.dataPath, "../docs/previews"));
+            Directory.CreateDirectory(_outDir);
+            ShaderUtil.allowAsyncCompilation = false;
+            UrpSetup.Ensure();
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            Camera cam = BuildRig();
+            _game = new GameObject("Game").AddComponent<GameController>();
+            _game.Bootstrap(false, 7);
+            foreach (Canvas c in _game.Ui.Canvases)
+            {
+                c.renderMode = RenderMode.ScreenSpaceCamera;
+                c.worldCamera = cam;
+                c.planeDistance = 1f;
+            }
+            Canvas.ForceUpdateCanvases();
+            _game.Step(0);
+            var s = _game.Session;
+            Teleport(s, "agency");
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            SmokeAgencySelection(s);
+            Shot("vs1_agency_map_720", 1280, 720);
+            ClickGuideButton("和小陈聊聊");
+            ClickGuideButton("随便聊聊（8 分钟）");
+            ClickGuideButton("继续看房");
+            Check(s.AgentDiscount > 0, "地图中的中介交谈保留熟络优惠");
+            Money cost = s.LeaseCost(s.Listings.First(l => l.PlaceId == "player_shop"));
+            Money before = s.Ledger.Balance;
+            ClickAgency("AgencyReviewLease");
+            ClickAgency("AgencyConfirmLease");
+            Check(s.HasShop && s.PlayerShopPlace.Id == "player_shop" && s.Ledger.Balance == before - cost, "确认签约按折后报价扣款并租下选中铺面");
+            Check(s.InAgency && s.Trip == null, "签约后仍在中介，不自动出行");
+            Check(AgencyButton("AgencyPin_player_shop") == null && AgencyButton("AgencyReviewLease") == null, "签下的店变为我的主店、不能重复签约");
+            _game.Ui.CloseAllWindows();
+            Teleport(s, "agency");
+            s.DebugAddListing("shop02", s.Clock.Today.TotalDays, s.Clock.Today.TotalDays + 30, Money.FromYuan(6200));
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            ClickAgency("AgencyLot_shop02");
+            Check(AgencyButton("AgencyReviewLease")?.interactable == false, "名气不足不能搬到中型店");
+            s.PlayerShop.Reputation = 100;
+            _game.Ui.RebuildWindows();
+            Check(AgencyButton("AgencyReviewLease")?.interactable == false, "资金不足不能签约");
+            Shot("vs1_agency_insufficient");
+            s.Ledger.Credit(s.Clock.Today, "验收", Money.FromYuan(100000), "选址验收资金");
+            _game.Ui.RebuildWindows();
+            Shot("vs1_agency_move");
+            var next = s.Listings.First(l => l.PlaceId == "shop02");
+            before = s.Ledger.Balance;
+            cost = s.LeaseCost(next);
+            ClickAgency("AgencyReviewLease");
+            Shot("vs1_agency_move_confirm");
+            ClickAgency("AgencyConfirmLease");
+            Check(s.PlayerShopPlace.Id == "shop02" && s.Ledger.Balance == before - cost, "搬店报价正确结算旧押金和搬家费");
+            Check(s.InAgency && s.Trip == null, "搬店签约不移动人物");
+
+            _game.Ui.CloseAllWindows();
+            var dense = s.CreateSave();
+            dense.listings = new[] { "shop01", "shop05", "shop06", "shop08", "shop09", "shop10" }
+                .Select((id, i) => new SaveListing { place = id, size = (int)s.City.GetPlace(id).Size,
+                    rentCents = Money.FromYuan(30000 - i * 4000).Cents,
+                    openDay = s.Clock.Today.TotalDays + (i % 2 == 0 ? 0 : 15), closeDay = s.Clock.Today.TotalDays + 45 }).ToArray();
+            File.WriteAllText(SaveStore.PathOf, JsonUtility.ToJson(dense));
+            _game.LoadGame();
+            s = _game.Session;
+            Teleport(s, "agency");
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            Canvas.ForceUpdateCanvases();
+            var pins = s.Listings.Select(l => (RectTransform)AgencyButton("AgencyPin_" + l.PlaceId).transform)
+                .OrderBy(rt => rt.anchoredPosition.x).ToArray();
+            for (int i = 0; i < pins.Length; i++)
+            {
+                var box = new Rect(pins[i].anchoredPosition.x, -pins[i].anchoredPosition.y, pins[i].rect.width, pins[i].rect.height);
+                Check(box.xMin >= 0 && box.xMax <= 1120 && box.yMin >= 0 && box.yMax <= 650, "鸟瞰图六房源报价牌不越界");
+                for (int j = 0; j < i; j++)
+                {
+                    var other = new Rect(pins[j].anchoredPosition.x, -pins[j].anchoredPosition.y, pins[j].rect.width, pins[j].rect.height);
+                    Check(!box.Overlaps(other), "鸟瞰图相邻报价牌不重叠");
+                }
+            }
+            ClickAgency("AgencyPin_shop01");
+            Shot("vs1_agency_dense");
+            before = s.Ledger.Balance;
+            ClickAgency("AgencyReviewLease");
+            s.Listings.First(l => l.PlaceId == "shop01").Rent += Money.FromYuan(100);
+            ClickAgency("AgencyConfirmLease");
+            Check(s.Ledger.Balance == before && s.PlayerShopPlace.Id == "shop02", "报价变化后必须重新核对，不按旧报价扣款");
+            ClickAgency("AgencyReviewLease");
+            ClickAgency("AgencyConfirmLease");
+            Check(s.PlayerShopPlace.Id == "shop01", "重新核价后可正常租下大型铺面");
+            _game.Ui.CloseAllWindows();
+            Teleport(s, "agency");
+            var cheaper = s.DebugAddListing("shop05", s.Clock.Today.TotalDays, s.Clock.Today.TotalDays + 30, Money.FromYuan(1500));
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            ClickAgency("AgencyLot_shop05");
+            before = s.Ledger.Balance;
+            cost = s.LeaseCost(cheaper);
+            Check(cost.IsNegative, "大铺换小铺，旧押金抵扣后产生退款");
+            Shot("vs1_agency_refund");
+            ClickAgency("AgencyReviewLease");
+            ClickAgency("AgencyConfirmLease");
+            Check(s.PlayerShopPlace.Id == "shop05" && s.Ledger.Balance == before - cost, "搬店净退款正确入账");
+            _game.Ui.CloseAllWindows();
+            Check(!UnityEngine.Object.FindObjectsOfType<Camera>().Any(c => c.name == "AgencyStreetCamera"), "关闭中介释放三维预览相机");
+            Teleport(s, "agency");
+            s.Clock.Restore(s.Clock.Today, 22 * 60);
+            Frame(.05f);
+            Color ambient = RenderSettings.ambientLight;
+            bool fog = RenderSettings.fog;
+            _game.Ui.OnEnteredPlace(s.CurrentPlace);
+            Check(RenderSettings.ambientLight == ambient && RenderSettings.fog == fog, "鸟瞰图白天采光不污染主场景夜间环境");
+            Shot("vs1_agency_birdseye_night");
+        }
+
+        private static UnityEngine.UI.Button GuideButton(string text) => _game.Ui.Canvases
+            .SelectMany(c => c.GetComponentsInChildren<UnityEngine.UI.Button>())
+            .LastOrDefault(b => b.gameObject.activeInHierarchy && b.GetComponentInChildren<UnityEngine.UI.Text>()?.text == text);
+
+        private static void ClickGuideButton(string text)
+        {
+            var b = GuideButton(text);
+            Check(b != null && b.interactable, "可点击引导按钮：" + text);
+            if (b != null && b.interactable) b.onClick.Invoke();
+            Canvas.ForceUpdateCanvases();
         }
 
         private static void Teleport(GameSession s, string placeId)
@@ -1152,9 +1689,37 @@ namespace PCShopSell.EditorTools
 
         private static void Log(string m) => Debug.Log("SMOKE " + m);
 
-        private static void Shot(string name)
+        private static void SmokeHomeMotion()
         {
-            const int w = 1920, h = 1080;
+            var motion = UnityEngine.Object.FindObjectsOfType<PCShopSell.Game.Runtime.FigureMotion>()
+                .First(m => m.name == "Owner" && Vector3.Distance(m.transform.position, _game.HomeRoom.OwnerWorld) < .01f);
+            const float dt = 1f / 30f;
+            Directory.CreateDirectory(Path.Combine(_outDir, "motion"));
+            bool walked = false;
+            for (int i = 0; i < 84; i++)
+            {
+                Vector3 dir = i < 28 ? Vector3.left : i >= 44 && i < 72 ? Vector3.right : Vector3.zero;
+                if (dir != Vector3.zero) _game.HomeRoom.MoveOwner(dir, dt);
+                _game.Step(0); // Exercise real room movement and animation without advancing the smoke fixture's clock.
+                PCShopSell.Game.Runtime.FigureMotion.AdvanceAll(dt, true);
+                walked |= motion.WalkBlend > .8f;
+                Shot("motion/home_" + i.ToString("D3"), 960, 540);
+            }
+            Check(walked, "出租屋移动带动双腿和摆臂");
+            Check(motion.WalkBlend < .01f, "松开移动键后自然收步");
+            for (int i = 0; i < 60; i++)
+            {
+                _game.HomeRoom.MoveOwner(Vector3.right, dt);
+                _game.Step(0);
+                PCShopSell.Game.Runtime.FigureMotion.AdvanceAll(dt, true);
+            }
+            Check(motion.WalkBlend < .01f, "被墙挡住时不原地踏步");
+            _game.HomeRoom.ResetOwner();
+            _game.Step(0);
+        }
+
+        private static void Shot(string name, int w = 1920, int h = 1080)
+        {
             Camera cam = _game.Cam;
             var rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32);
             cam.targetTexture = rt;

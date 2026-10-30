@@ -59,6 +59,55 @@ namespace PCShopSell.Game.UI
         /// <summary>
         /// 装机小游戏：把正确的配件拖进机箱对应的槽位。CPU、内存要先装主板；拿错档次/接口算失误，失误越多耗时越长。
         /// </summary>
+        private static void DrawPartSymbol(RectTransform parent, PartCategory category)
+        {
+            var area = Ui.Rect(parent, "Technical drawing").Anchor(0.12f, 0.32f, 0.88f, 0.88f);
+            Color line = new Color(0.66f, 0.75f, 0.65f, 0.85f);
+            void Block(string id, float x, float y, float w, float h, Color c)
+            {
+                var shape = Ui.Panel(area, id, c); shape.raycastTarget = false;
+                shape.rectTransform.Anchor(x, y, x + w, y + h);
+            }
+            if (category == PartCategory.Motherboard)
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    Block("Copper trace", 0.04f, 0.10f + i * 0.15f, 0.88f, 0.007f, line * 0.55f);
+                    Block("Bus", 0.16f + i * 0.14f, 0.04f, 0.005f, 0.86f, line * 0.55f);
+                }
+                Block("IO shield", 0.01f, 0.1f, 0.07f, 0.8f, Ui.Dim);
+            }
+            else if (category == PartCategory.Cpu)
+            {
+                Block("CPU", 0.27f, 0.13f, 0.46f, 0.72f, line);
+                Block("Die", 0.34f, 0.25f, 0.32f, 0.48f, Ui.PanelBg);
+                for (int i = 0; i < 6; i++) { Block("Pin", 0.18f, 0.18f + i * 0.11f, 0.08f, 0.025f, Ui.Accent); Block("Pin", 0.74f, 0.18f + i * 0.11f, 0.08f, 0.025f, Ui.Accent); }
+            }
+            else if (category == PartCategory.Memory)
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    Block("DIMM", 0.17f + i * 0.4f, 0.05f, 0.25f, 0.86f, line);
+                    for (int j = 0; j < 4; j++) Block("Memory chip", 0.21f + i * 0.4f, 0.13f + j * 0.17f, 0.17f, 0.1f, Ui.PanelBg);
+                }
+            }
+            else if (category == PartCategory.Gpu)
+            {
+                Block("Shroud", 0.06f, 0.12f, 0.88f, 0.75f, line);
+                for (int i = 0; i < 3; i++)
+                {
+                    Block("Fan", 0.14f + i * 0.25f, 0.25f, 0.15f, 0.48f, Ui.PanelBg);
+                    Block("Hub", 0.20f + i * 0.25f, 0.4f, 0.03f, 0.17f, Ui.Accent);
+                }
+            }
+            else
+            {
+                Block("Housing", 0.12f, 0.10f, 0.76f, 0.78f, line);
+                for (int i = 0; i < 5; i++) Block("Vent", 0.20f + i * 0.12f, 0.22f, 0.035f, 0.4f, Ui.PanelBg);
+                Block("Label", 0.22f, 0.69f, 0.32f, 0.08f, Ui.Accent);
+            }
+        }
+
         public void OpenBuildMinigame(BuildOrder order)
         {
             List<PartDef> need = PartCatalog.BuildList(order.Tier);
@@ -72,7 +121,7 @@ namespace PCShopSell.Game.UI
             cards = cards.OrderBy(_ => rng.Next()).ToList();
 
             var placed = new HashSet<PartCategory>();
-            int mistakes = 0;
+            int mistakes = order.Mistakes;
             Text status = null;
             Button finish = null;
 
@@ -96,21 +145,22 @@ namespace PCShopSell.Game.UI
                 grid.spacing = new Vector2(10, 10);
                 grid.padding = new RectOffset(12, 12, 12, 12);
 
-                Image chassis = Ui.Panel(body, "Chassis", new Color(0.12f, 0.13f, 0.15f));
+                Image chassis = Ui.Panel(body, "Chassis", Ui.PanelBg2);
                 Ui.Size(chassis, 700, 560);
                 RectTransform crt = chassis.rectTransform;
 
                 var slots = new Dictionary<PartCategory, RectTransform>();
                 void Slot(PartCategory c, float x, float y, float sw, float sh)
                 {
-                    Image s = Ui.Panel(crt, "Slot_" + c, new Color(0.25f, 0.28f, 0.32f, 0.9f));
+                    Image s = Ui.Panel(crt, "Slot_" + c, Ui.ButtonBg);
                     RectTransform rt = s.rectTransform;
                     rt.anchorMin = rt.anchorMax = new Vector2(0, 1);
                     rt.pivot = new Vector2(0, 1);
                     rt.anchoredPosition = new Vector2(x, -y);
                     rt.sizeDelta = new Vector2(sw, sh);
-                    Text t = Ui.Label(rt, PartCatalog.CategoryName(c), 18, TextAnchor.MiddleCenter, Ui.Dim);
-                    t.rectTransform.Fill();
+                    DrawPartSymbol(rt, c);
+                    Text t = Ui.Label(rt, PartCatalog.CategoryName(c), 16, TextAnchor.MiddleCenter, Ui.TextColor);
+                    t.rectTransform.Anchor(0, 0, 1, 0.30f);
                     slots[c] = rt;
                 }
                 Slot(PartCategory.Motherboard, 160, 30, 380, 300);
@@ -132,7 +182,7 @@ namespace PCShopSell.Game.UI
                 foreach (PartDef p in cards)
                 {
                     Button cardBtn = Ui.Button(bench.transform, $"{p.Name}\n<size=13>{PartCatalog.CategoryName(p.Category)} · {PartCatalog.TierName(p.Tier)}{(p.Socket != null ? " · " + p.Socket : "")}</size>", null, 15,
-                        new Color(0.30f, 0.34f, 0.42f));
+                        Ui.ButtonBg);
                     var card = cardBtn.gameObject.AddComponent<DragCard>();
                     card.Init(p, dragLayer, (dc, screen) =>
                     {
@@ -155,6 +205,7 @@ namespace PCShopSell.Game.UI
                         if (part.Category != hit.Value)
                         {
                             mistakes++;
+                            order.Mistakes = mistakes;
                             Toast($"{part.Name} 不是装在这里的。");
                             UpdateStatus();
                             return false;
@@ -162,6 +213,7 @@ namespace PCShopSell.Game.UI
                         if ((hit == PartCategory.Cpu || hit == PartCategory.Memory) && !placed.Contains(PartCategory.Motherboard))
                         {
                             mistakes++;
+                            order.Mistakes = mistakes;
                             Toast("先把主板装进机箱。");
                             UpdateStatus();
                             return false;
@@ -169,6 +221,7 @@ namespace PCShopSell.Game.UI
                         if (part.Tier != order.Tier)
                         {
                             mistakes++;
+                            order.Mistakes = mistakes;
                             Toast(part.Socket != null && part.Socket != need.First(x => x.Category == part.Category).Socket
                                 ? $"接口不对：{part.Socket}"
                                 : $"档次不对：订单要{PartCatalog.TierName(order.Tier)}档");

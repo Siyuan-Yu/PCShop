@@ -146,7 +146,8 @@ namespace PCShopSell.Game.Runtime
         private readonly GameObject _ebike;
         private readonly GameObject _tricycle;
         private readonly GameObject _taxi;
-        private float _bob;
+        private readonly GameObject _car, _van;
+        private readonly FigureMotion _motion;
         private string _dressed;
 
         public Vector3 Position => _root.transform.position;
@@ -156,6 +157,7 @@ namespace PCShopSell.Game.Runtime
             _root = new GameObject("Player");
             _root.transform.SetParent(parent, false);
             _figure = Prims.Figure(_root.transform, "Figure", new Color(0.95f, 0.55f, 0.15f), new Color(0.95f, 0.8f, 0.65f), 1.1f);
+            _motion = _figure.GetComponent<FigureMotion>();
             Prims.Shape(PrimitiveType.Cylinder, _root.transform, "Ring", new Vector3(0, 0.03f, 0), new Vector3(1.4f, 0.01f, 1.4f), Mats.Unlit(new Color(1f, 0.85f, 0.2f, 0.6f)));
 
             _ebike = new GameObject("EBike");
@@ -169,6 +171,11 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(_tricycle.transform, "Bed", new Vector3(0, 0.55f, -0.9f), new Vector3(1.3f, 0.35f, 1.4f), Mats.Lit(new Color(0.5f, 0.5f, 0.55f), 0.3f, 0.5f));
             Prims.Box(_tricycle.transform, "Cargo", new Vector3(0, 0.95f, -0.9f), new Vector3(1.0f, 0.5f, 1.0f), Mats.Lit(new Color(0.75f, 0.6f, 0.4f)));
 
+            _car = Prims.ParkedCar(_root.transform, Vector3.zero, ArtDirection.Sage);
+            _car.transform.localRotation = Quaternion.identity;
+            _van = Prims.ParkedCar(_root.transform, Vector3.zero, ArtDirection.Cream);
+            _van.transform.localRotation = Quaternion.identity;
+            Prims.Box(_van.transform, "LoadBox", new Vector3(0, 1.1f, -.75f), new Vector3(1.5f, 1.2f, 1.8f), Mats.Lit(ArtDirection.Cream));
             _taxi = new GameObject("Taxi");
             _taxi.transform.SetParent(_root.transform, false);
             Prims.Box(_taxi.transform, "Body", new Vector3(0, 0.6f, 0), new Vector3(1.8f, 0.9f, 4f), Mats.Lit(new Color(0.95f, 0.8f, 0.1f), 0.7f, 0.2f));
@@ -194,17 +201,18 @@ namespace PCShopSell.Game.Runtime
                 var dir = s.Trip != null ? new Vector3((float)s.Trip.DirX, 0, (float)s.Trip.DirY) : new Vector3((float)s.HeadingX, 0, (float)s.HeadingY);
                 if (dir.sqrMagnitude > 0.01f)
                     _root.transform.rotation = Quaternion.Slerp(_root.transform.rotation, Quaternion.LookRotation(dir), 1f - Mathf.Exp(-dt * 12f));
-                _bob += dt * 12f;
             }
 
             VehicleKind v = s.Vehicle;
             _ebike.SetActive(v == VehicleKind.EBike);
             _tricycle.SetActive(v == VehicleKind.Tricycle);
             _taxi.SetActive(v == VehicleKind.Taxi && s.Trip != null);
-            _figure.SetActive(!(v == VehicleKind.Taxi && s.Trip != null));
+            _car.SetActive(v == VehicleKind.Car);
+            _van.SetActive(v == VehicleKind.Van);
+            _figure.SetActive(!(v == VehicleKind.Taxi && s.Trip != null) && v != VehicleKind.Car && v != VehicleKind.Van);
             float lift = v == VehicleKind.EBike || v == VehicleKind.Tricycle ? 0.35f : 0f;
-            float bob = s.IsWalking && v == VehicleKind.Walk ? Mathf.Abs(Mathf.Sin(_bob)) * 0.12f : 0f;
-            _figure.transform.localPosition = new Vector3(0, lift + bob, 0);
+            _motion.LocomotionEnabled = v == VehicleKind.Walk || v == VehicleKind.Taxi;
+            _figure.transform.localPosition = new Vector3(0, lift, 0);
         }
     }
 

@@ -31,7 +31,7 @@ namespace PCShopSell.Game.UI
         private RectTransform PortraitCard(Transform parent, string portraitId, string title, string subtitle, float width, System.Action onClick, bool unknown = false, string tagText = "交谈")
         {
             float height = width * 4f / 3f;
-            Image frame = Ui.Panel(parent, "Portrait", new Color(0.05f, 0.06f, 0.08f, 1f));
+            Image frame = Ui.Panel(parent, "Portrait", Ui.PanelBg2);
             Ui.Size(frame, width, height);
             frame.GetComponent<LayoutElement>().minWidth = width;
 
@@ -74,7 +74,7 @@ namespace PCShopSell.Game.UI
         /// <summary>小头像（截取立绘上半部分的脸）。</summary>
         private void PortraitThumb(Transform parent, NpcDef n, float size, System.Action onClick = null)
         {
-            Image frame = Ui.Panel(parent, "Thumb", new Color(0.05f, 0.06f, 0.08f, 1f));
+            Image frame = Ui.Panel(parent, "Thumb", Ui.PanelBg2);
             Ui.Size(frame, size, size);
             frame.GetComponent<LayoutElement>().minWidth = size;
             RectTransform imgRt = Ui.Rect(frame.transform, "Image").Fill(2);
@@ -131,7 +131,7 @@ namespace PCShopSell.Game.UI
                 else
                 {
                     OrgNode(chart.transform, bossNpc.Id, "？？？", "老板", true, true, null);
-                    notes.Add("<color=#E0806A>" + $"老板：交情 {r.BossGate} 才肯见你（现在 {S.Relation(bossNpc.Id)}）" + "</color>");
+                    notes.Add("<color=#D79780>" + $"老板：交情 {r.BossGate} 才肯见你（现在 {S.Relation(bossNpc.Id)}）" + "</color>");
                     notes.Add("找店员聊聊老板的事，替你说几句好话，交情够了他自然肯出来。");
                 }
             }
@@ -160,7 +160,7 @@ namespace PCShopSell.Game.UI
                     OrgNodeIn(clerks, m.Id, m.Name, title, false, false, () => OpenStaffDialogue(m, r, p, w));
                 }
             }
-            notes.Add("<color=#9AA3AD>点头像和他说话</color>");
+            notes.Add("<color=#ABB5A8>点头像和他说话</color>");
 
             foreach (string n in notes) Ui.Size(Ui.Label(left, "<size=13>" + n + "</size>", 13, TextAnchor.UpperLeft, Ui.Dim), -1, n.Length > 22 ? 44 : 22);
 
@@ -217,7 +217,7 @@ namespace PCShopSell.Game.UI
             }
 
             Ui.Size(Ui.Label(col, $"<b>{name}</b>", 14, TextAnchor.MiddleCenter), -1, 20);
-            Ui.Size(Ui.Label(col, $"<size=11><color={(top ? "#E3B347" : "#9AA3AD")}>{title}</color></size>", 11, TextAnchor.MiddleCenter), -1, 14);
+            Ui.Size(Ui.Label(col, $"<size=11><color={(top ? "#E3B347" : "#ABB5A8")}>{title}</color></size>", 11, TextAnchor.MiddleCenter), -1, 14);
         }
 
         /// <summary>上下级之间的连线。</summary>
@@ -248,7 +248,7 @@ namespace PCShopSell.Game.UI
         /// 对话框：上面左边是人物头像、右边是他说的话；下面一列居中的选项，点一个选项他就回一句；不够条件的选项灰着写明原因。
         /// </summary>
         private void OpenDialogue(string portraitId, string name, string role, NpcDef npc, string greeting, int optionCount,
-            System.Func<TalkCtx, List<TalkOpt>> makeOptions, string firstReply = null, string rapportId = null)
+            System.Func<TalkCtx, List<TalkOpt>> makeOptions, string firstReply = null, string rapportId = null, System.Action onClosed = null)
         {
             var ctx = new TalkCtx { Reply = firstReply };
             float height = 440 + 46 * optionCount + (npc != null ? 66 : rapportId != null ? 36 : 0);
@@ -298,12 +298,12 @@ namespace PCShopSell.Game.UI
 
                 if (npc != null)
                 {
-                    string perk = "<color=#9AA3AD>交情好处：" + NpcPerks.Describe(npc.Id) + (npc.IsTipster ? "\n" + TrustText(npc) : "") + "</color>";
+                    string perk = "<color=#ABB5A8>交情好处：" + NpcPerks.Describe(npc.Id) + (npc.IsTipster ? "\n" + TrustText(npc) : "") + "</color>";
                     Ui.Size(Ui.Label(w.Content, "<size=14>" + perk + "</size>", 14, TextAnchor.UpperLeft), -1, 58);
                 }
 
                 Ui.Size(Ui.Button(w.Content, "结束对话", w.Close, 20), -1, 46);
-            }, true, true, null);
+            }, true, true, onClosed);
         }
 
         /// <summary>打开这家店接待的人的对话框（没有人则什么也不做）。</summary>
@@ -366,9 +366,9 @@ namespace PCShopSell.Game.UI
                         },
                     });
                 }
-                list.Add(new TalkOpt { Label = "看看货", Hot = true, Act = () => ctx.W.Close() });
+                list.Add(new TalkOpt { Label = place.Kind == PlaceKind.Agency ? "继续看房" : "看看货", Hot = true, Act = () => ctx.W.Close() });
                 return list;
-            }, null, staff.Id);
+            }, null, staff.Id, () => parent?.Rebuild());
         }
 
         /// <summary>从背包里挑一份礼品送给店员（一瓶饮料就够意思，贵的东西涨得多）。</summary>

@@ -25,7 +25,7 @@ namespace PCShopSell.Game.UI
 
                 if (shop.Orders.Count == 0)
                 {
-                    Ui.Size(Ui.Label(list, "台面上空空的，暂时没有装机单。\n约每 8 位顾客里有 1 位想装整机：他们会在展示桌看中一台，离店后下装机单。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 70);
+                    Ui.Size(Ui.Label(list, "台面上空空的，暂时没有装机单。\n部分顾客想装整机：他们会在展示桌看中一台，离店后下装机单。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 70);
                 }
                 foreach (BuildOrder o in shop.Orders)
                 {
@@ -40,7 +40,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(head, -1, 30);
                     foreach (PartDef p in PartCatalog.BuildList(order.Tier))
                     {
-                        int have = shop.Stock.CountAll(p);
+                        int have = order.PartsReserved ? 1 : shop.Stock.CountAll(p);
                         string mark = have > 0 ? "<color=#1E8E3E>有</color>" : "<color=#C62828>缺</color>";
                         Ui.Size(Ui.Label(card.transform, $"{mark}　<b>{PartCatalog.CategoryName(p.Category)}</b>　{p.Name}　<size=14>库存 {have}</size>", 16, TextAnchor.MiddleLeft, ink), -1, 24);
                     }
@@ -49,8 +49,9 @@ namespace PCShopSell.Game.UI
                         {
                             w.Close();
                             OpenBuildMinigame(order);
-                        }, 18, Ui.ButtonHot, missing.Count == 0);
+                        }, 18, Ui.ButtonHot, missing.Count == 0 && order.EmployeeMinutesLeft == 0);
                     Ui.Size(go, -1, 40);
+                    OrderActions(card.transform, order, w.Rebuild);
                 }
 
                 Ui.Size(Ui.Button(w.Content, "关闭", w.Close, 20), -1, 46);

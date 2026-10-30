@@ -16,6 +16,9 @@ namespace PCShopSell.Core.Session
         public int CheckoutMinutes;
 
         public string Description;
+        public int ShiftStart = 9 * 60, ShiftEnd = 21 * 60;
+        public int BuildsCompleted;
+        public bool OnDuty(GameTimestamp t) => t.MinuteOfDay >= ShiftStart && t.MinuteOfDay < ShiftEnd;
 
         public Money DailyWage => Money.FromYuan(DailyWageYuan);
     }
@@ -33,6 +36,8 @@ namespace PCShopSell.Core.Session
         private readonly List<Employee> _candidates = new List<Employee>();
 
         public Employee Employee { get; private set; }
+        public Employee Assembler { get; private set; }
+        public string OnDutyStaffName => Employee != null && Employee.OnDuty(Clock.Now) ? Employee.Name : Assembler?.Name ?? "店员";
         public bool EverHired { get; private set; }
         public IReadOnlyList<Employee> Candidates => _candidates;
 
@@ -66,10 +71,16 @@ namespace PCShopSell.Core.Session
         public bool CompleteBuild(int orderId, int mistakes)
         {
             if (!InPlayerShop) return false;
-            if (!PlayerShop.CompleteBuild(orderId)) return Fail("配件不齐，装不了。");
-            int minutes = Math.Max(20, 60 - Player.Skill / 3 + mistakes * 5 + (Player.Tired ? 15 : 0));
+            var order = System.Linq.Enumerable.FirstOrDefault(PlayerShop.Orders, o => o.Id == orderId);
+            if (order == null) return Fail("订单已取消或完成。");
+            int minutes = Math.Max(20, 60 - Player.Skill / 3 + Math.Max(order.Mistakes, Math.Max(0, mistakes)) * 5 + (Player.Tired ? 15 : 0));
+            if (Clock.Now.MinutesUntil(order.DueAt) <= minutes) return Fail($"来不及交付：装机需要 {minutes} 分钟，已超过剩余交期。");
+            if (order.EmployeeMinutesLeft > 0) return Fail("店员正在装这台机器，请等他完成。");
+            if (!PlayerShop.ReserveBuild(orderId)) return Fail("配件不齐，装不了。");
+            _manualBuildId = orderId;
+            try { AdvanceClock(minutes); } finally { _manualBuildId = -1; }
+            if (IsGameOver || !PlayerShop.CompleteBuild(orderId)) return Fail("装机未交付，请检查订单状态。");
             Player.Skill = Math.Min(100, Player.Skill + 2);
-            AdvanceClock(minutes);
             Say($"整机交付！用时 {minutes} 分钟。");
             return true;
         }
@@ -115,13 +126,38 @@ namespace PCShopSell.Core.Session
 
         public bool Hire(int candidateIndex)
         {
-            if (candidateIndex < 0 || candidateIndex >= _candidates.Count) return false;
+            if (Employee != null || candidateIndex < 0 || candidateIndex >= _candidates.Count) return false;
             Employee = _candidates[candidateIndex];
+            Flags.Remove("employee:trained");
             EverHired = true;
             PlayerShop.Settings.EmployeeCheckoutMinutes = Employee.CheckoutMinutes;
             _candidates.Clear();
-            Show("雇到人了", $"{Employee.Name} 每天 9:00–21:00 看店（只会收银，不会装机），日薪 {Employee.DailyWage}，每天结算。\n你不在店里时，他在班就照常营业。");
+            Show("雇到人了", $"{Employee.Name} 每天 9:00–21:00 看店（只会收银，不会装机），日薪 {Employee.DailyWage}，每天结算。\n他在班就持续收银，你在店内装机或外出都不影响。");
             return true;
+        }
+
+        public bool HireAssembler(int index)
+        {
+            if (!InPlayerShop || Assembler != null || index < 0 || index >= _candidates.Count) return false;
+            if (!Ledger.TryDebit(Clock.Today, "培训", Money.FromYuan(1200), "装机员入职培训")) return Fail("入职培训需要 ¥1,200。");
+            Assembler = _candidates[index]; Assembler.DailyWageYuan += 60;
+            EverHired = true; _candidates.Clear(); Flags.Add("employee:auto-build");
+            Say($"{Assembler.Name}入职装机岗位，日薪 {Assembler.DailyWage}。可与收银员同时工作。");
+            return true;
+        }
+        public void FireAssembler()
+        {
+            if (Assembler == null) return;
+            Say(Assembler.Name + "离职了。"); Assembler = null;
+            foreach (var o in PlayerShop.Orders) o.EmployeeMinutesLeft = 0;
+        }
+        public void CycleShift(bool assembly)
+        {
+            var e = assembly ? Assembler : Employee;
+            if (e == null) return;
+            if (e.ShiftStart == 9 * 60 && e.ShiftEnd == 21 * 60) e.ShiftEnd = 17 * 60;
+            else if (e.ShiftStart == 9 * 60) { e.ShiftStart = 13 * 60; e.ShiftEnd = 21 * 60; }
+            else { e.ShiftStart = 9 * 60; e.ShiftEnd = 21 * 60; }
         }
 
         public void Fire()
@@ -129,11 +165,14 @@ namespace PCShopSell.Core.Session
             if (Employee == null) return;
             Say($"{Employee.Name} 走了。");
             Employee = null;
+            _employeeBuilding = false;
+            if (Assembler == null) foreach (var order in PlayerShop.Orders) order.EmployeeMinutesLeft = 0;
+            Flags.Remove("employee:trained");
         }
 
         public bool IsEmployeeOnDuty(GameTimestamp t)
         {
-            return Employee != null && t.MinuteOfDay >= DutyStartMinute && t.MinuteOfDay < DutyEndMinute;
+            return (Employee != null && Employee.OnDuty(t)) || (Assembler != null && Assembler.OnDuty(t));
         }
 
         private void OnCandidateHour(GameDate today)
@@ -159,8 +198,8 @@ namespace PCShopSell.Core.Session
 
         private void PayWages(GameDate day)
         {
-            if (Employee == null) return;
-            Ledger.ForceDebit(day, "工资", Employee.DailyWage, Employee.Name);
+            if (Employee != null) Ledger.ForceDebit(day, "工资", Employee.DailyWage, Employee.Name);
+            if (Assembler != null) Ledger.ForceDebit(day, "工资", Assembler.DailyWage, Assembler.Name);
         }
     }
 }

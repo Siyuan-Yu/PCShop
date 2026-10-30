@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PCShopSell.Game.Procedural;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -98,15 +98,16 @@ namespace PCShopSell.Game.Runtime
             float night = NightFactor(minuteOfDay);
 
             _cam.backgroundColor = interior ? new Color(0.08f, 0.08f, 0.1f) : Color.Lerp(a.SkyColor, b.SkyColor, t);
-            RenderSettings.ambientLight = interior ? new Color(0.55f, 0.52f, 0.48f) : Color.Lerp(a.AmbientColor, b.AmbientColor, t);
+            RenderSettings.ambientLight = interior ? new Color(0.76f, 0.77f, 0.70f) : Color.Lerp(a.AmbientColor, b.AmbientColor, t);
             RenderSettings.fog = !interior && (a.Fog || b.Fog);
             RenderSettings.fogColor = Color.Lerp(a.FogColor, b.FogColor, t);
             RenderSettings.fogStartDistance = 160f;
             RenderSettings.fogEndDistance = 420f;
 
             _sun.color = interior ? new Color(1f, 0.93f, 0.82f) : Color.Lerp(a.SunColor, b.SunColor, t);
-            _sun.intensity = interior ? 1.0f : Mathf.Lerp(a.SunIntensity, b.SunIntensity, t);
-            _sun.transform.rotation = Quaternion.Euler(Vector3.Lerp(a.SunEuler, b.SunEuler, t));
+            _sun.intensity = interior ? 0.85f : Mathf.Lerp(a.SunIntensity, b.SunIntensity, t);
+            _sun.transform.rotation = Quaternion.Euler(interior ? new Vector3(65f, 135f, 0) : Vector3.Lerp(a.SunEuler, b.SunEuler, t));
+            _sun.shadowStrength = interior ? 0.45f : 0.65f;
 
             _bloom.intensity.Override(Mathf.Lerp(a.BloomIntensity, b.BloomIntensity, t));
             _bloom.threshold.Override(Mathf.Lerp(a.BloomThreshold, b.BloomThreshold, t));
@@ -123,7 +124,7 @@ namespace PCShopSell.Game.Runtime
             }
             foreach (Light l in _lamps)
             {
-                if (l != null) l.intensity = night * 3f;
+                if (l != null) l.intensity = night * 1.8f;
             }
         }
     }

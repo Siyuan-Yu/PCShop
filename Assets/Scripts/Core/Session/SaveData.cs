@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace PCShopSell.Core.Session
 {
@@ -7,6 +7,8 @@ namespace PCShopSell.Core.Session
     public sealed class SaveData
     {
         public int version = 1;
+        public bool hasBusiness;
+        public BusinessSave business;
         public string savedAt;
         /// <summary>随机数状态（ulong 的十进制字符串，避免 JSON 精度问题）。</summary>
         public string rngState;
@@ -40,6 +42,9 @@ namespace PCShopSell.Core.Session
         public string[] restockIds;
         public int[] restockTargets;
         public string restockStore;
+        public bool hasRestockPolicy;
+        public long restockReserveYuan, restockDailyBudgetYuan;
+        public int restockReserveDays;
         public double reputation;
         public int accepted;
         public SaveOrder[] orders;
@@ -55,6 +60,8 @@ namespace PCShopSell.Core.Session
         public SaveBargain[] bargains;
 
         public SaveEmployee employee;
+        public bool hasAssembler;
+        public SaveEmployee assembler;
         public bool hasEmployee;
         public bool everHired;
         public SaveEmployee[] candidates;
@@ -202,10 +209,13 @@ namespace PCShopSell.Core.Session
     public sealed class SaveOrder
     {
         public int id;
+        public string contractId;
         public int tier;
         public long priceCents;
         public long placedAt;
         public long dueAt;
+        public bool partsReserved;
+        public int mistakes, employeeMinutesLeft;
     }
 
     [Serializable]
@@ -241,6 +251,7 @@ namespace PCShopSell.Core.Session
         public string name;
         public long wage;
         public int checkoutMinutes;
+        public int shiftStart, shiftEnd, buildsCompleted;
         public string description;
     }
 

@@ -188,7 +188,18 @@ namespace PCShopSell.Core.Session
             _owned.Add(kind);
             Show("买到了" + v.Name, kind == VehicleKind.Tricycle
                 ? "能拉很多货。但三轮车在城里不能上路——巡逻交警看到就会追，追上罚款，还可能扣车。"
-                : "比走路快三倍，能带一点货。");
+                : kind == VehicleKind.Car ? "商务出行，拥有后魅力 +2；日养护费 ¥40（含油费、保险）。"
+                : kind == VehicleKind.Van ? "合法运货，容量 80 格；日养护费 ¥60（含油费、保险）。" : "比走路快三倍，能带一点货。");
+            return true;
+        }
+
+        public bool SellVehicle(VehicleKind kind)
+        {
+            if (IsGameOver || CurrentPlace == null || CurrentPlace.Kind != PlaceKind.Dealer || !IsDealerOpen || !_owned.Contains(kind)) return false;
+            if (kind == VehicleKind.Tricycle && TricycleImpounded) return Fail("先赎回扣押的车再出售。");
+            if (Vehicle == kind && !SetVehicle(VehicleKind.Walk)) return false;
+            _owned.Remove(kind);
+            Ledger.Credit(Clock.Today, "载具出售", Vehicles.Get(kind).Price.Scale(.6), Vehicles.Get(kind).Name);
             return true;
         }
 

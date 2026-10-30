@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -59,8 +59,8 @@ namespace PCShopSell.Game.UI
                 _tabButtons.Add((Ui.Button(tabs, name, () => SelectTab(t), 18), t));
             }
 
-            _dockContent = Ui.Rect(_dock, "Content").Anchor(0, 0, 1, 1, 0, 60, 0, 58);
-            Ui.VList(_dockContent, 6, 12);
+            _dockContent = Ui.Scroll(_dock);
+            ((RectTransform)_dockContent.parent.parent).Anchor(0, 0, 1, 1, 0, 60, 0, 58);
 
             bool staffed = S.IsEmployeeOnDuty(S.Clock.Now);
             Button leave = Ui.Button(_dock, staffed ? "离开店铺（店员看店）" : "离开店铺（没人看店就关门）", ConfirmLeaveShop, 19, Ui.Warn);
@@ -86,10 +86,10 @@ namespace PCShopSell.Game.UI
             _leaveConfirm = OpenWindow("要离开店铺吗？", 620, 320, w =>
             {
                 if (staffed)
-                    Para(w.Content, $"店员{S.Employee.Name}在班，你走了店<color=#7FD18B>照常营业</color>，顾客由他来接待、结账。", 19);
+                    Para(w.Content, $"店员{S.OnDutyStaffName}在班，你走了店<color=#7FD18B>照常营业</color>，顾客由他来接待、结账。", 19);
                 else
                 {
-                    Para(w.Content, "店里现在只有你一个人，你一走店就<color=#E0806A>关门</color>。", 19);
+                    Para(w.Content, "店里现在只有你一个人，你一走店就<color=#D79780>关门</color>。", 19);
                     Para(w.Content, inShop > 0 ? $"柜台前还有{inShop}个顾客在排队，他们会白等一场走掉；关门期间也不会有人进店。" : "关门期间不会有顾客进店。", 17, Ui.Dim);
                     if (S.Employee != null) Para(w.Content, $"（店员{S.Employee.Name}现在不在班。）", 16, Ui.Dim);
                 }
@@ -147,9 +147,16 @@ namespace PCShopSell.Game.UI
         public void RebuildDock()
         {
             if (_dock == null) return;
-            var scrolled = _scrollTab == _tab ? Ui.SaveScroll(_dockContent) : null;
+            var scrolled = _scrollTab == _tab ? Ui.SaveScroll(_dock) : null;
             _scrollTab = _tab;
             Ui.Clear(_dockContent);
+            var guide = S.CurrentQuest();
+            foreach (var (button, tab) in _tabButtons)
+            {
+                bool recommended = guide != null && guide.Target == TargetFor(tab);
+                button.GetComponentInChildren<Text>().text = (recommended ? "› " : "") + Tabs.First(t => t.tab == tab).name;
+            }
+            GuideHint(_dockContent, TargetFor(_tab), RebuildDock);
             switch (_tab)
             {
                 case ShopTab.Counter: BuildCounter(); break;
@@ -160,7 +167,8 @@ namespace PCShopSell.Game.UI
                 case ShopTab.Upgrades: BuildUpgrades(); break;
                 case ShopTab.Staff: BuildStaff(); break;
             }
-            Ui.RestoreScroll((RectTransform)_dockContent, _dockContent, scrolled);
+            Ui.RestoreScroll(_dock, _dock, scrolled);
+            if (scrolled == null) _dockContent.anchoredPosition = Vector2.zero;
         }
 
         private Transform C => _dockContent;
@@ -175,19 +183,19 @@ namespace PCShopSell.Game.UI
             Line(C, $"今日进店 {shop.TodayCustomers} 人 · 流失 {shop.TodayLost} 人 · 营业额 {shop.TodaySales}", 18);
             Line(C, $"店里 {shop.ActiveCustomers.Count} 位顾客，{shop.Queue.Count} 位在排队结账（{PaymentText(shop.Accepted)}）", 17, Ui.Dim);
             if (S.Employee != null)
-                Line(C, $"店员 {S.Employee.Name}：{(S.IsEmployeeOnDuty(S.Clock.Now) ? "在岗" : "下班")}（你在店时你来收银）", 16, Ui.Dim);
+                Line(C, $"店员 {S.Employee.Name}：{(S.Employee.OnDuty(S.Clock.Now) ? "在岗" : "下班")}（在班持续收银，你可以协助或装机）", 16, Ui.Dim);
 
             bool atCounter = _ctrl.Interior != null && _ctrl.Interior.NearCounter;
             if (shop.Queue.Count > 0)
-                Line(C, atCounter ? "你在收银台：点“结账”或按 F，把货交给顾客、收钱。" : "<color=#E0806A>顾客在收银台前排队等你。走到收银台后面才能结账。</color>", 16);
+                Line(C, atCounter ? "你在收银台：点“结账”或按 F，把货交给顾客、收钱。" : "<color=#D79780>顾客在收银台前排队等你。走到收银台后面才能结账。</color>", 16);
             RectTransform list = Ui.Scroll(C, fitBanner ? 200 : 420);
             foreach (ShopCustomer c in shop.Queue)
             {
                 ShopCustomer cust = c;
                 RectTransform row = Ui.Row(list, 44);
                 long waited = c.WaitingSince.MinutesUntil(S.Clock.Now);
-                string patience = waited >= shop.Settings.PatienceMinutes - 12 ? $"<color=#E0806A>等了 {waited} 分钟</color>" : $"等了 {waited} 分钟";
-                Ui.Size(Ui.Label(row, $"{c.ItemName}（{(c.DisplayTier >= 0 ? "展示机" : c.GoodsId != null ? "杂货" : c.ItemBoxed ? "盒装" : "散件")}） <color=#7CE38B>{c.Spend}</color>\n<size=14>{patience}</size>", 17), 360);
+                string patience = waited >= shop.Settings.PatienceMinutes - 12 ? $"<color=#D79780>等了 {waited} 分钟</color>" : $"等了 {waited} 分钟";
+                Ui.Size(Ui.Label(row, $"{c.ItemName}（{(c.DisplayTier >= 0 ? "展示机" : c.GoodsId != null ? "杂货" : c.ItemBoxed ? "盒装" : "散件")}） <color=#A9C9A9>{c.Spend}</color>\n<size=14>{patience}</size>", 17), 360);
                 Ui.Size(Ui.Button(row, "结账", () => _ctrl.Checkout(cust.Id), 18, Ui.ButtonHot, atCounter), 100);
             }
             if (shop.Queue.Count == 0) Ui.Size(Ui.Label(list, "没人排队。顾客挑好货会过来，等太久就走。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
@@ -196,6 +204,7 @@ namespace PCShopSell.Game.UI
             if (orders > 0) Line(C, $"有 {orders} 个订单等你处理（去“订单”页）", 18, Ui.Warn);
             if (S.Online.Pending.Count > 0) Line(C, $"1788 有 {S.Online.Pending.Count} 单在路上，明天 10:00 送到", 17, Ui.Dim);
             Line(C, $"库存 {shop.Stock.UsedSpace:0.#}/{shop.Stock.Capacity:0} 格 · 全局加价 {shop.Markup:0.00}×", 17, Ui.Dim);
+            Ui.Size(Ui.Button(C, "经营总览 · 合同 / 分店 / 资产", OpenBusinessPanel, 18, Ui.ButtonHot), -1, 40);
             Ui.Size(Ui.Button(C, "经营报表（近 14 天收入曲线）", OpenReportWindow, 18), -1, 40);
         }
 
@@ -218,7 +227,7 @@ namespace PCShopSell.Game.UI
                 FurnitureDef sdef = FurnitureCatalog.Get(S.ShopLayout[layoutIdx].Id);
                 string tier = sdef != null && sdef.ShelfKg > ShelfKinds.CapacityKg ? (sdef.ShelfKg >= 160 ? "重型" : "加固") : "普通";
                 RectTransform srow = Ui.Row(C, 38, 4);
-                Ui.Size(Ui.Label(srow, $"<b>{si + 1}号</b> <size=12><color=#9AA3AD>{tier}</color></size>", 16, TextAnchor.MiddleLeft), 78);
+                Ui.Size(Ui.Label(srow, $"<b>{si + 1}号</b> <size=12><color=#ABB5A8>{tier}</color></size>", 16, TextAnchor.MiddleLeft), 78);
                 Ui.Size(Ui.Button(srow, sk == null ? "选择摆什么 ▾" : sk.Name + "  ▾", () => OpenShelfKindChooser(layoutIdx), 16, sk == null ? Ui.Warn : Ui.ButtonBg), 150);
                 string load = "";
                 if (sk != null)
@@ -261,7 +270,7 @@ namespace PCShopSell.Game.UI
                     Ui.Label(lBadge.transform, "散件 " + looseN, 14, TextAnchor.MiddleCenter, Color.white).rectTransform.Fill(1);
                 }
                 int onShelf = shop.ShelfFillOf(cat).Total;
-                Ui.Size(Ui.Label(sum, $"共 {total} 件　" + (S.ShelvesOfKind(ShelfKinds.ForCategory(cat).Id) == 0 ? "<color=#E0806A>没有货架，卖不出去</color>" : $"货架上 {onShelf} 件"), 15, TextAnchor.MiddleLeft, Ui.Dim), 260);
+                Ui.Size(Ui.Label(sum, $"共 {total} 件　" + (S.ShelvesOfKind(ShelfKinds.ForCategory(cat).Id) == 0 ? "<color=#D79780>没有货架，卖不出去</color>" : $"货架上 {onShelf} 件"), 15, TextAnchor.MiddleLeft, Ui.Dim), 260);
             }
             foreach (ShelfKind gk in ShelfKinds.GoodsKinds)
             {
@@ -270,7 +279,7 @@ namespace PCShopSell.Game.UI
                 anything = true;
                 RectTransform sum = Ui.Row(C, 32, 4);
                 Ui.Size(Ui.Label(sum, "<b>" + gk.Name + "</b>", 16, TextAnchor.MiddleLeft), 64);
-                Ui.Size(Ui.Label(sum, $"共 {gTotal} 件　" + (S.ShelvesOfKind(gk.Id) == 0 ? "<color=#E0806A>没有货架，卖不出去</color>" : $"货架上 {shop.ShelfFillOf(gk).Total} 件"), 15, TextAnchor.MiddleLeft, Ui.Dim), 420);
+                Ui.Size(Ui.Label(sum, $"共 {gTotal} 件　" + (S.ShelvesOfKind(gk.Id) == 0 ? "<color=#D79780>没有货架，卖不出去</color>" : $"货架上 {shop.ShelfFillOf(gk).Total} 件"), 15, TextAnchor.MiddleLeft, Ui.Dim), 420);
             }
             if (!anything) Line(C, "店里一件货都没有。", 16, Ui.Dim);
             Line(C, "盒装占 1 格、卖得贵；拆成散件占 0.5 格但便宜，拆了不能复原。", 14, Ui.Dim);
@@ -282,7 +291,7 @@ namespace PCShopSell.Game.UI
             {
                 StockLine line = l;
                 RectTransform row = Ui.Row(list, 40);
-                Ui.Size(Ui.Label(row, $"{l.Part.Name} <color=#9AA3AD>{(l.Boxed ? "盒装" : "散件")}</color> ×{l.Count}", 17), 280);
+                Ui.Size(Ui.Label(row, $"{l.Part.Name} <color=#ABB5A8>{(l.Boxed ? "盒装" : "散件")}</color> ×{l.Count}", 17), 280);
                 Ui.Size(Ui.Label(row, $"售 {shop.PriceOf(l.Part, l.Boxed)}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
                 if (l.Boxed)
                 {
@@ -302,7 +311,7 @@ namespace PCShopSell.Game.UI
             {
                 string gid = kv.Key;
                 RectTransform row = Ui.Row(list, 40);
-                Ui.Size(Ui.Label(row, $"{Gifts.Get(gid).Name} <color=#9AA3AD>杂货</color> ×{kv.Value}", 17), 280);
+                Ui.Size(Ui.Label(row, $"{Gifts.Get(gid).Name} <color=#ABB5A8>杂货</color> ×{kv.Value}", 17), 280);
                 Ui.Size(Ui.Label(row, $"售 {shop.GoodsPriceOf(gid)}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
                 Ui.Size(Ui.Button(row, "收回 1", () =>
                 {
@@ -348,8 +357,8 @@ namespace PCShopSell.Game.UI
                 {
                     bool own = shop.HasPartMarkup(p);
                     double m = shop.MarkupOf(p);
-                    name.text = $"<b>{p.Name}</b>\n<size=13><color=#9AA3AD>市价 {S.Market.PriceOf(p)} → 盒 {shop.PriceOf(p, true)} / 散 {shop.PriceOf(p, false)}</color></size>";
-                    mk.text = own ? $"{m:0.00}×" : $"<color=#9AA3AD>{m:0.00}×</color>";
+                    name.text = $"<b>{p.Name}</b>\n<size=13><color=#ABB5A8>市价 {S.Market.PriceOf(p)} → 盒 {shop.PriceOf(p, true)} / 散 {shop.PriceOf(p, false)}</color></size>";
+                    mk.text = own ? $"{m:0.00}×" : $"<color=#ABB5A8>{m:0.00}×</color>";
                     follow.interactable = own;
                 }
 
@@ -387,17 +396,19 @@ namespace PCShopSell.Game.UI
             OpenWindow("经营报表", 900, 640, w =>
             {
                 var days = PCShopSell.Core.Finance.FinanceReport.Daily(S.Ledger, S.Clock.Today, 14);
-                Money rev = Money.Zero, exp = Money.Zero;
+                Money rev = Money.Zero, exp = Money.Zero, other = Money.Zero;
                 long max = 100;
                 foreach (var d in days)
                 {
                     rev += d.Revenue;
                     exp += d.Expense;
+                    other += d.OtherIncome;
                     max = System.Math.Max(max, System.Math.Max(d.Revenue.Cents, d.Expense.Cents));
                 }
-                Line(w.Content, $"近 {days.Count} 天：营业额 {rev}　支出 {exp}　净 {rev - exp}", 19);
-                Line(w.Content, "<color=#7CE38B>■</color> 营业额（零售 + 装机）　<color=#E0806A>■</color> 支出（进货、房租、工资、开销等）", 15, Ui.Dim);
+                Line(w.Content, $"近 {days.Count} 天：营业额 {rev}　支出 {exp}　现金变化 {rev + other - exp}", 19);
+                Line(w.Content, "<color=#A9C9A9>■</color> 营业额（零售 + 装机）　<color=#D79780>■</color> 支出（进货、房租、工资、开销等）", 15, Ui.Dim);
 
+                Line(w.Content, $"其他收款 {other}（含退押金等）；采购、押金、家具和生活开销计入现金支出，不代表利润。", 14, Ui.Dim);
                 Image plot = Ui.Panel(w.Content, "Chart", new Color(0, 0, 0, 0.22f));
                 Ui.Size(plot, -1, 380);
                 var h = plot.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -417,13 +428,13 @@ namespace PCShopSell.Game.UI
                     float he = d.Expense.Cents <= 0 ? 0 : Mathf.Max(0.01f, (float)d.Expense.Cents / max);
                     Ui.Panel(area, "Rev", new Color(0.48f, 0.89f, 0.55f)).rectTransform.Anchor(0.05f, 0, 0.48f, hr);
                     Ui.Panel(area, "Exp", new Color(0.88f, 0.5f, 0.42f)).rectTransform.Anchor(0.52f, 0, 0.95f, he);
-                    Text lbl = Ui.Label(col, $"{d.Date.Month}/{d.Date.Day}\n<size=11><color=#7CE38B>{(d.Revenue.IsZero ? "-" : "¥" + d.Revenue.Yuan)}</color></size>\n<size=11><color=#E0806A>{(d.Expense.IsZero ? "-" : "¥" + d.Expense.Yuan)}</color></size>", 12, TextAnchor.UpperCenter);
+                    Text lbl = Ui.Label(col, $"{d.Date.Month}/{d.Date.Day}\n<size=11><color=#A9C9A9>{(d.Revenue.IsZero ? "-" : "¥" + d.Revenue.Yuan)}</color></size>\n<size=11><color=#D79780>{(d.Expense.IsZero ? "-" : "¥" + d.Expense.Yuan)}</color></size>", 12, TextAnchor.UpperCenter);
                     lbl.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -40);
                 }
 
                 // 最好的一天
                 var best = days.OrderByDescending(x => x.Revenue.Cents).FirstOrDefault();
-                if (best != null && best.Revenue.IsPositive) Line(w.Content, $"最好的一天：{best.Date.Month}/{best.Date.Day}，营业额 {best.Revenue}", 16, Ui.Dim);
+                if (best != null && best.Revenue.IsPositive) Line(w.Content, $"营业额最高：{best.Date.Month}/{best.Date.Day}，营业额 {best.Revenue}", 16, Ui.Dim);
                 Ui.Size(Ui.Button(w.Content, "关闭", w.Close, 20), -1, 46);
             });
         }
@@ -440,16 +451,17 @@ namespace PCShopSell.Game.UI
                 BuildOrder order = o;
                 List<PartDef> missing = S.MissingParts(o);
                 long left = S.Clock.Now.MinutesUntil(o.DueAt);
-                Text head = Ui.Label(list, $"<b>{PartCatalog.TierName(o.Tier)}整机</b>  报价 <color=#7CE38B>{o.Price}</color>  剩 {left / 60} 小时", 18);
+                Text head = Ui.Label(list, $"<b>{PartCatalog.TierName(o.Tier)}整机</b>  报价 <color=#A9C9A9>{o.Price}</color>  剩 {left / 60} 小时", 18);
                 Ui.Size(head, -1, 28);
                 foreach (PartDef p in PartCatalog.BuildList(o.Tier))
                 {
-                    bool have = shop.Stock.CountAll(p) > 0;
-                    Ui.Size(Ui.Label(list, $"   {(have ? "<color=#7CE38B>✓</color>" : "<color=#E0806A>✗</color>")} {PartCatalog.CategoryName(p.Category)}：{p.Name}", 16), -1, 22);
+                    bool have = order.PartsReserved || shop.Stock.CountAll(p) > 0;
+                    Ui.Size(Ui.Label(list, $"   {(have ? "<color=#A9C9A9>✓</color>" : "<color=#D79780>✗</color>")} {PartCatalog.CategoryName(p.Category)}：{p.Name}", 16), -1, 22);
                 }
-                Ui.Size(Ui.Button(list, missing.Count == 0 ? "开始装机" : $"还缺 {missing.Count} 样配件", () => OpenBuildMinigame(order), 18, Ui.ButtonHot, missing.Count == 0), -1, 40);
+                Ui.Size(Ui.Button(list, missing.Count == 0 ? "开始装机" : $"还缺 {missing.Count} 样配件", () => OpenBuildMinigame(order), 18, Ui.ButtonHot, missing.Count == 0 && order.EmployeeMinutesLeft == 0), -1, 40);
+                OrderActions(list, order, RebuildDock);
             }
-            if (shop.Orders.Count == 0) Ui.Size(Ui.Label(list, "暂时没有订单。约每 8 位顾客里有 1 位想要装整机，装机订单会出现在这里。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
+            if (shop.Orders.Count == 0) Ui.Size(Ui.Label(list, "暂时没有订单。部分顾客想要装整机，装机订单会出现在这里。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
         }
 
         // ---------- 升级 ----------
@@ -474,33 +486,47 @@ namespace PCShopSell.Game.UI
                 if (!u.Offered && !(reward && owned)) continue; // 手机去手机店、货架去家具城；自助结账是任务奖励，拿到了才显示
                 string blocker = S.UpgradeBlocker(u);
                 RectTransform row = Ui.Row(list, 62);
-                string status = owned ? "<color=#7CE38B>已拥有</color>" : blocker == null ? $"<color=#7CE38B>{u.Price}</color>" : $"{u.Price}  <color=#E0806A>{blocker}</color>";
+                string status = owned ? "<color=#A9C9A9>已拥有</color>" : blocker == null ? $"<color=#A9C9A9>{u.Price}</color>" : $"{u.Price}  <color=#D79780>{blocker}</color>";
                 Ui.Size(Ui.Label(row, $"<b>{u.Name}</b>  {status}\n<size=14>{u.Description}</size>", 17), 420);
-                Ui.Size(Ui.Button(row, owned ? (reward ? "奖励" : "已买") : "购买", () =>
+                Ui.Size(Ui.Button(row, owned ? "已拥有" : "购买", () =>
                 {
                     S.BuyUpgrade(u.Id);
                     RebuildDock();
                 }, 18, Ui.ButtonHot, !owned && blocker == null), 90);
             }
-            Line(list, "智能手机去街上的手机店买；更大更结实的货架去家具城买；自助结账平台是任务奖励（一年目标达标就送）。", 14, Ui.Dim);
+            Line(list, "智能手机去街上的手机店买；更大更结实的货架去家具城买；自助结账可在知名度 8 后购买，一年目标达标也会赠送。", 14, Ui.Dim);
         }
 
         // ---------- 招人 ----------
 
         private void BuildStaff()
         {
-            Line(C, $"店员每天 {Ui.Hm(GameSession.DutyStartMinute)}–{Ui.Hm(GameSession.DutyEndMinute)} 看店，只会收银不会装机，日薪每天结算。", 16, Ui.Dim);
+            Line(C, $"可雇一位收银员和一位装机员，分别排班；工资按日结算，缩短班次不减薪。", 16, Ui.Dim);
             if (S.Employee != null)
             {
                 Employee e = S.Employee;
                 Line(C, $"{e.Name}（{e.Description}）日薪 {e.DailyWage}，结账每单 {e.CheckoutMinutes} 分钟", 19);
-                Ui.Size(Ui.Button(C, "辞退", () =>
+                if (!S.EmployeeTrained)
+                    Ui.Size(Ui.Button(C, "装机培训 ¥1,200（日薪 +¥60）", () => { S.TrainEmployee(); RebuildDock(); }, 17, Ui.ButtonHot), -1, 44);
+                else
+                    Ui.Size(Ui.Button(C, S.AutoBuildEnabled ? "自动装机：开（点击暂停）" : "自动装机：关（点击启用）", () => { S.ToggleAutoBuild(); RebuildDock(); }, 17), -1, 44);
+                Line(C, "培训后按交期装机；先收银、空闲时继续装机，离店后也能交付。", 14, Ui.Dim);
+                Ui.Size(Ui.Button(C, $"收银员班次 {Ui.Hm(e.ShiftStart)}–{Ui.Hm(e.ShiftEnd)}（点击切换，日薪不变）", () => { S.CycleShift(false); RebuildDock(); }, 15), -1, 36);
+                Ui.Size(Ui.Button(C, "辞退收银员", () =>
                 {
                     S.Fire();
                     RebuildDock();
                 }, 18, Ui.Warn), -1, 44);
-                return;
             }
+            if (S.Assembler != null)
+            {
+                var a = S.Assembler;
+                Line(C, $"装机员 {a.Name} · 日薪 {a.DailyWage} · 累计完成 {a.BuildsCompleted} 单", 17);
+                Ui.Size(Ui.Button(C, $"装机员班次 {Ui.Hm(a.ShiftStart)}–{Ui.Hm(a.ShiftEnd)}（点击切换）", () => { S.CycleShift(true); RebuildDock(); }, 15), -1, 36);
+                Ui.Size(Ui.Button(C, S.AutoBuildEnabled ? "自动装机：开" : "自动装机：关", () => { S.ToggleAutoBuild(); RebuildDock(); }, 16), -1, 36);
+                Ui.Size(Ui.Button(C, "辞退装机员", () => { S.FireAssembler(); RebuildDock(); }, 16, Ui.Warn), -1, 36);
+            }
+            if (S.Employee != null && S.Assembler != null) return;
             if (S.Candidates.Count > 0)
             {
                 Line(C, "来应聘的人：", 19);
@@ -509,13 +535,15 @@ namespace PCShopSell.Game.UI
                     int idx = i;
                     Employee c = S.Candidates[i];
                     RectTransform row = Ui.Row(C, 50);
-                    Ui.Size(Ui.Label(row, $"{c.Name}：{c.Description}\n<size=14>日薪 {c.DailyWage} · 结账每单 {c.CheckoutMinutes} 分钟</size>", 18), 380);
-                    Ui.Size(Ui.Button(row, "雇用", () =>
+                    Ui.Size(Ui.Label(row, $"{c.Name}：{c.Description}\n<size=14>日薪 {c.DailyWage} · 结账每单 {c.CheckoutMinutes} 分钟</size>", 16), 300);
+                    Ui.Size(Ui.Button(row, "收银", () =>
                     {
                         S.Hire(idx);
                         RebuildDock();
-                    }, 18, Ui.ButtonHot), 100);
+                    }, 16, Ui.ButtonHot, S.Employee == null), 90);
+                    Ui.Size(Ui.Button(row, "装机", () => { S.HireAssembler(idx); RebuildDock(); }, 16, Ui.ButtonBg, S.Assembler == null), 90);
                 }
+                Line(C, "装机岗位：入职培训 ¥1,200，以上日薪另加 ¥60；熟练后每单更快。", 14, Ui.Dim);
                 return;
             }
             if (S.JobAdDay >= 0)

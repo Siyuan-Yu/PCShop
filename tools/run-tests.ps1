@@ -1,4 +1,4 @@
-# 在工程镜像里跑 EditMode 测试（编辑器开着本工程时也能跑）。
+﻿# 在工程镜像里跑 EditMode 测试（编辑器开着本工程时也能跑）。
 # 用法：powershell -File tools\run-tests.ps1 [-Unity <Unity.exe>] [-Mirror <镜像目录>]
 param(
     [string]$Platform = "EditMode",
@@ -8,6 +8,7 @@ param(
 $src = (Resolve-Path "$PSScriptRoot\..").Path
 New-Item -ItemType Directory -Force $Mirror | Out-Null
 $dst = (Resolve-Path $Mirror).Path
+if ($dst -eq $src -or $src.StartsWith($dst + "\")) { throw "Mirror must not be the source or its parent" }
 foreach ($d in "Assets", "Packages", "ProjectSettings") {
     robocopy "$src\$d" "$dst\$d" /MIR /NFL /NDL /NJH /NJS /NP /R:0 /W:0 | Out-Null
 }
@@ -15,7 +16,7 @@ $xml = "$env:TEMP\pcshop-tests.xml"
 $log = "$env:TEMP\pcshop-tests.log"
 Remove-Item $xml -ErrorAction SilentlyContinue
 # 不用 Start-Process -Wait：Unity 的子进程会让它一直挂着。
-$p = Start-Process -FilePath $Unity -ArgumentList '-batchmode', '-nographics', '-projectPath', "`"$dst`"", '-runTests', '-testPlatform', $Platform, '-testResults', "`"$xml`"", '-logFile', "`"$log`"" -PassThru
+$p = Start-Process -WindowStyle Hidden -FilePath $Unity -ArgumentList '-batchmode', '-nographics', '-projectPath', "`"$dst`"", '-runTests', '-testPlatform', $Platform, '-testResults', "`"$xml`"", '-logFile', "`"$log`"" -PassThru
 $p.WaitForExit()
 "exit $($p.ExitCode)"
 if (Test-Path $xml) {

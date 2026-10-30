@@ -34,6 +34,21 @@ namespace PCShopSell.Tests
             Assert.IsNull(s.Trip, "手动走路不产生 Trip");
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Walking_ManualAndAutomatic_CoverHalfThePreviousDistancePerSecond(bool automatic)
+        {
+            using (var s = AtStreet("st"))
+            {
+                if (automatic) Assert.IsTrue(s.GoTo("mk"));
+                else s.SetSteer(-1, 0);
+                for (int i = 0; i < 10; i++) s.Tick(.1);
+                // Previously 5.5 visual units/sec, multiplied by the world's 3x movement rate.
+                Assert.That(s.PlayerPosition.X, Is.EqualTo(-8.25).Within(.0001));
+                Assert.That(s.PlayerPosition.Y, Is.Zero.Within(.0001));
+            }
+        }
+
         [Test]
         public void Steer_AcrossStreet_StopsAtCorridorEdge()
         {

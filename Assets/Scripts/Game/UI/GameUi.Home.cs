@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
@@ -283,7 +283,7 @@ namespace PCShopSell.Game.UI
 
                 BagStack pick = stacks.FirstOrDefault(s => s.Key == _bagSel);
                 if (pick != null)
-                    Line(w.Content, $"<b>{pick.Name}</b> ×{pick.Count}　占 {Mathf.Max(1, Mathf.CeilToInt((float)(pick.Space - 1e-6)))} 格　{pick.Kg:0.#} 公斤\n<color=#9AA3AD>{pick.Kind}</color>", 17);
+                    Line(w.Content, $"<b>{pick.Name}</b> ×{pick.Count}　占 {Mathf.Max(1, Mathf.CeilToInt((float)(pick.Space - 1e-6)))} 格　{pick.Kg:0.#} 公斤\n<color=#ABB5A8>{pick.Kind}</color>", 17);
                 else
                     Line(w.Content, stacks.Count == 0 ? "背包是空的。去买点东西：礼品在烟酒茶行 / 农贸市场 / 手机网购，进货在电子市场。" : "点一格看详情。", 17, Ui.Dim);
                 Line(w.Content, $"每天 12:00、18:30 饿两次，饭点先吃带着的饭盒（在家吃锅里的）。现在带着 {S.Backpack.Lunchboxes} 盒。", 15, S.Backpack.Lunchboxes < 2 ? Ui.Warn : Ui.Dim);
@@ -414,7 +414,7 @@ namespace PCShopSell.Game.UI
                         Line(list, "—— " + DateLabel((int)(e.Minute / PCShopSell.Core.Time.GameTimestamp.MinutesPerDay)) + " ——", 18, Ui.Accent);
                     }
                     RectTransform row = Ui.Row(list, 44);
-                    string color = e.Kind == "appointment" ? "#FFD54A" : (e.Kind == "repair" || e.Kind == "repairing") ? "#7CE38B" : "#C8D0DA";
+                    string color = e.Kind == "appointment" ? "#DDC18B" : (e.Kind == "repair" || e.Kind == "repairing") ? "#A9C9A9" : "#C8D0DA";
                     Ui.Size(Ui.Label(row, e.HasTime ? e.TimeText : "全天", 18, TextAnchor.MiddleLeft, Ui.Dim), 80);
                     Ui.Size(Ui.Label(row, $"<color={color}>{e.Text}</color>", 17), e.Kind == "repair" ? 480 : 600);
                     if (e.Kind == "repair")
@@ -601,7 +601,7 @@ namespace PCShopSell.Game.UI
             {
                 long left = pan.CookMinutesLeft(S.Clock.Now.TotalMinutes);
                 int readyMinuteOfDay = (int)(pan.Cooking.ReadyMinute % (24 * 60));
-                Line(w.Content, $"<color=#FFD54A>正在焖饭：{pan.Cooking.Batch.Name}，约 {pan.Cooking.Batch.Count} 碗</color>", 20);
+                Line(w.Content, $"<color=#DDC18B>正在焖饭：{pan.Cooking.Batch.Name}，约 {pan.Cooking.Batch.Count} 碗</color>", 20);
                 Line(w.Content, $"还剩 {left} 分钟（{readyMinuteOfDay / 60:00}:{readyMinuteOfDay % 60:00} 好）。焖好之前锅盖打不开，你可以先去干别的。", 17);
                 return;
             }
@@ -695,8 +695,11 @@ namespace PCShopSell.Game.UI
                 Line(list, $"智力 {st.Intelligence}  魅力 {S.EffectiveCharm}（衣着 +{S.Outfit.CharmBonus}）  技术 {st.Skill}   现金 {S.Ledger.Balance}", 17, Ui.Dim);
                 Line(list, "每天饿两次（12:00 / 18:30）：在家吃锅里的饭，出门吃背包里的饭盒；都没有就饿着。", 15, Ui.Dim);
 
+                Ui.Size(Ui.Button(list, S.MealDeliveryEnabled ? "缺饭时自动送餐：开（每餐 ¥25）" : "缺饭时自动送餐：关（需智能手机）", () => { S.ToggleMealDelivery(); w.Rebuild(); }, 17, Ui.ButtonBg, S.HasSmartphone), -1, 38);
+                if (S.HomeVisits.Any(v => v.Working))
+                    Ui.Size(Ui.Button(list, "在家等师傅修完", () => { S.WaitForRepair(); w.Rebuild(); }, 17, Ui.ButtonHot, _ctrl.InHome), -1, 38);
                 Line(list, "—— 出租屋 ——", 18, Ui.Accent);
-                Line(list, $"月租 {GameSession.HomeRent}；睡眠恢复 ×{S.HomeSleepQuality:0.##}；" + (S.HomeUtilities.IsPositive ? $"水电 {S.HomeUtilities}/月" : "不用交水电（没有电器）"), 17);
+                Line(list, $"月租 {S.CurrentHomeRent}；睡眠恢复 ×{S.HomeSleepQuality:0.##}；" + (S.HomeUtilities.IsPositive ? $"水电 {S.HomeUtilities}/月" : "不用交水电（没有电器）"), 17);
                 string placed = string.Join("、", S.HomeLayout.GroupBy(p => p.Id).Select(g => FurnitureLabel(g.Key, g.Count())));
                 Line(list, "屋里摆着：" + (placed.Length == 0 ? "什么都没有" : placed), 16, Ui.Dim);
 
@@ -1022,7 +1025,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Label(row, "送到", 16, TextAnchor.MiddleRight, Ui.Dim), 44);
                 Ui.Size(Ui.Button(row, $"{(toShop ? ShopDestName : "家里")}  ▼", () => OpenCourierDestMenu(w), 15, new Color(0.2f, 0.24f, 0.3f)), 190);
                 Para(parent, toShop
-                    ? "送到店里：配件直接上货架；吃的、礼品放进店里储物柜；家具进“我的”里待摆放。"
+                    ? "送到店里：配件入后仓，已设类别的货架自动补货；吃的、礼品放进店里储物柜；家具进“我的”里待摆放。"
                     : "送到家里：米和菜进厨房；礼品、配件放进纸箱；家具进“我的”里待摆放。", 14, Ui.Dim);
                 CourierLoadBar(parent, toShop);
             }
@@ -1121,7 +1124,7 @@ namespace PCShopSell.Game.UI
         private void BuildFarm(Window w, Place p)
         {
             bool open = S.IsFarmMarketOpen;
-            Line(w.Content, open ? "营业中（每天 6:00–18:00）。米按斤卖，菜、蛋、肉当天最新鲜。" : "<color=#E0806A>收摊了（每天 6:00–18:00）</color>");
+            Line(w.Content, open ? "营业中（每天 6:00–18:00）。米按斤卖，菜、蛋、肉当天最新鲜。" : "<color=#D79780>收摊了（每天 6:00–18:00）</color>");
             Line(w.Content, $"现金 {S.Ledger.Balance}   大米：背包 {S.Backpack.Food.RiceJin:0.#} 斤 / 家里 {S.Pantry.RiceJin:0.#} 斤", 18, Ui.Dim);
             Line(w.Content, "装进背包的要自己背回家，再打开背包一键放进厨房；叫车的直接送进家里厨房。家里没有冰箱，买多了会放坏。", 15, Ui.Dim);
             CarryModeRow(w, w.Content, false);
@@ -1199,7 +1202,7 @@ namespace PCShopSell.Game.UI
             _placeStatus = Ui.Label(_placePanel, "", 16, TextAnchor.UpperLeft);
             Ui.Size(_placeStatus, -1, 56);
 
-            Line(_placePanel, shop ? "背包里的店面摆设：" : "背包里的家具：", 17);
+            Line(_placePanel, shop ? "待安装的店面家具：" : "待安装的家居家具：", 17);
             bool any = false;
             foreach (var kv in S.FurnitureStock)
             {
@@ -1216,6 +1219,9 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(_placePanel, "旋转（R）", _ctrl.RotateGhost, 17), -1, 40);
                 if (_ctrl.PlaceHoldsPlaced) Ui.Size(Ui.Button(_placePanel, "收进背包（X）", _ctrl.StoreSelected, 17, Ui.Warn), -1, 40);
             }
+            var history = Ui.Row(_placePanel, 36);
+            Ui.Size(Ui.Button(history, "撤销 Ctrl+Z", () => _ctrl.UndoPlacement(), 15, Ui.ButtonBg, S.CanUndoLayout), 165);
+            Ui.Size(Ui.Button(history, "重做 Ctrl+Y", () => _ctrl.UndoPlacement(true), 15, Ui.ButtonBg, S.CanRedoLayout), 165);
             Ui.Size(Ui.Button(_placePanel, "完成", _ctrl.EndPlacement, 19, Ui.ButtonHot), -1, 46);
         }
 
@@ -1224,8 +1230,8 @@ namespace PCShopSell.Game.UI
             if (_placePanel == null || !_placePanel.gameObject.activeSelf || _placeStatus == null) return;
             if (!_ctrl.Placing) return;
             if (_ctrl.PlaceId == null) _placeStatus.text = "选一件背包里的家具，或者点屋里的家具拿起来挪。";
-            else if (_ctrl.PlaceError == null) _placeStatus.text = "<color=#7CE38B>这里可以放，点左键。</color>";
-            else _placeStatus.text = "<color=#E0806A>" + _ctrl.PlaceError + "</color>";
+            else if (_ctrl.PlaceError == null) _placeStatus.text = "<color=#A9C9A9>这里可以放，点左键。</color>";
+            else _placeStatus.text = "<color=#D79780>" + _ctrl.PlaceError + "</color>";
         }
 
         // ---------- 头顶的“可以交互”提示 ----------

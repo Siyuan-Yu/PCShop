@@ -64,8 +64,8 @@ namespace PCShopSell.Game.UI
             foreach (MarketTip t in S.Tips.Reverse().Take(12))
             {
                 NpcDef who = Npcs.Get(t.NpcId);
-                string verdict = t.Outcome == TipOutcome.Pending ? "<color=#9AA3AD>等着看</color>" :
-                    t.Outcome == TipOutcome.Right ? "<color=#7CE38B>应验</color>" : "<color=#E0806A>没应验</color>";
+                string verdict = t.Outcome == TipOutcome.Pending ? "<color=#ABB5A8>等着看</color>" :
+                    t.Outcome == TipOutcome.Right ? "<color=#A9C9A9>应验</color>" : "<color=#D79780>没应验</color>";
                 Text line = Ui.Label(list, $"第 {t.IssuedDay + 1} 天　{who.Name}：{PartCatalog.CategoryName(t.Category)}要{(t.Direction > 0 ? "涨" : "跌")}　{verdict}", 16);
                 Ui.Size(line, -1, 26);
             }

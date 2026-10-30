@@ -43,7 +43,7 @@ namespace PCShopSell.Core.Session
         {
             get
             {
-                if (Lease == null) return Money.Zero;
+                if (Lease == null || PropertyAt(Lease.PlaceId) != null) return Money.Zero;
                 double mult = 1.0 + Campaign.RentHikePerFail * Math.Min(3, RentHikes);
                 mult *= 1.0 - NpcPerks.RentDiscount(Relation(Npcs.Landlady));
                 return Lease.Rent.Scale(mult);

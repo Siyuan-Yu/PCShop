@@ -3,6 +3,8 @@
 电脑城创业故事：从商业街最偏的一间小电脑店起家，手装机赚第一桶金，靠行情、人脉和签约主播做大，最后建成自己的电脑乐园。3D 低多边形（固定斜俯视相机）模拟经营游戏（世界层 + 店内层 + 面板层 + 手操层），目标平台 Steam。
 
 ## 文档
+- [`docs/11-update-2026-10-30.md`](docs/11-update-2026-10-30.md)：本轮完整更新记录、确认的交互规则、截图及验证方法
+- [`docs/10-current-content.md`](docs/10-current-content.md)：当前已实现内容总览
 - [`docs/00-overview.md`](docs/00-overview.md)：概述与目录
 - [`docs/02-design.md`](docs/02-design.md)：设计文档（定位、竞品与差异化、成长曲线、系统、垂直切片）
 - [`docs/03-decisions.md`](docs/03-decisions.md)：决策记录（已定、已否决、默认假设、待办）
@@ -30,10 +32,21 @@ Unity.exe -batchmode -nographics -projectPath <项目路径> -runTests -testPlat
 编辑器开着工程时，用 `tools/run-tests.ps1`、`tools/run-smoke.ps1`（在旁边的镜像目录里跑，见 `docs/08-current-status.md`）。
 
 ## 状态
-VS1（一个月流程）可玩：打开 `Assets/Scenes/Main.unity` 点 Play。包含守店结账、6 类 × 3 档配件与库存容量、行情新闻、线下档口砍价、1788 网购、步行/打车/小电驴/三轮车/地铁、交警追逐、生活与晕倒住院、装机小游戏、雇人、房租破产、月目标、存读档。详见 [`docs/07-vs1-acceptance.md`](docs/07-vs1-acceptance.md)。
+打开 `Assets/Scenes/Main.unity` 点 Play。当前包含单店经营完整流程，以及直供账期、企业批单、委托分店、园区、创作者/MCN、私人关系、车辆与住房、物业及指数投资的首版规则。长期内容量与三年平衡仍需深化。
+
+本轮已加入按阶段派发的当前任务、人物步行动作、暖色微缩街区美术、房产中介三维鸟瞰选址，以及保留家具原材质的绿/红发光轮廓。任务引导只说明操作，不提供一键前往；只有街道步行减速 50%，室内保持原速。完整改动、已知边界和截图见[本轮更新记录](docs/11-update-2026-10-30.md)，试玩步骤见[验收说明](docs/07-vs1-acceptance.md)。
 
 冒烟测试（需图形，不能加 `-nographics`）：
 
 ```
 Unity.exe -batchmode -projectPath <项目路径> -executeMethod PCShopSell.EditorTools.GameSceneBuilder.SmokeFromBatch -logFile <日志>
 ```
+
+专项验收同样可通过镜像运行：
+
+```powershell
+./tools/run-smoke.ps1 -Method PCShopSell.EditorTools.GameSceneBuilder.AgencyFromBatch
+./tools/run-smoke.ps1 -Method PCShopSell.EditorTools.GameSceneBuilder.PlacementFromBatch
+```
+
+同一镜像内的测试和冒烟应串行运行。镜像、缓存及测试存档保留在本地，不提交到仓库。

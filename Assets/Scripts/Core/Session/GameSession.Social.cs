@@ -274,8 +274,10 @@ namespace PCShopSell.Core.Session
         private string CreateTip(NpcDef n, bool forceReal = false)
         {
             PartCategory cat = PickTipCategory(n);
-            int dir = Random.Chance(0.55) ? 1 : -1;
             bool real = forceReal || Random.Chance(TipTruthChance(n));
+            var planned = Market.PendingShocks.Where(x => x.category == cat && x.day > Clock.Today.TotalDays).OrderBy(x => x.day).FirstOrDefault();
+            int direction = planned.delta == 0 ? (Market.Index(cat) <= 1 ? 1 : -1) : (planned.delta > 0 ? 1 : -1);
+            int dir = real ? direction : -direction;
 
             var tip = new MarketTip
             {
@@ -287,8 +289,7 @@ namespace PCShopSell.Core.Session
                 IndexAtIssue = Market.Index(cat),
                 Outcome = TipOutcome.Pending,
             };
-            // 说真话 = 他真的知道要变价：行情在两天后朝那个方向走一波
-            if (real) Market.ScheduleShock(Clock.Today.AddDays(TipShockDelayDays), cat, dir * Random.Range(0.10, 0.18));
+            // 消息只披露已存在的市场计划，不再制造价格冲击。实际走势仍可能被其他新闻抵消。
 
             _tips.Add(tip);
             while (_tips.Count > MaxTipsKept) _tips.RemoveAt(0);

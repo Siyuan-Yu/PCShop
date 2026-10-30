@@ -22,6 +22,7 @@ namespace PCShopSell.Game.Runtime
         public Vector3 Entrance;
         public Vector3 LabelPos;
         public GameObject Root;
+        public UnityEngine.UI.Text Sign;
     }
 
     /// <summary>
@@ -33,21 +34,19 @@ namespace PCShopSell.Game.Runtime
         public const float StreetZ = 0f;
         public const float FrontZ = 4.5f;
 
-        private static readonly Color Asphalt = new Color(0.17f, 0.17f, 0.19f);
-        private static readonly Color Sidewalk = new Color(0.55f, 0.54f, 0.52f);
-        private static readonly Color Grass = new Color(0.30f, 0.38f, 0.26f);
-
+        private static readonly Color Asphalt = ArtDirection.Hex("626A69");
+        private static readonly Color Sidewalk = ArtDirection.Hex("C5BBA5");
+        private static readonly Color Grass = ArtDirection.Hex("81927C");
         private static readonly Color[] Facades =
         {
-            new Color(0.86f, 0.78f, 0.66f), new Color(0.72f, 0.80f, 0.86f), new Color(0.90f, 0.86f, 0.80f),
-            new Color(0.78f, 0.70f, 0.74f), new Color(0.70f, 0.76f, 0.68f), new Color(0.88f, 0.74f, 0.60f),
-            new Color(0.64f, 0.66f, 0.72f), new Color(0.82f, 0.82f, 0.74f),
+            ArtDirection.Hex("DBCEB4"), ArtDirection.Hex("B3BDB2"), ArtDirection.Hex("E5DDCA"),
+            ArtDirection.Hex("C5A493"), ArtDirection.Hex("A1AE99"), ArtDirection.Hex("CCBA99"),
+            ArtDirection.Hex("ABB6B6"), ArtDirection.Hex("CEC8B0"),
         };
-
         private static readonly Color[] SignColors =
         {
-            new Color(1f, 0.35f, 0.35f), new Color(1f, 0.75f, 0.2f), new Color(0.3f, 0.85f, 1f),
-            new Color(0.5f, 1f, 0.5f), new Color(1f, 0.45f, 0.9f), new Color(0.65f, 0.5f, 1f),
+            ArtDirection.Clay, ArtDirection.Brass, ArtDirection.Blue,
+            ArtDirection.Sage, ArtDirection.Hex("A88B87"), ArtDirection.Ink,
         };
 
         private readonly CityLayout _city;
@@ -103,7 +102,7 @@ namespace PCShopSell.Game.Runtime
                     float width = main ? 7f : 5f;
                     Vector3 d = b - a;
                     float len = d.magnitude + width;
-                    var go = Prims.Box(roads, "Road_" + key, (a + b) * 0.5f + Vector3.up * 0.005f, new Vector3(width, 0.02f, len), Mats.LitTex(Asphalt, new Vector2(Mathf.Max(1f, width / 5f), Mathf.Max(1f, len / 5f)), 0.5f));
+                    var go = Prims.Box(roads, "Road_" + key, (a + b) * 0.5f + Vector3.up * 0.005f, new Vector3(width, 0.02f, len), Mats.LitTex(Asphalt, new Vector2(Mathf.Max(1f, width / 5f), Mathf.Max(1f, len / 5f)), 0.12f));
                     go.transform.localRotation = Quaternion.LookRotation(d.normalized, Vector3.up);
 
                     if (len > 14f)
@@ -137,6 +136,7 @@ namespace PCShopSell.Game.Runtime
                 case PlaceKind.Shop:
                 case PlaceKind.Agency:
                     vis.LabelPos = BuildShop(root, p, entrance);
+                    vis.Sign = root.GetComponentInChildren<UnityEngine.UI.Text>();
                     break;
                 case PlaceKind.Station:
                     vis.LabelPos = BuildStation(root, p, entrance);
@@ -165,8 +165,8 @@ namespace PCShopSell.Game.Runtime
             int floors = p.Size == ShopSize.Large ? 4 : p.Size == ShopSize.Medium ? 3 : 2;
             if (p.IsPlayerShop) floors = 1;
             float h = floors * 3.2f;
-            Color facade = p.IsPlayerShop ? new Color(0.62f, 0.60f, 0.56f) : Facades[_rng.Next(Facades.Length)];
-            Color sign = p.IsPlayerShop ? new Color(0.2f, 1f, 0.9f) : SignColors[_rng.Next(SignColors.Length)];
+            Color facade = p.IsPlayerShop ? ArtDirection.Cream : Facades[_rng.Next(Facades.Length)];
+            Color sign = p.IsPlayerShop ? ArtDirection.Sage : SignColors[_rng.Next(SignColors.Length)];
             float cz = FrontZ + d / 2;
 
             var body = Prims.Box(root, "Body", new Vector3(entrance.x, h / 2, cz), new Vector3(w, h, d), Mats.Lit(facade, 0.1f), true);
@@ -176,8 +176,15 @@ namespace PCShopSell.Game.Runtime
                 Mats.Glow(new Color(0.35f, 0.45f, 0.55f), new Color(1.6f, 1.3f, 0.9f)));
             Prims.Box(root, "Door", new Vector3(entrance.x, 1.1f, FrontZ - 0.08f), new Vector3(Mathf.Min(1.4f, w * 0.3f), 2.2f, 0.1f), Mats.Lit(new Color(0.2f, 0.22f, 0.25f), 0.6f));
             Prims.Box(root, "Sign", new Vector3(entrance.x, 3.2f, FrontZ - 0.15f), new Vector3(w - 0.4f, 0.8f, 0.2f),
-                Mats.Glow(sign * 0.8f, sign * 2.2f));
-            Prims.Box(root, "Awning", new Vector3(entrance.x, 2.75f, FrontZ - 0.6f), new Vector3(w - 0.2f, 0.08f, 1.2f), Mats.Lit(sign * 0.6f));
+                Mats.Glow(sign * 0.8f, sign * 0.9f));
+            Prims.Box(root, "Awning", new Vector3(entrance.x, 2.75f, FrontZ - 0.6f), new Vector3(w - 0.2f, 0.08f, 1.2f), Mats.Lit(sign));
+            Prims.SignText(root, p.Name, new Vector3(entrance.x, 3.2f, FrontZ - 0.27f), w - 0.8f, 0.6f, ArtDirection.Cream);
+            // Fabric valance and timber window mullions make the frontage read as a small real shop.
+            for (int stripe = 0; stripe < Mathf.FloorToInt(w / 0.5f); stripe++)
+                Prims.Box(root, "AwningStripe", new Vector3(entrance.x - w / 2 + 0.3f + stripe * 0.5f, 2.80f, FrontZ - 0.6f), new Vector3(0.22f, 0.018f, 1.16f), Mats.Lit(ArtDirection.Cream));
+            Prims.Box(root, "Valance", new Vector3(entrance.x, 2.64f, FrontZ - 1.18f), new Vector3(w - 0.2f, 0.22f, 0.055f), Mats.Lit(sign));
+            foreach (float side in new[] { -1f, 1f })
+                Prims.Box(root, "WindowMullion", new Vector3(entrance.x + side * (w - 1f) * 0.37f, 1.4f, FrontZ - 0.12f), new Vector3(0.07f, 2.6f, 0.08f), Mats.Lit(ArtDirection.Cream));
             if (_shopNeonCount++ % 2 == 0)
             {
                 var ngo = new GameObject("NeonLight");
@@ -232,16 +239,14 @@ namespace PCShopSell.Game.Runtime
             float w = dealer ? 11f : 10f;
             var body = Prims.Box(root, "Body", new Vector3(e.x, 2.5f, FrontZ + 4), new Vector3(w, 5, 8), Mats.Lit(new Color(0.62f, 0.64f, 0.66f), 0.1f), true);
             body.AddComponent<PlaceMarker>().PlaceId = p.Id;
-            Color c = dealer ? new Color(1f, 0.55f, 0.1f) : SignColors[_rng.Next(SignColors.Length)];
+            Color c = dealer ? ArtDirection.Sage : SignColors[_rng.Next(SignColors.Length)];
             Prims.Box(root, "Shutter", new Vector3(e.x, 1.3f, FrontZ - 0.05f), new Vector3(w - 1.5f, 2.6f, 0.1f), Mats.Glow(new Color(0.4f, 0.42f, 0.45f), new Color(1.4f, 1.3f, 1.1f)));
-            Prims.Box(root, "Sign", new Vector3(e.x, 3.3f, FrontZ - 0.15f), new Vector3(w - 0.6f, 0.9f, 0.2f), Mats.Glow(c * 0.8f, c * 2f));
+            Prims.Box(root, "Sign", new Vector3(e.x, 3.3f, FrontZ - 0.15f), new Vector3(w - 0.6f, 0.9f, 0.2f), Mats.Glow(c * 0.8f, c * .9f));
+            Prims.SignText(root, p.Name, new Vector3(e.x, 3.3f, FrontZ - .27f), w - 1f, .65f, ArtDirection.Cream);
             if (dealer)
             {
-                for (int i = 0; i < 3; i++)
-                {
-                    float x = e.x - 3.5f + i * 3.2f;
-                    Prims.Box(root, "Bike" + i, new Vector3(x, 0.5f, FrontZ - 1.6f), new Vector3(0.5f, 0.6f, 1.6f), Mats.Lit(i == 2 ? new Color(0.25f, 0.5f, 0.85f) : new Color(0.9f, 0.3f, 0.3f)));
-                }
+                for (int i = 0; i < 2; i++)
+                    Prims.ParkedCar(root, new Vector3(e.x - 2.9f + i * 5.6f, 0, FrontZ - 1.6f), i == 0 ? ArtDirection.Clay : ArtDirection.Cream);
             }
             else
             {
@@ -381,7 +386,7 @@ namespace PCShopSell.Game.Runtime
                 Tree(t, new Vector3(x + 9, 0, -6.5f));
             }
             for (int i = 0; i < 6; i++)
-                Prims.Box(t, "ParkedCar", new Vector3(-80 + i * 31, 0.6f, -2.6f), new Vector3(4f, 1.2f, 1.8f), Mats.Lit(SignColors[i % SignColors.Length] * 0.7f, 0.7f, 0.3f));
+                Prims.ParkedCar(t, new Vector3(-80 + i * 31, 0, -2.6f), SignColors[i % SignColors.Length]);
             for (int i = 0; i < 6; i++) Tree(t, new Vector3(100 + i * 1.5f * (i % 2 == 0 ? 1 : -1), 0, -66 - i * 1.3f));
         }
 
@@ -389,7 +394,10 @@ namespace PCShopSell.Game.Runtime
         {
             float s = 0.8f + (float)_rng.NextDouble() * 0.5f;
             Prims.Shape(PrimitiveType.Cylinder, parent, "Trunk", at + new Vector3(0, 1f * s, 0), new Vector3(0.25f, 1f * s, 0.25f), Mats.Lit(new Color(0.35f, 0.25f, 0.15f)));
-            Prims.Shape(PrimitiveType.Sphere, parent, "Leaves", at + new Vector3(0, 2.6f * s, 0), new Vector3(2.2f, 2f, 2.2f) * s, Mats.Lit(new Color(0.25f, 0.45f, 0.22f) * (0.85f + (float)_rng.NextDouble() * 0.3f)));
+            Color green = ArtDirection.Hex("7C9770") * (0.92f + (float)_rng.NextDouble() * 0.12f);
+            Prims.Shape(PrimitiveType.Sphere, parent, "Crown", at + new Vector3(0, 2.5f * s, 0), new Vector3(1.8f, 1.6f, 1.7f) * s, Mats.Lit(green));
+            Prims.Shape(PrimitiveType.Sphere, parent, "CanopyL", at + new Vector3(-0.62f, 2.2f, 0.15f) * s, new Vector3(1.4f, 1.2f, 1.3f) * s, Mats.Lit(green * 0.94f));
+            Prims.Shape(PrimitiveType.Sphere, parent, "CanopyR", at + new Vector3(0.55f, 2.5f, -0.15f) * s, new Vector3(1.3f, 1.25f, 1.3f) * s, Mats.Lit(green * 1.05f));
         }
     }
 }

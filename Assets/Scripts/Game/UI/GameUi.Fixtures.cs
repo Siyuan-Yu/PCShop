@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Text;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
@@ -17,18 +17,18 @@ namespace PCShopSell.Game.UI
             var list = S.ShopFitList();
             string gap = S.ShopFitGap();
             sb.Append(gap == null
-                ? "<color=#7CE38B>开业条件满足：收银台和货架都摆好了。</color>"
-                : $"<color=#E0806A>还不能开业，差：{gap}。</color>");
+                ? "<color=#A9C9A9>开业条件满足：收银台和货架都摆好了。</color>"
+                : $"<color=#D79780>还不能开业，差：{gap}。</color>");
 
             FixtureNeed counter = list.First(n => n.Kind == FixtureKind.Counter);
             sb.Append('\n').Append(FitLine(counter, "收银台", true));
 
             FixtureNeed shelf = list.First(n => n.Kind == FixtureKind.Shelf);
-            string shelfState = shelf.Placed >= shelf.Want ? "<color=#7CE38B>✓</color>" : shelf.Placed >= FurnitureCatalog.MinShelves ? "<color=#FFD54A>◐</color>" : "<color=#E0806A>✗</color>";
+            string shelfState = shelf.Placed >= shelf.Want ? "<color=#A9C9A9>✓</color>" : shelf.Placed >= FurnitureCatalog.MinShelves ? "<color=#DDC18B>◐</color>" : "<color=#D79780>✗</color>";
             sb.Append($"\n{shelfState} 货架（建议 6 个：每类配件一个，至少一个）已摆 {shelf.Placed}/{shelf.Want}");
             if (shelf.Owned > 0) sb.Append($"，买了没摆 {shelf.Owned} 个");
             int unset = S.ShelfIndexes().Count(ix => S.ShelfKindAt(ix) == null);
-            if (unset > 0) sb.Append($"<color=#9AA3AD>　{unset} 个货架还没设置摆什么（去“库存”页设置）</color>");
+            if (unset > 0) sb.Append($"<color=#ABB5A8>　{unset} 个货架还没设置摆什么（去“库存”页设置）</color>");
 
             foreach (FixtureNeed n in list.Where(x => x.Kind == FixtureKind.Display || x.Kind == FixtureKind.Bench))
                 sb.Append('\n').Append(FitLine(n, n.Kind == FixtureKind.Display ? "整机展示桌（每张摆 2 台整机，店越大摆得越多）" : "装机操作台（接装机订单用）", false));
@@ -37,7 +37,7 @@ namespace PCShopSell.Game.UI
 
         private static string FitLine(FixtureNeed n, string label, bool required)
         {
-            string mark = n.Placed >= n.Want ? "<color=#7CE38B>✓</color>" : required ? "<color=#E0806A>✗</color>" : "<color=#FFD54A>○</color>";
+            string mark = n.Placed >= n.Want ? "<color=#A9C9A9>✓</color>" : required ? "<color=#D79780>✗</color>" : "<color=#DDC18B>○</color>";
             string s = $"{mark} {label}　已摆 {n.Placed}/{n.Want}";
             if (n.Owned > 0) s += $"，买了没摆 {n.Owned} 个";
             return s;
@@ -48,8 +48,8 @@ namespace PCShopSell.Game.UI
         {
             if (S.ShopFitted && !S.IsRenovating) return;
             string head = S.ShopFitted
-                ? "<color=#FFD54A>今天歇业装修，明天恢复营业。</color>"
-                : "<color=#FFD54A>店还没布置好，开不了业：</color>" + S.ShopFitGap();
+                ? "<color=#DDC18B>今天歇业装修，明天恢复营业。</color>"
+                : "<color=#DDC18B>店还没布置好，开不了业：</color>" + S.ShopFitGap();
             Para(parent, head + "　<color=#9AA7B5>（在“装修”页里摆）</color>", 15);
         }
 
@@ -57,10 +57,10 @@ namespace PCShopSell.Game.UI
         private void BuildRenovate()
         {
             string state = S.IsRenovating
-                ? "<color=#FFD54A>装修中：今天歇业，明天恢复营业。</color>"
+                ? "<color=#DDC18B>装修中：今天歇业，明天恢复营业。</color>"
                 : !S.ShopFitted
-                    ? "<color=#FFD54A>毛坯：还不能开业。</color>"
-                    : "<color=#7CE38B>已经布置好，正常营业。</color>";
+                    ? "<color=#DDC18B>毛坯：还不能开业。</color>"
+                    : "<color=#A9C9A9>已经布置好，正常营业。</color>";
             Line(C, "店面装修　" + state, 18);
             Para(C, "货架、收银台、整机展示桌、装机操作台和装饰都在这里摆放。进入编辑模式后镜头会转成俯视，带网格和坐标；装修要歇业一天，摆完第二天才开业。", 15, Ui.Dim);
             Para(C, FitChecklistText(), 15);

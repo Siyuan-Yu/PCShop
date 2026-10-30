@@ -39,10 +39,10 @@ namespace PCShopSell.Core.Session
         public bool IsMyShop(Place p) => Lease != null && p == PlayerShopPlace;
 
         /// <summary>空着、门上贴着“旺铺招租”的铺面。</summary>
-        public bool IsVacant(Place p) => p != null && _vacant.Contains(p.Id) && !IsMyShop(p);
+        public bool IsVacant(Place p) => p != null && _vacant.Contains(p.Id) && !IsMyShop(p) && VentureAt(p.Id) == null && PropertyAt(p.Id) == null;
 
         /// <summary>街上名牌显示的名字：我的店 / 旺铺招租 / 原来的店名。</summary>
-        public string PlaceTitle(Place p) => p == null ? "" : IsMyShop(p) ? MyShopName : IsVacant(p) ? VacantTitle : p.Name;
+        public string PlaceTitle(Place p) => p == null ? "" : IsMyShop(p) ? MyShopName : p == Home ? HomeTitle : p.Id == ParkPlaceId ? "电脑乐园" : VentureAt(p.Id) != null ? Ventures.Get(VentureAt(p.Id).Kind).Name : PropertyAt(p.Id) != null ? "我的出租物业" : IsVacant(p) ? VacantTitle : p.Name;
 
         public Place ListingPlace(ShopListing l) => City.GetPlace(l.PlaceId);
 
@@ -78,6 +78,7 @@ namespace PCShopSell.Core.Session
         public string LeaseBlocker(ShopListing l)
         {
             int today = Clock.Today.TotalDays;
+            if (VentureAt(l.PlaceId) != null || PropertyAt(l.PlaceId) != null) return "这间铺子已纳入你的经营资产";
             if (l.OpenDay > today) return $"现租户还没搬走，第 {l.OpenDay + 1} 天起才能签";
             if (Lease != null && l.PlaceId == Lease.PlaceId) return "这就是你现在的店";
             double rep = RealEstate.MinReputation(l.Size);
@@ -85,7 +86,7 @@ namespace PCShopSell.Core.Session
             if (Lease != null)
             {
                 double cap = ShopSettings.Capacity(l.Size) + ShopUpgrades.ExtraCapacity(_upgrades);
-                if (PlayerShop.Stock.UsedSpace > cap + 1e-9) return $"铺子太小，放不下现在的 {PlayerShop.Stock.UsedSpace:0.#} 格货";
+                if (PlayerShop.Stock.UsedSpace + IncomingShopSpace > cap + 1e-9) return $"铺子太小，放不下现在的 {PlayerShop.Stock.UsedSpace:0.#} 格货";
             }
             if (Ledger.Balance < LeaseCost(l)) return "钱不够";
             return null;
@@ -219,7 +220,7 @@ namespace PCShopSell.Core.Session
             return l;
         }
 
-        private List<Place> FreeUnits() => RentableUnits().Where(p => !IsMyShop(p) && !Listed(p)).ToList();
+        private List<Place> FreeUnits() => RentableUnits().Where(p => !IsMyShop(p) && VentureAt(p.Id) == null && PropertyAt(p.Id) == null && !Listed(p)).ToList();
 
         private Place Pick(List<Place> pool)
         {

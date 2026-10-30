@@ -118,6 +118,7 @@ namespace PCShopSell.Core.Market
                 _factor[i] = Clamp(_factor[i] * 0.9 + _rng.Gaussian(0.05));
 
             ApplyBias(today);
+            EnsureOutlook(today);
 
             NewsItem scripted = ScriptedNews(today);
             if (scripted != null) Apply(scripted);
@@ -148,6 +149,18 @@ namespace PCShopSell.Core.Market
         public void ScheduleShock(GameDate day, PartCategory category, double delta)
         {
             _shocks.Add((day.TotalDays, category, delta));
+        }
+
+        public bool OutlookEnabled { get; set; } = true;
+        public void EnsureOutlook(GameDate today)
+        {
+            if (!OutlookEnabled) return;
+            foreach (PartCategory category in PartCatalog.Categories)
+            {
+                bool planned = false;
+                foreach (var shock in _shocks) if (shock.category == category && shock.day > today.TotalDays) { planned = true; break; }
+                if (!planned) ScheduleShock(today.AddDays(2 + _rng.Next(0, 3)), category, (_rng.Chance(0.5) ? 1 : -1) * _rng.Range(0.06, 0.12));
+            }
         }
 
         public double BiasOf(PartCategory c) => _bias.TryGetValue(c, out double b) ? b : 0;
