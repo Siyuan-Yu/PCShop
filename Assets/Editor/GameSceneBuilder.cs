@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -598,6 +598,20 @@ namespace PCShopSell.EditorTools
             s.ArriveAtNode("e12");
             for (int i = 0; i < 30; i++) Frame(0.05f);
             Shot("vs1_07_street_night");
+            {
+                // 街上店铺开 / 关门外观：21 点后所有普通店铺放下卷帘门，白天亮灯挂“营业中”
+                var shops = _game.World.Places.Values.Where(v => v.Place.Kind == PCShopSell.Core.World.PlaceKind.Shop && v.ClosedOnly.Count > 0 && !s.IsMyShop(v.Place)).ToList();
+                Check(shops.Count > 3 && shops.All(v => v.OpenState == 0 && !s.IsPlaceOpen(v.Place)), "夜里 21 点后街上所有店铺都是关门外观");
+                Check(shops.All(v => v.ClosedOnly.Any(g => g != null && g.activeSelf) && v.OpenOnly.All(g => g == null || !g.activeSelf)), "关门店铺显示卷帘门、隐藏亮招牌");
+                s.Clock.Restore(s.Clock.Today, 12 * 60);
+                for (int i = 0; i < 10; i++) Frame(0.05f);
+                var openShops = shops.Where(v => s.IsPlaceOpen(v.Place)).ToList();
+                Check(openShops.Count > 3 && openShops.All(v => v.OpenState == 1 && v.OpenOnly.Any(g => g != null && g.activeSelf)), "中午街上店铺都是营业外观");
+                Shot("vs1_108_street_open");
+                s.Clock.Restore(s.Clock.Today, 22 * 60);
+                for (int i = 0; i < 10; i++) Frame(0.05f);
+                Shot("vs1_109_street_closed");
+            }
 
             // 行情面板
             _game.Ui.OpenMarketPanel();
@@ -993,6 +1007,25 @@ namespace PCShopSell.EditorTools
             for (int i = 0; i < 40; i++) Frame(0.05f);
             Check(System.Math.Abs(PCShopSell.Game.Runtime.CameraRig.Yaw - yaw0) > 30f, "编辑模式：能转视角");
             Shot("vs1_105_edit_rotated");
+            _game.EndPlacement();
+            {
+                // 悬停说明：鼠标停在顶栏“知名度”上，半秒后弹出
+                var tip = UnityEngine.Object.FindObjectsOfType<PCShopSell.Game.UI.TipTarget>().FirstOrDefault(t => t.Text != null && t.Text().Contains("饥饿"));
+                Check(tip != null, "顶栏状态文字挂了悬停说明");
+                PCShopSell.Game.UI.TipTarget.Hover = tip;
+                _game.Ui.DebugMouse = new UnityEngine.Vector2(300f, 470f);
+                for (int i = 0; i < 20; i++) Frame(0.05f);
+                Log("TIPDBG " + _game.Ui.TipDebug);
+                Check(_game.Ui.TipVisible, "悬停半秒后弹出说明");
+                Shot("vs1_107_tooltip");
+                PCShopSell.Game.UI.TipTarget.Hover = null;
+                Frame(0.05f);
+                _game.Ui.DebugMouse = null;
+                Check(_game.Ui.TryHotkey(UnityEngine.KeyCode.M), "快捷键 M 打开“我的”");
+                Check(_game.Ui.AnyModalOpen && !_game.Ui.TryHotkey(UnityEngine.KeyCode.P), "开着窗口时其他快捷键不叠窗口");
+                _game.Ui.CloseAllWindows();
+            }
+            _game.BeginPlacement(true);
             _game.DebugOrbit(-40f, 10f);
             for (int i = 0; i < 40; i++) Frame(0.05f);
             Shot("vs1_31_shop_decor");

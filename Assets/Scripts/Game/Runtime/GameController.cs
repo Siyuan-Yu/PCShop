@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
@@ -258,6 +258,9 @@ namespace PCShopSell.Game
             _police.Update(!room);
             _crowd.Update(worldDt, !room);
             (_beacon ?? (_beacon = new ShopBeacon(World.Root.transform))).Update(Session, World, dt);
+            if (!room)
+                foreach (PlaceVisual pv in World.Places.Values)
+                    if (pv.ClosedOnly.Count > 0) World.SetOpen(pv, Session.IsPlaceOpen(pv.Place));
             if (interior) Interior.Update(Session, worldDt, dt);
             if (InHome) HomeRoom.Update(Session, dt, Session.Clock.MinuteOfDay);
             FigureMotion.AdvanceAll(dt, Session.Time.IsRunning);
@@ -314,7 +317,12 @@ namespace PCShopSell.Game
             if (Input.GetKeyDown(KeyCode.Alpha4)) Session.Time.SetSpeed(8);
             if (!GameUi.PointerOverUi) _rig.Zoom(Input.mouseScrollDelta.y);
             HandleCameraOrbit();
-            if (Input.GetKeyDown(KeyCode.Escape) && !Placing && Ui.AnyModalOpen) Ui.CloseTopWindow();
+            // 右键、Esc：关最上面一层窗口；没开窗口时 Esc 打开菜单（和大多数游戏一样）
+            if (Input.GetMouseButtonDown(1) && !Placing && Ui.AnyModalOpen) Ui.CloseTopWindow();
+            if (Input.GetKeyDown(KeyCode.Escape) && !Placing && !Ui.CloseTopWindow() && !Ui.AnyModalOpen) Ui.TryHotkey(KeyCode.Escape);
+            if (!Placing)
+                foreach (KeyCode hk in HotkeyPanels)
+                    if (Input.GetKeyDown(hk) && Ui.TryHotkey(hk)) break;
             if (Input.GetKeyDown(KeyCode.B) && !Session.IsGameOver && !Placing) Ui.ToggleBackpack();
             if (Input.GetKeyDown(KeyCode.F) && !Ui.AnyModalOpen && !Session.IsGameOver && !Placing)
             {
@@ -332,6 +340,7 @@ namespace PCShopSell.Game
         // ---------- 镜头旋转 ----------
 
         private bool _orbiting;
+        private static readonly KeyCode[] HotkeyPanels = { KeyCode.M, KeyCode.C, KeyCode.P, KeyCode.J, KeyCode.H };
 
         /// <summary>街上自由切换视角：右键拖动旋转/俯仰，Q / E 左右转，V 复位。</summary>
         private void HandleCameraOrbit()

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
@@ -81,9 +81,10 @@ namespace PCShopSell.Game.UI
             _toastCanvas = Ui.CreateCanvas("UI_Toast", 25);
             BuildHud();
             BuildToasts();
+            BuildTip();
         }
 
-        public IEnumerable<Canvas> Canvases => new[] { _labelCanvas, _hudCanvas, _dockCanvas, _modalCanvas, _toastCanvas };
+        public IEnumerable<Canvas> Canvases => new[] { _labelCanvas, _hudCanvas, _dockCanvas, _modalCanvas, _toastCanvas, _tipCanvas };
 
         // ---------- 每帧 ----------
 
@@ -99,6 +100,7 @@ namespace PCShopSell.Game.UI
             UpdateEditHud();
             UpdateQueueLabels();
             UpdateToasts();
+            UpdateTip(dt);
             _slowTimer -= dt;
             if (_slowTimer <= 0)
             {
@@ -129,22 +131,29 @@ namespace PCShopSell.Game.UI
             _cashText = Ui.Size(Ui.Label(row, "", 26, TextAnchor.MiddleLeft, Ui.Good), 180);
 
             _pauseButton = Ui.Size(Ui.Button(row, "暂停", () => S.Time.TogglePause(), 18), 70);
+            _pauseButton.Tip(() => S.Time.IsHeld
+                ? "<b>已暂停</b>：开着面板或窗口时时间自动暂停，关掉后继续。\n（店里右侧的“柜台”页不暂停。）"
+                : S.Time.IsUserPaused ? "<b>继续</b>　快捷键：空格" : "<b>暂停</b>　快捷键：空格");
             foreach (int sp in TimeController.Speeds)
             {
                 int speed = sp;
                 Button b = Ui.Size(Ui.Button(row, speed + "×", () => S.Time.SetSpeed(speed), 18), 54);
+                int keyNo = System.Array.IndexOf(TimeController.Speeds, speed) + 1;
+                b.Tip($"<b>{speed} 倍速</b>　快捷键：{keyNo}");
                 _speedButtons.Add((b, speed));
             }
 
             _placeText = Ui.Size(Ui.Label(row, "", 20, TextAnchor.MiddleCenter), 260, -1, 1);
             _statsText = Ui.Size(Ui.Label(row, "", 18, TextAnchor.MiddleRight), 330);
-            Ui.Size(Ui.Button(row, "我的", OpenMyPanel, 18, Ui.ButtonHot), 66);
-            Ui.Size(Ui.Button(row, "背包 B", ToggleBackpack, 18), 78);
-            Ui.Size(Ui.Button(row, "日程", OpenSchedulePanel, 18), 66);
-            Ui.Size(Ui.Button(row, "手机", OpenPhone, 18), 66);
-            Ui.Size(Ui.Button(row, "经营", OpenBusinessPanel, 18), 66);
-            Ui.Size(Ui.Button(row, "行情", OpenMarketPanel, 18, Ui.ButtonHot), 66);
-            Ui.Size(Ui.Button(row, "菜单", OpenSystemPanel, 18), 66);
+            _statsText.Tip(StatsTip);
+            _cashText.Tip("<b>现金</b>：所有进出都记在账上。现金连续 3 天为负就破产。");
+            Ui.Size(Ui.Button(row, "我的", OpenMyPanel, 18, Ui.ButtonHot), 66).Tip("<b>我的</b>　快捷键：M\n身体状况、住处、背包里的吃的、家具背包；在家或店里可以从这里去摆家具。");
+            Ui.Size(Ui.Button(row, "背包 B", ToggleBackpack, 18), 78).Tip("<b>背包</b>　快捷键：B\n身上带的货和负重；在家或店里一键全放下。");
+            Ui.Size(Ui.Button(row, "日程", OpenSchedulePanel, 18), 66).Tip("<b>日程</b>　快捷键：C\n约会、师傅上门、网购快递、焖饭等安排（没有手机日历 app 时是小本子）。");
+            Ui.Size(Ui.Button(row, "手机", OpenPhone, 18), 66).Tip("<b>手机</b>　快捷键：P\n买了智能手机才有；通讯录、1788 批发、外卖等 app。");
+            Ui.Size(Ui.Button(row, "经营", OpenBusinessPanel, 18), 66).Tip("<b>经营</b>　快捷键：J\n资产与负债、直供、企业合同、分店、园区等后期经营。");
+            Ui.Size(Ui.Button(row, "行情", OpenMarketPanel, 18, Ui.ButtonHot), 66).Tip("<b>行情</b>　快捷键：H\n新闻、宏观指标和各品类配件的价格走势，决定什么时候进货。");
+            Ui.Size(Ui.Button(row, "菜单", OpenSystemPanel, 18), 66).Tip("<b>菜单</b>　快捷键：Esc\n存档、读档、目标与人脉、通知记录、音效。");
 
             Image bottom = Ui.Panel(root, "BottomBar", Ui.PanelBg);
             bottom.rectTransform.Anchor(0, 0, 0, 0, 0, 0, -1360, -58);
@@ -160,13 +169,15 @@ namespace PCShopSell.Game.UI
             {
                 VehicleKind kind = v.Kind;
                 Button b = Ui.Size(Ui.Button(brow, v.Name, () => S.SetVehicle(kind), 18), 92);
+                b.Tip(() => VehicleTip(Vehicles.Get(kind)));
                 _vehicleButtons.Add((b, kind));
             }
             _cargoText = Ui.Size(Ui.Label(brow, "", 17), 170);
             Ui.Size(Ui.Label(brow, "快捷前往：", 17), 90);
             Button shopGo = Ui.Size(Ui.Button(brow, "去我的店", () => _ctrl.GoToPlace(S.HasShop ? S.PlayerShopPlace : S.City.FirstOfKind(PlaceKind.Agency)), 17, Ui.ButtonHot), 100);
             _shopGoText = shopGo.GetComponentInChildren<Text>();
-            Ui.Size(Ui.Button(brow, "回家", () => _ctrl.GoToPlace(S.Home), 17), 70);
+            shopGo.Tip("自动走到店门口（耗时按路程算）；路上按 WASD 随时接管。");
+            Ui.Size(Ui.Button(brow, "回家", () => _ctrl.GoToPlace(S.Home), 17), 70).Tip("自动走回家；路上按 WASD 随时接管。");
             Ui.Size(Ui.Button(brow, "电子市场", () => _ctrl.GoToPlace(S.City.GetPlace("stall_cpu")), 17), 100);
 
             Image hint = Ui.Panel(root, "HintStrip", new Color(0.12f, 0.18f, 0.17f, 0.93f));
@@ -191,7 +202,7 @@ namespace PCShopSell.Game.UI
 
             bool paused = !S.Time.IsRunning;
             _pauseButton.image.color = paused ? Ui.Warn : Ui.ButtonBg;
-            _pauseButton.GetComponentInChildren<Text>().text = S.Time.IsHeld ? "查看中" : (S.Time.IsUserPaused ? "继续" : "暂停");
+            _pauseButton.GetComponentInChildren<Text>().text = S.Time.IsHeld ? "已暂停" : (S.Time.IsUserPaused ? "继续" : "暂停");
             foreach (var (b, speed) in _speedButtons)
                 b.image.color = !paused && S.Time.Speed == speed ? Ui.ButtonHot : Ui.ButtonBg;
 
@@ -343,9 +354,9 @@ namespace PCShopSell.Game.UI
                 case PlaceKind.Shop when S.IsMyShop(p):
                     return GameSession.MyShopName + (S.PlayerShop.IsOpen ? "\n<size=13><color=#A9C9A9>营业中</color></size>" : "\n<size=13>关门</size>");
                 case PlaceKind.Agency:
-                    return p.Name + (S.HasShop ? "" : "\n<size=13><color=#DDC18B>先来这里租铺子</color></size>");
+                    return p.Name + (!S.IsPlaceOpen(p) ? "\n<size=13><color=#D79780>已打烊</color></size>" : S.HasShop ? "" : "\n<size=13><color=#DDC18B>先来这里租铺子</color></size>");
                 default:
-                    return S.PlaceTitle(p);
+                    return S.PlaceTitle(p) + (p.Kind == PlaceKind.Shop && !S.IsVacant(p) && !S.IsPlaceOpen(p) ? "\n<size=13><color=#D79780>已打烊</color></size>" : "");
             }
         }
 

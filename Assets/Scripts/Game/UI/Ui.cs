@@ -146,6 +146,19 @@ namespace PCShopSell.Game.UI
             return b;
         }
 
+        /// <summary>给任意界面元素挂鼠标悬停说明（悬停约半秒后在鼠标旁边弹出）。文字每次悬停时现取，所以能显示当前状态。</summary>
+        public static T Tip<T>(this T c, Func<string> text) where T : Component
+        {
+            if (c == null) return c;
+            Graphic g = c.GetComponent<Graphic>();
+            if (g != null) g.raycastTarget = true;
+            var t = c.GetComponent<TipTarget>() ?? c.gameObject.AddComponent<TipTarget>();
+            t.Text = text;
+            return c;
+        }
+
+        public static T Tip<T>(this T c, string text) where T : Component => c.Tip(() => text);
+
         public static VerticalLayoutGroup VList(RectTransform rt, float spacing = 6, int pad = 10, bool expandHeight = false)
         {
             var v = rt.gameObject.AddComponent<VerticalLayoutGroup>();

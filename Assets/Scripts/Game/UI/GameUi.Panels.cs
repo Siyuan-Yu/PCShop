@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Text;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -296,9 +296,9 @@ namespace PCShopSell.Game.UI
                     if (_ctrl.SaveGame()) Toast("已存档。");
                     else Toast(S.CanSave ? SaveStore.LastSaveMessage : "当前状态暂时不能存档。");
                 }, 20, Ui.ButtonHot, S.CanSave), -1, 48);
-                Ui.Size(Ui.Button(w.Content, "读取手动存档", () => _ctrl.LoadGame(), 20, Ui.ButtonBg, SaveStore.Exists), -1, 40);
-                Ui.Size(Ui.Button(w.Content, "读取最近自动存档", () => _ctrl.LoadGame(true), 20, Ui.ButtonBg, SaveStore.Exists), -1, 40);
-                Ui.Size(Ui.Button(w.Content, "重新开始", () => _ctrl.NewGame(), 20, Ui.Warn), -1, 48);
+                Ui.Size(Ui.Button(w.Content, "读取手动存档…", () => ConfirmAction("读取手动存档", "回到上一次手动存档的状态。\n现在这局没存档的进度会丢掉。", "读取", () => _ctrl.LoadGame()), 20, Ui.ButtonBg, SaveStore.Exists), -1, 40);
+                Ui.Size(Ui.Button(w.Content, "读取最近自动存档…", () => ConfirmAction("读取自动存档", "回到最近一次自动存档的状态。\n现在这局没存档的进度会丢掉。", "读取", () => _ctrl.LoadGame(true)), 20, Ui.ButtonBg, SaveStore.Exists), -1, 40);
+                Ui.Size(Ui.Button(w.Content, "重新开始…", () => ConfirmAction("重新开始", "放弃现在这一局，从头开始新的一局。\n没存档的进度都会丢掉。", "重新开始", () => _ctrl.NewGame()), 20, Ui.Warn), -1, 48);
                 RectTransform sfx = Ui.Row(w.Content, 48, 8);
                 Ui.Size(Ui.Button(sfx, PCShopSell.Game.Runtime.SoundFx.Muted ? "音效：关" : "音效：开", () =>
                 {
@@ -328,7 +328,7 @@ namespace PCShopSell.Game.UI
                         w.Rebuild();
                     }, 17, Ui.ButtonBg), -1, 44);
                 }
-                Line(w.Content, "快捷键：空格 暂停 · 1–4 倍速 · 滚轮 缩放 · Esc 关闭窗口", 16, Ui.Dim);
+                Line(w.Content, "快捷键：空格 暂停 · 1–4 倍速 · 滚轮 缩放 · Esc / 右键 关窗口（没开窗口时 Esc 开菜单）· M 我的 · B 背包 · C 日程 · P 手机 · J 经营 · H 行情 · 鼠标停在按钮上有说明", 16, Ui.Dim);
             });
         }
 

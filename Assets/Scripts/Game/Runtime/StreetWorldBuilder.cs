@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.World;
 using UnityEngine;
@@ -23,6 +23,11 @@ namespace PCShopSell.Game.Runtime
         public Vector3 LabelPos;
         public GameObject Root;
         public UnityEngine.UI.Text Sign;
+        /// <summary>只在营业时显示 / 只在关门时显示的东西（招牌亮灯、橱窗、卷帘门、挂牌……）。</summary>
+        public readonly List<GameObject> OpenOnly = new List<GameObject>();
+        public readonly List<GameObject> ClosedOnly = new List<GameObject>();
+        public Light Neon;
+        public int OpenState = -1;
     }
 
     /// <summary>
@@ -53,6 +58,7 @@ namespace PCShopSell.Game.Runtime
         private readonly System.Random _rng;
         private Transform _root;
         private int _shopNeonCount;
+        private PlaceVisual _cur;
 
         public Dictionary<string, PlaceVisual> Places { get; } = new Dictionary<string, PlaceVisual>();
         public List<Light> NightLights { get; } = new List<Light>();
@@ -130,6 +136,7 @@ namespace PCShopSell.Game.Runtime
             root.SetParent(_root, false);
             var vis = new PlaceVisual { Place = p, Entrance = entrance, Root = root.gameObject };
             Places[p.Id] = vis;
+            _cur = vis;
 
             switch (p.Kind)
             {
@@ -172,17 +179,22 @@ namespace PCShopSell.Game.Runtime
             var body = Prims.Box(root, "Body", new Vector3(entrance.x, h / 2, cz), new Vector3(w, h, d), Mats.Lit(facade, 0.1f), true);
             body.AddComponent<PlaceMarker>().PlaceId = p.Id;
 
-            Prims.Box(root, "Glass", new Vector3(entrance.x, 1.4f, FrontZ - 0.05f), new Vector3(w - 1f, 2.6f, 0.1f),
-                Mats.Glow(new Color(0.35f, 0.45f, 0.55f), new Color(1.6f, 1.3f, 0.9f)));
+            _cur.OpenOnly.Add(Prims.Box(root, "Glass", new Vector3(entrance.x, 1.4f, FrontZ - 0.05f), new Vector3(w - 1f, 2.6f, 0.1f),
+                Mats.Glow(new Color(0.35f, 0.45f, 0.55f), new Color(1.6f, 1.3f, 0.9f))));
+            _cur.ClosedOnly.Add(Prims.Box(root, "GlassDark", new Vector3(entrance.x, 1.4f, FrontZ - 0.05f), new Vector3(w - 1f, 2.6f, 0.1f), Mats.Lit(new Color(0.17f, 0.21f, 0.25f), 0.7f)));
             Prims.Box(root, "Door", new Vector3(entrance.x, 1.1f, FrontZ - 0.08f), new Vector3(Mathf.Min(1.4f, w * 0.3f), 2.2f, 0.1f), Mats.Lit(new Color(0.2f, 0.22f, 0.25f), 0.6f));
-            Prims.Box(root, "Sign", new Vector3(entrance.x, 3.2f, FrontZ - 0.15f), new Vector3(w - 0.4f, 0.8f, 0.2f),
-                Mats.Glow(sign * 0.8f, sign * 0.9f));
-            Prims.Box(root, "Awning", new Vector3(entrance.x, 2.75f, FrontZ - 0.6f), new Vector3(w - 0.2f, 0.08f, 1.2f), Mats.Lit(sign));
+            _cur.OpenOnly.Add(Prims.Box(root, "Sign", new Vector3(entrance.x, 3.2f, FrontZ - 0.15f), new Vector3(w - 0.4f, 0.8f, 0.2f),
+                Mats.Glow(sign * 0.8f, sign * 0.9f)));
+            _cur.ClosedOnly.Add(Prims.Box(root, "SignDim", new Vector3(entrance.x, 3.2f, FrontZ - 0.15f), new Vector3(w - 0.4f, 0.8f, 0.2f), Mats.Lit(sign * 0.38f, 0.1f)));
+            _cur.OpenOnly.Add(Prims.Box(root, "Awning", new Vector3(entrance.x, 2.75f, FrontZ - 0.6f), new Vector3(w - 0.2f, 0.08f, 1.2f), Mats.Lit(sign)));
+            // 关门：遮阳篷收成一块灰扁布（没有条纹、没有亮色）
+            _cur.ClosedOnly.Add(Prims.Box(root, "AwningFolded", new Vector3(entrance.x, 2.75f, FrontZ - 0.6f), new Vector3(w - 0.2f, 0.08f, 1.2f), Mats.Lit(new Color(0.34f, 0.35f, 0.37f), 0.1f)));
             Prims.SignText(root, p.Name, new Vector3(entrance.x, 3.2f, FrontZ - 0.27f), w - 0.8f, 0.6f, ArtDirection.Cream);
             // Fabric valance and timber window mullions make the frontage read as a small real shop.
             for (int stripe = 0; stripe < Mathf.FloorToInt(w / 0.5f); stripe++)
-                Prims.Box(root, "AwningStripe", new Vector3(entrance.x - w / 2 + 0.3f + stripe * 0.5f, 2.80f, FrontZ - 0.6f), new Vector3(0.22f, 0.018f, 1.16f), Mats.Lit(ArtDirection.Cream));
-            Prims.Box(root, "Valance", new Vector3(entrance.x, 2.64f, FrontZ - 1.18f), new Vector3(w - 0.2f, 0.22f, 0.055f), Mats.Lit(sign));
+                _cur.OpenOnly.Add(Prims.Box(root, "AwningStripe", new Vector3(entrance.x - w / 2 + 0.3f + stripe * 0.5f, 2.80f, FrontZ - 0.6f), new Vector3(0.22f, 0.018f, 1.16f), Mats.Lit(ArtDirection.Cream)));
+            _cur.OpenOnly.Add(Prims.Box(root, "Valance", new Vector3(entrance.x, 2.64f, FrontZ - 1.18f), new Vector3(w - 0.2f, 0.22f, 0.055f), Mats.Lit(sign)));
+            _cur.ClosedOnly.Add(Prims.Box(root, "ValanceDim", new Vector3(entrance.x, 2.64f, FrontZ - 1.18f), new Vector3(w - 0.2f, 0.22f, 0.055f), Mats.Lit(new Color(0.28f, 0.29f, 0.31f), 0.1f)));
             foreach (float side in new[] { -1f, 1f })
                 Prims.Box(root, "WindowMullion", new Vector3(entrance.x + side * (w - 1f) * 0.37f, 1.4f, FrontZ - 0.12f), new Vector3(0.07f, 2.6f, 0.08f), Mats.Lit(ArtDirection.Cream));
             if (_shopNeonCount++ % 2 == 0)
@@ -197,6 +209,7 @@ namespace PCShopSell.Game.Runtime
                 nl.intensity = 0;
                 nl.shadows = LightShadows.None;
                 NightLights.Add(nl);
+                _cur.Neon = nl;
             }
 
             if (floors > 1)
@@ -205,10 +218,48 @@ namespace PCShopSell.Game.Runtime
 
             if (p.IsPlayerShop)
             {
-                Prims.Box(root, "RoofSign", new Vector3(entrance.x, h + 1.0f, FrontZ + 0.5f), new Vector3(w, 1.2f, 0.2f),
-                    Mats.Glow(new Color(0.1f, 0.6f, 0.55f), new Color(0.3f, 2.5f, 2.2f), false));
+                _cur.OpenOnly.Add(Prims.Box(root, "RoofSign", new Vector3(entrance.x, h + 1.0f, FrontZ + 0.5f), new Vector3(w, 1.2f, 0.2f),
+                    Mats.Glow(new Color(0.1f, 0.6f, 0.55f), new Color(0.3f, 2.5f, 2.2f), false)));
             }
+            AddShutterAndBoards(root, entrance.x, w, FrontZ, 2.6f);
             return new Vector3(entrance.x, h + (p.IsPlayerShop ? 2.4f : 1.2f), FrontZ);
+        }
+
+        /// <summary>关门时的卷帘门（带横纹）和门口挂牌：绿色“营业中” / 红色“休息中”。</summary>
+        private void AddShutterAndBoards(Transform root, float x, float w, float frontZ, float height)
+        {
+            var shutter = new GameObject("RollerShutter").transform;
+            shutter.SetParent(root, false);
+            Material slat = Mats.Lit(new Color(0.46f, 0.48f, 0.5f), 0.5f), rib = Mats.Lit(new Color(0.3f, 0.32f, 0.34f), 0.4f);
+            Prims.Box(shutter, "Slats", new Vector3(x, height * 0.5f, frontZ - 0.2f), new Vector3(w - 0.3f, height, 0.06f), slat);
+            for (float y = 0.25f; y < height; y += 0.28f)
+                Prims.Box(shutter, "Rib", new Vector3(x, y, frontZ - 0.245f), new Vector3(w - 0.3f, 0.035f, 0.03f), rib);
+            Prims.Box(shutter, "Box", new Vector3(x, height + 0.08f, frontZ - 0.22f), new Vector3(w - 0.2f, 0.16f, 0.14f), rib);
+            _cur.ClosedOnly.Add(shutter.gameObject);
+
+            float bx = x + Mathf.Min(1.5f, w * 0.34f);
+            var open = new GameObject("OpenBoard").transform;
+            open.SetParent(root, false);
+            Prims.Box(open, "Board", new Vector3(bx, 1.55f, frontZ - 0.3f), new Vector3(1.0f, 0.38f, 0.05f), Mats.Glow(new Color(0.2f, 0.62f, 0.32f), new Color(0.4f, 2.4f, 0.8f), false));
+            Prims.SignText(open, "营业中", new Vector3(bx, 1.55f, frontZ - 0.34f), 0.95f, 0.3f, Color.white);
+            _cur.OpenOnly.Add(open.gameObject);
+
+            var closed = new GameObject("ClosedBoard").transform;
+            closed.SetParent(root, false);
+            Prims.Box(closed, "Board", new Vector3(bx, 1.55f, frontZ - 0.34f), new Vector3(1.0f, 0.38f, 0.05f), Mats.Lit(new Color(0.72f, 0.2f, 0.18f), 0.3f));
+            Prims.SignText(closed, "休息中", new Vector3(bx, 1.55f, frontZ - 0.38f), 0.95f, 0.3f, Color.white);
+            _cur.ClosedOnly.Add(closed.gameObject);
+        }
+
+        /// <summary>街上店铺开门 / 关门的外观：开门亮招牌亮橱窗挂绿牌，关门放下卷帘门、招牌变暗、挂红牌、霓虹灭。</summary>
+        public void SetOpen(PlaceVisual v, bool open)
+        {
+            int state = open ? 1 : 0;
+            if (v.OpenState == state) return;
+            v.OpenState = state;
+            foreach (GameObject g in v.OpenOnly) if (g != null) g.SetActive(open);
+            foreach (GameObject g in v.ClosedOnly) if (g != null) g.SetActive(!open);
+            if (v.Neon != null) v.Neon.enabled = open;
         }
 
         private Vector3 BuildStation(Transform root, Place p, Vector3 e)
@@ -240,8 +291,10 @@ namespace PCShopSell.Game.Runtime
             var body = Prims.Box(root, "Body", new Vector3(e.x, 2.5f, FrontZ + 4), new Vector3(w, 5, 8), Mats.Lit(new Color(0.62f, 0.64f, 0.66f), 0.1f), true);
             body.AddComponent<PlaceMarker>().PlaceId = p.Id;
             Color c = dealer ? ArtDirection.Sage : SignColors[_rng.Next(SignColors.Length)];
-            Prims.Box(root, "Shutter", new Vector3(e.x, 1.3f, FrontZ - 0.05f), new Vector3(w - 1.5f, 2.6f, 0.1f), Mats.Glow(new Color(0.4f, 0.42f, 0.45f), new Color(1.4f, 1.3f, 1.1f)));
-            Prims.Box(root, "Sign", new Vector3(e.x, 3.3f, FrontZ - 0.15f), new Vector3(w - 0.6f, 0.9f, 0.2f), Mats.Glow(c * 0.8f, c * .9f));
+            _cur.OpenOnly.Add(Prims.Box(root, "Shutter", new Vector3(e.x, 1.3f, FrontZ - 0.05f), new Vector3(w - 1.5f, 2.6f, 0.1f), Mats.Glow(new Color(0.4f, 0.42f, 0.45f), new Color(1.4f, 1.3f, 1.1f))));
+            _cur.OpenOnly.Add(Prims.Box(root, "Sign", new Vector3(e.x, 3.3f, FrontZ - 0.15f), new Vector3(w - 0.6f, 0.9f, 0.2f), Mats.Glow(c * 0.8f, c * .9f)));
+            _cur.ClosedOnly.Add(Prims.Box(root, "SignDim", new Vector3(e.x, 3.3f, FrontZ - 0.15f), new Vector3(w - 0.6f, 0.9f, 0.2f), Mats.Lit(c * 0.38f, 0.1f)));
+            AddShutterAndBoards(root, e.x, w - 1.5f, FrontZ, 2.6f);
             Prims.SignText(root, p.Name, new Vector3(e.x, 3.3f, FrontZ - .27f), w - 1f, .65f, ArtDirection.Cream);
             if (dealer)
             {

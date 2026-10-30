@@ -245,6 +245,30 @@ namespace PCShopSell.Core.Session
             }
         }
 
+        /// <summary>街上普通店铺 / 中介的营业时间（只影响外观和名牌，不拦着你进门）。</summary>
+        public const int StreetShopOpenMinute = 9 * 60;
+        public const int StreetShopCloseMinute = 21 * 60;
+
+        /// <summary>这个地点现在看起来是不是在营业：自己的店看实际状态，批发 / 车行看营业时间，空铺和停业的分店一直关着。</summary>
+        public bool IsPlaceOpen(Place p)
+        {
+            if (p == null) return false;
+            if (IsMyShop(p)) return PlayerShop.IsOpen;
+            var venture = VentureAt(p.Id);
+            if (venture != null && venture.Paused) return false;
+            switch (p.Kind)
+            {
+                case PlaceKind.Wholesaler: return IsWholesalerOpen;
+                case PlaceKind.Dealer: return IsDealerOpen;
+                case PlaceKind.Shop:
+                case PlaceKind.Agency:
+                    if (IsVacant(p)) return false;
+                    int m = Clock.MinuteOfDay;
+                    return m >= StreetShopOpenMinute && m < StreetShopCloseMinute;
+                default: return true;
+            }
+        }
+
         private bool IsOpenWeekday(int open, int close)
         {
             GameTimestamp now = Clock.Now;
