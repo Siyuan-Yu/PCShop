@@ -116,6 +116,12 @@ namespace PCShopSell.Game.UI
             Place metro = S.City.FirstOfKind(PlaceKind.Station);
             if (metro != null && _ctrl.World.Places.TryGetValue(metro.Id, out var station))
                 AddAgencyLandmark(labels, occupied, view, view.Project(station.LabelPos), "M  商业街地铁站");
+            Place dealer = S.City.FirstOfKind(PlaceKind.Dealer);
+            if (dealer != null && _ctrl.World.Places.TryGetValue(dealer.Id, out var dealerView))
+            {
+                var roof = dealerView.Root.transform.Find("Body")?.GetComponent<Renderer>();
+                AddAgencyLandmark(labels, occupied, view, view.Project(roof != null ? new Vector3(roof.bounds.center.x, roof.bounds.max.y + .5f, roof.bounds.center.z) : dealerView.LabelPos), dealer.Name);
+            }
             AddAgencyLandmark(labels, occupied, view, view.Project(new Vector3(-25, 20, 32)), "沿街住宅");
             AddAgencyLandmark(labels, occupied, view, view.Project(new Vector3(105, 1, 0)), "城中村方向 →");
 

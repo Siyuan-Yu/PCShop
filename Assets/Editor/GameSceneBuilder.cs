@@ -1667,7 +1667,7 @@ namespace PCShopSell.EditorTools
 
             _game.Ui.CloseAllWindows();
             var dense = s.CreateSave();
-            dense.listings = new[] { "shop01", "shop05", "shop06", "shop08", "shop09", "shop10" }
+            dense.listings = new[] { "shop01", "shop05", "shop16", "shop08", "shop09", "shop10" }
                 .Select((id, i) => new SaveListing { place = id, size = (int)s.City.GetPlace(id).Size,
                     rentCents = Money.FromYuan(30000 - i * 4000).Cents,
                     openDay = s.Clock.Today.TotalDays + (i % 2 == 0 ? 0 : 15), closeDay = s.Clock.Today.TotalDays + 45 }).ToArray();

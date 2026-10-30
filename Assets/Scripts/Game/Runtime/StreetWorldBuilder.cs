@@ -142,6 +142,7 @@ namespace PCShopSell.Game.Runtime
             {
                 case PlaceKind.Shop:
                 case PlaceKind.Agency:
+                case PlaceKind.Dealer:
                     vis.LabelPos = BuildShop(root, p, entrance);
                     vis.Sign = root.GetComponentInChildren<UnityEngine.UI.Text>();
                     break;
@@ -152,10 +153,7 @@ namespace PCShopSell.Game.Runtime
                     vis.LabelPos = BuildHome(root, p, entrance);
                     break;
                 case PlaceKind.Wholesaler:
-                    vis.LabelPos = BuildStall(root, p, entrance, false);
-                    break;
-                case PlaceKind.Dealer:
-                    vis.LabelPos = BuildStall(root, p, entrance, true);
+                    vis.LabelPos = BuildStall(root, p, entrance);
                     break;
                 default:
                     vis.LabelPos = entrance + Vector3.up * 3;
@@ -285,27 +283,19 @@ namespace PCShopSell.Game.Runtime
             return new Vector3(x - 2, 8.5f, e.z);
         }
 
-        private Vector3 BuildStall(Transform root, Place p, Vector3 e, bool dealer)
+        private Vector3 BuildStall(Transform root, Place p, Vector3 e)
         {
-            float w = dealer ? 11f : 10f;
+            float w = 10f;
             var body = Prims.Box(root, "Body", new Vector3(e.x, 2.5f, FrontZ + 4), new Vector3(w, 5, 8), Mats.Lit(new Color(0.62f, 0.64f, 0.66f), 0.1f), true);
             body.AddComponent<PlaceMarker>().PlaceId = p.Id;
-            Color c = dealer ? ArtDirection.Sage : SignColors[_rng.Next(SignColors.Length)];
+            Color c = SignColors[_rng.Next(SignColors.Length)];
             _cur.OpenOnly.Add(Prims.Box(root, "Shutter", new Vector3(e.x, 1.3f, FrontZ - 0.05f), new Vector3(w - 1.5f, 2.6f, 0.1f), Mats.Glow(new Color(0.4f, 0.42f, 0.45f), new Color(1.4f, 1.3f, 1.1f))));
             _cur.OpenOnly.Add(Prims.Box(root, "Sign", new Vector3(e.x, 3.3f, FrontZ - 0.15f), new Vector3(w - 0.6f, 0.9f, 0.2f), Mats.Glow(c * 0.8f, c * .9f)));
             _cur.ClosedOnly.Add(Prims.Box(root, "SignDim", new Vector3(e.x, 3.3f, FrontZ - 0.15f), new Vector3(w - 0.6f, 0.9f, 0.2f), Mats.Lit(c * 0.38f, 0.1f)));
             AddShutterAndBoards(root, e.x, w - 1.5f, FrontZ, 2.6f);
             Prims.SignText(root, p.Name, new Vector3(e.x, 3.3f, FrontZ - .27f), w - 1f, .65f, ArtDirection.Cream);
-            if (dealer)
-            {
-                for (int i = 0; i < 2; i++)
-                    Prims.ParkedCar(root, new Vector3(e.x - 2.9f + i * 5.6f, 0, FrontZ - 1.6f), i == 0 ? ArtDirection.Clay : ArtDirection.Cream);
-            }
-            else
-            {
-                for (int i = 0; i < 4; i++)
-                    Prims.Box(root, "Box" + i, new Vector3(e.x - 3.5f + i * 2.2f, 0.35f, FrontZ - 1.0f), new Vector3(1.0f, 0.7f, 0.8f), Mats.Lit(new Color(0.72f, 0.58f, 0.40f)));
-            }
+            for (int i = 0; i < 4; i++)
+                Prims.Box(root, "Box" + i, new Vector3(e.x - 3.5f + i * 2.2f, 0.35f, FrontZ - 1.0f), new Vector3(1.0f, 0.7f, 0.8f), Mats.Lit(new Color(0.72f, 0.58f, 0.40f)));
             return new Vector3(e.x, 6.5f, FrontZ);
         }
 

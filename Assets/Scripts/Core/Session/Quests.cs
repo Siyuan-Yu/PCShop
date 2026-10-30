@@ -48,11 +48,11 @@ namespace PCShopSell.Core.Session
             new QuestDef
             {
                 Id = "rent", Title = "租一间铺子", Target = QuestTarget.Agency,
-                Short = "去商业街的「安居房产中介」挑一间铺面签约",
-                Hint = "先出门到商业街，找到“安居房产中介”的招牌，走到门口按 F 进入，挑一间铺面签约。要付首月租金、押金和中介费；留些钱作为开业后的进货和周转资金。注意看清“多少天后可租”：那种铺子签了要等现租户搬走才能进去，房租却从签约起算。",
+                Short = $"去{K("安居房产中介")}挑一间铺面签约",
+                Hint = $"签约要付{K("首月租金 + 押金 + 中介费")}，记得{K("留些进货钱")}。标着“多少天后可租”的铺子，要等现租户搬走才能进。",
                 Done = s => s.HasShop,
                 Progress = s => s.PendingLease != null
-                    ? $"已提前签下{s.City.GetPlace(s.PendingLease.PlaceId).Name}，第 {s.PendingLease.StartDay + 1} 天才交房；想早点开业，再找一间马上能进的"
+                    ? $"已提前签下{s.City.GetPlace(s.PendingLease.PlaceId).Name}，第 {s.PendingLease.StartDay + 1} 天才交房"
                     : $"现金 {s.Ledger.Balance}",
                 Reward = "一个货架 + 一个收银台（放进“我的”里待摆放）",
                 Grant = s =>
@@ -64,8 +64,8 @@ namespace PCShopSell.Core.Session
             new QuestDef
             {
                 Id = "mall", Title = "去家具城添置东西", Target = QuestTarget.Mall,
-                Short = "去商业街的「宜居家具城」买任意一件家具",
-                Hint = "奖励的一个货架只能摆一类配件，想卖得多还得添货架、展示桌、装机台；家里也缺床和凳子。去商业街的“宜居家具城”，走到门口按 F 进入，买任意一件东西就算完成（装背包或叫车都行），不用照着清单买齐。",
+                Short = $"去{K("宜居家具城")}买任意一件东西",
+                Hint = $"{K("随便买一件就算完成")}，装背包、叫车都行。以后的货架、展示桌、装机台也在这里买。",
                 Done = s => s.HasShop && s.Flags.Contains(GameSession.MallBoughtFlag),
                 Progress = s => s.Flags.Contains(GameSession.MallBoughtFlag) ? "已经在家具城买过东西" : "还没在家具城买过东西",
                 Reward = "1 个入门 CPU + 1 张入门显卡（直接放进店里后仓）",
@@ -78,16 +78,16 @@ namespace PCShopSell.Core.Session
             new QuestDef
             {
                 Id = "place", Title = "歇业装修，把设施摆好", Target = QuestTarget.Renovate,
-                Short = "回店里打开右侧“装修”页，摆好收银台和一个货架",
-                Hint = "回到自己的店，打开右侧“装修”页（今天歇业），在右侧列表选家具、点地上摆下；货架靠墙摆，收银台放门边。摆完点“完成”，第二天才能开业。",
+                Short = $"回店打开{K("“装修”页")}，摆好收银台和货架",
+                Hint = $"选家具、点地面摆下：货架靠墙，收银台放门边。点{K("“完成”")}后{K("第二天开业")}，装修当天歇业。",
                 Done = s => FitDone(s, true),
                 Progress = s => FitText(s, true),
             },
             new QuestDef
             {
                 Id = "shelf", Title = "设置第一个配件货架", Target = QuestTarget.Stock,
-                Short = "走到货架前按 F，把第一个货架设为已有货物的类别（例如处理器）",
-                Hint = "新摆的货架是空的，每个货架只摆一种货。走到货架前按 F（或店内右侧面板“库存”页点“设置”）选摆什么。先选后仓已有的处理器或显卡，以后再逐步扩充其他品类，顾客只买货架上摆着的。",
+                Short = $"点货架或按 {K("F")}，设成处理器或显卡",
+                Hint = $"每个货架{K("只摆一种货")}，顾客只买货架上的。先选后仓已有的{K("处理器或显卡")}；也可在“库存”页设置。",
                 Done = s => ShelvesSet(s) >= 1,
                 Progress = s => $"已设置 {Math.Min(1, ShelvesSet(s))}/1 类配件",
             },
@@ -95,45 +95,48 @@ namespace PCShopSell.Core.Session
             {
                 Id = "stock", Title = "进第一批货", Target = QuestTarget.Market,
                 Short = "先卖任务奖励的配件；没有货再去档口补货",
-                Hint = "先用家具城任务奖励的 CPU 和显卡开业。缺货时去电子市场，走近配件档口按 F 进入购买，用背包或三轮车带回来，到店里放进后仓，货架会自动摆上。有了智能手机、装上 1788 app 也能网上批发，便宜但要等一天。",
+                Hint = $"先用{K("奖励的 CPU、显卡")}开业。缺货去{K("电子市场档口")}进，带回店放进后仓会自动上架；有了智能手机也能用 1788 网上批发（次日到）。",
                 Done = s => StockCount(s) >= 1,
                 Progress = s => $"后仓 {StockCount(s)} 件，覆盖 {StockCategories(s)} 类配件（至少 1 件即可开始）",
             },
             new QuestDef
             {
                 Id = "sale", Title = "开业，卖出第一单", Target = QuestTarget.Counter,
-                Short = "人守在店里，顾客来了去收银台结账",
-                Hint = "装修完第二天店就开业了。人要在店里：顾客挑好货会在收银台前排队，走到收银台旁按 F，或点顾客头顶的“结账”收钱。没人看店就关门。",
+                Short = $"守在店里，顾客排队时去{K("收银台")}结账",
+                Hint = $"顾客挑好货会到收银台排队，走过去按 {K("F")} 或点头顶“结账”。{K("没人看店就关门")}。",
                 Done = s => s.Ledger.Entries.Any(e => e.Category == ShopSimulation.SalesCategory),
                 Progress = s => s.PlayerShop.IsOpen ? "店在营业，等顾客上门" : "店还没开业",
             },
             new QuestDef
             {
                 Id = "hire", Title = "雇一名店员", Target = QuestTarget.Staff,
-                Short = "店内“招人”页贴启事，雇个人看店",
-                Hint = "一个人守店走不开。在店内右侧面板“招人”页贴招聘启事，次日 9:00 来人后面试雇一个，日薪每天结算。店员替你收银，你就能出去进货、跑腿。第一个月的目标也要求雇过人。",
+                Short = $"在{K("“招人”页")}贴启事，雇个人看店",
+                Hint = $"贴启事后{K("次日 9:00")} 有人来应聘，日薪每天结算。店员帮你收银，{K("你才能出门进货")}。",
                 Done = s => s.Employee != null || s.EverHired,
                 Progress = s => s.Employee != null ? $"已雇 {s.Employee.Name}" : "还没雇人",
             },
             new QuestDef
             {
                 Id = "phone", Title = "买一部智能手机", Target = QuestTarget.PhoneShop,
-                Short = "去街上的「手机店」买智能手机",
-                Hint = "按键机只能打电话。去街上的「手机店」买一部智能手机，再到应用商店下载 1788 app，网上进货便宜（要等一天）；它也是开通收款码的前提。",
+                Short = $"去{K("手机店")}买智能手机",
+                Hint = $"按键机只能打电话。智能手机能装 {K("1788")} 网上进货，也是{K("开通收款码的前提")}。",
                 Done = s => s.HasSmartphone,
                 Progress = s => s.HasSmartphone ? "已有智能手机" : "现在只有按键机",
             },
             new QuestDef
             {
                 Id = "qr", Title = "开通收款码", Target = QuestTarget.PhoneShop,
-                Short = "去「手机店」给店里开通收款码（¥200）",
-                Hint = "收款码在街上的「手机店」办理（¥200），办好当场就能用。不带现金的顾客也能买单，结账更快，排队的人更少。店里“升级”页能看到还有哪些设备可以添、各在哪里买。",
+                Short = $"去{K("手机店")}开通收款码（¥200）",
+                Hint = $"办好{K("当场生效")}：不带现金的顾客也能买，结账更快。其他设备在哪买，看店里“升级”页。",
                 Done = s => s.HasUpgrade(ShopUpgrades.Qr),
                 Progress = s => s.HasUpgrade(ShopUpgrades.Qr) ? "已开通" : "还没开通",
             },
         }.Concat(GrowthSteps()).ToArray();
 
         public static QuestDef Get(string id) => All.FirstOrDefault(q => q.Id == id);
+
+        /// <summary>任务文字里的关键信息（uGUI 富文本高亮）。</summary>
+        private static string K(string text) => "<color=#FFC966>" + text + "</color>";
 
         // ---------- 判断用 ----------
 

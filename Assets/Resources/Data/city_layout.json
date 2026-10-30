@@ -118,7 +118,7 @@
     { "id": "shop03", "name": "大润发超市", "kind": "shop", "node": "e03", "size": "large", "business": "超市" },
     { "id": "shop04", "name": "米家手机", "kind": "shop", "node": "e04", "size": "medium", "business": "手机" },
     { "id": "shop05", "name": "老王修鞋", "kind": "shop", "node": "e05", "size": "small", "business": "修鞋" },
-    { "id": "shop06", "name": "明亮眼镜", "kind": "shop", "node": "e06", "size": "medium", "business": "眼镜" },
+    { "id": "dealer", "name": "顺风车行", "kind": "dealer", "node": "e06", "size": "medium" },
     { "id": "shop07", "name": "兴华电脑城", "kind": "shop", "node": "e07", "size": "large", "business": "电脑" },
     { "id": "shop08", "name": "好味快餐", "kind": "shop", "node": "e08", "size": "medium", "business": "快餐" },
     { "id": "shop09", "name": "阿芳理发", "kind": "shop", "node": "e09", "size": "small", "business": "理发" },
@@ -140,7 +140,6 @@
     { "id": "stall_gpu", "name": "显卡王", "kind": "wholesaler", "node": "mk2", "sells": "Gpu" },
     { "id": "stall_mem", "name": "存储专营", "kind": "wholesaler", "node": "mk3", "sells": "Memory,Storage" },
     { "id": "stall_psu", "name": "机箱电源城", "kind": "wholesaler", "node": "mk4", "sells": "PowerCase,Motherboard" },
-    { "id": "dealer", "name": "顺风车行", "kind": "dealer", "node": "mk5" },
     { "id": "metro_b", "name": "电子市场地铁站", "kind": "station", "node": "st_b" }
   ],
   "patrols": [

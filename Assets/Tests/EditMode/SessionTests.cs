@@ -447,10 +447,13 @@ namespace PCShopSell.Tests
             string json = System.IO.File.ReadAllText("Assets/Resources/Data/city_layout.json");
             CityLayout city = CityLayout.FromData(UnityEngine.JsonUtility.FromJson<CityLayoutData>(json));
             var shops = city.OfKind(PlaceKind.Shop).ToList();
-            Assert.AreEqual(19, shops.Count, "20 间门面，其中一间是房产中介");
+            Assert.AreEqual(18, shops.Count, "20 间门面，其中一间是房产中介、一间是车行");
             Assert.AreEqual(1, city.OfKind(PlaceKind.Agency).Count());
+            Place dealer = city.FirstOfKind(PlaceKind.Dealer);
+            Assert.IsNotNull(dealer);
+            Assert.AreEqual(0, city.Map.GetNode(dealer.NodeId).Y, 1e-9, "车行在商业街上，不在电子市场");
             Assert.AreEqual(4, shops.Count(p => p.Size == PCShopSell.Core.Shop.ShopSize.Large));
-            Assert.AreEqual(8, shops.Count(p => p.Size == PCShopSell.Core.Shop.ShopSize.Medium));
+            Assert.AreEqual(7, shops.Count(p => p.Size == PCShopSell.Core.Shop.ShopSize.Medium));
             Assert.AreEqual(7, shops.Count(p => p.Size == PCShopSell.Core.Shop.ShopSize.Small));
 
             var s = new GameSession(city, 1, Money.FromYuan(5000), GameTimestamp.From(new GameDate(0), 480));

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using PCShopSell.Core.Session;
 using UnityEngine;
@@ -188,18 +188,18 @@ namespace PCShopSell.Game.UI
         {
             switch (target)
             {
-                case QuestTarget.Agency: return "地点：商业街 · 安居房产中介。沿街看招牌，用 WASD 走到店门，按 F 进入。";
-                case QuestTarget.Renovate: return "位置：自己的店铺 → 右侧“装修”页。缺少家具时，到商业街的“宜居家具城”购买。";
-                case QuestTarget.Stock: return "位置：自己的店铺 → 右侧“库存”页；也可走近货架按 F 设置。";
-                case QuestTarget.Market: return "地点：电子市场的配件档口。沿路前往市场，走到档口门口按 F 进入。";
-                case QuestTarget.Counter: return "位置：自己的店铺 · 收银台。走近柜台，顾客排队时按 F 结账。";
-                case QuestTarget.Staff: return "位置：自己的店铺 → 右侧“招人”页。";
-                case QuestTarget.PhoneShop: return "地点：商业街 · 手机店。沿街找招牌，走到门口按 F 进入。";
-                case QuestTarget.Mall: return "地点：商业街 · 宜居家具城。沿街找招牌，走到门口按 F 进入。";
-                case QuestTarget.Upgrades: return "位置：自己的店铺 → 右侧“升级”页。";
-                case QuestTarget.Pricing: return "位置：自己的店铺 → 右侧“定价”页。";
-                case QuestTarget.Orders: return "位置：自己的店铺 → 右侧“订单”页。";
-                case QuestTarget.Restock: return "入口：顶栏“手机” → 1788 → “自动补货”；还没安装时先在手机应用商店下载。";
+                case QuestTarget.Agency: return "地点：商业街 · <color=#FFC966>安居房产中介</color>（走到门口按 F）";
+                case QuestTarget.Renovate: return "位置：自己的店 → 右侧“装修”页";
+                case QuestTarget.Stock: return "位置：自己的店 · 货架（点货架或按 F）";
+                case QuestTarget.Market: return "地点：<color=#FFC966>电子市场</color> · 配件档口";
+                case QuestTarget.Counter: return "位置：自己的店 · 收银台";
+                case QuestTarget.Staff: return "位置：自己的店 → 右侧“招人”页";
+                case QuestTarget.PhoneShop: return "地点：商业街 · <color=#FFC966>手机店</color>（走到门口按 F）";
+                case QuestTarget.Mall: return "地点：商业街 · <color=#FFC966>宜居家具城</color>（走到门口按 F）";
+                case QuestTarget.Upgrades: return "位置：自己的店 → 右侧“升级”页";
+                case QuestTarget.Pricing: return "位置：自己的店 → 右侧“定价”页";
+                case QuestTarget.Orders: return "位置：自己的店 → 右侧“订单”页";
+                case QuestTarget.Restock: return "入口：顶栏“手机” → 1788 → “自动补货”";
                 case QuestTarget.Finance: return "入口：顶栏“经营” → “资产与负债”。";
                 case QuestTarget.Enterprise: return "入口：顶栏“经营” → “企业合同”。";
                 case QuestTarget.Direct: return "入口：顶栏“经营” → “直供采购”。";
