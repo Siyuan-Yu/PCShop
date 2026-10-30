@@ -1514,8 +1514,8 @@ namespace PCShopSell.EditorTools
             if (window == null) return;
             var labels = window.GetComponentsInChildren<UnityEngine.UI.Button>()
                 .Select(b => b.GetComponentInChildren<UnityEngine.UI.Text>()?.text).ToArray();
-            Check(labels.Length == 3 && labels.All(t => t == "关闭" || t == "知道了" || t == "收起左上角任务条" || t == "在左上角显示任务条"),
-                "教学窗口只含关闭、知道了和收起任务条，不含出行或页面跳转按钮");
+            Check(labels.Length == 2 && labels.All(t => t == "关闭" || t == "知道了"),
+                "教学窗口只含关闭和知道了，不含收起任务条、出行或页面跳转按钮");
         }
 
         private static UnityEngine.UI.Button AgencyButton(string name) => _game.Ui.Canvases

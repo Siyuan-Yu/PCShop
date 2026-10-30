@@ -142,14 +142,7 @@ namespace PCShopSell.Game.UI
                 Para(w.Content, "与老周来往：顶栏“菜单” → “目标与人脉”。", 15, Ui.Dim);
             if (S.HasShop && NeedsTimeHint(q.Target))
                 Para(w.Content, "等顾客、招聘或到货时，关闭弹窗；在店内可手动切到“柜台”页，让时间继续。", 15, Ui.Dim);
-            var row = Ui.Row(w.Content, 42, 8);
-            Ui.Size(Ui.Button(row, _questHidden ? "在左上角显示任务条" : "收起左上角任务条", () =>
-            {
-                _questHidden = !_questHidden;
-                UpdateQuestTracker();
-                w.Rebuild();
-            }, 16), -1, 42, 1);
-            Ui.Size(Ui.Button(row, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42, 1);
+            Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
         }
 
         private static void ResetGuideScroll(Window w)
