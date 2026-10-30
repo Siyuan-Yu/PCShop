@@ -15,6 +15,8 @@ namespace PCShopSell.Game.UI
         private Window _questWindow;
         private Window _questPopup;
         private bool _questHidden;
+        private bool _popupPending;
+        private QuestDef _pendingDone, _pendingNext;
 
         /// <summary>任务完成 / 换任务时强制弹窗（冒烟测试脚本会关掉，免得挡住脚本流程）。</summary>
         public bool QuestPopups = true;
@@ -26,6 +28,8 @@ namespace PCShopSell.Game.UI
             _questWindow = null;
             _questPopup = null;
             _questHidden = false;
+            _popupPending = false;
+            _pendingDone = _pendingNext = null;
             _businessTab = 0;
         }
 
@@ -75,9 +79,21 @@ namespace PCShopSell.Game.UI
             if (_questInitialized && _questSeen != q?.Id && !S.IsGameOver)
             {
                 QuestDef done = _questSeen != null && S.QuestCompleted(_questSeen) ? Quests.Get(_questSeen) : null;
-                if (QuestPopups && (done != null || q != null)) OpenQuestPopup(done, q);
+                if (QuestPopups && (done != null || q != null))
+                {
+                    _pendingDone = _pendingDone ?? done;
+                    _pendingNext = q;
+                    _popupPending = true;
+                }
                 else if (done != null) Toast($"<color=#A9C9A9>完成：{done.Title}</color>" + (q != null ? $"\n接下来：{q.Title}" : "\n继续经营小店吧。"));
                 else if (q != null) Toast("新任务：" + q.Title);
+            }
+            // Wait until result popups (e.g. "签约成功") are dismissed, so they read first.
+            if (_popupPending && !PopupOpen && !S.IsGameOver)
+            {
+                OpenQuestPopup(_pendingDone, _pendingNext);
+                _popupPending = false;
+                _pendingDone = _pendingNext = null;
             }
             _questInitialized = true;
             _questSeen = q?.Id;
