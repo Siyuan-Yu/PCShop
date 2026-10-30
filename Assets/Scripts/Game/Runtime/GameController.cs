@@ -132,7 +132,7 @@ namespace PCShopSell.Game
             {
                 Vector3 entrance = World.Places[s.PlayerShopPlace.Id].Entrance;
                 Vector3 door = entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZAt(entrance.x) - 0.3f);
-                _crowd = new CrowdView(_actors, -95, 100, door, 34);
+                _crowd = new CrowdView(_actors, -95, 100, door);
             }
             SyncCrowdDoor();
 
@@ -247,6 +247,16 @@ namespace PCShopSell.Game
         private ShopBeacon _beacon;
         public bool ShopBeaconVisible => _beacon != null && _beacon.Visible;
 
+        private float _crowdSyncTimer;
+
+        /// <summary>街坊上班的店门口（站在门前人行道上，进去就消失）。</summary>
+        private Vector3? ResidentDoor(string placeId)
+        {
+            if (!Session.City.HasPlace(placeId)) return null;
+            Place p = Session.City.GetPlace(placeId);
+            return StreetWorldBuilder.ToWorld(Session.DoorOf(p)) - new Vector3(0, 0, 0.4f);
+        }
+
         private void SyncViews(float dt)
         {
             bool interior = InInterior;
@@ -257,6 +267,12 @@ namespace PCShopSell.Game
             World.Root.SetActive(!room);
             _avatar.Update(Session, dt);
             _police.Update(!room);
+            _crowdSyncTimer -= dt;
+            if (_crowdSyncTimer <= 0)
+            {
+                _crowdSyncTimer = 0.25f;
+                _crowd.Sync(Session.ResidentsOutside(), ResidentDoor);
+            }
             _crowd.Update(worldDt, !room);
             (_beacon ?? (_beacon = new ShopBeacon(World.Root.transform))).Update(Session, World, dt);
             if (!room)
@@ -528,15 +544,15 @@ namespace PCShopSell.Game
                 else label = $"货架：{shelfKind.Name}（货架上 {Session.PlayerShop.ShelfFillOf(shelfKind).Total} 件，按 F 查看 / 设置）";
                 return true;
             }
-            if (NearPasserby(out _, out Vector3 pw))
+            if (NearPasserby(out ResidentDef who, out Vector3 pw))
             {
                 world = pw + new Vector3(0, 2.2f, 0);
-                label = "和路人聊聊";
+                label = $"和{who.Person.Name}（{who.Person.Role}）聊聊";
                 return true;
             }
             Place p = Session.NearbyPlace;
             if (p == null || Session.CurrentPlace != null || !World.Places.TryGetValue(p.Id, out PlaceVisual pv)) return false;
-            world = pv.Entrance + new Vector3(0, 3.4f, 0);
+            world = StreetWorldBuilder.ToWorld(Session.DoorOf(p), 3.4f);
             label = "进入 " + p.Name;
             return true;
         }
@@ -582,29 +598,29 @@ namespace PCShopSell.Game
         }
 
         /// <summary>街上身边 1.3 米内的路人（比门口更近时优先和人说话）。</summary>
-        private bool NearPasserby(out int id, out Vector3 world)
+        private bool NearPasserby(out ResidentDef who, out Vector3 world)
         {
-            id = -1;
+            who = null;
             world = Vector3.zero;
             if (_crowd == null || InRoom || Session.CurrentPlace != null) return false;
-            return _crowd.Nearest(StreetWorldBuilder.ToWorld(Session.PlayerPosition), 1.3f, out id, out world);
+            return _crowd.Nearest(StreetWorldBuilder.ToWorld(Session.PlayerPosition), 1.3f, out who, out world);
         }
 
-        /// <summary>和路人说话：他停下来面向你，窗口关掉后接着走。</summary>
-        private void TalkToPasserby(int id)
+        /// <summary>和街上的人说话：他停下来面向你，窗口关掉后接着走。</summary>
+        private void TalkToPasserby(ResidentDef who)
         {
             Session.SetSteer(0, 0);
             if (Session.Trip != null) Session.StopTrip();
-            _crowd.Talking = id;
+            _crowd.Talking = who.Id;
             _crowd.TalkFace = StreetWorldBuilder.ToWorld(Session.PlayerPosition);
-            Ui.OpenPasserbyTalk(id, () => { if (_crowd.Talking == id) _crowd.Talking = -1; });
+            Ui.OpenResidentTalk(who, () => { if (_crowd.Talking == who.Id) _crowd.Talking = null; });
         }
 
         private void TryEnterNearby()
         {
-            if (NearPasserby(out int pid, out _))
+            if (NearPasserby(out ResidentDef who, out _))
             {
-                TalkToPasserby(pid);
+                TalkToPasserby(who);
                 return;
             }
             Place p = Session.NearbyPlace;

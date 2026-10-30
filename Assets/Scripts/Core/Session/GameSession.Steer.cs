@@ -12,7 +12,21 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         /// <summary>走到离某地点入口这么近（画面米）就能按 F 进去。</summary>
-        public const double EnterRadius = 9.5;
+        /// <summary>离门口这么近才能按 F 进门（站到店门前的人行道上）。</summary>
+        public const double EnterRadius = 3.0;
+
+        /// <summary>y=0 那条路边上的门面离路中线多远：商业街路宽，门面更靠外。</summary>
+        public const double LinkFrontY = 4.5, ShoppingFrontY = 8.0;
+
+        public static double FrontYAt(double x) => x >= ShoppingStreetMinX && x <= ShoppingStreetMaxX ? ShoppingFrontY : LinkFrontY;
+
+        /// <summary>地点的门口（画面坐标）：路边的店在门面正中，城中村的家门在小路右手边。</summary>
+        public MapPoint DoorOf(Place p)
+        {
+            MapPoint n = City.ViewPosition(p.NodeId);
+            if (Math.Abs(n.Y) < 0.1) return new MapPoint(n.X, FrontYAt(n.X));
+            return p.Kind == PlaceKind.Home ? new MapPoint(n.X + 2, n.Y) : n;
+        }
 
         /// <summary>商业街走廊半宽（含两侧人行道）。商业街的路是连接路的两倍宽。</summary>
         public const double MainStreetHalfWidth = 7.7;
@@ -218,7 +232,7 @@ namespace PCShopSell.Core.Session
                 double bestDist = EnterRadius;
                 foreach (Place pl in City.Places)
                 {
-                    double d = Dist(p, City.ViewPosition(pl.NodeId));
+                    double d = Dist(p, DoorOf(pl));
                     if (d < bestDist)
                     {
                         bestDist = d;

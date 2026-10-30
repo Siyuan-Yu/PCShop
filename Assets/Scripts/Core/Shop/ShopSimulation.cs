@@ -82,6 +82,9 @@ namespace PCShopSell.Core.Shop
         public CustomerIntent Intent { get; }
         public PartCategory DesiredCategory { get; }
         public int BuildTier { get; }
+
+        /// <summary>散件顾客点名要的型号（想要的品类 + 档次）；货架上有就拿这款，没有才挑同类别的。</summary>
+        public PartDef DesiredPart => PartCatalog.Find(DesiredCategory, BuildTier);
         public GameTimestamp ArrivedAt { get; }
         public GameTimestamp ReadyAt { get; }
         public bool CarriesCash { get; }

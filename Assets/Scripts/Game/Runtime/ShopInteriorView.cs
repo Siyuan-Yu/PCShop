@@ -1243,9 +1243,12 @@ namespace PCShopSell.Game.Runtime
                 string parts = missing == 0 ? $"<color={Ok}>✓ 配件都有，可以下单装</color>" : $"<color={Bad}>✗ 展台没有，店里还缺 {missing} 样配件</color>";
                 return $"<size=13>{v.Profile}</size>\n想装一台<b>{tierName}</b>整机\n{parts}\n{browsing}";
             }
-            int have = shop.ShelfFillOf(c.DesiredCategory).Total;
-            string stock = have > 0 ? $"<color={Ok}>货架上有 {have} 件</color>" : $"<color={Bad}>货架上有 0 件</color>";
-            return $"<size=13>{v.Profile}</size>\n想买<b>{PartCatalog.CategoryName(c.DesiredCategory)}</b>\n{stock}\n{browsing}";
+            PartDef want = c.DesiredPart;
+            int exact = shop.OnShelf(want), total = shop.ShelfFillOf(c.DesiredCategory).Total;
+            string stock = exact > 0 ? $"<color={Ok}>货架上有 {exact} 件</color>"
+                : total > 0 ? $"<color={Bad}>货架上没这款</color>，同类有 {total} 件"
+                : $"<color={Bad}>货架上没有{PartCatalog.CategoryName(c.DesiredCategory)}</color>";
+            return $"<size=13>{v.Profile}</size>\n想买<b>{want.Name}</b>\n{stock}\n{browsing}";
         }
 
         /// <summary>还在逛：挑款式、比价格，进度条走满才决定买不买（嫌贵就走）。</summary>

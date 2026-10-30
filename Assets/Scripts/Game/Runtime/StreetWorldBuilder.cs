@@ -38,18 +38,13 @@ namespace PCShopSell.Game.Runtime
     public sealed class StreetWorldBuilder
     {
         public const float StreetZ = 0f;
-        public const float LinkFrontZ = 4.5f;
         /// <summary>商业街路面是连接路的两倍宽，两侧人行道、店面、路边设施整体外移这么多。</summary>
-        public const float ShoppingWiden = 3.5f;
-        public const float ShoppingFrontZ = LinkFrontZ + ShoppingWiden;
-
-        public static bool OnShoppingStreet(float x) =>
-            x >= GameSession.ShoppingStreetMinX && x <= GameSession.ShoppingStreetMaxX;
+        public const float ShoppingWiden = (float)(GameSession.ShoppingFrontY - GameSession.LinkFrontY);
 
         /// <summary>门面所在的 z：商业街店面更靠后，连接路、电子市场不变。</summary>
-        public static float FrontZAt(float x) => OnShoppingStreet(x) ? ShoppingFrontZ : LinkFrontZ;
+        public static float FrontZAt(float x) => (float)GameSession.FrontYAt(x);
 
-        private float FrontZ = LinkFrontZ;
+        private float FrontZ = (float)GameSession.LinkFrontY;
 
         private static readonly Color Asphalt = ArtDirection.Hex("626A69");
         private static readonly Color Sidewalk = ArtDirection.Hex("C5BBA5");

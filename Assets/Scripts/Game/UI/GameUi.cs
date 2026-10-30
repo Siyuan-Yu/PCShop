@@ -127,6 +127,7 @@ namespace PCShopSell.Game.UI
             h.childForceExpandWidth = false;
             h.childAlignment = TextAnchor.MiddleLeft;
 
+            AddCheatButton(row);
             _dateText = Ui.Size(Ui.Label(row, "", 24), 270);
             _cashText = Ui.Size(Ui.Label(row, "", 26, TextAnchor.MiddleLeft, Ui.Good), 180);
 
@@ -150,6 +151,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(row, "我的", OpenMyPanel, 18, Ui.ButtonHot), 66).Tip("<b>我的</b>　快捷键：M\n身体状况、住处、背包里的吃的、家具背包；在家或店里可以从这里去摆家具。");
             Ui.Size(Ui.Button(row, "背包 B", ToggleBackpack, 18), 78).Tip("<b>背包</b>　快捷键：B\n身上带的货和负重；在家或店里一键全放下。");
             Ui.Size(Ui.Button(row, "日程", OpenSchedulePanel, 18), 66).Tip("<b>日程</b>　快捷键：C\n约会、师傅上门、网购快递、焖饭等安排（没有手机日历 app 时是小本子）。");
+            Ui.Size(Ui.Button(row, "人脉", OpenRelationsPanel, 18), 66).Tip("<b>人脉</b>\n认识的人和你有多熟、他们彼此之间的关系（网状图）。");
             Ui.Size(Ui.Button(row, "手机", OpenPhone, 18), 66).Tip("<b>手机</b>　快捷键：P\n买了智能手机才有；通讯录、1788 批发、外卖等 app。");
             Ui.Size(Ui.Button(row, "任务", OpenQuests, 18), 66).Tip("<b>任务</b>　快捷键：T\n当前任务怎么做、完成奖励；左上角的任务条收起后从这里再打开。");
             _businessButton = Ui.Size(Ui.Button(row, "经营", OpenBusinessPanel, 18), 66);
@@ -198,6 +200,9 @@ namespace PCShopSell.Game.UI
         }
 
         private Button _businessButton;
+
+        /// <summary>编辑器里才有的作弊工具按钮（打包时整段不编译）。</summary>
+        partial void AddCheatButton(Transform row);
 
         private void UpdateHud()
         {
@@ -710,14 +715,6 @@ namespace PCShopSell.Game.UI
                 Para(w.Content, "WASD 移动，沿街看招牌寻找店铺；靠近门或家具按 F 交互。", 18);
                 Para(w.Content, "左上角只提示眼前的一件事；需要说明时点“怎么做”。", 17, Ui.Accent);
                 Ui.Size(Ui.Button(w.Content, "开始经营", w.Close, 20, Ui.ButtonHot), -1, 50);
-                if (!S.HasShop)
-                {
-                    Ui.Size(Ui.Button(w.Content, "（作弊 / 验收）跳过找铺子：直接租下街尾小店，回到旧开局", () =>
-                    {
-                        S.DebugRentStarterShop();
-                        w.Close();
-                    }, 16, Ui.ButtonBg), -1, 42);
-                }
             });
         }
     }

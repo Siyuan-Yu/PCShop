@@ -39,6 +39,7 @@ namespace PCShopSell.Game.UI
                 }
 
                 Ui.Size(Ui.Label(list, "认识的人", 22), -1, 40);
+                Ui.Size(Ui.Button(list, "打开人脉图（所有认识的人和他们之间的关系）", OpenRelationsPanel, 17, Ui.ButtonHot), -1, 40);
                 foreach (NpcDef def in Npcs.All)
                 {
                     NpcDef n = def;

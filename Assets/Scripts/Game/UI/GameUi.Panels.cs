@@ -278,7 +278,7 @@ namespace PCShopSell.Game.UI
 
         public void OpenSystemPanel()
         {
-            OpenWindow("菜单", 560, S.HasShop ? 750 : 800, w =>
+            OpenWindow("菜单", 560, 700, w =>
             {
                 Line(w.Content, $"身家（资产 − 负债）：{S.NetWorth()}", 20);
                 GoalLine goal = S.NextGoal();
@@ -314,19 +314,6 @@ namespace PCShopSell.Game.UI
                 }, 20, Ui.ButtonBg, !PCShopSell.Game.Runtime.SoundFx.Muted), -1, -1, 1);
                 Ui.Size(Ui.Button(w.Content, "玩法说明", ShowIntro, 20), -1, 48);
                 Ui.Size(Ui.Button(w.Content, "账本（最近 30 条）", OpenLedger, 20), -1, 48);
-                Ui.Size(Ui.Button(w.Content, $"作弊工具  [{(S.HasSmartphone ? "x" : " ")}] 立即拥有智能手机（所有 app 都装好）", () =>
-                {
-                    S.SetSmartphone(!S.HasSmartphone);
-                    w.Rebuild();
-                }, 17, S.HasSmartphone ? Ui.Warn : Ui.ButtonBg), -1, 44);
-                if (!S.HasShop)
-                {
-                    Ui.Size(Ui.Button(w.Content, "作弊工具  直接租下街尾小店（回到旧开局：有店、有几件开局货）", () =>
-                    {
-                        S.DebugRentStarterShop();
-                        w.Rebuild();
-                    }, 17, Ui.ButtonBg), -1, 44);
-                }
                 Line(w.Content, "快捷键：空格 暂停 · 1–4 倍速 · 滚轮 缩放 · Esc / 右键 关窗口（没开窗口时 Esc 开菜单）· M 我的 · B 背包 · C 日程 · P 手机 · J 经营 · H 行情 · 鼠标停在按钮上有说明", 16, Ui.Dim);
             });
         }

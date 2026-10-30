@@ -75,7 +75,7 @@ namespace PCShopSell.Core.Session
             string reason = ShelvesOfKind(ShelfKinds.ForCategory(c.DesiredCategory).Id) == 0 ? "没有设置对应货架"
                 : PartCatalog.All.Any(p => p.Category == c.DesiredCategory && PlayerShop.Stock.CountAll(p) > 0) ? "货架容量或型号不能满足需求"
                 : PartCatalog.All.Any(p => p.Category == c.DesiredCategory && PendingOnlineCount(p.Id) > 0) ? "货物还在配送中" : "库存售罄";
-            Say($"有顾客想买{PartCatalog.CategoryName(c.DesiredCategory)}，但{reason}，空手走了。");
+            Say($"有顾客想买{c.DesiredPart.Name}，但{reason}，空手走了。");
         }
 
         /// <summary>自动补货用哪家店：指定的，或者已发现的里最便宜的（排除亲眼见过次品多的）。</summary>

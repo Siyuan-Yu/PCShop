@@ -133,6 +133,15 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void EnterNearby_FromMiddleOfRoad_Fails()
+        {
+            GameSession s = AtStreet("s1");
+            Walk(s, 0, 1, 2); // 店门正前方，但人还在马路中间
+            Assert.Less(s.PlayerPosition.Y, GameSession.ShoppingFrontY - GameSession.EnterRadius);
+            Assert.IsNull(s.NearbyPlace);
+        }
+
+        [Test]
         public void EnterNearby_FarFromDoors_Fails()
         {
             GameSession s = AtStreet("st");

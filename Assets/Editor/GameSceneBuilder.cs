@@ -1076,9 +1076,9 @@ namespace PCShopSell.EditorTools
             _game.SnapCamera();
             for (int i = 0; i < 6; i++) Frame(0.05f);
             Shot("vs1_85_street_vacant");
-            _game.Ui.OpenPasserbyTalk(3, null);
+            _game.Ui.OpenResidentTalk(Residents.Get("res_wang"), null);
             Frame(0.05f);
-            Check(_game.Ui.AnyModalOpen, "能和路人说话");
+            Check(_game.Ui.AnyModalOpen, "能和街上的人说话");
             Shot("vs1_123_passerby_talk");
             _game.Ui.CloseAllWindows();
             {
