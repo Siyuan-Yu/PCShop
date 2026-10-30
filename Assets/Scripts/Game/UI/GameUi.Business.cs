@@ -12,12 +12,41 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private int _businessTab, _directQuantity=3, _ventureKind;
-        public void DebugOpenBusiness(int tab) { _businessTab = Math.Max(0, Math.Min(6, tab)); OpenBusinessPanel(); }
+        public void DebugOpenBusiness(int tab) { _businessTab = Math.Max(0, Math.Min(6, tab)); ShowBusinessPanel(false); }
         private bool _directCredit=true;
+        private static readonly int[] AgencyTabs = { 3, 5, 6 };
+
+        /// <summary>后期经营（直供、合同、分店、物业、园区……）开局不出现，主店做起来以后才开放。</summary>
+        public bool BusinessUnlocked
+        {
+            get
+            {
+                if (S == null || !S.HasShop) return false;
+                QuestDef q = _questSeen != null ? Quests.Get(_questSeen) : null;
+                return S.PlayerShop.Reputation >= 8 || S.QuestCompleted("cashflow") || S.Flags.Contains("tutorial:issued:cashflow")
+                    || S.TotalDebt.IsPositive || S.ManagedVentures.Count > 0 || S.OwnedProperties.Count > 0 || S.HasPark
+                    || S.HomeTier > 0 || S.DirectAgreement || (q != null && BusinessTargets.Contains(q.Target));
+            }
+        }
+
         public void OpenBusinessPanel()
         {
+            if (!BusinessUnlocked) return;
+            ShowBusinessPanel(false);
+        }
+
+        /// <summary>中介里只办和房产有关的事：分店签约、物业与住处、园区。</summary>
+        public void OpenAgencyBusiness()
+        {
+            if (!BusinessUnlocked) return;
+            if (Array.IndexOf(AgencyTabs, _businessTab) < 0) _businessTab = AgencyTabs[0];
+            ShowBusinessPanel(true);
+        }
+
+        private void ShowBusinessPanel(bool agencyOnly)
+        {
             S.RefreshEnterpriseOffer();
-            OpenWindow("经营总览", 1080, 820, w=>
+            OpenWindow(agencyOnly ? "中介业务" : "经营总览", 1080, 820, w=>
             {
                 var guide = S.CurrentQuest();
                 var tabs=Ui.Row(w.Content,42);
@@ -26,6 +55,7 @@ namespace PCShopSell.Game.UI
                 {
                     int tab=i;
                     bool recommended = guide != null && guide.Target == BusinessTargets[i];
+                    if (agencyOnly && Array.IndexOf(AgencyTabs, tab) < 0) continue;
                     if (tab != _businessTab && !recommended && !BusinessTabRelevant(tab)) continue;
                     Ui.Size(Ui.Button(tabs,(recommended ? "› " : "") + names[i],()=>{_businessTab=tab;w.Rebuild();ResetGuideScroll(w);},17,tab==_businessTab ? Ui.ButtonHot : Ui.ButtonBg),140);
                 }

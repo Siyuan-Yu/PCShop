@@ -296,8 +296,7 @@ namespace PCShopSell.EditorTools
             ClickGuideButton("知道了");
             Check(s.CurrentPlace == s.Home && s.Trip == null && !s.Time.IsHeld, "关闭租铺说明只回到原地，不发起出行或残留暂停");
             _game.Ui.OpenBusinessPanel();
-            Check(GuideButton("已了解，完成这一步") == null, "初期打开资产页不提前发现金流教学");
-            Check(GuideButton("直供采购") == null && GuideButton("展开全部 7 项") == null && GuideButton("当前任务 · 租一间铺子") == null, "新手经营页只显示近期项目，没有多余的任务 / 展开按钮");
+            Check(!_game.Ui.BusinessUnlocked && !_game.Ui.AnyModalOpen && GuideButton("经营") == null, "开局没有经营总览，顶栏也没有“经营”按钮");
             _game.Ui.CloseAllWindows();
             _game.Ui.ShowIntro();
             Frame(0.05f);

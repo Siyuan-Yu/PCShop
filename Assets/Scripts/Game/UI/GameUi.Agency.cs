@@ -39,7 +39,7 @@ namespace PCShopSell.Game.UI
             talk.Tip("和小陈聊聊");
             string discount = S.AgentDiscount > 0 ? $"中介费减免 {S.AgentDiscount * 100:0.#}%" : "中介费暂无折扣";
             Ui.Size(Ui.Label(header, $"<b>小陈的片区房源</b>　现金 {S.Ledger.Balance}\n<size=16><color=#ABB5A8>点头像和小陈聊天；点铺面看位置、客流和户型，选好了再签约。{discount}</color></size>", 20), -1, 54, 1);
-            Ui.Size(Ui.Button(header, "分店 / 物业 / 住处", OpenBusinessPanel, 17), 210);
+            if (BusinessUnlocked) Ui.Size(Ui.Button(header, "分店 / 物业 / 住处", OpenAgencyBusiness, 17), 210);
 
             var body = Ui.Row(w.Content, 740, 14);
             var map = Ui.Panel(body, "AgencyMap", Ui.PanelBg2).rectTransform;

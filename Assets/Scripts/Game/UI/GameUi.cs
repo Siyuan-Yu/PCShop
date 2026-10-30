@@ -152,7 +152,9 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(row, "日程", OpenSchedulePanel, 18), 66).Tip("<b>日程</b>　快捷键：C\n约会、师傅上门、网购快递、焖饭等安排（没有手机日历 app 时是小本子）。");
             Ui.Size(Ui.Button(row, "手机", OpenPhone, 18), 66).Tip("<b>手机</b>　快捷键：P\n买了智能手机才有；通讯录、1788 批发、外卖等 app。");
             Ui.Size(Ui.Button(row, "任务", OpenQuests, 18), 66).Tip("<b>任务</b>　快捷键：T\n当前任务怎么做、完成奖励；左上角的任务条收起后从这里再打开。");
-            Ui.Size(Ui.Button(row, "经营", OpenBusinessPanel, 18), 66).Tip("<b>经营</b>　快捷键：J\n资产与负债、直供、企业合同、分店、园区等后期经营。");
+            _businessButton = Ui.Size(Ui.Button(row, "经营", OpenBusinessPanel, 18), 66);
+            _businessButton.gameObject.SetActive(false);
+            _businessButton.Tip("<b>经营</b>　快捷键：J\n资产与负债、直供、企业合同、分店、园区等后期经营。");
             Ui.Size(Ui.Button(row, "行情", OpenMarketPanel, 18, Ui.ButtonHot), 66).Tip("<b>行情</b>　快捷键：H\n新闻、宏观指标和各品类配件的价格走势，决定什么时候进货。");
             Ui.Size(Ui.Button(row, "菜单", OpenSystemPanel, 18), 66).Tip("<b>菜单</b>　快捷键：Esc\n存档、读档、目标与人脉、通知记录、音效。");
 
@@ -195,10 +197,14 @@ namespace PCShopSell.Game.UI
             _chaseText.gameObject.SetActive(false);
         }
 
+        private Button _businessButton;
+
         private void UpdateHud()
         {
             GameTimestamp now = S.Clock.Now;
             UpdateSleepBanner();
+            bool business = BusinessUnlocked;
+            if (_businessButton.gameObject.activeSelf != business) _businessButton.gameObject.SetActive(business);
             _dateText.text = $"{now.Date}  {Ui.WeekdayName(now.Date.Weekday)}  {Ui.Hm(now.MinuteOfDay)}";
             _cashText.text = S.Ledger.Balance.ToString();
             _cashText.color = S.Ledger.Balance.IsNegative ? Ui.Warn : Ui.Good;

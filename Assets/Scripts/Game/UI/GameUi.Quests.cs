@@ -82,7 +82,20 @@ namespace PCShopSell.Game.UI
             _questInitialized = true;
             _questSeen = q?.Id;
             _questPanel.gameObject.SetActive(q != null && !_questHidden && !S.IsGameOver && !_ctrl.Placing);
-            _questText.text = q == null ? "" : $"<b><color=#DDC18B>{q.Title}</color></b>\n{q.Short}\n<size=14><color=#ABB5A8>{q.Progress(S).Split('\n')[0]}</color></size>";
+            string progress = q == null ? null : ProgressOf(q);
+            _questText.text = q == null ? "" : $"<b><color=#DDC18B>{q.Title}</color></b>\n{q.Short}" + (progress != null ? $"\n<size=14><color=#ABB5A8>{progress.Split('\n')[0]}</color></size>" : "");
+        }
+
+        private string ProgressOf(QuestDef q)
+        {
+            string text = q.Progress?.Invoke(S);
+            return string.IsNullOrEmpty(text) ? null : text;
+        }
+
+        private void ProgressLine(Transform parent, QuestDef q, int size)
+        {
+            string text = ProgressOf(q);
+            if (text != null) Para(parent, text, size, Ui.Dim);
         }
 
         public void OpenQuestWindow()
@@ -102,7 +115,7 @@ namespace PCShopSell.Game.UI
                 if (done != null)
                 {
                     Line(w.Content, "✓ " + done.Title, 23, Ui.Good);
-                    if (done.Reward != null) Para(w.Content, "<b>奖励</b>：" + done.Reward, 18, Ui.Accent);
+                    if (done.Reward != null) Para(w.Content, "奖励：" + done.Reward, 18, Ui.Accent);
                 }
                 if (next == null)
                 {
@@ -114,7 +127,7 @@ namespace PCShopSell.Game.UI
                 Para(w.Content, GuideLocation(next.Target), 16, Ui.Accent);
                 Para(w.Content, next.Hint, 17);
                 if (next.Reward != null) Para(w.Content, "完成奖励：" + next.Reward, 16, Ui.Good);
-                Para(w.Content, next.Progress(S), 15, Ui.Dim);
+                ProgressLine(w.Content, next, 15);
                 Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
             }, onClosed: () => _questPopup = null);
         }
@@ -134,13 +147,7 @@ namespace PCShopSell.Game.UI
             Para(w.Content, GuideLocation(q.Target), 17, Ui.Accent);
             Para(w.Content, q.Hint, 18);
             if (q.Reward != null) Para(w.Content, "完成奖励：" + q.Reward, 16, Ui.Good);
-            Para(w.Content, q.Progress(S), 16, Ui.Dim);
-            if (q.Target == QuestTarget.Enterprise)
-                Para(w.Content, "已有合同：回到主店，在右侧“订单”页查看要装的电脑。", 15, Ui.Dim);
-            if (q.Target == QuestTarget.Direct)
-                Para(w.Content, "与老周来往：顶栏“菜单” → “目标与人脉”。", 15, Ui.Dim);
-            if (S.HasShop && NeedsTimeHint(q.Target))
-                Para(w.Content, "等顾客、招聘或到货时，关闭弹窗；在店内可手动切到“柜台”页，让时间继续。", 15, Ui.Dim);
+            ProgressLine(w.Content, q, 16);
             Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
         }
 
@@ -158,16 +165,12 @@ namespace PCShopSell.Game.UI
             var card = Ui.Panel(parent, "GuideHint", Ui.PanelBg2).rectTransform;
             Ui.VList(card, 6, 12);
             Para(card, "<color=#DDC18B><b>当前任务 · " + q.Title + "</b></color>\n" + (q.Lesson ? q.Hint : q.Short), 16);
-            Para(card, q.Progress(S), 14, Ui.Dim);
+            ProgressLine(card, q, 14);
             var row = Ui.Row(card, 34, 6);
             Ui.Size(Ui.Button(row, "怎么做", OpenQuestWindow, 15), -1, -1, 1);
             if (q.Lesson)
                 Ui.Size(Ui.Button(row, "已了解，完成这一步", () => { S.CompleteQuestLesson(q.Id); UpdateQuestTracker(); refresh(); }, 15, Ui.ButtonHot, q.LessonReady == null || q.LessonReady(S)), -1, -1, 1);
-            if (S.HasShop && NeedsTimeHint(target))
-                Para(card, "等待时关闭弹窗，或在店内手动切到“柜台”页，让时间继续。", 14, Ui.Dim);
         }
-
-        private static bool NeedsTimeHint(QuestTarget target) => target == QuestTarget.Orders || target == QuestTarget.Staff || target == QuestTarget.Restock || target == QuestTarget.Enterprise || target == QuestTarget.Park || target == QuestTarget.Ventures;
 
         private static QuestTarget TargetFor(ShopTab tab)
         {
@@ -187,25 +190,25 @@ namespace PCShopSell.Game.UI
         {
             switch (target)
             {
-                case QuestTarget.Agency: return "地点：商业街 · <color=#FFC966>安居房产中介</color>（走到门口按 F）";
+                case QuestTarget.Agency: return "地点：商业街 · <color=#FFC966>安居房产中介</color>";
                 case QuestTarget.Renovate: return "位置：自己的店 → 右侧“装修”页";
-                case QuestTarget.Stock: return "位置：自己的店 · 货架（点货架或按 F）";
+                case QuestTarget.Stock: return "位置：自己的店 · 货架";
                 case QuestTarget.Market: return "地点：<color=#FFC966>电子市场</color> · 配件档口";
                 case QuestTarget.Counter: return "位置：自己的店 · 收银台";
                 case QuestTarget.Staff: return "位置：自己的店 → 右侧“招人”页";
-                case QuestTarget.PhoneShop: return "地点：商业街 · <color=#FFC966>手机店</color>（走到门口按 F）";
-                case QuestTarget.Mall: return "地点：商业街 · <color=#FFC966>宜居家具城</color>（走到门口按 F）";
+                case QuestTarget.PhoneShop: return "地点：商业街 · <color=#FFC966>手机店</color>";
+                case QuestTarget.Mall: return "地点：商业街 · <color=#FFC966>宜居家具城</color>";
                 case QuestTarget.Upgrades: return "位置：自己的店 → 右侧“升级”页";
                 case QuestTarget.Pricing: return "位置：自己的店 → 右侧“定价”页";
                 case QuestTarget.Orders: return "位置：自己的店 → 右侧“订单”页";
-                case QuestTarget.Restock: return "入口：顶栏“手机” → 1788 → “自动补货”";
-                case QuestTarget.Finance: return "入口：顶栏“经营” → “资产与负债”。";
-                case QuestTarget.Enterprise: return "入口：顶栏“经营” → “企业合同”。";
-                case QuestTarget.Direct: return "入口：顶栏“经营” → “直供采购”。";
-                case QuestTarget.Ventures: return "管理入口：顶栏“经营” → “分店经营”。签新铺面要亲自到安居房产中介办理。";
-                case QuestTarget.Park: return "规划入口：顶栏“经营” → “园区布局”。买地要亲自到安居房产中介办理。";
-                case QuestTarget.Creators: return "入口：顶栏“经营” → “推广合作”。";
-                case QuestTarget.Property: return "入口：顶栏“经营” → “物业与住处”。";
+                case QuestTarget.Restock: return "入口：手机 → 1788";
+                case QuestTarget.Finance: return "入口：经营 → “资产与负债”。";
+                case QuestTarget.Enterprise: return "入口：经营 → “企业合同”。";
+                case QuestTarget.Direct: return "入口：经营 → “直供采购”。";
+                case QuestTarget.Ventures: return "地点：安居房产中介";
+                case QuestTarget.Park: return "入口：经营 → 园区布局";
+                case QuestTarget.Creators: return "入口：经营 → “推广合作”。";
+                case QuestTarget.Property: return "入口：经营 → “物业与住处”。";
                 default: return "";
             }
         }

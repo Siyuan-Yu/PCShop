@@ -229,7 +229,7 @@ namespace PCShopSell.Game.UI
             if (orders > 0) Line(C, $"有 {orders} 个订单等你处理（去“订单”页）", 18, Ui.Warn);
             if (S.Online.Pending.Count > 0) Line(C, $"1788 有 {S.Online.Pending.Count} 单在路上，明天 10:00 送到", 17, Ui.Dim);
             Line(C, $"库存 {shop.Stock.UsedSpace:0.#}/{shop.Stock.Capacity:0} 格 · 全局加价 {shop.Markup:0.00}×", 17, Ui.Dim);
-            Ui.Size(Ui.Button(C, "经营总览 · 合同 / 分店 / 资产", OpenBusinessPanel, 18, Ui.ButtonHot), -1, 40);
+            if (BusinessUnlocked) Ui.Size(Ui.Button(C, "经营总览 · 合同 / 分店 / 资产", OpenBusinessPanel, 18, Ui.ButtonHot), -1, 40);
             Ui.Size(Ui.Button(C, "经营报表（近 14 天收入曲线）", OpenReportWindow, 18), -1, 40);
         }
 

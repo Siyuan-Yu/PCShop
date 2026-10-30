@@ -288,7 +288,7 @@ namespace PCShopSell.Game.UI
                     Line(w.Content, goal.Progress, 16, Ui.Dim);
                 }
                 Ui.Size(Ui.Button(w.Content, "目标与人脉", OpenGoalsPanel, 20, Ui.ButtonHot), -1, 40);
-                Ui.Size(Ui.Button(w.Content, "经营总览", OpenBusinessPanel, 20, Ui.ButtonHot), -1, 40);
+                if (BusinessUnlocked) Ui.Size(Ui.Button(w.Content, "经营总览", OpenBusinessPanel, 20, Ui.ButtonHot), -1, 40);
                 Ui.Size(Ui.Button(w.Content, "通知记录", OpenNoticeHistory, 18), -1, 36);
                 Ui.Size(Ui.Button(w.Content, S.CanSave ? "存档" : "路上不能存档", () =>
                 {
