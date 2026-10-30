@@ -333,7 +333,8 @@ namespace PCShopSell.Game.Runtime
         public void SendShopper()
         {
             float x = Mathf.Lerp(_minX, _maxX, 0.55f + (float)_rng.NextDouble() * 0.45f);
-            var w = Spawn(new Vector3(x, 0, _rng.NextDouble() < 0.5 ? 2.6f : -2.8f));
+            float widen = StreetWorldBuilder.ShoppingWiden;
+            var w = Spawn(new Vector3(x, 0, _rng.NextDouble() < 0.5 ? 2.6f + widen : -2.8f - widen));
             w.Target = _shopDoor;
             w.VanishOnArrive = true;
             w.Speed = 1.8f;
@@ -375,7 +376,8 @@ namespace PCShopSell.Game.Runtime
         private Vector3 RandomSidewalk()
         {
             float x = Mathf.Lerp(_minX, _maxX, (float)_rng.NextDouble());
-            float z = _rng.NextDouble() < 0.5 ? 2.4f + (float)_rng.NextDouble() * 1.2f : -2.4f - (float)_rng.NextDouble() * 1.4f;
+            float widen = StreetWorldBuilder.ShoppingWiden;
+            float z = _rng.NextDouble() < 0.5 ? 2.4f + widen + (float)_rng.NextDouble() * 1.2f : -2.4f - widen - (float)_rng.NextDouble() * 1.4f;
             return new Vector3(x, 0, z);
         }
 

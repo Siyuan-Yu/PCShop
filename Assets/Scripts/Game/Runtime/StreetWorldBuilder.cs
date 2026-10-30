@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.World;
 using UnityEngine;
@@ -37,7 +38,18 @@ namespace PCShopSell.Game.Runtime
     public sealed class StreetWorldBuilder
     {
         public const float StreetZ = 0f;
-        public const float FrontZ = 4.5f;
+        public const float LinkFrontZ = 4.5f;
+        /// <summary>商业街路面是连接路的两倍宽，两侧人行道、店面、路边设施整体外移这么多。</summary>
+        public const float ShoppingWiden = 3.5f;
+        public const float ShoppingFrontZ = LinkFrontZ + ShoppingWiden;
+
+        public static bool OnShoppingStreet(float x) =>
+            x >= GameSession.ShoppingStreetMinX && x <= GameSession.ShoppingStreetMaxX;
+
+        /// <summary>门面所在的 z：商业街店面更靠后，连接路、电子市场不变。</summary>
+        public static float FrontZAt(float x) => OnShoppingStreet(x) ? ShoppingFrontZ : LinkFrontZ;
+
+        private float FrontZ = LinkFrontZ;
 
         private static readonly Color Asphalt = ArtDirection.Hex("626A69");
         private static readonly Color Sidewalk = ArtDirection.Hex("C5BBA5");
@@ -104,16 +116,18 @@ namespace PCShopSell.Game.Runtime
                     string key = string.CompareOrdinal(n.Id, e.To) < 0 ? n.Id + "|" + e.To : e.To + "|" + n.Id;
                     if (!done.Add(key)) continue;
                     Vector3 a = NodeWorld(n.Id), b = NodeWorld(e.To);
-                    bool main = Mathf.Abs(a.z) < 0.1f && Mathf.Abs(b.z) < 0.1f;
-                    float width = main ? 7f : 5f;
+                    MapPoint pa = _city.ViewPosition(n.Id), pb = _city.ViewPosition(e.To);
+                    bool shopping = GameSession.IsShoppingStreet(pa, pb);
+                    float width = shopping ? 14f : GameSession.IsMainRoad(pa, pb) ? 7f : 5f;
                     Vector3 d = b - a;
-                    float len = d.magnitude + width;
+                    // 宽路两端只多伸出窄路那么多，免得盖住路口旁的城中村房子。
+                    float len = d.magnitude + (shopping ? 5f : width);
                     var go = Prims.Box(roads, "Road_" + key, (a + b) * 0.5f + Vector3.up * 0.005f, new Vector3(width, 0.02f, len), Mats.LitTex(Asphalt, new Vector2(Mathf.Max(1f, width / 5f), Mathf.Max(1f, len / 5f)), 0.12f));
                     go.transform.localRotation = Quaternion.LookRotation(d.normalized, Vector3.up);
 
                     if (len > 14f)
                     {
-                        var mark = Prims.Box(roads, "Mark", (a + b) * 0.5f + Vector3.up * 0.02f, new Vector3(0.18f, 0.01f, len - width), Mats.Lit(new Color(0.85f, 0.8f, 0.55f)));
+                        var mark = Prims.Box(roads, "Mark", (a + b) * 0.5f + Vector3.up * 0.02f, new Vector3(0.18f, 0.01f, d.magnitude), Mats.Lit(new Color(0.85f, 0.8f, 0.55f)));
                         mark.transform.localRotation = go.transform.localRotation;
                     }
                 }
@@ -123,8 +137,16 @@ namespace PCShopSell.Game.Runtime
         private void BuildSidewalks()
         {
             var sw = Mats.LitTex(Sidewalk, new Vector2(60, 1), 0.2f);
-            Prims.Box(_root, "SidewalkNorth", new Vector3(-85, 0.06f, 3.9f), new Vector3(380, 0.12f, 1.4f), sw);
-            Prims.Box(_root, "SidewalkSouth", new Vector3(-85, 0.06f, -4.2f), new Vector3(380, 0.12f, 1.4f), sw);
+            float min = (float)GameSession.ShoppingStreetMinX, max = (float)GameSession.ShoppingStreetMaxX;
+            void Pair(string name, float from, float to, float widen)
+            {
+                float mid = (from + to) / 2f, len = to - from;
+                Prims.Box(_root, name + "North", new Vector3(mid, 0.06f, 3.9f + widen), new Vector3(len, 0.12f, 1.4f), sw);
+                Prims.Box(_root, name + "South", new Vector3(mid, 0.06f, -4.2f - widen), new Vector3(len, 0.12f, 1.4f), sw);
+            }
+            Pair("Sidewalk", -275f, min, 0f);
+            Pair("ShoppingSidewalk", min, max, ShoppingWiden);
+            Pair("VillageGateSidewalk", max, 105f, 0f);
         }
 
         // ---------- 地点 ----------
@@ -137,6 +159,7 @@ namespace PCShopSell.Game.Runtime
             var vis = new PlaceVisual { Place = p, Entrance = entrance, Root = root.gameObject };
             Places[p.Id] = vis;
             _cur = vis;
+            FrontZ = FrontZAt(entrance.x);
 
             switch (p.Kind)
             {
@@ -412,13 +435,13 @@ namespace PCShopSell.Game.Runtime
             int lights = 0;
             for (float x = -95; x <= 100; x += 18f)
             {
-                Prims.Box(t, "Pole", new Vector3(x, 2.2f, -4.6f), new Vector3(0.15f, 4.4f, 0.15f), pole);
-                Prims.Box(t, "Head", new Vector3(x, 4.4f, -4.0f), new Vector3(0.5f, 0.15f, 1.2f), lampHead);
+                Prims.Box(t, "Pole", new Vector3(x, 2.2f, -4.6f - ShoppingWiden), new Vector3(0.15f, 4.4f, 0.15f), pole);
+                Prims.Box(t, "Head", new Vector3(x, 4.4f, -4.0f - ShoppingWiden), new Vector3(0.5f, 0.15f, 1.2f), lampHead);
                 if (lights++ % 2 == 0)
                 {
                     var lgo = new GameObject("LampLight");
                     lgo.transform.SetParent(t, false);
-                    lgo.transform.localPosition = new Vector3(x, 4f, -3.2f);
+                    lgo.transform.localPosition = new Vector3(x, 4f, -3.2f - ShoppingWiden);
                     var l = lgo.AddComponent<Light>();
                     l.type = LightType.Point;
                     l.range = 12f;
@@ -426,10 +449,10 @@ namespace PCShopSell.Game.Runtime
                     l.intensity = 0;
                     NightLights.Add(l);
                 }
-                Tree(t, new Vector3(x + 9, 0, -6.5f));
+                Tree(t, new Vector3(x + 9, 0, -6.5f - ShoppingWiden));
             }
             for (int i = 0; i < 6; i++)
-                Prims.ParkedCar(t, new Vector3(-80 + i * 31, 0, -2.6f), SignColors[i % SignColors.Length]);
+                Prims.ParkedCar(t, new Vector3(-80 + i * 31, 0, -2.6f - ShoppingWiden), SignColors[i % SignColors.Length]);
             for (int i = 0; i < 6; i++) Tree(t, new Vector3(100 + i * 1.5f * (i % 2 == 0 ? 1 : -1), 0, -66 - i * 1.3f));
         }
 

@@ -12,10 +12,21 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         /// <summary>走到离某地点入口这么近（画面米）就能按 F 进去。</summary>
-        public const double EnterRadius = 6.0;
+        public const double EnterRadius = 9.5;
 
-        /// <summary>商业街、连接路（两端都在 y=0 那条线上的路）走廊半宽：含两侧人行道。</summary>
-        public const double MainStreetHalfWidth = 4.2;
+        /// <summary>商业街走廊半宽（含两侧人行道）。商业街的路是连接路的两倍宽。</summary>
+        public const double MainStreetHalfWidth = 7.7;
+
+        /// <summary>去电子市场的连接路、市场门前（也在 y=0 那条线上）的走廊半宽。</summary>
+        public const double LinkRoadHalfWidth = 4.2;
+
+        /// <summary>商业街的 x 范围（画面坐标）：这一段 y=0 的路按宽马路处理；最后一家店到城中村路口那一小段还是窄路。</summary>
+        public const double ShoppingStreetMinX = -100.5, ShoppingStreetMaxX = 100;
+
+        public static bool IsMainRoad(MapPoint a, MapPoint b) => Math.Abs(a.Y) < 0.1 && Math.Abs(b.Y) < 0.1;
+
+        public static bool IsShoppingStreet(MapPoint a, MapPoint b) =>
+            IsMainRoad(a, b) && Math.Min(a.X, b.X) >= ShoppingStreetMinX && Math.Max(a.X, b.X) <= ShoppingStreetMaxX;
 
         /// <summary>城中村等小路的走廊半宽。</summary>
         public const double SideRoadHalfWidth = 2.0;
@@ -84,12 +95,11 @@ namespace PCShopSell.Core.Session
                     if (!done.Add(key)) continue;
                     MapPoint a = City.ViewPosition(n.Id), b = City.ViewPosition(e.To);
                     double view = Dist(a, b);
-                    bool main = Math.Abs(a.Y) < 0.1 && Math.Abs(b.Y) < 0.1;
                     _corridors.Add(new Corridor
                     {
                         A = a,
                         B = b,
-                        HalfWidth = main ? MainStreetHalfWidth : SideRoadHalfWidth,
+                        HalfWidth = IsShoppingStreet(a, b) ? MainStreetHalfWidth : IsMainRoad(a, b) ? LinkRoadHalfWidth : SideRoadHalfWidth,
                         Scale = view < 1e-6 ? 1 : e.Length / view,
                     });
                 }

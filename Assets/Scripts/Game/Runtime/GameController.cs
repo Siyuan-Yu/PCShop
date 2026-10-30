@@ -130,7 +130,8 @@ namespace PCShopSell.Game
 
             if (_crowd == null)
             {
-                Vector3 door = World.Places[s.PlayerShopPlace.Id].Entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZ - 0.3f);
+                Vector3 entrance = World.Places[s.PlayerShopPlace.Id].Entrance;
+                Vector3 door = entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZAt(entrance.x) - 0.3f);
                 _crowd = new CrowdView(_actors, -95, 100, door, 34);
             }
             SyncCrowdDoor();
@@ -693,7 +694,7 @@ namespace PCShopSell.Game
         private void SyncCrowdDoor()
         {
             if (_crowd != null && World.Places.TryGetValue(Session.PlayerShopPlace.Id, out PlaceVisual pv))
-                _crowd.ShopDoor = pv.Entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZ - 0.3f);
+                _crowd.ShopDoor = pv.Entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZAt(pv.Entrance.x) - 0.3f);
         }
 
         /// <summary>切换场景时重设镜头：店内比较近、跟着老板，街上拉远。</summary>
