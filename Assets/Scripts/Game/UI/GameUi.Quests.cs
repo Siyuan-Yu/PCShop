@@ -89,7 +89,7 @@ namespace PCShopSell.Game.UI
                 else if (q != null) Toast("新任务：" + q.Title);
             }
             // Wait until result popups (e.g. "签约成功") are dismissed, so they read first.
-            if (_popupPending && !PopupOpen && !S.IsGameOver)
+            if (_popupPending && !PopupOpen && (_questPopup == null || _questPopup.Closed) && !S.IsGameOver)
             {
                 OpenQuestPopup(_pendingDone, _pendingNext);
                 _popupPending = false;
@@ -122,26 +122,35 @@ namespace PCShopSell.Game.UI
             _questWindow = OpenWindow("当前任务", 700, 520, BuildGuideWindow, onClosed: () => _questWindow = null);
         }
 
-        /// <summary>完成一个任务（或来了新任务）时强制弹出：完成了什么、拿到什么奖励、接下来做什么。</summary>
+        /// <summary>任务变化时强制弹出：先单独弹“任务完成”（完成了什么、拿到什么），关掉后再弹“新任务”。</summary>
         private void OpenQuestPopup(QuestDef done, QuestDef next)
         {
             if (_questPopup != null && !_questPopup.Closed) _questPopup.Close();
-            _questPopup = OpenWindow(done != null ? "任务完成" : "新任务", 700, 560, w =>
+            if (done == null)
             {
-                if (done != null)
-                {
-                    Line(w.Content, "✓ " + done.Title, 23, Ui.Good);
-                    if (done.Reward != null) Para(w.Content, "奖励：" + done.Reward, 18, Ui.Accent);
-                }
-                if (next == null)
-                {
-                    Para(w.Content, "暂时没有新任务，继续经营小店吧。有新的经营目标时会再弹出来。", 18, Ui.Dim);
-                    Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
-                    return;
-                }
-                Line(w.Content, (done != null ? "接下来：" : "") + next.Title, 21, Ui.Accent);
+                if (next != null) OpenNewQuestPopup(next);
+                return;
+            }
+            _questPopup = OpenWindow("任务完成", 560, 240, w =>
+            {
+                Line(w.Content, "✓ " + done.Title, 23, Ui.Good);
+                Para(w.Content, done.Reward != null ? "获得：" + done.Reward : "继续加油。", 19, Ui.Accent);
+                if (next == null) Para(w.Content, "暂时没有新任务。", 16, Ui.Dim);
+                Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
+            }, onClosed: () =>
+            {
+                _questPopup = null;
+                if (next != null && S.CurrentQuest()?.Id == next.Id) OpenNewQuestPopup(next);
+            });
+        }
+
+        private void OpenNewQuestPopup(QuestDef next)
+        {
+            _questPopup = OpenWindow("新任务", 560, 280, w =>
+            {
+                Line(w.Content, next.Title, 23, Ui.Accent);
                 Para(w.Content, GuideLocation(next.Target), 16, Ui.Accent);
-                Para(w.Content, next.Hint, 17);
+                Para(w.Content, next.Hint, 18);
                 if (next.Reward != null) Para(w.Content, "完成奖励：" + next.Reward, 16, Ui.Good);
                 ProgressLine(w.Content, next, 15);
                 Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
