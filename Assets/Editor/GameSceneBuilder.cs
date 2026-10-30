@@ -1627,7 +1627,12 @@ namespace PCShopSell.EditorTools
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
             SmokeAgencySelection(s);
             Shot("vs1_agency_map_720", 1280, 720);
-            ClickGuideButton("和小陈聊聊");
+            Check(GuideButton("和小陈聊聊") == null, "中介窗口没有重复的“和小陈聊聊”按钮，点头像交谈");
+            var portrait = _game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<UnityEngine.UI.Button>())
+                .LastOrDefault(b => b.gameObject.activeInHierarchy && b.name == "AgentPortrait");
+            Check(portrait != null, "中介窗口有可点的小陈头像");
+            portrait?.onClick.Invoke();
+            Canvas.ForceUpdateCanvases();
             ClickGuideButton("随便聊聊（8 分钟）");
             ClickGuideButton("继续看房");
             Check(s.AgentDiscount > 0, "地图中的中介交谈保留熟络优惠");
