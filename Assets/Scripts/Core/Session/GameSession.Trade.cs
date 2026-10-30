@@ -147,7 +147,7 @@ namespace PCShopSell.Core.Session
 
             Money total = Online1788.ShippingFee;
             double space = 0;
-            var order = new OnlineOrder { Id = Online.NextOrderId, StoreId = storeId, ToHome = toHome };
+            var order = new OnlineOrder { Id = Online.NextOrderId, StoreId = storeId, ToHome = toHome, ShopId = toHome ? null : PlayerShopPlace.Id };
             foreach (var (part, count) in lines)
             {
                 if (count <= 0) continue;
@@ -166,8 +166,8 @@ namespace PCShopSell.Core.Session
             Online.NextOrderId++;
             Online.TotalOrders++;
             Online.AddPending(order);
-            string where = toHome ? "家里（放在纸箱里）" : "店里";
-            Say(manual ? $"下单成功，{total}，明天 10:00 送到{where}。" : $"自动补货下单：{store.Name}，{total}，明天 10:00 送到店里。");
+            string where = toHome ? "家里（放在纸箱里）" : "店里" + ShopTag;
+            Say(manual ? $"下单成功，{total}，明天 10:00 送到{where}。" : $"自动补货下单：{store.Name}，{total}，明天 10:00 送到店里{ShopTag}。");
 
             if (Online.TotalOrders == 2 && Online.Discover("s_flash"))
                 Say("1788 首页给你推荐了一家新店：闪电优选。");
@@ -182,6 +182,7 @@ namespace PCShopSell.Core.Session
             {
                 OnlineStore store = Online1788.GetStore(o.StoreId);
                 StoreRecord rec = Online.RecordOf(o.StoreId);
+                OwnedShop dest = DeliveryShop(o.ShopId);
                 int good = 0, bad = 0;
                 var badNames = new StringBuilder();
                 foreach (OnlineOrderLine l in o.Lines)
@@ -198,14 +199,15 @@ namespace PCShopSell.Core.Session
                         else
                         {
                             if (o.ToHome) HomeBoxParts.ForceAdd(part, true, 1);
-                            else PlayerShop.Stock.ForceAdd(part, true, 1);
+                            else dest.Sim.Stock.ForceAdd(part, true, 1);
                             good++;
                         }
                     }
                 }
                 rec.ItemsReceived += good + bad;
                 rec.Defects += bad;
-                string body = $"{store.Name} 的货到了（{(o.ToHome ? "送到家里，放在纸箱里，要自己带去店里" : "已上店里货架")}）：{good} 件完好。";
+                string shopName = MyShopCount > 1 ? ShopTitle(dest) : "店里";
+                string body = $"{store.Name} 的货到了（{(o.ToHome ? "送到家里，放在纸箱里，要自己带去店里" : $"已上{shopName}货架")}）：{good} 件完好。";
                 if (bad > 0) body += $"\n{bad} 件是次品，只能扔掉：{badNames}";
                 Show("1788 到货", body);
             }

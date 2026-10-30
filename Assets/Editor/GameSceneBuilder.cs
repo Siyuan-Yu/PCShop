@@ -1644,10 +1644,10 @@ namespace PCShopSell.EditorTools
             s.DebugAddListing("shop02", s.Clock.Today.TotalDays, s.Clock.Today.TotalDays + 30, Money.FromYuan(6200));
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
             ClickAgency("AgencyLot_shop02");
-            Check(AgencyButton("AgencyReviewLease")?.interactable == false, "名气不足不能搬到中型店");
+            Check(AgencyButton("AgencyReviewMove")?.interactable == false, "名气不足不能搬到中型店");
             s.PlayerShop.Reputation = 100;
             _game.Ui.RebuildWindows();
-            Check(AgencyButton("AgencyReviewLease")?.interactable == false, "资金不足不能签约");
+            Check(AgencyButton("AgencyReviewMove")?.interactable == false, "资金不足不能签约");
             Shot("vs1_agency_insufficient");
             s.Ledger.Credit(s.Clock.Today, "验收", Money.FromYuan(100000), "选址验收资金");
             _game.Ui.RebuildWindows();
@@ -1655,7 +1655,7 @@ namespace PCShopSell.EditorTools
             var next = s.Listings.First(l => l.PlaceId == "shop02");
             before = s.Ledger.Balance;
             cost = s.LeaseCost(next);
-            ClickAgency("AgencyReviewLease");
+            ClickAgency("AgencyReviewMove");
             Shot("vs1_agency_move_confirm");
             ClickAgency("AgencyConfirmLease");
             Check(s.PlayerShopPlace.Id == "shop02" && s.Ledger.Balance == before - cost, "搬店报价正确结算旧押金和搬家费");
@@ -1688,11 +1688,11 @@ namespace PCShopSell.EditorTools
             ClickAgency("AgencyPin_shop01");
             Shot("vs1_agency_dense");
             before = s.Ledger.Balance;
-            ClickAgency("AgencyReviewLease");
+            ClickAgency("AgencyReviewMove");
             s.Listings.First(l => l.PlaceId == "shop01").Rent += Money.FromYuan(100);
             ClickAgency("AgencyConfirmLease");
             Check(s.Ledger.Balance == before && s.PlayerShopPlace.Id == "shop02", "报价变化后必须重新核对，不按旧报价扣款");
-            ClickAgency("AgencyReviewLease");
+            ClickAgency("AgencyReviewMove");
             ClickAgency("AgencyConfirmLease");
             Check(s.PlayerShopPlace.Id == "shop01", "重新核价后可正常租下大型铺面");
             _game.Ui.CloseAllWindows();
@@ -1704,7 +1704,7 @@ namespace PCShopSell.EditorTools
             cost = s.LeaseCost(cheaper);
             Check(cost.IsNegative, "大铺换小铺，旧押金抵扣后产生退款");
             Shot("vs1_agency_refund");
-            ClickAgency("AgencyReviewLease");
+            ClickAgency("AgencyReviewMove");
             ClickAgency("AgencyConfirmLease");
             Check(s.PlayerShopPlace.Id == "shop05" && s.Ledger.Balance == before - cost, "搬店净退款正确入账");
             _game.Ui.CloseAllWindows();

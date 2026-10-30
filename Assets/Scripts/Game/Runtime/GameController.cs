@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
@@ -102,7 +103,7 @@ namespace PCShopSell.Game
                 Session.EventRaised -= OnEventRaised;
                 Session.ShopExpanded -= OnShopExpanded;
                 Session.TripArrived -= OnTripArrived;
-                Session.PlayerShop.CustomerArrived -= OnCustomerArrived;
+                Session.ShopCustomerArrived -= OnCustomerArrived;
                 Session.Clock.DayAdvanced -= OnDayAdvanced;
                 Session.Dispose();
             }
@@ -118,7 +119,7 @@ namespace PCShopSell.Game
             s.ShopExpanded += OnShopExpanded;
             s.EventsEnabled = _eventsOn;
             s.TripArrived += OnTripArrived;
-            s.PlayerShop.CustomerArrived += OnCustomerArrived;
+            s.ShopCustomerArrived += OnCustomerArrived;
             s.Clock.DayAdvanced += OnDayAdvanced;
             _pendingEnter = null;
             _gameOverShown = false;
@@ -244,8 +245,17 @@ namespace PCShopSell.Game
             Ui.Update(dt);
         }
 
-        private ShopBeacon _beacon;
-        public bool ShopBeaconVisible => _beacon != null && _beacon.Visible;
+        private readonly List<ShopBeacon> _beacons = new List<ShopBeacon>();
+        public bool ShopBeaconVisible => _beacons.Exists(b => b.Visible);
+
+        /// <summary>每家自营店一圈光；店少了多出来的那几圈藏起来。</summary>
+        private void UpdateBeacons(float dt)
+        {
+            var shops = Session.MyShops;
+            while (_beacons.Count < shops.Count) _beacons.Add(new ShopBeacon(World.Root.transform));
+            for (int i = 0; i < _beacons.Count; i++)
+                _beacons[i].Update(Session, World, i < shops.Count ? shops[i].Place.Id : null, dt);
+        }
 
         private float _crowdSyncTimer;
 
@@ -274,7 +284,7 @@ namespace PCShopSell.Game
                 _crowd.Sync(Session.ResidentsOutside(), ResidentDoor);
             }
             _crowd.Update(worldDt, !room);
-            (_beacon ?? (_beacon = new ShopBeacon(World.Root.transform))).Update(Session, World, dt);
+            UpdateBeacons(dt);
             if (!room)
                 foreach (PlaceVisual pv in World.Places.Values)
                     if (pv.ClosedOnly.Count > 0) World.SetOpen(pv, Session.IsPlaceOpen(pv.Place));
@@ -750,9 +760,10 @@ namespace PCShopSell.Game
             _pendingEnter = null;
         }
 
-        private void OnCustomerArrived(PCShopSell.Core.Shop.ShopCustomer c)
+        private void OnCustomerArrived(Place shop, PCShopSell.Core.Shop.ShopCustomer c)
         {
-            if (!InInterior) _crowd?.SendShopper();
+            if (InInterior || _crowd == null || !World.Places.TryGetValue(shop.Id, out PlaceVisual pv)) return;
+            _crowd.SendShopper(pv.Entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZAt(pv.Entrance.x) - 0.3f));
         }
 
         private void OnDayAdvanced(GameDate prev, GameDate today) => _autosaveDue = true;

@@ -51,9 +51,13 @@ namespace PCShopSell.Core.Session
 
         private readonly Dictionary<string, int> _furnStock = new Dictionary<string, int>();
         private readonly List<PlacedFurniture> _homeLayout = FurnitureCatalog.StartHomeLayout();
-        private readonly List<PlacedFurniture> _shopLayout = new List<PlacedFurniture>();
+        private List<PlacedFurniture> _shopLayout => _focus.Layout;
         private readonly List<Parcel> _parcels = new List<Parcel>();
-        private int _renovationDay = -1;
+        private int _renovationDay
+        {
+            get => _focus.RenovationDay;
+            set => _focus.RenovationDay = value;
+        }
 
         public Pantry Pantry { get; } = new Pantry();
         public IReadOnlyList<PlacedFurniture> HomeLayout => _homeLayout;
@@ -436,7 +440,8 @@ namespace PCShopSell.Core.Session
             DeliverParcels(today);
             List<string> lost = Pantry.Spoil(today.TotalDays);
             if (lost.Count > 0) Say("放坏扔掉了：" + string.Join("、", lost) + "。");
-            if (_renovationDay != today.TotalDays) PlayerShop.ForcedClosed = false;
+            foreach (OwnedShop s in _shops)
+                if (s.RenovationDay != today.TotalDays) s.Sim.ForcedClosed = false;
             SpoilBackpackFood(today.TotalDays);
             List<string> boxLost = HomeBox.Food.Spoil(today.TotalDays);
             if (boxLost.Count > 0) Say("纸箱里放坏扔掉了：" + string.Join("、", boxLost) + "。");

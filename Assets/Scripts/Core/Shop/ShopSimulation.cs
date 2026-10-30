@@ -289,12 +289,21 @@ namespace PCShopSell.Core.Shop
         /// <summary>招牌灯箱之类的升级带来的客流倍数。</summary>
         public double TrafficMultiplier { get; set; } = 1.0;
 
-        /// <summary>知名度 0~100，每 10 点约增加 10% 客流。</summary>
+        private ShopSimulation _reputationOwner;
+
+        /// <summary>知名度 0~100，每 10 点约增加 10% 客流。同一个老板的几家店共用一个知名度。</summary>
         public double Reputation
         {
-            get => _reputation;
-            set => _reputation = Math.Max(0, Math.Min(100, value));
+            get => _reputationOwner != null ? _reputationOwner.Reputation : _reputation;
+            set
+            {
+                if (_reputationOwner != null) _reputationOwner.Reputation = value;
+                else _reputation = Math.Max(0, Math.Min(100, value));
+            }
         }
+
+        /// <summary>这家店的知名度跟 main 共用（开第二家店时用）。</summary>
+        public void ShareReputationWith(ShopSimulation main) => _reputationOwner = main == this ? null : main;
 
         /// <summary>售价 = 市场价 × 加价倍率（盒装再加溢价）。范围 0.9~1.6。</summary>
         public double Markup
@@ -651,7 +660,7 @@ namespace PCShopSell.Core.Shop
             TodayCustomers = 0;
             TodayLost = 0;
             TodaySales = Money.Zero;
-            Reputation *= DailyReputationRetention;
+            if (_reputationOwner == null) Reputation *= DailyReputationRetention;
         }
 
         private void OnTimeAdvanced(GameTimestamp from, GameTimestamp to)
@@ -940,6 +949,9 @@ namespace PCShopSell.Core.Shop
                 OrderExpired?.Invoke(o);
             }
         }
+
+        /// <summary>请走店里所有顾客（拿在手里的货放回去），退租前用。</summary>
+        public void ClearCustomers() => CloseAll();
 
         private void CloseAll()
         {

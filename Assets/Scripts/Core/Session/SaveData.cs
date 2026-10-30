@@ -110,6 +110,11 @@ namespace PCShopSell.Core.Session
         public long pendingDepositCents;
         public int pendingStartDay;
         public int pendingSignedDay;
+        public bool pendingNewShop;
+
+        /// <summary>主店以外的自营店（主店还在上面那些字段里）；focusShop 是当前店的序号（0 = 主店）。</summary>
+        public SaveShop[] extraShops;
+        public int focusShop;
         public SaveListing[] listings;
         public string[] vacantPlaces;
         public string realtyRng;
@@ -241,7 +246,35 @@ namespace PCShopSell.Core.Session
         public long deliverAt;
         public long totalCents;
         public bool toHome;
+        public string shopId;
         public SaveStockLine[] lines;
+    }
+
+    /// <summary>主店以外的一家自营店。</summary>
+    [Serializable]
+    public sealed class SaveShop
+    {
+        public string place;
+        public long rentCents, depositCents;
+        public int startDay;
+        public SaveStockLine[] stock;
+        public string[] goodsIds;
+        public int[] goodsCounts;
+        public double markup;
+        public int openMinute, closeMinute;
+        public SaveOrder[] orders;
+        public int nextOrderId;
+        public int[] displayPcs;
+        public string[] partMarkupIds;
+        public double[] partMarkupValues;
+        public bool hasEmployee, hasAssembler;
+        public SaveEmployee employee, assembler;
+        public bool employeeTrained, autoBuild;
+        public SavePlaced[] layout;
+        public string[] upgrades;
+        public string[] restockIds;
+        public int[] restockTargets;
+        public int renovationDay = -1;
     }
 
     [Serializable]
@@ -352,6 +385,7 @@ namespace PCShopSell.Core.Session
         public string fromId;
         public string fromName;
         public bool toShop;
+        public string shopId;
         public long dueMinute;
         public int[] kinds;
         public string[] ids;

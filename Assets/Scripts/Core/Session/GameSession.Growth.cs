@@ -43,7 +43,7 @@ namespace PCShopSell.Core.Session
 
     public sealed partial class GameSession
     {
-        private readonly HashSet<string> _upgrades = new HashSet<string>();
+        private HashSet<string> _upgrades => _focus.Upgrades;
         private readonly HashSet<string> _ownedOutfits = new HashSet<string> { Outfits.Default };
         private readonly List<(int day, long cents, string memo)> _scheduledCredits = new List<(int, long, string)>();
 

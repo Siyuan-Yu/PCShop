@@ -27,13 +27,20 @@ namespace PCShopSell.Core.Session
         private readonly HashSet<string> _vacant = new HashSet<string>();
         private readonly Dictionary<string, double> _locationCache = new Dictionary<string, double>();
 
-        /// <summary>正在租的铺子；还没租时为 null。</summary>
-        public ShopLease Lease { get; private set; }
+        /// <summary>当前这家店的租约；还没租铺子时为 null。</summary>
+        public ShopLease Lease
+        {
+            get => _focus.Lease;
+            private set => _focus.Lease = value;
+        }
 
         public bool HasShop => Lease != null;
 
         /// <summary>提前签下、现租户还没搬走的铺子：租金照交，到 StartDay 那天才自动搬进去。没有则为 null。</summary>
         public ShopLease PendingLease { get; private set; }
+
+        /// <summary>提前签的那间是开新店（否则是把当前店搬过去）。</summary>
+        public bool PendingIsNewShop { get; private set; }
 
         public bool IsPendingShop(Place p) => PendingLease != null && p != null && p.Id == PendingLease.PlaceId;
 
@@ -41,13 +48,13 @@ namespace PCShopSell.Core.Session
 
         public bool InAgency => CurrentPlace != null && CurrentPlace.Kind == PlaceKind.Agency;
 
-        public bool IsMyShop(Place p) => Lease != null && p == PlayerShopPlace;
+        public bool IsMyShop(Place p) => ShopAt(p) != null;
 
         /// <summary>空着、门上贴着“旺铺招租”的铺面。</summary>
         public bool IsVacant(Place p) => p != null && _vacant.Contains(p.Id) && !IsMyShop(p) && VentureAt(p.Id) == null && PropertyAt(p.Id) == null;
 
         /// <summary>街上名牌显示的名字：我的店 / 旺铺招租 / 原来的店名。</summary>
-        public string PlaceTitle(Place p) => p == null ? "" : IsMyShop(p) ? MyShopName : p == Home ? HomeTitle : p.Id == ParkPlaceId ? "电脑乐园" : VentureAt(p.Id) != null ? Ventures.Get(VentureAt(p.Id).Kind).Name : PropertyAt(p.Id) != null ? "我的出租物业" : IsVacant(p) ? VacantTitle : p.Name;
+        public string PlaceTitle(Place p) => p == null ? "" : IsMyShop(p) ? ShopTitle(ShopAt(p)) : p == Home ? HomeTitle : p.Id == ParkPlaceId ? "电脑乐园" : VentureAt(p.Id) != null ? Ventures.Get(VentureAt(p.Id).Kind).Name : PropertyAt(p.Id) != null ? "我的出租物业" : IsVacant(p) ? VacantTitle : p.Name;
 
         public Place ListingPlace(ShopListing l) => City.GetPlace(l.PlaceId);
 
@@ -71,43 +78,50 @@ namespace PCShopSell.Core.Session
             return path.Found ? path.Distance : 0;
         }
 
-        /// <summary>签这一间当场要付多少（已开着店的话加搬家费、减去退回的旧押金；提前签的铺子搬家那天再结算这两项）。</summary>
-        public Money LeaseCost(ShopListing l)
+        /// <summary>
+        /// 签这一间当场要付多少。newShop = 已经有店、再开一家（不搬）；否则已开着店就是搬店：
+        /// 加搬家费、减去退回的旧押金（提前签的铺子搬家那天再结算这两项）。
+        /// </summary>
+        public Money LeaseCost(ShopListing l, bool newShop = false)
         {
             Money cost = l.Rent + RealEstate.Deposit(l.Rent) + AgentFeeFor(l.Rent);
-            if (Lease != null && !IsAdvance(l)) cost = cost + RealEstate.MoveFee - Lease.Deposit;
+            if (Lease != null && !newShop && !IsAdvance(l)) cost = cost + RealEstate.MoveFee - Lease.Deposit;
             return cost;
         }
 
         /// <summary>现租户还没搬走：签了也要等到 OpenDay 才能搬进去。</summary>
         public bool IsAdvance(ShopListing l) => l.OpenDay > Clock.Today.TotalDays;
 
-        /// <summary>为什么现在签不了这一间；能签返回 null。</summary>
-        public string LeaseBlocker(ShopListing l)
+        /// <summary>为什么现在签不了这一间；能签返回 null。newShop 见 <see cref="LeaseCost"/>。</summary>
+        public string LeaseBlocker(ShopListing l, bool newShop = false)
         {
-            int today = Clock.Today.TotalDays;
             if (VentureAt(l.PlaceId) != null || PropertyAt(l.PlaceId) != null) return "这间铺子已纳入你的经营资产";
             if (PendingLease != null) return $"你已经提前签了{City.GetPlace(PendingLease.PlaceId).Name}，第 {PendingLease.StartDay + 1} 天交房前不能再签";
-            if (Lease != null && l.PlaceId == Lease.PlaceId) return "这就是你现在的店";
+            if (ShopAt(l.PlaceId) != null) return "这已经是你的店了";
+            if (newShop && HasShop && MyShopCount >= MaxOwnShops) return $"最多同时自营 {MaxOwnShops} 家店";
             double rep = RealEstate.MinReputation(l.Size);
             if (PlayerShop.Reputation < rep) return $"房东要看名气：知名度要到 {rep:0}";
-            if (Lease != null)
+            if (Lease != null && !newShop)
             {
                 double cap = ShopSettings.Capacity(l.Size) + ShopUpgrades.ExtraCapacity(_upgrades);
                 if (PlayerShop.Stock.UsedSpace + IncomingShopSpace > cap + 1e-9) return $"铺子太小，放不下现在的 {PlayerShop.Stock.UsedSpace:0.#} 格货";
             }
-            if (Ledger.Balance < LeaseCost(l)) return "钱不够";
+            if (Ledger.Balance < LeaseCost(l, newShop)) return "钱不够";
             return null;
         }
 
-        /// <summary>在房产中介签下一间铺子。已有店就搬过去：旧铺退押金，摆在店里的家具收回“我的”。</summary>
-        public bool SignLease(string placeId)
+        /// <summary>
+        /// 在房产中介签下一间铺子。还没店就是开第一家；已有店时 newShop = 再开一家（几家店同时经营），
+        /// 否则把当前这家店搬过去：旧铺退押金，摆在店里的家具收回“我的”。
+        /// </summary>
+        public bool SignLease(string placeId, bool newShop = false)
         {
             if (!InAgency) return Fail("要在房产中介签约。");
             ShopListing l = _listings.FirstOrDefault(x => x.PlaceId == placeId);
             if (l == null) return Fail("这间铺子已经不在挂牌了。");
-            string blocker = LeaseBlocker(l);
+            string blocker = LeaseBlocker(l, newShop);
             if (blocker != null) return Fail(blocker + "。");
+            newShop = newShop && HasShop;
 
             Place place = City.GetPlace(placeId);
             Money deposit = RealEstate.Deposit(l.Rent);
@@ -115,13 +129,23 @@ namespace PCShopSell.Core.Session
             {
                 PaySigning(l.Rent, place);
                 PendingLease = new ShopLease { PlaceId = place.Id, Rent = l.Rent, Deposit = deposit, StartDay = l.OpenDay, SignedDay = Clock.Today.TotalDays };
+                PendingIsNewShop = newShop;
                 _listings.Remove(l);
                 int wait = l.OpenDay - Clock.Today.TotalDays;
                 Show("提前签约",
                     $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）签下来了，月租 {l.Rent}，押金 {deposit}。\n" +
                     $"不过现租户的租约还没到期，要到第 {l.OpenDay + 1} 天（还有 {wait} 天）才搬走，到那天你才能搬进去。\n" +
                     "房租从今天就开始算，这段时间每月 1 号照样要交。" +
-                    (Lease != null ? "\n交房那天自动搬店：退旧铺押金、收搬家费，旧铺之前照常营业。" : "\n在那之前你还是没有店铺。"));
+                    (newShop ? "\n交房那天就多了一家新店（毛坯，要自己摆收银台和货架），现在的店照常营业。"
+                        : Lease != null ? "\n交房那天自动搬店：退旧铺押金、收搬家费，旧铺之前照常营业。" : "\n在那之前你还是没有店铺。"));
+                return true;
+            }
+            if (newShop)
+            {
+                PaySigning(l.Rent, place);
+                OpenNewShop(place, l.Rent, deposit);
+                ShowNewShop(place, l.Rent, deposit, "开了新店");
+                RefreshQuestProgress();
                 return true;
             }
             bool moving = Lease != null;
@@ -143,13 +167,30 @@ namespace PCShopSell.Core.Session
                 "以后每月 1 号交房租。");
         }
 
-        /// <summary>提前签的铺子到了交房日：自动搬进去（已有店就搬店：退旧押金、收搬家费）。</summary>
+        private void ShowNewShop(Place place, Money rent, Money deposit, string title)
+        {
+            Show(title,
+                $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）租下来了，是你的{ShopTitle(_focus)}，月租 {rent}，押金 {deposit}。\n" +
+                "原来的店照常营业，货、员工、货架各管各的。新店是毛坯：至少摆好收银台和一个货架才能营业，人不在店里时要雇人看店才开门。\n" +
+                "进哪家店，店里的面板、进货送货就对哪家店。以后每月 1 号每家店各交各的房租。");
+        }
+
+        /// <summary>提前签的铺子到了交房日：开新店，或者自动搬进去（搬店：退旧押金、收搬家费）。</summary>
         private void MoveIntoPending(int today)
         {
             if (PendingLease == null || today < PendingLease.StartDay) return;
             ShopLease p = PendingLease;
             PendingLease = null;
             Place place = City.GetPlace(p.PlaceId);
+            if (PendingIsNewShop && HasShop)
+            {
+                PendingIsNewShop = false;
+                OpenNewShop(place, p.Rent, p.Deposit);
+                ShowNewShop(place, p.Rent, p.Deposit, "交房了");
+                RefreshQuestProgress();
+                return;
+            }
+            PendingIsNewShop = false;
             bool moving = Lease != null;
             if (moving)
             {
@@ -352,6 +393,7 @@ namespace PCShopSell.Core.Session
                 d.pendingDepositCents = PendingLease.Deposit.Cents;
                 d.pendingStartDay = PendingLease.StartDay;
                 d.pendingSignedDay = PendingLease.SignedDay;
+                d.pendingNewShop = PendingIsNewShop;
             }
             d.listings = _listings.Select(l => new SaveListing
             {
@@ -389,6 +431,7 @@ namespace PCShopSell.Core.Session
                     StartDay = d.pendingStartDay, SignedDay = d.pendingSignedDay,
                 }
                 : null;
+            PendingIsNewShop = PendingLease != null && d.pendingNewShop;
 
             if (!string.IsNullOrEmpty(d.realtyRng) && ulong.TryParse(d.realtyRng, System.Globalization.NumberStyles.Integer,
                     System.Globalization.CultureInfo.InvariantCulture, out ulong st))

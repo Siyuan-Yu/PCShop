@@ -41,9 +41,18 @@ namespace PCShopSell.Core.Session
         public HardwareMarket Market { get; }
         public CityLayout City { get; }
         public TimeController Time { get; }
-        public ShopSimulation PlayerShop { get; }
-        /// <summary>玩家的店所在的铺面（还没租时是开局那间街尾空铺）。在房产中介签了别的铺子就换成那间。</summary>
-        public Place PlayerShopPlace { get; private set; }
+        /// <summary>当前这家店（人在哪家店就是哪家，出门后还是最后进过的那家）的营业模拟。</summary>
+        public ShopSimulation PlayerShop => _focus.Sim;
+
+        /// <summary>当前这家店的铺面（还没租时是开局那间街尾空铺）。</summary>
+        public Place PlayerShopPlace
+        {
+            get => _focus.Place;
+            private set => _focus.Place = value;
+        }
+
+        private readonly List<OwnedShop> _shops = new List<OwnedShop>();
+        private OwnedShop _focus;
         public Place Home { get; }
         public PoliceSystem Police { get; }
         public Online1788 Online { get; }
@@ -84,7 +93,8 @@ namespace PCShopSell.Core.Session
             bool startWithShop = true)
         {
             City = city ?? throw new ArgumentNullException(nameof(city));
-            PlayerShopPlace = city.PlayerShop() ?? throw new ArgumentException("布局里没有玩家的店。", nameof(city));
+            _focus = new OwnedShop { Place = city.PlayerShop() ?? throw new ArgumentException("布局里没有玩家的店。", nameof(city)) };
+            _shops.Add(_focus);
             Home = city.FirstOfKind(PlaceKind.Home) ?? throw new ArgumentException("布局里没有住所。", nameof(city));
 
             SetSmartphone(smartphone);
@@ -98,24 +108,7 @@ namespace PCShopSell.Core.Session
             Police = new PoliceSystem(city);
             Cargo = new Stock(Vehicles.Walk.CargoCapacity);
 
-            PlayerShop = new ShopSimulation(PlayerShopPlace.Id, PlayerShopPlace.Size, Clock, Ledger, Market, Random)
-            {
-                LocationFactor = ComputeLocationFactor(city, PlayerShopPlace),
-                EmployeeOnDuty = IsEmployeeOnDuty,
-            };
-            PlayerShop.WorkMinute = UpdateEmployeeWork;
-            PlayerShop.EmployeeBusy = () => _employeeBuilding;
-            PlayerShop.DayClosed += r =>
-            {
-                if (HasShop) Notice?.Invoke(DayReportText(r));
-            };
-            PlayerShop.CustomerLeft += OnShopCustomerLeft;
-            PlayerShop.OrderCompleted += o => { Flags.Add("tutorial:build"); ContractOrderResult(o, true); };
-            PlayerShop.OrderCancelled += o => ContractOrderResult(o, false);
-            PlayerShop.OrderExpired += o => ContractOrderResult(o, false);
-            PlayerShop.OrderPlaced += o => Notice?.Invoke($"新装机订单：{PartCatalog.TierName(o.Tier)}整机 {o.Price}，两天内交付。");
-            PlayerShop.OrderExpired += o => Popup?.Invoke("订单取消", $"{PartCatalog.TierName(o.Tier)}整机订单超时，顾客取消了订单，知名度下降。");
-
+            _focus.Sim = CreateShopSim(_focus);
             _basePatience = PlayerShop.Settings.PatienceMinutes;
 
             _realtyRng = new GameRandom(seed ^ 0x5EA1E57A7EUL);
@@ -201,6 +194,7 @@ namespace PCShopSell.Core.Session
             }
             if (place.NodeId != PlayerNodeId)
                 throw new InvalidOperationException($"玩家不在 {place.Name} 门口。");
+            SetFocus(ShopAt(place));
             CurrentPlace = place;
             CourierDest = null;
             if (InPlayerShop)
@@ -261,7 +255,8 @@ namespace PCShopSell.Core.Session
         public bool IsPlaceOpen(Place p)
         {
             if (p == null) return false;
-            if (IsMyShop(p)) return PlayerShop.IsOpen;
+            OwnedShop mine = ShopAt(p);
+            if (mine != null) return mine.Sim.IsOpen;
             var venture = VentureAt(p.Id);
             if (venture != null && venture.Paused) return false;
             switch (p.Kind)
@@ -289,20 +284,24 @@ namespace PCShopSell.Core.Session
         public Money InventoryValue()
         {
             double sum = 0;
-            foreach (StockLine l in PlayerShop.Stock.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
-            foreach (StockLine l in Cargo.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
-            foreach (var kv in PlayerShop.Stock.GoodsLines()) sum += (Gifts.Get(kv.Key)?.Price.Yuan ?? 0) * kv.Value;
-            foreach (var order in PlayerShop.Orders) if (order.PartsReserved)
-                foreach (var p in PartCatalog.BuildList(order.Tier)) sum += Market.PriceOf(p).Yuan;
-            foreach (var l in HomeBoxParts.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
-            foreach (int tier in PlayerShop.DisplayPcs)
-                foreach (var p in PartCatalog.BuildList(tier)) sum += Market.PriceOf(p).Yuan;
-            foreach (var c in PlayerShop.Queue)
+            foreach (OwnedShop shop in _shops)
             {
-                if (c.DisplayTier >= 0) foreach (var p in PartCatalog.BuildList(c.DisplayTier)) sum += Market.PriceOf(p).Yuan;
-                else if (c.Item != null) sum += Market.PriceOf(c.Item).Yuan;
-                else if (c.GoodsId != null) sum += Gifts.Get(c.GoodsId)?.Price.Yuan ?? 0;
+                ShopSimulation sim = shop.Sim;
+                foreach (StockLine l in sim.Stock.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
+                foreach (var kv in sim.Stock.GoodsLines()) sum += (Gifts.Get(kv.Key)?.Price.Yuan ?? 0) * kv.Value;
+                foreach (var order in sim.Orders) if (order.PartsReserved)
+                    foreach (var p in PartCatalog.BuildList(order.Tier)) sum += Market.PriceOf(p).Yuan;
+                foreach (int tier in sim.DisplayPcs)
+                    foreach (var p in PartCatalog.BuildList(tier)) sum += Market.PriceOf(p).Yuan;
+                foreach (var c in sim.Queue)
+                {
+                    if (c.DisplayTier >= 0) foreach (var p in PartCatalog.BuildList(c.DisplayTier)) sum += Market.PriceOf(p).Yuan;
+                    else if (c.Item != null) sum += Market.PriceOf(c.Item).Yuan;
+                    else if (c.GoodsId != null) sum += Gifts.Get(c.GoodsId)?.Price.Yuan ?? 0;
+                }
             }
+            foreach (StockLine l in Cargo.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
+            foreach (var l in HomeBoxParts.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
             foreach (var o in Online.Pending) foreach (var l in o.Lines) sum += Market.PriceOf(PartCatalog.Get(l.PartId)).Yuan * l.Count;
             foreach (var r in Couriers) foreach (var l in r.Items)
                 if (l.Kind == CourierItemKind.Part) sum += Market.PriceOf(PartCatalog.Get(l.Id)).Yuan * l.Count;
@@ -314,14 +313,16 @@ namespace PCShopSell.Core.Session
         public Money VehicleValue => Money.FromCents(_owned.Sum(v => Vehicles.Get(v).Price.Scale(.6).Cents));
         public Money ContractDeposits => Money.FromCents(_contracts.Where(x => x.Accepted && !x.Settled).Sum(x => Money.FromCents(x.DepositCents).Scale((double)(x.Count - x.Failed) / Math.Max(1, x.Count)).Cents));
         public Money TotalDebt => SupplierDebtTotal + MortgageDebt;
-        public Money NetWorth() => Ledger.Balance + InventoryValue() + (Lease?.Deposit ?? Money.Zero) + (PendingLease?.Deposit ?? Money.Zero) + ContractDeposits
+        public Money ShopDeposits => Money.FromCents(_shops.Where(s => s.Rented).Sum(s => s.Lease.Deposit.Cents));
+
+        public Money NetWorth() => Ledger.Balance + InventoryValue() + ShopDeposits + (PendingLease?.Deposit ?? Money.Zero) + ContractDeposits
             + VehicleValue + VentureValue + PropertyValue + Money.FromCents(HomePriceCents) + FundValue - TotalDebt;
 
         public void Dispose()
         {
             Clock.TimeAdvanced -= OnTimeAdvanced;
             Clock.DayAdvanced -= OnDayAdvanced;
-            PlayerShop.Dispose();
+            foreach (OwnedShop s in _shops) s.Sim.Dispose();
         }
 
         // ---------- 时间事件 ----------
@@ -400,7 +401,8 @@ namespace PCShopSell.Core.Session
             if (today.IsMonthStart)
             {
                 if (HomeUtilities.IsPositive) Ledger.ForceDebit(today, "水电", HomeUtilities, "住处水电");
-                if (HasShop && CurrentShopRent.IsPositive) Ledger.ForceDebit(today, "房租", CurrentShopRent, "店铺月租");
+                foreach (OwnedShop s in _shops)
+                    if (s.Rented && RentOf(s).IsPositive) Ledger.ForceDebit(today, "房租", RentOf(s), ShopTitle(s) + "月租");
                 if (CurrentHomeRent.IsPositive) Ledger.ForceDebit(today, "房租", CurrentHomeRent, HomeTitle + "月租");
                 string pending = "";
                 if (PendingLease != null)
@@ -409,7 +411,9 @@ namespace PCShopSell.Core.Session
                     Ledger.ForceDebit(today, "房租", PendingLease.Rent, $"{pp.Name} 月租（还没交房）");
                     pending = $"\n提前签的{pp.Name} {PendingLease.Rent} 也扣了（第 {PendingLease.StartDay + 1} 天才交房）。";
                 }
-                Popup?.Invoke("交房租", (HasShop ? $"店铺 {CurrentShopRent} + 出租屋 {CurrentHomeRent} 已扣款。" : $"出租屋 {CurrentHomeRent} 已扣款。（还没搬进铺子）") + pending);
+                int rented = _shops.Count(s => s.Rented);
+                string shops = rented > 1 ? $"{rented} 家店铺共 {TotalShopRent}" : $"店铺 {TotalShopRent}";
+                Popup?.Invoke("交房租", (HasShop ? $"{shops} + 出租屋 {CurrentHomeRent} 已扣款。" : $"出租屋 {CurrentHomeRent} 已扣款。（还没搬进铺子）") + pending);
             }
             OnRealtyDay(today.TotalDays);
             OnBusinessDay(previous, today);

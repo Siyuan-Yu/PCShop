@@ -28,7 +28,7 @@ namespace PCShopSell.Core.Session
         public Money EffectiveRestockReserve => Money.FromYuan(Math.Max(Math.Max(500, RestockReserveYuan),
             (long)Math.Ceiling((CurrentShopRent.Yuan / 30.0 + CurrentHomeRent.Yuan / 30.0 + (Employee?.DailyWageYuan ?? 0) + (Assembler?.DailyWageYuan ?? 0) + McnDailyWages + (_owned.Contains(VehicleKind.Car) ? 40 : 0) + (_owned.Contains(VehicleKind.Van) ? 60 : 0)) * Math.Max(0, RestockReserveDays)))) + UpcomingBusinessPayments(RestockReserveDays);
 
-        private readonly Dictionary<string, int> _restock = new Dictionary<string, int>();
+        private Dictionary<string, int> _restock => _focus.Restock;
         private readonly Dictionary<PartCategory, int> _noStockAlertDay = new Dictionary<PartCategory, int>();
 
         /// <summary>自动补货下单的店；null = 自动挑最便宜的（会避开你亲眼见过次品很多的店）。</summary>
@@ -119,6 +119,12 @@ namespace PCShopSell.Core.Session
         /// <summary>每天 9:00：库存（含在途）低于目标的 40% 就用手机在 1788 补到目标，次日 10:00 到。</summary>
         public void RunAutoRestock()
         {
+            foreach (OwnedShop s in _shops.ToList())
+                if (s.Rented) WithShop(s, RunAutoRestockHere);
+        }
+
+        private void RunAutoRestockHere()
+        {
             if (_restock.Count == 0 || IsGameOver || !HasShop) return;
             List<(PartDef part, int count)> needs = RestockNeeds();
             if (needs.Count == 0) return;
@@ -152,7 +158,7 @@ namespace PCShopSell.Core.Session
             if (!Ledger.CanAfford(total + EffectiveRestockReserve)) { Note($"自动补货没执行：要 {total}，扣掉后现金会低于 {EffectiveRestockReserve}，先不补。"); return; }
 
             if (PlaceOnlineOrderCore(store.Id, lines, false))
-                LastRestockNote = $"{Clock.Today} 自动补货：{store.Name}，{lines.Sum(l => l.count)} 件，{total}。";
+                LastRestockNote = $"{Clock.Today} 自动补货{ShopTag}：{store.Name}，{lines.Sum(l => l.count)} 件，{total}。";
         }
 
         private void Note(string message)

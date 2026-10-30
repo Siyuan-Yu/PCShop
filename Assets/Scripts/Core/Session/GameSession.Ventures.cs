@@ -140,7 +140,7 @@ namespace PCShopSell.Core.Session
         }
         public Money PropertyQuote(string id)
         {
-            Money rent=Lease!=null && Lease.PlaceId==id ? Lease.Rent : VentureAt(id)!=null ? Money.FromCents(VentureAt(id).RentCents) : _listings.Find(x=>x.PlaceId==id)?.Rent ?? Money.Zero;
+            Money rent=ShopAt(id)!=null ? ShopAt(id).Lease.Rent : VentureAt(id)!=null ? Money.FromCents(VentureAt(id).RentCents) : _listings.Find(x=>x.PlaceId==id)?.Rent ?? Money.Zero;
             return rent*120;
         }
         public string PropertyBlocker(string id,bool mortgage)
@@ -158,9 +158,10 @@ namespace PCShopSell.Core.Session
             Money price=PropertyQuote(id), paid=price.Scale(mortgage ? .3 : 1), debt=price-paid;
             Ledger.ForceDebit(Clock.Today,"购置物业",paid,PlaceTitle(City.GetPlace(id)));
             _properties.Add(new OwnedProperty {PlaceId=id,PriceCents=price.Cents,MortgageCents=debt.Cents,MonthlyPrincipalCents=(long)Math.Ceiling(debt.Cents/36.0),BoughtDay=Clock.Today.TotalDays});
-            long deposit=Lease!=null && Lease.PlaceId==id ? Lease.Deposit.Cents : VentureAt(id).DepositCents;
+            OwnedShop own=ShopAt(id);
+            long deposit=own!=null ? own.Lease.Deposit.Cents : VentureAt(id).DepositCents;
             if(deposit>0) Ledger.Credit(Clock.Today,"押金",Money.FromCents(deposit),"购房退租赁押金");
-            if(Lease!=null && Lease.PlaceId==id) Lease.Deposit=Money.Zero; else VentureAt(id).DepositCents=0;
+            if(own!=null) own.Lease.Deposit=Money.Zero; else VentureAt(id).DepositCents=0;
             Say("物业已购入：免付店租，每月维护费房价 0.1%。"+(mortgage ? "贷款 36 期等额本金，月利率 0.4%，可随时提前还清。" : ""));
             return true;
         }
@@ -181,14 +182,14 @@ namespace PCShopSell.Core.Session
             else if(net.IsNegative) Ledger.ForceDebit(Clock.Today,"物业出售",-net,"清偿贷款差额");
             _properties.Remove(p);
             if (id==ParkPlaceId) { ParkPlaceId=null; ParkReadyDay=0; }
-            if(VentureAt(id)==null && (Lease==null || Lease.PlaceId!=id)) AddListing(City.GetPlace(id),Clock.Today.TotalDays,Clock.Today.TotalDays+45);
+            if(VentureAt(id)==null && ShopAt(id)==null) AddListing(City.GetPlace(id),Clock.Today.TotalDays,Clock.Today.TotalDays+45);
             Say("物业出售完成；仍在经营的店铺恢复租赁计费。"); return true;
         }
         private void SettleProperties(GameDate today)
         {
             foreach(var p in _properties)
             {
-                bool self=(Lease!=null && Lease.PlaceId==p.PlaceId) || VentureAt(p.PlaceId)!=null || p.PlaceId==ParkPlaceId;
+                bool self=ShopAt(p.PlaceId)!=null || VentureAt(p.PlaceId)!=null || p.PlaceId==ParkPlaceId;
                 // 关闭自己的门店后由中介托管出租，15% 已包含空置与管理成本。
                 if(!self && today.TotalDays>p.BoughtDay)
                     Ledger.Credit(today,"物业租金",Money.FromCents(p.PriceCents).Scale(.85/120/30),"物业托管出租");

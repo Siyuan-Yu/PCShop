@@ -21,6 +21,26 @@ namespace PCShopSell.Core.Session
         {
             if (!CanSave) throw new InvalidOperationException("出行途中不能存档。");
             QuestIndex(); // 固化已完成教学，再序列化 flags。
+            OwnedShop keep = _focus;
+            _focus = MainShop;
+            try
+            {
+                SaveData d = CreateSaveOfMain();
+                d.extraShops = _shops.Skip(1).Where(s => s.Rented).Select(SaveShopOf).ToArray();
+                d.focusShop = Math.Max(0, _shops.IndexOf(keep));
+                return d;
+            }
+            finally
+            {
+                _focus = keep;
+            }
+        }
+
+        /// <summary>主店的数据还按原来的字段存（老存档也是这么读的）。</summary>
+        private SaveData CreateSaveOfMain()
+        {
+            if (_focus.EmployeeTrained) Flags.Add(TrainedFlag); else Flags.Remove(TrainedFlag);
+            if (_focus.AutoBuild) Flags.Add(AutoBuildFlag); else Flags.Remove(AutoBuildFlag);
             var d = new SaveData
             {
                 rngState = Random.State.ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -81,7 +101,7 @@ namespace PCShopSell.Core.Session
                 }).ToArray(),
                 onlineOrders = Online.Pending.Select(o => new SaveOnlineOrder
                 {
-                    id = o.Id, store = o.StoreId, deliverAt = o.DeliverAtMinute, totalCents = o.TotalCents, toHome = o.ToHome,
+                    id = o.Id, store = o.StoreId, deliverAt = o.DeliverAtMinute, totalCents = o.TotalCents, toHome = o.ToHome, shopId = o.ShopId,
                     lines = o.Lines.Select(l => new SaveStockLine { part = l.PartId, boxed = true, count = l.Count }).ToArray(),
                 }).ToArray(),
                 nextOnlineOrderId = Online.NextOrderId,
@@ -173,7 +193,7 @@ namespace PCShopSell.Core.Session
                     new KeyValuePair<string, StoreRecord>(r.store, new StoreRecord { ItemsReceived = r.received, Defects = r.defects })),
                 (d.onlineOrders ?? Array.Empty<SaveOnlineOrder>()).Select(o =>
                 {
-                    var order = new OnlineOrder { Id = o.id, StoreId = o.store, DeliverAtMinute = o.deliverAt, TotalCents = o.totalCents, ToHome = o.toHome };
+                    var order = new OnlineOrder { Id = o.id, StoreId = o.store, DeliverAtMinute = o.deliverAt, TotalCents = o.totalCents, ToHome = o.toHome, ShopId = string.IsNullOrEmpty(o.shopId) ? null : o.shopId };
                     foreach (SaveStockLine l in o.lines ?? Array.Empty<SaveStockLine>())
                         order.Lines.Add(new OnlineOrderLine { PartId = l.part, Count = l.count });
                     return order;
@@ -198,10 +218,23 @@ namespace PCShopSell.Core.Session
             IsGameOver = d.gameOver;
             GameOverReason = d.gameOverReason;
             RestoreGrowth(d);
+            _focus.EmployeeTrained = Flags.Contains(TrainedFlag);
+            _focus.AutoBuild = Flags.Contains(AutoBuildFlag);
             RestoreBusiness(d);
+            foreach (SaveShop shop in d.extraShops ?? Array.Empty<SaveShop>()) RestoreShop(shop);
+            OwnedShop inside = ShopAt(CurrentPlace);
+            OwnedShop focus = inside ?? (d.focusShop > 0 && d.focusShop < _shops.Count ? _shops[d.focusShop] : null);
+            if (focus != null && focus != _focus)
+            {
+                _focus = focus;
+                ApplyUpgrades();
+            }
+            foreach (OwnedShop s in _shops) s.Sim.PlayerPresent = s.Place == CurrentPlace && s.Rented;
             Trip = null;
             ClearEdge();
         }
+
+        private const string TrainedFlag = "employee:trained", AutoBuildFlag = "employee:auto-build";
 
         private static SaveStockLine[] Lines(Stock stock) =>
             stock.Lines().Select(l => new SaveStockLine { part = l.Part.Id, boxed = l.Boxed, count = l.Count }).ToArray();

@@ -179,9 +179,9 @@ namespace PCShopSell.Game.UI
             }
             _cargoText = Ui.Size(Ui.Label(brow, "", 17), 170);
             Ui.Size(Ui.Label(brow, "快捷前往：", 17), 90);
-            Button shopGo = Ui.Size(Ui.Button(brow, "去我的店", () => _ctrl.GoToPlace(S.HasShop ? S.PlayerShopPlace : S.City.FirstOfKind(PlaceKind.Agency)), 17, Ui.ButtonHot), 100);
+            Button shopGo = Ui.Size(Ui.Button(brow, "去我的店", GoToMyShop, 17, Ui.ButtonHot), 100);
             _shopGoText = shopGo.GetComponentInChildren<Text>();
-            shopGo.Tip("自动走到店门口（耗时按路程算）；路上按 WASD 随时接管。");
+            shopGo.Tip(() => S.MyShopCount > 1 ? "开了几家店：点了选去哪一家，自动走到店门口；路上按 WASD 随时接管。" : "自动走到店门口（耗时按路程算）；路上按 WASD 随时接管。");
             Ui.Size(Ui.Button(brow, "回家", () => _ctrl.GoToPlace(S.Home), 17), 70).Tip("自动走回家；路上按 WASD 随时接管。");
             Ui.Size(Ui.Button(brow, "电子市场", () => _ctrl.GoToPlace(S.City.GetPlace("stall_cpu")), 17), 100);
 
@@ -231,7 +231,8 @@ namespace PCShopSell.Game.UI
             }
             else if (S.CurrentPlace != null) where = "在 " + S.PlaceTitle(S.CurrentPlace);
             else where = "在街上";
-            string shopState = !S.HasShop ? "<color=#DDC18B>还没有店铺</color>" : S.PlayerShop.IsOpen ? "<color=#A9C9A9>店：营业中</color>" : "<color=#D79780>店：关门</color>";
+            string shopName = S.MyShopCount > 1 ? S.ShopTitle(S.CurrentShop) : "店";
+            string shopState = !S.HasShop ? "<color=#DDC18B>还没有店铺</color>" : S.PlayerShop.IsOpen ? $"<color=#A9C9A9>{shopName}：营业中</color>" : $"<color=#D79780>{shopName}：关门</color>";
             _shopGoText.text = S.HasShop ? "去我的店" : "房产中介";
             _placeText.text = where + "   " + shopState;
 
@@ -305,6 +306,31 @@ namespace PCShopSell.Game.UI
             }
         }
 
+        /// <summary>“去我的店”：只有一家就直接走过去；开了几家先选去哪家；还没店就去中介。</summary>
+        private void GoToMyShop()
+        {
+            var shops = S.MyShops;
+            if (shops.Count <= 1)
+            {
+                _ctrl.GoToPlace(S.HasShop ? S.PlayerShopPlace : S.City.FirstOfKind(PlaceKind.Agency));
+                return;
+            }
+            OpenWindow("去哪家店", 460, 120 + shops.Count * 56, w =>
+            {
+                foreach (OwnedShop shop in shops)
+                {
+                    Place p = shop.Place;
+                    string state = shop.Sim.IsOpen ? "营业中" : "关门";
+                    string staff = shop.Employee != null || shop.Assembler != null ? "有人看店" : "没人看店";
+                    Ui.Size(Ui.Button(w.Content, $"{S.ShopTitle(shop)}（{p.Name}）· {state} · {staff}", () =>
+                    {
+                        w.Close();
+                        _ctrl.GoToPlace(p);
+                    }, 17, shop == S.CurrentShop ? Ui.ButtonHot : Ui.ButtonBg), -1, 46);
+                }
+            });
+        }
+
         /// <summary>名牌底色：我的店青色，招租的铺子橙色，中介蓝色，其他深灰。</summary>
         private void OpenStreetPlace(Place p)
         {
@@ -366,7 +392,7 @@ namespace PCShopSell.Game.UI
                 case PlaceKind.Dealer:
                     return p.Name + (S.IsDealerOpen ? "" : "\n<size=13><color=#D79780>关门</color></size>");
                 case PlaceKind.Shop when S.IsMyShop(p):
-                    return GameSession.MyShopName + (S.PlayerShop.IsOpen ? "\n<size=13><color=#A9C9A9>营业中</color></size>" : "\n<size=13>关门</size>");
+                    return S.PlaceTitle(p) + (S.IsPlaceOpen(p) ? "\n<size=13><color=#A9C9A9>营业中</color></size>" : "\n<size=13>关门</size>");
                 case PlaceKind.Agency:
                     return p.Name + (!S.IsPlaceOpen(p) ? "\n<size=13><color=#D79780>已打烊</color></size>" : S.HasShop ? "" : "\n<size=13><color=#DDC18B>先来这里租铺子</color></size>");
                 default:

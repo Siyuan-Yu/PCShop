@@ -17,6 +17,7 @@ namespace PCShopSell.Core.Session
         public string PartId;
         public int Count;
         public long Arrival;
+        public string ShopId;
         public DirectShipment Copy() => (DirectShipment)MemberwiseClone();
     }
     [Serializable] public sealed class EnterpriseContract

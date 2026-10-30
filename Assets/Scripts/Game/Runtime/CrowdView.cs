@@ -144,13 +144,14 @@ namespace PCShopSell.Game.Runtime
 
         private Vector3 EndOf(ResidentDef r) => new Vector3(r.FromMetro ? MetroEndX : VillageEndX, 0, SidewalkZ());
 
-        /// <summary>有顾客进玩家的店：从街上某处走向店门（只是画面，不能搭话）。</summary>
-        public void SendShopper()
+        /// <summary>有顾客进玩家的某家店：从街上某处走向那家店的门（只是画面，不能搭话）。door 为空就去 ShopDoor。</summary>
+        public void SendShopper(Vector3? door = null)
         {
-            float x = Mathf.Lerp(_minX, _maxX, 0.55f + (float)_rng.NextDouble() * 0.45f);
+            Vector3 target = door ?? ShopDoor;
+            float x = Mathf.Clamp(target.x + ((float)_rng.NextDouble() * 2f - 1f) * 45f, _minX, _maxX);
             float widen = StreetWorldBuilder.ShoppingWiden;
             Walker w = Spawn(null, new Vector3(x, 0, _rng.NextDouble() < 0.5 ? 2.6f + widen : -2.8f - widen));
-            w.Target = ShopDoor;
+            w.Target = target;
             w.VanishOnArrive = true;
             w.Speed = 1.8f;
             _walkers.Add(w);

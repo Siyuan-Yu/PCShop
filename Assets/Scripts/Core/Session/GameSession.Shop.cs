@@ -35,8 +35,18 @@ namespace PCShopSell.Core.Session
 
         private readonly List<Employee> _candidates = new List<Employee>();
 
-        public Employee Employee { get; private set; }
-        public Employee Assembler { get; private set; }
+        /// <summary>当前这家店的收银员 / 装机员（每家店各雇各的）。</summary>
+        public Employee Employee
+        {
+            get => _focus.Employee;
+            private set => _focus.Employee = value;
+        }
+
+        public Employee Assembler
+        {
+            get => _focus.Assembler;
+            private set => _focus.Assembler = value;
+        }
         public string OnDutyStaffName => Employee != null && Employee.OnDuty(Clock.Now) ? Employee.Name : Assembler?.Name ?? "店员";
         public bool EverHired { get; private set; }
         public IReadOnlyList<Employee> Candidates => _candidates;
@@ -128,7 +138,7 @@ namespace PCShopSell.Core.Session
         {
             if (Employee != null || candidateIndex < 0 || candidateIndex >= _candidates.Count) return false;
             Employee = _candidates[candidateIndex];
-            Flags.Remove("employee:trained");
+            _focus.EmployeeTrained = false;
             EverHired = true;
             PlayerShop.Settings.EmployeeCheckoutMinutes = Employee.CheckoutMinutes;
             _candidates.Clear();
@@ -141,7 +151,7 @@ namespace PCShopSell.Core.Session
             if (!InPlayerShop || Assembler != null || index < 0 || index >= _candidates.Count) return false;
             if (!Ledger.TryDebit(Clock.Today, "培训", Money.FromYuan(1200), "装机员入职培训")) return Fail("入职培训需要 ¥1,200。");
             Assembler = _candidates[index]; Assembler.DailyWageYuan += 60;
-            EverHired = true; _candidates.Clear(); Flags.Add("employee:auto-build");
+            EverHired = true; _candidates.Clear(); _focus.AutoBuild = true;
             Say($"{Assembler.Name}入职装机岗位，日薪 {Assembler.DailyWage}。可与收银员同时工作。");
             return true;
         }
@@ -167,7 +177,7 @@ namespace PCShopSell.Core.Session
             Employee = null;
             _employeeBuilding = false;
             if (Assembler == null) foreach (var order in PlayerShop.Orders) order.EmployeeMinutesLeft = 0;
-            Flags.Remove("employee:trained");
+            _focus.EmployeeTrained = false;
         }
 
         public bool IsEmployeeOnDuty(GameTimestamp t)
@@ -198,8 +208,11 @@ namespace PCShopSell.Core.Session
 
         private void PayWages(GameDate day)
         {
-            if (Employee != null) Ledger.ForceDebit(day, "工资", Employee.DailyWage, Employee.Name);
-            if (Assembler != null) Ledger.ForceDebit(day, "工资", Assembler.DailyWage, Assembler.Name);
+            foreach (OwnedShop s in _shops)
+            {
+                if (s.Employee != null) Ledger.ForceDebit(day, "工资", s.Employee.DailyWage, s.Employee.Name);
+                if (s.Assembler != null) Ledger.ForceDebit(day, "工资", s.Assembler.DailyWage, s.Assembler.Name);
+            }
         }
     }
 }

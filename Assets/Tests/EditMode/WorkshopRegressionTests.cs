@@ -174,7 +174,7 @@ namespace PCShopSell.Tests
                 data.hasAssembler = true; data.assembler = new SaveEmployee { name = "装机员", wage = 180, checkoutMinutes = 3, shiftStart = 10 * 60, shiftEnd = 17 * 60, buildsCompleted = 4 };
                 using (var staffed = GameSession.Load(s.City, data))
                 {
-                    staffed.Flags.Add("employee:auto-build"); staffed.EventsEnabled = false;
+                    if (!staffed.AutoBuildEnabled) staffed.ToggleAutoBuild(); staffed.EventsEnabled = false;
                     staffed.PlayerShop.Settings.BaseCustomersPerHour = 0;
                     var order = Order(staffed);
                     staffed.AdvanceClock(59);
@@ -203,7 +203,7 @@ namespace PCShopSell.Tests
                 data.hasAssembler = true; data.assembler = new SaveEmployee { name = "装机", wage = 180, checkoutMinutes = 3 };
                 using (var staffed = GameSession.Load(s.City, data))
                 {
-                    staffed.Flags.Add("employee:auto-build"); staffed.EventsEnabled = false;
+                    if (!staffed.AutoBuildEnabled) staffed.ToggleAutoBuild(); staffed.EventsEnabled = false;
                     staffed.PlayerShop.Settings.BaseCustomersPerHour = 0;
                     var order = Order(staffed); staffed.AdvanceClock(10);
                     int left = order.EmployeeMinutesLeft;

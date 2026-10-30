@@ -251,7 +251,7 @@ namespace PCShopSell.Game.UI
             AgencyLink(w);
             Para(w.Content,"商用物业售价 = 签约月租 ×120。可全款或首付 30%，贷款 36 期等额本金、月利率 0.4%；每月 1 日扣月供和房价 0.1% 的维护费。出售九折并先还清贷款。关闭门店后的自有物业由中介托管出租，租金扣 15% 空置管理成本。",16);
             var ids=S.OwnedProperties.Select(x=>x.PlaceId).Concat(S.ManagedVentures.Where(x=>!S.IsParkVenture(x)).Select(x=>x.PlaceId));
-            if(S.HasShop) ids=ids.Concat(new[]{S.PlayerShopPlace.Id});
+            ids=ids.Concat(S.MyShops.Select(x=>x.Place.Id));
             foreach(string place in ids.Distinct())
             {
                 string id=place;var property=S.PropertyAt(id);var c=BusinessCard(w.Content,S.PlaceTitle(S.City.GetPlace(id))+" · "+S.City.GetPlace(id).Name);

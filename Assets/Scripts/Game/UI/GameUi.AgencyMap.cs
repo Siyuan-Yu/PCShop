@@ -96,7 +96,7 @@ namespace PCShopSell.Game.UI
                 Vector2 anchor = view.Project(roof);
                 if (anchor.x < 4 || anchor.x > view.Width - 4 || anchor.y < 4 || anchor.y > view.Height - 4) continue;
                 ShopListing listing = AgencyListing(p);
-                string name = p.Kind == PlaceKind.Agency ? "安居中介 · 你在这里" : S.IsMyShop(p) ? "我的主店" : p.Name;
+                string name = p.Kind == PlaceKind.Agency ? "安居中介 · 你在这里" : S.IsMyShop(p) ? (S.ShopAt(p) == S.MainShop ? "我的主店" : S.PlaceTitle(p)) : p.Name;
                 Vector2 size = listing != null ? new Vector2(144, 82) : new Vector2(Mathf.Clamp(name.Length * 14 + 20, 64, 174), 26);
                 var label = new AgencyMapLabel { Place = p, Listing = listing, Anchor = anchor, Text = name, Number = System.Array.IndexOf(units, p) + 1 };
                 label.Box = AgencyLabelBox(anchor, size, occupied, view.Width, view.Height);

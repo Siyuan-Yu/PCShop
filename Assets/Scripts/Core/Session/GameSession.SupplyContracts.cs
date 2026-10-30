@@ -81,7 +81,7 @@ namespace PCShopSell.Core.Session
             Money paid = credit ? total.Scale(.3) : total;
             Ledger.ForceDebit(Clock.Today, "进货", paid, "直供首付/现款 " + partId);
             if (credit) _supplierDebts.Add(new SupplierDebt { Id = _nextDebtId++, Principal = (total - paid).Cents, DueDay = Clock.Today.TotalDays + 14, LastFeeDay = Clock.Today.TotalDays + 14 });
-            _directShipments.Add(new DirectShipment { PartId = partId, Count = count, Arrival = GameTimestamp.From(Clock.Today.AddDays(1), 600).TotalMinutes });
+            _directShipments.Add(new DirectShipment { PartId = partId, Count = count, Arrival = GameTimestamp.From(Clock.Today.AddDays(1), 600).TotalMinutes, ShopId = PlayerShopPlace.Id });
             Flags.Add("tutorial:direct");
             Say($"直供下单 {count} 件，总额 {total}，现付 {paid}。次日 10:00 到货。" + (credit ? "尾款已列入负债。" : ""));
             return true;
@@ -99,9 +99,10 @@ namespace PCShopSell.Core.Session
         {
             foreach (var x in _directShipments.Where(x => x.Arrival <= now.TotalMinutes).ToArray())
             {
-                PlayerShop.Stock.ForceAdd(PartCatalog.Get(x.PartId), true, x.Count);
+                OwnedShop dest = DeliveryShop(string.IsNullOrEmpty(x.ShopId) ? null : x.ShopId);
+                dest.Sim.Stock.ForceAdd(PartCatalog.Get(x.PartId), true, x.Count);
                 _directShipments.Remove(x);
-                Say($"直供到货：{PartCatalog.Get(x.PartId).Name} ×{x.Count}，已入主店后仓。");
+                Say($"直供到货：{PartCatalog.Get(x.PartId).Name} ×{x.Count}，已入{(MyShopCount > 1 ? ShopTitle(dest) : "店里")}后仓。");
             }
         }
         private void SettleSupplierDebts(int day)

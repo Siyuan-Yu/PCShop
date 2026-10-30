@@ -34,6 +34,9 @@ namespace PCShopSell.Core.Session
         public string FromId;
         public string FromName;
         public bool ToShop;
+
+        /// <summary>送到哪家店（铺面 id）；null = 主店。</summary>
+        public string ShopId;
         public long DueMinute;
         public readonly List<CourierItem> Items = new List<CourierItem>();
 
@@ -183,6 +186,7 @@ namespace PCShopSell.Core.Session
                         FromId = CurrentPlace?.Id,
                         FromName = CurrentPlace?.Name ?? "街上",
                         ToShop = toShop,
+                        ShopId = toShop ? PlayerShopPlace.Id : null,
                         DueMinute = Clock.Now.TotalMinutes + minutes,
                     };
                     _couriers.Add(last);
@@ -211,8 +215,10 @@ namespace PCShopSell.Core.Session
                 if (_openRuns.TryGetValue(run.ToShop, out CourierRun open) && open == run) _openRuns.Remove(run.ToShop);
                 _couriers.RemoveAt(i--);
                 var what = new List<string>();
-                foreach (CourierItem it in run.Items) what.Add(Unpack(it, run.ToShop));
-                Say($"车把{run.FromName}买的东西送到{(run.ToShop ? "店里" : "家里")}了：" + string.Join("、", what) + "。");
+                OwnedShop dest = run.ToShop ? DeliveryShop(run.ShopId) : null;
+                WithShop(dest, () => { foreach (CourierItem it in run.Items) what.Add(Unpack(it, run.ToShop)); });
+                string where = !run.ToShop ? "家里" : MyShopCount > 1 ? ShopTitle(dest) : "店里";
+                Say($"车把{run.FromName}买的东西送到{where}了：" + string.Join("、", what) + "。");
             }
         }
 
@@ -252,6 +258,7 @@ namespace PCShopSell.Core.Session
             fromId = r.FromId,
             fromName = r.FromName,
             toShop = r.ToShop,
+            shopId = r.ShopId,
             dueMinute = r.DueMinute,
             kinds = r.Items.Select(i => (int)i.Kind).ToArray(),
             ids = r.Items.Select(i => i.Id).ToArray(),
@@ -267,7 +274,7 @@ namespace PCShopSell.Core.Session
             _openRuns.Clear();
             foreach (SaveCourier s in saved ?? Array.Empty<SaveCourier>())
             {
-                var run = new CourierRun { FromId = s.fromId, FromName = s.fromName, ToShop = s.toShop, DueMinute = s.dueMinute };
+                var run = new CourierRun { FromId = s.fromId, FromName = s.fromName, ToShop = s.toShop, ShopId = string.IsNullOrEmpty(s.shopId) ? null : s.shopId, DueMinute = s.dueMinute };
                 int n = s.kinds?.Length ?? 0;
                 for (int i = 0; i < n; i++)
                 {

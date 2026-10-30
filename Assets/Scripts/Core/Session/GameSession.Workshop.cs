@@ -9,18 +9,23 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
-        private bool _employeeBuilding;
+        private bool _employeeBuilding
+        {
+            get => _focus.EmployeeBuilding;
+            set => _focus.EmployeeBuilding = value;
+        }
+
         private int _manualBuildId = -1;
-        public bool EmployeeTrained => Employee != null && Flags.Contains("employee:trained");
-        public bool AutoBuildEnabled => Flags.Contains("employee:auto-build");
-        public void ToggleAutoBuild() { if (!Flags.Remove("employee:auto-build")) Flags.Add("employee:auto-build"); }
+        public bool EmployeeTrained => Employee != null && _focus.EmployeeTrained;
+        public bool AutoBuildEnabled => _focus.AutoBuild;
+        public void ToggleAutoBuild() => _focus.AutoBuild = !_focus.AutoBuild;
         public bool TrainEmployee()
         {
             if (!InPlayerShop || Employee == null || EmployeeTrained) return Fail("请在店里选择一位尚未培训的店员。");
             if (!Ledger.TryDebit(Clock.Today, "培训", Money.FromYuan(1200), "店员装机培训")) return Fail("培训需要 ¥1,200。");
             Employee.DailyWageYuan += 60;
-            Flags.Add("employee:trained");
-            Flags.Add("employee:auto-build");
+            _focus.EmployeeTrained = true;
+            _focus.AutoBuild = true;
             Say("培训完成：店员可以装机，日薪增加 ¥60。无排队顾客时优先赶最早到期的订单。");
             return true;
         }

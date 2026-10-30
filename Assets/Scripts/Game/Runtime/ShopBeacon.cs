@@ -6,7 +6,7 @@ namespace PCShopSell.Game.Runtime
     /// <summary>
     /// 玩家租下的铺子在街上的醒目标记：整栋铺子被一层青色光晕包住——楼体十二条边是发亮的霓虹灯管，
     /// 脚下地面一圈光，外面套一层半透明的光壳（缓慢呼吸），门前还有一盏青色点光源。白天晚上都看得见。
-    /// 跟着当前租的铺子走（搬店就换栋），没有店就不显示。
+    /// 每家自营店一个，跟着那家店的铺子走（搬店就换栋）。
     /// </summary>
     public sealed class ShopBeacon
     {
@@ -78,16 +78,16 @@ namespace PCShopSell.Game.Runtime
             _light.transform.position = new Vector3(c0.x, Mathf.Max(3f, mx.y * 0.6f), mn.z - 2.5f);
         }
 
-        /// <summary>每帧：有店就显示，没店隐藏；搬店后换楼；光壳缓慢呼吸。</summary>
-        public void Update(GameSession s, StreetWorldBuilder world, float dt)
+        /// <summary>每帧：罩住 placeId 那家店（null = 隐藏）；搬店后换楼；光壳缓慢呼吸。</summary>
+        public void Update(GameSession s, StreetWorldBuilder world, string placeId, float dt)
         {
-            bool show = s != null && s.HasShop && world.Places.ContainsKey(s.PlayerShopPlace.Id);
+            bool show = s != null && placeId != null && world.Places.ContainsKey(placeId);
             if (_root.activeSelf != show) _root.SetActive(show);
             if (!show) return;
 
-            if (_placeId != s.PlayerShopPlace.Id)
+            if (_placeId != placeId)
             {
-                _placeId = s.PlayerShopPlace.Id;
+                _placeId = placeId;
                 Transform body = world.Places[_placeId].Root.transform.Find("Body");
                 var r = body != null ? body.GetComponent<Renderer>() : null;
                 Rebuild(r != null ? r.bounds : new Bounds(world.Places[_placeId].Entrance + new Vector3(0, 2, 4), new Vector3(5, 4, 7)));

@@ -76,6 +76,9 @@ namespace PCShopSell.Core.Trade
 
         /// <summary>送到家里（放在家里纸箱）；否则送到店里上货架。</summary>
         public bool ToHome;
+
+        /// <summary>送到哪家店（铺面 id）；null = 主店。</summary>
+        public string ShopId;
     }
 
     /// <summary>"1788" 进货平台：比档口便宜，但第二天才到，还可能收到次品。用智能手机上的 1788 app 下单。</summary>

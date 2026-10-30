@@ -39,15 +39,17 @@ namespace PCShopSell.Core.Session
         public static string SizeName(ShopSize size) => size == ShopSize.Large ? "大型店" : size == ShopSize.Medium ? "中型店" : "小店";
 
         /// <summary>现在每月实际交的店租：签约时的月租，再随涨租次数、房东交情变化；没租铺子时为 0。</summary>
-        public Money CurrentShopRent
+        public Money CurrentShopRent => RentOf(_focus);
+
+        /// <summary>所有自营店一个月的房租加起来。</summary>
+        public Money TotalShopRent => Money.FromCents(_shops.Sum(s => RentOf(s).Cents));
+
+        public Money RentOf(OwnedShop shop)
         {
-            get
-            {
-                if (Lease == null || PropertyAt(Lease.PlaceId) != null) return Money.Zero;
-                double mult = 1.0 + Campaign.RentHikePerFail * Math.Min(3, RentHikes);
-                mult *= 1.0 - NpcPerks.RentDiscount(Relation(Npcs.Landlady));
-                return Lease.Rent.Scale(mult);
-            }
+            if (shop == null || shop.Lease == null || PropertyAt(shop.Lease.PlaceId) != null) return Money.Zero;
+            double mult = 1.0 + Campaign.RentHikePerFail * Math.Min(3, RentHikes);
+            mult *= 1.0 - NpcPerks.RentDiscount(Relation(Npcs.Landlady));
+            return shop.Lease.Rent.Scale(mult);
         }
 
         internal void AddRentHike() => RentHikes = Math.Min(3, RentHikes + 1);
