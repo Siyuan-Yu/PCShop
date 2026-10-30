@@ -12,7 +12,6 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private int _businessTab, _directQuantity=3, _ventureKind;
-        private bool _showAllBusinessTabs;
         public void DebugOpenBusiness(int tab) { _businessTab = Math.Max(0, Math.Min(6, tab)); OpenBusinessPanel(); }
         private bool _directCredit=true;
         public void OpenBusinessPanel()
@@ -21,19 +20,15 @@ namespace PCShopSell.Game.UI
             OpenWindow("经营总览", 1080, 820, w=>
             {
                 var guide = S.CurrentQuest();
-                var navigation = Ui.Row(w.Content, 40, 8);
-                if (guide != null) Ui.Size(Ui.Button(navigation, "当前任务 · " + guide.Title, OpenQuestWindow, 17, Ui.ButtonHot), -1, -1, 1);
-                Ui.Size(Ui.Button(navigation, _showAllBusinessTabs ? "收起远期项目" : "展开全部 7 项", () => { _showAllBusinessTabs = !_showAllBusinessTabs; w.Rebuild(); }, 16), 200);
                 var tabs=Ui.Row(w.Content,42);
                 string[] names={"资产与负债","直供采购","企业合同","分店经营","推广合作","物业与住处","园区布局"};
                 for(int i=0;i<names.Length;i++)
                 {
                     int tab=i;
                     bool recommended = guide != null && guide.Target == BusinessTargets[i];
-                    if (!_showAllBusinessTabs && tab != _businessTab && !recommended && !BusinessTabRelevant(tab)) continue;
+                    if (tab != _businessTab && !recommended && !BusinessTabRelevant(tab)) continue;
                     Ui.Size(Ui.Button(tabs,(recommended ? "› " : "") + names[i],()=>{_businessTab=tab;w.Rebuild();ResetGuideScroll(w);},17,tab==_businessTab ? Ui.ButtonHot : Ui.ButtonBg),140);
                 }
-                if (!_showAllBusinessTabs) Para(w.Content,"优先显示与你当前经营有关的项目；远期项目可随时展开查看，实际办理条件在各页说明。",14,Ui.Dim);
                 Line(w.Content,$"可用现金 {S.Ledger.Balance}     净资产 {S.NetWorth()}     已有负债 {S.TotalDebt}",20,Ui.Accent);
                 GuideHint(w.Content, BusinessTargets[_businessTab], w.Rebuild);
                 switch(_businessTab)
@@ -57,7 +52,7 @@ namespace PCShopSell.Game.UI
                 case 2: return S.EnterpriseContracts.Any(c => c.Accepted) || (S.HasShop && S.PlayerShop.Reputation >= 8);
                 case 3: return S.ManagedVentures.Count > 0 || (S.HasShop && S.PlayerShop.Reputation >= 8);
                 case 4: return S.CreatorPartners.Any(c => c.CampaignUntilDay > 0) || (S.HasShop && S.PlayerShop.Reputation >= 8);
-                case 5: return S.OwnedProperties.Count > 0 || S.HomeTier > 0 || S.QuestCompleted("cashflow");
+                case 5: return true;
                 case 6: return S.HasPark || (S.HasShop && S.PlayerShop.Reputation >= 25);
                 default: return false;
             }

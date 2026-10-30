@@ -27,7 +27,6 @@ namespace PCShopSell.Game.UI
             _questPopup = null;
             _questHidden = false;
             _businessTab = 0;
-            _showAllBusinessTabs = false;
         }
 
         private void BuildQuestTracker(Transform root)
