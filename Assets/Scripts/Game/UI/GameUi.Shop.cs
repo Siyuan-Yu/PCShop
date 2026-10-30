@@ -179,24 +179,48 @@ namespace PCShopSell.Game.UI
         private void ShopHoursRow(ShopSimulation shop)
         {
             const int day = 24 * 60;
-            int open = shop.AllDay ? 9 * 60 : shop.OpenMinute;
-            int close = shop.AllDay ? 21 * 60 : shop.CloseMinute;
-            void Set(int o, int c)
+            RectTransform row = Ui.Row(C, 36, 8);
+            Ui.Size(Ui.Label(row, "营业时间", 16), 80, 36);
+            if (shop.AllDay)
             {
-                shop.SetHours(((o % day) + day) % day, ((c - 1 + day) % day) + 1);
-                RebuildDock();
+                Ui.Size(Ui.Button(row, "不限时  ▼", () => OpenHoursPicker(shop, true), 15, new Color(0.2f, 0.24f, 0.3f)), 150, 34);
+                Ui.Size(Ui.Label(row, "有人看店就开", 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 36, 1);
             }
-            RectTransform row = Ui.Row(C, 36, 6);
-            string text = shop.AllDay ? "营业时间：不限（有人看店就开）" : $"营业时间：{Ui.Hm(shop.OpenMinute)}–{Ui.Hm(shop.CloseMinute % day)}{(shop.CloseMinute <= shop.OpenMinute ? "（过夜）" : "")}";
-            Ui.Size(Ui.Label(row, text, 16), -1, 36, 1);
-            Ui.Size(Ui.Button(row, "开门−1h", () => Set(open - 60, close), 14), 72, 34).Tip("开门时间提前 1 小时");
-            Ui.Size(Ui.Button(row, "开门+1h", () => Set(open + 60, close), 14), 72, 34).Tip("开门时间推后 1 小时");
-            Ui.Size(Ui.Button(row, "关门−1h", () => Set(open, close - 60), 14), 72, 34).Tip("关门时间提前 1 小时");
-            Ui.Size(Ui.Button(row, "关门+1h", () => Set(open, close + 60), 14), 72, 34).Tip("关门时间推后 1 小时");
-            Ui.Size(Ui.Button(row, "不限时", () => { shop.SetHours(0, day); RebuildDock(); }, 14, shop.AllDay ? Ui.ButtonHot : Ui.ButtonBg), 64, 34)
-                .Tip("不限营业时间：你在店里或店员在班就开门");
+            else
+            {
+                Ui.Size(Ui.Button(row, $"开门 {Ui.Hm(shop.OpenMinute)}  ▼", () => OpenHoursPicker(shop, true), 15, new Color(0.2f, 0.24f, 0.3f)), 150, 34);
+                Ui.Size(Ui.Button(row, $"关门 {Ui.Hm(shop.CloseMinute % day)}  ▼", () => OpenHoursPicker(shop, false), 15, new Color(0.2f, 0.24f, 0.3f)), 150, 34);
+                Ui.Size(Ui.Label(row, shop.CloseMinute <= shop.OpenMinute ? "过夜" : "", 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 36, 1);
+            }
             if (!shop.AllDay && !shop.InHours(S.Clock.Now))
                 Line(C, $"现在不在营业时间，{Ui.Hm(shop.OpenMinute)} 才开门；人在店里也不接客。", 15, new Color32(231, 160, 135, 255));
+        }
+
+        private void OpenHoursPicker(ShopSimulation shop, bool pickOpen)
+        {
+            const int day = 24 * 60;
+            int open = shop.AllDay ? 9 * 60 : shop.OpenMinute;
+            int close = shop.AllDay ? 21 * 60 : shop.CloseMinute % day;
+            OpenWindow(pickOpen ? "几点开门" : "几点关门", 560, 420, w =>
+            {
+                Ui.Size(Ui.Button(w.Content, "不限时（有人看店就开）", () => { shop.SetHours(0, day); w.Close(); RebuildDock(); },
+                    16, shop.AllDay ? Ui.ButtonHot : Ui.ButtonBg), -1, 40);
+                RectTransform row = null;
+                for (int h = 0; h < 24; h++)
+                {
+                    if (h % 6 == 0) row = Ui.Row(w.Content, 40, 6);
+                    int minute = h * 60;
+                    bool current = !shop.AllDay && (pickOpen ? open : close) == minute;
+                    bool clash = (pickOpen ? close : open) == minute;
+                    Ui.Size(Ui.Button(row, Ui.Hm(minute), () =>
+                    {
+                        if (pickOpen) shop.SetHours(minute, close == 0 ? day : close);
+                        else shop.SetHours(open, minute == 0 ? day : minute);
+                        w.Close();
+                        RebuildDock();
+                    }, 16, current ? Ui.ButtonHot : Ui.ButtonBg, !clash), -1, 38, 1);
+                }
+            });
         }
 
         private void BuildCounter()

@@ -963,7 +963,7 @@ namespace PCShopSell.Game.Runtime
                 _dressed = s.EquippedOutfit;
                 Prims.Dress(_owner, _dressed);
             }
-            UpdateStreet(s.Time.IsRunning ? realDt : 0f, s.Clock.MinuteOfDay);
+            UpdateStreet(s.Time.IsRunning ? realDt * s.Time.Speed : 0f, s.Clock.MinuteOfDay);
             ShopSimulation shop = s.PlayerShop;
             UpdateOpenLook(shop.IsOpen, realDt);
             _decor.Sync(s.ShopLayout, s.ShopRoom);
