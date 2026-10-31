@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 
@@ -143,7 +143,7 @@ public const double LunchboxKg = 0.5;
         public double WeightKg =>
             Food.RiceKg
             + Food.Ingredient.Sum(b => b.Count * IngredientKg(b.Id))
-            + Food.PackedBowls * LunchboxKg
+            + Food.Packed.Sum(b => b.Count * FoodBatch.WeightOf(b.Id))
             + _gifts.Sum(kv => kv.Value * (Gifts.Get(kv.Key)?.WeightKg ?? 0))
             + _furniture.Sum(kv => kv.Value * (FurnitureCatalog.Get(kv.Key)?.WeightKg ?? 0));
 

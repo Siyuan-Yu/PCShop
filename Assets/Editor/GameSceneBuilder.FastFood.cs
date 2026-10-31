@@ -27,11 +27,20 @@ namespace PCShopSell.EditorTools
             Check(_game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Text>()).Any(t => t.text.Contains("营养") && t.text.Contains("心情") && t.text.Contains("鸡腿汉堡")), "菜单展示价格、饱腹、营养与心情");
             s.Player.Hunger = 5; long cash = s.Ledger.Balance.Yuan; long time = s.Clock.Now.TotalMinutes;
             ActiveButtons().First(b => b.name == "BuyFastFood_combo").onClick.Invoke(); Frame(0);
-            Check(s.Player.Hunger > 90 && s.Ledger.Balance.Yuan == cash - 32 && s.Clock.Now.TotalMinutes == time + 20, "点击套餐实际扣费、吃饱并消耗用餐时间");
-            Check(s.CurrentPlace == shop && _game.Ui.AnyModalOpen, "吃完留在快餐菜单，可继续点餐或关闭离店");
+            Check(s.Player.Hunger == 5 && s.Ledger.Balance.Yuan == cash - 32 && s.Clock.Now.TotalMinutes == time,
+                "买套餐只扣费放背包，不立即吃、不消耗用餐时间");
+            Check(s.Backpack.Food.Packed.Any(b => b.Id == "fast:combo" && b.Name.Contains("汉堡炸鸡")), "背包获得具名套餐");
             ActiveButtons().First(b => b.name == "BuyFastFood_cola").onClick.Invoke(); Frame(0);
-            Check(s.Ledger.Balance.Yuan == cash - 38, "可乐可购买饮用");
+            Check(s.Backpack.Food.Packed.Any(b => b.Id == "fast:cola"), "可乐也购买后放进背包");
+            Check(ActiveButtons().Any(b => b.name == "QuantityPlus_online_fastfood_burger"), "快餐份数沿用可长按加减按钮");
             _game.Ui.CloseAllWindows(); Check(s.CurrentPlace != shop, "关闭菜单回街上");
+            _game.Ui.OpenBackpackPanel(); Frame(0);
+            var comboCell = ActiveButtons().First(b => ButtonText(b).Contains("汉堡炸鸡")); comboCell.onClick.Invoke(); Frame(0);
+            ActiveButtons().First(b => ButtonText(b).StartsWith("吃一份汉堡炸鸡")).onClick.Invoke(); Frame(0);
+            Check(s.Player.Hunger > 90 && !s.Backpack.Food.Packed.Any(b => b.Id == "fast:combo"), "背包手动吃套餐产生饱腹效果并移除一份");
+            var colaCell = ActiveButtons().First(b => ButtonText(b).Contains("可乐")); colaCell.onClick.Invoke(); Frame(0);
+            Check(ActiveButtons().Any(b => ButtonText(b).StartsWith("喝一份可乐")), "背包可乐显示主动喝的入口");
+            _game.Ui.CloseAllWindows();
         });
     }
 }

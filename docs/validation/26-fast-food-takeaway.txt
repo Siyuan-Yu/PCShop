@@ -1,0 +1,17 @@
+2026-11-01 fast food takeaway
+EditMode: total=560 passed=560 failed=0
+Command: powershell -File tools/run-tests.ps1
+Scene: PCShopSell.EditorTools.GameSceneBuilder.FastFoodFromBatch
+No screenshots generated.
+SMOKE OK 实际城市快餐店显示六种可购买餐品
+SMOKE OK 点餐不需要输入数字
+SMOKE OK 快餐菜单保留原有打工入口
+SMOKE OK 菜单展示价格、饱腹、营养与心情
+SMOKE OK 买套餐只扣费放背包，不立即吃、不消耗用餐时间
+SMOKE OK 背包获得具名套餐
+SMOKE OK 可乐也购买后放进背包
+SMOKE OK 快餐份数沿用可长按加减按钮
+SMOKE OK 关闭菜单回街上
+SMOKE OK 背包手动吃套餐产生饱腹效果并移除一份
+SMOKE OK 背包可乐显示主动喝的入口
+SMOKE RESULT code=0 errors=0

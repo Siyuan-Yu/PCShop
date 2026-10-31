@@ -389,7 +389,8 @@ namespace PCShopSell.Core.Session
                     s.Name = Ingredients.Get(s.Id)?.Name ?? s.Id;
                     return s;
                 case "lunch":
-                    s.UnitKg = Backpack.LunchboxKg;
+                    s.Id = key.StartsWith("lunch:") ? key.Substring(6) : null;
+                    s.UnitKg = FoodBatch.WeightOf(s.Id);
                     s.Name = s.Id == null ? "饭盒" : MealName(s.Id);
                     return s;
                 case "gift":

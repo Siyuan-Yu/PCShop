@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -378,7 +378,7 @@ namespace PCShopSell.Core.Session
             if (Player.Hunger >= 99) return Fail("不饿。");
             FoodBatch b = Pantry.TakeBowl(Pantry.Cooked);
             if (b == null) return Fail("没有做好的饭。");
-            ApplyDiet(MealNutrition(b.Id), 0);
+            ApplyDiet(MealNutrition(b.Id), MealMood(b.Id));
             Player.Hunger = Math.Min(100, Player.Hunger + b.Hunger);
             Player.Health = Math.Min(100, Player.Health + b.Health);
             AdvanceClock(Pantry.EatMinutes);
@@ -408,18 +408,24 @@ namespace PCShopSell.Core.Session
         /// <summary>一顿最多吃到饱多少。</summary>
         public const double MealGain = 60;
 
+        private bool _eating;
+
         private double EatFrom(System.Collections.Generic.List<FoodBatch> list)
         {
-            double gain = 0, nutrition = 0;
+            double gain = 0, nutrition = 0, fastNutrition = 0, mood = 0;
             int bowls = 0;
             while (gain < MealGain && Player.Hunger + gain < 100)
             {
                 FoodBatch b = Pantry.TakeBowl(list);
                 if (b == null) break;
-                gain += b.Hunger; nutrition += MealNutrition(b.Id); bowls++;
+                gain += b.Hunger;
+                var fast = FastFoodCatalog.Packed(b.Id);
+                if (fast == null) { nutrition += MealNutrition(b.Id); bowls++; }
+                else { fastNutrition += fast.Nutrition; mood += fast.Mood; }
+                if (fast?.Drink == true) break;
                 Player.Health = Math.Min(100, Player.Health + b.Health);
             }
-            if (bowls > 0) ApplyDiet(nutrition / bowls, 0); // One meal, regardless of bowl count.
+            ApplyDiet((bowls > 0 ? nutrition / bowls : 0) + fastNutrition, mood); // One meal, regardless of bowl count.
             return gain;
         }
 
@@ -431,7 +437,7 @@ namespace PCShopSell.Core.Session
 
         private void EatMeal(string meal)
         {
-            if (IsWorking) return; // Staff meals are provided at the midpoint of the assigned shift.
+            if (IsWorking || _eating) return; // Staff meals are provided at the midpoint of the assigned shift.
             if (Player.Hunger >= 90) return;
             if (CurrentPlace == Home && Pantry.CookedBowls > 0)
             {
@@ -443,7 +449,7 @@ namespace PCShopSell.Core.Session
             {
                 Player.Hunger = Math.Min(100, Player.Hunger + EatFrom(Backpack.Food.Packed));
                 ApplyCargoLimit();
-                Say($"{meal}吃了背包里的饭盒，还剩 {Backpack.Lunchboxes} 盒。");
+                Say($"{meal}吃了背包里的食物，还剩 {Backpack.Lunchboxes} 份。");
                 return;
             }
             if (MealDeliveryEnabled && HasSmartphone && Ledger.TryDebit(Clock.Today, "餐饮", Money.FromYuan(25), meal + "送餐"))
@@ -452,21 +458,23 @@ namespace PCShopSell.Core.Session
                 Say($"{meal}送餐到了，花费 ¥25。优先吃自带饭，没有才送餐。");
                 return;
             }
-            Say($"该吃{meal}了，可背包里没有饭盒……饿着。回家焖饭，装几盒饭带在身上。");
+            Say($"该吃{meal}了，可背包里没有即食食物。可以回家做饭打包，或到快餐店买外带食物。");
         }
 
         /// <summary>饿了随时从背包里拿一个饭盒吃（10 分钟）。</summary>
         public bool EatLunchboxNow(string foodId = null)
         {
-            if (Player.Hunger >= 95) return Fail("不饿。");
+            if (Player.Hunger >= 95 && FastFoodCatalog.Packed(foodId)?.Drink != true) return Fail("不饿。");
             FoodBatch b = Pantry.TakeBowl(Backpack.Food.Packed, foodId);
-            if (b == null) return Fail("背包里没有饭盒。");
-            ApplyDiet(MealNutrition(b.Id), 0);
+            if (b == null) return Fail("背包里没有这种即食食物。");
+            ApplyDiet(MealNutrition(b.Id), MealMood(b.Id));
             Player.Hunger = Math.Min(100, Player.Hunger + b.Hunger);
             Player.Health = Math.Min(100, Player.Health + b.Health);
             ApplyCargoLimit();
-            AdvanceClock(Pantry.EatMinutes);
-            Say($"吃了一盒{b.Name}，还剩 {Backpack.Lunchboxes} 盒。");
+            _eating = true;
+            try { AdvanceClock(FastFoodCatalog.Packed(b.Id)?.Minutes ?? Pantry.EatMinutes); }
+            finally { _eating = false; }
+            Say($"吃喝了{b.Name}，背包还剩 {Backpack.Lunchboxes} 份即食食品。");
             return true;
         }
 

@@ -245,9 +245,9 @@ namespace PCShopSell.Game.UI
             foreach (var meal in bag.Food.Packed.GroupBy(b => b.Id))
             {
                 int n = meal.Sum(b => b.Count);
-                double kg = n * Backpack.LunchboxKg;
+                double kg = n * FoodBatch.WeightOf(meal.Key);
                 Color color = meal.Key == "veg" ? new Color(0.3f, 0.55f, 0.3f) : meal.Key == "pork" ? new Color(0.62f, 0.35f, 0.28f) : new Color(0.62f, 0.55f, 0.35f);
-                l.Add(new BagStack { Key = "lunch:" + meal.Key, Name = meal.First().Name, Kind = "熟食 · 饥饿 +" + meal.First().Hunger.ToString("0.##") + " · " + GameSession.MealEffects(meal.Key) + " · 最早到期：第 " + meal.Min(b => b.ExpireDay) + " 天", Count = n, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = color });
+                l.Add(new BagStack { Key = "lunch:" + meal.Key, Name = meal.First().Name, Kind = (FastFoodCatalog.Packed(meal.Key)?.Drink == true ? "饮料 · 饱腹 +" : "即食食物 · 饱腹 +") + meal.First().Hunger.ToString("0.##") + " · " + GameSession.MealEffects(meal.Key) + " · 最早到期：第 " + meal.Min(b => b.ExpireDay) + " 天", Count = n, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = color });
             }
             foreach (var kv in bag.GiftLines)
             {
@@ -340,12 +340,12 @@ namespace PCShopSell.Game.UI
                     Para(w.Content, $"<b>{pick.Name}</b> ×{pick.Count}　占 {Mathf.Max(1, Mathf.CeilToInt((float)(pick.Space - 1e-6)))} 格　{pick.Kg:0.##} 千克\n<color=#ABB5A8>{pick.Kind}</color>", 17);
                 else
                     Line(w.Content, stacks.Count == 0 ? "背包是空的。去买点东西：礼品在烟酒茶行 / 农贸市场 / 手机网购，进货在电子市场。" : "点一格看详情。", 17, Ui.Dim);
-                Para(w.Content, $"营养 {S.Player.Nutrition:0.##}/100 · 心情 {S.Player.Mood:0.##}/100（暂只记录，无其他影响）\n饭菜按菜名分开。选中后可吃指定饭菜或喝饮料；每天 12:00、18:30 自动吃饭。", 15, Ui.Dim);
+                Para(w.Content, $"营养 {S.Player.Nutrition:0.##}/100 · 心情 {S.Player.Mood:0.##}/100（暂只记录，无其他影响）\n饭菜按菜名分开。选中后可吃指定饭菜或喝饮料；每天12:00、18:30或饱腹低于25时自动进餐。", 15, Ui.Dim);
 
                 if (S.CanOpenFridge) Ui.Size(Ui.Button(w.Content, "打开这里的冰箱", () => OpenFridgeWindow(), 17), -1, 34);
                 RectTransform acts = Ui.Row(w.Content, 46);
                 if (pick != null && pick.Key.StartsWith("lunch:"))
-                    Ui.Size(Ui.Button(acts, "吃一份" + pick.Name, () =>
+                    Ui.Size(Ui.Button(acts, (FastFoodCatalog.Packed(pick.Key.Substring(6))?.Drink == true ? "喝一份" : "吃一份") + pick.Name, () =>
                     {
                         S.EatLunchboxNow(pick.Key.Substring(6));
                         w.Rebuild();
@@ -775,7 +775,7 @@ namespace PCShopSell.Game.UI
                 var bagIngs = bag.Food.Ingredient.GroupBy(b => b.Id).ToList();
                 string bagFood = (bag.Food.RiceKg > 0 ? $"大米 {bag.Food.RiceKg:0.##} 千克" : "") + (bagIngs.Count > 0 ? "  " + string.Join("、", bagIngs.Select(g => $"{g.First().Name}×{g.Sum(b => b.Count)}")) : "");
                 Line(list, "买的菜米：" + (bagFood.Trim().Length == 0 ? "没有" : bagFood.Trim()) + "（回家打开背包一键放进厨房）", 16);
-                Para(list, "带着的熟饭：" + (bag.Lunchboxes == 0 ? "没有" : string.Join("、", bag.Food.Packed.GroupBy(b => b.Id).Select(g => g.First().Name + "×" + g.Sum(b => b.Count)))), 16, bag.Lunchboxes < 2 ? Ui.Warn : Ui.TextColor);
+                Para(list, "带着的即食食物：" + (bag.Lunchboxes == 0 ? "没有" : string.Join("、", bag.Food.Packed.GroupBy(b => b.Id).Select(g => g.First().Name + "×" + g.Sum(b => b.Count)))), 16, bag.Lunchboxes < 2 ? Ui.Warn : Ui.TextColor);
                 var bagFurn = bag.FurnitureLines.ToList();
                 if (bagFurn.Count > 0) Line(list, "背着的家具：" + string.Join("、", bagFurn.Select(kv => FurnitureLabel(kv.Key, kv.Value))) + "（回家或回店里打开背包一键放下）", 16);
                 Line(list, "礼品：" + (bag.GiftLines.Count() == 0 ? "没有。去烟酒茶行、农贸市场买，或者网购。" : string.Join("、", bag.GiftLines.Select(kv => $"{Gifts.Get(kv.Key).Name}×{kv.Value}"))), 16);

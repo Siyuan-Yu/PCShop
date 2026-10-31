@@ -3,39 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.World;
+using PCShopSell.Core.Home;
 
 namespace PCShopSell.Core.Session
 {
-    public sealed class FastFoodItem
-    {
-        public string Id { get; }
-        public string Name { get; }
-        public Money Price { get; }
-        public int Hunger { get; }
-        public int Nutrition { get; }
-        public int Mood { get; }
-        public int Minutes { get; }
-        public bool Drink { get; }
-        internal FastFoodItem(string id, string name, long yuan, int hunger, int nutrition, int mood, int minutes, bool drink = false)
-        { Id = id; Name = name; Price = Money.FromYuan(yuan); Hunger = hunger; Nutrition = nutrition; Mood = mood; Minutes = minutes; Drink = drink; }
-        public string Effects => $"饱腹 +{Hunger} · 营养 {GameSession.SignedDiet(Nutrition)} · 心情 {GameSession.SignedDiet(Mood)}";
-    }
-
     public sealed partial class GameSession
     {
         public const string FastFoodBusiness = "快餐";
-        public static readonly IReadOnlyList<FastFoodItem> FastFoodMenu = Array.AsReadOnly(new[]
-        {
-            new FastFoodItem("burger", "鸡腿汉堡", 18, 45, -1, 5, 10),
-            new FastFoodItem("chicken", "香酥炸鸡", 16, 35, -2, 6, 10),
-            new FastFoodItem("fries", "薯条", 8, 18, -2, 4, 5),
-            new FastFoodItem("cola", "可乐", 6, 2, -3, 8, 2, true),
-            new FastFoodItem("rice", "鸡肉蔬菜饭", 20, 65, 3, 3, 15),
-            new FastFoodItem("combo", "汉堡炸鸡套餐（含可乐）", 32, 90, -4, 10, 20)
-        });
+        public static IReadOnlyList<FastFoodItem> FastFoodMenu => FastFoodCatalog.All;
 
-        public string FastFoodBlocker(string itemId)
+        public string FastFoodBlocker(string itemId, int count = 1)
         {
+            if (count <= 0 || count > 100) return "请选择1到100份。";
             var item = FastFoodMenu.FirstOrDefault(x => x.Id == itemId);
             if (item == null) return "菜单里没有这种餐品。";
             var p = CurrentPlace;
@@ -43,22 +22,21 @@ namespace PCShopSell.Core.Session
             if (p == null || p.Kind != PlaceKind.Shop || p.Business != FastFoodBusiness || IsMyShop(p)
                 || IsVacant(p) || VentureAt(p.Id) != null || PropertyAt(p.Id) != null) return "请到营业的快餐店点餐。";
             if (!IsPlaceOpen(p)) return "快餐店已打烊，营业时间：" + OpeningHoursText(p) + "。";
-            if (!item.Drink && Player.Hunger >= 99) return "已经吃饱了。";
-            if (Ledger.Balance < item.Price) return "现金不足。";
+            if (item.WeightKg * count > FreeKg + 1e-9) return "背包装不下了。";
+            if (Ledger.Balance < item.Price * count) return "现金不足。";
             return null;
         }
 
-        public bool BuyFastFood(string itemId)
+        public bool BuyFastFood(string itemId, int count = 1)
         {
-            string why = FastFoodBlocker(itemId);
+            string why = FastFoodBlocker(itemId, count);
             if (why != null) return Fail(why);
             var item = FastFoodMenu.First(x => x.Id == itemId);
-            if (!Ledger.TryDebit(Clock.Today, "餐饮", item.Price, CurrentPlace.Name + " · " + item.Name)) return Fail("现金不足。");
-            // Apply the meal before advancing time, so a hungry player is fed while dining.
-            Player.Hunger = Math.Min(100, Player.Hunger + item.Hunger);
-            ApplyDiet(item.Nutrition, item.Mood);
-            AdvanceClock(item.Minutes);
-            Say("堂食：" + item.Name + "，花费 " + item.Price + "，" + item.Effects + "。");
+            if (!Ledger.TryDebit(Clock.Today, "餐饮", item.Price * count, CurrentPlace.Name + " · " + item.Name)) return Fail("现金不足。");
+            Backpack.Food.Packed.Add(new FoodBatch { Id = "fast:" + item.Id, Name = item.Name, Hunger = item.Hunger,
+                Count = count, ExpireDay = Clock.Today.TotalDays + item.ShelfDays });
+            ApplyCargoLimit();
+            Say("买了" + item.Name + "×" + count + "，已放入背包，花费 " + item.Price * count + "。可稍后手动吃喝，或留到自动进餐。");
             return true;
         }
     }

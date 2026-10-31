@@ -4,6 +4,8 @@
 
 ## 文档
 
+- [`docs/26-fast-food-takeaway.md`](docs/26-fast-food-takeaway.md)：快餐买后入包、真实重量、手动与自动进餐、冷藏及存档，560项测试通过
+
 - [`docs/25-product-weight-labels.md`](docs/25-product-weight-labels.md)：所有商品名称下的实际千克重量、各购买渠道和背包的统一说明
 
 - [`docs/24-live-price-preview-and-confirm.md`](docs/24-live-price-preview-and-confirm.md)：调价时实时预览购买意愿，点“确定”保存售价；556项回归通过

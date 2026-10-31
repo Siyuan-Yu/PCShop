@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -383,6 +383,8 @@ namespace PCShopSell.Core.Session
             {
                 if (Crosses(from, to, 12 * 60)) EatMeal("午饭");
                 if (Crosses(from, to, 18 * 60 + 30)) EatMeal("晚饭");
+                if (!IsWorking && Player.Hunger < 25 && ((CurrentPlace == Home && Pantry.CookedBowls > 0)
+                    || Backpack.Food.Packed.Any(b => b.Count > 0 && FastFoodCatalog.Packed(b.Id)?.Drink != true))) EatMeal("加餐");
                 if (!IsWorking && !NightWorkRest && Crosses(from, to, FaintMinute)) _pendingFaint = true;
             }
 
