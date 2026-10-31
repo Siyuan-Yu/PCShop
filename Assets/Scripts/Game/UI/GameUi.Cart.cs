@@ -78,6 +78,7 @@ namespace PCShopSell.Game.UI
 
         public void OnPointerDown(PointerEventData e)
         {
+            if (_button == null) _button = GetComponent<Button>();
             if (e.button != PointerEventData.InputButton.Left || (_button != null && !_button.interactable)) return;
             _down = true;
             _held = 0;
@@ -122,7 +123,11 @@ namespace PCShopSell.Game.UI
 
         private void Refresh()
         {
-            if (_text != null && Label != null) _text.text = Label(_count);
+            if (Label == null) return;
+            // Preview callbacks must run even if the text was not cached by Awake yet.
+            string label = Label(_count);
+            if (_text == null) _text = GetComponentInChildren<Text>();
+            if (_text != null) _text.text = label;
         }
     }
 

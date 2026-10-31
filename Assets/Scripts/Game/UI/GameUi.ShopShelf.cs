@@ -227,7 +227,7 @@ namespace PCShopSell.Game.UI
                     + (back > fill.Total ? $"　<color=#DDC18B>后仓还有 {back - fill.Total} 件没摆上（货架装满了）</color>" : ""), 16);
                 Line(w.Content, $"整店后仓 {st.UsedSpace:0.#}/{st.Capacity:0.#} 格，还剩 {st.FreeSpace:0.#} 格（所有货共用）", 15, Ui.Dim);
 
-                Para(w.Content, "在每件商品的价签旁点加减号调价，长按可加速；购买意愿随售价更新。同型号盒装和散件按包装溢价联动。", 15, Ui.Dim);
+                Para(w.Content, "在每件商品的价签旁点加减号调价，长按可加速；购买意愿实时预览，点确定后生效。同型号盒装和散件按包装溢价联动。", 15, Ui.Dim);
                 if (kind.IsParts) BuildPartShelfBody(w, kind, fill);
                 else BuildGoodsShelfBody(w, kind, fill);
                 Ui.Size(Ui.Button(w.Content, "关闭", w.Close, 20), -1, 46);
@@ -350,8 +350,8 @@ namespace PCShopSell.Game.UI
             Ui.Label(mark.transform, boxed ? "整盒" : "散件", 16, TextAnchor.MiddleCenter, boxed ? new Color(0.25f, 0.15f, 0.05f) : Color.white)
                 .rectTransform.Fill(2);
             ShelfSaleTag(w, rt, p.Id + (boxed ? "_boxed" : "_loose"), shop.PriceOf(p, boxed).Yuan, shop.PartPriceRange(p, boxed),
-                ShopSettings.BuyChance(shop.MarkupOf(p)), shop.HasPartMarkup(p),
-                value => shop.SetPartSalePrice(p, boxed, value), () => shop.SetPartMarkup(p, null))
+                value => shop.PartPurchaseIntentAtPrice(p, boxed, value),
+                value => shop.SetPartSalePrice(p, boxed, value))
                 .Anchor(.29f, .04f, .96f, .29f);
         }
         // ---------- 整机展示台 ----------

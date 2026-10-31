@@ -1,0 +1,51 @@
+2026-11-01 live price preview and confirmation
+EditMode: total=556 passed=556 failed=0
+Command: powershell -File tools/run-tests.ps1
+Scene: PCShopSell.EditorTools.GameSceneBuilder.InteractionRevisionFromBatch
+No screenshots generated.
+SMOKE OK 可点击引导按钮：在这里打工 · 农贸市场早班 · ¥145/天
+SMOKE OK 可点击引导按钮：签一周合同（明天开始）
+SMOKE OK 店内按钮签一周，次日开始，无需找人聊天
+SMOKE OK 签约当天没有手动开始工作按钮
+SMOKE OK 签约当天明确提示明天再来工作
+SMOKE OK 进入签约店后自动开始打工并显示全屏状态
+SMOKE OK 打工状态不加暂停锁，世界继续运行
+SMOKE OK 打工界面仅提供四档时间速度，无离开或购物按钮
+SMOKE OK 工作中不能通过快捷键打开管理或菜单
+SMOKE OK 可点击引导按钮：8×
+SMOKE OK 打工中倍速实际推进时间
+SMOKE OK 后台消息与随机选择事件延后，不让工作停住
+SMOKE OK 到点收工，移除操作锁并记录当天工资
+SMOKE OK 下班后可以处理延期事件
+SMOKE OK 处理消息后不残留工作暂停锁
+SMOKE OK 可点击引导按钮：领取这周工资 ¥145
+SMOKE OK 在我的面板领取已出勤工资，不要求重新进货
+SMOKE OK 可点击引导按钮：在这里打工 · 面包工坊烘焙夜班 · ¥175/天
+SMOKE OK 可点击引导按钮：签一周合同（明天开始）
+SMOKE OK 夜间商店打烊后凭合同到岗，夜班显示次日下班
+SMOKE OK 夜班跨午夜并经过凌晨4点，不会强制晕倒
+SMOKE OK 夜班次日6点收工，工资和消耗使用本店参数
+SMOKE OK 可点击引导按钮：睡满 8 小时
+SMOKE OK 夜班下班后能白天补觉，不被原白天不能睡规则卡住
+SMOKE OK 价签没有含义不明的跟随按钮
+SMOKE OK 调整价格仅预览，不提前改变成交价
+SMOKE OK 确定按钮保存当前预览售价
+SMOKE OK 加价后确定生效
+SMOKE OK 商品调价无数字输入框
+SMOKE OK 手指尚未松开时购买意愿已经实时变化
+SMOKE OK 实时意愿使用预览价格计算，确认前不改实际售价
+SMOKE OK 达到预览价格上限禁用加号
+SMOKE OK 连续反向调价后确定正确，长按松手不重复加价
+SMOKE OK 确认后没有未保存改动时禁用确定
+SMOKE OK 购买意愿显示在同一商品价签
+SMOKE OK 买米不再显示数量输入框
+SMOKE OK 长按数量加速递增
+SMOKE OK 松手提交千克数量，点击事件不会重复添加
+SMOKE OK 加号可继续购买
+SMOKE OK 员工采购移除数量输入框
+SMOKE OK 可点击引导按钮：完成
+SMOKE OK 员工采购加减数量在完成后保存
+SMOKE OK 自动补货政策也没有数字输入框
+SMOKE OK 可点击引导按钮：+30分钟
+SMOKE OK 床提供起床时间加减选择与确认
+SMOKE RESULT code=0 errors=0

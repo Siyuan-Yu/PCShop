@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
 
@@ -11,6 +11,18 @@ namespace PCShopSell.Core.Shop
 
         public (long min, long max) PartPriceRange(PartDef part, bool boxed) =>
             SalePriceRange(_market.PriceOf(part).Yuan * (boxed ? 1 + Settings.BoxedPremium : 1));
+
+        public double PartPurchaseIntentAtPrice(PartDef part, bool boxed, long yuan)
+        {
+            double basis = _market.PriceOf(part).Yuan * (boxed ? 1 + Settings.BoxedPremium : 1);
+            return basis > 0 ? ShopSettings.BuyChance(yuan / basis) : 0;
+        }
+
+        public double GoodsPurchaseIntentAtPrice(string id, long yuan)
+        {
+            double basis = Gifts.Get(id)?.Price.Yuan ?? 0;
+            return basis > 0 ? ShopSettings.BuyChance(yuan / basis) * Settings.GoodsBuyFactor : 0;
+        }
 
         public bool SetPartSalePrice(PartDef part, bool boxed, long yuan)
         {

@@ -7,33 +7,55 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private RectTransform ShelfSaleTag(Window w, Transform parent, string key, long price, (long min, long max) range,
-            double intent, bool own, Action<long> setPrice, Action follow)
+            Func<long, double> intentAtPrice, Action<long> setPrice)
         {
             var tag = Ui.Panel(parent, "PriceTag_" + key, TagPaper);
             var valueLabel = Ui.Label(tag.transform, "¥" + price, 17, TextAnchor.MiddleCenter, TagInk);
             valueLabel.name = "SalePrice_" + key;
             valueLabel.rectTransform.Anchor(.18f, .43f, .61f, .98f);
+            long draft = price;
+            Text demand = null;
+            Button confirm = null;
+            var controls = new System.Collections.Generic.List<(Button button, HoldRepeat hold, int direction)>();
+            long Clamp(long value) => Math.Max(range.min, Math.Min(range.max, value));
+            void Preview(long value)
+            {
+                valueLabel.text = "¥" + value;
+                if (demand != null) demand.text = $"购买意愿约 {Math.Max(0, Math.Min(1, intentAtPrice(value))) * 100:0}%";
+                if (confirm != null) confirm.interactable = value != price;
+            }
+            void RefreshLimits()
+            {
+                foreach (var control in controls)
+                {
+                    long room = control.direction > 0 ? range.max - draft : draft - range.min;
+                    control.hold.Max = (int)Math.Min(int.MaxValue, room);
+                    control.button.interactable = room > 0;
+                }
+            }
             void PriceButton(string label, int direction, float x0, float x1)
             {
-                bool enabled = direction > 0 ? price < range.max : price > range.min;
-                var button = Ui.Button(tag.transform, label, null, 20, WoodLight, enabled);
+                var button = Ui.Button(tag.transform, label, null, 20, WoodLight);
                 button.name = "Price" + (direction > 0 ? "Plus_" : "Minus_") + key;
                 ((RectTransform)button.transform).Anchor(x0, .43f, x1, .98f);
                 var hold = button.gameObject.AddComponent<HoldRepeat>();
-                hold.Max = (int)Math.Min(int.MaxValue, direction > 0 ? range.max - price : price - range.min);
-                hold.Label = n => { valueLabel.text = "¥" + (price + direction * n); return label; };
-                hold.Commit = n => { setPrice(price + direction * n); w.RequestRebuild(); };
+                hold.Label = n => { Preview(Clamp(draft + direction * n)); return label; };
+                hold.Commit = n => { draft = Clamp(draft + direction * n); Preview(draft); RefreshLimits(); };
+                controls.Add((button, hold, direction));
                 button.onClick.AddListener(hold.ClickOnce);
-                button.Tip("点一下调整1元；长按连续调价，越按越快，松开应用。购买意愿随售价更新。");
+                button.Tip("点一下调整1元；长按连续调价，购买意愿实时预览。点确定后生效。");
             }
             PriceButton("−", -1, .01f, .17f);
             PriceButton("+", 1, .62f, .78f);
-            var reset = Ui.Button(tag.transform, "跟随", () => { follow(); w.RequestRebuild(); }, 11, WoodLight, own);
-            reset.name = "FollowPrice_" + key;
-            ((RectTransform)reset.transform).Anchor(.8f, .43f, .99f, .98f);
-            var demand = Ui.Label(tag.transform, $"购买意愿约 {Math.Max(0, Math.Min(1, intent)) * 100:0}%", 13, TextAnchor.MiddleCenter, TagInk);
+            confirm = Ui.Button(tag.transform, "确定", () => { setPrice(draft); w.RequestRebuild(); }, 11, Ui.ButtonHot, false);
+            confirm.name = "ConfirmPrice_" + key;
+            confirm.GetComponentInChildren<Text>().color = Ui.TextColor;
+            confirm.Tip("确认这个商品的当前售价。");
+            ((RectTransform)confirm.transform).Anchor(.8f, .43f, .99f, .98f);
+            demand = Ui.Label(tag.transform, "", 13, TextAnchor.MiddleCenter, TagInk);
             demand.name = "PurchaseIntent_" + key;
             demand.rectTransform.Anchor(.02f, .02f, .98f, .4f);
+            Preview(draft); RefreshLimits();
             return tag.rectTransform;
         }
     }

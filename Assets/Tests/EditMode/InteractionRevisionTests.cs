@@ -7,6 +7,32 @@ namespace PCShopSell.Tests
 {
     public class InteractionRevisionTests
     {
+        [Test] public void PartIntentPreview_ChangesWithPriceWithoutMutatingSalePrice()
+        {
+            using (var s = GameSessionTests.Make())
+            {
+                var p = PartCatalog.Get("cpu0"); var shop = s.PlayerShop;
+                long original = shop.PriceOf(p, true).Yuan;
+                var range = shop.PartPriceRange(p, true);
+                Assert.Greater(shop.PartPurchaseIntentAtPrice(p, true, range.min), shop.PartPurchaseIntentAtPrice(p, true, range.max));
+                Assert.AreEqual(original, shop.PriceOf(p, true).Yuan);
+                Assert.IsTrue(shop.SetPartSalePrice(p, true, range.max));
+                Assert.AreEqual(PCShopSell.Core.Shop.ShopSettings.BuyChance(shop.MarkupOf(p)), shop.PartPurchaseIntentAtPrice(p, true, range.max), 1e-8);
+            }
+        }
+        [Test] public void GoodsIntentPreview_PreservesGoodsBuyFactorAndDoesNotCommit()
+        {
+            using (var s = GameSessionTests.Make())
+            {
+                var shop = s.PlayerShop; string id = PCShopSell.Core.Home.Gifts.Soda;
+                long original = shop.GoodsPriceOf(id).Yuan; var range = shop.GoodsPriceRange(id);
+                Assert.Greater(shop.GoodsPurchaseIntentAtPrice(id, range.min), shop.GoodsPurchaseIntentAtPrice(id, range.max));
+                Assert.AreEqual(original, shop.GoodsPriceOf(id).Yuan);
+                Assert.IsTrue(shop.SetGoodsSalePrice(id, range.max));
+                Assert.AreEqual(PCShopSell.Core.Shop.ShopSettings.BuyChance(shop.MarkupOfGoods(id)) * shop.Settings.GoodsBuyFactor,
+                    shop.GoodsPurchaseIntentAtPrice(id, range.max), 1e-8);
+            }
+        }
         [Test] public void ChosenWake_CrossesMidnightAndFourWithoutFaint()
         {
             var s = GameSessionTests.Make(minute: 23 * 60); s.EventsEnabled = false;
