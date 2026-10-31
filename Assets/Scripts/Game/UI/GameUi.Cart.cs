@@ -53,8 +53,87 @@ namespace PCShopSell.Game.UI
         }
     }
 
+    /// <summary>
+    /// 点一下 = 1；按住超过 0.4 秒开始一件件往上加（越按越快，到 Max 为止），按钮上实时显示数量，松手时一次提交。
+    /// 按住期间不重建窗口，所以数量只显示在按钮上。按钮上拖动不会拖走卡片。
+    /// </summary>
+    public sealed class HoldRepeat : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IBeginDragHandler, IDragHandler
+    {
+        public int Max = 1;
+        public Func<int, string> Label;
+        public Action<int> Commit;
+        private Text _text;
+        private Button _button;
+        private bool _down;
+        private float _held, _next;
+        private int _count;
+
+        private void Awake()
+        {
+            _text = GetComponentInChildren<Text>();
+            _button = GetComponent<Button>();
+        }
+
+        public void OnPointerDown(PointerEventData e)
+        {
+            if (e.button != PointerEventData.InputButton.Left || (_button != null && !_button.interactable)) return;
+            _down = true;
+            _held = 0;
+            _next = 0.4f;
+            _count = 1;
+            Refresh();
+        }
+
+        private void Update()
+        {
+            if (!_down) return;
+            _held += Time.unscaledDeltaTime;
+            while (_held >= _next && _count < Max)
+            {
+                _count++;
+                _next += Mathf.Max(0.04f, 0.16f - _count * 0.012f);
+            }
+            Refresh();
+        }
+
+        public void OnPointerUp(PointerEventData e)
+        {
+            if (!_down) return;
+            _down = false;
+            int n = _count;
+            _count = 0;
+            Commit?.Invoke(n);
+        }
+
+        public void OnBeginDrag(PointerEventData e) { }
+
+        public void OnDrag(PointerEventData e) { }
+
+        private void Refresh()
+        {
+            if (_text != null && Label != null) _text.text = Label(_count);
+        }
+    }
+
     public sealed partial class GameUi
     {
+        /// <summary>“点一下 1 件、按住多件”的按钮（最多 max）。</summary>
+        private void HoldButton(Window w, Transform parent, string text, Color color, double max, string unit, Func<double, bool> commit, float width, bool enabled = true)
+        {
+            var b = Ui.Button(parent, text, null, 15, color, enabled && max > 1e-9);
+            b.name = "Hold_" + text;
+            Ui.Size(b, width);
+            var hold = b.gameObject.AddComponent<HoldRepeat>();
+            hold.Max = Math.Max(1, (int)Math.Ceiling(max - 1e-9));
+            hold.Label = n => n <= 1 ? text : $"{text} ×{n}";
+            hold.Commit = n =>
+            {
+                commit(Math.Min(n, max));
+                w.Rebuild();
+            };
+            b.Tip($"点一下：1 {unit}\n按住：一{unit}一{unit}往上加，松手为止");
+        }
+
         private static readonly Color CartColumn = new Color(0.12f, 0.15f, 0.18f);
         private static readonly Color CartCard = new Color(0.19f, 0.23f, 0.27f);
 
@@ -74,7 +153,7 @@ namespace PCShopSell.Game.UI
         }
 
         /// <summary>
-        /// 购物车和结账：左栏“叫车送”，右栏“装进背包”。东西加进来先都在左栏，拖到右栏（或点 ›）就自己背，
+        /// 购物车和结账：左栏“叫车送”，右栏“装进背包”。东西加进来先都在左栏，点“放进背包”（按住放多件）或拖到右栏就自己背，
         /// 超重了拖回去；左栏剩下的一起叫车，按总重算几辆车，运费和货款一起结。
         /// </summary>
         private void CartPanel(Window w, Transform parent, bool defaultToShop)
@@ -106,15 +185,16 @@ namespace PCShopSell.Game.UI
             foreach (CartLine l in S.Cart.ToList())
             {
                 CartLine line = l;
-                const double one = 1;
                 if (line.ByTruck > 1e-9)
-                    CartLineCard(w, truckList, line, line.ByTruck, line.TruckKg, bagCol, () => S.CartToBag(line.Key, Math.Min(one, line.ByTruck)),
-                        ("›", () => S.CartToBag(line.Key, one)), ("»", () => S.CartToBag(line.Key, line.ByTruck)), ("−", () => S.RemoveFromCart(line.Key, Math.Min(one, line.Amount))));
+                    CartLineCard(w, truckList, line, line.ByTruck, line.TruckKg, bagCol, () => S.CartToBag(line.Key, Math.Min(1, line.ByTruck)),
+                        new HoldAction("放进背包", Ui.ButtonHot, line.ByTruck, n => S.CartToBag(line.Key, n)),
+                        new HoldAction("不要了", Ui.ButtonBg, line.ByTruck, n => S.RemoveFromCart(line.Key, n)));
                 if (line.InBag > 1e-9)
-                    CartLineCard(w, bagList, line, line.InBag, line.BagKg, truckCol, () => S.CartToTruck(line.Key, Math.Min(one, line.InBag)),
-                        ("‹", () => S.CartToTruck(line.Key, one)), ("«", () => S.CartToTruck(line.Key, line.InBag)), ("−", () => S.CartToTruck(line.Key, one) && S.RemoveFromCart(line.Key, one)));
+                    CartLineCard(w, bagList, line, line.InBag, line.BagKg, truckCol, () => S.CartToTruck(line.Key, Math.Min(1, line.InBag)),
+                        new HoldAction("改叫车", Ui.ButtonHot, line.InBag, n => S.CartToTruck(line.Key, n)),
+                        new HoldAction("不要了", Ui.ButtonBg, line.InBag, n => S.CartToTruck(line.Key, n) && S.RemoveFromCart(line.Key, n)));
             }
-            if (bagKg <= 1e-9) Para(bagList, "把左边的拖到这里（或点 ›）就自己背走；超重了再拖回去。", 14, Ui.Dim);
+            if (bagKg <= 1e-9) Para(bagList, "点左边的“放进背包”放 1 件，按住不放一件件往上加，松手放进来；也可以直接把卡片拖过来。超重了再挪回去。", 14, Ui.Dim);
 
             RectTransform destRow = Ui.Row(parent, 40, 8);
             if (truckKg > 1e-9)
@@ -148,9 +228,26 @@ namespace PCShopSell.Game.UI
             return box.rectTransform;
         }
 
-        /// <summary>一张能拖的卡片：名字、数量、重量，后面几个小按钮；拖到 target 栏松手执行 onDrop。</summary>
+        /// <summary>卡片后面的按钮：点一下做 1 件，按住一件件加，松手一起做（最多 Max）。</summary>
+        private readonly struct HoldAction
+        {
+            public readonly string Text;
+            public readonly Color Color;
+            public readonly double Max;
+            public readonly Func<double, bool> Commit;
+
+            public HoldAction(string text, Color color, double max, Func<double, bool> commit)
+            {
+                Text = text;
+                Color = color;
+                Max = max;
+                Commit = commit;
+            }
+        }
+
+        /// <summary>一张能拖的卡片：名字、数量、重量，后面是“点一下 1 件、按住多件”的按钮；拖到 target 栏松手执行 onDrop。</summary>
         private void CartLineCard(Window w, RectTransform list, CartLine l, double amount, double kg, RectTransform target, Func<bool> onDrop,
-            params (string text, Func<bool> act)[] buttons)
+            params HoldAction[] buttons)
         {
             RectTransform card = Ui.Row(list, 34, 4);
             Image bg = card.gameObject.AddComponent<Image>();
@@ -158,11 +255,8 @@ namespace PCShopSell.Game.UI
             string amountText = l.ByJin ? $"{amount:0.#} 斤" : $"×{amount:0}";
             string price = l.UnitPrice != null ? $"　{l.UnitPrice().Scale(amount)}" : "";
             Ui.Size(Ui.Label(card, $"  {l.Name} {amountText}<size=13><color=#A8B0BA>　{kg:0.#} 公斤{price}</color></size>", 15), -1, -1, 1);
-            foreach (var (text, act) in buttons)
-            {
-                var a = act;
-                Ui.Size(Ui.Button(card, text, () => { a(); w.Rebuild(); }, 16, Ui.ButtonBg), 32);
-            }
+            foreach (HoldAction a in buttons)
+                HoldButton(w, card, a.Text, a.Color, a.Max, l.ByJin ? "斤" : "件", a.Commit, a.Text.Length > 3 ? 104 : 76);
             var drag = card.gameObject.AddComponent<CartDragItem>();
             drag.Dropped = (pos, cam) =>
             {
@@ -204,7 +298,7 @@ namespace PCShopSell.Game.UI
         // ---------- 打电话叫货车 ----------
 
         /// <summary>
-        /// 打电话叫货车：左边是这里能交给司机的东西，拖到右边装货单（或点“装”），选好送到哪，点出发一起付运费。
+        /// 打电话叫货车：左边是这里能交给司机的东西，点“装车”（按住装多件）或拖到右边装货单，选好送到哪，点出发一起付运费。
         /// </summary>
         public void OpenTruckWindow()
         {
@@ -237,8 +331,7 @@ namespace PCShopSell.Game.UI
                     card.gameObject.AddComponent<Image>().color = CartCard;
                     string have = it.ByJin ? $"{left:0.#} 斤" : $"×{left:0}";
                     Ui.Size(Ui.Label(card, $"  {it.Name} {have}<size=13><color=#A8B0BA>　{it.Where} · 每{(it.ByJin ? "斤" : "件")} {it.UnitKg:0.#} 公斤</color></size>", 15), -1, -1, 1);
-                    Ui.Size(Ui.Button(card, "装 1", () => { S.AddToTruck(it.Key, 1); w.Rebuild(); }, 14, Ui.ButtonBg, destWhy == null), 52);
-                    Ui.Size(Ui.Button(card, "全装", () => { S.AddToTruck(it.Key, left); w.Rebuild(); }, 14, Ui.ButtonHot, destWhy == null), 56);
+                    HoldButton(w, card, "装车", Ui.ButtonHot, left, it.ByJin ? "斤" : "件", n => S.AddToTruck(it.Key, n), 90, destWhy == null);
                     var drag = card.gameObject.AddComponent<CartDragItem>();
                     drag.Dropped = (pos, cam) =>
                     {
@@ -249,13 +342,13 @@ namespace PCShopSell.Game.UI
                 }
 
                 int cars = S.TruckCars;
-                Line(loadList, S.TruckLoad.Count == 0 ? "装货单（拖过来或点“装”）"
+                Line(loadList, S.TruckLoad.Count == 0 ? "装货单（点左边“装车”，按住装多件；也可以拖过来）"
                     : $"装货单　{S.TruckKg:0.#} 公斤 → {(cars < 0 ? "有一件一车装不下" : cars == 0 ? "装上刚叫的车" : $"{cars} 辆面包车")}", 17, Ui.Accent);
                 foreach (CartLine l in S.TruckLoad.ToList())
                 {
                     CartLine line = l;
                     CartLineCard(w, loadList, line, line.Amount, line.Kg, hereCol, () => S.RemoveFromTruck(line.Key, 1),
-                        ("−", () => S.RemoveFromTruck(line.Key, 1)), ("×", () => S.RemoveFromTruck(line.Key, line.Amount)));
+                        new HoldAction("拿下来", Ui.ButtonBg, line.Amount, n => S.RemoveFromTruck(line.Key, n)));
                 }
 
                 RectTransform go = Ui.Row(w.Content, 48, 8);
