@@ -73,7 +73,7 @@ namespace PCShopSell.Tests
             Assert.AreEqual(2, s.ShopLocker.GiftCount(Gifts.Cig));
             Assert.AreEqual(0, s.HomeBoxCount(Gifts.Cig));
             Assert.IsFalse(s.CourierToShop(false), "没选时按这家店的默认");
-            s.CourierDest = true;
+            s.CourierDest = GameSession.CourierCurrentShop;
             Assert.IsTrue(s.CourierToShop(false), "选了送店里就送店里");
 
             GameSession l = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));

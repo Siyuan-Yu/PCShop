@@ -99,27 +99,19 @@ namespace PCShopSell.Game.UI
 
             if (l == null)
             {
-                bool main = own != null && own == S.MainShop;
-                string explanation = mine ? (main
-                        ? $"这是你的主店。已交押金 {own.Lease.Deposit}。\n想换地方：先进主店再来这里签新铺子选“搬店”；想多开一家：签新铺子选“开新店”。"
-                        : $"这是你的{S.ShopTitle(own)}，已交押金 {own.Lease.Deposit}。不想要了可以退租：货搬回主店，家具收回“我的”，员工辞退，押金退回。")
-                    : pending ? $"你已经提前签下这间，押金 {S.PendingLease.Deposit}。现租户第 {S.PendingLease.StartDay + 1} 天搬走，那天自动交房（{(S.PendingIsNewShop ? "开成一家新店" : "把店搬过去")}）；在那之前房租照交。"
+                string explanation = mine
+                        ? $"这是你的{S.ShopTitle(own)}，已交押金 {own.Lease.Deposit}。不想要了就到店里办退租（先叫货车把货搬走）。"
+                    : pending ? $"你已经提前签下这间，押金 {S.PendingLease.Deposit}。现租户第 {S.PendingLease.StartDay + 1} 天搬走，那天自动交房；在那之前房租照交。"
                     : S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null ? "这间铺面已经纳入你的经营资产，可在“分店 / 物业 / 住处”里管理。"
                     : "这间铺面目前没有出租报价。你可以先了解位置和户型，等它挂牌后再来询价。";
                 Para(parent, explanation, 18, Ui.Dim);
-                if (mine && !main)
-                {
-                    string why = S.CloseShopBlocker(own);
-                    var close = Ui.Button(parent, why == null ? "退租这家店…" : "退租（" + why + "）", () => ConfirmCloseShop(w, own), 18, Ui.ButtonBg, why == null);
-                    Ui.Size(close, -1, 42);
-                }
                 return;
             }
 
             bool hasShop = S.HasShop;
             AgencyQuote(parent, l, hasShop);
             Money cost = S.LeaseCost(l, hasShop);
-            Ui.Size(Ui.Label(parent, $"<b>{AgencySettlement(cost)}</b>{(hasShop ? "<size=15>（开新店）</size>" : "")}", 23, TextAnchor.MiddleLeft, Ui.Accent), -1, 32);
+            Ui.Size(Ui.Label(parent, $"<b>{AgencySettlement(cost)}</b>", 23, TextAnchor.MiddleLeft, Ui.Accent), -1, 32);
             Money remaining = S.Ledger.Balance - cost;
             Ui.Size(Ui.Label(parent, remaining.IsNegative ? $"现金还差 {remaining.Abs()}" : $"付清后剩余现金 {remaining}", 17,
                 TextAnchor.MiddleLeft, remaining.IsNegative ? new Color32(231, 160, 135, 255) : Ui.Good), -1, 24);
@@ -127,22 +119,10 @@ namespace PCShopSell.Game.UI
             bool advance = S.IsAdvance(l);
             string state = blocker ?? (advance ? $"现租户还没搬走，第 {l.OpenDay + 1} 天才能进 · 可以先签" : $"挂牌还剩 {l.CloseDay - S.Clock.Today.TotalDays + 1} 天 · 可以签约");
             Ui.Size(Ui.Label(parent, state, 16, TextAnchor.MiddleLeft, blocker == null ? Ui.Good : Ui.Accent), -1, 38);
-            string signText = !hasShop ? (advance ? "核对费用，提前签下" : "核对费用，租下这间")
-                : $"开新店（{S.MyShopCount + 1} 家店一起经营）";
-            var sign = Ui.Button(parent, signText, () => ConfirmAgencyLease(w, p.Id, hasShop), 19,
+            var sign = Ui.Button(parent, advance ? "核对费用，提前签下" : "核对费用，租下这间", () => ConfirmAgencyLease(w, p.Id, hasShop), 19,
                 Ui.ButtonHot, blocker == null);
             sign.name = "AgencyReviewLease";
             Ui.Size(sign, -1, 44);
-            if (hasShop)
-            {
-                string moveBlocker = S.LeaseBlocker(l);
-                var move = Ui.Button(parent, $"把{S.ShopTitle(S.CurrentShop)}搬过来（旧铺退租）", () => ConfirmAgencyLease(w, p.Id, false), 17,
-                    Ui.ButtonBg, moveBlocker == null);
-                move.name = "AgencyReviewMove";
-                Ui.Size(move, -1, 38);
-                if (moveBlocker != null && moveBlocker != blocker)
-                    Ui.Size(Ui.Label(parent, "搬店：" + moveBlocker, 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 20);
-            }
         }
 
         private void AgencyQuote(Transform parent, ShopListing l, bool newShop)
@@ -155,24 +135,6 @@ namespace PCShopSell.Game.UI
                 AgencyFeeLine(parent, "搬家费", RealEstate.MoveFee.ToString());
                 AgencyFeeLine(parent, "退回旧铺押金", "− " + S.Lease.Deposit);
             }
-        }
-
-        private void ConfirmCloseShop(Window parent, OwnedShop shop)
-        {
-            string title = S.ShopTitle(shop);
-            OpenWindow("退租 · " + title, 560, 330, confirm =>
-            {
-                Line(confirm.Content, $"{title}（{shop.Place.Name}）· 月租 {shop.Lease.Rent}", 20, Ui.Accent);
-                Para(confirm.Content, $"退租后押金 {shop.Lease.Deposit} 退回；店里的货和展示机搬回主店后仓，摆的家具收回“我的”，这家店的员工辞退。", 17);
-                var row = Ui.Row(confirm.Content, 46, 10);
-                Ui.Size(Ui.Button(row, "再想想", confirm.Close, 18), -1, 46, 1);
-                Ui.Size(Ui.Button(row, "确认退租", () =>
-                {
-                    confirm.Close();
-                    S.CloseShop(shop.Place.Id);
-                    parent.Rebuild();
-                }, 18, Ui.ButtonHot), -1, 46, 1);
-            });
         }
 
         private static void AgencyFeeLine(Transform parent, string label, string value)
@@ -190,17 +152,15 @@ namespace PCShopSell.Game.UI
             if (listing == null || S.LeaseBlocker(listing, newShop) != null) { parent.Rebuild(); return; }
             Place p = S.ListingPlace(listing);
             Money quotedCost = S.LeaseCost(listing, newShop);
-            bool moving = S.HasShop && !newShop;
-            OpenWindow((moving ? "确认搬店 · " : newShop ? "确认开新店 · " : "确认租赁 · ") + UnitName(p), 660, moving ? 570 : 520, confirm =>
+            OpenWindow("确认租赁 · " + UnitName(p), 660, 520, confirm =>
             {
                 Line(confirm.Content, $"{GameSession.SizeName(p.Size)} · {RealEstate.SizeArea(p.Size)} · 月租 {listing.Rent}", 21, Ui.Accent);
                 AgencyQuote(confirm.Content, listing, newShop);
                 Line(confirm.Content, $"{AgencySettlement(quotedCost)}　剩余 {S.Ledger.Balance - quotedCost}", 23, Ui.Good);
-                Para(confirm.Content, moving
-                    ? $"签约后{S.ShopTitle(S.CurrentShop)}迁到这里，旧铺（{S.PlayerShopPlace.Name}）退租、重新挂出招租。库存随店搬迁，已摆家具收回“我的”，需要重新装修。"
-                    : newShop ? $"这会是你的第 {S.MyShopCount + 1} 家店，原来的店照常营业。新店是毛坯的，货、货架、员工都要另外准备；人不在店里时要雇人看店才开门。"
+                Para(confirm.Content, newShop
+                    ? "铺子是毛坯的，原来的店照常营业。货可以打电话叫货车从别的店或家里搬过来；人不在店里时要雇人看店才开门。"
                     : "铺子是毛坯的，签好后自己到店里，摆好收银台和货架再开业。", 17);
-                string fine = "以后每月 1 日交租，押金退租换铺时退还。";
+                string fine = "以后每月 1 日交租，押金退租时退还。";
                 if (S.IsAdvance(listing)) fine += $"现租户第 {listing.OpenDay + 1} 天才搬走，到那天才能搬进去，房租从签约当天算起。";
                 Para(confirm.Content, fine, 14, Ui.Dim);
                 var row = Ui.Row(confirm.Content, 46, 10);

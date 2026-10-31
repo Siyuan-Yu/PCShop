@@ -31,19 +31,19 @@ namespace PCShopSell.Game.UI
                     Toast("回到出租屋了。走近床、衣柜、电饭锅、纸箱或门，头顶出现提示时按 F；看房间信息点右上角“我的”。");
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.MallBusiness:
-                    OpenPlaceWindow(p, BuildMall, 1140, 780);
+                    OpenPlaceWindow(p, BuildMall, 1140, 960);
                     break;
                 case PlaceKind.Shop when p.Business == Gifts.TobaccoBusiness:
-                    OpenPlaceWindow(p, BuildTobacco, 1040, 640);
+                    OpenPlaceWindow(p, BuildTobacco, 1040, 900);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.PhoneBusiness:
                     OpenPlaceWindow(p, BuildPhoneShop, 960, 860);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.FarmBusiness:
-                    OpenPlaceWindow(p, BuildFarm, 1060, 820);
+                    OpenPlaceWindow(p, BuildFarm, 1060, 960);
                     break;
                 case PlaceKind.Wholesaler:
-                    OpenPlaceWindow(p, BuildStall, 980, 800);
+                    OpenPlaceWindow(p, BuildStall, 1060, 940);
                     break;
                 case PlaceKind.Dealer:
                     OpenPlaceWindow(p, BuildDealer, 1180, 760);
@@ -99,11 +99,9 @@ namespace PCShopSell.Game.UI
         {
             bool open = S.IsWholesalerOpen;
             Line(w.Content, open ? "营业中（工作日 9:00–18:00）。批发价，只卖盒装正品。" : "<color=#D79780>关门了（工作日 9:00–18:00 营业）</color>");
-            Line(w.Content, $"随身货：{S.Cargo.UsedSpace:0.#}/{S.Cargo.Capacity:0} 格（{S.CurrentVehicle.Name}）   现金 {S.Ledger.Balance}", 18, Ui.Dim);
-            CarryModeRow(w, w.Content, true);
+            Line(w.Content, $"现金 {S.Ledger.Balance}　　{S.CurrentVehicle.Name}还能背 {S.FreeKg:0.#} 公斤　　先加进购物车，结账时分好自己背的和叫车送的", 17, Ui.Dim);
 
-            RectTransform list = Ui.Scroll(w.Content, 420);
-            Ui.Size((RectTransform)list.parent.parent, -1, -1, 1);
+            RectTransform list = Ui.Scroll(w.Content, 260);
             foreach (PartDef part in PartCatalog.All.Where(x => S.StallSells(p, x)))
             {
                 PartDef pd = part;
@@ -112,18 +110,15 @@ namespace PCShopSell.Game.UI
                 RectTransform row = Ui.Row(list, 50);
                 Ui.Size(Ui.Label(row, $"{pd.Name}\n<size=13><color=#ABB5A8>市价 {market} · {Stock.SpaceOf(pd, true, 1):0.#}格</color></size>", 17), 210);
                 Ui.Size(Ui.Label(row, $"{price}", 18, TextAnchor.MiddleLeft, Ui.Good), 84);
-                int left = S.StallRemaining(p, pd);
+                int left = S.StallRemaining(p, pd) - (int)S.CartAmount("part:" + pd.Id);
                 Ui.Size(Ui.Label(row, $"余 {left}", 14, TextAnchor.MiddleLeft, left == 0 ? Ui.Warn : Ui.Dim), 52);
                 foreach (int n in new[] { 1, 5 })
                 {
                     int count = n;
-                    Ui.Size(Ui.Button(row, "买" + count, () =>
-                    {
-                        if (S.BuyAtStall(p, pd, count)) Toast(S.SendByCourier ? $"买了 {pd.Name}×{count}，叫车送到{(S.CourierToShop(true) ? "店里" : "家里")}" : $"买了 {pd.Name}×{count}，装上身");
-                        w.Rebuild();
-                    }, 16, Ui.ButtonHot, open && left >= count), 58);
+                    CartAddButton(w, row, "part:" + pd.Id, () => S.CartAddStall(p, pd, count), "+" + count, 58, open && left >= count, n == 1);
                 }
             }
+            CartPanel(w, w.Content, true);
         }
 
         // ---------- 车行 ----------

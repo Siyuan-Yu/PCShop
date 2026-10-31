@@ -546,7 +546,8 @@ namespace PCShopSell.Core.Session
                 mallStashIds = _mallStash.Select(l => l.Id).ToArray(),
                 mallStashCounts = _mallStash.Select(l => l.Count).ToArray(),
                 shopLocker = ToSaveStorage(ShopLocker),
-                courierDest = CourierDest == null ? 0 : CourierDest.Value ? 2 : 1,
+                courierDest = CourierDest == null ? 0 : CourierDest == CourierHome ? 1 : 2,
+                courierDestShop = CourierDest == null || CourierDest == CourierHome || CourierDest == CourierCurrentShop ? null : CourierDest,
             };
             d.noPhone = !HasSmartphone;
             d.apps = _apps.ToArray();
@@ -581,7 +582,9 @@ namespace PCShopSell.Core.Session
             RestoreCouriers(h?.couriers);
             SendByCourier = h != null && h.sendByCourier;
             FromSaveStorage(h?.shopLocker, ShopLocker);
-            CourierDest = h == null || h.courierDest == 0 ? (bool?)null : h.courierDest == 2;
+            CourierDest = h == null || h.courierDest == 0 ? null
+                : h.courierDest == 1 ? CourierHome
+                : string.IsNullOrEmpty(h.courierDestShop) ? CourierCurrentShop : h.courierDestShop;
             if (h == null || !h.saved)
             {
                 // 老存档：按原来的住处档位把买过的东西放进背包

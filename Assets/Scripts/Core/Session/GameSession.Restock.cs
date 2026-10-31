@@ -57,7 +57,7 @@ namespace PCShopSell.Core.Session
                 if (!o.ToHome)   // 送家里的不算店里的库存
                     foreach (OnlineOrderLine l in o.Lines)
                         if (l.PartId == partId) n += l.Count;
-            foreach (var r in Couriers) if (r.ToShop)
+            foreach (var r in Couriers) if (HeadsToThisShop(r))
                 foreach (var item in r.Items)
                     if (item.Kind == CourierItemKind.Part && item.Id == partId) n += item.Count;
             return n + DirectShipments.Where(x => x.PartId == partId).Sum(x => x.Count);

@@ -525,7 +525,15 @@ namespace PCShopSell.Game.UI
         private void BuildUpgrades()
         {
             Para(C, "店里还能添的设备。这里只是清单，要去对应的店里买，买了当天装好，搬店也跟着走。", 16, Ui.Dim);
-            Para(C, $"现在：{GameSession.SizeName(S.PlayerShop.Size)}，月租 {S.CurrentShopRent}。想换大铺子或者换个好位置，去商业街中段的「安居房产中介」看在租的铺面。", 15, Ui.Accent);
+            Para(C, $"现在：{GameSession.SizeName(S.PlayerShop.Size)}，月租 {S.CurrentShopRent}。想换大铺子或者换个好位置：去「安居房产中介」再签一间，打电话叫货车把货搬过去，再回这里退租。", 15, Ui.Accent);
+            if (S.MyShopCount > 1)
+            {
+                OwnedShop shop = S.CurrentShop;
+                string why = S.CloseShopBlocker(shop);
+                var close = Ui.Button(C, why == null ? $"退租这家店（押金 {shop.Lease.Deposit} 退回）…" : "退租：" + why, () => ConfirmCloseShop(shop), 16, Ui.ButtonBg, why == null);
+                close.name = "CloseShop";
+                Ui.Size(close, -1, 40);
+            }
             RectTransform list = Ui.Scroll(C, 400);
             foreach (ShopUpgradeDef u in ShopUpgrades.All.Where(x => x.Offered))
             {

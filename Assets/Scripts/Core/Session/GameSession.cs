@@ -197,6 +197,8 @@ namespace PCShopSell.Core.Session
             SetFocus(ShopAt(place));
             CurrentPlace = place;
             CourierDest = null;
+            CloseCourierRuns();
+            ClearCarts();
             if (InPlayerShop)
             {
                 PlayerShop.PlayerPresent = true;
@@ -226,6 +228,7 @@ namespace PCShopSell.Core.Session
             if (left.NodeId == PlayerNodeId && Dist(stand, City.ViewPosition(left.NodeId)) > 1e-3) _free = stand;
             _mallCart.Clear();
             CloseCourierRuns();
+            ClearCarts();
         }
 
         /// <summary>玩家直接站到某个节点（读档、测试用）。</summary>
@@ -500,7 +503,13 @@ namespace PCShopSell.Core.Session
             return false;
         }
 
-        private void Say(string message) => Notice?.Invoke(message);
+        /// <summary>大于 0 时 Say 不出声（结账时一件件买，最后只报一次总账）。</summary>
+        private int _quiet;
+
+        private void Say(string message)
+        {
+            if (_quiet == 0) Notice?.Invoke(message);
+        }
 
         private void Show(string title, string body) => Popup?.Invoke(title, body);
 

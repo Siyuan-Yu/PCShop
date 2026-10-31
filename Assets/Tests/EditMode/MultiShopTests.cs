@@ -3,6 +3,7 @@ using NUnit.Framework;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
 
 namespace PCShopSell.Tests
 {
@@ -94,22 +95,119 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void CloseShop_MovesGoodsHomeAndRefundsDeposit()
+        public void CloseShop_InsideAndEmpty_RefundsDeposit()
         {
             GameSession s = TwoShops();
-            int mainCount = s.MainShop.Sim.Stock.Lines().Sum(l => l.Count);
             var part = s.MainShop.Sim.Stock.Lines().First().Part;
             s.ShopAt("tea").Sim.Stock.ForceAdd(part, true, 3);
+            StringAssert.Contains("在这家店里", s.CloseShopBlocker(s.ShopAt("tea")), "退租要在店里办");
+            GameSessionTests.Teleport(s, "tea");
+            StringAssert.Contains("货车", s.CloseShopBlocker(s.ShopAt("tea")), "有货先叫货车搬走");
+            s.ShopAt("tea").Sim.Stock.Clear();
             Money deposit = s.ShopAt("tea").Lease.Deposit;
             Money before = s.Ledger.Balance;
-            Assert.IsNotNull(s.CloseShopBlocker(s.MainShop), "主店不能退");
             Assert.IsTrue(s.CloseShop("tea"));
+            Assert.IsNull(s.CurrentPlace, "退完走到门口");
             Assert.AreEqual(1, s.MyShopCount);
             Assert.AreEqual("pc", s.PlayerShopPlace.Id);
-            Assert.AreEqual(mainCount + 3, s.MainShop.Sim.Stock.Lines().Sum(l => l.Count), "货搬回主店");
             Assert.AreEqual((before + deposit).Cents, s.Ledger.Balance.Cents, "押金退回");
             Assert.IsTrue(s.IsVacant(s.City.GetPlace("tea")));
             Assert.IsTrue(s.Listings.Any(l => l.PlaceId == "tea"), "铺子重新挂牌");
+            GameSessionTests.Teleport(s, "pc");
+            StringAssert.Contains("唯一", s.CloseShopBlocker(s.MainShop), "最后一家店不能退");
+        }
+
+        [Test]
+        public void CloseMainShop_NextShopBecomesMain()
+        {
+            GameSession s = TwoShops();
+            s.PlayerShop.Reputation = 55;
+            GameSessionTests.Teleport(s, "pc");
+            s.PlayerShop.Stock.Clear();
+            Assert.IsNull(s.CloseShopBlocker(s.MainShop));
+            Assert.IsTrue(s.CloseShop("pc"));
+            Assert.AreEqual("tea", s.MainShop.Place.Id);
+            Assert.AreEqual(GameSession.MyShopName, s.PlaceTitle(s.City.GetPlace("tea")));
+            Assert.AreEqual(55, s.PlayerShop.Reputation, 1e-6, "知名度跟着新主店");
+            GameSession b = GameSession.Load(s.City, s.CreateSave());
+            Assert.AreEqual("tea", b.MainShop.Place.Id);
+            Assert.AreEqual(1, b.MyShopCount);
+        }
+
+        [Test]
+        public void Courier_CanDeliverToAnyOwnShop()
+        {
+            GameSession s = TwoShops();
+            Assert.AreEqual("tea", s.PlayerShopPlace.Id);
+            GameSessionTests.Teleport(s, "flat");
+            s.HomeBoxParts.ForceAdd(s.MainShop.Sim.Stock.Lines().First().Part, true, 2);
+            var part = s.HomeBoxParts.Lines().First().Part;
+            int before = s.MainShop.Sim.Stock.Count(part, true);
+            s.SetCourierDest(s.MainShop);
+            Assert.AreEqual(s.MainShop, s.TruckDest, "可以选不是当前店的那家");
+            string key = s.MovableHere().First(m => m.Key.StartsWith("box|part:")).Key;
+            Assert.IsTrue(s.AddToTruck(key, 2));
+            Assert.AreEqual(2, s.HomeBoxParts.Count(part, true), "装货单还没出发，东西还在原处");
+            Money fee = s.TruckFreight;
+            Money cash = s.Ledger.Balance;
+            Assert.IsTrue(s.DispatchTruck());
+            Assert.AreEqual((cash - fee).Cents, s.Ledger.Balance.Cents, "出发时一起付运费");
+            Assert.AreEqual(0, s.HomeBoxParts.Count(part, true));
+            Assert.AreEqual("pc", s.Couriers.Single().ShopId);
+            s.AdvanceClock(s.CourierQuote(s.MainShop).minutes + 5);
+            Assert.AreEqual(before + 2, s.MainShop.Sim.Stock.Count(part, true), "送进了主店，不是当前店");
+            Assert.AreEqual(0, s.ShopAt("tea").Sim.Stock.Count(part, true));
+        }
+
+        [Test]
+        public void Truck_CannotSendToWhereYouStand()
+        {
+            GameSession s = TwoShops();
+            GameSessionTests.Teleport(s, "flat");
+            s.SetCourierDest(null);
+            Assert.IsNotNull(s.TruckDestBlocker, "人在家不能叫车送家里");
+            s.SetCourierDest(s.ShopAt("tea"));
+            Assert.IsNull(s.TruckDestBlocker);
+        }
+
+        [Test]
+        public void Cart_SplitsBagAndTruck_FreightPaidOnce()
+        {
+            GameSession s = GameSessionTests.Make(200000, 10 * 60);
+            Place stall = s.City.GetPlace("stall");
+            GameSessionTests.Teleport(s, "stall");
+            var part = PCShopSell.Core.Catalog.PartCatalog.All.First(p => s.StallSells(stall, p));
+            Assert.IsTrue(s.CartAddStall(stall, part, 3));
+            Assert.AreEqual(0, s.Ledger.Entries.Count(e => e.Category == "进货"), "加进购物车还没付钱");
+            Assert.IsTrue(s.CartToBag("part:" + part.Id, 1));
+            Assert.AreEqual(1, s.CartCars(true), "剩下两件一辆车");
+            Money cash = s.Ledger.Balance;
+            Money due = s.CartGoods + s.CartFreight(true);
+            Assert.IsNull(s.CheckoutBlocker(true));
+            Assert.IsTrue(s.Checkout(true));
+            Assert.AreEqual((cash - due).Cents, s.Ledger.Balance.Cents, "货款 + 一辆车的运费");
+            Assert.AreEqual(1, s.Cargo.Count(part, true), "一件自己背");
+            Assert.AreEqual(2, s.Couriers.Sum(r => r.Items.Sum(i => i.Count)), "两件叫车");
+            Assert.AreEqual(1, s.Ledger.Entries.Count(e => e.Category == "运费"), "运费只收一次");
+            Assert.AreEqual(0, s.Cart.Count);
+        }
+
+        [Test]
+        public void Cart_BagOverweight_Blocks()
+        {
+            GameSession s = GameSessionTests.Make(200000, 10 * 60);
+            Place stall = s.City.GetPlace("stall");
+            GameSessionTests.Teleport(s, "stall");
+            var part = PCShopSell.Core.Catalog.PartCatalog.All.First(p => s.StallSells(stall, p));
+            int n = s.StallRemaining(stall, part);
+            Assert.IsTrue(s.CartAddStall(stall, part, n));
+            s.CartToBag("part:" + part.Id, n);
+            Assume.That(s.CartBagKg > s.FreeKg, "老板给的不够多，背包装得下");
+            StringAssert.Contains("背包放不下", s.CheckoutBlocker(true));
+            s.CartAllToTruck();
+            s.CartFillBag();
+            Assert.IsNull(s.CheckoutBlocker(true), "背得动的放背包，剩下叫车");
+            Assert.LessOrEqual(s.CartBagKg, s.FreeKg + 1e-9);
         }
 
         [Test]

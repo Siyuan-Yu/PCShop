@@ -195,15 +195,24 @@ namespace PCShopSell.Game.UI
         /// <summary>通讯录：认识的人，打电话约出去。</summary>
         public void OpenContactsPanel()
         {
-            OpenWindow("通讯录", 700, 560, w =>
+            OpenWindow("通讯录", 700, 620, w =>
             {
+                RectTransform driver = Ui.Row(w.Content, 52);
+                Ui.Size(Ui.Label(driver, $"<b>{GameSession.TruckDriverName}</b>  <size=15><color=#A8B0BA>开面包车，随叫随到，帮你把东西搬到家里或任意一家店</color></size>", 17), -1, -1, 1);
+                var call = Ui.Button(driver, "打电话叫车", () =>
+                {
+                    w.Close();
+                    OpenTruckWindow();
+                }, 15, Ui.ButtonHot);
+                call.name = "CallTruck";
+                Ui.Size(call, 150);
                 var met = Npcs.All.Where(n => S.IsMet(n.Id)).ToList();
                 if (met.Count == 0)
                 {
-                    Line(w.Content, "手机里一个号码都没有。认识了人才会存进来（留心店里的随机事件、去档口逛逛）。", 17, Ui.Dim);
+                    Line(w.Content, "别的号码还没有。认识了人才会存进来（留心店里的随机事件、去档口逛逛）。", 17, Ui.Dim);
                     return;
                 }
-                RectTransform list = Ui.Scroll(w.Content, 460);
+                RectTransform list = Ui.Scroll(w.Content, 440);
                 foreach (NpcDef def in met)
                 {
                     NpcDef n = def;

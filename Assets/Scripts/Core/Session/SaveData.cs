@@ -343,6 +343,9 @@ namespace PCShopSell.Core.Session
 
         /// <summary>叫车送到哪：0 = 按店默认，1 = 家里，2 = 店里。</summary>
         public int courierDest;
+
+        /// <summary>courierDest = 2 时具体送哪家店（铺面 id）；空 = 当前这家店。</summary>
+        public string courierDestShop;
     }
 
     /// <summary>一个储物处（店里储物柜）里的米菜、饭盒、礼品、家具。</summary>

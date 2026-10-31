@@ -115,40 +115,54 @@ namespace PCShopSell.Core.Session
             SetFocus(shop);
         }
 
-        /// <summary>为什么这家店现在退不了租；能退返回 null。</summary>
+        /// <summary>为什么这家店现在退不了租；能退返回 null。退租在店里办，货要先叫货车搬走。</summary>
         public string CloseShopBlocker(OwnedShop s)
         {
             if (s == null || !s.Rented) return "这不是你的店";
-            if (s == MainShop) return "主店不能退租，想换地方可以签新铺子搬店";
-            if (s.Sim.Orders.Count > 0) return "这家店还有没交付的装机单";
-            if (CurrentPlace == s.Place) return "先出门再办退租";
+            if (MyShopCount <= 1) return "这是你唯一的店。想换地方：先去中介再签一间，叫货车把货搬过去，再回这里退租";
+            if (CurrentPlace != s.Place) return "要在这家店里办退租";
+            if (s.Sim.Orders.Count > 0) return "还有没交付的装机单";
+            if (s.Sim.DisplayPcs.Count > 0) return "展示台上还摆着整机，先拆回库存";
+            if (!s.Sim.Stock.IsEmpty) return "店里还有货，先打电话叫货车搬走";
+            if (_couriers.Any(r => r.ToShop && r.ShopId == s.Place.Id)) return "还有车在往这家店送货";
+            if (Online.Pending.Any(o => !o.ToHome && o.ShopId == s.Place.Id) || _directShipments.Any(x => x.ShopId == s.Place.Id)) return "还有货在往这家店寄";
             return null;
         }
 
-        /// <summary>退掉一家分出来的自营店：货和展示机搬回主店，摆的家具收回“我的”，员工辞退，押金退还，铺子重新挂牌。</summary>
+        /// <summary>
+        /// 在店里退掉这家店：摆的家具收回“我的”，这家店的员工辞退，押金退还，人走到门口，铺子重新挂牌。
+        /// 退的是主店时，下一家顶上当主店。
+        /// </summary>
         public bool CloseShop(string placeId)
         {
-            if (!InAgency) return Fail("要在房产中介办理退租。");
             OwnedShop s = ShopAt(placeId);
             string why = CloseShopBlocker(s);
             if (why != null) return Fail(why + "。");
             string title = ShopTitle(s);
-            ShopSimulation main = MainShop.Sim;
+            Leave();
+            if (CurrentPlace == s.Place) return false;
+            double reputation = MainShop.Sim.Reputation;
             s.Sim.ClearCustomers();
-            foreach (StockLine l in s.Sim.Stock.Lines().ToList()) main.Stock.ForceAdd(l.Part, l.Boxed, l.Count);
-            foreach (var kv in s.Sim.Stock.GoodsLines().ToList()) main.Stock.ForceAddGoods(kv.Key, kv.Value);
-            foreach (int tier in s.Sim.DisplayPcs)
-                foreach (PartDef p in PartCatalog.BuildList(tier)) main.Stock.ForceAdd(p, false, 1);
             foreach (PlacedFurniture f in s.Layout) AddFurniture(f.Id, 1);
             if (s.Lease.Deposit.IsPositive) Ledger.Credit(Clock.Today, "押金", s.Lease.Deposit, $"退还{title}押金");
+            bool hadStaff = s.Employee != null || s.Assembler != null;
             Money rent = s.Lease.Rent;
-            s.Sim.Dispose();
-            if (_focus == s) SetFocus(MainShop);
+            bool wasMain = s == MainShop;
             _shops.Remove(s);
+            s.Sim.Dispose();
+            if (wasMain)
+            {
+                ShopSimulation main = MainShop.Sim;
+                main.ShareReputationWith(main);
+                main.Reputation = reputation;
+                foreach (OwnedShop o in _shops.Skip(1)) o.Sim.ShareReputationWith(main);
+            }
+            if (_focus == s) SetFocus(MainShop);
             _vacant.Add(placeId);
             if (PropertyAt(placeId) == null) AddListing(City.GetPlace(placeId), Clock.Today.TotalDays, Clock.Today.TotalDays + 45, rent);
             WithShop(MainShop, ApplyUpgrades);
-            Show("退租了", $"{title}退租了，押金 {s.Lease.Deposit} 退回。货和展示机都搬回了主店后仓，店里摆的家具收回“我的”，员工也辞退了。");
+            Show("退租了", $"{title}（{s.Place.Name}）退租了，押金 {s.Lease.Deposit} 退回，店里摆的家具收回“我的”" + (hadStaff ? "，这家店的员工也辞退了" : "")
+                + (wasMain ? $"。现在{ShopTitle(MainShop)}（{MainShop.Place.Name}）是主店。" : "。"));
             return true;
         }
 
