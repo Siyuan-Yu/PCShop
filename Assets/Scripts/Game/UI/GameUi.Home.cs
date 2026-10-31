@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
@@ -903,48 +904,74 @@ namespace PCShopSell.Game.UI
 
         private void BuildMall(Window w, Place p)
         {
+            bool hasStash = S.MallStashCount > 0;
+            var tabs = new List<string> { "家里用", "店面设施", "店里装饰", "店铺设备" };
+            if (hasStash) tabs.Add("寄存的货");
+            // 还在毛坯里的时候，先给店面设施
+            string tab = ShopTabs(w, p, tabs, S.HasShop && !S.ShopFitted ? "店面设施" : null);
             Para(w.Content, "先把要买的加进购物车，在下面分好哪些自己背、哪些叫车，再一起结账。线上同款便宜 15%，2 天到家。", 15, Ui.Dim);
             Line(w.Content, $"现金 {S.Ledger.Balance}　　来时的载具：{S.CurrentVehicle.Name}，还能背 {S.FreeKg:0.#} 公斤", 17);
-            bool hasStash = S.MallStashCount > 0;
-            RectTransform list = Ui.Scroll(w.Content, hasStash ? 170 : 270);
-            void HomeSection()
+            RectTransform list = GoodsList(w.Content);
+            switch (tab)
             {
-                Line(list, "—— 家里用 ——", 18, Ui.Accent);
-                foreach (FurnitureDef f in FurnitureCatalog.Purchasable(false)) MallRow(w, list, f);
+                case "家里用":
+                    foreach (FurnitureDef f in FurnitureCatalog.Purchasable(false)) MallRow(w, list, f);
+                    break;
+                case "店面设施":
+                    Line(list, "租来的铺子是空的，这些是开店必备，买回去歇业装修时摆好。", 15, Ui.Dim);
+                    if (S.HasShop) Para(list, FitChecklistText(), 14, Ui.Dim);
+                    foreach (FurnitureDef f in FurnitureCatalog.Purchasable(true).Where(x => x.IsFixture)) MallRow(w, list, f);
+                    break;
+                case "店里装饰":
+                    Line(list, "摆放要歇业装修一天。", 15, Ui.Dim);
+                    foreach (FurnitureDef f in FurnitureCatalog.Purchasable(true).Where(x => !x.IsFixture)) MallRow(w, list, f);
+                    break;
+                case "店铺设备":
+                    UpgradeSaleRows(w, list, ShopUpgrades.FurnitureMall);
+                    break;
+                default:
+                    BuildMallStash(w, list);
+                    break;
             }
-
-            void ShopSection()
-            {
-                Line(list, "—— 店面设施（租来的铺子是空的，开店必备，买回去歇业装修时摆好）——", 18, Ui.Accent);
-                if (S.HasShop) Para(list, FitChecklistText(), 14, Ui.Dim);
-                foreach (FurnitureDef f in FurnitureCatalog.Purchasable(true).Where(x => x.IsFixture)) MallRow(w, list, f);
-                Line(list, "—— 店里的装饰（摆放要歇业装修一天）——", 18, Ui.Accent);
-                foreach (FurnitureDef f in FurnitureCatalog.Purchasable(true).Where(x => !x.IsFixture)) MallRow(w, list, f);
-                UpgradeSaleRows(w, list, ShopUpgrades.FurnitureMall);
-            }
-
-            // 还在毛坯里的时候，先给店面设施
-            if (S.HasShop && !S.ShopFitted)
-            {
-                ShopSection();
-                HomeSection();
-            }
-            else
-            {
-                HomeSection();
-                ShopSection();
-            }
-            if (hasStash) BuildMallStash(w);
             CartPanel(w, w.Content, false);
+        }
+
+        private readonly Dictionary<string, string> _shopTabs = new Dictionary<string, string>();
+
+        /// <summary>店里货品分类的标签栏（窗口最上面），返回当前选中的那一类；每家店各记各的。</summary>
+        private string ShopTabs(Window w, Place p, IList<string> tabs, string fallback = null)
+        {
+            if (!_shopTabs.TryGetValue(p.Id, out string cur) || !tabs.Contains(cur)) cur = fallback ?? tabs[0];
+            RectTransform bar = Ui.Row(w.Content, 42, 6);
+            foreach (string t in tabs)
+            {
+                string tab = t;
+                bool on = tab == cur;
+                var b = Ui.Button(bar, tab, () =>
+                {
+                    _shopTabs[p.Id] = tab;
+                    w.Rebuild();
+                }, 17, on ? Ui.ButtonHot : new Color(0.2f, 0.24f, 0.3f));
+                b.name = "ShopTab_" + tab;
+                Ui.Size(b, Mathf.Max(96, tab.Length * 19 + 36));
+            }
+            return cur;
+        }
+
+        /// <summary>货品列表：至少 minHeight 高，窗口里剩下的高度都给它（购物车空着时就很长）。</summary>
+        private static RectTransform GoodsList(Transform parent, float minHeight = 220)
+        {
+            RectTransform list = Ui.Scroll(parent, minHeight);
+            ((RectTransform)list.parent.parent).GetComponent<LayoutElement>().flexibleHeight = 1;
+            return list;
         }
 
         private static readonly Color CellFree = new Color(0.16f, 0.18f, 0.22f);
 
         /// <summary>以前寄存在店里的货：自己来搬（装不下就分几趟），或者全叫货车送回家。</summary>
-        private void BuildMallStash(Window w)
+        private void BuildMallStash(Window w, RectTransform stash)
         {
-            Line(w.Content, $"—— 寄存在店里的货（已付过钱，不过期）{S.MallStashCount} 件，共 {S.MallStashKg:0.#} 公斤 ——", 17, Ui.Accent);
-            RectTransform stash = Ui.Scroll(w.Content, 100);
+            Line(stash, $"寄存在店里的货（已付过钱，不过期）{S.MallStashCount} 件，共 {S.MallStashKg:0.#} 公斤", 17, Ui.Accent);
             foreach (MallCartLine l in S.MallStash.ToList())
             {
                 FurnitureDef d = FurnitureCatalog.Get(l.Id);
@@ -957,7 +984,7 @@ namespace PCShopSell.Game.UI
                     w.Rebuild();
                 }, 16, Ui.ButtonHot, fits), 110);
             }
-            RectTransform bar = Ui.Row(w.Content, 44, 8);
+            RectTransform bar = Ui.Row(stash, 44, 8);
             Ui.Size(Ui.Button(bar, "能搬的全搬走", () =>
             {
                 S.TakeStashWhatFits();
@@ -984,12 +1011,18 @@ namespace PCShopSell.Game.UI
 
         private void BuildTobacco(Window w, Place p)
         {
+            List<GiftDef> goods = Gifts.All.Where(x => x.SoldAt == Gifts.TobaccoBusiness).ToList();
+            List<string> tabs = goods.Select(TobaccoTab).Distinct().ToList();
+            string tab = ShopTabs(w, p, tabs);
             Line(w.Content, "烟酒茶行：先加进购物车，结账时分好自己背的和叫车送的。网购便宜 15%，但要等 2 天。", 16, Ui.Dim);
             Line(w.Content, $"现金 {S.Ledger.Balance}　　还能背 {S.FreeKg:0.#} 公斤", 18, Ui.Dim);
-            RectTransform list = Ui.Scroll(w.Content, 250);
-            foreach (GiftDef def in Gifts.All.Where(x => x.SoldAt == Gifts.TobaccoBusiness)) ShopGiftRow(w, list, def, true);
+            RectTransform list = GoodsList(w.Content);
+            foreach (GiftDef def in goods.Where(x => TobaccoTab(x) == tab)) ShopGiftRow(w, list, def, true);
             CartPanel(w, w.Content, false);
         }
+
+        private static string TobaccoTab(GiftDef g) =>
+            g.Id == Gifts.Cig || g.Id == Gifts.CigHi ? "烟" : g.Id == Gifts.Wine || g.Id == Gifts.Baijiu ? "酒" : "饮料点心";
 
         private void ShopGiftRow(Window w, RectTransform list, GiftDef def, bool open)
         {
@@ -1044,11 +1077,20 @@ namespace PCShopSell.Game.UI
         private void BuildFarm(Window w, Place p)
         {
             bool open = S.IsFarmMarketOpen;
+            string tab = ShopTabs(w, p, new[] { "米", "菜蛋肉", "水果" });
             Line(w.Content, open ? "营业中（每天 6:00–18:00）。米按斤卖，菜、蛋、肉当天最新鲜。" : "<color=#D79780>收摊了（每天 6:00–18:00）</color>");
             Line(w.Content, $"现金 {S.Ledger.Balance}   大米：背包 {S.Backpack.Food.RiceJin:0.#} 斤 / 家里 {S.Pantry.RiceJin:0.#} 斤", 18, Ui.Dim);
             Line(w.Content, "先加进购物车，结账时分好自己背的和叫车送的。背回去的要打开背包放进厨房；叫车的直接送进厨房。家里没有冰箱，买多了会放坏。", 15, Ui.Dim);
-            RectTransform list = Ui.Scroll(w.Content, 290);
+            RectTransform list = GoodsList(w.Content);
+            if (tab == "水果")
+                foreach (GiftDef g in Gifts.All.Where(x => x.SoldAt == Gifts.FarmBusiness)) ShopGiftRow(w, list, g, open);
+            if (tab == "菜蛋肉") FarmIngredientRows(w, list, open);
+            if (tab == "米") FarmRiceRow(w, list, open);
+            CartPanel(w, w.Content, false);
+        }
 
+        private void FarmRiceRow(Window w, RectTransform list, bool open)
+        {
             RectTransform rrow = Ui.Row(list, 50);
             Ui.Size(Ui.Label(rrow, $"大米 {Pantry.RicePricePerJin}/斤", 19), 200);
             double riceIn = S.CartAmount("rice");
@@ -1062,9 +1104,10 @@ namespace PCShopSell.Game.UI
                     w.Rebuild();
                 }, 17, Ui.ButtonHot, open), 90);
             }
+        }
 
-            foreach (GiftDef g in Gifts.All.Where(x => x.SoldAt == Gifts.FarmBusiness)) ShopGiftRow(w, list, g, open);
-
+        private void FarmIngredientRows(Window w, RectTransform list, bool open)
+        {
             foreach (IngredientDef def in Ingredients.All)
             {
                 IngredientDef d = def;
@@ -1078,7 +1121,6 @@ namespace PCShopSell.Game.UI
                     CartAddButton(w, row, "ing:" + d.Id, () => S.CartAddIngredient(d.Id, count), "+" + count, 70, open, n == 1);
                 }
             }
-            CartPanel(w, w.Content, false);
         }
 
         // ---------- 摆放模式面板 ----------

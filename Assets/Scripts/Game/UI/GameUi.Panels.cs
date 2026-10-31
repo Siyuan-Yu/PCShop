@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -98,11 +99,14 @@ namespace PCShopSell.Game.UI
         private void BuildStall(Window w, Place p)
         {
             bool open = S.IsWholesalerOpen;
+            List<PartDef> sold = PartCatalog.All.Where(x => S.StallSells(p, x)).ToList();
+            List<string> tabs = sold.Select(x => PartCatalog.CategoryName(x.Category)).Distinct().ToList();
+            string tab = tabs.Count > 0 ? ShopTabs(w, p, tabs) : null;
             Line(w.Content, open ? "营业中（工作日 9:00–18:00）。批发价，只卖盒装正品。" : "<color=#D79780>关门了（工作日 9:00–18:00 营业）</color>");
             Line(w.Content, $"现金 {S.Ledger.Balance}　　{S.CurrentVehicle.Name}还能背 {S.FreeKg:0.#} 公斤　　先加进购物车，结账时分好自己背的和叫车送的", 17, Ui.Dim);
 
-            RectTransform list = Ui.Scroll(w.Content, 260);
-            foreach (PartDef part in PartCatalog.All.Where(x => S.StallSells(p, x)))
+            RectTransform list = GoodsList(w.Content);
+            foreach (PartDef part in sold.Where(x => PartCatalog.CategoryName(x.Category) == tab))
             {
                 PartDef pd = part;
                 Money price = S.StallPrice(p, pd);
