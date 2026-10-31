@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using PCShopSell.Core.Catalog;
@@ -31,6 +31,9 @@ namespace PCShopSell.Game.UI
                     break;
                 case PlaceKind.Home:
                     Toast("回到出租屋了。走近床、衣柜、电饭锅、纸箱或门，头顶出现提示时按 F；看房间信息点右上角“我的”。");
+                    break;
+                case PlaceKind.Shop when p.Business == GameSession.FastFoodBusiness && !S.IsVacant(p) && S.VentureAt(p.Id) == null && S.PropertyAt(p.Id) == null:
+                    OpenPlaceWindow(p, BuildFastFood, 1080, 850);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.MallBusiness:
                     OpenPlaceWindow(p, BuildMall, 1140, 960);

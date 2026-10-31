@@ -4,6 +4,8 @@
 
 ## 文档
 
+- [`docs/23-fast-food-menu.md`](docs/23-fast-food-menu.md)：快餐店六项堂食菜单、饱腹/营养/心情、营业与扣费校验，554项测试通过
+
 - [`docs/22-price-tags-quantities-and-sleep.md`](docs/22-price-tags-quantities-and-sleep.md)：价签加减、长按购物数量、次日自动到岗、自选起床与8小时睡眠；547项回归，无新增截图
 - [`docs/21-cart-default-backpack.md`](docs/21-cart-default-backpack.md)：购物默认先放背包，超重再叫车；背包栏在前
 - [`docs/20-unified-clock-and-kilograms.md`](docs/20-unified-clock-and-kilograms.md)：室内/街上走停统一时钟、全游戏重量统一千克、旧档等量转换

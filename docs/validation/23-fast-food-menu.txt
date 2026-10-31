@@ -1,0 +1,14 @@
+2026-11-01 fast food menu
+EditMode: total=554 passed=554 failed=0
+Command: powershell -File tools/run-tests.ps1
+Scene: PCShopSell.EditorTools.GameSceneBuilder.FastFoodFromBatch
+No screenshots generated.
+SMOKE OK 实际城市快餐店显示六种可购买餐品
+SMOKE OK 点餐不需要输入数字
+SMOKE OK 快餐菜单保留原有打工入口
+SMOKE OK 菜单展示价格、饱腹、营养与心情
+SMOKE OK 点击套餐实际扣费、吃饱并消耗用餐时间
+SMOKE OK 吃完留在快餐菜单，可继续点餐或关闭离店
+SMOKE OK 可乐可购买饮用
+SMOKE OK 关闭菜单回街上
+SMOKE RESULT code=0 errors=0
