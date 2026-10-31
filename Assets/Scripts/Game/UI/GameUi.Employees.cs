@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -166,13 +166,13 @@ namespace PCShopSell.Game.UI
                     int count = selected.TryGetValue(offer.Key, out var lineItem) ? lineItem.Count : 0;
                     if (selectedOnly && count == 0) continue;
                     void Set(int value) { if (value <= 0) selected.Remove(offer.Key); else selected[offer.Key] = offer.Line(Math.Min(100, value)); Sync(); w.RequestRebuild(); }
-                    var line = Ui.Row(goods, 46);
+                    var line = Ui.Row(goods, 68);
                     string details = offer.Source.Name;
                     if (offer.Kind == PurchaseGoodsKind.Part)
                         details += $" · 库存 {worker.Shop.Sim.Stock.CountAll(PartCatalog.Get(offer.Id))} · 在途 {S.PendingPurchaseCount(worker.Shop, offer.Id)}";
                     else if (offer.Kind == PurchaseGoodsKind.Gift)
                         details += $" · 库存 {worker.Shop.Sim.Stock.GoodsCount(offer.Id)}";
-                    Ui.Size(Ui.Label(line, offer.Name + "\n<size=13>" + details + "</size>", 16), -1, -1, 1);
+                    Ui.Size(Ui.Label(line, ProductLabel(offer.Name, offer.UnitKg, details), 16), -1, -1, 1);
                     Ui.Size(Ui.Label(line, offer.Price + (offer.Kind == PurchaseGoodsKind.Rice ? "/袋" : offer.Kind == PurchaseGoodsKind.Ingredient ? "/份" : "/件"), 16), 130);
                     QuantityStepper(w, line, offer.Key, count, 0, 100, 1, value => Set((int)value));
                 }
@@ -186,9 +186,9 @@ namespace PCShopSell.Game.UI
                 {
                     var choice = item;
                     var offer = S.EmployeePurchaseOffer(choice);
-                    var row = Ui.Row(chosenList, 34);
+                    var row = Ui.Row(chosenList, 58);
                     string source = offer?.Source.Name ?? choice.SourceId ?? "自动选货源";
-                    Ui.Size(Ui.Label(row, source + " · " + GameSession.PurchaseItemName(choice) + " ×" + choice.Count, 16), -1, -1, 1);
+                    Ui.Size(Ui.Label(row, offer == null ? GameSession.PurchaseItemName(choice) + " ×" + choice.Count : ProductLabel(GameSession.PurchaseItemName(choice) + " ×" + choice.Count, offer.UnitKg, source), 16), -1, -1, 1);
                     Ui.Size(Ui.Label(row, offer == null ? "货源不可用" : (offer.Price * choice.Count).ToString(), 16), 130);
                     Ui.Size(Ui.Button(row, "移出清单", () => { selected.Remove(GameSession.PurchaseKey(choice)); Sync(); w.Rebuild(); }, 15), 110);
                 }

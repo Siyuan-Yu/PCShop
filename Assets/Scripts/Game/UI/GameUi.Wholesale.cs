@@ -80,8 +80,8 @@ namespace PCShopSell.Game.UI
                 _cart.TryGetValue(p.Id, out int n);
                 total += price * n;
                 space += Stock.SpaceOf(p, true, n);
-                RectTransform row = Ui.Row(list, 34);
-                Ui.Size(Ui.Label(row, p.Name, 16), 260);
+                RectTransform row = Ui.Row(list, 54);
+                Ui.Size(Ui.Label(row, ProductLabel(p.Name, PartUnitKg(p)), 16), 260);
                 Ui.Size(Ui.Label(row, $"{price}", 16, TextAnchor.MiddleLeft, Ui.Good), 90);
                 Ui.Size(Ui.Label(row, $"市价 {S.Market.PriceOf(p)}", 13, TextAnchor.MiddleLeft, Ui.Dim), 100);
                 Ui.Size(Ui.Label(row, $"店里有 {S.PlayerShop.Stock.CountAll(p)}", 13, TextAnchor.MiddleLeft, Ui.Dim), 90);
@@ -151,12 +151,12 @@ namespace PCShopSell.Game.UI
             foreach (PartDef part in PartCatalog.All)
             {
                 PartDef p = part;
-                RectTransform row = Ui.Row(list, 40, 4);
+                RectTransform row = Ui.Row(list, 66, 4);
                 Text name = Ui.Label(row, "", 15);
                 Ui.Size(name, 420);
                 int have = S.PlayerShop.Stock.CountAll(p), pend = S.PendingOnlineCount(p.Id);
                 string stock = have == 0 ? "<color=#D79780>店里有 0 件</color>" : $"店里有 {have} 件";
-                name.text = $"<b>{p.Name}</b>　<size=13>{stock}{(pend > 0 ? $" · 路上 {pend}" : "")}</size>";
+                name.text = ProductLabel($"<b>{p.Name}</b>", PartUnitKg(p), stock + (pend > 0 ? $" · 路上 {pend}" : ""));
                 QuantityStepper(w, row, "restock_" + p.Id, S.RestockTarget(p.Id), 0, 1000, 1,
                     value => S.SetRestockTarget(p.Id, (int)value), value => value == 0 ? "关" : value.ToString("0"));
             }

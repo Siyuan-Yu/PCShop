@@ -4,6 +4,8 @@
 
 ## 文档
 
+- [`docs/25-product-weight-labels.md`](docs/25-product-weight-labels.md)：所有商品名称下的实际千克重量、各购买渠道和背包的统一说明
+
 - [`docs/24-live-price-preview-and-confirm.md`](docs/24-live-price-preview-and-confirm.md)：调价时实时预览购买意愿，点“确定”保存售价；556项回归通过
 
 - [`docs/23-fast-food-menu.md`](docs/23-fast-food-menu.md)：快餐店六项堂食菜单、饱腹/营养/心情、营业与扣费校验，554项测试通过

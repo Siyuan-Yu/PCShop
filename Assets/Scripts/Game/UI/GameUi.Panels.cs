@@ -116,8 +116,8 @@ namespace PCShopSell.Game.UI
                 PartDef pd = part;
                 Money price = S.StallPrice(p, pd);
                 Money market = S.Market.PriceOf(pd);
-                RectTransform row = Ui.Row(list, 50);
-                Ui.Size(Ui.Label(row, $"{pd.Name}\n<size=13><color=#ABB5A8>市价 {market} · {Stock.SpaceOf(pd, true, 1):0.#}格</color></size>", 17), 210);
+                RectTransform row = Ui.Row(list, 72);
+                Ui.Size(Ui.Label(row, ProductLabel(pd.Name, PartUnitKg(pd), $"市价 {market} · {Stock.SpaceOf(pd, true, 1):0.#}格"), 17), 210);
                 Ui.Size(Ui.Label(row, $"{price}", 18, TextAnchor.MiddleLeft, Ui.Good), 84);
                 int left = S.StallRemaining(p, pd) - (int)S.CartAmount("part:" + pd.Id);
                 Ui.Size(Ui.Label(row, $"余 {left}", 14, TextAnchor.MiddleLeft, left == 0 ? Ui.Warn : Ui.Dim), 52);
@@ -138,9 +138,9 @@ namespace PCShopSell.Game.UI
             foreach (VehicleSpec v in Vehicles.All.Where(x => x.Purchasable))
             {
                 VehicleSpec vs = v;
-                RectTransform row = Ui.Row(w.Content, 78);
+                RectTransform row = Ui.Row(w.Content, 100);
                 string upkeep = vs.Kind == VehicleKind.Car ? " · 魅力 +2 · 日养护 ¥40" : vs.Kind == VehicleKind.Van ? " · 日养护 ¥60" : "";
-                string desc = $"{vs.Name}  {vs.Price}{upkeep}\n<size=15>速度 {vs.SpeedPerMinute * 60 / 1000:0} km/h · 载货 {vs.CargoCapacity:0} 格{(vs.Illegal ? " · <color=#D79780>城里不能上路，交警会追</color>" : "")}</size>";
+                string desc = $"{vs.Name}  {vs.Price}{upkeep}\n<size=13><color=#A8B0BA>载具，不装入背包</color></size>\n<size=15>速度 {vs.SpeedPerMinute * 60 / 1000:0} km/h · 载货 {vs.CargoCapacity:0} 格{(vs.Illegal ? " · <color=#D79780>城里不能上路，交警会追</color>" : "")}</size>";
                 Ui.Size(Ui.Label(row, desc + "\n<size=14>" + S.VehicleUsage(vs.Kind) + "</size>", 18), 760);
                 bool owned = S.Owns(vs.Kind);
                 Ui.Size(Ui.Button(row, owned ? "再买一台" : "购买一台", () =>

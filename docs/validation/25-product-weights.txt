@@ -1,0 +1,20 @@
+2026-11-01 product weight labels
+EditMode: total=556 passed=556 failed=0
+Command: powershell -File tools/run-tests.ps1
+Scene: PCShopSell.EditorTools.GameSceneBuilder.ProductWeightsFromBatch
+No screenshots generated.
+SMOKE OK 档口商品名称下显示与盒装承重一致的千克重量
+SMOKE OK 购物车继续显示单件和本批重量
+SMOKE OK 散装大米说明每次加购重量
+SMOKE OK 可点击引导按钮：菜蛋肉
+SMOKE OK 食材名称下显示每份实际千克数
+SMOKE OK 实体礼品显示重量
+SMOKE OK 网购家具名称下显示实际重量
+SMOKE OK 可点击引导按钮：礼品
+SMOKE OK 网购礼品显示重量
+SMOKE OK 可点击引导按钮：大米
+SMOKE OK 网购大米显示整袋重量而非散装步长
+SMOKE OK 1788批发商品显示盒装实际重量
+SMOKE OK 员工采购商品显示UnitKg重量
+SMOKE OK 货架盒装与散件分别显示不同实际重量
+SMOKE RESULT code=0 errors=0

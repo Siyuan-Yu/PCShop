@@ -268,12 +268,12 @@ namespace PCShopSell.Game.UI
         private void CartLineCard(Window w, RectTransform list, CartLine l, double amount, double kg, RectTransform target, Func<bool> onDrop,
             params HoldAction[] buttons)
         {
-            RectTransform card = Ui.Row(list, 34, 4);
+            RectTransform card = Ui.Row(list, 68, 4);
             Image bg = card.gameObject.AddComponent<Image>();
             bg.color = CartCard;
             string amountText = l.ByWeight ? $"{amount:0.##} 千克" : l.Key.StartsWith("ing:") ? $"{kg:0.##} 千克" : $"×{amount:0}";
             string price = l.UnitPrice != null ? $"　{l.UnitPrice().Scale(amount)}" : "";
-            Ui.Size(Ui.Label(card, $"  {l.Name} {amountText}<size=13><color=#A8B0BA>　{kg:0.##} 千克{price}</color></size>", 15), -1, -1, 1);
+            Ui.Size(Ui.Label(card, ProductLabel($"  {l.Name} {amountText}", l.UnitKg, $"本批 {kg:0.###} 千克{price}", l.ByWeight ? "每千克" : "每件"), 15), -1, -1, 1);
             foreach (HoldAction a in buttons)
                 HoldButton(w, card, a.Text, a.Color, a.Max, l.ByWeight ? "千克" : "件", a.Commit, a.Text.Length > 3 ? 104 : 76);
             var drag = card.gameObject.AddComponent<CartDragItem>();

@@ -303,7 +303,7 @@ namespace PCShopSell.Game.UI
                         BagStack st = cells[idx].st;
                         bool sel = st.Key == selKey;
                         Color bg = sel ? Color.Lerp(st.Color, Color.white, 0.35f) : st.Color;
-                        string label = st.Key == "rice" ? $"<size=15>大米</size>\n<size=14>{st.Kg * cells[idx].n / st.Count:0.##}千克</size>" : cells[idx].n > 0 ? $"<size=15>{ShortName(st.Name)}</size>\n<size=14>×{cells[idx].n}</size>" : "<size=22>…</size>";
+                        string label = st.Key == "rice" ? $"<size=15>大米</size>\n<size=14>{st.Kg * cells[idx].n / st.Count:0.##}千克</size>" : cells[idx].n > 0 ? $"<size=15>{ShortName(st.Name)}</size>\n<size=11>每件 {st.Kg / st.Count:0.###} 千克</size>\n<size=12>×{cells[idx].n}</size>" : "<size=22>…</size>";
                         Ui.Size(Ui.Button(row, label, () => onPick(st.Key), 14, bg), 80, 80);
                     }
                     else
@@ -915,8 +915,8 @@ namespace PCShopSell.Game.UI
                         foreach (GiftDef g in Gifts.All) OnlineGiftRow(w, list, g);
                         break;
                     default:
-                        RectTransform row = Ui.Row(list, 56);
-                        Ui.Size(Ui.Label(row, $"大米 {GameSession.RiceBagKg:0} 千克\n<size=14><color=#A8B0BA>也可以去农贸市场按千克买，更便宜。</color></size>", 18), -1, -1, 1);
+                        RectTransform row = Ui.Row(list, 80);
+                        Ui.Size(Ui.Label(row, ProductLabel("大米", GameSession.RiceBagKg, "也可以去农贸市场按千克买，更便宜。", "每袋"), 18), -1, -1, 1);
                         Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Rice, "rice").ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 100);
                         int count = OnlineQuantity(w, row, "rice");
                         Ui.Size(Ui.Button(row, "下单", () =>
@@ -932,8 +932,8 @@ namespace PCShopSell.Game.UI
 
         private void OnlineFurnitureRow(Window w, RectTransform list, FurnitureDef def)
         {
-            RectTransform row = Ui.Row(list, 58);
-            Ui.Size(Ui.Label(row, $"{def.Name}\n<size=14><color=#A8B0BA>{def.Description}</color></size>", 18), -1, -1, 1);
+            RectTransform row = Ui.Row(list, 80);
+            Ui.Size(Ui.Label(row, ProductLabel(def.Name, def.WeightKg, def.Description), 18), -1, -1, 1);
             Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Furniture, def.Id).ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 100);
             int count = OnlineQuantity(w, row, "furn:" + def.Id);
             int have = S.FurnitureInStock(def.Id);
@@ -947,8 +947,8 @@ namespace PCShopSell.Game.UI
 
         private void OnlineGiftRow(Window w, RectTransform list, GiftDef g)
         {
-            RectTransform row = Ui.Row(list, 58);
-            Ui.Size(Ui.Label(row, $"{g.Name}\n<size=14><color=#A8B0BA>{g.Description}</color></size>", 18), -1, -1, 1);
+            RectTransform row = Ui.Row(list, 80);
+            Ui.Size(Ui.Label(row, ProductLabel(g.Name, g.WeightKg, g.Description), 18), -1, -1, 1);
             Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Gift, g.Id).ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 100);
             int count = OnlineQuantity(w, row, "gift:" + g.Id);
             int have = S.Backpack.GiftCount(g.Id);
@@ -962,10 +962,10 @@ namespace PCShopSell.Game.UI
 
         private void OnlineOutfitRow(Window w, RectTransform list, OutfitDef o)
         {
-            RectTransform row = Ui.Row(list, 58);
+            RectTransform row = Ui.Row(list, 80);
             bool has = S.OwnedOutfits.Contains(o.Id);
             bool coming = S.Parcels.Any(p => p.Kind == ParcelKind.Outfit && p.Id == o.Id);
-            Ui.Size(Ui.Label(row, $"{o.Name}  魅力 +{o.CharmBonus}\n<size=14><color=#A8B0BA>{o.Description}</color></size>", 18), 480);
+            Ui.Size(Ui.Label(row, $"{o.Name}  魅力 +{o.CharmBonus}\n<size=13><color=#A8B0BA>穿戴物品，不计背包负重</color></size>\n<size=13>{o.Description}</size>", 18), 480);
             Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Outfit, o.Id).ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 100);
             Ui.Size(Ui.Button(row, has ? "已有" : coming ? "在路上" : "下单", () =>
             {
@@ -1073,8 +1073,8 @@ namespace PCShopSell.Game.UI
 
         private void MallRow(Window w, RectTransform list, FurnitureDef def)
         {
-            RectTransform row = Ui.Row(list, 58);
-            Ui.Size(Ui.Label(row, $"{def.Name}  <size=14><color=#A8B0BA>重 {def.WeightKg:0.##} 千克</color></size>\n<size=14><color=#A8B0BA>{def.Description}</color></size>", 18), 430);
+            RectTransform row = Ui.Row(list, 80);
+            Ui.Size(Ui.Label(row, ProductLabel(def.Name, def.WeightKg, def.Description), 18), 430);
             Ui.Size(Ui.Label(row, def.Price.ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 90);
             int have = S.FurnitureOwnedUnplaced(def.Id);
             int placedShop = S.ShopLayout.Count(p => p.Id == def.Id) + S.HomeLayout.Count(p => p.Id == def.Id);
@@ -1100,8 +1100,8 @@ namespace PCShopSell.Game.UI
 
         private void ShopGiftRow(Window w, RectTransform list, GiftDef def, bool open)
         {
-            RectTransform row = Ui.Row(list, 66);
-            Ui.Size(Ui.Label(row, $"{def.Name}\n<size=14><color=#A8B0BA>{def.Description}  重 {def.WeightKg:0.##} 千克</color></size>", 18), 400);
+            RectTransform row = Ui.Row(list, 80);
+            Ui.Size(Ui.Label(row, ProductLabel(def.Name, def.WeightKg, def.Description), 18), 400);
             Ui.Size(Ui.Label(row, def.Price.ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 90);
             int have = S.Backpack.GiftCount(def.Id);
             Ui.Size(Ui.Label(row, have > 0 ? $"背包 ×{have}" : "", 15, TextAnchor.MiddleLeft, Ui.Dim), 80);
@@ -1112,8 +1112,8 @@ namespace PCShopSell.Game.UI
         {
             Line(w.Content, "手机店。网购和 1788 进货都要用智能手机，买回来在应用商店里下载对应的 app。", 17, Ui.Dim);
             Line(w.Content, $"现金 {S.Ledger.Balance}", 18);
-            RectTransform row = Ui.Row(w.Content, 64);
-            Ui.Size(Ui.Label(row, "智能手机\n<size=14><color=#A8B0BA>能在应用商店下载网购、日程、聊天、1788 等 app。</color></size>", 18), 400);
+            RectTransform row = Ui.Row(w.Content, 84);
+            Ui.Size(Ui.Label(row, "智能手机\n<size=13><color=#A8B0BA>随身使用，不计背包负重</color></size>\n<size=13>能下载网购、日程、聊天、1788等app。</size>", 18), 400);
             Ui.Size(Ui.Label(row, GameSession.PhonePrice.ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 90);
             Ui.Size(Ui.Button(row, S.HasSmartphone ? "已有" : "买", () =>
             {
@@ -1133,7 +1133,7 @@ namespace PCShopSell.Game.UI
                 string blocker = owned ? null : S.UpgradeBlocker(u);
                 RectTransform row = Ui.Row(parent, blocker != null ? 96 : 76);
                 string tail = blocker != null ? $"\n<size=14><color=#D79780>{blocker}</color></size>" : "";
-                Ui.Size(Ui.Label(row, $"{u.Name}\n<size=14><color=#A8B0BA>{u.Description}</color></size>{tail}", 17), 400);
+                Ui.Size(Ui.Label(row, $"{u.Name}\n<size=13><color=#A8B0BA>购买后安装，不占背包</color></size>\n<size=13>{u.Description}</size>{tail}", 17), 400);
                 Ui.Size(Ui.Label(row, u.Price.ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 90);
                 Ui.Size(Ui.Button(row, owned ? "已装好" : "买", () =>
                 {
@@ -1165,8 +1165,8 @@ namespace PCShopSell.Game.UI
 
         private void FarmRiceRow(Window w, RectTransform list, bool open)
         {
-            RectTransform rrow = Ui.Row(list, 50);
-            Ui.Size(Ui.Label(rrow, $"大米 {Pantry.RicePricePerKg}/千克", 19), 200);
+            RectTransform rrow = Ui.Row(list, 76);
+            Ui.Size(Ui.Label(rrow, ProductLabel("大米", .25, $"{Pantry.RicePricePerKg}/千克 · 按千克购买", "每次加购"), 19), 200);
             ShopQuantity(w, rrow, "rice", () => S.CartAddRice(.25), open);
         }
 
@@ -1175,8 +1175,8 @@ namespace PCShopSell.Game.UI
             foreach (IngredientDef def in Ingredients.All)
             {
                 IngredientDef d = def;
-                RectTransform row = Ui.Row(list, 56);
-                Ui.Size(Ui.Label(row, $"{d.Name}（{d.Unit}）\n<size=14><color=#A8B0BA>可焖「{d.DishName}」，保质 {d.ShelfDays} 天</color></size>", 18), 380);
+                RectTransform row = Ui.Row(list, 80);
+                Ui.Size(Ui.Label(row, ProductLabel(d.Name + "（" + d.Unit + "）", d.WeightKg, $"可焖「{d.DishName}」，保质 {d.ShelfDays} 天", "每份"), 18), 380);
                 Ui.Size(Ui.Label(row, d.PricePerKg + "/千克", 17, TextAnchor.MiddleLeft, Ui.Good), 80);
                 Ui.Size(Ui.Label(row, $"背包 {S.Backpack.Food.IngredientCount(d.Id) * d.WeightKg:0.##}千克\n家里 {S.Pantry.IngredientCount(d.Id) * d.WeightKg:0.##}千克", 14, TextAnchor.MiddleLeft, Ui.Dim), 90);
                 foreach (int n in new[] { 1 })

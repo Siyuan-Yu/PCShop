@@ -46,7 +46,7 @@ namespace PCShopSell.Game.UI
                 RectTransform row = Ui.Row(list, 76, 6);
                 Image chip = Ui.Panel(row, "Chip", GoodsColor(gid));
                 Ui.Size(chip, 14, 40);
-                Ui.Size(Ui.Label(row, $"<b>{g.Name}</b>\n<size=13><color=#ABB5A8>进价 {g.Price}　每件 {ShelfPlanner.GoodsKg(gid):0.##} 千克</color></size>", 17), 200);
+                Ui.Size(Ui.Label(row, ProductLabel($"<b>{g.Name}</b>", g.WeightKg, $"进价 {g.Price}"), 17), 200);
                 Ui.Size(Ui.Label(row, $"货架上 <b>{onShelf}</b> 件\n<size=13><color=#ABB5A8>后仓共 {inStock} 件" + (handy > 0 ? $"　手边 {handy}" : "") + "</color></size>", 16), 170);
                 Ui.Size(ShelfSaleTag(w, row, "goods_" + gid, shop.GoodsPriceOf(gid).Yuan, shop.GoodsPriceRange(gid),
                     value => shop.GoodsPurchaseIntentAtPrice(gid, value),

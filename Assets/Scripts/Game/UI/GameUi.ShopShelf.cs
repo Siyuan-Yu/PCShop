@@ -318,12 +318,12 @@ namespace PCShopSell.Game.UI
 
             Color[] tierCol = { new Color(0.55f, 0.58f, 0.64f), new Color(0.2f, 0.7f, 0.65f), new Color(0.9f, 0.7f, 0.25f) };
             Chip(rt, tierCol[Mathf.Clamp(p.Tier, 0, 2)], 0, 0.975f, 1, 1);
-            Text name = Ui.Label(rt, $"<b>{PartCatalog.TierName(p.Tier)}</b>　<size=13>{p.Name}</size>\n<size=12>共 {have} 件</size>", 15, TextAnchor.MiddleLeft, new Color(0.85f, 0.87f, 0.9f));
-            name.rectTransform.Anchor(0, 0.8f, 1, 1, 10, 0, 6, 0);
+            Text name = Ui.Label(rt, ProductLabel($"<b>{PartCatalog.TierName(p.Tier)}</b>　<size=13>{p.Name}</size>", PartUnitKg(p, boxed), $"共 {have} 件"), 15, TextAnchor.MiddleLeft, new Color(0.85f, 0.87f, 0.9f));
+            name.rectTransform.Anchor(0, 0.73f, 1, 1, 10, 0, 6, 0);
 
             // 货放在板子上：从板面往上一层层摆，大小按真实尺寸
             Chip(rt, WoodLight, 0, 0.32f, 1, 0.34f);
-            RectTransform items = Ui.Rect(rt, "Items").Anchor(0, 0.34f, 1, 0.8f, 8, 0, 8, 0);
+            RectTransform items = Ui.Rect(rt, "Items").Anchor(0, 0.34f, 1, 0.73f, 8, 0, 8, 0);
             const float gx = 8, gy = 5, areaW = 280, areaH = 100;
             Vector2 cell = IconSize(p.Category, boxed);
             int cols = Mathf.Max(1, Mathf.FloorToInt((areaW + gx) / (cell.x + gx)));

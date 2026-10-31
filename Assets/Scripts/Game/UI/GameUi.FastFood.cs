@@ -17,7 +17,7 @@ namespace PCShopSell.Game.UI
                 var item = menuItem;
                 string blocker = S.FastFoodBlocker(item.Id);
                 var row = Ui.Row(list, 88, 10);
-                Ui.Size(Ui.Label(row, $"<b>{item.Name}</b>　{item.Price}\n<size=14>{item.Effects} · {item.Minutes}分钟</size>", 18), -1, -1, 1);
+                Ui.Size(Ui.Label(row, $"<b>{item.Name}</b>　{item.Price}\n<size=13><color=#A8B0BA>堂食，不占背包重量</color></size>\n<size=14>{item.Effects} · {item.Minutes}分钟</size>", 18), -1, -1, 1);
                 var button = Ui.Button(row, blocker ?? (item.Drink ? "买一杯喝" : "买一份吃"), () =>
                 { S.BuyFastFood(item.Id); w.RequestRebuild(); }, 17, blocker == null ? Ui.ButtonHot : Ui.ButtonBg, blocker == null);
                 button.name = "BuyFastFood_" + item.Id;

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -333,8 +333,8 @@ namespace PCShopSell.Game.UI
             foreach (StockLine l in shop.Stock.Lines())
             {
                 StockLine line = l;
-                RectTransform row = Ui.Row(list, 40);
-                Ui.Size(Ui.Label(row, $"{l.Part.Name} <color=#ABB5A8>{(l.Boxed ? "盒装" : "散件")}</color> ×{l.Count}", 17), 280);
+                RectTransform row = Ui.Row(list, 58);
+                Ui.Size(Ui.Label(row, ProductLabel($"{l.Part.Name} <color=#ABB5A8>{(l.Boxed ? "盒装" : "散件")}</color> ×{l.Count}", PartUnitKg(l.Part, l.Boxed)), 17), 280);
                 Ui.Size(Ui.Label(row, $"售 {shop.PriceOf(l.Part, l.Boxed)}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
                 if (l.Boxed)
                 {
@@ -353,8 +353,8 @@ namespace PCShopSell.Game.UI
             foreach (var kv in shop.Stock.GoodsLines())
             {
                 string gid = kv.Key;
-                RectTransform row = Ui.Row(list, 40);
-                Ui.Size(Ui.Label(row, $"{Gifts.Get(gid).Name} <color=#ABB5A8>杂货</color> ×{kv.Value}", 17), 280);
+                RectTransform row = Ui.Row(list, 58);
+                Ui.Size(Ui.Label(row, ProductLabel($"{Gifts.Get(gid).Name} <color=#ABB5A8>杂货</color> ×{kv.Value}", Gifts.Get(gid).WeightKg), 17), 280);
                 Ui.Size(Ui.Label(row, $"售 {shop.GoodsPriceOf(gid)}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
                 Ui.Size(Ui.Button(row, "收回 1", () =>
                 {
