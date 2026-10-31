@@ -117,6 +117,7 @@ namespace PCShopSell.Core.Session
             _shops.Add(shop);
             _vacant.Remove(place.Id);
             _listings.RemoveAll(x => x.PlaceId == place.Id);
+            GiveStarterBoxes(shop);
             SetFocus(shop);
         }
 
@@ -204,6 +205,9 @@ namespace PCShopSell.Core.Session
                 restockIds = s.Restock.Keys.ToArray(),
                 restockTargets = s.Restock.Values.ToArray(),
                 renovationDay = s.RenovationDay,
+                locker = ToSaveStorage(s.Locker),
+                temp = ToSaveStorage(s.Temp),
+                boxesGiven = s.BoxesGiven,
             };
         }
 
@@ -240,6 +244,9 @@ namespace PCShopSell.Core.Session
             for (int i = 0; i < rids.Length && i < rt.Length; i++)
                 if (PartCatalog.Get(rids[i]) != null && rt[i] > 0) shop.Restock[rids[i]] = Math.Min(RestockMaxTarget, rt[i]);
             shop.RenovationDay = d.renovationDay;
+            FromSaveStorage(d.locker, shop.Locker);
+            FromSaveStorage(d.temp, shop.Temp);
+            shop.BoxesGiven = d.boxesGiven;
             sim.ForcedClosed = shop.RenovationDay == Clock.Today.TotalDays;
             _shops.Add(shop);
             _vacant.Remove(place.Id);

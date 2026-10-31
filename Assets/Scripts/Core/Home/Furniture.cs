@@ -24,7 +24,7 @@ namespace PCShopSell.Core.Home
         Cooker,
         Seat,
         Broken,
-        /// <summary>纸箱：可以存取东西（有重量限制）。</summary>
+        /// <summary>纸箱：可以存取东西，每个 200 斤。</summary>
         Storage,
     }
 
@@ -123,6 +123,10 @@ namespace PCShopSell.Core.Home
         public const string TableCooker = "table_cooker";
         public const string Curtain = "curtain";
 
+        /// <summary>纸箱（家里 / 店里各一种），每个能放 200 斤。</summary>
+        public const string HomeBox = "box";
+        public const string ShopBox = "shop_box";
+
         /// <summary>单件超过这个重量就太大件，没法放进背包。</summary>
         public const double HeavyKg = 20;
 
@@ -196,6 +200,7 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef("desk", "书桌", "放电脑或者看书。", 350, FurnitureSlot.Floor, 1.2, 0.6) { Appeal = 1 });
             Add(new FurnitureDef("sofa", "小沙发", "可以窝着，也能坐。", 800, FurnitureSlot.Floor, 1.6, 0.8) { Appeal = 2, Role = FurnitureRole.Seat });
             Add(new FurnitureDef("poster", "墙上海报", "盖住墙上的水渍。", 40, FurnitureSlot.Wall, 0.7, 0.05) { Appeal = 1 });
+            Add(new FurnitureDef(HomeBox, "纸箱", "大号搬家纸箱，摆在屋里能多放 200 斤东西。", 20, FurnitureSlot.Floor, 0.6, 0.5) { Role = FurnitureRole.Storage, WeightKg = 1 });
 
             // ---- 店里的摆设：装修要歇业一天 ----
             Add(new FurnitureDef("shop_plant", "门店绿植", "客流 +。", 80, FurnitureSlot.Floor, 0.5, 0.5, true) { Appeal = 1 });
@@ -203,6 +208,7 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef("shop_dispenser", "饮水机", "顾客多等 3 分钟。", 350, FurnitureSlot.Floor, 0.5, 0.5, true) { Appeal = 1, PatienceBonus = 3 });
             Add(new FurnitureDef("shop_poster", "品牌海报", "客流 +。", 120, FurnitureSlot.Wall, 1.0, 0.05, true) { Appeal = 1 });
             Add(new FurnitureDef("shop_led", "LED 灯屏", "夜里很显眼。客流 ++。", 900, FurnitureSlot.Wall, 1.6, 0.1, true) { Appeal = 3 });
+            Add(new FurnitureDef(ShopBox, "纸箱", "大号搬家纸箱，摆在店里能多放 200 斤东西（吃的、礼品、小家具；配件直接上货架）。", 20, FurnitureSlot.Floor, 0.6, 0.5, true) { Role = FurnitureRole.Storage, WeightKg = 1 });
 
             // ---- 店面设施：租下来的铺子是空的，这些得自己买、自己摆（摆完第二天才开业） ----
             Add(new FurnitureDef(Shelf, "货架", "每个货架摆一种货（配件、烟酒饮料都行），能放 60 公斤。顾客只买货架上摆着的。", ShelfPrice.Yuan, FurnitureSlot.Floor, 1.4, 0.4, true) { Fixture = FixtureKind.Shelf, WeightKg = 40, ShelfKg = ShelfKinds.CapacityKg });

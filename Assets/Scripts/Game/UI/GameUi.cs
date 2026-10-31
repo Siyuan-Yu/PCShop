@@ -236,6 +236,12 @@ namespace PCShopSell.Game.UI
             _shopGoText.text = S.HasShop ? "去我的店" : "房产中介";
             _placeText.text = where + "   " + shopState;
 
+            if (S.HasTempHere && !S.IsGameOver && !AnyModalOpen && !_ctrl.Placing && (_ctrl.InHome || (_ctrl.InInterior && S.InPlayerShop)))
+            {
+                if (_ctrl.InHome) OpenStorageWindow();
+                else OpenShopLockerWindow();
+            }
+
             if (S.IsGameOver) _hintText.text = "游戏结束：" + S.GameOverReason;
             else if (_ctrl.Placing) _hintText.text = "摆放家具：左键放下 · R 旋转 · 右键/Esc 放回 · X 收进背包 · 点已摆的家具可以挪动 · 中键拖动 / Q E 转视角 · V 复位 · 右侧面板点“完成”结束";
             else if (_ctrl.InInterior) _hintText.text = "WASD 在店里走动 · 走到货架前按 F 查看货物 · 柜台边按 F（或点顾客头顶的“结账”）给顾客结账 · 走到门口按 F 出门 · 右侧面板管理店铺";

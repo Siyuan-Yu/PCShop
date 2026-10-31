@@ -363,7 +363,7 @@ namespace PCShopSell.Core.Session
         public List<MovableItem> MovableHere()
         {
             var keys = new List<string>();
-            foreach (string src in new[] { "bag", "kitchen", "box", "shop", "locker" })
+            foreach (string src in new[] { "bag", "temp", "kitchen", "box", "shop", "locker" })
             {
                 if (!SourceHere(src)) continue;
                 Pantry food = FoodOf(src);
@@ -424,6 +424,7 @@ namespace PCShopSell.Core.Session
             switch (src)
             {
                 case "bag": return true;
+                case "temp": return AtHome || InPlayerShop;
                 case "kitchen":
                 case "box": return AtHome;
                 case "shop":
@@ -437,21 +438,24 @@ namespace PCShopSell.Core.Session
             switch (src)
             {
                 case "bag": return "身上";
+                case "temp": return "临时存放";
                 case "kitchen": return "厨房";
                 case "box": return "家里纸箱";
                 case "shop": return "店里后仓";
-                default: return "储物柜";
+                default: return "店里纸箱";
             }
         }
 
+        private Backpack TempHere => AtHome ? HomeTemp : InPlayerShop ? ShopTemp : null;
+
         private Pantry FoodOf(string src) =>
-            src == "bag" ? Backpack.Food : src == "kitchen" ? Pantry : src == "box" ? HomeBox.Food : src == "locker" ? ShopLocker.Food : null;
+            src == "bag" ? Backpack.Food : src == "kitchen" ? Pantry : src == "box" ? HomeBox.Food : src == "locker" ? ShopLocker.Food : src == "temp" ? TempHere?.Food : null;
 
         private Backpack BagOf(string src) =>
-            src == "bag" ? Backpack : src == "box" ? HomeBox : src == "locker" ? ShopLocker : null;
+            src == "bag" ? Backpack : src == "box" ? HomeBox : src == "locker" ? ShopLocker : src == "temp" ? TempHere : null;
 
         private Stock PartsOf(string src) =>
-            src == "bag" ? Cargo : src == "box" ? HomeBoxParts : src == "shop" ? PlayerShop.Stock : null;
+            src == "bag" ? Cargo : src == "box" ? HomeBoxParts : src == "shop" ? PlayerShop.Stock : src == "temp" && AtHome ? HomeTempParts : null;
 
         private MovableItem DescribeMove(string key, out CourierItem unit)
         {

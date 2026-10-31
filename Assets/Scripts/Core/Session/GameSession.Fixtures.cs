@@ -106,7 +106,29 @@ namespace PCShopSell.Core.Session
         {
             if (_shopLayout.Any(p => FurnitureCatalog.Get(p.Id)?.IsFixture == true)) return;
             _shopLayout.InsertRange(0, FurnitureCatalog.DefaultShopFixtures(PlayerShop.Size));
+            GiveStarterBoxes(_focus);
             UpdateShopFit();
+        }
+
+        /// <summary>
+        /// 新租的铺子送 <see cref="StarterShopBoxes"/> 个纸箱，从左前角沿左墙往里摞（摆不下的放进“我的”）。每家店只送一次。
+        /// </summary>
+        internal void GiveStarterBoxes(OwnedShop shop)
+        {
+            if (shop == null || !shop.Rented || shop.BoxesGiven) return;
+            shop.BoxesGiven = true;
+            RoomSpec room = RoomSpec.ForShop(shop.Place.Size);
+            FurnitureDef def = FurnitureCatalog.Get(FurnitureCatalog.ShopBox);
+            int left = StarterShopBoxes;
+            for (double x = 0.3; x < room.Width - 0.3 && left > 0; x += 0.25)
+                for (double z = 0.25; z < room.Depth - 0.25 && left > 0; z += 0.25)
+                {
+                    PlacedFurniture cand = RoomPlanner.Snap(room, def, x, z, 0);
+                    if (RoomPlanner.Check(room, shop.Layout, def, cand, -1, null) != null) continue;
+                    shop.Layout.Add(cand);
+                    left--;
+                }
+            if (left > 0) AddFurniture(def.Id, left);
         }
 
         /// <summary>旧存档（设施还是店里自带的时候）：给已经有店的存档补上整套设施，保持原来的样子。</summary>

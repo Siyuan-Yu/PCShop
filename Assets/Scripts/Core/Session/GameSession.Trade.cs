@@ -183,7 +183,7 @@ namespace PCShopSell.Core.Session
                 OnlineStore store = Online1788.GetStore(o.StoreId);
                 StoreRecord rec = Online.RecordOf(o.StoreId);
                 OwnedShop dest = DeliveryShop(o.ShopId);
-                int good = 0, bad = 0;
+                int good = 0, bad = 0, toTemp = 0;
                 var badNames = new StringBuilder();
                 foreach (OnlineOrderLine l in o.Lines)
                 {
@@ -198,7 +198,7 @@ namespace PCShopSell.Core.Session
                         }
                         else
                         {
-                            if (o.ToHome) HomeBoxParts.ForceAdd(part, true, 1);
+                            if (o.ToHome) toTemp += StorePartAtHome(part, true, 1);
                             else dest.Sim.Stock.ForceAdd(part, true, 1);
                             good++;
                         }
@@ -208,6 +208,7 @@ namespace PCShopSell.Core.Session
                 rec.Defects += bad;
                 string shopName = MyShopCount > 1 ? ShopTitle(dest) : "店里";
                 string body = $"{store.Name} 的货到了（{(o.ToHome ? "送到家里，放在纸箱里，要自己带去店里" : $"已上{shopName}货架")}）：{good} 件完好。";
+                if (toTemp > 0) body += $"\n家里纸箱满了，{toTemp} 件放在临时存放，回家打开纸箱清掉。";
                 if (bad > 0) body += $"\n{bad} 件是次品，只能扔掉：{badNames}";
                 Show("1788 到货", body);
             }

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
@@ -41,12 +41,7 @@ namespace PCShopSell.Game.UI
         private AvatarPreview _avatarPreview;
 
 
-        public void OpenStorageWindow()
-        {
-            _boxSel = null;
-            _boxSide = null;
-            OpenRoomWindow("纸箱", 780, 760, BuildStorage);
-        }
+        public void OpenStorageWindow() => OpenBoxWindow("纸箱", () => _ctrl.InHome);
 
         private string _boxSel, _boxSide;
 
@@ -55,42 +50,83 @@ namespace PCShopSell.Game.UI
         private System.Collections.Generic.List<BagStack> CollectBox() =>
             S.InPlayerShop ? CollectStacks(S.ShopLocker, NoParts) : CollectStacks(S.HomeBox, S.HomeBoxParts);
 
-        /// <summary>店里的储物柜（右侧面板“库存”页和背包里都能打开）：吃的、礼品等放这里，配件放进来直接上货架。</summary>
-        public void OpenShopLockerWindow()
+        private System.Collections.Generic.List<BagStack> CollectTemp() =>
+            S.InPlayerShop ? CollectStacks(S.ShopTemp, NoParts) : CollectStacks(S.HomeTemp, S.HomeTempParts);
+
+        /// <summary>店里的纸箱（走到纸箱前按 F，或右侧面板“库存”页、背包里打开）：吃的、礼品等放这里，配件放进来直接上货架。</summary>
+        public void OpenShopLockerWindow() => OpenBoxWindow("店里纸箱", () => _ctrl.InInterior);
+
+        /// <summary>纸箱窗口：临时存放里还有东西时关不掉（也没有右上角“关闭”、Esc 不管用）。</summary>
+        private void OpenBoxWindow(string title, System.Func<bool> stillHere)
         {
             _boxSel = null;
             _boxSide = null;
-            OpenWindow("店里储物柜", 780, 760, win =>
+            OpenWindow(title, 820, 880, win =>
             {
-                if (!_ctrl.InInterior)
+                if (!stillHere())
                 {
                     win.Close();
                     return;
                 }
                 BuildStorage(win);
-                Ui.Size(Ui.Button(win.Content, "关闭", () => win.Close(), 20), -1, 46);
-            });
+                bool stuck = S.HasTempHere;
+                var close = Ui.Button(win.Content, stuck ? "临时存放还有东西：放进纸箱、拿进背包、叫货车搬走或扔掉，清空了才能关" : "关闭", () =>
+                {
+                    if (S.HasTempHere) win.Rebuild();
+                    else win.Close();
+                }, stuck ? 16 : 20, stuck ? Ui.ButtonBg : Ui.ButtonHot);
+                close.name = "StorageClose";
+                Ui.Size(close, -1, 46);
+            }, true, false);
         }
 
-        /// <summary>储物处（家里纸箱 / 店里储物柜）：上面是储物处的格子，下面是背包的格子；点一格选中，再放进去 / 拿出来。</summary>
+        /// <summary>
+        /// 储物处（家里 / 店里的纸箱）：最上面是临时存放（纸箱放不下的、要清空），然后是纸箱的格子，最下面是背包的格子；
+        /// 点一格选中，再放进去 / 拿出来。
+        /// </summary>
         private void BuildStorage(Window w)
         {
             bool shop = S.InPlayerShop;
             double boxKg = shop ? S.ShopLocker.WeightKg : S.HomeBoxKg;
-            double boxLimit = shop ? GameSession.ShopLockerLimitKg : GameSession.HomeBoxLimitKg;
-            Line(w.Content, shop
-                ? $"柜台下的储物柜：吃的、礼品、小家具都能放，最多 {boxLimit:0.#} 公斤（现在 {boxKg:0.#}）；配件放进来直接上货架。吃的隔天也会坏。"
-                : $"搬家时留下的纸箱，背包里的东西都能放，最多 {boxLimit:0.#} 公斤；目前放了 {boxKg:0.#} 公斤。吃的放这里隔天也会坏。", 16, Ui.Dim);
-            Ui.Bar(w.Content, (float)(boxKg / boxLimit), boxKg > boxLimit * 0.85 ? Ui.Warn : Ui.Accent, 700, 10);
+            double boxLimit = shop ? S.ShopLockerLimitKg : S.HomeBoxLimitKg;
+            int boxes = shop ? S.ShopBoxes : S.HomeBoxes;
+            string each = $"每个纸箱 {GameSession.BoxCapacityKg * 2:0} 斤（{GameSession.BoxCapacityKg:0} 公斤）";
+            Line(w.Content, boxes == 0
+                ? $"这里一个纸箱都没摆，放不了东西。家具城有卖纸箱，{each}。"
+                : $"{boxes} 个纸箱，{each}，一共能放 {boxLimit:0.#} 公斤，已经放了 {boxKg:0.#} 公斤。" + (shop ? "配件放进来直接上货架。" : "") + "吃的放这里隔天也会坏。", 16, Ui.Dim);
+            Ui.Bar(w.Content, boxLimit <= 0 ? 1 : (float)(boxKg / boxLimit), boxKg > boxLimit * 0.85 ? Ui.Warn : Ui.Accent, 760, 10);
 
-            Line(w.Content, shop ? "—— 储物柜 ——" : "—— 纸箱 ——", 17, Ui.Accent);
+            bool hasTemp = S.HasTempHere;
+            var tempStacks = hasTemp ? CollectTemp() : new System.Collections.Generic.List<BagStack>();
+            if (hasTemp)
+            {
+                Line(w.Content, $"—— 临时存放 {S.TempKgHere:0.#} 公斤（送来的东西纸箱放不下，先堆在这里；清空了才能关窗口）——", 17, Ui.Warn);
+                BagGrid(w.Content, tempStacks, 0, _boxSide == "temp" ? _boxSel : null, key =>
+                {
+                    _boxSide = "temp";
+                    _boxSel = key;
+                    w.Rebuild();
+                }, 100);
+                RectTransform tempBar = Ui.Row(w.Content, 40, 8);
+                Ui.Size(Ui.Button(tempBar, "能放的都放进纸箱", () => { S.TempFillBox(); w.Rebuild(); }, 15, Ui.ButtonHot), 170);
+                Ui.Size(Ui.Button(tempBar, "打电话叫货车搬走…", OpenTruckWindow, 15, Ui.ButtonBg), 170);
+                Ui.Size(Ui.Button(tempBar, "全部扔掉…", () => ConfirmAction("全部扔掉", $"临时存放里 {S.TempKgHere:0.#} 公斤东西都扔掉，不退钱。", "扔掉", () =>
+                {
+                    S.TempDiscardAll();
+                    w.Rebuild();
+                }), 15, Ui.Warn), 120);
+            }
+
+            Line(w.Content, "—— 纸箱 ——", 17, Ui.Accent);
             var boxStacks = CollectBox();
-            BagGrid(w.Content, boxStacks, Mathf.CeilToInt((float)(boxLimit / Backpack.KgPerSpace)), _boxSide == "box" ? _boxSel : null, key =>
+            int boxCells = Mathf.CeilToInt((float)(boxLimit / Backpack.KgPerSpace));
+            int usedCells = boxStacks.Sum(s => Mathf.Max(1, Mathf.CeilToInt((float)(s.Space - 1e-6))));
+            BagGrid(w.Content, boxStacks, Mathf.Min(boxCells, usedCells + 16), _boxSide == "box" ? _boxSel : null, key =>
             {
                 _boxSide = "box";
                 _boxSel = key;
                 w.Rebuild();
-            }, 182);
+            }, hasTemp ? 182 : 260);
 
             Line(w.Content, $"—— 背包（负重 {S.CarriedKg:0.#}/{S.CarryLimitKg:0.#} 公斤）——", 17, Ui.Accent);
             var bagStacks = CollectBag();
@@ -101,40 +137,47 @@ namespace PCShopSell.Game.UI
                 w.Rebuild();
             }, 182);
 
-            BagStack pick = (_boxSide == "box" ? boxStacks : bagStacks).FirstOrDefault(s => s.Key == _boxSel);
+            var side = _boxSide == "temp" ? tempStacks : _boxSide == "box" ? boxStacks : bagStacks;
+            BagStack pick = side.FirstOrDefault(s => s.Key == _boxSel);
             RectTransform bottom = Ui.Row(w.Content, 50);
             if (pick == null)
             {
                 Ui.Size(Ui.Label(bottom, "点一格看详情。", 16, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
+                return;
+            }
+            Ui.Size(Ui.Label(bottom, $"<b>{pick.Name}</b> ×{pick.Count}　{pick.Kg:0.#} 公斤", 17), shop && pick.Key.StartsWith("gift:") ? 220 : 300, -1, 1);
+            string key = pick.Key;
+            int n = pick.Count;
+            string one = key == "rice" ? "1 斤" : "一份";
+            string unit = key == "rice" ? "斤" : "份";
+            if (_boxSide == "temp")
+            {
+                bool toShelf = shop && key.StartsWith("part:");
+                HoldButton(w, bottom, toShelf ? "上货架" : "放进纸箱", Ui.ButtonHot, n, unit, c => S.MoveTemp(key, (int)c, "box"), 110);
+                HoldButton(w, bottom, "拿进背包", Ui.ButtonBg, n, unit, c => S.MoveTemp(key, (int)c, "bag"), 110);
+                HoldButton(w, bottom, "扔掉", Ui.Warn, n, unit, c => S.MoveTemp(key, (int)c, "trash"), 80);
+            }
+            else if (_boxSide == "box")
+            {
+                Ui.Size(Ui.Button(bottom, "拿" + one, () => { S.TakeFromBox(key); w.Rebuild(); }, 16, Ui.ButtonHot), 100);
+                Ui.Size(Ui.Button(bottom, "全拿出来", () => { S.TakeFromBox(key, n); w.Rebuild(); }, 16, Ui.ButtonBg), 110);
+                if (shop && key.StartsWith("gift:"))
+                {
+                    string gid = key.Substring(5);
+                    Ui.Size(Ui.Button(bottom, "上架卖", () => { S.ListGoods(gid, 1); w.Rebuild(); }, 16, Ui.ButtonHot), 80);
+                    Ui.Size(Ui.Button(bottom, "全上架", () => { S.ListGoods(gid, n); w.Rebuild(); }, 16, Ui.ButtonBg), 80);
+                }
             }
             else
             {
-                Ui.Size(Ui.Label(bottom, $"<b>{pick.Name}</b> ×{pick.Count}　{pick.Kg:0.#} 公斤", 17), shop && pick.Key.StartsWith("gift:") ? 220 : 330, -1, 1);
-                string key = pick.Key;
-                int n = pick.Count;
-                string one = key == "rice" ? "1 斤" : "一份";
-                if (_boxSide == "box")
+                bool toShelf = shop && key.StartsWith("part:");
+                Ui.Size(Ui.Button(bottom, toShelf ? "上货架一件" : "放" + one, () => { S.StoreInBox(key); w.Rebuild(); }, 16, Ui.ButtonHot), 100);
+                Ui.Size(Ui.Button(bottom, toShelf ? "全上货架" : "全放进去", () => { S.StoreInBox(key, n); w.Rebuild(); }, 16, Ui.ButtonBg), 110);
+                if (shop && key.StartsWith("gift:"))
                 {
-                    Ui.Size(Ui.Button(bottom, "拿" + one, () => { S.TakeFromBox(key); w.Rebuild(); }, 16, Ui.ButtonHot), 100);
-                    Ui.Size(Ui.Button(bottom, "全拿出来", () => { S.TakeFromBox(key, n); w.Rebuild(); }, 16, Ui.ButtonBg), 110);
-                    if (shop && key.StartsWith("gift:"))
-                    {
-                        string gid = key.Substring(5);
-                        Ui.Size(Ui.Button(bottom, "上架卖", () => { S.ListGoods(gid, 1); w.Rebuild(); }, 16, Ui.ButtonHot), 80);
-                        Ui.Size(Ui.Button(bottom, "全上架", () => { S.ListGoods(gid, n); w.Rebuild(); }, 16, Ui.ButtonBg), 80);
-                    }
-                }
-                else
-                {
-                    bool toShelf = shop && key.StartsWith("part:");
-                    Ui.Size(Ui.Button(bottom, toShelf ? "上货架一件" : "放" + one, () => { S.StoreInBox(key); w.Rebuild(); }, 16, Ui.ButtonHot), 100);
-                    Ui.Size(Ui.Button(bottom, toShelf ? "全上货架" : "全放进去", () => { S.StoreInBox(key, n); w.Rebuild(); }, 16, Ui.ButtonBg), 110);
-                    if (shop && key.StartsWith("gift:"))
-                    {
-                        string gid = key.Substring(5);
-                        Ui.Size(Ui.Button(bottom, "上架卖", () => { S.ListGoods(gid, 1); w.Rebuild(); }, 16, Ui.ButtonHot), 80);
-                        Ui.Size(Ui.Button(bottom, "全上架", () => { S.ListGoods(gid, n); w.Rebuild(); }, 16, Ui.ButtonBg), 80);
-                    }
+                    string gid = key.Substring(5);
+                    Ui.Size(Ui.Button(bottom, "上架卖", () => { S.ListGoods(gid, 1); w.Rebuild(); }, 16, Ui.ButtonHot), 80);
+                    Ui.Size(Ui.Button(bottom, "全上架", () => { S.ListGoods(gid, n); w.Rebuild(); }, 16, Ui.ButtonBg), 80);
                 }
             }
         }
@@ -314,7 +357,7 @@ namespace PCShopSell.Game.UI
                             ? "没有要放下的东西（饭盒一直带在身上）。"
                             : "没有要放在家里的东西：饭盒一直带在身上（饭点自动吃），配件要拿到店里。", 14, TextAnchor.MiddleLeft, Ui.Dim), S.InPlayerShop ? 260 : 440);
                     if (S.InPlayerShop)
-                        Ui.Size(Ui.Button(acts, "店里储物柜", () =>
+                        Ui.Size(Ui.Button(acts, "店里纸箱", () =>
                         {
                             w.Close();
                             OpenShopLockerWindow();

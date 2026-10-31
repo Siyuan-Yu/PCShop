@@ -275,6 +275,8 @@ namespace PCShopSell.Core.Session
         public string[] restockIds;
         public int[] restockTargets;
         public int renovationDay = -1;
+        public SaveStorage locker, temp;
+        public bool boxesGiven;
     }
 
     [Serializable]
@@ -341,6 +343,12 @@ namespace PCShopSell.Core.Session
         public int[] mallStashCounts;
         public SaveStorage shopLocker;
 
+        /// <summary>家里 / 主店的临时存放（纸箱放不下的东西）。</summary>
+        public SaveStorage homeTemp, shopTemp;
+
+        /// <summary>主店租下时送的纸箱已经给过了。</summary>
+        public bool shopBoxesGiven;
+
         /// <summary>叫车送到哪：0 = 按店默认，1 = 家里，2 = 店里。</summary>
         public int courierDest;
 
@@ -348,10 +356,11 @@ namespace PCShopSell.Core.Session
         public string courierDestShop;
     }
 
-    /// <summary>一个储物处（店里储物柜）里的米菜、饭盒、礼品、家具。</summary>
+    /// <summary>一个储物处（纸箱 / 临时存放）里的米菜、饭盒、礼品、家具、配件。</summary>
     [Serializable]
     public sealed class SaveStorage
     {
+        public SaveStockLine[] parts;
         public string[] giftIds;
         public int[] giftCounts;
         public double rice;

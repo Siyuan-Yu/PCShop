@@ -218,6 +218,17 @@ namespace PCShopSell.Core.Session
                 _vacant.Add(PlayerShopPlace.Id);
                 foreach (var f in _shopLayout) AddFurniture(f.Id, 1);
                 _shopLayout.Clear();
+                foreach (var kv in _focus.Locker.GiftLines.ToList()) _focus.Temp.AddGift(kv.Key, kv.Value);
+                foreach (var kv in _focus.Locker.FurnitureLines.ToList()) _focus.Temp.AddFurniture(kv.Key, kv.Value);
+                _focus.Temp.Food.RiceJin += _focus.Locker.Food.RiceJin;
+                _focus.Temp.Food.Ingredient.AddRange(_focus.Locker.Food.Ingredient);
+                _focus.Temp.Food.Packed.AddRange(_focus.Locker.Food.Packed);
+                _focus.Locker.ClearGifts();
+                _focus.Locker.ClearFurniture();
+                _focus.Locker.Food.RiceJin = 0;
+                _focus.Locker.Food.Ingredient.Clear();
+                _focus.Locker.Food.Packed.Clear();
+                _focus.BoxesGiven = false;
             }
             Lease = new ShopLease { PlaceId = place.Id, Rent = rent, Deposit = deposit, StartDay = Clock.Today.TotalDays };
             PlayerShopPlace = place;
@@ -225,6 +236,7 @@ namespace PCShopSell.Core.Session
             _listings.RemoveAll(x => x.PlaceId == place.Id);
             PlayerShop.Size = place.Size;
             PlayerShop.LocationFactor = LocationFactorOf(place);
+            GiveStarterBoxes(_focus);
             ApplyUpgrades();
             ShopExpanded?.Invoke(place.Size);
         }

@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 
@@ -302,30 +303,48 @@ namespace PCShopSell.Core.Session
             }
         }
 
+        /// <summary>
+        /// 送到的一样东西放好：送家里，米菜进厨房，礼品、配件进纸箱；送店里，配件上货架，米菜礼品进店里纸箱。
+        /// 纸箱放不下的进临时存放（下次打开纸箱要清空）。家具都进“我的”待摆放。
+        /// </summary>
         private string Unpack(CourierItem it, bool toShop)
         {
-            Pantry food = toShop ? ShopLocker.Food : Pantry;
-            string foodPlace = toShop ? "放进店里储物柜" : "进了厨房";
+            Backpack box = toShop ? ShopLocker : HomeBox;
+            Backpack temp = toShop ? ShopTemp : HomeTemp;
+            string boxPlace = toShop ? "放进店里纸箱" : "放进纸箱";
+            string Where(int overflow, int total) =>
+                overflow <= 0 ? boxPlace : overflow >= total ? "纸箱满了，放在临时存放" : $"纸箱放不下的 {overflow} 件放在临时存放";
             switch (it.Kind)
             {
                 case CourierItemKind.Rice:
-                    food.RiceJin += it.Jin;
-                    return $"大米 {it.Jin:0.#} 斤（{foodPlace}）";
+                    if (!toShop)
+                    {
+                        Pantry.RiceJin += it.Jin;
+                        return $"大米 {it.Jin:0.#} 斤（进了厨房）";
+                    }
+                    double riceOver = StoreRiceOrTemp(true, it.Jin);
+                    return $"大米 {it.Jin:0.#} 斤（{(riceOver <= 1e-9 ? boxPlace : $"纸箱放不下的 {riceOver:0.#} 斤放在临时存放")}）";
                 case CourierItemKind.Ingredient:
                     IngredientDef d = Ingredients.Get(it.Id);
-                    food.Ingredient.Add(new FoodBatch { Id = it.Id, Name = d?.Name ?? it.Id, Count = it.Count, ExpireDay = it.ExpireDay });
-                    return $"{d?.Name ?? it.Id}×{it.Count}（{foodPlace}）";
+                    FoodBatch Batch(int n) => new FoodBatch { Id = it.Id, Name = d?.Name ?? it.Id, Count = n, ExpireDay = it.ExpireDay };
+                    if (!toShop)
+                    {
+                        Pantry.Ingredient.Add(Batch(it.Count));
+                        return $"{d?.Name ?? it.Id}×{it.Count}（进了厨房）";
+                    }
+                    int ingOver = StoreOrTemp(true, Backpack.IngredientKg(it.Id), it.Count, n => box.Food.Ingredient.Add(Batch(n)), n => temp.Food.Ingredient.Add(Batch(n)));
+                    return $"{d?.Name ?? it.Id}×{it.Count}（{Where(ingOver, it.Count)}）";
                 case CourierItemKind.Gift:
-                    (toShop ? ShopLocker : HomeBox).AddGift(it.Id, it.Count);
-                    return $"{Gifts.Get(it.Id)?.Name ?? it.Id}×{it.Count}（{(toShop ? "放进店里储物柜" : "放进纸箱")}）";
+                    int giftOver = StoreOrTemp(toShop, Gifts.Get(it.Id)?.WeightKg ?? 0, it.Count, n => box.AddGift(it.Id, n), n => temp.AddGift(it.Id, n));
+                    return $"{Gifts.Get(it.Id)?.Name ?? it.Id}×{it.Count}（{Where(giftOver, it.Count)}）";
                 case CourierItemKind.Goods:
                     if (toShop)
                     {
                         PlayerShop.Stock.ForceAddGoods(it.Id, it.Count);
                         return $"{Gifts.Get(it.Id)?.Name ?? it.Id}×{it.Count}（进了店里后仓）";
                     }
-                    HomeBox.AddGift(it.Id, it.Count);
-                    return $"{Gifts.Get(it.Id)?.Name ?? it.Id}×{it.Count}（放进纸箱）";
+                    int goodsOver = StoreOrTemp(false, Gifts.Get(it.Id)?.WeightKg ?? 0, it.Count, n => HomeBox.AddGift(it.Id, n), n => HomeTemp.AddGift(it.Id, n));
+                    return $"{Gifts.Get(it.Id)?.Name ?? it.Id}×{it.Count}（{Where(goodsOver, it.Count)}）";
                 case CourierItemKind.Furniture:
                     AddFurniture(it.Id, it.Count);
                     return $"{FurnitureCatalog.Get(it.Id)?.Name ?? it.Id}×{it.Count}（在“我的”里摆放）";
@@ -333,13 +352,17 @@ namespace PCShopSell.Core.Session
                     PartDef p = PartCatalog.Get(it.Id);
                     if (!toShop)
                     {
-                        HomeBoxParts.ForceAdd(p, it.Boxed, it.Count);
-                        return $"{p.Name}×{it.Count}（放在家里纸箱）";
+                        int partOver = StorePartAtHome(p, it.Boxed, it.Count);
+                        return $"{p.Name}×{it.Count}（{Where(partOver, it.Count)}）";
                     }
                     PlayerShop.Stock.ForceAdd(p, it.Boxed, it.Count);
                     return $"{p.Name}×{it.Count}（上了货架）";
             }
         }
+
+        /// <summary>配件送到家：能放进纸箱的放纸箱，剩下的进临时存放。返回进临时存放的件数。</summary>
+        private int StorePartAtHome(PartDef p, bool boxed, int count) =>
+            StoreOrTemp(false, Stock.SpaceOf(p, boxed, 1) * Backpack.KgPerSpace, count, n => HomeBoxParts.ForceAdd(p, boxed, n), n => HomeTempParts.ForceAdd(p, boxed, n));
 
         private SaveCourier[] SaveCouriers() => _couriers.Select(r => new SaveCourier
         {

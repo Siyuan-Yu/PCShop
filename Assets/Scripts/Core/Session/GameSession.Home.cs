@@ -276,6 +276,12 @@ namespace PCShopSell.Core.Session
         {
             List<PlacedFurniture> l = LayoutOf(shop);
             if (index < 0 || index >= l.Count || !CanEdit(shop)) return false;
+            if (FurnitureCatalog.Get(l[index].Id)?.Role == FurnitureRole.Storage)
+            {
+                double used = shop ? ShopLocker.WeightKg : HomeBoxKg;
+                double after = (shop ? ShopLockerLimitKg : HomeBoxLimitKg) - BoxCapacityKg;
+                if (used > after + 1e-9) return Fail($"纸箱里还放着 {used:0.#} 公斤东西，收走这个纸箱就只能放 {Math.Max(0, after):0.#} 公斤，先拿出来一些。");
+            }
             RememberLayout(shop);
             AddFurniture(l[index].Id, 1);
             l.RemoveAt(index);
@@ -445,12 +451,18 @@ namespace PCShopSell.Core.Session
             SpoilBackpackFood(today.TotalDays);
             List<string> boxLost = HomeBox.Food.Spoil(today.TotalDays);
             if (boxLost.Count > 0) Say("纸箱里放坏扔掉了：" + string.Join("、", boxLost) + "。");
-            List<string> lockerLost = ShopLocker.Food.Spoil(today.TotalDays);
-            if (lockerLost.Count > 0) Say("店里储物柜里放坏扔掉了：" + string.Join("、", lockerLost) + "。");
+            List<string> tempLost = HomeTemp.Food.Spoil(today.TotalDays);
+            if (tempLost.Count > 0) Say("家里临时存放的放坏扔掉了：" + string.Join("、", tempLost) + "。");
+            foreach (OwnedShop s in _shops)
+            {
+                List<string> lockerLost = s.Locker.Food.Spoil(today.TotalDays).Concat(s.Temp.Food.Spoil(today.TotalDays)).ToList();
+                if (lockerLost.Count > 0) Say($"{(MyShopCount > 1 ? ShopTitle(s) : "店里")}纸箱里放坏扔掉了：" + string.Join("、", lockerLost) + "。");
+            }
         }
 
-        private static SaveStorage ToSaveStorage(Backpack b) => new SaveStorage
+        private static SaveStorage ToSaveStorage(Backpack b, Stock parts = null) => new SaveStorage
         {
+            parts = parts == null ? null : Lines(parts),
             giftIds = b.GiftLines.Select(kv => kv.Key).ToArray(),
             giftCounts = b.GiftLines.Select(kv => kv.Value).ToArray(),
             rice = b.Food.RiceJin,
@@ -460,14 +472,16 @@ namespace PCShopSell.Core.Session
             furnCounts = b.FurnitureLines.Select(kv => kv.Value).ToArray(),
         };
 
-        private static void FromSaveStorage(SaveStorage s, Backpack b)
+        private static void FromSaveStorage(SaveStorage s, Backpack b, Stock parts = null)
         {
             b.Food.RiceJin = 0;
             b.Food.Ingredient.Clear();
             b.Food.Packed.Clear();
             b.ClearGifts();
             b.ClearFurniture();
+            parts?.Clear();
             if (s == null) return;
+            if (parts != null) Fill(parts, s.parts);
             string[] g = s.giftIds ?? Array.Empty<string>();
             for (int i = 0; i < g.Length; i++)
                 if (Gifts.Get(g[i]) != null && s.giftCounts != null && i < s.giftCounts.Length) b.AddGift(g[i], s.giftCounts[i]);
@@ -545,7 +559,10 @@ namespace PCShopSell.Core.Session
                 boxPartCounts = HomeBoxParts.Lines().Select(l => l.Count).ToArray(),
                 mallStashIds = _mallStash.Select(l => l.Id).ToArray(),
                 mallStashCounts = _mallStash.Select(l => l.Count).ToArray(),
-                shopLocker = ToSaveStorage(ShopLocker),
+                shopLocker = ToSaveStorage(MainShop.Locker),
+                homeTemp = ToSaveStorage(HomeTemp, HomeTempParts),
+                shopTemp = ToSaveStorage(MainShop.Temp),
+                shopBoxesGiven = MainShop.BoxesGiven,
                 courierDest = CourierDest == null ? 0 : CourierDest == CourierHome ? 1 : 2,
                 courierDestShop = CourierDest == null || CourierDest == CourierHome || CourierDest == CourierCurrentShop ? null : CourierDest,
             };
@@ -581,7 +598,10 @@ namespace PCShopSell.Core.Session
             SaveHome h = d.home;
             RestoreCouriers(h?.couriers);
             SendByCourier = h != null && h.sendByCourier;
-            FromSaveStorage(h?.shopLocker, ShopLocker);
+            FromSaveStorage(h?.shopLocker, MainShop.Locker);
+            FromSaveStorage(h?.homeTemp, HomeTemp, HomeTempParts);
+            FromSaveStorage(h?.shopTemp, MainShop.Temp);
+            MainShop.BoxesGiven = h != null && h.shopBoxesGiven;
             CourierDest = h == null || h.courierDest == 0 ? null
                 : h.courierDest == 1 ? CourierHome
                 : string.IsNullOrEmpty(h.courierDestShop) ? CourierCurrentShop : h.courierDestShop;

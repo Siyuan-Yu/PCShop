@@ -334,7 +334,7 @@ namespace PCShopSell.Game.UI
             Line(C, "盒装占 1 格、卖得贵；拆成散件占 0.5 格但便宜，拆了不能复原。", 14, Ui.Dim);
             Line(C, "—— 明细 ——", 16, Ui.Dim);
             if (_ctrl.InInterior)
-                Ui.Size(Ui.Button(C, $"店里储物柜（{S.ShopLocker.WeightKg:0.#}/{GameSession.ShopLockerLimitKg:0} 公斤）", OpenShopLockerWindow, 17), -1, 42);
+                Ui.Size(Ui.Button(C, $"店里纸箱 ×{S.ShopBoxes}（{S.ShopLocker.WeightKg:0.#}/{S.ShopLockerLimitKg:0} 公斤）" + (S.ShopTemp.IsEmpty ? "" : "　临时存放有东西"), OpenShopLockerWindow, 17), -1, 42);
             RectTransform list = Ui.Scroll(C, 250);
             foreach (StockLine l in shop.Stock.Lines())
             {

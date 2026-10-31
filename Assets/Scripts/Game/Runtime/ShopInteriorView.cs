@@ -774,6 +774,13 @@ namespace PCShopSell.Game.Runtime
 
         public Vector3 NearBenchWorld { get; private set; }
 
+        /// <summary>站在店里的纸箱旁边（能按 F 打开店里纸箱）。</summary>
+        public bool NearBox { get; private set; }
+
+        public Vector3 NearBoxWorld { get; private set; }
+
+        private readonly List<Rect> _boxFoots = new List<Rect>();
+
         /// <summary>冒烟 / 调试：直接站到装机台正前方。</summary>
         public void StandAtBench()
         {
@@ -787,6 +794,7 @@ namespace PCShopSell.Game.Runtime
             NearCounter = false;
             NearDisplay = false;
             NearBench = false;
+            NearBox = false;
             if (!active) return;
             Vector3 op = _owner.transform.localPosition;
             if (_hasCounter)
@@ -826,6 +834,15 @@ namespace PCShopSell.Game.Runtime
                     NearDisplay = false;
                     NearBenchWorld = Origin + new Vector3(_benchPos.x, 2.0f, _benchPos.y);
                 }
+            }
+            float bestBox = 0.8f;
+            foreach (Rect r in _boxFoots)
+            {
+                float dd = DistToRect(r, lp);
+                if (dd >= bestBox) continue;
+                bestBox = dd;
+                NearBox = true;
+                NearBoxWorld = Origin + new Vector3(r.center.x, 1.2f, r.center.y);
             }
         }
 
@@ -883,8 +900,10 @@ namespace PCShopSell.Game.Runtime
             _hasCounter = false;
             _hasBench = false;
             var deskSpots = new List<Vector3>();
+            _boxFoots.Clear();
             foreach (RoomFurniture.Entry e in _decor.Entries)
             {
+                if (e.Def.Role == FurnitureRole.Storage && e.HasFoot) _boxFoots.Add(e.Foot);
                 if (!e.Def.IsFixture) continue;
                 var h = e.Go.GetComponent<FixtureHandle>();
                 if (h == null) continue;

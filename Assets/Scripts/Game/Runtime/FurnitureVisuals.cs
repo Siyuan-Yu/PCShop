@@ -45,6 +45,8 @@ namespace PCShopSell.Game.Runtime
                 case "fan_new":
                 case "fan_fixed": Fan(root, c, false); break;
                 case "junk": Junk(root, c); break;
+                case FurnitureCatalog.HomeBox:
+                case FurnitureCatalog.ShopBox: Carton(root, w, d, c); break;
                 case "aircon": AirCon(root); break;
                 case FurnitureCatalog.Curtain: Curtain(root); break;
                 case "poster": Poster(root, w, 1.0f, 1.55f, new Color(0.85f, 0.55f, 0.25f), new Color(0.25f, 0.45f, 0.65f)); break;
@@ -178,6 +180,13 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(r, "Box2", new Vector3(-0.2f, 0.7f, -0.08f), new Vector3(0.5f, 0.28f, 0.45f), Mats.Lit(new Color(0.66f, 0.54f, 0.37f), 0.02f));
             Prims.Shape(PrimitiveType.Cylinder, r, "Basin", new Vector3(0.3f, 0.1f, -0.2f), new Vector3(0.45f, 0.1f, 0.45f), Mats.Lit(new Color(0.8f, 0.3f, 0.25f), 0.3f));
             Prims.Shape(PrimitiveType.Cylinder, r, "Bucket", new Vector3(0.28f, 0.2f, 0.28f), new Vector3(0.3f, 0.2f, 0.3f), Mats.Lit(new Color(0.25f, 0.45f, 0.7f), 0.3f));
+        }
+
+        private static void Carton(Transform r, float w, float d, bool c)
+        {
+            Prims.Box(r, "Box", new Vector3(0, 0.25f, 0), new Vector3(w - 0.04f, 0.5f, d - 0.04f), Mats.Lit(new Color(0.72f, 0.58f, 0.38f), 0.02f), c);
+            Prims.Box(r, "Tape", new Vector3(0, 0.505f, 0), new Vector3(0.08f, 0.01f, d - 0.03f), Mats.Lit(new Color(0.85f, 0.78f, 0.6f), 0.3f));
+            Prims.Box(r, "Flap", new Vector3(0, 0.25f, -d / 2 + 0.015f), new Vector3(w * 0.4f, 0.12f, 0.01f), Mats.Lit(new Color(0.6f, 0.47f, 0.3f), 0.02f));
         }
 
         // ---------- 墙面 ----------

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Catalog;
@@ -24,6 +24,9 @@ namespace PCShopSell.Tests
             PackTests.EmptyBag(s);
             return s;
         }
+
+        /// <summary>店里摆的东西里除去租下时送的纸箱。</summary>
+        private static int NonBoxes(IEnumerable<PlacedFurniture> layout) => layout.Count(p => p.Id != FurnitureCatalog.ShopBox);
 
         private static GameSession Rented(long cash = 30000)
         {
@@ -93,7 +96,8 @@ namespace PCShopSell.Tests
         public void NewlyRentedShop_IsBare_AndClosed()
         {
             GameSession s = Rented();
-            Assert.AreEqual(0, s.ShopLayout.Count);
+            Assert.AreEqual(0, NonBoxes(s.ShopLayout));
+            Assert.AreEqual(GameSession.StarterShopBoxes, s.ShopBoxes, "租下送的纸箱已经摆好");
             Assert.IsFalse(s.ShopFitted);
             StringAssert.Contains("收银台", s.ShopFitGap());
             StringAssert.Contains("货架", s.ShopFitGap());
@@ -167,7 +171,7 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.PlaceFromStock(true, FurnitureCatalog.ShopCounter, At(s, FurnitureCatalog.ShopCounter, 0.9, 3.3, 3)));
             Assert.IsTrue(s.PlaceFromStock(true, FurnitureCatalog.Shelf, At(s, FurnitureCatalog.Shelf, 3, 5.8, 0)));
             Assert.IsTrue(s.ShopFitted);
-            Assert.IsTrue(s.StoreFurniture(true, 0));
+            Assert.IsTrue(s.StoreFurniture(true, s.ShopLayout.ToList().FindIndex(p => p.Id == FurnitureCatalog.ShopCounter)));
             Assert.IsFalse(s.ShopFitted);
             Assert.IsTrue(s.PlayerShop.NotFitted);
         }
@@ -231,7 +235,7 @@ namespace PCShopSell.Tests
             s.DebugAddListing("tea", 0, 20, Money.FromYuan(5000));
             GameSessionTests.Teleport(s, "agency");
             Assert.IsTrue(s.SignLease("tea"), "搬店");
-            Assert.AreEqual(0, s.ShopLayout.Count);
+            Assert.AreEqual(0, NonBoxes(s.ShopLayout));
             Assert.AreEqual(1, s.FurnitureInStock(FurnitureCatalog.ShopCounter));
             Assert.AreEqual(6, s.FurnitureInStock(FurnitureCatalog.Shelf));
             Assert.IsFalse(s.ShopFitted, "新店要重新摆");
@@ -247,7 +251,7 @@ namespace PCShopSell.Tests
 
             GameSession bare = Rented();
             GameSession loadedBare = GameSession.Load(bare.City, bare.CreateSave());
-            Assert.AreEqual(0, loadedBare.ShopLayout.Count);
+            Assert.AreEqual(0, NonBoxes(loadedBare.ShopLayout));
             Assert.IsFalse(loadedBare.ShopFitted, "毛坯店读档还是毛坯");
             Assert.IsTrue(loadedBare.PlayerShop.NotFitted);
         }

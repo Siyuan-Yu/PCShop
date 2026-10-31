@@ -102,7 +102,7 @@ namespace PCShopSell.Core.Session
             if (!InPlayerShop) return Fail("要在自己的店里才能下架。");
             if (PlayerShop.Stock.GoodsCount(giftId) < count) return Fail("店里没有这么多。");
             if (ShopLocker.WeightKg + g.WeightKg * count > ShopLockerLimitKg + 1e-9)
-                return Fail($"储物柜放不下了（最多 {ShopLockerLimitKg:0} 公斤）。");
+                return Fail($"店里纸箱放不下了（{ShopBoxes} 个纸箱，最多 {ShopLockerLimitKg:0} 公斤）。");
             PlayerShop.Stock.TryRemoveGoods(giftId, count);
             ShopLocker.AddGift(giftId, count);
             Say($"把「{g.Name}」{(count > 1 ? "×" + count : "")}从店里收回了储物柜。");

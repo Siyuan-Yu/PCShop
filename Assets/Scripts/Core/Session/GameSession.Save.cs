@@ -222,6 +222,7 @@ namespace PCShopSell.Core.Session
             _focus.AutoBuild = Flags.Contains(AutoBuildFlag);
             RestoreBusiness(d);
             foreach (SaveShop shop in d.extraShops ?? Array.Empty<SaveShop>()) RestoreShop(shop);
+            foreach (OwnedShop s in _shops) GiveStarterBoxes(s);
             OwnedShop inside = ShopAt(CurrentPlace);
             OwnedShop focus = inside ?? (d.focusShop > 0 && d.focusShop < _shops.Count ? _shops[d.focusShop] : null);
             if (focus != null && focus != _focus)

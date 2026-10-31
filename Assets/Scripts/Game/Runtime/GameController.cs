@@ -358,6 +358,7 @@ namespace PCShopSell.Game
                 {
                     if (Interior.NearCounter) CounterInteract();
                     else if (Interior.NearDoor) Ui.ConfirmLeaveShop();
+                    else if (Interior.NearBox && !Interior.NearShelf && !Interior.NearBench && !Interior.NearDisplay) Ui.OpenShopLockerWindow();
                     else ShelfInteract();
                 }
                 else TryEnterNearby();
@@ -532,6 +533,12 @@ namespace PCShopSell.Game
                 {
                     world = Interior.DoorWorld;
                     label = Session.LeaveBlocker ?? (Session.IsEmployeeOnDuty(Session.Clock.Now) ? "出门（店员看店）" : "出门（没人看店就关门）");
+                    return true;
+                }
+                if (Interior.NearBox && !Interior.NearShelf && !Interior.NearBench && !Interior.NearDisplay)
+                {
+                    world = Interior.NearBoxWorld;
+                    label = $"店里纸箱 ×{Session.ShopBoxes}（{Session.ShopLocker.WeightKg:0.#}/{Session.ShopLockerLimitKg:0} 公斤，按 F 打开）";
                     return true;
                 }
                 if (Interior.NearBench)
