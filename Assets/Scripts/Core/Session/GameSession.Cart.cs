@@ -131,15 +131,18 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
-        private static void PutLine(List<CartLine> list, CartLine proto, double amount)
+        private void PutLine(List<CartLine> list, CartLine proto, double amount)
         {
+            double toBag = ReferenceEquals(list, _cart) ? FitAmount(proto.ByWeight, proto.UnitKg, CartBagFreeKg, amount) : 0;
             CartLine l = list.Find(x => x.Key == proto.Key);
             if (l != null)
             {
                 l.Amount += amount;
+                l.InBag += toBag;
                 return;
             }
             proto.Amount = amount;
+            proto.InBag = toBag;
             list.Add(proto);
         }
 

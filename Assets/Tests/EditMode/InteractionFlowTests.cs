@@ -44,6 +44,7 @@ namespace PCShopSell.Tests
                 var part = PartCatalog.Get("cpu0");
                 int count = Math.Min(10, s.StallRemaining(s.CurrentPlace, part));
                 Assert.True(s.CartAddStall(s.CurrentPlace, part, count));
+                s.CartAllToTruck();
                 Assert.True(s.CartWholeRowToBag("part:cpu0"));
                 var line = s.Cart.Single();
                 Assert.AreEqual(count, line.InBag + line.ByTruck);

@@ -154,8 +154,8 @@ namespace PCShopSell.Game.UI
         }
 
         /// <summary>
-        /// 购物车和结账：左栏“叫车送”，右栏“装进背包”。东西加进来先都在左栏，点“放进背包”（按住放多件）或拖到右栏就自己背，
-        /// 超重了拖回去；左栏剩下的一起叫车，按总重算几辆车，运费和货款一起结。
+        /// 购物车和结账：左栏“装进背包”，右栏“叫车送”。新加商品优先装背包，超出承重的部分自动叫车；
+        /// 两栏可手动调整；右栏的一起叫车，按总重算几辆车，运费和货款一起结。
         /// </summary>
         private void CartPanel(Window w, Transform parent, bool defaultToShop)
         {
@@ -167,8 +167,8 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(head, "清空", () => { S.ClearCart(); w.Rebuild(); }, 15, Ui.ButtonBg), 70);
 
             RectTransform cols = Ui.Row(parent, 190, 10);
-            RectTransform truckCol = CartColumnBox(cols, out RectTransform truckList);
             RectTransform bagCol = CartColumnBox(cols, out RectTransform bagList);
+            RectTransform truckCol = CartColumnBox(cols, out RectTransform truckList);
 
             OwnedShop dest = S.CourierShop(defaultToShop);
             (Money fee, int minutes) = S.CourierQuote(dest);
@@ -195,7 +195,7 @@ namespace PCShopSell.Game.UI
                         new HoldAction("改叫车", Ui.ButtonHot, line.InBag, n => S.CartToTruck(line.Key, n)),
                         new HoldAction("少拿一件", Ui.ButtonBg, line.InBag, n => S.CartToTruck(line.Key, n) && S.RemoveFromCart(line.Key, n)));
             }
-            if (bagKg <= 1e-9) Para(bagList, "点按钮移一件，“数量”可指定或全选；拖整行尽量放入背包，放不下的继续叫车。", 14, Ui.Dim);
+            if (bagKg <= 1e-9) Para(bagList, "新购商品默认优先放背包；装不下的自动放到右侧叫车。两边可按需调整。", 14, Ui.Dim);
 
             RectTransform destRow = Ui.Row(parent, 40, 8);
             if (truckKg > 1e-9)

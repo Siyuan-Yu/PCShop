@@ -179,6 +179,7 @@ namespace PCShopSell.Tests
             var part = PCShopSell.Core.Catalog.PartCatalog.All.First(p => s.StallSells(stall, p));
             Assert.IsTrue(s.CartAddStall(stall, part, 3));
             Assert.AreEqual(0, s.Ledger.Entries.Count(e => e.Category == "进货"), "加进购物车还没付钱");
+            s.CartAllToTruck(); // Explicit split: one in bag, remaining items by truck.
             Assert.IsTrue(s.CartToBag("part:" + part.Id, 1));
             Assert.AreEqual(1, s.CartCars(true), "剩下两件一辆车");
             Money cash = s.Ledger.Balance;

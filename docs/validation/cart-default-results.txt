@@ -1,0 +1,3 @@
+2026-11-01
+EditMode: total=540 passed=540 failed=0
+No screenshots generated. Default bag allocation, overflow, fractional kg, repeated additions preserving manual truck choices, free-freight bag checkout and furniture sizing validated.
