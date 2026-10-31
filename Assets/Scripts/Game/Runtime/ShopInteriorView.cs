@@ -779,6 +779,9 @@ namespace PCShopSell.Game.Runtime
 
         public Vector3 NearBoxWorld { get; private set; }
 
+        public bool NearFridge { get; private set; }
+        public Vector3 NearFridgeWorld { get; private set; }
+        private readonly List<Rect> _fridgeFoots = new List<Rect>();
         private readonly List<Rect> _boxFoots = new List<Rect>();
 
         /// <summary>冒烟 / 调试：直接站到装机台正前方。</summary>
@@ -794,7 +797,7 @@ namespace PCShopSell.Game.Runtime
             NearCounter = false;
             NearDisplay = false;
             NearBench = false;
-            NearBox = false;
+            NearBox = false; NearFridge = false;
             if (!active) return;
             Vector3 op = _owner.transform.localPosition;
             if (_hasCounter)
@@ -834,6 +837,14 @@ namespace PCShopSell.Game.Runtime
                     NearDisplay = false;
                     NearBenchWorld = Origin + new Vector3(_benchPos.x, 2.0f, _benchPos.y);
                 }
+            }
+            float bestFridge = 0.8f;
+            foreach (Rect r in _fridgeFoots)
+            {
+                float dd = DistToRect(r, lp);
+                if (dd >= bestFridge) continue;
+                bestFridge = dd; NearFridge = true;
+                NearFridgeWorld = Origin + new Vector3(r.center.x, 1.8f, r.center.y);
             }
             float bestBox = 0.8f;
             foreach (Rect r in _boxFoots)
@@ -900,10 +911,11 @@ namespace PCShopSell.Game.Runtime
             _hasCounter = false;
             _hasBench = false;
             var deskSpots = new List<Vector3>();
-            _boxFoots.Clear();
+            _boxFoots.Clear(); _fridgeFoots.Clear();
             foreach (RoomFurniture.Entry e in _decor.Entries)
             {
                 if (e.Def.Role == FurnitureRole.Storage && e.HasFoot) _boxFoots.Add(e.Foot);
+                if (e.Def.Role == FurnitureRole.Fridge && e.HasFoot) _fridgeFoots.Add(e.Foot);
                 if (!e.Def.IsFixture) continue;
                 var h = e.Go.GetComponent<FixtureHandle>();
                 if (h == null) continue;

@@ -380,6 +380,7 @@ namespace PCShopSell.Game
                 {
                     if (Interior.NearCounter) CounterInteract();
                     else if (Interior.NearDoor) Ui.ConfirmLeaveShop();
+                    else if (Interior.NearFridge) Ui.OpenFridgeWindow();
                     else if (Interior.NearBox && !Interior.NearShelf && !Interior.NearBench && !Interior.NearDisplay) Ui.OpenShopLockerWindow();
                     else ShelfInteract();
                 }
@@ -500,6 +501,9 @@ namespace PCShopSell.Game
                 case HomeRoomView.Repair:
                     Ui.OpenRepairWindow();
                     break;
+                case HomeRoomView.Fridge:
+                    Ui.OpenFridgeWindow();
+                    break;
                 case HomeRoomView.Storage:
                     Ui.OpenStorageWindow();
                     break;
@@ -556,6 +560,10 @@ namespace PCShopSell.Game
                     world = Interior.DoorWorld;
                     label = Session.LeaveBlocker ?? (Session.IsEmployeeOnDuty(Session.Clock.Now) ? "出门（店员看店）" : "出门（没人看店就关门）");
                     return true;
+                }
+                if (Interior.NearFridge)
+                {
+                    world = Interior.NearFridgeWorld; label = "冰箱：存取食物（按 F 打开）"; return true;
                 }
                 if (Interior.NearBox && !Interior.NearShelf && !Interior.NearBench && !Interior.NearDisplay)
                 {

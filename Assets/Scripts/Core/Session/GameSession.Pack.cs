@@ -350,7 +350,7 @@ namespace PCShopSell.Core.Session
                 foreach (StockLine l in HomeTempParts.Lines()) keys.Add($"part:{l.Part.Id}:{(l.Boxed ? "b" : "l")}");
             if (temp.Food.RiceJin > 1e-9) keys.Add("rice");
             foreach (string id in temp.Food.Ingredient.Where(b => b.Count > 0).Select(b => b.Id).Distinct()) keys.Add("ing:" + id);
-            if (temp.Food.PackedBowls > 0) keys.Add("lunch");
+            foreach (string id in temp.Food.Packed.Select(x => x.Id).Distinct()) keys.Add("lunch:" + id);
             foreach (var kv in temp.GiftLines) keys.Add("gift:" + kv.Key);
             foreach (var kv in temp.FurnitureLines) keys.Add("furn:" + kv.Key);
             return keys;
@@ -390,7 +390,7 @@ namespace PCShopSell.Core.Session
                     return s;
                 case "lunch":
                     s.UnitKg = Backpack.LunchboxKg;
-                    s.Name = "饭盒";
+                    s.Name = s.Id == null ? "饭盒" : MealName(s.Id);
                     return s;
                 case "gift":
                     GiftDef g = Gifts.Get(s.Id);
@@ -416,7 +416,7 @@ namespace PCShopSell.Core.Session
                 case "part": return parts?.Count(s.Part, s.Boxed) ?? 0;
                 case "rice": return bag.Food.RiceJin;
                 case "ing": return bag.Food.IngredientCount(s.Id);
-                case "lunch": return bag.Food.PackedBowls;
+                case "lunch": return bag.Food.Packed.Where(x => s.Id == null || x.Id == s.Id).Sum(x => x.Count);
                 case "gift": return bag.GiftCount(s.Id);
                 case "furn": return bag.FurnitureCount(s.Id);
                 default: return 0;
@@ -442,7 +442,7 @@ namespace PCShopSell.Core.Session
                     MoveBatches(from.Food.Ingredient, to?.Food.Ingredient ?? new List<FoodBatch>(), s.Id, n);
                     break;
                 case "lunch":
-                    MoveBatches(from.Food.Packed, to?.Food.Packed ?? new List<FoodBatch>(), null, n);
+                    MoveBatches(from.Food.Packed, to?.Food.Packed ?? new List<FoodBatch>(), s.Id, n);
                     break;
                 case "gift":
                     for (int i = 0; i < n; i++) from.TakeGift(s.Id);

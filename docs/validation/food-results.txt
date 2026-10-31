@@ -1,0 +1,4 @@
+2026-11-01
+EditMode: total=497 passed=497 failed=0
+FoodFromBatch: code=0 errors=0
+Includes workforce flow and actual furniture purchase, courier delivery, fridge placement in home/shop, named meals, selecting food to eat, cola purchase and consumption. 1080p and 720p render checks.

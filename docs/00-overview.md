@@ -1,5 +1,7 @@
 # PCShopSell（工作名）
 
+最新生活功能与验证见 [冰箱、饭菜与营养/心情](17-food-fridge-and-diet.md)，员工每日多源采购见 [采购清单](16-daily-multisource-purchasing.md)。
+
 电脑城创业故事：从商业街最偏的一间小电脑店起家，手装机赚第一桶金，靠行情、人脉和签约主播做大，最后建成自己的电脑乐园（园区）。
 
 > 当前已实现内容以 [10-current-content.md](10-current-content.md) 和 [12-update-2026-10-31.md](12-update-2026-10-31.md) 为准，试玩与验证见 [07-vs1-acceptance.md](07-vs1-acceptance.md)，历次记录见 [08-current-status.md](08-current-status.md)。`02-design.md`、`03-decisions.md`、`04-3c-and-world.md`、`05-player-life.md` 保留设计目标与历史决策；它们不代表所有规划均已实现。美术当前方向见 `06-art-and-rendering.md` 开头，后续计划见 `01-roadmap.md`。

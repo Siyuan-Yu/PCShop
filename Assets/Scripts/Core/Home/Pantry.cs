@@ -5,7 +5,7 @@ using PCShopSell.Core.Common;
 
 namespace PCShopSell.Core.Home
 {
-    /// <summary>农贸市场卖的食材。没有冰箱，放不久。</summary>
+    /// <summary>农贸市场卖的食材；首次冷藏可延长保鲜。</summary>
     public sealed class IngredientDef
     {
         public string Id { get; }
@@ -57,8 +57,9 @@ namespace PCShopSell.Core.Home
         public double Health;
         public int Count;
         public int ExpireDay;
+        public bool Chilled;
 
-        public FoodBatch Clone() => new FoodBatch { Id = Id, Name = Name, Hunger = Hunger, Health = Health, Count = Count, ExpireDay = ExpireDay };
+        public FoodBatch Clone() => new FoodBatch { Id = Id, Name = Name, Hunger = Hunger, Health = Health, Count = Count, ExpireDay = ExpireDay, Chilled = Chilled };
     }
 
     /// <summary>电饭锅里正在焖的一锅：到点才好，好了才能取。</summary>
@@ -159,9 +160,9 @@ namespace PCShopSell.Core.Home
         }
 
         /// <summary>从某个列表里吃一碗（先吃快过期的）。返回这一碗的批次，没有则为 null。</summary>
-        public FoodBatch TakeBowl(List<FoodBatch> from)
+        public FoodBatch TakeBowl(List<FoodBatch> from, string id = null)
         {
-            FoodBatch b = from.Where(x => x.Count > 0).OrderBy(x => x.ExpireDay).FirstOrDefault();
+            FoodBatch b = from.Where(x => x.Count > 0 && (id == null || x.Id == id)).OrderBy(x => x.ExpireDay).FirstOrDefault();
             if (b == null) return null;
             b.Count--;
             var eaten = b.Clone();

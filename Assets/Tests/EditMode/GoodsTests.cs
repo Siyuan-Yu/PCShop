@@ -91,7 +91,7 @@ namespace PCShopSell.Tests
             ShopCustomer c = r.Shop.Queue[0];
             Assert.AreEqual(Gifts.Soda, c.GoodsId);
             Assert.AreEqual(r.Shop.GoodsPriceOf(Gifts.Soda), c.Spend);
-            Assert.AreEqual("一瓶饮料", c.ItemName);
+            Assert.AreEqual(Gifts.Get(Gifts.Soda).Name, c.ItemName);
             Assert.AreEqual(50 - r.Shop.Queue.Count, r.Shop.Stock.GoodsCount(Gifts.Soda), "排队时已经从货架上拿下");
 
             Money before = r.Ledger.Balance;

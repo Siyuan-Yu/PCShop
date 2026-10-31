@@ -22,6 +22,7 @@ namespace PCShopSell.Game.Runtime
         public const string Cooker = "cooker";
         public const string Seat = "seat";
         public const string Repair = "repair";
+        public const string Fridge = "fridge";
         public const string Storage = "storage";
         public const string Door = "door";
 
@@ -43,6 +44,7 @@ namespace PCShopSell.Game.Runtime
                 case FurnitureRole.Cooker: return Cooker;
                 case FurnitureRole.Seat: return Seat;
                 case FurnitureRole.Broken: return Repair;
+                case FurnitureRole.Fridge: return Fridge;
                 case FurnitureRole.Storage: return Storage;
                 default: return null;
             }
@@ -203,7 +205,7 @@ namespace PCShopSell.Game.Runtime
                 if (id == null) continue;
                 if (def.Role == FurnitureRole.Bed) hasBed = true;
                 RectD f = RoomPlanner.Footprint(RoomSpec.Home, def, p);
-                string label = def.Role == FurnitureRole.Bed ? "睡觉 / 小睡" : def.Role == FurnitureRole.Wardrobe ? "打开衣柜" : def.Role == FurnitureRole.Seat ? "坐下" : def.Role == FurnitureRole.Broken ? "坏了：约师傅上门修" : def.Role == FurnitureRole.Storage ? "纸箱：存取东西" : "电饭锅：做饭 / 吃饭";
+                string label = def.Role == FurnitureRole.Fridge ? "冰箱：存取食物" : def.Role == FurnitureRole.Bed ? "睡觉 / 小睡" : def.Role == FurnitureRole.Wardrobe ? "打开衣柜" : def.Role == FurnitureRole.Seat ? "坐下" : def.Role == FurnitureRole.Broken ? "坏了：约师傅上门修" : def.Role == FurnitureRole.Storage ? "纸箱：存取东西" : "电饭锅：做饭 / 吃饭";
                 _spots.Add(new Spot
                 {
                     Id = id,

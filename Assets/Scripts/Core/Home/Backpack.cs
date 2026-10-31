@@ -49,7 +49,7 @@ namespace PCShopSell.Core.Home
             new GiftDef(Baijiu, "两瓶白酒", "实在人喝的酒，有点沉。", 160, 1.6, TobaccoBusiness),
             new GiftDef(Drink, "一箱饮料", "一整箱，很沉。", 100, 6.0, TobaccoBusiness),
             new GiftDef(Snack, "一盒点心", "精致的点心盒。", 120, 0.8, TobaccoBusiness),
-            new GiftDef(Soda, "一瓶饮料", "冰镇的瓶装饮料，请店员喝正合适。", 5, 0.5, TobaccoBusiness),
+            new GiftDef(Soda, "可乐（瓶）", "自己喝：饥饿 +2、心情 +8、营养 −3。也能请店员喝。", 5, 0.5, TobaccoBusiness),
             new GiftDef(Fruit, "一箱水果", "农贸市场的时令水果，一箱也不轻。", 120, 3.0, FarmBusiness),
         };
 

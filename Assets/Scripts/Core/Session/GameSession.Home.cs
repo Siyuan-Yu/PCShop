@@ -296,6 +296,8 @@ namespace PCShopSell.Core.Session
         {
             List<PlacedFurniture> l = LayoutOf(shop);
             if (index < 0 || index >= l.Count || !CanEdit(shop)) return false;
+            if (FurnitureCatalog.Get(l[index].Id)?.Role == FurnitureRole.Fridge && FridgeOf(shop).WeightKg > (FridgeCount(shop) - 1) * FridgeCapacityKg + 1e-9)
+                return Fail("冰箱里还有食物，先取出一些再收起冰箱。不能丢失冷藏食物。");
             if (FurnitureCatalog.Get(l[index].Id)?.Role == FurnitureRole.Storage)
             {
                 double used = shop ? ShopLocker.WeightKg : HomeBoxKg;
@@ -366,7 +368,7 @@ namespace PCShopSell.Core.Session
         private void UpdateCooking(GameTimestamp now)
         {
             FoodBatch b = Pantry.FinishCook(now.TotalMinutes);
-            if (b != null) Say($"电饭锅跳了：{b.Name}×{b.Count} 碗焖好了。没有冰箱，放不过明天。");
+            if (b != null) Say($"电饭锅跳了：{b.Name}×{b.Count} 碗焖好了。可装进背包，或放入冰箱额外保鲜 2 天。");
         }
 
         /// <summary>在家吃一碗（10 分钟）。</summary>
@@ -376,6 +378,7 @@ namespace PCShopSell.Core.Session
             if (Player.Hunger >= 99) return Fail("不饿。");
             FoodBatch b = Pantry.TakeBowl(Pantry.Cooked);
             if (b == null) return Fail("没有做好的饭。");
+            ApplyDiet(MealNutrition(b.Id), 0);
             Player.Hunger = Math.Min(100, Player.Hunger + b.Hunger);
             Player.Health = Math.Min(100, Player.Health + b.Health);
             AdvanceClock(Pantry.EatMinutes);
@@ -407,14 +410,16 @@ namespace PCShopSell.Core.Session
 
         private double EatFrom(System.Collections.Generic.List<FoodBatch> list)
         {
-            double gain = 0;
+            double gain = 0, nutrition = 0;
+            int bowls = 0;
             while (gain < MealGain && Player.Hunger + gain < 100)
             {
                 FoodBatch b = Pantry.TakeBowl(list);
                 if (b == null) break;
-                gain += b.Hunger;
+                gain += b.Hunger; nutrition += MealNutrition(b.Id); bowls++;
                 Player.Health = Math.Min(100, Player.Health + b.Health);
             }
+            if (bowls > 0) ApplyDiet(nutrition / bowls, 0); // One meal, regardless of bowl count.
             return gain;
         }
 
@@ -450,11 +455,12 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>饿了随时从背包里拿一个饭盒吃（10 分钟）。</summary>
-        public bool EatLunchboxNow()
+        public bool EatLunchboxNow(string foodId = null)
         {
             if (Player.Hunger >= 95) return Fail("不饿。");
-            FoodBatch b = Pantry.TakeBowl(Backpack.Food.Packed);
+            FoodBatch b = Pantry.TakeBowl(Backpack.Food.Packed, foodId);
             if (b == null) return Fail("背包里没有饭盒。");
+            ApplyDiet(MealNutrition(b.Id), 0);
             Player.Hunger = Math.Min(100, Player.Hunger + b.Hunger);
             Player.Health = Math.Min(100, Player.Health + b.Health);
             ApplyCargoLimit();
@@ -465,6 +471,7 @@ namespace PCShopSell.Core.Session
 
         private void OnHomeDayAdvanced(GameDate today)
         {
+            SpoilFridges(today.TotalDays);
             DeliverParcels(today);
             List<string> lost = Pantry.Spoil(today.TotalDays);
             if (lost.Count > 0) Say("放坏扔掉了：" + string.Join("、", lost) + "。");
@@ -530,13 +537,13 @@ namespace PCShopSell.Core.Session
                 }).ToList();
 
         private static SaveBatch[] ToSave(IEnumerable<FoodBatch> l) =>
-            l.Select(b => new SaveBatch { id = b.Id, name = b.Name, hunger = b.Hunger, health = b.Health, count = b.Count, expireDay = b.ExpireDay }).ToArray();
+            l.Select(b => new SaveBatch { id = b.Id, name = b.Name, hunger = b.Hunger, health = b.Health, count = b.Count, expireDay = b.ExpireDay, chilled = b.Chilled }).ToArray();
 
         private static void FromSave(SaveBatch[] a, List<FoodBatch> into)
         {
             into.Clear();
             foreach (SaveBatch b in a ?? Array.Empty<SaveBatch>())
-                into.Add(new FoodBatch { Id = b.id, Name = b.name, Hunger = b.hunger, Health = b.health, Count = b.count, ExpireDay = b.expireDay });
+                into.Add(new FoodBatch { Id = b.id, Name = b.name, Hunger = b.hunger, Health = b.health, Count = b.count, ExpireDay = b.expireDay, Chilled = b.chilled });
         }
 
         private void SaveHomeData(SaveData d)
@@ -550,6 +557,7 @@ namespace PCShopSell.Core.Session
                 homeLayout = ToSave(_homeLayout),
                 shopLayout = ToSave(_shopLayout),
                 parcels = _parcels.Select(p => new SaveParcel { kind = (int)p.Kind, id = p.Id, count = p.Count, dueDay = p.DueDay, toShop = p.ToShop }).ToArray(),
+                homeFridge = ToSaveStorage(HomeFridge), mainShopFridge = ToSaveStorage(MainShop.Fridge),
                 riceJin = Pantry.RiceJin,
                 ingredients = ToSave(Pantry.Ingredient),
                 cooked = ToSave(Pantry.Cooked),
@@ -622,6 +630,8 @@ namespace PCShopSell.Core.Session
             SaveHome h = d.home;
             RestoreCouriers(h?.couriers);
             SendByCourier = h != null && h.sendByCourier;
+            FromSaveStorage(h?.homeFridge, HomeFridge);
+            FromSaveStorage(h?.mainShopFridge, MainShop.Fridge);
             FromSaveStorage(h?.shopLocker, MainShop.Locker);
             FromSaveStorage(h?.homeTemp, HomeTemp, HomeTempParts);
             FromSaveStorage(h?.shopTemp, MainShop.Temp);
@@ -669,7 +679,7 @@ namespace PCShopSell.Core.Session
             FromSave(h.packLunch, Backpack.Food.Packed);
             if (h.packed != null)
                 foreach (SaveBatch b in h.packed)
-                    Backpack.Food.Packed.Add(new FoodBatch { Id = b.id, Name = b.name, Hunger = b.hunger, Health = b.health, Count = b.count, ExpireDay = b.expireDay });
+                    Backpack.Food.Packed.Add(new FoodBatch { Id = b.id, Name = b.name, Hunger = b.hunger, Health = b.health, Count = b.count, ExpireDay = b.expireDay, Chilled = b.chilled });
             _renovationDay = h.renovationDay;
             _visits.Clear();
             int vn = Math.Min(h.visitTargets?.Length ?? 0, Math.Min(h.visitStarts?.Length ?? 0, h.visitPrices?.Length ?? 0));

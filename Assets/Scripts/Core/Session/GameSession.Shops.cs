@@ -131,6 +131,7 @@ namespace PCShopSell.Core.Session
             if (Employees.Any(x => x.Person.TransferShopId == s.Place.Id)) return "已有员工安排明天调入，先取消调店安排";
             if (s.Sim.Orders.Count > 0) return "还有没交付的装机单";
             if (s.Sim.DisplayPcs.Count > 0) return "展示台上还摆着整机，先拆回库存";
+            if (!s.Fridge.IsEmpty) return "冰箱里还有食物，请先取走";
             if (!s.Locker.IsEmpty || !s.Temp.IsEmpty) return "纸箱或临时存放还有物品，请先转存或叫货车搬走";
             if (!s.Sim.Stock.IsEmpty) return "店里还有货，先打电话叫货车搬走";
             if (_couriers.Any(r => r.ToShop && r.ShopId == s.Place.Id)) return "还有车在往这家店送货";
@@ -210,6 +211,7 @@ namespace PCShopSell.Core.Session
                 restockIds = s.Restock.Keys.ToArray(),
                 restockTargets = s.Restock.Values.ToArray(),
                 renovationDay = s.RenovationDay,
+                fridge = ToSaveStorage(s.Fridge),
                 locker = ToSaveStorage(s.Locker),
                 temp = ToSaveStorage(s.Temp),
                 tempSince = s.TempSince,
@@ -252,6 +254,7 @@ namespace PCShopSell.Core.Session
             for (int i = 0; i < rids.Length && i < rt.Length; i++)
                 if (PartCatalog.Get(rids[i]) != null && rt[i] > 0) shop.Restock[rids[i]] = Math.Min(RestockMaxTarget, rt[i]);
             shop.RenovationDay = d.renovationDay;
+            FromSaveStorage(d.fridge, shop.Fridge);
             FromSaveStorage(d.locker, shop.Locker);
             FromSaveStorage(d.temp, shop.Temp);
             shop.TempSince = d.tempSince;

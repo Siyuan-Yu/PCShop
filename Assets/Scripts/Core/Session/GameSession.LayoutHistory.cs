@@ -45,8 +45,12 @@ namespace PCShopSell.Core.Session
         private bool RestoreLayout(List<LayoutSnapshot> from, List<LayoutSnapshot> to)
         {
             if (!_layoutHistoryActive || !Time.IsHeld || from.Count == 0) return false;
+            var state = from[from.Count - 1];
+            int fridgeCount = state.Layout.Count(p => FurnitureCatalog.Get(p.Id)?.Role == FurnitureRole.Fridge);
+            if (FridgeOf(_layoutHistoryShop).WeightKg > fridgeCount * FridgeCapacityKg + 1e-9)
+                return Fail("冰箱里还有食物，这次撤销/重做会减少冷藏容量。请先取出食物。");
             to.Add(CaptureLayout());
-            var state = from[from.Count - 1]; from.RemoveAt(from.Count - 1);
+            from.RemoveAt(from.Count - 1);
             var layout = LayoutOf(_layoutHistoryShop); layout.Clear(); layout.AddRange(state.Layout.Select(p => p.Clone()));
             _furnStock.Clear(); foreach (var item in state.Furniture) _furnStock[item.Key] = item.Value;
             Backpack box = BoxOf(_layoutHistoryShop), temp = TempOf(_layoutHistoryShop);

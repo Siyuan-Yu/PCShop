@@ -35,6 +35,8 @@ namespace PCShopSell.Core.Session
         public SaveStockLine[] cargo;
 
         public double hunger, energy, health, sleepDebt;
+        public bool hasDietStats;
+        public double nutrition, mood;
         public int intelligence, charm, skill;
         public int lastNewsReadDay;
 
@@ -281,7 +283,7 @@ namespace PCShopSell.Core.Session
         public string[] restockIds;
         public int[] restockTargets;
         public int renovationDay = -1;
-        public SaveStorage locker, temp;
+        public SaveStorage locker, temp, fridge;
         public long tempSince;
         public bool boxesGiven;
     }
@@ -320,6 +322,7 @@ namespace PCShopSell.Core.Session
         public SavePlaced[] homeLayout;
         public SavePlaced[] shopLayout;
         public SaveParcel[] parcels;
+        public SaveStorage homeFridge, mainShopFridge;
         public double riceJin;
         public SaveBatch[] ingredients;
         public SaveBatch[] cooked;
@@ -441,5 +444,6 @@ namespace PCShopSell.Core.Session
         public double health;
         public int count;
         public int expireDay;
+        public bool chilled;
     }
 }

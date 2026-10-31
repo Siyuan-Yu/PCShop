@@ -37,6 +37,12 @@ namespace PCShopSell.Game.Runtime
                 case "bed_good": Bed(root, w, d, c, 2); break;
                 case FurnitureCatalog.WardrobeCloth: Wardrobe(root, w, d, c, false); break;
                 case "wardrobe_wood": Wardrobe(root, w, d, c, true); break;
+                case FurnitureCatalog.Fridge:
+                    Prims.Box(root, "FridgeBody", new Vector3(0, 0.9f, 0), new Vector3(w, 1.8f, d), Mats.Lit(new Color(0.8f, 0.86f, 0.85f)), c);
+                    Prims.Box(root, "UpperDoor", new Vector3(0, 1.45f, -d/2 - 0.015f), new Vector3(w - 0.04f, 0.62f, 0.04f), Mats.Lit(new Color(0.92f, 0.95f, 0.93f)), false);
+                    Prims.Box(root, "LowerDoor", new Vector3(0, 0.57f, -d/2 - 0.015f), new Vector3(w - 0.04f, 1.08f, 0.04f), Mats.Lit(new Color(0.92f, 0.95f, 0.93f)), false);
+                    Prims.Box(root, "Handle", new Vector3(w/2 - 0.1f, 1.05f, -d/2 - 0.06f), new Vector3(0.04f, 0.3f, 0.05f), Mats.Lit(Metal), false);
+                    break;
                 case FurnitureCatalog.TableCooker: TableCooker(root, w, d, c); break;
                 case "stool":
                     Prims.Shape(PrimitiveType.Cylinder, root, "Stool", new Vector3(0, 0.2f, 0), new Vector3(0.34f, 0.2f, 0.34f), Mats.Lit(new Color(0.7f, 0.25f, 0.2f), 0.3f), c);

@@ -242,16 +242,18 @@ namespace PCShopSell.Game.UI
                 double kg = n * Backpack.IngredientKg(g.Key);
                 l.Add(new BagStack { Key = "ing:" + g.Key, Name = g.First().Name, Kind = "买的米和菜", Count = n, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = new Color(0.30f, 0.55f, 0.30f) });
             }
-            if (bag.Lunchboxes > 0)
+            foreach (var meal in bag.Food.Packed.GroupBy(b => b.Id))
             {
-                double kg = bag.Lunchboxes * Backpack.LunchboxKg;
-                l.Add(new BagStack { Key = "lunch", Name = "饭盒", Kind = "从电饭锅装的饭（饭点自动吃，也可以现在吃一个）", Count = bag.Lunchboxes, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = new Color(0.62f, 0.40f, 0.30f) });
+                int n = meal.Sum(b => b.Count);
+                double kg = n * Backpack.LunchboxKg;
+                Color color = meal.Key == "veg" ? new Color(0.3f, 0.55f, 0.3f) : meal.Key == "pork" ? new Color(0.62f, 0.35f, 0.28f) : new Color(0.62f, 0.55f, 0.35f);
+                l.Add(new BagStack { Key = "lunch:" + meal.Key, Name = meal.First().Name, Kind = "熟食 · 饥饿 +" + meal.First().Hunger.ToString("0.#") + " · " + GameSession.MealEffects(meal.Key) + " · 最早到期：第 " + meal.Min(b => b.ExpireDay) + " 天", Count = n, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = color });
             }
             foreach (var kv in bag.GiftLines)
             {
                 GiftDef gd = Gifts.Get(kv.Key);
                 double kg = gd.WeightKg * kv.Value;
-                l.Add(new BagStack { Key = "gift:" + kv.Key, Name = gd.Name, Kind = "礼品", Count = kv.Value, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = new Color(0.70f, 0.52f, 0.18f) });
+                l.Add(new BagStack { Key = "gift:" + kv.Key, Name = gd.Name, Kind = GameSession.IsEdibleGift(gd.Id) ? "可食用 · " + GameSession.GiftEffects(gd.Id) : "礼品", Count = kv.Value, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = new Color(0.70f, 0.52f, 0.18f) });
             }
             foreach (var kv in bag.FurnitureLines)
             {
@@ -335,18 +337,21 @@ namespace PCShopSell.Game.UI
 
                 BagStack pick = stacks.FirstOrDefault(s => s.Key == _bagSel);
                 if (pick != null)
-                    Line(w.Content, $"<b>{pick.Name}</b> ×{pick.Count}　占 {Mathf.Max(1, Mathf.CeilToInt((float)(pick.Space - 1e-6)))} 格　{pick.Kg:0.#} 公斤\n<color=#ABB5A8>{pick.Kind}</color>", 17);
+                    Para(w.Content, $"<b>{pick.Name}</b> ×{pick.Count}　占 {Mathf.Max(1, Mathf.CeilToInt((float)(pick.Space - 1e-6)))} 格　{pick.Kg:0.#} 公斤\n<color=#ABB5A8>{pick.Kind}</color>", 17);
                 else
                     Line(w.Content, stacks.Count == 0 ? "背包是空的。去买点东西：礼品在烟酒茶行 / 农贸市场 / 手机网购，进货在电子市场。" : "点一格看详情。", 17, Ui.Dim);
-                Line(w.Content, $"每天 12:00、18:30 饿两次，饭点先吃带着的饭盒（在家吃锅里的）。现在带着 {S.Backpack.Lunchboxes} 盒。", 15, S.Backpack.Lunchboxes < 2 ? Ui.Warn : Ui.Dim);
+                Para(w.Content, $"营养 {S.Player.Nutrition:0.#}/100 · 心情 {S.Player.Mood:0.#}/100（暂只记录，无其他影响）\n饭菜按菜名分开。选中后可吃指定饭菜或喝饮料；每天 12:00、18:30 自动吃饭。", 15, Ui.Dim);
 
+                if (S.CanOpenFridge) Ui.Size(Ui.Button(w.Content, "打开这里的冰箱", () => OpenFridgeWindow(), 17), -1, 34);
                 RectTransform acts = Ui.Row(w.Content, 46);
-                if (S.Backpack.Lunchboxes > 0)
-                    Ui.Size(Ui.Button(acts, "吃一个饭盒", () =>
+                if (pick != null && pick.Key.StartsWith("lunch:"))
+                    Ui.Size(Ui.Button(acts, "吃一份" + pick.Name, () =>
                     {
-                        S.EatLunchboxNow();
+                        S.EatLunchboxNow(pick.Key.Substring(6));
                         w.Rebuild();
                     }, 18), 180);
+                if (pick != null && pick.Key.StartsWith("gift:") && GameSession.IsEdibleGift(pick.Key.Substring(5)))
+                    Ui.Size(Ui.Button(acts, pick.Key == "gift:" + Gifts.Soda ? "喝一瓶可乐" : "吃一份" + pick.Name, () => { S.ConsumeGift(pick.Key.Substring(5)); w.Rebuild(); }, 17, Ui.ButtonHot), 180);
                 string target = S.UnloadTarget;
                 if (target != null)
                 {
@@ -361,8 +366,8 @@ namespace PCShopSell.Game.UI
                     else
                         // 没东西可放就不摆一个点不动的灰按钮，直接说为什么
                         Ui.Size(Ui.Label(acts, S.InPlayerShop
-                            ? "没有要放下的东西（饭盒一直带在身上）。"
-                            : "没有要放在家里的东西：饭盒一直带在身上（饭点自动吃），配件要拿到店里。", 14, TextAnchor.MiddleLeft, Ui.Dim), S.InPlayerShop ? 260 : 440);
+                            ? "没有可一键转存的物品；熟饭可存入冰箱。"
+                            : "没有可一键转存的物品；熟饭可存入冰箱，配件要拿到店里。", 14, TextAnchor.MiddleLeft, Ui.Dim), S.InPlayerShop ? 260 : 440);
                     if (S.InPlayerShop)
                         Ui.Size(Ui.Button(acts, "转存物品", () =>
                         {
@@ -661,8 +666,10 @@ namespace PCShopSell.Game.UI
             // 焖好了：取饭（吃、装饭盒）；取完才能再焖
             if (pan.CookedBowls > 0)
             {
-                Line(w.Content, $"锅里焖好的饭：{pan.CookedBowls} 碗（没有冰箱，放不过明天）", 18);
+                Line(w.Content, $"锅里焖好的饭：{pan.CookedBowls} 碗（可装入背包或放冰箱）", 18);
                 foreach (FoodBatch b in pan.Cooked) Line(w.Content, $"· {b.Name} ×{b.Count}  （放到第 {b.ExpireDay} 天前吃完）", 15, Ui.Dim);
+                if (S.CanOpenFridge)
+                    Ui.Size(Ui.Button(w.Content, "把做好的饭全部放入冰箱", () => { S.ChillCookedFood(pan.CookedBowls); w.Rebuild(); }, 17, Ui.ButtonHot), -1, 38);
                 RectTransform erow = Ui.Row(w.Content, 46);
                 Ui.Size(Ui.Button(erow, $"吃一碗（{Pantry.EatMinutes} 分钟）", () =>
                 {
@@ -720,6 +727,7 @@ namespace PCShopSell.Game.UI
                 }, 15, _cookIngredient == d.Id ? Ui.ButtonHot : Ui.ButtonBg, have > 0), 150);
             }
 
+            Line(w.Content, GameSession.MealName(_cookIngredient ?? "rice") + "：" + GameSession.MealEffects(_cookIngredient ?? "rice") + "（每顿；暂只记录）", 16, Ui.Accent);
             int bowls = Mathf.RoundToInt((float)(_cookJin * Pantry.BowlsPerJin));
             Ui.Size(Ui.Button(w.Content, $"开始焖饭：{_cookJin:0.#} 斤，约 {bowls} 碗，{Pantry.CookMinutes} 分钟后好", () =>
             {
@@ -743,6 +751,8 @@ namespace PCShopSell.Game.UI
                 RectTransform list = Ui.Scroll(w.Content, 660);
                 PlayerStats st = S.Player;
                 Line(list, "—— 我 ——", 18, Ui.Accent);
+                Line(list, $"营养 {st.Nutrition:0.#}/100  心情 {st.Mood:0.#}/100（目前只记录，不影响其他玩法）", 17, Ui.Accent);
+                if (S.CanOpenFridge) Ui.Size(Ui.Button(list, "打开冰箱", () => OpenFridgeWindow(), 17), -1, 38);
                 Line(list, $"饥饿 {st.Hunger:0}  精力 {st.Energy:0}/{st.MaxEnergy:0}  健康 {st.Health:0}  欠觉 {st.SleepDebt:0.#} 小时", 17, Ui.Dim);
                 Line(list, $"智力 {st.Intelligence}  魅力 {S.EffectiveCharm}（衣着 +{S.Outfit.CharmBonus}）  技术 {st.Skill}   现金 {S.Ledger.Balance}", 17, Ui.Dim);
                 Line(list, "每天饿两次（12:00 / 18:30）：在家吃锅里的饭，出门吃背包里的饭盒；都没有就饿着。", 15, Ui.Dim);
@@ -761,7 +771,7 @@ namespace PCShopSell.Game.UI
                 var bagIngs = bag.Food.Ingredient.GroupBy(b => b.Id).ToList();
                 string bagFood = (bag.Food.RiceJin > 0 ? $"大米 {bag.Food.RiceJin:0.#} 斤" : "") + (bagIngs.Count > 0 ? "  " + string.Join("、", bagIngs.Select(g => $"{g.First().Name}×{g.Sum(b => b.Count)}")) : "");
                 Line(list, "买的菜米：" + (bagFood.Trim().Length == 0 ? "没有" : bagFood.Trim()) + "（回家打开背包一键放进厨房）", 16);
-                Line(list, $"饭盒：{bag.Lunchboxes} 盒", 16, bag.Lunchboxes < 2 ? Ui.Warn : Ui.TextColor);
+                Para(list, "带着的熟饭：" + (bag.Lunchboxes == 0 ? "没有" : string.Join("、", bag.Food.Packed.GroupBy(b => b.Id).Select(g => g.First().Name + "×" + g.Sum(b => b.Count)))), 16, bag.Lunchboxes < 2 ? Ui.Warn : Ui.TextColor);
                 var bagFurn = bag.FurnitureLines.ToList();
                 if (bagFurn.Count > 0) Line(list, "背着的家具：" + string.Join("、", bagFurn.Select(kv => FurnitureLabel(kv.Key, kv.Value))) + "（回家或回店里打开背包一键放下）", 16);
                 Line(list, "礼品：" + (bag.GiftLines.Count() == 0 ? "没有。去烟酒茶行、农贸市场买，或者网购。" : string.Join("、", bag.GiftLines.Select(kv => $"{Gifts.Get(kv.Key).Name}×{kv.Value}"))), 16);
@@ -776,7 +786,7 @@ namespace PCShopSell.Game.UI
                 Line(list, "—— 家具背包 ——", 18, Ui.Accent);
                 var stock = S.FurnitureStock.ToList();
                 if (stock.Count == 0) Line(list, "空的。买来的家具会放在这里，摆出来才算。", 15, Ui.Dim);
-                foreach (var kv in stock) Line(list, "· " + FurnitureLabel(kv.Key, kv.Value) + (FurnitureCatalog.Get(kv.Key).ForShop ? "（店里用）" : "（家里用）"), 16);
+                foreach (var kv in stock) Line(list, "· " + FurnitureLabel(kv.Key, kv.Value) + (FurnitureCatalog.Get(kv.Key).Role == FurnitureRole.Fridge ? "（家/店通用）" : FurnitureCatalog.Get(kv.Key).ForShop ? "（店里用）" : "（家里用）"), 16);
 
                 Line(list, "—— 在路上的包裹 ——", 18, Ui.Accent);
                 if (S.Parcels.Count == 0) Line(list, "没有。网购 " + GameSession.DeliveryDays + " 天送到家；家具城叫的货车明早到。", 15, Ui.Dim);

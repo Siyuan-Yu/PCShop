@@ -74,6 +74,7 @@ namespace PCShopSell.Core.Session
                 idleEmployees = _idleEmployees.Select(ToSave).ToArray(),
                 cargo = Lines(Cargo),
 
+                hasDietStats = true, nutrition = Player.Nutrition, mood = Player.Mood,
                 hunger = Player.Hunger,
                 energy = Player.Energy,
                 health = Player.Health,
@@ -168,6 +169,8 @@ namespace PCShopSell.Core.Session
             Cargo.Capacity = CurrentVehicle.CargoCapacity;
             Fill(Cargo, d.cargo);
 
+            Player.Nutrition = d.hasDietStats ? Math.Max(0, Math.Min(100, d.nutrition)) : 50;
+            Player.Mood = d.hasDietStats ? Math.Max(0, Math.Min(100, d.mood)) : 50;
             Player.Hunger = d.hunger;
             Player.Energy = d.energy;
             Player.Health = d.health;

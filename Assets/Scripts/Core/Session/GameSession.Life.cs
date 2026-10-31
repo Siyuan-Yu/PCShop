@@ -10,6 +10,8 @@ namespace PCShopSell.Core.Session
         public double Hunger = 80;
         public double Energy = 90;
         public double Health = 100;
+        // Display-only diet records; they do not alter health, energy or any other simulation.
+        public double Nutrition = 50, Mood = 50;
 
         /// <summary>欠下的睡眠（小时），会压低精力上限。</summary>
         public double SleepDebt;

@@ -26,6 +26,7 @@ namespace PCShopSell.Core.Home
         Broken,
         /// <summary>纸箱：可以存取东西，每个 200 斤。</summary>
         Storage,
+        Fridge,
     }
 
     /// <summary>店面设施的种类：货架摆配件，收银台收钱，整机展示桌摆整机，操作台装机。</summary>
@@ -118,6 +119,7 @@ namespace PCShopSell.Core.Home
 
     public static class FurnitureCatalog
     {
+        public const string Fridge = "fridge";
         public const string BedBoard = "bed_board";
         public const string WardrobeCloth = "wardrobe_cloth";
         public const string TableCooker = "table_cooker";
@@ -187,6 +189,8 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef("fan_broken", "坏电风扇", "摇头的地方卡住了，一直耷拉着。找人上门能修好。", 0, FurnitureSlot.Floor, 0.45, 0.45, false, true) { Role = FurnitureRole.Broken, RepairInto = "fan_fixed", RepairCost = Money.FromYuan(60) });
             Add(new FurnitureDef("fan_fixed", "电风扇（修好了）", "修好的旧电风扇，能转。睡眠 +0.05，水电 +¥10/月。", 0, FurnitureSlot.Floor, 0.45, 0.45, false, true) { SleepBonus = 0.05, Utilities = Money.FromYuan(10) });
             Add(new FurnitureDef("junk", "纸箱和塑料盆", "搬家时留下的杂物。纸箱里能放东西。", 0, FurnitureSlot.Floor, 0.9, 0.9, false, true) { Role = FurnitureRole.Storage });
+
+            Add(new FurnitureDef(Fridge, "双门冰箱", "家和店里都能摆，每台可放 60 公斤食物。冷藏额外保鲜 2 天，同一批食物只延长一次。", 1200, FurnitureSlot.Floor, 0.75, 0.7) { Role = FurnitureRole.Fridge, WeightKg = 45, Utilities = Money.FromYuan(20) });
 
             // ---- 出租屋：可以买 ----
             Add(new FurnitureDef("bed_spring", "弹簧床", "有像样的床垫，睡着不硌人。睡眠质量 ×1.12。", 900, FurnitureSlot.Floor, 2.0, 1.1) { Role = FurnitureRole.Bed, BedQuality = 1.12 });
@@ -280,7 +284,7 @@ namespace PCShopSell.Core.Home
             return null;
         }
 
-        public static IEnumerable<FurnitureDef> Purchasable(bool forShop) => All.Where(d => !d.Starter && d.ForShop == forShop);
+        public static IEnumerable<FurnitureDef> Purchasable(bool forShop) => All.Where(d => !d.Starter && (d.ForShop == forShop || d.Role == FurnitureRole.Fridge));
 
         /// <summary>开局时出租屋里摆好的家具。</summary>
         public static List<PlacedFurniture> StartHomeLayout() => new List<PlacedFurniture>

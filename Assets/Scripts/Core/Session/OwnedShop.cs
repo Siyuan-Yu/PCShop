@@ -23,6 +23,8 @@ namespace PCShopSell.Core.Session
         public int RenovationDay = -1;
 
         /// <summary>这家店纸箱里的东西（吃的、礼品、小家具），容量看店里摆了几个纸箱。</summary>
+        public readonly Backpack Fridge = new Backpack();
+
         public readonly Backpack Locker = new Backpack();
 
         /// <summary>这家店的临时存放：送来的东西纸箱放不下就先堆在这里。</summary>
