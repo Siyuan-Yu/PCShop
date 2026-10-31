@@ -7,7 +7,7 @@ namespace PCShopSell.Core.Session
     /// <summary>
     /// 手动走路（WASD）。街道是沿路网的一条条"走廊"（商业街两侧人行道宽，小路窄），
     /// 玩家可以在走廊里朝任何方向自由走，碰到走廊边缘就贴着边滑，不会走进楼里或草地。
-    /// 时间按走过的路程折算：压缩连接路上画面走一米等于游戏里好几米。
+    /// 移动只更新位置，世界时间由统一时钟推进，不随道路压缩比例变化。
     /// </summary>
     public sealed partial class GameSession
     {
@@ -79,7 +79,6 @@ namespace PCShopSell.Core.Session
         private MapPoint? _free;
         private bool _steering;
         private double _steerX, _steerY;
-        private double _meterCarry;
         private bool _manualMoving;
 
         /// <summary>现在不是正好站在某个路口上（手动走到了路中间）。</summary>
@@ -214,15 +213,14 @@ namespace PCShopSell.Core.Session
             PlayerNodeId = NearestNodeTo(pos);
         }
 
-        /// <summary>按方向走一步。返回是否真的走动了；minutes 是这一步折算出的游戏分钟。</summary>
-        private bool StepManual(double scaledSeconds, out int minutes)
+        /// <summary>按方向走一步。返回是否真的走动了；不推进世界时间。</summary>
+        private bool StepManual(double scaledSeconds)
         {
-            minutes = 0;
             VehicleSpec v = CurrentVehicle;
             double budget = v.VisualSpeed * scaledSeconds;
             MapPoint from = PlayerPosition;
             MapPoint want = new MapPoint(from.X + _steerX * budget, from.Y + _steerY * budget);
-            MapPoint res = Constrain(want, out double scale);
+            MapPoint res = Constrain(want, out _);
             double moved = Dist(from, res);
             if (moved < 1e-6) return false;
 
@@ -231,14 +229,6 @@ namespace PCShopSell.Core.Session
             HeadingX = (res.X - from.X) / moved;
             HeadingY = (res.Y - from.Y) / moved;
 
-            _meterCarry += moved * scale;
-            int due = (int)Math.Floor(_meterCarry / v.SpeedPerMinute + 1e-9);
-            if (due > 0)
-            {
-                _meterCarry -= due * v.SpeedPerMinute;
-                minutes = due;
-                AdvanceClock(due);
-            }
             return true;
         }
 

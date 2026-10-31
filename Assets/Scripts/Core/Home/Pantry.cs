@@ -20,6 +20,8 @@ namespace PCShopSell.Core.Home
         /// <summary>每碗多恢复多少健康。</summary>
         public double HealthBonus { get; }
 
+        public double WeightKg => Backpack.IngredientKg(Id);
+        public Money PricePerKg => Price.Scale(1 / WeightKg);
         public string DishName { get; }
 
         public IngredientDef(string id, string name, string unit, long priceYuan, int shelfDays, double hungerBonus, double healthBonus, string dish)
@@ -39,10 +41,10 @@ namespace PCShopSell.Core.Home
     {
         public static readonly IReadOnlyList<IngredientDef> All = new[]
         {
-            new IngredientDef("veg", "青菜", "把", 3, 2, 6, 0.4, "青菜焖饭"),
-            new IngredientDef("egg", "鸡蛋", "只", 2, 7, 9, 0.3, "鸡蛋焖饭"),
-            new IngredientDef("tofu", "豆腐", "块", 3, 2, 8, 0.3, "豆腐焖饭"),
-            new IngredientDef("pork", "五花肉", "两", 12, 1, 14, 0.2, "肉末焖饭"),
+            new IngredientDef("veg", "青菜", "千克", 3, 2, 6, 0.4, "青菜焖饭"),
+            new IngredientDef("egg", "鸡蛋", "千克", 2, 7, 9, 0.3, "鸡蛋焖饭"),
+            new IngredientDef("tofu", "豆腐", "千克", 3, 2, 8, 0.3, "豆腐焖饭"),
+            new IngredientDef("pork", "五花肉", "千克", 12, 1, 14, 0.2, "肉末焖饭"),
         };
 
         public static IngredientDef Get(string id) => All.FirstOrDefault(i => i.Id == id);
@@ -69,17 +71,17 @@ namespace PCShopSell.Core.Home
         public long ReadyMinute;
     }
 
-    /// <summary>家里的粮食：米（5 斤开局）、食材、电饭锅里焖着 / 焖好的饭、打包带走的饭盒。</summary>
+    /// <summary>家里的粮食：米（2.5 千克开局）、食材、电饭锅里焖着 / 焖好的饭、打包带走的饭盒。</summary>
     public sealed class Pantry
     {
-        public const double StartRiceJin = 5;
-        public const int BowlsPerJin = 4;
+        public const double StartRiceKg = 2.5;
+        public const int BowlsPerKg = 8;
         public const double BaseBowlHunger = 22;
         public const int CookMinutes = 40;
         public const int EatMinutes = 10;
-        public static readonly Money RicePricePerJin = Money.FromYuan(3);
+        public static readonly Money RicePricePerKg = Money.FromYuan(6);
 
-        public double RiceJin = StartRiceJin;
+        public double RiceKg = StartRiceKg;
         public readonly List<FoodBatch> Ingredient = new List<FoodBatch>();
         public readonly List<FoodBatch> Cooked = new List<FoodBatch>();
         public readonly List<FoodBatch> Packed = new List<FoodBatch>();
@@ -103,21 +105,21 @@ namespace PCShopSell.Core.Home
             Ingredient.Add(new FoodBatch { Id = id, Name = d.Name, Count = count, ExpireDay = today + d.ShelfDays });
         }
 
-        /// <summary>用几斤米（可选一样食材）开始焖一锅饭：米和食材马上用掉，要等 <see cref="CookMinutes"/> 分钟才好。返回 false 时 error 里是原因。</summary>
-        public bool StartCook(double jin, string ingredientId, long nowMinute, out string error)
+        /// <summary>用几千克米（可选一样食材）开始焖一锅饭：米和食材马上用掉，要等 <see cref="CookMinutes"/> 分钟才好。返回 false 时 error 里是原因。</summary>
+        public bool StartCook(double kg, string ingredientId, long nowMinute, out string error)
         {
             error = null;
             if (Cooking != null) { error = "锅里正在焖饭。"; return false; }
             if (CookedBowls > 0) { error = "锅里还有焖好的饭，先吃掉或者装进饭盒。"; return false; }
-            if (jin < 0.5 - 1e-9) { error = "至少放半斤米。"; return false; }
-            if (RiceJin + 1e-9 < jin) { error = "米不够了。"; return false; }
+            if (kg < 0.25 - 1e-9) { error = "至少放 0.25 千克米。"; return false; }
+            if (RiceKg + 1e-9 < kg) { error = "米不够了。"; return false; }
             IngredientDef ing = ingredientId == null ? null : Ingredients.Get(ingredientId);
-            int need = ing == null ? 0 : (int)Math.Ceiling(jin - 1e-9);
-            if (ing != null && IngredientCount(ingredientId) < need) { error = $"{ing.Name}不够（要 {need}）。"; return false; }
+            int need = ing == null ? 0 : (int)Math.Ceiling(kg * 2 - 1e-9);
+            if (ing != null && IngredientCount(ingredientId) < need) { error = $"{ing.Name}不够（要 {need * ing.WeightKg:0.##} 千克）。"; return false; }
 
-            RiceJin -= jin;
+            RiceKg -= kg;
             if (ing != null) Remove(Ingredient, ingredientId, need);
-            int bowls = Math.Max(1, (int)Math.Round(jin * BowlsPerJin));
+            int bowls = Math.Max(1, (int)Math.Round(kg * BowlsPerKg));
             Cooking = new CookJob
             {
                 ReadyMinute = nowMinute + CookMinutes,

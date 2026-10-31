@@ -81,7 +81,7 @@ namespace PCShopSell.Core.Session
 
         // ---------- 家里的纸箱 ----------
 
-        /// <summary>一个纸箱最多放多少公斤（200 斤）。家里、店里都一样，能放多少看摆了几个纸箱。</summary>
+        /// <summary>一个纸箱最多放多少千克。家里、店里都一样，能放多少看摆了几个纸箱。</summary>
         public const double BoxCapacityKg = 100;
 
         /// <summary>新租下的铺子送几个纸箱（摆在店里前墙边）。</summary>
@@ -93,7 +93,7 @@ namespace PCShopSell.Core.Session
         /// <summary>家里摆着几个纸箱。</summary>
         public int HomeBoxes => BoxesIn(_homeLayout);
 
-        /// <summary>家里纸箱一共能放多少公斤。</summary>
+        /// <summary>家里纸箱一共能放多少千克。</summary>
         public double HomeBoxLimitKg => BoxCapacityKg * HomeBoxes;
 
         /// <summary>家里的纸箱：背包里能装的东西（米菜、饭盒、礼品、家具）都能放，只看重量；吃的照样隔天会坏。</summary>
@@ -147,11 +147,11 @@ namespace PCShopSell.Core.Session
 
         public double TempKgHere => AtHome ? HomeTempKg : InPlayerShop ? ShopTemp.WeightKg : 0;
 
-        /// <summary>纸箱还剩多少公斤（toShop = 当前这家店）。</summary>
+        /// <summary>纸箱还剩多少千克（toShop = 当前这家店）。</summary>
         private double BoxRoomKg(bool toShop) => toShop ? ShopLockerLimitKg - ShopLocker.WeightKg : HomeBoxLimitKg - HomeBoxKg;
 
         /// <summary>
-        /// 送到的东西先放纸箱，放不下的进临时存放：每件 unitKg 公斤，共 count 件，能放进纸箱的件数交给 intoBox，剩下的交给 intoTemp。
+        /// 送到的东西先放纸箱，放不下的进临时存放：每件 unitKg 千克，共 count 件，能放进纸箱的件数交给 intoBox，剩下的交给 intoTemp。
         /// 返回进了临时存放的件数。
         /// </summary>
         private int StoreOrTemp(bool toShop, double unitKg, int count, Action<int> intoBox, Action<int> intoTemp)
@@ -162,13 +162,13 @@ namespace PCShopSell.Core.Session
             return count - fit;
         }
 
-        /// <summary>大米按斤：能放的进纸箱，剩下的进临时存放。返回进临时存放的斤数。</summary>
-        private double StoreRiceOrTemp(bool toShop, double jin)
+        /// <summary>大米按千克：能放的进纸箱，剩下的进临时存放。返回进临时存放的千克数。</summary>
+        private double StoreRiceOrTemp(bool toShop, double kg)
         {
-            double fit = Math.Max(0, Math.Min(jin, Math.Floor(BoxRoomKg(toShop) / Backpack.RiceKgPerJin * 2 + 1e-9) / 2));
-            (toShop ? ShopLocker : HomeBox).Food.RiceJin += fit;
-            if (jin - fit > 1e-9) (toShop ? ShopTemp : HomeTemp).Food.RiceJin += jin - fit;
-            return jin - fit;
+            double fit = Math.Max(0, Math.Min(kg, Math.Floor(BoxRoomKg(toShop) * 4 + 1e-9) / 4));
+            (toShop ? ShopLocker : HomeBox).Food.RiceKg += fit;
+            if (kg - fit > 1e-9) (toShop ? ShopTemp : HomeTemp).Food.RiceKg += kg - fit;
+            return kg - fit;
         }
 
         public IEnumerable<KeyValuePair<string, int>> HomeBoxLines => HomeBox.GiftLines;
@@ -184,7 +184,7 @@ namespace PCShopSell.Core.Session
         /// <summary>这家店摆着几个纸箱。</summary>
         public int ShopBoxes => BoxesIn(_focus.Layout);
 
-        /// <summary>这家店的纸箱一共能放多少公斤（配件不算，配件直接上货架）。</summary>
+        /// <summary>这家店的纸箱一共能放多少千克（配件不算，配件直接上货架）。</summary>
         public double ShopLockerLimitKg => BoxCapacityKg * ShopBoxes;
 
         /// <summary>这家店的纸箱：吃的、礼品、小家具都能放；配件放进来就直接上货架。吃的照样隔天会坏。每家店各有各的。</summary>
@@ -194,7 +194,7 @@ namespace PCShopSell.Core.Session
         public string StorageName => AtHome || InPlayerShop ? "纸箱" : null;
 
         /// <summary>
-        /// 把背包里的东西放进储物处（家里 / 店里的纸箱）。key 和背包格子一样："part:id:b|l"、"rice"（count 按斤）、"ing:id"、"lunch"、"gift:id"、"furn:id"；
+        /// 把背包里的东西放进储物处（家里 / 店里的纸箱）。key 和背包格子一样："part:id:b|l"、"rice"（count 按千克）、"ing:id"、"lunch"、"gift:id"、"furn:id"；
         /// 只写礼品 id 也行。店里放配件就是摆上货架。
         /// </summary>
         public bool StoreInBox(string key, int count = 1) => MoveBox(key, count, true);
@@ -231,7 +231,7 @@ namespace PCShopSell.Core.Session
 
             StoredMove(sk, amount, from, fromParts, to, toParts);
             ApplyCargoLimit();
-            string qty = sk.Rice ? $" {amount:0.#} 斤" : amount > 1 ? "×" + (int)Math.Round(amount) : "";
+            string qty = sk.Rice ? $" {amount:0.##} 千克" : amount > 1 ? "×" + (int)Math.Round(amount) : "";
             string where = shop && sk.Part != null ? "货架上" : storeName + "里";
             Say(intoBox ? $"把「{sk.Name}」{qty}放到了{where}。" : $"从{where}拿了「{sk.Name}」{qty}放进背包。");
             return true;
@@ -240,7 +240,7 @@ namespace PCShopSell.Core.Session
         private string BoxFullText(double limit, double storeKg, double kg) =>
             limit <= 1e-9
                 ? "这里一个纸箱都没摆，放不了东西（家具城有卖纸箱）。"
-                : $"纸箱放不下了：{limit / BoxCapacityKg:0} 个纸箱最多 {limit:0.#} 公斤，已经 {storeKg:0.#} 公斤，这些要 {kg:0.#} 公斤。";
+                : $"纸箱放不下了：{limit / BoxCapacityKg:0} 个纸箱最多 {limit:0.##} 千克，已经 {storeKg:0.##} 千克，这些要 {kg:0.##} 千克。";
 
         // ---------- 临时存放 ----------
 
@@ -258,7 +258,7 @@ namespace PCShopSell.Core.Session
             double amount = sk.Rice ? Math.Min(count, have) : count;
             if (have <= 1e-9 || (!sk.Rice && have < count)) return Fail("临时存放里没有这么多。");
             double kg = amount * sk.UnitKg;
-            string qty = sk.Rice ? $" {amount:0.#} 斤" : amount > 1 ? "×" + (int)Math.Round(amount) : "";
+            string qty = sk.Rice ? $" {amount:0.##} 千克" : amount > 1 ? "×" + (int)Math.Round(amount) : "";
             switch (to)
             {
                 case "box":
@@ -329,7 +329,7 @@ namespace PCShopSell.Core.Session
             bool shop = InPlayerShop;
             if (!AtHome && !shop) return;
             Backpack temp = shop ? ShopTemp : HomeTemp;
-            temp.Food.RiceJin = 0;
+            temp.Food.RiceKg = 0;
             temp.Food.Ingredient.Clear();
             temp.Food.Packed.Clear();
             temp.ClearGifts();
@@ -348,7 +348,7 @@ namespace PCShopSell.Core.Session
             Backpack temp = shop ? ShopTemp : HomeTemp;
             if (!shop)
                 foreach (StockLine l in HomeTempParts.Lines()) keys.Add($"part:{l.Part.Id}:{(l.Boxed ? "b" : "l")}");
-            if (temp.Food.RiceJin > 1e-9) keys.Add("rice");
+            if (temp.Food.RiceKg > 1e-9) keys.Add("rice");
             foreach (string id in temp.Food.Ingredient.Where(b => b.Count > 0).Select(b => b.Id).Distinct()) keys.Add("ing:" + id);
             foreach (string id in temp.Food.Packed.Select(x => x.Id).Distinct()) keys.Add("lunch:" + id);
             foreach (var kv in temp.GiftLines) keys.Add("gift:" + kv.Key);
@@ -381,7 +381,7 @@ namespace PCShopSell.Core.Session
                     s.Name = s.Part.Name + (s.Boxed ? "（整盒）" : "（散件）");
                     return s;
                 case "rice":
-                    s.UnitKg = Backpack.RiceKgPerJin;
+                    s.UnitKg = 1.0;
                     s.Name = "大米";
                     return s;
                 case "ing":
@@ -414,7 +414,7 @@ namespace PCShopSell.Core.Session
             switch (s.Kind)
             {
                 case "part": return parts?.Count(s.Part, s.Boxed) ?? 0;
-                case "rice": return bag.Food.RiceJin;
+                case "rice": return bag.Food.RiceKg;
                 case "ing": return bag.Food.IngredientCount(s.Id);
                 case "lunch": return bag.Food.Packed.Where(x => s.Id == null || x.Id == s.Id).Sum(x => x.Count);
                 case "gift": return bag.GiftCount(s.Id);
@@ -434,9 +434,9 @@ namespace PCShopSell.Core.Session
                     toParts?.ForceAdd(s.Part, s.Boxed, n);
                     break;
                 case "rice":
-                    from.Food.RiceJin -= amount;
-                    if (from.Food.RiceJin < 1e-9) from.Food.RiceJin = 0;
-                    if (to != null) to.Food.RiceJin += amount;
+                    from.Food.RiceKg -= amount;
+                    if (from.Food.RiceKg < 1e-9) from.Food.RiceKg = 0;
+                    if (to != null) to.Food.RiceKg += amount;
                     break;
                 case "ing":
                     MoveBatches(from.Food.Ingredient, to?.Food.Ingredient ?? new List<FoodBatch>(), s.Id, n);
@@ -473,10 +473,10 @@ namespace PCShopSell.Core.Session
 
         // ---------- 承重 ----------
 
-        /// <summary>现在的出行方式最多能背 / 载多少公斤。</summary>
+        /// <summary>现在的出行方式最多能背 / 载多少千克。</summary>
         public double CarryLimitKg => CurrentVehicle.CargoCapacity * Backpack.KgPerSpace;
 
-        /// <summary>现在身上的货（进货的配件 + 背包里的东西）合计多少公斤。</summary>
+        /// <summary>现在身上的货（进货的配件 + 背包里的东西）合计多少千克。</summary>
         public double CarriedKg => Cargo.UsedSpace * Backpack.KgPerSpace + Backpack.WeightKg;
 
         public double FreeKg => Math.Max(0, CarryLimitKg - CarriedKg);
@@ -490,7 +490,7 @@ namespace PCShopSell.Core.Session
         private bool CanCarry(double kg)
         {
             if (kg <= FreeKg + 1e-9) return true;
-            return Fail($"拿不动了：再背 {kg:0.#} 公斤会超重（{CurrentVehicle.Name}最多 {CarryLimitKg:0.#} 公斤，已经 {CarriedKg:0.#} 公斤）。");
+            return Fail($"拿不动了：再背 {kg:0.##} 千克会超重（{CurrentVehicle.Name}最多 {CarryLimitKg:0.##} 千克，已经 {CarriedKg:0.##} 千克）。");
         }
 
         // ---------- 买礼品 ----------
@@ -525,7 +525,7 @@ namespace PCShopSell.Core.Session
         {
             get
             {
-                bool things = Backpack.Food.RiceJin > 0 || Backpack.Food.Ingredient.Count > 0 || Backpack.GiftLines.Any() || Backpack.FurnitureLines.Any();
+                bool things = Backpack.Food.RiceKg > 0 || Backpack.Food.Ingredient.Count > 0 || Backpack.GiftLines.Any() || Backpack.FurnitureLines.Any();
                 if (InPlayerShop) return !Cargo.IsEmpty || things;
                 if (AtHome) return things;
                 return false;
@@ -539,15 +539,15 @@ namespace PCShopSell.Core.Session
             int moved = 0;
             Pantry food = Backpack.Food;
             double Room() => ShopLockerLimitKg - ShopLocker.WeightKg;
-            if (food.RiceJin > 0)
+            if (food.RiceKg > 0)
             {
-                double jin = Math.Min(food.RiceJin, Math.Floor(Room() / Backpack.RiceKgPerJin * 2 + 1e-9) / 2);
-                if (jin < food.RiceJin - 1e-9) full = true;
-                if (jin > 0)
+                double kg = Math.Min(food.RiceKg, Math.Floor(Room() * 4 + 1e-9) / 4);
+                if (kg < food.RiceKg - 1e-9) full = true;
+                if (kg > 0)
                 {
-                    food.RiceJin -= jin;
-                    if (food.RiceJin < 1e-9) food.RiceJin = 0;
-                    ShopLocker.Food.RiceJin += jin;
+                    food.RiceKg -= kg;
+                    if (food.RiceKg < 1e-9) food.RiceKg = 0;
+                    ShopLocker.Food.RiceKg += kg;
                     moved++;
                 }
             }
@@ -587,15 +587,15 @@ namespace PCShopSell.Core.Session
                 if (moved > 0) done.Add($"配件 {moved} 件上了货架");
                 if (leftover) done.Add("店里放不下了，剩下的配件还在身上（拆掉包装能省地方）");
                 if (MoveFoodAndGiftsToLocker(out bool lockerFull) > 0) done.Add("吃的、礼品放进了店里纸箱");
-                if (lockerFull) done.Add($"店里纸箱满了（{ShopBoxes} 个，{ShopLockerLimitKg:0} 公斤），剩下的还在背包里");
+                if (lockerFull) done.Add($"店里纸箱满了（{ShopBoxes} 个，{ShopLockerLimitKg:0} 千克），剩下的还在背包里");
             }
             else
             {
                 Pantry food = Backpack.Food;
-                if (food.RiceJin > 0 || food.Ingredient.Count > 0)
+                if (food.RiceKg > 0 || food.Ingredient.Count > 0)
                 {
-                    Pantry.RiceJin += food.RiceJin;
-                    food.RiceJin = 0;
+                    Pantry.RiceKg += food.RiceKg;
+                    food.RiceKg = 0;
                     foreach (FoodBatch b in food.Ingredient) Pantry.Ingredient.Add(b);
                     food.Ingredient.Clear();
                     done.Add("米和菜放进了厨房");

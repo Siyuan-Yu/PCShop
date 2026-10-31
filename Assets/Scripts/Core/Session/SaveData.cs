@@ -35,6 +35,7 @@ namespace PCShopSell.Core.Session
         public SaveStockLine[] cargo;
 
         public PlayerWorkContract playerWork;
+        public int weightUnitsVersion;
         public double hunger, energy, health, sleepDebt;
         public bool hasDietStats;
         public double nutrition, mood;
@@ -324,7 +325,8 @@ namespace PCShopSell.Core.Session
         public SavePlaced[] shopLayout;
         public SaveParcel[] parcels;
         public SaveStorage homeFridge, mainShopFridge;
-        public double riceJin;
+        public double riceKg;
+        public double riceJin; // Legacy saves only.
         public SaveBatch[] ingredients;
         public SaveBatch[] cooked;
         /// <summary>老存档：放在家里的饭盒（读档时转进背包）。</summary>
@@ -421,7 +423,8 @@ namespace PCShopSell.Core.Session
         public int[] kinds;
         public string[] ids;
         public int[] counts;
-        public double[] jins;
+        public double[] kilos;
+        public double[] jins; // Legacy saves only.
         public bool[] boxed;
         public int[] expireDays;
     }

@@ -37,7 +37,7 @@ namespace PCShopSell.Core.Inventory
 
     public static class ShelfKinds
     {
-        /// <summary>每个货架能放多少公斤（只算重量，不算体积；散件是盒装的一半重）。</summary>
+        /// <summary>每个货架能放多少千克（只算重量，不算体积；散件是盒装的一半重）。</summary>
         public const double CapacityKg = 60;
 
         public static readonly IReadOnlyList<ShelfKind> All = new[]
@@ -110,10 +110,10 @@ namespace PCShopSell.Core.Inventory
     /// </summary>
     public static class ShelfPlanner
     {
-        /// <summary>一件配件多重（公斤）：盒装 2 公斤，散件减半，显卡、电源机箱再乘 2。</summary>
+        /// <summary>一件配件多重（千克）：盒装 2 千克，散件减半，显卡、电源机箱再乘 2。</summary>
         public static double PartKg(PartDef part, bool boxed) => Stock.SpaceOf(part, boxed, 1) * Backpack.KgPerSpace;
 
-        /// <summary>一件杂货多重（公斤，最少 0.2）。</summary>
+        /// <summary>一件杂货多重（千克，最少 0.2）。</summary>
         public static double GoodsKg(string giftId) => Math.Max(0.2, Gifts.Get(giftId)?.WeightKg ?? 1.0);
 
         public static ShelfFill Fill(Stock stock, ShelfKind kind, double capacityKg)

@@ -279,7 +279,7 @@ namespace PCShopSell.Core.Session
                 case ParcelKind.Furniture: return (FurnitureCatalog.Get(p.Id)?.Name ?? p.Id) + (p.Count > 1 ? "×" + p.Count : "");
                 case ParcelKind.Outfit: return Outfits.Get(p.Id)?.Name ?? p.Id;
                 case ParcelKind.Gift: return (Gifts.Get(p.Id)?.Name ?? p.Id) + (p.Count > 1 ? "×" + p.Count : "");
-                default: return "大米 10 斤" + (p.Count > 1 ? "×" + p.Count : "");
+                default: return "大米 5 千克" + (p.Count > 1 ? "×" + p.Count : "");
             }
         }
     }

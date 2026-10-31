@@ -142,28 +142,20 @@ namespace PCShopSell.Core.Session
 
         public bool InPlayerShop => Lease != null && CurrentPlace == PlayerShopPlace;
 
-        /// <summary>按真实时间推进世界：出行中按路程推进时钟，否则按倍速推进。返回推进的整分钟数。</summary>
+        /// <summary>按真实时间推进世界：移动和静止都按同一个真实时间与倍速推进时钟。返回推进的整分钟数。</summary>
         public int Tick(double realSeconds)
         {
             _manualMoving = false;
             if (IsGameOver || !Time.IsRunning || realSeconds <= 0) return 0;
             double scaled = Math.Min(realSeconds, TimeController.MaxTickSeconds) * Time.Speed * TimeController.WorldRate;
 
-            int minutes;
+            int minutes = Time.Tick(realSeconds);
+            string arrived = null;
             if (SteerActive && Trip != null) BreakTripToEdge();
-            if (Trip != null)
-            {
-                minutes = StepTrip(scaled);
-            }
-            else if (SteerActive && StepManual(scaled, out minutes))
-            {
-                _manualMoving = true;
-            }
-            else
-            {
-                minutes = Time.Tick(realSeconds);
-                if (minutes > 0) AdvanceClock(minutes);
-            }
+            if (Trip != null) arrived = StepTrip(scaled);
+            else if (SteerActive) _manualMoving = StepManual(scaled);
+            if (minutes > 0) AdvanceClock(minutes);
+            if (arrived != null && !IsGameOver && CurrentPlace == null && PlayerNodeId == arrived) TripArrived?.Invoke(arrived);
 
             if (!IsGameOver) StepPolice(scaled);
             return minutes;

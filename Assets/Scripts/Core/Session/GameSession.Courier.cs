@@ -26,7 +26,7 @@ namespace PCShopSell.Core.Session
         public CourierItemKind Kind;
         public string Id;
         public int Count;
-        public double Jin;
+        public double Kg;
         public bool Boxed;
         public int ExpireDay;
     }
@@ -50,7 +50,7 @@ namespace PCShopSell.Core.Session
     /// <summary>
     /// 买东西的两种拿法：装进背包自己带（算负重），或者叫车送到家里 / 任意一家自己的店。
     /// 送到家：吃的进厨房，礼品、配件进纸箱；送到店：配件上货架，吃的、礼品进店里储物柜。家具都进家具背包。
-    /// 叫的是面包车，每辆最多装 <see cref="CourierCapacityKg"/> 公斤，运费按路程算（同打车计价再加跑腿费）。
+    /// 叫的是面包车，每辆最多装 <see cref="CourierCapacityKg"/> 千克，运费按路程算（同打车计价再加跑腿费）。
     /// 在同一个地方接着装的东西先往当前这辆里装，装不下就再叫一辆（再付一次运费）；离开这里后再装就是新车。
     /// </summary>
     public sealed partial class GameSession
@@ -67,7 +67,7 @@ namespace PCShopSell.Core.Session
         {
             switch (it.Kind)
             {
-                case CourierItemKind.Rice: return it.Jin * Backpack.RiceKgPerJin;
+                case CourierItemKind.Rice: return it.Kg * 1.0;
                 case CourierItemKind.Ingredient: return it.Count * Backpack.IngredientKg(it.Id);
                 case CourierItemKind.Gift:
                 case CourierItemKind.Goods: return it.Count * (Gifts.Get(it.Id)?.WeightKg ?? 0);
@@ -162,28 +162,28 @@ namespace PCShopSell.Core.Session
             Kind = it.Kind,
             Id = it.Id,
             Count = it.Kind == CourierItemKind.Rice ? 0 : (int)Math.Round(amount),
-            Jin = it.Kind == CourierItemKind.Rice ? amount : 0,
+            Kg = it.Kind == CourierItemKind.Rice ? amount : 0,
             Boxed = it.Boxed,
             ExpireDay = it.ExpireDay,
         };
 
-        /// <summary>一辆车剩 freeKg 还能装多少（米按半斤，其余按件，不拆单件）。</summary>
+        /// <summary>一辆车剩 freeKg 还能装多少（米按 0.25 千克，其余按件，不拆单件）。</summary>
         private static double FitAmount(bool rice, double unitKg, double freeKg, double left)
         {
             if (unitKg <= 0) return left;
             double n = freeKg / unitKg;
-            n = rice ? Math.Floor(n * 2 + 1e-9) / 2 : Math.Floor(n + 1e-9);
+            n = rice ? Math.Floor(n * 4 + 1e-9) / 4 : Math.Floor(n + 1e-9);
             return Math.Min(left, n);
         }
 
         /// <summary>
-        /// 把这批东西装车：先装当前这辆，装不下的按每辆 <see cref="CourierCapacityKg"/> 公斤再叫车（单件不拆）。
+        /// 把这批东西装车：先装当前这辆，装不下的按每辆 <see cref="CourierCapacityKg"/> 千克再叫车（单件不拆）。
         /// 返回每辆车装多少（null 表示是新车），单件就超载时返回 null。
         /// </summary>
         private List<(CourierRun run, double amount)> PlanLoad(CourierItem item, OwnedShop dest)
         {
             bool rice = item.Kind == CourierItemKind.Rice;
-            double total = rice ? item.Jin : item.Count;
+            double total = rice ? item.Kg : item.Count;
             double unitKg = total <= 0 ? 0 : CourierItemKg(item) / total;
             if (!rice && unitKg > CourierCapacityKg + 1e-9) return null;
             var plan = new List<(CourierRun, double)>();
@@ -243,7 +243,7 @@ namespace PCShopSell.Core.Session
         private bool Ship(OwnedShop dest, string category, Money goods, string what, CourierItem item, string verb)
         {
             var plan = PlanLoad(item, dest);
-            if (plan == null) return Fail($"单件就超过一辆面包车能装的 {CourierCapacityKg:0} 公斤。");
+            if (plan == null) return Fail($"单件就超过一辆面包车能装的 {CourierCapacityKg:0} 千克。");
             int newCars = plan.Count(p => p.run == null);
             int prepaid = Math.Min(newCars, _prepaidCars);
             (Money fee, int minutes) = CourierQuote(dest);
@@ -275,11 +275,11 @@ namespace PCShopSell.Core.Session
             }
             _openRuns[RunKey(dest)] = last;
             if (newCars == 0)
-                Say($"{verb}{what}，装上刚叫的车（{last.LoadKg:0.#}/{CourierCapacityKg:0} 公斤），一起送到{destName}。");
+                Say($"{verb}{what}，装上刚叫的车（{last.LoadKg:0.##}/{CourierCapacityKg:0} 千克），一起送到{destName}。");
             else if (plan[0].run != null || newCars > 1)
-                Say($"{verb}{what}，车装不下了，又叫了 {newCars} 辆（运费 {fee * newCars}），大约 {minutes} 分钟后送到{destName}。现在这辆装了 {last.LoadKg:0.#}/{CourierCapacityKg:0} 公斤。");
+                Say($"{verb}{what}，车装不下了，又叫了 {newCars} 辆（运费 {fee * newCars}），大约 {minutes} 分钟后送到{destName}。现在这辆装了 {last.LoadKg:0.##}/{CourierCapacityKg:0} 千克。");
             else
-                Say($"{verb}{what}，叫了一辆面包车（运费 {fee}，最多装 {CourierCapacityKg:0} 公斤），大约 {minutes} 分钟后送到{destName}。在这里接着装的先往这辆里装。");
+                Say($"{verb}{what}，叫了一辆面包车（运费 {fee}，最多装 {CourierCapacityKg:0} 千克），大约 {minutes} 分钟后送到{destName}。在这里接着装的先往这辆里装。");
             return true;
         }
 
@@ -324,11 +324,11 @@ namespace PCShopSell.Core.Session
             {
                 CourierItem same = merged.FirstOrDefault(m => m.Kind == it.Kind && m.Id == it.Id && m.Boxed == it.Boxed && m.ExpireDay == it.ExpireDay);
                 if (same == null)
-                    merged.Add(new CourierItem { Kind = it.Kind, Id = it.Id, Count = it.Count, Jin = it.Jin, Boxed = it.Boxed, ExpireDay = it.ExpireDay });
+                    merged.Add(new CourierItem { Kind = it.Kind, Id = it.Id, Count = it.Count, Kg = it.Kg, Boxed = it.Boxed, ExpireDay = it.ExpireDay });
                 else
                 {
                     same.Count += it.Count;
-                    same.Jin += it.Jin;
+                    same.Kg += it.Kg;
                 }
             }
             return merged;
@@ -350,11 +350,11 @@ namespace PCShopSell.Core.Session
                 case CourierItemKind.Rice:
                     if (!toShop)
                     {
-                        Pantry.RiceJin += it.Jin;
-                        return $"大米 {it.Jin:0.#} 斤（进了厨房）";
+                        Pantry.RiceKg += it.Kg;
+                        return $"大米 {it.Kg:0.##} 千克（进了厨房）";
                     }
-                    double riceOver = StoreRiceOrTemp(true, it.Jin);
-                    return $"大米 {it.Jin:0.#} 斤（{(riceOver <= 1e-9 ? boxPlace : $"纸箱放不下的 {riceOver:0.#} 斤放在临时存放")}）";
+                    double riceOver = StoreRiceOrTemp(true, it.Kg);
+                    return $"大米 {it.Kg:0.##} 千克（{(riceOver <= 1e-9 ? boxPlace : $"纸箱放不下的 {riceOver:0.##} 千克放在临时存放")}）";
                 case CourierItemKind.Ingredient:
                     IngredientDef d = Ingredients.Get(it.Id);
                     FoodBatch Batch(int n) => new FoodBatch { Id = it.Id, Name = d?.Name ?? it.Id, Count = n, ExpireDay = it.ExpireDay };
@@ -405,7 +405,7 @@ namespace PCShopSell.Core.Session
             kinds = r.Items.Select(i => (int)i.Kind).ToArray(),
             ids = r.Items.Select(i => i.Id).ToArray(),
             counts = r.Items.Select(i => i.Count).ToArray(),
-            jins = r.Items.Select(i => i.Jin).ToArray(),
+            kilos = r.Items.Select(i => i.Kg).ToArray(),
             boxed = r.Items.Select(i => i.Boxed).ToArray(),
             expireDays = r.Items.Select(i => i.ExpireDay).ToArray(),
         }).ToArray();
@@ -431,7 +431,7 @@ namespace PCShopSell.Core.Session
                         Kind = kind,
                         Id = id,
                         Count = s.counts != null && i < s.counts.Length ? s.counts[i] : 0,
-                        Jin = s.jins != null && i < s.jins.Length ? s.jins[i] : 0,
+                        Kg = s.kilos != null && i < s.kilos.Length ? s.kilos[i] : 0,
                         Boxed = s.boxed != null && i < s.boxed.Length && s.boxed[i],
                         ExpireDay = s.expireDays != null && i < s.expireDays.Length ? s.expireDays[i] : 0,
                     });

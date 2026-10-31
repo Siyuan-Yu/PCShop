@@ -1,0 +1,3 @@
+2026-11-01
+EditMode: total=537 passed=537 failed=0
+No screenshots generated. Unified real-time clock comparisons across indoor/idle/manual/automatic movement, speeds, pauses, compressed roads and arrival modal; kg pricing, cooking, legacy inventories and couriers, idempotent new-save restore, and quarter-kg cargo split validated.

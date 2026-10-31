@@ -110,7 +110,7 @@ namespace PCShopSell.Game.UI
 
         private string VehicleTip(Core.Session.VehicleSpec v)
         {
-            string s = $"<b>{v.Name}</b>\n速度：每游戏分钟 {v.SpeedPerMinute:0} 米　最多载 {v.CargoCapacity * Core.Home.Backpack.KgPerSpace:0} 公斤";
+            string s = $"<b>{v.Name}</b>\n移动速度：步行的 {v.VisualSpeed / Core.Session.Vehicles.Walk.VisualSpeed:0.##} 倍　最多载 {v.CargoCapacity * Core.Home.Backpack.KgPerSpace:0} 千克";
             if (v.Illegal) s += "\n<color=#D79780>城里不让上路，会被交警追</color>";
             if (v.Purchasable) s += "\n" + S.VehicleUsage(v.Kind);
             if (!S.CanUse(v.Kind)) s += v.Purchasable ? S.Owns(v.Kind) ? "\n当前没有空闲车辆，可在员工管理查看使用人。" : $"\n去车行购买：{v.Price}/台" : "\n暂时用不了";

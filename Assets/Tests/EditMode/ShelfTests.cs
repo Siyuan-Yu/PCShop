@@ -39,7 +39,7 @@ namespace PCShopSell.Tests
             shop.Stock.ForceAdd(cpu, true, 100);
             shop.SetShelfCapacity(new Dictionary<string, double> { { "cpu", 60 } });
             ShelfFill f = shop.ShelfFillOf(PartCategory.Cpu);
-            Assert.AreEqual(30, f.Total, "60 公斤 / 2 公斤 = 30 盒");
+            Assert.AreEqual(30, f.Total, "60 千克 / 2 千克 = 30 盒");
             Assert.AreEqual(60, f.UsedKg, 1e-6);
             Assert.AreEqual(100, shop.Stock.CountAll(cpu), "后仓的货没动");
         }
@@ -87,9 +87,9 @@ namespace PCShopSell.Tests
             Assert.AreEqual(11, ShelfKinds.All.Count);
 
             ShopSimulation shop = MakeSim(out _);
-            shop.Stock.ForceAddGoods(Gifts.Cig, 500); // 0.2 公斤一条
+            shop.Stock.ForceAddGoods(Gifts.Cig, 500); // 0.2 千克一条
             shop.SetShelfCapacity(new Dictionary<string, double> { { "smoke", 60 } });
-            Assert.AreEqual(300, shop.ShelfFillOf(ShelfKinds.Get("smoke")).Total, "60 公斤 = 300 条烟");
+            Assert.AreEqual(300, shop.ShelfFillOf(ShelfKinds.Get("smoke")).Total, "60 千克 = 300 条烟");
         }
 
         // ---------- 顾客只买架上的 ----------
@@ -158,7 +158,7 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.SetShelfKind(memShelf, "gpu"));
             Assert.AreEqual(2, s.ShelvesOfKind("gpu"));
             Assert.AreEqual(0, s.ShelvesOfKind("memory"));
-            Assert.AreEqual(120, s.PlayerShop.ShelfCapacityOf(ShelfKinds.Get("gpu")), 1e-9, "两个显卡货架 = 120 公斤");
+            Assert.AreEqual(120, s.PlayerShop.ShelfCapacityOf(ShelfKinds.Get("gpu")), 1e-9, "两个显卡货架 = 120 千克");
             Assert.AreEqual(0, s.PlayerShop.ShelfCapacityOf(ShelfKinds.Get("memory")), 1e-9);
             Assert.IsTrue(s.SetShelfKind(gpuShelf, null));
             Assert.IsNull(s.ShelfKindAt(gpuShelf));

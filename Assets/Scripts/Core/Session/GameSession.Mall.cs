@@ -48,12 +48,12 @@ namespace PCShopSell.Core.Session
 
     /// <summary>
     /// 家具城：东西随便挑进购物车，最后一起结算；结算时再决定怎么运。
-    /// 能装多少看来时的出行方式（载具的格子，1 格 = 2 公斤，和背包、进货的配件共用）；
-    /// 装不下的可以叫货车（每辆 ¥120、最多装 200 公斤，买多了要多辆，早早送到家），也可以先寄存在店里，改天自己来搬（可以分好几趟，不过期）。
+    /// 能装多少看来时的出行方式（载具的格子，1 格 = 2 千克，和背包、进货的配件共用）；
+    /// 装不下的可以叫货车（每辆 ¥120、最多装 200 千克，买多了要多辆，早早送到家），也可以先寄存在店里，改天自己来搬（可以分好几趟，不过期）。
     /// </summary>
     public sealed partial class GameSession
     {
-        /// <summary>一辆货车最多装多少公斤。</summary>
+        /// <summary>一辆货车最多装多少千克。</summary>
         public const double TruckCapacityKg = 200;
 
         private readonly List<MallCartLine> _mallCart = new List<MallCartLine>();
@@ -101,7 +101,7 @@ namespace PCShopSell.Core.Session
 
         public void MallCartClear() => _mallCart.Clear();
 
-        /// <summary>把这些东西装货车，最少要几辆（每辆最多 <see cref="TruckCapacityKg"/> 公斤，一件不拆）。</summary>
+        /// <summary>把这些东西装货车，最少要几辆（每辆最多 <see cref="TruckCapacityKg"/> 千克，一件不拆）。</summary>
         public static int TrucksNeeded(IEnumerable<MallCartLine> lines)
         {
             var weights = new List<double>();
@@ -172,7 +172,7 @@ namespace PCShopSell.Core.Session
             plan.TruckFees = FurnitureCatalog.TruckFee * plan.Trucks;
 
             if (mode == MallCarry.Self && plan.SelfKg > free + 1e-9)
-                plan.Blocker = $"共 {plan.SelfKg:0.#} 公斤，{CurrentVehicle.Name}现在只能再带 {free:0.#} 公斤";
+                plan.Blocker = $"共 {plan.SelfKg:0.##} 千克，{CurrentVehicle.Name}现在只能再带 {free:0.##} 千克";
             else if (mode == MallCarry.Split && (plan.SelfItems.Count == 0 || plan.TruckItems.Count == 0))
                 plan.Blocker = plan.SelfItems.Count == 0 ? "身上一件也带不了，全叫货车吧" : "都带得走，不用叫货车";
             else if (mode == MallCarry.SplitStay && (plan.SelfItems.Count == 0 || plan.StashItems.Count == 0))
@@ -214,7 +214,7 @@ namespace PCShopSell.Core.Session
             if (l == null || count <= 0 || l.Count < count) return Fail("寄存的货里没有这么多。");
             double kg = FurnitureCatalog.Get(id).WeightKg * count;
             if (kg > FreeKg + 1e-9)
-                return Fail($"装不下了：这些要 {kg:0.#} 公斤，{CurrentVehicle.Name}还剩 {FreeKg:0.#} 公斤。可以叫货车，或者改天再来搬。");
+                return Fail($"装不下了：这些要 {kg:0.##} 千克，{CurrentVehicle.Name}还剩 {FreeKg:0.##} 千克。可以叫货车，或者改天再来搬。");
             RemoveStash(id, count);
             Backpack.AddFurniture(id, count);
             ApplyCargoLimit();
@@ -236,7 +236,7 @@ namespace PCShopSell.Core.Session
                 taken++;
             }
             if (taken > 0) Say($"从店里搬了 {taken} 件，还剩 {MallStashCount} 件寄存着。");
-            else Fail($"一件也装不下了（{CurrentVehicle.Name}还剩 {FreeKg:0.#} 公斤）。");
+            else Fail($"一件也装不下了（{CurrentVehicle.Name}还剩 {FreeKg:0.##} 千克）。");
             return taken;
         }
 
@@ -296,7 +296,7 @@ namespace PCShopSell.Core.Session
             if (clearCart) _mallCart.Clear();
 
             var parts = new List<string>();
-            if (plan.SelfCount > 0) parts.Add($"{plan.SelfCount} 件自己带走（{plan.SelfKg:0.#} 公斤，回家或回店里自动放进家具背包）");
+            if (plan.SelfCount > 0) parts.Add($"{plan.SelfCount} 件自己带走（{plan.SelfKg:0.##} 千克，回家或回店里自动放进家具背包）");
             if (plan.TruckCount > 0) parts.Add($"{plan.TruckCount} 件叫了 {plan.Trucks} 辆货车（{plan.TruckFees}），早早送到{DeliveryName}");
             if (plan.StashCount > 0) parts.Add($"{plan.StashCount} 件寄存在店里，改天自己来搬");
             Say($"买了 {what}。" + string.Join("；", parts) + "。");
@@ -318,7 +318,7 @@ namespace PCShopSell.Core.Session
             if (SendByCourier)
                 return MarkMallBought(PayAndSend("家具", d.Price, "「" + d.Name + "」", false, new CourierItem { Kind = CourierItemKind.Furniture, Id = id, Count = 1 }));
             if (d.WeightKg > FreeKg + 1e-9)
-                return Fail($"「{d.Name}」{d.WeightKg:0.#} 公斤，{CurrentVehicle.Name}只剩 {FreeKg:0.#} 公斤，装不下。切到“叫车送到家”吧。");
+                return Fail($"「{d.Name}」{d.WeightKg:0.##} 千克，{CurrentVehicle.Name}只剩 {FreeKg:0.##} 千克，装不下。切到“叫车送到家”吧。");
             return BuyFurnitureAtMall(id);
         }
 

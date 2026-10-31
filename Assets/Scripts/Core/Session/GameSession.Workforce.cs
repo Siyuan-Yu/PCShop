@@ -268,7 +268,7 @@ namespace PCShopSell.Core.Session
             var back = Pathfinder.FindPath(City.Map, node, row.Shop.Place.NodeId);
             if (!back.Found) { q.Error = "找不到回店路线"; return q; }
             homeLeg = back.Distance;
-            if (!truck && q.Kg > Vehicles.Get(plan.Transport).CargoCapacity * Backpack.KgPerSpace + 1e-9) blocker = blocker ?? $"清单重 {q.Kg:0.#} 公斤，{Vehicles.Get(plan.Transport).Name}装不下；减少数量或改叫货车";
+            if (!truck && q.Kg > Vehicles.Get(plan.Transport).CargoCapacity * Backpack.KgPerSpace + 1e-9) blocker = blocker ?? $"清单重 {q.Kg:0.##} 千克，{Vehicles.Get(plan.Transport).Name}装不下；减少数量或改叫货车";
             double incoming = 0;
             WithShop(row.Shop, () => incoming = IncomingShopSpace);
             if (space > row.Shop.Sim.Stock.FreeSpace - incoming + 1e-9) blocker = blocker ?? "店里仓位不足（已预留在途货物）";
@@ -314,7 +314,7 @@ namespace PCShopSell.Core.Session
                 }).ToArray()
             });
             plan.LastDay = Clock.Today.TotalDays;
-            row.Person.LastPurchaseNote = $"已出发：{q.Kg:0.#} 公斤，预付 {q.Total}，货约 {q.DeliveryMinutes} 分钟送到{ShopTitle(row.Shop)}。";
+            row.Person.LastPurchaseNote = $"已出发：{q.Kg:0.##} 千克，预付 {q.Total}，货约 {q.DeliveryMinutes} 分钟送到{ShopTitle(row.Shop)}。";
             Say(row.Person.Name + row.Person.LastPurchaseNote);
             return true;
         }

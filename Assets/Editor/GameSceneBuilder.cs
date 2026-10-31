@@ -782,7 +782,7 @@ namespace PCShopSell.EditorTools
             _game.Ui.CloseAllWindows();
             s.Backpack.AddGift(PCShopSell.Core.Home.Gifts.Cig, 3);
             s.Backpack.AddGift("wine", 2);
-            s.Backpack.Food.RiceJin = 10;
+            s.Backpack.Food.RiceKg = 10;
             s.Cargo.TryAdd(PartCatalog.Get("gpu0"), true, 2);
             s.Cargo.TryAdd(PartCatalog.Get("ram0"), false, 4);
             _game.Ui.ToggleBackpack();
@@ -793,18 +793,18 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Check(!_game.Ui.AnyModalOpen, "再按 B 关上背包");
             s.Backpack.ClearGifts();
-            s.Backpack.Food.RiceJin = 0;
+            s.Backpack.Food.RiceKg = 0;
             s.Cargo.Clear();
             _game.Ui.CloseAllWindows();
             Check(s.TakeFromBox(PCShopSell.Core.Home.Gifts.Wine) && s.TakeFromBox(PCShopSell.Core.Home.Gifts.Cig, 2), "从纸箱拿回礼品");
             s.Backpack.ClearGifts();
 
-            // 电饭锅：真做饭（开局 5 斤米）
-            Check(Math.Abs(s.Pantry.RiceJin - 5) < 1e-6, "开局 5 斤米");
+            // 电饭锅：真做饭（开局 5 千克米）
+            Check(Math.Abs(s.Pantry.RiceKg - 5) < 1e-6, "开局 5 千克米");
             _game.HomeInteract(PCShopSell.Game.Runtime.HomeRoomView.Cooker);
             Frame(0.05f);
             Check(_game.Ui.AnyModalOpen, "电饭锅窗口打开");
-            Check(s.CookRice(1, null), "焖一斤米");
+            Check(s.CookRice(1, null), "焖一千克米");
             _game.Ui.CloseModalWindows();
             _game.HomeInteract(PCShopSell.Game.Runtime.HomeRoomView.Cooker);
             Frame(0.05f);
@@ -823,16 +823,16 @@ namespace PCShopSell.EditorTools
             int boxes = s.Backpack.Lunchboxes;
             Check(s.PackLunch(s.Pantry.CookedBowls), "饭全部装进饭盒");
             Check(s.Backpack.Lunchboxes == boxes + 4 && s.Pantry.CookedBowls == 0, "饭盒放进背包");
-            s.Backpack.Food.RiceJin = 3;
+            s.Backpack.Food.RiceKg = 3;
             s.Backpack.AddGift(PCShopSell.Core.Home.Gifts.Soda, 2);
             _game.Ui.ToggleBackpack();
             Frame(0.05f);
             Shot("vs1_75_backpack_lunch");
             _game.Ui.CloseAllWindows();
             Check(s.UnloadBackpack(), "在家一键把背包里的东西放下");
-            Check(s.Backpack.Food.RiceJin == 0 && s.Backpack.Lunchboxes == boxes + 4, "米进了厨房，饭盒留在背包");
+            Check(s.Backpack.Food.RiceKg == 0 && s.Backpack.Lunchboxes == boxes + 4, "米进了厨房，饭盒留在背包");
             s.Backpack.ClearGifts();
-            s.Pantry.RiceJin = 4;
+            s.Pantry.RiceKg = 4;
 
             // “我的”信息菜单、网购
             _game.Ui.OpenMyPanel();
@@ -882,15 +882,15 @@ namespace PCShopSell.EditorTools
             Check(s.BuyGift("fruit"), "农贸市场买水果");
             Check(s.Backpack.Food.IngredientCount("egg") == 2, "买的鸡蛋装进背包");
             s.SendByCourier = true;
-            double homeRice = s.Pantry.RiceJin;
-            Check(s.BuyRice(10), "叫车送 10 斤米回家");
-            Check(s.Couriers.Count == 1 && Math.Abs(s.Backpack.Food.RiceJin) < 1e-9, "叫车的米不进背包");
+            double homeRice = s.Pantry.RiceKg;
+            Check(s.BuyRice(10), "叫车送 5 千克米回家");
+            Check(s.Couriers.Count == 1 && Math.Abs(s.Backpack.Food.RiceKg) < 1e-9, "叫车的米不进背包");
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
             Frame(0.05f);
             Shot("vs1_76_farm_courier");
             s.SendByCourier = false;
             s.AdvanceClock(s.CourierQuote(false).minutes + 5);
-            Check(Math.Abs(s.Pantry.RiceJin - homeRice - 10) < 1e-6, "车把米送进了家里厨房");
+            Check(Math.Abs(s.Pantry.RiceKg - homeRice - 10) < 1e-6, "车把米送进了家里厨房");
             _game.Ui.CloseAllWindows();
 
             // 烟酒茶行、手机店、背包
@@ -1259,7 +1259,7 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Shot("vs1_104_shelf_kind_chooser");
             _game.Ui.CloseModalWindows();
-            Check(g.PlayerShop.ShelfCapacityOf(PCShopSell.Core.Inventory.ShelfKinds.Get("drink")) == 160 && g.PlayerShop.Stock.Capacity >= PCShopSell.Core.Shop.ShopSettings.Capacity(g.PlayerShop.Size) + 30, "重型货架能放 160 公斤，加固 + 重型让后仓多 30 格");
+            Check(g.PlayerShop.ShelfCapacityOf(PCShopSell.Core.Inventory.ShelfKinds.Get("drink")) == 160 && g.PlayerShop.Stock.Capacity >= PCShopSell.Core.Shop.ShopSettings.Capacity(g.PlayerShop.Size) + 30, "重型货架能放 160 千克，加固 + 重型让后仓多 30 格");
             _game.Ui.CloseAllWindows();
             g.Meet(PCShopSell.Core.Session.Npcs.Zhang, 40);
             g.Meet(PCShopSell.Core.Session.Npcs.Lin, 62);

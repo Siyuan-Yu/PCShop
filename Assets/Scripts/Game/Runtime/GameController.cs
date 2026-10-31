@@ -577,7 +577,7 @@ namespace PCShopSell.Game
                 if (Interior.NearBox && !Interior.NearShelf && !Interior.NearBench && !Interior.NearDisplay)
                 {
                     world = Interior.NearBoxWorld;
-                    label = $"店里纸箱 ×{Session.ShopBoxes}（{Session.ShopLocker.WeightKg:0.#}/{Session.ShopLockerLimitKg:0} 公斤，按 F 打开）";
+                    label = $"店里纸箱 ×{Session.ShopBoxes}（{Session.ShopLocker.WeightKg:0.##}/{Session.ShopLockerLimitKg:0} 千克，按 F 打开）";
                     return true;
                 }
                 if (Interior.NearBench)

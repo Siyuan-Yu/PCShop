@@ -107,7 +107,7 @@ namespace PCShopSell.Game.UI
             {
                 Para(w.Content, "每台车同时只能给一个人用。员工外出进货占用车辆，返店后释放；老板选中的出行车辆也占一台。", 18);
                 foreach (var v in Vehicles.All.Where(x => x.Purchasable))
-                    Para(w.Content, $"<b>{v.Name}</b> · 载货 {v.CargoCapacity * 2:0} 公斤\n{S.VehicleUsage(v.Kind)}", 18);
+                    Para(w.Content, $"<b>{v.Name}</b> · 载货 {v.CargoCapacity * 2:0} 千克\n{S.VehicleUsage(v.Kind)}", 18);
                 Ui.Size(Ui.Button(w.Content, "去车行买车", () =>
                 {
                     CloseModalWindows();
@@ -173,7 +173,7 @@ namespace PCShopSell.Game.UI
                     else if (offer.Kind == PurchaseGoodsKind.Gift)
                         details += $" · 库存 {worker.Shop.Sim.Stock.GoodsCount(offer.Id)}";
                     Ui.Size(Ui.Label(line, offer.Name + "\n<size=13>" + details + "</size>", 16), -1, -1, 1);
-                    Ui.Size(Ui.Label(line, offer.Price + (offer.Kind == PurchaseGoodsKind.Rice ? "/斤" : "/件"), 16), 130);
+                    Ui.Size(Ui.Label(line, offer.Price + (offer.Kind == PurchaseGoodsKind.Rice ? "/袋" : offer.Kind == PurchaseGoodsKind.Ingredient ? "/份" : "/件"), 16), 130);
                     Ui.Size(Ui.Button(line, "−", () => Set(count - 1), 18), 42);
                     Ui.Size(Ui.NumberInput(line, count, 0, 100, v => Set((int)v)), 70, 36);
                     Ui.Size(Ui.Button(line, "+", () => Set(count + 1), 18), 42);
@@ -205,7 +205,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(transport, label, () => { draft.Transport = mode; w.Rebuild(); }, 16, draft.Transport == mode ? Ui.ButtonHot : Ui.ButtonBg, hired || S.VehicleCount(mode) > 0), -1, -1, 1);
                 }
                 var quote = S.QuoteEmployeePurchase(employeeId, draft);
-                Para(w.Content, $"费用自动计算：货款 {quote.Goods} + 往返车费 {quote.Travel} + 货车运费 {quote.Freight} = 合计 {quote.Total}\n整份清单 {quote.Kg:0.#} 公斤，约 {quote.DeliveryMinutes} 分钟到店；每天按当日价格重新计算，不另设预算。", 16);
+                Para(w.Content, $"费用自动计算：货款 {quote.Goods} + 往返车费 {quote.Travel} + 货车运费 {quote.Freight} = 合计 {quote.Total}\n整份清单 {quote.Kg:0.##} 千克，约 {quote.DeliveryMinutes} 分钟到店；每天按当日价格重新计算，不另设预算。", 16);
                 if (quote.Error != null) Para(w.Content, "现在不能出发：" + quote.Error + "。仍可点“完成”保存，之后每天再尝试。", 15, Ui.Warn);
                 if (S.Vehicle == draft.Transport && S.FreeVehicleCount(draft.Transport) == 0)
                     Ui.Size(Ui.Button(w.Content, "老板改为步行，释放这台车", () => { S.SetVehicle(VehicleKind.Walk); w.Rebuild(); }, 16), -1, 36);

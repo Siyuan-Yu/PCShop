@@ -17,8 +17,8 @@ namespace PCShopSell.Core.Time
         public const double WorldRate = 3.0;
 
         /// <summary>
-        /// 1× 下 1 游戏分钟的真实秒数。要和出行时的时钟速度（画面速度 × 路程折算）大致一致，
-        /// 否则“走路时时间慢、站着不动时间飞快”。步行约 1.4 游戏分钟/秒，所以取 0.7。
+        /// 1× 下 1 游戏分钟的真实秒数。所有实时状态共用此时钟，
+        /// 不根据走路距离、地图压缩比例或是否停下来重新计时。
         /// </summary>
         public const double DefaultSecondsPerMinute = 0.7 / WorldRate;
 

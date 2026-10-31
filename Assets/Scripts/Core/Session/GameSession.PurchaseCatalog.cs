@@ -44,10 +44,10 @@ namespace PCShopSell.Core.Session
                         Category = "烟酒饮料与水果", Price = gift.Price, UnitKg = gift.WeightKg, StockSpace = Stock.GoodsSpace(gift.Id, 1) });
                 if (source.Business == FarmBusiness)
                 {
-                    offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Rice, Id = "rice", Name = "大米（斤）",
-                        Category = "米与食材", Price = Pantry.RicePricePerJin, UnitKg = Backpack.RiceKgPerJin });
+                    offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Rice, Id = "rice", Name = "大米（0.5千克/袋）",
+                        Category = "米与食材", Price = Pantry.RicePricePerKg.Scale(0.5), UnitKg = 0.5 });
                     foreach (var ingredient in Ingredients.All)
-                        offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Ingredient, Id = ingredient.Id, Name = ingredient.Name,
+                        offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Ingredient, Id = ingredient.Id, Name = ingredient.Name + "（" + ingredient.WeightKg.ToString("0.##") + "千克/份）",
                             Category = "米与食材", Price = ingredient.Price, UnitKg = Backpack.IngredientKg(ingredient.Id) });
                 }
                 if (source.Business == MallBusiness)
@@ -84,7 +84,7 @@ namespace PCShopSell.Core.Session
             switch (line.Kind)
             {
                 case PurchaseGoodsKind.Gift: return Gifts.Get(line.PartId)?.Name ?? line.PartId;
-                case PurchaseGoodsKind.Rice: return "大米（斤）";
+                case PurchaseGoodsKind.Rice: return "大米（0.5千克/袋）";
                 case PurchaseGoodsKind.Ingredient: return Ingredients.Get(line.PartId)?.Name ?? line.PartId;
                 case PurchaseGoodsKind.Furniture: return FurnitureCatalog.Get(line.PartId)?.Name ?? line.PartId;
                 default: return PartCatalog.Exists(line.PartId) ? PartCatalog.Get(line.PartId).Name : line.PartId;
@@ -103,7 +103,7 @@ namespace PCShopSell.Core.Session
         {
             Kind = line.Kind == PurchaseGoodsKind.Part ? CourierItemKind.Part : line.Kind == PurchaseGoodsKind.Gift ? CourierItemKind.Goods
                 : line.Kind == PurchaseGoodsKind.Rice ? CourierItemKind.Rice : line.Kind == PurchaseGoodsKind.Ingredient ? CourierItemKind.Ingredient : CourierItemKind.Furniture,
-            Id = line.PartId, Count = line.Count, Jin = line.Count, Boxed = true, ExpireDay = line.ExpireDay
+            Id = line.PartId, Count = line.Count, Kg = line.Count * 0.5, Boxed = true, ExpireDay = line.ExpireDay
         };
 
         private string PurchaseOpeningBlocker(Place source, int arrivalMinute)

@@ -61,21 +61,19 @@ namespace PCShopSell.Core.Home
     }
 
     /// <summary>
-    /// 出门背着的背包：有承重（和载具的载货一起算，1 格 = 2 公斤）。
+    /// 出门背着的背包：有承重（和载具的载货一起算，1 格 = 2 千克）。
     /// 装着刚买的米和菜、从电饭锅装的饭盒、送人的礼品；进货的配件在载具的 <c>Cargo</c> 里，两边合计受承重限制。
     /// 背包里的东西不会自己消失：回到家或自己的店里，打开背包一键放下。
     /// </summary>
     public sealed class Backpack
     {
-        /// <summary>每格货折合多少公斤（配件和背包里的东西共用一个承重）。</summary>
+        /// <summary>每格货折合多少千克（配件和背包里的东西共用一个承重）。</summary>
         public const double KgPerSpace = 2.0;
 
-        public const double RiceKgPerJin = 0.5;
-
-        public const double LunchboxKg = 0.5;
+public const double LunchboxKg = 0.5;
 
         /// <summary>刚买、还没放进厨房的米和食材；<c>Food.Packed</c> 是带在身上的饭盒（饭点从这里吃）。</summary>
-        public readonly Pantry Food = new Pantry { RiceJin = 0 };
+        public readonly Pantry Food = new Pantry { RiceKg = 0 };
 
         public int Lunchboxes => Food.PackedBowls;
 
@@ -143,7 +141,7 @@ namespace PCShopSell.Core.Home
         }
 
         public double WeightKg =>
-            Food.RiceJin * RiceKgPerJin
+            Food.RiceKg
             + Food.Ingredient.Sum(b => b.Count * IngredientKg(b.Id))
             + Food.PackedBowls * LunchboxKg
             + _gifts.Sum(kv => kv.Value * (Gifts.Get(kv.Key)?.WeightKg ?? 0))
@@ -152,7 +150,7 @@ namespace PCShopSell.Core.Home
         /// <summary>折合成“格”（和载具的载货容量同一单位）。</summary>
         public double Space => WeightKg / KgPerSpace;
 
-        public bool IsEmpty => Food.RiceJin <= 0 && Food.Ingredient.Count == 0 && Food.Packed.Count == 0 && !GiftLines.Any() && !FurnitureLines.Any();
+        public bool IsEmpty => Food.RiceKg <= 0 && Food.Ingredient.Count == 0 && Food.Packed.Count == 0 && !GiftLines.Any() && !FurnitureLines.Any();
 
         public void ClearGifts() => _gifts.Clear();
     }

@@ -7,7 +7,7 @@ using PCShopSell.Core.Inventory;
 namespace PCShopSell.Core.Session
 {
     /// <summary>
-    /// 货架：所有货架都一样，每个摆一种货（配件 6 类，或烟、酒、饮料、点心、水果），最多放 60 公斤。
+    /// 货架：所有货架都一样，每个摆一种货（配件 6 类，或烟、酒、饮料、点心、水果），最多放 60 千克。
     /// 店里的货都放在后仓（<c>Stock</c>，仓位有限），货架空出来就自动从后仓补；顾客只买货架上摆着的，
     /// 没有对应货架的货，后仓里再多也卖不出去。
     /// 另外：除了电脑配件，礼品表里的东西（烟酒饮料点心水果）也能放进后仓、摆上货架卖，
@@ -102,7 +102,7 @@ namespace PCShopSell.Core.Session
             if (!InPlayerShop) return Fail("要在自己的店里才能下架。");
             if (PlayerShop.Stock.GoodsCount(giftId) < count) return Fail("店里没有这么多。");
             if (ShopLocker.WeightKg + g.WeightKg * count > ShopLockerLimitKg + 1e-9)
-                return Fail($"店里纸箱放不下了（{ShopBoxes} 个纸箱，最多 {ShopLockerLimitKg:0} 公斤）。");
+                return Fail($"店里纸箱放不下了（{ShopBoxes} 个纸箱，最多 {ShopLockerLimitKg:0} 千克）。");
             PlayerShop.Stock.TryRemoveGoods(giftId, count);
             ShopLocker.AddGift(giftId, count);
             Say($"把「{g.Name}」{(count > 1 ? "×" + count : "")}从店里收回了储物柜。");

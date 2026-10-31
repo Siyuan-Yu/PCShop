@@ -48,7 +48,7 @@ namespace PCShopSell.Game.UI
                 RectTransform row = Ui.Row(list, 56, 6);
                 Image chip = Ui.Panel(row, "Chip", GoodsColor(gid));
                 Ui.Size(chip, 14, 40);
-                Ui.Size(Ui.Label(row, $"<b>{g.Name}</b>\n<size=13><color=#ABB5A8>进价 {g.Price}　每件 {ShelfPlanner.GoodsKg(gid):0.#} 公斤</color></size>", 17), 200);
+                Ui.Size(Ui.Label(row, $"<b>{g.Name}</b>\n<size=13><color=#ABB5A8>进价 {g.Price}　每件 {ShelfPlanner.GoodsKg(gid):0.##} 千克</color></size>", 17), 200);
                 Ui.Size(Ui.Label(row, $"货架上 <b>{onShelf}</b> 件\n<size=13><color=#ABB5A8>后仓共 {inStock} 件" + (handy > 0 ? $"　手边 {handy}" : "") + "</color></size>", 16), 170);
                 Ui.Size(Ui.Label(row, $"售 <color=#A9C9A9>{shop.GoodsPriceOf(gid)}</color>\n<size=13><color=#ABB5A8>{m:0.00}×{(own ? "" : "（跟随）")}　愿买约 {ShopSettings.BuyChance(m) * shop.Settings.GoodsBuyFactor * 100:0}%</color></size>", 16), 190);
                 Ui.Size(Ui.Button(row, "−", () => { S.SetGoodsMarkup(gid, Mathf.Round((float)m * 20 - 1) / 20f); w.Rebuild(); }, 20, Ui.ButtonBg, m > 0.9 + 1e-6), 34);

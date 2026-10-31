@@ -336,7 +336,7 @@ namespace PCShopSell.Core.Shop
         private Dictionary<string, double> _shelfKg;
 
         /// <summary>
-        /// 每类货的货架总载重（公斤，会话按摆放更新）。设了以后顾客只买货架上摆着的：
+        /// 每类货的货架总载重（千克，会话按摆放更新）。设了以后顾客只买货架上摆着的：
         /// 某类货没有货架就买不到。没设（null，单元测试里）= 后仓的货都能买。
         /// </summary>
         public void SetShelfCapacity(IReadOnlyDictionary<string, double> kgByKind)
@@ -348,7 +348,7 @@ namespace PCShopSell.Core.Shop
 
         public bool ShelvesManaged => _shelfKg != null;
 
-        /// <summary>这类货的货架总载重（公斤）。</summary>
+        /// <summary>这类货的货架总载重（千克）。</summary>
         public double ShelfCapacityOf(ShelfKind kind)
         {
             if (_shelfKg == null) return double.PositiveInfinity;

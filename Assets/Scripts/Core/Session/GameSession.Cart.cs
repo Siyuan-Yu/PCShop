@@ -15,12 +15,12 @@ namespace PCShopSell.Core.Session
         public string Key;
         public string Name;
 
-        /// <summary>件数；按斤的（大米）是斤数。</summary>
+        /// <summary>件数；按千克的（大米）是千克数。</summary>
         public double Amount;
 
         /// <summary>其中自己装进背包的部分；剩下的叫车送。</summary>
         public double InBag;
-        public bool ByJin;
+        public bool ByWeight;
         public double UnitKg;
 
         public double ByTruck => Math.Max(0, Amount - InBag);
@@ -35,7 +35,7 @@ namespace PCShopSell.Core.Session
 
         public double Kg => UnitKg * Amount;
         public Money Price => UnitPrice == null ? Money.Zero : UnitPrice().Scale(Amount);
-        public string AmountText => ByJin ? $"{Amount:0.#} 斤" : $"×{Amount:0}";
+        public string AmountText => ByWeight ? $"{Amount:0.##} 千克" : $"×{Amount:0}";
     }
 
     /// <summary>这里能交给货车司机搬走的一样东西。</summary>
@@ -45,7 +45,7 @@ namespace PCShopSell.Core.Session
         public string Name;
         public string Where;
         public double Have;
-        public bool ByJin;
+        public bool ByWeight;
         public double UnitKg;
     }
 
@@ -85,7 +85,7 @@ namespace PCShopSell.Core.Session
         public double TruckKg => _truck.Sum(l => l.Kg);
         public Money CartGoods => _cart.Aggregate(Money.Zero, (sum, l) => sum + l.Price);
 
-        /// <summary>背包还能再放多少公斤（已经拖进背包栏的算上）。</summary>
+        /// <summary>背包还能再放多少千克（已经拖进背包栏的算上）。</summary>
         public double CartBagFreeKg => Math.Max(0, FreeKg - CartBagKg);
 
         /// <summary>把购物车里这一样拿 amount 放进背包栏（其余仍叫车）。</summary>
@@ -111,7 +111,7 @@ namespace PCShopSell.Core.Session
         {
             foreach (CartLine l in _cart)
             {
-                double n = FitAmount(l.ByJin, l.UnitKg, CartBagFreeKg, l.ByTruck);
+                double n = FitAmount(l.ByWeight, l.UnitKg, CartBagFreeKg, l.ByTruck);
                 if (n > 0) l.InBag += n;
             }
         }
@@ -144,7 +144,7 @@ namespace PCShopSell.Core.Session
         }
 
         private int CarsFor(List<CartLine> lines, OwnedShop dest) =>
-            CarsFor(lines.Where(l => l.ByTruck > 1e-9).Select(l => (l.ByJin, l.UnitKg, l.ByTruck)), dest);
+            CarsFor(lines.Where(l => l.ByTruck > 1e-9).Select(l => (l.ByWeight, l.UnitKg, l.ByTruck)), dest);
 
         /// <summary>购物车里叫车的部分要几辆新车（-1 = 有单件超过一辆车）。</summary>
         public int CartCars(bool defaultToShop) => CarsFor(_cart, CourierShop(defaultToShop));
@@ -213,19 +213,19 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
-        public bool CartAddRice(double jin)
+        public bool CartAddRice(double kg)
         {
-            if (jin <= 0) return false;
+            if (kg <= 0) return false;
             if (!AtFarmMarket) return Fail("要去农贸市场买。");
             PutLine(_cart, new CartLine
             {
                 Key = "rice",
                 Name = "大米",
-                ByJin = true,
-                UnitKg = Backpack.RiceKgPerJin,
-                UnitPrice = () => Pantry.RicePricePerJin,
+                ByWeight = true,
+                UnitKg = 1.0,
+                UnitPrice = () => Pantry.RicePricePerKg,
                 Run = n => BuyRice(n),
-            }, jin);
+            }, kg);
             return true;
         }
 
@@ -252,11 +252,11 @@ namespace PCShopSell.Core.Session
         {
             if (_cart.Count == 0) return "购物车是空的";
             if (CartBagKg > FreeKg + 1e-9)
-                return $"背包放不下：拖进背包的有 {CartBagKg:0.#} 公斤，{CurrentVehicle.Name}还能背 {FreeKg:0.#} 公斤。拖一些回去叫车";
+                return $"背包放不下：拖进背包的有 {CartBagKg:0.##} 千克，{CurrentVehicle.Name}还能背 {FreeKg:0.##} 千克。拖一些回去叫车";
             Money due = CartGoods;
             if (CartTruckKg > 1e-9)
             {
-                if (CartCars(defaultToShop) < 0) return $"有一件超过一辆面包车能装的 {CourierCapacityKg:0} 公斤";
+                if (CartCars(defaultToShop) < 0) return $"有一件超过一辆面包车能装的 {CourierCapacityKg:0} 千克";
                 due += CartFreight(defaultToShop);
             }
             if (Ledger.Balance < due) return $"一共要 {due}，钱不够";
@@ -288,7 +288,7 @@ namespace PCShopSell.Core.Session
             var done = new List<string>();
             var failed = new List<string>();
             double bagKg = 0, truckKg = 0;
-            string Label(CartLine l, double n) => l.Name + (l.ByJin ? $" {n:0.#} 斤" : n > 1 ? $"×{n:0}" : "");
+            string Label(CartLine l, double n) => l.Name + (l.ByWeight ? $" {n:0.##} 千克" : n > 1 ? $"×{n:0}" : "");
             _quiet++;
             try
             {
@@ -323,10 +323,10 @@ namespace PCShopSell.Core.Session
             lines.Clear();
             if (done.Count == 0) return false;
             var tail = new List<string>();
-            if (bagKg > 1e-9) tail.Add($"{bagKg:0.#} 公斤装进背包");
+            if (bagKg > 1e-9) tail.Add($"{bagKg:0.##} 千克装进背包");
             if (truckKg > 1e-9)
-                tail.Add(cars > 0 ? $"{truckKg:0.#} 公斤叫了 {cars} 辆面包车（运费 {fee * cars}），大约 {minutes} 分钟送到{destName}"
-                    : $"{truckKg:0.#} 公斤装上刚才叫的车，一起送到{destName}");
+                tail.Add(cars > 0 ? $"{truckKg:0.##} 千克叫了 {cars} 辆面包车（运费 {fee * cars}），大约 {minutes} 分钟送到{destName}"
+                    : $"{truckKg:0.##} 千克装上刚才叫的车，一起送到{destName}");
             Say($"{title}：{string.Join("、", done)}" + (spent.IsPositive ? $"，货款 {spent}" : "") + (tail.Count > 0 ? "；" + string.Join("；", tail) : "") + "。"
                 + (failed.Count > 0 ? $"没办成的：{string.Join("、", failed)}。" : ""));
             return true;
@@ -353,7 +353,7 @@ namespace PCShopSell.Core.Session
             {
                 if (_truck.Count == 0) return "还没装东西";
                 if (TruckDestBlocker != null) return TruckDestBlocker;
-                if (TruckCars < 0) return $"有一件超过一辆面包车能装的 {CourierCapacityKg:0} 公斤";
+                if (TruckCars < 0) return $"有一件超过一辆面包车能装的 {CourierCapacityKg:0} 千克";
                 if (Ledger.Balance < TruckFreight) return $"运费 {TruckFreight}，钱不够";
                 return null;
             }
@@ -369,7 +369,7 @@ namespace PCShopSell.Core.Session
                 Pantry food = FoodOf(src);
                 if (food != null)
                 {
-                    if (food.RiceJin > 1e-9) keys.Add(src + "|rice");
+                    if (food.RiceKg > 1e-9) keys.Add(src + "|rice");
                     foreach (string id in food.Ingredient.Where(b => b.Count > 0).Select(b => b.Id).Distinct()) keys.Add(src + "|ing:" + id);
                 }
                 Backpack bag = BagOf(src);
@@ -396,13 +396,13 @@ namespace PCShopSell.Core.Session
             if (TruckDestBlocker != null) return Fail(TruckDestBlocker + "。");
             double left = m.Have - TruckAmount(key);
             amount = Math.Min(amount, left);
-            if (!m.ByJin) amount = Math.Floor(amount + 1e-9);
+            if (!m.ByWeight) amount = Math.Floor(amount + 1e-9);
             if (amount <= 1e-9) return Fail("已经全装上了。");
             PutLine(_truck, new CartLine
             {
                 Key = key,
                 Name = $"{m.Name}（{m.Where}）",
-                ByJin = m.ByJin,
+                ByWeight = m.ByWeight,
                 UnitKg = m.UnitKg,
                 Run = n => ShipFromHere(key, n),
             }, amount);
@@ -491,10 +491,10 @@ namespace PCShopSell.Core.Session
                     break;
                 case "rice":
                     if (food == null) return null;
-                    m.Have = food.RiceJin;
+                    m.Have = food.RiceKg;
                     m.Name = "大米";
-                    m.ByJin = true;
-                    unit = new CourierItem { Kind = CourierItemKind.Rice, Id = "rice", Jin = 1 };
+                    m.ByWeight = true;
+                    unit = new CourierItem { Kind = CourierItemKind.Rice, Id = "rice", Kg = 1 };
                     break;
                 case "ing":
                     if (food == null) return null;
@@ -545,8 +545,8 @@ namespace PCShopSell.Core.Session
                     items.Add(new CourierItem { Kind = unit.Kind, Id = unit.Id, Count = n });
                     break;
                 case CourierItemKind.Rice:
-                    food.RiceJin = Math.Max(0, food.RiceJin - amount);
-                    items.Add(new CourierItem { Kind = unit.Kind, Id = "rice", Jin = amount });
+                    food.RiceKg = Math.Max(0, food.RiceKg - amount);
+                    items.Add(new CourierItem { Kind = unit.Kind, Id = "rice", Kg = amount });
                     break;
                 case CourierItemKind.Ingredient:
                     var taken = new List<FoodBatch>();
@@ -582,7 +582,7 @@ namespace PCShopSell.Core.Session
             {
                 case CourierItemKind.Part: PartsOf(src).ForceAdd(PartCatalog.Get(it.Id), it.Boxed, it.Count); break;
                 case CourierItemKind.Goods: PartsOf(src).ForceAddGoods(it.Id, it.Count); break;
-                case CourierItemKind.Rice: FoodOf(src).RiceJin += it.Jin; break;
+                case CourierItemKind.Rice: FoodOf(src).RiceKg += it.Kg; break;
                 case CourierItemKind.Ingredient:
                     FoodOf(src).Ingredient.Add(new FoodBatch { Id = it.Id, Name = Ingredients.Get(it.Id)?.Name ?? it.Id, Count = it.Count, ExpireDay = it.ExpireDay });
                     break;

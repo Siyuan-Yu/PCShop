@@ -135,28 +135,32 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void Walking_AdvancesClockByGameDistance()
+        public void Walking_UsesTheSameClockAsStanding()
         {
             GameSession s = Make();
             Assert.IsTrue(s.GoTo("pc"));
             Assert.IsNull(s.CurrentPlace);
-            RunTrip(s);
+            using (var stationary = Make())
+            {
+                for (int i = 0; i < 20000 && s.Trip != null; i++) { s.Tick(.05); stationary.Tick(.05); }
+                Assert.AreEqual(stationary.Clock.Now, s.Clock.Now);
+            }
             Assert.AreEqual("pc", s.PlayerNodeId);
-            // 500 米 ÷ 49 米/分钟（约 3 公里/小时）≈ 10.2 → 11 分钟
-            Assert.AreEqual(8 * 60 + 11, s.Clock.MinuteOfDay);
         }
 
         [Test]
-        public void CompressedConnector_TakesFullTime()
+        public void CompressedConnector_UsesTheSameClockAsStanding_AndKeepsFare()
         {
             GameSession s = Make();
             s.SetVehicle(VehicleKind.Taxi);
             Money before = s.Ledger.Balance;
             Assert.IsTrue(s.GoTo("mk"));
-            RunTrip(s);
+            using (var stationary = Make())
+            {
+                for (int i = 0; i < 20000 && s.Trip != null; i++) { s.Tick(.05); stationary.Tick(.05); }
+                Assert.AreEqual(stationary.Clock.Now, s.Clock.Now);
+            }
             Assert.AreEqual("mk", s.PlayerNodeId);
-            // 500 + 20 + 2000 = 2520 米，打车 400 米/分钟 → 7 分钟；车费 ¥10 + ¥2
-            Assert.AreEqual(8 * 60 + 7, s.Clock.MinuteOfDay);
             Assert.AreEqual(Money.FromYuan(12), before - s.Ledger.Balance);
         }
 

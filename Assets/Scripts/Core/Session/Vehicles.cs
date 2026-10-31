@@ -13,7 +13,7 @@ namespace PCShopSell.Core.Session
         Van,
     }
 
-    /// <summary>出行方式参数。速度为游戏内米/分钟；画面速度为画面米/真实秒（1 倍速）；街上的画面速度已比最初慢一半（游戏内每公里耗时不变）。</summary>
+    /// <summary>出行方式参数。速度为游戏内米/分钟；画面速度为画面米/真实秒（1 倍速）；街上的画面速度已比最初慢一半；实时出行计时由统一世界时钟管理。</summary>
     public sealed class VehicleSpec
     {
         public VehicleKind Kind { get; }

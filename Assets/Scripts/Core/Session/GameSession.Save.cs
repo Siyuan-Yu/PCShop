@@ -75,6 +75,7 @@ namespace PCShopSell.Core.Session
                 cargo = Lines(Cargo),
 
                 playerWork = WorkContract?.Copy(),
+                weightUnitsVersion = 1,
                 hasDietStats = true, nutrition = Player.Nutrition, mood = Player.Mood,
                 hunger = Player.Hunger,
                 energy = Player.Energy,
@@ -139,6 +140,7 @@ namespace PCShopSell.Core.Session
         public static GameSession Load(CityLayout city, SaveData d)
         {
             if (d == null) throw new ArgumentNullException(nameof(d));
+            MigrateWeightUnits(d);
             ulong rng = ulong.Parse(d.rngState ?? "1", System.Globalization.CultureInfo.InvariantCulture);
             var s = new GameSession(city, rng, Money.Zero, GameTimestamp.From(new GameDate(d.day), d.minute), false, !d.noPhone);
             s.Restore(d, rng);

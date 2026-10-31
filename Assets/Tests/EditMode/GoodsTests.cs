@@ -41,7 +41,7 @@ namespace PCShopSell.Tests
             Assert.IsTrue(st.IsEmpty);
             Assert.IsTrue(st.TryAddGoods(Gifts.Soda, 4));
             Assert.AreEqual(4, st.GoodsCount(Gifts.Soda));
-            Assert.AreEqual(1.0, st.UsedSpace, 1e-6, "一瓶饮料 0.5 公斤 = 0.25 格");
+            Assert.AreEqual(1.0, st.UsedSpace, 1e-6, "一瓶饮料 0.5 千克 = 0.25 格");
             Assert.IsFalse(st.IsEmpty);
             Assert.IsFalse(st.TryAddGoods(Gifts.Drink, 4), "一箱饮料 3 格，4 箱放不下");
             Assert.IsFalse(st.TryAddGoods("no_such_gift", 1));

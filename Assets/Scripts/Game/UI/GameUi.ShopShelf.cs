@@ -232,7 +232,7 @@ namespace PCShopSell.Game.UI
                 ShelfFill fill = shop.ShelfFillOf(kind);
                 int same = S.ShelvesOfKind(kind.Id);
                 int back = kind.IsParts ? PartCatalog.InCategory(kind.Category).Sum(p => st.CountAll(p)) : kind.GiftIds.Sum(id => st.GoodsCount(id));
-                Line(w.Content, $"摆「{kind.Name}」的货架共 <b>{same}</b> 个，一共能放 {fill.CapacityKg:0} 公斤，已摆 <b>{fill.UsedKg:0.#}</b> 公斤 / <b>{fill.Total}</b> 件"
+                Line(w.Content, $"摆「{kind.Name}」的货架共 <b>{same}</b> 个，一共能放 {fill.CapacityKg:0} 千克，已摆 <b>{fill.UsedKg:0.##}</b> 千克 / <b>{fill.Total}</b> 件"
                     + (back > fill.Total ? $"　<color=#DDC18B>后仓还有 {back - fill.Total} 件没摆上（货架装满了）</color>" : ""), 16);
                 Line(w.Content, $"整店后仓 {st.UsedSpace:0.#}/{st.Capacity:0.#} 格，还剩 {st.FreeSpace:0.#} 格（所有货共用）", 15, Ui.Dim);
 

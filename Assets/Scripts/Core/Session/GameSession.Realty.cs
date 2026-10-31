@@ -220,12 +220,12 @@ namespace PCShopSell.Core.Session
                 _shopLayout.Clear();
                 foreach (var kv in _focus.Locker.GiftLines.ToList()) _focus.Temp.AddGift(kv.Key, kv.Value);
                 foreach (var kv in _focus.Locker.FurnitureLines.ToList()) _focus.Temp.AddFurniture(kv.Key, kv.Value);
-                _focus.Temp.Food.RiceJin += _focus.Locker.Food.RiceJin;
+                _focus.Temp.Food.RiceKg += _focus.Locker.Food.RiceKg;
                 _focus.Temp.Food.Ingredient.AddRange(_focus.Locker.Food.Ingredient);
                 _focus.Temp.Food.Packed.AddRange(_focus.Locker.Food.Packed);
                 _focus.Locker.ClearGifts();
                 _focus.Locker.ClearFurniture();
-                _focus.Locker.Food.RiceJin = 0;
+                _focus.Locker.Food.RiceKg = 0;
                 _focus.Locker.Food.Ingredient.Clear();
                 _focus.Locker.Food.Packed.Clear();
                 _focus.BoxesGiven = false;

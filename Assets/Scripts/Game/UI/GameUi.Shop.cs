@@ -277,7 +277,7 @@ namespace PCShopSell.Game.UI
                 {
                     ShelfFill sf = shop.ShelfFillOf(sk);
                     int same = Mathf.Max(1, S.ShelvesOfKind(sk.Id));
-                    load = $"{sf.UsedKg:0.#}/{sf.CapacityKg:0} 公斤{(same > 1 ? $"（{same} 个共用）" : "")}";
+                    load = $"{sf.UsedKg:0.##}/{sf.CapacityKg:0} 千克{(same > 1 ? $"（{same} 个共用）" : "")}";
                 }
                 Ui.Size(Ui.Label(srow, load, 14, TextAnchor.MiddleLeft, Ui.Dim), 178);
                 Ui.Size(Ui.Button(srow, "查看", () => OpenShelfWindow(layoutIdx), 15, sk == null ? Ui.ButtonBg : Ui.ButtonHot, sk != null), 66);
@@ -328,7 +328,7 @@ namespace PCShopSell.Game.UI
             Line(C, "盒装占 1 格、卖得贵；拆成散件占 0.5 格但便宜，拆了不能复原。", 14, Ui.Dim);
             Line(C, "—— 明细 ——", 16, Ui.Dim);
             if (_ctrl.InInterior)
-                Ui.Size(Ui.Button(C, $"店里纸箱 ×{S.ShopBoxes}（{S.ShopLocker.WeightKg:0.#}/{S.ShopLockerLimitKg:0} 公斤）" + (S.ShopTemp.IsEmpty ? "" : "　临时存放有东西"), OpenShopLockerWindow, 17), -1, 42);
+                Ui.Size(Ui.Button(C, $"店里纸箱 ×{S.ShopBoxes}（{S.ShopLocker.WeightKg:0.##}/{S.ShopLockerLimitKg:0} 千克）" + (S.ShopTemp.IsEmpty ? "" : "　临时存放有东西"), OpenShopLockerWindow, 17), -1, 42);
             RectTransform list = Ui.Scroll(C, 250);
             foreach (StockLine l in shop.Stock.Lines())
             {

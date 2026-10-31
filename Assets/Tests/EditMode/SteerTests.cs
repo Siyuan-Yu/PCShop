@@ -4,7 +4,7 @@ using PCShopSell.Core.World;
 
 namespace PCShopSell.Tests
 {
-    /// <summary>WASD 自由走路：走廊内任意方向、贴边滑动、时间随路程、进门、接管自动前往。</summary>
+    /// <summary>WASD 自由走路：走廊内任意方向、贴边滑动、移动和静止统一计时、进门、接管自动前往。</summary>
     public class SteerTests
     {
         // 测试地图：st(0,0) — s1(10,0) — pc(20,0) — home(20,-50)；st — mk(-100,0)。
@@ -81,18 +81,16 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void Steer_Time_FollowsDistance()
+        public void Steer_Time_MatchesStandingEvenOnCompressedRoad()
         {
-            GameSession s = AtStreet("pc");
-            long before = s.Clock.Now.TotalMinutes;
-            // pc -> home：游戏里 500 米，走路 49 米/分钟 ≈ 10.2 分钟
-            s.SetSteer(0, -1);
-            for (int i = 0; i < 300 && s.PlayerPosition.Y > -49.99; i++) s.Tick(0.1);
-            s.SetSteer(0, 0);
-            Assert.AreEqual("home", s.PlayerNodeId);
-            long used = s.Clock.Now.TotalMinutes - before;
-            Assert.GreaterOrEqual(used, 10);
-            Assert.LessOrEqual(used, 11);
+            using (var s = AtStreet("pc"))
+            using (var idle = AtStreet("pc"))
+            {
+                s.SetSteer(0, -1);
+                for (int i = 0; i < 300 && s.PlayerPosition.Y > -49.99; i++) { s.Tick(.1); idle.Tick(.1); }
+                Assert.AreEqual("home", s.PlayerNodeId);
+                Assert.AreEqual(idle.Clock.Now, s.Clock.Now);
+            }
         }
 
         [Test]

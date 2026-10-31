@@ -90,7 +90,7 @@ namespace PCShopSell.Core.Session
         {
             var line = _cart.Find(l => l.Key == key);
             if (line == null) return false;
-            double fit = FitAmount(line.ByJin, line.UnitKg, CartBagFreeKg, line.ByTruck);
+            double fit = FitAmount(line.ByWeight, line.UnitKg, CartBagFreeKg, line.ByTruck);
             if (fit <= 0) return Fail("背包已装不下，剩余物品继续叫车送。");
             if (fit < line.ByTruck) Say($"背包只能再装 {fit:0.#}，剩余物品继续叫车送。");
             return CartToBag(key, fit);

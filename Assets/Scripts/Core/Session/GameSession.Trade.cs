@@ -80,7 +80,7 @@ namespace PCShopSell.Core.Session
             else
             {
                 if (!Cargo.CanAdd(part, true, count))
-                    return Fail($"拿不动了：{CurrentVehicle.Name}最多 {CarryLimitKg:0.#} 公斤，现在已经 {CarriedKg:0.#} 公斤（还能装 {Cargo.FreeSpace * Backpack.KgPerSpace:0.#} 公斤的货）。可以改成“叫车送到店里”。");
+                    return Fail($"拿不动了：{CurrentVehicle.Name}最多 {CarryLimitKg:0.##} 千克，现在已经 {CarriedKg:0.##} 千克（还能装 {Cargo.FreeSpace * Backpack.KgPerSpace:0.##} 千克的货）。可以改成“叫车送到店里”。");
                 if (!Ledger.TryDebit(Clock.Today, "进货", total, $"{stall.Name} {part.Name}×{count}"))
                     return Fail($"要 {total}，钱不够。");
                 Cargo.TryAdd(part, true, count);

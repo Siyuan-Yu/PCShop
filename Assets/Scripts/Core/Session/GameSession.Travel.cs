@@ -35,7 +35,7 @@ namespace PCShopSell.Core.Session
             if (!CanUse(kind)) return Fail("没有空闲的" + Vehicles.Get(kind).Name + "（可能被员工使用或扣押），请先换车或到车行购买。");
             VehicleSpec v = Vehicles.Get(kind);
             if (CarriedKg > v.CargoCapacity * Backpack.KgPerSpace + 1e-9)
-                return Fail($"身上的东西太重（{CarriedKg:0.#} 公斤），{v.Name}最多带 {v.CargoCapacity * Backpack.KgPerSpace:0.#} 公斤。");
+                return Fail($"身上的东西太重（{CarriedKg:0.##} 千克），{v.Name}最多带 {v.CargoCapacity * Backpack.KgPerSpace:0.##} 千克。");
             Vehicle = kind;
             ApplyCargoLimit();
             return true;
@@ -47,13 +47,10 @@ namespace PCShopSell.Core.Session
             meters = 0;
             minutes = 0;
             fare = Money.Zero;
-            string from = Trip != null ? Trip.NextNode : PlayerNodeId;
-            PathResult path = Pathfinder.FindPath(City.Map, from, targetNode);
-            if (!path.Found) return false;
-            meters = path.Distance;
-            VehicleSpec v = CurrentVehicle;
-            minutes = (int)System.Math.Ceiling(meters / v.SpeedPerMinute);
-            if (v.Kind == VehicleKind.Taxi) fare = Vehicles.TaxiFare(meters);
+            var planned = PlanTrip(targetNode, null, out meters);
+            if (planned == null) return false;
+            minutes = planned.EstimateRemainingMinutes(Time.SecondsPerMinuteAt1x);
+            if (CurrentVehicle.Kind == VehicleKind.Taxi) fare = Vehicles.TaxiFare(meters);
             return true;
         }
 
@@ -77,6 +74,25 @@ namespace PCShopSell.Core.Session
                 return true;
             }
 
+            var planned = PlanTrip(targetNode, end, out double routeMeters);
+            if (planned == null) return Fail("到不了那里。");
+            VehicleSpec v = CurrentVehicle;
+            if (v.Kind == VehicleKind.Taxi)
+            {
+                Money fare = Vehicles.TaxiFare(routeMeters);
+                if (!Ledger.TryDebit(Clock.Today, "交通", fare, "打车")) return Fail($"打车要 {fare}，钱不够。");
+                Say($"打车 {fare}");
+            }
+
+            if (CurrentPlace != null) Leave();
+            Trip = planned;
+            ClearEdge();
+            return true;
+        }
+
+        private Trip PlanTrip(string targetNode, MapPoint? end, out double meters)
+        {
+            meters = 0;
             MapPoint start;
             double scale;
             string from;
@@ -106,21 +122,11 @@ namespace PCShopSell.Core.Session
             }
 
             PathResult path = Pathfinder.FindPath(City.Map, from, targetNode);
-            if (!path.Found) return Fail("到不了那里。");
+            if (!path.Found) return null;
+            meters = path.Distance;
 
-            VehicleSpec v = CurrentVehicle;
-            if (v.Kind == VehicleKind.Taxi)
-            {
-                Money fare = Vehicles.TaxiFare(path.Distance);
-                if (!Ledger.TryDebit(Clock.Today, "交通", fare, "打车")) return Fail($"打车要 {fare}，钱不够。");
-                Say($"打车 {fare}");
-            }
-
-            if (CurrentPlace != null) Leave();
-            VehicleKind kind = v.Kind;
-            Trip = new Trip(City, start, scale, path.NodeIds, v, n => LaneOf(n, kind), end);
-            ClearEdge();
-            return true;
+            var vehicle = CurrentVehicle;
+            return new Trip(City, start, scale, path.NodeIds, vehicle, n => LaneOf(n, vehicle.Kind), end);
         }
 
         /// <summary>取消出行，停在最近经过的节点。</summary>
@@ -129,10 +135,10 @@ namespace PCShopSell.Core.Session
             Trip = null;
         }
 
-        private int StepTrip(double scaledSeconds)
+        private string StepTrip(double scaledSeconds)
         {
             _passed.Clear();
-            int minutes = Trip.Step(Trip.Vehicle.VisualSpeed * scaledSeconds, _passed);
+            Trip.Step(Trip.Vehicle.VisualSpeed * scaledSeconds, _passed);
             foreach (string n in _passed) PlayerNodeId = n;
             bool arrived = Trip.Arrived;
             string target = Trip.TargetNode;
@@ -143,9 +149,7 @@ namespace PCShopSell.Core.Session
                 Trip = null;
                 if (Dist(end, City.ViewPosition(target)) > 1e-3) _free = end;
             }
-            if (minutes > 0) AdvanceClock(minutes);
-            if (arrived && !IsGameOver && CurrentPlace == null && PlayerNodeId == target) TripArrived?.Invoke(target);
-            return minutes;
+            return arrived ? target : null;
         }
 
         private void StepPolice(double scaledSeconds)

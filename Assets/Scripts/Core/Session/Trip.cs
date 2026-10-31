@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using PCShopSell.Core.World;
+using PCShopSell.Core.Time;
 
 namespace PCShopSell.Core.Session
 {
     /// <summary>
-    /// 一次出行。画面上按固定画面速度移动；时钟按这段路的游戏内路程 ÷ 交通速度同步推进。
-    /// 被压缩的连接路（边的实际长度大于画面长度）在画面上走得快、但时间照算。
+    /// 一次出行。画面位置按交通方式移动，世界时钟由 GameSession 统一推进。
+    /// 剩余时间按实际画面路径、移动速度及统一时钟比例估算。
     /// </summary>
     public sealed class Trip
     {
@@ -16,8 +17,7 @@ namespace PCShopSell.Core.Session
         private readonly List<double> _gameLen = new List<double>();
         private int _segment;
         private double _segmentProgress;
-        private double _gameMetersDone;
-        private double _minutesOwed;
+        private double _viewMetersDone;
 
         public VehicleSpec Vehicle { get; internal set; }
         public string TargetNode { get; }
@@ -101,25 +101,24 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>
-        /// 按画面距离推进。返回这一步应推进的整分钟数；经过的节点放进 passed。
+        /// 按画面距离推进。不推进时钟；经过的节点放进 passed。
         /// </summary>
-        internal int Step(double viewMeters, List<string> passed)
+        internal void Step(double viewMeters, List<string> passed)
         {
             double remaining = viewMeters;
             while (remaining > 0 && !Arrived)
             {
                 double segLeft = _viewLen[_segment] - _segmentProgress;
-                double scale = CurrentGameScale;
                 if (remaining < segLeft)
                 {
                     _segmentProgress += remaining;
-                    _gameMetersDone += remaining * scale;
+                    _viewMetersDone += remaining;
                     remaining = 0;
                 }
                 else
                 {
                     remaining -= segLeft;
-                    _gameMetersDone += segLeft * scale;
+                    _viewMetersDone += segLeft;
                     _segment++;
                     _segmentProgress = 0;
                     if (_nodeAt[_segment] != null) passed.Add(_nodeAt[_segment]);
@@ -127,23 +126,14 @@ namespace PCShopSell.Core.Session
             }
             UpdatePosition();
 
-            double totalMinutes = _gameMetersDone / Vehicle.SpeedPerMinute;
-            if (Arrived) totalMinutes = Math.Ceiling(totalMinutes - 1e-9);
-            int due = (int)Math.Floor(totalMinutes - _minutesOwed + 1e-9);
-            if (due < 0) due = 0;
-            _minutesOwed += due;
-            return due;
         }
 
-        /// <summary>中途换交通方式（例如三轮车被扣）：已走过的部分按原速度算完，剩下的按新速度。</summary>
-        internal void ChangeVehicle(VehicleSpec v)
-        {
-            double doneMinutes = _gameMetersDone / Vehicle.SpeedPerMinute;
-            Vehicle = v;
-            _gameMetersDone = doneMinutes * v.SpeedPerMinute;
-        }
+        /// <summary>换交通方式只改变后续移动速度，不重算已流逝的世界时间。</summary>
+        internal void ChangeVehicle(VehicleSpec v) => Vehicle = v;
 
-        public int EstimatedMinutes => (int)Math.Ceiling(TotalGameMeters / Vehicle.SpeedPerMinute);
+        public int EstimateRemainingMinutes(double secondsPerMinuteAt1x) => (int)Math.Ceiling(
+            Math.Max(0, TotalViewMeters - _viewMetersDone) / (Vehicle.VisualSpeed * TimeController.WorldRate * secondsPerMinuteAt1x) - 1e-9);
+        public int EstimatedMinutes => EstimateRemainingMinutes(TimeController.DefaultSecondsPerMinute);
 
         private void UpdatePosition()
         {

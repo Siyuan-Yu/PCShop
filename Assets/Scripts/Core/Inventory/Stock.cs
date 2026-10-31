@@ -21,7 +21,7 @@ namespace PCShopSell.Core.Inventory
 
     /// <summary>
     /// 有容量限制的库存（店铺货架、载具货箱）。容量单位为"格"：
-    /// 盒装占 1 格（2 公斤），散件占 0.5 格（重量减半），再乘配件的大小倍率（显卡、电源机箱为 2）。
+    /// 盒装占 1 格（2 千克），散件占 0.5 格（重量减半），再乘配件的大小倍率（显卡、电源机箱为 2）。
     /// </summary>
     public sealed class Stock
     {
@@ -65,7 +65,7 @@ namespace PCShopSell.Core.Inventory
 
         // ---------- 杂货 ----------
 
-        /// <summary>一件杂货占几格：按重量算，1 格 = 2 公斤，最少 0.1 格。</summary>
+        /// <summary>一件杂货占几格：按重量算，1 格 = 2 千克，最少 0.1 格。</summary>
         public static double GoodsSpace(string id, int count)
         {
             double kg = Gifts.Get(id)?.WeightKg ?? 1.0;

@@ -110,7 +110,7 @@ namespace PCShopSell.Tests
                 var trip = s.EmployeePurchaseTrips.Single();
                 s.AdvanceClock((int)(Math.Max(trip.ReturnAt, trip.DeliveryAt) - s.Clock.Now.TotalMinutes + 1));
                 Assert.AreEqual(2, s.MainShop.Locker.Food.IngredientCount(food.Id) + s.MainShop.Temp.Food.IngredientCount(food.Id));
-                Assert.AreEqual(3, s.MainShop.Locker.Food.RiceJin + s.MainShop.Temp.Food.RiceJin);
+                Assert.AreEqual(1.5, s.MainShop.Locker.Food.RiceKg + s.MainShop.Temp.Food.RiceKg);
                 Assert.AreEqual(1, s.MainShop.Locker.FurnitureCount(furniture.Id) + s.MainShop.Temp.FurnitureCount(furniture.Id));
                 Assert.Zero(s.EmployeePurchaseTrips.Count);
             }
