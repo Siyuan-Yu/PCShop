@@ -73,7 +73,6 @@ namespace PCShopSell.Game.UI
 
         private void LaunchFeatureApp(Window w, int n)
         {
-            w.Close();
             if (n == 1) OpenContactsPanel();
             else OpenChatPanel();
         }
@@ -152,7 +151,6 @@ namespace PCShopSell.Game.UI
                 Toast(blocker);
                 return;
             }
-            w.Close();
             switch (id)
             {
                 case PhoneApps.Contacts: OpenContactsPanel(); break;
@@ -199,7 +197,7 @@ namespace PCShopSell.Game.UI
             {
                 RectTransform driver = Ui.Row(w.Content, 52);
                 Ui.Size(Ui.Label(driver, $"<b>{GameSession.TruckDriverName}</b>  <size=15><color=#A8B0BA>开面包车，随叫随到，帮你把东西搬到家里或任意一家店</color></size>", 17), -1, -1, 1);
-                var call = Ui.Button(driver, "打电话叫车", () =>
+                var call = Ui.Button(driver, "联系司机", () =>
                 {
                     w.Close();
                     OpenTruckWindow();

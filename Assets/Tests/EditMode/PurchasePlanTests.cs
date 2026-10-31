@@ -1,0 +1,157 @@
+using System;
+using System.Linq;
+using NUnit.Framework;
+using PCShopSell.Core.Catalog;
+using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
+using PCShopSell.Core.Session;
+using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
+using UnityEngine;
+
+namespace PCShopSell.Tests
+{
+    public class PurchasePlanTests
+    {
+        private static GameSession Make()
+        {
+            var city = CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text));
+            var s = new GameSession(city, 7, Money.FromYuan(500000), GameTimestamp.From(new GameDate(0), 9 * 60));
+            s.EventsEnabled = false;
+            s.MainShop.Sim.Settings.BaseCustomersPerHour = 0;
+            s.MainShop.Buyer = new Employee { Name = "小陈", DailyWageYuan = 150, CheckoutMinutes = 3 };
+            return s;
+        }
+        private static EmployeePurchasePlan Mixed(GameSession s)
+        {
+            var offers = s.EmployeePurchaseCatalog();
+            return new EmployeePurchasePlan
+            {
+                BudgetYuan = 1, Transport = VehicleKind.Taxi,
+                Items = new[] { offers.First(o => o.Id == "cpu0" && o.Kind == PurchaseGoodsKind.Part).Line(1),
+                    offers.First(o => o.Id == "ram0" && o.Kind == PurchaseGoodsKind.Part).Line(1),
+                    offers.First(o => o.Id == Gifts.Drink && o.Kind == PurchaseGoodsKind.Gift).Line(2) }
+            };
+        }
+
+        [Test]
+        public void MixedSources_AutoCostIgnoresOldBudget_AndShipsAllItemsExactlyOnceAfterJson()
+        {
+            using (var s = Make())
+            {
+                string id = s.MainShop.Buyer.Id;
+                var plan = Mixed(s);
+                Assert.AreEqual(3, plan.Items.Select(x => x.SourceId).Distinct().Count());
+                Assert.True(s.ConfigureEmployeePurchase(id, plan));
+                var q = s.QuoteEmployeePurchase(id);
+                Assert.IsNull(q.Error, q.Error);
+                Assert.Greater(q.Total.Cents, 100, "旧存档的一元预算不能拦住实际采购");
+                var cash = s.Ledger.Balance;
+                int cpu = s.MainShop.Sim.Stock.CountAll(PartCatalog.Get("cpu0"));
+                int ram = s.MainShop.Sim.Stock.CountAll(PartCatalog.Get("ram0"));
+                int drinks = s.MainShop.Sim.Stock.GoodsCount(Gifts.Drink);
+                Assert.True(s.DispatchEmployeePurchase(id));
+                Assert.AreEqual(cash - q.Total, s.Ledger.Balance);
+                using (var loaded = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
+                {
+                    var trip = loaded.EmployeePurchaseTrips.Single();
+                    Assert.AreEqual(3, trip.Items.Select(x => x.SourceId).Distinct().Count());
+                    loaded.AdvanceClock((int)(Math.Max(trip.DeliveryAt, trip.ReturnAt) - loaded.Clock.Now.TotalMinutes + 1));
+                    Assert.AreEqual(cpu + 1, loaded.MainShop.Sim.Stock.CountAll(PartCatalog.Get("cpu0")));
+                    Assert.AreEqual(ram + 1, loaded.MainShop.Sim.Stock.CountAll(PartCatalog.Get("ram0")));
+                    Assert.AreEqual(drinks + 2, loaded.MainShop.Sim.Stock.GoodsCount(Gifts.Drink));
+                    Assert.Zero(loaded.EmployeePurchaseTrips.Count);
+                    var paid = loaded.Ledger.Balance;
+                    loaded.AdvanceClock(5);
+                    Assert.AreEqual(paid, loaded.Ledger.Balance);
+                    Assert.AreEqual(drinks + 2, loaded.MainShop.Sim.Stock.GoodsCount(Gifts.Drink));
+                }
+            }
+        }
+
+        [Test]
+        public void Complete_EnablesDailyPlanAndRepeatsTheWholeListOnAnotherDay()
+        {
+            using (var s = Make())
+            {
+                var buyer = s.MainShop.Buyer;
+                Assert.True(s.CompleteEmployeePurchase(buyer.Id, Mixed(s)));
+                Assert.True(buyer.PurchasePlan.Daily);
+                s.AdvanceClock(1);
+                var first = s.EmployeePurchaseTrips.Single();
+                Assert.AreEqual(3, first.Items.Length);
+                s.AdvanceClock((int)(Math.Max(first.DeliveryAt, first.ReturnAt) - s.Clock.Now.TotalMinutes + 1));
+                s.AdvanceClock(5);
+                Assert.Zero(s.EmployeePurchaseTrips.Count, "同一天只自动尝试一次");
+                s.Clock.Restore(new GameDate(1), 8 * 60 + 59);
+                s.AdvanceClock(2);
+                Assert.AreEqual(3, s.EmployeePurchaseTrips.Single().Items.Length, "次日仍按整份多源清单采购");
+                Assert.True(s.CompleteEmployeePurchase(buyer.Id, new EmployeePurchasePlan()));
+                Assert.False(buyer.PurchasePlan.Daily, "清空后完成应停止自动采购，已出发的货不受影响");
+                Assert.AreEqual(3, s.EmployeePurchaseTrips.Single().Items.Length);
+            }
+        }
+
+        [Test]
+        public void CatalogIncludesAllExistingPhysicalGoods_AndFurnitureFoodReachStorage()
+        {
+            using (var s = Make())
+            {
+                var offers = s.EmployeePurchaseCatalog();
+                foreach (PurchaseGoodsKind kind in Enum.GetValues(typeof(PurchaseGoodsKind))) Assert.True(offers.Any(o => o.Kind == kind), kind.ToString());
+                var food = offers.First(o => o.Kind == PurchaseGoodsKind.Ingredient);
+                var rice = offers.First(o => o.Kind == PurchaseGoodsKind.Rice);
+                var furniture = offers.First(o => o.Kind == PurchaseGoodsKind.Furniture && o.Id == FurnitureCatalog.HomeBox);
+                var plan = new EmployeePurchasePlan { Transport = VehicleKind.Taxi, Items = new[] { food.Line(2), rice.Line(3), furniture.Line(1) } };
+                Assert.True(s.ConfigureEmployeePurchase(s.MainShop.Buyer.Id, plan));
+                var quote = s.QuoteEmployeePurchase(s.MainShop.Buyer.Id);
+                Assert.IsNull(quote.Error, quote.Error);
+                Assert.True(s.DispatchEmployeePurchase(s.MainShop.Buyer.Id));
+                var trip = s.EmployeePurchaseTrips.Single();
+                s.AdvanceClock((int)(Math.Max(trip.ReturnAt, trip.DeliveryAt) - s.Clock.Now.TotalMinutes + 1));
+                Assert.AreEqual(2, s.MainShop.Locker.Food.IngredientCount(food.Id) + s.MainShop.Temp.Food.IngredientCount(food.Id));
+                Assert.AreEqual(3, s.MainShop.Locker.Food.RiceJin + s.MainShop.Temp.Food.RiceJin);
+                Assert.AreEqual(1, s.MainShop.Locker.FurnitureCount(furniture.Id) + s.MainShop.Temp.FurnitureCount(furniture.Id));
+                Assert.Zero(s.EmployeePurchaseTrips.Count);
+            }
+        }
+
+        [Test]
+        public void SwitchingBrowseSourceDoesNotLoseItemsOrModifyAnActiveTrip()
+        {
+            using (var s = Make())
+            {
+                var plan = Mixed(s);
+                Assert.True(s.ConfigureEmployeePurchase(s.MainShop.Buyer.Id, plan));
+                Assert.True(s.DispatchEmployeePurchase(s.MainShop.Buyer.Id));
+                var draft = s.MainShop.Buyer.PurchasePlan.Copy();
+                Assert.Zero(s.ChangePurchaseSource(draft, plan.Items[0].SourceId));
+                Assert.AreEqual(3, draft.Items.Length);
+                Assert.AreEqual(3, s.EmployeePurchaseTrips.Single().Items.Length);
+                draft.Items = draft.Items.Take(1).ToArray();
+                Assert.True(s.CompleteEmployeePurchase(s.MainShop.Buyer.Id, draft));
+                Assert.AreEqual(3, s.EmployeePurchaseTrips.Single().Items.Length, "保存新清单不能改动已出发的采购");
+                Assert.AreEqual(1, s.MainShop.Buyer.PurchasePlan.Items.Length);
+            }
+        }
+
+        [Test]
+        public void PostingAnotherAdRetainsPreviousCandidates_AndAddsMoreTomorrow()
+        {
+            using (var s = GameSessionTests.Make(50000, 9 * 60))
+            {
+                s.EventsEnabled = false;
+                GameSessionTests.Teleport(s, "pc");
+                Assert.True(s.PostJobAd());
+                s.Clock.Restore(new GameDate(1), 8 * 60 + 59); s.AdvanceClock(2);
+                var originals = s.Candidates.Select(x => x.Id).ToArray();
+                Assert.AreEqual(2, originals.Length);
+                Assert.True(s.PostJobAd());
+                Assert.AreEqual(2, s.Candidates.Count, "重贴告示不能删除原候选人");
+                s.Clock.Restore(new GameDate(2), 8 * 60 + 59); s.AdvanceClock(2);
+                Assert.AreEqual(4, s.Candidates.Count);
+                Assert.True(originals.All(id => s.Candidates.Any(x => x.Id == id)));
+            }
+        }
+    }
+}

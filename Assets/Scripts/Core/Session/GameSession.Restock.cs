@@ -61,7 +61,7 @@ namespace PCShopSell.Core.Session
                 foreach (var item in r.Items)
                     if (item.Kind == CourierItemKind.Part && item.Id == partId) n += item.Count;
             return n + DirectShipments.Where(x => x.PartId == partId && DeliveryShop(x.ShopId) == _focus).Sum(x => x.Count)
-                + _employeeTrips.Where(t => !t.Delivered && DeliveryShop(t.ShopId) == _focus).Sum(t => t.Items.Where(l => l.PartId == partId).Sum(l => l.Count));
+                + _employeeTrips.Where(t => !t.Delivered && DeliveryShop(t.ShopId) == _focus).Sum(t => t.Items.Where(l => l.Kind == PurchaseGoodsKind.Part && l.PartId == partId).Sum(l => l.Count));
         }
 
         /// <summary>店里现有 + 在路上。</summary>

@@ -115,7 +115,7 @@ namespace PCShopSell.Core.Session
         /// <summary>现在站的地方（家 / 自己的店）临时存放里有没有东西。</summary>
         public bool HasTempHere => AtHome ? !HomeTemp.IsEmpty || !HomeTempParts.IsEmpty : InPlayerShop && !ShopTemp.IsEmpty;
 
-        /// <summary>临时存放能放几天；到期后人在那里就弹出纸箱窗口，清空了才能关。</summary>
+        /// <summary>临时存放能放几天；到期后持续提醒清理，不强制锁住窗口。</summary>
         public const int TempKeepDays = 3;
 
         /// <summary>家里临时存放从什么时候开始有东西（游戏分钟）；0 = 空着。</summary>
@@ -128,7 +128,7 @@ namespace PCShopSell.Core.Session
             !HasTempHere || TempSinceHere <= 0 ? (HasTempHere ? TempKeepDays * 1440L : 0)
             : Math.Max(0, TempSinceHere + TempKeepDays * 1440L - Clock.Now.TotalMinutes);
 
-        /// <summary>这里的临时存放到期了：必须清空才能关纸箱窗口。</summary>
+        /// <summary>这里的临时存放到期了：界面持续提醒清理。</summary>
         public bool TempDueHere => HasTempHere && TempSinceHere > 0 && TempMinutesLeftHere <= 0;
 
         /// <summary>记下每处临时存放从什么时候开始有东西，清空了就重新算。</summary>

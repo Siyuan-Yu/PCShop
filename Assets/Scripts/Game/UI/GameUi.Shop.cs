@@ -62,11 +62,10 @@ namespace PCShopSell.Game.UI
             ((RectTransform)_dockContent.parent.parent).Anchor(0, 0, 1, 1, 0, 60, 0, 58);
 
             bool staffed = S.IsEmployeeOnDuty(S.Clock.Now);
-            Button leave = Ui.Button(_dock, staffed ? "离开店铺（店员看店）" : "离开店铺（没人看店就关门）", ConfirmLeaveShop, 19, Ui.Warn);
+            Button leave = Ui.Button(_dock, "离开店铺", ConfirmLeaveShop, 19, Ui.Warn);
             ((RectTransform)leave.transform).Anchor(0, 0, 1, 0, 12, 8, 12, -52);
 
-            _tab = ShopTab.Counter;
-            SelectTab(ShopTab.Counter);
+            SelectTab(_tab);
         }
 
         private Window _leaveConfirm;
@@ -81,6 +80,7 @@ namespace PCShopSell.Game.UI
                 return;
             }
             bool staffed = S.IsEmployeeOnDuty(S.Clock.Now);
+            if (staffed) { _ctrl.LeaveShop(); return; }
             int inShop = S.PlayerShop.Queue.Count;
             _leaveConfirm = OpenWindow("要离开店铺吗？", 620, 320, w =>
             {
@@ -247,7 +247,7 @@ namespace PCShopSell.Game.UI
             if (orders > 0) Line(C, $"有 {orders} 个订单等你处理（去“订单”页）", 18, Ui.Warn);
             if (S.Online.Pending.Count > 0) Line(C, $"1788 有 {S.Online.Pending.Count} 单在路上，明天 10:00 送到", 17, Ui.Dim);
             Line(C, $"库存 {shop.Stock.UsedSpace:0.#}/{shop.Stock.Capacity:0} 格 · 全局加价 {shop.Markup:0.00}×", 17, Ui.Dim);
-            if (BusinessUnlocked) Ui.Size(Ui.Button(C, "经营总览 · 合同 / 分店 / 资产", OpenBusinessPanel, 18, Ui.ButtonHot), -1, 40);
+
             Ui.Size(Ui.Button(C, "经营报表（近 14 天收入曲线）", OpenReportWindow, 18), -1, 40);
         }
 
@@ -478,7 +478,7 @@ namespace PCShopSell.Game.UI
                 // 最好的一天
                 var best = days.OrderByDescending(x => x.Revenue.Cents).FirstOrDefault();
                 if (best != null && best.Revenue.IsPositive) Line(w.Content, $"营业额最高：{best.Date.Month}/{best.Date.Day}，营业额 {best.Revenue}", 16, Ui.Dim);
-                Ui.Size(Ui.Button(w.Content, "关闭", w.Close, 20), -1, 46);
+
             });
         }
 
@@ -544,38 +544,12 @@ namespace PCShopSell.Game.UI
 
         private void BuildStaff()
         {
-            Line(C, "先聘用，再安排工作。岗位可换，跨店次日生效。", 16, Ui.Dim);
-            Ui.Size(Ui.Button(C, "员工管理（全部店铺 · 调店 / 安排进货）", OpenEmployeesPanel, 17, Ui.ButtonHot), -1, 42);
-            if (S.Employee != null)
+            Line(C, "选好岗位和门店后统一确认聘用。岗位可换，跨店次日生效。", 16, Ui.Dim);
+            Line(C, "已聘员工的岗位、班次、培训和采购统一在顶栏“员工”中管理。", 15, Ui.Dim);
+            Ui.Size(Ui.Button(C, S.JobAdDay >= 0 ? "招聘告示已贴，明天 9:00 再来一批人" : $"再贴招聘告示（{GameSession.JobAdFee}）", () =>
             {
-                Employee e = S.Employee;
-                Line(C, $"{e.Name}（{e.Description}）日薪 {e.DailyWage}，结账每单 {e.CheckoutMinutes} 分钟", 19);
-                if (!S.EmployeeTrained)
-                    Ui.Size(Ui.Button(C, "装机培训 ¥1,200（日薪 +¥60）", () => { S.TrainEmployee(); RebuildDock(); }, 17, Ui.ButtonHot), -1, 44);
-                else
-                    Ui.Size(Ui.Button(C, S.AutoBuildEnabled ? "自动装机：开（点击暂停）" : "自动装机：关（点击启用）", () => { S.ToggleAutoBuild(); RebuildDock(); }, 17), -1, 44);
-                Line(C, "培训后按交期装机；先收银、空闲时继续装机，离店后也能交付。", 14, Ui.Dim);
-                Ui.Size(Ui.Button(C, $"收银员班次 {Ui.Hm(e.ShiftStart)}–{Ui.Hm(e.ShiftEnd)}（点击切换，日薪不变）", () => { S.CycleShift(false); RebuildDock(); }, 15), -1, 36);
-                Ui.Size(Ui.Button(C, "辞退收银员", () =>
-                {
-                    S.Fire();
-                    RebuildDock();
-                }, 18, Ui.Warn), -1, 44);
-            }
-            if (S.Assembler != null)
-            {
-                var a = S.Assembler;
-                Line(C, $"装机员 {a.Name} · 日薪 {a.DailyWage} · 累计完成 {a.BuildsCompleted} 单", 17);
-                Ui.Size(Ui.Button(C, $"装机员班次 {Ui.Hm(a.ShiftStart)}–{Ui.Hm(a.ShiftEnd)}（点击切换）", () => { S.CycleShift(true); RebuildDock(); }, 15), -1, 36);
-                Ui.Size(Ui.Button(C, S.AutoBuildEnabled ? "自动装机：开" : "自动装机：关", () => { S.ToggleAutoBuild(); RebuildDock(); }, 16), -1, 36);
-                Ui.Size(Ui.Button(C, "辞退装机员", () => { S.FireAssembler(); RebuildDock(); }, 16, Ui.Warn), -1, 36);
-            }
-            if (S.CurrentShop.Buyer != null)
-            {
-                var buyer = S.CurrentShop.Buyer;
-                Line(C, $"进货员 {buyer.Name} · 日薪 {buyer.DailyWage}", 17);
-                Ui.Size(Ui.Button(C, "安排进货（清单 / 预算 / 车辆）", () => OpenEmployeePurchase(buyer.Id), 17, Ui.ButtonHot), -1, 40);
-            }
+                S.PostJobAd(); RebuildDock();
+            }, 18, Ui.ButtonHot, S.JobAdDay < 0), -1, 44);
             if (S.Candidates.Count > 0)
             {
                 Line(C, "来应聘的人：", 19);
@@ -587,24 +561,13 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Label(row, $"{c.Name} · 日薪 {c.DailyWage}\n<size=14>{c.Description}\n{GameSession.EmployeeAbilities(c)}</size>", 16), -1, -1, 1);
                     Ui.Size(Ui.Button(row, "聘用并安排工作", () =>
                     {
-                        var employee = S.RecruitEmployee(idx);
-                        RebuildDock();
-                        if (employee != null) OpenEmployeeWork(employee.Id);
+                        OpenRecruitWork(c);
                     }, 17, Ui.ButtonHot), 180);
                 }
-                Line(C, "岗位由你安排，之后可在“员工管理”更换；待安排员工也按日发薪。", 14, Ui.Dim);
+                Line(C, "确认前不会聘用；已聘用的待安排员工仍按日发薪。", 14, Ui.Dim);
                 return;
             }
-            if (S.JobAdDay >= 0)
-            {
-                Line(C, "招聘启事已经贴出去了，明天 9:00 会有人来面试。", 19);
-                return;
-            }
-            Ui.Size(Ui.Button(C, $"在门口贴招聘启事（{GameSession.JobAdFee}）", () =>
-            {
-                S.PostJobAd();
-                RebuildDock();
-            }, 19, Ui.ButtonHot), -1, 48);
+
         }
     }
 }

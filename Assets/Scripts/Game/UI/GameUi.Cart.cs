@@ -131,7 +131,8 @@ namespace PCShopSell.Game.UI
                 commit(Math.Min(n, max));
                 w.Rebuild();
             };
-            b.Tip($"点一下：1 {unit}\n按住：一{unit}一{unit}往上加，松手为止");
+            b.Tip($"点一下：1 {unit}；长按连续增加；点“数量”可直接指定或全选。");
+            Ui.Size(Ui.Button(parent, "数量", () => OpenAmountPicker(text, max, unit, n => { commit(n); w.Rebuild(); }), 13, Ui.ButtonBg, enabled && max > 0), 50);
         }
 
         private static readonly Color CartColumn = new Color(0.12f, 0.15f, 0.18f);
@@ -186,15 +187,15 @@ namespace PCShopSell.Game.UI
             {
                 CartLine line = l;
                 if (line.ByTruck > 1e-9)
-                    CartLineCard(w, truckList, line, line.ByTruck, line.TruckKg, bagCol, () => S.CartToBag(line.Key, Math.Min(1, line.ByTruck)),
+                    CartLineCard(w, truckList, line, line.ByTruck, line.TruckKg, bagCol, () => S.CartWholeRowToBag(line.Key),
                         new HoldAction("放进背包", Ui.ButtonHot, line.ByTruck, n => S.CartToBag(line.Key, n)),
                         new HoldAction("少拿一件", Ui.ButtonBg, line.ByTruck, n => S.RemoveFromCart(line.Key, n)));
                 if (line.InBag > 1e-9)
-                    CartLineCard(w, bagList, line, line.InBag, line.BagKg, truckCol, () => S.CartToTruck(line.Key, Math.Min(1, line.InBag)),
+                    CartLineCard(w, bagList, line, line.InBag, line.BagKg, truckCol, () => S.CartToTruck(line.Key, line.InBag),
                         new HoldAction("改叫车", Ui.ButtonHot, line.InBag, n => S.CartToTruck(line.Key, n)),
                         new HoldAction("少拿一件", Ui.ButtonBg, line.InBag, n => S.CartToTruck(line.Key, n) && S.RemoveFromCart(line.Key, n)));
             }
-            if (bagKg <= 1e-9) Para(bagList, "点左边的“放进背包”放 1 件，按住不放一件件往上加，松手放进来；也可以直接把卡片拖过来。超重了再挪回去。", 14, Ui.Dim);
+            if (bagKg <= 1e-9) Para(bagList, "点按钮移一件，“数量”可指定或全选；拖整行尽量放入背包，放不下的继续叫车。", 14, Ui.Dim);
 
             RectTransform destRow = Ui.Row(parent, 40, 8);
             if (truckKg > 1e-9)
@@ -347,7 +348,7 @@ namespace PCShopSell.Game.UI
                     drag.Dropped = (pos, cam) =>
                     {
                         if (!RectTransformUtility.RectangleContainsScreenPoint(loadCol, pos, cam)) return;
-                        S.AddToTruck(it.Key, 1);
+                        S.AddToTruck(it.Key, left);
                         w.Rebuild();
                     };
                 }
@@ -358,7 +359,7 @@ namespace PCShopSell.Game.UI
                 foreach (CartLine l in S.TruckLoad.ToList())
                 {
                     CartLine line = l;
-                    CartLineCard(w, loadList, line, line.Amount, line.Kg, hereCol, () => S.RemoveFromTruck(line.Key, 1),
+                    CartLineCard(w, loadList, line, line.Amount, line.Kg, hereCol, () => S.RemoveFromTruck(line.Key, line.Amount),
                         new HoldAction("拿下来", Ui.ButtonBg, line.Amount, n => S.RemoveFromTruck(line.Key, n)));
                 }
 
@@ -372,7 +373,7 @@ namespace PCShopSell.Game.UI
                 }, why == null ? 18 : 15, why == null ? Ui.ButtonHot : Ui.ButtonBg, why == null);
                 send.name = "TruckDispatch";
                 Ui.Size(send, -1, -1, 1);
-                Ui.Size(Ui.Button(go, "关闭", w.Close, 16, Ui.ButtonBg), 110);
+
             }, true, true, () => S.ClearTruckLoad());
         }
 

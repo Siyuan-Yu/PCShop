@@ -1,0 +1,17 @@
+SMOKE FAIL: 三辆车把家具都送到家了
+SMOKE FAIL: 烟酒茶行的商品列表能滚动
+SMOKE FAIL: 货车送到了大件家具
+SMOKE FAIL: 摆等候沙发
+SMOKE FAIL: 摆绿植
+SMOKE FAIL: 挂 LED
+SMOKE FAIL: 编辑模式：点墙上的 LED 灯屏能选中
+SMOKE FAIL: 新签的铺子是毛坯：一件设施都没有
+SMOKE FAIL: 货车把设施送到了（还有旧店搬来的那套）
+SMOKE FAIL: 摆右墙货架 2
+SMOKE FAIL: 摆展示桌 2
+SMOKE FAIL: 摆第 7 个货架（重型）
+SMOKE FAIL: 新摆的货架都还没设置摆什么
+SMOKE FAIL: 两张展示桌 = 4 个机位
+SMOKE FAIL: 店内场景按摆放认出 7 个货架
+ArgumentOutOfRangeException: Index was out of range. Must be non-negative and less than the size of the collection.
+SMOKE RESULT code=1 errors=16

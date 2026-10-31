@@ -86,7 +86,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Label(row, $"市价 {S.Market.PriceOf(p)}", 13, TextAnchor.MiddleLeft, Ui.Dim), 100);
                 Ui.Size(Ui.Label(row, $"店里有 {S.PlayerShop.Stock.CountAll(p)}", 13, TextAnchor.MiddleLeft, Ui.Dim), 90);
                 Ui.Size(Ui.Button(row, "-", () => { AddToCart(part, -1); w.Rebuild(); }, 18), 36);
-                Ui.Size(Ui.Label(row, n.ToString(), 17, TextAnchor.MiddleCenter), 30);
+                Ui.Size(Ui.NumberInput(row, n, 0, 1000, v => { _cart[part.Id] = (int)v; w.RequestRebuild(); }), 65, 32);
                 Ui.Size(Ui.Button(row, "+", () => { AddToCart(part, 1); w.Rebuild(); }, 18), 36);
             }
             RectTransform orow = Ui.Row(c, 46);
@@ -115,9 +115,12 @@ namespace PCShopSell.Game.UI
             Para(c, $"自动下单后至少给你留 {S.EffectiveRestockReserve} 现金；店里仓位放不下的会少补。", 15, Ui.Dim);
 
             RectTransform policy = Ui.Row(c, 38);
-            Ui.Size(Ui.Button(policy, $"运营资金保留 {S.RestockReserveDays} 天", () => { S.RestockReserveDays = (S.RestockReserveDays + 7) % 28; w.Rebuild(); }, 16), 230);
-            Ui.Size(Ui.Button(policy, $"现金底线 ¥{S.RestockReserveYuan}", () => { S.RestockReserveYuan = S.RestockReserveYuan >= 5000 ? 500 : S.RestockReserveYuan + 500; w.Rebuild(); }, 16), 220);
-            Ui.Size(Ui.Button(policy, S.RestockDailyBudgetYuan == 0 ? "每日预算：不限" : $"每日预算 ¥{S.RestockDailyBudgetYuan}", () => { S.RestockDailyBudgetYuan = S.RestockDailyBudgetYuan >= 10000 ? 0 : S.RestockDailyBudgetYuan + 2000; w.Rebuild(); }, 16), 220);
+            Ui.Size(Ui.Label(policy, "保留天数", 15), 75);
+            Ui.Size(Ui.NumberInput(policy, S.RestockReserveDays, 0, 365, v => { S.RestockReserveDays = (int)v; w.RequestRebuild(); }), 70, 36);
+            Ui.Size(Ui.Label(policy, "现金底线", 15), 75);
+            Ui.Size(Ui.NumberInput(policy, S.RestockReserveYuan, 0, 10000000, v => { S.RestockReserveYuan = (int)v; w.RequestRebuild(); }), 130, 36);
+            Ui.Size(Ui.Label(policy, "日预算(0不限)", 14), 115);
+            Ui.Size(Ui.NumberInput(policy, S.RestockDailyBudgetYuan, 0, 10000000, v => { S.RestockDailyBudgetYuan = (int)v; w.RequestRebuild(); }), 130, 36);
             if (!string.IsNullOrEmpty(S.LastRestockNote)) Line(c, S.LastRestockNote, 14, Ui.Accent);
             RectTransform storeRow = Ui.Row(c, 40);
             Text storeText = Ui.Label(storeRow, "", 16);
@@ -129,14 +132,15 @@ namespace PCShopSell.Game.UI
                     ? "向哪家下单：" + Online1788.GetStore(id).Name
                     : "向哪家下单：自动（挑最便宜的，避开次品多的）";
             }
-            Ui.Size(Ui.Button(storeRow, "换一家", () =>
+            Ui.Size(Ui.Button(storeRow, "选择商家 ▾", () => OpenWindow("补货商家", 580, 480, picker =>
             {
-                var ids = new List<string> { null };
-                ids.AddRange(Online1788.Stores.Where(s => S.Online.IsDiscovered(s.Id)).Select(s => s.Id));
-                int i = ids.IndexOf(S.RestockStoreId);
-                S.RestockStoreId = ids[(i + 1) % ids.Count];
-                RefreshStore();
-            }, 16), 100);
+                Ui.Size(Ui.Button(picker.Content, "自动挑选", () => { S.RestockStoreId = null; picker.Close(); w.Rebuild(); }), -1, 42);
+                foreach (var store in Online1788.Stores.Where(x => S.Online.IsDiscovered(x.Id)))
+                {
+                    var choice = store;
+                    Ui.Size(Ui.Button(picker.Content, choice.Name, () => { S.RestockStoreId = choice.Id; picker.Close(); w.Rebuild(); }), -1, 42);
+                }
+            }), 16), 150);
             RefreshStore();
             if (!string.IsNullOrEmpty(S.LastRestockNote)) Line(c, "上次：" + S.LastRestockNote, 14, Ui.Dim);
 

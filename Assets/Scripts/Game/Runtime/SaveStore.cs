@@ -26,6 +26,33 @@ namespace PCShopSell.Game
         public static string LastLoadMessage { get; private set; }
         public static bool Exists => File.Exists(PathOf) || File.Exists(AutoPath) || File.Exists(PathOf + ".bak") || File.Exists(AutoPath + ".bak");
 
+        public sealed class SlotInfo
+        {
+            public bool Exists;
+            public string SavedAt;
+        }
+        public static SlotInfo InspectSlot(bool automatic)
+        {
+            var info = new SlotInfo();
+            string path = automatic ? AutoPath : PathOf;
+            foreach (string candidate in new[] { path, path + ".bak" })
+            {
+                if (!File.Exists(candidate)) continue;
+                info.Exists = true;
+                try
+                {
+                    var data = JsonUtility.FromJson<SaveData>(File.ReadAllText(candidate));
+                    if (data != null && !string.IsNullOrEmpty(data.rngState) && !string.IsNullOrEmpty(data.savedAt))
+                    {
+                        info.SavedAt = data.savedAt;
+                        return info;
+                    }
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ArgumentException) { }
+            }
+            return info;
+        }
+
         public static void Save(GameSession session, bool automatic = false)
         {
             SaveData data = session.CreateSave();

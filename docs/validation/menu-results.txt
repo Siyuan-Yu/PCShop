@@ -1,0 +1,6 @@
+2026-11-01
+EditMode: total=485 passed=485 failed=0
+MainMenuFromBatch: code=0 errors=0
+InteractionsFromBatch: code=0 errors=0
+PurchasePlanFromBatch: code=0 errors=0
+Menu translations cover zh/en/ja menu and intro only; game operations are not fully translated. Full legacy smoke has 16 previously recorded baseline failures.

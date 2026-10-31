@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -83,8 +83,7 @@ namespace PCShopSell.Game
             StartSession(NewSession(seed));
             if (showMenus)
             {
-                if (SaveStore.Exists) Ui.ShowStartChoice();
-                else Ui.ShowIntro();
+                Ui.ShowMainMenu();
             }
         }
 
@@ -123,6 +122,7 @@ namespace PCShopSell.Game
             s.Clock.DayAdvanced += OnDayAdvanced;
             _pendingEnter = null;
             _gameOverShown = false;
+            _autosaveDue = false;
 
             if (_policeRoot != null) Kill.It(_policeRoot.gameObject);
             _policeRoot = new GameObject("Police").transform;
@@ -156,16 +156,19 @@ namespace PCShopSell.Game
             return SaveStore.TrySave(Session);
         }
 
-        public void LoadGame(bool automatic = false)
+        public void LoadGame(bool automatic = false) => TryLoadGame(automatic);
+
+        public bool TryLoadGame(bool automatic = false)
         {
             GameSession s = SaveStore.Load(City, automatic);
             if (s == null)
             {
-                Ui.Toast(SaveStore.LastLoadMessage);
-                return;
+                Ui.Toast(MenuLocalization.Get("load_failed_body"));
+                return false;
             }
             StartSession(s);
-            Ui.Toast(SaveStore.LastLoadMessage);
+            Ui.Toast(MenuLocalization.Get(SaveStore.LastLoadMessage.Contains("备用") ? "loaded_backup" : "loaded"));
+            return true;
         }
 
         /// <summary>前往某地并在到达后进入。已经在门口就直接进去。</summary>
@@ -348,6 +351,14 @@ namespace PCShopSell.Game
 
         private void HandleKeys()
         {
+            if (Ui.MainMenuOpen)
+            {
+                if (Input.GetKeyDown(KeyCode.Escape)) Ui.CloseTopWindow();
+                return;
+            }
+            var selected = UnityEngine.EventSystems.EventSystem.current?.currentSelectedGameObject;
+            var input = selected != null ? selected.GetComponent<UnityEngine.UI.InputField>() : null;
+            if (input != null && input.isFocused) return;
             if (Input.GetKeyDown(KeyCode.Space)) Session.Time.TogglePause();
             if (Input.GetKeyDown(KeyCode.Alpha1)) Session.Time.SetSpeed(1);
             if (Input.GetKeyDown(KeyCode.Alpha2)) Session.Time.SetSpeed(2);

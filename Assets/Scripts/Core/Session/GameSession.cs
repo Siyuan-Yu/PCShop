@@ -342,7 +342,7 @@ namespace PCShopSell.Core.Session
                 if (l.Kind == CourierItemKind.Part) sum += Market.PriceOf(PartCatalog.Get(l.Id)).Yuan * l.Count;
             foreach (var o in DirectShipments) sum += Market.PriceOf(PartCatalog.Get(o.PartId)).Yuan * o.Count;
             foreach (var trip in _employeeTrips.Where(t => !t.Delivered))
-                foreach (var line in trip.Items) sum += Market.PriceOf(PartCatalog.Get(line.PartId)).Yuan * line.Count;
+                foreach (var line in trip.Items) sum += PurchaseInventoryValue(line).Yuan;
             return Money.FromYuan((long)Math.Round(sum * 0.9));
         }
 

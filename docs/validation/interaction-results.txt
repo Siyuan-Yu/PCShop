@@ -1,0 +1,4 @@
+2026-11-01
+EditMode: total=485 passed=485 failed=0
+InteractionsFromBatch: code=0 errors=0
+Includes shared multisource purchase list and fixed Done footer. Replacement fixture waits for active daily trip to return before changing roles.

@@ -1,0 +1,370 @@
+{
+  "entries": [
+    {
+      "key": "game_title",
+      "zh": "电脑城模拟器",
+      "ja": "PCショップ・シミュレーター",
+      "en": "PC Shop Simulator"
+    },
+    {
+      "key": "tagline",
+      "zh": "从街角小店，\n开始你的创业故事。",
+      "ja": "街角の小さな店から、\n自分だけの物語を。",
+      "en": "A small shop.\nA big dream."
+    },
+    {
+      "key": "story",
+      "zh": "装好第一台电脑，迎来第一位顾客。\n在这条商业街上，经营一家属于自己的电脑店。",
+      "ja": "最初の一台を組み立て、最初のお客様を迎える。\nこの商店街で、自分だけのPCショップを育てよう。",
+      "en": "Build your first PC. Welcome your first customer.\nMake a place for yourself on a lively shopping street."
+    },
+    {
+      "key": "computer_line",
+      "zh": "准备开张",
+      "ja": "開店準備完了",
+      "en": "READY FOR BUSINESS"
+    },
+    {
+      "key": "development",
+      "zh": "开发中版本",
+      "ja": "開発中バージョン",
+      "en": "In development"
+    },
+    {
+      "key": "main_menu",
+      "zh": "主菜单",
+      "ja": "メインメニュー",
+      "en": "Main Menu"
+    },
+    {
+      "key": "resume",
+      "zh": "继续游戏",
+      "ja": "ゲームを再開",
+      "en": "Resume Game"
+    },
+    {
+      "key": "start",
+      "zh": "开始游戏",
+      "ja": "ゲーム開始",
+      "en": "Start Game"
+    },
+    {
+      "key": "new_game",
+      "zh": "新游戏",
+      "ja": "ニューゲーム",
+      "en": "New Game"
+    },
+    {
+      "key": "load",
+      "zh": "加载存档",
+      "ja": "セーブデータをロード",
+      "en": "Load Game"
+    },
+    {
+      "key": "settings",
+      "zh": "设置",
+      "ja": "設定",
+      "en": "Settings"
+    },
+    {
+      "key": "about",
+      "zh": "关于",
+      "ja": "このゲームについて",
+      "en": "About"
+    },
+    {
+      "key": "help",
+      "zh": "帮助",
+      "ja": "ヘルプ",
+      "en": "Help"
+    },
+    {
+      "key": "quit",
+      "zh": "退出游戏",
+      "ja": "ゲームを終了",
+      "en": "Quit Game"
+    },
+    {
+      "key": "close",
+      "zh": "关闭",
+      "ja": "閉じる",
+      "en": "Close"
+    },
+    {
+      "key": "cancel",
+      "zh": "取消",
+      "ja": "キャンセル",
+      "en": "Cancel"
+    },
+    {
+      "key": "language",
+      "zh": "语言 / Language",
+      "ja": "言語 / Language",
+      "en": "Language"
+    },
+    {
+      "key": "language_hint",
+      "zh": "可在设置中选择：中文 / 日本語 / English",
+      "ja": "設定で言語を選択：中文 / 日本語 / English",
+      "en": "Choose 中文 / 日本語 / English in Settings"
+    },
+    {
+      "key": "language_saved",
+      "zh": "选择后立即切换，下次启动会记住。",
+      "ja": "選択するとすぐに切り替わり、次回起動時も保持されます。",
+      "en": "Changes apply immediately and are remembered next time."
+    },
+    {
+      "key": "audio",
+      "zh": "声音",
+      "ja": "サウンド",
+      "en": "Audio"
+    },
+    {
+      "key": "sound_off",
+      "zh": "音效：关闭",
+      "ja": "効果音：オフ",
+      "en": "Sound Effects: Off"
+    },
+    {
+      "key": "sound_on",
+      "zh": "音效：开启",
+      "ja": "効果音：オン",
+      "en": "Sound Effects: On"
+    },
+    {
+      "key": "volume",
+      "zh": "音量 {0}%",
+      "ja": "音量 {0}%",
+      "en": "Volume {0}%"
+    },
+    {
+      "key": "settings_saved",
+      "zh": "设置自动保存。",
+      "ja": "設定は自動的に保存されます。",
+      "en": "Settings are saved automatically."
+    },
+    {
+      "key": "save_available",
+      "zh": "已有存档，可选择手动或自动存档继续。",
+      "ja": "セーブデータがあります。手動・自動セーブを選んで再開できます。",
+      "en": "A saved game is available. Choose a manual or automatic save."
+    },
+    {
+      "key": "no_saves",
+      "zh": "还没有存档，开始一段新旅程吧。",
+      "ja": "セーブデータはまだありません。新しい物語を始めましょう。",
+      "en": "No saved games yet. Start a new story."
+    },
+    {
+      "key": "load_description",
+      "zh": "选择要读取的存档。损坏时会尝试恢复备份，原文件会保留。",
+      "ja": "ロードするデータを選択してください。破損時はバックアップからの復元を試み、元のファイルは保持します。",
+      "en": "Choose a save. If it cannot be read, recovery will be attempted without deleting the original files."
+    },
+    {
+      "key": "manual_save",
+      "zh": "手动存档",
+      "ja": "手動セーブ",
+      "en": "Manual Save"
+    },
+    {
+      "key": "auto_save",
+      "zh": "自动存档",
+      "ja": "オートセーブ",
+      "en": "Autosave"
+    },
+    {
+      "key": "empty_slot",
+      "zh": "此位置没有存档。",
+      "ja": "セーブデータがありません。",
+      "en": "This slot is empty."
+    },
+    {
+      "key": "save_time",
+      "zh": "保存时间：{0}",
+      "ja": "保存日時：{0}",
+      "en": "Saved: {0}"
+    },
+    {
+      "key": "backup_available",
+      "zh": "找到存档或备份，可尝试读取。",
+      "ja": "セーブまたはバックアップが見つかりました。ロードを試せます。",
+      "en": "A save or backup is available to load."
+    },
+    {
+      "key": "load_auto",
+      "zh": "读取自动存档",
+      "ja": "オートセーブをロード",
+      "en": "Load Autosave"
+    },
+    {
+      "key": "load_manual",
+      "zh": "读取手动存档",
+      "ja": "手動セーブをロード",
+      "en": "Load Manual Save"
+    },
+    {
+      "key": "load_confirm",
+      "zh": "读取后，当前未保存的进度会丢失。是否继续？",
+      "ja": "ロードすると、現在の未保存の進行状況は失われます。続けますか？",
+      "en": "Loading will replace your current unsaved progress. Continue?"
+    },
+    {
+      "key": "new_confirm",
+      "zh": "开始新游戏会替换当前未保存的进度，已有存档文件会保留。",
+      "ja": "ニューゲームを開始すると現在の未保存の進行状況が失われます。保存済みファイルは保持されます。",
+      "en": "Starting a new game replaces unsaved progress. Existing save files will be kept."
+    },
+    {
+      "key": "load_failed",
+      "zh": "无法读取存档",
+      "ja": "ロードできませんでした",
+      "en": "Could Not Load Save"
+    },
+    {
+      "key": "load_failed_body",
+      "zh": "存档及备份暂时无法读取，原文件已保留。请返回选择其他存档。",
+      "ja": "セーブとバックアップを読み込めませんでした。元のファイルは保持されています。別のセーブを選択してください。",
+      "en": "The save and its recovery copies could not be read. Original files have been kept. Try another save."
+    },
+    {
+      "key": "loaded",
+      "zh": "存档已加载。",
+      "ja": "ロードしました。",
+      "en": "Game loaded."
+    },
+    {
+      "key": "loaded_backup",
+      "zh": "已从可用的备用存档恢复。",
+      "ja": "利用可能なバックアップから復元しました。",
+      "en": "Recovered from an available backup save."
+    },
+    {
+      "key": "help_goal",
+      "zh": "先开好一家小店",
+      "ja": "まずは小さなお店から",
+      "en": "Your First Shop"
+    },
+    {
+      "key": "help_goal_body",
+      "zh": "从家里出发，去房产中介租铺面，添置设备、采购配件，再开门接待顾客。左上角任务条会提示当前要做的事。",
+      "ja": "自宅を出て不動産屋で店舗を借り、設備とパーツを揃えて開店しましょう。画面左上のタスクに次の目標が表示されます。",
+      "en": "Visit the property agency, rent a shop, furnish it, and buy parts. Open for business and serve customers. The task tracker shows your next objective."
+    },
+    {
+      "key": "controls",
+      "zh": "基本操作",
+      "ja": "基本操作",
+      "en": "Controls"
+    },
+    {
+      "key": "controls_body",
+      "zh": "WASD / 方向键：移动\nF：与附近的门、家具或柜台交互\n滚轮：缩放；Q / E：转动街道视角；V：复位\n空格：暂停 / 继续；1–4：调整倍速\nB：背包；P：手机；C：日程；T：任务\nEsc / 右键：关闭当前窗口；Esc：打开游戏菜单",
+      "ja": "WASD / 矢印キー：移動\nF：近くのドア・家具・カウンターを操作\nホイール：ズーム／Q・E：街の視点回転／V：視点リセット\nSpace：一時停止・再開／1–4：ゲーム速度\nB：バッグ／P：携帯／C：予定／T：タスク\nEsc / 右クリック：ウィンドウを閉じる／Esc：ゲームメニュー",
+      "en": "WASD / Arrow keys: Move\nF: Interact with a nearby door, object, or counter\nMouse wheel: Zoom; Q / E: Rotate street view; V: Reset view\nSpace: Pause / resume; 1–4: Game speed\nB: Backpack; P: Phone; C: Schedule; T: Tasks\nEsc / Right-click: Close a window; Esc: Open the game menu"
+    },
+    {
+      "key": "help_save",
+      "zh": "保存与继续",
+      "ja": "セーブと再開",
+      "en": "Saving and Resuming"
+    },
+    {
+      "key": "help_save_body",
+      "zh": "游戏内按 Esc 打开菜单，可手动存档。手动与自动存档分别保存；旅途中需先到达目的地再存档。设置中的语言独立保存，不随读档改变。",
+      "ja": "ゲーム中にEscでメニューを開き、手動セーブできます。手動・自動セーブは別々です。移動中は目的地に着いてからセーブしてください。言語設定はセーブデータとは別に保持されます。",
+      "en": "Press Esc during play to save manually. Manual saves and autosaves use separate files. Finish travelling before saving. Language preferences are stored separately from game saves."
+    },
+    {
+      "key": "about_body",
+      "zh": "一款以电脑城创业为主题的模拟经营游戏。\n从采购、装机与接待顾客开始，逐步经营自己的电脑店。\n\n感谢你参与试玩，帮助我们打磨这个商业街的故事。",
+      "ja": "PCショップ経営をテーマにしたシミュレーションゲームです。\n仕入れ、PC組立、接客から始め、自分のお店を育てましょう。\n\nプレイテストにご参加いただき、ありがとうございます。",
+      "en": "A business simulation about building your own PC shop.\nBuy parts, assemble computers, and look after your customers as your business grows.\n\nThank you for helping shape this shopping-street story."
+    },
+    {
+      "key": "quit_confirm",
+      "zh": "确定要退出游戏吗？",
+      "ja": "ゲームを終了しますか？",
+      "en": "Quit the game?"
+    },
+    {
+      "key": "quit_unsaved",
+      "zh": "退出后，未保存的进度会丢失。确定退出吗？",
+      "ja": "終了すると未保存の進行状況は失われます。終了しますか？",
+      "en": "Unsaved progress will be lost when you quit. Exit now?"
+    },
+    {
+      "key": "game_menu",
+      "zh": "游戏菜单",
+      "ja": "ゲームメニュー",
+      "en": "Game Menu"
+    },
+    {
+      "key": "save",
+      "zh": "保存游戏",
+      "ja": "ゲームをセーブ",
+      "en": "Save Game"
+    },
+    {
+      "key": "cannot_save",
+      "zh": "旅途中无法存档",
+      "ja": "移動中はセーブできません",
+      "en": "Cannot Save While Travelling"
+    },
+    {
+      "key": "saved",
+      "zh": "已保存游戏。",
+      "ja": "セーブしました。",
+      "en": "Game saved."
+    },
+    {
+      "key": "save_failed",
+      "zh": "无法保存，请检查存储空间与目录权限。",
+      "ja": "セーブできませんでした。空き容量と保存先のアクセス権を確認してください。",
+      "en": "Could not save. Check free space and access to the save folder."
+    },
+    {
+      "key": "return_title",
+      "zh": "返回主菜单",
+      "ja": "タイトルに戻る",
+      "en": "Return to Main Menu"
+    },
+    {
+      "key": "welcome",
+      "zh": "欢迎来到电脑城",
+      "ja": "PCショップの街へようこそ",
+      "en": "Welcome to the Shopping Street"
+    },
+    {
+      "key": "intro_body",
+      "zh": "你带着 ¥10,000 来到电脑城，想开一家自己的电脑店。先安顿下来，出门去房产中介找一间负担得起的铺子。",
+      "ja": "所持金10,000元でこの街にやって来ました。夢は自分のPCショップ。まずは不動産屋で無理なく借りられる店舗を探しましょう。",
+      "en": "You arrive with ¥10,000 and a dream of opening a PC shop. Settle in, then visit the property agency to find an affordable storefront."
+    },
+    {
+      "key": "intro_existing",
+      "zh": "照顾好自己，也照顾好小店。新的任务会随着经营进展出现。",
+      "ja": "自分の体調とお店の両方を大切に。経営が進むと新しいタスクが登場します。",
+      "en": "Look after yourself and your shop. New tasks will appear as your business grows."
+    },
+    {
+      "key": "intro_move",
+      "zh": "WASD 移动，靠近门或家具按 F 交互。",
+      "ja": "WASDで移動し、ドアや家具の近くでFを押すと操作できます。",
+      "en": "Move with WASD. Press F near a door or object to interact."
+    },
+    {
+      "key": "intro_tasks",
+      "zh": "左上角提示眼前的一件事；需要说明时点“查看步骤”。",
+      "ja": "左上のタスクに次の目標が表示されます。手順ボタンから説明を確認できます。",
+      "en": "The task tracker shows your next objective. Open its instructions when you need guidance."
+    },
+    {
+      "key": "begin_business",
+      "zh": "开始经营",
+      "ja": "経営を始める",
+      "en": "Begin Your Story"
+    }
+  ]
+}

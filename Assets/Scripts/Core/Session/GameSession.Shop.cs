@@ -137,7 +137,6 @@ namespace PCShopSell.Core.Session
             if (JobAdDay >= 0) return Fail("已经贴过了，明天 9:00 会有人来。");
             if (!Ledger.TryDebit(Clock.Today, "招聘", JobAdFee, "招聘启事")) return Fail("钱不够。");
             JobAdDay = Clock.Today.TotalDays;
-            _candidates.Clear();
             Say("招聘启事贴出去了，明天 9:00 会有人来面试。");
             return true;
         }
@@ -198,7 +197,7 @@ namespace PCShopSell.Core.Session
         {
             if (JobAdDay < 0 || today.TotalDays <= JobAdDay) return;
             JobAdDay = -1;
-            _candidates.Clear();
+            int newStart = _candidates.Count;
             for (int i = 0; i < 2; i++)
             {
                 bool fast = Random.Chance(0.5);
@@ -213,8 +212,8 @@ namespace PCShopSell.Core.Session
                 e.Description = fast ? "有收银经验，其他工作也愿意学" : "踏实肯干，做事比较仔细";
                 _candidates.Add(e);
             }
-            Show("有人来应聘", $"{_candidates[0].Name}（{_candidates[0].Description}，日薪 ¥{_candidates[0].DailyWageYuan}）\n" +
-                             $"{_candidates[1].Name}（{_candidates[1].Description}，日薪 ¥{_candidates[1].DailyWageYuan}）\n去店里的'招人'面板决定。");
+            Show("有人来应聘", $"{_candidates[newStart].Name}（{_candidates[newStart].Description}，日薪 ¥{_candidates[newStart].DailyWageYuan}）\n" +
+                             $"{_candidates[newStart + 1].Name}（{_candidates[newStart + 1].Description}，日薪 ¥{_candidates[newStart + 1].DailyWageYuan}）\n去店里的'招人'面板决定。");
         }
 
         private void PayWages(GameDate day)

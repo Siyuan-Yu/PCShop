@@ -10,7 +10,7 @@ namespace PCShopSell.Game.UI
         /// <summary>目标与人脉：三年路线、各检查点进度、结局、认识的人和送礼。</summary>
         public void OpenGoalsPanel()
         {
-            OpenWindow("目标与人脉", 940, 800, w =>
+            OpenWindow("三年目标", 940, 800, w =>
             {
                 RectTransform list = Ui.Scroll(w.Content, 700);
 
@@ -31,34 +31,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(list, $"回看三年结局：{e.Title}", () => Popup("三年之后：" + e.Title, S.ComposeEpilogue(e)), 18, Ui.ButtonHot), -1, 44);
                 }
 
-                if (S.Appointments.Count > 0)
-                {
-                    Ui.Size(Ui.Label(list, "约好的行程", 22), -1, 40);
-                    foreach (Appointment a in S.Appointments)
-                        Ui.Size(Ui.Label(list, $"{S.DescribeDay(a.Day)} {GameSession.SlotName(a.Slot)}　和{Npcs.Get(a.NpcId).Name}", 17, TextAnchor.MiddleLeft, Ui.Good), -1, 30);
-                }
-
-                Ui.Size(Ui.Label(list, "认识的人", 22), -1, 40);
-                Ui.Size(Ui.Button(list, "打开人脉图（所有认识的人和他们之间的关系）", OpenRelationsPanel, 17, Ui.ButtonHot), -1, 40);
-                foreach (NpcDef def in Npcs.All)
-                {
-                    NpcDef n = def;
-                    if (!S.IsMet(n.Id))
-                    {
-                        Ui.Size(Ui.Label(list, $"<color=#ABB5A8>？？？　（还没遇到。留心店里的随机事件）</color>", 17), -1, 34);
-                        continue;
-                    }
-                    int rel = S.Relation(n.Id);
-                    RectTransform row = Ui.Row(list, 56);
-                    PortraitThumb(row, n, 52, () => OpenNpcWindow(n, null, w));
-                    Ui.Size(Ui.Label(row, $"<b>{n.Name}</b>  {n.Role}", 17), 270);
-                    Ui.Size(Ui.Label(row, $"{Npcs.LevelName(rel)} {rel}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
-                    Ui.Bar(row, rel / 100f, Ui.Accent, 120, 14);
-                    Ui.Size(Ui.Button(row, "交谈", () => OpenNpcWindow(n, null, w), 16, Ui.ButtonHot), 90);
-                    string perk = NpcPerks.Describe(n.Id);
-                    if (n.IsTipster) perk += "　" + TrustText(n);
-                    Ui.Size(Ui.Label(list, "<size=14><color=#ABB5A8>" + perk + "</color></size>", 14), -1, 24);
-                }
+                Para(list, "人物关系和邀约在顶栏“人脉”中查看；已约行程在“日程”中查看。", 16, Ui.Dim);
             });
         }
     }

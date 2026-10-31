@@ -26,7 +26,7 @@ namespace PCShopSell.Core.Session
             row.Person.TransferRole >= 0 && row.Person.TransferRole <= (int)EmployeeRole.Buyer
                 ? (EmployeeRole)row.Person.TransferRole : row.Role;
 
-        public string EmployeeAssignmentBlocker(string id, string destination, EmployeeRole role)
+        public string EmployeeAssignmentBlocker(string id, string destination, EmployeeRole role, bool replace = false)
         {
             var row = FindEmployee(id);
             if (IsGameOver || row == null) return "员工不存在或游戏已结束";
@@ -40,7 +40,8 @@ namespace PCShopSell.Core.Session
             if (dest == null) return "请选择自己的店铺";
             if (dest == row.Shop && role == row.Role) return "已经在这家店做这项工作";
             var occupant = EmployeeAt(dest, role);
-            if (occupant != null && occupant != row.Person) return "该店的" + RoleName(role) + "岗位已有员工，可先给对方换岗或设为待安排";
+            if (!replace && occupant != null && occupant != row.Person) return "该店的" + RoleName(role) + "岗位已有员工，可先给对方换岗或设为待安排";
+            if (replace && occupant != null && _employeeTrips.Any(t => t.EmployeeId == occupant.Id)) return "原员工或货物还在路上，不能替换";
             if (Employees.Any(x => x.Person.Id != id && x.Person.TransferShopId == destination && PlannedEmployeeRole(x) == role))
                 return "这个岗位已安排其他员工明天到岗";
             if ((row.Shop == null || row.Shop == dest) && _employeeTrips.Any(t => t.EmployeeId == id))

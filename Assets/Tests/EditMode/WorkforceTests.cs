@@ -179,7 +179,7 @@ namespace PCShopSell.Tests
             }
         }
 
-        [TestCase("budget")]
+        [TestCase("cash")]
         [TestCase("load")]
         [TestCase("source")]
         [TestCase("quota")]
@@ -193,13 +193,14 @@ namespace PCShopSell.Tests
                 Buy(s, VehicleKind.EBike);
                 var e = Worker(); s.MainShop.Buyer = e;
                 var plan = Plan(VehicleKind.EBike);
-                if (failure == "budget") plan.BudgetYuan = 1;
+                if (failure == "cash") s.Ledger.ForceDebit(s.Clock.Today, "测试", s.Ledger.Balance - Money.FromYuan(1), "现金只留一元");
                 if (failure == "load") { plan.Items[0].PartId = "gpu0"; plan.Items[0].Count = 6; }
                 if (failure == "source") plan.Items[0].PartId = "ram0";
                 if (failure == "quota") plan.Items[0].Count = 50;
                 if (failure == "closed") s.Clock.Restore(new GameDate(5), 10 * 60);
                 if (failure == "shift") e.ShiftStart = 13 * 60;
                 if (failure == "space") s.MainShop.Sim.Stock.Capacity = s.MainShop.Sim.Stock.UsedSpace;
+                if (failure == "source") { Assert.False(s.ConfigureEmployeePurchase(e.Id, plan)); return; }
                 Assert.True(s.ConfigureEmployeePurchase(e.Id, plan));
                 var before = s.Ledger.Balance;
                 Assert.IsNotNull(s.QuoteEmployeePurchase(e.Id).Error);

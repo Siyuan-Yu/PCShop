@@ -76,7 +76,7 @@ namespace PCShopSell.Game.UI
                     win.Content = original;
                 }
                 else build(win, p);
-                Ui.Size(Ui.Button(win.Content, "离开，回到街上", () => win.Close(), 20), -1, 46);
+                win.TitleText.text = S.PlaceTitle(p) + " · 关闭返回街上";
             }, true, true, () =>
             {
                 if (S.CurrentPlace == p) S.Leave();
@@ -277,43 +277,17 @@ namespace PCShopSell.Game.UI
 
         public void OpenSystemPanel()
         {
-            OpenWindow("菜单", 560, 700, w =>
+            OpenWindow(L("game_menu"), 620, 740, w =>
             {
-                Line(w.Content, $"身家（资产 − 负债）：{S.NetWorth()}", 20);
-                GoalLine goal = S.NextGoal();
-                if (goal != null)
-                {
-                    Line(w.Content, $"下一个目标：{goal.Title}（第 {goal.Day} 天）", 17, Ui.Dim);
-                    Line(w.Content, goal.Progress, 16, Ui.Dim);
-                }
-                Ui.Size(Ui.Button(w.Content, "目标与人脉", OpenGoalsPanel, 20, Ui.ButtonHot), -1, 40);
-                if (BusinessUnlocked) Ui.Size(Ui.Button(w.Content, "经营总览", OpenBusinessPanel, 20, Ui.ButtonHot), -1, 40);
-                Ui.Size(Ui.Button(w.Content, "通知记录", OpenNoticeHistory, 18), -1, 36);
-                Ui.Size(Ui.Button(w.Content, S.CanSave ? "存档" : "路上不能存档", () =>
-                {
-                    if (_ctrl.SaveGame()) Toast("已存档。");
-                    else Toast(S.CanSave ? SaveStore.LastSaveMessage : "当前状态暂时不能存档。");
-                }, 20, Ui.ButtonHot, S.CanSave), -1, 48);
-                Ui.Size(Ui.Button(w.Content, "读取手动存档…", () => ConfirmAction("读取手动存档", "回到上一次手动存档的状态。\n现在这局没存档的进度会丢掉。", "读取", () => _ctrl.LoadGame()), 20, Ui.ButtonBg, SaveStore.Exists), -1, 40);
-                Ui.Size(Ui.Button(w.Content, "读取最近自动存档…", () => ConfirmAction("读取自动存档", "回到最近一次自动存档的状态。\n现在这局没存档的进度会丢掉。", "读取", () => _ctrl.LoadGame(true)), 20, Ui.ButtonBg, SaveStore.Exists), -1, 40);
-                Ui.Size(Ui.Button(w.Content, "重新开始…", () => ConfirmAction("重新开始", "放弃现在这一局，从头开始新的一局。\n没存档的进度都会丢掉。", "重新开始", () => _ctrl.NewGame()), 20, Ui.Warn), -1, 48);
-                RectTransform sfx = Ui.Row(w.Content, 48, 8);
-                Ui.Size(Ui.Button(sfx, PCShopSell.Game.Runtime.SoundFx.Muted ? "音效：关" : "音效：开", () =>
-                {
-                    PCShopSell.Game.Runtime.SoundFx.Muted = !PCShopSell.Game.Runtime.SoundFx.Muted;
-                    PCShopSell.Game.Runtime.SoundFx.Play(PCShopSell.Game.Runtime.Sfx.Coin);
-                    w.Rebuild();
-                }, 20), -1, -1, 1);
-                Ui.Size(Ui.Button(sfx, $"音量 {PCShopSell.Game.Runtime.SoundFx.Volume * 100:0}%", () =>
-                {
-                    float v = PCShopSell.Game.Runtime.SoundFx.Volume + 0.2f;
-                    PCShopSell.Game.Runtime.SoundFx.Volume = v > 1.01f ? 0.2f : v;
-                    PCShopSell.Game.Runtime.SoundFx.Play(PCShopSell.Game.Runtime.Sfx.Coin);
-                    w.Rebuild();
-                }, 20, Ui.ButtonBg, !PCShopSell.Game.Runtime.SoundFx.Muted), -1, -1, 1);
-                Ui.Size(Ui.Button(w.Content, "玩法说明", ShowIntro, 20), -1, 48);
-                Ui.Size(Ui.Button(w.Content, "账本（最近 30 条）", OpenLedger, 20), -1, 48);
-                Line(w.Content, "快捷键：空格 暂停 · 1–4 倍速 · 滚轮 缩放 · Esc / 右键 关窗口（没开窗口时 Esc 开菜单）· M 我的 · B 背包 · C 日程 · P 手机 · J 经营 · H 行情 · 鼠标停在按钮上有说明", 16, Ui.Dim);
+                MenuTitle(w, "game_menu");
+                Ui.Size(Ui.Button(w.Content, L("resume"), w.Close, 21, Ui.ButtonHot), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L(S.CanSave ? "save" : "cannot_save"), () => Toast(L(_ctrl.SaveGame() ? "saved" : "save_failed")), 20, Ui.ButtonBg, S.CanSave), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L("load"), () => OpenLoadMenu(), 20, Ui.ButtonBg, SaveStore.Exists), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L("settings"), OpenSettingsMenu, 20), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L("help"), OpenHelpMenu, 20), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L("about"), OpenAboutMenu, 20), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L("return_title"), () => ShowMainMenu(true), 20), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L("quit"), OpenQuitMenu, 20, Ui.Warn), -1, 50);
             });
         }
 
@@ -343,22 +317,6 @@ namespace PCShopSell.Game.UI
             }, true, false);
         }
 
-        public void ShowStartChoice()
-        {
-            OpenWindow("电脑城模拟器 VS1", 560, 360, w =>
-            {
-                Line(w.Content, "发现了存档。", 20);
-                Ui.Size(Ui.Button(w.Content, "继续游戏", () =>
-                {
-                    w.Close();
-                    _ctrl.LoadGame();
-                }, 21, Ui.ButtonHot), -1, 54);
-                Ui.Size(Ui.Button(w.Content, "新游戏", () =>
-                {
-                    w.Close();
-                    ShowIntro();
-                }, 21), -1, 54);
-            }, true, false);
-        }
+        public void ShowStartChoice() => ShowMainMenu();
     }
 }

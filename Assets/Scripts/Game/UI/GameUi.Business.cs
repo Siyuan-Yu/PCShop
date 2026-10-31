@@ -123,7 +123,7 @@ namespace PCShopSell.Game.UI
             Para(c,"净资产 = 现金 + 库存 + 押金 + 载具残值 + 分店清算估值 + 物业买入价 + 指数市值 − 负债。物业出售按九折成交；尚未发生的利息不计入当前本金。分店收支留在自己的周转金中，转回总部才增加可用现金。",15,Ui.Dim);
             Line(w.Content,$"未来 7 天货款、月供与物业维护 {S.UpcomingBusinessPayments(7)} · 自动补货当前保留额 {S.EffectiveRestockReserve}",16,Ui.Accent);
             var row=Ui.Row(w.Content,40);
-            Ui.Size(Ui.Button(row,"三年目标与人脉",OpenGoalsPanel,17),-1,-1,1);
+            Ui.Size(Ui.Button(row,"三年目标",OpenGoalsPanel,17),-1,-1,1);
             Ui.Size(Ui.Button(row,"主店现金收支报表",OpenReportWindow,17),-1,-1,1);
             Ui.Size(Ui.Button(row,"查看账本",OpenLedger,17),-1,-1,1);
             var f=BusinessCard(w.Content,"硬件景气指数");

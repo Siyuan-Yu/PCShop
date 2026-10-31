@@ -75,11 +75,11 @@ namespace PCShopSell.EditorTools
             Frame(0);
             Shot("vs1_employees_purchase");
             Shot("vs1_employees_purchase_720", 1280, 720);
-            ClickGuideButton("电子市场：按品类找档口  ▼");
+            ClickGuideButton("全部货源  ▼");
             Shot("vs1_employees_source");
             _game.Ui.CloseTopWindow();
             var dispatch = _game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<UnityEngine.UI.Button>())
-                .Last(b => b.GetComponentInChildren<UnityEngine.UI.Text>()?.text.StartsWith("按清单派出（付") == true);
+                .Last(b => b.GetComponentInChildren<UnityEngine.UI.Text>()?.text.StartsWith("完成并立即采购（") == true);
             Check(dispatch.interactable, "员工验收：采购派出按钮可点击");
             dispatch.onClick.Invoke();
             Check(!_game.Ui.AnyModalOpen && !s.Time.IsHeld, "派出后关闭员工列表及采购单，不残留暂停");
@@ -111,10 +111,10 @@ namespace PCShopSell.EditorTools
             Shot("vs1_employees_recruitment");
             string recruitId = s.Candidates.Last().Id;
             ClickGuideButton("聘用并安排工作");
-            Check(s.FindEmployee(recruitId)?.Role == EmployeeRole.Unassigned, "聘用先进入待安排，不绑定职业");
+            Check(s.FindEmployee(recruitId) == null, "确认前不聘用，不增加工资");
             ClickGuideButton("进货员");
             Shot("vs1_employees_newhire_assignment");
-            ClickGuideButton("确认今天起做进货员");
+            ClickGuideButton("确认聘用并安排工作");
             Check(s.FindEmployee(recruitId)?.Role == EmployeeRole.Buyer, "新员工无职业门槛可直接安排进货");
         }
     }

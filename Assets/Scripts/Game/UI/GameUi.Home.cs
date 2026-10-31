@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
@@ -30,7 +30,7 @@ namespace PCShopSell.Game.UI
                     return;
                 }
                 build(win);
-                Ui.Size(Ui.Button(win.Content, "关闭", () => win.Close(), 20), -1, 46);
+
             }, true, true);
         }
 
@@ -54,9 +54,9 @@ namespace PCShopSell.Game.UI
             S.InPlayerShop ? CollectStacks(S.ShopTemp, NoParts) : CollectStacks(S.HomeTemp, S.HomeTempParts);
 
         /// <summary>店里的纸箱（走到纸箱前按 F，或右侧面板“库存”页、背包里打开）：吃的、礼品等放这里，配件放进来直接上货架。</summary>
-        public void OpenShopLockerWindow() => OpenBoxWindow("店里纸箱", () => _ctrl.InInterior);
+        public void OpenShopLockerWindow() => OpenBoxWindow("转存物品", () => _ctrl.InInterior);
 
-        /// <summary>纸箱窗口：临时存放到期了（放了 3 天）还有东西时关不掉（Esc、右上角都不管用），没到期随便关。</summary>
+        /// <summary>纸箱窗口：临时存放到期持续提示，但可关闭后继续处理其他事务。</summary>
         private void OpenBoxWindow(string title, System.Func<bool> stillHere)
         {
             _boxSel = null;
@@ -68,17 +68,9 @@ namespace PCShopSell.Game.UI
                     win.Close();
                     return;
                 }
-                win.Closable = !S.TempDueHere;
+                win.Closable = true;
                 BuildStorage(win);
-                bool stuck = S.TempDueHere;
-                var close = Ui.Button(win.Content, stuck ? "临时存放到期了：放进纸箱、拿进背包、叫货车搬走或扔掉，清空了才能关" : "关闭", () =>
-                {
-                    if (S.TempDueHere) win.Rebuild();
-                    else win.Close();
-                }, stuck ? 16 : 20, stuck ? Ui.ButtonBg : Ui.ButtonHot);
-                close.name = "StorageClose";
-                Ui.Size(close, -1, 46);
-            }, true, false);
+            });
         }
 
         /// <summary>临时存放还能放多久（“2 天 5 小时” / “40 分钟”）。</summary>
@@ -109,8 +101,8 @@ namespace PCShopSell.Game.UI
             if (hasTemp)
             {
                 Line(w.Content, S.TempDueHere
-                    ? $"—— 临时存放 {S.TempKgHere:0.#} 公斤：已经放满 {GameSession.TempKeepDays} 天了，清空了才能关窗口 ——"
-                    : $"—— 临时存放 {S.TempKgHere:0.#} 公斤（纸箱放不下的先堆在这里）：还能放 {TempLeftText(S.TempMinutesLeftHere)}，到时候必须清空 ——", 17, Ui.Warn);
+                    ? $"—— 临时存放 {S.TempKgHere:0.#} 公斤：已经放满 {GameSession.TempKeepDays} 天了，请尽快清理，可先关闭稍后处理 ——"
+                    : $"—— 临时存放 {S.TempKgHere:0.#} 公斤（纸箱放不下的先堆在这里）：还能放 {TempLeftText(S.TempMinutesLeftHere)}，到期持续提醒清理 ——", 17, Ui.Warn);
                 BagGrid(w.Content, tempStacks, 0, _boxSide == "temp" ? _boxSel : null, key =>
                 {
                     _boxSide = "temp";
@@ -372,7 +364,7 @@ namespace PCShopSell.Game.UI
                             ? "没有要放下的东西（饭盒一直带在身上）。"
                             : "没有要放在家里的东西：饭盒一直带在身上（饭点自动吃），配件要拿到店里。", 14, TextAnchor.MiddleLeft, Ui.Dim), S.InPlayerShop ? 260 : 440);
                     if (S.InPlayerShop)
-                        Ui.Size(Ui.Button(acts, "店里纸箱", () =>
+                        Ui.Size(Ui.Button(acts, "转存物品", () =>
                         {
                             w.Close();
                             OpenShopLockerWindow();
@@ -380,7 +372,7 @@ namespace PCShopSell.Game.UI
                 }
                 else
                     Ui.Size(Ui.Label(acts, "回到自己的店或家里，才能把东西放下。", 15, TextAnchor.MiddleLeft, Ui.Dim), 360);
-                Ui.Size(Ui.Button(w.Content, "关闭", w.Close, 20), -1, 46);
+
             });
         }
         public void OpenRepairWindow() => OpenRoomWindow("约师傅上门修", 820, 640, BuildRepair);
@@ -745,7 +737,7 @@ namespace PCShopSell.Game.UI
             {
                 RectTransform actions = Ui.Row(w.Content, 50);
                 Ui.Size(Ui.Button(actions, "摆放家具（家里）", () => StartPlacement(false), 18, Ui.ButtonHot, _ctrl.InHome), 230);
-                Ui.Size(Ui.Button(actions, "装修店面（歇业一天）", () => StartPlacement(true), 18, Ui.ButtonBg, _ctrl.InInterior), 250);
+
                 if (!_ctrl.InHome && !_ctrl.InInterior) Line(w.Content, "摆放家具要在家里；改造店面要在自己的店里。", 15, Ui.Dim);
 
                 RectTransform list = Ui.Scroll(w.Content, 660);
@@ -829,7 +821,7 @@ namespace PCShopSell.Game.UI
         /// <summary>纸箱 / 临时存放里的家具点“摆出来”：进摆放模式，手里直接拿着这件。</summary>
         private void PlaceFromStorage(bool shop, string furnitureId)
         {
-            StartPlacement(shop);
+            if (shop && S.ShopFitted) StartQuickPlacement(); else StartPlacement(shop);
             if (_ctrl.Placing) _ctrl.SelectStock(furnitureId);
         }
 
@@ -1219,7 +1211,7 @@ namespace PCShopSell.Game.UI
             if (_placePanel == null || !_placePanel.gameObject.activeSelf) return;
             Ui.Clear(_placePanel);
             bool shop = _ctrl.PlacingShop;
-            Text title = Ui.Label(_placePanel, shop ? "装修店面（今天歇业）" : "摆放家具", 22, TextAnchor.MiddleLeft, Ui.Accent);
+            Text title = Ui.Label(_placePanel, shop ? (S.IsRenovating ? "装修店面（今天歇业）" : "整理摆设（完成后继续营业）") : "摆放家具", 22, TextAnchor.MiddleLeft, Ui.Accent);
             Ui.Size(title, -1, 34);
             Text mode = Ui.Label(_placePanel, "编辑模式 · 俯视图　格线 1 米，摆放吸附 0.25 米", 15, TextAnchor.MiddleLeft, new Color(0.45f, 0.9f, 1f));
             Ui.Size(mode, -1, 24);

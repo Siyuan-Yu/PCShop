@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Game.Runtime;
@@ -44,7 +44,7 @@ namespace PCShopSell.Game
         public bool BeginPlacement(bool shop)
         {
             if (Placing || Session.IsGameOver) return false;
-            if (shop ? !InInterior || !Session.IsRenovating : !InHome) return false;
+            if (shop ? !InInterior || !Session.CanEditShop : !InHome) return false;
             Ui.CloseAllWindows();
             _placeShop = shop;
             Session.BeginLayoutHistory(shop);
@@ -68,6 +68,7 @@ namespace PCShopSell.Game
             CancelGhost();
             Placing = false;
             Session.EndLayoutHistory();
+            Session.EndQuickShopEdit();
             LeaveEditView();
             if (_placeHeld)
             {
@@ -285,7 +286,7 @@ namespace PCShopSell.Game
         {
             if (!Placing) return;
             bool wrongRoom = _placeShop ? !InInterior : !InHome;
-            if (wrongRoom || Session.IsGameOver || (_placeShop && !Session.IsRenovating))
+            if (wrongRoom || Session.IsGameOver || (_placeShop && !Session.CanEditShop))
             {
                 EndPlacement();
                 return;

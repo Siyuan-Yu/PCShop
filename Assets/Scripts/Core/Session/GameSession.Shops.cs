@@ -131,6 +131,7 @@ namespace PCShopSell.Core.Session
             if (Employees.Any(x => x.Person.TransferShopId == s.Place.Id)) return "已有员工安排明天调入，先取消调店安排";
             if (s.Sim.Orders.Count > 0) return "还有没交付的装机单";
             if (s.Sim.DisplayPcs.Count > 0) return "展示台上还摆着整机，先拆回库存";
+            if (!s.Locker.IsEmpty || !s.Temp.IsEmpty) return "纸箱或临时存放还有物品，请先转存或叫货车搬走";
             if (!s.Sim.Stock.IsEmpty) return "店里还有货，先打电话叫货车搬走";
             if (_couriers.Any(r => r.ToShop && r.ShopId == s.Place.Id)) return "还有车在往这家店送货";
             if (Online.Pending.Any(o => !o.ToHome && o.ShopId == s.Place.Id) || _directShipments.Any(x => x.ShopId == s.Place.Id)) return "还有货在往这家店寄";

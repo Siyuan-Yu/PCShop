@@ -22,6 +22,8 @@ namespace PCShopSell.Game.UI
         public bool Holds;
         public bool Closed;
         public bool Closable = true;
+        internal bool RebuildPending;
+        internal WindowFit Fitter;
         internal GameUi Owner;
 
         public void Rebuild()
@@ -34,6 +36,9 @@ namespace PCShopSell.Game.UI
         }
 
         public void Close() => Owner.CloseWindow(this);
+        // InputField ends editing during pointer selection. Defer reconstruction so
+        // the same click can still reach its original action button.
+        public void RequestRebuild() => RebuildPending = true;
     }
 
     public sealed partial class GameUi
@@ -50,6 +55,9 @@ namespace PCShopSell.Game.UI
         private readonly List<(RectTransform rt, Text text, Button button)> _queueLabels = new List<(RectTransform, Text, Button)>();
         private RectTransform _toastList;
 
+        private Button _storageWarning;
+        private Text _noticeButtonText;
+        private int _unreadNotices;
         private Text _dateText, _cashText, _statsText, _placeText, _hintText, _cargoText, _chaseText, _shopGoText;
         private readonly List<(Button b, int speed)> _speedButtons = new List<(Button, int)>();
         private readonly List<(Button b, VehicleKind kind)> _vehicleButtons = new List<(Button, VehicleKind)>();
@@ -91,6 +99,12 @@ namespace PCShopSell.Game.UI
         public void Update(float dt)
         {
             if (S == null) return;
+            foreach (var window in _windows.ToArray())
+            {
+                window.Fitter?.Fit();
+                if (window.RebuildPending) { window.RebuildPending = false; window.Rebuild(); }
+            }
+            if (MainMenuOpen) return;
             _uiTime += dt;
             UpdateHud();
             UpdateLabels();
@@ -128,10 +142,10 @@ namespace PCShopSell.Game.UI
             h.childAlignment = TextAnchor.MiddleLeft;
 
             AddCheatButton(row);
-            _dateText = Ui.Size(Ui.Label(row, "", 24), 245);
-            _cashText = Ui.Size(Ui.Label(row, "", 26, TextAnchor.MiddleLeft, Ui.Good), 155);
+            _dateText = Ui.Size(Ui.Label(row, "", 24), 200);
+            _cashText = Ui.Size(Ui.Label(row, "", 26, TextAnchor.MiddleLeft, Ui.Good), 130);
 
-            _pauseButton = Ui.Size(Ui.Button(row, "暂停", () => S.Time.TogglePause(), 18), 86);
+            _pauseButton = Ui.Size(Ui.Button(row, "暂停", () => S.Time.TogglePause(), 16), 86);
             _pauseButton.Tip(() => S.Time.IsHeld
                 ? "<b>已暂停</b>：弹出窗口或摆放家具时时间自动暂停，结束后恢复。\n店铺右侧各页签都可用顶部按钮暂停或继续。"
                 : S.Time.IsUserPaused ? "<b>继续</b>　快捷键：空格" : "<b>暂停</b>　快捷键：空格");
@@ -144,11 +158,11 @@ namespace PCShopSell.Game.UI
                 _speedButtons.Add((b, speed));
             }
 
-            _placeText = Ui.Size(Ui.Label(row, "", 20, TextAnchor.MiddleCenter), 260, -1, 1);
-            _statsText = Ui.Size(Ui.Label(row, "", 18, TextAnchor.MiddleRight), 305);
+            _placeText = Ui.Size(Ui.Label(row, "", 20, TextAnchor.MiddleCenter), 210, -1, 1);
+            _statsText = Ui.Size(Ui.Label(row, "", 18, TextAnchor.MiddleRight), 240);
             _statsText.Tip(StatsTip);
             _cashText.Tip("<b>现金</b>：所有进出都记在账上。现金连续 3 天为负就破产。");
-            Ui.Size(Ui.Button(row, "我的", OpenMyPanel, 18, Ui.ButtonHot), 66).Tip("<b>我的</b>　快捷键：M\n身体状况、住处、背包里的吃的、家具背包；在家或店里可以从这里去摆家具。");
+            Ui.Size(Ui.Button(row, "我的", OpenMyPanel, 18, Ui.ButtonHot), 66).Tip("<b>我的</b>　快捷键：M\n身体状况、住处与饮食；在家可以摆家具，店面整理在店铺“装修”页。");
             Ui.Size(Ui.Button(row, "背包 B", ToggleBackpack, 18), 78).Tip("<b>背包</b>　快捷键：B\n身上带的货和负重；在家或店里一键全放下。");
             Ui.Size(Ui.Button(row, "日程", OpenSchedulePanel, 18), 66).Tip("<b>日程</b>　快捷键：C\n约会、师傅上门、网购快递、焖饭等安排（没有手机日历 app 时是小本子）。");
             Ui.Size(Ui.Button(row, "人脉", OpenRelationsPanel, 18), 66).Tip("<b>人脉</b>\n认识的人和你有多熟、他们彼此之间的关系（网状图）。");
@@ -159,7 +173,8 @@ namespace PCShopSell.Game.UI
             _businessButton.gameObject.SetActive(false);
             _businessButton.Tip("<b>经营</b>　快捷键：J\n资产与负债、直供、企业合同、分店、园区等后期经营。");
             Ui.Size(Ui.Button(row, "行情", OpenMarketPanel, 18, Ui.ButtonHot), 66).Tip("<b>行情</b>　快捷键：H\n新闻、宏观指标和各品类配件的价格走势，决定什么时候进货。");
-            Ui.Size(Ui.Button(row, "菜单", OpenSystemPanel, 18), 66).Tip("<b>菜单</b>　快捷键：Esc\n存档、读档、目标与人脉、通知记录、音效。");
+            _noticeButtonText = Ui.Size(Ui.Button(row, "通知", OpenNoticeHistory, 16), 66).GetComponentInChildren<Text>();
+            Ui.Size(Ui.Button(row, "菜单", OpenSystemPanel, 18), 66).Tip("<b>菜单</b>　快捷键：Esc\n存档、读档、重新开始和音效设置。");
 
             Image bottom = Ui.Panel(root, "BottomBar", Ui.PanelBg);
             bottom.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -58);
@@ -194,6 +209,9 @@ namespace PCShopSell.Game.UI
             _hintText = Ui.Label(hint.transform, "", 16, TextAnchor.MiddleLeft, Ui.TextColor);
             _hintText.rectTransform.Fill(10);
 
+            _storageWarning = Ui.Button(root, "", () => { if (S.InPlayerShop) OpenShopLockerWindow(); else OpenStorageWindow(); }, 16, Ui.Warn);
+            ((RectTransform)_storageWarning.transform).Anchor(0.33f, 1, 0.67f, 1, 0, -108, 0, 72);
+            _storageWarning.gameObject.SetActive(false);
             BuildQuestTracker(root);
             BuildSleepBanner(root);
 
@@ -210,6 +228,7 @@ namespace PCShopSell.Game.UI
         private void UpdateHud()
         {
             GameTimestamp now = S.Clock.Now;
+            _noticeButtonText.text = _unreadNotices > 0 ? "通知 " + Math.Min(99, _unreadNotices) : "通知";
             UpdateSleepBanner();
             bool business = BusinessUnlocked;
             if (_businessButton.gameObject.activeSelf != business) _businessButton.gameObject.SetActive(business);
@@ -219,7 +238,7 @@ namespace PCShopSell.Game.UI
 
             bool paused = !S.Time.IsRunning;
             _pauseButton.image.color = paused ? Ui.Warn : Ui.ButtonBg;
-            _pauseButton.GetComponentInChildren<Text>().text = S.Time.IsHeld ? "已暂停" : (S.Time.IsUserPaused ? "继续" : "暂停");
+            _pauseButton.GetComponentInChildren<Text>().text = S.Time.IsHeld ? "窗口暂停" : (S.Time.IsUserPaused ? "继续" : "暂停");
             foreach (var (b, speed) in _speedButtons)
                 b.image.color = !paused && S.Time.Speed == speed ? Ui.ButtonHot : Ui.ButtonBg;
 
@@ -239,11 +258,10 @@ namespace PCShopSell.Game.UI
             _shopGoText.text = S.HasShop ? "去我的店" : "房产中介";
             _placeText.text = where + "   " + shopState;
 
-            if (S.TempDueHere && !S.IsGameOver && !AnyModalOpen && !_ctrl.Placing && (_ctrl.InHome || (_ctrl.InInterior && S.InPlayerShop)))
-            {
-                if (_ctrl.InHome) OpenStorageWindow();
-                else OpenShopLockerWindow();
-            }
+            bool warnStorage = S.HasTempHere && S.TempMinutesLeftHere <= 1440 && !S.IsGameOver && !AnyModalOpen && !_ctrl.Placing;
+            _storageWarning.gameObject.SetActive(warnStorage);
+            if (warnStorage) _storageWarning.GetComponentInChildren<Text>().text = S.TempDueHere
+                ? "临时存放已到期 · 点击清理（可稍后处理）" : "临时存放不足1天 · 点击整理";
 
             if (S.IsGameOver) _hintText.text = "游戏结束：" + S.GameOverReason;
             else if (_ctrl.Placing) _hintText.text = "摆放家具：左键放下 · R 旋转 · 右键/Esc 放回 · X 收进纸箱 · 点已摆的家具可以挪动 · 中键拖动 / Q E 转视角 · V 复位 · 右侧面板点“完成”结束";
@@ -597,6 +615,7 @@ namespace PCShopSell.Game.UI
         private float _lastToastAt;
         public void OpenNoticeHistory()
         {
+            _unreadNotices = 0;
             OpenWindow("通知记录（本次会话）", 850, 700, w =>
             {
                 var list = Ui.Scroll(w.Content, 590);
@@ -608,6 +627,7 @@ namespace PCShopSell.Game.UI
         {
             if (_lastToast == message && _uiTime - _lastToastAt < 8) return;
             _lastToast = message; _lastToastAt = _uiTime;
+            _unreadNotices++;
             _noticeHistory.Add((S == null ? "" : S.Clock.Now + "　") + message);
             if (_noticeHistory.Count > 150) _noticeHistory.RemoveAt(0);
             Image bg = Ui.Panel(_toastList, "Toast", new Color(0.12f, 0.17f, 0.16f, 0.96f));
@@ -648,10 +668,9 @@ namespace PCShopSell.Game.UI
             Image panel = Ui.Panel(dim.transform, "Panel", Ui.PanelBg);
             RectTransform prt = panel.rectTransform;
             prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0.5f);
-            Vector2 available = ((RectTransform)_modalCanvas.transform).rect.size;
-            float fit = Mathf.Min(1f, Mathf.Min((available.x - 32) / width, (available.y - 32) / height));
             prt.sizeDelta = new Vector2(width, height);
-            prt.localScale = Vector3.one * Mathf.Max(0.25f, fit);
+            w.Fitter = prt.gameObject.AddComponent<WindowFit>();
+            w.Fitter.Fit();
             prt.anchoredPosition = new Vector2(0, -10 * _windows.Count);
 
             Image bar = Ui.Panel(prt, "TitleBar", Ui.PanelBg2);
@@ -662,7 +681,7 @@ namespace PCShopSell.Game.UI
             Ui.Panel(prt, "BrassRule", Ui.Accent).rectTransform.Anchor(0, 1, 1, 1, 20, -51, 20, 49);
             if (closable)
             {
-                Button close = Ui.Button(bar.transform, "关闭", w.Close, 18, Ui.Warn);
+                Button close = Ui.Button(bar.transform, MenuLocalization.Get("close"), w.Close, 18, Ui.Warn);
                 ((RectTransform)close.transform).Anchor(1, 0, 1, 1, -96, 8, 10, 8);
             }
 
@@ -747,12 +766,13 @@ namespace PCShopSell.Game.UI
         /// <summary>开局介绍。</summary>
         public void ShowIntro()
         {
-            OpenWindow("欢迎来到电脑城", 680, 400, w =>
+            OpenWindow(L("welcome"), 740, 460, w =>
             {
-                Para(w.Content, S.HasShop ? "照顾好自己，也照顾好小店。新的任务会随着经营进展出现。" : "你带着 ¥10,000 来到电脑城，想开一家自己的电脑店。先安顿下来，出门去「安居房产中介」找一间负担得起的铺子。", 20);
-                Para(w.Content, "WASD 移动，沿街看招牌寻找店铺；靠近门或家具按 F 交互。", 18);
-                Para(w.Content, "左上角只提示眼前的一件事；需要说明时点“怎么做”。", 17, Ui.Accent);
-                Ui.Size(Ui.Button(w.Content, "开始经营", w.Close, 20, Ui.ButtonHot), -1, 50);
+                MenuTitle(w, "welcome");
+                Para(w.Content, L(S.HasShop ? "intro_existing" : "intro_body"), 20);
+                Para(w.Content, L("intro_move"), 18);
+                Para(w.Content, L("intro_tasks"), 17, Ui.Accent);
+                Ui.Size(Ui.Button(w.Content, L("begin_business"), w.Close, 20, Ui.ButtonHot), -1, 50);
             });
         }
     }

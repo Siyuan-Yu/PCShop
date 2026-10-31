@@ -1,0 +1,56 @@
+SMOKE OK 员工验收：开一家测试店
+SMOKE OK 员工验收：开第二家店
+SMOKE OK 员工验收：可买两台小电驴
+SMOKE OK 员工验收：购买三轮车
+SMOKE shot vs1_employees_hud
+SMOKE shot vs1_employees_list
+SMOKE OK 可点击引导按钮：安排工作
+SMOKE OK 可点击引导按钮：收银员
+SMOKE OK 可点击引导按钮：我的电脑店·二店（蜜雪奶茶）
+SMOKE shot vs1_employees_transfer
+SMOKE shot vs1_employees_work_assignment
+SMOKE OK 可点击引导按钮：确认明天到新店做收银员
+SMOKE OK 工作安排提交后今天仍进货，明天跨店做收银
+SMOKE shot vs1_employees_transfer_scheduled
+SMOKE OK 可点击引导按钮：安排进货
+SMOKE shot vs1_employees_purchase
+SMOKE shot vs1_employees_purchase_720
+SMOKE OK 可点击引导按钮：全部货源  ▼
+SMOKE shot vs1_employees_source
+SMOKE OK 员工验收：采购派出按钮可点击
+SMOKE OK 派出后关闭员工列表及采购单，不残留暂停
+SMOKE OK 员工验收：占一台，另一台仍可用
+SMOKE shot vs1_employees_fleet
+SMOKE OK 可点击引导按钮：叫货车
+SMOKE OK 底栏叫货车入口打开装货单
+SMOKE shot vs1_employees_freight
+SMOKE shot vs1_employees_staff_tab
+SMOKE OK 满员也可以招聘，先雇员工再安排工作
+SMOKE OK 次日同一个员工到新店换成收银岗位
+SMOKE shot vs1_employees_recruitment
+SMOKE OK 可点击引导按钮：聘用并安排工作
+SMOKE OK 确认前不聘用，不增加工资
+SMOKE OK 可点击引导按钮：进货员
+SMOKE shot vs1_employees_newhire_assignment
+SMOKE OK 可点击引导按钮：确认聘用并安排工作
+SMOKE OK 新员工无职业门槛可直接安排进货
+SMOKE OK 可把两个档口和一家商店合到同一采购清单
+SMOKE OK 完成按钮始终固定在采购窗口底部
+SMOKE OK 不需要预算输入或额外预算按钮
+SMOKE shot vs1_procurement_01_all_sources
+SMOKE shot vs1_procurement_02_all_sources_720
+SMOKE OK 可点击引导按钮：全部货源  ▼
+SMOKE shot vs1_procurement_03_source_picker
+SMOKE OK 可点击引导按钮：老李 CPU 档口
+SMOKE OK 筛选CPU档口后，内存和饮料仍在已选清单中
+SMOKE shot vs1_procurement_04_filtered_keeps_list
+SMOKE OK 可点击引导按钮：完成
+SMOKE OK 点完成保存后关闭窗口，不残留暂停
+SMOKE OK 完成后启用整份多源清单每日采购
+SMOKE OK 员工一趟采购三个货源的三种商品
+SMOKE OK 整趟人和货都回来后完成，不重复扣款或入库
+SMOKE OK 次日自动再次执行整份清单，不是只能进一次货
+SMOKE OK 保留其他候选人时也能再贴招聘告示
+SMOKE OK 离店按钮只显示离开店铺
+SMOKE shot vs1_procurement_05_recruit_again
+SMOKE RESULT code=0 errors=0

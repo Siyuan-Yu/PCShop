@@ -62,11 +62,13 @@ namespace PCShopSell.Game.UI
                     ? "<color=#DDC18B>毛坯：还不能开业。</color>"
                     : "<color=#A9C9A9>已经布置好，正常营业。</color>";
             Line(C, "店面装修　" + state, 18);
-            Para(C, "货架、收银台、整机展示桌、装机操作台和装饰都在这里摆放。进入编辑模式后镜头会转成俯视，带网格和坐标；装修要歇业一天，摆完第二天才开业。", 15, Ui.Dim);
+            Para(C, "货架、收银台、整机展示桌、装机操作台和装饰都在这里摆放。进入编辑模式后镜头会转成俯视，带网格和坐标；整理摆设只在编辑时暂停；整体装修会歇业一天。", 15, Ui.Dim);
             Para(C, FitChecklistText(), 15);
+            if (S.ShopFitted && !S.IsRenovating)
+                Ui.Size(Ui.Button(C, "整理摆设（暂停中调整，完成后继续营业）", StartQuickPlacement, 18, Ui.ButtonHot), -1, 48);
             string label = S.IsRenovating ? "继续摆放（进入编辑模式）" : S.ShopFitted ? "重新布置（今天歇业装修）" : "开始装修（今天歇业，进入编辑模式）";
             Ui.Size(Ui.Button(C, label, () => StartPlacement(true), 20, Ui.ButtonHot), -1, 48);
-            Line(C, "要买的设施去家具城（商业街）或手机上的 1788 下单，买来的东西在“我的”里。", 15, Ui.Dim);
+            Line(C, "要买的设施去家具城（商业街）或手机上的 1788 下单，买来的家具在当地纸箱或临时存放中。", 15, Ui.Dim);
         }
     }
 }

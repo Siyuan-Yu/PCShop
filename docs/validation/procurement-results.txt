@@ -1,0 +1,5 @@
+2026-11-01
+EditMode: total=485 passed=485 failed=0
+PurchasePlanFromBatch: code=0 errors=0
+InteractionsFromBatch: code=0 errors=0
+1920x1080 and 1280x720 screenshots inspected. Three items from three suppliers dispatch, deliver and repeat next day. Candidate repost and plain leave label verified.

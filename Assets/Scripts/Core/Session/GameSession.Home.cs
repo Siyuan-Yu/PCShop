@@ -247,7 +247,7 @@ namespace PCShopSell.Core.Session
             if (shop)
             {
                 if (!InPlayerShop) return Fail("要在自己的店里才能摆。");
-                if (!IsRenovating) return Fail("店里摆家具要先歇业装修。");
+                if (!CanEditShop) return Fail("请先进入整理或装修模式。");
                 return true;
             }
             if (CurrentPlace != Home) return Fail("要在家里才能摆。");

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using PCShopSell.Core.Session;
 using UnityEngine;
@@ -23,6 +23,7 @@ namespace PCShopSell.Game.UI
 
         public void ResetGuideState()
         {
+            _purchaseDrafts.Clear();
             _questSeen = null;
             _questInitialized = false;
             _questWindow = null;
@@ -37,14 +38,12 @@ namespace PCShopSell.Game.UI
         {
             _questPanel = Ui.Panel(root, "QuestTracker", Ui.PanelBg);
             _questPanel.rectTransform.Anchor(0, 1, 0, 1, 16, -248, -456, 82);
-            var btn = _questPanel.gameObject.AddComponent<Button>();
-            btn.targetGraphic = _questPanel;
-            btn.onClick.AddListener(OpenQuestWindow);
+
             _questText = Ui.Label(_questPanel.transform, "", 16, TextAnchor.UpperLeft);
             _questText.rectTransform.Anchor(0, 0, 1, 1, 14, 54, 44, 12);
             _questText.horizontalOverflow = HorizontalWrapMode.Wrap;
             _questText.verticalOverflow = VerticalWrapMode.Truncate;
-            var help = Ui.Button(_questPanel.transform, "怎么做", OpenQuestWindow, 16);
+            var help = Ui.Button(_questPanel.transform, "查看步骤", OpenQuestWindow, 16);
             ((RectTransform)help.transform).Anchor(0, 0, 1, 0, 12, 10, 12, -46);
             var close = Ui.Button(_questPanel.transform, "×", () =>
             {
@@ -126,34 +125,21 @@ namespace PCShopSell.Game.UI
         private void OpenQuestPopup(QuestDef done, QuestDef next)
         {
             if (_questPopup != null && !_questPopup.Closed) _questPopup.Close();
-            if (done == null)
+            _questPopup = OpenWindow(done != null ? "任务完成" : "新任务", 620, 420, w =>
             {
-                if (next != null) OpenNewQuestPopup(next);
-                return;
-            }
-            _questPopup = OpenWindow("任务完成", 560, 240, w =>
-            {
-                Line(w.Content, "✓ " + done.Title, 23, Ui.Good);
-                Para(w.Content, done.Reward != null ? "获得：" + done.Reward : "继续加油。", 19, Ui.Accent);
-                if (next == null) Para(w.Content, "暂时没有新任务。", 16, Ui.Dim);
-                Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
-            }, onClosed: () =>
-            {
-                _questPopup = null;
-                if (next != null && S.CurrentQuest()?.Id == next.Id) OpenNewQuestPopup(next);
-            });
-        }
-
-        private void OpenNewQuestPopup(QuestDef next)
-        {
-            _questPopup = OpenWindow("新任务", 560, 280, w =>
-            {
-                Line(w.Content, next.Title, 23, Ui.Accent);
-                Para(w.Content, GuideLocation(next.Target), 16, Ui.Accent);
-                Para(w.Content, next.Hint, 18);
-                if (next.Reward != null) Para(w.Content, "完成奖励：" + next.Reward, 16, Ui.Good);
-                ProgressLine(w.Content, next, 15);
-                Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
+                if (done != null)
+                {
+                    Line(w.Content, "✓ " + done.Title, 23, Ui.Good);
+                    if (done.Reward != null) Para(w.Content, "获得：" + done.Reward, 18, Ui.Accent);
+                }
+                if (next != null)
+                {
+                    Line(w.Content, "接下来：" + next.Title, 21, Ui.Accent);
+                    Para(w.Content, GuideLocation(next.Target), 16, Ui.Dim);
+                    Para(w.Content, next.Hint, 18);
+                    ProgressLine(w.Content, next, 16);
+                }
+                Ui.Size(Ui.Button(w.Content, "继续游戏", w.Close, 18, Ui.ButtonHot), -1, 42);
             }, onClosed: () => _questPopup = null);
         }
 
@@ -192,7 +178,7 @@ namespace PCShopSell.Game.UI
             Para(card, "<color=#DDC18B><b>当前任务 · " + q.Title + "</b></color>\n" + (q.Lesson ? q.Hint : q.Short), 16);
             ProgressLine(card, q, 14);
             var row = Ui.Row(card, 34, 6);
-            Ui.Size(Ui.Button(row, "怎么做", OpenQuestWindow, 15), -1, -1, 1);
+            Ui.Size(Ui.Button(row, "查看步骤", OpenQuestWindow, 15), -1, -1, 1);
             if (q.Lesson)
                 Ui.Size(Ui.Button(row, "已了解，完成这一步", () => { S.CompleteQuestLesson(q.Id); UpdateQuestTracker(); refresh(); }, 15, Ui.ButtonHot, q.LessonReady == null || q.LessonReady(S)), -1, -1, 1);
         }

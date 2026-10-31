@@ -40,6 +40,7 @@ namespace PCShopSell.Game.UI
         }
 
         private static Font _font;
+        public static void InvalidateFont() => _font = null;
 
         public static Font Font
         {
@@ -47,7 +48,9 @@ namespace PCShopSell.Game.UI
             {
                 if (_font == null)
                 {
-                    _font = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft YaHei", "Microsoft YaHei UI", "SimHei", "PingFang SC", "Arial" }, 20);
+                    _font = Font.CreateDynamicFontFromOSFont(PCShopSell.Game.Runtime.MenuLocalization.Current == PCShopSell.Game.Runtime.GameLanguage.Japanese
+                        ? new[] { "Yu Gothic UI", "Meiryo", "MS Gothic", "Microsoft YaHei", "Arial" }
+                        : new[] { "Microsoft YaHei", "Microsoft YaHei UI", "Yu Gothic UI", "SimHei", "PingFang SC", "Arial" }, 20);
                 }
                 return _font;
             }
@@ -144,6 +147,36 @@ namespace PCShopSell.Game.UI
             t.rectTransform.Fill(6);
             if (!interactable) t.color = Dim;
             return b;
+        }
+
+        public static InputField TextInput(Transform parent, string value, string placeholder, Action<string> commit)
+        {
+            var bg = Panel(parent, "Input", PanelBg2);
+            var input = bg.gameObject.AddComponent<InputField>();
+            var label = Label(bg.transform, "", 17, TextAnchor.MiddleLeft);
+            label.rectTransform.Fill(8);
+            var hint = Label(bg.transform, placeholder, 15, TextAnchor.MiddleLeft, Dim);
+            hint.rectTransform.Fill(8);
+            input.textComponent = label;
+            input.placeholder = hint;
+            input.targetGraphic = bg;
+            input.text = value ?? "";
+            input.onEndEdit.AddListener(text => { if (text != value) commit(text); });
+            return input;
+        }
+
+        public static InputField NumberInput(Transform parent, long value, long min, long max, Action<long> commit)
+        {
+            InputField input = null;
+            input = TextInput(parent, value.ToString(), "数量", text =>
+            {
+                if (!long.TryParse(text, out long parsed)) { input.SetTextWithoutNotify(value.ToString()); return; }
+                long valid = Math.Max(min, Math.Min(max, parsed));
+                input.SetTextWithoutNotify(valid.ToString());
+                if (valid != value) commit(valid);
+            });
+            input.contentType = InputField.ContentType.IntegerNumber;
+            return input;
         }
 
         /// <summary>给任意界面元素挂鼠标悬停说明（悬停约半秒后在鼠标旁边弹出）。文字每次悬停时现取，所以能显示当前状态。</summary>
