@@ -288,19 +288,49 @@ namespace PCShopSell.Core.Session
 
         private void DeliverCouriers(GameTimestamp now)
         {
+            var arrived = new List<(OwnedShop Dest, bool ToShop, string Where, string From, List<CourierItem> Items)>();
             for (int i = 0; i < _couriers.Count; i++)
             {
                 CourierRun run = _couriers[i];
                 if (run.DueMinute > now.TotalMinutes) continue;
                 foreach (var kv in _openRuns.Where(kv => kv.Value == run).ToList()) _openRuns.Remove(kv.Key);
                 _couriers.RemoveAt(i--);
-                var what = new List<string>();
                 OwnedShop dest = run.ToShop ? DeliveryShop(run.ShopId) : null;
                 bool toShop = dest != null && dest.Rented;
-                WithShop(dest, () => { foreach (CourierItem it in run.Items) what.Add(Unpack(it, toShop)); });
                 string where = !toShop ? "家里" : MyShopCount > 1 ? ShopTitle(dest) : "店里";
-                Show("货送到了", $"从{run.FromName}叫的车把东西送到{where}了：\n" + string.Join("\n", what) + "。");
+                arrived.Add((dest, toShop, where, run.FromName, run.Items));
             }
+            // 同一趟到的几辆车（比如一次买的东西装了两三辆）合并成一个弹窗，按送到哪分组，同种货先合成一条
+            foreach (var group in arrived.GroupBy(a => a.Where))
+            {
+                var first = group.First();
+                var what = new List<string>();
+                var items = group.SelectMany(a => a.Items).ToList();
+                WithShop(first.Dest, () => { foreach (CourierItem it in MergeItems(items)) what.Add(Unpack(it, first.ToShop)); });
+                var sources = group.Select(a => a.From).Distinct().ToList();
+                string head = sources.Count == 1
+                    ? $"从{sources[0]}叫的车把东西送到{group.Key}了："
+                    : $"叫的车把东西送到{group.Key}了：";
+                Show("货送到了", head + "\n" + string.Join("\n", what) + "。");
+            }
+        }
+
+        /// <summary>同一辆车里同种东西合成一条（买 3 个货架不要报 3 行）。</summary>
+        private static List<CourierItem> MergeItems(List<CourierItem> items)
+        {
+            var merged = new List<CourierItem>();
+            foreach (CourierItem it in items)
+            {
+                CourierItem same = merged.FirstOrDefault(m => m.Kind == it.Kind && m.Id == it.Id && m.Boxed == it.Boxed && m.ExpireDay == it.ExpireDay);
+                if (same == null)
+                    merged.Add(new CourierItem { Kind = it.Kind, Id = it.Id, Count = it.Count, Jin = it.Jin, Boxed = it.Boxed, ExpireDay = it.ExpireDay });
+                else
+                {
+                    same.Count += it.Count;
+                    same.Jin += it.Jin;
+                }
+            }
+            return merged;
         }
 
         /// <summary>

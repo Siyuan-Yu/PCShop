@@ -160,6 +160,25 @@ namespace PCShopSell.Tests
             Assert.IsTrue(popups.Any(p => p.Contains("货送到了") && p.Contains("店里") && p.Contains("货架")), "送到店里也要弹窗");
         }
 
+        [Test]
+        public void MallCart_SeveralTrucksArrivingTogether_OnePopup()
+        {
+            GameSession s = Make(200000, 10 * 60);
+            var popups = new System.Collections.Generic.List<string>();
+            s.Popup += (t, b) => popups.Add(t + "\n" + b);
+            GameSessionTests.Teleport(s, "mall");
+            int before = s.FurnitureInStock(FurnitureCatalog.RackHeavy);
+            for (int i = 0; i < 3; i++) Assert.IsTrue(s.CartAddFurniture(FurnitureCatalog.RackHeavy));
+            s.SetCourierDest(null);
+            Assert.IsTrue(s.Checkout(false));
+            Assert.AreEqual(2, s.Couriers.Count, "重型货架一件 90 公斤，一辆车装两件，三件要两辆车");
+            for (int i = 0; i < 100 && s.Couriers.Count > 0; i++) s.AdvanceClock(30);
+            Assert.AreEqual(before + 3, s.FurnitureInStock(FurnitureCatalog.RackHeavy));
+            var arrivals = popups.Where(p => p.StartsWith("货送到了")).ToList();
+            Assert.AreEqual(1, arrivals.Count, "一次买的东西一起到，只弹一个窗");
+            Assert.IsTrue(arrivals[0].Contains("重型货架×3"), "同种货合成一行报总数");
+        }
+
         private static long At(GameSession s, int dayOffset, int hour) => (long)(s.Clock.Today.TotalDays + dayOffset) * 1440 + hour * 60;
 
         [Test]
