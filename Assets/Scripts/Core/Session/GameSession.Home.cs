@@ -185,7 +185,7 @@ namespace PCShopSell.Core.Session
                 {
                     case ParcelKind.Furniture:
                         AddFurniture(p.Id, p.Count);
-                        what = FurnitureCatalog.Get(p.Id).Name + (p.Count > 1 ? "×" + p.Count : "") + "（在“我的”里摆放）";
+                        what = FurnitureCatalog.Get(p.Id).Name + (p.Count > 1 ? "×" + p.Count : "") + "（进了“我的”家具库，在家里能查看，摆要去用得上的地方）";
                         break;
                     case ParcelKind.Outfit:
                         _ownedOutfits.Add(p.Id);

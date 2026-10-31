@@ -952,7 +952,7 @@ namespace PCShopSell.Game.UI
             if (hasStash) tabs.Add("寄存的货");
             // 还在毛坯里的时候，先给店面设施
             string tab = ShopTabs(w, p, tabs, S.HasShop && !S.ShopFitted ? "店面设施" : null);
-            Para(w.Content, "先把要买的加进购物车，在下面分好哪些自己背、哪些叫车，再一起结账。线上同款便宜 15%，2 天到家。", 15, Ui.Dim);
+            Para(w.Content, "先把要买的加进购物车，在下面分好哪些自己背、哪些叫车，再一起结账。叫车送到哪就在购物车里选，送到了会弹窗告诉你。家具买了都进“我的”家具库，在家里打开摆放能看到，店里用的要去店里装修时摆。线上同款便宜 15%，2 天到家。", 15, Ui.Dim);
             Line(w.Content, $"现金 {S.Ledger.Balance}　　来时的载具：{S.CurrentVehicle.Name}，还能背 {S.FreeKg:0.#} 公斤", 17);
             RectTransform list = GoodsList(w.Content);
             switch (tab)
@@ -1211,10 +1211,12 @@ namespace PCShopSell.Game.UI
             foreach (var kv in S.FurnitureStock)
             {
                 FurnitureDef def = FurnitureCatalog.Get(kv.Key);
-                if (def == null || def.ForShop != shop) continue;
+                if (def == null) continue;
                 any = true;
+                bool usable = def.ForShop == shop;
                 string id = def.Id;
-                Ui.Size(Ui.Button(_placePanel, $"{def.Name} ×{kv.Value}", () => _ctrl.SelectStock(id), 17, _ctrl.PlaceId == id && !_ctrl.PlaceHoldsPlaced ? Ui.ButtonHot : Ui.ButtonBg), -1, 40);
+                string label = $"{def.Name} ×{kv.Value}" + (usable ? "" : shop ? "（家里用，这里摆不了）" : "（店里用，去店里装修时摆）");
+                Ui.Size(Ui.Button(_placePanel, label, () => _ctrl.SelectStock(id), 17, _ctrl.PlaceId == id && !_ctrl.PlaceHoldsPlaced ? Ui.ButtonHot : Ui.ButtonBg, usable), -1, 40);
             }
             if (!any) Ui.Size(Ui.Label(_placePanel, "空的。去家具城买，或者网购。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
 

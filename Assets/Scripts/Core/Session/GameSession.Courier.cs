@@ -299,7 +299,7 @@ namespace PCShopSell.Core.Session
                 bool toShop = dest != null && dest.Rented;
                 WithShop(dest, () => { foreach (CourierItem it in run.Items) what.Add(Unpack(it, toShop)); });
                 string where = !toShop ? "家里" : MyShopCount > 1 ? ShopTitle(dest) : "店里";
-                Say($"车把{run.FromName}的东西送到{where}了：" + string.Join("、", what) + "。");
+                Show("货送到了", $"从{run.FromName}叫的车把东西送到{where}了：\n" + string.Join("\n", what) + "。");
             }
         }
 
@@ -347,7 +347,7 @@ namespace PCShopSell.Core.Session
                     return $"{Gifts.Get(it.Id)?.Name ?? it.Id}×{it.Count}（{Where(goodsOver, it.Count)}）";
                 case CourierItemKind.Furniture:
                     AddFurniture(it.Id, it.Count);
-                    return $"{FurnitureCatalog.Get(it.Id)?.Name ?? it.Id}×{it.Count}（在“我的”里摆放）";
+                    return $"{FurnitureCatalog.Get(it.Id)?.Name ?? it.Id}×{it.Count}（进了“我的”家具库，在家里能查看，摆要去用得上的地方）";
                 default:
                     PartDef p = PartCatalog.Get(it.Id);
                     if (!toShop)

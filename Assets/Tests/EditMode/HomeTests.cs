@@ -130,6 +130,36 @@ namespace PCShopSell.Tests
             Assert.IsFalse(s.BuyFurnitureAtMall("bed_board"), "起始家具不卖");
         }
 
+        [Test]
+        public void MallCart_TruckGoesWhereChosen_AndArrivalPopsUp()
+        {
+            GameSession s = Make(200000, 10 * 60);
+            var popups = new System.Collections.Generic.List<string>();
+            s.Popup += (t, b) => popups.Add(t + "\n" + b);
+            GameSessionTests.Teleport(s, "mall");
+            int before = s.FurnitureInStock(FurnitureCatalog.Shelf);
+
+            Assert.IsTrue(s.CartAddFurniture(FurnitureCatalog.Shelf));
+            s.SetCourierDest(null);
+            Assert.IsTrue(s.Checkout(false));
+            Assert.AreEqual(1, s.Couriers.Count);
+            Assert.IsFalse(s.Couriers[0].ToShop, "选了送到家里，车就该开去家里，不能因为是店里用的就默认送店里");
+            for (int i = 0; i < 100 && s.Couriers.Count > 0; i++) s.AdvanceClock(30);
+            Assert.AreEqual(0, s.Couriers.Count);
+            Assert.AreEqual(before + 1, s.FurnitureInStock(FurnitureCatalog.Shelf), "送到后进家具库存，家里能查看");
+            Assert.IsTrue(popups.Any(p => p.Contains("货送到了") && p.Contains("家里") && p.Contains("货架")), "送到家里要弹窗说清送到哪");
+
+            popups.Clear();
+            Assert.IsTrue(s.CartAddFurniture(FurnitureCatalog.Shelf));
+            s.SetCourierDest(s.MainShop);
+            Assert.IsTrue(s.Checkout(false));
+            Assert.AreEqual(1, s.Couriers.Count);
+            Assert.IsTrue(s.Couriers[0].ToShop, "选了送到店里，车就该开去店里");
+            for (int i = 0; i < 100 && s.Couriers.Count > 0; i++) s.AdvanceClock(30);
+            Assert.AreEqual(before + 2, s.FurnitureInStock(FurnitureCatalog.Shelf));
+            Assert.IsTrue(popups.Any(p => p.Contains("货送到了") && p.Contains("店里") && p.Contains("货架")), "送到店里也要弹窗");
+        }
+
         private static long At(GameSession s, int dayOffset, int hour) => (long)(s.Clock.Today.TotalDays + dayOffset) * 1440 + hour * 60;
 
         [Test]
