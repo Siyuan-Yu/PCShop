@@ -149,8 +149,8 @@ namespace PCShopSell.Core.Session
         {
             if(today.TotalDays<=_lastBusinessDay) return;
             _lastBusinessDay=today.TotalDays;
-            if (_owned.Contains(VehicleKind.Car)) Ledger.ForceDebit(today,"交通",Money.FromYuan(40),"轿车日养护（含油费保险）");
-            if (_owned.Contains(VehicleKind.Van)) Ledger.ForceDebit(today,"交通",Money.FromYuan(60),"货车日养护（含油费保险）");
+            if (_owned.Contains(VehicleKind.Car)) Ledger.ForceDebit(today,"交通",Money.FromYuan(40) * VehicleCount(VehicleKind.Car),"轿车日养护（含油费保险）");
+            if (_owned.Contains(VehicleKind.Van)) Ledger.ForceDebit(today,"交通",Money.FromYuan(60) * VehicleCount(VehicleKind.Van),"货车日养护（含油费保险）");
             SettleSupplierDebts(today.TotalDays); SettleVentures(today); SettleProperties(today); SettleHomeMortgage(today); SettleCreators(previous,today); SettleMcnAndRelationships(previous,today); RefreshEnterpriseOffer();
         }
         private void SaveBusiness(SaveData d)

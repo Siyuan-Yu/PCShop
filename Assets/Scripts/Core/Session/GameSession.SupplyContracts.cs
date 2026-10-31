@@ -56,7 +56,9 @@ namespace PCShopSell.Core.Session
             return true;
         }
         public Money DirectPrice(PartDef p) => Market.PriceOf(p).Scale(.84);
-        public double IncomingShopSpace => Online.PendingSpace() + _directShipments.Sum(x => Stock.SpaceOf(PartCatalog.Get(x.PartId), true, x.Count))
+        public double IncomingShopSpace => Online.Pending.Where(o => !o.ToHome && DeliveryShop(o.ShopId) == _focus).Sum(o => o.Lines.Sum(l => Stock.SpaceOf(PartCatalog.Get(l.PartId), true, l.Count)))
+            + _directShipments.Where(x => DeliveryShop(x.ShopId) == _focus).Sum(x => Stock.SpaceOf(PartCatalog.Get(x.PartId), true, x.Count))
+            + _employeeTrips.Where(t => !t.Delivered && DeliveryShop(t.ShopId) == _focus).Sum(t => t.Items.Sum(l => Stock.SpaceOf(PartCatalog.Get(l.PartId), true, l.Count)))
             + Couriers.Where(HeadsToThisShop).Sum(x => x.Items.Where(i => i.Kind == CourierItemKind.Part && PartCatalog.Exists(i.Id)).Sum(i => Stock.SpaceOf(PartCatalog.Get(i.Id), i.Boxed, i.Count)));
         public string DirectOrderBlocker(string partId, int count, bool credit)
         {

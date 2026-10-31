@@ -67,6 +67,10 @@ namespace PCShopSell.Core.Session
                 vehicle = (int)Vehicle,
                 ownedVehicles = _owned.Select(v => (int)v).ToArray(),
                 tricycleImpounded = TricycleImpounded,
+                impoundedTricycles = _impoundedTricycles,
+                hasBuyer = _focus.Buyer != null,
+                buyer = _focus.Buyer != null ? ToSave(_focus.Buyer) : null,
+                employeeTrips = _employeeTrips.Select(t => t.Copy()).ToArray(),
                 cargo = Lines(Cargo),
 
                 hunger = Player.Hunger,
@@ -157,7 +161,7 @@ namespace PCShopSell.Core.Session
             if (CurrentPlace != null && CurrentPlace.NodeId != PlayerNodeId) PlayerNodeId = CurrentPlace.NodeId;
             _owned.Clear();
             foreach (int v in d.ownedVehicles ?? Array.Empty<int>()) _owned.Add((VehicleKind)v);
-            TricycleImpounded = d.tricycleImpounded;
+            _impoundedTricycles = Math.Max(d.impoundedTricycles, d.tricycleImpounded ? 1 : 0);
             Vehicle = (VehicleKind)d.vehicle;
             Cargo.Clear();
             Cargo.Capacity = CurrentVehicle.CargoCapacity;
@@ -207,6 +211,9 @@ namespace PCShopSell.Core.Session
             Employee = d.hasEmployee && d.employee != null ? FromSave(d.employee) : null;
             if (Employee != null) PlayerShop.Settings.EmployeeCheckoutMinutes = Employee.CheckoutMinutes;
             Assembler = !d.hasAssembler || d.assembler == null ? null : FromSave(d.assembler);
+            _focus.Buyer = d.hasBuyer && d.buyer != null ? FromSave(d.buyer) : null;
+            _employeeTrips.Clear();
+            _employeeTrips.AddRange((d.employeeTrips ?? Array.Empty<EmployeePurchaseTrip>()).Select(t => t.Copy()));
             EverHired = d.everHired;
             _candidates.Clear();
             foreach (SaveEmployee e in d.candidates ?? Array.Empty<SaveEmployee>()) _candidates.Add(FromSave(e));
@@ -250,11 +257,15 @@ namespace PCShopSell.Core.Session
 
         private static SaveEmployee ToSave(Employee e) => new SaveEmployee
         {
+            id = e.Id, transferShopId = e.TransferShopId, transferDay = e.TransferDay,
+            purchasePlan = e.PurchasePlan?.Copy(), lastPurchaseNote = e.LastPurchaseNote,
             name = e.Name, wage = e.DailyWageYuan, checkoutMinutes = e.CheckoutMinutes, description = e.Description, shiftStart = e.ShiftStart, shiftEnd = e.ShiftEnd, buildsCompleted = e.BuildsCompleted,
         };
 
         private static Employee FromSave(SaveEmployee e) => new Employee
         {
+            Id = string.IsNullOrEmpty(e.id) ? Guid.NewGuid().ToString("N") : e.id, TransferShopId = e.transferShopId, TransferDay = e.transferDay,
+            PurchasePlan = e.purchasePlan?.Copy() ?? new EmployeePurchasePlan(), LastPurchaseNote = e.lastPurchaseNote,
             Name = e.name, DailyWageYuan = e.wage, CheckoutMinutes = e.checkoutMinutes, Description = e.description,
             ShiftStart = e.shiftEnd > e.shiftStart ? e.shiftStart : DutyStartMinute,
             ShiftEnd = e.shiftEnd > e.shiftStart ? e.shiftEnd : DutyEndMinute, BuildsCompleted = Math.Max(0, e.buildsCompleted),

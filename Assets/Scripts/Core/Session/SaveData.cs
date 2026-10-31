@@ -26,6 +26,10 @@ namespace PCShopSell.Core.Session
         public string currentPlace;
         public int vehicle;
         public int[] ownedVehicles;
+        public int impoundedTricycles;
+        public bool hasBuyer;
+        public SaveEmployee buyer;
+        public EmployeePurchaseTrip[] employeeTrips;
         public bool tricycleImpounded;
         public SaveStockLine[] cargo;
 
@@ -268,7 +272,8 @@ namespace PCShopSell.Core.Session
         public string[] partMarkupIds;
         public double[] partMarkupValues;
         public bool hasEmployee, hasAssembler;
-        public SaveEmployee employee, assembler;
+        public SaveEmployee employee, assembler, buyer;
+        public bool hasBuyer;
         public bool employeeTrained, autoBuild;
         public SavePlaced[] layout;
         public string[] upgrades;
@@ -291,6 +296,9 @@ namespace PCShopSell.Core.Session
     [Serializable]
     public sealed class SaveEmployee
     {
+        public string id, transferShopId, lastPurchaseNote;
+        public int transferDay = -1;
+        public EmployeePurchasePlan purchasePlan;
         public string name;
         public long wage;
         public int checkoutMinutes;

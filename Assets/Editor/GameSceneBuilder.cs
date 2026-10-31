@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -22,7 +22,7 @@ namespace PCShopSell.EditorTools
     /// 生成可玩的主场景（Assets/Scenes/Main.unity）并加入 Build Settings；
     /// 以及批处理冒烟测试：不进 Play 模式，直接搭起整个游戏、模拟一段流程、截图。
     /// </summary>
-    public static class GameSceneBuilder
+    public static partial class GameSceneBuilder
     {
         public const string ScenePath = "Assets/Scenes/Main.unity";
 

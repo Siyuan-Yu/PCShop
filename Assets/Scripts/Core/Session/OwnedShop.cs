@@ -17,7 +17,7 @@ namespace PCShopSell.Core.Session
         public readonly List<PlacedFurniture> Layout = new List<PlacedFurniture>();
         public readonly HashSet<string> Upgrades = new HashSet<string>();
         public readonly Dictionary<string, int> Restock = new Dictionary<string, int>();
-        public Employee Employee, Assembler;
+        public Employee Employee, Assembler, Buyer;
         public bool EmployeeTrained, AutoBuild;
         public bool EmployeeBuilding;
         public int RenovationDay = -1;

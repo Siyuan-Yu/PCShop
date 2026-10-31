@@ -127,6 +127,8 @@ namespace PCShopSell.Core.Session
             if (s == null || !s.Rented) return "这不是你的店";
             if (MyShopCount <= 1) return "这是你唯一的店。想换地方：先去中介再签一间，叫货车把货搬过去，再回这里退租";
             if (CurrentPlace != s.Place) return "要在这家店里办退租";
+            if (_employeeTrips.Any(t => t.ShopId == s.Place.Id)) return "进货员或采购货物还在路上";
+            if (Employees.Any(x => x.Person.TransferShopId == s.Place.Id)) return "已有员工安排明天调入，先取消调店安排";
             if (s.Sim.Orders.Count > 0) return "还有没交付的装机单";
             if (s.Sim.DisplayPcs.Count > 0) return "展示台上还摆着整机，先拆回库存";
             if (!s.Sim.Stock.IsEmpty) return "店里还有货，先打电话叫货车搬走";
@@ -151,7 +153,7 @@ namespace PCShopSell.Core.Session
             s.Sim.ClearCustomers();
             foreach (PlacedFurniture f in s.Layout) AddFurniture(f.Id, 1);
             if (s.Lease.Deposit.IsPositive) Ledger.Credit(Clock.Today, "押金", s.Lease.Deposit, $"退还{title}押金");
-            bool hadStaff = s.Employee != null || s.Assembler != null;
+            bool hadStaff = s.Employee != null || s.Assembler != null || s.Buyer != null;
             Money rent = s.Lease.Rent;
             bool wasMain = s == MainShop;
             _shops.Remove(s);
@@ -198,6 +200,8 @@ namespace PCShopSell.Core.Session
                 employee = s.Employee != null ? ToSave(s.Employee) : null,
                 hasAssembler = s.Assembler != null,
                 assembler = s.Assembler != null ? ToSave(s.Assembler) : null,
+                hasBuyer = s.Buyer != null,
+                buyer = s.Buyer != null ? ToSave(s.Buyer) : null,
                 employeeTrained = s.EmployeeTrained,
                 autoBuild = s.AutoBuild,
                 layout = ToSave(s.Layout),
@@ -235,6 +239,7 @@ namespace PCShopSell.Core.Session
             shop.Employee = d.hasEmployee && d.employee != null ? FromSave(d.employee) : null;
             if (shop.Employee != null) sim.Settings.EmployeeCheckoutMinutes = shop.Employee.CheckoutMinutes;
             shop.Assembler = d.hasAssembler && d.assembler != null ? FromSave(d.assembler) : null;
+            shop.Buyer = d.hasBuyer && d.buyer != null ? FromSave(d.buyer) : null;
             shop.EmployeeTrained = d.employeeTrained;
             shop.AutoBuild = d.autoBuild;
             shop.Layout.AddRange(FromSave(d.layout));

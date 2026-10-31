@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using PCShopSell.Core.Catalog;
@@ -136,18 +136,18 @@ namespace PCShopSell.Game.UI
                 RectTransform row = Ui.Row(w.Content, 78);
                 string upkeep = vs.Kind == VehicleKind.Car ? " · 魅力 +2 · 日养护 ¥40" : vs.Kind == VehicleKind.Van ? " · 日养护 ¥60" : "";
                 string desc = $"{vs.Name}  {vs.Price}{upkeep}\n<size=15>速度 {vs.SpeedPerMinute * 60 / 1000:0} km/h · 载货 {vs.CargoCapacity:0} 格{(vs.Illegal ? " · <color=#D79780>城里不能上路，交警会追</color>" : "")}</size>";
-                Ui.Size(Ui.Label(row, desc, 19), 590);
+                Ui.Size(Ui.Label(row, desc + "\n<size=14>" + S.VehicleUsage(vs.Kind) + "</size>", 18), 760);
                 bool owned = S.Owns(vs.Kind);
-                Ui.Size(Ui.Button(row, owned ? "已拥有" : "购买", () =>
+                Ui.Size(Ui.Button(row, owned ? "再买一台" : "购买一台", () =>
                 {
                     S.BuyVehicle(vs.Kind);
                     w.Rebuild();
-                }, 19, Ui.ButtonHot, !owned && S.IsDealerOpen && S.Ledger.Balance >= vs.Price), 100);
+                }, 19, Ui.ButtonHot, S.IsDealerOpen && S.Ledger.Balance >= vs.Price), 100);
                 if (owned) Ui.Size(Ui.Button(row, "卖回…", () => ConfirmBusiness("出售载具", $"按购价六折 {vs.Price.Scale(.6)} 回收。当前使用此车时需先把携带货物减到步行可承受范围。", () => { S.SellVehicle(vs.Kind); w.Rebuild(); }), 17, Ui.Warn, S.IsDealerOpen), 90);
             }
             if (S.TricycleImpounded)
             {
-                Ui.Size(Ui.Button(w.Content, "交 ¥500 赎回被扣的三轮车", () =>
+                Ui.Size(Ui.Button(w.Content, "交 ¥500 赎回一台三轮车", () =>
                 {
                     S.RedeemTricycle();
                     w.Rebuild();

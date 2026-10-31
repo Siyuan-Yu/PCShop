@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.World;
@@ -7,20 +8,21 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
-        private readonly HashSet<VehicleKind> _owned = new HashSet<VehicleKind>();
+        private readonly List<VehicleKind> _owned = new List<VehicleKind>();
         private readonly List<string> _passed = new List<string>();
 
         /// <summary>当前出行方式。载具永远跟着玩家。</summary>
         public VehicleKind Vehicle { get; private set; } = VehicleKind.Walk;
 
-        public bool TricycleImpounded { get; private set; }
+        private int _impoundedTricycles;
+        public bool TricycleImpounded => _impoundedTricycles > 0;
 
         public bool Owns(VehicleKind kind) => kind == VehicleKind.Walk || kind == VehicleKind.Taxi || _owned.Contains(kind);
 
         public bool CanUse(VehicleKind kind)
         {
             if (!Owns(kind)) return false;
-            if (kind == VehicleKind.Tricycle && TricycleImpounded) return false;
+            if (kind != VehicleKind.Walk && kind != VehicleKind.Taxi && Vehicle != kind && FreeVehicleCount(kind) <= 0) return false;
             return true;
         }
 
@@ -30,7 +32,7 @@ namespace PCShopSell.Core.Session
             if (kind == Vehicle) return true;
             if (Trip != null) return Fail("在路上不能换交通方式。");
             if (!Owns(kind)) return Fail($"你还没有{Vehicles.Get(kind).Name}。");
-            if (kind == VehicleKind.Tricycle && TricycleImpounded) return Fail("三轮车被交警扣了，去车行交 ¥500 赎回。");
+            if (!CanUse(kind)) return Fail("没有空闲的" + Vehicles.Get(kind).Name + "（可能被员工使用或扣押），请先换车或到车行购买。");
             VehicleSpec v = Vehicles.Get(kind);
             if (CarriedKg > v.CargoCapacity * Backpack.KgPerSpace + 1e-9)
                 return Fail($"身上的东西太重（{CarriedKg:0.#} 公斤），{v.Name}最多带 {v.CargoCapacity * Backpack.KgPerSpace:0.#} 公斤。");
@@ -158,7 +160,7 @@ namespace PCShopSell.Core.Session
             string body = $"三轮车不能在城里上路，罚款 {PoliceSystem.Fine}。";
             if (Random.Chance(PoliceSystem.ImpoundChance))
             {
-                TricycleImpounded = true;
+                _impoundedTricycles++;
                 Vehicle = VehicleKind.Walk;
                 ApplyCargoLimit();
                 if (Trip != null) Trip.ChangeVehicle(Vehicles.Walk);
@@ -198,7 +200,7 @@ namespace PCShopSell.Core.Session
             if (!IsDealerOpen) return Fail("车行 9:00–19:00 营业。");
             VehicleSpec v = Vehicles.Get(kind);
             if (!v.Purchasable) return false;
-            if (_owned.Contains(kind)) return Fail($"已经有{v.Name}了。");
+            // 可购买多台同类车，分别分配给老板和进货员。
             if (!Ledger.TryDebit(Clock.Today, "载具", v.Price, v.Name)) return Fail($"{v.Name}要 {v.Price}，钱不够。");
             _owned.Add(kind);
             Show("买到了" + v.Name, kind == VehicleKind.Tricycle
@@ -211,8 +213,11 @@ namespace PCShopSell.Core.Session
         public bool SellVehicle(VehicleKind kind)
         {
             if (IsGameOver || CurrentPlace == null || CurrentPlace.Kind != PlaceKind.Dealer || !IsDealerOpen || !_owned.Contains(kind)) return false;
-            if (kind == VehicleKind.Tricycle && TricycleImpounded) return Fail("先赎回扣押的车再出售。");
-            if (Vehicle == kind && !SetVehicle(VehicleKind.Walk)) return false;
+            if (FreeVehicleCount(kind) <= 0)
+            {
+                if (Vehicle != kind) return Fail("车辆被员工使用或扣押，不能出售。");
+                if (!SetVehicle(VehicleKind.Walk)) return false;
+            }
             _owned.Remove(kind);
             Ledger.Credit(Clock.Today, "载具出售", Vehicles.Get(kind).Price.Scale(.6), Vehicles.Get(kind).Name);
             return true;
@@ -223,7 +228,7 @@ namespace PCShopSell.Core.Session
             if (!TricycleImpounded) return false;
             if (CurrentPlace == null || CurrentPlace.Kind != PlaceKind.Dealer) return Fail("要在车行办理。");
             if (!Ledger.TryDebit(Clock.Today, "罚款", PoliceSystem.RedeemFee, "赎回三轮车")) return Fail("钱不够赎车。");
-            TricycleImpounded = false;
+            _impoundedTricycles = System.Math.Max(0, _impoundedTricycles - 1);
             Say("三轮车赎回来了。");
             return true;
         }

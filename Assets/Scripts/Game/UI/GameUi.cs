@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
@@ -128,30 +128,31 @@ namespace PCShopSell.Game.UI
             h.childAlignment = TextAnchor.MiddleLeft;
 
             AddCheatButton(row);
-            _dateText = Ui.Size(Ui.Label(row, "", 24), 270);
-            _cashText = Ui.Size(Ui.Label(row, "", 26, TextAnchor.MiddleLeft, Ui.Good), 180);
+            _dateText = Ui.Size(Ui.Label(row, "", 24), 245);
+            _cashText = Ui.Size(Ui.Label(row, "", 26, TextAnchor.MiddleLeft, Ui.Good), 155);
 
-            _pauseButton = Ui.Size(Ui.Button(row, "暂停", () => S.Time.TogglePause(), 18), 70);
+            _pauseButton = Ui.Size(Ui.Button(row, "暂停", () => S.Time.TogglePause(), 18), 86);
             _pauseButton.Tip(() => S.Time.IsHeld
                 ? "<b>已暂停</b>：弹出窗口或摆放家具时时间自动暂停，结束后恢复。\n店铺右侧各页签都可用顶部按钮暂停或继续。"
                 : S.Time.IsUserPaused ? "<b>继续</b>　快捷键：空格" : "<b>暂停</b>　快捷键：空格");
             foreach (int sp in TimeController.Speeds)
             {
                 int speed = sp;
-                Button b = Ui.Size(Ui.Button(row, speed + "×", () => S.Time.SetSpeed(speed), 18), 54);
+                Button b = Ui.Size(Ui.Button(row, speed + "×", () => S.Time.SetSpeed(speed), 18), 48);
                 int keyNo = System.Array.IndexOf(TimeController.Speeds, speed) + 1;
                 b.Tip($"<b>{speed} 倍速</b>　快捷键：{keyNo}");
                 _speedButtons.Add((b, speed));
             }
 
             _placeText = Ui.Size(Ui.Label(row, "", 20, TextAnchor.MiddleCenter), 260, -1, 1);
-            _statsText = Ui.Size(Ui.Label(row, "", 18, TextAnchor.MiddleRight), 330);
+            _statsText = Ui.Size(Ui.Label(row, "", 18, TextAnchor.MiddleRight), 305);
             _statsText.Tip(StatsTip);
             _cashText.Tip("<b>现金</b>：所有进出都记在账上。现金连续 3 天为负就破产。");
             Ui.Size(Ui.Button(row, "我的", OpenMyPanel, 18, Ui.ButtonHot), 66).Tip("<b>我的</b>　快捷键：M\n身体状况、住处、背包里的吃的、家具背包；在家或店里可以从这里去摆家具。");
             Ui.Size(Ui.Button(row, "背包 B", ToggleBackpack, 18), 78).Tip("<b>背包</b>　快捷键：B\n身上带的货和负重；在家或店里一键全放下。");
             Ui.Size(Ui.Button(row, "日程", OpenSchedulePanel, 18), 66).Tip("<b>日程</b>　快捷键：C\n约会、师傅上门、网购快递、焖饭等安排（没有手机日历 app 时是小本子）。");
             Ui.Size(Ui.Button(row, "人脉", OpenRelationsPanel, 18), 66).Tip("<b>人脉</b>\n认识的人和你有多熟、他们彼此之间的关系（网状图）。");
+            Ui.Size(Ui.Button(row, "员工", OpenEmployeesPanel, 18), 66).Tip("所有店的员工列表、明天调店安排、进货清单和车辆占用。");
             Ui.Size(Ui.Button(row, "手机", OpenPhone, 18), 66).Tip("<b>手机</b>　快捷键：P\n买了智能手机才有；通讯录、1788 批发、外卖等 app。");
             Ui.Size(Ui.Button(row, "任务", OpenQuests, 18), 66).Tip("<b>任务</b>　快捷键：T\n当前任务怎么做、完成奖励；左上角的任务条收起后从这里再打开。");
             _businessButton = Ui.Size(Ui.Button(row, "经营", OpenBusinessPanel, 18), 66);
@@ -161,7 +162,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(row, "菜单", OpenSystemPanel, 18), 66).Tip("<b>菜单</b>　快捷键：Esc\n存档、读档、目标与人脉、通知记录、音效。");
 
             Image bottom = Ui.Panel(root, "BottomBar", Ui.PanelBg);
-            bottom.rectTransform.Anchor(0, 0, 0, 0, 0, 0, -1360, -58);
+            bottom.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -58);
             RectTransform brow = Ui.Rect(bottom.transform, "Row").Fill();
             var bh = brow.gameObject.AddComponent<HorizontalLayoutGroup>();
             bh.padding = new RectOffset(12, 12, 8, 8);
@@ -184,6 +185,8 @@ namespace PCShopSell.Game.UI
             shopGo.Tip(() => S.MyShopCount > 1 ? "开了几家店：点了选去哪一家，自动走到店门口；路上按 WASD 随时接管。" : "自动走到店门口（耗时按路程算）；路上按 WASD 随时接管。");
             Ui.Size(Ui.Button(brow, "回家", () => _ctrl.GoToPlace(S.Home), 17), 70).Tip("自动走回家；路上按 WASD 随时接管。");
             Ui.Size(Ui.Button(brow, "电子市场", () => _ctrl.GoToPlace(S.City.GetPlace("stall_cpu")), 17), 100);
+
+            Ui.Size(Ui.Button(brow, "叫货车", OpenTruckWindow, 17, Ui.ButtonHot), 100).Tip("打开货车装货单，选货物和目的地；手机通讯录里的入口也保留。");
 
             Image hint = Ui.Panel(root, "HintStrip", new Color(0.12f, 0.18f, 0.17f, 0.93f));
             hint.rectTransform.Anchor(0, 0, 0, 0, 16, 70, -1136, -122);
@@ -269,7 +272,7 @@ namespace PCShopSell.Game.UI
                 Text t = b.GetComponentInChildren<Text>();
                 t.color = can ? Ui.TextColor : Ui.Dim;
                 string name = Vehicles.Get(kind).Name;
-                if (kind == VehicleKind.Tricycle && S.TricycleImpounded) name = "三轮(扣)";
+                if (kind == VehicleKind.Tricycle && S.TricycleImpounded && !can) name = "三轮(扣)";
                 t.text = name;
             }
             _cargoText.text = $"负重 {S.CarriedKg:0.#}/{S.CarryLimitKg:0.#} 公斤";

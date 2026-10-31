@@ -341,6 +341,8 @@ namespace PCShopSell.Core.Session
             foreach (var r in Couriers) foreach (var l in r.Items)
                 if (l.Kind == CourierItemKind.Part) sum += Market.PriceOf(PartCatalog.Get(l.Id)).Yuan * l.Count;
             foreach (var o in DirectShipments) sum += Market.PriceOf(PartCatalog.Get(o.PartId)).Yuan * o.Count;
+            foreach (var trip in _employeeTrips.Where(t => !t.Delivered))
+                foreach (var line in trip.Items) sum += Market.PriceOf(PartCatalog.Get(line.PartId)).Yuan * line.Count;
             return Money.FromYuan((long)Math.Round(sum * 0.9));
         }
 
@@ -386,6 +388,7 @@ namespace PCShopSell.Core.Session
             CheckAppointments(to);
             DeliverOnlineOrders(to);
             DeliverCouriers(to);
+            UpdateEmployeePurchases(to);
             DeliverDirect(to);
             if (from.Date == to.Date) TrackCreatorCampaigns(to);
 
@@ -431,6 +434,7 @@ namespace PCShopSell.Core.Session
             OnHomeDayAdvanced(today);
 
             PayWages(previous);
+            ApplyEmployeeTransfers(today);
             ProcessScheduledCredits(today);
             DecayRelations();
             if (today.IsMonthStart)

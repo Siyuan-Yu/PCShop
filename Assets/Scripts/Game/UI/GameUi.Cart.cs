@@ -315,8 +315,8 @@ namespace PCShopSell.Game.UI
         {
             OpenWindow("叫货车 · " + GameSession.TruckDriverName, 1180, 860, w =>
             {
-                Para(w.Content, $"{GameSession.TruckDriverName}开面包车，每辆最多装 {GameSession.CourierCapacityKg:0} 公斤，运费按路程算。身上的东西在哪都能交给他；在家还能搬厨房和纸箱里的，在自己店里还能搬后仓的货和储物柜。" +
-                    "店里摆着的家具先在摆放模式收回“我的”——“我的”里的家具到哪家店都能直接摆，不用搬。", 15, Ui.Dim);
+                Para(w.Content, $"每辆货车最多装 {GameSession.CourierCapacityKg:0} 公斤，运费按路程算。先选送到哪，再把左边的东西装车。" +
+                    "在家可搬厨房、纸箱和临时存放；在店里可搬后仓、纸箱和临时存放。摆着的家具先收进纸箱，再装车搬走。", 15, Ui.Dim);
                 OwnedShop dest = S.TruckDest;
                 RectTransform destRow = Ui.Row(w.Content, 42, 8);
                 Ui.Size(Ui.Label(destRow, "送到", 17, TextAnchor.MiddleLeft, Ui.Dim), 44);
@@ -372,7 +372,7 @@ namespace PCShopSell.Game.UI
                 }, why == null ? 18 : 15, why == null ? Ui.ButtonHot : Ui.ButtonBg, why == null);
                 send.name = "TruckDispatch";
                 Ui.Size(send, -1, -1, 1);
-                Ui.Size(Ui.Button(go, "挂电话", w.Close, 16, Ui.ButtonBg), 110);
+                Ui.Size(Ui.Button(go, "关闭", w.Close, 16, Ui.ButtonBg), 110);
             }, true, true, () => S.ClearTruckLoad());
         }
 

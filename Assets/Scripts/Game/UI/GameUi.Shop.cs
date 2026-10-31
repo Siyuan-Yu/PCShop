@@ -544,7 +544,8 @@ namespace PCShopSell.Game.UI
 
         private void BuildStaff()
         {
-            Line(C, $"可雇一位收银员和一位装机员，分别排班；工资按日结算，缩短班次不减薪。", 16, Ui.Dim);
+            Line(C, "本店可雇收银员、装机员、进货员各一位；工资按日结算。跨店调动明天生效。", 16, Ui.Dim);
+            Ui.Size(Ui.Button(C, "员工管理（全部店铺 · 调店 / 安排进货）", OpenEmployeesPanel, 17, Ui.ButtonHot), -1, 42);
             if (S.Employee != null)
             {
                 Employee e = S.Employee;
@@ -569,7 +570,13 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(C, S.AutoBuildEnabled ? "自动装机：开" : "自动装机：关", () => { S.ToggleAutoBuild(); RebuildDock(); }, 16), -1, 36);
                 Ui.Size(Ui.Button(C, "辞退装机员", () => { S.FireAssembler(); RebuildDock(); }, 16, Ui.Warn), -1, 36);
             }
-            if (S.Employee != null && S.Assembler != null) return;
+            if (S.CurrentShop.Buyer != null)
+            {
+                var buyer = S.CurrentShop.Buyer;
+                Line(C, $"进货员 {buyer.Name} · 日薪 {buyer.DailyWage}", 17);
+                Ui.Size(Ui.Button(C, "安排进货（清单 / 预算 / 车辆）", () => OpenEmployeePurchase(buyer.Id), 17, Ui.ButtonHot), -1, 40);
+            }
+            if (S.Employee != null && S.Assembler != null && S.CurrentShop.Buyer != null) return;
             if (S.Candidates.Count > 0)
             {
                 Line(C, "来应聘的人：", 19);
@@ -583,10 +590,11 @@ namespace PCShopSell.Game.UI
                     {
                         S.Hire(idx);
                         RebuildDock();
-                    }, 16, Ui.ButtonHot, S.Employee == null), 90);
-                    Ui.Size(Ui.Button(row, "装机", () => { S.HireAssembler(idx); RebuildDock(); }, 16, Ui.ButtonBg, S.Assembler == null), 90);
+                    }, 16, Ui.ButtonHot, S.Employee == null), 80);
+                    Ui.Size(Ui.Button(row, "装机", () => { S.HireAssembler(idx); RebuildDock(); }, 16, Ui.ButtonBg, S.Assembler == null), 80);
+                    Ui.Size(Ui.Button(row, "进货", () => { S.HireBuyer(idx); RebuildDock(); }, 16, Ui.ButtonBg, S.CurrentShop.Buyer == null), 80);
                 }
-                Line(C, "装机岗位：入职培训 ¥1,200，以上日薪另加 ¥60；熟练后每单更快。", 14, Ui.Dim);
+                Line(C, "收银：值守收款；装机：培训 ¥1,200、日薪 +¥60；进货：按你设置的清单外出采购。", 14, Ui.Dim);
                 return;
             }
             if (S.JobAdDay >= 0)

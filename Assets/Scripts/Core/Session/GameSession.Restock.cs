@@ -26,7 +26,7 @@ namespace PCShopSell.Core.Session
         public int RestockReserveDays { get; set; } = 7;
         public long RestockDailyBudgetYuan { get; set; }
         public Money EffectiveRestockReserve => Money.FromYuan(Math.Max(Math.Max(500, RestockReserveYuan),
-            (long)Math.Ceiling((CurrentShopRent.Yuan / 30.0 + CurrentHomeRent.Yuan / 30.0 + (Employee?.DailyWageYuan ?? 0) + (Assembler?.DailyWageYuan ?? 0) + McnDailyWages + (_owned.Contains(VehicleKind.Car) ? 40 : 0) + (_owned.Contains(VehicleKind.Van) ? 60 : 0)) * Math.Max(0, RestockReserveDays)))) + UpcomingBusinessPayments(RestockReserveDays);
+            (long)Math.Ceiling((TotalShopRent.Yuan / 30.0 + CurrentHomeRent.Yuan / 30.0 + Employees.Sum(x => x.Person.DailyWageYuan) + McnDailyWages + VehicleCount(VehicleKind.Car) * 40 + VehicleCount(VehicleKind.Van) * 60) * Math.Max(0, RestockReserveDays)))) + UpcomingBusinessPayments(RestockReserveDays);
 
         private Dictionary<string, int> _restock => _focus.Restock;
         private readonly Dictionary<PartCategory, int> _noStockAlertDay = new Dictionary<PartCategory, int>();
@@ -54,13 +54,14 @@ namespace PCShopSell.Core.Session
         {
             int n = 0;
             foreach (OnlineOrder o in Online.Pending)
-                if (!o.ToHome)   // 送家里的不算店里的库存
+                if (!o.ToHome && DeliveryShop(o.ShopId) == _focus)   // 送家里的不算店里的库存
                     foreach (OnlineOrderLine l in o.Lines)
                         if (l.PartId == partId) n += l.Count;
             foreach (var r in Couriers) if (HeadsToThisShop(r))
                 foreach (var item in r.Items)
                     if (item.Kind == CourierItemKind.Part && item.Id == partId) n += item.Count;
-            return n + DirectShipments.Where(x => x.PartId == partId).Sum(x => x.Count);
+            return n + DirectShipments.Where(x => x.PartId == partId && DeliveryShop(x.ShopId) == _focus).Sum(x => x.Count)
+                + _employeeTrips.Where(t => !t.Delivered && DeliveryShop(t.ShopId) == _focus).Sum(t => t.Items.Where(l => l.PartId == partId).Sum(l => l.Count));
         }
 
         /// <summary>店里现有 + 在路上。</summary>

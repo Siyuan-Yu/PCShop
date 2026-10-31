@@ -9,6 +9,11 @@ namespace PCShopSell.Core.Session
 {
     public sealed class Employee
     {
+        public string Id = Guid.NewGuid().ToString("N");
+        public string TransferShopId;
+        public int TransferDay = -1;
+        public EmployeePurchasePlan PurchasePlan = new EmployeePurchasePlan();
+        public string LastPurchaseNote;
         public string Name;
         public long DailyWageYuan;
 
@@ -136,7 +141,7 @@ namespace PCShopSell.Core.Session
 
         public bool Hire(int candidateIndex)
         {
-            if (Employee != null || candidateIndex < 0 || candidateIndex >= _candidates.Count) return false;
+            if (IsGameOver || Employee != null || candidateIndex < 0 || candidateIndex >= _candidates.Count) return false;
             Employee = _candidates[candidateIndex];
             _focus.EmployeeTrained = false;
             EverHired = true;
@@ -212,6 +217,7 @@ namespace PCShopSell.Core.Session
             {
                 if (s.Employee != null) Ledger.ForceDebit(day, "工资", s.Employee.DailyWage, s.Employee.Name);
                 if (s.Assembler != null) Ledger.ForceDebit(day, "工资", s.Assembler.DailyWage, s.Assembler.Name);
+                if (s.Buyer != null) Ledger.ForceDebit(day, "工资", s.Buyer.DailyWage, s.Buyer.Name);
             }
         }
     }
