@@ -67,7 +67,15 @@ namespace PCShopSell.Tests
             Place p = s.City.GetPlace(placeId);
             s.Leave();
             s.ArriveAtNode(p.NodeId);
+            WaitUntilOpen(s, p);
             s.Enter(p);
+        }
+
+        /// <summary>别人的店打烊了进不去：把钟拨到当天开门的整点（不跑模拟）。</summary>
+        internal static void WaitUntilOpen(GameSession s, Place p)
+        {
+            while (s.ClosedReason(p) != null && s.Clock.Now.MinuteOfDay < 23 * 60)
+                s.Clock.Restore(s.Clock.Now.Date, (s.Clock.Now.MinuteOfDay / 60 + 1) * 60);
         }
 
         [Test]
@@ -94,6 +102,27 @@ namespace PCShopSell.Tests
             s.Leave();
             Assert.IsFalse(s.PlayerShop.IsOpen);
             Assert.IsNull(s.CurrentPlace);
+        }
+
+        [Test]
+        public void ClosedStreetShop_CannotBeEntered_OwnShopAlways()
+        {
+            GameSession s = Make(minute: 22 * 60);
+            Place tea = s.City.GetPlace("tea");
+            s.Leave();
+            s.ArriveAtNode(tea.NodeId);
+            Assert.IsNotNull(s.ClosedReason(tea));
+            Assert.IsFalse(s.Enter(tea), "晚上 10 点街上的店打烊了");
+            Assert.IsNull(s.CurrentPlace);
+
+            s.Clock.Restore(s.Clock.Now.Date, 10 * 60);
+            Assert.IsTrue(s.Enter(tea));
+
+            s.Leave();
+            s.Clock.Restore(s.Clock.Now.Date, 23 * 60);
+            s.ArriveAtNode(s.PlayerShopPlace.NodeId);
+            Assert.IsNull(s.ClosedReason(s.PlayerShopPlace));
+            Assert.IsTrue(s.Enter(s.PlayerShopPlace), "自己的店半夜也能进");
         }
 
         [Test]

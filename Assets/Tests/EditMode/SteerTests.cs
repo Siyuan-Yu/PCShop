@@ -10,7 +10,7 @@ namespace PCShopSell.Tests
         // 测试地图：st(0,0) — s1(10,0) — pc(20,0) — home(20,-50)；st — mk(-100,0)。
         private static GameSession AtStreet(string node = "st", long cash = 5000)
         {
-            GameSession s = GameSessionTests.Make(cash);
+            GameSession s = GameSessionTests.Make(cash, 10 * 60);
             s.Leave();
             s.ArriveAtNode(node);
             return s;

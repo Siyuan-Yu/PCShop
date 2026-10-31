@@ -1736,6 +1736,8 @@ namespace PCShopSell.EditorTools
             s.StopTrip();
             s.Leave();
             s.ArriveAtNode(p.NodeId);
+            while (s.ClosedReason(p) != null && s.Clock.Now.MinuteOfDay < 23 * 60)
+                s.Clock.Restore(s.Clock.Now.Date, (s.Clock.Now.MinuteOfDay / 60 + 1) * 60);
             s.Enter(p);
             Feed(s);
         }

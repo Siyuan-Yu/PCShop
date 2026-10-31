@@ -194,6 +194,8 @@ namespace PCShopSell.Core.Session
             }
             if (place.NodeId != PlayerNodeId)
                 throw new InvalidOperationException($"玩家不在 {place.Name} 门口。");
+            string closed = ClosedReason(place);
+            if (closed != null) return Fail(closed);
             SetFocus(ShopAt(place));
             CurrentPlace = place;
             CourierDest = null;
@@ -250,9 +252,37 @@ namespace PCShopSell.Core.Session
             }
         }
 
-        /// <summary>街上普通店铺 / 中介的营业时间（只影响外观和名牌，不拦着你进门）。</summary>
+        /// <summary>街上普通店铺 / 中介的营业时间。</summary>
         public const int StreetShopOpenMinute = 9 * 60;
         public const int StreetShopCloseMinute = 21 * 60;
+
+        /// <summary>
+        /// 别人家的店打烊了就进不去，返回原因（null = 能进）。自己的店、家、地铁站、空铺、自己的生意和房产不拦。
+        /// </summary>
+        public string ClosedReason(Place p)
+        {
+            if (p == null || ShopAt(p) != null || VentureAt(p.Id) != null || PropertyAt(p.Id) != null) return null;
+            if (p.Kind == PlaceKind.Shop && IsVacant(p)) return null;
+            string hours = OpeningHoursText(p);
+            if (hours == null || IsPlaceOpen(p)) return null;
+            return $"{p.Name}已经打烊了（{hours}营业）。";
+        }
+
+        /// <summary>这个地点的营业时间说明；不限时的地方返回 null。</summary>
+        public string OpeningHoursText(Place p)
+        {
+            switch (p.Kind)
+            {
+                case PlaceKind.Wholesaler: return $"工作日 {Hm(WholesalerOpenMinute)}–{Hm(WholesalerCloseMinute)}";
+                case PlaceKind.Dealer: return $"每天 {Hm(DealerOpenMinute)}–{Hm(DealerCloseMinute)}";
+                case PlaceKind.Shop when p.Business == FarmBusiness: return $"每天 {Hm(FarmOpenMinute)}–{Hm(FarmCloseMinute)}";
+                case PlaceKind.Shop:
+                case PlaceKind.Agency: return $"每天 {Hm(StreetShopOpenMinute)}–{Hm(StreetShopCloseMinute)}";
+                default: return null;
+            }
+        }
+
+        private static string Hm(int minute) => $"{minute / 60}:{minute % 60:00}";
 
         /// <summary>这个地点现在看起来是不是在营业：自己的店看实际状态，批发 / 车行看营业时间，空铺和停业的分店一直关着。</summary>
         public bool IsPlaceOpen(Place p)
@@ -266,6 +296,7 @@ namespace PCShopSell.Core.Session
             {
                 case PlaceKind.Wholesaler: return IsWholesalerOpen;
                 case PlaceKind.Dealer: return IsDealerOpen;
+                case PlaceKind.Shop when p.Business == FarmBusiness: return IsFarmMarketOpen;
                 case PlaceKind.Shop:
                 case PlaceKind.Agency:
                     if (IsVacant(p)) return false;

@@ -240,7 +240,10 @@ namespace PCShopSell.Game.UI
             else if (_ctrl.Placing) _hintText.text = "摆放家具：左键放下 · R 旋转 · 右键/Esc 放回 · X 收进背包 · 点已摆的家具可以挪动 · 中键拖动 / Q E 转视角 · V 复位 · 右侧面板点“完成”结束";
             else if (_ctrl.InInterior) _hintText.text = "WASD 在店里走动 · 走到货架前按 F 查看货物 · 柜台边按 F（或点顾客头顶的“结账”）给顾客结账 · 走到门口按 F 出门 · 右侧面板管理店铺";
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimatedMinutes} 分钟 · 按 WASD 随时接管";
-            else if (S.NearbyPlace != null) _hintText.text = $"<color=#DDC18B>按 F 进入 {S.PlaceTitle(S.NearbyPlace)}</color>";
+            else if (S.NearbyPlace != null)
+                _hintText.text = S.ClosedReason(S.NearbyPlace) is string closed
+                    ? $"<color=#D79780>{closed}</color>"
+                    : $"<color=#DDC18B>按 F 进入 {S.PlaceTitle(S.NearbyPlace)}</color>";
             else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#DDC18B>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : "WASD 在屋里走动 · 走近床、衣柜、电饭锅、纸箱、凳子（头顶出现提示按 F）· 房间信息、摆放家具看右上角“我的”";
             else if (S.CurrentPlace != null) _hintText.text = "按 WASD 离开 · 空格暂停";
             else _hintText.text = "WASD 自由走动 · 右键拖动/Q E 转视角 · V 复位 · 滚轮缩放 · 走到门口按 F 进入 · 空格暂停 · 下方按钮可快捷前往";

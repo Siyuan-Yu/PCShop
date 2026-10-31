@@ -507,6 +507,17 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void FarmMarket_UsesItsOwnHours()
+        {
+            GameSession s = Make(minute: 7 * 60);
+            Place farm = s.City.GetPlace("farm");
+            Assert.IsTrue(s.IsPlaceOpen(farm), "农贸市场 6 点就开门");
+            s.Clock.Restore(s.Clock.Today, 19 * 60);
+            Assert.IsFalse(s.IsPlaceOpen(farm), "18 点收摊");
+            StringAssert.Contains("6:00–18:00", s.ClosedReason(farm));
+        }
+
+        [Test]
         public void FarmMarket_SellsRiceAndIngredients_AndDishIsBetter()
         {
             GameSession s = Make(2000);
