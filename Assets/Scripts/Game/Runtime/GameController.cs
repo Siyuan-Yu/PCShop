@@ -168,17 +168,11 @@ namespace PCShopSell.Game
             Ui.Toast(SaveStore.LastLoadMessage);
         }
 
-        /// <summary>前往某地并在到达后进入。已经在门口就直接进去。打烊的地方不去，原地提示。</summary>
+        /// <summary>前往某地并在到达后进入。已经在门口就直接进去。</summary>
         public void GoToPlace(Place p)
         {
             if (Session.IsGameOver || Ui.AnyModalOpen) return;
             if (Session.CurrentPlace == p) return;
-            string closed = Session.ClosedReason(p);
-            if (closed != null)
-            {
-                Ui.Toast(closed);
-                return;
-            }
             if (Session.CurrentPlace != null)
             {
                 Ui.CloseDock();

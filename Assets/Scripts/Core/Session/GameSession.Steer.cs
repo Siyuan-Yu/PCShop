@@ -266,11 +266,13 @@ namespace PCShopSell.Core.Session
             }
         }
 
-        /// <summary>进入附近的地点（会先走到入口）。</summary>
+        /// <summary>进入附近的地点（会先走到入口）。进不去（比如打烊）时人留在门口原地，不挪位置。</summary>
         public bool EnterNearby()
         {
             Place p = NearbyPlace;
             if (p == null) return Fail("附近没有能进的地方。走到门口再按 F。");
+            string closed = ClosedReason(p);
+            if (closed != null) return Fail(closed);
             PlayerNodeId = p.NodeId;
             ClearEdge();
             return Enter(p);

@@ -188,11 +188,11 @@ namespace PCShopSell.Game.UI
                 if (line.ByTruck > 1e-9)
                     CartLineCard(w, truckList, line, line.ByTruck, line.TruckKg, bagCol, () => S.CartToBag(line.Key, Math.Min(1, line.ByTruck)),
                         new HoldAction("放进背包", Ui.ButtonHot, line.ByTruck, n => S.CartToBag(line.Key, n)),
-                        new HoldAction("不要了", Ui.ButtonBg, line.ByTruck, n => S.RemoveFromCart(line.Key, n)));
+                        new HoldAction("少拿一件", Ui.ButtonBg, line.ByTruck, n => S.RemoveFromCart(line.Key, n)));
                 if (line.InBag > 1e-9)
                     CartLineCard(w, bagList, line, line.InBag, line.BagKg, truckCol, () => S.CartToTruck(line.Key, Math.Min(1, line.InBag)),
                         new HoldAction("改叫车", Ui.ButtonHot, line.InBag, n => S.CartToTruck(line.Key, n)),
-                        new HoldAction("不要了", Ui.ButtonBg, line.InBag, n => S.CartToTruck(line.Key, n) && S.RemoveFromCart(line.Key, n)));
+                        new HoldAction("少拿一件", Ui.ButtonBg, line.InBag, n => S.CartToTruck(line.Key, n) && S.RemoveFromCart(line.Key, n)));
             }
             if (bagKg <= 1e-9) Para(bagList, "点左边的“放进背包”放 1 件，按住不放一件件往上加，松手放进来；也可以直接把卡片拖过来。超重了再挪回去。", 14, Ui.Dim);
 

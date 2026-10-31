@@ -135,6 +135,22 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void EnterNearby_ClosedShop_StaysAtDoor()
+        {
+            GameSession s = AtStreet("s1");
+            Walk(s, 0, 1, 100);
+            Walk(s, -1, 0, 3, 0.05);
+            Assert.AreEqual("tea", s.NearbyPlace.Id);
+            s.Clock.Restore(s.Clock.Now.Date, 22 * 60);
+            MapPoint before = s.PlayerPosition;
+            Assert.IsFalse(s.EnterNearby(), "打烊了进不去，只提示");
+            Assert.IsNull(s.CurrentPlace);
+            Assert.IsTrue(s.OffNode, "人还站在门口的人行道上");
+            Assert.AreEqual(before.X, s.PlayerPosition.X, 1e-9, "没被挪到马路中间");
+            Assert.AreEqual(before.Y, s.PlayerPosition.Y, 1e-9);
+        }
+
+        [Test]
         public void EnterNearby_FromMiddleOfRoad_Fails()
         {
             GameSession s = AtStreet("s1");
