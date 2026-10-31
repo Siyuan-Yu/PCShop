@@ -6,13 +6,15 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
-        public const double FridgeCapacityKg = 60;
+        public static double FridgeCapacityOf(System.Collections.Generic.IEnumerable<PlacedFurniture> layout) =>
+            layout.Select(p => FurnitureCatalog.Get(p.Id)).Where(d => d?.Role == FurnitureRole.Fridge).Sum(d => d.FridgeCapacityKg);
+        public double FridgeLimitKg(bool shop) => FridgeCapacityOf(LayoutOf(shop));
         public readonly Backpack HomeFridge = new Backpack();
         public Backpack FridgeOf(bool shop) => shop ? CurrentShop.Fridge : HomeFridge;
         public int FridgeCount(bool shop) => LayoutOf(shop).Count(p => FurnitureCatalog.Get(p.Id)?.Role == FurnitureRole.Fridge);
         public bool CanOpenFridge => (AtHome || InPlayerShop) && FridgeCount(InPlayerShop) > 0;
         public Backpack CurrentFridge => FridgeOf(InPlayerShop);
-        public double CurrentFridgeLimitKg => FridgeCount(InPlayerShop) * FridgeCapacityKg;
+        public double CurrentFridgeLimitKg => FridgeLimitKg(InPlayerShop);
 
         public static string MealName(string id) => Ingredients.Get(id)?.DishName ?? "白米饭";
         public static double MealNutrition(string id) => id == "rice" ? -5 : id == "pork" ? 5 : id == "egg" ? 3 : id == "tofu" ? 2 : 0;

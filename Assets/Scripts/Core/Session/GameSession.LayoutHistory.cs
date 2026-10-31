@@ -46,8 +46,8 @@ namespace PCShopSell.Core.Session
         {
             if (!_layoutHistoryActive || !Time.IsHeld || from.Count == 0) return false;
             var state = from[from.Count - 1];
-            int fridgeCount = state.Layout.Count(p => FurnitureCatalog.Get(p.Id)?.Role == FurnitureRole.Fridge);
-            if (FridgeOf(_layoutHistoryShop).WeightKg > fridgeCount * FridgeCapacityKg + 1e-9)
+            double fridgeCapacity = FridgeCapacityOf(state.Layout);
+            if (FridgeOf(_layoutHistoryShop).WeightKg > fridgeCapacity + 1e-9)
                 return Fail("冰箱里还有食物，这次撤销/重做会减少冷藏容量。请先取出食物。");
             to.Add(CaptureLayout());
             from.RemoveAt(from.Count - 1);

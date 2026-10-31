@@ -1,0 +1,3 @@
+2026-11-01
+EditMode: total=527 passed=527 failed=0
+No screenshots generated. Four prices/capacities, both-room catalogs and procurement offers, mixed capacity/removal safety, save roundtrip, legacy footprint/food retention and 1/2/2/4-door native models validated.

@@ -296,7 +296,7 @@ namespace PCShopSell.Core.Session
         {
             List<PlacedFurniture> l = LayoutOf(shop);
             if (index < 0 || index >= l.Count || !CanEdit(shop)) return false;
-            if (FurnitureCatalog.Get(l[index].Id)?.Role == FurnitureRole.Fridge && FridgeOf(shop).WeightKg > (FridgeCount(shop) - 1) * FridgeCapacityKg + 1e-9)
+            if (FurnitureCatalog.Get(l[index].Id)?.Role == FurnitureRole.Fridge && FridgeOf(shop).WeightKg > FridgeLimitKg(shop) - FurnitureCatalog.Get(l[index].Id).FridgeCapacityKg + 1e-9)
                 return Fail("冰箱里还有食物，先取出一些再收起冰箱。不能丢失冷藏食物。");
             if (FurnitureCatalog.Get(l[index].Id)?.Role == FurnitureRole.Storage)
             {
