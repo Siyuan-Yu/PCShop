@@ -239,6 +239,7 @@ namespace PCShopSell.Core.Session
             shop.Employee = d.hasEmployee && d.employee != null ? FromSave(d.employee) : null;
             if (shop.Employee != null) sim.Settings.EmployeeCheckoutMinutes = shop.Employee.CheckoutMinutes;
             shop.Assembler = d.hasAssembler && d.assembler != null ? FromSave(d.assembler) : null;
+            if (shop.Assembler != null && !d.assembler.hasWorkSkills) shop.Assembler.AssemblyTrained = true;
             shop.Buyer = d.hasBuyer && d.buyer != null ? FromSave(d.buyer) : null;
             shop.EmployeeTrained = d.employeeTrained;
             shop.AutoBuild = d.autoBuild;

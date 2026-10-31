@@ -10,7 +10,7 @@ using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
-    public enum EmployeeRole { Cashier, Assembler, Buyer }
+    public enum EmployeeRole { Cashier, Assembler, Buyer, Unassigned }
 
     [Serializable]
     public sealed class PurchaseLine
@@ -74,7 +74,7 @@ namespace PCShopSell.Core.Session
         private readonly List<EmployeePurchaseTrip> _employeeTrips = new List<EmployeePurchaseTrip>();
         public IReadOnlyList<EmployeePurchaseTrip> EmployeePurchaseTrips => _employeeTrips;
 
-        public static string RoleName(EmployeeRole role) => role == EmployeeRole.Cashier ? "收银员" : role == EmployeeRole.Assembler ? "装机员" : "进货员";
+        public static string RoleName(EmployeeRole role) => role == EmployeeRole.Cashier ? "收银员" : role == EmployeeRole.Assembler ? "装机员" : role == EmployeeRole.Buyer ? "进货员" : "待安排";
         public static string PurchaseTransportName(VehicleKind kind) =>
             kind == VehicleKind.Walk ? "步行去，叫货车送回" : kind == VehicleKind.Taxi ? "打车去，叫货车送回"
             : "开" + Vehicles.Get(kind).Name + "去，自己运回";
@@ -87,28 +87,31 @@ namespace PCShopSell.Core.Session
             {
                 var rows = new List<EmployeeAssignment>();
                 foreach (var shop in _shops.Where(x => x.Rented))
-                    foreach (EmployeeRole role in Enum.GetValues(typeof(EmployeeRole)))
+                    foreach (EmployeeRole role in new[] { EmployeeRole.Cashier, EmployeeRole.Assembler, EmployeeRole.Buyer })
                     {
                         Employee e = EmployeeAt(shop, role);
                         if (e == null) continue;
                         if (string.IsNullOrEmpty(e.Id)) e.Id = Guid.NewGuid().ToString("N");
+                        if (role == EmployeeRole.Cashier && shop.EmployeeTrained) e.AssemblyTrained = true;
                         rows.Add(new EmployeeAssignment { Shop = shop, Person = e, Role = role });
                     }
+                foreach (var e in _idleEmployees) rows.Add(new EmployeeAssignment { Person = e, Role = EmployeeRole.Unassigned });
                 return rows;
             }
         }
 
-        private static Employee EmployeeAt(OwnedShop s, EmployeeRole role) => role == EmployeeRole.Cashier ? s.Employee : role == EmployeeRole.Assembler ? s.Assembler : s.Buyer;
+        private static Employee EmployeeAt(OwnedShop s, EmployeeRole role) => role == EmployeeRole.Cashier ? s.Employee : role == EmployeeRole.Assembler ? s.Assembler : role == EmployeeRole.Buyer ? s.Buyer : null;
         private static void PutEmployee(OwnedShop s, EmployeeRole role, Employee e)
         {
             if (role == EmployeeRole.Cashier) s.Employee = e;
             else if (role == EmployeeRole.Assembler) s.Assembler = e;
-            else s.Buyer = e;
+            else if (role == EmployeeRole.Buyer) s.Buyer = e;
         }
         public EmployeeAssignment FindEmployee(string id) => Employees.FirstOrDefault(x => x.Person.Id == id);
         public EmployeePurchaseTrip EmployeeTrip(string id) => _employeeTrips.FirstOrDefault(x => x.EmployeeId == id && !x.Returned);
         public string EmployeeStatus(EmployeeAssignment row)
         {
+            if (row.Role == EmployeeRole.Unassigned) return "待安排工作";
             var trip = EmployeeTrip(row.Person.Id);
             if (trip != null) return Clock.Now.TotalMinutes < trip.BoughtAt ? "去批发市场路上" : "返店途中";
             return row.Person.OnDuty(Clock.Now) ? "在岗" : "休息中";
@@ -117,23 +120,13 @@ namespace PCShopSell.Core.Session
         public string EmployeeTransferBlocker(string id, string destination)
         {
             var row = FindEmployee(id);
-            var dest = ShopAt(destination);
-            if (IsGameOver || row == null || dest == null) return "员工或店铺不存在";
-            if (dest == row.Shop) return "已经在这家店";
-            if (EmployeeAt(dest, row.Role) != null) return "目标店已有" + RoleName(row.Role);
-            if (Employees.Any(x => x.Person.Id != id && x.Role == row.Role && x.Person.TransferShopId == destination)) return "这个岗位已安排其他员工明天到岗";
-            return null;
+            return row == null ? "员工不存在" : EmployeeAssignmentBlocker(id, destination, row.Role);
         }
 
         public bool ScheduleEmployeeTransfer(string id, string destination)
         {
-            string why = EmployeeTransferBlocker(id, destination);
-            if (why != null) return Fail(why + "。");
             var row = FindEmployee(id);
-            row.Person.TransferShopId = destination;
-            row.Person.TransferDay = Clock.Today.TotalDays + 1;
-            Say($"{row.Person.Name}今天仍在{ShopTitle(row.Shop)}，明天调到{ShopTitle(ShopAt(destination))}，岗位不变。");
-            return true;
+            return row != null && ArrangeEmployeeWork(id, destination, row.Role);
         }
 
         public void CancelEmployeeTransfer(string id)
@@ -141,37 +134,26 @@ namespace PCShopSell.Core.Session
             var row = FindEmployee(id);
             if (row == null) return;
             row.Person.TransferShopId = null;
+            row.Person.TransferRole = -1;
             row.Person.TransferDay = -1;
         }
 
-        private void ApplyEmployeeTransfers(GameDate today)
+        private void ApplyEmployeeTransfers(PCShopSell.Core.Time.GameDate today)
         {
             foreach (var row in Employees.ToList())
             {
                 var e = row.Person;
                 if (string.IsNullOrEmpty(e.TransferShopId) || e.TransferDay > today.TotalDays) continue;
                 var dest = ShopAt(e.TransferShopId);
-                if (dest == null || EmployeeAt(dest, row.Role) != null || EmployeeTrip(e.Id) != null)
+                var role = PlannedEmployeeRole(row);
+                if (dest == null || EmployeeAt(dest, role) != null || _employeeTrips.Any(t => t.EmployeeId == e.Id))
                 {
-                    Say($"{e.Name}调店未生效：目的店岗位已占用、店铺已退租或仍在出差。已取消安排，请重新选择。");
+                    Say($"{e.Name}明日工作安排未生效：岗位被占、店铺已退租或本趟进货未结束。已取消，请重新安排。");
                     CancelEmployeeTransfer(e.Id);
                     continue;
                 }
-                bool trained = row.Shop.EmployeeTrained;
-                PutEmployee(row.Shop, row.Role, null);
-                PutEmployee(dest, row.Role, e);
-                if (row.Role == EmployeeRole.Cashier)
-                {
-                    row.Shop.EmployeeTrained = false;
-                    dest.EmployeeTrained = trained;
-                    dest.Sim.Settings.EmployeeCheckoutMinutes = e.CheckoutMinutes;
-                    if (trained) dest.AutoBuild = row.Shop.AutoBuild;
-                }
-                if (row.Role == EmployeeRole.Assembler) dest.AutoBuild = row.Shop.AutoBuild;
-                if (row.Role != EmployeeRole.Buyer && row.Shop.Assembler == null && !row.Shop.EmployeeTrained)
-                    foreach (var order in row.Shop.Sim.Orders) order.EmployeeMinutesLeft = 0;
-                Say($"{e.Name}已调到{ShopTitle(dest)}，继续担任{RoleName(row.Role)}。");
-                e.TransferShopId = null; e.TransferDay = -1;
+                MoveEmployeeWork(row, dest, role);
+                Say($"{e.Name}已到{ShopTitle(dest)}做{RoleName(role)}。");
             }
         }
 
@@ -190,6 +172,12 @@ namespace PCShopSell.Core.Session
             var row = FindEmployee(id);
             if (row == null || IsGameOver) return false;
             if (_employeeTrips.Any(t => t.EmployeeId == id)) return Fail("员工或货物还在路上，等本次进货结束再辞退。");
+            if (row.Role == EmployeeRole.Unassigned)
+            {
+                _idleEmployees.Remove(row.Person);
+                Say(row.Person.Name + "离职了。");
+                return true;
+            }
             WithShop(row.Shop, () =>
             {
                 if (row.Role == EmployeeRole.Cashier) Fire();
@@ -252,7 +240,7 @@ namespace PCShopSell.Core.Session
                 var path = Pathfinder.FindPath(City.Map, node, stall.NodeId);
                 if (!path.Found) { q.Error = "去不了该档口"; return q; }
                 route += path.Distance; node = stall.NodeId;
-                buyMinutes += 2;
+                buyMinutes += Math.Max(1, row.Person.PurchaseMinutes);
                 q.Goods += StallPrice(stall, part) * item.Count;
                 space += Stock.SpaceOf(part, true, item.Count);
                 q.Lines.Add((stall, part, item.Count));

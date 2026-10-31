@@ -11,52 +11,76 @@ namespace PCShopSell.Game.UI
     {
         public void OpenEmployeesPanel()
         {
-            OpenWindow("员工管理", 1120, 860, w =>
+            OpenWindow("员工管理", 1120, 900, w =>
             {
                 var rows = S.Employees;
                 Line(w.Content, $"员工 {rows.Count} 人 · 每日工资合计 ¥{rows.Sum(x => x.Person.DailyWageYuan):N0}", 21, Ui.Accent);
-                Para(w.Content, "每家店可安排收银、装机、进货各一人。今天安排调店，明天才到新店；今天仍在原店工作。", 17, Ui.Dim);
+                Para(w.Content, "每个人都能做收银、装机或进货。先聘用，再安排岗位和门店；同店换岗今天生效，跨店明天生效。", 17, Ui.Dim);
                 var bar = Ui.Row(w.Content, 40);
                 Ui.Size(Ui.Button(bar, "查看车辆与占用", OpenFleetPanel, 17), 240);
                 Ui.Size(Ui.Button(bar, "在当前店招人", () => { w.Close(); OpenDock(); DebugSelectTab(6); }, 17, Ui.ButtonBg, S.InPlayerShop), 220);
-                if (rows.Count == 0) Para(w.Content, "还没有员工。到自己的店里打开“招人”，贴招聘启事，次日 9:00 面试时选择岗位。", 20);
-                var list = Ui.Scroll(w.Content, 600);
+                if (rows.Count == 0) Para(w.Content, "还没有员工。到自己的店里打开“招人”，聘用后选择工作安排。", 20);
+                var list = Ui.Scroll(w.Content, 640);
                 foreach (var assignment in rows)
                 {
                     var row = assignment;
                     var e = row.Person;
-                    string trained = row.Role == EmployeeRole.Cashier && row.Shop.EmployeeTrained ? "（已培训，可兼装机）" : "";
-                    Line(list, $"<b>{e.Name}</b> · {GameSession.RoleName(row.Role)}{trained} · 日薪 {e.DailyWage}", 19, Ui.Accent);
-                    Line(list, $"今天：{S.ShopTitle(row.Shop)}（{row.Shop.Place.Name}） · {S.EmployeeStatus(row)} · 班次 {Ui.Hm(e.ShiftStart)}–{Ui.Hm(e.ShiftEnd)}", 17);
+                    Line(list, $"<b>{e.Name}</b> · 日薪 {e.DailyWage}", 19, Ui.Accent);
+                    Line(list, GameSession.EmployeeAbilities(e) + "（越少越熟练）", 15, Ui.Dim);
+                    string current = row.Shop == null ? "待安排工作" : $"{S.ShopTitle(row.Shop)}（{row.Shop.Place.Name}） · {GameSession.RoleName(row.Role)}";
+                    Line(list, $"今天：{current} · {S.EmployeeStatus(row)} · 班次 {Ui.Hm(e.ShiftStart)}–{Ui.Hm(e.ShiftEnd)}", 17);
                     var destination = S.ShopAt(e.TransferShopId);
-                    Line(list, destination == null ? "明天：仍在本店" : $"明天：调到 {S.ShopTitle(destination)}（{destination.Place.Name}）", 17, destination == null ? Ui.Dim : Ui.Good);
+                    Line(list, destination == null ? "明天：保持当前安排" : $"明天：{S.ShopTitle(destination)}（{destination.Place.Name}） · {GameSession.RoleName(S.PlannedEmployeeRole(row))}", 17, destination == null ? Ui.Dim : Ui.Good);
                     var actions = Ui.Row(list, 40);
-                    Ui.Size(Ui.Button(actions, "安排明天调店", () => OpenEmployeeTransfer(row, w), 16), 170);
-                    if (destination != null) Ui.Size(Ui.Button(actions, "取消调店", () => { S.CancelEmployeeTransfer(e.Id); w.Rebuild(); }, 16), 130);
+                    Ui.Size(Ui.Button(actions, "安排工作", () => OpenEmployeeWork(e.Id, w), 17, Ui.ButtonHot), 150);
+                    if (destination != null) Ui.Size(Ui.Button(actions, "取消明日安排", () => { S.CancelEmployeeTransfer(e.Id); w.Rebuild(); }, 16), 150);
                     Ui.Size(Ui.Button(actions, "调整班次", () => { S.CycleEmployeeShift(e.Id); w.Rebuild(); }, 16), 140);
                     if (row.Role == EmployeeRole.Buyer)
                         Ui.Size(Ui.Button(actions, "安排进货", () => OpenEmployeePurchase(e.Id, w), 17, Ui.ButtonHot), 150);
-                    Ui.Size(Ui.Button(actions, "辞退…", () => ConfirmAction("辞退员工", $"辞退{e.Name}，同时取消未生效的调店安排。正在进货时需要先等人和货回店。", "确认辞退", () => { S.DismissEmployee(e.Id); w.Rebuild(); }), 16, Ui.Warn), 110);
+                    Ui.Size(Ui.Button(actions, "辞退…", () => ConfirmAction("辞退员工", $"辞退{e.Name}，同时取消未生效的安排。正在进货时需要先等人和货回店。", "确认辞退", () => { S.DismissEmployee(e.Id); w.Rebuild(); }), 16, Ui.Warn), 110);
                     if (row.Role == EmployeeRole.Buyer && !string.IsNullOrEmpty(e.LastPurchaseNote)) Para(list, e.LastPurchaseNote, 15, Ui.Dim);
                 }
             });
         }
 
-        private void OpenEmployeeTransfer(EmployeeAssignment row, Window parent)
+        public void OpenEmployeeWork(string employeeId, Window parent = null)
         {
-            OpenWindow("安排明天调店 · " + row.Person.Name, 740, 600, w =>
+            var row = S.FindEmployee(employeeId);
+            if (row == null) return;
+            EmployeeRole role = row.Role == EmployeeRole.Unassigned ? EmployeeRole.Cashier : row.Role;
+            string destination = (row.Shop ?? S.CurrentShop)?.Place.Id;
+            OpenWindow("安排工作 · " + row.Person.Name, 940, 660, w =>
             {
-                Para(w.Content, $"岗位：{GameSession.RoleName(row.Role)}。今天仍在{S.ShopTitle(row.Shop)}，明天上班去你选的新店，工资、班次和培训保留。", 18);
-                foreach (var shop in S.MyShops)
+                Line(w.Content, GameSession.EmployeeAbilities(row.Person), 17, Ui.Accent);
+                Para(w.Content, "不擅长也可以安排，效率按员工能力计算。换岗位不自动培训，也不改变工资。", 17, Ui.Dim);
+                Line(w.Content, "1. 做什么工作", 20);
+                var roles = Ui.Row(w.Content, 44);
+                foreach (EmployeeRole option in Enum.GetValues(typeof(EmployeeRole)))
                 {
-                    var dest = shop;
-                    string blocker = S.EmployeeTransferBlocker(row.Person.Id, dest.Place.Id);
-                    string label = $"{S.ShopTitle(dest)}（{dest.Place.Name}）\n" + (blocker ?? "安排明天到这里上班");
-                    Ui.Size(Ui.Button(w.Content, label, () =>
-                    {
-                        if (S.ScheduleEmployeeTransfer(row.Person.Id, dest.Place.Id)) { w.Close(); parent.Rebuild(); }
-                    }, 17, Ui.ButtonHot, blocker == null), -1, 64);
+                    var choice = option;
+                    Ui.Size(Ui.Button(roles, GameSession.RoleName(choice), () => { role = choice; w.Rebuild(); }, 18, role == choice ? Ui.ButtonHot : Ui.ButtonBg), -1, -1, 1);
                 }
+                if (role != EmployeeRole.Unassigned)
+                {
+                    Line(w.Content, "2. 在哪家店工作", 20);
+                    var shops = Ui.Scroll(w.Content, 210);
+                    foreach (var shop in S.MyShops)
+                    {
+                        string target = shop.Place.Id;
+                        Ui.Size(Ui.Button(shops, $"{S.ShopTitle(shop)}（{shop.Place.Name}）", () => { destination = target; w.Rebuild(); }, 18, destination == target ? Ui.ButtonHot : Ui.ButtonBg), -1, 44);
+                    }
+                }
+                bool tomorrow = role != EmployeeRole.Unassigned && row.Shop != null && row.Shop.Place.Id != destination;
+                Para(w.Content, role == EmployeeRole.Unassigned ? "暂不分配工作，仍按原日薪发工资；以后可重新安排。"
+                    : tomorrow ? $"跨店安排明天生效。今天仍在{S.ShopTitle(row.Shop)}做{GameSession.RoleName(row.Role)}，明天到新店做{GameSession.RoleName(role)}。"
+                    : "本次是首次安排或同店换岗，确认后今天起按新岗位工作。", 18, Ui.Accent);
+                string blocker = S.EmployeeAssignmentBlocker(employeeId, destination, role);
+                if (blocker != null) Para(w.Content, blocker, 16, Ui.Warn);
+                string label = role == EmployeeRole.Unassigned ? "确认设为待安排" : tomorrow ? "确认明天到新店做" + GameSession.RoleName(role) : "确认今天起做" + GameSession.RoleName(role);
+                Ui.Size(Ui.Button(w.Content, label, () =>
+                {
+                    if (S.ArrangeEmployeeWork(employeeId, destination, role)) { w.Close(); parent?.Rebuild(); RebuildDock(); }
+                }, 19, Ui.ButtonHot, blocker == null), -1, 48);
             });
         }
 

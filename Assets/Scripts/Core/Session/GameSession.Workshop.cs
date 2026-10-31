@@ -25,6 +25,7 @@ namespace PCShopSell.Core.Session
             if (!Ledger.TryDebit(Clock.Today, "培训", Money.FromYuan(1200), "店员装机培训")) return Fail("培训需要 ¥1,200。");
             Employee.DailyWageYuan += 60;
             _focus.EmployeeTrained = true;
+            Employee.AssemblyTrained = true;
             _focus.AutoBuild = true;
             Say("培训完成：店员可以装机，日薪增加 ¥60。无排队顾客时优先赶最早到期的订单。");
             return true;
@@ -36,7 +37,7 @@ namespace PCShopSell.Core.Session
             Employee worker = Assembler != null && Assembler.OnDuty(now) ? Assembler : EmployeeTrained && Employee.OnDuty(now) ? Employee : null;
             if (worker == null || !AutoBuildEnabled) return;
             bool dedicated = worker == Assembler && Employee != null && Employee.OnDuty(now);
-            int workMinutes = Math.Max(45, 90 - worker.BuildsCompleted / 2);
+            int workMinutes = AssemblyMinutesOf(worker);
             var order = PlayerShop.Orders.Where(o => o.Id != _manualBuildId && o.EmployeeMinutesLeft > 0).FirstOrDefault();
             if (order == null)
             {

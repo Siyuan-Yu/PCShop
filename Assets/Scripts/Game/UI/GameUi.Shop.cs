@@ -544,7 +544,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildStaff()
         {
-            Line(C, "本店可雇收银员、装机员、进货员各一位；工资按日结算。跨店调动明天生效。", 16, Ui.Dim);
+            Line(C, "先聘用，再安排工作。岗位可换，跨店次日生效。", 16, Ui.Dim);
             Ui.Size(Ui.Button(C, "员工管理（全部店铺 · 调店 / 安排进货）", OpenEmployeesPanel, 17, Ui.ButtonHot), -1, 42);
             if (S.Employee != null)
             {
@@ -576,7 +576,6 @@ namespace PCShopSell.Game.UI
                 Line(C, $"进货员 {buyer.Name} · 日薪 {buyer.DailyWage}", 17);
                 Ui.Size(Ui.Button(C, "安排进货（清单 / 预算 / 车辆）", () => OpenEmployeePurchase(buyer.Id), 17, Ui.ButtonHot), -1, 40);
             }
-            if (S.Employee != null && S.Assembler != null && S.CurrentShop.Buyer != null) return;
             if (S.Candidates.Count > 0)
             {
                 Line(C, "来应聘的人：", 19);
@@ -584,17 +583,16 @@ namespace PCShopSell.Game.UI
                 {
                     int idx = i;
                     Employee c = S.Candidates[i];
-                    RectTransform row = Ui.Row(C, 50);
-                    Ui.Size(Ui.Label(row, $"{c.Name}：{c.Description}\n<size=14>日薪 {c.DailyWage} · 结账每单 {c.CheckoutMinutes} 分钟</size>", 16), 300);
-                    Ui.Size(Ui.Button(row, "收银", () =>
+                    RectTransform row = Ui.Row(C, 82);
+                    Ui.Size(Ui.Label(row, $"{c.Name} · 日薪 {c.DailyWage}\n<size=14>{c.Description}\n{GameSession.EmployeeAbilities(c)}</size>", 16), -1, -1, 1);
+                    Ui.Size(Ui.Button(row, "聘用并安排工作", () =>
                     {
-                        S.Hire(idx);
+                        var employee = S.RecruitEmployee(idx);
                         RebuildDock();
-                    }, 16, Ui.ButtonHot, S.Employee == null), 80);
-                    Ui.Size(Ui.Button(row, "装机", () => { S.HireAssembler(idx); RebuildDock(); }, 16, Ui.ButtonBg, S.Assembler == null), 80);
-                    Ui.Size(Ui.Button(row, "进货", () => { S.HireBuyer(idx); RebuildDock(); }, 16, Ui.ButtonBg, S.CurrentShop.Buyer == null), 80);
+                        if (employee != null) OpenEmployeeWork(employee.Id);
+                    }, 17, Ui.ButtonHot), 180);
                 }
-                Line(C, "收银：值守收款；装机：培训 ¥1,200、日薪 +¥60；进货：按你设置的清单外出采购。", 14, Ui.Dim);
+                Line(C, "岗位由你安排，之后可在“员工管理”更换；待安排员工也按日发薪。", 14, Ui.Dim);
                 return;
             }
             if (S.JobAdDay >= 0)

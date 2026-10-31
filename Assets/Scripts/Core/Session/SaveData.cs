@@ -30,6 +30,7 @@ namespace PCShopSell.Core.Session
         public bool hasBuyer;
         public SaveEmployee buyer;
         public EmployeePurchaseTrip[] employeeTrips;
+        public SaveEmployee[] idleEmployees;
         public bool tricycleImpounded;
         public SaveStockLine[] cargo;
 
@@ -298,6 +299,8 @@ namespace PCShopSell.Core.Session
     {
         public string id, transferShopId, lastPurchaseNote;
         public int transferDay = -1;
+        public bool hasTransferRole, hasWorkSkills, assemblyTrained;
+        public int transferRole, assemblyMinutes, purchaseMinutes;
         public EmployeePurchasePlan purchasePlan;
         public string name;
         public long wage;

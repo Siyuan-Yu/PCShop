@@ -71,6 +71,7 @@ namespace PCShopSell.Core.Session
                 hasBuyer = _focus.Buyer != null,
                 buyer = _focus.Buyer != null ? ToSave(_focus.Buyer) : null,
                 employeeTrips = _employeeTrips.Select(t => t.Copy()).ToArray(),
+                idleEmployees = _idleEmployees.Select(ToSave).ToArray(),
                 cargo = Lines(Cargo),
 
                 hunger = Player.Hunger,
@@ -211,7 +212,10 @@ namespace PCShopSell.Core.Session
             Employee = d.hasEmployee && d.employee != null ? FromSave(d.employee) : null;
             if (Employee != null) PlayerShop.Settings.EmployeeCheckoutMinutes = Employee.CheckoutMinutes;
             Assembler = !d.hasAssembler || d.assembler == null ? null : FromSave(d.assembler);
+            if (Assembler != null && !d.assembler.hasWorkSkills) Assembler.AssemblyTrained = true;
             _focus.Buyer = d.hasBuyer && d.buyer != null ? FromSave(d.buyer) : null;
+            _idleEmployees.Clear();
+            _idleEmployees.AddRange((d.idleEmployees ?? Array.Empty<SaveEmployee>()).Select(FromSave));
             _employeeTrips.Clear();
             _employeeTrips.AddRange((d.employeeTrips ?? Array.Empty<EmployeePurchaseTrip>()).Select(t => t.Copy()));
             EverHired = d.everHired;
@@ -258,6 +262,8 @@ namespace PCShopSell.Core.Session
         private static SaveEmployee ToSave(Employee e) => new SaveEmployee
         {
             id = e.Id, transferShopId = e.TransferShopId, transferDay = e.TransferDay,
+            hasTransferRole = e.TransferRole >= 0, transferRole = e.TransferRole,
+            hasWorkSkills = true, assemblyMinutes = e.AssemblyMinutes, purchaseMinutes = e.PurchaseMinutes, assemblyTrained = e.AssemblyTrained,
             purchasePlan = e.PurchasePlan?.Copy(), lastPurchaseNote = e.LastPurchaseNote,
             name = e.Name, wage = e.DailyWageYuan, checkoutMinutes = e.CheckoutMinutes, description = e.Description, shiftStart = e.ShiftStart, shiftEnd = e.ShiftEnd, buildsCompleted = e.BuildsCompleted,
         };
@@ -265,6 +271,9 @@ namespace PCShopSell.Core.Session
         private static Employee FromSave(SaveEmployee e) => new Employee
         {
             Id = string.IsNullOrEmpty(e.id) ? Guid.NewGuid().ToString("N") : e.id, TransferShopId = e.transferShopId, TransferDay = e.transferDay,
+            TransferRole = e.hasTransferRole ? e.transferRole : -1,
+            AssemblyMinutes = e.hasWorkSkills ? Math.Max(45, e.assemblyMinutes) : 90,
+            PurchaseMinutes = e.hasWorkSkills ? Math.Max(1, e.purchaseMinutes) : 2, AssemblyTrained = e.assemblyTrained,
             PurchasePlan = e.purchasePlan?.Copy() ?? new EmployeePurchasePlan(), LastPurchaseNote = e.lastPurchaseNote,
             Name = e.name, DailyWageYuan = e.wage, CheckoutMinutes = e.checkoutMinutes, Description = e.description,
             ShiftStart = e.shiftEnd > e.shiftStart ? e.shiftStart : DutyStartMinute,

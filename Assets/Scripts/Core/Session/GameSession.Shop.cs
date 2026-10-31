@@ -12,6 +12,9 @@ namespace PCShopSell.Core.Session
         public string Id = Guid.NewGuid().ToString("N");
         public string TransferShopId;
         public int TransferDay = -1;
+        public int TransferRole = -1;
+        public int AssemblyMinutes = 90, PurchaseMinutes = 2;
+        public bool AssemblyTrained;
         public EmployeePurchasePlan PurchasePlan = new EmployeePurchasePlan();
         public string LastPurchaseNote;
         public string Name;
@@ -147,7 +150,7 @@ namespace PCShopSell.Core.Session
             EverHired = true;
             PlayerShop.Settings.EmployeeCheckoutMinutes = Employee.CheckoutMinutes;
             _candidates.Clear();
-            Show("雇到人了", $"{Employee.Name} 每天 9:00–21:00 看店（只会收银，不会装机），日薪 {Employee.DailyWage}，每天结算。\n他在班就持续收银，你在店内装机或外出都不影响。");
+            Show("雇到人了", $"{Employee.Name} 每天 9:00–21:00 在本店收银（可在员工管理重新安排岗位），日薪 {Employee.DailyWage}，每天结算。\n他在班就持续收银，你在店内装机或外出都不影响。");
             return true;
         }
 
@@ -156,6 +159,7 @@ namespace PCShopSell.Core.Session
             if (!InPlayerShop || Assembler != null || index < 0 || index >= _candidates.Count) return false;
             if (!Ledger.TryDebit(Clock.Today, "培训", Money.FromYuan(1200), "装机员入职培训")) return Fail("入职培训需要 ¥1,200。");
             Assembler = _candidates[index]; Assembler.DailyWageYuan += 60;
+            Assembler.AssemblyTrained = true;
             EverHired = true; _candidates.Clear(); _focus.AutoBuild = true;
             Say($"{Assembler.Name}入职装机岗位，日薪 {Assembler.DailyWage}。可与收银员同时工作。");
             return true;
@@ -202,9 +206,11 @@ namespace PCShopSell.Core.Session
                 {
                     Name = Surnames[Random.Next(0, Surnames.Length)] + GivenNames[Random.Next(0, GivenNames.Length)],
                     CheckoutMinutes = fast ? 2 : 4,
+                    AssemblyMinutes = Random.Next(70, 131),
+                    PurchaseMinutes = Random.Next(2, 7),
                     DailyWageYuan = fast ? Random.Next(150, 181) : Random.Next(100, 131),
                 };
-                e.Description = fast ? "手脚麻利，干过收银" : "老实，但动作慢";
+                e.Description = fast ? "有收银经验，其他工作也愿意学" : "踏实肯干，做事比较仔细";
                 _candidates.Add(e);
             }
             Show("有人来应聘", $"{_candidates[0].Name}（{_candidates[0].Description}，日薪 ¥{_candidates[0].DailyWageYuan}）\n" +
@@ -213,6 +219,7 @@ namespace PCShopSell.Core.Session
 
         private void PayWages(GameDate day)
         {
+            foreach (var e in _idleEmployees) Ledger.ForceDebit(day, "工资", e.DailyWage, e.Name + "（待安排）");
             foreach (OwnedShop s in _shops)
             {
                 if (s.Employee != null) Ledger.ForceDebit(day, "工资", s.Employee.DailyWage, s.Employee.Name);
