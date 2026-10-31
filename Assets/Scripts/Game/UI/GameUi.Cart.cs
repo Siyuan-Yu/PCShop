@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
@@ -67,6 +67,8 @@ namespace PCShopSell.Game.UI
         private bool _down;
         private float _held, _next;
         private int _count;
+        private int _releasedFrame = -1;
+        public int PendingCount => _count;
 
         private void Awake()
         {
@@ -84,10 +86,12 @@ namespace PCShopSell.Game.UI
             Refresh();
         }
 
-        private void Update()
+        private void Update() => AdvanceHold(Time.unscaledDeltaTime);
+
+        public void AdvanceHold(float seconds)
         {
             if (!_down) return;
-            _held += Time.unscaledDeltaTime;
+            _held += Mathf.Max(0, seconds);
             while (_held >= _next && _count < Max)
             {
                 _count++;
@@ -102,8 +106,15 @@ namespace PCShopSell.Game.UI
             _down = false;
             int n = _count;
             _count = 0;
+            _releasedFrame = Time.frameCount;
             Commit?.Invoke(n);
         }
+
+        public void ClickOnce()
+        {
+            if (_releasedFrame != Time.frameCount && (_button == null || _button.interactable)) Commit?.Invoke(1);
+        }
+        private void OnDisable() { _down = false; _count = 0; }
 
         public void OnBeginDrag(PointerEventData e) { }
 
@@ -131,8 +142,8 @@ namespace PCShopSell.Game.UI
                 commit(Math.Min(n, max));
                 w.Rebuild();
             };
-            b.Tip($"点一下：1 {unit}；长按连续增加；点“数量”可直接指定或全选。");
-            Ui.Size(Ui.Button(parent, "数量", () => OpenAmountPicker(text, max, unit, n => { commit(n); w.Rebuild(); }), 13, Ui.ButtonBg, enabled && max > 0), 50);
+            b.onClick.AddListener(hold.ClickOnce);
+            b.Tip($"点一下：1 {unit}；长按连续增加，松开应用，无需输入数量。");
         }
 
         private static readonly Color CartColumn = new Color(0.12f, 0.15f, 0.18f);
@@ -141,16 +152,7 @@ namespace PCShopSell.Game.UI
         /// <summary>商品行右边的“加入购物车”按钮；showCount 时前面写购物车里已经有几件。</summary>
         private void CartAddButton(Window w, Transform row, string key, Func<bool> add, string label, float width, bool enabled = true, bool showCount = true)
         {
-            if (showCount)
-            {
-                double n = S.CartAmount(key);
-                Ui.Size(Ui.Label(row, n > 0 ? $"购物车 ×{n:0}" : "", 14, TextAnchor.MiddleRight, Ui.Accent), 90);
-            }
-            Ui.Size(Ui.Button(row, label, () =>
-            {
-                add();
-                w.Rebuild();
-            }, 16, Ui.ButtonHot, enabled), width);
+            ShopQuantity(w, row, key, add, enabled);
         }
 
         /// <summary>
@@ -161,7 +163,7 @@ namespace PCShopSell.Game.UI
         {
             RectTransform head = Ui.Row(parent, 34, 8);
             int kinds = S.Cart.Count;
-            Ui.Size(Ui.Label(head, kinds == 0 ? "<b>购物车</b>　还是空的，在上面点“加入购物车”"
+            Ui.Size(Ui.Label(head, kinds == 0 ? "<b>购物车</b>　还是空的，在商品旁点“+”选择数量"
                 : $"<b>购物车</b>　{kinds} 样 · 共 {S.CartKg:0.##} 千克", 18, TextAnchor.MiddleLeft, Ui.Accent), -1, -1, 1);
             if (kinds == 0) return;
             Ui.Size(Ui.Button(head, "清空", () => { S.ClearCart(); w.Rebuild(); }, 15, Ui.ButtonBg), 70);

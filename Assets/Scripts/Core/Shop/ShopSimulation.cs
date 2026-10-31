@@ -255,7 +255,7 @@ namespace PCShopSell.Core.Shop
     /// 等太久、付不了钱或嫌贵就离开，拿下的货放回货架。
     /// 装机顾客下订单后离开，由玩家装好交付。没人值守时关门。
     /// </summary>
-    public sealed class ShopSimulation : IDisposable
+    public sealed partial class ShopSimulation : IDisposable
     {
         /// <summary>知名度涨幅：每笔散件成交、每单整机交付。数值偏小，让知名度要经营大半年才满。</summary>
         public const double SaleReputationGain = 0.012;

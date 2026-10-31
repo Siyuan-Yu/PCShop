@@ -3,6 +3,8 @@
 电脑城创业故事：从商业街最偏的一间小电脑店起家，手装机赚第一桶金，靠行情、人脉和签约主播做大，最后建成自己的电脑乐园。3D 低多边形（固定斜俯视相机）模拟经营游戏（世界层 + 店内层 + 面板层 + 手操层），目标平台 Steam。
 
 ## 文档
+
+- [`docs/22-price-tags-quantities-and-sleep.md`](docs/22-price-tags-quantities-and-sleep.md)：价签加减、长按购物数量、次日自动到岗、自选起床与8小时睡眠；547项回归，无新增截图
 - [`docs/21-cart-default-backpack.md`](docs/21-cart-default-backpack.md)：购物默认先放背包，超重再叫车；背包栏在前
 - [`docs/20-unified-clock-and-kilograms.md`](docs/20-unified-clock-and-kilograms.md)：室内/街上走停统一时钟、全游戏重量统一千克、旧档等量转换
 - [`docs/19-fridge-tiers.md`](docs/19-fridge-tiers.md)：四档冰箱、¥1,299–7,999、按型号累加容量及旧档保留

@@ -118,7 +118,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Label(row, $"{price}", 18, TextAnchor.MiddleLeft, Ui.Good), 84);
                 int left = S.StallRemaining(p, pd) - (int)S.CartAmount("part:" + pd.Id);
                 Ui.Size(Ui.Label(row, $"余 {left}", 14, TextAnchor.MiddleLeft, left == 0 ? Ui.Warn : Ui.Dim), 52);
-                foreach (int n in new[] { 1, 5 })
+                foreach (int n in new[] { 1 })
                 {
                     int count = n;
                     CartAddButton(w, row, "part:" + pd.Id, () => S.CartAddStall(p, pd, count), "+" + count, 58, open && left >= count, n == 1);

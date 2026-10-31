@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Game;
@@ -27,6 +27,8 @@ namespace PCShopSell.EditorTools
             ClickGuideButton("在这里打工 · 农贸市场早班 · ¥145/天");
             ClickGuideButton("签一周合同（明天开始）");
             Check(s.HasWorkContract && s.WorkContract.StartDay == s.Clock.Today.TotalDays + 1, "店内按钮签一周，次日开始，无需找人聊天");
+            Check(!ActiveButtons().Any(b => ButtonText(b).Contains("开始今天的工作")), "签约当天没有手动开始工作按钮");
+            Check(_game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Text>()).Any(t => t.text.Contains("明天再来工作")), "签约当天明确提示明天再来工作");
             _game.Ui.CloseAllWindows();
             s.Clock.Restore(new GameDate(s.WorkContract.StartDay), s.WorkContract.ShiftStart);
             Teleport(s, farm.Id); _game.Ui.OnEnteredPlace(farm); Frame(0);
@@ -66,7 +68,7 @@ namespace PCShopSell.EditorTools
             s.AdvanceClock(s.WorkMinutesLeft); Frame(0);
             Check(!s.IsWorking && s.WorkContract.EarnedYuan == 175 && s.WorkContract.HealthCost == 11 && s.WorkContract.MoodCost == 12, "夜班次日6点收工，工资和消耗使用本店参数");
             Teleport(s, s.Home.Id); _game.Ui.OpenBedWindow(); Frame(0);
-            ClickGuideButton("夜班补觉（最多 8 小时）");
+            ClickGuideButton("睡满 8 小时");
             Check(s.Clock.MinuteOfDay == 14 * 60, "夜班下班后能白天补觉，不被原白天不能睡规则卡住");
             _game.Ui.CloseAllWindows();
         }

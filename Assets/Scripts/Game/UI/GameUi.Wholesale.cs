@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -85,9 +85,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Label(row, $"{price}", 16, TextAnchor.MiddleLeft, Ui.Good), 90);
                 Ui.Size(Ui.Label(row, $"市价 {S.Market.PriceOf(p)}", 13, TextAnchor.MiddleLeft, Ui.Dim), 100);
                 Ui.Size(Ui.Label(row, $"店里有 {S.PlayerShop.Stock.CountAll(p)}", 13, TextAnchor.MiddleLeft, Ui.Dim), 90);
-                Ui.Size(Ui.Button(row, "-", () => { AddToCart(part, -1); w.Rebuild(); }, 18), 36);
-                Ui.Size(Ui.NumberInput(row, n, 0, 1000, v => { _cart[part.Id] = (int)v; w.RequestRebuild(); }), 65, 32);
-                Ui.Size(Ui.Button(row, "+", () => { AddToCart(part, 1); w.Rebuild(); }, 18), 36);
+                QuantityStepper(w, row, "wholesale_" + part.Id, n, 0, 1000, 1, value => _cart[part.Id] = (int)value);
             }
             RectTransform orow = Ui.Row(c, 46);
             string room = _onlineToHome ? "送家里不占店里仓位" : $"店里仓位还空 {S.PlayerShop.Stock.FreeSpace:0.#} 格";
@@ -114,13 +112,15 @@ namespace PCShopSell.Game.UI
                 + "哪样低于常备数的 40%，就自动下单补到常备数，第二天 10:00 送到店里。设成“关”就不自动补，全靠你自己进货。", 15, Ui.Dim);
             Para(c, $"自动下单后至少给你留 {S.EffectiveRestockReserve} 现金；店里仓位放不下的会少补。", 15, Ui.Dim);
 
-            RectTransform policy = Ui.Row(c, 38);
-            Ui.Size(Ui.Label(policy, "保留天数", 15), 75);
-            Ui.Size(Ui.NumberInput(policy, S.RestockReserveDays, 0, 365, v => { S.RestockReserveDays = (int)v; w.RequestRebuild(); }), 70, 36);
-            Ui.Size(Ui.Label(policy, "现金底线", 15), 75);
-            Ui.Size(Ui.NumberInput(policy, S.RestockReserveYuan, 0, 10000000, v => { S.RestockReserveYuan = (int)v; w.RequestRebuild(); }), 130, 36);
-            Ui.Size(Ui.Label(policy, "日预算(0不限)", 14), 115);
-            Ui.Size(Ui.NumberInput(policy, S.RestockDailyBudgetYuan, 0, 10000000, v => { S.RestockDailyBudgetYuan = (int)v; w.RequestRebuild(); }), 130, 36);
+            var policy = Ui.Row(c, 38);
+            Ui.Size(Ui.Label(policy, "保留天数", 15), 90);
+            QuantityStepper(w, policy, "reserveDays", S.RestockReserveDays, 0, 365, 1, v => S.RestockReserveDays = (int)v);
+            var reserve = Ui.Row(c, 38);
+            Ui.Size(Ui.Label(reserve, "现金底线", 15), 90);
+            QuantityStepper(w, reserve, "reserveCash", S.RestockReserveYuan, 0, 10000000, 100, v => S.RestockReserveYuan = (int)v, v => "¥" + v.ToString("0"));
+            var budget = Ui.Row(c, 38);
+            Ui.Size(Ui.Label(budget, "日预算", 15), 90);
+            QuantityStepper(w, budget, "dailyBudget", S.RestockDailyBudgetYuan, 0, 10000000, 100, v => S.RestockDailyBudgetYuan = (int)v, v => v == 0 ? "不限" : "¥" + v.ToString("0"));
             if (!string.IsNullOrEmpty(S.LastRestockNote)) Line(c, S.LastRestockNote, 14, Ui.Accent);
             RectTransform storeRow = Ui.Row(c, 40);
             Text storeText = Ui.Label(storeRow, "", 16);
@@ -147,40 +147,18 @@ namespace PCShopSell.Game.UI
             RectTransform head = Ui.Row(c, 26, 4);
             Ui.Size(Ui.Label(head, "配件", 14, TextAnchor.MiddleLeft, Ui.Dim), 420);
             Ui.Size(Ui.Label(head, "常备几件", 14, TextAnchor.MiddleCenter, Ui.Dim), 150);
-            RectTransform list = Ui.Scroll(c, 330);
+            RectTransform list = Ui.Scroll(c, 250);
             foreach (PartDef part in PartCatalog.All)
             {
                 PartDef p = part;
                 RectTransform row = Ui.Row(list, 40, 4);
                 Text name = Ui.Label(row, "", 15);
                 Ui.Size(name, 420);
-                Button minus = Ui.Button(row, "−", null, 18);
-                Text tgt = Ui.Label(row, "", 16, TextAnchor.MiddleCenter);
-                Button plus = Ui.Button(row, "+", null, 18);
-                Ui.Size(minus, 40);
-                Ui.Size(tgt, 60);
-                Ui.Size(plus, 40);
-
-                void Refresh()
-                {
-                    int have = S.PlayerShop.Stock.CountAll(p), pend = S.PendingOnlineCount(p.Id);
-                    string stock = have == 0 ? "<color=#D79780>店里有 0 件</color>" : $"店里有 {have} 件";
-                    name.text = $"<b>{p.Name}</b>　<size=13>{stock}{(pend > 0 ? $" · 路上 {pend}" : "")}</size>";
-                    int target = S.RestockTarget(p.Id);
-                    tgt.text = target == 0 ? "<color=#ABB5A8>关</color>" : target.ToString();
-                }
-
-                minus.onClick.AddListener(() =>
-                {
-                    S.SetRestockTarget(p.Id, S.RestockTarget(p.Id) - 2);
-                    Refresh();
-                });
-                plus.onClick.AddListener(() =>
-                {
-                    S.SetRestockTarget(p.Id, S.RestockTarget(p.Id) + 2);
-                    Refresh();
-                });
-                Refresh();
+                int have = S.PlayerShop.Stock.CountAll(p), pend = S.PendingOnlineCount(p.Id);
+                string stock = have == 0 ? "<color=#D79780>店里有 0 件</color>" : $"店里有 {have} 件";
+                name.text = $"<b>{p.Name}</b>　<size=13>{stock}{(pend > 0 ? $" · 路上 {pend}" : "")}</size>";
+                QuantityStepper(w, row, "restock_" + p.Id, S.RestockTarget(p.Id), 0, 1000, 1,
+                    value => S.SetRestockTarget(p.Id, (int)value), value => value == 0 ? "关" : value.ToString("0"));
             }
         }
     }

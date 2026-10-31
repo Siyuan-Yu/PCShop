@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -198,15 +198,6 @@ namespace PCShopSell.Game.UI
             DrawPart(pic, cat, loose.x, loose.y);
             return root;
         }
-        /// <summary>价签：米色小牌子，深色字。</summary>
-        private static void PriceTag(Transform parent, string text, float x0, float y0, float x1, float y1, int size = 15)
-        {
-            Image tag = Ui.Panel(parent, "Tag", TagPaper);
-            tag.rectTransform.Anchor(x0, y0, x1, y1);
-            Text t = Ui.Label(tag.transform, text, size, TextAnchor.MiddleCenter, TagInk);
-            t.rectTransform.Fill(2);
-        }
-
         // ---------- 货架 ----------
 
         /// <summary>走到货架前按 F：先选这个货架摆哪一类货；配件类是一座木货架（上层整盒、下层散件，入门 / 主流 / 高端各一格），杂货类是一张清单。</summary>
@@ -236,6 +227,7 @@ namespace PCShopSell.Game.UI
                     + (back > fill.Total ? $"　<color=#DDC18B>后仓还有 {back - fill.Total} 件没摆上（货架装满了）</color>" : ""), 16);
                 Line(w.Content, $"整店后仓 {st.UsedSpace:0.#}/{st.Capacity:0.#} 格，还剩 {st.FreeSpace:0.#} 格（所有货共用）", 15, Ui.Dim);
 
+                Para(w.Content, "在每件商品的价签旁点加减号调价，长按可加速；购买意愿随售价更新。同型号盒装和散件按包装溢价联动。", 15, Ui.Dim);
                 if (kind.IsParts) BuildPartShelfBody(w, kind, fill);
                 else BuildGoodsShelfBody(w, kind, fill);
                 Ui.Size(Ui.Button(w.Content, "关闭", w.Close, 20), -1, 46);
@@ -289,7 +281,7 @@ namespace PCShopSell.Game.UI
             var parts = PartCatalog.InCategory(cat).OrderBy(p => p.Tier).ToList();
 
             Image frame = Ui.Panel(w.Content, "Shelf", WoodDark);
-            Ui.Size(frame, -1, 540);
+            Ui.Size(frame, -1, 640);
             Ui.VList(frame.rectTransform, 0, 12);
 
             // 横梁招牌
@@ -302,47 +294,20 @@ namespace PCShopSell.Game.UI
             for (int board = 0; board < 2; board++)
             {
                 bool boxed = board == 0;
-                RectTransform row = Ui.Row(frame.transform, 205, 8);
+                RectTransform row = Ui.Row(frame.transform, 250, 8);
                 foreach (PartDef p in parts)
-                    BuildShelfSlot(row, p, boxed, shop, fill);
+                    BuildShelfSlot(w, row, p, boxed, shop, fill);
                 Ui.Size(Ui.Panel(frame.transform, "Plank", WoodLight), -1, 14);
                 Ui.Size(Ui.Panel(frame.transform, "Gap", WoodDark), -1, 8);
             }
 
-            RectTransform prices = Ui.Row(w.Content, 64, 8);
-            foreach (PartDef p in parts)
-            {
-                // 货架上没有的就不显示（价格在定价页里调）
-                if (fill.PartCount(p) > 0) ShelfPriceBox(w, prices, p, shop);
-                else Ui.Size(Ui.Rect(prices, "NoGoods"), 296, 64);
-            }
-        }
-        /// <summary>货架下面的调价：每件配件单独 −/+ 加价，“跟随”回到全局加价。改了马上生效，价签跟着变。</summary>
-        private void ShelfPriceBox(Window w, Transform row, PartDef p, ShopSimulation shop)
-        {
-            Image box = Ui.Panel(row, "Price", new Color(0.13f, 0.14f, 0.17f));
-            Ui.Size(box, 296, 64);
-            RectTransform inner = Ui.Row(box.transform, 64, 4);
-            inner.Fill(4);
-            bool own = shop.HasPartMarkup(p);
-            double m = shop.MarkupOf(p);
-            Text info = Ui.Label(inner, $"市价 {S.Market.PriceOf(p)}　<b>{m:0.00}×</b>{(own ? "" : "<size=12>（跟随）</size>")}\n<size=12><color=#ABB5A8>顾客愿买约 {ShopSettings.BuyChance(m) * 100:0}%</color></size>", 14);
-            Ui.Size(info, 150);
-            void Set(double? v)
-            {
-                shop.SetPartMarkup(p, v);
-                w.Rebuild();
-            }
-            Ui.Size(Ui.Button(inner, "−", () => Set(Mathf.Round((float)m * 20 - 1) / 20f), 20, Ui.ButtonBg, m > 0.9 + 1e-6), 34);
-            Ui.Size(Ui.Button(inner, "+", () => Set(Mathf.Round((float)m * 20 + 1) / 20f), 20, Ui.ButtonBg, m < 1.6 - 1e-6), 34);
-            Ui.Size(Ui.Button(inner, "跟随", () => Set(null), 13, Ui.ButtonBg, own), 54);
         }
 
-        private void BuildShelfSlot(Transform row, PartDef p, bool boxed, ShopSimulation shop, ShelfFill fill)
+        private void BuildShelfSlot(Window w, Transform row, PartDef p, bool boxed, ShopSimulation shop, ShelfFill fill)
         {
             int have = fill.PartCount(p, boxed);
             Image slot = Ui.Panel(row, "Slot", ShelfBack);
-            Ui.Size(slot, 296, 205);
+            Ui.Size(slot, 296, 250);
             RectTransform rt = slot.rectTransform;
             if (have == 0)
             {
@@ -353,12 +318,12 @@ namespace PCShopSell.Game.UI
 
             Color[] tierCol = { new Color(0.55f, 0.58f, 0.64f), new Color(0.2f, 0.7f, 0.65f), new Color(0.9f, 0.7f, 0.25f) };
             Chip(rt, tierCol[Mathf.Clamp(p.Tier, 0, 2)], 0, 0.975f, 1, 1);
-            Text name = Ui.Label(rt, $"<b>{PartCatalog.TierName(p.Tier)}</b>　<size=13>{p.Name}</size>", 15, TextAnchor.MiddleLeft, new Color(0.85f, 0.87f, 0.9f));
-            name.rectTransform.Anchor(0, 0.84f, 1, 1, 10, 0, 6, 0);
+            Text name = Ui.Label(rt, $"<b>{PartCatalog.TierName(p.Tier)}</b>　<size=13>{p.Name}</size>\n<size=12>共 {have} 件</size>", 15, TextAnchor.MiddleLeft, new Color(0.85f, 0.87f, 0.9f));
+            name.rectTransform.Anchor(0, 0.8f, 1, 1, 10, 0, 6, 0);
 
             // 货放在板子上：从板面往上一层层摆，大小按真实尺寸
-            Chip(rt, WoodLight, 0, 0.255f, 1, 0.272f);
-            RectTransform items = Ui.Rect(rt, "Items").Anchor(0, 0.272f, 1, 0.84f, 8, 0, 8, 0);
+            Chip(rt, WoodLight, 0, 0.32f, 1, 0.34f);
+            RectTransform items = Ui.Rect(rt, "Items").Anchor(0, 0.34f, 1, 0.8f, 8, 0, 8, 0);
             const float gx = 8, gy = 5, areaW = 280, areaH = 100;
             Vector2 cell = IconSize(p.Category, boxed);
             int cols = Mathf.Max(1, Mathf.FloorToInt((areaW + gx) / (cell.x + gx)));
@@ -379,13 +344,15 @@ namespace PCShopSell.Game.UI
                 more.rectTransform.Anchor(0.9f, 0.7f, 1, 1);
             }
 
-            string tag = $"<b>{shop.PriceOf(p, boxed)}</b>　共 {have} 件";
             // 标记：整盒（纸箱色）/ 散件（蓝灰色）
             Image mark = Ui.Panel(rt, "Mark", boxed ? CardboardColor : new Color(0.36f, 0.5f, 0.68f));
-            mark.rectTransform.Anchor(0.04f, 0.04f, 0.27f, 0.23f);
+            mark.rectTransform.Anchor(0.04f, 0.12f, 0.27f, 0.28f);
             Ui.Label(mark.transform, boxed ? "整盒" : "散件", 16, TextAnchor.MiddleCenter, boxed ? new Color(0.25f, 0.15f, 0.05f) : Color.white)
                 .rectTransform.Fill(2);
-            PriceTag(rt, tag, 0.29f, 0.04f, 0.96f, 0.23f, 16);
+            ShelfSaleTag(w, rt, p.Id + (boxed ? "_boxed" : "_loose"), shop.PriceOf(p, boxed).Yuan, shop.PartPriceRange(p, boxed),
+                ShopSettings.BuyChance(shop.MarkupOf(p)), shop.HasPartMarkup(p),
+                value => shop.SetPartSalePrice(p, boxed, value), () => shop.SetPartMarkup(p, null))
+                .Anchor(.29f, .04f, .96f, .29f);
         }
         // ---------- 整机展示台 ----------
 

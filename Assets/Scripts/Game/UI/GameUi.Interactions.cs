@@ -90,21 +90,5 @@ namespace PCShopSell.Game.UI
             if (S.BeginQuickShopEdit() && !_ctrl.BeginPlacement(true)) S.EndQuickShopEdit();
         }
 
-        private void OpenAmountPicker(string title, double max, string unit, Action<double> apply)
-        {
-            double amount = Math.Min(1, max);
-            OpenWindow(title + " · 数量", 520, 270, picker =>
-            {
-                Para(picker.Content, $"最多 {max:0.#} {unit}；输入数量后选择应用。", 17);
-                Ui.Size(Ui.TextInput(picker.Content, amount.ToString("0.#"), "数量", text =>
-                {
-                    if (double.TryParse(text, out double n) && !double.IsNaN(n) && !double.IsInfinity(n))
-                        amount = Math.Max(0, Math.Min(max, unit == "件" ? Math.Floor(n) : n));
-                }), -1, 42);
-                var actions = Ui.Row(picker.Content, 44);
-                Ui.Size(Ui.Button(actions, "全部", () => { picker.Close(); apply(max); }, 18), -1, -1, 1);
-                Ui.Size(Ui.Button(actions, "应用数量", () => { if (amount > 0) { picker.Close(); apply(amount); } }, 18, Ui.ButtonHot), -1, -1, 1);
-            });
-        }
     }
 }

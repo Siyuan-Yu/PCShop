@@ -174,10 +174,7 @@ namespace PCShopSell.Game.UI
                         details += $" · 库存 {worker.Shop.Sim.Stock.GoodsCount(offer.Id)}";
                     Ui.Size(Ui.Label(line, offer.Name + "\n<size=13>" + details + "</size>", 16), -1, -1, 1);
                     Ui.Size(Ui.Label(line, offer.Price + (offer.Kind == PurchaseGoodsKind.Rice ? "/袋" : offer.Kind == PurchaseGoodsKind.Ingredient ? "/份" : "/件"), 16), 130);
-                    Ui.Size(Ui.Button(line, "−", () => Set(count - 1), 18), 42);
-                    Ui.Size(Ui.NumberInput(line, count, 0, 100, v => Set((int)v)), 70, 36);
-                    Ui.Size(Ui.Button(line, "+", () => Set(count + 1), 18), 42);
-                    Ui.Size(Ui.Button(line, "+5", () => Set(count + 5), 16), 52);
+                    QuantityStepper(w, line, offer.Key, count, 0, 100, 1, value => Set((int)value));
                 }
                 Sync();
                 var summary = Ui.Row(w.Content, 32);

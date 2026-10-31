@@ -45,15 +45,14 @@ namespace PCShopSell.Game.UI
                 double m = shop.MarkupOfGoods(gid);
                 bool own = shop.HasGoodsMarkup(gid);
 
-                RectTransform row = Ui.Row(list, 56, 6);
+                RectTransform row = Ui.Row(list, 76, 6);
                 Image chip = Ui.Panel(row, "Chip", GoodsColor(gid));
                 Ui.Size(chip, 14, 40);
                 Ui.Size(Ui.Label(row, $"<b>{g.Name}</b>\n<size=13><color=#ABB5A8>进价 {g.Price}　每件 {ShelfPlanner.GoodsKg(gid):0.##} 千克</color></size>", 17), 200);
                 Ui.Size(Ui.Label(row, $"货架上 <b>{onShelf}</b> 件\n<size=13><color=#ABB5A8>后仓共 {inStock} 件" + (handy > 0 ? $"　手边 {handy}" : "") + "</color></size>", 16), 170);
-                Ui.Size(Ui.Label(row, $"售 <color=#A9C9A9>{shop.GoodsPriceOf(gid)}</color>\n<size=13><color=#ABB5A8>{m:0.00}×{(own ? "" : "（跟随）")}　愿买约 {ShopSettings.BuyChance(m) * shop.Settings.GoodsBuyFactor * 100:0}%</color></size>", 16), 190);
-                Ui.Size(Ui.Button(row, "−", () => { S.SetGoodsMarkup(gid, Mathf.Round((float)m * 20 - 1) / 20f); w.Rebuild(); }, 20, Ui.ButtonBg, m > 0.9 + 1e-6), 34);
-                Ui.Size(Ui.Button(row, "+", () => { S.SetGoodsMarkup(gid, Mathf.Round((float)m * 20 + 1) / 20f); w.Rebuild(); }, 20, Ui.ButtonBg, m < 1.6 - 1e-6), 34);
-                Ui.Size(Ui.Button(row, "跟随", () => { S.SetGoodsMarkup(gid, null); w.Rebuild(); }, 13, Ui.ButtonBg, own), 54);
+                Ui.Size(ShelfSaleTag(w, row, "goods_" + gid, shop.GoodsPriceOf(gid).Yuan, shop.GoodsPriceRange(gid),
+                    ShopSettings.BuyChance(m) * shop.Settings.GoodsBuyFactor, own,
+                    value => shop.SetGoodsSalePrice(gid, value), () => shop.SetGoodsMarkup(gid, null)), 195, 64);
                 Ui.Size(Ui.Button(row, "放进 1", () => { S.ListGoods(gid, 1); w.Rebuild(); }, 15, Ui.ButtonHot, handy > 0), 74);
                 Ui.Size(Ui.Button(row, "全放进", () => { S.ListGoods(gid, handy); w.Rebuild(); }, 15, Ui.ButtonBg, handy > 0), 70);
                 Ui.Size(Ui.Button(row, "收回 1", () => { S.UnlistGoods(gid, 1); w.Rebuild(); }, 15, Ui.ButtonBg, inStock > 0), 74);

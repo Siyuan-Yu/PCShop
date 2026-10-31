@@ -38,15 +38,8 @@ namespace PCShopSell.Game.UI
                 if (S.HasWorkContract)
                 {
                     BuildPlayerWorkSummary(w.Content, w);
-                    if (S.WorkPlace == p && !S.WorkContract.ReadyToPay)
-                    {
-                        bool can = S.CanStartPlayerWork;
-                        Ui.Size(Ui.Button(w.Content, "到岗，开始今天的工作", () =>
-                        {
-                            if (!S.StartPlayerWork()) return;
-                            CloseAllWindows(); S.Time.SetPaused(false); UpdateWorkScreen();
-                        }, 19, Ui.ButtonHot, can), -1, 46);
-                    }
+                    if (!S.WorkContract.ReadyToPay && S.Clock.Today.TotalDays < S.WorkContract.StartDay)
+                        Para(w.Content, "明天再来工作。排班开始后，进入签约店铺就会自动上班，不用再点开始。", 20, Ui.Accent);
                     return;
                 }
                 var offer = S.PlayerWorkFor(p);

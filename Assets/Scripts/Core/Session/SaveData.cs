@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace PCShopSell.Core.Session
 {
@@ -37,6 +37,7 @@ namespace PCShopSell.Core.Session
         public PlayerWorkContract playerWork;
         public int weightUnitsVersion;
         public double hunger, energy, health, sleepDebt;
+        public long[] sleepSpans;
         public bool hasDietStats;
         public double nutrition, mood;
         public int intelligence, charm, skill;

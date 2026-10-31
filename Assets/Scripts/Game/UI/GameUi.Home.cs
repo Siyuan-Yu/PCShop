@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
@@ -34,7 +34,7 @@ namespace PCShopSell.Game.UI
             }, true, true);
         }
 
-        public void OpenBedWindow() => OpenRoomWindow(S.HomeHas(FurnitureRole.Bed) ? "床" : "地铺", 700, 360, BuildBed);
+        public void OpenBedWindow() => OpenRoomWindow(S.HomeHas(FurnitureRole.Bed) ? "床" : "地铺", 760, 560, BuildBed);
 
         public void OpenWardrobeWindow() => OpenRoomWindow("衣柜", 700, 640, BuildWardrobe);
 
@@ -592,24 +592,26 @@ namespace PCShopSell.Game.UI
 
         public void OpenCookerWindow() => OpenRoomWindow("电饭锅", 760, 640, BuildCooker);
 
+        private int _wakeMinute = 8 * 60;
         private void BuildBed(Window w)
         {
             PlayerStats st = S.Player;
-            Line(w.Content, $"精力 {st.Energy:0}/{st.MaxEnergy:0}  欠觉 {st.SleepDebt:0.##} 小时  睡眠恢复 ×{S.HomeSleepQuality:0.##}", 18, Ui.Dim);
-            RectTransform row = Ui.Row(w.Content, 54);
-            Ui.Size(Ui.Button(row, S.NightWorkRest ? "夜班补觉（最多 8 小时）" : "睡到明早 8:00", () =>
-            {
-                if (S.Sleep()) Toast("新的一天。");
-                w.Rebuild();
-            }, 20, S.IsSleepTime ? Ui.ButtonHot : Ui.ButtonBg), 260);
-            Ui.Size(Ui.Button(row, "小睡 2 小时", () =>
-            {
-                S.Nap();
-                w.Rebuild();
-            }, 20), 200);
-            Line(w.Content, "凌晨 4 点还不睡会晕倒；睡不够 7 小时会欠觉，精力上限降低。", 16, Ui.Dim);
-            if (!S.HomeHas(FurnitureRole.Bed)) Line(w.Content, "屋里没有床，只能睡地上，恢复得慢。去家具城买，或者网购一张。", 16, Ui.Warn);
-            else Line(w.Content, "想换更好的床：去家具城买（当天带回），或者网购（2 天到），再在“我的”里摆放。", 16, Ui.Dim);
+            Line(w.Content, $"精力 {st.Energy:0}/{st.MaxEnergy:0}  欠觉 {st.SleepDebt:0.##} 小时", 18, Ui.Dim);
+            Line(w.Content, $"过去24小时已睡 {S.SleepHoursLast24:0.#}/8 小时；睡够8小时就算休息好。", 18);
+            Line(w.Content, "选择起床时间（24小时制）", 20, Ui.Accent);
+            var time = Ui.Row(w.Content, 50);
+            Ui.Size(Ui.Button(time, "−30分钟", () => { _wakeMinute = (_wakeMinute + 1410) % 1440; w.Rebuild(); }), 150);
+            Ui.Size(Ui.Label(time, $"{_wakeMinute / 60:00}:{_wakeMinute % 60:00}", 24, TextAnchor.MiddleCenter), 160);
+            Ui.Size(Ui.Button(time, "+30分钟", () => { _wakeMinute = (_wakeMinute + 30) % 1440; w.Rebuild(); }), 150);
+            int duration = (_wakeMinute - S.Clock.MinuteOfDay + 1440) % 1440;
+            string day = _wakeMinute <= S.Clock.MinuteOfDay ? "明天" : "今天";
+            Line(w.Content, $"{day} {_wakeMinute / 60:00}:{_wakeMinute % 60:00} 起床，睡 {duration / 60.0:0.##} 小时。", 18, Ui.Dim);
+            var row = Ui.Row(w.Content, 50);
+            Ui.Size(Ui.Button(row, "睡到选定时间", () => { S.SleepUntil(_wakeMinute); w.Rebuild(); }, 20, Ui.ButtonHot, S.IsSleepTime && duration > 0), 220);
+            Ui.Size(Ui.Button(row, "睡满 8 小时", () => { S.SleepEightHours(); w.Rebuild(); }, 20, Ui.ButtonHot, S.IsSleepTime), 200);
+            Ui.Size(Ui.Button(w.Content, "小睡 2 小时", () => { S.Nap(); w.Rebuild(); }, 20), -1, 44);
+            Para(w.Content, "凌晨4点前必须入睡，否则仍会晕倒；夜班保留白天补觉规则，起床不能耽误到岗。小睡也计入24小时的8小时目标。", 16, Ui.Dim);
+            if (!S.HomeHas(FurnitureRole.Bed)) Para(w.Content, "屋里没有床，只能睡地上；不足8小时的短睡恢复较慢。", 16, Ui.Warn);
         }
 
         private void BuildWardrobe(Window w)
@@ -914,11 +916,12 @@ namespace PCShopSell.Game.UI
                         break;
                     default:
                         RectTransform row = Ui.Row(list, 56);
-                        Ui.Size(Ui.Label(row, $"大米 {GameSession.RiceBagKg:0} 千克\n<size=14><color=#A8B0BA>也可以去农贸市场按千克买，更便宜。</color></size>", 18), 460);
+                        Ui.Size(Ui.Label(row, $"大米 {GameSession.RiceBagKg:0} 千克\n<size=14><color=#A8B0BA>也可以去农贸市场按千克买，更便宜。</color></size>", 18), -1, -1, 1);
                         Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Rice, "rice").ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 100);
+                        int count = OnlineQuantity(w, row, "rice");
                         Ui.Size(Ui.Button(row, "下单", () =>
                         {
-                            S.OrderOnline(ParcelKind.Rice, "rice");
+                            S.OrderOnline(ParcelKind.Rice, "rice", count);
                             w.Rebuild();
                         }, 17, Ui.ButtonHot), 90);
                         break;
@@ -930,13 +933,14 @@ namespace PCShopSell.Game.UI
         private void OnlineFurnitureRow(Window w, RectTransform list, FurnitureDef def)
         {
             RectTransform row = Ui.Row(list, 58);
-            Ui.Size(Ui.Label(row, $"{def.Name}\n<size=14><color=#A8B0BA>{def.Description}</color></size>", 18), 480);
+            Ui.Size(Ui.Label(row, $"{def.Name}\n<size=14><color=#A8B0BA>{def.Description}</color></size>", 18), -1, -1, 1);
             Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Furniture, def.Id).ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 100);
+            int count = OnlineQuantity(w, row, "furn:" + def.Id);
             int have = S.FurnitureInStock(def.Id);
             Ui.Size(Ui.Label(row, have > 0 ? $"背包 ×{have}" : "", 15, TextAnchor.MiddleLeft, Ui.Dim), 80);
             Ui.Size(Ui.Button(row, "下单", () =>
             {
-                S.OrderOnline(ParcelKind.Furniture, def.Id);
+                S.OrderOnline(ParcelKind.Furniture, def.Id, count);
                 w.Rebuild();
             }, 17, Ui.ButtonHot), 80);
         }
@@ -944,13 +948,14 @@ namespace PCShopSell.Game.UI
         private void OnlineGiftRow(Window w, RectTransform list, GiftDef g)
         {
             RectTransform row = Ui.Row(list, 58);
-            Ui.Size(Ui.Label(row, $"{g.Name}\n<size=14><color=#A8B0BA>{g.Description}</color></size>", 18), 480);
+            Ui.Size(Ui.Label(row, $"{g.Name}\n<size=14><color=#A8B0BA>{g.Description}</color></size>", 18), -1, -1, 1);
             Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Gift, g.Id).ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 100);
+            int count = OnlineQuantity(w, row, "gift:" + g.Id);
             int have = S.Backpack.GiftCount(g.Id);
             Ui.Size(Ui.Label(row, have > 0 ? $"背包 ×{have}" : "", 15, TextAnchor.MiddleLeft, Ui.Dim), 80);
             Ui.Size(Ui.Button(row, "下单", () =>
             {
-                S.OrderOnline(ParcelKind.Gift, g.Id);
+                S.OrderOnline(ParcelKind.Gift, g.Id, count);
                 w.Rebuild();
             }, 17, Ui.ButtonHot), 80);
         }
@@ -1162,17 +1167,7 @@ namespace PCShopSell.Game.UI
         {
             RectTransform rrow = Ui.Row(list, 50);
             Ui.Size(Ui.Label(rrow, $"大米 {Pantry.RicePricePerKg}/千克", 19), 200);
-            double riceIn = S.CartAmount("rice");
-            Ui.Size(Ui.Label(rrow, riceIn > 0 ? $"购物车 {riceIn:0.##} 千克" : "", 14, TextAnchor.MiddleLeft, Ui.Accent), 110);
-            foreach (int kg in new[] { 1, 5, 10 })
-            {
-                int j = kg;
-                Ui.Size(Ui.Button(rrow, $"+{j} 千克", () =>
-                {
-                    S.CartAddRice(j);
-                    w.Rebuild();
-                }, 17, Ui.ButtonHot, open), 90);
-            }
+            ShopQuantity(w, rrow, "rice", () => S.CartAddRice(.25), open);
         }
 
         private void FarmIngredientRows(Window w, RectTransform list, bool open)
@@ -1184,7 +1179,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Label(row, $"{d.Name}（{d.Unit}）\n<size=14><color=#A8B0BA>可焖「{d.DishName}」，保质 {d.ShelfDays} 天</color></size>", 18), 380);
                 Ui.Size(Ui.Label(row, d.PricePerKg + "/千克", 17, TextAnchor.MiddleLeft, Ui.Good), 80);
                 Ui.Size(Ui.Label(row, $"背包 {S.Backpack.Food.IngredientCount(d.Id) * d.WeightKg:0.##}千克\n家里 {S.Pantry.IngredientCount(d.Id) * d.WeightKg:0.##}千克", 14, TextAnchor.MiddleLeft, Ui.Dim), 90);
-                foreach (int n in new[] { 1, 3 })
+                foreach (int n in new[] { 1 })
                 {
                     int count = n;
                     CartAddButton(w, row, "ing:" + d.Id, () => S.CartAddIngredient(d.Id, count), "+" + (count * d.WeightKg).ToString("0.##") + "千克", 90, open, n == 1);

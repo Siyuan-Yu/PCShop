@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Time;
 
@@ -33,6 +35,37 @@ namespace PCShopSell.Core.Session
 
         public bool IsSleepTime => NightWorkRest || Clock.MinuteOfDay >= 18 * 60 || Clock.MinuteOfDay < WakeUpMinute;
 
+        private readonly List<long[]> _sleepHistory = new List<long[]>();
+        public double SleepHoursLast24 => _sleepHistory.Sum(span => Math.Max(0, Math.Min(Clock.Now.TotalMinutes, span[1]) - Math.Max(Clock.Now.TotalMinutes - 1440, span[0]))) / 60.0;
+
+        private void RestoreSleepHistory(long[] spans)
+        {
+            _sleepHistory.Clear();
+            if (spans != null)
+                for (int i = 0; i + 1 < spans.Length; i += 2)
+                    if (spans[i + 1] > spans[i]) _sleepHistory.Add(new[] { spans[i], spans[i + 1] });
+        }
+
+        public bool SleepUntil(int minuteOfDay)
+        {
+            if (minuteOfDay < 0 || minuteOfDay >= 1440) return Fail("请选择有效的起床时间。");
+            int minutes = (minuteOfDay - Clock.MinuteOfDay + 1440) % 1440;
+            if (minutes == 0) return Fail("起床时间不能与现在相同。");
+            return SleepMinutes(minutes);
+        }
+
+        public bool SleepEightHours() => SleepMinutes(480);
+
+        private bool SleepMinutes(int minutes)
+        {
+            if (CurrentPlace != Home) return Fail("只能回家睡觉。");
+            if (!IsSleepTime) return Fail("白天睡不着，可以小睡一会儿。");
+            if (NightWorkRest && minutes > NightRestMinutes) return Fail("这个起床时间会耽误到岗，请提前起床。");
+            SleepFor(minutes);
+            Say($"睡了 {minutes / 60.0:0.#} 小时。过去24小时已睡 {SleepHoursLast24:0.#}/8 小时。");
+            return true;
+        }
+
         /// <summary>在家睡到早上 8:00（白天睡不着，只能小睡）。</summary>
         public bool Sleep()
         {
@@ -65,15 +98,14 @@ namespace PCShopSell.Core.Session
 
         private void SleepFor(int minutes)
         {
+            long start = Clock.Now.TotalMinutes;
             _sleeping = true;
             AdvanceClock(minutes);
             _sleeping = false;
-            double hours = minutes / 60.0;
-            if (hours >= 3)
-            {
-                Player.SleepDebt = Math.Max(0, Player.SleepDebt + (7 - hours));
-                Player.SleepDebt = Math.Min(8, Player.SleepDebt);
-            }
+            _sleepHistory.Add(new[] { start, Clock.Now.TotalMinutes });
+            _sleepHistory.RemoveAll(span => span[1] <= Clock.Now.TotalMinutes - 1440);
+            Player.SleepDebt = Math.Max(0, 8 - SleepHoursLast24);
+            if (SleepHoursLast24 >= 8 - 1e-9) Player.Energy = Player.MaxEnergy;
             Player.Energy = Math.Min(Player.MaxEnergy, Player.Energy);
         }
 

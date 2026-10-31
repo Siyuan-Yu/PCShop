@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
@@ -54,11 +54,10 @@ namespace PCShopSell.EditorTools
             _game.Ui.OpenEmployeePurchase(buyer.Person.Id);
             Shot("vs1_ux_03_purchase_1080");
             Shot("vs1_ux_04_purchase_720", 1280, 720);
-            var quantity = ActiveInputs().First(i => i.contentType == InputField.ContentType.IntegerNumber && i.transform.parent.GetComponentsInChildren<Text>().Any(t => t.text.StartsWith(PartCatalog.Get("cpu0").Name)));
-            quantity.text = "17"; quantity.onEndEdit.Invoke("17");
+            AdjustQuantity("cpu0", 15);
             _game.Ui.CloseModalWindows();
             _game.Ui.OpenEmployeePurchase(buyer.Person.Id);
-            Check(ActiveInputs().Any(i => i.text == "17"), "关闭后采购草稿数量保留");
+            Check(_game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Text>()).Any(t => t.name.StartsWith("QuantityValue_") && t.text == "17"), "关闭后采购草稿数量保留");
             ClickGuideButton("全部 ▾"); ClickGuideButton("CPU");
             Check(!ActiveButtons().Any(b => ButtonText(b) == "全部 ▾"), "采购品类筛选可直接选择");
             Shot("vs1_ux_05_purchase_filtered");
@@ -69,9 +68,8 @@ namespace PCShopSell.EditorTools
             var purchaseTexts = _game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Text>()).Where(t => t.gameObject.activeInHierarchy).Select(t => t.text).ToArray();
             Check(!purchaseTexts.Any(t => t.Contains("该档口不卖") || t.Contains("在选定档口没有卖")) && purchaseTexts.Any(t => t.Contains(PartCatalog.Get("ram0").Name)),
                 "筛选CPU档口后已选内存仍然保留，不留下不售商品阻拦");
-            Check(ActiveInputs().Any(i => i.text == "17"), "切档口保留可售型号已选数量");
-            var cpuQuantity = ActiveInputs().First(i => i.contentType == InputField.ContentType.IntegerNumber);
-            cpuQuantity.text = "2"; cpuQuantity.onEndEdit.Invoke("2");
+            Check(_game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Text>()).Any(t => t.name.StartsWith("QuantityValue_") && t.text == "17"), "切档口保留可售型号已选数量");
+            AdjustQuantity("cpu0", -15);
             Frame(0);
             ClickGuideButton("完成");
             Check(buyer.Person.PurchasePlan.Items.Length == 2 && buyer.Person.PurchasePlan.Daily, "完成保存跨档口全部商品，并启用每天采购");
@@ -97,7 +95,7 @@ namespace PCShopSell.EditorTools
             Check(!_game.Ui.AnyModalOpen && !s.Time.IsHeld, "关闭手机正确释放暂停");
 
             _game.Ui.OpenWholesaleApp(true);
-            Check(ActiveInputs().Length >= 3, "补货政策支持直接输入，不再循环切换");
+            Check(ActiveInputs().Length == 0 && ActiveButtons().Any(b => b.name == "QuantityPlus_dailyBudget"), "补货政策使用加减选择，不再输入数字");
             Shot("vs1_ux_07_restock");
             _game.Ui.CloseAllWindows();
 
@@ -132,10 +130,10 @@ namespace PCShopSell.EditorTools
 
             s.SetCourierDest(null);
             _game.Ui.OpenTruckWindow();
-            ClickGuideButton("数量");
-            Shot("vs1_ux_13_amount_picker");
+
             var cashBeforeLoading = s.Ledger.Balance;
-            ClickGuideButton("全部");
+            var load = ActiveButtons().First(b => ButtonText(b) == "装车").GetComponent<HoldRepeat>();
+            load.Commit(load.Max); Frame(0);
             Check(s.TruckLoad.Count > 0 && s.Ledger.Balance == cashBeforeLoading, "数量全选批量装车，出发前不扣费");
             Shot("vs1_ux_16_truck_loaded");
             _game.Ui.CloseAllWindows();

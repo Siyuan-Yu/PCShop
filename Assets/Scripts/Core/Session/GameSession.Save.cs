@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -81,6 +81,7 @@ namespace PCShopSell.Core.Session
                 energy = Player.Energy,
                 health = Player.Health,
                 sleepDebt = Player.SleepDebt,
+                sleepSpans = _sleepHistory.SelectMany(span => span).ToArray(),
                 intelligence = Player.Intelligence,
                 charm = Player.Charm,
                 skill = Player.Skill,
@@ -178,6 +179,7 @@ namespace PCShopSell.Core.Session
             Player.Energy = d.energy;
             Player.Health = d.health;
             Player.SleepDebt = d.sleepDebt;
+            RestoreSleepHistory(d.sleepSpans);
             Player.Intelligence = d.intelligence;
             Player.Charm = d.charm;
             Player.Skill = d.skill;
