@@ -208,7 +208,7 @@ namespace PCShopSell.Core.Session
                 rec.Defects += bad;
                 string shopName = MyShopCount > 1 ? ShopTitle(dest) : "店里";
                 string body = $"{store.Name} 的货到了（{(o.ToHome ? "送到家里，放在纸箱里，要自己带去店里" : $"已上{shopName}货架")}）：{good} 件完好。";
-                if (toTemp > 0) body += $"\n家里纸箱满了，{toTemp} 件放在临时存放，回家打开纸箱清掉。";
+                if (toTemp > 0) body += $"\n家里纸箱满了，{toTemp} 件放在临时存放，能放 {TempKeepDays} 天，到期前回家打开纸箱清掉。";
                 if (bad > 0) body += $"\n{bad} 件是次品，只能扔掉：{badNames}";
                 Show("1788 到货", body);
             }

@@ -115,6 +115,36 @@ namespace PCShopSell.Core.Session
         /// <summary>现在站的地方（家 / 自己的店）临时存放里有没有东西。</summary>
         public bool HasTempHere => AtHome ? !HomeTemp.IsEmpty || !HomeTempParts.IsEmpty : InPlayerShop && !ShopTemp.IsEmpty;
 
+        /// <summary>临时存放能放几天；到期后人在那里就弹出纸箱窗口，清空了才能关。</summary>
+        public const int TempKeepDays = 3;
+
+        /// <summary>家里临时存放从什么时候开始有东西（游戏分钟）；0 = 空着。</summary>
+        private long _homeTempSince;
+
+        private long TempSinceHere => AtHome ? _homeTempSince : InPlayerShop ? _focus.TempSince : 0;
+
+        /// <summary>这里的临时存放还能放多少分钟（没东西时返回 0）。</summary>
+        public long TempMinutesLeftHere =>
+            !HasTempHere || TempSinceHere <= 0 ? (HasTempHere ? TempKeepDays * 1440L : 0)
+            : Math.Max(0, TempSinceHere + TempKeepDays * 1440L - Clock.Now.TotalMinutes);
+
+        /// <summary>这里的临时存放到期了：必须清空才能关纸箱窗口。</summary>
+        public bool TempDueHere => HasTempHere && TempSinceHere > 0 && TempMinutesLeftHere <= 0;
+
+        /// <summary>记下每处临时存放从什么时候开始有东西，清空了就重新算。</summary>
+        private void TrackTempClocks()
+        {
+            long now = Math.Max(1, Clock.Now.TotalMinutes);
+            bool homeHas = !HomeTemp.IsEmpty || !HomeTempParts.IsEmpty;
+            if (!homeHas) _homeTempSince = 0;
+            else if (_homeTempSince <= 0) _homeTempSince = now;
+            foreach (OwnedShop s in _shops)
+            {
+                if (s.Temp.IsEmpty) s.TempSince = 0;
+                else if (s.TempSince <= 0) s.TempSince = now;
+            }
+        }
+
         public double TempKgHere => AtHome ? HomeTempKg : InPlayerShop ? ShopTemp.WeightKg : 0;
 
         /// <summary>纸箱还剩多少公斤（toShop = 当前这家店）。</summary>
@@ -259,6 +289,7 @@ namespace PCShopSell.Core.Session
                 default:
                     return false;
             }
+            TrackTempClocks();
             return true;
         }
 
@@ -304,6 +335,7 @@ namespace PCShopSell.Core.Session
             temp.ClearGifts();
             temp.ClearFurniture();
             if (!shop) HomeTempParts.Clear();
+            TrackTempClocks();
             Say("临时存放清空了，里面的东西都扔掉了。");
         }
 
@@ -542,8 +574,8 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>
-        /// 一键放下：在店里，进货的配件上货架（放不下的留在身上），米菜礼品进店里储物柜，家具进家具背包；
-        /// 在家里，米和菜进厨房，礼品进纸箱（装不下的留在背包），家具进家具背包。饭盒一直带在身上。
+        /// 一键放下：在店里，进货的配件上货架（放不下的留在身上），米菜礼品家具进店里纸箱；
+        /// 在家里，米和菜进厨房，礼品、家具进纸箱（装不下的留在背包）。饭盒一直带在身上。
         /// </summary>
         public bool UnloadBackpack()
         {
@@ -584,13 +616,21 @@ namespace PCShopSell.Core.Session
                 if (boxed > 0) done.Add($"礼品 {boxed} 份放进纸箱");
                 if (full) done.Add("纸箱满了，剩下的礼品还在背包里");
             }
-            var furn = Backpack.FurnitureLines.ToList();
-            if (furn.Count > 0)
+            bool shop = InPlayerShop;
+            int furnMoved = 0;
+            bool furnFull = false;
+            foreach (var kv in Backpack.FurnitureLines.ToList())
             {
-                foreach (var kv in furn) AddFurniture(kv.Key, kv.Value);
-                Backpack.ClearFurniture();
-                done.Add("家具放进了家具背包（点“我的”→摆放家具）");
+                double unit = FurnitureCatalog.Get(kv.Key)?.WeightKg ?? 0;
+                int n = unit <= 1e-9 ? kv.Value : Math.Min(kv.Value, Math.Max(0, (int)Math.Floor(BoxRoomKg(shop) / unit + 1e-9)));
+                if (n < kv.Value) furnFull = true;
+                if (n <= 0) continue;
+                Backpack.TakeFurniture(kv.Key, n);
+                (shop ? ShopLocker : HomeBox).AddFurniture(kv.Key, n);
+                furnMoved += n;
             }
+            if (furnMoved > 0) done.Add($"家具 {furnMoved} 件放进了{(shop ? "店里纸箱" : "纸箱")}（摆放时直接从纸箱里拿）");
+            if (furnFull) done.Add("纸箱满了，剩下的家具还在背包里");
             ApplyCargoLimit();
             if (done.Count == 0) return Fail(InPlayerShop ? "背包里没有能放下的东西（饭盒一直带在身上）。" : "背包里没有能放在家里的东西（配件要拿到店里）。");
             Say("放下了：" + string.Join("；", done) + "。");

@@ -11,6 +11,7 @@ namespace PCShopSell.Core.Session
         {
             public List<PlacedFurniture> Layout;
             public Dictionary<string, int> Furniture;
+            public List<KeyValuePair<string, int>> BoxFurniture, TempFurniture;
             public List<StockLine> Parts;
             public List<KeyValuePair<string, int>> Goods;
             public int[] Displays;
@@ -30,6 +31,8 @@ namespace PCShopSell.Core.Session
         {
             Layout = LayoutOf(_layoutHistoryShop).Select(p => p.Clone()).ToList(),
             Furniture = new Dictionary<string, int>(_furnStock),
+            BoxFurniture = BoxOf(_layoutHistoryShop).FurnitureLines.ToList(),
+            TempFurniture = TempOf(_layoutHistoryShop).FurnitureLines.ToList(),
             Parts = PlayerShop.Stock.Lines(), Goods = PlayerShop.Stock.GoodsLines(),
             Displays = PlayerShop.DisplayPcs.ToArray()
         };
@@ -46,6 +49,9 @@ namespace PCShopSell.Core.Session
             var state = from[from.Count - 1]; from.RemoveAt(from.Count - 1);
             var layout = LayoutOf(_layoutHistoryShop); layout.Clear(); layout.AddRange(state.Layout.Select(p => p.Clone()));
             _furnStock.Clear(); foreach (var item in state.Furniture) _furnStock[item.Key] = item.Value;
+            Backpack box = BoxOf(_layoutHistoryShop), temp = TempOf(_layoutHistoryShop);
+            box.ClearFurniture(); foreach (var item in state.BoxFurniture) box.AddFurniture(item.Key, item.Value);
+            temp.ClearFurniture(); foreach (var item in state.TempFurniture) temp.AddFurniture(item.Key, item.Value);
             if (_layoutHistoryShop)
             {
                 PlayerShop.Stock.Clear();

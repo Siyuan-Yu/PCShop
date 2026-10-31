@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Game.Runtime;
@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace PCShopSell.Game
 {
-    /// <summary>家具摆放模式：在家里或装修中的店里，拾起 / 摆放 / 旋转 / 收进背包。</summary>
+    /// <summary>家具摆放模式：在家里或装修中的店里，拾起 / 摆放 / 旋转 / 收进纸箱。</summary>
     public sealed partial class GameController
     {
         private bool _placeShop;
@@ -29,7 +29,7 @@ namespace PCShopSell.Game
         /// <summary>手里拿着的家具（来自背包或从屋里拾起的）；没有则为空。</summary>
         public string PlaceId => _placeId;
 
-        /// <summary>手里这件是屋里原来就有的（可以收进背包）。</summary>
+        /// <summary>手里这件是屋里原来就有的（可以收进纸箱）。</summary>
         public bool PlaceHoldsPlaced => _placeId != null && _placeIndex >= 0;
 
         /// <summary>当前这个位置摆不了的原因；能摆则为空。</summary>
@@ -84,7 +84,7 @@ namespace PCShopSell.Game
         /// <summary>从背包里拿一件来摆。</summary>
         public void SelectStock(string id)
         {
-            if (!Placing || Session.FurnitureInStock(id) <= 0) return;
+            if (!Placing || Session.FurnitureToPlace(_placeShop, id) <= 0) return;
             CancelGhost();
             _placeId = id;
             _placeIndex = -1;
@@ -108,7 +108,7 @@ namespace PCShopSell.Game
             _placeRot = def.Slot == FurnitureSlot.Wall ? (_placeRot == 0 ? 1 : 0) : (_placeRot + 1) & 3;
         }
 
-        /// <summary>把手里这件（屋里原有的）收进背包。</summary>
+        /// <summary>把手里这件（屋里原有的）收进纸箱。</summary>
         public void StoreSelected()
         {
             if (!Placing || !PlaceHoldsPlaced) return;
@@ -356,7 +356,7 @@ namespace PCShopSell.Game
             else
             {
                 ok = Session.PlaceFromStock(_placeShop, def.Id, at, extra);
-                keep = ok && Session.FurnitureInStock(def.Id) > 0;
+                keep = ok && Session.FurnitureToPlace(_placeShop, def.Id) > 0;
             }
             if (!ok) return;
             if (keep)

@@ -36,7 +36,6 @@ namespace PCShopSell.Game.UI
         private RectTransform _dockContent;
         private readonly List<(Button b, ShopTab tab)> _tabButtons = new List<(Button, ShopTab)>();
         private ShopTab _tab = ShopTab.Counter;
-        private bool _dockHolding;
 
         public bool DockOpen => _dock != null;
 
@@ -106,8 +105,6 @@ namespace PCShopSell.Game.UI
         public void CloseDock()
         {
             if (_dock == null) return;
-            if (_dockHolding && S.Time.IsHeld) S.Time.Release();
-            _dockHolding = false;
             Kill.It(_dock.gameObject);
             _dock = null;
         }
@@ -123,10 +120,7 @@ namespace PCShopSell.Game.UI
         private void SelectTab(ShopTab tab)
         {
             _tab = tab;
-            bool hold = tab != ShopTab.Counter;
-            if (hold && !_dockHolding) S.Time.Hold();
-            if (!hold && _dockHolding && S.Time.IsHeld) S.Time.Release();
-            _dockHolding = hold;
+            // 店铺侧栏不锁住时间；所有页签都服从顶部的暂停 / 继续与倍速。
             foreach (var (b, t) in _tabButtons) b.image.color = t == tab ? Ui.ButtonHot : Ui.ButtonBg;
             RebuildDock();
         }

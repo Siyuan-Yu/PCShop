@@ -197,7 +197,7 @@ namespace PCShopSell.Tests
             CollectionAssert.AreEquivalent(new[] { "gpu", "cpu", "memory", "storage", "powercase", "motherboard" },
                 loaded.ShelfIndexes().Select(i => loaded.ShelfKindAt(i).Id).ToList());
             Assert.IsTrue(loaded.ShopFitted);
-            Assert.AreEqual(3, loaded.FurnitureInStock(FurnitureCatalog.Shelf), "买了没摆的老货架也都是通用货架");
+            Assert.AreEqual(3, loaded.FurnitureStored(FurnitureCatalog.Shelf), "买了没摆的老货架也都是通用货架");
         }
 
         [Test]

@@ -3,7 +3,8 @@
 电脑城创业故事：从商业街最偏的一间小电脑店起家，手装机赚第一桶金，靠行情、人脉和签约主播做大，最后建成自己的电脑乐园。3D 低多边形（固定斜俯视相机）模拟经营游戏（世界层 + 店内层 + 面板层 + 手操层），目标平台 Steam。
 
 ## 文档
-- [`docs/11-update-2026-10-30.md`](docs/11-update-2026-10-30.md)：本轮完整更新记录、确认的交互规则、截图及验证方法
+- [`docs/12-update-2026-10-31.md`](docs/12-update-2026-10-31.md)：最新工程快照、全部系统范围、物流/存储/多店/暂停规则、441 项测试及待修问题
+- [`docs/11-update-2026-10-30.md`](docs/11-update-2026-10-30.md)：此前更新记录、当时的交互规则、截图及验证方法
 - [`docs/10-current-content.md`](docs/10-current-content.md)：当前已实现内容总览
 - [`docs/00-overview.md`](docs/00-overview.md)：概述与目录
 - [`docs/02-design.md`](docs/02-design.md)：设计文档（定位、竞品与差异化、成长曲线、系统、垂直切片）
@@ -18,7 +19,7 @@
 - [`docs/asset-log.md`](docs/asset-log.md)：AI 美术资源登记
 
 ## 技术
-- Unity 2022.3.6f1，URP 14.0.8（3D 低多边形），uGUI + TextMeshPro
+- Unity 2022.3.6f1，URP 14.0.8（3D 低多边形）；当前 UI 为 uGUI Text 与系统中文字体回退，TextMeshPro 中文字体资产仍待完成
 - `Assets/Scripts/Core`：纯 C# 逻辑（无 UnityEngine 依赖）
 - `Assets/Scripts/Game`：Unity 层
 - `Assets/Tests/EditMode`：单元测试
@@ -32,9 +33,9 @@ Unity.exe -batchmode -nographics -projectPath <项目路径> -runTests -testPlat
 编辑器开着工程时，用 `tools/run-tests.ps1`、`tools/run-smoke.ps1`（在旁边的镜像目录里跑，见 `docs/08-current-status.md`）。
 
 ## 状态
-打开 `Assets/Scenes/Main.unity` 点 Play。当前包含单店经营完整流程，以及直供账期、企业批单、委托分店、园区、创作者/MCN、私人关系、车辆与住房、物业及指数投资的首版规则。长期内容量与三年平衡仍需深化。
+打开 `Assets/Scenes/Main.unity` 点 Play。当前包含单店经营流程、多家可进入的自营电脑店，以及直供账期、企业批单、委托门店、园区、创作者/MCN、私人关系、车辆与住房、物业及指数投资的首版规则。长期内容量与三年平衡仍需深化。
 
-本轮已加入按阶段派发的当前任务、人物步行动作、暖色微缩街区美术、房产中介三维鸟瞰选址，以及保留家具原材质的绿/红发光轮廓。任务引导只说明操作，不提供一键前往；只有街道步行减速 50%，室内保持原速。完整改动、已知边界和截图见[本轮更新记录](docs/11-update-2026-10-30.md)，试玩步骤见[验收说明](docs/07-vs1-acceptance.md)。
+本轮已加入按阶段派发的当前任务、人物步行动作、暖色微缩街区美术、房产中介三维鸟瞰选址，以及保留家具原材质的绿/红发光轮廓。任务引导只说明操作，不提供一键前往；只有街道步行减速 50%，室内保持原速。2026-10-31 新增与调整包括多店配送、购物车、纸箱和三天临时存放、家具跨房间摆放，以及全部店铺侧栏统一服从暂停/继续、暂停时角色不能走动。本次 EditMode 测试 441/441 通过，图形冒烟未重跑。最新规则与待修问题见[本轮更新记录](docs/12-update-2026-10-31.md)，历史截图见[此前更新](docs/11-update-2026-10-30.md)，试玩步骤见[验收说明](docs/07-vs1-acceptance.md)。
 
 冒烟测试（需图形，不能加 `-nographics`）：
 

@@ -291,6 +291,8 @@ namespace PCShopSell.Core.Home
             new PlacedFurniture { Id = "stool", X = 4.4, Z = 3.3, Rot = 0 },
             new PlacedFurniture { Id = "fan_broken", X = 2.5, Z = 1.9, Rot = 0 },
             new PlacedFurniture { Id = "junk", X = 0.55, Z = 0.55, Rot = 0 },
+            new PlacedFurniture { Id = HomeBox, X = 1.4, Z = 0.3, Rot = 0 },
+            new PlacedFurniture { Id = HomeBox, X = 2.05, Z = 0.3, Rot = 0 },
         };
     }
 

@@ -175,6 +175,7 @@ namespace PCShopSell.Core.Session
             if (minutes <= 0) return;
             Clock.Advance(minutes);
             ProcessPending();
+            TrackTempClocks();
         }
 
         // ---------- 地点 ----------

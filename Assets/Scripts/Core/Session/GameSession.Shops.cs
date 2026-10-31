@@ -207,6 +207,7 @@ namespace PCShopSell.Core.Session
                 renovationDay = s.RenovationDay,
                 locker = ToSaveStorage(s.Locker),
                 temp = ToSaveStorage(s.Temp),
+                tempSince = s.TempSince,
                 boxesGiven = s.BoxesGiven,
             };
         }
@@ -246,6 +247,7 @@ namespace PCShopSell.Core.Session
             shop.RenovationDay = d.renovationDay;
             FromSaveStorage(d.locker, shop.Locker);
             FromSaveStorage(d.temp, shop.Temp);
+            shop.TempSince = d.tempSince;
             shop.BoxesGiven = d.boxesGiven;
             sim.ForcedClosed = shop.RenovationDay == Clock.Today.TotalDays;
             _shops.Add(shop);

@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
@@ -102,12 +102,12 @@ namespace PCShopSell.Tests
             Money before = s.Ledger.Balance;
             Assert.IsTrue(s.OrderOnline(ParcelKind.Furniture, "aircon"));
             Assert.AreEqual(Money.FromYuan(1200).Scale(0.85), before - s.Ledger.Balance);
-            Assert.AreEqual(0, s.FurnitureInStock("aircon"));
+            Assert.AreEqual(0, s.FurnitureStored("aircon"));
             Assert.AreEqual(1, s.Parcels.Count);
             WaitDays(s, 1);
-            Assert.AreEqual(0, s.FurnitureInStock("aircon"), "第 1 天还没到");
+            Assert.AreEqual(0, s.FurnitureStored("aircon"), "第 1 天还没到");
             WaitDays(s, 2);
-            Assert.AreEqual(1, s.FurnitureInStock("aircon"));
+            Assert.AreEqual(1, s.FurnitureStored("aircon"));
             Assert.AreEqual(0, s.Parcels.Count);
         }
 
@@ -120,12 +120,12 @@ namespace PCShopSell.Tests
             Money before = s.Ledger.Balance;
             Assert.IsTrue(s.BuyFurnitureAtMall("plant"));
             Assert.AreEqual(Money.FromYuan(60), before - s.Ledger.Balance);
-            Assert.AreEqual(0, s.FurnitureInStock("plant"), "还背在身上，没到家");
+            Assert.AreEqual(0, s.FurnitureStored("plant"), "还背在身上，没到家");
             Assert.AreEqual(1, s.Backpack.FurnitureCount("plant"));
             GameSessionTests.Teleport(s, "flat");
             Assert.AreEqual(1, s.Backpack.FurnitureCount("plant"), "到家也还在背包里");
             Assert.IsTrue(s.UnloadBackpack());
-            Assert.AreEqual(1, s.FurnitureInStock("plant"));
+            Assert.AreEqual(1, s.FurnitureStored("plant"));
             Assert.AreEqual(0, s.Backpack.FurnitureCount("plant"));
             Assert.IsFalse(s.BuyFurnitureAtMall("bed_board"), "起始家具不卖");
         }
@@ -137,7 +137,7 @@ namespace PCShopSell.Tests
             var popups = new System.Collections.Generic.List<string>();
             s.Popup += (t, b) => popups.Add(t + "\n" + b);
             GameSessionTests.Teleport(s, "mall");
-            int before = s.FurnitureInStock(FurnitureCatalog.Shelf);
+            int before = s.FurnitureStored(FurnitureCatalog.Shelf);
 
             Assert.IsTrue(s.CartAddFurniture(FurnitureCatalog.Shelf));
             s.SetCourierDest(null);
@@ -146,7 +146,8 @@ namespace PCShopSell.Tests
             Assert.IsFalse(s.Couriers[0].ToShop, "选了送到家里，车就该开去家里，不能因为是店里用的就默认送店里");
             for (int i = 0; i < 100 && s.Couriers.Count > 0; i++) s.AdvanceClock(30);
             Assert.AreEqual(0, s.Couriers.Count);
-            Assert.AreEqual(before + 1, s.FurnitureInStock(FurnitureCatalog.Shelf), "送到后进家具库存，家里能查看");
+            Assert.AreEqual(before + 1, s.FurnitureStored(FurnitureCatalog.Shelf));
+            Assert.AreEqual(1, s.HomeBox.FurnitureCount(FurnitureCatalog.Shelf), "送到家放进纸箱，打开纸箱能看到");
             Assert.IsTrue(popups.Any(p => p.Contains("货送到了") && p.Contains("家里") && p.Contains("货架")), "送到家里要弹窗说清送到哪");
 
             popups.Clear();
@@ -156,7 +157,7 @@ namespace PCShopSell.Tests
             Assert.AreEqual(1, s.Couriers.Count);
             Assert.IsTrue(s.Couriers[0].ToShop, "选了送到店里，车就该开去店里");
             for (int i = 0; i < 100 && s.Couriers.Count > 0; i++) s.AdvanceClock(30);
-            Assert.AreEqual(before + 2, s.FurnitureInStock(FurnitureCatalog.Shelf));
+            Assert.AreEqual(before + 2, s.FurnitureStored(FurnitureCatalog.Shelf));
             Assert.IsTrue(popups.Any(p => p.Contains("货送到了") && p.Contains("店里") && p.Contains("货架")), "送到店里也要弹窗");
         }
 
@@ -167,16 +168,29 @@ namespace PCShopSell.Tests
             var popups = new System.Collections.Generic.List<string>();
             s.Popup += (t, b) => popups.Add(t + "\n" + b);
             GameSessionTests.Teleport(s, "mall");
-            int before = s.FurnitureInStock(FurnitureCatalog.RackHeavy);
-            for (int i = 0; i < 3; i++) Assert.IsTrue(s.CartAddFurniture(FurnitureCatalog.RackHeavy));
+            int before = s.FurnitureStored(FurnitureCatalog.RackHeavy);
+            for (int i = 0; i < 5; i++) Assert.IsTrue(s.CartAddFurniture(FurnitureCatalog.RackHeavy));
             s.SetCourierDest(null);
             Assert.IsTrue(s.Checkout(false));
-            Assert.AreEqual(2, s.Couriers.Count, "重型货架一件 90 公斤，一辆车装两件，三件要两辆车");
+            Assert.AreEqual(3, s.Couriers.Count, "重型货架一件 90 公斤，一辆车装两件，五件要三辆车");
             for (int i = 0; i < 100 && s.Couriers.Count > 0; i++) s.AdvanceClock(30);
-            Assert.AreEqual(before + 3, s.FurnitureInStock(FurnitureCatalog.RackHeavy));
+            Assert.AreEqual(before + 5, s.FurnitureStored(FurnitureCatalog.RackHeavy));
             var arrivals = popups.Where(p => p.StartsWith("货送到了")).ToList();
             Assert.AreEqual(1, arrivals.Count, "一次买的东西一起到，只弹一个窗");
-            Assert.IsTrue(arrivals[0].Contains("重型货架×3"), "同种货合成一行报总数");
+            Assert.IsTrue(arrivals[0].Contains("重型货架×5"), "同种货合成一行报总数");
+            Assert.IsTrue(arrivals[0].Contains("能放 3 天"), "进了临时存放要说清楚能放几天");
+
+            string rack = FurnitureCatalog.RackHeavy;
+            Assert.AreEqual(3, s.HomeBox.FurnitureCount(rack), "家里开局 3 个纸箱共 300 公斤，放得下三个 90 公斤的重型货架");
+            Assert.AreEqual(2, s.HomeTemp.FurnitureCount(rack), "放不下的进临时存放");
+            GameSessionTests.Teleport(s, "flat");
+            Assert.AreEqual(5, s.FurnitureToPlace(false, rack), "摆放时纸箱和临时存放里的都能拿");
+            PlacedFurniture at = RoomPlanner.Snap(RoomSpec.Home, FurnitureCatalog.Get(rack), 3.2, 2.6, 0);
+            Assert.IsTrue(s.PlaceFromStock(false, rack, at), "店里用的货架在家里也能摆");
+            Assert.AreEqual(1, s.HomeTemp.FurnitureCount(rack), "先从临时存放里拿");
+            int idx = s.HomeLayout.ToList().FindIndex(f => f.Id == rack);
+            Assert.IsTrue(s.StoreFurniture(false, idx));
+            Assert.AreEqual(2, s.HomeTemp.FurnitureCount(rack), "收起来放回纸箱，纸箱满了进临时存放");
         }
 
         private static long At(GameSession s, int dayOffset, int hour) => (long)(s.Clock.Today.TotalDays + dayOffset) * 1440 + hour * 60;
@@ -323,11 +337,11 @@ namespace PCShopSell.Tests
             Assert.AreEqual(Money.FromYuan(800) + FurnitureCatalog.TruckFee, before - s.Ledger.Balance);
             Assert.AreEqual(0, s.Backpack.WeightKg, 1e-9, "货车拉的，不占背包");
             Assert.AreEqual(0, s.MallCartCount, "结算后购物车清空");
-            Assert.AreEqual(0, s.FurnitureInStock("sofa"));
+            Assert.AreEqual(0, s.FurnitureStored("sofa"));
             GameSessionTests.Teleport(s, "flat");
             int day = s.Clock.Today.TotalDays + 2;
             while (s.Clock.Today.TotalDays < day) s.AdvanceClock(60);
-            Assert.AreEqual(1, s.FurnitureInStock("sofa"), "次日送到");
+            Assert.AreEqual(1, s.FurnitureStored("sofa"), "次日送到");
         }
 
         [Test]
@@ -349,7 +363,7 @@ namespace PCShopSell.Tests
             Assert.IsTrue(l.Parcels.Any(p => p.ToShop), "货车送店里的标记存档保留");
             int day = s.Clock.Today.TotalDays + 2;
             while (s.Clock.Today.TotalDays < day) s.AdvanceClock(60);
-            Assert.AreEqual(1, s.FurnitureInStock("sofa"));
+            Assert.AreEqual(1, s.FurnitureStored("sofa"));
             CollectionAssert.Contains(popups, "货车到店里了");
         }
 
@@ -478,11 +492,11 @@ namespace PCShopSell.Tests
             Assert.IsFalse(s.PlaceFromStock(false, "sofa", at), "不在家");
             GameSessionTests.Teleport(s, "flat");
             Assert.IsTrue(s.PlaceFromStock(false, "sofa", at));
-            Assert.AreEqual(0, s.FurnitureInStock("sofa"));
+            Assert.AreEqual(0, s.FurnitureStored("sofa"));
             int index = s.HomeLayout.Count - 1;
             Assert.IsTrue(s.MoveFurniture(false, index, new PlacedFurniture { Id = "sofa", X = 2.5, Z = 1.0 }));
             Assert.IsTrue(s.StoreFurniture(false, index));
-            Assert.AreEqual(1, s.FurnitureInStock("sofa"));
+            Assert.AreEqual(1, s.FurnitureStored("sofa"));
         }
 
         [Test]
@@ -638,7 +652,7 @@ namespace PCShopSell.Tests
 
             s.Leave();
             WaitMinutes(s, s.CourierQuote(false).minutes + 30);
-            Assert.AreEqual(3, s.FurnitureInStock("bed_good"));
+            Assert.AreEqual(3, s.FurnitureStored("bed_good"));
             Assert.AreEqual(0, s.Couriers.Count);
         }
 
@@ -761,7 +775,15 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.OrderOnline(ParcelKind.Furniture, "shop_plant"));
             Assert.IsTrue(s.OrderOnline(ParcelKind.Furniture, "shop_led"));
             WaitDays(s, 2);
+            GameSessionTests.Teleport(s, "flat");
+            Assert.AreEqual(1, s.HomeBox.FurnitureCount("shop_led"), "网购的送到家里纸箱");
+            s.SetCourierDest(s.MainShop);
+            Assert.IsTrue(s.AddToTruck("box|furn:shop_plant", 1));
+            Assert.IsTrue(s.AddToTruck("box|furn:shop_led", 1));
+            Assert.IsTrue(s.DispatchTruck());
+            for (int i = 0; i < 100 && s.Couriers.Count > 0; i++) s.AdvanceClock(10);
             GameSessionTests.Teleport(s, "pc");
+            Assert.AreEqual(1, s.ShopLocker.FurnitureCount("shop_plant"), "叫货车运到店里纸箱");
             PlacedFurniture plant = RoomPlanner.Snap(s.ShopRoom, FurnitureCatalog.Get("shop_plant"), 6.5, 2.0, 0);
             Assert.IsFalse(s.PlaceFromStock(true, "shop_plant", plant), "没歇业装修不能摆");
             Assert.IsTrue(s.BeginRenovation());
@@ -793,7 +815,7 @@ namespace PCShopSell.Tests
 
             GameSession loaded = GameSession.Load(s.City, s.CreateSave());
             Assert.AreEqual(s.HomeLayout.Count, loaded.HomeLayout.Count);
-            Assert.AreEqual(1, loaded.FurnitureInStock("stool"));
+            Assert.AreEqual(1, loaded.FurnitureStored("stool"));
             Assert.AreEqual(2, loaded.Parcels.Count);
             Assert.IsNotNull(loaded.Pantry.Cooking, "存档时还在焖");
             Assert.AreEqual(Pantry.CookMinutes - 10, loaded.Pantry.CookMinutesLeft(loaded.Clock.Now.TotalMinutes));
@@ -803,16 +825,16 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void OldSave_WithHomeComfort_GivesFurnitureInStock()
+        public void OldSave_WithHomeComfort_GivesFurnitureStored()
         {
             GameSession s = Make();
             SaveData d = s.CreateSave();
             d.home = null;
             d.homeComfort = 2;
             GameSession loaded = GameSession.Load(s.City, d);
-            Assert.AreEqual(1, loaded.FurnitureInStock("bed_spring"));
-            Assert.AreEqual(1, loaded.FurnitureInStock("aircon"));
-            Assert.AreEqual(0, loaded.FurnitureInStock(FurnitureCatalog.Curtain));
+            Assert.AreEqual(1, loaded.FurnitureStored("bed_spring"));
+            Assert.AreEqual(1, loaded.FurnitureStored("aircon"));
+            Assert.AreEqual(0, loaded.FurnitureStored(FurnitureCatalog.Curtain));
         }
     }
 }

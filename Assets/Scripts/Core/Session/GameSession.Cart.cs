@@ -416,7 +416,11 @@ namespace PCShopSell.Core.Session
             if (why != null) return Fail(why + "。");
             bool keep = SendByCourier;
             try { return RunLines(_truck, TruckDest, TruckCars, $"{TruckDriverName}把东西装上车了"); }
-            finally { SendByCourier = keep; }
+            finally
+            {
+                SendByCourier = keep;
+                TrackTempClocks();
+            }
         }
 
         private bool SourceHere(string src)

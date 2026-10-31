@@ -44,11 +44,12 @@ namespace PCShopSell.Tests
             Assert.AreEqual(0, s.Backpack.GiftCount(Gifts.Drink));
             Assert.AreEqual(3, s.HomeBoxCount(Gifts.Drink));
             Assert.AreEqual(18.0, s.HomeBoxKg, 1e-9);
-            Assert.AreEqual(1, s.HomeBoxes, "开局屋里有一个纸箱");
-            s.Backpack.AddGift(Gifts.Drink, 14);
-            Assert.IsFalse(s.StoreInBox(Gifts.Drink, 14), "再放 84 公斤会超过一个纸箱的 100 公斤（200 斤）");
-            Assert.AreEqual(14, s.Backpack.GiftCount(Gifts.Drink));
-            for (int i = 0; i < 14; i++) s.Backpack.TakeGift(Gifts.Drink);
+            Assert.AreEqual(3, s.HomeBoxes, "开局屋里有三个纸箱");
+            Assert.AreEqual(300, s.HomeBoxLimitKg, 1e-9);
+            s.Backpack.AddGift(Gifts.Drink, 48);
+            Assert.IsFalse(s.StoreInBox(Gifts.Drink, 48), "再放 288 公斤会超过三个纸箱的 300 公斤");
+            Assert.AreEqual(48, s.Backpack.GiftCount(Gifts.Drink));
+            for (int i = 0; i < 48; i++) s.Backpack.TakeGift(Gifts.Drink);
             s.Backpack.AddGift(Gifts.Cig, 1);
             Assert.IsTrue(s.StoreInBox(Gifts.Cig), "0.2 公斤放得下");
 
@@ -89,19 +90,34 @@ namespace PCShopSell.Tests
             GameSessionTests.Teleport(s, "pc");
             Assert.AreEqual(3, s.ShopBoxes, "新店送 3 个纸箱");
             Assert.AreEqual(300, s.ShopLockerLimitKg, 1e-9);
+            s.HomeBox.AddGift(Gifts.Drink, 34);
             s.ShopLocker.AddGift(Gifts.Drink, 20);
             s.SetCourierDest(null);
             Assert.IsTrue(s.AddToTruck("locker|gift:" + Gifts.Drink, 20));
             Assert.IsTrue(s.DispatchTruck());
             s.AdvanceClock(s.CourierQuote(null).minutes + 5);
-            Assert.AreEqual(16, s.HomeBoxCount(Gifts.Drink), "家里一个纸箱 100 公斤，装 16 箱饮料");
+            Assert.AreEqual(50, s.HomeBoxCount(Gifts.Drink), "家里三个纸箱 300 公斤，装满 50 箱饮料");
             Assert.AreEqual(4, s.HomeTemp.GiftCount(Gifts.Drink), "放不下的进临时存放");
-
-            GameSession l = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));
-            Assert.AreEqual(4, l.HomeTemp.GiftCount(Gifts.Drink), "临时存放存档后还在");
 
             GameSessionTests.Teleport(s, "flat");
             Assert.IsTrue(s.HasTempHere);
+            Assert.IsFalse(s.TempDueHere, "刚放进临时存放，不用马上清");
+            long left = s.TempMinutesLeftHere;
+            Assert.That(left, Is.InRange(GameSession.TempKeepDays * 1440L - 60, GameSession.TempKeepDays * 1440L), "能放 3 天");
+
+            GameSession l = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));
+            Assert.AreEqual(4, l.HomeTemp.GiftCount(Gifts.Drink), "临时存放存档后还在");
+            GameSessionTests.Teleport(l, "flat");
+            Assert.AreEqual(left, l.TempMinutesLeftHere, "读档后倒计时接着走，不重新算");
+
+            long since = s.Clock.Now.TotalMinutes + left - GameSession.TempKeepDays * 1440L;
+            for (int i = 0; i < 200 && !s.TempDueHere; i++)
+            {
+                Assert.Less(s.Clock.Now.TotalMinutes - since, GameSession.TempKeepDays * 1440L, "没满 3 天不会到期");
+                s.AdvanceClock(60);
+            }
+            Assert.IsTrue(s.TempDueHere, "放满 3 天就到期了，必须清空");
+            Assert.GreaterOrEqual(s.Clock.Now.TotalMinutes - since, GameSession.TempKeepDays * 1440L);
             string key = s.TempKeysHere().Single();
             Assert.IsTrue(s.MoveTemp(key, 1, "bag"));
             Assert.AreEqual(1, s.Backpack.GiftCount(Gifts.Drink));
@@ -111,10 +127,11 @@ namespace PCShopSell.Tests
             s.DebugGiveFurniture(FurnitureCatalog.HomeBox, 1);
             PlacedFurniture p = RoomPlanner.Snap(RoomSpec.Home, FurnitureCatalog.Get(FurnitureCatalog.HomeBox), 3.0, 3.0, 0);
             Assert.IsTrue(s.PlaceFromStock(false, FurnitureCatalog.HomeBox, p));
-            Assert.AreEqual(2, s.HomeBoxes);
+            Assert.AreEqual(4, s.HomeBoxes);
             s.TempFillBox();
             Assert.IsFalse(s.HasTempHere, "多摆一个纸箱就都放得下了");
-            Assert.AreEqual(18, s.HomeBoxCount(Gifts.Drink));
+            Assert.IsFalse(s.TempDueHere, "清空了就不再到期");
+            Assert.AreEqual(52, s.HomeBoxCount(Gifts.Drink));
         }
 
         [Test]
@@ -122,13 +139,12 @@ namespace PCShopSell.Tests
         {
             GameSession s = Make();
             GameSessionTests.Teleport(s, "flat");
-            s.Backpack.AddGift(Gifts.Cig, 1);
-            Assert.IsTrue(s.StoreInBox(Gifts.Cig));
+            s.HomeBox.AddGift(Gifts.Drink, 40);
             int junk = s.HomeLayout.ToList().FindIndex(f => FurnitureCatalog.Get(f.Id).Role == FurnitureRole.Storage);
-            Assert.IsFalse(s.StoreFurniture(false, junk), "纸箱里还有东西，收起来就没地方放了");
-            Assert.IsTrue(s.TakeFromBox(Gifts.Cig));
-            Assert.IsTrue(s.StoreFurniture(false, junk), "空了就能收");
-            Assert.AreEqual(0, s.HomeBoxes);
+            Assert.IsFalse(s.StoreFurniture(false, junk), "纸箱里 240 公斤，收起一个只剩 200 公斤，放不下");
+            for (int i = 0; i < 10; i++) s.HomeBox.TakeGift(Gifts.Drink);
+            Assert.IsTrue(s.StoreFurniture(false, junk), "剩 180 公斤就能收");
+            Assert.AreEqual(2, s.HomeBoxes);
         }
 
         [Test]
@@ -153,9 +169,9 @@ namespace PCShopSell.Tests
             double kg = 2 * Stock.SpaceOf(ram, true, 1) * Backpack.KgPerSpace + 4 * Backpack.RiceKgPerJin + 3 * Backpack.IngredientKg("egg") + 2 * Backpack.LunchboxKg + FurnitureCatalog.Get("plant").WeightKg;
             Assert.AreEqual(kg, s.HomeBoxKg, 1e-9);
 
-            s.Backpack.AddFurniture("desk", 4);
-            Assert.IsFalse(s.StoreInBox("furn:desk", 4), "4 张书桌 100 公斤，超过一个纸箱的上限");
-            s.Backpack.TakeFurniture("desk", 4);
+            s.Backpack.AddFurniture("desk", 12);
+            Assert.IsFalse(s.StoreInBox("furn:desk", 12), "12 张书桌 300 公斤，超过三个纸箱的上限");
+            s.Backpack.TakeFurniture("desk", 12);
             s.ApplyCargoLimit();
 
             GameSession l = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));

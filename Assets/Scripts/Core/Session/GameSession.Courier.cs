@@ -311,7 +311,8 @@ namespace PCShopSell.Core.Session
                 string head = sources.Count == 1
                     ? $"从{sources[0]}叫的车把东西送到{group.Key}了："
                     : $"叫的车把东西送到{group.Key}了：";
-                Show("货送到了", head + "\n" + string.Join("\n", what) + "。");
+                string tail = what.Any(x => x.Contains("临时存放")) ? $"\n\n临时存放的东西能放 {TempKeepDays} 天，到期前打开纸箱清掉（放进纸箱、摆出来、叫货车搬走或扔掉）。" : "";
+                Show("货送到了", head + "\n" + string.Join("\n", what) + "。" + tail);
             }
         }
 
@@ -335,7 +336,7 @@ namespace PCShopSell.Core.Session
 
         /// <summary>
         /// 送到的一样东西放好：送家里，米菜进厨房，礼品、配件进纸箱；送店里，配件上货架，米菜礼品进店里纸箱。
-        /// 纸箱放不下的进临时存放（下次打开纸箱要清空）。家具都进“我的”待摆放。
+        /// 家具也进纸箱。纸箱放不下的进临时存放（下次打开纸箱要清空）。
         /// </summary>
         private string Unpack(CourierItem it, bool toShop)
         {
@@ -376,8 +377,8 @@ namespace PCShopSell.Core.Session
                     int goodsOver = StoreOrTemp(false, Gifts.Get(it.Id)?.WeightKg ?? 0, it.Count, n => HomeBox.AddGift(it.Id, n), n => HomeTemp.AddGift(it.Id, n));
                     return $"{Gifts.Get(it.Id)?.Name ?? it.Id}×{it.Count}（{Where(goodsOver, it.Count)}）";
                 case CourierItemKind.Furniture:
-                    AddFurniture(it.Id, it.Count);
-                    return $"{FurnitureCatalog.Get(it.Id)?.Name ?? it.Id}×{it.Count}（进了“我的”家具库，在家里能查看，摆要去用得上的地方）";
+                    int furnOver = StoreFurnitureHere(toShop, it.Id, it.Count);
+                    return $"{FurnitureCatalog.Get(it.Id)?.Name ?? it.Id}×{it.Count}（{Where(furnOver, it.Count)}）";
                 default:
                     PartDef p = PartCatalog.Get(it.Id);
                     if (!toShop)

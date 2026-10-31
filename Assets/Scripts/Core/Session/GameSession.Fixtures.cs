@@ -47,9 +47,18 @@ namespace PCShopSell.Core.Session
             return gaps.Count == 0 ? null : string.Join("、", gaps);
         }
 
-        private int FurnitureOwnedUnplaced(string id)
+        /// <summary>放着没摆的某件家具：以前收着的、家里和各家店的纸箱 / 临时存放（不算背包里和在路上的）。</summary>
+        public int FurnitureStored(string id)
         {
-            int n = FurnitureInStock(id) + Backpack.FurnitureCount(id);
+            int n = FurnitureInStock(id) + HomeBox.FurnitureCount(id) + HomeTemp.FurnitureCount(id);
+            foreach (OwnedShop s in _shops) n += s.Locker.FurnitureCount(id) + s.Temp.FurnitureCount(id);
+            return n;
+        }
+
+        /// <summary>有、但还没摆出来的某件家具：放着的、背包里、在路上的。</summary>
+        public int FurnitureOwnedUnplaced(string id)
+        {
+            int n = FurnitureStored(id) + Backpack.FurnitureCount(id);
             foreach (Parcel p in _parcels)
                 if (p.Kind == ParcelKind.Furniture && FurnitureCatalog.Canonical(p.Id) == id) n += p.Count;
             foreach (CourierRun r in Couriers)

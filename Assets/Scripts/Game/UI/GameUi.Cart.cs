@@ -161,7 +161,7 @@ namespace PCShopSell.Game.UI
             RectTransform head = Ui.Row(parent, 34, 8);
             int kinds = S.Cart.Count;
             Ui.Size(Ui.Label(head, kinds == 0 ? "<b>购物车</b>　还是空的，在上面点“加入购物车”"
-                : $"<b>购物车</b>　{kinds} 样 · 共 {S.CartKg:0.#} 公斤 · 货款 {S.CartGoods}", 18, TextAnchor.MiddleLeft, Ui.Accent), -1, -1, 1);
+                : $"<b>购物车</b>　{kinds} 样 · 共 {S.CartKg:0.#} 公斤", 18, TextAnchor.MiddleLeft, Ui.Accent), -1, -1, 1);
             if (kinds == 0) return;
             Ui.Size(Ui.Button(head, "清空", () => { S.ClearCart(); w.Rebuild(); }, 15, Ui.ButtonBg), 70);
 
@@ -201,16 +201,27 @@ namespace PCShopSell.Game.UI
             {
                 Ui.Size(Ui.Label(destRow, "送到", 16, TextAnchor.MiddleLeft, Ui.Dim), 40);
                 Ui.Size(Ui.Button(destRow, S.CourierDestName(dest) + "  ▼", () => OpenCourierDestMenu(w, dest, false), 15, new Color(0.2f, 0.24f, 0.3f)), 300);
-                Ui.Size(Ui.Label(destRow, $"每辆 {fee}（最多 {GameSession.CourierCapacityKg:0} 公斤），约 {minutes} 分钟到" + (cars > 0 ? $"；运费 {fee * cars}" : ""), 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
+                Ui.Size(Ui.Label(destRow, $"约 {minutes} 分钟到，每辆面包车最多装 {GameSession.CourierCapacityKg:0} 公斤", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
             }
             else Ui.Size(Ui.Label(destRow, "全部自己背走，不叫车。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
+
+            // 钱都写在这一行：货款 + 运费 = 合计
+            Money goods = S.CartGoods;
+            Money freight = truckKg > 1e-9 ? S.CartFreight(defaultToShop) : Money.Zero;
+            Money total = goods + freight;
+            string freightText = truckKg <= 1e-9 ? "运费 ¥0（不叫车）"
+                : cars > 0 ? $"运费 {freight}（{cars} 辆 × {fee}）"
+                : cars == 0 ? "运费 ¥0（装上刚叫的车）" : "运费：有一件一车装不下";
+            Image bill = Ui.Panel(parent, "CartBill", CartColumn);
+            Ui.Size(bill, -1, 44);
+            Text billText = Ui.Label(bill.transform, $"货款 {goods}　＋　{freightText}　＝　<b><color=#E8C77A>合计 {total}</color></b>", 19, TextAnchor.MiddleCenter);
+            billText.rectTransform.Fill();
 
             RectTransform pay = Ui.Row(parent, 46, 8);
             Ui.Size(Ui.Button(pay, "背得动的都放背包", () => { S.CartFillBag(); w.Rebuild(); }, 15, Ui.ButtonBg), 170);
             Ui.Size(Ui.Button(pay, "全部叫车", () => { S.CartAllToTruck(); w.Rebuild(); }, 15, Ui.ButtonBg), 110);
             string why = S.CheckoutBlocker(defaultToShop);
-            Money total = S.CartGoods + (truckKg > 1e-9 ? S.CartFreight(defaultToShop) : Money.Zero);
-            var checkout = Ui.Button(pay, why ?? $"结账 {total}", () =>
+            var checkout = Ui.Button(pay, why ?? "结账（付合计）", () =>
             {
                 S.Checkout(defaultToShop);
                 w.Rebuild();

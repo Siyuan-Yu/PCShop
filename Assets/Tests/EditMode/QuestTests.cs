@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Catalog;
@@ -50,8 +50,8 @@ namespace PCShopSell.Tests
             GameSession s = Make(false);
             GameSessionTests.Teleport(s, "agency");
             Assert.IsTrue(s.SignLease("pc"));
-            Assert.AreEqual(1, s.FurnitureInStock(FurnitureCatalog.Shelf), "租铺任务奖励一个货架");
-            Assert.AreEqual(1, s.FurnitureInStock(FurnitureCatalog.ShopCounter), "和一个收银台");
+            Assert.AreEqual(1, s.FurnitureStored(FurnitureCatalog.Shelf), "租铺任务奖励一个货架");
+            Assert.AreEqual(1, s.FurnitureStored(FurnitureCatalog.ShopCounter), "和一个收银台");
             Assert.AreEqual("mall", s.CurrentQuest().Id);
             s.Flags.Add(GameSession.MallBoughtFlag);
             Assert.AreEqual("place", s.CurrentQuest().Id);

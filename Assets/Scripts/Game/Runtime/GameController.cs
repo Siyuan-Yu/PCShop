@@ -206,7 +206,18 @@ namespace PCShopSell.Game
         private void EnterPlace(Place p)
         {
             _pendingEnter = null;
+            if (ShowClosed(p)) return;
             if (Session.Enter(p)) Ui.OnEnteredPlace(p);
+        }
+
+        /// <summary>别人的店打烊了：弹窗说清楚（不只是角落里一行字），人留在门口。</summary>
+        private bool ShowClosed(Place p)
+        {
+            string closed = Session.ClosedReason(p);
+            if (closed == null) return false;
+            SoundFx.Play(Sfx.Error);
+            Ui.Popup("打烊了", closed + "\n营业时间再来吧。");
+            return true;
         }
 
         // ---------- 每帧 ----------
@@ -402,7 +413,7 @@ namespace PCShopSell.Game
         /// <summary>WASD / 方向键。相对镜头方向走：W 是屏幕往上（镜头怎么转，方向跟着转）。街上在街道范围内自由走，店里在店内走。</summary>
         private void HandleMovement(float dt)
         {
-            if (Ui.AnyModalOpen || Session.IsGameOver)
+            if (Ui.AnyModalOpen || Session.IsGameOver || !Session.Time.IsRunning || Placing)
             {
                 Session.SetSteer(0, 0);
                 return;
@@ -648,6 +659,7 @@ namespace PCShopSell.Game
             }
             Session.SetSteer(0, 0);
             if (Session.Trip != null) Session.StopTrip();
+            if (ShowClosed(p)) return;
             if (Session.EnterNearby()) Ui.OnEnteredPlace(p);
         }
 

@@ -141,7 +141,7 @@ namespace PCShopSell.Tests
             Assert.AreEqual(s.PlayerShop.Stock.Capacity, loaded.PlayerShop.Stock.Capacity, 1e-9);
             Assert.AreEqual(s.PlayerShop.Accepted, loaded.PlayerShop.Accepted);
             Assert.AreEqual("shirt", loaded.EquippedOutfit);
-            Assert.AreEqual(1, loaded.FurnitureInStock("bed_spring"));
+            Assert.AreEqual(1, loaded.FurnitureStored("bed_spring"));
             Assert.AreEqual(s.HomeLayout.Count, loaded.HomeLayout.Count);
             Assert.IsTrue(loaded.Flags.Contains("x_flag"));
         }

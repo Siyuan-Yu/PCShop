@@ -45,8 +45,8 @@ namespace PCShopSell.Tests
         private static void BuyMinimum(GameSession s)
         {
             // 第一次租铺子房东送了 1 货架 + 1 收银台，最低开业配置不用再买
-            Assert.AreEqual(1, s.FurnitureInStock(FurnitureCatalog.ShopCounter));
-            Assert.AreEqual(1, s.FurnitureInStock(FurnitureCatalog.Shelf));
+            Assert.AreEqual(1, s.FurnitureStored(FurnitureCatalog.ShopCounter));
+            Assert.AreEqual(1, s.FurnitureStored(FurnitureCatalog.Shelf));
         }
 
         private static PlacedFurniture At(GameSession s, string id, double x, double z, int rot) =>
@@ -111,8 +111,8 @@ namespace PCShopSell.Tests
         public void RentQuestReward_GivesAShelfAndCounter_SoABrokePlayerCanStillOpen()
         {
             GameSession s = Rented();
-            Assert.AreEqual(1, s.FurnitureInStock(FurnitureCatalog.Shelf));
-            Assert.AreEqual(1, s.FurnitureInStock(FurnitureCatalog.ShopCounter));
+            Assert.AreEqual(1, s.FurnitureStored(FurnitureCatalog.Shelf));
+            Assert.AreEqual(1, s.FurnitureStored(FurnitureCatalog.ShopCounter));
             Assert.IsTrue(s.QuestCompleted("rent"));
             Assert.AreEqual(0, s.PlayerShop.Stock.CountAll(PartCatalog.Get("cpu0")), "配件是家具城任务的奖励，租铺不送");
 
@@ -143,7 +143,7 @@ namespace PCShopSell.Tests
             GameSession s = Rented();
             BuyMinimum(s);
             GameSessionTests.Teleport(s, "pc");
-            Assert.AreEqual(1, s.FurnitureInStock(FurnitureCatalog.ShopCounter));
+            Assert.AreEqual(1, s.FurnitureStored(FurnitureCatalog.ShopCounter));
 
             Assert.IsFalse(s.PlaceFromStock(true, FurnitureCatalog.ShopCounter, At(s, FurnitureCatalog.ShopCounter, 0.9, 3.3, 3)), "要先歇业装修");
             Assert.IsTrue(s.BeginRenovation());
@@ -236,8 +236,8 @@ namespace PCShopSell.Tests
             GameSessionTests.Teleport(s, "agency");
             Assert.IsTrue(s.SignLease("tea"), "搬店");
             Assert.AreEqual(0, NonBoxes(s.ShopLayout));
-            Assert.AreEqual(1, s.FurnitureInStock(FurnitureCatalog.ShopCounter));
-            Assert.AreEqual(6, s.FurnitureInStock(FurnitureCatalog.Shelf));
+            Assert.AreEqual(1, s.FurnitureStored(FurnitureCatalog.ShopCounter));
+            Assert.AreEqual(6, s.FurnitureStored(FurnitureCatalog.Shelf));
             Assert.IsFalse(s.ShopFitted, "新店要重新摆");
         }
 

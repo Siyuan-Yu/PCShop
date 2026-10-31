@@ -276,6 +276,7 @@ namespace PCShopSell.Core.Session
         public int[] restockTargets;
         public int renovationDay = -1;
         public SaveStorage locker, temp;
+        public long tempSince;
         public bool boxesGiven;
     }
 
@@ -345,6 +346,9 @@ namespace PCShopSell.Core.Session
 
         /// <summary>家里 / 主店的临时存放（纸箱放不下的东西）。</summary>
         public SaveStorage homeTemp, shopTemp;
+
+        /// <summary>家里 / 主店的临时存放从什么时候开始有东西（游戏分钟，0 = 空着）。</summary>
+        public long homeTempSince, shopTempSince;
 
         /// <summary>主店租下时送的纸箱已经给过了。</summary>
         public bool shopBoxesGiven;

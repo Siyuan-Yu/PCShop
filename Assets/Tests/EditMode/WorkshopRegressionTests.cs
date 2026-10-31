@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -150,17 +150,17 @@ namespace PCShopSell.Tests
                 s.Time.Hold(); s.BeginLayoutHistory(true);
                 int desk = s.ShopLayout.ToList().FindIndex(p => p.Id == PCShopSell.Core.Home.FurnitureCatalog.ShopDisplay);
                 int parts = s.PlayerShop.Stock.Lines().Sum(l => l.Count);
-                int furniture = s.FurnitureInStock(PCShopSell.Core.Home.FurnitureCatalog.ShopDisplay);
+                int furniture = s.FurnitureStored(PCShopSell.Core.Home.FurnitureCatalog.ShopDisplay);
                 Assert.IsTrue(s.StoreFurniture(true, desk));
                 Assert.AreEqual(0, s.PlayerShop.DisplayPcs.Count);
                 Assert.IsTrue(s.UndoLayout());
                 Assert.AreEqual(1, s.PlayerShop.DisplayPcs.Count);
                 Assert.AreEqual(parts, s.PlayerShop.Stock.Lines().Sum(l => l.Count));
-                Assert.AreEqual(furniture, s.FurnitureInStock(PCShopSell.Core.Home.FurnitureCatalog.ShopDisplay));
+                Assert.AreEqual(furniture, s.FurnitureStored(PCShopSell.Core.Home.FurnitureCatalog.ShopDisplay));
                 Assert.IsTrue(s.RedoLayout());
                 Assert.AreEqual(0, s.PlayerShop.DisplayPcs.Count);
                 Assert.AreEqual(parts + 6, s.PlayerShop.Stock.Lines().Sum(l => l.Count));
-                Assert.AreEqual(furniture + 1, s.FurnitureInStock(PCShopSell.Core.Home.FurnitureCatalog.ShopDisplay));
+                Assert.AreEqual(furniture + 1, s.FurnitureStored(PCShopSell.Core.Home.FurnitureCatalog.ShopDisplay));
                 s.EndLayoutHistory(); s.Time.Release();
                 Assert.IsFalse(s.UndoLayout());
             }
@@ -241,6 +241,64 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(before - Money.FromYuan(25), s.Ledger.Balance);
                 Assert.Greater(s.Player.Hunger, 70);
                 using (var loaded = GameSession.Load(s.City, s.CreateSave())) Assert.IsTrue(loaded.MealDeliveryEnabled);
+            }
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        [TestCase(4)]
+        [TestCase(5)]
+        [TestCase(6)]
+        public void ShopTab_RespectsPauseResumeAndSpeed(int tab)
+        {
+            using (var s = Make())
+            {
+                var root = new UnityEngine.GameObject("PauseRegression");
+                root.SetActive(false);
+                var controller = root.AddComponent<PCShopSell.Game.GameController>();
+                typeof(PCShopSell.Game.GameController).GetProperty("Session").SetValue(controller, s);
+                typeof(PCShopSell.Game.GameController).GetProperty("City").SetValue(controller, s.City);
+                var existingEventSystem = UnityEngine.GameObject.Find("EventSystem");
+                var ui = new PCShopSell.Game.UI.GameUi(controller);
+                try
+                {
+                    ui.OpenDock();
+                    s.Time.SetPaused(true);
+                    ui.DebugSelectTab(tab);
+                    long before = s.Clock.Now.TotalMinutes;
+                    s.Tick(.25);
+                    Assert.AreEqual(before, s.Clock.Now.TotalMinutes, "换页不能解除玩家暂停");
+                    Assert.IsFalse(s.Time.IsHeld, "店铺页签不能强制锁住时间");
+
+                    s.Time.TogglePause();
+                    s.Tick(.25);
+                    Assert.Greater(s.Clock.Now.TotalMinutes, before, "本页点继续即可推进经营");
+
+                    s.Time.SetPaused(true);
+                    s.Time.SetSpeed(2);
+                    before = s.Clock.Now.TotalMinutes;
+                    s.Tick(.25);
+                    Assert.Greater(s.Clock.Now.TotalMinutes, before, "本页选择倍速也能恢复经营");
+
+                    s.Time.Hold();
+                    ui.DebugSelectTab(0);
+                    ui.CloseDock();
+                    Assert.IsTrue(s.Time.IsHeld, "切换或关闭侧栏不能释放其他窗口的暂停锁");
+                    s.Time.Release();
+                }
+                finally
+                {
+                    ui.CloseAllWindows();
+                    foreach (var canvas in ui.Canvases) UnityEngine.Object.DestroyImmediate(canvas.gameObject);
+                    UnityEngine.Object.DestroyImmediate(root);
+                    if (existingEventSystem == null)
+                    {
+                        var createdEventSystem = UnityEngine.GameObject.Find("EventSystem");
+                        if (createdEventSystem != null) UnityEngine.Object.DestroyImmediate(createdEventSystem);
+                    }
+                }
             }
         }
     }

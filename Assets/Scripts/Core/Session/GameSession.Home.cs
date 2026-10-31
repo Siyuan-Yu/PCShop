@@ -68,6 +68,22 @@ namespace PCShopSell.Core.Session
 
         public int FurnitureInStock(string id) => _furnStock.TryGetValue(FurnitureCatalog.Canonical(id), out int n) ? n : 0;
 
+        private Backpack BoxOf(bool shop) => shop ? ShopLocker : HomeBox;
+        private Backpack TempOf(bool shop) => shop ? ShopTemp : HomeTemp;
+
+        /// <summary>在这间屋（家 / 当前这家店）摆放时手边能拿来摆的某件家具：临时存放 + 纸箱 + 以前收着的。</summary>
+        public int FurnitureToPlace(bool shop, string id) =>
+            TempOf(shop).FurnitureCount(id) + BoxOf(shop).FurnitureCount(id) + FurnitureInStock(id);
+
+        /// <summary>在这间屋摆放时能拿来摆的全部家具（临时存放、纸箱里的和以前收着的合在一起）。</summary>
+        public IEnumerable<KeyValuePair<string, int>> FurnitureToPlaceList(bool shop) =>
+            TempOf(shop).FurnitureLines.Concat(BoxOf(shop).FurnitureLines).Concat(FurnitureStock)
+                .GroupBy(kv => kv.Key).Select(g => new KeyValuePair<string, int>(g.Key, g.Sum(kv => kv.Value)));
+
+        /// <summary>家具放进这间屋的纸箱，放不下的进临时存放。返回进临时存放的件数。</summary>
+        private int StoreFurnitureHere(bool shop, string id, int count) =>
+            StoreOrTemp(shop, FurnitureCatalog.Get(id)?.WeightKg ?? 0, count, n => BoxOf(shop).AddFurniture(id, n), n => TempOf(shop).AddFurniture(id, n));
+
         public RoomSpec ShopRoom => RoomSpec.ForShop(PlayerShop.Size);
 
         // ---------- 家里的效果 ----------
@@ -184,8 +200,12 @@ namespace PCShopSell.Core.Session
                 switch (p.Kind)
                 {
                     case ParcelKind.Furniture:
-                        AddFurniture(p.Id, p.Count);
-                        what = FurnitureCatalog.Get(p.Id).Name + (p.Count > 1 ? "×" + p.Count : "") + "（进了“我的”家具库，在家里能查看，摆要去用得上的地方）";
+                        bool toShop = p.ToShop && HasShop;
+                        int over = 0;
+                        WithShop(toShop ? MainShop : null, () => over = StoreFurnitureHere(toShop, p.Id, p.Count));
+                        string box = toShop ? "店里纸箱" : "纸箱";
+                        what = FurnitureCatalog.Get(p.Id).Name + (p.Count > 1 ? "×" + p.Count : "")
+                            + (over <= 0 ? $"（放进了{box}）" : over >= p.Count ? $"（{box}满了，放在临时存放）" : $"（{box}放不下的 {over} 件放在临时存放）");
                         break;
                     case ParcelKind.Outfit:
                         _ownedOutfits.Add(p.Id);
@@ -237,21 +257,21 @@ namespace PCShopSell.Core.Session
         public string PlacementError(bool shop, FurnitureDef def, PlacedFurniture cand, int ignore, IReadOnlyList<RectD> extra = null)
         {
             RoomSpec room = shop ? ShopRoom : RoomSpec.Home;
-            if (def.ForShop != shop && !def.Starter) return shop ? "这件是家里用的。" : "这件是店里用的。";
             return RoomPlanner.Check(room, LayoutOf(shop), def, cand, ignore, extra);
         }
 
-        /// <summary>把背包里的家具摆出来。</summary>
+        /// <summary>把手边的家具摆出来：先用临时存放里的，再用纸箱里的，最后是以前收着的。</summary>
         public bool PlaceFromStock(bool shop, string id, PlacedFurniture at, IReadOnlyList<RectD> extra = null)
         {
             id = FurnitureCatalog.Canonical(id);
             FurnitureDef def = FurnitureCatalog.Get(id);
-            if (def == null || FurnitureInStock(id) <= 0) return false;
+            if (def == null || FurnitureToPlace(shop, id) <= 0) return false;
             if (!CanEdit(shop)) return false;
             string err = PlacementError(shop, def, at, -1, extra);
             if (err != null) return Fail(err);
             RememberLayout(shop);
-            _furnStock[id] = FurnitureInStock(id) - 1;
+            if (!TempOf(shop).TakeFurniture(id, 1) && !BoxOf(shop).TakeFurniture(id, 1)) _furnStock[id] = FurnitureInStock(id) - 1;
+            TrackTempClocks();
             LayoutOf(shop).Add(new PlacedFurniture { Id = id, X = at.X, Z = at.Z, Rot = at.Rot });
             if (shop) ApplyUpgrades();
             return true;
@@ -271,7 +291,7 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
-        /// <summary>把摆出来的家具收回背包。</summary>
+        /// <summary>把摆出来的家具收起来：放进这间屋的纸箱，放不下的进临时存放。</summary>
         public bool StoreFurniture(bool shop, int index)
         {
             List<PlacedFurniture> l = LayoutOf(shop);
@@ -283,8 +303,10 @@ namespace PCShopSell.Core.Session
                 if (used > after + 1e-9) return Fail($"纸箱里还放着 {used:0.#} 公斤东西，收走这个纸箱就只能放 {Math.Max(0, after):0.#} 公斤，先拿出来一些。");
             }
             RememberLayout(shop);
-            AddFurniture(l[index].Id, 1);
+            string id = l[index].Id;
             l.RemoveAt(index);
+            StoreFurnitureHere(shop, id, 1);
+            TrackTempClocks();
             if (shop) ApplyUpgrades();
             return true;
         }
@@ -563,6 +585,8 @@ namespace PCShopSell.Core.Session
                 homeTemp = ToSaveStorage(HomeTemp, HomeTempParts),
                 shopTemp = ToSaveStorage(MainShop.Temp),
                 shopBoxesGiven = MainShop.BoxesGiven,
+                homeTempSince = _homeTempSince,
+                shopTempSince = MainShop.TempSince,
                 courierDest = CourierDest == null ? 0 : CourierDest == CourierHome ? 1 : 2,
                 courierDestShop = CourierDest == null || CourierDest == CourierHome || CourierDest == CourierCurrentShop ? null : CourierDest,
             };
@@ -602,6 +626,8 @@ namespace PCShopSell.Core.Session
             FromSaveStorage(h?.homeTemp, HomeTemp, HomeTempParts);
             FromSaveStorage(h?.shopTemp, MainShop.Temp);
             MainShop.BoxesGiven = h != null && h.shopBoxesGiven;
+            _homeTempSince = h?.homeTempSince ?? 0;
+            MainShop.TempSince = h?.shopTempSince ?? 0;
             CourierDest = h == null || h.courierDest == 0 ? null
                 : h.courierDest == 1 ? CourierHome
                 : string.IsNullOrEmpty(h.courierDestShop) ? CourierCurrentShop : h.courierDestShop;

@@ -28,6 +28,9 @@ namespace PCShopSell.Core.Session
         /// <summary>这家店的临时存放：送来的东西纸箱放不下就先堆在这里。</summary>
         public readonly Backpack Temp = new Backpack();
 
+        /// <summary>临时存放从什么时候开始有东西（游戏分钟）；0 = 空着。</summary>
+        public long TempSince;
+
         /// <summary>租下时送的纸箱已经给过了（收起来再读档也不会重复送）。</summary>
         public bool BoxesGiven;
 

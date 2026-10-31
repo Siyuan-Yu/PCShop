@@ -56,7 +56,7 @@ namespace PCShopSell.Game.UI
         /// <summary>店里的纸箱（走到纸箱前按 F，或右侧面板“库存”页、背包里打开）：吃的、礼品等放这里，配件放进来直接上货架。</summary>
         public void OpenShopLockerWindow() => OpenBoxWindow("店里纸箱", () => _ctrl.InInterior);
 
-        /// <summary>纸箱窗口：临时存放里还有东西时关不掉（也没有右上角“关闭”、Esc 不管用）。</summary>
+        /// <summary>纸箱窗口：临时存放到期了（放了 3 天）还有东西时关不掉（Esc、右上角都不管用），没到期随便关。</summary>
         private void OpenBoxWindow(string title, System.Func<bool> stillHere)
         {
             _boxSel = null;
@@ -68,16 +68,24 @@ namespace PCShopSell.Game.UI
                     win.Close();
                     return;
                 }
+                win.Closable = !S.TempDueHere;
                 BuildStorage(win);
-                bool stuck = S.HasTempHere;
-                var close = Ui.Button(win.Content, stuck ? "临时存放还有东西：放进纸箱、拿进背包、叫货车搬走或扔掉，清空了才能关" : "关闭", () =>
+                bool stuck = S.TempDueHere;
+                var close = Ui.Button(win.Content, stuck ? "临时存放到期了：放进纸箱、拿进背包、叫货车搬走或扔掉，清空了才能关" : "关闭", () =>
                 {
-                    if (S.HasTempHere) win.Rebuild();
+                    if (S.TempDueHere) win.Rebuild();
                     else win.Close();
                 }, stuck ? 16 : 20, stuck ? Ui.ButtonBg : Ui.ButtonHot);
                 close.name = "StorageClose";
                 Ui.Size(close, -1, 46);
             }, true, false);
+        }
+
+        /// <summary>临时存放还能放多久（“2 天 5 小时” / “40 分钟”）。</summary>
+        private static string TempLeftText(long minutes)
+        {
+            long d = minutes / 1440, h = minutes % 1440 / 60;
+            return d > 0 ? $"{d} 天" + (h > 0 ? $" {h} 小时" : "") : h > 0 ? $"{h} 小时" : $"{System.Math.Max(1, minutes)} 分钟";
         }
 
         /// <summary>
@@ -100,7 +108,9 @@ namespace PCShopSell.Game.UI
             var tempStacks = hasTemp ? CollectTemp() : new System.Collections.Generic.List<BagStack>();
             if (hasTemp)
             {
-                Line(w.Content, $"—— 临时存放 {S.TempKgHere:0.#} 公斤（送来的东西纸箱放不下，先堆在这里；清空了才能关窗口）——", 17, Ui.Warn);
+                Line(w.Content, S.TempDueHere
+                    ? $"—— 临时存放 {S.TempKgHere:0.#} 公斤：已经放满 {GameSession.TempKeepDays} 天了，清空了才能关窗口 ——"
+                    : $"—— 临时存放 {S.TempKgHere:0.#} 公斤（纸箱放不下的先堆在这里）：还能放 {TempLeftText(S.TempMinutesLeftHere)}，到时候必须清空 ——", 17, Ui.Warn);
                 BagGrid(w.Content, tempStacks, 0, _boxSide == "temp" ? _boxSel : null, key =>
                 {
                     _boxSide = "temp";
@@ -150,6 +160,11 @@ namespace PCShopSell.Game.UI
             int n = pick.Count;
             string one = key == "rice" ? "1 斤" : "一份";
             string unit = key == "rice" ? "斤" : "份";
+            if (_boxSide != "bag" && key.StartsWith("furn:"))
+            {
+                string fid = key.Substring(5);
+                Ui.Size(Ui.Button(bottom, "摆出来", () => PlaceFromStorage(shop, fid), 16, Ui.ButtonHot), 90);
+            }
             if (_boxSide == "temp")
             {
                 bool toShelf = shop && key.StartsWith("part:");
@@ -811,6 +826,13 @@ namespace PCShopSell.Game.UI
 
         // ---------- 开始摆放 ----------
 
+        /// <summary>纸箱 / 临时存放里的家具点“摆出来”：进摆放模式，手里直接拿着这件。</summary>
+        private void PlaceFromStorage(bool shop, string furnitureId)
+        {
+            StartPlacement(shop);
+            if (_ctrl.Placing) _ctrl.SelectStock(furnitureId);
+        }
+
         private void StartPlacement(bool shop)
         {
             if (!shop)
@@ -952,7 +974,7 @@ namespace PCShopSell.Game.UI
             if (hasStash) tabs.Add("寄存的货");
             // 还在毛坯里的时候，先给店面设施
             string tab = ShopTabs(w, p, tabs, S.HasShop && !S.ShopFitted ? "店面设施" : null);
-            Para(w.Content, "先把要买的加进购物车，在下面分好哪些自己背、哪些叫车，再一起结账。叫车送到哪就在购物车里选，送到了会弹窗告诉你。家具买了都进“我的”家具库，在家里打开摆放能看到，店里用的要去店里装修时摆。线上同款便宜 15%，2 天到家。", 15, Ui.Dim);
+            Para(w.Content, "先把要买的加进购物车，在下面分好哪些自己背、哪些叫车，再一起结账。叫车送到哪就在购物车里选，送到了会弹窗告诉你。家具送到后放在那里的纸箱里（放不下的进临时存放），家里、店里都能摆。线上同款便宜 15%，2 天到家。", 15, Ui.Dim);
             Line(w.Content, $"现金 {S.Ledger.Balance}　　来时的载具：{S.CurrentVehicle.Name}，还能背 {S.FreeKg:0.#} 公斤", 17);
             RectTransform list = GoodsList(w.Content);
             switch (tab)
@@ -1045,8 +1067,8 @@ namespace PCShopSell.Game.UI
             RectTransform row = Ui.Row(list, 58);
             Ui.Size(Ui.Label(row, $"{def.Name}  <size=14><color=#A8B0BA>重 {def.WeightKg:0.#} 公斤</color></size>\n<size=14><color=#A8B0BA>{def.Description}</color></size>", 18), 430);
             Ui.Size(Ui.Label(row, def.Price.ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 90);
-            int have = S.FurnitureInStock(def.Id) + S.Backpack.FurnitureCount(def.Id);
-            int placedShop = def.ForShop ? S.ShopLayout.Count(p => p.Id == def.Id) : 0;
+            int have = S.FurnitureOwnedUnplaced(def.Id);
+            int placedShop = S.ShopLayout.Count(p => p.Id == def.Id) + S.HomeLayout.Count(p => p.Id == def.Id);
             string haveText = (have > 0 ? $"已有 ×{have}" : "") + (have > 0 && placedShop > 0 ? "\n" : "") + (placedShop > 0 ? $"已摆 ×{placedShop}" : "");
             Ui.Size(Ui.Label(row, haveText, 14, TextAnchor.MiddleLeft, Ui.Dim), 80);
             CartAddButton(w, row, "furn:" + def.Id, () => S.CartAddFurniture(def.Id), "加入购物车", 160);
@@ -1201,29 +1223,27 @@ namespace PCShopSell.Game.UI
             Ui.Size(title, -1, 34);
             Text mode = Ui.Label(_placePanel, "编辑模式 · 俯视图　格线 1 米，摆放吸附 0.25 米", 15, TextAnchor.MiddleLeft, new Color(0.45f, 0.9f, 1f));
             Ui.Size(mode, -1, 24);
-            Text help = Ui.Label(_placePanel, "左键：放下  ·  R：旋转（墙面的自动挂最近的墙）\n右键 / Esc：放回  ·  X：收进背包  ·  滚轮：缩放\n中键拖动 / Q E：转视角  ·  V：复位视角\n点已经摆好的家具（含墙上的海报）可以拿起来挪", 15, TextAnchor.UpperLeft, Ui.Dim);
+            Text help = Ui.Label(_placePanel, "左键：放下  ·  R：旋转（墙面的自动挂最近的墙）\n右键 / Esc：放回  ·  X：收进纸箱  ·  滚轮：缩放\n中键拖动 / Q E：转视角  ·  V：复位视角\n点已经摆好的家具（含墙上的海报）可以拿起来挪", 15, TextAnchor.UpperLeft, Ui.Dim);
             Ui.Size(help, -1, 84);
             _placeStatus = Ui.Label(_placePanel, "", 16, TextAnchor.UpperLeft);
             Ui.Size(_placeStatus, -1, 56);
 
-            Line(_placePanel, shop ? "待安装的店面家具：" : "待安装的家居家具：", 17);
+            Line(_placePanel, shop ? "待摆放的家具（店里纸箱、临时存放里的）：" : "待摆放的家具（纸箱、临时存放里的）：", 17);
             bool any = false;
-            foreach (var kv in S.FurnitureStock)
+            foreach (var kv in S.FurnitureToPlaceList(shop))
             {
                 FurnitureDef def = FurnitureCatalog.Get(kv.Key);
                 if (def == null) continue;
                 any = true;
-                bool usable = def.ForShop == shop;
                 string id = def.Id;
-                string label = $"{def.Name} ×{kv.Value}" + (usable ? "" : shop ? "（家里用，这里摆不了）" : "（店里用，去店里装修时摆）");
-                Ui.Size(Ui.Button(_placePanel, label, () => _ctrl.SelectStock(id), 17, _ctrl.PlaceId == id && !_ctrl.PlaceHoldsPlaced ? Ui.ButtonHot : Ui.ButtonBg, usable), -1, 40);
+                Ui.Size(Ui.Button(_placePanel, $"{def.Name} ×{kv.Value}", () => _ctrl.SelectStock(id), 17, _ctrl.PlaceId == id && !_ctrl.PlaceHoldsPlaced ? Ui.ButtonHot : Ui.ButtonBg), -1, 40);
             }
             if (!any) Ui.Size(Ui.Label(_placePanel, "空的。去家具城买，或者网购。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
 
             if (_ctrl.PlaceId != null)
             {
                 Ui.Size(Ui.Button(_placePanel, "旋转（R）", _ctrl.RotateGhost, 17), -1, 40);
-                if (_ctrl.PlaceHoldsPlaced) Ui.Size(Ui.Button(_placePanel, "收进背包（X）", _ctrl.StoreSelected, 17, Ui.Warn), -1, 40);
+                if (_ctrl.PlaceHoldsPlaced) Ui.Size(Ui.Button(_placePanel, "收进纸箱（X）", _ctrl.StoreSelected, 17, Ui.Warn), -1, 40);
             }
             var history = Ui.Row(_placePanel, 36);
             Ui.Size(Ui.Button(history, "撤销 Ctrl+Z", () => _ctrl.UndoPlacement(), 15, Ui.ButtonBg, S.CanUndoLayout), 165);
