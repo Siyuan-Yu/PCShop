@@ -48,7 +48,7 @@ namespace PCShopSell.Game
         private Place _pendingEnter;
         private bool _wasChasing;
         private int _wasRoomKind;
-        private bool _autosaveDue;
+        private bool _autosaveDue, _wasPlayerWorking;
         private bool _bootstrapped;
         private bool _eventsOn;
         private bool _gameOverShown;
@@ -122,7 +122,7 @@ namespace PCShopSell.Game
             s.Clock.DayAdvanced += OnDayAdvanced;
             _pendingEnter = null;
             _gameOverShown = false;
-            _autosaveDue = false;
+            _autosaveDue = false; _wasPlayerWorking = s.IsWorking;
 
             if (_policeRoot != null) Kill.It(_policeRoot.gameObject);
             _policeRoot = new GameObject("Police").transform;
@@ -235,6 +235,7 @@ namespace PCShopSell.Game
             if (!Ui.AnyModalOpen && !Placing) HandleClicks();
 
             Session.Tick(dt);
+            if (_wasPlayerWorking != Session.IsWorking) { _wasPlayerWorking = Session.IsWorking; _autosaveDue = true; }
             if (_autosaveDue && Session.CanSave && !Session.IsGameOver)
             {
                 _autosaveDue = false;
@@ -359,6 +360,14 @@ namespace PCShopSell.Game
             var selected = UnityEngine.EventSystems.EventSystem.current?.currentSelectedGameObject;
             var input = selected != null ? selected.GetComponent<UnityEngine.UI.InputField>() : null;
             if (input != null && input.isFocused) return;
+            if (Session.IsWorking)
+            {
+                if (Input.GetKeyDown(KeyCode.Alpha1)) Session.Time.SetSpeed(1);
+                if (Input.GetKeyDown(KeyCode.Alpha2)) Session.Time.SetSpeed(2);
+                if (Input.GetKeyDown(KeyCode.Alpha3)) Session.Time.SetSpeed(4);
+                if (Input.GetKeyDown(KeyCode.Alpha4)) Session.Time.SetSpeed(8);
+                return;
+            }
             if (Input.GetKeyDown(KeyCode.Space)) Session.Time.TogglePause();
             if (Input.GetKeyDown(KeyCode.Alpha1)) Session.Time.SetSpeed(1);
             if (Input.GetKeyDown(KeyCode.Alpha2)) Session.Time.SetSpeed(2);
@@ -425,7 +434,7 @@ namespace PCShopSell.Game
         /// <summary>WASD / 方向键。相对镜头方向走：W 是屏幕往上（镜头怎么转，方向跟着转）。街上在街道范围内自由走，店里在店内走。</summary>
         private void HandleMovement(float dt)
         {
-            if (Ui.AnyModalOpen || Session.IsGameOver || !Session.Time.IsRunning || Placing)
+            if (Session.IsWorking || Ui.AnyModalOpen || Session.IsGameOver || !Session.Time.IsRunning || Placing)
             {
                 Session.SetSteer(0, 0);
                 return;
@@ -684,6 +693,7 @@ namespace PCShopSell.Game
 
         private void HandleClicks()
         {
+            if (Session.IsWorking) return;
             if (!Input.GetMouseButtonDown(0) || GameUi.PointerOverUi) return;
             Ray ray = Cam.ScreenPointToRay(Input.mousePosition);
             if (InInterior)

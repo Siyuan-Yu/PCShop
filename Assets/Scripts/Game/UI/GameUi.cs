@@ -105,6 +105,8 @@ namespace PCShopSell.Game.UI
                 if (window.RebuildPending) { window.RebuildPending = false; window.Rebuild(); }
             }
             if (MainMenuOpen) return;
+            UpdateWorkScreen();
+            if (S.IsWorking) return;
             _uiTime += dt;
             UpdateHud();
             UpdateLabels();
@@ -729,6 +731,7 @@ namespace PCShopSell.Game.UI
 
         public void Popup(string title, string body)
         {
+            if (S.IsWorking) { Toast(title + "：" + body); _workMessages.Add(title); return; }
             _popups.Add(OpenWindow(title, 640, 380, w =>
             {
                 Text t = Ui.Label(w.Content, body, 21, TextAnchor.UpperLeft);
@@ -740,6 +743,7 @@ namespace PCShopSell.Game.UI
         /// <summary>随机事件：必须选一个选项才能继续（不可关闭）。</summary>
         public void ShowEvent(EventDef def)
         {
+            if (S.IsWorking) { _workEvent = def; return; }
             float h = 250 + def.Choices.Count * 62;
             OpenWindow(def.Title, 720, h, w =>
             {

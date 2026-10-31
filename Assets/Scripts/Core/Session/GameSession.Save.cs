@@ -74,6 +74,7 @@ namespace PCShopSell.Core.Session
                 idleEmployees = _idleEmployees.Select(ToSave).ToArray(),
                 cargo = Lines(Cargo),
 
+                playerWork = WorkContract?.Copy(),
                 hasDietStats = true, nutrition = Player.Nutrition, mood = Player.Mood,
                 hunger = Player.Hunger,
                 energy = Player.Energy,
@@ -232,6 +233,7 @@ namespace PCShopSell.Core.Session
             IsGameOver = d.gameOver;
             GameOverReason = d.gameOverReason;
             RestoreGrowth(d);
+            RestorePlayerWork(d.playerWork);
             _focus.EmployeeTrained = Flags.Contains(TrainedFlag);
             _focus.AutoBuild = Flags.Contains(AutoBuildFlag);
             RestoreBusiness(d);

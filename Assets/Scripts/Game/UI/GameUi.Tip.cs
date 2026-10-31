@@ -76,7 +76,7 @@ namespace PCShopSell.Game.UI
         /// <summary>顶栏按钮的快捷键（没开窗口、不在摆放模式时有效）。返回是否处理了。</summary>
         public bool TryHotkey(KeyCode key)
         {
-            if (AnyModalOpen || S == null || S.IsGameOver) return false;
+            if (AnyModalOpen || S == null || S.IsGameOver || S.IsWorking) return false;
             switch (key)
             {
                 case KeyCode.M: OpenMyPanel(); return true;

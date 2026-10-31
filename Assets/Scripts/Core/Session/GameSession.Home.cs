@@ -431,6 +431,7 @@ namespace PCShopSell.Core.Session
 
         private void EatMeal(string meal)
         {
+            if (IsWorking) return; // Staff meals are provided at the midpoint of the assigned shift.
             if (Player.Hunger >= 90) return;
             if (CurrentPlace == Home && Pantry.CookedBowls > 0)
             {

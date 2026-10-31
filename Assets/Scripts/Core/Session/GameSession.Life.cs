@@ -31,14 +31,15 @@ namespace PCShopSell.Core.Session
 
         private int _lastNewsReadDay = -1;
 
-        public bool IsSleepTime => Clock.MinuteOfDay >= 18 * 60 || Clock.MinuteOfDay < WakeUpMinute;
+        public bool IsSleepTime => NightWorkRest || Clock.MinuteOfDay >= 18 * 60 || Clock.MinuteOfDay < WakeUpMinute;
 
         /// <summary>在家睡到早上 8:00（白天睡不着，只能小睡）。</summary>
         public bool Sleep()
         {
             if (CurrentPlace != Home) return Fail("只能回家睡觉。");
             if (!IsSleepTime) return Fail("白天睡不着，可以小睡一会儿。");
-            int minutes = Clock.MinutesUntil(WakeUpMinute);
+            int minutes = NightWorkRest ? NightRestMinutes : Clock.MinutesUntil(WakeUpMinute);
+            if (minutes <= 0) return Fail("快到上班时间了，请先到岗；收工后再补觉。");
             SleepFor(minutes);
             double hours = minutes / 60.0;
             Say($"睡了 {hours:0.#} 小时。" + (Player.SleepDebt > 0.5 ? $"还欠 {Player.SleepDebt:0.#} 小时觉，精力上限降低。" : ""));
@@ -99,6 +100,7 @@ namespace PCShopSell.Core.Session
 
         private void SendHome()
         {
+            InterruptPlayerWork("因身体不适中断打工，当天不计工资。请先休息恢复。");
             Trip = null;
             ClearEdge();
             if (InPlayerShop) PlayerShop.PlayerPresent = false;

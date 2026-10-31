@@ -65,6 +65,7 @@ namespace PCShopSell.Core.Session
 
         private bool GoTo(string targetNode, MapPoint? end)
         {
+            if (IsWorking) return Fail("正在打工，收工后才能出行。");
             if (IsGameOver) return false;
             if (!City.Map.HasNode(targetNode)) return false;
             string leaveBlock = LeaveBlocker;

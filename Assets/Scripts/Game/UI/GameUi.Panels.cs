@@ -18,6 +18,7 @@ namespace PCShopSell.Game.UI
         /// <summary>进入地点后打开对应面板。离开面板 = 回到街上。</summary>
         public void OnEnteredPlace(Place p)
         {
+            if (S.IsWorking) { UpdateWorkScreen(); return; }
             switch (p.Kind)
             {
                 case PlaceKind.Shop when S.IsMyShop(p):
@@ -67,6 +68,7 @@ namespace PCShopSell.Game.UI
                     win.Close();
                     return;
                 }
+                BuildPlayerWorkEntry(win.Content, p, win);
                 RectTransform frame = p.Kind == PlaceKind.Agency || S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null ? null : BuildRosterFrame(win, p, h - 170);
                 if (frame != null)
                 {
@@ -79,7 +81,7 @@ namespace PCShopSell.Game.UI
                 win.TitleText.text = S.PlaceTitle(p) + " · 关闭返回街上";
             }, true, true, () =>
             {
-                if (S.CurrentPlace == p) S.Leave();
+                if (S.CurrentPlace == p && !S.IsWorking) S.Leave();
             });
         }
 

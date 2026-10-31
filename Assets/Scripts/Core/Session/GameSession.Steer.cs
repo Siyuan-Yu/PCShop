@@ -94,7 +94,7 @@ namespace PCShopSell.Core.Session
         public double HeadingY { get; private set; } = 1;
 
         /// <summary>打车由司机开，不能自己走；其余出行方式都可以。</summary>
-        public bool CanSteer => !IsGameOver && Vehicle != VehicleKind.Taxi;
+        public bool CanSteer => !IsWorking && !IsGameOver && Vehicle != VehicleKind.Taxi;
 
         /// <summary>每帧由输入层告诉我想往哪个方向走（画面坐标，不用归一化）。传 (0,0) 表示松手。</summary>
         public void SetSteer(double dx, double dy)

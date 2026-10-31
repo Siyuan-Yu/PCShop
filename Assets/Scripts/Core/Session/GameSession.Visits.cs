@@ -84,6 +84,7 @@ namespace PCShopSell.Core.Session
         {
             get
             {
+                if (IsWorking) return "正在打工，收工后才能离开。";
                 if (CurrentPlace == null || CurrentPlace != Home) return null;
                 HomeVisit v = RepairmanAtWork;
                 if (v == null) return null;
@@ -207,7 +208,7 @@ namespace PCShopSell.Core.Session
             long f = from.TotalMinutes, t = to.TotalMinutes;
             foreach (ScheduleEntry e in Schedule())
             {
-                if (e.Kind != "appointment" && e.Kind != "repair") continue;
+                if (e.Kind != "appointment" && e.Kind != "repair" && e.Kind != "work") continue;
                 long at = e.Minute - ReminderLeadMinutes;
                 if (f < at && at <= t && t <= e.Minute)
                     Say($"日历提醒：{e.TimeText} {e.Text}（还有 {e.Minute - t} 分钟）");
@@ -218,6 +219,7 @@ namespace PCShopSell.Core.Session
         public List<ScheduleEntry> Schedule()
         {
             var l = new List<ScheduleEntry>();
+            AddWorkSchedule(l);
             long now = Clock.Now.TotalMinutes;
             for (int i = 0; i < _appointments.Count; i++)
             {

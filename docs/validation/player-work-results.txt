@@ -1,0 +1,5 @@
+2026-11-01
+EditMode: total=520 passed=520 failed=0
+PlayerWorkFromBatch: code=0 errors=0
+No screenshots generated. UI callbacks validate store contract, automatic attendance, speed-only work overlay, running clock, deferred popups/events, shift completion, weekly wage claim, closed-store staff entry, overnight and 04:00 handling, daytime recovery sleep.
+New regression coverage includes wages averaging about 150 yuan, varied hours and fatigue, 7 shifts, late/absent pay, no double payroll after JSON, zero-cash full week, bankruptcy grace and hospital interruption.

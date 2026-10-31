@@ -597,7 +597,7 @@ namespace PCShopSell.Game.UI
             PlayerStats st = S.Player;
             Line(w.Content, $"精力 {st.Energy:0}/{st.MaxEnergy:0}  欠觉 {st.SleepDebt:0.#} 小时  睡眠恢复 ×{S.HomeSleepQuality:0.##}", 18, Ui.Dim);
             RectTransform row = Ui.Row(w.Content, 54);
-            Ui.Size(Ui.Button(row, "睡到明早 8:00", () =>
+            Ui.Size(Ui.Button(row, S.NightWorkRest ? "夜班补觉（最多 8 小时）" : "睡到明早 8:00", () =>
             {
                 if (S.Sleep()) Toast("新的一天。");
                 w.Rebuild();
@@ -751,6 +751,7 @@ namespace PCShopSell.Game.UI
                 RectTransform list = Ui.Scroll(w.Content, 660);
                 PlayerStats st = S.Player;
                 Line(list, "—— 我 ——", 18, Ui.Accent);
+                BuildPlayerWorkSummary(list, w);
                 Line(list, $"营养 {st.Nutrition:0.#}/100  心情 {st.Mood:0.#}/100（目前只记录，不影响其他玩法）", 17, Ui.Accent);
                 if (S.CanOpenFridge) Ui.Size(Ui.Button(list, "打开冰箱", () => OpenFridgeWindow(), 17), -1, 38);
                 Line(list, $"饥饿 {st.Hunger:0}  精力 {st.Energy:0}/{st.MaxEnergy:0}  健康 {st.Health:0}  欠觉 {st.SleepDebt:0.#} 小时", 17, Ui.Dim);

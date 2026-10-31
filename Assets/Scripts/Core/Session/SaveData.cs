@@ -34,6 +34,7 @@ namespace PCShopSell.Core.Session
         public bool tricycleImpounded;
         public SaveStockLine[] cargo;
 
+        public PlayerWorkContract playerWork;
         public double hunger, energy, health, sleepDebt;
         public bool hasDietStats;
         public double nutrition, mood;

@@ -1,5 +1,7 @@
 # PCShopSell（工作名）
 
+玩家无进货资金时的打工收入、每店班次与周结规则见 [第 18 篇](18-player-work-and-weekly-pay.md)。
+
 最新生活功能与验证见 [冰箱、饭菜与营养/心情](17-food-fridge-and-diet.md)，员工每日多源采购见 [采购清单](16-daily-multisource-purchasing.md)。
 
 电脑城创业故事：从商业街最偏的一间小电脑店起家，手装机赚第一桶金，靠行情、人脉和签约主播做大，最后建成自己的电脑乐园（园区）。

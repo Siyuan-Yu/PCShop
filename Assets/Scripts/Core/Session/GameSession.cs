@@ -173,8 +173,15 @@ namespace PCShopSell.Core.Session
         public void AdvanceClock(int minutes)
         {
             if (minutes <= 0) return;
-            Clock.Advance(minutes);
-            ProcessPending();
+            while (minutes > 0)
+            {
+                if (IsWorking && WorkMinutesLeft <= 0) UpdatePlayerWork(Clock.Now);
+                int step = IsWorking ? Math.Min(minutes, Math.Max(1, WorkMinutesLeft)) : minutes;
+                if (IsWorking && !WorkContract.Days[WorkContract.WorkingIndex].LunchServed)
+                    step = (int)Math.Min(step, Math.Max(1, WorkMealAt - Clock.Now.TotalMinutes));
+                Clock.Advance(step); minutes -= step;
+                ProcessPending();
+            }
             TrackTempClocks();
         }
 
@@ -187,6 +194,7 @@ namespace PCShopSell.Core.Session
         public bool Enter(Place place)
         {
             if (place == null) throw new ArgumentNullException(nameof(place));
+            if (IsWorking) return Fail("正在打工，收工后才能离开或去其他地方。");
             if (Trip != null) return Fail("还在路上。");
             if (OffNode)
             {
@@ -210,6 +218,8 @@ namespace PCShopSell.Core.Session
             {
                 MeetStallOwner(place);
             }
+            UpdatePlayerWork(Clock.Now);
+            if (HasWorkContract && place == WorkPlace) StartPlayerWork();
             if (HasUnloadable) Say($"背包里带着东西，按 B 打开背包，一键全放到{UnloadTarget}。");
             return true;
         }
@@ -262,6 +272,7 @@ namespace PCShopSell.Core.Session
         /// </summary>
         public string ClosedReason(Place p)
         {
+            if (WorkStaffEntry(p)) return null;
             if (p == null || ShopAt(p) != null || VentureAt(p.Id) != null || PropertyAt(p.Id) != null) return null;
             if (p.Kind == PlaceKind.Shop && IsVacant(p)) return null;
             string hours = OpeningHoursText(p);
@@ -373,16 +384,17 @@ namespace PCShopSell.Core.Session
             if (Crosses(from, to, RestockCheckMinute)) RunAutoRestock();
             CheckHomeVisits(from, to);
 
-            if (CurrentPlace != Home && Crosses(from, to, BedtimeReminderMinute))
+            if (!NightWorkRest && !IsWorking && CurrentPlace != Home && Crosses(from, to, BedtimeReminderMinute))
                 Notice?.Invoke("23:00 了，该回家睡觉了。凌晨 4 点还不睡会晕倒。");
 
             if (!_sleeping)
             {
                 if (Crosses(from, to, 12 * 60)) EatMeal("午饭");
                 if (Crosses(from, to, 18 * 60 + 30)) EatMeal("晚饭");
-                if (Crosses(from, to, FaintMinute)) _pendingFaint = true;
+                if (!IsWorking && !NightWorkRest && Crosses(from, to, FaintMinute)) _pendingFaint = true;
             }
 
+            UpdatePlayerWork(to);
             if (Crosses(from, to, CandidateMinute)) OnCandidateHour(to.Date);
             if (Crosses(from, to, EventMinute)) RollDailyEvent(to.Date);
             CheckAppointments(to);
@@ -475,11 +487,12 @@ namespace PCShopSell.Core.Session
                     NegativeCashDays = 0;
                     return;
                 }
-                if (NegativeCashDays >= BankruptDays)
+                if (NegativeCashDays >= BankruptDays && !WorkPayGrace)
                 {
                     SetGameOver($"连续 {BankruptDays} 天资金为负，店铺倒闭了。");
                     return;
                 }
+                if (WorkPayGrace) { Say("现金为负，打工周结领取前暂缓破产判定；请按时到岗并及时领取工资。"); return; }
                 Popup?.Invoke("资金告急", $"账上是负数（{Ledger.Balance}）。连续 {BankruptDays} 天为负就会倒闭，已经 {NegativeCashDays} 天。");
             }
             else
@@ -502,6 +515,7 @@ namespace PCShopSell.Core.Session
 
         private void SetGameOver(string reason)
         {
+            InterruptPlayerWork("游戏结束，打工已中断。");
             IsGameOver = true;
             GameOverReason = reason;
             Trip = null;
