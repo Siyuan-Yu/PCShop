@@ -126,14 +126,20 @@ namespace PCShopSell.Game.UI
             string browseSource = null, category = "全部", search = "";
             bool selectedOnly = false;
             var selected = draft.Items.ToDictionary(GameSession.PurchaseKey, x => x.Copy());
-            void Sync() => draft.Items = selected.Values.Where(x => x.Count > 0).Select(x => x.Copy()).ToArray();
+            var order = draft.Items.Select(GameSession.PurchaseKey).ToList();
+            void Sync()
+            {
+                order.RemoveAll(key => !selected.ContainsKey(key));
+                foreach (string key in selected.Keys) if (!order.Contains(key)) order.Add(key);
+                draft.Items = order.Where(key => selected[key].Count > 0).Select(key => selected[key].Copy()).ToArray();
+            }
             OpenWindow("每日采购清单 · " + worker.Person.Name + " · " + S.ShopTitle(worker.Shop), 1160, 940, w =>
             {
                 var panel = w.Root.Find("Panel");
                 var previousActions = panel.Find("PurchaseActions");
                 if (previousActions != null) Kill.It(previousActions.gameObject);
                 ((RectTransform)w.Content.parent.parent).Anchor(0, 0, 1, 1, 0, 76, 0, 50);
-                Line(w.Content, "把要买的商品加入清单，点底部“完成”。以后每天按整份清单尝试采购一次。", 18, Ui.Accent);
+                Para(w.Content, "加入商品后点“完成”，今天只保存、不扣钱，明天起上班时每天尝试一次。按清单从上到下购买；钱不够就拿现有现金，扣除必要车费后尽量买，余款返店退回。", 18, Ui.Accent);
                 var filters = Ui.Row(w.Content, 38);
                 string sourceName = browseSource == null ? "全部货源" : S.City.GetPlace(browseSource).Name;
                 Ui.Size(Ui.Button(filters, sourceName + "  ▼", () => OpenWindow("浏览货源", 740, 660, picker =>
@@ -190,6 +196,11 @@ namespace PCShopSell.Game.UI
                     string source = offer?.Source.Name ?? choice.SourceId ?? "自动选货源";
                     Ui.Size(Ui.Label(row, offer == null ? GameSession.PurchaseItemName(choice) + " ×" + choice.Count : ProductLabel(GameSession.PurchaseItemName(choice) + " ×" + choice.Count, offer.UnitKg, source), 16), -1, -1, 1);
                     Ui.Size(Ui.Label(row, offer == null ? "货源不可用" : (offer.Price * choice.Count).ToString(), 16), 130);
+                    string key = GameSession.PurchaseKey(choice);
+                    int priority = order.IndexOf(key);
+                    void Move(int offset) { int index = order.IndexOf(key); var other = order[index + offset]; order[index + offset] = key; order[index] = other; Sync(); w.Rebuild(); }
+                    Ui.Size(Ui.Button(row, "↑", () => Move(-1), 18, Ui.ButtonBg, priority > 0), 36);
+                    Ui.Size(Ui.Button(row, "↓", () => Move(1), 18, Ui.ButtonBg, priority < order.Count - 1), 36);
                     Ui.Size(Ui.Button(row, "移出清单", () => { selected.Remove(GameSession.PurchaseKey(choice)); Sync(); w.Rebuild(); }, 15), 110);
                 }
                 Line(w.Content, "怎么运回来", 18, Ui.Accent);
@@ -202,8 +213,8 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(transport, label, () => { draft.Transport = mode; w.Rebuild(); }, 16, draft.Transport == mode ? Ui.ButtonHot : Ui.ButtonBg, hired || S.VehicleCount(mode) > 0), -1, -1, 1);
                 }
                 var quote = S.QuoteEmployeePurchase(employeeId, draft);
-                Para(w.Content, $"费用自动计算：货款 {quote.Goods} + 往返车费 {quote.Travel} + 货车运费 {quote.Freight} = 合计 {quote.Total}\n整份清单 {quote.Kg:0.##} 千克，约 {quote.DeliveryMinutes} 分钟到店；每天按当日价格重新计算，不另设预算。", 16);
-                if (quote.Error != null) Para(w.Content, "现在不能出发：" + quote.Error + "。仍可点“完成”保存，之后每天再尝试。", 15, Ui.Warn);
+                Para(w.Content, $"按当前价格试算：整单需要 {quote.RequiredTotal}；按当前现金可买货款 {quote.Goods} + 车费 {quote.Travel} + 运费 {quote.Freight} = {quote.Total}。\n实际出发时重新计算，最多带走所需费用；不足则带走现有现金，按上方清单顺序尽量买。今天保存不扣款。", 16);
+                if (quote.Error != null) Para(w.Content, "当前试算提示：" + quote.Error + "。不影响保存，明天上班时再检查。", 15, Ui.Warn);
                 if (S.Vehicle == draft.Transport && S.FreeVehicleCount(draft.Transport) == 0)
                     Ui.Size(Ui.Button(w.Content, "老板改为步行，释放这台车", () => { S.SetVehicle(VehicleKind.Walk); w.Rebuild(); }, 16), -1, 36);
                 var actions = Ui.Row(panel, 50);
@@ -215,16 +226,10 @@ namespace PCShopSell.Game.UI
                     if (S.CompleteEmployeePurchase(employeeId, draft))
                     {
                         _purchaseDrafts.Remove(employeeId);
-                        Toast(draft.Daily ? "每日采购清单已保存，员工每天按整份清单尝试采购一次。" : "已清空采购安排，不再自动进货。");
+                        Toast(draft.Daily ? "每日采购清单已保存，明天起上班时按顺序尝试采购，今天不扣款。" : "已清空采购安排，不再自动进货。");
                         CloseModalWindows();
                     }
                 }, 20, Ui.ButtonHot), -1, -1, 1);
-                Ui.Size(Ui.Button(actions, "完成并立即采购（" + quote.Total + "）", () =>
-                {
-                    Sync(); draft.Daily = true;
-                    if (S.ConfigureEmployeePurchase(employeeId, draft) && S.DispatchEmployeePurchase(employeeId)) { _purchaseDrafts.Remove(employeeId); CloseModalWindows(); }
-                    else w.Rebuild();
-                }, 18, Ui.ButtonBg, quote.Error == null), -1, -1, 1);
                 if (worker.Person.PurchasePlan.Daily)
                     Ui.Size(Ui.Button(actions, "暂停每日采购", () =>
                     {

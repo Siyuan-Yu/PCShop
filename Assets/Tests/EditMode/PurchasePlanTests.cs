@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Catalog;
@@ -77,13 +77,18 @@ namespace PCShopSell.Tests
                 var buyer = s.MainShop.Buyer;
                 Assert.True(s.CompleteEmployeePurchase(buyer.Id, Mixed(s)));
                 Assert.True(buyer.PurchasePlan.Daily);
+                var cash = s.Ledger.Balance;
                 s.AdvanceClock(1);
+                Assert.Zero(s.EmployeePurchaseTrips.Count, "完成当天只保存，不出发");
+                Assert.AreEqual(cash, s.Ledger.Balance);
+                Assert.False(s.DispatchEmployeePurchase(buyer.Id), "不能绕过次日生效规则");
+                s.Clock.Restore(new GameDate(1), 8 * 60 + 59); s.AdvanceClock(2);
                 var first = s.EmployeePurchaseTrips.Single();
                 Assert.AreEqual(3, first.Items.Length);
                 s.AdvanceClock((int)(Math.Max(first.DeliveryAt, first.ReturnAt) - s.Clock.Now.TotalMinutes + 1));
                 s.AdvanceClock(5);
                 Assert.Zero(s.EmployeePurchaseTrips.Count, "同一天只自动尝试一次");
-                s.Clock.Restore(new GameDate(1), 8 * 60 + 59);
+                s.Clock.Restore(new GameDate(2), 8 * 60 + 59);
                 s.AdvanceClock(2);
                 Assert.AreEqual(3, s.EmployeePurchaseTrips.Single().Items.Length, "次日仍按整份多源清单采购");
                 Assert.True(s.CompleteEmployeePurchase(buyer.Id, new EmployeePurchasePlan()));
@@ -135,6 +140,71 @@ namespace PCShopSell.Tests
             }
         }
 
+        private static void Wallet(GameSession s, Money amount)
+        { s.Ledger.ForceDebit(s.Clock.Today, "测试", s.Ledger.Balance - amount, "设置可用现金"); }
+
+        [Test] public void PartialCash_BuysInListOrderAndReturnsChangeOnceAfterSave()
+        {
+            using (var s = Make())
+            {
+                var offers = s.EmployeePurchaseCatalog();
+                var cheap = offers.First(o => o.Kind == PurchaseGoodsKind.Part && o.Id == "cpu0");
+                var dear = offers.First(o => o.Kind == PurchaseGoodsKind.Part && o.Id == "cpu1");
+                var plan = new EmployeePurchasePlan { Transport = VehicleKind.Walk, Items = new[] { cheap.Line(5), dear.Line(5) } };
+                var id = s.MainShop.Buyer.Id; Assert.True(s.ConfigureEmployeePurchase(id, plan));
+                var full = s.QuoteEmployeePurchase(id);
+                Money wallet = cheap.Price * 2 + full.Travel + full.Freight + Money.FromYuan(1);
+                Wallet(s, wallet); var q = s.QuoteEmployeePurchase(id);
+                Assert.IsNull(q.Error); Assert.AreEqual(wallet, q.Budget); Assert.Less(q.Total.Cents, q.RequiredTotal.Cents);
+                Assert.True(s.DispatchEmployeePurchase(id)); Assert.AreEqual(Money.Zero, s.Ledger.Balance);
+                var trip = s.EmployeePurchaseTrips.Single(); Assert.AreEqual(1, trip.Items.Length);
+                Assert.AreEqual("cpu0", trip.Items[0].PartId); Assert.AreEqual(2, trip.Items[0].Count);
+                Assert.AreEqual(100, trip.ChangeCents);
+                using (var loaded = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
+                {
+                    loaded.EventsEnabled = false;
+                    var copy = loaded.EmployeePurchaseTrips.Single(); Assert.AreEqual(100, copy.ChangeCents);
+                    loaded.AdvanceClock((int)(System.Math.Max(copy.ReturnAt, copy.DeliveryAt) - loaded.Clock.Now.TotalMinutes + 1));
+                    Assert.AreEqual(1, loaded.Ledger.Balance.Yuan);
+                    loaded.AdvanceClock(1); Assert.AreEqual(1, loaded.Ledger.Balance.Yuan);
+                }
+            }
+        }
+        [Test] public void PartialCash_SkipsUnaffordableEarlyItemButStillBuysLaterCheapItem()
+        {
+            using (var s = Make())
+            {
+                var offers = s.EmployeePurchaseCatalog();
+                var dear = offers.First(o => o.Kind == PurchaseGoodsKind.Part && o.Id == "cpu2");
+                var cheap = offers.First(o => o.Kind == PurchaseGoodsKind.Part && o.Id == "cpu0");
+                var id = s.MainShop.Buyer.Id;
+                Assert.True(s.ConfigureEmployeePurchase(id, new EmployeePurchasePlan { Transport = VehicleKind.Walk, Items = new[] { dear.Line(1), cheap.Line(1) } }));
+                var full = s.QuoteEmployeePurchase(id);
+                Wallet(s, cheap.Price + full.Travel + full.Freight);
+                Assert.True(s.DispatchEmployeePurchase(id));
+                var items = s.EmployeePurchaseTrips.Single().Items;
+                Assert.AreEqual(1, items.Length); Assert.AreEqual("cpu0", items[0].PartId);
+            }
+        }
+        [Test] public void Complete_NextDayEligibilityAndOrderSurviveJsonSave()
+        {
+            using (var s = Make())
+            {
+                var plan = Mixed(s); plan.Items = plan.Items.Reverse().ToArray();
+                var id = s.MainShop.Buyer.Id; var cash = s.Ledger.Balance;
+                Assert.True(s.CompleteEmployeePurchase(id, plan));
+                using (var loaded = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
+                {
+                    loaded.EventsEnabled = false; loaded.AdvanceClock(1);
+                    Assert.Zero(loaded.EmployeePurchaseTrips.Count); Assert.AreEqual(cash, loaded.Ledger.Balance);
+                    Assert.AreEqual(1, loaded.MainShop.Buyer.PurchasePlan.FirstDay);
+                    CollectionAssert.AreEqual(plan.Items.Select(x => x.PartId), loaded.MainShop.Buyer.PurchasePlan.Items.Select(x => x.PartId));
+                    loaded.Clock.Restore(new GameDate(1), 8 * 60 + 59); loaded.AdvanceClock(2);
+                    var trip = loaded.EmployeePurchaseTrips.Single();
+                    CollectionAssert.AreEqual(plan.Items.Select(x => x.PartId), trip.Items.Select(x => x.PartId));
+                }
+            }
+        }
         [Test]
         public void PostingAnotherAdRetainsPreviousCandidates_AndAddsMoreTomorrow()
         {

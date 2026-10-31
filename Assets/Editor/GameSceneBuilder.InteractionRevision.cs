@@ -73,7 +73,13 @@ namespace PCShopSell.EditorTools
             var buyer = s.Employees.First(e => e.Role == EmployeeRole.Buyer);
             _game.Ui.OpenEmployeePurchase(buyer.Person.Id); Frame(0);
             Check(!ActiveInputs().Any(i => i.contentType == InputField.ContentType.IntegerNumber), "员工采购移除数量输入框");
-            AdjustQuantity("cpu0", 3); ClickGuideButton("完成");
+            AdjustQuantity("cpu0", 3);
+            Check(!ActiveButtons().Any(b => ButtonText(b).Contains("立即采购")), "每日清单只有完成保存，没有立即采购按钮");
+            var purchaseCash = s.Ledger.Balance;
+            ClickGuideButton("完成");
+            s.AdvanceClock(1);
+            Check(s.EmployeePurchaseTrips.Count == 0 && s.Ledger.Balance == purchaseCash, "保存当天不出发、不扣采购款");
+            Check(buyer.Person.PurchasePlan.FirstDay == s.Clock.Today.TotalDays + 1, "每日采购明天才开始");
             Check(buyer.Person.PurchasePlan.Items.Any(i => i.PartId == "cpu0" && i.Count == 3), "员工采购加减数量在完成后保存");
             _game.Ui.CloseAllWindows(); s.SetSmartphone(true); _game.Ui.OpenWholesaleApp(true); Frame(0);
             Check(ActiveInputs().Length == 0 && ActiveButtons().Any(b => b.name == "QuantityPlus_dailyBudget"), "自动补货政策也没有数字输入框");
