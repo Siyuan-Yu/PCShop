@@ -83,6 +83,8 @@
 
 - [员工列表](previews/vs1_employees_list.png)
 - [次日调店](previews/vs1_employees_transfer.png)
+- [调店安排提交后：今天留原店、明天去二店](previews/vs1_employees_transfer_scheduled.png)
+- [选择进货源/指定档口](previews/vs1_employees_source.png)
 - [采购单](previews/vs1_employees_purchase.png) / [1280×720](previews/vs1_employees_purchase_720.png)
 - [车辆与占用](previews/vs1_employees_fleet.png)
 - [叫货车](previews/vs1_employees_freight.png)

@@ -62,12 +62,19 @@ namespace PCShopSell.EditorTools
             Shot("vs1_employees_list");
             ClickGuideButton("安排明天调店");
             Shot("vs1_employees_transfer");
+            ClickGuideButton($"{s.ShopTitle(s.ShopAt(second.Id))}（{second.Name}）\n安排明天到这里上班");
+            Check(s.FindEmployee(buyer.Id).Shop.Place.Id == mainId && buyer.TransferShopId == second.Id,
+                "调店安排提交后今天留在原店，明天去目标店");
+            Shot("vs1_employees_transfer_scheduled");
             _game.Ui.CloseModalWindows();
             _game.Ui.OpenEmployeesPanel();
             ClickGuideButton("安排进货");
             Frame(0);
             Shot("vs1_employees_purchase");
             Shot("vs1_employees_purchase_720", 1280, 720);
+            ClickGuideButton("电子市场：按品类找档口  ▼");
+            Shot("vs1_employees_source");
+            _game.Ui.CloseTopWindow();
             var dispatch = _game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<UnityEngine.UI.Button>())
                 .Last(b => b.GetComponentInChildren<UnityEngine.UI.Text>()?.text.StartsWith("按清单派出（付") == true);
             Check(dispatch.interactable, "员工验收：采购派出按钮可点击");
