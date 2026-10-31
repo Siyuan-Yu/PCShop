@@ -98,7 +98,6 @@ namespace PCShopSell.Core.Session
             if (VentureAt(l.PlaceId) != null || PropertyAt(l.PlaceId) != null) return "这间铺子已纳入你的经营资产";
             if (PendingLease != null) return $"你已经提前签了{City.GetPlace(PendingLease.PlaceId).Name}，第 {PendingLease.StartDay + 1} 天交房前不能再签";
             if (ShopAt(l.PlaceId) != null) return "这已经是你的店了";
-            if (newShop && HasShop && MyShopCount >= MaxOwnShops) return $"最多同时自营 {MaxOwnShops} 家店";
             double rep = RealEstate.MinReputation(l.Size);
             if (PlayerShop.Reputation < rep) return $"房东要看名气：知名度要到 {rep:0}";
             if (Lease != null && !newShop)

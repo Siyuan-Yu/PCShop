@@ -1700,8 +1700,11 @@ namespace PCShopSell.EditorTools
             var cheaper = s.DebugAddListing("shop05", s.Clock.Today.TotalDays, s.Clock.Today.TotalDays + 30, Money.FromYuan(1500));
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
             ClickAgency("AgencyLot_shop05");
-            Check(s.MyShopCount == GameSession.MaxOwnShops && AgencyButton("AgencyReviewLease")?.interactable == false, "自营店到上限后不能再签");
-            Shot("vs1_agency_max_shops");
+            Check(s.MyShopCount == 3 && AgencyButton("AgencyReviewLease")?.interactable == true, "开了 3 家店还能接着签，自营店不设上限");
+            ClickAgency("AgencyReviewLease");
+            ClickAgency("AgencyConfirmLease");
+            Check(s.MyShopCount == 4 && s.PlayerShopPlace.Id == "shop05", "签下第 4 家店");
+            Shot("vs1_agency_fourth_shop");
             _game.Ui.CloseAllWindows();
             Check(!UnityEngine.Object.FindObjectsOfType<Camera>().Any(c => c.name == "AgencyStreetCamera"), "关闭中介释放三维预览相机");
             Teleport(s, "agency");

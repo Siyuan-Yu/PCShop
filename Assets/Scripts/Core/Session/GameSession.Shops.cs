@@ -18,10 +18,15 @@ namespace PCShopSell.Core.Session
     /// </summary>
     public sealed partial class GameSession
     {
-        /// <summary>最多同时自营几家店。</summary>
-        public const int MaxOwnShops = 3;
+        private static readonly string[] Digits = { "零", "一", "二", "三", "四", "五", "六", "七", "八", "九" };
 
-        private static readonly string[] ShopOrdinals = { "", "二", "三", "四", "五", "六" };
+        /// <summary>第 n 家店的中文序号（2 → 二，10 → 十，12 → 十二，23 → 二十三）。</summary>
+        private static string ChineseNumber(int n)
+        {
+            if (n < 10) return Digits[n];
+            if (n < 100) return (n / 10 == 1 ? "" : Digits[n / 10]) + "十" + (n % 10 == 0 ? "" : Digits[n % 10]);
+            return n.ToString();
+        }
 
         /// <summary>任何一家自营店来了顾客（街上让路人走进那家店的门）。</summary>
         public event Action<Place, ShopCustomer> ShopCustomerArrived;
@@ -44,7 +49,7 @@ namespace PCShopSell.Core.Session
         public string ShopTitle(OwnedShop s)
         {
             int i = _shops.IndexOf(s);
-            return i <= 0 ? MyShopName : $"{MyShopName}·{ShopOrdinals[Math.Min(i, ShopOrdinals.Length - 1)]}店";
+            return i <= 0 ? MyShopName : $"{MyShopName}·{ChineseNumber(i + 1)}店";
         }
 
         /// <summary>开了不止一家时，提示里带上是哪家店。</summary>
