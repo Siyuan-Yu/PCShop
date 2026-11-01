@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -8,8 +8,21 @@ namespace PCShopSell.Core.Session
     {
         private readonly List<Employee> _idleEmployees = new List<Employee>();
         public static int AssemblyMinutesOf(Employee person) => Math.Max(45, person.AssemblyMinutes - person.BuildsCompleted / 2);
+        public static int EmployeeCharm(Employee person)
+        {
+            if(person==null)return 0;
+            if(person.Charm>=0)return Math.Max(0,Math.Min(100,person.Charm));
+            // Older employees receive a stable aptitude, without consuming simulation RNG.
+            uint hash=2166136261;
+            foreach(char ch in person.Id??person.Name??"employee")hash=unchecked((hash^ch)*16777619);
+            return 20+(int)(hash%71);
+        }
+        public static double EmployeeSalesBonus(Employee person)=>EmployeeCharm(person)*.0025;
+        public double ShopSalesBonus(OwnedShop shop)=>shop?.Salesperson!=null && shop.Salesperson.OnDuty(Clock.Now)
+            && EmployeeTrip(shop.Salesperson.Id)==null && CityEmployeeAvailable(shop.Salesperson,shop)
+                ?EmployeeSalesBonus(shop.Salesperson):0;
         public static string EmployeeAbilities(Employee person) =>
-            $"收银 {person.CheckoutMinutes} 分钟/单 · 装机 {AssemblyMinutesOf(person)} 分钟/台 · 采购 {person.PurchaseMinutes} 分钟/型号";
+            $"收银 {person.CheckoutMinutes} 分钟/单 · 装机 {AssemblyMinutesOf(person)} 分钟/台 · 采购 {person.PurchaseMinutes} 分钟/型号\n魅力 {EmployeeCharm(person)} · 销售购买意愿 +{EmployeeSalesBonus(person)*100:0.#}个百分点";
 
         public Employee RecruitEmployee(int index)
         {
@@ -24,7 +37,7 @@ namespace PCShopSell.Core.Session
         }
 
         public EmployeeRole PlannedEmployeeRole(EmployeeAssignment row) =>
-            row.Person.TransferRole >= 0 && row.Person.TransferRole <= (int)EmployeeRole.Buyer
+            row.Person.TransferRole >= 0 && Enum.IsDefined(typeof(EmployeeRole),row.Person.TransferRole) && row.Person.TransferRole != (int)EmployeeRole.Unassigned
                 ? (EmployeeRole)row.Person.TransferRole : row.Role;
 
         public string EmployeeAssignmentBlocker(string id, string destination, EmployeeRole role, bool replace = false)

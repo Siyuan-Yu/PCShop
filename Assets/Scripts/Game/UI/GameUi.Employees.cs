@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -18,7 +18,7 @@ namespace PCShopSell.Game.UI
             {
                 var rows = S.Employees;
                 Line(w.Content, $"员工 {rows.Count} 人 · 基础日薪合计 ¥{rows.Sum(x => x.Person.DailyWageYuan):N0} · 排班预计 {PCShopSell.Core.Common.Money.FromCents(rows.Sum(x=>GameSession.EstimateShiftPay(x.Person,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingStart:x.Person.ShiftStart,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingEnd:x.Person.ShiftEnd).Cents))}", 21, Ui.Accent);
-                Para(w.Content, "每个人都能做收银、装机或进货。先聘用，再安排岗位和门店；同店换岗今天生效，跨店明天生效。", 17, Ui.Dim);
+                Para(w.Content, "每个人都能做收银、装机、进货或销售。先聘用，再安排岗位和门店；同店换岗今天生效，跨店明天生效。", 17, Ui.Dim);
                 var bar = Ui.Row(w.Content, 40);
                 Ui.Size(Ui.Button(bar, "查看车辆与占用", OpenFleetPanel, 17), 240);
                 Ui.Size(Ui.Button(bar, "在当前店招人", () => { w.Close(); OpenDock(); DebugSelectTab(6); }, 17, Ui.ButtonBg, S.InPlayerShop), 220);
@@ -34,7 +34,7 @@ namespace PCShopSell.Game.UI
                     var row = assignment;
                     var e = row.Person;
                     Line(list, $"<b>{e.Name}</b> · 日薪 {e.DailyWage}", 19, Ui.Accent);
-                    Line(list, GameSession.EmployeeAbilities(e) + "（越少越熟练）", 15, Ui.Dim);
+                    Para(list, GameSession.EmployeeAbilities(e), 15, Ui.Dim);
                     string current = row.Shop == null ? "待安排工作" : $"{S.ShopTitle(row.Shop)}（{row.Shop.Place.Name}） · {GameSession.RoleName(row.Role)}";
                     Line(list, $"今天：{current} · {S.EmployeeStatus(row)}", 17);
                     Para(list,S.EmployeePaySummary(e),16,Ui.Dim);
@@ -67,7 +67,7 @@ namespace PCShopSell.Game.UI
             string destination = (row.Shop ?? S.CurrentShop)?.Place.Id;
             OpenWindow("安排工作 · " + row.Person.Name, 940, 660, w =>
             {
-                Line(w.Content, GameSession.EmployeeAbilities(row.Person), 17, Ui.Accent);
+                Para(w.Content, GameSession.EmployeeAbilities(row.Person), 17, Ui.Accent);
                 Para(w.Content, "不擅长也可以安排，效率按员工能力计算。换岗位不自动培训，也不改变工资。", 17, Ui.Dim);
                 Line(w.Content, "1. 做什么工作", 20);
                 var roles = Ui.Row(w.Content, 44);
@@ -90,6 +90,8 @@ namespace PCShopSell.Game.UI
                 Para(w.Content, role == EmployeeRole.Unassigned ? "暂不分配工作，仍按原日薪发工资；以后可重新安排。"
                     : tomorrow ? $"跨店安排明天生效。今天仍在{S.ShopTitle(row.Shop)}做{GameSession.RoleName(row.Role)}，明天到新店做{GameSession.RoleName(role)}。"
                     : "本次是首次安排或同店换岗，确认后今天起按新岗位工作。", 18, Ui.Accent);
+                if(role==EmployeeRole.Salesperson)
+                    Para(w.Content,$"魅力 {GameSession.EmployeeCharm(row.Person)}：实际在店上班时，顾客购买意愿 +{GameSession.EmployeeSalesBonus(row.Person)*100:0.#}个百分点。收银仍由老板或收银人员负责。",17,Ui.Good);
                 string blocker = S.EmployeeAssignmentBlocker(employeeId, destination, role);
                 if (blocker != null) Para(w.Content, blocker, 16, Ui.Warn);
                 var occupant = S.EmployeeInPosition(destination, role);

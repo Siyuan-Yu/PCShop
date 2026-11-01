@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -143,7 +143,7 @@ namespace PCShopSell.Game
             if (_crowd == null)
             {
                 Vector3 entrance = World.Places[s.PlayerShopPlace.Id].Entrance;
-                Vector3 door = entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZAt(entrance.x) - 0.3f);
+                Vector3 door = World.Places[s.PlayerShopPlace.Id].Place.ExplicitEntrance ? entrance : entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZAt(entrance.x) - 0.3f);
                 _crowd = new CrowdView(_actors, -95, 100, door);
             }
             SyncCrowdDoor();
@@ -449,7 +449,7 @@ namespace PCShopSell.Game
         private bool _orbiting;
         private static readonly KeyCode[] HotkeyPanels = { KeyCode.M, KeyCode.C, KeyCode.P, KeyCode.J, KeyCode.H, KeyCode.T };
 
-        /// <summary>街上自由切换视角：右键拖动旋转/俯仰，Q / E 左右转，V 复位。</summary>
+        /// <summary>街上、家里和店里共用视角操作：右键拖动旋转/俯仰，Q / E 左右转，V 复位。</summary>
         private void HandleCameraOrbit()
         {
             if (Placing)
@@ -465,7 +465,7 @@ namespace PCShopSell.Game
                 if (Input.GetKeyDown(KeyCode.V)) _rig.ResetView();
                 return;
             }
-            if (InRoom || Ui.AnyModalOpen) { _orbiting = false; return; }
+            if (Ui.AnyModalOpen) { _orbiting = false; return; }
             if (Input.GetMouseButtonDown(1) && !GameUi.PointerOverUi) _orbiting = true;
             if (!Input.GetMouseButton(1)) _orbiting = false;
             if (_orbiting) _rig.Orbit(Input.GetAxis("Mouse X") * 4f, -Input.GetAxis("Mouse Y") * 3f);
@@ -854,7 +854,7 @@ namespace PCShopSell.Game
         private void SyncCrowdDoor()
         {
             if (_crowd != null && World.Places.TryGetValue(Session.PlayerShopPlace.Id, out PlaceVisual pv))
-                _crowd.ShopDoor = pv.Entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZAt(pv.Entrance.x) - 0.3f);
+                _crowd.ShopDoor = (pv.Place.ExplicitEntrance ? pv.Entrance : pv.Entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZAt(pv.Entrance.x) - 0.3f));
         }
 
         /// <summary>切换场景时重设镜头：店内比较近、跟着老板，街上拉远。</summary>
@@ -903,7 +903,7 @@ namespace PCShopSell.Game
         private void OnCustomerArrived(Place shop, PCShopSell.Core.Shop.ShopCustomer c)
         {
             if (InInterior || _crowd == null || !World.Places.TryGetValue(shop.Id, out PlaceVisual pv)) return;
-            _crowd.SendShopper(pv.Entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZAt(pv.Entrance.x) - 0.3f));
+            _crowd.SendShopper((pv.Place.ExplicitEntrance ? pv.Entrance : pv.Entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZAt(pv.Entrance.x) - 0.3f)));
         }
 
         private void OnDayAdvanced(GameDate prev, GameDate today) => _autosaveDue = true;

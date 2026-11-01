@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.World;
@@ -19,7 +19,7 @@ namespace PCShopSell.Core.Session
         public readonly List<PlacedFurniture> Layout = new List<PlacedFurniture>();
         public readonly HashSet<string> Upgrades = new HashSet<string>();
         public readonly Dictionary<string, int> Restock = new Dictionary<string, int>();
-        public Employee Employee, Assembler, Buyer;
+        public Employee Employee, Assembler, Buyer, Salesperson;
         public bool EmployeeTrained, AutoBuild;
         public bool EmployeeBuilding;
         public int PendingDisplayTier = -1, PendingDisplayMinutes;

@@ -9,6 +9,8 @@ namespace PCShopSell.Core.World
     [Serializable]
     public sealed class CityLayoutData
     {
+        public int layoutVersion;
+        public LayoutBlockData[] blocks;
         public LayoutStreetData[] streets;
         /// <summary>
         /// 画面距离换算成游戏内距离的倍率。画面里的城市是缩小的：
@@ -22,6 +24,15 @@ namespace PCShopSell.Core.World
         public LayoutEdgeData[] edges;
         public LayoutPlaceData[] places;
         public LayoutPatrolData[] patrols;
+    }
+
+    [Serializable]
+    public sealed class LayoutBlockData
+    {
+        public string street, model;
+        public double x,y,width,depth,height;
+        public int variant;
+        public int tier,columns=1,rows=1;
     }
 
     [Serializable]
@@ -59,6 +70,8 @@ namespace PCShopSell.Core.World
     [Serializable]
     public sealed class LayoutPlaceData
     {
+        public string model;
+        public int tier;
         public string street;
         public bool explicitEntrance, tradable;
         public double entranceX, entranceY, width, depth, heading;
@@ -99,6 +112,8 @@ namespace PCShopSell.Core.World
     /// <summary>地点（店铺、住所、批发商、地铁站等），入口位于路径图的某个节点。</summary>
     public sealed class Place
     {
+        public string Model { get; }
+        public int Tier { get; }
         public string StreetId { get; }
         public bool ExplicitEntrance { get; }
         public bool IsTradable { get; }
@@ -122,8 +137,9 @@ namespace PCShopSell.Core.World
             ShopSize size = ShopSize.Small, string business = null, bool isPlayerShop = false,
             IReadOnlyList<PartCategory> sells = null, string streetId = null, bool explicitEntrance = false,
             double entranceX = 0, double entranceY = 0, double width = 10, double depth = 9, double heading = 0,
-            bool tradable = false, int openMinute = 0, int closeMinute = 0)
+            bool tradable = false, int openMinute = 0, int closeMinute = 0, string model = null, int tier = 0)
         {
+            Model = model; Tier = tier;
             Id = id;
             Name = name;
             Kind = kind;
@@ -162,6 +178,8 @@ namespace PCShopSell.Core.World
         private readonly List<Place> _placeList = new List<Place>();
         private readonly List<PatrolRoute> _patrols = new List<PatrolRoute>();
 
+        public int LayoutVersion { get; private set; }
+        public IReadOnlyList<LayoutBlockData> Blocks { get; private set; } = Array.Empty<LayoutBlockData>();
         public WorldMap Map { get; }
         public double DistanceScale { get; }
         public bool HasUniformRoadScale { get; private set; }
@@ -230,6 +248,7 @@ namespace PCShopSell.Core.World
             var layout = new CityLayout(map, data.distanceScale);
             layout.HasUniformRoadScale = data.uniformRoadScale > 0;
             layout.TravelDistanceScale = data.distanceScale * (layout.HasUniformRoadScale ? data.uniformRoadScale : 1);
+            layout.LayoutVersion=data.layoutVersion; layout.Blocks=data.blocks??Array.Empty<LayoutBlockData>();
             layout.Streets = data.streets ?? Array.Empty<LayoutStreetData>();
             if (data.patrols != null)
             {
@@ -257,7 +276,7 @@ namespace PCShopSell.Core.World
 
                     var place = new Place(p.id, p.name ?? p.id, ParseKind(p.kind), p.node,
                         ParseSize(p.size), p.business, p.player, ParseSells(p.sells), p.street, p.explicitEntrance,
-                        p.entranceX, p.entranceY, p.width, p.depth, p.heading, p.tradable, p.openMinute, p.closeMinute);
+                        p.entranceX, p.entranceY, p.width, p.depth, p.heading, p.tradable, p.openMinute, p.closeMinute, p.model, p.tier);
                     layout._places.Add(place.Id, place);
                     layout._placeList.Add(place);
                 }

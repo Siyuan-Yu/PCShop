@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -68,6 +68,8 @@ namespace PCShopSell.Core.Session
                     || (shop.Assembler != null && shop.Assembler.OnDuty(t) && CityEmployeeAvailable(shop.Assembler, shop)),
             };
             sim.Settings.BuildOrdersStartDay = BuildOrdersStartDay;
+            sim.SalesBonusOf = () => ShopSalesBonus(shop);
+            sim.HasClothingMirror = () => shop.Layout.Any(p=>FurnitureCatalog.Canonical(p.Id)==FurnitureCatalog.FittingMirror);
             sim.WorkMinute = now => WithShop(shop, () => UpdateEmployeeWork(now));
             sim.EmployeeBusy = () => shop.EmployeeBuilding;
             sim.DayClosed += r =>
@@ -165,7 +167,7 @@ namespace PCShopSell.Core.Session
             s.Sim.ClearCustomers();
             foreach (PlacedFurniture f in s.Layout) AddFurniture(f.Id, 1);
             if (s.Lease.Deposit.IsPositive) Ledger.Credit(Clock.Today, "押金", s.Lease.Deposit, $"退还{title}押金");
-            bool hadStaff = s.Employee != null || s.Assembler != null || s.Buyer != null;
+            bool hadStaff = s.Employee != null || s.Assembler != null || s.Buyer != null || s.Salesperson != null;
             Money rent = s.Lease.Rent;
             bool wasMain = s == MainShop;
             bool wasOwned = s.OwnsProperty;
@@ -224,6 +226,8 @@ namespace PCShopSell.Core.Session
                 hasAssembler = s.Assembler != null,
                 assembler = s.Assembler != null ? ToSave(s.Assembler) : null,
                 hasBuyer = s.Buyer != null,
+                hasSalesperson = s.Salesperson != null,
+                salesperson = s.Salesperson != null ? ToSave(s.Salesperson) : null,
                 buyer = s.Buyer != null ? ToSave(s.Buyer) : null,
                 employeeTrained = s.EmployeeTrained,
                 autoBuild = s.AutoBuild,
@@ -266,6 +270,7 @@ namespace PCShopSell.Core.Session
             shop.Assembler = d.hasAssembler && d.assembler != null ? FromSave(d.assembler) : null;
             if (shop.Assembler != null && !d.assembler.hasWorkSkills) shop.Assembler.AssemblyTrained = true;
             shop.Buyer = d.hasBuyer && d.buyer != null ? FromSave(d.buyer) : null;
+            shop.Salesperson = d.hasSalesperson && d.salesperson != null ? FromSave(d.salesperson) : null;
             shop.EmployeeTrained = d.employeeTrained;
             shop.AutoBuild = d.autoBuild;
             shop.Layout.AddRange(FromSave(d.layout));

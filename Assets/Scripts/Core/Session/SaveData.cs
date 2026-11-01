@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using PCShopSell.Core.Inventory;
 
 namespace PCShopSell.Core.Session
@@ -37,7 +37,9 @@ namespace PCShopSell.Core.Session
         public int impoundedTricycles;
         public int impoundedEBikes;
         public bool hasBuyer;
+        public bool hasSalesperson;
         public SaveEmployee buyer;
+        public SaveEmployee salesperson;
         public EmployeePurchaseTrip[] employeeTrips;
         public SaveEmployee[] idleEmployees;
         public bool tricycleImpounded;
@@ -290,8 +292,9 @@ namespace PCShopSell.Core.Session
         public string[] partMarkupIds;
         public double[] partMarkupValues;
         public bool hasEmployee, hasAssembler;
-        public SaveEmployee employee, assembler, buyer;
+        public SaveEmployee employee, assembler, buyer, salesperson;
         public bool hasBuyer;
+        public bool hasSalesperson;
         public bool employeeTrained, autoBuild;
         public SavePlaced[] layout;
         public string[] upgrades;
@@ -323,6 +326,8 @@ namespace PCShopSell.Core.Session
         public string name;
         public long wage;
         public int checkoutMinutes;
+        public bool hasCharm;
+        public int employeeCharm;
         public int shiftStart, shiftEnd, buildsCompleted;
         public EmployeeSchedule schedule;
         public bool hasSchedule;

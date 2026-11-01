@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -18,6 +18,7 @@ namespace PCShopSell.Core.Session
         public int TransferDay = -1;
         public int TransferRole = -1;
         public int AssemblyMinutes = 90, PurchaseMinutes = 2;
+        public int Charm = -1;
         public bool AssemblyTrained;
         public EmployeePurchasePlan PurchasePlan = new EmployeePurchasePlan();
         public string LastPurchaseNote;
@@ -69,6 +70,7 @@ namespace PCShopSell.Core.Session
             get => _focus.Assembler;
             private set => _focus.Assembler = value;
         }
+        public Employee Salesperson => _focus.Salesperson;
         public string OnDutyStaffName => Employee != null && Employee.OnDuty(Clock.Now) ? Employee.Name : Assembler?.Name ?? "店员";
         public bool EverHired { get; private set; }
         public IReadOnlyList<Employee> Candidates => _candidates;
@@ -250,6 +252,7 @@ namespace PCShopSell.Core.Session
                     CandidateLeavesAt = (long)today.TotalDays * 1440 + CandidateLeaveMinute,
                     Name = Surnames[Random.Next(0, Surnames.Length)] + GivenNames[Random.Next(0, GivenNames.Length)],
                     CheckoutMinutes = fast ? 2 : 4,
+                    Charm = Random.Next(20, 91),
                     AssemblyMinutes = Random.Next(70, 131),
                     PurchaseMinutes = Random.Next(2, 7),
                     DailyWageYuan = fast ? Random.Next(150, 181) : Random.Next(100, 131),

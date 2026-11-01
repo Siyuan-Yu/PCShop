@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.World;
 using UnityEngine;
@@ -105,7 +105,6 @@ namespace PCShopSell.Game.Runtime
 
         public void Orbit(float dYaw, float dPitch)
         {
-            if (_locked && !_edit) return;
             Yaw = Mathf.Repeat(Yaw + dYaw, 360f);
             Pitch = Mathf.Clamp(Pitch + dPitch, MinPitch, MaxPitch);
         }
@@ -118,7 +117,6 @@ namespace PCShopSell.Game.Runtime
                 Pitch = EditPitch;
                 return;
             }
-            if (_locked) return;
             Yaw = DefaultYaw;
             Pitch = DefaultPitch;
         }

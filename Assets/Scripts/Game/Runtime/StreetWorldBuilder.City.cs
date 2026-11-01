@@ -31,7 +31,7 @@ namespace PCShopSell.Game.Runtime
                 string key = string.CompareOrdinal(n.Id, edge.To) < 0 ? n.Id + "|" + edge.To : edge.To + "|" + n.Id;
                 if (!seen.Add(key)) continue;
                 Vector3 a = NodeWorld(n.Id), b = NodeWorld(edge.To), delta = b - a;
-                if (delta.sqrMagnitude < .01f || (Mathf.Abs(a.z) < .1f && Mathf.Abs(b.z) < .1f)) continue;
+                if (delta.sqrMagnitude < .01f || (_city.LayoutVersion<7 && Mathf.Abs(a.z) < .1f && Mathf.Abs(b.z) < .1f)) continue;
                 float width = GameSession.IsMainRoad(_city.ViewPosition(n.Id), _city.ViewPosition(edge.To)) ? 7 : 5;
                 Vector3 right = Vector3.Cross(Vector3.up, delta.normalized);
                 foreach (int side in new[] { -1, 1 })

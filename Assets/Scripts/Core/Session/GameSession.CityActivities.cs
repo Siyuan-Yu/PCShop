@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -16,7 +16,9 @@ namespace PCShopSell.Core.Session
         private readonly List<string> _cityFavorites = new List<string>(), _cityRecent = new List<string>();
         public string CityDefaultDestination { get; private set; }
         public string CityAgencyShortcut { get; private set; } = "agency";
-        public string CityMarketShortcut { get; private set; } = "shop14";
+        public string CityMarketShortcut { get; private set; } = "stall_cpu";
+        public string CityShopShortcut { get; private set; }
+        public void SetCityShopShortcut(string placeId) {if(MyShops.Any(s=>s.Place.Id==placeId))CityShopShortcut=placeId;}
         public IReadOnlyList<string> CityFavorites => _cityFavorites;
         public IReadOnlyList<string> CityRecent => _cityRecent;
         public IReadOnlyList<CityActivity> CityActivities => _cityActivities;

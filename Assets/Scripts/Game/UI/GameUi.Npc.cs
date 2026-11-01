@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
@@ -66,7 +66,7 @@ namespace PCShopSell.Game.UI
             cap.raycastTarget = false;
             cap.rectTransform.Fill(2);
 
-            if (onClick != null && !unknown)
+            if (onClick != null && !unknown && !string.IsNullOrEmpty(tagText))
             {
                 Image tag = Ui.Panel(frame.transform, "Tag", new Color(0.2f, 0.55f, 0.52f, 0.92f));
                 tag.raycastTarget = false;
@@ -214,7 +214,7 @@ namespace PCShopSell.Game.UI
         /// 对话框：上面左边是人物头像、右边是他说的话；下面一列居中的选项，点一个选项他就回一句；不够条件的选项灰着写明原因。
         /// </summary>
         private void OpenDialogue(string portraitId, string name, string role, NpcDef npc, string greeting, int optionCount,
-            System.Func<TalkCtx, List<TalkOpt>> makeOptions, string firstReply = null, string rapportId = null, System.Action onClosed = null)
+            System.Func<TalkCtx, List<TalkOpt>> makeOptions, string firstReply = null, string rapportId = null, System.Action onClosed = null, bool remote = false)
         {
             var ctx = new TalkCtx { Reply = firstReply };
             float height = 485 + 46 * optionCount + (npc != null ? 66 : rapportId != null ? 36 : 0);
@@ -261,7 +261,7 @@ namespace PCShopSell.Game.UI
                 }
                 Image bubble = Ui.Panel(say, "Bubble", new Color(0.16f, 0.18f, 0.22f, 1f));
                 Ui.Size(bubble, -1, bubbleHeight);
-                bool nearby = S.CityPersonState(portraitId) == null || S.CitySamePlace(portraitId);
+                bool nearby = remote || S.CityPersonState(portraitId) == null || S.CitySamePlace(portraitId);
                 string text = nearby ? ctx.Reply ?? "“" + greeting.Trim('"') + "”" : "对方已经离开了，等下次见面再聊吧。";
                 Text sayText = Ui.Label(bubble.transform, text, 19, TextAnchor.UpperLeft, Ui.TextColor);
                 sayText.rectTransform.Fill(12);
@@ -288,22 +288,24 @@ namespace PCShopSell.Game.UI
             }, true, true, onClosed);
         }
 
-        public void OpenPersonDialogue(string personId,Place place=null,Window parent=null,string firstReply=null,StaffDef staff=null,PlaceRoster roster=null,System.Action onClosed=null,int initialPage=0)
+        public void OpenPersonDialogue(string personId,Place place=null,Window parent=null,string firstReply=null,StaffDef staff=null,PlaceRoster roster=null,System.Action onClosed=null,int initialPage=0,bool remote=false)
         {
             var definition=S.CityPerson(personId);var npc=Npcs.All.FirstOrDefault(n=>n.Id==personId);
             staff=staff??Rosters.Get(personId)??Residents.Get(personId)?.Person;
             if(staff==null&&Npcs.Get(personId)==null&&definition!=null)staff=definition.Staff;
             if(definition==null&&npc==null&&staff==null){Toast("暂时找不到这个人物。");return;}
-            if(definition!=null&&!S.CitySamePlace(personId)){OpenCityPersonProfile(personId,onClosed);return;}
+            if(remote){string why=S.RemoteConversationBlocker(personId);if(why!=null){Toast(why);return;}}
+            else if(definition!=null&&!S.CitySamePlace(personId)){OpenCityPersonProfile(personId,onClosed);return;}
             string name=definition?.Name??npc?.Name??staff.Name;
             string role=definition!=null?S.CityPersonRole(personId):npc?.Role??staff.Role;
             string greeting=npc!=null?(S.IsMet(personId)?npc.Intro:npc.FirstMeet??npc.Intro):staff?.LineFor(S.Clock.Today.TotalDays)??"你好，今天过得怎么样？";
             bool creatorChoice = initialPage == 3;
             bool discussingPeople = false;
-            OpenDialogue(personId, name, role, npc, greeting, 6, ctx =>
+            OpenDialogue(personId, name, role+(remote?" · 手机聊天":""), npc, greeting, 6, ctx =>
             {
                 var options = new List<TalkOpt>();
-                bool near = definition == null || S.CitySamePlace(personId);
+                bool near = !remote && (definition == null || S.CitySamePlace(personId));
+                bool canTalk = remote || near;
                 void Reply(string text) { ctx.Reply = text; ctx.W.Rebuild(); parent?.RequestRebuild(); }
                 if (creatorChoice)
                 {
@@ -326,8 +328,8 @@ namespace PCShopSell.Game.UI
                         string targetId = person.PersonId;
                         options.Add(new TalkOpt {
                             Label = "谈谈" + person.Name,
-                            Blocker = S.AskAboutOthersBlocker(personId, targetId),
-                            Act = () => Reply(S.AskAboutPerson(personId, targetId))
+                            Blocker = S.AskAboutOthersBlocker(personId, targetId, remote),
+                            Act = () => Reply(S.AskAboutPerson(personId, targetId, remote))
                         });
                     }
                     options.Add(new TalkOpt { Label = "返回聊天", Act = () => { discussingPeople = false; ctx.W.Rebuild(); } });
@@ -337,8 +339,8 @@ namespace PCShopSell.Game.UI
                     Label = "打个招呼", Hot = true, Blocker = near ? null : "对方已离开",
                     Act = () => Reply(S.GreetPerson(personId) ? "你好，我是" + name + "。以后见面打声招呼。" : "对方现在不在这里。")
                 });
-                options.Add(new TalkOpt { Label = "随便聊聊", Blocker = near ? null : "对方已离开", Act = () => Reply(S.CasualConversation(personId)) });
-                options.Add(new TalkOpt { Label = "谈论别人", Blocker = S.AskAboutOthersBlocker(personId), Act = () =>
+                options.Add(new TalkOpt { Label = "随便聊聊", Blocker = canTalk ? null : "对方已离开", Act = () => Reply(S.CasualConversation(personId,remote)) });
+                options.Add(new TalkOpt { Label = "谈论别人", Blocker = S.AskAboutOthersBlocker(personId,remote:remote), Act = () =>
                 {
                     discussingPeople = true;
                     ctx.Reply = "你想打听谁？聊聊我认识的人吧。";
@@ -351,14 +353,14 @@ namespace PCShopSell.Game.UI
                 else options.Add(new TalkOpt { Label = "已交换联系方式", Blocker = "已存入通讯录" });
                 options.Add(new TalkOpt { Label = "送礼", Blocker = !near ? "需要当面送礼" : S.PersonGiftBlocker(personId), Act = () => OpenPersonGiftGrid(personId, name, ctx) });
                 if (S.IsMet(personId) && definition != null)
-                    options.Add(new TalkOpt { Label = "邀请活动", Blocker = near ? null : "对方已离开", Act = () => OpenCityActivityChooser(personId) });
+                    options.Add(new TalkOpt { Label = "邀请活动", Blocker = canTalk ? null : "对方已离开", Act = () => OpenCityActivityChooser(personId) });
                 if (npc != null && place != null)
                     options.AddRange(NpcDialogueActions(npc, place, parent, ctx).Where(o => o.Label.StartsWith("砍价") || o.Label.StartsWith("聊聊行情") || o.Label.StartsWith("交心打听")));
                 var creator = S.Creator(personId);
                 if (creator != null && S.CreatorStory(creator) != null)
-                    options.Add(new TalkOpt { Label = "聊聊最近的心事", Blocker = near ? null : "对方已离开", Act = () => { creatorChoice = true; Reply(S.CreatorStory(creator)); } });
+                    options.Add(new TalkOpt { Label = "聊聊最近的心事", Blocker = remote ? "需要当面交谈" : near ? null : "对方已离开", Act = () => { creatorChoice = true; Reply(S.CreatorStory(creator)); } });
                 return options;
-            }, firstReply, staff?.Id ?? (definition != null ? personId : null), () => { parent?.RequestRebuild(); onClosed?.Invoke(); });
+            }, firstReply, staff?.Id ?? (definition != null ? personId : null), () => { parent?.RequestRebuild(); onClosed?.Invoke(); },remote:remote);
         }
 
         private string ConversationViewKey(string id) => S.Clock.Today.TotalDays + "|" + S.CitySamePlace(id) + "|" + S.Relation(id)

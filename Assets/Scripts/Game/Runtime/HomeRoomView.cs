@@ -378,9 +378,9 @@ namespace PCShopSell.Game.Runtime
                 foreach (string name in new[] { "FloorStain1", "FloorStain2", "Crack1", "Crack2", "LeakStain", "LeakStain2", "Peeling", "Mold" })
                 { var t = _root.Find(name); if (t != null) t.gameObject.SetActive(_homeTier == 0); }
                 var floor = _root.Find("Floor").GetComponent<Renderer>();
-                floor.sharedMaterial = Mats.Lit(_homeTier == 2 ? ArtDirection.Wood : _homeTier == 1 ? ArtDirection.Cream : new Color(.52f, .47f, .41f));
+                floor.sharedMaterial = Mats.Lit(_homeTier >= 2 ? ArtDirection.Wood : _homeTier == 1 ? ArtDirection.Cream : new Color(.52f, .47f, .41f));
                 foreach (string name in new[] { "DadoBack", "DadoRight" })
-                    _root.Find(name).GetComponent<Renderer>().sharedMaterial = Mats.Lit(_homeTier == 2 ? ArtDirection.Blue : ArtDirection.Sage);
+                    _root.Find(name).GetComponent<Renderer>().sharedMaterial = Mats.Lit(_homeTier >= 2 ? ArtDirection.Blue : ArtDirection.Sage);
             }
             if (_dressed != s.EquippedOutfit)
             {

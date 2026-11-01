@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -197,7 +197,7 @@ namespace PCShopSell.Core.Home
             // ---- 出租屋：开局自带 ----
             Add(new FurnitureDef(BedBoard, "硬板床", "一块木板加一层薄褥子。", 0, FurnitureSlot.Floor, 2.0, 1.0, false, true) { Role = FurnitureRole.Bed, BedQuality = 1.0 });
             Add(new FurnitureDef(WardrobeCloth, "布衣柜", "拉链布衣柜，塑料骨架。", 0, FurnitureSlot.Floor, 1.1, 0.6, false, true) { Role = FurnitureRole.Wardrobe });
-            Add(new FurnitureDef(FittingMirror, "落地试衣镜", "真实摆放后可在店内试衣和更换已拥有的服装。", 230, FurnitureSlot.Floor, .7, .25, true) { Role = FurnitureRole.Wardrobe, WeightKg = 10 });
+            Add(new FurnitureDef(FittingMirror, "全身镜", "摆在店里使服装购买意愿增加5个百分点；只对服装生效，多面不叠加。也可试衣和更换已拥有的服装。", 230, FurnitureSlot.Floor, .7, .25, true) { Role = FurnitureRole.Wardrobe, WeightKg = 10 });
             Add(new FurnitureDef(TableCooker, "折叠小桌（电饭锅）", "吃饭、做饭都在这张小桌上。", 0, FurnitureSlot.Floor, 1.2, 0.6, false, true) { Role = FurnitureRole.Cooker });
             Add(new FurnitureDef("stool", "塑料矮凳", "红色塑料凳，可以坐。", 0, FurnitureSlot.Floor, 0.4, 0.4, false, true) { Role = FurnitureRole.Seat });
             Add(new FurnitureDef("fan_broken", "坏电风扇", "摇头的地方卡住了，一直耷拉着。找人上门能修好。", 0, FurnitureSlot.Floor, 0.45, 0.45, false, true) { Role = FurnitureRole.Broken, RepairInto = "fan_fixed", RepairCost = Money.FromYuan(60) });

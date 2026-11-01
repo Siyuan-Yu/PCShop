@@ -48,7 +48,7 @@ namespace PCShopSell.Core.Session
         private MapPoint LaneOf(string nodeId, VehicleKind kind)
         {
             MapPoint n = City.ViewPosition(nodeId);
-            if (kind != VehicleKind.Walk || Math.Abs(n.Y) >= 0.1) return n;
+            if (City.LayoutVersion>=7 || kind != VehicleKind.Walk || Math.Abs(n.Y) >= 0.1) return n;
             return new MapPoint(n.X, FrontYAt(n.X) - SidewalkInset);
         }
 

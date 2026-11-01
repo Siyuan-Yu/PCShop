@@ -53,7 +53,8 @@ namespace PCShopSell.Core.Session
 
         private readonly List<OwnedShop> _shops = new List<OwnedShop>();
         private OwnedShop _focus;
-        public Place Home { get; }
+        private readonly Place _initialHome;
+        public Place Home => HomeTier>0 && City.HasPlace("home_tier"+HomeTier)?City.GetPlace("home_tier"+HomeTier):_initialHome;
         public PoliceSystem Police { get; }
         public Online1788 Online { get; }
         public PlayerStats Player { get; } = new PlayerStats();
@@ -95,7 +96,7 @@ namespace PCShopSell.Core.Session
             City = city ?? throw new ArgumentNullException(nameof(city));
             _focus = new OwnedShop { Place = city.PlayerShop() ?? throw new ArgumentException("布局里没有玩家的店。", nameof(city)) };
             _shops.Add(_focus);
-            Home = city.FirstOfKind(PlaceKind.Home) ?? throw new ArgumentException("布局里没有住所。", nameof(city));
+            _initialHome = city.FirstOfKind(PlaceKind.Home) ?? throw new ArgumentException("布局里没有住所。", nameof(city));
 
             SetSmartphone(smartphone);
             Random = new GameRandom(seed);
@@ -273,6 +274,7 @@ namespace PCShopSell.Core.Session
         /// </summary>
         public string ClosedReason(Place p)
         {
+            if(City.LayoutVersion>=7 && p?.Kind==PlaceKind.Home && p!=Home)return "私人住宅，可在门前拜访；请到对应街道中介办理自己的住处。";
             if (WorkStaffEntry(p)) return null;
             if (p == null || ShopAt(p) != null || VentureAt(p.Id) != null || IsPlayerPropertyOccupied(p.Id)) return null;
             if (p.Kind == PlaceKind.Shop && IsVacant(p)) return null;

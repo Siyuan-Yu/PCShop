@@ -529,7 +529,7 @@ namespace PCShopSell.Core.Session
             get
             {
                 bool things = Backpack.Food.RiceKg > 0 || Backpack.Food.Ingredient.Count > 0 || Backpack.GiftLines.Any() || Backpack.FurnitureLines.Any();
-                if (InPlayerShop) return !Cargo.IsEmpty || things;
+                if (InPlayerShop) return !Cargo.IsEmpty || things || Gifts.All.Any(g=>HasAutomaticGoodsShelf(g.Id)&&GoodsAvailableToList(g.Id)>0);
                 if (AtHome) return things;
                 return false;
             }
@@ -542,7 +542,7 @@ namespace PCShopSell.Core.Session
             int moved = 0;
             Pantry food = Backpack.Food;
             double Room() => ShopLockerLimitKg - ShopLocker.WeightKg;
-            if (food.RiceKg > 0)
+            if (food.RiceKg > 0 && !HasAutomaticGoodsShelf("produce:rice"))
             {
                 double kg = Math.Min(food.RiceKg, Math.Floor(Room() * 4 + 1e-9) / 4);
                 if (kg < food.RiceKg - 1e-9) full = true;
@@ -556,6 +556,7 @@ namespace PCShopSell.Core.Session
             }
             foreach (string id in food.Ingredient.Select(b => b.Id).Distinct().ToList())
             {
+                if(HasAutomaticGoodsShelf("produce:"+id))continue;
                 int have = food.IngredientCount(id);
                 int n = Math.Min(have, (int)Math.Floor(Room() / Backpack.IngredientKg(id) + 1e-9));
                 if (n < have) full = true;
@@ -565,6 +566,7 @@ namespace PCShopSell.Core.Session
             }
             foreach (var kv in Backpack.GiftLines.ToList())
             {
+                if(HasAutomaticGoodsShelf(kv.Key))continue;
                 GiftDef g = Gifts.Get(kv.Key);
                 int n = Math.Min(kv.Value, (int)Math.Floor(Room() / g.WeightKg + 1e-9));
                 if (n < kv.Value) full = true;
@@ -577,8 +579,8 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>
-        /// 一键放下：在店里，进货的配件上货架（放不下的留在身上），米菜礼品家具进店里纸箱；
-        /// 在家里，米和菜进厨房，礼品、家具进纸箱（装不下的留在背包）。饭盒一直带在身上。
+        /// 一键放下：在店里，配件及有对应陈列的经营商品进入后仓自动上架；其他米菜礼品家具进纸箱；
+        /// 在家里，米和菜进厨房，礼品、家具进纸箱（装不下的留在背包）。自制饭菜继续随身携带，食品店经营的外带食品可按品类上架。
         /// </summary>
         public bool UnloadBackpack()
         {
@@ -589,6 +591,10 @@ namespace PCShopSell.Core.Session
                 int moved = MoveCargoToShop(out bool leftover);
                 if (moved > 0) done.Add($"配件 {moved} 件上了货架");
                 if (leftover) done.Add("店里放不下了，剩下的配件还在身上（拆掉包装能省地方）");
+                int listed=ListAutomaticShopGoods(out bool stockFull);
+                if(listed>0)done.Add($"经营商品 {listed} 件已入后仓，按对应货架/展示台自动陈列；架上满后其余留后仓待补");
+                if(stockFull)done.Add("后仓仓位已满，未放下的经营商品仍在背包或本店纸箱里");
+
                 if (MoveFoodAndGiftsToLocker(out bool lockerFull) > 0) done.Add("吃的、礼品放进了店里纸箱");
                 if (lockerFull) done.Add($"店里纸箱满了（{ShopBoxes} 个，{ShopLockerLimitKg:0} 千克），剩下的还在背包里");
             }
@@ -635,7 +641,7 @@ namespace PCShopSell.Core.Session
             if (furnMoved > 0) done.Add($"家具 {furnMoved} 件放进了{(shop ? "店里纸箱" : "纸箱")}（摆放时直接从纸箱里拿）");
             if (furnFull) done.Add("纸箱满了，剩下的家具还在背包里");
             ApplyCargoLimit();
-            if (done.Count == 0) return Fail(InPlayerShop ? "背包里没有能放下的东西（饭盒一直带在身上）。" : "背包里没有能放在家里的东西（配件要拿到店里）。");
+            if (done.Count == 0) return Fail(InPlayerShop ? "背包里没有能放下的东西；自制饭菜继续随身携带，经营食品需要对应货架。" : "背包里没有能放在家里的东西（配件要拿到店里）。");
             Say("放下了：" + string.Join("；", done) + "。");
             return true;
         }

@@ -180,24 +180,21 @@ namespace PCShopSell.Core.Session
         // ---------- 地铁 ----------
 
         /// <summary>在地铁站里坐到另一个站。</summary>
-        public bool TakeMetro()
+        public bool TakeMetro() => TakeMetro(City.OfKind(PlaceKind.Station).FirstOrDefault(p=>p!=CurrentPlace)?.Id);
+        public bool TakeMetro(string stationId)
         {
-            if (CurrentPlace == null || CurrentPlace.Kind != PlaceKind.Station) return Fail("要先进地铁站。");
-            Place other = null;
-            foreach (Place p in City.OfKind(PlaceKind.Station))
-            {
-                if (p != CurrentPlace) other = p;
-            }
-            if (other == null) return Fail("这条线只有一个站。");
-            if (Clock.MinuteOfDay < 6 * 60 || Clock.MinuteOfDay >= 23 * 60) return Fail("地铁运营时间 6:00–23:00。");
-            if (!Ledger.TryDebit(Clock.Today, "交通", MetroFare, "地铁")) return Fail("连地铁票都买不起了。");
+            if(CurrentPlace==null||CurrentPlace.Kind!=PlaceKind.Station)return Fail("要先进地铁站。");
+            var origin=CurrentPlace;
+            if(!City.HasPlace(stationId))return Fail("目的站不存在。");
+            var destination=City.GetPlace(stationId);
+            if(destination.Kind!=PlaceKind.Station||destination==origin)return Fail("请选择其他地铁站。");
+            if(Clock.MinuteOfDay<360||Clock.MinuteOfDay>=1380)return Fail("地铁运营时间 6:00–23:00。");
+            if(!Ledger.TryDebit(Clock.Today,"交通",MetroFare,origin.Name+"→"+destination.Name))return Fail("连地铁票都买不起了。");
+            CancelCityTravel();Trip=null;
             AdvanceClock(MetroMinutes);
-            if (IsGameOver || CurrentPlace == Home) return true;
-            PlayerNodeId = other.NodeId;
-            ClearEdge();
-            CurrentPlace = other;
-            Say($"坐地铁到了{other.Name}（{MetroMinutes} 分钟，{MetroFare}）");
-            return true;
+            if(IsGameOver||CurrentPlace!=origin)return true;
+            PlayerNodeId=destination.NodeId;ClearEdge();CurrentPlace=destination;
+            Say("坐地铁到了"+destination.Name+"（"+MetroMinutes+"分钟，"+MetroFare+"）");return true;
         }
 
         // ---------- 车行 ----------

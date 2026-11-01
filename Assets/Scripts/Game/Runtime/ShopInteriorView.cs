@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
@@ -142,6 +142,7 @@ namespace PCShopSell.Game.Runtime
         private readonly GameObject _owner;
         private readonly GameObject _clerk;
         private readonly GameObject _assembler;
+        private readonly GameObject _salesperson;
         private readonly Vector3 _door;
         private readonly float _doorX;
         private Vector3 _counterFront;
@@ -156,7 +157,7 @@ namespace PCShopSell.Game.Runtime
         private Rect _benchFoot;
         private Vector2 _benchPos;
         private Vector3 _benchFront;
-        private Vector3 _assemblerStand;
+        private Vector3 _assemblerStand, _salesStand;
         private Vector3 _deskFront;
         private bool _hasCounter;
         private bool _hasBench;
@@ -636,6 +637,7 @@ namespace PCShopSell.Game.Runtime
             _clerk.transform.localPosition = new Vector3(0.35f, 0, d * 0.55f - 0.8f);
             _clerk.transform.localRotation = Quaternion.LookRotation(Vector3.right);
             _assembler = Prims.Figure(_root, "Assembler", new Color(0.3f, 0.45f, 0.75f), new Color(0.95f, 0.8f, 0.65f), 1.0f);
+            _salesperson = Prims.Figure(_root,"Salesperson",new Color(.65f,.39f,.62f),new Color(.95f,.8f,.65f),1.0f);
 
             _door = Origin + new Vector3(doorX, 0, -0.6f);
             _counterFront = Origin + new Vector3(1.8f, 0, d * 0.55f);
@@ -998,6 +1000,7 @@ namespace PCShopSell.Game.Runtime
                 _buildGlow.AddRange(h.Glow);
             }
             _assemblerStand = FindAssemblerStand();
+            _salesStand = FindAssemblerStand(true);
             _shelfSpots.AddRange(deskSpots);
             _deskFront = _deskFoots.Count > 0 ? new Vector3(_deskFoots[0].center.x, 0, _deskFoots[0].yMin - 0.4f) : Vector3.zero;
             if (_tables.Count > 0) _deskFront = deskSpots[0] - Origin;
@@ -1006,9 +1009,9 @@ namespace PCShopSell.Game.Runtime
             _stockTimer = 0f;
         }
         /// <summary>营业：门头绿招牌、顶灯全亮；关门：门头变暗红、挂“休息中”牌 + 拦带、顶灯调暗。</summary>
-        private Vector3 FindAssemblerStand()
+        private Vector3 FindAssemblerStand(bool sales = false)
         {
-            Vector3 preferred = _hasBench ? _benchFront : _counterBack + Vector3.right;
+            Vector3 preferred = sales ? new Vector3(Width*.5f,0,Depth*.4f) : _hasBench ? _benchFront : _counterBack + Vector3.right;
             Vector3 best = preferred;
             float bestScore = float.PositiveInfinity;
             const float clearance = 0.24f;
@@ -1021,9 +1024,10 @@ namespace PCShopSell.Game.Runtime
                         if (new Rect(foot.xMin - clearance, foot.yMin - clearance,
                             foot.width + clearance * 2, foot.height + clearance * 2).Contains(new Vector2(x, z)))
                         { blocked = true; break; }
-                    if (blocked || (point - _clerk.transform.localPosition).sqrMagnitude < 0.64f) continue;
+                    if (blocked || (point - _clerk.transform.localPosition).sqrMagnitude < 0.64f
+                        || sales && (point-_assemblerStand).sqrMagnitude<.64f) continue;
                     float score = (point - preferred).sqrMagnitude;
-                    if (_hasBench) score += DistToRect(_benchFoot, point) * 2;
+                    if (!sales && _hasBench) score += DistToRect(_benchFoot, point) * 2;
                     if (score >= bestScore) continue;
                     bestScore = score; best = point;
                 }
@@ -1091,6 +1095,12 @@ namespace PCShopSell.Game.Runtime
             foreach (GameObject g in _buildGlow) g.SetActive(building);
             _clerk.SetActive(s.Employee != null && s.Employee.OnDuty(s.Clock.Now));
             _assembler.SetActive(s.Assembler != null && s.Assembler.OnDuty(s.Clock.Now));
+            _salesperson.SetActive(s.CityEmployeeAvailable(s.Salesperson,s.CurrentShop));
+            _salesperson.transform.localPosition=_salesStand;
+            _salesperson.transform.localRotation=Quaternion.LookRotation(Vector3.back);
+            if(_salesperson.activeSelf)
+                _emotes.Add(new EmoteInfo{Pos=_salesperson.transform.position+Vector3.up*2.15f,
+                    Text=s.Salesperson.Name+" · 销售员",Color=new Color(.9f,.7f,.88f),Size=17});
             _assembler.transform.localPosition = _assemblerStand;
             if (_hasBench)
             {

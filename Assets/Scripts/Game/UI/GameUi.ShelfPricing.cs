@@ -14,6 +14,7 @@ namespace PCShopSell.Game.UI
             valueLabel.name = "SalePrice_" + key;
             valueLabel.rectTransform.Anchor(.18f, .43f, .61f, .98f);
             long draft = price;
+            double MirrorBonus()=>key.StartsWith("goods_")?S.PlayerShop.GoodsMirrorBonus(key.Substring(6))*100:0;
             Text demand = null;
             Button confirm = null;
             var controls = new System.Collections.Generic.List<(Button button, HoldRepeat hold, int direction)>();
@@ -21,7 +22,15 @@ namespace PCShopSell.Game.UI
             void Preview(long value)
             {
                 valueLabel.text = "¥" + value;
-                if (demand != null) demand.text = $"购买意愿约 {Math.Max(0, Math.Min(1, intentAtPrice(value))) * 100:0}%";
+                if (demand != null)
+                {
+                    double chance=Math.Max(0,Math.Min(1,intentAtPrice(value)))*100;
+                    double bonus=S.PlayerShop.SalesPurchaseIntentBonus*100;
+                    double mirror=MirrorBonus();
+                    demand.text=mirror>0
+                        ?$"愿买 {chance:0}% · {(bonus>0?"加成":"镜子")}+{bonus+mirror:0.#}"
+                        :bonus>0?$"愿买 {chance:0}% · 销售+{bonus:0.#}":$"购买意愿约 {chance:0}%";
+                }
                 if (confirm != null) confirm.interactable = value != price;
             }
             void RefreshLimits()
@@ -55,6 +64,9 @@ namespace PCShopSell.Game.UI
             ((RectTransform)confirm.transform).Anchor(.8f, .43f, .99f, .98f);
             demand = Ui.Label(tag.transform, "", 13, TextAnchor.MiddleCenter, TagInk);
             demand.name = "PurchaseIntent_" + key;
+            tag.Tip(()=>"购买意愿已计入当前有效加成。\n"+
+                $"在岗销售员：+{S.PlayerShop.SalesPurchaseIntentBonus*100:0.#}个百分点。"+
+                (MirrorBonus()>0?"\n全身镜：服装购买意愿 +5个百分点，多面不叠加。":""));
             demand.rectTransform.Anchor(.02f, .02f, .98f, .4f);
             Preview(draft); RefreshLimits();
             return tag.rectTransform;

@@ -1,444 +1,980 @@
 {
   "distanceScale": 1,
-  "uniformRoadScale": 4,
+  "uniformRoadScale": 1,
   "nodes": [
     {
-      "id": "st_a",
-      "x": -100,
-      "y": 0
+      "id": "home",
+      "x": -143,
+      "y": 0.0
     },
     {
-      "id": "e01",
-      "x": -83,
-      "y": 0
+      "id": "v7_home_tier1",
+      "x": -165,
+      "y": 135.0
     },
     {
-      "id": "e02",
-      "x": -70.5,
-      "y": 0
+      "id": "v7_home_tier2",
+      "x": -165,
+      "y": 270.0
     },
     {
-      "id": "e03",
-      "x": -58,
-      "y": 0
-    },
-    {
-      "id": "e04",
-      "x": -45.5,
-      "y": 0
-    },
-    {
-      "id": "e05",
-      "x": -37.5,
-      "y": 0
-    },
-    {
-      "id": "e06",
-      "x": -29.5,
-      "y": 0
-    },
-    {
-      "id": "e07",
-      "x": -17,
-      "y": 0
-    },
-    {
-      "id": "e08",
-      "x": -4.5,
-      "y": 0
-    },
-    {
-      "id": "e09",
-      "x": 3.5,
-      "y": 0
-    },
-    {
-      "id": "e10",
-      "x": 11.5,
-      "y": 0
-    },
-    {
-      "id": "e11",
-      "x": 19.5,
-      "y": 0
-    },
-    {
-      "id": "e12",
-      "x": 30,
-      "y": 0
-    },
-    {
-      "id": "e13",
-      "x": 42.5,
-      "y": 0
-    },
-    {
-      "id": "e14",
-      "x": 50.5,
-      "y": 0
-    },
-    {
-      "id": "e15",
-      "x": 58.5,
-      "y": 0
-    },
-    {
-      "id": "e16",
-      "x": 66.5,
-      "y": 0
-    },
-    {
-      "id": "e17",
-      "x": 74.5,
-      "y": 0
-    },
-    {
-      "id": "e18",
-      "x": 82.5,
-      "y": 0
-    },
-    {
-      "id": "e19",
-      "x": 88.5,
-      "y": 0
+      "id": "v7_home_tier3",
+      "x": 36,
+      "y": 405.0
     },
     {
       "id": "e20",
-      "x": 94.5,
-      "y": 0
+      "x": 34,
+      "y": 45.0
+    },
+    {
+      "id": "e07",
+      "x": 16,
+      "y": 0.0
+    },
+    {
+      "id": "e02",
+      "x": 52,
+      "y": 0.0
+    },
+    {
+      "id": "e04",
+      "x": 69,
+      "y": 0.0
+    },
+    {
+      "id": "e01",
+      "x": 86,
+      "y": 0.0
+    },
+    {
+      "id": "e05",
+      "x": 103,
+      "y": 0.0
+    },
+    {
+      "id": "e06",
+      "x": 18,
+      "y": 45.0
+    },
+    {
+      "id": "e08",
+      "x": 35,
+      "y": 45.0
+    },
+    {
+      "id": "e09",
+      "x": 52,
+      "y": 45.0
+    },
+    {
+      "id": "e10",
+      "x": 69,
+      "y": 45.0
+    },
+    {
+      "id": "e12",
+      "x": 86,
+      "y": 45.0
+    },
+    {
+      "id": "e13",
+      "x": 34,
+      "y": 0.0
+    },
+    {
+      "id": "e14",
+      "x": 52.01,
+      "y": 0.0
+    },
+    {
+      "id": "e15",
+      "x": 70,
+      "y": 0.0
+    },
+    {
+      "id": "e16",
+      "x": 88,
+      "y": 0.0
+    },
+    {
+      "id": "e17",
+      "x": 106,
+      "y": 0.0
+    },
+    {
+      "id": "e18",
+      "x": 16,
+      "y": 45.0
+    },
+    {
+      "id": "e19",
+      "x": 103,
+      "y": 90.0
+    },
+    {
+      "id": "e03",
+      "x": 28,
+      "y": 0.0
+    },
+    {
+      "id": "e11",
+      "x": 14,
+      "y": 0.0
+    },
+    {
+      "id": "mk5",
+      "x": 245,
+      "y": 90.0
+    },
+    {
+      "id": "agency_s_oldhomes_door",
+      "x": -20,
+      "y": 0.0
+    },
+    {
+      "id": "agency_s_services_door",
+      "x": -20,
+      "y": 135.0
+    },
+    {
+      "id": "agency_s_market_door",
+      "x": 14,
+      "y": 135.0
+    },
+    {
+      "id": "agency_s_creative_door",
+      "x": 14,
+      "y": 270.0
+    },
+    {
+      "id": "agency_s_sports_door",
+      "x": -20,
+      "y": 270.0
+    },
+    {
+      "id": "agency_s_expo_door",
+      "x": 245,
+      "y": 360.0
+    },
+    {
+      "id": "agency_s_night_door",
+      "x": -73,
+      "y": 405.0
+    },
+    {
+      "id": "agency_s_newtown_door",
+      "x": 21,
+      "y": 405.0
+    },
+    {
+      "id": "st_a",
+      "x": -185,
+      "y": 0.0
+    },
+    {
+      "id": "st_b",
+      "x": 140,
+      "y": 0.0
+    },
+    {
+      "id": "v7_metro_community",
+      "x": -95,
+      "y": 135.0
+    },
+    {
+      "id": "v7_metro_center",
+      "x": 65,
+      "y": 135.0
+    },
+    {
+      "id": "v7_metro_park",
+      "x": -20,
+      "y": 315.0
+    },
+    {
+      "id": "v7_metro_expo",
+      "x": 140,
+      "y": 270.0
+    },
+    {
+      "id": "v7_metro_luxury",
+      "x": -85,
+      "y": 405.0
+    },
+    {
+      "id": "v7_metro_garden",
+      "x": 75,
+      "y": 405.0
+    },
+    {
+      "id": "mk1",
+      "x": 150,
+      "y": 45.0
+    },
+    {
+      "id": "mk2",
+      "x": 183,
+      "y": 45.0
+    },
+    {
+      "id": "mk3",
+      "x": 216,
+      "y": 45.0
+    },
+    {
+      "id": "mk4",
+      "x": 150,
+      "y": 90.0
+    },
+    {
+      "id": "clothing_wholesale_door",
+      "x": 183,
+      "y": 90.0
+    },
+    {
+      "id": "s_creative_2",
+      "x": 216,
+      "y": 90.0
+    },
+    {
+      "id": "s_night_0",
+      "x": 20,
+      "y": 90.0
+    },
+    {
+      "id": "s_night_1",
+      "x": 50,
+      "y": 90.0
+    },
+    {
+      "id": "s_night_2",
+      "x": 80,
+      "y": 90.0
+    },
+    {
+      "id": "v7_life_restaurant_tier2",
+      "x": 20,
+      "y": 225.0
+    },
+    {
+      "id": "v7_life_ktv_tier2",
+      "x": 50,
+      "y": 225.0
+    },
+    {
+      "id": "v7_life_bar_tier2",
+      "x": 80,
+      "y": 225.0
+    },
+    {
+      "id": "v7_life_restaurant_tier3",
+      "x": 20,
+      "y": 360.0
+    },
+    {
+      "id": "v7_life_ktv_tier3",
+      "x": 50,
+      "y": 360.0
+    },
+    {
+      "id": "v7_life_bar_tier3",
+      "x": 80,
+      "y": 360.0
+    },
+    {
+      "id": "v7_life_restaurant_tier4",
+      "x": -18,
+      "y": 405.0
+    },
+    {
+      "id": "v7_life_ktv_tier4",
+      "x": -87,
+      "y": 405.0
+    },
+    {
+      "id": "v7_life_bar_tier4",
+      "x": -60,
+      "y": 405.0
+    },
+    {
+      "id": "s_expo_0",
+      "x": 190,
+      "y": 315.0
+    },
+    {
+      "id": "s_expo_2",
+      "x": 155,
+      "y": 360.0
+    },
+    {
+      "id": "s_sports_0",
+      "x": 105,
+      "y": 45.0
+    },
+    {
+      "id": "s_sports_1",
+      "x": -50,
+      "y": 405.0
+    },
+    {
+      "id": "s_sports_2",
+      "x": -80,
+      "y": 315.0
+    },
+    {
+      "id": "s_market_2",
+      "x": -165,
+      "y": 0.0
+    },
+    {
+      "id": "s_market_0",
+      "x": 33,
+      "y": 135.0
+    },
+    {
+      "id": "s_creative_1",
+      "x": 51,
+      "y": 270.0
+    },
+    {
+      "id": "s_creative_0",
+      "x": 72,
+      "y": 270.0
+    },
+    {
+      "id": "clothing_boutique_door",
+      "x": 93,
+      "y": 270.0
+    },
+    {
+      "id": "s_services_0",
+      "x": -186,
+      "y": 135.0
+    },
+    {
+      "id": "v7_life_court_mid",
+      "x": 100,
+      "y": 180.0
+    },
+    {
+      "id": "v7_life_fitness",
+      "x": 30,
+      "y": 270.0
+    },
+    {
+      "id": "v7_door_life_unit_s_market_0",
+      "x": 18,
+      "y": 180.0
+    },
+    {
+      "id": "v7_door_life_unit_s_market_2",
+      "x": 41,
+      "y": 180.0
+    },
+    {
+      "id": "s_market_1",
+      "x": 64,
+      "y": 180.0
+    },
+    {
+      "id": "v7_door_life_unit_s_services_0",
+      "x": -172,
+      "y": 180.0
+    },
+    {
+      "id": "s_services_2",
+      "x": -149,
+      "y": 180.0
+    },
+    {
+      "id": "s_services_1",
+      "x": -126,
+      "y": 180.0
+    },
+    {
+      "id": "v7_door_life_unit_s_night_0",
+      "x": -82,
+      "y": 450.0
+    },
+    {
+      "id": "v7_door_life_unit_s_night_2",
+      "x": -59,
+      "y": 450.0
+    },
+    {
+      "id": "v7_door_life_home_s_night",
+      "x": -36,
+      "y": 450.0
+    },
+    {
+      "id": "v7_door_life_unit_s_creative_0",
+      "x": 18,
+      "y": 315.0
+    },
+    {
+      "id": "v7_door_life_unit_s_creative_2",
+      "x": 41,
+      "y": 315.0
+    },
+    {
+      "id": "v7_door_life_home_s_creative",
+      "x": 64,
+      "y": 315.0
+    },
+    {
+      "id": "v7_door_life_unit_s_sports_0",
+      "x": -172,
+      "y": 315.0
+    },
+    {
+      "id": "v7_door_life_unit_s_sports_2",
+      "x": -149,
+      "y": 315.0
+    },
+    {
+      "id": "v7_door_life_home_s_sports",
+      "x": -126,
+      "y": 315.0
+    },
+    {
+      "id": "v7_door_life_unit_s_expo_0",
+      "x": 138,
+      "y": 315.0
+    },
+    {
+      "id": "v7_door_life_unit_s_expo_2",
+      "x": 156,
+      "y": 270.0
+    },
+    {
+      "id": "s_expo_1",
+      "x": 174,
+      "y": 270.0
+    },
+    {
+      "id": "s_newtown_0",
+      "x": 38,
+      "y": 450.0
+    },
+    {
+      "id": "s_newtown_2",
+      "x": 61,
+      "y": 450.0
+    },
+    {
+      "id": "s_newtown_1",
+      "x": 84,
+      "y": 450.0
+    },
+    {
+      "id": "s_oldhomes_0",
+      "x": -172,
+      "y": 45.0
+    },
+    {
+      "id": "s_oldhomes_2",
+      "x": -149,
+      "y": 45.0
+    },
+    {
+      "id": "s_oldhomes_1",
+      "x": -126,
+      "y": 45.0
     },
     {
       "id": "a0",
-      "x": 105,
-      "y": 0
+      "x": -100,
+      "y": 270.0
     },
     {
       "id": "a1",
-      "x": 105,
-      "y": -12
+      "x": 0,
+      "y": 270.0
     },
     {
       "id": "a2",
-      "x": 105,
-      "y": -24
+      "x": 100,
+      "y": 270.0
     },
     {
       "id": "a3",
-      "x": 105,
-      "y": -36
+      "x": 200,
+      "y": 270.0
     },
     {
       "id": "a4",
-      "x": 105,
-      "y": -48
+      "x": -200,
+      "y": 315.0
     },
     {
       "id": "a5",
-      "x": 105,
-      "y": -60
+      "x": -100,
+      "y": 315.0
     },
     {
       "id": "b1",
-      "x": 125,
-      "y": -12
+      "x": 0,
+      "y": 315.0
     },
     {
       "id": "b2",
-      "x": 125,
-      "y": -24
+      "x": 100,
+      "y": 315.0
     },
     {
       "id": "b3",
-      "x": 125,
-      "y": -36
+      "x": 200,
+      "y": 315.0
     },
     {
       "id": "b4",
-      "x": 125,
-      "y": -48
+      "x": -200,
+      "y": 360.0
     },
     {
       "id": "b5",
-      "x": 125,
-      "y": -60
-    },
-    {
-      "id": "home",
-      "x": 136,
-      "y": -60
+      "x": -100,
+      "y": 360.0
     },
     {
       "id": "n0",
-      "x": -112,
-      "y": 0
+      "x": 0,
+      "y": 360.0
     },
     {
       "id": "n1",
-      "x": -142,
-      "y": 0
+      "x": 100,
+      "y": 360.0
     },
     {
       "id": "n2",
-      "x": -172,
-      "y": 0
+      "x": 200,
+      "y": 360.0
     },
     {
       "id": "m0",
       "x": -200,
-      "y": 0
+      "y": 405.0
     },
     {
       "id": "s0",
-      "x": -112,
-      "y": -20
+      "x": -100,
+      "y": 405.0
     },
     {
       "id": "s1",
-      "x": -142,
-      "y": -20
+      "x": 0,
+      "y": 405.0
     },
     {
       "id": "s2",
-      "x": -172,
-      "y": -20
+      "x": 100,
+      "y": 405.0
     },
     {
       "id": "m1",
+      "x": 200,
+      "y": 405.0
+    },
+    {
+      "id": "grid_-200_0",
       "x": -200,
-      "y": -20
+      "y": 450.0
     },
     {
-      "id": "mk1",
-      "x": -208,
-      "y": 0
+      "id": "grid_-200_30",
+      "x": -100,
+      "y": 450.0
     },
     {
-      "id": "mk2",
-      "x": -219,
-      "y": 0
-    },
-    {
-      "id": "mk3",
-      "x": -230,
-      "y": 0
-    },
-    {
-      "id": "mk4",
-      "x": -241,
-      "y": 0
-    },
-    {
-      "id": "mk5",
-      "x": -253,
-      "y": 0
-    },
-    {
-      "id": "st_b",
-      "x": -266,
-      "y": 0
-    },
-    {
-      "id": "s_market_0",
-      "x": -88,
-      "y": 55
-    },
-    {
-      "id": "s_market_1",
-      "x": -70,
-      "y": 55
-    },
-    {
-      "id": "s_market_2",
-      "x": -52,
-      "y": 55
-    },
-    {
-      "id": "s_services_0",
-      "x": -18,
-      "y": 55
-    },
-    {
-      "id": "s_services_1",
+      "id": "grid_-200_60",
       "x": 0,
-      "y": 55
+      "y": 450.0
     },
     {
-      "id": "s_services_2",
-      "x": 18,
-      "y": 55
+      "id": "grid_-200_90",
+      "x": 100,
+      "y": 450.0
     },
     {
-      "id": "s_night_0",
-      "x": 52,
-      "y": 55
+      "id": "grid_-200_120",
+      "x": 200,
+      "y": 450.0
     },
     {
-      "id": "s_night_1",
-      "x": 70,
-      "y": 55
+      "id": "grid_-200_270",
+      "x": -200,
+      "y": 495.0
     },
     {
-      "id": "s_night_2",
-      "x": 88,
-      "y": 55
+      "id": "grid_-200_300",
+      "x": -100,
+      "y": 495.0
     },
     {
-      "id": "s_creative_0",
-      "x": -88,
-      "y": 110
-    },
-    {
-      "id": "s_creative_1",
-      "x": -70,
-      "y": 110
-    },
-    {
-      "id": "s_creative_2",
-      "x": -52,
-      "y": 110
-    },
-    {
-      "id": "s_sports_0",
-      "x": -18,
-      "y": 110
-    },
-    {
-      "id": "s_sports_1",
+      "id": "grid_-200_330",
       "x": 0,
-      "y": 110
+      "y": 495.0
     },
     {
-      "id": "s_sports_2",
-      "x": 18,
-      "y": 110
+      "id": "grid_-200_360",
+      "x": 100,
+      "y": 495.0
     },
     {
-      "id": "s_expo_0",
-      "x": 52,
-      "y": 110
+      "id": "grid_-110_0",
+      "x": -110,
+      "y": 0.0
     },
     {
-      "id": "s_expo_1",
-      "x": 70,
-      "y": 110
+      "id": "grid_-110_30",
+      "x": -110,
+      "y": 45.0
     },
     {
-      "id": "s_expo_2",
-      "x": 88,
-      "y": 110
+      "id": "grid_-110_60",
+      "x": -110,
+      "y": 90.0
     },
     {
-      "id": "s_newtown_0",
-      "x": 122,
-      "y": 110
+      "id": "grid_-110_90",
+      "x": -110,
+      "y": 135.0
     },
     {
-      "id": "s_newtown_1",
-      "x": 140,
-      "y": 110
+      "id": "grid_-110_120",
+      "x": -110,
+      "y": 180.0
     },
     {
-      "id": "s_newtown_2",
-      "x": 158,
-      "y": 110
+      "id": "grid_-110_150",
+      "x": -110,
+      "y": 225.0
     },
     {
-      "id": "s_oldhomes_0",
-      "x": 122,
-      "y": -80
+      "id": "grid_-110_180",
+      "x": -110,
+      "y": 270.0
     },
     {
-      "id": "s_oldhomes_1",
-      "x": 140,
-      "y": -80
+      "id": "grid_-110_210",
+      "x": -110,
+      "y": 315.0
     },
     {
-      "id": "s_oldhomes_2",
-      "x": 158,
-      "y": -80
+      "id": "grid_-110_240",
+      "x": -110,
+      "y": 360.0
     },
     {
-      "id": "clothing_boutique_door",
-      "x": -106,
-      "y": 110
+      "id": "grid_-110_270",
+      "x": -110,
+      "y": 405.0
     },
     {
-      "id": "clothing_wholesale_door",
-      "x": -106,
-      "y": 55
+      "id": "grid_-110_300",
+      "x": -110,
+      "y": 450.0
     },
     {
-      "id": "agency_s_market_door",
-      "x": -34,
-      "y": 55
+      "id": "grid_-110_330",
+      "x": -110,
+      "y": 495.0
     },
     {
-      "id": "agency_s_oldhomes_door",
-      "x": 176,
-      "y": -80
+      "id": "grid_-110_360",
+      "x": -110,
+      "y": 540.0
     },
     {
-      "id": "agency_s_services_door",
-      "x": 36,
-      "y": 55
+      "id": "grid_0_0",
+      "x": 0,
+      "y": 45.0
     },
     {
-      "id": "agency_s_night_door",
-      "x": 106,
-      "y": 55
+      "id": "grid_0_30",
+      "x": 100,
+      "y": 45.0
     },
     {
-      "id": "agency_s_creative_door",
-      "x": -34,
-      "y": 110
+      "id": "grid_0_60",
+      "x": 200,
+      "y": 45.0
     },
     {
-      "id": "agency_s_sports_door",
-      "x": 36,
-      "y": 110
+      "id": "grid_0_90",
+      "x": -200,
+      "y": 90.0
     },
     {
-      "id": "agency_s_expo_door",
-      "x": 106,
-      "y": 110
+      "id": "grid_0_180",
+      "x": -99.99,
+      "y": 90.0
     },
     {
-      "id": "agency_s_newtown_door",
-      "x": 176,
-      "y": 110
+      "id": "grid_0_240",
+      "x": 0,
+      "y": 90.0
+    },
+    {
+      "id": "grid_0_270",
+      "x": 100,
+      "y": 90.0
+    },
+    {
+      "id": "grid_0_300",
+      "x": 200,
+      "y": 90.0
+    },
+    {
+      "id": "grid_0_330",
+      "x": -200,
+      "y": 135.0
+    },
+    {
+      "id": "grid_0_360",
+      "x": -100,
+      "y": 135.0
+    },
+    {
+      "id": "grid_120_0",
+      "x": 120,
+      "y": 0.0
+    },
+    {
+      "id": "grid_120_30",
+      "x": 120,
+      "y": 45.0
+    },
+    {
+      "id": "grid_120_60",
+      "x": 120,
+      "y": 90.0
+    },
+    {
+      "id": "grid_120_90",
+      "x": 120,
+      "y": 135.0
+    },
+    {
+      "id": "grid_120_120",
+      "x": 120,
+      "y": 180.0
+    },
+    {
+      "id": "grid_120_150",
+      "x": 120,
+      "y": 225.0
+    },
+    {
+      "id": "grid_120_180",
+      "x": 120,
+      "y": 270.0
+    },
+    {
+      "id": "grid_120_210",
+      "x": 120,
+      "y": 315.0
+    },
+    {
+      "id": "grid_120_240",
+      "x": 120,
+      "y": 360.0
+    },
+    {
+      "id": "grid_120_270",
+      "x": 120,
+      "y": 405.0
+    },
+    {
+      "id": "grid_120_300",
+      "x": 120,
+      "y": 450.0
+    },
+    {
+      "id": "grid_120_330",
+      "x": 120,
+      "y": 495.0
+    },
+    {
+      "id": "grid_120_360",
+      "x": 120,
+      "y": 540.0
+    },
+    {
+      "id": "grid_260_0",
+      "x": 260,
+      "y": 0.0
+    },
+    {
+      "id": "grid_260_30",
+      "x": 260,
+      "y": 45.0
+    },
+    {
+      "id": "grid_260_60",
+      "x": 260,
+      "y": 90.0
+    },
+    {
+      "id": "grid_260_90",
+      "x": 260,
+      "y": 135.0
+    },
+    {
+      "id": "grid_260_120",
+      "x": 260,
+      "y": 180.0
+    },
+    {
+      "id": "grid_260_150",
+      "x": 260,
+      "y": 225.0
+    },
+    {
+      "id": "grid_260_180",
+      "x": 260,
+      "y": 270.0
+    },
+    {
+      "id": "grid_260_210",
+      "x": 260,
+      "y": 315.0
+    },
+    {
+      "id": "grid_260_240",
+      "x": 260,
+      "y": 360.0
+    },
+    {
+      "id": "grid_260_270",
+      "x": 260,
+      "y": 405.0
+    },
+    {
+      "id": "grid_260_300",
+      "x": 260,
+      "y": 450.0
+    },
+    {
+      "id": "grid_260_330",
+      "x": 260,
+      "y": 495.0
+    },
+    {
+      "id": "grid_260_360",
+      "x": 260,
+      "y": 540.0
     }
   ],
   "edges": [
     {
       "a": "st_a",
-      "b": "e01"
+      "b": "s_market_2"
     },
     {
-      "a": "e01",
-      "b": "e02"
+      "a": "s_market_2",
+      "b": "home"
     },
     {
-      "a": "e02",
-      "b": "e03"
+      "a": "home",
+      "b": "grid_-110_0"
     },
     {
-      "a": "e03",
-      "b": "e04"
+      "a": "grid_-110_0",
+      "b": "agency_s_oldhomes_door"
     },
     {
-      "a": "e04",
-      "b": "e05"
+      "a": "agency_s_oldhomes_door",
+      "b": "e11"
     },
     {
-      "a": "e05",
-      "b": "e06"
-    },
-    {
-      "a": "e06",
+      "a": "e11",
       "b": "e07"
     },
     {
       "a": "e07",
+      "b": "e03"
+    },
+    {
+      "a": "e03",
+      "b": "e13"
+    },
+    {
+      "a": "e13",
+      "b": "e02"
+    },
+    {
+      "a": "e02",
+      "b": "e14"
+    },
+    {
+      "a": "e14",
+      "b": "e04"
+    },
+    {
+      "a": "e04",
+      "b": "e15"
+    },
+    {
+      "a": "e15",
+      "b": "e01"
+    },
+    {
+      "a": "e01",
+      "b": "e16"
+    },
+    {
+      "a": "e16",
+      "b": "e05"
+    },
+    {
+      "a": "e05",
+      "b": "e17"
+    },
+    {
+      "a": "e17",
+      "b": "grid_120_0"
+    },
+    {
+      "a": "grid_120_0",
+      "b": "st_b"
+    },
+    {
+      "a": "st_b",
+      "b": "grid_260_0"
+    },
+    {
+      "a": "s_oldhomes_0",
+      "b": "s_oldhomes_2"
+    },
+    {
+      "a": "s_oldhomes_2",
+      "b": "s_oldhomes_1"
+    },
+    {
+      "a": "s_oldhomes_1",
+      "b": "grid_-110_30"
+    },
+    {
+      "a": "grid_-110_30",
+      "b": "grid_0_0"
+    },
+    {
+      "a": "grid_0_0",
+      "b": "e18"
+    },
+    {
+      "a": "e18",
+      "b": "e06"
+    },
+    {
+      "a": "e06",
+      "b": "e20"
+    },
+    {
+      "a": "e20",
       "b": "e08"
     },
     {
@@ -451,179 +987,22 @@
     },
     {
       "a": "e10",
-      "b": "e11"
-    },
-    {
-      "a": "e11",
       "b": "e12"
     },
     {
       "a": "e12",
-      "b": "e13"
+      "b": "grid_0_30"
     },
     {
-      "a": "e13",
-      "b": "e14"
+      "a": "grid_0_30",
+      "b": "s_sports_0"
     },
     {
-      "a": "e14",
-      "b": "e15"
+      "a": "s_sports_0",
+      "b": "grid_120_30"
     },
     {
-      "a": "e15",
-      "b": "e16"
-    },
-    {
-      "a": "e16",
-      "b": "e17"
-    },
-    {
-      "a": "e17",
-      "b": "e18"
-    },
-    {
-      "a": "e18",
-      "b": "e19"
-    },
-    {
-      "a": "e19",
-      "b": "e20"
-    },
-    {
-      "a": "e20",
-      "b": "a0"
-    },
-    {
-      "a": "a0",
-      "b": "a1",
-      "length": 100
-    },
-    {
-      "a": "a1",
-      "b": "a2",
-      "length": 100
-    },
-    {
-      "a": "a2",
-      "b": "a3",
-      "length": 100
-    },
-    {
-      "a": "a3",
-      "b": "a4",
-      "length": 100
-    },
-    {
-      "a": "a4",
-      "b": "a5",
-      "length": 100
-    },
-    {
-      "a": "a1",
-      "b": "b1",
-      "length": 80
-    },
-    {
-      "a": "a2",
-      "b": "b2",
-      "length": 80
-    },
-    {
-      "a": "a3",
-      "b": "b3",
-      "length": 80
-    },
-    {
-      "a": "a4",
-      "b": "b4",
-      "length": 80
-    },
-    {
-      "a": "a5",
-      "b": "b5",
-      "length": 80
-    },
-    {
-      "a": "b1",
-      "b": "b2",
-      "length": 100
-    },
-    {
-      "a": "b2",
-      "b": "b3",
-      "length": 100
-    },
-    {
-      "a": "b3",
-      "b": "b4",
-      "length": 100
-    },
-    {
-      "a": "b4",
-      "b": "b5",
-      "length": 100
-    },
-    {
-      "a": "b5",
-      "b": "home",
-      "length": 40
-    },
-    {
-      "a": "st_a",
-      "b": "n0"
-    },
-    {
-      "a": "n0",
-      "b": "n1",
-      "length": 600
-    },
-    {
-      "a": "n1",
-      "b": "n2",
-      "length": 600
-    },
-    {
-      "a": "n2",
-      "b": "m0",
-      "length": 600
-    },
-    {
-      "a": "n0",
-      "b": "s0",
-      "length": 120
-    },
-    {
-      "a": "s0",
-      "b": "s1",
-      "length": 640
-    },
-    {
-      "a": "s1",
-      "b": "s2",
-      "length": 640
-    },
-    {
-      "a": "s2",
-      "b": "m1",
-      "length": 640
-    },
-    {
-      "a": "n1",
-      "b": "s1",
-      "length": 120
-    },
-    {
-      "a": "n2",
-      "b": "s2",
-      "length": 120
-    },
-    {
-      "a": "m0",
-      "b": "m1",
-      "length": 120
-    },
-    {
-      "a": "m0",
+      "a": "grid_120_30",
       "b": "mk1"
     },
     {
@@ -632,35 +1011,31 @@
     },
     {
       "a": "mk2",
+      "b": "grid_0_60"
+    },
+    {
+      "a": "grid_0_60",
       "b": "mk3"
     },
     {
       "a": "mk3",
-      "b": "mk4"
+      "b": "grid_260_30"
     },
     {
-      "a": "mk4",
-      "b": "mk5"
+      "a": "grid_0_90",
+      "b": "grid_-110_60"
     },
     {
-      "a": "mk5",
-      "b": "st_b"
+      "a": "grid_-110_60",
+      "b": "grid_0_180"
     },
     {
-      "a": "s_market_0",
-      "b": "s_market_1"
+      "a": "grid_0_180",
+      "b": "grid_0_240"
     },
     {
-      "a": "s_market_1",
-      "b": "s_market_2"
-    },
-    {
-      "a": "s_services_0",
-      "b": "s_services_1"
-    },
-    {
-      "a": "s_services_1",
-      "b": "s_services_2"
+      "a": "grid_0_240",
+      "b": "s_night_0"
     },
     {
       "a": "s_night_0",
@@ -671,143 +1046,682 @@
       "b": "s_night_2"
     },
     {
-      "a": "s_creative_0",
+      "a": "s_night_2",
+      "b": "grid_0_270"
+    },
+    {
+      "a": "grid_0_270",
+      "b": "e19"
+    },
+    {
+      "a": "e19",
+      "b": "grid_120_60"
+    },
+    {
+      "a": "grid_120_60",
+      "b": "mk4"
+    },
+    {
+      "a": "mk4",
+      "b": "clothing_wholesale_door"
+    },
+    {
+      "a": "clothing_wholesale_door",
+      "b": "grid_0_300"
+    },
+    {
+      "a": "grid_0_300",
+      "b": "s_creative_2"
+    },
+    {
+      "a": "s_creative_2",
+      "b": "mk5"
+    },
+    {
+      "a": "mk5",
+      "b": "grid_260_60"
+    },
+    {
+      "a": "grid_0_330",
+      "b": "s_services_0"
+    },
+    {
+      "a": "s_services_0",
+      "b": "v7_home_tier1"
+    },
+    {
+      "a": "v7_home_tier1",
+      "b": "grid_-110_90"
+    },
+    {
+      "a": "grid_-110_90",
+      "b": "grid_0_360"
+    },
+    {
+      "a": "grid_0_360",
+      "b": "v7_metro_community"
+    },
+    {
+      "a": "v7_metro_community",
+      "b": "agency_s_services_door"
+    },
+    {
+      "a": "agency_s_services_door",
+      "b": "agency_s_market_door"
+    },
+    {
+      "a": "agency_s_market_door",
+      "b": "s_market_0"
+    },
+    {
+      "a": "s_market_0",
+      "b": "v7_metro_center"
+    },
+    {
+      "a": "v7_metro_center",
+      "b": "grid_120_90"
+    },
+    {
+      "a": "grid_120_90",
+      "b": "grid_260_90"
+    },
+    {
+      "a": "v7_door_life_unit_s_services_0",
+      "b": "s_services_2"
+    },
+    {
+      "a": "s_services_2",
+      "b": "s_services_1"
+    },
+    {
+      "a": "s_services_1",
+      "b": "grid_-110_120"
+    },
+    {
+      "a": "grid_-110_120",
+      "b": "v7_door_life_unit_s_market_0"
+    },
+    {
+      "a": "v7_door_life_unit_s_market_0",
+      "b": "v7_door_life_unit_s_market_2"
+    },
+    {
+      "a": "v7_door_life_unit_s_market_2",
+      "b": "s_market_1"
+    },
+    {
+      "a": "s_market_1",
+      "b": "v7_life_court_mid"
+    },
+    {
+      "a": "v7_life_court_mid",
+      "b": "grid_120_120"
+    },
+    {
+      "a": "grid_120_120",
+      "b": "grid_260_120"
+    },
+    {
+      "a": "grid_-110_150",
+      "b": "v7_life_restaurant_tier2"
+    },
+    {
+      "a": "v7_life_restaurant_tier2",
+      "b": "v7_life_ktv_tier2"
+    },
+    {
+      "a": "v7_life_ktv_tier2",
+      "b": "v7_life_bar_tier2"
+    },
+    {
+      "a": "v7_life_bar_tier2",
+      "b": "grid_120_150"
+    },
+    {
+      "a": "grid_120_150",
+      "b": "grid_260_150"
+    },
+    {
+      "a": "v7_home_tier2",
+      "b": "grid_-110_180"
+    },
+    {
+      "a": "grid_-110_180",
+      "b": "a0"
+    },
+    {
+      "a": "a0",
+      "b": "agency_s_sports_door"
+    },
+    {
+      "a": "agency_s_sports_door",
+      "b": "a1"
+    },
+    {
+      "a": "a1",
+      "b": "agency_s_creative_door"
+    },
+    {
+      "a": "agency_s_creative_door",
+      "b": "v7_life_fitness"
+    },
+    {
+      "a": "v7_life_fitness",
       "b": "s_creative_1"
     },
     {
       "a": "s_creative_1",
-      "b": "s_creative_2"
+      "b": "s_creative_0"
     },
     {
-      "a": "s_sports_0",
-      "b": "s_sports_1"
+      "a": "s_creative_0",
+      "b": "clothing_boutique_door"
     },
     {
-      "a": "s_sports_1",
-      "b": "s_sports_2"
+      "a": "clothing_boutique_door",
+      "b": "a2"
     },
     {
-      "a": "s_expo_0",
+      "a": "a2",
+      "b": "grid_120_180"
+    },
+    {
+      "a": "grid_120_180",
+      "b": "v7_metro_expo"
+    },
+    {
+      "a": "v7_metro_expo",
+      "b": "v7_door_life_unit_s_expo_2"
+    },
+    {
+      "a": "v7_door_life_unit_s_expo_2",
       "b": "s_expo_1"
     },
     {
       "a": "s_expo_1",
+      "b": "a3"
+    },
+    {
+      "a": "a3",
+      "b": "grid_260_180"
+    },
+    {
+      "a": "a4",
+      "b": "v7_door_life_unit_s_sports_0"
+    },
+    {
+      "a": "v7_door_life_unit_s_sports_0",
+      "b": "v7_door_life_unit_s_sports_2"
+    },
+    {
+      "a": "v7_door_life_unit_s_sports_2",
+      "b": "v7_door_life_home_s_sports"
+    },
+    {
+      "a": "v7_door_life_home_s_sports",
+      "b": "grid_-110_210"
+    },
+    {
+      "a": "grid_-110_210",
+      "b": "a5"
+    },
+    {
+      "a": "a5",
+      "b": "s_sports_2"
+    },
+    {
+      "a": "s_sports_2",
+      "b": "v7_metro_park"
+    },
+    {
+      "a": "v7_metro_park",
+      "b": "b1"
+    },
+    {
+      "a": "b1",
+      "b": "v7_door_life_unit_s_creative_0"
+    },
+    {
+      "a": "v7_door_life_unit_s_creative_0",
+      "b": "v7_door_life_unit_s_creative_2"
+    },
+    {
+      "a": "v7_door_life_unit_s_creative_2",
+      "b": "v7_door_life_home_s_creative"
+    },
+    {
+      "a": "v7_door_life_home_s_creative",
+      "b": "b2"
+    },
+    {
+      "a": "b2",
+      "b": "grid_120_210"
+    },
+    {
+      "a": "grid_120_210",
+      "b": "v7_door_life_unit_s_expo_0"
+    },
+    {
+      "a": "v7_door_life_unit_s_expo_0",
+      "b": "s_expo_0"
+    },
+    {
+      "a": "s_expo_0",
+      "b": "b3"
+    },
+    {
+      "a": "b3",
+      "b": "grid_260_210"
+    },
+    {
+      "a": "b4",
+      "b": "grid_-110_240"
+    },
+    {
+      "a": "grid_-110_240",
+      "b": "b5"
+    },
+    {
+      "a": "b5",
+      "b": "n0"
+    },
+    {
+      "a": "n0",
+      "b": "v7_life_restaurant_tier3"
+    },
+    {
+      "a": "v7_life_restaurant_tier3",
+      "b": "v7_life_ktv_tier3"
+    },
+    {
+      "a": "v7_life_ktv_tier3",
+      "b": "v7_life_bar_tier3"
+    },
+    {
+      "a": "v7_life_bar_tier3",
+      "b": "n1"
+    },
+    {
+      "a": "n1",
+      "b": "grid_120_240"
+    },
+    {
+      "a": "grid_120_240",
       "b": "s_expo_2"
     },
     {
+      "a": "s_expo_2",
+      "b": "n2"
+    },
+    {
+      "a": "n2",
+      "b": "agency_s_expo_door"
+    },
+    {
+      "a": "agency_s_expo_door",
+      "b": "grid_260_240"
+    },
+    {
+      "a": "m0",
+      "b": "grid_-110_270"
+    },
+    {
+      "a": "grid_-110_270",
+      "b": "s0"
+    },
+    {
+      "a": "s0",
+      "b": "v7_life_ktv_tier4"
+    },
+    {
+      "a": "v7_life_ktv_tier4",
+      "b": "v7_metro_luxury"
+    },
+    {
+      "a": "v7_metro_luxury",
+      "b": "agency_s_night_door"
+    },
+    {
+      "a": "agency_s_night_door",
+      "b": "v7_life_bar_tier4"
+    },
+    {
+      "a": "v7_life_bar_tier4",
+      "b": "s_sports_1"
+    },
+    {
+      "a": "s_sports_1",
+      "b": "v7_life_restaurant_tier4"
+    },
+    {
+      "a": "v7_life_restaurant_tier4",
+      "b": "s1"
+    },
+    {
+      "a": "s1",
+      "b": "agency_s_newtown_door"
+    },
+    {
+      "a": "agency_s_newtown_door",
+      "b": "v7_home_tier3"
+    },
+    {
+      "a": "v7_home_tier3",
+      "b": "v7_metro_garden"
+    },
+    {
+      "a": "v7_metro_garden",
+      "b": "s2"
+    },
+    {
+      "a": "s2",
+      "b": "grid_120_270"
+    },
+    {
+      "a": "grid_120_270",
+      "b": "m1"
+    },
+    {
+      "a": "m1",
+      "b": "grid_260_270"
+    },
+    {
+      "a": "grid_-200_0",
+      "b": "grid_-110_300"
+    },
+    {
+      "a": "grid_-110_300",
+      "b": "grid_-200_30"
+    },
+    {
+      "a": "grid_-200_30",
+      "b": "v7_door_life_unit_s_night_0"
+    },
+    {
+      "a": "v7_door_life_unit_s_night_0",
+      "b": "v7_door_life_unit_s_night_2"
+    },
+    {
+      "a": "v7_door_life_unit_s_night_2",
+      "b": "v7_door_life_home_s_night"
+    },
+    {
+      "a": "v7_door_life_home_s_night",
+      "b": "grid_-200_60"
+    },
+    {
+      "a": "grid_-200_60",
+      "b": "s_newtown_0"
+    },
+    {
       "a": "s_newtown_0",
+      "b": "s_newtown_2"
+    },
+    {
+      "a": "s_newtown_2",
       "b": "s_newtown_1"
     },
     {
       "a": "s_newtown_1",
-      "b": "s_newtown_2"
+      "b": "grid_-200_90"
     },
     {
-      "a": "s_oldhomes_0",
-      "b": "s_oldhomes_1"
+      "a": "grid_-200_90",
+      "b": "grid_120_300"
     },
     {
-      "a": "s_oldhomes_1",
-      "b": "s_oldhomes_2"
+      "a": "grid_120_300",
+      "b": "grid_-200_120"
     },
     {
-      "a": "e08",
-      "b": "s_services_1"
+      "a": "grid_-200_120",
+      "b": "grid_260_300"
     },
     {
-      "a": "e02",
-      "b": "s_market_1"
+      "a": "grid_-200_270",
+      "b": "grid_-110_330"
     },
     {
-      "a": "e14",
-      "b": "s_night_1"
+      "a": "grid_-110_330",
+      "b": "grid_-200_300"
     },
     {
-      "a": "s_market_1",
-      "b": "s_services_1"
+      "a": "grid_-200_300",
+      "b": "grid_-200_330"
     },
     {
-      "a": "s_services_1",
-      "b": "s_night_1"
+      "a": "grid_-200_330",
+      "b": "grid_-200_360"
     },
     {
-      "a": "s_market_1",
-      "b": "s_creative_1"
+      "a": "grid_-200_360",
+      "b": "grid_120_330"
     },
     {
-      "a": "s_services_1",
-      "b": "s_sports_1"
+      "a": "grid_120_330",
+      "b": "grid_260_330"
     },
     {
-      "a": "s_night_1",
-      "b": "s_expo_1"
+      "a": "grid_-110_360",
+      "b": "grid_120_360"
     },
     {
-      "a": "s_creative_1",
-      "b": "s_sports_1"
+      "a": "grid_120_360",
+      "b": "grid_260_360"
     },
     {
-      "a": "s_sports_1",
-      "b": "s_expo_1"
+      "a": "grid_0_90",
+      "b": "grid_0_330"
     },
     {
-      "a": "s_expo_1",
-      "b": "s_newtown_1"
+      "a": "grid_0_330",
+      "b": "a4"
     },
     {
-      "a": "home",
-      "b": "s_oldhomes_1"
+      "a": "a4",
+      "b": "b4"
     },
     {
-      "a": "clothing_boutique_door",
-      "b": "s_creative_0",
-      "length": 36
+      "a": "b4",
+      "b": "m0"
     },
     {
-      "a": "clothing_wholesale_door",
-      "b": "s_market_0",
-      "length": 36
+      "a": "m0",
+      "b": "grid_-200_0"
     },
     {
-      "a": "s_market_2",
-      "b": "agency_s_market_door"
+      "a": "grid_-200_0",
+      "b": "grid_-200_270"
     },
     {
-      "a": "s_oldhomes_2",
-      "b": "agency_s_oldhomes_door"
+      "a": "grid_-110_0",
+      "b": "grid_-110_30"
     },
     {
-      "a": "s_services_2",
-      "b": "agency_s_services_door"
+      "a": "grid_-110_30",
+      "b": "grid_-110_60"
     },
     {
-      "a": "s_night_2",
-      "b": "agency_s_night_door"
+      "a": "grid_-110_60",
+      "b": "grid_-110_90"
     },
     {
-      "a": "s_creative_2",
-      "b": "agency_s_creative_door"
+      "a": "grid_-110_90",
+      "b": "grid_-110_120"
     },
     {
-      "a": "s_sports_2",
-      "b": "agency_s_sports_door"
+      "a": "grid_-110_120",
+      "b": "grid_-110_150"
     },
     {
-      "a": "s_expo_2",
-      "b": "agency_s_expo_door"
+      "a": "grid_-110_150",
+      "b": "grid_-110_180"
     },
     {
-      "a": "s_newtown_2",
-      "b": "agency_s_newtown_door"
+      "a": "grid_-110_180",
+      "b": "grid_-110_210"
+    },
+    {
+      "a": "grid_-110_210",
+      "b": "grid_-110_240"
+    },
+    {
+      "a": "grid_-110_240",
+      "b": "grid_-110_270"
+    },
+    {
+      "a": "grid_-110_270",
+      "b": "grid_-110_300"
+    },
+    {
+      "a": "grid_-110_300",
+      "b": "grid_-110_330"
+    },
+    {
+      "a": "grid_-110_330",
+      "b": "grid_-110_360"
+    },
+    {
+      "a": "grid_0_0",
+      "b": "grid_0_240"
+    },
+    {
+      "a": "grid_0_240",
+      "b": "a1"
+    },
+    {
+      "a": "a1",
+      "b": "b1"
+    },
+    {
+      "a": "b1",
+      "b": "n0"
+    },
+    {
+      "a": "n0",
+      "b": "s1"
+    },
+    {
+      "a": "s1",
+      "b": "grid_-200_60"
+    },
+    {
+      "a": "grid_-200_60",
+      "b": "grid_-200_330"
+    },
+    {
+      "a": "grid_120_0",
+      "b": "grid_120_30"
+    },
+    {
+      "a": "grid_120_30",
+      "b": "grid_120_60"
+    },
+    {
+      "a": "grid_120_60",
+      "b": "grid_120_90"
+    },
+    {
+      "a": "grid_120_90",
+      "b": "grid_120_120"
+    },
+    {
+      "a": "grid_120_120",
+      "b": "grid_120_150"
+    },
+    {
+      "a": "grid_120_150",
+      "b": "grid_120_180"
+    },
+    {
+      "a": "grid_120_180",
+      "b": "grid_120_210"
+    },
+    {
+      "a": "grid_120_210",
+      "b": "grid_120_240"
+    },
+    {
+      "a": "grid_120_240",
+      "b": "grid_120_270"
+    },
+    {
+      "a": "grid_120_270",
+      "b": "grid_120_300"
+    },
+    {
+      "a": "grid_120_300",
+      "b": "grid_120_330"
+    },
+    {
+      "a": "grid_120_330",
+      "b": "grid_120_360"
+    },
+    {
+      "a": "grid_260_0",
+      "b": "grid_260_30"
+    },
+    {
+      "a": "grid_260_30",
+      "b": "grid_260_60"
+    },
+    {
+      "a": "grid_260_60",
+      "b": "grid_260_90"
+    },
+    {
+      "a": "grid_260_90",
+      "b": "grid_260_120"
+    },
+    {
+      "a": "grid_260_120",
+      "b": "grid_260_150"
+    },
+    {
+      "a": "grid_260_150",
+      "b": "grid_260_180"
+    },
+    {
+      "a": "grid_260_180",
+      "b": "grid_260_210"
+    },
+    {
+      "a": "grid_260_210",
+      "b": "grid_260_240"
+    },
+    {
+      "a": "grid_260_240",
+      "b": "grid_260_270"
+    },
+    {
+      "a": "grid_260_270",
+      "b": "grid_260_300"
+    },
+    {
+      "a": "grid_260_300",
+      "b": "grid_260_330"
+    },
+    {
+      "a": "grid_260_330",
+      "b": "grid_260_360"
     }
   ],
   "places": [
     {
       "id": "metro_a",
-      "name": "商业街地铁站",
+      "name": "城郊站",
       "kind": "station",
       "node": "st_a",
-      "street": "s_start"
+      "street": "s_oldhomes",
+      "business": "",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 8,
+      "heading": 0,
+      "model": "station",
+      "tier": 0
     },
     {
       "id": "shop01",
@@ -816,7 +1730,16 @@
       "node": "e01",
       "size": "large",
       "business": "奶茶",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 14,
+      "depth": 12,
+      "heading": 0,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "shop02",
@@ -827,7 +1750,16 @@
       "business": "服装",
       "street": "s_start",
       "openMinute": 600,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 11,
+      "depth": 12,
+      "heading": 0,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "shop03",
@@ -836,7 +1768,16 @@
       "node": "e03",
       "size": "large",
       "business": "超市",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 14,
+      "depth": 12,
+      "heading": 0,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "shop04",
@@ -845,7 +1786,16 @@
       "node": "e04",
       "size": "medium",
       "business": "手机",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 11,
+      "depth": 12,
+      "heading": 0,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "shop05",
@@ -854,7 +1804,16 @@
       "node": "e05",
       "size": "small",
       "business": "修鞋",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
+      "heading": 0,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "dealer",
@@ -862,7 +1821,16 @@
       "kind": "dealer",
       "node": "e06",
       "size": "medium",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 11,
+      "depth": 12,
+      "heading": 0,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "shop07",
@@ -871,7 +1839,16 @@
       "node": "e07",
       "size": "large",
       "business": "电脑",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": -6,
+      "width": 14,
+      "depth": 12,
+      "heading": 180,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "shop08",
@@ -880,7 +1857,16 @@
       "node": "e08",
       "size": "medium",
       "business": "快餐",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 11,
+      "depth": 12,
+      "heading": 0,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "shop09",
@@ -889,7 +1875,16 @@
       "node": "e09",
       "size": "small",
       "business": "理发",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
+      "heading": 0,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "shop10",
@@ -898,16 +1893,33 @@
       "node": "e10",
       "size": "medium",
       "business": "药店",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 11,
+      "depth": 12,
+      "heading": 0,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "agency",
-      "name": "安居房产中介",
+      "name": "03 创业商业街房产中介",
       "kind": "agency",
       "node": "e11",
       "size": "small",
       "business": "房产中介",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 10,
+      "depth": 10,
+      "heading": 0,
+      "model": "agency",
+      "tier": 0
     },
     {
       "id": "shop12",
@@ -916,7 +1928,16 @@
       "node": "e12",
       "size": "large",
       "business": "家具",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 14,
+      "depth": 12,
+      "heading": 0,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "shop13",
@@ -925,7 +1946,16 @@
       "node": "e13",
       "size": "medium",
       "business": "电脑",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": -6,
+      "width": 11,
+      "depth": 12,
+      "heading": 180,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "shop14",
@@ -934,7 +1964,16 @@
       "node": "e14",
       "size": "small",
       "business": "农贸",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": -6,
+      "width": 8,
+      "depth": 12,
+      "heading": 180,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "shop15",
@@ -943,7 +1982,16 @@
       "node": "e15",
       "size": "medium",
       "business": "面包",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": -6,
+      "width": 11,
+      "depth": 12,
+      "heading": 180,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "shop16",
@@ -952,7 +2000,16 @@
       "node": "e16",
       "size": "small",
       "business": "花店",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": -6,
+      "width": 8,
+      "depth": 12,
+      "heading": 180,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "shop17",
@@ -961,7 +2018,16 @@
       "node": "e17",
       "size": "medium",
       "business": "便利店",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": -6,
+      "width": 11,
+      "depth": 12,
+      "heading": 180,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "shop18",
@@ -970,7 +2036,16 @@
       "node": "e18",
       "size": "small",
       "business": "五金",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": -6,
+      "width": 8,
+      "depth": 12,
+      "heading": 180,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "shop19",
@@ -979,7 +2054,16 @@
       "node": "e19",
       "size": "small",
       "business": "烟酒",
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
+      "heading": 0,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "player_shop",
@@ -989,14 +2073,31 @@
       "size": "small",
       "business": "空铺",
       "player": true,
-      "street": "s_start"
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": -6,
+      "width": 8,
+      "depth": 12,
+      "heading": 180,
+      "model": "shop",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "home",
-      "name": "城中村出租屋",
+      "name": "城郊老破小出租屋",
       "kind": "home",
       "node": "home",
-      "street": "s_oldhomes"
+      "street": "s_oldhomes",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 12,
+      "depth": 12,
+      "heading": 0,
+      "model": "oldhome",
+      "tier": 0
     },
     {
       "id": "stall_cpu",
@@ -1004,7 +2105,16 @@
       "kind": "wholesaler",
       "node": "mk1",
       "sells": "Cpu,Motherboard",
-      "street": "s_electronics"
+      "street": "s_electronics",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 27,
+      "depth": 16,
+      "heading": 0,
+      "model": "warehouse",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "stall_gpu",
@@ -1012,7 +2122,16 @@
       "kind": "wholesaler",
       "node": "mk2",
       "sells": "Gpu",
-      "street": "s_electronics"
+      "street": "s_electronics",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 27,
+      "depth": 16,
+      "heading": 0,
+      "model": "warehouse",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "stall_mem",
@@ -1020,7 +2139,16 @@
       "kind": "wholesaler",
       "node": "mk3",
       "sells": "Memory,Storage",
-      "street": "s_electronics"
+      "street": "s_electronics",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 27,
+      "depth": 16,
+      "heading": 0,
+      "model": "warehouse",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "stall_psu",
@@ -1028,19 +2156,37 @@
       "kind": "wholesaler",
       "node": "mk4",
       "sells": "PowerCase,Motherboard",
-      "street": "s_electronics"
+      "street": "s_electronics",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 27,
+      "depth": 16,
+      "heading": 0,
+      "model": "warehouse",
+      "tier": 0,
+      "tradable": true
     },
     {
       "id": "metro_b",
-      "name": "电子市场地铁站",
+      "name": "批发市场站",
       "kind": "station",
       "node": "st_b",
-      "street": "s_electronics"
+      "street": "s_electronics",
+      "business": "",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 8,
+      "heading": 0,
+      "model": "station",
+      "tier": 0
     },
     {
       "id": "life_restaurant",
-      "name": "同桌家常馆",
-      "street": "s_night",
+      "name": "街坊餐厅",
+      "street": "s_start",
       "node": "s_night_0",
       "business": "venue_restaurant",
       "kind": "shop",
@@ -1048,17 +2194,19 @@
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 24,
+      "depth": 16,
       "heading": 0,
       "tradable": false,
       "openMinute": 600,
-      "closeMinute": 1320
+      "closeMinute": 1320,
+      "model": "restaurant",
+      "tier": 0
     },
     {
       "id": "life_ktv",
-      "name": "拾音练歌房",
-      "street": "s_night",
+      "name": "街坊歌房",
+      "street": "s_start",
       "node": "s_night_1",
       "business": "venue_ktv",
       "kind": "shop",
@@ -1066,17 +2214,19 @@
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 24,
+      "depth": 16,
       "heading": 0,
       "tradable": false,
       "openMinute": 840,
-      "closeMinute": 120
+      "closeMinute": 120,
+      "model": "ktv",
+      "tier": 0
     },
     {
       "id": "life_bar",
-      "name": "灯塔无酒精吧",
-      "street": "s_night",
+      "name": "街坊酒吧",
+      "street": "s_start",
       "node": "s_night_2",
       "business": "venue_bar",
       "kind": "shop",
@@ -1084,17 +2234,19 @@
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 24,
+      "depth": 16,
       "heading": 0,
       "tradable": false,
       "openMinute": 1080,
-      "closeMinute": 120
+      "closeMinute": 120,
+      "model": "bar",
+      "tier": 0
     },
     {
       "id": "life_court",
       "name": "青湾球场",
-      "street": "s_sports",
+      "street": "s_start",
       "node": "s_sports_0",
       "business": "venue_court",
       "kind": "shop",
@@ -1102,17 +2254,19 @@
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 14,
+      "depth": 15,
       "heading": 0,
       "tradable": false,
       "openMinute": 420,
-      "closeMinute": 1320
+      "closeMinute": 1320,
+      "model": "court",
+      "tier": 0
     },
     {
       "id": "life_golf",
       "name": "青湾练习场",
-      "street": "s_sports",
+      "street": "s_night",
       "node": "s_sports_1",
       "business": "venue_golf",
       "kind": "shop",
@@ -1120,12 +2274,14 @@
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 32,
+      "depth": 20,
       "heading": 0,
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1140
+      "closeMinute": 1140,
+      "model": "golf",
+      "tier": 3
     },
     {
       "id": "life_park",
@@ -1138,12 +2294,14 @@
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 45,
+      "depth": 25,
       "heading": 0,
       "tradable": false,
       "openMinute": 360,
-      "closeMinute": 1380
+      "closeMinute": 1380,
+      "model": "park",
+      "tier": 2
     },
     {
       "id": "life_expo",
@@ -1156,17 +2314,19 @@
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 60,
+      "depth": 28,
       "heading": 0,
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1080
+      "closeMinute": 1080,
+      "model": "expo",
+      "tier": 2
     },
     {
       "id": "life_hike",
-      "name": "青湾步道入口",
-      "street": "s_market",
+      "name": "城郊平地散步公园",
+      "street": "s_oldhomes",
       "node": "s_market_2",
       "business": "venue_hike",
       "kind": "shop",
@@ -1174,52 +2334,58 @@
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 28,
+      "depth": 16,
       "heading": 0,
       "tradable": false,
       "openMinute": 360,
-      "closeMinute": 1200
+      "closeMinute": 1200,
+      "model": "park",
+      "tier": 0
     },
     {
       "id": "life_unit_s_market_0",
-      "name": "禾田生活街西铺",
+      "name": "05 社区商业街西侧商铺",
       "street": "s_market",
-      "node": "s_market_0",
+      "node": "v7_door_life_unit_s_market_0",
       "business": "零售商铺",
       "kind": "shop",
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 1
     },
     {
       "id": "life_unit_s_market_2",
-      "name": "禾田生活街东铺",
+      "name": "05 社区商业街东侧商铺",
       "street": "s_market",
-      "node": "s_market_2",
+      "node": "v7_door_life_unit_s_market_2",
       "business": "空铺",
       "kind": "shop",
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 1
     },
     {
       "id": "life_home_s_market",
-      "name": "禾田生活街邻里公寓",
+      "name": "05 社区商业街居民住宅",
       "street": "s_market",
       "node": "s_market_1",
       "business": "住宅",
@@ -1227,35 +2393,39 @@
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 16,
+      "depth": 12,
       "heading": 0,
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "apartment",
+      "tier": 1
     },
     {
       "id": "life_unit_s_services_0",
-      "name": "桥东社区街西铺",
+      "name": "04 宜居社区街西侧商铺",
       "street": "s_services",
-      "node": "s_services_0",
+      "node": "v7_door_life_unit_s_services_0",
       "business": "零售商铺",
       "kind": "shop",
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 1
     },
     {
       "id": "life_unit_s_services_2",
-      "name": "桥东社区街东铺",
+      "name": "04 宜居社区街东侧商铺",
       "street": "s_services",
       "node": "s_services_2",
       "business": "空铺",
@@ -1263,17 +2433,19 @@
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 1
     },
     {
       "id": "life_home_s_services",
-      "name": "桥东社区街邻里公寓",
+      "name": "04 宜居社区街居民住宅",
       "street": "s_services",
       "node": "s_services_1",
       "business": "住宅",
@@ -1281,215 +2453,239 @@
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 16,
+      "depth": 12,
       "heading": 0,
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "apartment",
+      "tier": 1
     },
     {
       "id": "life_unit_s_night_0",
-      "name": "灯巷餐饮街西铺",
+      "name": "09 顶奢商业街西侧商铺",
       "street": "s_night",
-      "node": "s_night_0",
+      "node": "v7_door_life_unit_s_night_0",
       "business": "零售商铺",
       "kind": "shop",
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 2
     },
     {
       "id": "life_unit_s_night_2",
-      "name": "灯巷餐饮街东铺",
+      "name": "09 顶奢商业街东侧商铺",
       "street": "s_night",
-      "node": "s_night_2",
+      "node": "v7_door_life_unit_s_night_2",
       "business": "空铺",
       "kind": "shop",
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 2
     },
     {
       "id": "life_home_s_night",
-      "name": "灯巷餐饮街邻里公寓",
+      "name": "09 顶奢商业街居民住宅",
       "street": "s_night",
-      "node": "s_night_1",
+      "node": "v7_door_life_home_s_night",
       "business": "住宅",
       "kind": "home",
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 16,
+      "depth": 12,
       "heading": 0,
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "luxury_apartment",
+      "tier": 2
     },
     {
       "id": "life_unit_s_creative_0",
-      "name": "纸风车文创街西铺",
+      "name": "06 品质商业街西侧商铺",
       "street": "s_creative",
-      "node": "s_creative_0",
+      "node": "v7_door_life_unit_s_creative_0",
       "business": "模型手办",
       "kind": "shop",
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 2
     },
     {
       "id": "life_unit_s_creative_2",
-      "name": "纸风车文创街东铺",
+      "name": "06 品质商业街东侧商铺",
       "street": "s_creative",
-      "node": "s_creative_2",
+      "node": "v7_door_life_unit_s_creative_2",
       "business": "空铺",
       "kind": "shop",
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 2
     },
     {
       "id": "life_home_s_creative",
-      "name": "纸风车文创街邻里公寓",
+      "name": "06 品质商业街居民住宅",
       "street": "s_creative",
-      "node": "s_creative_1",
+      "node": "v7_door_life_home_s_creative",
       "business": "住宅",
       "kind": "home",
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 16,
+      "depth": 12,
       "heading": 0,
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "luxury_apartment",
+      "tier": 2
     },
     {
       "id": "life_unit_s_sports_0",
-      "name": "青湾休闲街西铺",
+      "name": "07 公园公寓街西侧商铺",
       "street": "s_sports",
-      "node": "s_sports_0",
+      "node": "v7_door_life_unit_s_sports_0",
       "business": "零售商铺",
       "kind": "shop",
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 2
     },
     {
       "id": "life_unit_s_sports_2",
-      "name": "青湾休闲街东铺",
+      "name": "07 公园公寓街东侧商铺",
       "street": "s_sports",
-      "node": "s_sports_2",
+      "node": "v7_door_life_unit_s_sports_2",
       "business": "空铺",
       "kind": "shop",
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 2
     },
     {
       "id": "life_home_s_sports",
-      "name": "青湾休闲街邻里公寓",
+      "name": "07 公园公寓街居民住宅",
       "street": "s_sports",
-      "node": "s_sports_1",
+      "node": "v7_door_life_home_s_sports",
       "business": "住宅",
       "kind": "home",
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 16,
+      "depth": 12,
       "heading": 0,
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "luxury_apartment",
+      "tier": 2
     },
     {
       "id": "life_unit_s_expo_0",
-      "name": "云帆会展街西铺",
+      "name": "08 会展商务街西侧商铺",
       "street": "s_expo",
-      "node": "s_expo_0",
+      "node": "v7_door_life_unit_s_expo_0",
       "business": "零售商铺",
       "kind": "shop",
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 2
     },
     {
       "id": "life_unit_s_expo_2",
-      "name": "云帆会展街东铺",
+      "name": "08 会展商务街东侧商铺",
       "street": "s_expo",
-      "node": "s_expo_2",
+      "node": "v7_door_life_unit_s_expo_2",
       "business": "空铺",
       "kind": "shop",
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 2
     },
     {
       "id": "life_home_s_expo",
-      "name": "云帆会展街邻里公寓",
+      "name": "08 会展商务街居民住宅",
       "street": "s_expo",
       "node": "s_expo_1",
       "business": "住宅",
@@ -1497,17 +2693,19 @@
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 16,
+      "depth": 12,
       "heading": 0,
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "luxury_apartment",
+      "tier": 2
     },
     {
       "id": "life_unit_s_newtown_0",
-      "name": "新城物业街西铺",
+      "name": "10 花园别墅街西侧商铺",
       "street": "s_newtown",
       "node": "s_newtown_0",
       "business": "零售商铺",
@@ -1515,17 +2713,19 @@
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 3
     },
     {
       "id": "life_unit_s_newtown_2",
-      "name": "新城物业街东铺",
+      "name": "10 花园别墅街东侧商铺",
       "street": "s_newtown",
       "node": "s_newtown_2",
       "business": "空铺",
@@ -1533,17 +2733,19 @@
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 3
     },
     {
       "id": "life_home_s_newtown",
-      "name": "新城物业街邻里公寓",
+      "name": "10 花园别墅街居民住宅",
       "street": "s_newtown",
       "node": "s_newtown_1",
       "business": "住宅",
@@ -1551,17 +2753,19 @@
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 16,
+      "depth": 12,
       "heading": 0,
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "villa",
+      "tier": 3
     },
     {
       "id": "life_unit_s_oldhomes_0",
-      "name": "榕树老居民街西铺",
+      "name": "01 城郊旧居街西侧商铺",
       "street": "s_oldhomes",
       "node": "s_oldhomes_0",
       "business": "零售商铺",
@@ -1569,17 +2773,19 @@
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 0
     },
     {
       "id": "life_unit_s_oldhomes_2",
-      "name": "榕树老居民街东铺",
+      "name": "01 城郊旧居街东侧商铺",
       "street": "s_oldhomes",
       "node": "s_oldhomes_2",
       "business": "空铺",
@@ -1587,17 +2793,19 @@
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 0
     },
     {
       "id": "life_home_s_oldhomes",
-      "name": "榕树老居民街邻里公寓",
+      "name": "01 城郊旧居街居民住宅",
       "street": "s_oldhomes",
       "node": "s_oldhomes_1",
       "business": "住宅",
@@ -1605,13 +2813,15 @@
       "size": "small",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
-      "width": 12,
-      "depth": 9,
+      "entranceY": 6,
+      "width": 16,
+      "depth": 12,
       "heading": 0,
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "oldhome",
+      "tier": 0
     },
     {
       "id": "life_market",
@@ -1624,12 +2834,14 @@
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 24,
+      "depth": 14,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "market",
+      "tier": 1
     },
     {
       "id": "life_studio",
@@ -1642,12 +2854,14 @@
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 18,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "studio",
+      "tier": 2
     },
     {
       "id": "life_company",
@@ -1660,12 +2874,14 @@
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 25,
+      "depth": 15,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "office",
+      "tier": 2
     },
     {
       "id": "life_service",
@@ -1678,12 +2894,14 @@
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 1
     },
     {
       "id": "model_workshop",
@@ -1696,12 +2914,14 @@
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 2
     },
     {
       "id": "model_market",
@@ -1710,16 +2930,18 @@
       "node": "s_creative_2",
       "size": "small",
       "business": "潮玩模型",
-      "street": "s_creative",
+      "street": "s_electronics",
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 27,
+      "depth": 16,
       "heading": 0,
       "tradable": true,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "warehouse",
+      "tier": 0
     },
     {
       "id": "clothing_boutique",
@@ -1732,12 +2954,14 @@
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 8,
+      "depth": 12,
       "heading": 0,
       "tradable": true,
       "openMinute": 600,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 2
     },
     {
       "id": "clothing_wholesale",
@@ -1746,254 +2970,3049 @@
       "node": "clothing_wholesale_door",
       "size": "small",
       "business": "服装",
-      "street": "s_market",
+      "street": "s_electronics",
       "explicitEntrance": true,
       "entranceX": 0,
       "entranceY": 6,
-      "width": 12,
-      "depth": 9,
+      "width": 27,
+      "depth": 16,
       "heading": 0,
       "tradable": true,
       "openMinute": 600,
-      "closeMinute": 1260
+      "closeMinute": 1260,
+      "model": "warehouse",
+      "tier": 0
     },
     {
       "id": "agency_s_electronics",
-      "name": "电子市场街房产中介",
+      "name": "02 城外批发街房产中介",
       "kind": "agency",
       "node": "mk5",
       "street": "s_electronics",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
+      "entranceY": 6,
       "width": 10,
-      "depth": 8,
+      "depth": 10,
       "size": "small",
       "business": "房产中介",
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1200
+      "closeMinute": 1200,
+      "heading": 0,
+      "model": "agency",
+      "tier": 0
     },
     {
       "id": "agency_s_market",
-      "name": "禾田生活街房产中介",
+      "name": "05 社区商业街房产中介",
       "kind": "agency",
       "node": "agency_s_market_door",
       "street": "s_market",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
+      "entranceY": 6,
       "width": 10,
-      "depth": 8,
+      "depth": 10,
       "size": "small",
       "business": "房产中介",
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1200
+      "closeMinute": 1200,
+      "heading": 0,
+      "model": "agency",
+      "tier": 0
     },
     {
       "id": "agency_s_oldhomes",
-      "name": "榕树老居民街房产中介",
+      "name": "01 城郊旧居街房产中介",
       "kind": "agency",
       "node": "agency_s_oldhomes_door",
       "street": "s_oldhomes",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
+      "entranceY": 6,
       "width": 10,
-      "depth": 8,
+      "depth": 10,
       "size": "small",
       "business": "房产中介",
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1200
+      "closeMinute": 1200,
+      "heading": 0,
+      "model": "agency",
+      "tier": 0
     },
     {
       "id": "agency_s_services",
-      "name": "桥东社区街房产中介",
+      "name": "04 宜居社区街房产中介",
       "kind": "agency",
       "node": "agency_s_services_door",
       "street": "s_services",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
+      "entranceY": 6,
       "width": 10,
-      "depth": 8,
+      "depth": 10,
       "size": "small",
       "business": "房产中介",
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1200
+      "closeMinute": 1200,
+      "heading": 0,
+      "model": "agency",
+      "tier": 0
     },
     {
       "id": "agency_s_night",
-      "name": "灯巷餐饮街房产中介",
+      "name": "09 顶奢商业街房产中介",
       "kind": "agency",
       "node": "agency_s_night_door",
       "street": "s_night",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
+      "entranceY": 6,
       "width": 10,
-      "depth": 8,
+      "depth": 10,
       "size": "small",
       "business": "房产中介",
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1200
+      "closeMinute": 1200,
+      "heading": 0,
+      "model": "agency",
+      "tier": 0
     },
     {
       "id": "agency_s_creative",
-      "name": "纸风车文创街房产中介",
+      "name": "06 品质商业街房产中介",
       "kind": "agency",
       "node": "agency_s_creative_door",
       "street": "s_creative",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
+      "entranceY": 6,
       "width": 10,
-      "depth": 8,
+      "depth": 10,
       "size": "small",
       "business": "房产中介",
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1200
+      "closeMinute": 1200,
+      "heading": 0,
+      "model": "agency",
+      "tier": 0
     },
     {
       "id": "agency_s_sports",
-      "name": "青湾休闲街房产中介",
+      "name": "07 公园公寓街房产中介",
       "kind": "agency",
       "node": "agency_s_sports_door",
       "street": "s_sports",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
+      "entranceY": 6,
       "width": 10,
-      "depth": 8,
+      "depth": 10,
       "size": "small",
       "business": "房产中介",
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1200
+      "closeMinute": 1200,
+      "heading": 0,
+      "model": "agency",
+      "tier": 0
     },
     {
       "id": "agency_s_expo",
-      "name": "云帆会展街房产中介",
+      "name": "08 会展商务街房产中介",
       "kind": "agency",
       "node": "agency_s_expo_door",
       "street": "s_expo",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
+      "entranceY": 6,
       "width": 10,
-      "depth": 8,
+      "depth": 10,
       "size": "small",
       "business": "房产中介",
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1200
+      "closeMinute": 1200,
+      "heading": 0,
+      "model": "agency",
+      "tier": 0
     },
     {
       "id": "agency_s_newtown",
-      "name": "新城物业街房产中介",
+      "name": "10 花园别墅街房产中介",
       "kind": "agency",
       "node": "agency_s_newtown_door",
       "street": "s_newtown",
       "explicitEntrance": true,
       "entranceX": 0,
-      "entranceY": -6,
+      "entranceY": 6,
       "width": 10,
-      "depth": 8,
+      "depth": 10,
       "size": "small",
       "business": "房产中介",
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1200
+      "closeMinute": 1200,
+      "heading": 0,
+      "model": "agency",
+      "tier": 0
+    },
+    {
+      "id": "home_tier1",
+      "name": "宜居改善住宅",
+      "kind": "home",
+      "node": "v7_home_tier1",
+      "size": "medium",
+      "business": "",
+      "street": "s_services",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 16,
+      "depth": 15,
+      "heading": 0,
+      "model": "apartment",
+      "tier": 1
+    },
+    {
+      "id": "home_tier2",
+      "name": "公园豪华公寓",
+      "kind": "home",
+      "node": "v7_home_tier2",
+      "size": "medium",
+      "business": "",
+      "street": "s_sports",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 16,
+      "depth": 15,
+      "heading": 0,
+      "model": "luxury_apartment",
+      "tier": 2
+    },
+    {
+      "id": "home_tier3",
+      "name": "花园独栋别墅",
+      "kind": "home",
+      "node": "v7_home_tier3",
+      "size": "medium",
+      "business": "",
+      "street": "s_newtown",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 16,
+      "depth": 15,
+      "heading": 0,
+      "model": "villa",
+      "tier": 3
+    },
+    {
+      "id": "metro_community",
+      "name": "宜居社区站",
+      "kind": "station",
+      "node": "v7_metro_community",
+      "size": "medium",
+      "business": "",
+      "street": "s_services",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 8,
+      "heading": 0,
+      "model": "station",
+      "tier": 0
+    },
+    {
+      "id": "metro_center",
+      "name": "中心商业站",
+      "kind": "station",
+      "node": "v7_metro_center",
+      "size": "medium",
+      "business": "",
+      "street": "s_market",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 8,
+      "heading": 0,
+      "model": "station",
+      "tier": 0
+    },
+    {
+      "id": "metro_park",
+      "name": "公园公寓站",
+      "kind": "station",
+      "node": "v7_metro_park",
+      "size": "medium",
+      "business": "",
+      "street": "s_sports",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 8,
+      "heading": 0,
+      "model": "station",
+      "tier": 0
+    },
+    {
+      "id": "metro_expo",
+      "name": "会展站",
+      "kind": "station",
+      "node": "v7_metro_expo",
+      "size": "medium",
+      "business": "",
+      "street": "s_expo",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 8,
+      "heading": 0,
+      "model": "station",
+      "tier": 0
+    },
+    {
+      "id": "metro_luxury",
+      "name": "顶奢商业站",
+      "kind": "station",
+      "node": "v7_metro_luxury",
+      "size": "medium",
+      "business": "",
+      "street": "s_night",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 8,
+      "heading": 0,
+      "model": "station",
+      "tier": 0
+    },
+    {
+      "id": "metro_garden",
+      "name": "花园站",
+      "kind": "station",
+      "node": "v7_metro_garden",
+      "size": "medium",
+      "business": "",
+      "street": "s_newtown",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 8,
+      "depth": 8,
+      "heading": 0,
+      "model": "station",
+      "tier": 0
+    },
+    {
+      "id": "life_restaurant_tier2",
+      "name": "邻里餐厅",
+      "kind": "shop",
+      "node": "v7_life_restaurant_tier2",
+      "size": "medium",
+      "business": "venue_restaurant",
+      "street": "s_market",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 24,
+      "depth": 16,
+      "heading": 0,
+      "model": "restaurant",
+      "tier": 1,
+      "openMinute": 600,
+      "closeMinute": 1320,
+      "tradable": false
+    },
+    {
+      "id": "life_ktv_tier2",
+      "name": "邻里歌房",
+      "kind": "shop",
+      "node": "v7_life_ktv_tier2",
+      "size": "medium",
+      "business": "venue_ktv",
+      "street": "s_market",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 24,
+      "depth": 16,
+      "heading": 0,
+      "model": "ktv",
+      "tier": 1,
+      "openMinute": 840,
+      "closeMinute": 120,
+      "tradable": false
+    },
+    {
+      "id": "life_bar_tier2",
+      "name": "邻里酒吧",
+      "kind": "shop",
+      "node": "v7_life_bar_tier2",
+      "size": "medium",
+      "business": "venue_bar",
+      "street": "s_market",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 24,
+      "depth": 16,
+      "heading": 0,
+      "model": "bar",
+      "tier": 1,
+      "openMinute": 1080,
+      "closeMinute": 120,
+      "tradable": false
+    },
+    {
+      "id": "life_restaurant_tier3",
+      "name": "云庭餐厅",
+      "kind": "shop",
+      "node": "v7_life_restaurant_tier3",
+      "size": "medium",
+      "business": "venue_restaurant",
+      "street": "s_creative",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 24,
+      "depth": 16,
+      "heading": 0,
+      "model": "restaurant",
+      "tier": 2,
+      "openMinute": 600,
+      "closeMinute": 1320,
+      "tradable": false
+    },
+    {
+      "id": "life_ktv_tier3",
+      "name": "云庭歌房",
+      "kind": "shop",
+      "node": "v7_life_ktv_tier3",
+      "size": "medium",
+      "business": "venue_ktv",
+      "street": "s_creative",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 24,
+      "depth": 16,
+      "heading": 0,
+      "model": "ktv",
+      "tier": 2,
+      "openMinute": 840,
+      "closeMinute": 120,
+      "tradable": false
+    },
+    {
+      "id": "life_bar_tier3",
+      "name": "云庭酒吧",
+      "kind": "shop",
+      "node": "v7_life_bar_tier3",
+      "size": "medium",
+      "business": "venue_bar",
+      "street": "s_creative",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 24,
+      "depth": 16,
+      "heading": 0,
+      "model": "bar",
+      "tier": 2,
+      "openMinute": 1080,
+      "closeMinute": 120,
+      "tradable": false
+    },
+    {
+      "id": "life_restaurant_tier4",
+      "name": "星苑餐厅",
+      "kind": "shop",
+      "node": "v7_life_restaurant_tier4",
+      "size": "medium",
+      "business": "venue_restaurant",
+      "street": "s_night",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 24,
+      "depth": 16,
+      "heading": 0,
+      "model": "restaurant",
+      "tier": 3,
+      "openMinute": 600,
+      "closeMinute": 1320,
+      "tradable": false
+    },
+    {
+      "id": "life_ktv_tier4",
+      "name": "星苑歌房",
+      "kind": "shop",
+      "node": "v7_life_ktv_tier4",
+      "size": "medium",
+      "business": "venue_ktv",
+      "street": "s_night",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": -6,
+      "width": 24,
+      "depth": 16,
+      "heading": 180,
+      "model": "ktv",
+      "tier": 3,
+      "openMinute": 840,
+      "closeMinute": 120,
+      "tradable": false
+    },
+    {
+      "id": "life_bar_tier4",
+      "name": "星苑酒吧",
+      "kind": "shop",
+      "node": "v7_life_bar_tier4",
+      "size": "medium",
+      "business": "venue_bar",
+      "street": "s_night",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": -6,
+      "width": 24,
+      "depth": 16,
+      "heading": 180,
+      "model": "bar",
+      "tier": 3,
+      "openMinute": 1080,
+      "closeMinute": 120,
+      "tradable": false
+    },
+    {
+      "id": "life_court_mid",
+      "name": "社区运动场",
+      "kind": "shop",
+      "node": "v7_life_court_mid",
+      "size": "medium",
+      "business": "venue_court",
+      "street": "s_market",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 18,
+      "depth": 17,
+      "heading": 0,
+      "model": "court",
+      "tier": 1
+    },
+    {
+      "id": "life_fitness",
+      "name": "公园健身场",
+      "kind": "shop",
+      "node": "v7_life_fitness",
+      "size": "medium",
+      "business": "venue_court",
+      "street": "s_creative",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 18,
+      "depth": 17,
+      "heading": 0,
+      "model": "court",
+      "tier": 2
     }
   ],
   "patrols": [
     {
-      "id": "street",
+      "id": "v7_patrol",
       "nodes": [
-        "e05",
-        "e06",
-        "e07",
-        "e08",
-        "e09",
-        "e10",
-        "e11",
-        "e12"
-      ]
-    },
-    {
-      "id": "north",
-      "nodes": [
-        "n0",
-        "n1",
-        "n2",
-        "m0"
-      ]
-    },
-    {
-      "id": "south",
-      "nodes": [
-        "s0",
-        "s1",
-        "s2",
-        "m1"
+        "grid_0_0",
+        "grid_0_90",
+        "grid_120_90",
+        "grid_120_0"
       ]
     }
   ],
   "streets": [
     {
-      "id": "s_start",
-      "name": "创业商业街",
-      "purpose": "创业商业街生活与商业"
+      "id": "s_oldhomes",
+      "name": "01 城郊旧居街",
+      "purpose": "低级住宅"
     },
     {
       "id": "s_electronics",
-      "name": "电子市场街",
-      "purpose": "电子市场街生活与商业"
+      "name": "02 城外批发街",
+      "purpose": "集中批发"
     },
     {
-      "id": "s_market",
-      "name": "禾田生活街",
-      "purpose": "禾田生活街生活与商业"
-    },
-    {
-      "id": "s_oldhomes",
-      "name": "榕树老居民街",
-      "purpose": "榕树老居民街生活与商业"
+      "id": "s_start",
+      "name": "03 创业商业街",
+      "purpose": "平价商业"
     },
     {
       "id": "s_services",
-      "name": "桥东社区街",
-      "purpose": "桥东社区街生活与商业"
+      "name": "04 宜居社区街",
+      "purpose": "中级住宅"
     },
     {
-      "id": "s_night",
-      "name": "灯巷餐饮街",
-      "purpose": "灯巷餐饮街生活与商业"
+      "id": "s_market",
+      "name": "05 社区商业街",
+      "purpose": "中档商业"
     },
     {
       "id": "s_creative",
-      "name": "纸风车文创街",
-      "purpose": "纸风车文创街生活与商业"
+      "name": "06 品质商业街",
+      "purpose": "高档商业"
     },
     {
       "id": "s_sports",
-      "name": "青湾休闲街",
-      "purpose": "青湾休闲街生活与商业"
+      "name": "07 公园公寓街",
+      "purpose": "高级住宅"
     },
     {
       "id": "s_expo",
-      "name": "云帆会展街",
-      "purpose": "云帆会展街生活与商业"
+      "name": "08 会展商务街",
+      "purpose": "会展与办公"
+    },
+    {
+      "id": "s_night",
+      "name": "09 顶奢商业街",
+      "purpose": "顶奢商业"
     },
     {
       "id": "s_newtown",
-      "name": "新城物业街",
-      "purpose": "新城物业街生活与商业"
+      "name": "10 花园别墅街",
+      "purpose": "豪华住宅·东西片"
+    }
+  ],
+  "layoutVersion": 7,
+  "blocks": [
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -127.65,
+      "y": 7.5,
+      "width": 12,
+      "depth": 12,
+      "height": 11,
+      "variant": 29,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -94.7,
+      "y": 7.5,
+      "width": 12,
+      "depth": 12,
+      "height": 11,
+      "variant": 39,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -82.5,
+      "y": 7.5,
+      "width": 6.5,
+      "depth": 9,
+      "height": 5,
+      "variant": 40,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -68.3,
+      "y": 7.5,
+      "width": 16,
+      "depth": 11,
+      "height": 14,
+      "variant": 41,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -52.85,
+      "y": 7.5,
+      "width": 9,
+      "depth": 11,
+      "height": 8,
+      "variant": 42,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -42.15,
+      "y": 7.5,
+      "width": 6.5,
+      "depth": 9,
+      "height": 5,
+      "variant": 43,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -32.7,
+      "y": 7.5,
+      "width": 6.5,
+      "depth": 9,
+      "height": 5,
+      "variant": 44,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -187.15,
+      "y": 24,
+      "width": 9,
+      "depth": 11,
+      "height": 8,
+      "variant": 7,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -141.7,
+      "y": 24,
+      "width": 12,
+      "depth": 12,
+      "height": 11,
+      "variant": 24,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -129.5,
+      "y": 24,
+      "width": 6.5,
+      "depth": 9,
+      "height": 5,
+      "variant": 25,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -96.8,
+      "y": 24,
+      "width": 9,
+      "depth": 11,
+      "height": 8,
+      "variant": 37,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -79.85,
+      "y": 24,
+      "width": 19,
+      "depth": 12,
+      "height": 10,
+      "variant": 38,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -61.4,
+      "y": 24,
+      "width": 12,
+      "depth": 12,
+      "height": 11,
+      "variant": 39,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -49.2,
+      "y": 24,
+      "width": 6.5,
+      "depth": 9,
+      "height": 5,
+      "variant": 40,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -35.0,
+      "y": 24,
+      "width": 16,
+      "depth": 11,
+      "height": 14,
+      "variant": 41,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -19.55,
+      "y": 24,
+      "width": 9,
+      "depth": 11,
+      "height": 8,
+      "variant": 42,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -185.65,
+      "y": 52.5,
+      "width": 12,
+      "depth": 12,
+      "height": 11,
+      "variant": 11,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -161.45,
+      "y": 52.5,
+      "width": 6.5,
+      "depth": 9,
+      "height": 5,
+      "variant": 18,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -95.25,
+      "y": 52.5,
+      "width": 12,
+      "depth": 12,
+      "height": 11,
+      "variant": 46,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -83.05,
+      "y": 52.5,
+      "width": 6.5,
+      "depth": 9,
+      "height": 5,
+      "variant": 47,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -68.85,
+      "y": 52.5,
+      "width": 16,
+      "depth": 11,
+      "height": 14,
+      "variant": 48,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -53.4,
+      "y": 52.5,
+      "width": 9,
+      "depth": 11,
+      "height": 8,
+      "variant": 49,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -36.45,
+      "y": 52.5,
+      "width": 19,
+      "depth": 12,
+      "height": 10,
+      "variant": 50,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -18.0,
+      "y": 52.5,
+      "width": 12,
+      "depth": 12,
+      "height": 11,
+      "variant": 51,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -183.65,
+      "y": 69,
+      "width": 16,
+      "depth": 11,
+      "height": 14,
+      "variant": 18,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -168.2,
+      "y": 69,
+      "width": 9,
+      "depth": 11,
+      "height": 8,
+      "variant": 19,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -151.25,
+      "y": 69,
+      "width": 19,
+      "depth": 12,
+      "height": 10,
+      "variant": 20,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -132.8,
+      "y": 69,
+      "width": 12,
+      "depth": 12,
+      "height": 11,
+      "variant": 21,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -93.85,
+      "y": 69,
+      "width": 16,
+      "depth": 11,
+      "height": 14,
+      "variant": 33,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -78.4,
+      "y": 69,
+      "width": 9,
+      "depth": 11,
+      "height": 8,
+      "variant": 34,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -61.45,
+      "y": 69,
+      "width": 19,
+      "depth": 12,
+      "height": 10,
+      "variant": 35,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -43.0,
+      "y": 69,
+      "width": 12,
+      "depth": 12,
+      "height": 11,
+      "variant": 36,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -30.8,
+      "y": 69,
+      "width": 6.5,
+      "depth": 9,
+      "height": 5,
+      "variant": 37,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -16.6,
+      "y": 69,
+      "width": 16,
+      "depth": 11,
+      "height": 14,
+      "variant": 38,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -182.15,
+      "y": 97.5,
+      "width": 19,
+      "depth": 12,
+      "height": 10,
+      "variant": 22,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -163.7,
+      "y": 97.5,
+      "width": 12,
+      "depth": 12,
+      "height": 11,
+      "variant": 23,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -151.5,
+      "y": 97.5,
+      "width": 6.5,
+      "depth": 9,
+      "height": 5,
+      "variant": 24,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -137.3,
+      "y": 97.5,
+      "width": 16,
+      "depth": 11,
+      "height": 14,
+      "variant": 25,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -123.1,
+      "y": 97.5,
+      "width": 6.5,
+      "depth": 9,
+      "height": 5,
+      "variant": 26,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -92.9,
+      "y": 97.5,
+      "width": 16,
+      "depth": 11,
+      "height": 14,
+      "variant": 35,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -77.45,
+      "y": 97.5,
+      "width": 9,
+      "depth": 11,
+      "height": 8,
+      "variant": 36,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -60.5,
+      "y": 97.5,
+      "width": 19,
+      "depth": 12,
+      "height": 10,
+      "variant": 37,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -42.05,
+      "y": 97.5,
+      "width": 12,
+      "depth": 12,
+      "height": 11,
+      "variant": 38,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -29.85,
+      "y": 97.5,
+      "width": 6.5,
+      "depth": 9,
+      "height": 5,
+      "variant": 39,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -20.4,
+      "y": 97.5,
+      "width": 6.5,
+      "depth": 9,
+      "height": 5,
+      "variant": 40,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -188.4,
+      "y": 114,
+      "width": 6.5,
+      "depth": 9,
+      "height": 5,
+      "variant": 29,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -174.2,
+      "y": 114,
+      "width": 16,
+      "depth": 11,
+      "height": 14,
+      "variant": 30,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -158.75,
+      "y": 114,
+      "width": 9,
+      "depth": 11,
+      "height": 8,
+      "variant": 31,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -141.8,
+      "y": 114,
+      "width": 19,
+      "depth": 12,
+      "height": 10,
+      "variant": 32,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -126.1,
+      "y": 114,
+      "width": 6.5,
+      "depth": 9,
+      "height": 5,
+      "variant": 33,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -95.9,
+      "y": 114,
+      "width": 12,
+      "depth": 12,
+      "height": 11,
+      "variant": 43,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -83.7,
+      "y": 114,
+      "width": 6.5,
+      "depth": 9,
+      "height": 5,
+      "variant": 44,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -69.5,
+      "y": 114,
+      "width": 16,
+      "depth": 11,
+      "height": 14,
+      "variant": 45,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -54.05,
+      "y": 114,
+      "width": 9,
+      "depth": 11,
+      "height": 8,
+      "variant": 46,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -37.1,
+      "y": 114,
+      "width": 19,
+      "depth": 12,
+      "height": 10,
+      "variant": 47,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_oldhomes",
+      "model": "oldhome",
+      "tier": 0,
+      "x": -18.65,
+      "y": 114,
+      "width": 12,
+      "depth": 12,
+      "height": 11,
+      "variant": 48,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -144.65,
+      "y": 142.5,
+      "width": 18,
+      "depth": 12,
+      "height": 16,
+      "variant": 19,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -126.2,
+      "y": 142.5,
+      "width": 13,
+      "depth": 12,
+      "height": 12,
+      "variant": 20,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -80.25,
+      "y": 142.5,
+      "width": 13,
+      "depth": 12,
+      "height": 12,
+      "variant": 36,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -66.3,
+      "y": 142.5,
+      "width": 9,
+      "depth": 10,
+      "height": 9,
+      "variant": 37,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -46.85,
+      "y": 142.5,
+      "width": 24,
+      "depth": 11,
+      "height": 19,
+      "variant": 38,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -182.65,
+      "y": 159,
+      "width": 18,
+      "depth": 12,
+      "height": 16,
+      "variant": 7,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -164.2,
+      "y": 159,
+      "width": 13,
+      "depth": 12,
+      "height": 12,
+      "variant": 8,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -150.25,
+      "y": 159,
+      "width": 9,
+      "depth": 10,
+      "height": 9,
+      "variant": 9,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -130.8,
+      "y": 159,
+      "width": 24,
+      "depth": 11,
+      "height": 19,
+      "variant": 10,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -89.85,
+      "y": 159,
+      "width": 24,
+      "depth": 11,
+      "height": 19,
+      "variant": 18,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -65.9,
+      "y": 159,
+      "width": 18,
+      "depth": 12,
+      "height": 16,
+      "variant": 19,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -47.45,
+      "y": 159,
+      "width": 13,
+      "depth": 12,
+      "height": 12,
+      "variant": 20,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -33.5,
+      "y": 159,
+      "width": 9,
+      "depth": 10,
+      "height": 9,
+      "variant": 21,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -21.55,
+      "y": 159,
+      "width": 9,
+      "depth": 10,
+      "height": 9,
+      "variant": 22,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -187.15,
+      "y": 187.5,
+      "width": 9,
+      "depth": 10,
+      "height": 9,
+      "variant": 11,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -89.7,
+      "y": 187.5,
+      "width": 24,
+      "depth": 11,
+      "height": 19,
+      "variant": 51,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -65.75,
+      "y": 187.5,
+      "width": 18,
+      "depth": 12,
+      "height": 16,
+      "variant": 52,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -47.3,
+      "y": 187.5,
+      "width": 13,
+      "depth": 12,
+      "height": 12,
+      "variant": 53,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -33.35,
+      "y": 187.5,
+      "width": 9,
+      "depth": 10,
+      "height": 9,
+      "variant": 54,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -21.4,
+      "y": 187.5,
+      "width": 9,
+      "depth": 10,
+      "height": 9,
+      "variant": 55,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -187.15,
+      "y": 204,
+      "width": 9,
+      "depth": 10,
+      "height": 9,
+      "variant": 18,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -167.7,
+      "y": 204,
+      "width": 24,
+      "depth": 11,
+      "height": 19,
+      "variant": 19,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -143.75,
+      "y": 204,
+      "width": 18,
+      "depth": 12,
+      "height": 16,
+      "variant": 20,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -125.3,
+      "y": 204,
+      "width": 13,
+      "depth": 12,
+      "height": 12,
+      "variant": 21,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -95.35,
+      "y": 204,
+      "width": 13,
+      "depth": 12,
+      "height": 12,
+      "variant": 29,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -81.4,
+      "y": 204,
+      "width": 9,
+      "depth": 10,
+      "height": 9,
+      "variant": 30,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -61.95,
+      "y": 204,
+      "width": 24,
+      "depth": 11,
+      "height": 19,
+      "variant": 31,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -38.0,
+      "y": 204,
+      "width": 18,
+      "depth": 12,
+      "height": 16,
+      "variant": 32,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -19.55,
+      "y": 204,
+      "width": 13,
+      "depth": 12,
+      "height": 12,
+      "variant": 33,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -185.15,
+      "y": 232.5,
+      "width": 13,
+      "depth": 12,
+      "height": 12,
+      "variant": 22,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -171.2,
+      "y": 232.5,
+      "width": 9,
+      "depth": 10,
+      "height": 9,
+      "variant": 23,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -151.75,
+      "y": 232.5,
+      "width": 24,
+      "depth": 11,
+      "height": 19,
+      "variant": 24,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -127.8,
+      "y": 232.5,
+      "width": 18,
+      "depth": 12,
+      "height": 16,
+      "variant": 25,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -92.85,
+      "y": 232.5,
+      "width": 18,
+      "depth": 12,
+      "height": 16,
+      "variant": 33,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -74.4,
+      "y": 232.5,
+      "width": 13,
+      "depth": 12,
+      "height": 12,
+      "variant": 34,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -60.45,
+      "y": 232.5,
+      "width": 9,
+      "depth": 10,
+      "height": 9,
+      "variant": 35,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -41.0,
+      "y": 232.5,
+      "width": 24,
+      "depth": 11,
+      "height": 19,
+      "variant": 36,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -21.55,
+      "y": 232.5,
+      "width": 9,
+      "depth": 10,
+      "height": 9,
+      "variant": 37,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -182.65,
+      "y": 249,
+      "width": 18,
+      "depth": 12,
+      "height": 16,
+      "variant": 29,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -164.2,
+      "y": 249,
+      "width": 13,
+      "depth": 12,
+      "height": 12,
+      "variant": 30,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -150.25,
+      "y": 249,
+      "width": 9,
+      "depth": 10,
+      "height": 9,
+      "variant": 31,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -130.8,
+      "y": 249,
+      "width": 24,
+      "depth": 11,
+      "height": 19,
+      "variant": 32,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -89.85,
+      "y": 249,
+      "width": 24,
+      "depth": 11,
+      "height": 19,
+      "variant": 40,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -65.9,
+      "y": 249,
+      "width": 18,
+      "depth": 12,
+      "height": 16,
+      "variant": 41,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -47.45,
+      "y": 249,
+      "width": 13,
+      "depth": 12,
+      "height": 12,
+      "variant": 42,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -33.5,
+      "y": 249,
+      "width": 9,
+      "depth": 10,
+      "height": 9,
+      "variant": 43,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_services",
+      "model": "apartment",
+      "tier": 1,
+      "x": -21.55,
+      "y": 249,
+      "width": 9,
+      "depth": 10,
+      "height": 9,
+      "variant": 44,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -186.15,
+      "y": 277.5,
+      "width": 11,
+      "depth": 10,
+      "height": 16,
+      "variant": 0,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -145.7,
+      "y": 277.5,
+      "width": 16,
+      "depth": 12,
+      "height": 20,
+      "variant": 13,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -129.25,
+      "y": 277.5,
+      "width": 11,
+      "depth": 10,
+      "height": 16,
+      "variant": 14,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -92.8,
+      "y": 277.5,
+      "width": 16,
+      "depth": 12,
+      "height": 20,
+      "variant": 25,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -76.35,
+      "y": 277.5,
+      "width": 11,
+      "depth": 10,
+      "height": 16,
+      "variant": 26,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -53.9,
+      "y": 277.5,
+      "width": 28,
+      "depth": 11,
+      "height": 27,
+      "variant": 27,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -177.65,
+      "y": 294,
+      "width": 28,
+      "depth": 11,
+      "height": 27,
+      "variant": 7,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -149.7,
+      "y": 294,
+      "width": 22,
+      "depth": 12,
+      "height": 24,
+      "variant": 8,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -127.75,
+      "y": 294,
+      "width": 16,
+      "depth": 12,
+      "height": 20,
+      "variant": 9,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -95.3,
+      "y": 294,
+      "width": 11,
+      "depth": 10,
+      "height": 16,
+      "variant": 18,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -72.85,
+      "y": 294,
+      "width": 28,
+      "depth": 11,
+      "height": 27,
+      "variant": 19,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -44.9,
+      "y": 294,
+      "width": 22,
+      "depth": 12,
+      "height": 24,
+      "variant": 20,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -22.95,
+      "y": 294,
+      "width": 16,
+      "depth": 12,
+      "height": 20,
+      "variant": 21,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -186.15,
+      "y": 322.5,
+      "width": 11,
+      "depth": 10,
+      "height": 16,
+      "variant": 11,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -45.7,
+      "y": 322.5,
+      "width": 16,
+      "depth": 12,
+      "height": 20,
+      "variant": 74,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -183.65,
+      "y": 339,
+      "width": 16,
+      "depth": 12,
+      "height": 20,
+      "variant": 18,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -167.2,
+      "y": 339,
+      "width": 11,
+      "depth": 10,
+      "height": 16,
+      "variant": 19,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -144.75,
+      "y": 339,
+      "width": 28,
+      "depth": 11,
+      "height": 27,
+      "variant": 20,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -45.8,
+      "y": 339,
+      "width": 16,
+      "depth": 12,
+      "height": 20,
+      "variant": 58,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -29.35,
+      "y": 339,
+      "width": 11,
+      "depth": 10,
+      "height": 16,
+      "variant": 59,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -15.4,
+      "y": 339,
+      "width": 11,
+      "depth": 10,
+      "height": 16,
+      "variant": 60,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -180.65,
+      "y": 367.5,
+      "width": 22,
+      "depth": 12,
+      "height": 24,
+      "variant": 22,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -158.7,
+      "y": 367.5,
+      "width": 16,
+      "depth": 12,
+      "height": 20,
+      "variant": 23,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -142.25,
+      "y": 367.5,
+      "width": 11,
+      "depth": 10,
+      "height": 16,
+      "variant": 24,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -128.3,
+      "y": 367.5,
+      "width": 11,
+      "depth": 10,
+      "height": 16,
+      "variant": 25,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -93.85,
+      "y": 367.5,
+      "width": 16,
+      "depth": 12,
+      "height": 20,
+      "variant": 35,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -77.4,
+      "y": 367.5,
+      "width": 11,
+      "depth": 10,
+      "height": 16,
+      "variant": 36,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -54.95,
+      "y": 367.5,
+      "width": 28,
+      "depth": 11,
+      "height": 27,
+      "variant": 37,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -27.0,
+      "y": 367.5,
+      "width": 22,
+      "depth": 12,
+      "height": 24,
+      "variant": 38,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -177.65,
+      "y": 384,
+      "width": 28,
+      "depth": 11,
+      "height": 27,
+      "variant": 29,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -149.7,
+      "y": 384,
+      "width": 22,
+      "depth": 12,
+      "height": 24,
+      "variant": 30,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -127.75,
+      "y": 384,
+      "width": 16,
+      "depth": 12,
+      "height": 20,
+      "variant": 31,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -39.3,
+      "y": 384,
+      "width": 11,
+      "depth": 10,
+      "height": 16,
+      "variant": 68,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_sports",
+      "model": "luxury_apartment",
+      "tier": 2,
+      "x": -25.35,
+      "y": 384,
+      "width": 11,
+      "depth": 10,
+      "height": 16,
+      "variant": 69,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -181.65,
+      "y": 412.5,
+      "width": 18,
+      "depth": 11,
+      "height": 7,
+      "variant": 0,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -160.2,
+      "y": 412.5,
+      "width": 15,
+      "depth": 11,
+      "height": 8,
+      "variant": 1,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -142.25,
+      "y": 412.5,
+      "width": 11,
+      "depth": 10,
+      "height": 6.5,
+      "variant": 2,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -127.8,
+      "y": 412.5,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 3,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -186.65,
+      "y": 429,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 7,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -168.7,
+      "y": 429,
+      "width": 18,
+      "depth": 11,
+      "height": 7,
+      "variant": 8,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -147.25,
+      "y": 429,
+      "width": 15,
+      "depth": 11,
+      "height": 8,
+      "variant": 9,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -129.3,
+      "y": 429,
+      "width": 11,
+      "depth": 10,
+      "height": 6.5,
+      "variant": 10,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -185.15,
+      "y": 457.5,
+      "width": 11,
+      "depth": 10,
+      "height": 6.5,
+      "variant": 11,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -170.7,
+      "y": 457.5,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 12,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -152.75,
+      "y": 457.5,
+      "width": 18,
+      "depth": 11,
+      "height": 7,
+      "variant": 13,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -131.3,
+      "y": 457.5,
+      "width": 15,
+      "depth": 11,
+      "height": 8,
+      "variant": 14,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -183.15,
+      "y": 474,
+      "width": 15,
+      "depth": 11,
+      "height": 8,
+      "variant": 18,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -165.2,
+      "y": 474,
+      "width": 11,
+      "depth": 10,
+      "height": 6.5,
+      "variant": 19,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -150.75,
+      "y": 474,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 20,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -132.8,
+      "y": 474,
+      "width": 18,
+      "depth": 11,
+      "height": 7,
+      "variant": 21,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -181.65,
+      "y": 502.5,
+      "width": 18,
+      "depth": 11,
+      "height": 7,
+      "variant": 22,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -160.2,
+      "y": 502.5,
+      "width": 15,
+      "depth": 11,
+      "height": 8,
+      "variant": 23,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -142.25,
+      "y": 502.5,
+      "width": 11,
+      "depth": 10,
+      "height": 6.5,
+      "variant": 24,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -127.8,
+      "y": 502.5,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 25,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -186.65,
+      "y": 519,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 29,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -168.7,
+      "y": 519,
+      "width": 18,
+      "depth": 11,
+      "height": 7,
+      "variant": 30,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -147.25,
+      "y": 519,
+      "width": 15,
+      "depth": 11,
+      "height": 8,
+      "variant": 31,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": -129.3,
+      "y": 519,
+      "width": 11,
+      "depth": 10,
+      "height": 6.5,
+      "variant": 32,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 53.35,
+      "y": 412.5,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 15,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 88.3,
+      "y": 412.5,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 27,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 101.25,
+      "y": 412.5,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 28,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 23.35,
+      "y": 429,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 7,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 41.3,
+      "y": 429,
+      "width": 18,
+      "depth": 11,
+      "height": 7,
+      "variant": 8,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 62.75,
+      "y": 429,
+      "width": 15,
+      "depth": 11,
+      "height": 8,
+      "variant": 9,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 80.7,
+      "y": 429,
+      "width": 11,
+      "depth": 10,
+      "height": 6.5,
+      "variant": 10,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 95.15,
+      "y": 429,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 11,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 23.35,
+      "y": 457.5,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 11,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 100.3,
+      "y": 457.5,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 44,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 26.85,
+      "y": 474,
+      "width": 15,
+      "depth": 11,
+      "height": 8,
+      "variant": 18,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 44.8,
+      "y": 474,
+      "width": 11,
+      "depth": 10,
+      "height": 6.5,
+      "variant": 19,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 59.25,
+      "y": 474,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 20,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 77.2,
+      "y": 474,
+      "width": 18,
+      "depth": 11,
+      "height": 7,
+      "variant": 21,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 98.65,
+      "y": 474,
+      "width": 15,
+      "depth": 11,
+      "height": 8,
+      "variant": 22,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 28.35,
+      "y": 502.5,
+      "width": 18,
+      "depth": 11,
+      "height": 7,
+      "variant": 22,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 49.8,
+      "y": 502.5,
+      "width": 15,
+      "depth": 11,
+      "height": 8,
+      "variant": 23,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 67.75,
+      "y": 502.5,
+      "width": 11,
+      "depth": 10,
+      "height": 6.5,
+      "variant": 24,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 82.2,
+      "y": 502.5,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 25,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 100.15,
+      "y": 502.5,
+      "width": 18,
+      "depth": 11,
+      "height": 7,
+      "variant": 26,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 23.35,
+      "y": 519,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 29,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 41.3,
+      "y": 519,
+      "width": 18,
+      "depth": 11,
+      "height": 7,
+      "variant": 30,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 62.75,
+      "y": 519,
+      "width": 15,
+      "depth": 11,
+      "height": 8,
+      "variant": 31,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 80.7,
+      "y": 519,
+      "width": 11,
+      "depth": 10,
+      "height": 6.5,
+      "variant": 32,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "street": "s_newtown",
+      "model": "villa",
+      "tier": 3,
+      "x": 95.15,
+      "y": 519,
+      "width": 8,
+      "depth": 8,
+      "height": 5,
+      "variant": 33,
+      "columns": 1,
+      "rows": 1
     }
   ]
 }

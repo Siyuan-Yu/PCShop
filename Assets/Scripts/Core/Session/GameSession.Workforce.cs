@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -11,7 +11,7 @@ using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
-    public enum EmployeeRole { Cashier, Assembler, Buyer, Unassigned }
+    public enum EmployeeRole { Cashier, Assembler, Buyer, Unassigned, Salesperson }
 
     [Serializable]
     public sealed class PurchaseLine
@@ -89,7 +89,7 @@ namespace PCShopSell.Core.Session
         private readonly List<EmployeePurchaseTrip> _employeeTrips = new List<EmployeePurchaseTrip>();
         public IReadOnlyList<EmployeePurchaseTrip> EmployeePurchaseTrips => _employeeTrips;
 
-        public static string RoleName(EmployeeRole role) => role == EmployeeRole.Cashier ? "收银员" : role == EmployeeRole.Assembler ? "装机员" : role == EmployeeRole.Buyer ? "进货员" : "待安排";
+        public static string RoleName(EmployeeRole role) => role == EmployeeRole.Cashier ? "收银员" : role == EmployeeRole.Assembler ? "装机员" : role == EmployeeRole.Buyer ? "进货员" : role == EmployeeRole.Salesperson ? "销售员" : "待安排";
         public static string PurchaseTransportName(VehicleKind kind) =>
             kind == VehicleKind.Walk ? "步行去，叫货车送回" : kind == VehicleKind.Taxi ? "打车去，叫货车送回"
             : "开" + Vehicles.Get(kind).Name + "去，自己运回";
@@ -102,7 +102,7 @@ namespace PCShopSell.Core.Session
             {
                 var rows = new List<EmployeeAssignment>();
                 foreach (var shop in _shops.Where(x => x.Rented))
-                    foreach (EmployeeRole role in new[] { EmployeeRole.Cashier, EmployeeRole.Assembler, EmployeeRole.Buyer })
+                    foreach (EmployeeRole role in new[] { EmployeeRole.Cashier, EmployeeRole.Assembler, EmployeeRole.Buyer, EmployeeRole.Salesperson })
                     {
                         Employee e = EmployeeAt(shop, role);
                         if (e == null) continue;
@@ -115,12 +115,13 @@ namespace PCShopSell.Core.Session
             }
         }
 
-        private static Employee EmployeeAt(OwnedShop s, EmployeeRole role) => role == EmployeeRole.Cashier ? s.Employee : role == EmployeeRole.Assembler ? s.Assembler : role == EmployeeRole.Buyer ? s.Buyer : null;
+        private static Employee EmployeeAt(OwnedShop s, EmployeeRole role) => role == EmployeeRole.Cashier ? s.Employee : role == EmployeeRole.Assembler ? s.Assembler : role == EmployeeRole.Buyer ? s.Buyer : role == EmployeeRole.Salesperson ? s.Salesperson : null;
         private static void PutEmployee(OwnedShop s, EmployeeRole role, Employee e)
         {
             if (role == EmployeeRole.Cashier) s.Employee = e;
             else if (role == EmployeeRole.Assembler) s.Assembler = e;
             else if (role == EmployeeRole.Buyer) s.Buyer = e;
+            else if (role == EmployeeRole.Salesperson) s.Salesperson = e;
         }
         public EmployeeAssignment FindEmployee(string id) => Employees.FirstOrDefault(x => x.Person.Id == id);
         public EmployeePurchaseTrip EmployeeTrip(string id) => _employeeTrips.FirstOrDefault(x => x.EmployeeId == id && !x.Returned);
@@ -201,7 +202,7 @@ namespace PCShopSell.Core.Session
             {
                 if (row.Role == EmployeeRole.Cashier) Fire();
                 else if (row.Role == EmployeeRole.Assembler) FireAssembler();
-                else { row.Shop.Buyer = null; Say(row.Person.Name + "离职了。"); }
+                else { PutEmployee(row.Shop,row.Role,null); Say(row.Person.Name + "离职了。"); }
             });
             return true;
         }
@@ -321,7 +322,11 @@ namespace PCShopSell.Core.Session
                 q.Freight = (Vehicles.TaxiFare(homeLeg) + CourierHandling) * q.Trucks;
                 q.DeliveryMinutes = q.BuyMinutes + CourierBaseMinutes + CityTravelTiming.NpcMinutes(homeLeg, Vehicles.Get(VehicleKind.Van));
             }
-            if (Ledger.Balance < q.Total + EffectiveRestockReserve + ClaimedProcurementBudgetExcept(id)) blocker = blocker ?? "可采购现金不足（已保护到期账单、日常支出与其他已认领采购）";
+            // This is an explicit recurring employee shopping list. Future bill estimates
+            // and unspent purchase claims are planning figures, not cash already spent.
+            // Fit the trip (goods + actual travel/freight) to the real balance; partial
+            // selection below continues through every later line when one cannot fit.
+            if (Ledger.Balance < q.Total) blocker = blocker ?? $"现金不足（本趟需 {q.Total}，现有 {Ledger.Balance}）";
             q.Error = planningOnly?null:blocker;
             q.RequiredTotal = q.Total; q.Budget = q.Total;
             return q;
@@ -385,7 +390,7 @@ namespace PCShopSell.Core.Session
                 return full;
             }
             best.RequiredTotal = full.Total;
-            var available=Ledger.Balance-EffectiveRestockReserve-ClaimedProcurementBudgetExcept(id);
+            var available=Ledger.Balance;
             if(available<Money.Zero)available=Money.Zero;
             best.Budget = full.Total > available ? available : full.Total;
             best.Skipped.AddRange(skipped);

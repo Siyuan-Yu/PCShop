@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Home;
@@ -134,7 +134,7 @@ namespace PCShopSell.Core.Session
         /// 把储物柜 / 背包里的礼品放进后仓（先用储物柜里的），货架上有对应的货架就会自动摆上去。
         /// 需要人在自己店里、仓位还放得下。
         /// </summary>
-        public bool ListGoods(string giftId, int count = 1)
+        public bool ListGoods(string giftId, int count = 1, bool notify = true)
         {
             GiftDef g = Gifts.Get(giftId);
             if (g == null || count <= 0) return false;
@@ -152,8 +152,35 @@ namespace PCShopSell.Core.Session
             ApplyCargoLimit();
             ShelfKind k = ShelfKinds.ForGift(giftId);
             string tail = k != null && ShelvesOfKind(k.Id) == 0 ? $"（还没有摆「{k.Name}」的货架，顾客买不到）" : "";
-            Say($"把「{g.Name}」{(count > 1 ? "×" + count : "")}放进了店里。{tail}");
+            if(notify)Say($"把「{g.Name}」{(count > 1 ? "×" + count : "")}放进了店里。{tail}");
             return true;
+        }
+
+        // One-key unloading uses the same Stock -> shelf planner path as manual listing.
+        // Only merchandise for a configured shelf/display is taken; other personal supplies
+        // retain their existing storage destination.
+        private bool HasAutomaticGoodsShelf(string id)
+        {
+            if(!InPlayerShop || !RetailShopTypes.Sells(RetailKind,id))return false;
+            var kind=ShelfKinds.ForGift(id);if(kind==null)return false;
+            return _shopLayout.Any(p=>p.Item==kind.Id &&
+                (FurnitureCatalog.Get(p.Id)?.Fixture==FixtureKind.Shelf || FurnitureCatalog.Get(p.Id)?.Fixture==FixtureKind.Display));
+        }
+        private int ListAutomaticShopGoods(out bool full)
+        {
+            full=false;int moved=0;
+            ApplyShelfCapacity();
+            foreach(var goods in Gifts.All)
+            {
+                if(!HasAutomaticGoodsShelf(goods.Id))continue;
+                int available=GoodsAvailableToList(goods.Id);if(available<=0)continue;
+                double space=Stock.GoodsSpace(goods.Id,1);
+                int room=(int)Math.Max(0,Math.Min(int.MaxValue,Math.Floor((PlayerShop.Stock.FreeSpace+1e-9)/space)));
+                int count=Math.Min(available,room);
+                if(count<available)full=true;
+                if(count>0 && ListGoods(goods.Id,count,false))moved+=count;
+            }
+            return moved;
         }
 
         /// <summary>把店里的杂货收回储物柜。</summary>

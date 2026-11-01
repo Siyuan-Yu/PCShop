@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -78,6 +78,8 @@ namespace PCShopSell.Core.Session
                 impoundedTricycles = _impoundedTricycles,
                 impoundedEBikes = _impoundedEBikes,
                 hasBuyer = _focus.Buyer != null,
+                hasSalesperson = _focus.Salesperson != null,
+                salesperson = _focus.Salesperson != null ? ToSave(_focus.Salesperson) : null,
                 buyer = _focus.Buyer != null ? ToSave(_focus.Buyer) : null,
                 employeeTrips = _employeeTrips.Select(t => t.Copy()).ToArray(),
                 idleEmployees = _idleEmployees.Select(ToSave).ToArray(),
@@ -243,6 +245,7 @@ namespace PCShopSell.Core.Session
             Assembler = !d.hasAssembler || d.assembler == null ? null : FromSave(d.assembler);
             if (Assembler != null && !d.assembler.hasWorkSkills) Assembler.AssemblyTrained = true;
             _focus.Buyer = d.hasBuyer && d.buyer != null ? FromSave(d.buyer) : null;
+            _focus.Salesperson = d.hasSalesperson && d.salesperson != null ? FromSave(d.salesperson) : null;
             _idleEmployees.Clear();
             _idleEmployees.AddRange((d.idleEmployees ?? Array.Empty<SaveEmployee>()).Select(FromSave));
             _employeeTrips.Clear();
@@ -290,6 +293,7 @@ namespace PCShopSell.Core.Session
             LoadCityLife(d);
             LoadEnergyPayroll(d);
             MigrateStoreMainCategories();
+            MigrateCityGeometry(d);
         }
 
         private const string TrainedFlag = "employee:trained", AutoBuildFlag = "employee:auto-build";
@@ -308,6 +312,7 @@ namespace PCShopSell.Core.Session
         private static SaveEmployee ToSave(Employee e) => new SaveEmployee
         {
             candidateLeavesAt = e.CandidateLeavesAt,
+            hasCharm = true, employeeCharm = EmployeeCharm(e),
             id = e.Id, transferShopId = e.TransferShopId, transferDay = e.TransferDay,
             hasTransferRole = e.TransferRole >= 0, transferRole = e.TransferRole,
             hasWorkSkills = true, assemblyMinutes = e.AssemblyMinutes, purchaseMinutes = e.PurchaseMinutes, assemblyTrained = e.AssemblyTrained,
@@ -320,6 +325,7 @@ namespace PCShopSell.Core.Session
         private static Employee FromSave(SaveEmployee e) => new Employee
         {
             CandidateLeavesAt = e.candidateLeavesAt,
+            Charm = e.hasCharm ? Math.Max(0,Math.Min(100,e.employeeCharm)) : -1,
             Id = string.IsNullOrEmpty(e.id) ? Guid.NewGuid().ToString("N") : e.id, TransferShopId = e.transferShopId, TransferDay = e.transferDay,
             TransferRole = e.hasTransferRole ? e.transferRole : -1,
             AssemblyMinutes = e.hasWorkSkills ? Math.Max(45, e.assemblyMinutes) : 90,

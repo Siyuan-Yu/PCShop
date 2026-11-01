@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Time;
@@ -299,32 +299,34 @@ namespace PCShopSell.Core.Session
             if(CityEmployeeAvailable(shop.Assembler,shop))return shop.EmployeeBuilding?"装机值守，收银需等待":"可销售（装机员兼收银）";
             return "暂停服务：无人值守";
         }
-        public string CityTalk(string id,string topic)
+        public string CityTalk(string id,string topic,bool remote=false)
         {
             var p=CityPersonState(id);var d=CityPerson(id);
             if(p==null||d==null)return null;
-            if(!CitySamePlace(id))return "对方不在这里。通讯录可查看已知资料，聊天需实际见面。";
+            if(remote){string why=RemoteConversationBlocker(id);if(why!=null)return why;}
+            else if(!CitySamePlace(id))return "对方不在这里。通讯录可查看已知资料，聊天软件可远程交谈。";
             if (topic == "friends" && Relation(id) < AskAboutOthersMinRelation) return "咱们再熟悉一些，再慢慢聊我的朋友吧。";
-            GreetPerson(id); int index=topic=="work"?0:topic=="interest"?1:topic=="life"?2:3;
+            GreetPerson(id,remote); int index=topic=="work"?0:topic=="interest"?1:topic=="life"?2:3;
             string key=id+":"+topic;bool fresh=!_cityTopicDay.TryGetValue(key,out int day)||day!=Clock.Today.TotalDays;
             if(fresh){_cityTopicDay[key]=Clock.Today.TotalDays;AddRelation(id,1);p.KnownTopics=p.KnownTopics.Union(new[]{topic}).ToArray();}
             if (topic == "friends")
             {
                 var circle = PersonCircle(id).ToArray();
-                if (circle.Length > 0) return AskAboutPerson(id, circle[Clock.Today.TotalDays % circle.Length].PersonId);
+                if (circle.Length > 0) return AskAboutPerson(id, circle[Clock.Today.TotalDays % circle.Length].PersonId,remote);
             }
             string text=d.Topics!=null&&d.Topics.Length>index?d.Topics[index]:d.Goal;
             if(topic=="work")text=(p.WorkPlaceId!=null&&City.HasPlace(p.WorkPlaceId)?"我现在的工作在"+City.GetPlace(p.WorkPlaceId).Name+"。":"我现在没有固定岗位。")+"\n"+text;
             if (topic == "interest") text = "我平时喜欢" + ConversationTraits(id)[0].Name + "。有空的时候，也想给自己放个假。";
             else if (Npcs.Get(id) != null) text = NpcTalk.SmallTalkLine(id, Clock.Today.TotalDays);
-            RememberSocial(id,(fresh?"聊了新话题：":"再次聊起：")+text);
+            RememberSocial(id,(remote?"通过聊天软件，":"")+(fresh?"聊了新话题：":"再次聊起：")+text);
             OnCityStoryTalk(id,topic);
             return text;
         }
-        public string CityHearStory(string id)
+        public string CityHearStory(string id,bool remote=false)
         {
             var p=CityPersonState(id);var d=CityPerson(id);
-            if(p==null||d==null||!CitySamePlace(id))return "需要当面听对方讲。";
+            if(remote){string why=RemoteConversationBlocker(id);if(why!=null)return why;}
+            if(p==null||d==null||!remote&&!CitySamePlace(id))return "需要当面听对方讲。";
             p.StoryChapter=Math.Max(p.StoryChapter,StaffStoriesHeard(id));
             if(p.LastStoryDay==Clock.Today.TotalDays||_staffStoryDay.TryGetValue(id,out int toldDay)&&toldDay==Clock.Today.TotalDays)return "今天已经聊了不少，改天再听下一段。";
             if(d.Stories==null||p.StoryChapter>=d.Stories.Length)return d.Goal;

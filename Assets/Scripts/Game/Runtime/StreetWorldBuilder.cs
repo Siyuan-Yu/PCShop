@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.World;
@@ -92,6 +92,7 @@ namespace PCShopSell.Game.Runtime
                 new Vector3(CityBounds.size.x, 0.1f, CityBounds.size.z), Mats.LitTex(Grass, new Vector2(CityBounds.size.x / 7, CityBounds.size.z / 7), 0.05f), true);
             ground.AddComponent<GroundMarker>();
 
+            if(_city.LayoutVersion>=7){BuildPlannedCity();return _root.gameObject;}
             BuildRoads();
             BuildSidewalks();
             BuildCitySidewalks();
@@ -116,7 +117,7 @@ namespace PCShopSell.Game.Runtime
                     if (!done.Add(key)) continue;
                     Vector3 a = NodeWorld(n.Id), b = NodeWorld(e.To);
                     MapPoint pa = _city.ViewPosition(n.Id), pb = _city.ViewPosition(e.To);
-                    bool shopping = GameSession.IsShoppingStreet(pa, pb);
+                    bool shopping = _city.LayoutVersion<7 && GameSession.IsShoppingStreet(pa, pb);
                     float width = shopping ? 14f : GameSession.IsMainRoad(pa, pb) ? 7f : 5f;
                     Vector3 d = b - a;
                     // 宽路两端只多伸出窄路那么多，免得盖住路口旁的城中村房子。

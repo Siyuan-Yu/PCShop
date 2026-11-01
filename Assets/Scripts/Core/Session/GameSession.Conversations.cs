@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -40,18 +40,27 @@ namespace PCShopSell.Core.Session
                     Relationship = string.Join("；", group.Select(link => link.Relationship).Distinct())
                 }).OrderBy(link => link.Name).ToArray();
         }
-        public string AskAboutOthersBlocker(string speakerId, string targetId = null)
+        public string RemoteConversationBlocker(string id)
+        {
+            if(IsGameOver)return "现在不能交谈";
+            if(!HasChatApp)return "需要安装聊天软件";
+            if(!IsMet(id))return "尚未交换联系方式";
+            if(CityPerson(id)==null&&Npcs.Get(id)==null&&Rosters.Get(id)==null&&Residents.Get(id)==null)return "找不到这个联系人";
+            return null;
+        }
+        public string AskAboutOthersBlocker(string speakerId, string targetId = null, bool remote = false)
         {
             if (IsGameOver) return "现在不能交谈";
-            if (!CitySamePlace(speakerId)) return "需要当面聊天";
+            if(remote){var why=RemoteConversationBlocker(speakerId);if(why!=null)return why;}
+            else if (!CitySamePlace(speakerId)) return "需要当面聊天";
             if (Relation(speakerId) < AskAboutOthersMinRelation) return "熟悉度 " + AskAboutOthersMinRelation + " 解锁";
             var circle = PersonCircle(speakerId).ToArray();
             if (targetId == null) return circle.Length == 0 ? "目前没有可以打听的熟人" : null;
             return circle.Any(link => link.PersonId == targetId) ? null : "对方不认识这个人，不能随便打听";
         }
-        public string AskAboutPerson(string speakerId, string targetId)
+        public string AskAboutPerson(string speakerId, string targetId, bool remote = false)
         {
-            string why = AskAboutOthersBlocker(speakerId, targetId);
+            string why = AskAboutOthersBlocker(speakerId, targetId, remote);
             if (why != null) return why;
             var link = PersonCircle(speakerId).First(person => person.PersonId == targetId);
             var speaker = CityPersonState(speakerId); var target = CityPersonState(targetId);
@@ -99,10 +108,11 @@ namespace PCShopSell.Core.Session
         }
 
         public bool HasGreeted(string id) => IsMet(id) || Flags.Contains("greeted:" + id);
-        public bool GreetPerson(string id)
+        public bool GreetPerson(string id, bool remote = false)
         {
             if (CityPerson(id) == null && Npcs.Get(id) == null && Rosters.Get(id) == null && Residents.Get(id) == null) return false;
-            if (CityPersonState(id) != null && !CitySamePlace(id)) return false;
+            if(remote){if(RemoteConversationBlocker(id)!=null)return false;}
+            else if (CityPersonState(id) != null && !CitySamePlace(id)) return false;
             if (!HasGreeted(id))
             {
                 Flags.Add("greeted:" + id);
@@ -149,10 +159,11 @@ namespace PCShopSell.Core.Session
             if (index == 0) return (CityPerson(id)?.Name ?? Npcs.Get(id)?.Name ?? "对方") + "平时喜欢" + traits[index].Name + "。";
             return Npcs.Get(id) is NpcDef npc ? "喜欢收到：" + npc.GiftName + "。也可以从背包挑其他小礼物。" : "饮料、水果、点心、鲜花或一份做好的饭，都可以从背包里挑选。";
         }
-        public string CasualConversation(string id)
+        public string CasualConversation(string id, bool remote = false)
         {
-            if (CityPersonState(id) != null && !CitySamePlace(id)) return "对方已经离开了，等下次见面再聊吧。";
-            if (!GreetPerson(id)) return "现在无法和对方交谈。";
+            if(remote){var why=RemoteConversationBlocker(id);if(why!=null)return why;}
+            else if (CityPersonState(id) != null && !CitySamePlace(id)) return "对方已经离开了，等下次见面再聊吧。";
+            if (!GreetPerson(id,remote)) return "现在无法和对方交谈。";
             var def = CityPerson(id);
             if (def == null)
             {
@@ -162,7 +173,7 @@ namespace PCShopSell.Core.Session
             int pick = (ConversationSeed(id) % 4 + Clock.Today.TotalDays % 4) % 4;
             string topic = new[] { "work", "interest", "life", "friends" }[pick];
             if (topic == "interest" && !ConversationTraits(id)[0].Known || topic == "friends" && Relation(id) < AskAboutOthersMinRelation) topic = "work";
-            string text = CityTalk(id, topic);
+            string text = CityTalk(id, topic, remote);
             if (Relation(id) >= 15 && Clock.Today.TotalDays % 5 == ConversationSeed(id) % 5)
             {
                 if (Npcs.Get(id) != null)
@@ -176,7 +187,7 @@ namespace PCShopSell.Core.Session
                 else
                 {
                     var state = CityPersonState(id); int previous = state.StoryChapter;
-                    string story = CityHearStory(id);
+                    string story = CityHearStory(id, remote);
                     if (state.StoryChapter > previous) text += "\n" + story;
                 }
             }

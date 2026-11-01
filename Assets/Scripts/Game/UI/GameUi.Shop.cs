@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -170,46 +170,48 @@ namespace PCShopSell.Game.UI
 
         // ---------- 柜台 ----------
 
-        /// <summary>营业时间：开门 / 关门各选择时分，或者不限时（有人看店就开）。不在营业时间里，人在店里也不开门。</summary>
+        /// <summary>柜台内直接选择开门、关门时间；不限时单独切换，不再打开设置弹窗。</summary>
         private void ShopHoursRow(ShopSimulation shop)
         {
-            const int day = 24 * 60;
-            RectTransform row = Ui.Row(C, 36, 8);
-            Ui.Size(Ui.Label(row, "营业时间", 16), 80, 36);
-            if (shop.AllDay)
+            const int day=24*60;
+            bool allDay=shop.AllDay;
+            int open=allDay?9*60:shop.OpenMinute;
+            int close=allDay?21*60:shop.CloseMinute%day;
+            RectTransform row=Ui.Row(C,36,6);
+            Ui.Size(Ui.Label(row,"营业时间",16),76,36);
+            void TimeChoice(bool opening)
             {
-                Ui.Size(Ui.Button(row, "不限时  ▼", () => OpenHoursPicker(shop, true), 15, new Color(0.2f, 0.24f, 0.3f)), 150, 34);
-                Ui.Size(Ui.Label(row, "有人看店就开", 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 36, 1);
+                int other=opening?close:open;
+                var minutes=Enumerable.Range(0,96).Select(i=>i*15)
+                    .Where(m=>allDay||m!=other).ToArray();
+                string prefix=opening?"开门 ":"关门 ";
+                var labels=minutes.Select(m=>prefix+Ui.Hm(m)).ToList();
+                int selected=System.Array.IndexOf(minutes,opening?open:close);
+                if(allDay){labels.Insert(0,opening?"开门时间":"关门时间");selected=0;}
+                var dropdown=Ui.Choice(row,labels,selected,index=>
+                {
+                    if(allDay&&index==0)return;
+                    int value=minutes[index-(allDay?1:0)];
+                    int start=opening?value:open,end=opening?close:value;
+                    if(start==end){Toast("开门和关门不能相同；全天营业请选择“不限时”。");RebuildDock();return;}
+                    shop.SetHours(start,end==0?day:end);
+                    RebuildDock();
+                });
+                dropdown.name=opening?"ShopOpeningTime":"ShopClosingTime";
+                Ui.Size(dropdown,145,36);
+                dropdown.captionText.fontSize=15;
             }
-            else
+            TimeChoice(true);TimeChoice(false);
+            var unlimited=Ui.Button(row,allDay?"不限时 ✓":"不限时",()=>
             {
-                Ui.Size(Ui.Button(row, $"开门 {Ui.Hm(shop.OpenMinute)}  ▼", () => OpenHoursPicker(shop, true), 15, new Color(0.2f, 0.24f, 0.3f)), 150, 34);
-                Ui.Size(Ui.Button(row, $"关门 {Ui.Hm(shop.CloseMinute % day)}  ▼", () => OpenHoursPicker(shop, false), 15, new Color(0.2f, 0.24f, 0.3f)), 150, 34);
-                Ui.Size(Ui.Label(row, shop.CloseMinute <= shop.OpenMinute ? "过夜" : "", 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 36, 1);
-            }
-            if (!shop.AllDay && !shop.InHours(S.Clock.Now))
-                Line(C, $"现在不在营业时间，{Ui.Hm(shop.OpenMinute)} 才开门；人在店里也不接客。", 15, new Color32(231, 160, 135, 255));
-        }
-
-        private void OpenHoursPicker(ShopSimulation shop, bool pickOpen)
-        {
-            const int day = 24 * 60;
-            int open = shop.AllDay ? 9 * 60 : shop.OpenMinute;
-            int close = shop.AllDay ? 21 * 60 : shop.CloseMinute % day;
-            open=QuarterHourClock(open); close=QuarterHourClock(close);
-            OpenWindow(pickOpen ? "几点开门" : "几点关门", 560, 420, w =>
-            {
-                Ui.Size(Ui.Button(w.Content, "不限时（有人看店就开）", () => { shop.SetHours(0, day); w.Close(); RebuildDock(); },
-                    16, shop.AllDay ? Ui.ButtonHot : Ui.ButtonBg), -1, 40);
-                int selected=pickOpen?open:close;
-                ClockSelector(w.Content,pickOpen?"开门":"关门",selected,value=>{if(pickOpen)open=value;else close=value;w.RequestRebuild();});
-                bool valid=open!=close;
-                Line(w.Content,Ui.Hm(open)+"—"+(close<open?"次日":"")+Ui.Hm(close),20,Ui.Accent);
-                if(!valid)Para(w.Content,"开门和关门不能相同；全天营业请选“不限时”。",16,Ui.Warn);
-                Ui.Size(Ui.Button(w.Content,"保存营业时间",()=>
-                {shop.SetHours(open,close==0?day:close);w.Close();RebuildDock();},18,Ui.ButtonHot,valid),-1,42);
-
-            });
+                if(shop.AllDay)shop.SetHours(9*60,21*60);
+                else shop.SetHours(0,day);
+                RebuildDock();
+            },15,allDay?Ui.ButtonHot:Ui.ButtonBg);
+            unlimited.name="ShopUnlimitedHours";Ui.Size(unlimited,90,36);
+            if(!allDay&&close<open&&close!=0)Line(C,"跨午夜营业，次日 "+Ui.Hm(close)+" 关门。",14,Ui.Dim);
+            if(!allDay&&!shop.InHours(S.Clock.Now))
+                Line(C,$"现在不在营业时间，{Ui.Hm(shop.OpenMinute)} 才开门；人在店里也不接客。",15,new Color32(231,160,135,255));
         }
 
         private void BuildCounter()
@@ -221,6 +223,11 @@ namespace PCShopSell.Game.UI
             Line(C, $"今日进店 {shop.TodayCustomers} 人 · 流失 {shop.TodayLost} 人 · 营业额 {shop.TodaySales}", 18);
             Line(C, $"店里 {shop.ActiveCustomers.Count} 位顾客，{shop.Queue.Count} 位在排队结账（{PaymentText(shop.Accepted)}）", 17, Ui.Dim);
             ShopHoursRow(shop);
+            if(S.Salesperson!=null)
+                Line(C,$"销售员 {S.Salesperson.Name} · 魅力 {GameSession.EmployeeCharm(S.Salesperson)} · "+
+                    (shop.SalesPurchaseIntentBonus>0?$"在岗：购买意愿 +{shop.SalesPurchaseIntentBonus*100:0.#}个百分点":"未在岗：暂无销售加成"),16,Ui.Good);
+            if(shop.RetailKind=="clothing" && shop.ClothingMirrorPurchaseIntentBonus>0)
+                Line(C,"全身镜：服装购买意愿 +5个百分点（多面不叠加）",16,Ui.Good);
             if (S.Employee != null)
                 Line(C, $"店员 {S.Employee.Name}：{(S.Employee.OnDuty(S.Clock.Now) ? "在岗" : "下班")}（在班持续收银，你可以协助或装机）", 16, Ui.Dim);
 
@@ -269,12 +276,12 @@ namespace PCShopSell.Game.UI
                 RectTransform srow = Ui.Row(C, 38, 4);
                 Ui.Size(Ui.Label(srow, $"<b>{si + 1}号</b> <size=12><color=#ABB5A8>{tier}</color></size>", 16, TextAnchor.MiddleLeft), 78);
                 Ui.Size(Ui.Button(srow, sk == null ? "选择摆什么 ▾" : sk.Name + "  ▾", () => OpenShelfKindChooser(layoutIdx), 16, sk == null ? Ui.Warn : Ui.ButtonBg), 150);
-                string load = "";
+                string load = "已摆 0 件";
                 if (sk != null)
                 {
                     ShelfFill sf = shop.ShelfFillOf(sk);
                     int same = Mathf.Max(1, S.ShelvesOfKind(sk.Id));
-                    load = $"{sf.UsedKg:0.##}/{sf.CapacityKg:0} 千克{(same > 1 ? $"（{same} 个共用）" : "")}";
+                    load = $"{sf.UsedKg:0.##}/{sf.CapacityKg:0} 千克\n<size=12>已摆 {sf.Total} 件{(same > 1 ? $" · {same}架共用合计" : "")}</size>";
                 }
                 Ui.Size(Ui.Label(srow, load, 14, TextAnchor.MiddleLeft, Ui.Dim), 178);
                 Ui.Size(Ui.Button(srow, "查看", () => OpenShelfWindow(layoutIdx), 15, sk == null ? Ui.ButtonBg : Ui.ButtonHot, sk != null), 66);
@@ -373,7 +380,7 @@ namespace PCShopSell.Game.UI
 
             void RefreshAll()
             {
-                valueText.text = $"全局加价 {shop.Markup:0.00}×　顾客愿买概率约 {ShopSettings.BuyChance(shop.Markup) * 100:0}%";
+                valueText.text = $"全局加价 {shop.Markup:0.00}×　顾客愿买概率约 {System.Math.Min(1,ShopSettings.BuyChance(shop.Markup)+shop.SalesPurchaseIntentBonus) * 100:0}%";
                 foreach (System.Action r in refreshers) r();
             }
 
@@ -560,7 +567,7 @@ namespace PCShopSell.Game.UI
                 {
                     int idx = i;
                     Employee c = S.Candidates[i];
-                    RectTransform row = Ui.Row(C, 108);
+                    RectTransform row = Ui.Row(C, 144);
                     Ui.Size(Ui.Label(row, $"{c.Name} · 日薪 {c.DailyWage}\n<size=14>{c.Description}\n{GameSession.EmployeeAbilities(c)}\n<color=#E7B878>{S.CandidateWaitText(c)}</color></size>", 16), -1, -1, 1);
                     Ui.Size(Ui.Button(row, "聘用并安排工作", () =>
                     {

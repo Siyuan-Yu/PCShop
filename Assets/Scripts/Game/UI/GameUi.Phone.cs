@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using PCShopSell.Core.Session;
 using UnityEngine;
 using UnityEngine.UI;
@@ -226,20 +226,37 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(row, "打电话约出去", () => { var npc = Npcs.Get(n.Id); if (npc != null) OpenInviteWindow(npc, w); else OpenCityActivityChooser(n.Id); }, 15, Ui.ButtonHot), 150);
                     Ui.Size(Ui.Button(row, "发消息", () =>
                     {
-                        w.Close();
-                        OpenChatPanel();
+                        if(S.HasChatApp)OpenPersonDialogue(n.Id,parent:w,remote:true);
+                        else OpenChatPanel();
                     }, 15, Ui.ButtonBg), 90);
                 }
                 Line(w.Content, "送礼要当面送，在“目标”里或去档口。", 15, Ui.Dim);
             });
         }
 
-        /// <summary>聊天 app：每天和每个人聊一次，涨一点交情。</summary>
+        /// <summary>聊天软件选择联系人后复用人物立绘对话；按键机短信保留原发送规则。</summary>
         public void OpenChatPanel()
         {
             bool app = S.HasChatApp;
             OpenWindow(app ? "聊天" : "短信", 760, 600, w =>
             {
+                if(app)
+                {
+                    Para(w.Content,"选择联系人开始交谈；进入对话后点头像可看资料，也可以聊熟人、邀请活动。",17,Ui.Dim);
+                    var contacts=S.SavedConversationContacts().ToArray();
+                    if(contacts.Length==0){Para(w.Content,"还没有联系方式。熟悉度达到30后，当面交换联系方式即可在这里联系。",17,Ui.Dim);return;}
+                    var contactList=Ui.Scroll(w.Content,460);
+                    foreach(var person in contacts)
+                    {
+                        var contact=person;
+                        var row=Ui.Row(contactList,98,10);
+                        PortraitCard(row,contact.Id,contact.Name,"",70,()=>OpenPersonDialogue(contact.Id,parent:w,remote:true),tagText:null);
+                        Ui.Size(Ui.Label(row,$"<b>{contact.Name}</b>\n<size=14>{contact.Role}</size>",17),-1,72,1);
+                        Ui.Size(Ui.Label(row,$"{Npcs.LevelName(S.Relation(contact.Id))} {S.Relation(contact.Id)}",16,TextAnchor.MiddleCenter,Ui.Good),110,72);
+                        Ui.Size(Ui.Button(row,"交谈",()=>OpenPersonDialogue(contact.Id,parent:w,remote:true),17,Ui.ButtonHot),100,44);
+                    }
+                    return;
+                }
                 Line(w.Content, app
                     ? $"每天和每个人聊一次，一定有回，交情 +{GameSession.ChatGain}（只涨到 {GameSession.ChatMaxRelation}）。再往上得当面送礼、约出去。"
                     : $"每天给每个人发一条短信。现在大家都不习惯看短信，只有大约 {GameSession.SmsReplyChance * 100:0}% 的把握有人回；回了交情 +{GameSession.ChatGain}（只涨到 {GameSession.ChatMaxRelation}）。装了聊天 app 一定有回。", 15, Ui.Dim);

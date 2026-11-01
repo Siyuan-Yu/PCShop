@@ -123,19 +123,15 @@ namespace PCShopSell.Game.UI
 
         private void BuildStation(Window w, Place p)
         {
-            Place other = S.City.OfKind(PlaceKind.Station).FirstOrDefault(x => x != p);
-            Line(w.Content, "地铁 1 号线：商业街站 ⇄ 电子市场站");
-            Line(w.Content, $"票价 {GameSession.MetroFare}，约 {GameSession.MetroMinutes} 分钟。运营 6:00–23:00。", 18, Ui.Dim);
-            if (other != null)
+            Line(w.Content,"城市地铁 · 全站互通");
+            Line(w.Content,$"票价 {GameSession.MetroFare}，约 {GameSession.MetroMinutes} 分钟。运营 6:00–23:00。",18,Ui.Dim);
+            foreach(var destination in S.City.OfKind(PlaceKind.Station).Where(x=>x!=p))
             {
-                Ui.Size(Ui.Button(w.Content, "坐地铁去 " + other.Name, () =>
+                var target=destination;
+                Ui.Size(Ui.Button(w.Content,"前往 "+target.Name+" · "+S.City.StreetName(target.StreetId),()=>
                 {
-                    if (S.TakeMetro())
-                    {
-                        CloseWindowSilently(w);
-                        if (S.CurrentPlace != null) OnEnteredPlace(S.CurrentPlace);
-                    }
-                }, 21, Ui.ButtonHot), -1, 52);
+                    if(S.TakeMetro(target.Id)){CloseWindowSilently(w);if(S.CurrentPlace!=null)OnEnteredPlace(S.CurrentPlace);}
+                },19,Ui.ButtonHot),-1,44);
             }
         }
 

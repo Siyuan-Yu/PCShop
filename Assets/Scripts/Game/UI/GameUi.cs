@@ -135,6 +135,7 @@ namespace PCShopSell.Game.UI
             if (_slowTimer <= 0)
             {
                 _slowTimer = 0.4f;
+                RefreshShortcutMenus();
                 UpdateVehicleButtons();
                 UpdateQuestTracker();
                 if (!Input.GetMouseButton(0)) RefreshDock();
@@ -162,6 +163,7 @@ namespace PCShopSell.Game.UI
             _dateText = weatherButton.GetComponentInChildren<Text>();
             _dateText.alignment = TextAnchor.MiddleLeft;
             _dateText.horizontalOverflow=HorizontalWrapMode.Overflow;
+            _dateText.resizeTextForBestFit=true;_dateText.resizeTextMinSize=17;_dateText.resizeTextMaxSize=20;
             weatherButton.Tip(()=>"点击查看天气预报与穿衣建议\n"+S.Clock.Today+" "+Ui.WeekdayName(S.Clock.Today.Weekday)+"\n"+S.CityWeatherForecast);
             var cashButton = Ui.Size(Ui.Button(row, "", OpenLedger, 24), 145);
             _cashText = cashButton.GetComponentInChildren<Text>();
@@ -219,12 +221,11 @@ namespace PCShopSell.Game.UI
             }
             _cargoText = Ui.Size(Ui.Label(brow, "", 16), 155);
             Ui.Size(Ui.Label(brow, "快捷前往：", 17), 90);
-            Button shopGo = Ui.Size(Ui.Button(brow, "去我的店", GoToMyShop, 17, Ui.ButtonHot), 100);
-            _shopGoText = shopGo.GetComponentInChildren<Text>();
-            shopGo.Tip(() => S.MyShopCount > 1 ? "开了几家店：点了选去哪一家，自动走到店门口；路上按 WASD 随时接管。" : "自动走到店门口（耗时按路程算）；路上按 WASD 随时接管。");
+            BuildShortcutButton(brow,"去我的店",0,100);
             Ui.Size(Ui.Button(brow, "回家睡觉", _ctrl.GoHomeToSleep, 17), 108).Tip("自动回家并走到床边，打开睡眠选项；按 WASD 随时接管。");
-            Ui.Size(Ui.Button(brow, "电子市场", () => _ctrl.GoToPlace(S.City.GetPlace("stall_cpu")), 17), 100);
-            Ui.Size(Ui.Button(brow,"中介",()=>GoCityShortcut(true),17),80).Tip(() => "前往" + (S.City.HasPlace(S.CityAgencyShortcut) ? S.City.GetPlace(S.CityAgencyShortcut).Name : "房产中介"));
+            BuildShortcutButton(brow,"批发市场",1,100);
+            BuildShortcutButton(brow,"中介",2,72);
+            RefreshShortcutMenus();
             Ui.Size(Ui.Button(brow,"自定目的地",OpenCityMap,17,Ui.ButtonHot),116);
 
             Ui.Size(Ui.Button(brow, "叫货车", OpenTruckWindow, 17, Ui.ButtonHot), 100).Tip("打开货车装货单，选货物和目的地；手机通讯录里的入口也保留。");
@@ -259,7 +260,7 @@ namespace PCShopSell.Game.UI
             UpdateSleepBanner();
             bool business = BusinessUnlocked;
             if (!_businessButton.gameObject.activeSelf) _businessButton.gameObject.SetActive(true);
-            _dateText.text = (S.IsCityLifeTest?"测试 ":"")+$"{now.Date.Year}年{now.Date.Month}/{now.Date.Day} {Ui.Hm(now.MinuteOfDay)}\n天气 · {S.WeatherSummary}";
+            _dateText.text = (S.IsCityLifeTest?"测试 ":"")+$"{now.Date.Year}年{now.Date.Month}/{now.Date.Day} {Ui.WeekdayName(now.Date.Weekday)} {Ui.Hm(now.MinuteOfDay)}\n天气 · {S.WeatherSummary}";
             _cashText.text = S.Ledger.Balance.ToString();
             _cashText.color = S.Ledger.Balance.IsNegative ? Ui.Warn : Ui.Good;
 
@@ -361,31 +362,6 @@ namespace PCShopSell.Game.UI
                 label.text.fontSize = major ? 18 : 15;
                 label.rt.GetComponent<Image>().color = LabelColor(pv.Place, pv.Place.Kind != PlaceKind.Shop || pv.Place.IsPlayerShop);
             }
-        }
-
-        /// <summary>“去我的店”：只有一家就直接走过去；开了几家先选去哪家；还没店就去中介。</summary>
-        private void GoToMyShop()
-        {
-            var shops = S.MyShops;
-            if (shops.Count <= 1)
-            {
-                _ctrl.GoToPlace(S.HasShop ? S.PlayerShopPlace : S.City.FirstOfKind(PlaceKind.Agency));
-                return;
-            }
-            OpenWindow("去哪家店", 460, 120 + shops.Count * 56, w =>
-            {
-                foreach (OwnedShop shop in shops)
-                {
-                    Place p = shop.Place;
-                    string state = shop.Sim.IsOpen ? "营业中" : "关门";
-                    string staff = shop.Employee != null || shop.Assembler != null ? "有人看店" : "没人看店";
-                    Ui.Size(Ui.Button(w.Content, $"{S.ShopTitle(shop)}（{p.Name}）· {state} · {staff}", () =>
-                    {
-                        w.Close();
-                        _ctrl.GoToPlace(p);
-                    }, 17, shop == S.CurrentShop ? Ui.ButtonHot : Ui.ButtonBg), -1, 46);
-                }
-            });
         }
 
         /// <summary>名牌底色：我的店青色，招租的铺子橙色，中介蓝色，其他深灰。</summary>

@@ -138,7 +138,7 @@ namespace PCShopSell.Core.Session
             if(_personById==null)_personById=People.ToDictionary(p=>p.Id,StringComparer.Ordinal);
             return _personById.TryGetValue(id,out var person)?person:null;
         }
-        public static readonly CityActivityDefinition[] Activities = {
+        public static readonly CityActivityDefinition[] Activities = ExpandVenueTiers(new CityActivityDefinition[] {
             A("dinner","一起吃家常饭","life_restaurant",60,100,55,6,6,"选餐与入座","热菜上桌，可以聊聊最近的生活。","吃完饭，记下这次相处。","清淡家常菜","招牌炖菜","聊近况","聊彼此的工作"),
             A("ktv","练歌与合唱","life_ktv",90,160,0,8,8,"选择包间活动","原创伴奏响起，大家轮流唱或坐下交流。","散场时一起整理好麦克风。","合唱原创曲","独唱练习","聊喜欢的声音","聊创作经历"),
             A("bar","吧台小聚","life_bar",60,80,10,5,5,"选择饮品","可以选无酒精饮品，认识同桌的人。","结清本次饮品后各自安排返程。","气泡果饮","热茶","聊近况","认识同桌"),
@@ -150,7 +150,21 @@ namespace PCShopSell.Core.Session
             A("snack","夜宵小聚","life_restaurant",60,60,40,3,5,"选夜宵","热汤端上来，聊聊一天的收获。","各自离席，约好下次见。","汤面","家常小菜","聊今天","聊共同朋友"),
             A("expo_electronics","电子展游览","life_expo",120,30,0,-4,7,"检票入场","供应商、新品、企业需求与行业联系人分区交流。","可提前离场，已完成展位事件保持记忆。","供应商新品","企业需求","行业联系人","交流试单条件"),
             A("expo_comic","原创潮玩展","life_expo",120,30,0,-4,7,"检票入场","原创模型、创作者工作台和兴趣社交区开放。","原创作品与联系人记录在自己的城市履历中。","原创模型商品","创作者工作台","兴趣社交","讨论推广合作")
-        };
+        });
+        private static CityActivityDefinition[] ExpandVenueTiers(CityActivityDefinition[] originals)
+        {
+            var all=originals.ToList();
+            foreach(int tier in new[]{2,3,4})
+            foreach(var source in originals.Where(a=>a.Id=="dinner"||a.Id=="ktv"||a.Id=="bar"))
+            {
+                var copy=A(source.Id+"_tier"+tier,new[]{"","","邻里","云庭","星苑"}[tier]+source.Name,
+                    source.VenueId+"_tier"+tier,source.Minutes,source.PriceYuan*(tier==2?2:tier==3?5:12),source.Hunger,source.Energy,source.Relation,
+                    source.StartText,source.MidText,source.EndText,source.Choices);
+                copy.Mood=source.Mood;copy.Health=source.Health;copy.Charm=source.Charm;copy.Intelligence=source.Intelligence;copy.Nutrition=source.Nutrition;
+                all.Add(copy);
+            }
+            return all.ToArray();
+        }
         private static CityActivityDefinition A(string id,string name,string venue,int minutes,int price,int hunger,int energy,int relation,
             string start,string mid,string end,params string[] choices) => new CityActivityDefinition {Id=id,Name=name,VenueId=venue,Minutes=minutes,
                 PriceYuan=price,Hunger=hunger,Energy=energy,Relation=relation,StartText=start,MidText=mid,EndText=end,Choices=choices,

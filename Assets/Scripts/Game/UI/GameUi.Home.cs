@@ -372,7 +372,10 @@ namespace PCShopSell.Game.UI
                             S.UnloadBackpack();
                             _bagSel = null;
                             w.Rebuild();
-                        }, 18, Ui.ButtonHot), 260);
+                            if(S.InPlayerShop)RebuildDock();
+                        }, 18, Ui.ButtonHot), 260).Tip(S.InPlayerShop
+                            ?"有对应货架或展示台的本店商品自动进入经营库存并陈列，架满留后仓；其他物品按原规则存放。"
+                            :"米菜放进厨房，其他物品按原规则存放。");
                     else
                         // 没东西可放就不摆一个点不动的灰按钮，直接说为什么
                         Ui.Size(Ui.Label(acts, S.InPlayerShop

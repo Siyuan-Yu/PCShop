@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -778,7 +778,7 @@ namespace PCShopSell.Core.Shop
             }
             if (c.Intent == CustomerIntent.Build)
             {
-                if (!Random.Chance(ShopSettings.BuyChance(_markup)))
+                if (!Random.Chance(AssistedPurchaseIntent(ShopSettings.BuyChance(_markup))))
                 {
                     Leave(c, LeaveReason.TooExpensive);
                     return;
@@ -808,8 +808,7 @@ namespace PCShopSell.Core.Shop
                 return;
             }
 
-            double leave = 1.0 - ShopSettings.BuyChance(MarkupOf(c.Item));
-            if (c.ItemBoxed) leave *= Settings.BoxedTrust;
+            double leave = 1.0 - PartPurchaseChance(MarkupOf(c.Item),c.ItemBoxed);
             if (Random.Chance(leave))
             {
                 Stock.ForceAdd(c.Item, c.ItemBoxed, 1);
@@ -881,7 +880,7 @@ namespace PCShopSell.Core.Shop
                 foreach (var l in lines) { pick -= ClothingProducts.SeasonDemandAt(l.Key, temp); if (pick < 0) { id = l.Key; break; } }
             }
             else id = lines[Random.Next(0, lines.Count)].Key;
-            if (!Random.Chance(ShopSettings.BuyChance(MarkupOfGoods(id)) * (IsGoodsShop ? 1.0 : Settings.GoodsBuyFactor))) return false;
+            if (!Random.Chance(GoodsPurchaseChance(id,MarkupOfGoods(id)))) return false;
             if (!CanPay(c))
             {
                 Leave(c, LeaveReason.NoCash);

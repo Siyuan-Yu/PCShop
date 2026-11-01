@@ -6,6 +6,7 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class SaveData
     {
+        public int cityLayoutVersion;
         public int cityLifeVersion;
         public int energyPayrollVersion;
         public long exhaustedAt = -1;
@@ -25,7 +26,7 @@ namespace PCShopSell.Core.Session
         public long cityNextActivity,cityNextIntent;
         public string[] cityEmployeeIds,cityEmployeePersonIds,cityTopicKeys,cityTrustIds,cityFavorites,cityRecent;
         public int[] cityTopicDays,cityTrustValues;
-        public string cityDefaultDestination,cityAgencyShortcut,cityMarketShortcut;
+        public string cityDefaultDestination,cityAgencyShortcut,cityMarketShortcut,cityShopShortcut;
     }
     [Serializable] public sealed class CitySavedTrip
     {
@@ -41,6 +42,7 @@ namespace PCShopSell.Core.Session
         public bool CitySleepRequested { get; set; }
         private void SaveCityLife(SaveData d)
         {
+            d.cityLayoutVersion=City.LayoutVersion;
             d.energyPayrollVersion=1;d.exhaustedAt=_energyExhaustedAt;d.exhaustionReminder=_energyReminder;
             d.payrollDays=_employeePayroll.Select(p=>p.Copy()).ToArray();
             d.pendingDisplays=_shops.Where(s=>s.PendingDisplayTier>=0).Select(s=>new CityPendingDisplay{ShopId=s.Place.Id,Tier=s.PendingDisplayTier,Minutes=s.PendingDisplayMinutes}).ToArray();
@@ -55,7 +57,7 @@ namespace PCShopSell.Core.Session
             d.cityEmployeeIds=_cityEmployeeAliases.Keys.ToArray();d.cityEmployeePersonIds=_cityEmployeeAliases.Values.ToArray();
             d.cityTopicKeys=_cityTopicDay.Keys.ToArray();d.cityTopicDays=_cityTopicDay.Values.ToArray();d.cityTrustIds=_cityTrust.Keys.ToArray();d.cityTrustValues=_cityTrust.Values.ToArray();
             d.cityFavorites=_cityFavorites.ToArray();d.cityRecent=_cityRecent.ToArray();d.cityDefaultDestination=CityDefaultDestination;
-            d.cityAgencyShortcut=CityAgencyShortcut;d.cityMarketShortcut=CityMarketShortcut;
+            d.cityAgencyShortcut=CityAgencyShortcut;d.cityMarketShortcut=CityMarketShortcut;d.cityShopShortcut=CityShopShortcut;
             SaveCityStories(d);
             SaveCityVisits(d);
         }
@@ -103,7 +105,8 @@ namespace PCShopSell.Core.Session
             _cityRecent.Clear();_cityRecent.AddRange((d.cityRecent??Array.Empty<string>()).Where(City.HasPlace).Distinct().Take(6));
             CityDefaultDestination=City.HasPlace(d.cityDefaultDestination)?d.cityDefaultDestination:null;
             CityAgencyShortcut=City.HasPlace(d.cityAgencyShortcut)?d.cityAgencyShortcut:"agency";
-            CityMarketShortcut=City.HasPlace(d.cityMarketShortcut)?d.cityMarketShortcut:"shop14";
+            CityMarketShortcut=City.HasPlace(d.cityMarketShortcut)?d.cityMarketShortcut:"stall_cpu";
+            CityShopShortcut=MyShops.Any(s=>s.Place.Id==d.cityShopShortcut)?d.cityShopShortcut:null;
             CityIntent=d.cityTravelIntent!=null&&City.HasPlace(d.cityTravelIntent.TargetPlaceId)&&!d.cityTravelIntent.Cancelled?d.cityTravelIntent:null;
             if(d.cityTrip!=null)
             {

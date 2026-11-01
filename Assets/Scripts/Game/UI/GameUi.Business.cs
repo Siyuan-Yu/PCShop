@@ -287,7 +287,7 @@ namespace PCShopSell.Game.UI
             else
             {
                 var row=Ui.Row(home,40);
-                for(int i=0;i<=2;i++) {int tier=i;BusinessAction(row,new[]{"城中村","整洁单间","安静公寓"}[i],()=>S.ChangeHomeTier(tier),w,S.InAgency && tier!=S.HomeTier);}
+                for(int i=0;i<=3;i++) {int tier=i;BusinessAction(row,new[]{"城郊旧居","改善住宅","豪华公寓","花园别墅"}[i],()=>S.ChangeHomeTier(tier),w,S.InAgency && tier!=S.HomeTier);}
                 if(S.HomeTier>0)
                 {
                     Line(home,$"住宅售价 {S.HomePurchasePrice}    按揭首付 {S.HomePurchasePrice.Scale(.3)}",17);
