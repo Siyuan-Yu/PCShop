@@ -1,0 +1,13 @@
+2026-11-01 food expiry badges
+EditMode: total=574 passed=574 failed=0
+Command: powershell -File tools/run-tests.ps1
+Scene: PCShopSell.EditorTools.GameSceneBuilder.FoodExpiryFromBatch
+No screenshots generated.
+SMOKE OK 同名食物不同到期批次显示在不同格子
+SMOKE OK 各批次显示自身剩余时间
+SMOKE OK 食材也显示到期倒计时
+SMOKE OK 无过期规则的食品明确显示无期限
+SMOKE OK 倒计时固定在格子右下角且避开名字与重量
+SMOKE OK 时间变化后倒计时刷新并在临期时变红
+SMOKE OK 到期角标不妨碍选中与手动食用入口
+SMOKE RESULT code=0 errors=0

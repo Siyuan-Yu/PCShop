@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
@@ -44,7 +44,7 @@ namespace PCShopSell.Game.UI
                 string expiry = "";
                 var batches = item.Key.StartsWith("lunch:") ? bag.Food.Packed.Where(b => b.Id == item.Key.Substring(6))
                     : item.Key.StartsWith("ing:") ? bag.Food.Ingredient.Where(b => b.Id == item.Key.Substring(4)) : Enumerable.Empty<FoodBatch>();
-                if (batches.Any()) expiry = " · 最早到期：第 " + batches.Min(b => b.ExpireDay) + " 天";
+                expiry = " · " + FoodExpiryBadge.Countdown(batches.Any() ? (int?)batches.Min(b => b.ExpireDay) : null, S.Clock.Now.TotalMinutes);
                 Ui.Size(Ui.Label(row, item.Name + " ×" + item.Count + "\n<size=14>" + item.Kg.ToString("0.##") + " 千克" + expiry + "</size>", 17), -1, -1, 1);
                 Ui.Size(Ui.Button(row, put ? "存入 1 份" : "取出 1 份", () => { S.MoveFridgeFood(item.Key, 1, put); w.Rebuild(); }, 16), 130);
                 Ui.Size(Ui.Button(row, put ? "全部存入" : "全部取出", () => { S.MoveFridgeFood(item.Key, item.Count, put); w.Rebuild(); }, 16, Ui.ButtonHot), 130);

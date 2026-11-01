@@ -214,6 +214,7 @@ namespace PCShopSell.Game.UI
             public int Count;
             public double Kg, Space;
             public Color Color;
+            public FoodBatch[] Batches;
         }
 
         private string _bagSel;
@@ -240,14 +241,14 @@ namespace PCShopSell.Game.UI
             {
                 int n = g.Sum(b => b.Count);
                 double kg = n * Backpack.IngredientKg(g.Key);
-                l.Add(new BagStack { Key = "ing:" + g.Key, Name = g.First().Name, Kind = "买的米和菜", Count = n, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = new Color(0.30f, 0.55f, 0.30f) });
+                l.Add(new BagStack { Key = "ing:" + g.Key, Name = g.First().Name, Kind = "买的米和菜", Batches = g.ToArray(), Count = n, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = new Color(0.30f, 0.55f, 0.30f) });
             }
             foreach (var meal in bag.Food.Packed.GroupBy(b => b.Id))
             {
                 int n = meal.Sum(b => b.Count);
                 double kg = n * FoodBatch.WeightOf(meal.Key);
                 Color color = meal.Key == "veg" ? new Color(0.3f, 0.55f, 0.3f) : meal.Key == "pork" ? new Color(0.62f, 0.35f, 0.28f) : new Color(0.62f, 0.55f, 0.35f);
-                l.Add(new BagStack { Key = "lunch:" + meal.Key, Name = meal.First().Name, Kind = (FastFoodCatalog.Packed(meal.Key)?.Drink == true ? "饮料 · 饱腹 +" : "即食食物 · 饱腹 +") + meal.First().Hunger.ToString("0.##") + " · " + GameSession.MealEffects(meal.Key) + " · 最早到期：第 " + meal.Min(b => b.ExpireDay) + " 天", Count = n, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = color });
+                l.Add(new BagStack { Key = "lunch:" + meal.Key, Name = meal.First().Name, Batches = meal.ToArray(), Kind = (FastFoodCatalog.Packed(meal.Key)?.Drink == true ? "饮料 · 饱腹 +" : "即食食物 · 饱腹 +") + meal.First().Hunger.ToString("0.##") + " · " + GameSession.MealEffects(meal.Key) + " · 最早到期：第 " + meal.Min(b => b.ExpireDay) + " 天", Count = n, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = color });
             }
             foreach (var kv in bag.GiftLines)
             {
@@ -274,19 +275,26 @@ namespace PCShopSell.Game.UI
         /// <summary>一格一格的背包格子：8 列，一叠东西占几格就画几格。</summary>
         private RectTransform BagGrid(Transform parent, System.Collections.Generic.List<BagStack> stacks, int capacity, string selKey, System.Action<string> onPick, float height)
         {
-            var cells = new System.Collections.Generic.List<(BagStack st, int n)>();
+            var cells = new System.Collections.Generic.List<(BagStack st, int n, int? expiry)>();
             int used = 0;
             foreach (BagStack st in stacks)
             {
-                int c = Mathf.Max(1, Mathf.CeilToInt((float)(st.Space - 1e-6)));
-                int left = st.Count;
-                for (int i = 0; i < c; i++)
+                var batches = st.Batches == null
+                    ? new[] { (day: (int?)null, count: st.Count) }
+                    : st.Batches.Where(batch => batch.Count > 0).GroupBy(batch => batch.ExpireDay).OrderBy(group => group.Key)
+                        .Select(group => (day: (int?)group.Key, count: group.Sum(batch => batch.Count))).ToArray();
+                foreach (var batch in batches)
                 {
-                    int n = Mathf.CeilToInt(left / (float)(c - i));
-                    left -= n;
-                    cells.Add((st, n));
+                    int c = Mathf.Max(1, Mathf.CeilToInt((float)(st.Space * batch.count / st.Count - 1e-6)));
+                    int left = batch.count;
+                    for (int i = 0; i < c; i++)
+                    {
+                        int n = Mathf.CeilToInt(left / (float)(c - i));
+                        left -= n;
+                        cells.Add((st, n, batch.day));
+                    }
+                    used += c;
                 }
-                used += c;
             }
             int total = Mathf.Max(capacity, used);
             total = (total + BagColumns - 1) / BagColumns * BagColumns;
@@ -304,7 +312,8 @@ namespace PCShopSell.Game.UI
                         bool sel = st.Key == selKey;
                         Color bg = sel ? Color.Lerp(st.Color, Color.white, 0.35f) : st.Color;
                         string label = st.Key == "rice" ? $"<size=15>大米</size>\n<size=14>{st.Kg * cells[idx].n / st.Count:0.##}千克</size>" : cells[idx].n > 0 ? $"<size=15>{ShortName(st.Name)}</size>\n<size=11>每件 {st.Kg / st.Count:0.###} 千克</size>\n<size=12>×{cells[idx].n}</size>" : "<size=22>…</size>";
-                        Ui.Size(Ui.Button(row, label, () => onPick(st.Key), 14, bg), 80, 80);
+                        var cell = Ui.Size(Ui.Button(row, label, () => onPick(st.Key), 14, bg), 80, 80);
+                        AddFoodExpiry(cell, st.Key, cells[idx].expiry);
                     }
                     else
                     {
@@ -340,7 +349,7 @@ namespace PCShopSell.Game.UI
                     Para(w.Content, $"<b>{pick.Name}</b> ×{pick.Count}　占 {Mathf.Max(1, Mathf.CeilToInt((float)(pick.Space - 1e-6)))} 格　{pick.Kg:0.##} 千克\n<color=#ABB5A8>{pick.Kind}</color>", 17);
                 else
                     Line(w.Content, stacks.Count == 0 ? "背包是空的。去买点东西：礼品在烟酒茶行 / 农贸市场 / 手机网购，进货在电子市场。" : "点一格看详情。", 17, Ui.Dim);
-                Para(w.Content, $"营养 {S.Player.Nutrition:0.##}/100 · 心情 {S.Player.Mood:0.##}/100（暂只记录，无其他影响）\n饭菜按菜名分开。选中后可吃指定饭菜或喝饮料；每天12:00、18:30或饱腹低于25时自动进餐。", 15, Ui.Dim);
+                Para(w.Content, $"营养 {S.Player.Nutrition:0.##}/100 · 心情 {S.Player.Mood:0.##}/100（暂只记录，无其他影响）\n饭菜按菜名分开。选中后可吃指定饭菜或喝饮料；每天12:00、18:30或饱腹低于25时自动进餐；同种食物先用最早到期的批次。", 15, Ui.Dim);
 
                 if (S.CanOpenFridge) Ui.Size(Ui.Button(w.Content, "打开这里的冰箱", () => OpenFridgeWindow(), 17), -1, 34);
                 RectTransform acts = Ui.Row(w.Content, 46);
@@ -669,7 +678,7 @@ namespace PCShopSell.Game.UI
             if (pan.CookedBowls > 0)
             {
                 Line(w.Content, $"锅里焖好的饭：{pan.CookedBowls} 碗（可装入背包或放冰箱）", 18);
-                foreach (FoodBatch b in pan.Cooked) Line(w.Content, $"· {b.Name} ×{b.Count}  （放到第 {b.ExpireDay} 天前吃完）", 15, Ui.Dim);
+                foreach (FoodBatch b in pan.Cooked) Line(w.Content, $"· {b.Name} ×{b.Count}  （{FoodExpiryBadge.Countdown(b.ExpireDay, S.Clock.Now.TotalMinutes)}）", 15, Ui.Dim);
                 if (S.CanOpenFridge)
                     Ui.Size(Ui.Button(w.Content, "把做好的饭全部放入冰箱", () => { S.ChillCookedFood(pan.CookedBowls); w.Rebuild(); }, 17, Ui.ButtonHot), -1, 38);
                 RectTransform erow = Ui.Row(w.Content, 46);

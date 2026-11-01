@@ -63,6 +63,9 @@ namespace PCShopSell.Core.Home
 
         public static double WeightOf(string id) => FastFoodCatalog.Packed(id)?.WeightKg ?? Backpack.LunchboxKg;
 
+        public static long ExpiryMinute(int day) => ((long)day + 1) * 1440;
+        public long MinutesLeft(long now) => Math.Max(0, ExpiryMinute(ExpireDay) - now);
+
         public FoodBatch Clone() => new FoodBatch { Id = Id, Name = Name, Hunger = Hunger, Health = Health, Count = Count, ExpireDay = ExpireDay, Chilled = Chilled };
     }
 
