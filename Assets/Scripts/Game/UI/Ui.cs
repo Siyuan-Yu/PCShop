@@ -147,7 +147,16 @@ namespace PCShopSell.Game.UI
             cb.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.6f);
             b.colors = cb;
             b.interactable = interactable;
-            if (onClick != null) b.onClick.AddListener(() => onClick());
+            if (onClick != null)
+            {
+                if(text=="+"||text=="−"||text=="-")
+                {
+                    var hold=b.gameObject.AddComponent<HoldRepeat>();
+                    hold.Max=int.MaxValue;hold.Commit=n=>onClick();
+                    b.onClick.AddListener(hold.ClickOnce);
+                }
+                else b.onClick.AddListener(() => onClick());
+            }
             Text t = Label(img.transform, text, size, TextAnchor.MiddleCenter);
             t.rectTransform.Fill(6);
             if (!interactable) t.color = Dim;
@@ -170,18 +179,28 @@ namespace PCShopSell.Game.UI
             return input;
         }
 
-        public static InputField NumberInput(Transform parent, long value, long min, long max, Action<long> commit)
+        /// <summary>Finite choices without invoking a keyboard. The native list supports scroll and touch.</summary>
+        public static Dropdown Choice(Transform parent, IEnumerable<string> options, int selected, Action<int> choose)
         {
-            InputField input = null;
-            input = TextInput(parent, value.ToString(), "数量", text =>
-            {
-                if (!long.TryParse(text, out long parsed)) { input.SetTextWithoutNotify(value.ToString()); return; }
-                long valid = Math.Max(min, Math.Min(max, parsed));
-                input.SetTextWithoutNotify(valid.ToString());
-                if (valid != value) commit(valid);
-            });
-            input.contentType = InputField.ContentType.IntegerNumber;
-            return input;
+            var face=Panel(parent,"Choice",PanelBg2);
+            var dropdown=face.gameObject.AddComponent<ChoiceDropdown>();dropdown.targetGraphic=face;
+            var caption=Label(face.transform,"",18,TextAnchor.MiddleLeft);caption.rectTransform.Fill(8);caption.raycastTarget=false;
+            caption.rectTransform.offsetMax=new Vector2(-25,-4);
+            var arrow=Label(face.transform,"▾",18,TextAnchor.MiddleRight);arrow.rectTransform.Fill(6);arrow.raycastTarget=false;
+            var template=Panel(face.transform,"Template",PanelBg2).rectTransform;
+            template.anchorMin=new Vector2(0,0);template.anchorMax=new Vector2(1,0);template.pivot=new Vector2(.5f,1);
+            template.anchoredPosition=Vector2.zero;template.sizeDelta=new Vector2(0,220);
+            var viewport=Panel(template,"Viewport",PanelBg2).rectTransform;viewport.Fill();viewport.gameObject.AddComponent<RectMask2D>();
+            var content=Rect(viewport,"Content");content.anchorMin=new Vector2(0,1);content.anchorMax=Vector2.one;content.pivot=new Vector2(.5f,1);content.sizeDelta=new Vector2(0,38);
+            var item=Panel(content,"Item",ButtonBg);item.rectTransform.anchorMin=new Vector2(0,.5f);item.rectTransform.anchorMax=new Vector2(1,.5f);item.rectTransform.sizeDelta=new Vector2(0,38);
+            var toggle=item.gameObject.AddComponent<Toggle>();toggle.targetGraphic=item;
+            var mark=Panel(item.transform,"Selected",Accent);mark.raycastTarget=false;mark.rectTransform.Anchor(0,0,0,1,2,2,-6,2);toggle.graphic=mark;
+            var itemText=Label(item.transform,"",18,TextAnchor.MiddleLeft);itemText.rectTransform.Fill(10);itemText.raycastTarget=false;
+            var scroll=template.gameObject.AddComponent<ScrollRect>();scroll.viewport=viewport;scroll.content=content;scroll.horizontal=false;scroll.scrollSensitivity=38;scroll.movementType=ScrollRect.MovementType.Clamped;
+            dropdown.template=template;dropdown.captionText=caption;dropdown.itemText=itemText;
+            dropdown.AddOptions(new List<string>(options));dropdown.SetValueWithoutNotify(Mathf.Clamp(selected,0,Math.Max(0,dropdown.options.Count-1)));dropdown.RefreshShownValue();
+            template.gameObject.SetActive(false);dropdown.onValueChanged.AddListener(value=>choose(value));
+            return dropdown;
         }
 
         /// <summary>给任意界面元素挂鼠标悬停说明（悬停约半秒后在鼠标旁边弹出）。文字每次悬停时现取，所以能显示当前状态。</summary>
@@ -335,6 +354,24 @@ namespace PCShopSell.Game.UI
         {
             string[] n = { "周一", "周二", "周三", "周四", "周五", "周六", "周日" };
             return n[(int)d];
+        }
+    }
+    public sealed class ChoiceDropdown : Dropdown
+    {
+        public static int CancelFrame = -1;
+        public override void OnPointerClick(PointerEventData e) { base.OnPointerClick(e);FocusCurrent(); }
+        public override void OnSubmit(BaseEventData e) { base.OnSubmit(e);FocusCurrent(); }
+        public override void OnCancel(BaseEventData e) { base.OnCancel(e);CancelFrame=Time.frameCount; }
+        private void FocusCurrent()
+        {
+            var list=transform.Find("Dropdown List");var scroll=list==null?null:list.GetComponent<ScrollRect>();
+            if(scroll==null)return;
+            Canvas.ForceUpdateCanvases();scroll.StopMovement();scroll.verticalNormalizedPosition=options.Count<=1?1:1-value/(float)(options.Count-1);
+        }
+        public bool CloseChoice()
+        {
+            if(transform.Find("Dropdown List")==null)return false;
+            Hide();CancelFrame=Time.frameCount;return true;
         }
     }
 }

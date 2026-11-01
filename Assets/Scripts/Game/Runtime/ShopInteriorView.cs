@@ -1,10 +1,12 @@
 using System.Collections.Generic;
+using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
 using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
@@ -70,6 +72,7 @@ namespace PCShopSell.Game.Runtime
             public PartCategory Want;
             public string Spend;
             public string Profile;
+            public string PersonId;
             public string Emote;
             public Color EmoteColor;
             public float EmoteUntil;
@@ -80,6 +83,7 @@ namespace PCShopSell.Game.Runtime
         {
             public Vector3 Pos;
             public string Text;
+            public string PersonId;
             public Color Color;
             public int Size;
 
@@ -319,6 +323,7 @@ namespace PCShopSell.Game.Runtime
         private readonly List<Light> _ceilingLights = new List<Light>();
         private float _openBlend = 1f;
         private RoomFurniture _decor;
+        private GameObject _upgradeClimate;
 
         /// <summary>摆出来的店内摆设（装修后由玩家摆放）。</summary>
         public RoomFurniture Furniture => _decor;
@@ -663,6 +668,7 @@ namespace PCShopSell.Game.Runtime
         }
 
         /// <summary>WASD：按世界方向走一步，会被柜台、装机台、展示桌挡住（沿墙滑动）。</summary>
+        private const float OwnerWalkSpeed = 4.8f;
         public void MoveOwner(Vector3 worldDir, float realDt)
         {
             Vector3 d = new Vector3(worldDir.x, 0, worldDir.z);
@@ -670,13 +676,32 @@ namespace PCShopSell.Game.Runtime
             d.Normalize();
             Transform tr = _owner.transform;
             Vector3 p = tr.localPosition;
-            float step = 4.8f * realDt;
+            float step = OwnerWalkSpeed * realDt;
             Vector3 tx = p + new Vector3(d.x * step, 0, 0);
             if (CanStand(tx, p)) p = tx;
             Vector3 tz = p + new Vector3(0, 0, d.z * step);
             if (CanStand(tz, p)) p = tz;
             tr.localPosition = p;
             tr.localRotation = Quaternion.Slerp(tr.localRotation, Quaternion.LookRotation(d), 1f - Mathf.Exp(-12f * realDt));
+        }
+
+        private List<Vector3> _cityExitPath;
+        private int _cityExitIndex;
+        public void CancelCityDoorWalk(){_cityExitPath=null;_cityExitIndex=0;}
+        public int WalkToDoor(float dt)
+        {
+            if(NearDoor)return 1;
+            var at=_owner.transform.localPosition;
+            if(_cityExitPath==null)
+            {
+                _cityExitPath=CityRoomRoute.Find(at,new Vector3(_doorX,0,.6f),Width,Depth,Blocked);
+                _cityExitIndex=0;if(_cityExitPath==null)return -1;
+            }
+            if(_cityExitIndex>=_cityExitPath.Count)return NearDoor?1:-1;
+            var delta=_cityExitPath[_cityExitIndex]-at;
+            if(delta.magnitude<.035f){_cityExitIndex++;return 0;}
+            MoveOwner(delta,Mathf.Min(dt,delta.magnitude/4.8f));
+            return (_owner.transform.localPosition-at).sqrMagnitude<1e-10f&&dt>0?-1:0;
         }
 
         private bool CanStand(Vector3 to, Vector3 from)
@@ -937,7 +962,13 @@ namespace PCShopSell.Game.Runtime
                         _tables.Add(new Vector2(pos.x, pos.z));
                         _deskFoots.Add(e.Foot);
                         _pcSlots.AddRange(h.Slots);
-                        deskSpots.Add(Origin + pos + front * 1.15f);
+                        if(h.Shelf!=null)
+                        {
+                            h.Shelf.Pos=pos; h.Shelf.LayoutIndex=e.Go.GetComponent<PlacedVisual>().Index;
+                            h.Shelf.MaxItems=Mathf.Clamp(e.Placed.DisplayLimit<=0?2:e.Placed.DisplayLimit,1,6);
+                            _shelves.Add(h.Shelf);_shelfSpots.Add(Origin+pos+front*1.15f);
+                        }
+                        else deskSpots.Add(Origin + pos + front * 1.15f);
                         break;
                     case FixtureKind.Counter:
                         if (_hasCounter) break; // 摆了好几个收银台：只认第一个
@@ -1028,6 +1059,18 @@ namespace PCShopSell.Game.Runtime
 
         public void Update(GameSession s, float dt, float realDt)
         {
+            var climateShop=s.ShopAt(s.PlayerShopPlace.Id);
+            bool showUpgradeClimate=climateShop!=null&&climateShop.Upgrades.Contains(ShopUpgrades.AirCon)&&!climateShop.Layout.Any(p=>p.Id=="aircon"||p.Id=="aircon_large");
+            if(showUpgradeClimate&&_upgradeClimate==null)
+            {
+                var def=FurnitureCatalog.Get("aircon");
+                _upgradeClimate=FurnitureVisuals.Build(_root,def,false);
+                FurnitureVisuals.Place(_upgradeClimate,def,new PlacedFurniture{Id="aircon",X=Width*.7,Z=Depth},s.ShopRoom);
+                var marker=_upgradeClimate.AddComponent<PlacedVisual>();marker.Index=-1;marker.FurnitureId="aircon";
+                // A wall device needs a narrow click volume; it never blocks walking.
+                var click=_upgradeClimate.AddComponent<BoxCollider>();click.center=new Vector3(0,2.3f,0);click.size=new Vector3(1.2f,.7f,.35f);
+            }
+            if(_upgradeClimate!=null)_upgradeClimate.SetActive(showUpgradeClimate);
             if (_leaveReasons.Count > 200) _leaveReasons.Clear();
             if (_payChannels.Count > 200) _payChannels.Clear();
             _now += realDt;
@@ -1099,7 +1142,7 @@ namespace PCShopSell.Game.Runtime
                     _pcSlots[i].Root.SetActive(on);
                     if (on) ShopFixtures.SetSlotTier(_pcSlots[i], pcs[i]);
                 }
-                foreach (ShelfDisplay sh in _shelves)
+                foreach (ShelfDisplay sh in _shelves.OrderByDescending(display=>display.IsDisplay))
                 {
                     if (sh.Unset) continue; // 没设置摆什么：空架子
                     // 同一类货有几个货架，货就摊给它们（每个显示一份）
@@ -1110,16 +1153,19 @@ namespace PCShopSell.Game.Runtime
                     if (sh.Goods)
                     {
                         // 杂货架：这类杂货一共几件就亮几件（最多摆满三层）
-                        int goodsTotal = goodsOn.TryGetValue(sh.KindId, out int gt) ? (gt + same - 1) / same : 0;
+                        int goodsTotal = goodsOn.TryGetValue(sh.KindId, out int gt) ? Mathf.Min(gt,Mathf.Min(sh.MaxItems,sh.GoodsItems.Count)) : 0;
+                        goodsOn[sh.KindId]=Mathf.Max(0,(goodsOn.TryGetValue(sh.KindId,out int left)?left:0)-goodsTotal);
                         if (sh.EmptyMark != null) sh.EmptyMark.SetActive(goodsTotal == 0);
                         for (int i = 0; i < sh.GoodsItems.Count; i++) sh.GoodsItems[i].SetActive(i < goodsTotal);
                         continue;
                     }
-                    int boxedHave = counts.TryGetValue((sh.Category, true), out int bh) ? (bh + same - 1) / same : 0;
-                    int looseHave = counts.TryGetValue((sh.Category, false), out int lh) ? (lh + same - 1) / same : 0;
+                    int boxedHave = counts.TryGetValue((sh.Category, true), out int bh) ? bh : 0;
+                    int looseHave = counts.TryGetValue((sh.Category, false), out int lh) ? lh : 0;
                     // 整盒摆在最上层，散件摆在下面两层；一件都没有就板上全空，亮红色“缺货”条
-                    int showBoxed = Mathf.Min(sh.BoxedItems.Count, boxedHave);
-                    int showLoose = Mathf.Min(sh.LooseItems.Count, looseHave);
+                    int showBoxed = Mathf.Min(sh.MaxItems,Mathf.Min(sh.BoxedItems.Count, boxedHave));
+                    int showLoose = Mathf.Min(Mathf.Max(0,sh.MaxItems-showBoxed),Mathf.Min(sh.LooseItems.Count, looseHave));
+                    counts[(sh.Category,true)]=Mathf.Max(0,boxedHave-showBoxed);
+                    counts[(sh.Category,false)]=Mathf.Max(0,looseHave-showLoose);
                     if (sh.EmptyMark != null) sh.EmptyMark.SetActive(boxedHave + looseHave == 0);
                     for (int i = 0; i < sh.BoxedItems.Count; i++) sh.BoxedItems[i].SetActive(i < showBoxed);
                     for (int i = 0; i < sh.LooseItems.Count; i++) sh.LooseItems[i].SetActive(i < showLoose);
@@ -1133,16 +1179,19 @@ namespace PCShopSell.Game.Runtime
 
             foreach (ShopCustomer c in shop.ActiveCustomers)
             {
+                if (!string.IsNullOrEmpty(c.PersonId) && !s.CityCustomerIsInside(c, shop.ShopId)) continue;
                 alive.Add(c.Id);
                 if (!_visitors.TryGetValue(c.Id, out Visitor v))
                 {
                     string profile = ProfileOf(c, out Color shirt);
                     float shade = 0.85f + (c.Id * 37 % 100) / 100f * 0.3f;
+                    var person = s.CityPerson(c.PersonId);
+                    if (person != null) { shirt = CrowdView.PersonClothing(c.PersonId); shade = 1; profile = person.Name + " · " + person.Role; }
                     Color[] skins = { new Color(0.92f, 0.78f, 0.62f), new Color(0.85f, 0.66f, 0.5f), new Color(0.98f, 0.84f, 0.72f) };
                     v = new Visitor
                     {
-                        Go = Prims.Figure(_root, "Customer" + c.Id, new Color(shirt.r * shade, shirt.g * shade, shirt.b * shade), skins[c.Id % skins.Length], 0.9f + (c.Id * 53 % 100) / 100f * 0.15f),
-                        Profile = profile,
+                        Go = Prims.Figure(_root, "Customer" + c.Id, new Color(shirt.r * shade, shirt.g * shade, shirt.b * shade), person != null ? skins[0] : skins[c.Id % skins.Length], person != null ? .95f : 0.9f + (c.Id * 53 % 100) / 100f * 0.15f),
+                        Profile = profile, PersonId = c.PersonId,
                     };
                     v.Go.transform.position = StreetSpawn();
                     RouteIn(v);
@@ -1151,6 +1200,7 @@ namespace PCShopSell.Game.Runtime
                     col.height = 1.8f;
                     col.radius = 0.4f;
                     v.Go.AddComponent<CustomerMarker>().CustomerId = c.Id;
+                    if (person != null) { v.Go.AddComponent<CityPersonMarker>().PersonId = c.PersonId; CityNpcClothing.Apply(v.Go,s,c.PersonId); }
                     v.Bubble = Prims.Shape(PrimitiveType.Sphere, v.Go.transform, "Bubble", new Vector3(0, 1.85f, 0), Vector3.one * 0.28f,
                         Mats.Glow(new Color(1f, 0.8f, 0.1f), new Color(3f, 2.2f, 0.2f), false));
                     v.Build = c.Intent == CustomerIntent.Build;
@@ -1211,6 +1261,9 @@ namespace PCShopSell.Game.Runtime
                     }
                 }
                 Move(v, dt);
+                var visiblePerson = s.CityPerson(c.PersonId);
+                if (visiblePerson != null) _emotes.Add(new EmoteInfo { Pos = v.Go.transform.position + Vector3.up * 2.45f,
+                    Text = visiblePerson.Name, PersonId = c.PersonId, Color = new Color(.12f, .2f, .17f), Size = 17 });
                 if (Reached(v) || Flat(v.Go.transform.position - v.StuckAnchor).sqrMagnitude > 0.36f)
                 {
                     v.StuckAnchor = v.Go.transform.position;
@@ -1261,6 +1314,12 @@ namespace PCShopSell.Game.Runtime
                 }
                 else SendOut(v);
                 _leaveReasons.Remove(id);
+                if (!string.IsNullOrEmpty(v.PersonId))
+                {
+                    // A person-bound view hands off to the authoritative returning street route.
+                    // Keeping the legacy anonymous exit animation would render the same person twice.
+                    Kill.It(v.Go); continue;
+                }
                 _leaving.Add(v);
             }
             for (int i = _leaving.Count - 1; i >= 0; i--)
@@ -1380,7 +1439,7 @@ namespace PCShopSell.Game.Runtime
                 else if (v.Via.Count > 0) v.Via.RemoveAt(0);
                 return;
             }
-            v.Go.transform.position = p + d / m * Mathf.Min(m, 3.0f * dt);
+            v.Go.transform.position = p + d / m * Mathf.Min(m, OwnerWalkSpeed * (float)CityTravelTiming.NpcWalkSpeedFactor * dt / (float)TimeController.WorldRate);
             v.Go.transform.rotation = Quaternion.LookRotation(d / m);
         }
 

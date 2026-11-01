@@ -135,6 +135,8 @@ namespace PCShopSell.Game.UI
                     Ui.Size(b, 84, 100);
                 }
             }
+            Ui.Size(Ui.Button(wall.transform, "城市生活", OpenCityLife, 18), -1, 44)
+                .Tip("城市活动、场所与生活安排。");
             Ui.Size(Ui.Label(wall.transform, S.HasApp(PhoneApps.Shop) && S.HasApp(PhoneApps.Chat) && S.HasApp(PhoneApps.Wholesale)
                 ? "所有 app 都装好了。" : "想要更多功能，到「应用商店」里下载。", 15, TextAnchor.MiddleCenter, Ui.Dim), -1, 36);
         }
@@ -207,21 +209,21 @@ namespace PCShopSell.Game.UI
                 }, 15, Ui.ButtonHot);
                 call.name = "CallTruck";
                 Ui.Size(call, 150);
-                var met = Npcs.All.Where(n => S.IsMet(n.Id)).ToList();
+                var met = S.SavedConversationContacts().ToList();
                 if (met.Count == 0)
                 {
-                    Line(w.Content, "别的号码还没有。认识了人才会存进来（留心店里的随机事件、去档口逛逛）。", 17, Ui.Dim);
+                    Line(w.Content, "别的号码还没有。熟悉度达到30后，当面交换联系方式才会存进来。", 17, Ui.Dim);
                     return;
                 }
                 RectTransform list = Ui.Scroll(w.Content, 440);
-                foreach (NpcDef def in met)
+                foreach (ContactInfo def in met)
                 {
-                    NpcDef n = def;
+                    ContactInfo n = def;
                     int rel = S.Relation(n.Id);
                     RectTransform row = Ui.Row(list, 48);
                     Ui.Size(Ui.Label(row, $"<b>{n.Name}</b>  {n.Role}", 17), 260);
                     Ui.Size(Ui.Label(row, $"{Npcs.LevelName(rel)} {rel}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
-                    Ui.Size(Ui.Button(row, "打电话约出去", () => OpenInviteWindow(n, w), 15, Ui.ButtonHot), 150);
+                    Ui.Size(Ui.Button(row, "打电话约出去", () => { var npc = Npcs.Get(n.Id); if (npc != null) OpenInviteWindow(npc, w); else OpenCityActivityChooser(n.Id); }, 15, Ui.ButtonHot), 150);
                     Ui.Size(Ui.Button(row, "发消息", () =>
                     {
                         w.Close();
@@ -241,16 +243,16 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, app
                     ? $"每天和每个人聊一次，一定有回，交情 +{GameSession.ChatGain}（只涨到 {GameSession.ChatMaxRelation}）。再往上得当面送礼、约出去。"
                     : $"每天给每个人发一条短信。现在大家都不习惯看短信，只有大约 {GameSession.SmsReplyChance * 100:0}% 的把握有人回；回了交情 +{GameSession.ChatGain}（只涨到 {GameSession.ChatMaxRelation}）。装了聊天 app 一定有回。", 15, Ui.Dim);
-                var met = Npcs.All.Where(n => S.IsMet(n.Id)).ToList();
+                var met = S.SavedConversationContacts().ToList();
                 if (met.Count == 0)
                 {
-                    Line(w.Content, "还没有联系方式。认识了人才会存进来（留心店里的随机事件、去档口逛逛）。", 17, Ui.Dim);
+                    Line(w.Content, "还没有联系方式。熟悉度达到30后，当面交换联系方式才会存进来。", 17, Ui.Dim);
                     return;
                 }
                 RectTransform list = Ui.Scroll(w.Content, 460);
-                foreach (NpcDef def in met)
+                foreach (ContactInfo def in met)
                 {
-                    NpcDef n = def;
+                    ContactInfo n = def;
                     int rel = S.Relation(n.Id);
                     RectTransform row = Ui.Row(list, 48);
                     Ui.Size(Ui.Label(row, $"<b>{n.Name}</b>  {n.Role}", 17), 250);

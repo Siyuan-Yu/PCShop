@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Catalog;
@@ -20,6 +20,7 @@ namespace PCShopSell.Tests
             s.EventsEnabled = false;
             s.MainShop.Sim.Settings.BaseCustomersPerHour = 0;
             s.MainShop.Buyer = new Employee { Name = "小陈", DailyWageYuan = 150, CheckoutMinutes = 3 };
+            CityTestPeople.AtAssignedWork(s,s.MainShop.Buyer);
             return s;
         }
         private static EmployeePurchasePlan Mixed(GameSession s)
@@ -154,19 +155,20 @@ namespace PCShopSell.Tests
                 var id = s.MainShop.Buyer.Id; Assert.True(s.ConfigureEmployeePurchase(id, plan));
                 var full = s.QuoteEmployeePurchase(id);
                 Money wallet = cheap.Price * 2 + full.Travel + full.Freight + Money.FromYuan(1);
-                Wallet(s, wallet); var q = s.QuoteEmployeePurchase(id);
+                var reserve=s.GetCityCashReserve(s.RestockReserveDays).Total;
+                Wallet(s, reserve+wallet); var q = s.QuoteEmployeePurchase(id);
                 Assert.IsNull(q.Error); Assert.AreEqual(wallet, q.Budget); Assert.Less(q.Total.Cents, q.RequiredTotal.Cents);
-                Assert.True(s.DispatchEmployeePurchase(id)); Assert.AreEqual(Money.Zero, s.Ledger.Balance);
+                Assert.True(s.DispatchEmployeePurchase(id)); Assert.AreEqual(reserve+Money.FromYuan(1), s.Ledger.Balance);
                 var trip = s.EmployeePurchaseTrips.Single(); Assert.AreEqual(1, trip.Items.Length);
                 Assert.AreEqual("cpu0", trip.Items[0].PartId); Assert.AreEqual(2, trip.Items[0].Count);
-                Assert.AreEqual(100, trip.ChangeCents);
+                Assert.AreEqual(0, trip.ChangeCents,"unused cash now stays in the shared wallet rather than being issued then refunded");
                 using (var loaded = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
                 {
                     loaded.EventsEnabled = false;
-                    var copy = loaded.EmployeePurchaseTrips.Single(); Assert.AreEqual(100, copy.ChangeCents);
+                    var copy = loaded.EmployeePurchaseTrips.Single(); Assert.AreEqual(0, copy.ChangeCents);
                     loaded.AdvanceClock((int)(System.Math.Max(copy.ReturnAt, copy.DeliveryAt) - loaded.Clock.Now.TotalMinutes + 1));
-                    Assert.AreEqual(1, loaded.Ledger.Balance.Yuan);
-                    loaded.AdvanceClock(1); Assert.AreEqual(1, loaded.Ledger.Balance.Yuan);
+                    Assert.AreEqual(reserve+Money.FromYuan(1), loaded.Ledger.Balance);
+                    loaded.AdvanceClock(1); Assert.AreEqual(reserve+Money.FromYuan(1), loaded.Ledger.Balance);
                 }
             }
         }
@@ -180,10 +182,12 @@ namespace PCShopSell.Tests
                 var id = s.MainShop.Buyer.Id;
                 Assert.True(s.ConfigureEmployeePurchase(id, new EmployeePurchasePlan { Transport = VehicleKind.Walk, Items = new[] { dear.Line(1), cheap.Line(1) } }));
                 var full = s.QuoteEmployeePurchase(id);
-                Wallet(s, cheap.Price + full.Travel + full.Freight);
+                var reserve=s.GetCityCashReserve(s.RestockReserveDays).Total;
+                Wallet(s, reserve+cheap.Price + full.Travel + full.Freight);
                 Assert.True(s.DispatchEmployeePurchase(id));
                 var items = s.EmployeePurchaseTrips.Single().Items;
                 Assert.AreEqual(1, items.Length); Assert.AreEqual("cpu0", items[0].PartId);
+                Assert.GreaterOrEqual(s.Ledger.Balance.Cents,reserve.Cents);
             }
         }
         [Test] public void Complete_NextDayEligibilityAndOrderSurviveJsonSave()

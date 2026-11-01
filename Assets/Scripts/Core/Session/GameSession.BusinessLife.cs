@@ -12,13 +12,13 @@ namespace PCShopSell.Core.Session
         private readonly List<CreatorState> _creators = Creators.All.Select(x=>new CreatorState {Id=x.Id,Followers=x.Audience,Ambition=x.Ambition,Resources=40}).ToList();
         public IReadOnlyList<CreatorState> CreatorPartners => _creators;
         public CreatorState Creator(string id) => _creators.Find(x=>x.Id==id);
-        public double CreatorTrafficMultiplier => 1 + _creators.Where(x=>x.CampaignUntilDay>Clock.Today.TotalDays).Sum(x=>Math.Min(.45,.08+x.Followers/200000.0)*(0.6+x.Resources/250.0));
+        public double CreatorTrafficMultiplier => CityCampaignTraffic(_focus);
         public Money CreatorFee(CreatorState c) => Money.FromYuan(Creators.Get(c.Id).Fee).Scale((.7+c.Followers/(double)Creators.Get(c.Id).Audience*.3)*(1-c.Relationship*.002));
         public string CreatorCampaignBlocker(CreatorState c)
         {
             if(!HasShop || !HasSmartphone) return "需要主店和智能手机";
             if(PlayerShop.Reputation<8) return "知名度达到 8";
-            if(_creators.Any(x=>x.CampaignUntilDay>Clock.Today.TotalDays)) return "已有推广进行中，结束后再合作";
+            if(_cityPromotions.Any(x=>x.ShopId==PlayerShopPlace.Id&&(x.State=="Running"||x.State=="Scheduled"))) return "这家门店已有推广进行中，结束后再合作";
             if(c.Resources<20) return "创作资源不足，先赞助一次设备";
             if(Ledger.Balance<CreatorFee(c)) return "推广费用不足";
             return null;
@@ -27,8 +27,10 @@ namespace PCShopSell.Core.Session
         {
             var c=Creator(id); if(c==null || IsGameOver) return false;
             string why=CreatorCampaignBlocker(c); if(why!=null) return Fail(why);
-            Ledger.ForceDebit(Clock.Today,"推广",CreatorFee(c),Creators.Get(id).Name+"七日合作");
-            c.CampaignUntilDay=Clock.Today.TotalDays+7; c.LastSalesCents=RetailAndBuildRevenueToday(); c.LastLost=PlayerShop.TodayLost; c.AttributedSalesCents=0; c.PoorDays=0;
+            var campaign=AddCityPromotion(id,PlayerShopPlace.Id,"online",CreatorFee(c),7*1440,
+                Math.Min(.35,Math.Min(.45,.08+c.Followers/200000.0)*(.6+c.Resources/250.0)),null,null);
+            if(campaign==null)return false;
+            c.CampaignShopId=PlayerShopPlace.Id;c.CampaignUntilDay=Clock.Today.TotalDays+7; c.LastSalesCents=CreatorShopRevenue(c,Clock.Today); c.LastLost=PlayerShop.TodayLost; c.AttributedSalesCents=0; c.PoorDays=0;
             Flags.Add("tutorial:creator");
             ApplyUpgrades(); Say("七日推广开始：客流增加，资源与服务表现会影响后续合作。经营总览记录期间营业额（包含自然客流，不等同推广净增收益）。"); return true;
         }
@@ -45,7 +47,7 @@ namespace PCShopSell.Core.Session
             foreach(var c in _creators)
             {
                 if(c.CampaignUntilDay<=now.Date.TotalDays) continue;
-                long sales=RetailAndBuildRevenueToday();
+                long sales=CreatorShopRevenue(c,now.Date);
                 if(sales>c.LastSalesCents) c.AttributedSalesCents+=sales-c.LastSalesCents;
                 c.LastSalesCents=sales;
             }
@@ -57,7 +59,7 @@ namespace PCShopSell.Core.Session
                 if(c.CampaignUntilDay>previous.TotalDays)
                 {
                     // 从账本读取昨日，避免 ShopSimulation 午夜重置 TodaySales 导致漏记。
-                    long sales=Ledger.Entries.Where(x=>x.Date==previous && x.Amount.IsPositive && (x.Category=="零售" || x.Category=="装机")).Sum(x=>x.Amount.Cents);
+                    long sales=CreatorShopRevenue(c,previous);
                     c.AttributedSalesCents+=Math.Max(0,sales-c.LastSalesCents);
                     c.LastSalesCents=0;
                     bool good=sales>=300000;
@@ -75,24 +77,11 @@ namespace PCShopSell.Core.Session
             ApplyUpgrades();
         }
         public long FundUnits {get;private set;}
+        private long CreatorShopRevenue(CreatorState creator,GameDate day) => Ledger.Entries.Where(e=>e.Date==day&&e.ShopId==(creator.CampaignShopId??MainShop.Place.Id)
+            &&e.Amount.IsPositive&&(e.Category=="零售"||e.Category=="装机")).Sum(e=>e.Amount.Cents);
         public Money FundUnitPrice => Money.FromCents((long)Math.Round(PartCatalog.All.Average(x=>Market.PriceOf(x).Cents/(double)x.BasePrice.Cents)*10000));
         public Money FundValue => FundUnitPrice*FundUnits;
-        public bool TradeFund(int units,bool buy)
-        {
-            if(IsGameOver || !HasSmartphone || units<=0 || units>10000) return false;
-            Money value=FundUnitPrice*units;
-            if(buy)
-            {
-                if(!Ledger.TryDebit(Clock.Today,"指数投资",value.Scale(1.005),"买入硬件景气指数（含 0.5% 手续费）")) return Fail("现金不足。");
-                FundUnits+=units;
-            }
-            else
-            {
-                if(FundUnits<units) return Fail("持有份额不足。");
-                FundUnits-=units; Ledger.Credit(Clock.Today,"指数赎回",value.Scale(.995),"卖出硬件景气指数（扣 0.5% 手续费）");
-            }
-            return true;
-        }
+        public bool TradeFund(int units,bool buy) => TradeCityInvestment("hardware", units, buy);
         public int HomeTier {get;private set;}
         public long HomePriceCents {get;private set;}
         public long HomeMortgageCents {get;private set;}
@@ -151,7 +140,7 @@ namespace PCShopSell.Core.Session
             _lastBusinessDay=today.TotalDays;
             if (_owned.Contains(VehicleKind.Car)) Ledger.ForceDebit(today,"交通",Money.FromYuan(40) * VehicleCount(VehicleKind.Car),"轿车日养护（含油费保险）");
             if (_owned.Contains(VehicleKind.Van)) Ledger.ForceDebit(today,"交通",Money.FromYuan(60) * VehicleCount(VehicleKind.Van),"货车日养护（含油费保险）");
-            SettleSupplierDebts(today.TotalDays); SettleVentures(today); SettleProperties(today); SettleHomeMortgage(today); SettleCreators(previous,today); SettleMcnAndRelationships(previous,today); RefreshEnterpriseOffer();
+            TickCityAssets(); SettleSupplierDebts(today.TotalDays); SettleVentures(today); SettleProperties(today); SettleHomeMortgage(today); SettleCreators(previous,today); SettleMcnAndRelationships(previous,today); RefreshEnterpriseOffer();
         }
         private void SaveBusiness(SaveData d)
         {

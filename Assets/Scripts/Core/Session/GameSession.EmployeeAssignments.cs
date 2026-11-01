@@ -75,6 +75,8 @@ namespace PCShopSell.Core.Session
         {
             var person = row.Person;
             var source = row.Shop;
+            if(source!=null&&dest!=null&&source!=dest&&person.OnDuty(Clock.Now))
+            { if(person.Schedule==null)person.Schedule=new EmployeeSchedule();person.Schedule.WorkTravelTarget=dest.Place.Id; }
             if (source == null) _idleEmployees.Remove(person);
             else
             {

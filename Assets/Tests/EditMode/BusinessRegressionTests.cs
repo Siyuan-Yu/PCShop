@@ -7,6 +7,7 @@ using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 using PCShopSell.Core.Shop;
+using PCShopSell.Core.Finance;
 using UnityEngine;
 
 namespace PCShopSell.Tests
@@ -161,20 +162,23 @@ namespace PCShopSell.Tests
         {
             using(var s=Make())
             {
-                var worth=s.NetWorth();Assert.True(s.BuyProperty("pc",true));Assert.AreEqual(worth,s.NetWorth());Assert.Zero(s.CurrentShopRent.Cents);
+                var worth=s.NetWorth();var purchase=s.PreviewCityPropertyPurchase("pc",true);Assert.True(s.BuyProperty("pc",true));Assert.AreEqual(worth-purchase.Fee+purchase.PrepaidCredit,s.NetWorth());Assert.Zero(s.CurrentShopRent.Cents);
                 var p=s.OwnedProperties.Single();long debt=p.MortgageCents;var cash=s.Ledger.Balance;
                 Midnight(s,30);Assert.AreEqual(debt-p.MonthlyPrincipalCents,p.MortgageCents);
                 Assert.AreEqual(cash-Money.FromCents(p.MonthlyPrincipalCents)-Money.FromCents(debt).Scale(.004)-Money.FromCents(p.PriceCents).Scale(.001)-s.CurrentHomeRent-s.HomeUtilities,s.Ledger.Balance);
                 using(var l=Reload(s)){Assert.Zero(l.CurrentShopRent.Cents);Assert.AreEqual(s.MortgageDebt,l.MortgageDebt);Assert.True(l.RepayMortgage("pc"));Assert.Zero(l.MortgageDebt.Cents);}
             }
         }
-        [Test] public void ClosingOwnedVentureKeepsProperty_AndStartsRentalIncome()
+        [Test] public void ClosingOwnedVentureKeepsProperty_AndRentalRequiresExplicitRegistration()
         {
             using(var s=Make())
             {
                 ListUnit(s);s.OpenVenture("tea","branch");Assert.True(s.BuyProperty("tea",false));Assert.True(s.CloseVenture("tea"));
                 Assert.NotNull(s.PropertyAt("tea"));Assert.False(s.IsVacant(s.City.GetPlace("tea")));Assert.False(s.Listings.Any(x=>x.PlaceId=="tea"));
-                var cash=s.Ledger.Balance;Midnight(s,1);Assert.Greater(s.Ledger.Balance.Cents,cash.Cents);Assert.True(s.SellProperty("tea"));Assert.Null(s.PropertyAt("tea"));
+                Assert.AreEqual("vacant",s.PropertyAt("tea").UseMode);Assert.True(s.SetCityPropertyRental("tea",true));
+                Midnight(s,30);Assert.True(s.Ledger.Entries.Any(e=>e.Category=="物业租金" && e.Date.TotalDays==30));
+                using(var l=Reload(s)){var count=l.Ledger.Entries.Count(e=>e.Category=="物业租金");l.Clock.Advance(1);Assert.AreEqual(count,l.Ledger.Entries.Count(e=>e.Category=="物业租金"));}
+                Assert.True(s.SellProperty("tea"));Assert.Null(s.PropertyAt("tea"));
             }
         }
         [Test] public void HomePurchaseAndSaleRetainFurniture_AndClearMortgage()
@@ -232,8 +236,14 @@ namespace PCShopSell.Tests
         {
             using(var s=Make())
             {
-                s.StartCreatorCampaign("momo");
-                s.Ledger.Credit(s.Clock.Today,"零售",Money.FromYuan(4000));s.Clock.Advance(1);
+                s.Ledger.Credit(s.Clock.Today,"零售",Money.FromYuan(1000),attribution:LedgerAttribution.ForShop("another-shop"));
+                s.Ledger.Credit(s.Clock.Today,"零售",Money.FromYuan(500),attribution:LedgerAttribution.ForShop(s.MainShop.Place.Id));
+                Assert.True(s.StartCreatorCampaign("momo"));
+                Assert.AreEqual(0,s.Creator("momo").AttributedSalesCents,"Pre-campaign sales are not attributable");
+                s.Ledger.Credit(s.Clock.Today,"零售",Money.FromYuan(9000),attribution:LedgerAttribution.ForShop("another-shop"));
+                s.Ledger.Credit(s.Clock.Today,"零售",Money.FromYuan(7000),"old unassigned sale");
+                s.Ledger.Credit(s.Clock.Today,"贷款到账",Money.FromYuan(50000));
+                s.Ledger.Credit(s.Clock.Today,"零售",Money.FromYuan(4000),attribution:LedgerAttribution.ForShop(s.MainShop.Place.Id));s.Clock.Advance(1);
                 Assert.AreEqual(400000,s.Creator("momo").AttributedSalesCents);
                 Midnight(s,1);Assert.AreEqual(400000,s.Creator("momo").AttributedSalesCents);
                 Assert.Greater(s.Creator("momo").Relationship,0);
@@ -299,8 +309,15 @@ namespace PCShopSell.Tests
             using(var s=Make())
             {
                 var c=s.Creator("momo");c.Relationship=40;c.Affection=60;
+                Assert.False(s.ResolveCreatorStory(c.Id,true),"Private stories cannot be resolved remotely from the agency");
+                Assert.AreEqual(0,c.StoryStage);
+                var person=s.CityPersonState(c.Id);Assert.NotNull(person);Assert.NotNull(person.LocationPlaceId);
+                GameSessionTests.Teleport(s,person.LocationPlaceId);
+                Assert.True(s.CitySamePlace(c.Id),"The same persistent creator is physically present before the conversation");
                 Assert.True(s.ResolveCreatorStory(c.Id,true));Assert.True(s.ResolveCreatorStory(c.Id,true));
-                Assert.True(s.StartRomance(c.Id));Assert.False(s.StartRomance("ake"));
+                Assert.True(s.StartRomance(c.Id));
+                s.Creator("ake").Affection=80;s.Creator("ake").StoryStage=2;
+                Assert.False(s.StartRomance("ake"),"A second otherwise eligible relationship cannot replace the existing one");
                 Assert.True(s.FoundMcn());Assert.True(s.SignMcnCreator(c.Id));
                 using(var l=Reload(s))
                 {

@@ -98,7 +98,9 @@ namespace PCShopSell.Tests
                 s.Player.Hunger = 30; s.Player.Mood = 50;
                 Finish(s);
                 Assert.True(s.WorkContract.Days[0].LunchServed);
-                Assert.AreEqual(42, s.Player.Mood);
+                double expectedWorkMood=50-s.WorkContract.MoodCost;
+                double maximumClimateMoodCost=.15*(s.WorkContract.ShiftEnd-s.WorkContract.ShiftStart)/60.0;
+                Assert.That(s.Player.Mood,Is.InRange(expectedWorkMood-maximumClimateMoodCost,expectedWorkMood),"固定工作疲劳保留，明显不适最多每小时额外0.15心情");
                 Assert.AreEqual(94, s.Player.Health, 0.01);
                 Assert.Greater(s.Player.Hunger, 0);
                 Assert.AreEqual(150, s.WorkContract.EarnedYuan);
@@ -149,10 +151,20 @@ namespace PCShopSell.Tests
                 Assert.AreNotSame(s.WorkContract.Days[0], data.playerWork.Days[0]);
                 using (var loaded = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(data))))
                 {
+                      loaded.EventsEnabled=false;
                     Assert.True(loaded.IsWorking); Assert.False(loaded.CanSteer);
+                      Finish(s);
                     Finish(loaded); Assert.AreEqual(132, loaded.WorkContract.EarnedYuan);
-                    double mood = loaded.Player.Mood; loaded.AdvanceClock(2);
-                    Assert.AreEqual(132, loaded.WorkContract.EarnedYuan); Assert.AreEqual(mood, loaded.Player.Mood);
+                      Assert.AreEqual(s.Player.Mood,loaded.Player.Mood,1e-10,"读档后半班不能重复或漏掉体感/工作心情");
+                      Assert.AreEqual(s.Player.Energy,loaded.Player.Energy,1e-10);
+                      Assert.AreEqual(s.Player.Health,loaded.Player.Health,1e-10);
+                      long cash=loaded.Ledger.Balance.Cents;
+                      s.AdvanceClock(2);loaded.AdvanceClock(2);
+                      Assert.AreEqual(132, loaded.WorkContract.EarnedYuan);
+                      Assert.AreEqual(cash,loaded.Ledger.Balance.Cents,"后续时钟不重复发工资");
+                      Assert.AreEqual(s.Player.Mood,loaded.Player.Mood,1e-10,"持续气候也必须与未读档会话逐分相同");
+                      Assert.AreEqual(s.Player.Energy,loaded.Player.Energy,1e-10);
+                      Assert.AreEqual(s.Player.Health,loaded.Player.Health,1e-10);
                 }
             }
         }
@@ -176,13 +188,16 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void SigningWithoutAttendingDoesNotGiveUnlimitedBankruptcyProtection()
+        public void SigningWithoutAttendingKeepsDebtAndEarnsNoWagesButLifeContinues()
         {
             using (var s = Make())
             {
                 s.Ledger.ForceDebit(s.Clock.Today, "测试", Money.FromYuan(10), "无出勤"); s.SignPlayerWork(s.CurrentPlace); s.Leave();
                 for (int day = 0; day < 3; day++) { s.Clock.Restore(new GameDate(day), 23 * 60 + 59); s.AdvanceClock(1); }
-                Assert.True(s.IsGameOver);
+                  Assert.False(s.IsGameOver,"v3经济失败可继续，不依赖签空合同取得保护");
+                  Assert.Less(s.Ledger.Balance.Cents,0,"未出勤不能凭空消掉欠款");
+                  Assert.Zero(s.WorkContract.EarnedYuan,"未出勤不生成工资");
+                  Assert.True(s.WorkContract.Days.Any(d=>d.State==WorkDayState.Absent));
                 Assert.False(s.IsWorking);
             }
         }
@@ -287,7 +302,7 @@ namespace PCShopSell.Tests
                 GameSessionTests.Teleport(s, "flat"); Assert.True(s.IsSleepTime);
                 Assert.True(s.Sleep()); Assert.AreEqual(14 * 60, s.Clock.MinuteOfDay);
                 s.Clock.Restore(s.Clock.Today, 21 * 60 + 30);
-                Assert.False(s.Sleep(), "开工前不足1小时不再安排长觉");
+                Assert.True(s.Sleep(), "允许自行决定白天或夜间睡眠，不再按时刻阻止睡觉");
             }
         }
 

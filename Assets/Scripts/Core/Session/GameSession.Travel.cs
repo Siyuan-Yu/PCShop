@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
@@ -105,7 +105,7 @@ namespace PCShopSell.Core.Session
             else if (CurrentPlace != null && CurrentPlace.NodeId == PlayerNodeId)
             {
                 start = StandOf(CurrentPlace);
-                scale = 1;
+                scale = City.TravelDistanceScale;
                 from = PlayerNodeId;
             }
             else if (OffNode)
@@ -117,28 +117,29 @@ namespace PCShopSell.Core.Session
             else
             {
                 start = City.ViewPosition(PlayerNodeId);
-                scale = 1;
+                scale = City.TravelDistanceScale;
                 from = PlayerNodeId;
             }
 
             PathResult path = Pathfinder.FindPath(City.Map, from, targetNode);
             if (!path.Found) return null;
-            meters = path.Distance;
-
             var vehicle = CurrentVehicle;
-            return new Trip(City, start, scale, path.NodeIds, vehicle, n => LaneOf(n, vehicle.Kind), end);
+            var trip = new Trip(City, start, scale, path.NodeIds, vehicle, n => LaneOf(n, vehicle.Kind), end);
+            meters = trip.TotalGameMeters;
+            return trip;
         }
 
         /// <summary>取消出行，停在最近经过的节点。</summary>
         public void StopTrip()
         {
-            Trip = null;
+            if(Trip!=null) {var pos=Trip.Position;Trip=null;_free=pos;PlayerNodeId=City.NearestNode(pos.X,pos.Y);}
+            CancelCityTravel();
         }
 
         private string StepTrip(double scaledSeconds)
         {
             _passed.Clear();
-            Trip.Step(Trip.Vehicle.VisualSpeed * scaledSeconds, _passed);
+            Trip.Step(CityTravelTiming.ScaledSecondsMeters(Trip.Vehicle, scaledSeconds, Time.SecondsPerMinuteAt1x), _passed);
             foreach (string n in _passed) PlayerNodeId = n;
             bool arrived = Trip.Arrived;
             string target = Trip.TargetNode;
@@ -201,7 +202,7 @@ namespace PCShopSell.Core.Session
 
         // ---------- 车行 ----------
 
-        public bool BuyVehicle(VehicleKind kind)
+        public bool BuyVehicle(VehicleKind kind,bool notify=true)
         {
             if (CurrentPlace == null || CurrentPlace.Kind != PlaceKind.Dealer) return Fail("要在车行买。");
             if (!IsDealerOpen) return Fail("车行 9:00–19:00 营业。");
@@ -210,7 +211,7 @@ namespace PCShopSell.Core.Session
             // 可购买多台同类车，分别分配给老板和进货员。
             if (!Ledger.TryDebit(Clock.Today, "载具", v.Price, v.Name)) return Fail($"{v.Name}要 {v.Price}，钱不够。");
             _owned.Add(kind);
-            Show("买到了" + v.Name, v.Illegal
+            if(notify)Show("买到了" + v.Name, v.Illegal
                 ? $"{v.Name}在城里不能上路——巡逻交警看到就会追，追上罚款，还可能扣车。"
                 : kind == VehicleKind.Car ? "商务出行，拥有后魅力 +2；日养护费 ¥40（含油费、保险）。"
                 : kind == VehicleKind.Van ? "合法运货，容量 80 格；日养护费 ¥60（含油费、保险）。" : "比走路快三倍，能带一点货。");

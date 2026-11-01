@@ -34,10 +34,18 @@ namespace PCShopSell.Core.Session
         public bool SetEmployeeShift(string id, int start, int end)
         {
             var row = FindEmployee(id);
-            if (row == null || IsGameOver || EmployeeTrip(id) != null) return Fail("员工正在进货或不可安排。");
-            if (!((start == 540 && (end == 1020 || end == 1260)) || (start == 780 && end == 1260))) return false;
-            row.Person.ShiftStart = start;
-            row.Person.ShiftEnd = end;
+            if (row == null || IsGameOver) return Fail("员工不存在或不可安排。");
+            if(start<0||start>=1440||end<0||end>=1440||start==end) return Fail("请输入有效的HH:mm；班次必须大于0且小于24小时，上下班不能相同。");
+            var e=row.Person;long now=Clock.Now.TotalMinutes;
+            PrepareEmployeeShift(e,now);
+            var schedule=e.Schedule;
+            if(e.TryShift(now,out long activeStart,out long activeEnd))
+            {
+                PayrollDay(e,activeStart,activeEnd);
+                schedule.PendingAt=activeEnd;schedule.PendingStart=start;schedule.PendingEnd=end;
+                Say("已保存下次排班；当前班次时间、日薪和已发生工时保持不变。");
+            }
+            else {e.ShiftStart=start;e.ShiftEnd=end;schedule.PendingAt=-1;schedule.NextNotBefore=now;schedule.ActiveStart=-1;schedule.ActiveEnd=-1;}
             return true;
         }
 

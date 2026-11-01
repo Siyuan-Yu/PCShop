@@ -50,22 +50,19 @@ namespace PCShopSell.Core.Session
         public string CreatorOutingBlocker(CreatorState c)
         {
             if(!HasSmartphone)return "需要智能手机联系";
-            if(c.Relationship<20)return "商务交情达到 20 后才愿意私下见面";
+            if(c.Relationship<20&&Relation(c.Id)<10)return "先当面认识并熟悉这位创作者";
             if(c.LastOutingDay==Clock.Today.TotalDays)return "今天已经见过面";
             if(Trip!=null || PendingEvent!=null)return "先结束出行或当前事件";
-            if(Clock.MinuteOfDay<9*60 || Clock.MinuteOfDay>=20*60)return "见面时间 9:00–20:00，需留出两小时";
-            if(Ledger.Balance<Money.FromYuan(180))return "请客需要 ¥180";
+            if(CityActivities.Any(a=>a.Active&&a.Participants.Any(p=>p.PersonId==c.Id)))return "已有见面日程，请从城市日程赴约";
+            if(Ledger.Balance<Money.FromYuan(100))return "预计家常饭费用 ¥100，到场开始时支付";
             return null;
         }
         public bool InviteCreatorPrivately(string id)
         {
             var c=Creator(id);if(c==null || IsGameOver)return false;
             string why=CreatorOutingBlocker(c);if(why!=null)return Fail(why);
-            Ledger.ForceDebit(Clock.Today,"生活",Money.FromYuan(180),"与"+Creators.Get(id).Name+"见面");
-            c.LastOutingDay=Clock.Today.TotalDays;c.Affection=Math.Min(100,c.Affection+8+Math.Min(4,EffectiveCharm/10));
-            c.Relationship=Math.Min(100,c.Relationship+2);
-            AdvanceClock(120);
-            Say(Creators.Get(id).Name+"与你吃饭聊了会儿工作以外的事。私人好感增长；商务关系与私人关系分别记录。");return true;
+            string result=ScheduleLegacyCityMeeting(id,"dinner","legacy-creator-private:"+id+":"+Clock.Today.TotalDays);
+            Say(result);return CityActivities.Any(a=>a.SourceId!=null&&a.SourceId.StartsWith("legacy-creator-private:"+id+":"+Clock.Today.TotalDays)&&a.Active);
         }
         public string CreatorStory(CreatorState c)
         {
@@ -89,6 +86,7 @@ namespace PCShopSell.Core.Session
         public bool ResolveCreatorStory(string id,bool respectChoice)
         {
             var c=Creator(id);if(c==null || IsGameOver || CreatorStory(c)==null)return false;
+            if(!CitySamePlace(id))return Fail("需要实际见面才能聊这段心事，可先在城市日程预约见面。");
             string memory="creator-story:"+id+":"+c.StoryStage+":"+(respectChoice ? "respect" : "growth");
             if(!Flags.Add(memory))return false;
             c.StoryStage++;
@@ -96,7 +94,7 @@ namespace PCShopSell.Core.Session
             else {c.Followers=Math.Min(2000000,(int)(c.Followers*1.05));c.Affection=Math.Max(0,c.Affection-4);c.Resources=Math.Max(0,c.Resources-10);}
             Say(respectChoice ? "你支持对方自己做选择，这次谈话让关系更近了。" : "你把增长机会放在前面。账号有了更多曝光，但对方觉得自己的顾虑没被理解。");return true;
         }
-        public string RomanceBlocker(CreatorState c) => RomanceId!=null ? "已有伴侣，先认真处理现有关系" : c.Affection<60 ? "私人好感达到 60" : c.StoryStage<2 ? "先完成两段私人交谈" : BusinessStanding<c.Ambition*.5 ? "你们对未来生活的预期还不一致" : null;
+        public string RomanceBlocker(CreatorState c) => RomanceId!=null ? "已有伴侣，先认真处理现有关系" : c.Affection<60 ? "私人好感达到 60" : c.StoryStage<2 ? "先完成两段私人交谈" : !CitySamePlace(c.Id)?"需要实际见面表达个人关系选择":null;
         public bool StartRomance(string id)
         {
             var c=Creator(id);if(c==null || IsGameOver)return false;
@@ -106,7 +104,9 @@ namespace PCShopSell.Core.Session
         public bool EndRomance()
         {
             if(RomanceId==null || IsGameOver)return false;
-            var c=Creator(RomanceId);c.Affection=Math.Max(0,c.Affection-20);RomanceId=null;
+            var c=Creator(RomanceId);if(c!=null)c.Affection=Math.Max(0,c.Affection-20);
+            if(RomanceId=="life_creator"){var p=CityStory("romance");p.Branch="friends";p.Stage=Math.Max(4,p.Stage);}
+            RomanceId=null;
             Say("你们结束了私人关系，已经签署的商务合同继续按约执行。");return true;
         }
         private void SettleMcnAndRelationships(GameDate previous,GameDate today)
@@ -124,12 +124,7 @@ namespace PCShopSell.Core.Session
                     if(c.McnUntilDay==today.TotalDays)Say(Creators.Get(c.Id).Name+"的 MCN 合约到期，可商谈续约。");
                 }
             }
-            foreach(var c in _creators)
-            {
-                if(today.TotalDays-c.LastOutingDay>10)c.Affection=Math.Max(0,c.Affection-1);
-                if(RomanceId==c.Id && c.Affection<20)
-                {RomanceId=null;Say(Creators.Get(c.Id).Name+"觉得你们很久没有真正相处，提出结束私人关系。商务合约继续履行。");}
-            }
+            // Personal relationships do not require compulsory daily maintenance or random breakup rolls.
         }
     }
 }

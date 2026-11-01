@@ -365,6 +365,90 @@
       "zh": "开始经营",
       "ja": "経営を始める",
       "en": "Begin Your Story"
+    },
+    {
+      "key": "display",
+      "zh": "显示",
+      "ja": "画面",
+      "en": "Display"
+    },
+    {
+      "key": "display_mode",
+      "zh": "显示模式",
+      "ja": "画面モード",
+      "en": "Display mode"
+    },
+    {
+      "key": "display_windowed",
+      "zh": "窗口",
+      "ja": "ウィンドウ",
+      "en": "Windowed"
+    },
+    {
+      "key": "display_borderless",
+      "zh": "无边框全屏",
+      "ja": "ボーダーレス",
+      "en": "Borderless fullscreen"
+    },
+    {
+      "key": "display_exclusive",
+      "zh": "独占全屏",
+      "ja": "フルスクリーン",
+      "en": "Exclusive fullscreen"
+    },
+    {
+      "key": "display_resolution",
+      "zh": "分辨率",
+      "ja": "解像度",
+      "en": "Resolution"
+    },
+    {
+      "key": "display_current",
+      "zh": "当前实际：{0}",
+      "ja": "現在：{0}",
+      "en": "Current: {0}"
+    },
+    {
+      "key": "display_hint",
+      "zh": "窗口可拖动边缘调整大小；无边框使用桌面分辨率。",
+      "ja": "ウィンドウはサイズ変更可能。ボーダーレスはデスクトップ解像度。",
+      "en": "Windows are resizable; borderless uses desktop resolution."
+    },
+    {
+      "key": "display_apply",
+      "zh": "应用显示设置",
+      "ja": "適用",
+      "en": "Apply display settings"
+    },
+    {
+      "key": "display_preview",
+      "zh": "保留显示设置？",
+      "ja": "設定を保存しますか？",
+      "en": "Keep display settings?"
+    },
+    {
+      "key": "display_countdown",
+      "zh": "请在{0}秒内确认，否则自动恢复。",
+      "ja": "{0}秒後に元の設定へ戻ります。",
+      "en": "Confirm within {0} seconds or settings will revert."
+    },
+    {
+      "key": "display_keep",
+      "zh": "保留",
+      "ja": "保存",
+      "en": "Keep"
+    },
+    {
+      "key": "display_restore",
+      "zh": "恢复原设置",
+      "ja": "元に戻す",
+      "en": "Revert"
+    },
+    {
+      "key": "display_saved",
+      "zh": "显示设置已保存",
+      "ja": "設定を保存しました",
+      "en": "Display settings saved"
     }
   ]
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Finance;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Time;
@@ -11,11 +12,9 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         private static KeyValuePair<string, int>[] SaveRetailCounts(PCShopSell.Core.Shop.ShopSimulation shop) =>
-            shop.Stock.GoodsLines().Concat(shop.Queue.Where(c => c.GoodsId != null).Select(c => new KeyValuePair<string, int>(c.GoodsId, 1)))
-                .GroupBy(p => p.Key).Select(g => new KeyValuePair<string, int>(g.Key, g.Sum(p => p.Value))).ToArray();
+            shop.Stock.GoodsLines().ToArray();
         private static GoodsLot[] SaveRetailLots(PCShopSell.Core.Shop.ShopSimulation shop) =>
-            shop.Stock.GoodsLots.Select(l => l.Copy()).Concat(shop.Queue.Where(c => c.GoodsId != null && c.GoodsExpiryDay >= 0)
-                .Select(c => new GoodsLot { Id = c.GoodsId, Count = 1, ExpireDay = c.GoodsExpiryDay, Chilled = c.GoodsChilled })).ToArray();
+            shop.Stock.GoodsLots.Select(l => l.Copy()).ToArray();
         public bool OtherRetailShopsUnlocked => HasShop && Clock.Today.TotalDays >= 14;
         public string PendingRetailKind { get; private set; } = "computer";
         public string RetailKind => _focus.RetailKind;
@@ -35,18 +34,32 @@ namespace PCShopSell.Core.Session
             else if (newShop) { _focus.RetailKind = kind; _focus.Sim.RetailKind = kind; }
             return true;
         }
-        public bool SetRetailKind(string kind)
+        public bool SetRetailKind(string kind) => SetShopMainCategory(kind);
+        public bool SetShopMainCategory(string kind)
         {
-            if (!InPlayerShop || _focus == MainShop) return Fail("主店保留电脑店经营，其他类型请在分店选择。");
-            string why = RetailTypeBlocker(kind);
-            if (why != null) return Fail(why);
-            if (!PlayerShop.Stock.IsEmpty || PlayerShop.Queue.Count > 0 || PlayerShop.Orders.Count > 0 || PlayerShop.DisplayPcs.Count > 0 || IncomingShopSpace > 0)
-                return Fail("更换类型前请清空库存、展示机、订单和在途货物。");
-            if (!BeginRenovation()) return false;
-            PlayerShop.ClearCustomers();
-            _focus.RetailKind = kind; PlayerShop.RetailKind = kind;
-            Say("这家店改为" + RetailShopTypes.Name(kind) + "，请按新类型设置货架，明天恢复营业。");
-            return true;
+            if(!InPlayerShop || !RetailShopTypes.All.Contains(kind))return Fail("请在自己的店里选择主售品类。");
+            Flags.Add("shop:main-category:"+_focus.Place.Id);
+            if(_focus.RetailKind!=kind)PlayerShop.ClearCustomers();
+            _focus.RetailKind=kind;PlayerShop.RetailKind=kind;
+            ApplyShelfCapacity();
+            Say("本店主售已改为"+RetailShopTypes.Name(kind)+"，顾客将按此品类进店选购。");return true;
+        }
+        private void MigrateStoreMainCategories()
+        {
+            foreach(var shop in _shops.Where(s=>s.Rented))
+            {
+                if(Flags.Contains("shop:main-category:"+shop.Place.Id)) {shop.Sim.RetailKind=shop.RetailKind;continue;}
+                if(shop.RetailKind!="computer"){shop.Sim.RetailKind=shop.RetailKind;continue;}
+                var kinds=shop.Layout.Where(p=>FurnitureCatalog.Get(p.Id)?.Fixture==FixtureKind.Shelf)
+                    .Select(p=>ShelfKinds.Get(p.Item)).Where(k=>k!=null).ToArray();
+                if(kinds.Length==0 || kinds.Any(k=>k.IsParts))continue;
+                var candidates=RetailShopTypes.All.Where(type=>type!="computer" && kinds.All(k=>k.GiftIds.All(id=>RetailShopTypes.Sells(type,id)))).ToArray();
+                if(candidates.Length!=1)continue;
+                string inferred=candidates[0];
+                if(shop.Sim.Stock.GoodsLines().Where(line=>RetailShopTypes.Sells(inferred,line.Key)).Sum(line=>line.Value)<=0)continue;
+                shop.Sim.ClearCustomers();shop.RetailKind=inferred;shop.Sim.RetailKind=inferred;
+                Flags.Add("shop:main-category:"+shop.Place.Id);
+            }
         }
         private int RetailCount(Backpack bag, GiftDef def) => def == null ? 0 : def.IngredientId != null ? bag.Food.Ingredient.Where(b => b.Id == def.IngredientId).Sum(b => b.Count)
             : def.MealId != null ? bag.Food.Packed.Where(b => b.Id == def.Id).Sum(b => b.Count)
@@ -70,29 +83,35 @@ namespace PCShopSell.Core.Session
             return new FoodBatch { Id = def.Id, Count = 1, ExpireDay = -1 };
         }
         public bool HasRetailWholesale(Place source) => source != null && source.Kind == PlaceKind.Shop && !IsMyShop(source)
-            && !IsVacant(source) && VentureAt(source.Id) == null && Gifts.All.Any(g => g.SoldAt == source.Business);
+            && !IsVacant(source) && VentureAt(source.Id) == null && Gifts.All.Any(g => CityRetailGoodsAvailable(source, g));
         public bool BuyRetailWholesale(string sourceId, string id, int count, bool toBag, string shopId)
         {
             if (IsGameOver || IsWorking || !City.HasPlace(sourceId)) return false;
             var source = City.GetPlace(sourceId); var def = Gifts.Get(id);
-            if (CurrentPlace != source || !HasRetailWholesale(source) || !IsPlaceOpen(source) || def == null || def.SoldAt != source.Business || count < 1 || count > 100)
+            if (CurrentPlace != source || !HasRetailWholesale(source) || !IsPlaceOpen(source) || !CityRetailGoodsAvailable(source, def) || count < 1 || count > 100)
                 return Fail("请到对应货源营业时采购，单项数量为 1–100。");
-            Money cost = def.WholesalePrice * count;
+            if (!_retailCartBatch && count < CitySupplierMinimum(source.Id)) return Fail("该货源当前每款至少" + CitySupplierMinimum(source.Id) + "件起订，可在市场变化面板选择小批次合作。 ");
+            if (count > CitySupplierRemaining(source.Id, id)) return Fail("该商品本日供货配额只剩" + CitySupplierRemaining(source.Id, id) + "件，可换其他来源。 ");
+            Money cost = CityRetailWholesalePrice(source, def) * count;
             int expiry = def.ShelfDays > 0 ? Clock.Today.TotalDays + def.ShelfDays : -1;
             if (toBag)
             {
                 if (!CanCarry(def.WeightKg * count)) return false;
-                if (!Ledger.TryDebit(Clock.Today, "进货", cost, source.Name + "批发 " + def.Name + "×" + count)) return Fail("现金不足。");
+                if (!Ledger.TryDebit(Clock.Today, "进货", cost, source.Name + "批发 " + def.Name + "×" + count,
+                    LedgerAttribution.ForShop(null, transactionKind: "采购").Product(id, count, CityRetailWholesalePrice(source, def).Cents))) return Fail("现金不足。");
                 AddRetailToBag(Backpack, def, count, expiry); ApplyCargoLimit();
+                RecordCitySupplierPurchase(source.Id, id, count);
                 Say(def.Name + "×" + count + "已放入背包，可带到自己的店里上架。"); return true;
             }
             var dest = ShopAt(shopId);
-            if (dest == null) return Fail("请选择收货店铺。");
-            double free = 0;
-            WithShop(dest, () => free = Math.Max(0, PlayerShop.Stock.FreeSpace - IncomingShopSpace));
+            if (dest == null && !_retailCartBatch) return Fail("请选择收货店铺。");
+            double free = double.PositiveInfinity;
+            if(dest!=null)WithShop(dest, () => free = Math.Max(0, PlayerShop.Stock.FreeSpace - IncomingShopSpace));
             if (Stock.GoodsSpace(id, count) > free + 1e-9) return Fail("收货店的仓储空间不足，请减少数量。");
-            return Ship(dest, "进货", cost, source.Name + "批发 " + def.Name + "×" + count,
+            bool sent = Ship(dest, "进货", cost, source.Name + "批发 " + def.Name + "×" + count,
                 new CourierItem { Kind = CourierItemKind.Goods, Id = id, Count = count, ExpireDay = expiry }, "买了");
+            if (sent) RecordCitySupplierPurchase(source.Id, id, count);
+            return sent;
         }
         public string GoodsExpiryText(string id)
         {

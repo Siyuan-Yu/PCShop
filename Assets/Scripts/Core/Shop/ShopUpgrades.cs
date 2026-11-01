@@ -71,7 +71,7 @@ namespace PCShopSell.Core.Shop
             new ShopUpgradeDef(Shelf2, "货架扩容 II", "库存容量再 +20 格。", 2000, Shelf1, 0, false),
             new ShopUpgradeDef(Shelf3, "货架扩容 III", "库存容量再 +30 格。", 3500, Shelf2, 0, false),
             new ShopUpgradeDef(Sign, "招牌灯箱", "夜里也亮的招牌，客流约 +15%。", 900, soldAt: FurnitureMall),
-            new ShopUpgradeDef(AirCon, "空调", "顾客排队更有耐心（多等 5 分钟才走）。", 1800, soldAt: FurnitureMall),
+            new ShopUpgradeDef(AirCon, "冷暖空调", "安装25㎡冷暖机；实际运行且舒适时顾客最多多等5分钟，实际用电月结。", 1800, soldAt: FurnitureMall),
             new ShopUpgradeDef(Cctv, "监控摄像头", "小偷不敢来了。", 600, soldAt: PhoneShop),
         };
 

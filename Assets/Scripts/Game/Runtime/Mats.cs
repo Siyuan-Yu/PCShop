@@ -284,7 +284,7 @@ namespace PCShopSell.Game.Runtime
         /// 按衣服给 Figure 换装：T 恤（橙）/ 衬衫（白）/ 夹克（棕）/ 西装（深灰 + 领带），
         /// 同时给所有小人统一加上裤子和头发。可以反复调用，旧的衣着配件会被换掉。
         /// </summary>
-        public static void Dress(GameObject figure, string outfitId)
+        public static void Dress(GameObject figure, string outfitId, Color? identityColor = null)
         {
             var motion = figure.GetComponent<FigureMotion>();
             Transform t = motion.Torso;
@@ -300,6 +300,7 @@ namespace PCShopSell.Game.Runtime
                 Kill.It(c.gameObject);
             }
 
+            var outfit=PCShopSell.Core.Session.Outfits.Get(outfitId)??PCShopSell.Core.Session.Outfits.Get("tee");
             Color top, pants;
             switch (outfitId)
             {
@@ -308,14 +309,26 @@ namespace PCShopSell.Game.Runtime
                 case "suit": top = new Color(0.17f, 0.19f, 0.26f); pants = new Color(0.14f, 0.15f, 0.20f); break;
                 default: top = ArtDirection.Clay; pants = new Color(0.30f, 0.35f, 0.45f); break;
             }
+            top=identityColor??ArtDirection.Hex(outfit.ColorHex);
             body.GetComponent<Renderer>().sharedMaterial = Mats.Lit(top);
+            body.localScale=new Vector3(outfit.VisualPreset=="winter"?.48f:.39f,.57f,outfit.VisualPreset=="winter"?.36f:.27f);
 
             void Add(string n, Vector3 p, Vector3 sz, Color c) => Box(t, "Outfit_" + n, p * s, sz * s, Mats.Lit(c));
             motion.RecolorLimbs(Mats.Lit(pants), Mats.Lit(top));
-
-            switch (outfitId)
+            bool shortCut=outfit.VisualPreset=="short"||outfit.VisualPreset=="sport";
+            motion.SetClothingCut(shortCut,shortCut,outfit.VisualPreset=="winter",head.GetComponent<Renderer>().sharedMaterial);
+            if(outfit.VisualPreset=="winter")
             {
-                case "shirt":
+                Add("CoatHem",new Vector3(0,.50f,0),new Vector3(.49f,.20f,.36f),top);
+                Add("PaddedCollar",new Vector3(0,1.06f,0),new Vector3(.35f,.13f,.32f),top*.8f);
+                Add("WinterZip",new Vector3(0,.78f,.19f),new Vector3(.025f,.58f,.02f),ArtDirection.Cream);
+            }
+            if(outfit.VisualPreset=="sport"||outfit.VisualPreset=="sport_long")
+                Add("SportStripe",new Vector3(-.10f,.80f,.145f),new Vector3(.04f,.46f,.02f),ArtDirection.Cream);
+
+            switch (outfit.VisualPreset)
+            {
+                case "long":
                     Add("Collar", new Vector3(0, 1.0f, 0.0f), new Vector3(0.26f, 0.06f, 0.2f), Color.white);
                     Add("Buttons", new Vector3(0, 0.7f, 0.17f), new Vector3(0.03f, 0.5f, 0.02f), new Color(0.7f, 0.72f, 0.78f));
                     break;
@@ -324,7 +337,7 @@ namespace PCShopSell.Game.Runtime
                     Add("Zip", new Vector3(0, 0.66f, 0.17f), new Vector3(0.03f, 0.6f, 0.02f), new Color(0.8f, 0.78f, 0.7f));
                     Add("Pocket", new Vector3(0.12f, 0.45f, 0.14f), new Vector3(0.1f, 0.12f, 0.03f), new Color(0.28f, 0.2f, 0.13f));
                     break;
-                case "suit":
+                case "formal":
                     Add("Shirt", new Vector3(0, 0.82f, 0.16f), new Vector3(0.11f, 0.34f, 0.02f), Color.white);
                     Add("Tie", new Vector3(0, 0.74f, 0.175f), new Vector3(0.05f, 0.36f, 0.02f), new Color(0.75f, 0.12f, 0.15f));
                     Add("LapelL", new Vector3(-0.08f, 0.8f, 0.165f), new Vector3(0.05f, 0.34f, 0.02f), new Color(0.1f, 0.11f, 0.15f));

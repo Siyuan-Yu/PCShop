@@ -19,6 +19,9 @@ namespace PCShopSell.Game.UI
         public void OnEnteredPlace(Place p)
         {
             if (S.IsWorking) { UpdateWorkScreen(); return; }
+            if(p.Business!=null&&p.Business.StartsWith("venue_")||S.IsCityActivityVenue(p)&&S.CityActivities.Any(a=>a.Active&&a.VenueId==p.Id)){OpenCityVenue(p);return;}
+            if(IsCarryStore(p)){OpenPlaceWindow(p,BuildCarryStore,1120,960);return;}
+            if(!S.IsMyShop(p)&&(p.Id=="shop02"||p.Id=="clothing_boutique")){OpenCityClothingShop(p);return;}
             switch (p.Kind)
             {
                 case PlaceKind.Shop when S.IsMyShop(p):
@@ -32,7 +35,7 @@ namespace PCShopSell.Game.UI
                 case PlaceKind.Home:
                     Toast("回到出租屋了。走近床、衣柜、电饭锅、纸箱或门，头顶出现提示时按 F；看房间信息点右上角“我的”。");
                     break;
-                case PlaceKind.Shop when p.Business == GameSession.FastFoodBusiness && !S.IsVacant(p) && S.VentureAt(p.Id) == null && S.PropertyAt(p.Id) == null:
+                case PlaceKind.Shop when p.Business == GameSession.FastFoodBusiness && !S.IsVacant(p) && S.VentureAt(p.Id) == null && !S.IsPlayerPropertyOccupied(p.Id):
                     OpenPlaceWindow(p, BuildFastFood, 1080, 850);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.MallBusiness:
@@ -57,12 +60,13 @@ namespace PCShopSell.Game.UI
                     OpenPlaceWindow(p, BuildStation);
                     break;
                 default:
-                    OpenPlaceWindow(p, BuildNeighbour);
+                    if(S.HasRetailWholesale(p))OpenPlaceWindow(p,BuildRetailWholesale,1120,940);
+                    else OpenPlaceWindow(p, BuildNeighbour);
                     break;
             }
         }
 
-        private void OpenPlaceWindow(Place p, System.Action<Window, Place> build, float w = 640, float h = 520)
+        private void OpenPlaceWindow(Place p, System.Action<Window, Place> build, float w = 640, float h = 520, bool holds = true, bool leaveOnClose = true)
         {
             OpenWindow(S.PlaceTitle(p), w, h, win =>
             {
@@ -72,8 +76,9 @@ namespace PCShopSell.Game.UI
                     return;
                 }
                 BuildPlayerWorkEntry(win.Content, p, win);
-                if (S.HasRetailWholesale(p)) Ui.Size(Ui.Button(win.Content, "批发进货（可供自己店铺销售）", () => OpenRetailWholesale(p), 18, Ui.ButtonHot), -1, 40);
-                RectTransform frame = p.Kind == PlaceKind.Agency || S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null ? null : BuildRosterFrame(win, p, h - 170);
+                if(p.Kind==PlaceKind.Agency)Ui.Size(Ui.Button(win.Content,"购买 / 我的具体物业",OpenCityProperties,18,Ui.ButtonHot),-1,42);
+                if (S.HasRetailWholesale(p) && build!=BuildRetailWholesale && (p.Business==GameSession.FarmBusiness || p.Business==Gifts.TobaccoBusiness)) Ui.Size(Ui.Button(win.Content, "批发进货（可供自己店铺销售）", () => OpenRetailWholesale(p), 18, Ui.ButtonHot), -1, 40);
+                RectTransform frame = p.Kind == PlaceKind.Agency || S.VentureAt(p.Id) != null || S.IsPlayerPropertyOccupied(p.Id) ? null : BuildRosterFrame(win, p, h - 170);
                 if (frame != null)
                 {
                     RectTransform original = win.Content;
@@ -82,10 +87,10 @@ namespace PCShopSell.Game.UI
                     win.Content = original;
                 }
                 else build(win, p);
-                win.TitleText.text = S.PlaceTitle(p) + " · 关闭返回街上";
-            }, true, true, () =>
+                win.TitleText.text = S.PlaceTitle(p) + (leaveOnClose ? " · 关闭返回街上" : " · 关闭菜单后留在场所");
+            }, holds, true, () =>
             {
-                if (S.CurrentPlace == p && !S.IsWorking) S.Leave();
+                if (leaveOnClose && S.CurrentPlace == p && !S.IsWorking) S.Leave();
             });
         }
 
@@ -104,64 +109,14 @@ namespace PCShopSell.Game.UI
 
         private void BuildStall(Window w, Place p)
         {
-            bool open = S.IsWholesalerOpen;
-            List<PartDef> sold = PartCatalog.All.Where(x => S.StallSells(p, x)).ToList();
-            List<string> tabs = sold.Select(x => PartCatalog.CategoryName(x.Category)).Distinct().ToList();
-            string tab = tabs.Count > 0 ? ShopTabs(w, p, tabs) : null;
-            Line(w.Content, open ? $"营业中（{S.OpeningHoursText(S.CurrentPlace)}）。批发价，只卖盒装正品。" : $"<color=#D79780>关门了（{S.OpeningHoursText(S.CurrentPlace)} 营业）</color>");
-            Line(w.Content, $"现金 {S.Ledger.Balance}　　{S.CurrentVehicle.Name}还能背 {S.FreeKg:0.##} 千克　　先加进购物车，结账时分好自己背的和叫车送的", 17, Ui.Dim);
-
-            RectTransform list = GoodsList(w.Content);
-            foreach (PartDef part in sold.Where(x => PartCatalog.CategoryName(x.Category) == tab))
-            {
-                PartDef pd = part;
-                Money price = S.StallPrice(p, pd);
-                Money market = S.Market.PriceOf(pd);
-                RectTransform row = Ui.Row(list, 72);
-                Ui.Size(Ui.Label(row, ProductLabel(pd.Name, PartUnitKg(pd), $"市价 {market} · {Stock.SpaceOf(pd, true, 1):0.#}格"), 17), 210);
-                Ui.Size(Ui.Label(row, $"{price}", 18, TextAnchor.MiddleLeft, Ui.Good), 84);
-                int left = S.StallRemaining(p, pd) - (int)S.CartAmount("part:" + pd.Id);
-                Ui.Size(Ui.Label(row, $"余 {left}", 14, TextAnchor.MiddleLeft, left == 0 ? Ui.Warn : Ui.Dim), 52);
-                foreach (int n in new[] { 1 })
-                {
-                    int count = n;
-                    CartAddButton(w, row, "part:" + pd.Id, () => S.CartAddStall(p, pd, count), "+" + count, 58, open && left >= count, n == 1);
-                }
-            }
-            CartPanel(w, w.Content, true);
+            BuildCarryStore(w,p);
         }
 
         // ---------- 车行 ----------
 
         private void BuildDealer(Window w, Place p)
         {
-            Line(w.Content, S.IsDealerOpen ? "营业中（每天 9:00–19:00）" : "<color=#D79780>关门了（每天 9:00–19:00）</color>");
-            foreach (VehicleSpec v in Vehicles.All.Where(x => x.Purchasable))
-            {
-                VehicleSpec vs = v;
-                RectTransform row = Ui.Row(w.Content, 100);
-                string upkeep = vs.Kind == VehicleKind.Car ? " · 魅力 +2 · 日养护 ¥40" : vs.Kind == VehicleKind.Van ? " · 日养护 ¥60" : "";
-                string desc = $"{vs.Name}  {vs.Price}{upkeep}\n<size=13><color=#A8B0BA>载具，不装入背包</color></size>\n<size=15>速度 {vs.SpeedPerMinute * 60 / 1000:0} km/h · 载货 {vs.CargoCapacity:0} 格{(vs.Illegal ? " · <color=#D79780>城里不能上路，交警会追</color>" : "")}</size>";
-                Ui.Size(Ui.Label(row, desc + "\n<size=14>" + S.VehicleUsage(vs.Kind) + "</size>", 18), 760);
-                bool owned = S.Owns(vs.Kind);
-                Ui.Size(Ui.Button(row, owned ? "再买一台" : "购买一台", () =>
-                {
-                    S.BuyVehicle(vs.Kind);
-                    w.Rebuild();
-                }, 19, Ui.ButtonHot, S.IsDealerOpen && S.Ledger.Balance >= vs.Price), 100);
-                if (owned) Ui.Size(Ui.Button(row, "卖回…", () => ConfirmBusiness("出售载具", $"按购价六折 {vs.Price.Scale(.6)} 回收。当前使用此车时需先把携带货物减到步行可承受范围。", () => { S.SellVehicle(vs.Kind); w.Rebuild(); }), 17, Ui.Warn, S.IsDealerOpen), 90);
-            }
-            foreach (var impoundedKind in new[] { VehicleKind.EBike, VehicleKind.Tricycle })
-            {
-                var kind = impoundedKind;
-                if (S.ImpoundedVehicleCount(kind) <= 0) continue;
-                Ui.Size(Ui.Button(w.Content, "交 " + PoliceSystem.RedeemFee + " 赎回一台" + Vehicles.Get(kind).Name, () =>
-                {
-                    S.RedeemVehicle(kind);
-                    w.Rebuild();
-                }, 19, Ui.Warn), -1, 46);
-            }
-            Line(w.Content, "步行能带 6 格货，打车 15 格（按里程收费），小电驴 10 格，三轮车 40 格；轿车 18 格，合法小货车 80 格。", 16, Ui.Dim);
+            BuildCarryStore(w,p);
         }
 
         // ---------- 地铁 ----------
@@ -201,7 +156,7 @@ namespace PCShopSell.Game.UI
                 return;
             }
             var venture = S.VentureAt(p.Id);
-            if (venture != null || S.PropertyAt(p.Id) != null)
+            if (venture != null || S.IsPlayerPropertyOccupied(p.Id))
             {
                 Line(w.Content, S.PlaceTitle(p), 22, Ui.Accent);
                 Para(w.Content, venture != null ? "这是你委托店长经营的门店。日常收支留在门店周转金中，可在经营总览管理定价、维护和资金。" : "这处物业由中介托管出租，每日租金进入你的账本。", 18);

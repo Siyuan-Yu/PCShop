@@ -36,17 +36,17 @@ namespace PCShopSell.Tests
 
         [TestCase(false)]
         [TestCase(true)]
-        public void Walking_ManualAndAutomatic_CoverHalfThePreviousDistancePerSecond(bool automatic)
+        public void Walking_ManualAndAutomatic_UseTheSamePhysicalMetersPerMinute(bool automatic)
         {
             using (var s = AtStreet("st"))
             {
                 if (automatic) Assert.IsTrue(s.GoTo("mk"));
                 else s.SetSteer(-1, 0);
                 for (int i = 0; i < 10; i++) s.Tick(.1);
-                // Previously 5.5 visual units/sec, multiplied by the world's 3x movement rate.
-                // 自动前往先从路中间走到人行道（7.2）再沿人行道走，总路程一样是 8.25。
                 double lane = automatic ? GameSession.ShoppingFrontY - GameSession.SidewalkInset : 0;
-                Assert.That(s.PlayerPosition.X, Is.EqualTo(-(8.25 - lane)).Within(.0001));
+                double physical = CityTravelTiming.ScaledSecondsMeters(Vehicles.Walk, PCShopSell.Core.Time.TimeController.WorldRate, s.Time.SecondsPerMinuteAt1x);
+                double roadScale = CityTravelTiming.EdgeMeters(s.City, "st", "mk") / 100;
+                Assert.That(s.PlayerPosition.X, Is.EqualTo(-(physical - lane * s.City.DistanceScale) / roadScale).Within(.0001));
                 Assert.That(s.PlayerPosition.Y, Is.EqualTo(lane).Within(.0001));
             }
         }
@@ -63,12 +63,27 @@ namespace PCShopSell.Tests
         [Test]
         public void Steer_AgainstEdge_SlidesAlong()
         {
-            GameSession s = AtStreet("s1");
+            // Leave enough straight road for the calibrated pace: s1 is close enough to the
+            // rounded terminal cap that a five-tick diagonal now reaches that cap instead.
+            GameSession s = AtStreet("st");
             Walk(s, 0, 1, 100);
             double x = s.PlayerPosition.X;
             Walk(s, 1, 1, 5); // 斜着顶边：y 不再增加，x 继续
             Assert.AreEqual(GameSession.MainStreetHalfWidth, s.PlayerPosition.Y, 1e-6);
             Assert.Greater(s.PlayerPosition.X, x + 1);
+        }
+
+        [Test] public void DiagonalWallSlideDoesNotConvertBlockedMotionIntoExtraHorizontalSpeed()
+        {
+            using(var s=AtStreet("st"))
+            {
+                Walk(s,0,1,100);double x=s.PlayerPosition.X;
+                Walk(s,1,1,2);
+                double intended=CityTravelTiming.ScaledSecondsMeters(Vehicles.Walk,
+                    .2*PCShopSell.Core.Time.TimeController.WorldRate,s.Time.SecondsPerMinuteAt1x)/System.Math.Sqrt(2);
+                Assert.AreEqual(x+intended,s.PlayerPosition.X,.01);
+                Assert.AreEqual(GameSession.MainStreetHalfWidth,s.PlayerPosition.Y,1e-6);
+            }
         }
 
         [Test]
@@ -97,13 +112,13 @@ namespace PCShopSell.Tests
         public void Steer_CanStopAnywhere_AndTurnBack()
         {
             GameSession s = AtStreet("st");
-            Walk(s, 1, 0, 5);
+            Walk(s, 1, 0, 2, .02);
             double x = s.PlayerPosition.X;
             Assert.Greater(x, 0);
-            Walk(s, 1, 0, 2);
+            Walk(s, 1, 0, 2, .02);
             Assert.Greater(s.PlayerPosition.X, x, "继续走");
             double mid = s.PlayerPosition.X;
-            Walk(s, -1, 0, 3);
+            Walk(s, -1, 0, 3, .02);
             Assert.Less(s.PlayerPosition.X, mid, "掉头往回走");
         }
 
@@ -123,7 +138,7 @@ namespace PCShopSell.Tests
         {
             GameSession s = AtStreet("s1");
             Walk(s, 0, 1, 100); // 贴着店面一侧的人行道站着，离门口 4 米多
-            Walk(s, -1, 0, 3, 0.05); // 往西走一点
+            Walk(s, -1, 0, 1, 0.02); // 往西走一点，仍留在真实门口半径内
             Assert.IsNotNull(s.NearbyPlace);
             Assert.AreEqual("tea", s.NearbyPlace.Id);
             Assert.IsTrue(s.EnterNearby());
@@ -137,7 +152,7 @@ namespace PCShopSell.Tests
         {
             GameSession s = AtStreet("s1");
             Walk(s, 0, 1, 100);
-            Walk(s, -1, 0, 3, 0.05);
+            Walk(s, -1, 0, 1, 0.02);
             Assert.AreEqual("tea", s.NearbyPlace.Id);
             s.Clock.Restore(s.Clock.Now.Date, 22 * 60);
             MapPoint before = s.PlayerPosition;
@@ -152,7 +167,7 @@ namespace PCShopSell.Tests
         public void EnterNearby_FromMiddleOfRoad_Fails()
         {
             GameSession s = AtStreet("s1");
-            Walk(s, 0, 1, 2); // 店门正前方，但人还在马路中间
+            Walk(s, 0, 1, 2, .01); // 店门正前方，但人还在马路中间
             Assert.Less(s.PlayerPosition.Y, GameSession.ShoppingFrontY - GameSession.EnterRadius);
             Assert.IsNull(s.NearbyPlace);
         }

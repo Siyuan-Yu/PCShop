@@ -79,9 +79,11 @@ namespace PCShopSell.Game.UI
 
         public void OpenSettingsMenu()
         {
-            OpenWindow(L("settings"), 840, 650, w =>
+            var display=GameDisplaySettings.Current();
+            OpenWindow(L("settings"), 840, 850, w =>
             {
                 MenuTitle(w, "settings");
+                BuildDisplayOptions(w,display);
                 Line(w.Content, L("language"), 23, Ui.Accent);
                 Para(w.Content, L("language_saved"), 17, Ui.Dim);
                 var languages = Ui.Row(w.Content, 55, 10);

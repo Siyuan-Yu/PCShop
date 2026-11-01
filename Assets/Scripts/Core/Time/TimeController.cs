@@ -25,6 +25,13 @@ namespace PCShopSell.Core.Time
         private double _secondsPerMinute;
         private double _fraction;
         private int _holds;
+        /// <summary>Sub-minute progress belongs to the saved world clock, including a journey saved between minutes.</summary>
+        public double FractionalMinute => _fraction;
+        public void RestoreFractionalMinute(double fraction)
+        {
+            _fraction=double.IsNaN(fraction)||double.IsInfinity(fraction)?0:Math.Max(0,Math.Min(.999999999999,fraction));
+            LastDeltaMinutes=0;
+        }
 
         /// <summary>1× 下一个游戏分钟对应的真实秒数（一天 3~5 分钟约为 0.19~0.31）。</summary>
         public double SecondsPerMinuteAt1x

@@ -12,6 +12,8 @@ namespace PCShopSell.Game.Runtime
 
         /// <summary>摆的是杂货（烟酒饮料之类），不对应哪类配件。</summary>
         public bool Goods;
+        public bool IsDisplay;
+        public int MaxItems=int.MaxValue;
 
         /// <summary>货架还没设置摆什么：空架子。</summary>
         public bool Unset;
@@ -137,13 +139,14 @@ namespace PCShopSell.Game.Runtime
             int model = GoodsModelOf(kindId);
             Color cc = GoodsColor(kindId);
             Prims.Box(root, "Sign", new Vector3(0, 1.93f, -0.1f), new Vector3(1.0f, 0.14f, 0.04f), Mats.Lit(cc));
+            if(kindId!=null&&kindId.StartsWith("clothing_"))Prims.SignText(root,Core.Inventory.ShelfKinds.NameOf(kindId),new Vector3(0,1.93f,-.125f),.94f,.12f,ArtDirection.Cream);
 
             var display = new ShelfDisplay { Goods = true, Category = PartCategory.Gpu, KindId = kindId };
-            const int perRow = 7;
+            int perRow = model==11?4:7;
             for (int r = 0; r < 3; r++)
                 for (int c = 0; c < perRow; c++)
                 {
-                    float x = (c - (perRow - 1) / 2f) * 0.18f;
+                    float x = (c - (perRow - 1) / 2f) * (model==11?.31f:.18f);
                     display.GoodsItems.Add(GoodsModel(root, model, new Vector3(x, BoardCenters[r] + 0.02f, -0.01f)));
                 }
             display.EmptyMark = Prims.Box(root, "EmptyMark", new Vector3(0, 0.98f, -0.2f), new Vector3(1.1f, 0.2f, 0.02f), Mats.Glow(new Color(0.8f, 0.15f, 0.1f), new Color(3f, 0.4f, 0.25f), false));
@@ -153,6 +156,7 @@ namespace PCShopSell.Game.Runtime
 
         private static int GoodsModelOf(string kindId)
         {
+            if(kindId!=null&&kindId.StartsWith("clothing_"))return 11;
             switch (kindId)
             {
                 case "smoke": return 0;
@@ -161,6 +165,10 @@ namespace PCShopSell.Game.Runtime
                 case "snack": return 3;
                 case "flowers": return 5;
                 case "meals": return 6;
+                case "model_harbor": return 7;
+                case "model_rainbot": return 8;
+                case "model_garden": return 9;
+                case "model_starlight": return 10;
                 default: return 4;
             }
         }
@@ -176,6 +184,10 @@ namespace PCShopSell.Game.Runtime
                 case "produce": return new Color(0.4f, 0.7f, 0.35f);
                 case "meals": return new Color(0.9f, 0.65f, 0.3f);
                 case "snack": return new Color(0.95f, 0.65f, 0.25f);
+                case "model_harbor": return new Color(.35f, .7f, .75f);
+                case "model_rainbot": return new Color(.6f, .65f, .8f);
+                case "model_garden": return new Color(.5f, .75f, .45f);
+                case "model_starlight": return new Color(.9f, .7f, .35f);
                 default: return new Color(0.95f, 0.8f, 0.3f);
             }
         }
@@ -215,6 +227,34 @@ namespace PCShopSell.Game.Runtime
             t.localPosition = pos;
             switch (kind)
             {
+                case 11:
+                    Color cloth=((int)Mathf.Round(pos.x*10)&1)==0?ArtDirection.Clay:ArtDirection.Sage;
+                    Prims.Box(t,"FoldedTShirt",new Vector3(0,.055f,-.025f),new Vector3(.23f,.07f,.23f),Mats.Lit(cloth));
+                    Prims.Box(t,"FoldedSleeveL",new Vector3(-.117f,.075f,.045f),new Vector3(.05f,.065f,.13f),Mats.Lit(cloth*.85f));
+                    Prims.Box(t,"FoldedSleeveR",new Vector3(.117f,.075f,.045f),new Vector3(.05f,.065f,.13f),Mats.Lit(cloth*.85f));
+                    Prims.Box(t,"VisibleNeckline",new Vector3(0,.095f,.055f),new Vector3(.07f,.025f,.065f),Mats.Lit(ArtDirection.Cream));
+                    break;
+                case 7:
+                    Prims.Box(t, "ToyHull", new Vector3(0, .045f, 0), new Vector3(.15f, .07f, .1f), Mats.Lit(new Color(.3f, .65f, .7f)));
+                    Prims.Box(t, "ToyMast", new Vector3(0, .16f, 0), new Vector3(.012f, .2f, .012f), Mats.Lit(ArtDirection.Wood));
+                    Prims.Box(t, "ToySail", new Vector3(.035f, .19f, 0), new Vector3(.065f, .13f, .012f), Mats.Lit(ArtDirection.Cream));
+                    break;
+                case 8:
+                    Prims.Box(t, "ToyRobotBody", new Vector3(0, .11f, 0), new Vector3(.09f, .13f, .07f), Mats.Lit(new Color(.48f, .55f, .72f)));
+                    Prims.Box(t, "ToyRobotHead", new Vector3(0, .21f, 0), new Vector3(.12f, .09f, .09f), Mats.Lit(ArtDirection.Cream));
+                    Prims.Box(t, "ToyRobotEye", new Vector3(0, .215f, -.046f), new Vector3(.08f, .025f, .006f), Mats.Lit(ArtDirection.Ink));
+                    Prims.Box(t, "ToyRobotFeet", new Vector3(0, .025f, 0), new Vector3(.14f, .05f, .09f), Mats.Lit(ArtDirection.Ink));
+                    break;
+                case 9:
+                    Prims.Shape(PrimitiveType.Sphere, t, "ToyGardenBody", new Vector3(0, .09f, 0), new Vector3(.12f, .16f, .1f), Mats.Lit(new Color(.65f, .78f, .45f)));
+                    Prims.Shape(PrimitiveType.Sphere, t, "ToyLeafLeft", new Vector3(-.035f, .19f, 0), new Vector3(.07f, .025f, .045f), Mats.Lit(new Color(.25f, .6f, .3f)));
+                    Prims.Shape(PrimitiveType.Sphere, t, "ToyLeafRight", new Vector3(.035f, .19f, 0), new Vector3(.07f, .025f, .045f), Mats.Lit(new Color(.35f, .7f, .35f)));
+                    break;
+                case 10:
+                    Prims.Box(t, "ToyRover", new Vector3(0, .07f, 0), new Vector3(.13f, .09f, .1f), Mats.Lit(new Color(.87f, .66f, .3f)));
+                    Prims.Shape(PrimitiveType.Sphere, t, "ToyObservatory", new Vector3(0, .16f, 0), Vector3.one * .1f, Mats.Lit(ArtDirection.Cream));
+                    Prims.Box(t, "ToyWheels", new Vector3(0, .025f, 0), new Vector3(.16f, .045f, .12f), Mats.Lit(ArtDirection.Ink));
+                    break;
                 case 5:
                     Prims.Shape(PrimitiveType.Cylinder, t, "FlowerPot", new Vector3(0, 0.05f, 0), new Vector3(0.09f, 0.05f, 0.09f), Mats.Lit(ArtDirection.Wood));
                     Prims.Box(t, "Stem", new Vector3(0, 0.17f, 0), new Vector3(0.014f, 0.2f, 0.014f), Mats.Lit(new Color(0.2f, 0.55f, 0.2f)));
@@ -375,7 +415,7 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(root, "DeskTop", new Vector3(0, 0.805f, 0), new Vector3(2.44f, 0.02f, 0.94f), Mats.Lit(ArtDirection.Cream, 0.5f));
             Prims.Box(root, "Sign", new Vector3(0, 0.55f, -0.46f), new Vector3(1.6f, 0.22f, 0.02f), Mats.Lit(ArtDirection.Ink));
 
-            Prims.SignText(root, "整 机 现 货", new Vector3(0, 0.55f, -0.477f), 1.45f, 0.17f, ArtDirection.Cream);
+            Prims.SignText(root, "商 品 展 示", new Vector3(0, 0.55f, -0.477f), 1.45f, 0.17f, ArtDirection.Cream);
             var slots = new List<PcSlot>();
             for (int i = 0; i < 2; i++)
             {
@@ -432,6 +472,24 @@ namespace PCShopSell.Game.Runtime
                     break;
                 case FixtureKind.Display:
                     h.Slots.AddRange(BuildPcDesk(root, Vector3.zero));
+                    var displayKind=Core.Inventory.ShelfKinds.Get(kindId);
+                    if(displayKind!=null)
+                    {
+                        foreach(var slot in h.Slots)slot.Root.SetActive(false);
+                        h.Slots.Clear();
+                        h.Shelf=new ShelfDisplay {KindId=kindId,Goods=displayKind.IsGoods,Category=displayKind.Category,
+                            IsDisplay=true,MaxItems=6};
+                        for(int i=0;i<6;i++)
+                        {
+                            var at=new Vector3((i%3-1)*.65f,.83f,(i/3-.5f)*.38f);
+                            if(displayKind.IsGoods)
+                            {
+                                var goods=GoodsModel(root,GoodsModelOf(kindId),at);goods.transform.localScale=Vector3.one*1.6f;
+                                h.Shelf.GoodsItems.Add(goods);
+                            }
+                            else h.Shelf.BoxedItems.Add(PartModel(root,displayKind.Category,at,true));
+                        }
+                    }
                     pickH = 1.5f;
                     break;
                 default: // 装机操作台：有装机单时屏幕亮着
@@ -452,6 +510,29 @@ namespace PCShopSell.Game.Runtime
                 bc.center = new Vector3(0, pickH / 2f, 0);
                 bc.size = new Vector3(w, pickH, d);
             }
+        }
+        public static ShelfDisplay BuildClothingRack(Transform parent,string kindId)
+        {
+            var root=new GameObject("ClothingRail").transform;root.SetParent(parent,false);
+            var metal=Mats.Lit(ArtDirection.Ink,.5f);
+            foreach(float x in new[]{-.68f,.68f})
+            {
+                Prims.Box(root,"RailPost",new Vector3(x,.95f,0),new Vector3(.05f,1.9f,.05f),metal);
+                Prims.Box(root,"RailFoot",new Vector3(x,.04f,0),new Vector3(.12f,.08f,.52f),metal);
+            }
+            Prims.Box(root,"RailTop",new Vector3(0,1.87f,0),new Vector3(1.4f,.045f,.05f),metal);
+            Prims.SignText(root,Core.Inventory.ShelfKinds.NameOf(kindId),new Vector3(0,2.03f,-.05f),1.2f,.14f,ArtDirection.Ink);
+            var display=new ShelfDisplay{Goods=true,KindId=kindId,Unset=Core.Inventory.ShelfKinds.Get(kindId)==null,Category=PartCategory.Gpu};
+            for(int i=0;i<6;i++)
+            {
+                var cloth=new GameObject("HangingGarment").transform;cloth.SetParent(root,false);cloth.localPosition=new Vector3(-.53f+i*.21f,0,0);
+                Prims.Box(cloth,"Hanger",new Vector3(0,1.76f,0),new Vector3(.18f,.025f,.04f),Mats.Lit(ArtDirection.Wood));
+                Prims.Box(cloth,"Top",new Vector3(0,1.43f,0),new Vector3(.17f,.56f,.07f),Mats.Lit(i%2==0?ArtDirection.Blue:ArtDirection.Clay));
+                Prims.Box(cloth,"Sleeve",new Vector3(0,1.57f,0),new Vector3(.22f,.21f,.08f),Mats.Lit(i%2==0?ArtDirection.Blue:ArtDirection.Clay));
+                display.GoodsItems.Add(cloth.gameObject);
+            }
+            display.EmptyMark=Prims.Box(root,"EmptyMark",new Vector3(0,.6f,-.12f),new Vector3(1.0f,.12f,.025f),Mats.Lit(ArtDirection.Clay));
+            display.EmptyMark.SetActive(false);return display;
         }
     }
 

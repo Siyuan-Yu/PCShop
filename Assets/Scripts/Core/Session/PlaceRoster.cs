@@ -209,7 +209,7 @@ namespace PCShopSell.Core.Session
         {
             if (p == null) return null;
             if (p.Kind == PlaceKind.Dealer) return new PlaceRoster(DealerBoss);
-            if (p.Kind == PlaceKind.Agency) return new PlaceRoster(AgentChen);
+            if (p.Kind == PlaceKind.Agency) return p.Id == "agency" ? new PlaceRoster(AgentChen) : null;
             if (p.Kind == PlaceKind.Wholesaler)
             {
                 NpcDef owner = Npcs.OwnerOf(p.Id);

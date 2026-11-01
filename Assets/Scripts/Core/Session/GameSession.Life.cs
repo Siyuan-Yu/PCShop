@@ -10,7 +10,9 @@ namespace PCShopSell.Core.Session
     public sealed class PlayerStats
     {
         public double Hunger = 80;
-        public double Energy = 90;
+        private double _energy = 90;
+        internal Action EnergyChanged;
+        public double Energy { get => _energy; set { _energy = Math.Max(0, Math.Min(MaxEnergy, value)); EnergyChanged?.Invoke(); } }
         public double Health = 100;
         // Display-only diet records; they do not alter health, energy or any other simulation.
         public double Nutrition = 50, Mood = 50;
@@ -33,7 +35,7 @@ namespace PCShopSell.Core.Session
 
         private int _lastNewsReadDay = -1;
 
-        public bool IsSleepTime => NightWorkRest || Clock.MinuteOfDay >= 18 * 60 || Clock.MinuteOfDay < WakeUpMinute;
+        public bool IsSleepTime => true;
 
         private readonly List<long[]> _sleepHistory = new List<long[]>();
         public double SleepHoursLast24 => _sleepHistory.Sum(span => Math.Max(0, Math.Min(Clock.Now.TotalMinutes, span[1]) - Math.Max(Clock.Now.TotalMinutes - 1440, span[0]))) / 60.0;
@@ -59,20 +61,17 @@ namespace PCShopSell.Core.Session
         private bool SleepMinutes(int minutes)
         {
             if (CurrentPlace != Home) return Fail("只能回家睡觉。");
-            if (!IsSleepTime) return Fail("白天睡不着，可以小睡一会儿。");
-            if (NightWorkRest && minutes > NightRestMinutes) return Fail("这个起床时间会耽误到岗，请提前起床。");
             SleepFor(minutes);
             Say($"睡了 {minutes / 60.0:0.#} 小时。过去24小时已睡 {SleepHoursLast24:0.#}/8 小时。");
             return true;
         }
 
-        /// <summary>在家睡到早上 8:00（白天睡不着，只能小睡）。</summary>
+        /// <summary>在家睡到下一个早上8:00；白天也可以选择任意睡眠时长。</summary>
         public bool Sleep()
         {
             if (CurrentPlace != Home) return Fail("只能回家睡觉。");
-            if (!IsSleepTime) return Fail("白天睡不着，可以小睡一会儿。");
             int minutes = NightWorkRest ? NightRestMinutes : Clock.MinutesUntil(WakeUpMinute);
-            if (minutes <= 0) return Fail("快到上班时间了，请先到岗；收工后再补觉。");
+            if (minutes <= 0) minutes = 480;
             SleepFor(minutes);
             double hours = minutes / 60.0;
             Say($"睡了 {hours:0.#} 小时。" + (Player.SleepDebt > 0.5 ? $"还欠 {Player.SleepDebt:0.#} 小时觉，精力上限降低。" : ""));
@@ -98,7 +97,9 @@ namespace PCShopSell.Core.Session
 
         private void SleepFor(int minutes)
         {
+            if (minutes <= 0) return;
             long start = Clock.Now.TotalMinutes;
+            ClearEnergyExhaustion();
             _sleeping = true;
             AdvanceClock(minutes);
             _sleeping = false;
@@ -107,6 +108,8 @@ namespace PCShopSell.Core.Session
             Player.SleepDebt = Math.Max(0, 8 - SleepHoursLast24);
             if (SleepHoursLast24 >= 8 - 1e-9) Player.Energy = Player.MaxEnergy;
             Player.Energy = Math.Min(Player.MaxEnergy, Player.Energy);
+            FinishCityClimateSleep(minutes);
+            SynchronizeEnergyExhaustion();
         }
 
         private void UpdateBody(int minutes)
@@ -115,7 +118,7 @@ namespace PCShopSell.Core.Session
             PlayerStats p = Player;
             if (_sleeping)
             {
-                p.Energy = Math.Min(p.MaxEnergy, p.Energy + 12.5 * h * HomeSleepQuality);
+                p.Energy = Math.Min(p.MaxEnergy, p.Energy + 12.5 * h * HomeSleepQuality * CitySleepComfortFactor);
                 p.Hunger = Math.Max(0, p.Hunger - 2 * h);
             }
             else
@@ -132,6 +135,9 @@ namespace PCShopSell.Core.Session
 
         private void SendHome()
         {
+            foreach (var a in _cityActivities.Where(a => a.Active && (a.State == CityActivityPhase.Running || a.Id == CityIntent?.ActivityId)).ToArray())
+                EndCityActivity(a, CityActivityPhase.Interrupted, "因身体不适中断，仅保留已发生的消费和阶段", Clock.Now.TotalMinutes);
+            StopTrip(); CancelCityTravel(); CitySleepRequested = false; _steering = false;
             InterruptPlayerWork("因身体不适中断打工，当天不计工资。请先休息恢复。");
             Trip = null;
             ClearEdge();
@@ -144,12 +150,15 @@ namespace PCShopSell.Core.Session
         {
             SendHome();
             _sleeping = true;
-            AdvanceClock(Clock.MinutesUntil(12 * 60));
+            // The former 04:00 -> noon recovery was eight hours. Keep that duration
+            // when exhaustion can happen in daytime, instead of forcing a 23-hour sleep.
+            AdvanceClock(480);
             _sleeping = false;
             Player.Health = Math.Max(0, Player.Health - 10);
             Player.SleepDebt = Math.Min(8, Player.SleepDebt + 3);
             Player.Energy = Math.Min(Player.MaxEnergy, 55);
-            Show("你晕倒了", "凌晨 4 点还没睡，你晕倒在路边，被好心人送回了出租屋。一觉睡到中午，身体变差了。");
+            ClearEnergyExhaustion();
+            Show("你晕倒了", "精力耗尽后连续清醒四小时，你因疲劳晕倒，被送回出租屋休息。身体和欠觉按原有规则恢复。");
         }
 
         private void Hospitalize()

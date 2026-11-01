@@ -14,6 +14,7 @@ namespace PCShopSell.Core.Session
         public string RetailKind = "computer";
         public Place Place;
         public ShopLease Lease;
+        public bool OwnsProperty;
         public ShopSimulation Sim;
         public readonly List<PlacedFurniture> Layout = new List<PlacedFurniture>();
         public readonly HashSet<string> Upgrades = new HashSet<string>();
@@ -21,6 +22,7 @@ namespace PCShopSell.Core.Session
         public Employee Employee, Assembler, Buyer;
         public bool EmployeeTrained, AutoBuild;
         public bool EmployeeBuilding;
+        public int PendingDisplayTier = -1, PendingDisplayMinutes;
         public int RenovationDay = -1;
 
         /// <summary>这家店纸箱里的东西（吃的、礼品、小家具），容量看店里摆了几个纸箱。</summary>
@@ -37,6 +39,7 @@ namespace PCShopSell.Core.Session
         /// <summary>租下时送的纸箱已经给过了（收起来再读档也不会重复送）。</summary>
         public bool BoxesGiven;
 
-        public bool Rented => Lease != null;
+        // Legacy callers use Rented to mean an active lawful operating unit, including owned premises.
+        public bool Rented => OwnsProperty || Lease != null;
     }
 }

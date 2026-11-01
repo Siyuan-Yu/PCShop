@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Finance;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Time;
@@ -19,6 +20,7 @@ namespace PCShopSell.Core.Session
         Furniture,
         /// <summary>店里货架上卖的杂货（礼品 id）。</summary>
         Goods,
+        PackedFood,
     }
 
     public sealed class CourierItem
@@ -72,6 +74,7 @@ namespace PCShopSell.Core.Session
                 case CourierItemKind.Ingredient: return it.Count * Backpack.IngredientKg(it.Id);
                 case CourierItemKind.Gift:
                 case CourierItemKind.Goods: return it.Count * (Gifts.Get(it.Id)?.WeightKg ?? 0);
+                case CourierItemKind.PackedFood: return it.Count*(FastFoodCatalog.Packed(it.Id)?.WeightKg??0);
                 case CourierItemKind.Furniture: return it.Count * (FurnitureCatalog.Get(it.Id)?.WeightKg ?? 0);
                 default:
                     PartDef p = PartCatalog.Exists(it.Id) ? PartCatalog.Get(it.Id) : null;
@@ -252,10 +255,21 @@ namespace PCShopSell.Core.Session
             Money due = goods + freight;
             if (Ledger.Balance < due) return Fail(newCars > prepaid ? $"要 {goods} + 运费 {freight}（{newCars - prepaid} 辆车），钱不够。" : $"要 {goods}，钱不够。");
             _prepaidCars -= prepaid;
-            if (goods.IsPositive) Ledger.TryDebit(Clock.Today, category, goods, what);
+            if (goods.IsPositive)
+            {
+                LedgerAttribution allocation = dest == null
+                    ? new LedgerAttribution(LedgerBusinessKind.Personal, transactionKind: category)
+                    : item.Kind == CourierItemKind.Furniture
+                        ? new LedgerAttribution(LedgerBusinessKind.AssetInvestment, shopId: dest.Place.Id, transactionKind: "店铺设施")
+                        : LedgerAttribution.ForShop(dest.Place.Id, transactionKind: category);
+                if (item.Kind == CourierItemKind.Part || item.Kind == CourierItemKind.Goods)
+                    allocation = allocation.Product(item.Id, item.Count, goods.Cents / Math.Max(1, item.Count));
+                Ledger.TryDebit(Clock.Today, category, goods, what, allocation);
+            }
             string destName = CourierDestName(dest);
             if (freight.IsPositive)
-                Ledger.TryDebit(Clock.Today, "运费", freight, $"叫 {newCars - prepaid} 辆车从{CurrentPlace?.Name ?? "街上"}送到{destName}");
+                Ledger.TryDebit(Clock.Today, "运费", freight, $"叫 {newCars - prepaid} 辆车从{CurrentPlace?.Name ?? "街上"}送到{destName}",
+                    dest != null ? LedgerAttribution.ForShop(dest.Place.Id, transactionKind: "物流") : new LedgerAttribution(LedgerBusinessKind.Personal, transactionKind: "物流"));
             CourierRun last = null;
             foreach (var (run, amount) in plan)
             {
@@ -366,6 +380,14 @@ namespace PCShopSell.Core.Session
                     }
                     int ingOver = StoreOrTemp(true, Backpack.IngredientKg(it.Id), it.Count, n => box.Food.Ingredient.Add(Batch(n)), n => temp.Food.Ingredient.Add(Batch(n)));
                     return $"{d?.Name ?? it.Id}×{it.Count}（{Where(ingOver, it.Count)}）";
+                case CourierItemKind.PackedFood:
+                    var food=FastFoodCatalog.Packed(it.Id);
+                    if(food==null)return "餐品记录无效";
+                    if(it.ExpireDay<Clock.Today.TotalDays)return food.Name+"（运输途中已过期，已清理）";
+                    FoodBatch PackedBatch(int n)=>new FoodBatch {Id=it.Id,Name=food.Name,Hunger=food.Hunger,Count=n,ExpireDay=it.ExpireDay};
+                    int foodOver=StoreOrTemp(toShop,food.WeightKg,it.Count,
+                        n=>box.Food.Packed.Add(PackedBatch(n)),n=>temp.Food.Packed.Add(PackedBatch(n)));
+                    return food.Name+"×"+it.Count+"（"+Where(foodOver,it.Count)+"）";
                 case CourierItemKind.Gift:
                     int giftOver = StoreOrTemp(toShop, Gifts.Get(it.Id)?.WeightKg ?? 0, it.Count, n => box.AddGift(it.Id, n), n => temp.AddGift(it.Id, n));
                     return $"{Gifts.Get(it.Id)?.Name ?? it.Id}×{it.Count}（{Where(giftOver, it.Count)}）";
@@ -430,6 +452,7 @@ namespace PCShopSell.Core.Session
                     if (!Enum.IsDefined(typeof(CourierItemKind), kind)) continue;
                     if (kind == CourierItemKind.Part && (id == null || !PartCatalog.Exists(id))) continue;
                     if ((kind == CourierItemKind.Gift || kind == CourierItemKind.Goods) && Gifts.Get(id) == null) continue;
+                    if (kind == CourierItemKind.PackedFood && FastFoodCatalog.Packed(id)==null)continue;
                     if (kind == CourierItemKind.Furniture && FurnitureCatalog.Get(id) == null) continue;
                     run.Items.Add(new CourierItem
                     {

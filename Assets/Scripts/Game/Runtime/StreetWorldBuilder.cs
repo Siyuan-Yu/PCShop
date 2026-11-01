@@ -35,7 +35,7 @@ namespace PCShopSell.Game.Runtime
     /// 按城市布局数据生成灰盒 3D 街区。地图坐标 (x, y) 对应世界 (x, 0, y)。
     /// 镜头固定从西南方斜俯视（只看得到建筑的 -Z、-X 面），所以商铺都在街北侧、门脸朝 -Z，街南侧只放矮的东西。
     /// </summary>
-    public sealed class StreetWorldBuilder
+    public sealed partial class StreetWorldBuilder
     {
         public const float StreetZ = 0f;
         /// <summary>商业街路面是连接路的两倍宽，两侧人行道、店面、路边设施整体外移这么多。</summary>
@@ -70,6 +70,7 @@ namespace PCShopSell.Game.Runtime
         public Dictionary<string, PlaceVisual> Places { get; } = new Dictionary<string, PlaceVisual>();
         public List<Light> NightLights { get; } = new List<Light>();
         public GameObject Root => _root.gameObject;
+        public Bounds CityBounds { get; private set; }
 
         public StreetWorldBuilder(CityLayout city, int seed)
         {
@@ -86,11 +87,14 @@ namespace PCShopSell.Game.Runtime
             Mats.ClearNightGlow();
             _root = new GameObject("City").transform;
 
-            var ground = Prims.Box(_root, "Ground", new Vector3(-60, -0.06f, -20), new Vector3(520, 0.1f, 220), Mats.LitTex(Grass, new Vector2(70, 30), 0.05f), true);
+            CityBounds = BoundsOf(_city);
+            var ground = Prims.Box(_root, "Ground", new Vector3(CityBounds.center.x, -0.06f, CityBounds.center.z),
+                new Vector3(CityBounds.size.x, 0.1f, CityBounds.size.z), Mats.LitTex(Grass, new Vector2(CityBounds.size.x / 7, CityBounds.size.z / 7), 0.05f), true);
             ground.AddComponent<GroundMarker>();
 
             BuildRoads();
             BuildSidewalks();
+            BuildCitySidewalks();
             foreach (Place p in _city.Places) BuildPlace(p);
             BuildFiller();
             BuildStreetProps();
@@ -148,6 +152,7 @@ namespace PCShopSell.Game.Runtime
 
         private void BuildPlace(Place p)
         {
+            if (p.ExplicitEntrance) { BuildCityPlace(p); return; }
             Vector3 entrance = NodeWorld(p.NodeId);
             var root = new GameObject("Place_" + p.Id).transform;
             root.SetParent(_root, false);
@@ -185,6 +190,12 @@ namespace PCShopSell.Game.Runtime
         private Vector3 BuildShop(Transform root, Place p, Vector3 entrance)
         {
             float w = WidthOf(p.Size), d = DepthOf(p.Size);
+            if(p.Business=="服装")
+            {
+                var interior=new GameObject("ClothingShowroom").transform;interior.SetParent(root,false);interior.localPosition=new Vector3(entrance.x,0,FrontZ);
+                CityVenueView.Build(interior,p,w,d);
+                return new Vector3(entrance.x,4.8f,FrontZ+d/2);
+            }
             int floors = p.Size == ShopSize.Large ? 4 : p.Size == ShopSize.Medium ? 3 : 2;
             if (p.IsPlayerShop) floors = 1;
             float h = floors * 3.2f;

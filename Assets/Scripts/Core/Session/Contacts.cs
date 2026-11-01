@@ -88,7 +88,7 @@ namespace PCShopSell.Core.Session
             foreach (NpcDef n in Npcs.All)
             {
                 int rel = Relation(n.Id);
-                if (!IsMet(n.Id) && rel <= 0) continue;
+                if (!IsMet(n.Id) && rel <= 0 && !Flags.Contains("heard:" + n.Id)) continue;
                 seen.Add(n.Id);
                 list.Add(new ContactInfo
                 {
@@ -97,20 +97,28 @@ namespace PCShopSell.Core.Session
                     Role = n.Role,
                     IsNpc = true,
                     Level = rel,
-                    LevelName = Npcs.LevelName(rel) + (IsMet(n.Id) ? "" : "（没留联系方式）"),
+                    LevelName = rel == 0 && !IsMet(n.Id) ? "听说过（尚未见面）" : Npcs.LevelName(rel) + (IsMet(n.Id) ? "" : "（没留联系方式）"),
                     Group = n.StallId != null || n.Id == Npcs.Zhou ? ContactGroup.Market : n.Id == Npcs.Jie ? ContactGroup.Street : ContactGroup.Friends,
                     Where = NpcWhere(n),
                 });
             }
             foreach (StaffDef s in Rosters.All) AddStaffContact(list, seen, s);
             foreach (ResidentDef r in Residents.All) AddStaffContact(list, seen, r.Person);
+            foreach (var person in _cityPeople.Values)
+            {
+                if (!Flags.Contains("heard:" + person.PersonId) || !seen.Add(person.PersonId)) continue;
+                var definition = CityPerson(person.PersonId); if (definition == null) continue;
+                list.Add(new ContactInfo { Id = person.PersonId, Name = definition.Name, Role = CityPersonRole(person.PersonId),
+                    Level = Relation(person.PersonId), LevelName = "听说过（尚未见面）", Group = ContactGroup.Neighbors,
+                    Where = "从熟人口中听说，还没有与本人正式认识" });
+            }
             return list;
         }
 
         private void AddStaffContact(List<ContactInfo> list, HashSet<string> seen, StaffDef s)
         {
             int rap = StaffRapport(s.Id);
-            if (rap <= 0 || !seen.Add(s.Id)) return;
+            if (rap <= 0 && !Flags.Contains("heard:" + s.Id) || !seen.Add(s.Id)) return;
             ResidentDef r = Residents.Get(s.Id);
             Place work = StaffWorkplace(s.Id);
             bool market = work != null && work.Kind == PlaceKind.Wholesaler;
@@ -121,7 +129,7 @@ namespace PCShopSell.Core.Session
                 Role = s.Role,
                 IsNpc = false,
                 Level = rap,
-                LevelName = StaffTalk.LevelName(rap),
+                LevelName = rap == 0 ? "听说过（尚未见面）" : StaffTalk.LevelName(rap),
                 Group = market ? ContactGroup.Market : work != null ? ContactGroup.Street : ContactGroup.Neighbors,
                 Where = work != null ? $"在「{work.Name}」上班" + (r != null ? "，上下班路过商业街" : "")
                     : "常在商业街上走动",
@@ -131,6 +139,8 @@ namespace PCShopSell.Core.Session
         /// <summary>这个店员 / 街坊在哪家店上班；没有返回 null。</summary>
         public Place StaffWorkplace(string staffId)
         {
+            var person=CityPersonState(staffId);
+            if(person!=null)return !string.IsNullOrEmpty(person.WorkPlaceId)&&City.HasPlace(person.WorkPlaceId)?City.GetPlace(person.WorkPlaceId):null;
             ResidentDef r = Residents.Get(staffId);
             if (r?.WorkPlaceId != null) return City.HasPlace(r.WorkPlaceId) ? City.GetPlace(r.WorkPlaceId) : null;
             foreach (Place p in City.Places)

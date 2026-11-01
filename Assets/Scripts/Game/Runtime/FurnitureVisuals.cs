@@ -32,6 +32,11 @@ namespace PCShopSell.Game.Runtime
             }
             switch (def.Id)
             {
+                case FurnitureCatalog.FittingMirror:
+                    Prims.Box(root,"MirrorFrame",new Vector3(0,.92f,0),new Vector3(.7f,1.8f,.09f),Mats.Lit(ArtDirection.Wood),c);
+                    Prims.Box(root,"MirrorGlass",new Vector3(0,.96f,-.05f),new Vector3(.60f,1.56f,.012f),Mats.Lit(new Color(.66f,.81f,.86f),.85f));
+                    Prims.Box(root,"MirrorFoot",new Vector3(0,.06f,0),new Vector3(.70f,.12f,.25f),Mats.Lit(Metal),c);
+                    break;
                 case FurnitureCatalog.BedBoard: Bed(root, w, d, c, 0); break;
                 case "bed_spring": Bed(root, w, d, c, 1); break;
                 case "bed_good": Bed(root, w, d, c, 2); break;
@@ -51,7 +56,11 @@ namespace PCShopSell.Game.Runtime
                 case "junk": Junk(root, c); break;
                 case FurnitureCatalog.HomeBox:
                 case FurnitureCatalog.ShopBox: Carton(root, w, d, c); break;
-                case "aircon": AirCon(root); break;
+                case "aircon_large":
+                case "aircon":
+                    AirCon(root);
+                    if(c){var click=root.gameObject.AddComponent<BoxCollider>();click.center=new Vector3(0,2.4f,-.15f);click.size=new Vector3(w,.5f,.35f);}
+                    break;
                 case FurnitureCatalog.Curtain: Curtain(root); break;
                 case "poster": Poster(root, w, 1.0f, 1.55f, new Color(0.85f, 0.55f, 0.25f), new Color(0.25f, 0.45f, 0.65f)); break;
                 case "rug": Rug(root, w, d); break;
@@ -339,7 +348,7 @@ namespace PCShopSell.Game.Runtime
         public bool Sync(IReadOnlyList<PlacedFurniture> layout, RoomSpec room)
         {
             var sb = new System.Text.StringBuilder();
-            foreach (PlacedFurniture p in layout) sb.Append(p.Id).Append(':').Append(p.X).Append(':').Append(p.Z).Append(':').Append(p.Rot).Append(':').Append(p.Item).Append(';');
+            foreach (PlacedFurniture p in layout) sb.Append(p.Id).Append(':').Append(p.X).Append(':').Append(p.Z).Append(':').Append(p.Rot).Append(':').Append(p.Item).Append(':').Append(p.DisplayLimit).Append(';');
             string sig = sb.ToString();
             if (sig == _signature) return false;
             _signature = sig;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Finance;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
@@ -28,6 +29,7 @@ namespace PCShopSell.Core.Session
             var d = Ventures.Get(kind); var l = _listings.Find(x => x.PlaceId == placeId);
             if (!HasShop) return "先把主店开起来";
             if (d == null || l == null || l.OpenDay > Clock.Today.TotalDays || l.CloseDay < Clock.Today.TotalDays) return "请选择当前可签约的空铺";
+            if (InAgency && !AgencyServes(CurrentPlace, City.GetPlace(placeId))) return "请到房源所在街道的中介签约";
             if (IsMyShop(City.GetPlace(placeId)) || VentureAt(placeId) != null) return "这间铺子已在经营";
             if (_ventures.Count(x => !IsParkVenture(x)) >= 6) return "最多管理 6 家委托经营的门店";
             if (PlayerShop.Reputation < d.MinReputation) return $"知名度需要 {d.MinReputation:0}";
@@ -97,6 +99,8 @@ namespace PCShopSell.Core.Session
             if(refund.IsPositive) Ledger.Credit(Clock.Today,"企业清算",refund,Ventures.Get(v.Kind).Name);
             else if(refund.IsNegative) Ledger.ForceDebit(Clock.Today,"企业清算",-refund,Ventures.Get(v.Kind).Name);
             _ventures.Remove(v);
+            var ownedPremises = PropertyAt(id);
+            if (ownedPremises != null) { ownedPremises.UseMode = "vacant"; ownedPremises.TenantName = ""; }
             if (IsParkVenture(v)) { Say("园区铺位已清退，可重新招入业态。"); return true; }
             _vacant.Add(id);
             // 自有物业保留，不会因为关闭门店而消失。
@@ -138,72 +142,19 @@ namespace PCShopSell.Core.Session
                 v.LastSalesCents=sales; v.LastCostsCents=cost; v.LastDemand=demand;
             }
         }
-        public Money PropertyQuote(string id)
-        {
-            Money rent=ShopAt(id)!=null ? ShopAt(id).Lease.Rent : VentureAt(id)!=null ? Money.FromCents(VentureAt(id).RentCents) : _listings.Find(x=>x.PlaceId==id)?.Rent ?? Money.Zero;
-            return rent*120;
-        }
-        public string PropertyBlocker(string id,bool mortgage)
-        {
-            if(PropertyAt(id)!=null) return "已经拥有这处物业";
-            if(!City.HasPlace(id) || (!IsMyShop(City.GetPlace(id)) && VentureAt(id)==null)) return "先在这处物业开设主店或分店";
-            if(PlayerShop.Reputation<20) return "买物业需要知名度 20";
-            if(Ledger.Balance<PropertyQuote(id).Scale(mortgage ? .3 : 1)) return "现金不足";
-            return null;
-        }
-        public bool BuyProperty(string id,bool mortgage)
-        {
-            if(IsGameOver || !InAgency) return Fail("请在房产中介办理买卖。");
-            string why=PropertyBlocker(id,mortgage); if(why!=null) return Fail(why);
-            Money price=PropertyQuote(id), paid=price.Scale(mortgage ? .3 : 1), debt=price-paid;
-            Ledger.ForceDebit(Clock.Today,"购置物业",paid,PlaceTitle(City.GetPlace(id)));
-            _properties.Add(new OwnedProperty {PlaceId=id,PriceCents=price.Cents,MortgageCents=debt.Cents,MonthlyPrincipalCents=(long)Math.Ceiling(debt.Cents/36.0),BoughtDay=Clock.Today.TotalDays});
-            OwnedShop own=ShopAt(id);
-            long deposit=own!=null ? own.Lease.Deposit.Cents : VentureAt(id).DepositCents;
-            if(deposit>0) Ledger.Credit(Clock.Today,"押金",Money.FromCents(deposit),"购房退租赁押金");
-            if(own!=null) own.Lease.Deposit=Money.Zero; else VentureAt(id).DepositCents=0;
-            Say("物业已购入：免付店租，每月维护费房价 0.1%。"+(mortgage ? "贷款 36 期等额本金，月利率 0.4%，可随时提前还清。" : ""));
-            return true;
-        }
+        public Money PropertyQuote(string id) => CityPropertyPrice(id);
+        public string PropertyBlocker(string id, bool mortgage) => CityPropertyPurchaseBlocker(id, mortgage);
+        public bool BuyProperty(string id, bool mortgage) => PurchaseCityProperty(id, mortgage);
+        public Money PropertySaleNet(OwnedProperty p) => Money.FromCents(p.PriceCents).Scale(.9) - Money.FromCents(p.MortgageCents);
+        public bool SellProperty(string id) => SellCityProperty(id);
         public bool RepayMortgage(string id)
         {
-            var p=PropertyAt(id); if(p==null || p.MortgageCents<=0 || IsGameOver) return false;
-            if(!Ledger.TryDebit(Clock.Today,"偿还房贷",Money.FromCents(p.MortgageCents),"提前结清")) return Fail("现金不足。");
-            p.MortgageCents=0; return true;
+            var p = PropertyAt(id); if (p == null || p.MortgageCents <= 0 || IsGameOver) return false;
+            string transaction = "property:" + id + ":repay:" + p.BoughtDay + ":" + _cityAssetEffects.Count;
+            if (!Ledger.TryDebit(Clock.Today, "偿还房贷", Money.FromCents(p.MortgageCents), "提前结清",
+                new LedgerAttribution(LedgerBusinessKind.Financing, propertyId: id, sourceEventId: transaction))) return Fail("现金不足。");
+            _cityAssetEffects.Add(transaction); p.MortgageCents = 0; return true;
         }
-        public Money PropertySaleNet(OwnedProperty p) => Money.FromCents(p.PriceCents).Scale(.9)-Money.FromCents(p.MortgageCents);
-        public bool SellProperty(string id)
-        {
-            var p=PropertyAt(id); if(p==null || !InAgency || IsGameOver) return false;
-            if (id==ParkPlaceId && _ventures.Any(IsParkVenture)) return Fail("先清退园区所有铺位，再出售园区物业。");
-            Money net=PropertySaleNet(p);
-            if(Ledger.Balance+net<Money.Zero) return Fail("出售净额不足清偿贷款。");
-            if(net.IsPositive) Ledger.Credit(Clock.Today,"物业出售",net,"售价九折，先清偿贷款");
-            else if(net.IsNegative) Ledger.ForceDebit(Clock.Today,"物业出售",-net,"清偿贷款差额");
-            _properties.Remove(p);
-            if (id==ParkPlaceId) { ParkPlaceId=null; ParkReadyDay=0; }
-            if(VentureAt(id)==null && ShopAt(id)==null) AddListing(City.GetPlace(id),Clock.Today.TotalDays,Clock.Today.TotalDays+45);
-            Say("物业出售完成；仍在经营的店铺恢复租赁计费。"); return true;
-        }
-        private void SettleProperties(GameDate today)
-        {
-            foreach(var p in _properties)
-            {
-                bool self=ShopAt(p.PlaceId)!=null || VentureAt(p.PlaceId)!=null || p.PlaceId==ParkPlaceId;
-                // 关闭自己的门店后由中介托管出租，15% 已包含空置与管理成本。
-                if(!self && today.TotalDays>p.BoughtDay)
-                    Ledger.Credit(today,"物业租金",Money.FromCents(p.PriceCents).Scale(.85/120/30),"物业托管出租");
-                if(!today.IsMonthStart || today.TotalDays<=p.BoughtDay) continue;
-                Ledger.ForceDebit(today,"物业维护",Money.FromCents(p.PriceCents).Scale(.001),"物业月维护");
-                if(p.MortgageCents>0)
-                {
-                    long principal=Math.Min(p.MortgageCents,p.MonthlyPrincipalCents);
-                    Money interest=Money.FromCents(p.MortgageCents).Scale(.004);
-                    Ledger.ForceDebit(today,"偿还房贷",Money.FromCents(principal),"物业月供本金");
-                    if(interest.IsPositive) Ledger.ForceDebit(today,"房贷利息",interest,"物业月供利息");
-                    p.MortgageCents-=principal;
-                }
-            }
-        }
+        private void SettleProperties(GameDate today) => SettleCityProperties(today);
     }
 }

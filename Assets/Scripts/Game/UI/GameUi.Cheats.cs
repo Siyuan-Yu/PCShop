@@ -15,6 +15,13 @@ namespace PCShopSell.Game.UI
         {
             OpenWindow("作弊工具（仅编辑器）", 560, 640, w =>
             {
+                Ui.Size(Ui.Button(w.Content, "城市生活验收预置（独立测试档）", OpenCityAcceptance, 18, Ui.Warn), -1, 48);
+                Ui.Size(Ui.Button(w.Content,S.DebugInvitationPersonEnabled?"让小游消失（验收 NPC）":"让小游出现（满好感验收 NPC）",()=>
+                {
+                    S.DebugSetInvitationPerson(!S.DebugInvitationPersonEnabled);
+                    w.Rebuild();
+                },18,S.DebugInvitationPersonEnabled?Ui.Warn:Ui.ButtonHot),-1,48)
+                    .Tip("小游仅用于验收。出现后在安居房产中介附近散步；隐藏会结束他的进行中邀约，保留历史记录。");
                 RectTransform money = Ui.Row(w.Content, 44, 8);
                 Ui.Size(Ui.Button(money, "现金 +1 万", () => S.DebugAddCash(10000), 17), -1, -1, 1);
                 Ui.Size(Ui.Button(money, "现金 +10 万", () => S.DebugAddCash(100000), 17), -1, -1, 1);

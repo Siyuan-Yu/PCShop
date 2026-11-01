@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -20,9 +20,9 @@ namespace PCShopSell.Core.Session
             var p = CurrentPlace;
             if (IsWorking) return "打工期间不能自行点餐。";
             if (p == null || p.Kind != PlaceKind.Shop || p.Business != FastFoodBusiness || IsMyShop(p)
-                || IsVacant(p) || VentureAt(p.Id) != null || PropertyAt(p.Id) != null) return "请到营业的快餐店点餐。";
+                || IsVacant(p) || VentureAt(p.Id) != null || IsPlayerPropertyOccupied(p.Id)) return "请到营业的快餐店点餐。";
             if (!IsPlaceOpen(p)) return "快餐店已打烊，营业时间：" + OpeningHoursText(p) + "。";
-            if (item.WeightKg * count > FreeKg + 1e-9) return "背包装不下了。";
+            if (!SendByCourier && item.WeightKg * count > FreeKg + 1e-9) return "背包装不下了。";
             if (Ledger.Balance < item.Price * count) return "现金不足。";
             return null;
         }
@@ -32,6 +32,8 @@ namespace PCShopSell.Core.Session
             string why = FastFoodBlocker(itemId, count);
             if (why != null) return Fail(why);
             var item = FastFoodMenu.First(x => x.Id == itemId);
+            if(SendByCourier)return Ship(CourierShop(false),"餐饮",item.Price*count,CurrentPlace.Name+" · "+item.Name,
+                new CourierItem {Kind=CourierItemKind.PackedFood,Id="fast:"+item.Id,Count=count,ExpireDay=Clock.Today.TotalDays+item.ShelfDays},"买了");
             if (!Ledger.TryDebit(Clock.Today, "餐饮", item.Price * count, CurrentPlace.Name + " · " + item.Name)) return Fail("现金不足。");
             Backpack.Food.Packed.Add(new FoodBatch { Id = "fast:" + item.Id, Name = item.Name, Hunger = item.Hunger,
                 Count = count, ExpireDay = Clock.Today.TotalDays + item.ShelfDays });

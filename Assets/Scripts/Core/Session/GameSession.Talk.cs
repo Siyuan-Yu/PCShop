@@ -19,7 +19,7 @@ namespace PCShopSell.Core.Session
         public string SmallTalkBlocker(string npcId)
         {
             if (Npcs.Get(npcId) == null) return "没这个人";
-            if (!IsMet(npcId)) return "还没认识";
+            if (!HasGreeted(npcId)) return "还没打过招呼";
             if (_talkDays.TryGetValue(npcId, out int last) && last == Clock.Today.TotalDays) return "今天聊过了";
             return null;
         }
@@ -35,7 +35,6 @@ namespace PCShopSell.Core.Session
             if (Relation(npcId) < NpcTalk.SmallTalkMaxRelation) AddRelation(npcId, NpcTalk.SmallTalkGain);
             else line += $"\n（和{n.Name}聊得很开心，不过交情到这儿，光闲聊不涨了。送礼、约出去、听他讲讲过去会更有用。）";
             RememberSocial(npcId, "当面闲聊。\n" + line);
-            AdvanceClock(NpcTalk.SmallTalkMinutes);
             return line;
         }
 
@@ -67,7 +66,6 @@ namespace PCShopSell.Core.Session
             _lifeDays[npcId] = Clock.Today.TotalDays;
             AddRelation(npcId, NpcTalk.LifeGain);
             RememberSocial(npcId, $"听对方讲过去的事（第 {heard + 1} 段）。\n{story}");
-            AdvanceClock(NpcTalk.LifeMinutes);
             return story;
         }
 
@@ -93,7 +91,6 @@ namespace PCShopSell.Core.Session
             _insiderDays[npcId] = Clock.Today.TotalDays;
             string text = CreateTip(n, true);
             RememberSocial(npcId, "交心时听到了内幕消息。\n" + text);
-            AdvanceClock(NpcTalk.InsiderMinutes);
             return text.Replace("压低声音", "凑近你，认真地说");
         }
 

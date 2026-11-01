@@ -56,6 +56,14 @@ namespace PCShopSell.Core.Inventory
             new ShelfKind("flowers", "鲜花与盆栽", RetailProducts.All.Where(g => g.Id.StartsWith("flower_")).Select(g => g.Id).ToArray()),
             new ShelfKind("produce", "米与生鲜", RetailProducts.All.Where(g => g.Id.StartsWith("produce:")).Select(g => g.Id).ToArray()),
             new ShelfKind("meals", "外带食品", RetailProducts.All.Where(g => g.MealId != null).Select(g => g.Id).ToArray()),
+            new ShelfKind("clothing_0", "平价服装", ClothingProducts.All.Where(g => ClothingProducts.Outfit(g.Id).Tier == 0).Select(g => g.Id).ToArray()),
+            new ShelfKind("clothing_1", "品质服装", ClothingProducts.All.Where(g => ClothingProducts.Outfit(g.Id).Tier == 1).Select(g => g.Id).ToArray()),
+            new ShelfKind("clothing_2", "精品服装", ClothingProducts.All.Where(g => ClothingProducts.Outfit(g.Id).Tier == 2).Select(g => g.Id).ToArray()),
+            new ShelfKind("clothing_3", "奢侈服装", ClothingProducts.All.Where(g => ClothingProducts.Outfit(g.Id).Tier == 3).Select(g => g.Id).ToArray()),
+            new ShelfKind("model_harbor", "晨湾航行模型", ModelProducts.All.Where(g => g.ModelSeries == "harbor").Select(g => g.Id).ToArray()),
+            new ShelfKind("model_rainbot", "雨巷守望手办", ModelProducts.All.Where(g => g.ModelSeries == "rainbot").Select(g => g.Id).ToArray()),
+            new ShelfKind("model_garden", "苔园来客模型", ModelProducts.All.Where(g => g.ModelSeries == "garden").Select(g => g.Id).ToArray()),
+            new ShelfKind("model_starlight", "星灯工坊模型", ModelProducts.All.Where(g => g.ModelSeries == "starlight").Select(g => g.Id).ToArray()),
         };
 
         public static IEnumerable<ShelfKind> PartKinds => All.Where(k => k.IsParts);
@@ -119,7 +127,7 @@ namespace PCShopSell.Core.Inventory
         /// <summary>一件杂货多重（千克，最少 0.2）。</summary>
         public static double GoodsKg(string giftId) => Math.Max(0.2, Gifts.Get(giftId)?.WeightKg ?? 1.0);
 
-        public static ShelfFill Fill(Stock stock, ShelfKind kind, double capacityKg)
+        public static ShelfFill Fill(Stock stock, ShelfKind kind, double capacityKg, int maxItems = int.MaxValue)
         {
             var fill = new ShelfFill(kind, capacityKg);
             if (kind == null || capacityKg <= 0) return fill;
@@ -143,7 +151,7 @@ namespace PCShopSell.Core.Inventory
                 }
             }
 
-            double used = 0;
+            double used = 0; int taken = 0;
             if (double.IsPositiveInfinity(capacityKg))
             {
                 foreach (Entry e in entries)
@@ -160,8 +168,8 @@ namespace PCShopSell.Core.Inventory
                     progress = false;
                     foreach (Entry e in entries)
                     {
-                        if (e.Taken >= e.Left || used + e.Kg > capacityKg + 1e-9) continue;
-                        e.Taken++;
+                        if (taken>=maxItems || e.Taken >= e.Left || used + e.Kg > capacityKg + 1e-9) continue;
+                        e.Taken++; taken++;
                         used += e.Kg;
                         progress = true;
                     }

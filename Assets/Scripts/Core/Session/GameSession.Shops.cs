@@ -64,7 +64,8 @@ namespace PCShopSell.Core.Session
             {
                 RetailKind = shop.RetailKind,
                 LocationFactor = ComputeLocationFactor(City, shop.Place),
-                EmployeeOnDuty = t => (shop.Employee != null && shop.Employee.OnDuty(t)) || (shop.Assembler != null && shop.Assembler.OnDuty(t)),
+                EmployeeOnDuty = t => (shop.Employee != null && shop.Employee.OnDuty(t) && CityEmployeeAvailable(shop.Employee, shop))
+                    || (shop.Assembler != null && shop.Assembler.OnDuty(t) && CityEmployeeAvailable(shop.Assembler, shop)),
             };
             sim.Settings.BuildOrdersStartDay = BuildOrdersStartDay;
             sim.WorkMinute = now => WithShop(shop, () => UpdateEmployeeWork(now));
@@ -73,8 +74,12 @@ namespace PCShopSell.Core.Session
             {
                 if (shop.Rented) Notice?.Invoke((MyShopCount > 1 ? ShopTitle(shop) + " " : "") + DayReportText(r));
             };
-            sim.CustomerArrived += c => ShopCustomerArrived?.Invoke(shop.Place, c);
-            sim.CustomerLeft += c => WithShop(shop, () => OnShopCustomerLeft(c));
+            sim.CustomerArrived += c => {BindCityCustomer(shop,c);ShopCustomerArrived?.Invoke(shop.Place, c);};
+            sim.CustomerCanBrowse=c=>string.IsNullOrEmpty(c.PersonId)||CityPersonState(c.PersonId)?.LocationPlaceId==shop.Place.Id&&CityPersonState(c.PersonId)?.Route==null;
+            sim.RetailTemperature=()=>CityOutdoorTemperature(Clock.Now.TotalMinutes);
+            sim.RetailInterestOf=c=>CityRetailSeriesFor(c.PersonId ?? c.VisitId ?? (shop.Place.Id + ":" + c.Id));
+            sim.RetailBudgetOf=c=>CityRetailBudgetFor(c.PersonId ?? c.VisitId ?? (shop.Place.Id + ":" + c.Id));
+            sim.CustomerLeft += c => {ReleaseCityCustomer(c);WithShop(shop, () => OnShopCustomerLeft(c));};
             sim.OrderCompleted += o => { Flags.Add("tutorial:build"); ContractOrderResult(o, true); };
             sim.OrderCancelled += o => ContractOrderResult(o, false);
             sim.OrderExpired += o => ContractOrderResult(o, false);
@@ -130,7 +135,7 @@ namespace PCShopSell.Core.Session
         public string CloseShopBlocker(OwnedShop s)
         {
             if (s == null || !s.Rented) return "这不是你的店";
-            if (MyShopCount <= 1) return "这是你唯一的店。想换地方：先去中介再签一间，叫货车把货搬过去，再回这里退租";
+            if (MyShopCount <= 1 && !s.OwnsProperty) return "这是你唯一的租赁店。想换地方：先去中介再签一间，叫货车把货搬过去，再回这里退租";
             if (CurrentPlace != s.Place) return "要在这家店里办退租";
             if (_employeeTrips.Any(t => t.ShopId == s.Place.Id)) return "进货员或采购货物还在路上";
             if (Employees.Any(x => x.Person.TransferShopId == s.Place.Id)) return "已有员工安排明天调入，先取消调店安排";
@@ -163,8 +168,17 @@ namespace PCShopSell.Core.Session
             bool hadStaff = s.Employee != null || s.Assembler != null || s.Buyer != null;
             Money rent = s.Lease.Rent;
             bool wasMain = s == MainShop;
+            bool wasOwned = s.OwnsProperty;
             _shops.Remove(s);
             s.Sim.Dispose();
+            var property = PropertyAt(placeId);
+            if (property != null) { property.UseMode = "vacant"; property.TenantName = ""; }
+            if (_shops.Count == 0)
+            {
+                var placeholder = new OwnedShop { Place = City.PlayerShop() };
+                placeholder.Sim = CreateShopSim(placeholder); placeholder.Sim.Reputation = reputation;
+                _shops.Add(placeholder);
+            }
             if (wasMain)
             {
                 ShopSimulation main = MainShop.Sim;
@@ -176,8 +190,9 @@ namespace PCShopSell.Core.Session
             _vacant.Add(placeId);
             if (PropertyAt(placeId) == null) AddListing(City.GetPlace(placeId), Clock.Today.TotalDays, Clock.Today.TotalDays + 45, rent);
             WithShop(MainShop, ApplyUpgrades);
-            Show("退租了", $"{title}（{s.Place.Name}）退租了，押金 {s.Lease.Deposit} 退回，店里摆的家具收回“我的”" + (hadStaff ? "，这家店的员工也辞退了" : "")
-                + (wasMain ? $"。现在{ShopTitle(MainShop)}（{MainShop.Place.Name}）是主店。" : "。"));
+            Show(wasOwned ? "自营已结束" : "退租了", $"{title}（{s.Place.Name}）" + (wasOwned ? "已结束自营，产权保留为空置物业" : $"退租了，押金 {s.Lease.Deposit} 退回")
+                + "，店里摆的家具收回“我的”" + (hadStaff ? "，这家店的员工也辞退了" : "")
+                + (wasMain && MyShopCount > 0 ? $"。现在{ShopTitle(MainShop)}（{MainShop.Place.Name}）是主店。" : MyShopCount == 0 ? "。目前没有自营店，可到中介出租或出售物业，再选择新的经营起点。" : "。"));
             return true;
         }
 
@@ -201,7 +216,7 @@ namespace PCShopSell.Core.Session
                 closeMinute = sim.CloseMinute,
                 orders = sim.Orders.Select(ToSave).ToArray(),
                 nextOrderId = sim.NextOrderId,
-                displayPcs = sim.DisplayPcs.Concat(sim.Queue.Where(c => c.DisplayTier >= 0).Select(c => c.DisplayTier)).ToArray(),
+                displayPcs = sim.DisplayPcs.ToArray(),
                 partMarkupIds = sim.PartMarkups.Keys.ToArray(),
                 partMarkupValues = sim.PartMarkups.Values.ToArray(),
                 hasEmployee = s.Employee != null,

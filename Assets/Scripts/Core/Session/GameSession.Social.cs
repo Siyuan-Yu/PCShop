@@ -181,26 +181,7 @@ namespace PCShopSell.Core.Session
         /// <summary>每次时间推进后看有没有到点的约会。要等玩家不在路上、没有待选事件、没睡觉才弹出。</summary>
         private void CheckAppointments(GameTimestamp now)
         {
-            for (int i = _appointments.Count - 1; i >= 0; i--)
-            {
-                Appointment a = _appointments[i];
-                long start = (long)a.Day * GameTimestamp.MinutesPerDay + a.StartMinute;
-                if (now.TotalMinutes < start) continue;
-
-                if (now.TotalMinutes > start + OutingGraceMinutes)
-                {
-                    _appointments.RemoveAt(i);
-                    RememberSocial(a.NpcId, "错过了约定，对方等了一阵后离开。");
-                    AddRelation(a.NpcId, -5);
-                    Popup?.Invoke("错过了约定", $"你没能赴约，{Npcs.Get(a.NpcId).Name}等了一阵就走了。交情 -5。");
-                    continue;
-                }
-                if (PendingEvent != null || _sleeping || Trip != null || IsGameOver) continue;
-
-                _appointments.RemoveAt(i);
-                RaiseAppointment(a);
-                return;
-            }
+            MigrateCityAppointments();
         }
 
         private void RaiseAppointment(Appointment a)
@@ -242,26 +223,10 @@ namespace PCShopSell.Core.Session
 
         private string DoOuting(NpcDef n, ActivityDef act)
         {
-            if (CurrentPlace != null) Leave();
-            Ledger.ForceDebit(Clock.Today, "人情", act.Cost, $"和{n.Name}{act.Name}");
-
-            double gain = act.BaseGain * (0.8 + EffectiveCharm * 0.02);
-            if (n.Likes == act.Id) gain *= 1.5;
-            AddRelation(n.Id, gain);
-            _outingDay[n.Id] = Clock.Today.TotalDays;
-            RememberSocial(n.Id, $"一起{act.Name}，花费 {act.Cost}，相处了 {act.DurationMinutes} 分钟。");
-
-            Player.Energy = Math.Max(0, Math.Min(Player.MaxEnergy, Player.Energy + act.EnergyChange));
-            Player.Health = Math.Max(0, Math.Min(100, Player.Health + act.HealthChange));
-            Player.Hunger = Math.Max(0, Math.Min(100, Player.Hunger + act.HungerChange));
-            int rel = Relation(n.Id);
-
-            string text = $"{act.Flavor}\n和{n.Name}{act.Name}，花了 {act.Cost}，交情 +{gain:0.#}。";
-            if (n.IsTipster && Random.Chance(Math.Min(0.9, 0.35 + rel * 0.005 + act.TipBonus)))
-                text += "\n\n" + CreateTip(n);
-
-            AdvanceClock(act.DurationMinutes);
-            return text;
+            var activity=ScheduleCityActivity(act.Id,new[]{n.Id},SuggestCityActivityStart(act.Id,n.Id));
+            if(activity==null)return "Activity could not be scheduled.";
+            GoToCityActivity(activity.Id);
+            return "Scheduled: travel to the actual venue. Payment and effects apply only during attendance.";
         }
 
         // ---------- 行情消息 ----------
@@ -279,18 +244,18 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>递根烟，打听点行情。他说的不一定是真的。</summary>
-        public bool AskForTip(string npcId)
+        public bool AskForTip(string npcId) => AskForTipReply(npcId,true)!=null;
+        public string AskForTipReply(string npcId,bool notify=false)
         {
             string blocker = TipBlocker(npcId);
-            if (blocker != null) return Fail(blocker);
+            if (blocker != null) {Fail(blocker);return null;}
             NpcDef n = Npcs.Get(npcId);
             Backpack.TakeCigarette();
             ApplyCargoLimit();
-            AdvanceClock(5);
             string text = CreateTip(n);
             RememberSocial(npcId, "递了根烟，向对方打听了行情消息。\n" + text);
-            Popup?.Invoke(n.Name + "的消息", text);
-            return true;
+            if(notify)Popup?.Invoke(n.Name + "的消息", text);
+            return text;
         }
 
         /// <summary>这个人这次说真话的概率：本来的靠谱度 + 交情带来的信任。</summary>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Finance;
@@ -79,6 +80,7 @@ namespace PCShopSell.Core.Shop
 
     public sealed class ShopCustomer
     {
+        public string PersonId, VisitId;
         public int Id { get; }
         public CustomerIntent Intent { get; }
         public PartCategory DesiredCategory { get; }
@@ -102,6 +104,9 @@ namespace PCShopSell.Core.Shop
 
         /// <summary>顺手挑了一件杂货（礼品 id）；没有就是 null。杂货和配件不会同时拿。</summary>
         public string GoodsId { get; internal set; }
+        public string RetailInterestSeries;
+        public long RetailBudgetCents;
+        internal bool RetailPreferenceAssigned;
         public int GoodsExpiryDay = -1;
         public bool GoodsChilled;
 
@@ -292,6 +297,10 @@ namespace PCShopSell.Core.Shop
 
         /// <summary>招牌灯箱之类的升级带来的客流倍数。</summary>
         public double TrafficMultiplier { get; set; } = 1.0;
+        public double CityRetailDemandMultiplier { get; set; } = 1.0;
+        public Func<ShopCustomer, string> RetailInterestOf;
+        public Func<ShopCustomer, long> RetailBudgetOf;
+        public Func<double> RetailTemperature;
 
         private ShopSimulation _reputationOwner;
 
@@ -343,8 +352,10 @@ namespace PCShopSell.Core.Shop
         /// 每类货的货架总载重（千克，会话按摆放更新）。设了以后顾客只买货架上摆着的：
         /// 某类货没有货架就买不到。没设（null，单元测试里）= 后仓的货都能买。
         /// </summary>
-        public void SetShelfCapacity(IReadOnlyDictionary<string, double> kgByKind)
+        private IReadOnlyDictionary<string,int> _shelfItemLimits;
+        public void SetShelfCapacity(IReadOnlyDictionary<string, double> kgByKind,IReadOnlyDictionary<string,int> itemLimits=null)
         {
+            _shelfItemLimits=itemLimits;
             _shelfKg = kgByKind == null ? null : new Dictionary<string, double>(kgByKind.Count);
             if (kgByKind != null)
                 foreach (var kv in kgByKind) _shelfKg[kv.Key] = kv.Value;
@@ -360,7 +371,7 @@ namespace PCShopSell.Core.Shop
         }
 
         /// <summary>这类货现在在货架上摆着哪些（后仓里没摆上去的不算）。</summary>
-        public ShelfFill ShelfFillOf(ShelfKind kind) => ShelfPlanner.Fill(Stock, kind, ShelfCapacityOf(kind));
+        public ShelfFill ShelfFillOf(ShelfKind kind) => ShelfPlanner.Fill(Stock, kind, ShelfCapacityOf(kind),kind!=null && _shelfItemLimits!=null && _shelfItemLimits.TryGetValue(kind.Id,out int max)?max:int.MaxValue);
 
         public ShelfFill ShelfFillOf(PartCategory cat) => ShelfFillOf(ShelfKinds.ForCategory(cat));
 
@@ -417,6 +428,7 @@ namespace PCShopSell.Core.Shop
         public Func<GameTimestamp, bool> EmployeeOnDuty { get; set; } = _ => false;
 
         public IReadOnlyList<ShopCustomer> ActiveCustomers => _active;
+        public Func<ShopCustomer,bool> CustomerCanBrowse;
         public IReadOnlyList<ShopCustomer> Queue => _queue;
         public string RetailKind = "computer";
         public bool IsGoodsShop => RetailKind != "computer";
@@ -524,12 +536,12 @@ namespace PCShopSell.Core.Shop
         /// <summary>当前时刻每分钟来客的期望人数。</summary>
         public double ArrivalRatePerMinute(GameTimestamp at)
         {
-            double retailTraffic = RetailKind == "flowers" ? 1.8 : IsGoodsShop ? 3.0 : 1.0;
+            double retailTraffic = RetailKind == "flowers" ? 1.8 : RetailKind == "models" ? 1.4 : IsGoodsShop ? 3.0 : 1.0;
             double perHour = Settings.BaseCustomersPerHour * retailTraffic
                              * Settings.HourFactors[at.Hour]
                              * ShopSettings.SizeFactor(Size)
                              * LocationFactor
-                             * TrafficMultiplier
+                              * TrafficMultiplier * Math.Max(.5, Math.Min(1.5, CityRetailDemandMultiplier))
                              * (1.0 + Reputation / 100.0)
                              * (at.Date.IsWeekend ? Settings.WeekendMultiplier : 1.0);
             return perHour / 60.0;
@@ -568,7 +580,7 @@ namespace PCShopSell.Core.Shop
             if (o == null || at >= o.DueAt || MissingParts(o).Count > 0) return false;
             if (!o.PartsReserved) foreach (PartDef p in PartCatalog.BuildList(o.Tier)) Stock.TakeOne(p);
             _orders.Remove(o);
-            _ledger.Credit(at.Date, BuildCategory, o.Price, $"{PartCatalog.TierName(o.Tier)}整机");
+            _ledger.Credit(at.Date, BuildCategory, o.Price, $"{PartCatalog.TierName(o.Tier)}整机", LedgerAttribution.ForShop(ShopId, "build:" + ShopId + ":" + o.Id, "销售"));
             TodaySales += o.Price;
             Reputation += BuildReputationGain;
             OrderCompleted?.Invoke(o);
@@ -715,7 +727,7 @@ namespace PCShopSell.Core.Shop
             for (int i = _active.Count - 1; i >= 0; i--)
             {
                 ShopCustomer c = _active[i];
-                if (c.State == CustomerState.Browsing && now >= c.ReadyAt)
+                if (c.State == CustomerState.Browsing && now >= c.ReadyAt && (CustomerCanBrowse==null||CustomerCanBrowse(c)))
                     Decide(c, now);
                 else if (c.State == CustomerState.WaitingCheckout &&
                          c.WaitingSince.MinutesUntil(now) >= Settings.PatienceMinutes)
@@ -831,7 +843,44 @@ namespace PCShopSell.Core.Shop
         {
             List<KeyValuePair<string, int>> lines = GoodsOnShelves().FindAll(l => RetailShopTypes.Sells(RetailKind, l.Key));
             if (lines.Count == 0) return false;
-            string id = lines[Random.Next(0, lines.Count)].Key;
+            if (RetailKind == "models")
+            {
+                if (!c.RetailPreferenceAssigned)
+                {
+                    c.RetailPreferenceAssigned = true;
+                    c.RetailInterestSeries = RetailInterestOf?.Invoke(c);
+                    if (!ModelProducts.SeriesIds.Contains(c.RetailInterestSeries)) c.RetailInterestSeries = ModelProducts.SeriesIds[Random.Next(0, ModelProducts.SeriesIds.Length)];
+                    c.RetailBudgetCents = RetailBudgetOf?.Invoke(c) ?? 0;
+                    if (c.RetailBudgetCents <= 0) c.RetailBudgetCents = new long[] { 8000, 15000, 30000, 60000 }[Random.Next(0, 4)];
+                }
+                lines = lines.FindAll(l => GoodsPriceOf(l.Key).Cents <= c.RetailBudgetCents);
+                if (lines.Count == 0) { Leave(c, LeaveReason.TooExpensive); return true; }
+                var preferred = lines.FindAll(l => Gifts.Get(l.Key)?.ModelSeries == c.RetailInterestSeries);
+                if (preferred.Count > 0) lines = preferred;
+            }
+            if (RetailKind == "clothing")
+            {
+                if (!c.RetailPreferenceAssigned)
+                {
+                    c.RetailPreferenceAssigned = true;
+                    uint identity = 2166136261;
+                    foreach (char ch in c.PersonId ?? ("visit:" + c.Id)) identity = unchecked((identity ^ ch) * 16777619);
+                    int segment = (int)(identity % 100);
+                    c.RetailBudgetCents = segment < 65 ? 60000 : segment < 90 ? 180000 : segment < 99 ? 600000 : 5000000;
+                }
+                lines = lines.FindAll(l => GoodsPriceOf(l.Key).Cents <= c.RetailBudgetCents);
+                if (lines.Count == 0) { Leave(c, LeaveReason.TooExpensive); return true; }
+            }
+            string id;
+            if (RetailKind == "clothing")
+            {
+                double temp = RetailTemperature?.Invoke() ?? 22;
+                double total = lines.Sum(l => ClothingProducts.SeasonDemandAt(l.Key, temp));
+                double pick = Random.Next(0, 1000000) / 1000000.0 * total;
+                id = lines[lines.Count - 1].Key;
+                foreach (var l in lines) { pick -= ClothingProducts.SeasonDemandAt(l.Key, temp); if (pick < 0) { id = l.Key; break; } }
+            }
+            else id = lines[Random.Next(0, lines.Count)].Key;
             if (!Random.Chance(ShopSettings.BuyChance(MarkupOfGoods(id)) * (IsGoodsShop ? 1.0 : Settings.GoodsBuyFactor))) return false;
             if (!CanPay(c))
             {
@@ -923,17 +972,17 @@ namespace PCShopSell.Core.Shop
             c.State = CustomerState.Paid;
             if (c.DisplayTier >= 0)
             {
-                _ledger.Credit(_clock.Today, BuildCategory, c.Spend, $"{c.ItemName}（展示机）");
+                _ledger.Credit(_clock.Today, BuildCategory, c.Spend, $"{c.ItemName}（展示机）", LedgerAttribution.ForShop(ShopId, transactionKind: "销售"));
                 Reputation += BuildReputationGain;
             }
             else if (c.GoodsId != null)
             {
-                _ledger.Credit(_clock.Today, SalesCategory, c.Spend, c.ItemName + "（杂货）");
+                _ledger.Credit(_clock.Today, SalesCategory, c.Spend, c.ItemName + "（杂货）", LedgerAttribution.ForShop(ShopId, transactionKind: "销售"));
                 Reputation += SaleReputationGain * 0.5;
             }
             else
             {
-                _ledger.Credit(_clock.Today, SalesCategory, c.Spend, c.Item.Name + (c.ItemBoxed ? "（盒装）" : "（散件）"));
+                _ledger.Credit(_clock.Today, SalesCategory, c.Spend, c.Item.Name + (c.ItemBoxed ? "（盒装）" : "（散件）"), LedgerAttribution.ForShop(ShopId, transactionKind: "销售"));
                 Reputation += SaleReputationGain;
             }
             TodaySales += c.Spend;

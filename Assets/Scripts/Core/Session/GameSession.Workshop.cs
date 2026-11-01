@@ -16,6 +16,7 @@ namespace PCShopSell.Core.Session
         }
 
         private int _manualBuildId = -1;
+        private OwnedShop _manualDisplayShop;
         public bool EmployeeTrained => Employee != null && _focus.EmployeeTrained;
         public bool AutoBuildEnabled => _focus.AutoBuild;
         public void ToggleAutoBuild() => _focus.AutoBuild = !_focus.AutoBuild;
@@ -23,6 +24,7 @@ namespace PCShopSell.Core.Session
         {
             if (!InPlayerShop || Employee == null || EmployeeTrained) return Fail("请在店里选择一位尚未培训的店员。");
             if (!Ledger.TryDebit(Clock.Today, "培训", Money.FromYuan(1200), "店员装机培训")) return Fail("培训需要 ¥1,200。");
+            SnapshotCurrentEmployeePay(Employee);
             Employee.DailyWageYuan += 60;
             _focus.EmployeeTrained = true;
             Employee.AssemblyTrained = true;
@@ -34,9 +36,9 @@ namespace PCShopSell.Core.Session
         private void UpdateEmployeeWork(GameTimestamp now)
         {
             _employeeBuilding = false;
-            Employee worker = Assembler != null && Assembler.OnDuty(now) ? Assembler : EmployeeTrained && Employee.OnDuty(now) ? Employee : null;
+            Employee worker = Assembler != null && CityEmployeeAvailable(Assembler,_focus) ? Assembler : EmployeeTrained && CityEmployeeAvailable(Employee,_focus) ? Employee : null;
             if (worker == null || !AutoBuildEnabled) return;
-            bool dedicated = worker == Assembler && Employee != null && Employee.OnDuty(now);
+            bool dedicated = worker == Assembler && CityEmployeeAvailable(Employee,_focus);
             int workMinutes = AssemblyMinutesOf(worker);
             var order = PlayerShop.Orders.Where(o => o.Id != _manualBuildId && o.EmployeeMinutesLeft > 0).FirstOrDefault();
             if (order == null)

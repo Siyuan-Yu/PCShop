@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -8,39 +8,6 @@ using PCShopSell.Core.Shop;
 namespace PCShopSell.Core.Session
 {
     /// <summary>衣服。穿在身上加魅力（影响砍价等）。</summary>
-    public sealed class OutfitDef
-    {
-        public string Id { get; }
-        public string Name { get; }
-        public Money Price { get; }
-        public int CharmBonus { get; }
-        public string Description { get; }
-
-        public OutfitDef(string id, string name, long priceYuan, int charmBonus, string description)
-        {
-            Id = id;
-            Name = name;
-            Price = Money.FromYuan(priceYuan);
-            CharmBonus = charmBonus;
-            Description = description;
-        }
-    }
-
-    public static class Outfits
-    {
-        public const string Default = "tee";
-
-        public static readonly IReadOnlyList<OutfitDef> All = new[]
-        {
-            new OutfitDef(Default, "地摊 T 恤", 0, 0, "洗得发白，但是舒服。"),
-            new OutfitDef("shirt", "干净衬衫", 280, 2, "至少看起来像个正经老板。"),
-            new OutfitDef("jacket", "休闲夹克", 700, 4, "出门谈事不丢人。"),
-            new OutfitDef("suit", "合身西装", 1800, 7, "进了档口，老板都多看你两眼。"),
-        };
-
-        public static OutfitDef Get(string id) => All.FirstOrDefault(o => o.Id == id);
-    }
-
     public sealed partial class GameSession
     {
         private HashSet<string> _upgrades => _focus.Upgrades;
@@ -102,7 +69,7 @@ namespace PCShopSell.Core.Session
             PlayerShop.Accepted = acc;
             PlayerShop.Stock.Capacity = ShopSettings.Capacity(PlayerShop.Size) + ShopUpgrades.ExtraCapacity(_upgrades) + ShelfStockBonus();
             PlayerShop.TrafficMultiplier = (_upgrades.Contains(ShopUpgrades.Sign) ? ShopUpgrades.SignTrafficBonus : 1.0) * NpcTrafficMultiplier() * ShopDecorTrafficMultiplier * CreatorTrafficMultiplier;
-            PlayerShop.Settings.PatienceMinutes = _basePatience + (_upgrades.Contains(ShopUpgrades.AirCon) ? ShopUpgrades.AirConPatienceBonus : 0) + ShopDecorPatience;
+            PlayerShop.Settings.PatienceMinutes = _basePatience + ShopDecorPatience;
             UpdateShopFit();
         }
 
@@ -123,6 +90,7 @@ namespace PCShopSell.Core.Session
         public bool Equip(string id)
         {
             if (!_ownedOutfits.Contains(id)) return false;
+            if (!CanChangeCityClothing) return Fail("请到家中衣柜或真实试衣镜旁更衣。");
             EquippedOutfit = id;
             return true;
         }

@@ -31,7 +31,7 @@ namespace PCShopSell.Game.UI
             if (unset > 0) sb.Append($"<color=#ABB5A8>　{unset} 个货架还没设置摆什么（去“库存”页设置）</color>");
 
             foreach (FixtureNeed n in list.Where(x => S.RetailKind == "computer" && (x.Kind == FixtureKind.Display || x.Kind == FixtureKind.Bench)))
-                sb.Append('\n').Append(FitLine(n, n.Kind == FixtureKind.Display ? "整机展示桌（每张摆 2 台整机，店越大摆得越多）" : "装机操作台（接装机订单用）", false));
+                sb.Append('\n').Append(FitLine(n, n.Kind == FixtureKind.Display ? "展示台（可选品类：电脑整机或其他商品）" : "装机操作台（接装机订单用）", false));
             return sb.ToString();
         }
 
@@ -63,7 +63,7 @@ namespace PCShopSell.Game.UI
                     ? "<color=#DDC18B>毛坯：还不能开业。</color>"
                     : "<color=#A9C9A9>已经布置好，正常营业。</color>";
             Line(C, "店面装修　" + state, 18);
-            Para(C, "货架、收银台、整机展示桌、装机操作台和装饰都在这里摆放。进入编辑模式后镜头会转成俯视，带网格和坐标；调整任何店内摆设都需要歇业装修，当天不再营业，次日恢复。", 15, Ui.Dim);
+            Para(C, "货架、收银台、展示台、装机操作台和装饰都在这里摆放。进入编辑模式后镜头会转成俯视，带网格和坐标；调整任何店内摆设都需要歇业装修，当天不再营业，次日恢复。", 15, Ui.Dim);
             Para(C, FitChecklistText(), 15);
             string label = S.IsRenovating ? "继续摆放（进入编辑模式）" : S.ShopFitted ? "重新布置（今天歇业装修）" : "开始装修（今天歇业，进入编辑模式）";
             Ui.Size(Ui.Button(C, label, () => StartPlacement(true), 20, Ui.ButtonHot), -1, 48);

@@ -25,6 +25,7 @@ namespace PCShopSell.Game.Runtime
         public const string Fridge = "fridge";
         public const string Storage = "storage";
         public const string Door = "door";
+        public const string Climate = "climate";
 
         public static readonly Vector3 Origin = new Vector3(600, 0, -470);
         public const float Width = 6f;
@@ -46,6 +47,7 @@ namespace PCShopSell.Game.Runtime
                 case FurnitureRole.Broken: return Repair;
                 case FurnitureRole.Fridge: return Fridge;
                 case FurnitureRole.Storage: return Storage;
+                case FurnitureRole.Climate: return Climate;
                 default: return null;
             }
         }
@@ -205,7 +207,7 @@ namespace PCShopSell.Game.Runtime
                 if (id == null) continue;
                 if (def.Role == FurnitureRole.Bed) hasBed = true;
                 RectD f = RoomPlanner.Footprint(RoomSpec.Home, def, p);
-                string label = def.Role == FurnitureRole.Fridge ? "冰箱：存取食物" : def.Role == FurnitureRole.Bed ? "睡觉 / 小睡" : def.Role == FurnitureRole.Wardrobe ? "打开衣柜" : def.Role == FurnitureRole.Seat ? "坐下" : def.Role == FurnitureRole.Broken ? "坏了：约师傅上门修" : def.Role == FurnitureRole.Storage ? "纸箱：存取东西" : "电饭锅：做饭 / 吃饭";
+                string label = def.Role==FurnitureRole.Climate?"风扇/空调：模式与设温":def.Role == FurnitureRole.Fridge ? "冰箱：存取食物" : def.Role == FurnitureRole.Bed ? "睡觉 / 小睡" : def.Role == FurnitureRole.Wardrobe ? "打开衣柜" : def.Role == FurnitureRole.Seat ? "坐下" : def.Role == FurnitureRole.Broken ? "坏了：约师傅上门修" : def.Role == FurnitureRole.Storage ? "纸箱：存取东西" : "电饭锅：做饭 / 吃饭";
                 _spots.Add(new Spot
                 {
                     Id = id,
@@ -293,12 +295,14 @@ namespace PCShopSell.Game.Runtime
         public void CancelBedWalk() { _bedWalkPath = null; _bedWalkIndex = 0; }
 
         /// <summary>Walk around furniture to a reachable bedside (or the fallback floor bedding).</summary>
-        public int WalkToBed(float dt)
+        public int WalkToBed(float dt) => WalkToHomeSpot(Bed, dt);
+        public int WalkToDoor(float dt) => WalkToHomeSpot(Door, dt);
+        private int WalkToHomeSpot(string target, float dt)
         {
             StandUp();
             Vector3 at = _owner.transform.localPosition;
             foreach (var spot in _spots)
-                if (spot.Id == Bed && DistToRect(new Vector2(at.x, at.z), spot.Area) <= 0.6f) return 1;
+                if (spot.Id == target && DistToRect(new Vector2(at.x, at.z), spot.Area) <= 0.6f) return 1;
             if (_bedWalkPath == null)
             {
                 const float cell = 0.2f;
@@ -317,7 +321,7 @@ namespace PCShopSell.Game.Runtime
                     int current = queue.Dequeue();
                     Vector3 point = Point(current);
                     foreach (var spot in _spots)
-                        if (spot.Id == Bed && !Blocked(point) && DistToRect(new Vector2(point.x, point.z), spot.Area) <= 0.55f)
+                        if (spot.Id == target && !Blocked(point) && DistToRect(new Vector2(point.x, point.z), spot.Area) <= 0.55f)
                         { goal = current; break; }
                     if (goal >= 0) break;
                     for (int direction = 0; direction < 4; direction++)
@@ -390,7 +394,7 @@ namespace PCShopSell.Game.Runtime
                 var cooker = furniture.Go.GetComponent<RiceCookerVisual>();
                 if (cooker != null) cooker.Tick(s.Pantry, s.Time.IsRunning ? realDt : 0);
             }
-            UpdateRepairman(s, s.Time.IsRunning ? realDt : 0f);
+            UpdateRepairman(s, s.Time.IsRunning ? realDt * s.Time.Speed : 0f);
 
             // 窗外的天光：白天亮、夜里黑
             float hour = minuteOfDay / 60f;

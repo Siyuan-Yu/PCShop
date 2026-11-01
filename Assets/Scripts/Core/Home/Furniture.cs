@@ -27,6 +27,7 @@ namespace PCShopSell.Core.Home
         /// <summary>纸箱：可以存取东西，每个 100 千克。</summary>
         Storage,
         Fridge,
+        Climate,
     }
 
     /// <summary>店面设施的种类：货架摆配件，收银台收钱，整机展示桌摆整机，操作台装机。</summary>
@@ -110,6 +111,7 @@ namespace PCShopSell.Core.Home
     public sealed class PlacedFurniture
     {
         public string Id;
+        public string ClimateId;
         public double X;
         public double Z;
         public int Rot;
@@ -117,7 +119,8 @@ namespace PCShopSell.Core.Home
         /// <summary>货架专属：这个货架摆哪一类货（<c>ShelfKinds</c> 的 id；null = 还没设置）。</summary>
         public string Item;
 
-        public PlacedFurniture Clone() => new PlacedFurniture { Id = Id, X = X, Z = Z, Rot = Rot, Item = Item };
+        public int DisplayLimit = 2;
+        public PlacedFurniture Clone() => new PlacedFurniture { Id = Id, ClimateId = ClimateId, X = X, Z = Z, Rot = Rot, Item = Item, DisplayLimit=DisplayLimit };
     }
 
     public static class FurnitureCatalog
@@ -129,6 +132,9 @@ namespace PCShopSell.Core.Home
         public const string FridgePremium = "fridge_premium";
         public const string BedBoard = "bed_board";
         public const string WardrobeCloth = "wardrobe_cloth";
+        public const string ClothingRack = "clothing_rack";
+        public const string ClothingFold = "clothing_fold";
+        public const string FittingMirror = "fitting_mirror";
         public const string TableCooker = "table_cooker";
         public const string Curtain = "curtain";
 
@@ -162,7 +168,7 @@ namespace PCShopSell.Core.Home
         public static readonly Money ShelfPrice = Money.FromYuan(300);
 
         /// <summary>老版本按类别分的货架 id（"shelf_gpu"、"shelf_goods"……）统一当成现在的货架。</summary>
-        public static string Canonical(string id) => id != null && id.StartsWith("shelf_", StringComparison.Ordinal) ? Shelf : id;
+        public static string Canonical(string id) => id==ClothingRack || id==ClothingFold || id != null && id.StartsWith("shelf_", StringComparison.Ordinal) ? Shelf : id;
 
         /// <summary>老货架 id 对应的货类（显卡货架 → "gpu"；杂货架没有对应的类，返回 null）。</summary>
         public static string LegacyShelfKind(string id) =>
@@ -191,10 +197,11 @@ namespace PCShopSell.Core.Home
             // ---- 出租屋：开局自带 ----
             Add(new FurnitureDef(BedBoard, "硬板床", "一块木板加一层薄褥子。", 0, FurnitureSlot.Floor, 2.0, 1.0, false, true) { Role = FurnitureRole.Bed, BedQuality = 1.0 });
             Add(new FurnitureDef(WardrobeCloth, "布衣柜", "拉链布衣柜，塑料骨架。", 0, FurnitureSlot.Floor, 1.1, 0.6, false, true) { Role = FurnitureRole.Wardrobe });
+            Add(new FurnitureDef(FittingMirror, "落地试衣镜", "真实摆放后可在店内试衣和更换已拥有的服装。", 230, FurnitureSlot.Floor, .7, .25, true) { Role = FurnitureRole.Wardrobe, WeightKg = 10 });
             Add(new FurnitureDef(TableCooker, "折叠小桌（电饭锅）", "吃饭、做饭都在这张小桌上。", 0, FurnitureSlot.Floor, 1.2, 0.6, false, true) { Role = FurnitureRole.Cooker });
             Add(new FurnitureDef("stool", "塑料矮凳", "红色塑料凳，可以坐。", 0, FurnitureSlot.Floor, 0.4, 0.4, false, true) { Role = FurnitureRole.Seat });
             Add(new FurnitureDef("fan_broken", "坏电风扇", "摇头的地方卡住了，一直耷拉着。找人上门能修好。", 0, FurnitureSlot.Floor, 0.45, 0.45, false, true) { Role = FurnitureRole.Broken, RepairInto = "fan_fixed", RepairCost = Money.FromYuan(60) });
-            Add(new FurnitureDef("fan_fixed", "电风扇（修好了）", "修好的旧电风扇，能转。睡眠 +0.05，水电 +¥10/月。", 0, FurnitureSlot.Floor, 0.45, 0.45, false, true) { SleepBonus = 0.05, Utilities = Money.FromYuan(10) });
+            Add(new FurnitureDef("fan_fixed", "电风扇（修好了）", "热天改善所在室内的舒适体验；固定水电¥10/月。", 0, FurnitureSlot.Floor, 0.45, 0.45, false, true) { SleepBonus = 0, Utilities = Money.FromYuan(10) });
             Add(new FurnitureDef("junk", "纸箱和塑料盆", "搬家时留下的杂物。纸箱里能放东西。", 0, FurnitureSlot.Floor, 0.9, 0.9, false, true) { Role = FurnitureRole.Storage });
 
             Add(new FurnitureDef(FridgeSmall, "单门小冰箱", "入门款。容量 60 千克，占地小；家和店里都能摆。冷藏额外保鲜 7 天，每批只延长一次。", 1299, FurnitureSlot.Floor, 0.55, 0.6) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 60, WeightKg = 28, Utilities = Money.FromYuan(15) });
@@ -206,8 +213,8 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef("bed_spring", "弹簧床", "有像样的床垫，睡着不硌人。睡眠质量 ×1.12。", 900, FurnitureSlot.Floor, 2.0, 1.1) { Role = FurnitureRole.Bed, BedQuality = 1.12 });
             Add(new FurnitureDef("bed_good", "实木床 + 乳胶床垫", "睡眠质量 ×1.25。", 2200, FurnitureSlot.Floor, 2.1, 1.3) { Role = FurnitureRole.Bed, BedQuality = 1.25 });
             Add(new FurnitureDef("wardrobe_wood", "实木衣柜", "结实好看，屋里显得体面。", 600, FurnitureSlot.Floor, 1.4, 0.6) { Role = FurnitureRole.Wardrobe, Appeal = 1 });
-            Add(new FurnitureDef("fan_new", "落地扇", "能转的电风扇。睡眠 +0.05，水电 +¥10/月。", 180, FurnitureSlot.Floor, 0.45, 0.45) { SleepBonus = 0.05, Utilities = Money.FromYuan(10) });
-            Add(new FurnitureDef("aircon", "二手空调", "挂在墙上。睡眠 +0.12，水电 +¥40/月。", 1200, FurnitureSlot.Wall, 1.1, 0.3) { SleepBonus = 0.12, Utilities = Money.FromYuan(40) });
+            Add(new FurnitureDef("fan_new", "落地扇", "热天改善所在室内的舒适体验；固定水电¥10/月。", 180, FurnitureSlot.Floor, 0.45, 0.45) { SleepBonus = 0, Utilities = Money.FromYuan(10) });
+            Add(new FurnitureDef("aircon", "二手冷暖空调", "改善所在室内的冷暖体验，自动生效；固定水电¥40/月。", 1200, FurnitureSlot.Wall, 1.1, 0.3) { SleepBonus = 0, Utilities = Money.FromYuan(40) });
             Add(new FurnitureDef(Curtain, "窗帘", "挡光，晚上睡得安稳点。睡眠 +0.04。", 150, FurnitureSlot.Wall, 1.5, 0.1) { SleepBonus = 0.04 });
             Add(new FurnitureDef("rug", "小地毯", "遮住一块难看的地面。", 120, FurnitureSlot.Flat, 1.6, 1.2) { Appeal = 1 });
             Add(new FurnitureDef("plant", "绿萝盆栽", "屋里有点生气。", 60, FurnitureSlot.Floor, 0.4, 0.4) { Appeal = 1 });
@@ -229,11 +236,16 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef(RackStrong, "加固货架", "钢架加厚，每个能放 100 千克，还顺带把后仓扩大 10 格。用法和普通货架一样：每个摆一种货。", 700, FurnitureSlot.Floor, 1.4, 0.4, true) { Fixture = FixtureKind.Shelf, WeightKg = 55, ShelfKg = 100, StockBonus = 10 });
             Add(new FurnitureDef(RackHeavy, "重型货架", "仓储用的重型货架，每个能放 160 千克，后仓扩大 20 格。", 1500, FurnitureSlot.Floor, 1.4, 0.4, true) { Fixture = FixtureKind.Shelf, WeightKg = 90, ShelfKg = 160, StockBonus = 20 });
             Add(new FurnitureDef(ShopCounter, "收银台", "顾客结账的地方，没有它开不了业。", 600, FurnitureSlot.Floor, 2.2, 0.8, true) { Fixture = FixtureKind.Counter });
-            Add(new FurnitureDef(ShopDisplay, "整机展示桌", "一张桌子摆两台整机，让顾客直接带走。", 900, FurnitureSlot.Floor, 2.8, 1.2, true) { Fixture = FixtureKind.Display });
+            Add(new FurnitureDef(ShopDisplay, "展示台", "可选择展示电脑整机、服装或其他商品。电脑占两个机位，其他商品可摆1–6件。", 900, FurnitureSlot.Floor, 2.8, 1.2, true) { Fixture = FixtureKind.Display });
             Add(new FurnitureDef(ShopBench, "装机操作台", "接装机订单、拆装整机都在这张台子上。", 500, FurnitureSlot.Floor, 1.3, 0.7, true) { Fixture = FixtureKind.Bench });
 
+            Add(new FurnitureDef("aircon_large", "大店冷暖空调", "改善家或店铺的室内冷暖体验，自动生效；固定水电¥80/月。", 3600, FurnitureSlot.Wall, 1.4, 0.35) { WeightKg = 48, Utilities = Money.FromYuan(80) });
+
             foreach (FurnitureDef d in l)
+            {
+                if (d.Id=="fan_fixed"||d.Id=="fan_new"||d.Id=="aircon"||d.Id=="aircon_large")d.Role=FurnitureRole.Climate;
                 if (d.WeightKg <= 0) d.WeightKg = Weights.TryGetValue(d.Id, out double kg) ? kg : 10;
+            }
             return l;
         }
 

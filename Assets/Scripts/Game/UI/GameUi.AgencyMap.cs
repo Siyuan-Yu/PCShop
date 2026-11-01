@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Shop;
@@ -13,7 +13,7 @@ namespace PCShopSell.Game.UI
     {
         private void BuildAgencyMap(RectTransform map, Place[] units, Window w)
         {
-            AgencyMapText(map, "商业街 · 街区鸟瞰", 23, 16, 6, 280, 34, Ui.TextColor);
+            AgencyMapText(map, S.City.StreetName(S.AgencyStreetOf(S.CurrentPlace)) + " · 本街鸟瞰", 23, 16, 6, 280, 34, Ui.TextColor);
             AgencyMapText(map, "滚轮缩放 · 拖动查看 · 点建筑选址", 15, 300, 9, 350, 30, Ui.Dim);
             var raw = Ui.Rect(map, "StreetViewport");
             AgencyAt(raw, 0, 46, 1120, 650);

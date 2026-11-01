@@ -56,9 +56,12 @@ namespace PCShopSell.Tests
         public void Catalog_HasShelfTiers_AndTheOtherFixtures()
         {
             var shelves = FurnitureCatalog.All.Where(d => d.Fixture == FixtureKind.Shelf).ToList();
-            Assert.AreEqual(3, shelves.Count, "普通 / 加固 / 重型三档货架，摆什么都自己设置");
-            Assert.AreEqual(FurnitureCatalog.Shelf, shelves[0].Id);
-            Assert.IsTrue(shelves[0].ShelfKg < shelves[1].ShelfKg && shelves[1].ShelfKg < shelves[2].ShelfKg);
+            var general=new[]{FurnitureCatalog.Shelf,FurnitureCatalog.RackStrong,FurnitureCatalog.RackHeavy}.Select(FurnitureCatalog.Get).ToArray();
+            Assert.AreEqual(5, shelves.Count, "保留三档通用货架，新增服装衣架与折叠陈列架");
+            foreach(var d in general)Assert.Contains(d,shelves);
+            Assert.IsTrue(general[0].ShelfKg < general[1].ShelfKg && general[1].ShelfKg < general[2].ShelfKg);
+            foreach(var id in new[]{FurnitureCatalog.ClothingRack,FurnitureCatalog.ClothingFold})
+            {Assert.Contains(FurnitureCatalog.Get(id),shelves);Assert.Greater(FurnitureCatalog.Get(id).ShelfKg,0);}
             foreach (FurnitureDef d in FurnitureCatalog.All.Where(x => x.IsFixture))
             {
                 Assert.IsTrue(d.ForShop, d.Id);

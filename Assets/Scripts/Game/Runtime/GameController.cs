@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -36,7 +37,7 @@ namespace PCShopSell.Game
         public bool InHome => Session != null && Session.CurrentPlace != null && Session.CurrentPlace == Session.Home;
         /// <summary>在任意室内场景（店里或家里）：街道隐藏，镜头跟着老板。</summary>
         public bool InRoom => InInterior || InHome;
-        private int RoomKind => InInterior ? 1 : InHome ? 2 : 0;
+        private int RoomKind => InInterior ? 1 : InHome ? 2 : CityCloseView!=null ? 3 : 0;
 
         private CameraRig _rig;
         private DayNightLighting _lighting;
@@ -49,6 +50,7 @@ namespace PCShopSell.Game
         private bool _goHomeToBed;
         private bool _wasChasing;
         private int _wasRoomKind;
+        private string _crowdPlace, _crowdActivity;
         private bool _autosaveDue, _wasPlayerWorking;
         private bool _bootstrapped;
         private bool _eventsOn;
@@ -105,6 +107,9 @@ namespace PCShopSell.Game
                 Session.TripArrived -= OnTripArrived;
                 Session.ShopCustomerArrived -= OnCustomerArrived;
                 Session.Clock.DayAdvanced -= OnDayAdvanced;
+                Session.CityTravelRequested-=OnCityTravelRequested;
+                Session.CityPlaceEntered-=OnCityPlaceEntered;
+                Session.CityActivitySettled-=OnCityActivitySettled;
                 Session.Dispose();
             }
             Interior.Clear();
@@ -117,12 +122,16 @@ namespace PCShopSell.Game
             s.Popup += OnPopup;
             s.EventRaised += OnEventRaised;
             s.ShopExpanded += OnShopExpanded;
-            s.EventsEnabled = _eventsOn;
+            s.EventsEnabled = !s.IsCityLifeTest && _eventsOn;
             s.TripArrived += OnTripArrived;
             s.ShopCustomerArrived += OnCustomerArrived;
             s.Clock.DayAdvanced += OnDayAdvanced;
+            s.CityTravelRequested+=OnCityTravelRequested;
+            s.CityPlaceEntered+=OnCityPlaceEntered;
+            s.CityActivitySettled+=OnCityActivitySettled;
+            _cityExitIntent=null;
             _pendingEnter = null;
-            _goHomeToBed = false;
+            _goHomeToBed = s.CitySleepRequested;
             _gameOverShown = false;
             _autosaveDue = false; _wasPlayerWorking = s.IsWorking;
 
@@ -142,6 +151,10 @@ namespace PCShopSell.Game
             _wasRoomKind = RoomKind;
             SnapCamera();
             if (s.CurrentPlace != null && !s.IsGameOver) Ui.OnEnteredPlace(s.CurrentPlace);
+            if(s.CityIntent!=null&&s.Trip==null&&!s.IsGameOver)
+            {
+                bool sleep=s.CitySleepRequested;OnCityTravelRequested(s.CityIntent);s.CitySleepRequested=sleep;_goHomeToBed=sleep;
+            }
         }
 
         // ---------- 对 UI 暴露的操作 ----------
@@ -178,32 +191,26 @@ namespace PCShopSell.Game
         {
             if (Session.IsGameOver || Session.IsWorking || Ui.AnyModalOpen) return;
             CancelHomeBedTrip();
-            if (Session.CurrentPlace == p) return;
-            if (Session.CurrentPlace != null)
-            {
-                Ui.CloseDock();
-                Session.Leave();
-            }
-            if (Session.Trip == null && Session.NearbyPlace == p)
-            {
-                EnterPlace(p);
-                return;
-            }
-            if (Session.GoTo(p)) _pendingEnter = p;
+            Session.BeginCityTravel(p.Id);
         }
 
         public void GoHomeToSleep()
         {
             if (Session.IsGameOver || Session.IsWorking || Ui.AnyModalOpen || Placing) return;
             GoToPlace(Session.Home);
-            _goHomeToBed = InHome || _pendingEnter == Session.Home;
+            Session.CitySleepRequested=true;
+            _goHomeToBed = InHome || Session.CityIntent?.TargetPlaceId == Session.Home.Id;
         }
 
         private void CancelHomeBedTrip()
         {
             _goHomeToBed = false;
+            if(Session!=null)Session.CitySleepRequested=false;
             HomeRoom?.CancelBedWalk();
         }
+
+        // Indoor character speeds are authored at 1x; apply the selected speed exactly once.
+        private float IndoorWalkDelta(float realDt) => Session.Time.IsRunning ? realDt * Session.Time.Speed : 0f;
 
         private void UpdateHomeBedTrip(float dt)
         {
@@ -212,11 +219,11 @@ namespace PCShopSell.Game
             { CancelHomeBedTrip(); return; }
             if (!InHome)
             {
-                if (_pendingEnter != Session.Home || Session.Trip == null) CancelHomeBedTrip();
+                if (Session.CityIntent?.TargetPlaceId != Session.Home.Id) CancelHomeBedTrip();
                 return;
             }
             if (Ui.AnyModalOpen || !Session.Time.IsRunning) return;
-            int result = HomeRoom.WalkToBed(dt);
+            int result = HomeRoom.WalkToBed(IndoorWalkDelta(dt));
             if (result == 0) return;
             CancelHomeBedTrip();
             if (result > 0) Ui.OpenBedWindow();
@@ -327,10 +334,12 @@ namespace PCShopSell.Game
             _avatar.Update(Session, dt);
             _police.Update(!room);
             _crowdSyncTimer -= dt;
-            if (_crowdSyncTimer <= 0)
+            string crowdPlace=Session.CurrentPlace?.Id, crowdActivity=Session.RunningCityActivity?.Id;
+            if (_crowdSyncTimer <= 0 || crowdPlace!=_crowdPlace || crowdActivity!=_crowdActivity)
             {
+                _crowdPlace=crowdPlace;_crowdActivity=crowdActivity;
                 _crowdSyncTimer = 0.25f;
-                _crowd.Sync(Session.ResidentsOutside(), ResidentDoor);
+                _crowd.SyncCity(Session, FocusPoint(), Cam);
             }
             _crowd.Update(worldDt, !room);
             UpdateBeacons(dt);
@@ -340,6 +349,7 @@ namespace PCShopSell.Game
             if (interior) Interior.Update(Session, worldDt, dt);
             if (InHome) HomeRoom.Update(Session, dt, Session.Clock.MinuteOfDay);
             UpdateHomeBedTrip(dt);
+            UpdateCityTravel(dt);
             FigureMotion.AdvanceAll(dt, Session.Time.IsRunning);
 
             if (RoomKind != _wasRoomKind)
@@ -380,6 +390,8 @@ namespace PCShopSell.Game
             if (InInterior && _overview) return Interior.ViewCenter + new Vector3(0, 0.8f, 0);
             if (InInterior)
                 return Interior.OwnerWorld + new Vector3(0, 0.8f, -1.2f) + CameraRig.Rotation * Vector3.right * ((zoom > 0 ? zoom : Cam.orthographicSize) * Cam.aspect * 0.28f);
+              var closeView=CityCloseView;
+              if(closeView!=null)return CityCloseFocus(closeView);
             Vector3 p = StreetWorldBuilder.ToWorld(Session.PlayerPosition);
             if (Session.CurrentPlace != null && World.Places.TryGetValue(Session.CurrentPlace.Id, out PlaceVisual pv)) p = pv.Entrance;
             return p + new Vector3(0, 1f, 0);
@@ -469,7 +481,7 @@ namespace PCShopSell.Game
         /// <summary>WASD / 方向键。相对镜头方向走：W 是屏幕往上（镜头怎么转，方向跟着转）。街上在街道范围内自由走，店里在店内走。</summary>
         private void HandleMovement(float dt)
         {
-            if (Session.IsWorking || Ui.AnyModalOpen || Session.IsGameOver || !Session.Time.IsRunning || Placing)
+            if (Session.IsWorking || Session.CityActivityExclusive || Ui.AnyModalOpen || Session.IsGameOver || !Session.Time.IsRunning || Placing)
             {
                 Session.SetSteer(0, 0);
                 return;
@@ -483,6 +495,7 @@ namespace PCShopSell.Game
             }
 
             CancelHomeBedTrip();
+            Session.CancelCityTravel();_cityExitIntent=null;Interior?.CancelCityDoorWalk();
             Vector3 fwd = Cam.transform.forward;
             fwd.y = 0;
             fwd.Normalize();
@@ -494,7 +507,7 @@ namespace PCShopSell.Game
             if (InInterior)
             {
                 Session.SetSteer(0, 0);
-                Interior.MoveOwner(dir, dt);
+                Interior.MoveOwner(dir, IndoorWalkDelta(dt));
                 if (Interior.OwnerOutside)
                 {
                     Interior.StepBackInside();
@@ -505,7 +518,7 @@ namespace PCShopSell.Game
             if (InHome)
             {
                 Session.SetSteer(0, 0);
-                HomeRoom.MoveOwner(dir, dt);
+                HomeRoom.MoveOwner(dir, IndoorWalkDelta(dt));
                 return;
             }
 
@@ -546,6 +559,9 @@ namespace PCShopSell.Game
                     break;
                 case HomeRoomView.Repair:
                     Ui.OpenRepairWindow();
+                    break;
+                case HomeRoomView.Climate:
+                    Ui.OpenCityClimate();
                     break;
                 case HomeRoomView.Fridge:
                     Ui.OpenFridgeWindow();
@@ -588,7 +604,7 @@ namespace PCShopSell.Game
                         world = at;
                         ShelfKind hk = ShelfKinds.Get(kindId);
                         label = hover == FixturePick.Shelf ? (hk == null ? "货架（还没设置摆什么）· 左键设置" : $"货架：{hk.Name} · 左键查看 / 设置")
-                            : hover == FixturePick.Display ? "整机展示台 · 左键查看" : "装机台 · 左键打开";
+                            : hover == FixturePick.Display ? "展示台 · 左键查看" : "装机台 · 左键打开";
                         return true;
                     }
                 }
@@ -665,7 +681,7 @@ namespace PCShopSell.Game
                     Ui.OpenDisplayWindow();
                     return;
                 }
-                Ui.Toast("走到货架或整机展示台跟前按 F，可以看摆了什么。");
+                Ui.Toast("走到货架或展示台跟前按 F，可以看摆了什么。");
                 return;
             }
             Ui.OpenShelfWindow(Interior.NearbyShelf);
@@ -735,6 +751,23 @@ namespace PCShopSell.Game
             if (!Input.GetMouseButtonDown(0) || GameUi.PointerOverUi) return;
             CancelHomeBedTrip();
             Ray ray = Cam.ScreenPointToRay(Input.mousePosition);
+            foreach(var personHit in Physics.RaycastAll(ray,1000f))
+            {
+                var person=personHit.collider.GetComponentInParent<CityPersonMarker>();
+                if(person==null)continue;
+                var customer=personHit.collider.GetComponentInParent<CustomerMarker>();
+                if(customer!=null&&!Input.GetKey(KeyCode.LeftShift)&&!Input.GetKey(KeyCode.RightShift))continue;
+                if(Session.CitySamePlace(person.PersonId))Ui.OpenCityPerson(person.PersonId);
+                else Ui.Toast("走近这位居民后再交谈；地图不会把对方召唤过来。");
+                return;
+            }
+            foreach (var passerbyHit in Physics.RaycastAll(ray, 1000f))
+            {
+                var passerby = passerbyHit.collider.GetComponentInParent<AmbientPersonMarker>();
+                if (passerby == null) continue;
+                Ui.Toast("普通行人 · " + passerby.Status);
+                return;
+            }
             if (InInterior)
             {
                 // 货架、柜台的碰撞体也在场景里：从所有命中里挑顾客
@@ -743,11 +776,25 @@ namespace PCShopSell.Game
                     var cm = h.collider.GetComponentInParent<CustomerMarker>();
                     if (cm != null)
                     {
+                        var shopper = Session.PlayerShop.ActiveCustomers.FirstOrDefault(customer => customer.Id == cm.CustomerId);
+                        if (shopper != null && shopper.State == PCShopSell.Core.Shop.CustomerState.Browsing)
+                        {
+                            Ui.Toast(string.IsNullOrEmpty(shopper.PersonId) ? "普通顾客 · 正在挑选商品" : "正在挑选商品；点击头顶姓名可以交谈。");
+                            return;
+                        }
                         Checkout(cm.CustomerId);
                         return;
                     }
                 }
                 if (Ui.AnyModalOpen || Placing || !Session.InPlayerShop) return;
+                foreach(var deviceHit in Physics.RaycastAll(ray,1000f))
+                {
+                    var pv=deviceHit.collider.GetComponentInParent<PlacedVisual>();
+                    if(pv==null||!CityWeather.IsDevice(pv.FurnitureId)&&pv.FurnitureId!=PCShopSell.Core.Home.FurnitureCatalog.FittingMirror)continue;
+                    Vector3 offset=pv.transform.position-Interior.OwnerWorld;offset.y=0;
+                    if(offset.magnitude<=3){if(pv.FurnitureId==PCShopSell.Core.Home.FurnitureCatalog.FittingMirror)Ui.OpenCityWardrobe();else Ui.OpenCityClimate();}else Ui.Toast("走近设备后再操作。");
+                    return;
+                }
                 switch (Interior.PickFixture(ray, out int shelf, out _, out _))
                 {
                     case FixturePick.Shelf: Ui.OpenShelfWindow(shelf); break;
@@ -815,17 +862,22 @@ namespace PCShopSell.Game
         {
             bool interior = InInterior;
             bool home = InHome;
+            var closeView=interior||home?null:CityCloseView;
             bool editing = Placing && _rig.Edit;
             if (editing) _rig.SetEdit(false);
-            _rig.SetInterior(interior || home);
+            _rig.SetInterior(interior || home || closeView!=null);
+            if(closeView!=null)_rig.SetPlaceAngles(closeView.Root.transform.eulerAngles.y,61f);
+            else if(interior||home)_rig.SetPlaceAngles(CameraRig.DefaultYaw,CameraRig.DefaultPitch);
             _rig.MinSize = home ? HomeRoomView.MinZoom : interior ? ShopInteriorView.MinZoom : 5f;
-            _rig.MaxSize = home ? HomeRoomView.CameraSize : interior ? Interior.CameraSize : 60f;
-            float size = home ? HomeRoomView.DefaultZoom : interior ? Mathf.Min(ShopInteriorView.DefaultZoom, Interior.CameraSize) : 16f;
+            _rig.MaxSize = home ? HomeRoomView.CameraSize : interior ? Interior.CameraSize : closeView!=null?16f:60f;
+            float size = home ? HomeRoomView.DefaultZoom : interior ? Mathf.Min(ShopInteriorView.DefaultZoom, Interior.CameraSize) : closeView!=null?9.5f:16f;
             _wasRoomKind = RoomKind;
             if (smooth) _rig.Size = size;
             else _rig.Snap(FocusPoint(size), size);
             if (editing) EnterEditView(true);
         }
+
+        private void OnCityActivitySettled(string activityId) => Ui.OpenCityActivitySettlement(activityId);
 
         private void OnPopup(string title, string body)
         {
@@ -873,6 +925,7 @@ namespace PCShopSell.Game
             extra.renderPostProcessing = true;
             extra.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
             _rig = new CameraRig(Cam);
+            _rig.SetCityBounds(City);
         }
 
         private static Light FindSun()

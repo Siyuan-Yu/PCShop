@@ -32,21 +32,42 @@ namespace PCShopSell.Game.UI
             });
         }
 
+        private static int QuarterHourClock(int minute) => ((minute + 14) / 15 * 15) % 1440;
+
+        private void ClockSelector(Transform parent,string label,int minute,Action<int> choose,int earliestMinute=0)
+        {
+            minute=Math.Max(QuarterHourClock(minute),earliestMinute);
+            var hours=Enumerable.Range(0,24).Where(h=>h*60+45>=earliestMinute).ToArray();
+            var minuteOptions=new[]{0,15,30,45}.Where(m=>minute/60*60+m>=earliestMinute).ToArray();
+            var row=Ui.Row(parent,44,6);
+            Ui.Size(Ui.Label(row,label,18),65);
+            var hour=Ui.Choice(row,hours.Select(n=>n.ToString("00")),Array.IndexOf(hours,minute/60),h=>choose(Math.Max(earliestMinute,hours[h]*60+minute%60)));
+            hour.name="ClockHour_"+label;Ui.Size(hour,85,42);
+            Ui.Size(Ui.Label(row,":",20,TextAnchor.MiddleCenter),12);
+            var minutes=Ui.Choice(row,minuteOptions.Select(n=>n.ToString("00")),Array.IndexOf(minuteOptions,minute%60),m=>choose(minute/60*60+minuteOptions[m]));
+            minutes.name="ClockMinute_"+label;Ui.Size(minutes,85,42);
+        }
         private void OpenEmployeeShift(string id, Window parent)
         {
-            var person = S.FindEmployee(id)?.Person;
-            if (person == null) return;
-            OpenWindow("选择班次 · " + person.Name, 500, 290, w =>
+            var person=S.FindEmployee(id)?.Person;if(person==null)return;
+            int start=person.Schedule?.PendingAt>=0?person.Schedule.PendingStart:person.ShiftStart;
+            int end=person.Schedule?.PendingAt>=0?person.Schedule.PendingEnd:person.ShiftEnd;
+            start=QuarterHourClock(start); end=QuarterHourClock(end);
+            OpenWindow("排班 · "+person.Name,660,450,w=>
             {
-                foreach (var shift in new[] { (540, 1260), (540, 1020), (780, 1260) })
+                Para(w.Content,"选择每天的上班和下班时间。下班早于上班时，按次日计算。",17,Ui.Dim);
+                ClockSelector(w.Content,"上班",start,value=>{start=value;w.RequestRebuild();});
+                ClockSelector(w.Content,"下班",end,value=>{end=value;w.RequestRebuild();});
+                bool valid=start!=end;
+                if(valid)
                 {
-                    var value = shift;
-                    bool current = person.ShiftStart == value.Item1 && person.ShiftEnd == value.Item2;
-                    Ui.Size(Ui.Button(w.Content, Ui.Hm(value.Item1) + "–" + Ui.Hm(value.Item2) + (current ? " ✓" : ""), () =>
-                    {
-                        if (S.SetEmployeeShift(id, value.Item1, value.Item2)) { w.Close(); parent.Rebuild(); }
-                    }, 19, current ? Ui.ButtonHot : Ui.ButtonBg), -1, 48);
+                    int duration=GameSession.ShiftMinutes(start,end);
+                    Line(w.Content,Ui.Hm(start)+"—"+(end<start?"次日":"")+Ui.Hm(end)+$" · 共{duration/60.0:0.##}小时",21,Ui.Accent);
+                    Para(w.Content,$"预计工资 {GameSession.EstimateShiftPay(person,start,end)}（基础{person.DailyWage}＋加班{GameSession.EstimateShiftPay(person,start,end)-person.DailyWage}）",18);
                 }
+                else Line(w.Content,"上班与下班时间不能相同。",17,Ui.Warn);
+                if(person.OnDuty(S.Clock.Now))Para(w.Content,"新时间从下一班生效，已发生工时和工资保留。",16,Ui.Dim);
+                Ui.Size(Ui.Button(w.Content,"保存排班",()=>{if(S.SetEmployeeShift(id,start,end)){w.Close();parent?.Rebuild();}},18,Ui.ButtonHot,valid),-1,44);
             });
         }
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
@@ -20,6 +20,10 @@ namespace PCShopSell.Game.UI
         public Action<Window> Builder;
         public Action OnClosed;
         public bool Holds;
+        public bool LiveConversation;
+        public Func<string> LiveKey;
+        internal string LiveStamp;
+        internal float LiveRefreshAt;
         public bool Closed;
         public bool Closable = true;
         internal bool RebuildPending;
@@ -99,17 +103,26 @@ namespace PCShopSell.Game.UI
         public void Update(float dt)
         {
             if (S == null) return;
+            HoldRepeat.AdvanceActiveHold(Time.unscaledDeltaTime);
             foreach (var window in _windows.ToArray())
             {
                 window.Fitter?.Fit();
+                if (window.LiveConversation && Time.unscaledTime >= window.LiveRefreshAt)
+                {
+                    window.LiveRefreshAt = Time.unscaledTime + 1;
+                    string stamp = window.LiveKey?.Invoke();
+                    if (stamp != window.LiveStamp) { window.LiveStamp = stamp; window.RequestRebuild(); }
+                }
                 if (window.RebuildPending) { window.RebuildPending = false; window.Rebuild(); }
             }
+            UpdateDisplayPreview();
             if (MainMenuOpen) return;
             UpdateWorkScreen();
             if (S.IsWorking) return;
             CheckWeeklyPriceReport();
             _uiTime += dt;
             UpdateHud();
+            UpdateCityLifeHud(dt);
             UpdateLabels();
             UpdatePlayerMarker();
             UpdateInteractMarker();
@@ -145,11 +158,17 @@ namespace PCShopSell.Game.UI
             h.childAlignment = TextAnchor.MiddleLeft;
 
             AddCheatButton(row);
-            _dateText = Ui.Size(Ui.Label(row, "", 24), 200);
-            var cashButton = Ui.Size(Ui.Button(row, "", OpenLedger, 26), 130);
+            var weatherButton = Ui.Size(Ui.Button(row, "", OpenCityClimate, 20), 260);
+            _dateText = weatherButton.GetComponentInChildren<Text>();
+            _dateText.alignment = TextAnchor.MiddleLeft;
+            _dateText.horizontalOverflow=HorizontalWrapMode.Overflow;
+            weatherButton.Tip(()=>"点击查看天气预报与穿衣建议\n"+S.Clock.Today+" "+Ui.WeekdayName(S.Clock.Today.Weekday)+"\n"+S.CityWeatherForecast);
+            var cashButton = Ui.Size(Ui.Button(row, "", OpenLedger, 24), 145);
             _cashText = cashButton.GetComponentInChildren<Text>();
             _cashText.alignment = TextAnchor.MiddleLeft;
-            cashButton.Tip("<b>总收支账本</b>：点击查看每天、每周、每月的全部收支和逐笔明细。\n现金连续 3 天为负就破产。");
+            _cashText.horizontalOverflow=HorizontalWrapMode.Overflow;
+            _cashText.resizeTextForBestFit=true;_cashText.resizeTextMinSize=17;_cashText.resizeTextMaxSize=24;
+            cashButton.Tip("<b>总收支账本</b>：点击查看每天、每周、每月的全部收支和逐笔明细。\n资金紧张时可缩减经营、处置资产或打工继续，不会因现金为负自动清档。");
 
             _pauseButton = Ui.Size(Ui.Button(row, "暂停", () => S.Time.TogglePause(), 16), 86);
             _pauseButton.Tip(() => S.Time.IsHeld
@@ -175,7 +194,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(row, "手机", OpenPhone, 18), 66).Tip("<b>手机</b>　快捷键：P\n买了智能手机才有；通讯录、1788 批发、外卖等 app。");
             Ui.Size(Ui.Button(row, "任务", OpenQuests, 18), 66).Tip("<b>任务</b>　快捷键：T\n当前任务怎么做、完成奖励；左上角的任务条收起后从这里再打开。");
             _businessButton = Ui.Size(Ui.Button(row, "经营", OpenBusinessPanel, 18), 66);
-            _businessButton.gameObject.SetActive(false);
+            _businessButton.gameObject.SetActive(true);
             _businessButton.Tip("<b>经营</b>　快捷键：J\n资产与负债、直供、企业合同、分店、园区等后期经营。");
             Ui.Size(Ui.Button(row, "行情", OpenMarketPanel, 18, Ui.ButtonHot), 66).Tip("<b>行情</b>　快捷键：H\n新闻、宏观指标和各品类配件的价格走势，决定什么时候进货。");
             _noticeButtonText = Ui.Size(Ui.Button(row, "通知", OpenNoticeHistory, 16), 66).GetComponentInChildren<Text>();
@@ -191,22 +210,25 @@ namespace PCShopSell.Game.UI
             bh.childControlHeight = true;
             bh.childForceExpandWidth = false;
             Ui.Size(Ui.Label(brow, "出行：", 18), 60);
-            foreach (VehicleSpec v in Vehicles.All)
+            foreach (var vehicle in Vehicles.All)
             {
-                VehicleKind kind = v.Kind;
-                Button b = Ui.Size(Ui.Button(brow, v.Name, () => S.SetVehicle(kind), 18), 92);
-                b.Tip(() => VehicleTip(Vehicles.Get(kind)));
-                _vehicleButtons.Add((b, kind));
+                var kind = vehicle.Kind;
+                var button = Ui.Size(Ui.Button(brow, vehicle.Name, () => S.SetVehicle(kind), 17), 72);
+                button.Tip(() => vehicle.Name + (S.Vehicle == kind ? "（当前使用）" : S.CanUse(kind) ? "：点击切换" : "：尚未购买或暂无空闲车辆"));
+                _vehicleButtons.Add((button, kind));
             }
-            _cargoText = Ui.Size(Ui.Label(brow, "", 17), 170);
+            _cargoText = Ui.Size(Ui.Label(brow, "", 16), 155);
             Ui.Size(Ui.Label(brow, "快捷前往：", 17), 90);
             Button shopGo = Ui.Size(Ui.Button(brow, "去我的店", GoToMyShop, 17, Ui.ButtonHot), 100);
             _shopGoText = shopGo.GetComponentInChildren<Text>();
             shopGo.Tip(() => S.MyShopCount > 1 ? "开了几家店：点了选去哪一家，自动走到店门口；路上按 WASD 随时接管。" : "自动走到店门口（耗时按路程算）；路上按 WASD 随时接管。");
             Ui.Size(Ui.Button(brow, "回家睡觉", _ctrl.GoHomeToSleep, 17), 108).Tip("自动回家并走到床边，打开睡眠选项；按 WASD 随时接管。");
             Ui.Size(Ui.Button(brow, "电子市场", () => _ctrl.GoToPlace(S.City.GetPlace("stall_cpu")), 17), 100);
+            Ui.Size(Ui.Button(brow,"中介",()=>GoCityShortcut(true),17),80).Tip(() => "前往" + (S.City.HasPlace(S.CityAgencyShortcut) ? S.City.GetPlace(S.CityAgencyShortcut).Name : "房产中介"));
+            Ui.Size(Ui.Button(brow,"自定目的地",OpenCityMap,17,Ui.ButtonHot),116);
 
             Ui.Size(Ui.Button(brow, "叫货车", OpenTruckWindow, 17, Ui.ButtonHot), 100).Tip("打开货车装货单，选货物和目的地；手机通讯录里的入口也保留。");
+            BuildCityLifeHud(root);
 
             Image hint = Ui.Panel(root, "HintStrip", new Color(0.12f, 0.18f, 0.17f, 0.93f));
             hint.rectTransform.Anchor(0, 0, 0, 0, 16, 70, -1136, -122);
@@ -236,8 +258,8 @@ namespace PCShopSell.Game.UI
             _noticeButtonText.text = _unreadNotices > 0 ? "通知 " + Math.Min(99, _unreadNotices) : "通知";
             UpdateSleepBanner();
             bool business = BusinessUnlocked;
-            if (_businessButton.gameObject.activeSelf != business) _businessButton.gameObject.SetActive(business);
-            _dateText.text = $"{now.Date}  {Ui.WeekdayName(now.Date.Weekday)}  {Ui.Hm(now.MinuteOfDay)}";
+            if (!_businessButton.gameObject.activeSelf) _businessButton.gameObject.SetActive(true);
+            _dateText.text = (S.IsCityLifeTest?"测试 ":"")+$"{now.Date.Year}年{now.Date.Month}/{now.Date.Day} {Ui.Hm(now.MinuteOfDay)}\n天气 · {S.WeatherSummary}";
             _cashText.text = S.Ledger.Balance.ToString();
             _cashText.color = S.Ledger.Balance.IsNegative ? Ui.Warn : Ui.Good;
 
@@ -248,7 +270,7 @@ namespace PCShopSell.Game.UI
                 b.image.color = !paused && S.Time.Speed == speed ? Ui.ButtonHot : Ui.ButtonBg;
 
             PlayerStats p = S.Player;
-            _statsText.text = $"饥饿 {Pct(p.Hunger)}  精力 {Pct(p.Energy)}/{p.MaxEnergy:0}  健康 {Pct(p.Health)}  |  知名度 {S.PlayerShop.Reputation:0.0}";
+            _statsText.text = (S.EnergyExhausted ? $"耗尽 剩{S.EnergyAwakeMinutesLeft/60}:{S.EnergyAwakeMinutesLeft%60:00} · " : "") + $"饥饿 {Pct(p.Hunger)}  精力 {Pct(p.Energy)}/{p.MaxEnergy:0}  健康 {Pct(p.Health)}  |  知名度 {S.PlayerShop.Reputation:0.0}";
 
             string where;
             if (S.Trip != null)
@@ -369,7 +391,7 @@ namespace PCShopSell.Game.UI
         /// <summary>名牌底色：我的店青色，招租的铺子橙色，中介蓝色，其他深灰。</summary>
         private void OpenStreetPlace(Place p)
         {
-            if (S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null && !S.IsMyShop(p))
+            if (S.VentureAt(p.Id) != null || S.IsPlayerPropertyOccupied(p.Id) && !S.IsMyShop(p))
             {
                 _businessTab = p.Id == S.ParkPlaceId ? 6 : S.VentureAt(p.Id) != null ? 3 : 5;
                 OpenBusinessPanel();
@@ -381,7 +403,7 @@ namespace PCShopSell.Game.UI
         {
             var venture = S.VentureAt(p.Id);
             if (venture != null) return venture.Paused ? Ui.Warn : Ui.ButtonHot;
-            if (S.PropertyAt(p.Id) != null) return Ui.ButtonHot;
+            if (S.IsPlayerPropertyOccupied(p.Id)) return Ui.ButtonHot;
             if (S.IsMyShop(p)) return new Color(0.1f, 0.55f, 0.5f, 0.92f);
             if (S.IsVacant(p)) return new Color(0.75f, 0.42f, 0.1f, 0.9f);
             if (p.Kind == PlaceKind.Agency) return new Color(0.15f, 0.35f, 0.7f, 0.92f);
@@ -419,7 +441,7 @@ namespace PCShopSell.Game.UI
             var venture = S.VentureAt(p.Id);
             if (venture != null) return S.PlaceTitle(p) + (venture.Paused ? "\n<size=13><color=#D79780>停业 · 点击管理</color></size>" : "\n<size=13>营业中 · 点击管理</size>");
             if (p.Id == S.ParkPlaceId) return "电脑乐园\n<size=13>点击查看布局</size>";
-            if (S.PropertyAt(p.Id) != null && !S.IsMyShop(p)) return "我的物业\n<size=13>托管出租中</size>";
+            if (S.IsPlayerPropertyOccupied(p.Id) && !S.IsMyShop(p)) return "我的物业\n<size=13>托管出租中</size>";
             switch (p.Kind)
             {
                 case PlaceKind.Wholesaler:
@@ -436,6 +458,8 @@ namespace PCShopSell.Game.UI
         }
 
         private readonly System.Collections.Generic.List<Text> _emoteLabels = new System.Collections.Generic.List<Text>();
+        private readonly List<Button> _emoteChatButtons = new List<Button>();
+        private readonly List<string> _emoteChatIds = new List<string>();
 
         private readonly System.Collections.Generic.List<ShopInteriorView.EmoteInfo> _emoteBuf = new System.Collections.Generic.List<ShopInteriorView.EmoteInfo>();
 
@@ -488,10 +512,22 @@ namespace PCShopSell.Game.UI
                         r.anchorMin = r.anchorMax = Vector2.zero;
                         r.pivot = new Vector2(0.5f, 0);
                         r.sizeDelta = new Vector2(260, 28);
+                        int slot = _emoteLabels.Count;
+                        var chat = lt.gameObject.AddComponent<Button>(); chat.targetGraphic = lt;
+                        chat.onClick.AddListener(() =>
+                        {
+                            string person = _emoteChatIds[slot];
+                            if (!string.IsNullOrEmpty(person) && S.CitySamePlace(person)) OpenCityPerson(person);
+                        });
+                        _emoteChatButtons.Add(chat); _emoteChatIds.Add(null);
                         _emoteLabels.Add(lt);
                     }
                     Text label = _emoteLabels[n];
                     label.text = e.Text;
+                    _emoteChatIds[n] = e.PersonId;
+                    bool canTalk = !string.IsNullOrEmpty(e.PersonId);
+                    label.raycastTarget = canTalk; _emoteChatButtons[n].interactable = canTalk;
+                    if (canTalk && S.Flags.Add("hint_named_people")) Toast("头顶显示姓名的人可以聊天；普通行人和顾客只显示行为状态。");
                     label.fontSize = e.Size;
                     label.color = e.Color;
                     Vector3 sp = _ctrl.Cam.WorldToScreenPoint(e.Pos);
@@ -549,6 +585,8 @@ namespace PCShopSell.Game.UI
         /// <summary>Esc：关掉最上面一层窗口。返回有没有关。</summary>
         public bool CloseTopWindow()
         {
+            if(ChoiceDropdown.CancelFrame==UnityEngine.Time.frameCount)return true;
+            foreach(var canvas in Canvases)foreach(var choice in canvas.GetComponentsInChildren<ChoiceDropdown>())if(choice.CloseChoice())return true;
             if (_windows.Count == 0) return false;
             Window top = _windows[_windows.Count - 1];
             if (!top.Closable) return false;

@@ -177,11 +177,11 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void Sleep_OnlyAtHomeAtNight_WakesAtEight()
+        public void Sleep_AtHomeInDaytimeOrNight_WakesAtSelectedTime()
         {
             GameSession s = Make();
-            Assert.IsFalse(s.Sleep());
-            s.Clock.AdvanceTo(22 * 60);
+            Assert.IsTrue(s.SleepUntil(10*60));
+            s.Clock.Restore(new GameDate(0),22*60);
             Assert.IsTrue(s.Sleep());
             Assert.AreEqual(8 * 60, s.Clock.MinuteOfDay);
             Assert.AreEqual(1, s.Clock.Today.TotalDays);
@@ -191,16 +191,17 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void StayingUpPast4_Faints()
+        public void StayingUpPast4_WithPositiveEnergy_DoesNotFaint()
         {
             GameSession s = Make();
             Teleport(s, "pc");
             string title = null;
             s.Popup += (t, _) => title = t;
-            s.AdvanceClock(20 * 60 + 1);
-            Assert.AreEqual("你晕倒了", title);
-            Assert.AreEqual(s.Home, s.CurrentPlace);
-            Assert.AreEqual(12 * 60, s.Clock.MinuteOfDay);
+            s.Clock.Restore(s.Clock.Today,3*60+50);s.Player.Energy=50;
+            s.AdvanceClock(20);
+            Assert.AreNotEqual("你晕倒了", title);
+            Assert.AreEqual(s.City.GetPlace("pc"), s.CurrentPlace);
+            Assert.AreEqual(4*60+10, s.Clock.MinuteOfDay);
         }
 
         [Test]
@@ -216,14 +217,16 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void BedtimeReminder_FiresWhenAwayFromHome()
+        public void ExhaustionReminder_UsesEnergyRatherThanBedtime()
         {
             GameSession s = Make();
             s.Leave();
+            s.Clock.Restore(s.Clock.Today,22*60+55);s.Player.Energy=50;
             int notices = 0;
-            s.Notice += m => { if (m.Contains("23:00")) notices++; };
-            s.AdvanceClock(15 * 60 + 5);
-            Assert.AreEqual(1, notices);
+            s.Notice += m => { if (m.Contains("精力已耗尽")) notices++; };
+            s.AdvanceClock(10);
+            Assert.AreEqual(0, notices);
+            s.Player.Energy=0;Assert.AreEqual(1,notices);
         }
 
         [Test]
@@ -399,6 +402,10 @@ namespace PCShopSell.Tests
             s.AdvanceClock(20);
             Assert.AreEqual(2, s.Candidates.Count);
             Assert.IsTrue(s.Hire(0));
+            Assert.AreEqual(s.CityEmployeeAvailable(s.Employee,s.MainShop),s.PlayerShop.IsOpen,"雇佣本身不能绕过真实到岗");
+            for(int i=0;i<180&&!s.CityEmployeeAvailable(s.Employee,s.MainShop);i++)s.AdvanceClock(1);
+            Assert.IsTrue(s.CityEmployeeAvailable(s.Employee,s.MainShop),"录用后沿真实路线到岗");
+            Assert.AreEqual(s.PlayerShopPlace.Id,s.CityPersonState(s.PersonIdOf(s.Employee)).LocationPlaceId);
             Assert.IsTrue(s.PlayerShop.IsOpen, "员工在岗，玩家不在也营业");
             Money before = s.Ledger.Balance;
             s.Clock.Restore(new GameDate(1), 23 * 60);
@@ -418,9 +425,10 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void ThreeNegativeDays_GameOver()
+        public void ThreeNegativeDays_ContinueLifeAndKeepProgress()
         {
             GameSession s = Make(cash: 0);
+            s.EventsEnabled=false;
             s.Ledger.ForceDebit(s.Clock.Today, "测试", Money.FromYuan(10000));
             Teleport(s, "flat");
             for (int i = 0; i < 4 && !s.IsGameOver; i++)
@@ -428,7 +436,14 @@ namespace PCShopSell.Tests
                 s.Clock.Restore(new GameDate(i), 22 * 60);
                 s.Sleep();
             }
-            Assert.IsTrue(s.IsGameOver);
+            Assert.IsFalse(s.IsGameOver,"现金短缺不清档，仍可休息、打工和处置资产");
+            Assert.Less(s.Ledger.Balance.Cents,0,"欠款仍保留，不能免费抹掉债务");
+            var saved=s.CreateSave();
+            using(var restored=GameSession.Load(s.City,saved))
+            {
+                Assert.False(restored.IsGameOver);Assert.AreEqual(s.Ledger.Balance,restored.Ledger.Balance);
+                foreach(var line in s.PlayerShop.Stock.Lines())Assert.AreEqual(line.Count,restored.PlayerShop.Stock.Count(line.Part,line.Boxed));
+            }
         }
 
         [Test]
@@ -480,17 +495,28 @@ namespace PCShopSell.Tests
             string json = System.IO.File.ReadAllText("Assets/Resources/Data/city_layout.json");
             CityLayout city = CityLayout.FromData(UnityEngine.JsonUtility.FromJson<CityLayoutData>(json));
             var shops = city.OfKind(PlaceKind.Shop).ToList();
-            Assert.AreEqual(18, shops.Count, "20 间门面，其中一间是房产中介、一间是车行");
+            var original=shops.Where(p=>p.StreetId=="s_start").ToList();
+            Assert.AreEqual(18, original.Count, "保留原商业街18间商铺及独立中介/车行");
+            Assert.AreEqual(10,city.Streets.Count,"十个互联街区");
+            Assert.GreaterOrEqual(shops.Count(p=>p.IsTradable),20,"全城可规划收购至少20个具体单元");
+            foreach(var street in city.Streets)Assert.GreaterOrEqual(city.Places.Count(p=>p.StreetId==street.id),2,street.id+"至少两个功能点");
             Assert.AreEqual(1, city.OfKind(PlaceKind.Agency).Count());
             Place dealer = city.FirstOfKind(PlaceKind.Dealer);
             Assert.IsNotNull(dealer);
             Assert.AreEqual(0, city.Map.GetNode(dealer.NodeId).Y, 1e-9, "车行在商业街上，不在电子市场");
-            Assert.AreEqual(4, shops.Count(p => p.Size == PCShopSell.Core.Shop.ShopSize.Large));
-            Assert.AreEqual(7, shops.Count(p => p.Size == PCShopSell.Core.Shop.ShopSize.Medium));
-            Assert.AreEqual(7, shops.Count(p => p.Size == PCShopSell.Core.Shop.ShopSize.Small));
+            Assert.AreEqual(4, original.Count(p => p.Size == PCShopSell.Core.Shop.ShopSize.Large));
+            Assert.AreEqual(7, original.Count(p => p.Size == PCShopSell.Core.Shop.ShopSize.Medium));
+            Assert.AreEqual(7, original.Count(p => p.Size == PCShopSell.Core.Shop.ShopSize.Small));
 
             var s = new GameSession(city, 1, Money.FromYuan(5000), GameTimestamp.From(new GameDate(0), 480));
-            Assert.AreEqual(0.4, s.PlayerShop.LocationFactor, 1e-9, "玩家的店离地铁最远");
+            Assert.AreEqual(0.4, s.PlayerShop.LocationFactor, 1e-9, "原商圈开局位置/客流/租金口径不因扩城抬高");
+            foreach(var unit in shops.Where(p=>p.StreetId!="s_start"&&p.IsTradable))
+            {
+                var paths=city.OfKind(PlaceKind.Station).Select(station=>Pathfinder.FindPath(city.Map,station.NodeId,unit.NodeId)).Where(path=>path.Found).ToArray();
+                Assert.IsNotEmpty(paths,unit.Id+"应有实际可达地铁");
+                Assert.AreEqual(paths.Min(path=>path.Distance),s.StationDistance(unit),1e-9,unit.Id+"使用最近可达地铁");
+                Assert.That(s.LocationFactorOf(unit),Is.InRange(.4,1.0));
+            }
             double toMarket = Pathfinder.FindPath(city.Map, s.PlayerShopPlace.NodeId, city.GetPlace("stall_cpu").NodeId).Distance;
             double toHome = Pathfinder.FindPath(city.Map, s.PlayerShopPlace.NodeId, s.Home.NodeId).Distance;
             Assert.That(toMarket, Is.InRange(1800, 2400), "电子市场约 2 公里");

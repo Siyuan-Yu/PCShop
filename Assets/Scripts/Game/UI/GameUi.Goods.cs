@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Shop;
@@ -27,37 +27,105 @@ namespace PCShopSell.Game.UI
 
         private void BuildGoodsShelfBody(Window w, ShelfKind kind, ShelfFill fill)
         {
-            ShopSimulation shop = S.PlayerShop;
-            Stock st = shop.Stock;
-            Para(w.Content, "把储物柜或背包里的货放进店里，货架上有这类货架就自动摆上去；顾客按本店经营类型购买商品，摆什么、卖多少钱自己定。", 15, Ui.Dim);
-
-            RectTransform list = Ui.Scroll(w.Content, 380);
-            int shown = 0;
-            foreach (string id in kind.GiftIds)
+            var shop=S.PlayerShop;
+            var products=kind.GiftIds.Select(Gifts.Get).Where(g=>g!=null&&
+                (shop.Stock.GoodsCount(g.Id)>0||S.GoodsAvailableToList(g.Id)>0)).ToArray();
+            Para(w.Content,"商品摆在下方货架上；价签旁可调价，点确定生效。手边商品可直接放进店里。",15,Ui.Dim);
+            var list=Ui.Scroll(w.Content,630);
+            int boards=Mathf.Max(2,(products.Length+2)/3);
+            var frame=Ui.Panel(list,"GoodsShelf",WoodDark);
+            Ui.Size(frame,-1,48+boards*320);Ui.VList(frame.rectTransform,0,10);
+            var sign=Ui.Panel(frame.transform,"Sign",WoodLight);Ui.Size(sign,-1,32);
+            Ui.Label(sign.transform,"<b>"+kind.Name+"</b>",18,TextAnchor.MiddleCenter,TagInk).rectTransform.Fill();
+            for(int board=0;board<boards;board++)
             {
-                GiftDef g = Gifts.Get(id);
-                string gid = id;
-                int onShelf = fill.GoodsCount(gid);
-                int inStock = st.GoodsCount(gid);
-                int handy = S.GoodsAvailableToList(gid);
-                if (inStock == 0 && handy == 0) continue; // 店里没有、手边也没有的，不显示
-                shown++;
-                if (g.ShelfDays > 0 && inStock > 0) Line(list, g.Name + " · 最早到期：" + S.GoodsExpiryText(gid), 14, Ui.Warn);
-
-                RectTransform row = Ui.Row(list, 94, 6);
-                Image chip = Ui.Panel(row, "Chip", GoodsColor(gid));
-                Ui.Size(chip, 14, 40);
-                Ui.Size(Ui.Label(row, ProductLabel($"<b>{g.Name}</b>", g.WeightKg, $"批发参考 {g.WholesalePrice}"), 17), 200);
-                Ui.Size(Ui.Label(row, $"货架上 <b>{onShelf}</b> 件\n<size=13><color=#ABB5A8>后仓共 {inStock} 件" + (handy > 0 ? $"　手边 {handy}" : "") + "</color></size>", 16), 170);
-                Ui.Size(ShelfSaleTag(w, row, "goods_" + gid, shop.GoodsPriceOf(gid).Yuan, shop.GoodsPriceRange(gid),
-                    value => shop.GoodsPurchaseIntentAtPrice(gid, value),
-                    value => shop.SetGoodsSalePrice(gid, value)), 195, 64);
-                Ui.Size(Ui.Button(row, "放进 1", () => { S.ListGoods(gid, 1); w.Rebuild(); }, 15, Ui.ButtonHot, handy > 0), 74);
-                Ui.Size(Ui.Button(row, "全放进", () => { S.ListGoods(gid, handy); w.Rebuild(); }, 15, Ui.ButtonBg, handy > 0), 70);
-                Ui.Size(Ui.Button(row, "收回 1", () => { S.UnlistGoods(gid, 1); w.Rebuild(); }, 15, Ui.ButtonBg, inStock > 0), 74);
+                var row=Ui.Row(frame.transform,300,8);
+                for(int column=0;column<3;column++)
+                {
+                    int index=board*3+column;
+                    var slot=Ui.Panel(row,"GoodsSlot_"+index,ShelfBack);Ui.Size(slot,-1,300,1);
+                    if(index<products.Length)BuildGoodsShelfSlot(w,slot.rectTransform,products[index],fill);
+                }
+                Ui.Size(Ui.Panel(frame.transform,"Plank",WoodLight),-1,12);
+                Ui.Size(Ui.Rect(frame.transform,"Gap"),-1,8);
             }
-            if (shown == 0)
-                Ui.Size(Ui.Label(list, $"店里没有「{kind.Name}」，储物柜和背包里也没有。\n打开“库存 → 进货渠道”查看货源，买回背包或纸箱后上架，也可让采购员直接送入后仓。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 70);
+            if(products.Length==0)Para(list,"店里和手边还没有这类商品；可从进货渠道采购，送到后仓或从背包上架。",17,Ui.Dim);
+        }
+        private void BuildGoodsShelfSlot(Window w,RectTransform rt,GiftDef goods,ShelfFill fill)
+        {
+            string id=goods.Id;var shop=S.PlayerShop;
+            int count=fill.GoodsCount(id),stock=shop.Stock.GoodsCount(id),handy=S.GoodsAvailableToList(id);
+            var name=Ui.Label(rt,ProductLabel("<b>"+goods.Name+"</b>",goods.WeightKg,
+                "架上 "+count+" 件 · 后仓共 "+stock+" 件"+(handy>0?" · 手边 "+handy+" 件":"")),15);
+            name.rectTransform.Anchor(.03f,.73f,.97f,.99f);
+            Chip(rt,WoodLight,0,.38f,1,.4f);
+            var items=Ui.Rect(rt,"GoodsIllustrations").Anchor(.04f,.4f,.96f,.73f);
+            int visible=Mathf.Min(3,count);
+            for(int i=0;i<visible;i++)
+            {
+                var icon=Ui.Rect(items,"GoodsIcon_"+id+"_"+i).Anchor(i/3f+.02f,.03f,(i+1)/3f-.02f,.95f);
+                DrawShelfGoods(icon,id);
+            }
+            if(count==0)Ui.Label(items,stock>0?"暂无架上现货":"尚未上架",15,TextAnchor.MiddleCenter,Ui.Dim).rectTransform.Fill();
+            ShelfSaleTag(w,rt,"goods_"+id,shop.GoodsPriceOf(id).Yuan,shop.GoodsPriceRange(id),
+                value=>shop.GoodsPurchaseIntentAtPrice(id,value),value=>shop.SetGoodsSalePrice(id,value))
+                .Anchor(.04f,.14f,.96f,.36f);
+            var actions=Ui.Rect(rt,"GoodsActions_"+id).Anchor(.02f,.015f,.98f,.13f);
+            var row=Ui.Row(actions,34,3);row.Fill();
+            row.name="ShelfGoodsActions_"+id;
+            HoldButton(w,row,"放进",Ui.ButtonHot,handy,"件",n=>S.ListGoods(id,(int)n),66,handy>0);
+            Ui.Size(Ui.Button(row,"全放进",()=>{S.ListGoods(id,handy);w.RequestRebuild();},14,Ui.ButtonBg,handy>0),76,34);
+            HoldButton(w,row,"收回",Ui.ButtonBg,stock,"件",n=>S.UnlistGoods(id,(int)n),66,stock>0);
+            if(goods.ShelfDays>0&&stock>0)
+            {
+                name.text+="\n<size=12><color=#E7BD73>最早到期："+S.GoodsExpiryText(id)+"</color></size>";
+                name.fontSize=14;
+            }
+        }
+        private static void DrawShelfGoods(RectTransform root,string id)
+        {
+            var color=GoodsColor(id);
+            if(ClothingProducts.IsClothing(id))
+            {
+                var outfit=ClothingProducts.Outfit(id);
+                if(!ColorUtility.TryParseHtmlString("#"+outfit.ColorHex,out color))color=GoodsColor(id);
+                bool shortSleeve=outfit.VisualPreset=="short"||outfit.VisualPreset=="sport";
+                Chip(root,color,.24f,.4f,.76f,.94f);
+                Chip(root,color,.05f,shortSleeve?.66f:.41f,.25f,.89f);
+                Chip(root,color,.75f,shortSleeve?.66f:.41f,.95f,.89f);
+                Chip(root,ShelfBack,.39f,.86f,.61f,.99f);
+                var trousers=Color.Lerp(color,Color.black,.45f);
+                Chip(root,trousers,.27f,.03f,.47f,.39f);Chip(root,trousers,.53f,.03f,.73f,.39f);
+                if(outfit.VisualPreset=="winter"||outfit.VisualPreset=="jacket"||outfit.VisualPreset=="formal")
+                    Chip(root,Color.Lerp(color,Color.white,.45f),.48f,.4f,.52f,.85f);
+            }
+            else if(id.StartsWith("flower_"))
+            {
+                var green=new Color(.25f,.58f,.28f);
+                for(int i=0;i<3;i++)
+                {
+                    float x=.22f+i*.22f;
+                    Chip(root,green,x,.23f,x+.05f,.75f);
+                    Chip(root,id=="flower_sun"?new Color(.95f,.74f,.16f):id=="flower_lily"?TagPaper:color,x-.12f,.66f,x+.16f,.91f);
+                }
+                Chip(root,CardboardColor,.22f,.02f,.8f,.32f);
+            }
+            else if(id==Gifts.Drink||id==Gifts.Soda||id==Gifts.Wine||id==Gifts.Baijiu)
+            {
+                Chip(root,color,.2f,.03f,.8f,.72f);Chip(root,color,.35f,.7f,.65f,.92f);
+                Chip(root,WoodLight,.32f,.91f,.68f,.99f);Chip(root,TagPaper,.23f,.25f,.77f,.53f);
+            }
+            else if(ModelProducts.IsModel(id))
+            {
+                Chip(root,TagPaper,.05f,.02f,.95f,.95f);Chip(root,color,.12f,.1f,.88f,.87f);
+                Chip(root,TagInk,.34f,.5f,.66f,.77f);Chip(root,TagInk,.25f,.18f,.75f,.51f);
+            }
+            else
+            {
+                Chip(root,CardboardColor,.06f,.04f,.94f,.8f);Chip(root,color,.06f,.65f,.94f,.82f);
+                Chip(root,TagPaper,.17f,.23f,.83f,.58f);
+                Ui.Label(root,Gifts.Get(id)?.Name??"",11,TextAnchor.MiddleCenter,TagInk).rectTransform.Anchor(.17f,.23f,.83f,.58f);
+            }
         }
     }
 }

@@ -9,16 +9,25 @@ namespace PCShopSell.Core.World
     [Serializable]
     public sealed class CityLayoutData
     {
+        public LayoutStreetData[] streets;
         /// <summary>
         /// 画面距离换算成游戏内距离的倍率。画面里的城市是缩小的：
         /// 画面上 1 米按 distanceScale 米计算行走距离和耗时。
         /// </summary>
         public double distanceScale = 1;
+        // Optional common road-distance multiplier. Zero preserves legacy/custom map lengths.
+        public double uniformRoadScale;
 
         public LayoutNodeData[] nodes;
         public LayoutEdgeData[] edges;
         public LayoutPlaceData[] places;
         public LayoutPatrolData[] patrols;
+    }
+
+    [Serializable]
+    public sealed class LayoutStreetData
+    {
+        public string id, name, purpose;
     }
 
     [Serializable]
@@ -50,6 +59,10 @@ namespace PCShopSell.Core.World
     [Serializable]
     public sealed class LayoutPlaceData
     {
+        public string street;
+        public bool explicitEntrance, tradable;
+        public double entranceX, entranceY, width, depth, heading;
+        public int openMinute, closeMinute;
         public string id;
         public string name;
 
@@ -86,6 +99,16 @@ namespace PCShopSell.Core.World
     /// <summary>地点（店铺、住所、批发商、地铁站等），入口位于路径图的某个节点。</summary>
     public sealed class Place
     {
+        public string StreetId { get; }
+        public bool ExplicitEntrance { get; }
+        public bool IsTradable { get; }
+        public double EntranceX { get; }
+        public double EntranceY { get; }
+        public double Width { get; }
+        public double Depth { get; }
+        public double Heading { get; }
+        public int OpenMinute { get; }
+        public int CloseMinute { get; }
         public string Id { get; }
         public string Name { get; }
         public PlaceKind Kind { get; }
@@ -97,7 +120,9 @@ namespace PCShopSell.Core.World
 
         public Place(string id, string name, PlaceKind kind, string nodeId,
             ShopSize size = ShopSize.Small, string business = null, bool isPlayerShop = false,
-            IReadOnlyList<PartCategory> sells = null)
+            IReadOnlyList<PartCategory> sells = null, string streetId = null, bool explicitEntrance = false,
+            double entranceX = 0, double entranceY = 0, double width = 10, double depth = 9, double heading = 0,
+            bool tradable = false, int openMinute = 0, int closeMinute = 0)
         {
             Id = id;
             Name = name;
@@ -107,6 +132,11 @@ namespace PCShopSell.Core.World
             Business = business;
             IsPlayerShop = isPlayerShop;
             Sells = sells ?? Array.Empty<PartCategory>();
+            StreetId = streetId ?? (kind == PlaceKind.Wholesaler ? "s_electronics" : kind == PlaceKind.Home ? "s_oldhomes" : "s_start");
+            ExplicitEntrance = explicitEntrance; EntranceX = entranceX; EntranceY = entranceY;
+            Width = width > 0 ? width : 10; Depth = depth > 0 ? depth : 9; Heading = heading;
+            IsTradable = tradable || (!explicitEntrance && (kind == PlaceKind.Shop || kind == PlaceKind.Wholesaler));
+            OpenMinute = openMinute; CloseMinute = closeMinute;
         }
     }
 
@@ -134,8 +164,16 @@ namespace PCShopSell.Core.World
 
         public WorldMap Map { get; }
         public double DistanceScale { get; }
+        public bool HasUniformRoadScale { get; private set; }
+        public double TravelDistanceScale { get; private set; }
         public IReadOnlyList<Place> Places => _placeList;
         public IReadOnlyList<PatrolRoute> Patrols => _patrols;
+        public IReadOnlyList<LayoutStreetData> Streets { get; private set; } = Array.Empty<LayoutStreetData>();
+        public string StreetName(string id)
+        {
+            foreach (var street in Streets) if (street.id == id) return street.name;
+            return id == "s_electronics" ? "电子市场街" : id == "s_oldhomes" ? "老居民街" : "创业商业街";
+        }
 
         public IEnumerable<Place> OfKind(PlaceKind kind)
         {
@@ -159,6 +197,7 @@ namespace PCShopSell.Core.World
         {
             Map = map;
             DistanceScale = distanceScale;
+            TravelDistanceScale = distanceScale;
         }
 
         public static CityLayout FromData(CityLayoutData data)
@@ -177,7 +216,11 @@ namespace PCShopSell.Core.World
             {
                 foreach (LayoutEdgeData e in data.edges)
                 {
-                    double? len = e.length > 0 ? e.length * data.distanceScale : (double?)null;
+                    // The current city uses one physical distance per displayed meter, on every road.
+                    // Keep the coordinate scale separate: map/UI positions must not move.
+                    double? len = data.uniformRoadScale > 0
+                        ? map.StraightDistance(e.a, e.b) * data.uniformRoadScale
+                        : e.length > 0 ? e.length * data.distanceScale : (double?)null;
                     if (len.HasValue && len.Value < map.StraightDistance(e.a, e.b))
                         len = null;
                     map.AddEdge(e.a, e.b, len);
@@ -185,6 +228,9 @@ namespace PCShopSell.Core.World
             }
 
             var layout = new CityLayout(map, data.distanceScale);
+            layout.HasUniformRoadScale = data.uniformRoadScale > 0;
+            layout.TravelDistanceScale = data.distanceScale * (layout.HasUniformRoadScale ? data.uniformRoadScale : 1);
+            layout.Streets = data.streets ?? Array.Empty<LayoutStreetData>();
             if (data.patrols != null)
             {
                 foreach (LayoutPatrolData pr in data.patrols)
@@ -210,7 +256,8 @@ namespace PCShopSell.Core.World
                         throw new ArgumentException($"地点 {p.id} 的入口节点不存在：{p.node}");
 
                     var place = new Place(p.id, p.name ?? p.id, ParseKind(p.kind), p.node,
-                        ParseSize(p.size), p.business, p.player, ParseSells(p.sells));
+                        ParseSize(p.size), p.business, p.player, ParseSells(p.sells), p.street, p.explicitEntrance,
+                        p.entranceX, p.entranceY, p.width, p.depth, p.heading, p.tradable, p.openMinute, p.closeMinute);
                     layout._places.Add(place.Id, place);
                     layout._placeList.Add(place);
                 }

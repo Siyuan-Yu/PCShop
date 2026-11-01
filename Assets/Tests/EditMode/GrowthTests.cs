@@ -98,6 +98,10 @@ namespace PCShopSell.Tests
             Buy(s, ShopUpgrades.Sign);
             Buy(s, ShopUpgrades.AirCon);
             Assert.AreEqual(ShopUpgrades.SignTrafficBonus, s.PlayerShop.TrafficMultiplier, 1e-9);
+            Assert.True(s.HasSeasonalAircon(s.PlayerShopPlace.Id));
+            s.Clock.Restore(new PCShopSell.Core.Time.GameDate(150),900);
+            long now=s.Clock.Now.TotalMinutes;s.TickCityClimate(now,now+1);
+            Assert.AreEqual(0,s.CityClimateZones.Count,"a facility does not create a room simulation");
             Assert.AreEqual(patience + ShopUpgrades.AirConPatienceBonus, s.PlayerShop.Settings.PatienceMinutes);
         }
 
@@ -158,6 +162,9 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.OrderOnline(ParcelKind.Outfit, "suit"));
             Assert.IsFalse(s.Equip("suit"), "快递还没到");
             while (s.Clock.Today.TotalDays < 2) s.AdvanceClock(60);
+            s.Leave();
+            Assert.IsFalse(s.Equip("suit"), "到货不代表能在街上远程更衣");
+            GameSessionTests.Teleport(s, "flat");
             Assert.IsTrue(s.Equip("suit"));
             Assert.AreEqual(charm + 7, s.EffectiveCharm);
             Assert.IsTrue(s.Equip(Outfits.Default));

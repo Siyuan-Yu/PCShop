@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.World;
 using UnityEngine;
@@ -24,6 +24,9 @@ namespace PCShopSell.Game.Runtime
         public float Size = 16f;
         public float MinSize = 5f;
         public float MaxSize = 60f;
+        private Bounds? _cityBounds;
+
+        public void SetCityBounds(CityLayout city) => _cityBounds = StreetWorldBuilder.BoundsOf(city);
 
         public CameraRig(Camera cam)
         {
@@ -61,6 +64,12 @@ namespace PCShopSell.Game.Runtime
                 Yaw = _streetYaw;
                 Pitch = _streetPitch;
             }
+        }
+        /// <summary>A temporary venue shot preserves the street orbit cached by SetInterior.</summary>
+        public void SetPlaceAngles(float yaw,float pitch)
+        {
+            if(!_locked)return;
+            Yaw=Mathf.Repeat(yaw,360f);Pitch=Mathf.Clamp(pitch,MinPitch,MaxPitch);
         }
 
         /// <summary>缂栬緫妯″紡鐨勪刊瑙掞細70掳锛屼刊瑙嗕絾杩樼湅寰楀嚭瀹跺叿鐨勭珛闈€?/summary>
@@ -132,6 +141,12 @@ namespace PCShopSell.Game.Runtime
 
         private void Apply()
         {
+            if (!_locked && !_edit && _cityBounds.HasValue)
+            {
+                var b = _cityBounds.Value;
+                _focus.x = Mathf.Clamp(_focus.x, b.min.x, b.max.x);
+                _focus.z = Mathf.Clamp(_focus.z, b.min.z, b.max.z);
+            }
             _cam.orthographicSize = Mathf.Lerp(_cam.orthographicSize, Size, 0.25f);
             _cam.transform.rotation = _curRot;
             _cam.transform.position = _focus - _curRot * Vector3.forward * 120f;
@@ -148,6 +163,7 @@ namespace PCShopSell.Game.Runtime
         private readonly GameObject _taxi;
         private readonly GameObject _car, _van;
         private readonly FigureMotion _motion;
+        private Transform _activityName;
         private string _dressed;
 
         public Vector3 Position => _root.transform.position;
@@ -185,7 +201,8 @@ namespace PCShopSell.Game.Runtime
 
         public void Update(GameSession s, float dt)
         {
-            bool visible = s.CurrentPlace == null;
+            bool publicSpace=s.CurrentPlace!=null&&((s.CurrentPlace.Business??"").StartsWith("venue_",System.StringComparison.Ordinal)||((s.CurrentPlace.Business=="服装"||s.IsCityActivityVenue(s.CurrentPlace))&&s.ShopAt(s.CurrentPlace.Id)==null));
+            bool visible = s.CurrentPlace == null || publicSpace;
             _root.SetActive(visible);
             if (!visible) return;
             if (_dressed != s.EquippedOutfit)
@@ -196,6 +213,25 @@ namespace PCShopSell.Game.Runtime
 
             Vector3 p = StreetWorldBuilder.ToWorld(s.PlayerPosition);
             _root.transform.position = p;
+            var activity=publicSpace?s.RunningCityActivity:null;
+            _motion.ActivityKind=activity!=null?s.CityActivityService(activity)?.Id:null;
+            _motion.Seated=activity!=null&&s.City.GetPlace(activity.VenueId).Business=="venue_restaurant";
+            if(activity!=null)
+            {
+                foreach(var participant in activity.Participants)
+                {
+                    var person=s.CityPersonState(participant.PersonId);if(person==null)continue;
+                    Vector3 face=new Vector3((float)person.X,0,(float)person.Y)-p;face.y=0;
+                    if(face.sqrMagnitude>.01f)_root.transform.rotation=Quaternion.LookRotation(face.normalized);
+                    break;
+                }
+                if(_activityName==null)
+                {
+                    _activityName=new GameObject("ActivityPlayerName").transform;_activityName.SetParent(_root.transform,false);_activityName.localPosition=Vector3.up*1.9f;
+                    Prims.SignText(_activityName,"我",Vector3.zero,1,.38f,ArtDirection.Cream);
+                }
+            }
+            if(_activityName!=null){_activityName.gameObject.SetActive(activity!=null);_activityName.rotation=CameraRig.Rotation;}
             if (s.IsWalking)
             {
                 var dir = s.Trip != null ? new Vector3((float)s.Trip.DirX, 0, (float)s.Trip.DirY) : new Vector3((float)s.HeadingX, 0, (float)s.HeadingY);
@@ -204,14 +240,14 @@ namespace PCShopSell.Game.Runtime
             }
 
             VehicleKind v = s.Vehicle;
-            _ebike.SetActive(v == VehicleKind.EBike);
-            _tricycle.SetActive(v == VehicleKind.Tricycle);
+            _ebike.SetActive(!publicSpace && v == VehicleKind.EBike);
+            _tricycle.SetActive(!publicSpace && v == VehicleKind.Tricycle);
             _taxi.SetActive(v == VehicleKind.Taxi && s.Trip != null);
-            _car.SetActive(v == VehicleKind.Car);
-            _van.SetActive(v == VehicleKind.Van);
-            _figure.SetActive(!(v == VehicleKind.Taxi && s.Trip != null) && v != VehicleKind.Car && v != VehicleKind.Van);
-            float lift = v == VehicleKind.EBike || v == VehicleKind.Tricycle ? 0.35f : 0f;
-            _motion.LocomotionEnabled = v == VehicleKind.Walk || v == VehicleKind.Taxi;
+            _car.SetActive(!publicSpace && v == VehicleKind.Car);
+            _van.SetActive(!publicSpace && v == VehicleKind.Van);
+            _figure.SetActive(publicSpace || (!(v == VehicleKind.Taxi && s.Trip != null) && v != VehicleKind.Car && v != VehicleKind.Van));
+            float lift = !publicSpace && (v == VehicleKind.EBike || v == VehicleKind.Tricycle) ? 0.35f : 0f;
+            _motion.LocomotionEnabled = publicSpace || v == VehicleKind.Walk || v == VehicleKind.Taxi;
             _figure.transform.localPosition = new Vector3(0, lift, 0);
         }
     }

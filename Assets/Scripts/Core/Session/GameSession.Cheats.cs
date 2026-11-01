@@ -1,10 +1,41 @@
 using PCShopSell.Core.Common;
+using System.Linq;
 
 namespace PCShopSell.Core.Session
 {
     /// <summary>验收用的快捷操作（只有编辑器里的作弊工具会调用）。</summary>
     public sealed partial class GameSession
     {
+        private const string InvitationTestEnabledFlag="debug:invitation-test-person";
+        public bool DebugInvitationPersonEnabled
+        {
+            get
+            {
+#if UNITY_EDITOR
+                return Flags.Contains(InvitationTestEnabledFlag);
+#else
+                return false;
+#endif
+            }
+        }
+
+        public void DebugSetInvitationPerson(bool visible)
+        {
+            if(visible)Flags.Add(InvitationTestEnabledFlag); else Flags.Remove(InvitationTestEnabledFlag);
+            InitializeCityPeople();
+            Say(DebugInvitationPersonEnabled?"小游已出现在安居房产中介附近，好感已满，可用于邀约与聊天验收。":"小游已隐藏；相关验收邀约已结束，历史记录保留。");
+        }
+
+        private void RemoveInvitationTestPerson()
+        {
+            string id=CityLifeCatalog.InvitationTestPersonId;
+            foreach(var activity in _cityActivities.Where(a=>a.Active && a.Participants.Any(p=>p.PersonId==id)).ToArray())
+                EndCityActivity(activity,CityActivityPhase.Cancelled,"已通过作弊工具移除验收伙伴，结束本次验收安排",Clock.Now.TotalMinutes);
+            _cityPeople.Remove(id);
+            _relations.Remove(id);
+            Flags.Remove(MetFlag(id)); Flags.Remove("greeted:"+id); Flags.Remove("heard:"+id);
+        }
+
         public void DebugAddCash(long yuan)
         {
             Ledger.Credit(Clock.Today, "作弊", Money.FromYuan(yuan), "作弊工具");

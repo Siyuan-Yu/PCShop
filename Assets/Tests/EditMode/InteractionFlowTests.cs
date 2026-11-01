@@ -84,9 +84,11 @@ namespace PCShopSell.Tests
             {
                 var e = new Employee(); s.MainShop.Employee = e;
                 Assert.True(s.SetEmployeeShift(e.Id, 780, 1260));
-                Assert.AreEqual(780, e.ShiftStart);
-                Assert.False(s.SetEmployeeShift(e.Id, 1260, 540));
-                Assert.AreEqual(780, e.ShiftStart);
+                Assert.AreEqual(540, e.ShiftStart,"An already active shift keeps its start");
+                Assert.AreEqual(780,e.Schedule.PendingStart);
+                Assert.True(s.SetEmployeeShift(e.Id, 1260, 540),"Overnight custom hours are valid");
+                Assert.AreEqual(1260,e.Schedule.PendingStart);
+                Assert.False(s.SetEmployeeShift(e.Id,540,540));
             }
         }
 

@@ -34,6 +34,7 @@ namespace PCShopSell.Core.Session
         public string TimeText;
         public string Text;
         public string Kind;
+        public string ActivityId;
         public int Index = -1;
     }
 
@@ -220,6 +221,13 @@ namespace PCShopSell.Core.Session
         {
             var l = new List<ScheduleEntry>();
             AddWorkSchedule(l);
+            foreach (var activity in _cityActivities.Where(a => a.Active))
+            {
+                string companions = string.Join("、", activity.Participants.Select(p => CityPerson(p.PersonId)?.Name ?? "朋友"));
+                l.Add(new ScheduleEntry { ActivityId = activity.Id, Minute = activity.ScheduledStart,
+                    Day = DescribeDay((int)(activity.ScheduledStart / 1440)), TimeText = ClockText((int)(activity.ScheduledStart % 1440)), Kind = "city_activity",
+                    Text = (companions.Length == 0 ? "单人消费" : "和" + companions + "相约") + " · " + (City.HasPlace(activity.VenueId) ? City.GetPlace(activity.VenueId).Name : "场所失效") + " · " + (CityActivityService(activity)?.Name ?? "活动") + " · " + CityPhaseText(activity.State) });
+            }
             foreach (var loan in _appLoans.Where(x => !x.Repaid))
                 l.Add(new ScheduleEntry { Minute = (long)loan.DueDay * 1440, Day = DescribeDay(loan.DueDay), TimeText = "00:00",
                     Kind = "loan", Text = $"贷款 #{loan.Id} 到期自动扣款 {loan.TotalDue}（含利息 {loan.TermInterest}）" });
@@ -228,6 +236,7 @@ namespace PCShopSell.Core.Session
             {
                 Appointment a = _appointments[i];
                 long start = (long)a.Day * GameTimestamp.MinutesPerDay + a.StartMinute;
+                if (_cityActivities.Any(activity => activity.Active && activity.ScheduledStart == start && activity.Participants.Any(person => person.PersonId == a.NpcId))) continue;
                 l.Add(new ScheduleEntry
                 {
                     Minute = start, Day = DescribeDay(a.Day), TimeText = ClockText(a.StartMinute), Kind = "appointment", Index = i,

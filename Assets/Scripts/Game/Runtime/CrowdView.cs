@@ -5,11 +5,12 @@ using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
 {
+    public sealed class CityPersonMarker : MonoBehaviour { public string PersonId; }
     /// <summary>
     /// 街上的人：每个都是住在这一带的真实街坊（Residents），按作息上班、下班、出门逛；
     /// 上班的人走到店门口进去，回家的人走到街头（地铁站或城中村路口）离开。另有走进玩家店里的顾客（不能搭话）。
     /// </summary>
-    public sealed class CrowdView
+    public sealed partial class CrowdView
     {
         private sealed class Walker
         {
@@ -20,6 +21,8 @@ namespace PCShopSell.Game.Runtime
             public ResidentDef Resident;
             public ResidentTrip Trip;
             public bool Leaving;
+            public Transform ActivityName;
+            public FigureMotion Motion;
         }
 
         private const float MetroEndX = -97f, VillageEndX = 102f;
@@ -30,6 +33,10 @@ namespace PCShopSell.Game.Runtime
         private readonly System.Random _rng = new System.Random(11);
         private readonly float _minX, _maxX;
         private bool _synced;
+        private bool _cityMode;
+        private GameSession _citySession;
+        private readonly Dictionary<string, Walker> _cityWalkers = new Dictionary<string, Walker>();
+        private readonly Dictionary<string, ResidentDef> _cityResidents = new Dictionary<string, ResidentDef>();
 
         /// <summary>玩家店门口（搬店后改到新铺子）。</summary>
         public Vector3 ShopDoor { get; set; }
@@ -39,11 +46,109 @@ namespace PCShopSell.Game.Runtime
 
         public Vector3 TalkFace { get; set; }
 
+        /// <summary>Views follow the session's one authoritative person position. Visibility never advances a person or deletes history.</summary>
+        public void SyncCity(GameSession session, Vector3 playerWorld, Camera camera = null)
+        {
+            _citySession = session;
+            if (!_cityMode)
+            {
+                foreach (var old in _walkers) if (old.Go != null) Kill.It(old.Go);
+                _walkers.Clear(); _arrived.Clear(); _cityMode = true;
+            }
+            var wanted = new HashSet<string>();
+            foreach (var state in session.CityPeople)
+            {
+                var definition = session.CityPerson(state.PersonId); if (definition == null) continue;
+                Vector3 position = CityPresentationPosition(session, state);
+                bool privateInterior = session.CityPersonInside(state) || CityPersonInVehicle(state);
+                if (privateInterior) continue;
+                if (camera != null)
+                {
+                    Vector3 screen = camera.WorldToViewportPoint(position + Vector3.up);
+                    float margin = _cityWalkers.ContainsKey(state.PersonId) ? .2f : .08f;
+                    if (screen.z <= 0 || screen.x < -margin || screen.x > 1 + margin || screen.y < -margin || screen.y > 1 + margin) continue;
+                }
+                else if ((position - playerWorld).sqrMagnitude > 80 * 80) continue;
+                wanted.Add(state.PersonId);
+                if (!_cityWalkers.TryGetValue(state.PersonId, out var view))
+                {
+                    if (!_cityResidents.TryGetValue(state.PersonId, out var resident))
+                    {
+                        resident = new ResidentDef(definition.Staff, state.WorkPlaceId, definition.WorkStart, definition.WorkEnd, false, stories: definition.Stories);
+                        _cityResidents[state.PersonId] = resident;
+                    }
+                    view = Spawn(resident, position); CityNpcClothing.Apply(view.Go, session, state.PersonId); _cityWalkers[state.PersonId] = view; _walkers.Add(view);
+                }
+                // Membership and labels are refreshed at low frequency. Never snap an existing
+                // actor here: its root and walking rig are advanced every rendered frame below.
+                bool participating = state.Route == null && !string.IsNullOrEmpty(state.ActivityId)
+                    && session.RunningCityActivity?.Id == state.ActivityId;
+                if(view.ActivityName==null)
+                {
+                    var label=new GameObject("ActivityName").transform;label.SetParent(view.Go.transform,false);label.localPosition=Vector3.up*1.8f;
+                    Prims.SignText(label,definition.Staff.Name,Vector3.zero,3f,.38f,ArtDirection.Cream);view.ActivityName=label;
+                }
+                if(view.ActivityName!=null){view.ActivityName.gameObject.SetActive(participating || (position-playerWorld).sqrMagnitude <= 18*18);view.ActivityName.rotation=CameraRig.Rotation;}
+            }
+            SyncAmbient(session, camera);
+            foreach (string id in new List<string>(_cityWalkers.Keys))
+            {
+                if (wanted.Contains(id)) continue;
+                var view = _cityWalkers[id]; if (view.Go != null) Kill.It(view.Go);
+                _walkers.Remove(view); _cityWalkers.Remove(id);
+            }
+        }
+
+        // Passengers are inside their transport, not pedestrians sprinting at vehicle speed.
+        private static bool CityPersonInVehicle(CityPersonState person) =>
+            person.Route != null && person.Route.Transport != VehicleKind.Walk;
+
+        private static Vector3 CityPresentationPosition(GameSession session, CityPersonState person)
+        {
+            var point = person.Route != null
+                ? person.Route.Position(session.Clock.Now.TotalMinutes + session.Time.FractionalMinute)
+                : new PCShopSell.Core.World.MapPoint(person.X, person.Y);
+            return new Vector3((float)point.X, 0, (float)point.Y);
+        }
+
+        private void UpdateCityPresentation(float dt, bool visible)
+        {
+            if (_citySession == null) return;
+            foreach (var pair in _cityWalkers)
+            {
+                var view = pair.Value;
+                if (view.Go == null) continue;
+                var state = _citySession.CityPersonState(pair.Key);
+                bool show = visible && state != null && !_citySession.CityPersonInside(state) && !CityPersonInVehicle(state);
+                if (view.Go.activeSelf != show) view.Go.SetActive(show);
+                if (!show) continue;
+                Vector3 position = CityPresentationPosition(_citySession, state);
+                Vector3 direction = position - view.Go.transform.position;
+                view.Go.transform.position = position;
+                bool participating = state.Route == null && !string.IsNullOrEmpty(state.ActivityId)
+                    && _citySession.RunningCityActivity?.Id == state.ActivityId;
+                if (participating) direction = StreetWorldBuilder.ToWorld(_citySession.PlayerPosition) - position;
+                if (pair.Key == Talking && state.Route == null) direction = TalkFace - position;
+                direction.y = 0;
+                if (direction.sqrMagnitude > .00001f && dt > 0)
+                    view.Go.transform.rotation = Quaternion.RotateTowards(view.Go.transform.rotation,
+                        Quaternion.LookRotation(direction.normalized), 540 * dt);
+                if (view.Motion != null)
+                {
+                    view.Motion.ActivityKind = participating ? _citySession.CityActivityService(_citySession.RunningCityActivity)?.Id : null;
+                    view.Motion.LocomotionEnabled = state.Route != null;
+                    view.Motion.Seated = participating && _citySession.City.GetPlace(_citySession.RunningCityActivity.VenueId).Business == "venue_restaurant";
+                }
+            }
+        }
+
         private static readonly Color[] Clothes =
         {
             new Color(0.8f, 0.2f, 0.2f), new Color(0.2f, 0.4f, 0.8f), new Color(0.9f, 0.9f, 0.9f), new Color(0.2f, 0.2f, 0.2f),
             new Color(0.3f, 0.7f, 0.4f), new Color(0.85f, 0.65f, 0.2f), new Color(0.6f, 0.3f, 0.7f),
         };
+
+        public static Color PersonClothing(string personId) => Clothes[new System.Random(StableHash(personId ?? "visitor")).Next(Clothes.Length)];
 
         public CrowdView(Transform parent, float minX, float maxX, Vector3 shopDoor)
         {
@@ -147,6 +252,7 @@ namespace PCShopSell.Game.Runtime
         /// <summary>有顾客进玩家的某家店：从街上某处走向那家店的门（只是画面，不能搭话）。door 为空就去 ShopDoor。</summary>
         public void SendShopper(Vector3? door = null)
         {
+            if (_cityMode) return; // Shop visitors are drawn by the interior; street foot traffic has its own bounded pool.
             Vector3 target = door ?? ShopDoor;
             float x = Mathf.Clamp(target.x + ((float)_rng.NextDouble() * 2f - 1f) * 45f, _minX, _maxX);
             float widen = StreetWorldBuilder.ShoppingWiden;
@@ -159,6 +265,12 @@ namespace PCShopSell.Game.Runtime
 
         public void Update(float dt, bool visible)
         {
+            if (_cityMode)
+            {
+                UpdateCityPresentation(dt, visible);
+                UpdateAmbient(dt, visible);
+                return;
+            }
             for (int i = _walkers.Count - 1; i >= 0; i--)
             {
                 Walker w = _walkers[i];
@@ -204,7 +316,12 @@ namespace PCShopSell.Game.Runtime
             var look = new System.Random(seed);
             GameObject go = Prims.Figure(_parent, r == null ? "Shopper" : "Resident_" + r.Id, Clothes[look.Next(Clothes.Length)], new Color(0.92f, 0.78f, 0.62f), 0.95f);
             go.transform.position = at;
-            return new Walker { Go = go, Resident = r, Speed = 1.0f + (float)look.NextDouble() * 0.8f };
+            if (r != null)
+            {
+                go.AddComponent<CityPersonMarker>().PersonId = r.Id;
+                var collider = go.AddComponent<SphereCollider>(); collider.center = Vector3.up * .9f; collider.radius = .55f;
+            }
+            return new Walker { Go = go, Resident = r, Motion = go.GetComponent<FigureMotion>(), Speed = 1.0f + (float)look.NextDouble() * 0.8f };
         }
 
         private static int StableHash(string s)

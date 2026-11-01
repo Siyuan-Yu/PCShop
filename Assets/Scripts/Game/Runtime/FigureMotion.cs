@@ -13,6 +13,13 @@ namespace PCShopSell.Game.Runtime
         private Vector3 _previousPosition;
         private float _phase, _blend, _idleTime, _scale;
         private bool _sampled, _locomotion = true;
+        private bool _seated;
+        public string ActivityKind { get; set; }
+        public bool Seated
+        {
+            get=>_seated;
+            set{if(_seated==value)return;_seated=value;if(_visual!=null)ApplyPose();}
+        }
 
         public Transform Torso { get; private set; }
         public float WalkBlend => _blend;
@@ -46,6 +53,20 @@ namespace PCShopSell.Game.Runtime
         {
             foreach (var r in _pants) r.sharedMaterial = pants;
             foreach (var r in _sleeves) r.sharedMaterial = sleeves;
+        }
+        public void SetClothingCut(bool shortSleeve, bool shortPants, bool thick, Material skin)
+        {
+            for(int i=0;i<2;i++)
+            {
+                var sleeve=_sleeves[i].transform;
+                sleeve.localPosition=new Vector3(0,shortSleeve?-.075f:-.175f,0);
+                sleeve.localScale=new Vector3(thick?.20f:.15f,shortSleeve?.15f:.35f,thick?.28f:.23f);
+                var forearm=_arms[i].Find("ClothingForearm");
+                if(forearm==null)forearm=Prims.Box(_arms[i],"ClothingForearm",new Vector3(0,-.255f,0),new Vector3(.12f,.22f,.18f),skin).transform;
+                forearm.gameObject.SetActive(shortSleeve);
+                forearm.GetComponent<Renderer>().sharedMaterial=skin;
+                if(shortPants)_pants[i*2+1].sharedMaterial=skin;
+            }
         }
 
         private void OnEnable() { if (!Active.Contains(this)) Active.Add(this); ResetMotion(); }
@@ -108,6 +129,19 @@ namespace PCShopSell.Game.Runtime
 
         private void ApplyPose()
         {
+            if(_seated)
+            {
+                _visual.localPosition=Vector3.zero;Torso.localPosition=Vector3.zero;Torso.localRotation=Quaternion.Euler(-4,0,0);
+                for(int i=0;i<2;i++)
+                {
+                    _hips[i].localRotation=Quaternion.Euler(-90,0,0);
+                    _knees[i].localRotation=Quaternion.Euler(90,0,0);
+                    _feet[i].localRotation=Quaternion.identity;
+                    float gesture=string.IsNullOrEmpty(ActivityKind)?0:Mathf.Sin(_idleTime*2.2f+i*1.4f)*12f;
+                    _arms[i].localRotation=Quaternion.Euler(-35+gesture,0,i==0?-8:8);
+                }
+                return;
+            }
             float bob = (-.045f + .004f * (1f - Mathf.Cos(_phase * 2f))) * _blend;
             _visual.localPosition = Vector3.up * (bob * _scale);
             Torso.localPosition = Vector3.up * (Mathf.Sin(_idleTime * 1.8f) * .003f * (1f - _blend));
@@ -127,6 +161,15 @@ namespace PCShopSell.Game.Runtime
                 _feet[i].localRotation = Quaternion.Euler(-hip - knee, 0, 0);
                 float arm = -Mathf.Sin(phase) * 26f * _blend;
                 _arms[i].localRotation = Quaternion.Euler(arm, 0, i == 0 ? -8f : 8f);
+            }
+            if (!string.IsNullOrEmpty(ActivityKind) && _blend < .1f)
+            {
+                float gesture=Mathf.Sin(_idleTime*2.4f)*12f;
+                // Both participants share a readable activity pose, rather than a walking loop.
+                bool energetic=ActivityKind=="court" || ActivityKind=="golf" || ActivityKind=="hike";
+                Torso.localRotation=Quaternion.Euler(energetic?8:0,Mathf.Sin(_idleTime*1.5f)*4,0);
+                _arms[0].localRotation=Quaternion.Euler(ActivityKind=="ktv"?-100+gesture:-45+gesture,0,-12);
+                _arms[1].localRotation=Quaternion.Euler(energetic?-65-gesture:-20-gesture,0,12);
             }
         }
     }

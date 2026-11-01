@@ -43,12 +43,13 @@ namespace PCShopSell.Core.Session
         private readonly Dictionary<string, int> _staffStoryDay = new Dictionary<string, int>();
         private readonly Dictionary<string, int> _staffStoryCount = new Dictionary<string, int>();
 
-        public int StaffRapport(string staffId) => _staffRapport.TryGetValue(staffId, out double v) ? (int)Math.Floor(v) : 0;
+        public int StaffRapport(string staffId) => Math.Max(Relation(staffId),_staffRapport.TryGetValue(staffId, out double v) ? (int)Math.Floor(v) : 0);
 
         private void AddStaffRapport(string staffId, double delta)
         {
-            double cur = _staffRapport.TryGetValue(staffId, out double v) ? v : 0;
+            double cur = Math.Max(Relation(staffId),_staffRapport.TryGetValue(staffId, out double v) ? v : 0);
             _staffRapport[staffId] = Math.Max(0, Math.Min(StaffTalk.MaxRapport, cur + delta));
+            _relations[staffId]=_staffRapport[staffId];
         }
 
         // ---------- 闲聊 ----------
@@ -69,7 +70,6 @@ namespace PCShopSell.Core.Session
             if (StaffRapport(staff.Id) < StaffTalk.ChatMaxRapport) AddStaffRapport(staff.Id, StaffTalk.ChatGain);
             else line += $"\n（和{staff.Name}聊得很投缘，不过光闲聊熟络不动了。送点小礼物、听他讲讲自己的事更有用。）";
             RememberSocial(staff.Id, "当面闲聊。\n" + line);
-            AdvanceClock(StaffTalk.ChatMinutes);
             return line;
         }
 
@@ -131,7 +131,6 @@ namespace PCShopSell.Core.Session
             _staffStoryDay[staff.Id] = Clock.Today.TotalDays;
             AddStaffRapport(staff.Id, StaffTalk.StoryGain);
             RememberSocial(staff.Id, $"听对方讲自己的事（第 {heard + 1} 段）。\n{story}");
-            AdvanceClock(StaffTalk.StoryMinutes);
             return story;
         }
 

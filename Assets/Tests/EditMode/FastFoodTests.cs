@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
@@ -60,6 +60,9 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
+                // Isolate the food's exact diet effect from the separate persistent cold-discomfort rule.
+                GameSessionTests.Teleport(s,"flat");s.GrantOutfit("winter_basic");Assert.True(s.Equip("winter_basic"));
+                GameSessionTests.Teleport(s,"fast");
                 s.Player.Hunger = 10; s.Player.Nutrition = 98; s.Player.Mood = 99;
                 Assert.IsTrue(s.BuyFastFood("rice"));
                 var json = JsonUtility.ToJson(s.CreateSave());

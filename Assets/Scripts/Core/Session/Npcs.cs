@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 
@@ -97,7 +98,8 @@ namespace PCShopSell.Core.Session
         {
             foreach (NpcDef n in All)
                 if (n.Id == id) return n;
-            return null;
+            var person=CityLifeCatalog.Person(id);
+            return person==null?null:new NpcDef(person.Id,person.Name,person.Role,person.Experience,"一盒点心",60,"谢谢你记得我的喜好。",likes:person.Interest,firstMeet:person.Topics?.FirstOrDefault(),giftItemId:Gifts.Snack);
         }
 
         /// <summary>某个档口的老板（没有则 null）。</summary>

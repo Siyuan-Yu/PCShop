@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Linq;
+using System.Collections.Generic;
 using PCShopSell.Core.World;
 using PCShopSell.Game.Runtime;
 using UnityEngine;
@@ -25,6 +26,8 @@ namespace PCShopSell.Game.UI
         private ViewState _state;
         private Vector3 _overview;
         private float _overviewSize;
+        private Bounds _cityBounds;
+        private HashSet<string> _placeIds;
         private bool _dragged;
         private Vector2 _previousPointer;
         public Action Changed;
@@ -49,9 +52,21 @@ namespace PCShopSell.Game.UI
             extra.renderPostProcessing = false;
             extra.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
             _camera.transform.rotation = Quaternion.Euler(40, 45, 0);
-            float minX = (float)units.Min(p => game.City.ViewPosition(p.NodeId).X) - 22;
-            float maxX = (float)units.Max(p => game.City.ViewPosition(p.NodeId).X) + 12;
-            var bounds = new Bounds(new Vector3((minX + maxX) / 2, 10, 10), new Vector3(maxX - minX, 22, 48));
+            _placeIds = new HashSet<string>(units.Select(p => p.Id));
+            bool hasBounds = false;
+            var bounds = new Bounds(Vector3.zero, Vector3.zero);
+            foreach (var unit in units)
+            {
+                if (!game.World.Places.TryGetValue(unit.Id, out var visual)) continue;
+                var body = visual.Root.transform.Find("Body")?.GetComponent<Renderer>();
+                var buildingBounds = body != null ? body.bounds : new Bounds(visual.Entrance, new Vector3(12, 10, 12));
+                if (!hasBounds) { bounds = buildingBounds; hasBounds = true; }
+                else bounds.Encapsulate(buildingBounds);
+                bounds.Encapsulate(game.World.NodeWorld(unit.NodeId));
+            }
+            if (!hasBounds) bounds = new Bounds(Vector3.zero, new Vector3(40, 20, 40));
+            bounds.Expand(new Vector3(8, 4, 8));
+            _cityBounds = bounds;
             _overview = bounds.center;
             Quaternion inverse = Quaternion.Inverse(_camera.transform.rotation);
             float extentX = 0, extentY = 0;
@@ -80,8 +95,8 @@ namespace PCShopSell.Game.UI
         private void ApplyCamera()
         {
             float limit = 1 - 1 / _state.Zoom;
-            _state.Offset.x = Mathf.Clamp(_state.Offset.x, -115 * limit, 115 * limit);
-            _state.Offset.y = Mathf.Clamp(_state.Offset.y, -65 * limit, 65 * limit);
+            _state.Offset.x = Mathf.Clamp(_state.Offset.x, -_cityBounds.extents.x * limit, _cityBounds.extents.x * limit);
+            _state.Offset.y = Mathf.Clamp(_state.Offset.y, -_cityBounds.extents.z * limit, _cityBounds.extents.z * limit);
             _camera.orthographicSize = _overviewSize / _state.Zoom;
             _camera.transform.position = _overview + new Vector3(_state.Offset.x, 0, _state.Offset.y) - _camera.transform.forward * 240;
         }
@@ -97,9 +112,12 @@ namespace PCShopSell.Game.UI
             var suns = FindObjectsOfType<Light>().Where(l => l.type == LightType.Directional).ToArray();
             var intensities = suns.Select(l => l.intensity).ToArray();
             var colors = suns.Select(l => l.color).ToArray();
+            // Hide other streets only during this camera capture; restore the live world below.
+            var outside = _game.World.Places.Values.Where(p => !_placeIds.Contains(p.Place.Id) && p.Root.activeSelf).ToArray();
             try
             {
                 foreach (var c in canvases) c.enabled = false;
+                foreach (var place in outside) place.Root.SetActive(false);
                 if (_rentalGlow != null) _rentalGlow.SetActive(false);
                 RenderSettings.fog = false;
                 RenderSettings.ambientMode = AmbientMode.Flat;
@@ -115,6 +133,7 @@ namespace PCShopSell.Game.UI
                 RenderSettings.ambientLight = ambient;
                 for (int i = 0; i < suns.Length; i++) { suns[i].intensity = intensities[i]; suns[i].color = colors[i]; }
                 foreach (var c in canvases) if (c != null) c.enabled = true;
+                foreach (var place in outside) if (place.Root != null) place.Root.SetActive(true);
             }
             Changed?.Invoke();
         }
@@ -129,7 +148,7 @@ namespace PCShopSell.Game.UI
         public void ResetView() { _state.Zoom = 1; _state.Offset = Vector2.zero; RenderMap(); }
         public void Focus(Place p)
         {
-            Vector3 at = _game.World.NodeWorld(p.NodeId) + new Vector3(0, 0, 10);
+            Vector3 at = _game.World.Places.TryGetValue(p.Id, out var place) ? place.Entrance : _game.World.NodeWorld(p.NodeId);
             _state.Zoom = 2.4f;
             _state.Offset = new Vector2(at.x - _overview.x, at.z - _overview.z);
             RenderMap();
@@ -161,7 +180,7 @@ namespace PCShopSell.Game.UI
             Ray ray = _camera.ViewportPointToRay(viewport);
             if (!Physics.Raycast(ray, out RaycastHit hit, 600)) return null;
             PlaceMarker marker = hit.collider.GetComponentInParent<PlaceMarker>();
-            return marker?.PlaceId;
+            return marker != null && _placeIds.Contains(marker.PlaceId) ? marker.PlaceId : null;
         }
 
         public void OnBeginDrag(PointerEventData e) { _dragged = true; _previousPointer = e.position; }

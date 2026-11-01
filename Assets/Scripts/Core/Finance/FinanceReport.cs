@@ -19,6 +19,29 @@ namespace PCShopSell.Core.Finance
     /// <summary>从账本里按天汇总，给“经营报表”画图用。</summary>
     public static class FinanceReport
     {
+        /// <summary>经营现金口径；内部划转、借贷本金、投资交易永远不计入销售或经营净额。</summary>
+        public static CityFinanceSummary CitySummary(Ledger ledger, GameDate from, GameDate to, string shopId = null)
+        {
+            var result = new CityFinanceSummary { From = from, To = to, ShopId = shopId };
+            foreach (var e in ledger.Entries)
+            {
+                if (e.Date < from || e.Date > to || (shopId != null && e.ShopId != shopId)) continue;
+                switch (e.BusinessKind)
+                {
+                    case LedgerBusinessKind.Operating:
+                        if (e.Amount.IsPositive) result.OperatingIn += e.Amount; else result.OperatingOut -= e.Amount;
+                        if (e.Category == RetailCategory || e.Category == BuildCategory || e.Attribution?.TransactionKind == "销售") result.Sales += e.Amount;
+                        if (e.ShopId == null) { if (e.Amount.IsPositive) result.UnassignedOperatingIn += e.Amount; else result.UnassignedOperatingOut -= e.Amount; }
+                        break;
+                    case LedgerBusinessKind.Personal: result.PersonalNet += e.Amount; break;
+                    case LedgerBusinessKind.AssetInvestment: result.InvestmentNet += e.Amount; break;
+                    case LedgerBusinessKind.Financing: result.FinancingNet += e.Amount; break;
+                    case LedgerBusinessKind.InternalTransfer: result.InternalNet += e.Amount; break;
+                    default: result.HistoricalNet += e.Amount; break;
+                }
+            }
+            return result;
+        }
         public const string RetailCategory = "零售";
         public const string BuildCategory = "装机";
 

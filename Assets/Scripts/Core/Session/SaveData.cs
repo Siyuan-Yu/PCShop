@@ -5,8 +5,9 @@ namespace PCShopSell.Core.Session
 {
     /// <summary>存档格式。字段为公开小写，可直接用 Unity JsonUtility 序列化。出行中、店里的顾客不存。</summary>
     [Serializable]
-    public sealed class SaveData
+    public sealed partial class SaveData
     {
+        public int agencyStreetVersion;
         public string shopRetailKind, pendingRetailKind;
         public GoodsLot[] shopGoodsLots;
         public AppLoan[] appLoans;
@@ -323,6 +324,8 @@ namespace PCShopSell.Core.Session
         public long wage;
         public int checkoutMinutes;
         public int shiftStart, shiftEnd, buildsCompleted;
+        public EmployeeSchedule schedule;
+        public bool hasSchedule;
         public string description;
     }
 
@@ -407,12 +410,14 @@ namespace PCShopSell.Core.Session
     [Serializable]
     public sealed class SavePlaced
     {
+        public string climateId;
         public string id;
         public double x;
         public double z;
         public int rot;
         /// <summary>货架摆哪类货（ShelfKinds 的 id）。</summary>
         public string item;
+        public int displayLimit;
     }
 
     [Serializable]

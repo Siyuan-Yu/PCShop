@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
@@ -22,11 +22,12 @@ namespace PCShopSell.Game.UI
                 var button = Ui.Size(Ui.Button(row, label, null, 21, Ui.ButtonBg, enabled && room > 1e-9), 38, 36);
                 button.name = "Quantity" + (direction > 0 ? "Plus_" : "Minus_") + key;
                 var hold = button.gameObject.AddComponent<HoldRepeat>();
+                hold.Owner=w;hold.Key=button.name;
                 hold.Max = Math.Max(1, (int)Math.Ceiling(room / step - 1e-9));
                 hold.Label = n => { if (quantity != null) quantity.text = display(Math.Max(min, Math.Min(max, value + direction * n * step))); return label; };
                 hold.Commit = n => { set(Math.Max(min, Math.Min(max, value + direction * n * step))); w.RequestRebuild(); };
                 button.onClick.AddListener(hold.ClickOnce);
-                button.Tip("点一下调整一档；按住连续调整，越按越快。松开后应用。");
+                button.Tip("点一下调整一档；按住连续调整，越按越快。按下立即应用。");
             }
             Button("−", -1, value - min, true);
             quantity = Ui.Size(Ui.Label(row, display(value), 16, TextAnchor.MiddleCenter), 100, 36);
@@ -34,11 +35,11 @@ namespace PCShopSell.Game.UI
             Button("+", 1, max - value, canAdd);
         }
 
-        private void ShopQuantity(Window w, Transform row, string key, Func<bool> add, bool enabled)
+        private void ShopQuantity(Window w, Transform row, string key, Func<bool> add, bool enabled,double? maxAmount=null)
         {
             if (row.Find("Quantity_" + key) != null) return;
             double amount = S.CartAmount(key), step = key == "rice" ? .25 : 1;
-            double max = 1000;
+            double max = maxAmount??1000;
             if (key.StartsWith("part:")) max = Math.Min(1000, S.StallRemaining(S.CurrentPlace, PartCatalog.Get(key.Substring(5))));
             QuantityStepper(w, row, key, amount, 0, max, step, value =>
             {

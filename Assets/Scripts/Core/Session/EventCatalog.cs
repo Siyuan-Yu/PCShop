@@ -83,13 +83,11 @@ namespace PCShopSell.Core.Session
                 {
                     new EventChoice
                     {
-                        Text = "请他们吃顿饭（¥80）",
-                        Enabled = s => CanPay(s, 80), DisabledReason = "钱不够",
+                        Text = "约一次真实饭局（到场后消费）",
+                        Enabled = s => CanPay(s, 100), DisabledReason = "预计家常饭费用不足",
                         Apply = s =>
                         {
-                            s.EventPay(Y(80), "请客");
-                            s.PlayerShop.Reputation += 3;
-                            return "一顿饭下来都成了朋友。口碑 +3。";
+                            return s.ScheduleLegacyCityMeeting(Npcs.Zhang,"dinner","legacy-regulars-meal:"+s.Clock.Today.TotalDays);
                         },
                     },
                     new EventChoice
@@ -288,22 +286,17 @@ namespace PCShopSell.Core.Session
             new EventDef
             {
                 Id = "friend_meal", Title = "老同学请吃饭", MinDay = 5, CooldownDays = 15, Weight = 7,
-                When = s => CanPay(s, 120),
+                When = s => CanPay(s, 100),
                 Body = "大学同学打来电话：\"来电脑城了？晚上一起吃个饭，聊聊。\"",
                 Choices =
                 {
                     new EventChoice
                     {
-                        Text = "去（¥120，两小时）",
-                        Enabled = s => CanPay(s, 120), DisabledReason = "钱不够",
+                        Text = "接受，安排真实饭局（到场后消费）",
+                        Enabled = s => CanPay(s, 100), DisabledReason = "预计家常饭费用不足",
                         Apply = s =>
                         {
-                            s.EventPay(Y(120), "饭局");
-                            s.EventRest(120);
-                            s.Player.Hunger = System.Math.Min(100, s.Player.Hunger + 30);
-                            s.Player.Charm = System.Math.Min(100, s.Player.Charm + 1);
-                            s.Player.Intelligence = System.Math.Min(100, s.Player.Intelligence + 1);
-                            return "饭桌上聊起各自的生意，听到不少行情，也放松了一下。魅力 +1，智力 +1。";
+                            return s.ScheduleLegacyCityMeeting("res_coder", "dinner", "legacy-friend-meal:" + s.Clock.Today.TotalDays);
                         },
                     },
                     new EventChoice { Text = "推掉，店里忙", Apply = s => "你说这周走不开。同学说下次约。" },

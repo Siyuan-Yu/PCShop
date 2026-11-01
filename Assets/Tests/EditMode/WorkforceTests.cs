@@ -57,7 +57,7 @@ namespace PCShopSell.Tests
                 e.BuildsCompleted = 9;
                 if (role == EmployeeRole.Cashier) { s.MainShop.Employee = e; s.MainShop.EmployeeTrained = true; }
                 if (role == EmployeeRole.Assembler) s.MainShop.Assembler = e;
-                if (role == EmployeeRole.Buyer) s.MainShop.Buyer = e;
+                if (role == EmployeeRole.Buyer) s.MainShop.Buyer = e; CityTestPeople.AtAssignedWork(s,e);
                 Assert.True(s.ScheduleEmployeeTransfer(e.Id, "tea"));
                 Assert.AreEqual("pc", s.FindEmployee(e.Id).Shop.Place.Id);
                 using (var loaded = RoundTrip(s))
@@ -110,7 +110,7 @@ namespace PCShopSell.Tests
         {
             using (var s = Make(true))
             {
-                var e = Worker(); s.ShopAt("tea").Buyer = e;
+                var e = Worker(); s.ShopAt("tea").Buyer = e; CityTestPeople.AtAssignedWork(s,e);
                 Assert.True(s.ConfigureEmployeePurchase(e.Id, Plan()));
                 var q = s.QuoteEmployeePurchase(e.Id);
                 Assert.IsNull(q.Error, q.Error);
@@ -122,6 +122,7 @@ namespace PCShopSell.Tests
                 Assert.False(s.DispatchEmployeePurchase(e.Id), "在途不能重复派出");
                 using (var loaded = RoundTrip(s))
                 {
+                    foreach(var shop in loaded.MyShops)shop.Sim.Settings.BaseCustomersPerHour=0;
                     var trip = loaded.EmployeePurchaseTrips.Single();
                     int minutes = (int)(Math.Max(trip.DeliveryAt, trip.ReturnAt) - loaded.Clock.Now.TotalMinutes + 1);
                     var paid = loaded.Ledger.Balance;
@@ -143,7 +144,7 @@ namespace PCShopSell.Tests
             using (var s = Make())
             {
                 Buy(s, VehicleKind.EBike);
-                var e = Worker(); s.MainShop.Buyer = e;
+                var e = Worker(); s.MainShop.Buyer = e; CityTestPeople.AtAssignedWork(s,e);
                 Assert.True(s.ConfigureEmployeePurchase(e.Id, Plan(VehicleKind.EBike)));
                 Assert.True(s.DispatchEmployeePurchase(e.Id));
                 Assert.AreEqual(1, s.BusyVehicleCount(VehicleKind.EBike));
@@ -170,7 +171,7 @@ namespace PCShopSell.Tests
             {
                 Buy(s, VehicleKind.EBike);
                 var first = Worker("甲"); var second = Worker("乙");
-                s.MainShop.Buyer = first; s.ShopAt("tea").Buyer = second;
+                s.MainShop.Buyer = first; s.ShopAt("tea").Buyer = second; CityTestPeople.AtAssignedWork(s,first); CityTestPeople.AtAssignedWork(s,second);
                 Assert.True(s.ConfigureEmployeePurchase(first.Id, Plan(VehicleKind.EBike)));
                 Assert.True(s.ConfigureEmployeePurchase(second.Id, Plan(VehicleKind.EBike)));
                 Assert.True(s.DispatchEmployeePurchase(first.Id));
@@ -191,7 +192,7 @@ namespace PCShopSell.Tests
             using (var s = Make())
             {
                 Buy(s, VehicleKind.EBike);
-                var e = Worker(); s.MainShop.Buyer = e;
+                var e = Worker(); s.MainShop.Buyer = e; CityTestPeople.AtAssignedWork(s,e);
                 var plan = Plan(VehicleKind.EBike);
                 if (failure == "cash") s.Ledger.ForceDebit(s.Clock.Today, "测试", s.Ledger.Balance - Money.FromYuan(1), "现金只留一元");
                 if (failure == "load") { plan.Items[0].PartId = "gpu0"; plan.Items[0].Count = 6; }
@@ -216,7 +217,7 @@ namespace PCShopSell.Tests
         {
             using (var s = Make(true))
             {
-                var e = Worker(); s.MainShop.Buyer = e;
+                var e = Worker(); s.MainShop.Buyer = e; CityTestPeople.AtAssignedWork(s,e);
                 Assert.False(s.IsEmployeeOnDuty(s.Clock.Now), "进货员不能替代收银值守");
                 Assert.True(s.ScheduleEmployeeTransfer(e.Id, "tea"));
                 int entries = s.Ledger.Entries.Count(x => x.Category == "工资");
@@ -233,7 +234,7 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                var e = Worker(); s.MainShop.Buyer = e;
+                var e = Worker(); s.MainShop.Buyer = e; CityTestPeople.AtAssignedWork(s,e);
                 var plan = Plan(); plan.Daily = true;
                 Assert.True(s.ConfigureEmployeePurchase(e.Id, plan));
                 s.AdvanceClock(1);
@@ -255,7 +256,7 @@ namespace PCShopSell.Tests
         {
             using (var s = Make(true))
             {
-                var e = Worker(); s.ShopAt("tea").Buyer = e;
+                var e = Worker(); s.ShopAt("tea").Buyer = e; CityTestPeople.AtAssignedWork(s,e);
                 Assert.True(s.ConfigureEmployeePurchase(e.Id, Plan()));
                 Assert.True(s.DispatchEmployeePurchase(e.Id));
                 GameSessionTests.Teleport(s, "tea");
@@ -273,13 +274,16 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                var e = Worker(); s.MainShop.Buyer = e;
+                var e = Worker(); s.MainShop.Buyer = e; CityTestPeople.AtAssignedWork(s,e);
                 Assert.True(s.ConfigureEmployeePurchase(e.Id, Plan()));
                 var daytime = s.QuoteEmployeePurchase(e.Id);
                 Assert.IsNull(daytime.Error);
                 s.Clock.Restore(s.Clock.Today, 22 * 60);
                 var night = s.QuoteEmployeePurchase(e.Id);
                 Assert.IsNotNull(night.Error);
+                var planning=s.EstimateEmployeePurchase(e.Id);
+                Assert.IsNull(planning.Error,"planning a future shopping list does not dispatch an off-duty employee");
+                Assert.AreEqual(daytime.Total,planning.Total);
                 Assert.AreEqual(daytime.Goods, night.Goods);
                 Assert.AreEqual(daytime.Travel, night.Travel);
                 Assert.AreEqual(daytime.Freight, night.Freight);

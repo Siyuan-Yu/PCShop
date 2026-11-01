@@ -37,56 +37,7 @@ namespace PCShopSell.Game.UI
         /// <summary>和街上的人说话（走近按 F）。熟络度和在店里见到他时是同一份。</summary>
         public void OpenResidentTalk(ResidentDef r, Action onClosed)
         {
-            StaffDef p = r.Person;
-            ResidentTrip? trip = Residents.TripAt(r, S.Clock.MinuteOfDay);
-            string doing = ResidentDoing(r, trip);
-            string role = doing.Length > 0 ? p.Role + " · " + doing : p.Role;
-            var rng = new Random(p.Id.GetHashCode() ^ S.Clock.Today.TotalDays);
-            string greeting = p.LineFor(S.Clock.Today.TotalDays);
-            OpenDialogue(p.Id, p.Name, role, null, greeting, 4, ctx =>
-            {
-                var list = new List<TalkOpt>();
-                list.Add(new TalkOpt
-                {
-                    Label = "随便聊聊（8 分钟）",
-                    Blocker = S.StaffChatBlocker(p.Id),
-                    Act = () =>
-                    {
-                        string said = S.StaffChat(p);
-                        if (said != null) ctx.Reply = said;
-                        ctx.W.Rebuild();
-                    },
-                });
-                list.Add(new TalkOpt
-                {
-                    Label = "送他点东西（从背包里挑）",
-                    Blocker = S.StaffGiftBlocker(p.Id),
-                    Hot = true,
-                    Act = () => OpenStaffGiftPicker(p, ctx),
-                });
-                list.Add(new TalkOpt
-                {
-                    Label = "听他讲讲自己的事（30 分钟）",
-                    Blocker = S.StaffStoryBlocker(p.Id),
-                    Act = () =>
-                    {
-                        string said = S.StaffStory(p);
-                        if (said != null) ctx.Reply = said;
-                        ctx.W.Rebuild();
-                    },
-                });
-                list.Add(new TalkOpt
-                {
-                    Label = "打听点街上的事",
-                    Act = () =>
-                    {
-                        string[] tips = StreetTips();
-                        ctx.Reply = p.Name + "：" + tips[rng.Next(tips.Length)];
-                        ctx.W.Rebuild();
-                    },
-                });
-                return list;
-            }, null, p.Id, onClosed);
+            OpenPersonDialogue(r.Id,onClosed:onClosed);
         }
     }
 }

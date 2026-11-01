@@ -100,6 +100,7 @@ namespace PCShopSell.Core.Session
             SetSmartphone(smartphone);
             Random = new GameRandom(seed);
             Clock = new GameClock(start.Date, start.MinuteOfDay);
+            Player.EnergyChanged = SynchronizeEnergyExhaustion;
             Ledger = new Ledger(openingCash);
             Time = new TimeController();
             Market = new HardwareMarket(Random);
@@ -134,12 +135,15 @@ namespace PCShopSell.Core.Session
             RecordPriceDay();
             Clock.TimeAdvanced += OnTimeAdvanced;
             Clock.DayAdvanced += OnDayAdvanced;
+            InitializeCityPeople();
+            InitializeCityClimate();
+            TickCityRetail();
         }
 
         public VehicleSpec CurrentVehicle => Vehicles.Get(Vehicle);
 
         /// <summary>玩家的画面坐标。</summary>
-        public MapPoint PlayerPosition => Trip != null ? Trip.Position : OffNode ? _free.Value : City.ViewPosition(PlayerNodeId);
+        public MapPoint PlayerPosition => Trip != null ? Trip.Position : CityActivityPlayerPosition() ?? (OffNode ? _free.Value : CurrentPlace!=null?StandOf(CurrentPlace):City.ViewPosition(PlayerNodeId));
 
         public bool InPlayerShop => Lease != null && CurrentPlace == PlayerShopPlace;
 
@@ -166,14 +170,17 @@ namespace PCShopSell.Core.Session
         public void AdvanceClock(int minutes)
         {
             if (minutes <= 0) return;
+            int interruption = _bodyInterruptVersion;
+            SynchronizeEnergyExhaustion();
             while (minutes > 0)
             {
                 if (IsWorking && WorkMinutesLeft <= 0) UpdatePlayerWork(Clock.Now);
-                int step = IsWorking ? Math.Min(minutes, Math.Max(1, WorkMinutesLeft)) : minutes;
+                int step = Math.Min(1, IsWorking ? Math.Min(minutes, Math.Max(1, WorkMinutesLeft)) : minutes);
                 if (IsWorking && !WorkContract.Days[WorkContract.WorkingIndex].LunchServed)
                     step = (int)Math.Min(step, Math.Max(1, WorkMealAt - Clock.Now.TotalMinutes));
                 Clock.Advance(step); minutes -= step;
                 ProcessPending();
+                if (_bodyInterruptVersion != interruption) break;
             }
             TrackTempClocks();
         }
@@ -213,6 +220,7 @@ namespace PCShopSell.Core.Session
             }
             UpdatePlayerWork(Clock.Now);
             if (HasWorkContract && place == WorkPlace) StartPlayerWork();
+            PrepareVenueCompanions(place);
             if (HasUnloadable) Say($"背包里带着东西，按 B 打开背包，一键全放到{UnloadTarget}。");
             return true;
         }
@@ -266,7 +274,7 @@ namespace PCShopSell.Core.Session
         public string ClosedReason(Place p)
         {
             if (WorkStaffEntry(p)) return null;
-            if (p == null || ShopAt(p) != null || VentureAt(p.Id) != null || PropertyAt(p.Id) != null) return null;
+            if (p == null || ShopAt(p) != null || VentureAt(p.Id) != null || IsPlayerPropertyOccupied(p.Id)) return null;
             if (p.Kind == PlaceKind.Shop && IsVacant(p)) return null;
             string hours = OpeningHoursText(p);
             if (hours == null || IsPlaceOpen(p)) return null;
@@ -276,6 +284,7 @@ namespace PCShopSell.Core.Session
         /// <summary>这个地点的营业时间说明；不限时的地方返回 null。</summary>
         public string OpeningHoursText(Place p)
         {
+            if(p.ExplicitEntrance && p.OpenMinute!=p.CloseMinute)return $"每天 {Hm(p.OpenMinute)}–{Hm(p.CloseMinute)}";
             switch (p.Kind)
             {
                 case PlaceKind.Wholesaler: return $"工作日 {Hm(WholesalerOpenMinute)}–{Hm(WholesalerCloseMinute)}";
@@ -295,6 +304,7 @@ namespace PCShopSell.Core.Session
             if (p == null) return false;
             OwnedShop mine = ShopAt(p);
             if (mine != null) return mine.Sim.IsOpen;
+            if(p.ExplicitEntrance && p.OpenMinute!=p.CloseMinute)return CityWithinHours(Clock.MinuteOfDay,p.OpenMinute,p.CloseMinute);
             var venture = VentureAt(p.Id);
             if (venture != null && venture.Paused) return false;
             switch (p.Kind)
@@ -332,6 +342,7 @@ namespace PCShopSell.Core.Session
                     foreach (var p in PartCatalog.BuildList(order.Tier)) sum += Market.PriceOf(p).Yuan;
                 foreach (int tier in sim.DisplayPcs)
                     foreach (var p in PartCatalog.BuildList(tier)) sum += Market.PriceOf(p).Yuan;
+                if(shop.PendingDisplayTier>=0)foreach(var p in PartCatalog.BuildList(shop.PendingDisplayTier))sum+=Market.PriceOf(p).Yuan;
                 foreach (var c in sim.Queue)
                 {
                     if (c.DisplayTier >= 0) foreach (var p in PartCatalog.BuildList(c.DisplayTier)) sum += Market.PriceOf(p).Yuan;
@@ -357,7 +368,7 @@ namespace PCShopSell.Core.Session
         public Money ShopDeposits => Money.FromCents(_shops.Where(s => s.Rented).Sum(s => s.Lease.Deposit.Cents));
 
         public Money NetWorth() => Ledger.Balance + InventoryValue() + ShopDeposits + (PendingLease?.Deposit ?? Money.Zero) + ContractDeposits
-            + VehicleValue + VentureValue + PropertyValue + Money.FromCents(HomePriceCents) + FundValue - TotalDebt;
+            + VehicleValue + VentureValue + PropertyValue + Money.FromCents(HomePriceCents) + FundValue + CityEquityValue - TotalDebt;
 
         public void Dispose()
         {
@@ -370,27 +381,32 @@ namespace PCShopSell.Core.Session
 
         private void OnTimeAdvanced(GameTimestamp from, GameTimestamp to)
         {
+            TickEmployeePayroll(from.TotalMinutes, to.TotalMinutes);
+            TickCityPeople(to.TotalMinutes);
+            TickCityActivities(to.TotalMinutes);
+            TickCityStories(to.TotalMinutes);
+            TickCityRetail();
+            TickCityClimate(from.TotalMinutes,to.TotalMinutes);
+            foreach(var shop in _shops)shop.Sim.PlayerPresent=CityPlayerCanWork(shop);
             int minutes = (int)from.MinutesUntil(to);
             UpdateBody(minutes);
+            if(_manualDisplayShop!=null&&CityPlayerCanWork(_manualDisplayShop))_manualDisplayShop.PendingDisplayMinutes=Math.Max(0,_manualDisplayShop.PendingDisplayMinutes-minutes);
             UpdateCooking(to);
             CheckCalendarReminders(from, to);
             if (Crosses(from, to, RestockCheckMinute)) RunAutoRestock();
             CheckHomeVisits(from, to);
 
-            if (!NightWorkRest && !IsWorking && CurrentPlace != Home && Crosses(from, to, BedtimeReminderMinute))
-                Notice?.Invoke("23:00 了，该回家睡觉了。凌晨 4 点还不睡会晕倒。");
-
             if (!_sleeping)
             {
-                if (Crosses(from, to, 12 * 60)) EatMeal("午饭");
-                if (Crosses(from, to, 18 * 60 + 30)) EatMeal("晚饭");
-                if (!IsWorking && Player.Hunger < 25 && ((CurrentPlace == Home && Pantry.CookedBowls > 0)
+                if (!CityActivityExclusive && Crosses(from, to, 12 * 60)) EatMeal("午饭");
+                if (!CityActivityExclusive && Crosses(from, to, 18 * 60 + 30)) EatMeal("晚饭");
+                if (!CityActivityExclusive && !IsWorking && Player.Hunger < 25 && ((CurrentPlace == Home && Pantry.CookedBowls > 0)
                     || HasFridgeMeal || HasMeal(Backpack.Food.Packed)
                     || (MealDeliveryEnabled && HasSmartphone && Ledger.CanAfford(Money.FromYuan(SelectedDeliveryMeal.Price))))) EatMeal("加餐");
-                if (!IsWorking && !NightWorkRest && Crosses(from, to, FaintMinute)) _pendingFaint = true;
             }
 
-            UpdatePlayerWork(to);
+            TickEnergyExhaustion();
+            if (!_pendingFaint) UpdatePlayerWork(to);
             if (Crosses(from, to, CandidateMinute)) OnCandidateHour(to.Date);
             ExpireCandidates();
             if (Crosses(from, to, EventMinute)) RollDailyEvent(to.Date);
@@ -451,9 +467,9 @@ namespace PCShopSell.Core.Session
             DecayRelations();
             if (today.IsMonthStart)
             {
-                if (HomeUtilities.IsPositive) Ledger.ForceDebit(today, "水电", HomeUtilities, "住处水电");
+                if (HomeUtilities.IsPositive) Ledger.ForceDebit(today, "水电", HomeUtilities, "住处固定水电",new LedgerAttribution(LedgerBusinessKind.Personal,sourceEventId:"home:utilities:"+today.TotalDays,transactionKind:"固定水电"));
                 foreach (OwnedShop s in _shops)
-                    if (s.Rented && RentOf(s).IsPositive) Ledger.ForceDebit(today, "房租", RentOf(s), ShopTitle(s) + "月租");
+                    if (s.Rented && RentOf(s).IsPositive) Ledger.ForceDebit(today, "房租", RentOf(s), ShopTitle(s) + "月租", LedgerAttribution.ForShop(s.Place.Id,"rent:"+s.Place.Id+":"+today.TotalDays,"租金"));
                 if (CurrentHomeRent.IsPositive) Ledger.ForceDebit(today, "房租", CurrentHomeRent, HomeTitle + "月租");
                 string pending = "";
                 if (PendingLease != null)
@@ -487,13 +503,8 @@ namespace PCShopSell.Core.Session
                     NegativeCashDays = 0;
                     return;
                 }
-                if (NegativeCashDays >= BankruptDays && !WorkPayGrace)
-                {
-                    SetGameOver($"连续 {BankruptDays} 天资金为负，店铺倒闭了。");
-                    return;
-                }
-                if (WorkPayGrace) { Say("现金为负，合同期间暂缓破产判定；请按时打工，工资每天收工后自动到账。"); return; }
-                Popup?.Invoke("资金告急", $"账上是负数（{Ledger.Balance}）。连续 {BankruptDays} 天为负就会倒闭，已经 {NegativeCashDays} 天。");
+                if (WorkPayGrace) { Say("现金为负，请按时打工，工资每天收工后到账；也可以处置持仓和合格资产。"); return; }
+                if(NegativeCashDays==1 || NegativeCashDays%3==0)Popup?.Invoke("资金告急", $"账上是负数（{Ledger.Balance}），已持续 {NegativeCashDays} 天。请暂停非必要采购、卖出持仓、处置可售资产或打工恢复现金。关系与经营经历会保留，真实到期账单仍需支付。");
             }
             else
             {
@@ -526,12 +537,14 @@ namespace PCShopSell.Core.Session
         {
             if (_pendingHospital)
             {
+                _bodyInterruptVersion++;
                 _pendingHospital = false;
                 _pendingFaint = false;
                 Hospitalize();
             }
             else if (_pendingFaint)
             {
+                _bodyInterruptVersion++;
                 _pendingFaint = false;
                 Faint();
             }
@@ -563,21 +576,19 @@ namespace PCShopSell.Core.Session
 
         private void Show(string title, string body) => Popup?.Invoke(title, body);
 
-        /// <summary>按到地铁站的路程算位置系数：所有店里离地铁站最远的为 0.4，最近的接近 1。</summary>
+        /// <summary>旧商圈保留原比较范围，避免扩城把开局客流和租金一并抬高；新街区比较真实最近站距离。</summary>
         private static double ComputeLocationFactor(CityLayout city, Place shop)
         {
-            Place station = city.FirstOfKind(PlaceKind.Station);
-            if (station == null) return 1.0;
-
+            bool legacy=LegacyLocationEconomy(city,shop);
             double max = 0;
-            double mine = 0;
+            double mine=CityStationDistance(city,shop,legacy);
+            if(double.IsPositiveInfinity(mine))return 1.0;
             foreach (Place p in city.Places)
             {
                 if (p.Kind != PlaceKind.Shop) continue;
-                PathResult path = Pathfinder.FindPath(city.Map, station.NodeId, p.NodeId);
-                if (!path.Found) continue;
-                if (path.Distance > max) max = path.Distance;
-                if (p == shop) mine = path.Distance;
+                if(legacy && city.Streets.Count>0 && p.StreetId!=shop.StreetId)continue;
+                double meters=CityStationDistance(city,p,legacy);
+                if(!double.IsPositiveInfinity(meters)&&meters>max)max=meters;
             }
             return ShopSettings.LocationFactor(mine, max);
         }

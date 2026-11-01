@@ -17,6 +17,8 @@ namespace PCShopSell.Core.Home
         public string SoldAt { get; }
         public string IngredientId, MealId;
         public int ShelfDays;
+        public string ModelSeries;
+        public bool LimitedEdition;
         public Money WholesalePrice => Price.Scale(0.65);
 
         public GiftDef(string id, string name, string description, long priceYuan, double weightKg, string soldAt)

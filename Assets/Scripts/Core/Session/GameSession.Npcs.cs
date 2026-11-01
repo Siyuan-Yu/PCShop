@@ -28,7 +28,7 @@ namespace PCShopSell.Core.Session
 
         public string ChatBlocker(string npcId)
         {
-            if (Npcs.Get(npcId) == null) return "没这个人";
+            if (Npcs.Get(npcId) == null && CityPerson(npcId) == null && Rosters.Get(npcId) == null && Residents.Get(npcId) == null) return "没这个人";
             if (!IsMet(npcId)) return "还没认识";
             if (_chatDays.TryGetValue(npcId, out int last) && last == Clock.Today.TotalDays) return HasChatApp ? "今天聊过了" : "今天发过了";
             return null;
@@ -40,21 +40,21 @@ namespace PCShopSell.Core.Session
             string blocker = ChatBlocker(npcId);
             if (blocker != null) return Fail(blocker);
             _chatDays[npcId] = Clock.Today.TotalDays;
-            NpcDef n = Npcs.Get(npcId);
+            string contactName = CityPerson(npcId)?.Name ?? Npcs.Get(npcId)?.Name ?? Rosters.Get(npcId)?.Name ?? npcId;
             LastChatReplied = HasChatApp || Random.Chance(SmsReplyChance);
             if (!LastChatReplied)
             {
                 RememberSocial(npcId, "发了条短信，对方没有回复。");
-                Say($"给{n.Name}发了条短信，一直没回。现在大家都不习惯看短信了。");
+                Say($"给{contactName}发了条短信，一直没回。现在大家都不习惯看短信了。");
                 return true;
             }
             RememberSocial(npcId, HasChatApp ? "通过聊天软件聊了几句。" : "通过短信聊了几句。");
             if (Relation(npcId) < ChatMaxRelation)
             {
                 AddRelation(npcId, ChatGain);
-                Say($"和{n.Name}聊了几句，交情涨了一点。");
+                Say($"和{contactName}聊了几句，交情涨了一点。");
             }
-            else Say($"和{n.Name}闲聊了几句。交情已经到头了，再往上得当面送礼、约出去。");
+            else Say($"和{contactName}闲聊了几句。交情已经到头了，再往上得当面送礼、约出去。");
             return true;
         }
 
@@ -76,12 +76,13 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>当面要联系方式至少要多熟（档口老板走进去就是脸熟，到这个数才好意思开口）。</summary>
-        public const int ContactMinRelation = 10;
+        public const int ContactMinRelation = 30;
 
         /// <summary>现在能不能向他要联系方式；能返回 null。</summary>
         public string ContactBlocker(string npcId)
         {
-            if (Npcs.Get(npcId) == null) return "没这个人";
+            if (Npcs.Get(npcId) == null && CityPerson(npcId) == null && Rosters.Get(npcId) == null && Residents.Get(npcId) == null) return "没这个人";
+            if(CityPersonState(npcId)!=null&&!CitySamePlace(npcId))return "需要当面交换联系方式";
             if (IsMet(npcId)) return "已经存了联系方式";
             if (Relation(npcId) < ContactMinRelation) return $"还不够熟（交情 {ContactMinRelation}）";
             return null;
@@ -93,7 +94,7 @@ namespace PCShopSell.Core.Session
             string blocker = ContactBlocker(npcId);
             if (blocker != null) return Fail(blocker);
             Meet(npcId, ContactMinRelation);
-            Say($"和{Npcs.Get(npcId).Name}互相留了联系方式，存进了通讯录。");
+            Say($"和{CityPerson(npcId)?.Name ?? Npcs.Get(npcId)?.Name ?? Rosters.Get(npcId)?.Name}互相留了联系方式，存进了通讯录。");
             return true;
         }
 
@@ -108,6 +109,7 @@ namespace PCShopSell.Core.Session
         {
             NpcDef n = Npcs.Get(npcId);
             if (n == null) return "没这个人";
+            if(CityPersonState(npcId)!=null&&!CitySamePlace(npcId))return "需要在实际地点当面送礼";
             if (!IsMet(npcId)) return "还没认识";
             if (_giftDays.TryGetValue(npcId, out int last) && Clock.Today.TotalDays - last < Npcs.GiftCooldownDays)
                 return $"{Npcs.GiftCooldownDays - (Clock.Today.TotalDays - last)} 天后才能再送";
@@ -176,7 +178,7 @@ namespace PCShopSell.Core.Session
             _relations.Clear();
             int n = Math.Min(d.relationIds?.Length ?? 0, d.relationValues?.Length ?? 0);
             for (int i = 0; i < n; i++)
-                if (Npcs.Get(d.relationIds[i]) != null) _relations[d.relationIds[i]] = d.relationValues[i];
+                if (!string.IsNullOrWhiteSpace(d.relationIds[i])) _relations[d.relationIds[i]] = Math.Max(0,Math.Min(Npcs.MaxRelation,d.relationValues[i]));
             _giftDays.Clear();
             n = Math.Min(d.giftIds?.Length ?? 0, d.giftDays?.Length ?? 0);
             for (int i = 0; i < n; i++) _giftDays[d.giftIds[i]] = d.giftDays[i];

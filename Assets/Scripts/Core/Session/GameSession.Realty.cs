@@ -34,7 +34,7 @@ namespace PCShopSell.Core.Session
             private set => _focus.Lease = value;
         }
 
-        public bool HasShop => Lease != null;
+        public bool HasShop => _focus != null && _focus.Rented;
 
         /// <summary>提前签下、现租户还没搬走的铺子：租金照交，到 StartDay 那天才自动搬进去。没有则为 null。</summary>
         public ShopLease PendingLease { get; private set; }
@@ -46,6 +46,11 @@ namespace PCShopSell.Core.Session
 
         public IReadOnlyList<ShopListing> Listings => _listings;
 
+        public string AgencyStreetOf(Place p) => string.IsNullOrEmpty(p?.StreetId) ? "s_start" : p.StreetId;
+        public bool AgencyServes(Place agency, Place unit) => agency != null && unit != null
+            && agency.Kind == PlaceKind.Agency && AgencyStreetOf(agency) == AgencyStreetOf(unit);
+        public Place AgencyFor(Place unit) => City.OfKind(PlaceKind.Agency).FirstOrDefault(a => AgencyServes(a, unit));
+
         public bool InAgency => CurrentPlace != null && CurrentPlace.Kind == PlaceKind.Agency;
 
         public bool IsMyShop(Place p) => ShopAt(p) != null;
@@ -54,7 +59,7 @@ namespace PCShopSell.Core.Session
         public bool IsVacant(Place p) => p != null && _vacant.Contains(p.Id) && !IsMyShop(p) && VentureAt(p.Id) == null && PropertyAt(p.Id) == null;
 
         /// <summary>街上名牌显示的名字：我的店 / 旺铺招租 / 原来的店名。</summary>
-        public string PlaceTitle(Place p) => p == null ? "" : IsMyShop(p) ? ShopTitle(ShopAt(p)) : p == Home ? HomeTitle : p.Id == ParkPlaceId ? "电脑乐园" : VentureAt(p.Id) != null ? Ventures.Get(VentureAt(p.Id).Kind).Name : PropertyAt(p.Id) != null ? "我的出租物业" : IsVacant(p) ? VacantTitle : p.Name;
+        public string PlaceTitle(Place p) => p == null ? "" : IsMyShop(p) ? ShopTitle(ShopAt(p)) : p == Home ? HomeTitle : p.Id == ParkPlaceId ? "电脑乐园" : VentureAt(p.Id) != null ? Ventures.Get(VentureAt(p.Id).Kind).Name : PropertyAt(p.Id) != null ? CityPropertyTitle(p) : IsVacant(p) ? VacantTitle : p.Name;
 
         public Place ListingPlace(ShopListing l) => City.GetPlace(l.PlaceId);
 
@@ -69,13 +74,24 @@ namespace PCShopSell.Core.Session
             return f;
         }
 
-        /// <summary>到商业街地铁站的步行距离（米）。</summary>
+        private static bool LegacyLocationEconomy(CityLayout city,Place p) => city.Streets.Count==0 || string.IsNullOrEmpty(p.StreetId) || p.StreetId=="s_start";
+        private static double CityStationDistance(CityLayout city,Place p,bool legacy)
+        {
+            var stations=city.OfKind(PlaceKind.Station);
+            if(legacy)stations=stations.Take(1);
+            double best=double.PositiveInfinity;
+            foreach(var station in stations)
+            {
+                var route=Pathfinder.FindPath(city.Map,station.NodeId,p.NodeId);
+                if(route.Found)best=Math.Min(best,route.Distance);
+            }
+            return best;
+        }
+        /// <summary>原商圈保留其商业街站口径；新街区使用所有实际地铁站中最近的可达距离。</summary>
         public double StationDistance(Place p)
         {
-            Place station = City.FirstOfKind(PlaceKind.Station);
-            if (station == null) return 0;
-            PathResult path = Pathfinder.FindPath(City.Map, station.NodeId, p.NodeId);
-            return path.Found ? path.Distance : 0;
+            double meters=CityStationDistance(City,p,LegacyLocationEconomy(City,p));
+            return double.IsPositiveInfinity(meters)?0:meters;
         }
 
         /// <summary>
@@ -95,6 +111,8 @@ namespace PCShopSell.Core.Session
         /// <summary>为什么现在签不了这一间；能签返回 null。newShop 见 <see cref="LeaseCost"/>。</summary>
         public string LeaseBlocker(ShopListing l, bool newShop = false)
         {
+            if (InAgency && !AgencyServes(CurrentPlace, ListingPlace(l)))
+                return "这家中介只办理" + City.StreetName(AgencyStreetOf(CurrentPlace)) + "的房源，请到房源所在街道的中介";
             if (VentureAt(l.PlaceId) != null || PropertyAt(l.PlaceId) != null) return "这间铺子已纳入你的经营资产";
             if (PendingLease != null) return $"你已经提前签了{City.GetPlace(PendingLease.PlaceId).Name}，第 {PendingLease.StartDay + 1} 天交房前不能再签";
             if (ShopAt(l.PlaceId) != null) return "这已经是你的店了";
@@ -330,7 +348,7 @@ namespace PCShopSell.Core.Session
             _listings.Clear();
             Place start = City.PlayerShop();
             if (Lease == null) AddListing(start, today, today + 120, ShopRent);
-            List<Place> pool = FreeUnits().Where(p => !IsBareUnit(p)).ToList();
+            List<Place> pool = FreeUnits().Where(p => !IsBareUnit(p) && AgencyStreetOf(p) == "s_start").ToList();
 
             Place hardware = pool.FirstOrDefault(p => p.Business == "五金");
             if (hardware != null)
@@ -346,11 +364,23 @@ namespace PCShopSell.Core.Session
             }
             Place medium = Pick(pool.Where(p => p.Size == ShopSize.Medium).ToList());
             if (medium != null) AddListing(medium, today + _realtyRng.Next(20, 40), today + 80);
+            SeedStreetListings(today);
         }
 
-        private void AddRandomListing(int today)
+        private void SeedStreetListings(int today)
         {
-            List<Place> pool = FreeUnits();
+            foreach (var group in FreeUnits().Where(p => AgencyStreetOf(p) != "s_start" && p.Id.StartsWith("life_unit_", StringComparison.Ordinal)).GroupBy(AgencyStreetOf))
+            {
+                if (_listings.Any(l => AgencyStreetOf(ListingPlace(l)) == group.Key)) continue;
+                var units = group.OrderBy(p => p.Id).Take(2).ToArray();
+                for (int i = 0; i < units.Length; i++)
+                    AddListing(units[i], today + (i == 0 ? 0 : 14), today + 90);
+            }
+        }
+
+        private void AddRandomListing(int today, string street = null)
+        {
+            List<Place> pool = FreeUnits().Where(p => street == null || AgencyStreetOf(p) == street).ToList();
             if (pool.Count == 0) return;
             double r = _realtyRng.NextDouble();
             ShopSize want = r < 0.55 ? ShopSize.Small : r < 0.9 ? ShopSize.Medium : ShopSize.Large;
@@ -379,7 +409,9 @@ namespace PCShopSell.Core.Session
                     if (!IsBareUnit(p) && !IsMyShop(p)) _vacant.Remove(l.PlaceId);
                 }
             }
-            if (_listings.Count < MaxListings && _realtyRng.Chance(DailyListingChance)) AddRandomListing(today);
+            foreach (var street in RentableUnits().Select(AgencyStreetOf).Distinct())
+                if (_listings.Count(l => AgencyStreetOf(ListingPlace(l)) == street) < MaxListings && _realtyRng.Chance(DailyListingChance))
+                    AddRandomListing(today, street);
             if (Lease == null && PendingLease == null && !_listings.Any(l => l.OpenDay <= today && l.Size == ShopSize.Small))
             {
                 Place start = City.PlayerShop();
@@ -391,6 +423,7 @@ namespace PCShopSell.Core.Session
 
         private void SaveRealty(SaveData d)
         {
+            d.agencyStreetVersion = 1;
             d.shopState = Lease != null ? 1 : 2;
             if (Lease != null)
             {
@@ -466,6 +499,7 @@ namespace PCShopSell.Core.Session
                     PlaceId = l.place, Size = (ShopSize)l.size, Rent = Money.FromCents(l.rentCents), OpenDay = l.openDay, CloseDay = l.closeDay,
                 });
             }
+            if (d.agencyStreetVersion < 1) SeedStreetListings(Clock.Today.TotalDays);
         }
     }
 }

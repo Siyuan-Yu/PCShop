@@ -155,6 +155,13 @@ namespace PCShopSell.Core.Trade
             _pending.Add(order);
         }
 
+        public OnlineOrder CancelPending(int orderId)
+        {
+            var order = _pending.Find(o => o.Id == orderId);
+            if (order != null) _pending.Remove(order);
+            return order;
+        }
+
         /// <summary>取出到时间的订单。</summary>
         public List<OnlineOrder> TakeDue(GameTimestamp now)
         {

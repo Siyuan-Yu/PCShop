@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Finance;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Shop;
@@ -61,7 +62,8 @@ namespace PCShopSell.Core.Session
             + _directShipments.Where(x => DeliveryShop(x.ShopId) == _focus).Sum(x => Stock.SpaceOf(PartCatalog.Get(x.PartId), true, x.Count))
             + _employeeTrips.Where(t => !t.Delivered && DeliveryShop(t.ShopId) == _focus).Sum(t => t.Items.Sum(PurchaseStockSpace))
             + Couriers.Where(HeadsToThisShop).Sum(x => x.Items.Sum(i => i.Kind == CourierItemKind.Part && PartCatalog.Exists(i.Id)
-                ? Stock.SpaceOf(PartCatalog.Get(i.Id), i.Boxed, i.Count) : i.Kind == CourierItemKind.Goods ? Stock.GoodsSpace(i.Id, i.Count) : 0));
+                ? Stock.SpaceOf(PartCatalog.Get(i.Id), i.Boxed, i.Count) : i.Kind == CourierItemKind.Goods ? Stock.GoodsSpace(i.Id, i.Count) : 0))
+            + ClaimedProcurementSpace(_focus.Place.Id);
         public string DirectOrderBlocker(string partId, int count, bool credit)
         {
             if (!DirectAgreement || !HasShop) return "先签直供协议，并保有主店";
@@ -83,9 +85,14 @@ namespace PCShopSell.Core.Session
             if (why != null) return Fail(why);
             Money total = DirectPrice(PartCatalog.Get(partId)) * count;
             Money paid = credit ? total.Scale(.3) : total;
-            Ledger.ForceDebit(Clock.Today, "进货", paid, "直供首付/现款 " + partId);
+            string orderId = "direct-order:" + _cityProcurementSequence++;
+            Ledger.ForceDebit(Clock.Today, "进货", paid, "直供首付/现款 " + partId,
+                LedgerAttribution.ForShop(PlayerShopPlace.Id, orderId + ":goods", "采购").Product(partId, count, DirectPrice(PartCatalog.Get(partId)).Cents));
             if (credit) _supplierDebts.Add(new SupplierDebt { Id = _nextDebtId++, Principal = (total - paid).Cents, DueDay = Clock.Today.TotalDays + 14, LastFeeDay = Clock.Today.TotalDays + 14 });
-            _directShipments.Add(new DirectShipment { PartId = partId, Count = count, Arrival = GameTimestamp.From(Clock.Today.AddDays(1), 600).TotalMinutes, ShopId = PlayerShopPlace.Id });
+            long arrival = GameTimestamp.From(Clock.Today.AddDays(1), 600).TotalMinutes;
+            _directShipments.Add(new DirectShipment { OrderId = orderId, PartId = partId, Count = count, Arrival = arrival, ShopId = PlayerShopPlace.Id });
+            RegisterProcurementOrder(orderId, "直供", PlayerShopPlace.Id, "direct:zhou", paid.Cents, arrival,
+                new[] { new PurchaseLine { Kind = PurchaseGoodsKind.Part, PartId = partId, Count = count, SourceId = "direct:zhou" } });
             Flags.Add("tutorial:direct");
             Say($"直供下单 {count} 件，总额 {total}，现付 {paid}。次日 10:00 到货。" + (credit ? "尾款已列入负债。" : ""));
             return true;

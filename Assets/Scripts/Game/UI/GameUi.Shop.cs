@@ -170,7 +170,7 @@ namespace PCShopSell.Game.UI
 
         // ---------- 柜台 ----------
 
-        /// <summary>营业时间：开门 / 关门各按小时调，或者不限时（有人看店就开）。不在营业时间里，人在店里也不开门。</summary>
+        /// <summary>营业时间：开门 / 关门各选择时分，或者不限时（有人看店就开）。不在营业时间里，人在店里也不开门。</summary>
         private void ShopHoursRow(ShopSimulation shop)
         {
             const int day = 24 * 60;
@@ -196,25 +196,19 @@ namespace PCShopSell.Game.UI
             const int day = 24 * 60;
             int open = shop.AllDay ? 9 * 60 : shop.OpenMinute;
             int close = shop.AllDay ? 21 * 60 : shop.CloseMinute % day;
+            open=QuarterHourClock(open); close=QuarterHourClock(close);
             OpenWindow(pickOpen ? "几点开门" : "几点关门", 560, 420, w =>
             {
                 Ui.Size(Ui.Button(w.Content, "不限时（有人看店就开）", () => { shop.SetHours(0, day); w.Close(); RebuildDock(); },
                     16, shop.AllDay ? Ui.ButtonHot : Ui.ButtonBg), -1, 40);
-                RectTransform row = null;
-                for (int h = 0; h < 24; h++)
-                {
-                    if (h % 6 == 0) row = Ui.Row(w.Content, 40, 6);
-                    int minute = h * 60;
-                    bool current = !shop.AllDay && (pickOpen ? open : close) == minute;
-                    bool clash = (pickOpen ? close : open) == minute;
-                    Ui.Size(Ui.Button(row, Ui.Hm(minute), () =>
-                    {
-                        if (pickOpen) shop.SetHours(minute, close == 0 ? day : close);
-                        else shop.SetHours(open, minute == 0 ? day : minute);
-                        w.Close();
-                        RebuildDock();
-                    }, 16, current ? Ui.ButtonHot : Ui.ButtonBg, !clash), -1, 38, 1);
-                }
+                int selected=pickOpen?open:close;
+                ClockSelector(w.Content,pickOpen?"开门":"关门",selected,value=>{if(pickOpen)open=value;else close=value;w.RequestRebuild();});
+                bool valid=open!=close;
+                Line(w.Content,Ui.Hm(open)+"—"+(close<open?"次日":"")+Ui.Hm(close),20,Ui.Accent);
+                if(!valid)Para(w.Content,"开门和关门不能相同；全天营业请选“不限时”。",16,Ui.Warn);
+                Ui.Size(Ui.Button(w.Content,"保存营业时间",()=>
+                {shop.SetHours(open,close==0?day:close);w.Close();RebuildDock();},18,Ui.ButtonHot,valid),-1,42);
+
             });
         }
 
@@ -223,6 +217,7 @@ namespace PCShopSell.Game.UI
             ShopSimulation shop = S.PlayerShop;
             bool fitBanner = !S.ShopFitted || S.IsRenovating;
             FitBanner(C);
+            Ui.Size(Ui.Button(C,"本店主售："+RetailShopTypes.Name(S.RetailKind)+" · 点击更改",OpenRetailTypeChooser,18,Ui.ButtonHot),-1,42);
             Line(C, $"今日进店 {shop.TodayCustomers} 人 · 流失 {shop.TodayLost} 人 · 营业额 {shop.TodaySales}", 18);
             Line(C, $"店里 {shop.ActiveCustomers.Count} 位顾客，{shop.Queue.Count} 位在排队结账（{PaymentText(shop.Accepted)}）", 17, Ui.Dim);
             ShopHoursRow(shop);
@@ -336,7 +331,7 @@ namespace PCShopSell.Game.UI
             {
                 StockLine line = l;
                 RectTransform row = Ui.Row(list, 58);
-                Ui.Size(Ui.Label(row, ProductLabel($"{l.Part.Name} <color=#ABB5A8>{(l.Boxed ? "盒装" : "散件")}</color> ×{l.Count}", PartUnitKg(l.Part, l.Boxed)), 17), 280);
+                Ui.Size(ProductText(row, ProductLabel($"{l.Part.Name} <color=#ABB5A8>{(l.Boxed ? "盒装" : "散件")}</color> ×{l.Count}", PartUnitKg(l.Part, l.Boxed)), 17), 280);
                 Ui.Size(Ui.Label(row, $"售 {shop.PriceOf(l.Part, l.Boxed)}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
                 if (l.Boxed)
                 {
@@ -356,7 +351,7 @@ namespace PCShopSell.Game.UI
             {
                 string gid = kv.Key;
                 RectTransform row = Ui.Row(list, 58);
-                Ui.Size(Ui.Label(row, ProductLabel($"{Gifts.Get(gid).Name} <color=#ABB5A8>杂货</color> ×{kv.Value}", Gifts.Get(gid).WeightKg), 17), 280);
+                Ui.Size(ProductText(row, ProductLabel($"{Gifts.Get(gid).Name} <color=#ABB5A8>杂货</color> ×{kv.Value}", Gifts.Get(gid).WeightKg), 17), 280);
                 Ui.Size(Ui.Label(row, $"售 {shop.GoodsPriceOf(gid)}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
                 Ui.Size(Ui.Button(row, "收回 1", () =>
                 {
@@ -571,6 +566,7 @@ namespace PCShopSell.Game.UI
                     {
                         OpenRecruitWork(c);
                     }, 17, Ui.ButtonHot), 180);
+                    Ui.Size(Ui.Button(row,"交谈",()=>OpenPersonDialogue(S.PersonIdOf(c)),17),90);
                 }
                 Line(C, "应聘者只等到当天 18:00，过时离开。", 15, Ui.Warn);
                 Line(C, "确认前不会聘用；已聘用的待安排员工仍按日发薪。", 14, Ui.Dim);

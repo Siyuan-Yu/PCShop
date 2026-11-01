@@ -39,7 +39,14 @@ namespace PCShopSell.Game.UI
             var raw = imgRt.gameObject.AddComponent<RawImage>();
             raw.texture = PortraitOf(portraitId);
             raw.color = unknown ? new Color(0.12f, 0.12f, 0.14f) : Color.white;
-            if (raw.texture == null) raw.color = new Color(0.25f, 0.28f, 0.33f);
+            if (raw.texture == null)
+            {
+                raw.color=new Color(.20f,.24f,.26f);
+                var head=Ui.Panel(imgRt,"PortraitPlaceholderHead",new Color(.56f,.60f,.58f));
+                head.raycastTarget=false;head.rectTransform.anchorMin=new Vector2(.36f,.58f);head.rectTransform.anchorMax=new Vector2(.64f,.82f);head.rectTransform.offsetMin=head.rectTransform.offsetMax=Vector2.zero;
+                var shoulders=Ui.Panel(imgRt,"PortraitPlaceholderBody",new Color(.40f,.49f,.47f));
+                shoulders.raycastTarget=false;shoulders.rectTransform.anchorMin=new Vector2(.19f,.17f);shoulders.rectTransform.anchorMax=new Vector2(.81f,.56f);shoulders.rectTransform.offsetMin=shoulders.rectTransform.offsetMax=Vector2.zero;
+            }
 
             if (onClick != null && !unknown)
             {
@@ -81,7 +88,14 @@ namespace PCShopSell.Game.UI
             var raw = imgRt.gameObject.AddComponent<RawImage>();
             raw.texture = PortraitOf(n.Id);
             raw.uvRect = new Rect(0.12f, 0.48f, 0.76f, 0.5f);
-            if (raw.texture == null) raw.color = new Color(0.25f, 0.28f, 0.33f);
+            if (raw.texture == null)
+            {
+                raw.color=new Color(.20f,.24f,.26f);
+                var head=Ui.Panel(imgRt,"PortraitPlaceholderHead",new Color(.56f,.60f,.58f));
+                head.raycastTarget=false;head.rectTransform.anchorMin=new Vector2(.36f,.58f);head.rectTransform.anchorMax=new Vector2(.64f,.82f);head.rectTransform.offsetMin=head.rectTransform.offsetMax=Vector2.zero;
+                var shoulders=Ui.Panel(imgRt,"PortraitPlaceholderBody",new Color(.40f,.49f,.47f));
+                shoulders.raycastTarget=false;shoulders.rectTransform.anchorMin=new Vector2(.19f,.17f);shoulders.rectTransform.anchorMax=new Vector2(.81f,.56f);shoulders.rectTransform.offsetMin=shoulders.rectTransform.offsetMax=Vector2.zero;
+            }
             if (onClick != null)
             {
                 var b = imgRt.gameObject.AddComponent<Button>();
@@ -100,74 +114,19 @@ namespace PCShopSell.Game.UI
         /// </summary>
         private RectTransform BuildRosterFrame(Window w, Place p, float bodyHeight)
         {
-            PlaceRoster r = Rosters.For(p);
-            if (r == null) return null;
-            RectTransform body = Ui.Row(w.Content, bodyHeight, 12);
-            RectTransform left = Ui.Rect(body, "People");
-            Ui.VList(left, 8, 0);
-            Ui.Size(left, 210, -1, 0);
-            left.GetComponent<LayoutElement>().minWidth = 210;
+            var present=S.PeopleInPlace(p.Id).Where(person=>S.CityPerson(person.PersonId)!=null).ToArray();
 
-            Image chart = Ui.Panel(left, "OrgChart", new Color(0.09f, 0.11f, 0.15f, 1f));
-            Ui.VList(chart.rectTransform, 0, 8);
-            Ui.Size(Ui.Label(chart.transform, "店内人员", 14, TextAnchor.MiddleCenter, Ui.Dim), -1, 20);
-
-            StaffDef greeter = r.Greeter;
-            NpcDef bossNpc = r.Boss;
-            bool stall = p.Kind == PlaceKind.Wholesaler;
-            var notes = new List<string>();
-
-            // 第一级：老板（交情老板 / 普通上司 / 直接接待的小店老板）
-            bool greeterIsTop = bossNpc == null && r.PlainBoss == null;
-            if (bossNpc != null)
+            var body=Ui.Row(w.Content,bodyHeight,12);
+            var people=Ui.Rect(body,"People");Ui.VList(people,8,0);Ui.Size(people,210,-1);
+            Ui.Size(Ui.Label(people,"店内在场人物",17),-1,30);
+            var portraits = Ui.Scroll(people, Mathf.Max(140, bodyHeight - 40));
+            if(present.Length==0)Para(portraits,"此刻没有可交谈的店员在场。",16,Ui.Dim);
+            foreach(var state in present)
             {
-                if (S.BossReachable(r))
-                {
-                    int rel = S.Relation(bossNpc.Id);
-                    OrgNode(chart.transform, bossNpc.Id, bossNpc.Name, "老板", true, false, () => OpenNpcWindow(bossNpc, stall ? p : null, w));
-                    notes.Add($"<color=#6FD0A8>{bossNpc.Name}：{Npcs.LevelName(rel)} {rel}</color>");
-                    if (stall) notes.Add($"进价 -{NpcPerks.OwnerDiscount(rel) * 100:0.#}%　每样每天最多 {NpcPerks.StallQuota(rel)} 个");
-                }
-                else
-                {
-                    OrgNode(chart.transform, bossNpc.Id, "？？？", "老板", true, true, null);
-                    notes.Add("<color=#D79780>" + $"老板：交情 {r.BossGate} 才肯见你（现在 {S.Relation(bossNpc.Id)}）" + "</color>");
-                    notes.Add("找店员聊聊老板的事，替你说几句好话，交情够了他自然肯出来。");
-                }
+                string id=state.PersonId;var def=S.CityPerson(id);
+                OrgNode(portraits, id, def.Name, S.CityPersonRole(id), state.WorkPlaceId == p.Id, false, () => OpenCityPerson(id));
             }
-            else if (r.PlainBoss != null)
-            {
-                StaffDef top = r.PlainBoss;
-                OrgNode(chart.transform, top.Id, top.Name, "店长", true, false, () => OpenStaffDialogue(top, r, p, w));
-            }
-            else
-            {
-                OrgNode(chart.transform, greeter.Id, greeter.Name, "老板", true, false, () => OpenStaffDialogue(greeter, r, p, w));
-            }
-
-            // 第二级：接待的店员
-            if (!greeterIsTop)
-            {
-                OrgLink(chart.transform);
-                RectTransform clerks = Ui.Row(chart.transform, 104, 0);
-                clerks.GetComponent<HorizontalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
-                var tier = new List<StaffDef> { greeter };
-                tier.AddRange(r.Others);
-                foreach (StaffDef member in tier)
-                {
-                    StaffDef m = member;
-                    string title = m.Role.EndsWith("导购") ? "导购" : m.Role.EndsWith("学徒") ? "学徒" : m.Role.EndsWith("员") && m != greeter ? m.Role.Substring(m.Role.Length - 3) : "店员";
-                    OrgNodeIn(clerks, m.Id, m.Name, title, false, false, () => OpenStaffDialogue(m, r, p, w));
-                }
-            }
-            notes.Add("<color=#ABB5A8>点头像和他说话</color>");
-
-            foreach (string n in notes) Ui.Size(Ui.Label(left, "<size=13>" + n + "</size>", 13, TextAnchor.UpperLeft, Ui.Dim), -1, n.Length > 22 ? 44 : 22);
-
-            RectTransform center = Ui.Rect(body, "Goods");
-            Ui.VList(center, 6, 0);
-            Ui.Size(center, -1, -1, 1);
-            return center;
+            var center=Ui.Rect(body,"Goods");Ui.VList(center,6,0);Ui.Size(center,-1,-1,1);return center;
         }
 
         private const float OrgCardWidth = 44;
@@ -204,7 +163,14 @@ namespace PCShopSell.Game.UI
             var raw = imgRt.gameObject.AddComponent<RawImage>();
             raw.texture = PortraitOf(portraitId);
             raw.color = locked ? new Color(0.1f, 0.1f, 0.12f) : Color.white;
-            if (raw.texture == null) raw.color = new Color(0.25f, 0.28f, 0.33f);
+            if (raw.texture == null)
+            {
+                raw.color=new Color(.20f,.24f,.26f);
+                var head=Ui.Panel(imgRt,"PortraitPlaceholderHead",new Color(.56f,.60f,.58f));
+                head.raycastTarget=false;head.rectTransform.anchorMin=new Vector2(.36f,.58f);head.rectTransform.anchorMax=new Vector2(.64f,.82f);head.rectTransform.offsetMin=head.rectTransform.offsetMax=Vector2.zero;
+                var shoulders=Ui.Panel(imgRt,"PortraitPlaceholderBody",new Color(.40f,.49f,.47f));
+                shoulders.raycastTarget=false;shoulders.rectTransform.anchorMin=new Vector2(.19f,.17f);shoulders.rectTransform.anchorMax=new Vector2(.81f,.56f);shoulders.rectTransform.offsetMin=shoulders.rectTransform.offsetMax=Vector2.zero;
+            }
             if (onClick != null && !locked)
             {
                 var b = imgRt.gameObject.AddComponent<Button>();
@@ -251,13 +217,28 @@ namespace PCShopSell.Game.UI
             System.Func<TalkCtx, List<TalkOpt>> makeOptions, string firstReply = null, string rapportId = null, System.Action onClosed = null)
         {
             var ctx = new TalkCtx { Reply = firstReply };
-            float height = 440 + 46 * optionCount + (npc != null ? 66 : rapportId != null ? 36 : 0);
+            float height = 485 + 46 * optionCount + (npc != null ? 66 : rapportId != null ? 36 : 0);
+            // Conversation owns a normal modal hold, including while its profile or gift UI is open.
+            // Keep existing panel holds intact so closing chat restores the previous time state.
             OpenWindow(name + "　" + role, 700, height, w =>
             {
                 ctx.W = w;
-
-                RectTransform top = Ui.Row(w.Content, 200, 14);
-                PortraitCard(top, portraitId, name, "", 150, null);
+                w.LiveConversation = true;
+                w.LiveKey = () => ConversationViewKey(portraitId); w.LiveStamp = w.LiveKey();
+                RectTransform top = Ui.Row(w.Content, 245, 14);
+                var identity = Ui.Rect(top, "PersonIdentity");
+                Ui.VList(identity, 4, 0); Ui.Size(identity, 170, -1);
+                PortraitCard(identity, portraitId, name, "", 150, () => OpenCityPersonProfile(portraitId, fromConversation: true), tagText: "资料");
+                var traits = Ui.Row(identity, 30, 3);
+                var knownTraits = S.ConversationTraits(portraitId);
+                for (int i = 0; i < knownTraits.Length; i++)
+                {
+                    int index = i; var trait = knownTraits[i];
+                    Ui.Size(Ui.Button(traits, trait.Known ? trait.Name : "???", () =>
+                        OpenWindow(trait.Known ? trait.Name : "尚未了解", 440, 230, detail =>
+                            Para(detail.Content, S.ConversationTraitText(portraitId, index), 18), false), 13,
+                        trait.Known ? Ui.ButtonBg : new Color(.18f, .21f, .23f)), -1, 30, 1);
+                }
                 RectTransform say = Ui.Rect(top, "Say");
                 Ui.VList(say, 6, 0);
                 Ui.Size(say, -1, -1, 1);
@@ -272,7 +253,7 @@ namespace PCShopSell.Game.UI
                 }
                 if (npc == null && rapportId != null)
                 {
-                    int rap = S.StaffRapport(rapportId);
+                    int rap = S.Relation(rapportId);
                     RectTransform relRow = Ui.Row(say, 26);
                     Ui.Size(Ui.Label(relRow, $"{StaffTalk.LevelName(rap)} {rap}", 17, TextAnchor.MiddleLeft, Ui.Good), 110);
                     Ui.Bar(relRow, rap / 100f, Ui.Accent, 200, 14);
@@ -280,7 +261,8 @@ namespace PCShopSell.Game.UI
                 }
                 Image bubble = Ui.Panel(say, "Bubble", new Color(0.16f, 0.18f, 0.22f, 1f));
                 Ui.Size(bubble, -1, bubbleHeight);
-                string text = ctx.Reply ?? "“" + greeting.Trim('"') + "”";
+                bool nearby = S.CityPersonState(portraitId) == null || S.CitySamePlace(portraitId);
+                string text = nearby ? ctx.Reply ?? "“" + greeting.Trim('"') + "”" : "对方已经离开了，等下次见面再聊吧。";
                 Text sayText = Ui.Label(bubble.transform, text, 19, TextAnchor.UpperLeft, Ui.TextColor);
                 sayText.rectTransform.Fill(12);
 
@@ -296,7 +278,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Rect(row, "R"), -1, -1, 1);
                 }
 
-                if (npc != null)
+                if (npc != null && !string.IsNullOrEmpty(NpcPerks.Describe(npc.Id)))
                 {
                     string perk = "<color=#ABB5A8>交情好处：" + NpcPerks.Describe(npc.Id) + (npc.IsTipster ? "\n" + TrustText(npc) : "") + "</color>";
                     Ui.Size(Ui.Label(w.Content, "<size=14>" + perk + "</size>", 14, TextAnchor.UpperLeft), -1, 58);
@@ -304,6 +286,106 @@ namespace PCShopSell.Game.UI
 
                 Ui.Size(Ui.Button(w.Content, "结束对话", w.Close, 20), -1, 46);
             }, true, true, onClosed);
+        }
+
+        public void OpenPersonDialogue(string personId,Place place=null,Window parent=null,string firstReply=null,StaffDef staff=null,PlaceRoster roster=null,System.Action onClosed=null,int initialPage=0)
+        {
+            var definition=S.CityPerson(personId);var npc=Npcs.All.FirstOrDefault(n=>n.Id==personId);
+            staff=staff??Rosters.Get(personId)??Residents.Get(personId)?.Person;
+            if(staff==null&&Npcs.Get(personId)==null&&definition!=null)staff=definition.Staff;
+            if(definition==null&&npc==null&&staff==null){Toast("暂时找不到这个人物。");return;}
+            if(definition!=null&&!S.CitySamePlace(personId)){OpenCityPersonProfile(personId,onClosed);return;}
+            string name=definition?.Name??npc?.Name??staff.Name;
+            string role=definition!=null?S.CityPersonRole(personId):npc?.Role??staff.Role;
+            string greeting=npc!=null?(S.IsMet(personId)?npc.Intro:npc.FirstMeet??npc.Intro):staff?.LineFor(S.Clock.Today.TotalDays)??"你好，今天过得怎么样？";
+            bool creatorChoice = initialPage == 3;
+            bool discussingPeople = false;
+            OpenDialogue(personId, name, role, npc, greeting, 6, ctx =>
+            {
+                var options = new List<TalkOpt>();
+                bool near = definition == null || S.CitySamePlace(personId);
+                void Reply(string text) { ctx.Reply = text; ctx.W.Rebuild(); parent?.RequestRebuild(); }
+                if (creatorChoice)
+                {
+                    foreach (bool support in new[] { true, false })
+                    {
+                        bool choice = support;
+                        options.Add(new TalkOpt {
+                            Label = choice ? "先听清顾虑，支持对方自己决定" : "优先抓住增长机会，其他问题以后再说",
+                            Blocker = near ? null : "需要当面交谈",
+                            Act = () => { if (S.ResolveCreatorStory(personId, choice)) { creatorChoice = false; Reply(choice ? "谢谢你愿意先听我说。" : "我会记住你的想法，也想保留自己的选择。"); } }
+                        });
+                    }
+                    options.Add(new TalkOpt { Label = "返回", Act = () => { creatorChoice = false; ctx.W.Rebuild(); } });
+                    return options;
+                }
+                if (discussingPeople)
+                {
+                    foreach (var person in S.PersonCircle(personId))
+                    {
+                        string targetId = person.PersonId;
+                        options.Add(new TalkOpt {
+                            Label = "谈谈" + person.Name,
+                            Blocker = S.AskAboutOthersBlocker(personId, targetId),
+                            Act = () => Reply(S.AskAboutPerson(personId, targetId))
+                        });
+                    }
+                    options.Add(new TalkOpt { Label = "返回聊天", Act = () => { discussingPeople = false; ctx.W.Rebuild(); } });
+                    return options;
+                }
+                if (!S.HasGreeted(personId)) options.Add(new TalkOpt {
+                    Label = "打个招呼", Hot = true, Blocker = near ? null : "对方已离开",
+                    Act = () => Reply(S.GreetPerson(personId) ? "你好，我是" + name + "。以后见面打声招呼。" : "对方现在不在这里。")
+                });
+                options.Add(new TalkOpt { Label = "随便聊聊", Blocker = near ? null : "对方已离开", Act = () => Reply(S.CasualConversation(personId)) });
+                options.Add(new TalkOpt { Label = "谈论别人", Blocker = S.AskAboutOthersBlocker(personId), Act = () =>
+                {
+                    discussingPeople = true;
+                    ctx.Reply = "你想打听谁？聊聊我认识的人吧。";
+                    ctx.W.Rebuild();
+                } });
+                if (!S.IsMet(personId)) options.Add(new TalkOpt {
+                    Label = "要个联系方式", Blocker = !near ? "需要当面交换" : S.ContactBlocker(personId),
+                    Act = () => Reply(S.AskContact(personId) ? name + "：“好，咱们留个联系方式，以后可以联系。”\n已存入通讯录。" : S.ContactBlocker(personId) ?? "暂时没有交换成功。")
+                });
+                else options.Add(new TalkOpt { Label = "已交换联系方式", Blocker = "已存入通讯录" });
+                options.Add(new TalkOpt { Label = "送礼", Blocker = !near ? "需要当面送礼" : S.PersonGiftBlocker(personId), Act = () => OpenPersonGiftGrid(personId, name, ctx) });
+                if (S.IsMet(personId) && definition != null)
+                    options.Add(new TalkOpt { Label = "邀请活动", Blocker = near ? null : "对方已离开", Act = () => OpenCityActivityChooser(personId) });
+                if (npc != null && place != null)
+                    options.AddRange(NpcDialogueActions(npc, place, parent, ctx).Where(o => o.Label.StartsWith("砍价") || o.Label.StartsWith("聊聊行情") || o.Label.StartsWith("交心打听")));
+                var creator = S.Creator(personId);
+                if (creator != null && S.CreatorStory(creator) != null)
+                    options.Add(new TalkOpt { Label = "聊聊最近的心事", Blocker = near ? null : "对方已离开", Act = () => { creatorChoice = true; Reply(S.CreatorStory(creator)); } });
+                return options;
+            }, firstReply, staff?.Id ?? (definition != null ? personId : null), () => { parent?.RequestRebuild(); onClosed?.Invoke(); });
+        }
+
+        private string ConversationViewKey(string id) => S.Clock.Today.TotalDays + "|" + S.CitySamePlace(id) + "|" + S.Relation(id)
+            + "|" + S.HasGreeted(id) + "|" + S.IsMet(id) + "|" + S.CarriedKg.ToString("R");
+
+        private void OpenPersonGiftGrid(string personId, string name, TalkCtx ctx)
+        {
+            string selected = null;
+            OpenWindow("送礼给" + name, 760, 650, w =>
+            {
+                w.LiveConversation = true;
+                w.LiveKey = () => ConversationViewKey(personId); w.LiveStamp = w.LiveKey();
+                Para(w.Content, "从背包点选一件礼物，再确认赠送。每次送出一件；大米每次送出 0.5 千克。", 17, Ui.Dim);
+                var stacks = CollectBag();
+                foreach (var stack in stacks)
+                    if (S.PersonGiftItemBlocker(personId, stack.Key) != null) stack.Color = new Color(.23f, .25f, .26f);
+                BagGrid(w.Content, stacks, Mathf.CeilToInt((float)S.CurrentVehicle.CargoCapacity), selected, key => { selected = key; w.Rebuild(); }, 360);
+                var item = stacks.FirstOrDefault(stack => stack.Key == selected);
+                string why = S.PersonGiftItemBlocker(personId, selected);
+                Para(w.Content, item == null ? "点选背包中的一格。礼品、鲜花和未过期的食物可以赠送。" : item.Name + " ×" + item.Count + (why == null ? "\n送出一件" : "\n" + why), 18, why == null ? Ui.Good : Ui.Dim);
+                Ui.Size(Ui.Button(w.Content, item == null ? "先选一件礼物" : "送出「" + item.Name + "」", () =>
+                {
+                    if (!S.GivePersonGift(personId, selected)) { w.Rebuild(); return; }
+                    ctx.Reply = name + "收下了「" + item.Name + "」：“谢谢你想着我。”";
+                    w.Close(); ctx.W.RequestRebuild();
+                }, 19, Ui.ButtonHot, why == null), -1, 44);
+            }, false);
         }
 
         /// <summary>打开这家店接待的人的对话框（没有人则什么也不做）。</summary>
@@ -316,15 +398,15 @@ namespace PCShopSell.Game.UI
         /// <summary>和店员（或直接接待的小店老板）说话。</summary>
         private void OpenStaffDialogue(StaffDef staff, PlaceRoster roster, Place place, Window parent)
         {
-            string greeting = staff.LineFor(S.Clock.Today.TotalDays);
-            bool asksBoss = roster.BossNpcId != null && staff == roster.Greeter;
-            int count = 4 + (asksBoss ? 1 : 0);
-            OpenDialogue(staff.Id, staff.Name, staff.Role, null, greeting, count, ctx =>
-            {
+            if(staff!=null)OpenPersonDialogue(staff.Id,place,parent,null,staff,roster);
+        }
+        private List<TalkOpt> StaffDialogueActions(StaffDef staff,PlaceRoster roster,Place place,Window parent,TalkCtx ctx)
+        {
+            bool asksBoss=roster!=null&&roster.BossNpcId!=null&&staff==roster.Greeter;
                 var list = new List<TalkOpt>();
                 list.Add(new TalkOpt
                 {
-                    Label = "随便聊聊（8 分钟）",
+                    Label = "随便聊聊",
                     Blocker = S.StaffChatBlocker(staff.Id),
                     Act = () =>
                     {
@@ -342,7 +424,7 @@ namespace PCShopSell.Game.UI
                 });
                 list.Add(new TalkOpt
                 {
-                    Label = "听他讲讲自己的事（30 分钟）",
+                    Label = "听他讲讲自己的事",
                     Blocker = S.StaffStoryBlocker(staff.Id),
                     Act = () =>
                     {
@@ -366,43 +448,20 @@ namespace PCShopSell.Game.UI
                         },
                     });
                 }
-                list.Add(new TalkOpt { Label = place.Kind == PlaceKind.Agency ? "继续看房" : "看看货", Hot = true, Act = () => ctx.W.Close() });
+                list.Add(new TalkOpt { Label = place?.Kind == PlaceKind.Agency ? "继续看房" : "看看货", Hot = true, Act = () => ctx.W.Close() });
                 return list;
-            }, null, staff.Id, () => parent?.Rebuild());
         }
 
         /// <summary>从背包里挑一份礼品送给店员（一瓶饮料就够意思，贵的东西涨得多）。</summary>
-        private void OpenStaffGiftPicker(StaffDef staff, TalkCtx ctx)
-        {
-            var lines = S.Backpack.GiftLines.ToList();
-            OpenWindow("送" + staff.Name + "点什么", 520, 150 + 50 * lines.Count, w =>
-            {
-                Ui.Size(Ui.Label(w.Content, "背包里的东西（三天送一次）：", 16, TextAnchor.MiddleLeft, Ui.Dim), -1, 28);
-                foreach (var kv in S.Backpack.GiftLines.ToList())
-                {
-                    GiftDef g = Gifts.Get(kv.Key);
-                    if (g == null) continue;
-                    string id = kv.Key;
-                    Ui.Size(Ui.Button(w.Content, $"{g.Name} ×{kv.Value}   （熟络 +{GameSession.StaffGiftGain(g):0.#}）", () =>
-                    {
-                        if (S.GiveStaffGift(staff, id)) ctx.Reply = g.Id == Gifts.Soda || g.Id == Gifts.Drink
-                            ? staff.Name + "接过饮料笑了：“哎呀，太客气了。”"
-                            : staff.Name + "接过「" + g.Name + "」愣了一下：“这么破费干嘛……谢了啊。”";
-                        w.Close();
-                        ctx.W.Rebuild();
-                    }, 17), -1, 42);
-                }
-            });
-        }
+        private void OpenStaffGiftPicker(StaffDef staff, TalkCtx ctx) => OpenPersonGiftGrid(staff.Id, staff.Name, ctx);
 
         /// <summary>和某个有交情的人交谈（档口老板、阿杰、熟人）。stall 不为空表示正在这个档口里，可以砍价；parent 是背后的窗口，操作后要刷新。</summary>
         public void OpenNpcWindow(NpcDef n, Place stall = null, Window parent = null, string firstReply = null)
         {
-            int rel0 = S.Relation(n.Id);
-            string greeting = rel0 < 20 && !string.IsNullOrEmpty(n.FirstMeet) ? n.FirstMeet : n.Intro;
-            int count = 4 + (n.IsTipster ? 2 : 0) + (stall != null ? 1 : 0) + (S.IsMet(n.Id) ? 0 : 1);
-            OpenDialogue(n.Id, n.Name, n.Role, n, greeting, count, ctx =>
-            {
+            if(n!=null)OpenPersonDialogue(n.Id,stall,parent,firstReply);
+        }
+        private List<TalkOpt> NpcDialogueActions(NpcDef n,Place stall,Window parent,TalkCtx ctx)
+        {
                 var o = new List<TalkOpt>();
                 if (!S.IsMet(n.Id))
                 {
@@ -422,7 +481,7 @@ namespace PCShopSell.Game.UI
                 }
                 o.Add(new TalkOpt
                 {
-                    Label = "随便闲聊（10 分钟）",
+                    Label = "随便闲聊",
                     Blocker = S.SmallTalkBlocker(n.Id),
                     Act = () =>
                     {
@@ -434,14 +493,12 @@ namespace PCShopSell.Game.UI
                 });
                 o.Add(new TalkOpt
                 {
-                    Label = GiftLabel(n),
-                    Blocker = S.GiftBlocker(n.Id),
+                    Label = "送礼",
+                    Blocker = S.PersonGiftBlocker(n.Id),
                     Hot = true,
                     Act = () =>
                     {
-                        if (S.GiveGift(n.Id)) ctx.Reply = n.GiftReply;
-                        ctx.W.Rebuild();
-                        parent?.Rebuild();
+                        OpenPersonGiftGrid(n.Id, n.Name, ctx);
                     },
                 });
                 if (n.IsTipster)
@@ -452,7 +509,8 @@ namespace PCShopSell.Game.UI
                         Blocker = S.TipBlocker(n.Id),
                         Act = () =>
                         {
-                            S.AskForTip(n.Id);
+                            string reply=S.AskForTipReply(n.Id);
+                            if(reply!=null)ctx.Reply=reply;
                             ctx.W.Rebuild();
                         },
                     });
@@ -503,7 +561,6 @@ namespace PCShopSell.Game.UI
                     });
                 }
                 return o;
-            }, firstReply);
         }
     }
 }

@@ -16,44 +16,18 @@ namespace PCShopSell.Game.UI
             return right + wrong == 0 ? "消息：还没验证过" : $"消息：{right + wrong} 条里应验 {right} 条";
         }
 
-        public void OpenInvitePanel(string npcId) => OpenInviteWindow(Npcs.Get(npcId), null);
-
-        /// <summary>约某人晚上或周末出去玩。对方答不答应看交情和魅力。</summary>
+        public void OpenInvitePanel(string npcId)
+        {
+            if(S.Relation(npcId)>=GameSession.MinInviteRelation){OpenCityActivityChooser(npcId);return;}
+            OpenWindow("邀约",620,360,w=>
+            {
+                Para(w.Content,"熟悉达到"+GameSession.MinInviteRelation+"后可从这里安排同行。先实际见面聊聊，预约与到场都使用同一份城市日程。",18);
+                Ui.Size(Ui.Button(w.Content,"查看人物",()=>OpenCityPerson(npcId),18),-1,44);
+            });
+        }
         private void OpenInviteWindow(NpcDef n, Window parent)
         {
-            OpenWindow("约" + n.Name, 620, 520, w =>
-            {
-                int rel = S.Relation(n.Id);
-                Line(w.Content, $"{n.Name}　{Npcs.LevelName(rel)} {rel}　愿意赴约的把握约 {S.InviteAcceptChance(n.Id) * 100:0}%", 18);
-                Line(w.Content, "出去玩要花钱、花几个小时（店里没人看着），但能涨交情。交情 ≥ " + GameSession.MinInviteRelation + " 才约得动，他爱的活动涨得更多。", 15, Ui.Dim);
-
-                Appointment existing = S.Appointments.FirstOrDefault(a => a.NpcId == n.Id);
-                if (existing != null)
-                {
-                    Line(w.Content, $"已约好：{S.DescribeDay(existing.Day)} {GameSession.SlotName(existing.Slot)}。到点会弹出选择去哪里玩。", 18, Ui.Good);
-                    Ui.Size(Ui.Button(w.Content, "推掉（交情 -3）", () =>
-                    {
-                        S.CancelAppointment(n.Id);
-                        w.Rebuild();
-                    }, 18, Ui.Warn), -1, 46);
-                    return;
-                }
-
-                foreach (OutingSlot slot in new[] { OutingSlot.Evening, OutingSlot.Weekend })
-                {
-                    OutingSlot sl = slot;
-                    string blocker = S.InviteBlocker(n.Id, sl);
-                    string activities = string.Join("、", Activities.All.Where(a => a.Slot == sl).Select(a => a.Name));
-                    Line(w.Content, $"{GameSession.SlotName(sl)}（{S.DescribeDay(S.NextSlotDate(sl).TotalDays)}）：{activities}", 16, Ui.Dim);
-                    Ui.Size(Ui.Button(w.Content, blocker == null ? "约 " + GameSession.SlotName(sl) : blocker, () =>
-                    {
-                        S.Invite(n.Id, sl);
-                        w.Rebuild();
-                        parent?.Rebuild();
-                    }, 18, Ui.ButtonHot, blocker == null), -1, 46);
-                }
-                if (n.Likes != null) Line(w.Content, "听说他最爱：" + Activities.Get(n.Likes).Name, 16, Ui.Good);
-            });
+            if(n!=null)OpenInvitePanel(n.Id);
         }
 
         /// <summary>行情面板里的小道消息：听来的话，几天后能看到真假。</summary>

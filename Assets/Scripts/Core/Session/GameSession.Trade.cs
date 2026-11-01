@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Finance;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Time;
@@ -150,9 +152,10 @@ namespace PCShopSell.Core.Session
             Money total = Online1788.ShippingFee;
             double space = 0;
             var order = new OnlineOrder { Id = Online.NextOrderId, StoreId = storeId, ToHome = toHome, ShopId = toHome ? null : PlayerShopPlace.Id };
-            foreach (var (part, count) in lines)
+            foreach (var group in lines.Where(l => l.part != null && l.count > 0).GroupBy(l => l.part.Id))
             {
-                if (count <= 0) continue;
+                var part = group.First().part; int count = group.Sum(l => l.count);
+                if (count > 1000) return Fail("同一商品每单最多1000件。");
                 total += OnlinePrice(store, part) * count;
                 space += Stock.SpaceOf(part, true, count);
                 order.Lines.Add(new OnlineOrderLine { PartId = part.Id, Count = count });
@@ -160,7 +163,7 @@ namespace PCShopSell.Core.Session
             if (order.Lines.Count == 0) return Fail("购物车是空的。");
             double free = PlayerShop.Stock.FreeSpace - IncomingShopSpace;
             if (!toHome && space > free + 1e-9) return Fail($"店里放不下（需要 {space:0.#} 格，只剩 {Math.Max(0, free):0.#} 格）。");
-            if (!Ledger.TryDebit(Clock.Today, "进货", total, $"1788 {store.Name}")) return Fail($"要 {total}（含运费），钱不够。");
+            if (!PayUnifiedOnlineOrder(order, total, store)) return Fail($"要 {total}（含运费），钱不够。");
 
             GameDate next = Clock.Today.AddDays(1);
             order.DeliverAtMinute = GameTimestamp.From(next, Online1788.DeliveryMinuteOfDay).TotalMinutes;
@@ -168,6 +171,8 @@ namespace PCShopSell.Core.Session
             Online.NextOrderId++;
             Online.TotalOrders++;
             Online.AddPending(order);
+            RegisterProcurementOrder("online-order:" + order.Id, "1788", order.ShopId, store.Id, total.Cents, order.DeliverAtMinute,
+                order.Lines.Select(l => new PurchaseLine { Kind = PurchaseGoodsKind.Part, PartId = l.PartId, Count = l.Count, SourceId = store.Id }), order.Id, null);
             string where = toHome ? "家里（放在纸箱里）" : "店里" + ShopTag;
             Say(manual ? $"下单成功，{total}，明天 10:00 送到{where}。" : $"自动补货下单：{store.Name}，{total}，明天 10:00 送到店里{ShopTag}。");
 

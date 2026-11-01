@@ -503,6 +503,8 @@ namespace PCShopSell.Core.Session
         {
             GiftDef g = Gifts.Get(id);
             if (g == null || count <= 0) return false;
+            if (ClothingProducts.IsClothing(id)) return Fail("个人衣服请在服装店柜台购买；经营进货请使用批发入口。");
+            if (g.LimitedEdition) return Fail("限定模型只在漫展现场出售。 ");
             if (!AtBusiness(g.SoldAt)) return Fail(g.SoldAt == Gifts.FarmBusiness ? "水果要去农贸市场买。" : "要去烟酒茶行买。");
             if (g.SoldAt == FarmBusiness && !IsFarmMarketOpen) return Fail("农贸市场收摊了（6:00–18:00）。");
             string what = g.Name + (count > 1 ? "×" + count : "");

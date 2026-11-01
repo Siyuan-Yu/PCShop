@@ -53,82 +53,86 @@ namespace PCShopSell.Game.UI
         }
     }
 
-    /// <summary>
-    /// 点一下 = 1；按住超过 0.4 秒开始一件件往上加（越按越快，到 Max 为止），按钮上实时显示数量，松手时一次提交。
-    /// 按住期间不重建窗口，所以数量只显示在按钮上。按钮上拖动不会拖走卡片。
-    /// </summary>
+    /// <summary>按下立即提交，长按连续提交；窗口重建后按逻辑键继续同一操作。</summary>
     public sealed class HoldRepeat : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IBeginDragHandler, IDragHandler
     {
         public int Max = 1;
+        public Window Owner;
+        public string Key;
         public Func<int, string> Label;
         public Action<int> Commit;
-        private Text _text;
         private Button _button;
-        private bool _down;
-        private float _held, _next;
         private int _count;
-        private int _releasedFrame = -1;
+        private static HoldRepeat _source;
+        private static Window _owner;
+        private static string _key;
+        private static bool _pressed;
+        private static float _held, _next;
+        private static int _steps, _releasedFrame = -10;
         public int PendingCount => _count;
-
-        private void Awake()
-        {
-            _text = GetComponentInChildren<Text>();
-            _button = GetComponent<Button>();
-        }
 
         public void OnPointerDown(PointerEventData e)
         {
-            if (_button == null) _button = GetComponent<Button>();
-            if (e.button != PointerEventData.InputButton.Left || (_button != null && !_button.interactable)) return;
-            _down = true;
-            _held = 0;
-            _next = 0.4f;
-            _count = 1;
-            Refresh();
+            _button = GetComponent<Button>();
+            if (e.button != PointerEventData.InputButton.Left || Max <= 0 || (_button != null && !_button.interactable)) return;
+            _source=this;_owner=Owner;_key=Key;_pressed=true;
+            _held=0;_next=.4f;_steps=0;
+            ApplyStep();
         }
-
-        private void Update() => AdvanceHold(Time.unscaledDeltaTime);
-
-        public void AdvanceHold(float seconds)
+        private void ApplyStep()
         {
-            if (!_down) return;
-            _held += Mathf.Max(0, seconds);
-            while (_held >= _next && _count < Max)
-            {
-                _count++;
-                _next += Mathf.Max(0.04f, 0.16f - _count * 0.012f);
-            }
-            Refresh();
+            _button=GetComponent<Button>();
+            if(Max<=0 || (_button!=null&&!_button.interactable)){Stop();return;}
+            _count=++_steps;
+            string label=Label?.Invoke(1);
+            var text=GetComponentInChildren<Text>();
+            if(text!=null&&label!=null)text.text=label;
+            Commit?.Invoke(1);
         }
-
+        private static void Stop()
+        {
+            _pressed=false;_releasedFrame=Time.frameCount;
+            if(_source!=null)_source._count=0;
+            _source=null;_owner=null;_key=null;
+        }
+        public static void AdvanceActiveHold(float seconds)
+        {
+            if(!_pressed)return;
+            if(!Input.GetMouseButton(0) || (_owner!=null&&(_owner.Closed||_owner.Root==null))){Stop();return;}
+            Advance(seconds);
+        }
+        private static void Advance(float seconds)
+        {
+            _held+=Mathf.Max(0,seconds);
+            if(_held<_next)return;
+            // Rebuilds replace the pressed object. Locate its current equivalent, never
+            // reuse callbacks that captured the previous quantity or inventory row.
+            HoldRepeat target=null;
+            if(_owner!=null)
+            {
+                if(_owner.RebuildPending)return;
+                foreach(var hold in _owner.Root.GetComponentsInChildren<HoldRepeat>())
+                    if(hold.Owner==_owner&&hold.Key==_key){target=hold;break;}
+            }
+            else target=_source;
+            if(target==null){Stop();return;}
+            _source=target;
+            target.ApplyStep();
+            _next=_held+Mathf.Max(.04f,.16f-_steps*.012f);
+        }
+        public void AdvanceHold(float seconds) { if(_source==this)Advance(seconds); }
         public void OnPointerUp(PointerEventData e)
         {
-            if (!_down) return;
-            _down = false;
-            int n = _count;
-            _count = 0;
-            _releasedFrame = Time.frameCount;
-            Commit?.Invoke(n);
+            if(e.button==PointerEventData.InputButton.Left&&_pressed)Stop();
         }
-
         public void ClickOnce()
         {
-            if (_releasedFrame != Time.frameCount && (_button == null || _button.interactable)) Commit?.Invoke(1);
+            if(_pressed||Time.frameCount<=_releasedFrame+1)return;
+            _button=GetComponent<Button>();
+            if(Max>0&&(_button==null||_button.interactable))Commit?.Invoke(1);
         }
-        private void OnDisable() { _down = false; _count = 0; }
-
         public void OnBeginDrag(PointerEventData e) { }
-
         public void OnDrag(PointerEventData e) { }
-
-        private void Refresh()
-        {
-            if (Label == null) return;
-            // Preview callbacks must run even if the text was not cached by Awake yet.
-            string label = Label(_count);
-            if (_text == null) _text = GetComponentInChildren<Text>();
-            if (_text != null) _text.text = label;
-        }
     }
 
     public sealed partial class GameUi
@@ -140,24 +144,25 @@ namespace PCShopSell.Game.UI
             b.name = "Hold_" + text;
             Ui.Size(b, width);
             var hold = b.gameObject.AddComponent<HoldRepeat>();
+            hold.Owner=w;hold.Key=parent.name+"|"+b.name;
             hold.Max = Math.Max(1, (int)Math.Ceiling(max - 1e-9));
             hold.Label = n => n <= 1 ? text : $"{text} ×{n}";
             hold.Commit = n =>
             {
                 commit(Math.Min(n, max));
-                w.Rebuild();
+                w.RequestRebuild();
             };
             b.onClick.AddListener(hold.ClickOnce);
-            b.Tip($"点一下：1 {unit}；长按连续增加，松开应用，无需输入数量。");
+            b.Tip($"点一下：1 {unit}；长按连续调整并立即应用，无需输入数量。");
         }
 
         private static readonly Color CartColumn = new Color(0.12f, 0.15f, 0.18f);
         private static readonly Color CartCard = new Color(0.19f, 0.23f, 0.27f);
 
         /// <summary>商品行右边的“加入购物车”按钮；showCount 时前面写购物车里已经有几件。</summary>
-        private void CartAddButton(Window w, Transform row, string key, Func<bool> add, string label, float width, bool enabled = true, bool showCount = true)
+        private void CartAddButton(Window w, Transform row, string key, Func<bool> add, string label, float width, bool enabled = true, bool showCount = true,double? maxAmount=null)
         {
-            ShopQuantity(w, row, key, add, enabled);
+            ShopQuantity(w, row, key, add, enabled,maxAmount);
         }
 
         /// <summary>
@@ -173,14 +178,22 @@ namespace PCShopSell.Game.UI
             if (kinds == 0) return;
             Ui.Size(Ui.Button(head, "清空", () => { S.ClearCart(); w.Rebuild(); }, 15, Ui.ButtonBg), 70);
 
-            RectTransform cols = Ui.Row(parent, 190, 10);
-            RectTransform bagCol = CartColumnBox(cols, out RectTransform bagList);
-            RectTransform truckCol = CartColumnBox(cols, out RectTransform truckList);
-
+            foreach(var line in S.Cart.Where(l=>l.Registered).ToArray())
+            {
+                var item=line;var asset=Ui.Row(parent,48,8);
+                Ui.Size(ProductText(asset,item.Name+" ×"+item.Amount+" · "+item.Price+"\n<size=14>结账后登记为已购资产，不占背包或货车空间</size>",16),-1,-1,1);
+                Ui.Size(Ui.Button(asset,"移除",()=>{S.RemoveFromCart(item.Key,item.Amount);w.Rebuild();},15),64,38);
+            }
             OwnedShop dest = S.CourierShop(defaultToShop);
             (Money fee, int minutes) = S.CourierQuote(dest);
             int cars = S.CartCars(defaultToShop);
             double truckKg = S.CartTruckKg;
+            bool physical=S.Cart.Any(l=>!l.Registered);
+            if(physical)
+            {
+            RectTransform cols = Ui.Row(parent, 190, 10);
+            RectTransform bagCol = CartColumnBox(cols, out RectTransform bagList);bagCol.name="CartBag";
+            RectTransform truckCol = CartColumnBox(cols, out RectTransform truckList);truckCol.name="CartTruck";
             Line(truckList, truckKg > 1e-9
                 ? $"叫车送　{truckKg:0.##} 千克 → {(cars < 0 ? "有一件一车装不下" : cars == 0 ? "装上刚叫的车" : $"{cars} 辆面包车")}"
                 : "叫车送　（没有）", 16, Ui.Accent);
@@ -190,7 +203,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(bagHead, $"装进背包　{bagKg:0.##} / {free:0.##} 千克", 16, TextAnchor.MiddleLeft, over ? Ui.Warn : Ui.Accent), -1, -1, 1);
             Ui.Bar(bagHead, free <= 0 ? (bagKg > 0 ? 1 : 0) : (float)(bagKg / free), over ? Ui.Warn : Ui.Good, 120, 10);
 
-            foreach (CartLine l in S.Cart.ToList())
+            foreach (CartLine l in S.Cart.Where(line=>!line.Registered).ToList())
             {
                 CartLine line = l;
                 if (line.ByTruck > 1e-9)
@@ -213,6 +226,7 @@ namespace PCShopSell.Game.UI
             }
             else Ui.Size(Ui.Label(destRow, "全部自己背走，不叫车。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
 
+            }
             // 钱都写在这一行：货款 + 运费 = 合计
             Money goods = S.CartGoods;
             Money freight = truckKg > 1e-9 ? S.CartFreight(defaultToShop) : Money.Zero;
@@ -226,8 +240,8 @@ namespace PCShopSell.Game.UI
             billText.rectTransform.Fill();
 
             RectTransform pay = Ui.Row(parent, 46, 8);
-            Ui.Size(Ui.Button(pay, "背得动的都放背包", () => { S.CartFillBag(); w.Rebuild(); }, 15, Ui.ButtonBg), 170);
-            Ui.Size(Ui.Button(pay, "全部叫车", () => { S.CartAllToTruck(); w.Rebuild(); }, 15, Ui.ButtonBg), 110);
+            if(physical)Ui.Size(Ui.Button(pay, "背得动的都放背包", () => { S.CartFillBag(); w.Rebuild(); }, 15, Ui.ButtonBg), 170);
+            if(physical)Ui.Size(Ui.Button(pay, "全部叫车", () => { S.CartAllToTruck(); w.Rebuild(); }, 15, Ui.ButtonBg), 110);
             string why = S.CheckoutBlocker(defaultToShop);
             var checkout = Ui.Button(pay, why ?? "结账（付合计）", () =>
             {
@@ -247,7 +261,7 @@ namespace PCShopSell.Game.UI
             return box.rectTransform;
         }
 
-        /// <summary>卡片后面的按钮：点一下做 1 件，按住一件件加，松手一起做（最多 Max）。</summary>
+        /// <summary>卡片后面的按钮：点一下做 1 件，按住一件件连续调整（最多 Max）。</summary>
         private readonly struct HoldAction
         {
             public readonly string Text;
@@ -268,12 +282,12 @@ namespace PCShopSell.Game.UI
         private void CartLineCard(Window w, RectTransform list, CartLine l, double amount, double kg, RectTransform target, Func<bool> onDrop,
             params HoldAction[] buttons)
         {
-            RectTransform card = Ui.Row(list, 68, 4);
+            RectTransform card = Ui.Row(list, 68, 4);card.name="CartLine_"+l.Key+"_to_"+target.name;
             Image bg = card.gameObject.AddComponent<Image>();
             bg.color = CartCard;
             string amountText = l.ByWeight ? $"{amount:0.##} 千克" : l.Key.StartsWith("ing:") ? $"{kg:0.##} 千克" : $"×{amount:0}";
             string price = l.UnitPrice != null ? $"　{l.UnitPrice().Scale(amount)}" : "";
-            Ui.Size(Ui.Label(card, ProductLabel($"  {l.Name} {amountText}", l.UnitKg, $"本批 {kg:0.###} 千克{price}", l.ByWeight ? "每千克" : "每件"), 15), -1, -1, 1);
+            Ui.Size(ProductText(card, ProductLabel($"  {l.Name} {amountText}", l.UnitKg, $"本批 {kg:0.###} 千克{price}", l.ByWeight ? "每千克" : "每件"), 15), -1, -1, 1);
             foreach (HoldAction a in buttons)
                 HoldButton(w, card, a.Text, a.Color, a.Max, l.ByWeight ? "千克" : "件", a.Commit, a.Text.Length > 3 ? 104 : 76);
             var drag = card.gameObject.AddComponent<CartDragItem>();
@@ -346,7 +360,7 @@ namespace PCShopSell.Game.UI
                     MovableItem it = m;
                     double left = it.Have - S.TruckAmount(it.Key);
                     if (left <= 1e-9) continue;
-                    RectTransform card = Ui.Row(hereList, 38, 4);
+                    RectTransform card = Ui.Row(hereList, 38, 4);card.name="TruckLoad_"+it.Key;
                     card.gameObject.AddComponent<Image>().color = CartCard;
                     string have = it.ByWeight ? $"{left:0.##} 千克" : $"×{left:0}";
                     Ui.Size(Ui.Label(card, $"  {it.Name} {have}<size=13><color=#A8B0BA>　{it.Where} · 每{(it.ByWeight ? "千克" : "件")} {it.UnitKg:0.##} 千克</color></size>", 15), -1, -1, 1);

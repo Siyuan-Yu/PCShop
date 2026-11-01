@@ -21,21 +21,26 @@ namespace PCShopSell.Core.Home
             foreach (var meal in FastFoodCatalog.All)
                 list.Add(new GiftDef("fast:" + meal.Id, meal.Name, "食品批发，外带食品可放背包、冰箱或上架零售。",
                     meal.Price.Yuan, meal.WeightKg, "快餐") { MealId = meal.Id, ShelfDays = meal.ShelfDays });
+            list.AddRange(ModelProducts.All);
+            list.AddRange(ClothingProducts.All);
             return list.ToArray();
         }
         public static bool IsFood(GiftDef item) => item != null && (item.IngredientId != null || item.MealId != null || item.Id == "produce:rice");
     }
     public static class RetailShopTypes
     {
-        public static readonly string[] All = { "computer", "flowers", "produce", "food" };
+        public static readonly string[] All = { "computer", "flowers", "produce", "food", "models", "clothing" };
         public static string Valid(string kind) => All.Contains(kind) ? kind : "computer";
-        public static string Name(string kind) => kind == "flowers" ? "花店" : kind == "produce" ? "生鲜店" : kind == "food" ? "食品店" : "电脑店";
-        public static string Description(string kind) => kind == "flowers" ? "鲜花、花束与盆栽；从花店批发进货。"
+        public static string Name(string kind) => kind == "clothing" ? "服装店" : kind == "models" ? "模型手办店" : kind == "flowers" ? "花店" : kind == "produce" ? "生鲜店" : kind == "food" ? "食品店" : "电脑店";
+        public static string Description(string kind) => kind == "clothing" ? "服装四档选品；通用货架或展示台按品类陈列，从服装批发及1788进货。季节仅影响挑货倾向，不改变采购目标。" : kind == "flowers" ? "鲜花、花束与盆栽；从花店批发进货。"
             : kind == "produce" ? "大米、蔬菜、鸡蛋、豆腐、肉类和水果；从农贸市场进货。"
-            : kind == "food" ? "汉堡、炸鸡、薯条、便当、点心和饮料；从快餐店和烟酒茶行进货。" : "电脑配件、整机及少量附带杂货。";
+            : kind == "food" ? "汉堡、炸鸡、薯条、便当、点心和饮料；从快餐店和烟酒茶行进货。"
+            : kind == "models" ? "四个原创系列、12款现货模型；常规款从潮玩工坊批发，限定款需在漫展到场采购。按系列设置货架，顾客按兴趣和预算挑选。" : "电脑配件、整机及少量附带杂货。";
         public static bool Sells(string kind, string id)
         {
             if (kind == "computer") return true;
+            if (kind == "clothing") return ClothingProducts.IsClothing(id);
+            if (kind == "models") return ModelProducts.IsModel(id);
             if (kind == "flowers") return id != null && id.StartsWith("flower_");
             if (kind == "produce") return id != null && (id.StartsWith("produce:") || id == Gifts.Fruit);
             return id != null && (id.StartsWith("fast:") || id == Gifts.Soda || id == Gifts.Drink || id == Gifts.Snack);

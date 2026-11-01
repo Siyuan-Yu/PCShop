@@ -21,6 +21,7 @@ namespace PCShopSell.Core.Session
         /// <summary>其中自己装进背包的部分；剩下的叫车送。</summary>
         public double InBag;
         public bool ByWeight;
+        public bool Registered;
         public double UnitKg;
 
         public double ByTruck => Math.Max(0, Amount - InBag);
@@ -32,6 +33,7 @@ namespace PCShopSell.Core.Session
 
         /// <summary>结账时真正去做：买下 / 从原处拿出来装车。</summary>
         internal Func<double, bool> Run;
+        internal Func<string> Blocker;
 
         public double Kg => UnitKg * Amount;
         public Money Price => UnitPrice == null ? Money.Zero : UnitPrice().Scale(Amount);
@@ -101,7 +103,7 @@ namespace PCShopSell.Core.Session
         public bool CartToTruck(string key, double amount)
         {
             CartLine l = _cart.Find(x => x.Key == key);
-            if (l == null || amount <= 0) return false;
+            if (l == null || amount <= 0 || l.Registered) return false;
             l.InBag = Math.Max(0, l.InBag - amount);
             return true;
         }
@@ -118,7 +120,7 @@ namespace PCShopSell.Core.Session
 
         public void CartAllToTruck()
         {
-            foreach (CartLine l in _cart) l.InBag = 0;
+            foreach (CartLine l in _cart) if(!l.Registered)l.InBag = 0;
         }
 
         private static bool TakeLine(List<CartLine> list, string key, double amount)
@@ -177,6 +179,77 @@ namespace PCShopSell.Core.Session
                 Run = n => BuyAtStall(stall, part, (int)Math.Round(n)),
             }, count);
             return true;
+        }
+
+        private bool _retailCartBatch;
+        public bool CartAddRetailWholesale(Place source,string id,int count=1)
+        {
+            var product=Gifts.Get(id); string key="wholesale:"+id;
+            if(product==null || CurrentPlace!=source || !HasRetailWholesale(source) || !IsPlaceOpen(source)
+                || !CityRetailGoodsAvailable(source,product) || count<=0)return false;
+            int total=(int)CartAmount(key)+count;
+            if(total>100 || total>CitySupplierRemaining(source.Id,id))return Fail("超过本次可采购数量或本日剩余配额。");
+            PutLine(_cart,new CartLine {
+                Key=key,Name=product.Name,UnitKg=product.WeightKg,UnitPrice=()=>CityRetailWholesalePrice(source,product),
+                Blocker=()=>CurrentPlace!=source || !IsPlaceOpen(source)?"货源已经打烊或不在这里":
+                    CartAmount(key)<CitySupplierMinimum(source.Id)?product.Name+"至少"+CitySupplierMinimum(source.Id)+"件起订":
+                    CartAmount(key)>CitySupplierRemaining(source.Id,id)?product.Name+"超过本日剩余配额":null,
+                Run=n=>{
+                    _retailCartBatch=true;
+                    try{return BuyRetailWholesale(source.Id,id,(int)Math.Round(n),!SendByCourier,CourierShop(true)?.Place.Id);}
+                    finally{_retailCartBatch=false;}
+                }
+            },count);
+            return true;
+        }
+
+        private bool CartAddRegistered(string key,string name,Money price,Func<bool> buy,Func<string> blocker,bool repeat=false)
+        {
+            string why=blocker?.Invoke();if(why!=null)return Fail(why);
+            if(!repeat && CartAmount(key)>0)return Fail("购物车中已有这一项。");
+            if(CartAmount(key)>=20)return false;
+            var source=CurrentPlace;
+            PutLine(_cart,new CartLine {Key=key,Name=name,Registered=true,UnitKg=0,UnitPrice=()=>price,
+                Blocker=()=>CurrentPlace!=source || !IsPlaceOpen(source)?"请到营业中的店铺结账":blocker?.Invoke(),
+                Run=n=>{for(int i=0;i<(int)n;i++)if(!buy())return false;return true;}
+            },1);return true;
+        }
+        public bool CartAddSmartphone() => CartAddRegistered("phone","智能手机",PhonePrice,BuySmartphone,
+            ()=>HasSmartphone?"已经拥有智能手机":CurrentPlace?.Business!=PhoneBusiness?"请到手机店购买":null);
+        public bool CartAddOutfit(Place place,string id)
+        {
+            var outfit=Outfits.Get(id);if(outfit==null)return false;
+            return CartAddRegistered("outfit:"+id,outfit.Name,outfit.Price,()=>BuyCityClothing(place,id),
+                ()=>!IsCityClothingRetail(place)||CurrentPlace!=place?"请到服装店购买":OwnedOutfits.Contains(id)?"已拥有同款":null);
+        }
+        public bool CartAddVehicle(VehicleKind kind)
+        {
+            var vehicle=Vehicles.Get(kind);if(!vehicle.Purchasable)return false;
+            return CartAddRegistered("vehicle:"+kind,vehicle.Name,vehicle.Price,()=>BuyVehicle(kind,false),
+                ()=>CurrentPlace?.Kind!=PlaceKind.Dealer?"请到车行购买":null,true);
+        }
+        public bool CartAddUpgrade(string id)
+        {
+            var upgrade=PCShopSell.Core.Shop.ShopUpgrades.Get(id);if(upgrade==null)return false;
+            return CartAddRegistered("upgrade:"+id,upgrade.Name,upgrade.Price,()=>BuyUpgrade(id),
+                ()=>CurrentPlace?.Business!=upgrade.SoldAt?"请到对应商店购买":UpgradeBlocker(upgrade));
+        }
+        public bool CartAddFastFood(string id)
+        {
+            var item=FastFoodMenu.FirstOrDefault(x=>x.Id==id);var place=CurrentPlace;
+            if(item==null || place?.Business!=FastFoodBusiness || !IsPlaceOpen(place))return false;
+            string key="fast:"+id;if(CartAmount(key)>=100)return false;
+            PutLine(_cart,new CartLine {Key=key,Name=item.Name,UnitKg=item.WeightKg,UnitPrice=()=>item.Price,
+                Blocker=()=>CurrentPlace!=place||!IsPlaceOpen(place)?"快餐店已打烊或不在这里":null,
+                Run=n=>BuyFastFood(id,(int)n)},1);return true;
+        }
+        public bool CartAddExpoModel(string id)
+        {
+            var item=Gifts.Get(id);if(item==null || !CityComicExpoOpen || CartAmount("expo:"+id)>=CityExpoModelRemaining(id))return false;
+            PutLine(_cart,new CartLine {Key="expo:"+id,Name=item.Name,UnitKg=item.WeightKg,UnitPrice=()=>item.WholesalePrice,
+                Blocker=()=>!CityComicExpoOpen?"漫展展位尚未营业":CartAmount("expo:"+id)>CityExpoModelRemaining(id)?"超过本届剩余配额":null,
+                Run=n=>{_retailCartBatch=true;try{return BuyCityExpoModel(id,(int)n,CourierShop(true)?.Place.Id,!SendByCourier);}finally{_retailCartBatch=false;}}
+            },1);return true;
         }
 
         public bool CartAddFurniture(string id)
@@ -254,6 +327,7 @@ namespace PCShopSell.Core.Session
         public string CheckoutBlocker(bool defaultToShop)
         {
             if (_cart.Count == 0) return "购物车是空的";
+            foreach(var line in _cart){string blocker=line.Blocker?.Invoke();if(blocker!=null)return blocker;}
             if (CartBagKg > FreeKg + 1e-9)
                 return $"背包放不下：拖进背包的有 {CartBagKg:0.##} 千克，{CurrentVehicle.Name}还能背 {FreeKg:0.##} 千克。拖一些回去叫车";
             Money due = CartGoods;

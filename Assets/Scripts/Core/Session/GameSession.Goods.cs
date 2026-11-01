@@ -54,17 +54,73 @@ namespace PCShopSell.Core.Session
         internal double ShelfStockBonus() => _shopLayout.Sum(p => FurnitureCatalog.Get(p.Id)?.StockBonus ?? 0);
 
         /// <summary>把每类货的货架总载重告诉店（顾客只买货架上的）。</summary>
+        public IReadOnlyList<int> DisplayIndexes() => Enumerable.Range(0,_shopLayout.Count)
+            .Where(i=>FurnitureCatalog.Get(_shopLayout[i].Id)?.Fixture==FixtureKind.Display).ToArray();
+        public bool IsComputerDisplay(int index) => index>=0 && index<_shopLayout.Count
+            && (string.IsNullOrEmpty(_shopLayout[index].Item) || _shopLayout[index].Item=="computer");
+        public int DisplayLimitAt(int index) => Math.Max(1,Math.Min(6,_shopLayout[index].DisplayLimit<=0?2:_shopLayout[index].DisplayLimit));
+        public bool SetDisplayKind(int index,string kindId)
+        {
+            if(!InPlayerShop || !DisplayIndexes().Contains(index))return false;
+            bool computer=kindId=="computer";
+            var kind=ShelfKinds.Get(kindId);
+            if(!computer && kind==null)return false;
+            if(computer && RetailKind!="computer")return Fail("本店不经营电脑整机。");
+            if(!computer && RetailKind!="computer" && (kind.IsParts || !kind.GiftIds.Any(id=>RetailShopTypes.Sells(RetailKind,id))))
+                return Fail("这类商品不属于本店经营范围。");
+            int remainingPcSlots=(DisplayIndexes().Count(i=>i!=index && IsComputerDisplay(i))+(computer?1:0))*2;
+            if(PlayerShop.DisplayPcs.Count>remainingPcSlots || !computer && IsComputerDisplay(index) && _focus.PendingDisplayTier>=0)
+                return Fail("请先将多余展示整机拆回配件，并完成正在装的展示机，再更换品类。");
+            _shopLayout[index].Item=kindId;UpdateShopFit();return true;
+        }
+        public bool SetDisplayLimit(int index,int count)
+        {
+            if(!InPlayerShop || !DisplayIndexes().Contains(index) || IsComputerDisplay(index))return false;
+            _shopLayout[index].DisplayLimit=Math.Max(1,Math.Min(6,count));ApplyShelfCapacity();return true;
+        }
+        public ShelfFill DisplayFill(int index)
+        {
+            var kind=ShelfKindAt(index);int limit=DisplayLimitAt(index);
+            var result=new ShelfFill(kind,DisplayCapacityKg(kind,limit));if(kind==null)return result;
+            var displays=DisplayIndexes().Where(i=>_shopLayout[i].Item==kind.Id).ToArray();
+            int total=displays.Sum(DisplayLimitAt),skip=displays.TakeWhile(i=>i!=index).Sum(DisplayLimitAt);
+            var pool=ShelfPlanner.Fill(PlayerShop.Stock,kind,DisplayCapacityKg(kind,total),total);
+            int left=limit;
+            foreach(var goods in pool.Goods)
+            {
+                int count=Math.Min(left,Math.Max(0,goods.Value-skip));skip=Math.Max(0,skip-goods.Value);
+                if(count<=0)continue;result.Goods.Add(new KeyValuePair<string,int>(goods.Key,count));
+                result.UsedKg+=ShelfPlanner.GoodsKg(goods.Key)*count;left-=count;
+            }
+            foreach(var part in pool.Parts)
+            {
+                int count=Math.Min(left,Math.Max(0,part.Count-skip));skip=Math.Max(0,skip-part.Count);
+                if(count<=0)continue;result.Parts.Add(new StockLine(part.Part,part.Boxed,count));
+                result.UsedKg+=ShelfPlanner.PartKg(part.Part,part.Boxed)*count;left-=count;
+            }
+            return result;
+        }
+        private static double DisplayCapacityKg(ShelfKind kind,int count) => kind==null?0:
+            count*(kind.IsGoods?kind.GiftIds.Select(ShelfPlanner.GoodsKg).DefaultIfEmpty(1).Max():8);
         internal void ApplyShelfCapacity()
         {
             if (PlayerShop == null) return;
-            var kg = new Dictionary<string, double>();
+            var kg = new Dictionary<string, double>();var limits=new Dictionary<string,int>();
             foreach (PlacedFurniture p in _shopLayout)
             {
                 FurnitureDef d = p.Item != null ? FurnitureCatalog.Get(p.Id) : null;
-                if (d != null && d.Fixture == FixtureKind.Shelf)
-                    kg[p.Item] = (kg.TryGetValue(p.Item, out double v) ? v : 0) + d.ShelfKg;
+                if(d==null)continue;
+                if(d.Fixture==FixtureKind.Shelf)
+                {kg[p.Item]=(kg.TryGetValue(p.Item,out double v)?v:0)+d.ShelfKg;limits[p.Item]=int.MaxValue;}
+                else if(d.Fixture==FixtureKind.Display && ShelfKinds.Get(p.Item) is ShelfKind kind)
+                {
+                    int count=Math.Max(1,Math.Min(6,p.DisplayLimit<=0?2:p.DisplayLimit));
+                    kg[p.Item]=(kg.TryGetValue(p.Item,out double v)?v:0)+DisplayCapacityKg(kind,count);
+                    int previous=limits.TryGetValue(p.Item,out int old)?old:0;
+                    limits[p.Item]=previous==int.MaxValue?previous:previous+count;
+                }
             }
-            PlayerShop.SetShelfCapacity(kg);
+            PlayerShop.SetShelfCapacity(kg,limits);
         }
 
         /// <summary>现在在店里、能拿来放进后仓的某种杂货有几件（储物柜里的 + 背包里的）。</summary>

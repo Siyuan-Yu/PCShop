@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -40,7 +40,8 @@ namespace PCShopSell.Game.UI
         private void BuildOnline(Window w)
         {
             Transform c = w.Content;
-            Para(c, "比档口便宜，下单后次日 10:00 送货上门，可能有次品。评分不一定可信，自己买过才知道。", 15, Ui.Dim);
+            Para(c, "经营配件批发，下单后次日 10:00 送货上门。食品、生活用品与家具保留普通网购/线下入口；比较经营来源请用统一采购。", 15, Ui.Dim);
+            Ui.Size(Ui.Button(c, "统一商品采购 / 在途订单", OpenCityProcurement, 17), -1, 38);
             if (!S.HasShop) _onlineToHome = true;
             RectTransform dest = Ui.Row(c, 48, 6);
             Ui.Size(Ui.Label(dest, "送到", 16, TextAnchor.MiddleRight, Ui.Dim), 50);
@@ -81,7 +82,7 @@ namespace PCShopSell.Game.UI
                 total += price * n;
                 space += Stock.SpaceOf(p, true, n);
                 RectTransform row = Ui.Row(list, 54);
-                Ui.Size(Ui.Label(row, ProductLabel(p.Name, PartUnitKg(p)), 16), 260);
+                Ui.Size(ProductText(row, ProductLabel(p.Name, PartUnitKg(p)), 16), 260);
                 Ui.Size(Ui.Label(row, $"{price}", 16, TextAnchor.MiddleLeft, Ui.Good), 90);
                 Ui.Size(Ui.Label(row, $"市价 {S.Market.PriceOf(p)}", 13, TextAnchor.MiddleLeft, Ui.Dim), 100);
                 Ui.Size(Ui.Label(row, $"店里有 {S.PlayerShop.Stock.CountAll(p)}", 13, TextAnchor.MiddleLeft, Ui.Dim), 90);
@@ -93,8 +94,10 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(orow, "下单", () =>
             {
                 var lines = _cart.Where(kv => kv.Value > 0).Select(kv => (PartCatalog.Get(kv.Key), kv.Value)).ToList();
-                if (S.PlaceOnlineOrder(_onlineStore, lines, _onlineToHome)) _cart.Clear();
-                w.Rebuild();
+                void Place() { if (S.PlaceOnlineOrder(_onlineStore, lines, _onlineToHome)) _cart.Clear(); w.Rebuild(); }
+                bool covered = !_onlineToHome && lines.Any(l => S.PendingOnlineCount(l.Item1.Id) + S.ClaimedProcurementCount(S.CurrentShop.Place.Id, PurchaseGoodsKind.Part, l.Item1.Id) > 0);
+                if (covered) ConfirmAction("额外采购确认", "这些商品已有在途或已认领供给。本次属于额外囤货，仍要再下这一单吗？", "确认额外下单", Place);
+                else Place();
             }, 19, Ui.ButtonHot, _cart.Values.Any(v => v > 0)), 140);
         }
 
@@ -109,7 +112,8 @@ namespace PCShopSell.Game.UI
             Transform c = w.Content;
             GuideHint(c, QuestTarget.Restock, w.Rebuild);
             Para(c, "<b>自动补货是什么？</b> 给每样配件定一个“常备几件”。每天早上 9:00，1788 自动看一眼店里的库存（含还在路上的），"
-                + "哪样低于常备数的 40%，就自动下单补到常备数，第二天 10:00 送到店里。设成“关”就不自动补，全靠你自己进货。", 15, Ui.Dim);
+                + "按常备目标/补货下限补齐未覆盖需求。员工已承担的缺口不会再由1788重复买；可在统一采购页选择唯一主执行方式。设成“关”就不自动补。", 15, Ui.Dim);
+            Ui.Size(Ui.Button(c, "设置每件商品的执行方式与下限", OpenCityProcurement, 16), -1, 38);
             Para(c, $"自动下单后至少给你留 {S.EffectiveRestockReserve} 现金；店里仓位放不下的会少补。", 15, Ui.Dim);
 
             var policy = Ui.Row(c, 38);
@@ -152,11 +156,11 @@ namespace PCShopSell.Game.UI
             {
                 PartDef p = part;
                 RectTransform row = Ui.Row(list, 66, 4);
-                Text name = Ui.Label(row, "", 15);
+                Text name = ProductText(row, "", 15);
                 Ui.Size(name, 420);
                 int have = S.PlayerShop.Stock.CountAll(p), pend = S.PendingOnlineCount(p.Id);
                 string stock = have == 0 ? "<color=#D79780>店里有 0 件</color>" : $"店里有 {have} 件";
-                name.text = ProductLabel($"<b>{p.Name}</b>", PartUnitKg(p), stock + (pend > 0 ? $" · 路上 {pend}" : ""));
+                name.text = ProductLabel($"<b>{p.Name}</b>", PartUnitKg(p), stock + (pend > 0 ? $" · 路上 {pend}" : "")).Replace("<size=13>", "<size=14>");
                 QuantityStepper(w, row, "restock_" + p.Id, S.RestockTarget(p.Id), 0, 1000, 1,
                     value => S.SetRestockTarget(p.Id, (int)value), value => value == 0 ? "关" : value.ToString("0"));
             }

@@ -403,6 +403,12 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.BuyGift(Gifts.Cig));
             Assert.AreEqual((before - Gifts.Get(Gifts.Cig).Price).Cents, s.Ledger.Balance.Cents);
             Assert.AreEqual(1, s.Backpack.GiftCount(Gifts.Cig));
+            Assert.IsNotNull(s.GiftBlocker(Npcs.Zhang),"买到礼物也不能隔空送给不在场的人");
+            var person=s.CityPersonState(Npcs.Zhang);Assert.NotNull(person);
+            for(int i=0;i<120&&person.Route!=null;i++)s.AdvanceClock(1);
+            Assert.NotNull(person.LocationPlaceId,"等待本人真实到达目的地再见面");
+            GameSessionTests.Teleport(s,person.LocationPlaceId);
+            Assert.True(s.CitySamePlace(Npcs.Zhang));
             Assert.IsNull(s.GiftBlocker(Npcs.Zhang));
             Assert.IsTrue(s.GiveGift(Npcs.Zhang));
             Assert.AreEqual(0, s.Backpack.GiftCount(Gifts.Cig));

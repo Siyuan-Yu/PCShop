@@ -30,6 +30,40 @@ namespace PCShopSell.Tests
 
         private static PartDef CpuPart() => PartCatalog.All.First(p => p.Category == PartCategory.Cpu);
 
+        private static GameSession MakeCitySocial()
+        {
+            var data=UnityEngine.JsonUtility.FromJson<CityLayoutData>(UnityEngine.Resources.Load<UnityEngine.TextAsset>("Data/city_layout").text);
+            var s=new GameSession(CityLayout.FromData(data),7,Money.FromYuan(100000),GameTimestamp.From(new GameDate(5),10*60),false);
+            s.EventsEnabled=false;s.MainShop.Sim.Settings.BaseCustomersPerHour=0;s.Time.SetSpeed(8);
+            return s;
+        }
+        private static string _socialRouteTrace;
+        private static long _socialTraceMinute=-1;
+        private static void TraceSocialRoute(GameSession s)
+        {
+            if(_socialTraceMinute==s.Clock.Now.TotalMinutes)return;_socialTraceMinute=s.Clock.Now.TotalMinutes;
+            var a=s.CityActivities.FirstOrDefault(x=>x.Active);if(a==null)return;
+            _socialRouteTrace="minute="+s.Clock.Now.TotalMinutes+" start="+a.ScheduledStart+" activity="+a.State+" "+
+                string.Join("; ",a.Participants.Select(x=>
+                {
+                    var p=s.CityPersonState(x.PersonId);return x.PersonId+" phase="+x.Phase+" selected="+x.TravelTransport+
+                        " place="+p?.LocationPlaceId+" task="+p?.Task+" activityId="+p?.ActivityId+" route="+p?.Route?.TargetPlaceId+
+                        " arrival="+p?.Route?.ArriveMinute+" mode="+p?.Route?.Transport;
+                }));
+        }
+        private static void AdvanceSocial(GameSession s,int minutes)
+        {
+            for(int i=0;i<minutes;i++){TraceSocialRoute(s);s.Player.Hunger=100;s.Player.Energy=100;s.AdvanceClock(1);}
+        }
+        private static void StepSocial(GameSession s)
+        {TraceSocialRoute(s);s.Player.Hunger=100;s.Player.Energy=100;s.Tick(.025);}
+        private static CityActivity MigrateLegacyInvite(GameSession s)
+        {
+            s.Meet(Npcs.Li,90);Assert.IsTrue(ForceInvite(s,Npcs.Li,OutingSlot.Evening));
+            AdvanceSocial(s,1);
+            return s.CityActivities.Single(a=>a.SourceId!=null&&a.SourceId.StartsWith("legacy_appointment:"+Npcs.Li+":"));
+        }
+
         private static void GoToStall(GameSession s) => GameSessionTests.Teleport(s, Stall);
 
         [Test]
@@ -132,30 +166,35 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void Appointment_RaisesAnEvent_AndOutingRaisesRelationAndCostsTime()
+        public void Appointment_BecomesRealTravelAndOnlyCompletedOutingGrantsRelation()
         {
-            GameSession s = Make();
-            s.Meet(Npcs.Li, 90);
-            Assert.IsTrue(ForceInvite(s, Npcs.Li, OutingSlot.Evening));
-            Assert.AreEqual(1, s.Appointments.Count);
-            Assert.IsNotNull(s.InviteBlocker(Npcs.Li, OutingSlot.Evening), "已经约了");
-
-            int day = s.Appointments[0].Day;
-            while (s.Clock.Today.TotalDays < day) s.AdvanceClock(60);
-            while (s.PendingEvent == null && s.Clock.MinuteOfDay < 22 * 60) s.AdvanceClock(15);
-            Assert.IsNotNull(s.PendingEvent);
-            Assert.AreEqual("date_li", s.PendingEvent.Id);
-            Assert.AreEqual(0, s.Appointments.Count);
-
-            Money before = s.Ledger.Balance;
-            int rel = s.Relation(Npcs.Li);
-            int minuteBefore = s.Clock.MinuteOfDay;
-            Assert.IsTrue(s.ResolveEvent(0));
-            Assert.Greater(s.Relation(Npcs.Li), rel);
-            Assert.Less(s.Ledger.Balance.Cents, before.Cents);
-            Assert.IsNull(s.PendingEvent);
-            Assert.AreNotEqual(minuteBefore, s.Clock.MinuteOfDay, "出去玩要花时间");
-            Assert.IsNotNull(s.InviteBlocker(Npcs.Li, OutingSlot.Evening), "冷却中");
+            using(var s=MakeCitySocial())
+            {
+                var before=s.Ledger.Balance;var a=MigrateLegacyInvite(s);int relation=s.Relation(Npcs.Li);
+                Assert.AreEqual(1,s.Appointments.Count);Assert.IsNotNull(s.InviteBlocker(Npcs.Li,OutingSlot.Evening));
+                Assert.AreEqual(before,s.Ledger.Balance);Assert.AreEqual(90,relation);Assert.IsNull(s.PendingEvent,"No instant date event bypasses the city activity");
+                var venue=s.City.GetPlace(a.VenueId);
+                long departure=a.ScheduledStart-s.CityTravelMinutes(venue)-15;
+                AdvanceSocial(s,(int)System.Math.Max(0,departure-s.Clock.Now.TotalMinutes));
+                long minuteBefore=s.Clock.Now.TotalMinutes;
+                Assert.IsTrue(s.GoToCityActivity(a.Id));Assert.AreNotEqual(venue,s.CurrentPlace,"Accepting does not teleport to the meal");
+                for(int i=0;i<20000&&a.State!=CityActivityPhase.Running&&a.Active;i++)StepSocial(s);
+                Assert.AreEqual(CityActivityPhase.Running,a.State,a.EndReason+" | "+_socialRouteTrace);Assert.AreEqual(venue,s.CurrentPlace);Assert.AreEqual(relation,s.Relation(Npcs.Li));
+                var participant=a.Participants.Single();Assert.IsTrue(participant.TravelTransportChosen);
+                var saved=s.CreateSave();
+                using(var restored=GameSession.Load(s.City,UnityEngine.JsonUtility.FromJson<SaveData>(UnityEngine.JsonUtility.ToJson(saved))))
+                {
+                    var loaded=restored.CityActivities.Single(x=>x.Id==a.Id).Participants.Single();
+                    Assert.IsTrue(loaded.TravelTransportChosen);Assert.AreEqual(participant.TravelTransport,loaded.TravelTransport,"Chosen transport survives an active-activity save");
+                }
+                Assert.IsTrue(s.ChooseCityActivity(a.Id,0));
+                for(int i=0;i<12000&&a.Active;i++)StepSocial(s);
+                Assert.AreEqual(CityActivityPhase.Completed,a.State,a.EndReason);Assert.Greater(s.Relation(Npcs.Li),relation);
+                Assert.Less(s.Ledger.Balance.Cents,before.Cents);Assert.Greater(s.Clock.Now.TotalMinutes,minuteBefore);
+                Assert.AreEqual(1,s.Ledger.Entries.Count(e=>e.SourceEventId==a.Id+":entry"));
+                Assert.AreEqual(0,s.Appointments.Count);Assert.IsNull(s.PendingEvent);Assert.AreEqual(venue,s.CurrentPlace,"Finishing leaves the player at the actual venue");
+                Assert.IsNotNull(s.InviteBlocker(Npcs.Li,OutingSlot.Evening));
+            }
         }
 
         [Test]
@@ -168,32 +207,30 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void StandingThemUp_CostsRelation()
+        public void CancellingBeforeArrivalReleasesAppointmentWithoutChargingUnservedMeal()
         {
-            GameSession s = Make();
-            s.Meet(Npcs.Li, 90);
-            Assert.IsTrue(ForceInvite(s, Npcs.Li, OutingSlot.Evening));
-            while (s.PendingEvent == null && s.Clock.MinuteOfDay < 22 * 60) s.AdvanceClock(15);
-            Assert.IsNotNull(s.PendingEvent);
-            int rel = s.Relation(Npcs.Li);
-            int last = s.PendingEvent.Choices.Count - 1;
-            Assert.IsTrue(s.ResolveEvent(last), "放鸽子");
-            Assert.AreEqual(rel - 8, s.Relation(Npcs.Li));
+            using(var s=MakeCitySocial())
+            {
+                var a=MigrateLegacyInvite(s);int relation=s.Relation(Npcs.Li);var cash=s.Ledger.Balance;
+                Assert.IsTrue(s.CancelCityActivity(a.Id));Assert.AreEqual(CityActivityPhase.Cancelled,a.State);
+                Assert.AreEqual(relation,s.Relation(Npcs.Li),"Timely cancellation is not the obsolete instant-event no-show choice");
+                Assert.AreEqual(cash,s.Ledger.Balance);Assert.IsFalse(a.EntryPaid);Assert.IsFalse(a.RewardApplied);Assert.AreEqual(0,s.Appointments.Count);
+                Assert.IsFalse(s.CancelCityActivity(a.Id));Assert.AreEqual(relation,s.Relation(Npcs.Li));Assert.AreEqual(cash,s.Ledger.Balance);
+            }
         }
 
         [Test]
-        public void MissedAppointment_IsDropped_AndHurtsRelation()
+        public void MissedAppointmentRecordsNoShowWithoutFalseCompletionOrMealCharge()
         {
-            GameSession s = Make();
-            s.Meet(Npcs.Li, 90);
-            Assert.IsTrue(ForceInvite(s, Npcs.Li, OutingSlot.Evening));
-            int day = s.Appointments[0].Day;
-            s.Clock.Restore(new GameDate(day), 15 * 60);
-            s.RaiseEvent(EventCatalog.All.First().Id); // 有别的事压着，没法赴约
-            int rel = s.Relation(Npcs.Li);
-            while (s.Appointments.Count > 0 && s.Clock.MinuteOfDay < 23 * 60 + 30) s.AdvanceClock(30);
-            Assert.AreEqual(0, s.Appointments.Count);
-            Assert.AreEqual(rel - 5, s.Relation(Npcs.Li));
+            using(var s=MakeCitySocial())
+            {
+                var a=MigrateLegacyInvite(s);var cash=s.Ledger.Balance;int relation=s.Relation(Npcs.Li);
+                AdvanceSocial(s,(int)(a.ScheduledStart+16-s.Clock.Now.TotalMinutes));
+                Assert.AreEqual(CityActivityPhase.NoShow,a.State,a.EndReason+" | "+_socialRouteTrace);Assert.AreEqual(0,s.Appointments.Count);
+                Assert.AreEqual(relation,s.Relation(Npcs.Li),"A missed meal does not apply the removed event's arbitrary penalty or completion gain");
+                Assert.AreEqual(cash,s.Ledger.Balance);Assert.IsFalse(a.EntryPaid);Assert.IsFalse(a.MealApplied);Assert.IsFalse(a.RewardApplied);
+                AdvanceSocial(s,30);Assert.AreEqual(relation,s.Relation(Npcs.Li));Assert.AreEqual(cash,s.Ledger.Balance,"No replay on later ticks");
+            }
         }
 
         [Test]
@@ -498,7 +535,8 @@ namespace PCShopSell.Tests
             Assert.GreaterOrEqual(s.StaffRapport(c.Id), 2);
             Assert.IsNotNull(s.StaffGiftBlocker(c.Id));
             Assert.IsFalse(s.GiveStaffGift(c, Gifts.Soda));
-            s.AdvanceClock(StaffTalk.GiftCooldownDays * 24 * 60);
+            // This checks a calendar cooldown, not a three-day continuous awake action.
+            s.Clock.Restore(s.Clock.Today.AddDays(StaffTalk.GiftCooldownDays),s.Clock.MinuteOfDay);
             Assert.IsNull(s.StaffGiftBlocker(c.Id));
             s.Backpack.AddGift(Gifts.Wine, 1);
             int r0 = s.StaffRapport(c.Id);

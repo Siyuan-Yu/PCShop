@@ -39,9 +39,9 @@ namespace PCShopSell.Core.Session
                             Category = PartCatalog.CategoryName(p.Category), Price = StallPrice(source, p),
                             UnitKg = Stock.SpaceOf(p, true, 1) * Backpack.KgPerSpace, StockSpace = Stock.SpaceOf(p, true, 1) });
                 if (ShopAt(source) != null || IsVacant(source) || VentureAt(source.Id) != null) continue;
-                foreach (var gift in Gifts.All.Where(g => g.SoldAt == source.Business))
+                foreach (var gift in Gifts.All.Where(g => g.SoldAt == source.Business && CityRetailGoodsAvailable(source, g)))
                     offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Gift, Id = gift.Id, Name = gift.Name + (RetailProducts.IsFood(gift) ? "（零售）" : ""),
-                        Category = ShelfKinds.ForGift(gift.Id)?.Name ?? "其他商品", Price = gift.WholesalePrice, UnitKg = gift.WeightKg, StockSpace = Stock.GoodsSpace(gift.Id, 1) });
+                        Category = ShelfKinds.ForGift(gift.Id)?.Name ?? "其他商品", Price = CityRetailWholesalePrice(source, gift), UnitKg = gift.WeightKg, StockSpace = Stock.GoodsSpace(gift.Id, 1) });
                 if (source.Business == FarmBusiness)
                 {
                     offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Rice, Id = "rice", Name = "大米（0.5千克/袋）",

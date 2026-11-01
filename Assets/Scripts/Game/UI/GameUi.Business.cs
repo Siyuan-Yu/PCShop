@@ -31,8 +31,7 @@ namespace PCShopSell.Game.UI
 
         public void OpenBusinessPanel()
         {
-            if (!BusinessUnlocked) return;
-            ShowBusinessPanel(false);
+            OpenCityFinanceOverview();
         }
 
         /// <summary>中介里只办和房产有关的事：分店签约、物业与住处、园区。</summary>
@@ -48,6 +47,12 @@ namespace PCShopSell.Game.UI
             S.RefreshEnterpriseOffer();
             OpenWindow(agencyOnly ? "中介业务" : "经营总览", 1080, 820, w=>
             {
+                var cityTabs=Ui.Row(w.Content,40,7);
+                Ui.Size(Ui.Button(cityTabs,"收支总览",OpenCityFinanceOverview,17),140);
+                Ui.Size(Ui.Button(cityTabs,"统一采购",OpenCityProcurement,17),140);
+                Ui.Size(Ui.Button(cityTabs,"具体物业",OpenCityProperties,17),140);
+                Ui.Size(Ui.Button(cityTabs,"投资持仓",OpenCityInvestments,17),140);
+                Ui.Size(Ui.Button(cityTabs,"城市生活",OpenCityLife,17),140);
                 var guide = S.CurrentQuest();
                 var tabs=Ui.Row(w.Content,42);
                 string[] names={"资产与负债","直供采购","企业合同","分店经营","推广合作","物业与住处","园区布局"};
@@ -219,8 +224,8 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(choose,chosen.Name,21,TextAnchor.MiddleCenter,Ui.Accent),620);
             Ui.Size(Ui.Button(choose,"下一业态",()=>{_ventureKind=(_ventureKind+1)%Ventures.All.Length;w.Rebuild();},17),150);
             Para(w.Content,$"{chosen.Description} 装修设备 {Money.FromYuan(chosen.Capital)}，员工日薪 {Money.FromYuan(chosen.DailyWages)}，知名度要求 {chosen.MinReputation:0}。另需租赁签约款及 5,000 周转金。",16);
-            if (!S.Listings.Any(x=>x.OpenDay<=S.Clock.Today.TotalDays)) Para(w.Content,"当前没有可签约的空铺。中介会陆续挂出新房源；也可等已挂牌铺面的现租户到期。",16,Ui.Dim);
-            foreach(var listing in S.Listings.Where(x=>x.OpenDay<=S.Clock.Today.TotalDays))
+            if (!S.Listings.Any(x=>x.OpenDay<=S.Clock.Today.TotalDays && (!S.InAgency || S.AgencyServes(S.CurrentPlace, S.ListingPlace(x))))) Para(w.Content,"当前没有可签约的空铺。中介会陆续挂出新房源；也可等已挂牌铺面的现租户到期。",16,Ui.Dim);
+            foreach(var listing in S.Listings.Where(x=>x.OpenDay<=S.Clock.Today.TotalDays && (!S.InAgency || S.AgencyServes(S.CurrentPlace, S.ListingPlace(x)))))
             {
                 var l=listing;string why=S.VentureBlocker(l.PlaceId,chosen.Id);var c=BusinessCard(w.Content,S.City.GetPlace(l.PlaceId).Name+" · "+GameSession.SizeName(l.Size));
                 Line(c,$"月租 {l.Rent}    开办现金合计 {S.VentureOpeningCost(l,chosen)}",17);

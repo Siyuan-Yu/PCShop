@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using PCShopSell.Core.World;
 using PCShopSell.Core.Time;
 
@@ -7,7 +8,7 @@ namespace PCShopSell.Core.Session
 {
     /// <summary>
     /// 一次出行。画面位置按交通方式移动，世界时钟由 GameSession 统一推进。
-    /// 剩余时间按实际画面路径、移动速度及统一时钟比例估算。
+    /// 剩余时间和移动按实际路径米数与统一车辆步调估算，画面仅沿相同路段插值。
     /// </summary>
     public sealed class Trip
     {
@@ -18,6 +19,31 @@ namespace PCShopSell.Core.Session
         private int _segment;
         private double _segmentProgress;
         private double _viewMetersDone;
+        internal CitySavedTrip SaveCityTrip() => new CitySavedTrip {xs=_points.ConvertAll(p=>p.X).ToArray(),ys=_points.ConvertAll(p=>p.Y).ToArray(),
+            viewLengths=_viewLen.ToArray(),gameLengths=_gameLen.ToArray(),nodeAt=_nodeAt.ToArray(),target=TargetNode,segment=_segment,
+            vehicle=(int)Vehicle.Kind,progress=_segmentProgress,viewDone=_viewMetersDone};
+        private Trip(CitySavedTrip d, CityLayout city)
+        {
+            TargetNode=d.target;Vehicle=Vehicles.Get((VehicleKind)d.vehicle);
+            for(int i=0;i<d.xs.Length;i++)_points.Add(new MapPoint(d.xs[i],d.ys[i]));
+            _viewLen.AddRange(d.viewLengths.Select(v=>Math.Max(1e-8,v)));
+            // Recalibrate saved routes without changing their displayed position/progress.
+            if (city.HasUniformRoadScale)
+                _gameLen.AddRange(_viewLen.Select(length => length * city.TravelDistanceScale));
+            else _gameLen.AddRange(d.gameLengths);
+            _nodeAt.AddRange(d.nodeAt);
+            _segment=Math.Max(0,Math.Min(d.segment,_viewLen.Count));_segmentProgress=Arrived?0:Math.Min(_viewLen[_segment],Math.Max(0,d.progress));_viewMetersDone=Math.Max(0,d.viewDone);
+            TotalViewMeters=_viewLen.Sum();TotalGameMeters=_gameLen.Sum();UpdatePosition();UpdateDirection();
+        }
+        internal static Trip RestoreCityTrip(CitySavedTrip d,CityLayout city)
+        {
+            if(d==null||!city.Map.HasNode(d.target)||d.xs==null||d.ys==null||d.xs.Length<1||d.xs.Length!=d.ys.Length
+                ||d.viewLengths?.Length!=d.xs.Length-1||d.gameLengths?.Length!=d.xs.Length-1||d.nodeAt?.Length!=d.xs.Length)return null;
+            if (double.IsNaN(d.progress) || double.IsInfinity(d.progress) || double.IsNaN(d.viewDone) || double.IsInfinity(d.viewDone)
+                || d.xs.Any(v=>double.IsNaN(v)||double.IsInfinity(v)) || d.ys.Any(v=>double.IsNaN(v)||double.IsInfinity(v))
+                || d.viewLengths.Any(v=>double.IsNaN(v)||double.IsInfinity(v)||v<0) || d.gameLengths.Any(v=>double.IsNaN(v)||double.IsInfinity(v)||v<0)) return null;
+            return new Trip(d, city);
+        }
 
         public VehicleSpec Vehicle { get; internal set; }
         public string TargetNode { get; }
@@ -29,7 +55,7 @@ namespace PCShopSell.Core.Session
         public bool Arrived => _segment >= _viewLen.Count;
 
         /// <summary>下一个要经过的节点（重新选目的地时从这里接着走）。</summary>
-        public string NextNode => Arrived ? TargetNode : _nodeAt[_segment + 1];
+        public string NextNode => Arrived ? TargetNode : _nodeAt[_segment + 1] ?? TargetNode;
 
         public IReadOnlyList<MapPoint> Points => _points;
 
@@ -51,8 +77,9 @@ namespace PCShopSell.Core.Session
                 MapPoint prev = _points[_points.Count - 1];
                 double view = Dist(prev, p);
                 double game;
-                if (i == 0) game = view * startGameScale;
-                else game = EdgeLength(city.Map, path[i - 1], path[i]);
+                if (city.HasUniformRoadScale) game = view * city.TravelDistanceScale;
+                else if (i == 0) game = view * startGameScale;
+                else game = CityTravelTiming.EdgeMeters(city, path[i - 1], path[i]);
 
                 if (i == 0 && view < 1e-6)
                 {
@@ -61,7 +88,7 @@ namespace PCShopSell.Core.Session
                 }
                 _points.Add(p);
                 _nodeAt.Add(path[i]);
-                _viewLen.Add(view);
+                _viewLen.Add(Math.Max(1e-8, view));
                 _gameLen.Add(game);
             }
 
@@ -73,7 +100,7 @@ namespace PCShopSell.Core.Session
                     _points.Add(end.Value);
                     _nodeAt.Add(null);
                     _viewLen.Add(view);
-                    _gameLen.Add(view);
+                    _gameLen.Add(view * city.TravelDistanceScale);
                 }
             }
 
@@ -96,29 +123,32 @@ namespace PCShopSell.Core.Session
             {
                 if (Arrived) return 1;
                 double v = _viewLen[_segment];
-                return v < 1e-6 ? 1 : _gameLen[_segment] / v;
+                return v < 1e-12 ? 1 : _gameLen[_segment] / v;
             }
         }
 
         /// <summary>
-        /// 按画面距离推进。不推进时钟；经过的节点放进 passed。
+        /// 按真实路径距离推进。不推进时钟；经过的节点放进 passed。
         /// </summary>
-        internal void Step(double viewMeters, List<string> passed)
+        internal void Step(double gameMeters, List<string> passed)
         {
-            double remaining = viewMeters;
+            double remaining = gameMeters;
             while (remaining > 0 && !Arrived)
             {
-                double segLeft = _viewLen[_segment] - _segmentProgress;
+                double viewLeft = Math.Max(0, _viewLen[_segment] - _segmentProgress);
+                double gameScale = CurrentGameScale;
+                double segLeft = viewLeft * gameScale;
                 if (remaining < segLeft)
                 {
-                    _segmentProgress += remaining;
-                    _viewMetersDone += remaining;
+                    double advanced = remaining / gameScale;
+                    _segmentProgress += advanced;
+                    _viewMetersDone += advanced;
                     remaining = 0;
                 }
                 else
                 {
                     remaining -= segLeft;
-                    _viewMetersDone += segLeft;
+                    _viewMetersDone += viewLeft;
                     _segment++;
                     _segmentProgress = 0;
                     if (_nodeAt[_segment] != null) passed.Add(_nodeAt[_segment]);
@@ -131,8 +161,17 @@ namespace PCShopSell.Core.Session
         /// <summary>换交通方式只改变后续移动速度，不重算已流逝的世界时间。</summary>
         internal void ChangeVehicle(VehicleSpec v) => Vehicle = v;
 
-        public int EstimateRemainingMinutes(double secondsPerMinuteAt1x) => (int)Math.Ceiling(
-            Math.Max(0, TotalViewMeters - _viewMetersDone) / (Vehicle.VisualSpeed * TimeController.WorldRate * secondsPerMinuteAt1x) - 1e-9);
+        public double RemainingGameMeters
+        {
+            get
+            {
+                if (Arrived) return 0;
+                double value = Math.Max(0, _viewLen[_segment] - _segmentProgress) * CurrentGameScale;
+                for (int i = _segment + 1; i < _gameLen.Count; i++) value += _gameLen[i];
+                return value;
+            }
+        }
+        public int EstimateRemainingMinutes(double secondsPerMinuteAt1x) => CityTravelTiming.Minutes(RemainingGameMeters, Vehicle);
         public int EstimatedMinutes => EstimateRemainingMinutes(TimeController.DefaultSecondsPerMinute);
 
         private void UpdatePosition()

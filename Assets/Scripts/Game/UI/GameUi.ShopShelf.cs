@@ -1,8 +1,9 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Inventory;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Shop;
 using UnityEngine;
 using UnityEngine.UI;
@@ -359,8 +360,25 @@ namespace PCShopSell.Game.UI
         /// <summary>展示台上的整机：三台开着的整机并排，屏幕上是档次和成交价，台面下的牌子写配置、配件齐不齐。</summary>
         public void OpenDisplayWindow()
         {
-            OpenWindow("整机展示台", 960, 800, w =>
+            int selected=S.DisplayIndexes().Count>0?S.DisplayIndexes()[0]:-1;
+            OpenWindow("展示台", 980, 940, w =>
             {
+                var indexes=S.DisplayIndexes();
+                if(indexes.Count==0){Para(w.Content,"先购买并摆放一张展示台，再选择展示品类。",19);return;}
+                if(!indexes.Contains(selected))selected=indexes[0];
+                for(int i=0;i<indexes.Count;i+=3)
+                {
+                    var selector=Ui.Row(w.Content,40,6);
+                    foreach(int layoutIndex in indexes.Skip(i).Take(3))
+                    {
+                        int index=layoutIndex;
+                        string name=S.IsComputerDisplay(index)?"电脑整机":ShelfKinds.NameOf(S.ShopLayout[index].Item);
+                        Ui.Size(Ui.Button(selector,"展示台 "+(indexes.ToList().IndexOf(index)+1)+" · "+name,()=>{selected=index;w.Rebuild();},16,
+                            selected==index?Ui.ButtonHot:Ui.ButtonBg),-1,40,1);
+                    }
+                }
+                Ui.Size(Ui.Button(w.Content,"更换这张展示台的品类",()=>OpenDisplayKindPicker(selected,w),18,Ui.ButtonHot),-1,42);
+                if(!S.IsComputerDisplay(selected)){BuildGoodsDisplay(w,selected);return;}
                 ShopSimulation shop = S.PlayerShop;
                 int shown = shop.DisplayPcs.Count;
                 Para(w.Content, "用库存配件装好整机摆上展示台（店正中间）：想买整机的顾客看到就直接抱去收银台结账，不用等你装。" +
@@ -407,6 +425,49 @@ namespace PCShopSell.Game.UI
                     }, 19, Ui.ButtonHot), 300);
                 Ui.Size(Ui.Button(bar, "关闭", w.Close, 19), 200);
             });
+        }
+
+        private void OpenDisplayKindPicker(int layoutIndex,Window parent)
+        {
+            OpenWindow("选择展示品类",640,720,w=>
+            {
+                void Option(string id,string name)
+                {
+                    Ui.Size(Ui.Button(w.Content,name,()=>{if(S.SetDisplayKind(layoutIndex,id)){w.Close();parent.Rebuild();RebuildDock();}},18),-1,42);
+                }
+                if(S.RetailKind=="computer")Option("computer","电脑整机（装好后展示）");
+                foreach(var kind in ShelfKinds.All.Where(k=>S.RetailKind=="computer" || k.IsGoods&&k.GiftIds.Any(id=>RetailShopTypes.Sells(S.RetailKind,id))))
+                    Option(kind.Id,kind.Name);
+            });
+        }
+        private void BuildGoodsDisplay(Window w,int index)
+        {
+            var kind=S.ShelfKindAt(index);if(kind==null){Para(w.Content,"请选择展示品类。",18);return;}
+            int limit=S.DisplayLimitAt(index);
+            Para(w.Content,"按所选品类从后仓自动补货，顾客可直接购买。更换品类时商品仍留在后仓。",17,Ui.Dim);
+            var quantity=Ui.Row(w.Content,44,8);
+            Ui.Size(Ui.Label(quantity,"这张展示台摆放数量",18),230);
+            QuantityStepper(w,quantity,"display_"+index,limit,1,6,1,
+                value=>S.SetDisplayLimit(index,(int)value),value=>value+" 件");
+            var fill=S.DisplayFill(index);
+            Line(w.Content,kind.Name+" · 可陈列 "+fill.Total+"/"+limit+" 件",21,Ui.Accent);
+            var list=Ui.Scroll(w.Content,420);
+            if(fill.Total==0)Para(list,"后仓暂时没有这一品类的商品，可先批发进货，再到“库存”中上架。",18,Ui.Dim);
+            foreach(var item in fill.Goods)
+            {
+                var product=Gifts.Get(item.Key);if(product==null)continue;
+                var row=Ui.Row(list,74,10);
+                Ui.Size(ProductText(row,ProductLabel(product.Name,product.WeightKg,"陈列 "+item.Value+" 件"),18),-1,-1,1);
+                Ui.Size(Ui.Label(row,S.PlayerShop.GoodsPriceOf(item.Key).ToString(),20,TextAnchor.MiddleLeft,Ui.Good),100);
+            }
+            foreach(var line in fill.Parts)
+            {
+                var row=Ui.Row(list,74,10);
+                Ui.Size(ProductText(row,ProductLabel(line.Part.Name,PartUnitKg(line.Part,line.Boxed),"陈列 "+line.Count+" 件"),18),-1,-1,1);
+                Ui.Size(Ui.Label(row,S.PlayerShop.PriceOf(line.Part,line.Boxed).ToString(),20,TextAnchor.MiddleLeft,Ui.Good),100);
+            }
+            Ui.Size(Ui.Button(w.Content,"从背包或纸箱上架商品",OpenRetailListing,18),-1,42);
+            Ui.Size(Ui.Button(w.Content,"关闭",w.Close,18),-1,42);
         }
 
         private void BuildDisplayStand(Transform row, int tier, ShopSimulation shop)

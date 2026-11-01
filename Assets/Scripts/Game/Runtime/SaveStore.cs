@@ -17,6 +17,7 @@ namespace PCShopSell.Game
         private static string SaveDirectory => DirectoryOverride ?? Application.persistentDataPath;
         public static string PathOf => Path.Combine(SaveDirectory, "save1.json");
         public static string AutoPath => Path.Combine(SaveDirectory, "autosave.json");
+        public static string CityTestPath => Path.Combine(SaveDirectory,"city-life-test.json");
         public static string LastSaveMessage { get; private set; }
         public static bool TrySave(GameSession session, bool automatic = false)
         {
@@ -61,7 +62,7 @@ namespace PCShopSell.Game
         {
             SaveData data = session.CreateSave();
             data.savedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
-            string path = automatic ? AutoPath : PathOf;
+            string path = session.IsCityLifeTest?CityTestPath:automatic ? AutoPath : PathOf;
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             string temp = path + ".tmp";
             File.WriteAllText(temp, JsonUtility.ToJson(data));
@@ -97,6 +98,22 @@ namespace PCShopSell.Game
                 }
             }
             LastLoadMessage = Exists ? "存档无法读取，原文件已保留。" : "没有存档。";
+            return null;
+        }
+        public static GameSession LoadCityLifeTest(CityLayout city)
+        {
+            foreach(string path in new[]{CityTestPath,CityTestPath+".bak"})
+            {
+                if(!File.Exists(path))continue;
+                try
+                {
+                    var data=JsonUtility.FromJson<SaveData>(File.ReadAllText(path));
+                    if(data==null||!data.cityLifeTest)throw new InvalidDataException("不是独立测试档");
+                    return GameSession.Load(city,data);
+                }
+                catch(Exception e) when(e is IOException||e is ArgumentException||e is InvalidOperationException||e is FormatException)
+                {Debug.LogWarning("测试档无法读取，原文件保留："+e.Message);}
+            }
             return null;
         }
 

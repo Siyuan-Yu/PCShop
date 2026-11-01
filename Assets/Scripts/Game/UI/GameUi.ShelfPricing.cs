@@ -39,6 +39,7 @@ namespace PCShopSell.Game.UI
                 button.name = "Price" + (direction > 0 ? "Plus_" : "Minus_") + key;
                 ((RectTransform)button.transform).Anchor(x0, .43f, x1, .98f);
                 var hold = button.gameObject.AddComponent<HoldRepeat>();
+                hold.Owner=w;hold.Key=button.name;
                 hold.Label = n => { Preview(Clamp(draft + direction * n)); return label; };
                 hold.Commit = n => { draft = Clamp(draft + direction * n); Preview(draft); RefreshLimits(); };
                 controls.Add((button, hold, direction));

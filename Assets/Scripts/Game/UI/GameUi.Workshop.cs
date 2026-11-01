@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using PCShopSell.Core.Catalog;
+using System;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
 using UnityEngine;
@@ -27,7 +28,7 @@ namespace PCShopSell.Game.UI
         private void OpenOrderShopping(BuildOrder order)
         {
             var shop = S.CurrentShop;
-            var missing = shop.Sim.MissingParts(order);
+            var missing = S.UncoveredBuildProcurement(shop, order);
             OpenWindow("订单采购清单", 760, 550, w =>
             {
                 Line(w.Content, $"订单 #{order.Id} · 剩余 {S.Clock.Now.MinutesUntil(order.DueAt) / 60} 小时", 18);
@@ -88,12 +89,14 @@ namespace PCShopSell.Game.UI
             var lines = draft.Items.ToList(); var catalog = S.EmployeePurchaseCatalog();
             foreach (var part in missing)
             {
-                // Idempotent import: keep quantities and supplier choices already set by the player.
-                if (lines.Any(line => line.Kind == PurchaseGoodsKind.Part && line.PartId == part.Id)) continue;
+                // Merge the outstanding deadline-ordered requirement, not one new line on each click.
+                int needed = S.UncoveredBuildPartCount(shop, order, part.Id);
+                var existing = lines.FirstOrDefault(line => line.Kind == PurchaseGoodsKind.Part && line.PartId == part.Id);
+                if (existing != null) { existing.Count = Math.Max(existing.Count, needed); continue; }
                 var offer = catalog.Where(item => item.Kind == PurchaseGoodsKind.Part && item.Id == part.Id)
                     .OrderBy(item => item.Price.Cents).FirstOrDefault();
                 if (offer == null) { Toast("找不到“" + part.Name + "”的采购货源，请先自行补货。"); return; }
-                lines.Add(offer.Line(1));
+                lines.Add(offer.Line(needed));
             }
             draft.Items = lines.ToArray(); _purchaseDrafts[employeeId] = draft;
             shopping.Close(); OpenEmployeePurchase(employeeId, importedOrderId: order.Id);

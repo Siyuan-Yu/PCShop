@@ -107,7 +107,7 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                var e = Person(); s.MainShop.Buyer = e;
+                var e = Person(); s.MainShop.Buyer = e; CityTestPeople.AtAssignedWork(s,e);
                 Assert.True(s.ArrangeEmployeeWork(e.Id, null, EmployeeRole.Unassigned));
                 Assert.IsNull(s.MainShop.Buyer);
                 using (var loaded = Reload(s))
@@ -178,7 +178,7 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                var e = Person(); s.MainShop.Buyer = e;
+                var e = Person(); s.MainShop.Buyer = e; CityTestPeople.AtAssignedWork(s,e);
                 Assert.True(s.ConfigureEmployeePurchase(e.Id, new EmployeePurchasePlan
                 {
                     BudgetYuan = 3000, Transport = VehicleKind.Taxi,

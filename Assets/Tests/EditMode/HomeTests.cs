@@ -500,13 +500,13 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void BetterFurniture_ImprovesSleep_AndCostsUtilities()
+        public void BetterBedCurtainsAndSeasonalAirconUseOneSimpleBonusAndFixedFee()
         {
             GameSession s = Make(30000, 22 * 60);
             Assert.AreEqual(Money.Zero, s.HomeUtilities);
             FurnishBetter(s);
-            Assert.AreEqual(1.12 + 0.12 + 0.04, s.HomeSleepQuality, 1e-9);
-            Assert.AreEqual(Money.FromYuan(40), s.HomeUtilities);
+            Assert.AreEqual(1.12 + 0.04 + .12, s.HomeSleepQuality, 1e-9);
+            Assert.AreEqual(Money.FromYuan(40), s.HomeUtilities,"one fixed fee replaces the retired runtime meter");
         }
 
         [Test]

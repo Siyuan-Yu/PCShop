@@ -21,24 +21,27 @@ namespace PCShopSell.Game.UI
         // Selection is local UI state. Looking at a property never moves the player or signs a lease.
         private void BuildAgency(Window w, Place agency)
         {
-            var units = S.City.Places.Where(p => p.Kind == PlaceKind.Shop || p.Kind == PlaceKind.Agency)
+            var units = S.City.Places.Where(p => S.AgencyServes(agency, p))
                 .OrderBy(p => S.City.ViewPosition(p.NodeId).X).ToArray();
             if (!units.Any(p => p.Id == _agencySelectedId))
-                _agencySelectedId = S.Listings.OrderBy(l => S.LeaseBlocker(l) == null ? 0 : 1)
+                _agencySelectedId = S.Listings.Where(l => S.AgencyServes(agency, S.ListingPlace(l))).OrderBy(l => S.LeaseBlocker(l) == null ? 0 : 1)
                     .ThenBy(l => l.OpenDay).ThenBy(l => l.Rent.Cents).FirstOrDefault()?.PlaceId
-                    ?? (S.HasShop ? S.PlayerShopPlace.Id : units.FirstOrDefault()?.Id);
+                    ?? agency.Id;
 
             var header = Ui.Row(w.Content, 54, 12);
-            var portrait = Ui.Rect(header, "AgentPortrait");
-            Ui.Size(portrait, 40, 54);
-            var image = portrait.gameObject.AddComponent<RawImage>();
-            image.texture = PortraitOf(Rosters.AgentChen.Id);
-            var talk = portrait.gameObject.AddComponent<Button>();
-            talk.targetGraphic = image;
-            talk.onClick.AddListener(() => OpenGreeterDialogue(agency, w));
-            talk.Tip("和小陈聊聊");
+            if (agency.Id == "agency")
+            {
+                var portrait = Ui.Rect(header, "AgentPortrait");
+                Ui.Size(portrait, 40, 54);
+                var image = portrait.gameObject.AddComponent<RawImage>();
+                image.texture = PortraitOf(Rosters.AgentChen.Id);
+                var talk = portrait.gameObject.AddComponent<Button>();
+                talk.targetGraphic = image;
+                talk.onClick.AddListener(() => OpenGreeterDialogue(agency, w));
+                talk.Tip("和小陈聊聊");
+            }
             string discount = S.AgentDiscount > 0 ? $"中介费减免 {S.AgentDiscount * 100:0.#}%" : "中介费暂无折扣";
-            Ui.Size(Ui.Label(header, $"<b>小陈的片区房源</b>　现金 {S.Ledger.Balance}\n<size=16><color=#ABB5A8>点头像和小陈聊天；点铺面看位置、客流和户型，选好了再签约。{discount}</color></size>", 20), -1, 54, 1);
+            Ui.Size(Ui.Label(header, $"<b>{S.City.StreetName(S.AgencyStreetOf(agency))} · 本街房源</b>　现金 {S.Ledger.Balance}\n<size=16><color=#ABB5A8>仅办理本街房源。点建筑查看位置、客流和户型，选好了再签约。{discount}</color></size>", 20), -1, 54, 1);
             if (BusinessUnlocked) Ui.Size(Ui.Button(header, "分店 / 物业 / 住处", OpenAgencyBusiness, 17), 210);
 
             var body = Ui.Row(w.Content, 740, 14);
@@ -82,7 +85,12 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(parent, AgencyStatus(p, l), 17, TextAnchor.MiddleLeft, Ui.Accent), -1, 22);
             if (p.Kind == PlaceKind.Agency)
             {
-                Para(parent, "你正在小陈的办公室里看房。地图包含商业街全部沿街铺面；绿光表示现在可租，橙光表示之后可租；其余建筑保持原样。点建筑后在右侧查看报价与户型。", 18, Ui.Dim);
+                Para(parent, "你正在本街中介办公室里看房。地图只包含本街沿街建筑；绿光表示现在可租，橙光表示之后可租；其余建筑保持原样。点建筑后在右侧查看报价与户型。", 18, Ui.Dim);
+                return;
+            }
+            if (p.Kind != PlaceKind.Shop)
+            {
+                Para(parent, "这是本街地点，不属于商铺租赁房源。请选择发出绿光或橙光的铺面。", 18, Ui.Dim);
                 return;
             }
             bool pending = S.IsPendingShop(p);

@@ -15,11 +15,11 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
-        public bool CanSave => Trip == null && PendingEvent == null;
+        public bool CanSave => PendingEvent == null;
 
         public SaveData CreateSave()
         {
-            if (!CanSave) throw new InvalidOperationException("出行途中不能存档。");
+            if (!CanSave) throw new InvalidOperationException("请先处理当前待选择事件再存档。");
             QuestIndex(); // 固化已完成教学，再序列化 flags。
             OwnedShop keep = _focus;
             _focus = MainShop;
@@ -28,6 +28,13 @@ namespace PCShopSell.Core.Session
                 SaveData d = CreateSaveOfMain();
                 d.extraShops = _shops.Skip(1).Where(s => s.Rented).Select(SaveShopOf).ToArray();
                 d.focusShop = Math.Max(0, _shops.IndexOf(keep));
+                SaveCityFinance(d);
+                SaveCityProcurement(d);
+                SaveCityAssets(d);
+                SaveCityRetail(d);
+                SaveCityLife(d);
+                SaveCityClothing(d);
+                SaveCityClimate(d);
                 return d;
             }
             finally
@@ -43,6 +50,7 @@ namespace PCShopSell.Core.Session
             if (_focus.AutoBuild) Flags.Add(AutoBuildFlag); else Flags.Remove(AutoBuildFlag);
             var d = new SaveData
             {
+                version=2,
                 rngState = Random.State.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 day = Clock.Today.TotalDays,
                 minute = Clock.MinuteOfDay,
@@ -104,7 +112,7 @@ namespace PCShopSell.Core.Session
                     dueAt = o.DueAt.TotalMinutes, partsReserved = o.PartsReserved, mistakes = o.Mistakes, employeeMinutesLeft = o.EmployeeMinutesLeft,
                 }).ToArray(),
                 nextOrderId = PlayerShop.NextOrderId,
-                displayPcs = PlayerShop.DisplayPcs.Concat(PlayerShop.Queue.Where(c => c.DisplayTier >= 0).Select(c => c.DisplayTier)).ToArray(),
+                displayPcs = PlayerShop.DisplayPcs.ToArray(),
 
                 discoveredStores = Online.DiscoveredIds.ToArray(),
                 storeRecords = Online.Records.Select(kv => new SaveStoreRecord
@@ -161,6 +169,7 @@ namespace PCShopSell.Core.Session
             Clock.Restore(new GameDate(d.day), d.minute);
             Ledger.Restore(Money.FromCents(d.balanceCents), (d.ledger ?? Array.Empty<SaveLedgerEntry>()).Select(e =>
                 new LedgerEntry(new GameDate(e.day), e.category, Money.FromCents(e.cents), e.memo, Money.FromCents(e.balanceAfter))));
+            LoadCityFinance(d);
 
             var history = new Dictionary<PartCategory, List<double>>();
             foreach (SaveHistory h in d.history ?? Array.Empty<SaveHistory>())
@@ -255,6 +264,7 @@ namespace PCShopSell.Core.Session
             IsGameOver = d.gameOver;
             GameOverReason = d.gameOverReason;
             RestoreGrowth(d);
+            LoadCityClothing(d);
             RestorePlayerWork(d.playerWork);
             _focus.EmployeeTrained = Flags.Contains(TrainedFlag);
             _focus.AutoBuild = Flags.Contains(AutoBuildFlag);
@@ -262,6 +272,10 @@ namespace PCShopSell.Core.Session
             RestorePriceReports(d);
             RestoreAppLoans(d);
             foreach (SaveShop shop in d.extraShops ?? Array.Empty<SaveShop>()) RestoreShop(shop);
+            LoadCityAssets(d);
+            LoadCityProcurement(d);
+            LoadCityRetail(d);
+            LoadCityClimate(d);
             foreach (OwnedShop s in _shops) GiveStarterBoxes(s);
             OwnedShop inside = ShopAt(CurrentPlace);
             OwnedShop focus = inside ?? (d.focusShop > 0 && d.focusShop < _shops.Count ? _shops[d.focusShop] : null);
@@ -273,6 +287,9 @@ namespace PCShopSell.Core.Session
             foreach (OwnedShop s in _shops) s.Sim.PlayerPresent = s.Place == CurrentPlace && s.Rented;
             Trip = null;
             ClearEdge();
+            LoadCityLife(d);
+            LoadEnergyPayroll(d);
+            MigrateStoreMainCategories();
         }
 
         private const string TrainedFlag = "employee:trained", AutoBuildFlag = "employee:auto-build";
@@ -295,6 +312,8 @@ namespace PCShopSell.Core.Session
             hasTransferRole = e.TransferRole >= 0, transferRole = e.TransferRole,
             hasWorkSkills = true, assemblyMinutes = e.AssemblyMinutes, purchaseMinutes = e.PurchaseMinutes, assemblyTrained = e.AssemblyTrained,
             purchasePlan = e.PurchasePlan?.Copy(), lastPurchaseNote = e.LastPurchaseNote,
+            schedule = e.Schedule?.Copy(),
+            hasSchedule = true,
             name = e.Name, wage = e.DailyWageYuan, checkoutMinutes = e.CheckoutMinutes, description = e.Description, shiftStart = e.ShiftStart, shiftEnd = e.ShiftEnd, buildsCompleted = e.BuildsCompleted,
         };
 
@@ -307,8 +326,9 @@ namespace PCShopSell.Core.Session
             PurchaseMinutes = e.hasWorkSkills ? Math.Max(1, e.purchaseMinutes) : 2, AssemblyTrained = e.assemblyTrained,
             PurchasePlan = e.purchasePlan?.Copy() ?? new EmployeePurchasePlan(), LastPurchaseNote = e.lastPurchaseNote,
             Name = e.name, DailyWageYuan = e.wage, CheckoutMinutes = e.checkoutMinutes, Description = e.description,
-            ShiftStart = e.shiftEnd > e.shiftStart ? e.shiftStart : DutyStartMinute,
-            ShiftEnd = e.shiftEnd > e.shiftStart ? e.shiftEnd : DutyEndMinute, BuildsCompleted = Math.Max(0, e.buildsCompleted),
+            Schedule = e.hasSchedule ? e.schedule?.Copy() ?? new EmployeeSchedule() : new EmployeeSchedule(),
+            ShiftStart = e.shiftStart>=0&&e.shiftStart<1440&&e.shiftEnd>=0&&e.shiftEnd<1440&&e.shiftStart!=e.shiftEnd ? e.shiftStart : DutyStartMinute,
+            ShiftEnd = e.shiftStart>=0&&e.shiftStart<1440&&e.shiftEnd>=0&&e.shiftEnd<1440&&e.shiftStart!=e.shiftEnd ? e.shiftEnd : DutyEndMinute, BuildsCompleted = Math.Max(0, e.buildsCompleted),
         };
     }
 }

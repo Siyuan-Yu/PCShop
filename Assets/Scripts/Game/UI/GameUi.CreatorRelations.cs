@@ -42,9 +42,9 @@ namespace PCShopSell.Game.UI
                     BusinessAction(contract,$"签约 90 天 · {S.CreatorFee(c)*5}",()=>{bool ok=S.SignMcnCreator(id);parent.Rebuild();return ok;},w,why==null);
                 }
                 var life=BusinessCard(w.Content,"私下相处");
-                Para(life,"见面需商务交情 20，花费 ¥180 和两小时，每日一次；发展私人关系需要单独积累好感并交流未来。连续十天没见面后，好感每天下降 1。",16,Ui.Dim);
+                Para(life,"先当面认识或建立商务交情，再预约家常饭。预计¥100、60游戏分钟，到场后才消费和增加私人好感。心事与关系选择需要实际见面；不要求每天打卡维系。",16,Ui.Dim);
                 string outing=S.CreatorOutingBlocker(c);if(outing!=null)Line(life,outing,16,Ui.Dim);
-                BusinessAction(life,"约见 · ¥180 / 两小时",()=>S.InviteCreatorPrivately(id),w,outing==null);
+                BusinessAction(life,"预约实际见面 · 到场后消费",()=>S.InviteCreatorPrivately(id),w,outing==null);
                 if(S.CreatorStory(c)!=null)Ui.Size(Ui.Button(life,"听听对方最近的心事",()=>OpenCreatorStory(id,w),17,Ui.ButtonHot),-1,40);
                 else Line(life,c.StoryStage>=3 ? "三段私人交谈已经完成。" : $"下一段心事在私人好感 {20+c.StoryStage*25} 解锁。",15,Ui.Dim);
                 if(S.RomanceId==id)
@@ -62,13 +62,7 @@ namespace PCShopSell.Game.UI
         private void OpenCreatorStory(string id,Window parent)
         {
             var c=S.Creator(id);string story=S.CreatorStory(c);if(story==null)return;
-            OpenWindow(Creators.Get(id).Name+"的心事",760,480,w=>
-            {
-                Para(w.Content,story,20);
-                Ui.Size(Ui.Button(w.Content,"先听清顾虑，支持对方自己决定",()=>{S.ResolveCreatorStory(id,true);w.Close();parent.Rebuild();},18,Ui.ButtonHot),-1,48);
-                Ui.Size(Ui.Button(w.Content,"优先抓住增长机会，其他问题以后再说",()=>{S.ResolveCreatorStory(id,false);w.Close();parent.Rebuild();},18),-1,48);
-                Para(w.Content,"不同选择会留下关系记忆；这段谈话只能发生一次。",15,Ui.Dim);
-            });
+            OpenPersonDialogue(id,parent:parent,firstReply:story,initialPage:3);
         }
     }
 }

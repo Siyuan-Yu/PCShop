@@ -98,21 +98,22 @@ namespace PCShopSell.Core.Session
             {
                 var defs = PlacedDefs(_homeLayout).ToList();
                 double bed = defs.Where(d => d.Role == FurnitureRole.Bed).Select(d => d.BedQuality).DefaultIfEmpty(NoBedSleepQuality).Max();
-                double bonus = defs.Sum(d => d.SleepBonus);
+                double bonus = defs.Where(d => !CityWeather.IsDevice(d.Id)).Sum(d => d.SleepBonus);
                 double appeal = defs.Sum(d => d.Appeal);
-                return bed + bonus + Math.Min(0.08, 0.01 * appeal) + HomeTier * .08;
+                return bed + bonus + HomeSeasonalFacilityBonus + Math.Min(0.08, 0.01 * appeal) + HomeTier * .08;
             }
         }
 
         /// <summary>每月水电（摆出来的电器）。</summary>
         public Money HomeUtilities
         {
-            get
-            {
-                Money total = Money.Zero;
-                foreach (FurnitureDef d in PlacedDefs(_homeLayout)) total += d.Utilities;
-                return total;
-            }
+            get => HomeUtilitiesAtDay(Clock.Today.TotalDays);
+        }
+        private Money HomeUtilitiesAtDay(int day)
+        {
+            Money total=Money.Zero;
+            foreach(var d in PlacedDefs(_homeLayout))if(!CityWeather.IsDevice(d.Id)||day>=_fixedFacilityFeesFromDay)total+=d.Utilities;
+            return total;
         }
 
         public bool HomeHas(FurnitureRole role) => PlacedDefs(_homeLayout).Any(d => d.Role == role);
@@ -169,6 +170,8 @@ namespace PCShopSell.Core.Session
                 case ParcelKind.Gift:
                     GiftDef gd = Gifts.Get(id);
                     if (gd == null) return false;
+                    if (ClothingProducts.IsClothing(id)) return Fail("个人衣服请在网购服装分类下单；经营批发请使用1788或已知服装货源。");
+                    if (gd.LimitedEdition) return Fail("限定模型需在漫展现场采购，普通网购不出售。 ");
                     name = gd.Name;
                     break;
                 default:
@@ -409,6 +412,7 @@ namespace PCShopSell.Core.Session
         public const double MealGain = 60;
 
         private bool _eating;
+        private long _lastAutomaticMealMinute=-1;
 
         private double EatFrom(System.Collections.Generic.List<FoodBatch> list)
         {
@@ -473,9 +477,12 @@ namespace PCShopSell.Core.Session
         {
             if (IsWorking || _eating) return; // Staff meals are provided at the midpoint of the assigned shift.
             if (Player.Hunger >= 90) return;
+            long mealMinute=Clock.Now.TotalMinutes;
+            if(_lastAutomaticMealMinute>=0&&mealMinute>=_lastAutomaticMealMinute&&mealMinute-_lastAutomaticMealMinute<30)return;
             if (CurrentPlace == Home && Pantry.CookedBowls > 0)
             {
                 Player.Hunger = Math.Min(100, Player.Hunger + EatFrom(Pantry.Cooked));
+                _lastAutomaticMealMinute=mealMinute;
                 Say($"{meal}在家吃了自己做的饭。");
                 return;
             }
@@ -483,12 +490,14 @@ namespace PCShopSell.Core.Session
                 && (HasFridgeMeal || !HasMeal(Backpack.Food.Packed)))
             {
                 Player.Hunger = Math.Min(100, Player.Hunger + EatFrom(CurrentFridge.Food.Packed));
+                _lastAutomaticMealMinute=mealMinute;
                 Say($"{meal}吃了{(AtHome ? "家里" : "当前店铺")}冰箱里的食物。");
                 return;
             }
             if (Backpack.Lunchboxes > 0)
             {
                 Player.Hunger = Math.Min(100, Player.Hunger + EatFrom(Backpack.Food.Packed));
+                _lastAutomaticMealMinute=mealMinute;
                 ApplyCargoLimit();
                 Say($"{meal}吃了背包里的食物，还剩 {Backpack.Lunchboxes} 份。");
                 return;
@@ -499,6 +508,7 @@ namespace PCShopSell.Core.Session
                 if (Ledger.TryDebit(Clock.Today, "餐饮", Money.FromYuan(delivery.Price), meal + " · " + delivery.Name))
                 {
                     Player.Hunger = Math.Min(100, Player.Hunger + delivery.Hunger);
+                _lastAutomaticMealMinute=mealMinute;
                     Player.Health = Math.Max(0, Math.Min(100, Player.Health + delivery.Health));
                     ApplyDiet(0, delivery.Mood);
                     if (delivery.Energy > 0) Player.Energy = Math.Min(Player.MaxEnergy, Player.Energy + delivery.Energy);
@@ -521,6 +531,7 @@ namespace PCShopSell.Core.Session
             Player.Hunger = Math.Min(100, Player.Hunger + b.Hunger);
             Player.Health = Math.Min(100, Player.Health + b.Health);
             ApplyCargoLimit();
+            if(FastFoodCatalog.Packed(b.Id)?.Drink!=true)_lastAutomaticMealMinute=Clock.Now.TotalMinutes;
             _eating = true;
             try { AdvanceClock(FastFoodCatalog.Packed(b.Id)?.Minutes ?? Pantry.EatMinutes); }
             finally { _eating = false; }
@@ -584,15 +595,16 @@ namespace PCShopSell.Core.Session
         // ---------- 存档 ----------
 
         private static SavePlaced[] ToSave(IEnumerable<PlacedFurniture> l) =>
-            l.Select(p => new SavePlaced { id = p.Id, x = p.X, z = p.Z, rot = p.Rot, item = p.Item }).ToArray();
+            l.Select(p => new SavePlaced { id = p.Id, climateId = p.ClimateId, x = p.X, z = p.Z, rot = p.Rot, item = p.Item, displayLimit=p.DisplayLimit }).ToArray();
 
         /// <summary>读布局：老存档里按类别分的货架（shelf_gpu……）变成设好类别的通用货架，老杂货架变成没设置的货架。</summary>
         private static List<PlacedFurniture> FromSave(SavePlaced[] a) =>
             (a ?? Array.Empty<SavePlaced>()).Where(p => FurnitureCatalog.Get(p.id) != null)
                 .Select(p => new PlacedFurniture
                 {
-                    Id = FurnitureCatalog.Canonical(p.id), X = p.x, Z = p.z, Rot = p.rot,
-                    Item = ShelfKinds.Get(p.item) != null ? p.item : FurnitureCatalog.LegacyShelfKind(p.id),
+                    Id = FurnitureCatalog.Canonical(p.id), ClimateId = p.climateId, X = p.x, Z = p.z, Rot = p.rot,
+                    Item = p.item=="computer" || ShelfKinds.Get(p.item) != null ? p.item : FurnitureCatalog.LegacyShelfKind(p.id),
+                    DisplayLimit=p.displayLimit<=0?2:Math.Max(1,Math.Min(6,p.displayLimit)),
                 }).ToList();
 
         private static SaveBatch[] ToSave(IEnumerable<FoodBatch> l) =>

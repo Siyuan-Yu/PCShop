@@ -84,7 +84,11 @@ namespace PCShopSell.Tests
             Assert.AreEqual("drink", ShelfKinds.ForGift(Gifts.Drink).Id);
             Assert.AreEqual("drink", ShelfKinds.ForGift(Gifts.Soda).Id);
             foreach (GiftDef g in Gifts.All) Assert.IsNotNull(ShelfKinds.ForGift(g.Id), g.Id + " 要有对应的货架类");
-            Assert.AreEqual(11, ShelfKinds.All.Count);
+            foreach(var id in new[]{"gpu","cpu","memory","storage","powercase","motherboard","smoke","liquor","drink","snack","fruit"})
+                Assert.NotNull(ShelfKinds.Get(id),"旧商品类别保持有效："+id);
+            Assert.AreEqual(ShelfKinds.All.Count,ShelfKinds.All.Select(k=>k.Id).Distinct().Count(),"新旧类别ID唯一");
+            foreach(var product in RetailProducts.All.Concat(ClothingProducts.All).Concat(ModelProducts.All))
+                Assert.NotNull(ShelfKinds.ForGift(product.Id),"新增商品必须有真实可售货架类别："+product.Id);
 
             ShopSimulation shop = MakeSim(out _);
             shop.Stock.ForceAddGoods(Gifts.Cig, 500); // 0.2 千克一条
@@ -206,7 +210,8 @@ namespace PCShopSell.Tests
             FurnitureDef d = FurnitureCatalog.Get(FurnitureCatalog.Shelf);
             Assert.AreEqual(Money.FromYuan(300), d.Price);
             Assert.AreEqual(d, FurnitureCatalog.Get("shelf_gpu"), "老 id 当成现在的货架");
-            Assert.AreEqual(3, FurnitureCatalog.Purchasable(true).Count(x => x.Fixture == FixtureKind.Shelf), "普通 + 加固 + 重型");
+            var shelves=FurnitureCatalog.Purchasable(true).Where(x=>x.Fixture==FixtureKind.Shelf).ToArray();
+            CollectionAssert.AreEquivalent(new[]{FurnitureCatalog.Shelf,FurnitureCatalog.RackStrong,FurnitureCatalog.RackHeavy,FurnitureCatalog.ClothingRack,FurnitureCatalog.ClothingFold},shelves.Select(x=>x.Id));
         }
 
         [Test]

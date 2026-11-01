@@ -1,7 +1,9 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Finance;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
 
@@ -10,6 +12,7 @@ namespace PCShopSell.Core.Session
     public sealed class Employee
     {
         public string Id = Guid.NewGuid().ToString("N");
+        public string PersonId;
         public long CandidateLeavesAt;
         public string TransferShopId;
         public int TransferDay = -1;
@@ -26,8 +29,18 @@ namespace PCShopSell.Core.Session
 
         public string Description;
         public int ShiftStart = 9 * 60, ShiftEnd = 21 * 60;
+        public EmployeeSchedule Schedule = new EmployeeSchedule();
         public int BuildsCompleted;
-        public bool OnDuty(GameTimestamp t) => t.MinuteOfDay >= ShiftStart && t.MinuteOfDay < ShiftEnd;
+        public bool OnDuty(GameTimestamp t) => TryShift(t.TotalMinutes, out _, out _);
+        public bool TryShift(long at, out long start, out long end)
+        {
+            if(Schedule!=null && at>=Schedule.ActiveStart && at<Schedule.ActiveEnd) {start=Schedule.ActiveStart;end=Schedule.ActiveEnd;return true;}
+            int a=Schedule!=null&&Schedule.PendingAt>=0&&at>=Schedule.PendingAt?Schedule.PendingStart:ShiftStart;
+            int b=Schedule!=null&&Schedule.PendingAt>=0&&at>=Schedule.PendingAt?Schedule.PendingEnd:ShiftEnd;
+            start=at/1440*1440+a;if(start>at)start-=1440;
+            end=start+GameSession.ShiftMinutes(a,b);
+            return at>=start&&at<end&&(Schedule==null||start>=Schedule.NextNotBefore);
+        }
 
         public Money DailyWage => Money.FromYuan(DailyWageYuan);
     }
@@ -118,7 +131,7 @@ namespace PCShopSell.Core.Session
             if (!PlayerShop.ReserveBuild(orderId)) return Fail("配件不齐，装不了。");
             _manualBuildId = orderId;
             try { AdvanceClock(minutes); } finally { _manualBuildId = -1; }
-            if (IsGameOver || !PlayerShop.CompleteBuild(orderId)) return Fail("装机未交付，请检查订单状态。");
+            if (IsGameOver || !InPlayerShop || !PlayerShop.CompleteBuild(orderId)) return Fail("装机未交付，请检查订单状态。");
             Player.Skill = Math.Min(100, Player.Skill + 2);
             Say($"整机交付！用时 {minutes} 分钟。");
             return true;
@@ -129,10 +142,20 @@ namespace PCShopSell.Core.Session
         {
             if (!InPlayerShop) return Fail("得在店里才能装。");
             if (PlayerShop.DisplayPcs.Count >= PlayerShop.DisplaySlots) return Fail($"展示台摆满了（{PlayerShop.DisplaySlots} 台）。");
-            if (!PlayerShop.AssembleForDisplay(tier)) return Fail("配件不齐，装不了。");
-            int minutes = Math.Max(20, 60 - Player.Skill / 3 + (Player.Tired ? 15 : 0));
+            if(_focus.PendingDisplayTier>=0&&_focus.PendingDisplayTier!=tier)return Fail("请先完成已保留进度的展示整机。");
+            if(_focus.PendingDisplayTier<0)
+            {
+                if(PartCatalog.BuildList(tier).Any(p=>PlayerShop.Stock.CountAll(p)==0))return Fail("配件不齐，装不了。");
+                foreach(var part in PartCatalog.BuildList(tier))PlayerShop.Stock.TakeOne(part);
+                _focus.PendingDisplayTier=tier;_focus.PendingDisplayMinutes=Math.Max(20,60-Player.Skill/3+(Player.Tired?15:0));
+            }
+            var shop=_focus;int minutes=shop.PendingDisplayMinutes;
+            int interruption=_bodyInterruptVersion;
+            _manualDisplayShop=shop;try{AdvanceClock(minutes);}finally{_manualDisplayShop=null;}
+            if(interruption!=_bodyInterruptVersion||!InPlayerShop)return Fail("身体不适，装机暂停；配件和剩余进度已保留，回店后可继续。");
+            if(shop.PendingDisplayMinutes>0)return false;
+            shop.Sim.RestoreDisplay(shop.Sim.DisplayPcs.Concat(new[]{tier}).ToArray());shop.PendingDisplayTier=-1;
             Player.Skill = Math.Min(100, Player.Skill + 1);
-            AdvanceClock(minutes);
             Say($"装好一台{PartCatalog.TierName(tier)}整机摆上展示台，用时 {minutes} 分钟。");
             return true;
         }
@@ -196,9 +219,7 @@ namespace PCShopSell.Core.Session
         {
             var e = assembly ? Assembler : Employee;
             if (e == null) return;
-            if (e.ShiftStart == 9 * 60 && e.ShiftEnd == 21 * 60) e.ShiftEnd = 17 * 60;
-            else if (e.ShiftStart == 9 * 60) { e.ShiftStart = 13 * 60; e.ShiftEnd = 21 * 60; }
-            else { e.ShiftStart = 9 * 60; e.ShiftEnd = 21 * 60; }
+            SetEmployeeShift(e.Id, e.ShiftStart==540&&e.ShiftEnd==1020?780:540, e.ShiftStart==540&&e.ShiftEnd==1260?1020:1260);
         }
 
         public void Fire()
@@ -234,6 +255,7 @@ namespace PCShopSell.Core.Session
                     DailyWageYuan = fast ? Random.Next(150, 181) : Random.Next(100, 131),
                 };
                 e.Description = fast ? "有收银经验，其他工作也愿意学" : "踏实肯干，做事比较仔细";
+                BindCityCandidate(e);
                 _candidates.Add(e);
             }
             Show("有人来应聘", $"{_candidates[newStart].Name}（{_candidates[newStart].Description}，日薪 ¥{_candidates[newStart].DailyWageYuan}）\n" +
@@ -242,13 +264,7 @@ namespace PCShopSell.Core.Session
 
         private void PayWages(GameDate day)
         {
-            foreach (var e in _idleEmployees) Ledger.ForceDebit(day, "工资", e.DailyWage, e.Name + "（待安排）");
-            foreach (OwnedShop s in _shops)
-            {
-                if (s.Employee != null) Ledger.ForceDebit(day, "工资", s.Employee.DailyWage, s.Employee.Name);
-                if (s.Assembler != null) Ledger.ForceDebit(day, "工资", s.Assembler.DailyWage, s.Assembler.Name);
-                if (s.Buyer != null) Ledger.ForceDebit(day, "工资", s.Buyer.DailyWage, s.Buyer.Name);
-            }
+            PayEmployeeWorkday(day);
         }
     }
 }

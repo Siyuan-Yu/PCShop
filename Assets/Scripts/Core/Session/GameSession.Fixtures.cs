@@ -1,3 +1,4 @@
+using PCShopSell.Core.Inventory;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -77,9 +78,9 @@ namespace PCShopSell.Core.Session
                 Need(FurnitureCatalog.ShopCounter, 1, true),
             };
             l.Add(Need(FurnitureCatalog.Shelf, RetailKind == "computer" ? FurnitureCatalog.ShelfCategories.Length : RetailKind == "flowers" ? 1 : 2, true));
+            l.Add(Need(FurnitureCatalog.ShopDisplay, Math.Max(1, ShopSettings.DisplaySlots(PlayerShop.Size) / 2), false));
             if (RetailKind == "computer")
             {
-                l.Add(Need(FurnitureCatalog.ShopDisplay, Math.Max(1, ShopSettings.DisplaySlots(PlayerShop.Size) / 2), false));
                 l.Add(Need(FurnitureCatalog.ShopBench, 1, false));
             }
             return l;
@@ -99,8 +100,12 @@ namespace PCShopSell.Core.Session
         /// <summary>摆放有变化后：开店资格、展示桌数量（每张桌两个机位）跟着摆出来的东西走。</summary>
         internal void UpdateShopFit()
         {
+            if(RetailKind!="computer")
+                foreach(int index in DisplayIndexes())
+                    if(string.IsNullOrEmpty(_shopLayout[index].Item))
+                        _shopLayout[index].Item=ShelfKinds.GoodsKinds.FirstOrDefault(k=>k.GiftIds.Any(id=>RetailShopTypes.Sells(RetailKind,id)))?.Id;
             PlayerShop.NotFitted = HasShop && !ShopFitted;
-            PlayerShop.FixedDisplayDesks = PlacedFixtures(FixtureKind.Display);
+            PlayerShop.FixedDisplayDesks = DisplayIndexes().Count(IsComputerDisplay);
             ApplyShelfCapacity();
             // 展示桌被收走了：多出来的整机拆回散件放进库存
             while (PlayerShop.DisplayPcs.Count > PlayerShop.DisplaySlots)

@@ -24,6 +24,7 @@ namespace PCShopSell.Core.Session
         public MapPoint DoorOf(Place p)
         {
             MapPoint n = City.ViewPosition(p.NodeId);
+            if (p.ExplicitEntrance) return new MapPoint(n.X + p.EntranceX, n.Y + p.EntranceY);
             if (Math.Abs(n.Y) < 0.1) return new MapPoint(n.X, FrontYAt(n.X));
             return p.Kind == PlaceKind.Home ? new MapPoint(n.X + 2, n.Y) : n;
         }
@@ -93,7 +94,7 @@ namespace PCShopSell.Core.Session
         public double HeadingY { get; private set; } = 1;
 
         /// <summary>打车由司机开，不能自己走；其余出行方式都可以。</summary>
-        public bool CanSteer => !IsWorking && !IsGameOver && Vehicle != VehicleKind.Taxi;
+        public bool CanSteer => !IsWorking && !IsGameOver && !CityActivityExclusive && Vehicle != VehicleKind.Taxi;
 
         /// <summary>每帧由输入层告诉我想往哪个方向走（画面坐标，不用归一化）。传 (0,0) 表示松手。</summary>
         public void SetSteer(double dx, double dy)
@@ -105,6 +106,7 @@ namespace PCShopSell.Core.Session
                 return;
             }
             _steering = true;
+            CancelCityTravel();
             _steerX = dx / l;
             _steerY = dy / l;
         }
@@ -140,6 +142,8 @@ namespace PCShopSell.Core.Session
                     });
                 }
             }
+            foreach(var place in City.Places)
+                if(place.ExplicitEntrance)_corridors.Add(new Corridor { A=City.ViewPosition(place.NodeId), B=DoorOf(place), HalfWidth=1.6, Scale=City.TravelDistanceScale });
             return _corridors;
         }
 
@@ -207,6 +211,7 @@ namespace PCShopSell.Core.Session
         /// <summary>手动接管：把正在进行的自动前往转成"站在原地"的自由状态。</summary>
         private void BreakTripToEdge()
         {
+            CancelCityTravel();
             MapPoint pos = Trip.Position;
             Trip = null;
             _free = pos;
@@ -217,10 +222,21 @@ namespace PCShopSell.Core.Session
         private bool StepManual(double scaledSeconds)
         {
             VehicleSpec v = CurrentVehicle;
-            double budget = v.VisualSpeed * scaledSeconds;
-            MapPoint from = PlayerPosition;
-            MapPoint want = new MapPoint(from.X + _steerX * budget, from.Y + _steerY * budget);
-            MapPoint res = Constrain(want, out _);
+            MapPoint from = PlayerPosition, res = from;
+            double budget = CityTravelTiming.ScaledSecondsMeters(v, scaledSeconds, Time.SecondsPerMinuteAt1x);
+            // Small spatial steps prevent 8x movement from crossing a wall or skipping an entire short road.
+            for (int step = 0; budget > 1e-8 && step < 4096; step++)
+            {
+                Constrain(new MapPoint(res.X + _steerX * .01, res.Y + _steerY * .01), out double scale);
+                scale = Math.Max(1e-6, scale);
+                double view = Math.Min(.75, budget / scale);
+                MapPoint next = Constrain(new MapPoint(res.X + _steerX * view, res.Y + _steerY * view), out _);
+                double advanced = Dist(res, next);
+                if (advanced < 1e-8) break;
+                // A blocked component must not turn into extra tangent speed. Spend the intended
+                // directional step, so diagonal wall sliding keeps the same physical pace.
+                budget -= view * scale; res = next;
+            }
             double moved = Dist(from, res);
             if (moved < 1e-6) return false;
 

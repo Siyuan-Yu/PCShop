@@ -17,7 +17,7 @@ namespace PCShopSell.Game.UI
             OpenWindow("员工管理", 1120, 900, w =>
             {
                 var rows = S.Employees;
-                Line(w.Content, $"员工 {rows.Count} 人 · 每日工资合计 ¥{rows.Sum(x => x.Person.DailyWageYuan):N0}", 21, Ui.Accent);
+                Line(w.Content, $"员工 {rows.Count} 人 · 基础日薪合计 ¥{rows.Sum(x => x.Person.DailyWageYuan):N0} · 排班预计 {PCShopSell.Core.Common.Money.FromCents(rows.Sum(x=>GameSession.EstimateShiftPay(x.Person,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingStart:x.Person.ShiftStart,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingEnd:x.Person.ShiftEnd).Cents))}", 21, Ui.Accent);
                 Para(w.Content, "每个人都能做收银、装机或进货。先聘用，再安排岗位和门店；同店换岗今天生效，跨店明天生效。", 17, Ui.Dim);
                 var bar = Ui.Row(w.Content, 40);
                 Ui.Size(Ui.Button(bar, "查看车辆与占用", OpenFleetPanel, 17), 240);
@@ -36,7 +36,8 @@ namespace PCShopSell.Game.UI
                     Line(list, $"<b>{e.Name}</b> · 日薪 {e.DailyWage}", 19, Ui.Accent);
                     Line(list, GameSession.EmployeeAbilities(e) + "（越少越熟练）", 15, Ui.Dim);
                     string current = row.Shop == null ? "待安排工作" : $"{S.ShopTitle(row.Shop)}（{row.Shop.Place.Name}） · {GameSession.RoleName(row.Role)}";
-                    Line(list, $"今天：{current} · {S.EmployeeStatus(row)} · 班次 {Ui.Hm(e.ShiftStart)}–{Ui.Hm(e.ShiftEnd)}", 17);
+                    Line(list, $"今天：{current} · {S.EmployeeStatus(row)}", 17);
+                    Para(list,S.EmployeePaySummary(e),16,Ui.Dim);
                     var destination = S.ShopAt(e.TransferShopId);
                     Line(list, destination == null ? "明天：保持当前安排" : $"明天：{S.ShopTitle(destination)}（{destination.Place.Name}） · {GameSession.RoleName(S.PlannedEmployeeRole(row))}", 17, destination == null ? Ui.Dim : Ui.Good);
                     var actions = Ui.Row(list, 40);
@@ -48,6 +49,7 @@ namespace PCShopSell.Game.UI
                     if (row.Role == EmployeeRole.Buyer)
                         Ui.Size(Ui.Button(actions, "安排进货", () => OpenEmployeePurchase(e.Id, w), 17, Ui.ButtonHot), 150);
                     Ui.Size(Ui.Button(actions, "辞退…", () => ConfirmAction("辞退员工", $"辞退{e.Name}，同时取消未生效的安排。正在进货时需要先等人和货回店。", "确认辞退", () => { S.DismissEmployee(e.Id); w.Rebuild(); }), 16, Ui.Warn), 110);
+                    Ui.Size(Ui.Button(actions,"交谈",()=>OpenPersonDialogue(S.PersonIdOf(e)),16),140);
                     if (row.Role == EmployeeRole.Buyer)
                         Line(list, e.PurchasePlan.Daily ? "采购频率：" + (e.PurchasePlan.EveryDays == 1 ? "每天一次" : "每三天一次")
                             + " · 下次最早第" + (System.Math.Max(S.Clock.Today.TotalDays, e.PurchasePlan.NextPurchaseDay) + 1) + "天上班时尝试" : "定期采购：未启用或已暂停", 15, Ui.Dim);
@@ -146,7 +148,11 @@ namespace PCShopSell.Game.UI
                 Para(w.Content, "选好商品和采购频率后点“完成”，从明天起自动采购。清单从上到下是购买顺序。", 18, Ui.Accent);
                 Para(w.Content, S.EmployeePurchaseStorageText(employeeId), 16, Ui.Accent);
                 Para(w.Content, "货源包括电子市场、花店、农贸市场、快餐店和烟酒茶行。鲜花、生鲜与外带食品均可采购；送店后为对应货架设置品类即可销售。", 15, Ui.Dim);
-                Para(w.Content, "每次按清单数量重复买入；销售较慢时可减少数量或改为每三天一次。在途预留指已买、尚未送到的货。", 15, Ui.Dim);
+                var modes = Ui.Row(w.Content, 40);
+                Ui.Size(Ui.Button(modes, "固定数量清单" + (!draft.InventoryThreshold ? " ✓" : ""), () => { draft.InventoryThreshold = false; w.Rebuild(); }, 17, !draft.InventoryThreshold ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1);
+                Ui.Size(Ui.Button(modes, "库存阈值补货" + (draft.InventoryThreshold ? " ✓" : ""), () => { draft.InventoryThreshold = true; w.Rebuild(); }, 17, draft.InventoryThreshold ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1);
+                Ui.Size(Ui.Button(modes, "商品目标 / 补货责任", OpenCityProcurement, 16), 240, 40);
+                Para(w.Content, draft.InventoryThreshold ? "阈值模式只补本店分配给这位员工的未覆盖缺口。下方清单作为优先货源偏好；数量由目标、现货、在途和认领共同决定，不再照单重复买。" : "固定模式每次按清单数量重复买入；销售较慢时可减少数量或改为每三天一次。已有在途会提示，但固定清单保留你的囤货意图。", 15, Ui.Dim);
                 if (importedOrderId.HasValue)
                     Para(w.Content, "订单 #" + importedOrderId.Value + " 的缺件已合并到这份草稿。已有型号保留原数量和货源，可在这里调整；点“完成”后保存。", 16, Ui.Accent);
                 var quickKinds = Ui.Row(w.Content, 34);
@@ -205,7 +211,7 @@ namespace PCShopSell.Game.UI
                         details += $" · 库存 {worker.Shop.Sim.Stock.CountAll(PartCatalog.Get(offer.Id))} · 在途 {S.PendingPurchaseCount(worker.Shop, offer.Id)}";
                     else if (offer.Kind == PurchaseGoodsKind.Gift)
                         details += $" · 库存 {worker.Shop.Sim.Stock.GoodsCount(offer.Id)}";
-                    Ui.Size(Ui.Label(line, ProductLabel(offer.Name, offer.UnitKg, details), 16), -1, -1, 1);
+                    Ui.Size(ProductText(line, ProductLabel(offer.Name, offer.UnitKg, details), 16), -1, -1, 1);
                     Ui.Size(Ui.Label(line, offer.Price + (offer.Kind == PurchaseGoodsKind.Rice ? "/袋" : offer.Kind == PurchaseGoodsKind.Ingredient ? "/份" : "/件"), 16), 130);
                     QuantityStepper(w, line, offer.Key, count, 0, 100, 1, value => Set((int)value));
                 }
@@ -221,7 +227,7 @@ namespace PCShopSell.Game.UI
                     var offer = S.EmployeePurchaseOffer(choice);
                     var row = Ui.Row(chosenList, 58);
                     string source = offer?.Source.Name ?? choice.SourceId ?? "自动选货源";
-                    Ui.Size(Ui.Label(row, offer == null ? GameSession.PurchaseItemName(choice) + " ×" + choice.Count : ProductLabel(GameSession.PurchaseItemName(choice) + " ×" + choice.Count, offer.UnitKg, source), 16), -1, -1, 1);
+                    Ui.Size(ProductText(row, offer == null ? GameSession.PurchaseItemName(choice) + " ×" + choice.Count : ProductLabel(GameSession.PurchaseItemName(choice) + " ×" + choice.Count, offer.UnitKg, source), 16), -1, -1, 1);
                     Ui.Size(Ui.Label(row, offer == null ? "货源不可用" : (offer.Price * choice.Count).ToString(), 16), 130);
                     string key = GameSession.PurchaseKey(choice);
                     int priority = order.IndexOf(key);
@@ -251,7 +257,7 @@ namespace PCShopSell.Game.UI
                 actions.Anchor(0, 0, 1, 0, 16, 12, 16, -62);
                 Ui.Size(Ui.Button(actions, "完成", () =>
                 {
-                    Sync(); draft.Daily = draft.Items.Length > 0;
+                    Sync(); draft.Daily = draft.InventoryThreshold || draft.Items.Length > 0;
                     if (S.CompleteEmployeePurchase(employeeId, draft))
                     {
                         _purchaseDrafts.Remove(employeeId);

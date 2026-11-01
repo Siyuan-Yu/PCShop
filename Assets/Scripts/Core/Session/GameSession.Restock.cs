@@ -25,8 +25,7 @@ namespace PCShopSell.Core.Session
         public long RestockReserveYuan { get; set; } = 500;
         public int RestockReserveDays { get; set; } = 7;
         public long RestockDailyBudgetYuan { get; set; }
-        public Money EffectiveRestockReserve => Money.FromYuan(Math.Max(Math.Max(500, RestockReserveYuan),
-            (long)Math.Ceiling((TotalShopRent.Yuan / 30.0 + CurrentHomeRent.Yuan / 30.0 + Employees.Sum(x => x.Person.DailyWageYuan) + McnDailyWages + VehicleCount(VehicleKind.Car) * 40 + VehicleCount(VehicleKind.Van) * 60) * Math.Max(0, RestockReserveDays)))) + UpcomingBusinessPayments(RestockReserveDays);
+        public Money EffectiveRestockReserve => GetCityCashReserve(RestockReserveDays).Total;
 
         private Dictionary<string, int> _restock => _focus.Restock;
         private readonly Dictionary<PartCategory, int> _noStockAlertDay = new Dictionary<PartCategory, int>();
@@ -47,6 +46,9 @@ namespace PCShopSell.Core.Session
             target = Math.Max(0, Math.Min(RestockMaxTarget, target));
             if (target == 0) _restock.Remove(partId);
             else _restock[partId] = target;
+            if (_cityProcurementPolicies.TryGetValue(DemandKey(_focus.Place.Id, PurchaseGoodsKind.Part, partId), out var policy))
+            { policy.Target = target; policy.Lower = Math.Min(policy.Lower, target); }
+            else if(target>0)_cityProcurementPolicies[DemandKey(_focus.Place.Id,PurchaseGoodsKind.Part,partId)]=ProcurementPolicyFor(_focus.Place.Id,PurchaseGoodsKind.Part,partId);
         }
 
         /// <summary>这件配件在路上（已下单未到货）的数量。</summary>
@@ -65,7 +67,7 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>店里现有 + 在路上。</summary>
-        public int StockAndPending(PartDef p) => PlayerShop.Stock.CountAll(p) + PendingOnlineCount(p.Id);
+        public int StockAndPending(PartDef p) => PlayerShop.Stock.CountAll(p) + PendingOnlineCount(p.Id) + ClaimedProcurementCount(_focus.Place.Id, PurchaseGoodsKind.Part, p.Id);
 
         private void OnShopCustomerLeft(ShopCustomer c)
         {
@@ -109,9 +111,9 @@ namespace PCShopSell.Core.Session
             {
                 PartDef p = PartCatalog.Get(kv.Key);
                 if (p == null || kv.Value <= 0) continue;
-                int have = StockAndPending(p);
-                if (have * 10 > kv.Value * 4) continue;
-                needs.Add((p, kv.Value - have, (double)have / kv.Value));
+                var coverage = ProcurementCoverageFor(_focus.Place.Id, PurchaseGoodsKind.Part, p.Id);
+                if (coverage.Uncovered <= 0) continue;
+                needs.Add((p, coverage.Uncovered, (double)coverage.Effective / kv.Value));
             }
             needs.Sort((a, b) => a.ratio.CompareTo(b.ratio));
             return needs.Select(n => (n.part, n.count)).ToList();
@@ -129,6 +131,15 @@ namespace PCShopSell.Core.Session
             if (_restock.Count == 0 || IsGameOver || !HasShop) return;
             List<(PartDef part, int count)> needs = RestockNeeds();
             if (needs.Count == 0) return;
+            needs = needs.Where(n =>
+            {
+                var policy = ProcurementPolicyFor(_focus.Place.Id, PurchaseGoodsKind.Part, n.part.Id);
+                if (policy.Primary == ProcurementMethod.Online1788) return true;
+                var worker = FindEmployee(policy.EmployeeId);
+                bool available = worker?.Shop == _focus && worker.Role == EmployeeRole.Buyer && worker.Person.OnDuty(Clock.Now) && EmployeeTrip(worker.Person.Id) == null;
+                return policy.AllowFallback && !available;
+            }).ToList();
+            if (needs.Count == 0) { Note("自动补货：缺口由本店进货员负责，1788不重复下单；可在统一采购页修改主执行方式。"); return; }
 
             string block = AppBlocker(PhoneApps.Wholesale);
             if (block != null) { Note("自动补货没执行：" + block); return; }
@@ -138,7 +149,7 @@ namespace PCShopSell.Core.Session
 
             // 先按缺得最厉害的排，一个个往里放，放不下仓位的就少补
             double free = PlayerShop.Stock.FreeSpace - IncomingShopSpace;
-            long budget = Math.Max(0, Ledger.Balance.Cents - EffectiveRestockReserve.Cents - Online1788.ShippingFee.Cents);
+            long budget = Math.Max(0, Ledger.Balance.Cents - EffectiveRestockReserve.Cents - ClaimedProcurementBudget.Cents - Online1788.ShippingFee.Cents);
             if (RestockDailyBudgetYuan > 0) budget = Math.Min(budget, Math.Max(0, RestockDailyBudgetYuan * 100 - Online1788.ShippingFee.Cents));
             var lines = new List<(PartDef part, int count)>();
             foreach (var (part, count) in needs)

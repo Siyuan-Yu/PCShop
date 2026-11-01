@@ -14,6 +14,7 @@ namespace PCShopSell.Core.Session
     }
     [Serializable] public sealed class DirectShipment
     {
+        public string OrderId;
         public string PartId;
         public int Count;
         public long Arrival;
@@ -60,7 +61,7 @@ namespace PCShopSell.Core.Session
         public bool Paused;
         public ManagedVenture Copy() => (ManagedVenture)MemberwiseClone();
     }
-    [Serializable] public sealed class OwnedProperty
+    [Serializable] public sealed partial class OwnedProperty
     {
         public string PlaceId;
         public long PriceCents, MortgageCents, MonthlyPrincipalCents;
@@ -70,6 +71,7 @@ namespace PCShopSell.Core.Session
     [Serializable] public sealed class CreatorState
     {
         public string Id;
+        public string CampaignShopId;
         public int Followers, Relationship, Ambition, Resources, LastSupportDay = -999, CampaignUntilDay;
         public long AttributedSalesCents, LastSalesCents;
         public int LastLost, PoorDays, McnUntilDay, Affection, StoryStage;
