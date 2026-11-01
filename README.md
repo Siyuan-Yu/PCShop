@@ -4,6 +4,8 @@
 
 ## 文档
 
+- [`docs/28-procurement-frequency.md`](docs/28-procurement-frequency.md)：持续采购可选每天或每三天，显示下次日期并保存周期
+
 - [`docs/27-next-day-employee-procurement.md`](docs/27-next-day-employee-procurement.md)：采购只保存、次日起执行、按现金与清单顺序部分购买、余款退回，563项回归通过
 
 - [`docs/26-fast-food-takeaway.md`](docs/26-fast-food-takeaway.md)：快餐买后入包、真实重量、手动与自动进餐、冷藏及存档，560项测试通过

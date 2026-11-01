@@ -48,6 +48,9 @@ namespace PCShopSell.Game.UI
                     if (row.Role == EmployeeRole.Buyer)
                         Ui.Size(Ui.Button(actions, "安排进货", () => OpenEmployeePurchase(e.Id, w), 17, Ui.ButtonHot), 150);
                     Ui.Size(Ui.Button(actions, "辞退…", () => ConfirmAction("辞退员工", $"辞退{e.Name}，同时取消未生效的安排。正在进货时需要先等人和货回店。", "确认辞退", () => { S.DismissEmployee(e.Id); w.Rebuild(); }), 16, Ui.Warn), 110);
+                    if (row.Role == EmployeeRole.Buyer)
+                        Line(list, e.PurchasePlan.Daily ? "采购频率：" + (e.PurchasePlan.EveryDays == 1 ? "每天一次" : "每三天一次")
+                            + " · 下次最早第" + (System.Math.Max(S.Clock.Today.TotalDays, e.PurchasePlan.NextPurchaseDay) + 1) + "天上班时尝试" : "定期采购：未启用或已暂停", 15, Ui.Dim);
                     if (row.Role == EmployeeRole.Buyer && !string.IsNullOrEmpty(e.LastPurchaseNote)) Para(list, e.LastPurchaseNote, 15, Ui.Dim);
                 }
             });
@@ -133,13 +136,24 @@ namespace PCShopSell.Game.UI
                 foreach (string key in selected.Keys) if (!order.Contains(key)) order.Add(key);
                 draft.Items = order.Where(key => selected[key].Count > 0).Select(key => selected[key].Copy()).ToArray();
             }
-            OpenWindow("每日采购清单 · " + worker.Person.Name + " · " + S.ShopTitle(worker.Shop), 1160, 940, w =>
+            OpenWindow("定期采购清单 · " + worker.Person.Name + " · " + S.ShopTitle(worker.Shop), 1160, 940, w =>
             {
                 var panel = w.Root.Find("Panel");
                 var previousActions = panel.Find("PurchaseActions");
                 if (previousActions != null) Kill.It(previousActions.gameObject);
                 ((RectTransform)w.Content.parent.parent).Anchor(0, 0, 1, 1, 0, 76, 0, 50);
-                Para(w.Content, "加入商品后点“完成”，今天只保存、不扣钱，明天起上班时每天尝试一次。按清单从上到下购买；钱不够就拿现有现金，扣除必要车费后尽量买，余款返店退回。", 18, Ui.Accent);
+                Para(w.Content, "加入商品后点“完成”，今天只保存、不扣钱，明天起上班时按所选周期持续尝试。按清单从上到下购买；钱不够就拿现有现金，扣除必要车费后尽量买，余款返店退回。", 18, Ui.Accent);
+                var frequency = Ui.Row(w.Content, 38);
+                Ui.Size(Ui.Label(frequency, "采购频率", 17), 100);
+                foreach (int days in new[] { 1, 3 })
+                {
+                    int interval = days;
+                    var button = Ui.Button(frequency, days == 1 ? "每天一次" : "每三天一次", () => { draft.IntervalDays = interval; w.Rebuild(); }, 17,
+                        draft.EveryDays == days ? Ui.ButtonHot : Ui.ButtonBg);
+                    button.name = "PurchaseInterval_" + days;
+                    Ui.Size(button, 180, 36);
+                }
+                Para(w.Content, "从明天开始，每隔" + draft.EveryDays + "天在上班时尝试一趟；现金或车辆不足时，本次记为已尝试，等下个周期再尝试。", 15, Ui.Dim);
                 var filters = Ui.Row(w.Content, 38);
                 string sourceName = browseSource == null ? "全部货源" : S.City.GetPlace(browseSource).Name;
                 Ui.Size(Ui.Button(filters, sourceName + "  ▼", () => OpenWindow("浏览货源", 740, 660, picker =>
@@ -226,12 +240,12 @@ namespace PCShopSell.Game.UI
                     if (S.CompleteEmployeePurchase(employeeId, draft))
                     {
                         _purchaseDrafts.Remove(employeeId);
-                        Toast(draft.Daily ? "每日采购清单已保存，明天起上班时按顺序尝试采购，今天不扣款。" : "已清空采购安排，不再自动进货。");
+                        Toast(draft.Daily ? "采购安排已保存，明天起每隔" + draft.EveryDays + "天按顺序尝试采购，今天不扣款。" : "已清空采购安排，不再自动进货。");
                         CloseModalWindows();
                     }
                 }, 20, Ui.ButtonHot), -1, -1, 1);
                 if (worker.Person.PurchasePlan.Daily)
-                    Ui.Size(Ui.Button(actions, "暂停每日采购", () =>
+                    Ui.Size(Ui.Button(actions, "暂停定期采购", () =>
                     {
                         var plan = worker.Person.PurchasePlan.Copy(); plan.Daily = false;
                         if (S.ConfigureEmployeePurchase(employeeId, plan)) { _purchaseDrafts.Remove(employeeId); CloseModalWindows(); }

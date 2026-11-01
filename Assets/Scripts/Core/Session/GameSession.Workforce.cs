@@ -31,10 +31,13 @@ namespace PCShopSell.Core.Session
         public bool Daily;
         public int LastDay = -1;
         public int FirstDay;
+        public int IntervalDays = 1;
+        public int EveryDays => IntervalDays == 3 ? 3 : 1;
+        public int NextPurchaseDay => LastDay < FirstDay ? FirstDay : LastDay + EveryDays;
         public PurchaseLine[] Items = Array.Empty<PurchaseLine>();
         public EmployeePurchasePlan Copy() => new EmployeePurchasePlan
         {
-            SourceId = SourceId, Transport = Transport, BudgetYuan = BudgetYuan, Daily = Daily, LastDay = LastDay, FirstDay = FirstDay,
+            SourceId = SourceId, Transport = Transport, BudgetYuan = BudgetYuan, Daily = Daily, LastDay = LastDay, FirstDay = FirstDay, IntervalDays = EveryDays,
             Items = (Items ?? Array.Empty<PurchaseLine>()).Select(x => x.Copy()).ToArray()
         };
     }
@@ -393,7 +396,7 @@ namespace PCShopSell.Core.Session
             foreach (var row in Employees.Where(x => x.Role == EmployeeRole.Buyer).ToList())
             {
                 var plan = row.Person.PurchasePlan;
-                if (plan == null || !plan.Daily || to.Date.TotalDays < plan.FirstDay || plan.LastDay == to.Date.TotalDays || !row.Person.OnDuty(to) || _employeeTrips.Any(t => t.EmployeeId == row.Person.Id)) continue;
+                if (plan == null || !plan.Daily || to.Date.TotalDays < plan.NextPurchaseDay || !row.Person.OnDuty(to) || _employeeTrips.Any(t => t.EmployeeId == row.Person.Id)) continue;
                 // 每天只尝试一次，避免现金或车辆不足时逐分钟刷失败消息。
                 plan.LastDay = to.Date.TotalDays;
                 var q = QuoteEmployeePurchase(row.Person.Id);

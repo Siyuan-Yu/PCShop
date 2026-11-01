@@ -205,6 +205,52 @@ namespace PCShopSell.Tests
                 }
             }
         }
+        [Test] public void ThreeDayFrequency_RepeatsAndSurvivesSaveWithoutDailyPurchases()
+        {
+            using (var s = Make())
+            {
+                var plan = Mixed(s); plan.IntervalDays = 3; var id = s.MainShop.Buyer.Id;
+                Assert.True(s.CompleteEmployeePurchase(id, plan));
+                s.Clock.Restore(new GameDate(1), 9 * 60); s.AdvanceClock(1);
+                var trip = s.EmployeePurchaseTrips.Single();
+                s.AdvanceClock((int)(System.Math.Max(trip.ReturnAt, trip.DeliveryAt) - s.Clock.Now.TotalMinutes + 1));
+                using (var loaded = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
+                {
+                    loaded.EventsEnabled = false;
+                    Assert.AreEqual(3, loaded.MainShop.Buyer.PurchasePlan.EveryDays);
+                    Assert.AreEqual(4, loaded.MainShop.Buyer.PurchasePlan.NextPurchaseDay);
+                    foreach (int day in new[] { 2, 3 })
+                    {
+                        loaded.Clock.Restore(new GameDate(day), 9 * 60); loaded.AdvanceClock(1);
+                        Assert.Zero(loaded.EmployeePurchaseTrips.Count, "两次采购之间不应每天出发");
+                    }
+                    loaded.Clock.Restore(new GameDate(4), 9 * 60); loaded.AdvanceClock(1);
+                    Assert.AreEqual(1, loaded.EmployeePurchaseTrips.Count, "间隔三天后自动再次采购");
+                    Assert.AreEqual(7, loaded.MainShop.Buyer.PurchasePlan.NextPurchaseDay);
+                }
+            }
+        }
+        [Test] public void ThreeDayFrequency_FailedAttemptWaitsUntilNextCycle()
+        {
+            using (var s = Make())
+            {
+                var plan = Mixed(s); plan.IntervalDays = 3;
+                Assert.True(s.CompleteEmployeePurchase(s.MainShop.Buyer.Id, plan));
+                Wallet(s, Money.FromYuan(1)); s.Clock.Restore(new GameDate(1), 9 * 60); s.AdvanceClock(1);
+                Assert.Zero(s.EmployeePurchaseTrips.Count); Assert.AreEqual(4, s.MainShop.Buyer.PurchasePlan.NextPurchaseDay);
+                s.DebugAddCash(500000); s.Clock.Restore(new GameDate(2), 9 * 60); s.AdvanceClock(1);
+                Assert.Zero(s.EmployeePurchaseTrips.Count);
+                s.Clock.Restore(new GameDate(4), 9 * 60); s.AdvanceClock(1);
+                Assert.AreEqual(1, s.EmployeePurchaseTrips.Count);
+            }
+        }
+        [Test] public void LegacyFrequency_ZeroMeansDailyAndCopyKeepsCadence()
+        {
+            var plan = new EmployeePurchasePlan { IntervalDays = 0, FirstDay = 1, LastDay = 1 };
+            Assert.AreEqual(1, plan.EveryDays); Assert.AreEqual(2, plan.NextPurchaseDay);
+            Assert.AreEqual(1, plan.Copy().IntervalDays);
+            plan.IntervalDays = 3; Assert.AreEqual(4, plan.Copy().NextPurchaseDay);
+        }
         [Test]
         public void PostingAnotherAdRetainsPreviousCandidates_AndAddsMoreTomorrow()
         {
