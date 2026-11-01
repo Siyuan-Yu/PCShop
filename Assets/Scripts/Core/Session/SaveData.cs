@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using PCShopSell.Core.Inventory;
 
 namespace PCShopSell.Core.Session
 {
@@ -6,6 +7,12 @@ namespace PCShopSell.Core.Session
     [Serializable]
     public sealed class SaveData
     {
+        public string shopRetailKind, pendingRetailKind;
+        public GoodsLot[] shopGoodsLots;
+        public AppLoan[] appLoans;
+        public PriceDay[] priceDays;
+        public int nextPriceReportDay;
+        public bool weeklyPricesPending;
         public int version = 1;
         public bool hasBusiness;
         public BusinessSave business;
@@ -27,6 +34,7 @@ namespace PCShopSell.Core.Session
         public int vehicle;
         public int[] ownedVehicles;
         public int impoundedTricycles;
+        public int impoundedEBikes;
         public bool hasBuyer;
         public SaveEmployee buyer;
         public EmployeePurchaseTrip[] employeeTrips;
@@ -162,6 +170,7 @@ namespace PCShopSell.Core.Session
     [Serializable]
     public sealed class SaveSocial
     {
+        public SocialMemory[] memories;
         public string[] apptNpc;
         public int[] apptSlot;
         public int[] apptDay;
@@ -264,6 +273,8 @@ namespace PCShopSell.Core.Session
     [Serializable]
     public sealed class SaveShop
     {
+        public string retailKind;
+        public GoodsLot[] goodsLots;
         public string place;
         public long rentCents, depositCents;
         public int startDay;
@@ -302,6 +313,7 @@ namespace PCShopSell.Core.Session
     [Serializable]
     public sealed class SaveEmployee
     {
+        public long candidateLeavesAt;
         public string id, transferShopId, lastPurchaseNote;
         public int transferDay = -1;
         public bool hasTransferRole, hasWorkSkills, assemblyTrained;
@@ -428,6 +440,7 @@ namespace PCShopSell.Core.Session
         public double[] jins; // Legacy saves only.
         public bool[] boxed;
         public int[] expireDays;
+        public bool[] chilled;
     }
 
     [Serializable]
@@ -450,5 +463,6 @@ namespace PCShopSell.Core.Session
         public int count;
         public int expireDay;
         public bool chilled;
+        public int chilledDays;
     }
 }

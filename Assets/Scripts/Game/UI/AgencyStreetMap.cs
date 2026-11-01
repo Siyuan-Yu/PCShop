@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using PCShopSell.Core.World;
 using PCShopSell.Game.Runtime;
@@ -15,6 +15,9 @@ namespace PCShopSell.Game.UI
     public sealed class AgencyStreetMap : MonoBehaviour, IPointerDownHandler, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler, IScrollHandler
     {
         public sealed class ViewState { public float Zoom = 1; public Vector2 Offset; }
+        public static readonly Color RentalAvailable = new Color(.15f, 1f, .38f);
+        public static readonly Color RentalUpcoming = new Color(1f, .5f, .06f);
+        private GameObject _rentalGlow;
         private Camera _camera;
         private RenderTexture _texture;
         private GameController _game;
@@ -97,6 +100,7 @@ namespace PCShopSell.Game.UI
             try
             {
                 foreach (var c in canvases) c.enabled = false;
+                if (_rentalGlow != null) _rentalGlow.SetActive(false);
                 RenderSettings.fog = false;
                 RenderSettings.ambientMode = AmbientMode.Flat;
                 RenderSettings.ambientLight = new Color(.65f, .70f, .63f);
@@ -105,6 +109,7 @@ namespace PCShopSell.Game.UI
             }
             finally
             {
+                if (_rentalGlow != null) _rentalGlow.SetActive(false);
                 RenderSettings.fog = fog;
                 RenderSettings.ambientMode = ambientMode;
                 RenderSettings.ambientLight = ambient;
@@ -176,6 +181,7 @@ namespace PCShopSell.Game.UI
 
         private void ReleasePreview()
         {
+            if (_rentalGlow != null) { _rentalGlow.SetActive(false); Kill.It(_rentalGlow); _rentalGlow = null; }
             if (_camera != null)
             {
                 _camera.targetTexture = null;

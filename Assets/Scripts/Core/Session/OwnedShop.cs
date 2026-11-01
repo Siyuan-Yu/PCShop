@@ -11,6 +11,7 @@ namespace PCShopSell.Core.Session
     /// </summary>
     public sealed class OwnedShop
     {
+        public string RetailKind = "computer";
         public Place Place;
         public ShopLease Lease;
         public ShopSimulation Sim;

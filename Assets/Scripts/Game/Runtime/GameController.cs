@@ -46,6 +46,7 @@ namespace PCShopSell.Game
         private Transform _actors;
         private Transform _policeRoot;
         private Place _pendingEnter;
+        private bool _goHomeToBed;
         private bool _wasChasing;
         private int _wasRoomKind;
         private bool _autosaveDue, _wasPlayerWorking;
@@ -121,6 +122,7 @@ namespace PCShopSell.Game
             s.ShopCustomerArrived += OnCustomerArrived;
             s.Clock.DayAdvanced += OnDayAdvanced;
             _pendingEnter = null;
+            _goHomeToBed = false;
             _gameOverShown = false;
             _autosaveDue = false; _wasPlayerWorking = s.IsWorking;
 
@@ -174,7 +176,8 @@ namespace PCShopSell.Game
         /// <summary>前往某地并在到达后进入。已经在门口就直接进去。</summary>
         public void GoToPlace(Place p)
         {
-            if (Session.IsGameOver || Ui.AnyModalOpen) return;
+            if (Session.IsGameOver || Session.IsWorking || Ui.AnyModalOpen) return;
+            CancelHomeBedTrip();
             if (Session.CurrentPlace == p) return;
             if (Session.CurrentPlace != null)
             {
@@ -187,6 +190,37 @@ namespace PCShopSell.Game
                 return;
             }
             if (Session.GoTo(p)) _pendingEnter = p;
+        }
+
+        public void GoHomeToSleep()
+        {
+            if (Session.IsGameOver || Session.IsWorking || Ui.AnyModalOpen || Placing) return;
+            GoToPlace(Session.Home);
+            _goHomeToBed = InHome || _pendingEnter == Session.Home;
+        }
+
+        private void CancelHomeBedTrip()
+        {
+            _goHomeToBed = false;
+            HomeRoom?.CancelBedWalk();
+        }
+
+        private void UpdateHomeBedTrip(float dt)
+        {
+            if (!_goHomeToBed) return;
+            if (Session.IsGameOver || Session.IsWorking || Placing)
+            { CancelHomeBedTrip(); return; }
+            if (!InHome)
+            {
+                if (_pendingEnter != Session.Home || Session.Trip == null) CancelHomeBedTrip();
+                return;
+            }
+            if (Ui.AnyModalOpen || !Session.Time.IsRunning) return;
+            int result = HomeRoom.WalkToBed(dt);
+            if (result == 0) return;
+            CancelHomeBedTrip();
+            if (result > 0) Ui.OpenBedWindow();
+            else Ui.Toast("床边的路被家具挡住了，请先留出通道。");
         }
 
         /// <summary>收银：老板得站在收银台后面，把货交给顾客、收钱。不在收银台就收不了，顾客接着排队。</summary>
@@ -305,6 +339,7 @@ namespace PCShopSell.Game
                     if (pv.ClosedOnly.Count > 0) World.SetOpen(pv, Session.IsPlaceOpen(pv.Place));
             if (interior) Interior.Update(Session, worldDt, dt);
             if (InHome) HomeRoom.Update(Session, dt, Session.Clock.MinuteOfDay);
+            UpdateHomeBedTrip(dt);
             FigureMotion.AdvanceAll(dt, Session.Time.IsRunning);
 
             if (RoomKind != _wasRoomKind)
@@ -447,6 +482,7 @@ namespace PCShopSell.Game
                 return;
             }
 
+            CancelHomeBedTrip();
             Vector3 fwd = Cam.transform.forward;
             fwd.y = 0;
             fwd.Normalize();
@@ -496,6 +532,7 @@ namespace PCShopSell.Game
         /// <summary>出租屋里的互动：床 = 睡觉，衣柜 = 换衣服，电饭锅 = 做饭，凳子 / 沙发 = 坐下歇，门 = 出门。查看房间信息用右上角“我的”。</summary>
         public void HomeInteract(string id)
         {
+            CancelHomeBedTrip();
             switch (id)
             {
                 case HomeRoomView.Bed:
@@ -636,6 +673,7 @@ namespace PCShopSell.Game
 
         public void LeaveHome()
         {
+            CancelHomeBedTrip();
             Ui.CloseAllWindows();
             Session.Leave();
         }
@@ -695,6 +733,7 @@ namespace PCShopSell.Game
         {
             if (Session.IsWorking) return;
             if (!Input.GetMouseButtonDown(0) || GameUi.PointerOverUi) return;
+            CancelHomeBedTrip();
             Ray ray = Cam.ScreenPointToRay(Input.mousePosition);
             if (InInterior)
             {
@@ -794,6 +833,7 @@ namespace PCShopSell.Game
             {
                 Ui.CloseAllWindows();
                 _pendingEnter = null;
+                CancelHomeBedTrip();
                 if (Session.PendingEvent != null) Ui.ShowEvent(Session.PendingEvent);
                 Ui.Popup(title, body);
                 if (Session.CurrentPlace != null) Ui.OnEnteredPlace(Session.CurrentPlace);

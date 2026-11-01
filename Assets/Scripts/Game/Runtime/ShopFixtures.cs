@@ -159,6 +159,8 @@ namespace PCShopSell.Game.Runtime
                 case "liquor": return 1;
                 case "drink": return 2;
                 case "snack": return 3;
+                case "flowers": return 5;
+                case "meals": return 6;
                 default: return 4;
             }
         }
@@ -170,6 +172,9 @@ namespace PCShopSell.Game.Runtime
                 case "smoke": return new Color(0.9f, 0.3f, 0.3f);
                 case "liquor": return new Color(0.3f, 0.75f, 0.45f);
                 case "drink": return new Color(0.35f, 0.7f, 0.95f);
+                case "flowers": return new Color(0.9f, 0.45f, 0.65f);
+                case "produce": return new Color(0.4f, 0.7f, 0.35f);
+                case "meals": return new Color(0.9f, 0.65f, 0.3f);
                 case "snack": return new Color(0.95f, 0.65f, 0.25f);
                 default: return new Color(0.95f, 0.8f, 0.3f);
             }
@@ -210,6 +215,19 @@ namespace PCShopSell.Game.Runtime
             t.localPosition = pos;
             switch (kind)
             {
+                case 5:
+                    Prims.Shape(PrimitiveType.Cylinder, t, "FlowerPot", new Vector3(0, 0.05f, 0), new Vector3(0.09f, 0.05f, 0.09f), Mats.Lit(ArtDirection.Wood));
+                    Prims.Box(t, "Stem", new Vector3(0, 0.17f, 0), new Vector3(0.014f, 0.2f, 0.014f), Mats.Lit(new Color(0.2f, 0.55f, 0.2f)));
+                    for (int petal = 0; petal < 5; petal++)
+                    {
+                        float a = petal * Mathf.PI * 2 / 5;
+                        Prims.Shape(PrimitiveType.Sphere, t, "Petal", new Vector3(Mathf.Cos(a) * 0.045f, 0.27f, Mathf.Sin(a) * 0.045f), Vector3.one * 0.065f, Mats.Lit(new Color(0.92f, 0.3f, 0.48f)));
+                    }
+                    break;
+                case 6:
+                    Prims.Box(t, "MealTray", new Vector3(0, 0.035f, 0), new Vector3(0.18f, 0.07f, 0.13f), Mats.Lit(ArtDirection.Cream));
+                    Prims.Box(t, "Food", new Vector3(0, 0.08f, 0), new Vector3(0.14f, 0.03f, 0.09f), Mats.Lit(new Color(0.85f, 0.58f, 0.25f)));
+                    break;
                 case 0:
                     Prims.Box(t, "Pack", new Vector3(0, 0.07f, 0), new Vector3(0.12f, 0.14f, 0.05f), Mats.Lit(new Color(0.8f, 0.15f, 0.15f)));
                     Prims.Box(t, "Band", new Vector3(0, 0.09f, -0.026f), new Vector3(0.12f, 0.03f, 0.004f), Mats.Lit(new Color(0.95f, 0.8f, 0.3f)));

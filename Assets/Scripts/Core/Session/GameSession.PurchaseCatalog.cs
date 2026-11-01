@@ -40,8 +40,8 @@ namespace PCShopSell.Core.Session
                             UnitKg = Stock.SpaceOf(p, true, 1) * Backpack.KgPerSpace, StockSpace = Stock.SpaceOf(p, true, 1) });
                 if (ShopAt(source) != null || IsVacant(source) || VentureAt(source.Id) != null) continue;
                 foreach (var gift in Gifts.All.Where(g => g.SoldAt == source.Business))
-                    offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Gift, Id = gift.Id, Name = gift.Name,
-                        Category = "烟酒饮料与水果", Price = gift.Price, UnitKg = gift.WeightKg, StockSpace = Stock.GoodsSpace(gift.Id, 1) });
+                    offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Gift, Id = gift.Id, Name = gift.Name + (RetailProducts.IsFood(gift) ? "（零售）" : ""),
+                        Category = ShelfKinds.ForGift(gift.Id)?.Name ?? "其他商品", Price = gift.WholesalePrice, UnitKg = gift.WeightKg, StockSpace = Stock.GoodsSpace(gift.Id, 1) });
                 if (source.Business == FarmBusiness)
                 {
                     offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Rice, Id = "rice", Name = "大米（0.5千克/袋）",
@@ -108,8 +108,8 @@ namespace PCShopSell.Core.Session
 
         private string PurchaseOpeningBlocker(Place source, int arrivalMinute)
         {
-            int open = source.Business == FarmBusiness ? FarmOpenMinute : 9 * 60;
-            int close = source.Business == FarmBusiness || source.Kind == PlaceKind.Wholesaler ? 18 * 60 : 21 * 60;
+            int open = source.Kind == PlaceKind.Wholesaler ? WholesalerOpenMinute : source.Business == FarmBusiness ? FarmOpenMinute : 9 * 60;
+            int close = source.Kind == PlaceKind.Wholesaler ? WholesalerCloseMinute : source.Business == FarmBusiness ? FarmCloseMinute : 21 * 60;
             if ((source.Kind == PlaceKind.Wholesaler && Clock.Today.IsWeekend) || arrivalMinute < open || arrivalMinute >= close)
                 return source.Name + "到达时未营业（" + (source.Kind == PlaceKind.Wholesaler ? "工作日 " : "每天 ") + $"{open / 60}:00–{close / 60}:00）";
             return null;

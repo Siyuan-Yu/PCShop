@@ -68,6 +68,7 @@ namespace PCShopSell.Core.Session
             string line = staff.Name + "：“" + staff.LineFor(Clock.Today.TotalDays + chats) + "”";
             if (StaffRapport(staff.Id) < StaffTalk.ChatMaxRapport) AddStaffRapport(staff.Id, StaffTalk.ChatGain);
             else line += $"\n（和{staff.Name}聊得很投缘，不过光闲聊熟络不动了。送点小礼物、听他讲讲自己的事更有用。）";
+            RememberSocial(staff.Id, "当面闲聊。\n" + line);
             AdvanceClock(StaffTalk.ChatMinutes);
             return line;
         }
@@ -95,6 +96,7 @@ namespace PCShopSell.Core.Session
             if (g == null || !Backpack.TakeGift(giftId)) return Fail("背包里没有这个。");
             ApplyCargoLimit();
             _staffGiftDay[staff.Id] = Clock.Today.TotalDays;
+            RememberSocial(staff.Id, $"送给对方「{g.Name}」。");
             AddStaffRapport(staff.Id, StaffGiftGain(g) + EffectiveCharm * 0.02);
             Say(g.Id == Gifts.Soda || g.Id == Gifts.Drink
                 ? $"{staff.Name}接过饮料笑了：“哎呀，太客气了。”"
@@ -128,6 +130,7 @@ namespace PCShopSell.Core.Session
             _staffStoryCount[staff.Id] = heard + 1;
             _staffStoryDay[staff.Id] = Clock.Today.TotalDays;
             AddStaffRapport(staff.Id, StaffTalk.StoryGain);
+            RememberSocial(staff.Id, $"听对方讲自己的事（第 {heard + 1} 段）。\n{story}");
             AdvanceClock(StaffTalk.StoryMinutes);
             return story;
         }

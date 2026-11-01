@@ -82,7 +82,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(parent, AgencyStatus(p, l), 17, TextAnchor.MiddleLeft, Ui.Accent), -1, 22);
             if (p.Kind == PlaceKind.Agency)
             {
-                Para(parent, "你正在小陈的办公室里看房。地图包含商业街全部沿街铺面；绿色是正在出租，棕色是租约尚未到期。点选铺面即可看报价与户型。", 18, Ui.Dim);
+                Para(parent, "你正在小陈的办公室里看房。地图包含商业街全部沿街铺面；绿光表示现在可租，橙光表示之后可租；其余建筑保持原样。点建筑后在右侧查看报价与户型。", 18, Ui.Dim);
                 return;
             }
             bool pending = S.IsPendingShop(p);
@@ -99,6 +99,7 @@ namespace PCShopSell.Game.UI
 
             if (l == null)
             {
+                if (pending) AgencyEntryWarning(parent, S.PendingLease.StartDay);
                 string explanation = mine
                         ? $"这是你的{S.ShopTitle(own)}，已交押金 {own.Lease.Deposit}。不想要了就到店里办退租（先叫货车把货搬走）。"
                     : pending ? $"你已经提前签下这间，押金 {S.PendingLease.Deposit}。现租户第 {S.PendingLease.StartDay + 1} 天搬走，那天自动交房；在那之前房租照交。"
@@ -117,12 +118,27 @@ namespace PCShopSell.Game.UI
                 TextAnchor.MiddleLeft, remaining.IsNegative ? new Color32(231, 160, 135, 255) : Ui.Good), -1, 24);
             string blocker = S.LeaseBlocker(l, hasShop);
             bool advance = S.IsAdvance(l);
-            string state = blocker ?? (advance ? $"现租户还没搬走，第 {l.OpenDay + 1} 天才能进 · 可以先签" : $"挂牌还剩 {l.CloseDay - S.Clock.Today.TotalDays + 1} 天 · 可以签约");
-            Ui.Size(Ui.Label(parent, state, 16, TextAnchor.MiddleLeft, blocker == null ? Ui.Good : Ui.Accent), -1, 38);
-            var sign = Ui.Button(parent, advance ? "核对费用，提前签下" : "核对费用，租下这间", () => ConfirmAgencyLease(w, p.Id, hasShop), 19,
+            if (advance) AgencyEntryWarning(parent, l.OpenDay);
+            else Ui.Size(Ui.Label(parent, blocker ?? $"挂牌还剩 {l.CloseDay - S.Clock.Today.TotalDays + 1} 天 · 可以签约", 16,
+                TextAnchor.MiddleLeft, blocker == null ? Ui.Good : Ui.Accent), -1, 38);
+            var sign = Ui.Button(parent, advance ? $"提前签约（还需等 {l.OpenDay - S.Clock.Today.TotalDays} 天）" : "核对费用，租下这间", () => ConfirmAgencyLease(w, p.Id, hasShop), 19,
                 Ui.ButtonHot, blocker == null);
             sign.name = "AgencyReviewLease";
             Ui.Size(sign, -1, 44);
+        }
+
+        private void AgencyEntryWarning(Transform parent, int openDay)
+        {
+            int days = System.Math.Max(0, openDay - S.Clock.Today.TotalDays);
+            var warning = Ui.Panel(parent, "AgencyEntryWarning", new Color32(79, 43, 27, 255));
+            Ui.Size(warning, -1, 82);
+            var accent = new Color32(255, 184, 104, 255);
+            Ui.Panel(warning.transform, "WarningStripe", accent).rectTransform.Anchor(0, 0, 0, 1, 0, 0, -5, 0);
+            var heading = Ui.Label(warning.transform, $"<b>还需等待 {days} 天才能进入</b>", 25, TextAnchor.MiddleLeft, accent);
+            heading.name = "AgencyEntryCountdown";
+            heading.rectTransform.Anchor(0, .48f, 1, 1, 14, 0, 8, 2);
+            var detail = Ui.Label(warning.transform, $"<b>不能立即入驻 / 营业</b> · 第 {openDay + 1} 天交房\n提前签约，房租从签约当天开始计算", 14, TextAnchor.UpperLeft, new Color32(255, 222, 181, 255));
+            detail.rectTransform.Anchor(0, 0, 1, .48f, 14, 5, 8, 0);
         }
 
         private void AgencyQuote(Transform parent, ShopListing l, bool newShop)
@@ -152,9 +168,24 @@ namespace PCShopSell.Game.UI
             if (listing == null || S.LeaseBlocker(listing, newShop) != null) { parent.Rebuild(); return; }
             Place p = S.ListingPlace(listing);
             Money quotedCost = S.LeaseCost(listing, newShop);
-            OpenWindow("确认租赁 · " + UnitName(p), 660, 520, confirm =>
+            string retailKind = newShop ? "computer" : S.RetailKind;
+            OpenWindow("确认租赁 · " + UnitName(p), 660, S.IsAdvance(listing) ? 620 : 520, confirm =>
             {
                 Line(confirm.Content, $"{GameSession.SizeName(p.Size)} · {RealEstate.SizeArea(p.Size)} · 月租 {listing.Rent}", 21, Ui.Accent);
+                if (S.IsAdvance(listing)) AgencyEntryWarning(confirm.Content, listing.OpenDay);
+                if (newShop)
+                {
+                    Line(confirm.Content, "选择经营类型", 19, Ui.Accent);
+                    var kinds = Ui.Row(confirm.Content, 42);
+                    foreach (var value in PCShopSell.Core.Home.RetailShopTypes.All)
+                    {
+                        string kind = value;
+                        Ui.Size(Ui.Button(kinds, PCShopSell.Core.Home.RetailShopTypes.Name(kind), () => { retailKind = kind; confirm.Rebuild(); }, 17,
+                            retailKind == kind ? Ui.ButtonHot : Ui.ButtonBg, S.RetailTypeBlocker(kind) == null), -1, -1, 1);
+                    }
+                    Para(confirm.Content, PCShopSell.Core.Home.RetailShopTypes.Description(retailKind), 16, Ui.Dim);
+                    if (!S.OtherRetailShopsUnlocked) Para(confirm.Content, "第 15 天起可选择其他经营类型。", 15, Ui.Dim);
+                }
                 AgencyQuote(confirm.Content, listing, newShop);
                 Line(confirm.Content, $"{AgencySettlement(quotedCost)}　剩余 {S.Ledger.Balance - quotedCost}", 23, Ui.Good);
                 Para(confirm.Content, newShop
@@ -165,7 +196,7 @@ namespace PCShopSell.Game.UI
                 Para(confirm.Content, fine, 14, Ui.Dim);
                 var row = Ui.Row(confirm.Content, 46, 10);
                 Ui.Size(Ui.Button(row, "再看看", confirm.Close, 18), -1, 46, 1);
-                var pay = Ui.Button(row, quotedCost.IsNegative ? "确认签约并结算" : "确认签约并付款", () =>
+                var pay = Ui.Button(row, S.IsAdvance(listing) ? "确认提前签约" : quotedCost.IsNegative ? "确认签约并结算" : "确认签约并付款", () =>
                 {
                     ShopListing live = S.Listings.FirstOrDefault(l => l.PlaceId == placeId);
                     confirm.Close();
@@ -175,7 +206,11 @@ namespace PCShopSell.Game.UI
                         parent.Rebuild();
                         return;
                     }
-                    if (S.SignLease(placeId, newShop) && S.PendingLease == null) Toast("签约完成，可以自行到新店装修了。");
+                    if (S.SignRetailLease(placeId, newShop, retailKind))
+                    {
+                        if (S.PendingLease != null) Toast($"已提前签约，还需等待 {S.PendingLease.StartDay - S.Clock.Today.TotalDays} 天才能进入，期间房租照常计算。");
+                        else Toast("签约完成，可以自行到新店装修了。");
+                    }
                     parent.Rebuild();
                 }, 18, Ui.ButtonHot);
                 pay.name = "AgencyConfirmLease";

@@ -15,6 +15,10 @@ namespace PCShopSell.Core.Session
         public bool CanOpenFridge => (AtHome || InPlayerShop) && FridgeCount(InPlayerShop) > 0;
         public Backpack CurrentFridge => FridgeOf(InPlayerShop);
         public double CurrentFridgeLimitKg => FridgeLimitKg(InPlayerShop);
+        private const int FridgeBonusDays = 7;
+        private static bool HasMeal(System.Collections.Generic.List<FoodBatch> food) =>
+            food.Any(b => b.Count > 0 && FastFoodCatalog.Packed(b.Id)?.Drink != true);
+        private bool HasFridgeMeal => CanOpenFridge && HasMeal(CurrentFridge.Food.Packed);
 
         public static string MealName(string id) => FastFoodCatalog.Packed(id)?.Name ?? Ingredients.Get(id)?.DishName ?? "白米饭";
         public static double MealNutrition(string id) => FastFoodCatalog.Packed(id)?.Nutrition ?? (id == "rice" ? -5 : id == "pork" ? 5 : id == "egg" ? 3 : id == "tofu" ? 2 : 0);
@@ -49,7 +53,7 @@ namespace PCShopSell.Core.Session
         private static void Chill(Backpack bag)
         {
             foreach (var b in bag.Food.Ingredient.Concat(bag.Food.Packed).Where(b => !b.Chilled))
-            { b.ExpireDay += 2; b.Chilled = true; }
+            { b.ExpireDay += FridgeBonusDays; b.Chilled = true; b.ChilledDays = FridgeBonusDays; }
         }
 
         public bool MoveFridgeFood(string key, int count, bool intoFridge)

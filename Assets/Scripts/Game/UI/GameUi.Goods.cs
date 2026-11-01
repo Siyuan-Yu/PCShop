@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Shop;
@@ -29,7 +29,7 @@ namespace PCShopSell.Game.UI
         {
             ShopSimulation shop = S.PlayerShop;
             Stock st = shop.Stock;
-            Para(w.Content, "把储物柜或背包里的货放进店里，货架上有这类货架就自动摆上去；来店里的人多半是买电脑配件的，杂货卖得慢，摆什么、卖多少钱自己定。", 15, Ui.Dim);
+            Para(w.Content, "把储物柜或背包里的货放进店里，货架上有这类货架就自动摆上去；顾客按本店经营类型购买商品，摆什么、卖多少钱自己定。", 15, Ui.Dim);
 
             RectTransform list = Ui.Scroll(w.Content, 380);
             int shown = 0;
@@ -42,11 +42,12 @@ namespace PCShopSell.Game.UI
                 int handy = S.GoodsAvailableToList(gid);
                 if (inStock == 0 && handy == 0) continue; // 店里没有、手边也没有的，不显示
                 shown++;
+                if (g.ShelfDays > 0 && inStock > 0) Line(list, g.Name + " · 最早到期：" + S.GoodsExpiryText(gid), 14, Ui.Warn);
 
-                RectTransform row = Ui.Row(list, 76, 6);
+                RectTransform row = Ui.Row(list, 94, 6);
                 Image chip = Ui.Panel(row, "Chip", GoodsColor(gid));
                 Ui.Size(chip, 14, 40);
-                Ui.Size(Ui.Label(row, ProductLabel($"<b>{g.Name}</b>", g.WeightKg, $"进价 {g.Price}"), 17), 200);
+                Ui.Size(Ui.Label(row, ProductLabel($"<b>{g.Name}</b>", g.WeightKg, $"批发参考 {g.WholesalePrice}"), 17), 200);
                 Ui.Size(Ui.Label(row, $"货架上 <b>{onShelf}</b> 件\n<size=13><color=#ABB5A8>后仓共 {inStock} 件" + (handy > 0 ? $"　手边 {handy}" : "") + "</color></size>", 16), 170);
                 Ui.Size(ShelfSaleTag(w, row, "goods_" + gid, shop.GoodsPriceOf(gid).Yuan, shop.GoodsPriceRange(gid),
                     value => shop.GoodsPurchaseIntentAtPrice(gid, value),
@@ -56,7 +57,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(row, "收回 1", () => { S.UnlistGoods(gid, 1); w.Rebuild(); }, 15, Ui.ButtonBg, inStock > 0), 74);
             }
             if (shown == 0)
-                Ui.Size(Ui.Label(list, $"店里没有「{kind.Name}」，储物柜和背包里也没有。\n去烟酒茶行、农贸市场买，或者网购，放进店里储物柜，再回来放进来。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 70);
+                Ui.Size(Ui.Label(list, $"店里没有「{kind.Name}」，储物柜和背包里也没有。\n打开“库存 → 进货渠道”查看货源，买回背包或纸箱后上架，也可让采购员直接送入后仓。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 70);
         }
     }
 }

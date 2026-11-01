@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 
@@ -15,6 +15,9 @@ namespace PCShopSell.Core.Home
 
         /// <summary>在哪一类店里有得卖（地点的 Business）。</summary>
         public string SoldAt { get; }
+        public string IngredientId, MealId;
+        public int ShelfDays;
+        public Money WholesalePrice => Price.Scale(0.65);
 
         public GiftDef(string id, string name, string description, long priceYuan, double weightKg, string soldAt)
         {
@@ -51,7 +54,7 @@ namespace PCShopSell.Core.Home
             new GiftDef(Snack, "一盒点心", "精致的点心盒。", 120, 0.8, TobaccoBusiness),
             new GiftDef(Soda, "可乐（瓶）", "自己喝：饥饿 +2、心情 +8、营养 −3。也能请店员喝。", 5, 0.5, TobaccoBusiness),
             new GiftDef(Fruit, "一箱水果", "农贸市场的时令水果，一箱也不轻。", 120, 3.0, FarmBusiness),
-        };
+        }.Concat(RetailProducts.All).ToArray();
 
         public static GiftDef Get(string id) => All.FirstOrDefault(g => g.Id == id);
 

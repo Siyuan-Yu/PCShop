@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using PCShopSell.Core.Catalog;
@@ -66,7 +66,7 @@ namespace PCShopSell.Core.Session
         public bool BuyAtStall(Place stall, PartDef part, int count)
         {
             if (CurrentPlace != stall || !StallSells(stall, part)) return Fail("这家档口不卖这个。");
-            if (!IsWholesalerOpen) return Fail("批发市场工作日 9:00–18:00 营业。");
+            if (!IsWholesalerOpen) return Fail($"批发市场工作日 {Hm(WholesalerOpenMinute)}–{Hm(WholesalerCloseMinute)} 营业。");
             if (count <= 0) return false;
             int remaining = StallRemaining(stall, part);
             if (count > remaining)
@@ -86,6 +86,8 @@ namespace PCShopSell.Core.Session
                 Cargo.TryAdd(part, true, count);
             }
             RecordStallPurchase(stall, part, count);
+            var purchaseOwner = Npcs.OwnerOf(stall.Id);
+            if (purchaseOwner != null) RememberSocial(purchaseOwner.Id, $"在{stall.Name}购入{part.Name} ×{count}。");
             AdvanceClock(2);
             return true;
         }

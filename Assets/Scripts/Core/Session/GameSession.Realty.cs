@@ -185,6 +185,8 @@ namespace PCShopSell.Core.Session
             {
                 PendingIsNewShop = false;
                 OpenNewShop(place, p.Rent, p.Deposit);
+                _focus.RetailKind = PendingRetailKind; _focus.Sim.RetailKind = PendingRetailKind;
+                PendingRetailKind = "computer";
                 ShowNewShop(place, p.Rent, p.Deposit, "交房了");
                 RefreshQuestProgress();
                 return;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using PCShopSell.Core.Common;
 
 namespace PCShopSell.Core.Session
@@ -50,7 +50,7 @@ namespace PCShopSell.Core.Session
         public const double StreetSpeedMultiplier = .5;
         public static readonly VehicleSpec Walk = new VehicleSpec(VehicleKind.Walk, "步行", 49, 6, 0, 5.5 * StreetSpeedMultiplier, false);
         public static readonly VehicleSpec Taxi = new VehicleSpec(VehicleKind.Taxi, "打车", 400, 15, 0, 24 * StreetSpeedMultiplier, false);
-        public static readonly VehicleSpec EBike = new VehicleSpec(VehicleKind.EBike, "小电驴", 250, 10, 1800, 17 * StreetSpeedMultiplier, false);
+        public static readonly VehicleSpec EBike = new VehicleSpec(VehicleKind.EBike, "小电驴", 250, 10, 1800, 17 * StreetSpeedMultiplier, true);
         public static readonly VehicleSpec Tricycle = new VehicleSpec(VehicleKind.Tricycle, "三轮车", 200, 40, 2500, 15 * StreetSpeedMultiplier, true);
 
         public static readonly VehicleSpec Car = new VehicleSpec(VehicleKind.Car, "小轿车", 360, 18, 68000, 23 * StreetSpeedMultiplier, false);

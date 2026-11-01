@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -24,7 +24,7 @@ namespace PCShopSell.Core.Session
         public const int BedtimeReminderMinute = 23 * 60;
         public const int FaintMinute = 4 * 60;
         public const int WholesalerOpenMinute = 9 * 60;
-        public const int WholesalerCloseMinute = 18 * 60;
+        public const int WholesalerCloseMinute = 20 * 60;
         public const int DealerOpenMinute = 9 * 60;
         public const int DealerCloseMinute = 19 * 60;
         public const int MonthGoalDay = 30;
@@ -131,6 +131,7 @@ namespace PCShopSell.Core.Session
             PlayerNodeId = Home.NodeId;
             CurrentPlace = Home;
             Police.RollDuty(Random);
+            RecordPriceDay();
             Clock.TimeAdvanced += OnTimeAdvanced;
             Clock.DayAdvanced += OnDayAdvanced;
         }
@@ -352,7 +353,7 @@ namespace PCShopSell.Core.Session
         /// <summary>身家：现金 + 库存九折 + 铺子押金（退租能拿回来）。</summary>
         public Money VehicleValue => Money.FromCents(_owned.Sum(v => Vehicles.Get(v).Price.Scale(.6).Cents));
         public Money ContractDeposits => Money.FromCents(_contracts.Where(x => x.Accepted && !x.Settled).Sum(x => Money.FromCents(x.DepositCents).Scale((double)(x.Count - x.Failed) / Math.Max(1, x.Count)).Cents));
-        public Money TotalDebt => SupplierDebtTotal + MortgageDebt;
+        public Money TotalDebt => SupplierDebtTotal + MortgageDebt + AppLoanDebt;
         public Money ShopDeposits => Money.FromCents(_shops.Where(s => s.Rented).Sum(s => s.Lease.Deposit.Cents));
 
         public Money NetWorth() => Ledger.Balance + InventoryValue() + ShopDeposits + (PendingLease?.Deposit ?? Money.Zero) + ContractDeposits
@@ -384,12 +385,14 @@ namespace PCShopSell.Core.Session
                 if (Crosses(from, to, 12 * 60)) EatMeal("午饭");
                 if (Crosses(from, to, 18 * 60 + 30)) EatMeal("晚饭");
                 if (!IsWorking && Player.Hunger < 25 && ((CurrentPlace == Home && Pantry.CookedBowls > 0)
-                    || Backpack.Food.Packed.Any(b => b.Count > 0 && FastFoodCatalog.Packed(b.Id)?.Drink != true))) EatMeal("加餐");
+                    || HasFridgeMeal || HasMeal(Backpack.Food.Packed)
+                    || (MealDeliveryEnabled && HasSmartphone && Ledger.CanAfford(Money.FromYuan(SelectedDeliveryMeal.Price))))) EatMeal("加餐");
                 if (!IsWorking && !NightWorkRest && Crosses(from, to, FaintMinute)) _pendingFaint = true;
             }
 
             UpdatePlayerWork(to);
             if (Crosses(from, to, CandidateMinute)) OnCandidateHour(to.Date);
+            ExpireCandidates();
             if (Crosses(from, to, EventMinute)) RollDailyEvent(to.Date);
             CheckAppointments(to);
             DeliverOnlineOrders(to);
@@ -426,6 +429,7 @@ namespace PCShopSell.Core.Session
         private void OnDayAdvanced(GameDate previous, GameDate today)
         {
             Market.OnNewDay(today);
+            RecordPriceDay();
             if (Market.News.Count > 0)
             {
                 NewsItem last = Market.News[Market.News.Count - 1];
@@ -438,10 +442,12 @@ namespace PCShopSell.Core.Session
             Police.RollDuty(Random);
             ResolveTips(today);
             OnHomeDayAdvanced(today);
+            SpoilRetailGoods(today.TotalDays);
 
             PayWages(previous);
             ApplyEmployeeTransfers(today);
             ProcessScheduledCredits(today);
+            CollectDueAppLoans();
             DecayRelations();
             if (today.IsMonthStart)
             {
@@ -486,7 +492,7 @@ namespace PCShopSell.Core.Session
                     SetGameOver($"连续 {BankruptDays} 天资金为负，店铺倒闭了。");
                     return;
                 }
-                if (WorkPayGrace) { Say("现金为负，打工周结领取前暂缓破产判定；请按时到岗并及时领取工资。"); return; }
+                if (WorkPayGrace) { Say("现金为负，合同期间暂缓破产判定；请按时打工，工资每天收工后自动到账。"); return; }
                 Popup?.Invoke("资金告急", $"账上是负数（{Ledger.Balance}）。连续 {BankruptDays} 天为负就会倒闭，已经 {NegativeCashDays} 天。");
             }
             else

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
@@ -756,6 +756,7 @@ namespace PCShopSell.Game.UI
             OpenWindow("我的", 860, 860, w =>
             {
                 RectTransform actions = Ui.Row(w.Content, 50);
+                Ui.Size(Ui.Button(actions, "总收支账本", OpenLedger, 18), 180);
                 Ui.Size(Ui.Button(actions, "摆放家具（家里）", () => StartPlacement(false), 18, Ui.ButtonHot, _ctrl.InHome), 230);
 
                 if (!_ctrl.InHome && !_ctrl.InInterior) Line(w.Content, "摆放家具要在家里；改造店面要在自己的店里。", 15, Ui.Dim);
@@ -768,9 +769,9 @@ namespace PCShopSell.Game.UI
                 if (S.CanOpenFridge) Ui.Size(Ui.Button(list, "打开冰箱", () => OpenFridgeWindow(), 17), -1, 38);
                 Line(list, $"饥饿 {st.Hunger:0}  精力 {st.Energy:0}/{st.MaxEnergy:0}  健康 {st.Health:0}  欠觉 {st.SleepDebt:0.##} 小时", 17, Ui.Dim);
                 Line(list, $"智力 {st.Intelligence}  魅力 {S.EffectiveCharm}（衣着 +{S.Outfit.CharmBonus}）  技术 {st.Skill}   现金 {S.Ledger.Balance}", 17, Ui.Dim);
-                Line(list, "每天饿两次（12:00 / 18:30）：在家吃锅里的饭，出门吃背包里的饭盒；都没有就饿着。", 15, Ui.Dim);
+                Line(list, "到饭点（12:00 / 18:30）或饿了，优先吃锅里、当前地点冰箱和背包里的食物；都没有时按设置自动订餐。", 15, Ui.Dim);
 
-                Ui.Size(Ui.Button(list, S.MealDeliveryEnabled ? "缺饭时自动送餐：开（每餐 ¥25）" : "缺饭时自动送餐：关（需智能手机）", () => { S.ToggleMealDelivery(); w.Rebuild(); }, 17, Ui.ButtonBg, S.HasSmartphone), -1, 38);
+                Ui.Size(Ui.Button(list, "自动订餐设置 · " + (S.MealDeliveryEnabled ? $"开 · {S.SelectedDeliveryMeal.Name} ¥{S.SelectedDeliveryMeal.Price}/餐" : "关"), () => OpenMealDeliverySettings(w), 17), -1, 38);
                 if (S.HomeVisits.Any(v => v.Working))
                     Ui.Size(Ui.Button(list, "在家等师傅修完", () => { S.WaitForRepair(); w.Rebuild(); }, 17, Ui.ButtonHot, _ctrl.InHome), -1, 38);
                 Line(list, "—— 出租屋 ——", 18, Ui.Accent);
@@ -844,27 +845,30 @@ namespace PCShopSell.Game.UI
         /// <summary>纸箱 / 临时存放里的家具点“摆出来”：进摆放模式，手里直接拿着这件。</summary>
         private void PlaceFromStorage(bool shop, string furnitureId)
         {
-            if (shop && S.ShopFitted) StartQuickPlacement(); else StartPlacement(shop);
-            if (_ctrl.Placing) _ctrl.SelectStock(furnitureId);
+            StartPlacement(shop, furnitureId);
         }
 
-        private void StartPlacement(bool shop)
+        private void StartPlacement(bool shop, string furnitureId = null)
         {
+            void Begin()
+            {
+                if (_ctrl.BeginPlacement(shop) && furnitureId != null) _ctrl.SelectStock(furnitureId);
+            }
             if (!shop)
             {
-                _ctrl.BeginPlacement(false);
+                Begin();
                 return;
             }
             if (S.IsRenovating)
             {
-                _ctrl.BeginPlacement(true);
+                Begin();
                 return;
             }
             if (!S.ShopFitted)
             {
                 // 毛坯铺子本来就没开张，不用再确认
                 if (!S.BeginRenovation()) return;
-                _ctrl.BeginPlacement(true);
+                Begin();
                 return;
             }
             OpenWindow("歇业装修", 640, 380, w =>
@@ -875,7 +879,7 @@ namespace PCShopSell.Game.UI
                 {
                     if (!S.BeginRenovation()) return;
                     w.Close();
-                    _ctrl.BeginPlacement(true);
+                    Begin();
                 }, 19, Ui.Warn), 300);
                 Ui.Size(Ui.Button(row, "再想想", w.Close, 19), 140);
             });
@@ -921,7 +925,7 @@ namespace PCShopSell.Game.UI
                         break;
                     case 3:
                         Line(list, "礼品直接送进背包（不受承重限制）。送人前要先有货。", 15, Ui.Dim);
-                        foreach (GiftDef g in Gifts.All) OnlineGiftRow(w, list, g);
+                        foreach (GiftDef g in Gifts.All.Where(g => !RetailProducts.IsFood(g))) OnlineGiftRow(w, list, g);
                         break;
                     default:
                         RectTransform row = Ui.Row(list, 80);
@@ -1166,7 +1170,7 @@ namespace PCShopSell.Game.UI
             Line(w.Content, "先加进购物车，结账时分好自己背的和叫车送的。背回去的要打开背包放进厨房；叫车的直接送进厨房。家里没有冰箱，买多了会放坏。", 15, Ui.Dim);
             RectTransform list = GoodsList(w.Content);
             if (tab == "水果")
-                foreach (GiftDef g in Gifts.All.Where(x => x.SoldAt == Gifts.FarmBusiness)) ShopGiftRow(w, list, g, open);
+                foreach (GiftDef g in Gifts.All.Where(x => x.SoldAt == Gifts.FarmBusiness && !RetailProducts.IsFood(x))) ShopGiftRow(w, list, g, open);
             if (tab == "菜蛋肉") FarmIngredientRows(w, list, open);
             if (tab == "米") FarmRiceRow(w, list, open);
             CartPanel(w, w.Content, false);
@@ -1227,7 +1231,7 @@ namespace PCShopSell.Game.UI
             if (_placePanel == null || !_placePanel.gameObject.activeSelf) return;
             Ui.Clear(_placePanel);
             bool shop = _ctrl.PlacingShop;
-            Text title = Ui.Label(_placePanel, shop ? (S.IsRenovating ? "装修店面（今天歇业）" : "整理摆设（完成后继续营业）") : "摆放家具", 22, TextAnchor.MiddleLeft, Ui.Accent);
+            Text title = Ui.Label(_placePanel, shop ? "装修店面（今天歇业）" : "摆放家具", 22, TextAnchor.MiddleLeft, Ui.Accent);
             Ui.Size(title, -1, 34);
             Text mode = Ui.Label(_placePanel, "编辑模式 · 俯视图　格线 1 米，摆放吸附 0.25 米", 15, TextAnchor.MiddleLeft, new Color(0.45f, 0.9f, 1f));
             Ui.Size(mode, -1, 24);

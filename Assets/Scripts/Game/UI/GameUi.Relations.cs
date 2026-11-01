@@ -46,7 +46,7 @@ namespace PCShopSell.Game.UI
                 Ui.VList(side, 6, 0);
                 Ui.Size(side, -1, -1, 1);
                 ContactInfo sel = people.FirstOrDefault(c => c.Id == _contactSel);
-                if (sel != null) BuildContactDetail(side, sel, people, w);
+                if (sel != null) BuildContactDetail(Ui.Scroll(side, GraphHeight - 8), sel, people, w);
                 else BuildContactSummary(side, people);
 
                 RectTransform legend = Ui.Row(w.Content, 26, 14);
@@ -154,6 +154,32 @@ namespace PCShopSell.Game.UI
             Para(side, "点图上的头像看他的详情、和谁有关系。", 15, Ui.Dim);
         }
 
+        private static string SocialMemoryTime(long minute) =>
+            new PCShopSell.Core.Time.GameDate((int)(minute / 1440)) + $" {minute % 1440 / 60:00}:{minute % 60:00}";
+
+        private void OpenSocialMemories(ContactInfo contact)
+        {
+            int page = 0;
+            OpenWindow("与" + contact.Name + "的相处记录", 840, 760, w =>
+            {
+                var memories = S.MemoriesOf(contact.Id).ToList();
+                const int pageSize = 30;
+                int pages = System.Math.Max(1, (memories.Count + pageSize - 1) / pageSize);
+                page = System.Math.Min(page, pages - 1);
+                var nav = Ui.Row(w.Content, 40);
+                Ui.Size(Ui.Button(nav, "上一页", () => { page--; w.Rebuild(); }, 17, Ui.ButtonBg, page > 0), 110);
+                Ui.Size(Ui.Label(nav, $"共 {memories.Count} 条 · 第 {page + 1}/{pages} 页 · 最近的在前", 17, TextAnchor.MiddleCenter), -1, -1, 1);
+                Ui.Size(Ui.Button(nav, "下一页", () => { page++; w.Rebuild(); }, 17, Ui.ButtonBg, page + 1 < pages), 110);
+                var list = Ui.Scroll(w.Content, 610);
+                if (memories.Count == 0) Para(list, "还没有相处记录。", 18, Ui.Dim);
+                foreach (var memory in memories.Skip(page * pageSize).Take(pageSize))
+                {
+                    Line(list, SocialMemoryTime(memory.Minute), 17, Ui.Accent);
+                    Para(list, memory.Text, 18);
+                }
+            });
+        }
+
         private void BuildContactDetail(RectTransform side, ContactInfo c, List<ContactInfo> people, Window w)
         {
             RectTransform top = Ui.Row(side, 180, 10);
@@ -178,6 +204,20 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Label(side, "他认识的人", 17), -1, 26);
                 foreach (string t in knownTies) Ui.Size(Ui.Label(side, "· " + t, 15, TextAnchor.MiddleLeft), -1, 22);
                 if (hidden > 0) Ui.Size(Ui.Label(side, $"· 还有 {hidden} 个你不认识的人", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 22);
+            }
+
+            Line(side, "相处记录", 18, Ui.Accent);
+            var memories = S.MemoriesOf(c.Id).ToList();
+            if (memories.Count == 0)
+                Para(side, "还没有相处记录。从本次更新起记录实际发生的互动。", 15, Ui.Dim);
+            else
+            {
+                foreach (var memory in memories.Take(3))
+                {
+                    Line(side, SocialMemoryTime(memory.Minute), 14, Ui.Dim);
+                    Para(side, memory.Text.Split('\n')[0], 15);
+                }
+                Ui.Size(Ui.Button(side, $"查看全部相处记录（{memories.Count} 条）", () => OpenSocialMemories(c), 16), -1, 40);
             }
 
             NpcDef npc = c.IsNpc ? Npcs.Get(c.Id) : null;

@@ -1,10 +1,20 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
 
 namespace PCShopSell.Core.Inventory
 {
+    [Serializable]
+    public sealed class GoodsLot
+    {
+        public string Id;
+        public int Count, ExpireDay;
+        public bool Chilled;
+        public GoodsLot Copy() => (GoodsLot)MemberwiseClone();
+    }
+
     public readonly struct StockLine
     {
         public PartDef Part { get; }
@@ -34,6 +44,38 @@ namespace PCShopSell.Core.Inventory
 
         /// <summary>杂货（烟酒、饮料、水果……礼品都能拿来卖）：礼品 id → 件数。</summary>
         private readonly Dictionary<string, int> _goods = new Dictionary<string, int>();
+        private readonly List<GoodsLot> _goodsLots = new List<GoodsLot>();
+        public IReadOnlyList<GoodsLot> GoodsLots => _goodsLots;
+        public int GoodsExpiry(string id) => _goodsLots.Where(l => l.Id == id && l.Count > 0).Select(l => l.ExpireDay).DefaultIfEmpty(-1).Min();
+        public bool GoodsChilled(string id) => _goodsLots.Where(l => l.Id == id && l.Count > 0).OrderBy(l => l.ExpireDay).FirstOrDefault()?.Chilled ?? false;
+        public void RestoreGoodsLots(IEnumerable<GoodsLot> lots, int today)
+        {
+            _goodsLots.Clear();
+            foreach (var lot in lots ?? Array.Empty<GoodsLot>())
+            {
+                if (lot == null || lot.Count <= 0 || string.IsNullOrEmpty(lot.Id) || Gifts.Get(lot.Id) == null || Gifts.Get(lot.Id).ShelfDays <= 0) continue;
+                int left = GoodsCount(lot.Id) - _goodsLots.Where(l => l.Id == lot.Id).Sum(l => l.Count);
+                if (left > 0) { var copy = lot.Copy(); copy.Count = Math.Min(left, copy.Count); _goodsLots.Add(copy); }
+            }
+            foreach (var pair in GoodsLines())
+            {
+                var def = Gifts.Get(pair.Key);
+                int missing = pair.Value - _goodsLots.Where(l => l.Id == pair.Key).Sum(l => l.Count);
+                if (def.ShelfDays > 0 && missing > 0) _goodsLots.Add(new GoodsLot { Id = pair.Key, Count = missing, ExpireDay = today + def.ShelfDays });
+            }
+            SpoilGoods(today);
+        }
+        public List<string> SpoilGoods(int today)
+        {
+            var lost = new List<string>();
+            foreach (var lot in _goodsLots.Where(l => l.ExpireDay < today).ToArray())
+            {
+                int count = Math.Min(GoodsCount(lot.Id), lot.Count);
+                if (count > 0) { _goods[lot.Id] = GoodsCount(lot.Id) - count; if (_goods[lot.Id] == 0) _goods.Remove(lot.Id); lost.Add(Gifts.Get(lot.Id).Name + "×" + count); }
+                _goodsLots.Remove(lot);
+            }
+            return lost;
+        }
 
         public double Capacity { get; set; }
 
@@ -104,16 +146,24 @@ namespace PCShopSell.Core.Inventory
         }
 
         /// <summary>不检查容量地放入杂货（读档、顾客放回用）。</summary>
-        public void ForceAddGoods(string id, int count)
+        public void ForceAddGoods(string id, int count, int expireDay = -1, bool chilled = false)
         {
             if (count <= 0 || Gifts.Get(id) == null) return;
             _goods[id] = GoodsCount(id) + count;
+            if (expireDay >= 0 && Gifts.Get(id).ShelfDays > 0) _goodsLots.Add(new GoodsLot { Id = id, Count = count, ExpireDay = expireDay, Chilled = chilled });
         }
 
         public bool TryRemoveGoods(string id, int count)
         {
             int have = GoodsCount(id);
             if (count <= 0 || have < count) return false;
+            int left = count;
+            foreach (var lot in _goodsLots.Where(l => l.Id == id).OrderBy(l => l.ExpireDay).ToArray())
+            {
+                int take = Math.Min(left, lot.Count); lot.Count -= take; left -= take;
+                if (lot.Count == 0) _goodsLots.Remove(lot);
+                if (left == 0) break;
+            }
             if (have == count) _goods.Remove(id);
             else _goods[id] = have - count;
             return true;
@@ -199,6 +249,7 @@ namespace PCShopSell.Core.Inventory
             _boxed.Clear();
             _loose.Clear();
             _goods.Clear();
+            _goodsLots.Clear();
         }
     }
 }

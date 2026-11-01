@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
@@ -91,20 +91,17 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void QuickEdit_DoesNotCloseShopForRestOfDay_AndPermissionEnds()
+        public void ShopEditing_RequiresRenovationAndClosesShopForTheDay()
         {
             using (var s = Make())
             {
                 GameSessionTests.Teleport(s, s.MainShop.Place.Id);
-                bool closed = s.PlayerShop.ForcedClosed;
-                Assert.True(s.BeginQuickShopEdit());
-                Assert.True(s.CanEditShop);
-                Assert.False(s.IsRenovating);
-                Assert.AreEqual(closed, s.PlayerShop.ForcedClosed);
-                s.EndQuickShopEdit();
                 Assert.False(s.CanEditShop);
                 Assert.True(s.BeginRenovation());
+                Assert.True(s.CanEditShop); Assert.True(s.IsRenovating);
                 Assert.True(s.PlayerShop.ForcedClosed);
+                s.Clock.Restore(s.Clock.Today.AddDays(1), 9 * 60);
+                Assert.False(s.CanEditShop);
             }
         }
 

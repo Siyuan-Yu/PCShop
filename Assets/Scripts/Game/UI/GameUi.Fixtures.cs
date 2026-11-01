@@ -25,12 +25,12 @@ namespace PCShopSell.Game.UI
 
             FixtureNeed shelf = list.First(n => n.Kind == FixtureKind.Shelf);
             string shelfState = shelf.Placed >= shelf.Want ? "<color=#A9C9A9>✓</color>" : shelf.Placed >= FurnitureCatalog.MinShelves ? "<color=#DDC18B>◐</color>" : "<color=#D79780>✗</color>";
-            sb.Append($"\n{shelfState} 货架（建议 6 个：每类配件一个，至少一个）已摆 {shelf.Placed}/{shelf.Want}");
+            sb.Append(S.RetailKind == "computer" ? $"\n{shelfState} 货架（建议 6 个：每类配件一个，至少一个）已摆 {shelf.Placed}/{shelf.Want}" : $"\n{shelfState} 商品货架（至少一个，按销售品类设置）已摆 {shelf.Placed} 个");
             if (shelf.Owned > 0) sb.Append($"，买了没摆 {shelf.Owned} 个");
             int unset = S.ShelfIndexes().Count(ix => S.ShelfKindAt(ix) == null);
             if (unset > 0) sb.Append($"<color=#ABB5A8>　{unset} 个货架还没设置摆什么（去“库存”页设置）</color>");
 
-            foreach (FixtureNeed n in list.Where(x => x.Kind == FixtureKind.Display || x.Kind == FixtureKind.Bench))
+            foreach (FixtureNeed n in list.Where(x => S.RetailKind == "computer" && (x.Kind == FixtureKind.Display || x.Kind == FixtureKind.Bench)))
                 sb.Append('\n').Append(FitLine(n, n.Kind == FixtureKind.Display ? "整机展示桌（每张摆 2 台整机，店越大摆得越多）" : "装机操作台（接装机订单用）", false));
             return sb.ToString();
         }
@@ -56,16 +56,15 @@ namespace PCShopSell.Game.UI
         /// <summary>“装修”页：这间店现在是什么状态、开店清单，以及进入编辑模式（俯视图）摆货架、柜台的入口。</summary>
         private void BuildRenovate()
         {
+            BuildRetailLinks(C);
             string state = S.IsRenovating
                 ? "<color=#DDC18B>装修中：今天歇业，明天恢复营业。</color>"
                 : !S.ShopFitted
                     ? "<color=#DDC18B>毛坯：还不能开业。</color>"
                     : "<color=#A9C9A9>已经布置好，正常营业。</color>";
             Line(C, "店面装修　" + state, 18);
-            Para(C, "货架、收银台、整机展示桌、装机操作台和装饰都在这里摆放。进入编辑模式后镜头会转成俯视，带网格和坐标；整理摆设只在编辑时暂停；整体装修会歇业一天。", 15, Ui.Dim);
+            Para(C, "货架、收银台、整机展示桌、装机操作台和装饰都在这里摆放。进入编辑模式后镜头会转成俯视，带网格和坐标；调整任何店内摆设都需要歇业装修，当天不再营业，次日恢复。", 15, Ui.Dim);
             Para(C, FitChecklistText(), 15);
-            if (S.ShopFitted && !S.IsRenovating)
-                Ui.Size(Ui.Button(C, "整理摆设（暂停中调整，完成后继续营业）", StartQuickPlacement, 18, Ui.ButtonHot), -1, 48);
             string label = S.IsRenovating ? "继续摆放（进入编辑模式）" : S.ShopFitted ? "重新布置（今天歇业装修）" : "开始装修（今天歇业，进入编辑模式）";
             Ui.Size(Ui.Button(C, label, () => StartPlacement(true), 20, Ui.ButtonHot), -1, 48);
             Line(C, "要买的设施去家具城（商业街）或手机上的 1788 下单，买来的家具在当地纸箱或临时存放中。", 15, Ui.Dim);

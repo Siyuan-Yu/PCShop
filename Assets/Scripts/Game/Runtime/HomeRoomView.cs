@@ -288,6 +288,63 @@ namespace PCShopSell.Game.Runtime
             tr.localRotation = Quaternion.Slerp(tr.localRotation, Quaternion.LookRotation(d), 1f - Mathf.Exp(-12f * realDt));
         }
 
+        private List<Vector3> _bedWalkPath;
+        private int _bedWalkIndex;
+        public void CancelBedWalk() { _bedWalkPath = null; _bedWalkIndex = 0; }
+
+        /// <summary>Walk around furniture to a reachable bedside (or the fallback floor bedding).</summary>
+        public int WalkToBed(float dt)
+        {
+            StandUp();
+            Vector3 at = _owner.transform.localPosition;
+            foreach (var spot in _spots)
+                if (spot.Id == Bed && DistToRect(new Vector2(at.x, at.z), spot.Area) <= 0.6f) return 1;
+            if (_bedWalkPath == null)
+            {
+                const float cell = 0.2f;
+                int nx = Mathf.FloorToInt((Width - 0.6f) / cell) + 1;
+                int nz = Mathf.FloorToInt((Depth - 0.6f) / cell) + 1;
+                Vector3 Point(int id) => new Vector3(0.3f + id % nx * cell, 0, 0.3f + id / nx * cell);
+                int start = Mathf.Clamp(Mathf.RoundToInt((at.x - 0.3f) / cell), 0, nx - 1)
+                    + nx * Mathf.Clamp(Mathf.RoundToInt((at.z - 0.3f) / cell), 0, nz - 1);
+                var previous = new int[nx * nz];
+                for (int i = 0; i < previous.Length; i++) previous[i] = -1;
+                var queue = new Queue<int>();
+                previous[start] = start; queue.Enqueue(start);
+                int goal = -1;
+                while (queue.Count > 0)
+                {
+                    int current = queue.Dequeue();
+                    Vector3 point = Point(current);
+                    foreach (var spot in _spots)
+                        if (spot.Id == Bed && !Blocked(point) && DistToRect(new Vector2(point.x, point.z), spot.Area) <= 0.55f)
+                        { goal = current; break; }
+                    if (goal >= 0) break;
+                    for (int direction = 0; direction < 4; direction++)
+                    {
+                        int x = current % nx + (direction == 0 ? 1 : direction == 1 ? -1 : 0);
+                        int z = current / nx + (direction == 2 ? 1 : direction == 3 ? -1 : 0);
+                        if (x < 0 || x >= nx || z < 0 || z >= nz) continue;
+                        int next = x + z * nx;
+                        if (previous[next] >= 0 || Blocked(Point(next))) continue;
+                        previous[next] = current; queue.Enqueue(next);
+                    }
+                }
+                if (goal < 0) return -1;
+                _bedWalkPath = new List<Vector3>();
+                for (int node = goal; node != start; node = previous[node]) _bedWalkPath.Add(Point(node));
+                _bedWalkPath.Add(Point(start));
+                _bedWalkPath.Reverse();
+                _bedWalkIndex = 0;
+            }
+            if (_bedWalkIndex >= _bedWalkPath.Count) return 1;
+            Vector3 delta = _bedWalkPath[_bedWalkIndex] - at;
+            if (delta.magnitude < 0.025f) { _bedWalkIndex++; return 0; }
+            MoveOwner(delta, Mathf.Min(dt, delta.magnitude / 2.6f));
+            if ((_owner.transform.localPosition - at).sqrMagnitude < 1e-10f && dt > 0) return -1;
+            return 0;
+        }
+
         private bool CanStand(Vector3 to, Vector3 from)
         {
             if (to.x < 0.3f || to.x > Width - 0.3f || to.z < 0.3f || to.z > Depth - 0.3f) return false;
@@ -327,6 +384,12 @@ namespace PCShopSell.Game.Runtime
                 Prims.Dress(_owner, _dressed);
             }
             SyncFurniture(s);
+            foreach (var furniture in _furniture.Entries)
+            {
+                if (furniture.Def.Role != FurnitureRole.Cooker) continue;
+                var cooker = furniture.Go.GetComponent<RiceCookerVisual>();
+                if (cooker != null) cooker.Tick(s.Pantry, s.Time.IsRunning ? realDt : 0);
+            }
             UpdateRepairman(s, s.Time.IsRunning ? realDt : 0f);
 
             // 窗外的天光：白天亮、夜里黑
@@ -365,6 +428,7 @@ namespace PCShopSell.Game.Runtime
                 label = "坐下";
             }
             if (best == Repair && s.RepairmanAtWork != null) label = "师傅正在修…";
+            if (best == Cooker && s.Pantry.Cooking != null) label = "正在煮饭：还剩" + s.Pantry.CookMinutesLeft(s.Clock.Now.TotalMinutes) + "分钟";
             if (best == Cooker && s.Pantry.CookedBowls > 0) label = "饭好了：取饭 / 装饭盒";
             if (best == Door && s.LeaveBlocker != null) label = "师傅在修东西，暂时不能出门";
             NearbyId = best;

@@ -152,6 +152,7 @@ namespace PCShopSell.Game.Runtime
         private Rect _benchFoot;
         private Vector2 _benchPos;
         private Vector3 _benchFront;
+        private Vector3 _assemblerStand;
         private Vector3 _deskFront;
         private bool _hasCounter;
         private bool _hasBench;
@@ -187,6 +188,7 @@ namespace PCShopSell.Game.Runtime
         /// <summary>顾客的类型：决定衣服颜色、身高和头顶的称呼（装机党、游戏玩家、DIY 爱好者、办公族、学生）。</summary>
         private static string ProfileOf(ShopCustomer c, out Color shirt)
         {
+            if (c.Intent == CustomerIntent.Goods) { shirt = new Color(0.62f, 0.68f, 0.4f); return "附近居民"; }
             if (c.Intent == CustomerIntent.Build) { shirt = new Color(0.92f, 0.55f, 0.15f); return "装机党"; }
             switch (c.DesiredCategory)
             {
@@ -964,6 +966,7 @@ namespace PCShopSell.Game.Runtime
                 h.Glow.RemoveAll(g => g == null);
                 _buildGlow.AddRange(h.Glow);
             }
+            _assemblerStand = FindAssemblerStand();
             _shelfSpots.AddRange(deskSpots);
             _deskFront = _deskFoots.Count > 0 ? new Vector3(_deskFoots[0].center.x, 0, _deskFoots[0].yMin - 0.4f) : Vector3.zero;
             if (_tables.Count > 0) _deskFront = deskSpots[0] - Origin;
@@ -972,6 +975,46 @@ namespace PCShopSell.Game.Runtime
             _stockTimer = 0f;
         }
         /// <summary>营业：门头绿招牌、顶灯全亮；关门：门头变暗红、挂“休息中”牌 + 拦带、顶灯调暗。</summary>
+        private Vector3 FindAssemblerStand()
+        {
+            Vector3 preferred = _hasBench ? _benchFront : _counterBack + Vector3.right;
+            Vector3 best = preferred;
+            float bestScore = float.PositiveInfinity;
+            const float clearance = 0.24f;
+            for (float x = 0.4f; x <= Width - 0.4f; x += 0.2f)
+                for (float z = 0.4f; z <= Depth - 0.4f; z += 0.2f)
+                {
+                    var point = new Vector3(x, 0, z);
+                    bool blocked = false;
+                    foreach (var foot in _decor.Blockers)
+                        if (new Rect(foot.xMin - clearance, foot.yMin - clearance,
+                            foot.width + clearance * 2, foot.height + clearance * 2).Contains(new Vector2(x, z)))
+                        { blocked = true; break; }
+                    if (blocked || (point - _clerk.transform.localPosition).sqrMagnitude < 0.64f) continue;
+                    float score = (point - preferred).sqrMagnitude;
+                    if (_hasBench) score += DistToRect(_benchFoot, point) * 2;
+                    if (score >= bestScore) continue;
+                    bestScore = score; best = point;
+                }
+            // Even an entirely obstructed shop must not place the employee outside its walls.
+            if (float.IsPositiveInfinity(bestScore))
+                best = new Vector3(Mathf.Clamp(preferred.x, 0.4f, Width - 0.4f), 0, Mathf.Clamp(preferred.z, 0.4f, Depth - 0.4f));
+            return best;
+        }
+
+        private string AssemblerState(GameSession session)
+        {
+            if (!_hasBench) return "等待装机台";
+            if (!session.AutoBuildEnabled) return "自动装机已关";
+            var shop = session.PlayerShop;
+            foreach (var order in shop.Orders)
+                if (order.EmployeeMinutesLeft > 0) return "装机中";
+            if (shop.Orders.Count == 0) return "等待订单";
+            foreach (var order in shop.Orders)
+                if (shop.MissingParts(order).Count == 0) return "准备装机";
+            return "等待配件";
+        }
+
         private void UpdateOpenLook(bool open, float realDt)
         {
             _openBlend = Mathf.MoveTowards(_openBlend, open ? 1f : 0f, realDt * 2f);
@@ -1005,12 +1048,16 @@ namespace PCShopSell.Game.Runtime
             foreach (GameObject g in _buildGlow) g.SetActive(building);
             _clerk.SetActive(s.Employee != null && s.Employee.OnDuty(s.Clock.Now));
             _assembler.SetActive(s.Assembler != null && s.Assembler.OnDuty(s.Clock.Now));
-            _assembler.transform.localPosition = _hasBench ? _benchFront : _counterBack;
+            _assembler.transform.localPosition = _assemblerStand;
             if (_hasBench)
             {
-                Vector3 toward = new Vector3(_benchPos.x, 0, _benchPos.y) - _benchFront;
+                Vector3 toward = new Vector3(_benchPos.x, 0, _benchPos.y) - _assemblerStand;
                 if (toward.sqrMagnitude > 0.01f) _assembler.transform.localRotation = Quaternion.LookRotation(toward);
             }
+            if (_assembler.activeSelf)
+                _emotes.Add(new EmoteInfo { Pos = _assembler.transform.position + Vector3.up * 2.15f,
+                    Text = s.Assembler.Name + " · 装机员\n" + AssemblerState(s),
+                    Color = new Color(0.65f, 0.82f, 1f), Size = 17 });
 
             _stockTimer -= dt;
             if (_stockTimer <= 0)
@@ -1259,10 +1306,12 @@ namespace PCShopSell.Game.Runtime
             if (v.Phase == 1 && c.DisplayTier >= 0)
                 return $"展示台这台我要了！\n<b>{c.ItemName}</b>\n<color={Ok}>{c.Spend}</color>";
             if (v.Phase == 1 && c.GoodsId != null)
-                return $"顺手拿一个！\n<b>{c.ItemName}</b>\n<color={Ok}>{shop.GoodsPriceOf(c.GoodsId)}</color>";
+                return $"就要这个！\n<b>{c.ItemName}</b>\n<color={Ok}>{shop.GoodsPriceOf(c.GoodsId)}</color>";
             if (v.Phase == 1 && c.Item != null)
                 return $"就要这个！\n<b>{c.Item.Name}</b>（{(c.ItemBoxed ? "盒装" : "散件")}）\n<color={Ok}>{shop.PriceOf(c.Item, c.ItemBoxed)}</color>";
             string browsing = BrowseLine(c, now);
+            if (c.Intent == CustomerIntent.Goods)
+                return "看看店里的" + RetailShopTypes.Name(shop.RetailKind).Replace("店", "商品") + "\n" + browsing;
             if (v.Build)
             {
                 string tierName = PartCatalog.TierName(c.BuildTier);

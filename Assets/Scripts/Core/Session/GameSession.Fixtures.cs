@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -76,9 +76,12 @@ namespace PCShopSell.Core.Session
             {
                 Need(FurnitureCatalog.ShopCounter, 1, true),
             };
-            l.Add(Need(FurnitureCatalog.Shelf, FurnitureCatalog.ShelfCategories.Length, true));
-            l.Add(Need(FurnitureCatalog.ShopDisplay, Math.Max(1, ShopSettings.DisplaySlots(PlayerShop.Size) / 2), false));
-            l.Add(Need(FurnitureCatalog.ShopBench, 1, false));
+            l.Add(Need(FurnitureCatalog.Shelf, RetailKind == "computer" ? FurnitureCatalog.ShelfCategories.Length : RetailKind == "flowers" ? 1 : 2, true));
+            if (RetailKind == "computer")
+            {
+                l.Add(Need(FurnitureCatalog.ShopDisplay, Math.Max(1, ShopSettings.DisplaySlots(PlayerShop.Size) / 2), false));
+                l.Add(Need(FurnitureCatalog.ShopBench, 1, false));
+            }
             return l;
 
             FixtureNeed Need(string id, int want, bool required)

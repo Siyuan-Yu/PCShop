@@ -60,13 +60,14 @@ namespace PCShopSell.Core.Home
         public int Count;
         public int ExpireDay;
         public bool Chilled;
+        public int ChilledDays;
 
         public static double WeightOf(string id) => FastFoodCatalog.Packed(id)?.WeightKg ?? Backpack.LunchboxKg;
 
         public static long ExpiryMinute(int day) => ((long)day + 1) * 1440;
         public long MinutesLeft(long now) => Math.Max(0, ExpiryMinute(ExpireDay) - now);
 
-        public FoodBatch Clone() => new FoodBatch { Id = Id, Name = Name, Hunger = Hunger, Health = Health, Count = Count, ExpireDay = ExpireDay, Chilled = Chilled };
+        public FoodBatch Clone() => new FoodBatch { Id = Id, Name = Name, Hunger = Hunger, Health = Health, Count = Count, ExpireDay = ExpireDay, Chilled = Chilled, ChilledDays = ChilledDays };
     }
 
     /// <summary>电饭锅里正在焖的一锅：到点才好，好了才能取。</summary>

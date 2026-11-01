@@ -1,0 +1,44 @@
+using System.Collections.Generic;
+using System.Linq;
+namespace PCShopSell.Core.Home
+{
+    public static class RetailProducts
+    {
+        public static readonly IReadOnlyList<GiftDef> All = Create();
+        private static GiftDef[] Create()
+        {
+            var list = new List<GiftDef>
+            {
+                new GiftDef("flower_rose", "玫瑰花束", "鲜花批发，适合花店陈列。", 38, 0.4, "花店"),
+                new GiftDef("flower_lily", "百合花束", "花店常备鲜花。", 48, 0.5, "花店"),
+                new GiftDef("flower_sun", "向日葵花束", "明亮的向日葵花束。", 28, 0.4, "花店"),
+                new GiftDef("flower_pot", "绿植盆栽", "适合家居和办公桌的小盆栽。", 32, 1.2, "花店"),
+                new GiftDef("produce:rice", "大米（0.5千克/袋）", "零售装大米，可放进厨房使用。", 3, 0.5, "农贸"),
+            };
+            foreach (var ingredient in Ingredients.All)
+                list.Add(new GiftDef("produce:" + ingredient.Id, ingredient.Name, "农贸批发，可零售或带回家做饭。",
+                    ingredient.Price.Yuan, ingredient.WeightKg, "农贸") { IngredientId = ingredient.Id, ShelfDays = ingredient.ShelfDays });
+            foreach (var meal in FastFoodCatalog.All)
+                list.Add(new GiftDef("fast:" + meal.Id, meal.Name, "食品批发，外带食品可放背包、冰箱或上架零售。",
+                    meal.Price.Yuan, meal.WeightKg, "快餐") { MealId = meal.Id, ShelfDays = meal.ShelfDays });
+            return list.ToArray();
+        }
+        public static bool IsFood(GiftDef item) => item != null && (item.IngredientId != null || item.MealId != null || item.Id == "produce:rice");
+    }
+    public static class RetailShopTypes
+    {
+        public static readonly string[] All = { "computer", "flowers", "produce", "food" };
+        public static string Valid(string kind) => All.Contains(kind) ? kind : "computer";
+        public static string Name(string kind) => kind == "flowers" ? "花店" : kind == "produce" ? "生鲜店" : kind == "food" ? "食品店" : "电脑店";
+        public static string Description(string kind) => kind == "flowers" ? "鲜花、花束与盆栽；从花店批发进货。"
+            : kind == "produce" ? "大米、蔬菜、鸡蛋、豆腐、肉类和水果；从农贸市场进货。"
+            : kind == "food" ? "汉堡、炸鸡、薯条、便当、点心和饮料；从快餐店和烟酒茶行进货。" : "电脑配件、整机及少量附带杂货。";
+        public static bool Sells(string kind, string id)
+        {
+            if (kind == "computer") return true;
+            if (kind == "flowers") return id != null && id.StartsWith("flower_");
+            if (kind == "produce") return id != null && (id.StartsWith("produce:") || id == Gifts.Fruit);
+            return id != null && (id.StartsWith("fast:") || id == Gifts.Soda || id == Gifts.Drink || id == Gifts.Snack);
+        }
+    }
+}

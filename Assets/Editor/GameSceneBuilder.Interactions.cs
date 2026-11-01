@@ -107,12 +107,12 @@ namespace PCShopSell.EditorTools
             _game.Ui.OpenDock();
             _game.Ui.DebugSelectTab(4);
             Shot("vs1_ux_09_renovation");
-            ClickGuideButton("整理摆设（暂停中调整，完成后继续营业）");
+            ClickGuideButton("继续摆放（进入编辑模式）");
             Frame(0);
-            Check(_game.Placing && !s.IsRenovating && s.Time.IsHeld, "快速整理保持编辑模式，不消耗整天营业");
+            Check(_game.Placing && s.IsRenovating && s.Time.IsHeld, "继续摆放保持装修与当天歇业状态");
             Shot("vs1_ux_10_quick_edit");
             _game.EndPlacement();
-            Check(!s.Time.IsHeld && !s.IsRenovating && !s.CanEditShop, "整理结束释放暂停和编辑权限");
+            Check(!s.Time.IsHeld && s.IsRenovating && s.PlayerShop.ForcedClosed, "摆放结束释放暂停，当天仍然歇业");
             _game.Ui.CloseAllWindows();
 
             s.ShopTemp.AddGift(Gifts.Cig, 2);

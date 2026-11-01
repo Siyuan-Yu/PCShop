@@ -19,15 +19,7 @@ namespace PCShopSell.Core.Session
             return 0; // Selecting a browse source must never delete purchases from other sources.
         }
 
-        private bool _quickShopEdit;
-        public bool CanEditShop => IsRenovating || _quickShopEdit;
-        public bool BeginQuickShopEdit()
-        {
-            if (!InPlayerShop || IsGameOver) return false;
-            _quickShopEdit = true;
-            return true;
-        }
-        public void EndQuickShopEdit() => _quickShopEdit = false;
+        public bool CanEditShop => IsRenovating;
 
         public void TrainEmployeeAt(OwnedShop shop) => WithShop(shop, () => { TrainEmployee(); });
         public void ToggleAutoBuildAt(OwnedShop shop) => WithShop(shop, ToggleAutoBuild);
@@ -65,7 +57,7 @@ namespace PCShopSell.Core.Session
 
         public string RecruitAssignmentBlocker(string candidateId, string destination, EmployeeRole role)
         {
-            if (IsGameOver || !InPlayerShop || !_candidates.Any(c => c.Id == candidateId)) return "候选人已不可聘用";
+            if (IsGameOver || !InPlayerShop || !_candidates.Any(c => c.Id == candidateId && CandidateAvailable(c))) return "候选人已不可聘用";
             if (!Enum.IsDefined(typeof(EmployeeRole), role)) return "请选择岗位";
             if (role == EmployeeRole.Unassigned) return null;
             var shop = ShopAt(destination);

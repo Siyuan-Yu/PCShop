@@ -49,19 +49,24 @@ namespace PCShopSell.Core.Session
         public string ShopTitle(OwnedShop s)
         {
             int i = _shops.IndexOf(s);
+            if (s.RetailKind != "computer") return "我的" + RetailShopTypes.Name(s.RetailKind) + (i > 0 ? "·" + ChineseNumber(i + 1) + "店" : "");
             return i <= 0 ? MyShopName : $"{MyShopName}·{ChineseNumber(i + 1)}店";
         }
 
         /// <summary>开了不止一家时，提示里带上是哪家店。</summary>
         private string ShopTag => MyShopCount > 1 ? $"（{ShopTitle(_focus)}）" : "";
 
+        public const int BuildOrdersStartDay = 14;
+
         private ShopSimulation CreateShopSim(OwnedShop shop)
         {
             var sim = new ShopSimulation(shop.Place.Id, shop.Place.Size, Clock, Ledger, Market, Random)
             {
+                RetailKind = shop.RetailKind,
                 LocationFactor = ComputeLocationFactor(City, shop.Place),
                 EmployeeOnDuty = t => (shop.Employee != null && shop.Employee.OnDuty(t)) || (shop.Assembler != null && shop.Assembler.OnDuty(t)),
             };
+            sim.Settings.BuildOrdersStartDay = BuildOrdersStartDay;
             sim.WorkMinute = now => WithShop(shop, () => UpdateEmployeeWork(now));
             sim.EmployeeBusy = () => shop.EmployeeBuilding;
             sim.DayClosed += r =>
@@ -183,13 +188,14 @@ namespace PCShopSell.Core.Session
             ShopSimulation sim = s.Sim;
             return new SaveShop
             {
+                retailKind = s.RetailKind, goodsLots = SaveRetailLots(sim),
                 place = s.Place.Id,
                 rentCents = s.Lease.Rent.Cents,
                 depositCents = s.Lease.Deposit.Cents,
                 startDay = s.Lease.StartDay,
                 stock = Lines(sim.Stock),
-                goodsIds = sim.Stock.GoodsLines().Select(kv => kv.Key).ToArray(),
-                goodsCounts = sim.Stock.GoodsLines().Select(kv => kv.Value).ToArray(),
+                goodsIds = SaveRetailCounts(sim).Select(kv => kv.Key).ToArray(),
+                goodsCounts = SaveRetailCounts(sim).Select(kv => kv.Value).ToArray(),
                 markup = sim.Markup,
                 openMinute = sim.OpenMinute,
                 closeMinute = sim.CloseMinute,
@@ -223,13 +229,14 @@ namespace PCShopSell.Core.Session
         {
             if (d == null || !City.HasPlace(d.place) || _shops.Any(x => x.Place.Id == d.place)) return;
             Place place = City.GetPlace(d.place);
-            var shop = new OwnedShop { Place = place };
+            var shop = new OwnedShop { Place = place, RetailKind = RetailShopTypes.Valid(d.retailKind) };
             shop.Lease = new ShopLease { PlaceId = place.Id, Rent = Money.FromCents(d.rentCents), Deposit = Money.FromCents(d.depositCents), StartDay = d.startDay };
             shop.Sim = CreateShopSim(shop);
             ShopSimulation sim = shop.Sim;
             Fill(sim.Stock, d.stock);
             string[] goods = d.goodsIds ?? Array.Empty<string>();
             for (int i = 0; i < goods.Length && d.goodsCounts != null && i < d.goodsCounts.Length; i++) sim.Stock.ForceAddGoods(goods[i], d.goodsCounts[i]);
+            sim.Stock.RestoreGoodsLots(d.goodsLots, Clock.Today.TotalDays);
             sim.Markup = d.markup;
             if (d.closeMinute > 0) sim.SetHours(d.openMinute, d.closeMinute);
             sim.RestoreOrders((d.orders ?? Array.Empty<SaveOrder>()).Select(FromSave), d.nextOrderId);

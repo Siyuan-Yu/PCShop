@@ -8,12 +8,29 @@ using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
+    [Serializable]
+    public sealed class SocialMemory
+    {
+        public string PersonId, Text;
+        public long Minute;
+        public SocialMemory Copy() => (SocialMemory)MemberwiseClone();
+    }
+
     /// <summary>
     /// 进货渠道上的固定人物：认识档口老板、送礼、约他们晚上或周末出去玩、打听行情（消息有真有假）。
     /// 交情换来更低的进价和更大的每日进货额度。
     /// </summary>
     public sealed partial class GameSession
     {
+        private readonly List<SocialMemory> _socialMemories = new List<SocialMemory>();
+        public IEnumerable<SocialMemory> MemoriesOf(string personId) =>
+            _socialMemories.Where(m => m.PersonId == personId).Reverse().OrderByDescending(m => m.Minute);
+        private void RememberSocial(string personId, string text)
+        {
+            if (string.IsNullOrEmpty(personId) || string.IsNullOrEmpty(text)) return;
+            _socialMemories.Add(new SocialMemory { PersonId = personId, Text = text, Minute = Clock.Now.TotalMinutes });
+        }
+
         public const int EveningStartMinute = 19 * 60;
         public const int WeekendStartMinute = 10 * 60;
         public const int EveningBookDeadlineMinute = 17 * 60;
@@ -53,6 +70,7 @@ namespace PCShopSell.Core.Session
             string seen = "seen_" + owner.Id;
             if (!Flags.Add(seen)) return;
             if (Relation(owner.Id) < 10) _relations[owner.Id] = 10;
+            RememberSocial(owner.Id, "第一次到访档口，和老板打了照面。");
         }
 
         // ---------- 进价与额度 ----------
@@ -138,11 +156,13 @@ namespace PCShopSell.Core.Session
             if (!Random.Chance(InviteAcceptChance(npcId)))
             {
                 _inviteTryDay[npcId] = Clock.Today.TotalDays;
+                RememberSocial(npcId, "提出邀约，对方有事未能答应。");
                 Say($"{n.Name}说：\"那天正好有事，下次吧。\"");
                 return false;
             }
             int day = NextSlotDate(slot).TotalDays;
             _appointments.Add(new Appointment { NpcId = npcId, Slot = slot, Day = day });
+            RememberSocial(npcId, $"约好在{new GameDate(day)} {SlotName(slot)}一起出去。");
             Say($"约好了：{DescribeDay(day)} {SlotName(slot)}，和{n.Name}。");
             return true;
         }
@@ -152,6 +172,7 @@ namespace PCShopSell.Core.Session
             int i = _appointments.FindIndex(a => a.NpcId == npcId);
             if (i < 0) return false;
             _appointments.RemoveAt(i);
+            RememberSocial(npcId, "取消了已约好的活动，对方有点不高兴。");
             AddRelation(npcId, -3);
             Say("推掉了约会，对方有点不高兴。");
             return true;
@@ -169,6 +190,7 @@ namespace PCShopSell.Core.Session
                 if (now.TotalMinutes > start + OutingGraceMinutes)
                 {
                     _appointments.RemoveAt(i);
+                    RememberSocial(a.NpcId, "错过了约定，对方等了一阵后离开。");
                     AddRelation(a.NpcId, -5);
                     Popup?.Invoke("错过了约定", $"你没能赴约，{Npcs.Get(a.NpcId).Name}等了一阵就走了。交情 -5。");
                     continue;
@@ -210,6 +232,7 @@ namespace PCShopSell.Core.Session
                 Text = "临时有事，放鸽子（交情 -8）",
                 Apply = s =>
                 {
+                    s.RememberSocial(n.Id, "赴约前临时取消了活动，放了对方鸽子。");
                     s.AddRelation(n.Id, -8);
                     return $"你发消息说去不了。{n.Name}回了个“行吧”。交情 -8。";
                 },
@@ -226,6 +249,7 @@ namespace PCShopSell.Core.Session
             if (n.Likes == act.Id) gain *= 1.5;
             AddRelation(n.Id, gain);
             _outingDay[n.Id] = Clock.Today.TotalDays;
+            RememberSocial(n.Id, $"一起{act.Name}，花费 {act.Cost}，相处了 {act.DurationMinutes} 分钟。");
 
             Player.Energy = Math.Max(0, Math.Min(Player.MaxEnergy, Player.Energy + act.EnergyChange));
             Player.Health = Math.Max(0, Math.Min(100, Player.Health + act.HealthChange));
@@ -264,6 +288,7 @@ namespace PCShopSell.Core.Session
             ApplyCargoLimit();
             AdvanceClock(5);
             string text = CreateTip(n);
+            RememberSocial(npcId, "递了根烟，向对方打听了行情消息。\n" + text);
             Popup?.Invoke(n.Name + "的消息", text);
             return true;
         }
@@ -338,6 +363,7 @@ namespace PCShopSell.Core.Session
         {
             var s = new SaveSocial
             {
+                memories = _socialMemories.Select(m => m.Copy()).ToArray(),
                 apptNpc = _appointments.Select(a => a.NpcId).ToArray(),
                 apptSlot = _appointments.Select(a => (int)a.Slot).ToArray(),
                 apptDay = _appointments.Select(a => a.Day).ToArray(),
@@ -375,6 +401,11 @@ namespace PCShopSell.Core.Session
         private void RestoreSocial(SaveData d)
         {
             SaveSocial s = d.social ?? new SaveSocial();
+            _socialMemories.Clear();
+            foreach (var memory in s.memories ?? Array.Empty<SocialMemory>())
+                if (memory != null && !string.IsNullOrEmpty(memory.PersonId) && !string.IsNullOrEmpty(memory.Text)
+                    && memory.Minute >= 0 && memory.Minute <= Clock.Now.TotalMinutes)
+                    _socialMemories.Add(memory.Copy());
 
             _appointments.Clear();
             int n = MinLen(s.apptNpc, s.apptSlot, s.apptDay);

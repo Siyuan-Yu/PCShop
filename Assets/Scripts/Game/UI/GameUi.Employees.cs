@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -51,6 +51,7 @@ namespace PCShopSell.Game.UI
                     if (row.Role == EmployeeRole.Buyer)
                         Line(list, e.PurchasePlan.Daily ? "采购频率：" + (e.PurchasePlan.EveryDays == 1 ? "每天一次" : "每三天一次")
                             + " · 下次最早第" + (System.Math.Max(S.Clock.Today.TotalDays, e.PurchasePlan.NextPurchaseDay) + 1) + "天上班时尝试" : "定期采购：未启用或已暂停", 15, Ui.Dim);
+                    if (row.Role == EmployeeRole.Buyer) Para(list, S.EmployeePurchaseStorageText(e.Id), 15, Ui.Accent);
                     if (row.Role == EmployeeRole.Buyer && !string.IsNullOrEmpty(e.LastPurchaseNote)) Para(list, e.LastPurchaseNote, 15, Ui.Dim);
                 }
             });
@@ -119,15 +120,15 @@ namespace PCShopSell.Game.UI
             });
         }
 
-        public void OpenEmployeePurchase(string employeeId, Window parent = null)
+        public void OpenEmployeePurchase(string employeeId, Window parent = null, int? importedOrderId = null)
         {
             var worker = S.FindEmployee(employeeId);
             if (worker == null || worker.Role != EmployeeRole.Buyer) return;
             var draft = _purchaseDrafts.TryGetValue(employeeId, out var savedDraft) ? savedDraft.Copy() : worker.Person.PurchasePlan.Copy();
             S.PrepareEmployeePurchaseDraft(draft);
             _purchaseDrafts[employeeId] = draft;
-            string browseSource = null, category = "全部", search = "";
-            bool selectedOnly = false;
+            string browseSource = null, category = worker.Shop.RetailKind == "flowers" ? "鲜花与盆栽" : worker.Shop.RetailKind == "produce" ? "米与生鲜" : worker.Shop.RetailKind == "food" ? "外带食品" : "全部", search = "";
+            bool selectedOnly = importedOrderId.HasValue;
             var selected = draft.Items.ToDictionary(GameSession.PurchaseKey, x => x.Copy());
             var order = draft.Items.Select(GameSession.PurchaseKey).ToList();
             void Sync()
@@ -142,7 +143,19 @@ namespace PCShopSell.Game.UI
                 var previousActions = panel.Find("PurchaseActions");
                 if (previousActions != null) Kill.It(previousActions.gameObject);
                 ((RectTransform)w.Content.parent.parent).Anchor(0, 0, 1, 1, 0, 76, 0, 50);
-                Para(w.Content, "加入商品后点“完成”，今天只保存、不扣钱，明天起上班时按所选周期持续尝试。按清单从上到下购买；钱不够就拿现有现金，扣除必要车费后尽量买，余款返店退回。", 18, Ui.Accent);
+                Para(w.Content, "选好商品和采购频率后点“完成”，从明天起自动采购。清单从上到下是购买顺序。", 18, Ui.Accent);
+                Para(w.Content, S.EmployeePurchaseStorageText(employeeId), 16, Ui.Accent);
+                Para(w.Content, "货源包括电子市场、花店、农贸市场、快餐店和烟酒茶行。鲜花、生鲜与外带食品均可采购；送店后为对应货架设置品类即可销售。", 15, Ui.Dim);
+                Para(w.Content, "每次按清单数量重复买入；销售较慢时可减少数量或改为每三天一次。在途预留指已买、尚未送到的货。", 15, Ui.Dim);
+                if (importedOrderId.HasValue)
+                    Para(w.Content, "订单 #" + importedOrderId.Value + " 的缺件已合并到这份草稿。已有型号保留原数量和货源，可在这里调整；点“完成”后保存。", 16, Ui.Accent);
+                var quickKinds = Ui.Row(w.Content, 34);
+                foreach (var quick in new[] { "全部", "鲜花与盆栽", "米与生鲜", "外带食品", "饮料" })
+                {
+                    string pick = quick;
+                    Ui.Size(Ui.Button(quickKinds, pick, () => { category = pick; browseSource = null; selectedOnly = false; w.Rebuild(); }, 16,
+                        category == pick ? Ui.ButtonHot : Ui.ButtonBg), -1, -1, 1);
+                }
                 var frequency = Ui.Row(w.Content, 38);
                 Ui.Size(Ui.Label(frequency, "采购频率", 17), 100);
                 foreach (int days in new[] { 1, 3 })
@@ -153,7 +166,7 @@ namespace PCShopSell.Game.UI
                     button.name = "PurchaseInterval_" + days;
                     Ui.Size(button, 180, 36);
                 }
-                Para(w.Content, "从明天开始，每隔" + draft.EveryDays + "天在上班时尝试一趟；现金或车辆不足时，本次记为已尝试，等下个周期再尝试。", 15, Ui.Dim);
+                Para(w.Content, "从明天开始，每隔" + draft.EveryDays + "天在上班时采购一次。", 15, Ui.Dim);
                 var filters = Ui.Row(w.Content, 38);
                 string sourceName = browseSource == null ? "全部货源" : S.City.GetPlace(browseSource).Name;
                 Ui.Size(Ui.Button(filters, sourceName + "  ▼", () => OpenWindow("浏览货源", 740, 660, picker =>
@@ -226,10 +239,12 @@ namespace PCShopSell.Game.UI
                     string label = mode == VehicleKind.Walk ? "步行 + 货车" : mode == VehicleKind.Taxi ? "打车 + 货车" : Vehicles.Get(mode).Name + $"（空闲 {S.FreeVehicleCount(mode)}）";
                     Ui.Size(Ui.Button(transport, label, () => { draft.Transport = mode; w.Rebuild(); }, 16, draft.Transport == mode ? Ui.ButtonHot : Ui.ButtonBg, hired || S.VehicleCount(mode) > 0), -1, -1, 1);
                 }
-                var quote = S.QuoteEmployeePurchase(employeeId, draft);
-                Para(w.Content, $"按当前价格试算：整单需要 {quote.RequiredTotal}；按当前现金可买货款 {quote.Goods} + 车费 {quote.Travel} + 运费 {quote.Freight} = {quote.Total}。\n实际出发时重新计算，最多带走所需费用；不足则带走现有现金，按上方清单顺序尽量买。今天保存不扣款。", 16);
-                if (quote.Error != null) Para(w.Content, "当前试算提示：" + quote.Error + "。不影响保存，明天上班时再检查。", 15, Ui.Warn);
-                if (S.Vehicle == draft.Transport && S.FreeVehicleCount(draft.Transport) == 0)
+                var quote = S.EstimateEmployeePurchase(employeeId, draft);
+                string budgetName = draft.EveryDays == 1 ? "每日预算" : "每次采购预算";
+                var budgetLabel = Para(w.Content, $"{budgetName}：货款 {quote.Goods} + 车费 {quote.Travel} + 运费 {quote.Freight} = 总计 {quote.Total}", 17);
+                budgetLabel.name = "EmployeePurchaseBudget";
+                bool ownVehicle = draft.Transport == VehicleKind.EBike || draft.Transport == VehicleKind.Tricycle || draft.Transport == VehicleKind.Van;
+                if (ownVehicle && S.Vehicle == draft.Transport && S.FreeVehicleCount(draft.Transport) == 0)
                     Ui.Size(Ui.Button(w.Content, "老板改为步行，释放这台车", () => { S.SetVehicle(VehicleKind.Walk); w.Rebuild(); }, 16), -1, 36);
                 var actions = Ui.Row(panel, 50);
                 actions.name = "PurchaseActions";

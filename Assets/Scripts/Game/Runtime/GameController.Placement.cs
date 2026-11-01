@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Game.Runtime;
@@ -68,7 +68,6 @@ namespace PCShopSell.Game
             CancelGhost();
             Placing = false;
             Session.EndLayoutHistory();
-            Session.EndQuickShopEdit();
             LeaveEditView();
             if (_placeHeld)
             {

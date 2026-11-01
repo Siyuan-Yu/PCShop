@@ -10,6 +10,7 @@ namespace PCShopSell.Core.Session
     public sealed class Employee
     {
         public string Id = Guid.NewGuid().ToString("N");
+        public long CandidateLeavesAt;
         public string TransferShopId;
         public int TransferDay = -1;
         public int TransferRole = -1;
@@ -61,6 +62,26 @@ namespace PCShopSell.Core.Session
 
         /// <summary>贴了招聘启事的日期；-1 表示没贴。</summary>
         public int JobAdDay { get; private set; } = -1;
+
+        public const int CandidateLeaveMinute = 18 * 60;
+        public bool CandidateAvailable(Employee person) => person != null && _candidates.Contains(person)
+            && person.CandidateLeavesAt > Clock.Now.TotalMinutes;
+        public string CandidateWaitText(Employee person)
+        {
+            long left = Math.Max(0, person.CandidateLeavesAt - Clock.Now.TotalMinutes);
+            return $"{DescribeDay((int)(person.CandidateLeavesAt / 1440))} {Hm((int)(person.CandidateLeavesAt % 1440))} 离开 · 还等 {left / 60} 小时 {left % 60} 分钟";
+        }
+        private void ExpireCandidates()
+        {
+            var departed = new List<string>();
+            for (int i = _candidates.Count - 1; i >= 0; i--)
+            {
+                var person = _candidates[i];
+                if (person.CandidateLeavesAt > Clock.Now.TotalMinutes) continue;
+                departed.Add(person.Name); _candidates.RemoveAt(i);
+            }
+            if (departed.Count > 0) Say("应聘等待时间已到，" + string.Join("、", departed) + "离开了。需要招人可以再贴招聘告示。");
+        }
 
         // ---------- 店里 ----------
 
@@ -144,6 +165,7 @@ namespace PCShopSell.Core.Session
         public bool Hire(int candidateIndex)
         {
             if (IsGameOver || Employee != null || candidateIndex < 0 || candidateIndex >= _candidates.Count) return false;
+            if (!CandidateAvailable(_candidates[candidateIndex])) return Fail("这位应聘者已经离开了。");
             Employee = _candidates[candidateIndex];
             _focus.EmployeeTrained = false;
             EverHired = true;
@@ -156,6 +178,7 @@ namespace PCShopSell.Core.Session
         public bool HireAssembler(int index)
         {
             if (!InPlayerShop || Assembler != null || index < 0 || index >= _candidates.Count) return false;
+            if (!CandidateAvailable(_candidates[index])) return Fail("这位应聘者已经离开了。");
             if (!Ledger.TryDebit(Clock.Today, "培训", Money.FromYuan(1200), "装机员入职培训")) return Fail("入职培训需要 ¥1,200。");
             Assembler = _candidates[index]; Assembler.DailyWageYuan += 60;
             Assembler.AssemblyTrained = true;
@@ -203,6 +226,7 @@ namespace PCShopSell.Core.Session
                 bool fast = Random.Chance(0.5);
                 var e = new Employee
                 {
+                    CandidateLeavesAt = (long)today.TotalDays * 1440 + CandidateLeaveMinute,
                     Name = Surnames[Random.Next(0, Surnames.Length)] + GivenNames[Random.Next(0, GivenNames.Length)],
                     CheckoutMinutes = fast ? 2 : 4,
                     AssemblyMinutes = Random.Next(70, 131),
@@ -213,7 +237,7 @@ namespace PCShopSell.Core.Session
                 _candidates.Add(e);
             }
             Show("有人来应聘", $"{_candidates[newStart].Name}（{_candidates[newStart].Description}，日薪 ¥{_candidates[newStart].DailyWageYuan}）\n" +
-                             $"{_candidates[newStart + 1].Name}（{_candidates[newStart + 1].Description}，日薪 ¥{_candidates[newStart + 1].DailyWageYuan}）\n去店里的'招人'面板决定。");
+                             $"{_candidates[newStart + 1].Name}（{_candidates[newStart + 1].Description}，日薪 ¥{_candidates[newStart + 1].DailyWageYuan}）\n应聘者会等到今天 18:00，之后离开。请去店里的'招人'面板决定。");
         }
 
         private void PayWages(GameDate day)

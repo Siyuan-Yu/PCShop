@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -197,10 +197,10 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef("fan_fixed", "电风扇（修好了）", "修好的旧电风扇，能转。睡眠 +0.05，水电 +¥10/月。", 0, FurnitureSlot.Floor, 0.45, 0.45, false, true) { SleepBonus = 0.05, Utilities = Money.FromYuan(10) });
             Add(new FurnitureDef("junk", "纸箱和塑料盆", "搬家时留下的杂物。纸箱里能放东西。", 0, FurnitureSlot.Floor, 0.9, 0.9, false, true) { Role = FurnitureRole.Storage });
 
-            Add(new FurnitureDef(FridgeSmall, "单门小冰箱", "入门款。容量 60 千克，占地小；家和店里都能摆。冷藏额外保鲜 2 天，每批只延长一次。", 1299, FurnitureSlot.Floor, 0.55, 0.6) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 60, WeightKg = 28, Utilities = Money.FromYuan(15) });
-            Add(new FurnitureDef(FridgeFamily, "家用双门冰箱", "上下双门。容量 120 千克，适合日常备餐；家和店里都能摆。冷藏额外保鲜 2 天，每批只延长一次。", 2799, FurnitureSlot.Floor, 0.75, 0.7) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 120, WeightKg = 48, Utilities = Money.FromYuan(20) });
-            Add(new FurnitureDef(FridgeSide, "对开门大冰箱", "左右对开门。容量 240 千克，可囤更多饭菜饮料；家和店里都能摆。冷藏额外保鲜 2 天，每批只延长一次。", 5299, FurnitureSlot.Floor, 1.15, 0.75) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 240, WeightKg = 85, Utilities = Money.FromYuan(30) });
-            Add(new FurnitureDef(FridgePremium, "高端四门冰箱", "高端四门大容量款。容量 360 千克，适合大量备餐；家和店里都能摆。冷藏额外保鲜 2 天，每批只延长一次。", 7999, FurnitureSlot.Floor, 1.3, 0.85) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 360, WeightKg = 120, Utilities = Money.FromYuan(40) });
+            Add(new FurnitureDef(FridgeSmall, "单门小冰箱", "入门款。容量 60 千克，占地小；家和店里都能摆。冷藏额外保鲜 7 天，每批只延长一次。", 1299, FurnitureSlot.Floor, 0.55, 0.6) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 60, WeightKg = 28, Utilities = Money.FromYuan(15) });
+            Add(new FurnitureDef(FridgeFamily, "家用双门冰箱", "上下双门。容量 120 千克，适合日常备餐；家和店里都能摆。冷藏额外保鲜 7 天，每批只延长一次。", 2799, FurnitureSlot.Floor, 0.75, 0.7) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 120, WeightKg = 48, Utilities = Money.FromYuan(20) });
+            Add(new FurnitureDef(FridgeSide, "对开门大冰箱", "左右对开门。容量 240 千克，可囤更多饭菜饮料；家和店里都能摆。冷藏额外保鲜 7 天，每批只延长一次。", 5299, FurnitureSlot.Floor, 1.15, 0.75) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 240, WeightKg = 85, Utilities = Money.FromYuan(30) });
+            Add(new FurnitureDef(FridgePremium, "高端四门冰箱", "高端四门大容量款。容量 360 千克，适合大量备餐；家和店里都能摆。冷藏额外保鲜 7 天，每批只延长一次。", 7999, FurnitureSlot.Floor, 1.3, 0.85) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 360, WeightKg = 120, Utilities = Money.FromYuan(40) });
 
             // ---- 出租屋：可以买 ----
             Add(new FurnitureDef("bed_spring", "弹簧床", "有像样的床垫，睡着不硌人。睡眠质量 ×1.12。", 900, FurnitureSlot.Floor, 2.0, 1.1) { Role = FurnitureRole.Bed, BedQuality = 1.12 });

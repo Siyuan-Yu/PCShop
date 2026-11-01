@@ -88,6 +88,7 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Schedule: return new Color(0.90f, 0.45f, 0.25f);
                 case PhoneApps.Shop: return new Color(0.88f, 0.28f, 0.35f);
                 case PhoneApps.Chat: return new Color(0.18f, 0.72f, 0.58f);
+                case PhoneApps.Loans: return new Color(0.82f, 0.59f, 0.19f);
                 case PhoneApps.Wholesale: return new Color(0.62f, 0.40f, 0.82f);
                 default: return Ui.ButtonBg;
             }
@@ -102,6 +103,7 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Schedule: return "历";
                 case PhoneApps.Shop: return "购";
                 case PhoneApps.Chat: return "聊";
+                case PhoneApps.Loans: return "借";
                 case PhoneApps.Wholesale: return "批";
                 default: return "?";
             }
@@ -157,6 +159,7 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Schedule: OpenSchedulePanel(); break;
                 case PhoneApps.Shop: OpenOnlinePanel(); break;
                 case PhoneApps.Chat: OpenChatPanel(); break;
+                case PhoneApps.Loans: OpenLoansApp(); break;
                 case PhoneApps.Wholesale: OpenWholesaleApp(); break;
             }
         }

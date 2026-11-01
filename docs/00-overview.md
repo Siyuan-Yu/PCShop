@@ -1,6 +1,8 @@
 # PCShopSell（工作名）
 
-玩家无进货资金时的打工收入、每店班次与周结规则见 [第 18 篇](18-player-work-and-weekly-pay.md)。
+当前完整快照：[2026-11-01 更新与归档](30-update-2026-11-01.md)。现在支持电脑店起步、后期开花店/生鲜店/食品店，已接入真实进货、货架、收银和员工流程；最新验证仅为编译，历史文档的测试数字不代表当前版本回归。
+
+玩家无进货资金时的打工收入、每店班次与每日收工结算规则见 [第 18 篇](18-player-work-and-weekly-pay.md)。
 
 最新生活功能与验证见 [冰箱、饭菜与营养/心情](17-food-fridge-and-diet.md)，员工每日多源采购见 [采购清单](16-daily-multisource-purchasing.md)。
 
@@ -15,7 +17,7 @@
 - 时间：一条连续世界时钟，1× 静止经营时一天约 5.6 分钟，7 天一周。目标采用 365/730/1095 天，当前日历每年 360 天，差异已列待修。
 
 ## 技术栈
-- Unity 2022.3.6f1（`D:\UnityEditor\2022.3.6f1`），URP 14.0.8；当前界面使用 uGUI Text 与系统中文字体回退，TextMeshPro 中文字体资产仍列在路线待办中。
+- Unity 2022.3.6f1（`D:\UnityEditor\2022.3.6f1`），URP 14.0.8；当前界面使用 uGUI Text；桌面使用系统中文字体，WebGL 使用内置 Noto Sans CJK SC，TextMeshPro 中文字体资产仍列在路线待办中。
 - Windows 先行，后接 Steamworks；手游以后再考虑，微信小游戏不做。
 - 逻辑分层：
   - `Assets/Scripts/Core`：纯 C# 逻辑（价格模型、经济、存档数据），**不引用 UnityEngine**，可单元测试。
@@ -31,6 +33,8 @@
 - 不照搬竞品（含东京股神）的 UI 布局、角色、文案。
 
 ## 目录
+
+- [30-update-2026-11-01.md](30-update-2026-11-01.md)：本轮完整归档及最新规则。
 ```
 Assets/
   Scripts/Core/      纯逻辑（无 UnityEngine）

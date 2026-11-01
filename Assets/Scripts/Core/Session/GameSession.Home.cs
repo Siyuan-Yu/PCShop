@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -247,7 +247,7 @@ namespace PCShopSell.Core.Session
             if (shop)
             {
                 if (!InPlayerShop) return Fail("要在自己的店里才能摆。");
-                if (!CanEditShop) return Fail("请先进入整理或装修模式。");
+                if (!CanEditShop) return Fail("请先歇业装修，才能调整店内摆设。");
                 return true;
             }
             if (CurrentPlace != Home) return Fail("要在家里才能摆。");
@@ -368,7 +368,7 @@ namespace PCShopSell.Core.Session
         private void UpdateCooking(GameTimestamp now)
         {
             FoodBatch b = Pantry.FinishCook(now.TotalMinutes);
-            if (b != null) Say($"电饭锅跳了：{b.Name}×{b.Count} 碗焖好了。可装进背包，或放入冰箱额外保鲜 2 天。");
+            if (b != null) Say($"电饭锅跳了：{b.Name}×{b.Count} 碗焖好了。可装进背包，或放入冰箱额外保鲜 7 天。");
         }
 
         /// <summary>在家吃一碗（10 分钟）。</summary>
@@ -430,9 +430,43 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>
-        /// 每天饿两次（12:00、18:30）。在家且锅里有饭就吃锅里的，否则吃背包里的饭盒；都没有就只能饿着。
+        /// 到饭点或饿了自动吃饭，依次使用家里的熟饭、当前地点冰箱和背包。
         /// </summary>
+        public sealed class DeliveryMeal
+        {
+            public readonly string Name;
+            public readonly int Price, Hunger, Health, Mood, Energy;
+            public DeliveryMeal(string name, int price, int health, int mood, int energy)
+            { Name = name; Price = price; Hunger = 65; Health = health; Mood = mood; Energy = energy; }
+            public string Effects => $"饱腹 +{Hunger}"
+                + (Health != 0 ? $" · 健康 {SignedDiet(Health)}" : "")
+                + (Mood != 0 ? $" · 心情 {SignedDiet(Mood)}" : "")
+                + (Energy != 0 ? $" · 精力 {SignedDiet(Energy)}" : "");
+        }
+        public static readonly IReadOnlyList<DeliveryMeal> DeliveryMeals = Array.AsReadOnly(new[]
+        {
+            new DeliveryMeal("便宜外卖", 25, -5, 0, 0),
+            new DeliveryMeal("中档外卖", 100, 0, 0, 0),
+            new DeliveryMeal("精致外卖", 300, 0, 10, 0),
+            new DeliveryMeal("豪华外卖", 800, 0, 20, 20),
+        });
         public bool MealDeliveryEnabled => Flags.Contains("life:meal-delivery");
+        public int MealDeliveryTier
+        {
+            get
+            {
+                for (int i = DeliveryMeals.Count - 1; i > 0; i--)
+                    if (Flags.Contains("life:meal-delivery-tier:" + i)) return i;
+                return 0;
+            }
+        }
+        public DeliveryMeal SelectedDeliveryMeal => DeliveryMeals[MealDeliveryTier];
+        public void SelectMealDeliveryTier(int tier)
+        {
+            if (tier < 0 || tier >= DeliveryMeals.Count) return;
+            for (int i = 0; i < DeliveryMeals.Count; i++) Flags.Remove("life:meal-delivery-tier:" + i);
+            Flags.Add("life:meal-delivery-tier:" + tier);
+        }
         public void ToggleMealDelivery() { if (!Flags.Remove("life:meal-delivery")) Flags.Add("life:meal-delivery"); }
 
         private void EatMeal(string meal)
@@ -445,6 +479,13 @@ namespace PCShopSell.Core.Session
                 Say($"{meal}在家吃了自己做的饭。");
                 return;
             }
+            if (CanOpenFridge && CurrentFridge.Food.Packed.Any(b => b.Count > 0)
+                && (HasFridgeMeal || !HasMeal(Backpack.Food.Packed)))
+            {
+                Player.Hunger = Math.Min(100, Player.Hunger + EatFrom(CurrentFridge.Food.Packed));
+                Say($"{meal}吃了{(AtHome ? "家里" : "当前店铺")}冰箱里的食物。");
+                return;
+            }
             if (Backpack.Lunchboxes > 0)
             {
                 Player.Hunger = Math.Min(100, Player.Hunger + EatFrom(Backpack.Food.Packed));
@@ -452,10 +493,19 @@ namespace PCShopSell.Core.Session
                 Say($"{meal}吃了背包里的食物，还剩 {Backpack.Lunchboxes} 份。");
                 return;
             }
-            if (MealDeliveryEnabled && HasSmartphone && Ledger.TryDebit(Clock.Today, "餐饮", Money.FromYuan(25), meal + "送餐"))
+            if (MealDeliveryEnabled && HasSmartphone)
             {
-                Player.Hunger = Math.Min(100, Player.Hunger + 65);
-                Say($"{meal}送餐到了，花费 ¥25。优先吃自带饭，没有才送餐。");
+                var delivery = SelectedDeliveryMeal;
+                if (Ledger.TryDebit(Clock.Today, "餐饮", Money.FromYuan(delivery.Price), meal + " · " + delivery.Name))
+                {
+                    Player.Hunger = Math.Min(100, Player.Hunger + delivery.Hunger);
+                    Player.Health = Math.Max(0, Math.Min(100, Player.Health + delivery.Health));
+                    ApplyDiet(0, delivery.Mood);
+                    if (delivery.Energy > 0) Player.Energy = Math.Min(Player.MaxEnergy, Player.Energy + delivery.Energy);
+                    Say($"{meal}{delivery.Name}到了，花费 ¥{delivery.Price}：{delivery.Effects}。");
+                    return;
+                }
+                Say($"{meal}没有即食食物，{delivery.Name}需 ¥{delivery.Price}，当前现金不足，未下单。");
                 return;
             }
             Say($"该吃{meal}了，可背包里没有即食食物。可以回家做饭打包，或到快餐店买外带食物。");
@@ -546,13 +596,23 @@ namespace PCShopSell.Core.Session
                 }).ToList();
 
         private static SaveBatch[] ToSave(IEnumerable<FoodBatch> l) =>
-            l.Select(b => new SaveBatch { id = b.Id, name = b.Name, hunger = b.Hunger, health = b.Health, count = b.Count, expireDay = b.ExpireDay, chilled = b.Chilled }).ToArray();
+            l.Select(b => new SaveBatch { id = b.Id, name = b.Name, hunger = b.Hunger, health = b.Health, count = b.Count, expireDay = b.ExpireDay, chilled = b.Chilled, chilledDays = b.ChilledDays }).ToArray();
+
+        private static FoodBatch FromSaveBatch(SaveBatch b)
+        {
+            // Older saves recorded only the original two-day refrigeration bonus.
+            int previousBonus = b.chilledDays > 0 ? b.chilledDays : 2;
+            int extraDays = b.chilled ? Math.Max(0, FridgeBonusDays - previousBonus) : 0;
+            return new FoodBatch { Id = b.id, Name = b.name, Hunger = b.hunger, Health = b.health,
+                Count = b.count, ExpireDay = b.expireDay + extraDays, Chilled = b.chilled,
+                ChilledDays = b.chilled ? Math.Max(previousBonus, FridgeBonusDays) : 0 };
+        }
 
         private static void FromSave(SaveBatch[] a, List<FoodBatch> into)
         {
             into.Clear();
             foreach (SaveBatch b in a ?? Array.Empty<SaveBatch>())
-                into.Add(new FoodBatch { Id = b.id, Name = b.name, Hunger = b.hunger, Health = b.health, Count = b.count, ExpireDay = b.expireDay, Chilled = b.chilled });
+                into.Add(FromSaveBatch(b));
         }
 
         private void SaveHomeData(SaveData d)
@@ -688,7 +748,7 @@ namespace PCShopSell.Core.Session
             FromSave(h.packLunch, Backpack.Food.Packed);
             if (h.packed != null)
                 foreach (SaveBatch b in h.packed)
-                    Backpack.Food.Packed.Add(new FoodBatch { Id = b.id, Name = b.name, Hunger = b.hunger, Health = b.health, Count = b.count, ExpireDay = b.expireDay, Chilled = b.chilled });
+                    Backpack.Food.Packed.Add(FromSaveBatch(b));
             _renovationDay = h.renovationDay;
             _visits.Clear();
             int vn = Math.Min(h.visitTargets?.Length ?? 0, Math.Min(h.visitStarts?.Length ?? 0, h.visitPrices?.Length ?? 0));

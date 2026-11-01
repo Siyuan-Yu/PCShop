@@ -15,6 +15,7 @@ namespace PCShopSell.Core.Session
         {
             if (IsGameOver || !InPlayerShop || index < 0 || index >= _candidates.Count) return null;
             var person = _candidates[index];
+            if (!CandidateAvailable(person)) { Fail("这位应聘者已经离开了。"); return null; }
             _candidates.RemoveAt(index);
             _idleEmployees.Add(person);
             EverHired = true;

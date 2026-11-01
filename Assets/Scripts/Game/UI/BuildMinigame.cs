@@ -125,9 +125,9 @@ namespace PCShopSell.Game.UI
             Text status = null;
             Button finish = null;
 
-            OpenWindow($"装机：{PartCatalog.TierName(order.Tier)}整机（报价 {order.Price}）", 1180, 760, w =>
+            OpenWindow($"装机：{PartCatalog.TierName(order.Tier)}整机（报价 {order.Price}）", 1460, 800, w =>
             {
-                Text tip = Ui.Label(w.Content, $"把<b>{PartCatalog.TierName(order.Tier)}</b>档配件拖进机箱对应位置。先装主板，再装 CPU 和内存。拿错型号算失误。", 18);
+                Text tip = Ui.Label(w.Content, "对照右侧订单清单，把指定型号拖到对应位置。先装主板，再装 CPU 和内存。", 18);
                 Ui.Size(tip, -1, 30);
 
                 RectTransform body = Ui.Rect(w.Content, "Body");
@@ -148,6 +148,23 @@ namespace PCShopSell.Game.UI
                 Image chassis = Ui.Panel(body, "Chassis", Ui.PanelBg2);
                 Ui.Size(chassis, 700, 560);
                 RectTransform crt = chassis.rectTransform;
+
+                Image orderPreview = Ui.Panel(body, "OrderPreview", Ui.PanelBg2);
+                Ui.Size(orderPreview, 250, 560);
+                Ui.VList(orderPreview.rectTransform, 6, 12);
+                Line(orderPreview.transform, $"订单 #{order.Id} · 配置要求", 19, Ui.Accent);
+                long minutesLeft = System.Math.Max(0, S.Clock.Now.MinutesUntil(order.DueAt));
+                Line(orderPreview.transform, $"交付剩余 {minutesLeft / 60} 小时 {minutesLeft % 60} 分钟", 15, Ui.Dim);
+                var requirementLabels = new Dictionary<PartCategory, Text>();
+                var buildSteps = new[] { PartCategory.Motherboard, PartCategory.Cpu, PartCategory.Memory,
+                    PartCategory.Gpu, PartCategory.Storage, PartCategory.PowerCase };
+                foreach (var category in buildSteps)
+                {
+                    var label = Ui.Label(orderPreview.transform, "", 16, TextAnchor.UpperLeft);
+                    Ui.Size(label, -1, 64);
+                    requirementLabels[category] = label;
+                }
+                Para(orderPreview.transform, "每类配件各 1 件。装好后清单会自动打勾。", 15, Ui.Dim);
 
                 var slots = new Dictionary<PartCategory, RectTransform>();
                 void Slot(PartCategory c, float x, float y, float sw, float sh)
@@ -175,6 +192,14 @@ namespace PCShopSell.Game.UI
                 void UpdateStatus()
                 {
                     status.text = $"已装 {placed.Count}/6 · 失误 {mistakes} 次";
+                    foreach (var required in need)
+                    {
+                        bool installed = placed.Contains(required.Category);
+                        string socket = required.Socket == null ? "" : "\n<size=13>接口 " + required.Socket + "</size>";
+                        requirementLabels[required.Category].text = $"<b>{PartCatalog.CategoryName(required.Category)}</b> · "
+                            + (installed ? "<color=#A9C9A9>✓ 已装</color>" : "<color=#DDC18B>待装</color>")
+                            + "\n" + required.Name + socket;
+                    }
                     if (finish != null) finish.interactable = placed.Count == 6;
                 }
 

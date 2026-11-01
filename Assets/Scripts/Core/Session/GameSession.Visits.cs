@@ -220,6 +220,9 @@ namespace PCShopSell.Core.Session
         {
             var l = new List<ScheduleEntry>();
             AddWorkSchedule(l);
+            foreach (var loan in _appLoans.Where(x => !x.Repaid))
+                l.Add(new ScheduleEntry { Minute = (long)loan.DueDay * 1440, Day = DescribeDay(loan.DueDay), TimeText = "00:00",
+                    Kind = "loan", Text = $"贷款 #{loan.Id} 到期自动扣款 {loan.TotalDue}（含利息 {loan.TermInterest}）" });
             long now = Clock.Now.TotalMinutes;
             for (int i = 0; i < _appointments.Count; i++)
             {

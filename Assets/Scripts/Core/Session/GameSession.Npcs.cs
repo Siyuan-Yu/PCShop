@@ -44,9 +44,11 @@ namespace PCShopSell.Core.Session
             LastChatReplied = HasChatApp || Random.Chance(SmsReplyChance);
             if (!LastChatReplied)
             {
+                RememberSocial(npcId, "发了条短信，对方没有回复。");
                 Say($"给{n.Name}发了条短信，一直没回。现在大家都不习惯看短信了。");
                 return true;
             }
+            RememberSocial(npcId, HasChatApp ? "通过聊天软件聊了几句。" : "通过短信聊了几句。");
             if (Relation(npcId) < ChatMaxRelation)
             {
                 AddRelation(npcId, ChatGain);
@@ -68,7 +70,7 @@ namespace PCShopSell.Core.Session
         /// <summary>第一次认识。已认识则不变；初始交情不会拉低已有的。</summary>
         public void Meet(string npcId, double startRelation = 15)
         {
-            Flags.Add(MetFlag(npcId));
+            if (Flags.Add(MetFlag(npcId))) RememberSocial(npcId, "结识了对方，留下了联系方式。");
             if (Relation(npcId) < startRelation) _relations[npcId] = startRelation;
             ApplyUpgrades();
         }
@@ -130,6 +132,7 @@ namespace PCShopSell.Core.Session
             }
             else if (!Ledger.TryDebit(Clock.Today, "人情", n.GiftPrice, n.GiftName)) return Fail("钱不够。");
             _giftDays[npcId] = Clock.Today.TotalDays;
+            RememberSocial(npcId, $"送给对方{n.GiftName}。\n{n.GiftReply}");
             AddRelation(npcId, Npcs.GiftGain + EffectiveCharm * 0.02);
             Say(n.GiftReply);
             return true;

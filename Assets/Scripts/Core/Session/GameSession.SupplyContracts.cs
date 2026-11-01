@@ -28,6 +28,7 @@ namespace PCShopSell.Core.Session
             int horizon = Math.Max(0, Math.Min(3650, days));
             int today = Clock.Today.TotalDays;
             Money total = Money.FromCents(_supplierDebts.Where(x => x.DueDay <= today + horizon).Sum(x => x.Principal + x.Fees));
+            total += Money.FromCents(_appLoans.Where(l => !l.Repaid && l.DueDay <= today + horizon).Sum(l => l.TotalDue.Cents));
             foreach (var p in _properties)
                 total += MortgagePayments(p.MortgageCents, p.MonthlyPrincipalCents, p.PriceCents, today, horizon);
             total += MortgagePayments(HomeMortgageCents, HomeMonthlyPrincipalCents, HomePriceCents, today, horizon);
@@ -59,7 +60,8 @@ namespace PCShopSell.Core.Session
         public double IncomingShopSpace => Online.Pending.Where(o => !o.ToHome && DeliveryShop(o.ShopId) == _focus).Sum(o => o.Lines.Sum(l => Stock.SpaceOf(PartCatalog.Get(l.PartId), true, l.Count)))
             + _directShipments.Where(x => DeliveryShop(x.ShopId) == _focus).Sum(x => Stock.SpaceOf(PartCatalog.Get(x.PartId), true, x.Count))
             + _employeeTrips.Where(t => !t.Delivered && DeliveryShop(t.ShopId) == _focus).Sum(t => t.Items.Sum(PurchaseStockSpace))
-            + Couriers.Where(HeadsToThisShop).Sum(x => x.Items.Where(i => i.Kind == CourierItemKind.Part && PartCatalog.Exists(i.Id)).Sum(i => Stock.SpaceOf(PartCatalog.Get(i.Id), i.Boxed, i.Count)));
+            + Couriers.Where(HeadsToThisShop).Sum(x => x.Items.Sum(i => i.Kind == CourierItemKind.Part && PartCatalog.Exists(i.Id)
+                ? Stock.SpaceOf(PartCatalog.Get(i.Id), i.Boxed, i.Count) : i.Kind == CourierItemKind.Goods ? Stock.GoodsSpace(i.Id, i.Count) : 0));
         public string DirectOrderBlocker(string partId, int count, bool credit)
         {
             if (!DirectAgreement || !HasShop) return "先签直供协议，并保有主店";

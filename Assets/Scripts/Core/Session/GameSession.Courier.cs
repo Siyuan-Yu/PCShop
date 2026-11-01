@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -29,6 +29,7 @@ namespace PCShopSell.Core.Session
         public double Kg;
         public bool Boxed;
         public int ExpireDay;
+        public bool Chilled;
     }
 
     /// <summary>叫来的一辆面包车：在同一家店里接着买的东西往里装，装满了要再叫一辆。</summary>
@@ -164,7 +165,7 @@ namespace PCShopSell.Core.Session
             Count = it.Kind == CourierItemKind.Rice ? 0 : (int)Math.Round(amount),
             Kg = it.Kind == CourierItemKind.Rice ? amount : 0,
             Boxed = it.Boxed,
-            ExpireDay = it.ExpireDay,
+            ExpireDay = it.ExpireDay, Chilled = it.Chilled,
         };
 
         /// <summary>一辆车剩 freeKg 还能装多少（米按 0.25 千克，其余按件，不拆单件）。</summary>
@@ -322,9 +323,9 @@ namespace PCShopSell.Core.Session
             var merged = new List<CourierItem>();
             foreach (CourierItem it in items)
             {
-                CourierItem same = merged.FirstOrDefault(m => m.Kind == it.Kind && m.Id == it.Id && m.Boxed == it.Boxed && m.ExpireDay == it.ExpireDay);
+                CourierItem same = merged.FirstOrDefault(m => m.Kind == it.Kind && m.Id == it.Id && m.Boxed == it.Boxed && m.ExpireDay == it.ExpireDay && m.Chilled == it.Chilled);
                 if (same == null)
-                    merged.Add(new CourierItem { Kind = it.Kind, Id = it.Id, Count = it.Count, Kg = it.Kg, Boxed = it.Boxed, ExpireDay = it.ExpireDay });
+                    merged.Add(new CourierItem { Kind = it.Kind, Id = it.Id, Count = it.Count, Kg = it.Kg, Boxed = it.Boxed, ExpireDay = it.ExpireDay, Chilled = it.Chilled });
                 else
                 {
                     same.Count += it.Count;
@@ -369,12 +370,15 @@ namespace PCShopSell.Core.Session
                     int giftOver = StoreOrTemp(toShop, Gifts.Get(it.Id)?.WeightKg ?? 0, it.Count, n => box.AddGift(it.Id, n), n => temp.AddGift(it.Id, n));
                     return $"{Gifts.Get(it.Id)?.Name ?? it.Id}×{it.Count}（{Where(giftOver, it.Count)}）";
                 case CourierItemKind.Goods:
+                    if (Gifts.Get(it.Id)?.ShelfDays > 0 && it.ExpireDay < Clock.Today.TotalDays) return Gifts.Get(it.Id).Name + "×" + it.Count + "（运输途中已过期，已清理）";
                     if (toShop)
                     {
-                        PlayerShop.Stock.ForceAddGoods(it.Id, it.Count);
+                        PlayerShop.Stock.ForceAddGoods(it.Id, it.Count, it.ExpireDay, it.Chilled);
                         return $"{Gifts.Get(it.Id)?.Name ?? it.Id}×{it.Count}（进了店里后仓）";
                     }
-                    int goodsOver = StoreOrTemp(false, Gifts.Get(it.Id)?.WeightKg ?? 0, it.Count, n => HomeBox.AddGift(it.Id, n), n => HomeTemp.AddGift(it.Id, n));
+                    int goodsOver = StoreOrTemp(false, Gifts.Get(it.Id)?.WeightKg ?? 0, it.Count,
+                        n => AddRetailToBag(HomeBox, Gifts.Get(it.Id), n, it.ExpireDay, it.Chilled),
+                        n => AddRetailToBag(HomeTemp, Gifts.Get(it.Id), n, it.ExpireDay, it.Chilled));
                     return $"{Gifts.Get(it.Id)?.Name ?? it.Id}×{it.Count}（{Where(goodsOver, it.Count)}）";
                 case CourierItemKind.Furniture:
                     int furnOver = StoreFurnitureHere(toShop, it.Id, it.Count);
@@ -408,6 +412,7 @@ namespace PCShopSell.Core.Session
             kilos = r.Items.Select(i => i.Kg).ToArray(),
             boxed = r.Items.Select(i => i.Boxed).ToArray(),
             expireDays = r.Items.Select(i => i.ExpireDay).ToArray(),
+            chilled = r.Items.Select(i => i.Chilled).ToArray(),
         }).ToArray();
 
         private void RestoreCouriers(SaveCourier[] saved)
@@ -434,6 +439,7 @@ namespace PCShopSell.Core.Session
                         Kg = s.kilos != null && i < s.kilos.Length ? s.kilos[i] : 0,
                         Boxed = s.boxed != null && i < s.boxed.Length && s.boxed[i],
                         ExpireDay = s.expireDays != null && i < s.expireDays.Length ? s.expireDays[i] : 0,
+                        Chilled = s.chilled != null && i < s.chilled.Length && s.chilled[i],
                     });
                 }
                 if (run.Items.Count > 0) _couriers.Add(run);

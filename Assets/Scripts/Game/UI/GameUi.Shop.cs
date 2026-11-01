@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -133,7 +133,8 @@ namespace PCShopSell.Game.UI
                 CloseDock();
                 return;
             }
-            if (_tab == ShopTab.Counter) RebuildDock();
+            if (_tab == ShopTab.Counter || (_tab == ShopTab.Staff &&
+                (_staffRefreshMinute != S.Clock.Now.TotalMinutes || _staffCandidateCount != S.Candidates.Count))) RebuildDock();
         }
 
         private ShopTab? _scrollTab;
@@ -255,6 +256,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildStock()
         {
+            BuildRetailLinks(C);
             ShopSimulation shop = S.PlayerShop;
             Line(C, $"后仓仓位 {shop.Stock.UsedSpace:0.#} / {shop.Stock.Capacity:0} 格（在途 {S.Online.PendingSpace():0.#} 格）　顾客只买货架上摆着的", 19);
             Ui.Bar(C, shop.Stock.Capacity > 0 ? (float)(shop.Stock.UsedSpace / shop.Stock.Capacity) : 0f, Ui.Accent, 280, 10);
@@ -362,7 +364,7 @@ namespace PCShopSell.Game.UI
                     RebuildDock();
                 }, 16), 80);
             }
-            if (shop.Stock.IsEmpty) Ui.Size(Ui.Label(list, "空空如也。去电子市场进货，或用手机上的 1788 app 下单。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
+            if (shop.Stock.IsEmpty) Ui.Size(Ui.Label(list, "空空如也。点击上方“进货渠道”查看适合本店的货源，也可安排采购员。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
         }
 
         // ---------- 定价 ----------
@@ -487,6 +489,8 @@ namespace PCShopSell.Game.UI
         private void BuildOrders()
         {
             ShopSimulation shop = S.PlayerShop;
+            if (shop.IsGoodsShop) { Line(C, "这家店经营零售商品，不接电脑装机订单。", 18, Ui.Dim); return; }
+            if (!shop.BuildOrdersUnlocked) Line(C, "开局前 14 天不接顾客装机订单，第 15 天开始开放。", 17, Ui.Accent);
             Line(C, "顾客下的订单都在这里（目前是装机订单）：两天内做好交付才收钱，超时取消、掉知名度。配件从库存里出。", 15, Ui.Dim);
             RectTransform list = Ui.Scroll(C, 430);
             foreach (BuildOrder o in shop.Orders)
@@ -542,8 +546,12 @@ namespace PCShopSell.Game.UI
 
         // ---------- 招人 ----------
 
+        private long _staffRefreshMinute = -1;
+        private int _staffCandidateCount;
         private void BuildStaff()
         {
+            _staffRefreshMinute = S.Clock.Now.TotalMinutes;
+            _staffCandidateCount = S.Candidates.Count;
             Line(C, "选好岗位和门店后统一确认聘用。岗位可换，跨店次日生效。", 16, Ui.Dim);
             Line(C, "已聘员工的岗位、班次、培训和采购统一在顶栏“员工”中管理。", 15, Ui.Dim);
             Ui.Size(Ui.Button(C, S.JobAdDay >= 0 ? "招聘告示已贴，明天 9:00 再来一批人" : $"再贴招聘告示（{GameSession.JobAdFee}）", () =>
@@ -557,13 +565,14 @@ namespace PCShopSell.Game.UI
                 {
                     int idx = i;
                     Employee c = S.Candidates[i];
-                    RectTransform row = Ui.Row(C, 82);
-                    Ui.Size(Ui.Label(row, $"{c.Name} · 日薪 {c.DailyWage}\n<size=14>{c.Description}\n{GameSession.EmployeeAbilities(c)}</size>", 16), -1, -1, 1);
+                    RectTransform row = Ui.Row(C, 108);
+                    Ui.Size(Ui.Label(row, $"{c.Name} · 日薪 {c.DailyWage}\n<size=14>{c.Description}\n{GameSession.EmployeeAbilities(c)}\n<color=#E7B878>{S.CandidateWaitText(c)}</color></size>", 16), -1, -1, 1);
                     Ui.Size(Ui.Button(row, "聘用并安排工作", () =>
                     {
                         OpenRecruitWork(c);
                     }, 17, Ui.ButtonHot), 180);
                 }
+                Line(C, "应聘者只等到当天 18:00，过时离开。", 15, Ui.Warn);
                 Line(C, "确认前不会聘用；已聘用的待安排员工仍按日发薪。", 14, Ui.Dim);
                 return;
             }

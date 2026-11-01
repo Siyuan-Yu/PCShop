@@ -471,7 +471,7 @@ namespace PCShopSell.Core.Session
             if (kk.Length != 2 || !SourceHere(kk[0])) return null;
             string src = kk[0];
             string[] k = kk[1].Split(':');
-            string id = k.Length > 1 ? k[1] : null;
+            string id = k.Length > 1 ? (k[0] == "part" ? k[1] : kk[1].Substring(k[0].Length + 1)) : null;
             var m = new MovableItem { Key = key, Where = SourceName(src) };
             Pantry food = FoodOf(src);
             Backpack bag = BagOf(src);
@@ -544,8 +544,12 @@ namespace PCShopSell.Core.Session
                     items.Add(new CourierItem { Kind = unit.Kind, Id = unit.Id, Boxed = unit.Boxed, Count = n });
                     break;
                 case CourierItemKind.Goods:
-                    parts.TryRemoveGoods(unit.Id, n);
-                    items.Add(new CourierItem { Kind = unit.Kind, Id = unit.Id, Count = n });
+                    for (int i = 0; i < n; i++)
+                    {
+                        int expiry = parts.GoodsExpiry(unit.Id); bool chilled = parts.GoodsChilled(unit.Id);
+                        parts.TryRemoveGoods(unit.Id, 1);
+                        items.Add(new CourierItem { Kind = unit.Kind, Id = unit.Id, Count = 1, ExpireDay = expiry, Chilled = chilled });
+                    }
                     break;
                 case CourierItemKind.Rice:
                     food.RiceKg = Math.Max(0, food.RiceKg - amount);
@@ -584,7 +588,7 @@ namespace PCShopSell.Core.Session
             switch (it.Kind)
             {
                 case CourierItemKind.Part: PartsOf(src).ForceAdd(PartCatalog.Get(it.Id), it.Boxed, it.Count); break;
-                case CourierItemKind.Goods: PartsOf(src).ForceAddGoods(it.Id, it.Count); break;
+                case CourierItemKind.Goods: PartsOf(src).ForceAddGoods(it.Id, it.Count, it.ExpireDay, it.Chilled); break;
                 case CourierItemKind.Rice: FoodOf(src).RiceKg += it.Kg; break;
                 case CourierItemKind.Ingredient:
                     FoodOf(src).Ingredient.Add(new FoodBatch { Id = it.Id, Name = Ingredients.Get(it.Id)?.Name ?? it.Id, Count = it.Count, ExpireDay = it.ExpireDay });

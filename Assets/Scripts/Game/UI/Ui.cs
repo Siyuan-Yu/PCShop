@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -48,9 +48,14 @@ namespace PCShopSell.Game.UI
             {
                 if (_font == null)
                 {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                    _font = Resources.Load<Font>("Fonts/NotoSansCJKsc-Regular");
+                    if (_font == null) _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+#else
                     _font = Font.CreateDynamicFontFromOSFont(PCShopSell.Game.Runtime.MenuLocalization.Current == PCShopSell.Game.Runtime.GameLanguage.Japanese
                         ? new[] { "Yu Gothic UI", "Meiryo", "MS Gothic", "Microsoft YaHei", "Arial" }
                         : new[] { "Microsoft YaHei", "Microsoft YaHei UI", "Yu Gothic UI", "SimHei", "PingFang SC", "Arial" }, 20);
+#endif
                 }
                 return _font;
             }

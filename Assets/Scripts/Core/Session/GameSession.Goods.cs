@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Home;
@@ -40,6 +40,9 @@ namespace PCShopSell.Core.Session
             if (!InPlayerShop) return Fail("要在自己的店里才能设置货架。");
             if (layoutIndex < 0 || layoutIndex >= _shopLayout.Count || FurnitureCatalog.Get(_shopLayout[layoutIndex].Id)?.Fixture != FixtureKind.Shelf) return false;
             if (kindId != null && ShelfKinds.Get(kindId) == null) return false;
+            var kind = ShelfKinds.Get(kindId);
+            if (kind != null && RetailKind != "computer" && (kind.IsParts || !kind.GiftIds.Any(id => RetailShopTypes.Sells(RetailKind, id))))
+                return Fail("这类商品不属于本店的经营类型。");
             if (_shopLayout[layoutIndex].Item == kindId) return true;
             _shopLayout[layoutIndex].Item = kindId;
             ApplyShelfCapacity();
@@ -66,7 +69,7 @@ namespace PCShopSell.Core.Session
 
         /// <summary>现在在店里、能拿来放进后仓的某种杂货有几件（储物柜里的 + 背包里的）。</summary>
         public int GoodsAvailableToList(string giftId) =>
-            InPlayerShop ? ShopLocker.GiftCount(giftId) + Backpack.GiftCount(giftId) : 0;
+            InPlayerShop ? RetailCount(ShopLocker, Gifts.Get(giftId)) + RetailCount(Backpack, Gifts.Get(giftId)) : 0;
 
         /// <summary>店里能放进后仓的杂货一共有几件。</summary>
         public int GoodsListableTotal => InPlayerShop ? Gifts.All.Sum(g => GoodsAvailableToList(g.Id)) : 0;
@@ -80,13 +83,16 @@ namespace PCShopSell.Core.Session
             GiftDef g = Gifts.Get(giftId);
             if (g == null || count <= 0) return false;
             if (!InPlayerShop) return Fail("要在自己的店里才能上架。");
+            if (!RetailShopTypes.Sells(RetailKind, giftId)) return Fail("本店不经营这种商品，请选择对应店铺。 ");
             int have = GoodsAvailableToList(giftId);
             if (have < count) return Fail($"手边只有 {have} 件「{g.Name}」。");
             if (!PlayerShop.Stock.CanAddGoods(giftId, count)) return Fail("店里放不下了（仓位不够）。");
-            int fromLocker = Math.Min(count, ShopLocker.GiftCount(giftId));
-            for (int i = 0; i < fromLocker; i++) ShopLocker.TakeGift(giftId);
-            for (int i = 0; i < count - fromLocker; i++) Backpack.TakeGift(giftId);
-            PlayerShop.Stock.TryAddGoods(giftId, count);
+            for (int i = 0; i < count; i++)
+            {
+                var from = RetailCount(ShopLocker, g) > 0 ? ShopLocker : Backpack;
+                var batch = TakeRetailFromBag(from, g);
+                PlayerShop.Stock.ForceAddGoods(giftId, 1, batch.ExpireDay, batch.Chilled);
+            }
             ApplyCargoLimit();
             ShelfKind k = ShelfKinds.ForGift(giftId);
             string tail = k != null && ShelvesOfKind(k.Id) == 0 ? $"（还没有摆「{k.Name}」的货架，顾客买不到）" : "";
@@ -100,11 +106,17 @@ namespace PCShopSell.Core.Session
             GiftDef g = Gifts.Get(giftId);
             if (g == null || count <= 0) return false;
             if (!InPlayerShop) return Fail("要在自己的店里才能下架。");
+            PlayerShop.Stock.SpoilGoods(Clock.Today.TotalDays);
             if (PlayerShop.Stock.GoodsCount(giftId) < count) return Fail("店里没有这么多。");
             if (ShopLocker.WeightKg + g.WeightKg * count > ShopLockerLimitKg + 1e-9)
                 return Fail($"店里纸箱放不下了（{ShopBoxes} 个纸箱，最多 {ShopLockerLimitKg:0} 千克）。");
-            PlayerShop.Stock.TryRemoveGoods(giftId, count);
-            ShopLocker.AddGift(giftId, count);
+            for (int i = 0; i < count; i++)
+            {
+                int expiry = PlayerShop.Stock.GoodsExpiry(giftId);
+                bool chilled = PlayerShop.Stock.GoodsChilled(giftId);
+                PlayerShop.Stock.TryRemoveGoods(giftId, 1);
+                AddRetailToBag(ShopLocker, g, 1, expiry, chilled);
+            }
             Say($"把「{g.Name}」{(count > 1 ? "×" + count : "")}从店里收回了储物柜。");
             return true;
         }

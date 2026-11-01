@@ -53,6 +53,9 @@ namespace PCShopSell.Core.Inventory
             new ShelfKind("drink", "饮料", Gifts.Drink, Gifts.Soda),
             new ShelfKind("snack", "点心", Gifts.Snack),
             new ShelfKind("fruit", "水果", Gifts.Fruit),
+            new ShelfKind("flowers", "鲜花与盆栽", RetailProducts.All.Where(g => g.Id.StartsWith("flower_")).Select(g => g.Id).ToArray()),
+            new ShelfKind("produce", "米与生鲜", RetailProducts.All.Where(g => g.Id.StartsWith("produce:")).Select(g => g.Id).ToArray()),
+            new ShelfKind("meals", "外带食品", RetailProducts.All.Where(g => g.MealId != null).Select(g => g.Id).ToArray()),
         };
 
         public static IEnumerable<ShelfKind> PartKinds => All.Where(k => k.IsParts);

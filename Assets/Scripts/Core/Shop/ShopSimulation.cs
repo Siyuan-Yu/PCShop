@@ -38,6 +38,7 @@ namespace PCShopSell.Core.Shop
     {
         Retail,
         Build,
+        Goods,
     }
 
     public enum CustomerState
@@ -101,6 +102,8 @@ namespace PCShopSell.Core.Shop
 
         /// <summary>顺手挑了一件杂货（礼品 id）；没有就是 null。杂货和配件不会同时拿。</summary>
         public string GoodsId { get; internal set; }
+        public int GoodsExpiryDay = -1;
+        public bool GoodsChilled;
 
         public bool ItemBoxed { get; internal set; }
         public Money Spend { get; internal set; }
@@ -169,6 +172,7 @@ namespace PCShopSell.Core.Shop
 
         /// <summary>进店顾客里想装整机的比例（展示台空着时）。</summary>
         public double BuildOrderChance = 0.06;
+        public int BuildOrdersStartDay;
 
         /// <summary>展示台上每摆一台整机，想装整机的顾客比例多这么多倍（曝光度）。</summary>
         public double DisplayExposurePerPc = 0.5;
@@ -414,6 +418,8 @@ namespace PCShopSell.Core.Shop
 
         public IReadOnlyList<ShopCustomer> ActiveCustomers => _active;
         public IReadOnlyList<ShopCustomer> Queue => _queue;
+        public string RetailKind = "computer";
+        public bool IsGoodsShop => RetailKind != "computer";
         public IReadOnlyList<BuildOrder> Orders => _orders;
         public int NextOrderId { get; private set; } = 1;
 
@@ -496,8 +502,16 @@ namespace PCShopSell.Core.Shop
             return Money.FromYuan((long)Math.Round(_market.PriceOf(part).Yuan * k));
         }
 
-        /// <summary>顾客下装机单时的成交价（报价 × 加价，整机不收盒装溢价）。</summary>
-        public Money BuildPrice(int tier) => Money.FromYuan((long)Math.Round(QuoteBuild(tier).Yuan * _markup / 1.15));
+        /// <summary>同一套配件按本店当前盒装零售价分卖的合计。</summary>
+        public Money BuildPartsRetailValue(int tier)
+        {
+            Money total = Money.Zero;
+            foreach (var part in PartCatalog.BuildList(tier)) total += PriceOf(part, true);
+            return total;
+        }
+
+        /// <summary>整机成交价：配件分卖合计 + 20% 整机服务溢价 + 手工费。</summary>
+        public Money BuildPrice(int tier) => BuildPartsRetailValue(tier).Scale(1.20) + BuildOrder.LaborFee(tier);
 
         /// <summary>装机订单报价：配件市场价合计 + 手工费。</summary>
         public Money QuoteBuild(int tier)
@@ -510,7 +524,8 @@ namespace PCShopSell.Core.Shop
         /// <summary>当前时刻每分钟来客的期望人数。</summary>
         public double ArrivalRatePerMinute(GameTimestamp at)
         {
-            double perHour = Settings.BaseCustomersPerHour
+            double retailTraffic = RetailKind == "flowers" ? 1.8 : IsGoodsShop ? 3.0 : 1.0;
+            double perHour = Settings.BaseCustomersPerHour * retailTraffic
                              * Settings.HourFactors[at.Hour]
                              * ShopSettings.SizeFactor(Size)
                              * LocationFactor
@@ -603,7 +618,9 @@ namespace PCShopSell.Core.Shop
         public int DisplayCount(int tier) => _display.FindAll(t => t == tier).Count;
 
         /// <summary>现在进店顾客里想装整机的比例：展示台上的整机越多越高。</summary>
-        public double BuildChance => Math.Min(1.0, Settings.BuildOrderChance * (1.0 + Settings.DisplayExposurePerPc * _display.Count));
+        public bool BuildOrdersUnlocked => !IsGoodsShop && _clock.Today.TotalDays >= Settings.BuildOrdersStartDay;
+        public double BuildChance => IsGoodsShop || (!BuildOrdersUnlocked && _display.Count == 0) ? 0
+            : Math.Min(1.0, Settings.BuildOrderChance * (1.0 + Settings.DisplayExposurePerPc * _display.Count));
 
         /// <summary>装一台整机摆到展示台上：从库存扣一套配件。没空位或缺配件返回 false。</summary>
         public bool AssembleForDisplay(int tier)
@@ -644,6 +661,14 @@ namespace PCShopSell.Core.Shop
         {
             _orders.Clear();
             _orders.AddRange(orders);
+            if (!BuildOrdersUnlocked)
+                for (int i = _orders.Count - 1; i >= 0; i--)
+                {
+                    var order = _orders[i];
+                    if (!string.IsNullOrEmpty(order.ContractId)) continue;
+                    ReturnReservedParts(order);
+                    _orders.RemoveAt(i);
+                }
             NextOrderId = nextOrderId;
         }
 
@@ -718,7 +743,7 @@ namespace PCShopSell.Core.Shop
             int tier = PickTier();
             int browse = Random.Next(Settings.MinBrowseMinutes, Settings.MaxBrowseMinutes + 1);
             bool cash = Random.Chance(Settings.CashCarryChance);
-            var c = new ShopCustomer(_nextCustomerId++, build ? CustomerIntent.Build : CustomerIntent.Retail,
+            var c = new ShopCustomer(_nextCustomerId++, IsGoodsShop ? CustomerIntent.Goods : build ? CustomerIntent.Build : CustomerIntent.Retail,
                 cat, tier, now, now.AddMinutes(browse), cash);
             _active.Add(c);
             TodayCustomers++;
@@ -733,6 +758,12 @@ namespace PCShopSell.Core.Shop
 
         private void Decide(ShopCustomer c, GameTimestamp now)
         {
+            if (IsGoodsShop)
+            {
+                if (TryTakeGoods(c, now)) return;
+                Leave(c, GoodsOnSale ? LeaveReason.TooExpensive : LeaveReason.NoStock);
+                return;
+            }
             if (c.Intent == CustomerIntent.Build)
             {
                 if (!Random.Chance(ShopSettings.BuyChance(_markup)))
@@ -741,12 +772,16 @@ namespace PCShopSell.Core.Shop
                     return;
                 }
                 if (TryTakeDisplay(c, now)) return;
-                Money price = BuildPrice(c.BuildTier);
-                var order = new BuildOrder(NextOrderId++, c.BuildTier, price, now, now.AddMinutes(Settings.BuildOrderDueDays * GameTimestamp.MinutesPerDay));
-                _orders.Add(order);
-                OrderPlaced?.Invoke(order);
-                Leave(c, LeaveReason.OrderPlaced, countAsLost: false);
-                return;
+                if (BuildOrdersUnlocked)
+                {
+                    Money price = BuildPrice(c.BuildTier);
+                    var order = new BuildOrder(NextOrderId++, c.BuildTier, price, now, now.AddMinutes(Settings.BuildOrderDueDays * GameTimestamp.MinutesPerDay));
+                    _orders.Add(order);
+                    OrderPlaced?.Invoke(order);
+                    Leave(c, LeaveReason.OrderPlaced, countAsLost: false);
+                    return;
+                }
+                // During the opening grace period, browse available parts instead of placing an order.
             }
 
             // 逛的时候顺手看一眼杂货架（只有少数人会买）
@@ -794,15 +829,17 @@ namespace PCShopSell.Core.Shop
         /// </summary>
         private bool TryTakeGoods(ShopCustomer c, GameTimestamp now)
         {
-            List<KeyValuePair<string, int>> lines = GoodsOnShelves();
+            List<KeyValuePair<string, int>> lines = GoodsOnShelves().FindAll(l => RetailShopTypes.Sells(RetailKind, l.Key));
             if (lines.Count == 0) return false;
             string id = lines[Random.Next(0, lines.Count)].Key;
-            if (!Random.Chance(ShopSettings.BuyChance(MarkupOfGoods(id)) * Settings.GoodsBuyFactor)) return false;
+            if (!Random.Chance(ShopSettings.BuyChance(MarkupOfGoods(id)) * (IsGoodsShop ? 1.0 : Settings.GoodsBuyFactor))) return false;
             if (!CanPay(c))
             {
                 Leave(c, LeaveReason.NoCash);
                 return true;
             }
+            c.GoodsExpiryDay = Stock.GoodsExpiry(id);
+            c.GoodsChilled = Stock.GoodsChilled(id);
             Stock.TryRemoveGoods(id, 1);
             c.GoodsId = id;
             c.Spend = GoodsPriceOf(id);
@@ -878,6 +915,8 @@ namespace PCShopSell.Core.Shop
 
         private void CompleteSale(ShopCustomer c, bool selfCheckout = false)
         {
+            if (c.GoodsId != null && c.GoodsExpiryDay >= 0 && c.GoodsExpiryDay < _clock.Today.TotalDays)
+            { Leave(c, LeaveReason.NoStock, countAsLost: false); return; }
             c.PaidWith = selfCheckout ? PayChannel.SelfCheckout : c.CarriesCash && (Accepted & PaymentMethods.Cash) != 0 ? PayChannel.Cash : PayChannel.QrCode;
             _queue.Remove(c);
             _active.Remove(c);
@@ -911,7 +950,7 @@ namespace PCShopSell.Core.Shop
             }
             if (c.State == CustomerState.WaitingCheckout && c.GoodsId != null)
             {
-                Stock.ForceAddGoods(c.GoodsId, 1);
+                if (c.GoodsExpiryDay < 0 || c.GoodsExpiryDay >= _clock.Today.TotalDays) Stock.ForceAddGoods(c.GoodsId, 1, c.GoodsExpiryDay, c.GoodsChilled);
                 c.GoodsId = null;
             }
             if (c.State == CustomerState.WaitingCheckout && c.DisplayTier >= 0)

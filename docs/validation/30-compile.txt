@@ -1,0 +1,9 @@
+2026-11-01 archive validation
+Unity: 2022.3.6f1
+Scope: Editor script compilation only in an isolated project mirror.
+Final compilation: PASS; Unity exited with return code 0; C# compiler errors: 0.
+Log: pcshop-20261101-archive-compile.log (local temporary log).
+Command: Unity.exe -batchmode -nographics -quit -projectPath D:\UnityProjects\PCShop\_ci -logFile <temporary log>
+Git whitespace validation: git diff --check passed.
+No EditMode/PlayMode tests, gameplay runs, smoke tests, screenshots or new WebGL build were performed for this archive.
+Historical test counts in older documents are not validation results for this snapshot.

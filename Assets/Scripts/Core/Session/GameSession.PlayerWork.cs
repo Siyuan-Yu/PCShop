@@ -22,6 +22,7 @@ namespace PCShopSell.Core.Session
         public int LateMinutes;
         public long EarnedYuan;
         public bool LunchServed;
+        public bool WagePaid;
         public PlayerWorkDay Copy() => (PlayerWorkDay)MemberwiseClone();
     }
     [Serializable]
@@ -91,7 +92,7 @@ namespace PCShopSell.Core.Session
             {
                 PlaceId = p.Id, StartDay = Clock.Today.TotalDays + 1,
                 ShiftStart = offer.Start, ShiftEnd = offer.End, JobTitle = offer.Title, DailyWageYuan = offer.Wage, HealthCost = offer.HealthCost, MoodCost = offer.MoodCost,
-                LastNote = "已签一周合同，明天开始。每天到店自动上班，整周结束后领取工资。"
+                LastNote = "已签一周合同，明天开始。每天到店自动上班，每天收工后工资自动到账。"
             };
             Say(WorkContract.LastNote);
             return true;
@@ -127,6 +128,7 @@ namespace PCShopSell.Core.Session
         {
             if (!HasWorkContract) return;
             var c = WorkContract;
+            SettleCompletedWorkPay(to.Date);
             if (IsWorking && to.TotalMinutes >= WorkMealAt) ServeWorkMeal();
             for (int i = 0; i < 7; i++)
             {
@@ -138,11 +140,12 @@ namespace PCShopSell.Core.Session
                     day.State = WorkDayState.Completed;
                     long deduction = Math.Min(c.DailyWageYuan, ((day.LateMinutes + 29) / 30) * c.LatePenaltyPerHalfHour);
                     day.EarnedYuan = c.DailyWageYuan - deduction;
+                    SettleCompletedWorkPay(to.Date);
                     c.WorkingIndex = -1;
                     Player.Hunger = Math.Min(100, Player.Hunger + 40); // A closing meal keeps a zero-cash worker able to finish the week.
                     Player.Health = Math.Max(0, Player.Health - c.HealthCost);
                     Player.Mood = Math.Max(0, Player.Mood - c.MoodCost);
-                    c.LastNote = $"今天收工了，记入周薪 ¥{day.EarnedYuan}（迟到扣 ¥{deduction}）；健康 −{c.HealthCost}，心情 −{c.MoodCost}。已提供收工餐，可以回家休息。剩余排班见日程。";
+                    c.LastNote = $"今天收工了，工资 ¥{day.EarnedYuan} 已自动到账（迟到扣 ¥{deduction}）；健康 −{c.HealthCost}，心情 −{c.MoodCost}。已提供收工餐，可以回家休息。剩余排班见日程。";
                     Say(c.LastNote);
                 }
                 else
@@ -154,19 +157,34 @@ namespace PCShopSell.Core.Session
             }
             if (c.Days.All(d => d.State == WorkDayState.Completed || d.State == WorkDayState.Absent))
             {
-                if (!c.ReadyToPay) Say($"一周打工结束，可在店内或“我的”领取 ¥{c.EarnedYuan} 周薪。迟到/缺勤合计扣 ¥{c.DeductionsYuan}。");
-                c.ReadyToPay = true;
+                c.ReadyToPay = false;
+                c.Paid = true;
+                c.LastNote = $"一周合同已结束，累计实发工资 ¥{c.EarnedYuan}，迟到/缺勤合计扣 ¥{c.DeductionsYuan}。工资已每日到账，可再签下一周。";
+                Say(c.LastNote);
             }
+        }
+
+        private bool SettleCompletedWorkPay(GameDate date)
+        {
+            var c = WorkContract;
+            if (c == null || c.Paid) return false;
+            bool settled = false;
+            for (int i = 0; i < c.Days.Length; i++)
+            {
+                var day = c.Days[i];
+                if (day.State != WorkDayState.Completed || day.WagePaid) continue;
+                day.WagePaid = true;
+                if (day.EarnedYuan > 0)
+                    Ledger.Credit(date, "打工", Money.FromYuan(day.EarnedYuan),
+                        (WorkPlace?.Name ?? "店铺") + "第 " + (i + 1) + " 班工资（日结）");
+                settled = true;
+            }
+            return settled;
         }
 
         public bool ClaimPlayerWorkPay()
         {
-            var c = WorkContract;
-            if (!HasWorkContract || !c.ReadyToPay || IsWorking) return Fail("这周还没结束，工资在整周结束后领取。");
-            c.Paid = true;
-            if (c.EarnedYuan > 0) Ledger.Credit(Clock.Today, "打工", Money.FromYuan(c.EarnedYuan), (WorkPlace?.Name ?? "店铺") + "一周工资");
-            c.LastNote = $"已领取周薪 ¥{c.EarnedYuan}，可再签下一周。";
-            Say(c.LastNote);
+            if (IsWorking || !SettleCompletedWorkPay(Clock.Today)) return Fail("工资每天收工后自动到账，没有待领取的工资。");
             return true;
         }
 
@@ -177,6 +195,14 @@ namespace PCShopSell.Core.Session
                 || saved.ShiftStart < 0 || saved.ShiftStart >= 1440 || saved.ShiftEnd <= saved.ShiftStart || saved.ShiftEnd > saved.ShiftStart + 1440 || saved.DailyWageYuan < 0) return;
             WorkContract = saved.Copy();
             var c = WorkContract;
+            // Old weekly contracts already paid must never pay their completed shifts again.
+            if (c.Paid)
+                foreach (var day in c.Days) day.WagePaid = true;
+            else if (c.Days.Any(d => d.State == WorkDayState.Completed && !d.WagePaid))
+            {
+                SettleCompletedWorkPay(Clock.Today);
+                c.LastNote = "此前已完成班次的工资已补发，之后每天收工后自动到账。";
+            }
             if (c.WorkingIndex < 0 || c.WorkingIndex >= 7 || c.Days[c.WorkingIndex].State != WorkDayState.Working) c.WorkingIndex = -1;
             if (c.WorkingIndex >= 0 && CurrentPlace != WorkPlace)
             { c.Days[c.WorkingIndex].State = WorkDayState.Pending; c.WorkingIndex = -1; }
@@ -193,7 +219,7 @@ namespace PCShopSell.Core.Session
             UpdatePlayerWork(Clock.Now);
         }
 
-        // A signed, attended contract gets a bounded grace period to collect the weekly wage.
+        // A signed, attended contract gets a bounded grace period while working.
         private bool WorkPayGrace => HasWorkContract && Clock.Today.TotalDays <= WorkContract.EndDay + WorkContract.ShiftEnd / 1440 + 1
             && (Clock.Today.TotalDays <= WorkContract.StartDay || WorkContract.Days.Any(d => d.State == WorkDayState.Working || d.EarnedYuan > 0));
 
@@ -235,8 +261,7 @@ namespace PCShopSell.Core.Session
             for (int i = 0; i < 7; i++)
                 if (c.Days[i].State == WorkDayState.Pending || c.Days[i].State == WorkDayState.Working)
                     entries.Add(new ScheduleEntry { Minute = (long)(c.StartDay + i) * 1440 + c.ShiftStart, Day = DescribeDay(c.StartDay + i), TimeText = WorkHours,
-                        Kind = "work", Text = "去" + (WorkPlace?.Name ?? "签约店铺") + "打工 · 日薪 ¥" + c.DailyWageYuan + "，迟到扣薪，周结" });
-            if (c.ReadyToPay) entries.Add(new ScheduleEntry { Minute = Clock.Now.TotalMinutes, Day = "现在", TimeText = "可领取", Kind = "work", Text = "领取打工周薪 ¥" + c.EarnedYuan });
+                        Kind = "work", Text = "去" + (WorkPlace?.Name ?? "签约店铺") + "打工 · 日薪 ¥" + c.DailyWageYuan + "，迟到扣薪，收工自动日结" });
         }
     }
 }

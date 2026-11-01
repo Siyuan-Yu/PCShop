@@ -58,6 +58,7 @@ namespace PCShopSell.Game.UI
             {
                 Line(w.Content, candidate.Name + " · 日薪 " + candidate.DailyWage, 22, Ui.Accent);
                 Para(w.Content, GameSession.EmployeeAbilities(candidate), 17, Ui.Dim);
+                Line(w.Content, S.CandidateWaitText(candidate), 17, Ui.Warn);
                 Para(w.Content, "选好后统一确认。关闭此窗口不会聘用；选择待安排仍会按日发薪。", 17);
                 var roles = Ui.Row(w.Content, 44);
                 foreach (EmployeeRole option in Enum.GetValues(typeof(EmployeeRole)))
@@ -85,10 +86,7 @@ namespace PCShopSell.Game.UI
             });
         }
 
-        private void StartQuickPlacement()
-        {
-            if (S.BeginQuickShopEdit() && !_ctrl.BeginPlacement(true)) S.EndQuickShopEdit();
-        }
+
 
     }
 }

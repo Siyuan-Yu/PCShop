@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -68,6 +68,7 @@ namespace PCShopSell.Core.Session
                 ownedVehicles = _owned.Select(v => (int)v).ToArray(),
                 tricycleImpounded = TricycleImpounded,
                 impoundedTricycles = _impoundedTricycles,
+                impoundedEBikes = _impoundedEBikes,
                 hasBuyer = _focus.Buyer != null,
                 buyer = _focus.Buyer != null ? ToSave(_focus.Buyer) : null,
                 employeeTrips = _employeeTrips.Select(t => t.Copy()).ToArray(),
@@ -88,8 +89,10 @@ namespace PCShopSell.Core.Session
                 lastNewsReadDay = _lastNewsReadDay,
 
                 shopStock = Lines(PlayerShop.Stock),
-                shopGoodsIds = PlayerShop.Stock.GoodsLines().Select(kv => kv.Key).ToArray(),
-                shopGoodsCounts = PlayerShop.Stock.GoodsLines().Select(kv => kv.Value).ToArray(),
+                shopRetailKind = MainShop.RetailKind, pendingRetailKind = PendingRetailKind,
+                shopGoodsLots = SaveRetailLots(PlayerShop),
+                shopGoodsIds = SaveRetailCounts(PlayerShop).Select(kv => kv.Key).ToArray(),
+                shopGoodsCounts = SaveRetailCounts(PlayerShop).Select(kv => kv.Value).ToArray(),
                 markup = PlayerShop.Markup,
                 shopOpenMinute = PlayerShop.OpenMinute,
                 shopCloseMinute = PlayerShop.CloseMinute,
@@ -133,6 +136,10 @@ namespace PCShopSell.Core.Session
                 gameOverReason = GameOverReason,
             };
             SaveGrowth(d);
+            d.appLoans = _appLoans.Select(l => l.Copy()).ToArray();
+            d.priceDays = _priceDays.Select(p => p.Copy()).ToArray();
+            d.nextPriceReportDay = _nextPriceReportDay;
+            d.weeklyPricesPending = WeeklyPricesPending;
             SaveRealty(d);
             SaveBusiness(d);
             return d;
@@ -168,6 +175,7 @@ namespace PCShopSell.Core.Session
             _owned.Clear();
             foreach (int v in d.ownedVehicles ?? Array.Empty<int>()) _owned.Add((VehicleKind)v);
             _impoundedTricycles = Math.Max(d.impoundedTricycles, d.tricycleImpounded ? 1 : 0);
+            _impoundedEBikes = Math.Max(0, d.impoundedEBikes);
             Vehicle = (VehicleKind)d.vehicle;
             Cargo.Clear();
             Cargo.Capacity = CurrentVehicle.CargoCapacity;
@@ -186,11 +194,15 @@ namespace PCShopSell.Core.Session
             _lastNewsReadDay = d.lastNewsReadDay;
 
             RestoreRealty(d);
+            _focus.RetailKind = PCShopSell.Core.Home.RetailShopTypes.Valid(d.shopRetailKind);
+            PlayerShop.RetailKind = _focus.RetailKind;
+            PendingRetailKind = PCShopSell.Core.Home.RetailShopTypes.Valid(d.pendingRetailKind);
             PlayerShop.Stock.Clear();
             Fill(PlayerShop.Stock, d.shopStock);
             string[] goodsIds = d.shopGoodsIds ?? Array.Empty<string>();
             for (int i = 0; i < goodsIds.Length && d.shopGoodsCounts != null && i < d.shopGoodsCounts.Length; i++)
                 PlayerShop.Stock.ForceAddGoods(goodsIds[i], d.shopGoodsCounts[i]);
+            PlayerShop.Stock.RestoreGoodsLots(d.shopGoodsLots, Clock.Today.TotalDays);
             PlayerShop.Markup = d.markup;
             if (d.shopCloseMinute > 0) PlayerShop.SetHours(d.shopOpenMinute, d.shopCloseMinute);
             PlayerShop.Reputation = d.reputation;
@@ -228,7 +240,13 @@ namespace PCShopSell.Core.Session
             _employeeTrips.AddRange((d.employeeTrips ?? Array.Empty<EmployeePurchaseTrip>()).Select(t => t.Copy()));
             EverHired = d.everHired;
             _candidates.Clear();
-            foreach (SaveEmployee e in d.candidates ?? Array.Empty<SaveEmployee>()) _candidates.Add(FromSave(e));
+            foreach (SaveEmployee e in d.candidates ?? Array.Empty<SaveEmployee>())
+            {
+                var candidate = FromSave(e);
+                if (candidate.CandidateLeavesAt <= 0) candidate.CandidateLeavesAt = (long)Clock.Today.TotalDays * 1440 + CandidateLeaveMinute;
+                _candidates.Add(candidate);
+            }
+            ExpireCandidates();
             JobAdDay = d.jobAdDay;
 
             MonthGoalEvaluated = d.monthGoalEvaluated;
@@ -241,6 +259,8 @@ namespace PCShopSell.Core.Session
             _focus.EmployeeTrained = Flags.Contains(TrainedFlag);
             _focus.AutoBuild = Flags.Contains(AutoBuildFlag);
             RestoreBusiness(d);
+            RestorePriceReports(d);
+            RestoreAppLoans(d);
             foreach (SaveShop shop in d.extraShops ?? Array.Empty<SaveShop>()) RestoreShop(shop);
             foreach (OwnedShop s in _shops) GiveStarterBoxes(s);
             OwnedShop inside = ShopAt(CurrentPlace);
@@ -270,6 +290,7 @@ namespace PCShopSell.Core.Session
 
         private static SaveEmployee ToSave(Employee e) => new SaveEmployee
         {
+            candidateLeavesAt = e.CandidateLeavesAt,
             id = e.Id, transferShopId = e.TransferShopId, transferDay = e.TransferDay,
             hasTransferRole = e.TransferRole >= 0, transferRole = e.TransferRole,
             hasWorkSkills = true, assemblyMinutes = e.AssemblyMinutes, purchaseMinutes = e.PurchaseMinutes, assemblyTrained = e.AssemblyTrained,
@@ -279,6 +300,7 @@ namespace PCShopSell.Core.Session
 
         private static Employee FromSave(SaveEmployee e) => new Employee
         {
+            CandidateLeavesAt = e.candidateLeavesAt,
             Id = string.IsNullOrEmpty(e.id) ? Guid.NewGuid().ToString("N") : e.id, TransferShopId = e.transferShopId, TransferDay = e.transferDay,
             TransferRole = e.hasTransferRole ? e.transferRole : -1,
             AssemblyMinutes = e.hasWorkSkills ? Math.Max(45, e.assemblyMinutes) : 90,

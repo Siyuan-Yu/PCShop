@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
@@ -8,6 +8,29 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
+        private void OpenMealDeliverySettings(Window parent)
+        {
+            OpenWindow("缺饭时自动订餐", 780, 660, w =>
+            {
+                Para(w.Content, "到饭点或饿了时，优先吃现有食物；没有可吃的食物时，按选定档位自动订一餐。", 18);
+                Ui.Size(Ui.Button(w.Content, S.MealDeliveryEnabled ? "自动订餐：开" : "自动订餐：关", () =>
+                { S.ToggleMealDelivery(); w.Rebuild(); parent?.RequestRebuild(); }, 19,
+                    S.MealDeliveryEnabled ? Ui.ButtonHot : Ui.ButtonBg, S.HasSmartphone), -1, 42);
+                if (!S.HasSmartphone) Para(w.Content, "需要先买智能手机才能开启自动订餐，可以先选择餐食。", 17, Ui.Warn);
+                for (int i = 0; i < GameSession.DeliveryMeals.Count; i++)
+                {
+                    int tier = i;
+                    var meal = GameSession.DeliveryMeals[i];
+                    string selected = S.MealDeliveryTier == tier ? "✓ 已选 · " : "";
+                    Ui.Size(Ui.Button(w.Content, $"{selected}{meal.Name} · ¥{meal.Price}/餐\n{meal.Effects}", () =>
+                    { S.SelectMealDeliveryTier(tier); w.Rebuild(); parent?.RequestRebuild(); }, 18,
+                        S.MealDeliveryTier == tier ? Ui.ButtonHot : Ui.ButtonBg), -1, 76);
+                }
+                Para(w.Content, "选择立即保存，点选不扣钱；实际订餐时扣费。余额不足时不下单，也不会自动换档。", 16, Ui.Dim);
+                Line(w.Content, "心情目前只记录；精力恢复不超过当前精力上限。", 15, Ui.Dim);
+            });
+        }
+
         public void OpenFridgeWindow()
         {
             if (!S.CanOpenFridge) { Toast("这里还没有摆冰箱。家具城有售，可摆在家或自己的店里。"); return; }
@@ -20,7 +43,7 @@ namespace PCShopSell.Game.UI
                 var layout = shop ? S.ShopLayout : S.HomeLayout;
                 Para(w.Content, string.Join(" · ", layout.Select(p => FurnitureCatalog.Get(p.Id)).Where(d => d?.Role == FurnitureRole.Fridge).GroupBy(d => d.Id)
                     .Select(g => g.First().Name + " ×" + g.Count() + "（每台 " + g.First().FridgeCapacityKg.ToString("0") + " 千克）")), 15, Ui.Dim);
-                Para(w.Content, "可放熟饭、食材、米和饮料。熟饭与食材额外保鲜 2 天，每批只延长一次，反复存取不会刷新保质期。取出后保留到期日。", 16, Ui.Dim);
+                Para(w.Content, "可放熟饭、食材、米和饮料。熟饭与食材额外保鲜 7 天，每批只延长一次，反复存取不会刷新保质期。取出后保留到期日。在这里饿了或到饭点，会自动吃冰箱里的即食食物。", 16, Ui.Dim);
                 if (!shop && S.Pantry.CookedBowls > 0)
                     Ui.Size(Ui.Button(w.Content, "把锅里的饭全部放入冰箱", () => { S.ChillCookedFood(S.Pantry.CookedBowls); w.Rebuild(); }, 17, Ui.ButtonHot), -1, 38);
                 Line(w.Content, "冰箱里的食物（取出到背包后可吃）", 18, Ui.Accent);

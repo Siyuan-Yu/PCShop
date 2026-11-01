@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -266,8 +266,8 @@ namespace PCShopSell.Game.UI
                     }
                     if (n % 2 == 1) Ui.Size(Ui.Rect(row, "Pad"), -1, -1, 1);
                 }
-                KindRows("电脑配件", ShelfKinds.PartKinds);
-                KindRows("杂货", ShelfKinds.GoodsKinds);
+                if (S.RetailKind == "computer") KindRows("电脑配件", ShelfKinds.PartKinds);
+                KindRows("零售商品", ShelfKinds.GoodsKinds.Where(k => k.GiftIds.Any(id => PCShopSell.Core.Home.RetailShopTypes.Sells(S.RetailKind, id))));
                 RectTransform row = Ui.Row(w.Content, 46, 8);
                 Ui.Size(Ui.Button(row, "清空这个货架", () => Pick(null), 17, Ui.ButtonBg, cur != null), -1, -1, 1);
                 Ui.Size(Ui.Button(row, "取消", w.Close, 17), 160);
@@ -365,6 +365,7 @@ namespace PCShopSell.Game.UI
                 int shown = shop.DisplayPcs.Count;
                 Para(w.Content, "用库存配件装好整机摆上展示台（店正中间）：想买整机的顾客看到就直接抱去收银台结账，不用等你装。" +
                                 "展台上的机器越多越显眼，进店的人里想买整机的也越多；展台没有合适的，顾客才下装机单（两天内装好交付）。", 15, Ui.Dim);
+                Para(w.Content, "整机售价 = 同套配件盒装分卖总价 × 1.20 + 装机手工费。配件调价会同步影响新整机报价。", 15, Ui.Accent);
                 Line(w.Content, $"展台上 <b>{shown}/{shop.DisplaySlots}</b> 台　·　想买整机的顾客占 <b>{shop.BuildChance:P0}</b>（展台空着时 {shop.Settings.BuildOrderChance:P0}）", 17);
 
                 Image table = Ui.Panel(w.Content, "Table", new Color(0.11f, 0.12f, 0.14f));
@@ -457,7 +458,8 @@ namespace PCShopSell.Game.UI
                 string pn = p.Name.Replace("电源机箱套装", "").Trim();
                 sb.Append($"{mark} <b>{PartCatalog.CategoryName(p.Category)}</b> {pn}  ×{have}\n");
             }
-            sb.Append($"<size=13><color=#6B6F78>配件市价合计 {cost}</color></size>");
+            Money retail = shop.BuildPartsRetailValue(tier);
+            sb.Append($"<size=12><color=#6B6F78>配件市价参考 {cost}\n盒装分卖合计 {retail}\n整机比配件分卖多收 {shop.BuildPrice(tier) - retail}</color></size>");
             Text ct = Ui.Label(card.transform, sb.ToString(), 14, TextAnchor.MiddleLeft, TagInk);
             ct.rectTransform.Fill(8);
         }

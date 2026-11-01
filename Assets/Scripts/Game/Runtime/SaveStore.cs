@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.World;
@@ -9,6 +9,10 @@ namespace PCShopSell.Game
     /// <summary>手动和自动存档分开写；原子替换保留上一个有效版本。</summary>
     public static class SaveStore
     {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        private static extern void PCShop_SyncStorage();
+#endif
         public static string DirectoryOverride { get; set; }
         private static string SaveDirectory => DirectoryOverride ?? Application.persistentDataPath;
         public static string PathOf => Path.Combine(SaveDirectory, "save1.json");
@@ -61,8 +65,14 @@ namespace PCShopSell.Game
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             string temp = path + ".tmp";
             File.WriteAllText(temp, JsonUtility.ToJson(data));
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (File.Exists(path)) { File.Copy(path, path + ".bak", true); File.Delete(path); }
+            File.Move(temp, path);
+            PCShop_SyncStorage();
+#else
             if (File.Exists(path)) File.Replace(temp, path, path + ".bak");
             else File.Move(temp, path);
+#endif
         }
 
         public static GameSession Load(CityLayout city, bool automatic = false)
@@ -94,6 +104,9 @@ namespace PCShopSell.Game
         {
             foreach (string path in new[] { PathOf, AutoPath, PathOf + ".bak", AutoPath + ".bak" })
                 if (File.Exists(path)) File.Delete(path);
+#if UNITY_WEBGL && !UNITY_EDITOR
+            PCShop_SyncStorage();
+#endif
         }
     }
 }

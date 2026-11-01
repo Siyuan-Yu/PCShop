@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using PCShopSell.Core.Home;
 using UnityEngine;
 
@@ -181,7 +181,18 @@ namespace PCShopSell.Game.Runtime
             foreach (Vector2 p in new[] { new Vector2(-w / 2 + 0.06f, -d / 2 + 0.06f), new Vector2(w / 2 - 0.06f, -d / 2 + 0.06f), new Vector2(-w / 2 + 0.06f, d / 2 - 0.06f), new Vector2(w / 2 - 0.06f, d / 2 - 0.06f) })
                 Prims.Box(r, "Leg", new Vector3(p.x, 0.36f, p.y), new Vector3(0.04f, 0.72f, 0.04f), Mats.Lit(new Color(0.3f, 0.3f, 0.32f), 0.3f, 0.5f));
             Prims.Shape(PrimitiveType.Cylinder, r, "RiceCooker", new Vector3(-0.35f, 0.88f, 0), new Vector3(0.34f, 0.15f, 0.34f), Mats.Lit(new Color(0.86f, 0.86f, 0.8f), 0.3f), c);
-            Prims.Box(r, "CookerLight", new Vector3(-0.35f, 0.9f, -0.17f), new Vector3(0.05f, 0.03f, 0.02f), Mats.Glow(new Color(0.6f, 0.1f, 0.1f), new Color(3f, 0.3f, 0.2f), false));
+            var lid = new GameObject("CookerLid").transform; lid.SetParent(r, false); lid.localPosition = new Vector3(-.35f, 1.045f, 0);
+            Prims.Shape(PrimitiveType.Cylinder, lid, "Lid", Vector3.zero, new Vector3(.35f, .015f, .35f), Mats.Lit(new Color(.65f, .69f, .66f), .5f));
+            Prims.Box(lid, "Handle", new Vector3(0, .031f, 0), new Vector3(.11f, .025f, .045f), Mats.Lit(new Color(.2f, .24f, .22f)));
+            var light = Prims.Box(r, "CookerLight", new Vector3(-.35f, .93f, -.17f), new Vector3(.075f, .035f, .025f), Mats.Glow(new Color(.18f, .2f, .17f), Color.black, false));
+            var animation = r.gameObject.AddComponent<RiceCookerVisual>();
+            animation.Lid = lid; animation.Indicator = light.GetComponent<Renderer>(); animation.Steam = new Renderer[5];
+            for (int i = 0; i < animation.Steam.Length; i++)
+            {
+                var steam = Prims.Shape(PrimitiveType.Sphere, r, "CookerSteam" + i, Vector3.zero, Vector3.one * .03f, Mats.Unlit(new Color(.94f, .97f, 1f, .3f)));
+                var renderer = steam.GetComponent<Renderer>(); renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; renderer.receiveShadows = false;
+                animation.Steam[i] = renderer; steam.SetActive(false);
+            }
             Prims.Shape(PrimitiveType.Cylinder, r, "Bowl", new Vector3(0.25f, 0.77f, 0f), new Vector3(0.2f, 0.04f, 0.2f), Mats.Lit(new Color(0.9f, 0.9f, 0.92f), 0.4f));
             Prims.Shape(PrimitiveType.Cylinder, r, "Mug", new Vector3(0.5f, 0.8f, 0.08f), new Vector3(0.1f, 0.06f, 0.1f), Mats.Lit(new Color(0.3f, 0.5f, 0.7f), 0.4f));
         }

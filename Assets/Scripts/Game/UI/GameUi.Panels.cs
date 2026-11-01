@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using PCShopSell.Core.Catalog;
@@ -72,6 +72,7 @@ namespace PCShopSell.Game.UI
                     return;
                 }
                 BuildPlayerWorkEntry(win.Content, p, win);
+                if (S.HasRetailWholesale(p)) Ui.Size(Ui.Button(win.Content, "批发进货（可供自己店铺销售）", () => OpenRetailWholesale(p), 18, Ui.ButtonHot), -1, 40);
                 RectTransform frame = p.Kind == PlaceKind.Agency || S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null ? null : BuildRosterFrame(win, p, h - 170);
                 if (frame != null)
                 {
@@ -107,7 +108,7 @@ namespace PCShopSell.Game.UI
             List<PartDef> sold = PartCatalog.All.Where(x => S.StallSells(p, x)).ToList();
             List<string> tabs = sold.Select(x => PartCatalog.CategoryName(x.Category)).Distinct().ToList();
             string tab = tabs.Count > 0 ? ShopTabs(w, p, tabs) : null;
-            Line(w.Content, open ? "营业中（工作日 9:00–18:00）。批发价，只卖盒装正品。" : "<color=#D79780>关门了（工作日 9:00–18:00 营业）</color>");
+            Line(w.Content, open ? $"营业中（{S.OpeningHoursText(S.CurrentPlace)}）。批发价，只卖盒装正品。" : $"<color=#D79780>关门了（{S.OpeningHoursText(S.CurrentPlace)} 营业）</color>");
             Line(w.Content, $"现金 {S.Ledger.Balance}　　{S.CurrentVehicle.Name}还能背 {S.FreeKg:0.##} 千克　　先加进购物车，结账时分好自己背的和叫车送的", 17, Ui.Dim);
 
             RectTransform list = GoodsList(w.Content);
@@ -150,11 +151,13 @@ namespace PCShopSell.Game.UI
                 }, 19, Ui.ButtonHot, S.IsDealerOpen && S.Ledger.Balance >= vs.Price), 100);
                 if (owned) Ui.Size(Ui.Button(row, "卖回…", () => ConfirmBusiness("出售载具", $"按购价六折 {vs.Price.Scale(.6)} 回收。当前使用此车时需先把携带货物减到步行可承受范围。", () => { S.SellVehicle(vs.Kind); w.Rebuild(); }), 17, Ui.Warn, S.IsDealerOpen), 90);
             }
-            if (S.TricycleImpounded)
+            foreach (var impoundedKind in new[] { VehicleKind.EBike, VehicleKind.Tricycle })
             {
-                Ui.Size(Ui.Button(w.Content, "交 ¥500 赎回一台三轮车", () =>
+                var kind = impoundedKind;
+                if (S.ImpoundedVehicleCount(kind) <= 0) continue;
+                Ui.Size(Ui.Button(w.Content, "交 " + PoliceSystem.RedeemFee + " 赎回一台" + Vehicles.Get(kind).Name, () =>
                 {
-                    S.RedeemTricycle();
+                    S.RedeemVehicle(kind);
                     w.Rebuild();
                 }, 19, Ui.Warn), -1, 46);
             }
@@ -231,6 +234,7 @@ namespace PCShopSell.Game.UI
             S.ReadNews();
             OpenWindow("行情与新闻", 900, 880, w =>
             {
+                Ui.Size(Ui.Button(w.Content, "每周物价简报 · " + (S.WeeklyPricesSubscribed ? "已订阅" : "未订阅"), OpenWeeklyPriceReport, 18, Ui.ButtonHot), -1, 40);
                 Line(w.Content, "新闻 → 宏观指标 → 配件价格。读懂新闻，提前囤货或清货。", 18, Ui.Dim);
                 foreach (MacroFactor f in new[] { MacroFactor.Crypto, MacroFactor.AiDemand, MacroFactor.NewGeneration })
                 {
@@ -296,17 +300,67 @@ namespace PCShopSell.Game.UI
             });
         }
 
+        private int _ledgerPeriod, _ledgerFilter, _ledgerPage;
+        private int _ledgerDay;
+
         private void OpenLedger()
         {
-            OpenWindow("账本", 760, 680, w =>
+            _ledgerDay = S.Clock.Today.TotalDays;
+            _ledgerPage = 0;
+            OpenWindow("总收支账本", 940, 830, w =>
             {
-                RectTransform list = Ui.Scroll(w.Content, 560);
-                var entries = S.Ledger.Entries;
-                for (int i = entries.Count - 1; i >= 0 && i >= entries.Count - 30; i--)
+                int today = S.Clock.Today.TotalDays;
+                int span = _ledgerPeriod == 0 ? 1 : _ledgerPeriod == 1 ? 7 : 30;
+                int start = _ledgerDay / span * span;
+                int end = System.Math.Min(today, start + span - 1);
+                var from = new PCShopSell.Core.Time.GameDate(start);
+                var to = new PCShopSell.Core.Time.GameDate(end);
+                var periods = Ui.Row(w.Content, 40);
+                string[] names = { "按天", "按周", "按月" };
+                for (int i = 0; i < names.Length; i++)
                 {
-                    var e = entries[i];
-                    Text t = Ui.Label(list, $"<color=#ABB5A8>{e.Date}</color>  {e.Category}  {(e.Amount.IsNegative ? "<color=#D79780>" : "<color=#A9C9A9>")}{e.Amount}</color>  {e.Memo}", 16);
-                    Ui.Size(t, -1, 24);
+                    int period = i;
+                    Ui.Size(Ui.Button(periods, names[i], () => { _ledgerPeriod = period; _ledgerPage = 0; w.Rebuild(); }, 18,
+                        i == _ledgerPeriod ? Ui.ButtonHot : Ui.ButtonBg), -1, -1, 1);
+                }
+                var dates = Ui.Row(w.Content, 42);
+                Ui.Size(Ui.Button(dates, "上一" + (_ledgerPeriod == 0 ? "天" : _ledgerPeriod == 1 ? "周" : "月"), () =>
+                { _ledgerDay = System.Math.Max(0, start - span); _ledgerPage = 0; w.Rebuild(); }, 17, Ui.ButtonBg, start > 0), 110);
+                Ui.Size(Ui.Label(dates, span == 1 ? from.ToString() : from + " — " + to, 18, TextAnchor.MiddleCenter), -1, -1, 1);
+                Ui.Size(Ui.Button(dates, "下一" + (_ledgerPeriod == 0 ? "天" : _ledgerPeriod == 1 ? "周" : "月"), () =>
+                { _ledgerDay = start + span; _ledgerPage = 0; w.Rebuild(); }, 17, Ui.ButtonBg, start + span <= today), 110);
+                Ui.Size(Ui.Button(dates, "回到当前", () => { _ledgerDay = today; _ledgerPage = 0; w.Rebuild(); }, 17), 110);
+
+                var entries = S.Ledger.Entries.Where(e => e.Date >= from && e.Date <= to).ToList();
+                Money income = Money.FromCents(entries.Where(e => e.Amount.IsPositive).Sum(e => e.Amount.Cents));
+                Money expense = Money.FromCents(-entries.Where(e => e.Amount.IsNegative).Sum(e => e.Amount.Cents));
+                Line(w.Content, $"总收入 {income}    总支出 {expense}    净收支 {income - expense}", 21, Ui.Accent);
+                Line(w.Content, $"当前现金 {S.Ledger.Balance} · 包含经营、生活、打工、交通、购置、借还款等全部现金往来。", 16, Ui.Dim);
+                Para(w.Content, "周按周一至周日，月按游戏日历每月 30 天；当前周期统计至今天。净收支是现金变化，包含借款、押金等，不等于利润。", 15, Ui.Dim);
+                var filters = Ui.Row(w.Content, 36);
+                string[] filterNames = { "全部明细", "只看收入", "只看支出" };
+                for (int i = 0; i < filterNames.Length; i++)
+                {
+                    int filter = i;
+                    Ui.Size(Ui.Button(filters, filterNames[i], () => { _ledgerFilter = filter; _ledgerPage = 0; w.Rebuild(); }, 17,
+                        i == _ledgerFilter ? Ui.ButtonHot : Ui.ButtonBg), -1, -1, 1);
+                }
+                var filtered = entries.Where(e => _ledgerFilter == 0 || (_ledgerFilter == 1 ? e.Amount.IsPositive : e.Amount.IsNegative)).Reverse().ToList();
+                const int pageSize = 40;
+                int pages = System.Math.Max(1, (filtered.Count + pageSize - 1) / pageSize);
+                _ledgerPage = System.Math.Min(_ledgerPage, pages - 1);
+                var nav = Ui.Row(w.Content, 34);
+                Ui.Size(Ui.Button(nav, "上一页", () => { _ledgerPage--; w.Rebuild(); }, 16, Ui.ButtonBg, _ledgerPage > 0), 100);
+                Ui.Size(Ui.Label(nav, $"共 {filtered.Count} 笔 · 第 {_ledgerPage + 1}/{pages} 页", 16, TextAnchor.MiddleCenter), -1, -1, 1);
+                Ui.Size(Ui.Button(nav, "下一页", () => { _ledgerPage++; w.Rebuild(); }, 16, Ui.ButtonBg, _ledgerPage + 1 < pages), 100);
+                RectTransform list = Ui.Scroll(w.Content, 400);
+                if (filtered.Count == 0) Line(list, "这段时间没有符合条件的收支记录。", 18, Ui.Dim);
+                foreach (var e in filtered.Skip(_ledgerPage * pageSize).Take(pageSize))
+                {
+                    string sign = e.Amount.IsPositive ? "+" : "";
+                    Line(list, $"{e.Date}  {e.Category}  {sign}{e.Amount}", 18, e.Amount.IsNegative ? Ui.Warn : Ui.Good);
+                    Para(list, string.IsNullOrEmpty(e.Memo) ? "无备注" : e.Memo, 16, Ui.Dim);
+                    Line(list, $"该笔后现金 {e.BalanceAfter}", 14, Ui.Dim);
                 }
             });
         }
