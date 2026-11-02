@@ -939,7 +939,7 @@ namespace PCShopSell.Game
             Cam.allowMSAA = true;
             var extra = Cam.GetUniversalAdditionalCameraData();
             extra.renderPostProcessing = true;
-            extra.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
+            extra.antialiasing = AntialiasingMode.None; // Keep the pixel presentation grid crisp.
             _rig = new CameraRig(Cam);
             _rig.SetCityBounds(City);
         }

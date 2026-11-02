@@ -6,8 +6,8 @@ namespace PCShopSell.Game.Runtime
     {
         private void ReferenceResidence(Transform root,float w,float d,float h,int tier,int seed)
         {
-            Color stone=ArtDirection.Hex(tier>1?"CBC8BD":"B9B6A6");
-            Color blue=ArtDirection.Hex(tier>1?"4F697D":"657B88");
+            Color stone=ArtDirection.Hex(tier>1?"E5DDBB":"D4D5BA");
+            Color blue=ArtDirection.Hex(tier>1?"458FB5":"6CA7C5");
             var masonry=IndustrialMaterials.Surface("concrete",stone,new Vector2(3,4));var glass=Mats.Lit(blue,.58f,.08f);
             Prims.Box(root,"ResidenceGarden",new Vector3(0,.04f,d/2),new Vector3(w,.08f,d),Mats.Lit(ArtDirection.Hex("78865D")));
             Prims.Box(root,"ResidenceForecourt",new Vector3(0,.10f,d*.15f),new Vector3(w*.86f,.12f,d*.30f),Mats.Lit(Sidewalk));

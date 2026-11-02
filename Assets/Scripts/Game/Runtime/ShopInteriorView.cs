@@ -579,7 +579,7 @@ namespace PCShopSell.Game.Runtime
             float w = Width, d = Depth;
 
             Prims.Box(_root, "Floor", new Vector3(w / 2, -0.05f, d / 2), new Vector3(w, 0.1f, d), Mats.Lit(ArtDirection.Hex("B4AA95"), 0.12f), true);
-            Material tileMat = IndustrialMaterials.Surface("concrete", ArtDirection.Hex("B6B1A4"), Vector2.one);
+            Material tileMat = IndustrialMaterials.Surface("concrete", ArtDirection.Hex("D6CBAA"), Vector2.one);
             const float tile = 0.8f;
             for (int tx = 0; tx * tile < w; tx++)
             for (int tz = 0; tz * tile < d; tz++)
@@ -588,8 +588,8 @@ namespace PCShopSell.Game.Runtime
                 Prims.Box(_root, "Tile", new Vector3(tx * tile + sx / 2, 0.005f, tz * tile + sz / 2), new Vector3(sx - 0.012f, 0.012f, sz - 0.012f), tileMat);
             }
             BuildStreet(w, d, w - 3.0f);
-            Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), IndustrialMaterials.Surface("brick", ArtDirection.Hex("B5AA96"), new Vector2(w / 3, 1.5f)));
-            Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), IndustrialMaterials.Surface("concrete", ArtDirection.Hex("B2B4AC"), new Vector2(d / 3, 1.5f)));
+            Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), IndustrialMaterials.Surface("brick", ArtDirection.Hex("E5CDA6"), new Vector2(w / 3, 1.5f)));
+            Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), IndustrialMaterials.Surface("concrete", ArtDirection.Hex("D7DDCA"), new Vector2(d / 3, 1.5f)));
             Prims.Box(_root, "WallLeftLow", new Vector3(-0.05f, 0.3f, d / 2), new Vector3(0.1f, 0.6f, d), Mats.Lit(ArtDirection.Ink, .25f, .2f));
             Prims.Box(_root, "WallDadoBack", new Vector3(w / 2, 0.38f, d - 0.015f), new Vector3(w, 0.76f, 0.025f), Mats.Lit(ArtDirection.Ink, .25f, .2f));
             Prims.Box(_root, "WallDadoRight", new Vector3(w - 0.015f, 0.38f, d / 2), new Vector3(0.025f, 0.76f, d), Mats.Lit(ArtDirection.Ink, .25f, .2f));

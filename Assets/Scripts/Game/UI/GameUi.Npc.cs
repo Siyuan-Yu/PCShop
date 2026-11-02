@@ -37,6 +37,7 @@ namespace PCShopSell.Game.UI
 
             RectTransform imgRt = Ui.Rect(frame.transform, "Image").Fill(3);
             var raw = imgRt.gameObject.AddComponent<RawImage>();
+            raw.material=Ui.PixelPortraitMaterial;
             raw.texture = PortraitOf(portraitId);
             if(raw.texture!=null)
             {
@@ -92,6 +93,7 @@ namespace PCShopSell.Game.UI
             frame.GetComponent<LayoutElement>().minWidth = size;
             RectTransform imgRt = Ui.Rect(frame.transform, "Image").Fill(2);
             var raw = imgRt.gameObject.AddComponent<RawImage>();
+            raw.material=Ui.PixelPortraitMaterial;
             raw.texture = PortraitOf(n.Id);
             raw.uvRect = new Rect(0.12f, 0.48f, 0.76f, 0.5f);
             if (raw.texture == null)
@@ -167,6 +169,7 @@ namespace PCShopSell.Game.UI
             frame.GetComponent<LayoutElement>().minWidth = OrgCardWidth;
             RectTransform imgRt = Ui.Rect(frame.transform, "Image").Fill(2);
             var raw = imgRt.gameObject.AddComponent<RawImage>();
+            raw.material=Ui.PixelPortraitMaterial;
             raw.texture = PortraitOf(portraitId);
             raw.color = locked ? new Color(0.1f, 0.1f, 0.12f) : Color.white;
             if (raw.texture == null)

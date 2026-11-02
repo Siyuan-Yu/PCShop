@@ -1,6 +1,6 @@
 ﻿Shader "PCShop/LakeWater"
 {
-    Properties { _BaseColor("Lake blue",Color)=(0.28,0.44,0.53,1) }
+    Properties { _BaseColor("Lake blue",Color)=(0.22,0.60,0.76,1) }
     SubShader
     {
         Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" }
@@ -34,10 +34,10 @@
                 float fresnel=pow(1-saturate(dot(view,n)),3);
                 Light sun=GetMainLight(TransformWorldToShadowCoord(i.world));
                 float spec=pow(saturate(dot(n,normalize(sun.direction+view))),130);
-                float ripple=pow(saturate(wave),18)*.018;
+                float ripple=step(.78,wave)*.045;
                 float depth=saturate(1-length(float2((p.x+25)/360,(p.y-90)/300)));
-                half3 lake=lerp(_BaseColor.rgb,half3(.13,.25,.33),depth*.7);
-                half3 color=lerp(lake,half3(.57,.64,.68),(.12+fresnel*.55));
+                half3 lake=lerp(_BaseColor.rgb,half3(.04,.26,.43),depth*.7);
+                half3 color=lerp(lake,half3(.48,.79,.9),(.12+fresnel*.55));
                 color*=.38+.62*sun.color*sun.shadowAttenuation;
                 color+=(spec*.72+ripple)*sun.color;
                 return half4(MixFog(color,i.fog),1);

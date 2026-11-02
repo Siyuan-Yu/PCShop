@@ -39,7 +39,7 @@ namespace PCShopSell.Game.Procedural
         // 后处�?
         public float BloomIntensity = 0.2f;
         public float BloomThreshold = 1f;
-        public float Exposure = 0f;
+        public float Exposure = .3f;
         public float Saturation = -8f;
         public float Contrast = 4f;
         public float Vignette = 0.10f;
@@ -58,16 +58,16 @@ namespace PCShopSell.Game.Procedural
                 UnlitGlassColor = new Color(0.35f, 0.5f, 0.65f),
                 RoadSmoothness = 0.35f,
                 LampsOn = false,
-                SkyColor = new Color(.64f,.71f,.78f),
-                AmbientColor = new Color(.52f,.59f,.66f),
+                SkyColor = new Color(.53f,.78f,.94f),
+                AmbientColor = new Color(.64f,.73f,.86f),
                 SunColor = new Color(1f,.91f,.77f),
-                SunIntensity = 1.25f,
+                SunIntensity = 1.5f,
                 SunEuler = new Vector3(38f,-38f,0f),
                 BloomIntensity = 0.12f,
                 BloomThreshold = 1.1f,
-                Exposure = 0f,
-                Saturation = -7f,
-                Contrast = 12f,
+                Exposure = .05f,
+                Saturation = 10f,
+                Contrast = 18f,
                 Vignette = .08f,
             };
         }
@@ -96,10 +96,10 @@ namespace PCShopSell.Game.Procedural
                 SunEuler = new Vector3(16f,-48f,0f),
                 BloomIntensity = .24f,
                 BloomThreshold = 0.9f,
-                Exposure = 0f,
+                Exposure = .3f,
                 Vignette = 0.12f,
                 ChromaticAberration = 0f,
-                FilmGrain = 0.02f,
+                FilmGrain = 0f,
                 ShadowTint = new Vector4(0.95f, 0.85f, 1.15f, 0f),
                 HighlightTint = new Vector4(1.1f, 1.0f, 0.95f, 0f),
             };
@@ -130,11 +130,11 @@ namespace PCShopSell.Game.Procedural
                 BloomIntensity = 0.28f,
                 BloomThreshold = 0.9f,
                 Exposure = 0.1f,
-                Saturation = -10f,
+                Saturation = 8f,
                 Contrast = 5f,
                 Vignette = 0.16f,
                 ChromaticAberration = 0f,
-                FilmGrain = 0.025f,
+                FilmGrain = 0f,
                 ShadowTint = new Vector4(0.80f, 0.78f, 1.25f, 0f),
                 HighlightTint = new Vector4(1.0f, 0.90f, 1.15f, 0f),
             };

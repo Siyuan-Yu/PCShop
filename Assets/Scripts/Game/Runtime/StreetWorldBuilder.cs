@@ -78,14 +78,14 @@ namespace PCShopSell.Game.Runtime
 
         private float FrontZ = (float)GameSession.LinkFrontY;
 
-        private static readonly Color Asphalt = ArtDirection.Hex("515C65");
-        private static readonly Color Sidewalk = ArtDirection.Hex("B9B5A9");
-        private static readonly Color Grass = ArtDirection.Hex("7D8E62");
+        private static readonly Color Asphalt = ArtDirection.Hex("657B88");
+        private static readonly Color Sidewalk = ArtDirection.Hex("D8D0AE");
+        private static readonly Color Grass = ArtDirection.Hex("77A14A");
         private static readonly Color[] Facades =
         {
-            ArtDirection.Hex("B6AB96"), ArtDirection.Hex("99A29A"), ArtDirection.Hex("C3BAA6"),
-            ArtDirection.Hex("AD907E"), ArtDirection.Hex("969B87"), ArtDirection.Hex("B19B7B"),
-            ArtDirection.Hex("8293A0"), ArtDirection.Hex("BAB5A5"),
+            ArtDirection.Hex("E7D5AD"), ArtDirection.Hex("9BC6C3"), ArtDirection.Hex("E8DFB7"),
+            ArtDirection.Hex("D6AB8C"), ArtDirection.Hex("A6C8A8"), ArtDirection.Hex("E5BD84"),
+            ArtDirection.Hex("8FB7CC"), ArtDirection.Hex("D7D5B5"),
         };
         private static readonly Color[] SignColors =
         {

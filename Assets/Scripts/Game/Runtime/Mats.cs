@@ -82,7 +82,7 @@ namespace PCShopSell.Game.Runtime
             if(_roofTiles==null)
             {
                 const int size=64;
-                _roofTiles=new Texture2D(size,size,TextureFormat.RGBA32,true,true){name="MiniatureRoofTiles",wrapMode=TextureWrapMode.Repeat,anisoLevel=4};
+                _roofTiles=new Texture2D(size,size,TextureFormat.RGBA32,true,true){name="MiniatureRoofTiles",wrapMode=TextureWrapMode.Repeat,anisoLevel=1, filterMode=FilterMode.Point};
                 var pixels=new Color[size*size];
                 for(int y=0;y<size;y++)for(int x=0;x<size;x++)
                 {
@@ -148,7 +148,7 @@ namespace PCShopSell.Game.Runtime
             if(WindowPalettes.TryGetValue(wall,out _windowAlbedo))return;
             const int cell = 64, cells = 4, n = cell * cells;
             var rng = new System.Random(4242);
-            _windowAlbedo = new Texture2D(n, n, TextureFormat.RGBA32, true, false) { name = "IndustrialMasonryWindowAtlas", wrapMode = TextureWrapMode.Repeat, anisoLevel=4 };
+            _windowAlbedo = new Texture2D(n, n, TextureFormat.RGBA32, true, false) { name = "PixelTownMasonryWindows", wrapMode = TextureWrapMode.Repeat, anisoLevel=1, filterMode=FilterMode.Point };
             if(_windowEmission==null)_windowEmission = new Texture2D(n, n, TextureFormat.RGBA32, true, true) { name = "WindowEmission", wrapMode = TextureWrapMode.Repeat };
             var a = new Color32[n * n];
             var e = new Color32[n * n];
@@ -165,8 +165,8 @@ namespace PCShopSell.Game.Runtime
                             bool frame = !pane && x >= 8 && x < cell - 8 && y >= 9 && y < cell - 6;
                             bool mullion=pane&&(x>=30&&x<=32||y>=34&&y<=36);
                             float reflection=Mathf.Clamp01((float)y/cell)*.30f+(x+y>71?.16f:0);
-                            Color glass=Color.Lerp(new Color32(43,59,73,255),new Color32(124,151,165,255),reflection);
-                            Color32 albedo = pane ? (Color32)(mullion?new Color32(68,77,82,255):glass) : frame ? new Color32(111,114,111,255) : (Color32)wall;
+                            Color glass=Color.Lerp(new Color32(43,89,132,255),new Color32(142,210,219,255),reflection);
+                            Color32 albedo = pane ? (Color32)(mullion?new Color32(230,215,171,255):glass) : frame ? new Color32(52,77,110,255) : (Color32)wall;
                             if(!pane&&!frame)
                             {
                                 float mortar=y%12==0||((x+(y/12%2)*12)%24==0)? .77f: .97f+.03f*Mathf.PerlinNoise(px*.27f,py*.27f);

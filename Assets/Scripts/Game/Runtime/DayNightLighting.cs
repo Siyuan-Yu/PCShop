@@ -47,7 +47,7 @@ namespace PCShopSell.Game.Runtime
             var tone = profile.Add<Tonemapping>(true);
             tone.mode.Override(TonemappingMode.ACES);
             var split=profile.Add<SplitToning>(true);
-            split.shadows.Override(new Color(.44f,.48f,.55f));
+            split.shadows.Override(new Color(.45f,.48f,.56f));
             split.highlights.Override(new Color(.54f,.52f,.47f));
             split.balance.Override(-8);
             _grade = profile.Add<ColorAdjustments>(true);
@@ -134,9 +134,9 @@ namespace PCShopSell.Game.Runtime
             _sun.color = interior ? new Color(1f, 0.93f, 0.82f) : Color.Lerp(a.SunColor, b.SunColor, t);
             _sun.intensity = interior ? 0.85f : Mathf.Lerp(a.SunIntensity, b.SunIntensity, t);
             _sun.transform.rotation = Quaternion.Euler(interior ? new Vector3(65f, 135f, 0) : Vector3.Lerp(a.SunEuler, b.SunEuler, t));
-            _sun.shadowStrength = interior ? .55f : .78f;
-            _skyFill.color=new Color(.72f,.82f,1f);_skyFill.intensity=interior?.42f:Mathf.Lerp(.66f,.26f,night);
-            _bounceFill.color=new Color(1f,.92f,.78f);_bounceFill.intensity=interior?.24f:Mathf.Lerp(.35f,.12f,night);
+            _sun.shadowStrength = interior ? .45f : .65f;
+            _skyFill.color=new Color(.72f,.82f,1f);_skyFill.intensity=interior?.52f:Mathf.Lerp(.50f,.32f,night);
+            _bounceFill.color=new Color(1f,.92f,.78f);_bounceFill.intensity=interior?.24f:Mathf.Lerp(.26f,.12f,night);
 
             _bloom.intensity.Override(Mathf.Lerp(a.BloomIntensity, b.BloomIntensity, t));
             _bloom.threshold.Override(Mathf.Lerp(a.BloomThreshold, b.BloomThreshold, t));

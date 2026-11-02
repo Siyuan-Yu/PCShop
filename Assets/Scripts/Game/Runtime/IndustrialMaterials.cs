@@ -12,8 +12,9 @@ namespace PCShopSell.Game.Runtime
         {
             string key=kind+color+repeat;
             if(Materials.TryGetValue(key,out var found)&&found!=null)return found;
-            var mat=new Material(Shader.Find("Universal Render Pipeline/Lit")){name="Industrial / "+kind};
-            mat.SetColor("_BaseColor",color);mat.SetTexture("_BaseMap",Texture(kind));mat.mainTextureScale=repeat;
+            var mat=new Material(kind=="foliage"?Resources.Load<Shader>("Shaders/PixelFoliage"):Shader.Find("Universal Render Pipeline/Lit")){name="Pixel town / "+kind};
+            mat.SetColor("_BaseColor",color);
+            if(kind!="foliage"){mat.SetTexture("_BaseMap",Texture(kind));mat.mainTextureScale=repeat;}
             mat.SetFloat("_Smoothness",kind=="metal"?.36f:kind=="wood"?.22f:.13f);
             mat.SetFloat("_Metallic",kind=="metal"?.55f:0);
             mat.enableInstancing=true;Materials[key]=mat;return mat;
@@ -42,9 +43,10 @@ namespace PCShopSell.Game.Runtime
                 {if(x%64<2||y%64<2)v*=.62f;else if(x%64==2||y%64==2)v=1;}
                 else if(kind=="wood")v*=.78f+.22f*Mathf.PerlinNoise(x*.15f,y*.006f);
                 else if(kind=="asphalt")v*=.8f+.2f*noise;
+                v=Mathf.Round(v*8)/8;
                 byte b=(byte)(Mathf.Clamp01(v)*255);px[y*n+x]=new Color32(b,b,b,255);
             }
-            var tex=new Texture2D(n,n,TextureFormat.RGBA32,true,true){name="Industrial "+kind,wrapMode=TextureWrapMode.Repeat,anisoLevel=4};
+            var tex=new Texture2D(n,n,TextureFormat.RGBA32,true,true){name="Industrial "+kind,wrapMode=TextureWrapMode.Repeat,filterMode=FilterMode.Point,anisoLevel=1};
             tex.SetPixels32(px);tex.Apply(true);Textures[kind]=tex;return tex;
         }
     }

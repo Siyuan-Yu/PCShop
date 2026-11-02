@@ -12,7 +12,7 @@ namespace PCShopSell.Game.UI
             if(button.transform.parent?.parent?.name!="TopBar"||!new[]{"我的","背包 B","日程","人物","人脉","员工","手机","任务","经营","通知","菜单"}.Contains(title))return;
             if(!NavigationIcons.TryGetValue(title,out var sprite))
             {
-                const int n=32;var tex=new Texture2D(n,n,TextureFormat.RGBA32,false){name="Navigation / "+title,filterMode=FilterMode.Bilinear};
+                const int n=32;var tex=new Texture2D(n,n,TextureFormat.RGBA32,false){name="Navigation / "+title,filterMode=FilterMode.Point};
                 var pixels=new Color32[n*n];
                 void Pixel(int x,int y){if(x>=0&&x<n&&y>=0&&y<n)pixels[y*n+x]=new Color32(255,255,255,255);}
                 void Line(int x,int y,int xx,int yy)

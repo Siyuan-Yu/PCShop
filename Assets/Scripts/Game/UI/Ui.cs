@@ -10,15 +10,15 @@ namespace PCShopSell.Game.UI
     public static partial class Ui
     {
         public static Color Gold => Accent;
-        public static readonly Color PanelBg = Tone("29333F");
-        public static readonly Color PanelBg2 = Tone("35424F");
-        public static readonly Color Accent = Tone("E8BE62");
-        public static readonly Color ButtonBg = Tone("455362");
-        public static readonly Color ButtonHot = Tone("9F7B36");
-        public static readonly Color Warn = Tone("B5603E");
-        public static readonly Color Good = Tone("B6D578");
-        public static readonly Color Dim = Tone("AAB4BB");
-        public static readonly Color TextColor = Tone("ECE8DF");
+        public static readonly Color PanelBg = Tone("243957");
+        public static readonly Color PanelBg2 = Tone("344B69");
+        public static readonly Color Accent = Tone("FFD16B");
+        public static readonly Color ButtonBg = Tone("415878");
+        public static readonly Color ButtonHot = Tone("B48137");
+        public static readonly Color Warn = Tone("D57548");
+        public static readonly Color Good = Tone("BCE35B");
+        public static readonly Color Dim = Tone("BAC7DA");
+        public static readonly Color TextColor = Tone("FFF1D5");
         private static Color Tone(string hex) { ColorUtility.TryParseHtmlString("#" + hex, out var c); return c; }
         private static Sprite _card;
         private static Sprite Card
@@ -27,15 +27,15 @@ namespace PCShopSell.Game.UI
             {
                 if (_card != null) return _card;
                 const int n = 64; const float radius = 7;
-                var texture = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Brushed steel UI plate", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                var texture = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Pixel town inset panel", filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
                 var pixels = new Color[n * n];
                 for (int y = 0; y < n; y++) for (int x = 0; x < n; x++)
                 {
                     float dx = Mathf.Max(Mathf.Abs(x - 31.5f) - (32 - radius), 0);
                     float dy = Mathf.Max(Mathf.Abs(y - 31.5f) - (32 - radius), 0);
                     float edge=Mathf.Min(Mathf.Min(x,63-x),Mathf.Min(y,63-y));
-                    float shade=edge<2? .72f: edge<4?1f:Mathf.Lerp(.88f,1f,y/63f);
-                    pixels[y * n + x] = new Color(shade,shade,shade, Mathf.Clamp01(radius - Mathf.Sqrt(dx * dx + dy * dy)));
+                    float shade=edge<2? .72f: edge<4?1f:(y>32?1f:.92f);
+                    pixels[y * n + x] = new Color(shade,shade,shade, (dx+dy<=radius?1f:0f));
                 }
                 texture.SetPixels(pixels); texture.Apply();
                 return _card = Sprite.Create(texture, new Rect(0, 0, n, n), Vector2.one * 0.5f, 100, 0, SpriteMeshType.FullRect, new Vector4(12, 12, 12, 12));

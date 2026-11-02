@@ -122,7 +122,7 @@ namespace PCShopSell.Game.Runtime
             Color wall=Facades[seed%Facades.Length];
             if(model=="oldhome")
             {
-                Color[] oldWalls={ArtDirection.Hex("A09889"),ArtDirection.Hex("B2A48F"),ArtDirection.Hex("909A96"),ArtDirection.Hex("A28E80"),ArtDirection.Hex("B8B2A3")};
+                Color[] oldWalls={ArtDirection.Hex("D9C8A7"),ArtDirection.Hex("E6CBA0"),ArtDirection.Hex("A3C5CC"),ArtDirection.Hex("DEB698"),ArtDirection.Hex("D7D9C3")};
                 wall=oldWalls[(seed&int.MaxValue)%oldWalls.Length];
             }
             if(model=="luxury_apartment")wall=ArtDirection.Cream;
@@ -142,9 +142,9 @@ namespace PCShopSell.Game.Runtime
                 int panels=Mathf.Max(4,Mathf.RoundToInt(awningWidth/.6f));
                 for(int i=0;i<panels;i++)
                     Prims.Box(root,"StripedAwning",new Vector3(-awningWidth/2+(i+.5f)*awningWidth/panels,2.75f,-.55f),
-                        new Vector3(awningWidth/panels,.12f,1.15f),Mats.Lit(i%2==0?ArtDirection.Blue:ArtDirection.Ink,.35f,.25f));
+                        new Vector3(awningWidth/panels,.12f,1.15f),Mats.Lit(i%2==0?ArtDirection.Blue:ArtDirection.Cream,.35f,.25f));
                 foreach(int side in new[]{-1,1})
-                    Prims.Box(root,"GroundFloorWindow",new Vector3(side*w*.3f,1.25f,-.15f),new Vector3(w*.22f,1.7f,.1f),Mats.Glow(ArtDirection.Hex("4A5962"),new Color(1.3f,.85f,.38f)));
+                    Prims.Box(root,"GroundFloorWindow",new Vector3(side*w*.3f,1.25f,-.15f),new Vector3(w*.22f,1.7f,.1f),Mats.Glow(ArtDirection.Hex("5089AB"),new Color(1.3f,.85f,.38f)));
             }
             CityArchitecture.Residence(root,model,tier,w,d,h,variation);
             CityArchitecture.ReferenceFacade(root,model,tier,w,d,h,seed);

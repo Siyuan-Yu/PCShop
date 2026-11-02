@@ -7,8 +7,8 @@ namespace PCShopSell.Game.Runtime
         // Dressing stays inside the existing lot, has no colliders or interactable markers.
         public static void IndustrialDetails(Transform parent,string model,float w,float d,float h,int seed)
         {
-            var root=new GameObject("Industrial architectural finish").transform;root.SetParent(parent,false);
-            Color steel=ArtDirection.Hex("394855"),silver=ArtDirection.Hex("9DA6A8"),ochre=ArtDirection.Hex("C0954F");
+            var root=new GameObject("Pixel town facade finish").transform;root.SetParent(parent,false);
+            Color steel=ArtDirection.Hex("365477"),silver=ArtDirection.Hex("E4D4AF"),ochre=ArtDirection.Hex("EDC05E");
             void Steel(string name,Vector3 at,Vector3 size)=>Prims.Box(root,name,at,size,Mats.Lit(steel,.38f,.4f));
             void Pipe(Vector3 at,float height,float radius)
             {
@@ -41,12 +41,27 @@ namespace PCShopSell.Game.Runtime
                         Steel("Masonry corner trim",new Vector3(side*(w*.5f-.08f),h*.5f,-.12f),new Vector3(.16f,h,.18f));
                 }
                 float y=h+(model=="warehouse"||model=="shop"?1.05f:.45f);
-                var hvac=new Vector3(w*.24f,y+.45f,d*.68f);
-                Prims.Box(root,"Roof air handling unit",hvac,new Vector3(w*.24f,.9f,d*.21f),IndustrialMaterials.Surface("metal",silver,new Vector2(2,1)));
-                for(int i=0;i<4;i++)Steel("Vent grille",hvac+new Vector3((i-1.5f)*w*.043f,0,-d*.106f),new Vector3(.055f,.7f,.04f));
-                Steel("Rooftop service duct",new Vector3(0,y+.18f,d*.68f),new Vector3(w*.28f,.35f,.45f));
-                Pipe(new Vector3(-w*.31f,y+.85f,d*.73f),1.6f,.18f);
-                Steel("Vent rain hood",new Vector3(-w*.31f,y+1.68f,d*.73f),new Vector3(.6f,.12f,.6f));
+                if(model!="shop")
+                {
+                    var hvac=new Vector3(w*.24f,y+.45f,d*.68f);
+                    Prims.Box(root,"Roof ventilation",hvac,new Vector3(w*.24f,.9f,d*.21f),IndustrialMaterials.Surface("metal",ArtDirection.Blue,new Vector2(2,1)));
+                    Pipe(new Vector3(-w*.31f,y+.85f,d*.73f),1.6f,.18f);
+                }
+                else
+                {
+                    Box(root,"Brick chimney",new Vector3(-w*.28f,h+1.25f,d*.72f),new Vector3(.6f,1.8f,.65f),ArtDirection.Clay);
+                    Box(root,"Chimney cap",new Vector3(-w*.28f,h+2.18f,d*.72f),new Vector3(.78f,.15f,.82f),ArtDirection.Cream);
+                    foreach(int side in new[]{-1,1})
+                    {
+                        Box(root,"Window planter",new Vector3(side*w*.3f,.55f,-.29f),new Vector3(w*.22f,.28f,.38f),ArtDirection.Wood);
+                        for(int flower=0;flower<5;flower++)
+                        {
+                            float x=side*w*.3f+(flower-2)*w*.04f;
+                            Box(root,"Planter leaves",new Vector3(x,.77f,-.30f),new Vector3(w*.05f,.24f,.32f),ArtDirection.Sage);
+                            Box(root,"Planter flower",new Vector3(x,.92f,-.36f),new Vector3(.16f,.12f,.14f),flower%2==0?ArtDirection.Hex("F4B4CE"):ArtDirection.Brass);
+                        }
+                    }
+                }
                 if(model=="warehouse")
                 {
                     // Existing wholesale buildings acquire industrial roof furniture, never new factories.

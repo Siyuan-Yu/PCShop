@@ -79,7 +79,7 @@ namespace PCShopSell.Game.Runtime
             {float x=-1500+i*step,z=-1000+j*step;v.Add(new Vector3(x,MountainHeight(x,z)+.001f,z));}
             for(int j=0;j<nz;j++)for(int i=0;i<nx;i++)
             {int a=j*(nx+1)+i,b=a+nx+1;t.Add(a);t.Add(b);t.Add(a+1);t.Add(a+1);t.Add(b);t.Add(b+1);}
-            LandscapeMesh(root,"ForestedMountainTerrain",v,t,Mats.LitTex(ArtDirection.Hex("73805C"),new Vector2(1,1),.12f));
+            LandscapeMesh(root,"ForestedMountainTerrain",v,t,Mats.LitTex(ArtDirection.Hex("81A951"),new Vector2(1,1),.12f));
             // Granite outcrops break up the forested silhouette, never inside the road network.
             for(int i=0;i<25;i++)
             {
@@ -153,12 +153,12 @@ namespace PCShopSell.Game.Runtime
                     if(urban&&hash%3==0)AddCrown(verts[4],tris[4],p+new Vector3(1.8f,1.2f,-1.3f),new Vector3(1.15f,.6f,1.1f),false);
                 }
             }
-            string[] colors={"526B46","6D7E48","849255","A0A16B","AC938F","715D49"};
+            string[] colors={"387F50","64A63E","97C846","D9CE5F","EB9DBC","956541"};
             foreach(var pair in chunks)
                 for(int i=0;i<6;i++)
                     if(pair.Value.Vertices[i].Count>0)
                         LandscapeMesh(root,(i==5?"ForestTrunks":"ForestCanopies_"+i)+"_"+pair.Key.x+"_"+pair.Key.y,
-                            pair.Value.Vertices[i],pair.Value.Triangles[i],Mats.Lit(ArtDirection.Hex(colors[i])));
+                            pair.Value.Vertices[i],pair.Value.Triangles[i],i==5?Mats.Lit(ArtDirection.Hex(colors[i])):IndustrialMaterials.Surface("foliage",ArtDirection.Hex(colors[i]),Vector2.one));
         }
         private sealed class ForestChunk
         {
@@ -273,7 +273,7 @@ namespace PCShopSell.Game.Runtime
                 var tree=new GameObject("LakeshoreFloweringTree").transform;tree.SetParent(detail,false);tree.localPosition=p;tree.localScale=Vector3.one*2;
                 CityVegetation.Build(tree,Vector3.zero,i+1);
                 if(i%6==0)foreach(var renderer in tree.GetComponentsInChildren<MeshRenderer>())
-                    if(renderer.name=="SculptedCanopy")renderer.sharedMaterial=Mats.Lit(ArtDirection.Hex("AC938F"));
+                    if(renderer.name=="SculptedCanopy")renderer.sharedMaterial=IndustrialMaterials.Surface("foliage",ArtDirection.Hex("EB9DBC"),Vector2.one);
             }
             // Viewing decks and reed islands are decoration; no new gameplay destinations.
             foreach(var pos in new[]{new Vector3(610,0,230),new Vector3(-70,0,-310),new Vector3(-70,0,675)})
@@ -364,7 +364,7 @@ namespace PCShopSell.Game.Runtime
                     Prims.Box(root,"FlowerBorder",new Vector3(side*(w/2-1.8f),.55f,d*.55f),new Vector3(1,.3f,d*.65f),Mats.Lit(ArtDirection.Hex(index%2==0?"D6AFBE":"DCC779")));
                     var tree=new GameObject("GardenTree").transform;tree.SetParent(root,false);tree.localPosition=new Vector3(side*w*.27f,.44f,d*.7f);tree.localScale=Vector3.one*(index%3==0?1.55f:1.25f);
                     CityVegetation.Build(tree,Vector3.zero,index%3==0?1:index+side+4);
-                    if(index%3==0)foreach(var renderer in tree.GetComponentsInChildren<MeshRenderer>())if(renderer.name=="SculptedCanopy")renderer.sharedMaterial=Mats.Lit(ArtDirection.Hex("B49A94"));
+                    if(index%3==0)foreach(var renderer in tree.GetComponentsInChildren<MeshRenderer>())if(renderer.name=="SculptedCanopy")renderer.sharedMaterial=IndustrialMaterials.Surface("foliage",ArtDirection.Hex("F4A4C2"),Vector2.one);
                     Prims.Box(root,"BenchSeat",new Vector3(side*w*.25f,.9f,d*.22f),new Vector3(2.1f,.18f,.65f),Mats.Lit(ArtDirection.Wood));
                     Prims.Box(root,"BenchBack",new Vector3(side*w*.25f,1.25f,d*.22f+.3f),new Vector3(2.1f,.6f,.12f),Mats.Lit(ArtDirection.Wood));
                 }
