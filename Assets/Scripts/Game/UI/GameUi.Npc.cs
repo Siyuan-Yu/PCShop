@@ -38,6 +38,12 @@ namespace PCShopSell.Game.UI
             RectTransform imgRt = Ui.Rect(frame.transform, "Image").Fill(3);
             var raw = imgRt.gameObject.AddComponent<RawImage>();
             raw.texture = PortraitOf(portraitId);
+            if(raw.texture!=null)
+            {
+                var aspect=imgRt.gameObject.AddComponent<AspectRatioFitter>();
+                aspect.aspectMode=AspectRatioFitter.AspectMode.FitInParent;
+                aspect.aspectRatio=(float)raw.texture.width/raw.texture.height;
+            }
             raw.color = unknown ? new Color(0.12f, 0.12f, 0.14f) : Color.white;
             if (raw.texture == null)
             {
@@ -68,7 +74,7 @@ namespace PCShopSell.Game.UI
 
             if (onClick != null && !unknown && !string.IsNullOrEmpty(tagText))
             {
-                Image tag = Ui.Panel(frame.transform, "Tag", new Color(0.2f, 0.55f, 0.52f, 0.92f));
+                Image tag = Ui.Panel(frame.transform, "Tag", Ui.ButtonHot);
                 tag.raycastTarget = false;
                 tag.rectTransform.Anchor(1, 1, 1, 1, -96, -30, 6, 6);
                 Text t = Ui.Label(tag.transform, tagText, 14, TextAnchor.MiddleCenter);
@@ -259,11 +265,11 @@ namespace PCShopSell.Game.UI
                     Ui.Bar(relRow, rap / 100f, Ui.Accent, 200, 14);
                     bubbleHeight -= 32;
                 }
-                Image bubble = Ui.Panel(say, "Bubble", new Color(0.16f, 0.18f, 0.22f, 1f));
+                Image bubble = Ui.Panel(say, "Bubble", new Color(.89f,.87f,.82f,1f));
                 Ui.Size(bubble, -1, bubbleHeight);
                 bool nearby = remote || S.CityPersonState(portraitId) == null || S.CitySamePlace(portraitId);
                 string text = nearby ? ctx.Reply ?? "“" + greeting.Trim('"') + "”" : "对方已经离开了，等下次见面再聊吧。";
-                Text sayText = Ui.Label(bubble.transform, text, 19, TextAnchor.UpperLeft, Ui.TextColor);
+                Text sayText = Ui.Label(bubble.transform, text, 19, TextAnchor.UpperLeft, Ui.PanelBg);
                 sayText.rectTransform.Fill(12);
 
                 Ui.Size(Ui.Label(w.Content, "你想……", 15, TextAnchor.MiddleCenter, Ui.Dim), -1, 26);
@@ -340,6 +346,8 @@ namespace PCShopSell.Game.UI
                     Act = () => Reply(S.GreetPerson(personId) ? "你好，我是" + name + "。以后见面打声招呼。" : "对方现在不在这里。")
                 });
                 options.Add(new TalkOpt { Label = "随便聊聊", Blocker = canTalk ? null : "对方已离开", Act = () => Reply(S.CasualConversation(personId,remote)) });
+                if (definition?.Stories != null && definition.Stories.Length > 0)
+                    options.Add(new TalkOpt { Label = "听听你的经历", Blocker = canTalk ? null : "对方已离开", Act = () => Reply(S.CityHearStory(personId,remote)) });
                 options.Add(new TalkOpt { Label = "谈论别人", Blocker = S.AskAboutOthersBlocker(personId,remote:remote), Act = () =>
                 {
                     discussingPeople = true;

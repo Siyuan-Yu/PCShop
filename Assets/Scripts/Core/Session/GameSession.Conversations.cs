@@ -176,7 +176,7 @@ namespace PCShopSell.Core.Session
             string text = CityTalk(id, topic, remote);
             if (Relation(id) >= 15 && Clock.Today.TotalDays % 5 == ConversationSeed(id) % 5)
             {
-                if (Npcs.Get(id) != null)
+                if (Npcs.All.Any(n=>n.Id==id))
                 {
                     if (LifeBlocker(id) == null) text += "\n" + LifeTalk(id);
                 }

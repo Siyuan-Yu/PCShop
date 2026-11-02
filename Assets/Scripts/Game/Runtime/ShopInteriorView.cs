@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
@@ -579,7 +579,7 @@ namespace PCShopSell.Game.Runtime
             float w = Width, d = Depth;
 
             Prims.Box(_root, "Floor", new Vector3(w / 2, -0.05f, d / 2), new Vector3(w, 0.1f, d), Mats.Lit(ArtDirection.Hex("B4AA95"), 0.12f), true);
-            Material tileMat = Mats.LitTex(ArtDirection.Cream, new Vector2(1, 1), 0.16f);
+            Material tileMat = IndustrialMaterials.Surface("concrete", ArtDirection.Hex("B6B1A4"), Vector2.one);
             const float tile = 0.8f;
             for (int tx = 0; tx * tile < w; tx++)
             for (int tz = 0; tz * tile < d; tz++)
@@ -588,16 +588,16 @@ namespace PCShopSell.Game.Runtime
                 Prims.Box(_root, "Tile", new Vector3(tx * tile + sx / 2, 0.005f, tz * tile + sz / 2), new Vector3(sx - 0.012f, 0.012f, sz - 0.012f), tileMat);
             }
             BuildStreet(w, d, w - 3.0f);
-            Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), Mats.Lit(ArtDirection.Cream));
-            Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), Mats.Lit(ArtDirection.Hex("CECDBB")));
-            Prims.Box(_root, "WallLeftLow", new Vector3(-0.05f, 0.3f, d / 2), new Vector3(0.1f, 0.6f, d), Mats.Lit(ArtDirection.Sage));
-            Prims.Box(_root, "WallDadoBack", new Vector3(w / 2, 0.38f, d - 0.015f), new Vector3(w, 0.76f, 0.025f), Mats.Lit(ArtDirection.Sage));
-            Prims.Box(_root, "WallDadoRight", new Vector3(w - 0.015f, 0.38f, d / 2), new Vector3(0.025f, 0.76f, d), Mats.Lit(ArtDirection.Sage));
+            Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), IndustrialMaterials.Surface("brick", ArtDirection.Hex("B5AA96"), new Vector2(w / 3, 1.5f)));
+            Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), IndustrialMaterials.Surface("concrete", ArtDirection.Hex("B2B4AC"), new Vector2(d / 3, 1.5f)));
+            Prims.Box(_root, "WallLeftLow", new Vector3(-0.05f, 0.3f, d / 2), new Vector3(0.1f, 0.6f, d), Mats.Lit(ArtDirection.Ink, .25f, .2f));
+            Prims.Box(_root, "WallDadoBack", new Vector3(w / 2, 0.38f, d - 0.015f), new Vector3(w, 0.76f, 0.025f), Mats.Lit(ArtDirection.Ink, .25f, .2f));
+            Prims.Box(_root, "WallDadoRight", new Vector3(w - 0.015f, 0.38f, d / 2), new Vector3(0.025f, 0.76f, d), Mats.Lit(ArtDirection.Ink, .25f, .2f));
             Prims.Box(_root, "BrassRailBack", new Vector3(w / 2, 0.78f, d - 0.035f), new Vector3(w, 0.035f, 0.035f), Mats.Lit(ArtDirection.Brass, 0.3f, 0.3f));
             Prims.Box(_root, "BrassRailRight", new Vector3(w - 0.035f, 0.78f, d / 2), new Vector3(0.035f, 0.035f, d), Mats.Lit(ArtDirection.Brass, 0.3f, 0.3f));
             // 大门开在货架这一侧（右前方），收银台在左边：顾客进门先逛货架，再回左边结账
             float doorX = w - 3.0f;
-            Material lowWall = Mats.Lit(ArtDirection.Sage);
+            Material lowWall = Mats.Lit(ArtDirection.Ink, .25f, .2f);
             Prims.Box(_root, "WallFrontLowA", new Vector3((doorX - 0.7f) / 2, 0.3f, -0.05f), new Vector3(doorX - 0.7f, 0.6f, 0.1f), lowWall);
             Prims.Box(_root, "WallFrontLowB", new Vector3((doorX + 0.7f + w) / 2, 0.3f, -0.05f), new Vector3(w - doorX - 0.7f, 0.6f, 0.1f), lowWall);
             Prims.Box(_root, "DoorMat", new Vector3(doorX, 0.012f, 0.45f), new Vector3(1.3f, 0.014f, 0.8f), Mats.Lit(new Color(0.35f, 0.18f, 0.16f)));
@@ -628,7 +628,9 @@ namespace PCShopSell.Game.Runtime
                 lamp.type = LightType.Point;
                 lamp.range = 9f;
                 lamp.intensity = lampsX * lampsZ > 1 ? 1.6f : 2.2f;
-                lamp.color = new Color(1f, 0.95f, 0.85f);
+                lamp.color = new Color(1f, 0.87f, 0.66f);
+                Prims.Box(lampGo.transform, "Steel light housing", Vector3.zero, new Vector3(.7f,.11f,.28f), Mats.Lit(ArtDirection.Ink,.4f,.5f));
+                Prims.Box(lampGo.transform, "Warm diffuser", new Vector3(0,-.06f,0), new Vector3(.58f,.02f,.2f), Mats.Glow(ArtDirection.Cream,new Color(2.3f,1.65f,.8f),false));
                 _ceilingLights.Add(lamp);
             }
 

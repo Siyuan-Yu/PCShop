@@ -20,6 +20,7 @@ namespace PCShopSell.Game.UI
             public string Stamp;
         }
         private readonly List<ShortcutMenu> _shortcutMenus=new List<ShortcutMenu>();
+        private bool _shortcutSelectionExplained;
         // 0: owned shop, 1: wholesale sources, 2: agencies, 3: custom destination.
         private Place[] ShortcutPlaces(int kind)
         {
@@ -41,6 +42,11 @@ namespace PCShopSell.Game.UI
             else if(kind==0)S.SetCityShopShortcut(place.Id);
             else S.SetCityShortcut(place.Id,kind==2);
             RefreshShortcutMenus();
+            if(!_shortcutSelectionExplained)
+            {
+                _shortcutSelectionExplained=true;
+                Toast("已选目的地："+place.Name+"。点击“前往”出发。");
+            }
         }
         private void TravelShortcut(int kind)
         {
@@ -93,7 +99,7 @@ namespace PCShopSell.Game.UI
                 var places=ShortcutPlaces(menu.Kind);
                 var destination=SelectedShortcut(menu.Kind);
                 string selected=destination?.Id;
-                string caption=ShortcutPlaceName(menu.Kind,destination);
+                string caption=destination==null?(menu.Kind==3?"选择目的地":ShortcutPlaceName(menu.Kind,null)):"前往 "+ShortcutPlaceName(menu.Kind,destination);
                 var labels=places.Select(p=>ShortcutPlaceName(menu.Kind,p)+" · "+S.City.StreetName(p.StreetId)).ToArray();
                 string stamp=string.Join("|",places.Select(p=>p.Id))+"/"+string.Join("|",labels)+"/"+selected+"/"+caption;
                 if(menu.Stamp==stamp)continue;
@@ -112,7 +118,6 @@ namespace PCShopSell.Game.UI
         }
         private void OpenCustomDestinationPicker()
         {
-            _cityMapSearch="";_cityMapStreet=null;_cityMapType=null;
             OpenCityMap(place=>SelectShortcut(3,place));
         }
         private void OpenCityPlacePeople(PCShopSell.Core.World.Place place)

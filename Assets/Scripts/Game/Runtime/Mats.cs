@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -148,7 +148,7 @@ namespace PCShopSell.Game.Runtime
             if(WindowPalettes.TryGetValue(wall,out _windowAlbedo))return;
             const int cell = 64, cells = 4, n = cell * cells;
             var rng = new System.Random(4242);
-            _windowAlbedo = new Texture2D(n, n, TextureFormat.RGBA32, true, false) { name = "IvoryFacadeBlueGlazing", wrapMode = TextureWrapMode.Repeat, anisoLevel=4 };
+            _windowAlbedo = new Texture2D(n, n, TextureFormat.RGBA32, true, false) { name = "IndustrialMasonryWindowAtlas", wrapMode = TextureWrapMode.Repeat, anisoLevel=4 };
             if(_windowEmission==null)_windowEmission = new Texture2D(n, n, TextureFormat.RGBA32, true, true) { name = "WindowEmission", wrapMode = TextureWrapMode.Repeat };
             var a = new Color32[n * n];
             var e = new Color32[n * n];
@@ -165,10 +165,16 @@ namespace PCShopSell.Game.Runtime
                             bool frame = !pane && x >= 8 && x < cell - 8 && y >= 9 && y < cell - 6;
                             bool mullion=pane&&(x>=30&&x<=32||y>=34&&y<=36);
                             float reflection=Mathf.Clamp01((float)y/cell)*.30f+(x+y>71?.16f:0);
-                            Color glass=Color.Lerp(new Color32(39,105,187,255),new Color32(137,201,240,255),reflection);
-                            Color32 albedo = pane ? (Color32)(mullion?new Color32(231,222,195,255):glass) : frame ? new Color32(246,235,207,255) : (Color32)wall;
+                            Color glass=Color.Lerp(new Color32(43,59,73,255),new Color32(124,151,165,255),reflection);
+                            Color32 albedo = pane ? (Color32)(mullion?new Color32(68,77,82,255):glass) : frame ? new Color32(111,114,111,255) : (Color32)wall;
+                            if(!pane&&!frame)
+                            {
+                                float mortar=y%12==0||((x+(y/12%2)*12)%24==0)? .77f: .97f+.03f*Mathf.PerlinNoise(px*.27f,py*.27f);
+                                albedo=(Color32)((Color)albedo*mortar);
+                            }
                             a[py * n + px] = albedo;
-                            e[py * n + px] = pane && lit ? warm : new Color32(0, 0, 0, 255);
+                            float curtain=(x<17||x>46)?.62f:1f;
+                            e[py * n + px] = pane && !mullion && lit ? (Color32)((Color)warm * curtain) : new Color32(0, 0, 0, 255);
                         }
                 }
             _windowAlbedo.SetPixels32(a);
@@ -188,7 +194,7 @@ namespace PCShopSell.Game.Runtime
             var m = new Material(LitShader) { name = "WindowWall" };
             m.SetColor("_BaseColor", Color.white);
             m.color = Color.white;
-            m.SetFloat("_Smoothness", 0.35f);
+            m.SetFloat("_Smoothness", 0.24f);
             m.SetTexture("_BaseMap", _windowAlbedo);
             m.mainTexture = _windowAlbedo;
             m.mainTextureScale = new Vector2(Mathf.Max(1, columns) / 4f, Mathf.Max(1, rows) / 4f);
@@ -196,7 +202,7 @@ namespace PCShopSell.Game.Runtime
             m.EnableKeyword("_EMISSION");
             m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             m.SetTexture("_EmissionMap", _windowEmission);
-            Color baseEmission = new Color(2.2f, 1.9f, 1.4f);
+            Color baseEmission = new Color(2.3f, 1.55f, .68f);
             m.SetColor("_EmissionColor", baseEmission * 0.08f);
             NightGlow.Add((m, baseEmission));
             return m;
@@ -281,7 +287,7 @@ namespace PCShopSell.Game.Runtime
             Transform visual = Joint(root.transform, "Visual", Vector3.zero);
             visual.localScale = Vector3.one * scale;
             Transform t = Joint(visual, "Torso", Vector3.zero);
-            Color shirt = Color.Lerp(body, ArtDirection.Cream, 0.22f);
+            Color shirt = Color.Lerp(body, ArtDirection.Ink, 0.12f);
             GameObject Part(string id, Vector3 p, Vector3 sz, Color c) => Box(t, id, p, sz, Mats.Lit(c, 0.12f));
             Part("Body", new Vector3(0, 0.82f, 0), new Vector3(0.39f, 0.57f, 0.27f), shirt);
             foreach (int side in new[] { -1, 1 })

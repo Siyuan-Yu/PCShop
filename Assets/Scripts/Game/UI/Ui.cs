@@ -7,17 +7,18 @@ using UnityEngine.UI;
 namespace PCShopSell.Game.UI
 {
     /// <summary>用代码搭 uGUI 的小工具。灰盒阶段字体用系统微软雅黑。</summary>
-    public static class Ui
+    public static partial class Ui
     {
-        public static readonly Color PanelBg = Tone("202E2D");
-        public static readonly Color PanelBg2 = Tone("2B3D3A");
-        public static readonly Color Accent = Tone("DDC18B");
-        public static readonly Color ButtonBg = Tone("374945");
-        public static readonly Color ButtonHot = Tone("547469");
-        public static readonly Color Warn = Tone("A65E49");
-        public static readonly Color Good = Tone("A9C9A9");
-        public static readonly Color Dim = Tone("ABB5A8");
-        public static readonly Color TextColor = Tone("F1E9D7");
+        public static Color Gold => Accent;
+        public static readonly Color PanelBg = Tone("29333F");
+        public static readonly Color PanelBg2 = Tone("35424F");
+        public static readonly Color Accent = Tone("E8BE62");
+        public static readonly Color ButtonBg = Tone("455362");
+        public static readonly Color ButtonHot = Tone("9F7B36");
+        public static readonly Color Warn = Tone("B5603E");
+        public static readonly Color Good = Tone("B6D578");
+        public static readonly Color Dim = Tone("AAB4BB");
+        public static readonly Color TextColor = Tone("ECE8DF");
         private static Color Tone(string hex) { ColorUtility.TryParseHtmlString("#" + hex, out var c); return c; }
         private static Sprite _card;
         private static Sprite Card
@@ -25,14 +26,16 @@ namespace PCShopSell.Game.UI
             get
             {
                 if (_card != null) return _card;
-                const int n = 64; const float radius = 10;
-                var texture = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Enamel card", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                const int n = 64; const float radius = 7;
+                var texture = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Brushed steel UI plate", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
                 var pixels = new Color[n * n];
                 for (int y = 0; y < n; y++) for (int x = 0; x < n; x++)
                 {
                     float dx = Mathf.Max(Mathf.Abs(x - 31.5f) - (32 - radius), 0);
                     float dy = Mathf.Max(Mathf.Abs(y - 31.5f) - (32 - radius), 0);
-                    pixels[y * n + x] = new Color(1, 1, 1, Mathf.Clamp01(radius - Mathf.Sqrt(dx * dx + dy * dy)));
+                    float edge=Mathf.Min(Mathf.Min(x,63-x),Mathf.Min(y,63-y));
+                    float shade=edge<2? .72f: edge<4?1f:Mathf.Lerp(.88f,1f,y/63f);
+                    pixels[y * n + x] = new Color(shade,shade,shade, Mathf.Clamp01(radius - Mathf.Sqrt(dx * dx + dy * dy)));
                 }
                 texture.SetPixels(pixels); texture.Apply();
                 return _card = Sprite.Create(texture, new Rect(0, 0, n, n), Vector2.one * 0.5f, 100, 0, SpriteMeshType.FullRect, new Vector4(12, 12, 12, 12));
@@ -107,14 +110,16 @@ namespace PCShopSell.Game.UI
             RectTransform rt = Rect(parent, name);
             var img = rt.gameObject.AddComponent<Image>();
             img.color = color;
-            if (name == "Button" || name == "Panel" || name == "ShopDock" || name == "Toast" || name == "Bubble" || name == "QuestTracker" || name == "Portrait")
+            if (name == "Button" || name == "Panel" || name == "ShopDock" || name == "Toast" || name == "Bubble" || name == "QuestTracker" || name == "Portrait" || name == "TopBar" || name == "BottomBar" || name == "TitleBar" || name == "Choice" || name == "Input")
             {
                 img.sprite = Card; img.type = Image.Type.Sliced;
                 if (name != "Bubble")
                 {
                     var line = rt.gameObject.AddComponent<Outline>();
-                    line.effectColor = new Color(0.8f, 0.76f, 0.6f, name == "Button" ? 0.10f : 0.22f);
-                    line.effectDistance = new Vector2(0.65f, -0.65f);
+                    line.effectColor = new Color(.72f,.77f,.81f,name=="Button"?.25f:.36f);
+                    line.effectDistance = new Vector2(.8f,-.8f);
+                    var shadow=rt.gameObject.AddComponent<Shadow>();
+                    shadow.effectColor=new Color(.025f,.035f,.05f,.32f);shadow.effectDistance=new Vector2(0,-2);
                 }
             }
             return img;
@@ -158,8 +163,10 @@ namespace PCShopSell.Game.UI
                 else b.onClick.AddListener(() => onClick());
             }
             Text t = Label(img.transform, text, size, TextAnchor.MiddleCenter);
+            if(bg.HasValue&&(bg.Value==ButtonHot||bg.Value==Accent))t.fontStyle=FontStyle.Bold;
             t.rectTransform.Fill(6);
             if (!interactable) t.color = Dim;
+            NavigationArt(b,t,text);
             return b;
         }
 

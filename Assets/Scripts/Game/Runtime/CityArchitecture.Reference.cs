@@ -1,13 +1,13 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
 {
     public static partial class CityArchitecture
     {
-        private static readonly Color Glass = ArtDirection.Hex("4589CC");
-        private static readonly Color Limestone = ArtDirection.Hex("F0DDB9");
-        private static readonly Color Lawn = ArtDirection.Hex("91B65B");
-        private static readonly Color Hedge = ArtDirection.Hex("649B43");
+        private static readonly Color Glass = ArtDirection.Hex("526977");
+        private static readonly Color Limestone = ArtDirection.Hex("CEC9BA");
+        private static readonly Color Lawn = ArtDirection.Hex("7B8C60");
+        private static readonly Color Hedge = ArtDirection.Hex("617747");
 
         // Closed roof volume: no open triangles or intersecting wafer-thin roof slabs.
         private static void HipRoof(Transform root,Vector3 at,float w,float d,float rise,Color color)
@@ -42,7 +42,7 @@ namespace PCShopSell.Game.Runtime
         public static void ReferenceFacade(Transform root,string model,int tier,float w,float d,float h,int seed)
         {
             if(model=="oldhome" && h<=8)
-                HipRoof(root,new Vector3(0,h+.32f,d/2),w+.45f,d+.45f,Mathf.Min(1.1f,w*.13f),ArtDirection.Hex("B67C5B"));
+                HipRoof(root,new Vector3(0,h+.32f,d/2),w+.45f,d+.45f,Mathf.Min(1.1f,w*.13f),ArtDirection.Hex("8F705B"));
             if(model=="luxury_apartment"||model=="apartment")
             {
                 // Cream piers, blue bay glazing and stepped crowns follow the reference's towers.
@@ -56,6 +56,17 @@ namespace PCShopSell.Game.Runtime
                     Box(root,"ResidentialFloorBand",new Vector3(0,y,d/2),new Vector3(w+.17f,.15f,d+.17f),trim);
                 Box(root,"SteppedRoofCrown",new Vector3(0,h+.55f,d*.57f),new Vector3(w*.65f,1,d*.65f),trim);
                 Box(root,"CrownCap",new Vector3(0,h+1.12f,d*.57f),new Vector3(w*.7f,.16f,d*.7f),ArtDirection.Blue);
+            }
+            if(model=="shop" && tier==0)
+            {
+                HipRoof(root,new Vector3(0,h+.32f,d/2),w+.5f,d+.5f,1.15f,ArtDirection.Hex("53606A"));
+                foreach(int side in new[]{-1,1})
+                {
+                    var at=new Vector3(side*w*.25f,h+.97f,d*.24f);
+                    Box(root,"ShopDormer",at,new Vector3(w*.15f,.78f,d*.14f),ArtDirection.Blue);
+                    VillaWindow(root,at+new Vector3(0,0,-d*.075f),w*.10f,.45f);
+                    Box(root,"DormerSteelCap",at+Vector3.up*.44f,new Vector3(w*.18f,.13f,d*.17f),ArtDirection.Ink);
+                }
             }
             if(model=="shop" && tier>0)
             {
@@ -71,11 +82,11 @@ namespace PCShopSell.Game.Runtime
                     Prims.Shape(PrimitiveType.Sphere,root,"ShopFrontShrub",new Vector3(side*(w/2-.6f),.9f,-.4f),Vector3.one*.8f,Mats.Lit(Hedge));
                 }
                 Box(root,"RooftopAccess",new Vector3(w*.15f,h+1.1f,d*.73f),new Vector3(w*.22f,1.8f,d*.22f),Limestone);
-                Box(root,"RooftopAccessCap",new Vector3(w*.15f,h+2.05f,d*.73f),new Vector3(w*.25f,.16f,d*.25f),ArtDirection.Hex("5487B2"));
+                Box(root,"RooftopAccessCap",new Vector3(w*.15f,h+2.05f,d*.73f),new Vector3(w*.25f,.16f,d*.25f),ArtDirection.Hex("526271"));
             }
             if(model=="warehouse")
             {
-                Color blue=ArtDirection.Hex("527FAC");
+                Color blue=ArtDirection.Hex("4F6477");
                 HipRoof(root,new Vector3(0,h+.35f,d/2),w+.55f,d+.55f,.8f,blue);
                 foreach(int side in new[]{-1,1})
                     Box(root,"WarehouseCornerColumn",new Vector3(side*(w/2-.25f),h/2,-.12f),new Vector3(.4f,h,.25f),Limestone);

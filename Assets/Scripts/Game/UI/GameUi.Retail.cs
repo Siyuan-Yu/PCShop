@@ -20,27 +20,34 @@ namespace PCShopSell.Game.UI
             if(S.RetailKind=="restaurant")Line(parent,"堂食可加购已上架饮料 · 购买意愿+20个百分点",15,Ui.Dim);
             var row = Ui.Row(parent, 38);
             Ui.Size(Ui.Button(row, "进货员 · " + S.Employees.Count(x=>x.Shop==S.CurrentShop&&x.Role==EmployeeRole.Buyer) + " 人", OpenShopBuyers, 17, Ui.ButtonHot), -1, -1, 1).name="ShopBuyersEntry";
-            Ui.Size(Ui.Button(row, "背包/后仓商品上架", OpenRetailListing, 17), -1, -1, 1);
+            Ui.Size(Ui.Button(row, "商品入库", OpenRetailListing, 17), -1, -1, 1);
         }
         private void OpenRetailListing()
         {
-            OpenWindow("商品上架", 820, 700, w =>
+            OpenWorkspace("retail-storage","retail-storage","商品入库", 820, 700, w =>
             {
                 if (!S.InPlayerShop) { w.Close(); return; }
-                Para(w.Content, "将背包或本店后仓里的商品放入后仓；摆好并设置相应品类的货架后，顾客才能买到。", 18);
+                Para(w.Content, "将手边商品转入经营库存；货架按所选品类和容量自动陈列，余货留在后仓。", 18);
                 var items = Gifts.All.Where(g => S.GoodsAvailableToList(g.Id) > 0).ToArray();
                 var list = Ui.Scroll(w.Content, 510);
-                if (items.Length == 0) Para(list, "手边没有可上架的商品。可先去批发进货，或让采购员直接送入后仓。", 18, Ui.Dim);
+                if (items.Length == 0) Para(list, "手边暂无可入库商品。可先采购，或直接送货到本店后仓。", 18, Ui.Dim);
                 foreach (var product in items)
                 {
                     string id = product.Id;
                     int have = S.GoodsAvailableToList(id);
                     Line(list, product.Name + $" · 手边 {have} 件 · 每件 {product.WeightKg:0.##} 千克", 18, Ui.Accent);
                     var row = Ui.Row(list, 38);
-                    Ui.Size(Ui.Button(row, "上架 1 件", () => { S.ListGoods(id, 1); w.Rebuild(); RebuildDock(); }, 17), -1, -1, 1);
-                    Ui.Size(Ui.Button(row, "全部上架", () => { S.ListGoods(id, have); w.Rebuild(); RebuildDock(); }, 17, Ui.ButtonHot), -1, -1, 1);
+                    Ui.Size(Ui.Button(row, "入库 1 件", () => { StoreRetailGoods(id,1); w.Rebuild(); RebuildDock(); }, 17), -1, -1, 1);
+                    Ui.Size(Ui.Button(row, "全部入库", () => { StoreRetailGoods(id,have); w.Rebuild(); RebuildDock(); }, 17, Ui.ButtonHot), -1, -1, 1);
                 }
             });
+        }
+        private void StoreRetailGoods(string id,int count)
+        {
+            int before=S.PlayerShop.Stock.GoodsCount(id);
+            if(!S.ListGoods(id,count))return;
+            int stock=S.PlayerShop.Stock.GoodsCount(id),shown=S.PlayerShop.OnShelfGoods(id);
+            Toast($"已入库 {stock-before} 件 · 本品陈列 {shown} 件 · 后仓 {Math.Max(0,stock-shown)} 件");
         }
         private void OpenRetailTypeChooser()
         {

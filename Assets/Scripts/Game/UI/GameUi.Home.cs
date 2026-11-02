@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
+using PCShopSell.Core.Time;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.World;
 using PCShopSell.Game.Runtime;
@@ -127,7 +129,7 @@ namespace PCShopSell.Game.UI
             {
                 Line(w.Content, S.TempDueHere
                     ? $"—— 临时存放 {S.TempKgHere:0.##} 千克：已经放满 {GameSession.TempKeepDays} 天了，请尽快清理，可先关闭稍后处理 ——"
-                    : $"—— 临时存放 {S.TempKgHere:0.##} 千克（后仓放不下的先堆在这里）：还能放 {TempLeftText(S.TempMinutesLeftHere)}，到期持续提醒清理 ——", 17, Ui.Warn);
+                    : $"—— 临时存放 {S.TempKgHere:0.##} 千克（尚未归仓）：还能放 {TempLeftText(S.TempMinutesLeftHere)}，到期持续提醒清理 ——", 17, Ui.Warn);
                 BagGrid(w.Content, tempStacks, 0, _boxSide == "temp" ? _boxSel : null, key =>
                 {
                     _boxSide = "temp";
@@ -176,7 +178,7 @@ namespace PCShopSell.Game.UI
             if (_boxSide == "temp")
             {
                 bool toShelf = shop && key.StartsWith("part:");
-                HoldButton(w, bottom, toShelf ? "上货架" : "放进后仓", Ui.ButtonHot, n, unit, c => S.MoveTemp(key, (int)c, "box"), 110);
+                HoldButton(w, bottom, "放进后仓", Ui.ButtonHot, n, unit, c => S.MoveTemp(key, (int)c, "box"), 110);
                 HoldButton(w, bottom, "拿进背包", Ui.ButtonBg, n, unit, c => S.MoveTemp(key, (int)c, "bag"), 110);
                 HoldButton(w, bottom, "扔掉", Ui.Warn, n, unit, c => S.MoveTemp(key, (int)c, "trash"), 80);
             }
@@ -460,22 +462,11 @@ namespace PCShopSell.Game.UI
 
         // ---------- 日程 ----------
 
-        public void OpenSchedulePanel()
+        public void OpenSchedulePanel() => OpenCalendar(0);
+        private void BuildPersonalSchedule(Window w)
         {
-            if (!S.HasCalendar)
-            {
-                OpenNotebook();
-                return;
-            }
-            const bool calendar = true;
-            OpenWindow("日历", 760, 640, w =>
-            {
-                Line(w.Content, $"现在是 {S.Clock.Today} {GameSession.ClockText(S.Clock.MinuteOfDay)}。约会、师傅上门前 {GameSession.ReminderLeadMinutes} 分钟会提醒你。", 17, Ui.Dim);
-                var links=Ui.Row(w.Content,40);
-                Ui.Size(Ui.Button(links,"活动与展会日程",OpenCityActivities,18),-1,40,1);
-                Ui.Size(Ui.Button(links,"天气与穿衣",OpenCityClimate,18),-1,40,1);
-                Para(w.Content,S.CityWeatherForecast,16,Ui.Dim);
-                var entries = S.Schedule();
+            Line(w.Content,S.HasCalendar?"我的安排 · 到期前提醒":"笔记本 · 最近5天（升级智能手机后可看全部）",17,Ui.Accent);
+                var entries = S.Schedule().Where(e => S.HasCalendar || e.Minute / GameTimestamp.MinutesPerDay < S.Clock.Today.TotalDays + NotebookDays).ToList();
                 if (entries.Count == 0)
                 {
                     Line(w.Content, "最近没有安排。约朋友、约师傅上门修东西、网购的快递、焖饭，都会出现在这里。", 17, Ui.Dim);
@@ -510,7 +501,6 @@ namespace PCShopSell.Game.UI
                         }, 16, Ui.Warn), 100);
                     }
                 }
-            });
         }
 
         private void ScheduleActivityGoButton(Transform row, string activityId)
@@ -543,82 +533,9 @@ namespace PCShopSell.Game.UI
         private static readonly Color PaperLine = new Color(0.55f, 0.65f, 0.80f, 0.55f);
 
         /// <summary>笔记本：约好的事自动记在本子上，纸张、横线、红边线、螺旋圈，没有提醒。</summary>
-        public void OpenNotebook()
-        {
-            Window win = OpenWindow("笔记本", 720, 660, w =>
-            {
-                Image paper = Ui.Panel(w.Content, "Paper", Paper);
-                Ui.Size(paper, -1, -1).gameObject.AddComponent<LayoutElement>().flexibleHeight = 1;
-                RectTransform prt = paper.rectTransform;
-                var v = Ui.VList(prt, 2, 0);
-                v.padding = new RectOffset(70, 22, 16, 14);
+        public void OpenNotebook() => OpenCalendar(0);
 
-                // 螺旋圈和红色边线（不参与布局）
-                for (int i = 0; i < 12; i++)
-                {
-                    Image ring = Ui.Panel(prt, "Ring", new Color(0.35f, 0.35f, 0.38f));
-                    ring.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
-                    RectTransform rr = ring.rectTransform;
-                    rr.anchorMin = rr.anchorMax = new Vector2(0, 1);
-                    rr.pivot = new Vector2(0.5f, 0.5f);
-                    rr.sizeDelta = new Vector2(30, 8);
-                    rr.anchoredPosition = new Vector2(8, -34 - i * 44);
-                }
-                Image margin = Ui.Panel(prt, "Margin", new Color(0.80f, 0.30f, 0.28f, 0.7f));
-                margin.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
-                margin.rectTransform.Anchor(0, 0, 0, 1, 56, 0, 0, 0);
-                margin.rectTransform.sizeDelta = new Vector2(2, 0);
 
-                Ui.Size(Ui.Label(prt, "最近几天的安排，都自动记在这儿了。", 22, TextAnchor.MiddleLeft, Ink), -1, 36);
-                Ui.Size(Ui.Label(prt, "（本子不会提醒你，得自己翻。买了智能手机，日历里能看到以后所有的安排，还会提醒。）", 14, TextAnchor.MiddleLeft, new Color(Ink.r, Ink.g, Ink.b, 0.6f)), -1, 26);
-                RuledLine(prt);
-
-                var entries = S.Schedule();
-                RectTransform list = Ui.Scroll(prt, 420);
-                Image sbg = list.parent.parent.GetComponent<Image>();
-                if (sbg != null) sbg.color = new Color(0, 0, 0, 0);
-                for (int d = 0; d < NotebookDays; d++)
-                {
-                    int day = S.Clock.Today.TotalDays + d;
-                    RectTransform dayRow = Ui.Row(list, 40);
-                    Ui.Size(Ui.Label(dayRow, "<b>" + DateLabel(day) + "</b>", 20, TextAnchor.MiddleLeft, InkRed), -1, -1, 1);
-                    RuledLine(dayRow);
-                    var today = entries.Where(e => e.Minute / PCShopSell.Core.Time.GameTimestamp.MinutesPerDay == day).ToList();
-                    if (today.Count == 0)
-                    {
-                        RectTransform empty = Ui.Row(list, 36);
-                        Ui.Size(Ui.Label(empty, "没安排", 16, TextAnchor.MiddleLeft, new Color(Ink.r, Ink.g, Ink.b, 0.45f)), -1, -1, 1);
-                        RuledLine(empty);
-                        continue;
-                    }
-                    foreach (ScheduleEntry e in today)
-                    {
-                        RectTransform row = Ui.Row(list, 40);
-                        Ui.Size(Ui.Label(row, e.HasTime ? e.TimeText : "当天", 18, TextAnchor.MiddleLeft, InkRed), 70);
-                        Ui.Size(ProductText(row, e.Text, 17, TextAnchor.UpperLeft, Ink), -1, -1, 1);
-                        if (e.ActivityId != null) ScheduleActivityGoButton(row, e.ActivityId);
-                        if (e.Kind == "repair")
-                        {
-                            string target = S.HomeVisits.Count > 0 ? S.HomeVisits[0].TargetId : null;
-                            Ui.Size(Ui.Button(row, "划掉（不退款）", () =>
-                            {
-                                if (target != null) S.CancelRepair(target);
-                                w.Rebuild();
-                            }, 13, new Color(0.62f, 0.30f, 0.24f)), 112);
-                        }
-                        RuledLine(row);
-                    }
-                }
-                Ui.Size(Ui.Label(prt, $"（本子只记了最近 {NotebookDays} 天）", 13, TextAnchor.MiddleRight, new Color(Ink.r, Ink.g, Ink.b, 0.5f)), -1, 22);            });
-            // 牛皮封面
-            Transform panel = win.Root.Find("Panel");
-            if (panel != null)
-            {
-                panel.GetComponent<Image>().color = new Color(0.36f, 0.24f, 0.16f, 0.98f);
-                Transform bar = panel.Find("TitleBar");
-                if (bar != null) bar.GetComponent<Image>().color = new Color(0.26f, 0.17f, 0.11f, 0.98f);
-            }
-        }
 
         private static void RuledLine(Transform parent)
         {
@@ -750,76 +667,62 @@ namespace PCShopSell.Game.UI
 
         // ---------- “我的” ----------
 
+        private int _myPanelTab;
+        private string WorkbenchAccessReason => S.CanUseHomeWorkbench ? null : !S.OwnsHomeWorkbench&&!S.DebugHomeWorkbenchEnabled ? "需购买家庭经营大屏" : !_ctrl.InHome ? "回家后可用" : S.IsWorking ? "下班后可用" : "结束当前活动或行程后可用";
         public void OpenMyPanel()
         {
-            OpenWindow("我的", 860, 860, w =>
+            OpenWorkspace("personal","personal","我的",1000,820,w=>
             {
-                RectTransform actions = Ui.Row(w.Content, 50);
-                Ui.Size(Ui.Button(actions, "总收支账本", OpenLedger, 18), 180);
-                Ui.Size(Ui.Button(actions,"居家工作台",OpenHomeWorkbench,18,Ui.ButtonHot,S.CanUseHomeWorkbench),180).name="MyHomeWorkbench";
-                Ui.Size(Ui.Button(actions, "摆放家具（家里）", () => StartPlacement(false), 18, Ui.ButtonHot, _ctrl.InHome), 230);
-
-                if (!_ctrl.InHome && !_ctrl.InInterior) Line(w.Content, "摆放家具要在家里；改造店面要在自己的店里。", 15, Ui.Dim);
-
-                RectTransform list = Ui.Scroll(w.Content, 660);
-                PlayerStats st = S.Player;
-                Line(list, "—— 我 ——", 18, Ui.Accent);
-                BuildPlayerWorkSummary(list, w);
-                Line(list, $"营养 {st.Nutrition:0.##}/100  心情 {st.Mood:0.##}/100（目前只记录，不影响其他玩法）", 17, Ui.Accent);
-                if (S.CanOpenFridge) Ui.Size(Ui.Button(list, "打开冰箱", () => OpenFridgeWindow(), 17), -1, 38);
-                Line(list, $"饥饿 {st.Hunger:0}  精力 {st.Energy:0}/{st.MaxEnergy:0}  健康 {st.Health:0}  欠觉 {st.SleepDebt:0.##} 小时", 17, Ui.Dim);
-                if(S.EnergyExhausted) Line(list,S.EnergyExhaustionText,17,Ui.Warn);
-                Line(list, $"智力 {st.Intelligence}  魅力 {S.EffectiveCharm}（衣着 +{S.Outfit.CharmBonus}）  技术 {st.Skill}   现金 {S.Ledger.Balance}", 17, Ui.Dim);
-                Line(list, "到饭点（12:00 / 18:30）或饿了，优先吃锅里、当前地点冰箱和背包里的食物；都没有时按设置自动订餐。", 15, Ui.Dim);
-
-                Ui.Size(Ui.Button(list, "自动订餐设置 · " + (S.MealDeliveryEnabled ? $"开 · {S.SelectedDeliveryMeal.Name} ¥{S.SelectedDeliveryMeal.Price}/餐" : "关"), () => OpenMealDeliverySettings(w), 17), -1, 38);
-                if (S.HomeVisits.Any(v => v.Working))
-                    Ui.Size(Ui.Button(list, "在家等师傅修完", () => { S.WaitForRepair(); w.Rebuild(); }, 17, Ui.ButtonHot, _ctrl.InHome), -1, 38);
-                Line(list, "—— 出租屋 ——", 18, Ui.Accent);
-                Line(list, $"月租 {S.CurrentHomeRent}；睡眠恢复 ×{S.HomeSleepQuality:0.##}；" + (S.HomeUtilities.IsPositive ? $"水电 {S.HomeUtilities}/月" : "不用交水电（没有电器）"), 17);
-                string placed = string.Join("、", S.HomeLayout.GroupBy(p => p.Id).Select(g => FurnitureLabel(g.Key, g.Count())));
-                Line(list, "屋里摆着：" + (placed.Length == 0 ? "什么都没有" : placed), 16, Ui.Dim);
-
-                Line(list, "—— 背包 ——", 18, Ui.Accent);
-                Line(list, $"负重 {S.CarriedKg:0.##}/{S.CarryLimitKg:0.##} 千克（{S.CurrentVehicle.Name}；进货的货也算）。" + (S.HasSmartphone ? "" : "只有按键机，不能网购、上 1788；去手机店买智能手机。"), 16, S.CarriedKg > S.CarryLimitKg * 0.85 ? Ui.Warn : Ui.Dim);
-                Backpack bag = S.Backpack;
-                var bagIngs = bag.Food.Ingredient.GroupBy(b => b.Id).ToList();
-                string bagFood = (bag.Food.RiceKg > 0 ? $"大米 {bag.Food.RiceKg:0.##} 千克" : "") + (bagIngs.Count > 0 ? "  " + string.Join("、", bagIngs.Select(g => $"{g.First().Name}×{g.Sum(b => b.Count)}")) : "");
-                Line(list, "买的菜米：" + (bagFood.Trim().Length == 0 ? "没有" : bagFood.Trim()) + "（回家打开背包一键放进厨房）", 16);
-                Para(list, "带着的即食食物：" + (bag.Lunchboxes == 0 ? "没有" : string.Join("、", bag.Food.Packed.GroupBy(b => b.Id).Select(g => g.First().Name + "×" + g.Sum(b => b.Count)))), 16, bag.Lunchboxes < 2 ? Ui.Warn : Ui.TextColor);
-                var bagFurn = bag.FurnitureLines.ToList();
-                if (bagFurn.Count > 0) Line(list, "背着的家具：" + string.Join("、", bagFurn.Select(kv => FurnitureLabel(kv.Key, kv.Value))) + "（回家或回店里打开背包一键放下）", 16);
-                Line(list, "礼品：" + (bag.GiftLines.Count() == 0 ? "没有。去烟酒茶行、农贸市场买，或者网购。" : string.Join("、", bag.GiftLines.Select(kv => $"{Gifts.Get(kv.Key).Name}×{kv.Value}"))), 16);
-
-                Line(list, "—— 吃的 ——", 18, Ui.Accent);
-                Pantry pan = S.Pantry;
-                Line(list, $"大米 {pan.RiceKg:0.##} 千克   锅里做好的饭 {pan.CookedBowls} 碗", 17);
-                if (pan.Cooking != null) Line(list, $"电饭锅正在焖饭，还剩 {pan.CookMinutesLeft(S.Clock.Now.TotalMinutes)} 分钟。", 16, Ui.Warn);
-                var ings = pan.Ingredient.GroupBy(b => b.Id).ToList();
-                Line(list, "食材：" + (ings.Count == 0 ? "没有" : string.Join("、", ings.Select(g => $"{g.First().Name}×{g.Sum(b => b.Count)}"))) + "。没有冰箱，放不久；去农贸市场买。", 15, Ui.Dim);
-
-                Line(list, "—— 家具背包 ——", 18, Ui.Accent);
-                var stock = S.FurnitureStock.ToList();
-                if (stock.Count == 0) Line(list, "空的。买来的家具会放在这里，摆出来才算。", 15, Ui.Dim);
-                foreach (var kv in stock) Line(list, "· " + FurnitureLabel(kv.Key, kv.Value) + (FurnitureCatalog.Get(kv.Key).Role == FurnitureRole.Fridge ? "（家/店通用）" : FurnitureCatalog.Get(kv.Key).ForShop ? "（店里用）" : "（家里用）"), 16);
-
-                Line(list, "—— 在路上的包裹 ——", 18, Ui.Accent);
-                if (S.Parcels.Count == 0) Line(list, "没有。网购 " + GameSession.DeliveryDays + " 天送到家；家具城叫的货车明早到。", 15, Ui.Dim);
-                foreach (Parcel p in S.Parcels)
+                var nav=Ui.Row(w.Content,38,6);string[] names={"状态","饮食","住处","物品与包裹"};
+                for(int i=0;i<names.Length;i++){int tab=i;Ui.Size(Ui.Button(nav,names[i],()=>{_myPanelTab=tab;w.Rebuild();},17,_myPanelTab==i?Ui.ButtonHot:Ui.ButtonBg),-1,38,1).name="MyTab_"+i;}
+                var stats=S.Player;
+                Line(w.Content,$"饱腹 {stats.Hunger:0} · 精力 {stats.Energy:0}/{stats.MaxEnergy:0} · 健康 {stats.Health:0}",21,Ui.Good);
+                if(S.EnergyExhausted)Para(w.Content,S.EnergyExhaustionText,16,Ui.Warn);
+                if(_myPanelTab==0)
                 {
-                    int left = Mathf.Max(0, p.DueDay - S.Clock.Today.TotalDays);
-                    Line(list, $"· {ParcelName(p)}，还要 {left} 天", 16);
+                    BuildPlayerWorkSummary(w.Content,w);
+                    Line(w.Content,$"智力 {stats.Intelligence} · 魅力 {S.EffectiveCharm} · 技术 {stats.Skill} · 欠觉 {stats.SleepDebt:0.#} 小时",17);
+                    var links=Ui.Row(w.Content,38,6);
+                    Ui.Size(Ui.Button(links,"日程",OpenSchedulePanel,17),-1,38,1);
+                    Ui.Size(Ui.Button(links,"天气与穿衣",OpenCityClimate,17),-1,38,1);
+                    Ui.Size(Ui.Button(links,"行情",OpenMarketPanel,17),-1,38,1);
+                    string blocker=WorkbenchAccessReason;
+                    Ui.Size(Ui.Button(w.Content,"居家工作台"+(blocker==null?"":" · "+blocker),OpenHomeWorkbench,18,Ui.ButtonHot,blocker==null),-1,40).name="MyHomeWorkbench";
+                    if(blocker=="回家后可用")Ui.Size(Ui.Button(w.Content,"回家",()=>{CloseModalWindows();_ctrl.GoToPlace(S.Home);},17),-1,36);
+                    HelpLink(w.Content,"身体详细资料",$"营养 {stats.Nutrition:0.#}/100 · 心情 {stats.Mood:0.#}/100（暂仅记录）\n衣着魅力 +{S.Outfit.CharmBonus} · 现金 {S.Ledger.Balance}");
+                    return;
                 }
-                foreach (CourierRun r in S.Couriers)
+                if(_myPanelTab==1)
                 {
-                    long left = System.Math.Max(0, r.DueMinute - S.Clock.Now.TotalMinutes);
-                    Line(list, $"· 叫的车：从{r.FromName}送到{S.CourierRunDestName(r)}，{r.Items.Count} 样东西，约 {left} 分钟到", 16);
+                    var pan=S.Pantry;Line(w.Content,$"家中厨房 · 大米 {pan.RiceKg:0.##} 千克 · 熟饭 {pan.CookedBowls} 碗",18,Ui.Accent);
+                    if(pan.Cooking!=null)Line(w.Content,$"焖饭剩余 {pan.CookMinutesLeft(S.Clock.Now.TotalMinutes)} 分钟",17,Ui.Good);
+                    var ingredients=pan.Ingredient.GroupBy(x=>x.Id).ToArray();
+                    Para(w.Content,"家中食材："+(ingredients.Length==0?"暂无":string.Join("、",ingredients.Select(g=>g.First().Name+"×"+g.Sum(x=>x.Count)))),17);
+                    if(S.CanOpenFridge)Ui.Size(Ui.Button(w.Content,"打开当前冰箱",OpenFridgeWindow,17),-1,38);
+                    Ui.Size(Ui.Button(w.Content,"自动订餐 · "+(S.MealDeliveryEnabled?S.SelectedDeliveryMeal.Name+" ¥"+S.SelectedDeliveryMeal.Price+"/餐":"关闭"),()=>OpenMealDeliverySettings(w),17),-1,38);
+                    HelpLink(w.Content,"用餐与保存说明","到饭点或饥饿时优先吃现有食物，缺餐时按订餐设置处理。冰箱内永久保存，取出后继续消耗剩余保质期。餐馆可用厨房现有大米和配菜做自己的餐食。");
+                    return;
                 }
-
-                Line(list, "—— 店里的摆设 ——", 18, Ui.Accent);
-                Line(list, $"装饰分 {S.ShopDecorAppeal:0}，客流 ×{S.ShopDecorTrafficMultiplier:0.00}，顾客多等 {S.ShopDecorPatience} 分钟。摆放店里的东西要歇业装修一天。", 16);
-                if (S.HasShop) Para(list, FitChecklistText(), 15);
-                if (S.IsRenovating) Line(list, "今天正在装修，店不营业。", 16, Ui.Warn);
+                if(_myPanelTab==2)
+                {
+                    Line(w.Content,S.HomeTitle,20,Ui.Accent);
+                    Line(w.Content,$"月租 {S.CurrentHomeRent} · 水电 {S.HomeUtilities}/月 · 睡眠恢复 {S.HomeSleepQuality:0.##}×",17);
+                    Ui.Size(Ui.Button(w.Content,"摆放家中家具",()=>StartPlacement(false),18,Ui.ButtonHot,_ctrl.InHome),-1,40);
+                    if(!_ctrl.InHome)Line(w.Content,"回家后可摆放家具。",15,Ui.Dim);
+                    Ui.Size(Ui.Button(w.Content,"管理住处租约与产权",OpenCityResidence,17),-1,38);
+                    if(S.HomeVisits.Any(v=>v.Working))Ui.Size(Ui.Button(w.Content,"在家等维修完成",()=>{S.WaitForRepair();w.Rebuild();},17,Ui.ButtonHot,_ctrl.InHome),-1,38);
+                    string furniture=string.Join("、",S.HomeLayout.GroupBy(x=>x.Id).Select(g=>FurnitureLabel(g.Key,g.Count())));
+                    HelpLink(w.Content,"家中家具",furniture.Length==0?"暂无已摆家具。":furniture);
+                    return;
+                }
+                Line(w.Content,$"背包负重 {S.CarriedKg:0.##}/{S.CarryLimitKg:0.##} 千克 · {S.CurrentVehicle.Name}",18,Ui.Accent);
+                Ui.Size(Ui.Button(w.Content,"背包与当前后仓",OpenBackpackPanel,18,Ui.ButtonHot),-1,40);
+                Line(w.Content,"在途包裹",19,Ui.Accent);
+                foreach(var parcel in S.Parcels)Line(w.Content,ParcelName(parcel)+$" · {Mathf.Max(0,parcel.DueDay-S.Clock.Today.TotalDays)} 天后到达",17);
+                foreach(var run in S.Couriers)Line(w.Content,run.FromName+" → "+S.CourierRunDestName(run)+$" · 约 {Math.Max(0,run.DueMinute-S.Clock.Now.TotalMinutes)} 分钟",17);
+                if(S.Parcels.Count==0&&S.Couriers.Count==0)Line(w.Content,"暂无在途包裹。",16,Ui.Dim);
+                string stored=string.Join("、",S.FurnitureStock.Select(x=>FurnitureLabel(x.Key,x.Value)));
+                HelpLink(w.Content,"未摆放的家具",stored.Length==0?"暂无未摆家具。":stored);
             });
         }
 

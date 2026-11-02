@@ -59,7 +59,7 @@ namespace PCShopSell.Game.UI
             {
                 Para(w.Content, CompetitionSummary(place), 19, Ui.Accent).name = "ShopCompetitionSummary";
                 if (!S.IsMyShop(place)) Ui.Size(Ui.Button(w.Content, "试算店型：" + RetailShopTypes.Name(CompetitionPreviewKind(place)) + " · 点击更换", () => ChooseCompetitionKind(w), 17), -1, 36);
-                Para(w.Content, "橙圈为本店40米商圈。按各店自己的圆统计；不同店型、空铺、待交付店不分流。关门休息仍计入，退租或改店型后即时重算。经过人数不等于进店或成交人数。", 15, Ui.Dim);
+                HelpLink(w.Content,"商圈规则","橙圈半径40米，每店统计自己圈内的同类自营店，含本店共N家时客流保留1/N。不同店型、空铺、待交付店不计入；临时关门仍计入，退租或转型后重算。经过人数不等于进店或成交人数。");
                 var others = S.NearbyCompetingShops(place, CompetitionPreviewKind(place));
                 Para(w.Content, others.Count == 0 ? "圈内暂无其他同类自营店。" : "圈内同类店：" + string.Join("、", others.Select(S.ShopTitle)), 16);
                 if (_ctrl.World != null)

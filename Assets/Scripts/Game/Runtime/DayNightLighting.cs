@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using PCShopSell.Game.Procedural;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -17,6 +17,7 @@ namespace PCShopSell.Game.Runtime
 
         private readonly Camera _cam;
         private readonly Light _sun;
+        private readonly Light _skyFill, _bounceFill;
         private readonly List<Light> _lamps;
         private readonly Bloom _bloom;
         private readonly ColorAdjustments _grade;
@@ -30,13 +31,25 @@ namespace PCShopSell.Game.Runtime
         {
             _cam = cam;
             _sun = sun;
+            Light Fill(string name,Vector3 angle)
+            {
+                var go=new GameObject(name);go.transform.SetParent(sun.transform.parent,false);
+                go.transform.rotation=Quaternion.Euler(angle);var light=go.AddComponent<Light>();
+                light.type=LightType.Directional;light.shadows=LightShadows.None;light.renderMode=LightRenderMode.ForcePixel;return light;
+            }
+            _skyFill=Fill("Cool diffuse skylight",new Vector3(48,145,0));
+            _bounceFill=Fill("Soft reflected daylight",new Vector3(65,35,0));
             _lamps = lamps;
 
             var profile = ScriptableObject.CreateInstance<VolumeProfile>();
             _bloom = profile.Add<Bloom>(true);
             _bloom.scatter.Override(0.7f);
             var tone = profile.Add<Tonemapping>(true);
-            tone.mode.Override(TonemappingMode.Neutral);
+            tone.mode.Override(TonemappingMode.ACES);
+            var split=profile.Add<SplitToning>(true);
+            split.shadows.Override(new Color(.44f,.48f,.55f));
+            split.highlights.Override(new Color(.54f,.52f,.47f));
+            split.balance.Override(-8);
             _grade = profile.Add<ColorAdjustments>(true);
             _vignette = profile.Add<Vignette>(true);
             _vignette.smoothness.Override(0.5f);
@@ -104,7 +117,15 @@ namespace PCShopSell.Game.Runtime
             float night = NightFactor(minuteOfDay);
 
             _cam.backgroundColor = interior ? new Color(0.08f, 0.08f, 0.1f) : Color.Lerp(a.SkyColor, b.SkyColor, t);
-            RenderSettings.ambientLight = interior ? new Color(0.76f, 0.77f, 0.70f) : Color.Lerp(a.AmbientColor, b.AmbientColor, t);
+            Color ambient=interior?new Color(.65f,.65f,.62f):Color.Lerp(a.AmbientColor,b.AmbientColor,t);
+            RenderSettings.ambientLight=ambient;
+            RenderSettings.ambientSkyColor=ambient;
+            RenderSettings.ambientEquatorColor=ambient*.83f;
+            RenderSettings.ambientGroundColor=ambient*.52f;
+            // Runtime procedural world has no baked light probes: explicitly supply diffuse sky fill.
+            var skyProbe=new SphericalHarmonicsL2();
+            skyProbe.AddAmbientLight(ambient * .8f);
+            RenderSettings.ambientProbe=skyProbe;
             RenderSettings.fog = !interior && (a.Fog || b.Fog);
             RenderSettings.fogColor = Color.Lerp(a.FogColor, b.FogColor, t);
             RenderSettings.fogStartDistance = 160f;
@@ -113,7 +134,9 @@ namespace PCShopSell.Game.Runtime
             _sun.color = interior ? new Color(1f, 0.93f, 0.82f) : Color.Lerp(a.SunColor, b.SunColor, t);
             _sun.intensity = interior ? 0.85f : Mathf.Lerp(a.SunIntensity, b.SunIntensity, t);
             _sun.transform.rotation = Quaternion.Euler(interior ? new Vector3(65f, 135f, 0) : Vector3.Lerp(a.SunEuler, b.SunEuler, t));
-            _sun.shadowStrength = interior ? 0.45f : 0.72f;
+            _sun.shadowStrength = interior ? .55f : .78f;
+            _skyFill.color=new Color(.72f,.82f,1f);_skyFill.intensity=interior?.42f:Mathf.Lerp(.66f,.26f,night);
+            _bounceFill.color=new Color(1f,.92f,.78f);_bounceFill.intensity=interior?.24f:Mathf.Lerp(.35f,.12f,night);
 
             _bloom.intensity.Override(Mathf.Lerp(a.BloomIntensity, b.BloomIntensity, t));
             _bloom.threshold.Override(Mathf.Lerp(a.BloomThreshold, b.BloomThreshold, t));

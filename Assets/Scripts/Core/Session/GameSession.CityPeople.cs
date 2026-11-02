@@ -250,7 +250,8 @@ namespace PCShopSell.Core.Session
                 person.LeisureStop++; person.LeisureNextMove = 0;
             }
             // Visits have real routes and short pauses rather than everyone standing at one park all afternoon.
-            string[] destinations = { "shop14", "shop07", "life_park", "shop15", "shop01", "metro_a", "shop16", "life_court", "metro_b" };
+            string[] destinations = CityPerson(person.PersonId)?.LeisurePlaces;
+            if(destinations==null||destinations.Length==0)destinations=new[]{ "shop14", "shop07", "life_park", "shop15", "shop01", "metro_a", "shop16", "life_court", "metro_b" };
             for (int i = 0; i < destinations.Length; i++)
             {
                 string target = destinations[(seed % destinations.Length + person.LeisureStop + i) % destinations.Length];
@@ -333,7 +334,6 @@ namespace PCShopSell.Core.Session
             string text=d.Topics!=null&&d.Topics.Length>index?d.Topics[index]:d.Goal;
             if(topic=="work")text=(p.WorkPlaceId!=null&&City.HasPlace(p.WorkPlaceId)?"我现在的工作在"+City.GetPlace(p.WorkPlaceId).Name+"。":"我现在没有固定岗位。")+"\n"+text;
             if (topic == "interest") text = "我平时喜欢" + ConversationTraits(id)[0].Name + "。有空的时候，也想给自己放个假。";
-            else if (Npcs.Get(id) != null) text = NpcTalk.SmallTalkLine(id, Clock.Today.TotalDays);
             RememberSocial(id,(remote?"通过聊天软件，":"")+(fresh?"聊了新话题：":"再次聊起：")+text);
             OnCityStoryTalk(id,topic);
             return text;
@@ -343,12 +343,12 @@ namespace PCShopSell.Core.Session
             var p=CityPersonState(id);var d=CityPerson(id);
             if(remote){string why=RemoteConversationBlocker(id);if(why!=null)return why;}
             if(p==null||d==null||!remote&&!CitySamePlace(id))return "需要当面听对方讲。";
-            p.StoryChapter=Math.Max(p.StoryChapter,StaffStoriesHeard(id));
+            // The authored city biography and legacy staff anecdotes are distinct texts.
+            // Do not mark an unheard legacy anecdote as learned when a biography is told.
             if(p.LastStoryDay==Clock.Today.TotalDays||_staffStoryDay.TryGetValue(id,out int toldDay)&&toldDay==Clock.Today.TotalDays)return "今天已经聊了不少，改天再听下一段。";
             if(d.Stories==null||p.StoryChapter>=d.Stories.Length)return d.Goal;
             if(Relation(id)<5+p.StoryChapter*5)return "再熟悉一点，对方愿意慢慢讲自己的经历。";
             string line=d.Stories[p.StoryChapter++];p.LastStoryDay=Clock.Today.TotalDays;
-            if(Rosters.Get(id)!=null||Residents.Get(id)!=null){_staffStoryCount[id]=p.StoryChapter;_staffStoryDay[id]=Clock.Today.TotalDays;}
             AddRelation(id,2);RememberSocial(id,line);return line;
         }
     }

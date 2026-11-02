@@ -7,10 +7,10 @@ namespace PCShopSell.Game.Runtime
         private static void ModernGardenVilla(Transform root,float w,float d,float configuredHeight,int seed)
         {
             int variant=(seed&int.MaxValue)%3;
-            Color white=ArtDirection.Hex(variant==0?"F1EFE4":variant==1?"E9E3D4":"DADFE0");
-            Color dark=ArtDirection.Hex("293F4A"),wood=ArtDirection.Hex("A27D51"),paving=ArtDirection.Hex("D6D6C5");
+            Color white=ArtDirection.Hex(variant==0?"D9D8CE":variant==1?"CBC5B8":"BDC5CB");
+            Color dark=ArtDirection.Hex("303C48"),wood=ArtDirection.Hex("866849"),paving=ArtDirection.Hex("B5B8B1");
             float floor=2.7f,h=floor*4,bw=w*.72f,bd=d*.37f,z=d*.73f,front=z-bd/2;
-            Box(root,"PrivateEstateLawn",new Vector3(0,.045f,d/2),new Vector3(w,.09f,d),ArtDirection.Hex("7FA45B"));
+            Box(root,"PrivateEstateLawn",new Vector3(0,.045f,d/2),new Vector3(w,.09f,d),ArtDirection.Hex("71815A"));
             Box(root,"StoneTerrace",new Vector3(0,.14f,d*.37f),new Vector3(w*.85f,.18f,d*.36f),paving);
             Box(root,"GroundFloor",new Vector3(0,floor/2+.2f,z),new Vector3(bw,floor,bd),white,true);
             Box(root,"GroundFloorPlinth",new Vector3(0,.26f,z),new Vector3(bw+.3f,.3f,bd+.25f),dark);
@@ -45,7 +45,7 @@ namespace PCShopSell.Game.Runtime
                 Box(root,"FloatingFloorPlate"+(level+1),new Vector3(topX,(level+1)*floor+.59f,topZ),new Vector3(topW+.65f,.24f,topD+.7f),white);
                 Box(root,"FloorShadowGap"+(level+1),new Vector3(topX,(level+1)*floor+.44f,topZ),new Vector3(topW+.25f,.1f,topD+.25f),dark);
                 float terraceFront=z-upperD/2-.2f;
-                Box(root,"SetbackGlassBalustrade"+(level+1),new Vector3(topX,baseY+.55f,terraceFront),new Vector3(topW,1,.055f),ArtDirection.Hex("86B8C4"));
+                Box(root,"SetbackGlassBalustrade"+(level+1),new Vector3(topX,baseY+.55f,terraceFront),new Vector3(topW,1,.055f),ArtDirection.Hex("718E9A"));
                 Box(root,"SetbackBalustradeCap"+(level+1),new Vector3(topX,baseY+1.08f,terraceFront),new Vector3(topW,.055f,.08f),dark);
                 // The fourth-floor terrace rests on the third-floor roof rather than floating.
                 if(level==3)
@@ -61,14 +61,14 @@ namespace PCShopSell.Game.Runtime
             // Open roof terrace, bounded by slim glass balustrades.
             float terraceX=-Mathf.Sign(upperX)*bw*.38f,terraceW=bw*.20f;
             Box(root,"UpperTerraceDeck",new Vector3(terraceX,floor+.42f,z),new Vector3(terraceW,.12f,bd*.8f),wood);
-            Box(root,"GlassBalustrade",new Vector3(terraceX,floor+.97f,front-.09f),new Vector3(terraceW,1,.055f),ArtDirection.Hex("86B8C4"));
+            Box(root,"GlassBalustrade",new Vector3(terraceX,floor+.97f,front-.09f),new Vector3(terraceW,1,.055f),ArtDirection.Hex("718E9A"));
             Box(root,"BalustradeCap",new Vector3(terraceX,floor+1.5f,front-.09f),new Vector3(terraceW,.055f,.08f),dark);
             // Every property gets a conspicuous private swimming pool, including the smallest lots.
             float poolW=w*.43f,poolD=d*.22f,poolX=-w*.15f,poolZ=d*.28f;
             Box(root,"PoolCoping",new Vector3(poolX,.29f,poolZ),new Vector3(poolW+.5f,.22f,poolD+.5f),white);
-            Box(root,"PoolDeepWater",new Vector3(poolX,.405f,poolZ),new Vector3(poolW,.025f,poolD),ArtDirection.Hex("258EA8"));
-            Box(root,"PoolShallowShelf",new Vector3(poolX-poolW*.37f,.423f,poolZ),new Vector3(poolW*.23f,.015f,poolD*.95f),ArtDirection.Hex("63C9D2"));
-            var water=Mats.Lit(ArtDirection.Hex("70C9CF"),.7f,.12f);
+            Box(root,"PoolDeepWater",new Vector3(poolX,.405f,poolZ),new Vector3(poolW,.025f,poolD),ArtDirection.Hex("386C7D"));
+            Box(root,"PoolShallowShelf",new Vector3(poolX-poolW*.37f,.423f,poolZ),new Vector3(poolW*.23f,.015f,poolD*.95f),ArtDirection.Hex("709CA7"));
+            var water=Mats.Lit(ArtDirection.Hex("91B0B5"),.7f,.12f);
             for(int i=0;i<7;i++)
                 Prims.Box(root,"WaterGlint",new Vector3(poolX+Mathf.Sin(i*2.1f)*poolW*.27f,.43f,poolZ+(i-3)*poolD*.12f),new Vector3(poolW*(i%2==0?.15f:.09f),.008f,.035f),water);
             foreach(int side in new[]{-1,1})

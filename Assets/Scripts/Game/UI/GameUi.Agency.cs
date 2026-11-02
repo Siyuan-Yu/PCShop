@@ -104,17 +104,17 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(metrics, $"<size=14>每月租金</size>\n<b>{(rent.HasValue ? rent.Value.ToString() : "未挂牌")}</b>", 27), -1, 60, 1);
             Ui.Size(Ui.Label(metrics, $"<size=14>室内面积 · {GameSession.SizeName(p.Size)}</size>\n<b>{RealEstate.SizeArea(p.Size)}</b>", 27), -1, 60, 1);
             var flow = S.FootfallOf(p);
-            if(!S.IsDedicatedVenue(p))Line(parent,"后仓容量不限 · 最多 "+GameSession.ShelfLimit(p.Size)+" 个货架 / "+GameSession.StaffLimit(p.Size)+" 名员工，其他家具不限数量",16,Ui.Accent);
+            if(!S.IsDedicatedVenue(p))Line(parent,"最多 "+GameSession.ShelfLimit(p.Size)+" 个货架 · "+GameSession.StaffLimit(p.Size)+" 名员工 · 后仓不限",16,Ui.Accent);
             Ui.Size(Ui.Label(parent, $"预计每日经过约 {flow.DailyPassers:N0} 人", 22, TextAnchor.MiddleLeft, Ui.Good), -1, 32).name="AgencyDailyPassers";
             string station=double.IsPositiveInfinity(flow.StationMeters)?"无可达地铁站":$"距最近地铁 {flow.StationMeters:0} 米";
             string housing=double.IsPositiveInfinity(flow.HousingMeters)?"附近无可达住宅":$"距最近住宅 {flow.HousingMeters:0} 米";
             Ui.Size(Ui.Label(parent,station+" · "+housing,15),-1,24);
-            Ui.Size(Ui.Label(parent,"按地铁、周边住宅和店铺面积估算；经过人数不等于进店或成交人数。",14,TextAnchor.MiddleLeft,Ui.Dim),-1,40);
+            HelpLink(parent,"租赁与客流说明","地段经过人数由地铁、住宅和店铺面积估算，不等于进店或成交人数。同类自营店会分流客流，已签租金保持原价。提前签约到交房日才能使用；退租前请清理库存，主动退租不退押金。");
             if(mine||pending)Line(parent,"已签租约保留原价。",14,Ui.Dim);
             if(!S.IsDedicatedVenue(p))
             {
                 Para(parent, (mine ? "" : "试算开设" + RetailShopTypes.Name(CompetitionPreviewKind(p)) + "：\n") + CompetitionSummary(p), 16, Ui.Accent).name="AgencyCompetitionSummary";
-                Ui.Size(Ui.Button(parent,"查看40米商圈",()=>OpenShopCompetition(p),16),-1,32);
+                Ui.Size(Ui.Button(parent,"商圈详情与试算",()=>OpenShopCompetition(p),16),-1,32);
             }
             BuildAgencyFloorPlan(parent, p);
             if(S.IsDedicatedVenue(p))Para(parent,"专用场地 · "+S.VenueBusinessName(p)+"\n只能延续原有服务，不能改作零售店。接手不包含原教练劳动；需自己值守或另行招聘。每日维护 ¥"+S.VenueMaintenanceYuan(p)+"，租金及工资另计。",17,Ui.Accent);
