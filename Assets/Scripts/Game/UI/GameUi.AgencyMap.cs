@@ -65,6 +65,8 @@ namespace PCShopSell.Game.UI
         private void BuildAgencyMapAnnotations(RectTransform overlay, AgencyStreetMap view, Place[] units, Window w, Place agency)
         {
             Ui.Clear(overlay);
+            if (_agencySelectedId != null && S.City.HasPlace(_agencySelectedId))
+                AddCompetitionRing(overlay, view, S.City.GetPlace(_agencySelectedId));
             void Glow(string id,PlaceVisual building,Color color,bool emphasized=false)
             {
                 var rect=Ui.Rect(overlay,id);AgencyAt(rect,0,0,view.Width,view.Height);

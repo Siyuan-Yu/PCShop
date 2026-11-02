@@ -300,6 +300,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildCounter()
         {
+            BuildCompetitionEntry(C);
             if(S.IsSpecialBusiness(S.CurrentShop)){BuildSpecialCounter();return;}
             BuildIndustryBrief(C);
             ShopSimulation shop = S.PlayerShop;

@@ -109,6 +109,11 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(parent,station+" · "+housing,15),-1,24);
             Ui.Size(Ui.Label(parent,"按地铁、周边住宅和店铺面积估算；经过人数不等于进店或成交人数。",14,TextAnchor.MiddleLeft,Ui.Dim),-1,40);
             if(mine||pending)Line(parent,"已签租约保留原价。",14,Ui.Dim);
+            if(!S.IsDedicatedVenue(p))
+            {
+                Para(parent, (mine ? "" : "试算开设" + RetailShopTypes.Name(CompetitionPreviewKind(p)) + "：\n") + CompetitionSummary(p), 16, Ui.Accent).name="AgencyCompetitionSummary";
+                Ui.Size(Ui.Button(parent,"查看40米商圈",()=>OpenShopCompetition(p),16),-1,32);
+            }
             BuildAgencyFloorPlan(parent, p);
             if(S.IsDedicatedVenue(p))Para(parent,"专用场地 · "+S.VenueBusinessName(p)+"\n只能延续原有服务，不能改作零售店。接手不包含原教练劳动；需自己值守或另行招聘。每日维护 ¥"+S.VenueMaintenanceYuan(p)+"，租金及工资另计。",17,Ui.Accent);
 

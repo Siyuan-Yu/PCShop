@@ -1,0 +1,38 @@
+同类店铺商圈分流验证（2026-11-03，Asia/Shanghai）
+Unity: 2022.3.6f1 Windows
+基线: 72c1cd1 + 本次商圈暂存改动；已逐文件核对暂存C#与测试工程一致。
+测试工程: D:/UnityProjects/PCShop/_ci_shop_cores
+最终 EditMode 71/71 通过，0失败；新增14项商圈用例。
+- MultiShopTests: 14/14
+- RestaurantDrinkTests: 9/9
+- ShelfItemCapacityTests: 17/17
+- ShopCompetitionTests: 14/14
+- ShopDockInteractionTests: 7/7
+- ShopFootfallTests: 10/10
+
+覆盖：2/3/4店真实来客速率、圆形边界和方形角落、非传递邻接链、距离缩放及入口偏移、
+类别改变、临时关门、退租、搬迁、待交付不计、空铺假设店型、餐馆/二手专用间隔、
+JSON读档与租金不追溯变化、真实UI文字、圆圈网格闭合和绘制组件。
+图形专项: GameSceneBuilder.CompetitionFromBatch，code=0/errors=0。
+检查店内查看时街景临时恢复/重新隐藏、圆圈与地图宽度一致、三店1/3显示、选中房源圆圈。
+实际检查1080p和720p商圈/中介画面；圈与主体说明未越界。截图随文档归档。
+
+未运行全仓库全部测试，未测量本次帧率变化，未重新打Windows包。
+并行餐馆手操、二手转售、开局任务和睡眠导航改动保留且未混入本提交。
+
+图形检查日志摘要：
+SMOKE OK 开局商圈能覆盖附近至少两间铺面
+SMOKE OK 签约同类邻店 shop19
+SMOKE OK 签约同类邻店 shop09
+SMOKE OK 店内正常隐藏城市模型
+SMOKE OK 地图拍摄后恢复城市隐藏状态
+SMOKE OK 三店实际分流与窗口文字一致
+SMOKE OK 商圈窗口有真实投影圆圈
+SMOKE OK 地图与圆圈使用相同的投影宽度
+SMOKE shot shop_competition_three
+SMOKE shot shop_competition_three_720
+SMOKE OK 中介选中房源同步显示半径圈
+SMOKE shot agency_competition
+SMOKE shot agency_competition_720
+SMOKE COMPETITION GRAPHICS COMPLETE
+SMOKE RESULT code=0 errors=0

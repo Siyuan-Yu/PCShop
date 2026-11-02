@@ -36,6 +36,15 @@ namespace PCShopSell.Game.UI
         public float Height { get; private set; }
         public float Zoom => _state.Zoom;
 
+        public void FrameArea(Vector3 center, float radius)
+        {
+            _overview = center;
+            _overviewSize = radius * 1.15f;
+            _cityBounds = new Bounds(center, new Vector3(radius * 3, 20, radius * 3));
+            _state.Zoom = 1; _state.Offset = Vector2.zero;
+            RenderMap();
+        }
+
         public void Initialize(GameController game, ViewState state, Place[] units, float width, float height)
         {
             _game = game; _state = state; _rect = (RectTransform)transform;
@@ -119,8 +128,10 @@ namespace PCShopSell.Game.UI
             var rotations = suns.Select(l => l.transform.rotation).ToArray();
             // Hide other streets only during this camera capture; restore the live world below.
             var outside = _game.World.Places.Values.Where(p => !_placeIds.Contains(p.Place.Id) && p.Root.activeSelf).ToArray();
+            bool worldWasActive = _game.World.Root.activeSelf;
             try
             {
+                _game.World.Root.SetActive(true);
                 foreach (var c in canvases) c.enabled = false;
                 foreach (var place in outside) place.Root.SetActive(false);
                 if (_rentalGlow != null) _rentalGlow.SetActive(false);
@@ -139,6 +150,7 @@ namespace PCShopSell.Game.UI
                 for (int i = 0; i < suns.Length; i++) { suns[i].intensity = intensities[i]; suns[i].color = colors[i]; suns[i].transform.rotation=rotations[i]; }
                 foreach (var c in canvases) if (c != null) c.enabled = true;
                 foreach (var place in outside) if (place.Root != null) place.Root.SetActive(true);
+                _game.World.Root.SetActive(worldWasActive);
             }
             Changed?.Invoke();
         }

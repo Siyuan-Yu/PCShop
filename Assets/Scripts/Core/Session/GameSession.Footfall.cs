@@ -14,6 +14,6 @@ namespace PCShopSell.Core.Session
         // Size is already counted by the footfall estimate; avoid multiplying it twice.
         public double LocationFactorOf(Place place) => FootfallOf(place).DailyPassers/(600.0*ShopSettings.SizeFactor(place.Size));
         public double StationDistance(Place place) => FootfallOf(place).StationMeters;
-        private long SpecialVisitInterval(OwnedShop shop,int baseMinutes) => Math.Max(1,(long)Math.Round(baseMinutes*300.0/FootfallOf(shop.Place).DailyPassers));
+        private long SpecialVisitInterval(OwnedShop shop,int baseMinutes) => Math.Max(1,(long)Math.Round(baseMinutes*300.0*ShopCompetitionCount(shop.Place,shop.RetailKind)/FootfallOf(shop.Place).DailyPassers));
     }
 }

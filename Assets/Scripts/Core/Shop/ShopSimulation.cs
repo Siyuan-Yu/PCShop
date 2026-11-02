@@ -292,6 +292,7 @@ namespace PCShopSell.Core.Shop
         public Stock Stock { get; }
         public ShopSize Size { get; set; }
         public double LocationFactor { get; set; } = 1.0;
+        public Func<double> CompetitionFactorOf;
 
         /// <summary>招牌灯箱之类的升级带来的客流倍数。</summary>
         public double TrafficMultiplier { get; set; } = 1.0;
@@ -551,6 +552,7 @@ namespace PCShopSell.Core.Shop
                              * Settings.HourFactors[at.Hour]
                              * ShopSettings.SizeFactor(Size)
                              * LocationFactor
+                             * (CompetitionFactorOf?.Invoke() ?? 1.0)
                               * TrafficMultiplier * Math.Max(.5, Math.Min(1.5, CityRetailDemandMultiplier))
                              * (1.0 + Reputation / 100.0)
                              * (at.Date.IsWeekend ? Settings.WeekendMultiplier : 1.0);
