@@ -101,11 +101,14 @@ namespace PCShopSell.Game.UI
             var metrics = Ui.Row(parent, 60, 12);
             Ui.Size(Ui.Label(metrics, $"<size=14>每月租金</size>\n<b>{(rent.HasValue ? rent.Value.ToString() : "未挂牌")}</b>", 27), -1, 60, 1);
             Ui.Size(Ui.Label(metrics, $"<size=14>室内面积 · {GameSession.SizeName(p.Size)}</size>\n<b>{RealEstate.SizeArea(p.Size)}</b>", 27), -1, 60, 1);
-            double flow = S.LocationFactorOf(p);
+            var flow = S.FootfallOf(p);
             if(!S.IsDedicatedVenue(p))Line(parent,"后仓容量不限 · 最多 "+GameSession.ShelfLimit(p.Size)+" 个货架 / "+GameSession.StaffLimit(p.Size)+" 名员工，其他家具不限数量",16,Ui.Accent);
-            Ui.Size(Ui.Label(parent, $"距地铁 {S.StationDistance(p):0} 米　　地段客流 ×{flow:0.00}", 17), -1, 24);
-            Ui.Size(Ui.Bar(parent, (float)flow, Ui.Good), -1, 6);
-            Ui.Size(Ui.Label(parent, "条越长，地段客流越好；实际进店还受经营影响。", 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 22);
+            Ui.Size(Ui.Label(parent, $"预计每日经过约 {flow.DailyPassers:N0} 人", 22, TextAnchor.MiddleLeft, Ui.Good), -1, 32).name="AgencyDailyPassers";
+            string station=double.IsPositiveInfinity(flow.StationMeters)?"无可达地铁站":$"距最近地铁 {flow.StationMeters:0} 米";
+            string housing=double.IsPositiveInfinity(flow.HousingMeters)?"附近无可达住宅":$"距最近住宅 {flow.HousingMeters:0} 米";
+            Ui.Size(Ui.Label(parent,station+" · "+housing,15),-1,24);
+            Ui.Size(Ui.Label(parent,"按地铁、周边住宅和店铺面积估算；经过人数不等于进店或成交人数。",14,TextAnchor.MiddleLeft,Ui.Dim),-1,40);
+            if(mine||pending)Line(parent,"已签租约保留原价。",14,Ui.Dim);
             BuildAgencyFloorPlan(parent, p);
             if(S.IsDedicatedVenue(p))Para(parent,"专用场地 · "+S.VenueBusinessName(p)+"\n只能延续原有服务，不能改作零售店。接手不包含原教练劳动；需自己值守或另行招聘。每日维护 ¥"+S.VenueMaintenanceYuan(p)+"，租金及工资另计。",17,Ui.Accent);
 
@@ -191,6 +194,7 @@ namespace PCShopSell.Game.UI
             OpenWindow("确认租赁 · " + UnitName(p), 660, S.IsAdvance(listing) ? 620 : 520, confirm =>
             {
                 Line(confirm.Content, $"{GameSession.SizeName(p.Size)} · {RealEstate.SizeArea(p.Size)} · 月租 {listing.Rent}", 21, Ui.Accent);
+                Line(confirm.Content,$"预计每日经过约 {S.FootfallOf(p).DailyPassers:N0} 人",19,Ui.Good);
                 if (S.IsAdvance(listing)) AgencyEntryWarning(confirm.Content, listing.OpenDay);
                 if(S.IsDedicatedVenue(p))
                     Para(confirm.Content,"专用场地："+S.VenueBusinessName(p)+"，只能延续原用途，不可改作零售店。\n保留原设施，另行安排值守。原教练不自动受雇；维护费 ¥"+S.VenueMaintenanceYuan(p)+"/天，员工按实际排班另付工资。老板自用免费，不产生营业收入。",18,Ui.Accent);

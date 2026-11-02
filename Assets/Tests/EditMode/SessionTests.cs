@@ -88,9 +88,9 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void FarthestShop_HasLowestLocationFactor()
+        public void ShopLocationUsesEstimatedDailyPassingPeople()
         {
-            Assert.AreEqual(0.4, Make().PlayerShop.LocationFactor, 1e-9);
+            using(var s=Make())Assert.AreEqual(s.FootfallOf(s.PlayerShopPlace).DailyPassers/600.0,s.PlayerShop.LocationFactor,1e-9);
         }
 
         [Test]
@@ -420,7 +420,7 @@ namespace PCShopSell.Tests
             s.Clock.Restore(new GameDate(29), 23 * 60);
             Money before = s.Ledger.Balance;
             s.AdvanceClock(61);
-            Assert.AreEqual(GameSession.ShopRent + GameSession.HomeRent, before - s.Ledger.Balance);
+            Assert.AreEqual(s.CurrentShopRent + GameSession.HomeRent, before - s.Ledger.Balance);
             Assert.IsTrue(s.MonthGoalEvaluated);
         }
 
@@ -509,13 +509,13 @@ namespace PCShopSell.Tests
             Assert.AreEqual(7, original.Count(p => p.Size == PCShopSell.Core.Shop.ShopSize.Small));
 
             var s = new GameSession(city, 1, Money.FromYuan(5000), GameTimestamp.From(new GameDate(0), 480));
-            Assert.AreEqual(0.4, s.PlayerShop.LocationFactor, 1e-9, "原商圈开局位置/客流/租金口径不因扩城抬高");
+            Assert.AreEqual(s.LocationFactorOf(s.PlayerShopPlace), s.PlayerShop.LocationFactor, 1e-9, "模拟使用每日经过人数计算的位置影响");
             foreach(var unit in shops.Where(p=>p.StreetId!="s_start"&&p.IsTradable))
             {
                 var paths=city.OfKind(PlaceKind.Station).Select(station=>Pathfinder.FindPath(city.Map,station.NodeId,unit.NodeId)).Where(path=>path.Found).ToArray();
                 Assert.IsNotEmpty(paths,unit.Id+"应有实际可达地铁");
                 Assert.AreEqual(paths.Min(path=>path.Distance),s.StationDistance(unit),1e-9,unit.Id+"使用最近可达地铁");
-                Assert.That(s.LocationFactorOf(unit),Is.InRange(.4,1.0));
+                Assert.Greater(s.FootfallOf(unit).DailyPassers,0);
             }
             double toMarket = Pathfinder.FindPath(city.Map, s.PlayerShopPlace.NodeId, city.GetPlace("stall_cpu").NodeId).Distance;
             double toHome = Pathfinder.FindPath(city.Map, s.PlayerShopPlace.NodeId, s.Home.NodeId).Distance;

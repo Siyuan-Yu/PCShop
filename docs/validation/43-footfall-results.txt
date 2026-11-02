@@ -1,0 +1,18 @@
+Agency daily footfall / rent update - 2026-11-02
+Unity 2022.3.6f1, isolated _ci_shop_cores project.
+Joint tests: 99 total, 98 passed, 1 existing failure.
+Existing failure: FixtureTests.Catalog_HasShelfTiers_AndTheOtherFixtures expects 5 shelf types; current catalog has 3.
+Same failure recorded by clean baseline docs/validation/36-shop-core-baseline.xml; catalog and assertion unchanged here.
+Final focused validation: 20 total, 20 passed, 0 failed (including 10 ShopFootfallTests).
+Coverage: distance, housing density, size, unreachable sources, rent ordering, simulation scaling,
+signing and JSON migration, signed/pending lease preservation, restaurant/used-store visit intervals,
+monthly rent collection, venue operations and real agency UI labels.
+Current lake map: 61 shop places, estimated 236-1484 passing people/day; monthly rents 1180-7420 yuan.
+Starter: 299 passing people/day, station 150m, housing 124m, monthly rent 1495 yuan,
+initial rent+deposit+agency fee 4485 yuan, 5515 yuan remaining from a 10000-yuan start.
+First all-shop calculation: 129ms in one local EditMode run. Repeated queries return cached estimates.
+Graphics: GameSceneBuilder.FootfallFromBatch; SMOKE RESULT code=0 errors=0.
+Actual 1920x1080 and 1280x720 screenshots inspected; estimate, distances, costs and lease control visible.
+Screenshots: ../previews/footfall/agency_daily_passers.png and agency_daily_passers_720.png.
+No full-suite claim, no long-term economy balance claim, no new Windows package.
+All validation uses isolated fresh sessions, not the user's saved games.

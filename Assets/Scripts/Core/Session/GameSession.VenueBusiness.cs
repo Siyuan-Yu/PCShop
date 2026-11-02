@@ -121,7 +121,7 @@ namespace PCShopSell.Core.Session
                 int ownerSeats=_cityActivities.Where(a=>a.Active&&a.VenueId==shop.Place.Id&&a.RendezvousReady).Sum(a=>1+a.Participants.Length);
                 if(state.CustomersHere.Length+ownerSeats>=VenueCapacity(shop.Place))continue;
                 double basePrice=(CityLifeCatalog.Activities.FirstOrDefault(a=>a.VenueId==shop.Place.Id)?.PriceYuan??30)*100;
-                if(!Random.Chance(Math.Min(.8,.45*basePrice/state.PriceCents)))continue;
+                if(!Random.Chance(Math.Min(.8,.45*basePrice/state.PriceCents*FootfallOf(shop.Place).DailyPassers/300.0)))continue;
                 var people=_cityPeople.Values.Where(p=>p.Route==null&&p.ActivityId==null&&p.VisitId==null&&p.Task!=CityPersonTask.Working
                     &&!Employees.Any(e=>PersonIdOf(e.Person)==p.PersonId)
                     &&!_cityActivities.Any(a=>a.Active&&a.Participants.Any(c=>c.PersonId==p.PersonId))).ToArray();

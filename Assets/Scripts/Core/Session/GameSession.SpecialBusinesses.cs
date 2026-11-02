@@ -165,7 +165,7 @@ namespace PCShopSell.Core.Session
             if(!open)return;
             if(minute>=state.NextVisit)
             {
-                state.NextVisit=minute+45;
+                state.NextVisit=minute+SpecialVisitInterval(shop,45);
                 if(!state.Used.Any(i=>!i.Owned)&&state.Used.Count(i=>i.Owned&&!i.Sold)<20)state.Used.Add(CreateSeller(state,minute));
                 foreach(var item in state.Used.Where(i=>i.Listed&&!i.Sold).ToArray())
                 {
@@ -294,7 +294,7 @@ namespace PCShopSell.Core.Session
                 if(waiters.Length>0&&(o.Stage==DiningStage.Completed||o.Stage==DiningStage.Left))state.Orders.Remove(o);
             }
             if(!open||minute<state.NextVisit)return;
-            state.NextVisit=minute+12;
+            state.NextVisit=minute+SpecialVisitInterval(shop,12);
             int tables=Furnished(shop,"restaurant_table");
             int table=Enumerable.Range(0,tables).FirstOrDefault(index=>!state.Orders.Any(o=>o.Table==index));
             if(state.Orders.Count>=tables||!Random.Chance(shop.Sim.MarkupPurchaseIntent(state.MenuMarkup)))return;

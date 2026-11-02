@@ -59,7 +59,7 @@ namespace PCShopSell.Core.Session
             var existing = PropertyAt(id); if (existing != null) return Money.FromCents(existing.PriceCents);
             var own = ShopAt(id); var venture = VentureAt(id); var place = City.GetPlace(id);
             Money rent = own?.Lease != null ? own.Lease.Rent : venture != null ? Money.FromCents(venture.RentCents) : _listings.Find(l => l.PlaceId == id)?.Rent ?? Money.Zero;
-            if (!rent.IsPositive) rent = RealEstate.RentFor(place.Size, LocationFactorOf(place), 1);
+            if (!rent.IsPositive) rent = ShopRentQuote(place);
             return rent * 120;
         }
         public CityPropertyPurchase PreviewCityPropertyPurchase(string id, bool mortgage)

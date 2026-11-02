@@ -66,7 +66,7 @@ namespace PCShopSell.Core.Session
                 TradingEnabled = !IsDedicatedVenue(shop.Place) && !IsSpecialBusiness(shop),
                 CheckoutClock = ()=>CurrentPlace==shop.Place&&!_sleeping&&!IsWorking?_activeCheckoutSeconds:double.NaN,
                 RetailKind = shop.RetailKind,
-                LocationFactor = ComputeLocationFactor(City, shop.Place),
+                LocationFactor = LocationFactorOf(shop.Place),
                 EmployeeOnDuty = t => ShopStaff(shop,EmployeeRole.Cashier).Concat(ShopStaff(shop,EmployeeRole.Assembler)).Any(e=>e.OnDuty(t)&&CityEmployeeAvailable(e,shop)),
                 EmployeeServiceRate = ()=>ShopCheckoutWorkers(shop).Sum(e=>1.0/(Math.Max(1,e.CheckoutMinutes)+1)),
             };

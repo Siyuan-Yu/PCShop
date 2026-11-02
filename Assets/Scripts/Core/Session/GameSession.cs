@@ -116,7 +116,7 @@ namespace PCShopSell.Core.Session
             _realtyRng = new GameRandom(seed ^ 0x5EA1E57A7EUL);
             if (startWithShop)
             {
-                Lease = new ShopLease { PlaceId = PlayerShopPlace.Id, Rent = ShopRent, Deposit = Money.Zero, StartDay = start.Date.TotalDays };
+                Lease = new ShopLease { PlaceId = PlayerShopPlace.Id, Rent = ShopRentQuote(PlayerShopPlace), Deposit = Money.Zero, StartDay = start.Date.TotalDays };
                 if (starterStock) AddStarterStock();
                 FitStarterShop();
                 SkipOpeningQuests();
@@ -588,21 +588,6 @@ namespace PCShopSell.Core.Session
 
         private void Show(string title, string body) => Popup?.Invoke(title, body);
 
-        /// <summary>旧商圈保留原比较范围，避免扩城把开局客流和租金一并抬高；新街区比较真实最近站距离。</summary>
-        private static double ComputeLocationFactor(CityLayout city, Place shop)
-        {
-            bool legacy=LegacyLocationEconomy(city,shop);
-            double max = 0;
-            double mine=CityStationDistance(city,shop,legacy);
-            if(double.IsPositiveInfinity(mine))return 1.0;
-            foreach (Place p in city.Places)
-            {
-                if (p.Kind != PlaceKind.Shop) continue;
-                if(legacy && city.Streets.Count>0 && p.StreetId!=shop.StreetId)continue;
-                double meters=CityStationDistance(city,p,legacy);
-                if(!double.IsPositiveInfinity(meters)&&meters>max)max=meters;
-            }
-            return ShopSettings.LocationFactor(mine, max);
-        }
+
     }
 }

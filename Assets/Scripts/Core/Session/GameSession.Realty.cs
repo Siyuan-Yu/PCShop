@@ -25,7 +25,6 @@ namespace PCShopSell.Core.Session
         private readonly GameRandom _realtyRng;
         private readonly List<ShopListing> _listings = new List<ShopListing>();
         private readonly HashSet<string> _vacant = new HashSet<string>();
-        private readonly Dictionary<string, double> _locationCache = new Dictionary<string, double>();
 
         /// <summary>当前这家店的租约；还没租铺子时为 null。</summary>
         public ShopLease Lease
@@ -64,37 +63,6 @@ namespace PCShopSell.Core.Session
         public string PlaceTitle(Place p) => p == null ? "" : IsMyShop(p) ? ShopTitle(ShopAt(p)) : p == Home ? HomeTitle : p.Id == ParkPlaceId ? "电脑乐园" : VentureAt(p.Id) != null ? Ventures.Get(VentureAt(p.Id).Kind).Name : PropertyAt(p.Id) != null ? CityPropertyTitle(p) : IsVacant(p) ? VacantTitle : p.Name;
 
         public Place ListingPlace(ShopListing l) => City.GetPlace(l.PlaceId);
-
-        /// <summary>位置系数（离地铁站最远 0.4，最近接近 1），决定客流和月租。</summary>
-        public double LocationFactorOf(Place p)
-        {
-            if (!_locationCache.TryGetValue(p.Id, out double f))
-            {
-                f = ComputeLocationFactor(City, p);
-                _locationCache[p.Id] = f;
-            }
-            return f;
-        }
-
-        private static bool LegacyLocationEconomy(CityLayout city,Place p) => city.Streets.Count==0 || string.IsNullOrEmpty(p.StreetId) || p.StreetId=="s_start";
-        private static double CityStationDistance(CityLayout city,Place p,bool legacy)
-        {
-            var stations=city.OfKind(PlaceKind.Station);
-            if(legacy)stations=stations.Take(1);
-            double best=double.PositiveInfinity;
-            foreach(var station in stations)
-            {
-                var route=Pathfinder.FindPath(city.Map,station.NodeId,p.NodeId);
-                if(route.Found)best=Math.Min(best,route.Distance);
-            }
-            return best;
-        }
-        /// <summary>原商圈保留其商业街站口径；新街区使用所有实际地铁站中最近的可达距离。</summary>
-        public double StationDistance(Place p)
-        {
-            double meters=CityStationDistance(City,p,LegacyLocationEconomy(City,p));
-            return double.IsPositiveInfinity(meters)?0:meters;
-        }
 
         /// <summary>
         /// 签这一间当场要付多少。newShop = 已经有店、再开一家（不搬）；否则已开着店就是搬店：
@@ -287,8 +255,9 @@ namespace PCShopSell.Core.Session
         {
             if (Lease != null) return false;
             Place start = City.PlayerShop();
-            PaySigning(ShopRent, start);
-            MoveInto(start, ShopRent, RealEstate.Deposit(ShopRent));
+            Money rent=ShopRentQuote(start);
+            PaySigning(rent, start);
+            MoveInto(start, rent, RealEstate.Deposit(rent));
             FitStarterShop();
             if (PlayerShop.Stock.IsEmpty) AddStarterStock();
             SkipOpeningQuests();
@@ -311,7 +280,7 @@ namespace PCShopSell.Core.Session
             var l = new ShopListing
             {
                 PlaceId = placeId, Size = p.Size, OpenDay = openDay, CloseDay = closeDay,
-                Rent = rent ?? RealEstate.RentFor(p.Size, LocationFactorOf(p), 1.0),
+                Rent = rent ?? ShopRentQuote(p),
             };
             _listings.Add(l);
             if (openDay <= Clock.Today.TotalDays) _vacant.Add(placeId);
@@ -336,7 +305,7 @@ namespace PCShopSell.Core.Session
             var l = new ShopListing
             {
                 PlaceId = p.Id, Size = p.Size, OpenDay = openDay, CloseDay = closeDay,
-                Rent = rent ?? RealEstate.RentFor(p.Size, LocationFactorOf(p), _realtyRng.Range(0.9, 1.15)),
+                Rent = rent ?? ShopRentQuote(p),
             };
             _listings.Add(l);
             if (openDay <= Clock.Today.TotalDays) _vacant.Add(p.Id);
@@ -358,7 +327,7 @@ namespace PCShopSell.Core.Session
         {
             _listings.Clear();
             Place start = City.PlayerShop();
-            if (Lease == null) AddListing(start, today, today + 120, ShopRent);
+            if (Lease == null) AddListing(start, today, today + 120);
             List<Place> pool = FreeUnits().Where(p => !IsBareUnit(p) && AgencyStreetOf(p) == "s_start").ToList();
 
             Place hardware = pool.FirstOrDefault(p => p.Business == "五金");
@@ -426,7 +395,7 @@ namespace PCShopSell.Core.Session
             if (Lease == null && PendingLease == null && !_listings.Any(l => l.OpenDay <= today && l.Size == ShopSize.Small))
             {
                 Place start = City.PlayerShop();
-                if (!Listed(start)) AddListing(start, today, today + 60, ShopRent);
+                if (!Listed(start)) AddListing(start, today, today + 60);
             }
         }
 
@@ -435,6 +404,7 @@ namespace PCShopSell.Core.Session
         private void SaveRealty(SaveData d)
         {
             d.agencyStreetVersion = 1;
+            d.shopFootfallVersion = 1;
             d.shopState = Lease != null ? 1 : 2;
             if (Lease != null)
             {
@@ -507,7 +477,7 @@ namespace PCShopSell.Core.Session
                 if (!City.HasPlace(l.place)) continue;
                 _listings.Add(new ShopListing
                 {
-                    PlaceId = l.place, Size = (ShopSize)l.size, Rent = Money.FromCents(l.rentCents), OpenDay = l.openDay, CloseDay = l.closeDay,
+                    PlaceId = l.place, Size = (ShopSize)l.size, Rent = d.shopFootfallVersion<1 && !IsPendingShop(City.GetPlace(l.place)) ? ShopRentQuote(City.GetPlace(l.place)) : Money.FromCents(l.rentCents), OpenDay = l.openDay, CloseDay = l.closeDay,
                 });
             }
             if (d.agencyStreetVersion < 1) SeedStreetListings(Clock.Today.TotalDays);
