@@ -89,7 +89,7 @@ namespace PCShopSell.Game.UI
                 QuantityStepper(w, row, "wholesale_" + part.Id, n, 0, 1000, 1, value => _cart[part.Id] = (int)value);
             }
             RectTransform orow = Ui.Row(c, 46);
-            string room = _onlineToHome ? "送家里不占店里仓位" : $"店里仓位还空 {S.PlayerShop.Stock.FreeSpace:0.#} 格";
+            string room = _onlineToHome ? "家中后仓容量不限" : "店铺后仓容量不限";
             Ui.Size(Ui.Label(orow, $"合计 {total}（含运费 {Online1788.ShippingFee}） · {space:0.#} 格　送到{(_onlineToHome ? "家里" : "店里")}　{room}", 16), -1, -1, 1);
             Ui.Size(Ui.Button(orow, "下单", () =>
             {

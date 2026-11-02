@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.World;
@@ -19,8 +19,8 @@ namespace PCShopSell.Core.Session
     /// </summary>
     public sealed class Officer
     {
-        public const double PatrolSpeed = 2;
-        public const double ChaseSpeed = 8.25 * Vehicles.StreetSpeedMultiplier;
+        public const double PatrolSpeed = 2 * Vehicles.WalkingSpeedMultiplier;
+        public const double ChaseSpeed = 8.25 * Vehicles.StreetSpeedMultiplier * Vehicles.WalkingSpeedMultiplier;
         public const double SightRange = 13;
         public const double SightHalfAngleDeg = 40;
         public const double CatchDistance = 1.3;

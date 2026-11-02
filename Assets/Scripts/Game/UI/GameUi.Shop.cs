@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -22,28 +22,59 @@ namespace PCShopSell.Game.UI
             Pricing,
             Orders,
             Renovate,
-            Upgrades,
             Staff,
         }
 
         private static readonly (ShopTab tab, string name)[] Tabs =
         {
             (ShopTab.Counter, "柜台"), (ShopTab.Stock, "库存"), (ShopTab.Pricing, "定价"),
-            (ShopTab.Orders, "订单"), (ShopTab.Renovate, "装修"), (ShopTab.Upgrades, "升级"), (ShopTab.Staff, "招人"),
+            (ShopTab.Orders, "订单"), (ShopTab.Renovate, "装修"), (ShopTab.Staff, "招人"),
         };
 
         private RectTransform _dock;
         private RectTransform _dockContent;
         private readonly List<(Button b, ShopTab tab)> _tabButtons = new List<(Button, ShopTab)>();
         private ShopTab _tab = ShopTab.Counter;
+        private Button _shopDockToggle;
+        private bool _dockCollapsed;
+        private string _dockShopId;
+
+        private void BuildShopDockToggle(Transform parent)
+        {
+            _shopDockToggle=Ui.Button(parent,"收起店铺面板 ▴",ToggleShopDock,17);
+            _shopDockToggle.name="ShopDockToggle";
+            ((RectTransform)_shopDockToggle.transform).Anchor(1,1,1,1,-200,-112,12,74);
+            _shopDockToggle.gameObject.SetActive(false);
+        }
+        private void ToggleShopDock()
+        {
+            if(!S.InPlayerShop||S.IsOwnedVenue(S.CurrentPlace)||_ctrl.Placing)return;
+            _dockCollapsed=DockOpen;
+            if(_dockCollapsed)CloseDock();else OpenDock();
+            RefreshShopDockVisibility();
+        }
+        private void RefreshShopDockVisibility()
+        {
+            bool inside=S.InPlayerShop&&!S.IsOwnedVenue(S.CurrentPlace);
+            bool visible=inside&&!_ctrl.Placing&&!S.IsGameOver&&!MainMenuOpen;
+            if(_shopDockToggle!=null)_shopDockToggle.gameObject.SetActive(visible);
+            if(!inside){CloseDock();_dockShopId=null;_dockCollapsed=false;return;}
+            if(_dockShopId!=S.CurrentShop.Place.Id){_dockShopId=S.CurrentShop.Place.Id;_dockCollapsed=false;}
+            if(!visible){CloseDock();return;}
+            if(!_dockCollapsed&&!DockOpen)OpenDock();
+            if(_shopDockToggle!=null)_shopDockToggle.GetComponentInChildren<Text>().text=DockOpen?"收起店铺面板 ▴":"展开店铺面板 ▾";
+        }
 
         public bool DockOpen => _dock != null;
 
         public void OpenDock()
         {
+            if(S.IsOwnedVenue(S.CurrentPlace)){OpenVenueManagement(S.CurrentPlace);return;}
+            if(!S.InPlayerShop)return;
+            _dockCollapsed=false;_dockShopId=S.CurrentShop.Place.Id;
             if (_dock != null) return;
             Image panel = Ui.Panel(_dockCanvas.transform, "ShopDock", Ui.PanelBg);
-            _dock = panel.rectTransform.Anchor(1, 0, 1, 1, -600, 70, 10, 74);
+            _dock = panel.rectTransform.Anchor(1, 0, 1, 1, -600, 70, 10, 120);
 
             RectTransform tabs = Ui.Rect(_dock, "Tabs").Anchor(0, 1, 1, 1, 8, -54, 8, 8);
             var h = tabs.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -110,11 +141,11 @@ namespace PCShopSell.Game.UI
         }
 
         /// <summary>自动化冒烟用：切换商店面板的标签页（按枚举序号）。</summary>
-        public int DebugTabCount => System.Enum.GetValues(typeof(ShopTab)).Length;
+        public int DebugTabCount => Tabs.Length;
 
         public void DebugSelectTab(int index)
         {
-            if (_dock != null) SelectTab((ShopTab)index);
+            if (_dock != null&&index>=0&&index<Tabs.Length) SelectTab(Tabs[index].tab);
         }
 
         private void SelectTab(ShopTab tab)
@@ -133,11 +164,19 @@ namespace PCShopSell.Game.UI
                 CloseDock();
                 return;
             }
+            // Keep the current controls alive while the player is choosing or scrolling a dropdown.
+            if (_dock.GetComponentsInChildren<ChoiceDropdown>().Any(choice=>choice.IsChoiceOpen)) return;
+            if((_tab==ShopTab.Stock || _tab==ShopTab.Pricing) && !AnyModalOpen && _stockViewSignature!=StockViewSignature())
+            {RebuildDock();return;}
             if (_tab == ShopTab.Counter || (_tab == ShopTab.Staff &&
                 (_staffRefreshMinute != S.Clock.Now.TotalMinutes || _staffCandidateCount != S.Candidates.Count))) RebuildDock();
         }
 
         private ShopTab? _scrollTab;
+        private string _stockViewSignature;
+        private string StockViewSignature()=>S.CurrentShop.Place.Id+"|"+S.RetailKind+"|"
+            +string.Join(";",S.PlayerShop.Stock.Lines().Select(l=>l.Part.Id+":"+l.Boxed+":"+l.Count))+"|"
+            +string.Join(";",S.PlayerShop.Stock.GoodsLines().Select(l=>l.Key+":"+l.Value));
 
         public void RebuildDock()
         {
@@ -159,11 +198,11 @@ namespace PCShopSell.Game.UI
                 case ShopTab.Pricing: BuildPricing(); break;
                 case ShopTab.Orders: BuildOrders(); break;
                 case ShopTab.Renovate: BuildRenovate(); break;
-                case ShopTab.Upgrades: BuildUpgrades(); break;
                 case ShopTab.Staff: BuildStaff(); break;
             }
             Ui.RestoreScroll(_dock, _dock, scrolled);
             if (scrolled == null) _dockContent.anchoredPosition = Vector2.zero;
+            if(_tab==ShopTab.Stock || _tab==ShopTab.Pricing)_stockViewSignature=StockViewSignature();
         }
 
         private Transform C => _dockContent;
@@ -219,7 +258,10 @@ namespace PCShopSell.Game.UI
             ShopSimulation shop = S.PlayerShop;
             bool fitBanner = !S.ShopFitted || S.IsRenovating;
             FitBanner(C);
-            Ui.Size(Ui.Button(C,"本店主售："+RetailShopTypes.Name(S.RetailKind)+" · 点击更改",OpenRetailTypeChooser,18,Ui.ButtonHot),-1,42);
+            var management=Ui.Row(C,42,6);
+            Ui.Size(Ui.Button(management,"本店主售："+RetailShopTypes.Name(S.RetailKind)+" · 点击更改",OpenRetailTypeChooser,18,Ui.ButtonHot),-1,42,1).name="ShopMainCategory";
+            var closeShop=Ui.Size(Ui.Button(management,S.CurrentShop.OwnsProperty?"结束自营":"退租店铺",()=>ConfirmCloseShop(S.CurrentShop),16,Ui.Warn),110,42);
+            closeShop.name="CloseShopCounter";
             Line(C, $"今日进店 {shop.TodayCustomers} 人 · 流失 {shop.TodayLost} 人 · 营业额 {shop.TodaySales}", 18);
             Line(C, $"店里 {shop.ActiveCustomers.Count} 位顾客，{shop.Queue.Count} 位在排队结账（{PaymentText(shop.Accepted)}）", 17, Ui.Dim);
             ShopHoursRow(shop);
@@ -240,16 +282,17 @@ namespace PCShopSell.Game.UI
                 ShopCustomer cust = c;
                 RectTransform row = Ui.Row(list, 44);
                 long waited = c.WaitingSince.MinutesUntil(S.Clock.Now);
-                string patience = waited >= shop.Settings.PatienceMinutes - 12 ? $"<color=#D79780>等了 {waited} 分钟</color>" : $"等了 {waited} 分钟";
+                double? seconds=shop.CheckoutElapsedSeconds(c);
+                string patience=seconds.HasValue?(seconds.Value>=12?$"<color=#D79780>已等 {seconds.Value:0} 秒，请尽快结账</color>":$"已等 {seconds.Value:0} 秒"):$"等了 {waited} 游戏分钟";
                 Ui.Size(Ui.Label(row, $"{c.ItemName}（{(c.DisplayTier >= 0 ? "展示机" : c.GoodsId != null ? "杂货" : c.ItemBoxed ? "盒装" : "散件")}） <color=#A9C9A9>{c.Spend}</color>\n<size=14>{patience}</size>", 17), 360);
                 Ui.Size(Ui.Button(row, "结账", () => _ctrl.Checkout(cust.Id), 18, Ui.ButtonHot, atCounter), 100);
             }
-            if (shop.Queue.Count == 0) Ui.Size(Ui.Label(list, "没人排队。顾客挑好货会过来，等太久就走。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
+            if (shop.Queue.Count == 0) Ui.Size(Ui.Label(list, "没人排队。顾客挑好货会过来，现场等结账至少约 15 秒（暂停不计）。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
 
             int orders = shop.Orders.Count;
             if (orders > 0) Line(C, $"有 {orders} 个订单等你处理（去“订单”页）", 18, Ui.Warn);
             if (S.Online.Pending.Count > 0) Line(C, $"1788 有 {S.Online.Pending.Count} 单在路上，明天 10:00 送到", 17, Ui.Dim);
-            Line(C, $"库存 {shop.Stock.UsedSpace:0.#}/{shop.Stock.Capacity:0} 格 · 全局加价 {shop.Markup:0.00}×", 17, Ui.Dim);
+            Line(C, $"后仓容量不限 · 已存 {shop.Stock.UsedSpace:0.#} 格 · 全局加价 {shop.Markup:0.00}×", 17, Ui.Dim);
 
             Ui.Size(Ui.Button(C, "经营报表（近 14 天收入曲线）", OpenReportWindow, 18), -1, 40);
         }
@@ -260,8 +303,7 @@ namespace PCShopSell.Game.UI
         {
             BuildRetailLinks(C);
             ShopSimulation shop = S.PlayerShop;
-            Line(C, $"后仓仓位 {shop.Stock.UsedSpace:0.#} / {shop.Stock.Capacity:0} 格（在途 {S.Online.PendingSpace():0.#} 格）　顾客只买货架上摆着的", 19);
-            Ui.Bar(C, shop.Stock.Capacity > 0 ? (float)(shop.Stock.UsedSpace / shop.Stock.Capacity) : 0f, Ui.Accent, 280, 10);
+            Line(C, $"后仓容量不限 · 已存 {shop.Stock.UsedSpace:0.#} 格（在途 {S.Online.PendingSpace():0.#} 格） · 顾客只买已陈列的商品", 19);
 
             // 货架：一行一个，点“选择摆什么”弹出选择，点“查看”看货架上摆的样子
             Line(C, "—— 货架（每个货架摆一类货，顾客只买货架上摆着的）——", 16, Ui.Dim);
@@ -287,152 +329,123 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(srow, "查看", () => OpenShelfWindow(layoutIdx), 15, sk == null ? Ui.ButtonBg : Ui.ButtonHot, sk != null), 66);
             }
 
-            // 店里现有的东西：只列有货的，数量写明白（没有的不显示）
-            Line(C, "—— 店里现有（件）——", 16, Ui.Dim);
-            PartCategory[] cats = { PartCategory.Gpu, PartCategory.Cpu, PartCategory.Memory, PartCategory.Storage, PartCategory.PowerCase, PartCategory.Motherboard };
-            bool anything = false;
-            foreach (PartCategory cat in cats)
+            var partLines=shop.Stock.Lines().Where(l=>l.Count>0).ToArray();
+            var goodsLines=shop.Stock.GoodsLines().Where(l=>l.Value>0).ToArray();
+            var mainGoods=goodsLines;
+            int mainCount=mainGoods.Sum(l=>l.Value)+partLines.Sum(l=>l.Count);
+            void PartSummary(Transform parent)
             {
-                int boxedN = 0, looseN = 0;
-                foreach (StockLine sl in shop.Stock.Lines())
+                foreach(var group in partLines.GroupBy(l=>l.Part.Category))
                 {
-                    if (sl.Part.Category != cat) continue;
-                    if (sl.Boxed) boxedN += sl.Count; else looseN += sl.Count;
+                    int boxed=group.Where(l=>l.Boxed).Sum(l=>l.Count),loose=group.Where(l=>!l.Boxed).Sum(l=>l.Count);
+                    Line(parent,PartCatalog.CategoryName(group.Key)+$" · 共 {boxed+loose} 件（盒装 {boxed} / 散件 {loose}）",16);
                 }
-                int total = boxedN + looseN;
-                if (total == 0) continue;
-                anything = true;
-                RectTransform sum = Ui.Row(C, 32, 4);
-                Ui.Size(Ui.Label(sum, "<b>" + PartCatalog.CategoryName(cat) + "</b>", 16, TextAnchor.MiddleLeft), 64);
-                if (boxedN > 0)
-                {
-                    Image bBadge = Ui.Panel(sum, "Boxed", CardboardColor);
-                    Ui.Size(bBadge, 76, 26);
-                    Ui.Label(bBadge.transform, "整盒 " + boxedN, 14, TextAnchor.MiddleCenter, new Color(0.25f, 0.15f, 0.05f)).rectTransform.Fill(1);
-                }
-                if (looseN > 0)
-                {
-                    Image lBadge = Ui.Panel(sum, "Loose", new Color(0.36f, 0.5f, 0.68f));
-                    Ui.Size(lBadge, 76, 26);
-                    Ui.Label(lBadge.transform, "散件 " + looseN, 14, TextAnchor.MiddleCenter, Color.white).rectTransform.Fill(1);
-                }
-                int onShelf = shop.ShelfFillOf(cat).Total;
-                Ui.Size(Ui.Label(sum, $"共 {total} 件　" + (S.ShelvesOfKind(ShelfKinds.ForCategory(cat).Id) == 0 ? "<color=#D79780>没有货架，卖不出去</color>" : $"货架上 {onShelf} 件"), 15, TextAnchor.MiddleLeft, Ui.Dim), 260);
             }
-            foreach (ShelfKind gk in ShelfKinds.GoodsKinds)
+            void GoodsSummary(Transform parent,IEnumerable<KeyValuePair<string,int>> lines)
             {
-                int gTotal = gk.GiftIds.Sum(id => shop.Stock.GoodsCount(id));
-                if (gTotal == 0) continue;
-                anything = true;
-                RectTransform sum = Ui.Row(C, 32, 4);
-                Ui.Size(Ui.Label(sum, "<b>" + gk.Name + "</b>", 16, TextAnchor.MiddleLeft), 64);
-                Ui.Size(Ui.Label(sum, $"共 {gTotal} 件　" + (S.ShelvesOfKind(gk.Id) == 0 ? "<color=#D79780>没有货架，卖不出去</color>" : $"货架上 {shop.ShelfFillOf(gk).Total} 件"), 15, TextAnchor.MiddleLeft, Ui.Dim), 420);
-            }
-            if (!anything) Line(C, "店里一件货都没有。", 16, Ui.Dim);
-            Line(C, "盒装占 1 格、卖得贵；拆成散件占 0.5 格但便宜，拆了不能复原。", 14, Ui.Dim);
-            Line(C, "—— 明细 ——", 16, Ui.Dim);
-            if (_ctrl.InInterior)
-                Ui.Size(Ui.Button(C, $"店里纸箱 ×{S.ShopBoxes}（{S.ShopLocker.WeightKg:0.##}/{S.ShopLockerLimitKg:0} 千克）" + (S.ShopTemp.IsEmpty ? "" : "　临时存放有东西"), OpenShopLockerWindow, 17), -1, 42);
-            RectTransform list = Ui.Scroll(C, 250);
-            foreach (StockLine l in shop.Stock.Lines())
-            {
-                StockLine line = l;
-                RectTransform row = Ui.Row(list, 58);
-                Ui.Size(ProductText(row, ProductLabel($"{l.Part.Name} <color=#ABB5A8>{(l.Boxed ? "盒装" : "散件")}</color> ×{l.Count}", PartUnitKg(l.Part, l.Boxed)), 17), 280);
-                Ui.Size(Ui.Label(row, $"售 {shop.PriceOf(l.Part, l.Boxed)}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
-                if (l.Boxed)
+                foreach(var group in lines.GroupBy(l=>ShelfKinds.ForGift(l.Key)))
                 {
-                    Ui.Size(Ui.Button(row, "拆 1", () =>
+                    int onShelf=group.Sum(l=>shop.OnShelfGoods(l.Key));
+                    Line(parent,(group.Key?.Name??"商品")+$" · 共 {group.Sum(l=>l.Value)} 件 · 已陈列 {onShelf} 件",16);
+                }
+            }
+            void PartRows(Transform parent)
+            {
+                foreach(var item in partLines)
+                {
+                    var line=item;
+                    var row=Ui.Row(parent,62,4);row.name="StockPart_"+line.Part.Id;
+                    Ui.Size(ProductText(row,ProductLabel(line.Part.Name+$" · {(line.Boxed?"盒装":"散件")} ×{line.Count}",PartUnitKg(line.Part,line.Boxed)),16),-1,-1,1);
+                    Ui.Size(Ui.Label(row,"售 "+shop.PriceOf(line.Part,line.Boxed),16,TextAnchor.MiddleLeft,Ui.Good),100);
+                    if(line.Boxed)
                     {
-                        S.Unbox(line.Part, 1);
-                        RebuildDock();
-                    }, 16), 60);
-                    Ui.Size(Ui.Button(row, "全拆", () =>
-                    {
-                        S.Unbox(line.Part, line.Count);
-                        RebuildDock();
-                    }, 16), 60);
+                        Ui.Size(Ui.Button(row,"拆 1",()=>{S.Unbox(line.Part,1);RebuildDock();},16),60);
+                        Ui.Size(Ui.Button(row,"全拆",()=>{S.Unbox(line.Part,line.Count);RebuildDock();},16),60);
+                    }
                 }
             }
-            foreach (var kv in shop.Stock.GoodsLines())
+            void GoodsRows(Transform parent,IEnumerable<KeyValuePair<string,int>> lines)
             {
-                string gid = kv.Key;
-                RectTransform row = Ui.Row(list, 58);
-                Ui.Size(ProductText(row, ProductLabel($"{Gifts.Get(gid).Name} <color=#ABB5A8>杂货</color> ×{kv.Value}", Gifts.Get(gid).WeightKg), 17), 280);
-                Ui.Size(Ui.Label(row, $"售 {shop.GoodsPriceOf(gid)}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
-                Ui.Size(Ui.Button(row, "收回 1", () =>
+                foreach(var item in lines)
                 {
-                    S.UnlistGoods(gid, 1);
-                    RebuildDock();
-                }, 16), 80);
+                    string id=item.Key;var product=Gifts.Get(id);
+                    var row=Ui.Row(parent,62,4);row.name="StockGoods_"+id;
+                    Ui.Size(ProductText(row,ProductLabel(product.Name+$" ×{item.Value}",product.WeightKg,ShelfKinds.ForGift(id)?.Name),16),-1,-1,1);
+                    Ui.Size(Ui.Label(row,"售 "+shop.GoodsPriceOf(id),16,TextAnchor.MiddleLeft,Ui.Good),100);
+                    Ui.Size(Ui.Button(row,"收回 1",()=>{S.UnlistGoods(id,1);RebuildDock();},16),80);
+                }
             }
-            if (shop.Stock.IsEmpty) Ui.Size(Ui.Label(list, "空空如也。点击上方“进货渠道”查看适合本店的货源，也可安排采购员。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
+            Line(C,"—— 实际商品库存 · "+RetailShopTypes.Name(S.RetailKind)+" ——",16,Ui.Accent);
+            GoodsSummary(C,mainGoods);
+            PartSummary(C);
+            if(mainCount==0)Line(C,"店里暂无商品库存，可从进货渠道采购后陈列。",16,Ui.Dim);
+            if(partLines.Length>0)Line(C,"配件可保留盒装销售，或拆成散件；拆包不可复原。",14,Ui.Dim);
+            var list=Ui.Scroll(C,250);list.parent.parent.name="MainStockList";
+            GoodsRows(list,mainGoods);
+            PartRows(list);
+            if(mainCount==0)Line(list,"尚无可展示的商品。",16,Ui.Dim);
         }
 
         // ---------- 定价 ----------
 
         private void BuildPricing()
         {
-            ShopSimulation shop = S.PlayerShop;
-            Line(C, "售价 = 今日市场价 × 加价倍率（盒装再贵 12%）。可以给每件配件单独定价，没单独定的跟全局。", 15, Ui.Dim);
-            Text valueText = Line(C, "", 20, Ui.Good);
-            var refreshers = new List<System.Action>();
-
+            var shop=S.PlayerShop;
+            var parts=shop.Stock.Lines().Where(l=>l.Count>0).ToArray();
+            var goods=shop.Stock.GoodsLines().Where(l=>l.Value>0).ToArray();
+            Line(C,RetailShopTypes.Name(S.RetailKind)+" · 仅列实际在库商品，可混合经营",17,Ui.Accent);
+            Line(C,"可逐件调价，点“确定”生效；未单独定价的商品跟随统一加价。",15,Ui.Dim);
+            var global=Line(C,"",19,Ui.Good);
+            global.name="PricingPurchaseIntentSummary";
+            global.Tip("购买意愿按当前在库商品件数汇总，包含每件商品的实际定价、销售员和镜子加成。具体商品以各自的购买意愿为准；季节、预算和陈列仍会影响实际成交。");
+            var refreshers=new List<System.Action>();
             void RefreshAll()
             {
-                valueText.text = $"全局加价 {shop.Markup:0.00}×　顾客愿买概率约 {System.Math.Min(1,ShopSettings.BuyChance(shop.Markup)+shop.SalesPurchaseIntentBonus) * 100:0}%";
-                foreach (System.Action r in refreshers) r();
+                long count=goods.Sum(g=>(long)g.Value)+parts.Sum(p=>(long)p.Count);
+                double total=goods.Sum(g=>g.Value*shop.GoodsPurchaseIntentAtPrice(g.Key,shop.GoodsPriceOf(g.Key).Yuan))
+                    +parts.Sum(p=>p.Count*shop.PartPurchaseIntentAtPrice(p.Part,p.Boxed,shop.PriceOf(p.Part,p.Boxed).Yuan));
+                global.text=$"统一加价 {shop.Markup:0.00}× · "+(count>0?$"参考购买意愿 {total/count*100:0}%":"购买意愿：暂无商品");
+                foreach(var refresh in refreshers)refresh();
             }
-
-            Ui.Slider(C, 0.9f, 1.6f, (float)shop.Markup, v =>
+            Ui.Slider(C,.9f,1.6f,(float)shop.Markup,v=>{S.SetMarkup(Mathf.Round(v*20)/20f);RefreshAll();}).name="GlobalMarkupSlider";
+            var list=Ui.Scroll(C,330);
+            void ProductRow(string key,string name,double kg,int count,System.Func<Money> price,System.Func<double> intent,
+                System.Action edit,System.Func<bool> own,System.Action follow)
             {
-                S.SetMarkup(Mathf.Round(v * 20) / 20f);
-                RefreshAll();
-            });
-
-            RectTransform list = Ui.Scroll(C, 330);
-            foreach (PartDef part in PartCatalog.All)
-            {
-                PartDef p = part;
-                RectTransform row = Ui.Row(list, 44, 4);
-                Text name = Ui.Label(row, "", 15);
-                Ui.Size(name, 250);
-                Text mk = Ui.Label(row, "", 16, TextAnchor.MiddleCenter);
-                Button minus = null, plus = null, follow = null;
-
-                void Refresh()
-                {
-                    bool own = shop.HasPartMarkup(p);
-                    double m = shop.MarkupOf(p);
-                    name.text = $"<b>{p.Name}</b>\n<size=13><color=#ABB5A8>市价 {S.Market.PriceOf(p)} → 盒 {shop.PriceOf(p, true)} / 散 {shop.PriceOf(p, false)}</color></size>";
-                    mk.text = own ? $"{m:0.00}×" : $"<color=#ABB5A8>{m:0.00}×</color>";
-                    follow.interactable = own;
-                }
-
-                minus = Ui.Button(row, "−", () =>
-                {
-                    shop.SetPartMarkup(p, Mathf.Round((float)shop.MarkupOf(p) * 20 - 1) / 20f);
-                    Refresh();
-                }, 18);
-                Ui.Size(mk, 64);
-                Ui.Size(minus, 38);
-                plus = Ui.Button(row, "+", () =>
-                {
-                    shop.SetPartMarkup(p, Mathf.Round((float)shop.MarkupOf(p) * 20 + 1) / 20f);
-                    Refresh();
-                }, 18);
-                Ui.Size(plus, 38);
-                follow = Ui.Button(row, "跟随", () =>
-                {
-                    shop.SetPartMarkup(p, null);
-                    Refresh();
-                }, 14);
-                Ui.Size(follow, 62);
-                mk.transform.SetSiblingIndex(minus.transform.GetSiblingIndex() + 1);
+                var row=Ui.Row(list,86,6);row.name="Pricing_"+key;
+                Ui.Size(ProductText(row,ProductLabel(name,kg,$"在库 {count} 件"),16),-1,-1,1);
+                var current=Ui.Size(Ui.Label(row,"",16,TextAnchor.MiddleLeft,Ui.Good),104);
+                var editButton=Ui.Size(Ui.Button(row,"调价",edit,16,Ui.ButtonHot),62,38);editButton.name="EditPrice_"+key;
+                var followButton=Ui.Size(Ui.Button(row,"跟随",()=>{follow();RefreshAll();},15),56,38);
+                void Refresh(){current.text=price()+$"\n<size=14>购买意愿 {intent()*100:0}%</size>";followButton.interactable=own();}
                 refreshers.Add(Refresh);
             }
+            foreach(var item in goods)
+            {
+                string id=item.Key;var product=Gifts.Get(id);
+                ProductRow("goods_"+id,product.Name,product.WeightKg,item.Value,()=>shop.GoodsPriceOf(id),
+                    ()=>shop.GoodsPurchaseIntentAtPrice(id,shop.GoodsPriceOf(id).Yuan),
+                    ()=>OpenWindow("调价 · "+product.Name,600,300,w=>
+                    {
+                        Para(w.Content,product.Name+" · 调整时预览购买意愿，确定后保存售价。",17);
+                        Ui.Size(ShelfSaleTag(w,w.Content,"goods_"+id,shop.GoodsPriceOf(id).Yuan,shop.GoodsPriceRange(id),
+                            value=>shop.GoodsPurchaseIntentAtPrice(id,value),value=>{shop.SetGoodsSalePrice(id,value);RebuildDock();}),-1,100);
+                    }),()=>shop.HasGoodsMarkup(id),()=>shop.SetGoodsMarkup(id,null));
+            }
+            foreach(var item in parts)
+            {
+                var line=item;var part=line.Part;bool boxed=line.Boxed;string key=part.Id+(boxed?"_boxed":"_loose");
+                ProductRow(key,part.Name+(boxed?" · 盒装":" · 散件"),PartUnitKg(part,boxed),line.Count,()=>shop.PriceOf(part,boxed),
+                    ()=>shop.PartPurchaseIntentAtPrice(part,boxed,shop.PriceOf(part,boxed).Yuan),
+                    ()=>OpenWindow("调价 · "+part.Name,600,300,w=>
+                    {
+                        Para(w.Content,part.Name+" · "+(boxed?"盒装":"散件"),17);
+                        Ui.Size(ShelfSaleTag(w,w.Content,key,shop.PriceOf(part,boxed).Yuan,shop.PartPriceRange(part,boxed),
+                            value=>shop.PartPurchaseIntentAtPrice(part,boxed,value),value=>{shop.SetPartSalePrice(part,boxed,value);RebuildDock();}),-1,100);
+                    }),()=>shop.HasPartMarkup(part),()=>shop.SetPartMarkup(part,null));
+            }
+            if(goods.Length==0 && parts.Length==0)Line(list,"店里暂无商品库存，进货后会在这里显示。",17,Ui.Dim);
             RefreshAll();
-            Line(C, "加价越高赚得越多，但更多顾客会嫌贵走掉；热门配件可以压低价引流，冷门高价配件可以拉高。", 15, Ui.Dim);
         }
 
         // ---------- 经营报表 ----------
@@ -526,13 +539,14 @@ namespace PCShopSell.Game.UI
         {
             Para(C, "店里还能添的设备。这里只是清单，要去对应的店里买，买了当天装好，搬店也跟着走。", 16, Ui.Dim);
             Para(C, $"现在：{GameSession.SizeName(S.PlayerShop.Size)}，月租 {S.CurrentShopRent}。想换大铺子或者换个好位置：去「安居房产中介」再签一间，打电话叫货车把货搬过去，再回这里退租。", 15, Ui.Accent);
-            if (S.MyShopCount > 1)
+            if (S.CurrentShop.Rented)
             {
                 OwnedShop shop = S.CurrentShop;
                 string why = S.CloseShopBlocker(shop);
-                var close = Ui.Button(C, why == null ? $"退租这家店（押金 {shop.Lease.Deposit} 退回）…" : "退租：" + why, () => ConfirmCloseShop(shop), 16, Ui.ButtonBg, why == null);
+                var close = Ui.Button(C, shop.OwnsProperty?"结束这家店的自营…":$"退租这家店（押金 {shop.Lease.Deposit} 不退）…", () => ConfirmCloseShop(shop), 16, Ui.ButtonBg);
                 close.name = "CloseShop";
                 Ui.Size(close, -1, 40);
+                if(why!=null)Line(C,"退租前需处理："+why,15,Ui.Dim);
             }
             RectTransform list = Ui.Scroll(C, 400);
             foreach (ShopUpgradeDef u in ShopUpgrades.All.Where(x => x.Offered))
@@ -555,6 +569,7 @@ namespace PCShopSell.Game.UI
             _staffRefreshMinute = S.Clock.Now.TotalMinutes;
             _staffCandidateCount = S.Candidates.Count;
             Line(C, "选好岗位和门店后统一确认聘用。岗位可换，跨店次日生效。", 16, Ui.Dim);
+            Line(C,"本店员工 "+S.StaffCommitted(S.CurrentShop)+" / "+S.ShopStaffLimit+" 人（含待安排及调入预留），同一岗位可安排多人。",17,Ui.Accent);
             Line(C, "已聘员工的岗位、班次、培训和采购统一在顶栏“员工”中管理。", 15, Ui.Dim);
             Ui.Size(Ui.Button(C, S.JobAdDay >= 0 ? "招聘告示已贴，明天 9:00 再来一批人" : $"再贴招聘告示（{GameSession.JobAdFee}）", () =>
             {

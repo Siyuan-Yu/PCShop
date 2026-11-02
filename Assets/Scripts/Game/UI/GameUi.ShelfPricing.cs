@@ -28,8 +28,8 @@ namespace PCShopSell.Game.UI
                     double bonus=S.PlayerShop.SalesPurchaseIntentBonus*100;
                     double mirror=MirrorBonus();
                     demand.text=mirror>0
-                        ?$"愿买 {chance:0}% · {(bonus>0?"加成":"镜子")}+{bonus+mirror:0.#}"
-                        :bonus>0?$"愿买 {chance:0}% · 销售+{bonus:0.#}":$"购买意愿约 {chance:0}%";
+                        ?$"购买意愿 {chance:0}% · {(bonus>0?"加成":"镜子")}+{bonus+mirror:0.#}"
+                        :bonus>0?$"购买意愿 {chance:0}% · 销售+{bonus:0.#}":$"购买意愿约 {chance:0}%";
                 }
                 if (confirm != null) confirm.interactable = value != price;
             }

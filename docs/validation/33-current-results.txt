@@ -1,0 +1,36 @@
+2026-11-02 当前实现归档验证
+
+最新针对性联合EditMode报告：33-warehouse-box-tests.xml
+原报告：_ci_city_life/warehouse-box-complete.xml
+执行时间：2026-11-02 16:28:39–16:29:26（Asia/Shanghai）
+结果：126 total / 126 passed / 0 failed / Passed
+
+包含：WarehouseBoxInteractionTests、BuyerHistoryTests、ShopDockInteractionTests、
+WarehouseCapacityTests、EmployeeAssignmentTests、MultiShopTests、CheckoutPatienceTests、
+PackTests、GoodsTests、VenueBusinessTests、ShopSimulationTests，
+ShopManageTests的实际库存定价用例，以及指定采购清单/周期/存档/家具目录回归。
+准确用例名单及结果以同目录NUnit XML为准。
+
+这不是全仓库测试总数；未把旧报告的测试数字相加为新结果。
+之前较广采购检查的4项旧失败在关闭本次收据与归档写入后同样复现。
+纸箱目录项随后随恢复纸箱出售在最新126项中通过；其余两项旧现金储备预期和
+候选人跨日保留预期未在此126项内重跑，不宣称全套回归已通过。
+
+本次归档时重新运行：python tools/check-city-v7.py
+PASS: 10 streets / 4 agency districts / 8 stations / 12 tiered venues / 4 homes
+PASS: all graph edges orthogonal, every node/place reachable, all legacy IDs retained, no interactive building overlap
+Nodes: 173 edges: 209 places: 90 compound buildings: 227
+PASS: residential density floors, every scenery footprint clear of roads/door aisles/actual buildings/other scenery
+Rendered housing scenery: s_oldhomes 56, s_services 46, s_sports 31, s_newtown 11,
+s_start 10, s_market 13, s_creative 12, s_night 16, s_electronics 8, s_expo 24; total 227
+PASS: each housing district has at least 3 building widths and heights
+
+已有Windows构建：Windows-20261102-160929 / PCShop-Windows-20261102-160929.zip
+WINDOWS_BUILD_RESULT Succeeded bytes=92055448
+压缩包：48,457,681字节；已检查包含PCShop.exe和PCShop_Data/Managed/PCShopSell.Core.dll。
+仅做过无图形启动日志检查，不表示完成图形试玩。
+该包包含进货员界面/历史，不包含之后完成的纸箱B/F交互；此次归档不重新打包。
+
+模型截图：docs/previews/current-models/，为既有拍摄时版本。
+已有截图运行记录：CITY MODEL CAPTURE RESULT errors=0。
+未据此宣称后续全部模型细节、完整玩法或性能验收通过。

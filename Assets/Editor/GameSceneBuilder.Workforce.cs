@@ -93,7 +93,7 @@ namespace PCShopSell.EditorTools
             Shot("vs1_employees_freight");
             _game.Ui.CloseModalWindows();
             _game.Ui.OpenDock();
-            _game.Ui.DebugSelectTab(6);
+            _game.Ui.DebugSelectTab(5);
             Frame(0);
             Shot("vs1_employees_staff_tab");
             _game.Ui.CloseAllWindows();
@@ -106,7 +106,7 @@ namespace PCShopSell.EditorTools
             s.AdvanceClock(2);
             _game.Ui.CloseAllWindows();
             _game.Ui.OpenDock();
-            _game.Ui.DebugSelectTab(6);
+            _game.Ui.DebugSelectTab(5);
             Frame(0);
             Shot("vs1_employees_recruitment");
             string recruitId = s.Candidates.Last().Id;

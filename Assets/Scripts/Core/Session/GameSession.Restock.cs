@@ -155,7 +155,7 @@ namespace PCShopSell.Core.Session
             foreach (var (part, count) in needs)
             {
                 double each = PCShopSell.Core.Inventory.Stock.SpaceOf(part, true, 1);
-                int fit = each <= 0 ? count : (int)Math.Floor((free + 1e-9) / each);
+                int fit = each <= 0 ? count : (int)Math.Min(count,Math.Floor((free + 1e-9) / each));
                 long price = Math.Max(1, OnlinePrice(store, part).Cents);
                 int n = (int)Math.Min(Math.Min(count, fit), budget / price);
                 if (n <= 0) continue;

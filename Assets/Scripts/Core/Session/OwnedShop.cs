@@ -20,6 +20,7 @@ namespace PCShopSell.Core.Session
         public readonly HashSet<string> Upgrades = new HashSet<string>();
         public readonly Dictionary<string, int> Restock = new Dictionary<string, int>();
         public Employee Employee, Assembler, Buyer, Salesperson;
+        public readonly List<AdditionalShopEmployee> AdditionalEmployees=new List<AdditionalShopEmployee>();
         public bool EmployeeTrained, AutoBuild;
         public bool EmployeeBuilding;
         public int PendingDisplayTier = -1, PendingDisplayMinutes;

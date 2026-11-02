@@ -186,7 +186,7 @@ namespace PCShopSell.Core.Inventory
         public int MaxAddable(PartDef part, bool boxed)
         {
             double per = SpaceOf(part, boxed, 1);
-            return (int)Math.Floor((FreeSpace + Epsilon) / per);
+            return (int)Math.Min(int.MaxValue,Math.Floor((FreeSpace + Epsilon) / per));
         }
 
         public bool TryAdd(PartDef part, bool boxed, int count)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.World;
@@ -8,11 +8,23 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         // A geometry migration does not replay time, payments, inventory or activity stages.
-        // Existing promises retain their timestamps; only their physical route is rebuilt.
+        // Walking routes are subsequently recalibrated so new geometry cannot force sprinting.
         private void MigrateCityGeometry(SaveData data)
         {
             if(City.LayoutVersion<7 || data.cityLayoutVersion>=City.LayoutVersion)return;
             long now=Clock.Now.TotalMinutes;
+            foreach(var person in _cityPeople.Values)
+            {
+                person.WorkPlaceId=City.CanonicalPlaceId(person.WorkPlaceId);
+                person.HomePlaceId=City.CanonicalPlaceId(person.HomePlaceId);
+                person.LocationPlaceId=City.CanonicalPlaceId(person.LocationPlaceId);
+                if(person.Route!=null)person.Route.TargetPlaceId=City.CanonicalPlaceId(person.Route.TargetPlaceId);
+            }
+            for(int i=0;i<_cityFavorites.Count;i++)_cityFavorites[i]=City.CanonicalPlaceId(_cityFavorites[i]);
+            var favorites=_cityFavorites.Distinct().ToArray();_cityFavorites.Clear();_cityFavorites.AddRange(favorites);
+            CityAgencyShortcut=City.CanonicalPlaceId(CityAgencyShortcut);
+            if(CityIntent!=null)CityIntent.TargetPlaceId=City.CanonicalPlaceId(CityIntent.TargetPlaceId);
+
             if(CurrentPlace?.Id=="home" && HomeTier>0)CurrentPlace=Home;
             if(CurrentPlace!=null)PlayerNodeId=CurrentPlace.NodeId;
             Trip=null;ClearEdge();
@@ -52,6 +64,30 @@ namespace PCShopSell.Core.Session
                 }
             }
             foreach(var shop in _shops)shop.Sim.PlayerPresent=CityPlayerCanWork(shop);
+        }
+        private static void EnforceNpcWalkingPace(CityRoute route)
+        {
+            if(route==null||route.Transport!=VehicleKind.Walk||!route.HasPath)return;
+            int minutes=CityTravelTiming.NpcMinutes(route.Meters.Sum(),Vehicles.Walk);
+            route.ArriveMinute=Math.Max(route.ArriveMinute,route.DepartMinute+minutes);
+        }
+        private void NormalizeCityWalkingRoutes()
+        {
+            foreach(var activity in _cityActivities.Where(a=>a.Active))
+            {
+                var route=activity.PlayerVenueRoute;
+                if(route!=null&&route.HasPath&&route.Transport==VehicleKind.Walk)
+                    route.ArriveMinute=Math.Max(route.ArriveMinute,route.DepartMinute+CityTravelTiming.Minutes(route.Meters.Sum(),Vehicles.Walk));
+            }
+            foreach(var trip in _employeeTrips.Where(t=>!t.Returned))
+                NormalizePurchaseWalkingLegs(trip,trip.TravelLegs);
+            foreach(var person in _cityPeople.Values)
+            {
+                EnforceNpcWalkingPace(person.Route);
+                if(person.Route==null)continue;
+                var point=person.Route.Position(Clock.Now.TotalMinutes+Time.FractionalMinute);
+                person.X=point.X;person.Y=point.Y;
+            }
         }
         private void RebaseCityRoute(CityRoute route)
         {

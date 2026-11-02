@@ -71,16 +71,16 @@ namespace PCShopSell.Core.Session
         private Backpack BoxOf(bool shop) => shop ? ShopLocker : HomeBox;
         private Backpack TempOf(bool shop) => shop ? ShopTemp : HomeTemp;
 
-        /// <summary>在这间屋（家 / 当前这家店）摆放时手边能拿来摆的某件家具：临时存放 + 纸箱 + 以前收着的。</summary>
+        /// <summary>在这间屋（家 / 当前这家店）摆放时手边能拿来摆的某件家具：临时存放 + 后仓 + 以前收着的。</summary>
         public int FurnitureToPlace(bool shop, string id) =>
             TempOf(shop).FurnitureCount(id) + BoxOf(shop).FurnitureCount(id) + FurnitureInStock(id);
 
-        /// <summary>在这间屋摆放时能拿来摆的全部家具（临时存放、纸箱里的和以前收着的合在一起）。</summary>
+        /// <summary>在这间屋摆放时能拿来摆的全部家具（临时存放、后仓里的和以前收着的合在一起）。</summary>
         public IEnumerable<KeyValuePair<string, int>> FurnitureToPlaceList(bool shop) =>
             TempOf(shop).FurnitureLines.Concat(BoxOf(shop).FurnitureLines).Concat(FurnitureStock)
                 .GroupBy(kv => kv.Key).Select(g => new KeyValuePair<string, int>(g.Key, g.Sum(kv => kv.Value)));
 
-        /// <summary>家具放进这间屋的纸箱，放不下的进临时存放。返回进临时存放的件数。</summary>
+        /// <summary>家具放进这间屋的后仓，放不下的进临时存放。返回进临时存放的件数。</summary>
         private int StoreFurnitureHere(bool shop, string id, int count) =>
             StoreOrTemp(shop, FurnitureCatalog.Get(id)?.WeightKg ?? 0, count, n => BoxOf(shop).AddFurniture(id, n), n => TempOf(shop).AddFurniture(id, n));
 
@@ -206,7 +206,7 @@ namespace PCShopSell.Core.Session
                         bool toShop = p.ToShop && HasShop;
                         int over = 0;
                         WithShop(toShop ? MainShop : null, () => over = StoreFurnitureHere(toShop, p.Id, p.Count));
-                        string box = toShop ? "店里纸箱" : "纸箱";
+                        string box = toShop ? "店里后仓" : "后仓";
                         what = FurnitureCatalog.Get(p.Id).Name + (p.Count > 1 ? "×" + p.Count : "")
                             + (over <= 0 ? $"（放进了{box}）" : over >= p.Count ? $"（{box}满了，放在临时存放）" : $"（{box}放不下的 {over} 件放在临时存放）");
                         break;
@@ -247,6 +247,7 @@ namespace PCShopSell.Core.Session
 
         private bool CanEdit(bool shop)
         {
+            if(shop&&IsDedicatedVenue(PlayerShopPlace))return Fail("专用场馆保留原用途，不能按普通商铺装修。");
             if (shop)
             {
                 if (!InPlayerShop) return Fail("要在自己的店里才能摆。");
@@ -259,11 +260,12 @@ namespace PCShopSell.Core.Session
 
         public string PlacementError(bool shop, FurnitureDef def, PlacedFurniture cand, int ignore, IReadOnlyList<RectD> extra = null)
         {
+            string limit=ShelfPlacementBlocker(shop,def,ignore);if(limit!=null)return limit;
             RoomSpec room = shop ? ShopRoom : RoomSpec.Home;
             return RoomPlanner.Check(room, LayoutOf(shop), def, cand, ignore, extra);
         }
 
-        /// <summary>把手边的家具摆出来：先用临时存放里的，再用纸箱里的，最后是以前收着的。</summary>
+        /// <summary>把手边的家具摆出来：先用临时存放里的，再用后仓里的，最后是以前收着的。</summary>
         public bool PlaceFromStock(bool shop, string id, PlacedFurniture at, IReadOnlyList<RectD> extra = null)
         {
             id = FurnitureCatalog.Canonical(id);
@@ -294,19 +296,13 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
-        /// <summary>把摆出来的家具收起来：放进这间屋的纸箱，放不下的进临时存放。</summary>
+        /// <summary>把摆出来的家具收起来：放进这间屋的后仓，放不下的进临时存放。</summary>
         public bool StoreFurniture(bool shop, int index)
         {
             List<PlacedFurniture> l = LayoutOf(shop);
             if (index < 0 || index >= l.Count || !CanEdit(shop)) return false;
             if (FurnitureCatalog.Get(l[index].Id)?.Role == FurnitureRole.Fridge && FridgeOf(shop).WeightKg > FridgeLimitKg(shop) - FurnitureCatalog.Get(l[index].Id).FridgeCapacityKg + 1e-9)
                 return Fail("冰箱里还有食物，先取出一些再收起冰箱。不能丢失冷藏食物。");
-            if (FurnitureCatalog.Get(l[index].Id)?.Role == FurnitureRole.Storage)
-            {
-                double used = shop ? ShopLocker.WeightKg : HomeBoxKg;
-                double after = (shop ? ShopLockerLimitKg : HomeBoxLimitKg) - BoxCapacityKg;
-                if (used > after + 1e-9) return Fail($"纸箱里还放着 {used:0.##} 千克东西，收走这个纸箱就只能放 {Math.Max(0, after):0.##} 千克，先拿出来一些。");
-            }
             RememberLayout(shop);
             string id = l[index].Id;
             l.RemoveAt(index);
@@ -549,13 +545,13 @@ namespace PCShopSell.Core.Session
                 if (s.RenovationDay != today.TotalDays) s.Sim.ForcedClosed = false;
             SpoilBackpackFood(today.TotalDays);
             List<string> boxLost = HomeBox.Food.Spoil(today.TotalDays);
-            if (boxLost.Count > 0) Say("纸箱里放坏扔掉了：" + string.Join("、", boxLost) + "。");
+            if (boxLost.Count > 0) Say("后仓里放坏扔掉了：" + string.Join("、", boxLost) + "。");
             List<string> tempLost = HomeTemp.Food.Spoil(today.TotalDays);
             if (tempLost.Count > 0) Say("家里临时存放的放坏扔掉了：" + string.Join("、", tempLost) + "。");
             foreach (OwnedShop s in _shops)
             {
                 List<string> lockerLost = s.Locker.Food.Spoil(today.TotalDays).Concat(s.Temp.Food.Spoil(today.TotalDays)).ToList();
-                if (lockerLost.Count > 0) Say($"{(MyShopCount > 1 ? ShopTitle(s) : "店里")}纸箱里放坏扔掉了：" + string.Join("、", lockerLost) + "。");
+                if (lockerLost.Count > 0) Say($"{(MyShopCount > 1 ? ShopTitle(s) : "店里")}后仓里放坏扔掉了：" + string.Join("、", lockerLost) + "。");
             }
         }
 

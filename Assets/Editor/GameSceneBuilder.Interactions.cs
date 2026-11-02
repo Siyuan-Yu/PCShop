@@ -40,7 +40,7 @@ namespace PCShopSell.EditorTools
             _game.Ui.CloseDock();
             _game.Ui.OpenDock();
             Check(ActiveButtons().Any(b => ButtonText(b).StartsWith("店里纸箱")), "重新开店侧栏记住库存页");
-            _game.Ui.DebugSelectTab(6);
+            _game.Ui.DebugSelectTab(5);
             Check(!ActiveButtons().Any(b => ButtonText(b).StartsWith("员工管理（")), "招聘页移除重复员工管理入口");
             Shot("vs1_ux_02_recruitment");
             _game.Ui.CloseAllWindows();
@@ -138,7 +138,7 @@ namespace PCShopSell.EditorTools
             Shot("vs1_ux_16_truck_loaded");
             _game.Ui.CloseAllWindows();
 
-            _game.Ui.OpenDock(); _game.Ui.DebugSelectTab(6);
+            _game.Ui.OpenDock(); _game.Ui.DebugSelectTab(5);
             int employeesBefore = s.Employees.Count;
             ClickGuideButton("聘用并安排工作");
             Shot("vs1_ux_17_recruit_preview");

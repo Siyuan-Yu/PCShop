@@ -12,34 +12,40 @@ namespace PCShopSell.Game.UI
         {
             public int Kind;
             public Dropdown Dropdown;
+            public Button Main;
+            public Text Caption;
+            public RectTransform Group;
+            public float MinimumWidth;
             public Place[] Places=System.Array.Empty<Place>();
             public string Stamp;
         }
         private readonly List<ShortcutMenu> _shortcutMenus=new List<ShortcutMenu>();
-        // 0: owned shop, 1: wholesale sources, 2: agencies.
+        // 0: owned shop, 1: wholesale sources, 2: agencies, 3: custom destination.
         private Place[] ShortcutPlaces(int kind)
         {
             if(S==null)return System.Array.Empty<Place>();
+            if(kind==3)return S.City.Places.ToArray();
             if(kind==0)return S.MyShops.Select(s=>s.Place).ToArray();
             if(kind==2)return S.City.Places.Where(p=>p.Kind==PlaceKind.Agency).ToArray();
             return S.City.Places.Where(p=>p.Id=="stall_cpu"||S.HasRetailWholesale(p)).ToArray();
         }
-        private string ShortcutSelection(int kind)=>kind==0?S.CityShopShortcut:kind==1?S.CityMarketShortcut:S.CityAgencyShortcut;
+        private string ShortcutSelection(int kind)=>kind==3?S.CityDefaultDestination:kind==0?S.CityShopShortcut:kind==1?S.CityMarketShortcut:S.CityAgencyShortcut;
         private Place SelectedShortcut(int kind)
         {
             var places=ShortcutPlaces(kind);
-            return places.FirstOrDefault(p=>p.Id==ShortcutSelection(kind))??places.FirstOrDefault();
+            return places.FirstOrDefault(p=>p.Id==ShortcutSelection(kind))??(kind==3?null:places.FirstOrDefault());
         }
         private void SelectShortcut(int kind,Place place)
         {
-            if(kind==0)S.SetCityShopShortcut(place.Id);
+            if(kind==3)S.SetCityDefault(place.Id);
+            else if(kind==0)S.SetCityShopShortcut(place.Id);
             else S.SetCityShortcut(place.Id,kind==2);
             RefreshShortcutMenus();
         }
         private void TravelShortcut(int kind)
         {
             var target=SelectedShortcut(kind);
-            if(target==null&&kind==0)target=SelectedShortcut(2);
+            if(target==null&&kind==3){OpenCustomDestinationPicker();return;}
             if(target==null){Toast("当前没有可前往的地点。");return;}
             _ctrl.GoToPlace(target);
         }
@@ -48,9 +54,18 @@ namespace PCShopSell.Game.UI
             var group=Ui.Row(parent,42,1);group.name="Shortcut_"+kind;Ui.Size(group,width+27,42);
             var main=Ui.Button(group,label,()=>TravelShortcut(kind),17,kind==0?Ui.ButtonHot:Ui.ButtonBg);
             main.name="ShortcutGo_"+kind;Ui.Size(main,width,42);
-            if(kind==0)_shopGoText=main.GetComponentInChildren<Text>();
-            main.Tip(()=>"当前目的地："+(SelectedShortcut(kind)?.Name??(kind==0?"尚无店铺，前往中介":"暂无"))+"\n点主按钮直接前往；右侧小三角可切换目的地。");
-            var menu=new ShortcutMenu{Kind=kind};
+            var caption=main.GetComponentInChildren<Text>();
+            caption.horizontalOverflow=HorizontalWrapMode.Wrap;
+            caption.resizeTextForBestFit=true;caption.resizeTextMinSize=13;caption.resizeTextMaxSize=17;
+            main.Tip(()=>kind==0&&S.MyShopCount==0?"尚无店铺，租下或购入店铺后可使用。":"当前目的地："+(SelectedShortcut(kind)?.Name??"暂无")+"\n点主按钮直接前往；右侧小三角可切换目的地。");
+            var menu=new ShortcutMenu{Kind=kind,Main=main,Caption=caption,Group=group,MinimumWidth=width};
+            if(kind==3)
+            {
+                var arrow=Ui.Size(Ui.Button(group,"▾",OpenCustomDestinationPicker,17),26,42);
+                arrow.name="ShortcutArrow_3";
+                arrow.Tip("打开地图选择目的地（只保存选择，不立即出发）");
+                _shortcutMenus.Add(menu);return;
+            }
             var dropdown=Ui.Choice(group,new[]{"暂无目的地"},0,index=>
             {
                 if(index>=0&&index<menu.Places.Length)SelectShortcut(kind,menu.Places[index]);
@@ -64,22 +79,41 @@ namespace PCShopSell.Game.UI
             dropdown.Tip("选择目的地（只切换，不立即出发）");
             _shortcutMenus.Add(menu);
         }
+        private string ShortcutPlaceName(int kind,Place place)
+        {
+            if(place==null)return kind==3?"自定目的地":kind==0?"我的店铺":kind==1?"批发市场":"中介";
+            if((kind==0||kind==3) && S.ShopAt(place.Id) is OwnedShop shop)return S.ShopTitle(shop);
+            return place.Id=="stall_cpu"?"电子批发市场":place.Name;
+        }
         private void RefreshShortcutMenus()
         {
             if(S==null)return;
             foreach(var menu in _shortcutMenus)
             {
                 var places=ShortcutPlaces(menu.Kind);
-                string selected=SelectedShortcut(menu.Kind)?.Id;
-                var labels=places.Select(p=>(p.Id=="stall_cpu"?"电子批发市场":p.Name)+" · "+S.City.StreetName(p.StreetId)).ToArray();
-                string stamp=string.Join("|",places.Select(p=>p.Id))+"/"+string.Join("|",labels)+"/"+selected;
+                var destination=SelectedShortcut(menu.Kind);
+                string selected=destination?.Id;
+                string caption=ShortcutPlaceName(menu.Kind,destination);
+                var labels=places.Select(p=>ShortcutPlaceName(menu.Kind,p)+" · "+S.City.StreetName(p.StreetId)).ToArray();
+                string stamp=string.Join("|",places.Select(p=>p.Id))+"/"+string.Join("|",labels)+"/"+selected+"/"+caption;
                 if(menu.Stamp==stamp)continue;
                 menu.Stamp=stamp;menu.Places=places;
+                menu.Caption.text=caption;
+                menu.Main.interactable=menu.Kind==3||destination!=null;
+                menu.Caption.color=menu.Main.interactable?Ui.TextColor:Ui.Dim;
+                float width=Mathf.Clamp(menu.Caption.preferredWidth+20,Mathf.Max(100,menu.MinimumWidth),172);
+                Ui.Size(menu.Main,width,42);Ui.Size(menu.Group,width+27,42);
+                if(menu.Dropdown==null)continue;
                 menu.Dropdown.ClearOptions();
                 menu.Dropdown.AddOptions(places.Length==0?new List<string>{"暂无目的地"}:labels.ToList());
                 menu.Dropdown.SetValueWithoutNotify(Mathf.Max(0,System.Array.FindIndex(places,p=>p.Id==selected)));
                 menu.Dropdown.RefreshShownValue();menu.Dropdown.interactable=places.Length>0;
             }
+        }
+        private void OpenCustomDestinationPicker()
+        {
+            _cityMapSearch="";_cityMapStreet=null;_cityMapType=null;
+            OpenCityMap(place=>SelectShortcut(3,place));
         }
         private void OpenCityPlacePeople(PCShopSell.Core.World.Place place)
         {

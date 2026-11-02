@@ -124,16 +124,18 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void OccupiedOrReservedJobCannotBeOverwritten()
+        public void MultiplePeopleCanShareAJobWithoutOverwritingExistingEmployees()
         {
             using (var s = Make(true))
             {
                 var a = Person(); var b = Person(); b.Name = "小李";
                 s.MainShop.Employee = a; s.ShopAt("tea").Assembler = b;
-                Assert.False(s.ArrangeEmployeeWork(a.Id, "tea", EmployeeRole.Assembler));
-                Assert.True(s.ArrangeEmployeeWork(b.Id, "tea", EmployeeRole.Buyer));
                 Assert.True(s.ArrangeEmployeeWork(a.Id, "tea", EmployeeRole.Assembler));
-                Assert.False(s.ArrangeEmployeeWork(b.Id, "tea", EmployeeRole.Assembler), "明天已有别人调入，不能抢占");
+                Assert.AreSame(b,s.ShopAt("tea").Assembler,"预约调入不能覆盖已经在岗的人");
+                Assert.True(s.ArrangeEmployeeWork(b.Id, "tea", EmployeeRole.Buyer));
+                Assert.True(s.ArrangeEmployeeWork(b.Id, "tea", EmployeeRole.Assembler));
+                Tomorrow(s);
+                CollectionAssert.AreEquivalent(new[]{a,b},s.ShopStaff(s.ShopAt("tea"),EmployeeRole.Assembler));
                 Assert.AreEqual(2, s.Employees.Count);
             }
         }
@@ -158,12 +160,14 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
+                s.Clock.Restore(new PCShopSell.Core.Time.GameDate(GameSession.BuildOrdersStartDay),9*60);
                 var e = Person(); s.MainShop.Employee = e;
                 Assert.False(e.AssemblyTrained);
                 Assert.True(s.ArrangeEmployeeWork(e.Id, "pc", EmployeeRole.Assembler));
                 var order = new BuildOrder(1, 0, Money.FromYuan(3000), s.Clock.Now, s.Clock.Now.AddMinutes(600));
                 s.PlayerShop.RestoreOrders(new[] { order }, 2);
                 foreach (var part in PartCatalog.BuildList(0)) s.PlayerShop.Stock.ForceAdd(part, true, 1);
+                CityTestPeople.AtAssignedWork(s,e);
                 s.AdvanceClock(10);
                 Assert.IsTrue(order.PartsReserved);
                 Assert.Greater(order.EmployeeMinutesLeft, 90, "不擅长只影响耗时，不能拒绝工作");

@@ -24,7 +24,7 @@ namespace PCShopSell.Core.Home
         Cooker,
         Seat,
         Broken,
-        /// <summary>纸箱：可以存取东西，每个 100 千克。</summary>
+        /// <summary>纸箱：所在室内共用不限容量的后仓交互入口。</summary>
         Storage,
         Fridge,
         Climate,
@@ -202,7 +202,7 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef("stool", "塑料矮凳", "红色塑料凳，可以坐。", 0, FurnitureSlot.Floor, 0.4, 0.4, false, true) { Role = FurnitureRole.Seat });
             Add(new FurnitureDef("fan_broken", "坏电风扇", "摇头的地方卡住了，一直耷拉着。找人上门能修好。", 0, FurnitureSlot.Floor, 0.45, 0.45, false, true) { Role = FurnitureRole.Broken, RepairInto = "fan_fixed", RepairCost = Money.FromYuan(60) });
             Add(new FurnitureDef("fan_fixed", "电风扇（修好了）", "热天改善所在室内的舒适体验；固定水电¥10/月。", 0, FurnitureSlot.Floor, 0.45, 0.45, false, true) { SleepBonus = 0, Utilities = Money.FromYuan(10) });
-            Add(new FurnitureDef("junk", "纸箱和塑料盆", "搬家时留下的杂物。纸箱里能放东西。", 0, FurnitureSlot.Floor, 0.9, 0.9, false, true) { Role = FurnitureRole.Storage });
+            Add(new FurnitureDef("junk", "纸箱和塑料盆", "搬家时留下的杂物。这个纸箱可打开家中不限容量的后仓：靠近按 F，或按 B 查看背包和后仓。", 0, FurnitureSlot.Floor, 0.9, 0.9, false, true) { Role = FurnitureRole.Storage });
 
             Add(new FurnitureDef(FridgeSmall, "单门小冰箱", "入门款。容量 60 千克，占地小；家和店里都能摆。冷藏额外保鲜 7 天，每批只延长一次。", 1299, FurnitureSlot.Floor, 0.55, 0.6) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 60, WeightKg = 28, Utilities = Money.FromYuan(15) });
             Add(new FurnitureDef(FridgeFamily, "家用双门冰箱", "上下双门。容量 120 千克，适合日常备餐；家和店里都能摆。冷藏额外保鲜 7 天，每批只延长一次。", 2799, FurnitureSlot.Floor, 0.75, 0.7) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 120, WeightKg = 48, Utilities = Money.FromYuan(20) });
@@ -221,7 +221,7 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef("desk", "书桌", "放电脑或者看书。", 350, FurnitureSlot.Floor, 1.2, 0.6) { Appeal = 1 });
             Add(new FurnitureDef("sofa", "小沙发", "可以窝着，也能坐。", 800, FurnitureSlot.Floor, 1.6, 0.8) { Appeal = 2, Role = FurnitureRole.Seat });
             Add(new FurnitureDef("poster", "墙上海报", "盖住墙上的水渍。", 40, FurnitureSlot.Wall, 0.7, 0.05) { Appeal = 1 });
-            Add(new FurnitureDef(HomeBox, "纸箱", "大号搬家纸箱，摆在屋里能多放 100 千克东西。", 20, FurnitureSlot.Floor, 0.6, 0.5) { Role = FurnitureRole.Storage, WeightKg = 1 });
+            Add(new FurnitureDef(HomeBox, "纸箱", "摆在家里即可使用不限容量的后仓；多个纸箱共用同一个后仓。靠近按 F，或按 B 查看背包和后仓。", 20, FurnitureSlot.Floor, 0.6, 0.5) { Role = FurnitureRole.Storage, WeightKg = 1 });
 
             // ---- 店里的摆设：装修要歇业一天 ----
             Add(new FurnitureDef("shop_plant", "门店绿植", "客流 +。", 80, FurnitureSlot.Floor, 0.5, 0.5, true) { Appeal = 1 });
@@ -229,12 +229,12 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef("shop_dispenser", "饮水机", "顾客多等 3 分钟。", 350, FurnitureSlot.Floor, 0.5, 0.5, true) { Appeal = 1, PatienceBonus = 3 });
             Add(new FurnitureDef("shop_poster", "品牌海报", "客流 +。", 120, FurnitureSlot.Wall, 1.0, 0.05, true) { Appeal = 1 });
             Add(new FurnitureDef("shop_led", "LED 灯屏", "夜里很显眼。客流 ++。", 900, FurnitureSlot.Wall, 1.6, 0.1, true) { Appeal = 3 });
-            Add(new FurnitureDef(ShopBox, "纸箱", "大号搬家纸箱，摆在店里能多放 100 千克东西（吃的、礼品、小家具；配件直接上货架）。", 20, FurnitureSlot.Floor, 0.6, 0.5, true) { Role = FurnitureRole.Storage, WeightKg = 1 });
+            Add(new FurnitureDef(ShopBox, "店铺纸箱", "摆在店里即可使用不限容量的后仓；多个纸箱共用本店后仓。靠近按 F，或按 B 查看背包和后仓。", 20, FurnitureSlot.Floor, 0.6, 0.5, true) { Role = FurnitureRole.Storage, WeightKg = 1 });
 
             // ---- 店面设施：租下来的铺子是空的，这些得自己买、自己摆（摆完第二天才开业） ----
             Add(new FurnitureDef(Shelf, "货架", "每个货架摆一种货（配件、烟酒饮料都行），能放 60 千克。顾客只买货架上摆着的。", ShelfPrice.Yuan, FurnitureSlot.Floor, 1.4, 0.4, true) { Fixture = FixtureKind.Shelf, WeightKg = 40, ShelfKg = ShelfKinds.CapacityKg });
-            Add(new FurnitureDef(RackStrong, "加固货架", "钢架加厚，每个能放 100 千克，还顺带把后仓扩大 10 格。用法和普通货架一样：每个摆一种货。", 700, FurnitureSlot.Floor, 1.4, 0.4, true) { Fixture = FixtureKind.Shelf, WeightKg = 55, ShelfKg = 100, StockBonus = 10 });
-            Add(new FurnitureDef(RackHeavy, "重型货架", "仓储用的重型货架，每个能放 160 千克，后仓扩大 20 格。", 1500, FurnitureSlot.Floor, 1.4, 0.4, true) { Fixture = FixtureKind.Shelf, WeightKg = 90, ShelfKg = 160, StockBonus = 20 });
+            Add(new FurnitureDef(RackStrong, "加固货架", "钢架加厚，每个最多陈列 100 千克商品。每个摆一种货，其余库存留在不限容量的后仓。", 700, FurnitureSlot.Floor, 1.4, 0.4, true) { Fixture = FixtureKind.Shelf, WeightKg = 55, ShelfKg = 100 });
+            Add(new FurnitureDef(RackHeavy, "重型货架", "重型陈列货架，每个最多陈列 160 千克商品；其余库存留在不限容量的后仓。", 1500, FurnitureSlot.Floor, 1.4, 0.4, true) { Fixture = FixtureKind.Shelf, WeightKg = 90, ShelfKg = 160 });
             Add(new FurnitureDef(ShopCounter, "收银台", "顾客结账的地方，没有它开不了业。", 600, FurnitureSlot.Floor, 2.2, 0.8, true) { Fixture = FixtureKind.Counter });
             Add(new FurnitureDef(ShopDisplay, "展示台", "可选择展示电脑整机、服装或其他商品。电脑占两个机位，其他商品可摆1–6件。", 900, FurnitureSlot.Floor, 2.8, 1.2, true) { Fixture = FixtureKind.Display });
             Add(new FurnitureDef(ShopBench, "装机操作台", "接装机订单、拆装整机都在这张台子上。", 500, FurnitureSlot.Floor, 1.3, 0.7, true) { Fixture = FixtureKind.Bench });
@@ -317,8 +317,6 @@ namespace PCShopSell.Core.Home
             new PlacedFurniture { Id = "stool", X = 4.4, Z = 3.3, Rot = 0 },
             new PlacedFurniture { Id = "fan_broken", X = 2.5, Z = 1.9, Rot = 0 },
             new PlacedFurniture { Id = "junk", X = 0.55, Z = 0.55, Rot = 0 },
-            new PlacedFurniture { Id = HomeBox, X = 1.4, Z = 0.3, Rot = 0 },
-            new PlacedFurniture { Id = HomeBox, X = 2.05, Z = 0.3, Rot = 0 },
         };
     }
 

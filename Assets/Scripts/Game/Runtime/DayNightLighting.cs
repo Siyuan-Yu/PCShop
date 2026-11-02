@@ -34,7 +34,7 @@ namespace PCShopSell.Game.Runtime
             _bloom = profile.Add<Bloom>(true);
             _bloom.scatter.Override(0.7f);
             var tone = profile.Add<Tonemapping>(true);
-            tone.mode.Override(TonemappingMode.ACES);
+            tone.mode.Override(TonemappingMode.Neutral);
             _grade = profile.Add<ColorAdjustments>(true);
             _vignette = profile.Add<Vignette>(true);
             _vignette.smoothness.Override(0.5f);
@@ -107,7 +107,7 @@ namespace PCShopSell.Game.Runtime
             _sun.color = interior ? new Color(1f, 0.93f, 0.82f) : Color.Lerp(a.SunColor, b.SunColor, t);
             _sun.intensity = interior ? 0.85f : Mathf.Lerp(a.SunIntensity, b.SunIntensity, t);
             _sun.transform.rotation = Quaternion.Euler(interior ? new Vector3(65f, 135f, 0) : Vector3.Lerp(a.SunEuler, b.SunEuler, t));
-            _sun.shadowStrength = interior ? 0.45f : 0.65f;
+            _sun.shadowStrength = interior ? 0.45f : 0.72f;
 
             _bloom.intensity.Override(Mathf.Lerp(a.BloomIntensity, b.BloomIntensity, t));
             _bloom.threshold.Override(Mathf.Lerp(a.BloomThreshold, b.BloomThreshold, t));

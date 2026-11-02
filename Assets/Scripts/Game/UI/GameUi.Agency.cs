@@ -28,7 +28,7 @@ namespace PCShopSell.Game.UI
                     .ThenBy(l => l.OpenDay).ThenBy(l => l.Rent.Cents).FirstOrDefault()?.PlaceId
                     ?? agency.Id;
 
-            var header = Ui.Row(w.Content, 54, 12);
+            var header = Ui.Row(w.Content, 78, 12);
             if (agency.Id == "agency")
             {
                 var portrait = Ui.Rect(header, "AgentPortrait");
@@ -40,15 +40,17 @@ namespace PCShopSell.Game.UI
                 talk.onClick.AddListener(() => OpenGreeterDialogue(agency, w));
                 talk.Tip("和小陈聊聊");
             }
+            var district=S.City.AgencyDistrictFor(agency.StreetId);
+            string coverage=district==null?S.City.StreetName(agency.StreetId):string.Join("、",district.streets.Select(S.City.StreetName));
             string discount = S.AgentDiscount > 0 ? $"中介费减免 {S.AgentDiscount * 100:0.#}%" : "中介费暂无折扣";
-            Ui.Size(Ui.Label(header, $"<b>{S.City.StreetName(S.AgencyStreetOf(agency))} · 本街房源</b>　现金 {S.Ledger.Balance}\n<size=16><color=#ABB5A8>仅办理本街房源。点建筑查看位置、客流和户型，选好了再签约。{discount}</color></size>", 20), -1, 54, 1);
+            Ui.Size(Ui.Label(header, $"<b>{S.City.AgencyCoverageName(agency)} · 本片区房源</b>　现金 {S.Ledger.Balance}\n<size=16>负责：{coverage}\n<color=#ABB5A8>仅办理本片区房源。点建筑查看位置、客流和户型，选好了再签约。{discount}</color></size>", 20), -1, 78, 1);
             if (BusinessUnlocked) Ui.Size(Ui.Button(header, "分店 / 物业 / 住处", OpenAgencyBusiness, 17), 210);
 
             var body = Ui.Row(w.Content, 740, 14);
             var map = Ui.Panel(body, "AgencyMap", Ui.PanelBg2).rectTransform;
             Ui.Size(map, 1120, 740);
             map.GetComponent<LayoutElement>().minWidth = 1120;
-            BuildAgencyMap(map, units, w);
+            BuildAgencyMap(map, units, w, agency);
             var detail = Ui.Panel(body, "AgencyDetail", Ui.PanelBg2).rectTransform;
             Ui.Size(detail, -1, 740, 1);
             Ui.VList(detail, 4, 12);
@@ -85,12 +87,12 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(parent, AgencyStatus(p, l), 17, TextAnchor.MiddleLeft, Ui.Accent), -1, 22);
             if (p.Kind == PlaceKind.Agency)
             {
-                Para(parent, "你正在本街中介办公室里看房。地图只包含本街沿街建筑；绿光表示现在可租，橙光表示之后可租；其余建筑保持原样。点建筑后在右侧查看报价与户型。", 18, Ui.Dim);
+                Para(parent, "你正在本片区中介办公室里看房。地图只包含本片区沿街建筑；绿光表示现在可租，橙光表示之后可租；其余建筑保持原样。点建筑后在右侧查看报价与户型。", 18, Ui.Dim);
                 return;
             }
             if (p.Kind != PlaceKind.Shop)
             {
-                Para(parent, "这是本街地点，不属于商铺租赁房源。请选择发出绿光或橙光的铺面。", 18, Ui.Dim);
+                Para(parent, "这是本片区地点，不属于商铺租赁房源。请选择发出绿光或橙光的铺面。", 18, Ui.Dim);
                 return;
             }
             bool pending = S.IsPendingShop(p);
@@ -100,10 +102,12 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(metrics, $"<size=14>每月租金</size>\n<b>{(rent.HasValue ? rent.Value.ToString() : "未挂牌")}</b>", 27), -1, 60, 1);
             Ui.Size(Ui.Label(metrics, $"<size=14>室内面积 · {GameSession.SizeName(p.Size)}</size>\n<b>{RealEstate.SizeArea(p.Size)}</b>", 27), -1, 60, 1);
             double flow = S.LocationFactorOf(p);
+            if(!S.IsDedicatedVenue(p))Line(parent,"后仓容量不限 · 最多 "+GameSession.ShelfLimit(p.Size)+" 个货架 / "+GameSession.StaffLimit(p.Size)+" 名员工，其他家具不限数量",16,Ui.Accent);
             Ui.Size(Ui.Label(parent, $"距地铁 {S.StationDistance(p):0} 米　　地段客流 ×{flow:0.00}", 17), -1, 24);
             Ui.Size(Ui.Bar(parent, (float)flow, Ui.Good), -1, 6);
             Ui.Size(Ui.Label(parent, "条越长，地段客流越好；实际进店还受经营影响。", 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 22);
             BuildAgencyFloorPlan(parent, p);
+            if(S.IsDedicatedVenue(p))Para(parent,"专用场地 · "+S.VenueBusinessName(p)+"\n只能延续原有服务，不能改作零售店。接手不包含原教练劳动；需自己值守或另行招聘。每日维护 ¥"+S.VenueMaintenanceYuan(p)+"，租金及工资另计。",17,Ui.Accent);
 
             if (l == null)
             {
@@ -152,7 +156,7 @@ namespace PCShopSell.Game.UI
         private void AgencyQuote(Transform parent, ShopListing l, bool newShop)
         {
             AgencyFeeLine(parent, "首月租金", l.Rent.ToString());
-            AgencyFeeLine(parent, "押金（退租时退还）", RealEstate.Deposit(l.Rent).ToString());
+            AgencyFeeLine(parent, "押金（主动退租不退）", RealEstate.Deposit(l.Rent).ToString());
             AgencyFeeLine(parent, S.AgentDiscount > 0 ? $"中介费（已减 {S.AgentDiscount * 100:0.#}%）" : "中介费", S.AgentFeeFor(l.Rent).ToString());
             if (S.HasShop && !newShop && !S.IsAdvance(l))
             {
@@ -181,7 +185,9 @@ namespace PCShopSell.Game.UI
             {
                 Line(confirm.Content, $"{GameSession.SizeName(p.Size)} · {RealEstate.SizeArea(p.Size)} · 月租 {listing.Rent}", 21, Ui.Accent);
                 if (S.IsAdvance(listing)) AgencyEntryWarning(confirm.Content, listing.OpenDay);
-                if (newShop)
+                if(S.IsDedicatedVenue(p))
+                    Para(confirm.Content,"专用场地："+S.VenueBusinessName(p)+"，只能延续原用途，不可改作零售店。\n保留原设施，另行安排值守。原教练不自动受雇；维护费 ¥"+S.VenueMaintenanceYuan(p)+"/天，员工按实际排班另付工资。老板自用免费，不产生营业收入。",18,Ui.Accent);
+                else if (newShop)
                 {
                     Line(confirm.Content, "选择经营类型", 19, Ui.Accent);
                     var kinds = Ui.Row(confirm.Content, 42);
@@ -196,10 +202,10 @@ namespace PCShopSell.Game.UI
                 }
                 AgencyQuote(confirm.Content, listing, newShop);
                 Line(confirm.Content, $"{AgencySettlement(quotedCost)}　剩余 {S.Ledger.Balance - quotedCost}", 23, Ui.Good);
-                Para(confirm.Content, newShop
+                Para(confirm.Content, S.IsDedicatedVenue(p)?"接手后进入场馆管理，设置营业时间、价格并开启接客。顾客按场地容量付费使用；不提供普通店铺柜台或货架经营。":newShop
                     ? "铺子是毛坯的，原来的店照常营业。货可以打电话叫货车从别的店或家里搬过来；人不在店里时要雇人看店才开门。"
                     : "铺子是毛坯的，签好后自己到店里，摆好收银台和货架再开业。", 17);
-                string fine = "以后每月 1 日交租，押金退租时退还。";
+                string fine = "以后每月 1 日交租；主动退租，已交押金不退。";
                 if (S.IsAdvance(listing)) fine += $"现租户第 {listing.OpenDay + 1} 天才搬走，到那天才能搬进去，房租从签约当天算起。";
                 Para(confirm.Content, fine, 14, Ui.Dim);
                 var row = Ui.Row(confirm.Content, 46, 10);
@@ -217,7 +223,7 @@ namespace PCShopSell.Game.UI
                     if (S.SignRetailLease(placeId, newShop, retailKind))
                     {
                         if (S.PendingLease != null) Toast($"已提前签约，还需等待 {S.PendingLease.StartDay - S.Clock.Today.TotalDays} 天才能进入，期间房租照常计算。");
-                        else Toast("签约完成，可以自行到新店装修了。");
+                        else Toast(S.IsDedicatedVenue(p)?"接手完成，请到场馆设置营业与值守。":"签约完成，可以自行到新店装修了。");
                     }
                     parent.Rebuild();
                 }, 18, Ui.ButtonHot);

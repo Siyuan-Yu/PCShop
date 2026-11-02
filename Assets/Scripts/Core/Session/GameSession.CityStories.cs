@@ -367,13 +367,14 @@ namespace PCShopSell.Core.Session
             }
         }
 
-        internal string ScheduleLegacyCityMeeting(string personId,string definitionId,string source)
+        internal string ScheduleLegacyCityMeeting(string personId,string definitionId,string source,bool hostedByPerson=false)
         {
             long start=SuggestCityActivityStart(definitionId,personId);
             var previous=CityActivities.FirstOrDefault(a=>a.SourceId==source);
             if(previous!=null&&!previous.Active&&previous.State!=CityActivityPhase.Completed)source+=":retry:"+_nextCityActivity;
             var a=ScheduleCityActivity(definitionId,new[]{personId},start,false,source);
-            return a==null?"预约未成立，请在日程选择可用时段；尚未消费或增加关系。":"已约在"+new GameTimestamp(start)+"到"+City.GetPlace(a.VenueId).Name+"见面。请从城市日程实际前往，到场后按活动阶段结算。";
+            if(a!=null&&hostedByPerson)a.HostId=personId;
+            return a==null?"预约未成立，请在日程选择可用时段；尚未消费或增加关系。":"已和"+(CityPerson(personId)?.Name??"同行者")+"约在"+new GameTimestamp(start)+"到"+City.GetPlace(a.VenueId).Name+"见面。请从城市日程实际前往，到场后按活动阶段结算。";
         }
         internal string OfferCityReferralContract(string source,string client,int count,bool discount)
         {

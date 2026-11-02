@@ -33,6 +33,7 @@ namespace PCShopSell.Core.Inventory
         }
 
         public bool IsGoods => !IsParts;
+        public string BrowseGroup => IsParts?"电脑配件":Id.StartsWith("clothing_")?"服装":Id.StartsWith("model_")?"模型手办":"零售商品";
     }
 
     public static class ShelfKinds

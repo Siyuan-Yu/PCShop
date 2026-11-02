@@ -19,6 +19,42 @@ namespace PCShopSell.Tests
             s.EventsEnabled = false; s.PlayerShop.Settings.BaseCustomersPerHour = 0;
             s.Leave(); s.ArriveAtNode("st"); return s;
         }
+        [TestCase(VehicleKind.EBike,3)]
+        [TestCase(VehicleKind.Tricycle,2.4)]
+        [TestCase(VehicleKind.Van,3.84)]
+        [TestCase(VehicleKind.Car,4.32)]
+        [TestCase(VehicleKind.Taxi,4.8)]
+        public void VehicleMovementPresentationAndEtaUseTheSameWalkingRatio(VehicleKind kind,double ratio)
+        {
+            var vehicle=Vehicles.Get(kind);
+            Assert.AreEqual(ratio,vehicle.SpeedPerMinute/Vehicles.Walk.SpeedPerMinute,1e-10);
+            Assert.AreEqual(ratio,vehicle.VisualSpeed/Vehicles.Walk.VisualSpeed,1e-10);
+            Assert.AreEqual(ratio,CityTravelTiming.ScaledSecondsMeters(vehicle,.25,TimeController.DefaultSecondsPerMinute)
+                /CityTravelTiming.ScaledSecondsMeters(Vehicles.Walk,.25,TimeController.DefaultSecondsPerMinute),1e-10);
+            Assert.That(CityTravelTiming.Minutes(1000,vehicle)*ratio,
+                Is.EqualTo(CityTravelTiming.Minutes(1000,Vehicles.Walk)).Within(ratio));
+        }
+        [TestCase(1)] [TestCase(2)] [TestCase(4)] [TestCase(8)]
+        public void EBikeActuallyMovesThreeTimesAsFarForManualAndAutomaticTravel(int speed)
+        {
+            using(var walk=Make())using(var ride=Make())using(var automatic=Make())
+            {
+                foreach(var s in new[]{ride,automatic})
+                {
+                    GameSessionTests.Teleport(s,"dealer");Assert.IsTrue(s.BuyVehicle(VehicleKind.EBike));
+                    Assert.IsTrue(s.SetVehicle(VehicleKind.EBike));s.Leave();s.ArriveAtNode("st");
+                    foreach(var officer in s.Police.Officers)officer.OnDutyToday=false;
+                }
+                foreach(var s in new[]{walk,ride,automatic})s.Time.SetSpeed(speed);
+                var walkStart=walk.PlayerPosition;var rideStart=ride.PlayerPosition;
+                walk.SetSteer(-1,0);ride.SetSteer(-1,0);Assert.IsTrue(automatic.GoTo("mk"));
+                for(int i=0;i<30;i++){walk.Tick(.02);ride.Tick(.02);automatic.Tick(.02);}
+                double walked=Math.Abs(walk.PlayerPosition.X-walkStart.X),ridden=Math.Abs(ride.PlayerPosition.X-rideStart.X);
+                Assert.Greater(walked,0);Assert.AreEqual(walked*3,ridden,.0001);
+                Assert.AreEqual(ride.PlayerPosition.X,automatic.PlayerPosition.X,.0001);
+                Assert.AreEqual(walk.Clock.Now,ride.Clock.Now);Assert.AreEqual(ride.Clock.Now,automatic.Clock.Now);
+            }
+        }
         [Test] public void RealEdgeLengthControlsEtaNotCompressedDrawingLength()
         {
             using (var s = Make())

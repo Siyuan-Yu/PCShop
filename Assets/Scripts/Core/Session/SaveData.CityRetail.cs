@@ -6,6 +6,7 @@ namespace PCShopSell.Core.Session
     public sealed class CityCompetition
     {
         public string Id, Kind, ShopId, SupplierId, ProductId, Response;
+        public string RetailKind, RivalName;
         public int StartDay, EndDay;
         public bool Announced, Ended;
         public CityCompetition Copy() => (CityCompetition)MemberwiseClone();

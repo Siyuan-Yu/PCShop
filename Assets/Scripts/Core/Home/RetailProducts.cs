@@ -36,6 +36,7 @@ namespace PCShopSell.Core.Home
             : kind == "produce" ? "大米、蔬菜、鸡蛋、豆腐、肉类和水果；从农贸市场进货。"
             : kind == "food" ? "汉堡、炸鸡、薯条、便当、点心和饮料；从快餐店和烟酒茶行进货。"
             : kind == "models" ? "四个原创系列、12款现货模型；常规款从潮玩工坊批发，限定款需在漫展到场采购。按系列设置货架，顾客按兴趣和预算挑选。" : "电脑配件、整机及少量附带杂货。";
+        // Main-category affinity only: this must not restrict listing or shelf configuration.
         public static bool Sells(string kind, string id)
         {
             if (kind == "computer") return true;
@@ -45,5 +46,6 @@ namespace PCShopSell.Core.Home
             if (kind == "produce") return id != null && (id.StartsWith("produce:") || id == Gifts.Fruit);
             return id != null && (id.StartsWith("fast:") || id == Gifts.Soda || id == Gifts.Drink || id == Gifts.Snack);
         }
+        public static string GoodsKind(string id)=>All.Where(k=>k!="computer").FirstOrDefault(k=>Sells(k,id))??"retail";
     }
 }

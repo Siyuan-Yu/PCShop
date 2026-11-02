@@ -212,8 +212,8 @@ namespace PCShopSell.Core.Session
             new EventDef
             {
                 Id = "rival", Title = "隔壁打价格战", MinDay = 7, CooldownDays = 14, Weight = 8,
-                When = s => s.PlayerShop.Markup > 1.2 && s.Relation(Npcs.Jie) < NpcPerks.JieNoPriceWar,
-                Body = "隔壁电脑店在门口挂出了特价牌，写着\"全场比别家便宜一成\"。有顾客进来先问你能不能也降。",
+                When = s => s.PriceWarTarget()!=null,
+                Body = "同商圈同行正在促销，有顾客询问是否跟进价格。",
                 Choices =
                 {
                     new EventChoice
@@ -227,7 +227,7 @@ namespace PCShopSell.Core.Session
                     },
                     new EventChoice
                     {
-                        Text = "去找老板当面聊聊（看魅力）",
+                        Text = "和同行沟通（看魅力）",
                         Apply = s =>
                         {
                             if (s.Random.Chance(0.3 + s.EffectiveCharm * 0.012))
@@ -287,7 +287,7 @@ namespace PCShopSell.Core.Session
             {
                 Id = "friend_meal", Title = "老同学请吃饭", MinDay = 5, CooldownDays = 15, Weight = 7,
                 When = s => CanPay(s, 100),
-                Body = "大学同学打来电话：\"来电脑城了？晚上一起吃个饭，聊聊。\"",
+                Body = "你的大学同学陈工（程序员）托人联系上你：\"来城里了？找时间一起吃个饭，聊聊，见面后把联系方式重新存上。\"",
                 Choices =
                 {
                     new EventChoice
@@ -296,10 +296,10 @@ namespace PCShopSell.Core.Session
                         Enabled = s => CanPay(s, 100), DisabledReason = "预计家常饭费用不足",
                         Apply = s =>
                         {
-                            return s.ScheduleLegacyCityMeeting("res_coder", "dinner", "legacy-friend-meal:" + s.Clock.Today.TotalDays);
+                            return s.ScheduleLegacyCityMeeting("res_coder", "dinner", "legacy-friend-meal:" + s.Clock.Today.TotalDays, true);
                         },
                     },
-                    new EventChoice { Text = "推掉，店里忙", Apply = s => "你说这周走不开。同学说下次约。" },
+                    new EventChoice { Text = "推掉，店里忙", Apply = s => "你说这周走不开。陈工说下次约。" },
                 },
             },
             new EventDef

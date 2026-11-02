@@ -40,9 +40,6 @@ namespace PCShopSell.Core.Session
             if (!InPlayerShop) return Fail("要在自己的店里才能设置货架。");
             if (layoutIndex < 0 || layoutIndex >= _shopLayout.Count || FurnitureCatalog.Get(_shopLayout[layoutIndex].Id)?.Fixture != FixtureKind.Shelf) return false;
             if (kindId != null && ShelfKinds.Get(kindId) == null) return false;
-            var kind = ShelfKinds.Get(kindId);
-            if (kind != null && RetailKind != "computer" && (kind.IsParts || !kind.GiftIds.Any(id => RetailShopTypes.Sells(RetailKind, id))))
-                return Fail("这类商品不属于本店的经营类型。");
             if (_shopLayout[layoutIndex].Item == kindId) return true;
             _shopLayout[layoutIndex].Item = kindId;
             ApplyShelfCapacity();
@@ -65,9 +62,6 @@ namespace PCShopSell.Core.Session
             bool computer=kindId=="computer";
             var kind=ShelfKinds.Get(kindId);
             if(!computer && kind==null)return false;
-            if(computer && RetailKind!="computer")return Fail("本店不经营电脑整机。");
-            if(!computer && RetailKind!="computer" && (kind.IsParts || !kind.GiftIds.Any(id=>RetailShopTypes.Sells(RetailKind,id))))
-                return Fail("这类商品不属于本店经营范围。");
             int remainingPcSlots=(DisplayIndexes().Count(i=>i!=index && IsComputerDisplay(i))+(computer?1:0))*2;
             if(PlayerShop.DisplayPcs.Count>remainingPcSlots || !computer && IsComputerDisplay(index) && _focus.PendingDisplayTier>=0)
                 return Fail("请先将多余展示整机拆回配件，并完成正在装的展示机，再更换品类。");
@@ -139,7 +133,6 @@ namespace PCShopSell.Core.Session
             GiftDef g = Gifts.Get(giftId);
             if (g == null || count <= 0) return false;
             if (!InPlayerShop) return Fail("要在自己的店里才能上架。");
-            if (!RetailShopTypes.Sells(RetailKind, giftId)) return Fail("本店不经营这种商品，请选择对应店铺。 ");
             int have = GoodsAvailableToList(giftId);
             if (have < count) return Fail($"手边只有 {have} 件「{g.Name}」。");
             if (!PlayerShop.Stock.CanAddGoods(giftId, count)) return Fail("店里放不下了（仓位不够）。");
@@ -161,7 +154,7 @@ namespace PCShopSell.Core.Session
         // retain their existing storage destination.
         private bool HasAutomaticGoodsShelf(string id)
         {
-            if(!InPlayerShop || !RetailShopTypes.Sells(RetailKind,id))return false;
+            if(!InPlayerShop)return false;
             var kind=ShelfKinds.ForGift(id);if(kind==null)return false;
             return _shopLayout.Any(p=>p.Item==kind.Id &&
                 (FurnitureCatalog.Get(p.Id)?.Fixture==FixtureKind.Shelf || FurnitureCatalog.Get(p.Id)?.Fixture==FixtureKind.Display));
@@ -172,7 +165,7 @@ namespace PCShopSell.Core.Session
             ApplyShelfCapacity();
             foreach(var goods in Gifts.All)
             {
-                if(!HasAutomaticGoodsShelf(goods.Id))continue;
+                if(ShelfKinds.ForGift(goods.Id)==null)continue;
                 int available=GoodsAvailableToList(goods.Id);if(available<=0)continue;
                 double space=Stock.GoodsSpace(goods.Id,1);
                 int room=(int)Math.Max(0,Math.Min(int.MaxValue,Math.Floor((PlayerShop.Stock.FreeSpace+1e-9)/space)));
@@ -181,6 +174,22 @@ namespace PCShopSell.Core.Session
                 if(count>0 && ListGoods(goods.Id,count,false))moved+=count;
             }
             return moved;
+        }
+
+        public bool TakeShopGoodsIntoBag(string giftId,int count=1)
+        {
+            var product=Gifts.Get(giftId);
+            if(product==null||count<=0)return false;
+            if(!InPlayerShop||!HasWarehouseHere)return Fail("要在摆有纸箱的自己店里取货。");
+            PlayerShop.Stock.SpoilGoods(Clock.Today.TotalDays);
+            if(PlayerShop.Stock.GoodsCount(giftId)<count)return Fail("店里没有这么多。");
+            if(!CanCarry(product.WeightKg*count))return false;
+            for(int i=0;i<count;i++)
+            {
+                int expiry=PlayerShop.Stock.GoodsExpiry(giftId);bool chilled=PlayerShop.Stock.GoodsChilled(giftId);
+                PlayerShop.Stock.TryRemoveGoods(giftId,1);AddRetailToBag(Backpack,product,1,expiry,chilled);
+            }
+            ApplyCargoLimit();Say("从本店后仓取出"+product.Name+" ×"+count+"。");return true;
         }
 
         /// <summary>把店里的杂货收回储物柜。</summary>
@@ -192,7 +201,7 @@ namespace PCShopSell.Core.Session
             PlayerShop.Stock.SpoilGoods(Clock.Today.TotalDays);
             if (PlayerShop.Stock.GoodsCount(giftId) < count) return Fail("店里没有这么多。");
             if (ShopLocker.WeightKg + g.WeightKg * count > ShopLockerLimitKg + 1e-9)
-                return Fail($"店里纸箱放不下了（{ShopBoxes} 个纸箱，最多 {ShopLockerLimitKg:0} 千克）。");
+                return Fail($"店里后仓放不下了（{ShopBoxes} 个后仓，最多 {ShopLockerLimitKg:0} 千克）。");
             for (int i = 0; i < count; i++)
             {
                 int expiry = PlayerShop.Stock.GoodsExpiry(giftId);

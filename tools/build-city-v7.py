@@ -53,7 +53,10 @@ for i,id in enumerate(shop_ids):
     p=find(id);p['tradable']=True;put(p,'s_start',18+(i%6)*17,(i//6)*30,'shop',0,14,12)
 # One agency per stable jurisdiction, including both villa parcels as a SINGLE street.
 for street,x,y in [('s_start',112,60),('s_electronics',245,60),('s_oldhomes',-20,0),('s_services',-20,90),('s_market',112,150),('s_creative',112,240),('s_sports',-20,180),('s_expo',245,240),('s_night',-6,270),('s_newtown',112,270)]:
-    p=find('agency' if street=='s_start' else 'agency_'+street)
+    agencyId='agency' if street=='s_start' else 'agency_'+street
+    p=next((p for p in places if p['id']==agencyId),None)
+    if p is None:
+        p=dict(id=agencyId,node='v7_'+agencyId,kind='agency',size='small',business='房产中介');places.append(p)
     p['name']=names[street]+'房产中介';put(p,street,x,y,'agency',0,10,10)
 # Metro IDs metro_a/b remain valid. No station in the starter commercial street.
 for id,name,street,x,y in [('metro_a','城郊站','s_oldhomes',-185,0),('metro_b','批发市场站','s_electronics',140,0),
@@ -163,6 +166,7 @@ data.update(layoutVersion=7,uniformRoadScale=1,distanceScale=1,
 for p in data['places']:
  if p.get('model')=='shop':p['width']={'small':8,'medium':11,'large':14}.get(p.get('size'),11)
 import runpy
+data=runpy.run_path(str(Path(__file__).with_name('plan-four-agencies.py')))['apply'](data)
 data=runpy.run_path(str(Path(__file__).with_name('densify-city.py')))['populate'](data)
 path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-print('V7:',len(nodes),'nodes,',len(edges),'edges,',len(places),'places,',len(blocks),'compound buildings')
+print('Layout',data['layoutVersion'],':',len(data['nodes']),'nodes,',len(data['edges']),'edges,',len(data['places']),'places,',len(data['blocks']),'compound buildings')

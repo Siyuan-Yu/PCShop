@@ -359,6 +359,7 @@ namespace PCShopSell.Game.UI
     public sealed class ChoiceDropdown : Dropdown
     {
         public static int CancelFrame = -1;
+        public bool IsChoiceOpen => transform.Find("Dropdown List")!=null;
         public override void OnPointerClick(PointerEventData e) { base.OnPointerClick(e);FocusCurrent(); }
         public override void OnSubmit(BaseEventData e) { base.OnSubmit(e);FocusCurrent(); }
         public override void OnCancel(BaseEventData e) { base.OnCancel(e);CancelFrame=Time.frameCount; }
@@ -370,7 +371,7 @@ namespace PCShopSell.Game.UI
         }
         public bool CloseChoice()
         {
-            if(transform.Find("Dropdown List")==null)return false;
+            if(!IsChoiceOpen)return false;
             Hide();CancelFrame=Time.frameCount;return true;
         }
     }

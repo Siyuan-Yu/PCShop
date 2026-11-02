@@ -51,7 +51,7 @@ namespace PCShopSell.EditorTools
             s.Clock.Restore(s.Clock.Today, 8 * 60 + 59); s.AdvanceClock(2);
             Check(s.EmployeePurchaseTrips.Any(t => t.EmployeeId == buyer.Person.Id && t.Items.Length == 3), "次日自动再次执行整份清单，不是只能进一次货");
             _game.Ui.CloseAllWindows();
-            _game.Ui.OpenDock(); _game.Ui.DebugSelectTab(6);
+            _game.Ui.OpenDock(); _game.Ui.DebugSelectTab(5);
             Check(ActiveButtons().Any(b => ButtonText(b).StartsWith("再贴招聘告示")), "保留其他候选人时也能再贴招聘告示");
             Check(ActiveButtons().Any(b => ButtonText(b) == "离开店铺"), "离店按钮只显示离开店铺");
             Shot("vs1_procurement_05_recruit_again");

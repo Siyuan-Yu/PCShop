@@ -95,7 +95,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void CloseShop_InsideAndEmpty_RefundsDeposit()
+        public void CloseShop_InsideAndEmpty_ForfeitsDepositWithoutChargingAgain()
         {
             GameSession s = TwoShops();
             var part = s.MainShop.Sim.Stock.Lines().First().Part;
@@ -110,11 +110,62 @@ namespace PCShopSell.Tests
             Assert.IsNull(s.CurrentPlace, "退完走到门口");
             Assert.AreEqual(1, s.MyShopCount);
             Assert.AreEqual("pc", s.PlayerShopPlace.Id);
-            Assert.AreEqual((before + deposit).Cents, s.Ledger.Balance.Cents, "押金退回");
+            Assert.Greater(deposit.Cents,0);
+            Assert.AreEqual(before.Cents, s.Ledger.Balance.Cents, "主动退租不退押金，也不重复扣除");
             Assert.IsTrue(s.IsVacant(s.City.GetPlace("tea")));
             Assert.IsTrue(s.Listings.Any(l => l.PlaceId == "tea"), "铺子重新挂牌");
             GameSessionTests.Teleport(s, "pc");
-            StringAssert.Contains("唯一", s.CloseShopBlocker(s.MainShop), "最后一家店不能退");
+            StringAssert.Contains("货车", s.CloseShopBlocker(s.MainShop), "最后一家店也可退，只需先搬走存货");
+        }
+
+        [Test]
+        public void LastRentedShopCanBeClosedFromCounterAndRentedAgainAfterSaving()
+        {
+            using(var s=TwoShops())
+            {
+                GameSessionTests.Teleport(s,"pc");s.PlayerShop.Stock.Clear();
+                Assert.IsTrue(s.CloseShop("pc"));
+                GameSessionTests.Teleport(s,"tea");
+                var shop=s.CurrentShop;shop.Sim.Stock.Clear();
+                Assert.AreEqual(1,s.MyShopCount);Assert.Greater(shop.Lease.Deposit.Cents,0);
+                var furniture=shop.Layout.GroupBy(f=>f.Id).ToDictionary(g=>g.Key,g=>s.FurnitureInStock(g.Key)+g.Count());
+                var before=s.Ledger.Balance;
+                var root=new UnityEngine.GameObject("LastShopTerminationRegression");root.SetActive(false);
+                var controller=root.AddComponent<PCShopSell.Game.GameController>();
+                typeof(PCShopSell.Game.GameController).GetProperty("Session").SetValue(controller,s);
+                typeof(PCShopSell.Game.GameController).GetProperty("City").SetValue(controller,s.City);
+                var existingEventSystem=UnityEngine.EventSystems.EventSystem.current;
+                var ui=new PCShopSell.Game.UI.GameUi(controller);
+                UnityEngine.UI.Button Button(string name)=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<UnityEngine.UI.Button>()).Single(b=>b.name==name);
+                try
+                {
+                    ui.OpenDock();
+                    Button("CloseShopCounter").onClick.Invoke();
+                    Assert.IsTrue(Button("ConfirmCloseShop").interactable);
+                    StringAssert.Contains("押金不退",Button("ConfirmCloseShop").GetComponentInChildren<UnityEngine.UI.Text>().text);
+                    Button("ConfirmCloseShop").onClick.Invoke();
+                    Assert.IsFalse(s.HasShop);Assert.AreEqual(0,s.MyShopCount);Assert.IsNull(s.CurrentPlace);
+                    Assert.AreEqual(before,s.Ledger.Balance);
+                    foreach(var item in furniture)Assert.AreEqual(item.Value,s.FurnitureInStock(item.Key));
+                    Assert.IsFalse(s.CloseShop("tea"),"重复点击不能重复结算");
+                    using(var loaded=GameSession.Load(s.City,UnityEngine.JsonUtility.FromJson<SaveData>(UnityEngine.JsonUtility.ToJson(s.CreateSave()))))
+                    {
+                        Assert.IsFalse(loaded.HasShop);Assert.AreEqual(0,loaded.MyShopCount);
+                        Assert.AreEqual(before,loaded.Ledger.Balance);
+                        Assert.IsTrue(loaded.IsVacant(loaded.City.GetPlace("tea")));
+                        GameSessionTests.Teleport(loaded,"agency");
+                        Assert.IsTrue(loaded.SignLease("tea"));
+                        Assert.AreEqual(1,loaded.MyShopCount);Assert.IsTrue(loaded.HasShop);
+                    }
+                }
+                finally
+                {
+                    ui.CloseAllWindows();
+                    foreach(var canvas in ui.Canvases)UnityEngine.Object.DestroyImmediate(canvas.gameObject);
+                    UnityEngine.Object.DestroyImmediate(root);
+                    if(existingEventSystem==null && UnityEngine.EventSystems.EventSystem.current!=null)UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);
+                }
+            }
         }
 
         [Test]

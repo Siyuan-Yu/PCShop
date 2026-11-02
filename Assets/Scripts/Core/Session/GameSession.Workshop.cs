@@ -36,29 +36,33 @@ namespace PCShopSell.Core.Session
         private void UpdateEmployeeWork(GameTimestamp now)
         {
             _employeeBuilding = false;
-            Employee worker = Assembler != null && CityEmployeeAvailable(Assembler,_focus) ? Assembler : EmployeeTrained && CityEmployeeAvailable(Employee,_focus) ? Employee : null;
-            if (worker == null || !AutoBuildEnabled) return;
-            bool dedicated = worker == Assembler && CityEmployeeAvailable(Employee,_focus);
+            var workers=ShopStaff(_focus,EmployeeRole.Assembler).Concat(ShopStaff(_focus,EmployeeRole.Cashier).Where(e=>e.AssemblyTrained))
+                .Where(e=>CityEmployeeAvailable(e,_focus)).Distinct().ToArray();
+            if (workers.Length==0 || !AutoBuildEnabled) return;
+            var handled=new System.Collections.Generic.HashSet<int>();
+            foreach(var worker in workers)
+            {
+            bool dedicated = ShopStaff(_focus,EmployeeRole.Assembler).Contains(worker) && ShopStaff(_focus,EmployeeRole.Cashier).Any(e=>CityEmployeeAvailable(e,_focus));
             int workMinutes = AssemblyMinutesOf(worker);
-            var order = PlayerShop.Orders.Where(o => o.Id != _manualBuildId && o.EmployeeMinutesLeft > 0).FirstOrDefault();
+            var order = PlayerShop.Orders.Where(o => !handled.Contains(o.Id)&&o.Id != _manualBuildId && o.EmployeeMinutesLeft > 0).FirstOrDefault();
             if (order == null)
             {
-                if (!dedicated && PlayerShop.Queue.Count > 0) return;
-                order = PlayerShop.Orders.Where(o => o.Id != _manualBuildId && now.MinutesUntil(o.DueAt) > workMinutes && PlayerShop.MissingParts(o).Count == 0)
+                if (!dedicated && PlayerShop.Queue.Count > 0) continue;
+                order = PlayerShop.Orders.Where(o => !handled.Contains(o.Id)&&o.Id != _manualBuildId && now.MinutesUntil(o.DueAt) > workMinutes && PlayerShop.MissingParts(o).Count == 0)
                     .OrderBy(o => o.DueAt.TotalMinutes).FirstOrDefault();
-                if (order == null || !PlayerShop.ReserveBuild(order.Id)) return;
+                if (order == null || !PlayerShop.ReserveBuild(order.Id)) continue;
                 order.EmployeeMinutesLeft = workMinutes;
             }
             // 服务优先：有人排队时先收银，装机进度保留。
-            if (!dedicated && PlayerShop.Queue.Count > 0) return;
-            _employeeBuilding = !dedicated;
+            if (!dedicated && PlayerShop.Queue.Count > 0) continue;
+            handled.Add(order.Id);_employeeBuilding |= !dedicated;
             order.EmployeeMinutesLeft--;
             if (order.EmployeeMinutesLeft <= 0)
             {
-                if (!PlayerShop.CompleteBuild(order.Id, now)) return;
+                if (!PlayerShop.CompleteBuild(order.Id, now)) continue;
                 worker.BuildsCompleted++;
                 Say($"{worker.Name}完成订单 #{order.Id}，收款 {order.Price}。");
-                _employeeBuilding = false;
+            }
             }
         }
 
@@ -68,6 +72,15 @@ namespace PCShopSell.Core.Session
             Money sum = Money.Zero;
             foreach (var part in PartCatalog.BuildList(order.Tier)) sum += store == null ? Market.PriceOf(part) : OnlinePrice(store, part);
             return sum;
+        }
+        public bool TrainNamedEmployee(string id)
+        {
+            var row=FindEmployee(id);if(row?.Shop==null||row.Person.AssemblyTrained)return Fail("请选择尚未培训的在职员工。");
+            if(IsDedicatedVenue(row.Shop.Place))return Fail("场馆值守无需装机培训。");
+            if(!Ledger.TryDebit(Clock.Today,"培训",Money.FromYuan(1200),row.Person.Name+" 装机培训"))return Fail("培训需要 ¥1,200。");
+            SnapshotCurrentEmployeePay(row.Person);row.Person.DailyWageYuan+=60;row.Person.AssemblyTrained=true;row.Shop.AutoBuild=true;
+            if(row.Shop.Employee==row.Person)row.Shop.EmployeeTrained=true;
+            return true;
         }
     }
 }

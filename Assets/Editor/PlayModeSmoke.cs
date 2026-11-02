@@ -90,10 +90,10 @@ namespace PCShopSell.EditorTools
                 }
                 if (_enteredShop && game.InInterior && elapsed > 12 && _step == 0)
                 {
-                    // 遍历商店面板的每个标签页，最后停在「升级」
+                    // 遍历商店面板的每个标签页，最后停在柜台。
                     for (int i = 0; i < game.Ui.DebugTabCount; i++) game.Ui.DebugSelectTab(i);
-                    game.Ui.DebugSelectTab(game.Ui.DebugTabCount - 2);
-                    Capture("play_03_upgrades");
+                    game.Ui.DebugSelectTab(0);
+                    Capture("play_03_counter");
                     _step = 1;
                 }
                 else if (_step == 1)

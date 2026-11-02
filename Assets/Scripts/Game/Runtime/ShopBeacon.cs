@@ -15,6 +15,7 @@ namespace PCShopSell.Game.Runtime
         private Material _shell;
         private Material _ground;
         private string _placeId;
+        private GameObject _building;
         private float _time;
 
         private static readonly Color Cyan = new Color(0.1f, 0.95f, 0.85f);
@@ -57,11 +58,11 @@ namespace PCShopSell.Game.Runtime
             const float t = 0.22f;
 
             // 脚下一大片柔光 + 贴着楼体的一圈亮边
-            Prims.Box(_root.transform, "GroundGlow", new Vector3(c0.x, 0.04f, c0.z), new Vector3(size.x + 3.2f, 0.02f, size.z + 3.2f), _ground);
-            Prims.Box(_root.transform, "Ring", new Vector3(c0.x, 0.07f, mn.z - 0.5f), new Vector3(size.x + 1f, 0.03f, 0.3f), soft);
+            Prims.Box(_root.transform, "GroundGlow", new Vector3(c0.x, mn.y+0.04f, c0.z), new Vector3(size.x + 3.2f, 0.02f, size.z + 3.2f), _ground);
+            Prims.Box(_root.transform, "Ring", new Vector3(c0.x, mn.y+0.07f, mn.z - 0.5f), new Vector3(size.x + 1f, 0.03f, 0.3f), soft);
 
             // 楼体十二条边做成霓虹灯管
-            foreach (float y in new[] { 0.1f, mx.y })
+            foreach (float y in new[] { mn.y+0.1f, mx.y })
             {
                 Prims.Box(_root.transform, "EdgeFront", new Vector3(c0.x, y, mn.z), new Vector3(size.x + t, t, t), tube);
                 Prims.Box(_root.transform, "EdgeBack", new Vector3(c0.x, y, mx.z), new Vector3(size.x + t, t, t), tube);
@@ -75,22 +76,27 @@ namespace PCShopSell.Game.Runtime
             // 外面一层半透明光壳，整栋楼像被光包住
             Prims.Box(_root.transform, "Shell", c0, size + new Vector3(0.5f, 0.5f, 0.5f), _shell);
 
-            _light.transform.position = new Vector3(c0.x, Mathf.Max(3f, mx.y * 0.6f), mn.z - 2.5f);
+            _light.transform.localPosition = new Vector3(c0.x, mn.y+Mathf.Max(3f, size.y * 0.6f), mn.z - 2.5f);
         }
 
         /// <summary>每帧：罩住 placeId 那家店（null = 隐藏）；搬店后换楼；光壳缓慢呼吸。</summary>
         public void Update(GameSession s, StreetWorldBuilder world, string placeId, float dt)
         {
-            bool show = s != null && placeId != null && world.Places.ContainsKey(placeId);
+            bool show = s != null && placeId != null && world.Places.ContainsKey(placeId) && world.Places[placeId].Root!=null;
             if (_root.activeSelf != show) _root.SetActive(show);
             if (!show) return;
 
-            if (_placeId != placeId)
+            var building=world.Places[placeId];var transform=building.Root.transform;
+            // Match the building's local coordinate system as a sibling, so geometry scans cannot include this glow.
+            if(_root.transform.parent!=transform.parent)_root.transform.SetParent(transform.parent,false);
+            _root.transform.localPosition=transform.localPosition;
+            _root.transform.localRotation=transform.localRotation;
+            _root.transform.localScale=transform.localScale;
+            if (_placeId != placeId || _building!=building.Root)
             {
                 _placeId = placeId;
-                Transform body = world.Places[_placeId].Root.transform.Find("Body");
-                var r = body != null ? body.GetComponent<Renderer>() : null;
-                Rebuild(r != null ? r.bounds : new Bounds(world.Places[_placeId].Entrance + new Vector3(0, 2, 4), new Vector3(5, 4, 7)));
+                _building=building.Root;
+                Rebuild(building.BuildingBounds(transform));
             }
 
             _time += dt;

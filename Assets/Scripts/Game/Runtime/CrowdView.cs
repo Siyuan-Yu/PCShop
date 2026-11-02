@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Session;
 using UnityEngine;
@@ -16,7 +16,6 @@ namespace PCShopSell.Game.Runtime
         {
             public GameObject Go;
             public Vector3 Target;
-            public float Speed;
             public bool VanishOnArrive;
             public ResidentDef Resident;
             public ResidentTrip Trip;
@@ -259,7 +258,6 @@ namespace PCShopSell.Game.Runtime
             Walker w = Spawn(null, new Vector3(x, 0, _rng.NextDouble() < 0.5 ? 2.6f + widen : -2.8f - widen));
             w.Target = target;
             w.VanishOnArrive = true;
-            w.Speed = 1.8f;
             _walkers.Add(w);
         }
 
@@ -296,7 +294,12 @@ namespace PCShopSell.Game.Runtime
                     w.Target = RandomSidewalk();
                     continue;
                 }
-                Vector3 step = d.normalized * Mathf.Min(d.magnitude, w.Speed * dt);
+                float distance=(float)(PCShopSell.Core.World.CityTravelTiming.ScaledSecondsMeters(Vehicles.Walk,dt,
+                    _citySession?.Time.SecondsPerMinuteAt1x??PCShopSell.Core.Time.TimeController.DefaultSecondsPerMinute)
+                    *PCShopSell.Core.World.CityTravelTiming.NpcWalkSpeedFactor);
+                if(_citySession!=null)distance/=(float)PCShopSell.Core.World.CityTravelTiming.LocalScale(_citySession.City,
+                    new PCShopSell.Core.World.MapPoint(p.x,p.z));
+                Vector3 step = d.normalized * Mathf.Min(d.magnitude,distance);
                 w.Go.transform.position = p + step;
                 w.Go.transform.rotation = Quaternion.LookRotation(d.normalized);
             }
@@ -321,7 +324,7 @@ namespace PCShopSell.Game.Runtime
                 go.AddComponent<CityPersonMarker>().PersonId = r.Id;
                 var collider = go.AddComponent<SphereCollider>(); collider.center = Vector3.up * .9f; collider.radius = .55f;
             }
-            return new Walker { Go = go, Resident = r, Motion = go.GetComponent<FigureMotion>(), Speed = 1.0f + (float)look.NextDouble() * 0.8f };
+            return new Walker { Go = go, Resident = r, Motion = go.GetComponent<FigureMotion>() };
         }
 
         private static int StableHash(string s)

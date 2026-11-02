@@ -62,7 +62,7 @@ namespace PCShopSell.Game.UI
         private Button _storageWarning;
         private Text _noticeButtonText;
         private int _unreadNotices;
-        private Text _dateText, _cashText, _statsText, _placeText, _hintText, _cargoText, _chaseText, _shopGoText;
+        private Text _dateText, _cashText, _statsText, _placeText, _hintText, _cargoText, _chaseText;
         private readonly List<(Button b, int speed)> _speedButtons = new List<(Button, int)>();
         private readonly List<(Button b, VehicleKind kind)> _vehicleButtons = new List<(Button, VehicleKind)>();
         private Button _pauseButton;
@@ -103,6 +103,7 @@ namespace PCShopSell.Game.UI
         public void Update(float dt)
         {
             if (S == null) return;
+            RefreshShopDockVisibility();
             HoldRepeat.AdvanceActiveHold(Time.unscaledDeltaTime);
             foreach (var window in _windows.ToArray())
             {
@@ -221,15 +222,16 @@ namespace PCShopSell.Game.UI
             }
             _cargoText = Ui.Size(Ui.Label(brow, "", 16), 155);
             Ui.Size(Ui.Label(brow, "快捷前往：", 17), 90);
-            BuildShortcutButton(brow,"去我的店",0,100);
             Ui.Size(Ui.Button(brow, "回家睡觉", _ctrl.GoHomeToSleep, 17), 108).Tip("自动回家并走到床边，打开睡眠选项；按 WASD 随时接管。");
+            BuildShortcutButton(brow,"我的店铺",0,100);
             BuildShortcutButton(brow,"批发市场",1,100);
             BuildShortcutButton(brow,"中介",2,72);
+            BuildShortcutButton(brow,"自定目的地",3,116);
             RefreshShortcutMenus();
-            Ui.Size(Ui.Button(brow,"自定目的地",OpenCityMap,17,Ui.ButtonHot),116);
 
             Ui.Size(Ui.Button(brow, "叫货车", OpenTruckWindow, 17, Ui.ButtonHot), 100).Tip("打开货车装货单，选货物和目的地；手机通讯录里的入口也保留。");
             BuildCityLifeHud(root);
+            BuildShopDockToggle(root);
 
             Image hint = Ui.Panel(root, "HintStrip", new Color(0.12f, 0.18f, 0.17f, 0.93f));
             hint.rectTransform.Anchor(0, 0, 0, 0, 16, 70, -1136, -122);
@@ -282,8 +284,7 @@ namespace PCShopSell.Game.UI
             else if (S.CurrentPlace != null) where = "在 " + S.PlaceTitle(S.CurrentPlace);
             else where = "在街上";
             string shopName = S.MyShopCount > 1 ? S.ShopTitle(S.CurrentShop) : "店";
-            string shopState = !S.HasShop ? "<color=#DDC18B>还没有店铺</color>" : S.PlayerShop.IsOpen ? $"<color=#A9C9A9>{shopName}：营业中</color>" : $"<color=#D79780>{shopName}：关门</color>";
-            _shopGoText.text = S.HasShop ? "去我的店" : "房产中介";
+            string shopState = !S.HasShop ? "<color=#DDC18B>还没有店铺</color>" : S.IsPlaceOpen(S.PlayerShopPlace) ? $"<color=#A9C9A9>{shopName}：营业中</color>" : $"<color=#D79780>{shopName}：关门</color>";
             _placeText.text = where + "   " + shopState;
 
             bool warnStorage = S.HasTempHere && S.TempMinutesLeftHere <= 1440 && !S.IsGameOver && !AnyModalOpen && !_ctrl.Placing;
@@ -679,7 +680,7 @@ namespace PCShopSell.Game.UI
 
         // ---------- 窗口 ----------
 
-        public Window OpenWindow(string title, float width, float height, Action<Window> builder, bool holds = true, bool closable = true, Action onClosed = null)
+        public Window OpenWindow(string title, float width, float height, Action<Window> builder, bool holds = true, bool closable = true, Action onClosed = null, bool scrollContent = true)
         {
             var w = new Window { Builder = builder, Holds = holds, Owner = this, OnClosed = onClosed, Closable = closable };
             Image dim = Ui.Panel(_modalCanvas.transform, "Window_" + title, new Color(0.04f, 0.08f, 0.07f, 0.55f));
@@ -705,8 +706,16 @@ namespace PCShopSell.Game.UI
             }
 
             w.Root = dim.rectTransform;
-            w.Content = Ui.Scroll(prt);
-            ((RectTransform)w.Content.parent.parent).Anchor(0, 0, 1, 1, 0, 0, 0, 50);
+            if(scrollContent)
+            {
+                w.Content = Ui.Scroll(prt);
+                ((RectTransform)w.Content.parent.parent).Anchor(0, 0, 1, 1, 0, 0, 0, 50);
+            }
+            else
+            {
+                w.Content = Ui.Rect(prt,"FixedContent").Anchor(0,0,1,1,0,0,0,50);
+                Ui.VList(w.Content);
+            }
             var contentLayout = w.Content.GetComponent<VerticalLayoutGroup>();
             contentLayout.spacing = 8; contentLayout.padding = new RectOffset(16, 16, 16, 16);
             _windows.Add(w);

@@ -6,6 +6,7 @@ using PCShopSell.Core.Finance;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using UnityEngine;
+using PCShopSell.Core.Home;
 
 namespace PCShopSell.Tests
 {
@@ -16,6 +17,80 @@ namespace PCShopSell.Tests
         {
             return new GameSession(PCShopSell.Core.World.CityLayout.FromData(GameSessionTests.Layout()), 7,
                 Money.FromYuan(cash), GameTimestamp.From(new GameDate(3), 8 * 60), false, phone);
+        }
+
+        [TestCase("computer")]
+        [TestCase("clothing")]
+        [TestCase("models")]
+        [TestCase("flowers")]
+        [TestCase("produce")]
+        [TestCase("food")]
+        public void StockAndPricingUseActualGoodsForTheCurrentBusiness(string kind)
+        {
+            using(var s=Make())
+            {
+                GameSessionTests.Teleport(s,"pc");
+                Assert.IsTrue(s.SetShopMainCategory(kind));
+                var shop=s.PlayerShop;shop.Settings.BaseCustomersPerHour=0;shop.Stock.Clear();
+                var product=Gifts.All.First(g=>RetailShopTypes.Sells(kind,g.Id));
+                var part=PartCatalog.Get("cpu0");
+                shop.Stock.ForceAddGoods(product.Id,3);shop.Stock.ForceAdd(part,true,2);
+                var root=new GameObject("ActualShopGoodsRegression");root.SetActive(false);
+                var controller=root.AddComponent<PCShopSell.Game.GameController>();
+                typeof(PCShopSell.Game.GameController).GetProperty("Session").SetValue(controller,s);
+                typeof(PCShopSell.Game.GameController).GetProperty("City").SetValue(controller,s.City);
+                var existingEventSystem=UnityEngine.EventSystems.EventSystem.current;
+                var ui=new PCShopSell.Game.UI.GameUi(controller);
+                Transform[] Named(string prefix)=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Transform>()).Where(t=>t.name.StartsWith(prefix)).ToArray();
+                UnityEngine.UI.Button Button(string name)=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<UnityEngine.UI.Button>()).Single(b=>b.name==name);
+                try
+                {
+                    ui.OpenDock();ui.DebugSelectTab(2);
+                    Assert.AreEqual(2,Named("Pricing_").Length,"只展示实际持有的商品，混售不受主售限制");
+                    Assert.AreEqual(1,Named("Pricing_goods_"+product.Id).Length);
+                    Assert.AreEqual(1,Named("Pricing_cpu0").Length);
+                    string IntentSummary()=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<UnityEngine.UI.Text>()).Single(t=>t.name=="PricingPurchaseIntentSummary").text;
+                    string ExpectedIntent()=>((shop.GoodsPurchaseIntentAtPrice(product.Id,shop.GoodsPriceOf(product.Id).Yuan)*3
+                        +shop.PartPurchaseIntentAtPrice(part,true,shop.PriceOf(part,true).Yuan)*2)/5*100).ToString("0")+"%";
+                    StringAssert.Contains("购买意愿",IntentSummary());StringAssert.Contains(ExpectedIntent(),IntentSummary());
+                    var slider=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<UnityEngine.UI.Slider>()).Single(t=>t.name=="GlobalMarkupSlider");
+                    slider.value=1.4f;StringAssert.Contains(ExpectedIntent(),IntentSummary());
+                    var before=shop.GoodsPriceOf(product.Id);
+                    Button("EditPrice_goods_"+product.Id).onClick.Invoke();
+                    Button("PricePlus_goods_"+product.Id).onClick.Invoke();
+                    Assert.AreEqual(before,shop.GoodsPriceOf(product.Id),"预览不能提前修改售价");
+                    Button("ConfirmPrice_goods_"+product.Id).onClick.Invoke();
+                    Assert.AreEqual(before.Yuan+1,shop.GoodsPriceOf(product.Id).Yuan);
+                    StringAssert.Contains(ExpectedIntent(),IntentSummary(),"单独改价后顶部参考值也必须更新");
+                    ui.CloseAllWindows();ui.OpenDock();ui.DebugSelectTab(1);
+                    Assert.AreEqual(1,Named("StockGoods_"+product.Id).Length);
+                    Assert.AreEqual(1,Named("StockPart_cpu0").Length,"实际配件在任何主售店都可管理");
+                    Assert.AreEqual(2,shop.Stock.CountAll(part));Assert.AreEqual(3,shop.Stock.GoodsCount(product.Id));
+                    Assert.IsTrue(shop.Stock.TryRemoveGoods(product.Id,3));
+                    typeof(PCShopSell.Game.UI.GameUi).GetMethod("RefreshDock",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance).Invoke(ui,null);
+                    Assert.AreEqual(0,Named("StockGoods_"+product.Id).Length,"售罄后库存列表应刷新");
+                    ui.DebugSelectTab(2);
+                    Assert.AreEqual(1,Named("Pricing_").Length,"售罄商品不能继续显示在调价页");
+                    int shelf=s.CurrentShop.Layout.Count;
+                    s.CurrentShop.Layout.Add(new PCShopSell.Core.Home.PlacedFurniture{Id=FurnitureCatalog.Shelf});
+                    foreach(string group in new[]{"服装","电脑配件","模型手办","零售商品","全部"})
+                    {
+                        ui.OpenShelfKindChooser(shelf);
+                        Button("ShelfGroup_"+group).onClick.Invoke();
+                        var expected=PCShopSell.Core.Inventory.ShelfKinds.All.Where(k=>group=="全部" || k.BrowseGroup==group).Select(k=>"ShelfKind_"+k.Id).ToArray();
+                        CollectionAssert.AreEquivalent(expected,Named("ShelfKind_").Select(t=>t.name));
+                        Button(expected.First()).onClick.Invoke();
+                        Assert.AreEqual(expected.First().Substring("ShelfKind_".Length),s.ShelfKindAt(shelf).Id);
+                    }
+                }
+                finally
+                {
+                    ui.CloseAllWindows();
+                    foreach(var canvas in ui.Canvases)UnityEngine.Object.DestroyImmediate(canvas.gameObject);
+                    UnityEngine.Object.DestroyImmediate(root);
+                    if(existingEventSystem==null && UnityEngine.EventSystems.EventSystem.current!=null)UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);
+                }
+            }
         }
 
         [Test]

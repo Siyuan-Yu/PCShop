@@ -87,6 +87,11 @@ namespace PCShopSell.Core.Session
 
         private void Raise(EventDef def, GameDate today)
         {
+            if(def.Id=="rival")
+            {
+                def=BindPriceWar(def);
+                if(def==null)return;
+            }
             PendingEvent = def;
             _eventLastDay[def.Id] = today.TotalDays;
             _eventCount[def.Id] = EventCountOf(def.Id) + 1;

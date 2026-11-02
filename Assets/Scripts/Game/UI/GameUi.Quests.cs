@@ -59,6 +59,7 @@ namespace PCShopSell.Game.UI
         /// <summary>顶栏“任务”按钮：打开当前任务说明，并重新显示左上角的任务条。</summary>
         public void OpenQuests()
         {
+            if(S.IsOwnedVenue(S.CurrentPlace)){OpenVenueManagement(S.CurrentPlace);return;}
             _questHidden = false;
             UpdateQuestTracker();
             if (_questWindow != null && !_questWindow.Closed) { _questWindow.Rebuild(); return; }
@@ -74,6 +75,12 @@ namespace PCShopSell.Game.UI
         private void UpdateQuestTracker()
         {
             if (_questPanel == null) return;
+            if(S.IsOwnedVenue(S.CurrentPlace))
+            {
+                _questPanel.gameObject.SetActive(!_questHidden&&!S.IsGameOver&&!_ctrl.Placing);
+                _questText.text="<b><color=#DDC18B>场馆经营 · "+S.VenueBusinessName(S.CurrentPlace)+"</color></b>\n设置价格和营业时间，安排值守后开启接客。\n<size=14>顾客到场后付费；老板自用免费。按 F 或查看步骤打开场馆管理。</size>";
+                return;
+            }
             QuestDef q = S.CurrentQuest();
             if (_questInitialized && _questSeen != q?.Id && !S.IsGameOver)
             {
@@ -115,6 +122,7 @@ namespace PCShopSell.Game.UI
 
         public void OpenQuestWindow()
         {
+            if(S.IsOwnedVenue(S.CurrentPlace)){OpenVenueManagement(S.CurrentPlace);return;}
             UpdateQuestTracker();
             if (S.CurrentQuest() == null) return;
             if (_questWindow != null && !_questWindow.Closed) { _questWindow.Rebuild(); return; }
@@ -172,6 +180,7 @@ namespace PCShopSell.Game.UI
         {
             var q = S.CurrentQuest();
             if (q == null || q.Target != target) return;
+            if(q.Id=="shelf" && S.RetailKind!="computer")return;
             S.VisitQuestTarget(target);
             var card = Ui.Panel(parent, "GuideHint", Ui.PanelBg2).rectTransform;
             Ui.VList(card, 6, 12);
@@ -191,7 +200,6 @@ namespace PCShopSell.Game.UI
                 case ShopTab.Pricing: return QuestTarget.Pricing;
                 case ShopTab.Orders: return QuestTarget.Orders;
                 case ShopTab.Renovate: return QuestTarget.Renovate;
-                case ShopTab.Upgrades: return QuestTarget.Upgrades;
                 case ShopTab.Staff: return QuestTarget.Staff;
                 default: return QuestTarget.Counter;
             }
@@ -209,7 +217,7 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Staff: return "位置：自己的店 → 右侧“招人”页";
                 case QuestTarget.PhoneShop: return "地点：商业街 · <color=#FFC966>手机店</color>";
                 case QuestTarget.Mall: return "地点：商业街 · <color=#FFC966>宜居家具城</color>";
-                case QuestTarget.Upgrades: return "位置：自己的店 → 右侧“升级”页";
+                case QuestTarget.Upgrades: return "设备在街上的对应商店购买，家具在店铺“装修”页摆放。";
                 case QuestTarget.Pricing: return "位置：自己的店 → 右侧“定价”页";
                 case QuestTarget.Orders: return "位置：自己的店 → 右侧“订单”页";
                 case QuestTarget.Restock: return "入口：手机 → 1788";

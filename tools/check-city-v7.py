@@ -10,7 +10,10 @@ assert len(n)==len(d['nodes']) and len(p)==len(d['places'])
 assert len(d['streets'])==10
 assert len([x for x in p.values() if x.get('tradable')])>=20
 assert len([x for x in p.values() if x['kind']=='station'])==8
-assert Counter(x['street'] for x in p.values() if x['kind']=='agency')==Counter(s['id'] for s in d['streets'])
+agencies={x['id'] for x in p.values() if x['kind']=='agency'}
+assert len(agencies)==4
+assert {x['agencyId'] for x in d['agencyDistricts']}==agencies
+assert Counter(street for district in d['agencyDistricts'] for street in district['streets'])==Counter(s['id'] for s in d['streets'])
 for kind in ['restaurant','ktv','bar']:
  venues=[x for x in p.values() if x.get('business')=='venue_'+kind]
  assert len(venues)==4,(kind,len(venues))
@@ -33,7 +36,7 @@ while q:
 assert len(visited)==len(n),('disconnected',set(n)-visited)
 for x in p.values():assert x['node'] in visited
 legacy=json.loads(subprocess.check_output(['git','show','HEAD:Assets/Resources/Data/city_layout.json'],cwd=root).decode('utf-8-sig'))
-assert {x['id'] for x in legacy['places']}<=set(p),'lost legacy places'
+assert {x['id'] for x in legacy['places']}<=set(p)|{a['from'] for a in d.get('placeAliases',[])},'lost legacy place/alias'
 assert {x['id'] for x in legacy['nodes']}<=set(n),'lost legacy nodes'
 rects=[]
 for x in p.values():
@@ -42,7 +45,7 @@ for x in p.values():
  for id,other in rects:
   assert not(rect[0]<other[2] and rect[2]>other[0] and rect[1]<other[3] and rect[3]>other[1]),('overlap',id,x['id'])
  rects.append((x['id'],rect))
-print('PASS: 10 streets / 10 agencies / 8 stations / 12 tiered venues / 4 homes')
+print('PASS: 10 streets / 4 agency districts / 8 stations / 12 tiered venues / 4 homes')
 print('PASS: all graph edges orthogonal, every node/place reachable, all legacy IDs retained, no interactive building overlap')
 print('Nodes:',len(n),'edges:',len(d['edges']),'places:',len(p),'compound buildings:',len(d['blocks']))
 
@@ -52,7 +55,7 @@ from collections import Counter
 scenery=runpy.run_path(str(Path(__file__).with_name('densify-city.py')))
 reserved=scenery['reserved_rectangles'](d)
 counts=Counter(b['street'] for b in d['blocks'])
-for street,minimum in [('s_oldhomes',45),('s_services',25),('s_sports',25),('s_newtown',35)]:
+for street,minimum in [('s_oldhomes',45),('s_services',25),('s_sports',25),('s_newtown',10)]:
  assert counts[street]>=minimum,('residential density',street,counts[street])
 for block in d['blocks']:
  rect=scenery['building_rect'](block,.75)

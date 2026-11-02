@@ -98,6 +98,7 @@ namespace PCShopSell.Core.Shop
         public CustomerState State { get; internal set; }
         public LeaveReason Reason { get; internal set; }
         public GameTimestamp WaitingSince { get; internal set; }
+        internal double CheckoutStartedSeconds = double.NaN;
 
         /// <summary>挑中的货（排队时已从货架上拿下）。</summary>
         public PartDef Item { get; internal set; }
@@ -235,12 +236,7 @@ namespace PCShopSell.Core.Shop
         /// <summary>库存容量（格）。</summary>
         public static double Capacity(ShopSize size)
         {
-            switch (size)
-            {
-                case ShopSize.Medium: return 120;
-                case ShopSize.Large: return 300;
-                default: return 40;
-            }
+            return double.MaxValue;
         }
 
         /// <summary>离地铁站越远客流越低：最近为 1，最远为 0.4。</summary>
@@ -426,9 +422,15 @@ namespace PCShopSell.Core.Shop
 
         /// <summary>员工此刻是否在岗（由会话按值班时间提供）。</summary>
         public Func<GameTimestamp, bool> EmployeeOnDuty { get; set; } = _ => false;
+        public Func<double> EmployeeServiceRate;
+        private double _employeeServiceCredit=1;
 
         public IReadOnlyList<ShopCustomer> ActiveCustomers => _active;
         public Func<ShopCustomer,bool> CustomerCanBrowse;
+        // A finite value is the active, unscaled clock of the shop the player is currently observing.
+        // Unobserved/background simulations keep their ordinary game-time patience.
+        public Func<double> CheckoutClock;
+        public const double MinimumCheckoutWaitSeconds = 15;
         public IReadOnlyList<ShopCustomer> Queue => _queue;
         public string RetailKind = "computer";
         public bool IsGoodsShop => RetailKind != "computer";
@@ -503,7 +505,8 @@ namespace PCShopSell.Core.Shop
             return OpenMinute < CloseMinute ? m >= OpenMinute && m < CloseMinute : m >= OpenMinute || m < CloseMinute;
         }
 
-        public bool IsOpenAt(GameTimestamp t) => !ForcedClosed && !NotFitted && InHours(t) && (PlayerPresent || EmployeeOnDuty(t));
+        public bool TradingEnabled = true;
+        public bool IsOpenAt(GameTimestamp t) => TradingEnabled && !ForcedClosed && !NotFitted && InHours(t) && (PlayerPresent || EmployeeOnDuty(t));
 
         public bool IsOpen => IsOpenAt(_clock.Now);
 
@@ -730,7 +733,7 @@ namespace PCShopSell.Core.Shop
                 if (c.State == CustomerState.Browsing && now >= c.ReadyAt && (CustomerCanBrowse==null||CustomerCanBrowse(c)))
                     Decide(c, now);
                 else if (c.State == CustomerState.WaitingCheckout &&
-                         c.WaitingSince.MinutesUntil(now) >= Settings.PatienceMinutes)
+                         c.WaitingSince.MinutesUntil(now) >= Settings.PatienceMinutes && CheckoutPatienceElapsed(c))
                     Leave(c, LeaveReason.Impatient);
             }
 
@@ -739,6 +742,12 @@ namespace PCShopSell.Core.Shop
                 CompleteSale(_queue[0], true);
             else if (EmployeeOnDuty(now) && !EmployeeBusy())
             {
+                if(EmployeeServiceRate!=null)
+                {
+                    _employeeServiceCredit=Math.Min(1,_employeeServiceCredit)+EmployeeServiceRate();
+                    while(_queue.Count>0&&_employeeServiceCredit>=1){CompleteSale(_queue[0]);_employeeServiceCredit--;}
+                    return;
+                }
                 if (_employeeBusyMinutes > 0) _employeeBusyMinutes--;
                 else if (_queue.Count > 0)
                 {
@@ -761,6 +770,18 @@ namespace PCShopSell.Core.Shop
             TodayCustomers++;
             CustomerArrived?.Invoke(c);
         }
+        private bool CheckoutPatienceElapsed(ShopCustomer customer)
+        {
+            double seconds=CheckoutClock?.Invoke()??double.NaN;
+            if(double.IsNaN(seconds))return true;
+            if(double.IsNaN(customer.CheckoutStartedSeconds))customer.CheckoutStartedSeconds=seconds;
+            return seconds-customer.CheckoutStartedSeconds+1e-8>=MinimumCheckoutWaitSeconds;
+        }
+        public double? CheckoutElapsedSeconds(ShopCustomer customer)
+        {
+            double seconds=CheckoutClock?.Invoke()??double.NaN;
+            return double.IsNaN(seconds)||double.IsNaN(customer.CheckoutStartedSeconds)?(double?)null:Math.Max(0,seconds-customer.CheckoutStartedSeconds);
+        }
 
         private int PickTier()
         {
@@ -770,12 +791,15 @@ namespace PCShopSell.Core.Shop
 
         private void Decide(ShopCustomer c, GameTimestamp now)
         {
-            if (IsGoodsShop)
+            bool browseComputer=IsGoodsShop && (_display.Count>0 || PartCatalog.Categories.Any(cat=>ShelfFillOf(cat).Total>0))
+                && (!GoodsOnSale || Random.Chance(.2));
+            if (IsGoodsShop && !browseComputer)
             {
                 if (TryTakeGoods(c, now)) return;
                 Leave(c, GoodsOnSale ? LeaveReason.TooExpensive : LeaveReason.NoStock);
                 return;
             }
+            if(browseComputer && _display.Count>0 && Random.Chance(AssistedPurchaseIntent(ShopSettings.BuyChance(_markup))) && TryTakeDisplay(c,now))return;
             if (c.Intent == CustomerIntent.Build)
             {
                 if (!Random.Chance(AssistedPurchaseIntent(ShopSettings.BuyChance(_markup))))
@@ -827,6 +851,7 @@ namespace PCShopSell.Core.Shop
 
             c.State = CustomerState.WaitingCheckout;
             c.WaitingSince = now;
+            c.CheckoutStartedSeconds=CheckoutClock?.Invoke()??double.NaN;
             _queue.Add(c);
             CustomerReadyToPay?.Invoke(c);
         }
@@ -840,9 +865,16 @@ namespace PCShopSell.Core.Shop
         /// </summary>
         private bool TryTakeGoods(ShopCustomer c, GameTimestamp now)
         {
-            List<KeyValuePair<string, int>> lines = GoodsOnShelves().FindAll(l => RetailShopTypes.Sells(RetailKind, l.Key));
+            List<KeyValuePair<string, int>> lines = GoodsOnShelves();
             if (lines.Count == 0) return false;
-            if (RetailKind == "models")
+            var primary=lines.FindAll(l=>RetailShopTypes.Sells(RetailKind,l.Key));
+            if(primary.Count>0 && primary.Count<lines.Count)
+                lines=Random.Chance(.8)?primary:lines.FindAll(l=>!RetailShopTypes.Sells(RetailKind,l.Key));
+            var groups=lines.GroupBy(l=>RetailShopTypes.GoodsKind(l.Key)).ToArray();
+            var group=groups[groups.Length==1?0:Random.Next(0,groups.Length)];
+            lines=group.ToList();
+            bool clothing=group.Key=="clothing";
+            if (group.Key == "models")
             {
                 if (!c.RetailPreferenceAssigned)
                 {
@@ -857,7 +889,7 @@ namespace PCShopSell.Core.Shop
                 var preferred = lines.FindAll(l => Gifts.Get(l.Key)?.ModelSeries == c.RetailInterestSeries);
                 if (preferred.Count > 0) lines = preferred;
             }
-            if (RetailKind == "clothing")
+            if (clothing)
             {
                 if (!c.RetailPreferenceAssigned)
                 {
@@ -871,8 +903,12 @@ namespace PCShopSell.Core.Shop
                 if (lines.Count == 0) { Leave(c, LeaveReason.TooExpensive); return true; }
             }
             string id;
-            if (RetailKind == "clothing")
+            if (clothing)
             {
+                // Choose the seasonal pool first so a larger off-season catalog cannot drown out demand.
+                var seasonal=lines.FindAll(l=>ClothingProducts.IsInSeason(l.Key,now.TotalMinutes));
+                if(seasonal.Count>0 && seasonal.Count<lines.Count)
+                    lines=Random.Chance(.7)?seasonal:lines.FindAll(l=>!ClothingProducts.IsInSeason(l.Key,now.TotalMinutes));
                 double temp = RetailTemperature?.Invoke() ?? 22;
                 double total = lines.Sum(l => ClothingProducts.SeasonDemandAt(l.Key, temp));
                 double pick = Random.Next(0, 1000000) / 1000000.0 * total;
@@ -893,6 +929,7 @@ namespace PCShopSell.Core.Shop
             c.Spend = GoodsPriceOf(id);
             c.State = CustomerState.WaitingCheckout;
             c.WaitingSince = now;
+            c.CheckoutStartedSeconds=CheckoutClock?.Invoke()??double.NaN;
             _queue.Add(c);
             CustomerReadyToPay?.Invoke(c);
             return true;
@@ -914,6 +951,7 @@ namespace PCShopSell.Core.Shop
             c.Spend = BuildPrice(tier);
             c.State = CustomerState.WaitingCheckout;
             c.WaitingSince = now;
+            c.CheckoutStartedSeconds=CheckoutClock?.Invoke()??double.NaN;
             _queue.Add(c);
             CustomerReadyToPay?.Invoke(c);
             return true;

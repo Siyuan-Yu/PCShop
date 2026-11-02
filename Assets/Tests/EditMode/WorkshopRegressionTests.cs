@@ -244,6 +244,72 @@ namespace PCShopSell.Tests
             }
         }
 
+        [UnityEngine.TestTools.UnityTest]
+        public System.Collections.IEnumerator ShopHoursDropdown_SurvivesLiveRefreshAndCommitsSelection()
+        {
+            yield return new UnityEngine.TestTools.EnterPlayMode();
+            using(var s=Make())
+            {
+                s.PlayerShop.SetHours(9*60,21*60);
+                var root=new UnityEngine.GameObject("ShopHoursDropdownRegression");
+                root.SetActive(false);
+                var controller=root.AddComponent<PCShopSell.Game.GameController>();
+                typeof(PCShopSell.Game.GameController).GetProperty("Session").SetValue(controller,s);
+                typeof(PCShopSell.Game.GameController).GetProperty("City").SetValue(controller,s.City);
+                var existingEventSystem=UnityEngine.EventSystems.EventSystem.current;
+                var ui=new PCShopSell.Game.UI.GameUi(controller);
+                var refresh=typeof(PCShopSell.Game.UI.GameUi).GetMethod("RefreshDock",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance);
+                try
+                {
+                    ui.OpenDock();
+                    yield return null; // Let Unity initialize the newly created dropdown components.
+                    foreach(string name in new[]{"ShopOpeningTime","ShopClosingTime"})
+                    {
+                        var choice=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<PCShopSell.Game.UI.ChoiceDropdown>()).Single(d=>d.name==name);
+                        int next=choice.value+1;
+                        string caption=choice.options[next].text;
+                        choice.OnPointerClick(new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current));
+                        Assert.IsTrue(choice.IsChoiceOpen,"点击后必须展开");
+                        var list=choice.transform.Find("Dropdown List");
+                        var scroll=list.GetComponent<UnityEngine.UI.ScrollRect>();
+                        scroll.verticalNormalizedPosition=.3f;
+                        for(int tick=0;tick<4;tick++)
+                        {
+                            yield return new UnityEngine.WaitForSecondsRealtime(.45f);
+                            s.Clock.Advance(1);
+                            refresh.Invoke(ui,null);
+                            Assert.IsTrue(choice!=null && choice.IsChoiceOpen,"柜台定时刷新不能销毁正在操作的下拉框");
+                            Assert.AreSame(list,choice.transform.Find("Dropdown List"));
+                            Assert.AreEqual(.3f,scroll.verticalNormalizedPosition,.01f,"刷新不能重置滚动位置");
+                        }
+                        var selected=list.GetComponentsInChildren<UnityEngine.UI.Toggle>().Single(t=>t.GetComponentInChildren<UnityEngine.UI.Text>().text==caption);
+                        selected.isOn=true;
+                        yield return null;
+                        var updated=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<PCShopSell.Game.UI.ChoiceDropdown>()).Single(d=>d.name==name);
+                        Assert.AreEqual(caption,updated.captionText.text,"选中时间后应立即更新并保存");
+                        Assert.AreEqual(name=="ShopOpeningTime"?9*60+15:21*60+15,name=="ShopOpeningTime"?s.PlayerShop.OpenMinute:s.PlayerShop.CloseMinute);
+                    }
+                    var closing=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<PCShopSell.Game.UI.ChoiceDropdown>()).Single(d=>d.name=="ShopClosingTime");
+                    closing.Show();
+                    Assert.IsTrue(ui.CloseTopWindow(),"Esc应先收起下拉列表");
+                    yield return new UnityEngine.WaitForSecondsRealtime(.3f);
+                    Assert.IsFalse(closing.IsChoiceOpen);
+                    refresh.Invoke(ui,null);
+                    yield return null;
+                    Assert.IsTrue(closing==null,"收起列表后柜台自动刷新应恢复");
+                }
+                finally
+                {
+                    ui.CloseAllWindows();
+                    foreach(var canvas in ui.Canvases)UnityEngine.Object.DestroyImmediate(canvas.gameObject);
+                    UnityEngine.Object.DestroyImmediate(root);
+                    if(existingEventSystem==null && UnityEngine.EventSystems.EventSystem.current!=null)
+                        UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);
+                }
+            }
+            yield return new UnityEngine.TestTools.ExitPlayMode();
+        }
+
         [TestCase(0)]
         [TestCase(1)]
         [TestCase(2)]

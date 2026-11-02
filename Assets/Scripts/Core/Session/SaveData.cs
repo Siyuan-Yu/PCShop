@@ -41,6 +41,8 @@ namespace PCShopSell.Core.Session
         public SaveEmployee buyer;
         public SaveEmployee salesperson;
         public EmployeePurchaseTrip[] employeeTrips;
+        public EmployeePurchaseTrip[] employeePurchaseHistory;
+        public int warehouseAccessVersion;
         public SaveEmployee[] idleEmployees;
         public bool tricycleImpounded;
         public SaveStockLine[] cargo;

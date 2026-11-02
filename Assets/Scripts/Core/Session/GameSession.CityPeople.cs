@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Time;
@@ -23,7 +23,7 @@ namespace PCShopSell.Core.Session
             if(string.IsNullOrEmpty(id))return "居民";
             var job=Employees.FirstOrDefault(e=>e.Person.PersonId==id||
                 (_cityEmployeeAliases.TryGetValue(e.Person.Id,out var known)&&known==id));
-            return job!=null?RoleName(job.Role)+"（受聘）":CityPerson(id)?.Role??"居民";
+            return job!=null?(job.Role==EmployeeRole.Cashier&&IsDedicatedVenue(job.Shop?.Place)?"场馆值守员":RoleName(job.Role))+"（受聘）":CityPerson(id)?.Role??"居民";
         }
         public IEnumerable<CityPersonState> PeopleInPlace(string placeId) => _cityPeople.Values.Where(p=>p.LocationPlaceId==placeId && p.Route==null);
         // Coordinates stay at the entrance as a route anchor while the person is inside.
@@ -59,10 +59,10 @@ namespace PCShopSell.Core.Session
             {
                 if(d.Id==CityLifeCatalog.InvitationTestPersonId && !DebugInvitationPersonEnabled)continue;
                 if(_cityPeople.ContainsKey(d.Id)) continue;
-                string home=City.HasPlace(d.HomeId)?d.HomeId:Home.Id;
+                string home=City.HasPlace(d.HomeId)?City.CanonicalPlaceId(d.HomeId):Home.Id;
                 var pos=StandOf(City.GetPlace(home));
                 var p=new CityPersonState {PersonId=d.Id,HomePlaceId=home,Address=City.GetPlace(home).Name+" "+(1+_cityPeople.Count/8)+"栋"+(101+_cityPeople.Count%8)+"室",
-                    WorkPlaceId=City.HasPlace(d.WorkId)?d.WorkId:null,LocationPlaceId=home,Task=CityPersonTask.Home,X=pos.X,Y=pos.Y};
+                    WorkPlaceId=City.HasPlace(d.WorkId)?City.CanonicalPlaceId(d.WorkId):null,LocationPlaceId=home,Task=CityPersonTask.Home,X=pos.X,Y=pos.Y};
                 _cityPeople.Add(p.PersonId,p);
                 if (d.Id == CityLifeCatalog.InvitationTestPersonId)
                 {
@@ -100,7 +100,7 @@ namespace PCShopSell.Core.Session
                 Stories=new[]{"最初来这座城时，我也从临时工作开始。",e.Description??"现在希望工作和生活都稳定一点。","以后想学一门更熟练的手艺。"}};
             if(!_cityPeople.ContainsKey(id))
             {
-                var d=CityPerson(id);string home=City.HasPlace(d.HomeId)?d.HomeId:Home.Id;var pos=StandOf(City.GetPlace(home));
+                var d=CityPerson(id);string home=City.HasPlace(d.HomeId)?City.CanonicalPlaceId(d.HomeId):Home.Id;var pos=StandOf(City.GetPlace(home));
                 _cityPeople[id]=new CityPersonState {PersonId=id,HomePlaceId=home,Address=City.GetPlace(home).Name+" 员工合租单元",LocationPlaceId=home,X=pos.X,Y=pos.Y};
             }
         }
@@ -295,8 +295,9 @@ namespace PCShopSell.Core.Session
         public string CityServiceReason(OwnedShop shop)
         {
             if(shop==null)return "未开店";
-            if(CityPlayerCanWork(shop)||CityEmployeeAvailable(shop.Employee,shop))return "可销售";
-            if(CityEmployeeAvailable(shop.Assembler,shop))return shop.EmployeeBuilding?"装机值守，收银需等待":"可销售（装机员兼收银）";
+            if(IsDedicatedVenue(shop.Place))return VenueOpen(shop.Place)?"场馆正在接客":"场馆暂停接客或等待值守";
+            if(CityPlayerCanWork(shop)||ShopStaff(shop,EmployeeRole.Cashier).Any(e=>CityEmployeeAvailable(e,shop)))return "可销售";
+            if(ShopStaff(shop,EmployeeRole.Assembler).Any(e=>CityEmployeeAvailable(e,shop)))return shop.EmployeeBuilding?"装机值守，收银需等待":"可销售（装机员兼收银）";
             return "暂停服务：无人值守";
         }
         public string CityTalk(string id,string topic,bool remote=false)

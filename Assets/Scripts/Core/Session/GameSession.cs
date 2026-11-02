@@ -147,12 +147,14 @@ namespace PCShopSell.Core.Session
         public MapPoint PlayerPosition => Trip != null ? Trip.Position : CityActivityPlayerPosition() ?? (OffNode ? _free.Value : CurrentPlace!=null?StandOf(CurrentPlace):City.ViewPosition(PlayerNodeId));
 
         public bool InPlayerShop => Lease != null && CurrentPlace == PlayerShopPlace;
+        private double _activeCheckoutSeconds;
 
         /// <summary>按真实时间推进世界：移动和静止都按同一个真实时间与倍速推进时钟。返回推进的整分钟数。</summary>
         public int Tick(double realSeconds)
         {
             _manualMoving = false;
             if (IsGameOver || !Time.IsRunning || realSeconds <= 0) return 0;
+            _activeCheckoutSeconds+=Math.Min(realSeconds,TimeController.MaxTickSeconds);
             double scaled = Math.Min(realSeconds, TimeController.MaxTickSeconds) * Time.Speed * TimeController.WorldRate;
 
             int minutes = Time.Tick(realSeconds);
@@ -305,7 +307,7 @@ namespace PCShopSell.Core.Session
         {
             if (p == null) return false;
             OwnedShop mine = ShopAt(p);
-            if (mine != null) return mine.Sim.IsOpen;
+            if (mine != null) return IsDedicatedVenue(p)?VenueOpen(p):mine.Sim.IsOpen;
             if(p.ExplicitEntrance && p.OpenMinute!=p.CloseMinute)return CityWithinHours(Clock.MinuteOfDay,p.OpenMinute,p.CloseMinute);
             var venture = VentureAt(p.Id);
             if (venture != null && venture.Paused) return false;
@@ -386,6 +388,8 @@ namespace PCShopSell.Core.Session
             TickEmployeePayroll(from.TotalMinutes, to.TotalMinutes);
             TickCityPeople(to.TotalMinutes);
             TickCityActivities(to.TotalMinutes);
+            TickVenueBusinesses(to.TotalMinutes);
+            NormalizeWarehouses();
             TickCityStories(to.TotalMinutes);
             TickCityRetail();
             TickCityClimate(from.TotalMinutes,to.TotalMinutes);

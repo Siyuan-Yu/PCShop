@@ -67,11 +67,11 @@ namespace PCShopSell.Core.Session
         {
             if (IsGameOver || !InPlayerShop || !_candidates.Any(c => c.Id == candidateId && CandidateAvailable(c))) return "候选人已不可聘用";
             if (!Enum.IsDefined(typeof(EmployeeRole), role)) return "请选择岗位";
-            if (role == EmployeeRole.Unassigned) return null;
+            if (role == EmployeeRole.Unassigned) return StaffCapacityBlocker(_focus);
             var shop = ShopAt(destination);
             if (shop == null) return "请选择门店";
-            if (EmployeeAt(shop, role) != null || Employees.Any(x => x.Person.TransferShopId == destination && PlannedEmployeeRole(x) == role))
-                return "岗位已占用或已预留，请选择其他岗位";
+            string capacity=StaffCapacityBlocker(shop);if(capacity!=null)return capacity;
+            if(IsDedicatedVenue(shop.Place)&&role!=EmployeeRole.Cashier)return "场馆仅可招聘值守岗位";
             return null;
         }
 
@@ -80,7 +80,8 @@ namespace PCShopSell.Core.Session
             var why = RecruitAssignmentBlocker(candidateId, destination, role);
             if (why != null) return Fail(why);
             int index = _candidates.FindIndex(c => c.Id == candidateId);
-            var person = RecruitEmployee(index);
+            var person = RecruitEmployee(index,role==EmployeeRole.Unassigned?null:destination);
+            if(person==null)return false;
             if (role == EmployeeRole.Unassigned) return true;
             MoveEmployeeWork(FindEmployee(person.Id), ShopAt(destination), role);
             return true;

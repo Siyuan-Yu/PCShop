@@ -29,7 +29,7 @@ namespace PCShopSell.Core.Session
             var d = Ventures.Get(kind); var l = _listings.Find(x => x.PlaceId == placeId);
             if (!HasShop) return "先把主店开起来";
             if (d == null || l == null || l.OpenDay > Clock.Today.TotalDays || l.CloseDay < Clock.Today.TotalDays) return "请选择当前可签约的空铺";
-            if (InAgency && !AgencyServes(CurrentPlace, City.GetPlace(placeId))) return "请到房源所在街道的中介签约";
+            if (InAgency && !AgencyServes(CurrentPlace, City.GetPlace(placeId))) return "请到房源所属片区的中介签约";
             if (IsMyShop(City.GetPlace(placeId)) || VentureAt(placeId) != null) return "这间铺子已在经营";
             if (_ventures.Count(x => !IsParkVenture(x)) >= 6) return "最多管理 6 家委托经营的门店";
             if (PlayerShop.Reputation < d.MinReputation) return $"知名度需要 {d.MinReputation:0}";

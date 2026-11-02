@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using UnityEngine;
@@ -273,6 +273,7 @@ namespace PCShopSell.Game.Runtime
         }
 
         /// <summary>WASD：按世界方向走一步，被家具挡住时沿边滑。</summary>
+        private const float OwnerWalkSpeed = 2.6f;
         public void MoveOwner(Vector3 worldDir, float realDt)
         {
             Vector3 d = new Vector3(worldDir.x, 0, worldDir.z);
@@ -281,7 +282,7 @@ namespace PCShopSell.Game.Runtime
             d.Normalize();
             Transform tr = _owner.transform;
             Vector3 p = tr.localPosition;
-            float step = 2.6f * realDt;
+            float step = OwnerWalkSpeed * realDt;
             Vector3 tx = p + new Vector3(d.x * step, 0, 0);
             if (CanStand(tx, p)) p = tx;
             Vector3 tz = p + new Vector3(0, 0, d.z * step);
@@ -344,7 +345,7 @@ namespace PCShopSell.Game.Runtime
             if (_bedWalkIndex >= _bedWalkPath.Count) return 1;
             Vector3 delta = _bedWalkPath[_bedWalkIndex] - at;
             if (delta.magnitude < 0.025f) { _bedWalkIndex++; return 0; }
-            MoveOwner(delta, Mathf.Min(dt, delta.magnitude / 2.6f));
+            MoveOwner(delta, Mathf.Min(dt, delta.magnitude / OwnerWalkSpeed));
             if ((_owner.transform.localPosition - at).sqrMagnitude < 1e-10f && dt > 0) return -1;
             return 0;
         }

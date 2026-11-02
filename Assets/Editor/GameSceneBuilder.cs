@@ -647,12 +647,12 @@ namespace PCShopSell.EditorTools
             _game.Ui.CloseAllWindows();
             Check(s.CompleteBuild(orderField.Id, 1), "交付装机订单");
 
-            // 新内容：升级面板 / 随机事件窗口 / 家里的衣橱
+            // 店铺管理 / 随机事件窗口 / 家里的衣橱
             Teleport(s, "player_shop");
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
-            _game.Ui.DebugSelectTab(_game.Ui.DebugTabCount - 2);
+            _game.Ui.DebugSelectTab(0);
             Frame(0.05f);
-            Shot("vs1_11_upgrades");
+            Shot("vs1_11_counter_management");
             // 按配件定价 / 自动补货 / 经营报表
             s.PlayerShop.SetPartMarkup(PartCatalog.Get("gpu1"), 1.45);
             s.PlayerShop.SetPartMarkup(PartCatalog.Get("ram0"), 1.0);
@@ -1218,10 +1218,10 @@ namespace PCShopSell.EditorTools
             _game.Ui.DebugSelectTab(1);
             Frame(0.05f);
             Shot("vs1_96_stock_tab_counts");
-            _game.Ui.DebugSelectTab(5);
+            _game.Ui.DebugSelectTab(0);
             Frame(0.05f);
-            Shot("vs1_99_upgrades_tab");
-            Check(!g.BuyUpgrade(PCShopSell.Core.Shop.ShopUpgrades.Sign), "店里的升级页只能看、不能买");
+            Shot("vs1_99_counter_tab");
+            Check(!g.BuyUpgrade(PCShopSell.Core.Shop.ShopUpgrades.Sign), "设备仍需到对应店内购买");
             _game.Ui.DebugSelectTab(0);
             g.PlayerShop.SetHours(9 * 60, 21 * 60);
             _game.Ui.DebugSelectTab(0);
@@ -1371,7 +1371,7 @@ namespace PCShopSell.EditorTools
             Teleport(staffed, staffed.PlayerShopPlace.Id);
             Frame(0.05f);
             _game.Ui.OpenDock();
-            _game.Ui.DebugSelectTab(6);
+            _game.Ui.DebugSelectTab(5);
             Frame(0.05f);
             Check(staffed.Employee != null && staffed.Assembler != null, "两个岗位真实 JSON 存档后都能恢复");
             Shot("vs1_106_dual_staff");

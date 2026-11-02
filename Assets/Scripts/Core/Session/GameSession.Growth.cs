@@ -67,7 +67,7 @@ namespace PCShopSell.Core.Session
             if (_upgrades.Contains(ShopUpgrades.Qr)) acc |= PaymentMethods.QrCode;
             if (_upgrades.Contains(ShopUpgrades.SelfCheckout)) acc |= PaymentMethods.SelfCheckout;
             PlayerShop.Accepted = acc;
-            PlayerShop.Stock.Capacity = ShopSettings.Capacity(PlayerShop.Size) + ShopUpgrades.ExtraCapacity(_upgrades) + ShelfStockBonus();
+            PlayerShop.Stock.Capacity = WarehouseCapacity;
             PlayerShop.TrafficMultiplier = (_upgrades.Contains(ShopUpgrades.Sign) ? ShopUpgrades.SignTrafficBonus : 1.0) * NpcTrafficMultiplier() * ShopDecorTrafficMultiplier * CreatorTrafficMultiplier;
             PlayerShop.Settings.PatienceMinutes = _basePatience + ShopDecorPatience;
             UpdateShopFit();

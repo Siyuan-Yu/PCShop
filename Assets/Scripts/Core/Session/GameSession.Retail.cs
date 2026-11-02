@@ -26,6 +26,7 @@ namespace PCShopSell.Core.Session
         }
         public bool SignRetailLease(string placeId, bool newShop, string kind)
         {
+            if(City.HasPlace(placeId)&&IsDedicatedVenue(City.GetPlace(placeId)))return SignLease(placeId,newShop);
             string why = RetailTypeBlocker(kind);
             if (why != null) return Fail(why);
             if (!newShop && kind != RetailKind) return Fail("搬店会保留原来的经营类型。");
@@ -37,10 +38,12 @@ namespace PCShopSell.Core.Session
         public bool SetRetailKind(string kind) => SetShopMainCategory(kind);
         public bool SetShopMainCategory(string kind)
         {
+            if(IsDedicatedVenue(PlayerShopPlace))return Fail("专用场馆只能延续原有服务，不能改为零售店。");
             if(!InPlayerShop || !RetailShopTypes.All.Contains(kind))return Fail("请在自己的店里选择主售品类。");
             Flags.Add("shop:main-category:"+_focus.Place.Id);
-            if(_focus.RetailKind!=kind)PlayerShop.ClearCustomers();
             _focus.RetailKind=kind;PlayerShop.RetailKind=kind;
+            foreach(var competition in _cityCompetitions.Where(e=>e.ShopId==_focus.Place.Id && e.RetailKind!=kind))competition.Ended=true;
+            ApplyCityRetailDemand();
             ApplyShelfCapacity();
             Say("本店主售已改为"+RetailShopTypes.Name(kind)+"，顾客将按此品类进店选购。");return true;
         }
@@ -48,6 +51,7 @@ namespace PCShopSell.Core.Session
         {
             foreach(var shop in _shops.Where(s=>s.Rented))
             {
+                if(IsDedicatedVenue(shop.Place))continue;
                 if(Flags.Contains("shop:main-category:"+shop.Place.Id)) {shop.Sim.RetailKind=shop.RetailKind;continue;}
                 if(shop.RetailKind!="computer"){shop.Sim.RetailKind=shop.RetailKind;continue;}
                 var kinds=shop.Layout.Where(p=>FurnitureCatalog.Get(p.Id)?.Fixture==FixtureKind.Shelf)
@@ -60,6 +64,8 @@ namespace PCShopSell.Core.Session
                 shop.Sim.ClearCustomers();shop.RetailKind=inferred;shop.Sim.RetailKind=inferred;
                 Flags.Add("shop:main-category:"+shop.Place.Id);
             }
+            foreach(var competition in _cityCompetitions.Where(e=>!CompetitionMatchesShop(e)))competition.Ended=true;
+            ApplyCityRetailDemand();
         }
         private int RetailCount(Backpack bag, GiftDef def) => def == null ? 0 : def.IngredientId != null ? bag.Food.Ingredient.Where(b => b.Id == def.IngredientId).Sum(b => b.Count)
             : def.MealId != null ? bag.Food.Packed.Where(b => b.Id == def.Id).Sum(b => b.Count)

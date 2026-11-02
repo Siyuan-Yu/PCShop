@@ -74,11 +74,34 @@ namespace PCShopSell.Game.Runtime
 
         public static void ClearNightGlow() => NightGlow.Clear();
 
+        private static Texture2D _roofTiles;
+        public static Material TileRoof(Color color)
+        {
+            string key="Roof"+color;
+            if(Cache.TryGetValue(key,out Material material)&&material!=null)return material;
+            if(_roofTiles==null)
+            {
+                const int size=64;
+                _roofTiles=new Texture2D(size,size,TextureFormat.RGBA32,true,true){name="MiniatureRoofTiles",wrapMode=TextureWrapMode.Repeat,anisoLevel=4};
+                var pixels=new Color[size*size];
+                for(int y=0;y<size;y++)for(int x=0;x<size;x++)
+                {
+                    int row=y/16, tileX=(x+(row%2)*8)%16;
+                    float shade=y%16<2||tileX<1?.68f:.87f+.12f*Mathf.Sin(tileX/16f*Mathf.PI);
+                    pixels[y*size+x]=new Color(shade,shade,shade,1);
+                }
+                _roofTiles.SetPixels(pixels);_roofTiles.Apply(true);
+            }
+            material=new Material(LitShader){name=key};material.SetColor("_BaseColor",color);material.SetTexture("_BaseMap",_roofTiles);material.SetFloat("_Smoothness",.14f);
+            Cache[key]=material;return material;
+        }
+
         // ---------- 贴图材质（地面质感、带窗户的墙面） ----------
 
         private static Texture2D _noise;
         private static Texture2D _windowAlbedo;
         private static Texture2D _windowEmission;
+        private static readonly Dictionary<Color,Texture2D> WindowPalettes=new Dictionary<Color,Texture2D>();
 
         /// <summary>灰度噪点贴图（0.78~1），乘在底色上让大面积的地面不再是一整块平色。</summary>
         public static Texture2D NoiseTex
@@ -94,7 +117,7 @@ namespace PCShopSell.Game.Runtime
                     {
                         float low = Mathf.PerlinNoise(x * 0.05f + 11f, y * 0.05f + 3f);
                         float fine = Mathf.PerlinNoise(x * 0.35f, y * 0.35f);
-                        float v = Mathf.Clamp01(0.78f + 0.14f * low + 0.08f * fine);
+                        float v = Mathf.Clamp01(0.94f + 0.045f * low + 0.015f * fine);
                         byte b = (byte)(v * 255f);
                         px[y * n + x] = new Color32(b, b, b, 255);
                     }
@@ -120,13 +143,13 @@ namespace PCShopSell.Game.Runtime
             return m;
         }
 
-        private static void BuildWindowTextures()
+        private static void BuildWindowTextures(Color wall)
         {
-            if (_windowAlbedo != null) return;
+            if(WindowPalettes.TryGetValue(wall,out _windowAlbedo))return;
             const int cell = 64, cells = 4, n = cell * cells;
             var rng = new System.Random(4242);
-            _windowAlbedo = new Texture2D(n, n, TextureFormat.RGBA32, true, true) { name = "WindowAlbedo", wrapMode = TextureWrapMode.Repeat };
-            _windowEmission = new Texture2D(n, n, TextureFormat.RGBA32, true, true) { name = "WindowEmission", wrapMode = TextureWrapMode.Repeat };
+            _windowAlbedo = new Texture2D(n, n, TextureFormat.RGBA32, true, false) { name = "IvoryFacadeBlueGlazing", wrapMode = TextureWrapMode.Repeat, anisoLevel=4 };
+            if(_windowEmission==null)_windowEmission = new Texture2D(n, n, TextureFormat.RGBA32, true, true) { name = "WindowEmission", wrapMode = TextureWrapMode.Repeat };
             var a = new Color32[n * n];
             var e = new Color32[n * n];
             for (int cy = 0; cy < cells; cy++)
@@ -138,9 +161,12 @@ namespace PCShopSell.Game.Runtime
                         for (int x = 0; x < cell; x++)
                         {
                             int px = cx * cell + x, py = cy * cell + y;
-                            bool pane = x >= 12 && x < cell - 12 && y >= 14 && y < cell - 10;
-                            bool frame = !pane && x >= 9 && x < cell - 9 && y >= 11 && y < cell - 7;
-                            Color32 albedo = pane ? new Color32(36, 46, 62, 255) : frame ? new Color32(215, 215, 215, 255) : new Color32(255, 255, 255, 255);
+                            bool pane = x >= 11 && x < cell - 11 && y >= 12 && y < cell - 9;
+                            bool frame = !pane && x >= 8 && x < cell - 8 && y >= 9 && y < cell - 6;
+                            bool mullion=pane&&(x>=30&&x<=32||y>=34&&y<=36);
+                            float reflection=Mathf.Clamp01((float)y/cell)*.30f+(x+y>71?.16f:0);
+                            Color glass=Color.Lerp(new Color32(39,105,187,255),new Color32(137,201,240,255),reflection);
+                            Color32 albedo = pane ? (Color32)(mullion?new Color32(231,222,195,255):glass) : frame ? new Color32(246,235,207,255) : (Color32)wall;
                             a[py * n + px] = albedo;
                             e[py * n + px] = pane && lit ? warm : new Color32(0, 0, 0, 255);
                         }
@@ -149,6 +175,7 @@ namespace PCShopSell.Game.Runtime
             _windowAlbedo.Apply(true);
             _windowEmission.SetPixels32(e);
             _windowEmission.Apply(true);
+            WindowPalettes[wall]=_windowAlbedo;
         }
 
         /// <summary>
@@ -157,10 +184,10 @@ namespace PCShopSell.Game.Runtime
         /// </summary>
         public static Material WindowWall(Color wall, int columns, int rows, int seed)
         {
-            BuildWindowTextures();
+            BuildWindowTextures(wall);
             var m = new Material(LitShader) { name = "WindowWall" };
-            m.SetColor("_BaseColor", wall);
-            m.color = wall;
+            m.SetColor("_BaseColor", Color.white);
+            m.color = Color.white;
             m.SetFloat("_Smoothness", 0.35f);
             m.SetTexture("_BaseMap", _windowAlbedo);
             m.mainTexture = _windowAlbedo;

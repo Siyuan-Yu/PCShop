@@ -99,6 +99,8 @@ namespace PCShopSell.Core.Session
         public int Duration, Grace = 60, Stage, Seat;
         public bool RendezvousReady;
         public string SettlementSummary;
+        public long EntryCostCents;
+        public bool EntryCostRecorded;
         public double[] PlayerStatsBefore, PlayerStatsAfter;
         public CityActivityPhase State;
         public bool Reminder, EntryPaid, MealApplied, MidApplied, RewardApplied;
@@ -107,7 +109,7 @@ namespace PCShopSell.Core.Session
         public bool Active => State==CityActivityPhase.Scheduled || State==CityActivityPhase.Gathering || State==CityActivityPhase.Running;
         public CityActivity Copy() => new CityActivity {Id=Id,DefinitionId=DefinitionId,SourceId=SourceId,VenueId=VenueId,HostId=HostId,
             EndReason=EndReason,ServiceDefinitionId=ServiceDefinitionId,ServiceConfirmed=ServiceConfirmed,ServiceChoice=ServiceChoice,PlayerIntentId=PlayerIntentId,PlayerVenueRoute=PlayerVenueRoute?.Copy(),OccupiedFrom=OccupiedFrom,OccupiedUntil=OccupiedUntil,EmployeeLeaveApproved=EmployeeLeaveApproved,ScheduledStart=ScheduledStart,ActualStart=ActualStart,ActualEnd=ActualEnd,
-            Duration=Duration,Grace=Grace,Stage=Stage,Seat=Seat,State=State,RendezvousReady=RendezvousReady,SettlementSummary=SettlementSummary,
+            Duration=Duration,Grace=Grace,Stage=Stage,Seat=Seat,State=State,RendezvousReady=RendezvousReady,SettlementSummary=SettlementSummary,EntryCostCents=EntryCostCents,EntryCostRecorded=EntryCostRecorded,
             PlayerStatsBefore=PlayerStatsBefore?.ToArray(),PlayerStatsAfter=PlayerStatsAfter?.ToArray(),Reminder=Reminder,EntryPaid=EntryPaid,MealApplied=MealApplied,
             MidApplied=MidApplied,RewardApplied=RewardApplied,Choices=Choices?.ToArray()??Array.Empty<string>(),
             Participants=(Participants??Array.Empty<CityActivityParticipant>()).Select(p=>p.Copy()).ToArray()};

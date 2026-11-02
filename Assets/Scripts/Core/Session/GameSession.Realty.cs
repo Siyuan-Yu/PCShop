@@ -48,7 +48,9 @@ namespace PCShopSell.Core.Session
 
         public string AgencyStreetOf(Place p) => string.IsNullOrEmpty(p?.StreetId) ? "s_start" : p.StreetId;
         public bool AgencyServes(Place agency, Place unit) => agency != null && unit != null
-            && agency.Kind == PlaceKind.Agency && AgencyStreetOf(agency) == AgencyStreetOf(unit);
+            && agency.Kind == PlaceKind.Agency && (City.AgencyDistricts.Count>0
+                ? City.AgencyDistrictFor(unit.StreetId)?.agencyId==agency.Id
+                : AgencyStreetOf(agency)==AgencyStreetOf(unit));
         public Place AgencyFor(Place unit) => City.OfKind(PlaceKind.Agency).FirstOrDefault(a => AgencyServes(a, unit));
 
         public bool InAgency => CurrentPlace != null && CurrentPlace.Kind == PlaceKind.Agency;
@@ -111,8 +113,9 @@ namespace PCShopSell.Core.Session
         /// <summary>为什么现在签不了这一间；能签返回 null。newShop 见 <see cref="LeaseCost"/>。</summary>
         public string LeaseBlocker(ShopListing l, bool newShop = false)
         {
+            if(Lease!=null&&!newShop&&(IsDedicatedVenue(ListingPlace(l))||IsDedicatedVenue(PlayerShopPlace)))return "专用场馆需要独立接手，不能与普通店铺搬店混用";
             if (InAgency && !AgencyServes(CurrentPlace, ListingPlace(l)))
-                return "这家中介只办理" + City.StreetName(AgencyStreetOf(CurrentPlace)) + "的房源，请到房源所在街道的中介";
+                return "这家中介只办理" + City.AgencyCoverageName(CurrentPlace) + "的房源，请到房源所属片区的中介";
             if (VentureAt(l.PlaceId) != null || PropertyAt(l.PlaceId) != null) return "这间铺子已纳入你的经营资产";
             if (PendingLease != null) return $"你已经提前签了{City.GetPlace(PendingLease.PlaceId).Name}，第 {PendingLease.StartDay + 1} 天交房前不能再签";
             if (ShopAt(l.PlaceId) != null) return "这已经是你的店了";
@@ -120,6 +123,7 @@ namespace PCShopSell.Core.Session
             if (PlayerShop.Reputation < rep) return $"房东要看名气：知名度要到 {rep:0}";
             if (Lease != null && !newShop)
             {
+                if(StaffCommitted(_focus)>StaffLimit(l.Size))return "新铺最多可雇 "+StaffLimit(l.Size)+" 人，请先调整员工安排再搬店";
                 double cap = ShopSettings.Capacity(l.Size) + ShopUpgrades.ExtraCapacity(_upgrades);
                 if (PlayerShop.Stock.UsedSpace + IncomingShopSpace > cap + 1e-9) return $"铺子太小，放不下现在的 {PlayerShop.Stock.UsedSpace:0.#} 格货";
             }
@@ -177,15 +181,17 @@ namespace PCShopSell.Core.Session
 
         private void ShowMovedIn(Place place, Money rent, Money deposit, bool moving, string title)
         {
+            if(IsDedicatedVenue(place)){ShowVenueHandover(place);return;}
             Show(moving ? "搬店完成" : title,
                 $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）租下来了，月租 {rent}，押金 {deposit}。\n" +
                 (moving ? "货、储物柜、展示机都搬过去了；原来店里摆的家具、货架、收银台都收回了“我的”，要在新店里重新摆。\n"
-                        : "这是间毛坯铺子，里面什么都没有：至少摆好收银台和一个货架才能营业。\n") +
+                        : "这是间毛坯铺子，只配一个后仓纸箱：至少摆好收银台和一个货架才能营业。\n") +
                 "以后每月 1 号交房租。");
         }
 
         private void ShowNewShop(Place place, Money rent, Money deposit, string title)
         {
+            if(IsDedicatedVenue(place)){ShowVenueHandover(place);return;}
             Show(title,
                 $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）租下来了，是你的{ShopTitle(_focus)}，月租 {rent}，押金 {deposit}。\n" +
                 "原来的店照常营业，货、员工、货架各管各的。新店是毛坯：至少摆好收银台和一个货架才能营业，人不在店里时要雇人看店才开门。\n" +
@@ -251,7 +257,10 @@ namespace PCShopSell.Core.Session
                 _focus.BoxesGiven = false;
             }
             Lease = new ShopLease { PlaceId = place.Id, Rent = rent, Deposit = deposit, StartDay = Clock.Today.TotalDays };
+            foreach(var id in _employeeHireShops.Where(p=>p.Value==PlayerShopPlace.Id).Select(p=>p.Key).ToArray())_employeeHireShops[id]=place.Id;
+            foreach(var row in Employees.Where(e=>e.Person.TransferShopId==PlayerShopPlace.Id))row.Person.TransferShopId=place.Id;
             PlayerShopPlace = place;
+            PlayerShop.TradingEnabled=!IsDedicatedVenue(place);
             _vacant.Remove(place.Id);
             _listings.RemoveAll(x => x.PlaceId == place.Id);
             PlayerShop.Size = place.Size;

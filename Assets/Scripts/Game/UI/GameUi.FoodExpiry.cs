@@ -35,6 +35,7 @@ namespace PCShopSell.Game.UI
     {
         private void AddFoodExpiry(Button cell, string key, int? day)
         {
+            if(key.StartsWith("stockgift:"))key="gift:"+key.Substring(10);
             bool food = key == "rice" || key.StartsWith("ing:") || key.StartsWith("lunch:")
                 || key.StartsWith("gift:") && !Gifts.IsCigarette(key.Substring(5));
             if (!food) return;

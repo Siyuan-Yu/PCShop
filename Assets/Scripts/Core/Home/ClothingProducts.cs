@@ -12,6 +12,21 @@ namespace PCShopSell.Core.Home
                 x.Price.Yuan,x.WeightKg,Business)).ToArray();
         public static OutfitDef Outfit(string productId)=>productId!=null&&productId.StartsWith("clothing:")?Outfits.Get(productId.Substring(9)):null;
         public static bool IsClothing(string id)=>Outfit(id)!=null;
+        public static string SeasonGroup(string productId)
+        {
+            var outfit=Outfit(productId);
+            if(outfit==null)return null;
+            return outfit.SeasonTags.Split(',').Contains("winter")?"冬装"
+                :outfit.SeasonTags.Split(',').Contains("summer")?"夏装":"春秋装";
+        }
+        public static bool IsInSeason(string productId,long minute)
+        {
+            var outfit=Outfit(productId);
+            if(outfit==null)return false;
+            string season=CityWeather.Season(minute);
+            string tag=season=="春"?"spring":season=="夏"?"summer":season=="秋"?"autumn":"winter";
+            return outfit.SeasonTags.Split(',').Contains(tag);
+        }
         public static double SeasonDemandAt(string productId,double temperature)
         {
             var o=Outfit(productId); if(o==null)return 1;

@@ -18,19 +18,21 @@ namespace PCShopSell.Core.Session
             return 20+(int)(hash%71);
         }
         public static double EmployeeSalesBonus(Employee person)=>EmployeeCharm(person)*.0025;
-        public double ShopSalesBonus(OwnedShop shop)=>shop?.Salesperson!=null && shop.Salesperson.OnDuty(Clock.Now)
-            && EmployeeTrip(shop.Salesperson.Id)==null && CityEmployeeAvailable(shop.Salesperson,shop)
-                ?EmployeeSalesBonus(shop.Salesperson):0;
+        public double ShopSalesBonus(OwnedShop shop)=>Math.Min(.25,ShopStaff(shop,EmployeeRole.Salesperson)
+            .Where(e=>CityEmployeeAvailable(e,shop)).Sum(EmployeeSalesBonus));
         public static string EmployeeAbilities(Employee person) =>
             $"收银 {person.CheckoutMinutes} 分钟/单 · 装机 {AssemblyMinutesOf(person)} 分钟/台 · 采购 {person.PurchaseMinutes} 分钟/型号\n魅力 {EmployeeCharm(person)} · 销售购买意愿 +{EmployeeSalesBonus(person)*100:0.#}个百分点";
 
-        public Employee RecruitEmployee(int index)
+        public Employee RecruitEmployee(int index,string destination=null)
         {
             if (IsGameOver || !InPlayerShop || index < 0 || index >= _candidates.Count) return null;
+            var hiringShop=ShopAt(destination)??_focus;
+            string capacity=StaffCapacityBlocker(hiringShop);if(capacity!=null){Fail(capacity);return null;}
             var person = _candidates[index];
             if (!CandidateAvailable(person)) { Fail("这位应聘者已经离开了。"); return null; }
             _candidates.RemoveAt(index);
             _idleEmployees.Add(person);
+            _employeeHireShops[person.Id]=hiringShop.Place.Id;
             EverHired = true;
             Say($"聘用了{person.Name}，日薪 {person.DailyWage}。请选择工作岗位和门店；待安排期间也按日发薪。");
             return person;
@@ -52,12 +54,11 @@ namespace PCShopSell.Core.Session
             }
             var dest = ShopAt(destination);
             if (dest == null) return "请选择自己的店铺";
+            if(IsDedicatedVenue(dest.Place)&&role!=EmployeeRole.Cashier)return "场馆本轮只设值守岗位，请选择场馆值守（收银位）";
+            string capacity=dest==row.Shop?null:StaffCapacityBlocker(dest,id,replace,role);if(capacity!=null)return capacity;
             if (dest == row.Shop && role == row.Role) return "已经在这家店做这项工作";
             var occupant = EmployeeAt(dest, role);
-            if (!replace && occupant != null && occupant != row.Person) return "该店的" + RoleName(role) + "岗位已有员工，可先给对方换岗或设为待安排";
             if (replace && occupant != null && _employeeTrips.Any(t => t.EmployeeId == occupant.Id)) return "原员工或货物还在路上，不能替换";
-            if (Employees.Any(x => x.Person.Id != id && x.Person.TransferShopId == destination && PlannedEmployeeRole(x) == role))
-                return "这个岗位已安排其他员工明天到岗";
             if ((row.Shop == null || row.Shop == dest) && _employeeTrips.Any(t => t.EmployeeId == id))
                 return "本趟进货还没结束，等人和货回店再换岗";
             return null;
@@ -93,9 +94,8 @@ namespace PCShopSell.Core.Session
             if (source == null) _idleEmployees.Remove(person);
             else
             {
-                if (row.Role == EmployeeRole.Cashier && source.EmployeeTrained) person.AssemblyTrained = true;
-                PutEmployee(source, row.Role, null);
-                if (row.Role == EmployeeRole.Cashier) source.EmployeeTrained = false;
+                if (row.Role == EmployeeRole.Cashier && source.Employee==person&&source.EmployeeTrained) person.AssemblyTrained = true;
+                RemoveShopEmployee(source, row.Role, person);
                 source.EmployeeBuilding = false;
                 if (source.Assembler == null && !source.EmployeeTrained)
                     foreach (var order in source.Sim.Orders) order.EmployeeMinutesLeft = 0;
@@ -103,8 +103,8 @@ namespace PCShopSell.Core.Session
             if (role == EmployeeRole.Unassigned) _idleEmployees.Add(person);
             else
             {
-                PutEmployee(dest, role, person);
-                if (role == EmployeeRole.Cashier)
+                AddShopEmployee(dest, role, person);_employeeHireShops[person.Id]=dest.Place.Id;
+                if (role == EmployeeRole.Cashier&&dest.Employee==person)
                 {
                     dest.EmployeeTrained = person.AssemblyTrained;
                     dest.Sim.Settings.EmployeeCheckoutMinutes = person.CheckoutMinutes;

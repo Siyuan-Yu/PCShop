@@ -12,7 +12,14 @@ namespace PCShopSell.Game.Runtime
             Color floor = kind == "court" || kind == "golf" || kind == "park" || kind == "hike" ? ArtDirection.Sage : ArtDirection.Cream;
             var body = Prims.Box(root, "Body", new Vector3(0, .045f, depth / 2 - 1), new Vector3(width, .09f, depth + 6), Mats.Lit(floor), true);
             body.AddComponent<PlaceMarker>().PlaceId = p.Id;
-            Prims.Box(root, "BackBoundary", new Vector3(0, 1.5f, depth), new Vector3(width, 3, .2f), Mats.Lit(ArtDirection.Ink));
+            bool outside=kind=="court"||kind=="golf"||kind=="park"||kind=="hike";
+            if(outside)
+            {
+                for(float x=-width/2;x<=width/2;x+=2)
+                    Prims.Box(root,"OutdoorFencePost",new Vector3(x,.85f,depth),new Vector3(.1f,1.7f,.1f),Mats.Lit(ArtDirection.Ink));
+                foreach(float y in new[]{.55f,1.35f})Prims.Box(root,"OutdoorFenceRail",new Vector3(0,y,depth),new Vector3(width,.07f,.07f),Mats.Lit(ArtDirection.Sage));
+            }
+            else Prims.Box(root, "BackBoundary", new Vector3(0, 1.5f, depth), new Vector3(width, 3, .2f), Mats.Lit(ArtDirection.Ink));
             Prims.Box(root, "EntranceFascia", new Vector3(0, 3.5f, -.1f), new Vector3(width - .4f, .9f, .24f), Mats.Lit(ArtDirection.Sage));
             Prims.SignText(root, p.Name, new Vector3(0, 3.5f, -.25f), width - .8f, .65f, ArtDirection.Cream);
             Prims.Box(root, "SignSupportLeft", new Vector3(-width / 2 + .3f, 1.8f, 0), new Vector3(.18f, 3.6f, .18f), Mats.Lit(ArtDirection.Brass));
@@ -157,11 +164,36 @@ namespace PCShopSell.Game.Runtime
         }
         private static void Park(Transform root, float width, float depth, bool hike)
         {
-            Prims.Box(root, hike ? "WalkingTrail" : "River", new Vector3(0, .12f, depth / 2), new Vector3(hike ? 2.2f : 3.5f, .12f, depth), Mats.Lit(hike ? ArtDirection.Cream : new Color(.28f, .48f, .54f)));
+            if(!hike && width>=30)
+            {
+                var stone=Mats.Lit(ArtDirection.Cream);
+                Prims.Shape(PrimitiveType.Cylinder,root,"LakeShore",new Vector3(0,.12f,depth*.53f),new Vector3(width*.65f,.12f,depth*.63f),stone);
+                Prims.Shape(PrimitiveType.Cylinder,root,"GardenLake",new Vector3(0,.25f,depth*.53f),new Vector3(width*.61f,.025f,depth*.57f),Mats.Lit(ArtDirection.Hex("479FB3")));
+                foreach(int side in new[]{-1,1})
+                {
+                    Prims.Box(root,"LakesideWalk",new Vector3(0,.16f,depth*(side<0?.13f:.91f)),new Vector3(width*.9f,.08f,1.8f),stone);
+                    CityVegetation.Build(root,new Vector3(side*width*.31f,0,depth*.16f),side+7);
+                    Prims.Box(root,"LakesideBench",new Vector3(side*width*.25f,.5f,depth*.84f),new Vector3(2,.2f,.6f),Mats.Lit(ArtDirection.Wood));
+                }
+                Prims.Box(root,"LakesideDeck",new Vector3(width*.25f,.35f,depth*.35f),new Vector3(5,.18f,3),Mats.Lit(ArtDirection.Wood));
+                for(int i=0;i<16;i++)
+                {
+                    float angle=i*Mathf.PI/8;
+                    Vector3 bank=new Vector3(Mathf.Cos(angle)*width*.37f,0,depth*.53f+Mathf.Sin(angle)*depth*.37f);
+                    if(i%4!=0)CityVegetation.Build(root,bank,i+21);
+                    Prims.Shape(PrimitiveType.Sphere,root,"ShoreRock",bank+new Vector3(-.65f,.22f,.3f),new Vector3(.9f,.5f,.65f),Mats.Lit(ArtDirection.Hex("C6C4AD")));
+                    if(i%2==0)for(int f=-1;f<=1;f++)
+                        Prims.Shape(PrimitiveType.Sphere,root,"WatersideFlowers",bank+new Vector3(f*.4f,.3f,-.8f),new Vector3(.5f,.4f,.5f),Mats.Lit(ArtDirection.Hex("E3B54C")));
+                }
+                var pergola=new GameObject("LakesidePergola").transform;pergola.SetParent(root,false);pergola.localPosition=new Vector3(-width*.27f,0,depth*.20f);
+                foreach(int x in new[]{-1,1})foreach(int z in new[]{-1,1})
+                    Prims.Box(pergola,"Post",new Vector3(x*1.7f,1.4f,z),new Vector3(.16f,2.8f,.16f),stone);
+                for(int i=-4;i<=4;i++)Prims.Box(pergola,"RoofSlat",new Vector3(i*.45f,2.85f,0),new Vector3(.15f,.18f,2.7f),Mats.Lit(ArtDirection.Wood));
+            }
+            else Prims.Box(root, hike ? "WalkingTrail" : "River", new Vector3(0, .12f, depth / 2), new Vector3(hike ? 2.2f : 3.5f, .12f, depth), Mats.Lit(hike ? ArtDirection.Cream : new Color(.28f, .48f, .54f)));
             for (int side = -1; side <= 1; side += 2)
             {
-                Prims.Shape(PrimitiveType.Cylinder, root, "TreeTrunk", new Vector3(side * (width / 2 - 1.5f), 1.1f, depth - 2), new Vector3(.35f, 1.1f, .35f), Mats.Lit(ArtDirection.Clay));
-                Prims.Shape(PrimitiveType.Sphere, root, "TreeCrown", new Vector3(side * (width / 2 - 1.5f), 2.7f, depth - 2), new Vector3(2.7f, 2.8f, 2.7f), Mats.Lit(ArtDirection.Sage));
+                CityVegetation.Build(root,new Vector3(side*(width/2-1.5f),0,depth-2),side+3);
                 if (!hike) Prims.Box(root, "FishingRod", new Vector3(side * 2.1f, .65f, 2), new Vector3(.06f, 1.2f, .06f), Mats.Lit(ArtDirection.Brass));
             }
             if (hike) Prims.Box(root, "ViewDeck", new Vector3(0, .4f, depth - 1.8f), new Vector3(width - 3, .8f, 2.7f), Mats.Lit(ArtDirection.Clay));

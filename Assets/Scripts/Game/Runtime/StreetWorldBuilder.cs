@@ -23,12 +23,44 @@ namespace PCShopSell.Game.Runtime
         public Vector3 Entrance;
         public Vector3 LabelPos;
         public GameObject Root;
+        public GameObject Exterior, VenueInterior;
         public UnityEngine.UI.Text Sign;
         /// <summary>只在营业时显示 / 只在关门时显示的东西（招牌亮灯、橱窗、卷帘门、挂牌……）。</summary>
         public readonly List<GameObject> OpenOnly = new List<GameObject>();
         public readonly List<GameObject> ClosedOnly = new List<GameObject>();
         public Light Neon;
         public int OpenState = -1;
+
+        /// <summary>Actual exterior geometry in world space, or in the requested transform's local space.</summary>
+        public Bounds BuildingBounds(Transform relativeTo = null)
+        {
+            var root=Root.transform;
+            var exterior=Exterior!=null?Exterior.transform:root;
+            var toTarget=relativeTo==null?Matrix4x4.identity:relativeTo.worldToLocalMatrix;
+            bool found=false;var result=new Bounds();
+            void Include(Bounds local,Matrix4x4 matrix)
+            {
+                for(int x=-1;x<=1;x+=2)for(int y=-1;y<=1;y+=2)for(int z=-1;z<=1;z+=2)
+                {
+                    var point=matrix.MultiplyPoint3x4(local.center+Vector3.Scale(local.extents,new Vector3(x,y,z)));
+                    if(!found){result=new Bounds(point,Vector3.zero);found=true;}else result.Encapsulate(point);
+                }
+            }
+            foreach(var renderer in exterior.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if(renderer.GetComponent<TextMesh>()!=null)continue;
+                var filter=renderer.GetComponent<MeshFilter>();
+                if(filter==null || filter.sharedMesh==null)continue;
+                Include(filter.sharedMesh.bounds,toTarget*renderer.localToWorldMatrix);
+            }
+            // Empty or not-yet-meshed places still use their own oriented footprint, never a door offset.
+            if(!found)
+            {
+                float width=Mathf.Max(1,(float)(Place?.Width??1)),depth=Mathf.Max(1,(float)(Place?.Depth??1));
+                Include(new Bounds(new Vector3(0,2,depth/2),new Vector3(width,4,depth)),toTarget*root.localToWorldMatrix);
+            }
+            return result;
+        }
     }
 
     /// <summary>
@@ -46,14 +78,14 @@ namespace PCShopSell.Game.Runtime
 
         private float FrontZ = (float)GameSession.LinkFrontY;
 
-        private static readonly Color Asphalt = ArtDirection.Hex("626A69");
-        private static readonly Color Sidewalk = ArtDirection.Hex("C5BBA5");
-        private static readonly Color Grass = ArtDirection.Hex("81927C");
+        private static readonly Color Asphalt = ArtDirection.Hex("74828B");
+        private static readonly Color Sidewalk = ArtDirection.Hex("E7D2AD");
+        private static readonly Color Grass = ArtDirection.Hex("9CB768");
         private static readonly Color[] Facades =
         {
-            ArtDirection.Hex("DBCEB4"), ArtDirection.Hex("B3BDB2"), ArtDirection.Hex("E5DDCA"),
-            ArtDirection.Hex("C5A493"), ArtDirection.Hex("A1AE99"), ArtDirection.Hex("CCBA99"),
-            ArtDirection.Hex("ABB6B6"), ArtDirection.Hex("CEC8B0"),
+            ArtDirection.Hex("F1D7A0"), ArtDirection.Hex("CDDDC9"), ArtDirection.Hex("F5E5BE"),
+            ArtDirection.Hex("E5BEA1"), ArtDirection.Hex("C8D6A3"), ArtDirection.Hex("E8C78E"),
+            ArtDirection.Hex("B5CDDD"), ArtDirection.Hex("E7DDB9"),
         };
         private static readonly Color[] SignColors =
         {
@@ -118,13 +150,15 @@ namespace PCShopSell.Game.Runtime
                     Vector3 a = NodeWorld(n.Id), b = NodeWorld(e.To);
                     MapPoint pa = _city.ViewPosition(n.Id), pb = _city.ViewPosition(e.To);
                     bool shopping = _city.LayoutVersion<7 && GameSession.IsShoppingStreet(pa, pb);
-                    float width = shopping ? 14f : GameSession.IsMainRoad(pa, pb) ? 7f : 5f;
+                    float width = _city.LayoutVersion>=7?PlannedRoadWidth(a,b):shopping ? 14f : GameSession.IsMainRoad(pa, pb) ? 7f : 5f;
                     Vector3 d = b - a;
+                    if(d.sqrMagnitude<.01f)continue;
                     // 宽路两端只多伸出窄路那么多，免得盖住路口旁的城中村房子。
                     float len = d.magnitude + (shopping ? 5f : width);
                     var go = Prims.Box(roads, "Road_" + key, (a + b) * 0.5f + Vector3.up * 0.005f, new Vector3(width, 0.02f, len), Mats.LitTex(Asphalt, new Vector2(Mathf.Max(1f, width / 5f), Mathf.Max(1f, len / 5f)), 0.12f));
                     go.transform.localRotation = Quaternion.LookRotation(d.normalized, Vector3.up);
 
+                    if (_city.LayoutVersion>=7){BuildRoadDetail(roads,a,b,width);continue;}
                     if (len > 14f)
                     {
                         var mark = Prims.Box(roads, "Mark", (a + b) * 0.5f + Vector3.up * 0.02f, new Vector3(0.18f, 0.01f, d.magnitude), Mats.Lit(new Color(0.85f, 0.8f, 0.55f)));
@@ -465,6 +499,7 @@ namespace PCShopSell.Game.Runtime
 
         private void Tree(Transform parent, Vector3 at)
         {
+            if(_city.LayoutVersion>=7){CityVegetation.Build(parent,at,Mathf.RoundToInt(at.x+at.z));return;}
             float s = 0.8f + (float)_rng.NextDouble() * 0.5f;
             Prims.Shape(PrimitiveType.Cylinder, parent, "Trunk", at + new Vector3(0, 1f * s, 0), new Vector3(0.25f, 1f * s, 0.25f), Mats.Lit(new Color(0.35f, 0.25f, 0.15f)));
             Color green = ArtDirection.Hex("7C9770") * (0.92f + (float)_rng.NextDouble() * 0.12f);

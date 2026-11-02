@@ -119,7 +119,8 @@ namespace PCShopSell.Core.Session
             if(d.cityLifeVersion<2)MigrateCityAppointments();
             if(!DebugInvitationPersonEnabled)RemoveInvitationTestPerson();
             // Restore only; do not replay time, charge a fee or grant rewards during load.
-            foreach(var p in _cityPeople.Values)if(p.ActivityId!=null&&!_cityActivities.Any(a=>a.Id==p.ActivityId&&a.Active))p.ActivityId=null;
+            foreach(var p in _cityPeople.Values)if(p.ActivityId!=null&&!_cityActivities.Any(a=>a.Id==p.ActivityId&&a.Active)
+                &&!(d.venueBusinesses??Array.Empty<VenueBusiness>()).Any(v=>v!=null&&ShopAt(v.PlaceId)!=null&&(v.CustomersHere??Array.Empty<VenueCustomer>()).Any(c=>c.PersonId==p.PersonId&&c.ReservationId==p.ActivityId)))p.ActivityId=null;
             foreach(var shop in _shops)shop.Sim.PlayerPresent=CityPlayerCanWork(shop);
         }
     }

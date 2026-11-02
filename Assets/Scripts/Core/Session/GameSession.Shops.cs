@@ -48,6 +48,7 @@ namespace PCShopSell.Core.Session
         /// <summary>主店叫“我的电脑店”，之后开的叫“我的电脑店·二店”……</summary>
         public string ShopTitle(OwnedShop s)
         {
+            if(IsDedicatedVenue(s.Place))return "我的"+VenueBusinessName(s.Place);
             int i = _shops.IndexOf(s);
             if (s.RetailKind != "computer") return "我的" + RetailShopTypes.Name(s.RetailKind) + (i > 0 ? "·" + ChineseNumber(i + 1) + "店" : "");
             return i <= 0 ? MyShopName : $"{MyShopName}·{ChineseNumber(i + 1)}店";
@@ -62,10 +63,12 @@ namespace PCShopSell.Core.Session
         {
             var sim = new ShopSimulation(shop.Place.Id, shop.Place.Size, Clock, Ledger, Market, Random)
             {
+                TradingEnabled = !IsDedicatedVenue(shop.Place),
+                CheckoutClock = ()=>CurrentPlace==shop.Place&&!_sleeping&&!IsWorking?_activeCheckoutSeconds:double.NaN,
                 RetailKind = shop.RetailKind,
                 LocationFactor = ComputeLocationFactor(City, shop.Place),
-                EmployeeOnDuty = t => (shop.Employee != null && shop.Employee.OnDuty(t) && CityEmployeeAvailable(shop.Employee, shop))
-                    || (shop.Assembler != null && shop.Assembler.OnDuty(t) && CityEmployeeAvailable(shop.Assembler, shop)),
+                EmployeeOnDuty = t => ShopStaff(shop,EmployeeRole.Cashier).Concat(ShopStaff(shop,EmployeeRole.Assembler)).Any(e=>e.OnDuty(t)&&CityEmployeeAvailable(e,shop)),
+                EmployeeServiceRate = ()=>ShopCheckoutWorkers(shop).Sum(e=>1.0/(Math.Max(1,e.CheckoutMinutes)+1)),
             };
             sim.Settings.BuildOrdersStartDay = BuildOrdersStartDay;
             sim.SalesBonusOf = () => ShopSalesBonus(shop);
@@ -137,11 +140,13 @@ namespace PCShopSell.Core.Session
         public string CloseShopBlocker(OwnedShop s)
         {
             if (s == null || !s.Rented) return "这不是你的店";
-            if (MyShopCount <= 1 && !s.OwnsProperty) return "这是你唯一的租赁店。想换地方：先去中介再签一间，叫货车把货搬过去，再回这里退租";
             if (CurrentPlace != s.Place) return "要在这家店里办退租";
+            if(IsDedicatedVenue(s.Place)&&VenueOperation(s.Place.Id)?.CustomersHere.Length>0)return "还有顾客正在赴场或使用场馆，请先停止接客并等待结束";
+            if(RunningCityActivity?.VenueId==s.Place.Id)return "请先结束自己的场馆活动";
             if (_employeeTrips.Any(t => t.ShopId == s.Place.Id)) return "进货员或采购货物还在路上";
             if (Employees.Any(x => x.Person.TransferShopId == s.Place.Id)) return "已有员工安排明天调入，先取消调店安排";
             if (s.Sim.Orders.Count > 0) return "还有没交付的装机单";
+            if (s.Sim.Queue.Count > 0) return "还有顾客等待结账，请先处理完再退租";
             if (s.Sim.DisplayPcs.Count > 0) return "展示台上还摆着整机，先拆回库存";
             if (!s.Fridge.IsEmpty) return "冰箱里还有食物，请先取走";
             if (!s.Locker.IsEmpty || !s.Temp.IsEmpty) return "纸箱或临时存放还有物品，请先转存或叫货车搬走";
@@ -152,7 +157,7 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>
-        /// 在店里退掉这家店：摆的家具收回“我的”，这家店的员工辞退，押金退还，人走到门口，铺子重新挂牌。
+        /// 在店里退掉这家店：摆的家具收回“我的”，这家店的员工辞退，已交押金不退，人走到门口，铺子重新挂牌。
         /// 退的是主店时，下一家顶上当主店。
         /// </summary>
         public bool CloseShop(string placeId)
@@ -166,12 +171,15 @@ namespace PCShopSell.Core.Session
             double reputation = MainShop.Sim.Reputation;
             s.Sim.ClearCustomers();
             foreach (PlacedFurniture f in s.Layout) AddFurniture(f.Id, 1);
-            if (s.Lease.Deposit.IsPositive) Ledger.Credit(Clock.Today, "押金", s.Lease.Deposit, $"退还{title}押金");
+            Money lostDeposit=s.Lease?.Deposit??Money.Zero;
             bool hadStaff = s.Employee != null || s.Assembler != null || s.Buyer != null || s.Salesperson != null;
             Money rent = s.Lease.Rent;
             bool wasMain = s == MainShop;
             bool wasOwned = s.OwnsProperty;
             _shops.Remove(s);
+            foreach(var idle in _idleEmployees.Where(e=>_employeeHireShops.TryGetValue(e.Id,out var hired)&&hired==placeId).ToArray())_idleEmployees.Remove(idle);
+            foreach(var id in _employeeHireShops.Where(p=>p.Value==placeId).Select(p=>p.Key).ToArray())_employeeHireShops.Remove(id);
+            ResetVenueLease(placeId);
             s.Sim.Dispose();
             var property = PropertyAt(placeId);
             if (property != null) { property.UseMode = "vacant"; property.TenantName = ""; }
@@ -192,9 +200,9 @@ namespace PCShopSell.Core.Session
             _vacant.Add(placeId);
             if (PropertyAt(placeId) == null) AddListing(City.GetPlace(placeId), Clock.Today.TotalDays, Clock.Today.TotalDays + 45, rent);
             WithShop(MainShop, ApplyUpgrades);
-            Show(wasOwned ? "自营已结束" : "退租了", $"{title}（{s.Place.Name}）" + (wasOwned ? "已结束自营，产权保留为空置物业" : $"退租了，押金 {s.Lease.Deposit} 退回")
+            Show(wasOwned ? "自营已结束" : "退租了", $"{title}（{s.Place.Name}）" + (wasOwned ? "已结束自营，产权保留为空置物业" : $"已退租，已交押金 {lostDeposit} 不退还，不会再次扣款")
                 + "，店里摆的家具收回“我的”" + (hadStaff ? "，这家店的员工也辞退了" : "")
-                + (wasMain && MyShopCount > 0 ? $"。现在{ShopTitle(MainShop)}（{MainShop.Place.Name}）是主店。" : MyShopCount == 0 ? "。目前没有自营店，可到中介出租或出售物业，再选择新的经营起点。" : "。"));
+                + (wasMain && MyShopCount > 0 ? $"。现在{ShopTitle(MainShop)}（{MainShop.Place.Name}）是主店。" : MyShopCount == 0 ? "。目前没有自营店，可到中介重新租铺。" : "。"));
             return true;
         }
 

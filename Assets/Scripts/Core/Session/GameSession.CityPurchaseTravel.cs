@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.World;
@@ -30,6 +30,26 @@ namespace PCShopSell.Core.Session
             person.TaskLabel=now>=trip.ReturnAt?"采购返店":now>=trip.BoughtAt?"采购完成，返店途中":current!=null?"按清单前往供货商":"在供货商处核对与提货";
         }
 
+        private void NormalizePurchaseWalkingLegs(EmployeePurchaseTrip trip,CityRoute[] legs)
+        {
+            if(trip.Transport!=VehicleKind.Walk||legs==null||legs.Length==0)return;
+            long delay=0,oldBought=trip.BoughtAt;
+            foreach(var leg in legs)
+            {
+                long arrival=leg.ArriveMinute;
+                leg.DepartMinute+=delay;leg.ArriveMinute+=delay;
+                EnforceNpcWalkingPace(leg);
+                delay=leg.ArriveMinute-arrival;
+            }
+            trip.BoughtAt=Math.Max(trip.BoughtAt,legs[legs.Length-1].DepartMinute);
+            trip.ReturnAt=Math.Max(trip.ReturnAt,legs[legs.Length-1].ArriveMinute);
+            if(!trip.Delivered&&trip.BoughtAt>oldBought)
+            {
+                trip.DeliveryAt+=trip.BoughtAt-oldBought;
+                var order=_cityProcurementOrders.FirstOrDefault(o=>o.Id==trip.OrderId);
+                if(order!=null)order.DeliveryAt=trip.DeliveryAt;
+            }
+        }
         private CityRoute[] BuildCityPurchaseLegs(EmployeePurchaseTrip trip,CityPersonState person)
         {
             var shop=DeliveryShop(trip.ShopId);if(shop==null)return Array.Empty<CityRoute>();
@@ -63,7 +83,9 @@ namespace PCShopSell.Core.Session
             back.IntentId="purchase:"+trip.OrderId+":"+trip.EmployeeId+":return";
             back.Transport=trip.Transport;
             back.DepartMinute=trip.BoughtAt;back.ArriveMinute=trip.ReturnAt;routes.Add(back);
-            return routes.ToArray();
+            var result=routes.ToArray();
+            NormalizePurchaseWalkingLegs(trip,result);
+            return result;
         }
     }
 }

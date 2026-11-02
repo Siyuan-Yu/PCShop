@@ -100,6 +100,7 @@ namespace PCShopSell.Core.Session
         /// <summary>摆放有变化后：开店资格、展示桌数量（每张桌两个机位）跟着摆出来的东西走。</summary>
         internal void UpdateShopFit()
         {
+            if(IsDedicatedVenue(PlayerShopPlace)){PlayerShop.TradingEnabled=false;return;}
             if(RetailKind!="computer")
                 foreach(int index in DisplayIndexes())
                     if(string.IsNullOrEmpty(_shopLayout[index].Item))
@@ -132,20 +133,9 @@ namespace PCShopSell.Core.Session
         /// </summary>
         internal void GiveStarterBoxes(OwnedShop shop)
         {
-            if (shop == null || !shop.Rented || shop.BoxesGiven) return;
-            shop.BoxesGiven = true;
-            RoomSpec room = RoomSpec.ForShop(shop.Place.Size);
-            FurnitureDef def = FurnitureCatalog.Get(FurnitureCatalog.ShopBox);
-            int left = StarterShopBoxes;
-            for (double x = 0.3; x < room.Width - 0.3 && left > 0; x += 0.25)
-                for (double z = 0.25; z < room.Depth - 0.25 && left > 0; z += 0.25)
-                {
-                    PlacedFurniture cand = RoomPlanner.Snap(room, def, x, z, 0);
-                    if (RoomPlanner.Check(room, shop.Layout, def, cand, -1, null) != null) continue;
-                    shop.Layout.Add(cand);
-                    left--;
-                }
-            if (left > 0) AddFurniture(def.Id, left);
+            if(shop==null||!shop.Rented||shop.BoxesGiven)return;
+            shop.BoxesGiven=true;
+            if(!IsDedicatedVenue(shop.Place))EnsureWarehouseBox(shop.Layout,RoomSpec.ForShop(shop.Place.Size),FurnitureCatalog.ShopBox);
         }
 
         /// <summary>旧存档（设施还是店里自带的时候）：给已经有店的存档补上整套设施，保持原来的样子。</summary>

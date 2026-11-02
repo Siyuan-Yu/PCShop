@@ -58,14 +58,17 @@ namespace PCShopSell.Game.Procedural
                 UnlitGlassColor = new Color(0.35f, 0.5f, 0.65f),
                 RoadSmoothness = 0.35f,
                 LampsOn = false,
-                SkyColor = new Color(0.77f, 0.83f, 0.79f),
-                AmbientColor = new Color(0.72f, 0.76f, 0.73f),
-                SunColor = new Color(1f, 0.96f, 0.88f),
-                SunIntensity = 1.1f,
-                SunEuler = new Vector3(42f, 115f, 0f),
-                BloomIntensity = 0.15f,
+                SkyColor = new Color(0.73f, 0.83f, 0.88f),
+                AmbientColor = new Color(0.48f, 0.56f, 0.65f),
+                SunColor = new Color(1f, 0.97f, 0.90f),
+                SunIntensity = 1.35f,
+                SunEuler = new Vector3(52f, -32f, 0f),
+                BloomIntensity = 0.12f,
                 BloomThreshold = 1.1f,
                 Exposure = 0f,
+                Saturation = 14f,
+                Contrast = 13f,
+                Vignette = 0f,
             };
         }
 

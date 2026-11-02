@@ -10,15 +10,16 @@ namespace PCShopSell.Game.UI
     public sealed class AgencyBuildingGlow : MaskableGraphic
     {
         private Vector2[] _outline;
+        private bool _emphasized;
         protected override void OnEnable()
         {
             // Also repair objects created before the renderer requirement was introduced.
             if (GetComponent<CanvasRenderer>() == null) gameObject.AddComponent<CanvasRenderer>();
             base.OnEnable();
         }
-        public void Initialize(Vector2[] projectedCorners, Color tint)
+        public void Initialize(Vector2[] projectedCorners, Color tint, bool emphasized = false)
         {
-            raycastTarget = false; color = tint;
+            raycastTarget = false; color = tint; _emphasized=emphasized;
             var points = projectedCorners.Select(p => new Vector2(p.x, -p.y)).Distinct().OrderBy(p => p.x).ThenBy(p => p.y).ToArray();
             var hull = new List<Vector2>();
             foreach (var point in points)
@@ -46,7 +47,7 @@ namespace PCShopSell.Game.UI
             for (int i = 0; i < _outline.Length; i++) mesh.AddTriangle(0, i + 1, (i + 1) % _outline.Length + 1);
             for (int layer = 0; layer < 3; layer++)
             {
-                float width = layer == 0 ? 14 : layer == 1 ? 7 : 2.5f;
+                float width = (_emphasized?1.8f:1f)*(layer == 0 ? 14 : layer == 1 ? 7 : 2.5f);
                 var tint = new Color(color.r, color.g, color.b, layer == 0 ? .12f : layer == 1 ? .32f : 1);
                 for (int i = 0; i < _outline.Length; i++)
                 {

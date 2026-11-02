@@ -10,6 +10,8 @@ namespace PCShopSell.Core.World
     public sealed class CityLayoutData
     {
         public int layoutVersion;
+        public LayoutAgencyDistrictData[] agencyDistricts;
+        public LayoutPlaceAliasData[] placeAliases;
         public LayoutBlockData[] blocks;
         public LayoutStreetData[] streets;
         /// <summary>
@@ -26,6 +28,12 @@ namespace PCShopSell.Core.World
         public LayoutPatrolData[] patrols;
     }
 
+    [Serializable] public sealed class LayoutAgencyDistrictData
+    {
+        public string id,name,agencyId;
+        public string[] streets;
+    }
+    [Serializable] public sealed class LayoutPlaceAliasData { public string from,to; }
     [Serializable]
     public sealed class LayoutBlockData
     {
@@ -179,6 +187,11 @@ namespace PCShopSell.Core.World
         private readonly List<PatrolRoute> _patrols = new List<PatrolRoute>();
 
         public int LayoutVersion { get; private set; }
+        public IReadOnlyList<LayoutAgencyDistrictData> AgencyDistricts { get; private set; } = Array.Empty<LayoutAgencyDistrictData>();
+        public string CanonicalPlaceId(string id) => HasPlace(id)?GetPlace(id).Id:id;
+        public LayoutAgencyDistrictData AgencyDistrictFor(string street)
+        { foreach(var d in AgencyDistricts)if(Array.IndexOf(d.streets??Array.Empty<string>(),street)>=0)return d;return null; }
+        public string AgencyCoverageName(Place p)=>AgencyDistrictFor(p?.StreetId)?.name??StreetName(p?.StreetId);
         public IReadOnlyList<LayoutBlockData> Blocks { get; private set; } = Array.Empty<LayoutBlockData>();
         public WorldMap Map { get; }
         public double DistanceScale { get; }
@@ -248,6 +261,7 @@ namespace PCShopSell.Core.World
             var layout = new CityLayout(map, data.distanceScale);
             layout.HasUniformRoadScale = data.uniformRoadScale > 0;
             layout.TravelDistanceScale = data.distanceScale * (layout.HasUniformRoadScale ? data.uniformRoadScale : 1);
+            layout.AgencyDistricts=data.agencyDistricts??Array.Empty<LayoutAgencyDistrictData>();
             layout.LayoutVersion=data.layoutVersion; layout.Blocks=data.blocks??Array.Empty<LayoutBlockData>();
             layout.Streets = data.streets ?? Array.Empty<LayoutStreetData>();
             if (data.patrols != null)
@@ -280,6 +294,11 @@ namespace PCShopSell.Core.World
                     layout._places.Add(place.Id, place);
                     layout._placeList.Add(place);
                 }
+            }
+            foreach(var alias in data.placeAliases??Array.Empty<LayoutPlaceAliasData>())
+            {
+                if(alias.from==null||layout._places.ContainsKey(alias.from)||!layout._places.ContainsKey(alias.to))continue;
+                layout._places.Add(alias.from,layout._places[alias.to]);
             }
             return layout;
         }

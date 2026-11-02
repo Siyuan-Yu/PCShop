@@ -95,7 +95,7 @@ namespace PCShopSell.Core.Session
             if(tier<0 || tier>3 || tier==HomeTier) return false;
             if(HomePriceCents>0) return Fail("先出售自住房，再换住处。");
             string homeId=tier==0?"home":"home_tier"+tier;
-            if(City.LayoutVersion>=7 && City.HasPlace(homeId) && !AgencyServes(CurrentPlace,City.GetPlace(homeId)))return Fail("请到目的住宅所在街道的中介办理。");
+            if(City.LayoutVersion>=7 && City.HasPlace(homeId) && !AgencyServes(CurrentPlace,City.GetPlace(homeId)))return Fail("请到目的住宅所属片区的中介办理。");
             Money rent=Money.FromYuan(tier==3 ? 12000 : tier==2 ? 3000 : tier==1 ? 1200 : 450);
             if(!Ledger.TryDebit(Clock.Today,"搬家",rent+Money.FromYuan(500),"住处首月租金及搬家费")) return Fail("需支付新住处首月租金与 ¥500 搬家费。");
             HomeTier=tier;
@@ -104,7 +104,7 @@ namespace PCShopSell.Core.Session
         public bool BuyHome(bool mortgage)
         {
             if(IsGameOver || !InAgency || HomeTier==0 || HomePriceCents>0) return Fail("在中介先换成改善住宅、公寓或别墅，再办理购买。");
-            if(City.LayoutVersion>=7 && !AgencyServes(CurrentPlace,Home))return Fail("请到自住房所在街道的中介办理。");
+            if(City.LayoutVersion>=7 && !AgencyServes(CurrentPlace,Home))return Fail("请到自住房所属片区的中介办理。");
             Money price=HomePurchasePrice,paid=price.Scale(mortgage ? .3 : 1);
             if(!Ledger.TryDebit(Clock.Today,"购置住宅",paid,HomeTitle)) return Fail("购房现金不足。");
             HomePriceCents=price.Cents; HomeMortgageCents=(price-paid).Cents; HomeMonthlyPrincipalCents=(long)Math.Ceiling(HomeMortgageCents/36.0);
@@ -119,7 +119,7 @@ namespace PCShopSell.Core.Session
         public bool SellHome()
         {
             if(IsGameOver || !InAgency || HomePriceCents<=0) return false;
-            if(City.LayoutVersion>=7 && !AgencyServes(CurrentPlace,Home))return Fail("请到自住房所在街道的中介办理。");
+            if(City.LayoutVersion>=7 && !AgencyServes(CurrentPlace,Home))return Fail("请到自住房所属片区的中介办理。");
             Money net=Money.FromCents(HomePriceCents).Scale(.9)-Money.FromCents(HomeMortgageCents);
             if(Ledger.Balance+net<Money.Zero) return Fail("现金不足清偿房贷差额。");
             if(net.IsPositive) Ledger.Credit(Clock.Today,"住宅出售",net,"售价九折，扣清剩余房贷");

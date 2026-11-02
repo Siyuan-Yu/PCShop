@@ -12,10 +12,13 @@ namespace PCShopSell.Tests
     {
         private static CityLayout City()=>CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text));
         private static GameSession Session(CityLayout city)=>new GameSession(city,123,Money.FromYuan(100000),GameTimestamp.From(new GameDate(5),600));
-        [Test] public void ConfirmedPlanHasOneAgencyPerStreetAndNoStarterShopStation()
+        [Test] public void ConfirmedPlanHasFourAgencyDistrictsAndNoStarterShopStation()
         {
-            var city=City();Assert.AreEqual(7,city.LayoutVersion);Assert.AreEqual(10,city.Streets.Count);
-            foreach(var street in city.Streets)Assert.AreEqual(1,city.OfKind(PlaceKind.Agency).Count(p=>p.StreetId==street.id),street.id);
+            var city=City();Assert.AreEqual(8,city.LayoutVersion);Assert.AreEqual(10,city.Streets.Count);
+            Assert.AreEqual(4,city.OfKind(PlaceKind.Agency).Count());
+            foreach(var street in city.Streets)Assert.AreEqual(1,city.AgencyDistricts.Count(d=>d.streets.Contains(street.id)),street.id);
+            Assert.AreEqual("agency",city.GetPlace("agency_s_electronics").Id);
+            Assert.AreEqual("agency_s_sports",city.GetPlace("agency_s_expo").Id);
             Assert.AreEqual(8,city.OfKind(PlaceKind.Station).Count());
             Assert.False(city.OfKind(PlaceKind.Station).Any(p=>p.StreetId=="s_start"));
             Assert.GreaterOrEqual(city.Places.Count(p=>p.IsTradable),20);
@@ -49,6 +52,19 @@ namespace PCShopSell.Tests
             }
         }
         private static string pairLabel(string street,string place)=>street+" / "+place;
+        [Test] public void AgenciesServeTheirWholeCircleAndNeverCrossIntoAnotherCircle()
+        {
+            var city=City();using(var session=Session(city))
+            foreach(var place in city.Places)
+            {
+                var expected=city.AgencyDistrictFor(place.StreetId);
+                Assert.NotNull(expected,place.Id);
+                var agencies=city.OfKind(PlaceKind.Agency).Where(a=>session.AgencyServes(a,place)).ToArray();
+                Assert.AreEqual(1,agencies.Length,place.Id);Assert.AreEqual(expected.agencyId,agencies[0].Id);
+            }
+            foreach(var venue in city.Places.Where(p=>p.Business=="venue_ktv"||p.Business=="venue_restaurant"||p.Business=="venue_bar"||p.Business=="venue_expo"))
+                Assert.True(PCShopSell.Game.Runtime.CityArchitecture.HasExterior(venue),venue.Id);
+        }
         [Test] public void MetroTravelsToChosenStationRatherThanLastEnumeratedStation()
         {
             var city=City();using(var s=Session(city))
@@ -74,7 +90,7 @@ namespace PCShopSell.Tests
                 using(var migrated=GameSession.Load(city,save))
                 {
                     Assert.AreEqual(cash,migrated.Ledger.Balance);Assert.AreEqual(people,migrated.CityPeople.Count);
-                    var current=migrated.CreateSave();Assert.AreEqual(7,current.cityLayoutVersion);
+                    var current=migrated.CreateSave();Assert.AreEqual(8,current.cityLayoutVersion);
                     using(var again=GameSession.Load(city,current))
                     {Assert.AreEqual(cash,again.Ledger.Balance);Assert.AreEqual(people,again.CityPeople.Count);Assert.AreEqual(migrated.Home.Id,again.Home.Id);}
                 }

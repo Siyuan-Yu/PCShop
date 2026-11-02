@@ -215,6 +215,7 @@ namespace PCShopSell.Tests
         public void JiePriceWar_StopsAtHighFriendship()
         {
             GameSession s = Make();
+            s.PlayerShop.NotFitted=false;s.PlayerShop.ForcedClosed=false;s.PlayerShop.PlayerPresent=true;s.PlayerShop.SetHours(0,1440);
             s.PlayerShop.Markup = 1.4;
             EventDef rival = EventCatalog.Get("rival");
             Assert.IsTrue(rival.When(s));

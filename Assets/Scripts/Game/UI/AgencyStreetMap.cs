@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.World;
@@ -58,8 +58,7 @@ namespace PCShopSell.Game.UI
             foreach (var unit in units)
             {
                 if (!game.World.Places.TryGetValue(unit.Id, out var visual)) continue;
-                var body = visual.Root.transform.Find("Body")?.GetComponent<Renderer>();
-                var buildingBounds = body != null ? body.bounds : new Bounds(visual.Entrance, new Vector3(12, 10, 12));
+                var buildingBounds = BuildingBounds(visual);
                 if (!hasBounds) { bounds = buildingBounds; hasBounds = true; }
                 else bounds.Encapsulate(buildingBounds);
                 bounds.Encapsulate(game.World.NodeWorld(unit.NodeId));
@@ -82,6 +81,11 @@ namespace PCShopSell.Game.UI
             _camera.targetTexture = _texture;
             GetComponent<RawImage>().texture = _texture;
             RenderMap();
+        }
+
+        public static Bounds BuildingBounds(PlaceVisual place)
+        {
+            return place.BuildingBounds();
         }
 
         public static Vector3[] Corners(Bounds b) => new[]
@@ -112,6 +116,7 @@ namespace PCShopSell.Game.UI
             var suns = FindObjectsOfType<Light>().Where(l => l.type == LightType.Directional).ToArray();
             var intensities = suns.Select(l => l.intensity).ToArray();
             var colors = suns.Select(l => l.color).ToArray();
+            var rotations = suns.Select(l => l.transform.rotation).ToArray();
             // Hide other streets only during this camera capture; restore the live world below.
             var outside = _game.World.Places.Values.Where(p => !_placeIds.Contains(p.Place.Id) && p.Root.activeSelf).ToArray();
             try
@@ -121,8 +126,8 @@ namespace PCShopSell.Game.UI
                 if (_rentalGlow != null) _rentalGlow.SetActive(false);
                 RenderSettings.fog = false;
                 RenderSettings.ambientMode = AmbientMode.Flat;
-                RenderSettings.ambientLight = new Color(.65f, .70f, .63f);
-                foreach (var sun in suns) { sun.intensity = 1.1f; sun.color = new Color(1, .96f, .86f); }
+                RenderSettings.ambientLight = new Color(.48f, .56f, .65f);
+                foreach (var sun in suns) { sun.intensity = 1.35f; sun.color = new Color(1, .97f, .90f); sun.transform.rotation=Quaternion.Euler(52,-32,0); }
                 _camera.Render();
             }
             finally
@@ -131,7 +136,7 @@ namespace PCShopSell.Game.UI
                 RenderSettings.fog = fog;
                 RenderSettings.ambientMode = ambientMode;
                 RenderSettings.ambientLight = ambient;
-                for (int i = 0; i < suns.Length; i++) { suns[i].intensity = intensities[i]; suns[i].color = colors[i]; }
+                for (int i = 0; i < suns.Length; i++) { suns[i].intensity = intensities[i]; suns[i].color = colors[i]; suns[i].transform.rotation=rotations[i]; }
                 foreach (var c in canvases) if (c != null) c.enabled = true;
                 foreach (var place in outside) if (place.Root != null) place.Root.SetActive(true);
             }

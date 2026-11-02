@@ -19,6 +19,7 @@ namespace PCShopSell.Game.UI
         public void OnEnteredPlace(Place p)
         {
             if (S.IsWorking) { UpdateWorkScreen(); return; }
+            if(S.IsOwnedVenue(p)){OpenVenueManagement(p);return;}
             if(p.Business!=null&&p.Business.StartsWith("venue_")||S.IsCityActivityVenue(p)&&S.CityActivities.Any(a=>a.Active&&a.VenueId==p.Id)){OpenCityVenue(p);return;}
             if(IsCarryStore(p)){OpenPlaceWindow(p,BuildCarryStore,1120,960);return;}
             if(!S.IsMyShop(p)&&(p.Id=="shop02"||p.Id=="clothing_boutique")){OpenCityClothingShop(p);return;}

@@ -1,0 +1,127 @@
+using System.Linq;
+using NUnit.Framework;
+using UnityEngine;
+using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
+using PCShopSell.Core.Session;
+using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
+
+namespace PCShopSell.Tests
+{
+    public sealed class CompetitionContextTests
+    {
+        private static GameSession Make(string kind="clothing",bool fullCity=false)
+        {
+            var data=fullCity?JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text):GameSessionTests.Layout();
+            var s=new GameSession(CityLayout.FromData(data),71,Money.FromYuan(300000),GameTimestamp.From(new GameDate(0),11*60),false);
+            s.EventsEnabled=false;GameSessionTests.Teleport(s,s.MainShop.Place.Id);
+            Assert.IsTrue(s.SetShopMainCategory(kind));
+            s.PlayerShop.SetHours(0,1440);s.PlayerShop.ForcedClosed=false;s.PlayerShop.NotFitted=false;s.PlayerShop.Markup=1.4;
+            return s;
+        }
+        [Test]
+        public void ClosedShopCannotTriggerPriceWarOrConsumeTheCompetitionRound()
+        {
+            using(var s=Make("computer"))
+            {
+                s.PlayerShop.ForcedClosed=true;
+                Assert.IsFalse(EventCatalog.Get("rival").When(s));
+                s.RaiseEvent("rival");Assert.IsNull(s.PendingEvent);Assert.AreEqual(0,s.EventCountOf("rival"));
+                s.Clock.Restore(new GameDate(14),11*60);s.TickCityRetail();Assert.AreEqual(0,s.CityCompetitions.Count);
+                s.PlayerShop.ForcedClosed=false;s.TickCityRetail();
+                Assert.AreEqual(1,s.CityCompetitions.Count,"同一天真正开门后仍可生成这一轮事件");
+                s.TickCityRetail();Assert.AreEqual(1,s.CityCompetitions.Count);
+            }
+        }
+        [Test]
+        public void ClothingPriceWarUsesAClothingBrandAndIgnoresComputerFriendshipPerks()
+        {
+            using(var s=Make())
+            {
+                s.PlayerShop.Stock.ForceAddGoods("clothing:jacket",2);
+                s.Meet(Npcs.Jie,100);s.AddRelation(Npcs.Jie,100);
+                Assert.IsTrue(EventCatalog.Get("rival").When(s));s.RaiseEvent("rival");
+                Assert.IsNotNull(s.PendingEvent);StringAssert.Contains("服装",s.PendingEvent.Title);
+                StringAssert.Contains("远迹服饰",s.PendingEvent.Body);StringAssert.DoesNotContain("电脑",s.PendingEvent.Body);
+                var before=s.PlayerShop.Markup;Assert.IsTrue(s.ResolveEvent(0));
+                Assert.AreEqual(before-.1,s.PlayerShop.Markup,1e-9);Assert.IsFalse(s.ResolveEvent(0));
+            }
+        }
+        [Test]
+        public void ChangingTheMainCategoryInvalidatesAnAlreadyRaisedPriceWar()
+        {
+            using(var s=Make())
+            {
+                s.RaiseEvent("rival");Assert.IsNotNull(s.PendingEvent);
+                Assert.IsTrue(s.SetShopMainCategory("food"));double markup=s.PlayerShop.Markup;
+                Assert.IsTrue(s.ResolveEvent(0));Assert.AreEqual(markup,s.PlayerShop.Markup);
+            }
+        }
+        [Test]
+        public void PriceWarResponseStaysBoundToTheOriginalOperatingShopAfterSwitchingFocus()
+        {
+            using(var s=Make("computer"))
+            {
+                s.PlayerShop.Reputation=80;s.PlayerShop.Markup=1.1;
+                s.DebugAddListing("tea",0,60,Money.FromYuan(3000));GameSessionTests.Teleport(s,"agency");
+                Assert.IsTrue(s.SignLease("tea",true));GameSessionTests.Teleport(s,"tea");Assert.IsTrue(s.SetShopMainCategory("clothing"));
+                var target=s.CurrentShop;target.Sim.NotFitted=false;target.Sim.ForcedClosed=false;target.Sim.SetHours(0,1440);
+                target.Sim.Markup=1.4;target.Sim.EmployeeOnDuty=_=>true;
+                s.RaiseEvent("rival");Assert.IsNotNull(s.PendingEvent);StringAssert.Contains("服装",s.PendingEvent.Body);
+                GameSessionTests.Teleport(s,"pc");var current=s.CurrentShop;double unchanged=current.Sim.Markup;
+                Assert.IsTrue(s.ResolveEvent(0));Assert.AreSame(current,s.CurrentShop);
+                Assert.AreEqual(1.3,target.Sim.Markup,1e-9);Assert.AreEqual(unchanged,current.Sim.Markup);
+            }
+        }
+        [TestCase(21,"quota")]
+        [TestCase(28,"terms")]
+        public void ClothingMarketEventsUseActualClothingSuppliersAndSurviveSaving(int day,string kind)
+        {
+            using(var s=Make(fullCity:true))
+            {
+                s.Clock.Restore(new GameDate(day),11*60);s.TickCityRetail();var item=s.CityCompetitions.Single();
+                Assert.AreEqual(kind,item.Kind);Assert.AreEqual("clothing",item.RetailKind);
+                Assert.IsTrue(ClothingProducts.IsClothing(item.ProductId));Assert.AreEqual("clothing_wholesale",item.SupplierId);
+                StringAssert.DoesNotContain("CPU",s.CityCompetitionTerms(item));
+                using(var loaded=GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
+                {
+                    var restored=loaded.CityCompetitions.Single();Assert.AreEqual(item.RetailKind,restored.RetailKind);
+                    Assert.AreEqual(item.ProductId,restored.ProductId);Assert.AreEqual(item.SupplierId,restored.SupplierId);
+                }
+            }
+        }
+        [Test]
+        public void SwitchingIndustryClearsPromotionAndOldComputerEventsCannotPenalizeClothing()
+        {
+            using(var s=Make(fullCity:true))
+            {
+                s.Clock.Restore(new GameDate(14),11*60);s.TickCityRetail();Assert.Less(s.PlayerShop.CityRetailDemandMultiplier,1);
+                Assert.IsTrue(s.SetShopMainCategory("food"));Assert.AreEqual(1,s.PlayerShop.CityRetailDemandMultiplier);
+                Assert.IsTrue(s.CityCompetitions.Single().Ended);
+                Assert.IsTrue(s.SetShopMainCategory("clothing"));
+                s.LoadCityRetail(new SaveData{cityRetailVersion=1,cityCompetitionSlot=0,cityCompetitions=new[]{
+                    new CityCompetition{Id="old-pc",Kind="promotion",ShopId=s.MainShop.Place.Id,ProductId="cpu0",StartDay=14,EndDay=17}}});
+                Assert.IsTrue(s.CityCompetitions.Single().Ended);Assert.AreEqual(1,s.PlayerShop.CityRetailDemandMultiplier);
+            }
+        }
+        [Test]
+        public void LegacyClothingInferenceAlsoClearsAComputerPromotionBeforeTheFirstTick()
+        {
+            using(var s=Make())
+            {
+                s.PlayerShop.Stock.Clear();s.PlayerShop.Stock.ForceAddGoods("clothing:cotton_short",2);
+                foreach(int shelf in s.ShelfIndexes())Assert.IsTrue(s.SetShelfKind(shelf,"clothing_0"));
+                s.Clock.Restore(new GameDate(14),11*60);var save=s.CreateSave();
+                save.shopRetailKind="computer";save.flags=save.flags.Where(f=>!f.StartsWith("shop:main-category:")).ToArray();
+                save.cityRetailVersion=1;save.cityCompetitionSlot=0;
+                save.cityCompetitions=new[]{new CityCompetition{Id="legacy-inferred",Kind="promotion",ShopId=s.MainShop.Place.Id,ProductId="cpu0",StartDay=14,EndDay=17}};
+                using(var loaded=GameSession.Load(s.City,save))
+                {
+                    Assert.AreEqual("clothing",loaded.RetailKind);Assert.IsTrue(loaded.CityCompetitions.Single().Ended);
+                    Assert.AreEqual(1,loaded.PlayerShop.CityRetailDemandMultiplier);
+                }
+            }
+        }
+    }
+}

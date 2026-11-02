@@ -18,17 +18,16 @@ namespace PCShopSell.Game.UI
         {
             Line(parent, "经营类型：" + RetailShopTypes.Name(S.RetailKind), 18, Ui.Accent);
             var row = Ui.Row(parent, 38);
-            Ui.Size(Ui.Button(row, "进货渠道", OpenRetailSources, 17, Ui.ButtonHot), -1, -1, 1);
-            Ui.Size(Ui.Button(row, "背包/纸箱商品上架", OpenRetailListing, 17), -1, -1, 1);
-            Ui.Size(Ui.Button(row, "主售品类", OpenRetailTypeChooser, 17), -1, -1, 1);
+            Ui.Size(Ui.Button(row, "进货员 · " + S.Employees.Count(x=>x.Shop==S.CurrentShop&&x.Role==EmployeeRole.Buyer) + " 人", OpenShopBuyers, 17, Ui.ButtonHot), -1, -1, 1).name="ShopBuyersEntry";
+            Ui.Size(Ui.Button(row, "背包/后仓商品上架", OpenRetailListing, 17), -1, -1, 1);
         }
         private void OpenRetailListing()
         {
             OpenWindow("商品上架", 820, 700, w =>
             {
                 if (!S.InPlayerShop) { w.Close(); return; }
-                Para(w.Content, "将背包或本店纸箱里的商品放入后仓；摆好并设置相应品类的货架后，顾客才能买到。", 18);
-                var items = Gifts.All.Where(g => S.GoodsAvailableToList(g.Id) > 0 && RetailShopTypes.Sells(S.RetailKind, g.Id)).ToArray();
+                Para(w.Content, "将背包或本店后仓里的商品放入后仓；摆好并设置相应品类的货架后，顾客才能买到。", 18);
+                var items = Gifts.All.Where(g => S.GoodsAvailableToList(g.Id) > 0).ToArray();
                 var list = Ui.Scroll(w.Content, 510);
                 if (items.Length == 0) Para(list, "手边没有可上架的商品。可先去批发进货，或让采购员直接送入后仓。", 18, Ui.Dim);
                 foreach (var product in items)
@@ -46,7 +45,7 @@ namespace PCShopSell.Game.UI
         {
             OpenWindow("本店主售品类",760,720,w=>
             {
-                Para(w.Content,"选择本店主要销售什么。之后进店的顾客按这个品类挑选商品；已有库存和已接订单保留，尚未结账的顾客会先离店。",18,Ui.Dim);
+                Para(w.Content,"主售影响客流与选购偏好，不限制陈列：顾客更倾向买主售商品，也会购买其他已陈列商品。",18,Ui.Dim);
                 foreach(string id in RetailShopTypes.All)
                 {
                     string kind=id;bool current=kind==S.RetailKind;
@@ -57,22 +56,6 @@ namespace PCShopSell.Game.UI
                 }
             });
         }
-        private void OpenRetailSources()
-        {
-            OpenWindow("进货渠道", 820, 720, w =>
-            {
-                Para(w.Content, "去对应店铺打开“批发进货”，可放背包带回上架，也可叫货车送入指定店铺后仓。员工管理的采购清单同样包含这些货源。", 18);
-                var list = Ui.Scroll(w.Content, 520);
-                foreach (var p in S.City.Places.Where(p => S.HasRetailWholesale(p)))
-                {
-                    var source = p;
-                    Line(list, source.Name + " · " + S.OpeningHoursText(source), 19, Ui.Accent);
-                    Para(list, string.Join("、", Gifts.All.Where(g => S.CityRetailGoodsAvailable(source, g)).Select(g => g.Name)), 16);
-                    Ui.Size(Ui.Button(list, "前往进货", () => { CloseAllWindows(); _ctrl.GoToPlace(source); }, 17), -1, 36);
-                }
-                Ui.Size(Ui.Button(w.Content, "安排采购员", OpenEmployeesPanel, 18, Ui.ButtonHot), -1, 42);
-            });
-        }
         private void OpenRetailWholesale(Place source)
         {
             CloseStoreWindows();
@@ -81,12 +64,24 @@ namespace PCShopSell.Game.UI
         private void BuildRetailWholesale(Window w,Place source) => BuildCarryCatalog(w,source,"wholesale");
         private sealed class CarryOffer
         {
-            public string Key,Name,Group,Detail;
+            public string Key,Name,Group,Detail,Season;
             public double Kg;
             public Money Price;
             public Func<bool> Add;
             public Func<double> Remaining;
             public Action Preview;
+        }
+        private static string FurniturePurchaseGroup(FurnitureDef item)
+        {
+            if(item.Role==FurnitureRole.Fridge || item.Role==FurnitureRole.Climate || item.Role==FurnitureRole.Cooker
+                || item.Id=="shop_dispenser" || item.Id=="shop_led")return "电器";
+            switch(item.Id)
+            {
+                case FurnitureCatalog.Curtain:
+                case "rug": case "plant": case "poster": case "shop_plant": case "shop_poster":
+                    return "装饰";
+                default:return "非电器";
+            }
         }
         private bool IsCarryStore(Place source) => source!=null && !S.IsMyShop(source) && !S.IsVacant(source)
             && S.VentureAt(source.Id)==null && !S.IsPlayerPropertyOccupied(source.Id)
@@ -108,8 +103,8 @@ namespace PCShopSell.Game.UI
         {
             bool wholesale=mode=="wholesale",expo=mode=="expo";
             var offers=new List<CarryOffer>();
-            void Offer(string key,string name,string group,double kg,Money price,string detail,Func<bool> add,Func<double> remaining=null,Action preview=null)
-                =>offers.Add(new CarryOffer {Key=key,Name=name,Group=group,Kg=kg,Price=price,Detail=detail,Add=add,Remaining=remaining,Preview=preview});
+            void Offer(string key,string name,string group,double kg,Money price,string detail,Func<bool> add,Func<double> remaining=null,Action preview=null,string season=null)
+                =>offers.Add(new CarryOffer {Key=key,Name=name,Group=group,Kg=kg,Price=price,Detail=detail,Add=add,Remaining=remaining,Preview=preview,Season=season});
             if(expo)
             {
                 foreach(var item in ModelProducts.Limited)
@@ -126,7 +121,8 @@ namespace PCShopSell.Game.UI
                     var item=product;string key="wholesale:"+item.Id;
                     Offer(key,item.Name,ShelfKinds.ForGift(item.Id)?.Name??"商品",item.WeightKg,S.CityRetailWholesalePrice(source,item),
                         "零售参考价 "+item.Price+" · 起订 "+S.CitySupplierMinimum(source.Id)+" 件"+(item.ShelfDays>0?" · 保鲜 "+item.ShelfDays+" 天":""),
-                        ()=>S.CartAddRetailWholesale(source,item.Id),()=>Math.Min(100,S.CitySupplierRemaining(source.Id,item.Id))-S.CartAmount(key));
+                        ()=>S.CartAddRetailWholesale(source,item.Id),()=>Math.Min(100,S.CitySupplierRemaining(source.Id,item.Id))-S.CartAmount(key),
+                        season:ClothingProducts.SeasonGroup(item.Id));
                 }
             }
             else if(source.Kind==PlaceKind.Wholesaler)
@@ -162,7 +158,7 @@ namespace PCShopSell.Game.UI
                 foreach(var item in FurnitureCatalog.Purchasable(false).Concat(FurnitureCatalog.Purchasable(true)).GroupBy(f=>f.Id).Select(g=>g.First()))
                 {
                     var product=item;
-                    Offer("furn:"+product.Id,product.Name,product.IsFixture?"店面设施":product.ForShop?"店里装饰":"家里用",product.WeightKg,product.Price,product.Description,()=>S.CartAddFurniture(product.Id));
+                    Offer("furn:"+product.Id,product.Name,FurniturePurchaseGroup(product),product.WeightKg,product.Price,product.Description,()=>S.CartAddFurniture(product.Id));
                 }
             }
             else if(source.Business==GameSession.FastFoodBusiness)
@@ -198,7 +194,7 @@ namespace PCShopSell.Game.UI
                 foreach(var upgrade in ShopUpgrades.SoldBy(source.Business))
                 {
                     var item=upgrade;
-                    Offer("upgrade:"+item.Id,item.Name,"店铺设备",0,item.Price,item.Description+" · 购后安装到门店，不占货运空间",()=>S.CartAddUpgrade(item.Id),
+                    Offer("upgrade:"+item.Id,item.Name,source.Business==GameSession.MallBusiness?"电器":"店铺设备",0,item.Price,item.Description+" · 购后安装到门店，不占货运空间",()=>S.CartAddUpgrade(item.Id),
                         ()=>S.HasUpgrade(item.Id)?0:Math.Max(0,1-S.CartAmount("upgrade:"+item.Id)));
                 }
             Line(w.Content,"商品购买 · "+(S.IsPlaceOpen(source)?"营业中 · ":"已打烊 · ")+S.OpeningHoursText(source),19,Ui.Accent);
@@ -211,14 +207,22 @@ namespace PCShopSell.Game.UI
             if(source.Business==GameSession.MallBusiness && S.MallStashCount>0)
                 Ui.Size(Ui.Button(links,"取寄存的货",()=>OpenWindow("家具城寄存",1000,760,detail=>BuildMallStash(detail,detail.Content)),16),150,36);
             if(links.childCount==0)links.gameObject.SetActive(false);
-            var tabs=offers.Select(o=>o.Group).Distinct().ToList();string tab=tabs.Count>1?ShopTabs(w,source,tabs):tabs.FirstOrDefault();
+            var tabs=source.Business==GameSession.MallBusiness
+                ?new List<string>{"全部","电器","非电器","装饰"}
+                :new[]{"全部"}.Concat(offers.Select(o=>o.Group)).Distinct().ToList();
+            bool clothingWholesale=wholesale && offers.Any(o=>o.Season!=null);
+            string tab=ShopTabs(w,source,tabs,label:clothingWholesale?"品质":null);
+            string season=clothingWholesale?ShopTabs(w,source,new[]{"全部","春秋装","夏装","冬装"},filterKey:"season",label:"季节"):"全部";
+            if(clothingWholesale)Line(w.Content,"当前"+CityWeather.Season(S.Clock.Now.TotalMinutes)+"季 · 应季服装需求较多，反季服装仍有需求。",16,Ui.Dim);
             var list=GoodsList(w.Content);
-            if(offers.Count==0)Para(list,"这里暂时没有可购买的商品。",18,Ui.Dim);
-            foreach(var product in offers.Where(o=>o.Group==tab))
+            var visible=offers.Where(o=>(tab=="全部" || o.Group==tab) && (season=="全部" || o.Season==season)).ToList();
+            if(visible.Count==0)Para(list,offers.Count==0?"这里暂时没有可购买的商品。":"当前筛选下没有商品，可切换品质或季节。",18,Ui.Dim);
+            foreach(var product in visible)
             {
                 var item=product;double remaining=item.Remaining?.Invoke()??double.PositiveInfinity;
                 var row=Ui.Row(list,84,10);
-                string label=item.Kg>0?ProductLabel(item.Name,item.Kg,item.Detail):item.Name+"\n<size=14>登记为已购资产，不占背包或货车空间</size>\n<size=14>"+item.Detail+"</size>";
+                string detail=item.Season==null?item.Detail:item.Season+" · "+item.Detail;
+                string label=item.Kg>0?ProductLabel(item.Name,item.Kg,detail):item.Name+"\n<size=14>登记为已购资产，不占背包或货车空间</size>\n<size=14>"+detail+"</size>";
                 Ui.Size(ProductText(row,label,17),-1,-1,1);
                 Ui.Size(Ui.Label(row,item.Price.ToString(),19,TextAnchor.MiddleLeft,Ui.Good),100);
                 if(item.Preview!=null)Ui.Size(Ui.Button(row,"试穿",item.Preview,16),68,38);

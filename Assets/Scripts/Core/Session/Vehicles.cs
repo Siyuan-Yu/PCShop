@@ -13,7 +13,7 @@ namespace PCShopSell.Core.Session
         Van,
     }
 
-    /// <summary>出行方式参数。速度为游戏内米/分钟；画面速度为画面米/真实秒（1 倍速）；街上的画面速度已比最初慢一半；实时出行计时由统一世界时钟管理。</summary>
+    /// <summary>出行方式参数。物理速度为游戏内米/分钟，表现速度与其使用相同的步行倍率；实际街道移动与行程时间由 CityTravelTiming 统一换算。</summary>
     public sealed class VehicleSpec
     {
         public VehicleKind Kind { get; }
@@ -48,14 +48,20 @@ namespace PCShopSell.Core.Session
     {
         // Street presentation only (walking and vehicles); indoor movement has its own unchanged speed.
         public const double StreetSpeedMultiplier = .5;
-        public static readonly VehicleSpec Walk = new VehicleSpec(VehicleKind.Walk, "步行", 49, 6, 0, 5.5 * StreetSpeedMultiplier, false);
-        public static readonly VehicleSpec Taxi = new VehicleSpec(VehicleKind.Taxi, "打车", 400, 15, 0, 24 * StreetSpeedMultiplier, false);
-        public static readonly VehicleSpec EBike = new VehicleSpec(VehicleKind.EBike, "小电驴", 250, 10, 1800, 17 * StreetSpeedMultiplier, true);
-        public static readonly VehicleSpec Tricycle = new VehicleSpec(VehicleKind.Tricycle, "三轮车", 200, 40, 2500, 15 * StreetSpeedMultiplier, true);
+        // Shared outdoor player/pedestrian adjustment; rooms retain their authored walking speeds.
+        public const double WalkingSpeedMultiplier = .25;
+        public static readonly VehicleSpec Walk = new VehicleSpec(VehicleKind.Walk, "步行", 49 * WalkingSpeedMultiplier, 6, 0, 5.5 * StreetSpeedMultiplier * WalkingSpeedMultiplier, false);
+        // Anchor both physical pace and presentation to the current walking speed.
+        public static readonly VehicleSpec Taxi = AtWalkingRatio(VehicleKind.Taxi, "打车", 4.8, 15, 0, false);
+        public static readonly VehicleSpec EBike = AtWalkingRatio(VehicleKind.EBike, "小电驴", 3, 10, 1800, true);
+        public static readonly VehicleSpec Tricycle = AtWalkingRatio(VehicleKind.Tricycle, "三轮车", 2.4, 40, 2500, true);
 
-        public static readonly VehicleSpec Car = new VehicleSpec(VehicleKind.Car, "小轿车", 360, 18, 68000, 23 * StreetSpeedMultiplier, false);
-        public static readonly VehicleSpec Van = new VehicleSpec(VehicleKind.Van, "小货车", 320, 80, 46000, 21 * StreetSpeedMultiplier, false);
+        public static readonly VehicleSpec Car = AtWalkingRatio(VehicleKind.Car, "小轿车", 4.32, 18, 68000, false);
+        public static readonly VehicleSpec Van = AtWalkingRatio(VehicleKind.Van, "小货车", 3.84, 80, 46000, false);
         public static readonly VehicleSpec[] All = { Walk, Taxi, EBike, Tricycle, Car, Van };
+
+        private static VehicleSpec AtWalkingRatio(VehicleKind kind,string name,double ratio,double capacity,long price,bool illegal)
+            =>new VehicleSpec(kind,name,Walk.SpeedPerMinute*ratio,capacity,price,Walk.VisualSpeed*ratio,illegal);
 
         public static VehicleSpec Get(VehicleKind kind)
         {

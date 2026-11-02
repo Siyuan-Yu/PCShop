@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -32,7 +32,7 @@ namespace PCShopSell.Game
         public Camera Cam { get; private set; }
         public GameUi Ui { get; private set; }
         public HomeRoomView HomeRoom { get; private set; }
-        public bool InInterior => Session != null && Session.InPlayerShop;
+        public bool InInterior => Session != null && Session.InPlayerShop&&!Session.IsDedicatedVenue(Session.CurrentPlace);
         /// <summary>在自己的出租屋里（真实的小屋，不是街上弹窗）。</summary>
         public bool InHome => Session != null && Session.CurrentPlace != null && Session.CurrentPlace == Session.Home;
         /// <summary>在任意室内场景（店里或家里）：街道隐藏，镜头跟着老板。</summary>
@@ -210,7 +210,7 @@ namespace PCShopSell.Game
         }
 
         // Indoor character speeds are authored at 1x; apply the selected speed exactly once.
-        private float IndoorWalkDelta(float realDt) => Session.Time.IsRunning ? realDt * Session.Time.Speed : 0f;
+        private float IndoorWalkDelta(float realDt) => Session.Time.IsRunning ? Mathf.Min(realDt,(float)TimeController.MaxTickSeconds) * Session.Time.Speed : 0f;
 
         private void UpdateHomeBedTrip(float dt)
         {
@@ -327,10 +327,11 @@ namespace PCShopSell.Game
         {
             bool interior = InInterior;
             bool room = InRoom;
-            float worldDt = Session.Time.IsRunning ? dt * Session.Time.Speed * (float)TimeController.WorldRate : 0f;
+            float worldDt = Session.Time.IsRunning ? Mathf.Min(dt,(float)TimeController.MaxTickSeconds) * Session.Time.Speed * (float)TimeController.WorldRate : 0f;
             Interior.SetActive(interior);
             HomeRoom.SetActive(InHome);
             World.Root.SetActive(!room);
+            World.SetVenueFocus(Session.CurrentPlace?.Id);
             _avatar.Update(Session, dt);
             _police.Update(!room);
             _crowdSyncTimer -= dt;
@@ -422,8 +423,7 @@ namespace PCShopSell.Game
             if (Input.GetKeyDown(KeyCode.Alpha4)) Session.Time.SetSpeed(8);
             if (!GameUi.PointerOverUi) _rig.Zoom(Input.mouseScrollDelta.y);
             HandleCameraOrbit();
-            // 右键、Esc：关最上面一层窗口；没开窗口时 Esc 打开菜单（和大多数游戏一样）
-            if (Input.GetMouseButtonDown(1) && !Placing && Ui.AnyModalOpen) Ui.CloseTopWindow();
+            // Esc：关最上面一层窗口；没开窗口时打开菜单。右键不关闭界面。
             if (Input.GetKeyDown(KeyCode.Escape) && !Placing && !Ui.CloseTopWindow() && !Ui.AnyModalOpen) Ui.TryHotkey(KeyCode.Escape);
             if (!Placing)
                 foreach (KeyCode hk in HotkeyPanels)
@@ -432,12 +432,13 @@ namespace PCShopSell.Game
             if (Input.GetKeyDown(KeyCode.F) && !Ui.AnyModalOpen && !Session.IsGameOver && !Placing)
             {
                 if (InHome) HomeInteract(HomeRoom.NearbyId);
+                else if(Session.IsOwnedVenue(Session.CurrentPlace))Ui.OpenVenueManagement(Session.CurrentPlace);
                 else if (InInterior)
                 {
                     if (Interior.NearCounter) CounterInteract();
                     else if (Interior.NearDoor) Ui.ConfirmLeaveShop();
                     else if (Interior.NearFridge) Ui.OpenFridgeWindow();
-                    else if (Interior.NearBox && !Interior.NearShelf && !Interior.NearBench && !Interior.NearDisplay) Ui.OpenShopLockerWindow();
+                    else if (Interior.NearBox) Ui.OpenShopLockerWindow();
                     else ShelfInteract();
                 }
                 else TryEnterNearby();
@@ -587,6 +588,8 @@ namespace PCShopSell.Game
             world = Vector3.zero;
             label = null;
             if (Session == null || Session.IsGameOver || Ui.AnyModalOpen || Placing) return false;
+            if(Session.IsOwnedVenue(Session.CurrentPlace))
+            {world=StreetWorldBuilder.ToWorld(Session.PlayerPosition)+Vector3.up*2;label="场馆管理（按 F 打开）";return true;}
             if (InHome)
             {
                 if (HomeRoom.NearbyId == null) return false;
@@ -627,10 +630,10 @@ namespace PCShopSell.Game
                 {
                     world = Interior.NearFridgeWorld; label = "冰箱：存取食物（按 F 打开）"; return true;
                 }
-                if (Interior.NearBox && !Interior.NearShelf && !Interior.NearBench && !Interior.NearDisplay)
+                if (Interior.NearBox)
                 {
                     world = Interior.NearBoxWorld;
-                    label = $"店里纸箱 ×{Session.ShopBoxes}（{Session.ShopLocker.WeightKg:0.##}/{Session.ShopLockerLimitKg:0} 千克，按 F 打开）";
+                    label = "纸箱：背包与后仓（容量不限，按 F 打开）";
                     return true;
                 }
                 if (Interior.NearBench)

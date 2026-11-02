@@ -92,7 +92,7 @@ namespace PCShopSell.Core.Session
         {
             if (IsGameOver) return "当前不能交易";
             if (!CityCommercialProperties.Any(p => p.Id == id)) return "该地点不是可交易的商业物业";
-            if (InAgency && !AgencyServes(CurrentPlace, City.GetPlace(id))) return "请到房源所在街道的中介办理";
+            if (InAgency && !AgencyServes(CurrentPlace, City.GetPlace(id))) return "请到房源所属片区的中介办理";
             if (PropertyAt(id) != null) return "已经持有这处物业";
             if (IsPendingShop(City.GetPlace(id))) return "该物业已有待交房租约，交房后再办理租转买";
             var quote = PreviewCityPropertyPurchase(id, mortgage);
@@ -118,7 +118,7 @@ namespace PCShopSell.Core.Session
         public string CityPropertySaleBlocker(string id)
         {
             if (PropertyAt(id) == null) return "尚未拥有该物业";
-            if (InAgency && !AgencyServes(CurrentPlace, City.GetPlace(id))) return "请到物业所在街道的中介办理";
+            if (InAgency && !AgencyServes(CurrentPlace, City.GetPlace(id))) return "请到物业所属片区的中介办理";
             if (ShopAt(id) != null || VentureAt(id) != null) return "请先结束自营并清理经营资产；本轮不办理售后回租";
             if (id == ParkPlaceId && _ventures.Any(IsParkVenture)) return "先清退园区全部铺位";
             if (Ledger.Balance + PropertySaleNet(PropertyAt(id)) < Money.Zero) return "售价不足偿还房贷，需要先补足现金";
@@ -141,7 +141,7 @@ namespace PCShopSell.Core.Session
         {
             var p = PropertyAt(id); if (p == null || IsGameOver) return false;
             if (!InAgency) return Fail("请到中介办理出租登记。");
-            if (!City.HasPlace(id) || !AgencyServes(CurrentPlace, City.GetPlace(id))) return Fail("请到房源所在街道的中介办理。");
+            if (!City.HasPlace(id) || !AgencyServes(CurrentPlace, City.GetPlace(id))) return Fail("请到房源所属片区的中介办理。");
             if (ShopAt(id) != null || VentureAt(id) != null) return Fail("自营物业不能同时向自己收租。");
             if (p.UseMode == "npc") return Fail("现有租户租约受保护，本轮不提供强制驱逐。");
             if (!rentOut && p.UseMode == "managed" && Clock.Today.TotalDays < p.LeaseEndDay) return Fail("托管租约尚未到期，不能直接腾空。");
@@ -153,10 +153,11 @@ namespace PCShopSell.Core.Session
         {
             var p = PropertyAt(id); if (p == null || IsGameOver || !InAgency || !AgencyServes(CurrentPlace, City.GetPlace(id))) return Fail("在中介选择自有空置物业开店。");
             if (p.UseMode != "vacant" || ShopAt(id) != null || VentureAt(id) != null) return Fail("该物业仍被使用，不能清走原租户。");
-            var place = City.GetPlace(id); var kind = RetailShopTypes.Valid(retailKind);
+            var place = City.GetPlace(id); var kind = IsDedicatedVenue(place)?"computer":RetailShopTypes.Valid(retailKind);
             if (kind != "computer" && Clock.Today.TotalDays < 14) return Fail("第15天起可选其他自营业态。");
             if (!HasShop) MoveInto(place, Money.Zero, Money.Zero); else OpenNewShop(place, Money.Zero, Money.Zero);
             _focus.OwnsProperty = true; _focus.RetailKind = kind; _focus.Sim.RetailKind = kind; p.UseMode = "self"; p.TenantName = "玩家自营";
+            if(IsDedicatedVenue(place)){ShowVenueHandover(place);return true;}
             Say("自有物业开店完成，不收自己的房租。按正常流程购买设施、装修并在次日营业。"); return true;
         }
         private void SettleCityProperties(GameDate today)

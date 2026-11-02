@@ -535,7 +535,7 @@ namespace PCShopSell.Game.Runtime
             {
                 Go = go,
                 Target = Origin + new Vector3(fromLeft ? xb : xa, 0, z + ((float)_rng.NextDouble() - 0.5f) * 0.6f),
-                Speed = 1.0f + (float)_rng.NextDouble() * 0.7f,
+                Speed = OwnerWalkSpeed * (float)Vehicles.WalkingSpeedMultiplier * (float)CityTravelTiming.NpcWalkSpeedFactor,
             });
         }
 
@@ -1449,7 +1449,10 @@ namespace PCShopSell.Game.Runtime
                 else if (v.Via.Count > 0) v.Via.RemoveAt(0);
                 return;
             }
-            v.Go.transform.position = p + d / m * Mathf.Min(m, OwnerWalkSpeed * (float)CityTravelTiming.NpcWalkSpeedFactor * dt / (float)TimeController.WorldRate);
+            var local=p-Origin;
+            bool inside=local.x>=0 && local.x<=Width && local.z>=0 && local.z<=Depth;
+            float pace=inside?1f:(float)Vehicles.WalkingSpeedMultiplier;
+            v.Go.transform.position = p + d / m * Mathf.Min(m, OwnerWalkSpeed * pace * (float)CityTravelTiming.NpcWalkSpeedFactor * dt / (float)TimeController.WorldRate);
             v.Go.transform.rotation = Quaternion.LookRotation(d / m);
         }
 

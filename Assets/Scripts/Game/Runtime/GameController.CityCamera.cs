@@ -22,7 +22,7 @@ namespace PCShopSell.Game
                     if(World.Places.TryGetValue(target.Id,out var waiting))
                     {
                         Vector3 delta=waiting.Entrance-StreetWorldBuilder.ToWorld(Session.PlayerPosition);delta.y=0;
-                        if(delta.sqrMagnitude<=16)place=target;
+                        if(delta.sqrMagnitude<=16 && waiting.Exterior==null)place=target;
                     }
                 }
                 if(place==null || !((place.Business??"").StartsWith("venue_",StringComparison.Ordinal)||place.Business=="服装"||Session.IsCityActivityVenue(place)))return null;

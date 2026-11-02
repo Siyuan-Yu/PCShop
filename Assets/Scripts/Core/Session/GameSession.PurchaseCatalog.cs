@@ -79,6 +79,33 @@ namespace PCShopSell.Core.Session
             plan.SourceId = null;
         }
 
+        public string EmployeePurchaseBrowseSource(EmployeePurchasePlan plan)
+        {
+            if(plan==null)return null;
+            string source=plan.BrowseSourceId;
+            if(!plan.BrowseSourceSelected)
+            {
+                source=plan.SourceId;
+                if(string.IsNullOrEmpty(source))
+                {
+                    var sources=(plan.Items??Array.Empty<PurchaseLine>()).Where(x=>x!=null && !string.IsNullOrEmpty(x.SourceId))
+                        .Select(x=>x.SourceId).Distinct().ToArray();
+                    source=sources.Length==1?sources[0]:null;
+                }
+            }
+            return !string.IsNullOrEmpty(source) && EmployeePurchaseCatalog().Any(o=>o.Source.Id==source)?source:null;
+        }
+
+        public bool RememberEmployeePurchaseSource(string employeeId,string sourceId)
+        {
+            var worker=FindEmployee(employeeId);
+            if(worker==null || worker.Role!=EmployeeRole.Buyer)return false;
+            if(!string.IsNullOrEmpty(sourceId) && !EmployeePurchaseCatalog().Any(o=>o.Source.Id==sourceId))return false;
+            worker.Person.PurchasePlan.BrowseSourceId=string.IsNullOrEmpty(sourceId)?null:sourceId;
+            worker.Person.PurchasePlan.BrowseSourceSelected=true;
+            return true;
+        }
+
         public static string PurchaseItemName(PurchaseLine line)
         {
             switch (line.Kind)

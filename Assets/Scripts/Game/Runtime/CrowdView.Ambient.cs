@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.World;
@@ -10,13 +10,13 @@ namespace PCShopSell.Game.Runtime
 
     public sealed partial class CrowdView
     {
-        private sealed class AmbientEdge { public string A, B; public Vector3 From, To; public double Scale; }
+        private sealed class AmbientEdge { public string A, B; public Vector3 From, To; }
         private sealed class AmbientWalker
         {
             public GameObject Go;
             public string PreviousNode, NextNode;
             public Vector3 Target;
-            public double Scale;
+
             public int Side;
         }
         private readonly List<AmbientWalker> _ambient = new List<AmbientWalker>();
@@ -50,7 +50,7 @@ namespace PCShopSell.Game.Runtime
                     Vector3 b = StreetWorldBuilder.ToWorld(session.City.ViewPosition(edge.To));
                     float length = Vector3.Distance(a, b);
                     if (length < 3) continue;
-                    _ambientEdges.Add(new AmbientEdge { A = node.Id, B = edge.To, From = a, To = b, Scale = edge.Length / length });
+                    _ambientEdges.Add(new AmbientEdge { A = node.Id, B = edge.To, From = a, To = b });
                 }
             }
             _visibleAmbientEdges.Clear();
@@ -83,7 +83,7 @@ namespace PCShopSell.Game.Runtime
                         reverse = AmbientOnScreen(camera, edge.From, -.02f);
                     Vector3 from = reverse ? edge.To : edge.From, to = reverse ? edge.From : edge.To;
                     person.PreviousNode = reverse ? edge.B : edge.A; person.NextNode = reverse ? edge.A : edge.B;
-                    person.Target = AmbientLane(from, to, true, person.Side); person.Scale = edge.Scale;
+                    person.Target = AmbientLane(from, to, true, person.Side);
                     Vector3 start = AmbientLane(from, to, false, person.Side);
                     // New views can already be on their way. Recycled views enter near a street end.
                     float progress = added ? (float)_rng.NextDouble() : .02f;
@@ -101,33 +101,36 @@ namespace PCShopSell.Game.Runtime
                 if (person.Go.activeSelf != show) person.Go.SetActive(show);
                 if (!show || dt <= 0 || _citySession == null) continue;
                 double remaining = CityTravelTiming.ScaledSecondsMeters(Vehicles.Walk, dt, _citySession.Time.SecondsPerMinuteAt1x) * CityTravelTiming.NpcWalkSpeedFactor;
-                for (int step = 0; remaining > .00001 && step < 16; step++)
+                for (int step = 0; remaining > .00001 && step < 128; step++)
                 {
                     Vector3 delta = person.Target - person.Go.transform.position;
                     float distance = delta.magnitude;
                     if (distance < .02f)
                     {
                         var options = _ambientCity.Map.NeighborsOf(person.NextNode);
-                        string next = null; double length = 0; int count = 0;
+                        string next = null; int count = 0;
                         foreach (var edge in options)
                         {
                             if (edge.To == person.PreviousNode) continue;
-                            if (_rng.Next(++count) == 0) { next = edge.To; length = edge.Length; }
+                            if (_rng.Next(++count) == 0) { next = edge.To; }
                         }
                         if (next == null)
-                            foreach (var edge in _ambientCity.Map.NeighborsOf(person.NextNode)) { next = edge.To; length = edge.Length; break; }
+                            foreach (var edge in _ambientCity.Map.NeighborsOf(person.NextNode)) { next = edge.To; break; }
                         if (next == null) break;
                         var from = StreetWorldBuilder.ToWorld(_ambientCity.ViewPosition(person.NextNode));
                         var to = StreetWorldBuilder.ToWorld(_ambientCity.ViewPosition(next));
                         person.PreviousNode = person.NextNode; person.NextNode = next;
                         person.Target = AmbientLane(from, to, true, person.Side);
-                        person.Scale = length / Math.Max(.01, Vector3.Distance(person.Go.transform.position, person.Target));
                         continue;
                     }
-                    float move = (float)Math.Min(distance, remaining / Math.Max(.01, person.Scale));
+                    // Use the player's road calibration at the actual position. A corner's
+                    // remaining visual distance must never redefine the walker's speed.
+                    var at=person.Go.transform.position;
+                    double scale=CityTravelTiming.LocalScale(_ambientCity,new PCShopSell.Core.World.MapPoint(at.x,at.z));
+                    float move = (float)Math.Min(distance, Math.Min(.75,remaining / Math.Max(.01, scale)));
                     person.Go.transform.position += delta / distance * move;
                     person.Go.transform.rotation = Quaternion.RotateTowards(person.Go.transform.rotation, Quaternion.LookRotation(delta.normalized), 540 * dt);
-                    remaining -= move * person.Scale;
+                    remaining -= move * scale;
                 }
             }
         }

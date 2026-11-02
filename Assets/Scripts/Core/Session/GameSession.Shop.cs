@@ -71,7 +71,7 @@ namespace PCShopSell.Core.Session
             private set => _focus.Assembler = value;
         }
         public Employee Salesperson => _focus.Salesperson;
-        public string OnDutyStaffName => Employee != null && Employee.OnDuty(Clock.Now) ? Employee.Name : Assembler?.Name ?? "店员";
+        public string OnDutyStaffName => string.Join("、",ShopStaff(_focus,EmployeeRole.Cashier).Concat(ShopStaff(_focus,EmployeeRole.Assembler)).Where(e=>e.OnDuty(Clock.Now)).Select(e=>e.Name));
         public bool EverHired { get; private set; }
         public IReadOnlyList<Employee> Candidates => _candidates;
 
@@ -189,32 +189,34 @@ namespace PCShopSell.Core.Session
 
         public bool Hire(int candidateIndex)
         {
-            if (IsGameOver || Employee != null || candidateIndex < 0 || candidateIndex >= _candidates.Count) return false;
+            if (IsGameOver || candidateIndex < 0 || candidateIndex >= _candidates.Count) return false;
+            string capacity=StaffCapacityBlocker(_focus);if(capacity!=null)return Fail(capacity);
             if (!CandidateAvailable(_candidates[candidateIndex])) return Fail("这位应聘者已经离开了。");
-            Employee = _candidates[candidateIndex];
-            _focus.EmployeeTrained = false;
+            var hired=_candidates[candidateIndex];AddShopEmployee(_focus,EmployeeRole.Cashier,hired);_employeeHireShops[hired.Id]=_focus.Place.Id;
+            if(Employee==hired)_focus.EmployeeTrained = false;
             EverHired = true;
             PlayerShop.Settings.EmployeeCheckoutMinutes = Employee.CheckoutMinutes;
             _candidates.Clear();
-            Show("雇到人了", $"{Employee.Name} 每天 9:00–21:00 在本店收银（可在员工管理重新安排岗位），日薪 {Employee.DailyWage}，每天结算。\n他在班就持续收银，你在店内装机或外出都不影响。");
+            Show("雇到人了",IsDedicatedVenue(PlayerShopPlace)?$"{hired.Name}受聘为场馆值守员，默认每天 9:00–21:00，日薪 {hired.DailyWage}，按实际排班与到岗结算。可在员工管理调整班次。":$"{hired.Name} 每天 9:00–21:00 在本店收银（可在员工管理重新安排岗位），日薪 {hired.DailyWage}，每天结算。\n他在班就持续收银，你在店内装机或外出都不影响。");
             return true;
         }
 
         public bool HireAssembler(int index)
         {
-            if (!InPlayerShop || Assembler != null || index < 0 || index >= _candidates.Count) return false;
+            if (!InPlayerShop || index < 0 || index >= _candidates.Count) return false;
+            string capacity=StaffCapacityBlocker(_focus);if(capacity!=null)return Fail(capacity);
             if (!CandidateAvailable(_candidates[index])) return Fail("这位应聘者已经离开了。");
             if (!Ledger.TryDebit(Clock.Today, "培训", Money.FromYuan(1200), "装机员入职培训")) return Fail("入职培训需要 ¥1,200。");
-            Assembler = _candidates[index]; Assembler.DailyWageYuan += 60;
-            Assembler.AssemblyTrained = true;
+            var hired=_candidates[index];hired.DailyWageYuan += 60;hired.AssemblyTrained=true;
+            AddShopEmployee(_focus,EmployeeRole.Assembler,hired);_employeeHireShops[hired.Id]=_focus.Place.Id;
             EverHired = true; _candidates.Clear(); _focus.AutoBuild = true;
-            Say($"{Assembler.Name}入职装机岗位，日薪 {Assembler.DailyWage}。可与收银员同时工作。");
+            Say($"{hired.Name}入职装机岗位，日薪 {hired.DailyWage}。可与收银员同时工作。");
             return true;
         }
         public void FireAssembler()
         {
             if (Assembler == null) return;
-            Say(Assembler.Name + "离职了。"); Assembler = null;
+            Say(Assembler.Name + "离职了。"); RemoveShopEmployee(_focus,EmployeeRole.Assembler,Assembler);
             foreach (var o in PlayerShop.Orders) o.EmployeeMinutesLeft = 0;
         }
         public void CycleShift(bool assembly)
@@ -228,15 +230,15 @@ namespace PCShopSell.Core.Session
         {
             if (Employee == null) return;
             Say($"{Employee.Name} 走了。");
-            Employee = null;
+            RemoveShopEmployee(_focus,EmployeeRole.Cashier,Employee);
             _employeeBuilding = false;
             if (Assembler == null) foreach (var order in PlayerShop.Orders) order.EmployeeMinutesLeft = 0;
-            _focus.EmployeeTrained = false;
+            _focus.EmployeeTrained = Employee?.AssemblyTrained??false;
         }
 
         public bool IsEmployeeOnDuty(GameTimestamp t)
         {
-            return (Employee != null && Employee.OnDuty(t)) || (Assembler != null && Assembler.OnDuty(t));
+            return ShopStaff(_focus,EmployeeRole.Cashier).Concat(ShopStaff(_focus,EmployeeRole.Assembler)).Any(e=>e.OnDuty(t));
         }
 
         private void OnCandidateHour(GameDate today)

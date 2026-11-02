@@ -52,7 +52,7 @@ namespace PCShopSell.Game.UI
                 + "|" + S.PendingVenueActivity(place)?.Id + "|" + S.PendingVenueActivity(place)?.ServiceConfirmed
                 + "|" + string.Join("|", S.CityActivities.Where(a => a.Active && a.VenueId == place.Id).SelectMany(a => a.Participants).Select(p => p.PersonId + ":" + p.Phase));
             w.LiveStamp = w.LiveKey();
-            Line(w.Content, "现场消费 · " + S.City.StreetName(place.StreetId) + " · " + CityPlaceHours(place), 19, Ui.Accent);
+            Line(w.Content, (S.IsOwnedVenue(place)?"老板自用 · 免费，不计营业收入 · ":"现场消费 · ") + S.City.StreetName(place.StreetId) + " · " + CityPlaceHours(place), 19, Ui.Accent);
             Para(w.Content,"选择服务后在这里体验，结束时结算个人变化；同行活动额外结算关系进展。",16,Ui.Dim);
             if (!here)
             {
@@ -89,7 +89,7 @@ namespace PCShopSell.Game.UI
                 var row = Ui.Row(list, 90, 10);
                 string description = def.Minutes + " 分钟\n" + VenuePlayerEffects(def);
                 Ui.Size(ProductText(row, "<b>" + GameSession.VenueServiceName(def, choice) + "</b>\n<size=15>" + description + "</size>", 18), -1, -1, 1);
-                Ui.Size(Ui.Label(row, "¥" + def.PriceYuan + "/次", 20, TextAnchor.MiddleLeft, Ui.Good), 100);
+                Ui.Size(Ui.Label(row, S.IsOwnedVenue(place)?"老板自用\n免费":S.VenuePlayerPrice(def)+"/次", 20, TextAnchor.MiddleLeft, Ui.Good), 100);
                 string why = here ? S.VenueServiceBlocker(def.Id, choice) : "到场后选择";
                 var action = Ui.Rect(row, "ServiceAction"); Ui.VList(action, 4, 0); Ui.Size(action, 150);
                 Ui.Size(Ui.Button(action, place.Business == "venue_restaurant" ? "点这份餐" : "选择这项服务", () =>

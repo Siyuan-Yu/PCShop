@@ -338,7 +338,7 @@ namespace PCShopSell.Game.UI
             OpenWindow("叫货车 · " + GameSession.TruckDriverName, 1180, 860, w =>
             {
                 Para(w.Content, $"每辆货车最多装 {GameSession.CourierCapacityKg:0} 千克，运费按路程算。先选送到哪，再把左边的东西装车。" +
-                    "在家可搬厨房、纸箱和临时存放；在店里可搬后仓、纸箱和临时存放。摆着的家具先收进纸箱，再装车搬走。", 15, Ui.Dim);
+                    "在家可搬厨房、后仓和临时存放；在店里可搬后仓、后仓和临时存放。摆着的家具先收进后仓，再装车搬走。", 15, Ui.Dim);
                 OwnedShop dest = S.TruckDest;
                 RectTransform destRow = Ui.Row(w.Content, 42, 8);
                 Ui.Size(Ui.Label(destRow, "送到", 17, TextAnchor.MiddleLeft, Ui.Dim), 44);
@@ -403,14 +403,17 @@ namespace PCShopSell.Game.UI
         private void ConfirmCloseShop(OwnedShop shop)
         {
             string title = S.ShopTitle(shop);
-            OpenWindow("退租 · " + title, 580, 340, confirm =>
+            OpenWindow((shop.OwnsProperty?"结束自营 · ":"退租 · ") + title, 660, 460, confirm =>
             {
                 Line(confirm.Content, $"{title}（{shop.Place.Name}）· 月租 {shop.Lease.Rent}", 20, Ui.Accent);
-                Para(confirm.Content, $"退租后押金 {shop.Lease.Deposit} 退回，店里摆的家具收回“我的”，这家店的员工辞退，你走到门口。" +
-                    (shop == S.MainShop ? "这是主店，退掉后下一家店当主店。" : ""), 17);
+                Para(confirm.Content, (shop.OwnsProperty?"结束自营后产权保留。":$"主动退租，已交押金 {shop.Lease.Deposit} 全部不退，不会再次扣款。")+
+                    "店里摆的家具收回“我的”，本店员工辞退，人移到门口。"+
+                    (S.MyShopCount==1?"这是最后一家店，结束后可到中介重新租铺。":shop==S.MainShop?"下一家店将成为主店。":""),17);
+                string blocker=S.CloseShopBlocker(shop);
+                if(blocker!=null)Para(confirm.Content,"暂不能办理："+blocker+"。",17,Ui.Warn);
                 var row = Ui.Row(confirm.Content, 46, 10);
                 Ui.Size(Ui.Button(row, "再想想", confirm.Close, 18), -1, 46, 1);
-                Ui.Size(Ui.Button(row, "确认退租", () =>
+                var submit=Ui.Size(Ui.Button(row, shop.OwnsProperty?"确认结束自营":"确认退租（押金不退）", () =>
                 {
                     if (S.CloseShopBlocker(shop) != null)
                     {
@@ -421,7 +424,8 @@ namespace PCShopSell.Game.UI
                     CloseAllWindows();
                     CloseDock();
                     if (!S.CloseShop(shop.Place.Id) && S.InPlayerShop) OpenDock();
-                }, 18, Ui.ButtonHot), -1, 46, 1);
+                }, 18, Ui.Warn,blocker==null), -1, 46, 1);
+                submit.name="ConfirmCloseShop";
             });
         }
     }

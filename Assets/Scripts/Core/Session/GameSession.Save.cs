@@ -35,6 +35,8 @@ namespace PCShopSell.Core.Session
                 SaveCityLife(d);
                 SaveCityClothing(d);
                 SaveCityClimate(d);
+                d.venueBusinesses=MyShops.Where(s=>IsDedicatedVenue(s.Place)).Select(s=>VenueOperation(s.Place.Id).Copy()).ToArray();
+                SaveAdditionalStaff(d);
                 return d;
             }
             finally
@@ -82,6 +84,8 @@ namespace PCShopSell.Core.Session
                 salesperson = _focus.Salesperson != null ? ToSave(_focus.Salesperson) : null,
                 buyer = _focus.Buyer != null ? ToSave(_focus.Buyer) : null,
                 employeeTrips = _employeeTrips.Select(t => t.Copy()).ToArray(),
+                employeePurchaseHistory = _employeePurchaseHistory.Select(t => t.Copy()).ToArray(),
+                warehouseAccessVersion = 1,
                 idleEmployees = _idleEmployees.Select(ToSave).ToArray(),
                 cargo = Lines(Cargo),
 
@@ -250,6 +254,8 @@ namespace PCShopSell.Core.Session
             _idleEmployees.AddRange((d.idleEmployees ?? Array.Empty<SaveEmployee>()).Select(FromSave));
             _employeeTrips.Clear();
             _employeeTrips.AddRange((d.employeeTrips ?? Array.Empty<EmployeePurchaseTrip>()).Select(t => t.Copy()));
+            _employeePurchaseHistory.Clear();
+            _employeePurchaseHistory.AddRange((d.employeePurchaseHistory ?? Array.Empty<EmployeePurchaseTrip>()).Where(t=>t!=null).Select(t=>t.Copy()));
             EverHired = d.everHired;
             _candidates.Clear();
             foreach (SaveEmployee e in d.candidates ?? Array.Empty<SaveEmployee>())
@@ -275,6 +281,7 @@ namespace PCShopSell.Core.Session
             RestorePriceReports(d);
             RestoreAppLoans(d);
             foreach (SaveShop shop in d.extraShops ?? Array.Empty<SaveShop>()) RestoreShop(shop);
+            LoadAdditionalStaff(d);
             LoadCityAssets(d);
             LoadCityProcurement(d);
             LoadCityRetail(d);
@@ -291,9 +298,13 @@ namespace PCShopSell.Core.Session
             Trip = null;
             ClearEdge();
             LoadCityLife(d);
+            LoadVenueBusinesses(d);
             LoadEnergyPayroll(d);
             MigrateStoreMainCategories();
             MigrateCityGeometry(d);
+            NormalizeCityWalkingRoutes();
+            NormalizeWarehouses();
+            MigrateWarehouseBoxAccess(d);
         }
 
         private const string TrainedFlag = "employee:trained", AutoBuildFlag = "employee:auto-build";
