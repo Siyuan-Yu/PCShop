@@ -233,7 +233,7 @@ namespace PCShopSell.Game.UI
             foreach (var (button, tab) in _tabButtons)
             {
                 bool recommended = guide != null && guide.Target == TargetFor(tab);
-                button.GetComponentInChildren<Text>().text = (recommended ? "› " : "") + Tabs.First(t => t.tab == tab).name;
+                button.GetComponentInChildren<Text>().text = (recommended ? "› " : "") + (tab==ShopTab.Orders&&S.IsSpecialBusiness(S.CurrentShop)?"记录":Tabs.First(t => t.tab == tab).name);
             }
             GuideHint(_dockContent, TargetFor(_tab), RebuildDock);
             switch (_tab)
@@ -241,7 +241,7 @@ namespace PCShopSell.Game.UI
                 case ShopTab.Counter: BuildCounter(); break;
                 case ShopTab.Stock: BuildStock(); break;
                 case ShopTab.Pricing: BuildPricing(); break;
-                case ShopTab.Orders: if(S.IsSpecialBusiness(S.CurrentShop))BuildSpecialCounter();else BuildOrders(); break;
+                case ShopTab.Orders: if(S.IsSpecialBusiness(S.CurrentShop))BuildSpecialOrders();else BuildOrders(); break;
                 case ShopTab.Renovate: BuildRenovate(); break;
                 case ShopTab.Staff: BuildStaff(); break;
             }
@@ -467,8 +467,7 @@ namespace PCShopSell.Game.UI
         {
             if(S.IsSpecialBusiness(S.CurrentShop))
             {
-                BuildSpecialCounter();
-                if(S.RetailKind=="restaurant")BuildRestaurantDrinkPricing();
+                BuildSpecialPricing();
                 return;
             }
             var shop=S.PlayerShop;
@@ -489,7 +488,7 @@ namespace PCShopSell.Game.UI
                 global.text=$"统一加价 {shop.Markup:0.00}× · "+(count>0?$"参考购买意愿 {total/count*100:0}%":"购买意愿：暂无商品");
                 foreach(var refresh in refreshers)refresh();
             }
-            Ui.Slider(C,(float)ShopSettings.MinMarkup,(float)ShopSettings.MaxMarkup,(float)shop.Markup,v=>{S.SetMarkup(Mathf.Round(v*20)/20f);RefreshAll();}).name="GlobalMarkupSlider";
+            PriceMultiplierEditor(C,"GlobalMarkupSlider","统一加价",shop.Markup,ShopSettings.MinMarkup,ShopSettings.MaxMarkup,.05,value=>S.SetMarkup(value),RebuildDock,"global:"+S.CurrentShop.Place.Id);
             var list=Ui.Rect(C,"PricingProducts");Ui.VList(list,4,0);
             void ProductRow(string key,string name,double kg,int count,System.Func<Money> price,System.Func<double> intent,
                 System.Action edit,System.Func<bool> own,System.Action follow)
@@ -533,11 +532,13 @@ namespace PCShopSell.Game.UI
         // ---------- 经营报表 ----------
 
         /// <summary>近 14 天每天的营业额（绿）和支出（红）柱状图。</summary>
-        public void OpenReportWindow()
+        public void OpenReportWindow() => OpenFinanceTrend(S.CurrentShop?.Rented == true ? S.CurrentShop.Place.Id : null);
+        private void OpenFinanceTrend(string shopId)
         {
-            OpenWindow("经营报表", 900, 640, w =>
+            string scope = shopId == null ? "全部门店" : S.ShopTitle(S.ShopAt(shopId));
+            OpenWorkspace("finance-trend", shopId ?? "all", "经营趋势 · " + scope, 960, 680, w =>
             {
-                var days = PCShopSell.Core.Finance.FinanceReport.Daily(S.Ledger, S.Clock.Today, 14);
+                var days = PCShopSell.Core.Finance.FinanceReport.OperatingDaily(S.Ledger, S.Clock.Today, 14, shopId);
                 Money rev = Money.Zero, exp = Money.Zero, other = Money.Zero;
                 long max = 100;
                 foreach (var d in days)
@@ -547,10 +548,10 @@ namespace PCShopSell.Game.UI
                     other += d.OtherIncome;
                     max = System.Math.Max(max, System.Math.Max(d.Revenue.Cents, d.Expense.Cents));
                 }
-                Line(w.Content, $"近 {days.Count} 天：营业额 {rev}　支出 {exp}　现金变化 {rev + other - exp}", 19);
-                Line(w.Content, "<color=#A9C9A9>■</color> 营业额（零售 + 装机）　<color=#D79780>■</color> 支出（进货、房租、工资、开销等）", 15, Ui.Dim);
+                Line(w.Content, $"近 {days.Count} 天：销售 {rev}　经营支出 {exp}　经营现金净额 {rev + other - exp}", 19);
+                Line(w.Content, "<color=#A9C9A9>■</color> 销售收款　<color=#D79780>■</color> 经营支出", 15, Ui.Dim);
 
-                Line(w.Content, $"其他收款 {other}（含退押金等）；采购、押金、家具和生活开销计入现金支出，不代表利润。", 14, Ui.Dim);
+                Line(w.Content, $"{scope} · 其他经营收款 {other}；个人消费、借款和押金不计入本图。", 15, Ui.Dim);
                 Image plot = Ui.Panel(w.Content, "Chart", new Color(0, 0, 0, 0.22f));
                 Ui.Size(plot, -1, 380);
                 var h = plot.gameObject.AddComponent<HorizontalLayoutGroup>();

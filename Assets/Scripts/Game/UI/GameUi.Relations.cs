@@ -31,8 +31,9 @@ namespace PCShopSell.Game.UI
 
         public void OpenRelationsPanel()
         {
-            OpenWindow("人脉", 1300, 790, w =>
+            OpenWorkspace("people", "relations", "人物 · 关系图", 1300, 850, w =>
             {
+                BuildPeopleNavigation(w,"relations");
                 List<ContactInfo> people = S.Contacts();
                 if (_contactSel != null && people.All(c => c.Id != _contactSel)) _contactSel = null;
 
@@ -53,7 +54,7 @@ namespace PCShopSell.Game.UI
                 for (int i = 0; i < GroupNames.Length; i++)
                     Ui.Size(Ui.Label(legend, $"<color=#{ColorUtility.ToHtmlStringRGB(GroupColors[i])}>■</color> {GroupNames[i]}", 15, TextAnchor.MiddleLeft, Ui.Dim), 130);
                 Ui.Size(Ui.Label(legend, "越熟离“我”越近，连线越亮：<color=#8C99A8>脸熟</color> · <color=#73D1B8>熟人</color> · <color=#F2C64D>朋友</color>　细线：他们彼此认识", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
-            }, onClosed: () => _contactSel = null);
+            });
         }
 
         private void BuildContactGraph(RectTransform graph, List<ContactInfo> people, Window w)
@@ -220,11 +221,9 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(side, $"查看全部相处记录（{memories.Count} 条）", () => OpenSocialMemories(c), 16), -1, 40);
             }
 
-            NpcDef npc = c.IsNpc ? Npcs.Get(c.Id) : null;
-            if (npc != null && S.IsMet(npc.Id))
-                Ui.Size(Ui.Button(side, "联系他", () => OpenNpcWindow(npc, null, w), 17, Ui.ButtonHot), -1, 40);
-            else
-                Para(side, "当面才能聊：去他那里找他。", 14, Ui.Dim);
+            bool profile=S.CityPerson(c.Id)!=null||Npcs.Get(c.Id)!=null||Rosters.Get(c.Id)!=null||Residents.Get(c.Id)!=null;
+            Ui.Size(Ui.Button(side,"人物资料与联系",()=>OpenCityPersonProfile(c.Id),17,Ui.ButtonHot,profile),-1,40)
+                .Tip(profile?"资料、联系与邀约":"暂时没有可查看的人物资料");
             Ui.Size(Ui.Button(side, "返回总览", () =>
             {
                 _contactSel = null;

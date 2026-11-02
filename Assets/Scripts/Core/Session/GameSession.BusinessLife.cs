@@ -89,6 +89,7 @@ namespace PCShopSell.Core.Session
         public string HomeTitle => HomeTier==3 ? "花园独栋别墅" : HomeTier==2 ? "公园豪华公寓" : HomeTier==1 ? "宜居改善住宅" : "城郊老破小出租屋";
         public Money CurrentHomeRent => HomePriceCents>0 ? Money.Zero : HomeTier==3 ? Money.FromYuan(12000) : HomeTier==2 ? Money.FromYuan(3000) : HomeTier==1 ? Money.FromYuan(1200) : HomeRent;
         public Money HomePurchasePrice => Money.FromYuan(HomeTier==3 ? 1800000 : HomeTier==2 ? 450000 : 180000);
+        public Money HomeTierRentQuote(int tier) => Money.FromYuan(tier==3 ? 12000 : tier==2 ? 3000 : tier==1 ? 1200 : 450);
         public bool ChangeHomeTier(int tier)
         {
             if(IsGameOver || !InAgency) return Fail("去房产中介办理住处升级。");
@@ -96,7 +97,7 @@ namespace PCShopSell.Core.Session
             if(HomePriceCents>0) return Fail("先出售自住房，再换住处。");
             string homeId=tier==0?"home":"home_tier"+tier;
             if(City.LayoutVersion>=7 && City.HasPlace(homeId) && !AgencyServes(CurrentPlace,City.GetPlace(homeId)))return Fail("请到目的住宅所属片区的中介办理。");
-            Money rent=Money.FromYuan(tier==3 ? 12000 : tier==2 ? 3000 : tier==1 ? 1200 : 450);
+            Money rent=HomeTierRentQuote(tier);
             if(!Ledger.TryDebit(Clock.Today,"搬家",rent+Money.FromYuan(500),"住处首月租金及搬家费")) return Fail("需支付新住处首月租金与 ¥500 搬家费。");
             HomeTier=tier;
             Say("已换为"+HomeTitle+"。家具与储物保留；睡眠质量提高，次月按新月租扣款。"); return true;

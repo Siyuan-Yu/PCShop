@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="2" result="Failed(Child)" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-02 17:35:58Z" end-time="2026-11-02 17:35:58Z" duration="0.295277">
+  <test-suite type="TestSuite" id="2080" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="940" result="Failed" site="Child" start-time="2026-11-02 17:35:58Z" end-time="2026-11-02 17:35:58Z" duration="0.295277" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="3156" name="PCShopSell.Tests.EditMode.dll" fullname="D:/UnityProjects/PCShop/_ci_shop_cores/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="940" result="Failed" site="Child" start-time="2026-11-02 17:35:58Z" end-time="2026-11-02 17:35:58Z" duration="0.268899" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="81900" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="3157" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="940" result="Failed" site="Child" start-time="2026-11-02 17:35:58Z" end-time="2026-11-02 17:35:58Z" duration="0.260553" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="3158" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="940" result="Failed" site="Child" start-time="2026-11-02 17:35:58Z" end-time="2026-11-02 17:35:58Z" duration="0.250425" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="2474" name="HomeTests" fullname="PCShopSell.Tests.HomeTests" classname="PCShopSell.Tests.HomeTests" runstate="Runnable" testcasecount="42" result="Failed" site="Child" start-time="2026-11-02 17:35:58Z" end-time="2026-11-02 17:35:58Z" duration="0.171291" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="2507" name="Courier_BigOrder_SplitsAcrossCars" fullname="PCShopSell.Tests.HomeTests.Courier_BigOrder_SplitsAcrossCars" methodname="Courier_BigOrder_SplitsAcrossCars" classname="PCShopSell.Tests.HomeTests" runstate="Runnable" seed="1682798929" result="Failed" start-time="2026-11-02 17:35:58Z" end-time="2026-11-02 17:35:58Z" duration="0.087355" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.HomeTests.Courier_BigOrder_SplitsAcrossCars () [0x0004a] in D:\UnityProjects\PCShop\_ci_shop_cores\Assets\Tests\EditMode\HomeTests.cs:668
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.HomeTests.Courier_BigOrder_SplitsAcrossCars
+REGRESSION DONE PCShopSell.Tests.HomeTests.Courier_BigOrder_SplitsAcrossCars Failed
+]]></output>
+            </test-case>
+            <test-case id="2482" name="MallCart_SeveralTrucksArrivingTogether_OnePopup" fullname="PCShopSell.Tests.HomeTests.MallCart_SeveralTrucksArrivingTogether_OnePopup" methodname="MallCart_SeveralTrucksArrivingTogether_OnePopup" classname="PCShopSell.Tests.HomeTests" runstate="Runnable" seed="560768668" result="Failed" start-time="2026-11-02 17:35:58Z" end-time="2026-11-02 17:35:58Z" duration="0.061189" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  进了临时存放要说清楚能放几天
+  Expected: True
+  But was:  False
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.HomeTests.MallCart_SeveralTrucksArrivingTogether_OnePopup () [0x00172] in D:\UnityProjects\PCShop\_ci_shop_cores\Assets\Tests\EditMode\HomeTests.cs:181
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.HomeTests.MallCart_SeveralTrucksArrivingTogether_OnePopup
+REGRESSION DONE PCShopSell.Tests.HomeTests.MallCart_SeveralTrucksArrivingTogether_OnePopup Failed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

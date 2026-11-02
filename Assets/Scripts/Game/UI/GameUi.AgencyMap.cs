@@ -106,6 +106,7 @@ namespace PCShopSell.Game.UI
             foreach(var place in units.OrderBy(p=>S.City.ViewPosition(p.NodeId).X))
             {
                 if(place.Id==agency.Id||place.Id==_agencySelectedId)continue;
+                if(view.Zoom<1.6f&&!S.IsMyShop(place)&&AgencyListing(place)==null)continue;
                 if(!_ctrl.World.Places.TryGetValue(place.Id,out var building))continue;
                 var bounds=AgencyStreetMap.BuildingBounds(building);
                 Vector2 roof=view.Project(new Vector3(bounds.center.x,bounds.max.y+.6f,bounds.center.z));

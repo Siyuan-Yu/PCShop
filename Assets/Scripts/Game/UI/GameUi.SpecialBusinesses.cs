@@ -11,9 +11,9 @@ namespace PCShopSell.Game.UI
     {
         public void OpenSpecialBusinessPanel(){if(S.IsSpecialBusiness(S.CurrentShop)){OpenDock();SelectTab(ShopTab.Counter);}}
         private readonly Dictionary<string,long> _usedBids=new Dictionary<string,long>();
-        private void OpenIndustryNews()
+        private void OpenIndustryNews() => OpenMarketView(1);
+        private void BuildIndustryNews(Window w)
         {
-            OpenWindow("各行业行情",850,720,w=>{
                 int day=S.Clock.Today.TotalDays;
                 Line(w.Content,"科技发布日历",20,Ui.Accent);
                 Para(w.Content,"第31天第二代配件发布，第91天第三代发布。旧代参考价依次下降22%、45%；新品沿用配件品类与兼容规则，已经持有的旧配件继续可用。",17);
@@ -21,7 +21,6 @@ namespace PCShopSell.Game.UI
                 foreach(string series in ModelProducts.SeriesIds)Para(w.Content,IndustryCycles.ModelNews(series,day)+" · 参考行情 ×"+IndustryCycles.ModelFactor(series,day).ToString("0.##"),17);
                 double clothing=IndustryCycles.ClothingFactor(day);
                 Para(w.Content,clothing>1?"服装供给事件："+(clothing>1.4?"暴雨运输受阻，参考价上涨50%":"棉花减产，参考价上涨35%")+"。":"服装供给正常，日常参考价稳定；换季会显著改变需求。",17);
-            });
         }
         private void BuildIndustryBrief(Transform parent)
         {
@@ -67,12 +66,7 @@ namespace PCShopSell.Game.UI
         private void BuildRestaurantCounter(SpecialBusinessState state)
         {
             var shop=S.CurrentShop;
-            for(int recipe=0;recipe<GameSession.RecipeNames.Length;recipe++){int selected=recipe;bool enabled=(state.RecipeMask&(1<<selected))!=0;Ui.Size(Ui.Button(C,(enabled?"✓ 供应 ":"暂停 ")+GameSession.RecipeNames[selected]+" · ¥"+Math.Round(GameSession.RecipePrices[selected]*state.MenuMarkup),()=>{state.RecipeMask^=1<<selected;RebuildDock();},15,enabled?Ui.ButtonHot:Ui.ButtonBg),-1,30);}
-            Para(C,"点操作后角色会实际走到设备或餐桌旁，再完成操作；WASD可接管。加工台备菜 → 投锅 → 出锅到传菜台 → 上菜 → 顾客吃完付款 → 收桌。锅内8分钟熟，38分钟焦糊；顾客等餐100分钟。暂停时走动、操作和火候都暂停。",15,Ui.Dim);
-            var menu=Ui.Row(C,32,4);
-            Ui.Size(Ui.Label(menu,"菜单倍率 ×"+state.MenuMarkup.ToString("0.0")+$" · 购买意愿 {shop.Sim.MarkupPurchaseIntent(state.MenuMarkup)*100:0}%",16),-1,32,1);
-            Ui.Size(Ui.Button(menu,"−",()=>{state.MenuMarkup=Math.Max(.8,state.MenuMarkup-.1);RebuildDock();},18),40);
-            Ui.Size(Ui.Button(menu,"+",()=>{state.MenuMarkup=Math.Min(PCShopSell.Core.Shop.ShopSettings.MaxMarkup,state.MenuMarkup+.1);RebuildDock();},18),40);
+            HelpLink(C,"烹饪说明","加工台备料→投锅→出锅到传菜台→上菜→收桌。锅内8分钟熟，38分钟焦糊；顾客最多等餐100分钟。点操作后会走到设备旁执行，WASD可接管。暂停时操作和火候都暂停。厨师和服务员须实际在岗；菜单与售价在定价页设置。");
             Line(C,"厨房大米 "+S.KitchenRice(shop).ToString("0.##")+" 千克 · 青菜 "+S.KitchenIngredientCount(shop,"veg")+" · 鸡蛋 "+S.KitchenIngredientCount(shop,"egg")+" · 肉 "+S.KitchenIngredientCount(shop,"pork"),15,Ui.Dim);
             string coldStorageBlocker=S.KitchenColdStorageBlocker;
             Ui.Size(Ui.Button(C,"店内食材放入冰箱",()=>{S.ChillKitchenIngredients();RebuildDock();},16,Ui.ButtonHot,coldStorageBlocker==null),-1,34).name="ChillKitchenIngredients";
@@ -80,9 +74,9 @@ namespace PCShopSell.Game.UI
             var storage=Ui.Row(C,36,4);
             Ui.Size(Ui.Button(storage,"背包全部存入后仓",()=>{S.StoreBackpackInWarehouse();RebuildDock();},15,Ui.ButtonBg,S.HasWarehouseHere),-1,36,1);
             Ui.Size(Ui.Button(storage,"打开冰箱",OpenFridgeWindow,15,Ui.ButtonBg,S.CanOpenFridge),110,36);
-            Para(C,"食材放本店冰箱、后仓或经营库存；安排进货员补货。厨师自动投锅出锅，服务员自动上菜收桌，均须实际在岗。",15,Ui.Dim);
-            Para(C,"在本店需要吃饭时，会随机用现有食材做一餐：消耗大米0.25千克和一份配菜，恢复最多60饱腹；食材不足时沿用普通用餐方式。",14,Ui.Dim);
-            foreach(var order in state.Orders.ToArray())
+
+
+            foreach(var order in state.Orders.OrderBy(o=>o.Stage==DiningStage.Cooking&&S.Clock.Now.TotalMinutes>=o.ReadyAt?0:o.Stage==DiningStage.Burnt?1:o.Stage==DiningStage.Ready?2:o.Stage==DiningStage.Waiting?3:4).ToArray())
             {
                 int id=order.Id;long now=S.Clock.Now.TotalMinutes;
                 string status=order.Stage==DiningStage.Waiting?"等待烹饪":order.Stage==DiningStage.Cooking?(now<order.ReadyAt?"烹饪中 · 还有"+(order.ReadyAt-now)+"分钟熟":"可出锅 · 距焦糊"+(order.BurnAt-now)+"分钟"):
@@ -109,10 +103,54 @@ namespace PCShopSell.Game.UI
             }
             if(state.Orders.Count==0)Para(C,"等待顾客入座；请检查营业时间、厨房设施和餐桌。",17,Ui.Dim);
         }
+        private void BuildSpecialPricing()
+        {
+            var state=S.SpecialBusiness(S.CurrentShop.Place.Id);
+            if(S.RetailKind=="secondhand") { BuildUsedStock(C,pricingOnly:true); return; }
+            Line(C,"菜单与饮料定价",20,Ui.Accent);
+            for(int recipe=0;recipe<GameSession.RecipeNames.Length;recipe++)
+            {
+                int selected=recipe;bool enabled=(state.RecipeMask&(1<<selected))!=0;
+                Ui.Size(Ui.Button(C,(enabled?"✓ 供应 ":"暂停 ")+GameSession.RecipeNames[selected]+" · ¥"+Math.Round(GameSession.RecipePrices[selected]*state.MenuMarkup),()=>{state.RecipeMask^=1<<selected;RebuildDock();},16,enabled?Ui.ButtonHot:Ui.ButtonBg),-1,34);
+            }
+            BuildMenuMarkupEditor(state);
+            BuildRestaurantDrinkPricing();
+        }
+        private void BuildMenuMarkupEditor(SpecialBusinessState state)
+        {
+            string key="menu:"+S.CurrentShop.Place.Id;
+            double draft=_multiplierDrafts.TryGetValue(key,out var previous)?previous:state.MenuMarkup;var label=Line(C,"",17,Ui.Good);UnityEngine.UI.Button save=null;
+            void Preview(){label.text=$"菜单售价 {draft:0.0}× · 购买意愿 {S.PlayerShop.MarkupPurchaseIntent(draft)*100:0}%";if(save!=null)save.interactable=Math.Abs(draft-state.MenuMarkup)>.001;}
+            Ui.Slider(C,.8f,(float)PCShopSell.Core.Shop.ShopSettings.MaxMarkup,(float)draft,v=>{draft=Math.Round(v*10)/10;_multiplierDrafts[key]=draft;Preview();}).name="MenuMarkupSlider";
+            save=Ui.Size(Ui.Button(C,"确认菜单售价",()=>{state.MenuMarkup=draft;_multiplierDrafts.Remove(key);RebuildDock();},17,Ui.ButtonHot,false),-1,36);
+            save.name="SaveMenuMarkup";Preview();
+            Line(C,"供应开关即时生效，调整价格后请确认。",14,Ui.Dim);
+        }
+        private void BuildSpecialOrders()
+        {
+            var state=S.SpecialBusiness(S.CurrentShop.Place.Id);
+            Line(C,$"累计成交 {state.Paid} 单 · 营业收入 ¥{state.Revenue}",19,Ui.Accent);
+            if(S.RetailKind=="secondhand")
+            {
+                Line(C,"收购与售出记录",18,Ui.Accent);
+                foreach(var item in state.Used.Where(i=>i.Owned).Reverse())
+                    Line(C,GameSession.UsedNames[item.Product]+" #"+item.Id+" · "+(item.Sold?"已售 ¥"+(item.SalePrice>0?item.SalePrice:item.Price):item.Listed?"待售":"处理中")+" · 收购成本 ¥"+item.Cost,16);
+                if(!state.Used.Any(i=>i.Owned))Line(C,"暂无收购记录。",16,Ui.Dim);
+                return;
+            }
+            Line(C,$"当前桌单 {state.Orders.Count} · 超时流失 {state.Lost}",17);
+            foreach(var order in state.Orders.OrderBy(o=>o.Table))
+            {
+                string status=order.Stage==DiningStage.Waiting?"待备料":order.Stage==DiningStage.Cooking?"烹饪中":order.Stage==DiningStage.Ready?"待上菜":order.Stage==DiningStage.Eating?"用餐中":order.Stage==DiningStage.Completed?"已付款":order.Stage==DiningStage.Burnt?"已焦糊":"已离开";
+                Line(C,$"{order.Table+1}号桌 · {GameSession.RecipeNames[order.Recipe]} · ¥{order.Price} · {status}",17);
+            }
+            if(state.Orders.Count==0)Line(C,"当前没有桌单。",16,Ui.Dim);
+            Ui.Size(Ui.Button(C,"返回柜台处理桌单",()=>SelectTab(ShopTab.Counter),17),-1,38);
+        }
         private void BuildUsedCounter(SpecialBusinessState state)
         {
             BuildUsedCheckout();
-            Para(C,"先听卖家说法，再决定出价。买下后才能鉴定。人格只影响可信度，不保证每次真假；未鉴定的物品不能出售。",15,Ui.Dim);
+            HelpLink(C,"二手收购说明","先听卖家说法和报价，再决定收购；买下后才能鉴定。性格影响可信度，不保证真假。鉴定并定价后可在二手转售品货架出售；代管收购仍有亏损风险。");
             Ui.Size(Ui.Button(C,state.AutoPurchase?"收购师代管：开":"收购师代管：关",()=>{state.AutoPurchase=!state.AutoPurchase;RebuildDock();},17,state.AutoPurchase?Ui.ButtonHot:Ui.ButtonBg),-1,36);
             SpecialNumber(C,"每日收购预算",state.DailyBudget,100,0,100000,value=>state.DailyBudget=value);
             SpecialNumber(C,"单件最高收购价",state.MaxOffer,10,0,10000,value=>state.MaxOffer=value);
@@ -121,7 +159,7 @@ namespace PCShopSell.Game.UI
             Line(C,"今日收购已支出 ¥"+state.SpentToday+" · 员工须实际在岗；智力越高判断越可靠，仍可能亏损。",15,Ui.Dim);
             BuildUsedSalesHistory(C,state);
             Line(C,"收购与待处理物品",19,Ui.Accent);
-            Para(C,"鉴定后确认售价，商品自动上到“二手转售品”货架；已上架商品请到库存或货架查看。",15,Ui.Dim);
+            Line(C,"收购后鉴定，再定价加入转售库存。",15,Ui.Dim);
             foreach(var item in state.Used.Where(i=>!i.Sold&&!i.Listed).ToArray())
             {
                 int id=item.Id;string key=S.CurrentShop.Place.Id+":"+id;

@@ -1,0 +1,66 @@
+UI整理（保留员工部分）验证记录，2026-11-03 Asia/Shanghai
+Unity 2022.3.6f1，Windows。
+工程 D:/UnityProjects/PCShop/_ci_shop_cores；从0dabdac和本轮暂存源码构建隔离快照。
+所有暂存C#文件已逐一核对与最终测试、图形工程一致。
+
+相关联合回归：201/201通过，0失败。
+最终图形快照后的UI专项：22/22通过，0失败；与联合回归重叠，不累加。
+- BusinessRegressionTests: 30/30
+- CityFinanceTests: 4/4
+- CityProcurementTests: 8/8
+- HomeWorkbenchTests: 13/13
+- MultiShopTests: 14/14
+- RestaurantDrinkTests: 9/9
+- ShelfItemCapacityTests: 17/17
+- ShopCompetitionTests: 14/14
+- ShopCoreGameplayTests: 53/53
+- ShopDockInteractionTests: 7/7
+- ShopManageTests: 10/10
+- UiCleanupTests: 22/22
+
+扩展批次：243项中241通过，2条旧HomeTests失败。
+- Courier_BigOrder_SplitsAcrossCars：大批购买返回false。
+- MallCart_SeveralTrucksArrivingTogether_OnePopup：仍要求出现临时存放期限说明。
+已把隔离工程完整还原为0dabdac，单独运行同名两条用例，2/2均以相同信息失败。
+基线报告50-ui-cleanup-baseline.xml；扩展报告50-ui-cleanup-extended.xml。
+这些未归入本轮新增UI失败，也不据此声称整仓全部测试通过。
+
+员工保护核对：GameUi.Employees.cs、GameUi.ShopBuyers.cs、GameUi.Interactions.cs与HEAD完全一致；
+GameUi.Shop.cs的BuildStaff函数与HEAD一致；已有员工页、招聘与交谈回归包含在ShopDockInteractionTests中。
+不重写员工采购清单、招聘、岗位或排班。
+
+图形专项：GameSceneBuilder.UiCleanupFromBatch，code=0/errors=0。
+实际检查17张截图，包含经营/分店采购/餐馆柜台和定价的1080p与720p，以及物业、记录、二手定价、
+个人、日程、行情、中介、人物、搬家确认的720p画面。物业已选卡片和离开按钮可见，主要信息未越界。
+交易确认保留费用条件；搬家预览检查不会扣款。
+
+不读取玩家正式存档；未打Windows发行包；未混入并行NPC叙事和美术源码。
+图形日志摘要：
+SMOKE OK 准备主店
+SMOKE OK 准备第二家自营店
+SMOKE shot business_workspace
+SMOKE shot business_workspace_720
+SMOKE OK 采购默认当前分店
+SMOKE OK 经营采购只用一个主窗口
+SMOKE shot branch_procurement
+SMOKE shot branch_procurement_720
+SMOKE shot selected_property_720
+SMOKE OK 主店转为餐馆
+SMOKE shot restaurant_counter
+SMOKE shot restaurant_counter_720
+SMOKE OK 定价页没有柜台操作
+SMOKE OK 菜单价格需要确认保存
+SMOKE shot restaurant_pricing
+SMOKE shot restaurant_pricing_720
+SMOKE shot restaurant_records_720
+SMOKE OK 主店转为二手店
+SMOKE shot used_pricing_720
+SMOKE shot personal_overview_720
+SMOKE shot unified_calendar_720
+SMOKE shot market_workspace_720
+SMOKE shot agency_reduced_labels_720
+SMOKE shot people_workspace_720
+SMOKE OK 搬家预览不扣款
+SMOKE shot housing_cost_preview_720
+SMOKE UI CLEANUP GRAPHICS COMPLETE
+SMOKE RESULT code=0 errors=0

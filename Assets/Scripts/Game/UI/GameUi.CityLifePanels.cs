@@ -159,15 +159,16 @@ namespace PCShopSell.Game.UI
             });
         }
 
+        private string _cityPeopleSearch = "";
         public void OpenCityPeople()
         {
-            string search = "";
-            OpenWindow("街坊与人际关系", 960, 750, w =>
+            OpenWorkspace("people", "people", "街坊与人际关系", 960, 750, w =>
             {
-                Ui.Size(Ui.TextInput(w.Content, search, "搜索已知名字、职业或兴趣", s => { search = s ?? ""; w.RequestRebuild(); }), -1, 42);
+                BuildPeopleNavigation(w,"people");
+                Ui.Size(Ui.TextInput(w.Content, _cityPeopleSearch, "搜索已知名字、职业或兴趣", s => { _cityPeopleSearch = s ?? ""; w.RequestRebuild(); }), -1, 42);
                 Para(w.Content, "此处只列已认识的人和当前真实在附近的人。查看通讯录不会把对方召到身边；不显示远处人物的精确位置。", 17, Ui.Dim);
                 var people = S.CityPeople.Where(p => S.IsMet(p.PersonId) || S.CitySamePlace(p.PersonId))
-                    .Where(p => { var d = S.CityPerson(p.PersonId); return d != null && (search.Length == 0 || (d.Name + S.CityPersonRole(p.PersonId) + (p.KnownTopics.Contains("interest") ? d.Interest : "")).IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0); })
+                    .Where(p => { var d = S.CityPerson(p.PersonId); return d != null && (_cityPeopleSearch.Length == 0 || (d.Name + S.CityPersonRole(p.PersonId) + (p.KnownTopics.Contains("interest") ? d.Interest : "")).IndexOf(_cityPeopleSearch, StringComparison.OrdinalIgnoreCase) >= 0); })
                     .OrderByDescending(p => S.CitySamePlace(p.PersonId)).ThenBy(p => S.CityPerson(p.PersonId)?.Name).ToArray();
                 foreach (var p in people)
                 {
@@ -215,6 +216,15 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(tags, trait.Known ? trait.Name : "???", () =>
                         OpenWindow(trait.Known ? trait.Name : "尚未了解", 440, 230, detail =>
                             Para(detail.Content, S.ConversationTraitText(personId, index), 18), !fromConversation), 14), -1, 32, 1);
+                }
+                if (!fromConversation)
+                {
+                    var actions=Ui.Row(w.Content,38,6);
+                    bool nearby=S.CitySamePlace(personId);
+                    Ui.Size(Ui.Button(actions,"现场交谈",()=>OpenPersonDialogue(personId),17,Ui.ButtonHot,nearby),-1,38,1).Tip(nearby?"与面前的人交谈":"需要实际到同一地点");
+                    bool saved=S.SavedConversationContacts().Any(c=>c.Id==personId);
+                    Ui.Size(Ui.Button(actions,"电话 / 消息",()=>OpenPersonDialogue(personId,parent:w,remote:true),17,Ui.ButtonBg,saved),-1,38,1).Tip(saved?"使用已交换的联系方式":"先当面交换联系方式");
+                    Ui.Size(Ui.Button(actions,"邀约",()=>OpenInvitePanel(personId),17,Ui.ButtonBg,saved),-1,38,1);
                 }
                 Line(w.Content, "关于这个人", 20, Ui.Accent);
                 if (definition != null)
@@ -341,12 +351,11 @@ namespace PCShopSell.Game.UI
             });
         }
 
-        public void OpenCityActivities()
+        public void OpenCityActivities() => OpenCalendar(1);
+        private void BuildActivitySchedule(Window w)
         {
-            OpenWindow("城市活动日程", 980, 750, w =>
-            {
                 Para(w.Content, S.CityExpoCalendar, 19, Ui.Accent);
-                Para(w.Content, "与人物聊天时约定见面，邀约会记录在这里。一个人用餐或游玩，直接到店选择服务即可。", 18, Ui.Dim);
+                HelpLink(w.Content,"邀约与活动说明","从人物资料发出邀约，到约定地点后选择服务。个人维修、快递和用餐等安排在“我的安排”中查看。");
                 foreach (var activity in S.CityActivities.OrderByDescending(a => a.Active).ThenBy(a => a.Active ? a.ScheduledStart : -a.ScheduledStart).Take(30))
                 {
                     var a = activity; var def = S.CityActivityService(a);
@@ -354,7 +363,6 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(w.Content, GameSession.CityPhaseText(a.State) + " · " + (def?.Name ?? a.DefinitionId) + " · " + venue + "\n" + CityTime(a.ScheduledStart) + (a.EntryPaid ? " · 已产生实际消费" : " · 尚未支付活动费"), () => OpenCityActivityDetail(a.Id), 18), -1, 72);
                 }
                 if (S.CityActivities.Count == 0) Para(w.Content, "还没有活动记录。在和朋友聊天时发出邀约；到场后再点菜或选择服务。", 18, Ui.Dim);
-            });
         }
 
         public void OpenCityActivitySettlement(string activityId)

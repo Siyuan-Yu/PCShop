@@ -11,9 +11,8 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
-        private int _businessTab, _directQuantity=3, _ventureKind;
+        private int _businessTab, _ventureKind;
         public void DebugOpenBusiness(int tab) { _businessTab = Math.Max(0, Math.Min(6, tab)); ShowBusinessPanel(false); }
-        private bool _directCredit=true;
         private static readonly int[] AgencyTabs = { 3, 5, 6 };
 
         /// <summary>后期经营（直供、合同、分店、物业、园区……）开局不出现，主店做起来以后才开放。</summary>
@@ -42,39 +41,38 @@ namespace PCShopSell.Game.UI
             ShowBusinessPanel(true);
         }
 
+        private string _businessAssetId;
+        private void OpenBusinessServices() { if (_businessTab == 5) _businessTab = 2; _businessAssetId = null; ShowBusinessPanel(false); }
+        private void OpenBusinessSection(int tab, string assetId = null)
+        {
+            _businessTab = tab; _businessAssetId = assetId; ShowBusinessPanel(false);
+        }
         private void ShowBusinessPanel(bool agencyOnly)
         {
+            if (_businessTab == 5) { OpenCityResidence(); return; }
             S.RefreshEnterpriseOffer();
-            OpenWindow(agencyOnly ? "中介业务" : "经营总览", 1080, 820, w=>
+            OpenWorkspace("business", "services", "经营 · 合同与合作", 1160, 840, w =>
             {
-                var cityTabs=Ui.Row(w.Content,40,7);
-                Ui.Size(Ui.Button(cityTabs,"收支总览",OpenCityFinanceOverview,17),140);
-                Ui.Size(Ui.Button(cityTabs,"统一采购",OpenCityProcurement,17),140);
-                Ui.Size(Ui.Button(cityTabs,"具体物业",OpenCityProperties,17),140);
-                Ui.Size(Ui.Button(cityTabs,"投资持仓",OpenCityInvestments,17),140);
-                Ui.Size(Ui.Button(cityTabs,"城市生活",OpenCityLife,17),140);
-                var guide = S.CurrentQuest();
-                var tabs=Ui.Row(w.Content,42);
-                string[] names={"资产与负债","直供采购","企业合同","分店经营","推广合作","物业与住处","园区布局"};
-                for(int i=0;i<names.Length;i++)
+                var tabs = Ui.Row(w.Content, 38, 5);
+                string[] names = { "资产负债", "直供", "企业合同", "托管门店", "推广合作", "住处", "园区" };
+                foreach (int tab in new[] { 0, 1, 2, 3, 4, 6 })
                 {
-                    int tab=i;
-                    bool recommended = guide != null && guide.Target == BusinessTargets[i];
-                    if (agencyOnly && Array.IndexOf(AgencyTabs, tab) < 0) continue;
-                    if (tab != _businessTab && !recommended && !BusinessTabRelevant(tab)) continue;
-                    Ui.Size(Ui.Button(tabs,(recommended ? "› " : "") + names[i],()=>{_businessTab=tab;w.Rebuild();ResetGuideScroll(w);},17,tab==_businessTab ? Ui.ButtonHot : Ui.ButtonBg),140);
+                    int choice = tab;
+                    if (tab != _businessTab && !BusinessTabRelevant(tab)) continue;
+                    Ui.Size(Ui.Button(tabs, names[tab], () => { _businessTab = choice; _businessAssetId = null; w.Rebuild(); }, 16,
+                        tab == _businessTab ? Ui.ButtonHot : Ui.ButtonBg), -1, 38, 1).name = "BusinessSection_" + tab;
                 }
-                Line(w.Content,$"可用现金 {S.Ledger.Balance}     净资产 {S.NetWorth()}     已有负债 {S.TotalDebt}",20,Ui.Accent);
-                GuideHint(w.Content, BusinessTargets[_businessTab], w.Rebuild);
-                switch(_businessTab)
+                if (_businessAssetId != null)
+                    Ui.Size(Ui.Button(w.Content, "查看全部托管门店", () => { _businessAssetId = null; w.Rebuild(); }, 16), -1, 32);
+                GuideHint(w.Content,BusinessTargets[_businessTab],w.Rebuild);
+                switch (_businessTab)
                 {
-                    case 0: BuildBusinessFinance(w);break;
-                    case 1: BuildDirectSupply(w);break;
-                    case 2: BuildEnterprise(w);break;
-                    case 3: BuildVentures(w);break;
-                    case 4: BuildCreators(w);break;
-                    case 5: BuildPropertyPortfolio(w);break;
-                    case 6: BuildPark(w);break;
+                    case 1: BuildDirectSupply(w); break;
+                    case 2: BuildEnterprise(w); break;
+                    case 3: BuildVentures(w); break;
+                    case 4: BuildCreators(w); break;
+                    case 6: BuildPark(w); break;
+                    default: BuildBusinessFinance(w); break;
                 }
             });
         }
@@ -111,32 +109,27 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(row,"返回",confirm.Close,18),-1,-1,1);
             });
         }
-        private void AgencyLink(Window w)
+        private void AgencyLink(Window w,Place property=null)
         {
-            if(S.InAgency) {Line(w.Content,"当前在房产中介，可直接签约。",16,Ui.Good);return;}
+            if(S.InAgency&&(property==null||S.AgencyServes(S.CurrentPlace,property))) {Line(w.Content,"当前在所属中介，可办理签约。",16,Ui.Good);return;}
             Para(w.Content,"开设分店、买卖物业和更换住处需当面签约；经营管理可随时查看。",16,Ui.Dim);
-            Ui.Size(Ui.Button(w.Content,"前往房产中介",()=>{CloseAllWindows();_ctrl.GoToPlace(S.City.FirstOfKind(PlaceKind.Agency));},17),-1,38);
+            Ui.Size(Ui.Button(w.Content,"前往所属中介",()=>GoToPropertyAgency(property),17),-1,38);
         }
         private void BuildBusinessFinance(Window w)
         {
             var c=BusinessCard(w.Content,"每一笔钱放在哪里");
-            Line(c,$"主店库存及在途（市价九折） {S.InventoryValue()}    载具残值（购价六折） {S.VehicleValue}",17);
-            Line(c,$"主店押金 {S.Lease?.Deposit ?? Money.Zero}    企业合同保证金 {S.ContractDeposits}",17);
-            Line(c,$"分店资产 {S.VentureValue}（其中周转金 {S.VentureReserve}）    指数持仓 {S.FundValue}",17);
+            Line(c,$"全店库存及在途（市价九折） {S.InventoryValue()}    载具残值（购价六折） {S.VehicleValue}",17);
+            Line(c,$"铺面押金 {Money.FromCents(S.MyShops.Sum(shop=>shop.Lease?.Deposit.Cents??0))+(S.PendingLease?.Deposit??Money.Zero)}    企业合同保证金 {S.ContractDeposits}",17);
+            Line(c,$"托管门店资产 {S.VentureValue}（含周转金 {S.VentureReserve}）    指数 {S.FundValue} · 企业持仓 {S.CityEquityValue}",17);
             Line(c,$"商用物业账面值 {S.PropertyValue}    自住房账面值 {Money.FromCents(S.HomePriceCents)}",17);
             Line(c,$"待付货款 {S.SupplierDebtTotal}    剩余房贷本金 {S.MortgageDebt}    APP 贷款待还 {S.AppLoanDebt}",17,new Color(.84f,.60f,.50f));
-            Para(c,"净资产 = 现金 + 库存 + 押金 + 载具残值 + 分店清算估值 + 物业买入价 + 指数市值 − 负债。物业出售按九折成交；尚未发生的利息不计入当前本金。分店收支留在自己的周转金中，转回总部才增加可用现金。",15,Ui.Dim);
+            HelpLink(c,"资产估值说明","净资产 = 现金 + 库存 + 押金 + 载具残值 + 分店清算估值 + 物业买入价 + 指数市值 − 负债。物业出售按九折成交；尚未发生的利息不计入当前本金。分店收支留在自己的周转金中，转回总部才增加可用现金。");
             Line(w.Content,$"未来 7 天货款、贷款、月供与物业维护 {S.UpcomingBusinessPayments(7)} · 自动补货当前保留额 {S.EffectiveRestockReserve}",16,Ui.Accent);
             var row=Ui.Row(w.Content,40);
             Ui.Size(Ui.Button(row,"三年目标",OpenGoalsPanel,17),-1,-1,1);
-            Ui.Size(Ui.Button(row,"主店现金收支报表",OpenReportWindow,17),-1,-1,1);
-            Ui.Size(Ui.Button(row,"查看账本",OpenLedger,17),-1,-1,1);
-            var f=BusinessCard(w.Content,"硬件景气指数");
-            Line(f,$"现价 {S.FundUnitPrice}/份    持有 {S.FundUnits} 份    市值 {S.FundValue}",18);
-            Para(f,"价格跟随所有硬件型号的平均市场涨跌，无保底收益。买卖各收 0.5% 手续费，交易 10 份一手。留足进货、房租和到期账款再投资。",15,Ui.Dim);
-            var actions=Ui.Row(f,40);
-            BusinessAction(actions,$"买入 10 份 · { (S.FundUnitPrice*10).Scale(1.005)}",()=>S.TradeFund(10,true),w,(S.HasSmartphone||S.CanUseHomeWorkbench) && S.Ledger.Balance>=(S.FundUnitPrice*10).Scale(1.005));
-            BusinessAction(actions,$"卖出 10 份 · 到手 {(S.FundUnitPrice*10).Scale(.995)}",()=>S.TradeFund(10,false),w,(S.HasSmartphone||S.CanUseHomeWorkbench) && S.FundUnits>=10);
+            Ui.Size(Ui.Button(row,"本店经营趋势",OpenReportWindow,17),-1,-1,1);
+            Ui.Size(Ui.Button(row,"现金流水",OpenLedger,17),-1,-1,1);
+            Ui.Size(Ui.Button(w.Content,"管理投资持仓",OpenCityInvestments,17),-1,38);
             if(S.SupplierDebts.Count>0) BuildDebtList(w);
         }
         private void BuildDebtList(Window w)
@@ -161,18 +154,7 @@ namespace PCShopSell.Game.UI
                 BusinessAction(w.Content,"签订直供协议",S.SignDirectAgreement,w,why==null);return;
             }
             Line(w.Content,$"信用额度 {S.CreditLimit}    已用 {S.SupplierDebtTotal}    仓位已预留在途 {S.IncomingShopSpace:0.#} 格",17);
-            var settings=Ui.Row(w.Content,40);
-            Ui.Size(Ui.Button(settings,$"每批 {_directQuantity} 件 · 点击切换",()=>{_directQuantity=_directQuantity==3 ? 5 : _directQuantity==5 ? 10 : _directQuantity==10 ? 20 : _directQuantity==20 ? 30 : 3;w.Rebuild();},17),340);
-            Ui.Size(Ui.Button(settings,_directCredit ? "付款：30% 首付 + 14 天账期" : "付款：全款",()=>{_directCredit=!_directCredit;w.Rebuild();},17),440);
-            foreach(var p in PartCatalog.All.Where(p=>PCShopSell.Core.Home.IndustryCycles.Available(p,S.Clock.Today.TotalDays)))
-            {
-                var part=p;string why=S.DirectOrderBlocker(p.Id,_directQuantity,_directCredit);
-                Money total=S.DirectPrice(p)*_directQuantity;
-                var row=Ui.Row(w.Content,50);
-                Ui.Size(Ui.Label(row,$"{p.Name}\n<size=14>单价 {S.DirectPrice(p)} · 本批合计 {total}</size>",17),470);
-                Ui.Size(Ui.Label(row,why??$"现付 {(_directCredit ? total.Scale(.3) : total)}",15,TextAnchor.MiddleLeft,why==null ? Ui.Good : Ui.Dim),340);
-                BusinessAction(row,"下单",()=>S.OrderDirect(part.Id,_directQuantity,_directCredit),w,why==null);
-            }
+            Ui.Size(Ui.Button(w.Content,"选择商品与采购方式",()=>OpenCityProcurementFor(S.MainShop),18,Ui.ButtonHot),-1,42);
             foreach(var x in S.DirectShipments) Line(w.Content,$"在途：{PartCatalog.Get(x.PartId).Name} ×{x.Count} · {new GameTimestamp(x.Arrival)}",15,Ui.Dim);
             if(S.SupplierDebts.Count>0) BuildDebtList(w);
         }
@@ -201,8 +183,8 @@ namespace PCShopSell.Game.UI
         }
         private void BuildVentures(Window w)
         {
-            Para(w.Content,"主店保留亲自经营，其余铺面由店长托管。每日结算记入各店周转金；定价、位置、周末和维护状态影响销量。停业仍付租金及 20% 留任工资；周转金不足的固定费用由总部补足。",16);
-            foreach(var venture in S.ManagedVentures)
+            HelpLink(w.Content,"托管经营说明","主店保留亲自经营，其余铺面由店长托管。每日结算记入各店周转金；定价、位置、周末和维护状态影响销量。停业仍付租金及 20% 留任工资；周转金不足的固定费用由总部补足。");
+            foreach(var venture in S.ManagedVentures.Where(v => _businessAssetId == null || v.PlaceId == _businessAssetId))
             {
                 var v=venture;var d=Ventures.Get(v.Kind);var c=BusinessCard(w.Content,d.Name+" · "+S.VentureLocationName(v)+(v.Paused ? "  [停业]" : "  [营业]"));
                 Line(c,$"周转金 {Money.FromCents(v.ReserveCents)}   昨日收入 {Money.FromCents(v.LastSalesCents)} / 成本 {Money.FromCents(v.LastCostsCents)}",17);
@@ -218,6 +200,7 @@ namespace PCShopSell.Game.UI
                 BusinessAction(controls,$"维护 · {S.VentureRepairCost(v)}",()=>S.MaintainVenture(v.PlaceId),w,v.Condition<.999 && S.Ledger.Balance>=S.VentureRepairCost(v));
                 Ui.Size(Ui.Button(c,$"关闭并清算…  预计回收 {S.VentureExitValue(v)}",()=>ConfirmBusiness("关闭门店", "清退员工，设备与装修按 30% × 维护状态回收，退还押金与周转金。自有物业保留并交由中介出租。",()=>{S.CloseVenture(v.PlaceId);w.Rebuild();}),16,Ui.Warn),-1,36);
             }
+            if(_businessAssetId!=null){AgencyLink(w,S.City.GetPlace(_businessAssetId));return;}
             AgencyLink(w);
             var chosen=Ventures.All[_ventureKind];var choose=Ui.Row(w.Content,42);
             Ui.Size(Ui.Button(choose,"上一业态",()=>{_ventureKind=(_ventureKind+Ventures.All.Length-1)%Ventures.All.Length;w.Rebuild();},17),150);
@@ -236,7 +219,7 @@ namespace PCShopSell.Game.UI
         private void BuildCreators(Window w)
         {
             BuildMcnHeader(w);
-            Para(w.Content,"主店推广同一时间只合作一位创作者，MCN 合约可并行。粉丝量、创作资源影响导流；合作销售表现影响粉丝与关系。高抱负创作者在连续表现不佳时会提前结束合作，不退费用。",16);
+            HelpLink(w.Content,"推广合作说明","主店推广同一时间只合作一位创作者，MCN 合约可并行。粉丝量、创作资源影响导流；合作销售表现影响粉丝与关系。高抱负创作者在连续表现不佳时会提前结束合作，不退费用。");
             foreach(var creator in S.CreatorPartners)
             {
                 var c=creator;var d=Creators.Get(c.Id);var card=BusinessCard(w.Content,d.Name+" · "+d.Style);
@@ -251,34 +234,11 @@ namespace PCShopSell.Game.UI
                 Para(card,"赞助每日一次：资源 +30、交情 +5。推广日资源 −4；日营业额达到 ¥3,000 提升交情和粉丝，否则回落。",14,Ui.Dim);
             }
         }
-        private void BuildPropertyPortfolio(Window w)
+        private void BuildResidence(Window w)
         {
-            AgencyLink(w);
-            Para(w.Content,"商用物业售价 = 签约月租 ×120。可全款或首付 30%，贷款 36 期等额本金、月利率 0.4%；每月 1 日扣月供和房价 0.1% 的维护费。出售九折并先还清贷款。关闭门店后的自有物业由中介托管出租，租金扣 15% 空置管理成本。",16);
-            var ids=S.OwnedProperties.Select(x=>x.PlaceId).Concat(S.ManagedVentures.Where(x=>!S.IsParkVenture(x)).Select(x=>x.PlaceId));
-            ids=ids.Concat(S.MyShops.Select(x=>x.Place.Id));
-            foreach(string place in ids.Distinct())
-            {
-                string id=place;var property=S.PropertyAt(id);var c=BusinessCard(w.Content,S.PlaceTitle(S.City.GetPlace(id))+" · "+S.City.GetPlace(id).Name);
-                if(property!=null)
-                {
-                    Line(c,$"买入价 {Money.FromCents(property.PriceCents)}    房贷本金 {Money.FromCents(property.MortgageCents)}",17);
-                    var row=Ui.Row(c,40);
-                    BusinessAction(row,"提前还清房贷",()=>S.RepayMortgage(id),w,property.MortgageCents>0 && S.Ledger.Balance>=Money.FromCents(property.MortgageCents));
-                    Ui.Size(Ui.Button(row,$"出售… 净回款 {S.PropertySaleNet(property)}",()=>ConfirmBusiness("出售物业","按原价九折出售并清偿贷款；仍在经营的门店恢复租赁计费。",()=>{S.SellProperty(id);w.Rebuild();}),17,Ui.Warn,S.InAgency),-1,-1,1);
-                }
-                else
-                {
-                    Money quote=S.PropertyQuote(id);Line(c,$"售价 {quote}    按揭首付 {quote.Scale(.3)}",17);
-                    string why=S.PropertyBlocker(id,true);if(why!=null) Line(c,why,15,Ui.Dim);
-                    var row=Ui.Row(c,40);
-                    BusinessAction(row,"全款买下",()=>S.BuyProperty(id,false),w,S.InAgency && S.PropertyBlocker(id,false)==null);
-                    Ui.Size(Ui.Button(row,"办理按揭…",()=>ConfirmBusiness("物业按揭",$"首付 {quote.Scale(.3)}，贷款 {quote.Scale(.7)}，每月本金约 {quote.Scale(.7/36)} + 剩余本金的 0.4% 利息。另收月维护费 {quote.Scale(.001)}。",()=>{S.BuyProperty(id,true);w.Rebuild();}),17,Ui.ButtonHot,S.InAgency && why==null),-1,-1,1);
-                }
-            }
             var home=BusinessCard(w.Content,"住处 · "+S.HomeTitle);
             Line(home,$"月租 {S.CurrentHomeRent}    睡眠恢复 ×{S.HomeSleepQuality:0.00}    住宅贷款 {Money.FromCents(S.HomeMortgageCents)}",17);
-            Para(home,"住处升级保留家具与储物：整洁单间 ¥1,200/月、安静公寓 ¥3,000/月，分别额外增加 0.08 / 0.16 睡眠质量；搬家支付首月租金 + ¥500。",15,Ui.Dim);
+            HelpLink(home,"住处与搬家说明","换住处保留家具与储物，搬家需支付新住处首月租金与搬家费。按揭购房为36期等额本金，月利率0.4%，另按房价收月维护费。出售按九折计算并先结清贷款。");
             if(S.HomePriceCents>0)
             {
                 BusinessAction(home,"提前还清住宅贷款",S.RepayHomeMortgage,w,S.HomeMortgageCents>0 && S.Ledger.Balance>=Money.FromCents(S.HomeMortgageCents));
@@ -287,15 +247,30 @@ namespace PCShopSell.Game.UI
             else
             {
                 var row=Ui.Row(home,40);
-                for(int i=0;i<=3;i++) {int tier=i;BusinessAction(row,new[]{"城郊旧居","改善住宅","豪华公寓","花园别墅"}[i],()=>S.ChangeHomeTier(tier),w,S.InAgency && tier!=S.HomeTier);}
+                for(int i=0;i<=3;i++) {int tier=i;Ui.Size(Ui.Button(row,new[]{"城郊旧居","改善住宅","豪华公寓","花园别墅"}[i]+"…",()=>ConfirmResidenceMove(tier,w),16,Ui.ButtonBg,tier!=S.HomeTier),-1,40,1);}
                 if(S.HomeTier>0)
                 {
                     Line(home,$"住宅售价 {S.HomePurchasePrice}    按揭首付 {S.HomePurchasePrice.Scale(.3)}",17);
                     var buy=Ui.Row(home,40);
-                    BusinessAction(buy,"全款购入",()=>S.BuyHome(false),w,S.InAgency && S.Ledger.Balance>=S.HomePurchasePrice);
+                    Ui.Size(Ui.Button(buy,"全款购入…",()=>ConfirmBusiness("购买住宅",$"支付房价 {S.HomePurchasePrice}，不新增贷款。月维护费 {S.HomePurchasePrice.Scale(.001)}。",()=>{if(S.BuyHome(false))w.Rebuild();}),17,Ui.ButtonHot,S.InAgency&&S.Ledger.Balance>=S.HomePurchasePrice),-1,40,1);
                     Ui.Size(Ui.Button(buy,"按揭购入…",()=>ConfirmBusiness("住宅按揭",$"首付 {S.HomePurchasePrice.Scale(.3)}；贷款 36 期等额本金、月利率 0.4%，月维护费 {S.HomePurchasePrice.Scale(.001)}。",()=>{S.BuyHome(true);w.Rebuild();}),17,Ui.ButtonHot,S.InAgency && S.Ledger.Balance>=S.HomePurchasePrice.Scale(.3)),-1,-1,1);
                 }
             }
+        }
+        private void ConfirmResidenceMove(int tier,Window parent)
+        {
+            string homeId=tier==0?"home":"home_tier"+tier;
+            var target=S.City.HasPlace(homeId)?S.City.GetPlace(homeId):S.Home;
+            var rent=S.HomeTierRentQuote(tier);var cost=rent+Money.FromYuan(500);
+            bool rightAgency=S.InAgency&&(S.City.LayoutVersion<7||!S.City.HasPlace(homeId)||S.AgencyServes(S.CurrentPlace,target));
+            OpenWindow("更换住处",720,440,w=>
+            {
+                Line(w.Content,$"新月租 {rent} · 搬家费 ¥500",20,Ui.Accent);
+                Line(w.Content,$"本次合计 {cost} · 付款后现金 {S.Ledger.Balance-cost}",18);
+                Para(w.Content,"家具与储物保留，次月起按新月租缴费。",17,Ui.Dim);
+                if(!rightAgency)Ui.Size(Ui.Button(w.Content,"前往住宅所属中介",()=>GoToPropertyAgency(target),17),-1,38);
+                Ui.Size(Ui.Button(w.Content,"确认搬家",()=>{if(S.ChangeHomeTier(tier)){w.Close();parent.Rebuild();}},18,Ui.ButtonHot,rightAgency&&S.Ledger.Balance>=cost),-1,44);
+            });
         }
     }
 }

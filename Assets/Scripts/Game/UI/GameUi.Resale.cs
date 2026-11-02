@@ -29,12 +29,12 @@ namespace PCShopSell.Game.UI
                 Line(parent,"已售出 · "+GameSession.UsedNames[sold.Product]+" #"+sold.Id+" · 收入 ¥"+price+" · 成本 ¥"+sold.Cost+" · 毛利 ¥"+(price-sold.Cost),15,price>=sold.Cost?Ui.Good:Ui.Warn).name="UsedSold_"+sold.Id;
             }
         }
-        private void BuildUsedStock(Transform parent,Window owner=null,bool shelfOnly=false)
+        private void BuildUsedStock(Transform parent,Window owner=null,bool shelfOnly=false,bool pricingOnly=false)
         {
             var state=S.SpecialBusiness(S.CurrentShop.Place.Id);
             var onShelf=S.PlayerShop.ShelfFillOf(ShelfKinds.Get("secondhand")).Resale.Select(i=>i.Id).ToArray();
-            Line(parent,"二手转售库存",19,Ui.Accent);
-            var items=state.Used.Where(i=>i.Owned&&!i.Sold&&(!shelfOnly||i.Listed)).ToArray();
+            Line(parent,pricingOnly?"二手商品定价":"二手转售库存",19,Ui.Accent);
+            var items=state.Used.Where(i=>i.Owned&&!i.Sold&&(!shelfOnly||i.Listed)&&(!pricingOnly||i.Inspected)).ToArray();
             Transform container=parent;
             if(shelfOnly)
             {
@@ -58,7 +58,7 @@ namespace PCShopSell.Game.UI
                 if(shelfOnly)Ui.Size(Ui.Panel(container,"Plank",WoodLight),-1,10);
             }
             if(items.Length==0)Line(parent,"暂无二手转售库存。",16,Ui.Dim);
-            BuildUsedSalesHistory(parent,state);
+            if(!pricingOnly)BuildUsedSalesHistory(parent,state);
         }
         private static void DrawUsedIcon(RectTransform root,int product)
         {

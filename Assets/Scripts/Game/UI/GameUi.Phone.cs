@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using PCShopSell.Core.Session;
 using UnityEngine;
 using UnityEngine.UI;
@@ -60,11 +60,7 @@ namespace PCShopSell.Game.UI
                 {
                     string k = keys[r * 3 + c];
                     int num = k.Length == 1 && char.IsDigit(k[0]) ? k[0] - '0' : -1;
-                    Ui.Size(Ui.Button(row, k, () =>
-                    {
-                        if (num == 1 || num == 2) LaunchFeatureApp(w, num);
-                        else Toast("按键机上这个键没用，试试 1（通讯录）或 2（短信）。");
-                    }, 24, key), 100, -1, 1);
+                    Ui.Size(Ui.Button(row, k, num==1||num==2?(System.Action)(()=>LaunchFeatureApp(w,num)):null,24,key,num==1||num==2),100,-1,1);
                 }
             }
 
@@ -198,8 +194,9 @@ namespace PCShopSell.Game.UI
         /// <summary>通讯录：认识的人，打电话约出去。</summary>
         public void OpenContactsPanel()
         {
-            OpenWindow("通讯录", 700, 620, w =>
+            OpenWorkspace("people", "contacts", "人物 · 通讯录", 1300, 850, w =>
             {
+                BuildPeopleNavigation(w,"contacts");
                 RectTransform driver = Ui.Row(w.Content, 52);
                 Ui.Size(Ui.Label(driver, $"<b>{GameSession.TruckDriverName}</b>  <size=15><color=#A8B0BA>开面包车，随叫随到，帮你把东西搬到家里或任意一家店</color></size>", 17), -1, -1, 1);
                 var call = Ui.Button(driver, "联系司机", () =>
@@ -223,6 +220,7 @@ namespace PCShopSell.Game.UI
                     RectTransform row = Ui.Row(list, 48);
                     Ui.Size(Ui.Label(row, $"<b>{n.Name}</b>  {n.Role}", 17), 260);
                     Ui.Size(Ui.Label(row, $"{Npcs.LevelName(rel)} {rel}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
+                    Ui.Size(Ui.Button(row,"人物资料",()=>OpenCityPersonProfile(n.Id),15),100);
                     Ui.Size(Ui.Button(row, "打电话约出去", () => { var npc = Npcs.Get(n.Id); if (npc != null) OpenInviteWindow(npc, w); else OpenCityActivityChooser(n.Id); }, 15, Ui.ButtonHot), 150);
                     Ui.Size(Ui.Button(row, "发消息", () =>
                     {
@@ -238,8 +236,9 @@ namespace PCShopSell.Game.UI
         public void OpenChatPanel()
         {
             bool app = S.HasChatApp;
-            OpenWindow(app ? "聊天" : "短信", 760, 600, w =>
+            OpenWorkspace("people", "messages", app ? "聊天" : "短信", 760, 600, w =>
             {
+                BuildPeopleNavigation(w,"messages");
                 if(app)
                 {
                     Para(w.Content,"选择联系人开始交谈；进入对话后点头像可看资料，也可以聊熟人、邀请活动。",17,Ui.Dim);

@@ -13,7 +13,6 @@ namespace PCShopSell.Game.UI
     /// <summary>手机上的 1788 批发 app：进货下单 + 自动补货设置。买了智能机、在应用商店装了 1788 才能用，人在哪都能打开。</summary>
     public sealed partial class GameUi
     {
-        private bool _wholesaleRestockPage;
         private string _onlineStore;
         private bool _onlineToHome;   // 1788 送到哪：false = 店里，true = 家里
         private readonly Dictionary<string, int> _cart = new Dictionary<string, int>();
@@ -26,14 +25,13 @@ namespace PCShopSell.Game.UI
                 Toast(block);
                 return;
             }
-            _wholesaleRestockPage = restockPage;
+            if (restockPage) { OpenCityProcurement(); return; }
             OpenWindow("1788 批发", 860, 820, w =>
             {
                 RectTransform tabs = Ui.Row(w.Content, 44, 6);
-                Ui.Size(Ui.Button(tabs, "进货", () => { _wholesaleRestockPage = false; w.Rebuild(); }, 18, _wholesaleRestockPage ? Ui.ButtonBg : Ui.ButtonHot), -1, -1, 1);
-                Ui.Size(Ui.Button(tabs, "自动补货", () => { _wholesaleRestockPage = true; w.Rebuild(); }, 18, _wholesaleRestockPage ? Ui.ButtonHot : Ui.ButtonBg), -1, -1, 1);
-                if (_wholesaleRestockPage) BuildRestock(w);
-                else BuildOnline(w);
+                Ui.Size(Ui.Button(tabs, "进货", w.Rebuild, 18, Ui.ButtonHot), -1, -1, 1);
+                Ui.Size(Ui.Button(tabs, "补货计划", OpenCityProcurement, 18, Ui.ButtonBg), -1, -1, 1);
+                BuildOnline(w);
             });
         }
 
@@ -41,7 +39,7 @@ namespace PCShopSell.Game.UI
         {
             Transform c = w.Content;
             Para(c, "经营配件批发，下单后次日 10:00 送货上门。食品、生活用品与家具保留普通网购/线下入口；比较经营来源请用统一采购。", 15, Ui.Dim);
-            Ui.Size(Ui.Button(c, "统一商品采购 / 在途订单", OpenCityProcurement, 17), -1, 38);
+
             if (!S.HasShop) _onlineToHome = true;
             RectTransform dest = Ui.Row(c, 48, 6);
             Ui.Size(Ui.Label(dest, "送到", 16, TextAnchor.MiddleRight, Ui.Dim), 50);
@@ -107,63 +105,5 @@ namespace PCShopSell.Game.UI
             _cart[p.Id] = Mathf.Max(0, n + delta);
         }
 
-        private void BuildRestock(Window w)
-        {
-            Transform c = w.Content;
-            GuideHint(c, QuestTarget.Restock, w.Rebuild);
-            Para(c, "<b>自动补货是什么？</b> 给每样配件定一个“常备几件”。每天早上 9:00，1788 自动看一眼店里的库存（含还在路上的），"
-                + "按常备目标/补货下限补齐未覆盖需求。员工已承担的缺口不会再由1788重复买；可在统一采购页选择唯一主执行方式。设成“关”就不自动补。", 15, Ui.Dim);
-            Ui.Size(Ui.Button(c, "设置每件商品的执行方式与下限", OpenCityProcurement, 16), -1, 38);
-            Para(c, $"自动下单后至少给你留 {S.EffectiveRestockReserve} 现金；店里仓位放不下的会少补。", 15, Ui.Dim);
-
-            var policy = Ui.Row(c, 38);
-            Ui.Size(Ui.Label(policy, "保留天数", 15), 90);
-            QuantityStepper(w, policy, "reserveDays", S.RestockReserveDays, 0, 365, 1, v => S.RestockReserveDays = (int)v);
-            var reserve = Ui.Row(c, 38);
-            Ui.Size(Ui.Label(reserve, "现金底线", 15), 90);
-            QuantityStepper(w, reserve, "reserveCash", S.RestockReserveYuan, 0, 10000000, 100, v => S.RestockReserveYuan = (int)v, v => "¥" + v.ToString("0"));
-            var budget = Ui.Row(c, 38);
-            Ui.Size(Ui.Label(budget, "日预算", 15), 90);
-            QuantityStepper(w, budget, "dailyBudget", S.RestockDailyBudgetYuan, 0, 10000000, 100, v => S.RestockDailyBudgetYuan = (int)v, v => v == 0 ? "不限" : "¥" + v.ToString("0"));
-            if (!string.IsNullOrEmpty(S.LastRestockNote)) Line(c, S.LastRestockNote, 14, Ui.Accent);
-            RectTransform storeRow = Ui.Row(c, 40);
-            Text storeText = Ui.Label(storeRow, "", 16);
-            Ui.Size(storeText, -1, -1, 1);
-            void RefreshStore()
-            {
-                string id = S.RestockStoreId;
-                storeText.text = id != null && S.Online.IsDiscovered(id)
-                    ? "向哪家下单：" + Online1788.GetStore(id).Name
-                    : "向哪家下单：自动（挑最便宜的，避开次品多的）";
-            }
-            Ui.Size(Ui.Button(storeRow, "选择商家 ▾", () => OpenWindow("补货商家", 580, 480, picker =>
-            {
-                Ui.Size(Ui.Button(picker.Content, "自动挑选", () => { S.RestockStoreId = null; picker.Close(); w.Rebuild(); }), -1, 42);
-                foreach (var store in Online1788.Stores.Where(x => S.Online.IsDiscovered(x.Id)))
-                {
-                    var choice = store;
-                    Ui.Size(Ui.Button(picker.Content, choice.Name, () => { S.RestockStoreId = choice.Id; picker.Close(); w.Rebuild(); }), -1, 42);
-                }
-            }), 16), 150);
-            RefreshStore();
-            if (!string.IsNullOrEmpty(S.LastRestockNote)) Line(c, "上次：" + S.LastRestockNote, 14, Ui.Dim);
-
-            RectTransform head = Ui.Row(c, 26, 4);
-            Ui.Size(Ui.Label(head, "配件", 14, TextAnchor.MiddleLeft, Ui.Dim), 420);
-            Ui.Size(Ui.Label(head, "常备几件", 14, TextAnchor.MiddleCenter, Ui.Dim), 150);
-            RectTransform list = Ui.Scroll(c, 250);
-            foreach (PartDef part in PartCatalog.All.Where(p=>PCShopSell.Core.Home.IndustryCycles.Available(p,S.Clock.Today.TotalDays)))
-            {
-                PartDef p = part;
-                RectTransform row = Ui.Row(list, 66, 4);
-                Text name = ProductText(row, "", 15);
-                Ui.Size(name, 420);
-                int have = S.PlayerShop.Stock.CountAll(p), pend = S.PendingOnlineCount(p.Id);
-                string stock = have == 0 ? "<color=#D79780>店里有 0 件</color>" : $"店里有 {have} 件";
-                name.text = ProductLabel($"<b>{p.Name}</b>", PartUnitKg(p), stock + (pend > 0 ? $" · 路上 {pend}" : "")).Replace("<size=13>", "<size=14>");
-                QuantityStepper(w, row, "restock_" + p.Id, S.RestockTarget(p.Id), 0, 1000, 1,
-                    value => S.SetRestockTarget(p.Id, (int)value), value => value == 0 ? "关" : value.ToString("0"));
-            }
-        }
     }
 }

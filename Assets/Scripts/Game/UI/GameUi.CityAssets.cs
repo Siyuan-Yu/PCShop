@@ -12,40 +12,49 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
-        private int _cityPropertyTab;
+        private int _cityPropertyTab = 1;
+        private string _cityPropertyTarget;
         private string _cityPropertyStreet = "";
         private int _cityAssetQuantity = 10;
 
-        public void OpenCityProperties()
+        public void OpenCityProperties() { _cityPropertyTarget = null; OpenCityPropertiesView(); }
+        private void OpenCityResidence() { _cityPropertyTarget = null; _cityPropertyTab = 3; OpenCityPropertiesView(); }
+        public void OpenCityProperty(Place place)
         {
-            OpenWindow("城市物业 · 租赁、购买与我的产权", 1080, 740, w =>
+            _cityPropertyTarget = place.Id; _cityPropertyStreet = ""; _cityPropertyTab = S.PropertyAt(place.Id) != null ? 2 : 1; OpenCityPropertiesView();
+        }
+        private void OpenCityPropertiesView()
+        {
+            OpenWorkspace("business", "properties", "经营 · 物业", 1160, 840, w =>
             {
+                GuideHint(w.Content,QuestTarget.Property,w.Rebuild);
                 var tabs = Ui.Row(w.Content, 42);
-                for (int n = 0; n < 3; n++)
+                for (int n = 0; n < 4; n++)
                 {
                     int tab = n;
-                    Ui.Size(Ui.Button(tabs, new[] { "租赁挂牌", "购买目录", "我的物业" }[n], () => { _cityPropertyTab = tab; w.Rebuild(); }, 19,
+                    Ui.Size(Ui.Button(tabs, new[] { "租店地图", "购买目录", "我的物业", "住处" }[n], () => { _cityPropertyTab = tab; _cityPropertyTarget = null; w.Rebuild(); }, 19,
                         _cityPropertyTab == n ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
                 }
+                if (_cityPropertyTab == 3) { BuildResidence(w); AgencyLink(w,S.Home); return; }
                 if (_cityPropertyTab == 0)
                 {
-                    Para(w.Content, "原租赁挂牌与提前交房规则保留。在中介只办理本街租赁和产权；个人物业总览仍可查看全部持有资产。", 18);
-                    Ui.Size(Ui.Button(w.Content, "打开中介租铺地图", () => { w.Close(); if (S.InAgency) OpenStreetPlace(S.CurrentPlace); else { CloseAllWindows(); _ctrl.GoToPlace(S.City.FirstOfKind(PlaceKind.Agency)); } }, 19), -1, 44);
+                    Para(w.Content, "选择所属中介看房，房源详情可查看租金、商圈和签约费用。", 18);
+                    Ui.Size(Ui.Button(w.Content, "打开中介租铺地图", () => GoToPropertyAgency(), 19), -1, 44);
                     return;
                 }
                 var places = S.CityCommercialProperties.Where(p => !S.InAgency || S.AgencyServes(S.CurrentPlace, p)).ToArray();
-                Line(w.Content, $"当前持有 {S.OwnedProperties.Count}/{places.Length} 处 · 估值 {S.PropertyValue} · 现金 {S.Ledger.Balance}", 21, Ui.Accent);
-                Para(w.Content, "买产权不等于买租户的生意。带租约购入保留商户、商品、员工与剧情；公共道路和活动设施不在收购分母中。", 17, Ui.Dim);
-                foreach (var group in places.GroupBy(p => string.IsNullOrEmpty(p.StreetId) ? "创业商业街" : p.StreetId))
-                    Line(w.Content, S.City.StreetName(group.Key) + $"：持有 {group.Count(p => S.PropertyAt(p.Id) != null)}/{group.Count()}", 16);
-                var filter = Ui.Row(w.Content, 38);
-                Ui.Size(Ui.Button(filter, S.InAgency ? "本街" : "全部街区", () => { _cityPropertyStreet = ""; w.Rebuild(); }, 16), 120);
-                foreach (var street in places.Select(p => p.StreetId ?? "").Distinct().Take(10))
+                Line(w.Content, $"已持有 {S.OwnedProperties.Count} 处 · 估值 {S.PropertyValue} · 现金 {S.Ledger.Balance}", 21, Ui.Accent);
+                HelpLink(w.Content, "物业交易说明", "购买产权不会接管租户的生意；原租约和人物关系保留。房贷36期等额本金，月利率0.4%，另有月维护费。确认购买前会列出房价、费用、押金抵扣和付款后余额。");
+                if (_cityPropertyTarget != null) Ui.Size(Ui.Button(w.Content, "查看全部物业", () => { _cityPropertyTarget = null; w.Rebuild(); }, 16), -1, 32);
+                if (_cityPropertyTarget == null)
                 {
-                    var id = street; Ui.Size(Ui.Button(filter, S.City.StreetName(id), () => { _cityPropertyStreet = id; w.Rebuild(); }, 15), -1, 38, 1);
+                    var streetIds = places.Select(p=>p.StreetId??"").Distinct().ToArray();
+                    var labels = new[]{S.InAgency?"本片区":"全部街区"}.Concat(streetIds.Select(S.City.StreetName)).ToArray();
+                    var filter = Ui.Row(w.Content,38,8);Ui.Size(Ui.Label(filter,"筛选街区",17),100);
+                    Ui.Size(Ui.Choice(filter,labels,Array.IndexOf(streetIds,_cityPropertyStreet)+1,index=>{_cityPropertyStreet=index==0?"":streetIds[index-1];w.RequestRebuild();}),-1,38,1);
                 }
                 var list = places.Where(p => (S.InAgency || string.IsNullOrEmpty(_cityPropertyStreet) || p.StreetId == _cityPropertyStreet)
-                    && (_cityPropertyTab != 2 || S.PropertyAt(p.Id) != null));
+                    && (_cityPropertyTab != 2 || S.PropertyAt(p.Id) != null) && (_cityPropertyTarget == null || p.Id == _cityPropertyTarget));
                 foreach (var place in list)
                 {
                     var p = place; var property = S.PropertyAt(p.Id); var shop = S.ShopAt(p.Id);
@@ -89,7 +98,7 @@ namespace PCShopSell.Game.UI
                         Ui.Size(Ui.Button(card, "出售确认", () => CityAssetConfirm("出售具体物业", "到手 " + S.PropertySaleNet(property) + "。保留原租户及其人物关系。", () => S.SellProperty(p.Id), w), 18, Ui.Warn, why == null), -1, 42);
                     }
                 }
-                AgencyLink(w);
+                AgencyLink(w,_cityPropertyTarget==null?null:S.City.GetPlace(_cityPropertyTarget));
             });
         }
         private void CityPropertyConfirm(string id, bool mortgage, Window parent)
@@ -98,26 +107,29 @@ namespace PCShopSell.Game.UI
             string why = S.CityPropertyPurchaseBlocker(id, mortgage);
             string terms = q.Address + "\n使用方：" + q.Tenant + $"\n房价 {q.Price} + 交易费 {q.Fee}\n抵扣押金 {q.DepositCredit}、未使用首月租金 {q.PrepaidCredit}\n本次付款 {q.TotalDue}，付款后现金 {q.CashAfter}"
                 + (mortgage ? $"\n贷款 {q.Mortgage}，36期等额本金，月利率0.4%。" : "\n全款，不新增长期贷款。")
+                + $"\n月维护费 {q.Price.Scale(.001)}。"
                 + (why == null ? "\n原经营资产与租户不转移给买方。" : "\n当前不能成交：" + why);
-            CityAssetConfirm("物业购买结算预览", terms, () => S.BuyProperty(id, mortgage), parent, why == null);
+            CityAssetConfirm("物业购买结算预览", terms, () => S.BuyProperty(id, mortgage), parent, why == null, S.City.GetPlace(id));
         }
-        private void CityAssetConfirm(string title, string terms, Func<bool> action, Window parent, bool enabled = true)
+        private void CityAssetConfirm(string title, string terms, Func<bool> action, Window parent, bool enabled = true, Place property = null)
         {
             bool submitted = false;
             OpenWindow(title, 780, 530, confirmation =>
             {
                 Para(confirmation.Content, terms, 19);
-                Ui.Size(Ui.Button(confirmation.Content, "确认办理", () => { if (submitted) return; submitted = true; action(); confirmation.Close(); parent.Rebuild(); }, 19, Ui.Warn, enabled), -1, 48);
+                if(property!=null&&(!S.InAgency||!S.AgencyServes(S.CurrentPlace,property)))
+                    Ui.Size(Ui.Button(confirmation.Content,"前往房源所属中介",()=>GoToPropertyAgency(property),17),-1,38).name="PropertyAgency";
+                Ui.Size(Ui.Button(confirmation.Content, "确认办理", () => { if (submitted) return; submitted = true; if (action()) { confirmation.Close(); parent.Rebuild(); } else submitted = false; }, 19, Ui.Warn, enabled), -1, 48);
                 Ui.Size(Ui.Button(confirmation.Content, "返回", confirmation.Close, 19), -1, 44);
             });
         }
         public void OpenCityInvestments()
         {
-            OpenWindow("投资 · 指数与虚构企业", 1000, 740, w =>
+            OpenWorkspace("business", "investments", "经营 · 投资", 1160, 840, w =>
             {
                 Line(w.Content, $"现金 {S.Ledger.Balance} · 三企业持仓 {S.CityEquityValue} · 持仓成本 {S.CityEquityCost}", 21, Ui.Accent);
                 Line(w.Content, $"已实现 {S.CityEquityRealized} · 浮动盈亏 {S.CityEquityValue - S.CityEquityCost}", 19);
-                Para(w.Content, "全部为游戏虚构行情，不借贷、不杠杆。价格按游戏日更新，打开面板不改变行情。亏损只影响实际持仓；资金紧张仍可卖出、打工或缩减经营。", 17, Ui.Dim);
+                HelpLink(w.Content, "投资规则", "行情按游戏日更新，不使用借贷或杠杆。买卖前会显示成交金额、手续费和是否动用账单预留资金。硬件指数双向手续费0.5%，企业持仓双向0.2%。");
                 Para(w.Content, S.CityInvestmentNews, 18, Ui.Accent);
                 var quantity = Ui.Row(w.Content, 42);
                 foreach (int n in new[] { 1, 10, 100, 1000 })

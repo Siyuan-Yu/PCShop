@@ -31,7 +31,7 @@ namespace PCShopSell.Game.UI
                 case PlaceKind.Agency:
                     _agencySelectedId = null;
                     _agencyViewState = new AgencyStreetMap.ViewState();
-                    OpenPlaceWindow(p, BuildAgency, 1660, 960);
+                    OpenPlaceWindow(p, BuildAgency, 1660, 1000);
                     break;
                 case PlaceKind.Home:
                     Toast("回到出租屋了。走近床、衣柜、电饭锅、纸箱或门，头顶出现提示时按 F；看房间信息点右上角“我的”。");
@@ -88,11 +88,18 @@ namespace PCShopSell.Game.UI
                     win.Content = original;
                 }
                 else build(win, p);
-                win.TitleText.text = S.PlaceTitle(p) + (leaveOnClose ? " · 关闭返回街上" : " · 关闭菜单后留在场所");
-            }, holds, true, () =>
-            {
-                if (leaveOnClose && S.CurrentPlace == p && !S.IsWorking) S.Leave();
-            });
+                win.TitleText.text = S.PlaceTitle(p);
+                if (leaveOnClose)
+                {
+                    var panel=win.Root.Find("Panel");
+                    if(panel.Find("LeavePlaceFooter")==null)
+                    {
+                        var footer=Ui.Rect(panel,"LeavePlaceFooter").Anchor(0,0,1,0,16,10,16,-50);
+                        Ui.Button(footer,"离开"+p.Name,()=>{if(S.CurrentPlace==p&&!S.IsWorking){CloseModalWindows();S.Leave();}},17,Ui.Warn).GetComponent<RectTransform>().Fill().name="LeavePlace";
+                    }
+                    ((RectTransform)win.Content.parent.parent).offsetMin=new Vector2(0,58);
+                }
+            }, holds, true);
         }
 
         private static Text Line(Transform parent, string text, int size = 19, Color? color = null)
@@ -149,7 +156,7 @@ namespace PCShopSell.Game.UI
             {
                 Line(w.Content, "电脑乐园", 22, Ui.Accent);
                 Para(w.Content, S.Clock.Today.TotalDays < S.ParkReadyDay ? $"公共区域正在改造，还有 {S.ParkReadyDay - S.Clock.Today.TotalDays} 天开放铺位。" : "园区已开放。选择铺位招商，调整不同业态之间的位置，在经营总览管理门店收支。", 18);
-                Ui.Size(Ui.Button(w.Content, "查看园区布局", () => { _businessTab = 6; OpenBusinessPanel(); }, 18, Ui.ButtonHot), -1, 42);
+                Ui.Size(Ui.Button(w.Content, "查看园区布局", () => OpenBusinessSection(6), 18, Ui.ButtonHot), -1, 42);
                 return;
             }
             var venture = S.VentureAt(p.Id);
@@ -157,7 +164,7 @@ namespace PCShopSell.Game.UI
             {
                 Line(w.Content, S.PlaceTitle(p), 22, Ui.Accent);
                 Para(w.Content, venture != null ? "这是你委托店长经营的门店。日常收支留在门店周转金中，可在经营总览管理定价、维护和资金。" : "这处物业由中介托管出租，每日租金进入你的账本。", 18);
-                Ui.Size(Ui.Button(w.Content, "管理这处资产", OpenBusinessPanel, 18, Ui.ButtonHot), -1, 42);
+                Ui.Size(Ui.Button(w.Content, "管理这处资产", () => { if (venture != null) OpenBusinessSection(3, p.Id); else OpenCityProperty(p); }, 18, Ui.ButtonHot), -1, 42);
                 return;
             }
             if (S.IsVacant(p))
@@ -168,7 +175,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content, "去房产中介", () =>
                 {
                     w.Close();
-                    _ctrl.GoToPlace(S.City.FirstOfKind(PlaceKind.Agency));
+                    _ctrl.GoToPlace(PreferredAgency(p));
                 }, 19, Ui.ButtonHot), -1, 46);
                 return;
             }
@@ -181,14 +188,11 @@ namespace PCShopSell.Game.UI
 
         // ---------- 行情 ----------
 
-        public void OpenMarketPanel()
+        public void OpenMarketPanel() => OpenMarketView(0);
+        private void BuildPriceMarket(Window w)
         {
-            S.ReadNews();
-            OpenWindow("行情与新闻", 900, 880, w =>
-            {
-                Ui.Size(Ui.Button(w.Content, "每周物价简报 · " + (S.WeeklyPricesSubscribed ? "已订阅" : "未订阅"), OpenWeeklyPriceReport, 18, Ui.ButtonHot), -1, 40);
-                Ui.Size(Ui.Button(w.Content,"科技发布 / 模型作品热度 / 服装供给",OpenIndustryNews,17),-1,36);
-                Line(w.Content, "新闻 → 宏观指标 → 配件价格。读懂新闻，提前囤货或清货。", 18, Ui.Dim);
+                Ui.Size(Ui.Button(w.Content, "每周物价简报 · " + (S.WeeklyPricesSubscribed ? "已订阅" : "未订阅"), OpenWeeklyPriceReport, 17), -1, 34);
+
                 foreach (MacroFactor f in new[] { MacroFactor.Crypto, MacroFactor.AiDemand, MacroFactor.NewGeneration })
                 {
                     RectTransform row = Ui.Row(w.Content, 28);
@@ -220,7 +224,6 @@ namespace PCShopSell.Game.UI
                 }
                 if (S.Market.News.Count == 0) Ui.Size(Ui.Label(list, "暂时风平浪静。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 26);
                 BuildTipsSection(w);
-            });
         }
 
         private static string Sparkline(System.Collections.Generic.IReadOnlyList<double> values)
@@ -260,7 +263,7 @@ namespace PCShopSell.Game.UI
         {
             _ledgerDay = S.Clock.Today.TotalDays;
             _ledgerPage = 0;
-            OpenWindow("总收支账本", 940, 830, w =>
+            OpenWorkspace("ledger", "ledger", "现金流水", 1040, 830, w =>
             {
                 int today = S.Clock.Today.TotalDays;
                 int span = _ledgerPeriod == 0 ? 1 : _ledgerPeriod == 1 ? 7 : 30;
@@ -289,7 +292,7 @@ namespace PCShopSell.Game.UI
                 Money expense = Money.FromCents(-entries.Where(e => e.Amount.IsNegative).Sum(e => e.Amount.Cents));
                 Line(w.Content, $"总收入 {income}    总支出 {expense}    净收支 {income - expense}", 21, Ui.Accent);
                 Line(w.Content, $"当前现金 {S.Ledger.Balance} · 包含经营、生活、打工、交通、购置、借还款等全部现金往来。", 16, Ui.Dim);
-                Para(w.Content, "周按周一至周日，月按游戏日历每月 30 天；当前周期统计至今天。净收支是现金变化，包含借款、押金等，不等于利润。", 15, Ui.Dim);
+                Para(w.Content, "现金流水包含借款、押金和个人收支；经营表现请看经营总览。", 15, Ui.Dim);
                 var filters = Ui.Row(w.Content, 36);
                 string[] filterNames = { "全部明细", "只看收入", "只看支出" };
                 for (int i = 0; i < filterNames.Length; i++)

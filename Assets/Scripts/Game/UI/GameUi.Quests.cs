@@ -144,7 +144,7 @@ namespace PCShopSell.Game.UI
                 {
                     Line(w.Content, "接下来：" + next.Title, 21, Ui.Accent);
                     Para(w.Content, GuideLocation(next.Target), 16, Ui.Dim);
-                    Para(w.Content, next.Hint, 18);
+                    Para(w.Content, next.Short, 18);
                     ProgressLine(w.Content, next, 16);
                 }
                 Ui.Size(Ui.Button(w.Content, "继续游戏", w.Close, 18, Ui.ButtonHot), -1, 42);
@@ -183,7 +183,7 @@ namespace PCShopSell.Game.UI
             S.VisitQuestTarget(target);
             var card = Ui.Panel(parent, "GuideHint", Ui.PanelBg2).rectTransform;
             Ui.VList(card, 6, 12);
-            Para(card, "<color=#DDC18B><b>当前任务 · " + q.Title + "</b></color>\n" + (q.Lesson ? q.Hint : q.Short), 16);
+            Para(card, "<color=#DDC18B><b>当前任务 · " + q.Title + "</b></color>\n" + (target==QuestTarget.Staff&&q.Lesson?q.Hint:q.Short), 16);
             ProgressLine(card, q, 14);
             var row = Ui.Row(card, 34, 6);
             Ui.Size(Ui.Button(row, "查看步骤", OpenQuestWindow, 15), -1, -1, 1);

@@ -178,7 +178,7 @@ namespace PCShopSell.Game.UI
             {
                 WbButton(list,"具体物业、租约与收租",OpenCityProperties,"WorkbenchAssets");
                 WbButton(list,"车辆与占用",OpenFleetPanel,"WorkbenchVehicles");
-                if(BusinessUnlocked)WbButton(list,"物业与住处账目",()=>{_businessTab=5;ShowBusinessPanel(false);},"WorkbenchPropertyAccounts");
+                if(BusinessUnlocked)WbButton(list,"住处租约",OpenCityResidence,"WorkbenchPropertyAccounts");
                 if(S.HasPark)WbButton(list,"园区管理",()=>{_businessTab=6;ShowBusinessPanel(false);},"WorkbenchPark");
             }
         }
@@ -232,8 +232,8 @@ namespace PCShopSell.Game.UI
             var close=Ui.Size(Ui.Choice(hours,options,sim.AllDay?21:sim.CloseMinute/60%24,i=>{S.SetWorkbenchHours(shop.Place.Id,sim.AllDay?9:sim.OpenMinute/60,i,false);w.RequestRebuild();}),150,38);close.name="WorkbenchCloseHour";
             WbButton(hours,sim.AllDay?"不限时 ✓":"不限时",()=>{S.SetWorkbenchHours(shop.Place.Id,9,21,!sim.AllDay);w.RequestRebuild();},"WorkbenchAllDay");
             WbText(parent,"统一加价 "+sim.Markup.ToString("0.00")+"×",19);
-            Ui.Slider(parent,(float)PCShopSell.Core.Shop.ShopSettings.MinMarkup,(float)PCShopSell.Core.Shop.ShopSettings.MaxMarkup,(float)sim.Markup,v=>{S.SetWorkbenchMarkup(shop.Place.Id,Math.Round(v*20)/20);w.RequestRebuild();}).name="WorkbenchMarkup";
-            var actions=Ui.Row(parent,40,8);WbButton(actions,"员工与排班",OpenEmployeesPanel,"WorkbenchShopStaff");WbButton(actions,"进货员与记录",()=>OpenShopBuyers(shop),"WorkbenchShopBuyers");
+            PriceMultiplierEditor(parent,"WorkbenchMarkup_"+shop.Place.Id,"统一加价",sim.Markup,PCShopSell.Core.Shop.ShopSettings.MinMarkup,PCShopSell.Core.Shop.ShopSettings.MaxMarkup,.05,value=>S.SetWorkbenchMarkup(shop.Place.Id,value),w.RequestRebuild);
+            var actions=Ui.Row(parent,40,8);WbButton(actions,"员工与排班",OpenEmployeesPanel,"WorkbenchShopStaff");WbButton(actions,"进货员与记录",()=>OpenShopBuyers(shop),"WorkbenchShopBuyers");WbButton(actions,"本店采购",()=>OpenCityProcurementFor(shop),"WorkbenchShopProcurement");
             var list=WbScroll(parent,"WorkbenchDisplayedProducts");WbText(list,"已陈列商品 · 定价",20);
             foreach(var kind in ShelfKinds.All)
             {

@@ -45,6 +45,19 @@ namespace PCShopSell.Core.Finance
         public const string RetailCategory = "零售";
         public const string BuildCategory = "装机";
 
+        public static List<DayFinance> OperatingDaily(Ledger ledger, GameDate today, int days, string shopId = null)
+        {
+            var result = new List<DayFinance>();
+            for (int i = days - 1; i >= 0; i--)
+            {
+                int day = today.TotalDays - i; if (day < 0) continue;
+                var date = new GameDate(day); var summary = CitySummary(ledger, date, date, shopId);
+                result.Add(new DayFinance { Date = date, Revenue = summary.Sales, Expense = summary.OperatingOut,
+                    OtherIncome = summary.OperatingIn - summary.Sales });
+            }
+            return result;
+        }
+
         /// <summary>截止 today（含）的最近 days 天，按日期从早到晚。</summary>
         public static List<DayFinance> Daily(Ledger ledger, GameDate today, int days)
         {
