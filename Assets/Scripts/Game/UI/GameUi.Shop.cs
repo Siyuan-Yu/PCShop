@@ -444,7 +444,12 @@ namespace PCShopSell.Game.UI
 
         private void BuildPricing()
         {
-            if(S.IsSpecialBusiness(S.CurrentShop)){BuildSpecialCounter();return;}
+            if(S.IsSpecialBusiness(S.CurrentShop))
+            {
+                BuildSpecialCounter();
+                if(S.RetailKind=="restaurant")BuildRestaurantDrinkPricing();
+                return;
+            }
             var shop=S.PlayerShop;
             var fills=ShelfKinds.All.Select(shop.ShelfFillOf).ToArray();
             var parts=fills.SelectMany(f=>f.Parts).Where(l=>l.Count>0).ToArray();

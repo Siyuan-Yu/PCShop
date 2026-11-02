@@ -285,6 +285,7 @@ namespace PCShopSell.Core.Session
                 {
                     Ledger.Credit(now.Date,"餐饮",Money.FromYuan(o.Price),RecipeNames[o.Recipe]+"堂食",LedgerAttribution.ForShop(shop.Place.Id,"meal:"+o.Id+":paid","销售"));
                     state.Revenue+=o.Price;state.Paid++;o.Stage=DiningStage.Completed;
+                    SellRestaurantDrink(shop,state,o,now);
                 }
                 if(!open)continue;
                 if(cooks.Length>0&&o.Stage==DiningStage.Waiting)StartRestaurantOrder(shop,state,o,minute,true);

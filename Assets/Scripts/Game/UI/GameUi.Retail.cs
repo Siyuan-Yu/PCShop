@@ -17,6 +17,7 @@ namespace PCShopSell.Game.UI
         private void BuildRetailLinks(Transform parent)
         {
             Line(parent, "经营类型：" + RetailShopTypes.Name(S.RetailKind), 18, Ui.Accent);
+            if(S.RetailKind=="restaurant")Line(parent,"堂食可加购已上架饮料 · 购买意愿+20个百分点",15,Ui.Dim);
             var row = Ui.Row(parent, 38);
             Ui.Size(Ui.Button(row, "进货员 · " + S.Employees.Count(x=>x.Shop==S.CurrentShop&&x.Role==EmployeeRole.Buyer) + " 人", OpenShopBuyers, 17, Ui.ButtonHot), -1, -1, 1).name="ShopBuyersEntry";
             Ui.Size(Ui.Button(row, "背包/后仓商品上架", OpenRetailListing, 17), -1, -1, 1);

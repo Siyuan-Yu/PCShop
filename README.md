@@ -1,5 +1,7 @@
 # PCShopSell（工作名）
 
+最新源码补充：[餐馆饮料加购](docs/41-restaurant-drinks.md)，购买意愿+20个百分点，真实陈列、扣货、收入和调价预览已接通，相关回归65/65通过。以下223752发行包尚不包含此补充。
+
 当前完整归档：[第40篇：湖城、店型、采购、居家工作台与性能](docs/40-current-snapshot-2026-11-02.md)。包含已实现功能、已确认但未实施的剧情设计、测试边界与发行包信息；旧篇保留历史状态。
 
 最新Windows x64包：`Windows-Optimized-20261102-223752`，包含树林分块、柜台增量刷新和居民运算优化。相关回归95/95通过，性能对照和验证边界见 [第39篇](docs/39-performance-optimization.md)，包信息见 [验证记录](docs/validation/39-performance-results.txt)。发行包不入库。

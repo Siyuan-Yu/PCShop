@@ -26,6 +26,7 @@ namespace PCShopSell.Core.Home
             return list.ToArray();
         }
         public static bool IsFood(GiftDef item) => item != null && (item.IngredientId != null || item.MealId != null || item.Id == "produce:rice");
+        public static bool IsDrink(string id) => id == Gifts.Soda || id == Gifts.Drink;
     }
     public static class RetailShopTypes
     {
