@@ -68,17 +68,20 @@ namespace PCShopSell.Game.UI
         {
             var shop=S.CurrentShop;
             for(int recipe=0;recipe<GameSession.RecipeNames.Length;recipe++){int selected=recipe;bool enabled=(state.RecipeMask&(1<<selected))!=0;Ui.Size(Ui.Button(C,(enabled?"✓ 供应 ":"暂停 ")+GameSession.RecipeNames[selected]+" · ¥"+Math.Round(GameSession.RecipePrices[selected]*state.MenuMarkup),()=>{state.RecipeMask^=1<<selected;RebuildDock();},15,enabled?Ui.ButtonHot:Ui.ButtonBg),-1,30);}
-            Para(C,"加工台备菜 → 投锅 → 熟后及时出锅 → 传菜台上菜 → 顾客吃完付款 → 收桌。锅内8分钟熟，38分钟焦糊；顾客等餐100分钟。暂停时火候也暂停。",15,Ui.Dim);
+            Para(C,"点操作后角色会实际走到设备或餐桌旁，再完成操作；WASD可接管。加工台备菜 → 投锅 → 出锅到传菜台 → 上菜 → 顾客吃完付款 → 收桌。锅内8分钟熟，38分钟焦糊；顾客等餐100分钟。暂停时走动、操作和火候都暂停。",15,Ui.Dim);
             var menu=Ui.Row(C,32,4);
             Ui.Size(Ui.Label(menu,"菜单倍率 ×"+state.MenuMarkup.ToString("0.0")+$" · 购买意愿 {shop.Sim.MarkupPurchaseIntent(state.MenuMarkup)*100:0}%",16),-1,32,1);
             Ui.Size(Ui.Button(menu,"−",()=>{state.MenuMarkup=Math.Max(.8,state.MenuMarkup-.1);RebuildDock();},18),40);
             Ui.Size(Ui.Button(menu,"+",()=>{state.MenuMarkup=Math.Min(PCShopSell.Core.Shop.ShopSettings.MaxMarkup,state.MenuMarkup+.1);RebuildDock();},18),40);
             Line(C,"厨房大米 "+S.KitchenRice(shop).ToString("0.##")+" 千克 · 青菜 "+S.KitchenIngredientCount(shop,"veg")+" · 鸡蛋 "+S.KitchenIngredientCount(shop,"egg")+" · 肉 "+S.KitchenIngredientCount(shop,"pork"),15,Ui.Dim);
-            Ui.Size(Ui.Button(C,"店内食材放入冰箱",()=>{S.ChillKitchenIngredients();RebuildDock();},16,Ui.ButtonHot,S.CanOpenFridge),-1,34);
+            string coldStorageBlocker=S.KitchenColdStorageBlocker;
+            Ui.Size(Ui.Button(C,"店内食材放入冰箱",()=>{S.ChillKitchenIngredients();RebuildDock();},16,Ui.ButtonHot,coldStorageBlocker==null),-1,34).name="ChillKitchenIngredients";
+            if(coldStorageBlocker!=null)Line(C,coldStorageBlocker,14,Ui.Dim);
             var storage=Ui.Row(C,36,4);
             Ui.Size(Ui.Button(storage,"背包全部存入后仓",()=>{S.StoreBackpackInWarehouse();RebuildDock();},15,Ui.ButtonBg,S.HasWarehouseHere),-1,36,1);
             Ui.Size(Ui.Button(storage,"打开冰箱",OpenFridgeWindow,15,Ui.ButtonBg,S.CanOpenFridge),110,36);
             Para(C,"食材放本店冰箱、后仓或经营库存；安排进货员补货。厨师自动投锅出锅，服务员自动上菜收桌，均须实际在岗。",15,Ui.Dim);
+            Para(C,"在本店需要吃饭时，会随机用现有食材做一餐：消耗大米0.25千克和一份配菜，恢复最多60饱腹；食材不足时沿用普通用餐方式。",14,Ui.Dim);
             foreach(var order in state.Orders.ToArray())
             {
                 int id=order.Id;long now=S.Clock.Now.TotalMinutes;
@@ -86,17 +89,29 @@ namespace PCShopSell.Game.UI
                     order.Stage==DiningStage.Ready?"传菜台待上菜":order.Stage==DiningStage.Eating?"正在用餐":order.Stage==DiningStage.Completed?"已付款，待收桌":order.Stage==DiningStage.Burnt?"焦糊，需重做":"顾客已离开";
                 Line(C,(order.Table+1)+"号桌 · "+GameSession.RecipeNames[order.Recipe]+" · ¥"+order.Price,17,Ui.Accent);
                 Line(C,status,16,order.Stage==DiningStage.Burnt?Ui.Warn:Ui.Good);
+                var assigned=state.Workers.FirstOrDefault(w=>w.Busy&&w.OrderId==id);
+                bool playerBusy=state.Workers.Any(w=>w.ActorId==GameSession.RestaurantPlayer&&w.Busy);
+                if(assigned!=null)
+                {
+                    string who=assigned.ActorId==GameSession.RestaurantPlayer?"你":S.FindEmployee(assigned.ActorId)?.Person.Name??"员工";
+                    string target=FurnitureCatalog.Get(assigned.Station)?.Name??"操作位置";
+                    Line(C,who+"："+(assigned.OperateUntil<0?"前往"+target:"正在"+GameSession.RestaurantJobName(assigned.Job)),15,Ui.Good);
+                    if(assigned.ActorId==GameSession.RestaurantPlayer)Ui.Button(C,"取消本次操作",()=>{S.CancelPlayerRestaurantWork();RebuildDock();},15);
+                }
+                void Request(RestaurantJob job){_ctrl.RequestRestaurantWork(id,job);RebuildDock();}
+                bool canRequest=assigned==null&&!playerBusy;
                 var bar=Ui.Row(C,36,4);
-                if(order.Stage==DiningStage.Waiting)Ui.Size(Ui.Button(bar,"备料投锅",()=>{S.StartRestaurantCooking(id);RebuildDock();},17,Ui.ButtonHot),-1,36,1);
-                if(order.Stage==DiningStage.Cooking)Ui.Size(Ui.Button(bar,"出锅到传菜台",()=>{S.PlateRestaurantOrder(id);RebuildDock();},17,Ui.ButtonHot,now>=order.ReadyAt&&now<order.BurnAt),-1,36,1);
-                if(order.Stage==DiningStage.Ready)Ui.Size(Ui.Button(bar,"上菜",()=>{S.ServeRestaurantOrder(id);RebuildDock();},17,Ui.ButtonHot),-1,36,1);
+                if(order.Stage==DiningStage.Waiting)Ui.Size(Ui.Button(bar,"备料投锅",()=>Request(RestaurantJob.Cook),17,Ui.ButtonHot,canRequest),-1,36,1);
+                if(order.Stage==DiningStage.Cooking)Ui.Size(Ui.Button(bar,"出锅到传菜台",()=>Request(RestaurantJob.Plate),17,Ui.ButtonHot,canRequest&&now>=order.ReadyAt&&now<order.BurnAt),-1,36,1);
+                if(order.Stage==DiningStage.Ready)Ui.Size(Ui.Button(bar,"上菜",()=>Request(RestaurantJob.Serve),17,Ui.ButtonHot,canRequest),-1,36,1);
                 if(order.Stage==DiningStage.Completed||order.Stage==DiningStage.Left||order.Stage==DiningStage.Burnt)
-                    Ui.Size(Ui.Button(bar,order.Stage==DiningStage.Burnt?"倒掉重做":"收桌",()=>{S.ClearRestaurantOrder(id);RebuildDock();},17),-1,36,1);
+                    Ui.Size(Ui.Button(bar,order.Stage==DiningStage.Burnt?"倒掉重做":"收桌",()=>Request(RestaurantJob.Clear),17,Ui.ButtonBg,canRequest),-1,36,1);
             }
             if(state.Orders.Count==0)Para(C,"等待顾客入座；请检查营业时间、厨房设施和餐桌。",17,Ui.Dim);
         }
         private void BuildUsedCounter(SpecialBusinessState state)
         {
+            BuildUsedCheckout();
             Para(C,"先听卖家说法，再决定出价。买下后才能鉴定。人格只影响可信度，不保证每次真假；未鉴定的物品不能出售。",15,Ui.Dim);
             Ui.Size(Ui.Button(C,state.AutoPurchase?"收购师代管：开":"收购师代管：关",()=>{state.AutoPurchase=!state.AutoPurchase;RebuildDock();},17,state.AutoPurchase?Ui.ButtonHot:Ui.ButtonBg),-1,36);
             SpecialNumber(C,"每日收购预算",state.DailyBudget,100,0,100000,value=>state.DailyBudget=value);
@@ -104,8 +119,10 @@ namespace PCShopSell.Game.UI
             var risk=Ui.Row(C,34,4);Ui.Size(Ui.Label(risk,"风险倾向："+(state.Risk<.4?"谨慎":state.Risk>.6?"积极":"均衡"),16),-1,34,1);
             foreach(var level in new[]{.2,.5,.8}){double choice=level;Ui.Size(Ui.Button(risk,level<.4?"谨慎":level>.6?"积极":"均衡",()=>{state.Risk=choice;RebuildDock();},15),65);}
             Line(C,"今日收购已支出 ¥"+state.SpentToday+" · 员工须实际在岗；智力越高判断越可靠，仍可能亏损。",15,Ui.Dim);
-            foreach(var sold in state.Used.Where(i=>i.Sold).Reverse().Take(3))Line(C,"已售 "+GameSession.UsedNames[sold.Product]+" · "+GameSession.ConditionName(sold.Condition)+" · 收 "+sold.Cost+" / 售 "+sold.Price+" · 毛利 ¥"+(sold.Price-sold.Cost),15,sold.Price>=sold.Cost?Ui.Good:Ui.Warn);
-            foreach(var item in state.Used.Where(i=>!i.Sold).ToArray())
+            BuildUsedSalesHistory(C,state);
+            Line(C,"收购与待处理物品",19,Ui.Accent);
+            Para(C,"鉴定后确认售价，商品自动上到“二手转售品”货架；已上架商品请到库存或货架查看。",15,Ui.Dim);
+            foreach(var item in state.Used.Where(i=>!i.Sold&&!i.Listed).ToArray())
             {
                 int id=item.Id;string key=S.CurrentShop.Place.Id+":"+id;
                 Line(C,GameSession.UsedNames[item.Product]+" #"+id,18,Ui.Accent);
@@ -117,7 +134,7 @@ namespace PCShopSell.Game.UI
                     SpecialNumber(C,"我的报价",bid,1,1,1000000,value=>_usedBids[key]=value);
                     var bar=Ui.Row(C,36,4);
                     Ui.Size(Ui.Button(bar,"出价收购",()=>{S.OfferUsedPrice(id,bid);RebuildDock();},17,Ui.ButtonHot),-1,36,1);
-                    Ui.Size(Ui.Button(bar,"不收",()=>{S.DeclineUsedSeller(id);RebuildDock();},17),90,36);
+                    Ui.Size(Ui.Button(bar,"拒收",()=>{S.DeclineUsedSeller(id);RebuildDock();},17,Ui.Warn),90,36).name="DeclineUsed_"+id;
                 }
                 else if(!item.Inspected)
                 {
@@ -130,7 +147,7 @@ namespace PCShopSell.Game.UI
                     long price=_usedBids.TryGetValue(key+":sale",out var chosen)?chosen:Math.Max(1,item.Price);
                     SpecialNumber(C,"出售标价",price,1,1,1000000,value=>_usedBids[key+":sale"]=value);
                     var bar=Ui.Row(C,36,4);
-                    Ui.Size(Ui.Button(bar,item.Listed?"确认改价":"放入销售展示台",()=>{S.ListUsedItem(id,price);RebuildDock();},17,Ui.ButtonHot),-1,36,1);
+                    Ui.Size(Ui.Button(bar,"确认售价并上架",()=>{S.ListUsedItem(id,price);RebuildDock();},17,Ui.ButtonHot),-1,36,1).name="ListUsed_"+id;
                     Ui.Size(Ui.Button(bar,"丢弃",()=>ConfirmBusiness("丢弃旧物","将损失这件旧物及收购成本。",()=>{S.DiscardUsed(id);RebuildDock();}),16,Ui.Warn),70,36);
                 }
             }

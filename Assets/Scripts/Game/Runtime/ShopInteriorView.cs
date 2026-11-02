@@ -43,6 +43,7 @@ namespace PCShopSell.Game.Runtime
 
             /// <summary>拿的是杂货架上的杂货（不是配件）。</summary>
             public bool IsGoods;
+            public int ResaleId;
 
             /// <summary>拿的杂货属于哪类货架（ShelfKinds 的 id）。</summary>
             public string GoodsKind;
@@ -1078,7 +1079,7 @@ namespace PCShopSell.Game.Runtime
                     }
                     var preferred = employee.Role == EmployeeRole.Cashier ? _clerkStand
                         : employee.Role == EmployeeRole.Assembler ? _assemblerStand
-                        : employee.Role == EmployeeRole.Buyer ? new Vector3(_doorX, 0, 1.5f) : _salesStand;
+                        : employee.Role == EmployeeRole.Buyer||employee.Role==EmployeeRole.Chef||employee.Role==EmployeeRole.Waiter ? new Vector3(_doorX, 0, .9f) : _salesStand;
                     Vector3 stand = FindStaffStand(preferred, occupied);
                     occupied.Add(stand);
                     figure.transform.localPosition = stand;
@@ -1090,7 +1091,11 @@ namespace PCShopSell.Game.Runtime
             foreach (var employee in staff)
             {
                 var figure = _staffFigures[employee.Person.Id];
+                var restaurantWorker=session.RestaurantActor(session.CurrentShop.Place.Id,employee.Person.Id);
+                if(restaurantWorker!=null)ApplyRestaurantActor(session,restaurantWorker,figure);
+                else RestaurantCarry(figure,false);
                 string state = employee.Role == EmployeeRole.Assembler ? "\n" + AssemblerState(session) : "";
+                if(restaurantWorker?.Busy==true)state="\n"+(restaurantWorker.OperateUntil<0?"走向操作位置 · ":"操作中 · ")+GameSession.RestaurantJobName(restaurantWorker.Job);
                 _emotes.Add(new EmoteInfo { Pos = figure.transform.position + Vector3.up * 2.15f,
                     PersonId = session.PersonIdOf(employee.Person),
                     Text = employee.Person.Name + " · " + GameSession.RoleName(employee.Role) + state,
@@ -1160,6 +1165,7 @@ namespace PCShopSell.Game.Runtime
             foreach (GameObject g in _buildGlow) g.SetActive(building);
             UpdateStaff(s);
             UpdateSpecialBusinessVisuals(s);
+            UpdateRestaurantPlayer(s);
 
             // Shelf meshes are presentation, not simulation. 8x must not rebuild
             // every shelf eight times as often (nor freeze stock refresh when paused).
@@ -1180,13 +1186,24 @@ namespace PCShopSell.Game.Runtime
                 }
                 foreach (ShelfKind gk in ShelfKinds.GoodsKinds)
                     foreach (var kv in shop.ShelfFillOf(gk).Goods) BumpGoods(gk.Id, kv.Value);
+                var resaleProducts=shop.ShelfFillOf(ShelfKinds.Get("secondhand")).Resale.Select(o=>o.Product).ToList();
+                int resaleOffset=0;
+                BumpGoods("secondhand",resaleProducts.Count);
                 // 顾客还在走去拿货的路上：货架上还摆着；正在走去放回去的：货架上还没有
                 var pcs = new List<int>(shop.DisplayPcs);
                 foreach (Visitor pv in _visitors.Values)
                     if (pv.Phase == 1)
                     {
                         if (pv.DisplayPc) pcs.Add(pv.PcTier);
-                        else if (pv.IsGoods) BumpGoods(pv.GoodsKind, 1);
+                        else if (pv.IsGoods)
+                        {
+                            BumpGoods(pv.GoodsKind, 1);
+                            if(pv.GoodsKind=="secondhand")
+                            {
+                                var item=s.SpecialBusiness(s.CurrentShop.Place.Id).Used.FirstOrDefault(i=>i.Id==pv.ResaleId);
+                                if(item!=null)resaleProducts.Add(item.Product);
+                            }
+                        }
                         else Bump((pv.ItemCat, pv.ItemBoxed), 1);
                     }
                 foreach (Visitor pv in _leaving)
@@ -1218,6 +1235,13 @@ namespace PCShopSell.Game.Runtime
                         goodsOn[sh.KindId]=Mathf.Max(0,(goodsOn.TryGetValue(sh.KindId,out int left)?left:0)-goodsTotal);
                         if (sh.EmptyMark != null) sh.EmptyMark.SetActive(goodsTotal == 0);
                         for (int i = 0; i < sh.GoodsItems.Count; i++) sh.GoodsItems[i].SetActive(i < goodsTotal);
+                        if(sh.KindId=="secondhand")
+                            for(int i=0;i<goodsTotal;i++)
+                            {
+                                int product=resaleOffset<resaleProducts.Count?resaleProducts[resaleOffset]:0;resaleOffset++;
+                                var model=sh.GoodsItems[i].transform;
+                                for(int j=0;j<model.childCount;j++)model.GetChild(j).gameObject.SetActive(j==product);
+                            }
                         continue;
                     }
                     int boxedHave = counts.TryGetValue((sh.Category, true), out int bh) ? bh : 0;
@@ -1267,7 +1291,7 @@ namespace PCShopSell.Game.Runtime
                     v.Build = c.Intent == CustomerIntent.Build;
                     v.Want = c.DesiredCategory;
                     v.Target = _shelfSpots.Count == 0 ? Center
-                        : v.Build ? Jitter(RandomDeskSpot())
+                        : shop.RetailKind=="secondhand"?Jitter(GoodsShelfSpot("secondhand",_door)):v.Build ? Jitter(RandomDeskSpot())
                         : Jitter(ShelfSpotFor(c.DesiredCategory, _door, _rng));
                     v.BrowseTimer = 0.5f + (float)_rng.NextDouble() * 1.5f;
                     _visitors[c.Id] = v;
@@ -1276,13 +1300,14 @@ namespace PCShopSell.Game.Runtime
                 if (c.Spend.IsPositive) v.Spend = c.Spend.ToString();
                 bool waiting = queueIds.TryGetValue(c.Id, out int qi);
                 v.Bubble.SetActive(waiting && v.Phase == 2);
-                if (waiting && (c.Item != null || c.DisplayTier >= 0 || c.GoodsId != null))
+                if (waiting && (c.Item != null || c.DisplayTier >= 0 || c.GoodsId != null || c.ResaleId>0))
                 {
                     if (v.Phase == 0)
                     {
                         // 挑中了：先去货架 / 展示台前把货拿下来
                         v.DisplayPc = c.DisplayTier >= 0;
-                        v.IsGoods = c.GoodsId != null;
+                        v.IsGoods = c.GoodsId != null || c.ResaleId>0;
+                        v.ResaleId = c.ResaleId;
                         if (v.DisplayPc)
                         {
                             v.PcTier = c.DisplayTier;
@@ -1290,7 +1315,7 @@ namespace PCShopSell.Game.Runtime
                         }
                         else if (v.IsGoods)
                         {
-                            v.GoodsKind = ShelfKinds.ForGift(c.GoodsId)?.Id;
+                            v.GoodsKind = c.ResaleId>0?"secondhand":ShelfKinds.ForGift(c.GoodsId)?.Id;
                             v.PickSpot = Jitter(GoodsShelfSpot(v.GoodsKind, v.Go.transform.position));
                         }
                         else
@@ -1423,6 +1448,7 @@ namespace PCShopSell.Game.Runtime
         private static string Say(ShopCustomer c, Visitor v, ShopSimulation shop, GameTimestamp now)
         {
             if (v.Phase == 2) return null;
+            if(v.Phase==1&&c.ResaleId>0)return $"就要这件二手货！\n<b>{c.ItemName}</b>\n<color={Ok}>{c.Spend}</color>";
             if (v.Phase == 1 && c.DisplayTier >= 0)
                 return $"展示台这台我要了！\n<b>{c.ItemName}</b>\n<color={Ok}>{c.Spend}</color>";
             if (v.Phase == 1 && c.GoodsId != null)

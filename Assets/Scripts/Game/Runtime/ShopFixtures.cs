@@ -160,6 +160,7 @@ namespace PCShopSell.Game.Runtime
             switch (kindId)
             {
                 case "smoke": return 0;
+                case "secondhand": return 12;
                 case "liquor": return 1;
                 case "drink": return 2;
                 case "snack": return 3;
@@ -227,6 +228,37 @@ namespace PCShopSell.Game.Runtime
             t.localPosition = pos;
             switch (kind)
             {
+                case 12:
+                    for(int product=0;product<4;product++)
+                    {
+                        var old=new GameObject("UsedProduct_"+product);old.transform.SetParent(t,false);
+                        var p=old.transform;var metal=Mats.Lit(ArtDirection.Brass);var dark=Mats.Lit(ArtDirection.Ink);
+                        if(product==0)
+                        {
+                            Prims.Box(p,"LampBase",new Vector3(0,.015f,0),new Vector3(.12f,.03f,.1f),dark);
+                            Prims.Box(p,"LampStem",new Vector3(0,.12f,0),new Vector3(.018f,.21f,.018f),metal);
+                            Prims.Box(p,"LampShade",new Vector3(0,.24f,0),new Vector3(.15f,.09f,.12f),Mats.Lit(ArtDirection.Cream));
+                        }
+                        else if(product==1)
+                        {
+                            Prims.Box(p,"Speaker",new Vector3(0,.14f,0),new Vector3(.14f,.28f,.13f),dark);
+                            Prims.Shape(PrimitiveType.Sphere,p,"Woofer",new Vector3(0,.1f,-.065f),new Vector3(.1f,.1f,.012f),Mats.Lit(Color.gray));
+                            Prims.Shape(PrimitiveType.Sphere,p,"Tweeter",new Vector3(0,.22f,-.065f),new Vector3(.05f,.05f,.012f),metal);
+                        }
+                        else if(product==2)
+                        {
+                            Prims.Box(p,"WatchStrap",new Vector3(0,.025f,0),new Vector3(.05f,.04f,.19f),dark);
+                            Prims.Box(p,"WatchFace",new Vector3(0,.05f,0),new Vector3(.09f,.03f,.09f),metal);
+                            Prims.Box(p,"Dial",new Vector3(0,.068f,0),new Vector3(.065f,.008f,.065f),Mats.Lit(ArtDirection.Cream));
+                        }
+                        else
+                        {
+                            Prims.Box(p,"OrnamentBase",new Vector3(0,.025f,0),new Vector3(.14f,.05f,.11f),Mats.Lit(ArtDirection.Wood));
+                            Prims.Shape(PrimitiveType.Sphere,p,"Ornament",new Vector3(0,.14f,0),new Vector3(.11f,.2f,.09f),metal);
+                        }
+                        old.SetActive(product==0);
+                    }
+                    break;
                 case 11:
                     Color cloth=((int)Mathf.Round(pos.x*10)&1)==0?ArtDirection.Clay:ArtDirection.Sage;
                     Prims.Box(t,"FoldedTShirt",new Vector3(0,.055f,-.025f),new Vector3(.23f,.07f,.23f),Mats.Lit(cloth));

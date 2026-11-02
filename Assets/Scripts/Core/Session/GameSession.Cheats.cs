@@ -68,7 +68,7 @@ namespace PCShopSell.Core.Session
             Flags.Add("tutorial:issued:" + q.Id);
             Flags.Add("tutorial:" + q.Id);
             q.Grant?.Invoke(this);
-            Say($"作弊：任务「{q.Title}」直接完成，奖励：{q.Reward}。");
+            Say($"作弊：任务「{q.Title}」直接完成，奖励：{q.RewardText(this)}。");
             return true;
         }
 

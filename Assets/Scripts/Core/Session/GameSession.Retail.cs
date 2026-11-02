@@ -21,19 +21,16 @@ namespace PCShopSell.Core.Session
         public string RetailTypeBlocker(string kind)
         {
             if (!RetailShopTypes.All.Contains(kind)) return "请选择店铺类型";
-            if (kind != "computer" && !OtherRetailShopsUnlocked) return "先开电脑店，第 15 天起可开其他类型的分店";
+            if (kind != "computer" && HasShop && !OtherRetailShopsUnlocked) return "第 15 天起可开其他类型的分店";
             return null;
         }
         public bool SignRetailLease(string placeId, bool newShop, string kind)
         {
             if(City.HasPlace(placeId)&&IsDedicatedVenue(City.GetPlace(placeId)))return SignLease(placeId,newShop);
-            string why = RetailTypeBlocker(kind);
+            string why = HasShop&&!newShop ? (RetailShopTypes.All.Contains(kind)?null:"请选择店铺类型") : RetailTypeBlocker(kind);
             if (why != null) return Fail(why);
-            if (!newShop && kind != RetailKind) return Fail("搬店会保留原来的经营类型。");
-            if (!SignLease(placeId, newShop)) return false;
-            if (PendingLease != null) PendingRetailKind = kind;
-            else if (newShop) { _focus.RetailKind = kind; _focus.Sim.RetailKind = kind; }
-            return true;
+            if (HasShop && !newShop && kind != RetailKind) return Fail("搬店会保留原来的经营类型。");
+            return SignLease(placeId, newShop, kind);
         }
         public bool SetRetailKind(string kind) => SetShopMainCategory(kind);
         public bool SetShopMainCategory(string kind)
@@ -44,7 +41,7 @@ namespace PCShopSell.Core.Session
             if(IsSpecialBusiness(_focus)&&SpecialBusinessBusy(_focus))return Fail("请先完成或清理餐馆订单、二手库存及卖家，再转型。");
             if((kind=="restaurant"||kind=="secondhand")&&(PlayerShop.Orders.Count>0||PlayerShop.Queue.Count>0))return Fail("请先完成装机订单和排队结账，再转型。");
             _focus.RetailKind=kind;PlayerShop.RetailKind=kind;
-            PlayerShop.TradingEnabled=!IsSpecialBusiness(_focus);
+            PlayerShop.TradingEnabled=kind!="restaurant";
             if(IsSpecialBusiness(_focus))PlayerShop.ClearCustomers();
             foreach(var competition in _cityCompetitions.Where(e=>e.ShopId==_focus.Place.Id && e.RetailKind!=kind))competition.Ended=true;
             ApplyCityRetailDemand();

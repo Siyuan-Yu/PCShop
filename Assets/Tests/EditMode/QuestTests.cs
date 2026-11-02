@@ -59,6 +59,131 @@ namespace PCShopSell.Tests
             StringAssert.Contains("货架 0/1", s.CurrentQuest().Progress(s));
         }
 
+        [TestCase("computer")]
+        [TestCase("restaurant")]
+        [TestCase("clothing")]
+        [TestCase("models")]
+        [TestCase("secondhand")]
+        public void FirstShopRewardsMatchSelectedBusinessAndOnlyPayOnce(string kind)
+        {
+            using(var s=Make(false))
+            {
+                GameSessionTests.Teleport(s,"agency");Assert.IsNull(s.RetailTypeBlocker(kind));
+                Assert.True(s.SignRetailLease("pc",false,kind));Assert.AreEqual(kind,s.RetailKind);
+                foreach(string id in GameSession.OpeningFurniture(kind))Assert.AreEqual(1,s.FurnitureStored(id),id);
+                if(kind=="restaurant")Assert.Zero(s.FurnitureStored(FurnitureCatalog.Shelf));
+                s.Flags.Add(GameSession.MallBoughtFlag);s.RefreshQuestProgress();
+                int stock=PartCatalog.All.Sum(p=>s.PlayerShop.Stock.CountAll(p));
+                if(kind=="computer")Assert.AreEqual(2,stock);else Assert.Zero(stock);
+                if(kind=="restaurant")
+                {
+                    Assert.AreEqual(2,s.KitchenRice(s.CurrentShop));
+                    foreach(string id in GameSession.RecipeIngredients)Assert.AreEqual(4,s.KitchenIngredientCount(s.CurrentShop,id));
+                }
+                if(kind=="secondhand")Assert.AreEqual(2,s.SpecialBusiness(s.CurrentShop.Place.Id).Used.Count(i=>i.Owned&&i.Inspected&&!i.Sold));
+                if(kind=="clothing"||kind=="models")
+                {
+                    Assert.AreEqual(6,s.PlayerShop.Stock.GoodsLines().Sum(l=>l.Value));
+                    Assert.True(s.PlayerShop.Stock.GoodsLines().All(l=>RetailShopTypes.Sells(kind,l.Key)));
+                }
+                string reward=Quests.Get("rent").RewardText(s);
+                s.RefreshQuestProgress();
+                using(var loaded=Reload(s))
+                {
+                    loaded.RefreshQuestProgress();
+                    foreach(string id in GameSession.OpeningFurniture(kind))Assert.AreEqual(1,loaded.FurnitureStored(id));
+                    Assert.AreEqual(reward,Quests.Get("rent").RewardText(loaded));
+                    if(kind=="restaurant")Assert.AreEqual(2,loaded.KitchenRice(loaded.CurrentShop));
+                    if(kind=="secondhand")loaded.SpecialBusiness(loaded.CurrentShop.Place.Id).Used.Clear();
+                    GameSessionTests.Teleport(loaded,"pc");Assert.True(loaded.SetShopMainCategory("computer"));
+                    loaded.RefreshQuestProgress();Assert.AreEqual(reward,Quests.Get("rent").RewardText(loaded),"转型不改写已领礼包，也不重发");
+                }
+            }
+        }
+        [Test]
+        public void RentalThenBusinessConfirmationSurvivesLoadWithoutEarlyRewardsOrDoubleCharge()
+        {
+            using(var s=Make(false))
+            {
+                GameSessionTests.Teleport(s,"agency");Assert.True(s.SignLeaseThenChooseKind("pc",false));
+                var paid=s.Ledger.Balance;Assert.True(s.HasShop);Assert.AreEqual("pc",s.PendingShopKindPlaceId);
+                s.RefreshQuestProgress();Assert.False(s.QuestCompleted("rent"));Assert.Zero(s.FurnitureStored(FurnitureCatalog.Shelf));
+                using(var loaded=Reload(s))
+                {
+                    Assert.AreEqual("pc",loaded.PendingShopKindPlaceId);Assert.AreEqual(paid,loaded.Ledger.Balance);
+                    Assert.False(loaded.ConfirmOpeningKind("pc","unknown"));Assert.False(loaded.QuestCompleted("rent"));
+                    Assert.True(loaded.ConfirmOpeningKind("pc","restaurant"));Assert.IsNull(loaded.PendingShopKindPlaceId);
+                    Assert.AreEqual("restaurant",loaded.RetailKind);Assert.AreEqual(paid,loaded.Ledger.Balance);
+                    Assert.True(loaded.QuestCompleted("rent"));Assert.AreEqual(1,loaded.FurnitureStored("restaurant_stove"));
+                    Assert.Zero(loaded.FurnitureStored(FurnitureCatalog.Shelf));Assert.False(loaded.ConfirmOpeningKind("pc","computer"));
+                }
+            }
+        }
+        [Test]
+        public void OpeningChoiceRequiresExplicitSelectionAndHoldsTimeUntilConfirmed()
+        {
+            using(var s=Make(false))
+            {
+                GameSessionTests.Teleport(s,"agency");Assert.True(s.SignLeaseThenChooseKind("pc",false));
+                var cash=s.Ledger.Balance;
+                var root=new UnityEngine.GameObject("OpeningChoiceUiRegression");root.SetActive(false);
+                var controller=root.AddComponent<PCShopSell.Game.GameController>();
+                typeof(PCShopSell.Game.GameController).GetProperty("Session").SetValue(controller,s);
+                typeof(PCShopSell.Game.GameController).GetProperty("City").SetValue(controller,s.City);
+                var previousEventSystem=UnityEngine.EventSystems.EventSystem.current;
+                var ui=new PCShopSell.Game.UI.GameUi(controller);
+                try
+                {
+                    typeof(PCShopSell.Game.UI.GameUi).GetMethod("RefreshOpeningKindChoice",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).Invoke(ui,null);
+                    UnityEngine.UI.Button Button(string name)=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<UnityEngine.UI.Button>()).Single(b=>b.name==name);
+                    Assert.True(ui.AnyModalOpen);Assert.True(s.Time.IsHeld);Assert.False(Button("ConfirmOpeningKind").interactable);
+                    Button("OpeningKind_restaurant").onClick.Invoke();
+                    Assert.False(s.QuestCompleted("rent"),"点选类型本身不领取礼包");
+                    Assert.True(Button("ConfirmOpeningKind").interactable);Button("ConfirmOpeningKind").onClick.Invoke();
+                    Assert.False(ui.AnyModalOpen);Assert.False(s.Time.IsHeld);Assert.AreEqual(cash,s.Ledger.Balance);
+                    Assert.AreEqual("restaurant",s.RetailKind);Assert.AreEqual(1,s.FurnitureStored("restaurant_pass"));
+                }
+                finally
+                {
+                    ui.CloseAllWindows();foreach(var canvas in ui.Canvases)UnityEngine.Object.DestroyImmediate(canvas.gameObject);
+                    UnityEngine.Object.DestroyImmediate(root);
+                    if(previousEventSystem==null&&UnityEngine.EventSystems.EventSystem.current!=null)UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);
+                }
+            }
+        }
+        [Test]
+        public void AdvanceLeaseKeepsRestaurantChoiceUntilHandoverAndThenGivesCorrectReward()
+        {
+            using(var s=Make(false))
+            {
+                s.EventsEnabled=false;GameSessionTests.Teleport(s,"agency");s.DebugAddListing("pc",2,20);
+                Assert.True(s.SignLeaseThenChooseKind("pc",false));Assert.False(s.HasShop);
+                Assert.True(s.ConfirmOpeningKind("pc","restaurant"));
+                Assert.False(s.QuestCompleted("rent"));Assert.Zero(s.FurnitureStored("restaurant_stove"));
+                using(var loaded=Reload(s))
+                {
+                    loaded.Clock.Restore(new GameDate(1),1439);loaded.Clock.Advance(1);
+                    Assert.True(loaded.HasShop);Assert.AreEqual("restaurant",loaded.RetailKind);
+                    Assert.AreEqual(1,loaded.FurnitureStored("restaurant_stove"));Assert.Zero(loaded.FurnitureStored(FurnitureCatalog.Shelf));
+                }
+            }
+        }
+        [Test]
+        public void LegacyRestaurantOpeningRewardAddsMissingFacilitiesOnceWithoutRemovingOldItems()
+        {
+            using(var s=Make(true))
+            {
+                GameSessionTests.Teleport(s,"pc");Assert.True(s.SetShopMainCategory("restaurant"));
+                s.Flags.RemoveWhere(f=>f.StartsWith("tutorial:reward:"));
+                int oldParts=PartCatalog.All.Sum(p=>s.PlayerShop.Stock.CountAll(p));
+                s.CurrentShop.Layout.Add(new PlacedFurniture{Id="restaurant_stove",X=1,Z=1});
+                s.RefreshQuestProgress();
+                Assert.Zero(s.FurnitureStored("restaurant_stove"),"已有灶台不再重复补发");
+                Assert.AreEqual(1,s.FurnitureStored("restaurant_pass"));Assert.AreEqual(2,s.KitchenRice(s.CurrentShop));
+                s.RefreshQuestProgress();Assert.AreEqual(1,s.FurnitureStored("restaurant_pass"));Assert.AreEqual(2,s.KitchenRice(s.CurrentShop));
+                Assert.AreEqual(oldParts,PartCatalog.All.Sum(p=>s.PlayerShop.Stock.CountAll(p)));
+            }
+        }
         [Test]
         public void FittedShop_SkipsToShelvesStockAndFirstSale()
         {

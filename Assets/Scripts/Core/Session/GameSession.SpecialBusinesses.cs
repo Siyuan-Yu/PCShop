@@ -15,17 +15,19 @@ namespace PCShopSell.Core.Session
         public int Id, Product, Personality, Statement, SellerId;
         public UsedCondition Condition, Claim;
         public long Asking, Minimum, Cost, Price, ExpiresAt;
+        public long SalePrice,SoldAt;
         public bool Owned, Inspected, Listed, Sold;
         public UsedItem Copy() => (UsedItem)MemberwiseClone();
     }
     [Serializable] public sealed class DiningOrder
     {
         public int Id, Recipe, Table;
+        public int Stove=-1;
         public DiningStage Stage;
         public long Arrived, Started, ReadyAt, BurnAt, EatUntil, Price;
         public DiningOrder Copy() => (DiningOrder)MemberwiseClone();
     }
-    [Serializable] public sealed class SpecialBusinessState
+    [Serializable] public sealed partial class SpecialBusinessState
     {
         public string ShopId;
         public int NextId=1, BudgetDay=-1;
@@ -40,7 +42,7 @@ namespace PCShopSell.Core.Session
         public SpecialBusinessState Copy()
         {
             var copy=(SpecialBusinessState)MemberwiseClone();
-            copy.Used=Used.Select(i=>i.Copy()).ToList();copy.Orders=Orders.Select(o=>o.Copy()).ToList();return copy;
+            copy.Used=Used.Select(i=>i.Copy()).ToList();copy.Orders=Orders.Select(o=>o.Copy()).ToList();copy.Workers=(Workers??new List<RestaurantWorker>()).Select(w=>w.Copy()).ToList();return copy;
         }
     }
     [Serializable] public sealed class SavedFixedSalePrice {public string ShopId,Key;public long Price;}
@@ -81,7 +83,14 @@ namespace PCShopSell.Core.Session
                 if(!shop.Layout.Any(p=>FurnitureCatalog.Get(p.Id)?.Role==FurnitureRole.Fridge))missing.Add("冰箱");
                 return missing.Count==0?null:string.Join("、",missing);
             }
-            if(shop.RetailKind=="secondhand")return Furnished(shop,"used_buydesk")<1?"收购鉴定台":Furnished(shop,"used_display")<1?"二手销售展示台":null;
+            if(shop.RetailKind=="secondhand")
+            {
+                var missing=new List<string>();
+                foreach(string id in new[]{"used_buydesk","used_display",FurnitureCatalog.ShopCounter})
+                    if(Furnished(shop,id)<1)missing.Add(FurnitureCatalog.Get(id).Name);
+                if(!shop.Layout.Any(p=>FurnitureCatalog.Get(p.Id)?.Fixture==FixtureKind.Shelf))missing.Add("货架（设置为二手转售品）");
+                return missing.Count==0?null:string.Join("、",missing);
+            }
             return null;
         }
         private bool SpecialPlayer(OwnedShop shop)=>shop!=null&&InPlayerShop&&CurrentShop==shop&&!_sleeping&&!IsWorking&&!CityActivityExclusive&&!IsRenovating&&!IsGameOver;
@@ -92,7 +101,7 @@ namespace PCShopSell.Core.Session
         {
             foreach(var shop in MyShops.Where(IsSpecialBusiness))
             {
-                shop.Sim.TradingEnabled=false;
+                shop.Sim.TradingEnabled=shop.RetailKind=="secondhand";
                 var state=SpecialBusiness(shop.Place.Id);
                 // Minute stepping preserves cooking, waiting and settlement order during sleep/fast-forward.
                 for(long minute=from.TotalMinutes+1;minute<=to.TotalMinutes;minute++)
@@ -124,7 +133,7 @@ namespace PCShopSell.Core.Session
             if(state.Used.Count(i=>i.Owned&&!i.Sold)>=20)return Fail("最多暂存20件旧物，请先卖出或清理库存。");
             var payment=Money.FromYuan(bid);
             if(!Ledger.TryDebit(Clock.Today,"进货",payment,"二手收购 "+UsedNames[item.Product],LedgerAttribution.ForShop(shop.Place.Id,"used:"+item.Id+":buy","采购")))return Fail("现金不足。");
-            item.Owned=true;item.Cost=bid;state.SpentToday+=bid;return true;
+            item.Owned=true;item.Cost=bid;state.SpentToday+=bid;Say("已收购"+UsedNames[item.Product]+"，支付 ¥"+bid+"。请鉴定后确认售价上架。");return true;
         }
         public bool OfferUsedPrice(int id,long bid)
         {
@@ -134,7 +143,8 @@ namespace PCShopSell.Core.Session
         public bool DeclineUsedSeller(int id)
         {
             if(!SpecialPlayer(CurrentShop))return false;var s=SpecialBusiness(CurrentShop.Place.Id);
-            return s.Used.RemoveAll(i=>i.Id==id&&!i.Owned)>0;
+            bool removed=s.Used.RemoveAll(i=>i.Id==id&&!i.Owned)>0;
+            if(removed)Say("已拒收，卖家带走物品，没有扣款。");return removed;
         }
         public bool InspectUsed(int id)
         {
@@ -147,13 +157,13 @@ namespace PCShopSell.Core.Session
         {
             if(!SpecialPlayer(CurrentShop)||CurrentShop.RetailKind!="secondhand"||price<1||price>1000000)return false;
             var s=SpecialBusiness(CurrentShop.Place.Id);var item=s.Used.FirstOrDefault(i=>i.Id==id&&i.Owned&&i.Inspected&&!i.Sold);
-            if(item==null)return false;
-            if(!item.Listed&&s.Used.Count(i=>i.Listed&&!i.Sold)>=Furnished(CurrentShop,"used_display")*4)return Fail("销售展示台已满，每台可展示4件。");
-            item.Price=price;item.Listed=true;return true;
+            if(!SetUsedListing(CurrentShop,item,price))return false;
+            Say(UsedNames[item.Product]+"已按 ¥"+price+" 上架到二手转售品货架，等待顾客挑选、结账。");return true;
         }
         public bool DiscardUsed(int id)
         {
             if(!SpecialPlayer(CurrentShop))return false;
+            if(UsedReserved(CurrentShop,id))return Fail("顾客正在结账，不能丢弃这件商品。");
             return SpecialBusiness(CurrentShop.Place.Id).Used.RemoveAll(i=>i.Id==id&&i.Owned&&!i.Sold)>0;
         }
         public static double AppraiserAccuracy(int intelligence)=>.3+.006*Math.Max(0,Math.Min(100,intelligence));
@@ -167,15 +177,6 @@ namespace PCShopSell.Core.Session
             {
                 state.NextVisit=minute+SpecialVisitInterval(shop,45);
                 if(!state.Used.Any(i=>!i.Owned)&&state.Used.Count(i=>i.Owned&&!i.Sold)<20)state.Used.Add(CreateSeller(state,minute));
-                foreach(var item in state.Used.Where(i=>i.Listed&&!i.Sold).ToArray())
-                {
-                    double ratio=item.Price/(double)Math.Max(1,UsedValue(item));
-                    if(Random.Chance(Math.Max(.01,Math.Min(.9,1.15-ratio*.65))))
-                    {
-                        Ledger.Credit(now.Date,"零售",Money.FromYuan(item.Price),"二手转售 "+UsedNames[item.Product]+" · "+ConditionName(item.Condition),LedgerAttribution.ForShop(shop.Place.Id,"used:"+item.Id+":sale","销售"));
-                        item.Sold=true;state.Revenue+=item.Price;state.Paid++;
-                    }
-                }
             }
             if(!state.AutoPurchase)return;
             var worker=SpecialWorkers(shop,EmployeeRole.Appraiser,now).OrderByDescending(e=>e.Intelligence).FirstOrDefault();
@@ -193,13 +194,28 @@ namespace PCShopSell.Core.Session
             foreach(var item in state.Used.Where(i=>i.Owned&&!i.Sold).ToArray())
             {
                 item.Inspected=true;
-                if(!item.Listed&&state.Used.Count(i=>i.Listed&&!i.Sold)<Furnished(shop,"used_display")*4){item.Price=UsedValue(item);item.Listed=true;}
+                if(!item.Listed&&shop.Sim.ShelfFillOf(PCShopSell.Core.Inventory.ShelfKinds.Get("secondhand")).UsedKg+UsedWeight(item)<=shop.Sim.ShelfCapacityOf(PCShopSell.Core.Inventory.ShelfKinds.Get("secondhand")))
+                    SetUsedListing(shop,item,Math.Max(1,UsedValue(item)));
             }
             if(state.Used.Count>80)state.Used.RemoveAll(i=>i.Sold);
         }
+        public string KitchenColdStorageBlocker
+        {
+            get
+            {
+                if(!InPlayerShop||CurrentShop.RetailKind!="restaurant")return "请到自己的餐馆里整理食材。";
+                if(!CanOpenFridge)return "本店还没有摆放冰箱，请先在装修页摆好冰箱。";
+                if(IsGameOver)return "当前游戏已经结束，不能整理食材。";
+                if(_sleeping)return "请先结束休息，再整理食材。";
+                if(IsWorking)return "正在打工，请收工后再整理食材。";
+                if(CityActivityExclusive)return "正在参加活动，请结束活动后再整理食材。";
+                return null;
+            }
+        }
         public bool ChillKitchenIngredients()
         {
-            if(!SpecialPlayer(CurrentShop)||CurrentShop.RetailKind!="restaurant"||!CanOpenFridge)return Fail("请在摆有冰箱的餐馆里整理食材。");
+            // Stocking an installed fridge is preparation, including while the restaurant is closed for renovation.
+            string blocker=KitchenColdStorageBlocker;if(blocker!=null)return Fail(blocker);
             var shop=CurrentShop;var fridge=shop.Fridge;double capacity=CurrentFridgeLimitKg;int moved=0;
             foreach(var bag in new[]{shop.Locker,shop.Temp})
             {
@@ -227,6 +243,27 @@ namespace PCShopSell.Core.Session
         private IEnumerable<Backpack> KitchenBags(OwnedShop shop)=>new[]{shop.Fridge,shop.Locker,shop.Temp};
         public int KitchenIngredientCount(OwnedShop shop,string id)=>KitchenBags(shop).Sum(b=>b.Food.Ingredient.Where(f=>f.Id==id).Sum(f=>f.Count))+shop.Sim.Stock.GoodsCount("produce:"+id);
         public double KitchenRice(OwnedShop shop)=>KitchenBags(shop).Sum(b=>b.Food.RiceKg)+shop.Sim.Stock.GoodsCount("produce:rice")*.5;
+        private int[] RestaurantMealChoices()
+        {
+            var shop=CurrentShop;
+            if(!SpecialPlayer(shop)||shop.RetailKind!="restaurant"||Furnished(shop,"restaurant_prep")==0
+                ||Furnished(shop,"restaurant_stove")==0||KitchenRice(shop)<.25-1e-9)return Array.Empty<int>();
+            return Enumerable.Range(0,RecipeNames.Length).Where(i=>KitchenIngredientCount(shop,RecipeIngredients[i])>0).ToArray();
+        }
+        private bool EatRestaurantMeal(string meal)
+        {
+            var choices=RestaurantMealChoices();
+            if(choices.Length==0)return false;
+            int recipe=choices[Random.Next(0,choices.Length)];
+            if(!ConsumeRecipe(CurrentShop,recipe))return false;
+            double gain=Math.Min(MealGain,100-Player.Hunger);
+            Player.Hunger+=gain;
+            ApplyDiet(MealNutrition(RecipeIngredients[recipe]),MealMood(RecipeIngredients[recipe]));
+            _lastAutomaticMealMinute=Clock.Now.TotalMinutes;
+            ApplyShelfCapacity();
+            Say($"{meal}在自己的餐厅吃了{RecipeNames[recipe]}，消耗本店大米 0.25 千克和{Ingredients.Get(RecipeIngredients[recipe]).Name} 1 份，饱腹 +{gain:0.#}。");
+            return true;
+        }
         private bool ConsumeRecipe(OwnedShop shop,int recipe)
         {
             string id=RecipeIngredients[recipe];
@@ -241,12 +278,15 @@ namespace PCShopSell.Core.Session
             }
             shop.Sim.Stock.TryRemoveGoods("produce:"+id,1);return true;
         }
-        private bool StartRestaurantOrder(OwnedShop shop,SpecialBusinessState state,DiningOrder order,long minute,bool automatic=false)
+        private bool StartRestaurantOrder(OwnedShop shop,SpecialBusinessState state,DiningOrder order,long minute,bool automatic=false,int stove=-1)
         {
             if(order==null||order.Stage!=DiningStage.Waiting||SpecialFitGap(shop)!=null)return false;
             if(state.Orders.Count(o=>o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Burnt)>=Furnished(shop,"restaurant_stove"))return automatic?false:Fail("锅位正在使用。");
+            var used=state.Orders.Where(o=>o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Burnt).Select(o=>o.Stove).ToArray();
+            if(stove<0)stove=Enumerable.Range(0,Furnished(shop,"restaurant_stove")).First(i=>!used.Contains(i));
+            if(used.Contains(stove))return false;
             if(!ConsumeRecipe(shop,order.Recipe))return automatic?false:Fail("缺少食材：需要0.25千克大米和1份"+Ingredients.Get(RecipeIngredients[order.Recipe]).Name+"，请补入店内库存或冰箱。");
-            order.Stage=DiningStage.Cooking;order.Started=minute;order.ReadyAt=minute+8;order.BurnAt=minute+38;return true;
+            order.Stove=stove;order.Stage=DiningStage.Cooking;order.Started=minute;order.ReadyAt=minute+8;order.BurnAt=minute+38;return true;
         }
         public bool StartRestaurantCooking(int id)
         {
@@ -270,13 +310,12 @@ namespace PCShopSell.Core.Session
         {
             if(!SpecialPlayer(CurrentShop))return false;var s=SpecialBusiness(CurrentShop.Place.Id);var o=s.Orders.FirstOrDefault(x=>x.Id==id);
             if(o==null)return false;
-            if(o.Stage==DiningStage.Burnt&&Clock.Now.TotalMinutes-o.Arrived<100){o.Stage=DiningStage.Waiting;return true;}
+            if(o.Stage==DiningStage.Burnt&&Clock.Now.TotalMinutes-o.Arrived<100){o.Stage=DiningStage.Waiting;o.Stove=-1;return true;}
             if(o.Stage==DiningStage.Completed||o.Stage==DiningStage.Left||o.Stage==DiningStage.Burnt)return s.Orders.Remove(o);return false;
         }
         private void TickRestaurant(OwnedShop shop,SpecialBusinessState state,GameTimestamp now,bool open)
         {
             long minute=now.TotalMinutes;
-            var cooks=SpecialWorkers(shop,EmployeeRole.Chef,now);var waiters=SpecialWorkers(shop,EmployeeRole.Waiter,now);
             foreach(var o in state.Orders.ToArray())
             {
                 if(o.Stage==DiningStage.Cooking&&minute>=o.BurnAt)o.Stage=DiningStage.Burnt;
@@ -287,12 +326,8 @@ namespace PCShopSell.Core.Session
                     state.Revenue+=o.Price;state.Paid++;o.Stage=DiningStage.Completed;
                     SellRestaurantDrink(shop,state,o,now);
                 }
-                if(!open)continue;
-                if(cooks.Length>0&&o.Stage==DiningStage.Waiting)StartRestaurantOrder(shop,state,o,minute,true);
-                if(cooks.Length>0&&o.Stage==DiningStage.Cooking&&minute>=o.ReadyAt&&minute<o.BurnAt)o.Stage=DiningStage.Ready;
-                if(waiters.Length>0&&o.Stage==DiningStage.Ready){o.Stage=DiningStage.Eating;o.EatUntil=minute+15;}
-                if(waiters.Length>0&&(o.Stage==DiningStage.Completed||o.Stage==DiningStage.Left))state.Orders.Remove(o);
             }
+            TickRestaurantWorkers(shop,state,now,open);
             if(!open||minute<state.NextVisit)return;
             state.NextVisit=minute+SpecialVisitInterval(shop,12);
             int tables=Furnished(shop,"restaurant_table");
@@ -318,8 +353,15 @@ namespace PCShopSell.Core.Session
             _specialBusinesses.Clear();
             foreach(var price in d.fixedSalePrices??Array.Empty<SavedFixedSalePrice>())if(price!=null)ShopAt(price.ShopId)?.Sim.RestoreFixedSalePrice(price.Key,price.Price);
             foreach(var saved in d.specialBusinesses??Array.Empty<SpecialBusinessState>())
-                if(saved!=null&&ShopAt(saved.ShopId)!=null){saved.Used=saved.Used??new List<UsedItem>();saved.Orders=saved.Orders??new List<DiningOrder>();_specialBusinesses[saved.ShopId]=saved.Copy();}
-            foreach(var shop in MyShops.Where(IsSpecialBusiness))shop.Sim.TradingEnabled=false;
+                if(saved!=null&&ShopAt(saved.ShopId)!=null)
+                {
+                    saved.Used=saved.Used??new List<UsedItem>();saved.Orders=saved.Orders??new List<DiningOrder>();saved.Workers=saved.Workers??new List<RestaurantWorker>();
+                    var state=saved.Copy();var used=new HashSet<int>();
+                    foreach(var order in state.Orders.Where(o=>o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Burnt))
+                    {if(order.Stove<0||used.Contains(order.Stove))order.Stove=Enumerable.Range(0,state.Orders.Count+1).First(i=>!used.Contains(i));used.Add(order.Stove);}
+                    _specialBusinesses[saved.ShopId]=state;
+                }
+            foreach(var shop in MyShops.Where(IsSpecialBusiness))shop.Sim.TradingEnabled=shop.RetailKind=="secondhand";
         }
     }
 }

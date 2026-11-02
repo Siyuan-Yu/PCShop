@@ -198,6 +198,7 @@ namespace PCShopSell.Game.Runtime
         private void SyncFurniture(GameSession s)
         {
             if (!_furniture.Sync(s.HomeLayout, RoomSpec.Home)) return;
+            CancelBedWalk();
             _spots.Clear();
             bool hasBed = false;
             foreach (PlacedFurniture p in s.HomeLayout)
@@ -257,6 +258,7 @@ namespace PCShopSell.Game.Runtime
 
         public void ResetOwner()
         {
+            CancelBedWalk();
             _sitting = false;
             _owner.GetComponent<FigureMotion>().LocomotionEnabled = true;
             _owner.GetComponent<FigureMotion>().ResetMotion();
@@ -293,7 +295,8 @@ namespace PCShopSell.Game.Runtime
 
         private List<Vector3> _bedWalkPath;
         private int _bedWalkIndex;
-        public void CancelBedWalk() { _bedWalkPath = null; _bedWalkIndex = 0; }
+        private string _homeWalkTarget;
+        public void CancelBedWalk() { _bedWalkPath = null; _bedWalkIndex = 0; _homeWalkTarget = null; }
 
         /// <summary>Walk around furniture to a reachable bedside (or the fallback floor bedding).</summary>
         public int WalkToBed(float dt) => WalkToHomeSpot(Bed, dt);
@@ -301,6 +304,8 @@ namespace PCShopSell.Game.Runtime
         private int WalkToHomeSpot(string target, float dt)
         {
             StandUp();
+            if (_homeWalkTarget != target) CancelBedWalk();
+            _homeWalkTarget = target;
             Vector3 at = _owner.transform.localPosition;
             foreach (var spot in _spots)
                 if (spot.Id == target && DistToRect(new Vector2(at.x, at.z), spot.Area) <= 0.6f) return 1;
@@ -342,7 +347,9 @@ namespace PCShopSell.Game.Runtime
                 _bedWalkPath.Reverse();
                 _bedWalkIndex = 0;
             }
-            if (_bedWalkIndex >= _bedWalkPath.Count) return 1;
+            // Exhausting a cached path is not proof of arrival: the owner or furniture may have moved.
+            // Only the actual target-distance check above may report success.
+            if (_bedWalkIndex >= _bedWalkPath.Count) { CancelBedWalk(); return 0; }
             Vector3 delta = _bedWalkPath[_bedWalkIndex] - at;
             if (delta.magnitude < 0.025f) { _bedWalkIndex++; return 0; }
             MoveOwner(delta, Mathf.Min(dt, delta.magnitude / OwnerWalkSpeed));

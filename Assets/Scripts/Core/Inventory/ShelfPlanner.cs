@@ -6,6 +6,13 @@ using PCShopSell.Core.Home;
 
 namespace PCShopSell.Core.Inventory
 {
+    public sealed class ResaleOffer
+    {
+        public int Id,Product;
+        public string Name;
+        public double Kg;
+        public long Price,ReferencePrice;
+    }
     /// <summary>货架能摆的一种货：6 类配件，或一组杂货（烟、酒、饮料、点心、水果）。</summary>
     public sealed class ShelfKind
     {
@@ -54,6 +61,7 @@ namespace PCShopSell.Core.Inventory
             new ShelfKind("drink", "饮料", Gifts.Drink, Gifts.Soda),
             new ShelfKind("snack", "点心", Gifts.Snack),
             new ShelfKind("fruit", "水果", Gifts.Fruit),
+            new ShelfKind("secondhand", "二手转售品", Array.Empty<string>()),
             new ShelfKind("flowers", "鲜花与盆栽", RetailProducts.All.Where(g => g.Id.StartsWith("flower_")).Select(g => g.Id).ToArray()),
             new ShelfKind("produce", "米与生鲜", RetailProducts.All.Where(g => g.Id.StartsWith("produce:")).Select(g => g.Id).ToArray()),
             new ShelfKind("meals", "外带食品", RetailProducts.All.Where(g => g.MealId != null).Select(g => g.Id).ToArray()),
@@ -89,6 +97,7 @@ namespace PCShopSell.Core.Inventory
         public double UsedKg { get; internal set; }
         public List<StockLine> Parts { get; } = new List<StockLine>();
         public List<KeyValuePair<string, int>> Goods { get; } = new List<KeyValuePair<string, int>>();
+        public List<ResaleOffer> Resale { get; } = new List<ResaleOffer>();
 
         public ShelfFill(ShelfKind kind, double capacityKg, int capacityItems = int.MaxValue)
         {
@@ -97,7 +106,7 @@ namespace PCShopSell.Core.Inventory
             CapacityItems = Math.Max(0, capacityItems);
         }
 
-        public int Total => Parts.Sum(l => l.Count) + Goods.Sum(g => g.Value);
+        public int Total => Parts.Sum(l => l.Count) + Goods.Sum(g => g.Value)+Resale.Count;
 
         public int PartCount(PartDef part, bool boxed)
         {

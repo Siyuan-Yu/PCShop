@@ -225,6 +225,11 @@ namespace PCShopSell.Game.UI
                 }
 
                 ShelfFill fill = shop.ShelfFillOf(kind);
+                if(kind.Id=="secondhand")
+                {
+                    Line(w.Content,$"已摆 {fill.Total} 件 · {fill.UsedKg:0.##}/{fill.CapacityKg:0} 千克",17,Ui.Accent);
+                    BuildUsedStock(w.Content,w,true);return;
+                }
                 int same = S.ShelvesOfKind(kind.Id);
                 int back = kind.IsParts ? PartCatalog.InCategory(kind.Category).Sum(p => st.CountAll(p)) : kind.GiftIds.Sum(id => st.GoodsCount(id));
                 Para(w.Content, $"摆「{kind.Name}」的货架共 <b>{same}</b> 个；同类陈列合计（含展示台）：<b>{fill.UsedKg:0.##}/{fill.CapacityKg:0}</b> 千克，<b>{fill.Total}/{fill.CapacityItems}</b> 件，剩余 {System.Math.Max(0, fill.CapacityItems - fill.Total)} 件名额"
@@ -269,7 +274,7 @@ namespace PCShopSell.Game.UI
                     {
                         var option=kind;
                         if(n++%2==0)row=Ui.Row(choices,56,6);
-                        int count=kind.IsParts?PartCatalog.InCategory(kind.Category).Sum(p=>shop.Stock.CountAll(p)):kind.GiftIds.Sum(id=>shop.Stock.GoodsCount(id));
+                        int count=kind.Id=="secondhand"?S.SpecialBusiness(S.CurrentShop.Place.Id).Used.Count(i=>i.Owned&&!i.Sold):kind.IsParts?PartCatalog.InCategory(kind.Category).Sum(p=>shop.Stock.CountAll(p)):kind.GiftIds.Sum(id=>shop.Stock.GoodsCount(id));
                         int shelves=S.ShelvesOfKind(kind.Id);
                         string info=$"在库 {count} 件 · {(shelves==0?"尚未陈列":shelves+" 个货架")}";
                         var button=Ui.Size(Ui.Button(row,kind.Name+(current?.Id==kind.Id?" ✓":"")+"\n<size=13>"+info+"</size>",()=>Pick(option.Id),17,current?.Id==kind.Id?Ui.ButtonHot:Ui.ButtonBg),-1,-1,1);

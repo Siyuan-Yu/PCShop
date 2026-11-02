@@ -105,6 +105,8 @@ namespace PCShopSell.Core.Shop
 
         /// <summary>顺手挑了一件杂货（礼品 id）；没有就是 null。杂货和配件不会同时拿。</summary>
         public string GoodsId { get; internal set; }
+        public int ResaleId { get; internal set; }
+        public string ResaleName { get; internal set; }
         public string RetailInterestSeries;
         public long RetailBudgetCents;
         internal bool RetailPreferenceAssigned;
@@ -118,7 +120,7 @@ namespace PCShopSell.Core.Shop
         public int DisplayTier { get; internal set; } = -1;
 
         /// <summary>排队时手里拿的东西的名字（配件或整机）。</summary>
-        public string ItemName => DisplayTier >= 0 ? PartCatalog.TierName(DisplayTier) + "整机" : GoodsId != null ? Gifts.Get(GoodsId)?.Name : Item?.Name;
+        public string ItemName => ResaleId>0?ResaleName:DisplayTier >= 0 ? PartCatalog.TierName(DisplayTier) + "整机" : GoodsId != null ? Gifts.Get(GoodsId)?.Name : Item?.Name;
 
         internal ShopCustomer(int id, CustomerIntent intent, PartCategory category, int buildTier,
             GameTimestamp arrivedAt, GameTimestamp readyAt, bool carriesCash)
@@ -371,7 +373,7 @@ namespace PCShopSell.Core.Shop
         }
 
         /// <summary>这类货现在在货架上摆着哪些（后仓里没摆上去的不算）。</summary>
-        public ShelfFill ShelfFillOf(ShelfKind kind) => ShelfPlanner.Fill(Stock, kind, ShelfCapacityOf(kind),kind!=null && _shelfItemLimits!=null && _shelfItemLimits.TryGetValue(kind.Id,out int max)?max:int.MaxValue);
+        public ShelfFill ShelfFillOf(ShelfKind kind) => kind?.Id=="secondhand"?ResaleShelfFill(kind):ShelfPlanner.Fill(Stock, kind, ShelfCapacityOf(kind),kind!=null && _shelfItemLimits!=null && _shelfItemLimits.TryGetValue(kind.Id,out int max)?max:int.MaxValue);
 
         public ShelfFill ShelfFillOf(PartCategory cat) => ShelfFillOf(ShelfKinds.ForCategory(cat));
 
@@ -800,6 +802,7 @@ namespace PCShopSell.Core.Shop
 
         private void Decide(ShopCustomer c, GameTimestamp now)
         {
+            if(RetailKind=="secondhand"){DecideResale(c,now);return;}
             bool browseComputer=IsGoodsShop && (_display.Count>0 || PartCatalog.Categories.Any(cat=>ShelfFillOf(cat).Total>0))
                 && (!GoodsOnSale || Random.Chance(.2));
             if (IsGoodsShop && !browseComputer)
@@ -1018,7 +1021,12 @@ namespace PCShopSell.Core.Shop
             _queue.Remove(c);
             _active.Remove(c);
             c.State = CustomerState.Paid;
-            if (c.DisplayTier >= 0)
+            if(c.ResaleId>0)
+            {
+                _ledger.Credit(_clock.Today,SalesCategory,c.Spend,c.ItemName+"（二手转售）",LedgerAttribution.ForShop(ShopId,"used:"+c.ResaleId+":sale","销售"));
+                Reputation+=SaleReputationGain;
+            }
+            else if (c.DisplayTier >= 0)
             {
                 _ledger.Credit(_clock.Today, BuildCategory, c.Spend, $"{c.ItemName}（展示机）", LedgerAttribution.ForShop(ShopId, transactionKind: "销售"));
                 Reputation += BuildReputationGain;
@@ -1040,6 +1048,7 @@ namespace PCShopSell.Core.Shop
 
         private void Leave(ShopCustomer c, LeaveReason reason, bool countAsLost = true)
         {
+            c.ResaleId=0;c.ResaleName=null;
             if (c.State == CustomerState.WaitingCheckout && c.Item != null)
             {
                 Stock.ForceAdd(c.Item, c.ItemBoxed, 1);

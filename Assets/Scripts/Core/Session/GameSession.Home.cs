@@ -238,6 +238,7 @@ namespace PCShopSell.Core.Session
             if (!InPlayerShop) return Fail("要在自己的店里装修。");
             if (IsRenovating) return true;
             _renovationDay = Clock.Today.TotalDays;
+            CancelPlayerRestaurantWork();
             PlayerShop.ForcedClosed = true;
             Say("今天歇业装修，明天恢复营业。");
             return true;
@@ -489,6 +490,7 @@ namespace PCShopSell.Core.Session
             long mealMinute=Clock.Now.TotalMinutes;
             if(_lastAutomaticMealMinute>=0&&mealMinute>=_lastAutomaticMealMinute&&mealMinute-_lastAutomaticMealMinute<30)return;
             if(EatWorkbenchMeal(meal))return;
+            if(EatRestaurantMeal(meal))return;
             if (CurrentPlace == Home && Pantry.CookedBowls > 0)
             {
                 Player.Hunger = Math.Min(100, Player.Hunger + EatFrom(Pantry.Cooked));

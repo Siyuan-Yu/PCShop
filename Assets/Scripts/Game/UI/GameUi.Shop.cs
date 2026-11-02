@@ -218,7 +218,9 @@ namespace PCShopSell.Game.UI
             +string.Join(";",S.PlayerShop.Stock.Lines().Select(l=>l.Part.Id+":"+l.Boxed+":"+l.Count))+"|"
             +string.Join(";",S.PlayerShop.Stock.GoodsLines().Select(l=>l.Key+":"+l.Value))+"|"+S.HasWarehouseHere+"|"
             +string.Join(";",S.ShopLayout.Select(p=>p.Id+":"+p.Item+":"+p.DisplayLimit))+"|"
-            +string.Join(";",CollectBox().Select(b=>b.Key+":"+b.Count+":"+b.Kg))+"|"+string.Join(",",S.PlayerShop.DisplayPcs);
+            +string.Join(";",CollectBox().Select(b=>b.Key+":"+b.Count+":"+b.Kg))+"|"+string.Join(",",S.PlayerShop.DisplayPcs)
+            +(S.RetailKind=="restaurant"?"|fridge:"+string.Join(";",CollectStacks(S.CurrentShop.Fridge,new Stock(0)).Select(b=>b.Key+":"+b.Count+":"+b.Kg)):"")
+            +(S.RetailKind=="secondhand"?"|used:"+string.Join(";",S.SpecialBusiness(S.CurrentShop.Place.Id).Used.Select(i=>i.Id+":"+i.Owned+":"+i.Inspected+":"+i.Listed+":"+i.Sold+":"+i.Price))+"|"+string.Join(",",S.PlayerShop.Queue.Select(c=>c.ResaleId)):"");
 
         public void RebuildDock()
         {
@@ -349,6 +351,8 @@ namespace PCShopSell.Game.UI
         {
             BuildRetailLinks(C);
             ShopSimulation shop = S.PlayerShop;
+            if(S.RetailKind=="restaurant") BuildRestaurantFridgeStock();
+            if(S.RetailKind=="secondhand")BuildUsedStock(C);
             Line(C, "货架上的商品", 19, Ui.Accent).name="StockShelvesHeading";
             var shelfIdx = S.ShelfIndexes();
             if (shelfIdx.Count == 0) Line(C, "尚未摆放货架。", 16, Ui.Dim);
@@ -405,7 +409,7 @@ namespace PCShopSell.Game.UI
                 var row=Ui.Row(shelves,44);row.name="ShelfPc_"+pcs.Key;
                 Ui.Size(Ui.Label(row,PartCatalog.TierName(pcs.Key)+"整机 · 展示台",17),-1,-1,1);StockCount(row,pcs.Count());
             }
-            if(shown.Count==0&&shop.DisplayPcs.Count==0)Line(shelves,"暂无已陈列商品。",16,Ui.Dim);
+            if(shown.Count==0&&shop.DisplayPcs.Count==0&&shop.ShelfFillOf(ShelfKinds.Get("secondhand")).Total==0)Line(shelves,"暂无已陈列商品。",16,Ui.Dim);
 
             Line(C,"后仓 · 容量不限",19,Ui.Accent).name="StockWarehouseHeading";
             var warehouse=Ui.Rect(C,"StockWarehouseSection");Ui.VList(warehouse,4,0);
@@ -439,6 +443,23 @@ namespace PCShopSell.Game.UI
         }
 
         private static void StockCount(Transform parent,int count)=>Ui.Size(Ui.Label(parent,"×"+count,17,TextAnchor.MiddleLeft),64).name="StockQuantity";
+
+        private void BuildRestaurantFridgeStock()
+        {
+            var fridge=S.CurrentShop.Fridge;
+            Line(C,$"冰箱库存 · {fridge.WeightKg:0.##}/{S.CurrentFridgeLimitKg:0} 千克",19,Ui.Accent).name="StockFridgeHeading";
+            var section=Ui.Rect(C,"StockFridgeSection");Ui.VList(section,4,0);
+            var items=CollectStacks(fridge,new Stock(0)).Where(item=>item.Count>0).ToArray();
+            foreach(var item in items)
+            {
+                var row=Ui.Row(section,56,4);row.name="FridgeItem_"+item.Key;
+                Ui.Size(Ui.Label(row,item.Name+"\n<size=14>冰箱 · "+item.Kg.ToString("0.##")+" 千克 · 永久保存</size>",16),-1,-1,1);
+                if(item.Key=="rice")Ui.Size(Ui.Label(row,item.Kg.ToString("0.##")+" 千克",16),90).name="StockQuantity";
+                else StockCount(row,item.Count);
+            }
+            if(items.Length==0)Line(section,S.CanOpenFridge?"冰箱是空的。":"尚未摆放冰箱。",16,Ui.Dim);
+            Ui.Size(Ui.Button(section,"管理冰箱",OpenFridgeWindow,16,Ui.ButtonBg,S.CanOpenFridge),-1,34);
+        }
 
         // ---------- 定价 ----------
 

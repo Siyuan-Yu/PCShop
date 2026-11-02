@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -199,8 +199,8 @@ namespace PCShopSell.Game
         {
             if (Session.IsGameOver || Session.IsWorking || Ui.AnyModalOpen || Placing) return;
             GoToPlace(Session.Home);
-            Session.CitySleepRequested=true;
             _goHomeToBed = InHome || Session.CityIntent?.TargetPlaceId == Session.Home.Id;
+            Session.CitySleepRequested = _goHomeToBed;
         }
 
         private void CancelHomeBedTrip()
@@ -441,7 +441,8 @@ namespace PCShopSell.Game
                 else if(Session.IsOwnedVenue(Session.CurrentPlace))Ui.OpenVenueManagement(Session.CurrentPlace);
                 else if (InInterior)
                 {
-                    if(Session.IsSpecialBusiness(Session.CurrentShop)&&Interior.NearSpecialFurniture)Ui.OpenSpecialBusinessPanel();
+                    if(Interior.NearCounter&&Session.PlayerShop.Queue.Count>0)CounterInteract();
+                    else if(Session.IsSpecialBusiness(Session.CurrentShop)&&Interior.NearSpecialFurniture)Ui.OpenSpecialBusinessPanel();
                     else if (Interior.NearCounter) CounterInteract();
                     else if (Interior.NearDoor) Ui.ConfirmLeaveShop();
                     else if (Interior.NearFridge) Ui.OpenFridgeWindow();
@@ -504,6 +505,7 @@ namespace PCShopSell.Game
 
             CancelHomeBedTrip();
             Session.CancelCityTravel();_cityExitIntent=null;Interior?.CancelCityDoorWalk();
+            Session.CancelPlayerRestaurantWork();
             Vector3 fwd = Cam.transform.forward;
             fwd.y = 0;
             fwd.Normalize();
@@ -618,7 +620,7 @@ namespace PCShopSell.Game
                         return true;
                     }
                 }
-                if(Session.IsSpecialBusiness(Session.CurrentShop)&&Interior.NearSpecialFurniture)
+                if(Session.IsSpecialBusiness(Session.CurrentShop)&&Interior.NearSpecialFurniture&&!(Interior.NearCounter&&Session.PlayerShop.Queue.Count>0))
                 {
                     world=Interior.SpecialFurnitureWorld;label=Interior.SpecialFurnitureName+"：经营操作（按 F 打开）";return true;
                 }

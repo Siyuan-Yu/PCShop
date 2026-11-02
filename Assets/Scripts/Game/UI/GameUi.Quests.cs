@@ -138,7 +138,7 @@ namespace PCShopSell.Game.UI
                 if (done != null)
                 {
                     Line(w.Content, "✓ " + done.Title, 23, Ui.Good);
-                    if (done.Reward != null) Para(w.Content, "获得：" + done.Reward, 18, Ui.Accent);
+                    if (done.Reward != null) Para(w.Content, "获得：" + done.RewardText(S), 18, Ui.Accent);
                 }
                 if (next != null)
                 {
@@ -165,7 +165,7 @@ namespace PCShopSell.Game.UI
             // Guidance explains where/how; it must never move the player or open a destination page.
             Para(w.Content, GuideLocation(q.Target), 17, Ui.Accent);
             Para(w.Content, q.Hint, 18);
-            if (q.Reward != null) Para(w.Content, "完成奖励：" + q.Reward, 16, Ui.Good);
+            if (q.Reward != null) Para(w.Content, "完成奖励：" + q.RewardText(S), 16, Ui.Good);
             ProgressLine(w.Content, q, 16);
             Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
         }
@@ -180,7 +180,6 @@ namespace PCShopSell.Game.UI
         {
             var q = S.CurrentQuest();
             if (q == null || q.Target != target) return;
-            if(q.Id=="shelf" && S.RetailKind!="computer")return;
             S.VisitQuestTarget(target);
             var card = Ui.Panel(parent, "GuideHint", Ui.PanelBg2).rectTransform;
             Ui.VList(card, 6, 12);
@@ -205,8 +204,14 @@ namespace PCShopSell.Game.UI
             }
         }
         private static readonly QuestTarget[] BusinessTargets = { QuestTarget.Finance, QuestTarget.Direct, QuestTarget.Enterprise, QuestTarget.Ventures, QuestTarget.Creators, QuestTarget.Property, QuestTarget.Park };
-        private static string GuideLocation(QuestTarget target)
+        private string GuideLocation(QuestTarget target)
         {
+            if(S.RetailKind!="computer")
+            {
+                if(target==QuestTarget.Market)return S.RetailKind=="restaurant"?"地点：农贸市场 · 采购大米与配菜":S.RetailKind=="secondhand"?"位置：自己的店 → 柜台 · 收购旧物":"地点：对应品类的批发店 · 或手机1788进货";
+                if(target==QuestTarget.Stock)return "位置：自己的店 → 右侧“库存”页";
+                if(target==QuestTarget.Counter)return "位置：自己的店 → 右侧“柜台”页";
+            }
             switch (target)
             {
                 case QuestTarget.Agency: return "地点：商业街 · <color=#FFC966>安居房产中介</color>";

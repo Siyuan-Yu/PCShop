@@ -120,6 +120,7 @@ namespace PCShopSell.Game.UI
             }
             UpdateDisplayPreview();
             if (MainMenuOpen) return;
+            RefreshOpeningKindChoice();
             UpdateWorkScreen();
             if (S.IsWorking) return;
             CheckWeeklyPriceReport();

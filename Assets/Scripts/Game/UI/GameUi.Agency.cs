@@ -24,7 +24,9 @@ namespace PCShopSell.Game.UI
             var units = S.City.Places.Where(p => S.AgencyServes(agency, p))
                 .OrderBy(p => S.City.ViewPosition(p.NodeId).X).ToArray();
             if (!units.Any(p => p.Id == _agencySelectedId))
-                _agencySelectedId = S.Listings.Where(l => S.AgencyServes(agency, S.ListingPlace(l))).OrderBy(l => S.LeaseBlocker(l) == null ? 0 : 1)
+                _agencySelectedId = S.Listings.Where(l => S.AgencyServes(agency, S.ListingPlace(l)))
+                    .OrderBy(l => S.LookingForFirstShop && l.PlaceId==S.City.PlayerShop().Id ? 0 : 1)
+                    .ThenBy(l => S.LeaseBlocker(l) == null ? 0 : 1)
                     .ThenBy(l => l.OpenDay).ThenBy(l => l.Rent.Cents).FirstOrDefault()?.PlaceId
                     ?? agency.Id;
 
@@ -195,7 +197,6 @@ namespace PCShopSell.Game.UI
             if (listing == null || S.LeaseBlocker(listing, newShop) != null) { parent.Rebuild(); return; }
             Place p = S.ListingPlace(listing);
             Money quotedCost = S.LeaseCost(listing, newShop);
-            string retailKind = newShop ? "computer" : S.RetailKind;
             OpenWindow("确认租赁 · " + UnitName(p), 660, S.IsAdvance(listing) ? 620 : 520, confirm =>
             {
                 Line(confirm.Content, $"{GameSession.SizeName(p.Size)} · {RealEstate.SizeArea(p.Size)} · 月租 {listing.Rent}", 21, Ui.Accent);
@@ -203,24 +204,15 @@ namespace PCShopSell.Game.UI
                 if (S.IsAdvance(listing)) AgencyEntryWarning(confirm.Content, listing.OpenDay);
                 if(S.IsDedicatedVenue(p))
                     Para(confirm.Content,"专用场地："+S.VenueBusinessName(p)+"，只能延续原用途，不可改作零售店。\n保留原设施，另行安排值守。原教练不自动受雇；维护费 ¥"+S.VenueMaintenanceYuan(p)+"/天，员工按实际排班另付工资。老板自用免费，不产生营业收入。",18,Ui.Accent);
-                else if (newShop)
+                else if (newShop || !S.HasShop)
                 {
-                    Line(confirm.Content, "选择经营类型", 19, Ui.Accent);
-                    var kinds = Ui.Row(confirm.Content, 42);
-                    foreach (var value in PCShopSell.Core.Home.RetailShopTypes.All)
-                    {
-                        string kind = value;
-                        Ui.Size(Ui.Button(kinds, PCShopSell.Core.Home.RetailShopTypes.Name(kind), () => { retailKind = kind; confirm.Rebuild(); }, 17,
-                            retailKind == kind ? Ui.ButtonHot : Ui.ButtonBg, S.RetailTypeBlocker(kind) == null), -1, -1, 1);
-                    }
-                    Para(confirm.Content, PCShopSell.Core.Home.RetailShopTypes.Description(retailKind), 16, Ui.Dim);
-                    if (!S.OtherRetailShopsUnlocked) Para(confirm.Content, "第 15 天起可选择其他经营类型。", 15, Ui.Dim);
+                    Para(confirm.Content,"租下后，还会单独确认“准备开什么店”。选择经营类型后，再发放对应的开店任务礼包。",17,Ui.Accent);
                 }
                 AgencyQuote(confirm.Content, listing, newShop);
                 Line(confirm.Content, $"{AgencySettlement(quotedCost)}　剩余 {S.Ledger.Balance - quotedCost}", 23, Ui.Good);
                 Para(confirm.Content, S.IsDedicatedVenue(p)?"接手后进入场馆管理，设置营业时间、价格并开启接客。顾客按场地容量付费使用；不提供普通店铺柜台或货架经营。":newShop
                     ? "铺子是毛坯的，原来的店照常营业。货可以打电话叫货车从别的店或家里搬过来；人不在店里时要雇人看店才开门。"
-                    : "铺子是毛坯的，签好后自己到店里，摆好收银台和货架再开业。", 17);
+                    : "铺子是毛坯的，签好后自己到店里，按所选经营类型摆好设施再开业。", 17);
                 string fine = "以后每月 1 日交租；主动退租，已交押金不退。";
                 if (S.IsAdvance(listing)) fine += $"现租户第 {listing.OpenDay + 1} 天才搬走，到那天才能搬进去，房租从签约当天算起。";
                 Para(confirm.Content, fine, 14, Ui.Dim);
@@ -236,10 +228,11 @@ namespace PCShopSell.Game.UI
                         parent.Rebuild();
                         return;
                     }
-                    if (S.SignRetailLease(placeId, newShop, retailKind))
+                    if (S.SignLeaseThenChooseKind(placeId, newShop))
                     {
                         if (S.PendingLease != null) Toast($"已提前签约，还需等待 {S.PendingLease.StartDay - S.Clock.Today.TotalDays} 天才能进入，期间房租照常计算。");
                         else Toast(S.IsDedicatedVenue(p)?"接手完成，请到场馆设置营业与值守。":"签约完成，可以自行到新店装修了。");
+                        if(S.PendingShopKindPlaceId!=null){parent.Close();return;}
                     }
                     parent.Rebuild();
                 }, 18, Ui.ButtonHot);
@@ -249,5 +242,33 @@ namespace PCShopSell.Game.UI
         }
 
         private static string UnitName(Place p) => p.Business == RealEstate.VacantBusiness ? p.Name : p.Name + "原址";
+
+        private void RefreshOpeningKindChoice()
+        {
+            string placeId=S.PendingShopKindPlaceId;
+            if(placeId==null||AnyModalOpen||PopupOpen||S.IsGameOver)return;
+            string selected=null;
+            OpenWindow("准备开什么店？",720,640,w=>
+            {
+                Line(w.Content,S.City.GetPlace(placeId).Name+" · 已签约",21,Ui.Accent);
+                Para(w.Content,"请选择经营类型，再确认开店。租金已经支付，这一步不会重复扣款。",17);
+                foreach(string value in PCShopSell.Core.Home.RetailShopTypes.All)
+                {
+                    string kind=value;string blocker=S.OpeningKindBlocker(placeId,kind);
+                    var button=Ui.Size(Ui.Button(w.Content,(selected==kind?"✓ ":"")+PCShopSell.Core.Home.RetailShopTypes.Name(kind)+(blocker==null?"":" · "+blocker),
+                        ()=>{selected=kind;w.Rebuild();},18,selected==kind?Ui.ButtonHot:Ui.ButtonBg,blocker==null),-1,42);
+                    button.name="OpeningKind_"+kind;
+                }
+                if(selected!=null)
+                {
+                    Para(w.Content,PCShopSell.Core.Home.RetailShopTypes.Description(selected),16,Ui.Dim);
+                    if(!S.QuestCompleted("rent"))Para(w.Content,"任务赠品："+string.Join("、",GameSession.OpeningFurniture(selected).Select(id=>PCShopSell.Core.Home.FurnitureCatalog.Get(id).Name)),16,Ui.Good);
+                }
+                Ui.Size(Ui.Button(w.Content,selected==null?"请先选择经营类型":"确认开一家"+PCShopSell.Core.Home.RetailShopTypes.Name(selected),()=>
+                {
+                    if(S.ConfirmOpeningKind(placeId,selected)){w.Close();RebuildDock();}
+                },19,Ui.ButtonHot,selected!=null),-1,46).name="ConfirmOpeningKind";
+            },closable:false);
+        }
     }
 }

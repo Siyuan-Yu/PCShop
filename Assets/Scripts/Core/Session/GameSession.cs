@@ -241,6 +241,7 @@ namespace PCShopSell.Core.Session
                 return;
             }
             if (InPlayerShop) PlayerShop.PlayerPresent = false;
+            CancelPlayerRestaurantWork();
             Place left = CurrentPlace;
             CurrentPlace = null;
             MapPoint stand = StandOf(left);
@@ -411,7 +412,7 @@ namespace PCShopSell.Core.Session
                 if (!CityActivityExclusive && Crosses(from, to, 12 * 60)) EatMeal("午饭");
                 if (!CityActivityExclusive && Crosses(from, to, 18 * 60 + 30)) EatMeal("晚饭");
                 if (!CityActivityExclusive && !IsWorking && Player.Hunger < 25 && ((CurrentPlace == Home && Pantry.CookedBowls > 0)
-                    || HasFridgeMeal || HasMeal(Backpack.Food.Packed)
+                    || HasFridgeMeal || HasMeal(Backpack.Food.Packed) || RestaurantMealChoices().Length>0
                     || (MealDeliveryEnabled && HasSmartphone && Ledger.CanAfford(Money.FromYuan(SelectedDeliveryMeal.Price))))) EatMeal("加餐");
             }
 

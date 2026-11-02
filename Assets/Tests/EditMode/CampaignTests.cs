@@ -227,6 +227,64 @@ namespace PCShopSell.Tests
 
     public class RealtyTests
     {
+        private static CityLayout FirstShopTestCity()
+        {
+            var data=GameSessionTests.Layout();
+            data.places=data.places.Concat(new[]{
+                new LayoutPlaceData{id="leisure_small",name="练歌房",kind="shop",node="s1",size="small",business="venue_ktv"},
+                new LayoutPlaceData{id="leisure_medium",name="球场",kind="shop",node="dl",size="medium",business="venue_court"}
+            }).ToArray();
+            return CityLayout.FromData(data);
+        }
+        [TestCase(7UL)]
+        [TestCase(19UL)]
+        public void FirstShopPoolExcludesLeisureVenuesAndKeepsImmediateStarterEvenAfterMonths(ulong seed)
+        {
+            using(var s=new GameSession(FirstShopTestCity(),seed,Money.FromYuan(10000),GameTimestamp.From(new GameDate(0),480),false,true,false))
+            {
+                var daily=typeof(GameSession).GetMethod("OnRealtyDay",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic);
+                for(int day=0;day<150;day++)
+                {
+                    s.Clock.Restore(new GameDate(day),480);daily.Invoke(s,new object[]{day});
+                    Assert.True(s.LookingForFirstShop);Assert.False(s.Listings.Any(l=>s.IsDedicatedVenue(s.ListingPlace(l))));
+                    var starter=s.Listings.First();Assert.AreEqual("pc",starter.PlaceId);
+                    Assert.LessOrEqual(starter.OpenDay,day);Assert.Greater(starter.CloseDay,day);
+                    Assert.True(s.IsVacant(s.City.PlayerShop()));Assert.LessOrEqual(s.LeaseCost(starter).Cents,s.Ledger.Balance.Cents);
+                }
+                GameSessionTests.Teleport(s,"agency");Assert.True(s.SignLease("pc"));Assert.False(s.LookingForFirstShop);
+                var pool=(System.Collections.Generic.IEnumerable<Place>)typeof(GameSession).GetMethod("RentableUnits",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).Invoke(s,null);
+                Assert.True(pool.Any(s.IsDedicatedVenue),"租下第一家商铺后恢复正常场馆挂牌池");
+            }
+        }
+        [Test]
+        public void OldUnstartedSaveRestoresStarterAndRemovesLeisureVacancyWithoutChangingMoney()
+        {
+            using(var s=new GameSession(FirstShopTestCity(),7,Money.FromYuan(10000),GameTimestamp.From(new GameDate(0),480),false,true,false))
+            {
+                s.DebugAddListing("leisure_small",0,90,Money.FromYuan(1));
+                var save=s.CreateSave();save.listings=save.listings.Where(l=>l.place!="pc").ToArray();
+                using(var loaded=GameSession.Load(s.City,save))
+                {
+                    Assert.AreEqual(s.Ledger.Balance,loaded.Ledger.Balance);
+                    Assert.AreEqual("pc",loaded.Listings.First().PlaceId);Assert.False(loaded.IsAdvance(loaded.Listings.First()));
+                    Assert.False(loaded.Listings.Any(l=>loaded.IsDedicatedVenue(loaded.ListingPlace(l))));
+                    Assert.False(loaded.IsVacant(loaded.City.GetPlace("leisure_small")));
+                    Assert.True(loaded.IsVacant(loaded.City.PlayerShop()));
+                }
+            }
+        }
+        [Test]
+        public void ProductionCityStartsWithAffordableOrdinaryShopInItsAgency()
+        {
+            var data=UnityEngine.JsonUtility.FromJson<CityLayoutData>(UnityEngine.Resources.Load<UnityEngine.TextAsset>("Data/city_layout").text);
+            using(var s=new GameSession(CityLayout.FromData(data),7,Money.FromYuan(10000),GameTimestamp.From(new GameDate(0),480),false,true,false))
+            {
+                var first=s.Listings.First();var place=s.ListingPlace(first);
+                Assert.AreEqual(s.City.PlayerShop().Id,place.Id);Assert.False(s.IsDedicatedVenue(place));
+                Assert.NotNull(s.AgencyFor(place));Assert.False(s.IsAdvance(first));Assert.LessOrEqual(s.LeaseCost(first).Cents,s.Ledger.Balance.Cents);
+                Assert.False(s.Listings.Any(l=>s.IsDedicatedVenue(s.ListingPlace(l))));
+            }
+        }
         private static GameSession NoShop(long cash = 10000)
         {
             CityLayout city = CityLayout.FromData(GameSessionTests.Layout());
@@ -251,7 +309,7 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.IsVacant(s.PlayerShopPlace));
             Assert.AreEqual(GameSession.VacantTitle, s.PlaceTitle(s.PlayerShopPlace));
             ShopListing l = s.Listings.Single(x => x.PlaceId == "pc");
-            Assert.AreEqual(GameSession.ShopRent.Cents, l.Rent.Cents);
+            Assert.AreEqual(s.ShopRentQuote(s.PlayerShopPlace).Cents, l.Rent.Cents);
             Assert.LessOrEqual(l.OpenDay, 0);
 
             GameSessionTests.Teleport(s, "pc");
@@ -268,12 +326,14 @@ namespace PCShopSell.Tests
             Assert.IsFalse(s.SignLease("pc"), "不在中介签不了");
 
             GameSessionTests.Teleport(s, "agency");
+            Money openingRent=s.Listings.Single(l=>l.PlaceId=="pc").Rent;
+            Money openingCost=openingRent+RealEstate.Deposit(openingRent)+s.AgentFeeFor(openingRent);
             Assert.IsTrue(s.SignLease("pc"));
             Assert.IsTrue(s.HasShop);
-            Assert.AreEqual(10000 - 1500 * 3, s.Ledger.Balance.Yuan, "首月 + 押金 + 中介费");
-            Assert.AreEqual(1500, s.Lease.Deposit.Yuan);
+            Assert.AreEqual((Money.FromYuan(10000)-openingCost).Cents, s.Ledger.Balance.Cents, "首月 + 押金 + 中介费");
+            Assert.AreEqual(RealEstate.Deposit(openingRent), s.Lease.Deposit);
             // 身家 = 现金 + 押金（租铺不再送货，配件是家具城任务的奖励）
-            Assert.AreEqual(s.Ledger.Balance.Yuan + 1500, s.NetWorth().Yuan, "押金算进身家");
+            Assert.AreEqual(s.Ledger.Balance.Yuan + s.Lease.Deposit.Yuan, s.NetWorth().Yuan, "押金算进身家");
             Assert.AreEqual(GameSession.MyShopName, s.PlaceTitle(s.PlayerShopPlace));
             Assert.IsFalse(s.Listings.Any(x => x.PlaceId == "pc"));
 
@@ -406,11 +466,13 @@ namespace PCShopSell.Tests
         public void DebugRentStarterShop_RecreatesOldStart()
         {
             GameSession s = NoShop();
+            Money rent=s.ShopRentQuote(s.City.PlayerShop());
+            Money cost=rent+RealEstate.Deposit(rent)+s.AgentFeeFor(rent);
             Assert.IsTrue(s.DebugRentStarterShop());
             Assert.IsTrue(s.HasShop);
             Assert.AreEqual("pc", s.PlayerShopPlace.Id);
             Assert.IsFalse(s.PlayerShop.Stock.IsEmpty, "送开局货");
-            Assert.AreEqual(10000 - 4500, s.Ledger.Balance.Yuan);
+            Assert.AreEqual((Money.FromYuan(10000)-cost).Cents, s.Ledger.Balance.Cents);
             Assert.IsFalse(s.DebugRentStarterShop(), "有店了不能再用");
         }
     }

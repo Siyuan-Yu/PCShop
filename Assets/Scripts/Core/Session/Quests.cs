@@ -39,6 +39,9 @@ namespace PCShopSell.Core.Session
 
         /// <summary>完成时发奖励（只发一次，记在完成记号里）。</summary>
         public Action<GameSession> Grant;
+        public Func<GameSession,string> RewardFor;
+        public string RewardText(GameSession s)=>RewardFor?.Invoke(s)??Reward;
+        public QuestDef Copy()=>(QuestDef)MemberwiseClone();
     }
 
     public static partial class Quests
@@ -55,11 +58,8 @@ namespace PCShopSell.Core.Session
                     ? $"已提前签下{s.City.GetPlace(s.PendingLease.PlaceId).Name}，第 {s.PendingLease.StartDay + 1} 天才交房"
                     : null,
                 Reward = "一个货架 + 一个收银台",
-                Grant = s =>
-                {
-                    s.AddFurniture(FurnitureCatalog.Shelf, 1);
-                    s.AddFurniture(FurnitureCatalog.ShopCounter, 1);
-                },
+                RewardFor=s=>s.OpeningRewardText("rent"),
+                Grant = s => s.GrantOpeningReward("rent"),
             },
             new QuestDef
             {
@@ -68,11 +68,8 @@ namespace PCShopSell.Core.Session
                 Hint = $"{K("随便买一件就行")}。",
                 Done = s => s.HasShop && s.Flags.Contains(GameSession.MallBoughtFlag),
                 Reward = "入门 CPU + 入门显卡",
-                Grant = s =>
-                {
-                    s.PlayerShop.Stock.ForceAdd(PartCatalog.Get("cpu0"), true, 1);
-                    s.PlayerShop.Stock.ForceAdd(PartCatalog.Get("gpu0"), true, 1);
-                },
+                RewardFor=s=>s.OpeningRewardText("mall"),
+                Grant = s => s.GrantOpeningReward("mall"),
             },
             new QuestDef
             {
@@ -101,7 +98,7 @@ namespace PCShopSell.Core.Session
                 Id = "sale", Title = "开业，卖出第一单", Target = QuestTarget.Counter,
                 Short = $"守在店里，给顾客{K("结账")}",
                 Hint = $"{K("没人看店就关门")}。",
-                Done = s => s.Ledger.Entries.Any(e => e.Category == ShopSimulation.SalesCategory),
+                Done = s => s.Ledger.Entries.Any(e => e.Category == ShopSimulation.SalesCategory || e.Category == "餐饮"&&e.Amount.IsPositive),
             },
             new QuestDef
             {
@@ -149,10 +146,36 @@ namespace PCShopSell.Core.Session
         private static int ShelvesSet(GameSession s)
         {
             if (!s.HasShop) return 0;
+            if(s.IsSpecialBusiness(s.CurrentShop))return s.SpecialFitGap(s.CurrentShop)==null?1:0;
+            if(s.RetailKind!="computer")return s.ShelfIndexes().Count(i=>s.ShelfKindAt(i)?.GiftIds.Any(id=>RetailShopTypes.Sells(s.RetailKind,id))==true);
             return FurnitureCatalog.ShelfCategories.Count(c => s.ShelvesOfKind(ShelfKinds.ForCategory(c).Id) > 0);
         }
 
-        private static int StockCount(GameSession s) => PartCatalog.All.Sum(p => s.PlayerShop.Stock.CountAll(p));
+        private static int StockCount(GameSession s) => s.RetailKind=="restaurant"
+            ?(s.KitchenRice(s.CurrentShop)>=.25?GameSession.RecipeIngredients.Sum(id=>s.KitchenIngredientCount(s.CurrentShop,id)):0)
+            :s.RetailKind=="secondhand"?s.SpecialBusiness(s.CurrentShop.Place.Id).Used.Count(i=>i.Owned&&!i.Sold)
+            :s.RetailKind!="computer"?s.PlayerShop.Stock.GoodsLines().Where(g=>RetailShopTypes.Sells(s.RetailKind,g.Key)).Sum(g=>g.Value)
+            :PartCatalog.All.Sum(p => s.PlayerShop.Stock.CountAll(p));
+
+        public static QuestDef ForShop(QuestDef source,GameSession s)
+        {
+            if(source==null||s.RetailKind=="computer")return source;
+            var q=source.Copy();
+            if(q.Id=="place")q.Short="在店里装修，摆好"+(s.RetailKind=="restaurant"?"加工台、灶台、传菜台、餐桌和冰箱":s.RetailKind=="secondhand"?"收购鉴定台、二手展示台、货架和收银台":"收银台和货架");
+            if(q.Id=="shelf")
+            {
+                q.Title=s.IsSpecialBusiness(s.CurrentShop)?"准备经营设施":"设置第一个商品货架";
+                q.Short=s.IsSpecialBusiness(s.CurrentShop)?"按开店清单摆齐设施":"把货架设成与本店商品对应的品类";
+                q.Hint=s.IsSpecialBusiness(s.CurrentShop)?"设施摆齐后才可接待顾客。":"顾客只买货架上已陈列的商品。";
+            }
+            if(q.Id=="stock")
+            {
+                q.Short=s.RetailKind=="restaurant"?"准备大米和配菜":s.RetailKind=="secondhand"?"准备可出售的二手商品":"准备本店品类的第一批商品";
+                q.Hint="先使用开店任务赠送的库存，不足时再按本店品类进货。";
+            }
+            if(q.Id=="sale"&&s.RetailKind=="restaurant"){q.Short="接待一桌客人，完成备菜、烹饪与上菜";q.Hint="顾客吃完后付款，记入餐饮收入。";}
+            return q;
+        }
     }
 
     public sealed partial class GameSession
@@ -174,9 +197,10 @@ namespace PCShopSell.Core.Session
         /// <summary>当前任务；阶段条件未到或全部完成时返回 null，不预告未来任务。</summary>
         public QuestDef CurrentQuest()
         {
-            if(InPlayerShop&&IsSpecialBusiness(CurrentShop))return null; // Dedicated counters explain their own workflow; keep computer tutorial progress for returning.
             int i = QuestIndex();
-            return i < Quests.All.Count ? Quests.All[i] : null;
+            if(i>=Quests.All.Count)return null;
+            if(RetailKind!="computer"&&Quests.All[i].Chapter>0)return null;
+            return Quests.ForShop(Quests.All[i],this);
         }
     }
 }

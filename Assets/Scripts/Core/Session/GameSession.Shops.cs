@@ -63,7 +63,7 @@ namespace PCShopSell.Core.Session
         {
             var sim = new ShopSimulation(shop.Place.Id, shop.Place.Size, Clock, Ledger, Market, Random)
             {
-                TradingEnabled = !IsDedicatedVenue(shop.Place) && !IsSpecialBusiness(shop),
+                TradingEnabled = !IsDedicatedVenue(shop.Place) && shop.RetailKind!="restaurant",
                 CheckoutClock = ()=>CurrentPlace==shop.Place&&!_sleeping&&!IsWorking?_activeCheckoutSeconds:double.NaN,
                 RetailKind = shop.RetailKind,
                 LocationFactor = LocationFactorOf(shop.Place),
@@ -87,6 +87,8 @@ namespace PCShopSell.Core.Session
             sim.RetailInterestOf=c=>CityRetailSeriesFor(c.PersonId ?? c.VisitId ?? (shop.Place.Id + ":" + c.Id));
             sim.RetailBudgetOf=c=>CityRetailBudgetFor(c.PersonId ?? c.VisitId ?? (shop.Place.Id + ":" + c.Id));
             sim.CustomerLeft += c => {ReleaseCityCustomer(c);WithShop(shop, () => OnShopCustomerLeft(c));};
+            sim.ResaleOffers=()=>UsedOffers(shop);
+            sim.CustomerPaid+=c=>{ReleaseCityCustomer(c);CompleteUsedSale(shop,c);};
             sim.OrderCompleted += o => { Flags.Add("tutorial:build"); ContractOrderResult(o, true); };
             sim.OrderCancelled += o => ContractOrderResult(o, false);
             sim.OrderExpired += o => ContractOrderResult(o, false);

@@ -310,6 +310,7 @@ namespace PCShopSell.Core.Session
             LoadSpecialBusinesses(d);
             LoadWeeklySupplierPlans();
             LoadHomeWorkbench(d);
+            EnsureFirstShopListings(Clock.Today.TotalDays);
         }
 
         private const string TrainedFlag = "employee:trained", AutoBuildFlag = "employee:auto-build";

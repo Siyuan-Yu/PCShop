@@ -72,6 +72,14 @@ namespace PCShopSell.Core.Session
         private void OnShopCustomerLeft(ShopCustomer c)
         {
             if (c.Reason != LeaveReason.NoStock) return;
+            if(RetailKind=="secondhand")
+            {
+                int day=Clock.Today.TotalDays;
+                if(_noStockAlertDay.TryGetValue(PartCategory.Cpu,out int last)&&last==day)return;
+                _noStockAlertDay[PartCategory.Cpu]=day;
+                Say("顾客没有找到可购买的二手转售品。请确认商品已鉴定、定价，并且有对应货架可陈列。");return;
+            }
+            if(RetailKind!="computer")return;
             int today = Clock.Today.TotalDays;
             if (_noStockAlertDay.TryGetValue(c.DesiredCategory, out int d) && d == today) return;
             _noStockAlertDay[c.DesiredCategory] = today;

@@ -15,6 +15,8 @@ namespace PCShopSell.Core.Shop
         public string personId, visitId, itemId, goodsId, interest;
         public long arrived, ready, waiting, spendCents, budgetCents;
         public bool cash, boxed, chilled, preferenceAssigned;
+        public int resaleId;
+        public string resaleName;
         public CitySavedCustomer Copy() => (CitySavedCustomer)MemberwiseClone();
     }
     [Serializable]
@@ -49,7 +51,7 @@ namespace PCShopSell.Core.Shop
                 arrived = c.ArrivedAt.TotalMinutes, ready = c.ReadyAt.TotalMinutes, waiting = c.WaitingSince.TotalMinutes,
                 spendCents = c.Spend.Cents, budgetCents = c.RetailBudgetCents, cash = c.CarriesCash,
                 boxed = c.ItemBoxed, chilled = c.GoodsChilled, goodsExpiry = c.GoodsExpiryDay, displayTier = c.DisplayTier,
-                preferenceAssigned = c.RetailPreferenceAssigned }).ToArray()
+                resaleId=c.ResaleId,resaleName=c.ResaleName,preferenceAssigned = c.RetailPreferenceAssigned }).ToArray()
         };
 
         /// <summary>Inventory already excludes goods held by these visitors. Restore references only: no arrival events, purchases or stock removal.</summary>
@@ -73,7 +75,7 @@ namespace PCShopSell.Core.Shop
                     State = (CustomerState)x.state, Reason = Enum.IsDefined(typeof(LeaveReason), x.reason) ? (LeaveReason)x.reason : LeaveReason.None,
                     PaidWith = Enum.IsDefined(typeof(PayChannel), x.paidWith) ? (PayChannel)x.paidWith : PayChannel.Cash,
                     PersonId = string.IsNullOrEmpty(x.personId) ? null : x.personId, VisitId = string.IsNullOrEmpty(x.visitId) ? null : x.visitId, WaitingSince = new GameTimestamp(x.waiting),
-                    Item = itemId == null ? null : PartCatalog.Get(itemId), GoodsId = goodsId,
+                    Item = itemId == null ? null : PartCatalog.Get(itemId), GoodsId = goodsId,ResaleId=x.resaleId,ResaleName=x.resaleName,
                     ItemBoxed = x.boxed, GoodsChilled = x.chilled, GoodsExpiryDay = x.goodsExpiry,
                     DisplayTier = x.displayTier >= 0 && x.displayTier < PartCatalog.TierCount ? x.displayTier : -1,
                     Spend = Money.FromCents(x.spendCents), RetailInterestSeries = x.interest,

@@ -98,6 +98,8 @@ namespace PCShopSell.Core.Session
         public bool QuestLessonRead(string id) => Flags.Contains("tutorial:read:" + id);
         public void RefreshQuestProgress()
         {
+            if(PendingShopKindPlaceId!=null)return;
+            MigrateOpeningRewards();
             // Ignore the old directory's arbitrary selection/skip state, preserving real achievements.
             Flags.RemoveWhere(f => f.StartsWith("tutorial:track:", StringComparison.Ordinal) || f.StartsWith("tutorial:defer:", StringComparison.Ordinal));
             // Observe every milestone, including out-of-order achievements; all flags use the existing save format.
@@ -108,7 +110,7 @@ namespace PCShopSell.Core.Session
                     if (q.Grant != null)
                     {
                         q.Grant(this);
-                        Say($"任务完成「{q.Title}」，奖励：{q.Reward}。");
+                        Say($"任务完成「{q.Title}」，奖励：{q.RewardText(this)}。");
                     }
                 }
         }

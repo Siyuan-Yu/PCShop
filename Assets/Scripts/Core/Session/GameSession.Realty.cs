@@ -44,6 +44,7 @@ namespace PCShopSell.Core.Session
         public bool IsPendingShop(Place p) => PendingLease != null && p != null && p.Id == PendingLease.PlaceId;
 
         public IReadOnlyList<ShopListing> Listings => _listings;
+        public bool LookingForFirstShop => !QuestCompleted("rent") && !_shops.Any(s=>s.Rented) && PendingLease==null;
 
         public string AgencyStreetOf(Place p) => string.IsNullOrEmpty(p?.StreetId) ? "s_start" : p.StreetId;
         public bool AgencyServes(Place agency, Place unit) => agency != null && unit != null
@@ -104,7 +105,7 @@ namespace PCShopSell.Core.Session
         /// 在房产中介签下一间铺子。还没店就是开第一家；已有店时 newShop = 再开一家（几家店同时经营），
         /// 否则把当前这家店搬过去：旧铺退押金，摆在店里的家具收回“我的”。
         /// </summary>
-        public bool SignLease(string placeId, bool newShop = false)
+        public bool SignLease(string placeId, bool newShop = false, string retailKind = null)
         {
             if (!InAgency) return Fail("要在房产中介签约。");
             ShopListing l = _listings.FirstOrDefault(x => x.PlaceId == placeId);
@@ -117,6 +118,7 @@ namespace PCShopSell.Core.Session
             Money deposit = RealEstate.Deposit(l.Rent);
             if (IsAdvance(l))
             {
+                PendingRetailKind = RetailShopTypes.Valid(retailKind ?? (newShop ? "computer" : RetailKind));
                 PaySigning(l.Rent, place);
                 PendingLease = new ShopLease { PlaceId = place.Id, Rent = l.Rent, Deposit = deposit, StartDay = l.OpenDay, SignedDay = Clock.Today.TotalDays };
                 PendingIsNewShop = newShop;
@@ -134,6 +136,7 @@ namespace PCShopSell.Core.Session
             {
                 PaySigning(l.Rent, place);
                 OpenNewShop(place, l.Rent, deposit);
+                SetOpeningShopKind(retailKind ?? "computer");
                 ShowNewShop(place, l.Rent, deposit, "开了新店");
                 RefreshQuestProgress();
                 return true;
@@ -143,6 +146,7 @@ namespace PCShopSell.Core.Session
             PaySigning(l.Rent, place);
             if (moving) Ledger.ForceDebit(Clock.Today, "搬家", RealEstate.MoveFee, "搬店");
             MoveInto(place, l.Rent, deposit);
+            if(!moving)SetOpeningShopKind(retailKind ?? RetailKind);
             ShowMovedIn(place, l.Rent, deposit, moving, "签约成功");
             RefreshQuestProgress();
             return true;
@@ -154,7 +158,7 @@ namespace PCShopSell.Core.Session
             Show(moving ? "搬店完成" : title,
                 $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）租下来了，月租 {rent}，押金 {deposit}。\n" +
                 (moving ? "货、储物柜、展示机都搬过去了；原来店里摆的家具、货架、收银台都收回了“我的”，要在新店里重新摆。\n"
-                        : "这是间毛坯铺子，只配一个后仓纸箱：至少摆好收银台和一个货架才能营业。\n") +
+                        : "这是间毛坯铺子，只配一个后仓纸箱；请按经营类型摆好开业所需设施。\n") +
                 "以后每月 1 号交房租。");
         }
 
@@ -163,7 +167,7 @@ namespace PCShopSell.Core.Session
             if(IsDedicatedVenue(place)){ShowVenueHandover(place);return;}
             Show(title,
                 $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）租下来了，是你的{ShopTitle(_focus)}，月租 {rent}，押金 {deposit}。\n" +
-                "原来的店照常营业，货、员工、货架各管各的。新店是毛坯：至少摆好收银台和一个货架才能营业，人不在店里时要雇人看店才开门。\n" +
+                "原来的店照常营业，货、员工、设施各管各的。新店是毛坯：按经营类型摆好设施，人不在店里时要雇人看店才开门。\n" +
                 "进哪家店，店里的面板、进货送货就对哪家店。以后每月 1 号每家店各交各的房租。");
         }
 
@@ -178,7 +182,7 @@ namespace PCShopSell.Core.Session
             {
                 PendingIsNewShop = false;
                 OpenNewShop(place, p.Rent, p.Deposit);
-                _focus.RetailKind = PendingRetailKind; _focus.Sim.RetailKind = PendingRetailKind;
+                SetOpeningShopKind(PendingRetailKind);
                 PendingRetailKind = "computer";
                 ShowNewShop(place, p.Rent, p.Deposit, "交房了");
                 RefreshQuestProgress();
@@ -192,6 +196,8 @@ namespace PCShopSell.Core.Session
                 Ledger.ForceDebit(Clock.Today, "搬家", RealEstate.MoveFee, "搬店");
             }
             MoveInto(place, p.Rent, p.Deposit);
+            if(!moving)SetOpeningShopKind(PendingRetailKind);
+            PendingRetailKind = "computer";
             ShowMovedIn(place, p.Rent, p.Deposit, moving, "交房了");
             RefreshQuestProgress();
         }
@@ -230,7 +236,7 @@ namespace PCShopSell.Core.Session
             foreach(var row in Employees.Where(e=>e.Person.TransferShopId==PlayerShopPlace.Id))row.Person.TransferShopId=place.Id;
             MoveSpecialBusinessState(PlayerShopPlace.Id,place.Id);
             PlayerShopPlace = place;
-            PlayerShop.TradingEnabled=!IsDedicatedVenue(place)&&!IsSpecialBusiness(_focus);
+            PlayerShop.TradingEnabled=!IsDedicatedVenue(place)&&RetailKind!="restaurant";
             _vacant.Remove(place.Id);
             _listings.RemoveAll(x => x.PlaceId == place.Id);
             PlayerShop.Size = place.Size;
@@ -270,6 +276,8 @@ namespace PCShopSell.Core.Session
         {
             Flags.Add("tutorial:rent");
             Flags.Add("tutorial:mall");
+            Flags.Add("tutorial:reward:rent:computer");
+            Flags.Add("tutorial:reward:mall:computer");
         }
 
         /// <summary>测试 / 冒烟用：让中介挂出一间指定的铺子。</summary>
@@ -296,7 +304,24 @@ namespace PCShopSell.Core.Session
         private bool IsBareUnit(Place p) => p.IsPlayerShop || p.Business == RealEstate.VacantBusiness;
 
         private IEnumerable<Place> RentableUnits() =>
-            City.Places.Where(p => p.Kind == PlaceKind.Shop && (IsBareUnit(p) || !IsFixedBusiness(p.Business)));
+            City.Places.Where(p => p.Kind == PlaceKind.Shop && (IsBareUnit(p) || !IsFixedBusiness(p.Business))
+                && (!LookingForFirstShop || !IsDedicatedVenue(p)));
+
+        private void EnsureFirstShopListings(int today)
+        {
+            if(!LookingForFirstShop)return;
+            // Existing saves can contain leisure venues from the old random pool.
+            _listings.RemoveAll(l=>IsDedicatedVenue(ListingPlace(l)));
+            _vacant.RemoveWhere(id=>City.HasPlace(id)&&IsDedicatedVenue(City.GetPlace(id))
+                &&ShopAt(id)==null&&VentureAt(id)==null&&PropertyAt(id)==null);
+            var start=City.PlayerShop();
+            if(IsDedicatedVenue(start)||VentureAt(start.Id)!=null||PropertyAt(start.Id)!=null)return;
+            var listing=_listings.FirstOrDefault(l=>l.PlaceId==start.Id)??AddListing(start,today,today+120);
+            listing.OpenDay=Math.Min(listing.OpenDay,today);
+            listing.CloseDay=Math.Max(listing.CloseDay,today+120);
+            _vacant.Add(start.Id);
+            _listings.Remove(listing);_listings.Insert(0,listing);
+        }
 
         private bool Listed(Place p) => _listings.Any(l => l.PlaceId == p.Id);
 
@@ -345,6 +370,7 @@ namespace PCShopSell.Core.Session
             Place medium = Pick(pool.Where(p => p.Size == ShopSize.Medium).ToList());
             if (medium != null) AddListing(medium, today + _realtyRng.Next(20, 40), today + 80);
             SeedStreetListings(today);
+            EnsureFirstShopListings(today);
         }
 
         private void SeedStreetListings(int today)
@@ -374,6 +400,7 @@ namespace PCShopSell.Core.Session
         /// <summary>每天：到期的老租户搬走（铺子空出来）、过期没人签的挂牌下架、偶尔挂出新铺子。</summary>
         private void OnRealtyDay(int today)
         {
+            EnsureFirstShopListings(today);
             MoveIntoPending(today);
             foreach (ShopListing l in _listings.ToList())
             {

@@ -65,11 +65,14 @@ namespace PCShopSell.Game.Runtime
                             Person("dining:"+order.Id,position+new Vector3(0,0,-.7f));
                             if(order.Stage==DiningStage.Eating)Good("meal:"+order.Id,position+Vector3.up*.95f,new Color(.9f,.7f,.25f));
                         }
+                    var pass=shop.Layout.FirstOrDefault(p=>p.Id=="restaurant_pass");
+                    if(pass!=null)foreach(var order in state.Orders.Where(o=>o.Stage==DiningStage.Ready&&!state.Workers.Any(w=>w.Busy&&w.OrderId==o.Id&&w.Job==RestaurantJob.Serve&&w.Carrying)))
+                        Good("pass:"+order.Id,new Vector3((float)pass.X,.95f,(float)pass.Z),new Color(.9f,.7f,.25f));
                     var stoves=shop.Layout.Where(p=>p.Id=="restaurant_stove").ToArray();
-                    int burner=0;
                     foreach(var order in state.Orders.Where(o=>o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Burnt))
                     {
-                        if(burner>=stoves.Length)break;var stove=stoves[burner++];
+                        if(order.Stove<0||order.Stove>=stoves.Length||state.Workers.Any(w=>w.Busy&&w.OrderId==order.Id&&w.Job==RestaurantJob.Plate&&w.Carrying))continue;
+                        var stove=stoves[order.Stove];
                         Color color=order.Stage==DiningStage.Burnt?Color.black:session.Clock.Now.TotalMinutes>=order.ReadyAt?new Color(.3f,.8f,.25f):new Color(.95f,.6f,.2f);
                         Good("fire:"+order.Id,new Vector3((float)stove.X,1.13f,(float)stove.Z),color);
                     }
@@ -80,7 +83,7 @@ namespace PCShopSell.Game.Runtime
                     var seller=state.Used.FirstOrDefault(i=>!i.Owned&&!i.Sold);
                     if(desk!=null&&seller!=null){Person("seller:"+seller.Id,new Vector3((float)desk.X,0,(float)desk.Z-.8f));Good("offer:"+seller.Id,new Vector3((float)desk.X,.95f,(float)desk.Z),new Color(.68f,.5f,.32f));}
                     var displays=shop.Layout.Where(p=>p.Id=="used_display").ToArray();int slot=0;
-                    foreach(var item in state.Used.Where(i=>i.Listed&&!i.Sold))
+                    foreach(var item in state.Used.Where(i=>i.Owned&&!i.Listed&&!i.Sold))
                     {
                         if(slot/4>=displays.Length)break;var display=displays[slot/4];int offset=slot++%4;
                         Good("used:"+item.Id,new Vector3((float)display.X+(offset%2==0?-.22f:.22f),1.2f,(float)display.Z+(offset<2?-.16f:.16f)),item.Condition==UsedCondition.Broken?Color.gray:new Color(.7f,.55f,.35f));
