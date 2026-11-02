@@ -105,11 +105,12 @@ namespace PCShopSell.Tests
             ShopSimulation shop = MakeSim(out GameClock clock, s);
             PartDef gpu = Part(PartCategory.Gpu, 1);
             foreach (PartDef p in PartCatalog.InCategory(PartCategory.Cpu)) shop.Stock.ForceAdd(p, true, 20);
+            int cpuStockBefore = PartCatalog.InCategory(PartCategory.Cpu).Sum(p => shop.Stock.CountAll(p));
             shop.Stock.ForceAdd(gpu, true, 20);
             shop.SetShelfCapacity(new Dictionary<string, double> { { "cpu", 60 } }); // 只有处理器货架
             clock.Advance(180);
             Assert.AreEqual(20, shop.Stock.CountAll(gpu), "没有显卡货架，后仓里的显卡一张都卖不出去");
-            Assert.Less(PartCatalog.InCategory(PartCategory.Cpu).Sum(p => shop.Stock.CountAll(p)), 60, "处理器卖出去了");
+            Assert.Less(PartCatalog.InCategory(PartCategory.Cpu).Sum(p => shop.Stock.CountAll(p)), cpuStockBefore, "处理器卖出去了");
         }
 
         [Test]
@@ -211,7 +212,9 @@ namespace PCShopSell.Tests
             Assert.AreEqual(Money.FromYuan(300), d.Price);
             Assert.AreEqual(d, FurnitureCatalog.Get("shelf_gpu"), "老 id 当成现在的货架");
             var shelves=FurnitureCatalog.Purchasable(true).Where(x=>x.Fixture==FixtureKind.Shelf).ToArray();
-            CollectionAssert.AreEquivalent(new[]{FurnitureCatalog.Shelf,FurnitureCatalog.RackStrong,FurnitureCatalog.RackHeavy,FurnitureCatalog.ClothingRack,FurnitureCatalog.ClothingFold},shelves.Select(x=>x.Id));
+            CollectionAssert.AreEquivalent(new[]{FurnitureCatalog.Shelf,FurnitureCatalog.RackStrong,FurnitureCatalog.RackHeavy},shelves.Select(x=>x.Id));
+            Assert.AreSame(d,FurnitureCatalog.Get(FurnitureCatalog.ClothingRack),"旧衣架归入普通货架");
+            Assert.AreSame(d,FurnitureCatalog.Get(FurnitureCatalog.ClothingFold),"旧叠衣架归入普通货架");
         }
 
         [Test]

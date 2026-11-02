@@ -214,6 +214,9 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Label(head, kind == null ? "这个货架还空着" : "这个货架摆：<b>" + kind.Name + "</b>", 19, TextAnchor.MiddleLeft), -1, -1, 1);
                 Ui.Size(Ui.Button(head, kind == null ? "选择摆什么" : "换品类", () => OpenShelfKindChooser(layoutIndex, w), 17, kind == null ? Ui.ButtonHot : Ui.ButtonBg), 160);
 
+                FurnitureDef shelf = FurnitureCatalog.Get(S.ShopLayout[layoutIndex].Id);
+                Para(w.Content, $"本架最多 {shelf.ShelfItems} 件、{shelf.ShelfKg:0} 千克。件数或承重任一达到上限就停止陈列。", 16, Ui.Dim);
+
                 if (kind == null)
                 {
                     Para(w.Content, "选一类货：店里这一类的货（盒装、散件都算同一类）就会自动摆上来。没有对应货架的货，顾客买不到。", 17, Ui.Warn);
@@ -224,7 +227,7 @@ namespace PCShopSell.Game.UI
                 ShelfFill fill = shop.ShelfFillOf(kind);
                 int same = S.ShelvesOfKind(kind.Id);
                 int back = kind.IsParts ? PartCatalog.InCategory(kind.Category).Sum(p => st.CountAll(p)) : kind.GiftIds.Sum(id => st.GoodsCount(id));
-                Line(w.Content, $"摆「{kind.Name}」的货架共 <b>{same}</b> 个，一共能放 {fill.CapacityKg:0} 千克，已摆 <b>{fill.UsedKg:0.##}</b> 千克 / <b>{fill.Total}</b> 件"
+                Para(w.Content, $"摆「{kind.Name}」的货架共 <b>{same}</b> 个；同类陈列合计（含展示台）：<b>{fill.UsedKg:0.##}/{fill.CapacityKg:0}</b> 千克，<b>{fill.Total}/{fill.CapacityItems}</b> 件，剩余 {System.Math.Max(0, fill.CapacityItems - fill.Total)} 件名额"
                     + (back > fill.Total ? $"　<color=#DDC18B>后仓还有 {back - fill.Total} 件没摆上（货架装满了）</color>" : ""), 16);
                 Line(w.Content, $"整店后仓容量不限 · 已存 {st.UsedSpace:0.#} 格；货架仍按陈列容量出售。", 15, Ui.Dim);
 

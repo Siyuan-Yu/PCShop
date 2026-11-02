@@ -90,6 +90,9 @@ namespace PCShopSell.Core.Home
         /// <summary>货架专属：这个货架能放多少千克货（别的家具为 0）。</summary>
         public double ShelfKg { get; set; }
 
+        /// <summary>货架陈列件数上限，与承重同时生效。</summary>
+        public int ShelfItems { get; set; }
+
         /// <summary>货架专属：摆出来之后后仓多出来的仓位（格）。</summary>
         public double StockBonus { get; set; }
 
@@ -239,9 +242,9 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef(ShopBox, "店铺纸箱", "摆在店里即可使用不限容量的后仓；多个纸箱共用本店后仓。靠近按 F，或按 B 查看背包和后仓。", 20, FurnitureSlot.Floor, 0.6, 0.5, true) { Role = FurnitureRole.Storage, WeightKg = 1 });
 
             // ---- 店面设施：租下来的铺子是空的，这些得自己买、自己摆（摆完第二天才开业） ----
-            Add(new FurnitureDef(Shelf, "货架", "每个货架摆一种货（配件、烟酒饮料都行），能放 60 千克。顾客只买货架上摆着的。", ShelfPrice.Yuan, FurnitureSlot.Floor, 1.4, 0.4, true) { Fixture = FixtureKind.Shelf, WeightKg = 40, ShelfKg = ShelfKinds.CapacityKg });
-            Add(new FurnitureDef(RackStrong, "加固货架", "钢架加厚，每个最多陈列 100 千克商品。每个摆一种货，其余库存留在不限容量的后仓。", 700, FurnitureSlot.Floor, 1.4, 0.4, true) { Fixture = FixtureKind.Shelf, WeightKg = 55, ShelfKg = 100 });
-            Add(new FurnitureDef(RackHeavy, "重型货架", "重型陈列货架，每个最多陈列 160 千克商品；其余库存留在不限容量的后仓。", 1500, FurnitureSlot.Floor, 1.4, 0.4, true) { Fixture = FixtureKind.Shelf, WeightKg = 90, ShelfKg = 160 });
+            Add(new FurnitureDef(Shelf, "货架", "每架最多20件、60千克，任一达到上限即停止陈列。每架摆一种货，多余商品留在后仓。", ShelfPrice.Yuan, FurnitureSlot.Floor, 1.4, 0.4, true) { Fixture = FixtureKind.Shelf, WeightKg = 40, ShelfKg = ShelfKinds.CapacityKg, ShelfItems = 20 });
+            Add(new FurnitureDef(RackStrong, "加固货架", "每架最多30件、100千克，任一达到上限即停止陈列。每架摆一种货，多余商品留在后仓。", 700, FurnitureSlot.Floor, 1.4, 0.4, true) { Fixture = FixtureKind.Shelf, WeightKg = 55, ShelfKg = 100, ShelfItems = 30 });
+            Add(new FurnitureDef(RackHeavy, "重型货架", "每架最多40件、160千克，任一达到上限即停止陈列。多余商品留在不限容量的后仓。", 1500, FurnitureSlot.Floor, 1.4, 0.4, true) { Fixture = FixtureKind.Shelf, WeightKg = 90, ShelfKg = 160, ShelfItems = 40 });
             Add(new FurnitureDef(ShopCounter, "收银台", "顾客结账的地方，没有它开不了业。", 600, FurnitureSlot.Floor, 2.2, 0.8, true) { Fixture = FixtureKind.Counter });
             Add(new FurnitureDef(ShopDisplay, "展示台", "可选择展示电脑整机、服装或其他商品。电脑占两个机位，其他商品可摆1–6件。", 900, FurnitureSlot.Floor, 2.8, 1.2, true) { Fixture = FixtureKind.Display });
             Add(new FurnitureDef(ShopBench, "装机操作台", "接装机订单、拆装整机都在这张台子上。", 500, FurnitureSlot.Floor, 1.3, 0.7, true) { Fixture = FixtureKind.Bench });

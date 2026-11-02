@@ -7,8 +7,8 @@ using PCShopSell.Core.Inventory;
 namespace PCShopSell.Core.Session
 {
     /// <summary>
-    /// 货架：所有货架都一样，每个摆一种货（配件 6 类，或烟、酒、饮料、点心、水果），最多放 60 千克。
-    /// 店里的货都放在后仓（<c>Stock</c>，仓位有限），货架空出来就自动从后仓补；顾客只买货架上摆着的，
+    /// 货架：每个摆一种货，普通/加固/重型同时限制60/100/160千克与20/30/40件。
+    /// 店里的货都放在不限容量的后仓（<c>Stock</c>），货架空出来就自动从后仓补；顾客只买货架上摆着的，
     /// 没有对应货架的货，后仓里再多也卖不出去。
     /// 另外：除了电脑配件，礼品表里的东西（烟酒饮料点心水果）也能放进后仓、摆上货架卖，
     /// 来店里的人多半是买配件的，杂货卖得慢，摆什么、卖多少钱自己定。
@@ -75,7 +75,7 @@ namespace PCShopSell.Core.Session
         public ShelfFill DisplayFill(int index)
         {
             var kind=ShelfKindAt(index);int limit=DisplayLimitAt(index);
-            var result=new ShelfFill(kind,DisplayCapacityKg(kind,limit));if(kind==null)return result;
+            var result=new ShelfFill(kind,DisplayCapacityKg(kind,limit),limit);if(kind==null)return result;
             var displays=DisplayIndexes().Where(i=>_shopLayout[i].Item==kind.Id).ToArray();
             int total=displays.Sum(DisplayLimitAt),skip=displays.TakeWhile(i=>i!=index).Sum(DisplayLimitAt);
             var pool=ShelfPlanner.Fill(PlayerShop.Stock,kind,DisplayCapacityKg(kind,total),total);
@@ -105,13 +105,16 @@ namespace PCShopSell.Core.Session
                 FurnitureDef d = p.Item != null ? FurnitureCatalog.Get(p.Id) : null;
                 if(d==null)continue;
                 if(d.Fixture==FixtureKind.Shelf)
-                {kg[p.Item]=(kg.TryGetValue(p.Item,out double v)?v:0)+d.ShelfKg;limits[p.Item]=int.MaxValue;}
+                {
+                    kg[p.Item]=(kg.TryGetValue(p.Item,out double v)?v:0)+d.ShelfKg;
+                    limits[p.Item]=(limits.TryGetValue(p.Item,out int previous)?previous:0)+d.ShelfItems;
+                }
                 else if(d.Fixture==FixtureKind.Display && ShelfKinds.Get(p.Item) is ShelfKind kind)
                 {
                     int count=Math.Max(1,Math.Min(6,p.DisplayLimit<=0?2:p.DisplayLimit));
                     kg[p.Item]=(kg.TryGetValue(p.Item,out double v)?v:0)+DisplayCapacityKg(kind,count);
                     int previous=limits.TryGetValue(p.Item,out int old)?old:0;
-                    limits[p.Item]=previous==int.MaxValue?previous:previous+count;
+                    limits[p.Item]=previous+count;
                 }
             }
             PlayerShop.SetShelfCapacity(kg,limits);

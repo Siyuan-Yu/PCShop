@@ -360,14 +360,13 @@ namespace PCShopSell.Game.UI
                 RectTransform srow = Ui.Row(C, 38, 4);
                 Ui.Size(Ui.Label(srow, $"<b>{si + 1}号</b> <size=12><color=#ABB5A8>{tier}</color></size>", 16, TextAnchor.MiddleLeft), 78);
                 Ui.Size(Ui.Button(srow, sk == null ? "选择摆什么 ▾" : sk.Name + "  ▾", () => OpenShelfKindChooser(layoutIdx), 16, sk == null ? Ui.Warn : Ui.ButtonBg), 150);
-                string load = "已摆 0 件";
+                string load = $"0/{sdef?.ShelfKg ?? 0:0} 千克\n<size=12>0/{sdef?.ShelfItems ?? 0} 件</size>";
                 if (sk != null)
                 {
                     ShelfFill sf = shop.ShelfFillOf(sk);
-                    int same = Mathf.Max(1, S.ShelvesOfKind(sk.Id));
-                    load = $"{sf.UsedKg:0.##}/{sf.CapacityKg:0} 千克\n<size=12>已摆 {sf.Total} 件{(same > 1 ? $" · {same}架共用合计" : "")}</size>";
+                    load = $"{sf.UsedKg:0.##}/{sf.CapacityKg:0} 千克\n<size=12>{sf.Total}/{sf.CapacityItems} 件 · 同类合计</size>";
                 }
-                Ui.Size(Ui.Label(srow, load, 14, TextAnchor.MiddleLeft, Ui.Dim), 178);
+                Ui.Size(Ui.Label(srow, load, 14, TextAnchor.MiddleLeft, Ui.Dim), 178).name = $"ShelfCapacity_{layoutIdx}";
                 Ui.Size(Ui.Button(srow, "查看", () => OpenShelfWindow(layoutIdx), 15, sk == null ? Ui.ButtonBg : Ui.ButtonHot, sk != null), 66);
             }
 

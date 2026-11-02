@@ -80,19 +80,21 @@ namespace PCShopSell.Core.Inventory
         public static string NameOf(string id) => Get(id)?.Name ?? "未设置";
     }
 
-    /// <summary>某一类货在货架上摆了哪些（受货架总载重限制）。</summary>
+    /// <summary>某一类货在货架上摆了哪些（同时受总承重和总件数限制）。</summary>
     public sealed class ShelfFill
     {
         public ShelfKind Kind { get; }
         public double CapacityKg { get; }
+        public int CapacityItems { get; }
         public double UsedKg { get; internal set; }
         public List<StockLine> Parts { get; } = new List<StockLine>();
         public List<KeyValuePair<string, int>> Goods { get; } = new List<KeyValuePair<string, int>>();
 
-        public ShelfFill(ShelfKind kind, double capacityKg)
+        public ShelfFill(ShelfKind kind, double capacityKg, int capacityItems = int.MaxValue)
         {
             Kind = kind;
             CapacityKg = capacityKg;
+            CapacityItems = Math.Max(0, capacityItems);
         }
 
         public int Total => Parts.Sum(l => l.Count) + Goods.Sum(g => g.Value);
@@ -117,7 +119,7 @@ namespace PCShopSell.Core.Inventory
     }
 
     /// <summary>
-    /// 后仓的货怎么摆上货架：货架只摆一种货，装满为止（按重量）；同一类里各个型号轮流各摆一件，
+    /// 后仓的货怎么摆上货架：货架只摆一种货，装满为止（同时限制重量与件数）；同一类里各个型号轮流各摆一件，
     /// 这样摆出来的货是多样的。顾客只能买货架上的东西。
     /// </summary>
     public static class ShelfPlanner
@@ -130,8 +132,8 @@ namespace PCShopSell.Core.Inventory
 
         public static ShelfFill Fill(Stock stock, ShelfKind kind, double capacityKg, int maxItems = int.MaxValue)
         {
-            var fill = new ShelfFill(kind, capacityKg);
-            if (kind == null || capacityKg <= 0) return fill;
+            var fill = new ShelfFill(kind, capacityKg, maxItems);
+            if (kind == null || capacityKg <= 0 || maxItems <= 0) return fill;
 
             var entries = new List<Entry>();
             if (kind.IsParts)
@@ -157,8 +159,9 @@ namespace PCShopSell.Core.Inventory
             {
                 foreach (Entry e in entries)
                 {
-                    e.Taken = e.Left;
-                    used += e.Kg * e.Left;
+                    e.Taken = Math.Min(e.Left, maxItems-taken);
+                    taken += e.Taken;
+                    used += e.Kg * e.Taken;
                 }
             }
             else

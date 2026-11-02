@@ -1,0 +1,19 @@
+货架件数与承重双上限验证（2026-11-03，Asia/Shanghai）
+Unity: 2022.3.6f1，Windows EditMode / batchmode / nographics
+工程: D:/UnityProjects/PCShop/_ci_shop_cores
+源码: a19ab0b 基线 + 本次暂存改动；已逐文件核对暂存C#与实际测试快照一致。
+结果: 54/54 通过，0失败。
+- ShelfItemCapacityTests: 17/17（本次新增）
+- ShelfTests: 13/13
+- CityRetailTests: 8/8
+- ShopDockInteractionTests: 7/7
+- RestaurantDrinkTests: 9/9
+
+新增用例验证三档模型/服装件数、重货承重、多型号共用名额、补货与换品类不丢货、
+同类多架累加、展示台与货架两种顺序、旧ID和JSON读档、无限承重分支、库存/详情文字。
+修正旧ShelfTests两处过时假设：可购5种货架改为现有3种+旧ID映射；
+CPU卖出量断言不再固定目录只有3种/共60盒，而对比真实营业前数量。
+
+首次工作区快照含并行未完成修改；正式通过结果来自隔离暂存快照。
+UI测试检查真实控件文字，未做本轮图形截图或全仓库测试，不报告帧率提升。
+未重新打包Windows；223752包不含本轮及第41—43篇后续修改。
