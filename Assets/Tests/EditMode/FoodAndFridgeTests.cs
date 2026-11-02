@@ -40,7 +40,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void NamedFoodCanBeMovedWithoutTakingAnotherDish_AndChillingCannotBeRefreshed()
+        public void NamedFoodCanBeMovedWithoutTakingAnotherDish_AndChillingDoesNotResetExpiry()
         {
             using (var s = Make())
             {
@@ -50,10 +50,10 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(2, s.Backpack.Food.Packed.Single().Count);
                 Assert.AreEqual("rice", s.Backpack.Food.Packed.Single().Id);
                 Assert.AreEqual("青菜焖饭", s.HomeFridge.Food.Packed.Single().Name);
-                Assert.AreEqual(3, s.HomeFridge.Food.Packed.Single().ExpireDay);
+                Assert.AreEqual(1, s.HomeFridge.Food.Packed.Single().ExpireDay);
                 Assert.True(s.MoveFridgeFood("lunch:veg", 1, false));
                 Assert.True(s.MoveFridgeFood("lunch:veg", 1, true));
-                Assert.True(s.HomeFridge.Food.Packed.All(b => b.ExpireDay == 3 && b.Chilled));
+                Assert.True(s.HomeFridge.Food.Packed.All(b => b.ExpireDay == 1 && b.Chilled));
                 Assert.False(s.MoveFridgeFood("furn:fridge", 1, true));
             }
         }
@@ -93,7 +93,7 @@ namespace PCShopSell.Tests
                     Assert.AreEqual("rice", loaded.HomeFridge.Food.Packed.Single().Id);
                     Assert.AreEqual("pork", loaded.MainShop.Fridge.Food.Packed.Single().Id);
                     Assert.True(loaded.MainShop.Fridge.Food.Packed.Single().Chilled);
-                    Assert.AreEqual(3, loaded.HomeFridge.Food.Packed.Single().ExpireDay);
+                    Assert.AreEqual(1, loaded.HomeFridge.Food.Packed.Single().ExpireDay);
                     Assert.AreEqual(61, loaded.Player.Nutrition);
                     Assert.AreEqual(72, loaded.Player.Mood);
                 }
@@ -152,7 +152,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void OldSavesDefaultDietStatsToFifty_AndChilledFoodStillExpires()
+        public void OldSavesDefaultDietStatsToFifty_AndRefrigeratedFoodSurvivesAcrossDays()
         {
             using (var s = Make())
             {
@@ -162,8 +162,72 @@ namespace PCShopSell.Tests
                     Assert.AreEqual(50, loaded.Player.Nutrition); Assert.AreEqual(50, loaded.Player.Mood);
                     loaded.Backpack.Food.Packed.Add(Meal("veg"));
                     Assert.True(loaded.MoveFridgeFood("lunch:veg", 1, true));
-                    Assert.Zero(loaded.HomeFridge.Food.Spoil(3).Count);
-                    Assert.AreEqual(1, loaded.HomeFridge.Food.Spoil(4).Count);
+                    GameSessionTests.Teleport(loaded, "farm");
+                    for (int day = 0; day < 40; day++)
+                    {
+                        loaded.Clock.Restore(loaded.Clock.Today, 1439);
+                        loaded.Clock.Advance(1);
+                    }
+                    Assert.AreEqual(1, loaded.HomeFridge.Lunchboxes);
+                    Assert.AreEqual(41, loaded.HomeFridge.Food.Packed.Single().ExpireDay);
+                    GameSessionTests.Teleport(loaded, "flat");
+                    Assert.True(loaded.MoveFridgeFood("lunch:veg", 1, false));
+                    Assert.Zero(loaded.Backpack.Food.Spoil(41).Count);
+                    Assert.AreEqual(1, loaded.Backpack.Food.Spoil(42).Count);
+                }
+            }
+        }
+
+        [Test]
+        public void RefrigerationPreservesHomeAndShopBatchesAcrossSaveLoad_OutsideFoodStillSpoils()
+        {
+            using (var s = Make())
+            {
+                s.Backpack.Food.Ingredient.Add(new FoodBatch { Id = "pork", Name = "五花肉", Count = 1, ExpireDay = 1 });
+                Assert.True(s.MoveFridgeFood("ing:pork", 1, true));
+                GameSessionTests.Teleport(s, "pc");
+                s.Backpack.Food.Packed.Add(Meal("veg", 2));
+                Assert.True(s.MoveFridgeFood("lunch:veg", 1, true));
+                s.HomeBox.Food.Packed.Add(Meal("egg"));
+                GameSessionTests.Teleport(s, "farm");
+                for (int day = 0; day < 12; day++)
+                {
+                    s.Clock.Restore(s.Clock.Today, 1439);
+                    s.Clock.Advance(1);
+                }
+                Assert.IsEmpty(s.Backpack.Food.Packed);
+                Assert.IsEmpty(s.HomeBox.Food.Packed);
+                Assert.AreEqual(13, s.HomeFridge.Food.Ingredient.Single().ExpireDay);
+                Assert.AreEqual(13, s.MainShop.Fridge.Food.Packed.Single().ExpireDay);
+                using (var loaded = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
+                {
+                    loaded.EventsEnabled = false;
+                    loaded.Clock.Restore(loaded.Clock.Today, 1439);
+                    loaded.Clock.Advance(1);
+                    Assert.AreEqual(14, loaded.HomeFridge.Food.Ingredient.Single().ExpireDay);
+                    Assert.AreEqual(14, loaded.MainShop.Fridge.Food.Packed.Single().ExpireDay);
+                    GameSessionTests.Teleport(loaded, "pc");
+                    Assert.True(loaded.MoveFridgeFood("lunch:veg", 1, false));
+                    Assert.True(loaded.MoveFridgeFood("lunch:veg", 1, true));
+                    Assert.AreEqual(14, loaded.MainShop.Fridge.Food.Packed.Single().ExpireDay);
+                    Assert.True(loaded.MoveFridgeFood("lunch:veg", 1, false));
+                    Assert.AreEqual(1, loaded.Backpack.Food.Spoil(15).Count);
+                }
+            }
+        }
+
+        [Test]
+        public void LegacyChilledBatchesKeepTheirSavedDeadlinesWithoutLoadBonuses()
+        {
+            using (var s = Make())
+            {
+                var data = s.CreateSave();
+                data.home.homeFridge.lunch = new[] { new SaveBatch { id = "veg", name = "青菜焖饭", count = 1, expireDay = 3, chilled = true } };
+                using (var loaded = GameSession.Load(s.City, data))
+                using (var again = GameSession.Load(s.City, loaded.CreateSave()))
+                {
+                    Assert.AreEqual(3, loaded.HomeFridge.Food.Packed.Single().ExpireDay);
+                    Assert.AreEqual(3, again.HomeFridge.Food.Packed.Single().ExpireDay);
                 }
             }
         }
@@ -260,7 +324,7 @@ namespace PCShopSell.Tests
                 {
                     Assert.AreEqual(120, loaded.CurrentFridgeLimitKg);
                     Assert.AreEqual("青菜焖饭", loaded.HomeFridge.Food.Packed.Single().Name);
-                    Assert.AreEqual(3, loaded.HomeFridge.Food.Packed.Single().ExpireDay);
+                    Assert.AreEqual(1, loaded.HomeFridge.Food.Packed.Single().ExpireDay);
                 }
             }
         }

@@ -1,0 +1,51 @@
+2026-11-02 批发商/型号/星期共享分配验收
+Unity 2022.3.6f1 / EditMode / 独立镜像 _ci_shop_cores；不读写正式玩家存档，未打包。
+
+最终专项: total=17 passed=17 failed=0
+覆盖：三人共享同源同型号6+4+剩余；拒绝超额；不同商家、不同型号独立；周三与一三五的重叠；逐日最大份额；暂停/减量释放；最大吸收释放量（包括原先周三份额为0的情况）；先出发不能侵占其他计划；旧档迁移、JSON/草稿深拷贝；三种频率与失败后等待下一个计划日；批发周末跳过；关系不改变物理供货。
+
+相关联合: total=92 passed=86 failed=6
+联合6项失败与第36篇干净HEAD 024042c对照中的旧失败一致，未宣称全量回归通过。
+
+PCShopSell.Tests.PurchasePlanTests.PartialCash_BuysInListOrderAndReturnsChangeOnceAfterSave
+Expected: ¥1,069
+  But was:  ¥3,039
+
+PCShopSell.Tests.PurchasePlanTests.PartialCash_SkipsUnaffordableEarlyItemButStillBuysLaterCheapItem
+String lengths are both 4. Strings differ at index 3.
+  Expected: "cpu0"
+  But was:  "cpu2"
+  --------------^
+
+PCShopSell.Tests.PurchasePlanTests.PostingAnotherAdRetainsPreviousCandidates_AndAddsMoreTomorrow
+Expected: 4
+  But was:  2
+
+PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("load")
+Expected: not null
+  But was:  null
+
+PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("quota")
+Expected: not null
+  But was:  null
+
+PCShopSell.Tests.WorkforceTests.Transfer_CanCancel_AndCannotOverwriteOccupiedRole
+Expected: False
+  But was:  True
+
+图形专项：GameSceneBuilder.SupplierPlansFromBatch
+SMOKE OK 租下测试门店
+SMOKE OK 保存前两份共享配额安排
+SMOKE OK 保存前两份共享配额安排
+SMOKE OK 只显示三种星期频率
+SMOKE OK 20份实货减去6+4后显示周三可分配10份
+SMOKE shot allocation_remaining
+SMOKE shot allocation_remaining_720
+SMOKE shot allocation_maximum
+SMOKE OK 可点击引导按钮：完成
+SMOKE OK 实际最大按钮保存10份周三额度
+SMOKE OK 配置预留不扣实货、不扣货款
+SMOKE SUPPLIER PLAN GRAPHICS COMPLETE
+SMOKE RESULT code=0 errors=0
+
+1920x1080与1280x720实际界面已检查；验证三种频率按钮、6+4后的10份可分配量、真实最大按钮保存、配置不扣实货及货款。

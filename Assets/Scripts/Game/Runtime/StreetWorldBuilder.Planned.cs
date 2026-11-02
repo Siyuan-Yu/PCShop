@@ -25,7 +25,7 @@ namespace PCShopSell.Game.Runtime
         }
         private void BuildPlannedCity()
         {
-            BuildRoads(); BuildCitySidewalks();
+            BuildRoads(); BatchLakeRoads(); BuildCitySidewalks();
             foreach(var p in _city.Places) BuildPlannedPlace(p);
             var housing=new GameObject("ResidentialCompounds").transform;housing.SetParent(_root,false);
             foreach(var block in _city.Blocks)
@@ -34,6 +34,7 @@ namespace PCShopSell.Game.Runtime
                 // configured building: broad proximity culling previously erased whole apartment rows.
                 Vector3 at=new Vector3((float)block.x,0,(float)block.y);
                 var root=new GameObject("Compound_"+block.street).transform;root.SetParent(housing,false);root.position=at;
+                root.rotation=Quaternion.Euler(0,(float)block.heading,0);
                 PlannedBuilding(root,block.model,block.tier,(float)block.width,(float)block.depth,null,(float)block.height,block.variant);
                 BuildResidentialPlot(root,block);
             }
@@ -239,7 +240,7 @@ namespace PCShopSell.Game.Runtime
                 Vector3 at=NodeWorld(n.Id);
                 for(int i=-2;i<=2;i++)Prims.Box(props,"Crosswalk",at+new Vector3(i*.7f,.04f,2.6f),new Vector3(.4f,.02f,1.7f),Mats.Lit(ArtDirection.Cream));
             }
-            for(int band=0;band<4;band++)
+            for(int band=0;band<(_city.IsLakeCity?0:4);band++)
             {
                 for(int x=-190;x<260;x+=22)
                 {

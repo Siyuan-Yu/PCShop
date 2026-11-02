@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
@@ -24,7 +24,7 @@ namespace PCShopSell.Game.Runtime
     /// 玩家店铺的室内（按规格生成：小 48㎡ / 中 108㎡ / 大 216㎡）。放在远离城市的位置，进店时镜头切过来。
     /// 顾客进门 → 去货架前挑货 → 到柜台前排队（头顶有 ¥）→ 结账后出门。
     /// </summary>
-    public sealed class ShopInteriorView
+    public sealed partial class ShopInteriorView
     {
         public static readonly Vector3 Origin = new Vector3(600, 0, -400);
 
@@ -140,9 +140,9 @@ namespace PCShopSell.Game.Runtime
         private readonly List<ShelfDisplay> _shelves = new List<ShelfDisplay>();
         private readonly System.Random _rng = new System.Random(5);
         private readonly GameObject _owner;
-        private readonly GameObject _clerk;
-        private readonly GameObject _assembler;
-        private readonly GameObject _salesperson;
+        private readonly Dictionary<string, GameObject> _staffFigures = new Dictionary<string, GameObject>();
+        private string _staffLayoutSignature;
+        private Vector3 _clerkStand;
         private readonly Vector3 _door;
         private readonly float _doorX;
         private Vector3 _counterFront;
@@ -165,6 +165,9 @@ namespace PCShopSell.Game.Runtime
         private readonly List<Rect> _deskFoots = new List<Rect>();
         private readonly List<(Rect foot, ShelfDisplay shelf)> _shelfFoots = new List<(Rect, ShelfDisplay)>();
         private float _stockTimer;
+        private readonly HashSet<int> _aliveCustomers = new HashSet<int>();
+        private readonly Dictionary<int, int> _customerQueueIndices = new Dictionary<int, int>();
+        private readonly List<int> _goneCustomers = new List<int>();
         private ShopSimulation _hooked;
         private readonly Dictionary<int, LeaveReason> _leaveReasons = new Dictionary<int, LeaveReason>();
 
@@ -633,11 +636,6 @@ namespace PCShopSell.Game.Runtime
             _owner = Prims.Figure(_root, "Owner", new Color(0.95f, 0.55f, 0.15f), new Color(0.95f, 0.8f, 0.65f), 1.05f);
             _owner.transform.localPosition = new Vector3(_doorX = doorX, 0, 0.9f);
             _owner.transform.localRotation = Quaternion.LookRotation(Vector3.forward);
-            _clerk = Prims.Figure(_root, "Clerk", new Color(0.3f, 0.6f, 0.35f), new Color(0.95f, 0.8f, 0.65f), 1.0f);
-            _clerk.transform.localPosition = new Vector3(0.35f, 0, d * 0.55f - 0.8f);
-            _clerk.transform.localRotation = Quaternion.LookRotation(Vector3.right);
-            _assembler = Prims.Figure(_root, "Assembler", new Color(0.3f, 0.45f, 0.75f), new Color(0.95f, 0.8f, 0.65f), 1.0f);
-            _salesperson = Prims.Figure(_root,"Salesperson",new Color(.65f,.39f,.62f),new Color(.95f,.8f,.65f),1.0f);
 
             _door = Origin + new Vector3(doorX, 0, -0.6f);
             _counterFront = Origin + new Vector3(1.8f, 0, d * 0.55f);
@@ -939,6 +937,7 @@ namespace PCShopSell.Game.Runtime
             _walkAround.Clear();
             _hasCounter = false;
             _hasBench = false;
+            _clerkStand = new Vector3(0.5f, 0, Depth * 0.55f);
             var deskSpots = new List<Vector3>();
             _boxFoots.Clear(); _fridgeFoots.Clear();
             foreach (RoomFurniture.Entry e in _decor.Entries)
@@ -985,8 +984,7 @@ namespace PCShopSell.Game.Runtime
                         Vector3 axis = rot * Vector3.right;
                         _queueDir = axis.z < 0 ? axis : -axis;
                         if (Mathf.Abs(axis.z) < 0.1f) _queueDir = _doorX >= pos.x ? Vector3.right : Vector3.left;
-                        _clerk.transform.localPosition = _counterBack + _queueDir * 0.8f;
-                        _clerk.transform.localRotation = Quaternion.LookRotation(front);
+                        _clerkStand = _counterBack + _queueDir * 0.8f;
                         break;
                     case FixtureKind.Bench:
                         if (_hasBench) break;
@@ -1024,7 +1022,7 @@ namespace PCShopSell.Game.Runtime
                         if (new Rect(foot.xMin - clearance, foot.yMin - clearance,
                             foot.width + clearance * 2, foot.height + clearance * 2).Contains(new Vector2(x, z)))
                         { blocked = true; break; }
-                    if (blocked || (point - _clerk.transform.localPosition).sqrMagnitude < 0.64f
+                    if (blocked || (point - _clerkStand).sqrMagnitude < 0.64f
                         || sales && (point-_assemblerStand).sqrMagnitude<.64f) continue;
                     float score = (point - preferred).sqrMagnitude;
                     if (!sales && _hasBench) score += DistToRect(_benchFoot, point) * 2;
@@ -1048,6 +1046,73 @@ namespace PCShopSell.Game.Runtime
             foreach (var order in shop.Orders)
                 if (shop.MissingParts(order).Count == 0) return "准备装机";
             return "等待配件";
+        }
+
+        private void UpdateStaff(GameSession session)
+        {
+            var staff = session.Employees.Where(e => e.Shop == session.CurrentShop
+                && session.CityEmployeeAvailable(e.Person, e.Shop)).ToArray();
+            string signature = _fxVersion + ":" + string.Join(";", staff.Select(e => e.Person.Id + ":" + e.Role));
+            if (_staffLayoutSignature != signature)
+            {
+                _staffLayoutSignature = signature;
+                var ids = new HashSet<string>(staff.Select(e => e.Person.Id));
+                foreach (string id in _staffFigures.Keys.Where(id => !ids.Contains(id)).ToArray())
+                {
+                    var figure = _staffFigures[id];
+                    figure.SetActive(false);
+                    if (Application.isPlaying) Object.Destroy(figure); else Object.DestroyImmediate(figure);
+                    _staffFigures.Remove(id);
+                }
+                var occupied = new List<Vector3>();
+                foreach (var employee in staff)
+                {
+                    string personId = session.PersonIdOf(employee.Person);
+                    if (!_staffFigures.TryGetValue(employee.Person.Id, out var figure))
+                    {
+                        figure = Prims.Figure(_root, "ShopEmployee_" + employee.Person.Id,
+                            CrowdView.PersonClothing(personId), new Color(.95f, .8f, .65f), 1f);
+                        figure.AddComponent<CityPersonMarker>().PersonId = personId;
+                        CityNpcClothing.Apply(figure, session, personId);
+                        _staffFigures.Add(employee.Person.Id, figure);
+                    }
+                    var preferred = employee.Role == EmployeeRole.Cashier ? _clerkStand
+                        : employee.Role == EmployeeRole.Assembler ? _assemblerStand
+                        : employee.Role == EmployeeRole.Buyer ? new Vector3(_doorX, 0, 1.5f) : _salesStand;
+                    Vector3 stand = FindStaffStand(preferred, occupied);
+                    occupied.Add(stand);
+                    figure.transform.localPosition = stand;
+                    Vector3 facing = employee.Role == EmployeeRole.Cashier ? _counterRot * Vector3.back
+                        : employee.Role == EmployeeRole.Assembler && _hasBench ? new Vector3(_benchPos.x, 0, _benchPos.y) - stand : Vector3.back;
+                    if (facing.sqrMagnitude > .01f) figure.transform.localRotation = Quaternion.LookRotation(facing);
+                }
+            }
+            foreach (var employee in staff)
+            {
+                var figure = _staffFigures[employee.Person.Id];
+                string state = employee.Role == EmployeeRole.Assembler ? "\n" + AssemblerState(session) : "";
+                _emotes.Add(new EmoteInfo { Pos = figure.transform.position + Vector3.up * 2.15f,
+                    PersonId = session.PersonIdOf(employee.Person),
+                    Text = employee.Person.Name + " · " + GameSession.RoleName(employee.Role) + state,
+                    Color = new Color(.85f, .8f, .95f), Size = 17 });
+            }
+        }
+
+        private Vector3 FindStaffStand(Vector3 preferred, List<Vector3> occupied)
+        {
+            Vector3 best = new Vector3(Mathf.Clamp(preferred.x, .4f, Width - .4f), 0, Mathf.Clamp(preferred.z, .4f, Depth - .4f));
+            float bestScore = float.PositiveInfinity;
+            for (float x = .4f; x <= Width - .4f; x += .2f)
+                for (float z = .4f; z <= Depth - .4f; z += .2f)
+                {
+                    var point = new Vector3(x, 0, z);
+                    if (_decor.Blockers.Any(r => new Rect(r.xMin - .24f, r.yMin - .24f, r.width + .48f, r.height + .48f).Contains(new Vector2(x, z)))
+                        || occupied.Any(p => (p - point).sqrMagnitude < .81f)) continue;
+                    float score = (point - preferred).sqrMagnitude;
+                    if (score >= bestScore) continue;
+                    bestScore = score; best = point;
+                }
+            return best;
         }
 
         private void UpdateOpenLook(bool open, float realDt)
@@ -1093,29 +1158,15 @@ namespace PCShopSell.Game.Runtime
             UpdateNearbyShelf(s.InPlayerShop);
             bool building = shop.Orders.Count > 0;
             foreach (GameObject g in _buildGlow) g.SetActive(building);
-            _clerk.SetActive(s.Employee != null && s.Employee.OnDuty(s.Clock.Now));
-            _assembler.SetActive(s.Assembler != null && s.Assembler.OnDuty(s.Clock.Now));
-            _salesperson.SetActive(s.CityEmployeeAvailable(s.Salesperson,s.CurrentShop));
-            _salesperson.transform.localPosition=_salesStand;
-            _salesperson.transform.localRotation=Quaternion.LookRotation(Vector3.back);
-            if(_salesperson.activeSelf)
-                _emotes.Add(new EmoteInfo{Pos=_salesperson.transform.position+Vector3.up*2.15f,
-                    Text=s.Salesperson.Name+" · 销售员",Color=new Color(.9f,.7f,.88f),Size=17});
-            _assembler.transform.localPosition = _assemblerStand;
-            if (_hasBench)
-            {
-                Vector3 toward = new Vector3(_benchPos.x, 0, _benchPos.y) - _assemblerStand;
-                if (toward.sqrMagnitude > 0.01f) _assembler.transform.localRotation = Quaternion.LookRotation(toward);
-            }
-            if (_assembler.activeSelf)
-                _emotes.Add(new EmoteInfo { Pos = _assembler.transform.position + Vector3.up * 2.15f,
-                    Text = s.Assembler.Name + " · 装机员\n" + AssemblerState(s),
-                    Color = new Color(0.65f, 0.82f, 1f), Size = 17 });
+            UpdateStaff(s);
+            UpdateSpecialBusinessVisuals(s);
 
-            _stockTimer -= dt;
+            // Shelf meshes are presentation, not simulation. 8x must not rebuild
+            // every shelf eight times as often (nor freeze stock refresh when paused).
+            _stockTimer -= realDt;
             if (_stockTimer <= 0)
             {
-                _stockTimer = 0.5f;
+                _stockTimer = 0.25f;
                 var counts = new Dictionary<(PartCategory, bool), int>();
                 void Bump((PartCategory, bool) k, int d) => counts[k] = Mathf.Max(0, (counts.TryGetValue(k, out int n0) ? n0 : 0) + d);
                 // 只数货架上摆着的（后仓里的不算）
@@ -1182,9 +1233,9 @@ namespace PCShopSell.Game.Runtime
                 }
             }
             Hook(shop);
-            var alive = new HashSet<int>();
+            var alive = _aliveCustomers; alive.Clear();
             int queueIndex = 0;
-            var queueIds = new Dictionary<int, int>();
+            var queueIds = _customerQueueIndices; queueIds.Clear();
             foreach (ShopCustomer c in shop.Queue) queueIds[c.Id] = queueIndex++;
 
             foreach (ShopCustomer c in shop.ActiveCustomers)
@@ -1295,7 +1346,7 @@ namespace PCShopSell.Game.Runtime
                     });
             }
 
-            var gone = new List<int>();
+            var gone = _goneCustomers; gone.Clear();
             foreach (var kv in _visitors)
             {
                 if (!alive.Contains(kv.Key)) gone.Add(kv.Key);

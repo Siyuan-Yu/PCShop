@@ -68,6 +68,7 @@ namespace PCShopSell.Game.UI
         private Button _pauseButton;
         private float _slowTimer;
         private float _uiTime;
+        private float _hudRefreshTimer;
 
         private GameSession S => _ctrl.Session;
 
@@ -104,6 +105,7 @@ namespace PCShopSell.Game.UI
         {
             if (S == null) return;
             RefreshShopDockVisibility();
+            RefreshWorkbenchAccess();
             HoldRepeat.AdvanceActiveHold(Time.unscaledDeltaTime);
             foreach (var window in _windows.ToArray())
             {
@@ -122,7 +124,9 @@ namespace PCShopSell.Game.UI
             if (S.IsWorking) return;
             CheckWeeklyPriceReport();
             _uiTime += dt;
-            UpdateHud();
+            _hudRefreshTimer -= dt;
+            if (_hudRefreshTimer <= 0 || dt <= 0) { _hudRefreshTimer = .1f; UpdateHud(); }
+            if (dt <= 0) _labelContentAt = 0;
             UpdateCityLifeHud(dt);
             UpdateLabels();
             UpdatePlayerMarker();
@@ -260,7 +264,6 @@ namespace PCShopSell.Game.UI
             GameTimestamp now = S.Clock.Now;
             _noticeButtonText.text = _unreadNotices > 0 ? "通知 " + Math.Min(99, _unreadNotices) : "通知";
             UpdateSleepBanner();
-            bool business = BusinessUnlocked;
             if (!_businessButton.gameObject.activeSelf) _businessButton.gameObject.SetActive(true);
             _dateText.text = (S.IsCityLifeTest?"测试 ":"")+$"{now.Date.Year}年{now.Date.Month}/{now.Date.Day} {Ui.WeekdayName(now.Date.Weekday)} {Ui.Hm(now.MinuteOfDay)}\n天气 · {S.WeatherSummary}";
             _cashText.text = S.Ledger.Balance.ToString();
@@ -294,6 +297,7 @@ namespace PCShopSell.Game.UI
 
             if (S.IsGameOver) _hintText.text = "游戏结束：" + S.GameOverReason;
             else if (_ctrl.Placing) _hintText.text = "摆放家具：左键放下 · R 旋转 · 右键/Esc 放回 · X 收进纸箱 · 点已摆的家具可以挪动 · 中键拖动 / Q E 转视角 · V 复位 · 右侧面板点“完成”结束";
+            else if(_ctrl.InInterior&&S.IsSpecialBusiness(S.CurrentShop))_hintText.text="WASD 在店里走动 · 靠近专用设施按 F 打开操作 · 右侧柜台管理烹饪 / 收购 · 靠近冰箱按 F 存取食物 · 走到门口按 F 出门";
             else if (_ctrl.InInterior) _hintText.text = "WASD 在店里走动 · 走到货架前按 F 查看货物 · 柜台边按 F（或点顾客头顶的“结账”）给顾客结账 · 走到门口按 F 出门 · 右侧面板管理店铺";
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimateRemainingMinutes(S.Time.SecondsPerMinuteAt1x)} 分钟 · 按 WASD 随时接管";
             else if (S.NearbyPlace != null)
@@ -327,16 +331,38 @@ namespace PCShopSell.Game.UI
 
         // ---------- 地点名牌 ----------
 
+        private bool _streetLabelsVisible = true;
+        private float _labelContentAt;
+
         private void UpdateLabels()
         {
             Camera cam = _ctrl.Cam;
             bool show = !_ctrl.InRoom;
+            if (!show)
+            {
+                if (_streetLabelsVisible)
+                    foreach (var label in _labels.Values) label.rt.gameObject.SetActive(false);
+                _streetLabelsVisible = false;
+                return;
+            }
+            bool refresh = !_streetLabelsVisible || _uiTime >= _labelContentAt;
+            _streetLabelsVisible = true;
+            if (refresh) _labelContentAt = _uiTime + .25f;
             foreach (var kv in _ctrl.World.Places)
             {
                 PlaceVisual pv = kv.Value;
-                if (pv.Sign != null) pv.Sign.text = S.PlaceTitle(pv.Place);
+                if (refresh && pv.Sign != null)
+                {
+                    string title = S.PlaceTitle(pv.Place);
+                    if (pv.Sign.text != title) pv.Sign.text = title;
+                }
+                Vector3 sp = cam.WorldToScreenPoint(pv.LabelPos);
+                bool visible = sp.z > 0 && sp.x > -100 && sp.x < cam.pixelWidth + 100 && sp.y > -50 && sp.y < cam.pixelHeight + 50;
+                bool created = false;
                 if (!_labels.TryGetValue(kv.Key, out var label))
                 {
+                    if (!visible) continue;
+                    created = true;
                     Place place = pv.Place;
                     bool important = place.Kind != PlaceKind.Shop || place.IsPlayerShop;
                     Button b = Ui.Button(_labelCanvas.transform, place.Name, () => OpenStreetPlace(place),
@@ -349,13 +375,13 @@ namespace PCShopSell.Game.UI
                     _labels[kv.Key] = label;
                 }
 
-                Vector3 sp = cam.WorldToScreenPoint(pv.LabelPos);
-                bool visible = show && sp.z > 0 && sp.x > -100 && sp.x < cam.pixelWidth + 100 && sp.y > -50 && sp.y < cam.pixelHeight + 50;
+                bool appeared = visible && !label.rt.gameObject.activeSelf;
                 label.rt.gameObject.SetActive(visible);
                 if (!visible) continue;
                 RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)_labelCanvas.transform, sp, LabelCam, out Vector2 local);
                 var canvasRt = (RectTransform)_labelCanvas.transform;
                 label.rt.anchoredPosition = local + canvasRt.rect.size * 0.5f;
+                if (!refresh && !created && !appeared) continue;
                 label.text.text = LabelText(pv.Place);
                 bool owned = S.IsMyShop(pv.Place) || S.VentureAt(pv.Place.Id) != null || S.PropertyAt(pv.Place.Id) != null;
                 bool major = owned || pv.Place.Kind != PlaceKind.Shop || pv.Place.IsPlayerShop;

@@ -1,0 +1,13 @@
+SMOKE OK 租下测试门店
+SMOKE OK 保存前两份共享配额安排
+SMOKE OK 保存前两份共享配额安排
+SMOKE OK 只显示三种星期频率
+SMOKE OK 20份实货减去6+4后显示周三可分配10份
+SMOKE shot allocation_remaining
+SMOKE shot allocation_remaining_720
+SMOKE shot allocation_maximum
+SMOKE OK 可点击引导按钮：完成
+SMOKE OK 实际最大按钮保存10份周三额度
+SMOKE OK 配置预留不扣实货、不扣货款
+SMOKE SUPPLIER PLAN GRAPHICS COMPLETE
+SMOKE RESULT code=0 errors=0

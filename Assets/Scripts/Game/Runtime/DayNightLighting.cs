@@ -23,6 +23,8 @@ namespace PCShopSell.Game.Runtime
         private readonly Vignette _vignette;
         private readonly FilmGrain _grain;
         private float _lastMinute = -1;
+        private bool _lastInterior;
+        private int _lastGlowCount = -1, _lastLampCount = -1;
 
         public DayNightLighting(Camera cam, Light sun, Volume volume, List<Light> lamps)
         {
@@ -91,8 +93,12 @@ namespace PCShopSell.Game.Runtime
         /// <param name="interior">在店里时用暖色室内光。</param>
         public void Apply(float minuteOfDay, bool interior)
         {
-            if (Mathf.Abs(minuteOfDay - _lastMinute) < 0.5f && !interior) return;
+            if (Mathf.Abs(minuteOfDay - _lastMinute) < 0.5f && interior == _lastInterior
+                && _lastGlowCount == Mats.NightGlow.Count && _lastLampCount == _lamps.Count) return;
             _lastMinute = minuteOfDay;
+            _lastInterior = interior;
+            _lastGlowCount = Mats.NightGlow.Count;
+            _lastLampCount = _lamps.Count;
 
             var (a, b, t) = Blend(minuteOfDay);
             float night = NightFactor(minuteOfDay);

@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -58,6 +58,7 @@ namespace PCShopSell.Game
 
         private void Start()
         {
+            if (TryStartPerformanceBenchmark()) return;
             Bootstrap(true);
         }
 
@@ -275,7 +276,7 @@ namespace PCShopSell.Game
             UpdatePlacement();
             if (!Ui.AnyModalOpen && !Placing) HandleClicks();
 
-            Session.Tick(dt);
+            using (SimulationMarker.Auto()) Session.Tick(dt);
             if (_wasPlayerWorking != Session.IsWorking) { _wasPlayerWorking = Session.IsWorking; _autosaveDue = true; }
             if (_autosaveDue && Session.CanSave && !Session.IsGameOver)
             {
@@ -288,17 +289,17 @@ namespace PCShopSell.Game
                 Ui.CloseDock();
                 Ui.ShowGameOver();
             }
-            SyncViews(dt);
-            Ui.Update(dt);
+            using (ViewsMarker.Auto()) SyncViews(dt);
+            using (UiMarker.Auto()) Ui.Update(dt);
         }
 
         /// <summary>不依赖 Update 的推进（自动化测试用）。</summary>
         public void Step(float dt)
         {
             UpdatePlacement();
-            Session.Tick(dt);
-            SyncViews(dt);
-            Ui.Update(dt);
+            using (SimulationMarker.Auto()) Session.Tick(dt);
+            using (ViewsMarker.Auto()) SyncViews(dt);
+            using (UiMarker.Auto()) Ui.Update(dt);
         }
 
         private readonly List<ShopBeacon> _beacons = new List<ShopBeacon>();
@@ -314,6 +315,7 @@ namespace PCShopSell.Game
         }
 
         private float _crowdSyncTimer;
+        private float _shopFrontTimer;
 
         /// <summary>街坊上班的店门口（站在门前人行道上，进去就消失）。</summary>
         private Vector3? ResidentDoor(string placeId)
@@ -336,7 +338,7 @@ namespace PCShopSell.Game
             _police.Update(!room);
             _crowdSyncTimer -= dt;
             string crowdPlace=Session.CurrentPlace?.Id, crowdActivity=Session.RunningCityActivity?.Id;
-            if (_crowdSyncTimer <= 0 || crowdPlace!=_crowdPlace || crowdActivity!=_crowdActivity)
+            if (!room && (_crowdSyncTimer <= 0 || crowdPlace!=_crowdPlace || crowdActivity!=_crowdActivity))
             {
                 _crowdPlace=crowdPlace;_crowdActivity=crowdActivity;
                 _crowdSyncTimer = 0.25f;
@@ -344,9 +346,13 @@ namespace PCShopSell.Game
             }
             _crowd.Update(worldDt, !room);
             UpdateBeacons(dt);
-            if (!room)
+            _shopFrontTimer -= dt;
+            if (!room && (_shopFrontTimer <= 0 || _wasRoomKind != RoomKind))
+            {
+                _shopFrontTimer = .25f;
                 foreach (PlaceVisual pv in World.Places.Values)
                     if (pv.ClosedOnly.Count > 0) World.SetOpen(pv, Session.IsPlaceOpen(pv.Place));
+            }
             if (interior) Interior.Update(Session, worldDt, dt);
             if (InHome) HomeRoom.Update(Session, dt, Session.Clock.MinuteOfDay);
             UpdateHomeBedTrip(dt);
@@ -435,7 +441,8 @@ namespace PCShopSell.Game
                 else if(Session.IsOwnedVenue(Session.CurrentPlace))Ui.OpenVenueManagement(Session.CurrentPlace);
                 else if (InInterior)
                 {
-                    if (Interior.NearCounter) CounterInteract();
+                    if(Session.IsSpecialBusiness(Session.CurrentShop)&&Interior.NearSpecialFurniture)Ui.OpenSpecialBusinessPanel();
+                    else if (Interior.NearCounter) CounterInteract();
                     else if (Interior.NearDoor) Ui.ConfirmLeaveShop();
                     else if (Interior.NearFridge) Ui.OpenFridgeWindow();
                     else if (Interior.NearBox) Ui.OpenShopLockerWindow();
@@ -610,6 +617,10 @@ namespace PCShopSell.Game
                             : hover == FixturePick.Display ? "展示台 · 左键查看" : "装机台 · 左键打开";
                         return true;
                     }
+                }
+                if(Session.IsSpecialBusiness(Session.CurrentShop)&&Interior.NearSpecialFurniture)
+                {
+                    world=Interior.SpecialFurnitureWorld;label=Interior.SpecialFurnitureName+"：经营操作（按 F 打开）";return true;
                 }
                 if (Interior.NearCounter)
                 {

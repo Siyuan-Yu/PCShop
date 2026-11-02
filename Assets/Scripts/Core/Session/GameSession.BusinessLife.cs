@@ -16,7 +16,7 @@ namespace PCShopSell.Core.Session
         public Money CreatorFee(CreatorState c) => Money.FromYuan(Creators.Get(c.Id).Fee).Scale((.7+c.Followers/(double)Creators.Get(c.Id).Audience*.3)*(1-c.Relationship*.002));
         public string CreatorCampaignBlocker(CreatorState c)
         {
-            if(!HasShop || !HasSmartphone) return "需要主店和智能手机";
+            if(!HasShop || (!HasSmartphone&&!CanUseHomeWorkbench)) return "需要主店和智能手机";
             if(PlayerShop.Reputation<8) return "知名度达到 8";
             if(_cityPromotions.Any(x=>x.ShopId==PlayerShopPlace.Id&&(x.State=="Running"||x.State=="Scheduled"))) return "这家门店已有推广进行中，结束后再合作";
             if(c.Resources<20) return "创作资源不足，先赞助一次设备";
@@ -36,7 +36,7 @@ namespace PCShopSell.Core.Session
         }
         public bool SupportCreator(string id)
         {
-            var c=Creator(id); if(c==null || !HasSmartphone || IsGameOver) return false;
+            var c=Creator(id); if(c==null || (!HasSmartphone&&!CanUseHomeWorkbench) || IsGameOver) return false;
             if(c.LastSupportDay==Clock.Today.TotalDays) return Fail("今天已经支持过这位创作者。");
             if(!Ledger.TryDebit(Clock.Today,"推广",Money.FromYuan(500),Creators.Get(id).Name+"设备与制作赞助")) return Fail("赞助需要 ¥500。");
             c.LastSupportDay=Clock.Today.TotalDays; c.Resources=Math.Min(100,c.Resources+30); c.Relationship=Math.Min(100,c.Relationship+5); return true;

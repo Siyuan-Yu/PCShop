@@ -77,7 +77,7 @@ namespace PCShopSell.Core.Session
             new EventDef
             {
                 Id = "regulars", Title = "熟客想带朋友", MinDay = 3, CooldownDays = 6, Weight = 10,
-                When = s => s.PlayerShop.Reputation >= 3,
+                When = s => s.RetailStoryTarget("regulars")!=null,
                 Body = "常来的一位熟客说：\"下回我带几个同学一起来，都要配电脑。\"",
                 Choices =
                 {
@@ -176,7 +176,7 @@ namespace PCShopSell.Core.Session
             new EventDef
             {
                 Id = "students", Title = "学生团购", MinDay = 6, CooldownDays = 12, Weight = 9,
-                When = s => s.PlayerShop.Reputation >= 2 && s.PlayerShop.Stock.CountAll(PartCatalog.Get("ram0")) >= 5,
+                When = s => s.RetailStoryTarget("students")!=null,
                 Body = "几个学生凑在一起，想一次买 5 条「入门内存」装宿舍的电脑，问你能不能给个团购价。",
                 Choices =
                 {
@@ -329,7 +329,7 @@ namespace PCShopSell.Core.Session
             new EventDef
             {
                 Id = "review", Title = "网上有人说你家卖翻新货", MinDay = 10, CooldownDays = 14, Weight = 7,
-                When = s => s.PlayerShop.Reputation >= 5,
+                When = s => s.RetailStoryTarget("review")!=null,
                 Body = "有人在本地论坛发帖，说你家的配件是翻新的，帖子下面已经有人跟帖。",
                 Choices =
                 {

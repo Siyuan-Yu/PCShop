@@ -163,7 +163,7 @@ namespace PCShopSell.Game.UI
                     string text = title + "\n成交价 " + S.CityInvestmentPrice(id) + "，数量 " + quantity + "\n" + (buying ? "支付（含手续费）" : "到手（扣手续费）") + S.CityInvestmentTradeTotal(id, quantity, buying)
                         + (reserve ? "\n警告：本次买入将动用未来必付款及保护额，可能影响工资、房租或采购。继续由你决定。" : "\n不自动借贷或动用其他资产。");
                     CityAssetConfirm("投资交易预览", text, () => S.TradeCityInvestment(id, quantity, buying, reserve), w);
-                }, 18, Ui.ButtonBg, S.HasSmartphone && (buy ? S.Ledger.Balance >= total : held >= quantity)), -1, 42, 1);
+                }, 18, Ui.ButtonBg, (S.HasSmartphone||S.CanUseHomeWorkbench) && (buy ? S.Ledger.Balance >= total : held >= quantity)), -1, 42, 1).name="Investment"+(buy?"Buy_":"Sell_")+id;
             }
         }
     }

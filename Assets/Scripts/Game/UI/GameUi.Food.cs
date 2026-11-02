@@ -43,7 +43,7 @@ namespace PCShopSell.Game.UI
                 var layout = shop ? S.ShopLayout : S.HomeLayout;
                 Para(w.Content, string.Join(" · ", layout.Select(p => FurnitureCatalog.Get(p.Id)).Where(d => d?.Role == FurnitureRole.Fridge).GroupBy(d => d.Id)
                     .Select(g => g.First().Name + " ×" + g.Count() + "（每台 " + g.First().FridgeCapacityKg.ToString("0") + " 千克）")), 15, Ui.Dim);
-                Para(w.Content, "可放熟饭、食材、米和饮料。熟饭与食材额外保鲜 7 天，每批只延长一次，反复存取不会刷新保质期。取出后保留到期日。在这里饿了或到饭点，会自动吃冰箱里的即食食物。", 16, Ui.Dim);
+                Para(w.Content, "可放熟饭、食材、米和饮料。食物在冰箱里永久保存，不会过期；取出后继续计算存入前剩余的保质期。在这里饿了或到饭点，会自动吃冰箱里的即食食物。", 16, Ui.Dim);
                 if (!shop && S.Pantry.CookedBowls > 0)
                     Ui.Size(Ui.Button(w.Content, "把锅里的饭全部放入冰箱", () => { S.ChillCookedFood(S.Pantry.CookedBowls); w.Rebuild(); }, 17, Ui.ButtonHot), -1, 38);
                 Line(w.Content, "冰箱里的食物（取出到背包后可吃）", 18, Ui.Accent);
@@ -67,7 +67,7 @@ namespace PCShopSell.Game.UI
                 string expiry = "";
                 var batches = item.Key.StartsWith("lunch:") ? bag.Food.Packed.Where(b => b.Id == item.Key.Substring(6))
                     : item.Key.StartsWith("ing:") ? bag.Food.Ingredient.Where(b => b.Id == item.Key.Substring(4)) : Enumerable.Empty<FoodBatch>();
-                expiry = " · " + FoodExpiryBadge.Countdown(batches.Any() ? (int?)batches.Min(b => b.ExpireDay) : null, S.Clock.Now.TotalMinutes);
+                expiry = " · " + (put ? FoodExpiryBadge.Countdown(batches.Any() ? (int?)batches.Min(b => b.ExpireDay) : null, S.Clock.Now.TotalMinutes) : "永久保存");
                 Ui.Size(Ui.Label(row, item.Name + " ×" + item.Count + "\n<size=14>" + item.Kg.ToString("0.##") + " 千克" + expiry + "</size>", 17), -1, -1, 1);
                 Ui.Size(Ui.Button(row, put ? "存入 1 份" : "取出 1 份", () => { S.MoveFridgeFood(item.Key, 1, put); w.Rebuild(); }, 16), 130);
                 Ui.Size(Ui.Button(row, put ? "全部存入" : "全部取出", () => { S.MoveFridgeFood(item.Key, item.Count, put); w.Rebuild(); }, 16, Ui.ButtonHot), 130);

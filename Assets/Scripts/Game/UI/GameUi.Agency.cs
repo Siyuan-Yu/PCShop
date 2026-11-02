@@ -113,11 +113,18 @@ namespace PCShopSell.Game.UI
             {
                 if (pending) AgencyEntryWarning(parent, S.PendingLease.StartDay);
                 string explanation = mine
-                        ? $"这是你的{S.ShopTitle(own)}，已交押金 {own.Lease.Deposit}。不想要了就到店里办退租（先叫货车把货搬走）。"
+                        ? own.OwnsProperty?"这是你的自有店铺，可以结束自营并保留产权。":$"这是你的{S.ShopTitle(own)}，已交押金 {own.Lease.Deposit}。可在这里办理退租，押金不退；请先搬走货物。"
                     : pending ? $"你已经提前签下这间，押金 {S.PendingLease.Deposit}。现租户第 {S.PendingLease.StartDay + 1} 天搬走，那天自动交房；在那之前房租照交。"
                     : S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null ? "这间铺面已经纳入你的经营资产，可在“分店 / 物业 / 住处”里管理。"
                     : "这间铺面目前没有出租报价。你可以先了解位置和户型，等它挂牌后再来询价。";
                 Para(parent, explanation, 18, Ui.Dim);
+                if(mine)
+                {
+                    var close=Ui.Size(Ui.Button(parent,own.OwnsProperty?"结束自营…":"退租店铺…",()=>ConfirmCloseShop(own),18,Ui.Warn),-1,44);
+                    close.name="AgencyCloseShop_"+p.Id;
+                    string why=S.CloseShopBlocker(own);
+                    if(why!=null)Line(parent,"办理前需处理："+why,16,Ui.Warn);
+                }
                 return;
             }
 

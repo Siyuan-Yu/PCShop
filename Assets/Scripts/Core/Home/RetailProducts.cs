@@ -29,10 +29,10 @@ namespace PCShopSell.Core.Home
     }
     public static class RetailShopTypes
     {
-        public static readonly string[] All = { "computer", "flowers", "produce", "food", "models", "clothing" };
-        public static string Valid(string kind) => All.Contains(kind) ? kind : "computer";
-        public static string Name(string kind) => kind == "clothing" ? "服装店" : kind == "models" ? "模型手办店" : kind == "flowers" ? "花店" : kind == "produce" ? "生鲜店" : kind == "food" ? "食品店" : "电脑店";
-        public static string Description(string kind) => kind == "clothing" ? "服装四档选品；通用货架或展示台按品类陈列，从服装批发及1788进货。季节仅影响挑货倾向，不改变采购目标。" : kind == "flowers" ? "鲜花、花束与盆栽；从花店批发进货。"
+        public static readonly string[] All = { "computer", "models", "clothing", "secondhand", "restaurant" };
+        public static string Valid(string kind) => All.Contains(kind) || kind == "flowers" || kind == "produce" || kind == "food" ? kind : "computer";
+        public static string Name(string kind) => kind == "restaurant" ? "餐馆" : kind == "secondhand" ? "二手旧物店" : kind == "clothing" ? "服装店" : kind == "models" ? "模型手办店" : kind == "flowers" ? "花店" : kind == "produce" ? "生鲜店" : kind == "food" ? "食品店" : "电脑店";
+        public static string Description(string kind) => kind == "restaurant" ? "食材备料、投锅看火候、出锅上菜；需要加工台、灶台、传菜台、餐桌和冰箱，可安排厨师与服务员。" : kind == "secondhand" ? "听卖家说辞、出价收购，买后鉴定好货/瑕疵/仿造/损坏，再按件定价出售；高智力收购师可代管。" : kind == "clothing" ? "服装四档选品；通用货架或展示台按品类陈列，从服装批发及1788进货。季节仅影响挑货倾向，不改变采购目标。" : kind == "flowers" ? "鲜花、花束与盆栽；从花店批发进货。"
             : kind == "produce" ? "大米、蔬菜、鸡蛋、豆腐、肉类和水果；从农贸市场进货。"
             : kind == "food" ? "汉堡、炸鸡、薯条、便当、点心和饮料；从快餐店和烟酒茶行进货。"
             : kind == "models" ? "四个原创系列、12款现货模型；常规款从潮玩工坊批发，限定款需在漫展到场采购。按系列设置货架，顾客按兴趣和预算挑选。" : "电脑配件、整机及少量附带杂货。";
@@ -40,12 +40,13 @@ namespace PCShopSell.Core.Home
         public static bool Sells(string kind, string id)
         {
             if (kind == "computer") return true;
+            if(kind=="restaurant"||kind=="secondhand")return false;
             if (kind == "clothing") return ClothingProducts.IsClothing(id);
             if (kind == "models") return ModelProducts.IsModel(id);
             if (kind == "flowers") return id != null && id.StartsWith("flower_");
             if (kind == "produce") return id != null && (id.StartsWith("produce:") || id == Gifts.Fruit);
             return id != null && (id.StartsWith("fast:") || id == Gifts.Soda || id == Gifts.Drink || id == Gifts.Snack);
         }
-        public static string GoodsKind(string id)=>All.Where(k=>k!="computer").FirstOrDefault(k=>Sells(k,id))??"retail";
+        public static string GoodsKind(string id)=>new[]{"clothing","models","flowers","produce","food"}.FirstOrDefault(k=>Sells(k,id))??"retail";
     }
 }

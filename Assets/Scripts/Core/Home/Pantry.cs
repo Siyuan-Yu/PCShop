@@ -5,7 +5,7 @@ using PCShopSell.Core.Common;
 
 namespace PCShopSell.Core.Home
 {
-    /// <summary>农贸市场卖的食材；首次冷藏可延长保鲜。</summary>
+    /// <summary>农贸市场卖的食材；冰箱内永久保存，外面按保质期保存。</summary>
     public sealed class IngredientDef
     {
         public string Id { get; }

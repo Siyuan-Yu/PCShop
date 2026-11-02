@@ -21,7 +21,7 @@ namespace PCShopSell.Core.Session
         public double ShopSalesBonus(OwnedShop shop)=>Math.Min(.25,ShopStaff(shop,EmployeeRole.Salesperson)
             .Where(e=>CityEmployeeAvailable(e,shop)).Sum(EmployeeSalesBonus));
         public static string EmployeeAbilities(Employee person) =>
-            $"收银 {person.CheckoutMinutes} 分钟/单 · 装机 {AssemblyMinutesOf(person)} 分钟/台 · 采购 {person.PurchaseMinutes} 分钟/型号\n魅力 {EmployeeCharm(person)} · 销售购买意愿 +{EmployeeSalesBonus(person)*100:0.#}个百分点";
+            $"收银 {person.CheckoutMinutes} 分钟/单 · 装机 {AssemblyMinutesOf(person)} 分钟/台 · 采购 {person.PurchaseMinutes} 分钟/型号\n智力 {person.Intelligence} · 收购判断准确率 {AppraiserAccuracy(person.Intelligence)*100:0.#}%\n魅力 {EmployeeCharm(person)} · 销售购买意愿 +{EmployeeSalesBonus(person)*100:0.#}个百分点";
 
         public Employee RecruitEmployee(int index,string destination=null)
         {
@@ -54,6 +54,8 @@ namespace PCShopSell.Core.Session
             }
             var dest = ShopAt(destination);
             if (dest == null) return "请选择自己的店铺";
+            if ((role==EmployeeRole.Chef||role==EmployeeRole.Waiter)&&dest.RetailKind!="restaurant")return "厨师与服务员请安排到餐馆";
+            if(role==EmployeeRole.Appraiser&&dest.RetailKind!="secondhand")return "收购师请安排到二手店";
             if(IsDedicatedVenue(dest.Place)&&role!=EmployeeRole.Cashier)return "场馆本轮只设值守岗位，请选择场馆值守（收银位）";
             string capacity=dest==row.Shop?null:StaffCapacityBlocker(dest,id,replace,role);if(capacity!=null)return capacity;
             if (dest == row.Shop && role == row.Role) return "已经在这家店做这项工作";

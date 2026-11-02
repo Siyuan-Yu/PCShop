@@ -174,6 +174,7 @@ namespace PCShopSell.Core.Session
         /// <summary>当前任务；阶段条件未到或全部完成时返回 null，不预告未来任务。</summary>
         public QuestDef CurrentQuest()
         {
+            if(InPlayerShop&&IsSpecialBusiness(CurrentShop))return null; // Dedicated counters explain their own workflow; keep computer tutorial progress for returning.
             int i = QuestIndex();
             return i < Quests.All.Count ? Quests.All[i] : null;
         }

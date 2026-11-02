@@ -275,8 +275,8 @@ namespace PCShopSell.Core.Session
             foreach (var offer in EmployeePurchaseCatalog().Where(o => o.Kind == kind && o.Id == productId))
                 result.Add(new ProcurementSourceQuote { OfferId = offer.Key, SupplierId = offer.Source.Id, SupplierName = offer.Source.Name, ProductId = productId,
                     Kind = kind, Name = offer.Name, PlaceId = offer.Source.Id, UnitPrice = offer.Price, Method = ProcurementMethod.Employee,
-                    Minimum = CitySupplierMinimum(offer.Source.Id),
-                    Conditions = "线下看货/议价；员工按真实路线与运费执行 · 起订 " + CitySupplierMinimum(offer.Source.Id) + " 件"
+                    Minimum = PurchaseMinimum(offer),
+                    Conditions = "线下看货/议价；员工按真实路线与运费执行 · 起订 " + PurchaseMinimum(offer) + " 件"
                         + (kind == PurchaseGoodsKind.Gift && CitySupplierRemaining(offer.Source.Id, productId) < int.MaxValue ? " · 本日剩余配额 " + CitySupplierRemaining(offer.Source.Id, productId) : ""), LeadMinutes = 0 });
             if (kind == PurchaseGoodsKind.Part && PartCatalog.Exists(productId))
             {
@@ -318,9 +318,28 @@ namespace PCShopSell.Core.Session
             bool result = false; WithShop(shop, () => result = OrderDirect(partId, count, false)); return result;
         }
 
-        private EmployeePurchasePlan EffectiveEmployeePurchasePlan(EmployeeAssignment row, EmployeePurchasePlan source)
+        private EmployeePurchasePlan EffectiveEmployeePurchasePlan(EmployeeAssignment row, EmployeePurchasePlan source,bool planningOnly=false)
         {
-            if (source == null || !source.InventoryThreshold) return source;
+            if (source == null) return null;
+            if (!source.InventoryThreshold)
+            {
+                var fixedPlan=source.Copy();
+                foreach(var item in fixedPlan.Items.Where(i=>i.BuyMaximum))
+                {
+                    var offer=EmployeePurchaseOffer(item,source.SourceId);
+                    // Resolve at execution time, not when the recurring plan was saved.
+                    int day=planningOnly?NextEmployeePurchaseDay(row.Person.Id,source,Clock.Today.TotalDays+1):Clock.Today.TotalDays;
+                    if(day<0){item.Count=0;item.BuyMaximum=false;continue;}
+                    int allocated=source.Daily&&item.ReservedByWeekday!=null&&item.ReservedByWeekday.Length==7?item.ReservedByWeekday[day%7]:item.Count;
+                    if(planningOnly&&offer!=null)allocated=SupplierPlanHeadroom(row.Person.Id,source,offer,day%7);
+                    // Saved shares protect the other plans. Maximum may also absorb unassigned or released stock at execution.
+                    int available=offer==null?0:planningOnly?PurchaseLimit(offer):EmployeeSupplyAvailable(row.Person.Id,offer,day);
+                    item.Count=offer==null?0:Math.Max(0,Math.Min(planningOnly?allocated:100,available));
+                    item.BuyMaximum=false;
+                }
+                fixedPlan.Items=fixedPlan.Items.Where(i=>i.Count>0).ToArray();
+                return fixedPlan;
+            }
             var plan = source.Copy(); plan.InventoryThreshold = false; var lines = new List<PurchaseLine>();
             var policies = _cityProcurementPolicies.Values.Where(p => p.ShopId == row.Shop.Place.Id).Select(p => p.Copy()).ToList();
             foreach (var entry in row.Shop.Restock)

@@ -19,6 +19,7 @@ namespace PCShopSell.Core.Session
         public int TransferRole = -1;
         public int AssemblyMinutes = 90, PurchaseMinutes = 2;
         public int Charm = -1;
+        public int Intelligence = 50;
         public bool AssemblyTrained;
         public EmployeePurchasePlan PurchasePlan = new EmployeePurchasePlan();
         public string LastPurchaseNote;
@@ -238,7 +239,7 @@ namespace PCShopSell.Core.Session
 
         public bool IsEmployeeOnDuty(GameTimestamp t)
         {
-            return ShopStaff(_focus,EmployeeRole.Cashier).Concat(ShopStaff(_focus,EmployeeRole.Assembler)).Any(e=>e.OnDuty(t));
+            return Employees.Where(e=>e.Shop==_focus&&(e.Role==EmployeeRole.Cashier||e.Role==EmployeeRole.Assembler||IsSpecialBusiness(_focus)&&(e.Role==EmployeeRole.Chef||e.Role==EmployeeRole.Waiter||e.Role==EmployeeRole.Appraiser))).Any(e=>e.Person.OnDuty(t));
         }
 
         private void OnCandidateHour(GameDate today)
@@ -255,6 +256,7 @@ namespace PCShopSell.Core.Session
                     Name = Surnames[Random.Next(0, Surnames.Length)] + GivenNames[Random.Next(0, GivenNames.Length)],
                     CheckoutMinutes = fast ? 2 : 4,
                     Charm = Random.Next(20, 91),
+                    Intelligence = Random.Next(20, 96),
                     AssemblyMinutes = Random.Next(70, 131),
                     PurchaseMinutes = Random.Next(2, 7),
                     DailyWageYuan = fast ? Random.Next(150, 181) : Random.Next(100, 131),

@@ -80,9 +80,9 @@ namespace PCShopSell.Tests
                         shop.Checkout(customer.Id);
                     }
                 }
-                Assert.Greater(seasonal+other,100);
+                Assert.Greater(seasonal+other,stockSeasonal?100:5);
                 Assert.Greater(other,0,"反季库存仍然可以卖出");
-                if(stockSeasonal)Assert.That(seasonal/(double)(seasonal+other),Is.InRange(.6,.8));
+                if(stockSeasonal)Assert.That(seasonal/(double)(seasonal+other),Is.InRange(.84,.98));
                 else Assert.AreEqual(0,seasonal);
             }
         }

@@ -40,14 +40,14 @@ namespace PCShopSell.Core.Session
                             UnitKg = Stock.SpaceOf(p, true, 1) * Backpack.KgPerSpace, StockSpace = Stock.SpaceOf(p, true, 1) });
                 if (ShopAt(source) != null || IsVacant(source) || VentureAt(source.Id) != null) continue;
                 foreach (var gift in Gifts.All.Where(g => g.SoldAt == source.Business && CityRetailGoodsAvailable(source, g)))
-                    offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Gift, Id = gift.Id, Name = gift.Name + (RetailProducts.IsFood(gift) ? "（零售）" : ""),
+                    offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Gift, Id = gift.Id, Name = gift.Name + (HasDualRetailWholesale(source) ? "（批发）" : ""),
                         Category = ShelfKinds.ForGift(gift.Id)?.Name ?? "其他商品", Price = CityRetailWholesalePrice(source, gift), UnitKg = gift.WeightKg, StockSpace = Stock.GoodsSpace(gift.Id, 1) });
                 if (source.Business == FarmBusiness)
                 {
-                    offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Rice, Id = "rice", Name = "大米（0.5千克/袋）",
+                    offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Rice, Id = "rice", Name = "大米（零售，0.5千克/袋）",
                         Category = "米与食材", Price = Pantry.RicePricePerKg.Scale(0.5), UnitKg = 0.5 });
                     foreach (var ingredient in Ingredients.All)
-                        offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Ingredient, Id = ingredient.Id, Name = ingredient.Name + "（" + ingredient.WeightKg.ToString("0.##") + "千克/份）",
+                        offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Ingredient, Id = ingredient.Id, Name = ingredient.Name + "（零售，" + ingredient.WeightKg.ToString("0.##") + "千克/份）",
                             Category = "米与食材", Price = ingredient.Price, UnitKg = Backpack.IngredientKg(ingredient.Id) });
                 }
                 if (source.Business == MallBusiness)
@@ -137,7 +137,7 @@ namespace PCShopSell.Core.Session
         {
             int open = source.Kind == PlaceKind.Wholesaler ? WholesalerOpenMinute : source.Business == FarmBusiness ? FarmOpenMinute : 9 * 60;
             int close = source.Kind == PlaceKind.Wholesaler ? WholesalerCloseMinute : source.Business == FarmBusiness ? FarmCloseMinute : 21 * 60;
-            if ((source.Kind == PlaceKind.Wholesaler && Clock.Today.IsWeekend) || arrivalMinute < open || arrivalMinute >= close)
+            if ((SupplierClosesOnWeekend(source) && Clock.Today.IsWeekend) || arrivalMinute < open || arrivalMinute >= close)
                 return source.Name + "到达时未营业（" + (source.Kind == PlaceKind.Wholesaler ? "工作日 " : "每天 ") + $"{open / 60}:00–{close / 60}:00）";
             return null;
         }

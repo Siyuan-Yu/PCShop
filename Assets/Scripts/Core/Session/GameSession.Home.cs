@@ -322,29 +322,42 @@ namespace PCShopSell.Core.Session
         {
             if (!AtFarmMarket) return Fail("要去农贸市场买。");
             if (!IsFarmMarketOpen) return Fail("农贸市场收摊了（6:00–18:00）。");
-            if (kg <= 0) return false;
-            Money cost = Pantry.RicePricePerKg.Scale(kg);
-            if (SendByCourier)
-                return PayAndSend("买菜", cost, $"大米 {kg:0.##} 千克", false, new CourierItem { Kind = CourierItemKind.Rice, Id = "rice", Kg = kg });
-            if (!CanCarry(kg * 1.0)) return false;
-            if (!Ledger.TryDebit(Clock.Today, "买菜", cost, $"大米 {kg:0.##} 千克")) return Fail("钱不够。");
-            Backpack.Food.RiceKg += kg;
-            ApplyCargoLimit();
-            return true;
+            if(kg<=0||double.IsNaN(kg)||double.IsInfinity(kg)||Math.Abs(kg*4-Math.Round(kg*4))>1e-8)return false;
+            string key=SupplierCounterKey(CurrentPlace.Id,"produce:rice");
+            _citySupplierPurchases.TryGetValue(key,out int used);
+            int quarters=(int)Math.Round(kg*4);
+            if(quarters>SupplierCapacity(CurrentPlace.Id,"produce:rice")*2-used)return Fail("大米超过今日剩余供货量。");
+            Money cost=Pantry.RicePricePerKg.Scale(kg);
+            if(SendByCourier)
+            {
+                if(!PayAndSend("买菜",cost,$"大米 {kg:0.##} 千克",false,new CourierItem{Kind=CourierItemKind.Rice,Id="rice",Kg=kg}))return false;
+            }
+            else
+            {
+                if(!CanCarry(kg))return false;
+                if(!Ledger.TryDebit(Clock.Today,"买菜",cost,$"大米 {kg:0.##} 千克"))return Fail("钱不够。");
+                Backpack.Food.RiceKg+=kg;ApplyCargoLimit();
+            }
+            _citySupplierPurchases[key]=used+quarters;return true;
         }
 
         public bool BuyIngredient(string id, int count)
         {
             IngredientDef d = Ingredients.Get(id);
             if (d == null || count <= 0) return false;
+            if(count>CitySupplierRemaining(CurrentPlace.Id,"produce:"+id))return Fail("该食材超过今日剩余供货数量。");
             if (!AtFarmMarket) return Fail("要去农贸市场买。");
             if (!IsFarmMarketOpen) return Fail("农贸市场收摊了（6:00–18:00）。");
             if (SendByCourier)
-                return PayAndSend("买菜", d.Price * count, $"{d.Name} {d.WeightKg * count:0.##} 千克", false,
-                    new CourierItem { Kind = CourierItemKind.Ingredient, Id = id, Count = count, ExpireDay = Clock.Today.TotalDays + d.ShelfDays });
+            {
+                bool sent=PayAndSend("买菜",d.Price*count,$"{d.Name} {d.WeightKg*count:0.##} 千克",false,
+                    new CourierItem{Kind=CourierItemKind.Ingredient,Id=id,Count=count,ExpireDay=Clock.Today.TotalDays+d.ShelfDays});
+                if(sent)RecordCitySupplierPurchase(CurrentPlace.Id,"produce:"+id,count);return sent;
+            }
             if (!CanCarry(Backpack.IngredientKg(id) * count)) return false;
             if (!Ledger.TryDebit(Clock.Today, "买菜", d.Price * count, $"{d.Name} {d.WeightKg * count:0.##} 千克")) return Fail("钱不够。");
             Backpack.Food.AddIngredient(id, count, Clock.Today.TotalDays);
+            RecordCitySupplierPurchase(CurrentPlace.Id,"produce:"+id,count);
             ApplyCargoLimit();
             return true;
         }
@@ -367,7 +380,7 @@ namespace PCShopSell.Core.Session
         private void UpdateCooking(GameTimestamp now)
         {
             FoodBatch b = Pantry.FinishCook(now.TotalMinutes);
-            if (b != null) Say($"电饭锅跳了：{b.Name}×{b.Count} 碗焖好了。可装进背包，或放入冰箱额外保鲜 7 天。");
+            if (b != null) Say($"电饭锅跳了：{b.Name}×{b.Count} 碗焖好了。可装进背包，或放入冰箱永久保存，取出后继续计算剩余保质期。");
         }
 
         /// <summary>在家吃一碗（10 分钟）。</summary>
@@ -475,6 +488,7 @@ namespace PCShopSell.Core.Session
             if (Player.Hunger >= 90) return;
             long mealMinute=Clock.Now.TotalMinutes;
             if(_lastAutomaticMealMinute>=0&&mealMinute>=_lastAutomaticMealMinute&&mealMinute-_lastAutomaticMealMinute<30)return;
+            if(EatWorkbenchMeal(meal))return;
             if (CurrentPlace == Home && Pantry.CookedBowls > 0)
             {
                 Player.Hunger = Math.Min(100, Player.Hunger + EatFrom(Pantry.Cooked));
@@ -537,7 +551,7 @@ namespace PCShopSell.Core.Session
 
         private void OnHomeDayAdvanced(GameDate today)
         {
-            SpoilFridges(today.TotalDays);
+            PreserveFridges();
             DeliverParcels(today);
             List<string> lost = Pantry.Spoil(today.TotalDays);
             if (lost.Count > 0) Say("放坏扔掉了：" + string.Join("、", lost) + "。");
@@ -608,12 +622,9 @@ namespace PCShopSell.Core.Session
 
         private static FoodBatch FromSaveBatch(SaveBatch b)
         {
-            // Older saves recorded only the original two-day refrigeration bonus.
-            int previousBonus = b.chilledDays > 0 ? b.chilledDays : 2;
-            int extraDays = b.chilled ? Math.Max(0, FridgeBonusDays - previousBonus) : 0;
+            // Preserve historical deadlines as saved; loading must never extend shelf life.
             return new FoodBatch { Id = b.id, Name = b.name, Hunger = b.hunger, Health = b.health,
-                Count = b.count, ExpireDay = b.expireDay + extraDays, Chilled = b.chilled,
-                ChilledDays = b.chilled ? Math.Max(previousBonus, FridgeBonusDays) : 0 };
+                Count = b.count, ExpireDay = b.expireDay, Chilled = b.chilled, ChilledDays = b.chilledDays };
         }
 
         private static void FromSave(SaveBatch[] a, List<FoodBatch> into)

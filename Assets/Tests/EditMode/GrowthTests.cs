@@ -315,6 +315,9 @@ namespace PCShopSell.Tests
         public void Students_SellFiveRam()
         {
             GameSession s = Make();
+            GameSessionTests.Teleport(s,"pc");
+            s.PlayerShop.SetHours(0,1440);s.PlayerShop.ForcedClosed=false;s.PlayerShop.NotFitted=false;
+            s.PlayerShop.SetShelfCapacity(new System.Collections.Generic.Dictionary<string,double>{{"memory",60}});
             PartDef ram = PartCatalog.Get("ram0");
             s.PlayerShop.Stock.ForceAdd(ram, true, 5);
             s.PlayerShop.Reputation = 3;

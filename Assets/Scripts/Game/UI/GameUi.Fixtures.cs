@@ -13,6 +13,7 @@ namespace PCShopSell.Game.UI
         /// <summary>开店清单（富文本，一项一行）。</summary>
         private string FitChecklistText()
         {
+            if(S.IsSpecialBusiness(S.CurrentShop))return S.SpecialFitGap(S.CurrentShop)==null?"专用经营设施已摆齐。":"还需摆好："+S.SpecialFitGap(S.CurrentShop);
             var sb = new StringBuilder();
             var list = S.ShopFitList();
             string gap = S.ShopFitGap();
@@ -56,18 +57,32 @@ namespace PCShopSell.Game.UI
         /// <summary>“装修”页：这间店现在是什么状态、开店清单，以及进入编辑模式（俯视图）摆货架、柜台的入口。</summary>
         private void BuildRenovate()
         {
-            BuildRetailLinks(C);
+            _renovationStockSignature=RenovationStockSignature();
+            Line(C,GameSession.SizeName(S.PlayerShop.Size)+" · 最多 "+S.ShopShelfLimit+" 个货架 · 已摆 "+S.ShelvesPlaced+" 个",18,Ui.Accent).name="RenovationShopCapacity";
             string state = S.IsRenovating
                 ? "<color=#DDC18B>装修中：今天歇业，明天恢复营业。</color>"
                 : !S.ShopFitted
                     ? "<color=#DDC18B>毛坯：还不能开业。</color>"
                     : "<color=#A9C9A9>已经布置好，正常营业。</color>";
             Line(C, "店面装修　" + state, 18);
-            Para(C, "货架、收银台、展示台、装机操作台和装饰都在这里摆放。进入编辑模式后镜头会转成俯视，带网格和坐标；调整任何店内摆设都需要歇业装修，当天不再营业，次日恢复。", 15, Ui.Dim);
             Para(C, FitChecklistText(), 15);
-            string label = S.IsRenovating ? "继续摆放（进入编辑模式）" : S.ShopFitted ? "重新布置（今天歇业装修）" : "开始装修（今天歇业，进入编辑模式）";
+            string label = S.IsRenovating ? "继续摆放" : S.ShopFitted ? "重新布置" : "开始装修";
             Ui.Size(Ui.Button(C, label, () => StartPlacement(true), 20, Ui.ButtonHot), -1, 48);
-            Line(C, "要买的设施去家具城（商业街）或手机上的 1788 下单，买来的家具在当地纸箱或临时存放中。", 15, Ui.Dim);
+            var furniture=S.FurnitureToPlaceList(true).Where(kv=>kv.Value>0&&FurnitureCatalog.Get(kv.Key)!=null)
+                .OrderBy(kv=>FurnitureCatalog.Get(kv.Key).IsFixture?0:1).ThenBy(kv=>FurnitureCatalog.Get(kv.Key).Name).ToArray();
+            Line(C,"待摆放物品 · "+furniture.Length+" 种",18,Ui.Accent).name="RenovationInventoryHeading";
+            if(furniture.Length==0)Line(C,"本店暂无待摆放物品。",16,Ui.Dim);
+            foreach(var item in furniture)
+            {
+                string id=item.Key;var def=FurnitureCatalog.Get(id);
+                var row=Ui.Row(C,56,8);row.name="RenovationItem_"+id;
+                Ui.Size(Ui.Label(row,def.Name+" ×"+item.Value,18),-1,-1,1);
+                Ui.Size(Ui.Button(row,"摆放",()=>StartPlacement(true,id),18,Ui.ButtonHot),88,-1);
+            }
         }
+
+        private string _renovationStockSignature;
+        private string RenovationStockSignature()=>S.PlayerShop.Size+"|"+S.ShelvesPlaced+"|"+S.IsRenovating+"|"+S.ShopFitGap()+"|"
+            +string.Join(";",S.FurnitureToPlaceList(true).Where(kv=>kv.Value>0).OrderBy(kv=>kv.Key).Select(kv=>kv.Key+":"+kv.Value));
     }
 }

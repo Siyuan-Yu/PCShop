@@ -1,0 +1,11 @@
+SMOKE OK 测试门店已租用
+SMOKE shot street
+SMOKE OK 树林已按空间分块
+SMOKE OK 每个树林网格都有局部包围盒
+SMOKE FOREST mesh-count=1139 triangles=7504168
+SMOKE shot home
+SMOKE OK 同一分钟出门立即恢复室外灯光
+SMOKE shot shop
+SMOKE OK 暂停两秒后柜台保留原控件
+SMOKE PERFORMANCE GRAPHICS COMPLETE
+SMOKE RESULT code=0 errors=0

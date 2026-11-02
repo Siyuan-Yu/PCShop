@@ -1,0 +1,88 @@
+{
+    "unity": "2022.3.6f1",
+    "gpu": "NVIDIA GeForce RTX 3070",
+    "resolution": "1280x720",
+    "renderers": 30787,
+    "places": 90,
+    "people": 60,
+    "scenarios": [
+        {
+            "name": "street-paused",
+            "frames": 360,
+            "frameMs": 5.0528699999999999,
+            "p95Ms": 5.8537,
+            "p99Ms": 6.1623,
+            "simulationMs": 0.0005608333333333342,
+            "viewsMs": 0.13372944444444447,
+            "uiMs": 0.28736416666666639,
+            "allocatedBytes": 0.0,
+            "drawCalls": 1808.1666666666667,
+            "triangles": 45774197.333333339
+        },
+        {
+            "name": "street-1x",
+            "frames": 360,
+            "frameMs": 4.933343611111114,
+            "p95Ms": 5.852600000000001,
+            "p99Ms": 6.403300000000001,
+            "simulationMs": 0.09301916666666659,
+            "viewsMs": 0.21530027777777778,
+            "uiMs": 0.27786305555555548,
+            "allocatedBytes": 0.0,
+            "drawCalls": 1828.2694444444444,
+            "triangles": 45777188.18888889
+        },
+        {
+            "name": "street-8x",
+            "frames": 360,
+            "frameMs": 5.0844227777777839,
+            "p95Ms": 5.8318,
+            "p99Ms": 6.681100000000001,
+            "simulationMs": 0.441403888888889,
+            "viewsMs": 0.45777861111111087,
+            "uiMs": 0.31144999999999997,
+            "allocatedBytes": 0.0,
+            "drawCalls": 1721.8555555555556,
+            "triangles": 45763955.56666667
+        },
+        {
+            "name": "shop-paused",
+            "frames": 360,
+            "frameMs": 2.236818888888889,
+            "p95Ms": 3.5741,
+            "p99Ms": 7.4611,
+            "simulationMs": 0.0006050000000000007,
+            "viewsMs": 0.5889569444444448,
+            "uiMs": 0.3237863888888889,
+            "allocatedBytes": 0.0,
+            "drawCalls": 1079.1722222222222,
+            "triangles": 53198.61111111111
+        },
+        {
+            "name": "shop-8x",
+            "frames": 360,
+            "frameMs": 3.78933027777778,
+            "p95Ms": 6.958900000000001,
+            "p99Ms": 10.9364,
+            "simulationMs": 0.5392361111111111,
+            "viewsMs": 0.8471155555555558,
+            "uiMs": 0.39345222222222217,
+            "allocatedBytes": 0.0,
+            "drawCalls": 1690.8277777777778,
+            "triangles": 128354.57777777779
+        },
+        {
+            "name": "home-paused",
+            "frames": 360,
+            "frameMs": 1.5631052777777775,
+            "p95Ms": 2.1547,
+            "p99Ms": 2.829,
+            "simulationMs": 0.0004947222222222224,
+            "viewsMs": 0.4982366666666669,
+            "uiMs": 0.19827722222222228,
+            "allocatedBytes": 0.0,
+            "drawCalls": 300.1722222222222,
+            "triangles": 19448.61111111111
+        }
+    ]
+}

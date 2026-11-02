@@ -187,6 +187,7 @@ namespace PCShopSell.Game.UI
             OpenWindow("行情与新闻", 900, 880, w =>
             {
                 Ui.Size(Ui.Button(w.Content, "每周物价简报 · " + (S.WeeklyPricesSubscribed ? "已订阅" : "未订阅"), OpenWeeklyPriceReport, 18, Ui.ButtonHot), -1, 40);
+                Ui.Size(Ui.Button(w.Content,"科技发布 / 模型作品热度 / 服装供给",OpenIndustryNews,17),-1,36);
                 Line(w.Content, "新闻 → 宏观指标 → 配件价格。读懂新闻，提前囤货或清货。", 18, Ui.Dim);
                 foreach (MacroFactor f in new[] { MacroFactor.Crypto, MacroFactor.AiDemand, MacroFactor.NewGeneration })
                 {

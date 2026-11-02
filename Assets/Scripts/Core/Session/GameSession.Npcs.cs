@@ -21,7 +21,7 @@ namespace PCShopSell.Core.Session
         public const double SmsReplyChance = 0.4;
 
         /// <summary>手机上装了聊天 app：发消息一定有人回；否则只能发短信。</summary>
-        public bool HasChatApp => HasApp(PhoneApps.Chat);
+        public bool HasChatApp => HasApp(PhoneApps.Chat)||CanUseHomeWorkbench;
 
         /// <summary>刚发的那条消息有没有人回。</summary>
         public bool LastChatReplied { get; private set; }

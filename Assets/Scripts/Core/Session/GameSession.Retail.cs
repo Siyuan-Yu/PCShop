@@ -41,10 +41,14 @@ namespace PCShopSell.Core.Session
             if(IsDedicatedVenue(PlayerShopPlace))return Fail("专用场馆只能延续原有服务，不能改为零售店。");
             if(!InPlayerShop || !RetailShopTypes.All.Contains(kind))return Fail("请在自己的店里选择主售品类。");
             Flags.Add("shop:main-category:"+_focus.Place.Id);
+            if(IsSpecialBusiness(_focus)&&SpecialBusinessBusy(_focus))return Fail("请先完成或清理餐馆订单、二手库存及卖家，再转型。");
+            if((kind=="restaurant"||kind=="secondhand")&&(PlayerShop.Orders.Count>0||PlayerShop.Queue.Count>0))return Fail("请先完成装机订单和排队结账，再转型。");
             _focus.RetailKind=kind;PlayerShop.RetailKind=kind;
+            PlayerShop.TradingEnabled=!IsSpecialBusiness(_focus);
+            if(IsSpecialBusiness(_focus))PlayerShop.ClearCustomers();
             foreach(var competition in _cityCompetitions.Where(e=>e.ShopId==_focus.Place.Id && e.RetailKind!=kind))competition.Ended=true;
             ApplyCityRetailDemand();
-            ApplyShelfCapacity();
+            UpdateShopFit();
             Say("本店主售已改为"+RetailShopTypes.Name(kind)+"，顾客将按此品类进店选购。");return true;
         }
         private void MigrateStoreMainCategories()
@@ -96,7 +100,7 @@ namespace PCShopSell.Core.Session
             var source = City.GetPlace(sourceId); var def = Gifts.Get(id);
             if (CurrentPlace != source || !HasRetailWholesale(source) || !IsPlaceOpen(source) || !CityRetailGoodsAvailable(source, def) || count < 1 || count > 100)
                 return Fail("请到对应货源营业时采购，单项数量为 1–100。");
-            if (!_retailCartBatch && count < CitySupplierMinimum(source.Id)) return Fail("该货源当前每款至少" + CitySupplierMinimum(source.Id) + "件起订，可在市场变化面板选择小批次合作。 ");
+            if (!_retailCartBatch && count < CitySupplierMinimum(source.Id,id)) return Fail(def.Name+" · "+WholesaleMinimumText(source.Id,id)+"。");
             if (count > CitySupplierRemaining(source.Id, id)) return Fail("该商品本日供货配额只剩" + CitySupplierRemaining(source.Id, id) + "件，可换其他来源。 ");
             Money cost = CityRetailWholesalePrice(source, def) * count;
             int expiry = def.ShelfDays > 0 ? Clock.Today.TotalDays + def.ShelfDays : -1;

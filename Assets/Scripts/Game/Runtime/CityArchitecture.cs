@@ -103,11 +103,22 @@ namespace PCShopSell.Game.Runtime
             }
             else if(kind=="venue_expo")
             {
-                Gables(root,w,d,h,.8f+w*.046f,wall);
-                foreach(int side in new[]{-1,1})
+                // Three blue vaulted roof bays and white ribs match the convention landmark.
+                for(int bay=-1;bay<=1;bay++)
                 {
-                    var roof=Box(root,"ExpoPitchedRoof",new Vector3(side*w*.25f,h+.8f,d/2),new Vector3(w*.53f,.3f,d+.4f),ArtDirection.Blue);
-                    roof.transform.localRotation=Quaternion.Euler(0,0,-side*10);
+                    float bayW=w/3;
+                    for(int strip=0;strip<8;strip++)
+                    {
+                        float x=-bayW/2+(strip+.5f)*bayW/8;
+                        float y=h+.5f+Mathf.Cos(x/bayW*Mathf.PI)*2.5f;
+                        var roof=Box(root,"ExpoBlueVault",new Vector3(bay*bayW+x,y,d/2),new Vector3(bayW/8+.08f,.24f,d+.4f),ArtDirection.Hex("4498D1"));
+                        roof.transform.localRotation=Quaternion.Euler(0,0,-Mathf.Sin(x/bayW*Mathf.PI)*25);
+                        foreach(float z in new[]{-.3f,d*.33f,d*.67f,d+.3f})
+                        {
+                            var rib=Box(root,"ExpoWhiteRoofRib",new Vector3(bay*bayW+x,y+.2f,z),new Vector3(bayW/8+.12f,.2f,.22f),ArtDirection.Cream);
+                            rib.transform.localRotation=roof.transform.localRotation;
+                        }
+                    }
                 }
                 for(int i=-2;i<=2;i++)Box(root,"ExpoPortico",new Vector3(i*w*.17f,2.1f,-.4f),new Vector3(.28f,4.2f,.28f),ArtDirection.Cream);
             }

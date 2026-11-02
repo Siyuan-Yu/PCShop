@@ -63,13 +63,14 @@ namespace PCShopSell.Core.Session
         {
             var sim = new ShopSimulation(shop.Place.Id, shop.Place.Size, Clock, Ledger, Market, Random)
             {
-                TradingEnabled = !IsDedicatedVenue(shop.Place),
+                TradingEnabled = !IsDedicatedVenue(shop.Place) && !IsSpecialBusiness(shop),
                 CheckoutClock = ()=>CurrentPlace==shop.Place&&!_sleeping&&!IsWorking?_activeCheckoutSeconds:double.NaN,
                 RetailKind = shop.RetailKind,
                 LocationFactor = ComputeLocationFactor(City, shop.Place),
                 EmployeeOnDuty = t => ShopStaff(shop,EmployeeRole.Cashier).Concat(ShopStaff(shop,EmployeeRole.Assembler)).Any(e=>e.OnDuty(t)&&CityEmployeeAvailable(e,shop)),
                 EmployeeServiceRate = ()=>ShopCheckoutWorkers(shop).Sum(e=>1.0/(Math.Max(1,e.CheckoutMinutes)+1)),
             };
+            sim.OpenStatusOf=t=>IsSpecialBusiness(shop)?SpecialOpen(shop,t):sim.IsOpenAt(t);
             sim.Settings.BuildOrdersStartDay = BuildOrdersStartDay;
             sim.SalesBonusOf = () => ShopSalesBonus(shop);
             sim.HasClothingMirror = () => shop.Layout.Any(p=>FurnitureCatalog.Canonical(p.Id)==FurnitureCatalog.FittingMirror);
@@ -136,11 +137,12 @@ namespace PCShopSell.Core.Session
             SetFocus(shop);
         }
 
-        /// <summary>为什么这家店现在退不了租；能退返回 null。退租在店里办，货要先叫货车搬走。</summary>
+        /// <summary>为什么这家店现在退不了租；可在店内或所属片区中介办理，货要先搬走。</summary>
         public string CloseShopBlocker(OwnedShop s)
         {
             if (s == null || !s.Rented) return "这不是你的店";
-            if (CurrentPlace != s.Place) return "要在这家店里办退租";
+            if (CurrentPlace != s.Place && !InAgency) return "要在这家店里或所属片区中介办理退租";
+            if (InAgency && !AgencyServes(CurrentPlace,s.Place)) return "请到店铺所属片区的中介办理退租";
             if(IsDedicatedVenue(s.Place)&&VenueOperation(s.Place.Id)?.CustomersHere.Length>0)return "还有顾客正在赴场或使用场馆，请先停止接客并等待结束";
             if(RunningCityActivity?.VenueId==s.Place.Id)return "请先结束自己的场馆活动";
             if (_employeeTrips.Any(t => t.ShopId == s.Place.Id)) return "进货员或采购货物还在路上";
@@ -148,6 +150,7 @@ namespace PCShopSell.Core.Session
             if (s.Sim.Orders.Count > 0) return "还有没交付的装机单";
             if (s.Sim.Queue.Count > 0) return "还有顾客等待结账，请先处理完再退租";
             if (s.Sim.DisplayPcs.Count > 0) return "展示台上还摆着整机，先拆回库存";
+            if(IsSpecialBusiness(s)&&SpecialBusinessBusy(s))return "请先处理餐馆订单、二手库存和卖家，再结束经营";
             if (!s.Fridge.IsEmpty) return "冰箱里还有食物，请先取走";
             if (!s.Locker.IsEmpty || !s.Temp.IsEmpty) return "纸箱或临时存放还有物品，请先转存或叫货车搬走";
             if (!s.Sim.Stock.IsEmpty) return "店里还有货，先打电话叫货车搬走";
@@ -157,7 +160,8 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>
-        /// 在店里退掉这家店：摆的家具收回“我的”，这家店的员工辞退，已交押金不退，人走到门口，铺子重新挂牌。
+        /// 退掉这家店：摆的家具收回“我的”，这家店的员工辞退，已交押金不退，铺子重新挂牌。
+        /// 店内办理时走到门口，中介办理时留在中介。
         /// 退的是主店时，下一家顶上当主店。
         /// </summary>
         public bool CloseShop(string placeId)
@@ -166,8 +170,11 @@ namespace PCShopSell.Core.Session
             string why = CloseShopBlocker(s);
             if (why != null) return Fail(why + "。");
             string title = ShopTitle(s);
-            Leave();
-            if (CurrentPlace == s.Place) return false;
+            if (CurrentPlace == s.Place)
+            {
+                Leave();
+                if (CurrentPlace == s.Place) return false;
+            }
             double reputation = MainShop.Sim.Reputation;
             s.Sim.ClearCustomers();
             foreach (PlacedFurniture f in s.Layout) AddFurniture(f.Id, 1);

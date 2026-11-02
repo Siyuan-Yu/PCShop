@@ -194,7 +194,14 @@ namespace PCShopSell.Core.Home
                 return d;
             }
 
+            Add(new FurnitureDef("restaurant_prep","餐馆加工台","备料台；餐馆必需。",650,FurnitureSlot.Floor,1.1,.6,true){WeightKg=30});
+            Add(new FurnitureDef("restaurant_stove","餐馆炒锅灶台","一个同时烹饪锅位；投料后注意火候，及时出锅。",1400,FurnitureSlot.Floor,.8,.65,true){WeightKg=45});
+            Add(new FurnitureDef("restaurant_pass","餐馆传菜台","出锅的菜放在这里，再送至餐桌。",500,FurnitureSlot.Floor,1,.5,true){WeightKg=20});
+            Add(new FurnitureDef("restaurant_table","餐馆餐桌","提供一个堂食桌位；上菜后用餐结账，需要收桌。",380,FurnitureSlot.Floor,.85,.85,true){WeightKg=15});
+            Add(new FurnitureDef("used_buydesk","收购鉴定台","听说辞、出价收购；买下后才可鉴定。",650,FurnitureSlot.Floor,1.1,.6,true){WeightKg=25});
+            Add(new FurnitureDef("used_display","二手销售展示台","每台展示4件已鉴定的旧物，按真实状态标价出售。",450,FurnitureSlot.Floor,1,.65,true){WeightKg=20});
             // ---- 出租屋：开局自带 ----
+            Add(new FurnitureDef("home_workbench", "家庭经营大屏", "大型液晶经营终端。在家集中管理经营、投资、联系人和生活托管。", 28000, FurnitureSlot.Floor, 6.4, 2.4) { WeightKg=160 });
             Add(new FurnitureDef(BedBoard, "硬板床", "一块木板加一层薄褥子。", 0, FurnitureSlot.Floor, 2.0, 1.0, false, true) { Role = FurnitureRole.Bed, BedQuality = 1.0 });
             Add(new FurnitureDef(WardrobeCloth, "布衣柜", "拉链布衣柜，塑料骨架。", 0, FurnitureSlot.Floor, 1.1, 0.6, false, true) { Role = FurnitureRole.Wardrobe });
             Add(new FurnitureDef(FittingMirror, "全身镜", "摆在店里使服装购买意愿增加5个百分点；只对服装生效，多面不叠加。也可试衣和更换已拥有的服装。", 230, FurnitureSlot.Floor, .7, .25, true) { Role = FurnitureRole.Wardrobe, WeightKg = 10 });
@@ -204,10 +211,10 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef("fan_fixed", "电风扇（修好了）", "热天改善所在室内的舒适体验；固定水电¥10/月。", 0, FurnitureSlot.Floor, 0.45, 0.45, false, true) { SleepBonus = 0, Utilities = Money.FromYuan(10) });
             Add(new FurnitureDef("junk", "纸箱和塑料盆", "搬家时留下的杂物。这个纸箱可打开家中不限容量的后仓：靠近按 F，或按 B 查看背包和后仓。", 0, FurnitureSlot.Floor, 0.9, 0.9, false, true) { Role = FurnitureRole.Storage });
 
-            Add(new FurnitureDef(FridgeSmall, "单门小冰箱", "入门款。容量 60 千克，占地小；家和店里都能摆。冷藏额外保鲜 7 天，每批只延长一次。", 1299, FurnitureSlot.Floor, 0.55, 0.6) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 60, WeightKg = 28, Utilities = Money.FromYuan(15) });
-            Add(new FurnitureDef(FridgeFamily, "家用双门冰箱", "上下双门。容量 120 千克，适合日常备餐；家和店里都能摆。冷藏额外保鲜 7 天，每批只延长一次。", 2799, FurnitureSlot.Floor, 0.75, 0.7) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 120, WeightKg = 48, Utilities = Money.FromYuan(20) });
-            Add(new FurnitureDef(FridgeSide, "对开门大冰箱", "左右对开门。容量 240 千克，可囤更多饭菜饮料；家和店里都能摆。冷藏额外保鲜 7 天，每批只延长一次。", 5299, FurnitureSlot.Floor, 1.15, 0.75) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 240, WeightKg = 85, Utilities = Money.FromYuan(30) });
-            Add(new FurnitureDef(FridgePremium, "高端四门冰箱", "高端四门大容量款。容量 360 千克，适合大量备餐；家和店里都能摆。冷藏额外保鲜 7 天，每批只延长一次。", 7999, FurnitureSlot.Floor, 1.3, 0.85) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 360, WeightKg = 120, Utilities = Money.FromYuan(40) });
+            Add(new FurnitureDef(FridgeSmall, "单门小冰箱", "入门款。容量 60 千克，占地小；家和店里都能摆。食物在冰箱里永久保存；取出后继续计算剩余保质期。", 1299, FurnitureSlot.Floor, 0.55, 0.6) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 60, WeightKg = 28, Utilities = Money.FromYuan(15) });
+            Add(new FurnitureDef(FridgeFamily, "家用双门冰箱", "上下双门。容量 120 千克，适合日常备餐；家和店里都能摆。食物在冰箱里永久保存；取出后继续计算剩余保质期。", 2799, FurnitureSlot.Floor, 0.75, 0.7) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 120, WeightKg = 48, Utilities = Money.FromYuan(20) });
+            Add(new FurnitureDef(FridgeSide, "对开门大冰箱", "左右对开门。容量 240 千克，可囤更多饭菜饮料；家和店里都能摆。食物在冰箱里永久保存；取出后继续计算剩余保质期。", 5299, FurnitureSlot.Floor, 1.15, 0.75) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 240, WeightKg = 85, Utilities = Money.FromYuan(30) });
+            Add(new FurnitureDef(FridgePremium, "高端四门冰箱", "高端四门大容量款。容量 360 千克，适合大量备餐；家和店里都能摆。食物在冰箱里永久保存；取出后继续计算剩余保质期。", 7999, FurnitureSlot.Floor, 1.3, 0.85) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 360, WeightKg = 120, Utilities = Money.FromYuan(40) });
 
             // ---- 出租屋：可以买 ----
             Add(new FurnitureDef("bed_spring", "弹簧床", "有像样的床垫，睡着不硌人。睡眠质量 ×1.12。", 900, FurnitureSlot.Floor, 2.0, 1.1) { Role = FurnitureRole.Bed, BedQuality = 1.12 });

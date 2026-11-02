@@ -18,7 +18,7 @@ namespace PCShopSell.Core.Session
         private int _cityCompetitionSlot = -1, _cityRetailTickDay = -1;
         public IReadOnlyList<CityCompetition> CityCompetitions => _cityCompetitions;
         private bool IsCompetingRetailShop(OwnedShop shop,bool requireOpen=true)=>shop!=null && shop.Rented
-            && RetailShopTypes.All.Contains(shop.RetailKind) && !(shop.Place.Business??"").StartsWith("venue_",StringComparison.Ordinal)
+            && RetailShopTypes.All.Contains(shop.RetailKind) && !IsSpecialBusiness(shop) && !(shop.Place.Business??"").StartsWith("venue_",StringComparison.Ordinal)
             && (!requireOpen || shop.Sim.IsOpen);
         internal OwnedShop PriceWarTarget()=>MyShops.Where(shop=>IsCompetingRetailShop(shop) && shop.Sim.Markup>1.2
             && (shop.RetailKind!="computer" || Relation(Npcs.Jie)<NpcPerks.JieNoPriceWar))
@@ -64,30 +64,47 @@ namespace PCShopSell.Core.Session
         {
             if (product == null) return Money.Zero;
             bool small = ActiveCityCompetition("terms").Any(e => e.SupplierId == source?.Id && e.Response == "small");
-            return small ? product.WholesalePrice.Scale(1.08) : product.WholesalePrice;
+            return product.WholesalePrice.Scale(IndustryCycles.GoodsFactor(product,Clock.Today.TotalDays)*(small?1.08:1));
         }
         private IEnumerable<CityCompetition> ActiveCityCompetition(string kind = null) => _cityCompetitions.Where(e => !e.Ended && CompetitionMatchesShop(e) && e.StartDay <= Clock.Today.TotalDays && Clock.Today.TotalDays < e.EndDay && (kind == null || e.Kind == kind));
         private string SupplierCounterKey(string sourceId, string productId) => Clock.Today.TotalDays + "|" + sourceId + "|" + productId;
         public int CitySupplierRemaining(string sourceId, string productId)
         {
-            int limit = ActiveCityCompetition("quota").Any(e => e.SupplierId == sourceId && e.ProductId == productId) ? 4 : int.MaxValue;
-            if (limit == int.MaxValue) return limit;
+            int limit = ActiveCityCompetition("quota").Any(e => e.SupplierId == sourceId && e.ProductId == productId) ? 4 : SupplierCapacity(sourceId,productId);
             _citySupplierPurchases.TryGetValue(SupplierCounterKey(sourceId, productId), out int used);
+            if(productId=="produce:rice")return Math.Max(0,limit-(used+1)/2);
             return Math.Max(0, limit - used);
         }
         public int CitySupplierMinimum(string sourceId) => ActiveCityCompetition("terms").Any(e => e.SupplierId == sourceId && e.Response != "small") ? 3 : 1;
+        public bool HasDualRetailWholesale(Place source) => source!=null&&source.Kind==PlaceKind.Shop
+            && (source.Business==FarmBusiness||source.Business==Gifts.TobaccoBusiness||source.Business==FastFoodBusiness);
+        public int CitySupplierMinimum(string sourceId,string productId)
+        {
+            int minimum=CitySupplierMinimum(sourceId);
+            if(!City.HasPlace(sourceId)||!HasDualRetailWholesale(City.GetPlace(sourceId)))return minimum;
+            // Farm retail rice is sold in .25 kg increments; wholesale bags hold .5 kg.
+            int regular=productId=="produce:rice"?5:10;
+            return minimum*regular;
+        }
+        public int PurchaseMinimum(PurchaseOffer offer)=>offer.Kind==PurchaseGoodsKind.Gift
+            ?CitySupplierMinimum(offer.Source.Id,offer.Id):CitySupplierMinimum(offer.Source.Id);
+        public string WholesaleMinimumText(string sourceId,string productId)
+        {
+            int minimum=CitySupplierMinimum(sourceId,productId);
+            return productId=="produce:rice"?"起订 "+minimum+" 袋（"+(minimum*.5).ToString("0.##")+" 千克）":"起订 "+minimum+" 件";
+        }
         public void RecordCitySupplierPurchase(string sourceId, string productId, int count)
         {
             if (count <= 0) return;
             string key = SupplierCounterKey(sourceId, productId);
-            _citySupplierPurchases.TryGetValue(key, out int old); _citySupplierPurchases[key] = old + count;
+            _citySupplierPurchases.TryGetValue(key, out int old); _citySupplierPurchases[key] = old + (productId=="produce:rice"?count*2:count);
         }
         public string CityCompetitionTitle(CityCompetition e) => e.Kind == "promotion" ? RetailShopTypes.Name(e.RetailKind)+"同行促销" : e.Kind == "quota" ? "同行业货源配额紧张" : "同行业供应商调整合作条件";
         public string CityCompetitionTerms(CityCompetition e)
         {
             if (e.Kind == "promotion") return (e.RivalName??"同商圈同行")+"正在促销，目标门店潜在询价客流暂为85%。可维持定位、调整陈列价格，或突出特色系列（潜在客流恢复到95%）；只影响对应店铺，收入仍需实际成交。";
             if (e.Kind == "quota") return $"{(City.HasPlace(e.SupplierId) ? City.GetPlace(e.SupplierId).Name : e.SupplierId)} 的 {Gifts.Get(e.ProductId)?.Name ?? (PartCatalog.Exists(e.ProductId) ? PartCatalog.Get(e.ProductId).Name : e.ProductId)} 每日最多供应4件。可选其他来源，不影响已有在途订单。";
-            return (City.HasPlace(e.SupplierId)?City.GetPlace(e.SupplierId).Name:"对应供应商")+"这轮要求每款至少3件。可接受正常起订量，或选择小批次合作：恢复1件起订、批发价提高8%。仅影响本货源和事件期间的后续订单。";
+            return (City.HasPlace(e.SupplierId)?City.GetPlace(e.SupplierId).Name:"对应供应商")+"这轮将常规起订量提高到3倍。可选择小批次合作：恢复常规起订量、批发价提高8%。兼营零售的店铺仍须满足零售数量10倍的批发门槛。仅影响本货源和事件期间的后续订单。";
         }
         public bool RespondCityCompetition(string id, string response)
         {
@@ -152,7 +169,7 @@ namespace PCShopSell.Core.Session
             if (IsGameOver || IsWorking || !CityComicExpoOpen) return Fail("请在每月22—24日的漫展开放时间到会展中心现场采购。 ");
             var product = Gifts.Get(productId);
             if (product?.LimitedEdition != true || count < 1 || count > CityExpoModelRemaining(productId)) return Fail("本届该限定款每人限5件，请检查剩余数量。 ");
-            Money price = product.WholesalePrice * count;
+            Money price = CityRetailWholesalePrice(CurrentPlace,product) * count;
             if (toBag)
             {
                 if (!CanCarry(product.WeightKg * count)) return false;

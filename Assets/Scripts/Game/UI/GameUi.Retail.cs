@@ -74,7 +74,7 @@ namespace PCShopSell.Game.UI
         private static string FurniturePurchaseGroup(FurnitureDef item)
         {
             if(item.Role==FurnitureRole.Fridge || item.Role==FurnitureRole.Climate || item.Role==FurnitureRole.Cooker
-                || item.Id=="shop_dispenser" || item.Id=="shop_led")return "电器";
+                || item.Id=="shop_dispenser" || item.Id=="shop_led" || item.Id==GameSession.HomeWorkbenchId)return "电器";
             switch(item.Id)
             {
                 case FurnitureCatalog.Curtain:
@@ -120,8 +120,8 @@ namespace PCShopSell.Game.UI
                 {
                     var item=product;string key="wholesale:"+item.Id;
                     Offer(key,item.Name,ShelfKinds.ForGift(item.Id)?.Name??"商品",item.WeightKg,S.CityRetailWholesalePrice(source,item),
-                        "零售参考价 "+item.Price+" · 起订 "+S.CitySupplierMinimum(source.Id)+" 件"+(item.ShelfDays>0?" · 保鲜 "+item.ShelfDays+" 天":""),
-                        ()=>S.CartAddRetailWholesale(source,item.Id),()=>Math.Min(100,S.CitySupplierRemaining(source.Id,item.Id))-S.CartAmount(key),
+                        "零售参考价 "+item.Price.Scale(IndustryCycles.GoodsFactor(item,S.Clock.Today.TotalDays))+" · "+S.WholesaleMinimumText(source.Id,item.Id)+" · 今日可购 "+S.CitySupplierRemaining(source.Id,item.Id)+(item.ShelfDays>0?" · 保鲜 "+item.ShelfDays+" 天":""),
+                        ()=>S.CartAddRetailWholesale(source,item.Id,S.CartAmount(key)==0?S.CitySupplierMinimum(source.Id,item.Id):1),()=>Math.Min(100,S.CitySupplierRemaining(source.Id,item.Id))-S.CartAmount(key),
                         season:ClothingProducts.SeasonGroup(item.Id));
                 }
             }
@@ -131,7 +131,7 @@ namespace PCShopSell.Game.UI
                 {
                     var item=part;
                     Offer("part:"+item.Id,item.Name,PartCatalog.CategoryName(item.Category),PartUnitKg(item),S.StallPrice(source,item),
-                        "市价 "+S.Market.PriceOf(item)+" · 盒装正品",()=>S.CartAddStall(source,item,1),()=>S.StallRemaining(source,item)-S.CartAmount("part:"+item.Id));
+                        "市价 "+S.Market.PriceOf(item)+" · 盒装正品 · 本档口该型号每日上限 "+S.SupplierCapacity(source.Id,item.Id)+" · 今日可购 "+S.StallRemaining(source,item),()=>S.CartAddStall(source,item,1),()=>S.StallRemaining(source,item)-S.CartAmount("part:"+item.Id));
                 }
             }
             else if(S.IsCityClothingRetail(source))
@@ -228,6 +228,11 @@ namespace PCShopSell.Game.UI
                 if(item.Preview!=null)Ui.Size(Ui.Button(row,"试穿",item.Preview,16),68,38);
                 CartAddButton(w,row,item.Key,item.Add,"+1",58,S.IsPlaceOpen(source)&&remaining>0,maxAmount:
                     double.IsPositiveInfinity(remaining)?1000:Math.Max(S.CartAmount(item.Key),S.CartAmount(item.Key)+remaining));
+                if((wholesale||expo||source.Kind==PlaceKind.Wholesaler)&&remaining>0&&!double.IsInfinity(remaining))
+                    Ui.Size(Ui.Button(row,"最大",()=>{
+                        for(int n=0;n<1000;n++){double before=S.CartAmount(item.Key);if((item.Remaining?.Invoke()??0)<=0)break;item.Add();if(S.CartAmount(item.Key)<=before)break;}
+                        w.RequestRebuild();
+                    },15),58);
                 if(remaining<=0)Ui.Size(Ui.Label(row,"已选满 / 已拥有",14,TextAnchor.MiddleLeft,Ui.Dim),106);
             }
             CartPanel(w,w.Content,wholesale||expo||source.Kind==PlaceKind.Wholesaler);

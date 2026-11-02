@@ -104,7 +104,7 @@ namespace PCShopSell.Core.Session
             Player.EnergyChanged = SynchronizeEnergyExhaustion;
             Ledger = new Ledger(openingCash);
             Time = new TimeController();
-            Market = new HardwareMarket(Random);
+            Market = new HardwareMarket(Random) {DayProvider=()=>Clock.Today.TotalDays};
             Market.EnsureOutlook(start.Date);
             Online = new Online1788();
             Police = new PoliceSystem(city);
@@ -139,6 +139,8 @@ namespace PCShopSell.Core.Session
             InitializeCityPeople();
             InitializeCityClimate();
             TickCityRetail();
+            TickSpecialBusinesses(start,start);
+            RecordWorkbenchPrices();
         }
 
         public VehicleSpec CurrentVehicle => Vehicles.Get(Vehicle);
@@ -308,6 +310,7 @@ namespace PCShopSell.Core.Session
             if (p == null) return false;
             OwnedShop mine = ShopAt(p);
             if (mine != null) return IsDedicatedVenue(p)?VenueOpen(p):mine.Sim.IsOpen;
+            if(SupplierClosesOnWeekend(p)&&Clock.Today.IsWeekend)return false;
             if(p.ExplicitEntrance && p.OpenMinute!=p.CloseMinute)return CityWithinHours(Clock.MinuteOfDay,p.OpenMinute,p.CloseMinute);
             var venture = VentureAt(p.Id);
             if (venture != null && venture.Paused) return false;
@@ -392,6 +395,7 @@ namespace PCShopSell.Core.Session
             NormalizeWarehouses();
             TickCityStories(to.TotalMinutes);
             TickCityRetail();
+            TickSpecialBusinesses(from,to);
             TickCityClimate(from.TotalMinutes,to.TotalMinutes);
             foreach(var shop in _shops)shop.Sim.PlayerPresent=CityPlayerCanWork(shop);
             int minutes = (int)from.MinutesUntil(to);
@@ -419,6 +423,7 @@ namespace PCShopSell.Core.Session
             CheckAppointments(to);
             DeliverOnlineOrders(to);
             DeliverCouriers(to);
+            TickHomeWorkbench(from,to);
             UpdateEmployeePurchases(to);
             DeliverDirect(to);
             if (from.Date == to.Date) TrackCreatorCampaigns(to);
@@ -554,6 +559,7 @@ namespace PCShopSell.Core.Session
                 _pendingFaint = false;
                 Faint();
             }
+            else ProcessWorkbenchSleep();
         }
 
         private static bool Crosses(GameTimestamp from, GameTimestamp to, int minuteOfDay)

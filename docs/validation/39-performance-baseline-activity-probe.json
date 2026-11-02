@@ -1,0 +1,9 @@
+{
+  "originalCore": true,
+  "go": true,
+  "frames": 840,
+  "phase": "Cancelled",
+  "reason": "场所已经打烊，尚未消费",
+  "positionY": -398.4949840984624,
+  "place": "life_restaurant"
+}

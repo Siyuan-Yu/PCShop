@@ -3,6 +3,8 @@ using NUnit.Framework;
 using UnityEngine;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Catalog;
+using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
@@ -19,6 +21,87 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.SetShopMainCategory(kind));
             s.PlayerShop.SetHours(0,1440);s.PlayerShop.ForcedClosed=false;s.PlayerShop.NotFitted=false;s.PlayerShop.Markup=1.4;
             return s;
+        }
+        [Test]
+        public void ComputerStoryBindsToTheComputerBranchWithoutTakingClothingShopStock()
+        {
+            using(var s=Make())
+            {
+                var clothing=s.CurrentShop;
+                s.PlayerShop.Reputation=80;
+                s.DebugAddListing("tea",0,60,Money.FromYuan(3000));GameSessionTests.Teleport(s,"agency");
+                Assert.True(s.SignRetailLease("tea",true,"computer"));
+                var computer=s.ShopAt("tea");computer.Sim.Stock.Clear();
+                computer.Employee=new Employee{Id="branch-clerk",Name="分店收银员"};CityTestPeople.AtAssignedWork(s,computer.Employee);
+                computer.Sim.SetHours(0,1440);computer.Sim.NotFitted=false;computer.Sim.ForcedClosed=false;computer.Sim.Reputation=10;
+                var ram=PartCatalog.Get("ram0");computer.Sim.Stock.ForceAdd(ram,true,5);
+                GameSessionTests.Teleport(s,clothing.Place.Id);var active=s.CurrentShop;
+                computer.Sim.NotFitted=false;computer.Sim.ForcedClosed=false;
+                computer.Sim.SetShelfCapacity(new System.Collections.Generic.Dictionary<string,double>{{"memory",60}});
+                int unchanged=clothing.Sim.Stock.CountAll(ram);
+                s.RaiseEvent("students");Assert.NotNull(s.PendingEvent);StringAssert.Contains(s.ShopTitle(computer),s.PendingEvent.Body);
+                Assert.True(s.ResolveEvent(0));Assert.Zero(computer.Sim.Stock.CountAll(ram));
+                Assert.AreEqual(unchanged,clothing.Sim.Stock.CountAll(ram));Assert.AreSame(active,s.CurrentShop);
+            }
+        }
+        [Test]
+        public void ComputerStoriesDoNotTargetClothingEvenWhenPartsRemainInTheWarehouse()
+        {
+            using(var s=Make())
+            {
+                s.PlayerShop.Reputation=10;s.PlayerShop.Stock.Clear();
+                s.PlayerShop.Stock.ForceAdd(PartCatalog.Get("ram0"),true,10);
+                s.PlayerShop.SetShelfCapacity(new System.Collections.Generic.Dictionary<string,double>{{"memory",60}});
+                foreach(string id in new[]{"regulars","students","review"})
+                {
+                    Assert.False(EventCatalog.Get(id).When(s));s.RaiseEvent(id);
+                    Assert.IsNull(s.PendingEvent);Assert.Zero(s.EventCountOf(id));
+                }
+            }
+        }
+        [TestCase("computer","配件")]
+        [TestCase("clothing","面料")]
+        [TestCase("models","正版")]
+        public void ReviewUsesTheActualRetailIndustryAndCancelsIfItChanges(string kind,string word)
+        {
+            using(var s=Make(kind))
+            {
+                s.PlayerShop.Reputation=10;s.PlayerShop.Stock.Clear();
+                string shelf;
+                if(kind=="computer")
+                {
+                    s.PlayerShop.Stock.ForceAdd(PartCatalog.Get("cpu0"),true,2);shelf="cpu";
+                }
+                else
+                {
+                    var product=Gifts.All.First(g=>RetailShopTypes.Sells(kind,g.Id));
+                    s.PlayerShop.Stock.ForceAddGoods(product.Id,2);shelf=ShelfKinds.ForGift(product.Id).Id;
+                }
+                s.PlayerShop.SetShelfCapacity(new System.Collections.Generic.Dictionary<string,double>{{shelf,60}});
+                Assert.True(EventCatalog.Get("review").When(s));s.RaiseEvent("review");
+                StringAssert.Contains(word,s.PendingEvent.Body);StringAssert.Contains(s.ShopTitle(s.CurrentShop),s.PendingEvent.Body);
+                if(kind!="computer"){StringAssert.DoesNotContain("配件",s.PendingEvent.Body);StringAssert.DoesNotContain("翻新",s.PendingEvent.Title);}
+                var cash=s.Ledger.Balance;double reputation=s.PlayerShop.Reputation;
+                Assert.True(s.SetShopMainCategory(kind=="clothing"?"models":"clothing"));
+                Assert.True(s.ResolveEvent(1));Assert.AreEqual(cash,s.Ledger.Balance);Assert.AreEqual(reputation,s.PlayerShop.Reputation);
+            }
+        }
+        [Test]
+        public void ReviewRequiresOpenShopAndRelatedGoodsOnDisplayAndDoesNotMutateTheCatalog()
+        {
+            using(var s=Make("clothing"))
+            {
+                s.PlayerShop.Reputation=10;s.PlayerShop.Stock.Clear();
+                var product=Gifts.All.First(g=>ClothingProducts.IsClothing(g.Id));
+                s.PlayerShop.Stock.ForceAddGoods(product.Id,2);
+                s.PlayerShop.SetShelfCapacity(new System.Collections.Generic.Dictionary<string,double>());
+                Assert.False(EventCatalog.Get("review").When(s));
+                s.PlayerShop.SetShelfCapacity(new System.Collections.Generic.Dictionary<string,double>{{ShelfKinds.ForGift(product.Id).Id,60}});
+                s.PlayerShop.ForcedClosed=true;Assert.False(EventCatalog.Get("review").When(s));
+                s.PlayerShop.ForcedClosed=false;s.RaiseEvent("review");Assert.NotNull(s.PendingEvent);
+                StringAssert.Contains("配件",EventCatalog.Get("review").Body,"共享模板不能被上一次服装事件污染");
+                var cash=s.Ledger.Balance;Assert.True(s.ResolveEvent(1));Assert.AreEqual(cash-Money.FromYuan(100),s.Ledger.Balance);
+            }
         }
         [Test]
         public void ClosedShopCannotTriggerPriceWarOrConsumeTheCompetitionRound()
@@ -54,7 +137,7 @@ namespace PCShopSell.Tests
             using(var s=Make())
             {
                 s.RaiseEvent("rival");Assert.IsNotNull(s.PendingEvent);
-                Assert.IsTrue(s.SetShopMainCategory("food"));double markup=s.PlayerShop.Markup;
+                Assert.IsTrue(s.SetShopMainCategory("models"));double markup=s.PlayerShop.Markup;
                 Assert.IsTrue(s.ResolveEvent(0));Assert.AreEqual(markup,s.PlayerShop.Markup);
             }
         }
@@ -97,7 +180,7 @@ namespace PCShopSell.Tests
             using(var s=Make(fullCity:true))
             {
                 s.Clock.Restore(new GameDate(14),11*60);s.TickCityRetail();Assert.Less(s.PlayerShop.CityRetailDemandMultiplier,1);
-                Assert.IsTrue(s.SetShopMainCategory("food"));Assert.AreEqual(1,s.PlayerShop.CityRetailDemandMultiplier);
+                Assert.IsTrue(s.SetShopMainCategory("models"));Assert.AreEqual(1,s.PlayerShop.CityRetailDemandMultiplier);
                 Assert.IsTrue(s.CityCompetitions.Single().Ended);
                 Assert.IsTrue(s.SetShopMainCategory("clothing"));
                 s.LoadCityRetail(new SaveData{cityRetailVersion=1,cityCompetitionSlot=0,cityCompetitions=new[]{

@@ -7,14 +7,15 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private RectTransform ShelfSaleTag(Window w, Transform parent, string key, long price, (long min, long max) range,
-            Func<long, double> intentAtPrice, Action<long> setPrice)
+            Func<long, double> intentAtPrice, Action<long> setPrice, PCShopSell.Core.Shop.ShopSimulation pricingShop=null)
         {
+            var shop=pricingShop??S.PlayerShop;
             var tag = Ui.Panel(parent, "PriceTag_" + key, TagPaper);
             var valueLabel = Ui.Label(tag.transform, "¥" + price, 17, TextAnchor.MiddleCenter, TagInk);
             valueLabel.name = "SalePrice_" + key;
             valueLabel.rectTransform.Anchor(.18f, .43f, .61f, .98f);
             long draft = price;
-            double MirrorBonus()=>key.StartsWith("goods_")?S.PlayerShop.GoodsMirrorBonus(key.Substring(6))*100:0;
+            double MirrorBonus()=>key.StartsWith("goods_")?shop.GoodsMirrorBonus(key.Substring(6))*100:0;
             Text demand = null;
             Button confirm = null;
             var controls = new System.Collections.Generic.List<(Button button, HoldRepeat hold, int direction)>();
@@ -25,7 +26,7 @@ namespace PCShopSell.Game.UI
                 if (demand != null)
                 {
                     double chance=Math.Max(0,Math.Min(1,intentAtPrice(value)))*100;
-                    double bonus=S.PlayerShop.SalesPurchaseIntentBonus*100;
+                    double bonus=shop.SalesPurchaseIntentBonus*100;
                     double mirror=MirrorBonus();
                     demand.text=mirror>0
                         ?$"购买意愿 {chance:0}% · {(bonus>0?"加成":"镜子")}+{bonus+mirror:0.#}"
@@ -65,7 +66,7 @@ namespace PCShopSell.Game.UI
             demand = Ui.Label(tag.transform, "", 13, TextAnchor.MiddleCenter, TagInk);
             demand.name = "PurchaseIntent_" + key;
             tag.Tip(()=>"购买意愿已计入当前有效加成。\n"+
-                $"在岗销售员：+{S.PlayerShop.SalesPurchaseIntentBonus*100:0.#}个百分点。"+
+                $"在岗销售员：+{shop.SalesPurchaseIntentBonus*100:0.#}个百分点。"+
                 (MirrorBonus()>0?"\n全身镜：服装购买意愿 +5个百分点，多面不叠加。":""));
             demand.rectTransform.Anchor(.02f, .02f, .98f, .4f);
             Preview(draft); RefreshLimits();

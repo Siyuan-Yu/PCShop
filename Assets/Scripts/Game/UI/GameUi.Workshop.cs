@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using PCShopSell.Core.Catalog;
 using System;
 using PCShopSell.Core.Session;
@@ -70,7 +70,7 @@ namespace PCShopSell.Game.UI
                 foreach (var row in buyers)
                 {
                     var buyer = row.Person;
-                    Ui.Size(Ui.Button(picker.Content, buyer.Name + " · " + (buyer.PurchasePlan.EveryDays == 1 ? "每天一次" : "每三天一次"), () =>
+                    Ui.Size(Ui.Button(picker.Content, buyer.Name + " · " + buyer.PurchasePlan.FrequencyText, () =>
                     { picker.Close(); AddOrderToBuyerDraft(order, shop, buyer.Id, shopping); }, 18), -1, 46);
                 }
             });

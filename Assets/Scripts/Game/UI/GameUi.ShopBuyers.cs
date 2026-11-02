@@ -23,7 +23,11 @@ namespace PCShopSell.Game.UI
         public void OpenShopBuyers()
         {
             if(!S.InPlayerShop)return;
-            var shop=S.CurrentShop;
+            OpenShopBuyers(S.CurrentShop);
+        }
+        public void OpenShopBuyers(OwnedShop shop)
+        {
+            if(shop?.Rented!=true || !S.InPlayerShop&&!S.CanUseHomeWorkbench)return;
             OpenWindow("进货员 · "+S.ShopTitle(shop),960,800,w=>
             {
                 if(!shop.Rented){w.Close();return;}
@@ -34,17 +38,18 @@ namespace PCShopSell.Game.UI
                 if(buyers.Length==0)
                 {
                     Line(list,"本店还没有进货员",22);
-                    Para(list,"安排现有员工做进货员，或先到“招人”聘用员工，再设置要采购的商品。",18,Ui.Dim);
+                    Para(list,"安排现有员工做进货员，或先到“员工”页聘用员工，再设置要采购的商品。",18,Ui.Dim);
                     Ui.Size(Ui.Button(list,"安排现有员工",()=>ManageBuyerEmployees(w),18,Ui.ButtonHot),-1,42);
-                    Ui.Size(Ui.Button(list,"招聘进货员",()=>{w.Close();OpenDock();SelectTab(ShopTab.Staff);},18),-1,42);
+                    Ui.Size(Ui.Button(list,S.InPlayerShop?"招聘进货员":"管理员工",()=>{if(S.InPlayerShop){w.Close();OpenDock();SelectTab(ShopTab.Staff);}else OpenEmployeesPanel();},18),-1,42);
                 }
                 foreach(var assignment in buyers)
                 {
                     var person=assignment.Person;
                     var plan=person.PurchasePlan??new EmployeePurchasePlan();
                     Line(list,person.Name+" · "+S.EmployeeStatus(assignment),21,Ui.Accent);
-                    string frequency=plan.Daily?(plan.EveryDays==1?"每天一次":"每三天一次"):"定期采购未启用 / 已暂停";
+                    string frequency=plan.Daily?plan.FrequencyText:"定期采购未启用 / 已暂停";
                     Line(list,frequency+" · "+(plan.InventoryThreshold?"库存阈值补货":"固定数量清单"),17);
+                    if(plan.Daily)Line(list,S.EmployeePurchaseNextText(person.Id),15,Ui.Dim);
                     var items=plan.Items??Array.Empty<PurchaseLine>();
                     if(items.Length==0)Line(list,"还没有选择要进的货",17,Ui.Dim);
                     foreach(var line in items.Take(5))

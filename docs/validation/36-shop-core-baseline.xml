@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="12" result="Failed(Child)" total="12" passed="5" failed="7" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-02 11:37:39Z" end-time="2026-11-02 11:37:41Z" duration="2.8356867">
+  <test-suite type="TestSuite" id="1860" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="756" result="Failed" site="Child" start-time="2026-11-02 11:37:39Z" end-time="2026-11-02 11:37:41Z" duration="2.835687" total="12" passed="5" failed="7" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="2716" name="PCShopSell.Tests.EditMode.dll" fullname="D:/UnityProjects/PCShop/_ci_shop_baseline/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="756" result="Failed" site="Child" start-time="2026-11-02 11:37:39Z" end-time="2026-11-02 11:37:41Z" duration="2.814464" total="12" passed="5" failed="7" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="72560" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="2717" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="756" result="Failed" site="Child" start-time="2026-11-02 11:37:39Z" end-time="2026-11-02 11:37:41Z" duration="2.808208" total="12" passed="5" failed="7" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="2718" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="756" result="Failed" site="Child" start-time="2026-11-02 11:37:39Z" end-time="2026-11-02 11:37:41Z" duration="2.802060" total="12" passed="5" failed="7" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="2147" name="FixtureTests" fullname="PCShopSell.Tests.FixtureTests" classname="PCShopSell.Tests.FixtureTests" runstate="Runnable" testcasecount="16" result="Failed" site="Child" start-time="2026-11-02 11:37:39Z" end-time="2026-11-02 11:37:39Z" duration="0.044357" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="2148" name="Catalog_HasShelfTiers_AndTheOtherFixtures" fullname="PCShopSell.Tests.FixtureTests.Catalog_HasShelfTiers_AndTheOtherFixtures" methodname="Catalog_HasShelfTiers_AndTheOtherFixtures" classname="PCShopSell.Tests.FixtureTests" runstate="Runnable" seed="515152436" result="Failed" start-time="2026-11-02 11:37:39Z" end-time="2026-11-02 11:37:39Z" duration="0.017076" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  保留三档通用货架，新增服装衣架与折叠陈列架
+  Expected: 5
+  But was:  3
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.FixtureTests.Catalog_HasShelfTiers_AndTheOtherFixtures () [0x00065] in D:\UnityProjects\PCShop\_ci_shop_baseline\Assets\Tests\EditMode\FixtureTests.cs:60
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FixtureTests.Catalog_HasShelfTiers_AndTheOtherFixtures
+REGRESSION DONE PCShopSell.Tests.FixtureTests.Catalog_HasShelfTiers_AndTheOtherFixtures Failed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="2376" name="PurchasePlanTests" fullname="PCShopSell.Tests.PurchasePlanTests" classname="PCShopSell.Tests.PurchasePlanTests" runstate="Runnable" testcasecount="14" result="Failed" site="Child" start-time="2026-11-02 11:37:39Z" end-time="2026-11-02 11:37:41Z" duration="2.546428" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="2384" name="PartialCash_BuysInListOrderAndReturnsChangeOnceAfterSave" fullname="PCShopSell.Tests.PurchasePlanTests.PartialCash_BuysInListOrderAndReturnsChangeOnceAfterSave" methodname="PartialCash_BuysInListOrderAndReturnsChangeOnceAfterSave" classname="PCShopSell.Tests.PurchasePlanTests" runstate="Runnable" seed="1928153036" result="Failed" start-time="2026-11-02 11:37:39Z" end-time="2026-11-02 11:37:40Z" duration="1.295165" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: ¥1,069
+  But was:  ¥3,039
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.PurchasePlanTests.PartialCash_BuysInListOrderAndReturnsChangeOnceAfterSave () [0x0012a] in D:\UnityProjects\PCShop\_ci_shop_baseline\Assets\Tests\EditMode\PurchasePlanTests.cs:324
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.PurchasePlanTests.PartialCash_BuysInListOrderAndReturnsChangeOnceAfterSave
+REGRESSION DONE PCShopSell.Tests.PurchasePlanTests.PartialCash_BuysInListOrderAndReturnsChangeOnceAfterSave Failed
+]]></output>
+            </test-case>
+            <test-case id="2385" name="PartialCash_SkipsUnaffordableEarlyItemButStillBuysLaterCheapItem" fullname="PCShopSell.Tests.PurchasePlanTests.PartialCash_SkipsUnaffordableEarlyItemButStillBuysLaterCheapItem" methodname="PartialCash_SkipsUnaffordableEarlyItemButStillBuysLaterCheapItem" classname="PCShopSell.Tests.PurchasePlanTests" runstate="Runnable" seed="580615642" result="Failed" start-time="2026-11-02 11:37:40Z" end-time="2026-11-02 11:37:41Z" duration="1.194893" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  String lengths are both 4. Strings differ at index 3.
+  Expected: "cpu0"
+  But was:  "cpu2"
+  --------------^
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.PurchasePlanTests.PartialCash_SkipsUnaffordableEarlyItemButStillBuysLaterCheapItem () [0x0012d] in D:\UnityProjects\PCShop\_ci_shop_baseline\Assets\Tests\EditMode\PurchasePlanTests.cs:353
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.PurchasePlanTests.PartialCash_SkipsUnaffordableEarlyItemButStillBuysLaterCheapItem
+REGRESSION DONE PCShopSell.Tests.PurchasePlanTests.PartialCash_SkipsUnaffordableEarlyItemButStillBuysLaterCheapItem Failed
+]]></output>
+            </test-case>
+            <test-case id="2390" name="PostingAnotherAdRetainsPreviousCandidates_AndAddsMoreTomorrow" fullname="PCShopSell.Tests.PurchasePlanTests.PostingAnotherAdRetainsPreviousCandidates_AndAddsMoreTomorrow" methodname="PostingAnotherAdRetainsPreviousCandidates_AndAddsMoreTomorrow" classname="PCShopSell.Tests.PurchasePlanTests" runstate="Runnable" seed="992766329" result="Failed" start-time="2026-11-02 11:37:41Z" end-time="2026-11-02 11:37:41Z" duration="0.030000" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: 4
+  But was:  2
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.PurchasePlanTests.PostingAnotherAdRetainsPreviousCandidates_AndAddsMoreTomorrow () [0x00125] in D:\UnityProjects\PCShop\_ci_shop_baseline\Assets\Tests\EditMode\PurchasePlanTests.cs:436
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.PurchasePlanTests.PostingAnotherAdRetainsPreviousCandidates_AndAddsMoreTomorrow
+REGRESSION DONE PCShopSell.Tests.PurchasePlanTests.PostingAnotherAdRetainsPreviousCandidates_AndAddsMoreTomorrow Failed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="2645" name="WorkforceTests" fullname="PCShopSell.Tests.WorkforceTests" classname="PCShopSell.Tests.WorkforceTests" runstate="Runnable" testcasecount="20" result="Failed" site="Child" start-time="2026-11-02 11:37:41Z" end-time="2026-11-02 11:37:41Z" duration="0.064744" total="8" passed="5" failed="3" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="ParameterizedMethod" id="2662" name="InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods" fullname="PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods" classname="PCShopSell.Tests.WorkforceTests" runstate="Runnable" testcasecount="7" result="Failed" site="Child" start-time="2026-11-02 11:37:41Z" end-time="2026-11-02 11:37:41Z" duration="0.037942" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-case id="2655" name="InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(&quot;cash&quot;)" fullname="PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(&quot;cash&quot;)" methodname="InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods" classname="PCShopSell.Tests.WorkforceTests" runstate="Runnable" seed="1850191569" result="Passed" start-time="2026-11-02 11:37:41Z" end-time="2026-11-02 11:37:41Z" duration="0.008810" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("cash")
+REGRESSION DONE PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("cash") Passed
+]]></output>
+              </test-case>
+              <test-case id="2656" name="InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(&quot;load&quot;)" fullname="PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(&quot;load&quot;)" methodname="InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods" classname="PCShopSell.Tests.WorkforceTests" runstate="Runnable" seed="1101432358" result="Failed" start-time="2026-11-02 11:37:41Z" end-time="2026-11-02 11:37:41Z" duration="0.002578" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  Expected: not null
+  But was:  null
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods (System.String failure) [0x001c2] in D:\UnityProjects\PCShop\_ci_shop_baseline\Assets\Tests\EditMode\WorkforceTests.cs:207
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("load")
+REGRESSION DONE PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("load") Failed
+]]></output>
+              </test-case>
+              <test-case id="2657" name="InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(&quot;source&quot;)" fullname="PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(&quot;source&quot;)" methodname="InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods" classname="PCShopSell.Tests.WorkforceTests" runstate="Runnable" seed="640253195" result="Passed" start-time="2026-11-02 11:37:41Z" end-time="2026-11-02 11:37:41Z" duration="0.001336" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("source")
+REGRESSION DONE PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("source") Passed
+]]></output>
+              </test-case>
+              <test-case id="2658" name="InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(&quot;quota&quot;)" fullname="PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(&quot;quota&quot;)" methodname="InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods" classname="PCShopSell.Tests.WorkforceTests" runstate="Runnable" seed="970333484" result="Failed" start-time="2026-11-02 11:37:41Z" end-time="2026-11-02 11:37:41Z" duration="0.002406" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[  Expected: not null
+  But was:  null
+]]></message>
+                  <stack-trace><![CDATA[at PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods (System.String failure) [0x001c2] in D:\UnityProjects\PCShop\_ci_shop_baseline\Assets\Tests\EditMode\WorkforceTests.cs:207
+]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("quota")
+REGRESSION DONE PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("quota") Failed
+]]></output>
+              </test-case>
+              <test-case id="2659" name="InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(&quot;closed&quot;)" fullname="PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(&quot;closed&quot;)" methodname="InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods" classname="PCShopSell.Tests.WorkforceTests" runstate="Runnable" seed="37421244" result="Passed" start-time="2026-11-02 11:37:41Z" end-time="2026-11-02 11:37:41Z" duration="0.002247" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("closed")
+REGRESSION DONE PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("closed") Passed
+]]></output>
+              </test-case>
+              <test-case id="2660" name="InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(&quot;shift&quot;)" fullname="PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(&quot;shift&quot;)" methodname="InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods" classname="PCShopSell.Tests.WorkforceTests" runstate="Runnable" seed="463574332" result="Passed" start-time="2026-11-02 11:37:41Z" end-time="2026-11-02 11:37:41Z" duration="0.002661" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("shift")
+REGRESSION DONE PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("shift") Passed
+]]></output>
+              </test-case>
+              <test-case id="2661" name="InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(&quot;space&quot;)" fullname="PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods(&quot;space&quot;)" methodname="InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods" classname="PCShopSell.Tests.WorkforceTests" runstate="Runnable" seed="1837730494" result="Passed" start-time="2026-11-02 11:37:41Z" end-time="2026-11-02 11:37:41Z" duration="0.002148" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("space")
+REGRESSION DONE PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("space") Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="2650" name="Transfer_CanCancel_AndCannotOverwriteOccupiedRole" fullname="PCShopSell.Tests.WorkforceTests.Transfer_CanCancel_AndCannotOverwriteOccupiedRole" methodname="Transfer_CanCancel_AndCannotOverwriteOccupiedRole" classname="PCShopSell.Tests.WorkforceTests" runstate="Runnable" seed="1709608502" result="Failed" start-time="2026-11-02 11:37:41Z" end-time="2026-11-02 11:37:41Z" duration="0.015887" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: False
+  But was:  True
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.WorkforceTests.Transfer_CanCancel_AndCannotOverwriteOccupiedRole () [0x0003a] in D:\UnityProjects\PCShop\_ci_shop_baseline\Assets\Tests\EditMode\WorkforceTests.cs:86
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.WorkforceTests.Transfer_CanCancel_AndCannotOverwriteOccupiedRole
+REGRESSION DONE PCShopSell.Tests.WorkforceTests.Transfer_CanCancel_AndCannotOverwriteOccupiedRole Failed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

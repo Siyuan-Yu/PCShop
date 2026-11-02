@@ -7,6 +7,7 @@ using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using UnityEngine;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Inventory;
 
 namespace PCShopSell.Tests
 {
@@ -30,11 +31,16 @@ namespace PCShopSell.Tests
             using(var s=Make())
             {
                 GameSessionTests.Teleport(s,"pc");
-                Assert.IsTrue(s.SetShopMainCategory(kind));
+                if(kind=="flowers"||kind=="produce"||kind=="food"){s.CurrentShop.RetailKind=kind;s.PlayerShop.RetailKind=kind;} // Legacy operating shops remain compatible.
+                else Assert.IsTrue(s.SetShopMainCategory(kind));
                 var shop=s.PlayerShop;shop.Settings.BaseCustomersPerHour=0;shop.Stock.Clear();
                 var product=Gifts.All.First(g=>RetailShopTypes.Sells(kind,g.Id));
                 var part=PartCatalog.Get("cpu0");
                 shop.Stock.ForceAddGoods(product.Id,3);shop.Stock.ForceAdd(part,true,2);
+                s.CurrentShop.Layout.Clear();
+                shop.SetShelfCapacity(new System.Collections.Generic.Dictionary<string,double>());
+                var storedProduct=Gifts.All.First(g=>ShelfKinds.ForGift(g.Id)!=null && ShelfKinds.ForGift(g.Id)!=ShelfKinds.ForGift(product.Id));
+                shop.Stock.ForceAddGoods(storedProduct.Id,10);shop.Stock.ForceAdd(PartCatalog.Get("gpu0"),true,2);
                 var root=new GameObject("ActualShopGoodsRegression");root.SetActive(false);
                 var controller=root.AddComponent<PCShopSell.Game.GameController>();
                 typeof(PCShopSell.Game.GameController).GetProperty("Session").SetValue(controller,s);
@@ -46,7 +52,15 @@ namespace PCShopSell.Tests
                 try
                 {
                     ui.OpenDock();ui.DebugSelectTab(2);
-                    Assert.AreEqual(2,Named("Pricing_").Length,"只展示实际持有的商品，混售不受主售限制");
+                    Assert.AreEqual(0,Named("Pricing_").Length,"只有后仓库存时不应显示可调价商品");
+                    s.CurrentShop.Layout.Add(new PlacedFurniture{Id=FurnitureCatalog.Shelf});
+                    s.CurrentShop.Layout.Add(new PlacedFurniture{Id=FurnitureCatalog.Shelf});
+                    Assert.True(s.SetShelfKind(0,ShelfKinds.ForGift(product.Id).Id));Assert.True(s.SetShelfKind(1,"cpu"));
+                    typeof(PCShopSell.Game.UI.GameUi).GetMethod("RefreshDock",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance).Invoke(ui,null);
+                    Assert.AreEqual(2,Named("Pricing_").Length,"只展示已陈列的商品，混售不受主售限制");
+                    Assert.AreEqual(0,Named("Pricing_goods_"+storedProduct.Id).Length);
+                    Assert.AreEqual(0,Named("Pricing_gpu0").Length);
+                    Assert.AreEqual(1,Named("ShopDock").Single().GetComponentsInChildren<UnityEngine.UI.ScrollRect>().Length,"定价复用面板整页滚动，不再嵌套固定高度的商品列表");
                     Assert.AreEqual(1,Named("Pricing_goods_"+product.Id).Length);
                     Assert.AreEqual(1,Named("Pricing_cpu0").Length);
                     string IntentSummary()=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<UnityEngine.UI.Text>()).Single(t=>t.name=="PricingPurchaseIntentSummary").text;
@@ -63,14 +77,18 @@ namespace PCShopSell.Tests
                     Assert.AreEqual(before.Yuan+1,shop.GoodsPriceOf(product.Id).Yuan);
                     StringAssert.Contains(ExpectedIntent(),IntentSummary(),"单独改价后顶部参考值也必须更新");
                     ui.CloseAllWindows();ui.OpenDock();ui.DebugSelectTab(1);
-                    Assert.AreEqual(1,Named("StockGoods_"+product.Id).Length);
-                    Assert.AreEqual(1,Named("StockPart_cpu0").Length,"实际配件在任何主售店都可管理");
+                    Assert.GreaterOrEqual(Named("ShelfGoods_"+product.Id).Length+Named("WarehouseItem_stockgift:"+product.Id).Length,1);
+                    Assert.GreaterOrEqual(Named("ShelfPart_cpu0").Length+Named("WarehouseItem_part:cpu0").Length,1,"实际配件在任何主售店都可管理");
                     Assert.AreEqual(2,shop.Stock.CountAll(part));Assert.AreEqual(3,shop.Stock.GoodsCount(product.Id));
                     Assert.IsTrue(shop.Stock.TryRemoveGoods(product.Id,3));
                     typeof(PCShopSell.Game.UI.GameUi).GetMethod("RefreshDock",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance).Invoke(ui,null);
-                    Assert.AreEqual(0,Named("StockGoods_"+product.Id).Length,"售罄后库存列表应刷新");
+                    Assert.AreEqual(0,Named("ShelfGoods_"+product.Id).Length+Named("WarehouseItem_stockgift:"+product.Id).Length,"售罄后库存列表应刷新");
                     ui.DebugSelectTab(2);
                     Assert.AreEqual(1,Named("Pricing_").Length,"售罄商品不能继续显示在调价页");
+                    Assert.True(s.SetShelfKind(1,null));
+                    typeof(PCShopSell.Game.UI.GameUi).GetMethod("RefreshDock",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance).Invoke(ui,null);
+                    Assert.AreEqual(0,Named("Pricing_").Length,"取消陈列后立即移出定价页，保留后仓库存");
+                    Assert.AreEqual(2,shop.Stock.CountAll(part));
                     int shelf=s.CurrentShop.Layout.Count;
                     s.CurrentShop.Layout.Add(new PCShopSell.Core.Home.PlacedFurniture{Id=FurnitureCatalog.Shelf});
                     foreach(string group in new[]{"服装","电脑配件","模型手办","零售商品","全部"})

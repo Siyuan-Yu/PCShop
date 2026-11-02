@@ -37,11 +37,12 @@ namespace PCShopSell.Core.Session
         public int PlacedFixtures(FixtureKind kind) => FurnitureCatalog.CountFixtures(_shopLayout, kind);
 
         /// <summary>摆好了最低要求（收银台 + 至少一个货架）。</summary>
-        public bool ShopFitted => PlacedFixtures(FixtureKind.Counter) >= 1 && PlacedFixtures(FixtureKind.Shelf) >= FurnitureCatalog.MinShelves;
+        public bool ShopFitted => IsSpecialBusiness(_focus) ? SpecialFitGap(_focus)==null : PlacedFixtures(FixtureKind.Counter) >= 1 && PlacedFixtures(FixtureKind.Shelf) >= FurnitureCatalog.MinShelves;
 
         /// <summary>开店还差什么（人话）；摆齐了返回 null。</summary>
         public string ShopFitGap()
         {
+            if(IsSpecialBusiness(_focus))return SpecialFitGap(_focus);
             var gaps = new List<string>();
             if (PlacedFixtures(FixtureKind.Counter) < 1) gaps.Add("收银台");
             if (PlacedFixtures(FixtureKind.Shelf) < FurnitureCatalog.MinShelves) gaps.Add("至少一个货架");
@@ -73,6 +74,8 @@ namespace PCShopSell.Core.Session
         /// <summary>开店清单：每种设施要几个、摆了几个、买了几个还没摆。</summary>
         public IReadOnlyList<FixtureNeed> ShopFitList()
         {
+            if(RetailKind=="restaurant")return new[]{"restaurant_prep","restaurant_stove","restaurant_pass","restaurant_table",FurnitureCatalog.Fridge}.Select(id=>Need(id,1,true)).ToArray();
+            if(RetailKind=="secondhand")return new[]{"used_buydesk","used_display"}.Select(id=>Need(id,1,true)).ToArray();
             var l = new List<FixtureNeed>
             {
                 Need(FurnitureCatalog.ShopCounter, 1, true),
@@ -101,6 +104,7 @@ namespace PCShopSell.Core.Session
         internal void UpdateShopFit()
         {
             if(IsDedicatedVenue(PlayerShopPlace)){PlayerShop.TradingEnabled=false;return;}
+            PlayerShop.TradingEnabled=!IsSpecialBusiness(_focus);
             if(RetailKind!="computer")
                 foreach(int index in DisplayIndexes())
                     if(string.IsNullOrEmpty(_shopLayout[index].Item))

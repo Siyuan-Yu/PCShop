@@ -1,0 +1,13 @@
+2026-11-02 冰箱永久保存专项验证
+Unity 2022.3.6f1 / EditMode / 隔离镜像 D:/UnityProjects/PCShop/_ci_city_life
+
+Filter: PCShopSell.Tests.FoodAndFridgeTests;PCShopSell.Tests.FastFoodTests;PCShopSell.Tests.FoodExpiryTests;PCShopSell.Tests.HomeTests;PCShopSell.Tests.WarehouseBoxInteractionTests;PCShopSell.Tests.WarehouseCapacityTests
+Result: total=99 passed=98 failed=1
+FoodAndFridgeTests 21/21, FastFoodTests 11/11, FoodExpiryTests 8/8,
+HomeTests 41/42, WarehouseBoxInteractionTests 5/5, WarehouseCapacityTests 12/12.
+
+唯一失败: HomeTests.MallCart_SeveralTrucksArrivingTogether_OnePopup
+Message: 进了临时存放要说清楚能放几天 / Expected True But was False
+在镜像撤回本次生产代码修改，保留其余工作区内容，单独重跑该用例：total=1 passed=0 failed=1，同样断言失败。
+详见35-permanent-fridge-tests.xml和35-permanent-fridge-baseline.xml。
+未修改正式存档、未打包、未做图形或全量验收。

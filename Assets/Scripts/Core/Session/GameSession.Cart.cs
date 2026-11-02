@@ -192,7 +192,7 @@ namespace PCShopSell.Core.Session
             PutLine(_cart,new CartLine {
                 Key=key,Name=product.Name,UnitKg=product.WeightKg,UnitPrice=()=>CityRetailWholesalePrice(source,product),
                 Blocker=()=>CurrentPlace!=source || !IsPlaceOpen(source)?"货源已经打烊或不在这里":
-                    CartAmount(key)<CitySupplierMinimum(source.Id)?product.Name+"至少"+CitySupplierMinimum(source.Id)+"件起订":
+                    CartAmount(key)<CitySupplierMinimum(source.Id,id)?product.Name+" · "+WholesaleMinimumText(source.Id,id):
                     CartAmount(key)>CitySupplierRemaining(source.Id,id)?product.Name+"超过本日剩余配额":null,
                 Run=n=>{
                     _retailCartBatch=true;

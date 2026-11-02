@@ -334,6 +334,7 @@ namespace PCShopSell.Core.Shop
         /// <summary>给一件配件单独定价；null = 恢复跟随全局加价。</summary>
         public void SetPartMarkup(PartDef part, double? markup)
         {
+            ClearFixedPartPrices(part);
             if (markup == null) _partMarkups.Remove(part.Id);
             else _partMarkups[part.Id] = Math.Max(0.9, Math.Min(1.6, markup.Value));
         }
@@ -392,10 +393,11 @@ namespace PCShopSell.Core.Shop
 
         public bool HasGoodsMarkup(string id) => _partMarkups.ContainsKey(GoodsKey(id));
 
-        public double MarkupOfGoods(string id) => _partMarkups.TryGetValue(GoodsKey(id), out double m) ? m : _markup;
+        public double MarkupOfGoods(string id) => _fixedSalePrices.TryGetValue("g:"+id,out var fixedPrice)&&GoodsReferencePrice(id)>0?fixedPrice/GoodsReferencePrice(id):_partMarkups.TryGetValue(GoodsKey(id), out double m) ? m : _markup;
 
         public void SetGoodsMarkup(string id, double? markup)
         {
+            _fixedSalePrices.Remove("g:"+id);
             if (markup == null) _partMarkups.Remove(GoodsKey(id));
             else _partMarkups[GoodsKey(id)] = Math.Max(0.9, Math.Min(1.6, markup.Value));
         }
@@ -405,7 +407,8 @@ namespace PCShopSell.Core.Shop
         {
             GiftDef g = Gifts.Get(id);
             if (g == null) return Money.Zero;
-            return Money.FromYuan(Math.Max(1, (long)Math.Round(g.Price.Yuan * MarkupOfGoods(id))));
+            if(_fixedSalePrices.TryGetValue("g:"+id,out var fixedPrice))return Money.FromYuan(fixedPrice);
+            return Money.FromYuan(Math.Max(1, (long)Math.Round(g.Price.Yuan * IndustryCycles.GoodsFactor(g,_clock.Today.TotalDays) * MarkupOfGoods(id))));
         }
 
         public void RestorePartMarkups(IEnumerable<KeyValuePair<string, double>> items)
@@ -508,11 +511,13 @@ namespace PCShopSell.Core.Shop
         public bool TradingEnabled = true;
         public bool IsOpenAt(GameTimestamp t) => TradingEnabled && !ForcedClosed && !NotFitted && InHours(t) && (PlayerPresent || EmployeeOnDuty(t));
 
-        public bool IsOpen => IsOpenAt(_clock.Now);
+        public Func<GameTimestamp,bool> OpenStatusOf;
+        public bool IsOpen => OpenStatusOf?.Invoke(_clock.Now)??IsOpenAt(_clock.Now);
 
         /// <summary>当前售价。</summary>
         public Money PriceOf(PartDef part, bool boxed)
         {
+            if(_fixedSalePrices.TryGetValue(FixedPartKey(part,boxed),out var fixedPrice))return Money.FromYuan(fixedPrice);
             double k = MarkupOf(part) * (boxed ? 1.0 + Settings.BoxedPremium : 1.0);
             return Money.FromYuan((long)Math.Round(_market.PriceOf(part).Yuan * k));
         }
@@ -832,7 +837,7 @@ namespace PCShopSell.Core.Shop
                 return;
             }
 
-            double leave = 1.0 - PartPurchaseChance(MarkupOf(c.Item),c.ItemBoxed);
+            double leave = 1.0 - PartPurchaseIntentAtPrice(c.Item,c.ItemBoxed,PriceOf(c.Item,c.ItemBoxed).Yuan);
             if (Random.Chance(leave))
             {
                 Stock.ForceAdd(c.Item, c.ItemBoxed, 1);
@@ -884,7 +889,7 @@ namespace PCShopSell.Core.Shop
                     c.RetailBudgetCents = RetailBudgetOf?.Invoke(c) ?? 0;
                     if (c.RetailBudgetCents <= 0) c.RetailBudgetCents = new long[] { 8000, 15000, 30000, 60000 }[Random.Next(0, 4)];
                 }
-                lines = lines.FindAll(l => GoodsPriceOf(l.Key).Cents <= c.RetailBudgetCents);
+                lines = lines.FindAll(l => GoodsPriceOf(l.Key).Cents <= c.RetailBudgetCents*IndustryCycles.GoodsFactor(Gifts.Get(l.Key),_clock.Today.TotalDays));
                 if (lines.Count == 0) { Leave(c, LeaveReason.TooExpensive); return true; }
                 var preferred = lines.FindAll(l => Gifts.Get(l.Key)?.ModelSeries == c.RetailInterestSeries);
                 if (preferred.Count > 0) lines = preferred;
@@ -907,8 +912,9 @@ namespace PCShopSell.Core.Shop
             {
                 // Choose the seasonal pool first so a larger off-season catalog cannot drown out demand.
                 var seasonal=lines.FindAll(l=>ClothingProducts.IsInSeason(l.Key,now.TotalMinutes));
-                if(seasonal.Count>0 && seasonal.Count<lines.Count)
-                    lines=Random.Chance(.7)?seasonal:lines.FindAll(l=>!ClothingProducts.IsInSeason(l.Key,now.TotalMinutes));
+                if(Random.Chance(.9))lines=seasonal;
+                else if(seasonal.Count<lines.Count)lines=lines.FindAll(l=>!ClothingProducts.IsInSeason(l.Key,now.TotalMinutes));
+                if(lines.Count==0){Leave(c,LeaveReason.NoStock);return true;}
                 double temp = RetailTemperature?.Invoke() ?? 22;
                 double total = lines.Sum(l => ClothingProducts.SeasonDemandAt(l.Key, temp));
                 double pick = Random.Next(0, 1000000) / 1000000.0 * total;
@@ -979,7 +985,8 @@ namespace PCShopSell.Core.Shop
             int bestDiff = int.MaxValue;
             foreach (var cand in candidates)
             {
-                int diff = Math.Abs(cand.part.Tier - c.BuildTier) * 2 + Random.Next(0, 2);
+                int age=Math.Max(0,IndustryCycles.CurrentGeneration(_clock.Today.TotalDays)-IndustryCycles.Generation(cand.part.Id));
+                int diff = Math.Abs(cand.part.Tier - c.BuildTier) * 8 + age*2 + Random.Next(0, 4);
                 if (diff < bestDiff)
                 {
                     bestDiff = diff;

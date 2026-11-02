@@ -15,7 +15,6 @@ namespace PCShopSell.Core.Session
         public bool CanOpenFridge => (AtHome || InPlayerShop) && FridgeCount(InPlayerShop) > 0;
         public Backpack CurrentFridge => FridgeOf(InPlayerShop);
         public double CurrentFridgeLimitKg => FridgeLimitKg(InPlayerShop);
-        private const int FridgeBonusDays = 7;
         private static bool HasMeal(System.Collections.Generic.List<FoodBatch> food) =>
             food.Any(b => b.Count > 0 && FastFoodCatalog.Packed(b.Id)?.Drink != true);
         private bool HasFridgeMeal => CanOpenFridge && HasMeal(CurrentFridge.Food.Packed);
@@ -49,11 +48,11 @@ namespace PCShopSell.Core.Session
         private static bool FridgeKey(string key) => key == "rice" || key == "lunch" || key.StartsWith("lunch:") || key.StartsWith("ing:")
             || (key.StartsWith("gift:") && Gifts.Get(key.Substring(5)) != null && !Gifts.IsCigarette(key.Substring(5)));
 
-        // Extend a batch only once, so repeatedly moving it through the fridge cannot reset spoilage.
+        // Keep legacy chilled metadata, but refrigeration no longer grants a one-time expiry bonus.
         private static void Chill(Backpack bag)
         {
             foreach (var b in bag.Food.Ingredient.Concat(bag.Food.Packed).Where(b => !b.Chilled))
-            { b.ExpireDay += FridgeBonusDays; b.Chilled = true; b.ChilledDays = FridgeBonusDays; }
+            { b.Chilled = true; }
         }
 
         public bool MoveFridgeFood(string key, int count, bool intoFridge)
@@ -88,15 +87,13 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
-        private void SpoilFridges(int today)
+        // Food deadlines use whole days. Offset every refrigerated batch at each midnight
+        // so time in any fridge never consumes its remaining outdoor shelf life.
+        private void PreserveFridges()
         {
-            var lost = HomeFridge.Food.Spoil(today);
-            if (lost.Count > 0) Say("家里冰箱的食物过期：" + string.Join("、", lost));
-            foreach (var shop in _shops)
-            {
-                lost = shop.Fridge.Food.Spoil(today);
-                if (lost.Count > 0) Say(ShopTitle(shop) + "冰箱的食物过期：" + string.Join("、", lost));
-            }
+            foreach (var bag in _shops.Select(shop => shop.Fridge).Prepend(HomeFridge))
+                foreach (var batch in bag.Food.Ingredient.Concat(bag.Food.Packed))
+                    batch.ExpireDay++;
         }
     }
 }

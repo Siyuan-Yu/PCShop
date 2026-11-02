@@ -9,6 +9,7 @@ namespace PCShopSell.Game.Runtime
 
         private void BuildReferenceLandscape()
         {
+            if(_city.IsLakeCity){BuildLakeLandscape();return;}
             var root=new GameObject("ReferenceNeighborhoodLandscape").transform;root.SetParent(_root,false);
             Garden(root,CommunityGarden,false);
             // The lake is part of the existing, interactive life_park property.

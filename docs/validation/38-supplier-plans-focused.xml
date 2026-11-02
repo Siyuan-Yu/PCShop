@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="17" result="Passed" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-02 12:40:02Z" end-time="2026-11-02 12:41:31Z" duration="88.4419555">
+  <test-suite type="TestSuite" id="1949" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="834" result="Passed" start-time="2026-11-02 12:40:02Z" end-time="2026-11-02 12:41:31Z" duration="88.441956" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="2894" name="PCShopSell.Tests.EditMode.dll" fullname="D:/UnityProjects/PCShop/_ci_shop_cores/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="834" result="Passed" start-time="2026-11-02 12:40:02Z" end-time="2026-11-02 12:41:31Z" duration="88.412241" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="77836" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="2895" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="834" result="Passed" start-time="2026-11-02 12:40:03Z" end-time="2026-11-02 12:41:31Z" duration="88.391040" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="2896" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="834" result="Passed" start-time="2026-11-02 12:40:03Z" end-time="2026-11-02 12:41:31Z" duration="88.363824" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="2490" name="PurchasePlanTests" fullname="PCShopSell.Tests.PurchasePlanTests" classname="PCShopSell.Tests.PurchasePlanTests" runstate="Runnable" testcasecount="14" result="Passed" start-time="2026-11-02 12:40:03Z" end-time="2026-11-02 12:40:09Z" duration="6.601541" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="2503" name="LegacyFrequency_ZeroMeansDailyAndCopyKeepsCadence" fullname="PCShopSell.Tests.PurchasePlanTests.LegacyFrequency_ZeroMeansDailyAndCopyKeepsCadence" methodname="LegacyFrequency_ZeroMeansDailyAndCopyKeepsCadence" classname="PCShopSell.Tests.PurchasePlanTests" runstate="Runnable" seed="1216116134" result="Passed" start-time="2026-11-02 12:40:03Z" end-time="2026-11-02 12:40:03Z" duration="0.010584" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.PurchasePlanTests.LegacyFrequency_ZeroMeansDailyAndCopyKeepsCadence
+REGRESSION DONE PCShopSell.Tests.PurchasePlanTests.LegacyFrequency_ZeroMeansDailyAndCopyKeepsCadence Passed
+]]></output>
+            </test-case>
+            <test-case id="2502" name="MondayWednesdayFriday_FailedAttemptWaitsUntilNextScheduledDay" fullname="PCShopSell.Tests.PurchasePlanTests.MondayWednesdayFriday_FailedAttemptWaitsUntilNextScheduledDay" methodname="MondayWednesdayFriday_FailedAttemptWaitsUntilNextScheduledDay" classname="PCShopSell.Tests.PurchasePlanTests" runstate="Runnable" seed="24473252" result="Passed" start-time="2026-11-02 12:40:03Z" end-time="2026-11-02 12:40:09Z" duration="6.572596" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.PurchasePlanTests.MondayWednesdayFriday_FailedAttemptWaitsUntilNextScheduledDay
+REGRESSION DONE PCShopSell.Tests.PurchasePlanTests.MondayWednesdayFriday_FailedAttemptWaitsUntilNextScheduledDay Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="2678" name="SocialTests" fullname="PCShopSell.Tests.SocialTests" classname="PCShopSell.Tests.SocialTests" runstate="Runnable" testcasecount="30" result="Passed" start-time="2026-11-02 12:40:09Z" end-time="2026-11-02 12:40:09Z" duration="0.027439" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="2682" name="MerchantModelStock_LimitsDailyPurchase_AndDoesNotGrowWithRelation" fullname="PCShopSell.Tests.SocialTests.MerchantModelStock_LimitsDailyPurchase_AndDoesNotGrowWithRelation" methodname="MerchantModelStock_LimitsDailyPurchase_AndDoesNotGrowWithRelation" classname="PCShopSell.Tests.SocialTests" runstate="Runnable" seed="557105352" result="Passed" start-time="2026-11-02 12:40:09Z" end-time="2026-11-02 12:40:09Z" duration="0.010803" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SocialTests.MerchantModelStock_LimitsDailyPurchase_AndDoesNotGrowWithRelation
+REGRESSION DONE PCShopSell.Tests.SocialTests.MerchantModelStock_LimitsDailyPurchase_AndDoesNotGrowWithRelation Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="2731" name="SupplierPlanAllocationTests" fullname="PCShopSell.Tests.SupplierPlanAllocationTests" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" testcasecount="14" result="Passed" start-time="2026-11-02 12:40:09Z" end-time="2026-11-02 12:41:31Z" duration="81.626346" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="2745" name="DailyWholesalerPlanSkipsClosedWeekendWhenShowingNextPurchaseDay" fullname="PCShopSell.Tests.SupplierPlanAllocationTests.DailyWholesalerPlanSkipsClosedWeekendWhenShowingNextPurchaseDay" methodname="DailyWholesalerPlanSkipsClosedWeekendWhenShowingNextPurchaseDay" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" seed="342769802" result="Passed" start-time="2026-11-02 12:40:09Z" end-time="2026-11-02 12:40:15Z" duration="6.122949" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SupplierPlanAllocationTests.DailyWholesalerPlanSkipsClosedWeekendWhenShowingNextPurchaseDay
+REGRESSION DONE PCShopSell.Tests.SupplierPlanAllocationTests.DailyWholesalerPlanSkipsClosedWeekendWhenShowingNextPurchaseDay Passed
+]]></output>
+            </test-case>
+            <test-case id="2736" name="ExecutingBeforeAnotherBuyerCannotConsumeThatBuyersReservedShare" fullname="PCShopSell.Tests.SupplierPlanAllocationTests.ExecutingBeforeAnotherBuyerCannotConsumeThatBuyersReservedShare" methodname="ExecutingBeforeAnotherBuyerCannotConsumeThatBuyersReservedShare" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" seed="1748333150" result="Passed" start-time="2026-11-02 12:40:15Z" end-time="2026-11-02 12:40:22Z" duration="6.156320" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SupplierPlanAllocationTests.ExecutingBeforeAnotherBuyerCannotConsumeThatBuyersReservedShare
+REGRESSION DONE PCShopSell.Tests.SupplierPlanAllocationTests.ExecutingBeforeAnotherBuyerCannotConsumeThatBuyersReservedShare Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="2741" name="FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals" fullname="PCShopSell.Tests.SupplierPlanAllocationTests.FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-02 12:40:22Z" end-time="2026-11-02 12:40:22Z" duration="0.005650" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="2738" name="FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals(Daily,3,3)" fullname="PCShopSell.Tests.SupplierPlanAllocationTests.FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals(Daily,3,3)" methodname="FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" seed="1083332566" result="Passed" start-time="2026-11-02 12:40:22Z" end-time="2026-11-02 12:40:22Z" duration="0.000506" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SupplierPlanAllocationTests.FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals(Daily,3,3)
+REGRESSION DONE PCShopSell.Tests.SupplierPlanAllocationTests.FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals(Daily,3,3) Passed
+]]></output>
+              </test-case>
+              <test-case id="2739" name="FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals(MondayWednesdayFriday,3,4)" fullname="PCShopSell.Tests.SupplierPlanAllocationTests.FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals(MondayWednesdayFriday,3,4)" methodname="FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" seed="630030500" result="Passed" start-time="2026-11-02 12:40:22Z" end-time="2026-11-02 12:40:22Z" duration="0.000294" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SupplierPlanAllocationTests.FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals(MondayWednesdayFriday,3,4)
+REGRESSION DONE PCShopSell.Tests.SupplierPlanAllocationTests.FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals(MondayWednesdayFriday,3,4) Passed
+]]></output>
+              </test-case>
+              <test-case id="2740" name="FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals(Wednesday,3,9)" fullname="PCShopSell.Tests.SupplierPlanAllocationTests.FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals(Wednesday,3,9)" methodname="FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" seed="158030725" result="Passed" start-time="2026-11-02 12:40:22Z" end-time="2026-11-02 12:40:22Z" duration="0.000189" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SupplierPlanAllocationTests.FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals(Wednesday,3,9)
+REGRESSION DONE PCShopSell.Tests.SupplierPlanAllocationTests.FrequenciesUseCalendarWeekdaysRatherThanSlidingThreeDayIntervals(Wednesday,3,9) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="2742" name="LegacyEveryThreeDaysMigratesToMondayWednesdayFriday" fullname="PCShopSell.Tests.SupplierPlanAllocationTests.LegacyEveryThreeDaysMigratesToMondayWednesdayFriday" methodname="LegacyEveryThreeDaysMigratesToMondayWednesdayFriday" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" seed="1641617544" result="Passed" start-time="2026-11-02 12:40:22Z" end-time="2026-11-02 12:40:34Z" duration="12.817033" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SupplierPlanAllocationTests.LegacyEveryThreeDaysMigratesToMondayWednesdayFriday
+REGRESSION DONE PCShopSell.Tests.SupplierPlanAllocationTests.LegacyEveryThreeDaysMigratesToMondayWednesdayFriday Passed
+]]></output>
+            </test-case>
+            <test-case id="2743" name="MaximumAtExecutionCanAbsorbReleasedSharesWithoutOverridingAnotherActivePlan" fullname="PCShopSell.Tests.SupplierPlanAllocationTests.MaximumAtExecutionCanAbsorbReleasedSharesWithoutOverridingAnotherActivePlan" methodname="MaximumAtExecutionCanAbsorbReleasedSharesWithoutOverridingAnotherActivePlan" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" seed="2113043721" result="Passed" start-time="2026-11-02 12:40:34Z" end-time="2026-11-02 12:40:41Z" duration="6.145699" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SupplierPlanAllocationTests.MaximumAtExecutionCanAbsorbReleasedSharesWithoutOverridingAnotherActivePlan
+REGRESSION DONE PCShopSell.Tests.SupplierPlanAllocationTests.MaximumAtExecutionCanAbsorbReleasedSharesWithoutOverridingAnotherActivePlan Passed
+]]></output>
+            </test-case>
+            <test-case id="2744" name="MaximumCanUseAReleasedWednesdayEvenIfItsOriginalWednesdayShareWasZero" fullname="PCShopSell.Tests.SupplierPlanAllocationTests.MaximumCanUseAReleasedWednesdayEvenIfItsOriginalWednesdayShareWasZero" methodname="MaximumCanUseAReleasedWednesdayEvenIfItsOriginalWednesdayShareWasZero" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" seed="54326518" result="Passed" start-time="2026-11-02 12:40:41Z" end-time="2026-11-02 12:40:47Z" duration="6.210193" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SupplierPlanAllocationTests.MaximumCanUseAReleasedWednesdayEvenIfItsOriginalWednesdayShareWasZero
+REGRESSION DONE PCShopSell.Tests.SupplierPlanAllocationTests.MaximumCanUseAReleasedWednesdayEvenIfItsOriginalWednesdayShareWasZero Passed
+]]></output>
+            </test-case>
+            <test-case id="2734" name="MerchantAndModelEachHaveTheirOwnCapacityAndDoNotShareReservations" fullname="PCShopSell.Tests.SupplierPlanAllocationTests.MerchantAndModelEachHaveTheirOwnCapacityAndDoNotShareReservations" methodname="MerchantAndModelEachHaveTheirOwnCapacityAndDoNotShareReservations" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" seed="2047506169" result="Passed" start-time="2026-11-02 12:40:47Z" end-time="2026-11-02 12:40:53Z" duration="6.070543" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SupplierPlanAllocationTests.MerchantAndModelEachHaveTheirOwnCapacityAndDoNotShareReservations
+REGRESSION DONE PCShopSell.Tests.SupplierPlanAllocationTests.MerchantAndModelEachHaveTheirOwnCapacityAndDoNotShareReservations Passed
+]]></output>
+            </test-case>
+            <test-case id="2735" name="PausingOrReducingAPlanImmediatelyReleasesItsFutureAllocation" fullname="PCShopSell.Tests.SupplierPlanAllocationTests.PausingOrReducingAPlanImmediatelyReleasesItsFutureAllocation" methodname="PausingOrReducingAPlanImmediatelyReleasesItsFutureAllocation" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" seed="1449270808" result="Passed" start-time="2026-11-02 12:40:53Z" end-time="2026-11-02 12:40:59Z" duration="6.058854" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SupplierPlanAllocationTests.PausingOrReducingAPlanImmediatelyReleasesItsFutureAllocation
+REGRESSION DONE PCShopSell.Tests.SupplierPlanAllocationTests.PausingOrReducingAPlanImmediatelyReleasesItsFutureAllocation Passed
+]]></output>
+            </test-case>
+            <test-case id="2732" name="ThreeBuyersSplitOneMerchantsExactModelWithoutOverbookingOrChargingAtConfiguration" fullname="PCShopSell.Tests.SupplierPlanAllocationTests.ThreeBuyersSplitOneMerchantsExactModelWithoutOverbookingOrChargingAtConfiguration" methodname="ThreeBuyersSplitOneMerchantsExactModelWithoutOverbookingOrChargingAtConfiguration" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" seed="1022607875" result="Passed" start-time="2026-11-02 12:40:59Z" end-time="2026-11-02 12:41:05Z" duration="6.269641" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SupplierPlanAllocationTests.ThreeBuyersSplitOneMerchantsExactModelWithoutOverbookingOrChargingAtConfiguration
+REGRESSION DONE PCShopSell.Tests.SupplierPlanAllocationTests.ThreeBuyersSplitOneMerchantsExactModelWithoutOverbookingOrChargingAtConfiguration Passed
+]]></output>
+            </test-case>
+            <test-case id="2733" name="WednesdayReservationsDoNotReduceMondayOrFridayAndMaximumCanDifferByWeekday" fullname="PCShopSell.Tests.SupplierPlanAllocationTests.WednesdayReservationsDoNotReduceMondayOrFridayAndMaximumCanDifferByWeekday" methodname="WednesdayReservationsDoNotReduceMondayOrFridayAndMaximumCanDifferByWeekday" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" seed="1528293177" result="Passed" start-time="2026-11-02 12:41:05Z" end-time="2026-11-02 12:41:11Z" duration="6.113490" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SupplierPlanAllocationTests.WednesdayReservationsDoNotReduceMondayOrFridayAndMaximumCanDifferByWeekday
+REGRESSION DONE PCShopSell.Tests.SupplierPlanAllocationTests.WednesdayReservationsDoNotReduceMondayOrFridayAndMaximumCanDifferByWeekday Passed
+]]></output>
+            </test-case>
+            <test-case id="2737" name="WeeklyAllocationsAndFrequencySurviveJsonWithoutDuplicatingPhysicalConsumption" fullname="PCShopSell.Tests.SupplierPlanAllocationTests.WeeklyAllocationsAndFrequencySurviveJsonWithoutDuplicatingPhysicalConsumption" methodname="WeeklyAllocationsAndFrequencySurviveJsonWithoutDuplicatingPhysicalConsumption" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" seed="1659308339" result="Passed" start-time="2026-11-02 12:41:11Z" end-time="2026-11-02 12:41:24Z" duration="12.813525" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SupplierPlanAllocationTests.WeeklyAllocationsAndFrequencySurviveJsonWithoutDuplicatingPhysicalConsumption
+REGRESSION DONE PCShopSell.Tests.SupplierPlanAllocationTests.WeeklyAllocationsAndFrequencySurviveJsonWithoutDuplicatingPhysicalConsumption Passed
+]]></output>
+            </test-case>
+            <test-case id="2746" name="WholesalerWeekendCapacityIsNotPromisedInAWeeklyPlan" fullname="PCShopSell.Tests.SupplierPlanAllocationTests.WholesalerWeekendCapacityIsNotPromisedInAWeeklyPlan" methodname="WholesalerWeekendCapacityIsNotPromisedInAWeeklyPlan" classname="PCShopSell.Tests.SupplierPlanAllocationTests" runstate="Runnable" seed="1288533371" result="Passed" start-time="2026-11-02 12:41:24Z" end-time="2026-11-02 12:41:31Z" duration="6.830305" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SupplierPlanAllocationTests.WholesalerWeekendCapacityIsNotPromisedInAWeeklyPlan
+REGRESSION DONE PCShopSell.Tests.SupplierPlanAllocationTests.WholesalerWeekendCapacityIsNotPromisedInAWeeklyPlan Passed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -176,6 +176,11 @@ namespace PCShopSell.Core.Catalog
 
         private static Dictionary<string, PartDef> BuildIndex()
         {
+            var originals=_all.ToArray();
+            for(int generation=1;generation<=2;generation++)
+                foreach(var part in originals)
+                    _all.Add(new PartDef("g"+generation+":"+part.Id,part.Name+" · 第"+(generation+1)+"代",part.Category,part.Tier,
+                        (long)Math.Round(part.BasePrice.Yuan*(1+generation*.18)),part.Socket,part.Watts,part.SizeFactor));
             var d = new Dictionary<string, PartDef>();
             foreach (PartDef p in _all) d.Add(p.Id, p);
             return d;

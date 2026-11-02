@@ -214,7 +214,7 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Stock: return "位置：自己的店 · 货架";
                 case QuestTarget.Market: return "地点：<color=#FFC966>电子市场</color> · 配件档口";
                 case QuestTarget.Counter: return "位置：自己的店 · 收银台";
-                case QuestTarget.Staff: return "位置：自己的店 → 右侧“招人”页";
+                case QuestTarget.Staff: return "位置：自己的店 → 右侧“员工”页";
                 case QuestTarget.PhoneShop: return "地点：商业街 · <color=#FFC966>手机店</color>";
                 case QuestTarget.Mall: return "地点：商业街 · <color=#FFC966>宜居家具城</color>";
                 case QuestTarget.Upgrades: return "设备在街上的对应商店购买，家具在店铺“装修”页摆放。";

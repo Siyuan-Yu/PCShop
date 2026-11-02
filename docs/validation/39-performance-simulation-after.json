@@ -1,0 +1,1150 @@
+[
+  {
+    "preset": "solo",
+    "elapsedMs": 267.2211,
+    "state": {
+      "minute": 24300,
+      "cashCents": 15000000,
+      "shops": [
+        {
+          "id": "player_shop",
+          "customers": 8,
+          "lost": 4,
+          "salesCents": 0,
+          "parts": [
+            "ram0:True:2",
+            "ssd0:True:1"
+          ],
+          "queue": [
+            4,
+            5,
+            6,
+            8
+          ],
+          "orders": []
+        }
+      ],
+      "people": [
+        {
+          "id": "ake",
+          "place": null,
+          "task": "Travelling",
+          "x": -511.48595574741637,
+          "y": -369.9933467300989,
+          "target": "shop15",
+          "arrival": 24317
+        },
+        {
+          "id": "jie",
+          "place": null,
+          "task": "Travelling",
+          "x": -594.6341747634746,
+          "y": -491.31984318659005,
+          "target": "metro_a",
+          "arrival": 24323
+        },
+        {
+          "id": "keeper_agent",
+          "place": null,
+          "task": "Travelling",
+          "x": -418.8027702932314,
+          "y": -432.39776591159466,
+          "target": "shop16",
+          "arrival": 24324
+        },
+        {
+          "id": "keeper_dealer",
+          "place": null,
+          "task": "Travelling",
+          "x": -364.99981382647843,
+          "y": -411.74843856485995,
+          "target": "shop16",
+          "arrival": 24352
+        },
+        {
+          "id": "keeper_farm",
+          "place": null,
+          "task": "Travelling",
+          "x": 227.78589331189,
+          "y": -306.19244229273215,
+          "target": "life_park",
+          "arrival": 24385
+        },
+        {
+          "id": "keeper_mall",
+          "place": null,
+          "task": "Travelling",
+          "x": -542.0942999050008,
+          "y": -433.81922588562196,
+          "target": "metro_b",
+          "arrival": 24363
+        },
+        {
+          "id": "keeper_phone",
+          "place": "shop04",
+          "task": "Working",
+          "x": -477.1858416154661,
+          "y": -413.6781458178143,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "keeper_phone2",
+          "place": null,
+          "task": "Travelling",
+          "x": -477.18584161546596,
+          "y": -413.6781458178147,
+          "target": "life_park",
+          "arrival": 24455
+        },
+        {
+          "id": "keeper_tobacco",
+          "place": "shop19",
+          "task": "Working",
+          "x": -554.4053140627173,
+          "y": -483.1115623627625,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "landlady",
+          "place": null,
+          "task": "Travelling",
+          "x": -454.77019532574764,
+          "y": -385.8997521965388,
+          "target": "shop01",
+          "arrival": 24333
+        },
+        {
+          "id": "li",
+          "place": null,
+          "task": "Travelling",
+          "x": 593.0447549721348,
+          "y": 492.2959102024578,
+          "target": "life_home_s_night",
+          "arrival": 24386
+        },
+        {
+          "id": "life_bartender",
+          "place": "life_bar",
+          "task": "Working",
+          "x": -526.380975309176,
+          "y": -382.7951961381681,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "life_chef",
+          "place": null,
+          "task": "Travelling",
+          "x": -581.7555916380054,
+          "y": -435.8002174691312,
+          "target": "shop07",
+          "arrival": 24314
+        },
+        {
+          "id": "life_clothier",
+          "place": null,
+          "task": "Travelling",
+          "x": -491.9070795152667,
+          "y": -418.53010021592934,
+          "target": "metro_b",
+          "arrival": 24388
+        },
+        {
+          "id": "life_clothsupplier",
+          "place": null,
+          "task": "Travelling",
+          "x": -676.9907234763289,
+          "y": -455.3607756504502,
+          "target": "life_park",
+          "arrival": 24471
+        },
+        {
+          "id": "life_coach",
+          "place": null,
+          "task": "Travelling",
+          "x": 320.33679514752146,
+          "y": -292.77350279949144,
+          "target": "life_park",
+          "arrival": 24377
+        },
+        {
+          "id": "life_creator",
+          "place": null,
+          "task": "Travelling",
+          "x": 442.4330377009972,
+          "y": 596.0873875991747,
+          "target": "shop01",
+          "arrival": 24476
+        },
+        {
+          "id": "life_curator",
+          "place": null,
+          "task": "Travelling",
+          "x": -363.08541451124296,
+          "y": -410.9923487994843,
+          "target": "shop16",
+          "arrival": 24353
+        },
+        {
+          "id": "life_designer",
+          "place": null,
+          "task": "Travelling",
+          "x": 653.9685561152689,
+          "y": 416.9403205747156,
+          "target": "metro_a",
+          "arrival": 24451
+        },
+        {
+          "id": "life_enterprise",
+          "place": "shop07",
+          "task": "Shopping",
+          "x": -559.0224001629063,
+          "y": -438.44801477272904,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "life_gardener",
+          "place": null,
+          "task": "Travelling",
+          "x": -594.7360268432423,
+          "y": -438.3937159501768,
+          "target": "metro_b",
+          "arrival": 24306
+        },
+        {
+          "id": "life_golfer",
+          "place": null,
+          "task": "Travelling",
+          "x": 183.79903864214492,
+          "y": -308.1971350382669,
+          "target": "shop15",
+          "arrival": 24380
+        },
+        {
+          "id": "life_librarian",
+          "place": "shop07",
+          "task": "Shopping",
+          "x": -559.0224001629059,
+          "y": -438.4480147727301,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "life_maker",
+          "place": null,
+          "task": "Travelling",
+          "x": -284.2928957263582,
+          "y": -347.51599098511156,
+          "target": "shop01",
+          "arrival": 24320
+        },
+        {
+          "id": "life_ming",
+          "place": null,
+          "task": "Travelling",
+          "x": -444.5681930837817,
+          "y": -421.8050864580212,
+          "target": "life_home_s_oldhomes",
+          "arrival": 24319
+        },
+        {
+          "id": "life_model_supplier",
+          "place": null,
+          "task": "Travelling",
+          "x": -707.9841514927731,
+          "y": -456.90138670700026,
+          "target": "metro_a",
+          "arrival": 24336
+        },
+        {
+          "id": "life_ning",
+          "place": null,
+          "task": "Travelling",
+          "x": -407.20292498424146,
+          "y": -428.15992382282263,
+          "target": "shop16",
+          "arrival": 24330
+        },
+        {
+          "id": "life_qiao",
+          "place": null,
+          "task": "Travelling",
+          "x": 354.2219750703387,
+          "y": -283.51448570457853,
+          "target": "life_park",
+          "arrival": 24374
+        },
+        {
+          "id": "life_singer",
+          "place": "life_ktv",
+          "task": "Working",
+          "x": -552.5518494263108,
+          "y": -390.56205265644223,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "life_teacher",
+          "place": null,
+          "task": "Travelling",
+          "x": 376.8893604547959,
+          "y": -276.5958600230432,
+          "target": "shop15",
+          "arrival": 24397
+        },
+        {
+          "id": "life_tenant",
+          "place": null,
+          "task": "Travelling",
+          "x": -405.2768531533829,
+          "y": -427.4340889653772,
+          "target": "shop16",
+          "arrival": 24331
+        },
+        {
+          "id": "lin",
+          "place": null,
+          "task": "Travelling",
+          "x": 356.7161286053198,
+          "y": 673.5723857513253,
+          "target": "metro_b",
+          "arrival": 24507
+        },
+        {
+          "id": "momo",
+          "place": null,
+          "task": "Travelling",
+          "x": -467.00328331401295,
+          "y": -355.26367368783184,
+          "target": "shop15",
+          "arrival": 24321
+        },
+        {
+          "id": "qian",
+          "place": null,
+          "task": "Travelling",
+          "x": -486.47063368438995,
+          "y": -361.80346027638655,
+          "target": "life_court",
+          "arrival": 24314
+        },
+        {
+          "id": "qiao",
+          "place": null,
+          "task": "Travelling",
+          "x": -446.0781093205162,
+          "y": -416.4914166114324,
+          "target": "life_court",
+          "arrival": 24357
+        },
+        {
+          "id": "res_auntie",
+          "place": "life_home_s_services",
+          "task": "Home",
+          "x": 220.37452171747628,
+          "y": -403.3292046185554,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "res_baker",
+          "place": "life_home_s_creative",
+          "task": "Home",
+          "x": 566.42768364315,
+          "y": 522.1276763382542,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "res_coder",
+          "place": null,
+          "task": "Travelling",
+          "x": -2.2641595175265543,
+          "y": -352.75792877001555,
+          "target": "shop15",
+          "arrival": 24363
+        },
+        {
+          "id": "res_cook",
+          "place": null,
+          "task": "Travelling",
+          "x": -601.2173432977012,
+          "y": -447.4277228044798,
+          "target": "life_home_s_newtown",
+          "arrival": 24566
+        },
+        {
+          "id": "res_fang",
+          "place": null,
+          "task": "Travelling",
+          "x": -526.0801820337077,
+          "y": -475.46171307376676,
+          "target": "life_home_s_services",
+          "arrival": 24386
+        },
+        {
+          "id": "res_flower",
+          "place": null,
+          "task": "Travelling",
+          "x": 82.8015435012126,
+          "y": -306.08000546770126,
+          "target": "life_home_s_sports",
+          "arrival": 24414
+        },
+        {
+          "id": "res_grandpa",
+          "place": null,
+          "task": "Travelling",
+          "x": 748.4290553095374,
+          "y": 168.66660304733546,
+          "target": "life_home_s_market",
+          "arrival": 24377
+        },
+        {
+          "id": "res_mom",
+          "place": null,
+          "task": "Travelling",
+          "x": 545.4108846612588,
+          "y": 24.26816142444201,
+          "target": "life_home_s_sports",
+          "arrival": 24351
+        },
+        {
+          "id": "res_pharm",
+          "place": null,
+          "task": "Travelling",
+          "x": 120.49821535832567,
+          "y": -302.6053154423005,
+          "target": "life_home_s_expo",
+          "arrival": 24411
+        },
+        {
+          "id": "res_pupil",
+          "place": null,
+          "task": "Travelling",
+          "x": -47.97098553062027,
+          "y": -343.6604740964933,
+          "target": "life_home_s_expo",
+          "arrival": 24427
+        },
+        {
+          "id": "res_rider",
+          "place": null,
+          "task": "Travelling",
+          "x": 560.9656574912757,
+          "y": -37.67545535200447,
+          "target": "life_park",
+          "arrival": 24340
+        },
+        {
+          "id": "res_student",
+          "place": null,
+          "task": "Travelling",
+          "x": 627.6259694034172,
+          "y": 191.56979207178674,
+          "target": "shop07",
+          "arrival": 24444
+        },
+        {
+          "id": "res_tea",
+          "place": "shop01",
+          "task": "Working",
+          "x": -487.6442218885172,
+          "y": -370.31608538609754,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "res_wang",
+          "place": "life_home_s_market",
+          "task": "Home",
+          "x": 259.55190653739476,
+          "y": -311.41544339729995,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "staff_cpu",
+          "place": null,
+          "task": "Travelling",
+          "x": -683.4215753875831,
+          "y": -448.00464888170023,
+          "target": "metro_b",
+          "arrival": 24317
+        },
+        {
+          "id": "staff_gpu",
+          "place": null,
+          "task": "Travelling",
+          "x": -592.5856823745332,
+          "y": -428.42121571156633,
+          "target": "shop07",
+          "arrival": 24323
+        },
+        {
+          "id": "staff_gpu2",
+          "place": null,
+          "task": "Travelling",
+          "x": -639.0821345010684,
+          "y": -445.0143651343295,
+          "target": "shop07",
+          "arrival": 24342
+        },
+        {
+          "id": "staff_mall",
+          "place": null,
+          "task": "Travelling",
+          "x": -280.23865651598635,
+          "y": -349.3635980307992,
+          "target": "life_park",
+          "arrival": 24430
+        },
+        {
+          "id": "staff_mall2",
+          "place": "metro_b",
+          "task": "Leisure",
+          "x": -655.7185758900766,
+          "y": -454.11967582555343,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "staff_mem",
+          "place": null,
+          "task": "Travelling",
+          "x": -612.1733275276323,
+          "y": -441.44337539266974,
+          "target": "metro_b",
+          "arrival": 24325
+        },
+        {
+          "id": "staff_psu",
+          "place": null,
+          "task": "Travelling",
+          "x": -591.2725183629116,
+          "y": -482.88457022736446,
+          "target": "shop15",
+          "arrival": 24306
+        },
+        {
+          "id": "sun",
+          "place": null,
+          "task": "Travelling",
+          "x": -614.4001973873441,
+          "y": -441.7914441381274,
+          "target": "shop07",
+          "arrival": 24330
+        },
+        {
+          "id": "wang",
+          "place": null,
+          "task": "Travelling",
+          "x": 565.2551127359274,
+          "y": 513.4868426793486,
+          "target": "life_home_s_creative",
+          "arrival": 24301
+        },
+        {
+          "id": "zhang",
+          "place": null,
+          "task": "Travelling",
+          "x": 416.3985629446333,
+          "y": 653.545060906135,
+          "target": "metro_a",
+          "arrival": 24480
+        },
+        {
+          "id": "zhou",
+          "place": null,
+          "task": "Travelling",
+          "x": -655.7185758900766,
+          "y": -454.11967582555343,
+          "target": "life_park",
+          "arrival": 24470
+        }
+      ]
+    },
+    "simulationMinutes": 720
+  },
+  {
+    "preset": "staff",
+    "elapsedMs": 241.925,
+    "state": {
+      "minute": 24300,
+      "cashCents": 15278600,
+      "shops": [
+        {
+          "id": "player_shop",
+          "customers": 11,
+          "lost": 8,
+          "salesCents": 118200,
+          "parts": [
+            "ram0:True:2",
+            "ssd0:True:2"
+          ],
+          "queue": [],
+          "orders": []
+        },
+        {
+          "id": "life_unit_s_market_2",
+          "customers": 17,
+          "lost": 10,
+          "salesCents": 178400,
+          "parts": [
+            "ssd0:True:1"
+          ],
+          "queue": [],
+          "orders": [
+            "1:0"
+          ]
+        }
+      ],
+      "people": [
+        {
+          "id": "ake",
+          "place": null,
+          "task": "Travelling",
+          "x": -511.48595574741637,
+          "y": -369.9933467300989,
+          "target": "shop15",
+          "arrival": 24317
+        },
+        {
+          "id": "jie",
+          "place": null,
+          "task": "Travelling",
+          "x": -594.6341747634746,
+          "y": -491.31984318659005,
+          "target": "metro_a",
+          "arrival": 24323
+        },
+        {
+          "id": "keeper_agent",
+          "place": null,
+          "task": "Travelling",
+          "x": -418.8027702932314,
+          "y": -432.39776591159466,
+          "target": "shop16",
+          "arrival": 24324
+        },
+        {
+          "id": "keeper_dealer",
+          "place": null,
+          "task": "Travelling",
+          "x": -364.99981382647843,
+          "y": -411.74843856485995,
+          "target": "shop16",
+          "arrival": 24352
+        },
+        {
+          "id": "keeper_farm",
+          "place": null,
+          "task": "Travelling",
+          "x": 227.78589331189,
+          "y": -306.19244229273215,
+          "target": "life_park",
+          "arrival": 24385
+        },
+        {
+          "id": "keeper_mall",
+          "place": null,
+          "task": "Travelling",
+          "x": -542.0942999050008,
+          "y": -433.81922588562196,
+          "target": "metro_b",
+          "arrival": 24363
+        },
+        {
+          "id": "keeper_phone",
+          "place": "shop04",
+          "task": "Working",
+          "x": -477.1858416154661,
+          "y": -413.6781458178143,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "keeper_phone2",
+          "place": null,
+          "task": "Travelling",
+          "x": -477.18584161546596,
+          "y": -413.6781458178147,
+          "target": "life_park",
+          "arrival": 24455
+        },
+        {
+          "id": "keeper_tobacco",
+          "place": "shop19",
+          "task": "Working",
+          "x": -554.4053140627173,
+          "y": -483.1115623627625,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "landlady",
+          "place": null,
+          "task": "Travelling",
+          "x": -454.77019532574764,
+          "y": -385.8997521965388,
+          "target": "shop01",
+          "arrival": 24333
+        },
+        {
+          "id": "li",
+          "place": null,
+          "task": "Travelling",
+          "x": 593.0447549721348,
+          "y": 492.2959102024578,
+          "target": "life_home_s_night",
+          "arrival": 24386
+        },
+        {
+          "id": "life_bartender",
+          "place": "life_bar",
+          "task": "Working",
+          "x": -526.380975309176,
+          "y": -382.7951961381681,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "life_chef",
+          "place": null,
+          "task": "Travelling",
+          "x": -581.7555916380054,
+          "y": -435.8002174691312,
+          "target": "shop07",
+          "arrival": 24314
+        },
+        {
+          "id": "life_clothier",
+          "place": null,
+          "task": "Travelling",
+          "x": -491.9070795152667,
+          "y": -418.53010021592934,
+          "target": "metro_b",
+          "arrival": 24388
+        },
+        {
+          "id": "life_clothsupplier",
+          "place": null,
+          "task": "Travelling",
+          "x": -676.9907234763289,
+          "y": -455.3607756504502,
+          "target": "life_park",
+          "arrival": 24471
+        },
+        {
+          "id": "life_coach",
+          "place": null,
+          "task": "Travelling",
+          "x": 320.33679514752146,
+          "y": -292.77350279949144,
+          "target": "life_park",
+          "arrival": 24377
+        },
+        {
+          "id": "life_creator",
+          "place": null,
+          "task": "Travelling",
+          "x": 442.4330377009972,
+          "y": 596.0873875991747,
+          "target": "shop01",
+          "arrival": 24476
+        },
+        {
+          "id": "life_curator",
+          "place": null,
+          "task": "Travelling",
+          "x": -363.08541451124296,
+          "y": -410.9923487994843,
+          "target": "shop16",
+          "arrival": 24353
+        },
+        {
+          "id": "life_designer",
+          "place": null,
+          "task": "Travelling",
+          "x": 653.9685561152689,
+          "y": 416.9403205747156,
+          "target": "metro_a",
+          "arrival": 24451
+        },
+        {
+          "id": "life_enterprise",
+          "place": "shop07",
+          "task": "Shopping",
+          "x": -559.0224001629063,
+          "y": -438.44801477272904,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "life_gardener",
+          "place": null,
+          "task": "Travelling",
+          "x": -594.7360268432423,
+          "y": -438.3937159501768,
+          "target": "metro_b",
+          "arrival": 24306
+        },
+        {
+          "id": "life_golfer",
+          "place": null,
+          "task": "Travelling",
+          "x": 183.79903864214492,
+          "y": -308.1971350382669,
+          "target": "shop15",
+          "arrival": 24380
+        },
+        {
+          "id": "life_librarian",
+          "place": "shop07",
+          "task": "Shopping",
+          "x": -559.0224001629059,
+          "y": -438.4480147727301,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "life_maker",
+          "place": null,
+          "task": "Travelling",
+          "x": -284.2928957263582,
+          "y": -347.51599098511156,
+          "target": "shop01",
+          "arrival": 24320
+        },
+        {
+          "id": "life_ming",
+          "place": null,
+          "task": "Travelling",
+          "x": -542.9562705185633,
+          "y": -480.2025255497229,
+          "target": "life_home_s_oldhomes",
+          "arrival": 24367
+        },
+        {
+          "id": "life_model_supplier",
+          "place": null,
+          "task": "Travelling",
+          "x": -707.9841514927731,
+          "y": -456.90138670700026,
+          "target": "metro_a",
+          "arrival": 24336
+        },
+        {
+          "id": "life_ning",
+          "place": null,
+          "task": "Travelling",
+          "x": -542.9562705185633,
+          "y": -480.2025255497229,
+          "target": "life_court",
+          "arrival": 24321
+        },
+        {
+          "id": "life_qiao",
+          "place": null,
+          "task": "Travelling",
+          "x": 467.61825294509174,
+          "y": -253.70109546677955,
+          "target": "life_park",
+          "arrival": 24365
+        },
+        {
+          "id": "life_singer",
+          "place": "life_ktv",
+          "task": "Working",
+          "x": -552.5518494263108,
+          "y": -390.56205265644223,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "life_teacher",
+          "place": null,
+          "task": "Travelling",
+          "x": 376.8893604547959,
+          "y": -276.5958600230432,
+          "target": "shop15",
+          "arrival": 24397
+        },
+        {
+          "id": "life_tenant",
+          "place": null,
+          "task": "Travelling",
+          "x": -405.2768531533829,
+          "y": -427.4340889653772,
+          "target": "shop16",
+          "arrival": 24331
+        },
+        {
+          "id": "lin",
+          "place": null,
+          "task": "Travelling",
+          "x": 356.7161286053198,
+          "y": 673.5723857513253,
+          "target": "metro_b",
+          "arrival": 24507
+        },
+        {
+          "id": "momo",
+          "place": null,
+          "task": "Travelling",
+          "x": -467.00328331401295,
+          "y": -355.26367368783184,
+          "target": "shop15",
+          "arrival": 24321
+        },
+        {
+          "id": "qian",
+          "place": null,
+          "task": "Travelling",
+          "x": -486.47063368438995,
+          "y": -361.80346027638655,
+          "target": "life_court",
+          "arrival": 24314
+        },
+        {
+          "id": "qiao",
+          "place": null,
+          "task": "Travelling",
+          "x": -446.0781093205162,
+          "y": -416.4914166114324,
+          "target": "life_court",
+          "arrival": 24357
+        },
+        {
+          "id": "res_auntie",
+          "place": "life_home_s_services",
+          "task": "Home",
+          "x": 220.37452171747628,
+          "y": -403.3292046185554,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "res_baker",
+          "place": "life_home_s_creative",
+          "task": "Home",
+          "x": 566.42768364315,
+          "y": 522.1276763382542,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "res_coder",
+          "place": null,
+          "task": "Travelling",
+          "x": -2.2641595175265543,
+          "y": -352.75792877001555,
+          "target": "shop15",
+          "arrival": 24363
+        },
+        {
+          "id": "res_cook",
+          "place": null,
+          "task": "Travelling",
+          "x": -601.2173432977012,
+          "y": -447.4277228044798,
+          "target": "life_home_s_newtown",
+          "arrival": 24566
+        },
+        {
+          "id": "res_fang",
+          "place": null,
+          "task": "Travelling",
+          "x": -526.0801820337077,
+          "y": -475.46171307376676,
+          "target": "life_home_s_services",
+          "arrival": 24386
+        },
+        {
+          "id": "res_flower",
+          "place": null,
+          "task": "Travelling",
+          "x": 82.8015435012126,
+          "y": -306.08000546770126,
+          "target": "life_home_s_sports",
+          "arrival": 24414
+        },
+        {
+          "id": "res_grandpa",
+          "place": null,
+          "task": "Travelling",
+          "x": 748.4290553095374,
+          "y": 168.66660304733546,
+          "target": "life_home_s_market",
+          "arrival": 24377
+        },
+        {
+          "id": "res_mom",
+          "place": null,
+          "task": "Travelling",
+          "x": 545.4108846612588,
+          "y": 24.26816142444201,
+          "target": "life_home_s_sports",
+          "arrival": 24351
+        },
+        {
+          "id": "res_pharm",
+          "place": null,
+          "task": "Travelling",
+          "x": 120.49821535832567,
+          "y": -302.6053154423005,
+          "target": "life_home_s_expo",
+          "arrival": 24411
+        },
+        {
+          "id": "res_pupil",
+          "place": null,
+          "task": "Travelling",
+          "x": -47.97098553062027,
+          "y": -343.6604740964933,
+          "target": "life_home_s_expo",
+          "arrival": 24427
+        },
+        {
+          "id": "res_rider",
+          "place": null,
+          "task": "Travelling",
+          "x": 560.9656574912757,
+          "y": -37.67545535200447,
+          "target": "life_park",
+          "arrival": 24340
+        },
+        {
+          "id": "res_student",
+          "place": null,
+          "task": "Travelling",
+          "x": 627.6259694034172,
+          "y": 191.56979207178674,
+          "target": "shop07",
+          "arrival": 24444
+        },
+        {
+          "id": "res_tea",
+          "place": "shop01",
+          "task": "Working",
+          "x": -487.6442218885172,
+          "y": -370.31608538609754,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "res_wang",
+          "place": "life_home_s_market",
+          "task": "Home",
+          "x": 259.55190653739476,
+          "y": -311.41544339729995,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "staff_cpu",
+          "place": null,
+          "task": "Travelling",
+          "x": -683.4215753875831,
+          "y": -448.00464888170023,
+          "target": "metro_b",
+          "arrival": 24317
+        },
+        {
+          "id": "staff_gpu",
+          "place": null,
+          "task": "Travelling",
+          "x": -592.5856823745332,
+          "y": -428.42121571156633,
+          "target": "shop07",
+          "arrival": 24323
+        },
+        {
+          "id": "staff_gpu2",
+          "place": null,
+          "task": "Travelling",
+          "x": -639.0821345010684,
+          "y": -445.0143651343295,
+          "target": "shop07",
+          "arrival": 24342
+        },
+        {
+          "id": "staff_mall",
+          "place": null,
+          "task": "Travelling",
+          "x": -280.23865651598635,
+          "y": -349.3635980307992,
+          "target": "life_park",
+          "arrival": 24430
+        },
+        {
+          "id": "staff_mall2",
+          "place": "metro_b",
+          "task": "Leisure",
+          "x": -655.7185758900766,
+          "y": -454.11967582555343,
+          "target": null,
+          "arrival": null
+        },
+        {
+          "id": "staff_mem",
+          "place": null,
+          "task": "Travelling",
+          "x": -612.1733275276323,
+          "y": -441.44337539266974,
+          "target": "metro_b",
+          "arrival": 24325
+        },
+        {
+          "id": "staff_psu",
+          "place": null,
+          "task": "Travelling",
+          "x": -591.2725183629116,
+          "y": -482.88457022736446,
+          "target": "shop15",
+          "arrival": 24306
+        },
+        {
+          "id": "sun",
+          "place": null,
+          "task": "Travelling",
+          "x": -614.4001973873441,
+          "y": -441.7914441381274,
+          "target": "shop07",
+          "arrival": 24330
+        },
+        {
+          "id": "wang",
+          "place": null,
+          "task": "Travelling",
+          "x": 565.2551127359274,
+          "y": 513.4868426793486,
+          "target": "life_home_s_creative",
+          "arrival": 24301
+        },
+        {
+          "id": "zhang",
+          "place": null,
+          "task": "Travelling",
+          "x": 416.3985629446333,
+          "y": 653.545060906135,
+          "target": "metro_a",
+          "arrival": 24480
+        },
+        {
+          "id": "zhou",
+          "place": null,
+          "task": "Travelling",
+          "x": -655.7185758900766,
+          "y": -454.11967582555343,
+          "target": "life_park",
+          "arrival": 24470
+        }
+      ]
+    },
+    "simulationMinutes": 720
+  }
+]

@@ -100,6 +100,7 @@ namespace PCShopSell.Tests
             GameSession s = TwoShops();
             var part = s.MainShop.Sim.Stock.Lines().First().Part;
             s.ShopAt("tea").Sim.Stock.ForceAdd(part, true, 3);
+            GameSessionTests.Teleport(s,"flat");
             StringAssert.Contains("在这家店里", s.CloseShopBlocker(s.ShopAt("tea")), "退租要在店里办");
             GameSessionTests.Teleport(s, "tea");
             StringAssert.Contains("货车", s.CloseShopBlocker(s.ShopAt("tea")), "有货先叫货车搬走");
@@ -118,8 +119,9 @@ namespace PCShopSell.Tests
             StringAssert.Contains("货车", s.CloseShopBlocker(s.MainShop), "最后一家店也可退，只需先搬走存货");
         }
 
-        [Test]
-        public void LastRentedShopCanBeClosedFromCounterAndRentedAgainAfterSaving()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void LastRentedShopCanBeClosedFromCounterOrAgencyAndRentedAgainAfterSaving(bool fromAgency)
         {
             using(var s=TwoShops())
             {
@@ -127,6 +129,8 @@ namespace PCShopSell.Tests
                 Assert.IsTrue(s.CloseShop("pc"));
                 GameSessionTests.Teleport(s,"tea");
                 var shop=s.CurrentShop;shop.Sim.Stock.Clear();
+                var agency=s.AgencyFor(shop.Place);
+                if(fromAgency)GameSessionTests.Teleport(s,agency.Id);
                 Assert.AreEqual(1,s.MyShopCount);Assert.Greater(shop.Lease.Deposit.Cents,0);
                 var furniture=shop.Layout.GroupBy(f=>f.Id).ToDictionary(g=>g.Key,g=>s.FurnitureInStock(g.Key)+g.Count());
                 var before=s.Ledger.Balance;
@@ -139,12 +143,26 @@ namespace PCShopSell.Tests
                 UnityEngine.UI.Button Button(string name)=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<UnityEngine.UI.Button>()).Single(b=>b.name==name);
                 try
                 {
-                    ui.OpenDock();
-                    Button("CloseShopCounter").onClick.Invoke();
+                    if(fromAgency)
+                    {
+                        var detail=new UnityEngine.GameObject("AgencyDetailRegression",typeof(UnityEngine.RectTransform)).GetComponent<UnityEngine.RectTransform>();
+                        detail.SetParent(ui.Canvases.First().transform,false);
+                        typeof(PCShopSell.Game.UI.GameUi).GetMethod("BuildAgencyDetail",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance)
+                            .Invoke(ui,new object[]{detail,shop.Place,1,null});
+                        shop.Sim.Stock.ForceAdd(PCShopSell.Core.Catalog.PartCatalog.Get("cpu0"),true,1);
+                        Button("AgencyCloseShop_"+shop.Place.Id).onClick.Invoke();
+                        Assert.IsFalse(Button("ConfirmCloseShop").interactable,"中介退租仍须先搬走存货");
+                        Assert.IsFalse(s.CloseShop(shop.Place.Id));Assert.AreEqual(agency,s.CurrentPlace);
+                        Assert.AreEqual(before,s.Ledger.Balance);Assert.AreEqual(1,s.MyShopCount);
+                        ui.CloseTopWindow();shop.Sim.Stock.Clear();
+                        Button("AgencyCloseShop_"+shop.Place.Id).onClick.Invoke();
+                    }
+                    else{ui.OpenDock();Button("CloseShopCounter").onClick.Invoke();}
                     Assert.IsTrue(Button("ConfirmCloseShop").interactable);
                     StringAssert.Contains("押金不退",Button("ConfirmCloseShop").GetComponentInChildren<UnityEngine.UI.Text>().text);
                     Button("ConfirmCloseShop").onClick.Invoke();
-                    Assert.IsFalse(s.HasShop);Assert.AreEqual(0,s.MyShopCount);Assert.IsNull(s.CurrentPlace);
+                    Assert.IsFalse(s.HasShop);Assert.AreEqual(0,s.MyShopCount);
+                    if(fromAgency)Assert.AreEqual(agency,s.CurrentPlace,"在中介办理后应留在中介");else Assert.IsNull(s.CurrentPlace);
                     Assert.AreEqual(before,s.Ledger.Balance);
                     foreach(var item in furniture)Assert.AreEqual(item.Value,s.FurnitureInStock(item.Key));
                     Assert.IsFalse(s.CloseShop("tea"),"重复点击不能重复结算");

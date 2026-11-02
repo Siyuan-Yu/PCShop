@@ -135,8 +135,8 @@ namespace PCShopSell.Game.UI
             Line(f,$"现价 {S.FundUnitPrice}/份    持有 {S.FundUnits} 份    市值 {S.FundValue}",18);
             Para(f,"价格跟随所有硬件型号的平均市场涨跌，无保底收益。买卖各收 0.5% 手续费，交易 10 份一手。留足进货、房租和到期账款再投资。",15,Ui.Dim);
             var actions=Ui.Row(f,40);
-            BusinessAction(actions,$"买入 10 份 · { (S.FundUnitPrice*10).Scale(1.005)}",()=>S.TradeFund(10,true),w,S.HasSmartphone && S.Ledger.Balance>=(S.FundUnitPrice*10).Scale(1.005));
-            BusinessAction(actions,$"卖出 10 份 · 到手 {(S.FundUnitPrice*10).Scale(.995)}",()=>S.TradeFund(10,false),w,S.HasSmartphone && S.FundUnits>=10);
+            BusinessAction(actions,$"买入 10 份 · { (S.FundUnitPrice*10).Scale(1.005)}",()=>S.TradeFund(10,true),w,(S.HasSmartphone||S.CanUseHomeWorkbench) && S.Ledger.Balance>=(S.FundUnitPrice*10).Scale(1.005));
+            BusinessAction(actions,$"卖出 10 份 · 到手 {(S.FundUnitPrice*10).Scale(.995)}",()=>S.TradeFund(10,false),w,(S.HasSmartphone||S.CanUseHomeWorkbench) && S.FundUnits>=10);
             if(S.SupplierDebts.Count>0) BuildDebtList(w);
         }
         private void BuildDebtList(Window w)
@@ -164,7 +164,7 @@ namespace PCShopSell.Game.UI
             var settings=Ui.Row(w.Content,40);
             Ui.Size(Ui.Button(settings,$"每批 {_directQuantity} 件 · 点击切换",()=>{_directQuantity=_directQuantity==3 ? 5 : _directQuantity==5 ? 10 : _directQuantity==10 ? 20 : _directQuantity==20 ? 30 : 3;w.Rebuild();},17),340);
             Ui.Size(Ui.Button(settings,_directCredit ? "付款：30% 首付 + 14 天账期" : "付款：全款",()=>{_directCredit=!_directCredit;w.Rebuild();},17),440);
-            foreach(var p in PartCatalog.All)
+            foreach(var p in PartCatalog.All.Where(p=>PCShopSell.Core.Home.IndustryCycles.Available(p,S.Clock.Today.TotalDays)))
             {
                 var part=p;string why=S.DirectOrderBlocker(p.Id,_directQuantity,_directCredit);
                 Money total=S.DirectPrice(p)*_directQuantity;
@@ -247,7 +247,7 @@ namespace PCShopSell.Game.UI
                 string why=S.CreatorCampaignBlocker(c);if(why!=null) Line(card,why,15,Ui.Dim);
                 var row=Ui.Row(card,40);
                 BusinessAction(row,$"合作七天 · {S.CreatorFee(c)}",()=>S.StartCreatorCampaign(c.Id),w,why==null);
-                BusinessAction(row,"设备制作赞助 · ¥500",()=>S.SupportCreator(c.Id),w,S.HasSmartphone && S.Ledger.Balance>=Money.FromYuan(500) && c.LastSupportDay!=S.Clock.Today.TotalDays);
+                BusinessAction(row,"设备制作赞助 · ¥500",()=>S.SupportCreator(c.Id),w,(S.HasSmartphone||S.CanUseHomeWorkbench) && S.Ledger.Balance>=Money.FromYuan(500) && c.LastSupportDay!=S.Clock.Today.TotalDays);
                 Para(card,"赞助每日一次：资源 +30、交情 +5。推广日资源 −4；日营业额达到 ¥3,000 提升交情和粉丝，否则回落。",14,Ui.Dim);
             }
         }

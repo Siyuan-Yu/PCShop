@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Time;
+using PCShopSell.Core.Catalog;
+using PCShopSell.Core.Inventory;
+using PCShopSell.Core.Home;
 
 namespace PCShopSell.Core.Session
 {
@@ -87,6 +90,11 @@ namespace PCShopSell.Core.Session
 
         private void Raise(EventDef def, GameDate today)
         {
+            if(def.Id=="review"||def.Id=="regulars"||def.Id=="students")
+            {
+                def=BindRetailStory(def);
+                if(def==null)return;
+            }
             if(def.Id=="rival")
             {
                 def=BindPriceWar(def);
@@ -96,6 +104,50 @@ namespace PCShopSell.Core.Session
             _eventLastDay[def.Id] = today.TotalDays;
             _eventCount[def.Id] = EventCountOf(def.Id) + 1;
             EventRaised?.Invoke(def);
+        }
+
+        private bool HasRetailStoryGoods(OwnedShop shop,string eventId)
+        {
+            if(!IsCompetingRetailShop(shop))return false;
+            if(eventId!="review" && shop.RetailKind!="computer")return false;
+            if(eventId=="students")return shop.Sim.OnShelf(PartCatalog.Get("ram0"))>=5;
+            if(shop.RetailKind=="computer")return shop.Sim.DisplayPcs.Count>0 || ShelfKinds.PartKinds.Any(k=>shop.Sim.ShelfFillOf(k).Total>0);
+            return shop.Sim.GoodsOnShelves().Any(g=>g.Value>0 && RetailShopTypes.Sells(shop.RetailKind,g.Key));
+        }
+
+        internal OwnedShop RetailStoryTarget(string eventId)=>MyShops
+            .Where(shop=>HasRetailStoryGoods(shop,eventId) && shop.Sim.Reputation>=(eventId=="review"?5:eventId=="regulars"?3:2))
+            .OrderBy(shop=>shop==CurrentShop?0:1).ThenBy(shop=>shop.Place.Id,StringComparer.Ordinal).FirstOrDefault();
+
+        private EventDef BindRetailStory(EventDef template)
+        {
+            var target=RetailStoryTarget(template.Id);if(target==null)return null;
+            string kind=target.RetailKind;
+            var bound=new EventDef{Id=template.Id,Title=template.Title,Body=ShopTitle(target)+"："+template.Body,
+                MinDay=template.MinDay,CooldownDays=template.CooldownDays,Weight=template.Weight};
+            if(template.Id=="review")
+            {
+                string accusation=kind=="computer"?"配件是翻新的，冒充新品销售":kind=="clothing"?"衣服的吊牌与实际面料不符":kind=="models"?"模型手办是仿品，冒充正版销售":"商品的质量和来源有问题";
+                bound.Title=kind=="computer"?template.Title:kind=="clothing"?"网上有人质疑你家服装质量":kind=="models"?"网上有人质疑你家模型手办的正版来源":"网上有人质疑你家的商品";
+                bound.Body=$"有人在本地论坛发帖，质疑{ShopTitle(target)}的{accusation}，帖子下面已经有人跟帖。";
+            }
+            foreach(var original in template.Choices)
+            {
+                var choice=original;
+                bound.Choices.Add(new EventChoice{Text=choice.Text,DisabledReason=choice.DisabledReason,
+                    Enabled=session=>
+                    {
+                        if(choice.Enabled==null)return true;
+                        bool enabled=false;session.WithShop(target,()=>enabled=choice.Enabled(session));return enabled;
+                    },
+                    Apply=session=>
+                    {
+                        if(session.ShopAt(target.Place.Id)!=target || target.RetailKind!=kind || !session.HasRetailStoryGoods(target,template.Id))
+                            return "这家店已停业、退租、改换主售或不再陈列相关商品，本次事件不再结算，其他店铺未受影响。";
+                        string result=null;session.WithShop(target,()=>result=choice.Apply(session));return result;
+                    }});
+            }
+            return bound;
         }
 
         public bool IsChoiceEnabled(EventChoice c) => c.Enabled == null || c.Enabled(this);

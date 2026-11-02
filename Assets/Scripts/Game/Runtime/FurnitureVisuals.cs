@@ -30,6 +30,7 @@ namespace PCShopSell.Game.Runtime
                 ShopFixtures.BuildFixture(root, def, c, shelfKind);
                 return root.gameObject;
             }
+            if(def.Id.StartsWith("restaurant_")||def.Id.StartsWith("used_")){SpecialFurniture(root,def,c);return root.gameObject;}
             switch (def.Id)
             {
                 case FurnitureCatalog.FittingMirror:
@@ -77,6 +78,38 @@ namespace PCShopSell.Game.Runtime
                     break;
             }
             return root.gameObject;
+        }
+
+        private static void SpecialFurniture(Transform root,FurnitureDef def,bool collider)
+        {
+            float w=(float)def.Width,d=(float)def.Depth;
+            Desk(root,w,d,collider);
+            if(def.Id=="restaurant_stove")
+            {
+                Prims.Box(root,"StoveBody",new Vector3(0,.55f,0),new Vector3(w,.6f,d),Mats.Lit(Metal),collider);
+                Prims.Shape(PrimitiveType.Cylinder,root,"Wok",new Vector3(0,.94f,0),new Vector3(.5f,.07f,.5f),Mats.Lit(Metal));
+                Prims.Box(root,"WokHandle",new Vector3(.34f,.96f,0),new Vector3(.32f,.04f,.06f),Mats.Lit(ArtDirection.Wood));
+                Prims.Shape(PrimitiveType.Sphere,root,"FoodInWok",new Vector3(0,1.02f,0),new Vector3(.38f,.08f,.38f),Mats.Lit(new Color(.85f,.67f,.25f)));
+            }
+            else if(def.Id=="restaurant_table")
+            {
+                Prims.Box(root,"DiningChair",new Vector3(0,.25f,-d*.6f),new Vector3(.38f,.5f,.35f),Mats.Lit(ArtDirection.Wood),collider);
+                Prims.Shape(PrimitiveType.Cylinder,root,"DiningPlate",new Vector3(0,.88f,0),new Vector3(.3f,.015f,.3f),Mats.Lit(Color.white));
+            }
+            else if(def.Id=="restaurant_prep")
+            {
+                Prims.Box(root,"ChoppingBoard",new Vector3(0,.87f,0),new Vector3(.55f,.04f,.35f),Mats.Lit(new Color(.72f,.51f,.3f)));
+                Prims.Box(root,"Vegetable",new Vector3(-.15f,.92f,0),new Vector3(.2f,.07f,.13f),Mats.Lit(new Color(.25f,.55f,.25f)));
+            }
+            else if(def.Id=="restaurant_pass")
+                Prims.Box(root,"PassTop",new Vector3(0,1.3f,.12f),new Vector3(w,.05f,.3f),Mats.Lit(Metal));
+            else if(def.Id=="used_buydesk")
+            {
+                Prims.Box(root,"InspectionMat",new Vector3(0,.87f,0),new Vector3(w*.8f,.025f,d*.75f),Mats.Lit(new Color(.18f,.38f,.3f)));
+                Prims.Box(root,"InspectionLamp",new Vector3(w*.3f,1.05f,.15f),new Vector3(.08f,.38f,.08f),Mats.Lit(Metal));
+            }
+            else if(def.Id=="used_display")
+                Prims.Box(root,"SalesGlass",new Vector3(0,1.03f,0),new Vector3(w,.25f,d),Mats.Lit(new Color(.55f,.72f,.7f),.3f));
         }
 
         private static void Fridge(Transform root, FurnitureDef def, bool collider)
@@ -318,7 +351,9 @@ namespace PCShopSell.Game.Runtime
     {
         private readonly Transform _parent;
         private readonly List<GameObject> _items = new List<GameObject>();
-        private string _signature = "";
+        private readonly List<PlacedFurniture> _snapshot = new List<PlacedFurniture>();
+        private double _roomWidth = -1, _roomDepth = -1;
+        private bool _roomIsShop;
 
         /// <summary>地面家具的占地（走路用，x/y = 房间局部 x/z）。</summary>
         public readonly List<Rect> Blockers = new List<Rect>();
@@ -347,11 +382,18 @@ namespace PCShopSell.Game.Runtime
         /// <summary>布局有变化就重建，返回是否重建了。</summary>
         public bool Sync(IReadOnlyList<PlacedFurniture> layout, RoomSpec room)
         {
-            var sb = new System.Text.StringBuilder();
-            foreach (PlacedFurniture p in layout) sb.Append(p.Id).Append(':').Append(p.X).Append(':').Append(p.Z).Append(':').Append(p.Rot).Append(':').Append(p.Item).Append(':').Append(p.DisplayLimit).Append(';');
-            string sig = sb.ToString();
-            if (sig == _signature) return false;
-            _signature = sig;
+            bool same = layout.Count == _snapshot.Count && room.Width == _roomWidth
+                && room.Depth == _roomDepth && room.IsShop == _roomIsShop;
+            for (int i = 0; same && i < layout.Count; i++)
+            {
+                var a = layout[i]; var b = _snapshot[i];
+                same = a.Id == b.Id && a.X == b.X && a.Z == b.Z && a.Rot == b.Rot
+                    && a.Item == b.Item && a.DisplayLimit == b.DisplayLimit && a.ClimateId == b.ClimateId;
+            }
+            if (same) return false;
+            _snapshot.Clear();
+            for (int i = 0; i < layout.Count; i++) _snapshot.Add(layout[i].Clone());
+            _roomWidth = room.Width; _roomDepth = room.Depth; _roomIsShop = room.IsShop;
 
             foreach (GameObject go in _items) Kill.It(go);
             _items.Clear();
@@ -403,7 +445,8 @@ namespace PCShopSell.Game.Runtime
             _items.Clear();
             Entries.Clear();
             Blockers.Clear();
-            _signature = "";
+            _snapshot.Clear();
+            _roomWidth = _roomDepth = -1;
         }
     }
 }

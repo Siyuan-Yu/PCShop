@@ -24,6 +24,7 @@ namespace PCShopSell.Game.Runtime
         }
         private void BuildCitySidewalks()
         {
+            var walks=new GameObject("CitySidewalks").transform;walks.SetParent(_root,false);
             var seen = new HashSet<string>();
             foreach (var n in _city.Map.Nodes)
             foreach (var edge in _city.Map.NeighborsOf(n.Id))
@@ -36,11 +37,12 @@ namespace PCShopSell.Game.Runtime
                 Vector3 right = Vector3.Cross(Vector3.up, delta.normalized);
                 foreach (int side in new[] { -1, 1 })
                 {
-                    var walk = Prims.Box(_root, "CitySidewalk_" + key, (a + b) * .5f + right * side * (width / 2 + .7f) + Vector3.up * .06f,
+                    var walk = Prims.Box(walks, "CitySidewalk_" + key, (a + b) * .5f + right * side * (width / 2 + .7f) + Vector3.up * .06f,
                         new Vector3(1.4f, .12f, delta.magnitude + 1), Mats.Lit(Sidewalk));
                     walk.transform.localRotation = Quaternion.LookRotation(delta.normalized);
                 }
             }
+            if(_city.IsLakeCity)StaticBatchingUtility.Combine(walks.gameObject);
         }
         private void BuildCityPlace(Place p)
         {

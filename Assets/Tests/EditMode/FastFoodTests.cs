@@ -137,7 +137,7 @@ namespace PCShopSell.Tests
                 {
                     Assert.IsTrue(loaded.MoveFridgeFood("lunch:fast:combo", 1, true));
                     var food = loaded.HomeFridge.Food.Packed.Single(); Assert.AreEqual("汉堡炸鸡套餐（含可乐）", food.Name);
-                    Assert.IsTrue(food.Chilled); Assert.AreEqual(3, food.ExpireDay);
+                    Assert.IsTrue(food.Chilled); Assert.AreEqual(1, food.ExpireDay);
                     Assert.IsTrue(loaded.MoveFridgeFood("lunch:fast:combo", 1, false)); Assert.AreEqual(11.7, loaded.Backpack.WeightKg, 1e-8);
                 }
             }

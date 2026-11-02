@@ -16,6 +16,18 @@ namespace PCShopSell.Game.UI
             OpenWindow("作弊工具（仅编辑器）", 560, 640, w =>
             {
                 Ui.Size(Ui.Button(w.Content, "城市生活验收预置（独立测试档）", OpenCityAcceptance, 18, Ui.Warn), -1, 48);
+                Ui.Size(Ui.Button(w.Content,S.DebugHomeWorkbenchEnabled?"关闭大屏（取消作弊接入）":"打开大屏（免购买接入）",()=>
+                {
+                    bool enabled=!S.DebugHomeWorkbenchEnabled;
+                    S.DebugSetHomeWorkbench(enabled);
+                    if(enabled)
+                    {
+                        w.Close();
+                        if(S.CanUseHomeWorkbench)OpenHomeWorkbench();
+                        else Toast("已开启大屏测试接入，回家后可打开居家工作台。");
+                    }
+                    else{_homeWorkbench?.Close();w.Rebuild();}
+                },18,S.DebugHomeWorkbenchEnabled?Ui.Warn:Ui.ButtonHot),-1,44).name="CheatHomeWorkbench";
                 Ui.Size(Ui.Button(w.Content,S.DebugInvitationPersonEnabled?"让小游消失（验收 NPC）":"让小游出现（满好感验收 NPC）",()=>
                 {
                     S.DebugSetInvitationPerson(!S.DebugInvitationPersonEnabled);

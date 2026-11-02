@@ -18,7 +18,7 @@ namespace PCShopSell.Core.Session
 
     /// <summary>
     /// 进货渠道上的固定人物：认识档口老板、送礼、约他们晚上或周末出去玩、打听行情（消息有真有假）。
-    /// 交情换来更低的进价和更大的每日进货额度。
+    /// 交情换来更低进价；物理供货量由档口与型号决定。
     /// </summary>
     public sealed partial class GameSession
     {
@@ -82,11 +82,10 @@ namespace PCShopSell.Core.Session
             return owner == null ? 0 : NpcPerks.OwnerDiscount(Relation(owner.Id));
         }
 
-        /// <summary>每样配件每天最多从这个档口进多少。没有老板的档口按陌生人算。</summary>
+        /// <summary>旧接口返回该档口cpu0的日供货量；具体型号请用SupplierCapacity。</summary>
         public int StallQuota(Place stall)
         {
-            NpcDef owner = stall == null ? null : Npcs.OwnerOf(stall.Id);
-            return NpcPerks.StallQuota(owner == null ? 0 : Relation(owner.Id));
+            return stall==null?0:SupplierCapacity(stall.Id,"cpu0");
         }
 
         private static string BoughtKey(Place stall, PartDef part) => stall.Id + "|" + part.Id;
@@ -94,7 +93,7 @@ namespace PCShopSell.Core.Session
         public int StallBoughtToday(Place stall, PartDef part) =>
             _stallBought.TryGetValue(BoughtKey(stall, part), out var b) && b.day == Clock.Today.TotalDays ? b.count : 0;
 
-        public int StallRemaining(Place stall, PartDef part) => Math.Max(0, StallQuota(stall) - StallBoughtToday(stall, part));
+        public int StallRemaining(Place stall, PartDef part) => Math.Max(0, SupplierCapacity(stall.Id,part.Id) - StallBoughtToday(stall, part));
 
         private void RecordStallPurchase(Place stall, PartDef part, int count)
         {

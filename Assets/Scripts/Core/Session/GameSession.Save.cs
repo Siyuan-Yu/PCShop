@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -35,8 +35,10 @@ namespace PCShopSell.Core.Session
                 SaveCityLife(d);
                 SaveCityClothing(d);
                 SaveCityClimate(d);
+                SaveHomeWorkbench(d);
                 d.venueBusinesses=MyShops.Where(s=>IsDedicatedVenue(s.Place)).Select(s=>VenueOperation(s.Place.Id).Copy()).ToArray();
                 SaveAdditionalStaff(d);
+                SaveSpecialBusinesses(d);
                 return d;
             }
             finally
@@ -305,6 +307,9 @@ namespace PCShopSell.Core.Session
             NormalizeCityWalkingRoutes();
             NormalizeWarehouses();
             MigrateWarehouseBoxAccess(d);
+            LoadSpecialBusinesses(d);
+            LoadWeeklySupplierPlans();
+            LoadHomeWorkbench(d);
         }
 
         private const string TrainedFlag = "employee:trained", AutoBuildFlag = "employee:auto-build";
@@ -324,6 +329,7 @@ namespace PCShopSell.Core.Session
         {
             candidateLeavesAt = e.CandidateLeavesAt,
             hasCharm = true, employeeCharm = EmployeeCharm(e),
+            hasEmployeeIntelligence = true, employeeIntelligence = e.Intelligence,
             id = e.Id, transferShopId = e.TransferShopId, transferDay = e.TransferDay,
             hasTransferRole = e.TransferRole >= 0, transferRole = e.TransferRole,
             hasWorkSkills = true, assemblyMinutes = e.AssemblyMinutes, purchaseMinutes = e.PurchaseMinutes, assemblyTrained = e.AssemblyTrained,
@@ -336,6 +342,7 @@ namespace PCShopSell.Core.Session
         private static Employee FromSave(SaveEmployee e) => new Employee
         {
             CandidateLeavesAt = e.candidateLeavesAt,
+            Intelligence = e.hasEmployeeIntelligence ? Math.Max(0,Math.Min(100,e.employeeIntelligence)) : 50,
             Charm = e.hasCharm ? Math.Max(0,Math.Min(100,e.employeeCharm)) : -1,
             Id = string.IsNullOrEmpty(e.id) ? Guid.NewGuid().ToString("N") : e.id, TransferShopId = e.transferShopId, TransferDay = e.transferDay,
             TransferRole = e.hasTransferRole ? e.transferRole : -1,

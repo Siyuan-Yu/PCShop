@@ -81,6 +81,7 @@ namespace PCShopSell.Core.Session
         public bool OrderDirect(string partId, int count, bool credit)
         {
             if (IsGameOver) return false;
+            if(PartCatalog.Exists(partId)&&!PCShopSell.Core.Home.IndustryCycles.Available(PartCatalog.Get(partId),Clock.Today.TotalDays))return Fail("该代配件尚未发布。");
             string why = DirectOrderBlocker(partId, count, credit);
             if (why != null) return Fail(why);
             Money total = DirectPrice(PartCatalog.Get(partId)) * count;

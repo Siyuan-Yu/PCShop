@@ -7,6 +7,24 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         private const string InvitationTestEnabledFlag="debug:invitation-test-person";
+        private const string HomeWorkbenchTestFlag="debug:home-workbench";
+        public bool DebugHomeWorkbenchEnabled
+        {
+            get
+            {
+#if UNITY_EDITOR
+                return Flags.Contains(HomeWorkbenchTestFlag);
+#else
+                return false;
+#endif
+            }
+        }
+        public void DebugSetHomeWorkbench(bool enabled)
+        {
+#if UNITY_EDITOR
+            if(enabled)Flags.Add(HomeWorkbenchTestFlag);else Flags.Remove(HomeWorkbenchTestFlag);
+#endif
+        }
         public bool DebugInvitationPersonEnabled
         {
             get

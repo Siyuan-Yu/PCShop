@@ -64,6 +64,7 @@ namespace PCShopSell.Core.Market
             [MacroFactor.NewGeneration] = new[] { "新品延期上市，老款 CPU 价格回稳", "新一代处理器缺货，旧款反而抢手" },
         };
 
+        public Func<int> DayProvider;
         private readonly GameRandom _rng;
         private readonly double[] _factor = new double[3];
         private readonly Dictionary<PartCategory, double> _index = new Dictionary<PartCategory, double>();
@@ -108,7 +109,7 @@ namespace PCShopSell.Core.Market
         /// <summary>今天的市场价（零售参考价），取整到元。</summary>
         public Money PriceOf(PartDef part)
         {
-            return Money.FromYuan((long)Math.Round(part.BasePrice.Yuan * _index[part.Category]));
+            return Money.FromYuan((long)Math.Round(part.BasePrice.Yuan * _index[part.Category] * PCShopSell.Core.Home.IndustryCycles.HardwareFactor(part,DayProvider?.Invoke()??0)));
         }
 
         /// <summary>新的一天：指标回归 + 随机波动 + 新闻冲击，然后更新价格指数。</summary>

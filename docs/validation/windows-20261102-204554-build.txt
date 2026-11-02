@@ -1,0 +1,25 @@
+2026-11-02 Windows x64 交付
+构建ID：Windows-20261102-204554（北京时间）
+Unity：2022.3.6f1 / StandaloneWindows64 / Main.unity / 非Development / LZ4HC
+执行：独立工程副本 _ci_shop_cores，WindowsPlayerBuild.Run
+结果：WINDOWS_BUILD_RESULT Succeeded bytes=92265986
+
+目录：D:\UnityProjects\PCShop\PCShop\Builds\Windows-20261102-204554
+压缩包：D:\UnityProjects\PCShop\PCShop\Builds\PCShop-Windows-20261102-204554.zip
+压缩字节：48564398
+解压字节：92272068
+文件数量：135
+SHA256：378a740461431e58f250f4f01d8a278c7f0e2caac590621f5f5b90b7543854e0
+
+检查：
+- PE头确认为Windows x64。
+- 包含PCShop_Data、MonoBleedingEdge、UnityPlayer.dll、第三方字体许可及运行说明。
+- Core程序集包含SupplierCapacity、ReservedByWeekday、PurchaseFrequency、SpecialBusinessState、IndustryCycles，确认包含当前供货安排和店型玩法。
+- ZIP全文件CRC检查通过，包内没有DoNotShip调试目录。
+- 实际Direct3D11启动检查通过，无运行时异常或ERROR；测试进程已关闭。
+- 原有JSON存档及其备份哈希未变。
+- 另做无图形启动检查；Null graphics下的Shader不支持提示不作为有图形验收结果。
+
+范围：当前未提交源码的构建快照，包含店型核心、冰箱、仓库、工作台、城市更新及按商家/型号/星期分配采购。
+源文件摘要、完整构建日志和启动日志保留在本地Logs目录；发行包和缓存不提交Git。
+这是构建、文件完整性和启动验证，不等同于全部玩法真人试玩通过。

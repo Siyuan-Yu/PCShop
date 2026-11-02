@@ -74,7 +74,7 @@ namespace PCShopSell.Game.UI
             RectTransform list = Ui.Scroll(c, 280);
             Money total = Online1788.ShippingFee;
             double space = 0;
-            foreach (PartDef p in PartCatalog.All)
+            foreach (PartDef p in PartCatalog.All.Where(p=>PCShopSell.Core.Home.IndustryCycles.Available(p,S.Clock.Today.TotalDays)))
             {
                 PartDef part = p;
                 Money price = S.OnlinePrice(s, p);
@@ -152,7 +152,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(head, "配件", 14, TextAnchor.MiddleLeft, Ui.Dim), 420);
             Ui.Size(Ui.Label(head, "常备几件", 14, TextAnchor.MiddleCenter, Ui.Dim), 150);
             RectTransform list = Ui.Scroll(c, 250);
-            foreach (PartDef part in PartCatalog.All)
+            foreach (PartDef part in PartCatalog.All.Where(p=>PCShopSell.Core.Home.IndustryCycles.Available(p,S.Clock.Today.TotalDays)))
             {
                 PartDef p = part;
                 RectTransform row = Ui.Row(list, 66, 4);

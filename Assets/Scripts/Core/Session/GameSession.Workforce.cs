@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -11,7 +11,8 @@ using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
-    public enum EmployeeRole { Cashier, Assembler, Buyer, Unassigned, Salesperson }
+    public enum PurchaseFrequency { Daily, MondayWednesdayFriday, Wednesday }
+    public enum EmployeeRole { Cashier, Assembler, Buyer, Unassigned, Salesperson, Chef, Waiter, Appraiser }
 
     [Serializable]
     public sealed class PurchaseLine
@@ -19,7 +20,9 @@ namespace PCShopSell.Core.Session
         public string PartId, SourceId;
         public PurchaseGoodsKind Kind;
         public int Count, ExpireDay;
-        public PurchaseLine Copy() => new PurchaseLine { PartId = PartId, SourceId = SourceId, Kind = Kind, Count = Count, ExpireDay = ExpireDay };
+        public bool BuyMaximum;
+        public int[] ReservedByWeekday;
+        public PurchaseLine Copy() => new PurchaseLine { PartId = PartId, SourceId = SourceId, Kind = Kind, Count = Count, ExpireDay = ExpireDay, BuyMaximum = BuyMaximum, ReservedByWeekday = ReservedByWeekday == null ? null : (int[])ReservedByWeekday.Clone() };
     }
 
     [Serializable]
@@ -37,13 +40,26 @@ namespace PCShopSell.Core.Session
         public int LastDay = -1;
         public int FirstDay;
         public int IntervalDays = 1;
-        public int EveryDays => IntervalDays == 3 ? 3 : 1;
-        public int NextPurchaseDay => LastDay < FirstDay ? FirstDay : LastDay + EveryDays;
+        public bool HasWeeklySchedule;
+        public PurchaseFrequency Frequency;
+        public PurchaseFrequency Schedule => HasWeeklySchedule ? (Enum.IsDefined(typeof(PurchaseFrequency),Frequency)?Frequency:PurchaseFrequency.Daily)
+            : IntervalDays==3?PurchaseFrequency.MondayWednesdayFriday:PurchaseFrequency.Daily;
+        public int EveryDays => Schedule==PurchaseFrequency.Daily?1:3; // Legacy readers only; execution uses weekdays.
+        public string FrequencyText => Schedule==PurchaseFrequency.Daily?"每天一次":Schedule==PurchaseFrequency.MondayWednesdayFriday?"周一、三、五":"每周三";
+        public bool ScheduledOn(int day) => day>=FirstDay && MatchesWeekday(day%7);
+        public bool MatchesWeekday(int weekday) => Schedule==PurchaseFrequency.Daily || Schedule==PurchaseFrequency.MondayWednesdayFriday&&(weekday==0||weekday==2||weekday==4) || Schedule==PurchaseFrequency.Wednesday&&weekday==2;
+        public int NextOnOrAfter(int day)
+        {
+            int next=Math.Max(day,Math.Max(FirstDay,LastDay+1));
+            while(!MatchesWeekday(next%7))next++;
+            return next;
+        }
+        public int NextPurchaseDay => NextOnOrAfter(FirstDay);
         public PurchaseLine[] Items = Array.Empty<PurchaseLine>();
         public EmployeePurchasePlan Copy() => new EmployeePurchasePlan
         {
             SourceId = SourceId, BrowseSourceId = BrowseSourceId, BrowseSourceSelected = BrowseSourceSelected,
-            Transport = Transport, BudgetYuan = BudgetYuan, Daily = Daily, InventoryThreshold = InventoryThreshold, LastDay = LastDay, FirstDay = FirstDay, IntervalDays = EveryDays,
+            Transport = Transport, BudgetYuan = BudgetYuan, Daily = Daily, InventoryThreshold = InventoryThreshold, LastDay = LastDay, FirstDay = FirstDay, IntervalDays = EveryDays, HasWeeklySchedule = true, Frequency = Schedule,
             Items = (Items ?? Array.Empty<PurchaseLine>()).Where(x => x != null).Select(x => x.Copy()).ToArray()
         };
     }
@@ -108,7 +124,7 @@ namespace PCShopSell.Core.Session
         private readonly List<EmployeePurchaseTrip> _employeeTrips = new List<EmployeePurchaseTrip>();
         public IReadOnlyList<EmployeePurchaseTrip> EmployeePurchaseTrips => _employeeTrips;
 
-        public static string RoleName(EmployeeRole role) => role == EmployeeRole.Cashier ? "收银员" : role == EmployeeRole.Assembler ? "装机员" : role == EmployeeRole.Buyer ? "进货员" : role == EmployeeRole.Salesperson ? "销售员" : "待安排";
+        public static string RoleName(EmployeeRole role) => role == EmployeeRole.Cashier ? "收银员" : role == EmployeeRole.Assembler ? "装机员" : role == EmployeeRole.Buyer ? "进货员" : role == EmployeeRole.Salesperson ? "销售员" : role == EmployeeRole.Chef ? "厨师" : role == EmployeeRole.Waiter ? "服务员" : role == EmployeeRole.Appraiser ? "收购师" : "待安排";
         public static string PurchaseTransportName(VehicleKind kind) =>
             kind == VehicleKind.Walk ? "步行去，叫货车送回" : kind == VehicleKind.Taxi ? "打车去，叫货车送回"
             : "开" + Vehicles.Get(kind).Name + "去，自己运回";
@@ -121,7 +137,7 @@ namespace PCShopSell.Core.Session
             {
                 var rows = new List<EmployeeAssignment>();
                 foreach (var shop in _shops.Where(x => x.Rented))
-                    foreach (EmployeeRole role in new[] { EmployeeRole.Cashier, EmployeeRole.Assembler, EmployeeRole.Buyer, EmployeeRole.Salesperson })
+                    foreach (EmployeeRole role in new[] { EmployeeRole.Cashier, EmployeeRole.Assembler, EmployeeRole.Buyer, EmployeeRole.Salesperson, EmployeeRole.Chef, EmployeeRole.Waiter, EmployeeRole.Appraiser })
                     {
                         foreach(Employee e in ShopStaff(shop,role))
                         {
@@ -243,6 +259,11 @@ namespace PCShopSell.Core.Session
             PrepareEmployeePurchaseDraft(copy);
             if (copy.Items.Any(x => x.Count <= 0 || x.Count > 100 || EmployeePurchaseOffer(x) == null)) return Fail("清单中有无法采购的商品，单项数量须为 1–100。");
             if (copy.Items.GroupBy(PurchaseKey).Any(g => g.Count() > 1)) return Fail("同一货源的同种商品请合成一行。");
+            if(copy.Daily)
+            {
+                string allocationError=AllocateSupplierPlan(id,copy);
+                if(allocationError!=null)return Fail(allocationError);
+            }
             copy.LastDay = row.Person.PurchasePlan?.LastDay ?? -1;
             row.Person.PurchasePlan = copy;
             if(copy.Daily)BindDefaultProcurementOwner(row,copy);
@@ -267,7 +288,7 @@ namespace PCShopSell.Core.Session
             var stock = row.Shop.Sim.Stock;
             double available = Math.Max(0, stock.FreeSpace - incoming);
             double kg = Backpack.KgPerSpace;
-            return $"店内后仓容量不限 · 已存 {stock.UsedSpace * kg:0.##} 千克 · 在途 {incoming * kg:0.##} 千克；采购仍受货款和运输承重约束";
+            return $"店内后仓容量不限 · 已存 {stock.UsedSpace * kg:0.##} 千克 · 在途 {incoming * kg:0.##} 千克；采购仍受货款、运输承重和店家本型号余量约束";
         }
 
         private EmployeePurchaseQuote QuoteEmployeePurchaseExact(string id, EmployeePurchasePlan plan = null,bool planningOnly=false)
@@ -276,13 +297,13 @@ namespace PCShopSell.Core.Session
             var row = FindEmployee(id);
             if (row == null || row.Role != EmployeeRole.Buyer) { q.Error = "请选择进货员"; return q; }
             plan = plan ?? row.Person.PurchasePlan;
-            plan = EffectiveEmployeePurchasePlan(row, plan);
+            plan = EffectiveEmployeePurchasePlan(row, plan,planningOnly);
             string blocker = planningOnly?null:IsGameOver ? "游戏已结束"
                 : _employeeTrips.Any(t => t.EmployeeId == id) ? "上一趟员工或货物还没回来"
                 : !row.Person.OnDuty(Clock.Now) ? "还没到该员工的上班时间"
                 : !CityEmployeeAvailable(row.Person, row.Shop) ? "员工尚未实际到岗，或正在赴约/参加其他活动"
                 : null;
-            if (plan == null || (plan.Items?.Length ?? 0) == 0) q.Error = plan?.InventoryThreshold == true ? "当前没有未覆盖的阈值缺口（含现货、在途和已认领）" : "先在采购清单里添加商品";
+            if (plan == null || (plan.Items?.Length ?? 0) == 0) q.Error = plan?.InventoryThreshold == true ? "当前没有未覆盖的阈值缺口（含现货、在途和已认领）" : row.Person.PurchasePlan.Items.Any(i=>i.BuyMaximum)?"该采购日暂无可用的店家份额或实货":"先在采购清单里添加商品";
             else if (!IsPurchaseTransport(plan.Transport)) q.Error = "请选择有效运输方式";
             if (q.Error != null) return q;
             bool truck = plan.Transport == VehicleKind.Walk || plan.Transport == VehicleKind.Taxi;
@@ -300,9 +321,12 @@ namespace PCShopSell.Core.Session
                     blocker = blocker ?? offer.Source.Name + "的" + offer.Name + "超过今天剩余额度";
                 if (offer.Kind == PurchaseGoodsKind.Gift && item.Count > CitySupplierRemaining(offer.Source.Id, offer.Id))
                     blocker = blocker ?? offer.Source.Name + "的" + offer.Name + "超过本日供货配额";
-                if (item.Count < CitySupplierMinimum(offer.Source.Id)) blocker = blocker ?? offer.Source.Name + "当前起订量为" + CitySupplierMinimum(offer.Source.Id) + "件";
+                if (item.Count > EmployeeSupplyAvailable(id,offer,Clock.Today.TotalDays)) blocker=blocker??offer.Name+"超过今日剩余库存";
+                if (item.Count < PurchaseMinimum(offer)) blocker = blocker ?? offer.Source.Name + "的"+offer.Name+"当前起订量为" + PurchaseMinimum(offer) + "件";
                 selected.Add((offer, item));
             }
+            foreach(var sameStock in selected.GroupBy(x=>PhysicalSupplyKey(x.offer)))
+                if(sameStock.Sum(x=>x.item.Count)>EmployeeSupplyAvailable(id,sameStock.First().offer,Clock.Today.TotalDays))blocker=blocker??sameStock.First().offer.Name+"的不同包装/清单行合计超过剩余供货";
             foreach (var stop in selected.GroupBy(x => x.offer.Source.Id))
             {
                 var source = stop.First().offer.Source;
@@ -383,8 +407,8 @@ namespace PCShopSell.Core.Session
                 if (item == null || item.Count <= 0 || item.Count > 100 || offer == null)
                 { skipped.Add((item == null ? "无效清单项" : PurchaseItemName(item)) + "：商品或货源不可用"); continue; }
                 string label = offer.Source.Name + " · " + offer.Name;
-                string reason = "本次条件不满足";
-                int minimum = Math.Max(1, CitySupplierMinimum(offer.Source.Id));
+                int minimum = Math.Max(1, PurchaseMinimum(offer));
+                string reason = item.Count < minimum ? "当前起订量为"+minimum+"件" : "本次条件不满足";
                 int lo = minimum - 1, hi = item.Count;
                 EmployeePurchaseQuote accepted = null;
                 while (lo < hi)
@@ -422,7 +446,9 @@ namespace PCShopSell.Core.Session
 
         public bool DispatchEmployeePurchase(string id, EmployeePurchasePlan executionPlan = null)
         {
-            if (FindEmployee(id)?.Person.PurchasePlan?.FirstDay > Clock.Today.TotalDays) return Fail("采购安排明天开始，今天只保存清单。");
+            var savedPlan=FindEmployee(id)?.Person.PurchasePlan;
+            if (savedPlan?.FirstDay > Clock.Today.TotalDays) return Fail("采购安排明天开始，今天只保存清单。");
+            if(savedPlan?.Daily==true&&(!savedPlan.ScheduledOn(Clock.Today.TotalDays)||!SupplierPlanHasDay(savedPlan,Clock.Today.TotalDays)))return Fail("今天不在该采购计划的星期安排内。");
             var q = QuoteEmployeePurchase(id, executionPlan);
             if (q.Error != null) return Fail(q.Error + "。");
             var row = FindEmployee(id);
@@ -444,6 +470,7 @@ namespace PCShopSell.Core.Session
                 RecordStallPurchase(line.offer.Source, PartCatalog.Get(line.offer.Id), line.item.Count);
             foreach (var line in q.Lines.Where(x => x.offer.Kind == PurchaseGoodsKind.Gift))
                 RecordCitySupplierPurchase(line.offer.Source.Id, line.offer.Id, line.item.Count);
+            foreach(var line in q.Lines.Where(x=>x.offer.Kind!=PurchaseGoodsKind.Part&&x.offer.Kind!=PurchaseGoodsKind.Gift))RecordOtherSupply(line.offer,line.item.Count);
             long now = Clock.Now.TotalMinutes;
             _employeeTrips.Add(new EmployeePurchaseTrip
             {
@@ -513,7 +540,7 @@ namespace PCShopSell.Core.Session
             foreach (var row in Employees.Where(x => x.Role == EmployeeRole.Buyer).ToList())
             {
                 var plan = row.Person.PurchasePlan;
-                if (plan == null || !plan.Daily || to.Date.TotalDays < plan.NextPurchaseDay || !row.Person.OnDuty(to) || !CityEmployeeAvailable(row.Person, row.Shop) || _employeeTrips.Any(t => t.EmployeeId == row.Person.Id)) continue;
+                if (plan == null || !plan.Daily || !plan.ScheduledOn(to.Date.TotalDays) || to.Date.TotalDays<=plan.LastDay || !row.Person.OnDuty(to) || !CityEmployeeAvailable(row.Person, row.Shop) || _employeeTrips.Any(t => t.EmployeeId == row.Person.Id) || !SupplierPlanHasDay(plan,to.Date.TotalDays)) continue;
                 // 每天只尝试一次，避免现金或车辆不足时逐分钟刷失败消息。
                 plan.LastDay = to.Date.TotalDays;
                 var execution = AutomaticEmployeePurchasePlan(row);

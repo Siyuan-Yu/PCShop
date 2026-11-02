@@ -49,7 +49,7 @@ namespace PCShopSell.Tests
         [TestCase("clothing","clothing:cotton_short","flower_rose",false)]
         public void MainCategoryBiasesSalesWithoutBanningOtherDisplayedGoods(string kind,string primary,string other,bool primaryInStock)
         {
-            var clock=new GameClock(new GameDate(0),10*60);var random=new GameRandom(523);
+            var clock=new GameClock(new GameDate(90),10*60);var random=new GameRandom(523);
             using(var shop=new ShopSimulation("mixed",ShopSize.Large,clock,new Ledger(),new HardwareMarket(random),random,ShopSimulationTests.BusySettings()))
             {
                 shop.RetailKind=kind;shop.PlayerPresent=true;shop.Markup=.9;
@@ -73,7 +73,7 @@ namespace PCShopSell.Tests
         [Test]
         public void ClothingShopCanAlsoSellDisplayedComputerParts()
         {
-            var clock=new GameClock(new GameDate(0),10*60);var random=new GameRandom(731);
+            var clock=new GameClock(new GameDate(90),10*60);var random=new GameRandom(731);
             using(var shop=new ShopSimulation("mixedparts",ShopSize.Large,clock,new Ledger(),new HardwareMarket(random),random,ShopSimulationTests.BusySettings()))
             {
                 shop.RetailKind="clothing";shop.PlayerPresent=true;shop.Markup=.9;
@@ -95,7 +95,7 @@ namespace PCShopSell.Tests
         [Test]
         public void ClothingShopCanAlsoSellCompletedDisplayComputers()
         {
-            var clock=new GameClock(new GameDate(0),10*60);var random=new GameRandom(732);
+            var clock=new GameClock(new GameDate(90),10*60);var random=new GameRandom(732);
             using(var shop=new ShopSimulation("mixedcomputers",ShopSize.Large,clock,new Ledger(),new HardwareMarket(random),random,ShopSimulationTests.BusySettings()))
             {
                 shop.RetailKind="clothing";shop.PlayerPresent=true;shop.Markup=.9;shop.FixedDisplayDesks=1;

@@ -123,6 +123,7 @@ namespace PCShopSell.Core.Session
             if (PlayerShop.Reputation < rep) return $"房东要看名气：知名度要到 {rep:0}";
             if (Lease != null && !newShop)
             {
+                if(IsSpecialBusiness(_focus)&&SpecialBusinessBusy(_focus))return "请先处理专用店铺订单和旧物库存，再搬店";
                 if(StaffCommitted(_focus)>StaffLimit(l.Size))return "新铺最多可雇 "+StaffLimit(l.Size)+" 人，请先调整员工安排再搬店";
                 double cap = ShopSettings.Capacity(l.Size) + ShopUpgrades.ExtraCapacity(_upgrades);
                 if (PlayerShop.Stock.UsedSpace + IncomingShopSpace > cap + 1e-9) return $"铺子太小，放不下现在的 {PlayerShop.Stock.UsedSpace:0.#} 格货";
@@ -259,8 +260,9 @@ namespace PCShopSell.Core.Session
             Lease = new ShopLease { PlaceId = place.Id, Rent = rent, Deposit = deposit, StartDay = Clock.Today.TotalDays };
             foreach(var id in _employeeHireShops.Where(p=>p.Value==PlayerShopPlace.Id).Select(p=>p.Key).ToArray())_employeeHireShops[id]=place.Id;
             foreach(var row in Employees.Where(e=>e.Person.TransferShopId==PlayerShopPlace.Id))row.Person.TransferShopId=place.Id;
+            MoveSpecialBusinessState(PlayerShopPlace.Id,place.Id);
             PlayerShopPlace = place;
-            PlayerShop.TradingEnabled=!IsDedicatedVenue(place);
+            PlayerShop.TradingEnabled=!IsDedicatedVenue(place)&&!IsSpecialBusiness(_focus);
             _vacant.Remove(place.Id);
             _listings.RemoveAll(x => x.PlaceId == place.Id);
             PlayerShop.Size = place.Size;

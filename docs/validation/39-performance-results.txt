@@ -1,0 +1,50 @@
+PCShop performance optimization validation — 2026-11-02 (Asia/Shanghai)
+
+Related EditMode regression: 95 total, 95 passed, 0 failed.
+Result: 39-performance-regression.xml
+Includes PerformanceRegressionTests, ShopDockInteractionTests, CityTravelTimingTests,
+CityVisitSaveTests, CityServiceTests, SupplierPlanAllocationTests, ShopCoreGameplayTests,
+and FoodAndFridgeTests.
+
+Windows Player controlled comparison: 39-performance-before.json / 39-performance-after.json
+Unity 2022.3.6f1, Direct3D 11, RTX 3070, 1280x720; 90 warm-up + 360 sampled frames per scenario.
+All 6 scenarios submitted real draw calls. VSync/frame cap disabled for comparison only.
+The .NET allocation counter returned zero despite known allocations; unavailable, NOT a zero-allocation result.
+The later 1920x1080 hidden-window benchmark suppressed rendering (0 draw calls); excluded from timing conclusions.
+
+Deterministic Core simulation equivalence:
+39-performance-simulation-before.json / 39-performance-simulation-after.json
+Solo and staff/multi-shop presets, 720 game minutes each.
+Compared cash, clock, stock, orders, queues, and authored resident task/location/route state: identical.
+Auxiliary .NET timing (not Unity Player FPS): solo 374.44 -> 267.22 ms; staff 413.22 -> 241.93 ms.
+
+Graphics review: GameSceneBuilder.PerformanceReviewFromBatch
+SMOKE RESULT code=0 errors=0
+1139 spatial forest meshes, 7,504,168 independent forest triangles (geometry retained).
+All forest X/Z mesh bounds <250 local units.
+Same-minute interior/street lighting restoration and persistent paused counter controls checked.
+1920x1080 street/home/shop screenshots rendered and inspected: ../previews/performance/
+
+Extended-suite limitation:
+An older CityActivityTests case expected Running after visiting a restaurant. An independent
+probe against the ORIGINAL Core reproduced Cancelled / 场所已经打烊，尚未消费.
+It also assumes restaurant Y>40, while the current lake city uses negative Y there.
+This is not included in the 95 passing tests. A different long-loop appointment case was interrupted.
+No claim that all tests in the entire repository pass.
+
+Windows x64 package:
+Builds/PCShop-Windows-Optimized-20261102-223752.zip
+Executable: Builds/Windows-Optimized-20261102-223752/PCShop.exe
+Unity BuildPipeline result: Succeeded; reported build bytes 92266635.
+ZIP bytes: 48594330; entries: 135; full ZIP CRC verification passed.
+SHA256: 644c6fcbd473cd4a7025128dd0eaeff0f0ab32a98f3f658cd0122f80909d5033
+DoNotShip debug folder moved outside distribution; bundled third-party notices included.
+The package's build-info.json records hashes checked against the isolated build source.
+Final packaged Player also completed all 6 rendering scenarios; each submitted nonzero draw calls.
+Paused scenarios advanced 0 game minutes, 1x advanced 26, both 8x scenarios advanced 206.
+Final startup report: 39-performance-final-player.json. Desktop load differed during this
+last launch check; use the earlier before/after pair for the controlled timing comparison.
+No user save loaded or written by benchmarking. No gameplay balancing or save-schema changes.
+
+Local detailed logs: Logs/performance-*.log / Logs/performance-package.json
+Source/design notes: ../39-performance-optimization.md

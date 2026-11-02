@@ -32,11 +32,14 @@ namespace PCShopSell.Core.Session
 
         public bool StallSells(Place stall, PartDef part)
         {
-            if (stall == null || stall.Kind != PlaceKind.Wholesaler) return false;
-            foreach (PartCategory c in stall.Sells)
-            {
-                if (c == part.Category) return true;
-            }
+            if (stall == null || stall.Kind != PlaceKind.Wholesaler || !IndustryCycles.Available(part,Clock.Today.TotalDays)) return false;
+            foreach (PartCategory c in stall.Sells) if(c==part.Category)return true;
+            // Existing specialist stalls also carry a small overlapping range, so the same
+            // model has real alternative merchants without creating duplicate city buildings.
+            if(stall.Id=="stall_cpu")return part.Category==PartCategory.Gpu||part.Category==PartCategory.PowerCase;
+            if(stall.Id=="stall_gpu")return part.Category==PartCategory.Cpu||part.Category==PartCategory.Storage;
+            if(stall.Id=="stall_mem")return part.Category==PartCategory.Motherboard||part.Category==PartCategory.Cpu;
+            if(stall.Id=="stall_psu")return part.Category==PartCategory.Gpu||part.Category==PartCategory.Memory;
             return false;
         }
 
@@ -72,7 +75,7 @@ namespace PCShopSell.Core.Session
             if (count <= 0) return false;
             int remaining = StallRemaining(stall, part);
             if (count > remaining)
-                return Fail(remaining <= 0 ? $"老板说{part.Name}今天不能再多给你了，明天再来。" : $"老板说{part.Name}今天最多再给你 {remaining} 个。多来往，他会放心多给。");
+                return Fail(remaining <= 0 ? $"老板说{part.Name}今天不能再多给你了，明天再来。" : $"老板说{part.Name}今天最多再给你 {remaining} 个。这个型号的当日实货已不足。");
             Money total = StallPrice(stall, part) * count;
             if (SendByCourier)
             {
@@ -155,6 +158,7 @@ namespace PCShopSell.Core.Session
             foreach (var group in lines.Where(l => l.part != null && l.count > 0).GroupBy(l => l.part.Id))
             {
                 var part = group.First().part; int count = group.Sum(l => l.count);
+                if(!IndustryCycles.Available(part,Clock.Today.TotalDays))return Fail("该代配件尚未发布。");
                 if (count > 1000) return Fail("同一商品每单最多1000件。");
                 total += OnlinePrice(store, part) * count;
                 space += Stock.SpaceOf(part, true, count);

@@ -113,25 +113,25 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void Quota_LimitsDailyPurchase_AndGrowsWithRelation()
+        public void MerchantModelStock_LimitsDailyPurchase_AndDoesNotGrowWithRelation()
         {
             GameSession s = Make(200000);
             GoToStall(s);
             Place stall = s.City.GetPlace(Stall);
             PartDef cpu = CpuPart();
-            Assert.AreEqual(8, s.StallQuota(stall));
-            Assert.IsFalse(s.BuyAtStall(stall, cpu, 9), "超出额度不能买");
+            int limit=s.SupplierCapacity(stall.Id,cpu.Id);Assert.AreEqual(limit,s.StallRemaining(stall,cpu));
+            Assert.IsFalse(s.BuyAtStall(stall, cpu, limit+1), "超出库存不能买");
             Assert.AreEqual(0, s.StallBoughtToday(stall, cpu));
 
             Assert.IsTrue(s.BuyAtStall(stall, cpu, 2));
-            Assert.AreEqual(6, s.StallRemaining(stall, cpu));
-            Assert.IsFalse(s.BuyAtStall(stall, cpu, 7));
+            Assert.AreEqual(limit-2, s.StallRemaining(stall, cpu));
+            Assert.IsFalse(s.BuyAtStall(stall, cpu, limit-1));
 
             s.AddRelation(Npcs.Li, 60);
-            Assert.AreEqual(28, s.StallQuota(stall), "交情高了额度变大");
+            Assert.AreEqual(limit,s.SupplierCapacity(stall.Id,cpu.Id),"交情不增加物理库存");
 
             s.Clock.Restore(s.Clock.Today.AddDays(1), 10 * 60);
-            Assert.AreEqual(s.StallQuota(stall), s.StallRemaining(stall, cpu), "第二天额度重置");
+            Assert.AreEqual(limit, s.StallRemaining(stall, cpu), "第二天库存重置");
         }
 
         [Test]

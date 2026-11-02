@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using PCShopSell.Core.World;
+using PCShopSell.Core.Session;
 using PCShopSell.Game.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -16,6 +17,7 @@ namespace PCShopSell.EditorTools
         private static Camera camera;
         private static DayNightLighting lighting;
         private static int frames;
+        private static bool sideViews;
         public static void Run()
         {
             try
@@ -23,7 +25,22 @@ namespace PCShopSell.EditorTools
                 ShaderUtil.allowAsyncCompilation=false;
                 EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);
                 var data=JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text);
-                var world=new StreetWorldBuilder(CityLayout.FromData(data),12345);world.Build();
+                var layout=CityLayout.FromData(data);
+                if(data.lakeCity&&data.layoutVersion>=13)
+                {
+                    var full=Pathfinder.FindPath(layout.Map,data.lakeSouthNode,data.lakeNorthNode);
+                    if(!full.Found||CityTravelTiming.Minutes(full.Distance,Vehicles.Walk)!=1440)
+                        throw new InvalidOperationException("Full lake route must take 1440 game minutes with production walking speed.");
+                    if(layout.FirstOfKind(PlaceKind.Home).Id!="home")throw new InvalidOperationException("Starter home changed.");
+                    foreach(var pair in new[]{new[]{"home","player_shop"},new[]{"player_shop","stall_cpu"},new[]{"home","stall_cpu"}})
+                    {
+                        var path=Pathfinder.FindPath(layout.Map,layout.GetPlace(pair[0]).NodeId,layout.GetPlace(pair[1]).NodeId);
+                        if(!path.Found)throw new InvalidOperationException("Disconnected daily route");
+                        Debug.Log("ART_ROUTE "+pair[0]+" -> "+pair[1]+" walk="+CityTravelTiming.Minutes(path.Distance,Vehicles.Walk)+" min; ebike="+CityTravelTiming.Minutes(path.Distance,Vehicles.EBike)+" min (road nodes)");
+                    }
+                    Debug.Log("ART_LAYOUT_VALIDATED full walk=1440 min; start home=home");
+                }
+                var world=new StreetWorldBuilder(layout,12345);world.Build();
                 camera=new GameObject("ArtReviewCamera").AddComponent<Camera>();
                 camera.orthographic=true;camera.allowHDR=true;camera.allowMSAA=true;
                 camera.clearFlags=CameraClearFlags.SolidColor;camera.farClipPlane=2000;camera.nearClipPlane=.1f;
@@ -33,6 +50,8 @@ namespace PCShopSell.EditorTools
                 var volume=new GameObject("PostVolume").AddComponent<Volume>();volume.priority=1;
                 lighting=new DayNightLighting(camera,sun,volume,world.NightLights);lighting.Apply(720,false);
                 frames=0;EditorApplication.update+=Render;
+                // Overview shadows must reach the city at the distant review camera position.
+                if(GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset pipeline)pipeline.shadowDistance=1800;
             }
             catch(Exception e){Debug.LogException(e);EditorApplication.Exit(1);}
         }
@@ -44,24 +63,40 @@ namespace PCShopSell.EditorTools
                 string output="work/art-review";var args=Environment.GetCommandLineArgs();
                 for(int i=0;i<args.Length-1;i++)if(args[i]=="-artReviewOutput")output=args[i+1];
                 Directory.CreateDirectory(output);
-                Shot(output,"city",new Vector3(28,0,264),0,40,205);
-                Shot(output,"villa",new Vector3(53,0,445),30,38,37);
-                Shot(output,"villa-estate",new Vector3(34.35f,0,516),30,35,18);
-                Shot(output,"apartments",new Vector3(-75,0,333),25,40,57);
-                Shot(output,"old-street",new Vector3(-148,0,23),30,38,34);
-                Shot(output,"commercial",new Vector3(55,0,292),25,38,45);
-                Shot(output,"wholesale",new Vector3(172,0,38),25,40,42);
+                if(Array.IndexOf(args,"-sideViews")>=0)
+                {
+                    sideViews=true;camera.farClipPlane=5000;
+                    if(GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset pipeline)pipeline.shadowDistance=3500;
+                    Shot(output,"city-side",new Vector3(-20,0,160),0,35,490);
+                    Shot(output,"lakeside-side",new Vector3(650,0,375),-40,25,135);
+                    Shot(output,"garden-side",new Vector3(-110,0,735),20,25,135);
+                    Shot(output,"outskirts",new Vector3(-525,0,-420),0,52,145);
+                    Shot(output,"community",new Vector3(380,0,-310),0,52,145);
+                    Shot(output,"reference-angle",new Vector3(-20,0,160),0,30,570,true);
+                    Debug.Log("ART_REVIEW_COMPLETE "+Path.GetFullPath(output));EditorApplication.Exit(0);return;
+                }
+                Shot(output,"city",new Vector3(0,0,100),0,35,365);
+                Shot(output,"lake-bridges",new Vector3(30,0,60),0,45,250);
+                Shot(output,"villa",new Vector3(23,0,450),30,38,37);
+                Shot(output,"villa-estate",new Vector3(4.35f,0,521),30,35,18);
+                Shot(output,"apartments",new Vector3(397,0,55),-65,40,57);
+                Shot(output,"old-street",new Vector3(-388,0,-297),30,38,34);
+                Shot(output,"commercial",new Vector3(438,0,185),-65,38,45);
+                Shot(output,"wholesale",new Vector3(-68,0,-282),25,40,42);
                 lighting.Apply(1260,false);
-                Shot(output,"night",new Vector3(53,0,445),30,38,37);
+                Shot(output,"night",new Vector3(30,0,60),0,45,250);
                 Debug.Log("ART_REVIEW_COMPLETE "+Path.GetFullPath(output));EditorApplication.Exit(0);
             }
             catch(Exception e){Debug.LogException(e);EditorApplication.Exit(1);}
         }
-        private static void Shot(string folder,string name,Vector3 focus,float yaw,float pitch,float size)
+        private static void Shot(string folder,string name,Vector3 focus,float yaw,float pitch,float size,bool perspective=false)
         {
             camera.transform.rotation=Quaternion.Euler(pitch,yaw,0);
             // Keep close shots within the production shadow distance.
             float distance=Mathf.Max(75,size*2.2f);
+            if(sideViews)distance=Mathf.Max(1600,size*3.5f);
+            camera.orthographic=!perspective;
+            if(perspective){camera.fieldOfView=38;distance=size/Mathf.Tan(19*Mathf.Deg2Rad);}
             camera.transform.position=focus-camera.transform.forward*distance;
             camera.orthographicSize=size;camera.aspect=16f/9;
             var rt=new RenderTexture(1920,1080,24,RenderTextureFormat.ARGB32,RenderTextureReadWrite.sRGB){antiAliasing=4};

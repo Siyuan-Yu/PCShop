@@ -115,10 +115,24 @@ namespace PCShopSell.Core.Session
         private void TickCityPeople(long now)
         {
             InitializeCityPeople();
+            // Employees builds assignment records; doing that per resident multiplied
+            // all roster work by the city population on every simulated minute.
+            var jobs = new Dictionary<string, EmployeeAssignment>();
+            foreach (var row in Employees)
+            {
+                string person = PersonIdOf(row.Person);
+                if (!jobs.ContainsKey(person)) jobs.Add(person, row);
+            }
+            var candidates = new Dictionary<string, Employee>();
+            foreach (var candidate in _candidates)
+            {
+                string person = PersonIdOf(candidate);
+                if (!candidates.ContainsKey(person)) candidates.Add(person, candidate);
+            }
             foreach(var p in _cityPeople.Values.ToArray())
             {
                 var d=CityPerson(p.PersonId); if(d==null)continue;
-                var employment=Employees.FirstOrDefault(a=>PersonIdOf(a.Person)==p.PersonId);
+                jobs.TryGetValue(p.PersonId,out var employment);
                 var purchase=employment==null?null:EmployeeTrip(employment.Person.Id);
                 if(purchase!=null)
                 {
@@ -146,7 +160,7 @@ namespace PCShopSell.Core.Session
                     p.WorkPlaceId=work;
                 }
                 else p.WorkPlaceId=d.Recruitable?null:City.HasPlace(d.WorkId)?d.WorkId:null;
-                var candidate=_candidates.FirstOrDefault(e=>PersonIdOf(e)==p.PersonId);
+                candidates.TryGetValue(p.PersonId,out var candidate);
                 bool shift=employee!=null?employee.OnDuty(Clock.Now):p.WorkPlaceId!=null&&CityWithinHours(Clock.MinuteOfDay,d.WorkStart,d.WorkEnd);
                 string target=shift?p.WorkPlaceId:p.HomePlaceId;
                 var desiredTask=shift?CityPersonTask.Working:CityPersonTask.Home;
@@ -296,6 +310,7 @@ namespace PCShopSell.Core.Session
         {
             if(shop==null)return "未开店";
             if(IsDedicatedVenue(shop.Place))return VenueOpen(shop.Place)?"场馆正在接客":"场馆暂停接客或等待值守";
+            if(IsSpecialBusiness(shop))return SpecialOpen(shop,Clock.Now)?"专用经营正在接客":"专用经营暂停或缺少设施/值守";
             if(CityPlayerCanWork(shop)||ShopStaff(shop,EmployeeRole.Cashier).Any(e=>CityEmployeeAvailable(e,shop)))return "可销售";
             if(ShopStaff(shop,EmployeeRole.Assembler).Any(e=>CityEmployeeAvailable(e,shop)))return shop.EmployeeBuilding?"装机值守，收银需等待":"可销售（装机员兼收银）";
             return "暂停服务：无人值守";

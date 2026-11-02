@@ -23,11 +23,12 @@ namespace PCShopSell.Core.Session
         }
         public int StaffCommitted(OwnedShop shop,string exceptId=null)
         {
-            if(shop==null)return 0;
-            return Employees.Where(e=>e.Person.Id!=exceptId&&(e.Shop==shop||e.Person.TransferShopId==shop.Place.Id
-                ||e.Shop==null&&_employeeHireShops.TryGetValue(e.Person.Id,out var hired)&&hired==shop.Place.Id))
+            return EmployeesForShop(shop).Where(e=>e.Person.Id!=exceptId)
                 .Select(e=>e.Person.Id).Distinct().Count();
         }
+        public EmployeeAssignment[] EmployeesForShop(OwnedShop shop)=>shop==null?Array.Empty<EmployeeAssignment>():
+            Employees.Where(e=>e.Shop==shop||e.Person.TransferShopId==shop.Place.Id
+                ||e.Shop==null&&_employeeHireShops.TryGetValue(e.Person.Id,out var hired)&&hired==shop.Place.Id).ToArray();
         public string StaffCapacityBlocker(OwnedShop shop,string exceptId=null,bool replace=false,EmployeeRole role=EmployeeRole.Unassigned)
         {
             if(shop==null)return "请选择门店";
@@ -36,7 +37,8 @@ namespace PCShopSell.Core.Session
         }
         private static void AddShopEmployee(OwnedShop shop,EmployeeRole role,Employee person)
         {
-            if(EmployeeAt(shop,role)==null)PutEmployee(shop,role,person);
+            if(role==EmployeeRole.Chef||role==EmployeeRole.Waiter||role==EmployeeRole.Appraiser)shop.AdditionalEmployees.Add(new AdditionalShopEmployee{Role=role,Person=person});
+            else if(EmployeeAt(shop,role)==null)PutEmployee(shop,role,person);
             else shop.AdditionalEmployees.Add(new AdditionalShopEmployee{Role=role,Person=person});
         }
         private Employee[] ShopCheckoutWorkers(OwnedShop shop)
@@ -46,7 +48,7 @@ namespace PCShopSell.Core.Session
         }
         private static void RemoveShopEmployee(OwnedShop shop,EmployeeRole role,Employee person)
         {
-            if(EmployeeAt(shop,role)==person)
+            if(EmployeeAt(shop,role)!=null&&EmployeeAt(shop,role)==person)
             {
                 var next=shop.AdditionalEmployees.FirstOrDefault(e=>e.Role==role);
                 PutEmployee(shop,role,next?.Person);

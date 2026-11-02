@@ -330,6 +330,8 @@ namespace PCShopSell.Core.Session
         public int checkoutMinutes;
         public bool hasCharm;
         public int employeeCharm;
+        public bool hasEmployeeIntelligence;
+        public int employeeIntelligence;
         public int shiftStart, shiftEnd, buildsCompleted;
         public EmployeeSchedule schedule;
         public bool hasSchedule;

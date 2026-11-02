@@ -10,6 +10,12 @@ namespace PCShopSell.Core.World
     public sealed class CityLayoutData
     {
         public int layoutVersion;
+        public bool lakeCity;
+        public double lakeSceneScale=1;
+        public LayoutLakeParcel[] lakeParcels;
+        public LayoutLakePoint[] lakeShore;
+        public LayoutLakeBridge[] lakeBridges;
+        public string lakeSouthNode, lakeNorthNode;
         public LayoutAgencyDistrictData[] agencyDistricts;
         public LayoutPlaceAliasData[] placeAliases;
         public LayoutBlockData[] blocks;
@@ -28,6 +34,18 @@ namespace PCShopSell.Core.World
         public LayoutPatrolData[] patrols;
     }
 
+    [Serializable] public sealed class LayoutLakePoint { public double x,y; }
+    [Serializable] public sealed class LayoutLakeParcel
+    {
+        public double x,y,width,depth,heading;
+        public string kind;
+    }
+    [Serializable] public sealed class LayoutLakeBridge
+    {
+        public string id,name;
+        public int requiredTier;
+        public LayoutLakePoint[] points;
+    }
     [Serializable] public sealed class LayoutAgencyDistrictData
     {
         public string id,name,agencyId;
@@ -38,7 +56,7 @@ namespace PCShopSell.Core.World
     public sealed class LayoutBlockData
     {
         public string street, model;
-        public double x,y,width,depth,height;
+        public double x,y,width,depth,height,heading;
         public int variant;
         public int tier,columns=1,rows=1;
     }
@@ -187,6 +205,11 @@ namespace PCShopSell.Core.World
         private readonly List<PatrolRoute> _patrols = new List<PatrolRoute>();
 
         public int LayoutVersion { get; private set; }
+        public bool IsLakeCity { get; private set; }
+        public float LakeSceneScale { get; private set; }=1;
+        public IReadOnlyList<LayoutLakeParcel> LakeParcels { get; private set; }=Array.Empty<LayoutLakeParcel>();
+        public IReadOnlyList<LayoutLakePoint> LakeShore { get; private set; } = Array.Empty<LayoutLakePoint>();
+        public IReadOnlyList<LayoutLakeBridge> LakeBridges { get; private set; } = Array.Empty<LayoutLakeBridge>();
         public IReadOnlyList<LayoutAgencyDistrictData> AgencyDistricts { get; private set; } = Array.Empty<LayoutAgencyDistrictData>();
         public string CanonicalPlaceId(string id) => HasPlace(id)?GetPlace(id).Id:id;
         public LayoutAgencyDistrictData AgencyDistrictFor(string street)
@@ -263,6 +286,9 @@ namespace PCShopSell.Core.World
             layout.TravelDistanceScale = data.distanceScale * (layout.HasUniformRoadScale ? data.uniformRoadScale : 1);
             layout.AgencyDistricts=data.agencyDistricts??Array.Empty<LayoutAgencyDistrictData>();
             layout.LayoutVersion=data.layoutVersion; layout.Blocks=data.blocks??Array.Empty<LayoutBlockData>();
+            layout.IsLakeCity=data.lakeCity;layout.LakeShore=data.lakeShore??Array.Empty<LayoutLakePoint>();
+            layout.LakeSceneScale=data.lakeSceneScale>0?(float)data.lakeSceneScale:1;layout.LakeParcels=data.lakeParcels??Array.Empty<LayoutLakeParcel>();
+            layout.LakeBridges=data.lakeBridges??Array.Empty<LayoutLakeBridge>();
             layout.Streets = data.streets ?? Array.Empty<LayoutStreetData>();
             if (data.patrols != null)
             {
@@ -322,8 +348,16 @@ namespace PCShopSell.Core.World
         }
 
         /// <summary>离画面坐标 (x, y) 最近的节点。</summary>
+        private readonly Dictionary<(double x, double y), string> _nearestNodeCache = new Dictionary<(double, double), string>();
+        private int _nearestNodeCount = -1;
         public string NearestNode(double viewX, double viewY)
         {
+            // NPC commute estimates repeatedly ask about exactly the same doorway.
+            // Exact coordinates preserve tie-breaking; bound moving-position entries.
+            if (_nearestNodeCount != Map.NodeCount)
+            { _nearestNodeCache.Clear(); _nearestNodeCount = Map.NodeCount; }
+            var key = (viewX, viewY);
+            if (_nearestNodeCache.TryGetValue(key, out string cached)) return cached;
             string best = null;
             double bestDist = double.MaxValue;
             double mx = viewX * DistanceScale;
@@ -339,6 +373,8 @@ namespace PCShopSell.Core.World
                     best = n.Id;
                 }
             }
+            if (_nearestNodeCache.Count >= 4096) _nearestNodeCache.Clear();
+            _nearestNodeCache[key] = best;
             return best;
         }
 

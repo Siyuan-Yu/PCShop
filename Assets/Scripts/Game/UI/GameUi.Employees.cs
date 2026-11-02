@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -19,11 +19,11 @@ namespace PCShopSell.Game.UI
                 var rows = S.Employees;
                 foreach(var shop in S.MyShops)Line(w.Content,S.ShopTitle(shop)+" · 员工 "+S.StaffCommitted(shop)+" / "+GameSession.StaffLimit(shop.Place.Size)+" 人",17,Ui.Accent);
                 Line(w.Content, $"员工 {rows.Count} 人 · 基础日薪合计 ¥{rows.Sum(x => x.Person.DailyWageYuan):N0} · 排班预计 {PCShopSell.Core.Common.Money.FromCents(rows.Sum(x=>GameSession.EstimateShiftPay(x.Person,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingStart:x.Person.ShiftStart,x.Person.Schedule?.PendingAt>=0?x.Person.Schedule.PendingEnd:x.Person.ShiftEnd).Cents))}", 21, Ui.Accent);
-                Para(w.Content, "每个人都能做收银、装机、进货或销售。先聘用，再安排岗位和门店；同店换岗今天生效，跨店明天生效。", 17, Ui.Dim);
+                Para(w.Content, "每个人都能安排收银、装机、进货、销售，或餐馆厨师、服务员、二手店收购师。先聘用，再安排岗位和门店；同店换岗今天生效，跨店明天生效。", 17, Ui.Dim);
                 var bar = Ui.Row(w.Content, 40);
                 Ui.Size(Ui.Button(bar, "查看车辆与占用", OpenFleetPanel, 17), 240);
                 Ui.Size(Ui.Button(bar, "在当前店招人", () => { w.Close(); if(S.IsOwnedVenue(S.CurrentPlace))OpenVenueManagement(S.CurrentPlace);else{OpenDock();SelectTab(ShopTab.Staff);} }, 17, Ui.ButtonBg, S.InPlayerShop), 220);
-                if (rows.Count == 0) Para(w.Content, "还没有员工。到自己的店里打开“招人”，聘用后选择工作安排。", 20);
+                if (rows.Count == 0) Para(w.Content, "还没有员工。到自己的店里打开“员工”页，聘用后选择工作安排。", 20);
                 foreach (var shop in S.MyShops.Where(x => x.Assembler != null || x.EmployeeTrained))
                 {
                     var target = shop;
@@ -52,8 +52,8 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(actions, "辞退…", () => ConfirmAction("辞退员工", $"辞退{e.Name}，同时取消未生效的安排。正在进货时需要先等人和货回店。", "确认辞退", () => { S.DismissEmployee(e.Id); w.Rebuild(); }), 16, Ui.Warn), 110);
                     Ui.Size(Ui.Button(actions,"交谈",()=>OpenPersonDialogue(S.PersonIdOf(e)),16),140);
                     if (row.Role == EmployeeRole.Buyer)
-                        Line(list, e.PurchasePlan.Daily ? "采购频率：" + (e.PurchasePlan.EveryDays == 1 ? "每天一次" : "每三天一次")
-                            + " · 下次最早第" + (System.Math.Max(S.Clock.Today.TotalDays, e.PurchasePlan.NextPurchaseDay) + 1) + "天上班时尝试" : "定期采购：未启用或已暂停", 15, Ui.Dim);
+                        Line(list, e.PurchasePlan.Daily ? "采购频率：" + e.PurchasePlan.FrequencyText
+                            + " · " + S.EmployeePurchaseNextText(e.Id) : "定期采购：未启用或已暂停", 15, Ui.Dim);
                     if (row.Role == EmployeeRole.Buyer) Para(list, S.EmployeePurchaseStorageText(e.Id), 15, Ui.Accent);
                     if (row.Role == EmployeeRole.Buyer && !string.IsNullOrEmpty(e.LastPurchaseNote)) Para(list, e.LastPurchaseNote, 15, Ui.Dim);
                 }
@@ -178,15 +178,15 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Label(w.Content,"订单 #"+importedOrderId.Value+" 缺件已合并，点“完成”保存。",15,TextAnchor.MiddleLeft,Ui.Accent),-1,24);
                 var frequency = Ui.Row(w.Content, 38);
                 Ui.Size(Ui.Label(frequency, "采购频率", 17), 100);
-                foreach (int days in new[] { 1, 3 })
+                foreach (PurchaseFrequency choice in Enum.GetValues(typeof(PurchaseFrequency)))
                 {
-                    int interval = days;
-                    var button = Ui.Button(frequency, days == 1 ? "每天一次" : "每三天一次", () => { draft.IntervalDays = interval; w.Rebuild(); }, 17,
-                        draft.EveryDays == days ? Ui.ButtonHot : Ui.ButtonBg);
-                    button.name = "PurchaseInterval_" + days;
-                    Ui.Size(button, 150, 36);
+                    var selectedFrequency=choice;
+                    string label=choice==PurchaseFrequency.Daily?"每天一次":choice==PurchaseFrequency.MondayWednesdayFriday?"周一、三、五":"每周三";
+                    var button=Ui.Button(frequency,label,()=>{draft.HasWeeklySchedule=true;draft.Frequency=selectedFrequency;w.Rebuild();},17,
+                        draft.Schedule==choice?Ui.ButtonHot:Ui.ButtonBg);
+                    button.name="PurchaseFrequency_"+choice;Ui.Size(button,150,36);
                 }
-                Ui.Size(Ui.Label(frequency,"每隔"+draft.EveryDays+"天，上班时采购",15,TextAnchor.MiddleLeft,Ui.Dim),-1,-1,1);
+                Ui.Size(Ui.Label(w.Content,"按所选星期采购；批发市场周末休息。下面额度已扣除其他门店/进货员的已保存计划。",15,TextAnchor.MiddleLeft,Ui.Dim),-1,24);
                 var filters = Ui.Row(w.Content, 38);
                 string sourceName = browseSource == null ? "全部货源" : S.City.GetPlace(browseSource).Name;
                 Ui.Size(Ui.Button(filters, sourceName + "  ▼", () => OpenWindow("浏览货源", 740, 660, picker =>
@@ -219,16 +219,33 @@ namespace PCShopSell.Game.UI
                     var offer = item;
                     int count = selected.TryGetValue(offer.Key, out var lineItem) ? lineItem.Count : 0;
                     if (selectedOnly && count == 0) continue;
-                    void Set(int value) { if (value <= 0) selected.Remove(offer.Key); else selected[offer.Key] = offer.Line(Math.Min(100, value)); Sync(); w.RequestRebuild(); }
+                    int minimum=S.PurchaseMinimum(offer);
+                    void Set(int value,bool maximumSelection=false)
+                    {
+                        int room=S.SupplierPlanMaximum(employeeId,draft,offer,!maximumSelection);
+                        value=Math.Min(value,room);
+                        if(value>0&&value<minimum)value=room<minimum?0:value<count?0:minimum;
+                        if(value<=0)selected.Remove(offer.Key);else selected[offer.Key]=offer.Line(Math.Min(100,value));
+                        Sync();w.RequestRebuild();
+                    }
                     var line = Ui.Row(goods, 68);
-                    string details = offer.Source.Name;
+                    string details = offer.Source.Name+(minimum>1?" · 起订 "+minimum+" 件":"");
                     if (offer.Kind == PurchaseGoodsKind.Part)
                         details += $" · 库存 {worker.Shop.Sim.Stock.CountAll(PartCatalog.Get(offer.Id))} · 在途 {S.PendingPurchaseCount(worker.Shop, offer.Id)}";
                     else if (offer.Kind == PurchaseGoodsKind.Gift)
                         details += $" · 库存 {worker.Shop.Sim.Stock.GoodsCount(offer.Id)}";
                     Ui.Size(ProductText(line, ProductLabel(offer.Name, offer.UnitKg, details), 16), -1, -1, 1);
                     Ui.Size(Ui.Label(line, offer.Price + (offer.Kind == PurchaseGoodsKind.Rice ? "/袋" : offer.Kind == PurchaseGoodsKind.Ingredient ? "/份" : "/件"), 16), 130);
-                    QuantityStepper(w, line, offer.Key, count, 0, 100, 1, value => Set((int)value));
+                    int fixedMaximum=S.SupplierPlanMaximum(employeeId,draft,offer,true);
+                    int maximum=S.SupplierPlanMaximum(employeeId,draft,offer,false);
+                    QuantityStepper(w, line, offer.Key, count, 0, System.Math.Max(count,fixedMaximum), 1, value => Set((int)value));
+                    Ui.Size(Ui.Button(line, lineItem?.BuyMaximum==true?"最大 ✓":"最大",()=>{
+                        Set(maximum,true);
+                        if(selected.TryGetValue(offer.Key,out var maxLine))maxLine.BuyMaximum=true;
+                        Sync();w.RequestRebuild();
+                    },15,Ui.ButtonBg,maximum>=minimum),65).name="PurchaseMaximum_"+offer.Key;
+                    Line(goods,"该货源本型号日上限 "+S.PurchaseLimit(offer)+" · 今日实货剩余 "+S.PurchaseRemaining(offer),14,Ui.Dim);
+                    Line(goods,S.SupplierAllocationText(employeeId,draft,offer)+(lineItem?.BuyMaximum==true?" · 按各日剩余额度最大采购":""),14,Ui.Accent);
                 }
                 Sync();
                 var summary = Ui.Row(w.Content, 32);
@@ -246,7 +263,7 @@ namespace PCShopSell.Game.UI
                     var offer = S.EmployeePurchaseOffer(choice);
                     var row = Ui.Row(chosenList, 58);
                     string source = offer?.Source.Name ?? choice.SourceId ?? "自动选货源";
-                    Ui.Size(ProductText(row, offer == null ? GameSession.PurchaseItemName(choice) + " ×" + choice.Count : ProductLabel(GameSession.PurchaseItemName(choice) + " ×" + choice.Count, offer.UnitKg, source), 16), -1, -1, 1);
+                    Ui.Size(ProductText(row, offer == null ? GameSession.PurchaseItemName(choice) + (choice.BuyMaximum ? " ×最大" : " ×" + choice.Count) : ProductLabel(GameSession.PurchaseItemName(choice) + (choice.BuyMaximum ? " ×最大" : " ×" + choice.Count), offer.UnitKg, source), 16), -1, -1, 1);
                     Ui.Size(Ui.Label(row, offer == null ? "货源不可用" : (offer.Price * choice.Count).ToString(), 16), 130);
                     string key = GameSession.PurchaseKey(choice);
                     int priority = order.IndexOf(key);
@@ -266,7 +283,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(transport, label, () => { draft.Transport = mode; w.Rebuild(); }, 16, draft.Transport == mode ? Ui.ButtonHot : Ui.ButtonBg, hired || S.VehicleCount(mode) > 0), -1, -1, 1);
                 }
                 var quote = S.EstimateEmployeePurchase(employeeId, draft);
-                string budgetName = draft.EveryDays == 1 ? "每日预算" : "每次采购预算";
+                string budgetName = draft.Schedule == PurchaseFrequency.Daily ? "每日预算" : "每次采购预算";
                 var budgetLabel = Ui.Size(Ui.Label(footer, $"{budgetName}：货款 {quote.Goods} + 车费 {quote.Travel} + 运费 {quote.Freight} = 总计 {quote.Total}", 17),-1,28);
                 budgetLabel.name = "EmployeePurchaseBudget";
                 if (releaseVehicle)
@@ -279,7 +296,7 @@ namespace PCShopSell.Game.UI
                     if (S.CompleteEmployeePurchase(employeeId, draft))
                     {
                         _purchaseDrafts.Remove(employeeId);
-                        Toast(draft.Daily ? "采购安排已保存，明天起每隔" + draft.EveryDays + "天按顺序尝试采购，今天不扣款。" : "已清空采购安排，不再自动进货。");
+                        Toast(draft.Daily ? "采购安排已保存，明天起按" + draft.FrequencyText + "执行，今天不扣款。" : "已清空采购安排，不再自动进货。");
                         if(parent!=null) { w.Close(); parent.Rebuild(); RebuildDock(); }
                         else CloseModalWindows();
                     }

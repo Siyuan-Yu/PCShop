@@ -155,7 +155,8 @@ namespace PCShopSell.Game.Runtime
                     if(d.sqrMagnitude<.01f)continue;
                     // 宽路两端只多伸出窄路那么多，免得盖住路口旁的城中村房子。
                     float len = d.magnitude + (shopping ? 5f : width);
-                    var go = Prims.Box(roads, "Road_" + key, (a + b) * 0.5f + Vector3.up * 0.005f, new Vector3(width, 0.02f, len), Mats.LitTex(Asphalt, new Vector2(Mathf.Max(1f, width / 5f), Mathf.Max(1f, len / 5f)), 0.12f));
+                    var roadMaterial=_city.IsLakeCity?Mats.Lit(Asphalt,.12f):Mats.LitTex(Asphalt,new Vector2(Mathf.Max(1f,width/5f),Mathf.Max(1f,len/5f)),.12f);
+                    var go = Prims.Box(roads, "Road_" + key, (a + b) * 0.5f + Vector3.up * 0.005f, new Vector3(width, 0.02f, len), roadMaterial);
                     go.transform.localRotation = Quaternion.LookRotation(d.normalized, Vector3.up);
 
                     if (_city.LayoutVersion>=7){BuildRoadDetail(roads,a,b,width);continue;}
@@ -168,6 +169,11 @@ namespace PCShopSell.Game.Runtime
             }
         }
 
+        private void BatchLakeRoads()
+        {
+            if(!_city.IsLakeCity)return;
+            var roads=_root.Find("Roads");if(roads!=null)StaticBatchingUtility.Combine(roads.gameObject);
+        }
         private void BuildSidewalks()
         {
             var sw = Mats.LitTex(Sidewalk, new Vector2(60, 1), 0.2f);

@@ -1,0 +1,50 @@
+2026-11-02 店型核心玩法与每日供货验证
+Unity 2022.3.6f1 / EditMode / 独立镜像 _ci_shop_cores
+正式玩家存档未读写。未打包。
+
+联合结果: total=197 passed=190 failed=7
+新增 ShopCoreGameplayTests: total=31 passed=31 failed=0
+覆盖供货共享与跨日/读档、最大采购动态执行、不同包装共用余量、科技发布与兼容、热度与服装供给、真实价格确认、餐馆耗料/火候/并发/上菜收款/超时/后台员工/冷藏、二手先买后验/单件状态/亏损/展示容量/智力/预算/换岗/读档、专用家具和真实UI构建。
+
+7项失败在干净HEAD 024042c导出的独立镜像 _ci_shop_baseline 同样复现。
+对照结果: total=12 passed=5 failed=7
+
+PCShopSell.Tests.FixtureTests.Catalog_HasShelfTiers_AndTheOtherFixtures
+保留三档通用货架，新增服装衣架与折叠陈列架
+  Expected: 5
+  But was:  3
+
+PCShopSell.Tests.PurchasePlanTests.PartialCash_BuysInListOrderAndReturnsChangeOnceAfterSave
+Expected: ¥1,069
+  But was:  ¥3,039
+
+PCShopSell.Tests.PurchasePlanTests.PartialCash_SkipsUnaffordableEarlyItemButStillBuysLaterCheapItem
+String lengths are both 4. Strings differ at index 3.
+  Expected: "cpu0"
+  But was:  "cpu2"
+  --------------^
+
+PCShopSell.Tests.PurchasePlanTests.PostingAnotherAdRetainsPreviousCandidates_AndAddsMoreTomorrow
+Expected: 4
+  But was:  2
+
+PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("load")
+Expected: not null
+  But was:  null
+
+PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("quota")
+Expected: not null
+  But was:  null
+
+PCShopSell.Tests.WorkforceTests.Transfer_CanCancel_AndCannotOverwriteOccupiedRole
+Expected: False
+  But was:  True
+
+图形专项：PCShopSell.EditorTools.GameSceneBuilder.ShopCoresFromBatch
+最终 shop-core-graphics-final.log: SMOKE RESULT code=0 errors=0
+使用生产GameController/UI/家具/室内构建器，实际完成租铺、转型、投料、火候、上菜、付款、二手出价、收购后鉴定、上架；有1920x1080与1280x720截图。
+首次图形夹具未租铺，修正后暴露编辑模式的材质实例化和销毁错误，均已修正；仅最终报告作为当前验收结果。
+截图见 docs/previews/shop-cores/。另有最终任务提示/竞争上下文专项检查报告（生成后附上）。
+未把全仓库三年长线测试称为通过；一次尝试在长线用例运行时停止，随后按本轮相关模块完成上述联合检查。
+
+最终核心/任务/竞争上下文专项: shop-core-last-check.xml total=68 passed=68 failed=0（含新增核心31项）。

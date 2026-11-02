@@ -398,7 +398,7 @@ namespace PCShopSell.Game.UI
             }, true, true, () => S.ClearTruckLoad());
         }
 
-        // ---------- 在店里退租 ----------
+        // ---------- 店内 / 中介退租 ----------
 
         private void ConfirmCloseShop(OwnedShop shop)
         {
@@ -407,7 +407,7 @@ namespace PCShopSell.Game.UI
             {
                 Line(confirm.Content, $"{title}（{shop.Place.Name}）· 月租 {shop.Lease.Rent}", 20, Ui.Accent);
                 Para(confirm.Content, (shop.OwnsProperty?"结束自营后产权保留。":$"主动退租，已交押金 {shop.Lease.Deposit} 全部不退，不会再次扣款。")+
-                    "店里摆的家具收回“我的”，本店员工辞退，人移到门口。"+
+                    "店里摆的家具收回“我的”，本店员工辞退。"+(S.CurrentPlace==shop.Place?"办理后移到店铺门口。":"办理后仍留在中介。")+
                     (S.MyShopCount==1?"这是最后一家店，结束后可到中介重新租铺。":shop==S.MainShop?"下一家店将成为主店。":""),17);
                 string blocker=S.CloseShopBlocker(shop);
                 if(blocker!=null)Para(confirm.Content,"暂不能办理："+blocker+"。",17,Ui.Warn);

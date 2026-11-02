@@ -203,7 +203,7 @@ namespace PCShopSell.Core.Session
         public bool TradeCityInvestment(string id, long units, bool buy, bool acknowledgeReserve = false)
         {
             var e = _cityEquities.Find(x => x.Id == id);
-            if ((id != "hardware" && e == null) || IsGameOver || !HasSmartphone || units <= 0 || units > 1000000) return Fail("请使用智能手机投资入口，按整数份额交易。");
+            if ((id != "hardware" && e == null) || IsGameOver || !HasSmartphone&&!CanUseHomeWorkbench || units <= 0 || units > 1000000) return Fail("请使用智能手机或居家工作台入口，按整数份额交易。");
             Money amount = CityInvestmentTradeTotal(id, units, buy); if (!amount.IsPositive) return Fail("交易金额不足以支付手续费。");
             if (buy && !acknowledgeReserve && CityInvestmentUsesReserve(id, units)) return Fail("这笔买入将动用未来必付款及资金保护额，请在投资确认页阅读预警后继续。");
             long held = CityInvestmentUnits(id); if (!buy && held < units) return Fail("不能卖出超过实际持仓的份额。");

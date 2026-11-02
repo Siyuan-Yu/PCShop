@@ -137,7 +137,7 @@ namespace PCShopSell.Core.Session
         /// <summary>档口老板的进价折扣（和阿杰的折扣叠加）。</summary>
         public static double OwnerDiscount(int rel) => rel >= 80 ? 0.06 : rel >= 60 ? 0.04 : rel >= 40 ? 0.025 : rel >= 20 ? 0.01 : 0.0;
 
-        /// <summary>档口老板每样配件每天肯卖给你的数量上限。交情越高，货越肯多给。</summary>
+        /// <summary>历史关系额度公式，仅保留兼容；实际库存现由货源和具体型号决定。</summary>
         public static int StallQuota(int rel) => rel >= 80 ? 45 : rel >= 60 ? 28 : rel >= 40 ? 18 : rel >= 20 ? 12 : 8;
 
         /// <summary>阿杰到了这个交情就不会跟你打价格战。</summary>
@@ -161,7 +161,7 @@ namespace PCShopSell.Core.Session
                 case Npcs.Wang:
                 case Npcs.Qian:
                 case Npcs.Sun:
-                    return "20：进价 -1%，每样每天 12 个　40：-2.5%，18 个　60：-4%，28 个　80：-6%，45 个。会透露行情";
+                    return "20：进价 -1%　40：-2.5%　60：-4%　80：-6%。会透露行情；每日供货按批发商和型号独立计算";
                 default: return "";
             }
         }

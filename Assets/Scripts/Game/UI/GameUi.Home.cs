@@ -756,6 +756,7 @@ namespace PCShopSell.Game.UI
             {
                 RectTransform actions = Ui.Row(w.Content, 50);
                 Ui.Size(Ui.Button(actions, "总收支账本", OpenLedger, 18), 180);
+                Ui.Size(Ui.Button(actions,"居家工作台",OpenHomeWorkbench,18,Ui.ButtonHot,S.CanUseHomeWorkbench),180).name="MyHomeWorkbench";
                 Ui.Size(Ui.Button(actions, "摆放家具（家里）", () => StartPlacement(false), 18, Ui.ButtonHot, _ctrl.InHome), 230);
 
                 if (!_ctrl.InHome && !_ctrl.InInterior) Line(w.Content, "摆放家具要在家里；改造店面要在自己的店里。", 15, Ui.Dim);

@@ -33,7 +33,7 @@ namespace PCShopSell.Game.Runtime
             _cam = cam;
             _cam.orthographic = true;
             _cam.nearClipPlane = 0.1f;
-            _cam.farClipPlane = 600f;
+            _cam.farClipPlane = 2600f;
             _curRot = Rotation;
             _cam.transform.rotation = Rotation;
         }
