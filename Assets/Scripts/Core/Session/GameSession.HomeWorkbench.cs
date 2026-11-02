@@ -109,7 +109,7 @@ namespace PCShopSell.Core.Session
         }
         public bool SetWorkbenchMarkup(string shopId,double markup)
         {
-            var shop=ShopAt(shopId);if(!CanUseHomeWorkbench||shop?.Rented!=true||double.IsNaN(markup)||double.IsInfinity(markup)||markup<.9||markup>1.6)return false;
+            var shop=ShopAt(shopId);if(!CanUseHomeWorkbench||shop?.Rented!=true||double.IsNaN(markup)||double.IsInfinity(markup)||markup<Shop.ShopSettings.MinMarkup||markup>Shop.ShopSettings.MaxMarkup)return false;
             shop.Sim.Markup=markup;return true;
         }
         public bool SetWorkbenchGoodsPrice(string shopId,string id,long yuan)

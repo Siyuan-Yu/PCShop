@@ -18,6 +18,7 @@ namespace PCShopSell.Core.Shop
         public double GoodsMirrorBonus(string id)=>ClothingProducts.IsClothing(id)?ClothingMirrorPurchaseIntentBonus:0;
         public double RestaurantDrinkPurchaseIntentBonus(string id) => RetailKind == "restaurant" && RetailProducts.IsDrink(id) ? .20 : 0;
         public double SalesPurchaseIntentBonus => Math.Max(0,Math.Min(.25,SalesBonusOf?.Invoke()??0));
+        public double MarkupPurchaseIntent(double markup) => AssistedPurchaseIntent(ShopSettings.BuyChance(markup));
         private double AssistedPurchaseIntent(double baseline)=>Math.Max(0,Math.Min(1,baseline+SalesPurchaseIntentBonus));
         private double PartPurchaseChance(double markup,bool boxed)
         {
@@ -27,7 +28,7 @@ namespace PCShopSell.Core.Shop
         private double GoodsPurchaseChance(string id,double markup)=>AssistedPurchaseIntent(
             ShopSettings.BuyChance(markup)*(IsGoodsShop?1:Settings.GoodsBuyFactor)*(ModelProducts.IsModel(id)?Math.Min(1.4,IndustryCycles.GoodsFactor(Gifts.Get(id),_clock.Today.TotalDays)):1)+GoodsMirrorBonus(id)+RestaurantDrinkPurchaseIntentBonus(id));
         private static (long min, long max) SalePriceRange(double basis) =>
-            (Math.Max(1, (long)Math.Round(basis * .9)), Math.Max(1, (long)Math.Round(basis * 1.6)));
+            (Math.Max(1, (long)Math.Round(basis * ShopSettings.MinMarkup)), Math.Max(1, (long)Math.Round(basis * ShopSettings.MaxMarkup)));
 
         public (long min, long max) PartPriceRange(PartDef part, bool boxed) =>
             SalePriceRange(_market.PriceOf(part).Yuan * (boxed ? 1 + Settings.BoxedPremium : 1));

@@ -17,7 +17,8 @@ namespace PCShopSell.Tests
                 Assert.Greater(shop.PartPurchaseIntentAtPrice(p, true, range.min), shop.PartPurchaseIntentAtPrice(p, true, range.max));
                 Assert.AreEqual(original, shop.PriceOf(p, true).Yuan);
                 Assert.IsTrue(shop.SetPartSalePrice(p, true, range.max));
-                Assert.AreEqual(PCShopSell.Core.Shop.ShopSettings.BuyChance(shop.MarkupOf(p)), shop.PartPurchaseIntentAtPrice(p, true, range.max), 1e-8);
+                Assert.AreEqual(1-shop.Settings.BoxedTrust, shop.PartPurchaseIntentAtPrice(p, true, range.max), 1e-8,
+                    "3倍售价的基础意愿为0，盒装信任加成仍生效");
             }
         }
         [Test] public void GoodsIntentPreview_PreservesGoodsBuyFactorAndDoesNotCommit()

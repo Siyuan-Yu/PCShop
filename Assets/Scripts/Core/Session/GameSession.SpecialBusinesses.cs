@@ -297,7 +297,7 @@ namespace PCShopSell.Core.Session
             state.NextVisit=minute+12;
             int tables=Furnished(shop,"restaurant_table");
             int table=Enumerable.Range(0,tables).FirstOrDefault(index=>!state.Orders.Any(o=>o.Table==index));
-            if(state.Orders.Count>=tables||!Random.Chance(Math.Min(1,1.15/Math.Max(.8,state.MenuMarkup))))return;
+            if(state.Orders.Count>=tables||!Random.Chance(shop.Sim.MarkupPurchaseIntent(state.MenuMarkup)))return;
             var recipes=Enumerable.Range(0,RecipeNames.Length).Where(i=>(state.RecipeMask&(1<<i))!=0).ToArray();
             if(recipes.Length==0)return;
             int recipe=recipes[Random.Next(0,recipes.Length)];

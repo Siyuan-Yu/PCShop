@@ -468,7 +468,7 @@ namespace PCShopSell.Game.UI
                 global.text=$"统一加价 {shop.Markup:0.00}× · "+(count>0?$"参考购买意愿 {total/count*100:0}%":"购买意愿：暂无商品");
                 foreach(var refresh in refreshers)refresh();
             }
-            Ui.Slider(C,.9f,1.6f,(float)shop.Markup,v=>{S.SetMarkup(Mathf.Round(v*20)/20f);RefreshAll();}).name="GlobalMarkupSlider";
+            Ui.Slider(C,(float)ShopSettings.MinMarkup,(float)ShopSettings.MaxMarkup,(float)shop.Markup,v=>{S.SetMarkup(Mathf.Round(v*20)/20f);RefreshAll();}).name="GlobalMarkupSlider";
             var list=Ui.Rect(C,"PricingProducts");Ui.VList(list,4,0);
             void ProductRow(string key,string name,double kg,int count,System.Func<Money> price,System.Func<double> intent,
                 System.Action edit,System.Func<bool> own,System.Action follow)

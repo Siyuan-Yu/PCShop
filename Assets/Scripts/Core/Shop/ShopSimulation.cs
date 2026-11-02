@@ -162,6 +162,8 @@ namespace PCShopSell.Core.Shop
     /// <summary>营业参数。数值均为占位，等原型试玩后平衡。</summary>
     public sealed class ShopSettings
     {
+        public const double MinMarkup = .9;
+        public const double MaxMarkup = 3.0;
         /// <summary>位置最好、规格系数为 1、知名度为 0 时，高峰时段每小时进店人数。</summary>
         public double BaseCustomersPerHour = 2;
 
@@ -250,7 +252,7 @@ namespace PCShopSell.Core.Shop
         /// <summary>按加价倍率算顾客愿意买的概率（加价越高越低）。</summary>
         public static double BuyChance(double markup)
         {
-            return Math.Max(0.05, Math.Min(0.97, 0.95 - (markup - 1.0) * 1.6));
+            return Math.Max(0, Math.Min(0.97, 0.95 - (markup - 1.0) * 1.6));
         }
     }
 
@@ -314,11 +316,11 @@ namespace PCShopSell.Core.Shop
         /// <summary>这家店的知名度跟 main 共用（开第二家店时用）。</summary>
         public void ShareReputationWith(ShopSimulation main) => _reputationOwner = main == this ? null : main;
 
-        /// <summary>售价 = 市场价 × 加价倍率（盒装再加溢价）。范围 0.9~1.6。</summary>
+        /// <summary>售价 = 市场价 × 加价倍率（盒装再加溢价）。范围 0.9~3.0。</summary>
         public double Markup
         {
             get => _markup;
-            set => _markup = Math.Max(0.9, Math.Min(1.6, value));
+            set => _markup = Math.Max(ShopSettings.MinMarkup, Math.Min(ShopSettings.MaxMarkup, value));
         }
 
         private readonly Dictionary<string, double> _partMarkups = new Dictionary<string, double>();
@@ -336,7 +338,7 @@ namespace PCShopSell.Core.Shop
         {
             ClearFixedPartPrices(part);
             if (markup == null) _partMarkups.Remove(part.Id);
-            else _partMarkups[part.Id] = Math.Max(0.9, Math.Min(1.6, markup.Value));
+            else _partMarkups[part.Id] = Math.Max(ShopSettings.MinMarkup, Math.Min(ShopSettings.MaxMarkup, markup.Value));
         }
 
         // ---------- 杂货 ----------
@@ -399,7 +401,7 @@ namespace PCShopSell.Core.Shop
         {
             _fixedSalePrices.Remove("g:"+id);
             if (markup == null) _partMarkups.Remove(GoodsKey(id));
-            else _partMarkups[GoodsKey(id)] = Math.Max(0.9, Math.Min(1.6, markup.Value));
+            else _partMarkups[GoodsKey(id)] = Math.Max(ShopSettings.MinMarkup, Math.Min(ShopSettings.MaxMarkup, markup.Value));
         }
 
         /// <summary>杂货现在的售价 = 进价（礼品标价）× 加价倍率。</summary>
@@ -415,7 +417,7 @@ namespace PCShopSell.Core.Shop
         {
             _partMarkups.Clear();
             if (items == null) return;
-            foreach (var kv in items) _partMarkups[kv.Key] = Math.Max(0.9, Math.Min(1.6, kv.Value));
+            foreach (var kv in items) _partMarkups[kv.Key] = Math.Max(ShopSettings.MinMarkup, Math.Min(ShopSettings.MaxMarkup, kv.Value));
         }
 
         public PaymentMethods Accepted { get; set; } = PaymentMethods.Cash;

@@ -128,10 +128,10 @@ namespace PCShopSell.Tests
             Assert.AreEqual(1.5, s.PlayerShop.MarkupOf(gpu), 1e-9, "全局变了，单独定价不变");
 
             s.PlayerShop.SetPartMarkup(gpu, 9.0);
-            Assert.AreEqual(1.6, s.PlayerShop.MarkupOf(gpu), 1e-9, "上限 1.6");
+            Assert.AreEqual(3.0, s.PlayerShop.MarkupOf(gpu), 1e-9, "上限 3.0");
 
             GameSession l = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));
-            Assert.AreEqual(1.6, l.PlayerShop.MarkupOf(PartCatalog.Get("gpu1")), 1e-9);
+            Assert.AreEqual(3.0, l.PlayerShop.MarkupOf(PartCatalog.Get("gpu1")), 1e-9);
             Assert.IsFalse(l.PlayerShop.HasPartMarkup(PartCatalog.Get("ram0")));
 
             s.PlayerShop.SetPartMarkup(gpu, null);

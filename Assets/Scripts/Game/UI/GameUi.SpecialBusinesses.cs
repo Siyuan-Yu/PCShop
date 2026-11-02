@@ -70,9 +70,9 @@ namespace PCShopSell.Game.UI
             for(int recipe=0;recipe<GameSession.RecipeNames.Length;recipe++){int selected=recipe;bool enabled=(state.RecipeMask&(1<<selected))!=0;Ui.Size(Ui.Button(C,(enabled?"✓ 供应 ":"暂停 ")+GameSession.RecipeNames[selected]+" · ¥"+Math.Round(GameSession.RecipePrices[selected]*state.MenuMarkup),()=>{state.RecipeMask^=1<<selected;RebuildDock();},15,enabled?Ui.ButtonHot:Ui.ButtonBg),-1,30);}
             Para(C,"加工台备菜 → 投锅 → 熟后及时出锅 → 传菜台上菜 → 顾客吃完付款 → 收桌。锅内8分钟熟，38分钟焦糊；顾客等餐100分钟。暂停时火候也暂停。",15,Ui.Dim);
             var menu=Ui.Row(C,32,4);
-            Ui.Size(Ui.Label(menu,"菜单倍率 ×"+state.MenuMarkup.ToString("0.0"),16),-1,32,1);
+            Ui.Size(Ui.Label(menu,"菜单倍率 ×"+state.MenuMarkup.ToString("0.0")+$" · 购买意愿 {shop.Sim.MarkupPurchaseIntent(state.MenuMarkup)*100:0}%",16),-1,32,1);
             Ui.Size(Ui.Button(menu,"−",()=>{state.MenuMarkup=Math.Max(.8,state.MenuMarkup-.1);RebuildDock();},18),40);
-            Ui.Size(Ui.Button(menu,"+",()=>{state.MenuMarkup=Math.Min(1.6,state.MenuMarkup+.1);RebuildDock();},18),40);
+            Ui.Size(Ui.Button(menu,"+",()=>{state.MenuMarkup=Math.Min(PCShopSell.Core.Shop.ShopSettings.MaxMarkup,state.MenuMarkup+.1);RebuildDock();},18),40);
             Line(C,"厨房大米 "+S.KitchenRice(shop).ToString("0.##")+" 千克 · 青菜 "+S.KitchenIngredientCount(shop,"veg")+" · 鸡蛋 "+S.KitchenIngredientCount(shop,"egg")+" · 肉 "+S.KitchenIngredientCount(shop,"pork"),15,Ui.Dim);
             Ui.Size(Ui.Button(C,"店内食材放入冰箱",()=>{S.ChillKitchenIngredients();RebuildDock();},16,Ui.ButtonHot,S.CanOpenFridge),-1,34);
             var storage=Ui.Row(C,36,4);
