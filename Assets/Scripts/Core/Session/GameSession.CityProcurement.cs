@@ -286,7 +286,7 @@ namespace PCShopSell.Core.Session
                         Method = ProcurementMethod.Online1788, Blocker = AppBlocker(PhoneApps.Wholesale), LeadMinutes = (24 * 60 - Clock.MinuteOfDay) + Online1788.DeliveryMinuteOfDay,
                         Conditions = "常规经营批发；次日10:00配送，同订单只收一次运费" });
                 if (DirectAgreement)
-                    result.Add(new ProcurementSourceQuote { OfferId = "direct:" + productId, SupplierId = "direct:zhou", SupplierName = "老周协议直供",
+                    result.Add(new ProcurementSourceQuote { OfferId = "direct:" + productId, SupplierId = "direct:zhou", SupplierName = "周维成协议直供",
                         ProductId = productId, Kind = kind, Name = PartCatalog.Get(productId).Name, UnitPrice = DirectPrice(PartCatalog.Get(productId)), Minimum = 3,
                         Method = ProcurementMethod.DirectSupply, LeadMinutes = 1440 - Clock.MinuteOfDay + 600, Conditions = "协议货源；每型3–30件，次日10:00配送；保留原直供授信入口" });
             }

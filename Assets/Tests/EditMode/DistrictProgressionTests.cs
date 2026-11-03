@@ -37,7 +37,8 @@ namespace PCShopSell.Tests
         }
         private static void Advance(GameSession s,long until)
         {
-            for(int guard=0;s.Clock.Now.TotalMinutes<until&&guard<100;guard++)s.AdvanceClock((int)(until-s.Clock.Now.TotalMinutes));
+            for(int guard=0;s.Clock.Now.TotalMinutes<until&&guard<10000;guard++)
+            {s.Player.Health=100;s.Player.Hunger=100;s.Player.Energy=100;s.AdvanceClock((int)Math.Min(60,until-s.Clock.Now.TotalMinutes));}
             Assert.GreaterOrEqual(s.Clock.Now.TotalMinutes,until);
         }
         internal static void CompleteLeadOuting(GameSession s,int index)
@@ -103,7 +104,19 @@ namespace PCShopSell.Tests
         private static void Finish(GameSession s)
         {
             string id=s.CurrentDistrictNode.Id;Meet(s);
+            CompleteDetailedTasks(s);
             Assert.True(s.ActDistrictNode(id),id);
+        }
+        private static void CompleteDetailedTasks(GameSession s)
+        {
+            foreach(var task in s.DistrictTasks.ToArray())
+            {
+                if(s.HasDistrictTask(task.Id))continue;
+                At(s,s.City.GetPlace(task.PlaceId??s.DistrictStoryState.MeetingPlaceId));
+                Assert.IsNull(s.DistrictTaskBlocker(task.Id),task.Id);
+                s.PerformDistrictTask(task.Id);Assert.True(s.HasDistrictTask(task.Id),task.Id);
+            }
+            At(s,s.City.GetPlace(s.DistrictStoryState.MeetingPlaceId));
         }
 
         [Test] public void InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce()
@@ -375,7 +388,7 @@ namespace PCShopSell.Tests
                 Assert.GreaterOrEqual(s.NetWorth().Yuan,30000000);Assert.AreEqual(1,s.DistrictAccessTier);AwaitInvitation(s);
                 for(int guard=0;s.CurrentDistrictNode!=null&&s.DistrictAccessTier<2&&guard<12;guard++)
                 {
-                    string id=s.CurrentDistrictNode.Id;Meet(s);Assert.True(s.ActDistrictNode(id),id);
+                    string id=s.CurrentDistrictNode.Id;Meet(s);CompleteDetailedTasks(s);Assert.True(s.ActDistrictNode(id),id);
                     if(id=="park.delivery"||id=="model.dinner")
                     {
                         Assert.False(s.ActDistrictNode(id));Advance(s,s.Clock.Now.TotalMinutes+30);Assert.True(s.ActDistrictNode(id));
@@ -384,7 +397,7 @@ namespace PCShopSell.Tests
                     {
                         var cash=s.Ledger.Balance;Assert.False(s.ActDistrictNode(id));Assert.AreEqual(cash,s.Ledger.Balance);
                         using(var loaded=Reload(s)){Assert.True(loaded.DistrictStoryState.RepairPaid);Assert.False(loaded.ActDistrictNode(id));Assert.AreEqual(cash,loaded.Ledger.Balance);}
-                        Advance(s,s.DistrictStoryState.RepairReadyAt);Assert.True(s.ActDistrictNode(id));Assert.True(s.DistrictStoryState.HasModel);
+                        Advance(s,s.DistrictStoryState.RepairReadyAt);CompleteDetailedTasks(s);Assert.True(s.ActDistrictNode(id));Assert.True(s.DistrictStoryState.HasModel);
                     }
                     var after=s.Ledger.Balance;Assert.False(s.ActDistrictNode(id));Assert.AreEqual(after,s.Ledger.Balance,"Old callback cannot repeat a transaction");
                 }
@@ -393,7 +406,7 @@ namespace PCShopSell.Tests
                 Finish(s);
                 var project=s.MyShops.First(shop=>s.DistrictTierOf(shop.Place)==2);
                 Assert.True(s.SelectDistrictProjectShop(project.Place.Id));Finish(s);
-                Meet(s,gardenChoice);var beforeContract=s.Ledger.Balance;Assert.True(s.ActDistrictNode("garden.terms"));
+                Meet(s,gardenChoice);CompleteDetailedTasks(s);var beforeContract=s.Ledger.Balance;Assert.True(s.ActDistrictNode("garden.terms"));
                 Assert.AreEqual(gardenChoice=="limited"?50000:gardenChoice=="respect"?10000:5000,(beforeContract-s.Ledger.Balance).Yuan);
                 Assert.AreEqual(gardenChoice=="respect"?"life_clothier":"life_tenant",s.DistrictStoryState.ProjectPartnerId);
                 Assert.AreEqual("garden.fulfilment",s.CurrentDistrictNode.Id);Meet(s);
@@ -403,6 +416,7 @@ namespace PCShopSell.Tests
                 s.Ledger.Credit(s.Clock.Today,"贷款",Money.FromYuan(100000),"不是营业收入",LedgerAttribution.ForShop(project.Place.Id));
                 Assert.False(s.ActDistrictNode("garden.fulfilment"));
                 s.Ledger.Credit(s.Clock.Today,ShopSimulation.SalesCategory,Money.FromYuan(100),"测试实际销售凭据",LedgerAttribution.ForShop(project.Place.Id));
+                CompleteDetailedTasks(s);
                 Assert.True(s.ActDistrictNode("garden.fulfilment"));Assert.AreEqual(3,s.DistrictAccessTier);Finish(s);
                 using(var loaded=Reload(s))
                 {

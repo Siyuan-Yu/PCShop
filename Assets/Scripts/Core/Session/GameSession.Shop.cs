@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -55,7 +55,15 @@ namespace PCShopSell.Core.Session
         public const int DutyEndMinute = 21 * 60;
 
         private static readonly string[] Surnames = { "王", "李", "张", "刘", "陈", "杨", "赵", "黄", "周", "吴" };
-        private static readonly string[] GivenNames = { "小明", "小红", "阿强", "阿珍", "建国", "晓燕", "大伟", "婷婷", "浩然", "丽丽" };
+        private static readonly string[] GivenNames = { "明远", "红梅", "志强", "玉珍", "建国", "晓燕", "大伟", "婷婷", "浩然", "丽丽" };
+
+        private static string FormalEmployeeName(string name)
+        {
+            if (string.IsNullOrEmpty(name) || name.Length != 3 || !Surnames.Contains(name.Substring(0, 1))) return name;
+            string given = name.Substring(1);
+            string formal = given == "小明" ? "明远" : given == "小红" ? "红梅" : given == "阿强" ? "志强" : given == "阿珍" ? "玉珍" : given;
+            return name.Substring(0, 1) + formal;
+        }
 
         private readonly List<Employee> _candidates = new List<Employee>();
 

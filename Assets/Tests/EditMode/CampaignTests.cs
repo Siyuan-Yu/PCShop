@@ -137,7 +137,7 @@ namespace PCShopSell.Tests
             s.AdvanceClock(60);
             Assert.AreEqual(1, s.NegativeCashDays);
             s.AdvanceClock(60 * 24);
-            Assert.IsTrue(s.Flags.Contains(GameSession.BailoutUsedFlag), "第二天小林来救急");
+            Assert.IsTrue(s.Flags.Contains(GameSession.BailoutUsedFlag), "第二天林远航来救急");
             Assert.IsFalse(s.IsGameOver);
             Assert.IsFalse(s.Ledger.Balance.IsNegative);
             Assert.AreEqual(0, s.NegativeCashDays);
@@ -622,8 +622,8 @@ namespace PCShopSell.Tests
             s.Meet(Npcs.Lin, 15);
             s.AddRelation(Npcs.Lin, 70);
             string text = s.ComposeEpilogue(Campaign.Steady);
-            StringAssert.Contains("小林", text);
-            StringAssert.DoesNotContain("老周", text);
+            StringAssert.Contains("林远航", text);
+            StringAssert.DoesNotContain("周维成", text);
         }
 
         [Test]

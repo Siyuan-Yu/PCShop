@@ -310,9 +310,9 @@ namespace PCShopSell.EditorTools
             Check((_game.Ui.QuestTrackerText ?? "").Contains("租一间铺子"), "任务条：新游戏先去租铺子：" + _game.Ui.QuestTrackerText);
             Check(s.Listings.Any(l => l.PlaceId == "player_shop" && s.LeaseBlocker(l) == null), "中介挂着街尾空铺、现在就能签");
             Check(s.Listings.Any(l => s.LeaseBlocker(l) != null && l.OpenDay > s.Clock.Today.TotalDays), "中介有现租户还没到期的铺子");
-            Check(PCShopSell.Game.UI.GameUi.PortraitOf(PCShopSell.Core.Session.Rosters.AgentChen.Id) != null, "中介小陈有立绘");
+            Check(PCShopSell.Game.UI.GameUi.PortraitOf(PCShopSell.Core.Session.Rosters.AgentChen.Id) != null, "中介陈启明有立绘");
             Check(s.AgentDiscount == 0, "没熟之前中介费按标价");
-            Check(s.StaffChat(PCShopSell.Core.Session.Rosters.AgentChen) != null, "和中介小陈闲聊");
+            Check(s.StaffChat(PCShopSell.Core.Session.Rosters.AgentChen) != null, "和中介陈启明闲聊");
             s.Backpack.AddGift(PCShopSell.Core.Home.Gifts.Soda, 1);
             Check(s.GiveStaffGift(PCShopSell.Core.Session.Rosters.AgentChen, PCShopSell.Core.Home.Gifts.Soda), "送中介一瓶饮料");
             Check(s.AgentDiscount > 0, "聊熟了中介费有折扣");
@@ -1361,7 +1361,7 @@ namespace PCShopSell.EditorTools
             // Dedicated staff UI and runtime models; fixture is saved only in the isolated smoke directory.
             var staffSave = g.CreateSave();
             staffSave.hasEmployee = true;
-            staffSave.employee = new SaveEmployee { name = "收银小陈", wage = 150, checkoutMinutes = 2 };
+            staffSave.employee = new SaveEmployee { name = "收银陈启明", wage = 150, checkoutMinutes = 2 };
             staffSave.hasAssembler = true;
             staffSave.assembler = new SaveEmployee { name = "装机小王", wage = 210, checkoutMinutes = 3, buildsCompleted = 8 };
             File.WriteAllText(SaveStore.PathOf, JsonUtility.ToJson(staffSave));
@@ -1623,10 +1623,10 @@ namespace PCShopSell.EditorTools
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
             SmokeAgencySelection(s);
             Shot("vs1_agency_map_720", 1280, 720);
-            Check(GuideButton("和小陈聊聊") == null, "中介窗口没有重复的“和小陈聊聊”按钮，点头像交谈");
+            Check(GuideButton("和陈启明聊聊") == null, "中介窗口没有重复的“和陈启明聊聊”按钮，点头像交谈");
             var portrait = _game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<UnityEngine.UI.Button>())
                 .LastOrDefault(b => b.gameObject.activeInHierarchy && b.name == "AgentPortrait");
-            Check(portrait != null, "中介窗口有可点的小陈头像");
+            Check(portrait != null, "中介窗口有可点的陈启明头像");
             portrait?.onClick.Invoke();
             Canvas.ForceUpdateCanvases();
             ClickGuideButton("随便聊聊（8 分钟）");

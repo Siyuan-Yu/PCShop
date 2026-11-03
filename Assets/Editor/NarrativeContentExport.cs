@@ -18,6 +18,7 @@ public static class NarrativeContentExport
         foreach(var p in CityLifeCatalog.People.Where(p=>p.Id!=CityLifeCatalog.InvitationTestPersonId))
         {
             b.AppendLine($"## {p.Name} · {p.Role}\n\n- ID：`{p.Id}`；{p.Age}岁；{(p.KeyCharacter?"关键人物":"城市居民")}；{p.Circle}\n- 住处：`{p.HomeId}`；工作/学习：`{p.WorkId}`\n- 日常时段：{p.WorkStart/60:00}:{p.WorkStart%60:00}—{p.WorkEnd/60:00}:{p.WorkEnd%60:00}；跨午夜时结束时间属于次日\n- 闲暇地点：{string.Join("、",p.LeisurePlaces??Array.Empty<string>())}\n- 初识：{p.FirstEncounter}\n- 兴趣：{p.Interest}\n- 想做的事：{p.Goal}\n\n**{p.StoryTitle}**\n");
+            if(NpcNames.Alias(p.Id) is string alias)b.AppendLine("熟人称呼／旧显示名："+alias+"；正式姓名："+p.Name+"。\n");
             for(int i=0;i<p.Stories.Length;i++)b.AppendLine($"{i+1}. {p.Stories[i]}\n");
             b.AppendLine("日常话题：\n");foreach(var topic in p.Topics)b.AppendLine("- "+topic);
             b.AppendLine("\n关系：\n");

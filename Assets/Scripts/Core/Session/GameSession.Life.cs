@@ -103,6 +103,7 @@ namespace PCShopSell.Core.Session
             _sleeping = true;
             AdvanceClock(minutes);
             _sleeping = false;
+            RefreshDistrictNarrative();
             _sleepHistory.Add(new[] { start, Clock.Now.TotalMinutes });
             _sleepHistory.RemoveAll(span => span[1] <= Clock.Now.TotalMinutes - 1440);
             Player.SleepDebt = Math.Max(0, 8 - SleepHoursLast24);
@@ -154,6 +155,7 @@ namespace PCShopSell.Core.Session
             // when exhaustion can happen in daytime, instead of forcing a 23-hour sleep.
             AdvanceClock(480);
             _sleeping = false;
+            RefreshDistrictNarrative();
             Player.Health = Math.Max(0, Player.Health - 10);
             Player.SleepDebt = Math.Min(8, Player.SleepDebt + 3);
             Player.Energy = Math.Min(Player.MaxEnergy, 55);
@@ -167,6 +169,7 @@ namespace PCShopSell.Core.Session
             _sleeping = true;
             AdvanceClock(HospitalDays * GameTimestamp.MinutesPerDay - Clock.MinuteOfDay + WakeUpMinute);
             _sleeping = false;
+            RefreshDistrictNarrative();
             Money bill = HospitalPerDay * HospitalDays;
             Ledger.ForceDebit(Clock.Today, "医疗", bill, "住院");
             Player.Health = 80;

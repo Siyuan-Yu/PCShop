@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -96,6 +96,7 @@ namespace PCShopSell.Core.Session
         public string[] LearnedPersonStories(string id)
         {
             var stories = new List<string>();
+            stories.AddRange(_brandStories.Where(s=>s.Stage==3 && s.PersonId==id && !string.IsNullOrWhiteSpace(s.Conclusion)).Select(s=>s.Conclusion));
             int heard = CityPersonState(id)?.StoryChapter ?? 0;
             var definition = CityPerson(id);
             if (definition?.Stories != null) stories.AddRange(definition.Stories.Take(Math.Max(0, heard)));
@@ -155,7 +156,7 @@ namespace PCShopSell.Core.Session
             var traits = ConversationTraits(id);
             if (index < 0 || index >= traits.Length) return "";
             if (!traits[index].Known) return "还不知道这一点。熟悉度达到 " + traits[index].Unlock + " 后逐渐了解。";
-            if (id == "res_cook") return index == 0 ? "胖哥闲下来时会抽烟。" : "胖哥喜欢骑车，闲聊时常会提到路上的见闻。";
+            if (id == "res_cook") return index == 0 ? "罗志勇闲下来时会抽烟。" : "罗志勇喜欢骑车，闲聊时常会提到路上的见闻。";
             if (index == 0) return (CityPerson(id)?.Name ?? Npcs.Get(id)?.Name ?? "对方") + "平时喜欢" + traits[index].Name + "。";
             return Npcs.Get(id) is NpcDef npc ? "喜欢收到：" + npc.GiftName + "。也可以从背包挑其他小礼物。" : "饮料、水果、点心、鲜花或一份做好的饭，都可以从背包里挑选。";
         }

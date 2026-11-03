@@ -48,13 +48,13 @@ namespace PCShopSell.Core.Session
             }
             return total;
         }
-        public string DirectAgreementBlocker => !HasShop ? "先租下主店" : !HasSmartphone ? "需要智能手机" : PlayerShop.Reputation < 10 ? "知名度达到 10" : Relation(Npcs.Zhou) < 40 ? "与老周交情达到 40" : null;
+        public string DirectAgreementBlocker => !HasShop ? "先租下主店" : !HasSmartphone ? "需要智能手机" : PlayerShop.Reputation < 10 ? "知名度达到 10" : Relation(Npcs.Zhou) < 40 ? "与周维成交情达到 40" : null;
         public bool SignDirectAgreement()
         {
             if (IsGameOver || DirectAgreement) return false;
             if (DirectAgreementBlocker != null) return Fail(DirectAgreementBlocker);
             DirectAgreement = true;
-            Say("老周牵线签下直供：每个型号至少 3 件，市场价 84%，次日 10:00 送店。可付 30% 首款，其余 14 天内结清。");
+            Say("周维成牵线签下直供：每个型号至少 3 件，市场价 84%，次日 10:00 送店。可付 30% 首款，其余 14 天内结清。");
             return true;
         }
         public Money DirectPrice(PartDef p) => Market.PriceOf(p).Scale(.84);

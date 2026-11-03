@@ -75,23 +75,23 @@ namespace PCShopSell.Core.Session
 
         public static readonly IReadOnlyList<NpcDef> All = new[]
         {
-            new NpcDef(Zhang, "老张", "熟客，附近中学的老师", "第一个常来的熟客，认准你这家店。", "一条好烟", 100, "老张笑得合不拢嘴：\"你这小子，会来事。\"", likes: Activities.Hike, giftItemId: Gifts.Cig),
-            new NpcDef(Landlady, "李姐", "房东，住楼上", "你的店面和出租屋都是她的。", "一箱水果", 120, "李姐掂了掂水果：\"哎呀，这么客气，下个月的事好商量。\"", likes: Activities.Dinner, giftItemId: Gifts.Fruit),
-            new NpcDef(Zhou, "老周", "电子市场老货商", "在 1788 上开店的老货商，认识半个市场。", "两瓶好酒", 200, "老周拍拍你肩膀：\"后生可畏，以后进货找我，给你实价。\"", reliability: 0.75, likes: Activities.Dinner, giftItemId: Gifts.Wine),
-            new NpcDef(Jie, "阿杰", "隔壁手机店老板", "年纪相仿的同行，嘴上不饶人，心里有数。", "一顿烧烤", 150, "阿杰咬着串：\"行，以后有事言语一声。\"", reliability: 0.50, likes: Activities.Ktv),
-            new NpcDef(Li, "老李", "CPU 档口老板", "市场里最老的档口，做 CPU 和主板二十年了，说话慢，但很少看走眼。", "一条名烟", 150,
-                "老李接过烟，在耳朵上夹了一下：\"小伙子，下次给你留好货。\"", Stalls.Cpu, 0.80, Activities.Fishing,
-                "老李眯着眼打量你：\"新面孔？先看货，别急。\"", Gifts.CigHi),
-            new NpcDef(Wang, "阿王", "显卡王档口老板", "显卡档口的大嗓门，消息灵通，不过嘴上没把门，说的不一定准。", "一箱饮料", 100,
-                "阿王哈哈大笑：\"够意思！以后显卡找我，价钱好说！\"", Stalls.Gpu, 0.55, Activities.Ktv,
-                "阿王扯着嗓子：\"来来来，显卡看一看！新来的？给你个好价！\"", Gifts.Drink),
-            new NpcDef(Qian, "钱姐", "存储专营老板娘", "内存和硬盘档口的老板娘，精明细致，账目清楚。", "一盒点心", 120,
-                "钱姐笑着收下：\"还挺会来事，以后多照顾你。\"", Stalls.Memory, 0.70, Activities.Dinner,
-                "钱姐头也不抬地敲着计算器：\"要什么货？先说清楚数量。\"", Gifts.Snack),
-            new NpcDef(Sun, "老孙", "机箱电源城老板", "做机箱电源的实在人，货量大，价格死板，但从不坑人。", "两瓶白酒", 160,
-                "老孙搓搓手：\"这怎么好意思，下回来我给你算便宜点。\"", Stalls.PowerCase, 0.65, Activities.Snack,
-                "老孙从货堆后探出头：\"电源机箱？这边，实在价，不二价。\"", Gifts.Baijiu),
-            new NpcDef(Lin, "小林", "发小，在外面打工", "从小一起长大的朋友，听说你开了店就常来看你。", "一顿夜宵", 100, "小林边吃边笑：\"还是你够意思。\"", likes: Activities.Snack),
+            new NpcDef(Zhang, "张绍文", "熟客，附近中学的老师", "第一个常来的熟客，认准你这家店。", "一条好烟", 100, "张绍文笑得合不拢嘴：\"你这小子，会来事。\"", likes: Activities.Hike, giftItemId: Gifts.Cig),
+            new NpcDef(Landlady, "李秀兰", "房东，住楼上", "你的店面和出租屋都是她的。", "一箱水果", 120, "李秀兰掂了掂水果：\"哎呀，这么客气，下个月的事好商量。\"", likes: Activities.Dinner, giftItemId: Gifts.Fruit),
+            new NpcDef(Zhou, "周维成", "电子市场老货商", "在 1788 上开店的老货商，认识半个市场。", "两瓶好酒", 200, "周维成拍拍你肩膀：\"后生可畏，以后进货找我，给你实价。\"", reliability: 0.75, likes: Activities.Dinner, giftItemId: Gifts.Wine),
+            new NpcDef(Jie, "唐俊杰", "隔壁手机店老板", "年纪相仿的同行，嘴上不饶人，心里有数。", "一顿烧烤", 150, "唐俊杰咬着串：\"行，以后有事言语一声。\"", reliability: 0.50, likes: Activities.Ktv),
+            new NpcDef(Li, "李承业", "CPU 档口老板", "市场里最老的档口，做 CPU 和主板二十年了，说话慢，但很少看走眼。", "一条名烟", 150,
+                "李承业接过烟，在耳朵上夹了一下：\"小伙子，下次给你留好货。\"", Stalls.Cpu, 0.80, Activities.Fishing,
+                "李承业眯着眼打量你：\"新面孔？先看货，别急。\"", Gifts.CigHi),
+            new NpcDef(Wang, "王振海", "显卡王档口老板", "显卡档口的大嗓门，消息灵通，不过嘴上没把门，说的不一定准。", "一箱饮料", 100,
+                "王振海哈哈大笑：\"够意思！以后显卡找我，价钱好说！\"", Stalls.Gpu, 0.55, Activities.Ktv,
+                "王振海扯着嗓子：\"来来来，显卡看一看！新来的？给你个好价！\"", Gifts.Drink),
+            new NpcDef(Qian, "钱慧珍", "存储专营老板娘", "内存和硬盘档口的老板娘，精明细致，账目清楚。", "一盒点心", 120,
+                "钱慧珍笑着收下：\"还挺会来事，以后多照顾你。\"", Stalls.Memory, 0.70, Activities.Dinner,
+                "钱慧珍头也不抬地敲着计算器：\"要什么货？先说清楚数量。\"", Gifts.Snack),
+            new NpcDef(Sun, "孙建国", "机箱电源城老板", "做机箱电源的实在人，货量大，价格死板，但从不坑人。", "两瓶白酒", 160,
+                "孙建国搓搓手：\"这怎么好意思，下回来我给你算便宜点。\"", Stalls.PowerCase, 0.65, Activities.Snack,
+                "孙建国从货堆后探出头：\"电源机箱？这边，实在价，不二价。\"", Gifts.Baijiu),
+            new NpcDef(Lin, "林远航", "发小，在外面打工", "从小一起长大的朋友，听说你开了店就常来看你。", "一顿夜宵", 100, "林远航边吃边笑：\"还是你够意思。\"", likes: Activities.Snack),
         };
 
         public static NpcDef Get(string id)
@@ -134,16 +134,16 @@ namespace PCShopSell.Core.Session
         /// <summary>档口批发价折扣。</summary>
         public static double StallDiscount(int jie) => jie >= 80 ? 0.04 : jie >= 50 ? 0.02 : 0.0;
 
-        /// <summary>档口老板的进价折扣（和阿杰的折扣叠加）。</summary>
+        /// <summary>档口老板的进价折扣（和唐俊杰的折扣叠加）。</summary>
         public static double OwnerDiscount(int rel) => rel >= 80 ? 0.06 : rel >= 60 ? 0.04 : rel >= 40 ? 0.025 : rel >= 20 ? 0.01 : 0.0;
 
         /// <summary>历史关系额度公式，仅保留兼容；实际库存现由货源和具体型号决定。</summary>
         public static int StallQuota(int rel) => rel >= 80 ? 45 : rel >= 60 ? 28 : rel >= 40 ? 18 : rel >= 20 ? 12 : 8;
 
-        /// <summary>阿杰到了这个交情就不会跟你打价格战。</summary>
+        /// <summary>唐俊杰到了这个交情就不会跟你打价格战。</summary>
         public const int JieNoPriceWar = 50;
 
-        /// <summary>小林到了这个交情，你快破产时他会救急一次。</summary>
+        /// <summary>林远航到了这个交情，你快破产时他会救急一次。</summary>
         public const int LinBailout = 50;
 
         public static readonly Money BailoutAmount = Money.FromYuan(3000);

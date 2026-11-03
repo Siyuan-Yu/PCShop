@@ -24,7 +24,7 @@ namespace PCShopSell.Core.Session
         public bool CommunityBoxAvailable(int index) => CommunitySearchActive&&CommunityHasClue(index)&&!CommunityHasPiece(index);
 #if UNITY_EDITOR
         public string DebugCommunityConditionsBlocker => !CommunitySearchActive
-            ? "请先接受小陈的寻物委托，并完成李姐对三位保管人的介绍。" : null;
+            ? "请先接受陈启明的寻物委托，并完成李秀兰对三位保管人的介绍。" : null;
         public bool DebugPrepareCommunityConditions()
         {
             string why=DebugCommunityConditionsBlocker;if(why!=null)return Fail(why);
@@ -32,7 +32,7 @@ namespace PCShopSell.Core.Session
             // Explicit acceptance fixture: satisfy quest evidence without inventing activity history.
             _district.CommunityOutings|=7;
             SetSmartphone(true);
-            Say("已补齐李姐、老林、周叔的好感与娱乐条件，并加入通讯录。请在主线消息中分别找他们打听，再去找箱子、拼图和交付。");
+            Say("已补齐李秀兰、林远航、周维成的好感与娱乐条件，并加入通讯录。请在主线消息中分别找他们打听，再去找箱子、拼图和交付。");
             return true;
         }
 #endif
@@ -61,7 +61,7 @@ namespace PCShopSell.Core.Session
         }
         public string AskCommunityLead(int index,bool remote=false)
         {
-            if(index<0||index>2||!CommunitySearchActive)return "请先接受委托，向李姐问清三位保管人。";
+            if(index<0||index>2||!CommunitySearchActive)return "请先接受委托，向李秀兰问清三位保管人。";
             string id=CommunityLeadPerson(index);
             string blocker=remote?RemoteConversationBlocker(id):CitySamePlace(id)?null:"请先找到本人，在附近交谈。";
             if(blocker!=null)return blocker;
@@ -108,7 +108,7 @@ namespace PCShopSell.Core.Session
             if(!CommunitySearchActive||_district.CommunityPieces!=7||_district.HasCommunityMap)return Fail("需要先找齐三份不同的图页。");
             if(Trip!=null||IsWorking||CityActivityExclusive||IsGameOver)return Fail("请先结束当前行程或活动，再整理图页。");
             _district.HasCommunityMap=true;CompleteDistrictNode();
-            Show("拼好了旧街手绘商铺图","你对齐三页的街道接缝，补齐了从旧居街到批发市场的旧街全图。\n请预约回城郊中介，当面交给小陈与唐蔚。交付后才开放社区道路。");
+            Show("拼好了旧街手绘商铺图","你对齐三页的街道接缝，补齐了从旧居街到批发市场的旧街全图。\n请预约回城郊中介，当面交给陈启明与唐蔚。交付后才开放社区道路。");
             return true;
         }
     }

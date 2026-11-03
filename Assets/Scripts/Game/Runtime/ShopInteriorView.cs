@@ -1004,7 +1004,7 @@ namespace PCShopSell.Game.Runtime
             _salesStand = FindAssemblerStand(true);
             _shelfSpots.AddRange(deskSpots);
             _deskFront = _deskFoots.Count > 0 ? new Vector3(_deskFoots[0].center.x, 0, _deskFoots[0].yMin - 0.4f) : Vector3.zero;
-            if (_tables.Count > 0) _deskFront = deskSpots[0] - Origin;
+            if (deskSpots.Count > 0) _deskFront = deskSpots[0] - Origin;
             // 顾客走路绕开所有地面家具（货架、柜台、展示桌、沙发……）
             foreach (Rect r in _decor.Blockers) _walkAround.Add(new Rect(r.x + Origin.x, r.y + Origin.z, r.width, r.height));
             _stockTimer = 0f;

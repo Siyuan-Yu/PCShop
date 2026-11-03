@@ -15,6 +15,9 @@ namespace PCShopSell.Core.Session
         public int QualifiedMonth;
         public int PendingChapter;
         public long InvitationDueAt;
+        public bool InvitationWaitingForWake;
+        public bool BrandCommerceRoute;
+        public string[] TaskEvidence = Array.Empty<string>();
         // Retained only for migration of the superseded trading assignment.
         public string CommunityTrialShopId;
         public int CommunityTrialSalesStart;
@@ -30,6 +33,7 @@ namespace PCShopSell.Core.Session
             copy.Completed = (string[])(Completed ?? Array.Empty<string>()).Clone();
             copy.Choices = (string[])(Choices ?? Array.Empty<string>()).Clone();
             copy.MeetingPeople = (string[])(MeetingPeople ?? Array.Empty<string>()).Clone();
+            copy.TaskEvidence = (string[])(TaskEvidence ?? Array.Empty<string>()).Clone();
             return copy;
         }
     }

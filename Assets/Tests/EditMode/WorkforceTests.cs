@@ -27,7 +27,7 @@ namespace PCShopSell.Tests
             return s;
         }
 
-        private static Employee Worker(string name = "小陈") => new Employee { Name = name, DailyWageYuan = 150, CheckoutMinutes = 3 };
+        private static Employee Worker(string name = "陈启明") => new Employee { Name = name, DailyWageYuan = 150, CheckoutMinutes = 3 };
         private static EmployeePurchasePlan Plan(VehicleKind kind = VehicleKind.Taxi, int count = 2) => new EmployeePurchasePlan
         {
             SourceId = "stall", Transport = kind, BudgetYuan = 50000,

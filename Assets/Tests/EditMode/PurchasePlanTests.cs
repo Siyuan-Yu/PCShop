@@ -19,7 +19,7 @@ namespace PCShopSell.Tests
             var s = new GameSession(city, 7, Money.FromYuan(500000), GameTimestamp.From(new GameDate(0), 9 * 60));
             s.EventsEnabled = false;
             s.MainShop.Sim.Settings.BaseCustomersPerHour = 0;
-            s.MainShop.Buyer = new Employee { Name = "小陈", DailyWageYuan = 150, CheckoutMinutes = 3 };
+            s.MainShop.Buyer = new Employee { Name = "陈启明", DailyWageYuan = 150, CheckoutMinutes = 3 };
             CityTestPeople.AtAssignedWork(s,s.MainShop.Buyer);
             return s;
         }

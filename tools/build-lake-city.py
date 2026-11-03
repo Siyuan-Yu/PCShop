@@ -134,11 +134,14 @@ ordered=sorted(places,key=lambda p:(0 if p['id']=='home' else 1,-p['width']*p['d
 for index,p in enumerate(ordered):
     index=placement_order[p['id']]
     options=assignment[p['street']];chosen=None
+    if p['id']=='life_expo':
+        options=['gap2'];p.update(street='s_services',tier=1)
     if p['id'] in garden_commerce:options=['garden']
     for name in options:
         r=routes[name]
         # Evenly spread the search starting position; large venues should not all collect at one end.
         steps=list(range(24,int(r['length'])-24,2));offset=0 if p['model']=='warehouse' else (index*19)%len(steps);steps=steps[offset:]+steps[:offset]
+        if p['id']=='life_expo':steps=sorted([s for s in steps if .15*r['length']<s<.35*r['length']],key=lambda s:abs(s-r['length']*.25))
         if name.startswith('old'):
             lo,hi=(.025,.30) if p['street']=='s_electronics' else (.72,.96) if p['street']=='s_oldhomes' else (.31,.70)
             steps=[s for s in steps if lo*r['length']<=s<=hi*r['length']]

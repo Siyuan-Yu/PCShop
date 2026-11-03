@@ -109,6 +109,7 @@ namespace PCShopSell.Game.UI
             Link("properties", "物业", OpenCityProperties);
             Link("investments", "投资", OpenCityInvestments);
             Link("services", "合同与合作", OpenBusinessServices);
+            Link("brands", "品牌", OpenBrandBusiness);
         }
 
         private void HelpLink(Transform parent, string title, string text)

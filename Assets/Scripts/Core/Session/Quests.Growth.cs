@@ -52,10 +52,10 @@ namespace PCShopSell.Core.Session
             yield return Step("enterprise", 3, QuestTarget.Enterprise, "完成第一份企业合同", "按时交齐一份企业合同",
                 $"先交 {K("5% 保证金")}，{K("按时交齐")}才退还并有奖励。",
                 s => s.EnterpriseContracts.Any(c => c.Settled && c.Completed == c.Count && c.Failed == 0), EnterpriseProgress);
-            yield return Step("direct", 3, QuestTarget.Direct, "建立稳定直供", $"和{K("老周")}签直供，进一次货",
+            yield return Step("direct", 3, QuestTarget.Direct, "建立稳定直供", $"和{K("周维成")}签直供，进一次货",
                 $"进价只要{K("市场价 84%")}。",
                 s => s.DirectShipments.Count > 0 || s.Ledger.Entries.Any(e => e.Category == "进货" && (e.Memo ?? "").StartsWith("直供首付/现款", StringComparison.Ordinal)),
-                s => s.DirectAgreement ? null : $"知名度 {s.PlayerShop.Reputation:0}/10 · 老周交情 {s.Relation(Npcs.Zhou)}/40");
+                s => s.DirectAgreement ? null : $"知名度 {s.PlayerShop.Reputation:0}/10 · 周维成交情 {s.Relation(Npcs.Zhou)}/40");
             yield return Step("branch", 3, QuestTarget.Ventures, "开设第一家托管门店", $"开一家{K("托管门店")}",
                 $"{K("留足主店的周转资金")}再开。",
                 s => s.ManagedVentures.Any(v => !s.IsParkVenture(v)),

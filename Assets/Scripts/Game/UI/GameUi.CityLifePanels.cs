@@ -168,7 +168,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.TextInput(w.Content, _cityPeopleSearch, "搜索已知名字、职业或兴趣", s => { _cityPeopleSearch = s ?? ""; w.RequestRebuild(); }), -1, 42);
                 Para(w.Content, "此处只列已认识的人和当前真实在附近的人。查看通讯录不会把对方召到身边；不显示远处人物的精确位置。", 17, Ui.Dim);
                 var people = S.CityPeople.Where(p => S.IsMet(p.PersonId) || S.CitySamePlace(p.PersonId))
-                    .Where(p => { var d = S.CityPerson(p.PersonId); return d != null && (_cityPeopleSearch.Length == 0 || (d.Name + S.CityPersonRole(p.PersonId) + (p.KnownTopics.Contains("interest") ? d.Interest : "")).IndexOf(_cityPeopleSearch, StringComparison.OrdinalIgnoreCase) >= 0); })
+                    .Where(p => { var d = S.CityPerson(p.PersonId); return d != null && (_cityPeopleSearch.Length == 0 || (d.Name + NpcNames.Alias(p.PersonId) + S.CityPersonRole(p.PersonId) + (p.KnownTopics.Contains("interest") ? d.Interest : "")).IndexOf(_cityPeopleSearch, StringComparison.OrdinalIgnoreCase) >= 0); })
                     .OrderByDescending(p => S.CitySamePlace(p.PersonId)).ThenBy(p => S.CityPerson(p.PersonId)?.Name).ToArray();
                 foreach (var p in people)
                 {
@@ -204,6 +204,7 @@ namespace PCShopSell.Game.UI
                 PortraitCard(top, personId, name, "", 145, null);
                 var info = Ui.Rect(top, "PersonDetails"); Ui.VList(info, 6, 0); Ui.Size(info, -1, -1, 1);
                 Line(info, name, 25, Ui.Accent);
+                if(NpcNames.Alias(personId) is string alias)Line(info,"熟人称呼："+alias,15,Ui.Dim);
                 Para(info, definition != null ? S.CityPersonRole(personId) : npc?.Role ?? staff?.Role, 18);
                 Line(info, "熟悉度 " + S.Relation(personId), 17, Ui.Good);
                 Ui.Size(Ui.Bar(info, S.Relation(personId) / 100f, Ui.Accent), -1, 8);

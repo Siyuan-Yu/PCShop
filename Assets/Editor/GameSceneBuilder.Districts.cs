@@ -50,7 +50,7 @@ namespace PCShopSell.EditorTools
             Teleport(s,"agency");_game.Ui.CloseAllWindows();
             Check(s.ActDistrictNode("community.meeting"),"当面领取寻物委托");
             Check(s.DistrictAccessTier==0,"领取委托不解锁道路");
-            Check(s.BeginDistrictMeeting("community.clue"),"约见李姐询问寄存线索");
+            Check(s.BeginDistrictMeeting("community.clue"),"约见李秀兰询问寄存线索");
             at=s.DistrictStoryState.MeetingAt;
             for(int i=0;s.Clock.Now.TotalMinutes<at+1&&i<50;i++)s.AdvanceClock((int)(at+1-s.Clock.Now.TotalMinutes));
             s.StopTrip();typeof(GameSession).GetProperty("CurrentPlace").SetValue(s,null);
@@ -58,7 +58,7 @@ namespace PCShopSell.EditorTools
             typeof(GameSession).GetProperty("PlayerNodeId").SetValue(s,cluePlace.NodeId);
             typeof(GameSession).GetField("_free",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(s,(MapPoint?)s.StandOf(cluePlace));
             Feed(s);_game.Ui.CloseAllWindows();Frame(0);_game.SnapCamera();Frame(.2f);
-            Check(GameObject.Find("DistrictPersonMarker_landlady")!=null,"李姐会面头顶显示主线标识");
+            Check(GameObject.Find("DistrictPersonMarker_landlady")!=null,"李秀兰会面头顶显示主线标识");
             Shot("community-meeting-marker",1280,720);
             var marker=GameObject.Find("DistrictPersonMarker_landlady");
             Log("QUEST MARKER objective="+s.DistrictPersonObjective("landlady")+" pos="+marker?.GetComponent<RectTransform>().anchoredPosition+" canvas="+marker?.GetComponentInParent<Canvas>().name);

@@ -114,6 +114,13 @@ namespace PCShopSell.Core.Session
                 _cityEmployeeAliases[e.Id]=id;
             }
             e.PersonId=id;
+            var fixedIdentity=CityLifeCatalog.Person(id);
+            if(fixedIdentity!=null && e.Name!=fixedIdentity.Name)e.Name=fixedIdentity.Name;
+            else if(fixedIdentity==null)
+            {
+                e.Name=FormalEmployeeName(e.Name);
+                if(_cityExtraDefinitions.TryGetValue(id,out var extra))extra.Name=e.Name;
+            }
             if(CityPerson(id)==null) _cityExtraDefinitions[id]=new CityPersonDefinition {Id=id,Name=e.Name,Role="受聘员工",Age=28,
                 HomeId="life_home_s_oldhomes",Interest="稳定的工作和业余生活",Goal=e.Description??"攒下生活费，找一份可靠工作。",
                 Experience="我做过零售和仓储，普通的工作会按规矩可靠完成。",Recruitable=true,
@@ -168,6 +175,7 @@ namespace PCShopSell.Core.Session
                     p.LocationPlaceId=p.Route.TargetPlaceId;p.Route=null;
                 }
                 if(TickDistrictMeetingPerson(p,now))continue;
+                if(TickBrandExpoPerson(p,now))continue;
                 if(!string.IsNullOrEmpty(p.ActivityId))continue;
                 if(!string.IsNullOrEmpty(p.VisitId)){p.Task=CityPersonTask.Shopping;continue;}
                 if (p.PersonId == CityLifeCatalog.InvitationTestPersonId)
@@ -324,6 +332,7 @@ namespace PCShopSell.Core.Session
 
         public bool CityEmployeeAvailable(Employee e,OwnedShop shop)
         {
+            if(e!=null&&BrandExpoPersonReserved(PersonIdOf(e)))return false;
             if(e==null||shop==null||!e.OnDuty(Clock.Now)||EmployeeTrip(e.Id)!=null)return false;
             string id=PersonIdOf(e);var p=CityPersonState(id);
             return p!=null && p.Route==null && p.LocationPlaceId==shop.Place.Id && string.IsNullOrEmpty(p.ActivityId);

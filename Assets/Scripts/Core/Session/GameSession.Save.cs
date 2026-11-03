@@ -312,6 +312,7 @@ namespace PCShopSell.Core.Session
             LoadWeeklySupplierPlans();
             LoadHomeWorkbench(d);
             LoadDistrictProgress(d);
+            RefreshBrandTraffic();
             EnsureFirstShopListings(Clock.Today.TotalDays);
         }
 

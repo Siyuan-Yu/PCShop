@@ -40,7 +40,7 @@ namespace PCShopSell.Game.UI
                 var talk = portrait.gameObject.AddComponent<Button>();
                 talk.targetGraphic = image;
                 talk.onClick.AddListener(() => OpenGreeterDialogue(agency, w));
-                talk.Tip("和小陈聊聊");
+                talk.Tip("和陈启明聊聊");
             }
             var district=S.City.AgencyDistrictFor(agency.StreetId);
             string coverage=district==null?S.City.StreetName(agency.StreetId):string.Join("、",district.streets.Select(S.City.StreetName));

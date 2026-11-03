@@ -53,6 +53,8 @@ namespace PCShopSell.Core.Session
             new[] { "garden.invitation", "garden.proposal", "garden.terms", "garden.fulfilment", "garden.echo" }
         };
         public DistrictNarrativeNode CurrentDistrictNode => DistrictNarrativeCatalog.Nodes.FirstOrDefault(n => n.Id == _district.NodeId);
+        private string[] ActiveDistrictChain(int chapter) => _district.BrandCommerceRoute&&chapter==2?new[]{"expo.invitation","expo.review"}
+            :_district.BrandCommerceRoute&&chapter==3?new[]{"tender.invitation","tender.review"}:DistrictNodeChains[chapter-1];
         public bool DistrictNodeCompleted(string id) => _district.Completed.Contains(id);
         public int DistrictOperatingShops(int tier) => MyShops.Count(s => DistrictTierOf(s.Place)==tier
             && (IsDedicatedVenue(s.Place) ? VenueOperation(s.Place.Id)?.Accepting==true : !s.Sim.NotFitted)
@@ -93,7 +95,13 @@ namespace PCShopSell.Core.Session
             {
                 if (DistrictOperatingShops(1)<6) return "社区已布置并开业的门店 "+DistrictOperatingShops(1)+"/6";
                 if (NetWorth()<Money.FromYuan(30000000)) return "净资产尚未达到3000万元";
-                if (!DistrictTestListing) return "尚无自有品牌上市凭据（编辑器可准备上市验收条件）";
+                if (!_brands.Brands.Any()&&!DistrictTestListing) return "请先创立自己的行业品牌";
+            }
+            if(chapter==3&&_brands.Brands.Any())
+            {
+                int month=Clock.Today.TotalDays/30;
+                if(!_brands.Brands.Any(b=>BrandRevenue(MyShops.Where(s=>s.RetailKind==b.Kind),(month-1)*30,month*30)>=10000000000L))return "需要一个品牌所属行业上个完整月营业额达到1亿元";
+                return null;
             }
             if (chapter==3 && (!DistrictTestQualifiedMonth || Clock.Today.TotalDays/30<=_district.QualifiedMonth))
                 return "需同一行业完整月收入1亿元、对应自有股价100元，并进入次月（编辑器可准备验收凭据）";
@@ -111,11 +119,19 @@ namespace PCShopSell.Core.Session
                 _district.InvitationDueAt=Clock.Now.TotalMinutes+3*1440;
             }
             if (Clock.Now.TotalMinutes<_district.InvitationDueAt) return;
+            if (_sleeping) { _district.InvitationWaitingForWake=true; return; }
+            if (_district.InvitationWaitingForWake)
+            {
+                _district.InvitationWaitingForWake=false;
+                _district.InvitationDueAt=Clock.Now.TotalMinutes+120;
+                return;
+            }
             _district.PendingChapter=0;
             _district.InvitationDueAt=0;
             _district.Chapter = chapter;
-            _district.NodeId = DistrictNodeChains[chapter-1][0];
-            string sender=chapter==1?"李姐":chapter==2?"唐蔚":"任帆";
+            if(chapter>1&&_brands.Brands.Any())_district.BrandCommerceRoute=true;
+            _district.NodeId = ActiveDistrictChain(chapter)[0];
+            string sender=chapter==1?"李秀兰":chapter==2?"唐蔚":"任帆";
             Say(sender+"主动联系了你：“"+CurrentDistrictNode.Title+"”。");
             Show(sender+"发来主线邀请",CurrentDistrictNode.Dialogue+"\n\n打开手机聊天顶部的“主线消息”回复邀请；现在不用立刻赴约。");
         }
@@ -128,7 +144,8 @@ namespace PCShopSell.Core.Session
                     return "主线 · 打听图页";
                 return null;
             }
-            if(!node.People.Contains(personId)&&!_district.MeetingPeople.Contains(personId))return null;
+            if(_district.MeetingNodeId==node.Id&&!_district.MeetingPeople.Contains(personId))return null;
+            if(!node.People.Contains(personId)&&!_district.MeetingPeople.Contains(personId)&&!DistrictTasks.Any(t=>t.PersonId==personId))return null;
             if(_district.MeetingNodeId!=node.Id)return "主线 · 待约见";
             if(CityPersonState(personId)?.Route!=null)return "主线 · 正在赴约";
             return Clock.Now.TotalMinutes<_district.MeetingAt?"主线 · 等待会面":"主线 · 可以交谈";
@@ -152,8 +169,12 @@ namespace PCShopSell.Core.Session
             {
                 switch(_district.NodeId)
                 {
-                    case "community.meeting": return "小陈筹备街区介绍会，需要找回搬家时寄存的旧街手绘商铺图。先接受寻物委托，再向李姐问清箱子去向。没有营业额或交钱要求。";
-                    case "community.clue": return "到城郊旧居街居民住宅门前约见李姐，问清三页图的保管人。之后分别交往、打听具体藏点。";
+                    case "expo.invitation": return "每90天一届；品牌页报名，需¥2,000及3件展示样品。报名截止展前7天。";
+                    case "expo.review": return "同一品牌影响力100，并完成至少一笔真实展会采购订单。";
+                    case "tender.invitation": return "品牌页调查采购需求、提交方案、交付试单，评审通过才取得席位。";
+                    case "tender.review": return "企业合同连续三期交付后再约见；失约失去席位，下一年度可以重新竞标。";
+                    case "community.meeting": return "陈启明筹备街区介绍会，需要找回搬家时寄存的旧街手绘商铺图。先接受寻物委托，再向李秀兰问清箱子去向。没有营业额或交钱要求。";
+                    case "community.clue": return "到城郊旧居街居民住宅门前约见李秀兰，问清三页图的保管人。之后分别交往、打听具体藏点。";
                     case "community.search": return "三位保管人分别需要好感达到30、接受委托后一起完成喜欢的活动。再向本人打听才会出现对应箱子；三个箱子可以任意顺序寻找。找齐后手动拼图，再回中介交付。";
                     case "community.trial": return "任务物品：旧街手绘商铺图 ×"+(_district.HasCommunityMap?"1":"0")+"。带回城郊中介交给唐蔚；确认交付后消耗任务物品并开放社区道路。";
                     case "park.proposal": return "共同分摊预算¥2,000；缩小规模预算¥1,000。会面确认后实际支付。";
@@ -192,6 +213,7 @@ namespace PCShopSell.Core.Session
             if(_district.NodeId!="garden.proposal" || _district.ProjectStartedAt>0)return false;
             var shop=ShopAt(placeId);
             if(shop==null||DistrictTierOf(shop.Place)!=2||shop.Sim.NotFitted)return Fail("请选择已布置开业的公园门店。");
+            if(_district.ProjectShopId!=shop.Place.Id)_district.TaskEvidence=_district.TaskEvidence.Where(e=>e!="garden.site").ToArray();
             _district.ProjectShopId=shop.Place.Id; return true;
         }
         public bool BeginDistrictMeeting(string nodeId, string choice = null)
@@ -214,6 +236,7 @@ namespace PCShopSell.Core.Session
             if(nodeId=="garden.terms" && choice=="respect")people=people.Concat(new[]{"life_clothier"}).Distinct().ToArray();
             if(nodeId=="garden.fulfilment" && _district.ProjectPartnerId=="life_clothier")
                 people=people.Where(id=>id!="life_tenant").Concat(new[]{"life_clothier"}).Distinct().ToArray();
+            if(nodeId=="model.clues")people=choice=="supplier"?new[]{"life_model_supplier","life_curator"}:new[]{"life_tenant","life_creator"};
             if(people.Length==0)return Fail("未找到会面人物。");
             // Reserve everyone together only after all routes and concurrent commitments validate.
             var routes=new Dictionary<string,CityRoute>();
@@ -265,6 +288,10 @@ namespace PCShopSell.Core.Session
             if(CurrentDistrictNode?.Id!=expectedNodeId)return false;
             string why=DistrictMeetingBlocker;if(why!=null)return Fail(why);
             string id=_district.NodeId;
+            if(id=="expo.review"&&!_brands.Brands.Any(b=>b.Influence>=100&&_brands.Orders.Any(o=>o.BrandId==b.Id&&o.Source=="expo"&&o.Done)))return Fail("需要同一品牌达到100影响力并交付展会订单");
+            if(id=="tender.review"&&!_brands.Tenders.Any(t=>t.Stage==3))return Fail("需要赢得席位并完成连续三期履约");
+            string taskBlocker=DistrictTasksBlocker;
+            if(taskBlocker!=null)return Fail(taskBlocker);
             if(id=="community.meeting")AcceptCommunitySearch();
             if(id=="community.search")return Fail("请在纸箱旁按 F 调查，远程对话不能取物。");
             if(id=="community.trial")
@@ -334,9 +361,11 @@ namespace PCShopSell.Core.Session
             if(node.Id=="community.trial")GrantDistrictAccess(1);
             if(node.Id=="park.recommendation")GrantDistrictAccess(2);
             if(node.Id=="garden.fulfilment")GrantDistrictAccess(3);
+            if(node.Id=="expo.review")GrantDistrictAccess(2);
+            if(node.Id=="tender.review")GrantDistrictAccess(3);
             _district.MeetingPeople=Array.Empty<string>();_district.MeetingPlaceId=null;_district.MeetingNodeId=null;
             _district.WorkStartedAt=0;_district.WorkMinutes=0;
-            var chain=DistrictNodeChains[_district.Chapter-1];int index=Array.IndexOf(chain,node.Id)+1;
+            var chain=ActiveDistrictChain(_district.Chapter);int index=Array.IndexOf(chain,node.Id)+1;
             _district.NodeId=index<chain.Length?chain[index]:null;
             Say("主线完成："+node.Title+(CurrentDistrictNode==null?"":"。下一条消息："+CurrentDistrictNode.Title));
         }

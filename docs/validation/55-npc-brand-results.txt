@@ -1,0 +1,71 @@
+NPC正式姓名与品牌合作故事验收，2026-11-03 Asia/Shanghai
+Unity 2022.3.6f1，隔离工程 D:/UnityProjects/PCShop/_ci_shop_cores
+
+55-npc-brand-tests.xml: total=70 passed=70 failed=0
+  BrandBusinessTests: 16/16
+  BrandStoryTests: 16/16
+  BrandStoryUiTests: 1/1
+  NarrativeContentTests: 8/8
+  ShopDockInteractionTests: 7/7
+  UiCleanupTests: 22/22
+
+55-npc-brand-dependencies.xml: total=72 passed=72 failed=0
+  BusinessRegressionTests: 30/30
+  CityFinanceTests: 4/4
+  DistrictDetailTests: 12/12
+  DistrictProgressionTests: 26/26
+
+55-npc-brand-extended.xml: total=88 passed=85 failed=3
+  BrandBusinessTests: 16/16
+  BrandStoryTests: 15/15
+  NarrativeContentTests: 8/8
+  ShopDockInteractionTests: 7/7
+  UiCleanupTests: 22/22
+  WorkforceTests: 17/20
+PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("load")
+  Expected: not null
+  But was:  null
+
+PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("quota")
+  Expected: not null
+  But was:  null
+
+PCShopSell.Tests.WorkforceTests.Transfer_CanCancel_AndCannotOverwriteOccupiedRole
+  Expected: False
+  But was:  True
+
+
+55-npc-brand-baseline.xml: total=8 passed=5 failed=3
+  WorkforceTests: 5/8
+PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("load")
+  Expected: not null
+  But was:  null
+
+PCShopSell.Tests.WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("quota")
+  Expected: not null
+  But was:  null
+
+PCShopSell.Tests.WorkforceTests.Transfer_CanCancel_AndCannotOverwriteOccupiedRole
+  Expected: False
+  But was:  True
+
+
+最终两组不重叠的相关回归：70 + 72 = 142/142通过。
+扩展批次3条WorkforceTests失败，在本次修改前工作区源码快照复现相同结果。
+基线为7c05550及当时已有的品牌/展会/主线工作区内容，不冒称干净Git基线。
+新故事与姓名不依赖修改员工采购或调岗规则。
+UI验证：正式姓名与熟人称呼；长对白ScrollRect可到末尾；阅读不自动接受故事。
+图形首轮发现空桌前位置列表索引越界，已检查deskSpots实际数量；同场景复验通过。
+最终图形日志摘要：
+SMOKE shot formal-name-profile-720
+SMOKE shot creator-story-dialogue-720
+SMOKE shot creator-story-dialogue-1080
+SMOKE shot story-sample-preparation-720
+SMOKE shot story-sample-preparation-1080
+SMOKE shot honest-zero-sales-followup-720
+SMOKE shot exhibition-story-invitations-720
+SMOKE NPC BRAND STORIES GRAPHICS COMPLETE
+SMOKE RESULT code=0 errors=0
+
+7张实际图形捕获（5张720p、2张1080p）。
+未读取正式存档，未重新打Windows包。

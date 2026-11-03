@@ -67,8 +67,8 @@ namespace PCShopSell.Tests
                 var root=new GameObject("StaffInteriorRegression");
                 try
                 {
-                    var cashier=new Employee{Id="cashier",Name="收银小陈"};
-                    var sales1=new Employee{Id="sales1",Name="销售小赵"};
+                    var cashier=new Employee{Id="cashier",Name="收银陈启明"};
+                    var sales1=new Employee{Id="sales1",Name="销售赵成"};
                     var sales2=new Employee{Id="sales2",Name="销售小顾"};
                     var buyer=new Employee{Id="buyer",Name="进货小李"};
                     s.CurrentShop.Employee=cashier;
@@ -107,7 +107,7 @@ namespace PCShopSell.Tests
             WithUi((s,ui)=>
             {
                 s.EventsEnabled=false;s.Clock.Restore(s.Clock.Today,10*60);
-                var cashier=new Employee{Id="local-cashier",Name="本店小陈",DailyWageYuan=150};
+                var cashier=new Employee{Id="local-cashier",Name="本店陈启明",DailyWageYuan=150};
                 var buyer=new Employee{Id="local-buyer",Name="本店小顾",DailyWageYuan=140};
                 s.CurrentShop.Employee=cashier;s.CurrentShop.AdditionalEmployees.Add(new AdditionalShopEmployee{Person=buyer,Role=EmployeeRole.Buyer});
                 CityTestPeople.AtAssignedWork(s,cashier);CityTestPeople.AtAssignedWork(s,buyer);

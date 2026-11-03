@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -148,11 +148,11 @@ namespace PCShopSell.Core.Session
         {
             switch (npcId)
             {
-                case Npcs.Zhang: return "老张带着一批又一批学生来店里配电脑，逢人就说“这是我看着长大的店”。";
-                case Npcs.Landlady: return "李姐一直没怎么涨你的租，逢年过节还会上楼送碗汤圆。";
-                case Npcs.Zhou: return "老周把压箱底的货源都介绍给了你，还说你比他年轻时有出息。";
-                case Npcs.Jie: return "阿杰的店和你的店互相引流，两个人在街口喝酒到半夜。";
-                case Npcs.Lin: return "小林还是那个小林，不管你富了穷了，他永远是第一个来的。";
+                case Npcs.Zhang: return "张绍文带着一批又一批学生来店里配电脑，逢人就说“这是我看着长大的店”。";
+                case Npcs.Landlady: return "李秀兰一直没怎么涨你的租，逢年过节还会上楼送碗汤圆。";
+                case Npcs.Zhou: return "周维成把压箱底的货源都介绍给了你，还说你比他年轻时有出息。";
+                case Npcs.Jie: return "唐俊杰的店和你的店互相引流，两个人在街口喝酒到半夜。";
+                case Npcs.Lin: return "林远航还是那个林远航，不管你富了穷了，他永远是第一个来的。";
                 default: return "";
             }
         }

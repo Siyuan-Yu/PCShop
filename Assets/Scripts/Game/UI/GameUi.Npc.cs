@@ -269,8 +269,12 @@ namespace PCShopSell.Game.UI
                 Ui.Size(bubble, -1, bubbleHeight);
                 bool nearby = remote || S.CityPersonState(portraitId) == null || S.CitySamePlace(portraitId);
                 string text = nearby ? ctx.Reply ?? "“" + greeting.Trim('"') + "”" : "对方已经离开了，等下次见面再聊吧。";
-                Text sayText = Ui.Label(bubble.transform, text, 19, TextAnchor.UpperLeft, Ui.PanelBg);
-                sayText.rectTransform.Fill(12);
+                var transcript = Ui.Scroll(bubble.transform);
+                var transcriptScroll = transcript.GetComponentInParent<ScrollRect>();
+                transcriptScroll.name = "DialogueTextScroll";
+                ((RectTransform)transcriptScroll.transform).Fill(8);
+                transcriptScroll.GetComponent<Image>().color = Color.clear;
+                Para(transcript, text, 19, Ui.PanelBg);
 
                 Ui.Size(Ui.Label(w.Content, "你想……", 15, TextAnchor.MiddleCenter, Ui.Dim), -1, 26);
 
@@ -316,6 +320,21 @@ namespace PCShopSell.Game.UI
                 if(districtNode!=null && (districtNode.People.Contains(personId)||S.DistrictStoryState.MeetingPeople.Contains(personId)))
                     options.Add(new TalkOpt {Label="主线 · "+districtNode.Title,Hot=true,Act=()=>{ctx.W.Close();OpenDistrictStory();}});
                 void Reply(string text) { ctx.Reply = text; ctx.W.Rebuild(); parent?.RequestRebuild(); }
+                AddBrandStoryDialogue(options,personId,remote,Reply);
+                if(GameSession.BrandPeople.Contains(personId)&&S.BrandBusiness.Brands.Length>0)
+                    options.Add(new TalkOpt{Label="谈品牌推广与代言",Blocker=canTalk?null:"对方已离开",Act=()=>{ctx.W.Close();_brandTab=1;OpenBrandBusiness();}});
+                if(personId=="life_enterprise"||personId=="life_tenant")
+                    foreach(var tender in S.BrandBusiness.Tenders.Where(t=>t.Stage<2))
+                    {
+                        int clue=personId=="life_enterprise"?1:2;string id=tender.Id;
+                        if((tender.Intel&clue)!=0)continue;
+                        options.Add(new TalkOpt{Label=(clue==1?"核实企业采购要求":"调查现有供应商")+" · ¥200",Blocker=canTalk?null:"对方已离开",Act=()=>Reply(S.ResearchBrandTender(id,clue)?(clue==1?"沈远：按时交付是底线，最低价不一定赢。拿试单证明你能供货。":"袁岚：原供应商一定会还价。我们可以联合履约，你也可以先把自己的供货做稳。"):"这次未能完成核实，请查看预算和截止时间。")});
+                    }
+                foreach(var task in S.DistrictTasks.Where(t=>t.PersonId==personId&&!S.HasDistrictTask(t.Id)))
+                {
+                    string taskId=task.Id;
+                    options.Add(new TalkOpt{Label="主线 · "+task.Title,Hot=true,Blocker=S.DistrictTaskBlocker(taskId,remote),Act=()=>Reply(S.PerformDistrictTask(taskId,remote))});
+                }
                 if(S.CommunitySearchActive)
                     for(int i=0;i<3;i++)
                         if(GameSession.CommunityLeadPerson(i)==personId)
@@ -476,7 +495,7 @@ namespace PCShopSell.Game.UI
         /// <summary>从背包里挑一份礼品送给店员（一瓶饮料就够意思，贵的东西涨得多）。</summary>
         private void OpenStaffGiftPicker(StaffDef staff, TalkCtx ctx) => OpenPersonGiftGrid(staff.Id, staff.Name, ctx);
 
-        /// <summary>和某个有交情的人交谈（档口老板、阿杰、熟人）。stall 不为空表示正在这个档口里，可以砍价；parent 是背后的窗口，操作后要刷新。</summary>
+        /// <summary>和某个有交情的人交谈（档口老板、唐俊杰、熟人）。stall 不为空表示正在这个档口里，可以砍价；parent 是背后的窗口，操作后要刷新。</summary>
         public void OpenNpcWindow(NpcDef n, Place stall = null, Window parent = null, string firstReply = null)
         {
             if(n!=null)OpenPersonDialogue(n.Id,stall,parent,firstReply);

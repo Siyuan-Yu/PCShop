@@ -393,6 +393,7 @@ namespace PCShopSell.Core.Session
         {
             TickEmployeePayroll(from.TotalMinutes, to.TotalMinutes);
             TickCityPeople(to.TotalMinutes);
+            TickBrandDeliveries(to.TotalMinutes);
             TickDistrictNarrative(from.TotalMinutes, to.TotalMinutes);
             TickCityActivities(to.TotalMinutes);
             TickVenueBusinesses(to.TotalMinutes);
@@ -504,7 +505,7 @@ namespace PCShopSell.Core.Session
             {
                 Meet(Npcs.Jie, 20);
                 Meet(Npcs.Zhou, 10);
-                Popup?.Invoke("同行的建议", "隔壁手机店的老板说：\"别在 1788 上看评分，评分都是刷的。去搜'老周电子'，我们都在他那拿货。\"\n（1788 上出现了新店铺）");
+                Popup?.Invoke("同行的建议", "隔壁手机店的老板说：\"别在 1788 上看评分，评分都是刷的。去搜'周维成电子'，我们都在他那拿货。\"\n（1788 上出现了新店铺）");
             }
 
             if (!MonthGoalEvaluated && today.TotalDays >= MonthGoalDay) EvaluateMonthGoal();

@@ -19,7 +19,7 @@ namespace PCShopSell.Tests
             CityLayoutData data = GameSessionTests.Layout();
             data.places = data.places.Concat(new[]
             {
-                new LayoutPlaceData { id = Stall, name = "老李 CPU 档口", kind = "wholesaler", node = "mk", sells = "Cpu,Motherboard" },
+                new LayoutPlaceData { id = Stall, name = "李承业 CPU 档口", kind = "wholesaler", node = "mk", sells = "Cpu,Motherboard" },
             }).ToArray();
             var s = new GameSession(CityLayout.FromData(data), 7, Money.FromYuan(cash), GameTimestamp.From(new GameDate(0), minute));
             GameDate d = new GameDate(0);
@@ -200,7 +200,7 @@ namespace PCShopSell.Tests
         [Test]
         public void LikedActivity_GivesMoreRelation()
         {
-            // 老李最爱钓鱼；同样的魅力下，钓鱼的收益比同价位其它周末活动高。
+            // 李承业最爱钓鱼；同样的魅力下，钓鱼的收益比同价位其它周末活动高。
             ActivityDef fishing = Activities.Get(Activities.Fishing);
             Assert.AreEqual(Activities.Fishing, Npcs.Get(Npcs.Li).Likes);
             Assert.Greater(fishing.BaseGain * 1.5, Activities.Get(Activities.MarketWalk).BaseGain);
@@ -249,7 +249,7 @@ namespace PCShopSell.Tests
             Assert.AreEqual(before.Cents, s.Ledger.Balance.Cents);
             Assert.AreEqual(1, s.Tips.Count);
             Assert.IsFalse(s.AskForTip(Npcs.Li), "冷却中");
-            Assert.IsNotNull(s.TipBlocker(Npcs.Zhang), "老张不爱聊这个");
+            Assert.IsNotNull(s.TipBlocker(Npcs.Zhang), "张绍文不爱聊这个");
         }
 
         [Test]
@@ -467,7 +467,7 @@ namespace PCShopSell.Tests
             Assert.IsNull(s.StaffBossBlocker(r));
 
             int before = s.Relation(Npcs.Li);
-            StringAssert.Contains("老李", s.AskStaffAboutBoss(r));
+            StringAssert.Contains("李承业", s.AskStaffAboutBoss(r));
             Assert.AreEqual("今天问过了", s.StaffBossBlocker(r));
             Assert.IsNull(s.AskStaffAboutBoss(r));
 
@@ -512,7 +512,7 @@ namespace PCShopSell.Tests
             GameSession s = Make();
             StaffDef c = Rosters.CpuClerk;
             Assert.AreEqual(0, s.StaffRapport(c.Id));
-            StringAssert.Contains("小慧", s.StaffChat(c));
+            StringAssert.Contains("许慧", s.StaffChat(c));
             Assert.AreEqual(1, s.StaffRapport(c.Id));
             Assert.AreEqual("今天聊过了", s.StaffChatBlocker(c.Id));
             Assert.IsNull(s.StaffChat(c));

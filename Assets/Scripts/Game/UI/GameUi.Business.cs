@@ -146,7 +146,7 @@ namespace PCShopSell.Game.UI
         }
         private void BuildDirectSupply(Window w)
         {
-            Para(w.Content,"老周牵线的工厂直供：市场价 84%，每种 3–30 件，次日 10:00 送到主店。可全款，也可 30% 首付、70% 尾款 14 天结清。直供承诺合格交付，不抽次品。",17);
+            Para(w.Content,"周维成牵线的工厂直供：市场价 84%，每种 3–30 件，次日 10:00 送到主店。可全款，也可 30% 首付、70% 尾款 14 天结清。直供承诺合格交付，不抽次品。",17);
             if(!S.DirectAgreement)
             {
                 string why=S.DirectAgreementBlocker;

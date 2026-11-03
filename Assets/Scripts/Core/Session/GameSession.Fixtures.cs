@@ -152,7 +152,7 @@ namespace PCShopSell.Core.Session
 
         // ---------- 中介费打折 ----------
 
-        /// <summary>和中介小陈的熟络度。</summary>
+        /// <summary>和中介陈启明的熟络度。</summary>
         public int AgentRapport => StaffRapport(Rosters.AgentChen.Id);
 
         /// <summary>现在的中介费折扣（0 ~ 0.5）。</summary>

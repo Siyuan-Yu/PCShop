@@ -90,9 +90,9 @@ namespace PCShopSell.Core.Session
     public static class Creators
     {
         public static readonly CreatorDef[] All = {
-            new CreatorDef("momo", "莫莫", "实用装机教程 · 耐心积累口碑", 4000, 30, 600),
-            new CreatorDef("ake", "阿可", "电竞直播 · 看重设备与成长", 18000, 65, 1800),
-            new CreatorDef("qiao", "乔乔", "数码评测 · 需要稳定供货与服务", 60000, 85, 5000),
+            new CreatorDef("momo", "莫文宁", "实用装机教程 · 耐心积累口碑", 4000, 30, 600),
+            new CreatorDef("ake", "柯承安", "电竞直播 · 看重设备与成长", 18000, 65, 1800),
+            new CreatorDef("qiao", "乔雨桐", "数码评测 · 需要稳定供货与服务", 60000, 85, 5000),
         };
         public static CreatorDef Get(string id) => All.FirstOrDefault(x => x.Id == id);
     }

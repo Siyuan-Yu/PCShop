@@ -16,7 +16,7 @@ namespace PCShopSell.Game.UI
             var node=S.CurrentDistrictNode;var cam=_ctrl.Cam;
             foreach(var mark in _districtPersonMarks.Values)mark.gameObject.SetActive(false);
             if(node==null||cam==null||_ctrl.InRoom)return;
-            foreach(string id in node.People.Concat(S.DistrictStoryState.MeetingPeople).Distinct())
+            foreach(string id in node.People.Concat(S.DistrictStoryState.MeetingPeople).Concat(S.DistrictTasks.Select(t=>t.PersonId).Where(id=>id!=null)).Distinct())
             {
                 string objective=S.DistrictPersonObjective(id);var state=S.CityPersonState(id);
                 if(objective==null||state==null)continue;
@@ -66,16 +66,18 @@ namespace PCShopSell.Game.UI
                 {
                     if(state.PendingChapter>0)
                     {
-                        Para(w.Content,"已达到引荐条件，对方会在3个游戏日后主动联系你。剩余约 "+System.Math.Max(0,state.InvitationDueAt-S.Clock.Now.TotalMinutes)+" 游戏分钟；可以继续正常经营。",18);
+                        Para(w.Content,"已达到引荐条件，正在等对方联系。剩余约 "+System.Math.Max(0,state.InvitationDueAt-S.Clock.Now.TotalMinutes)+" 游戏分钟；到期时若正在睡觉，会改为醒来2小时后主动联系，不会错过。",18);
                         return;
                     }
                     Para(w.Content,S.DistrictAccessTier==3?"三段引荐已完成，可以继续经营和人物探索。":S.DistrictPrerequisiteBlocker(state.Chapter+1)??"继续经营，留意新的聊天消息。",18);
                     return;
                 }
                 Line(w.Content,node.Title,25,Ui.Accent);
+                if(node.Id.StartsWith("expo.")||node.Id.StartsWith("tender."))
+                    Ui.Size(Ui.Button(w.Content,"打开品牌经营 · 参展与企业竞标",OpenBrandBusiness,18),-1,38);
                 var body=Ui.Scroll(w.Content,430);
                 var person=node.People.FirstOrDefault();
-                if(person!=null)PortraitCard(body,person,S.CityPerson(person)?.Name??person,"",84,()=>{},tagText:null);
+                if(person!=null&&!S.DistrictTasks.Any())PortraitCard(body,person,S.CityPerson(person)?.Name??person,"",84,()=>{},tagText:null);
                 Para(body,node.Dialogue,19);
                 Para(body,S.DistrictMeetingDescription,17,Ui.Good);
                 Para(body,S.DistrictNodeTerms,17);
@@ -87,6 +89,27 @@ namespace PCShopSell.Game.UI
                         {
                             CloseAllWindows();S.BeginCityTravel(placeId,enter:false);
                         },18,Ui.ButtonHot),-1,44).name="DistrictGoToMeeting";
+                }
+                foreach(var task in S.DistrictTasks)
+                {
+                    string taskId=task.Id;bool done=S.HasDistrictTask(taskId);
+                    Line(body,(done?"✓ ":"○ ")+task.Title,18,done?Ui.Good:Ui.Accent);
+                    if(done){Para(body,task.Reply,16,Ui.Dim);continue;}
+                    if(state.MeetingNodeId!=node.Id)continue;
+                    if(task.PersonId!=null)
+                    {
+                        string who=task.PersonId;bool remote=!S.CitySamePlace(who);string why=remote?S.RemoteConversationBlocker(who):null;
+                        Ui.Size(Ui.Button(body,"联系 "+S.CityPerson(who).Name,()=>OpenPersonDialogue(who,parent:w,remote:remote),16,Ui.ButtonHot,why==null),-1,38);
+                        if(why!=null)Para(body,"先确认约见，在会面地点与本人交谈。",15,Ui.Dim);
+                    }
+                    else
+                    {
+                        string place=task.PlaceId;
+                        if(place!=null&&S.City.HasPlace(place))Ui.Size(Ui.Button(body,"前往现场 · "+S.City.GetPlace(place).Name,()=>{CloseAllWindows();S.BeginCityTravel(place,enter:false);},16),-1,38);
+                        string why=S.DistrictTaskBlocker(taskId);
+                        if(why!=null)Para(body,why,15,Ui.Dim);
+                        Ui.Size(Ui.Button(body,"现场核对并记录",()=>{Toast(S.PerformDistrictTask(taskId));w.Rebuild();},17,Ui.ButtonHot,why==null),-1,40);
+                    }
                 }
 
                 if(state.ProjectPartnerId=="life_clothier")Para(body,"袁岚保留原店，宋棉自愿参加本次试点；后续履约按宋棉的合作安排核验。",16,Ui.Good);
@@ -132,7 +155,7 @@ namespace PCShopSell.Game.UI
                 }
                 else
                 {
-                    string why=S.DistrictMeetingBlocker;
+                    string why=S.DistrictMeetingBlocker??S.DistrictTasksBlocker;
                     string action=node.Id=="community.meeting"?"接受寻物委托"
                         :node.Id=="community.trial"?"交还手绘商铺图，完成引荐"
                         :node.Id=="model.repair"?(state.RepairPaid?"领取修复展样":"确认交易并委托修复 ¥1,800")

@@ -95,7 +95,7 @@ namespace PCShopSell.Core.Trade
                 "便宜！好评！（返现 5 元）", "收到的内存点不亮，客服说是我不会装。", "好评好评好评", "显卡有矿渣味……"),
             new OnlineStore("s_mid", "华强北老陈", StoreQuality.Good, 0.84, 0.05, 4.5, 3100, true,
                 "价格实在，偶尔有一件小问题，换货快。", "老板人不错。", "发货慢了一天。"),
-            new OnlineStore("s_zhou", "老周电子（同行推荐）", StoreQuality.Good, 0.80, 0.03, 4.3, 860, false,
+            new OnlineStore("s_zhou", "周维成电子（同行推荐）", StoreQuality.Good, 0.80, 0.03, 4.3, 860, false,
                 "同行都在这拿货，懂的都懂。", "没有花里胡哨的页面，东西靠谱。"),
             new OnlineStore("s_flash", "闪电优选", StoreQuality.Shoddy, 0.78, 0.22, 4.7, 41000, false,
                 "物流快。", "硬盘是翻新的。", "包装像被拆过。"),

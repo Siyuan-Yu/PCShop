@@ -70,8 +70,8 @@ namespace PCShopSell.Core.Session
         public string CityStoryObjective(string id)
         {
             var p=CityStory(id);if(p==null)return "故事记录不存在";
-            if(id=="supply")return p.Stage==0?"到电子市场与李老板聊工作/共同朋友，熟悉到8；普通采购不受这条故事限制。"
-                :p.Stage==1?"约李老板和企业联系人沈远到同桌家常馆，实际完成饭局后才形成引荐。"
+            if(id=="supply")return p.Stage==0?"到电子市场与李承业聊工作/共同朋友，熟悉到8；普通采购不受这条故事限制。"
+                :p.Stage==1?"约李承业和企业联系人沈远到同桌家常馆，实际完成饭局后才形成引荐。"
                 :p.Stage==2?"与沈远确认2台入门电脑试单；按现有成本报价、5%保证金和真实装机交付执行。"
                 :p.Stage==3?(p.Failed?"试单未全数履约，可补救后再试；普通店铺与其他客户不受锁定。":"采购、预留材料并完成试单；等待交付结果，不能点按钮领收益。")
                 :p.Stage==4?"与沈远参加本月或下一届电子展，实际到场交流后解锁复订合作。":"已建立履约记录，可接受新的小批量订单；仍需正常采购和交付。";
@@ -283,7 +283,7 @@ namespace PCShopSell.Core.Session
         {
             if(shop==null)return 1;
             long now=Clock.Now.TotalMinutes;
-            return 1+Math.Min(.50,_cityPromotions.Where(c=>c.ShopId==shop.Place.Id&&c.State=="Running"&&c.Start<=now&&now<c.End&&c.SalesCount<c.MaxConversions).Sum(c=>c.MaxTrafficBoost));
+            return Math.Max(.5,1+BrandTraffic(shop)+Math.Min(.50,_cityPromotions.Where(c=>c.ShopId==shop.Place.Id&&c.State=="Running"&&c.Start<=now&&now<c.End&&c.SalesCount<c.MaxConversions).Sum(c=>c.MaxTrafficBoost)));
         }
         private CityPromotion AddCityPromotion(string creator,string shop,string mode,Money fee,int duration,double boost,string activity,string story)
         {

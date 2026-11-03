@@ -143,12 +143,15 @@ namespace PCShopSell.Core.Session
         {
             if(today.TotalDays<=_lastBusinessDay) return;
             _lastBusinessDay=today.TotalDays;
+            TickBrandBusiness(previous,today);
             if (_owned.Contains(VehicleKind.Car)) Ledger.ForceDebit(today,"交通",Money.FromYuan(40) * VehicleCount(VehicleKind.Car),"轿车日养护（含油费保险）");
             if (_owned.Contains(VehicleKind.Van)) Ledger.ForceDebit(today,"交通",Money.FromYuan(60) * VehicleCount(VehicleKind.Van),"货车日养护（含油费保险）");
             TickCityAssets(); SettleSupplierDebts(today.TotalDays); SettleVentures(today); SettleProperties(today); SettleHomeMortgage(today); SettleCreators(previous,today); SettleMcnAndRelationships(previous,today); RefreshEnterpriseOffer();
         }
         private void SaveBusiness(SaveData d)
         {
+            d.brandBusiness=_brands.Copy();
+            d.brandStories=_brandStories.Select(s=>s.Copy()).ToArray();
             d.hasBusiness=true;
             d.business=new BusinessSave { Debts=_supplierDebts.Select(x=>x.Copy()).ToArray(), Shipments=_directShipments.Select(x=>x.Copy()).ToArray(), Contracts=_contracts.Select(x=>x.Copy()).ToArray(),
                 Ventures=_ventures.Select(x=>x.Copy()).ToArray(),Properties=_properties.Select(x=>x.Copy()).ToArray(),Creators=_creators.Select(x=>x.Copy()).ToArray(),
@@ -157,6 +160,9 @@ namespace PCShopSell.Core.Session
         }
         private void RestoreBusiness(SaveData d)
         {
+            _brands=d.brandBusiness?.Copy()??new BrandBusinessState();
+            _brandStories.Clear();
+            _brandStories.AddRange((d.brandStories??Array.Empty<BrandStoryRecord>()).Where(s=>s!=null).GroupBy(s=>s.Id).Select(g=>g.First().Copy()));
             var b=d.business; if(!d.hasBusiness || b==null || b.NextDebtId<=0) return;
             ParkPlaceId=City.HasPlace(b.ParkPlaceId) ? b.ParkPlaceId : null; ParkReadyDay=b.ParkReadyDay; HasMcn=b.HasMcn; RomanceId=Creators.Get(b.RomanceId)!=null ? b.RomanceId : null;
             _supplierDebts.Clear();_supplierDebts.AddRange((b.Debts??Array.Empty<SupplierDebt>()).Select(x=>x.Copy()));

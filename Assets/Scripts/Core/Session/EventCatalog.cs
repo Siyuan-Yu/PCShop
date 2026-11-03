@@ -287,7 +287,7 @@ namespace PCShopSell.Core.Session
             {
                 Id = "friend_meal", Title = "老同学请吃饭", MinDay = 5, CooldownDays = 15, Weight = 7,
                 When = s => CanPay(s, 100),
-                Body = "你的大学同学陈工（程序员）托人联系上你：\"来城里了？找时间一起吃个饭，聊聊，见面后把联系方式重新存上。\"",
+                Body = "你的大学同学陈志衡（程序员）托人联系上你：\"来城里了？找时间一起吃个饭，聊聊，见面后把联系方式重新存上。\"",
                 Choices =
                 {
                     new EventChoice
@@ -299,7 +299,7 @@ namespace PCShopSell.Core.Session
                             return s.ScheduleLegacyCityMeeting("res_coder", "dinner", "legacy-friend-meal:" + s.Clock.Today.TotalDays, true);
                         },
                     },
-                    new EventChoice { Text = "推掉，店里忙", Apply = s => "你说这周走不开。陈工说下次约。" },
+                    new EventChoice { Text = "推掉，店里忙", Apply = s => "你说这周走不开。陈志衡说下次约。" },
                 },
             },
             new EventDef

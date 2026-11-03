@@ -150,13 +150,13 @@ namespace PCShopSell.Core.Session
             ApplyUpgrades();
         }
 
-        /// <summary>资金连续为负的第 2 天，小林救一次急。</summary>
+        /// <summary>资金连续为负的第 2 天，林远航救一次急。</summary>
         private bool TryFriendBailout()
         {
             if (Flags.Contains(BailoutUsedFlag) || Relation(Npcs.Lin) < NpcPerks.LinBailout) return false;
             Flags.Add(BailoutUsedFlag);
-            Ledger.Credit(Clock.Today, "人情", NpcPerks.BailoutAmount, "小林救急");
-            Popup?.Invoke("小林来了", $"小林听说你的账上告急，二话没说转了 {NpcPerks.BailoutAmount} 过来：\"先拿着，别跟我客气，以后赚了再还。\"\n（这个人情只能用一次）");
+            Ledger.Credit(Clock.Today, "人情", NpcPerks.BailoutAmount, "林远航救急");
+            Popup?.Invoke("林远航来了", $"林远航听说你的账上告急，二话没说转了 {NpcPerks.BailoutAmount} 过来：\"先拿着，别跟我客气，以后赚了再还。\"\n（这个人情只能用一次）");
             return true;
         }
 
