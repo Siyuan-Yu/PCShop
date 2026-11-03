@@ -26,6 +26,7 @@ namespace PCShopSell.Core.Session
             try
             {
                 SaveData d = CreateSaveOfMain();
+                d.districtProgress = _district.Copy();
                 d.extraShops = _shops.Skip(1).Where(s => s.Rented).Select(SaveShopOf).ToArray();
                 d.focusShop = Math.Max(0, _shops.IndexOf(keep));
                 SaveCityFinance(d);
@@ -310,6 +311,7 @@ namespace PCShopSell.Core.Session
             LoadSpecialBusinesses(d);
             LoadWeeklySupplierPlans();
             LoadHomeWorkbench(d);
+            LoadDistrictProgress(d);
             EnsureFirstShopListings(Clock.Today.TotalDays);
         }
 

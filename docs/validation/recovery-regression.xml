@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="28" result="Failed(Child)" total="28" passed="27" failed="1" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-03 09:10:49Z" end-time="2026-11-03 09:11:14Z" duration="25.3945759">
+  <test-suite type="TestSuite" id="2148" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="995" result="Failed" site="Child" start-time="2026-11-03 09:10:49Z" end-time="2026-11-03 09:11:14Z" duration="25.394576" total="28" passed="27" failed="1" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="3292" name="PCShopSell.Tests.EditMode.dll" fullname="C:/Users/yusiyuan/Documents/Codex/2026-11-03/c-d/work/pcshop-review/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="995" result="Failed" site="Child" start-time="2026-11-03 09:10:49Z" end-time="2026-11-03 09:11:14Z" duration="25.373502" total="28" passed="27" failed="1" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="64104" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="3293" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="995" result="Failed" site="Child" start-time="2026-11-03 09:10:49Z" end-time="2026-11-03 09:11:14Z" duration="25.365690" total="28" passed="27" failed="1" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="3294" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="995" result="Failed" site="Child" start-time="2026-11-03 09:10:49Z" end-time="2026-11-03 09:11:14Z" duration="25.354958" total="28" passed="27" failed="1" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="2421" name="EnergyPayrollTests" fullname="PCShopSell.Tests.EnergyPayrollTests" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" testcasecount="25" result="Failed" site="Child" start-time="2026-11-03 09:10:49Z" end-time="2026-11-03 09:10:56Z" duration="7.286788" total="25" passed="24" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="ParameterizedMethod" id="2436" name="ActualShiftMinuteAccountingAndPay" fullname="PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-11-03 09:10:49Z" end-time="2026-11-03 09:10:50Z" duration="1.790155" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="2430" name="ActualShiftMinuteAccountingAndPay(540,1080,200)" fullname="PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(540,1080,200)" methodname="ActualShiftMinuteAccountingAndPay" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="1756193251" result="Passed" start-time="2026-11-03 09:10:49Z" end-time="2026-11-03 09:10:49Z" duration="0.412636" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(540,1080,200)
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(540,1080,200) Passed
+]]></output>
+              </test-case>
+              <test-case id="2431" name="ActualShiftMinuteAccountingAndPay(540,1140,200)" fullname="PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(540,1140,200)" methodname="ActualShiftMinuteAccountingAndPay" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="387124756" result="Passed" start-time="2026-11-03 09:10:49Z" end-time="2026-11-03 09:10:49Z" duration="0.212972" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(540,1140,200)
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(540,1140,200) Passed
+]]></output>
+              </test-case>
+              <test-case id="2432" name="ActualShiftMinuteAccountingAndPay(540,1170,220)" fullname="PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(540,1170,220)" methodname="ActualShiftMinuteAccountingAndPay" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="499756843" result="Passed" start-time="2026-11-03 09:10:49Z" end-time="2026-11-03 09:10:50Z" duration="0.196684" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(540,1170,220)
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(540,1170,220) Passed
+]]></output>
+              </test-case>
+              <test-case id="2433" name="ActualShiftMinuteAccountingAndPay(540,1200,240)" fullname="PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(540,1200,240)" methodname="ActualShiftMinuteAccountingAndPay" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="825221309" result="Passed" start-time="2026-11-03 09:10:50Z" end-time="2026-11-03 09:10:50Z" duration="0.369527" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(540,1200,240)
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(540,1200,240) Passed
+]]></output>
+              </test-case>
+              <test-case id="2434" name="ActualShiftMinuteAccountingAndPay(1200,480,280)" fullname="PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(1200,480,280)" methodname="ActualShiftMinuteAccountingAndPay" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="2015598739" result="Passed" start-time="2026-11-03 09:10:50Z" end-time="2026-11-03 09:10:50Z" duration="0.401850" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(1200,480,280)
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(1200,480,280) Passed
+]]></output>
+              </test-case>
+              <test-case id="2435" name="ActualShiftMinuteAccountingAndPay(1260,0,200)" fullname="PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(1260,0,200)" methodname="ActualShiftMinuteAccountingAndPay" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="1866767074" result="Passed" start-time="2026-11-03 09:10:50Z" end-time="2026-11-03 09:10:50Z" duration="0.184351" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(1260,0,200)
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.ActualShiftMinuteAccountingAndPay(1260,0,200) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="2438" name="BigAndSmallStepsAndReloadProduceIdenticalMinuteRounding" fullname="PCShopSell.Tests.EnergyPayrollTests.BigAndSmallStepsAndReloadProduceIdenticalMinuteRounding" methodname="BigAndSmallStepsAndReloadProduceIdenticalMinuteRounding" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="1578469385" result="Passed" start-time="2026-11-03 09:10:50Z" end-time="2026-11-03 09:10:51Z" duration="0.586160" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.BigAndSmallStepsAndReloadProduceIdenticalMinuteRounding
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.BigAndSmallStepsAndReloadProduceIdenticalMinuteRounding Passed
+]]></output>
+            </test-case>
+            <test-case id="2426" name="CrossingZeroMidAdvanceDoesNotCountEarlierTime" fullname="PCShopSell.Tests.EnergyPayrollTests.CrossingZeroMidAdvanceDoesNotCountEarlierTime" methodname="CrossingZeroMidAdvanceDoesNotCountEarlierTime" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="53141735" result="Passed" start-time="2026-11-03 09:10:51Z" end-time="2026-11-03 09:10:51Z" duration="0.038467" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.CrossingZeroMidAdvanceDoesNotCountEarlierTime
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.CrossingZeroMidAdvanceDoesNotCountEarlierTime Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="2425" name="ExhaustionGetsExactly240AwakeMinutesIncludingMidnight" fullname="PCShopSell.Tests.EnergyPayrollTests.ExhaustionGetsExactly240AwakeMinutesIncludingMidnight" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-03 09:10:51Z" end-time="2026-11-03 09:10:52Z" duration="0.606147" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="2423" name="ExhaustionGetsExactly240AwakeMinutesIncludingMidnight(600)" fullname="PCShopSell.Tests.EnergyPayrollTests.ExhaustionGetsExactly240AwakeMinutesIncludingMidnight(600)" methodname="ExhaustionGetsExactly240AwakeMinutesIncludingMidnight" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="1101808580" result="Passed" start-time="2026-11-03 09:10:51Z" end-time="2026-11-03 09:10:51Z" duration="0.375651" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.ExhaustionGetsExactly240AwakeMinutesIncludingMidnight(600)
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.ExhaustionGetsExactly240AwakeMinutesIncludingMidnight(600) Passed
+]]></output>
+              </test-case>
+              <test-case id="2424" name="ExhaustionGetsExactly240AwakeMinutesIncludingMidnight(1410)" fullname="PCShopSell.Tests.EnergyPayrollTests.ExhaustionGetsExactly240AwakeMinutesIncludingMidnight(1410)" methodname="ExhaustionGetsExactly240AwakeMinutesIncludingMidnight" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="527497830" result="Passed" start-time="2026-11-03 09:10:51Z" end-time="2026-11-03 09:10:52Z" duration="0.227212" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.ExhaustionGetsExactly240AwakeMinutesIncludingMidnight(1410)
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.ExhaustionGetsExactly240AwakeMinutesIncludingMidnight(1410) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="2445" name="FaintDuringDisplayAssemblyPreservesReservedPartsAndProgressThroughSave" fullname="PCShopSell.Tests.EnergyPayrollTests.FaintDuringDisplayAssemblyPreservesReservedPartsAndProgressThroughSave" methodname="FaintDuringDisplayAssemblyPreservesReservedPartsAndProgressThroughSave" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="886861751" result="Passed" start-time="2026-11-03 09:10:52Z" end-time="2026-11-03 09:10:52Z" duration="0.358968" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.FaintDuringDisplayAssemblyPreservesReservedPartsAndProgressThroughSave
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.FaintDuringDisplayAssemblyPreservesReservedPartsAndProgressThroughSave Passed
+]]></output>
+            </test-case>
+            <test-case id="2441" name="FatigueInterruptsRealWorkTravelAndAnActiveExclusiveActivityOnlyOnce" fullname="PCShopSell.Tests.EnergyPayrollTests.FatigueInterruptsRealWorkTravelAndAnActiveExclusiveActivityOnlyOnce" methodname="FatigueInterruptsRealWorkTravelAndAnActiveExclusiveActivityOnlyOnce" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="1256932845" result="Failed" start-time="2026-11-03 09:10:52Z" end-time="2026-11-03 09:10:52Z" duration="0.040897" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: not null
+  But was:  null
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.EnergyPayrollTests.FatigueInterruptsRealWorkTravelAndAnActiveExclusiveActivityOnlyOnce () [0x0006c] in C:\Users\yusiyuan\Documents\Codex\2026-11-03\c-d\work\pcshop-review\Assets\Tests\EditMode\EnergyPayrollTests.cs:121
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.FatigueInterruptsRealWorkTravelAndAnActiveExclusiveActivityOnlyOnce
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.FatigueInterruptsRealWorkTravelAndAnActiveExclusiveActivityOnlyOnce Failed
+]]></output>
+            </test-case>
+            <test-case id="2422" name="FourAmDoesNotForceASleepWithPositiveEnergy" fullname="PCShopSell.Tests.EnergyPayrollTests.FourAmDoesNotForceASleepWithPositiveEnergy" methodname="FourAmDoesNotForceASleepWithPositiveEnergy" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="1137046873" result="Passed" start-time="2026-11-03 09:10:52Z" end-time="2026-11-03 09:10:52Z" duration="0.080453" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.FourAmDoesNotForceASleepWithPositiveEnergy
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.FourAmDoesNotForceASleepWithPositiveEnergy Passed
+]]></output>
+            </test-case>
+            <test-case id="2440" name="InvalidEqualHoursAreRejectedAndViewsDoNotGeneratePayroll" fullname="PCShopSell.Tests.EnergyPayrollTests.InvalidEqualHoursAreRejectedAndViewsDoNotGeneratePayroll" methodname="InvalidEqualHoursAreRejectedAndViewsDoNotGeneratePayroll" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="1638192491" result="Passed" start-time="2026-11-03 09:10:52Z" end-time="2026-11-03 09:10:52Z" duration="0.034363" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.InvalidEqualHoursAreRejectedAndViewsDoNotGeneratePayroll
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.InvalidEqualHoursAreRejectedAndViewsDoNotGeneratePayroll Passed
+]]></output>
+            </test-case>
+            <test-case id="2429" name="LegacyZeroEnergyStartsAtMigrationAndCannotImmediatelyFaint" fullname="PCShopSell.Tests.EnergyPayrollTests.LegacyZeroEnergyStartsAtMigrationAndCannotImmediatelyFaint" methodname="LegacyZeroEnergyStartsAtMigrationAndCannotImmediatelyFaint" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="1585591899" result="Passed" start-time="2026-11-03 09:10:52Z" end-time="2026-11-03 09:10:52Z" duration="0.072442" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.LegacyZeroEnergyStartsAtMigrationAndCannotImmediatelyFaint
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.LegacyZeroEnergyStartsAtMigrationAndCannotImmediatelyFaint Passed
+]]></output>
+            </test-case>
+            <test-case id="2446" name="LongWorkAdvanceStopsAtFatigueBoundaryWithoutFinishingTheShift" fullname="PCShopSell.Tests.EnergyPayrollTests.LongWorkAdvanceStopsAtFatigueBoundaryWithoutFinishingTheShift" methodname="LongWorkAdvanceStopsAtFatigueBoundaryWithoutFinishingTheShift" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="488015537" result="Passed" start-time="2026-11-03 09:10:52Z" end-time="2026-11-03 09:10:53Z" duration="0.403013" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.LongWorkAdvanceStopsAtFatigueBoundaryWithoutFinishingTheShift
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.LongWorkAdvanceStopsAtFatigueBoundaryWithoutFinishingTheShift Passed
+]]></output>
+            </test-case>
+            <test-case id="2443" name="MidnightBasePlusShiftEndOvertimeAreUniqueAndStructuredAfterJson" fullname="PCShopSell.Tests.EnergyPayrollTests.MidnightBasePlusShiftEndOvertimeAreUniqueAndStructuredAfterJson" methodname="MidnightBasePlusShiftEndOvertimeAreUniqueAndStructuredAfterJson" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="1553993094" result="Passed" start-time="2026-11-03 09:10:53Z" end-time="2026-11-03 09:10:53Z" duration="0.299986" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.MidnightBasePlusShiftEndOvertimeAreUniqueAndStructuredAfterJson
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.MidnightBasePlusShiftEndOvertimeAreUniqueAndStructuredAfterJson Passed
+]]></output>
+            </test-case>
+            <test-case id="2447" name="PausedAndHeldFramesDoNotAccrueExhaustionAndWarningsAreOncePerCycle" fullname="PCShopSell.Tests.EnergyPayrollTests.PausedAndHeldFramesDoNotAccrueExhaustionAndWarningsAreOncePerCycle" methodname="PausedAndHeldFramesDoNotAccrueExhaustionAndWarningsAreOncePerCycle" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="1871421110" result="Passed" start-time="2026-11-03 09:10:53Z" end-time="2026-11-03 09:10:53Z" duration="0.059924" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.PausedAndHeldFramesDoNotAccrueExhaustionAndWarningsAreOncePerCycle
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.PausedAndHeldFramesDoNotAccrueExhaustionAndWarningsAreOncePerCycle Passed
+]]></output>
+            </test-case>
+            <test-case id="2439" name="PersonalAbsenceDoesNotAccrueWorkAndIdleShopStillDoes" fullname="PCShopSell.Tests.EnergyPayrollTests.PersonalAbsenceDoesNotAccrueWorkAndIdleShopStillDoes" methodname="PersonalAbsenceDoesNotAccrueWorkAndIdleShopStillDoes" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="358445290" result="Passed" start-time="2026-11-03 09:10:53Z" end-time="2026-11-03 09:10:53Z" duration="0.222613" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.PersonalAbsenceDoesNotAccrueWorkAndIdleShopStillDoes
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.PersonalAbsenceDoesNotAccrueWorkAndIdleShopStillDoes Passed
+]]></output>
+            </test-case>
+            <test-case id="2442" name="ProcurementMinutesCountOnceAndRoleChangesDoNotRestartOvertime" fullname="PCShopSell.Tests.EnergyPayrollTests.ProcurementMinutesCountOnceAndRoleChangesDoNotRestartOvertime" methodname="ProcurementMinutesCountOnceAndRoleChangesDoNotRestartOvertime" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="1395414758" result="Passed" start-time="2026-11-03 09:10:53Z" end-time="2026-11-03 09:10:53Z" duration="0.211589" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.ProcurementMinutesCountOnceAndRoleChangesDoNotRestartOvertime
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.ProcurementMinutesCountOnceAndRoleChangesDoNotRestartOvertime Passed
+]]></output>
+            </test-case>
+            <test-case id="2428" name="RecoveryAndActualDaytimeSleepStartNewCyclesButReadOnlyUiDoesNot" fullname="PCShopSell.Tests.EnergyPayrollTests.RecoveryAndActualDaytimeSleepStartNewCyclesButReadOnlyUiDoesNot" methodname="RecoveryAndActualDaytimeSleepStartNewCyclesButReadOnlyUiDoesNot" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="1394894615" result="Passed" start-time="2026-11-03 09:10:53Z" end-time="2026-11-03 09:10:54Z" duration="0.251924" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.RecoveryAndActualDaytimeSleepStartNewCyclesButReadOnlyUiDoesNot
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.RecoveryAndActualDaytimeSleepStartNewCyclesButReadOnlyUiDoesNot Passed
+]]></output>
+            </test-case>
+            <test-case id="2444" name="SameShiftRoleChangeKeepsOneWorkdayAndTenHourAllowance" fullname="PCShopSell.Tests.EnergyPayrollTests.SameShiftRoleChangeKeepsOneWorkdayAndTenHourAllowance" methodname="SameShiftRoleChangeKeepsOneWorkdayAndTenHourAllowance" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="1798696091" result="Passed" start-time="2026-11-03 09:10:54Z" end-time="2026-11-03 09:10:54Z" duration="0.366361" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.SameShiftRoleChangeKeepsOneWorkdayAndTenHourAllowance
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.SameShiftRoleChangeKeepsOneWorkdayAndTenHourAllowance Passed
+]]></output>
+            </test-case>
+            <test-case id="2427" name="SaveLoadPreservesCountdownAndWarnings" fullname="PCShopSell.Tests.EnergyPayrollTests.SaveLoadPreservesCountdownAndWarnings" methodname="SaveLoadPreservesCountdownAndWarnings" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="467528034" result="Passed" start-time="2026-11-03 09:10:54Z" end-time="2026-11-03 09:10:54Z" duration="0.203096" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.SaveLoadPreservesCountdownAndWarnings
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.SaveLoadPreservesCountdownAndWarnings Passed
+]]></output>
+            </test-case>
+            <test-case id="2437" name="ShiftEditIsDeferredAndSnapshotSurvivesJsonWithoutPayReplay" fullname="PCShopSell.Tests.EnergyPayrollTests.ShiftEditIsDeferredAndSnapshotSurvivesJsonWithoutPayReplay" methodname="ShiftEditIsDeferredAndSnapshotSurvivesJsonWithoutPayReplay" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="589494852" result="Passed" start-time="2026-11-03 09:10:54Z" end-time="2026-11-03 09:10:55Z" duration="1.028707" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.ShiftEditIsDeferredAndSnapshotSurvivesJsonWithoutPayReplay
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.ShiftEditIsDeferredAndSnapshotSurvivesJsonWithoutPayReplay Passed
+]]></output>
+            </test-case>
+            <test-case id="2448" name="TrainingAtShiftStartKeepsTheAlreadyActiveDayRateSnapshot" fullname="PCShopSell.Tests.EnergyPayrollTests.TrainingAtShiftStartKeepsTheAlreadyActiveDayRateSnapshot" methodname="TrainingAtShiftStartKeepsTheAlreadyActiveDayRateSnapshot" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="142746930" result="Passed" start-time="2026-11-03 09:10:55Z" end-time="2026-11-03 09:10:56Z" duration="0.565665" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.TrainingAtShiftStartKeepsTheAlreadyActiveDayRateSnapshot
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.TrainingAtShiftStartKeepsTheAlreadyActiveDayRateSnapshot Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3046" name="SleepPerformanceTests" fullname="PCShopSell.Tests.SleepPerformanceTests" classname="PCShopSell.Tests.SleepPerformanceTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-03 09:10:56Z" end-time="2026-11-03 09:11:14Z" duration="18.042512" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="3050" name="SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache" fullname="PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache" classname="PCShopSell.Tests.SleepPerformanceTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-03 09:10:56Z" end-time="2026-11-03 09:11:14Z" duration="18.041179" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="3047" name="SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(&quot;sleep&quot;)" fullname="PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(&quot;sleep&quot;)" methodname="SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache" classname="PCShopSell.Tests.SleepPerformanceTests" runstate="Runnable" seed="1479306588" result="Passed" start-time="2026-11-03 09:10:56Z" end-time="2026-11-03 09:11:03Z" duration="6.640044" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache("sleep")
+RECOVERY_COMPARE sleep baseline_ms=5793.00 optimized_ms=635.97
+REGRESSION DONE PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache("sleep") Passed
+]]></output>
+              </test-case>
+              <test-case id="3048" name="SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(&quot;faint&quot;)" fullname="PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(&quot;faint&quot;)" methodname="SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache" classname="PCShopSell.Tests.SleepPerformanceTests" runstate="Runnable" seed="627323654" result="Passed" start-time="2026-11-03 09:11:03Z" end-time="2026-11-03 09:11:04Z" duration="1.248010" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache("faint")
+RECOVERY_COMPARE faint baseline_ms=857.64 optimized_ms=289.02
+REGRESSION DONE PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache("faint") Passed
+]]></output>
+              </test-case>
+              <test-case id="3049" name="SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(&quot;hospital&quot;)" fullname="PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache(&quot;hospital&quot;)" methodname="SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache" classname="PCShopSell.Tests.SleepPerformanceTests" runstate="Runnable" seed="1763752696" result="Passed" start-time="2026-11-03 09:11:04Z" end-time="2026-11-03 09:11:14Z" duration="10.146924" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache("hospital")
+RECOVERY_COMPARE hospital baseline_ms=9019.35 optimized_ms=1038.57
+REGRESSION DONE PCShopSell.Tests.SleepPerformanceTests.SleepAndRecoveryRetainIdenticalSimulationWithCommuteEstimateCache("hospital") Passed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

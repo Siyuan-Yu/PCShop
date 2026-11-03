@@ -76,6 +76,11 @@ namespace PCShopSell.Game
             SetupRendering();
             World = new StreetWorldBuilder(City, 7);
             World.Build();
+            var checkpoints = new GameObject("DistrictCheckpoints").AddComponent<DistrictGateView>();
+            checkpoints.transform.SetParent(transform, false);
+            checkpoints.Initialize(this);
+            var search=new GameObject("CommunitySearch").AddComponent<CommunitySearchView>();
+            search.transform.SetParent(transform,false);search.Initialize(this);
             _lighting = new DayNightLighting(Cam, FindSun(), FindVolume(), World.NightLights);
 
             _actors = new GameObject("Actors").transform;
@@ -449,6 +454,7 @@ namespace PCShopSell.Game
                     else if (Interior.NearBox) Ui.OpenShopLockerWindow();
                     else ShelfInteract();
                 }
+                else if(Session.NearbyCommunityBox>=0)Session.SearchCommunityBox(Session.NearbyCommunityBox);
                 else TryEnterNearby();
             }
         }
@@ -668,6 +674,12 @@ namespace PCShopSell.Game
                 if (shelfKind == null) label = "货架（还没设置摆什么，按 F 设置）";
                 else label = $"货架：{shelfKind.Name}（货架上 {Session.PlayerShop.ShelfFillOf(shelfKind).Total} 件，按 F 查看 / 设置）";
                 return true;
+            }
+            if(Session.NearbyCommunityBox>=0)
+            {
+                int box=Session.NearbyCommunityBox;
+                world=StreetWorldBuilder.ToWorld(Session.CommunityBoxPosition(box))+Vector3.up;
+                label="调查"+GameSession.CommunityBoxName(box)+"（按 F）";return true;
             }
             if (NearPasserby(out ResidentDef who, out Vector3 pw))
             {

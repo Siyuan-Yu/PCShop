@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -79,6 +80,8 @@ namespace PCShopSell.Core.Session
             VehicleSpec v = CurrentVehicle;
             if (v.Kind == VehicleKind.Taxi)
             {
+                int blocked = BlockedDistrictOnTrip(planned);
+                if(blocked>0)return Fail("通往"+DistrictName(blocked)+"的道路尚未开放，出租车暂不发车，也不收取车费。");
                 Money fare = Vehicles.TaxiFare(routeMeters);
                 if (!Ledger.TryDebit(Clock.Today, "交通", fare, "打车")) return Fail($"打车要 {fare}，钱不够。");
                 Say($"打车 {fare}");
@@ -139,7 +142,19 @@ namespace PCShopSell.Core.Session
         private string StepTrip(double scaledSeconds)
         {
             _passed.Clear();
-            Trip.Step(CityTravelTiming.ScaledSecondsMeters(Trip.Vehicle, scaledSeconds, Time.SecondsPerMinuteAt1x), _passed);
+            double remaining = CityTravelTiming.ScaledSecondsMeters(Trip.Vehicle, scaledSeconds, Time.SecondsPerMinuteAt1x);
+            // Check each short segment so a fast vehicle cannot jump across a curved checkpoint road.
+            while (remaining > 1e-8 && !Trip.Arrived)
+            {
+                var before = Trip.Position;
+                double distance = Math.Min(remaining, .5 * Trip.CurrentGameScale);
+                Trip.Step(distance, _passed); remaining -= distance;
+                if (TryDistrictRoadStop(before, Trip.Position, out MapPoint stop, out int tier))
+                {
+                    Trip = null; _free = stop; PlayerNodeId = City.NearestNode(stop.X, stop.Y);
+                    CancelCityTravel(); NotifyDistrictRoadStop(tier); return null;
+                }
+            }
             foreach (string n in _passed) PlayerNodeId = n;
             bool arrived = Trip.Arrived;
             string target = Trip.TargetNode;
@@ -188,6 +203,8 @@ namespace PCShopSell.Core.Session
             if(!City.HasPlace(stationId))return Fail("目的站不存在。");
             var destination=City.GetPlace(stationId);
             if(destination.Kind!=PlaceKind.Station||destination==origin)return Fail("请选择其他地铁站。");
+            string districtBlock = DistrictAccessBlocker(destination);
+            if(districtBlock!=null)return Fail(districtBlock);
             if(Clock.MinuteOfDay<360||Clock.MinuteOfDay>=1380)return Fail("地铁运营时间 6:00–23:00。");
             if(!Ledger.TryDebit(Clock.Today,"交通",MetroFare,origin.Name+"→"+destination.Name))return Fail("连地铁票都买不起了。");
             CancelCityTravel();Trip=null;

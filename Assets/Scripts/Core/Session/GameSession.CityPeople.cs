@@ -14,6 +14,26 @@ namespace PCShopSell.Core.Session
         private readonly Dictionary<string,int> _cityTopicDay = new Dictionary<string,int>();
         private readonly Dictionary<string,int> _cityTrust = new Dictionary<string,int>();
         private readonly Dictionary<string,PathResult> _cityPathCache = new Dictionary<string,PathResult>();
+        // Only travel duration is reused, never a person's route or departure timestamp.
+        // Exact positions preserve commute decisions while avoiding a full route allocation
+        // every minute that a resident stays at the same doorway.
+        private readonly Dictionary<(double x,double y,string target,bool inside),long> _cityCommuteMinutes = new Dictionary<(double,double,string,bool),long>();
+        private int _cityCommuteNodeCount = -1;
+        private long EstimateCityCommute(CityPersonState person,string target,long now)
+        {
+            if(_cityCommuteNodeCount!=City.Map.NodeCount)
+            {
+                _cityCommuteMinutes.Clear();_cityPathCache.Clear();
+                _cityCommuteNodeCount=City.Map.NodeCount;
+            }
+            var key=(person.X,person.Y,target,person.LocationPlaceId!=null);
+            if(_cityCommuteMinutes.TryGetValue(key,out long minutes))return minutes;
+            var route=PlanCityRoute(person,target,now);
+            minutes=route==null?-1:route.ArriveMinute-now;
+            if(_cityCommuteMinutes.Count>=4096)_cityCommuteMinutes.Clear();
+            _cityCommuteMinutes[key]=minutes;
+            return minutes;
+        }
         public IReadOnlyCollection<CityPersonState> CityPeople => _cityPeople.Values;
         public CityPersonDefinition CityPerson(string id) => CityLifeCatalog.Person(id) ?? (_cityExtraDefinitions.TryGetValue(id??"",out var p)?p:null);
         public CityPersonState CityPersonState(string id) => _cityPeople.TryGetValue(id??"",out var p)?p:null;
@@ -31,6 +51,7 @@ namespace PCShopSell.Core.Session
         public bool CityPersonInside(CityPersonState p)
         {
             if (p == null || p.Route != null || string.IsNullOrEmpty(p.LocationPlaceId)) return false;
+            if(_district.MeetingNodeId==_district.NodeId && _district.MeetingPeople.Contains(p.PersonId) && p.LocationPlaceId==_district.MeetingPlaceId)return false;
             if (!string.IsNullOrEmpty(p.ActivityId) && _cityActivities.Any(a=>a.Id==p.ActivityId && a.Active && a.RendezvousReady)) return false;
             string business = City.HasPlace(p.LocationPlaceId) ? City.GetPlace(p.LocationPlaceId).Business : null;
             // Outdoor workplaces keep their people visible at the actual venue.
@@ -146,6 +167,7 @@ namespace PCShopSell.Core.Session
                     if(now<p.Route.ArriveMinute)continue;
                     p.LocationPlaceId=p.Route.TargetPlaceId;p.Route=null;
                 }
+                if(TickDistrictMeetingPerson(p,now))continue;
                 if(!string.IsNullOrEmpty(p.ActivityId))continue;
                 if(!string.IsNullOrEmpty(p.VisitId)){p.Task=CityPersonTask.Shopping;continue;}
                 if (p.PersonId == CityLifeCatalog.InvitationTestPersonId)
@@ -180,8 +202,8 @@ namespace PCShopSell.Core.Session
                 {
                     int start=employee?.ShiftStart??d.WorkStart;
                     int delta=(start-Clock.MinuteOfDay+1440)%1440;
-                    var commute=PlanCityRoute(p,p.WorkPlaceId,now);
-                    if(commute!=null && delta>0 && delta<=commute.ArriveMinute-now+3)
+                    long commute=EstimateCityCommute(p,p.WorkPlaceId,now);
+                    if(commute>=0 && delta>0 && delta<=commute+3)
                     {target=p.WorkPlaceId;desiredTask=CityPersonTask.Waiting;p.LeisureTargetId=null;p.LeisureNextMove=0;}
                 }
                 if(target!=null && City.HasPlace(target) && p.LocationPlaceId!=target)

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="4" result="Passed" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-03 11:23:25Z" end-time="2026-11-03 11:23:29Z" duration="3.6472781">
+  <test-suite type="TestSuite" id="2160" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1005" result="Passed" start-time="2026-11-03 11:23:25Z" end-time="2026-11-03 11:23:29Z" duration="3.647278" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="3316" name="PCShopSell.Tests.EditMode.dll" fullname="C:/Users/yusiyuan/Documents/Codex/2026-11-03/c-d/work/pcshop-review/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1005" result="Passed" start-time="2026-11-03 11:23:25Z" end-time="2026-11-03 11:23:29Z" duration="3.632726" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="69976" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="3317" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1005" result="Passed" start-time="2026-11-03 11:23:25Z" end-time="2026-11-03 11:23:29Z" duration="3.630276" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3318" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="1005" result="Passed" start-time="2026-11-03 11:23:26Z" end-time="2026-11-03 11:23:29Z" duration="3.623127" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="2400" name="DistrictProgressionTests" fullname="PCShopSell.Tests.DistrictProgressionTests" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" testcasecount="26" result="Passed" start-time="2026-11-03 11:23:26Z" end-time="2026-11-03 11:23:29Z" duration="3.593518" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="2424" name="EachDispersedBoxIsWalkableInsideStarterDistrict" fullname="PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-03 11:23:26Z" end-time="2026-11-03 11:23:26Z" duration="0.350700" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="2421" name="EachDispersedBoxIsWalkableInsideStarterDistrict(0)" fullname="PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(0)" methodname="EachDispersedBoxIsWalkableInsideStarterDistrict" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="453820442" result="Passed" start-time="2026-11-03 11:23:26Z" end-time="2026-11-03 11:23:26Z" duration="0.257073" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(0)
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(0) Passed
+]]></output>
+              </test-case>
+              <test-case id="2422" name="EachDispersedBoxIsWalkableInsideStarterDistrict(1)" fullname="PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(1)" methodname="EachDispersedBoxIsWalkableInsideStarterDistrict" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1572476857" result="Passed" start-time="2026-11-03 11:23:26Z" end-time="2026-11-03 11:23:26Z" duration="0.042577" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(1)
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(1) Passed
+]]></output>
+              </test-case>
+              <test-case id="2423" name="EachDispersedBoxIsWalkableInsideStarterDistrict(2)" fullname="PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(2)" methodname="EachDispersedBoxIsWalkableInsideStarterDistrict" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="24989187" result="Passed" start-time="2026-11-03 11:23:26Z" end-time="2026-11-03 11:23:26Z" duration="0.041217" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(2)
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(2) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="2415" name="ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload" fullname="PCShopSell.Tests.DistrictProgressionTests.ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload" methodname="ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1453890452" result="Passed" start-time="2026-11-03 11:23:26Z" end-time="2026-11-03 11:23:29Z" duration="3.230464" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload Passed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

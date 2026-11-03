@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Failed(Child)" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-03 09:12:13Z" end-time="2026-11-03 09:12:13Z" duration="0.1911149">
+  <test-suite type="TestSuite" id="2148" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="995" result="Failed" site="Child" start-time="2026-11-03 09:12:13Z" end-time="2026-11-03 09:12:13Z" duration="0.191115" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="3292" name="PCShopSell.Tests.EditMode.dll" fullname="C:/Users/yusiyuan/Documents/Codex/2026-11-03/c-d/work/pcshop-review/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="995" result="Failed" site="Child" start-time="2026-11-03 09:12:13Z" end-time="2026-11-03 09:12:13Z" duration="0.179862" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="52340" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="3293" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="995" result="Failed" site="Child" start-time="2026-11-03 09:12:13Z" end-time="2026-11-03 09:12:13Z" duration="0.176995" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="3294" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="995" result="Failed" site="Child" start-time="2026-11-03 09:12:13Z" end-time="2026-11-03 09:12:13Z" duration="0.172484" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="2421" name="EnergyPayrollTests" fullname="PCShopSell.Tests.EnergyPayrollTests" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" testcasecount="25" result="Failed" site="Child" start-time="2026-11-03 09:12:13Z" end-time="2026-11-03 09:12:13Z" duration="0.159475" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="2441" name="FatigueInterruptsRealWorkTravelAndAnActiveExclusiveActivityOnlyOnce" fullname="PCShopSell.Tests.EnergyPayrollTests.FatigueInterruptsRealWorkTravelAndAnActiveExclusiveActivityOnlyOnce" methodname="FatigueInterruptsRealWorkTravelAndAnActiveExclusiveActivityOnlyOnce" classname="PCShopSell.Tests.EnergyPayrollTests" runstate="Runnable" seed="1159892633" result="Failed" start-time="2026-11-03 09:12:13Z" end-time="2026-11-03 09:12:13Z" duration="0.144476" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: not null
+  But was:  null
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.EnergyPayrollTests.FatigueInterruptsRealWorkTravelAndAnActiveExclusiveActivityOnlyOnce () [0x0006c] in C:\Users\yusiyuan\Documents\Codex\2026-11-03\c-d\work\pcshop-review\Assets\Tests\EditMode\EnergyPayrollTests.cs:121
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EnergyPayrollTests.FatigueInterruptsRealWorkTravelAndAnActiveExclusiveActivityOnlyOnce
+REGRESSION DONE PCShopSell.Tests.EnergyPayrollTests.FatigueInterruptsRealWorkTravelAndAnActiveExclusiveActivityOnlyOnce Failed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -153,6 +153,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildGuideWindow(Window w)
         {
+            BuildDistrictMessage(w.Content);
             var q = S.CurrentQuest();
             if (q == null)
             {

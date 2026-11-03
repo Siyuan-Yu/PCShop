@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Linq;
 using PCShopSell.Core.World;
+using PCShopSell.Core.Session;
 using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
@@ -218,8 +219,7 @@ namespace PCShopSell.Game.Runtime
         }
         private static float PlannedRoadWidth(Vector3 a,Vector3 b)
         {
-            bool horizontal=Mathf.Abs(a.z-b.z)<.01f;
-            return horizontal?(Mathf.Abs(a.z/135f-Mathf.Round(a.z/135f))<.001f?8:5):7;
+            return (float)GameSession.CityRoadWidth(new MapPoint(a.x,a.z),new MapPoint(b.x,b.z));
         }
         private void BuildRoadDetail(Transform parent,Vector3 a,Vector3 b,float width)
         {
@@ -229,8 +229,7 @@ namespace PCShopSell.Game.Runtime
             Vector3 right=Vector3.Cross(Vector3.up,delta.normalized);
             foreach(int side in new[]{-1,1})
             {
-                var curb=Prims.Box(parent,"StreetCurb",(a+b)*.5f+right*side*(width/2+.12f)+Vector3.up*.12f,
-                    new Vector3(.24f,.24f,length),Mats.Lit(Sidewalk));curb.transform.localRotation=rotation;
+                // Paving and roadway meet at ground level; no raised curb.
                 if(length>5)
                 {
                     var edge=Prims.Box(parent,"RoadEdge",(a+b)*.5f+right*side*(width/2-.35f)+Vector3.up*.025f,

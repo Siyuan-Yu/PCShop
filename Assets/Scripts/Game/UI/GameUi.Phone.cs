@@ -235,10 +235,12 @@ namespace PCShopSell.Game.UI
         /// <summary>聊天软件选择联系人后复用人物立绘对话；按键机短信保留原发送规则。</summary>
         public void OpenChatPanel()
         {
+            S.RefreshDistrictNarrative();
             bool app = S.HasChatApp;
             OpenWorkspace("people", "messages", app ? "聊天" : "短信", 760, 600, w =>
             {
                 BuildPeopleNavigation(w,"messages");
+                BuildDistrictMessage(w.Content);
                 if(app)
                 {
                     Para(w.Content,"选择联系人开始交谈；进入对话后点头像可看资料，也可以聊熟人、邀请活动。",17,Ui.Dim);

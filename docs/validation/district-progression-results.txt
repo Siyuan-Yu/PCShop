@@ -1,0 +1,55 @@
+District progression acceptance — 2026-11-03
+Unity: 2022.3.6f1, isolated project copy; original editor and player saves untouched by tests.
+EditMode result: 187 passed / 187 total, 0 failed, 0 skipped; 65.15 seconds.
+Filter: DistrictProgressionTests;DistrictUiTests;NarrativeContentTests;SteerTests;CityTravelTimingTests;QuestTests;ShopCoreGameplayTests;UiCleanupTests;HomeSleepNavigationTests;BuildingBoundsTests;ShopDockInteractionTests
+Result XML: district-progression-tests.xml
+Graphics entry: PCShopSell.EditorTools.GameSceneBuilder.DistrictAcceptanceFromBatch
+Graphics result: SMOKE RESULT code=0 errors=0
+Screenshots: ../previews/district-progression/*.png
+Coverage: editor prerequisite buttons and chat invitation; physical barriers; high-speed forward stops and backward exit; taxi/metro denial without charging; graph connectivity; saved route blocking; three story chains and all three garden choices; timed work/repair, item delivery and one-time costs/reimbursement; selected-shop sales attribution; saved unlocks and legacy assets.
+Boundary: graphics smoke completes the first story; second/third chains are advanced in EditMode tests, using attributed ledger sales for the final fulfilment check. Not a complete human playthrough or entire-suite run. No Windows build produced.
+Financial prerequisites: real fitted shops and money/net assets. IPO, full-sector monthly revenue and own share price use explicitly marked editor-only acceptance evidence; their formal production systems remain unimplemented.
+Follow-up: three-day proactive invitations (2026-11-03).
+First qualification stores a persisted deadline of +4320 game minutes. Once due, Li Jie / Tang Wei / Ren Fan proactively notify via popup with direct reply action. Repeated cheats do not reset the timer; later spending does not withdraw the invitation. Existing active stories are preserved.
+Updated regression: 17 relevant cases covered. Initial run: 15 passed, including all three complete story branches and chat UI. Two test assumptions required correction: cheat top-up assertion now runs before daily living expenses; exact deadline test positions the clock before the deadline to isolate involuntary sleep/hospital time jumps. Both corrected cases passed on rerun (2/2), including saving/loading the pending timer and spending after qualification.
+Raw results: district-delay-initial-tests.xml and district-delay-boundary-tests.xml.
+No new graphical smoke captures or Windows build for this follow-up. Existing screenshots show the previous immediate invitation timing.
+
+Follow-up: first district now requires a trading assignment (2026-11-03).
+The first meeting selects an operating outskirts store and starts a fresh ledger checkpoint. Three positive sales entries and at least 1000 yuan in that store are required before arranging an in-person acceptance meeting. Only acceptance unlocks the first road. Completed legacy unlocks are preserved.
+Regression: 26/26 core/UI/content/checkout cases plus 2/2 store-switch, threshold and legacy-unlock cases passed (28 distinct cases). Results: community-trial-tests.xml and community-trial-boundaries.xml.
+Graphics: community-trial-smoke-final.log, SMOKE RESULT code=0 errors=0. Verified assignment screen shows 0/3 and 0/1000 with acceptance disabled; first meeting does not unlock; actual ShopSimulation.Checkout records sales, then acceptance unlocks road. Smoke seeds reserved customer fixtures rather than waiting for naturally generated shoppers. Screenshot: ../previews/district-progression/community-trial-task.png. No Windows rebuild.
+
+Follow-up: replace first-stage trading assignment with finding the old street map (2026-11-03).
+The chain is invitation -> accept Xiao Chen's missing-map commission -> meet landlady outside the old-residential building for a clue -> physically inspect storage boxes outside Yiju Furniture -> receive the quest map -> return and hand it over to Tang Wei -> unlock the road. Wrong boxes provide feedback without penalties. Remote pickup, skipping the clue, repeated pickup and repeated delivery are rejected. Quest inventory and inspected boxes persist. Saves on the superseded trading assignment migrate to the clue; unlocked districts remain unlocked.
+Regression: 48/48 passed, including normal manual movement to the correct box, NPCs waiting visibly outside their own workplace/home, save reload, migration, every district chain and existing steering/content/UI checks. Raw result: community-search-tests.xml.
+Graphics entry: DistrictAcceptanceFromBatch. Final result: community-search-delivery.log, SMOKE RESULT code=0 errors=0. Physical boxes, F prompt, wrong-box feedback, acquiring map, delivery and road unlock verified. Graphics fixture positions the player at each location; manual approach is separately tested in EditMode. Camera is rotated to view the furniture-store frontage. No Windows rebuild.
+Latest screenshots: ../previews/district-progression/community-search-clue.png, community-search-boxes.png, community-map-found.png. Prior community-trial screenshots are historical and no longer describe the current quest.
+
+2026-11-03 三人三处寻物改版
+- 第一段：李姐郊游、老林聚餐、周叔旧物闲逛；每人好感30且接受委托后实际完成对应活动，再打听才揭示独立箱子。
+- 三处藏点：旧居街散步公园入口、城郊商业街宜居家具城门口、批发市场站入口。三份图页任意顺序现场拾取，手动拼图、预约交付后开路。
+- 新增旧物闲逛服务；根据实际选择的服务结算，预约但改选其他服务不计。修复活动恰好关门时完成被误判中断的问题。
+- Unity EditMode：55/55 通过（DistrictProgressionTests、DistrictUiTests、NarrativeContentTests、SteerTests）；结果 community-three-leads-tests.xml。
+- 覆盖：三条完整主线、三种第三段选择；实际预约/到场选择服务/耗时/活动结算；好感单独达标、错误服务/人物、取消/中断、委托前活动不计；三个箱子的街道可达性；分步存读档与旧档兼容；重复取物/拼图保护；关门时完成结算。
+- 测试中的到场使用位置夹具，活动调度和结算使用正式接口；三箱步行可达性另有逐帧移动验证。
+- 为避免楼体遮挡，箱子移至各入口靠街的一端；位置调整后4项取物/步行/存读档相关测试复测通过（community-three-leads-entrances.xml）。
+- 图形冒烟：三处独立箱子生成、F提示、拾取后隐藏、三页拼合及交付开路，SMOKE RESULT code=0 errors=0。图形夹具预置好感与已完成活动证据；正式活动结算由上述EditMode测试验证。
+- 最终视觉调整：商业街蓝绳箱改到青湾球场入口，避免家具城楼体遮挡，并关联老林小时候一起打球的经历。最终三处为散步公园、青湾球场、批发市场站。4项相关复测通过（community-three-leads-outdoor.xml），最终图形冒烟 code=0 errors=0。
+
+2026-11-03 道路与人行铺装连续通行
+- 修复湖城可见道路/铺装宽度与移动走廊不一致：旧版大部分街道只有2画面米半宽，实际道路本身即更宽。
+- 道路绘制与移动共用路宽计算，可走半宽覆盖车行道＋两侧1.4宽铺装；移除凸起路沿，铺装压平。建筑入口走廊及主线路障继续生效。
+- 移动测试22/22通过（flat-streets-movement.xml）；主线专项26/26通过（flat-streets-district-regression.xml中DistrictProgressionTests）。该组合首轮额外尝试了地图中不存在的8宽长边样本，测试样本已修正，移动专项复测全通过。
+图形冒烟：SMOKE RESULT code=0 errors=0。
+
+2026-11-03 三人寻物条件作弊入口
+- 作弊工具首页及三段主线验收页新增按钮，三线寻物阶段可用；好感至少30＋三个任务娱乐完成标记＋通讯录/聊天手机。
+- 不授予线索/图页/完整图，不改变当前节点、时间、现金或道路权限；保留高好感和已取得物品。标记作为明确验收预置，不伪造真实城市活动历史。
+- Unity DistrictUiTests 1/1通过：实际点击按钮、重复点击、入口阶段限制、已有进度保持、序列化读档、读档后主动打听才生成箱子。结果 community-cheat-tests.xml。
+
+2026-11-03 主线人物标识与会面导航
+- 当前主线人物以金色叹号、姓名和阶段状态提示；建筑内目标显示入口标识。取得个人线索后撤下对应寻物标识。
+- 主线窗口可自动前往会面门前，使用正式城市行程且EnterOnArrival=false，避免误入私人住宅。
+- DistrictUiTests 1/1通过：主线标识目标过滤、线索取得后撤下、会面导航按钮及原作弊流程。quest-markers-ui-tests.xml。
+- 最终场景图形验收：SMOKE RESULT code=0 errors=0；截图community-meeting-marker.png确认李姐标识在场景可见，使用视口锚点修正截图分辨率与相机画布的定位偏移。

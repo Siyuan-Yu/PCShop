@@ -69,6 +69,14 @@ namespace PCShopSell.Core.Session
         /// <summary>城中村等小路的走廊半宽。</summary>
         public const double SideRoadHalfWidth = 2.0;
 
+        // One continuous street surface: lane and paving share the same movement area.
+        public const double CityPavingWidth = 1.4;
+        public static double CityRoadWidth(MapPoint a, MapPoint b)
+        {
+            bool horizontal=Math.Abs(a.Y-b.Y)<.01;
+            return horizontal?(Math.Abs(a.Y/135-Math.Round(a.Y/135))<.001?8:5):7;
+        }
+
         private struct Corridor
         {
             public MapPoint A, B;
@@ -137,7 +145,8 @@ namespace PCShopSell.Core.Session
                     {
                         A = a,
                         B = b,
-                        HalfWidth = IsShoppingStreet(a, b) ? MainStreetHalfWidth : IsMainRoad(a, b) ? LinkRoadHalfWidth : SideRoadHalfWidth,
+                        HalfWidth = City.LayoutVersion>=7 ? CityRoadWidth(a,b)/2+CityPavingWidth
+                            : IsShoppingStreet(a, b) ? MainStreetHalfWidth : IsMainRoad(a, b) ? LinkRoadHalfWidth : SideRoadHalfWidth,
                         Scale = view < 1e-6 ? 1 : e.Length / view,
                     });
                 }
@@ -231,6 +240,10 @@ namespace PCShopSell.Core.Session
                 scale = Math.Max(1e-6, scale);
                 double view = Math.Min(.75, budget / scale);
                 MapPoint next = Constrain(new MapPoint(res.X + _steerX * view, res.Y + _steerY * view), out _);
+                if (TryDistrictRoadStop(res, next, out MapPoint gateStop, out int gateTier))
+                {
+                    res = gateStop; _steering = false; NotifyDistrictRoadStop(gateTier); break;
+                }
                 double advanced = Dist(res, next);
                 if (advanced < 1e-8) break;
                 // A blocked component must not turn into extra tangent speed. Spend the intended

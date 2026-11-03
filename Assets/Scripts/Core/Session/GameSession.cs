@@ -279,6 +279,8 @@ namespace PCShopSell.Core.Session
         /// </summary>
         public string ClosedReason(Place p)
         {
+            string districtBlock = DistrictAccessBlocker(p);
+            if (districtBlock != null) return districtBlock;
             if(City.LayoutVersion>=7 && p?.Kind==PlaceKind.Home && p!=Home)return "私人住宅，可在门前拜访；请到对应街道中介办理自己的住处。";
             if (WorkStaffEntry(p)) return null;
             if (p == null || ShopAt(p) != null || VentureAt(p.Id) != null || IsPlayerPropertyOccupied(p.Id)) return null;
@@ -391,6 +393,7 @@ namespace PCShopSell.Core.Session
         {
             TickEmployeePayroll(from.TotalMinutes, to.TotalMinutes);
             TickCityPeople(to.TotalMinutes);
+            TickDistrictNarrative(from.TotalMinutes, to.TotalMinutes);
             TickCityActivities(to.TotalMinutes);
             TickVenueBusinesses(to.TotalMinutes);
             NormalizeWarehouses();

@@ -133,6 +133,7 @@ namespace PCShopSell.Game.UI
             UpdateCityLifeHud(dt);
             UpdateLabels();
             UpdatePlayerMarker();
+            UpdateDistrictPersonMarkers();
             UpdateInteractMarker();
             UpdatePlacementStatus();
             UpdateEditHud();
@@ -301,6 +302,8 @@ namespace PCShopSell.Game.UI
             else if(_ctrl.InInterior&&S.IsSpecialBusiness(S.CurrentShop))_hintText.text="WASD 在店里走动 · 靠近专用设施按 F 打开操作 · 右侧柜台管理烹饪 / 收购 · 靠近冰箱按 F 存取食物 · 走到门口按 F 出门";
             else if (_ctrl.InInterior) _hintText.text = "WASD 在店里走动 · 走到货架前按 F 查看货物 · 柜台边按 F（或点顾客头顶的“结账”）给顾客结账 · 走到门口按 F 出门 · 右侧面板管理店铺";
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimateRemainingMinutes(S.Time.SecondsPerMinuteAt1x)} 分钟 · 按 WASD 随时接管";
+            else if (S.NearbyCommunityBox>=0)
+                _hintText.text = "<color=#DDC18B>按 F 调查"+GameSession.CommunityBoxName(S.NearbyCommunityBox)+"，取回这一份图页</color>";
             else if (S.NearbyPlace != null)
                 _hintText.text = S.ClosedReason(S.NearbyPlace) is string closed
                     ? $"<color=#D79780>{closed}</color>"
@@ -793,6 +796,8 @@ namespace PCShopSell.Game.UI
             {
                 Text t = Ui.Label(w.Content, body, 21, TextAnchor.UpperLeft);
                 Ui.Size(t, -1, 230);
+                if(title.EndsWith("发来主线邀请"))
+                    Ui.Size(Ui.Button(w.Content, "查看并回复邀请", () => { w.Close(); OpenDistrictStory(); }, 20, Ui.ButtonHot), -1, 44);
                 Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 20, Ui.ButtonHot), -1, 48);
             }));
         }

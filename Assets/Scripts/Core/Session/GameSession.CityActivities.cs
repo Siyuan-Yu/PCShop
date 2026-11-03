@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -352,7 +352,8 @@ namespace PCShopSell.Core.Session
                     if (a.ServiceConfirmed && a.ServiceChoice >= 0) ChooseCityActivity(a.Id, a.ServiceChoice);
                     Say("开始"+serviceTitle+"："+def.StartText+"。世界时间和后台经营正常继续。");
                 }
-                if(CurrentPlace!=venue||!IsOwnedVenue(venue)&&!CityWithinHours(Clock.MinuteOfDay,venue.OpenMinute,venue.CloseMinute)||_sleeping||IsWorking||IsGameOver)
+                // A service ending exactly at closing has fulfilled its full duration.
+                if(CurrentPlace!=venue||!IsOwnedVenue(venue)&&!CityWithinHours(Clock.MinuteOfDay,venue.OpenMinute,venue.CloseMinute)&&now<a.ActualStart+a.Duration||_sleeping||IsWorking||IsGameOver)
                 {EndCityActivity(a,CityActivityPhase.Interrupted,"离开场所或被必要状态中断，只保留已发生阶段",now);continue;}
                 long elapsed=now-a.ActualStart;
                 if(elapsed>=a.Duration/3 && a.Stage<1)
@@ -418,6 +419,7 @@ namespace PCShopSell.Core.Session
                 Player.Health=Math.Max(0,Math.Min(100,Player.Health+def.Health));
                 Player.Charm=Math.Min(100,Player.Charm+def.Charm);
                 Player.Intelligence=Math.Min(100,Player.Intelligence+def.Intelligence);
+                RecordCommunityOuting(a);
                 OnCityActivityCompleted(a);
             }
             foreach(var participant in a.Participants)

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
@@ -312,7 +312,18 @@ namespace PCShopSell.Game.UI
                 var options = new List<TalkOpt>();
                 bool near = !remote && (definition == null || S.CitySamePlace(personId));
                 bool canTalk = remote || near;
+                var districtNode=S.CurrentDistrictNode;
+                if(districtNode!=null && (districtNode.People.Contains(personId)||S.DistrictStoryState.MeetingPeople.Contains(personId)))
+                    options.Add(new TalkOpt {Label="主线 · "+districtNode.Title,Hot=true,Act=()=>{ctx.W.Close();OpenDistrictStory();}});
                 void Reply(string text) { ctx.Reply = text; ctx.W.Rebuild(); parent?.RequestRebuild(); }
+                if(S.CommunitySearchActive)
+                    for(int i=0;i<3;i++)
+                        if(GameSession.CommunityLeadPerson(i)==personId)
+                        {
+                            int lead=i;
+                            options.Add(new TalkOpt {Label="打听你保管的旧街图页",Hot=true,Blocker=canTalk?null:"对方已离开",
+                                Act=()=>Reply(S.AskCommunityLead(lead,remote))});
+                        }
                 if (creatorChoice)
                 {
                     foreach (bool support in new[] { true, false })

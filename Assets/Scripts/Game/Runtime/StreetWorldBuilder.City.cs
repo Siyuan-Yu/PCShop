@@ -37,8 +37,8 @@ namespace PCShopSell.Game.Runtime
                 Vector3 right = Vector3.Cross(Vector3.up, delta.normalized);
                 foreach (int side in new[] { -1, 1 })
                 {
-                    var walk = Prims.Box(walks, "CitySidewalk_" + key, (a + b) * .5f + right * side * (width / 2 + .7f) + Vector3.up * .06f,
-                        new Vector3(1.4f, .12f, delta.magnitude + 1), Mats.Lit(Sidewalk));
+                    var walk = Prims.Box(walks, "CitySidewalk_" + key, (a + b) * .5f + right * side * (width / 2 + .7f) + Vector3.up * .01f,
+                        new Vector3((float)GameSession.CityPavingWidth, .02f, delta.magnitude + 1), Mats.Lit(Sidewalk));
                     walk.transform.localRotation = Quaternion.LookRotation(delta.normalized);
                 }
             }

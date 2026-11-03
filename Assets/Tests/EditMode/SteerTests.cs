@@ -1,4 +1,7 @@
 using NUnit.Framework;
+using System;
+using System.Linq;
+using System.Reflection;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.World;
 
@@ -21,6 +24,27 @@ namespace PCShopSell.Tests
             s.SetSteer(dx, dy);
             for (int i = 0; i < ticks; i++) s.Tick(dt);
             s.SetSteer(0, 0);
+        }
+
+        [TestCase(5)] [TestCase(7)]
+        public void LakeRoadAndPavingFormOneContinuousWalkableSurface(int roadWidth)
+        {
+            using(var s=DistrictProgressionTests.Make())
+            {
+                var edge=s.City.Map.Nodes.SelectMany(n=>s.City.Map.NeighborsOf(n.Id).Select(e=>new {A=s.City.ViewPosition(n.Id),B=s.City.ViewPosition(e.To)}))
+                    .First(e=>GameSession.CityRoadWidth(e.A,e.B)==roadWidth && Math.Abs(e.A.X-e.B.X)+Math.Abs(e.A.Y-e.B.Y)>5);
+                double dx=edge.B.X-edge.A.X,dy=edge.B.Y-edge.A.Y,length=Math.Sqrt(dx*dx+dy*dy);
+                var middle=new MapPoint((edge.A.X+edge.B.X)/2,(edge.A.Y+edge.B.Y)/2);
+                var constrain=typeof(GameSession).GetMethod("Constrain",BindingFlags.Instance|BindingFlags.NonPublic);
+                // Probe the full crossing, including both old curb lines and outer paving.
+                for(double offset=-roadWidth/2.0-1.3;offset<=roadWidth/2.0+1.3;offset+=.2)
+                {
+                    var want=new MapPoint(middle.X-dy/length*offset,middle.Y+dx/length*offset);
+                    var args=new object[]{want,0.0};var actual=(MapPoint)constrain.Invoke(s,args);
+                    Assert.That(actual.X,Is.EqualTo(want.X).Within(.00001),"Street width "+roadWidth+" offset "+offset);
+                    Assert.That(actual.Y,Is.EqualTo(want.Y).Within(.00001),"Street width "+roadWidth+" offset "+offset);
+                }
+            }
         }
 
         [Test]

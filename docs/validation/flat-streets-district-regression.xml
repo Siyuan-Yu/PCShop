@@ -1,0 +1,365 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="49" result="Failed(Child)" total="49" passed="48" failed="1" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-03 11:25:28Z" end-time="2026-11-03 11:26:13Z" duration="45.4193528">
+  <test-suite type="TestSuite" id="2164" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1008" result="Failed" site="Child" start-time="2026-11-03 11:25:28Z" end-time="2026-11-03 11:26:13Z" duration="45.419353" total="49" passed="48" failed="1" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="3324" name="PCShopSell.Tests.EditMode.dll" fullname="C:/Users/yusiyuan/Documents/Codex/2026-11-03/c-d/work/pcshop-review/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1008" result="Failed" site="Child" start-time="2026-11-03 11:25:28Z" end-time="2026-11-03 11:26:13Z" duration="45.395200" total="49" passed="48" failed="1" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="72080" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="3325" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1008" result="Failed" site="Child" start-time="2026-11-03 11:25:28Z" end-time="2026-11-03 11:26:13Z" duration="45.385204" total="49" passed="48" failed="1" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="3326" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="1008" result="Failed" site="Child" start-time="2026-11-03 11:25:28Z" end-time="2026-11-03 11:26:13Z" duration="45.377300" total="49" passed="48" failed="1" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="2404" name="DistrictProgressionTests" fullname="PCShopSell.Tests.DistrictProgressionTests" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" testcasecount="26" result="Passed" start-time="2026-11-03 11:25:28Z" end-time="2026-11-03 11:26:13Z" duration="45.158515" total="26" passed="26" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="2434" name="AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay" fullname="PCShopSell.Tests.DistrictProgressionTests.AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-03 11:25:28Z" end-time="2026-11-03 11:26:04Z" duration="36.003205" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="2431" name="AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay(&quot;trial&quot;)" fullname="PCShopSell.Tests.DistrictProgressionTests.AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay(&quot;trial&quot;)" methodname="AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1670731560" result="Passed" start-time="2026-11-03 11:25:28Z" end-time="2026-11-03 11:25:40Z" duration="12.048180" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay("trial")
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay("trial") Passed
+]]></output>
+              </test-case>
+              <test-case id="2432" name="AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay(&quot;limited&quot;)" fullname="PCShopSell.Tests.DistrictProgressionTests.AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay(&quot;limited&quot;)" methodname="AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="376117367" result="Passed" start-time="2026-11-03 11:25:40Z" end-time="2026-11-03 11:25:52Z" duration="11.876580" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay("limited")
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay("limited") Passed
+]]></output>
+              </test-case>
+              <test-case id="2433" name="AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay(&quot;respect&quot;)" fullname="PCShopSell.Tests.DistrictProgressionTests.AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay(&quot;respect&quot;)" methodname="AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1194906752" result="Passed" start-time="2026-11-03 11:25:52Z" end-time="2026-11-03 11:26:04Z" duration="12.069649" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay("respect")
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay("respect") Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="2417" name="CuttingTheThreeCheckpointEdgesSeparatesEveryHigherDistrictFromTheStarterArea" fullname="PCShopSell.Tests.DistrictProgressionTests.CuttingTheThreeCheckpointEdgesSeparatesEveryHigherDistrictFromTheStarterArea" methodname="CuttingTheThreeCheckpointEdgesSeparatesEveryHigherDistrictFromTheStarterArea" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="2031220019" result="Passed" start-time="2026-11-03 11:26:04Z" end-time="2026-11-03 11:26:04Z" duration="0.027412" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.CuttingTheThreeCheckpointEdgesSeparatesEveryHigherDistrictFromTheStarterArea
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.CuttingTheThreeCheckpointEdgesSeparatesEveryHigherDistrictFromTheStarterArea Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="2428" name="EachDispersedBoxIsWalkableInsideStarterDistrict" fullname="PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-03 11:26:04Z" end-time="2026-11-03 11:26:04Z" duration="0.138120" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="2425" name="EachDispersedBoxIsWalkableInsideStarterDistrict(0)" fullname="PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(0)" methodname="EachDispersedBoxIsWalkableInsideStarterDistrict" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1967831180" result="Passed" start-time="2026-11-03 11:26:04Z" end-time="2026-11-03 11:26:04Z" duration="0.045280" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(0)
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(0) Passed
+]]></output>
+              </test-case>
+              <test-case id="2426" name="EachDispersedBoxIsWalkableInsideStarterDistrict(1)" fullname="PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(1)" methodname="EachDispersedBoxIsWalkableInsideStarterDistrict" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1664437477" result="Passed" start-time="2026-11-03 11:26:04Z" end-time="2026-11-03 11:26:04Z" duration="0.042054" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(1)
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(1) Passed
+]]></output>
+              </test-case>
+              <test-case id="2427" name="EachDispersedBoxIsWalkableInsideStarterDistrict(2)" fullname="PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(2)" methodname="EachDispersedBoxIsWalkableInsideStarterDistrict" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1946162504" result="Passed" start-time="2026-11-03 11:26:04Z" end-time="2026-11-03 11:26:04Z" duration="0.046437" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(2)
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.EachDispersedBoxIsWalkableInsideStarterDistrict(2) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="2406" name="FirstPresetCreatesRealFittedShopsAndCashOnceButDoesNotUnlockRoads" fullname="PCShopSell.Tests.DistrictProgressionTests.FirstPresetCreatesRealFittedShopsAndCashOnceButDoesNotUnlockRoads" methodname="FirstPresetCreatesRealFittedShopsAndCashOnceButDoesNotUnlockRoads" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1701782733" result="Passed" start-time="2026-11-03 11:26:04Z" end-time="2026-11-03 11:26:06Z" duration="1.953784" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.FirstPresetCreatesRealFittedShopsAndCashOnceButDoesNotUnlockRoads
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.FirstPresetCreatesRealFittedShopsAndCashOnceButDoesNotUnlockRoads Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="2410" name="GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn" fullname="PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-03 11:26:06Z" end-time="2026-11-03 11:26:06Z" duration="0.080731" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="2407" name="GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(1)" fullname="PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(1)" methodname="GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="461495126" result="Passed" start-time="2026-11-03 11:26:06Z" end-time="2026-11-03 11:26:06Z" duration="0.026687" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(1)
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(1) Passed
+]]></output>
+              </test-case>
+              <test-case id="2408" name="GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(2)" fullname="PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(2)" methodname="GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1279586042" result="Passed" start-time="2026-11-03 11:26:06Z" end-time="2026-11-03 11:26:06Z" duration="0.025682" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(2)
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(2) Passed
+]]></output>
+              </test-case>
+              <test-case id="2409" name="GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(3)" fullname="PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(3)" methodname="GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1015280735" result="Passed" start-time="2026-11-03 11:26:06Z" end-time="2026-11-03 11:26:06Z" duration="0.024889" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(3)
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.GatesStopForwardCrossingAtMiddleAndAlwaysPermitReturn(3) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="2420" name="IncompleteWrongPersonAndWrongServiceOutingsDoNotRevealClues" fullname="PCShopSell.Tests.DistrictProgressionTests.IncompleteWrongPersonAndWrongServiceOutingsDoNotRevealClues" methodname="IncompleteWrongPersonAndWrongServiceOutingsDoNotRevealClues" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1216584396" result="Passed" start-time="2026-11-03 11:26:06Z" end-time="2026-11-03 11:26:06Z" duration="0.023967" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.IncompleteWrongPersonAndWrongServiceOutingsDoNotRevealClues
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.IncompleteWrongPersonAndWrongServiceOutingsDoNotRevealClues Passed
+]]></output>
+            </test-case>
+            <test-case id="2418" name="InvitationAndRealMeetingUnlockOnlyFirstGateAndSurviveReload" fullname="PCShopSell.Tests.DistrictProgressionTests.InvitationAndRealMeetingUnlockOnlyFirstGateAndSurviveReload" methodname="InvitationAndRealMeetingUnlockOnlyFirstGateAndSurviveReload" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1966910698" result="Passed" start-time="2026-11-03 11:26:06Z" end-time="2026-11-03 11:26:09Z" duration="3.152033" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.InvitationAndRealMeetingUnlockOnlyFirstGateAndSurviveReload
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.InvitationAndRealMeetingUnlockOnlyFirstGateAndSurviveReload Passed
+]]></output>
+            </test-case>
+            <test-case id="2405" name="InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce" fullname="PCShopSell.Tests.DistrictProgressionTests.InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce" methodname="InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1136428131" result="Passed" start-time="2026-11-03 11:26:09Z" end-time="2026-11-03 11:26:09Z" duration="0.066981" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="2424" name="LegacyMapSavesPreserveEarnedMapAndMigrateUnfinishedSearch" fullname="PCShopSell.Tests.DistrictProgressionTests.LegacyMapSavesPreserveEarnedMapAndMigrateUnfinishedSearch" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-03 11:26:09Z" end-time="2026-11-03 11:26:09Z" duration="0.088878" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="2422" name="LegacyMapSavesPreserveEarnedMapAndMigrateUnfinishedSearch(False)" fullname="PCShopSell.Tests.DistrictProgressionTests.LegacyMapSavesPreserveEarnedMapAndMigrateUnfinishedSearch(False)" methodname="LegacyMapSavesPreserveEarnedMapAndMigrateUnfinishedSearch" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1359489605" result="Passed" start-time="2026-11-03 11:26:09Z" end-time="2026-11-03 11:26:09Z" duration="0.042520" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.LegacyMapSavesPreserveEarnedMapAndMigrateUnfinishedSearch(False)
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.LegacyMapSavesPreserveEarnedMapAndMigrateUnfinishedSearch(False) Passed
+]]></output>
+              </test-case>
+              <test-case id="2423" name="LegacyMapSavesPreserveEarnedMapAndMigrateUnfinishedSearch(True)" fullname="PCShopSell.Tests.DistrictProgressionTests.LegacyMapSavesPreserveEarnedMapAndMigrateUnfinishedSearch(True)" methodname="LegacyMapSavesPreserveEarnedMapAndMigrateUnfinishedSearch" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1342630171" result="Passed" start-time="2026-11-03 11:26:09Z" end-time="2026-11-03 11:26:09Z" duration="0.040900" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.LegacyMapSavesPreserveEarnedMapAndMigrateUnfinishedSearch(True)
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.LegacyMapSavesPreserveEarnedMapAndMigrateUnfinishedSearch(True) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="2435" name="LegacySaveKeepsAssetsButNewRoadRulesApplyWithoutSharingStateBetweenSessions" fullname="PCShopSell.Tests.DistrictProgressionTests.LegacySaveKeepsAssetsButNewRoadRulesApplyWithoutSharingStateBetweenSessions" methodname="LegacySaveKeepsAssetsButNewRoadRulesApplyWithoutSharingStateBetweenSessions" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="165722671" result="Passed" start-time="2026-11-03 11:26:09Z" end-time="2026-11-03 11:26:09Z" duration="0.054124" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.LegacySaveKeepsAssetsButNewRoadRulesApplyWithoutSharingStateBetweenSessions
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.LegacySaveKeepsAssetsButNewRoadRulesApplyWithoutSharingStateBetweenSessions Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="2413" name="ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed" fullname="PCShopSell.Tests.DistrictProgressionTests.ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-03 11:26:09Z" end-time="2026-11-03 11:26:09Z" duration="0.119889" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="2411" name="ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed(False)" fullname="PCShopSell.Tests.DistrictProgressionTests.ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed(False)" methodname="ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1232142161" result="Passed" start-time="2026-11-03 11:26:09Z" end-time="2026-11-03 11:26:09Z" duration="0.070796" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed(False)
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed(False) Passed
+]]></output>
+              </test-case>
+              <test-case id="2412" name="ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed(True)" fullname="PCShopSell.Tests.DistrictProgressionTests.ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed(True)" methodname="ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="40785643" result="Passed" start-time="2026-11-03 11:26:09Z" end-time="2026-11-03 11:26:09Z" duration="0.046950" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed(True)
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.ManualAndAutoTravelStopAtCheckpointAtEightTimesSpeed(True) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="2414" name="MetroCannotBypassGateOrChargeFareForRejectedTrip" fullname="PCShopSell.Tests.DistrictProgressionTests.MetroCannotBypassGateOrChargeFareForRejectedTrip" methodname="MetroCannotBypassGateOrChargeFareForRejectedTrip" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="967603508" result="Passed" start-time="2026-11-03 11:26:09Z" end-time="2026-11-03 11:26:09Z" duration="0.024443" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.MetroCannotBypassGateOrChargeFareForRejectedTrip
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.MetroCannotBypassGateOrChargeFareForRejectedTrip Passed
+]]></output>
+            </test-case>
+            <test-case id="2430" name="PreviouslyUnlockedCommunitySaveKeepsAccessWithoutNewTrial" fullname="PCShopSell.Tests.DistrictProgressionTests.PreviouslyUnlockedCommunitySaveKeepsAccessWithoutNewTrial" methodname="PreviouslyUnlockedCommunitySaveKeepsAccessWithoutNewTrial" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1423202261" result="Passed" start-time="2026-11-03 11:26:09Z" end-time="2026-11-03 11:26:09Z" duration="0.043552" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.PreviouslyUnlockedCommunitySaveKeepsAccessWithoutNewTrial
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.PreviouslyUnlockedCommunitySaveKeepsAccessWithoutNewTrial Passed
+]]></output>
+            </test-case>
+            <test-case id="2416" name="SaveReloadInFlightStillStopsAtRoadAndDoesNotUnlockAnything" fullname="PCShopSell.Tests.DistrictProgressionTests.SaveReloadInFlightStillStopsAtRoadAndDoesNotUnlockAnything" methodname="SaveReloadInFlightStillStopsAtRoadAndDoesNotUnlockAnything" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="2063262345" result="Passed" start-time="2026-11-03 11:26:09Z" end-time="2026-11-03 11:26:09Z" duration="0.057359" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.SaveReloadInFlightStillStopsAtRoadAndDoesNotUnlockAnything
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.SaveReloadInFlightStillStopsAtRoadAndDoesNotUnlockAnything Passed
+]]></output>
+            </test-case>
+            <test-case id="2421" name="ServiceEndingExactlyAtClosingCountsAsCompleted" fullname="PCShopSell.Tests.DistrictProgressionTests.ServiceEndingExactlyAtClosingCountsAsCompleted" methodname="ServiceEndingExactlyAtClosingCountsAsCompleted" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1465097642" result="Passed" start-time="2026-11-03 11:26:09Z" end-time="2026-11-03 11:26:10Z" duration="0.090286" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.ServiceEndingExactlyAtClosingCountsAsCompleted
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.ServiceEndingExactlyAtClosingCountsAsCompleted Passed
+]]></output>
+            </test-case>
+            <test-case id="2429" name="SupersededTradingAssignmentMigratesToClueWithoutUnlocking" fullname="PCShopSell.Tests.DistrictProgressionTests.SupersededTradingAssignmentMigratesToClueWithoutUnlocking" methodname="SupersededTradingAssignmentMigratesToClueWithoutUnlocking" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1576490249" result="Passed" start-time="2026-11-03 11:26:10Z" end-time="2026-11-03 11:26:10Z" duration="0.043145" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.SupersededTradingAssignmentMigratesToClueWithoutUnlocking
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.SupersededTradingAssignmentMigratesToClueWithoutUnlocking Passed
+]]></output>
+            </test-case>
+            <test-case id="2415" name="TaxiCannotBypassGateAndDoesNotChargeForBlockedRoad" fullname="PCShopSell.Tests.DistrictProgressionTests.TaxiCannotBypassGateAndDoesNotChargeForBlockedRoad" methodname="TaxiCannotBypassGateAndDoesNotChargeForBlockedRoad" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="982898614" result="Passed" start-time="2026-11-03 11:26:10Z" end-time="2026-11-03 11:26:10Z" duration="0.029645" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.TaxiCannotBypassGateAndDoesNotChargeForBlockedRoad
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.TaxiCannotBypassGateAndDoesNotChargeForBlockedRoad Passed
+]]></output>
+            </test-case>
+            <test-case id="2419" name="ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload" fullname="PCShopSell.Tests.DistrictProgressionTests.ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload" methodname="ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="900533083" result="Passed" start-time="2026-11-03 11:26:10Z" end-time="2026-11-03 11:26:13Z" duration="3.141670" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.ThreeIndependentLeadsRequireActualOutingsAndPhysicalBoxesAndSurviveReload Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3110" name="SteerTests" fullname="PCShopSell.Tests.SteerTests" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" testcasecount="23" result="Failed" site="Child" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.191428" total="23" passed="22" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="3121" name="DiagonalWallSlideDoesNotConvertBlockedMotionIntoExtraHorizontalSpeed" fullname="PCShopSell.Tests.SteerTests.DiagonalWallSlideDoesNotConvertBlockedMotionIntoExtraHorizontalSpeed" methodname="DiagonalWallSlideDoesNotConvertBlockedMotionIntoExtraHorizontalSpeed" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="1803352640" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.009033" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.DiagonalWallSlideDoesNotConvertBlockedMotionIntoExtraHorizontalSpeed
+REGRESSION DONE PCShopSell.Tests.SteerTests.DiagonalWallSlideDoesNotConvertBlockedMotionIntoExtraHorizontalSpeed Passed
+]]></output>
+            </test-case>
+            <test-case id="3135" name="Enter_WhileFree_IsRefused" fullname="PCShopSell.Tests.SteerTests.Enter_WhileFree_IsRefused" methodname="Enter_WhileFree_IsRefused" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="1478387678" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.001411" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.Enter_WhileFree_IsRefused
+REGRESSION DONE PCShopSell.Tests.SteerTests.Enter_WhileFree_IsRefused Passed
+]]></output>
+            </test-case>
+            <test-case id="3127" name="EnterNearby_ClosedShop_StaysAtDoor" fullname="PCShopSell.Tests.SteerTests.EnterNearby_ClosedShop_StaysAtDoor" methodname="EnterNearby_ClosedShop_StaysAtDoor" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="692097027" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.005712" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.EnterNearby_ClosedShop_StaysAtDoor
+REGRESSION DONE PCShopSell.Tests.SteerTests.EnterNearby_ClosedShop_StaysAtDoor Passed
+]]></output>
+            </test-case>
+            <test-case id="3129" name="EnterNearby_FarFromDoors_Fails" fullname="PCShopSell.Tests.SteerTests.EnterNearby_FarFromDoors_Fails" methodname="EnterNearby_FarFromDoors_Fails" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="746495641" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.002067" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.EnterNearby_FarFromDoors_Fails
+REGRESSION DONE PCShopSell.Tests.SteerTests.EnterNearby_FarFromDoors_Fails Passed
+]]></output>
+            </test-case>
+            <test-case id="3128" name="EnterNearby_FromMiddleOfRoad_Fails" fullname="PCShopSell.Tests.SteerTests.EnterNearby_FromMiddleOfRoad_Fails" methodname="EnterNearby_FromMiddleOfRoad_Fails" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="1611094554" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.000829" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.EnterNearby_FromMiddleOfRoad_Fails
+REGRESSION DONE PCShopSell.Tests.SteerTests.EnterNearby_FromMiddleOfRoad_Fails Passed
+]]></output>
+            </test-case>
+            <test-case id="3126" name="EnterNearby_FromStorefrontSide_SnapsToDoor" fullname="PCShopSell.Tests.SteerTests.EnterNearby_FromStorefrontSide_SnapsToDoor" methodname="EnterNearby_FromStorefrontSide_SnapsToDoor" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="1598306486" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.005239" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.EnterNearby_FromStorefrontSide_SnapsToDoor
+REGRESSION DONE PCShopSell.Tests.SteerTests.EnterNearby_FromStorefrontSide_SnapsToDoor Passed
+]]></output>
+            </test-case>
+            <test-case id="3130" name="GoTo_FromFreePosition_StillArrives" fullname="PCShopSell.Tests.SteerTests.GoTo_FromFreePosition_StillArrives" methodname="GoTo_FromFreePosition_StillArrives" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="1921383701" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.002243" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.GoTo_FromFreePosition_StillArrives
+REGRESSION DONE PCShopSell.Tests.SteerTests.GoTo_FromFreePosition_StillArrives Passed
+]]></output>
+            </test-case>
+            <test-case id="3133" name="GoToPlace_FromInsideAnotherShop_LeavesByTheDoor" fullname="PCShopSell.Tests.SteerTests.GoToPlace_FromInsideAnotherShop_LeavesByTheDoor" methodname="GoToPlace_FromInsideAnotherShop_LeavesByTheDoor" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="107691387" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.001606" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.GoToPlace_FromInsideAnotherShop_LeavesByTheDoor
+REGRESSION DONE PCShopSell.Tests.SteerTests.GoToPlace_FromInsideAnotherShop_LeavesByTheDoor Passed
+]]></output>
+            </test-case>
+            <test-case id="3131" name="GoToPlace_WalksOnSidewalk_AndStopsAtDoor" fullname="PCShopSell.Tests.SteerTests.GoToPlace_WalksOnSidewalk_AndStopsAtDoor" methodname="GoToPlace_WalksOnSidewalk_AndStopsAtDoor" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="1860524773" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.003916" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.GoToPlace_WalksOnSidewalk_AndStopsAtDoor
+REGRESSION DONE PCShopSell.Tests.SteerTests.GoToPlace_WalksOnSidewalk_AndStopsAtDoor Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="3114" name="LakeRoadAndPavingFormOneContinuousWalkableSurface" fullname="PCShopSell.Tests.SteerTests.LakeRoadAndPavingFormOneContinuousWalkableSurface" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" testcasecount="3" result="Failed" site="Child" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.085948" total="3" passed="2" failed="1" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-case id="3111" name="LakeRoadAndPavingFormOneContinuousWalkableSurface(5)" fullname="PCShopSell.Tests.SteerTests.LakeRoadAndPavingFormOneContinuousWalkableSurface(5)" methodname="LakeRoadAndPavingFormOneContinuousWalkableSurface" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="1417864967" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.029172" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.LakeRoadAndPavingFormOneContinuousWalkableSurface(5)
+REGRESSION DONE PCShopSell.Tests.SteerTests.LakeRoadAndPavingFormOneContinuousWalkableSurface(5) Passed
+]]></output>
+              </test-case>
+              <test-case id="3112" name="LakeRoadAndPavingFormOneContinuousWalkableSurface(7)" fullname="PCShopSell.Tests.SteerTests.LakeRoadAndPavingFormOneContinuousWalkableSurface(7)" methodname="LakeRoadAndPavingFormOneContinuousWalkableSurface" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="1608054842" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.024921" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.LakeRoadAndPavingFormOneContinuousWalkableSurface(7)
+REGRESSION DONE PCShopSell.Tests.SteerTests.LakeRoadAndPavingFormOneContinuousWalkableSurface(7) Passed
+]]></output>
+              </test-case>
+              <test-case id="3113" name="LakeRoadAndPavingFormOneContinuousWalkableSurface(8)" fullname="PCShopSell.Tests.SteerTests.LakeRoadAndPavingFormOneContinuousWalkableSurface(8)" methodname="LakeRoadAndPavingFormOneContinuousWalkableSurface" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="780097561" result="Failed" label="Error" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.028311" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[System.InvalidOperationException : Sequence contains no matching element]]></message>
+                  <stack-trace><![CDATA[  at System.Linq.Enumerable.First[TSource] (System.Collections.Generic.IEnumerable`1[T] source, System.Func`2[T,TResult] predicate) [0x00011] in <de4a1a1490a74771a34fee0d1d586658>:0
+  at PCShopSell.Tests.SteerTests.LakeRoadAndPavingFormOneContinuousWalkableSurface (System.Int32 roadWidth) [0x0001e] in C:\Users\yusiyuan\Documents\Codex\2026-11-03\c-d\work\pcshop-review\Assets\Tests\EditMode\SteerTests.cs:34
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 ]]></stack-trace>
+                </failure>
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.LakeRoadAndPavingFormOneContinuousWalkableSurface(8)
+REGRESSION DONE PCShopSell.Tests.SteerTests.LakeRoadAndPavingFormOneContinuousWalkableSurface(8) Failed:Error
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="3132" name="Leave_PutsPlayerAtDoor_NotRoadCentre" fullname="PCShopSell.Tests.SteerTests.Leave_PutsPlayerAtDoor_NotRoadCentre" methodname="Leave_PutsPlayerAtDoor_NotRoadCentre" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="1297614344" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.000922" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.Leave_PutsPlayerAtDoor_NotRoadCentre
+REGRESSION DONE PCShopSell.Tests.SteerTests.Leave_PutsPlayerAtDoor_NotRoadCentre Passed
+]]></output>
+            </test-case>
+            <test-case id="3119" name="Steer_AcrossStreet_StopsAtCorridorEdge" fullname="PCShopSell.Tests.SteerTests.Steer_AcrossStreet_StopsAtCorridorEdge" methodname="Steer_AcrossStreet_StopsAtCorridorEdge" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="1427831615" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.004344" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.Steer_AcrossStreet_StopsAtCorridorEdge
+REGRESSION DONE PCShopSell.Tests.SteerTests.Steer_AcrossStreet_StopsAtCorridorEdge Passed
+]]></output>
+            </test-case>
+            <test-case id="3120" name="Steer_AgainstEdge_SlidesAlong" fullname="PCShopSell.Tests.SteerTests.Steer_AgainstEdge_SlidesAlong" methodname="Steer_AgainstEdge_SlidesAlong" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="683051773" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.006285" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.Steer_AgainstEdge_SlidesAlong
+REGRESSION DONE PCShopSell.Tests.SteerTests.Steer_AgainstEdge_SlidesAlong Passed
+]]></output>
+            </test-case>
+            <test-case id="3124" name="Steer_CanStopAnywhere_AndTurnBack" fullname="PCShopSell.Tests.SteerTests.Steer_CanStopAnywhere_AndTurnBack" methodname="Steer_CanStopAnywhere_AndTurnBack" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="251632587" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.000991" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.Steer_CanStopAnywhere_AndTurnBack
+REGRESSION DONE PCShopSell.Tests.SteerTests.Steer_CanStopAnywhere_AndTurnBack Passed
+]]></output>
+            </test-case>
+            <test-case id="3115" name="Steer_FreeDirection_MovesDiagonally" fullname="PCShopSell.Tests.SteerTests.Steer_FreeDirection_MovesDiagonally" methodname="Steer_FreeDirection_MovesDiagonally" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="281418373" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.000999" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.Steer_FreeDirection_MovesDiagonally
+REGRESSION DONE PCShopSell.Tests.SteerTests.Steer_FreeDirection_MovesDiagonally Passed
+]]></output>
+            </test-case>
+            <test-case id="3122" name="Steer_PastEndOfRoad_StopsAtEndCap" fullname="PCShopSell.Tests.SteerTests.Steer_PastEndOfRoad_StopsAtEndCap" methodname="Steer_PastEndOfRoad_StopsAtEndCap" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="1937146709" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.004876" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.Steer_PastEndOfRoad_StopsAtEndCap
+REGRESSION DONE PCShopSell.Tests.SteerTests.Steer_PastEndOfRoad_StopsAtEndCap Passed
+]]></output>
+            </test-case>
+            <test-case id="3134" name="Steer_TakesOverFromAutoTravel" fullname="PCShopSell.Tests.SteerTests.Steer_TakesOverFromAutoTravel" methodname="Steer_TakesOverFromAutoTravel" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="1765200099" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.005652" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.Steer_TakesOverFromAutoTravel
+REGRESSION DONE PCShopSell.Tests.SteerTests.Steer_TakesOverFromAutoTravel Passed
+]]></output>
+            </test-case>
+            <test-case id="3123" name="Steer_Time_MatchesStandingEvenOnCompressedRoad" fullname="PCShopSell.Tests.SteerTests.Steer_Time_MatchesStandingEvenOnCompressedRoad" methodname="Steer_Time_MatchesStandingEvenOnCompressedRoad" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="785870986" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.027394" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.Steer_Time_MatchesStandingEvenOnCompressedRoad
+REGRESSION DONE PCShopSell.Tests.SteerTests.Steer_Time_MatchesStandingEvenOnCompressedRoad Passed
+]]></output>
+            </test-case>
+            <test-case id="3125" name="Taxi_CannotBeSteered" fullname="PCShopSell.Tests.SteerTests.Taxi_CannotBeSteered" methodname="Taxi_CannotBeSteered" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="1118190333" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.001673" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.Taxi_CannotBeSteered
+REGRESSION DONE PCShopSell.Tests.SteerTests.Taxi_CannotBeSteered Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="3118" name="Walking_ManualAndAutomatic_UseTheSamePhysicalMetersPerMinute" fullname="PCShopSell.Tests.SteerTests.Walking_ManualAndAutomatic_UseTheSamePhysicalMetersPerMinute" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.006168" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="3116" name="Walking_ManualAndAutomatic_UseTheSamePhysicalMetersPerMinute(False)" fullname="PCShopSell.Tests.SteerTests.Walking_ManualAndAutomatic_UseTheSamePhysicalMetersPerMinute(False)" methodname="Walking_ManualAndAutomatic_UseTheSamePhysicalMetersPerMinute" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="69399838" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.001890" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.Walking_ManualAndAutomatic_UseTheSamePhysicalMetersPerMinute(False)
+REGRESSION DONE PCShopSell.Tests.SteerTests.Walking_ManualAndAutomatic_UseTheSamePhysicalMetersPerMinute(False) Passed
+]]></output>
+              </test-case>
+              <test-case id="3117" name="Walking_ManualAndAutomatic_UseTheSamePhysicalMetersPerMinute(True)" fullname="PCShopSell.Tests.SteerTests.Walking_ManualAndAutomatic_UseTheSamePhysicalMetersPerMinute(True)" methodname="Walking_ManualAndAutomatic_UseTheSamePhysicalMetersPerMinute" classname="PCShopSell.Tests.SteerTests" runstate="Runnable" seed="1489090587" result="Passed" start-time="2026-11-03 11:26:13Z" end-time="2026-11-03 11:26:13Z" duration="0.001091" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SteerTests.Walking_ManualAndAutomatic_UseTheSamePhysicalMetersPerMinute(True)
+REGRESSION DONE PCShopSell.Tests.SteerTests.Walking_ManualAndAutomatic_UseTheSamePhysicalMetersPerMinute(True) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>
