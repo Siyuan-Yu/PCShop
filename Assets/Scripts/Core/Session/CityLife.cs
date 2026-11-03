@@ -15,6 +15,9 @@ namespace PCShopSell.Core.Session
         public int Age = 28, WorkStart = 540, WorkEnd = 1080;
         public bool Recruitable;
         public string[] Topics, Stories;
+        public string Circle, StoryTitle, FirstEncounter;
+        public string[] LeisurePlaces;
+        public bool KeyCharacter;
         public StaffDef Staff => new StaffDef(Id, Name, Role, Topics);
     }
     [Serializable] public sealed class CityRelationEdge
@@ -128,7 +131,7 @@ namespace PCShopSell.Core.Session
     }
 
     /// <summary>原创静态内容。原居民和重点人物保留ID，不能按显示名合并。</summary>
-    public static class CityLifeCatalog
+    public static partial class CityLifeCatalog
     {
         public const string InvitationTestPersonId = "life_invitation_test";
         private static List<CityPersonDefinition> _people;
@@ -286,6 +289,7 @@ namespace PCShopSell.Core.Session
             Content("life_librarian","我整理地方资料，也听老居民口述。有些年份记不清，但一个人怎样走到今天，不该因为没有整齐的纸张就被漏掉。",
                 new[]{"口述资料会注明是谁在什么时候说的，记忆和档案对不上也先保留差异，不替别人编一个漂亮而确定的故事。","我喜欢比对旧地图和现在的路口。看见街道改了名字，再听人说当年的日常，城市才不只是几个地标。","家里有一只装着待整理纸条的木盒。我给自己定了每周一小叠，休息时就合上，不把兴趣变成永远做不完的加班。","程弈会来查老工坊结构，宋棉在旧街散步时能记住很多细节。介绍他们认识前，我会先问双方愿不愿意留联系方式。"},
                 new[]{"第一次整理邻里的旧照片，我急着写齐所有名字。有位老人指着空白说，想不起来就先空着，这句话后来成了我的工作习惯。","程弈查一间老工坊，我找到的图纸只有半张。我们沿着旧地图走到原址，没找到答案，却弄清哪一部分只能说是推测。","现在我给每份口述留下回访位置。有人过很久才补上一段记忆也没关系，记录不是一次问完后就再也不见。"});
+            ConfigureNarrativePeople(result);
             return result;
         }
         private static string Interest(int i) => new[]{"dinner","court","ktv","fishing","market","hike"}[i%6];
@@ -294,6 +298,7 @@ namespace PCShopSell.Core.Session
         {
             get
             {
+                foreach(var edge in NarrativeRelations()) yield return edge;
                 foreach (var tie in SocialTies.All)
                 {
                     yield return new CityRelationEdge { From=tie[0], To=tie[1], Kind=tie[2], RevealTopic="friends" };

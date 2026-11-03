@@ -6,10 +6,10 @@ namespace PCShopSell.Game.Runtime
     {
         private void ReferenceResidence(Transform root,float w,float d,float h,int tier,int seed)
         {
-            Color stone=ArtDirection.Hex(tier>1?"F1E4C5":"EAD3A7");
-            Color blue=ArtDirection.Hex(tier>1?"3378BA":"5D91BA");
-            var masonry=Mats.Lit(stone,.18f);var glass=Mats.Lit(blue,.58f,.08f);
-            Prims.Box(root,"ResidenceGarden",new Vector3(0,.04f,d/2),new Vector3(w,.08f,d),Mats.Lit(ArtDirection.Hex("8CAF58")));
+            Color stone=ArtDirection.Hex(tier>1?"CBC8BD":"B9B6A6");
+            Color blue=ArtDirection.Hex(tier>1?"4F697D":"657B88");
+            var masonry=IndustrialMaterials.Surface("concrete",stone,new Vector2(3,4));var glass=Mats.Lit(blue,.58f,.08f);
+            Prims.Box(root,"ResidenceGarden",new Vector3(0,.04f,d/2),new Vector3(w,.08f,d),Mats.Lit(ArtDirection.Hex("78865D")));
             Prims.Box(root,"ResidenceForecourt",new Vector3(0,.10f,d*.15f),new Vector3(w*.86f,.12f,d*.30f),Mats.Lit(Sidewalk));
             Prims.Box(root,"Podium",new Vector3(0,1.05f,d*.59f),new Vector3(w*.87f,2.1f,d*.75f),masonry,true);
             int count=w>21?2:1;float towerW=count==2?w*.34f:w*.64f,towerD=d*.69f;
@@ -41,7 +41,7 @@ namespace PCShopSell.Game.Runtime
                 Prims.Box(tower,"SetbackPenthouse",new Vector3(0,top+.7f,towerD*.12f),new Vector3(towerW*.67f,1.2f,towerD*.58f),masonry);
                 CityArchitecture.Roof(tower,new Vector3(0,top+1.32f,towerD*.12f),towerW*.71f,towerD*.64f,.65f,blue);
                 foreach(int side in new[]{-1,1})
-                    Prims.Box(tower,"RoofGarden",new Vector3(side*towerW*.37f,top+.38f,0),new Vector3(.6f,.35f,towerD*.68f),Mats.Lit(ArtDirection.Hex("6E9846")));
+                    Prims.Box(tower,"RoofGarden",new Vector3(side*towerW*.37f,top+.38f,0),new Vector3(.6f,.35f,towerD*.68f),Mats.Lit(ArtDirection.Hex("5B714D")));
             }
             Prims.Box(root,"LobbyGlass",new Vector3(0,1.05f,d*.215f-.06f),new Vector3(w*.34f,1.85f,.1f),glass);
             Prims.Box(root,"LobbyCanopy",new Vector3(0,2.2f,d*.17f),new Vector3(w*.46f,.2f,d*.15f),masonry);
@@ -49,7 +49,7 @@ namespace PCShopSell.Game.Runtime
             foreach(int side in new[]{-1,1})
             {
                 CityVegetation.Build(root,new Vector3(side*w*.36f,0,d*.14f),seed+side);
-                Prims.Box(root,"EntryFlowerBed",new Vector3(side*w*.26f,.24f,.45f),new Vector3(w*.23f,.45f,.65f),Mats.Lit(ArtDirection.Hex("659B40")));
+                Prims.Box(root,"EntryFlowerBed",new Vector3(side*w*.26f,.24f,.45f),new Vector3(w*.23f,.45f,.65f),Mats.Lit(ArtDirection.Hex("62754E")));
                 for(int j=-1;j<=1;j++)Prims.Shape(PrimitiveType.Sphere,root,"EntryFlowers",new Vector3(side*w*.26f+j*w*.06f,.53f,.45f),Vector3.one*.28f,Mats.Lit(ArtDirection.Hex("EAB24E")));
             }
         }

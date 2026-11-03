@@ -118,8 +118,8 @@ namespace PCShopSell.Game.Runtime
 
             Color wallUpper = ArtDirection.Cream;
             Color wallDado = ArtDirection.Sage;
-            Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), Mats.LitTex(wallUpper, new Vector2(3, 1), 0.05f));
-            Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), Mats.LitTex(wallUpper * 0.93f, new Vector2(3, 1), 0.05f));
+            Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), IndustrialMaterials.Surface("concrete", wallUpper, new Vector2(3,1)));
+            Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), IndustrialMaterials.Surface("concrete", wallUpper * .93f, new Vector2(3,1)));
             Prims.Box(_root, "DadoBack", new Vector3(w / 2, 0.55f, d - 0.01f), new Vector3(w, 1.1f, 0.02f), Mats.Lit(wallDado, 0.05f));
             Prims.Box(_root, "DadoRight", new Vector3(w - 0.01f, 0.55f, d / 2), new Vector3(0.02f, 1.1f, d), Mats.Lit(wallDado * 0.93f, 0.05f));
             Prims.Box(_root, "WallLeftLow", new Vector3(-0.05f, 0.3f, d / 2), new Vector3(0.1f, 0.6f, d), Mats.Lit(new Color(0.6f, 0.58f, 0.52f)));
@@ -386,7 +386,7 @@ namespace PCShopSell.Game.Runtime
                 foreach (string name in new[] { "FloorStain1", "FloorStain2", "Crack1", "Crack2", "LeakStain", "LeakStain2", "Peeling", "Mold" })
                 { var t = _root.Find(name); if (t != null) t.gameObject.SetActive(_homeTier == 0); }
                 var floor = _root.Find("Floor").GetComponent<Renderer>();
-                floor.sharedMaterial = Mats.Lit(_homeTier >= 2 ? ArtDirection.Wood : _homeTier == 1 ? ArtDirection.Cream : new Color(.52f, .47f, .41f));
+                floor.sharedMaterial = IndustrialMaterials.Surface(_homeTier>=2?"wood":"paving",_homeTier >= 2 ? ArtDirection.Wood : _homeTier == 1 ? ArtDirection.Cream : new Color(.52f, .47f, .41f),new Vector2(3,3));
                 foreach (string name in new[] { "DadoBack", "DadoRight" })
                     _root.Find(name).GetComponent<Renderer>().sharedMaterial = Mats.Lit(_homeTier >= 2 ? ArtDirection.Blue : ArtDirection.Sage);
             }

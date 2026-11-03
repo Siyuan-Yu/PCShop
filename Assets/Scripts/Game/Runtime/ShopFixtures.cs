@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
 using UnityEngine;
@@ -70,8 +70,8 @@ namespace PCShopSell.Game.Runtime
             root.localPosition = pos;
             root.localRotation = Quaternion.Euler(0, yawDeg, 0);
 
-            Material wood = Mats.Lit(ArtDirection.Wood);
-            Material frame = Mats.Lit(ArtDirection.Ink, 0.5f);
+            Material wood = IndustrialMaterials.Surface("wood", ArtDirection.Wood, new Vector2(2, 1));
+            Material frame = Mats.Lit(ArtDirection.Ink, 0.4f, 0.55f);
             Prims.Box(root, "Back", new Vector3(0, 0.9f, 0.175f), new Vector3(1.4f, 1.8f, 0.05f), wood);
             Prims.Box(root, "PostL", new Vector3(-0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);
             Prims.Box(root, "PostR", new Vector3(0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);
@@ -130,8 +130,8 @@ namespace PCShopSell.Game.Runtime
             var root = new GameObject("Shelf_" + kindId).transform;
             root.SetParent(parent, false);
 
-            Material wood = Mats.Lit(ArtDirection.Wood);
-            Material frame = Mats.Lit(ArtDirection.Ink, 0.5f);
+            Material wood = IndustrialMaterials.Surface("wood", ArtDirection.Wood, new Vector2(2, 1));
+            Material frame = Mats.Lit(ArtDirection.Ink, 0.4f, 0.55f);
             Prims.Box(root, "Back", new Vector3(0, 0.9f, 0.175f), new Vector3(1.4f, 1.8f, 0.05f), wood);
             Prims.Box(root, "PostL", new Vector3(-0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);
             Prims.Box(root, "PostR", new Vector3(0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);
@@ -198,8 +198,8 @@ namespace PCShopSell.Game.Runtime
         {
             var root = new GameObject("Shelf_Unset").transform;
             root.SetParent(parent, false);
-            Material wood = Mats.Lit(ArtDirection.Wood);
-            Material frame = Mats.Lit(ArtDirection.Ink, 0.5f);
+            Material wood = IndustrialMaterials.Surface("wood", ArtDirection.Wood, new Vector2(2, 1));
+            Material frame = Mats.Lit(ArtDirection.Ink, 0.4f, 0.55f);
             Prims.Box(root, "Back", new Vector3(0, 0.9f, 0.175f), new Vector3(1.4f, 1.8f, 0.05f), wood);
             Prims.Box(root, "PostL", new Vector3(-0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);
             Prims.Box(root, "PostR", new Vector3(0.7f, 0.9f, 0f), new Vector3(0.05f, 1.8f, 0.36f), frame);

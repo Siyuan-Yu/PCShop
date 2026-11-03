@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="22" result="Passed" total="22" passed="22" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-02 17:49:31Z" end-time="2026-11-02 17:49:32Z" duration="1.2658535">
+  <test-suite type="TestSuite" id="2128" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="980" result="Passed" start-time="2026-11-02 17:49:31Z" end-time="2026-11-02 17:49:32Z" duration="1.265854" total="22" passed="22" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="3252" name="PCShopSell.Tests.EditMode.dll" fullname="D:/UnityProjects/PCShop/_ci/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="980" result="Passed" start-time="2026-11-02 17:49:31Z" end-time="2026-11-02 17:49:32Z" duration="1.240265" total="22" passed="22" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="49860" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="3253" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="980" result="Passed" start-time="2026-11-02 17:49:31Z" end-time="2026-11-02 17:49:32Z" duration="1.227958" total="22" passed="22" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3254" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="980" result="Passed" start-time="2026-11-02 17:49:31Z" end-time="2026-11-02 17:49:32Z" duration="1.217844" total="22" passed="22" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="2129" name="BuildingBoundsTests" fullname="PCShopSell.Tests.BuildingBoundsTests" classname="PCShopSell.Tests.BuildingBoundsTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-11-02 17:49:31Z" end-time="2026-11-02 17:49:32Z" duration="0.124258" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="2133" name="ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform" fullname="PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform" classname="PCShopSell.Tests.BuildingBoundsTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.030393" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="2130" name="ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform(&quot;Body&quot;,0)" fullname="PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform(&quot;Body&quot;,0)" methodname="ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform" classname="PCShopSell.Tests.BuildingBoundsTests" runstate="Runnable" seed="671429417" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.020339" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform("Body",0)
+REGRESSION DONE PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform("Body",0) Passed
+]]></output>
+              </test-case>
+              <test-case id="2131" name="ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform(&quot;Building&quot;,90)" fullname="PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform(&quot;Building&quot;,90)" methodname="ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform" classname="PCShopSell.Tests.BuildingBoundsTests" runstate="Runnable" seed="1790772572" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.000739" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform("Building",90)
+REGRESSION DONE PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform("Building",90) Passed
+]]></output>
+              </test-case>
+              <test-case id="2132" name="ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform(&quot;CustomFacade&quot;,137)" fullname="PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform(&quot;CustomFacade&quot;,137)" methodname="ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform" classname="PCShopSell.Tests.BuildingBoundsTests" runstate="Runnable" seed="166605472" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.000700" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform("CustomFacade",137)
+REGRESSION DONE PCShopSell.Tests.BuildingBoundsTests.ActualGeometryDefinesBoundsRegardlessOfNamesHeadingAndParentTransform("CustomFacade",137) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="2135" name="BeaconFitsNewModelsFollowsTransformsAndRebindsTheSamePlaceWithoutGrowingMapBounds" fullname="PCShopSell.Tests.BuildingBoundsTests.BeaconFitsNewModelsFollowsTransformsAndRebindsTheSamePlaceWithoutGrowingMapBounds" methodname="BeaconFitsNewModelsFollowsTransformsAndRebindsTheSamePlaceWithoutGrowingMapBounds" classname="PCShopSell.Tests.BuildingBoundsTests" runstate="Runnable" seed="1334492687" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.082755" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BuildingBoundsTests.BeaconFitsNewModelsFollowsTransformsAndRebindsTheSamePlaceWithoutGrowingMapBounds
+REGRESSION DONE PCShopSell.Tests.BuildingBoundsTests.BeaconFitsNewModelsFollowsTransformsAndRebindsTheSamePlaceWithoutGrowingMapBounds Passed
+]]></output>
+            </test-case>
+            <test-case id="2134" name="ExteriorBoundsIgnoreInactiveInteriorAndIncludeTheWholeRoof" fullname="PCShopSell.Tests.BuildingBoundsTests.ExteriorBoundsIgnoreInactiveInteriorAndIncludeTheWholeRoof" methodname="ExteriorBoundsIgnoreInactiveInteriorAndIncludeTheWholeRoof" classname="PCShopSell.Tests.BuildingBoundsTests" runstate="Runnable" seed="898997309" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.001351" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.BuildingBoundsTests.ExteriorBoundsIgnoreInactiveInteriorAndIncludeTheWholeRoof
+REGRESSION DONE PCShopSell.Tests.BuildingBoundsTests.ExteriorBoundsIgnoreInactiveInteriorAndIncludeTheWholeRoof Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="2579" name="IndustrialArtTests" fullname="PCShopSell.Tests.IndustrialArtTests" classname="PCShopSell.Tests.IndustrialArtTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.114177" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="2584" name="ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles" fullname="PCShopSell.Tests.IndustrialArtTests.ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles" classname="PCShopSell.Tests.IndustrialArtTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.037650" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="2580" name="ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles(&quot;shop&quot;)" fullname="PCShopSell.Tests.IndustrialArtTests.ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles(&quot;shop&quot;)" methodname="ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles" classname="PCShopSell.Tests.IndustrialArtTests" runstate="Runnable" seed="1730527398" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.012042" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.IndustrialArtTests.ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles("shop")
+REGRESSION DONE PCShopSell.Tests.IndustrialArtTests.ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles("shop") Passed
+]]></output>
+              </test-case>
+              <test-case id="2581" name="ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles(&quot;oldhome&quot;)" fullname="PCShopSell.Tests.IndustrialArtTests.ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles(&quot;oldhome&quot;)" methodname="ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles" classname="PCShopSell.Tests.IndustrialArtTests" runstate="Runnable" seed="1660222837" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.001017" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.IndustrialArtTests.ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles("oldhome")
+REGRESSION DONE PCShopSell.Tests.IndustrialArtTests.ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles("oldhome") Passed
+]]></output>
+              </test-case>
+              <test-case id="2582" name="ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles(&quot;warehouse&quot;)" fullname="PCShopSell.Tests.IndustrialArtTests.ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles(&quot;warehouse&quot;)" methodname="ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles" classname="PCShopSell.Tests.IndustrialArtTests" runstate="Runnable" seed="497574855" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.018825" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.IndustrialArtTests.ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles("warehouse")
+REGRESSION DONE PCShopSell.Tests.IndustrialArtTests.ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles("warehouse") Passed
+]]></output>
+              </test-case>
+              <test-case id="2583" name="ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles(&quot;office&quot;)" fullname="PCShopSell.Tests.IndustrialArtTests.ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles(&quot;office&quot;)" methodname="ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles" classname="PCShopSell.Tests.IndustrialArtTests" runstate="Runnable" seed="207856918" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.000492" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.IndustrialArtTests.ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles("office")
+REGRESSION DONE PCShopSell.Tests.IndustrialArtTests.ArchitecturalDressingDoesNotAddMovementOrInteractionObstacles("office") Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="2585" name="NavigationArtworkPreservesTextActionAndHitTarget" fullname="PCShopSell.Tests.IndustrialArtTests.NavigationArtworkPreservesTextActionAndHitTarget" methodname="NavigationArtworkPreservesTextActionAndHitTarget" classname="PCShopSell.Tests.IndustrialArtTests" runstate="Runnable" seed="2047926963" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.073566" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.IndustrialArtTests.NavigationArtworkPreservesTextActionAndHitTarget
+REGRESSION DONE PCShopSell.Tests.IndustrialArtTests.NavigationArtworkPreservesTextActionAndHitTarget Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="2692" name="PixelArtAssetsTests" fullname="PCShopSell.Tests.PixelArtAssetsTests" classname="PCShopSell.Tests.PixelArtAssetsTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.017890" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="2698" name="PortraitArtKeepsStencilSupportForExistingScrollViews" fullname="PCShopSell.Tests.PixelArtAssetsTests.PortraitArtKeepsStencilSupportForExistingScrollViews" methodname="PortraitArtKeepsStencilSupportForExistingScrollViews" classname="PCShopSell.Tests.PixelArtAssetsTests" runstate="Runnable" seed="704923730" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.000717" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.PixelArtAssetsTests.PortraitArtKeepsStencilSupportForExistingScrollViews
+REGRESSION DONE PCShopSell.Tests.PixelArtAssetsTests.PortraitArtKeepsStencilSupportForExistingScrollViews Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="2696" name="PresentationShadersArePackagedAndCompile" fullname="PCShopSell.Tests.PixelArtAssetsTests.PresentationShadersArePackagedAndCompile" classname="PCShopSell.Tests.PixelArtAssetsTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.007251" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="2693" name="PresentationShadersArePackagedAndCompile(&quot;PixelTown&quot;)" fullname="PCShopSell.Tests.PixelArtAssetsTests.PresentationShadersArePackagedAndCompile(&quot;PixelTown&quot;)" methodname="PresentationShadersArePackagedAndCompile" classname="PCShopSell.Tests.PixelArtAssetsTests" runstate="Runnable" seed="145506639" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.001759" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.PixelArtAssetsTests.PresentationShadersArePackagedAndCompile("PixelTown")
+REGRESSION DONE PCShopSell.Tests.PixelArtAssetsTests.PresentationShadersArePackagedAndCompile("PixelTown") Passed
+]]></output>
+              </test-case>
+              <test-case id="2694" name="PresentationShadersArePackagedAndCompile(&quot;PixelFoliage&quot;)" fullname="PCShopSell.Tests.PixelArtAssetsTests.PresentationShadersArePackagedAndCompile(&quot;PixelFoliage&quot;)" methodname="PresentationShadersArePackagedAndCompile" classname="PCShopSell.Tests.PixelArtAssetsTests" runstate="Runnable" seed="389597431" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.000831" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.PixelArtAssetsTests.PresentationShadersArePackagedAndCompile("PixelFoliage")
+REGRESSION DONE PCShopSell.Tests.PixelArtAssetsTests.PresentationShadersArePackagedAndCompile("PixelFoliage") Passed
+]]></output>
+              </test-case>
+              <test-case id="2695" name="PresentationShadersArePackagedAndCompile(&quot;PixelPortrait&quot;)" fullname="PCShopSell.Tests.PixelArtAssetsTests.PresentationShadersArePackagedAndCompile(&quot;PixelPortrait&quot;)" methodname="PresentationShadersArePackagedAndCompile" classname="PCShopSell.Tests.PixelArtAssetsTests" runstate="Runnable" seed="2110505678" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.000270" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.PixelArtAssetsTests.PresentationShadersArePackagedAndCompile("PixelPortrait")
+REGRESSION DONE PCShopSell.Tests.PixelArtAssetsTests.PresentationShadersArePackagedAndCompile("PixelPortrait") Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="2697" name="ProductionRendererIncludesExactlyOnePixelFeature" fullname="PCShopSell.Tests.PixelArtAssetsTests.ProductionRendererIncludesExactlyOnePixelFeature" methodname="ProductionRendererIncludesExactlyOnePixelFeature" classname="PCShopSell.Tests.PixelArtAssetsTests" runstate="Runnable" seed="633531325" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.005927" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.PixelArtAssetsTests.ProductionRendererIncludesExactlyOnePixelFeature
+REGRESSION DONE PCShopSell.Tests.PixelArtAssetsTests.ProductionRendererIncludesExactlyOnePixelFeature Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="2935" name="ShopDockInteractionTests" fullname="PCShopSell.Tests.ShopDockInteractionTests" classname="PCShopSell.Tests.ShopDockInteractionTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.732215" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="2936" name="CounterKeepsControlsAliveWhileUpdatingNumbersAndRebuildsChangedHours" fullname="PCShopSell.Tests.ShopDockInteractionTests.CounterKeepsControlsAliveWhileUpdatingNumbersAndRebuildsChangedHours" methodname="CounterKeepsControlsAliveWhileUpdatingNumbersAndRebuildsChangedHours" classname="PCShopSell.Tests.ShopDockInteractionTests" runstate="Runnable" seed="728303144" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.116882" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopDockInteractionTests.CounterKeepsControlsAliveWhileUpdatingNumbersAndRebuildsChangedHours
+REGRESSION DONE PCShopSell.Tests.ShopDockInteractionTests.CounterKeepsControlsAliveWhileUpdatingNumbersAndRebuildsChangedHours Passed
+]]></output>
+            </test-case>
+            <test-case id="2941" name="DockRemainsRecoverableAcrossPauseDialogsAndExplicitCollapse" fullname="PCShopSell.Tests.ShopDockInteractionTests.DockRemainsRecoverableAcrossPauseDialogsAndExplicitCollapse" methodname="DockRemainsRecoverableAcrossPauseDialogsAndExplicitCollapse" classname="PCShopSell.Tests.ShopDockInteractionTests" runstate="Runnable" seed="1894532784" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.104428" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopDockInteractionTests.DockRemainsRecoverableAcrossPauseDialogsAndExplicitCollapse
+REGRESSION DONE PCShopSell.Tests.ShopDockInteractionTests.DockRemainsRecoverableAcrossPauseDialogsAndExplicitCollapse Passed
+]]></output>
+            </test-case>
+            <test-case id="2938" name="EmployeeTabShowsLocalWorkersAndStandbyAndUsesTheSharedNpcDialogue" fullname="PCShopSell.Tests.ShopDockInteractionTests.EmployeeTabShowsLocalWorkersAndStandbyAndUsesTheSharedNpcDialogue" methodname="EmployeeTabShowsLocalWorkersAndStandbyAndUsesTheSharedNpcDialogue" classname="PCShopSell.Tests.ShopDockInteractionTests" runstate="Runnable" seed="1074294370" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.082769" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopDockInteractionTests.EmployeeTabShowsLocalWorkersAndStandbyAndUsesTheSharedNpcDialogue
+REGRESSION DONE PCShopSell.Tests.ShopDockInteractionTests.EmployeeTabShowsLocalWorkersAndStandbyAndUsesTheSharedNpcDialogue Passed
+]]></output>
+            </test-case>
+            <test-case id="2937" name="InteriorShowsEveryPresentEmployeeWithDistinctPositionsAndRealIdentity" fullname="PCShopSell.Tests.ShopDockInteractionTests.InteriorShowsEveryPresentEmployeeWithDistinctPositionsAndRealIdentity" methodname="InteriorShowsEveryPresentEmployeeWithDistinctPositionsAndRealIdentity" classname="PCShopSell.Tests.ShopDockInteractionTests" runstate="Runnable" seed="1690308117" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.144777" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopDockInteractionTests.InteriorShowsEveryPresentEmployeeWithDistinctPositionsAndRealIdentity
+REGRESSION DONE PCShopSell.Tests.ShopDockInteractionTests.InteriorShowsEveryPresentEmployeeWithDistinctPositionsAndRealIdentity Passed
+]]></output>
+            </test-case>
+            <test-case id="2939" name="InventoryShowsDisplayedGoodsAboveWarehouseRemainderWithoutOpeningAnotherWindow" fullname="PCShopSell.Tests.ShopDockInteractionTests.InventoryShowsDisplayedGoodsAboveWarehouseRemainderWithoutOpeningAnotherWindow" methodname="InventoryShowsDisplayedGoodsAboveWarehouseRemainderWithoutOpeningAnotherWindow" classname="PCShopSell.Tests.ShopDockInteractionTests" runstate="Runnable" seed="1601529593" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.124561" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopDockInteractionTests.InventoryShowsDisplayedGoodsAboveWarehouseRemainderWithoutOpeningAnotherWindow
+REGRESSION DONE PCShopSell.Tests.ShopDockInteractionTests.InventoryShowsDisplayedGoodsAboveWarehouseRemainderWithoutOpeningAnotherWindow Passed
+]]></output>
+            </test-case>
+            <test-case id="2942" name="OnlyCounterSelectsMainCategoryAndUpgradeTabIsRemoved" fullname="PCShopSell.Tests.ShopDockInteractionTests.OnlyCounterSelectsMainCategoryAndUpgradeTabIsRemoved" methodname="OnlyCounterSelectsMainCategoryAndUpgradeTabIsRemoved" classname="PCShopSell.Tests.ShopDockInteractionTests" runstate="Runnable" seed="313154917" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.093021" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopDockInteractionTests.OnlyCounterSelectsMainCategoryAndUpgradeTabIsRemoved
+REGRESSION DONE PCShopSell.Tests.ShopDockInteractionTests.OnlyCounterSelectsMainCategoryAndUpgradeTabIsRemoved Passed
+]]></output>
+            </test-case>
+            <test-case id="2940" name="RenovationOnlyShowsUnplacedFurnitureAndRefreshesWhenStockChanges" fullname="PCShopSell.Tests.ShopDockInteractionTests.RenovationOnlyShowsUnplacedFurnitureAndRefreshesWhenStockChanges" methodname="RenovationOnlyShowsUnplacedFurnitureAndRefreshesWhenStockChanges" classname="PCShopSell.Tests.ShopDockInteractionTests" runstate="Runnable" seed="237797412" result="Passed" start-time="2026-11-02 17:49:32Z" end-time="2026-11-02 17:49:32Z" duration="0.056705" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopDockInteractionTests.RenovationOnlyShowsUnplacedFurnitureAndRefreshesWhenStockChanges
+REGRESSION DONE PCShopSell.Tests.ShopDockInteractionTests.RenovationOnlyShowsUnplacedFurnitureAndRefreshesWhenStockChanges Passed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
@@ -238,7 +238,7 @@ namespace PCShopSell.Game.UI
             BuildCityLifeHud(root);
             BuildShopDockToggle(root);
 
-            Image hint = Ui.Panel(root, "HintStrip", new Color(0.12f, 0.18f, 0.17f, 0.93f));
+            Image hint = Ui.Panel(root, "HintStrip", new Color(.13f,.17f,.22f,.95f));
             hint.rectTransform.Anchor(0, 0, 0, 0, 16, 70, -1136, -122);
             hint.raycastTarget = false;
             _hintText = Ui.Label(hint.transform, "", 16, TextAnchor.MiddleLeft, Ui.TextColor);
@@ -565,7 +565,7 @@ namespace PCShopSell.Game.UI
             var fit = panel.gameObject.AddComponent<ContentSizeFitter>();
             fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            panel.gameObject.AddComponent<Outline>().effectColor = new Color(0.04f, 0.08f, 0.07f, 0.55f);
+            panel.gameObject.AddComponent<Outline>().effectColor = new Color(.025f,.035f,.06f,.48f);
 
             Image tail = Ui.Panel(rt, "Tail", bg);
             tail.raycastTarget = false;
@@ -677,7 +677,7 @@ namespace PCShopSell.Game.UI
             _unreadNotices++;
             _noticeHistory.Add((S == null ? "" : S.Clock.Now + "　") + message);
             if (_noticeHistory.Count > 150) _noticeHistory.RemoveAt(0);
-            Image bg = Ui.Panel(_toastList, "Toast", new Color(0.12f, 0.17f, 0.16f, 0.96f));
+            Image bg = Ui.Panel(_toastList, "Toast", new Color(.13f,.17f,.22f,.96f));
             var fit = bg.gameObject.AddComponent<VerticalLayoutGroup>();
             fit.padding = new RectOffset(14, 14, 10, 10);
             fit.childControlHeight = true;
@@ -710,7 +710,7 @@ namespace PCShopSell.Game.UI
         public Window OpenWindow(string title, float width, float height, Action<Window> builder, bool holds = true, bool closable = true, Action onClosed = null, bool scrollContent = true)
         {
             var w = new Window { Builder = builder, Holds = holds, Owner = this, OnClosed = onClosed, Closable = closable };
-            Image dim = Ui.Panel(_modalCanvas.transform, "Window_" + title, new Color(0.04f, 0.08f, 0.07f, 0.55f));
+            Image dim = Ui.Panel(_modalCanvas.transform, "Window_" + title, new Color(.025f,.035f,.06f,.48f));
             dim.rectTransform.Fill();
             Image panel = Ui.Panel(dim.transform, "Panel", Ui.PanelBg);
             RectTransform prt = panel.rectTransform;

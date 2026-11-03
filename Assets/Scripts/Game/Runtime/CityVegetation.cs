@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
 {
@@ -17,20 +17,25 @@ namespace PCShopSell.Game.Runtime
         public static void Build(Transform parent,Vector3 at,int variant=0)
         {
             int seed=variant&int.MaxValue;float scale=.9f+(seed%5)*.08f;
-            Prims.Box(parent,"TreeTrunk",at+Vector3.up*1.25f*scale,new Vector3(.24f,2.5f,.24f)*scale,Mats.Lit(ArtDirection.Hex("9A7446")));
-            Color leaf=seed%3==0?ArtDirection.Hex("79A843"):seed%3==1?ArtDirection.Hex("98B951"):ArtDirection.Hex("55904D");
+            Prims.Box(parent,"TreeTrunk",at+Vector3.up*1.25f*scale,new Vector3(.24f,2.5f,.24f)*scale,Mats.Lit(ArtDirection.Hex("6E5842")));
+            Color leaf=seed%3==0?ArtDirection.Hex("738343"):seed%3==1?ArtDirection.Hex("8B9654"):ArtDirection.Hex("4E6B4B");
             if(seed%4==0)
             {
                 if(_cone==null)_cone=ConiferCrown();
-                for(int i=0;i<3;i++)CrownPart(parent,_cone,at+new Vector3(0,1.5f+i*.65f,0)*scale,new Vector3(1.1f-i*.23f,1.55f,1.1f-i*.23f)*scale,Color.Lerp(leaf,ArtDirection.Hex("B3C75F"),i*.10f));
+                for(int i=0;i<3;i++)CrownPart(parent,_cone,at+new Vector3(0,1.5f+i*.65f,0)*scale,new Vector3(1.1f-i*.23f,1.55f,1.1f-i*.23f)*scale,Color.Lerp(leaf,ArtDirection.Hex("A4A66C"),i*.10f));
             }
             else
             {
                 CrownPart(parent,Crown,at+new Vector3(-.35f,2.55f,0)*scale,new Vector3(1.22f,1.4f,1.22f)*scale,leaf);
-                CrownPart(parent,Crown,at+new Vector3(.48f,3.1f,.1f)*scale,new Vector3(.95f,1.3f,1.0f)*scale,Color.Lerp(leaf,ArtDirection.Hex("B9CD68"),.20f));
+                CrownPart(parent,Crown,at+new Vector3(.48f,3.1f,.1f)*scale,new Vector3(.95f,1.3f,1.0f)*scale,Color.Lerp(leaf,ArtDirection.Hex("A8AA71"),.20f));
                 CrownPart(parent,Crown,at+new Vector3(.5f,2.25f,-.35f)*scale,new Vector3(.85f,.85f,.9f)*scale,leaf);
+                for(int cluster=0;cluster<4;cluster++)
+                {
+                    float angle=cluster*Mathf.PI*.5f;
+                    CrownPart(parent,Crown,at+new Vector3(Mathf.Cos(angle)*.75f,3.2f+(cluster%2)*.35f,Mathf.Sin(angle)*.65f)*scale,new Vector3(.53f,.65f,.54f)*scale,Color.Lerp(leaf,ArtDirection.Cream,.08f));
+                }
             }
-            Prims.Shape(PrimitiveType.Cylinder,parent,"TreeBed",at+new Vector3(0,.055f,0),new Vector3(1.35f,.055f,1.35f),Mats.Lit(ArtDirection.Hex("8FA459")));
+            Prims.Shape(PrimitiveType.Cylinder,parent,"TreeBed",at+new Vector3(0,.055f,0),new Vector3(1.35f,.055f,1.35f),Mats.Lit(ArtDirection.Hex("738057")));
         }
         private static void CrownPart(Transform parent,Mesh mesh,Vector3 at,Vector3 scale,Color color)
         {

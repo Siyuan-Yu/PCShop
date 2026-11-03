@@ -78,14 +78,14 @@ namespace PCShopSell.Game.Runtime
 
         private float FrontZ = (float)GameSession.LinkFrontY;
 
-        private static readonly Color Asphalt = ArtDirection.Hex("74828B");
-        private static readonly Color Sidewalk = ArtDirection.Hex("E7D2AD");
-        private static readonly Color Grass = ArtDirection.Hex("9CB768");
+        private static readonly Color Asphalt = ArtDirection.Hex("515C65");
+        private static readonly Color Sidewalk = ArtDirection.Hex("B9B5A9");
+        private static readonly Color Grass = ArtDirection.Hex("7D8E62");
         private static readonly Color[] Facades =
         {
-            ArtDirection.Hex("F1D7A0"), ArtDirection.Hex("CDDDC9"), ArtDirection.Hex("F5E5BE"),
-            ArtDirection.Hex("E5BEA1"), ArtDirection.Hex("C8D6A3"), ArtDirection.Hex("E8C78E"),
-            ArtDirection.Hex("B5CDDD"), ArtDirection.Hex("E7DDB9"),
+            ArtDirection.Hex("B6AB96"), ArtDirection.Hex("99A29A"), ArtDirection.Hex("C3BAA6"),
+            ArtDirection.Hex("AD907E"), ArtDirection.Hex("969B87"), ArtDirection.Hex("B19B7B"),
+            ArtDirection.Hex("8293A0"), ArtDirection.Hex("BAB5A5"),
         };
         private static readonly Color[] SignColors =
         {
@@ -155,7 +155,7 @@ namespace PCShopSell.Game.Runtime
                     if(d.sqrMagnitude<.01f)continue;
                     // 宽路两端只多伸出窄路那么多，免得盖住路口旁的城中村房子。
                     float len = d.magnitude + (shopping ? 5f : width);
-                    var roadMaterial=_city.IsLakeCity?Mats.Lit(Asphalt,.12f):Mats.LitTex(Asphalt,new Vector2(Mathf.Max(1f,width/5f),Mathf.Max(1f,len/5f)),.12f);
+                    var roadMaterial=_city.IsLakeCity?IndustrialMaterials.Surface("asphalt",Asphalt,new Vector2(Mathf.Max(1,width/4),Mathf.Max(1,len/4))):Mats.LitTex(Asphalt,new Vector2(Mathf.Max(1f,width/5f),Mathf.Max(1f,len/5f)),.12f);
                     var go = Prims.Box(roads, "Road_" + key, (a + b) * 0.5f + Vector3.up * 0.005f, new Vector3(width, 0.02f, len), roadMaterial);
                     go.transform.localRotation = Quaternion.LookRotation(d.normalized, Vector3.up);
 

@@ -7,13 +7,13 @@ namespace PCShopSell.Game.Runtime
     public static class ArtDirection
     {
         public static Color Hex(string value) { ColorUtility.TryParseHtmlString("#" + value, out var c); return c; }
-        public static readonly Color Cream = Hex("E5DDCA");
-        public static readonly Color Sage = Hex("758A7D");
-        public static readonly Color Ink = Hex("293E3D");
-        public static readonly Color Wood = Hex("977457");
-        public static readonly Color Brass = Hex("C7A36B");
-        public static readonly Color Clay = Hex("AD6C55");
-        public static readonly Color Blue = Hex("6D8896");
+        public static readonly Color Cream = Hex("DDD8CC");
+        public static readonly Color Sage = Hex("657C64");
+        public static readonly Color Ink = Hex("303C4B");
+        public static readonly Color Wood = Hex("88684C");
+        public static readonly Color Brass = Hex("C49B51");
+        public static readonly Color Clay = Hex("B16D45");
+        public static readonly Color Blue = Hex("647C90");
 
         private static readonly Dictionary<Vector3, Mesh> Bevels = new Dictionary<Vector3, Mesh>();
         // Small objects have physical edge highlights; their existing box colliders stay unchanged.

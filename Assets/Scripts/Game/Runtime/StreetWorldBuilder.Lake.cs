@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -17,10 +17,10 @@ namespace PCShopSell.Game.Runtime
             root.localScale=Vector3.one*LakeScale;
             var resources=root.gameObject.AddComponent<CityLandscapeResources>();
             var shore=SmoothShore();
-            LakeSurface(root,"StoneShore",shore,1.006f,.12f,Mats.Lit(ArtDirection.Hex("B3BE99")));
-            LakeSurface(root,"ShallowWater",shore,1,.18f,Mats.Lit(ArtDirection.Hex("4E9FA9"),.65f));
+            LakeSurface(root,"StoneShore",shore,1.006f,.12f,Mats.Lit(ArtDirection.Hex("929A89")));
+            LakeSurface(root,"ShallowWater",shore,1,.18f,Mats.Lit(ArtDirection.Hex("537D83"),.65f));
             var shader=Resources.Load<Shader>("Shaders/LakeWater");
-            var water=shader!=null?new Material(shader):Mats.Lit(ArtDirection.Hex("348EAF"),.8f);
+            var water=shader!=null?new Material(shader):Mats.Lit(ArtDirection.Hex("385E72"),.8f);
             if(shader!=null)resources.Owned.Add(water);
             LakeSurface(root,"CentralLake",shore,.995f,.21f,water);
             BuildMountainGround(root);
@@ -79,7 +79,7 @@ namespace PCShopSell.Game.Runtime
             {float x=-1500+i*step,z=-1000+j*step;v.Add(new Vector3(x,MountainHeight(x,z)+.001f,z));}
             for(int j=0;j<nz;j++)for(int i=0;i<nx;i++)
             {int a=j*(nx+1)+i,b=a+nx+1;t.Add(a);t.Add(b);t.Add(a+1);t.Add(a+1);t.Add(b);t.Add(b+1);}
-            LandscapeMesh(root,"ForestedMountainTerrain",v,t,Mats.LitTex(ArtDirection.Hex("7D9F59"),new Vector2(1,1),.12f));
+            LandscapeMesh(root,"ForestedMountainTerrain",v,t,Mats.LitTex(ArtDirection.Hex("73805C"),new Vector2(1,1),.12f));
             // Granite outcrops break up the forested silhouette, never inside the road network.
             for(int i=0;i<25;i++)
             {
@@ -90,7 +90,7 @@ namespace PCShopSell.Game.Runtime
                 AddCrown(rv,rt,new Vector3(x+size*.55f,h+size*.1f,z+4),new Vector3(size*.4f,size,size*.4f),false);
                 // Split vertices for crisp granite planes rather than smooth stretched spheres.
                 var flat=rt.Select(index=>rv[index]).ToList();
-                LandscapeMesh(root,"GraniteOutcrop",flat,Enumerable.Range(0,flat.Count).ToList(),Mats.Lit(ArtDirection.Hex(i%2==0?"A7AA96":"B8BAA1")));
+                LandscapeMesh(root,"GraniteOutcrop",flat,Enumerable.Range(0,flat.Count).ToList(),Mats.Lit(ArtDirection.Hex(i%2==0?"8C938D":"A8ABA0")));
             }
         }
         private static bool WithinLake(Vector3 p,List<Vector3> shore)
@@ -153,7 +153,7 @@ namespace PCShopSell.Game.Runtime
                     if(urban&&hash%3==0)AddCrown(verts[4],tris[4],p+new Vector3(1.8f,1.2f,-1.3f),new Vector3(1.15f,.6f,1.1f),false);
                 }
             }
-            string[] colors={"4E8542","709D45","8DAF4F","A2BA56","DFA6C0","887254"};
+            string[] colors={"526B46","6D7E48","849255","A0A16B","AC938F","715D49"};
             foreach(var pair in chunks)
                 for(int i=0;i<6;i++)
                     if(pair.Value.Vertices[i].Count>0)
@@ -175,9 +175,15 @@ namespace PCShopSell.Game.Runtime
             }
             else
             {
-                AddCrown(v,t,p+Vector3.up*height*.68f,new Vector3(height*.43f,height*.36f,height*.40f),false);
+                AddCrown(v,t,p+Vector3.up*height*.68f,new Vector3(height*.32f,height*.30f,height*.32f),false);
                 AddCrown(v,t,p+new Vector3(height*.26f,height*.57f,0),new Vector3(height*.31f,height*.25f,height*.32f),false);
                 AddCrown(v,t,p+new Vector3(-height*.23f,height*.55f,height*.16f),new Vector3(height*.3f,height*.24f,height*.28f),false);
+                // Smaller overlapping leaf masses replace the balloon silhouette, within the same tree envelope.
+                for(int crown=0;crown<4;crown++)
+                {
+                    float angle=crown*Mathf.PI*.5f+.35f;
+                    AddCrown(v,t,p+new Vector3(Mathf.Cos(angle)*height*.29f,height*(.73f+(crown%2)*.10f),Mathf.Sin(angle)*height*.26f),new Vector3(height*.25f,height*.25f,height*.24f),false);
+                }
             }
         }
         private static void AddCrown(List<Vector3> v,List<int> t,Vector3 center,Vector3 scale,bool cone)
@@ -267,7 +273,7 @@ namespace PCShopSell.Game.Runtime
                 var tree=new GameObject("LakeshoreFloweringTree").transform;tree.SetParent(detail,false);tree.localPosition=p;tree.localScale=Vector3.one*2;
                 CityVegetation.Build(tree,Vector3.zero,i+1);
                 if(i%6==0)foreach(var renderer in tree.GetComponentsInChildren<MeshRenderer>())
-                    if(renderer.name=="SculptedCanopy")renderer.sharedMaterial=Mats.Lit(ArtDirection.Hex("DFA6C0"));
+                    if(renderer.name=="SculptedCanopy")renderer.sharedMaterial=Mats.Lit(ArtDirection.Hex("AC938F"));
             }
             // Viewing decks and reed islands are decoration; no new gameplay destinations.
             foreach(var pos in new[]{new Vector3(610,0,230),new Vector3(-70,0,-310),new Vector3(-70,0,675)})
@@ -305,7 +311,7 @@ namespace PCShopSell.Game.Runtime
                 for(int i=0;i<36;i++){t.Add(0);t.Add((i+1)%36+1);t.Add(i+1);}
                 LandscapeMesh(islands,"IslandBank",v,t,Mats.Lit(ArtDirection.Hex("C7C7A0")));
                 for(int i=0;i<v.Count;i++)v[i]=center+(v[i]-center)*.9f+Vector3.up*.08f;
-                LandscapeMesh(islands,"IslandGrass",v,t,Mats.Lit(ArtDirection.Hex("87AB5D")));
+                LandscapeMesh(islands,"IslandGrass",v,t,Mats.Lit(ArtDirection.Hex("75845A")));
                 for(int i=-2;i<=2;i++)
                 {
                     var tree=new GameObject("IslandTree").transform;tree.SetParent(islands,false);tree.localPosition=center+new Vector3(i*6,.5f,Mathf.Sin(i*4)*3);tree.localScale=Vector3.one*1.7f;
@@ -328,7 +334,7 @@ namespace PCShopSell.Game.Runtime
                     Garden(root,new Rect(-w/2,0,w,d),false);
                     Prims.Shape(PrimitiveType.Cylinder,root,"ParkPromenade",new Vector3(0,.15f,d*.52f),new Vector3(w*.8f,.1f,d*.62f),stone);
                     Prims.Shape(PrimitiveType.Cylinder,root,"ParkIslandLawn",new Vector3(0,.27f,d*.52f),new Vector3(w*.69f,.04f,d*.53f),leaf);
-                    Prims.Shape(PrimitiveType.Cylinder,root,"ParkReflectingPond",new Vector3(0,.34f,d*.52f),new Vector3(w*.45f,.04f,d*.28f),Mats.Lit(ArtDirection.Hex("4AA8BE"),.7f));
+                    Prims.Shape(PrimitiveType.Cylinder,root,"ParkReflectingPond",new Vector3(0,.34f,d*.52f),new Vector3(w*.45f,.04f,d*.28f),Mats.Lit(ArtDirection.Hex("507F8C"),.7f));
                     for(int j=0;j<12;j++)
                     {
                         float angle=j*Mathf.PI/6;var tree=new GameObject("ParkGrove").transform;tree.SetParent(root,false);
@@ -342,7 +348,7 @@ namespace PCShopSell.Game.Runtime
                     Garden(root,new Rect(-w/2,0,w,d),false);
                     Prims.Shape(PrimitiveType.Cylinder,root,"CentralPlazaRing",new Vector3(0,.14f,d*.5f),new Vector3(29,.12f,29),stone);
                     Prims.Shape(PrimitiveType.Cylinder,root,"CentralFountainBasin",new Vector3(0,.45f,d*.5f),new Vector3(20,.38f,20),Mats.Lit(ArtDirection.Cream));
-                    Prims.Shape(PrimitiveType.Cylinder,root,"CentralFountainWater",new Vector3(0,.85f,d*.5f),new Vector3(18.8f,.04f,18.8f),Mats.Lit(ArtDirection.Hex("3FADCD"),.7f));
+                    Prims.Shape(PrimitiveType.Cylinder,root,"CentralFountainWater",new Vector3(0,.85f,d*.5f),new Vector3(18.8f,.04f,18.8f),Mats.Lit(ArtDirection.Hex("4F889A"),.7f));
                     Prims.Shape(PrimitiveType.Cylinder,root,"CentralFountainPedestal",new Vector3(0,1.2f,d*.5f),new Vector3(3,.5f,3),stone);
                     Prims.Shape(PrimitiveType.Cylinder,root,"CentralWaterJet",new Vector3(0,3,d*.5f),new Vector3(.25f,1.5f,.25f),Mats.Lit(ArtDirection.Hex("C4E8E7"),.7f));
                     for(int j=0;j<8;j++)
@@ -350,7 +356,7 @@ namespace PCShopSell.Game.Runtime
                     index++;continue;
                 }
                 Prims.Box(root,"GardenRetainingEdge",new Vector3(0,.18f,d/2),new Vector3(w,.35f,d),stone);
-                Prims.Box(root,"InsetLawn",new Vector3(0,.37f,d/2),new Vector3(w-.6f,.12f,d-.6f),Mats.Lit(ArtDirection.Hex("8BA75D")));
+                Prims.Box(root,"InsetLawn",new Vector3(0,.37f,d/2),new Vector3(w-.6f,.12f,d-.6f),Mats.Lit(ArtDirection.Hex("798661")));
                 Prims.Box(root,"GardenPath",new Vector3(0,.46f,d/2),new Vector3(1.4f,.08f,d),stone);
                 foreach(int side in new[]{-1,1})
                 {
@@ -358,7 +364,7 @@ namespace PCShopSell.Game.Runtime
                     Prims.Box(root,"FlowerBorder",new Vector3(side*(w/2-1.8f),.55f,d*.55f),new Vector3(1,.3f,d*.65f),Mats.Lit(ArtDirection.Hex(index%2==0?"D6AFBE":"DCC779")));
                     var tree=new GameObject("GardenTree").transform;tree.SetParent(root,false);tree.localPosition=new Vector3(side*w*.27f,.44f,d*.7f);tree.localScale=Vector3.one*(index%3==0?1.55f:1.25f);
                     CityVegetation.Build(tree,Vector3.zero,index%3==0?1:index+side+4);
-                    if(index%3==0)foreach(var renderer in tree.GetComponentsInChildren<MeshRenderer>())if(renderer.name=="SculptedCanopy")renderer.sharedMaterial=Mats.Lit(ArtDirection.Hex("E3ABC4"));
+                    if(index%3==0)foreach(var renderer in tree.GetComponentsInChildren<MeshRenderer>())if(renderer.name=="SculptedCanopy")renderer.sharedMaterial=Mats.Lit(ArtDirection.Hex("B49A94"));
                     Prims.Box(root,"BenchSeat",new Vector3(side*w*.25f,.9f,d*.22f),new Vector3(2.1f,.18f,.65f),Mats.Lit(ArtDirection.Wood));
                     Prims.Box(root,"BenchBack",new Vector3(side*w*.25f,1.25f,d*.22f+.3f),new Vector3(2.1f,.6f,.12f),Mats.Lit(ArtDirection.Wood));
                 }
@@ -375,7 +381,7 @@ namespace PCShopSell.Game.Runtime
         {
             // Landmark backdrop for the existing convention district, not another gameplay shop.
             var root=new GameObject("ConventionDistrictExhibitionHall").transform;root.SetParent(parent,false);root.localPosition=new Vector3(525,0,310);
-            var glass=Mats.Lit(ArtDirection.Hex("579BBE"),.65f);var white=Mats.Lit(ArtDirection.Cream);
+            var glass=Mats.Lit(ArtDirection.Hex("607E90"),.65f);var white=Mats.Lit(ArtDirection.Cream);
             Prims.Box(root,"CivicPlaza",new Vector3(0,.05f,20),new Vector3(65,.1f,52),Mats.Lit(Sidewalk));
             Prims.Box(root,"Hall",new Vector3(0,7,20),new Vector3(52,14,36),glass);
             foreach(int side in new[]{-1,1})for(int i=0;i<7;i++)
@@ -383,7 +389,7 @@ namespace PCShopSell.Game.Runtime
             for(int i=-4;i<=4;i++)Prims.Box(root,"LobbyFrame",new Vector3(i*6,7,1.8f),new Vector3(.45f,14,.5f),white);
             for(int bay=-1;bay<=1;bay++)
             {
-                var roof=Prims.Box(root,"BlueRoofBay",new Vector3(bay*17.5f,14.8f,20),new Vector3(17,1.2f,37),Mats.Lit(ArtDirection.Hex("467FB0"),.4f));
+                var roof=Prims.Box(root,"BlueRoofBay",new Vector3(bay*17.5f,14.8f,20),new Vector3(17,1.2f,37),Mats.Lit(ArtDirection.Hex("526C83"),.4f));
                 foreach(int side in new[]{-1,1})Prims.Box(root,"RoofRib",new Vector3(bay*17.5f+side*8,15.5f,20),new Vector3(.45f,.4f,38),white);
             }
             Prims.Box(root,"EntranceCanopy",new Vector3(0,5,-2),new Vector3(20,.4f,8),white);

@@ -1,8 +1,10 @@
 # PCShopSell（工作名）
 
+当前统一归档（2026-11-03）：[第51篇：现有内容与美术分支](docs/51-current-state-and-art-branches-2026-11-03.md)。main保存当前工业风美术、人物内容与最新UI整理；`art/industrial-reference`保存工业参考快照；`art/pixel-town`保存独立像素风方案。文档包含实际游戏截图、已实现/仅配置的范围与验证边界。本次源码联合专项47/47通过，未重新打包。
+
 UI整理已落实：[第50篇：保留员工部分的UI整理](docs/50-ui-cleanup-excluding-employees.md)。统一经营、行情、人物和日程入口，拆分特殊店型页签，修正分店采购、资产跳转和财务范围，压缩常驻说明；员工部分保留。原审查见[第47篇](docs/47-ui-interaction-audit.md)。尚未重新打包。
 
-最新开发快照：[第46篇：当前源码与剧情规划归档](docs/46-snapshot-and-story-plan-2026-11-03.md)。保存多业态开局、餐馆操作、二手转售和睡眠导航的开发中源码，并完整记录统一四区主线、暂定晋升门槛、品牌上市／行业登顶及NPC规模建议；已验收功能、未联合验收快照与尚未实现的设计分别标注。未重新打包。
+最新人物内容交付：[第49篇：人物与主线信息配置接入](docs/49-narrative-content-implementation.md)，包含120名正式NPC、18个主线节点和20条关键人物支线配置。人物聊天与作息已接入，新主线执行机制仍待接入。此前开发快照见[第46篇](docs/46-snapshot-and-story-plan-2026-11-03.md)。未重新打包。
 
 最新源码补充：[同类店铺商圈分流](docs/45-local-shop-competition.md)，半径40米内同类自营店含本店共N家时，客流保留1/N；中介地图和店铺商圈窗口显示范围圈、同类数量及分流后预计人数。尚未重新打包。
 
@@ -27,6 +29,10 @@ UI整理已落实：[第50篇：保留员工部分的UI整理](docs/50-ui-cleanu
 叙事方向已确认：架空近当代城市中的多业态经营与人物探索，通过三次引荐与真实合作，从城郊进入社区、公园与花园经营圈。统一依据见 [剧情总纲与四区晋升](docs/story-and-district-progression.md)；这是设计决定，实施状态以工程核对为准。旧“电脑城创业／电脑乐园终局”说明保留为历史设计与电脑业态内容，不再作为全店型总主线。游戏采用3D低多边形的世界层、店内层、面板层与手操层，目标平台Steam。
 
 ## 文档
+
+- [`docs/47-city-npc-dossiers.md`](docs/47-city-npc-dossiers.md)：120名正式NPC的身份、住处、工作时段、三段经历及人物关系，从工程配置导出。
+- [`docs/48-district-narrative-nodes.md`](docs/48-district-narrative-nodes.md)：18个成长主线节点、20条人物支线，以及可移动的上市／行业登顶条件模块；明确区分内容配置与任务执行。
+- [`docs/49-narrative-content-implementation.md`](docs/49-narrative-content-implementation.md)：本轮接入范围、检查入口、存档兼容和测试结果。
 
 - [`docs/story-and-district-progression.md`](docs/story-and-district-progression.md)：已确认叙事设计的统一入口；多业态定位、规则主题、四区成长、三次晋升、人物长期支线、可选投资再起，以及现有实现差异和待定事项。不是剧情实现或验收报告。
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using PCShopSell.Core.World;
 using UnityEngine;
@@ -122,12 +122,12 @@ namespace PCShopSell.Game.Runtime
             Color wall=Facades[seed%Facades.Length];
             if(model=="oldhome")
             {
-                Color[] oldWalls={ArtDirection.Hex("C8B28F"),ArtDirection.Hex("D2B997"),ArtDirection.Hex("B7B7A1"),ArtDirection.Hex("C1AB91"),ArtDirection.Hex("D2C6A9")};
+                Color[] oldWalls={ArtDirection.Hex("A09889"),ArtDirection.Hex("B2A48F"),ArtDirection.Hex("909A96"),ArtDirection.Hex("A28E80"),ArtDirection.Hex("B8B2A3")};
                 wall=oldWalls[(seed&int.MaxValue)%oldWalls.Length];
             }
             if(model=="luxury_apartment")wall=ArtDirection.Cream;
             if(model=="warehouse")wall=ArtDirection.Blue;
-            var material=Mats.Lit(wall);
+            var material=IndustrialMaterials.Surface(model=="warehouse"?"metal":model=="oldhome"?"brick":"concrete",wall,new Vector2(Mathf.Max(1,w/3),Mathf.Max(1,h/3)));
             var body=Prims.Box(root,"Building",new Vector3(0,h/2,d/2),new Vector3(w,h,d),material,true);
             if(p!=null)body.AddComponent<PlaceMarker>().PlaceId=p.Id;
             Prims.Box(root,"Foundation",new Vector3(0,.18f,d/2),new Vector3(w+.5f,.36f,d+.5f),Mats.Lit(Sidewalk));
@@ -142,12 +142,25 @@ namespace PCShopSell.Game.Runtime
                 int panels=Mathf.Max(4,Mathf.RoundToInt(awningWidth/.6f));
                 for(int i=0;i<panels;i++)
                     Prims.Box(root,"StripedAwning",new Vector3(-awningWidth/2+(i+.5f)*awningWidth/panels,2.75f,-.55f),
-                        new Vector3(awningWidth/panels,.12f,1.15f),Mats.Lit(i%2==0?ArtDirection.Cream:ArtDirection.Clay));
+                        new Vector3(awningWidth/panels,.12f,1.15f),Mats.Lit(i%2==0?ArtDirection.Blue:ArtDirection.Ink,.35f,.25f));
                 foreach(int side in new[]{-1,1})
-                    Prims.Box(root,"GroundFloorWindow",new Vector3(side*w*.3f,1.25f,-.15f),new Vector3(w*.22f,1.7f,.1f),Mats.Lit(ArtDirection.Blue));
+                    Prims.Box(root,"GroundFloorWindow",new Vector3(side*w*.3f,1.25f,-.15f),new Vector3(w*.22f,1.7f,.1f),Mats.Glow(ArtDirection.Hex("4A5962"),new Color(1.3f,.85f,.38f)));
             }
             CityArchitecture.Residence(root,model,tier,w,d,h,variation);
             CityArchitecture.ReferenceFacade(root,model,tier,w,d,h,seed);
+            CityArchitecture.IndustrialDetails(root,model,w,d,h,seed);
+            if(p!=null&&(model=="shop"||model=="warehouse"))
+            {
+                foreach(int side in new[]{-1,1})
+                {
+                    var lamp=new GameObject("Shopfront warm downlight");lamp.transform.SetParent(root,false);
+                    lamp.transform.localPosition=new Vector3(side*w*.3f,2.9f,-.65f);
+                    Prims.Box(lamp.transform,"Metal lamp shade",Vector3.zero,new Vector3(.48f,.12f,.32f),Mats.Lit(ArtDirection.Ink,.4f,.4f));
+                    Prims.Box(lamp.transform,"Lamp diffuser",Vector3.down*.08f,new Vector3(.35f,.035f,.22f),Mats.Glow(ArtDirection.Cream,new Color(2.4f,1.5f,.6f)));
+                    var light=lamp.AddComponent<Light>();light.type=LightType.Point;light.range=6.5f;
+                    light.color=new Color(1f,.72f,.38f);light.intensity=0;light.shadows=LightShadows.None;NightLights.Add(light);
+                }
+            }
             if(model=="office")
             {
                 foreach(int side in new[]{-1,1})Prims.Box(root,"OfficeFrame",new Vector3(side*w*.42f,h/2,-.18f),new Vector3(.5f,h,.3f),Mats.Lit(ArtDirection.Cream));

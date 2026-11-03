@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="8" result="Failed(Child)" total="8" passed="0" failed="8" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-02 17:25:40Z" end-time="2026-11-02 17:26:58Z" duration="78.3849579">
+  <test-suite type="TestSuite" id="2089" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="948" result="Failed" site="Child" start-time="2026-11-02 17:25:40Z" end-time="2026-11-02 17:26:58Z" duration="78.384958" total="8" passed="0" failed="8" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="3174" name="PCShopSell.Tests.EditMode.dll" fullname="D:/UnityProjects/PCShop/_ci_city_life/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="948" result="Failed" site="Child" start-time="2026-11-02 17:25:40Z" end-time="2026-11-02 17:26:58Z" duration="78.366334" total="8" passed="0" failed="8" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="79376" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="3175" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="948" result="Failed" site="Child" start-time="2026-11-02 17:25:40Z" end-time="2026-11-02 17:26:58Z" duration="78.364130" total="8" passed="0" failed="8" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="3176" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="948" result="Failed" site="Child" start-time="2026-11-02 17:25:40Z" end-time="2026-11-02 17:26:58Z" duration="78.362019" total="8" passed="0" failed="8" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="2198" name="CityActivityTests" fullname="PCShopSell.Tests.CityActivityTests" classname="PCShopSell.Tests.CityActivityTests" runstate="Runnable" testcasecount="4" result="Failed" site="Child" start-time="2026-11-02 17:25:40Z" end-time="2026-11-02 17:26:56Z" duration="75.734407" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="2201" name="FutureAppointmentWithEmptyJsonSeatRouteStillWalksToTheVenueAfterLoad" fullname="PCShopSell.Tests.CityActivityTests.FutureAppointmentWithEmptyJsonSeatRouteStillWalksToTheVenueAfterLoad" methodname="FutureAppointmentWithEmptyJsonSeatRouteStillWalksToTheVenueAfterLoad" classname="PCShopSell.Tests.CityActivityTests" runstate="Runnable" seed="1756486036" result="Failed" start-time="2026-11-02 17:25:40Z" end-time="2026-11-02 17:25:42Z" duration="1.735254" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  场所已经打烊，尚未消费
+  Expected: Running
+  But was:  Cancelled
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.CityActivityTests.FutureAppointmentWithEmptyJsonSeatRouteStillWalksToTheVenueAfterLoad () [0x0014e] in D:\UnityProjects\PCShop\_ci_city_life\Assets\Tests\EditMode\CityActivityTests.cs:79
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.CityActivityTests.FutureAppointmentWithEmptyJsonSeatRouteStillWalksToTheVenueAfterLoad
+REGRESSION DONE PCShopSell.Tests.CityActivityTests.FutureAppointmentWithEmptyJsonSeatRouteStillWalksToTheVenueAfterLoad Failed
+]]></output>
+            </test-case>
+            <test-case id="2200" name="RealTravelMealAndReloadSettleEachStageOnce" fullname="PCShopSell.Tests.CityActivityTests.RealTravelMealAndReloadSettleEachStageOnce" methodname="RealTravelMealAndReloadSettleEachStageOnce" classname="PCShopSell.Tests.CityActivityTests" runstate="Runnable" seed="126143105" result="Failed" start-time="2026-11-02 17:25:42Z" end-time="2026-11-02 17:26:56Z" duration="73.979734" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  场所已经打烊，尚未消费
+  Expected: Running
+  But was:  Cancelled
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.CityActivityTests.RealTravelMealAndReloadSettleEachStageOnce () [0x000dc] in D:\UnityProjects\PCShop\_ci_city_life\Assets\Tests\EditMode\CityActivityTests.cs:45
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.CityActivityTests.RealTravelMealAndReloadSettleEachStageOnce
+REGRESSION DONE PCShopSell.Tests.CityActivityTests.RealTravelMealAndReloadSettleEachStageOnce Failed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="2270" name="CityStoryTests" fullname="PCShopSell.Tests.CityStoryTests" classname="PCShopSell.Tests.CityStoryTests" runstate="Runnable" testcasecount="8" result="Failed" site="Child" start-time="2026-11-02 17:26:56Z" end-time="2026-11-02 17:26:56Z" duration="0.112502" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="2275" name="LongNpcTripUsesSameOrdinaryTransportForEstimateAndActualSavedRoute" fullname="PCShopSell.Tests.CityStoryTests.LongNpcTripUsesSameOrdinaryTransportForEstimateAndActualSavedRoute" methodname="LongNpcTripUsesSameOrdinaryTransportForEstimateAndActualSavedRoute" classname="PCShopSell.Tests.CityStoryTests" runstate="Runnable" seed="1330466224" result="Failed" start-time="2026-11-02 17:26:56Z" end-time="2026-11-02 17:26:56Z" duration="0.062715" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: Taxi
+  But was:  Walk
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.CityStoryTests.LongNpcTripUsesSameOrdinaryTransportForEstimateAndActualSavedRoute () [0x000d2] in D:\UnityProjects\PCShop\_ci_city_life\Assets\Tests\EditMode\CityStoryTests.cs:92
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.CityStoryTests.LongNpcTripUsesSameOrdinaryTransportForEstimateAndActualSavedRoute
+REGRESSION DONE PCShopSell.Tests.CityStoryTests.LongNpcTripUsesSameOrdinaryTransportForEstimateAndActualSavedRoute Failed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="2958" name="SocialTests" fullname="PCShopSell.Tests.SocialTests" classname="PCShopSell.Tests.SocialTests" runstate="Runnable" testcasecount="30" result="Failed" site="Child" start-time="2026-11-02 17:26:56Z" end-time="2026-11-02 17:26:58Z" duration="2.102685" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="2965" name="Appointment_BecomesRealTravelAndOnlyCompletedOutingGrantsRelation" fullname="PCShopSell.Tests.SocialTests.Appointment_BecomesRealTravelAndOnlyCompletedOutingGrantsRelation" methodname="Appointment_BecomesRealTravelAndOnlyCompletedOutingGrantsRelation" classname="PCShopSell.Tests.SocialTests" runstate="Runnable" seed="444729663" result="Failed" start-time="2026-11-02 17:26:56Z" end-time="2026-11-02 17:26:58Z" duration="1.265805" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  场所已经打烊，尚未消费 | minute=8519 start=8340 activity=Gathering li phase=Waiting selected=Walk place=life_restaurant task=Waiting activityId=activity_1 route= arrival= mode=
+  Expected: Running
+  But was:  Cancelled
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.SocialTests.Appointment_BecomesRealTravelAndOnlyCompletedOutingGrantsRelation () [0x00180] in D:\UnityProjects\PCShop\_ci_city_life\Assets\Tests\EditMode\SocialTests.cs:182
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SocialTests.Appointment_BecomesRealTravelAndOnlyCompletedOutingGrantsRelation
+REGRESSION DONE PCShopSell.Tests.SocialTests.Appointment_BecomesRealTravelAndOnlyCompletedOutingGrantsRelation Failed
+]]></output>
+            </test-case>
+            <test-case id="2959" name="EnteringOwnersStall_OnlyMakesYouFamiliar_ContactIsAskedForInPerson" fullname="PCShopSell.Tests.SocialTests.EnteringOwnersStall_OnlyMakesYouFamiliar_ContactIsAskedForInPerson" methodname="EnteringOwnersStall_OnlyMakesYouFamiliar_ContactIsAskedForInPerson" classname="PCShopSell.Tests.SocialTests" runstate="Runnable" seed="1393196034" result="Failed" start-time="2026-11-02 17:26:58Z" end-time="2026-11-02 17:26:58Z" duration="0.009269" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: null
+  But was:  "还不够熟（交情 30）"
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.SocialTests.EnteringOwnersStall_OnlyMakesYouFamiliar_ContactIsAskedForInPerson () [0x000f7] in D:\UnityProjects\PCShop\_ci_city_life\Assets\Tests\EditMode\SocialTests.cs:85
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SocialTests.EnteringOwnersStall_OnlyMakesYouFamiliar_ContactIsAskedForInPerson
+REGRESSION DONE PCShopSell.Tests.SocialTests.EnteringOwnersStall_OnlyMakesYouFamiliar_ContactIsAskedForInPerson Failed
+]]></output>
+            </test-case>
+            <test-case id="2968" name="MissedAppointmentRecordsNoShowWithoutFalseCompletionOrMealCharge" fullname="PCShopSell.Tests.SocialTests.MissedAppointmentRecordsNoShowWithoutFalseCompletionOrMealCharge" methodname="MissedAppointmentRecordsNoShowWithoutFalseCompletionOrMealCharge" classname="PCShopSell.Tests.SocialTests" runstate="Runnable" seed="167529914" result="Failed" start-time="2026-11-02 17:26:58Z" end-time="2026-11-02 17:26:58Z" duration="0.787731" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[   | minute=8355 start=8340 activity=Gathering li phase=Waiting selected=Walk place=life_restaurant task=Waiting activityId=activity_1 route= arrival= mode=
+  Expected: NoShow
+  But was:  Gathering
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.SocialTests.MissedAppointmentRecordsNoShowWithoutFalseCompletionOrMealCharge () [0x0004e] in D:\UnityProjects\PCShop\_ci_city_life\Assets\Tests\EditMode\SocialTests.cs:229
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SocialTests.MissedAppointmentRecordsNoShowWithoutFalseCompletionOrMealCharge
+REGRESSION DONE PCShopSell.Tests.SocialTests.MissedAppointmentRecordsNoShowWithoutFalseCompletionOrMealCharge Failed
+]]></output>
+            </test-case>
+            <test-case id="2973" name="SaveLoad_KeepsSocialState" fullname="PCShopSell.Tests.SocialTests.SaveLoad_KeepsSocialState" methodname="SaveLoad_KeepsSocialState" classname="PCShopSell.Tests.SocialTests" runstate="Runnable" seed="1735272720" result="Failed" start-time="2026-11-02 17:26:58Z" end-time="2026-11-02 17:26:58Z" duration="0.002353" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.SocialTests.SaveLoad_KeepsSocialState () [0x0002a] in D:\UnityProjects\PCShop\_ci_city_life\Assets\Tests\EditMode\SocialTests.cs:312
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SocialTests.SaveLoad_KeepsSocialState
+REGRESSION DONE PCShopSell.Tests.SocialTests.SaveLoad_KeepsSocialState Failed
+]]></output>
+            </test-case>
+            <test-case id="2975" name="SmallTalk_OncePerDay_GainsRelation_AndTakesTenMinutes" fullname="PCShopSell.Tests.SocialTests.SmallTalk_OncePerDay_GainsRelation_AndTakesTenMinutes" methodname="SmallTalk_OncePerDay_GainsRelation_AndTakesTenMinutes" classname="PCShopSell.Tests.SocialTests" runstate="Runnable" seed="600200917" result="Failed" start-time="2026-11-02 17:26:58Z" end-time="2026-11-02 17:26:58Z" duration="0.003289" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: 10
+  But was:  0
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.SocialTests.SmallTalk_OncePerDay_GainsRelation_AndTakesTenMinutes () [0x0007f] in D:\UnityProjects\PCShop\_ci_city_life\Assets\Tests\EditMode\SocialTests.cs:361
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.SocialTests.SmallTalk_OncePerDay_GainsRelation_AndTakesTenMinutes
+REGRESSION DONE PCShopSell.Tests.SocialTests.SmallTalk_OncePerDay_GainsRelation_AndTakesTenMinutes Failed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>
