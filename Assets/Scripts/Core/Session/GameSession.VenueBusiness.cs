@@ -130,7 +130,7 @@ namespace PCShopSell.Core.Session
                 var route=PlanCityRoute(visitor,shop.Place.Id,now);
                 if(route==null||route.ArriveMinute-now>120||!CityWithinHours((int)((route.ArriveMinute+VenueDuration(shop.Place)-1)%1440),state.Open,state.Close))continue;
                 var definition=CityPerson(visitor.PersonId);
-                if(visitor.WorkPlaceId!=null&&CityShiftOverlaps(now,route.ArriveMinute+VenueDuration(shop.Place),definition.WorkStart,definition.WorkEnd))continue;
+                if(visitor.WorkPlaceId!=null&&AuthoredCityWorkOverlaps(visitor,now,route.ArriveMinute+VenueDuration(shop.Place)))continue;
                 string reservation="venue-customer:"+shop.Place.Id+":"+now+":"+visitor.PersonId;
                 visitor.Route=route;visitor.LocationPlaceId=null;visitor.ActivityId=reservation;visitor.Task=CityPersonTask.Travelling;visitor.TaskLabel="前往"+VenueBusinessName(shop.Place);
                 remaining.Add(new VenueCustomer{PersonId=visitor.PersonId,ReservationId=reservation,PriceCents=state.PriceCents});state.CustomersHere=remaining.ToArray();

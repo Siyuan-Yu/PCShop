@@ -39,6 +39,37 @@ namespace PCShopSell.Tests
                     scroll.verticalNormalizedPosition = 0; Canvas.ForceUpdateCanvases();
                     Assert.That(scroll.verticalNormalizedPosition, Is.EqualTo(0).Within(.01));
                     Assert.IsEmpty(s.BrandStories, "Reading dialogue must not accept or finish a story");
+                    Button Find(string label) => ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>())
+                        .Single(b=>b.GetComponentInChildren<Text>()?.text==label);
+                    Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text=="随便聊聊"),
+                        "A reply replaces the topic list instead of hiding in its greeting bubble");
+                    Assert.Greater(((RectTransform)scroll.transform).rect.height,300);
+                    Find("返回上一级").onClick.Invoke();
+                    Assert.NotNull(Find("随便聊聊"));
+                    Find("随便聊聊").onClick.Invoke();
+                    Assert.NotNull(Find("返回上一级"));
+                    Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text=="随便聊聊"));
+                    var reply=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<ScrollRect>()).Single(x=>x.name=="DialogueTextScroll").content.GetComponentInChildren<Text>().text;
+                    ui.RebuildWindows();
+                    Assert.AreEqual(reply,ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<ScrollRect>()).Single(x=>x.name=="DialogueTextScroll").content.GetComponentInChildren<Text>().text,
+                        "Refreshing the window must keep the reply open until explicitly returned");
+                    Find("返回上一级").onClick.Invoke();
+                    Assert.NotNull(Find("随便聊聊"));
+                    ui.CloseAllWindows();
+                    typeof(GameSession).GetField("_district",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).SetValue(s,
+                        new DistrictProgress{Chapter=1,NodeId="community.search",CommunityMapQuest=true,CommunitySearchVersion=2});
+                    DistrictProgressionTests.CompleteLeadOuting(s,0);
+                    var outing=s.CityActivities.Last(a=>a.State==CityActivityPhase.Completed);
+                    Assert.True(s.CommunityHasClue(0));
+                    ui.OpenCityActivitySettlement(outing.Id);
+                    Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text=="记下线索"));
+                    Find("收好这段回忆").onClick.Invoke();
+                    Assert.NotNull(Find("记下线索"));
+                    Assert.True(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text.Contains(GameSession.CommunityLeadHint(0))));
+                    Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text=="返回上一级"));
+                    Find("记下线索").onClick.Invoke();
+                    ui.OpenCityActivitySettlement(outing.Id);Find("收好这段回忆").onClick.Invoke();
+                    Assert.False(ui.AnyModalOpen,"Reopening settlement must not repeat the clue dialogue");
                 }
                 finally
                 {

@@ -2203,8 +2203,8 @@
       "depth": 16,
       "heading": 0,
       "tradable": false,
-      "openMinute": 600,
-      "closeMinute": 1320,
+      "openMinute": 0,
+      "closeMinute": 1440,
       "model": "restaurant",
       "tier": 0
     },

@@ -217,6 +217,7 @@ namespace PCShopSell.Core.Session
         public bool ResearchBrandTender(string id,int clue)
         {
             var t=_brands.Tenders.FirstOrDefault(x=>x.Id==id);if(IsGameOver||t==null||t.Stage>=2||BrandDay>t.Deadline||(clue!=1&&clue!=2)||(t.Intel&clue)!=0)return false;
+            if(!CitySamePlace(clue==1?"life_enterprise":"life_tenant"))return Fail("请找到本人，当面核实采购信息。");
             if(!BrandPay(20000,"采购访谈与供应商核实"))return Fail("访谈需要¥200");
             t.Intel|=clue;Say(clue==1?"沈远：采购方更看重按时交付，低价不是唯一标准。":"袁岚：原供应商会降价应对；保留稳定货源比临时承诺更重要。");return true;
         }

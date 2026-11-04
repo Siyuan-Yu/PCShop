@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Collections.Generic;
 using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
@@ -15,9 +16,9 @@ namespace PCShopSell.Core.Session
         public static string CommunityBoxName(int index) => new[]{"绿绳旧居资料箱","蓝绳街铺资料箱","红绳市场资料箱"}[index];
         public static string CommunityPieceName(int index) => new[]{"旧居街图页","商业街图页","批发市场图页"}[index];
         public static string CommunityLeadHint(int index) => new[]{
-            "我把旧居街那一页放进绿绳箱了，就在城郊平地散步公园入口。循着旧居街去找，别进居民家里。",
-            "商业街那一页放在蓝绳箱里，我已托人放到青湾球场入口。还记得小时候一起打球吗？图上画着球场附近的老铺子。",
-            "市场那一页在红绳箱里，我已经送到批发市场站入口，靠近入口找。纸上有那座旧水塔。"}[index];
+            "我把旧居街那一页放进绿绳箱了，就在城郊平地散步公园附近的街边空地。",
+            "商业街那一页放在蓝绳箱里，我已托人放到青湾球场附近的街边空地。还记得小时候一起打球吗？图上画着球场附近的老铺子。",
+            "市场那一页在红绳箱里，我已经送到批发市场站附近的街边空地。纸上有那座旧水塔。"}[index];
         public bool CommunityHasClue(int index) => index>=0&&index<3&&(_district.CommunityClues&(1<<index))!=0;
         public bool CommunityHasPiece(int index) => index>=0&&index<3&&(_district.CommunityPieces&(1<<index))!=0;
         public bool CommunityHasOuting(int index) => index>=0&&index<3&&(_district.CommunityOutings&(1<<index))!=0;
@@ -49,21 +50,50 @@ namespace PCShopSell.Core.Session
             for(int i=0;i<3;i++)
                 if(CityActivityService(activity)?.Id==CommunityLeadActivity(i)&&activity.VenueId==CommunityLeadVenue(i)
                     &&activity.Participants.Any(p=>p.PersonId==CommunityLeadPerson(i)))
+                {
                     _district.CommunityOutings|=1<<i;
+                    if(CommunitySearchActive && !CommunityHasClue(i) && Relation(CommunityLeadPerson(i))>=CommunityLeadRelation)
+                    {
+                        _district.CommunityClues|=1<<i;
+                        activity.CommunityClueMask|=1<<i;
+                        RememberSocial(CommunityLeadPerson(i),"活动结束时告诉了你旧街图页的藏箱线索。");
+                    }
+                }
         }
+        public int TakeCommunityActivityClue(string activityId)
+        {
+            var activity=_cityActivities.FirstOrDefault(a=>a.Id==activityId);
+            if(activity==null)return -1;
+            // Also allow an existing completed settlement to reveal its eligible clue.
+            RecordCommunityOuting(activity);
+            for(int i=0;i<3;i++)
+                if((activity.CommunityClueMask&(1<<i))!=0&&(activity.CommunityClueShownMask&(1<<i))==0)
+                {
+                    activity.CommunityClueShownMask|=1<<i;
+                    return i;
+                }
+            return -1;
+        }
+        public CityActivity CommunityLeadCompletedActivity(int index) => _cityActivities.LastOrDefault(a=>
+            a.State==CityActivityPhase.Completed&&a.RewardApplied&&a.EntryPaid&&a.ActualStart>=_district.CommunityAcceptedAt
+            &&a.VenueId==CommunityLeadVenue(index)&&CityActivityService(a)?.Id==CommunityLeadActivity(index)
+            &&a.Participants.Any(p=>p.PersonId==CommunityLeadPerson(index)));
         public string CommunityLeadStatus(int index)
         {
             if(CommunityHasPiece(index))return "已找到："+CommunityPieceName(index);
             if(CommunityHasClue(index))return "线索："+CommunityLeadHint(index);
-            return "好感 "+Relation(CommunityLeadPerson(index))+"/"+CommunityLeadRelation+"；接受委托后一起完成："
-                +CityLifeCatalog.Activities.First(a=>a.Id==CommunityLeadActivity(index)).Name
-                +"（"+(CommunityHasOuting(index)?"已完成":"未完成")+"）。两项达成后再向本人打听。";
+            string remaining="";
+            if(Relation(CommunityLeadPerson(index))<CommunityLeadRelation)
+                remaining="提升好感："+Relation(CommunityLeadPerson(index))+"/"+CommunityLeadRelation+"。";
+            if(!CommunityHasOuting(index))remaining+="一起完成："+CityLifeCatalog.Activities.First(a=>a.Id==CommunityLeadActivity(index)).Name+"。";
+            return remaining.Length==0?(CommunityLeadCompletedActivity(index)!=null?"查看已完成活动的结算，听对方告诉你藏箱线索。":"条件已满足，可直接向本人打听图页线索。")
+                :remaining+"满足条件后，活动结算结束时对方会告诉你藏箱线索。";
         }
         public string AskCommunityLead(int index,bool remote=false)
         {
             if(index<0||index>2||!CommunitySearchActive)return "请先接受委托，向李秀兰问清三位保管人。";
             string id=CommunityLeadPerson(index);
-            string blocker=remote?RemoteConversationBlocker(id):CitySamePlace(id)?null:"请先找到本人，在附近交谈。";
+            string blocker=remote||!CitySamePlace(id)?"请走到本人身边，当面打听图页；聊天消息不能取得线索。":null;
             if(blocker!=null)return blocker;
             if(CommunityHasClue(index))return CommunityLeadHint(index);
             if(Relation(id)<CommunityLeadRelation||!CommunityHasOuting(index))
@@ -72,14 +102,22 @@ namespace PCShopSell.Core.Session
             RememberSocial(id,"交代了旧街图页的藏箱线索。");
             return CommunityLeadHint(index)+"\n已记录线索，对应资料箱现在可以现场调查。";
         }
-        public MapPoint CommunityBoxPosition(int index)
+        private readonly Dictionary<string, string> _communityStreetNodes = new Dictionary<string, string>();
+
+        private string CommunityStreetNode(Place landmark)
         {
-            var place=City.GetPlace(CommunityBoxPlace(index));var stand=StandOf(place);var node=City.ViewPosition(place.NodeId);
-            // Near the street end of the entrance corridor, clear of the facade.
-            double dx=stand.X-node.X,dy=stand.Y-node.Y,length=Math.Sqrt(dx*dx+dy*dy);
-            double ratio=length<.001?0:Math.Min(2,length)/length;
-            return new MapPoint(node.X+dx*ratio,node.Y+dy*ratio);
+            if (_communityStreetNodes.TryGetValue(landmark.Id, out var nodeId)) return nodeId;
+            var origin = City.ViewPosition(landmark.NodeId);
+            var doors = City.Places.Select(DoorOf).ToArray();
+            // Leave room for the interaction radius and for a player approaching from either side.
+            nodeId = City.Map.Nodes.OrderBy(node => DistanceCity(City.ViewPosition(node.Id), origin))
+                .First(node => doors.All(door => DistanceCity(City.ViewPosition(node.Id), door) >= EnterRadius + 6)).Id;
+            _communityStreetNodes[landmark.Id] = nodeId;
+            return nodeId;
         }
+
+        public string CommunityBoxNode(int index) => CommunityStreetNode(City.GetPlace(CommunityBoxPlace(index)));
+        public MapPoint CommunityBoxPosition(int index) => City.ViewPosition(CommunityBoxNode(index));
         public int NearbyCommunityBox
         {
             get

@@ -20,10 +20,10 @@ namespace PCShopSell.Game
             Session.CancelPlayerRestaurantWork();
             _pendingEnter=null;CancelHomeBedTrip();Ui.CloseDock();
             if(Session.CurrentPlace?.Id==intent.TargetPlaceId){Session.ActivateCityTravel(intent.Id);return;}
-            if(InInterior||InHome)
+            if(InRoom)
             {
                 _cityExitIntent=intent.Id;
-                Interior?.CancelCityDoorWalk();HomeRoom?.CancelBedWalk();
+                Interior?.CancelCityDoorWalk();ActiveResidence?.CancelBedWalk();
                 Ui.Toast("先走到门口，再沿城市路网前往；WASD可接管。 ");
             }
             else Session.ActivateCityTravel(intent.Id);
@@ -32,10 +32,10 @@ namespace PCShopSell.Game
         {
             if(_cityExitIntent==null)return;
             if(Session.CityIntent==null||Session.CityIntent.Id!=_cityExitIntent||Session.IsGameOver||Session.IsWorking)
-            {_cityExitIntent=null;Interior?.CancelCityDoorWalk();HomeRoom?.CancelBedWalk();return;}
+            {_cityExitIntent=null;Interior?.CancelCityDoorWalk();ActiveResidence?.CancelBedWalk();return;}
             if(!Session.Time.IsRunning||Ui.AnyModalOpen)return;
             float walkDt=IndoorWalkDelta(dt);
-            int result=InInterior?Interior.WalkToDoor(walkDt):InHome?HomeRoom.WalkToDoor(walkDt):1;
+            int result=InInterior?Interior.WalkToDoor(walkDt):InHome||InVisit?ActiveResidence.WalkToDoor(walkDt):1;
             if(result==0)return;
             string intent=_cityExitIntent;_cityExitIntent=null;
             if(result<0){Session.CancelCityTravel();Ui.Toast("出门路线被家具挡住了，请清出通道后重新前往。");return;}

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using UnityEngine;
@@ -376,6 +376,90 @@ namespace PCShopSell.Game.Runtime
             float dx = Mathf.Max(r.xMin - p.x, 0f, p.x - r.xMax);
             float dy = Mathf.Max(r.yMin - p.y, 0f, p.y - r.yMax);
             return Mathf.Sqrt(dx * dx + dy * dy);
+        }
+
+        private readonly Dictionary<string, GameObject> _visitResidents = new Dictionary<string, GameObject>();
+        private string _visitAddress;
+
+        public bool CanReachResident(string id) =>
+            _visitResidents.TryGetValue(id, out var figure) && figure.activeSelf &&
+            (figure.transform.position - OwnerWorld).sqrMagnitude <= 1.25f * 1.25f;
+
+        public void UpdateVisit(GameSession session)
+        {
+            var home = session.CurrentPlace;
+            if (_visitAddress != home.Id)
+            {
+                _visitAddress = home.Id;
+                ResetOwner();
+                foreach (var figure in _visitResidents.Values) Kill.It(figure);
+                _visitResidents.Clear();
+
+                var furniture = FurnitureCatalog.StartHomeLayout();
+                furniture.RemoveAll(item => item.Id == "fan_broken" || item.Id == "junk");
+                if (home.Tier >= 2)
+                {
+                    furniture[0].Id = "bed_good";
+                    furniture[1].Id = "wardrobe_wood";
+                    furniture.Add(new PlacedFurniture { Id = "sofa", X = 1.2, Z = .65 });
+                }
+                else if (home.Tier == 1) furniture[0].Id = "bed_spring";
+                foreach (string name in new[] { "FloorStain1", "FloorStain2", "Crack1", "Crack2", "LeakStain", "LeakStain2", "Peeling", "Mold" })
+                    _root.Find(name).gameObject.SetActive(home.Tier == 0);
+                _furniture.Sync(furniture, RoomSpec.Home);
+                _spots.Clear();
+                _spots.Add(new Spot { Id = Door, Label = "告辞，回到街上", Area = _doorArea, Height = 2.5f });
+                var floor = _root.Find("Floor").GetComponent<Renderer>();
+                floor.sharedMaterial = IndustrialMaterials.Surface(home.Tier >= 2 ? "wood" : "paving",
+                    home.Tier >= 2 ? ArtDirection.Wood : ArtDirection.Cream, new Vector2(3, 3));
+                var wallColor = home.Tier >= 2 ? ArtDirection.Blue : ArtDirection.Sage;
+                foreach (string name in new[] { "DadoBack", "DadoRight" })
+                    _root.Find(name).GetComponent<Renderer>().sharedMaterial = Mats.Lit(wallColor);
+            }
+
+            if (_dressed != session.EquippedOutfit)
+            {
+                _dressed = session.EquippedOutfit;
+                Prims.Dress(_owner, _dressed);
+            }
+
+            foreach (var entry in _visitResidents)
+                if (!session.CitySamePlace(entry.Key)) entry.Value.SetActive(false);
+            int seat = 0;
+            NearbyId = null;
+            NearbyLabel = null;
+            float nearest = 1.25f * 1.25f;
+            foreach (var resident in session.ResidentsAtHome(home))
+            {
+                string id = resident.PersonId;
+                string name = session.CityPerson(id).Name;
+                if (!_visitResidents.TryGetValue(id, out var figure))
+                {
+                    figure = Prims.Figure(_root, "VisitResident_" + id, CrowdView.PersonClothing(id),
+                        new Color(.92f, .78f, .62f), .95f);
+                    figure.AddComponent<CityPersonMarker>().PersonId = id;
+                    CityNpcClothing.Apply(figure, session, id);
+                    Prims.SignText(figure.transform, name, Vector3.up * 1.85f, 1.8f, .26f, ArtDirection.Cream);
+                    _visitResidents.Add(id, figure);
+                }
+                figure.transform.Find("Painted lettering").rotation = CameraRig.Rotation;
+                figure.SetActive(true);
+                figure.transform.localPosition = new Vector3(1.1f + seat % 3 * 1.5f, 0, 2.65f - seat / 3 * .9f);
+                seat++;
+                float distance = (figure.transform.position - OwnerWorld).sqrMagnitude;
+                if (distance >= nearest) continue;
+                nearest = distance;
+                NearbyId = id;
+                NearbyLabel = "和" + name + "交谈";
+                NearbyWorld = figure.transform.position + Vector3.up * 2.15f;
+            }
+            var owner = _owner.transform.localPosition;
+            if (DistToRect(new Vector2(owner.x, owner.z), _doorArea) <= .75f)
+            {
+                NearbyId = Door;
+                NearbyLabel = "告辞，回到街上";
+                NearbyWorld = Origin + new Vector3(_doorArea.center.x, 2.5f, _doorArea.center.y);
+            }
         }
 
         public void Update(GameSession s, float realDt, float minuteOfDay)

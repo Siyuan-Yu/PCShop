@@ -12,6 +12,7 @@ namespace PCShopSell.Game.Runtime
     {
         private readonly GameObject _root;
         private readonly Light _light;
+        private readonly bool _residential;
         private Material _shell;
         private Material _ground;
         private string _placeId;
@@ -22,10 +23,14 @@ namespace PCShopSell.Game.Runtime
 
         public bool Visible => _root != null && _root.activeSelf;
 
-        public ShopBeacon(Transform parent)
+        public ShopBeacon(Transform parent, bool residential = false)
         {
-            _root = new GameObject("MyShopGlow");
+            _residential = residential;
+            _root = new GameObject(residential ? "MyHomeOutline" : "MyShopGlow");
             _root.transform.SetParent(parent, false);
+            _root.SetActive(false);
+            if (residential) return;
+
             var lgo = new GameObject("GlowLight");
             lgo.transform.SetParent(_root.transform, false);
             _light = lgo.AddComponent<Light>();
@@ -34,7 +39,6 @@ namespace PCShopSell.Game.Runtime
             _light.range = 16f;
             _light.intensity = 2.2f;
             _light.shadows = LightShadows.None;
-            _root.SetActive(false);
         }
 
         /// <summary>按铺子楼体的范围重建一圈光。</summary>
@@ -43,23 +47,18 @@ namespace PCShopSell.Game.Runtime
             for (int i = _root.transform.childCount - 1; i >= 0; i--)
             {
                 Transform c = _root.transform.GetChild(i);
-                if (c.gameObject == _light.gameObject) continue;
+                if (_light != null && c.gameObject == _light.gameObject) continue;
                 if (Application.isPlaying) Object.Destroy(c.gameObject); else Object.DestroyImmediate(c.gameObject);
             }
 
-            Material tube = Mats.Glow(new Color(0.3f, 1f, 0.95f), new Color(1.6f, 5f, 4.6f), false);
-            Material soft = Mats.Glow(new Color(0.05f, 0.5f, 0.45f), new Color(0.5f, 3.2f, 2.8f), false);
-            _shell = Mats.Unlit(new Color(Cyan.r, Cyan.g, Cyan.b, 0.13f));
-            _ground = Mats.Unlit(new Color(Cyan.r, Cyan.g, Cyan.b, 0.30f));
+            Material tube = _residential
+                ? Mats.Unlit(new Color(.61f, .82f, 1f, .66f))
+                : Mats.Glow(new Color(0.3f, 1f, 0.95f), new Color(1.6f, 5f, 4.6f), false);
 
             Vector3 mn = b.min - new Vector3(0.12f, 0, 0.12f);
             Vector3 mx = b.max + new Vector3(0.12f, 0.12f, 0.12f);
             Vector3 c0 = (mn + mx) * 0.5f, size = mx - mn;
-            const float t = 0.22f;
-
-            // 脚下一大片柔光 + 贴着楼体的一圈亮边
-            Prims.Box(_root.transform, "GroundGlow", new Vector3(c0.x, mn.y+0.04f, c0.z), new Vector3(size.x + 3.2f, 0.02f, size.z + 3.2f), _ground);
-            Prims.Box(_root.transform, "Ring", new Vector3(c0.x, mn.y+0.07f, mn.z - 0.5f), new Vector3(size.x + 1f, 0.03f, 0.3f), soft);
+            float t = _residential ? .13f : .22f;
 
             // 楼体十二条边做成霓虹灯管
             foreach (float y in new[] { mn.y+0.1f, mx.y })
@@ -72,6 +71,19 @@ namespace PCShopSell.Game.Runtime
             foreach (float x in new[] { mn.x, mx.x })
                 foreach (float z in new[] { mn.z, mx.z })
                     Prims.Box(_root.transform, "Pillar", new Vector3(x, c0.y, z), new Vector3(t, size.y, t), tube);
+
+            if (_residential)
+            {
+                var homeShell = Mats.Unlit(new Color(.48f, .75f, 1f, .18f));
+                Prims.Box(_root.transform, "HomeShell", c0, size, homeShell);
+                return;
+            }
+
+            Material soft = Mats.Glow(new Color(0.05f, 0.5f, 0.45f), new Color(0.5f, 3.2f, 2.8f), false);
+            _shell = Mats.Unlit(new Color(Cyan.r, Cyan.g, Cyan.b, 0.13f));
+            _ground = Mats.Unlit(new Color(Cyan.r, Cyan.g, Cyan.b, 0.30f));
+            Prims.Box(_root.transform, "GroundGlow", new Vector3(c0.x, mn.y+0.04f, c0.z), new Vector3(size.x + 3.2f, 0.02f, size.z + 3.2f), _ground);
+            Prims.Box(_root.transform, "Ring", new Vector3(c0.x, mn.y+0.07f, mn.z - 0.5f), new Vector3(size.x + 1f, 0.03f, 0.3f), soft);
 
             // 外面一层半透明光壳，整栋楼像被光包住
             Prims.Box(_root.transform, "Shell", c0, size + new Vector3(0.5f, 0.5f, 0.5f), _shell);
@@ -98,6 +110,8 @@ namespace PCShopSell.Game.Runtime
                 _building=building.Root;
                 Rebuild(building.BuildingBounds(transform));
             }
+
+            if (_residential) return;
 
             _time += dt;
             float k = 0.5f + 0.5f * Mathf.Sin(_time * 2f);

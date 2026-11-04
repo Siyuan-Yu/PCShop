@@ -53,6 +53,18 @@ namespace PCShopSell.Core.Session
             new[] { "garden.invitation", "garden.proposal", "garden.terms", "garden.fulfilment", "garden.echo" }
         };
         public DistrictNarrativeNode CurrentDistrictNode => DistrictNarrativeCatalog.Nodes.FirstOrDefault(n => n.Id == _district.NodeId);
+        public string DistrictInvitationStatus
+        {
+            get
+            {
+                if (_district.PendingChapter <= 0 || CurrentDistrictNode != null) return null;
+                if (_district.InvitationWaitingForWake) return "主线邀请已到期，将在醒来2小时后联系。";
+                long due = _district.InvitationDueAt;
+                long remaining = Math.Max(0, due - Clock.Now.TotalMinutes);
+                return "预计第" + (due / 1440 + 1) + "天 " + Hm((int)(due % 1440))
+                    + "主动联系，还需" + (remaining / 60) + "小时" + (remaining % 60) + "分钟。";
+            }
+        }
         private string[] ActiveDistrictChain(int chapter) => _district.BrandCommerceRoute&&chapter==2?(_district.CommerceVersion>0?ExpoStoryChain:new[]{"expo.invitation","expo.review"})
             :_district.BrandCommerceRoute&&chapter==3?(_district.CommerceVersion>0?TenderStoryChain:new[]{"tender.invitation","tender.review"}):DistrictNodeChains[chapter-1];
         public bool DistrictNodeCompleted(string id) => _district.Completed.Contains(id);
@@ -138,24 +150,88 @@ namespace PCShopSell.Core.Session
             Say(sender+"主动联系了你：“"+CurrentDistrictNode.Title+"”。");
             Show(sender+"发来主线邀请",CurrentDistrictNode.Dialogue+"\n\n打开手机聊天顶部的“主线消息”回复邀请；现在不用立刻赴约。");
         }
+        public event Action<string,string> DistrictDialogueReady;
+        public string DistrictMeetingContact
+        {
+            get
+            {
+                bool booked=_district.MeetingNodeId==_district.NodeId;
+                switch(_district.NodeId)
+                {
+                    case "community.meeting": return booked?CityLifeCatalog.TangWei:"keeper_agent";
+                    case "community.trial": return CityLifeCatalog.TangWei;
+                    case "park.proposal": return CityLifeCatalog.TangWei;
+                    case "park.change": case "park.delivery": case "park.recommendation":
+                    case "expo.invitation": case "expo.review": return "life_curator";
+                    case "model.dinner": return booked?"life_enterprise":"life_curator";
+                    case "model.clues": return DistrictChoice("model.clues")=="supplier"?"life_model_supplier":"life_tenant";
+                    case "model.repair": return "life_maker";
+                    case "model.delivery": case "tender.invitation": case "tender.review": return "life_enterprise";
+                    case "garden.invitation": return booked?CityLifeCatalog.LiangJing:"life_curator";
+                    case "garden.proposal": case "garden.terms": case "garden.fulfilment": return CityLifeCatalog.LiangJing;
+                    case "garden.echo": return CityLifeCatalog.TangWei;
+                    default: return CurrentDistrictNode?.People.FirstOrDefault();
+                }
+            }
+        }
+        public IEnumerable<DistrictTask> ReadyDistrictTasks => _district.MeetingNodeId==_district.NodeId
+            ? DistrictTasks.Where(t=>!HasDistrictTask(t.Id)&&t.Requires.All(HasDistrictTask)) : Enumerable.Empty<DistrictTask>();
+
         public string DistrictPersonObjective(string personId)
         {
             var node=CurrentDistrictNode;if(node==null)return null;
+            if((node.Id=="park.delivery"||node.Id=="model.dinner")&&_district.WorkStartedAt>0)return null;
+
             if(node.Id=="community.search")
             {
                 for(int i=0;i<3;i++)if(CommunityLeadPerson(i)==personId && !CommunityHasClue(i))
                     return "主线 · 打听图页";
                 return null;
             }
-            if(_district.MeetingNodeId==node.Id&&!_district.MeetingPeople.Contains(personId))return null;
-            if(DistrictCommerceGameplay)return node.People.Contains(personId)?"主线 · 经营合作":null;
-            if(!node.People.Contains(personId)&&!_district.MeetingPeople.Contains(personId)&&!DistrictTasks.Any(t=>t.PersonId==personId))return null;
+            if(!DistrictCommerceGameplay)
+            {
+                var tasks=ReadyDistrictTasks.ToArray();
+                if(tasks.Any(t=>t.PersonId==personId))return "主线 · "+tasks.First(t=>t.PersonId==personId).Title;
+                if(DistrictTasksBlocker!=null&&_district.MeetingNodeId==node.Id)return null;
+                if(personId!=DistrictMeetingContact && !(node.Id=="model.clues"&&_district.MeetingNodeId!=node.Id&&personId=="life_model_supplier"))return null;
+            }
+            if(DistrictCommerceGameplay)
+            {
+                var tender=DistrictCommerceTender;
+                if(node.Id=="tender.prepare"&&tender!=null&&
+                    (personId=="life_enterprise"&&(tender.Intel&1)==0||personId=="life_tenant"&&(tender.Intel&2)==0))
+                    return "主线 · 调查竞标信息";
+                return null;
+            }
+            if(personId!=DistrictMeetingContact&&!node.People.Contains(personId)&&!_district.MeetingPeople.Contains(personId)&&!DistrictTasks.Any(t=>t.PersonId==personId))return null;
             if(_district.MeetingNodeId!=node.Id)return "主线 · 待约见";
             if(CityPersonState(personId)?.Route!=null)return "主线 · 正在赴约";
             return Clock.Now.TotalMinutes<_district.MeetingAt?"主线 · 等待会面":"主线 · 可以交谈";
         }
 
         public string DistrictNodePlaceId => CurrentDistrictNode?.PlaceId;
+        public bool DistrictMeetingOutdoors => City.IsLakeCity && _district.Chapter == 1 && !CommunitySearchActive;
+        public string DistrictMeetingStreetNode => DistrictMeetingOutdoors && City.HasPlace(DistrictNodePlaceId)
+            ? CommunityStreetNode(City.GetPlace(DistrictNodePlaceId)) : null;
+        public bool AtCurrentDistrictMeeting => CurrentDistrictNode != null
+            && _district.MeetingNodeId == _district.NodeId && AtDistrictMeeting();
+        public Place DistrictPersonWaitingPlace(string id)
+        {
+            var person=CityPersonState(id);if(person==null)return null;
+            if(person.Route==null&&person.LocationPlaceId==person.HomePlaceId&&City.HasPlace(person.HomePlaceId)
+                &&HomeVisitBlocker(City.GetPlace(person.HomePlaceId))!=null&&City.HasPlace(person.WorkPlaceId))
+            {
+                var work=City.GetPlace(person.WorkPlaceId);
+                if(work.Kind!=PlaceKind.Home&&DistrictAccessBlocker(work)==null)return work;
+            }
+            if(person.Route?.TargetPlaceId==person.HomePlaceId&&City.HasPlace(person.HomePlaceId)
+                &&DistrictAccessBlocker(City.GetPlace(person.HomePlaceId))==null)return City.GetPlace(person.HomePlaceId);
+            string location=person.LocationPlaceId??person.Route?.TargetPlaceId;
+            if(!City.HasPlace(location)||DistrictAccessBlocker(City.GetPlace(location))==null)return null;
+            return City.HasPlace(person.HomePlaceId)&&DistrictAccessBlocker(City.GetPlace(person.HomePlaceId))==null
+                ?City.GetPlace(person.HomePlaceId):null;
+        }
+
         public string DistrictMeetingDescription
         {
             get
@@ -163,8 +239,24 @@ namespace PCShopSell.Core.Session
                 if(CurrentDistrictNode==null)return "暂无待处理主线消息";
                 if(_district.NodeId=="community.search")return "三位保管人分别交往、打听；取得对应线索后再去藏点找图页。";
                 string place=City.HasPlace(DistrictNodePlaceId)?City.GetPlace(DistrictNodePlaceId).Name:DistrictNodePlaceId;
-                if(_district.MeetingNodeId!=_district.NodeId)return "约见地点："+place+"门前。确认后人物沿实际道路赴约，玩家自行前往。";
-                return "会面："+place+"门前；最早第"+(_district.MeetingAt/1440+1)+"天 "+Hm((int)(_district.MeetingAt%1440))+"。可晚些到，机会不会消失。";
+                string site=place+(DistrictMeetingOutdoors?"附近的街边空地":"门前");
+                if(_district.MeetingNodeId!=_district.NodeId)return "约见地点："+site+"。确认后人物沿实际道路赴约，玩家自行前往。";
+                string schedule="约定时间："+DistrictMeetingTime+"\n会面地点："+site+"。\n";
+                if(AtCurrentDistrictMeeting)return schedule+(DistrictMeetingBlocker==null
+                    ? "你已到达，对方也已到场，可以当面交谈。"
+                    : "你已到达。"+DistrictMeetingBlocker);
+                long remaining=_district.MeetingAt-Clock.Now.TotalMinutes;
+                return schedule+(remaining>0?"距离约定时间还有"+DistrictMeetingWait+"。":"约定时间已到。")+"可晚些到，机会不会消失。";
+            }
+        }
+        private string DistrictMeetingTime => new PCShopSell.Core.Time.GameDate((int)(_district.MeetingAt/1440))
+            +" "+Hm((int)(_district.MeetingAt%1440));
+        private string DistrictMeetingWait
+        {
+            get
+            {
+                long minutes=Math.Max(0,_district.MeetingAt-Clock.Now.TotalMinutes);
+                return (minutes>=60?minutes/60+"小时":"")+minutes%60+"分钟";
             }
         }
         public string DistrictNodeTerms
@@ -177,10 +269,10 @@ namespace PCShopSell.Core.Session
                     case "expo.review": return "同一品牌影响力100，并完成至少一笔真实展会采购订单。";
                     case "tender.invitation": return "品牌页调查采购需求、提交方案、交付试单，评审通过才取得席位。";
                     case "tender.review": return "企业合同连续三期交付后再约见；失约失去席位，下一年度可以重新竞标。";
-                    case "community.meeting": return "陈启明筹备街区介绍会，需要找回搬家时寄存的旧街手绘商铺图。先接受寻物委托，再向李秀兰问清箱子去向。没有营业额或交钱要求。";
-                    case "community.clue": return "到城郊旧居街居民住宅门前约见李秀兰，问清三页图的保管人。之后分别交往、打听具体藏点。";
+                    case "community.meeting": return "唐蔚筹备街区介绍会，需要找回搬家时寄存的旧街手绘商铺图。先接受寻物委托，再向李秀兰问清箱子去向。没有营业额或交钱要求。";
+                    case "community.clue": return "到城郊旧居街居民住宅附近的街边空地约见李秀兰，问清三页图的保管人。之后分别交往、打听具体藏点。";
                     case "community.search": return "三位保管人分别需要好感达到30、接受委托后一起完成喜欢的活动。再向本人打听才会出现对应箱子；三个箱子可以任意顺序寻找。找齐后手动拼图，再回中介交付。";
-                    case "community.trial": return "任务物品：旧街手绘商铺图 ×"+(_district.HasCommunityMap?"1":"0")+"。带回城郊中介交给唐蔚；确认交付后消耗任务物品并开放社区道路。";
+                    case "community.trial": return "任务物品：旧街手绘商铺图 ×"+(_district.HasCommunityMap?"1":"0")+"。带到城郊中介旁的街边会面点交给唐蔚，无需进入中介；确认交付后消耗任务物品并开放社区道路。";
                     case "park.proposal": return "共同分摊预算¥2,000；缩小规模预算¥1,000。会面确认后实际支付。";
                     case "park.delivery": return "在社区服务站实际参与30游戏分钟；离开不累计，管理窗口暂停时不累计。";
                     case "model.dinner": return "饭局费用¥160；到场后确认开席，与任帆、沈远交谈30游戏分钟。";
@@ -197,6 +289,8 @@ namespace PCShopSell.Core.Session
         {
             if(string.IsNullOrEmpty(_district.MeetingPlaceId)||!City.HasPlace(_district.MeetingPlaceId)||Trip!=null)return false;
             var place=City.GetPlace(_district.MeetingPlaceId);
+            if (DistrictMeetingStreetNode is string node)
+                return CurrentPlace == null && DistanceCity(PlayerPosition, City.ViewPosition(node)) <= 4;
             return CurrentPlace==place || CurrentPlace==null && DistanceCity(PlayerPosition,StandOf(place))<=5;
         }
         public string DistrictMeetingBlocker
@@ -207,9 +301,18 @@ namespace PCShopSell.Core.Session
                 if(CurrentDistrictNode==null)return "暂无主线";
                 if(DistrictCommerceGameplay)return DistrictCommerceBlocker;
                 if(_district.MeetingNodeId!=_district.NodeId)return "请先在聊天消息中确认约见";
-                if(!AtDistrictMeeting())return "请自行前往"+City.GetPlace(_district.MeetingPlaceId).Name+"门前";
-                if(Clock.Now.TotalMinutes<_district.MeetingAt)return "还未到约定时间，请关闭窗口等待";
+                if(!AtDistrictMeeting())return "请自行前往"+City.GetPlace(_district.MeetingPlaceId).Name+(DistrictMeetingOutdoors?"附近的街边会面点":"门前");
+                if(Clock.Now.TotalMinutes<_district.MeetingAt)return "约定 "+DistrictMeetingTime+"，还需等待"+DistrictMeetingWait+"。关闭窗口后时间才会继续。";
                 if(_district.MeetingPeople.Any(id=>CityPersonState(id)?.Route!=null || CityPersonState(id)?.LocationPlaceId!=_district.MeetingPlaceId))return "同行人物仍在赴约，请关闭窗口等待";
+                if (DistrictMeetingStreetNode is string streetNode)
+                {
+                    var meetingPoint = City.ViewPosition(streetNode);
+                    if (_district.MeetingPeople.Any(id =>
+                    {
+                        var person = CityPersonState(id);
+                        return person == null || DistanceCity(new MapPoint(person.X, person.Y), meetingPoint) > 4;
+                    })) return "人物正在前往街边会面点，请关闭窗口等待";
+                }
                 return null;
             }
         }
@@ -234,7 +337,7 @@ namespace PCShopSell.Core.Session
             if(nodeId=="community.intro")
             {
                 RememberDistrictChoice(nodeId,choice); CompleteDistrictNode();
-                return BeginDistrictMeeting(_district.NodeId);
+                return true;
             }
             string placeId=DistrictNodePlaceId;
             if(!City.HasPlace(placeId)||DistrictAccessBlocker(City.GetPlace(placeId))!=null)return Fail("会面地点尚未开放。");
@@ -251,7 +354,7 @@ namespace PCShopSell.Core.Session
                 var person=CityPersonState(id);
                 if(!string.IsNullOrEmpty(person.ActivityId)||!string.IsNullOrEmpty(person.VisitId)||Employees.Any(e=>PersonIdOf(e.Person)==id))
                     return Fail((CityPerson(id)?.Name??id)+"正在活动或任职，请结束安排后再约。");
-                var route=PlanCityRoute(person,placeId,Clock.Now.TotalMinutes);
+                var route=PlanCityRouteToNode(person,placeId,Clock.Now.TotalMinutes,DistrictMeetingStreetNode);
                 if(route==null)return Fail("人物暂时无法到达约见地点。");
                 routes[id]=route;
             }
@@ -277,17 +380,34 @@ namespace PCShopSell.Core.Session
             if(_district.MeetingNodeId!=_district.NodeId || !_district.MeetingPeople.Contains(person.PersonId))return false;
             if(person.LocationPlaceId!=_district.MeetingPlaceId)
             {
-                person.Route=PlanCityRoute(person,_district.MeetingPlaceId,now);person.LocationPlaceId=null;
+                person.Route=PlanCityRouteToNode(person,_district.MeetingPlaceId,now,DistrictMeetingStreetNode);person.LocationPlaceId=null;
                 person.Task=CityPersonTask.Travelling;
             }
-            else person.Task=CityPersonTask.Waiting;
+            else
+            {
+                // Existing appointments keep their time and participants after an older save is loaded.
+                if (DistrictMeetingStreetNode is string node)
+                {
+                    var point = City.ViewPosition(node);
+                    person.X = point.X;
+                    person.Y = point.Y;
+                }
+                person.Task = CityPersonTask.Waiting;
+            }
             person.TaskLabel="主线会面："+CurrentDistrictNode?.Title;return true;
         }
         private void TickDistrictNarrative(long from,long now)
         {
             RefreshDistrictNarrative();
             if(_district.WorkStartedAt>0 && (_district.NodeId=="park.delivery"||_district.NodeId=="model.dinner") && DistrictMeetingBlocker==null)
+            {
                 _district.WorkMinutes+=Math.Max(0,now-Math.Max(from,_district.WorkStartedAt));
+                if(_district.WorkMinutes>=30)
+                {
+                    var node=CurrentDistrictNode;string speaker=DistrictMeetingContact;
+                    if(ActDistrictNode(node.Id))DistrictDialogueReady?.Invoke(speaker,node.Dialogue+"\n\n下一步："+(CurrentDistrictNode?.Title??"本段主线已完成。"));
+                }
+            }
         }
         public bool ActDistrictNode(string expectedNodeId)
         {
@@ -338,7 +458,7 @@ namespace PCShopSell.Core.Session
                 _district.HasModel=false;_district.ModelDelivered=true;
                 Ledger.Credit(Clock.Today,"委托报销",Money.FromYuan(1800),"沈远报销展样转让与修复费用");
             }
-            if(id=="garden.proposal" && ShopAt(_district.ProjectShopId)==null)return Fail("请先在消息中选择公园试点门店。");
+            if(id=="garden.proposal" && ShopAt(_district.ProjectShopId)==null)return Fail("请先与合作方当面商定公园试点门店。");
             if(id=="garden.terms")
             {
                 var shop=ShopAt(_district.ProjectShopId);

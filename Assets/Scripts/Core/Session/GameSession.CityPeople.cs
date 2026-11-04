@@ -51,6 +51,7 @@ namespace PCShopSell.Core.Session
         public bool CityPersonInside(CityPersonState p)
         {
             if (p == null || p.Route != null || string.IsNullOrEmpty(p.LocationPlaceId)) return false;
+            if (StreetServicePlace(p.LocationPlaceId)) return false;
             if(_district.MeetingNodeId==_district.NodeId && _district.MeetingPeople.Contains(p.PersonId) && p.LocationPlaceId==_district.MeetingPlaceId)return false;
             if (!string.IsNullOrEmpty(p.ActivityId) && _cityActivities.Any(a=>a.Id==p.ActivityId && a.Active && a.RendezvousReady)) return false;
             string business = City.HasPlace(p.LocationPlaceId) ? City.GetPlace(p.LocationPlaceId).Business : null;
@@ -59,12 +60,64 @@ namespace PCShopSell.Core.Session
             return p.Task == CityPersonTask.Home || p.Task == CityPersonTask.Working || p.Task == CityPersonTask.Shopping
                 || p.Task == CityPersonTask.Waiting && p.LocationPlaceId == p.WorkPlaceId;
         }
+        // Agencies have a service panel, not a walkable interior. Their people wait
+        // beside the building on the road network, outside every door's F radius.
+        private bool StreetServicePlace(string placeId) => City.IsLakeCity && City.HasPlace(placeId)
+            && City.GetPlace(placeId).Kind == PlaceKind.Agency;
+        private void PositionStreetServicePeople()
+        {
+            var groups = new Dictionary<string, List<CityPersonState>>();
+            foreach (var person in _cityPeople.Values)
+            {
+                if (person.Route != null) continue;
+                bool meeting = _district.MeetingNodeId == _district.NodeId
+                    && _district.MeetingPeople.Contains(person.PersonId)
+                    && person.LocationPlaceId == _district.MeetingPlaceId;
+                string node = meeting ? DistrictMeetingStreetNode : null;
+                if (node == null && StreetServicePlace(person.LocationPlaceId))
+                    node = CommunityStreetNode(City.GetPlace(person.LocationPlaceId));
+                if (node == null) continue;
+                if (!groups.TryGetValue(node, out var people)) groups[node] = people = new List<CityPersonState>();
+                people.Add(person);
+            }
+            foreach (var group in groups)
+            {
+                var point = City.ViewPosition(group.Key);
+                var people = group.Value.OrderBy(p => p.PersonId, StringComparer.Ordinal).ToArray();
+                for (int i = 0; i < people.Length; i++)
+                {
+                    // Keep one person at the navigation anchor and give everyone else
+                    // a distinct spot within the meeting radius, clear of nearby doors.
+                    double angle = 2 * Math.PI * (i - 1) / Math.Max(1, people.Length - 1);
+                    people[i].X = point.X + (i == 0 ? 0 : (float)(2.8 * Math.Cos(angle)));
+                    people[i].Y = point.Y + (i == 0 ? 0 : (float)(2.8 * Math.Sin(angle)));
+                }
+            }
+        }
         public static bool CityWithinHours(int minute,int open,int close) => open==close || (close>open?minute>=open&&minute<close:minute>=open||minute<close);
+        public const int HomeVisitMinRelation = 60;
+
+        public IEnumerable<CityPersonState> ResidentsAtHome(Place home) =>
+            PeopleInPlace(home.Id).Where(person => person.HomePlaceId == home.Id && CityPersonInside(person));
+
+        public string HomeVisitBlocker(Place home)
+        {
+            var residents = CityPeople.Where(person => person.HomePlaceId == home.Id).ToArray();
+            if (residents.Length == 0) return "这是私人住宅，暂时没有可拜访的住户。";
+            if (!residents.Any(person => Relation(person.PersonId) >= HomeVisitMinRelation))
+                return "拜访私人住宅需要与一位住户的好感达到 " + HomeVisitMinRelation + "。可以先在街上或工作地点认识对方。";
+            if (!ResidentsAtHome(home).Any(person => Relation(person.PersonId) >= HomeVisitMinRelation))
+                return "熟悉的住户现在不在家，晚些再来拜访。";
+            return null;
+        }
+
         public bool CitySamePlace(string personId)
         {
             var person = CityPersonState(personId);
             if (person == null) return false;
-            if (CurrentPlace != null) return person.Route == null && person.LocationPlaceId == CurrentPlace.Id;
+            if (CurrentPlace != null)
+                return person.Route == null && person.LocationPlaceId == CurrentPlace.Id
+                    && (CurrentPlace.Kind != PlaceKind.Home || CurrentPlace == Home || CityPersonInside(person));
             if (CityPersonInside(person) || person.Route != null && person.Route.Transport != VehicleKind.Walk) return false;
             // A walking resident can be stopped for conversation. Match the rendered fractional
             // route position rather than rejecting everyone who is currently on their way somewhere.
@@ -90,7 +143,7 @@ namespace PCShopSell.Core.Session
                     p.Address="安居房产中介附近"; p.LocationPlaceId=null;
                     p.Task=CityPersonTask.Leisure; p.TaskLabel="在中介附近散步，随时可以邀约";
                 }
-                if(p.WorkPlaceId!=null && CityWithinHours(Clock.MinuteOfDay,d.WorkStart,d.WorkEnd))
+                if(AuthoredCityWorkAt(p,Clock.Now.TotalMinutes))
                 { p.LocationPlaceId=p.WorkPlaceId;p.Task=CityPersonTask.Working;pos=StandOf(City.GetPlace(p.WorkPlaceId));p.X=pos.X;p.Y=pos.Y; }
             }
             if(DebugInvitationPersonEnabled)
@@ -99,7 +152,73 @@ namespace PCShopSell.Core.Session
                 Flags.Add(MetFlag(CityLifeCatalog.InvitationTestPersonId));
             }
             foreach(var e in Employees.Select(a=>a.Person).Concat(_candidates).Where(e=>e!=null)) EnsureCityEmployee(e);
+            PositionStreetServicePeople();
         }
+        private void AssignCityHomes()
+        {
+            if (!City.Blocks.Any(block => City.HasPlace(block.homeId))) return;
+            var homes = City.Places.Where(place => place.Kind == PlaceKind.Home &&
+                place != Home && place.Id != "home" && !place.Id.StartsWith("home_tier", StringComparison.Ordinal)).ToArray();
+            if (homes.Length == 0) return;
+            var householdSize = homes.ToDictionary(home => home, home => 0);
+            var vacant = new HashSet<Place>(homes);
+            var remaining = _cityPeople.Values.Where(person =>
+                CityLifeCatalog.Person(person.PersonId) != null && person.PersonId != CityLifeCatalog.InvitationTestPersonId).ToList();
+
+            // Keep one established resident at each existing address before filling the other buildings.
+            remaining.RemoveAll(person =>
+            {
+                if (!City.HasPlace(person.HomePlaceId)) return false;
+                var original = City.GetPlace(person.HomePlaceId);
+                if (!vacant.Remove(original)) return false;
+                householdSize[original]++;
+                return true;
+            });
+            foreach (bool sameDistrict in new[] { true, false })
+            {
+                remaining.RemoveAll(person =>
+                {
+                    var original = City.GetPlace(person.HomePlaceId);
+                    var point = City.ViewPosition(original.NodeId);
+                    var next = homes.Where(home => vacant.Contains(home) &&
+                            (!sameDistrict || DistrictTierOf(home) == DistrictTierOf(original)))
+                        .OrderBy(home => DistanceCity(City.ViewPosition(home.NodeId), point)).FirstOrDefault();
+                    if (next == null) return false;
+                    vacant.Remove(next);
+                    householdSize[next]++;
+                    MoveCityHome(person, next);
+                    return true;
+                });
+            }
+            foreach (var person in remaining)
+            {
+                var original = City.GetPlace(person.HomePlaceId);
+                var point = City.ViewPosition(original.NodeId);
+                var next = homes.OrderBy(home => householdSize[home])
+                    .ThenBy(home => DistrictTierOf(home) != DistrictTierOf(original))
+                    .ThenBy(home => DistanceCity(City.ViewPosition(home.NodeId), point)).First();
+                householdSize[next]++;
+                MoveCityHome(person, next);
+            }
+        }
+
+        private void MoveCityHome(CityPersonState person, Place residence)
+        {
+            var definition=CityPerson(person.PersonId);
+            bool worksAtHome=definition!=null&&definition.WorkId==definition.HomeId;
+            if (person.Route == null && (person.Task == CityPersonTask.Home||worksAtHome)
+                && person.LocationPlaceId == person.HomePlaceId)
+            {
+                var door = StandOf(residence);
+                person.LocationPlaceId = residence.Id;
+                person.X = door.X;
+                person.Y = door.Y;
+            }
+            person.HomePlaceId = residence.Id;
+            if(worksAtHome)person.WorkPlaceId=residence.Id;
+            person.Address = residence.Name;
+        }
+
         public string PersonIdOf(Employee e)
         {
             if(e==null)return null;
@@ -190,9 +309,10 @@ namespace PCShopSell.Core.Session
                 {
                     p.WorkPlaceId=work;
                 }
-                else p.WorkPlaceId=d.Recruitable?null:City.HasPlace(d.WorkId)?d.WorkId:null;
+                else p.WorkPlaceId=d.Recruitable?null:d.WorkId==d.HomeId&&City.HasPlace(p.HomePlaceId)?p.HomePlaceId:City.HasPlace(d.WorkId)?d.WorkId:null;
                 candidates.TryGetValue(p.PersonId,out var candidate);
-                bool shift=employee!=null?employee.OnDuty(Clock.Now):p.WorkPlaceId!=null&&CityWithinHours(Clock.MinuteOfDay,d.WorkStart,d.WorkEnd);
+                bool shift=employee!=null?employee.OnDuty(Clock.Now):AuthoredCityWorkAt(p,now);
+                if(employee==null&&shift&&p.WorkPlaceId!=p.HomePlaceId&&!IsPlaceOpen(City.GetPlace(p.WorkPlaceId)))shift=false;
                 string target=shift?p.WorkPlaceId:p.HomePlaceId;
                 var desiredTask=shift?CityPersonTask.Working:CityPersonTask.Home;
                 if(candidate!=null && CandidateAvailable(candidate)) {target=PlayerShopPlace.Id;desiredTask=CityPersonTask.Waiting;p.TaskLabel="等待面试";}
@@ -212,7 +332,9 @@ namespace PCShopSell.Core.Session
                     int start=employee?.ShiftStart??d.WorkStart;
                     int delta=(start-Clock.MinuteOfDay+1440)%1440;
                     long commute=EstimateCityCommute(p,p.WorkPlaceId,now);
-                    if(commute>=0 && delta>0 && delta<=commute+3)
+                    if(commute>=0 && delta>0 && delta<=commute+3
+                        &&(employee==null?AuthoredCityWorkAt(p,now+delta)
+                            :p.WorkPlaceId==p.HomePlaceId||CityVenueFits(City.GetPlace(p.WorkPlaceId),now+delta,1)))
                     {target=p.WorkPlaceId;desiredTask=CityPersonTask.Waiting;p.LeisureTargetId=null;p.LeisureNextMove=0;}
                 }
                 if(target!=null && City.HasPlace(target) && p.LocationPlaceId!=target)
@@ -223,6 +345,7 @@ namespace PCShopSell.Core.Session
                 }
                 else {p.Task=desiredTask;if(desiredTask!=CityPersonTask.Waiting)p.TaskLabel=desiredTask==CityPersonTask.Working?"当班工作":desiredTask==CityPersonTask.Home?"在家休息":desiredTask==CityPersonTask.Shopping?"日常买东西":"日常逛街与散步";}
             }
+            PositionStreetServicePeople();
         }
         private void TickInvitationTestWander(CityPersonState person, long now)
         {
@@ -275,6 +398,11 @@ namespace PCShopSell.Core.Session
             { person.LeisureTargetId = null; person.LeisureNextMove = 0; return null; }
             if (person.LeisureTargetId != null && City.HasPlace(person.LeisureTargetId))
             {
+                if(!IsPlaceOpen(City.GetPlace(person.LeisureTargetId)))
+                { person.LeisureTargetId=null;person.LeisureNextMove=0; }
+            }
+            if (person.LeisureTargetId != null && City.HasPlace(person.LeisureTargetId))
+            {
                 if (person.LocationPlaceId != person.LeisureTargetId) return person.LeisureTargetId;
                 if (person.LeisureNextMove == 0) person.LeisureNextMove = now + (working ? 5 : 5 + seed % 11);
                 if (now < person.LeisureNextMove) return person.LeisureTargetId;
@@ -288,6 +416,7 @@ namespace PCShopSell.Core.Session
                 string target = destinations[(seed % destinations.Length + person.LeisureStop + i) % destinations.Length];
                 if (!City.HasPlace(target) || target == person.HomePlaceId || target == person.LocationPlaceId || target == person.WorkPlaceId) continue;
                 var place = City.GetPlace(target);
+                if(!IsPlaceOpen(place))continue;
                 if (working && person.WorkPlaceId != null && City.HasPlace(person.WorkPlaceId))
                 {
                     var from = City.ViewPosition(City.GetPlace(person.WorkPlaceId).NodeId);
@@ -301,18 +430,24 @@ namespace PCShopSell.Core.Session
         }
 
         private CityRoute PlanCityRoute(CityPersonState p,string target,long now,long latestArrival=long.MaxValue,VehicleKind? transportChoice=null)
+            => PlanCityRouteToNode(p, target, now, null, latestArrival, transportChoice);
+
+        private CityRoute PlanCityRouteToNode(CityPersonState p, string target, long now, string streetNode,
+            long latestArrival = long.MaxValue, VehicleKind? transportChoice = null)
         {
             if(!City.HasPlace(target))return null;
+            if(streetNode==null && StreetServicePlace(target))streetNode=CommunityStreetNode(City.GetPlace(target));
             var place=City.GetPlace(target);string from=City.NearestNode(p.X,p.Y);
-            string key=from+"|"+place.NodeId;
-            if(!_cityPathCache.TryGetValue(key,out var path)){path=Pathfinder.FindPath(City.Map,from,place.NodeId);_cityPathCache[key]=path;}
+            string destination=streetNode??place.NodeId;
+            string key=from+"|"+destination;
+            if(!_cityPathCache.TryGetValue(key,out var path)){path=Pathfinder.FindPath(City.Map,from,destination);_cityPathCache[key]=path;}
             if(!path.Found)return null;
             var points=new List<MapPoint>{new MapPoint(p.X,p.Y)};
             foreach(string node in path.NodeIds)
             {
                 points.Add(City.ViewPosition(node));
             }
-            var end=StandOf(place);points.Add(end);
+            var end=streetNode==null?StandOf(place):City.ViewPosition(streetNode);points.Add(end);
             var meters=CityTravelTiming.RouteMeters(City,new MapPoint(p.X,p.Y),path.NodeIds,end,
                 p.LocationPlaceId!=null?City.TravelDistanceScale:CityTravelTiming.LocalScale(City,new MapPoint(p.X,p.Y)));
             // Long cross-city journeys use ordinary personal transport. Both the reservation

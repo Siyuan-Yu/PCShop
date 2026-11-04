@@ -47,7 +47,7 @@ namespace PCShopSell.Core.Session
             d.payrollDays=_employeePayroll.Select(p=>p.Copy()).ToArray();
             d.pendingDisplays=_shops.Where(s=>s.PendingDisplayTier>=0).Select(s=>new CityPendingDisplay{ShopId=s.Place.Id,Tier=s.PendingDisplayTier,Minutes=s.PendingDisplayMinutes}).ToArray();
             d.cityLastAutomaticMealMinute=_lastAutomaticMealMinute;
-            d.cityLifeVersion=2;d.cityLifeTest=IsCityLifeTest;d.cityPeople=_cityPeople.Values.Select(p=>p.Copy()).ToArray();
+            d.cityLifeVersion=3;d.cityLifeTest=IsCityLifeTest;d.cityPeople=_cityPeople.Values.Select(p=>p.Copy()).ToArray();
             d.cityExtraPeople=_cityExtraDefinitions.Values.ToArray();d.cityNextVisit=_nextCityVisit;
             d.cityActivities=_cityActivities.Select(a=>a.Copy()).ToArray();d.cityStories=_cityStories.Select(a=>a.Copy()).ToArray();
             d.cityTravelIntent=CityIntent==null?null:new CityTravelIntent {Id=CityIntent.Id,TargetPlaceId=CityIntent.TargetPlaceId,ActivityId=CityIntent.ActivityId,
@@ -80,6 +80,7 @@ namespace PCShopSell.Core.Session
                 _cityPeople.Add(copy.PersonId,copy);
             }
             InitializeCityPeople();
+            if (d.cityLifeVersion < 3) AssignCityHomes();
             if(d.cityLifeVersion==0)
             {
                 // Old saves had no authoritative person positions. Preserve their actual on-duty
@@ -122,6 +123,7 @@ namespace PCShopSell.Core.Session
             foreach(var p in _cityPeople.Values)if(p.ActivityId!=null&&!_cityActivities.Any(a=>a.Id==p.ActivityId&&a.Active)
                 &&!(d.venueBusinesses??Array.Empty<VenueBusiness>()).Any(v=>v!=null&&ShopAt(v.PlaceId)!=null&&(v.CustomersHere??Array.Empty<VenueCustomer>()).Any(c=>c.PersonId==p.PersonId&&c.ReservationId==p.ActivityId)))p.ActivityId=null;
             foreach(var shop in _shops)shop.Sim.PlayerPresent=CityPlayerCanWork(shop);
+            PositionStreetServicePeople();
         }
     }
     public sealed partial class CityStoryProgress

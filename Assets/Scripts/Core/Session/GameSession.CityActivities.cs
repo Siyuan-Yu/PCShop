@@ -46,10 +46,7 @@ namespace PCShopSell.Core.Session
             if(npcRoute!=null)trip=Math.Max(trip,(int)(npcRoute.ArriveMinute-now));
             long start=now+trip+8;
             var employee=Employees.FirstOrDefault(e=>PersonIdOf(e.Person)==personId)?.Person;
-            var pd=CityPerson(personId);
-            int close=employee?.ShiftEnd??pd?.WorkEnd??0;
             if(employee!=null&&employee.TryShift(now,out _,out long shiftEnd))start=Math.Max(start,shiftEnd+trip+5);
-            else if(employee==null&&!definitionId.StartsWith("expo_") && person!=null && person.WorkPlaceId!=null && close>Clock.MinuteOfDay)start=Math.Max(start,(long)Clock.Today.TotalDays*1440+close+trip+5);
             // Offer only quarter-hour appointments, rounding later so the journey still fits.
             start=(start+14)/15*15;
             for(int i=0;i<60*24*35;i+=15)
@@ -78,9 +75,7 @@ namespace PCShopSell.Core.Session
             if(start>now+120)
             {
                 var employee=Employees.FirstOrDefault(e=>PersonIdOf(e.Person)==person.PersonId)?.Person;
-                var definition=CityPerson(person.PersonId);
-                int shiftStart=employee?.ShiftStart??definition?.WorkStart??540;
-                string origin=person.WorkPlaceId!=null && (employee!=null?employee.TryShift(start,out _,out _):start%1440>=shiftStart)?person.WorkPlaceId:person.HomePlaceId;
+                string origin=person.WorkPlaceId!=null && (employee!=null?employee.TryShift(start,out _,out _):AuthoredCityWorkAt(person,start))?person.WorkPlaceId:person.HomePlaceId;
                 if(origin!=null&&City.HasPlace(origin)){var at=StandOf(City.GetPlace(origin));probe.X=at.X;probe.Y=at.Y;probe.LocationPlaceId=origin;}
             }
             var route=PlanCityRoute(probe,venue.Id,now,start>0?start-3:long.MaxValue);
@@ -103,9 +98,49 @@ namespace PCShopSell.Core.Session
         private bool CityVenueFits(Place venue,long start,int minutes)
         {
             if(IsOwnedVenue(venue))return true;
-            int open=venue.ExplicitEntrance?venue.OpenMinute:venue.Kind==PlaceKind.Wholesaler?540:0;
-            int close=venue.ExplicitEntrance?venue.CloseMinute:venue.Kind==PlaceKind.Wholesaler?1200:0;
+            if(SupplierClosesOnWeekend(venue))
+                for(long day=start/1440;day<=(start+Math.Max(1,minutes)-1)/1440;day++)
+                    if(new GameDate((int)day).IsWeekend)return false;
+            CityVenueHours(venue,out int open,out int close);
             return CityWithinHours((int)(start%1440),open,close)&&CityWithinHours((int)((start+Math.Max(1,minutes)-1)%1440),open,close);
+        }
+        private void CityVenueHours(Place venue,out int open,out int close)
+        {
+            // An authored entrance with 00:00–00:00 inherits the building's normal
+            // business hours, just as IsPlaceOpen does; it is not a 24-hour venue.
+            bool customHours=venue.ExplicitEntrance&&venue.OpenMinute!=venue.CloseMinute;
+            open=customHours?venue.OpenMinute:venue.Kind==PlaceKind.Wholesaler?WholesalerOpenMinute
+                :venue.Kind==PlaceKind.Dealer?DealerOpenMinute:venue.Business==FarmBusiness?FarmOpenMinute
+                :venue.Kind==PlaceKind.Shop||venue.Kind==PlaceKind.Agency?StreetShopOpenMinute:0;
+            close=customHours?venue.CloseMinute:venue.Kind==PlaceKind.Wholesaler?WholesalerCloseMinute
+                :venue.Kind==PlaceKind.Dealer?DealerCloseMinute:venue.Business==FarmBusiness?FarmCloseMinute
+                :venue.Kind==PlaceKind.Shop||venue.Kind==PlaceKind.Agency?StreetShopCloseMinute:0;
+        }
+        private bool AuthoredCityWorkAt(CityPersonState person,long minute)
+        {
+            var definition=CityPerson(person.PersonId);
+            if(definition==null||!City.HasPlace(person.WorkPlaceId))return false;
+            var workplace=City.GetPlace(person.WorkPlaceId);
+            if(workplace.Kind==PlaceKind.Shop&&IsVacant(workplace))return false;
+            return CityWithinHours((int)(minute%1440),definition.WorkStart,definition.WorkEnd)
+                &&(person.WorkPlaceId==person.HomePlaceId||CityVenueFits(workplace,minute,1));
+        }
+        private bool AuthoredCityWorkOverlaps(CityPersonState person,long from,long until)
+        {
+            var definition=CityPerson(person.PersonId);
+            if(definition==null||!City.HasPlace(person.WorkPlaceId)||until<=from)return false;
+            CityVenueHours(City.GetPlace(person.WorkPlaceId),out int open,out int close);
+            // Work and shop status can only change at these boundaries or at midnight.
+            // Check intervals, rather than iterating every simulated minute per suggestion.
+            var boundaries=new[]{0,definition.WorkStart,definition.WorkEnd,open,close,1440}.Distinct().OrderBy(x=>x).ToArray();
+            for(long day=Math.Max(0,from/1440);day<=until/1440;day++)
+                for(int i=0;i<boundaries.Length-1;i++)
+                {
+                    long begin=Math.Max(from,day*1440+boundaries[i]);
+                    long end=Math.Min(until,day*1440+boundaries[i+1]);
+                    if(begin<end&&AuthoredCityWorkAt(person,begin))return true;
+                }
+            return false;
         }
         public int CityTravelMinutes(Place target)
         {
@@ -119,9 +154,15 @@ namespace PCShopSell.Core.Session
             if(IsGameOver||IsWorking||_sleeping)return "当前状态不能参加活动";
             if(start<Clock.Now.TotalMinutes)return "预约时间已经过去";
             var venue=City.GetPlace(def.VenueId);
+            if(SupplierClosesOnWeekend(venue)&&new GameDate((int)(start/1440)).IsWeekend)return "该场所周末休息，请选择工作日赴约";
             if(!CityVenueFits(venue,start,def.Minutes))return "该时段不能在闭店前完成，请改约其他时间";
             if(definitionId.StartsWith("expo_")&&!CityExpoDay(start,definitionId=="expo_comic"))return "不在本届展期，下一届按固定月历开放";
             var ids=(persons??Array.Empty<string>()).Where(id=>!string.IsNullOrEmpty(id)).Distinct().ToArray();
+            if(CommunitySearchActive)
+                for(int i=0;i<3;i++)
+                    if(!CommunityHasClue(i)&&def.VenueId==CommunityLeadVenue(i)
+                        &&ids.Contains(CommunityLeadPerson(i))&&!CitySamePlace(CommunityLeadPerson(i)))
+                        return "这次寻物交往需要当面邀约，请先走到"+(CityPerson(CommunityLeadPerson(i))?.Name??CommunityLeadPerson(i))+"身边，通过人物对话邀请活动。";
             if(ids.Length>5)return "一个活动最多六人（含玩家）";
             if(IsOwnedVenue(venue)&&ids.Length+1>VenueCapacity(venue))return "该场地最多容纳 "+VenueCapacity(venue)+" 人（含玩家），请减少同行人数";
             long end=start+def.Minutes;
@@ -146,7 +187,7 @@ namespace PCShopSell.Core.Session
                 bool working=row!=null&&EmployeeShiftOverlaps(row.Person,start-personTravel,end+personTravel);
                 if(working&&!approveEmployee)return "该员工届时当班；需要明确批准离岗，页面会说明无人值守影响";
                 var d=CityPerson(id);
-                if(row==null&&!definitionId.StartsWith("expo_")&&p.WorkPlaceId!=null&&d!=null&&CityShiftOverlaps(start-personTravel,end+personTravel,d.WorkStart,d.WorkEnd))return d.Name+"届时还在工作，建议下班后再约";
+                if(row==null&&!definitionId.StartsWith("expo_")&&p.WorkPlaceId!=null&&d!=null&&AuthoredCityWorkOverlaps(p,start-personTravel,end+personTravel))return d.Name+"届时还在工作，建议下班后再约";
                 if(route.ArriveMinute>start+15)return "对方按真实路线来不及在宽限内到达，请晚一点预约";
             }
             int seats=_cityActivities.Where(a=>a.Active&&a.VenueId==venue.Id&&start<a.ScheduledStart+a.Duration&&end>a.ScheduledStart).Sum(a=>a.Participants.Length+1);

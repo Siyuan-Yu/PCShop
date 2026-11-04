@@ -47,7 +47,7 @@ namespace PCShopSell.Game.UI
             if(S.IsOwnedVenue(p)){var v=S.VenueOperation(p.Id);return v.Open==v.Close?"全天开放":$"{v.Open/60:00}:{v.Open%60:00}—{v.Close/60:00}:{v.Close%60:00}";}
             int open = p.ExplicitEntrance ? p.OpenMinute : p.Kind == PlaceKind.Wholesaler ? 540 : 0;
             int close = p.ExplicitEntrance ? p.CloseMinute : p.Kind == PlaceKind.Wholesaler ? 1200 : 0;
-            if (open == close) return "全天开放";
+            if (open == close || open == 0 && close == 1440) return "24小时营业";
             return $"{open / 60:00}:{open % 60:00}—{(close < open ? "次日 " : "")}{close / 60:00}:{close % 60:00}" + (p.Kind == PlaceKind.Wholesaler ? "（工作日）" : "");
         }
         private bool CityMapTypeMatches(Place p) => _cityMapType == null
@@ -300,7 +300,7 @@ namespace PCShopSell.Game.UI
                 foreach (var definition in CityLifeCatalog.Activities.Where(activity => activity.Id != "snack"))
                 {
                     var def = definition; string location = S.City.HasPlace(def.VenueId) ? S.City.GetPlace(def.VenueId).Name : "场所暂不可用";
-                    Ui.Size(Ui.Button(w.Content, $"{location} · {def.Minutes}分钟\n到场后选择菜单或服务", () => OpenCityActivityOffer(def.Id, personId), 18), -1, 66);
+                    Ui.Size(Ui.Button(w.Content, $"{def.Name} · {location} · {def.Minutes}分钟\n到场后选择菜单或服务", () => OpenCityActivityOffer(def.Id, personId), 18), -1, 66).name="CityActivityOffer_"+def.Id;
                 }
             });
         }
@@ -376,7 +376,18 @@ namespace PCShopSell.Game.UI
             {
                 Para(w.Content,activity.SettlementSummary,19);
                 Ui.Size(Ui.Button(w.Content,"收好这段回忆",w.Close,20,Ui.ButtonHot),-1,46);
-            });
+            },onClosed:()=>OpenCommunityActivityClue(activityId));
+        }
+
+        private void OpenCommunityActivityClue(string activityId)
+        {
+            int lead=S.TakeCommunityActivityClue(activityId);
+            if(lead<0)return;
+            string id=GameSession.CommunityLeadPerson(lead);
+            string name=S.CityPerson(id)?.Name??id;
+            OpenDialogue(id,name,"活动后的话",null,"",6,ctx=>new System.Collections.Generic.List<TalkOpt>(),
+                firstReply:GameSession.CommunityLeadHint(lead)+"\n\n已记下藏箱线索，可以按主线导航前去寻找。",
+                onClosed:()=>OpenCommunityActivityClue(activityId),remote:true,replyOnly:true,replyConfirm:"记下线索");
         }
 
         private void OpenCityActivityDetail(string activityId)

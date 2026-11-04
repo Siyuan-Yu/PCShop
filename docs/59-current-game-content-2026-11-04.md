@@ -206,3 +206,5 @@
 - Steamworks、成就、云存档、商店页和正式发行尚未完成。
 
 最新已有Windows包仍为`Windows-Optimized-20261102-223752`，不包含此后UI、品牌主线、MCN、网购及复古头像等更新；旧WebGL包同样不代表当前全部源码。**本轮GitHub上传的是当前工程与文档，不是新Windows包或GitHub Release。**
+
+本次归档之后的主线、住宅、对话及作息改动见[第60篇](60-mainline-residences-and-business-hours.md)。

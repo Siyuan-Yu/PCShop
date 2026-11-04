@@ -54,8 +54,8 @@ namespace PCShopSell.Tests
             {
                 Meet(s);Assert.AreEqual("tender.prepare",s.CurrentDistrictNode.Id);
                 Assert.True(s.EnterBrandTender("b",s.MyShops.First().Place.Id,Product));s.RefreshDistrictNarrative();Assert.AreEqual("tender.prepare",s.CurrentDistrictNode.Id);
-                var t=s.BrandBusiness.Tenders.Single();Assert.True(s.ResearchBrandTender(t.Id,1));s.RefreshDistrictNarrative();Assert.AreEqual("tender.prepare",s.CurrentDistrictNode.Id);
-                Assert.True(s.ResearchBrandTender(t.Id,2));s.RefreshDistrictNarrative();Assert.AreEqual("tender.trial",s.CurrentDistrictNode.Id);Assert.True(s.SubmitBrandTender(t.Id,"service",true));
+                var t=s.BrandBusiness.Tenders.Single();DistrictProgressionTests.StandWithPerson(s,"life_enterprise");Assert.True(s.ResearchBrandTender(t.Id,1));s.RefreshDistrictNarrative();Assert.AreEqual("tender.prepare",s.CurrentDistrictNode.Id);
+                DistrictProgressionTests.StandWithPerson(s,"life_tenant");Assert.True(s.ResearchBrandTender(t.Id,2));s.RefreshDistrictNarrative();Assert.AreEqual("tender.trial",s.CurrentDistrictNode.Id);Assert.True(s.SubmitBrandTender(t.Id,"service",true));
                 Deliver(s,s.BrandBusiness.Orders.Single(o=>o.Source=="trial"));Assert.AreEqual("tender.decision",s.CurrentDistrictNode.Id);
                 Assert.True(s.EvaluateBrandTender(t.Id));s.RefreshDistrictNarrative();Assert.AreEqual("tender.fulfilment",s.CurrentDistrictNode.Id);
                 for(int round=0;round<3;round++)

@@ -33,11 +33,12 @@ namespace PCShopSell.Tests
             foreach(var id in m.MeetingPeople){var p=s.CityPersonState(id);p.Route=null;p.LocationPlaceId=m.MeetingPlaceId;}
             Assert.IsNull(s.DistrictMeetingBlocker);
         }
-        [TestCase(720,1)] [TestCase(1140,1)] [TestCase(720,2)] [TestCase(1140,3)]
+        [TestCase(600,1)] [TestCase(720,1)] [TestCase(1140,1)] [TestCase(720,2)] [TestCase(1140,3)]
         public void SleepingPastInviteDeliversExactlyTwoHoursAfterActualWake(int wake,int chapter)
         {
             using(var seed=DistrictProgressionTests.Make())
             {
+                if(wake==600)seed.Clock.Restore(seed.Clock.Today,540);
                 var save=seed.CreateSave();save.districtProgress=new DistrictProgress{Chapter=chapter-1,UnlockedTier=chapter-1,PendingChapter=chapter,InvitationDueAt=seed.Clock.Now.TotalMinutes+30};
                 using(var s=GameSession.Load(seed.City,save))
                 {
@@ -47,6 +48,34 @@ namespace PCShopSell.Tests
                     s.Player.Health=100;s.Player.Hunger=100;s.Player.Energy=100;s.AdvanceClock(119);
                     Assert.IsNull(s.CurrentDistrictNode);s.AdvanceClock(1);Assert.AreEqual(new[]{"community.intro","park.proposal","garden.invitation"}[chapter-1],s.CurrentDistrictNode.Id);
                     Assert.AreEqual(1,popups);s.RefreshDistrictNarrative();Assert.AreEqual(1,popups);
+                }
+            }
+        }
+        [Test] public void SleepingToTenBeforeSavedDeadlineStillInvitesAtFourteenOhOne()
+        {
+            using(var seed=DistrictProgressionTests.Make())
+            {
+                var save=seed.CreateSave();
+                save.districtProgress=new DistrictProgress{PendingChapter=1,InvitationDueAt=5161};
+                using(var s=GameSession.Load(seed.City,save))
+                {
+                    s.EventsEnabled=false;
+                    s.Clock.Restore(new GameDate(2),1320);
+                    At(s,s.Home.Id);
+                    int invites=0;
+                    s.Popup+=(title,body)=>{if(title.EndsWith("发来主线邀请"))invites++;};
+                    Assert.True(s.SleepUntil(600));
+                    Assert.AreEqual(4920,s.Clock.Now.TotalMinutes);
+                    StringAssert.Contains("第4天 14:01",s.DistrictInvitationStatus);
+                    s.Player.Health=100;s.Player.Hunger=100;s.Player.Energy=100;
+                    s.AdvanceClock(240);
+                    Assert.IsNull(s.CurrentDistrictNode);
+                    StringAssert.Contains("0小时1分钟",s.DistrictInvitationStatus);
+                    s.AdvanceClock(1);
+                    Assert.AreEqual("community.intro",s.CurrentDistrictNode.Id);
+                    Assert.IsNull(s.DistrictInvitationStatus);
+                    Assert.AreEqual(1,invites);
+                    s.RefreshDistrictNarrative();Assert.AreEqual(1,invites);
                 }
             }
         }
@@ -86,8 +115,23 @@ namespace PCShopSell.Tests
                 }
                 var save=JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()));
                 using(var loaded=GameSession.Load(s.City,save))CollectionAssert.AreEqual(s.DistrictStoryState.TaskEvidence,loaded.DistrictStoryState.TaskEvidence);
-                At(s,s.DistrictStoryState.MeetingPlaceId);Assert.True(s.ActDistrictNode("model.clues"));
+                Assert.True(s.DistrictNodeCompleted("model.clues"));Assert.False(s.ActDistrictNode("model.clues"),"Final evidence already advanced the story; no redundant return conversation");
                 Assert.AreEqual("model.repair",s.CurrentDistrictNode.Id);Assert.False(s.DistrictRoadOpen(2));
+            }
+        }
+        [Test] public void MainQuestEvidenceRequiresLocalConversationAndInspectionUsesSceneInteraction()
+        {
+            using(var s=Stage("park.change"))
+            {
+                Meeting(s,"honor");
+                var task=s.DistrictTasks.First(t=>t.PersonId!=null);
+                s.Meet(task.PersonId,50);
+                Assert.NotNull(s.DistrictTaskBlocker(task.Id,true));
+                s.PerformDistrictTask(task.Id,true);Assert.False(s.HasDistrictTask(task.Id));
+                Assert.IsNull(s.DistrictTaskBlocker(task.Id));
+                s.PerformDistrictTask(task.Id);Assert.True(s.HasDistrictTask(task.Id));
+                Assert.AreEqual("fair.walk",s.NearbyDistrictTask?.Id);
+                s.PerformDistrictTask(s.NearbyDistrictTask.Id);Assert.IsNull(s.NearbyDistrictTask);
             }
         }
         [Test] public void InspectionCannotBeDoneRemotelyAndEvidenceCopyIsIndependent()

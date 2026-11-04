@@ -82,13 +82,18 @@ namespace PCShopSell.Core.Session
         /// <summary>所有有交情的人都认识、交情 +delta；店员和街坊的熟络度也 +delta。</summary>
         public void DebugRaiseAllRelations(double delta)
         {
-            foreach (NpcDef n in Npcs.All)
+            InitializeCityPeople();
+            var staffIds = Rosters.All.Select(staff => staff.Id)
+                .Concat(Residents.All.Select(resident => resident.Person.Id)).ToHashSet();
+            var personIds = Npcs.All.Select(npc => npc.Id)
+                .Concat(CityPeople.Select(person => person.PersonId))
+                .Concat(staffIds).Distinct();
+            foreach (string id in personIds)
             {
-                Meet(n.Id, 0);
-                AddRelation(n.Id, delta);
+                Meet(id, 0);
+                if (staffIds.Contains(id)) AddStaffRapport(id, delta);
+                else AddRelation(id, delta);
             }
-            foreach (StaffDef s in Rosters.All) AddStaffRapport(s.Id, delta);
-            foreach (ResidentDef r in Residents.All) AddStaffRapport(r.Person.Id, delta);
             Say($"作弊：所有人交情 / 熟络 +{delta:0}。");
         }
 

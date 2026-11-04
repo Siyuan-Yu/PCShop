@@ -18,6 +18,7 @@ namespace PCShopSell.Core.Session
 
         // These are durable action receipts. Merely displaying a task does not record evidence.
         public bool HasDistrictTask(string id)=>_district.TaskEvidence.Contains(id);
+        public DistrictTask NearbyDistrictTask => DistrictTasks.FirstOrDefault(t=>t.PersonId==null&&!HasDistrictTask(t.Id)&&DistrictTaskBlocker(t.Id)==null);
         public IEnumerable<DistrictTask> DistrictTasks
         {
             get
@@ -33,8 +34,6 @@ namespace PCShopSell.Core.Session
                     case "park.delivery":
                         yield return DTask("fair.signs","现场核对导览与展示动线",null,"life_service",DistrictChoice("park.change")=="consent"?"你把袁岚的摊位写进入口导览，核对分时展示安排；侧门的卸货通道已经留出来。":"你按协商图核对展架边界，保留原摊位，确认侧门仍能通行。");
                         yield return DTask("fair.handover","把现场交接说清楚","life_curator",null,"任帆：开场由我接待，袁岚负责展示，你帮忙照看入口。遇到新变动先叫大家一起确认，别各改各的。","fair.signs");break;
-                    case "model.dinner":
-                        yield return DTask("model.request","听沈远说孩子喜欢的细节","life_enterprise",null,"沈远：他画了窗边一张小凳子，还有一块旧公交站牌。他想找回的是那次看展的记忆，不是价签最大的模型。你先问清版本，不要急着付钱。");break;
                     case "model.clues":
                         if(DistrictChoice("model.clues")=="supplier")
                         {
@@ -90,7 +89,7 @@ namespace PCShopSell.Core.Session
             if(_district.MeetingNodeId!=_district.NodeId)return "先确认本次约见和处理方案，再开展调查。";
             if(IsGameOver||IsWorking||CityActivityExclusive||_sleeping)return "请先结束当前工作或活动。";
             if(t.Requires.Any(id=>!HasDistrictTask(id)))return "先完成前面的线索或沟通。";
-            if(t.PersonId!=null)return remote?RemoteConversationBlocker(t.PersonId):CitySamePlace(t.PersonId)?null:"请找到本人交谈，或使用已有联系方式联系。";
+            if(t.PersonId!=null)return !remote&&CitySamePlace(t.PersonId)?null:"请找到本人，当面交谈。";
             if(t.PlaceId==null||!City.HasPlace(t.PlaceId))return "请先选择实际试点门店。";
             var p=City.GetPlace(t.PlaceId);
             if(Trip!=null||!(CurrentPlace==p||CurrentPlace==null&&DistanceCity(PlayerPosition,StandOf(p))<=5))return "请亲自前往"+p.Name+"进行现场核对。";
@@ -114,7 +113,13 @@ namespace PCShopSell.Core.Session
                 if(task.PersonId!=null)RememberSocial(task.PersonId,task.Title+"："+task.Reply);
                 Say("主线记录："+task.Title);
             }
-            return task.Reply;
+            string reply=task.Reply;
+            if(DistrictTasksBlocker==null&&(_district.NodeId=="park.change"||_district.NodeId=="model.clues"||_district.NodeId=="garden.proposal"))
+            {
+                CompleteDistrictNode();
+                reply+="\n\n下一步："+(CurrentDistrictNode?.Title??"本段主线已完成。");
+            }
+            return reply;
         }
         private bool DistrictProjectHasSales()
         {

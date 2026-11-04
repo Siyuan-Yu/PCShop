@@ -2,6 +2,7 @@
 Geometry is regenerated from the V8 source, never cumulatively warped.
 """
 import json, math, heapq
+from residence_access import assign_residence_entrances
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 d=json.loads((ROOT/'tools/data/city-layout-v8.json').read_text(encoding='utf-8-sig'))
@@ -254,6 +255,7 @@ bridges=[dict(id='lake_bridge_1',name='跨湖道路①',requiredTier=2,points=sm
 for bridge in bridges:bridge['points']=[dict(x=x*scale,y=y*scale) for x,y in bridge['points']]
 d.update(layoutVersion=14,lakeCity=True,lakeSceneScale=scale,lakeShore=[dict(x=x*scale,y=y*scale) for x,y in shore],lakeBridges=bridges,lakeParcels=parcels,nodes=list(nodes.values()),edges=edges,blocks=blocks,lakeSouthNode=south,lakeNorthNode=north,
          lakeGapRoutes=[[id for _,id in sorted(routes['gap'+str(i)]['marks'])] for i in [1,2,3]])
+assign_residence_entrances(d)
 # Patrols still use stable nodes; their route planner resolves the new curving roads.
 (ROOT/'Assets/Resources/Data/city_layout.json').write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 print('V14:',len(nodes),'nodes;',len(places),'functional places;',len(blocks),'scenery buildings;',len(parcels),'gardens')

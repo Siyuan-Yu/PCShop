@@ -92,6 +92,7 @@ namespace PCShopSell.Game.UI
                     return;
                 }
                 win.Closable = true;
+                BuildQuestItems(win);
                 BuildStorage(win);
             },scrollContent:false);
         }
@@ -365,6 +366,7 @@ namespace PCShopSell.Game.UI
             _bagSel = null;
             _backpackWin = OpenWindow("背包", 760, 700, w =>
             {
+                BuildQuestItems(w);
                 double carried = S.CarriedKg, limit = S.CarryLimitKg;
                 bool heavy = carried > limit * 0.85;
                 Line(w.Content, $"{S.CurrentVehicle.Name}　负重 {carried:0.##}/{limit:0.##} 千克（1 格 = {Backpack.KgPerSpace:0.##} 千克）", 17, heavy ? Ui.Warn : Ui.Dim);

@@ -55,7 +55,8 @@ namespace PCShopSell.Core.World
     [Serializable]
     public sealed class LayoutBlockData
     {
-        public string street, model;
+        public string street, model, homeId, entranceNode;
+        public int homeNumber;
         public double x,y,width,depth,height,heading;
         public int variant;
         public int tier,columns=1,rows=1;
@@ -320,6 +321,20 @@ namespace PCShopSell.Core.World
                     layout._places.Add(place.Id, place);
                     layout._placeList.Add(place);
                 }
+            }
+            foreach (var block in layout.Blocks)
+            {
+                if (string.IsNullOrEmpty(block.homeId)) continue;
+                if (!map.HasNode(block.entranceNode))
+                    throw new ArgumentException($"住宅 {block.homeId} 的入口节点不存在：{block.entranceNode}");
+                var node = layout.ViewPosition(block.entranceNode);
+                string name = layout.StreetName(block.street) + " · " + block.homeNumber + "号住宅";
+                var residence = new Place(block.homeId, name, PlaceKind.Home, block.entranceNode,
+                    streetId: block.street, explicitEntrance: true, entranceX: block.x - node.X,
+                    entranceY: block.y - node.Y, width: block.width, depth: block.depth, heading: block.heading,
+                    model: block.model, tier: block.tier);
+                layout._places.Add(residence.Id, residence);
+                layout._placeList.Add(residence);
             }
             foreach(var alias in data.placeAliases??Array.Empty<LayoutPlaceAliasData>())
             {

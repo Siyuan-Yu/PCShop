@@ -98,7 +98,7 @@ namespace PCShopSell.Tests
             {
                 var state=s.BrandBusiness;state.Brands[0].Influence=100;Set(s,state);string shop=state.Brands[0].ShopIds[0];s.ShopAt(shop).Sim.Stock.ForceAddGoods(Product,150);
                 Assert.True(s.EnterBrandTender("b",shop,Product));string id=s.BrandBusiness.Tenders[0].Id;
-                Assert.True(s.ResearchBrandTender(id,1));Assert.True(s.ResearchBrandTender(id,2));Assert.False(s.ResearchBrandTender(id,2));Assert.True(s.SubmitBrandTender(id,"service",true));
+                DistrictProgressionTests.StandWithPerson(s,"life_enterprise");Assert.True(s.ResearchBrandTender(id,1));DistrictProgressionTests.StandWithPerson(s,"life_tenant");Assert.True(s.ResearchBrandTender(id,2));Assert.False(s.ResearchBrandTender(id,2));Assert.True(s.SubmitBrandTender(id,"service",true));
                 void Send(string orderId)
                 {Assert.True(s.FulfilBrandOrder(orderId));var o=s.BrandBusiness.Orders.First(x=>x.Id==orderId);s.Clock.Restore(new GameDate((int)(o.Arrival/1440)),(int)(o.Arrival%1440));Delivery(s);}
                 Send(id+":trial");Assert.True(s.EvaluateBrandTender(id));Assert.AreEqual(2,s.BrandBusiness.Tenders[0].Stage);

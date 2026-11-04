@@ -137,6 +137,7 @@ namespace PCShopSell.Core.Session
             Clock.TimeAdvanced += OnTimeAdvanced;
             Clock.DayAdvanced += OnDayAdvanced;
             InitializeCityPeople();
+            AssignCityHomes();
             InitializeCityClimate();
             TickCityRetail();
             TickSpecialBusinesses(start,start);
@@ -281,7 +282,7 @@ namespace PCShopSell.Core.Session
         {
             string districtBlock = DistrictAccessBlocker(p);
             if (districtBlock != null) return districtBlock;
-            if(City.LayoutVersion>=7 && p?.Kind==PlaceKind.Home && p!=Home)return "私人住宅，可在门前拜访；请到对应街道中介办理自己的住处。";
+            if(City.LayoutVersion>=7 && p?.Kind==PlaceKind.Home && p!=Home)return HomeVisitBlocker(p);
             if (WorkStaffEntry(p)) return null;
             if (p == null || ShopAt(p) != null || VentureAt(p.Id) != null || IsPlayerPropertyOccupied(p.Id)) return null;
             if (p.Kind == PlaceKind.Shop && IsVacant(p)) return null;
@@ -293,6 +294,7 @@ namespace PCShopSell.Core.Session
         /// <summary>这个地点的营业时间说明；不限时的地方返回 null。</summary>
         public string OpeningHoursText(Place p)
         {
+            if(p.ExplicitEntrance&&p.OpenMinute==0&&p.CloseMinute==1440)return "24小时";
             if(p.ExplicitEntrance && p.OpenMinute!=p.CloseMinute)return $"每天 {Hm(p.OpenMinute)}–{Hm(p.CloseMinute)}";
             switch (p.Kind)
             {

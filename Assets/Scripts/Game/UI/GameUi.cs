@@ -28,6 +28,7 @@ namespace PCShopSell.Game.UI
         public bool Closed;
         public bool Closable = true;
         internal bool RebuildPending;
+        internal bool ResetScrollOnRebuild;
         internal WindowFit Fitter;
         internal GameUi Owner;
 
@@ -38,6 +39,16 @@ namespace PCShopSell.Game.UI
             Ui.Clear(Content);
             Builder?.Invoke(this);
             Ui.RestoreScroll(Root, Root, scrolled);
+            if (ResetScrollOnRebuild)
+            {
+                ResetScrollOnRebuild = false;
+                Canvas.ForceUpdateCanvases();
+                foreach (var scroll in Root.GetComponentsInChildren<ScrollRect>())
+                {
+                    scroll.StopMovement();
+                    scroll.verticalNormalizedPosition = 1;
+                }
+            }
         }
 
         public void Close() => Owner.CloseWindow(this);
@@ -304,10 +315,15 @@ namespace PCShopSell.Game.UI
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimateRemainingMinutes(S.Time.SecondsPerMinuteAt1x)} 分钟 · 按 WASD 随时接管";
             else if (S.NearbyCommunityBox>=0)
                 _hintText.text = "<color=#DDC18B>按 F 调查"+GameSession.CommunityBoxName(S.NearbyCommunityBox)+"，取回这一份图页</color>";
+            else if (S.NearbyPlace?.Kind == PlaceKind.Home)
+                _hintText.text = $"<color=#DDC18B>按 F 查看住户 · {S.PlaceTitle(S.NearbyPlace)}</color>";
             else if (S.NearbyPlace != null)
                 _hintText.text = S.ClosedReason(S.NearbyPlace) is string closed
                     ? $"<color=#D79780>{closed}</color>"
                     : $"<color=#DDC18B>按 F 进入 {S.PlaceTitle(S.NearbyPlace)}</color>";
+            else if (_ctrl.InVisit)
+                _hintText.text = _ctrl.VisitRoom?.NearbyLabel is string visitHint
+                    ? "按 F：" + visitHint : "WASD 在屋里走动 · 走近住户或房门按 F";
             else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#DDC18B>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : "WASD 在屋里走动 · 走近床、衣柜、电饭锅、纸箱、凳子（头顶出现提示按 F）· 房间信息、摆放家具看右上角“我的”";
             else if (S.CurrentPlace != null) _hintText.text = "按 WASD 离开 · 空格暂停";
             else _hintText.text = "WASD 自由走动 · 右键拖动/Q E 转视角 · V 复位 · 滚轮缩放 · 走到门口按 F 进入 · 空格暂停 · 下方按钮可快捷前往";

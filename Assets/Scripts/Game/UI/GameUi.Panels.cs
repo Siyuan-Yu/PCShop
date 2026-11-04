@@ -34,6 +34,9 @@ namespace PCShopSell.Game.UI
                     _agencyViewState = new AgencyStreetMap.ViewState();
                     OpenPlaceWindow(p, BuildAgency, 1660, 1000);
                     break;
+                case PlaceKind.Home when p != S.Home:
+                    Toast("走近在家的住户按 F 交谈，走回门口按 F 告辞。");
+                    break;
                 case PlaceKind.Home:
                     Toast("回到出租屋了。走近床、衣柜、电饭锅、纸箱或门，头顶出现提示时按 F；看房间信息点右上角“我的”。");
                     break;
@@ -66,6 +69,62 @@ namespace PCShopSell.Game.UI
                     else OpenPlaceWindow(p, BuildNeighbour);
                     break;
             }
+        }
+
+        public void OpenResidence(Place residence)
+        {
+            int residentCount = S.CityPeople.Count(person => person.HomePlaceId == residence.Id);
+            float rosterHeight = Mathf.Clamp(residentCount * 66 + 8, 140, 410);
+            float bodyHeight = Mathf.Max(220, rosterHeight + 42);
+            OpenWindow("住宅 · " + residence.Name, 800, bodyHeight + 100, window =>
+            {
+                var row = Ui.Row(window.Content, bodyHeight, 14);
+                var roster = Ui.Rect(row, "Residents");
+                Ui.Size(roster, 250, -1);
+                Ui.VList(roster, 8, 0);
+                Line(roster, "住户", 20, Ui.Accent);
+                var portraits = Ui.Scroll(roster, rosterHeight);
+                var residents = S.CityPeople.Where(person => person.HomePlaceId == residence.Id).ToArray();
+                var present = S.ResidentsAtHome(residence).Select(person => person.PersonId).ToHashSet();
+                if (residents.Length == 0)
+                    Para(portraits, residence == S.Home ? "你的住处" : "暂无登记住户。", 17, Ui.Dim);
+                foreach (var resident in residents)
+                {
+                    string id = resident.PersonId;
+                    bool atHome = present.Contains(id);
+                    var person = S.CityPerson(id);
+                    var entry = Ui.Row(portraits, 58, 8);
+                    var layout = entry.GetComponent<HorizontalLayoutGroup>();
+                    layout.childForceExpandHeight = false;
+                    layout.childAlignment = TextAnchor.MiddleLeft;
+                    PortraitThumb(entry, id, 46, () => OpenCityPersonProfile(id, fromConversation: true), dimmed: !atHome);
+                    var description = Ui.Rect(entry, "ResidentDetails");
+                    Ui.Size(description, -1, -1, 1);
+                    Ui.VList(description, 2, 0);
+                    Line(description, person.Name + (atHome ? " · 在家" : " · 不在家"), 16, atHome ? Ui.Good : Ui.Dim);
+                    Line(description, "好感 " + S.Relation(id), 15, Ui.Dim);
+                }
+
+                var details = Ui.Rect(row, "Visit");
+                Ui.Size(details, -1, -1, 1);
+                Ui.VList(details, 10, 0);
+                Line(details, residence.Name, 22, Ui.Accent);
+                Para(details, "点击左侧头像查看住户资料。", 16, Ui.Dim);
+                string blocker = S.ClosedReason(residence);
+                if (residence != S.Home)
+                    Para(details, "与至少一位住户的好感达到 " + GameSession.HomeVisitMinRelation + "，且这位住户在家时，可以进屋拜访。", 18);
+                if (blocker != null) Para(details, blocker, 17, Ui.Warn);
+                Ui.Size(Ui.Button(details, residence == S.Home ? "回家" : "进屋拜访", () =>
+                {
+                    if (S.NearbyPlace != residence || !S.EnterNearby())
+                    {
+                        window.Rebuild();
+                        return;
+                    }
+                    window.Close();
+                    OnEnteredPlace(residence);
+                }, 18, Ui.ButtonHot, blocker == null), -1, 46).name = "ResidenceEnter";
+            }, scrollContent: false);
         }
 
         private void OpenPlaceWindow(Place p, System.Action<Window, Place> build, float w = 640, float h = 520, bool holds = true, bool leaveOnClose = true)

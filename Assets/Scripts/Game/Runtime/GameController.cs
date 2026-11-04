@@ -32,12 +32,15 @@ namespace PCShopSell.Game
         public Camera Cam { get; private set; }
         public GameUi Ui { get; private set; }
         public HomeRoomView HomeRoom { get; private set; }
+        public HomeRoomView VisitRoom { get; private set; }
+        public bool InVisit => Session?.CurrentPlace?.Kind == PlaceKind.Home && !InHome;
+        private HomeRoomView ActiveResidence => InVisit ? VisitRoom : HomeRoom;
         public bool InInterior => Session != null && Session.InPlayerShop&&!Session.IsDedicatedVenue(Session.CurrentPlace);
         /// <summary>在自己的出租屋里（真实的小屋，不是街上弹窗）。</summary>
         public bool InHome => Session != null && Session.CurrentPlace != null && Session.CurrentPlace == Session.Home;
         /// <summary>在任意室内场景（店里或家里）：街道隐藏，镜头跟着老板。</summary>
-        public bool InRoom => InInterior || InHome;
-        private int RoomKind => InInterior ? 1 : InHome ? 2 : CityCloseView!=null ? 3 : 0;
+        public bool InRoom => InInterior || InHome || InVisit;
+        private int RoomKind => InInterior ? 1 : InHome ? 2 : InVisit ? 4 : CityCloseView!=null ? 3 : 0;
 
         private CameraRig _rig;
         private DayNightLighting _lighting;
@@ -116,6 +119,7 @@ namespace PCShopSell.Game
                 Session.CityTravelRequested-=OnCityTravelRequested;
                 Session.CityPlaceEntered-=OnCityPlaceEntered;
                 Session.CityActivitySettled-=OnCityActivitySettled;
+                Session.DistrictDialogueReady-=OnDistrictDialogueReady;
                 Session.Dispose();
             }
             Interior.Clear();
@@ -135,6 +139,7 @@ namespace PCShopSell.Game
             s.CityTravelRequested+=OnCityTravelRequested;
             s.CityPlaceEntered+=OnCityPlaceEntered;
             s.CityActivitySettled+=OnCityActivitySettled;
+            s.DistrictDialogueReady+=OnDistrictDialogueReady;
             _cityExitIntent=null;
             _pendingEnter = null;
             _goHomeToBed = s.CitySleepRequested;
@@ -308,11 +313,15 @@ namespace PCShopSell.Game
         }
 
         private readonly List<ShopBeacon> _beacons = new List<ShopBeacon>();
+        private ShopBeacon _homeBeacon;
         public bool ShopBeaconVisible => _beacons.Exists(b => b.Visible);
 
         /// <summary>每家自营店一圈光；店少了多出来的那几圈藏起来。</summary>
         private void UpdateBeacons(float dt)
         {
+            _homeBeacon ??= new ShopBeacon(World.Root.transform, residential: true);
+            _homeBeacon.Update(Session, World, Session.Home.Id, dt);
+
             var shops = Session.MyShops;
             while (_beacons.Count < shops.Count) _beacons.Add(new ShopBeacon(World.Root.transform));
             for (int i = 0; i < _beacons.Count; i++)
@@ -337,6 +346,8 @@ namespace PCShopSell.Game
             float worldDt = Session.Time.IsRunning ? Mathf.Min(dt,(float)TimeController.MaxTickSeconds) * Session.Time.Speed * (float)TimeController.WorldRate : 0f;
             Interior.SetActive(interior);
             HomeRoom.SetActive(InHome);
+            if (InVisit && VisitRoom == null) VisitRoom = new HomeRoomView(_actors);
+            VisitRoom?.SetActive(InVisit);
             World.Root.SetActive(!room);
             World.SetVenueFocus(Session.CurrentPlace?.Id);
             _avatar.Update(Session, dt);
@@ -360,6 +371,7 @@ namespace PCShopSell.Game
             }
             if (interior) Interior.Update(Session, worldDt, dt);
             if (InHome) HomeRoom.Update(Session, dt, Session.Clock.MinuteOfDay);
+            if (InVisit) VisitRoom.UpdateVisit(Session);
             UpdateHomeBedTrip(dt);
             UpdateCityTravel(dt);
             FigureMotion.AdvanceAll(dt, Session.Time.IsRunning);
@@ -394,10 +406,11 @@ namespace PCShopSell.Game
         private Vector3 FocusPoint(float zoom = -1f)
         {
             if (Placing && _rig.Edit) return EditFocus(zoom > 0 ? zoom : _rig.Size);
-            if (InHome)
+            if (InHome || InVisit)
             {
-                Vector3 c = HomeRoom.Center + new Vector3(0, 0.8f, 0);
-                return c + (HomeRoom.OwnerWorld - HomeRoom.Center) * 0.35f;
+                var residence = ActiveResidence ?? HomeRoom;
+                Vector3 c = residence.Center + new Vector3(0, 0.8f, 0);
+                return c + (residence.OwnerWorld - residence.Center) * 0.35f;
             }
             if (InInterior && _overview) return Interior.ViewCenter + new Vector3(0, 0.8f, 0);
             if (InInterior)
@@ -442,7 +455,9 @@ namespace PCShopSell.Game
             if (Input.GetKeyDown(KeyCode.B) && !Session.IsGameOver && !Placing) Ui.ToggleBackpack();
             if (Input.GetKeyDown(KeyCode.F) && !Ui.AnyModalOpen && !Session.IsGameOver && !Placing)
             {
-                if (InHome) HomeInteract(HomeRoom.NearbyId);
+                if(Session.NearbyDistrictTask is DistrictTask task)Ui.Toast(Session.PerformDistrictTask(task.Id));
+                else if (InVisit) InteractVisitRoom();
+                else if (InHome) HomeInteract(HomeRoom.NearbyId);
                 else if(Session.IsOwnedVenue(Session.CurrentPlace))Ui.OpenVenueManagement(Session.CurrentPlace);
                 else if (InInterior)
                 {
@@ -531,10 +546,10 @@ namespace PCShopSell.Game
                 }
                 return;
             }
-            if (InHome)
+            if (InHome || InVisit)
             {
                 Session.SetSteer(0, 0);
-                HomeRoom.MoveOwner(dir, IndoorWalkDelta(dt));
+                ActiveResidence?.MoveOwner(dir, IndoorWalkDelta(dt));
                 return;
             }
 
@@ -559,6 +574,15 @@ namespace PCShopSell.Game
         }
 
         /// <summary>出租屋里的互动：床 = 睡觉，衣柜 = 换衣服，电饭锅 = 做饭，凳子 / 沙发 = 坐下歇，门 = 出门。查看房间信息用右上角“我的”。</summary>
+        private void InteractVisitRoom()
+        {
+            string target = VisitRoom?.NearbyId;
+            if (target == HomeRoomView.Door) LeaveHome();
+            else if (target != null && Session.CitySamePlace(target) && VisitRoom.CanReachResident(target))
+                Ui.OpenCityPerson(target);
+            else Ui.Toast("走近住户或房门，再按 F。");
+        }
+
         public void HomeInteract(string id)
         {
             CancelHomeBedTrip();
@@ -603,13 +627,19 @@ namespace PCShopSell.Game
             world = Vector3.zero;
             label = null;
             if (Session == null || Session.IsGameOver || Ui.AnyModalOpen || Placing) return false;
+            if(Session.NearbyDistrictTask is DistrictTask task)
+            {
+                world=StreetWorldBuilder.ToWorld(Session.PlayerPosition)+Vector3.up;
+                label=task.Title+"（按 F）";return true;
+            }
             if(Session.IsOwnedVenue(Session.CurrentPlace))
             {world=StreetWorldBuilder.ToWorld(Session.PlayerPosition)+Vector3.up*2;label="场馆管理（按 F 打开）";return true;}
-            if (InHome)
+            if (InHome || InVisit)
             {
-                if (HomeRoom.NearbyId == null) return false;
-                world = HomeRoom.NearbyWorld;
-                label = HomeRoom.NearbyLabel;
+                var room = ActiveResidence;
+                if (room?.NearbyId == null) return false;
+                world = room.NearbyWorld;
+                label = room.NearbyLabel;
                 return true;
             }
             if (InInterior)
@@ -680,6 +710,12 @@ namespace PCShopSell.Game
                 int box=Session.NearbyCommunityBox;
                 world=StreetWorldBuilder.ToWorld(Session.CommunityBoxPosition(box))+Vector3.up;
                 label="调查"+GameSession.CommunityBoxName(box)+"（按 F）";return true;
+            }
+            if (Session.NearbyPlace is Place residence && residence.Kind == PlaceKind.Home)
+            {
+                world = StreetWorldBuilder.ToWorld(Session.DoorOf(residence), 3.4f);
+                label = "查看住户 · " + residence.Name;
+                return true;
             }
             if (NearPasserby(out ResidentDef who, out Vector3 pw))
             {
@@ -756,6 +792,12 @@ namespace PCShopSell.Game
 
         private void TryEnterNearby()
         {
+            if (Session.NearbyPlace is Place residence && residence.Kind == PlaceKind.Home)
+            {
+                Session.SetSteer(0, 0);
+                Ui.OpenResidence(residence);
+                return;
+            }
             if (NearPasserby(out ResidentDef who, out _))
             {
                 TalkToPasserby(who);
@@ -889,7 +931,7 @@ namespace PCShopSell.Game
         public void SnapCamera(bool smooth = false)
         {
             bool interior = InInterior;
-            bool home = InHome;
+            bool home = InHome || InVisit;
             var closeView=interior||home?null:CityCloseView;
             bool editing = Placing && _rig.Edit;
             if (editing) _rig.SetEdit(false);
@@ -905,6 +947,7 @@ namespace PCShopSell.Game
             if (editing) EnterEditView(true);
         }
 
+        private void OnDistrictDialogueReady(string person,string text) => Ui.OpenDistrictResult(person,text);
         private void OnCityActivitySettled(string activityId) => Ui.OpenCityActivitySettlement(activityId);
 
         private void OnPopup(string title, string body)

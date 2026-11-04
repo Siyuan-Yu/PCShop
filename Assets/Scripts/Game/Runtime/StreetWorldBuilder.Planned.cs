@@ -27,10 +27,17 @@ namespace PCShopSell.Game.Runtime
         private void BuildPlannedCity()
         {
             BuildRoads(); BatchLakeRoads(); BuildCitySidewalks();
-            foreach(var p in _city.Places) BuildPlannedPlace(p);
             var housing=new GameObject("ResidentialCompounds").transform;housing.SetParent(_root,false);
+            var residenceBlocks = _city.Blocks.Where(block => _city.HasPlace(block.homeId))
+                .ToDictionary(block => block.homeId);
+            foreach (var place in _city.Places)
+            {
+                residenceBlocks.TryGetValue(place.Id, out var block);
+                BuildPlannedPlace(place, block, block == null ? _root : housing);
+            }
             foreach(var block in _city.Blocks)
             {
+                if (_city.HasPlace(block.homeId)) continue;
                 // The configuration validates real footprints, roads and door aisles. Render every
                 // configured building: broad proximity culling previously erased whole apartment rows.
                 Vector3 at=new Vector3((float)block.x,0,(float)block.y);
@@ -39,7 +46,7 @@ namespace PCShopSell.Game.Runtime
                 PlannedBuilding(root,block.model,block.tier,(float)block.width,(float)block.depth,null,(float)block.height,block.variant);
                 BuildResidentialPlot(root,block);
             }
-            // These buildings never move. Combine only static scenery, keeping interactive places separate.
+            // Residential geometry is static even when the door and occupants are interactive.
             StaticBatchingUtility.Combine(housing.gameObject);
             BuildPlannedProps();
             BuildReferenceLandscape();
@@ -68,10 +75,10 @@ namespace PCShopSell.Game.Runtime
                 }
             }
         }
-        private void BuildPlannedPlace(Place p)
+        private void BuildPlannedPlace(Place p, LayoutBlockData block, Transform parent)
         {
             Vector3 node=NodeWorld(p.NodeId),door=node+new Vector3((float)p.EntranceX,0,(float)p.EntranceY);
-            var root=new GameObject("Place_"+p.Id).transform;root.SetParent(_root,false);root.position=door;
+            var root=new GameObject("Place_"+p.Id).transform;root.SetParent(parent,false);root.position=door;
             root.rotation=Quaternion.Euler(0,(float)p.Heading,0);
             var vis=new PlaceVisual{Place=p,Entrance=door,Root=root.gameObject};Places[p.Id]=vis;_cur=vis;
             float w=(float)p.Width,d=(float)p.Depth;
@@ -87,12 +94,13 @@ namespace PCShopSell.Game.Runtime
             }
             else if(venue)CityVenueView.Build(root,p,w,d);
             else if(p.Kind==PlaceKind.Station)PlannedStation(root,p.Name,w,d);
-            else PlannedBuilding(root,p.Model,p.Tier,w,d,p);
+            else PlannedBuilding(root,p.Model,p.Tier,w,d,p,(float)(block?.height ?? 0),block?.variant ?? 0);
+            if (block != null) BuildResidentialPlot(root, block);
             // The route node is on the road; its approach ends at the actual public door.
             var delta=door-node;
             var approach=Prims.Box(_root,"Approach_"+p.Id,(node+door)*.5f+Vector3.up*.08f,new Vector3(2,.12f,delta.magnitude),Mats.Lit(Sidewalk));
             if(delta.sqrMagnitude>.01f)approach.transform.rotation=Quaternion.LookRotation(delta);
-            vis.LabelPos=root.TransformPoint(new Vector3(0,CityArchitecture.HasExterior(p)?CityArchitecture.VenueHeight(p)+1:!venue && p.Kind!=PlaceKind.Station?PlannedPlaceHeight(p)+1:5,d*.3f));
+            vis.LabelPos=root.TransformPoint(new Vector3(0,block!=null?3.3f:CityArchitecture.HasExterior(p)?CityArchitecture.VenueHeight(p)+1:!venue && p.Kind!=PlaceKind.Station?PlannedPlaceHeight(p)+1:5,d*.3f));
             vis.Sign=root.GetComponentInChildren<UnityEngine.UI.Text>();
         }
         private static float PlannedHeight(string model,int tier)=>model=="villa"?6:model=="oldhome"?6:model=="luxury_apartment"?22:model=="apartment"?14:model=="office"?16:model=="warehouse"?6:4.5f+tier*.65f;

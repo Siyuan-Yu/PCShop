@@ -106,6 +106,13 @@ namespace PCShopSell.Game.UI
             _questPanel.gameObject.SetActive(q != null && !_questHidden && !S.IsGameOver && !_ctrl.Placing);
             string progress = q == null ? null : ProgressOf(q);
             _questText.text = q == null ? "" : $"<b><color=#DDC18B>{q.Title}</color></b>\n{q.Short}" + (progress != null ? $"\n<size=14><color=#ABB5A8>{progress.Split('\n')[0]}</color></size>" : "");
+            if (S.CurrentDistrictNode != null || S.DistrictInvitationStatus != null)
+            {
+                _questPanel.gameObject.SetActive(!_questHidden && !S.IsGameOver && !_ctrl.Placing);
+                _questText.text = S.CurrentDistrictNode != null
+                    ? "<b><color=#DDC18B>主线 · " + S.CurrentDistrictNode.Title + "</color></b>\n有待处理的主线消息，点击查看步骤。"
+                    : "<b><color=#DDC18B>主线 · 等待联系</color></b>\n" + S.DistrictInvitationStatus;
+            }
         }
 
         private string ProgressOf(QuestDef q)
@@ -124,7 +131,7 @@ namespace PCShopSell.Game.UI
         {
             if(S.IsOwnedVenue(S.CurrentPlace)){OpenVenueManagement(S.CurrentPlace);return;}
             UpdateQuestTracker();
-            if (S.CurrentQuest() == null) return;
+            if (S.CurrentQuest() == null && S.CurrentDistrictNode == null && S.DistrictInvitationStatus == null) return;
             if (_questWindow != null && !_questWindow.Closed) { _questWindow.Rebuild(); return; }
             _questWindow = OpenWindow("当前任务", 700, 520, BuildGuideWindow, onClosed: () => _questWindow = null);
         }

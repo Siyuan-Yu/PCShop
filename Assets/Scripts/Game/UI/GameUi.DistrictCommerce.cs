@@ -15,17 +15,8 @@ namespace PCShopSell.Game.UI
         private void BuildDistrictCommerceProgress(Transform body,Window w)
         {
             var state=S.DistrictStoryState;
-            if(state.NodeId.EndsWith(".invitation"))
-            {
-                Line(body,"本次引荐的品牌（接受邀请后固定）",17,Ui.Accent);
-                foreach(var brand in S.BrandBusiness.Brands)
-                {
-                    string id=brand.Id;
-                    Ui.Size(Ui.Button(body,brand.Name+(id==state.CommerceBrandId?" ✓":""),()=>{S.SelectDistrictCommerceBrand(id);w.Rebuild();},17,id==state.CommerceBrandId?Ui.ButtonHot:Ui.ButtonBg),-1,36);
-                }
-            }
             Para(body,S.DistrictCommerceStatus,18,Ui.Accent);
-            foreach(string step in S.DistrictCommerceSteps)
+            foreach(string step in S.DistrictCommerceSteps.Where(step=>step==state.NodeId))
             {
                 var node=DistrictNarrativeCatalog.Nodes.First(n=>n.Id==step);
                 Line(body,(S.DistrictNodeCompleted(step)?"✓ ":step==state.NodeId?"→ ":"○ ")+node.Title,16,step==state.NodeId?Ui.Accent:Ui.Dim);
@@ -37,14 +28,18 @@ namespace PCShopSell.Game.UI
             Para(body,S.CurrentDistrictNode.Dialogue,18);
             BuildDistrictCommerceProgress(body,w);
             if(S.DistrictCommerceBlocker!=null)Para(body,S.DistrictCommerceBlocker,17,Ui.Warn);
-            if(S.DistrictStoryState.Chapter==2)
+            if(S.CurrentDistrictNode.Id=="expo.reception"&&S.CurrentPlace?.Id!="life_expo")
                 Ui.Size(Ui.Button(body,"前往会展中心",()=>{CloseAllWindows();S.BeginCityTravel("life_expo");},17),-1,40);
-            else
-                foreach(string person in new[]{"life_enterprise","life_tenant"})
+            if(S.CurrentDistrictNode.Id=="tender.prepare")
+            {
+                var tender=S.BrandBusiness.Tenders.Where(t=>t.BrandId==S.DistrictStoryState.CommerceBrandId)
+                    .OrderByDescending(t=>t.Deadline).FirstOrDefault();
+                if(tender!=null)
                 {
-                    string id=person;
-                    Ui.Size(Ui.Button(body,"联系"+S.CityPerson(id).Name,()=>OpenBrandContact(id),17),-1,36);
+                    if((tender.Intel&1)==0)BuildDistrictPersonNavigation(body,"life_enterprise");
+                    if((tender.Intel&2)==0)BuildDistrictPersonNavigation(body,"life_tenant");
                 }
+            }
             Para(body,"进度来自实际经营记录。完成后自动进入下一步；最后仍需亲自会见推荐人才能开放道路。",16,Ui.Dim);
             Ui.Size(Ui.Button(w.Content,"刷新主线进度",()=>{S.RefreshDistrictNarrative();w.Rebuild();},17),-1,38);
         }

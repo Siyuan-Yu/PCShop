@@ -92,14 +92,26 @@ namespace PCShopSell.Game.UI
 
         /// <summary>小头像（截取立绘上半部分的脸）。</summary>
         private void PortraitThumb(Transform parent, NpcDef n, float size, System.Action onClick = null)
+            => PortraitThumb(parent, n.Id, size, onClick);
+
+        private void PortraitThumb(Transform parent, string portraitId, float size, System.Action onClick, bool dimmed = false)
         {
             Image frame = Ui.Panel(parent, "Thumb", Ui.PanelBg2);
             Ui.Size(frame, size, size);
             frame.GetComponent<LayoutElement>().minWidth = size;
             RectTransform imgRt = Ui.Rect(frame.transform, "Image").Fill(2);
             var raw = imgRt.gameObject.AddComponent<RawImage>();
-            raw.texture = PortraitOf(n.Id);
-            raw.uvRect = new Rect(0.12f, 0.48f, 0.76f, 0.5f);
+            raw.texture = PortraitOf(portraitId);
+            var crop = new Rect(0.12f, 0.48f, 0.76f, 0.5f);
+            if (raw.texture != null)
+            {
+                float textureAspect = (float)raw.texture.width / raw.texture.height;
+                float width = Mathf.Min(crop.width, crop.height / textureAspect);
+                float height = Mathf.Min(crop.height, crop.width * textureAspect);
+                crop = new Rect(crop.center.x - width / 2, crop.center.y - height / 2, width, height);
+            }
+            raw.uvRect = crop;
+            if (dimmed) raw.color = new Color(.52f, .52f, .52f);
             if (raw.texture == null)
             {
                 raw.color=new Color(.20f,.24f,.26f);
@@ -218,15 +230,20 @@ namespace PCShopSell.Game.UI
 
         private sealed class TalkCtx
         {
-            public string Reply;
+            private string _reply;
+            public string Reply
+            {
+                get => _reply;
+                set { _reply = value; if (W != null) W.ResetScrollOnRebuild = true; }
+            }
             public Window W;
         }
 
         /// <summary>
-        /// 对话框：上面左边是人物头像、右边是他说的话；下面一列居中的选项，点一个选项他就回一句；不够条件的选项灰着写明原因。
+        /// 话题列表与回复正文分层显示；读完回复后显式返回原来的话题层级。
         /// </summary>
         private void OpenDialogue(string portraitId, string name, string role, NpcDef npc, string greeting, int optionCount,
-            System.Func<TalkCtx, List<TalkOpt>> makeOptions, string firstReply = null, string rapportId = null, System.Action onClosed = null, bool remote = false)
+            System.Func<TalkCtx, List<TalkOpt>> makeOptions, string firstReply = null, string rapportId = null, System.Action onClosed = null, bool remote = false, bool replyOnly = false, string replyConfirm = "知道了")
         {
             var ctx = new TalkCtx { Reply = firstReply };
             float height = 485 + 46 * optionCount + (npc != null ? 66 : rapportId != null ? 36 : 0);
@@ -237,6 +254,29 @@ namespace PCShopSell.Game.UI
                 ctx.W = w;
                 w.LiveConversation = true;
                 w.LiveKey = () => ConversationViewKey(portraitId); w.LiveStamp = w.LiveKey();
+                if (ctx.Reply != null)
+                {
+                    // A reply is a separate reading page, not a silent replacement of
+                    // the small greeting bubble above the unchanged topic buttons.
+                    var heading = Ui.Row(w.Content, 96, 14);
+                    PortraitCard(heading, portraitId, name, "", 90, () => OpenCityPersonProfile(portraitId, fromConversation: true), tagText: "资料");
+                    Ui.Size(Ui.Label(heading, name + "说：", 23, TextAnchor.MiddleLeft, Ui.Accent), -1, -1, 1);
+                    var replyPanel = Ui.Panel(w.Content, "DialogueReplyPage", new Color(.89f,.87f,.82f,1f));
+                    Ui.Size(replyPanel, -1, 420);
+                    var replyBody = Ui.Scroll(replyPanel.transform);
+                    var replyScroll = replyBody.GetComponentInParent<ScrollRect>();
+                    replyScroll.name = "DialogueTextScroll";
+                    ((RectTransform)replyScroll.transform).Fill(16);
+                    replyScroll.GetComponent<Image>().color = Color.clear;
+                    Para(replyBody, ctx.Reply, 23, Ui.PanelBg);
+                    if(!replyOnly)Ui.Size(Ui.Button(w.Content, "返回上一级", () =>
+                    {
+                        ctx.Reply = null;
+                        w.Rebuild();
+                    }, 20, Ui.ButtonHot), -1, 46).name = "DialogueReplyBack";
+                    Ui.Size(Ui.Button(w.Content, replyOnly ? replyConfirm : "结束对话", w.Close, 18), -1, 42);
+                    return;
+                }
                 RectTransform top = Ui.Row(w.Content, 245, 14);
                 var identity = Ui.Rect(top, "PersonIdentity");
                 Ui.VList(identity, 4, 0); Ui.Size(identity, 170, -1);
@@ -310,11 +350,20 @@ namespace PCShopSell.Game.UI
             staff=staff??Rosters.Get(personId)??Residents.Get(personId)?.Person;
             if(staff==null&&Npcs.Get(personId)==null&&definition!=null)staff=definition.Staff;
             if(definition==null&&npc==null&&staff==null){Toast("暂时找不到这个人物。");return;}
+            if (!remote && _ctrl.InVisit && _ctrl.VisitRoom?.CanReachResident(personId) != true)
+            {
+                Toast("请走到住户身边再交谈。");
+                return;
+            }
             if(remote){string why=S.RemoteConversationBlocker(personId);if(why!=null){Toast(why);return;}}
             else if(definition!=null&&!S.CitySamePlace(personId)){OpenCityPersonProfile(personId,onClosed);return;}
             string name=definition?.Name??npc?.Name??staff.Name;
             string role=definition!=null?S.CityPersonRole(personId):npc?.Role??staff.Role;
             string greeting=npc!=null?(S.IsMet(personId)?npc.Intro:npc.FirstMeet??npc.Intro):staff?.LineFor(S.Clock.Today.TotalDays)??"你好，今天过得怎么样？";
+            if(!remote&&S.AtCurrentDistrictMeeting&&S.DistrictMeetingBlocker==null
+                &&S.DistrictStoryState.MeetingPeople.Contains(personId)
+                &&!S.ReadyDistrictTasks.Any() && S.CurrentDistrictNode.Id!="park.delivery" && S.CurrentDistrictNode.Id!="model.dinner"
+                &&(S.DistrictMeetingContact==null||personId==S.DistrictMeetingContact))greeting=S.CurrentDistrictNode.Dialogue;
             bool creatorChoice = initialPage == 3;
             bool discussingPeople = false;
             OpenDialogue(personId, name, role+(remote?" · 手机聊天":""), npc, greeting, 6, ctx =>
@@ -322,10 +371,8 @@ namespace PCShopSell.Game.UI
                 var options = new List<TalkOpt>();
                 bool near = !remote && (definition == null || S.CitySamePlace(personId));
                 bool canTalk = remote || near;
-                var districtNode=S.CurrentDistrictNode;
-                if(districtNode!=null && (districtNode.People.Contains(personId)||S.DistrictStoryState.MeetingPeople.Contains(personId)))
-                    options.Add(new TalkOpt {Label="主线 · "+districtNode.Title,Hot=true,Act=()=>{ctx.W.Close();OpenDistrictStory();}});
                 void Reply(string text) { ctx.Reply = text; ctx.W.Rebuild(); parent?.RequestRebuild(); }
+                AddDistrictDialogue(options,personId,remote,near,Reply);
                 AddBrandStoryDialogue(options,personId,remote,Reply);
                 if(GameSession.BrandPeople.Contains(personId)&&S.BrandBusiness.Brands.Length>0)
                     options.Add(new TalkOpt{Label="谈品牌推广与代言",Blocker=canTalk?null:"对方已离开",Act=()=>{ctx.W.Close();_brandTab=1;OpenBrandBusiness();}});
@@ -334,19 +381,19 @@ namespace PCShopSell.Game.UI
                     {
                         int clue=personId=="life_enterprise"?1:2;string id=tender.Id;
                         if((tender.Intel&clue)!=0)continue;
-                        options.Add(new TalkOpt{Label=(clue==1?"核实企业采购要求":"调查现有供应商")+" · ¥200",Blocker=canTalk?null:"对方已离开",Act=()=>Reply(S.ResearchBrandTender(id,clue)?(clue==1?"沈远：按时交付是底线，最低价不一定赢。拿试单证明你能供货。":"袁岚：原供应商一定会还价。我们可以联合履约，你也可以先把自己的供货做稳。"):"这次未能完成核实，请查看预算和截止时间。")});
+                        options.Add(new TalkOpt{Label=(clue==1?"核实企业采购要求":"调查现有供应商")+" · ¥200",Blocker=near?null:"请找到本人，当面核实",Act=()=>Reply(S.ResearchBrandTender(id,clue)?(clue==1?"沈远：按时交付是底线，最低价不一定赢。拿试单证明你能供货。":"袁岚：原供应商一定会还价。我们可以联合履约，你也可以先把自己的供货做稳。"):"这次未能完成核实，请查看预算和截止时间。")});
                     }
-                foreach(var task in S.DistrictTasks.Where(t=>t.PersonId==personId&&!S.HasDistrictTask(t.Id)))
+                foreach(var task in S.ReadyDistrictTasks.Where(t=>t.PersonId==personId))
                 {
                     string taskId=task.Id;
                     options.Add(new TalkOpt{Label="主线 · "+task.Title,Hot=true,Blocker=S.DistrictTaskBlocker(taskId,remote),Act=()=>Reply(S.PerformDistrictTask(taskId,remote))});
                 }
                 if(S.CommunitySearchActive)
                     for(int i=0;i<3;i++)
-                        if(GameSession.CommunityLeadPerson(i)==personId)
+                        if(GameSession.CommunityLeadPerson(i)==personId&&!S.CommunityHasClue(i))
                         {
                             int lead=i;
-                            options.Add(new TalkOpt {Label="打听你保管的旧街图页",Hot=true,Blocker=canTalk?null:"对方已离开",
+                            options.Add(new TalkOpt {Label="打听你保管的旧街图页",Hot=true,Blocker=near?null:"需要走到本人身边，当面打听",
                                 Act=()=>Reply(S.AskCommunityLead(lead,remote))});
                         }
                 if (creatorChoice)
