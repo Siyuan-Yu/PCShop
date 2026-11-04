@@ -122,6 +122,11 @@ namespace PCShopSell.Core.Session
         public void RefreshDistrictNarrative()
         {
             if (!City.IsLakeCity || IsGameOver) return;
+            if(CommunitySearchActive && _district.CommunityPieces==7)CompleteDistrictNode();
+            if(_district.NodeId=="community.trial" && _district.MeetingNodeId!=_district.NodeId
+                && CanDeliverCommunityPages && CityPersonState(CityLifeCatalog.TangWei) is CityPersonState receiver
+                && string.IsNullOrEmpty(receiver.ActivityId) && string.IsNullOrEmpty(receiver.VisitId))
+                BeginDistrictMeeting("community.trial");
             RefreshDistrictCommerce();
             if(CurrentDistrictNode!=null)return;
             int chapter = _district.Chapter+1;
@@ -272,7 +277,7 @@ namespace PCShopSell.Core.Session
                     case "community.meeting": return "唐蔚筹备街区介绍会，需要找回搬家时寄存的旧街手绘商铺图。先接受寻物委托，再向李秀兰问清箱子去向。没有营业额或交钱要求。";
                     case "community.clue": return "到城郊旧居街居民住宅附近的街边空地约见李秀兰，问清三页图的保管人。之后分别交往、打听具体藏点。";
                     case "community.search": return "三位保管人分别需要好感达到30、接受委托后一起完成喜欢的活动。再向本人打听才会出现对应箱子；三个箱子可以任意顺序寻找。找齐后手动拼图，再回中介交付。";
-                    case "community.trial": return "任务物品：旧街手绘商铺图 ×"+(_district.HasCommunityMap?"1":"0")+"。带到城郊中介旁的街边会面点交给唐蔚，无需进入中介；确认交付后消耗任务物品并开放社区道路。";
+                    case "community.trial": return "把收集到的图页交给唐蔚。她会到城郊中介旁的街边会面点，无需进入中介。交付后开放社区道路。";
                     case "park.proposal": return "共同分摊预算¥2,000；缩小规模预算¥1,000。会面确认后实际支付。";
                     case "park.delivery": return "在社区服务站实际参与30游戏分钟；离开不累计，管理窗口暂停时不累计。";
                     case "model.dinner": return "饭局费用¥160；到场后确认开席，与任帆、沈远交谈30游戏分钟。";
@@ -330,7 +335,7 @@ namespace PCShopSell.Core.Session
             if(node==null||node.Id!=nodeId)return false;
             if(DistrictCommerceGameplay)return Fail("这一阶段直接完成品牌经营任务，无需另约会面");
             if(nodeId=="community.search")return Fail("请分别向三位保管人打听，取得线索后前往各自藏点按 F 调查。");
-            if(nodeId=="community.trial" && !_district.HasCommunityMap)return Fail("请先找回旧街手绘商铺图。");
+            if(nodeId=="community.trial" && !CanDeliverCommunityPages)return Fail("请先找回旧街手绘商铺图。");
             if(node.Choices.Length>0 && !node.Choices.Any(c=>c.Id==choice))return Fail("请选择一种处理方式。");
             if(choice=="later")return true;
             if(_district.MeetingNodeId==nodeId)return true;
@@ -423,8 +428,8 @@ namespace PCShopSell.Core.Session
             if(id=="community.search")return Fail("请在纸箱旁按 F 调查，远程对话不能取物。");
             if(id=="community.trial")
             {
-                if(!_district.HasCommunityMap)return Fail("还没有找到手绘商铺图，无法交付。");
-                _district.HasCommunityMap=false;_district.CommunityMapDelivered=true;
+                if(!CanDeliverCommunityPages)return Fail("还没有找到手绘商铺图，无法交付。");
+                _district.HasCommunityMap=false;_district.CommunityPieces=0;_district.CommunityMapDelivered=true;
             }
             if(id=="park.proposal")
             {

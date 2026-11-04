@@ -273,8 +273,10 @@ namespace PCShopSell.Tests
                     ui.CloseAllWindows();ui.OpenDistrictStory();
                     Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Any(b=>b.name=="CommunityAssembleMap"));
                     ui.CloseAllWindows();ui.OpenBackpackPanel();
-                    Assert.True(Find("CommunityAssembleMap").interactable);
-                    Find("CommunityAssembleMap").onClick.Invoke();Assert.True(s.DistrictStoryState.HasCommunityMap);
+                    for(int i=0;i<3;i++)Assert.True(Find("BagItem_quest-page:"+i).interactable);
+                    Find("BagItem_quest-page:2").onClick.Invoke();
+                    Assert.True(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text.Contains(GameSession.CommunityPieceName(2))));
+                    Assert.AreEqual("community.trial",s.CurrentDistrictNode.Id);
                     StringAssert.DoesNotContain("找他聊聊",StoryText());
                     StringAssert.DoesNotContain("前往藏箱地点",StoryText());
 

@@ -107,13 +107,13 @@ namespace PCShopSell.Game.UI
                         Para(body,node.Dialogue,19);
                     else Para(body,state.MeetingNodeId==node.Id
                         ? (S.AtCurrentDistrictMeeting?"你已到达会面点，请留意下方约定时间。":"已约好见面。请按约定前往，双方到场后再交谈。")
-                        : node.Id=="community.meeting" ? "李秀兰已介绍陈启明给你。先亲自找到陈启明，请他帮忙约唐蔚出来。" : "先找到对方当面商量；确认约见后再前往会面点。",19);
+                        : node.Id=="community.trial" ? "唐蔚会到城郊中介旁收取图页。若她还在忙，请关闭窗口等待约见安排。" : node.Id=="community.meeting" ? "李秀兰已介绍陈启明给你。先亲自找到陈启明，请他帮忙约唐蔚出来。" : "先找到对方当面商量；确认约见后再前往会面点。",19);
                     if(state.MeetingNodeId==node.Id)Para(body,S.DistrictMeetingDescription,17,Ui.Good);
                     if(state.MeetingNodeId==node.Id)Para(body,S.DistrictNodeTerms,17);
                 }
                 if(node.Id!="community.search"&&state.MeetingNodeId!=node.Id)
                 {
-                    var contact=S.DistrictMeetingContact ?? DistrictNavigationContact(node.People);
+                    var contact=node.Id=="community.trial"?null:S.DistrictMeetingContact ?? DistrictNavigationContact(node.People);
                     if(contact!=null)BuildDistrictPersonNavigation(body,contact);
                     if(node.Id=="model.clues")BuildDistrictPersonNavigation(body,"life_model_supplier");
                 }
@@ -187,18 +187,13 @@ namespace PCShopSell.Game.UI
                         }
                         else BuildDistrictPersonNavigation(body,id);
                     }
-                    if(state.CommunityPieces==7)
-                    {
-                        Para(body,"三份图页已齐，下一步拼成完整商铺图。",17,Ui.Good);
-                        Para(body,"打开背包，在任务物品中拼合图页。",17);
-                    }
                 }
                 else if((node.Id=="park.delivery"||node.Id=="model.dinner")&&state.WorkStartedAt>0)
                 {
                     Para(body,"现场参与："+state.WorkMinutes+"/30 分钟。关闭窗口后继续，离开现场不会累计时间。",18,Ui.Good);
                     Para(body,"完成后"+(S.CityPerson(S.DistrictMeetingContact)?.Name??"对方")+"会主动告诉你后续情况，不用再次找人确认。",17);
                 }
-                else if(!S.ReadyDistrictTasks.Any())
+                else if(!S.ReadyDistrictTasks.Any() && (node.Id!="community.trial" || state.MeetingNodeId==node.Id))
                 {
                     string who=state.MeetingNodeId!=node.Id?(S.CityPerson(person)?.Name??person):(S.CityPerson(S.DistrictMeetingContact)?.Name??S.DistrictMeetingContact);
                     Para(body,state.MeetingNodeId!=node.Id
@@ -299,12 +294,6 @@ namespace PCShopSell.Game.UI
         {
             var state=S.DistrictStoryState;
             if(state.HasCommunityMap)Line(w.Content,"任务物品 · 旧街手绘商铺图 ×1",17,Ui.Good);
-            else if(S.CommunitySearchActive)
-            {
-                for(int i=0;i<3;i++)if(S.CommunityHasPiece(i))Line(w.Content,"任务物品 · "+GameSession.CommunityPieceName(i),16,Ui.Good);
-                if(state.CommunityPieces==7)
-                    Ui.Size(Ui.Button(w.Content,"拼合三份图页",()=>{S.AssembleCommunityMap();w.Rebuild();},18,Ui.ButtonHot),-1,42).name="CommunityAssembleMap";
-            }
             if(state.HasModel)Line(w.Content,"任务物品 · 修复后的初版城市展样 ×1",17,Ui.Good);
         }
 
@@ -348,7 +337,7 @@ namespace PCShopSell.Game.UI
             if((node.Id=="park.delivery"||node.Id=="model.dinner")&&state.WorkStartedAt>0)return;
             string action=node.Id=="community.meeting"?"答应帮忙找回三页图，接受寻物委托"
                 :node.Id=="community.clue"?"询问三页图分别由谁保管"
-                :node.Id=="community.trial"?"交还手绘商铺图，完成引荐"
+                :node.Id=="community.trial"?"交付三份图页，完成引荐"
                 :node.Id=="model.repair"?(state.RepairPaid?"领取修复展样":"确认转让并委托修复 ¥1,800")
                 :node.Id=="model.delivery"?"交付展样并结清报销"
                 :node.Id=="park.delivery"||node.Id=="model.dinner"?(state.WorkStartedAt==0?"开始现场参与":"确认现场参与完成")

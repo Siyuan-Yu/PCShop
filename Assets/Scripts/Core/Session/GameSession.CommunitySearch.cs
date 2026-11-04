@@ -137,17 +137,12 @@ namespace PCShopSell.Core.Session
         {
             if(index<0||index>2||NearbyCommunityBox!=index)return Fail("请先向对应保管人取得线索，再到藏点走近纸箱调查。");
             _district.CommunityBoxesInspected|=1<<index;_district.CommunityPieces|=1<<index;
+            RefreshDistrictNarrative();
             Show("找到图页", "已获得任务物品："+CommunityPieceName(index)+"。\n"+(_district.CommunityPieces==7?
-                "三页已经找齐，请打开主线消息，按图上的街道接缝拼成完整商铺图。":"另外两页有各自的保管人与藏点，可以按任意顺序寻找。"));
+                "三页已经找齐。唐蔚会到城郊中介旁收取图页，请在主线查看约见。":"其他图页可按任意顺序寻找。"));
             return true;
         }
-        public bool AssembleCommunityMap()
-        {
-            if(!CommunitySearchActive||_district.CommunityPieces!=7||_district.HasCommunityMap)return Fail("需要先找齐三份不同的图页。");
-            if(Trip!=null||IsWorking||CityActivityExclusive||IsGameOver)return Fail("请先结束当前行程或活动，再整理图页。");
-            _district.HasCommunityMap=true;CompleteDistrictNode();
-            Show("拼好了旧街手绘商铺图","你对齐三页的街道接缝，补齐了从旧居街到批发市场的旧街全图。\n请预约回城郊中介，当面交给陈启明与唐蔚。交付后才开放社区道路。");
-            return true;
-        }
+        private bool CanDeliverCommunityPages => !_district.CommunityMapDelivered
+            && (_district.CommunityPieces==7 || _district.HasCommunityMap);
     }
 }

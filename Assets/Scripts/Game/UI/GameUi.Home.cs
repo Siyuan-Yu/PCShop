@@ -112,7 +112,7 @@ namespace PCShopSell.Game.UI
         {
             bool shop = S.InPlayerShop;
             Line(w.Content,$"—— 我的背包 · 负重 {S.CarriedKg:0.##}/{S.CarryLimitKg:0.##} 千克 ——",18,Ui.Accent).name="WarehouseBagHeading";
-            var bagStacks=CollectBag();
+            var bagStacks=CollectBag(includeQuestPages: true);
             var bagGrid=BagGrid(w.Content,bagStacks,Mathf.CeilToInt((float)S.CurrentVehicle.CargoCapacity),_boxSide=="bag"?_boxSel:null,key=>
             {_boxSide="bag";_boxSel=key;w.Rebuild();},-1);
             bagGrid.parent.parent.name="WarehouseBackpackGrid";
@@ -168,6 +168,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(bottom, $"<b>{pick.Name}</b> ×{pick.Count}　{pick.Kg:0.##} 千克", 17), shop && pick.Key.StartsWith("gift:") ? 220 : 300, -1, 1);
             string key = pick.Key;
             bottom.name="StorageActions_"+_boxSide+"_"+key;
+            if (key.StartsWith("quest-page:")) return;
             int n = pick.Count;
             string one = key == "rice" ? "1 千克" : "一份";
             string unit = key == "rice" ? "千克" : "份";
@@ -246,7 +247,25 @@ namespace PCShopSell.Game.UI
         private string _bagSel;
         private const int BagColumns = 8;
 
-        private System.Collections.Generic.List<BagStack> CollectBag() => CollectStacks(S.Backpack, S.Cargo);
+        private System.Collections.Generic.List<BagStack> CollectBag(bool includeQuestPages = false)
+        {
+            var stacks = CollectStacks(S.Backpack, S.Cargo);
+            if (!includeQuestPages) return stacks;
+
+            for (int i = 0; i < 3; i++)
+            {
+                if (!S.CommunityHasPiece(i)) continue;
+                stacks.Add(new BagStack
+                {
+                    Key = "quest-page:" + i,
+                    Name = GameSession.CommunityPieceName(i),
+                    Kind = "主线图页，集齐后交给唐蔚。",
+                    Count = 1,
+                    Color = new Color(.52f, .40f, .18f)
+                });
+            }
+            return stacks;
+        }
 
         /// <summary>背包 / 后仓里的东西摊成一叠一叠（配件、米菜、饭盒、礼品、家具）。</summary>
         private static System.Collections.Generic.List<BagStack> CollectStacks(Backpack bag, Stock parts)
@@ -372,7 +391,7 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, $"{S.CurrentVehicle.Name}　负重 {carried:0.##}/{limit:0.##} 千克（1 格 = {Backpack.KgPerSpace:0.##} 千克）", 17, heavy ? Ui.Warn : Ui.Dim);
                 Ui.Bar(w.Content, (float)(limit <= 0 ? 0 : carried / limit), heavy ? Ui.Warn : Ui.Accent, 700, 10);
 
-                var stacks = CollectBag();
+                var stacks = CollectBag(includeQuestPages: true);
                 BagGrid(w.Content, stacks, Mathf.CeilToInt((float)S.CurrentVehicle.CargoCapacity), _bagSel, key =>
                 {
                     _bagSel = key;

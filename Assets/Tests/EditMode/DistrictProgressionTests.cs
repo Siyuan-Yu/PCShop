@@ -97,7 +97,7 @@ namespace PCShopSell.Tests
                 Street(s,s.CommunityBoxPosition(i),s.City.GetPlace(GameSession.CommunityBoxPlace(i)).NodeId);
                 Assert.True(s.SearchCommunityBox(i));Assert.False(s.DistrictStoryState.HasCommunityMap);
             }
-            Assert.True(s.AssembleCommunityMap());Assert.True(s.DistrictStoryState.HasCommunityMap);
+            Assert.AreEqual("community.trial",s.CurrentDistrictNode.Id);
         }
         internal static void AwaitInvitation(GameSession s)
         {
@@ -185,6 +185,28 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(1,replies);Assert.True(s.DistrictNodeCompleted(node));
                 Advance(s,s.Clock.Now.TotalMinutes+30);Assert.AreEqual(1,replies);Assert.False(s.ActDistrictNode(node));
                 using(var loaded=Reload(s)){Assert.True(loaded.DistrictNodeCompleted(node));Assert.AreEqual(0,loaded.DistrictStoryState.WorkStartedAt);}
+            }
+        }
+
+        [Test] public void SavedPagesBringTangFromLockedCommunityToAccessibleHandover()
+        {
+            using(var s=Make())
+            {
+                var state=new DistrictProgress{Chapter=1,NodeId="community.search",CommunityPieces=7,CommunitySearchVersion=2};
+                typeof(GameSession).GetField("_district",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(s,state);
+                var locked=s.City.GetPlace("agency_s_services");
+                Assert.NotNull(s.DistrictAccessBlocker(locked));
+                var tang=s.CityPersonState(CityLifeCatalog.TangWei);var point=s.StandOf(locked);
+                tang.LocationPlaceId=locked.Id;tang.Route=null;tang.X=point.X;tang.Y=point.Y;
+                s.RefreshDistrictNarrative();
+                Assert.AreEqual("community.trial",s.CurrentDistrictNode.Id);
+                Assert.AreEqual("agency",tang.Route?.TargetPlaceId);
+                Assert.AreEqual(7,s.DistrictStoryState.CommunityPieces);
+                Assert.False(s.ActDistrictNode("community.trial"));
+                Meet(s);
+                Assert.True(s.ActDistrictNode("community.trial"));
+                Assert.Zero(s.DistrictStoryState.CommunityPieces);
+                Assert.AreEqual(1,s.DistrictAccessTier);
             }
         }
 
@@ -467,7 +489,7 @@ namespace PCShopSell.Tests
                 Assert.False(s.SearchCommunityBox(2),"No remote pickup without the clue");
                 CompleteCommunitySearch(s);Assert.Zero(s.DistrictAccessTier);
                 Assert.False(s.SearchCommunityBox(2),"Cannot collect twice");
-                using(var pending=Reload(s)){Assert.True(pending.DistrictStoryState.HasCommunityMap);Assert.Zero(pending.DistrictAccessTier);}
+                using(var pending=Reload(s)){Assert.AreEqual(7,pending.DistrictStoryState.CommunityPieces);Assert.Zero(pending.DistrictAccessTier);}
                 Finish(s);Assert.AreEqual(1,s.DistrictAccessTier);
                 Assert.False(s.DistrictStoryState.HasCommunityMap);Assert.True(s.DistrictStoryState.CommunityMapDelivered);
                 Assert.True(s.DistrictRoadOpen(1));Assert.False(s.DistrictRoadOpen(2));
@@ -499,7 +521,7 @@ namespace PCShopSell.Tests
                 AskLeadLocally(s,0);Assert.True(s.CommunityBoxAvailable(0));Assert.False(s.CommunityBoxAvailable(1));Assert.False(s.CommunityBoxAvailable(2));
                 Assert.False(s.SearchCommunityBox(0),"Remote inquiry cannot collect a piece");
                 Street(s,s.CommunityBoxPosition(0),s.City.GetPlace(GameSession.CommunityBoxPlace(0)).NodeId);
-                Assert.True(s.SearchCommunityBox(0));Assert.False(s.SearchCommunityBox(0));Assert.False(s.AssembleCommunityMap());
+                Assert.True(s.SearchCommunityBox(0));Assert.False(s.SearchCommunityBox(0));Assert.AreEqual("community.search",s.CurrentDistrictNode.Id);
                 using(var loaded=Reload(s))
                 {
                     Assert.True(loaded.CommunityHasPiece(0));Assert.True(loaded.CommunityHasClue(0));Assert.True(loaded.CommunityHasOuting(0));
@@ -511,7 +533,7 @@ namespace PCShopSell.Tests
                         Assert.True(loaded.SearchCommunityBox(i));
                         Assert.False(loaded.DistrictStoryState.HasCommunityMap);Assert.Zero(loaded.DistrictAccessTier);
                     }
-                    Assert.True(loaded.AssembleCommunityMap());Assert.False(loaded.AssembleCommunityMap());Assert.Zero(loaded.DistrictAccessTier);
+                    Assert.AreEqual("community.trial",loaded.CurrentDistrictNode.Id);Assert.Zero(loaded.DistrictAccessTier);
                     Finish(loaded);Assert.True(loaded.DistrictRoadOpen(1));Assert.False(loaded.DistrictStoryState.HasCommunityMap);
                 }
             }

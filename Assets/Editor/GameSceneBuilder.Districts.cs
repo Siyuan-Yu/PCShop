@@ -161,11 +161,9 @@ namespace PCShopSell.EditorTools
                 Must(s.SearchCommunityBox(i),"通过现场交互取得图页 "+i);
                 Guide("piece-complete-"+i);Must(!Buttons().Any(b=>b.name=="DistrictFindPerson_"+id),"取物后隐藏该人物指引 "+i);
             }
-            _game.Ui.CloseAllWindows();_game.Ui.OpenBackpackPanel();Capture("assemble-in-backpack");Click("CommunityAssembleMap",true);
-            Must(s.DistrictStoryState.HasCommunityMap,"背包拼图成功");
-            Guide("delivery-find-person");
-            var delivery=Buttons().First(b=>b.name.StartsWith("DistrictFindPerson_"));string receiver=delivery.name.Substring("DistrictFindPerson_".Length);
-            NearPerson(receiver);Talk(receiver);Click("商量主线会面：");AttendMeeting("交还手绘商铺图");
+            _game.Ui.CloseAllWindows();_game.Ui.OpenBackpackPanel();Capture("pages-in-backpack");
+            Must(s.DistrictStoryState.CommunityPieces==7,"三份图页已齐");
+            AttendMeeting("交付三份图页");
             Must(s.DistrictAccessTier==1&&s.CurrentDistrictNode==null&&!s.DistrictStoryState.HasCommunityMap,"交付后移除任务物品、结束第一段、只开放社区");
             Guide("completed");Must(!Buttons().Any(b=>b.name.StartsWith("DistrictFindPerson_")||b.name=="DistrictGoToMeeting"),"完成后不残留主线导航");
             Log("COMMUNITY WALKTHROUGH COMPLETE - production navigation, conversations, outings and delivery");
@@ -287,7 +285,7 @@ namespace PCShopSell.EditorTools
                 Check(!s.DistrictStoryState.HasCommunityMap&&s.DistrictAccessTier==0,"单份图页不自动拼图或开路");
             }
             _game.Ui.OpenDistrictStory();Frame(0);Shot("community-three-pieces",1280,720);_game.Ui.CloseAllWindows();
-            Check(s.AssembleCommunityMap(),"三份图页手动拼合");
+            Check(s.DistrictStoryState.CommunityPieces==7,"三份图页已齐");
             Frame(.2f);_game.SnapCamera();Shot("community-map-found",1280,720);_game.Ui.CloseAllWindows();
             Check(s.BeginDistrictMeeting("community.trial"),"预约交还地图");at=s.DistrictStoryState.MeetingAt;
             for(int i=0;s.Clock.Now.TotalMinutes<at+1&&i<50;i++)s.AdvanceClock((int)(at+1-s.Clock.Now.TotalMinutes));
