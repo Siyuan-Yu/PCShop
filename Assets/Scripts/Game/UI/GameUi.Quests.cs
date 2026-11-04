@@ -209,7 +209,7 @@ namespace PCShopSell.Game.UI
         {
             if(S.RetailKind!="computer")
             {
-                if(target==QuestTarget.Market)return S.RetailKind=="restaurant"?"地点：农贸市场 · 采购大米与配菜":S.RetailKind=="secondhand"?"位置：自己的店 → 柜台 · 收购旧物":"地点：对应品类的批发店 · 或手机1788进货";
+                if(target==QuestTarget.Market)return S.RetailKind=="restaurant"?"地点：农贸市场 · 采购大米与配菜":S.RetailKind=="secondhand"?"位置：自己的店 → 柜台 · 收购旧物":"地点：对应品类的批发店 · 或手机网购";
                 if(target==QuestTarget.Stock)return "位置：自己的店 → 右侧“库存”页";
                 if(target==QuestTarget.Counter)return "位置：自己的店 → 右侧“柜台”页";
             }
@@ -226,7 +226,7 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Upgrades: return "设备在街上的对应商店购买，家具在店铺“装修”页摆放。";
                 case QuestTarget.Pricing: return "位置：自己的店 → 右侧“定价”页";
                 case QuestTarget.Orders: return "位置：自己的店 → 右侧“订单”页";
-                case QuestTarget.Restock: return "入口：手机 → 1788";
+                case QuestTarget.Restock: return "入口：手机 → 网购";
                 case QuestTarget.Finance: return "入口：经营 → “资产与负债”。";
                 case QuestTarget.Enterprise: return "入口：经营 → “企业合同”。";
                 case QuestTarget.Direct: return "入口：经营 → “直供采购”。";

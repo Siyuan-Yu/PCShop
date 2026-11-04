@@ -339,7 +339,7 @@ namespace PCShopSell.Game.UI
 
             int orders = shop.Orders.Count;
             if (orders > 0) Line(C, $"有 {orders} 个订单等你处理（去“订单”页）", 18, Ui.Warn);
-            if (S.Online.Pending.Count > 0) Line(C, $"1788 有 {S.Online.Pending.Count} 单在路上，明天 10:00 送到", 17, Ui.Dim);
+            if (S.Online.Pending.Count > 0) Line(C, $"网购 有 {S.Online.Pending.Count} 单在路上，明天 10:00 送到", 17, Ui.Dim);
             CounterText(() => $"后仓容量不限 · 已存 {shop.Stock.UsedSpace:0.#} 格 · 全局加价 {shop.Markup:0.00}×", 17, Ui.Dim);
 
             Ui.Size(Ui.Button(C, "经营报表（近 14 天收入曲线）", OpenReportWindow, 18), -1, 40);

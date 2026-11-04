@@ -81,14 +81,18 @@ namespace PCShopSell.Core.Trade
         public string ShopId;
     }
 
-    /// <summary>"1788" 进货平台：比档口便宜，但第二天才到，还可能收到次品。用智能手机上的 1788 app 下单。</summary>
+    /// <summary>网购配件订单容器。类名及旧商家保留用于历史存档，不再提供平台或商家选择。</summary>
     public sealed class Online1788
     {
         public const int DeliveryMinuteOfDay = 10 * 60;
         public static readonly Money ShippingFee = Money.FromYuan(15);
 
+        // Legacy stores remain solely for previously paid orders and save compatibility.
+        public static readonly OnlineStore Shopping = new OnlineStore("online_shop", "网购", StoreQuality.Good, 0.85, 0, 0, 0, true);
+
         public static readonly OnlineStore[] Stores =
         {
+            Shopping,
             new OnlineStore("s_star", "星河数码旗舰店", StoreQuality.Pricey, 0.95, 0.01, 4.9, 52000, true,
                 "正品，包装完好，就是贵了点。", "官方授权，放心。", "比电脑城还贵？"),
             new OnlineStore("s_cheap", "超低价电脑配件批发", StoreQuality.Shoddy, 0.74, 0.32, 4.8, 98000, true,

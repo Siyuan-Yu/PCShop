@@ -179,7 +179,7 @@ namespace PCShopSell.Game.UI
                 }
             }
             else if(source.Business==GameSession.PhoneBusiness)
-                Offer("phone","智能手机","手机",0,GameSession.PhonePrice,"随身设备，不计背包负重；可安装日历、1788等应用。",S.CartAddSmartphone,
+                Offer("phone","智能手机","手机",0,GameSession.PhonePrice,"随身设备，不计背包负重；可安装日历、网购等应用。",S.CartAddSmartphone,
                     ()=>S.HasSmartphone?0:Math.Max(0,1-S.CartAmount("phone")));
             else
             {

@@ -1,5 +1,7 @@
 # PCShopSell（工作名）
 
+**当前总入口：[第59篇：2026-11-04完整游戏归档](59-current-game-content-2026-11-04.md)。** 已核对现有系统、新MCN/网购/展会竞标主线与复古头像；下文保留各历史专题，旧版本“最新”字样按当时日期理解。联合检查见[本轮结果](validation/59-current-archive-results.md)。
+
 最新Windows x64包：`Windows-Optimized-20261102-223752`，包含树林分块、柜台增量刷新和居民运算优化。相关回归95/95通过，性能对照和验证边界见 [第39篇](39-performance-optimization.md)，包信息见 [验证记录](validation/39-performance-results.txt)。发行包不入库。
 
 供货安排已细化为“批发商＋具体型号＋星期”的共享分配，支持每天／一三五／仅周三，详见 [第38篇](38-supplier-model-allocation-and-weekdays.md)。

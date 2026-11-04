@@ -161,7 +161,7 @@ namespace PCShopSell.Core.Session
                 case Npcs.Jie: return "隔壁手机店，平时在里间修手机";
                 case Npcs.Zhang: return "常来你店里";
                 case Npcs.Landlady: return "房东，住楼上";
-                case Npcs.Zhou: return "在 1788 上开店";
+                case Npcs.Zhou: return "经营电子配件供货";
                 default: return "打电话、发消息联系";
             }
         }

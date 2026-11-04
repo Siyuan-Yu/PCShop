@@ -36,14 +36,11 @@ namespace PCShopSell.Game.UI
                 if (missing.Count == 0) Line(w.Content, "配件已齐全，可预留后开始装机。", 18, Ui.Good);
                 Ui.Size(Ui.Button(w.Content, "加入采购员定期清单", () => ChooseOrderBuyer(order, shop, w), 18, Ui.ButtonHot, missing.Count > 0), -1, 44);
                 Para(w.Content, "加入后按采购员原有频率重复采购，点“完成”才保存；从明天开始，请留意订单时限。", 15, Ui.Dim);
-                Para(w.Content, "线上次日 10:00 送达，另需装机时间；急单请去档口现买。清单补入现有购物车并切换到推荐供应商；请核对全部数量和新报价，不会自动花钱。", 15, Ui.Dim);
-                Ui.Size(Ui.Button(w.Content, "放入 1788 购物车", () =>
+                Para(w.Content, "线上次日 10:00 送达，另需装机时间；急单请去档口现买。清单补入网购购物车；请核对全部数量和报价，不会自动花钱。", 15, Ui.Dim);
+                Ui.Size(Ui.Button(w.Content, "放入 网购 购物车", () =>
                 {
-                    string block = S.AppBlocker(PhoneApps.Wholesale);
+                    string block = S.AppBlocker(PhoneApps.Shop);
                     if (block != null) { Toast(block); return; }
-                    var store = S.PickRestockStore(missing);
-                    if (store == null) { Toast("没有已发现的供应商。"); return; }
-                    _onlineStore = store.Id;
                     _onlineToHome = false;
                     foreach (var p in missing) if (S.PendingOnlineCount(p.Id) == 0) _cart[p.Id] = System.Math.Max(1, _cart.TryGetValue(p.Id, out int n) ? n : 0);
                     w.Close(); OpenWholesaleApp();

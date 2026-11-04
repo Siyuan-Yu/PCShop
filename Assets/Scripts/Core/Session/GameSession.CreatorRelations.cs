@@ -13,13 +13,14 @@ namespace PCShopSell.Core.Session
         public long McnDailyWages => HasMcn ? 60+30*_creators.Count(x=>x.McnUntilDay>Clock.Today.TotalDays) : 0;
         public bool FoundMcn()
         {
-            if(IsGameOver || HasMcn)return false;
-            if(!HasShop || PlayerShop.Reputation<25)return Fail("需要主店和知名度 25。");
+            string why=McnFoundBlocker;if(why!=null)return Fail(why);
             if(!Ledger.TryDebit(Clock.Today,"MCN投资",Money.FromYuan(50000),"成立创作工作室"))return Fail("成立工作室需要 ¥50,000。");
             HasMcn=true;Say("创作工作室成立。固定日薪 ¥60，每位签约创作者再加 ¥30。创作者广告收入按 20% 分成，单次合约 90 天。");return true;
         }
         public string McnContractBlocker(CreatorState c)
         {
+            if(c==null)return "没有这位创作者";
+            string contact=KolContactBlocker(c.Id);if(contact!=null)return contact;
             if(!HasMcn)return "先成立创作工作室";
             if(c.McnUntilDay>Clock.Today.TotalDays)return "合约尚未到期";
             if(c.Relationship<30)return "商务交情达到 30";

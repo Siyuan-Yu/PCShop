@@ -801,10 +801,10 @@ namespace PCShopSell.Game.UI
                 Toast(appBlock);
                 return;
             }
-            OpenWindow("网购（2 天后送到家）", 900, 800, w =>
+            OpenWindow("网购", 1000, 850, w =>
             {
                 RectTransform tabs = Ui.Row(w.Content, 46);
-                string[] names = { "家具", "店里摆设", "衣服", "礼品", "大米" };
+                string[] names = { "家具", "店里摆设", "衣服", "礼品", "大米", "电脑配件" };
                 for (int i = 0; i < names.Length; i++)
                 {
                     int tab = i;
@@ -814,6 +814,7 @@ namespace PCShopSell.Game.UI
                         w.Rebuild();
                     }, 18, _onlineTab == tab ? Ui.ButtonHot : Ui.ButtonBg), 130);
                 }
+                if (_onlineTab == 5) { BuildOnline(w); return; }
                 Line(w.Content, $"现金 {S.Ledger.Balance}。线上价是店里的 85 折，下单后 {GameSession.DeliveryDays} 天送到家，收到的家具放进背包。", 16, Ui.Dim);
                 RectTransform list = Ui.Scroll(w.Content, 600);
                 switch (_onlineTab)
@@ -851,7 +852,7 @@ namespace PCShopSell.Game.UI
         {
             RectTransform row = Ui.Row(list, 80);
             Ui.Size(ProductText(row, ProductLabel(def.Name, def.WeightKg, def.Description), 18), -1, -1, 1);
-            Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Furniture, def.Id).ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 100);
+            Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Furniture, def.Id).ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 145);
             int count = OnlineQuantity(w, row, "furn:" + def.Id);
             int have = S.FurnitureInStock(def.Id);
             Ui.Size(Ui.Label(row, have > 0 ? $"背包 ×{have}" : "", 15, TextAnchor.MiddleLeft, Ui.Dim), 80);
@@ -866,7 +867,7 @@ namespace PCShopSell.Game.UI
         {
             RectTransform row = Ui.Row(list, 80);
             Ui.Size(ProductText(row, ProductLabel(g.Name, g.WeightKg, g.Description), 18), -1, -1, 1);
-            Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Gift, g.Id).ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 100);
+            Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Gift, g.Id).ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 145);
             int count = OnlineQuantity(w, row, "gift:" + g.Id);
             int have = S.Backpack.GiftCount(g.Id);
             Ui.Size(Ui.Label(row, have > 0 ? $"背包 ×{have}" : "", 15, TextAnchor.MiddleLeft, Ui.Dim), 80);
@@ -883,7 +884,7 @@ namespace PCShopSell.Game.UI
             bool has = S.OwnedOutfits.Contains(o.Id);
             bool coming = S.Parcels.Any(p => p.Kind == ParcelKind.Outfit && p.Id == o.Id);
             Ui.Size(Ui.Label(row, $"{o.Name}  魅力 +{o.CharmBonus}\n<size=13><color=#A8B0BA>穿戴物品，不计背包负重</color></size>\n<size=13>{o.Description}</size>", 18), 480);
-            Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Outfit, o.Id).ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 100);
+            Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Outfit, o.Id).ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 145);
             Ui.Size(Ui.Button(row, has ? "已有" : coming ? "在路上" : "下单", () =>
             {
                 S.OrderOnline(ParcelKind.Outfit, o.Id);

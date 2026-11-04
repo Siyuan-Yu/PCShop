@@ -170,7 +170,7 @@ namespace PCShopSell.Core.Session
                 case ParcelKind.Gift:
                     GiftDef gd = Gifts.Get(id);
                     if (gd == null) return false;
-                    if (ClothingProducts.IsClothing(id)) return Fail("个人衣服请在网购服装分类下单；经营批发请使用1788或已知服装货源。");
+                    if (ClothingProducts.IsClothing(id)) return Fail("个人衣服请在网购衣服分类下单；经营服装请从线下服装货源进货。");
                     if (gd.LimitedEdition) return Fail("限定模型需在漫展现场采购，普通网购不出售。 ");
                     name = gd.Name;
                     break;
@@ -699,7 +699,7 @@ namespace PCShopSell.Core.Session
             {
                 _apps.Clear();
                 foreach (string id in d.apps)
-                    if (PhoneApps.Get(id) != null) _apps.Add(id);
+                    if (PhoneApps.Get(id) != null) _apps.Add(PhoneApps.Normalize(id));
             }
             Backpack.Food.RiceKg = 0;
             Backpack.Food.Ingredient.Clear();

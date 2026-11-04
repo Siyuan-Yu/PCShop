@@ -85,8 +85,8 @@ namespace PCShopSell.Core.Session
             var shop = ShopAt(policy?.ShopId);
             if (shop == null || string.IsNullOrEmpty(policy.ProductId)) return Fail("请选择有效门店和商品。");
             var p = policy.Copy(); p.ExplicitChoice = true; p.Target = Math.Max(0, Math.Min(p.Kind == PurchaseGoodsKind.Part ? RestockMaxTarget : 100, p.Target)); p.Lower = Math.Max(0, Math.Min(p.Target, p.Lower < 0 ? (int)(p.Target * RestockTriggerRatio) : p.Lower));
-            if (p.Primary != ProcurementMethod.Online1788 && p.Primary != ProcurementMethod.Employee) return Fail("自动补货请选择1788或指定进货员，直供由玩家确认。");
-            if (p.Kind != PurchaseGoodsKind.Part && p.Primary == ProcurementMethod.Online1788) return Fail("1788 经营批发目前供应电脑配件；这件商品请选择进货员。");
+            if (p.Primary != ProcurementMethod.Online1788 && p.Primary != ProcurementMethod.Employee) return Fail("自动补货请选择网购或指定进货员，直供由玩家确认。");
+            if (p.Kind != PurchaseGoodsKind.Part && p.Primary == ProcurementMethod.Online1788) return Fail("网购自动补货目前支持电脑配件；这件商品请选择进货员。");
             if (p.Primary == ProcurementMethod.Employee)
             {
                 var worker = FindEmployee(p.EmployeeId);
@@ -98,7 +98,7 @@ namespace PCShopSell.Core.Session
         }
         public string ProcurementExecutorStatus(ProcurementPolicy policy)
         {
-            if(policy.Primary==ProcurementMethod.Online1788)return AppBlocker(PhoneApps.Wholesale)??"1788按目标自动补货";
+            if(policy.Primary==ProcurementMethod.Online1788)return AppBlocker(PhoneApps.Shop)??"网购按目标自动补货";
             var worker=FindEmployee(policy.EmployeeId);
             if(worker?.Shop?.Place.Id!=policy.ShopId||worker.Role!=EmployeeRole.Buyer)return "原采购员已换岗/离职；缺口保留，不自动换渠道";
             if(worker.Person.PurchasePlan?.Daily!=true)return "进货员定期计划尚未启用或已暂停";
@@ -170,6 +170,7 @@ namespace PCShopSell.Core.Session
         public string ClaimProcurementDemand(string shopId, PurchaseGoodsKind kind, string productId, int count, ProcurementMethod method, string ownerId, string sourceId)
         {
             var shop = ShopAt(shopId); if (shop == null || count <= 0 || count > 100 || string.IsNullOrEmpty(ownerId) || method == ProcurementMethod.DirectSupply) return null;
+            if (method == ProcurementMethod.Online1788) sourceId = Online1788.Shopping.Id;
             var quote = ProcurementSources(kind, productId).FirstOrDefault(o => o.Method == method && o.SupplierId == sourceId && o.Blocker == null);
             if (quote == null || ProcurementCoverageFor(shopId, kind, productId).Uncovered < count) return null;
             Money budget = quote.UnitPrice * count + quote.Shipping;
@@ -196,10 +197,10 @@ namespace PCShopSell.Core.Session
                 var unit = OnlinePrice(store, PartCatalog.Get(line.PartId));
                 var attribution = order.ToHome ? new LedgerAttribution(LedgerBusinessKind.Personal, sourceEventId: orderId + ":" + line.PartId, transactionKind: "个人采购")
                     : LedgerAttribution.ForShop(order.ShopId, orderId + ":" + line.PartId, "采购").Product(line.PartId, line.Count, unit.Cents);
-                if (!Ledger.TryDebit(Clock.Today, "进货", unit * line.Count, "1788 " + store.Name, attribution))
-                    throw new InvalidOperationException("1788总额预检通过后扣款失败，未继续发货。");
+                if (!Ledger.TryDebit(Clock.Today, "进货", unit * line.Count, "网购 " + store.Name, attribution))
+                    throw new InvalidOperationException("网购总额预检通过后扣款失败，未继续发货。");
             }
-            if (Online1788.ShippingFee.IsPositive) Ledger.ForceDebit(Clock.Today, "运费", Online1788.ShippingFee, "1788 " + store.Name,
+            if (Online1788.ShippingFee.IsPositive) Ledger.ForceDebit(Clock.Today, "运费", Online1788.ShippingFee, "网购 " + store.Name,
                 order.ToHome ? new LedgerAttribution(LedgerBusinessKind.Personal, sourceEventId: orderId + ":shipping", transactionKind: "个人采购运费") : LedgerAttribution.ForShop(order.ShopId, orderId + ":shipping", "物流"));
             return true;
         }
@@ -217,7 +218,7 @@ namespace PCShopSell.Core.Session
             var pending = Online.Pending.FirstOrDefault(o => o.Id == id);
             if (pending == null || Clock.Now.TotalMinutes >= pending.DeliverAtMinute || IsGameOver) return Fail("订单已交付或不可取消。");
             var order = Online.CancelPending(id); if (order == null) return false;
-            Ledger.Credit(Clock.Today, "进货退款", Money.FromCents(order.TotalCents), "1788取消订单 #" + id,
+            Ledger.Credit(Clock.Today, "进货退款", Money.FromCents(order.TotalCents), "网购取消订单 #" + id,
                 order.ToHome ? new LedgerAttribution(LedgerBusinessKind.Personal, sourceEventId: "online-order:" + id + ":refund", transactionKind: "个人采购退款") : LedgerAttribution.ForShop(order.ShopId, "online-order:" + id + ":refund", "采购退款"));
             var record = _cityProcurementOrders.FirstOrDefault(o => o.Id == "online-order:" + id);
             if (record != null) record.State = "已取消并退款";
@@ -232,7 +233,7 @@ namespace PCShopSell.Core.Session
             if (claim == null) return false;
             if (claim.Method == ProcurementMethod.Employee) return Fail("进货员认领按保存的班次/采购周期执行，不立即扣款出发。");
             var shop = ShopAt(claim.ShopId); if (shop == null || claim.Kind != PurchaseGoodsKind.Part || !PartCatalog.Exists(claim.ProductId)) return false;
-            Money actual = OnlinePrice(Online1788.GetStore(claim.SourceId), PartCatalog.Get(claim.ProductId)) * claim.Count + Online1788.ShippingFee;
+            Money actual = OnlinePrice(Online1788.Shopping, PartCatalog.Get(claim.ProductId)) * claim.Count + Online1788.ShippingFee;
             if (Ledger.Balance < actual + EffectiveRestockReserve + ClaimedProcurementBudget - Money.FromCents(claim.BudgetCents)) return Fail("当前报价超过可用采购资金，保留认领等待处理。");
             claim.State = ProcurementClaimState.Ordered; claim.BudgetCents = 0;
             int onlineId = Online.NextOrderId; bool success = false;
@@ -280,11 +281,11 @@ namespace PCShopSell.Core.Session
                         + (kind == PurchaseGoodsKind.Gift && CitySupplierRemaining(offer.Source.Id, productId) < int.MaxValue ? " · 本日剩余配额 " + CitySupplierRemaining(offer.Source.Id, productId) : ""), LeadMinutes = 0 });
             if (kind == PurchaseGoodsKind.Part && PartCatalog.Exists(productId))
             {
-                foreach (var store in Online1788.Stores.Where(st => Online.IsDiscovered(st.Id)))
-                    result.Add(new ProcurementSourceQuote { OfferId = "1788:" + store.Id + ":" + productId, SupplierId = store.Id, SupplierName = store.Name,
+                foreach (var store in new[] { Online1788.Shopping })
+                    result.Add(new ProcurementSourceQuote { OfferId = "网购:" + store.Id + ":" + productId, SupplierId = store.Id, SupplierName = store.Name,
                         Kind = kind, ProductId = productId, Name = PartCatalog.Get(productId).Name, UnitPrice = OnlinePrice(store, PartCatalog.Get(productId)), Shipping = Online1788.ShippingFee,
-                        Method = ProcurementMethod.Online1788, Blocker = AppBlocker(PhoneApps.Wholesale), LeadMinutes = (24 * 60 - Clock.MinuteOfDay) + Online1788.DeliveryMinuteOfDay,
-                        Conditions = "常规经营批发；次日10:00配送，同订单只收一次运费" });
+                        Method = ProcurementMethod.Online1788, Blocker = AppBlocker(PhoneApps.Shop), LeadMinutes = (24 * 60 - Clock.MinuteOfDay) + Online1788.DeliveryMinuteOfDay,
+                        Conditions = "网购；次日10:00配送，同订单只收一次运费" });
                 if (DirectAgreement)
                     result.Add(new ProcurementSourceQuote { OfferId = "direct:" + productId, SupplierId = "direct:zhou", SupplierName = "周维成协议直供",
                         ProductId = productId, Kind = kind, Name = PartCatalog.Get(productId).Name, UnitPrice = DirectPrice(PartCatalog.Get(productId)), Minimum = 3,
@@ -387,8 +388,9 @@ namespace PCShopSell.Core.Session
             _cityProcurementOrders.Clear();
             foreach (var o in d.cityProcurementOrders ?? Array.Empty<ProcurementOrderRecord>())
                 if (o != null && !string.IsNullOrEmpty(o.Id) && !_cityProcurementOrders.Any(x => x.Id == o.Id)) _cityProcurementOrders.Add(o.Copy());
+            foreach (var record in _cityProcurementOrders.Where(o => o.OnlineOrderId > 0)) record.Channel = "网购";
             foreach (var o in Online.Pending)
-                RegisterProcurementOrder("online-order:" + o.Id, "1788", o.ShopId, o.StoreId, o.TotalCents, o.DeliverAtMinute,
+                RegisterProcurementOrder("online-order:" + o.Id, "网购", o.ShopId, o.StoreId, o.TotalCents, o.DeliverAtMinute,
                     o.Lines.Select(l => new PurchaseLine { Kind = PurchaseGoodsKind.Part, PartId = l.PartId, Count = l.Count }), o.Id);
             foreach (var trip in _employeeTrips)
             {

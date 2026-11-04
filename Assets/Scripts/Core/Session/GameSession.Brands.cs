@@ -69,6 +69,7 @@ namespace PCShopSell.Core.Session
         public bool SignBrandDeal(string brandId,string person,string mode,bool exclusive)
         {
             var b=Brand(brandId);if(b==null||!BrandPeople.Contains(person)||(mode!="campaign"&&mode!="endorse"))return false;
+            string contact=KolContactBlocker(person);if(contact!=null)return Fail(contact);
             if(_brands.Deals.Any(d=>d.PersonId==person&&!d.Ended&&d.End>BrandDay&&(d.BrandId==brandId||d.Exclusive||exclusive)))return Fail("该人物已有冲突的合作合约");
             long fee=BrandDealQuote(person,mode,exclusive);if(!BrandPay(fee,"推广签约 · "+b.Name))return Fail("签约资金不足");
             _brands.Deals=AppendBrand(_brands.Deals,new BrandDeal {Id=Guid.NewGuid().ToString("N"),BrandId=brandId,PersonId=person,Mode=mode,

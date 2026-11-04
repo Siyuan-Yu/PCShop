@@ -15,12 +15,13 @@ namespace PCShopSell.Game.UI
         private string _brandId, _brandName="我的品牌", _brandPosition="quality", _brandShop, _brandProduct, _brandFocus="buyers";
         public void OpenBrandBusiness() => OpenWorkspace("business","brands","品牌经营",1160,840,BuildBrandBusiness);
         private void BrandButton(Transform parent,string label,Func<bool> action,Window w,bool enabled=true)
-        { Ui.Size(Ui.Button(parent,label,()=>{action();w.Rebuild();},17,Ui.ButtonBg,enabled),-1,38,1); }
+        { Ui.Size(Ui.Button(parent,label,()=>{action();S.RefreshDistrictNarrative();w.Rebuild();},17,Ui.ButtonBg,enabled),-1,38,1); }
         private void BuildBrandBusiness(Window w)
         {
             var state=S.BrandBusiness;
             var tabs=Ui.Row(w.Content,40,6);string[] names={"品牌","推广与代言","季度展会","企业竞标","机构资源","人物故事"};
             for(int i=0;i<names.Length;i++){int t=i;Ui.Size(Ui.Button(tabs,names[i],()=>{_brandTab=t;w.Rebuild();},18,t==_brandTab?Ui.ButtonHot:Ui.ButtonBg),-1,40,1);}
+            if(S.DistrictCommerceActive)Ui.Size(Ui.Button(w.Content,"主线 · "+S.CurrentDistrictNode.Title,OpenDistrictStory,17,Ui.ButtonHot),-1,36);
             var body=Ui.Scroll(w.Content,570);
             if(state.Brands.Length==0||_brandTab==0)
             {
@@ -138,10 +139,14 @@ namespace PCShopSell.Game.UI
         }
         private void BuildBrandPromotion(Transform body,Window w,BrandRecord b,BrandBusinessState state)
         {
+            Ui.Size(Ui.Button(body,"社区MCN · 认识与联系创作者",OpenCommunityMcn,18),-1,38);
             Para(body,"推广7天；代言90天＋营业额2%。交情可降低报价。暂停不退固定费；提前解约收剩余固定费30%，重大已核实争议免解约费。",17);
             foreach(string person in GameSession.BrandPeople)
             {
                 string p=person;Line(body,S.CityPerson(p)?.Name??p,21,Ui.Accent);
+                if(S.KolContactBlocker(p)!=null)
+                {Para(body,"尚未交换名片，请到社区MCN安排介绍。",17,Ui.Dim);Ui.Size(Ui.Button(body,"请公司安排认识",OpenCommunityMcn,17),-1,36);continue;}
+                Ui.Size(Ui.Button(body,"联系本人",()=>OpenBrandContact(p),17),-1,34);
                 Para(body,"本行业受众适配 "+(S.BrandAudienceFit(p,b.Kind)*100).ToString("0")+"%",16,Ui.Dim);
                 Para(body,state.Careers.FirstOrDefault(c=>c.PersonId==p)?.News??"暂无动态",16);
                 var deal=state.Deals.FirstOrDefault(d=>d.BrandId==b.Id&&d.PersonId==p&&!d.Ended&&d.End>S.Clock.Today.TotalDays);

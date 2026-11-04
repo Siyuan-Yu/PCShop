@@ -197,7 +197,8 @@ namespace PCShopSell.Core.Session
                 var stories=r.Stories??new[]{r.Person.LineFor(0),r.Person.LineFor(1),r.Person.LineFor(2)};
                 result.Add(new CityPersonDefinition {Id=r.Id,Name=r.Person.Name,Role=r.Person.Role,HomeId=Home(i++),WorkId=r.WorkPlaceId,
                     WorkStart=r.WorkStart,WorkEnd=r.WorkEnd,Interest=Interest(i),Goal=stories.LastOrDefault()??"把日子过安稳。",Experience=stories[0],
-                    Topics=new[]{r.Person.LineFor(0),r.Person.LineFor(1),r.Person.LineFor(2),stories[0]},Stories=stories,Age=r.Id=="res_pupil"?14:26+i%28});
+                    Topics=new[]{r.Person.LineFor(0),r.Person.LineFor(1),r.Person.LineFor(2),stories[0]},Stories=stories,
+                    Age=r.Id=="res_pupil"?14:r.Id=="res_grandpa"?67:r.Id=="res_student"?21:26+i%28});
             }
             foreach(var n in Npcs.All)
             {
@@ -215,7 +216,7 @@ namespace PCShopSell.Core.Session
                     Interest=Interest(i),Goal=stories.LastOrDefault(),Experience=stories.FirstOrDefault(),Topics=new[]{staff.LineFor(0),staff.LineFor(1),staff.LineFor(2),stories.FirstOrDefault()},Stories=stories,Age=25+i%14});
             }
             foreach(var creator in Creators.All)
-                result.Add(new CityPersonDefinition{Id=creator.Id,Name=creator.Name,Role="原创内容创作者（成年）",Age=28,HomeId=Home(i++),WorkId="life_studio",Interest=creator.Style,
+                result.Add(new CityPersonDefinition{Id=creator.Id,Name=creator.Name,Role="原创内容创作者（成年）",Age=28,HomeId=Home(i++),WorkId="life_mcn",Interest=creator.Style,
                     Goal="在有供货与服务能力的店铺做长期合作，不只追求一次曝光。",Experience="从普通工作转到创作，慢慢积累自己的作品。",
                     Topics=new[]{creator.Style,"推广前会先确认商品和售后能力。","工作之外也想交朋友。","我认识纸风车工作室的陆栀。"},
                     Stories=new[]{"最开始只有几位朋友愿意看我的内容。","我想先把一件有用的作品做好。","合作和私人相处是两回事，我会分别认真对待。"}});

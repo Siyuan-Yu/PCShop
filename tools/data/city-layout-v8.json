@@ -866,6 +866,11 @@
       "id": "grid_260_360",
       "x": 260,
       "y": 540.0
+    },
+    {
+      "id": "life_mcn_door",
+      "x": 80,
+      "y": 80
     }
   ],
   "edges": [
@@ -3409,6 +3414,26 @@
       "heading": 0,
       "model": "court",
       "tier": 2
+    },
+    {
+      "id": "life_mcn",
+      "name": "澄光传媒 MCN",
+      "street": "s_services",
+      "node": "life_mcn_door",
+      "business": "mcn",
+      "kind": "shop",
+      "size": "small",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 6,
+      "width": 22,
+      "depth": 16,
+      "heading": 0,
+      "tradable": false,
+      "openMinute": 540,
+      "closeMinute": 1080,
+      "model": "office",
+      "tier": 1
     }
   ],
   "patrols": [

@@ -1,0 +1,4 @@
+SMOKE shot community-mcn
+SMOKE shot community-mcn-contact
+SMOKE MCN GRAPHICS COMPLETE
+SMOKE RESULT code=0 errors=0

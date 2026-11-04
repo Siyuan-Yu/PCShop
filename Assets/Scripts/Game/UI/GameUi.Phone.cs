@@ -7,7 +7,7 @@ namespace PCShopSell.Game.UI
 {
     /// <summary>
     /// 手机：顶栏只有一个“手机”按钮。没有智能手机打开的是按键机（只能打电话、发短信）；
-    /// 买了智能手机打开的是主屏幕，要网购、日程、聊天、1788 都得先去应用商店下载 app。
+    /// 买了智能手机打开的是主屏幕，要网购、日程、聊天 都得先去应用商店下载 app。
     /// </summary>
     public sealed partial class GameUi
     {
@@ -64,7 +64,7 @@ namespace PCShopSell.Game.UI
                 }
             }
 
-            Ui.Size(Ui.Label(w.Content, "按键机只能打电话、发短信。现在大家都不习惯看短信，常常没人回。要网购、上 1788、下载 app，得去街上的手机店买一部智能手机。", 15, TextAnchor.UpperLeft, Ui.Dim), -1, 70);
+            Ui.Size(Ui.Label(w.Content, "按键机只能打电话、发短信。现在大家都不习惯看短信，常常没人回。要网购、下载 app，得去街上的手机店买一部智能手机。", 15, TextAnchor.UpperLeft, Ui.Dim), -1, 70);
         }
 
         private void LaunchFeatureApp(Window w, int n)
@@ -85,7 +85,6 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Shop: return new Color(0.88f, 0.28f, 0.35f);
                 case PhoneApps.Chat: return new Color(0.18f, 0.72f, 0.58f);
                 case PhoneApps.Loans: return new Color(0.82f, 0.59f, 0.19f);
-                case PhoneApps.Wholesale: return new Color(0.62f, 0.40f, 0.82f);
                 default: return Ui.ButtonBg;
             }
         }
@@ -100,7 +99,6 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Shop: return "购";
                 case PhoneApps.Chat: return "聊";
                 case PhoneApps.Loans: return "借";
-                case PhoneApps.Wholesale: return "批";
                 default: return "?";
             }
         }
@@ -133,7 +131,7 @@ namespace PCShopSell.Game.UI
             }
             Ui.Size(Ui.Button(wall.transform, "城市生活", OpenCityLife, 18), -1, 44)
                 .Tip("城市活动、场所与生活安排。");
-            Ui.Size(Ui.Label(wall.transform, S.HasApp(PhoneApps.Shop) && S.HasApp(PhoneApps.Chat) && S.HasApp(PhoneApps.Wholesale)
+            Ui.Size(Ui.Label(wall.transform, S.HasApp(PhoneApps.Shop) && S.HasApp(PhoneApps.Chat)
                 ? "所有 app 都装好了。" : "想要更多功能，到「应用商店」里下载。", 15, TextAnchor.MiddleCenter, Ui.Dim), -1, 36);
         }
 
@@ -158,7 +156,6 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Shop: OpenOnlinePanel(); break;
                 case PhoneApps.Chat: OpenChatPanel(); break;
                 case PhoneApps.Loans: OpenLoansApp(); break;
-                case PhoneApps.Wholesale: OpenWholesaleApp(); break;
             }
         }
 

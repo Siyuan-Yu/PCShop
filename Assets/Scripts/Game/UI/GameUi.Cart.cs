@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
@@ -325,7 +325,7 @@ namespace PCShopSell.Game.UI
             });
         }
 
-        /// <summary>1788 等线上下单送店里时的名字：当前这家店。</summary>
+        /// <summary>网购 等线上下单送店里时的名字：当前这家店。</summary>
         private string ShopDestName => S.HasShop ? S.CourierDestName(S.CurrentShop) : "我的店里";
 
         // ---------- 打电话叫货车 ----------

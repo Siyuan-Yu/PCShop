@@ -10,7 +10,7 @@ using PCShopSell.Core.Trade;
 
 namespace PCShopSell.Core.Session
 {
-    /// <summary>缺货提醒、自动补货（每天 9:00 用手机在 1788 下单）。</summary>
+    /// <summary>缺货提醒、自动补货（每天 9:00 用手机在 网购 下单）。</summary>
     public sealed partial class GameSession
     {
         public const int RestockCheckMinute = 9 * 60;
@@ -89,26 +89,10 @@ namespace PCShopSell.Core.Session
             Say($"有顾客想买{c.DesiredPart.Name}，但{reason}，空手走了。");
         }
 
-        /// <summary>自动补货用哪家店：指定的，或者已发现的里最便宜的（排除亲眼见过次品多的）。</summary>
+        /// <summary>自动补货统一使用网购，旧档商家偏好不再参与选择。</summary>
         public OnlineStore PickRestockStore(IReadOnlyList<PartDef> parts)
         {
-            if (RestockStoreId != null && Online.IsDiscovered(RestockStoreId)) return Online1788.GetStore(RestockStoreId);
-            OnlineStore best = null;
-            long bestCost = long.MaxValue;
-            foreach (OnlineStore st in Online1788.Stores)
-            {
-                if (!Online.IsDiscovered(st.Id)) continue;
-                StoreRecord rec = Online.RecordOf(st.Id);
-                if (rec.ItemsReceived >= 4 && rec.Defects * 5 > rec.ItemsReceived) continue;
-                long cost = 0;
-                foreach (PartDef p in parts) cost += OnlinePrice(st, p).Cents;
-                if (cost < bestCost)
-                {
-                    bestCost = cost;
-                    best = st;
-                }
-            }
-            return best;
+            return Online1788.Shopping;
         }
 
         /// <summary>算出现在该补哪些货、补多少（按缺得多不多排序）。</summary>
@@ -127,7 +111,7 @@ namespace PCShopSell.Core.Session
             return needs.Select(n => (n.part, n.count)).ToList();
         }
 
-        /// <summary>每天 9:00：库存（含在途）低于目标的 40% 就用手机在 1788 补到目标，次日 10:00 到。</summary>
+        /// <summary>每天 9:00：库存（含在途）低于目标的 40% 就用手机在 网购 补到目标，次日 10:00 到。</summary>
         public void RunAutoRestock()
         {
             foreach (OwnedShop s in _shops.ToList())
@@ -147,9 +131,9 @@ namespace PCShopSell.Core.Session
                 bool available = worker?.Shop == _focus && worker.Role == EmployeeRole.Buyer && worker.Person.OnDuty(Clock.Now) && EmployeeTrip(worker.Person.Id) == null;
                 return policy.AllowFallback && !available;
             }).ToList();
-            if (needs.Count == 0) { Note("自动补货：缺口由本店进货员负责，1788不重复下单；可在统一采购页修改主执行方式。"); return; }
+            if (needs.Count == 0) { Note("自动补货：缺口由本店进货员负责，网购不重复下单；可在统一采购页修改主执行方式。"); return; }
 
-            string block = AppBlocker(PhoneApps.Wholesale);
+            string block = AppBlocker(PhoneApps.Shop);
             if (block != null) { Note("自动补货没执行：" + block); return; }
 
             OnlineStore store = PickRestockStore(needs.Select(n => n.part).ToList());

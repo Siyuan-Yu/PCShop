@@ -53,8 +53,8 @@ namespace PCShopSell.Core.Session
             new[] { "garden.invitation", "garden.proposal", "garden.terms", "garden.fulfilment", "garden.echo" }
         };
         public DistrictNarrativeNode CurrentDistrictNode => DistrictNarrativeCatalog.Nodes.FirstOrDefault(n => n.Id == _district.NodeId);
-        private string[] ActiveDistrictChain(int chapter) => _district.BrandCommerceRoute&&chapter==2?new[]{"expo.invitation","expo.review"}
-            :_district.BrandCommerceRoute&&chapter==3?new[]{"tender.invitation","tender.review"}:DistrictNodeChains[chapter-1];
+        private string[] ActiveDistrictChain(int chapter) => _district.BrandCommerceRoute&&chapter==2?(_district.CommerceVersion>0?ExpoStoryChain:new[]{"expo.invitation","expo.review"})
+            :_district.BrandCommerceRoute&&chapter==3?(_district.CommerceVersion>0?TenderStoryChain:new[]{"tender.invitation","tender.review"}):DistrictNodeChains[chapter-1];
         public bool DistrictNodeCompleted(string id) => _district.Completed.Contains(id);
         public int DistrictOperatingShops(int tier) => MyShops.Count(s => DistrictTierOf(s.Place)==tier
             && (IsDedicatedVenue(s.Place) ? VenueOperation(s.Place.Id)?.Accepting==true : !s.Sim.NotFitted)
@@ -109,12 +109,15 @@ namespace PCShopSell.Core.Session
         }
         public void RefreshDistrictNarrative()
         {
-            if (!City.IsLakeCity || IsGameOver || CurrentDistrictNode!=null) return;
+            if (!City.IsLakeCity || IsGameOver) return;
+            RefreshDistrictCommerce();
+            if(CurrentDistrictNode!=null)return;
             int chapter = _district.Chapter+1;
             if (chapter>3) return;
             if (_district.PendingChapter!=chapter)
             {
                 if (DistrictPrerequisiteBlocker(chapter)!=null) return;
+                _district.CommerceBrandId=_brands.Brands.Where(b=>chapter!=3||DistrictBrandRevenueQualified(b)).OrderByDescending(b=>b.Influence).FirstOrDefault()?.Id;
                 _district.PendingChapter=chapter;
                 _district.InvitationDueAt=Clock.Now.TotalMinutes+3*1440;
             }
@@ -129,9 +132,9 @@ namespace PCShopSell.Core.Session
             _district.PendingChapter=0;
             _district.InvitationDueAt=0;
             _district.Chapter = chapter;
-            if(chapter>1&&_brands.Brands.Any())_district.BrandCommerceRoute=true;
+            if(chapter>1&&_brands.Brands.Any()){_district.BrandCommerceRoute=true;StartDistrictCommerce();}
             _district.NodeId = ActiveDistrictChain(chapter)[0];
-            string sender=chapter==1?"李秀兰":chapter==2?"唐蔚":"任帆";
+            string sender=chapter==1?"李秀兰":_district.BrandCommerceRoute?(chapter==2?"任帆":"沈远"):chapter==2?"唐蔚":"任帆";
             Say(sender+"主动联系了你：“"+CurrentDistrictNode.Title+"”。");
             Show(sender+"发来主线邀请",CurrentDistrictNode.Dialogue+"\n\n打开手机聊天顶部的“主线消息”回复邀请；现在不用立刻赴约。");
         }
@@ -145,6 +148,7 @@ namespace PCShopSell.Core.Session
                 return null;
             }
             if(_district.MeetingNodeId==node.Id&&!_district.MeetingPeople.Contains(personId))return null;
+            if(DistrictCommerceGameplay)return node.People.Contains(personId)?"主线 · 经营合作":null;
             if(!node.People.Contains(personId)&&!_district.MeetingPeople.Contains(personId)&&!DistrictTasks.Any(t=>t.PersonId==personId))return null;
             if(_district.MeetingNodeId!=node.Id)return "主线 · 待约见";
             if(CityPersonState(personId)?.Route!=null)return "主线 · 正在赴约";
@@ -201,6 +205,7 @@ namespace PCShopSell.Core.Session
             {
                 if(IsGameOver||IsWorking||CityActivityExclusive)return "请先结束当前工作或活动";
                 if(CurrentDistrictNode==null)return "暂无主线";
+                if(DistrictCommerceGameplay)return DistrictCommerceBlocker;
                 if(_district.MeetingNodeId!=_district.NodeId)return "请先在聊天消息中确认约见";
                 if(!AtDistrictMeeting())return "请自行前往"+City.GetPlace(_district.MeetingPlaceId).Name+"门前";
                 if(Clock.Now.TotalMinutes<_district.MeetingAt)return "还未到约定时间，请关闭窗口等待";
@@ -220,6 +225,7 @@ namespace PCShopSell.Core.Session
         {
             var node=CurrentDistrictNode;
             if(node==null||node.Id!=nodeId)return false;
+            if(DistrictCommerceGameplay)return Fail("这一阶段直接完成品牌经营任务，无需另约会面");
             if(nodeId=="community.search")return Fail("请分别向三位保管人打听，取得线索后前往各自藏点按 F 调查。");
             if(nodeId=="community.trial" && !_district.HasCommunityMap)return Fail("请先找回旧街手绘商铺图。");
             if(node.Choices.Length>0 && !node.Choices.Any(c=>c.Id==choice))return Fail("请选择一种处理方式。");
@@ -288,6 +294,7 @@ namespace PCShopSell.Core.Session
             if(CurrentDistrictNode?.Id!=expectedNodeId)return false;
             string why=DistrictMeetingBlocker;if(why!=null)return Fail(why);
             string id=_district.NodeId;
+            if(DistrictCommerceActive&&DistrictCommerceBlocker!=null)return Fail(DistrictCommerceBlocker);
             if(id=="expo.review"&&!_brands.Brands.Any(b=>b.Influence>=100&&_brands.Orders.Any(o=>o.BrandId==b.Id&&o.Source=="expo"&&o.Done)))return Fail("需要同一品牌达到100影响力并交付展会订单");
             if(id=="tender.review"&&!_brands.Tenders.Any(t=>t.Stage==3))return Fail("需要赢得席位并完成连续三期履约");
             string taskBlocker=DistrictTasksBlocker;
@@ -449,6 +456,7 @@ namespace PCShopSell.Core.Session
             _district.UnlockedTier=Math.Max(0,Math.Min(3,_district.UnlockedTier));
             _district.Chapter=Math.Max(0,Math.Min(3,_district.Chapter));
             if(CurrentDistrictNode==null){_district.NodeId=null;_district.MeetingPeople=Array.Empty<string>();_district.MeetingNodeId=null;}
+            MigrateDistrictCommerce();
             // Legacy saves keep assets and location. Returning through a checkpoint is always allowed.
         }
     }

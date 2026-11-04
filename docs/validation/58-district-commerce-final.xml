@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="7" result="Passed" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-03 16:23:20Z" end-time="2026-11-03 16:23:21Z" duration="1.1062275">
+  <test-suite type="TestSuite" id="2238" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1072" result="Passed" start-time="2026-11-03 16:23:20Z" end-time="2026-11-03 16:23:21Z" duration="1.106228" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="3472" name="PCShopSell.Tests.EditMode.dll" fullname="D:/UnityProjects/PCShop/_ci_city_life/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1072" result="Passed" start-time="2026-11-03 16:23:20Z" end-time="2026-11-03 16:23:21Z" duration="1.086832" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="49932" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="3473" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1072" result="Passed" start-time="2026-11-03 16:23:20Z" end-time="2026-11-03 16:23:21Z" duration="1.081309" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3474" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="1072" result="Passed" start-time="2026-11-03 16:23:20Z" end-time="2026-11-03 16:23:21Z" duration="1.076321" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="2514" name="DistrictCommerceTests" fullname="PCShopSell.Tests.DistrictCommerceTests" classname="PCShopSell.Tests.DistrictCommerceTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-11-03 16:23:20Z" end-time="2026-11-03 16:23:21Z" duration="1.042078" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="2515" name="ExpoMainlineUsesRealRegistrationReceptionDeliveryAndFinalMeeting" fullname="PCShopSell.Tests.DistrictCommerceTests.ExpoMainlineUsesRealRegistrationReceptionDeliveryAndFinalMeeting" methodname="ExpoMainlineUsesRealRegistrationReceptionDeliveryAndFinalMeeting" classname="PCShopSell.Tests.DistrictCommerceTests" runstate="Runnable" seed="1471365924" result="Passed" start-time="2026-11-03 16:23:20Z" end-time="2026-11-03 16:23:20Z" duration="0.241378" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictCommerceTests.ExpoMainlineUsesRealRegistrationReceptionDeliveryAndFinalMeeting
+REGRESSION DONE PCShopSell.Tests.DistrictCommerceTests.ExpoMainlineUsesRealRegistrationReceptionDeliveryAndFinalMeeting Passed
+]]></output>
+            </test-case>
+            <test-case id="2520" name="FailedTenderDoesNotUnlockRoadAndExplainsRetry" fullname="PCShopSell.Tests.DistrictCommerceTests.FailedTenderDoesNotUnlockRoadAndExplainsRetry" methodname="FailedTenderDoesNotUnlockRoadAndExplainsRetry" classname="PCShopSell.Tests.DistrictCommerceTests" runstate="Runnable" seed="882077417" result="Passed" start-time="2026-11-03 16:23:20Z" end-time="2026-11-03 16:23:20Z" duration="0.073863" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictCommerceTests.FailedTenderDoesNotUnlockRoadAndExplainsRetry
+REGRESSION DONE PCShopSell.Tests.DistrictCommerceTests.FailedTenderDoesNotUnlockRoadAndExplainsRetry Passed
+]]></output>
+            </test-case>
+            <test-case id="2521" name="MigrationHonoursQualifiedBrandInsteadOfUnrelatedHigherInfluence" fullname="PCShopSell.Tests.DistrictCommerceTests.MigrationHonoursQualifiedBrandInsteadOfUnrelatedHigherInfluence" methodname="MigrationHonoursQualifiedBrandInsteadOfUnrelatedHigherInfluence" classname="PCShopSell.Tests.DistrictCommerceTests" runstate="Runnable" seed="30095191" result="Passed" start-time="2026-11-03 16:23:20Z" end-time="2026-11-03 16:23:20Z" duration="0.225099" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictCommerceTests.MigrationHonoursQualifiedBrandInsteadOfUnrelatedHigherInfluence
+REGRESSION DONE PCShopSell.Tests.DistrictCommerceTests.MigrationHonoursQualifiedBrandInsteadOfUnrelatedHigherInfluence Passed
+]]></output>
+            </test-case>
+            <test-case id="2518" name="MilestonesAndSelectedBrandSurviveSaveWithoutFreeProgress" fullname="PCShopSell.Tests.DistrictCommerceTests.MilestonesAndSelectedBrandSurviveSaveWithoutFreeProgress" methodname="MilestonesAndSelectedBrandSurviveSaveWithoutFreeProgress" classname="PCShopSell.Tests.DistrictCommerceTests" runstate="Runnable" seed="1571248293" result="Passed" start-time="2026-11-03 16:23:20Z" end-time="2026-11-03 16:23:21Z" duration="0.188827" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictCommerceTests.MilestonesAndSelectedBrandSurviveSaveWithoutFreeProgress
+REGRESSION DONE PCShopSell.Tests.DistrictCommerceTests.MilestonesAndSelectedBrandSurviveSaveWithoutFreeProgress Passed
+]]></output>
+            </test-case>
+            <test-case id="2519" name="OldTwoNodeRouteMigratesToBusinessWorkButKeepsInvitationAndAccess" fullname="PCShopSell.Tests.DistrictCommerceTests.OldTwoNodeRouteMigratesToBusinessWorkButKeepsInvitationAndAccess" methodname="OldTwoNodeRouteMigratesToBusinessWorkButKeepsInvitationAndAccess" classname="PCShopSell.Tests.DistrictCommerceTests" runstate="Runnable" seed="1089631638" result="Passed" start-time="2026-11-03 16:23:21Z" end-time="2026-11-03 16:23:21Z" duration="0.135940" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictCommerceTests.OldTwoNodeRouteMigratesToBusinessWorkButKeepsInvitationAndAccess
+REGRESSION DONE PCShopSell.Tests.DistrictCommerceTests.OldTwoNodeRouteMigratesToBusinessWorkButKeepsInvitationAndAccess Passed
+]]></output>
+            </test-case>
+            <test-case id="2517" name="OtherBrandReceiptsCannotCompleteSelectedBrandAndSelectionLocks" fullname="PCShopSell.Tests.DistrictCommerceTests.OtherBrandReceiptsCannotCompleteSelectedBrandAndSelectionLocks" methodname="OtherBrandReceiptsCannotCompleteSelectedBrandAndSelectionLocks" classname="PCShopSell.Tests.DistrictCommerceTests" runstate="Runnable" seed="343067665" result="Passed" start-time="2026-11-03 16:23:21Z" end-time="2026-11-03 16:23:21Z" duration="0.070607" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictCommerceTests.OtherBrandReceiptsCannotCompleteSelectedBrandAndSelectionLocks
+REGRESSION DONE PCShopSell.Tests.DistrictCommerceTests.OtherBrandReceiptsCannotCompleteSelectedBrandAndSelectionLocks Passed
+]]></output>
+            </test-case>
+            <test-case id="2516" name="TenderMainlineRequiresTrialWinThreeRealPeriodsThenRecommendation" fullname="PCShopSell.Tests.DistrictCommerceTests.TenderMainlineRequiresTrialWinThreeRealPeriodsThenRecommendation" methodname="TenderMainlineRequiresTrialWinThreeRealPeriodsThenRecommendation" classname="PCShopSell.Tests.DistrictCommerceTests" runstate="Runnable" seed="1836226135" result="Passed" start-time="2026-11-03 16:23:21Z" end-time="2026-11-03 16:23:21Z" duration="0.088654" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictCommerceTests.TenderMainlineRequiresTrialWinThreeRealPeriodsThenRecommendation
+REGRESSION DONE PCShopSell.Tests.DistrictCommerceTests.TenderMainlineRequiresTrialWinThreeRealPeriodsThenRecommendation Passed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

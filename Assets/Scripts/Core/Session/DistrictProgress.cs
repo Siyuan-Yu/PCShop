@@ -17,6 +17,8 @@ namespace PCShopSell.Core.Session
         public long InvitationDueAt;
         public bool InvitationWaitingForWake;
         public bool BrandCommerceRoute;
+        public int CommerceVersion;
+        public string CommerceBrandId;
         public string[] TaskEvidence = Array.Empty<string>();
         // Retained only for migration of the superseded trading assignment.
         public string CommunityTrialShopId;

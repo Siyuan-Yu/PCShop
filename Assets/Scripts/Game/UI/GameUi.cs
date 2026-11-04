@@ -201,7 +201,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(row, "背包 B", ToggleBackpack, 18), 78).Tip("<b>背包</b>　快捷键：B\n身上带的货和负重；在家或店里一键全放下。");
             Ui.Size(Ui.Button(row, "人物", OpenRelationsPanel, 18), 66).Tip("<b>人脉</b>\n认识的人和你有多熟、他们彼此之间的关系（网状图）。");
             Ui.Size(Ui.Button(row, "员工", OpenEmployeesPanel, 18), 66).Tip("所有店的员工列表、明天调店安排、进货清单和车辆占用。");
-            Ui.Size(Ui.Button(row, "手机", OpenPhone, 18), 66).Tip("<b>手机</b>　快捷键：P\n买了智能手机才有；通讯录、1788 批发、外卖等 app。");
+            Ui.Size(Ui.Button(row, "手机", OpenPhone, 18), 66).Tip("<b>手机</b>　快捷键：P\n买了智能手机才有；通讯录、网购、外卖等 app。");
             Ui.Size(Ui.Button(row, "任务", OpenQuests, 18), 66).Tip("<b>任务</b>　快捷键：T\n当前任务怎么做、完成奖励；左上角的任务条收起后从这里再打开。");
             _businessButton = Ui.Size(Ui.Button(row, "经营", OpenBusinessPanel, 18), 66);
             _businessButton.gameObject.SetActive(true);

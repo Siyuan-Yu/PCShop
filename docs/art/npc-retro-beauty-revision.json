@@ -1,0 +1,44 @@
+{
+  "date": "2026-11-04",
+  "generation": "built-in image_gen",
+  "template": "Use case: stylized-concept. Create ONE finished beautiful adult NPC portrait for a Chinese shop management game. Retro slice-of-life comic with an appealing shoujo-manga leading-character aesthetic. Reference image is ONLY a reference for warm beige paper background, brown ink and restrained vintage print texture. Deliberately REDESIGN the person to be MUCH MORE BEAUTIFUL and visually charismatic than the reference. Refined attractive facial anatomy, expressive luminous eyes with carefully drawn lashes and subtle highlights, flattering hairstyle, stylish clothing, lively individual expression. A polished illustrated visual novel heroine/hero, unmistakably charming at thumbnail size. Keep flat warm muted colors and clean dark-brown comic contours, light cel shadows, subtle fine halftone. Avoid heavy orange skin or muddy all-brown palette; fresh luminous fair warm skin, elegant color contrast. Clearly 2D illustration, no photo realism, no 3D, no generic middle-aged neighbor face, no chibi. \nSUBJECT: {{PROFILE}}\nComposition: vertical 3:4, centered chest-up, shoulders visible, whole hair with top margin, gentle three-quarter view facing viewer, hands and props outside frame. Simple pale warm cream paper backdrop, no scenery, no text, logo, watermark, border or extra person. Fully clothed tasteful everyday styling.",
+  "correctionPrompt": "Remove eyeglasses completely while preserving face, hair, clothes, pose and retro comic style.",
+  "portraits": [
+    {
+      "id": "momo",
+      "name": "莫文宁",
+      "description": "28-year-old Chinese adult woman, a charming approachable PC tutorial video creator. Beautiful heart-shaped face, luminous large almond eyes, fine lashes, delicate nose, gentle rosy smile. Thin round glasses that flatter rather than obscure her eyes. Silky dark brown hair in a loose low ponytail with airy curtain fringe; small cream hair clip. Stylish pale honey knit top and fitted slate-blue light cardigan. Smart, sweet, warm heroine charisma.",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-05d205e7-94e2-4f5e-bd3b-4a66676a8e36.png"
+    },
+    {
+      "id": "qiao",
+      "name": "乔雨桐",
+      "description": "28-year-old Chinese adult woman, a popular confident technology review influencer. Striking elegant beauty, graceful oval face, long expressive slightly upturned eyes, defined fine lashes, delicate nose, glossy subtle rose lips, confident knowing smile. Long flowing black hair with side part and soft waves, small silver earrings. Muted plum tailored jacket over ivory top. Fashionable polished camera-ready heroine, distinctly sophisticated rather than shy.",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-449479d9-8c4e-427a-930b-bf91ce3ebdc3.png"
+    },
+    {
+      "id": "ake",
+      "name": "柯承安",
+      "description": "28-year-old Chinese adult man, a handsome esports livestreamer. Refined angular face, attractive sharp almond eyes, clean brows, straight nose, relaxed charismatic smile. Dark layered hair with airy tousled fringe, no beard. Stylish dark teal esports casual jacket over cream shirt; discreet headphones resting around neck. Youthful adult leading-man good looks, lean rather than bulky, confident friendly screen presence.",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-4b81a92b-e154-4a17-8454-ceacd97c2871.png"
+    },
+    {
+      "id": "life_creator",
+      "name": "陆栀",
+      "description": "27-year-old Chinese adult woman, an original miniature model artist. Very pretty gentle artistic heroine, softly tapered face, sparkling warm hazel almond eyes, delicate lashes, small refined nose, shy expressive smile. Chestnut shoulder-length wavy hair with airy bangs and a tiny sage barrette. Cream blouse with muted sage green pinafore work dress. Dreamy artistic beauty, clearly adult.",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-125f9fd0-b1cf-4791-969a-040bdb9b4fc1.png"
+    },
+    {
+      "id": "life_designer",
+      "name": "温岚",
+      "description": "30-year-old Chinese adult woman, an independent fashion designer. Beautiful poised fashionable adult heroine, delicate oval face, bright slightly catlike eyes, graceful brows, fine nose, subtle coral lips, playful self-assured smile. Long lustrous dark-brown hair half-up with a muted wine ribbon, soft cheek-framing strands. Tasteful ivory blouse with structured muted terracotta vest and small gold earrings. Elegant feminine charm, stylish and approachable.",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-ca056160-f41e-4770-9b42-9a7f4b39c725.png"
+    },
+    {
+      "id": "resident_ningxi",
+      "name": "宁汐",
+      "description": "26-year-old Chinese adult woman, a miniature-product photographer. Exceptionally pretty cool reserved heroine, slender oval face, beautifully drawn long almond eyes, subtle lashes, fine nose, soft rose lips and a restrained warm smile. Silky blue-black chin-length bob with one side tucked behind ear and sweeping fringe. Slate-blue fitted knit top under light cream jacket; slim camera strap visible at shoulders, camera outside frame. Cool refined beauty with warmth in her gaze.",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-66086a25-0eb7-4c25-bb85-dee23c20dcbd.png"
+    }
+  ]
+}

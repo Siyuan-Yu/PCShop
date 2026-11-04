@@ -336,7 +336,8 @@ namespace PCShopSell.Tests
             SaveData d = JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()));
             GameSession l = GameSession.Load(s.City, d);
             Assert.IsTrue(l.HasApp(PhoneApps.Wholesale));
-            Assert.IsFalse(l.HasApp(PhoneApps.Shop));
+            Assert.IsTrue(l.HasApp(PhoneApps.Shop), "旧批发应用合并为网购");
+            Assert.IsFalse(l.InstalledApps.Contains(PhoneApps.Wholesale), "不保存独立批发入口");
             Assert.IsNotNull(l.ChatBlocker(Npcs.Zhang));
             d.apps = null;
             GameSession old = GameSession.Load(s.City, d);

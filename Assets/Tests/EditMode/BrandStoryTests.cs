@@ -19,6 +19,9 @@ namespace PCShopSell.Tests
         {
             var s = DistrictProgressionTests.Make(); s.EventsEnabled = false;
             s.DebugPrepareDistrictPrerequisites(1); s.DebugAddCash(1000000);
+            // These story cases start after the business introduction; unmet-contact
+            // rejection is covered by McnIntroductionTests.
+            foreach (string person in GameSession.BrandPeople) s.Meet(person, 0);
             typeof(GameSession).GetField("_district", Private).SetValue(s, new DistrictProgress { UnlockedTier = 3, Chapter = 1 });
             var shop = s.MyShops.First(); shop.RetailKind = "clothing"; shop.Sim.Stock.ForceAddGoods(Product, 100);
             typeof(GameSession).GetField("_brands", Private).SetValue(s, new BrandBusinessState {

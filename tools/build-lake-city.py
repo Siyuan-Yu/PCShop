@@ -1,4 +1,4 @@
-"""V13: approved four-neighbourhood / 24-hour plan; compact shared outskirts template.
+"""V14: approved four-neighbourhood / 24-hour plan; community MCN office.
 Geometry is regenerated from the V8 source, never cumulatively warped.
 """
 import json, math, heapq
@@ -252,9 +252,9 @@ def bridge_start(r,s):return point(r,s)[0]
 a=bridge_start(main[0],210);b=bridge_start(main[2],175);c=bridge_start(main[1],290);e=bridge_start(main[3],360)
 bridges=[dict(id='lake_bridge_1',name='跨湖道路①',requiredTier=2,points=smooth([a,(a[0]+35,a[1]+75),(-150,0),(230,210),b],6)),dict(id='lake_bridge_2',name='跨湖道路②',requiredTier=3,points=smooth([c,(300,-80),(25,210),(-190,460),e],6))]
 for bridge in bridges:bridge['points']=[dict(x=x*scale,y=y*scale) for x,y in bridge['points']]
-d.update(layoutVersion=13,lakeCity=True,lakeSceneScale=scale,lakeShore=[dict(x=x*scale,y=y*scale) for x,y in shore],lakeBridges=bridges,lakeParcels=parcels,nodes=list(nodes.values()),edges=edges,blocks=blocks,lakeSouthNode=south,lakeNorthNode=north,
+d.update(layoutVersion=14,lakeCity=True,lakeSceneScale=scale,lakeShore=[dict(x=x*scale,y=y*scale) for x,y in shore],lakeBridges=bridges,lakeParcels=parcels,nodes=list(nodes.values()),edges=edges,blocks=blocks,lakeSouthNode=south,lakeNorthNode=north,
          lakeGapRoutes=[[id for _,id in sorted(routes['gap'+str(i)]['marks'])] for i in [1,2,3]])
 # Patrols still use stable nodes; their route planner resolves the new curving roads.
 (ROOT/'Assets/Resources/Data/city_layout.json').write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-print('V13:',len(nodes),'nodes;',len(places),'functional places;',len(blocks),'scenery buildings;',len(parcels),'gardens')
+print('V14:',len(nodes),'nodes;',len(places),'functional places;',len(blocks),'scenery buildings;',len(parcels),'gardens')
 print('physical scale',scale,'shortest walk',distance(south,north)/2.45,'game minutes')

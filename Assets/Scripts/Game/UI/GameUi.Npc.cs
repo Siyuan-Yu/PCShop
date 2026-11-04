@@ -13,16 +13,22 @@ namespace PCShopSell.Game.UI
     {
         private static readonly Dictionary<string, Texture2D> PortraitCache = new Dictionary<string, Texture2D>();
 
-        /// <summary>人物立绘（Resources/Portraits/{id}）；没有则返回 null。</summary>
+        /// <summary>按稳定人物ID加载复古头像；未知动态人物使用同画风备用图。</summary>
         public static Texture2D PortraitOf(string npcId)
         {
+            npcId = string.IsNullOrWhiteSpace(npcId) ? "default" : npcId;
             if (!PortraitCache.TryGetValue(npcId, out Texture2D tex) || tex == null)
             {
-                tex = Resources.Load<Texture2D>("Portraits/" + npcId);
+                tex = Resources.Load<Texture2D>("PortraitsRetro/" + npcId)
+                    ?? Resources.Load<Texture2D>("Portraits/" + npcId)
+                    ?? Resources.Load<Texture2D>("PortraitsRetro/default");
                 PortraitCache[npcId] = tex;
             }
             return tex;
         }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        public static void InvalidatePortraitCache() => PortraitCache.Clear();
 
         /// <summary>立绘卡片（3:4）。onClick 不为空时可点击，右上角有“点击交谈”小标。unknown = 还不认识，只显示暗色剪影。</summary>
         private RectTransform PortraitCard(Transform parent, NpcDef n, float width, System.Action onClick, bool unknown = false) =>

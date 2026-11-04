@@ -279,6 +279,7 @@ namespace PCShopSell.Game.UI
         public void OpenCityVenue(Place place)
         {
             if (place == null) return;
+            if (place.Id == GameSession.CommunityMcnId) { OpenCommunityMcn(); return; }
             if (S.CurrentPlace != place)
             {
                 OpenWindow(place.Name + " · 服务价目表", 950, 740, w => BuildCityVenue(w, place));

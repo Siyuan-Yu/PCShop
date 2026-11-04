@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -8,14 +8,14 @@ using PCShopSell.Core.Inventory;
 
 namespace PCShopSell.Core.Session
 {
-    /// <summary>智能手机（网购、1788 要用）、背包的承重、烟酒茶行和手机店。</summary>
+    /// <summary>智能手机（网购要用）、背包的承重、烟酒茶行和手机店。</summary>
     public sealed partial class GameSession
     {
         public const string PhoneBusiness = "手机";
         public static readonly Money PhonePrice = Money.FromYuan(800);
         public const string NoPhoneMessage = "你还没有智能手机，上不了网。去街上的手机店买一部。";
 
-        /// <summary>有没有智能手机：没有就用不了网购和 1788。新游戏开局没有。</summary>
+        /// <summary>有没有智能手机：没有就用不了网购。新游戏开局没有。</summary>
         public bool HasSmartphone { get; private set; } = true;
 
         /// <summary>背包：刚买的米菜、礼品。</summary>
@@ -35,7 +35,7 @@ namespace PCShopSell.Core.Session
                 foreach (PhoneAppDef a in PhoneApps.All) _apps.Add(a.Id);
         }
 
-        public bool HasApp(string id) => HasSmartphone && (_apps.Contains(id) || PhoneApps.Preinstalled.Contains(id));
+        public bool HasApp(string id) => HasSmartphone && (_apps.Contains(PhoneApps.Normalize(id)) || PhoneApps.Preinstalled.Contains(PhoneApps.Normalize(id)));
 
         /// <summary>智能手机自带真正的日历（有提醒）；没有智能手机就只有手写的笔记本。</summary>
         public bool HasCalendar => HasSmartphone;
@@ -43,6 +43,7 @@ namespace PCShopSell.Core.Session
         /// <summary>要用某个 app 但用不了的原因；能用返回 null。</summary>
         public string AppBlocker(string id)
         {
+            id = PhoneApps.Normalize(id);
             if (!HasSmartphone) return NoPhoneMessage;
             if (!_apps.Contains(id) && !PhoneApps.Preinstalled.Contains(id)) return $"手机上没装「{PhoneApps.Get(id)?.Name ?? id}」，去应用商店下载。";
             return null;
@@ -51,6 +52,7 @@ namespace PCShopSell.Core.Session
         /// <summary>在应用商店下载 app（免费）。</summary>
         public bool InstallApp(string id)
         {
+            id = PhoneApps.Normalize(id);
             if (!HasSmartphone) return Fail(NoPhoneMessage);
             if (PhoneApps.Get(id) == null) return false;
             if (!_apps.Contains(PhoneApps.Store)) return Fail("应用商店不见了。");
@@ -63,6 +65,7 @@ namespace PCShopSell.Core.Session
         /// <summary>卸载（应用商店、通讯录、日历不能卸）。</summary>
         public bool UninstallApp(string id)
         {
+            id = PhoneApps.Normalize(id);
             if (PhoneApps.Preinstalled.Contains(id)) return Fail("系统自带的，卸不了。");
             return _apps.Remove(id);
         }
@@ -75,7 +78,7 @@ namespace PCShopSell.Core.Session
             HasSmartphone = true;
             _apps.Clear();
             foreach (string id in PhoneApps.Preinstalled) _apps.Add(id);
-            Say("买了一部智能手机。里面只有应用商店、通讯录和日历，要网购、上 1788 先去应用商店下载 app。");
+            Say("买了一部智能手机。里面只有应用商店、通讯录和日历，要网购先去应用商店下载 app。");
             return true;
         }
 

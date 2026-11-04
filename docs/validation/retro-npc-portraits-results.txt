@@ -1,0 +1,42 @@
+复古生活漫画风NPC头像验收，2026-11-04 Asia/Shanghai
+120位正式常驻NPC独立头像 + 1张动态/验收备用图；121张PNG全部生成并导入。
+其中温岚、莫文宁、李秀兰沿用已确认复古样本，另118张使用内置image_gen生成。
+每个PNG有独立SHA-256，121张无重复，比例均为3:4；源文件合计330.4 MiB，未改动像素。
+所有原图保存在Assets/Resources/PortraitsRetro；生成来源和人物外观记录见docs/art/npc-retro-portraits.json。
+
+相关测试：41/41通过，0失败。
+- BrandStoryUiTests: 1/1
+- NarrativeContentTests: 8/8
+- RetroPortraitTests: 3/3
+- ShopDockInteractionTests: 7/7
+- UiCleanupTests: 22/22
+
+Unity 2022.3.6f1，专用隔离工程 D:/UnityProjects/PCShop/_ci_retro_portraits。
+验证基线为de37420，加本轮头像加载、导入规则、年龄和验收改动；不把并行MCN/采购/主线改动当作已验证内容。
+头像121份导入元数据已复制回正式工程，保留已存在的GUID；默认平台最大边512、无mipmap、不可CPU读写、压缩贴图。
+校验使用TextureImporter属性与默认平台设置；不把YAML中的遗留全局尺寸字段当作实际导入尺寸。
+图形批次同时载入120位正式NPC：Profiler.GetRuntimeMemorySizeLong合计 23674560 bytes，约22.6 MiB。
+此数值是贴图对象运行时内存测量，不是全游戏内存或独立显存测量；正常游戏按需加载并缓存。
+人工查看6页图册共120人，以及人物资料、对话和备用图；无漏项、明显错配或脸部裁切异常。
+保留14张实际Unity图形捕获：6页1600x1760图册、7个人物资料720p截图、1张对话720p截图。
+
+SMOKE RETRO PORTRAIT_TEXTURE_BYTES=23674560
+SMOKE shot catalogue-01
+SMOKE shot catalogue-02
+SMOKE shot catalogue-03
+SMOKE shot catalogue-04
+SMOKE shot catalogue-05
+SMOKE shot catalogue-06
+SMOKE shot profile-keeper_agent
+SMOKE shot profile-momo
+SMOKE shot profile-life_designer
+SMOKE shot profile-landlady
+SMOKE shot profile-life_creator
+SMOKE shot profile-resident_hanzheng
+SMOKE shot profile-story_shenxiao
+SMOKE shot dialogue-momo
+SMOKE RETRO NPC PORTRAITS GRAPHICS COMPLETE
+SMOKE RESULT code=0 errors=0
+
+修正退休街坊67岁、大学生21岁的早期占位年龄；人物ID、关系和传记记录未更换。
+未读取正式存档，未重新打Windows包。按用户明确要求，没有执行Git提交或GitHub推送。

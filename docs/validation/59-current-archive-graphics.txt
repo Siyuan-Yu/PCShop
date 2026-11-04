@@ -1,0 +1,139 @@
+SMOKE OK 正式NPC名单120人
+SMOKE OK 独立头像 keeper_mall
+SMOKE OK 独立头像 staff_mall
+SMOKE OK 独立头像 staff_mall2
+SMOKE OK 独立头像 keeper_farm
+SMOKE OK 独立头像 keeper_tobacco
+SMOKE OK 独立头像 keeper_phone
+SMOKE OK 独立头像 keeper_phone2
+SMOKE OK 独立头像 keeper_dealer
+SMOKE OK 独立头像 keeper_agent
+SMOKE OK 独立头像 res_wang
+SMOKE OK 独立头像 res_fang
+SMOKE OK 独立头像 res_tea
+SMOKE OK 独立头像 res_baker
+SMOKE OK 独立头像 res_flower
+SMOKE OK 独立头像 res_pharm
+SMOKE OK 独立头像 res_cook
+SMOKE OK 独立头像 res_rider
+SMOKE OK 独立头像 res_grandpa
+SMOKE OK 独立头像 res_auntie
+SMOKE OK 独立头像 res_student
+SMOKE OK 独立头像 res_coder
+SMOKE OK 独立头像 res_mom
+SMOKE OK 独立头像 res_pupil
+SMOKE OK 独立头像 zhang
+SMOKE OK 独立头像 landlady
+SMOKE OK 独立头像 zhou
+SMOKE OK 独立头像 jie
+SMOKE OK 独立头像 li
+SMOKE OK 独立头像 wang
+SMOKE OK 独立头像 qian
+SMOKE OK 独立头像 sun
+SMOKE OK 独立头像 lin
+SMOKE OK 独立头像 staff_cpu
+SMOKE OK 独立头像 staff_gpu
+SMOKE OK 独立头像 staff_mem
+SMOKE OK 独立头像 staff_psu
+SMOKE OK 独立头像 staff_gpu2
+SMOKE OK 独立头像 momo
+SMOKE OK 独立头像 ake
+SMOKE OK 独立头像 qiao
+SMOKE OK 独立头像 life_ming
+SMOKE OK 独立头像 life_ning
+SMOKE OK 独立头像 life_qiao
+SMOKE OK 独立头像 life_creator
+SMOKE OK 独立头像 life_enterprise
+SMOKE OK 独立头像 life_chef
+SMOKE OK 独立头像 life_singer
+SMOKE OK 独立头像 life_bartender
+SMOKE OK 独立头像 life_coach
+SMOKE OK 独立头像 life_golfer
+SMOKE OK 独立头像 life_curator
+SMOKE OK 独立头像 life_tenant
+SMOKE OK 独立头像 life_teacher
+SMOKE OK 独立头像 life_gardener
+SMOKE OK 独立头像 life_maker
+SMOKE OK 独立头像 life_librarian
+SMOKE OK 独立头像 life_clothier
+SMOKE OK 独立头像 life_designer
+SMOKE OK 独立头像 life_clothsupplier
+SMOKE OK 独立头像 life_model_supplier
+SMOKE OK 独立头像 story_tangwei
+SMOKE OK 独立头像 story_liangjing
+SMOKE OK 独立头像 story_shenxiao
+SMOKE OK 独立头像 resident_yuanan
+SMOKE OK 独立头像 resident_hexin
+SMOKE OK 独立头像 resident_gaobo
+SMOKE OK 独立头像 resident_penglan
+SMOKE OK 独立头像 resident_sujun
+SMOKE OK 独立头像 resident_dengyue
+SMOKE OK 独立头像 resident_qiufeng
+SMOKE OK 独立头像 resident_luwei
+SMOKE OK 独立头像 resident_chenxia
+SMOKE OK 独立头像 resident_yeli
+SMOKE OK 独立头像 resident_xuwei
+SMOKE OK 独立头像 resident_zhouran
+SMOKE OK 独立头像 resident_guwen
+SMOKE OK 独立头像 resident_linhe
+SMOKE OK 独立头像 resident_hanzheng
+SMOKE OK 独立头像 resident_baiming
+SMOKE OK 独立头像 resident_zhaoyu
+SMOKE OK 独立头像 resident_taoran
+SMOKE OK 独立头像 resident_mengqiu
+SMOKE OK 独立头像 resident_shiyang
+SMOKE OK 独立头像 resident_wuyou
+SMOKE OK 独立头像 resident_jiyun
+SMOKE OK 独立头像 resident_rongke
+SMOKE OK 独立头像 resident_xiaqing
+SMOKE OK 独立头像 resident_wenbo
+SMOKE OK 独立头像 resident_siyu
+SMOKE OK 独立头像 resident_jiangning
+SMOKE OK 独立头像 resident_luoya
+SMOKE OK 独立头像 resident_caihong
+SMOKE OK 独立头像 resident_luchen
+SMOKE OK 独立头像 resident_songan
+SMOKE OK 独立头像 resident_xuweilin
+SMOKE OK 独立头像 resident_yucheng
+SMOKE OK 独立头像 resident_duma
+SMOKE OK 独立头像 resident_leiming
+SMOKE OK 独立头像 resident_fanglu
+SMOKE OK 独立头像 resident_ningxi
+SMOKE OK 独立头像 resident_pancheng
+SMOKE OK 独立头像 resident_zhengke
+SMOKE OK 独立头像 resident_lanxin
+SMOKE OK 独立头像 resident_guanghe
+SMOKE OK 独立头像 resident_yujia
+SMOKE OK 独立头像 resident_wanqing
+SMOKE OK 独立头像 resident_luhai
+SMOKE OK 独立头像 resident_renxin
+SMOKE OK 独立头像 resident_zengyu
+SMOKE OK 独立头像 resident_lishan
+SMOKE OK 独立头像 resident_moxin
+SMOKE OK 独立头像 resident_quyuan
+SMOKE OK 独立头像 resident_maoning
+SMOKE OK 独立头像 resident_peiran
+SMOKE OK 独立头像 resident_dongyu
+SMOKE OK 独立头像 resident_qiaosong
+SMOKE OK 独立头像 resident_fuzhi
+SMOKE OK 独立头像 resident_shaoan
+SMOKE OK 独立头像 resident_luqiao
+SMOKE OK 独立头像 resident_yinhe
+SMOKE RETRO PORTRAIT_TEXTURE_BYTES=23674560
+SMOKE OK 动态人物使用复古备用头像
+SMOKE shot catalogue-01
+SMOKE shot catalogue-02
+SMOKE shot catalogue-03
+SMOKE shot catalogue-04
+SMOKE shot catalogue-05
+SMOKE shot catalogue-06
+SMOKE shot profile-keeper_agent
+SMOKE shot profile-momo
+SMOKE shot profile-life_designer
+SMOKE shot profile-landlady
+SMOKE shot profile-life_creator
+SMOKE shot profile-resident_hanzheng
+SMOKE shot profile-story_shenxiao
+SMOKE shot dialogue-momo
+SMOKE RETRO NPC PORTRAITS GRAPHICS COMPLETE
+SMOKE RESULT code=0 errors=0

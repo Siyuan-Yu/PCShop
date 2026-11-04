@@ -38,9 +38,9 @@ namespace PCShopSell.Core.Session
                 $"注意{K("截止时间")}，超时作废。",
                 s => s.Ledger.Entries.Any(e => e.Category == ShopSimulation.BuildCategory && !(e.Memo ?? "").Contains("展示机")),
                 BuildProgress);
-            yield return Step("restock", 2, QuestTarget.Restock, "让补货有预算", $"设置 1788 {K("自动补货")}",
+            yield return Step("restock", 2, QuestTarget.Restock, "让补货有预算", $"设置 网购 {K("自动补货")}",
                 $"设好{K("每日预算")}，{K("保留至少 7 天")}运营资金。",
-                s => s.HasShop && s.AppBlocker(PhoneApps.Wholesale) == null && s.RestockTargets.Any() && s.RestockDailyBudgetYuan > 0 && s.RestockReserveDays >= 7,
+                s => s.HasShop && s.AppBlocker(PhoneApps.Shop) == null && s.RestockTargets.Any() && s.RestockDailyBudgetYuan > 0 && s.RestockReserveDays >= 7,
                 null);
             yield return Step("automation", 2, QuestTarget.Staff, "把装机交给店员", $"让店员会装机，打开{K("自动装机")}",
                 $"{K("培训店员")}或招{K("装机师")}。",

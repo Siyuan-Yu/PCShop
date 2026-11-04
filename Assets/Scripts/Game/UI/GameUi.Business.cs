@@ -219,10 +219,13 @@ namespace PCShopSell.Game.UI
         private void BuildCreators(Window w)
         {
             BuildMcnHeader(w);
+            Ui.Size(Ui.Button(w.Content,"社区MCN · 介绍创作者",OpenCommunityMcn,18),-1,40);
             HelpLink(w.Content,"推广合作说明","主店推广同一时间只合作一位创作者，MCN 合约可并行。粉丝量、创作资源影响导流；合作销售表现影响粉丝与关系。高抱负创作者在连续表现不佳时会提前结束合作，不退费用。");
             foreach(var creator in S.CreatorPartners)
             {
                 var c=creator;var d=Creators.Get(c.Id);var card=BusinessCard(w.Content,d.Name+" · "+d.Style);
+                if(S.KolContactBlocker(c.Id)!=null)
+                {Para(card,"尚未交换业务名片。请到社区MCN安排实际见面。",17,Ui.Dim);Ui.Size(Ui.Button(card,"去MCN认识对方",OpenCommunityMcn,17),-1,36);continue;}
                 Ui.Size(Ui.Button(card,"合作合约 / 私人相处",()=>OpenCreatorRelations(c.Id,w),17),-1,36);
                 Line(card,$"粉丝 {c.Followers:N0}   交情 {c.Relationship}/100   抱负 {c.Ambition}/100   资源 {c.Resources}/100",17);
                 if(c.CampaignUntilDay>S.Clock.Today.TotalDays) Line(card,$"推广剩余 {c.CampaignUntilDay-S.Clock.Today.TotalDays} 天   主店客流 ×{S.CreatorTrafficMultiplier:0.00}",18,Ui.Good);

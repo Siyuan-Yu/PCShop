@@ -555,7 +555,7 @@
 
 ## 周国良 · 退休大爷
 
-- ID：`res_grandpa`；44岁；城市居民；商户与街坊
+- ID：`res_grandpa`；67岁；城市居民；商户与街坊
 - 住处：`life_home_s_market`；工作/学习：``
 - 日常时段：00:00—00:00；跨午夜时结束时间属于次日
 - 闲暇地点：life_court、life_market、life_restaurant_tier2
@@ -624,7 +624,7 @@
 
 ## 陆宇 · 大学生
 
-- ID：`res_student`；46岁；城市居民；商户与街坊
+- ID：`res_student`；21岁；城市居民；商户与街坊
 - 住处：`life_home_s_night`；工作/学习：``
 - 日常时段：00:00—00:00；跨午夜时结束时间属于次日
 - 闲暇地点：life_court、life_market、life_restaurant_tier2

@@ -159,6 +159,7 @@ namespace PCShopSell.Core.Session
             d.weeklyPricesPending = WeeklyPricesPending;
             SaveRealty(d);
             SaveBusiness(d);
+            d.mcnIntroductions=_mcnIntroductions.Select(x=>x.Copy()).ToArray();
             return d;
         }
 
@@ -312,6 +313,7 @@ namespace PCShopSell.Core.Session
             LoadWeeklySupplierPlans();
             LoadHomeWorkbench(d);
             LoadDistrictProgress(d);
+            RestoreMcnIntroductions(d);
             RefreshBrandTraffic();
             EnsureFirstShopListings(Clock.Today.TotalDays);
         }

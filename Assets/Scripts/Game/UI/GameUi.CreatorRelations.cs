@@ -12,8 +12,9 @@ namespace PCShopSell.Game.UI
             var c=BusinessCard(w.Content,"创作工作室 · 地位 "+S.BusinessStanding+"/100");
             if(!S.HasMcn)
             {
-                Para(c,"知名度 25 后可成立 MCN：设立 ¥50,000，日常人员 ¥60/天；每位签约创作者再加 ¥30/天。合约 90 天，签约费为当期推广费五倍，广告收入按 20% 分成。",15,Ui.Dim);
-                BusinessAction(c,"成立创作工作室 · ¥50,000",S.FoundMcn,w,S.HasShop && S.PlayerShop.Reputation>=25 && S.Ledger.Balance>=Money.FromYuan(50000));
+                Para(c,"公园阶段开放自办MCN，需门店与知名度25。设立¥50,000；基础人员¥60/天，每位签约创作者另加¥30/天。合约90天，广告收入分成20%。",15,Ui.Dim);
+                string why=S.McnFoundBlocker;if(why!=null)Para(c,why,16,Ui.Dim);
+                BusinessAction(c,"成立MCN公司 · ¥50,000",S.FoundMcn,w,why==null);
             }
             else
             {

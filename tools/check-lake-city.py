@@ -44,7 +44,7 @@ scale=d['lakeSceneScale']
 for suffix in ['join0','join1','backjoin0','backjoin1','middlejoin0','middlejoin1','court0','court1','backcourt0','backcourt1','midcourt0','midcourt1']:
     a=nodes['lake_old_'+suffix];b=nodes['lake_community_'+suffix]
     assert abs((b['x']-a['x'])/scale-930)<.001 and abs((b['y']-a['y'])/scale-100)<.001
-print('PASS: all 90 places, 4 agencies and legacy node IDs preserved; all nodes connected')
+print(f"PASS: all {len(places)} places, 4 agencies and legacy node IDs preserved; all nodes connected")
 print('PASS: shortest full route = 3528 units = 1440 game minutes; both bridges excluded from navigation/manual corridors')
 def footprint(x,y,w,depth,angle):
     a=math.radians(angle);c,s=math.cos(a),math.sin(a)

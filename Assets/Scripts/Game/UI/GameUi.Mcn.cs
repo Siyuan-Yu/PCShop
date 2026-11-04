@@ -1,0 +1,59 @@
+using System;
+using System.Linq;
+using PCShopSell.Core.Session;
+using UnityEngine;
+
+namespace PCShopSell.Game.UI
+{
+    public sealed partial class GameUi
+    {
+        public void OpenCommunityMcn()
+        {
+            if(!S.City.HasPlace(GameSession.CommunityMcnId)){Toast("这张旧地图没有社区MCN");return;}
+            var place=S.City.GetPlace(GameSession.CommunityMcnId);
+            if(S.CurrentPlace==place)OpenPlaceWindow(place,BuildCommunityMcn,1000,780,holds:true,leaveOnClose:false);
+            else OpenWindow("澄光传媒 MCN",1000,780,w=>BuildCommunityMcn(w,place));
+        }
+        private void BuildCommunityMcn(Window w,PCShopSell.Core.World.Place place)
+        {
+            bool here=S.CurrentPlace==place;
+            Line(w.Content,"社区 · 商务介绍与创作者合作 · 09:00—18:00",21,Ui.Accent);
+            Para(w.Content,"先请公司介绍，实际见面交换名片后，就能通过手机联系与谈合作。",17);
+            if(!here)
+            {
+                string blocker=S.DistrictAccessBlocker(place);
+                if(blocker!=null)Para(w.Content,blocker,17,Ui.Dim);
+                Ui.Size(Ui.Button(w.Content,"前往社区澄光传媒",()=>{CloseAllWindows();S.BeginCityTravel(place.Id);},18,Ui.ButtonHot,blocker==null),-1,42);
+            }
+            var list=Ui.Scroll(w.Content,430);
+            foreach(string person in GameSession.BrandPeople)
+            {
+                string id=person;string name=S.CityPerson(id)?.Name??id;
+                Line(list,name+" · "+(Creators.Get(id)?.Style??S.CityPerson(id)?.Interest),19,Ui.Accent);
+                if(S.IsMet(id))
+                {
+                    var row=Ui.Row(list,38,6);
+                    Ui.Size(Ui.Button(row,"已存名片 · 联系本人",()=>OpenBrandContact(id),17),-1,38,1);
+                    if(Creators.Get(id)!=null)Ui.Size(Ui.Button(row,"推广 / MCN合作",()=>OpenCreatorRelations(id,w),17),-1,38,1);
+                    continue;
+                }
+                var appointment=S.McnIntroductions.FirstOrDefault(a=>a.PersonId==id&&!a.Finished&&a.Until>=S.Clock.Now.TotalMinutes);
+                if(appointment!=null)
+                {
+                    string why=S.McnExchangeBlocker(id);
+                    Para(list,why??"对方已到场，可以交换业务名片。",17,Ui.Good);
+                    Para(list,"预计到场还需 "+Math.Max(0,appointment.Arrival-S.Clock.Now.TotalMinutes)+" 分钟；请关闭窗口等待，回来可继续办理。",15,Ui.Dim);
+                    Ui.Size(Ui.Button(list,"见面介绍 · 交换业务名片",()=>{if(S.ExchangeMcnContact(id)){w.Rebuild();OpenPersonDialogue(id);}else w.Rebuild();},17,Ui.ButtonHot,why==null),-1,38);
+                }
+                else
+                {
+                    string why=S.McnIntroductionBlocker(id);
+                    if(here&&why!=null)Para(list,why,16,Ui.Dim);
+                    Ui.Size(Ui.Button(list,"请公司安排介绍",()=>{S.RequestMcnIntroduction(id);w.Rebuild();},17,Ui.ButtonBg,why==null),-1,38);
+                }
+            }
+            Line(w.Content,S.HasMcn?"你已有自己的MCN公司":S.DistrictAccessTier<2?"自己的MCN公司：进入公园后开放":"公园阶段 · 可以筹备自己的MCN公司",18,Ui.Accent);
+            Ui.Size(Ui.Button(w.Content,"管理自己的MCN",()=>{_businessTab=4;ShowBusinessPanel(false);},18),-1,40);
+        }
+    }
+}

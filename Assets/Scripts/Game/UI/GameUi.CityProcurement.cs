@@ -24,9 +24,9 @@ namespace PCShopSell.Game.UI
                 var tabs = Ui.Row(w.Content, 42);
                 Ui.Size(Ui.Button(tabs, "商品与补货", () => { _procurementOrders = false; w.Rebuild(); }, 18, _procurementOrders ? Ui.ButtonBg : Ui.ButtonHot), -1, 42, 1);
                 Ui.Size(Ui.Button(tabs, "在途与订单", () => { _procurementOrders = true; w.Rebuild(); }, 18, _procurementOrders ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
-                HelpLink(w.Content, "采购与补货说明", "先选收货店，再比较1788、协议直供和线下来源。商品目标决定补到多少，执行人负责实际采购；渠道的解锁、每日配额、运费和路线照常计算。认领会预留缺口和预算，不会立即下单。");
+                HelpLink(w.Content, "采购与补货说明", "先选收货店和商品，可直接网购，也可安排进货员或使用已有供货协议。商品目标决定补到多少，执行人负责实际采购；渠道的解锁、每日配额、运费和路线照常计算。认领会预留缺口和预算，不会立即下单。");
                 Para(w.Content, $"现金 {S.Ledger.Balance} · 共同保护额 {S.EffectiveRestockReserve} · 已安排预算 {S.ClaimedProcurementBudget}", 18, Ui.Accent);
-                Ui.Size(Ui.Button(w.Content,"全店补货预算与默认商家",OpenProcurementBudget,16),-1,32).name="ProcurementBudget";
+                Ui.Size(Ui.Button(w.Content,"全店补货预算",OpenProcurementBudget,16),-1,32).name="ProcurementBudget";
                 if (shop == null) { Para(w.Content, "经营进货需要合法使用的门店。普通生活购物仍可从手机或街上商户进入。", 18); return; }
                 var destinations = Ui.Row(w.Content, 38);
                 foreach (var s in S.MyShops)
@@ -46,7 +46,7 @@ namespace PCShopSell.Game.UI
                     var product = entry;
                     var coverage = S.ProcurementCoverageFor(_procurementShopId, product.Kind, product.Id);
                     var policy = S.ProcurementPolicyFor(_procurementShopId, product.Kind, product.Id);
-                    string executor = policy.Primary == ProcurementMethod.Employee ? S.FindEmployee(policy.EmployeeId)?.Person.Name ?? "本店进货员（待选择）" : "1788";
+                    string executor = policy.Primary == ProcurementMethod.Employee ? S.FindEmployee(policy.EmployeeId)?.Person.Name ?? "本店进货员（待选择）" : "网购";
                     var row = Ui.Row(list, 76);
                     Ui.Size(Ui.Label(row, product.Name + $"\n<size=14>可用库存 {coverage.FreeStock} · 在途 {coverage.InTransit} · 已安排 {coverage.Claimed} · 订单缺货 {coverage.ContractMissing}</size>", 17), -1, 76, 1);
                     Ui.Size(Ui.Button(row, "目标 " + coverage.Target + " / 下限 " + coverage.Lower + "\n" + executor, () => OpenCityProcurementPolicy(_procurementShopId, product.Kind, product.Id, product.Name, w), 15), 230, 66);
@@ -59,7 +59,7 @@ namespace PCShopSell.Game.UI
 
         private void OpenProcurementBudget()
         {
-            int days=S.RestockReserveDays;long cash=S.RestockReserveYuan,budget=S.RestockDailyBudgetYuan;string store=S.RestockStoreId;
+            int days=S.RestockReserveDays;long cash=S.RestockReserveYuan,budget=S.RestockDailyBudgetYuan;
             OpenWindow("全店补货预算",760,590,w=>
             {
                 Line(w.Content,"所有门店共用；保存后生效。",17,Ui.Accent);
@@ -72,13 +72,9 @@ namespace PCShopSell.Game.UI
                 Number("现金底线（元）","reserveCash",cash,10000000,100,n=>cash=n);
                 Number("每日预算（元）","dailyBudget",budget,10000000,100,n=>budget=n);
                 Line(w.Content,"每日预算为0表示不限；账单预留仍然生效。",15,Ui.Dim);
-                var stores=PCShopSell.Core.Trade.Online1788.Stores.Where(s=>S.Online.IsDiscovered(s.Id)).ToArray();
-                var options=new[]{"自动比较已知商家"}.Concat(stores.Select(s=>s.Name)).ToArray();
-                int selected=Array.FindIndex(stores,s=>s.Id==store)+1;
-                Ui.Size(Ui.Choice(w.Content,options,selected,index=>store=index==0?null:stores[index-1].Id),-1,40);
                 Ui.Size(Ui.Button(w.Content,"保存补货设置",()=>
                 {
-                    S.RestockReserveDays=days;S.RestockReserveYuan=cash;S.RestockDailyBudgetYuan=budget;S.RestockStoreId=store;
+                    S.RestockReserveDays=days;S.RestockReserveYuan=cash;S.RestockDailyBudgetYuan=budget;S.RestockStoreId=null;
                     w.Close();RebuildWindows();
                 },18,Ui.ButtonHot),-1,42).name="SaveProcurementBudget";
                 DraftQuantityHints(w.Content);
@@ -142,20 +138,20 @@ namespace PCShopSell.Game.UI
             var draft = S.ProcurementPolicyFor(shopId, kind, productId);
             OpenWindow("补货责任 · " + title, 760, 650, w =>
             {
-                Para(w.Content, "同店同商品只由一个主执行方式自动补货。旧员工固定清单与1788目标重叠时，默认由原进货员承担，1788不重复购买。", 17, Ui.Dim);
+                Para(w.Content, "同店同商品只由一个主执行方式自动补货。旧员工固定清单与网购目标重叠时，默认由原进货员承担，网购不重复购买。", 17, Ui.Dim);
                 var target = Ui.Row(w.Content, 42); Ui.Size(Ui.Label(target, "常备目标", 17), 130);
                 QuantityStepper(w, target, "city_target_" + productId, draft.Target, 0, kind == PurchaseGoodsKind.Part ? GameSession.RestockMaxTarget : 100, 1, n => { draft.Target = (int)n; if (draft.Lower > draft.Target) draft.Lower = draft.Target; });
                 var lower = Ui.Row(w.Content, 42); Ui.Size(Ui.Label(lower, "补货下限", 17), 130);
                 QuantityStepper(w, lower, "city_lower_" + productId, draft.Lower < 0 ? (int)(draft.Target * .4) : draft.Lower, 0, draft.Target, 1, n => draft.Lower = (int)n);
                 if (kind == PurchaseGoodsKind.Part)
-                    Ui.Size(Ui.Button(w.Content, "1788" + (draft.Primary == ProcurementMethod.Online1788 ? " ✓" : ""), () => { draft.Primary = ProcurementMethod.Online1788; draft.EmployeeId = null; w.Rebuild(); }, 18), -1, 44);
+                    Ui.Size(Ui.Button(w.Content, "网购" + (draft.Primary == ProcurementMethod.Online1788 ? " ✓" : ""), () => { draft.Primary = ProcurementMethod.Online1788; draft.EmployeeId = null; w.Rebuild(); }, 18), -1, 44);
                 foreach (var worker in S.Employees.Where(e => e.Shop?.Place.Id == shopId && e.Role == EmployeeRole.Buyer))
                 {
                     var person = worker.Person;
                     Ui.Size(Ui.Button(w.Content, person.Name + "（员工）" + (draft.Primary == ProcurementMethod.Employee && draft.EmployeeId == person.Id ? " ✓" : ""), () =>
                     { draft.Primary = ProcurementMethod.Employee; draft.EmployeeId = person.Id; w.Rebuild(); }, 18), -1, 44);
                 }
-                Ui.Size(Ui.Button(w.Content, "不可用时使用备选1788：" + (draft.AllowFallback ? "开启" : "关闭"), () => { draft.AllowFallback = !draft.AllowFallback; w.Rebuild(); }, 17, Ui.ButtonBg, kind == PurchaseGoodsKind.Part), -1, 42);
+                Ui.Size(Ui.Button(w.Content, "不可用时使用备选网购：" + (draft.AllowFallback ? "开启" : "关闭"), () => { draft.AllowFallback = !draft.AllowFallback; w.Rebuild(); }, 17, Ui.ButtonBg, kind == PurchaseGoodsKind.Part), -1, 42);
                 HelpLink(w.Content, "补货目标说明", "低于下限时补到目标库存，在途和已安排的数量计入覆盖。员工的固定清单仍按固定数量执行，阈值模式按缺口补齐；食品还受保质期限制。");
                 Para(w.Content,S.ProcurementExecutorStatus(draft),16,Ui.Accent);
                 Ui.Size(Ui.Button(w.Content, "保存补货责任", () => { if (S.SetProcurementPolicy(draft)) { w.Close(); parent?.Rebuild(); } }, 19, Ui.ButtonHot), -1, 48);
@@ -182,7 +178,7 @@ namespace PCShopSell.Game.UI
                 Line(list, o.Id + " · " + o.Channel + " · " + (shop == null ? "家里 / 原门店" : S.ShopTitle(shop)) + " · " + state, 17, Ui.Accent);
                 Para(list, string.Join("、", o.Lines.Select(i => GameSession.PurchaseItemName(i) + "×" + i.Count)) + "\n已付 " + Money.FromCents(o.PaidCents) + " · 预计 " + new GameTimestamp(o.DeliveryAt), 15);
                 if (o.OnlineOrderId > 0 && S.Online.Pending.Any(x => x.Id == o.OnlineOrderId))
-                    Ui.Size(Ui.Button(list, "取消订单并退款…", () => ConfirmAction("取消采购", "尚未交付的1788订单将整单退货款及运费，同时释放在途仓位。", "确认取消", () => { S.CancelOnlineProcurementOrder(o.OnlineOrderId); w.Rebuild(); }), 16, Ui.Warn), -1, 38);
+                    Ui.Size(Ui.Button(list, "取消订单并退款…", () => ConfirmAction("取消采购", "尚未交付的网购订单将整单退货款及运费，同时释放在途仓位。", "确认取消", () => { S.CancelOnlineProcurementOrder(o.OnlineOrderId); w.Rebuild(); }), 16, Ui.Warn), -1, 38);
             }
             if (!S.ProcurementOrders.Any(o => o.ShopId == _procurementShopId)) Para(list, "本店暂无已确认采购订单。", 17, Ui.Dim);
             foreach (var run in S.Couriers.Where(r => r.ToShop && (r.ShopId ?? S.MainShop.Place.Id) == _procurementShopId))

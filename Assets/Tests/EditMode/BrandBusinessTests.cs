@@ -16,6 +16,7 @@ namespace PCShopSell.Tests
         private static GameSession Make(int tier=3)
         {
             var s=DistrictProgressionTests.Make();s.DebugPrepareDistrictPrerequisites(1);s.DebugAddCash(1000000);
+            foreach(string person in GameSession.BrandPeople)s.Meet(person,0);
             typeof(GameSession).GetField("_district",BindingFlags.NonPublic|BindingFlags.Instance).SetValue(s,new DistrictProgress{UnlockedTier=tier,Chapter=1});
             var shop=s.MyShops.First();shop.RetailKind="clothing";
             var b=new BrandRecord{Id="b",Name="试验服装",Kind="clothing",Position="quality",ShopIds=new[]{shop.Place.Id}};

@@ -134,23 +134,24 @@ namespace PCShopSell.Core.Session
             return ((h % 1000) / 1000.0 - 0.5) * 0.04;
         }
 
-        // ---------- 1788 ----------
+        // ---------- 网购 ----------
 
         public Money OnlinePrice(OnlineStore store, PartDef part) =>
             Online1788.PriceOf(store, Market.PriceOf(part)).Scale(1.0 - NpcPerks.OnlineDiscount(Relation(Npcs.Zhou)));
 
-        /// <summary>用手机上的 1788 app 下单（人在哪都行），次日 10:00 送到店里或家里（toHome）。</summary>
+        /// <summary>用手机上的 网购 app 下单（人在哪都行），次日 10:00 送到店里或家里（toHome）。</summary>
         public bool PlaceOnlineOrder(string storeId, IReadOnlyList<(PartDef part, int count)> lines, bool toHome = false) =>
             PlaceOnlineOrderCore(storeId, lines, true, toHome);
 
         /// <summary>manual = 玩家亲自在手机上挑货下单（花 5 分钟）；自动补货是 app 定时下单。</summary>
         private bool PlaceOnlineOrderCore(string storeId, IReadOnlyList<(PartDef part, int count)> lines, bool manual, bool toHome = false)
         {
-            string appBlock = AppBlocker(PhoneApps.Wholesale);
+            string appBlock = AppBlocker(PhoneApps.Shop);
             if (appBlock != null) return Fail(appBlock);
             if (!toHome && !HasShop) return Fail("还没有店铺，货没地方送店里。先去商业街的房产中介租个铺子，或者选“送到家里”。");
-            if (!Online.IsDiscovered(storeId)) return false;
-            OnlineStore store = Online1788.GetStore(storeId);
+            // Old callers also use the single shopping channel for new orders.
+            OnlineStore store = Online1788.Shopping;
+            storeId = store.Id;
 
             Money total = Online1788.ShippingFee;
             double space = 0;
@@ -175,13 +176,11 @@ namespace PCShopSell.Core.Session
             Online.NextOrderId++;
             Online.TotalOrders++;
             Online.AddPending(order);
-            RegisterProcurementOrder("online-order:" + order.Id, "1788", order.ShopId, store.Id, total.Cents, order.DeliverAtMinute,
+            RegisterProcurementOrder("online-order:" + order.Id, "网购", order.ShopId, store.Id, total.Cents, order.DeliverAtMinute,
                 order.Lines.Select(l => new PurchaseLine { Kind = PurchaseGoodsKind.Part, PartId = l.PartId, Count = l.Count, SourceId = store.Id }), order.Id, null);
             string where = toHome ? "家里（放在纸箱里）" : "店里" + ShopTag;
             Say(manual ? $"下单成功，{total}，明天 10:00 送到{where}。" : $"自动补货下单：{store.Name}，{total}，明天 10:00 送到店里{ShopTag}。");
 
-            if (Online.TotalOrders == 2 && Online.Discover("s_flash"))
-                Say("1788 首页给你推荐了一家新店：闪电优选。");
             if (manual) AdvanceClock(5);
             return true;
         }
@@ -221,7 +220,7 @@ namespace PCShopSell.Core.Session
                 string body = $"{store.Name} 的货到了（{(o.ToHome ? "送到家里，放在纸箱里，要自己带去店里" : $"已上{shopName}货架")}）：{good} 件完好。";
                 if (toTemp > 0) body += $"\n家里纸箱满了，{toTemp} 件放在临时存放，能放 {TempKeepDays} 天，到期前回家打开纸箱清掉。";
                 if (bad > 0) body += $"\n{bad} 件是次品，只能扔掉：{badNames}";
-                Show("1788 到货", body);
+                Show("网购 到货", body);
             }
         }
     }

@@ -73,9 +73,11 @@ namespace PCShopSell.Game.UI
                     return;
                 }
                 Line(w.Content,node.Title,25,Ui.Accent);
-                if(node.Id.StartsWith("expo.")||node.Id.StartsWith("tender."))
+                if(!S.DistrictCommerceActive&&(node.Id.StartsWith("expo.")||node.Id.StartsWith("tender.")))
                     Ui.Size(Ui.Button(w.Content,"打开品牌经营 · 参展与企业竞标",OpenBrandBusiness,18),-1,38);
                 var body=Ui.Scroll(w.Content,430);
+                if(S.DistrictCommerceGameplay){BuildDistrictCommerceGameplay(body,w);return;}
+                if(S.DistrictCommerceActive)BuildDistrictCommerceProgress(body,w);
                 var person=node.People.FirstOrDefault();
                 if(person!=null&&!S.DistrictTasks.Any())PortraitCard(body,person,S.CityPerson(person)?.Name??person,"",84,()=>{},tagText:null);
                 Para(body,node.Dialogue,19);
@@ -155,7 +157,7 @@ namespace PCShopSell.Game.UI
                 }
                 else
                 {
-                    string why=S.DistrictMeetingBlocker??S.DistrictTasksBlocker;
+                    string why=S.DistrictMeetingBlocker??S.DistrictTasksBlocker??S.DistrictCommerceBlocker;
                     string action=node.Id=="community.meeting"?"接受寻物委托"
                         :node.Id=="community.trial"?"交还手绘商铺图，完成引荐"
                         :node.Id=="model.repair"?(state.RepairPaid?"领取修复展样":"确认交易并委托修复 ¥1,800")
@@ -166,7 +168,7 @@ namespace PCShopSell.Game.UI
                     if(why!=null)Para(body,why,17,Ui.Warn);
                     Ui.Size(Ui.Button(body,action,()=>{S.ActDistrictNode(node.Id);w.Rebuild();},18,Ui.ButtonHot,why==null),-1,46).name="DistrictCompleteNode";
                 }
-                Ui.Size(Ui.Button(w.Content,"刷新进度",w.Rebuild,16),-1,36);
+                Ui.Size(Ui.Button(w.Content,"刷新进度",()=>{S.RefreshDistrictNarrative();w.Rebuild();},16),-1,36);
                 Para(w.Content,"会面需自行前往。此窗口打开时暂停时间；等人、参与活动或等待修复时请先关闭窗口。",15,Ui.Dim);
             },onClosed:()=>_districtStoryWindow=null);
         }

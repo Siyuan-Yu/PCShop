@@ -77,7 +77,7 @@ namespace PCShopSell.Core.Session
         {
             new NpcDef(Zhang, "张绍文", "熟客，附近中学的老师", "第一个常来的熟客，认准你这家店。", "一条好烟", 100, "张绍文笑得合不拢嘴：\"你这小子，会来事。\"", likes: Activities.Hike, giftItemId: Gifts.Cig),
             new NpcDef(Landlady, "李秀兰", "房东，住楼上", "你的店面和出租屋都是她的。", "一箱水果", 120, "李秀兰掂了掂水果：\"哎呀，这么客气，下个月的事好商量。\"", likes: Activities.Dinner, giftItemId: Gifts.Fruit),
-            new NpcDef(Zhou, "周维成", "电子市场老货商", "在 1788 上开店的老货商，认识半个市场。", "两瓶好酒", 200, "周维成拍拍你肩膀：\"后生可畏，以后进货找我，给你实价。\"", reliability: 0.75, likes: Activities.Dinner, giftItemId: Gifts.Wine),
+            new NpcDef(Zhou, "周维成", "电子市场老货商", "经营电子配件的老货商，认识半个市场。", "两瓶好酒", 200, "周维成拍拍你肩膀：\"后生可畏，以后进货找我，给你实价。\"", reliability: 0.75, likes: Activities.Dinner, giftItemId: Gifts.Wine),
             new NpcDef(Jie, "唐俊杰", "隔壁手机店老板", "年纪相仿的同行，嘴上不饶人，心里有数。", "一顿烧烤", 150, "唐俊杰咬着串：\"行，以后有事言语一声。\"", reliability: 0.50, likes: Activities.Ktv),
             new NpcDef(Li, "李承业", "CPU 档口老板", "市场里最老的档口，做 CPU 和主板二十年了，说话慢，但很少看走眼。", "一条名烟", 150,
                 "李承业接过烟，在耳朵上夹了一下：\"小伙子，下次给你留好货。\"", Stalls.Cpu, 0.80, Activities.Fishing,
@@ -128,7 +128,7 @@ namespace PCShopSell.Core.Session
         /// <summary>房租折扣（0.12 = 九折以下）。</summary>
         public static double RentDiscount(int landlady) => landlady >= 70 ? 0.12 : landlady >= 40 ? 0.05 : 0.0;
 
-        /// <summary>1788 进货价折扣。</summary>
+        /// <summary>网购配件价折扣。</summary>
         public static double OnlineDiscount(int zhou) => zhou >= 70 ? 0.06 : zhou >= 40 ? 0.03 : 0.0;
 
         /// <summary>档口批发价折扣。</summary>
@@ -154,7 +154,7 @@ namespace PCShopSell.Core.Session
             {
                 case Npcs.Zhang: return "40：客流 +5%　70：客流 +10%";
                 case Npcs.Landlady: return "40：店租 -5%　70：店租 -12%";
-                case Npcs.Zhou: return "40：1788 进货 -3%　70：-6%。会透露行情";
+                case Npcs.Zhou: return "40：网购配件 -3%　70：-6%。会透露行情";
                 case Npcs.Jie: return "50：不再打价格战，档口批发价 -2%　80：-4%。会透露行情（不太靠谱）";
                 case Npcs.Lin: return "50：快破产时借你 ¥3,000 救急（仅一次）";
                 case Npcs.Li:

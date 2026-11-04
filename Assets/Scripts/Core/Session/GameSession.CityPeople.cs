@@ -175,6 +175,7 @@ namespace PCShopSell.Core.Session
                     p.LocationPlaceId=p.Route.TargetPlaceId;p.Route=null;
                 }
                 if(TickDistrictMeetingPerson(p,now))continue;
+                if(TickMcnIntroduction(p,now))continue;
                 if(TickBrandExpoPerson(p,now))continue;
                 if(!string.IsNullOrEmpty(p.ActivityId))continue;
                 if(!string.IsNullOrEmpty(p.VisitId)){p.Task=CityPersonTask.Shopping;continue;}

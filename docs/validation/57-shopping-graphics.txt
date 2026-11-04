@@ -1,0 +1,6 @@
+SMOKE shot phone
+SMOKE shot app-store
+SMOKE shot shopping
+SMOKE shot shopping-parts
+SMOKE SHOPPING GRAPHICS COMPLETE
+SMOKE RESULT code=0 errors=0

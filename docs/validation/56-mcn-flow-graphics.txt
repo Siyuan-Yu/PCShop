@@ -1,0 +1,10 @@
+SMOKE shot community-mcn
+SMOKE shot community-mcn-waiting
+SMOKE shot community-mcn-contact
+SMOKE shot community-mcn-dialogue
+SMOKE shot community-mcn-locked
+SMOKE shot park-mcn-found
+SMOKE shot park-mcn-operating
+SMOKE MCN FLOW: introduction -> real route arrival -> contact -> dialogue; community founding rejected; park founding charged 50000 yuan
+SMOKE MCN GRAPHICS COMPLETE
+SMOKE RESULT code=0 errors=0
