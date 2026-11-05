@@ -26,7 +26,7 @@ namespace PCShopSell.Core.Session
         {
             var ids=new HashSet<string>(shops.Select(s=>s.Place.Id));
             return Ledger.Entries.Where(e=>ids.Contains(e.ShopId)&&e.Date.TotalDays>=first&&e.Date.TotalDays<end&&e.Amount.IsPositive
-                &&(e.Category=="零售"||e.Category=="装机"||e.Category=="餐饮"||e.Category=="品牌订单")).Sum(e=>e.Amount.Cents);
+                &&(e.Category=="零售"||e.Category=="装机"||e.Category=="餐饮"||e.Category=="品牌订单"||e.Category=="展会零售")).Sum(e=>e.Amount.Cents);
         }
         // Competitor estimates are explicitly a market benchmark, not fabricated ledger entries.
         public long BrandRivalMonthlySales(string kind,int day) => (kind=="computer"?24000000L:kind=="clothing"?12000000L:16000000L)*(90+(day/30*17)%21)/100;
@@ -70,6 +70,7 @@ namespace PCShopSell.Core.Session
         {
             var b=Brand(brandId);if(b==null||!BrandPeople.Contains(person)||(mode!="campaign"&&mode!="endorse"))return false;
             string contact=KolContactBlocker(person);if(contact!=null)return Fail(contact);
+            if(exclusive&&_kol.Contracts.Any(c=>c.PersonId==person&&c.BrandId!=brandId&&KolContractCurrent(c,Clock.Now.TotalMinutes)))return Fail("该人物已有其他品牌的独家直播合约");
             if(_brands.Deals.Any(d=>d.PersonId==person&&!d.Ended&&d.End>BrandDay&&(d.BrandId==brandId||d.Exclusive||exclusive)))return Fail("该人物已有冲突的合作合约");
             long fee=BrandDealQuote(person,mode,exclusive);if(!BrandPay(fee,"推广签约 · "+b.Name))return Fail("签约资金不足");
             _brands.Deals=AppendBrand(_brands.Deals,new BrandDeal {Id=Guid.NewGuid().ToString("N"),BrandId=brandId,PersonId=person,Mode=mode,
@@ -120,19 +121,12 @@ namespace PCShopSell.Core.Session
         {var s=ShopAt(shopId);return s!=null&&(PartCatalog.Exists(id)?s.Sim.Stock.TryRemove(PartCatalog.Get(id),true,count):s.Sim.Stock.TryRemoveGoods(id,count));}
         public bool RegisterBrandExpo(string brandId,string shopId,string product,string focus)
         {
-            var b=Brand(brandId);int day=NextBrandExpoDay;
-            if(IsGameOver||b==null||!BrandShops(b).Any(s=>s.Place.Id==shopId)||!BrandProducts(shopId).Contains(product))return false;
-            if(focus!="media"&&focus!="buyers"&&focus!="design")return false;
-            if(BrandDay>day-7)return Fail("本届报名已截止，展前7天截止");
-            if(_brands.Exhibits.Any(x=>x.BrandId==brandId&&x.Day==day))return Fail("本届已经报名");
-            if(BrandProductCount(shopId,product)<3)return Fail("需3件现货，作为展示与试用耗材");
-            if(!BrandPay(200000,"展位、运输及临时展务 · "+b.Name))return Fail("展位需要¥2,000");
-            BrandTake(shopId,product,3);
-            _brands.Exhibits=AppendBrand(_brands.Exhibits,new BrandExhibit{Id=brandId+":expo:"+day,BrandId=brandId,ShopId=shopId,ProductId=product,Focus=focus,Day=day});
-            Say("参展报名成功，3件样品已交付展务。请在"+new GameDate(day)+" 09:00—17:00到云帆会展中心，完成现场接待。");return true;
+            // Existing callers enter the new preparation rules; old saved exhibits retain their format.
+            return BookQuarterlyExpo(brandId,shopId,0,new[]{product},ExpoAvailableKols(brandId,NextBrandExpoDay).Take(1).ToArray());
         }
         public string BrandExpoBlocker(string id)
         {
+            var modern=_brands.Exhibits.FirstOrDefault(x=>x.Id==id&&x.Format==2);if(modern!=null)return ExpoStartBlocker(id);
             var e=_brands.Exhibits.FirstOrDefault(x=>x.Id==id);if(e==null||e.Finished||e.Missed)return "展会已结束";
             if(BrandDay!=e.Day)return "请在展会当天到场";
             long minute=Clock.Now.TotalMinutes%1440;if(minute<540||minute>=1020)return "展会开放时间09:00—17:00";
@@ -144,6 +138,7 @@ namespace PCShopSell.Core.Session
         }
         public bool ActBrandExpo(string id,string choice)
         {
+            if(_brands.Exhibits.Any(x=>x.Id==id&&x.Format==2))return Fail("请进入4天展会现场，处理当前事件与舞台互动");
             string why=BrandExpoBlocker(id);if(why!=null)return Fail(why);
             if(choice!="media"&&choice!="buyers"&&choice!="design")return false;
             var e=_brands.Exhibits.First(x=>x.Id==id);var b=Brand(e.BrandId);
@@ -164,6 +159,8 @@ namespace PCShopSell.Core.Session
         {
             var e=_brands.Exhibits.FirstOrDefault(x=>x.Id==exhibitId);
             if(IsGameOver||e==null||e.Day<=BrandDay||e.Finished||e.Missed||CityPersonState(personId)==null)return false;
+            if(e.Format==2)return Fail("新版展会在报名时选择已签约KOL，不接受临时未签约嘉宾");
+            if(!staff&&!_kol.Contracts.Any(c=>c.PersonId==personId&&c.BrandId==e.BrandId&&KolContractCurrent(c,Clock.Now.TotalMinutes)))return Fail("站台嘉宾必须已与本品牌签约");
             if(staff)
             {if(e.StaffPersonId!=null||!Employees.Any(a=>a.Shop?.Place.Id==e.ShopId&&PersonIdOf(a.Person)==personId))return Fail("只能安排展品来源门店的员工，每场一人");}
             else if(e.GuestPersonId!=null||!new[]{"life_creator","life_designer","life_clothier"}.Contains(personId))return false;
@@ -173,8 +170,8 @@ namespace PCShopSell.Core.Session
             if(staff)e.StaffPersonId=personId;else e.GuestPersonId=personId;
             Meet(personId,0);Say("参展安排已记录，当天06:00起前往会展中心，活动或采购未结束时会晚到。");return true;
         }
-        private bool BrandExpoPersonReserved(string id)=>_brands.Exhibits.Any(e=>e.Day==BrandDay&&!e.Finished&&!e.Missed
-            &&Clock.MinuteOfDay>=360&&Clock.MinuteOfDay<1020&&(e.StaffPersonId==id||e.GuestPersonId==id));
+        private bool BrandExpoPersonReserved(string id)=>_brands.Exhibits.Any(e=>BrandDay>=e.Day&&BrandDay<e.Day+(e.Format==2?4:1)&&!e.Finished&&!e.Missed
+            &&Clock.MinuteOfDay>=360&&Clock.MinuteOfDay<1020&&(e.StaffPersonId==id||e.GuestPersonId==id||(e.Format==2&&e.KolIds.Contains(id)&&_kol.Contracts.Any(c=>c.BrandId==e.BrandId&&c.PersonId==id&&KolContractCurrent(c,Clock.Now.TotalMinutes)))));
         private bool TickBrandExpoPerson(CityPersonState person,long now)
         {
             if(!BrandExpoPersonReserved(person.PersonId)||!string.IsNullOrEmpty(person.ActivityId))return false;
@@ -301,7 +298,8 @@ namespace PCShopSell.Core.Session
                 if(fee>0){Ledger.ForceDebit(today,"代言分成",Money.FromCents(fee),b.Name+"昨日营业额2%");d.SharePaid+=fee;}
                 if(d.Response!="pause")b.Reputation=Math.Max(0,Math.Min(100,b.Reputation-(d.Response=="negotiate"?Math.Max(0,d.Severity-1):d.Severity)+(d.Severity==0&&day%3==0?1:0)));
             }
-            foreach(var e in _brands.Exhibits.Where(e=>!e.Finished&&!e.Missed&&e.Day<day)){e.Missed=true;Say("错过展会："+Brand(e.BrandId)?.Name+"，可报名下一季度，费用不退。");}
+            SettleQuarterlyExpoAbsence(day);
+            foreach(var e in _brands.Exhibits.Where(e=>e.Format!=2&&!e.Finished&&!e.Missed&&e.Day<day)){e.Missed=true;Say("错过展会："+Brand(e.BrandId)?.Name+"，可报名下一季度，费用不退。");}
             TickBrandDeliveries(Clock.Now.TotalMinutes);
             foreach(var o in _brands.Orders.Where(o=>!o.Shipped&&!o.Done&&!o.Failed&&o.Due<day)){o.Failed=true;var b=Brand(o.BrandId);if(b!=null)b.Reputation=Math.Max(0,b.Reputation-10);Say("品牌订单逾期，口碑下降："+BrandProductName(o.ProductId));}
             foreach(var t in _brands.Tenders.Where(t=>t.Stage<4))

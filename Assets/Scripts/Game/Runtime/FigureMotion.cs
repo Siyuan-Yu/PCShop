@@ -74,6 +74,7 @@ namespace PCShopSell.Game.Runtime
         private void OnDestroy() => Active.Remove(this);
 
         // Called after all world/interior movement, including the editor smoke simulation.
+        public bool PresentationAnimation {get;set;}
         public static void AdvanceAll(float dt, bool animateIdle)
         {
             for (int i = Active.Count - 1; i >= 0; i--)
@@ -81,7 +82,7 @@ namespace PCShopSell.Game.Runtime
                 var motion = Active[i];
                 if (motion == null) { Active.RemoveAt(i); continue; }
                 if (!motion.isActiveAndEnabled) { motion.ResetMotion(); continue; }
-                motion.Advance(dt, animateIdle);
+                motion.Advance(dt, animateIdle || motion.PresentationAnimation);
             }
         }
 

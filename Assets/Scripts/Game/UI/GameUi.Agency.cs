@@ -12,6 +12,8 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private string _agencySelectedId;
+        private bool _agencyResidential;
+        private string _agencyMapDistrictId;
         private AgencyStreetMap.ViewState _agencyViewState = new AgencyStreetMap.ViewState();
         private static readonly Color AgencyPaper = new Color32(230, 224, 207, 255);
         private static readonly Color AgencyInk = new Color32(46, 66, 61, 255);
@@ -21,8 +23,12 @@ namespace PCShopSell.Game.UI
         // Selection is local UI state. Looking at a property never moves the player or signs a lease.
         private void BuildAgency(Window w, Place agency)
         {
-            var units = S.City.Places.Where(p => S.AgencyServes(agency, p))
-                .OrderBy(p => S.City.ViewPosition(p.NodeId).X).ToArray();
+            if(_agencyMapDistrictId!=agency.Id){_agencyMapDistrictId=agency.Id;_agencyViewState=new AgencyStreetMap.ViewState();}
+            var versions = Ui.Row(w.Content, 42, 8);
+            Ui.Size(Ui.Button(versions,"商铺",()=>{_agencyResidential=false;w.Rebuild();},21,!_agencyResidential?Ui.ButtonHot:Ui.ButtonBg),-1,42,1).name="AgencyCommercialTab";
+            Ui.Size(Ui.Button(versions,"住宅",()=>{_agencyResidential=true;w.Rebuild();},21,_agencyResidential?Ui.ButtonHot:Ui.ButtonBg),-1,42,1).name="AgencyResidentialTab";
+            if(_agencyResidential){BuildResidentialAgency(w,agency);return;}
+            var units = AgencyStreetMap.DistrictPlaces(S,agency);
             if (!units.Any(p => p.Id == _agencySelectedId))
                 _agencySelectedId = S.Listings.Where(l => S.AgencyServes(agency, S.ListingPlace(l)))
                     .OrderBy(l => S.LookingForFirstShop && l.PlaceId==S.City.PlayerShop().Id ? 0 : 1)

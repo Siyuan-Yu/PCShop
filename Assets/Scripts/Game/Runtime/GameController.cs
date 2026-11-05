@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -281,6 +281,7 @@ namespace PCShopSell.Game
         {
             if (!_bootstrapped || Session == null) return;
             float dt = Time.unscaledDeltaTime;
+            if(UpdateRacing(dt))return;
             HandleKeys();
             HandleMovement(dt);
             UpdatePlacement();
@@ -351,6 +352,7 @@ namespace PCShopSell.Game
             World.Root.SetActive(!room);
             World.SetVenueFocus(Session.CurrentPlace?.Id);
             _avatar.Update(Session, dt);
+            SyncExpoView(dt);
             _police.Update(!room);
             _crowdSyncTimer -= dt;
             string crowdPlace=Session.CurrentPlace?.Id, crowdActivity=Session.RunningCityActivity?.Id;
@@ -416,6 +418,7 @@ namespace PCShopSell.Game
             if (InInterior)
                 return Interior.OwnerWorld + new Vector3(0, 0.8f, -1.2f) + CameraRig.Rotation * Vector3.right * ((zoom > 0 ? zoom : Cam.orthographicSize) * Cam.aspect * 0.28f);
               var closeView=CityCloseView;
+              if(ExpoView?.Open==true)return ExpoCameraFocus(zoom>0?zoom:_rig.Size);
               if(closeView!=null)return CityCloseFocus(closeView);
             Vector3 p = StreetWorldBuilder.ToWorld(Session.PlayerPosition);
             if (Session.CurrentPlace != null && World.Places.TryGetValue(Session.CurrentPlace.Id, out PlaceVisual pv)) p = pv.Entrance;
@@ -432,6 +435,15 @@ namespace PCShopSell.Game
             var selected = UnityEngine.EventSystems.EventSystem.current?.currentSelectedGameObject;
             var input = selected != null ? selected.GetComponent<UnityEngine.UI.InputField>() : null;
             if (input != null && input.isFocused) return;
+            if(Ui.ExpoHudOpen)
+            {
+                if(!GameUi.PointerOverUi)_rig.Zoom(Input.mouseScrollDelta.y);
+                HandleCameraOrbit();HandleExpoPointer();
+                if(Input.GetKeyDown(KeyCode.V))FocusExpo("overview");
+                if(Input.GetKeyDown(KeyCode.F)&&Session.BrandExpoExclusive)FocusExpo(ExpoMoments.ZoneAt(Session.ActiveBrandExpo.Day,Session.ActiveBrandExpo.Decision));
+                if(Input.GetKeyDown(KeyCode.Escape))Ui.CloseTopWindow();
+                return;
+            }
             if (Session.IsWorking)
             {
                 if (Input.GetKeyDown(KeyCode.Alpha1)) Session.Time.SetSpeed(1);
@@ -495,7 +507,7 @@ namespace PCShopSell.Game
                 if (Input.GetKeyDown(KeyCode.V)) _rig.ResetView();
                 return;
             }
-            if (Ui.AnyModalOpen) { _orbiting = false; return; }
+            if (Ui.AnyModalOpen && !Ui.ExpoHudOpen) { _orbiting = false; return; }
             if (Input.GetMouseButtonDown(1) && !GameUi.PointerOverUi) _orbiting = true;
             if (!Input.GetMouseButton(1)) _orbiting = false;
             if (_orbiting) _rig.Orbit(Input.GetAxis("Mouse X") * 4f, -Input.GetAxis("Mouse Y") * 3f);
@@ -941,6 +953,11 @@ namespace PCShopSell.Game
             _rig.MinSize = home ? HomeRoomView.MinZoom : interior ? ShopInteriorView.MinZoom : 5f;
             _rig.MaxSize = home ? HomeRoomView.CameraSize : interior ? Interior.CameraSize : closeView!=null?16f:60f;
             float size = home ? HomeRoomView.DefaultZoom : interior ? Mathf.Min(ShopInteriorView.DefaultZoom, Interior.CameraSize) : closeView!=null?9.5f:16f;
+            if(ExpoView?.Open==true)
+            {
+                _rig.SetInterior(true);_rig.SetPlaceAngles(ExpoView.transform.eulerAngles.y,52f);
+                _rig.MinSize=7f;_rig.MaxSize=45f;size=ExpoView.CameraSize(Cam.aspect);
+            }
             _wasRoomKind = RoomKind;
             if (smooth) _rig.Size = size;
             else _rig.Snap(FocusPoint(size), size);
@@ -952,6 +969,12 @@ namespace PCShopSell.Game
 
         private void OnPopup(string title, string body)
         {
+            if(Session?.BrandExpoExclusive==true&&title!="你晕倒了"&&title!="住院了"){Ui.Toast(title+"："+body);return;}
+#if UNITY_EDITOR
+            // This explicit test-only jump spans a week. Keep its ordinary shop
+            // notification backlog from covering the exhibition controls.
+            if (Session?.DebugExpoFastForwarding == true) return;
+#endif
             if (title == "你晕倒了" || title == "住院了")
             {
                 Ui.CloseAllWindows();

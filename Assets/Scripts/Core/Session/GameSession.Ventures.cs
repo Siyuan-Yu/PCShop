@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -26,6 +26,8 @@ namespace PCShopSell.Core.Session
         public Money VentureOpeningCost(ShopListing listing, VentureDef def) => Money.FromYuan(def.Capital + 5000) + listing.Rent + RealEstate.Deposit(listing.Rent) + AgentFeeFor(listing.Rent);
         public string VentureBlocker(string placeId, string kind)
         {
+            if(placeId=="life_expo")return "会展中心不开放整栋租赁经营";
+            if(kind=="cars" && DistrictAccessTier<1)return "二手车行需要先解锁社区片区";
             var d = Ventures.Get(kind); var l = _listings.Find(x => x.PlaceId == placeId);
             if (!HasShop) return "先把主店开起来";
             if (d == null || l == null || l.OpenDay > Clock.Today.TotalDays || l.CloseDay < Clock.Today.TotalDays) return "请选择当前可签约的空铺";
@@ -33,7 +35,7 @@ namespace PCShopSell.Core.Session
             if (IsMyShop(City.GetPlace(placeId)) || VentureAt(placeId) != null) return "这间铺子已在经营";
             if (_ventures.Count(x => !IsParkVenture(x)) >= 6) return "最多管理 6 家委托经营的门店";
             if (PlayerShop.Reputation < d.MinReputation) return $"知名度需要 {d.MinReputation:0}";
-            if ((kind == "esports" || kind == "cars" || kind == "stay") && l.Size == ShopSize.Small) return "该业态需要中型或大型铺面";
+            if ((kind == "esports" || kind == "stay") && l.Size == ShopSize.Small) return "该业态需要中型或大型铺面";
             if (d.HardwareCount > 0 && PartCatalog.BuildList(d.HardwareTier).Any(p => PlayerShop.Stock.CountAll(p) < d.HardwareCount)) return $"主店需备齐 {d.HardwareCount} 套{PartCatalog.TierName(d.HardwareTier)}散件";
             if (Ledger.Balance < VentureOpeningCost(l, d)) return "现金不足（含装修、首月租金、押金、中介费和 5,000 周转金）";
             return null;
@@ -95,6 +97,7 @@ namespace PCShopSell.Core.Session
         public bool CloseVenture(string id)
         {
             var v=VentureAt(id); if(v==null || IsGameOver) return false;
+            if(v.Kind=="cars" && _usedMotors.Any(c=>c.ShopId==id))return Fail("请先售出库存车或取回车库，再关闭车行。");
             Money refund=VentureExitValue(v);
             if(refund.IsPositive) Ledger.Credit(Clock.Today,"企业清算",refund,Ventures.Get(v.Kind).Name);
             else if(refund.IsNegative) Ledger.ForceDebit(Clock.Today,"企业清算",-refund,Ventures.Get(v.Kind).Name);
@@ -119,6 +122,7 @@ namespace PCShopSell.Core.Session
                 // 首期租金已付；之后逐日计提。停业仍有租金及 20% 留任工资。
                 long rent=(day-v.OpenDay<=30 || PropertyAt(v.PlaceId)!=null || IsParkVenture(v)) ? 0 : v.RentCents/30;
                 long wages=d.DailyWages*100;
+                if(v.Kind=="cars"){SettleUsedMotors(v,today,rent+(v.Paused?wages/5:wages));continue;}
                 double location=LocationFactorOf(VentureLocation(v));
                 bool weekend=day%7==5 || day%7==6;
                 double seasonal=d.Id=="flowers" && day%30==13 ? 1.8 : weekend && d.Id!="branch" && d.Id!="cars" ? 1.25 : 1;
@@ -146,7 +150,7 @@ namespace PCShopSell.Core.Session
         public string PropertyBlocker(string id, bool mortgage) => CityPropertyPurchaseBlocker(id, mortgage);
         public bool BuyProperty(string id, bool mortgage) => PurchaseCityProperty(id, mortgage);
         public Money PropertySaleNet(OwnedProperty p) => Money.FromCents(p.PriceCents).Scale(.9) - Money.FromCents(p.MortgageCents);
-        public bool SellProperty(string id) => SellCityProperty(id);
+        public bool SellProperty(string id) => City.HasPlace(id)&&City.GetPlace(id).Kind==PlaceKind.Home?SellResidentialInvestment(id):SellCityProperty(id);
         public bool RepayMortgage(string id)
         {
             var p = PropertyAt(id); if (p == null || p.MortgageCents <= 0 || IsGameOver) return false;

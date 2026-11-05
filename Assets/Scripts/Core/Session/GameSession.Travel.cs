@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -218,31 +218,13 @@ namespace PCShopSell.Core.Session
 
         public bool BuyVehicle(VehicleKind kind,bool notify=true)
         {
-            if (CurrentPlace == null || CurrentPlace.Kind != PlaceKind.Dealer) return Fail("要在车行买。");
-            if (!IsDealerOpen) return Fail("车行 9:00–19:00 营业。");
-            VehicleSpec v = Vehicles.Get(kind);
-            if (!v.Purchasable) return false;
-            // 可购买多台同类车，分别分配给老板和进货员。
-            if (!Ledger.TryDebit(Clock.Today, "载具", v.Price, v.Name)) return Fail($"{v.Name}要 {v.Price}，钱不够。");
-            _owned.Add(kind);
-            if(notify)Show("买到了" + v.Name, v.Illegal
-                ? $"{v.Name}在城里不能上路——巡逻交警看到就会追，追上罚款，还可能扣车。"
-                : kind == VehicleKind.Car ? "商务出行，拥有后魅力 +2；日养护费 ¥40（含油费、保险）。"
-                : kind == VehicleKind.Van ? "合法运货，容量 80 格；日养护费 ¥60（含油费、保险）。" : "比走路快三倍，能带一点货。");
-            return true;
+            return Vehicles.Get(kind).Purchasable && BuyMotor(MotorCatalog.Legacy(kind).Id);
         }
 
         public bool SellVehicle(VehicleKind kind)
         {
-            if (IsGameOver || CurrentPlace == null || CurrentPlace.Kind != PlaceKind.Dealer || !IsDealerOpen || !_owned.Contains(kind)) return false;
-            if (FreeVehicleCount(kind) <= 0)
-            {
-                if (Vehicle != kind) return Fail("车辆被员工使用或扣押，不能出售。");
-                if (!SetVehicle(VehicleKind.Walk)) return false;
-            }
-            _owned.Remove(kind);
-            Ledger.Credit(Clock.Today, "载具出售", Vehicles.Get(kind).Price.Scale(.6), Vehicles.Get(kind).Name);
-            return true;
+            SyncGarage();var v=_garage.FirstOrDefault(g=>MotorCatalog.Get(g.ModelId).Kind==kind);
+            return v!=null&&SellMotor(v.Id);
         }
 
         private void ImpoundVehicle(VehicleKind kind)

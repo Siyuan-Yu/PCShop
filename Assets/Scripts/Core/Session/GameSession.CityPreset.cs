@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
@@ -11,7 +11,7 @@ namespace PCShopSell.Core.Session
         public static GameSession CreateCityLifePreset(CityLayout city,string scenario)
         {
             bool clothing=scenario=="clothing"||scenario.StartsWith("clothing_",StringComparison.Ordinal);
-            int day=scenario=="clothing_spring"?44:scenario=="clothing_summer"?134:scenario=="clothing_autumn"?224:clothing?279:scenario=="expo"?21:scenario=="assets"?29:16;
+            int day=scenario=="brand_expo"||scenario=="kol_live"||scenario=="quarter_expo"?68:scenario=="clothing_spring"?44:scenario=="clothing_summer"?134:scenario=="clothing_autumn"?224:clothing?279:scenario=="expo"?21:scenario=="assets"?29:16;
             var s=new GameSession(city,20261101,Money.FromYuan(scenario=="assets"?2500000:150000),GameTimestamp.From(new GameDate(day),scenario=="night"?20*60:9*60),true,true,true);
             s.IsCityLifeTest=true;s.EventsEnabled=false;
             s.Flags.Add("tutorial:issued:cashflow");
@@ -62,6 +62,12 @@ namespace PCShopSell.Core.Session
                 s.ApplyUpgrades();
             }
             if(scenario=="expo") {s.Leave();s.ArriveAtNode(city.GetPlace("life_expo").NodeId);}
+#if UNITY_EDITOR
+            if(scenario=="brand_expo")s.PrepareBrandExpoAcceptance();
+            if(scenario=="kol_live")s.PrepareKolLiveAcceptance();
+            if(scenario=="quarter_expo")s.PrepareQuarterlyExpoAcceptance();
+            if(scenario=="racing")s.PrepareRacingAcceptance();
+#endif
             return s;
         }
     }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -54,7 +54,7 @@ namespace PCShopSell.Core.Session
         private readonly List<OwnedShop> _shops = new List<OwnedShop>();
         private OwnedShop _focus;
         private readonly Place _initialHome;
-        public Place Home => HomeTier>0 && City.HasPlace("home_tier"+HomeTier)?City.GetPlace("home_tier"+HomeTier):_initialHome;
+        public Place Home => City.HasPlace(_residentialHomeId)?City.GetPlace(_residentialHomeId):HomeTier>0 && City.HasPlace("home_tier"+HomeTier)?City.GetPlace("home_tier"+HomeTier):_initialHome;
         public PoliceSystem Police { get; }
         public Online1788 Online { get; }
         public PlayerStats Player { get; } = new PlayerStats();
@@ -156,7 +156,7 @@ namespace PCShopSell.Core.Session
         public int Tick(double realSeconds)
         {
             _manualMoving = false;
-            if (IsGameOver || !Time.IsRunning || realSeconds <= 0) return 0;
+            if (Racing || IsGameOver || !Time.IsRunning || realSeconds <= 0) return 0;
             _activeCheckoutSeconds+=Math.Min(realSeconds,TimeController.MaxTickSeconds);
             double scaled = Math.Min(realSeconds, TimeController.MaxTickSeconds) * Time.Speed * TimeController.WorldRate;
 
@@ -175,6 +175,7 @@ namespace PCShopSell.Core.Session
         /// <summary>推进时钟并处理推进中触发的晕倒、住院。所有改变时间的操作都走这里。</summary>
         public void AdvanceClock(int minutes)
         {
+            if(BrandExpoExclusive&&!ExpoTimeAdvancing)return;
             if (minutes <= 0) return;
             int interruption = _bodyInterruptVersion;
             SynchronizeEnergyExhaustion();
@@ -200,6 +201,8 @@ namespace PCShopSell.Core.Session
         public bool Enter(Place place)
         {
             if (place == null) throw new ArgumentNullException(nameof(place));
+            if(Racing)return Fail("请先完成或退出当前比赛。");
+            if(BrandExpoExclusive)return Fail("正在参加展会，闭展后才能前往其他地点。");
             if (IsWorking) return Fail("正在打工，收工后才能离开或去其他地方。");
             if (Trip != null) return Fail("还在路上。");
             if (OffNode)
@@ -374,13 +377,13 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>身家：现金 + 库存九折 + 铺子押金（退租能拿回来）。</summary>
-        public Money VehicleValue => Money.FromCents(_owned.Sum(v => Vehicles.Get(v).Price.Scale(.6).Cents));
+        public Money VehicleValue => Money.FromYuan(Garage.Sum(v => (long)(MotorCatalog.Get(v.ModelId).Price * .6 * v.Condition / 100)));
         public Money ContractDeposits => Money.FromCents(_contracts.Where(x => x.Accepted && !x.Settled).Sum(x => Money.FromCents(x.DepositCents).Scale((double)(x.Count - x.Failed) / Math.Max(1, x.Count)).Cents));
         public Money TotalDebt => SupplierDebtTotal + MortgageDebt + AppLoanDebt;
         public Money ShopDeposits => Money.FromCents(_shops.Where(s => s.Rented).Sum(s => s.Lease.Deposit.Cents));
 
         public Money NetWorth() => Ledger.Balance + InventoryValue() + ShopDeposits + (PendingLease?.Deposit ?? Money.Zero) + ContractDeposits
-            + VehicleValue + VentureValue + PropertyValue + Money.FromCents(HomePriceCents) + FundValue + CityEquityValue - TotalDebt;
+            + VehicleValue + UsedMotorAssetValue + VentureValue + PropertyValue + Money.FromCents(HomePriceCents) + FundValue + CityEquityValue - TotalDebt;
 
         public void Dispose()
         {
@@ -393,6 +396,7 @@ namespace PCShopSell.Core.Session
 
         private void OnTimeAdvanced(GameTimestamp from, GameTimestamp to)
         {
+            TickKolStreams(from.TotalMinutes,to.TotalMinutes);
             TickEmployeePayroll(from.TotalMinutes, to.TotalMinutes);
             TickCityPeople(to.TotalMinutes);
             TickBrandDeliveries(to.TotalMinutes);
@@ -479,6 +483,7 @@ namespace PCShopSell.Core.Session
             SpoilRetailGoods(today.TotalDays);
 
             PayWages(previous);
+            SettleKolDailyWages(today.TotalDays*1440L);
             ApplyEmployeeTransfers(today);
             ProcessScheduledCredits(today);
             CollectDueAppLoans();

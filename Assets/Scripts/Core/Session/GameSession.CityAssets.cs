@@ -40,8 +40,8 @@ namespace PCShopSell.Core.Session
             }
         }
 
-        public IEnumerable<Place> CityCommercialProperties => City.Places.Where(p => p.IsTradable ||
-            (p.Kind == PlaceKind.Shop && !(p.Business ?? "").StartsWith("venue_", StringComparison.Ordinal)));
+        public IEnumerable<Place> CityCommercialProperties => City.Places.Where(p => p.Id!="life_expo"&&(p.IsTradable ||
+            (p.Kind == PlaceKind.Shop && !(p.Business ?? "").StartsWith("venue_", StringComparison.Ordinal))));
         public bool IsPlayerPropertyOccupied(string id)
         {
             var p = PropertyAt(id);
@@ -139,6 +139,7 @@ namespace PCShopSell.Core.Session
         }
         public bool SetCityPropertyRental(string id, bool rentOut)
         {
+            if(City.HasPlace(id)&&City.GetPlace(id).Kind==PlaceKind.Home)return Fail("住宅只按实际NPC住户收租，空房不产生托管租金。");
             var p = PropertyAt(id); if (p == null || IsGameOver) return false;
             if (!InAgency) return Fail("请到中介办理出租登记。");
             if (!City.HasPlace(id) || !AgencyServes(CurrentPlace, City.GetPlace(id))) return Fail("请到房源所属片区的中介办理。");
@@ -151,6 +152,7 @@ namespace PCShopSell.Core.Session
         }
         public bool OpenCityOwnedShop(string id, string retailKind = "computer")
         {
+            if(!City.HasPlace(id)||City.GetPlace(id).Kind!=PlaceKind.Shop)return Fail("住宅不能作为商铺开业。");
             var p = PropertyAt(id); if (p == null || IsGameOver || !InAgency || !AgencyServes(CurrentPlace, City.GetPlace(id))) return Fail("在中介选择自有空置物业开店。");
             if (p.UseMode != "vacant" || ShopAt(id) != null || VentureAt(id) != null) return Fail("该物业仍被使用，不能清走原租户。");
             var place = City.GetPlace(id); var kind = IsDedicatedVenue(place)?"computer":RetailShopTypes.Valid(retailKind);
@@ -170,13 +172,21 @@ namespace PCShopSell.Core.Session
                 p.LastSettledMonth = month;
                 string basis = "property:" + p.PlaceId + ":month:" + month;
                 bool self = ShopAt(p.PlaceId) != null || VentureAt(p.PlaceId) != null || p.PlaceId == ParkPlaceId;
+                bool residential=City.HasPlace(p.PlaceId)&&City.GetPlace(p.PlaceId).Kind==PlaceKind.Home;
+                var residents=residential?ResidentialTenants(p.PlaceId):null;
+                if(residential)
+                {
+                    p.TenantName=string.Join("、",residents.Select(r=>CityPerson(r.PersonId)?.Name??r.PersonId));
+                    p.TenantPersonId=residents.FirstOrDefault()?.PersonId;
+                    p.UseMode=residents.Length>0?"npc":"vacant";
+                }
                 if (!self && (p.UseMode == "npc" || p.UseMode == "managed"))
                 {
                     Money rent = Money.FromCents(p.MonthlyRentCents).Scale(p.UseMode == "managed" ? .85 : 1);
                     if (rent.IsPositive) Ledger.Credit(today, "物业租金", rent, p.TenantName + "本月租金", LedgerAttribution.ForAsset(p.PlaceId, basis + ":rent"));
                 }
                 Money maintenance = Money.FromCents(p.PriceCents).Scale(.001);
-                if (maintenance.IsPositive) Ledger.ForceDebit(today, "物业维护", maintenance, "商用物业月维护", LedgerAttribution.ForAsset(p.PlaceId, basis + ":maintenance"));
+                if (maintenance.IsPositive) Ledger.ForceDebit(today, "物业维护", maintenance, residential?"出租住宅月维护":"商用物业月维护", LedgerAttribution.ForAsset(p.PlaceId, basis + ":maintenance"));
                 if (p.MortgageCents > 0)
                 {
                     long principal = Math.Min(p.MortgageCents, p.MonthlyPrincipalCents);

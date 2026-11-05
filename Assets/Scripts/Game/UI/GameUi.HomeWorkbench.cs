@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -179,6 +179,7 @@ namespace PCShopSell.Game.UI
             {
                 WbButton(list,"具体物业、租约与收租",OpenCityProperties,"WorkbenchAssets");
                 WbButton(list,"车辆与占用",OpenFleetPanel,"WorkbenchVehicles");
+                if(S.RacingUnlocked)WbButton(list,"湖区赛车",OpenRacingDestinations,"WorkbenchRacing");
                 if(BusinessUnlocked)WbButton(list,"住处租约",OpenCityResidence,"WorkbenchPropertyAccounts");
                 if(S.HasPark)WbButton(list,"园区管理",()=>{_businessTab=6;ShowBusinessPanel(false);},"WorkbenchPark");
             }

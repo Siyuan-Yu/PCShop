@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -187,6 +187,7 @@ namespace PCShopSell.Game.UI
             foreach(var venture in S.ManagedVentures.Where(v => _businessAssetId == null || v.PlaceId == _businessAssetId))
             {
                 var v=venture;var d=Ventures.Get(v.Kind);var c=BusinessCard(w.Content,d.Name+" · "+S.VentureLocationName(v)+(v.Paused ? "  [停业]" : "  [营业]"));
+                if(v.Kind=="cars")Ui.Size(Ui.Button(c,"到车行管理车源 / 库存 / 买家",()=>{CloseWindowSilently(w);S.BeginCityTravel(v.PlaceId);},18,Ui.ButtonHot),-1,40);
                 Line(c,$"周转金 {Money.FromCents(v.ReserveCents)}   昨日收入 {Money.FromCents(v.LastSalesCents)} / 成本 {Money.FromCents(v.LastCostsCents)}",17);
                 Line(c,$"累计经营结余 {Money.FromCents(v.TotalOperatingCents)}    定价 {v.PriceFactor:P0}    维护状态 {v.Condition:P0}",17);
                 Para(c,$"月租 {Money.FromCents(v.RentCents)}，首 30 天已付（自有物业免租）。{d.Description}",15,Ui.Dim);
@@ -194,10 +195,13 @@ namespace PCShopSell.Game.UI
                 BusinessAction(row,"补资 ¥5,000",()=>S.TransferVentureCash(v.PlaceId,5000,false),w,S.Ledger.Balance>=Money.FromYuan(5000));
                 BusinessAction(row,"取回 ¥1,000",()=>S.TransferVentureCash(v.PlaceId,1000,true),w,v.ReserveCents>=100000);
                 BusinessAction(row,v.Paused ? "恢复营业" : "暂停营业",()=>S.ToggleVenture(v.PlaceId),w);
+                if(v.Kind!="cars")
+                {
                 var controls=Ui.Row(c,40);
                 BusinessAction(controls,"定价 −10%",()=>S.SetVenturePrice(v.PlaceId,Math.Max(.8,v.PriceFactor-.1)),w,v.PriceFactor>.8);
                 BusinessAction(controls,"定价 +10%",()=>S.SetVenturePrice(v.PlaceId,Math.Min(1.3,v.PriceFactor+.1)),w,v.PriceFactor<1.3);
                 BusinessAction(controls,$"维护 · {S.VentureRepairCost(v)}",()=>S.MaintainVenture(v.PlaceId),w,v.Condition<.999 && S.Ledger.Balance>=S.VentureRepairCost(v));
+                }
                 Ui.Size(Ui.Button(c,$"关闭并清算…  预计回收 {S.VentureExitValue(v)}",()=>ConfirmBusiness("关闭门店", "清退员工，设备与装修按 30% × 维护状态回收，退还押金与周转金。自有物业保留并交由中介出租。",()=>{S.CloseVenture(v.PlaceId);w.Rebuild();}),16,Ui.Warn),-1,36);
             }
             if(_businessAssetId!=null){AgencyLink(w,S.City.GetPlace(_businessAssetId));return;}

@@ -62,6 +62,7 @@ namespace PCShopSell.Game.UI
         private readonly GameController _ctrl;
         private readonly Canvas _labelCanvas;
         private readonly Canvas _hudCanvas;
+        private readonly CanvasGroup _expoHudGate;
         private readonly Canvas _dockCanvas;
         private readonly Canvas _modalCanvas;
         private readonly Canvas _toastCanvas;
@@ -101,6 +102,7 @@ namespace PCShopSell.Game.UI
             Ui.EnsureEventSystem();
             _labelCanvas = Ui.CreateCanvas("UI_Labels", 0);
             _hudCanvas = Ui.CreateCanvas("UI_Hud", 10);
+            _expoHudGate=_hudCanvas.gameObject.AddComponent<CanvasGroup>();
             _dockCanvas = Ui.CreateCanvas("UI_Dock", 20);
             _modalCanvas = Ui.CreateCanvas("UI_Modal", 30);
             _toastCanvas = Ui.CreateCanvas("UI_Toast", 25);
@@ -116,6 +118,9 @@ namespace PCShopSell.Game.UI
         public void Update(float dt)
         {
             if (S == null) return;
+            EnsureQuarterlyExpoWindow();
+            _expoHudGate.interactable=!ExpoHudOpen;
+            _labelCanvas.enabled=!ExpoHudOpen;
             RefreshShopDockVisibility();
             RefreshWorkbenchAccess();
             HoldRepeat.AdvanceActiveHold(Time.unscaledDeltaTime);
@@ -217,6 +222,9 @@ namespace PCShopSell.Game.UI
             _businessButton = Ui.Size(Ui.Button(row, "经营", OpenBusinessPanel, 18), 66);
             _businessButton.gameObject.SetActive(true);
             _businessButton.Tip("<b>经营</b>　快捷键：J\n资产与负债、直供、企业合同、分店、园区等后期经营。");
+            _brandButton=Ui.Size(Ui.Button(row,"品牌",OpenBrandBusiness,18),66);
+            _brandButton.name="HudBrand";_brandButton.gameObject.SetActive(S.BrandManagementUnlocked);
+            _brandButton.Tip("品牌管理、KOL签约、直播排班与直播间。");
             _noticeButtonText = Ui.Size(Ui.Button(row, "通知", OpenNoticeHistory, 16), 66).GetComponentInChildren<Text>();
             Ui.Size(Ui.Button(row, "菜单", OpenSystemPanel, 18), 66).Tip("<b>菜单</b>　快捷键：Esc\n存档、读档、重新开始和音效设置。");
 
@@ -268,6 +276,7 @@ namespace PCShopSell.Game.UI
         }
 
         private Button _businessButton;
+        private Button _brandButton;
 
         /// <summary>编辑器里才有的作弊工具按钮（打包时整段不编译）。</summary>
         partial void AddCheatButton(Transform row);
@@ -278,6 +287,7 @@ namespace PCShopSell.Game.UI
             _noticeButtonText.text = _unreadNotices > 0 ? "通知 " + Math.Min(99, _unreadNotices) : "通知";
             UpdateSleepBanner();
             if (!_businessButton.gameObject.activeSelf) _businessButton.gameObject.SetActive(true);
+            if(_brandButton!=null)_brandButton.gameObject.SetActive(S.BrandManagementUnlocked);
             _dateText.text = (S.IsCityLifeTest?"测试 ":"")+$"{now.Date.Year}年{now.Date.Month}/{now.Date.Day} {Ui.WeekdayName(now.Date.Weekday)} {Ui.Hm(now.MinuteOfDay)}\n天气 · {S.WeatherSummary}";
             _cashText.text = S.Ledger.Balance.ToString();
             _cashText.color = S.Ledger.Balance.IsNegative ? Ui.Warn : Ui.Good;

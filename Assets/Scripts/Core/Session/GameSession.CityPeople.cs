@@ -298,6 +298,7 @@ namespace PCShopSell.Core.Session
                 if(TickBrandExpoPerson(p,now))continue;
                 if(!string.IsNullOrEmpty(p.ActivityId))continue;
                 if(!string.IsNullOrEmpty(p.VisitId)){p.Task=CityPersonTask.Shopping;continue;}
+                if(HoldKolLivePerson(p,now))continue;
                 if (p.PersonId == CityLifeCatalog.InvitationTestPersonId)
                 {
                     TickInvitationTestWander(p, now);

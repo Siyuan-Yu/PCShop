@@ -56,7 +56,7 @@ namespace PCShopSell.Core.Session
 
         private void RollDailyEvent(GameDate today)
         {
-            if (!EventsEnabled || IsGameOver || PendingEvent != null || _sleeping || !HasShop) return;
+            if (!EventsEnabled || IsGameOver || PendingEvent != null || _sleeping || !HasShop || BrandExpoExclusive) return;
             if (today.TotalDays < 2) return;
             if (!Random.Chance(EventDailyChance)) return;
 

@@ -17,6 +17,7 @@ namespace PCShopSell.Game.UI
         private void LateUpdate() => Fit();
         public void Fit()
         {
+            if(!enabled)return;
             if (_rect == null) _rect = transform as RectTransform;
             if (_rect == null || !(_rect.parent is RectTransform parent)) return;
             Vector2 wanted = _rect.rect.size;

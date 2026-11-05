@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using PCShopSell.Core.World;
 using PCShopSell.Core.Session;
@@ -82,6 +82,16 @@ namespace PCShopSell.Game.Runtime
             root.rotation=Quaternion.Euler(0,(float)p.Heading,0);
             var vis=new PlaceVisual{Place=p,Entrance=door,Root=root.gameObject};Places[p.Id]=vis;_cur=vis;
             float w=(float)p.Width,d=(float)p.Depth;
+            var track=RaceTracks.Get(p.Id);
+            if(track!=null)
+            {
+                var circuit=new GameObject("Circuit_"+p.Id);circuit.transform.SetParent(root,false);circuit.AddComponent<RaceTrackView>().Build(track);
+                BuildRaceEntrance(root,door,track);
+                var office=Prims.Box(root,"RaceReception",new Vector3(0,2,0),new Vector3(9,4,6),Mats.Lit(ArtDirection.Cream),true);
+                office.AddComponent<PlaceMarker>().PlaceId=p.Id;vis.LabelPos=door+Vector3.up*6;
+                return;
+            }
+
             bool venue=(p.Business??"").StartsWith("venue_");
             if(CityArchitecture.HasExterior(p))
             {

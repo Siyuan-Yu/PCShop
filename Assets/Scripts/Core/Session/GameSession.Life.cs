@@ -136,6 +136,7 @@ namespace PCShopSell.Core.Session
 
         private void SendHome()
         {
+            InterruptBrandExpoForHealth();
             foreach (var a in _cityActivities.Where(a => a.Active && (a.State == CityActivityPhase.Running || a.Id == CityIntent?.ActivityId)).ToArray())
                 EndCityActivity(a, CityActivityPhase.Interrupted, "因身体不适中断，仅保留已发生的消费和阶段", Clock.Now.TotalMinutes);
             StopTrip(); CancelCityTravel(); CitySleepRequested = false; _steering = false;

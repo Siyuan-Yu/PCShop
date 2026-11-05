@@ -152,15 +152,7 @@ namespace PCShopSell.Game.Runtime
         }
         private static void Expo(Transform root, float width, float depth)
         {
-            string[] names = { "供应商 / 新品", "企业需求 / 行业", "原创模型 / 创作者" };
-            for (int i = 0; i < 3; i++)
-            {
-                float x = (i - 1) * (width / 3);
-                Prims.Box(root, "ExhibitionBooth", new Vector3(x, .8f, depth - 3), new Vector3(width / 3 - .6f, 1.6f, 1.4f), Mats.Lit(i == 2 ? ArtDirection.Clay : ArtDirection.Sage));
-                Prims.SignText(root, names[i], new Vector3(x, 2.8f, depth - 1.9f), width / 3 - .5f, .8f, ArtDirection.Cream);
-                for (int j = -1; j <= 1; j++) Prims.Box(root, "OriginalDisplay", new Vector3(x + j * .7f, 1.9f, depth - 3), new Vector3(.45f, .6f, .45f), Mats.Lit(j == 0 ? ArtDirection.Brass : ArtDirection.Cream));
-            }
-            Prims.Box(root, "Reception", new Vector3(width / 2 - 1.6f, .6f, -.4f), new Vector3(2, 1.2f, 1.2f), Mats.Lit(ArtDirection.Ink));
+            root.gameObject.AddComponent<QuarterlyExpoView>().Initialize(width,depth);
         }
         private static void Park(Transform root, float width, float depth, bool hike)
         {

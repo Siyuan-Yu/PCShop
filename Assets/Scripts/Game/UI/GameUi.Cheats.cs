@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using UnityEngine;
 
 namespace PCShopSell.Game.UI
@@ -16,6 +16,12 @@ namespace PCShopSell.Game.UI
             OpenWindow("作弊工具（仅编辑器）", 560, 640, w =>
             {
                 Ui.Size(Ui.Button(w.Content, "城市生活验收预置（独立测试档）", OpenCityAcceptance, 18, Ui.Warn), -1, 48);
+                Ui.Size(Ui.Button(w.Content, "社区资格与品牌展会验收", OpenExpoAcceptance, 18, Ui.ButtonHot), -1, 48).name = "CheatBrandExpo";
+                Ui.Size(Ui.Button(w.Content,"KOL直播验收（独立测试档）",()=>
+                {
+                    CloseAllWindows();_ctrl.StartCityLifePreset("kol_live");_ctrl.Ui.OpenKolManagement();
+                },18,Ui.ButtonHot),-1,48).name="CheatKolLive";
+                Ui.Size(Ui.Button(w.Content,"赛车与二手车行验收（独立测试档）",()=>{CloseAllWindows();_ctrl.StartCityLifePreset("racing");_ctrl.Ui.OnEnteredPlace(_ctrl.Session.CurrentPlace);},18,Ui.ButtonHot),-1,48).name="CheatRacing";
                 Ui.Size(Ui.Button(w.Content, "人物与剧情配置（只读）", OpenNarrativeCatalogue, 18), -1, 44);
                 Ui.Size(Ui.Button(w.Content, "三段主线验收：一键满足前置条件", OpenDistrictAcceptance, 18, Ui.ButtonHot), -1, 48).name="CheatDistrictProgression";
                 BuildCommunityConditionsCheat(w.Content,w.Rebuild);

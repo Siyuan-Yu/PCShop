@@ -100,6 +100,7 @@ namespace PCShopSell.Core.Session
 
         public bool StartPlayerWork()
         {
+            if(BrandExpoExclusive)return Fail("请先完成展会现场活动");
             var c = WorkContract;
             if (IsGameOver || !HasWorkContract || IsWorking || CurrentPlace != WorkPlace) return false;
             int index = WorkShiftToJoin();

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -15,7 +15,7 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
-        public bool CanSave => PendingEvent == null;
+        public bool CanSave => PendingEvent == null && !Racing;
 
         public SaveData CreateSave()
         {
@@ -40,6 +40,7 @@ namespace PCShopSell.Core.Session
                 d.venueBusinesses=MyShops.Where(s=>IsDedicatedVenue(s.Place)).Select(s=>VenueOperation(s.Place.Id).Copy()).ToArray();
                 SaveAdditionalStaff(d);
                 SaveSpecialBusinesses(d);
+                SaveRacing(d);
                 return d;
             }
             finally
@@ -160,6 +161,8 @@ namespace PCShopSell.Core.Session
             SaveRealty(d);
             SaveBusiness(d);
             d.mcnIntroductions=_mcnIntroductions.Select(x=>x.Copy()).ToArray();
+            d.residentialHomeId=_residentialHomeId;
+            d.kolStreaming=_kol.Copy();
             return d;
         }
 
@@ -282,6 +285,7 @@ namespace PCShopSell.Core.Session
             _focus.EmployeeTrained = Flags.Contains(TrainedFlag);
             _focus.AutoBuild = Flags.Contains(AutoBuildFlag);
             RestoreBusiness(d);
+            _residentialHomeId=City.HasPlace(d.residentialHomeId)&&City.GetPlace(d.residentialHomeId).Kind==PlaceKind.Home?d.residentialHomeId:null;
             RestorePriceReports(d);
             RestoreAppLoans(d);
             foreach (SaveShop shop in d.extraShops ?? Array.Empty<SaveShop>()) RestoreShop(shop);
@@ -314,6 +318,8 @@ namespace PCShopSell.Core.Session
             LoadHomeWorkbench(d);
             LoadDistrictProgress(d);
             RestoreMcnIntroductions(d);
+            RestoreKolStreaming(d);
+            LoadRacing(d);
             RefreshBrandTraffic();
             EnsureFirstShopListings(Clock.Today.TotalDays);
         }

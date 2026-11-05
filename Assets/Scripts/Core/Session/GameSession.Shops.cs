@@ -74,6 +74,8 @@ namespace PCShopSell.Core.Session
             sim.OpenStatusOf=t=>IsSpecialBusiness(shop)?SpecialOpen(shop,t):sim.IsOpenAt(t);
             sim.Settings.BuildOrdersStartDay = BuildOrdersStartDay;
             sim.SalesBonusOf = () => ShopSalesBonus(shop);
+            sim.KolIntentOf = () => KolShopIntent(shop);
+            sim.KolTrafficOf = () => KolShopTraffic(shop);
             sim.HasClothingMirror = () => shop.Layout.Any(p=>FurnitureCatalog.Canonical(p.Id)==FurnitureCatalog.FittingMirror);
             sim.WorkMinute = now => WithShop(shop, () => UpdateEmployeeWork(now));
             sim.EmployeeBusy = () => shop.EmployeeBuilding;

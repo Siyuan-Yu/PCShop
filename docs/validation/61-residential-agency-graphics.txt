@@ -1,0 +1,13 @@
+SMOKE OK 营业时间实际进入城郊中介
+SMOKE OK 住宅入口不依赖后期经营解锁
+SMOKE shot starter-residences
+SMOKE OK 实际进入住宅所属中介
+SMOKE shot community-residence
+SMOKE shot purchase-confirmation
+SMOKE OK 看房与预览不搬家不扣钱
+SMOKE OK 直接全款购入并搬入
+SMOKE shot owned-residence
+SMOKE shot commercial-version
+SMOKE OK 商铺版仍显示真实鸟瞰地图
+SMOKE RESIDENTIAL AGENCY GRAPHICS COMPLETE
+SMOKE RESULT code=0 errors=0

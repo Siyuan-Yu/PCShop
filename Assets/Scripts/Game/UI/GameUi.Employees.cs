@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -115,6 +115,8 @@ namespace PCShopSell.Game.UI
         {
             OpenWindow("车辆与占用", 860, 650, w =>
             {
+                Ui.Size(Ui.Button(w.Content,"具体车型 / 改装车库",OpenMotorGarage,18,Ui.ButtonHot),-1,40);
+                Ui.Size(Ui.Button(w.Content,"湖区四大赛车场",OpenRacingDestinations,18),-1,40);
                 Para(w.Content, "每台车同时只能给一个人用。员工外出进货占用车辆，返店后释放；老板选中的出行车辆也占一台。", 18);
                 foreach (var v in Vehicles.All.Where(x => x.Purchasable))
                     Para(w.Content, $"<b>{v.Name}</b> · 载货 {v.CargoCapacity * 2:0} 千克\n{S.VehicleUsage(v.Kind)}", 18);

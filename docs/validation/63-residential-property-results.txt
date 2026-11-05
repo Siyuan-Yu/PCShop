@@ -1,0 +1,6 @@
+Residential map and tenanted ownership: headless EditMode checks
+total=73 passed=73 failed=0
+RESIDENTIAL AUDIT total=97 occupied=93 empty=4 registeredNPC=120
+Coverage: actual registered address audit, occupied NPC protection, direct ownership transfer, next-month rent via actual clock boundary, same-month/load de-duplication, empty-home rental/purchase, self-use conversion, loan and sale compatibility.
+No screenshot capture or visual inspection was run for this change, as requested.
+No Windows package, commit or push was made.

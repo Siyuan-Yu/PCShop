@@ -12,7 +12,7 @@ using UnityEngine.Rendering.Universal;
 namespace PCShopSell.EditorTools
 {
     // Isolated edit-mode art renders. Uses the production builders and lighting, never a player save.
-    public static class CityArtReview
+    public static partial class CityArtReview
     {
         private static Camera camera;
         private static DayNightLighting lighting;
@@ -63,6 +63,11 @@ namespace PCShopSell.EditorTools
                 string output="work/art-review";var args=Environment.GetCommandLineArgs();
                 for(int i=0;i<args.Length-1;i++)if(args[i]=="-artReviewOutput")output=args[i+1];
                 Directory.CreateDirectory(output);
+                if(Array.IndexOf(args,"-racingViews")>=0)
+                {
+                    RacingOverview(output);
+                    Debug.Log("RACING_MAP_REVIEW_COMPLETE "+Path.GetFullPath(output));EditorApplication.Exit(0);return;
+                }
                 if(Array.IndexOf(args,"-sideViews")>=0)
                 {
                     sideViews=true;camera.farClipPlane=5000;

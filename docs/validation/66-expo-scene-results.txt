@@ -1,0 +1,37 @@
+2026-11-05 展会场景与到场交互验证
+
+环境：Unity 2022.3.6f1，隔离副本 D:/UnityProjects/PCShop/_ci_retro_portraits。
+方式：-batchmode -nographics -runTests -testPlatform editmode。
+相关回归：108 / 108 通过，0 失败。报告 66-expo-scene-regression-tests.xml。
+闭展余货撤箱的最后调整后，场景专项再次11 / 11通过，0失败；报告66-expo-scene-final-tests.xml。
+两轮最终运行均无C#编译错误。
+
+检查组：
+QuarterlyExpoSceneTests 11/11。
+QuarterlyExpoTests 14/14。
+KolStreamingTests 14/14。
+McnIntroductionTests 8/8。
+BrandBusinessTests 16/16。
+BrandStoryTests 16/16。
+DistrictCommerceTests 7/7。
+ExpoAcceptanceTests 4/4。
+AgencyDistrictViewTests 3/3。
+FigureMotionTests 7/7。
+VenueBusinessTests 8/8。
+
+新增场景覆盖：
+- 必须在真实会展中心内且在季度展期才启用展厅；非展期为空置接待区。
+- 三种摊位尺寸、实际报名商品身份、KOL身份及人数，已交付海报。
+- KOL在异地或参与其他活动时不显示为到场；实际到场后显示。
+- 多次刷新与动画不改变存档、时间、金钱或游戏随机状态。
+- 决策切换队列/舞台道具、热度观众和库存，不重建整个展厅。
+- 连续完成24段互动后真实退回未售商品，场景备货箱撤掉，当前事件道具关闭。
+- 读档恢复当前环节；异地或过期调用现场操作不推进、不扣款。
+- 切换存档重建一份展厅，固定26个观众对象，无旧布景残留。
+- 旋转后的真实世界坐标支持场景点击；相机将目标放在左侧可视区域。
+- 实际控制器使用同一个玩家角色在馆内移动；离场恢复街道位置、镜头与动画模式。
+- 右侧现场窗口取消全屏遮罩，保留3个决策按钮、暂停时钟和参加期间不可普通关闭。
+
+限制：这是相关功能回归，不代表全项目历史测试全部通过。
+按照用户指示未截图、未查看游戏画面；未进行视觉观感或实际渲染帧率验收。
+未写入正式玩家存档，未打Windows包，未提交或推送GitHub。

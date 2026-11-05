@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="11" result="Passed" total="11" passed="11" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-04 17:58:07Z" end-time="2026-11-04 17:58:15Z" duration="8.4178726">
+  <test-suite type="TestSuite" id="2363" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1180" result="Passed" start-time="2026-11-04 17:58:07Z" end-time="2026-11-04 17:58:15Z" duration="8.417873" total="11" passed="11" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="3722" name="PCShopSell.Tests.EditMode.dll" fullname="D:/UnityProjects/PCShop/_ci_retro_portraits/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1180" result="Passed" start-time="2026-11-04 17:58:07Z" end-time="2026-11-04 17:58:15Z" duration="8.393628" total="11" passed="11" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="81748" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="3723" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1180" result="Passed" start-time="2026-11-04 17:58:07Z" end-time="2026-11-04 17:58:15Z" duration="8.382369" total="11" passed="11" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3724" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="1180" result="Passed" start-time="2026-11-04 17:58:07Z" end-time="2026-11-04 17:58:15Z" duration="8.371649" total="11" passed="11" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="3150" name="QuarterlyExpoSceneTests" fullname="PCShopSell.Tests.QuarterlyExpoSceneTests" classname="PCShopSell.Tests.QuarterlyExpoSceneTests" runstate="Runnable" testcasecount="11" result="Passed" start-time="2026-11-04 17:58:07Z" end-time="2026-11-04 17:58:15Z" duration="8.346474" total="11" passed="11" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="3151" name="ActualVenueAndExhibitionDateBothGateThePopulatedScene" fullname="PCShopSell.Tests.QuarterlyExpoSceneTests.ActualVenueAndExhibitionDateBothGateThePopulatedScene" methodname="ActualVenueAndExhibitionDateBothGateThePopulatedScene" classname="PCShopSell.Tests.QuarterlyExpoSceneTests" runstate="Runnable" seed="656304890" result="Passed" start-time="2026-11-04 17:58:07Z" end-time="2026-11-04 17:58:07Z" duration="0.458832" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.QuarterlyExpoSceneTests.ActualVenueAndExhibitionDateBothGateThePopulatedScene
+REGRESSION DONE PCShopSell.Tests.QuarterlyExpoSceneTests.ActualVenueAndExhibitionDateBothGateThePopulatedScene Passed
+]]></output>
+            </test-case>
+            <test-case id="3157" name="ChoicesChangeTheEventCrowdAndStockWithoutRebuildingTheHall" fullname="PCShopSell.Tests.QuarterlyExpoSceneTests.ChoicesChangeTheEventCrowdAndStockWithoutRebuildingTheHall" methodname="ChoicesChangeTheEventCrowdAndStockWithoutRebuildingTheHall" classname="PCShopSell.Tests.QuarterlyExpoSceneTests" runstate="Runnable" seed="945996906" result="Passed" start-time="2026-11-04 17:58:07Z" end-time="2026-11-04 17:58:12Z" duration="5.068907" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.QuarterlyExpoSceneTests.ChoicesChangeTheEventCrowdAndStockWithoutRebuildingTheHall
+REGRESSION DONE PCShopSell.Tests.QuarterlyExpoSceneTests.ChoicesChangeTheEventCrowdAndStockWithoutRebuildingTheHall Passed
+]]></output>
+            </test-case>
+            <test-case id="3162" name="ControllerFramesTheRealVenueMovesTheExistingPlayerAndRestoresTheStreetView" fullname="PCShopSell.Tests.QuarterlyExpoSceneTests.ControllerFramesTheRealVenueMovesTheExistingPlayerAndRestoresTheStreetView" methodname="ControllerFramesTheRealVenueMovesTheExistingPlayerAndRestoresTheStreetView" classname="PCShopSell.Tests.QuarterlyExpoSceneTests" runstate="Runnable" seed="1415167524" result="Passed" start-time="2026-11-04 17:58:12Z" end-time="2026-11-04 17:58:13Z" duration="0.242915" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.QuarterlyExpoSceneTests.ControllerFramesTheRealVenueMovesTheExistingPlayerAndRestoresTheStreetView
+REGRESSION DONE PCShopSell.Tests.QuarterlyExpoSceneTests.ControllerFramesTheRealVenueMovesTheExistingPlayerAndRestoresTheStreetView Passed
+]]></output>
+            </test-case>
+            <test-case id="3156" name="HostsAreShownOnlyAfterRealArrivalAndViewDoesNotAdvanceTheSimulation" fullname="PCShopSell.Tests.QuarterlyExpoSceneTests.HostsAreShownOnlyAfterRealArrivalAndViewDoesNotAdvanceTheSimulation" methodname="HostsAreShownOnlyAfterRealArrivalAndViewDoesNotAdvanceTheSimulation" classname="PCShopSell.Tests.QuarterlyExpoSceneTests" runstate="Runnable" seed="1404923339" result="Passed" start-time="2026-11-04 17:58:13Z" end-time="2026-11-04 17:58:13Z" duration="0.272154" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.QuarterlyExpoSceneTests.HostsAreShownOnlyAfterRealArrivalAndViewDoesNotAdvanceTheSimulation
+REGRESSION DONE PCShopSell.Tests.QuarterlyExpoSceneTests.HostsAreShownOnlyAfterRealArrivalAndViewDoesNotAdvanceTheSimulation Passed
+]]></output>
+            </test-case>
+            <test-case id="3161" name="OnsiteHudLeavesTheSceneUncoveredAndRemoteBrandAccessCannotOpenIt" fullname="PCShopSell.Tests.QuarterlyExpoSceneTests.OnsiteHudLeavesTheSceneUncoveredAndRemoteBrandAccessCannotOpenIt" methodname="OnsiteHudLeavesTheSceneUncoveredAndRemoteBrandAccessCannotOpenIt" classname="PCShopSell.Tests.QuarterlyExpoSceneTests" runstate="Runnable" seed="903193094" result="Passed" start-time="2026-11-04 17:58:13Z" end-time="2026-11-04 17:58:13Z" duration="0.303246" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.QuarterlyExpoSceneTests.OnsiteHudLeavesTheSceneUncoveredAndRemoteBrandAccessCannotOpenIt
+REGRESSION DONE PCShopSell.Tests.QuarterlyExpoSceneTests.OnsiteHudLeavesTheSceneUncoveredAndRemoteBrandAccessCannotOpenIt Passed
+]]></output>
+            </test-case>
+            <test-case id="3158" name="ReloadReconstructsTheCurrentStageAndCannotAdvanceFromElsewhere" fullname="PCShopSell.Tests.QuarterlyExpoSceneTests.ReloadReconstructsTheCurrentStageAndCannotAdvanceFromElsewhere" methodname="ReloadReconstructsTheCurrentStageAndCannotAdvanceFromElsewhere" classname="PCShopSell.Tests.QuarterlyExpoSceneTests" runstate="Runnable" seed="418790186" result="Passed" start-time="2026-11-04 17:58:13Z" end-time="2026-11-04 17:58:14Z" duration="0.608259" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.QuarterlyExpoSceneTests.ReloadReconstructsTheCurrentStageAndCannotAdvanceFromElsewhere
+REGRESSION DONE PCShopSell.Tests.QuarterlyExpoSceneTests.ReloadReconstructsTheCurrentStageAndCannotAdvanceFromElsewhere Passed
+]]></output>
+            </test-case>
+            <test-case id="3159" name="ReusingTheSceneAfterChangingSavesBuildsOnlyOneHallAndLeavesOldCrowdsInactive" fullname="PCShopSell.Tests.QuarterlyExpoSceneTests.ReusingTheSceneAfterChangingSavesBuildsOnlyOneHallAndLeavesOldCrowdsInactive" methodname="ReusingTheSceneAfterChangingSavesBuildsOnlyOneHallAndLeavesOldCrowdsInactive" classname="PCShopSell.Tests.QuarterlyExpoSceneTests" runstate="Runnable" seed="1484218374" result="Passed" start-time="2026-11-04 17:58:14Z" end-time="2026-11-04 17:58:14Z" duration="0.446861" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.QuarterlyExpoSceneTests.ReusingTheSceneAfterChangingSavesBuildsOnlyOneHallAndLeavesOldCrowdsInactive
+REGRESSION DONE PCShopSell.Tests.QuarterlyExpoSceneTests.ReusingTheSceneAfterChangingSavesBuildsOnlyOneHallAndLeavesOldCrowdsInactive Passed
+]]></output>
+            </test-case>
+            <test-case id="3160" name="ScenePickingAndFocusRespectTheRotatedWorldVenue" fullname="PCShopSell.Tests.QuarterlyExpoSceneTests.ScenePickingAndFocusRespectTheRotatedWorldVenue" methodname="ScenePickingAndFocusRespectTheRotatedWorldVenue" classname="PCShopSell.Tests.QuarterlyExpoSceneTests" runstate="Runnable" seed="388421804" result="Passed" start-time="2026-11-04 17:58:14Z" end-time="2026-11-04 17:58:14Z" duration="0.223798" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.QuarterlyExpoSceneTests.ScenePickingAndFocusRespectTheRotatedWorldVenue
+REGRESSION DONE PCShopSell.Tests.QuarterlyExpoSceneTests.ScenePickingAndFocusRespectTheRotatedWorldVenue Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="3155" name="SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople" fullname="PCShopSell.Tests.QuarterlyExpoSceneTests.SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople" classname="PCShopSell.Tests.QuarterlyExpoSceneTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-04 17:58:14Z" end-time="2026-11-04 17:58:15Z" duration="0.700014" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="3152" name="SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople(0,1,1)" fullname="PCShopSell.Tests.QuarterlyExpoSceneTests.SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople(0,1,1)" methodname="SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople" classname="PCShopSell.Tests.QuarterlyExpoSceneTests" runstate="Runnable" seed="1173315160" result="Passed" start-time="2026-11-04 17:58:14Z" end-time="2026-11-04 17:58:15Z" duration="0.225245" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.QuarterlyExpoSceneTests.SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople(0,1,1)
+REGRESSION DONE PCShopSell.Tests.QuarterlyExpoSceneTests.SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople(0,1,1) Passed
+]]></output>
+              </test-case>
+              <test-case id="3153" name="SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople(1,4,5)" fullname="PCShopSell.Tests.QuarterlyExpoSceneTests.SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople(1,4,5)" methodname="SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople" classname="PCShopSell.Tests.QuarterlyExpoSceneTests" runstate="Runnable" seed="190322896" result="Passed" start-time="2026-11-04 17:58:15Z" end-time="2026-11-04 17:58:15Z" duration="0.232723" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.QuarterlyExpoSceneTests.SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople(1,4,5)
+REGRESSION DONE PCShopSell.Tests.QuarterlyExpoSceneTests.SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople(1,4,5) Passed
+]]></output>
+              </test-case>
+              <test-case id="3154" name="SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople(2,6,8)" fullname="PCShopSell.Tests.QuarterlyExpoSceneTests.SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople(2,6,8)" methodname="SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople" classname="PCShopSell.Tests.QuarterlyExpoSceneTests" runstate="Runnable" seed="1114317824" result="Passed" start-time="2026-11-04 17:58:15Z" end-time="2026-11-04 17:58:15Z" duration="0.234402" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.QuarterlyExpoSceneTests.SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople(2,6,8)
+REGRESSION DONE PCShopSell.Tests.QuarterlyExpoSceneTests.SceneUsesTheBookedBoothReservedProductsAndActualSignedPeople(2,6,8) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

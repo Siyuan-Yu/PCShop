@@ -26,6 +26,7 @@ namespace PCShopSell.Core.Session
     {
         public string Id, Name, Kind, Position;
         public int Founded, Influence, Reputation = 50;
+        public int Level;
         public string[] ShopIds=Array.Empty<string>();
         public BrandRecord Copy(){var c=(BrandRecord)MemberwiseClone();c.ShopIds=(string[])ShopIds.Clone();return c;}
     }
@@ -51,7 +52,20 @@ namespace PCShopSell.Core.Session
         public string Id, BrandId, ShopId, ProductId, Focus, StaffPersonId, GuestPersonId;
         public int Day, Stage, Score; public bool Finished, Missed;
         public long Started;
-        public BrandExhibit Copy()=>(BrandExhibit)MemberwiseClone();
+        public int Format,Duration=4,Booth,Heat,Trust=50,Decision,AttendanceDays;
+        public bool Attending,StockReturned;
+        public string DesignerId,LastFeedback;
+        public long PosterReadyAt,RevenueCents,ExpoWagesCents;
+        public string[] KolIds=Array.Empty<string>();
+        public long[] KolDayQuotes=Array.Empty<long>();
+        public ExpoProduct[] Products=Array.Empty<ExpoProduct>();
+        public string[] Journal=Array.Empty<string>();
+        public BrandExhibit Copy(){var e=(BrandExhibit)MemberwiseClone();e.KolIds=(string[])(KolIds??Array.Empty<string>()).Clone();e.KolDayQuotes=(long[])(KolDayQuotes??Array.Empty<long>()).Clone();e.Products=Array.ConvertAll(Products??Array.Empty<ExpoProduct>(),p=>p.Copy());e.Journal=(string[])(Journal??Array.Empty<string>()).Clone();return e;}
+    }
+    [Serializable] public sealed class ExpoProduct
+    {
+        public string ProductId;public int Reserved=100,Sold;public long UnitCents;
+        public ExpoProduct Copy()=>(ExpoProduct)MemberwiseClone();
     }
     [Serializable] public sealed class BrandOrder
     {

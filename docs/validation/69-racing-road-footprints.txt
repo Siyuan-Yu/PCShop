@@ -1,0 +1,3 @@
+All 6 racing access edges checked against existing shops and rotated residential block footprints.
+Park approach corrected to s_expo_0 (public road node, no residential doorway) to avoid residence_s_sports_17.
+All 6 are now clear with a 5-unit lateral half-width (wider than the 9-unit causeway).

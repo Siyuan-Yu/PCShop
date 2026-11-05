@@ -36,6 +36,7 @@ namespace PCShopSell.Game.Runtime
         private GameSession _citySession;
         private readonly Dictionary<string, Walker> _cityWalkers = new Dictionary<string, Walker>();
         private readonly Dictionary<string, ResidentDef> _cityResidents = new Dictionary<string, ResidentDef>();
+        private readonly HashSet<string> _expoPresented=new HashSet<string>();
 
         /// <summary>玩家店门口（搬店后改到新铺子）。</summary>
         public Vector3 ShopDoor { get; set; }
@@ -49,6 +50,10 @@ namespace PCShopSell.Game.Runtime
         public void SyncCity(GameSession session, Vector3 playerWorld, Camera camera = null)
         {
             _citySession = session;
+            _expoPresented.Clear();
+            if(session.CurrentPlace?.Id=="life_expo"&&session.CityExpoOpen(false))
+                foreach(string id in session.ExpoAtVenue?.KolIds??Array.Empty<string>())
+                {var p=session.CityPersonState(id);if(p!=null&&p.LocationPlaceId=="life_expo"&&p.Route==null&&string.IsNullOrEmpty(p.ActivityId))_expoPresented.Add(id);}
             if (!_cityMode)
             {
                 foreach (var old in _walkers) if (old.Go != null) Kill.It(old.Go);
@@ -59,7 +64,7 @@ namespace PCShopSell.Game.Runtime
             {
                 var definition = session.CityPerson(state.PersonId); if (definition == null) continue;
                 Vector3 position = CityPresentationPosition(session, state);
-                bool privateInterior = session.CityPersonInside(state) || CityPersonInVehicle(state);
+                bool privateInterior = session.CityPersonInside(state) || CityPersonInVehicle(state) || _expoPresented.Contains(state.PersonId);
                 if (privateInterior) continue;
                 if (camera != null)
                 {
@@ -118,7 +123,7 @@ namespace PCShopSell.Game.Runtime
                 var view = pair.Value;
                 if (view.Go == null) continue;
                 var state = _citySession.CityPersonState(pair.Key);
-                bool show = visible && state != null && !_citySession.CityPersonInside(state) && !CityPersonInVehicle(state);
+                bool show = visible && state != null && !_citySession.CityPersonInside(state) && !CityPersonInVehicle(state) && !_expoPresented.Contains(state.PersonId);
                 if (view.Go.activeSelf != show) view.Go.SetActive(show);
                 if (!show) continue;
                 Vector3 position = CityPresentationPosition(_citySession, state);

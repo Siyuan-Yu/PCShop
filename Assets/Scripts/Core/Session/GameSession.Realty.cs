@@ -82,6 +82,7 @@ namespace PCShopSell.Core.Session
         /// <summary>为什么现在签不了这一间；能签返回 null。newShop 见 <see cref="LeaseCost"/>。</summary>
         public string LeaseBlocker(ShopListing l, bool newShop = false)
         {
+            if(l==null||l.PlaceId=="life_expo")return "会展中心不整栋出租，请从品牌展会页预订摊位";
             if(Lease!=null&&!newShop&&(IsDedicatedVenue(ListingPlace(l))||IsDedicatedVenue(PlayerShopPlace)))return "专用场馆需要独立接手，不能与普通店铺搬店混用";
             if (InAgency && !AgencyServes(CurrentPlace, ListingPlace(l)))
                 return "这家中介只办理" + City.AgencyCoverageName(CurrentPlace) + "的房源，请到房源所属片区的中介";
@@ -304,7 +305,7 @@ namespace PCShopSell.Core.Session
         private bool IsBareUnit(Place p) => p.IsPlayerShop || p.Business == RealEstate.VacantBusiness;
 
         private IEnumerable<Place> RentableUnits() =>
-            City.Places.Where(p => p.Kind == PlaceKind.Shop && (IsBareUnit(p) || !IsFixedBusiness(p.Business))
+            City.Places.Where(p => p.Id!="life_expo"&&p.Kind == PlaceKind.Shop && (IsBareUnit(p) || !IsFixedBusiness(p.Business))
                 && (!LookingForFirstShop || !IsDedicatedVenue(p)));
 
         private void EnsureFirstShopListings(int today)
@@ -501,7 +502,7 @@ namespace PCShopSell.Core.Session
             }
             foreach (SaveListing l in d.listings)
             {
-                if (!City.HasPlace(l.place)) continue;
+                if (!City.HasPlace(l.place)||l.place=="life_expo") continue;
                 _listings.Add(new ShopListing
                 {
                     PlaceId = l.place, Size = (ShopSize)l.size, Rent = d.shopFootfallVersion<1 && !IsPendingShop(City.GetPlace(l.place)) ? ShopRentQuote(City.GetPlace(l.place)) : Money.FromCents(l.rentCents), OpenDay = l.openDay, CloseDay = l.closeDay,

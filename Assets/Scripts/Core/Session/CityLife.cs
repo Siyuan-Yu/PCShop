@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.World;
@@ -293,6 +293,7 @@ namespace PCShopSell.Core.Session
                 new[]{"口述资料会注明是谁在什么时候说的，记忆和档案对不上也先保留差异，不替别人编一个漂亮而确定的故事。","我喜欢比对旧地图和现在的路口。看见街道改了名字，再听人说当年的日常，城市才不只是几个地标。","家里有一只装着待整理纸条的木盒。我给自己定了每周一小叠，休息时就合上，不把兴趣变成永远做不完的加班。","程弈会来查老工坊结构，宋棉在旧街散步时能记住很多细节。介绍他们认识前，我会先问双方愿不愿意留联系方式。"},
                 new[]{"第一次整理邻里的旧照片，我急着写齐所有名字。有位老人指着空白说，想不起来就先空着，这句话后来成了我的工作习惯。","程弈查一间老工坊，我找到的图纸只有半张。我们沿着旧地图走到原址，没找到答案，却弄清哪一部分只能说是推测。","现在我给每份口述留下回访位置。有人过很久才补上一段记忆也没关系，记录不是一次问完后就再也不见。"});
             ConfigureNarrativePeople(result);
+            AddRacingPeople(result);
             return result;
         }
         private static string Interest(int i) => new[]{"dinner","court","ktv","fishing","market","hike"}[i%6];
@@ -309,6 +310,10 @@ namespace PCShopSell.Core.Session
                 }
                 // Authored connections mentioned in these characters' own conversations and histories.
                 foreach (var tie in new[] {
+                    new[] { "racer_0", "life_coach", "一起组织入门运动课程" },
+                    new[] { "racer_1", "life_qiao", "帮助车友运输整备配件" },
+                    new[] { "racer_2", "life_maker", "交流机械结构与轮胎调校" },
+                    new[] { "racer_3", LiangJing, "为花园车友聚会介绍收藏车" },
                     new[] { InvitationTestPersonId, Rosters.AgentChen.Id, "在中介附近常一起散步的街坊" },
                     new[] { InvitationTestPersonId, "life_chef", "常一起吃饭的朋友" },
                     new[] { InvitationTestPersonId, "life_singer", "一起练歌的朋友" },

@@ -19,7 +19,7 @@ namespace PCShopSell.Game.UI
         private void BuildBrandBusiness(Window w)
         {
             var state=S.BrandBusiness;
-            var tabs=Ui.Row(w.Content,40,6);string[] names={"品牌","推广与代言","季度展会","企业竞标","机构资源","人物故事"};
+            var tabs=Ui.Row(w.Content,40,6);string[] names={"品牌","推广与代言","展会","企业竞标","机构资源","人物故事","KOL直播"};
             for(int i=0;i<names.Length;i++){int t=i;Ui.Size(Ui.Button(tabs,names[i],()=>{_brandTab=t;w.Rebuild();},18,t==_brandTab?Ui.ButtonHot:Ui.ButtonBg),-1,40,1);}
             if(S.DistrictCommerceActive)Ui.Size(Ui.Button(w.Content,"主线 · "+S.CurrentDistrictNode.Title,OpenDistrictStory,17,Ui.ButtonHot),-1,36);
             var body=Ui.Scroll(w.Content,570);
@@ -49,6 +49,7 @@ namespace PCShopSell.Game.UI
             foreach(var item in state.Brands){string id=item.Id;Ui.Size(Ui.Button(brands,item.Name,()=>{_brandId=id;_brandShop=null;_brandProduct=null;w.Rebuild();},18,id==_brandId?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);}
             var brand=state.Brands.First(b=>b.Id==_brandId);
             Line(body,$"{brand.Name}  ·  影响力 {brand.Influence}  ·  口碑 {brand.Reputation}/100",21,Ui.Accent);
+            if(_brandTab==6){BuildKolBrandPage(body,w,brand);return;}
             if(_brandTab==0)
             {
                 Para(body,brand.Position=="value"?"实惠定位：参展更适合采购洽谈。":"品质定位：参展更适合设计展示。",17);
@@ -59,39 +60,11 @@ namespace PCShopSell.Game.UI
             if(_brandTab==5){BuildBrandStories(body,w,brand);return;}
             if(_brandTab==1){BuildBrandPromotion(body,w,brand,state);return;}
             if(_brandTab==4){BuildBrandInstitutions(body,w,brand,state);return;}
-            if(_brandTab==2)
-            {
-                int day=S.NextBrandExpoDay;Line(body,"云帆会展中心 · "+S.BrandExpoTheme(day),21,Ui.Accent);
-                Para(body,$"{new GameDate(day)} 09:00—17:00 · 报名截止 {new GameDate(day-7)}",18);
-                Ui.Size(Ui.Button(body,"前往会展中心",()=>{CloseAllWindows();S.BeginCityTravel("life_expo");},18),-1,38);
-            }
-            else Para(body,"年度采购席位：原供应商守位，访谈、试单与交付能力决定评审；不是最低价直接中标。",18);
-            BuildBrandStockChoice(body,w,brand);
-            if(_brandTab==2)
-            {
-                var focus=Ui.Row(body,38,5);
-                foreach(var f in new[]{"buyers","media","design"}){string v=f;Ui.Size(Ui.Button(focus,BrandFocusLabel(f)+(_brandFocus==f?" ✓":""),()=>{_brandFocus=v;w.Rebuild();},17),-1,38,1);}
-                BrandButton(body,"报名 · ¥2,000 ＋ 3件展示耗材",()=>S.RegisterBrandExpo(brand.Id,_brandShop,_brandProduct,_brandFocus),w,_brandProduct!=null);
-                foreach(var e in state.Exhibits.Where(e=>e.BrandId==brand.Id).OrderByDescending(e=>e.Day).Take(6))
-                {
-                    Line(body,$"{new GameDate(e.Day)} · {S.BrandProductName(e.ProductId)} · 接待 {e.Stage}/3 · 得分 {e.Score}",18,Ui.Accent);
-                    if(e.Finished||e.Missed){Para(body,e.Finished?"展会结束，请处理下方采购线索。":"未完成参展，下季度可重新报名。",16);continue;}
-                    if(e.Day>S.Clock.Today.TotalDays)
-                    {
-                        if(e.StaffPersonId==null)
-                            foreach(var a in S.Employees.Where(a=>a.Shop?.Place.Id==e.ShopId))
-                            {string person=S.PersonIdOf(a.Person);BrandButton(body,"安排 "+a.Person.Name+" 接待 · 补贴¥200",()=>S.AssignBrandExpoPerson(e.Id,person,true),w);}
-                        else Para(body,"展务员工："+(S.CityPerson(e.StaffPersonId)?.Name??e.StaffPersonId),17);
-                        if(e.GuestPersonId==null){var guest=Ui.Row(body,36,5);foreach(string p in new[]{"life_creator","life_designer","life_clothier"}){string person=p;BrandButton(guest,"邀"+(S.CityPerson(p)?.Name??p)+(S.Relation(p)<20?" · 交情需20":" · ¥500"),()=>S.AssignBrandExpoPerson(e.Id,person,false),w,S.Relation(p)>=20);}}
-                        else Para(body,"受邀嘉宾："+S.CityPerson(e.GuestPersonId)?.Name,17);
-                    }
-                    string why=S.BrandExpoBlocker(e.Id);if(why!=null)Para(body,why,17,Ui.Dim);
-                    Para(body,new[]{"买家希望了解供货，记者也在等待采访。","采购方要求试用，设计同行邀请交流。","闭展前最后一轮接待，请选择投入方向。"}[Math.Min(2,e.Stage)],17);
-                    var r=Ui.Row(body,38,5);foreach(var f in new[]{"buyers","media","design"}){string c=f,id=e.Id;BrandButton(r,BrandFocusLabel(c),()=>S.ActBrandExpo(id,c),w,why==null);}
-                }
-            }
+            if(_brandTab==2)BuildQuarterlyExpo(body,w,brand,state);
             else
             {
+                Para(body,"年度采购席位：调查、试单与真实交付决定评审。",18);
+                BuildBrandStockChoice(body,w,brand);
                 BrandButton(body,"报名年度竞标 · ¥1,000",()=>S.EnterBrandTender(brand.Id,_brandShop,_brandProduct),w,_brandProduct!=null);
                 foreach(var t in state.Tenders.Where(t=>t.BrandId==brand.Id).Reverse().Take(5))
                 {

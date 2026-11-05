@@ -5226,6 +5226,36 @@
       "id": "lake_south_terminal",
       "x": -753.5421049106127,
       "y": -521.6829957073472
+    },
+    {
+      "id": "race_0_door",
+      "x": -550,
+      "y": -120
+    },
+    {
+      "id": "race_1_door",
+      "x": 120,
+      "y": -222
+    },
+    {
+      "id": "race_2_door",
+      "x": 515,
+      "y": 90
+    },
+    {
+      "id": "race_3_door",
+      "x": 70,
+      "y": 547
+    },
+    {
+      "id": "motor_scooter_mod_door",
+      "x": -573,
+      "y": -148
+    },
+    {
+      "id": "motor_cars_door",
+      "x": -527,
+      "y": -148
     }
   ],
   "edges": [
@@ -9476,6 +9506,36 @@
     {
       "a": "lake_south_terminal",
       "b": "lake_old_backjoin0"
+    },
+    {
+      "a": "s_night_0",
+      "b": "race_0_door",
+      "length": 0
+    },
+    {
+      "a": "v7_life_restaurant_tier2",
+      "b": "race_1_door",
+      "length": 0
+    },
+    {
+      "a": "s_expo_0",
+      "b": "race_2_door",
+      "length": 0
+    },
+    {
+      "a": "v7_door_life_unit_s_night_0",
+      "b": "race_3_door",
+      "length": 0
+    },
+    {
+      "a": "race_0_door",
+      "b": "motor_scooter_mod_door",
+      "length": 0
+    },
+    {
+      "a": "race_0_door",
+      "b": "motor_cars_door",
+      "length": 0
     }
   ],
   "places": [
@@ -9589,7 +9649,7 @@
     },
     {
       "id": "dealer",
-      "name": "顺风车行",
+      "name": "顺丰车行",
       "kind": "dealer",
       "node": "e06",
       "size": "medium",
@@ -9602,7 +9662,7 @@
       "heading": 161.2661809749492,
       "model": "shop",
       "tier": 0,
-      "tradable": true
+      "tradable": false
     },
     {
       "id": "shop07",
@@ -11201,6 +11261,126 @@
       "closeMinute": 1080,
       "model": "office",
       "tier": 1
+    },
+    {
+      "id": "race_0",
+      "name": "城郊练习场",
+      "kind": "other",
+      "node": "race_0_door",
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 0,
+      "width": 9,
+      "depth": 6,
+      "heading": 0,
+      "model": "racetrack",
+      "tier": 0,
+      "tradable": false,
+      "business": "racing",
+      "size": "large",
+      "openMinute": 540,
+      "closeMinute": 1080
+    },
+    {
+      "id": "race_1",
+      "name": "社区俱乐部",
+      "kind": "other",
+      "node": "race_1_door",
+      "street": "s_market",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 0,
+      "width": 9,
+      "depth": 6,
+      "heading": 0,
+      "model": "racetrack",
+      "tier": 1,
+      "tradable": false,
+      "business": "racing",
+      "size": "large",
+      "openMinute": 540,
+      "closeMinute": 1080
+    },
+    {
+      "id": "race_2",
+      "name": "公园竞速场",
+      "kind": "other",
+      "node": "race_2_door",
+      "street": "s_sports",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 0,
+      "width": 9,
+      "depth": 6,
+      "heading": 0,
+      "model": "racetrack",
+      "tier": 2,
+      "tradable": false,
+      "business": "racing",
+      "size": "large",
+      "openMinute": 540,
+      "closeMinute": 1080
+    },
+    {
+      "id": "race_3",
+      "name": "花园大奖赛",
+      "kind": "other",
+      "node": "race_3_door",
+      "street": "s_night",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 0,
+      "width": 9,
+      "depth": 6,
+      "heading": 0,
+      "model": "racetrack",
+      "tier": 3,
+      "tradable": false,
+      "business": "racing",
+      "size": "large",
+      "openMinute": 540,
+      "closeMinute": 1080
+    },
+    {
+      "id": "motor_scooter_mod",
+      "name": "顺丰改车",
+      "kind": "other",
+      "node": "motor_scooter_mod_door",
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 0,
+      "width": 18,
+      "depth": 14,
+      "heading": 180,
+      "model": "shop",
+      "tier": 0,
+      "tradable": false,
+      "business": "motor",
+      "size": "medium",
+      "openMinute": 540,
+      "closeMinute": 1140
+    },
+    {
+      "id": "motor_cars",
+      "name": "湖岸汽车城",
+      "kind": "dealer",
+      "node": "motor_cars_door",
+      "street": "s_start",
+      "explicitEntrance": true,
+      "entranceX": 0,
+      "entranceY": 0,
+      "width": 18,
+      "depth": 14,
+      "heading": 180,
+      "model": "shop",
+      "tier": 0,
+      "tradable": false,
+      "business": "motor",
+      "size": "medium",
+      "openMinute": 540,
+      "closeMinute": 1140
     }
   ],
   "patrols": [

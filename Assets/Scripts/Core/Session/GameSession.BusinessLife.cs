@@ -89,30 +89,22 @@ namespace PCShopSell.Core.Session
         public long HomePriceCents {get;private set;}
         public long HomeMortgageCents {get;private set;}
         public long HomeMonthlyPrincipalCents {get;private set;}
-        public string HomeTitle => HomeTier==3 ? "花园独栋别墅" : HomeTier==2 ? "公园豪华公寓" : HomeTier==1 ? "宜居改善住宅" : "城郊老破小出租屋";
+        public string HomeTitle => City.HasPlace(_residentialHomeId)?City.GetPlace(_residentialHomeId).Name:HomeTier==3 ? "花园独栋别墅" : HomeTier==2 ? "公园豪华公寓" : HomeTier==1 ? "宜居改善住宅" : "城郊老破小出租屋";
         public Money CurrentHomeRent => HomePriceCents>0 ? Money.Zero : HomeTier==3 ? Money.FromYuan(12000) : HomeTier==2 ? Money.FromYuan(3000) : HomeTier==1 ? Money.FromYuan(1200) : HomeRent;
-        public Money HomePurchasePrice => Money.FromYuan(HomeTier==3 ? 1800000 : HomeTier==2 ? 450000 : 180000);
+        public Money HomePurchasePrice => City.HasPlace(_residentialHomeId)?ResidentialPrice(Home):Money.FromYuan(HomeTier==3 ? 1800000 : HomeTier==2 ? 450000 : 180000);
         public Money HomeTierRentQuote(int tier) => Money.FromYuan(tier==3 ? 12000 : tier==2 ? 3000 : tier==1 ? 1200 : 450);
         public bool ChangeHomeTier(int tier)
         {
-            if(IsGameOver || !InAgency) return Fail("去房产中介办理住处升级。");
-            if(tier<0 || tier>3 || tier==HomeTier) return false;
-            if(HomePriceCents>0) return Fail("先出售自住房，再换住处。");
-            string homeId=tier==0?"home":"home_tier"+tier;
-            if(City.LayoutVersion>=7 && City.HasPlace(homeId) && !AgencyServes(CurrentPlace,City.GetPlace(homeId)))return Fail("请到目的住宅所属片区的中介办理。");
+            string why=ResidenceBlocker(tier,false);if(why!=null)return Fail(why);
             Money rent=HomeTierRentQuote(tier);
             if(!Ledger.TryDebit(Clock.Today,"搬家",rent+Money.FromYuan(500),"住处首月租金及搬家费")) return Fail("需支付新住处首月租金与 ¥500 搬家费。");
             HomeTier=tier;
+            _residentialHomeId=null;
             Say("已换为"+HomeTitle+"。家具与储物保留；睡眠质量提高，次月按新月租扣款。"); return true;
         }
         public bool BuyHome(bool mortgage)
         {
-            if(IsGameOver || !InAgency || HomeTier==0 || HomePriceCents>0) return Fail("在中介先换成改善住宅、公寓或别墅，再办理购买。");
-            if(City.LayoutVersion>=7 && !AgencyServes(CurrentPlace,Home))return Fail("请到自住房所属片区的中介办理。");
-            Money price=HomePurchasePrice,paid=price.Scale(mortgage ? .3 : 1);
-            if(!Ledger.TryDebit(Clock.Today,"购置住宅",paid,HomeTitle)) return Fail("购房现金不足。");
-            HomePriceCents=price.Cents; HomeMortgageCents=(price-paid).Cents; HomeMonthlyPrincipalCents=(long)Math.Ceiling(HomeMortgageCents/36.0);
-            Say("自住房购入，免除月租；月维护费为房价 0.1%。按揭为 36 期等额本金、月利率 0.4%。"); return true;
+            return City.HasPlace(_residentialHomeId)?BuyResidentialHome(Home.Id,mortgage,true):BuyResidence(HomeTier,mortgage);
         }
         public bool RepayHomeMortgage()
         {

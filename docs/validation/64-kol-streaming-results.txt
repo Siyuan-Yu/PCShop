@@ -1,0 +1,23 @@
+2026-11-05 品牌KOL直播功能检查
+
+Unity 2022.3.6f1；隔离项目副本：D:/UnityProjects/PCShop/_ci_retro_portraits。
+执行方式：-batchmode -nographics -runTests -testPlatform editmode。
+结果：58 / 58 通过，0失败；最终检查无C#编译错误。
+报告：64-kol-streaming-tests.xml。
+
+选择的测试组：KolStreamingTests、BrandBusinessTests、BrandStoryTests、McnIntroductionTests、ExpoAcceptanceTests。
+覆盖：15位成年KOL及真实头像；签约扣费、独家冲突、3/7/12名额和升级扣款；无效排班与资金防护；
+独立排班、跨午夜同场、暂停/解约/到期；真实门店客流和购买意愿；活动即时暂停加成；
+直播间头像、礼物控件、实时状态重建和不锁定时间；观看不消耗随机数或生成收益；
+实际打赏、冷却和读档、过期临时观众不复活；效果上限；旧档无直播字段兼容；
+新增KOL的MCN实际介绍和保存；独立验收档需真实签约；无人观看时仍推进、跨午夜存档接续。
+
+首次扩大选择的62项检查曾有2项失败：
+1. 新增魅力比较测试的两组输入都达到25%客流上限；改为未饱和输入，验证属性实际差异。
+2. 旧MarkupRangeTests.ShopSliderAndRestaurantMenuReachThree_AndMenuShowsZeroIntent，期望菜单3.0实际1.15。
+   此为既有UI检查问题，本轮未修改其功能或测试；最终58项选择不包含MarkupRangeTests，不宣称全项目通过。
+后续直播间检查曾因未创建城市场景而调用完整UI.Update触发UpdateLabels空引用；
+改为检查直播窗口的LiveKey变化并执行实际Window.Rebuild，不依赖未初始化城市场景。
+
+本轮没有截图、查看游戏画面、运行图形验收或重新打包Windows。
+全部改动保留本地，没有提交或推送GitHub。

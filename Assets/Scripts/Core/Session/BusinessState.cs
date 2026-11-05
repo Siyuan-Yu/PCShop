@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -48,7 +48,7 @@ namespace PCShopSell.Core.Session
             new VentureDef("food", "街角简餐店", "店长每日采购；食材成本占营业额 45%，周末生意更好。", 22000, 260, 1400, .45, 10),
             new VentureDef("flowers", "花店", "损耗计入采购成本；每月 14 日有鲜花消费高峰。", 14000, 180, 950, .48, 8),
             new VentureDef("stay", "小型民宿", "保洁和前台由店长管理；周末入住较多，维护影响入住率。", 65000, 280, 1500, .24, 22),
-            new VentureDef("cars", "二手车行", "委托店长收车和整备；周转额大、毛利薄，需预留充足周转现金。", 120000, 460, 8000, .86, 35),
+            new VentureDef("cars", "二手车行", "结识车友取得车源，检测整备后挂牌；每三天可能有一位买家，需到店交付。", 80000, 180, 0, 0, 12),
         };
         public static VentureDef Get(string id) => All.FirstOrDefault(x => x.Id == id);
     }

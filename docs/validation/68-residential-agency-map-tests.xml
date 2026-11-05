@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="19" result="Passed" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-04 18:15:30Z" end-time="2026-11-04 18:15:35Z" duration="4.8206796">
+  <test-suite type="TestSuite" id="2370" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1186" result="Passed" start-time="2026-11-04 18:15:30Z" end-time="2026-11-04 18:15:35Z" duration="4.820680" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="3736" name="PCShopSell.Tests.EditMode.dll" fullname="D:/UnityProjects/PCShop/_ci_retro_portraits/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1186" result="Passed" start-time="2026-11-04 18:15:30Z" end-time="2026-11-04 18:15:35Z" duration="4.805194" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="70864" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="3737" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1186" result="Passed" start-time="2026-11-04 18:15:30Z" end-time="2026-11-04 18:15:35Z" duration="4.802952" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3738" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="1186" result="Passed" start-time="2026-11-04 18:15:30Z" end-time="2026-11-04 18:15:35Z" duration="4.802419" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="2371" name="AgencyDistrictViewTests" fullname="PCShopSell.Tests.AgencyDistrictViewTests" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" testcasecount="8" result="Passed" start-time="2026-11-04 18:15:30Z" end-time="2026-11-04 18:15:31Z" duration="1.453620" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="2377" name="ActualTabsKeepZoomAndPanAndChangingAgencyResetsToItsOwnDistrict" fullname="PCShopSell.Tests.AgencyDistrictViewTests.ActualTabsKeepZoomAndPanAndChangingAgencyResetsToItsOwnDistrict" methodname="ActualTabsKeepZoomAndPanAndChangingAgencyResetsToItsOwnDistrict" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="154246579" result="Passed" start-time="2026-11-04 18:15:30Z" end-time="2026-11-04 18:15:31Z" duration="0.639324" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.ActualTabsKeepZoomAndPanAndChangingAgencyResetsToItsOwnDistrict
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.ActualTabsKeepZoomAndPanAndChangingAgencyResetsToItsOwnDistrict Passed
+]]></output>
+            </test-case>
+            <test-case id="2378" name="AdministrativeVenueShopDoesNotExpandTheCommunityPropertyOverview" fullname="PCShopSell.Tests.AgencyDistrictViewTests.AdministrativeVenueShopDoesNotExpandTheCommunityPropertyOverview" methodname="AdministrativeVenueShopDoesNotExpandTheCommunityPropertyOverview" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="2073576570" result="Passed" start-time="2026-11-04 18:15:31Z" end-time="2026-11-04 18:15:31Z" duration="0.009412" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.AdministrativeVenueShopDoesNotExpandTheCommunityPropertyOverview
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.AdministrativeVenueShopDoesNotExpandTheCommunityPropertyOverview Passed
+]]></output>
+            </test-case>
+            <test-case id="2379" name="DiagonalStreetFitsActualBuildingsWithoutFramingEmptyWorldBoundsCorners" fullname="PCShopSell.Tests.AgencyDistrictViewTests.DiagonalStreetFitsActualBuildingsWithoutFramingEmptyWorldBoundsCorners" methodname="DiagonalStreetFitsActualBuildingsWithoutFramingEmptyWorldBoundsCorners" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="1596548631" result="Passed" start-time="2026-11-04 18:15:31Z" end-time="2026-11-04 18:15:31Z" duration="0.005239" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.DiagonalStreetFitsActualBuildingsWithoutFramingEmptyWorldBoundsCorners
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.DiagonalStreetFitsActualBuildingsWithoutFramingEmptyWorldBoundsCorners Passed
+]]></output>
+            </test-case>
+            <test-case id="2380" name="FramingIsTranslationInvariantAndIncludesRoofHeight" fullname="PCShopSell.Tests.AgencyDistrictViewTests.FramingIsTranslationInvariantAndIncludesRoofHeight" methodname="FramingIsTranslationInvariantAndIncludesRoofHeight" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="45579558" result="Passed" start-time="2026-11-04 18:15:31Z" end-time="2026-11-04 18:15:31Z" duration="0.001117" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.FramingIsTranslationInvariantAndIncludesRoofHeight
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.FramingIsTranslationInvariantAndIncludesRoofHeight Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="2376" name="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable" fullname="PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-11-04 18:15:31Z" end-time="2026-11-04 18:15:31Z" duration="0.784084" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="2372" name="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency&quot;)" fullname="PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency&quot;)" methodname="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="2109284287" result="Passed" start-time="2026-11-04 18:15:31Z" end-time="2026-11-04 18:15:31Z" duration="0.198888" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency")
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency") Passed
+]]></output>
+              </test-case>
+              <test-case id="2373" name="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency_s_services&quot;)" fullname="PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency_s_services&quot;)" methodname="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="2105060463" result="Passed" start-time="2026-11-04 18:15:31Z" end-time="2026-11-04 18:15:31Z" duration="0.191530" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency_s_services")
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency_s_services") Passed
+]]></output>
+              </test-case>
+              <test-case id="2374" name="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency_s_sports&quot;)" fullname="PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency_s_sports&quot;)" methodname="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="2133899482" result="Passed" start-time="2026-11-04 18:15:31Z" end-time="2026-11-04 18:15:31Z" duration="0.192285" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency_s_sports")
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency_s_sports") Passed
+]]></output>
+              </test-case>
+              <test-case id="2375" name="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency_s_night&quot;)" fullname="PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable(&quot;agency_s_night&quot;)" methodname="HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable" classname="PCShopSell.Tests.AgencyDistrictViewTests" runstate="Runnable" seed="723534123" result="Passed" start-time="2026-11-04 18:15:31Z" end-time="2026-11-04 18:15:31Z" duration="0.194309" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency_s_night")
+REGRESSION DONE PCShopSell.Tests.AgencyDistrictViewTests.HousingAndCommercialShareTheDistrictFramingButOnlyLocalHomesAreSelectable("agency_s_night") Passed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+          <test-suite type="TestFixture" id="3227" name="ResidentialAgencyTests" fullname="PCShopSell.Tests.ResidentialAgencyTests" classname="PCShopSell.Tests.ResidentialAgencyTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-11-04 18:15:31Z" end-time="2026-11-04 18:15:33Z" duration="1.234969" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="3228" name="CanBuyAndMoveDirectlyWithoutIntermediateRentAndKeepsFurnitureAndStorage" fullname="PCShopSell.Tests.ResidentialAgencyTests.CanBuyAndMoveDirectlyWithoutIntermediateRentAndKeepsFurnitureAndStorage" methodname="CanBuyAndMoveDirectlyWithoutIntermediateRentAndKeepsFurnitureAndStorage" classname="PCShopSell.Tests.ResidentialAgencyTests" runstate="Runnable" seed="1848652295" result="Passed" start-time="2026-11-04 18:15:31Z" end-time="2026-11-04 18:15:32Z" duration="0.188520" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ResidentialAgencyTests.CanBuyAndMoveDirectlyWithoutIntermediateRentAndKeepsFurnitureAndStorage
+REGRESSION DONE PCShopSell.Tests.ResidentialAgencyTests.CanBuyAndMoveDirectlyWithoutIntermediateRentAndKeepsFurnitureAndStorage Passed
+]]></output>
+            </test-case>
+            <test-case id="3229" name="DirectMortgageUsesThirtyPercentPlusMoveFeeAndSurvivesJsonReload" fullname="PCShopSell.Tests.ResidentialAgencyTests.DirectMortgageUsesThirtyPercentPlusMoveFeeAndSurvivesJsonReload" methodname="DirectMortgageUsesThirtyPercentPlusMoveFeeAndSurvivesJsonReload" classname="PCShopSell.Tests.ResidentialAgencyTests" runstate="Runnable" seed="853832176" result="Passed" start-time="2026-11-04 18:15:32Z" end-time="2026-11-04 18:15:32Z" duration="0.461090" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ResidentialAgencyTests.DirectMortgageUsesThirtyPercentPlusMoveFeeAndSurvivesJsonReload
+REGRESSION DONE PCShopSell.Tests.ResidentialAgencyTests.DirectMortgageUsesThirtyPercentPlusMoveFeeAndSurvivesJsonReload Passed
+]]></output>
+            </test-case>
+            <test-case id="3230" name="RentingThenBuyingExistingHomeDoesNotChargeMovingFeeTwice" fullname="PCShopSell.Tests.ResidentialAgencyTests.RentingThenBuyingExistingHomeDoesNotChargeMovingFeeTwice" methodname="RentingThenBuyingExistingHomeDoesNotChargeMovingFeeTwice" classname="PCShopSell.Tests.ResidentialAgencyTests" runstate="Runnable" seed="121930002" result="Passed" start-time="2026-11-04 18:15:32Z" end-time="2026-11-04 18:15:32Z" duration="0.193009" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ResidentialAgencyTests.RentingThenBuyingExistingHomeDoesNotChargeMovingFeeTwice
+REGRESSION DONE PCShopSell.Tests.ResidentialAgencyTests.RentingThenBuyingExistingHomeDoesNotChargeMovingFeeTwice Passed
+]]></output>
+            </test-case>
+            <test-case id="3231" name="WrongAgencyLockedDistrictAndInsufficientCashNeverPartiallyMoveOrDebit" fullname="PCShopSell.Tests.ResidentialAgencyTests.WrongAgencyLockedDistrictAndInsufficientCashNeverPartiallyMoveOrDebit" methodname="WrongAgencyLockedDistrictAndInsufficientCashNeverPartiallyMoveOrDebit" classname="PCShopSell.Tests.ResidentialAgencyTests" runstate="Runnable" seed="1681885413" result="Passed" start-time="2026-11-04 18:15:32Z" end-time="2026-11-04 18:15:33Z" duration="0.386288" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ResidentialAgencyTests.WrongAgencyLockedDistrictAndInsufficientCashNeverPartiallyMoveOrDebit
+REGRESSION DONE PCShopSell.Tests.ResidentialAgencyTests.WrongAgencyLockedDistrictAndInsufficientCashNeverPartiallyMoveOrDebit Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3232" name="ResidentialPropertyTests" fullname="PCShopSell.Tests.ResidentialPropertyTests" classname="PCShopSell.Tests.ResidentialPropertyTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-11-04 18:15:33Z" end-time="2026-11-04 18:15:35Z" duration="2.013761" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="3236" name="AbsentRegisteredResidentStillBlocksMovingInAndSaleDoesNotEvict" fullname="PCShopSell.Tests.ResidentialPropertyTests.AbsentRegisteredResidentStillBlocksMovingInAndSaleDoesNotEvict" methodname="AbsentRegisteredResidentStillBlocksMovingInAndSaleDoesNotEvict" classname="PCShopSell.Tests.ResidentialPropertyTests" runstate="Runnable" seed="326185000" result="Passed" start-time="2026-11-04 18:15:33Z" end-time="2026-11-04 18:15:33Z" duration="0.195794" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ResidentialPropertyTests.AbsentRegisteredResidentStillBlocksMovingInAndSaleDoesNotEvict
+REGRESSION DONE PCShopSell.Tests.ResidentialPropertyTests.AbsentRegisteredResidentStillBlocksMovingInAndSaleDoesNotEvict Passed
+]]></output>
+            </test-case>
+            <test-case id="3235" name="ActualMonthBoundaryCreditsRegisteredTenantRentOnceAndReloadDoesNotReplayIt" fullname="PCShopSell.Tests.ResidentialPropertyTests.ActualMonthBoundaryCreditsRegisteredTenantRentOnceAndReloadDoesNotReplayIt" methodname="ActualMonthBoundaryCreditsRegisteredTenantRentOnceAndReloadDoesNotReplayIt" classname="PCShopSell.Tests.ResidentialPropertyTests" runstate="Runnable" seed="984133755" result="Passed" start-time="2026-11-04 18:15:33Z" end-time="2026-11-04 18:15:33Z" duration="0.493470" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ResidentialPropertyTests.ActualMonthBoundaryCreditsRegisteredTenantRentOnceAndReloadDoesNotReplayIt
+REGRESSION DONE PCShopSell.Tests.ResidentialPropertyTests.ActualMonthBoundaryCreditsRegisteredTenantRentOnceAndReloadDoesNotReplayIt Passed
+]]></output>
+            </test-case>
+            <test-case id="3237" name="AnyGenuinelyEmptyHomeCanBeRentedAndSavedThenBoughtWithoutSecondMoveFee" fullname="PCShopSell.Tests.ResidentialPropertyTests.AnyGenuinelyEmptyHomeCanBeRentedAndSavedThenBoughtWithoutSecondMoveFee" methodname="AnyGenuinelyEmptyHomeCanBeRentedAndSavedThenBoughtWithoutSecondMoveFee" classname="PCShopSell.Tests.ResidentialPropertyTests" runstate="Runnable" seed="927818406" result="Passed" start-time="2026-11-04 18:15:33Z" end-time="2026-11-04 18:15:34Z" duration="0.364033" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ResidentialPropertyTests.AnyGenuinelyEmptyHomeCanBeRentedAndSavedThenBoughtWithoutSecondMoveFee
+REGRESSION DONE PCShopSell.Tests.ResidentialPropertyTests.AnyGenuinelyEmptyHomeCanBeRentedAndSavedThenBoughtWithoutSecondMoveFee Passed
+]]></output>
+            </test-case>
+            <test-case id="3233" name="AuditActualRegisteredAddressesRatherThanSceneryOrCurrentPresence" fullname="PCShopSell.Tests.ResidentialPropertyTests.AuditActualRegisteredAddressesRatherThanSceneryOrCurrentPresence" methodname="AuditActualRegisteredAddressesRatherThanSceneryOrCurrentPresence" classname="PCShopSell.Tests.ResidentialPropertyTests" runstate="Runnable" seed="1428938206" result="Passed" start-time="2026-11-04 18:15:34Z" end-time="2026-11-04 18:15:34Z" duration="0.187349" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ResidentialPropertyTests.AuditActualRegisteredAddressesRatherThanSceneryOrCurrentPresence
+RESIDENTIAL AUDIT total=97 occupied=93 empty=4 registeredNPC=120
+REGRESSION DONE PCShopSell.Tests.ResidentialPropertyTests.AuditActualRegisteredAddressesRatherThanSceneryOrCurrentPresence Passed
+]]></output>
+            </test-case>
+            <test-case id="3234" name="BuyingOccupiedHomePreservesNpcAddressesAndPaysOneRealMonthlyRentAfterPurchase" fullname="PCShopSell.Tests.ResidentialPropertyTests.BuyingOccupiedHomePreservesNpcAddressesAndPaysOneRealMonthlyRentAfterPurchase" methodname="BuyingOccupiedHomePreservesNpcAddressesAndPaysOneRealMonthlyRentAfterPurchase" classname="PCShopSell.Tests.ResidentialPropertyTests" runstate="Runnable" seed="1886242038" result="Passed" start-time="2026-11-04 18:15:34Z" end-time="2026-11-04 18:15:34Z" duration="0.370902" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ResidentialPropertyTests.BuyingOccupiedHomePreservesNpcAddressesAndPaysOneRealMonthlyRentAfterPurchase
+REGRESSION DONE PCShopSell.Tests.ResidentialPropertyTests.BuyingOccupiedHomePreservesNpcAddressesAndPaysOneRealMonthlyRentAfterPurchase Passed
+]]></output>
+            </test-case>
+            <test-case id="3238" name="EmptyInvestmentCannotGeneratePhantomRentAndCanBeConvertedToSelfUseWithoutDoubleOwnership" fullname="PCShopSell.Tests.ResidentialPropertyTests.EmptyInvestmentCannotGeneratePhantomRentAndCanBeConvertedToSelfUseWithoutDoubleOwnership" methodname="EmptyInvestmentCannotGeneratePhantomRentAndCanBeConvertedToSelfUseWithoutDoubleOwnership" classname="PCShopSell.Tests.ResidentialPropertyTests" runstate="Runnable" seed="1294038002" result="Passed" start-time="2026-11-04 18:15:34Z" end-time="2026-11-04 18:15:34Z" duration="0.208975" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ResidentialPropertyTests.EmptyInvestmentCannotGeneratePhantomRentAndCanBeConvertedToSelfUseWithoutDoubleOwnership
+REGRESSION DONE PCShopSell.Tests.ResidentialPropertyTests.EmptyInvestmentCannotGeneratePhantomRentAndCanBeConvertedToSelfUseWithoutDoubleOwnership Passed
+]]></output>
+            </test-case>
+            <test-case id="3239" name="WrongAgencyAndDuplicatePurchaseCannotDebitOrCreateOwnership" fullname="PCShopSell.Tests.ResidentialPropertyTests.WrongAgencyAndDuplicatePurchaseCannotDebitOrCreateOwnership" methodname="WrongAgencyAndDuplicatePurchaseCannotDebitOrCreateOwnership" classname="PCShopSell.Tests.ResidentialPropertyTests" runstate="Runnable" seed="1697501406" result="Passed" start-time="2026-11-04 18:15:34Z" end-time="2026-11-04 18:15:35Z" duration="0.184751" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ResidentialPropertyTests.WrongAgencyAndDuplicatePurchaseCannotDebitOrCreateOwnership
+REGRESSION DONE PCShopSell.Tests.ResidentialPropertyTests.WrongAgencyAndDuplicatePurchaseCannotDebitOrCreateOwnership Passed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

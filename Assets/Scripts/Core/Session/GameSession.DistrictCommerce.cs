@@ -11,7 +11,8 @@ namespace PCShopSell.Core.Session
         public bool DistrictCommerceGameplay=>DistrictCommerceActive&&_district.NodeId!="expo.invitation"&&_district.NodeId!="expo.review"&&_district.NodeId!="tender.invitation"&&_district.NodeId!="tender.review";
         public BrandRecord DistrictCommerceBrand=>Brand(_district.CommerceBrandId)?.Copy();
         public string[] DistrictCommerceSteps=>_district.Chapter==2?ExpoStoryChain.ToArray():TenderStoryChain.ToArray();
-        private BrandExhibit DistrictCommerceExpo=>_brands.Exhibits.Where(e=>e.BrandId==_district.CommerceBrandId).OrderByDescending(e=>e.Finished).ThenByDescending(e=>e.Day).FirstOrDefault();
+        private BrandExhibit DistrictCommerceExpo=>_brands.Exhibits.Where(e=>e.BrandId==_district.CommerceBrandId)
+            .OrderByDescending(e=>_brands.Orders.Any(o=>o.Id==e.Id+":lead"&&o.Done)).ThenByDescending(e=>e.Day).FirstOrDefault();
         private BrandTender DistrictCommerceTender=>_brands.Tenders.Where(t=>t.BrandId==_district.CommerceBrandId).OrderByDescending(t=>t.Stage==3).ThenByDescending(t=>t.Deadline).FirstOrDefault();
         private BrandOrder DistrictExpoReceipt=>_brands.Orders.FirstOrDefault(o=>o.Id==DistrictCommerceExpo?.Id+":lead"&&o.BrandId==_district.CommerceBrandId&&o.Source=="expo");
         private bool DistrictBrandRevenueQualified(BrandRecord b)=>BrandRevenue(MyShops.Where(s=>s.RetailKind==b.Kind),(Clock.Today.TotalDays/30-1)*30,Clock.Today.TotalDays/30*30)>=10000000000L;
@@ -36,10 +37,10 @@ namespace PCShopSell.Core.Session
                 if(_district.Chapter==3&&t?.Stage==4&&!_district.NodeId.EndsWith(".invitation"))return "本轮未能保住席位；主线保留，下年度重新报名、试单和履约";
                 switch(_district.NodeId)
                 {
-                    case "expo.prepare": return e!=null&&!e.Missed?null:"到季度展会页报名：准备3件现货和¥2,000；错过本届可报名下季度";
-                    case "expo.reception": return e?.Finished==true?null:e?.Missed==true?"本届未完成，保留主线，下一季度重新报名并接待":"展会当天进入会展中心，完成三轮现场接待";
+                    case "expo.prepare": return e!=null&&!e.Missed?null:"到品牌展会页准备摊位、每种100件展品与已签约KOL；错过本届可报名下季度";
+                    case "expo.reception": return e?.Finished==true?null:e?.Missed==true?"本届未完成，保留主线，下一季度重新参展":"开幕当天进入会展中心，连续4天参与事件与舞台互动";
                     case "expo.delivery": case "expo.review":
-                        if(e?.Finished!=true||DistrictExpoReceipt?.Done!=true)return DistrictExpoReceipt?.Failed==true?"展会订单已逾期，下季度参展取得新订单后继续":"请实际交付本品牌的展会线索订单；发货不等于到货";
+                        if(e?.Finished!=true||DistrictExpoReceipt?.Done!=true)return DistrictExpoReceipt==null&&e?.Finished==true?"本届没有获得采购订单，下季度改善现场表现后重新参展":DistrictExpoReceipt?.Failed==true?"展会订单已逾期，下季度参展取得新订单后继续":"请实际交付本品牌的展会线索订单；发货不等于到货";
                         return b.Influence>=100?null:"本品牌影响力 "+b.Influence+"/100，请继续参展和交付";
                     case "tender.prepare": return t==null?"到企业竞标页报名，联系沈远和袁岚调查需求与对手，再准备报价和试单":t.Intel==3||t.Stage==2||t.Stage==3?null:"报名已完成，请联系沈远核实需求、向袁岚调查对手";
                     case "tender.trial": return _brands.Orders.Any(o=>o.Id==t?.Id+":trial"&&o.Done)?null:"提交本品牌的竞标方案，实际交付10件试单并等待到货";
@@ -57,7 +58,7 @@ namespace PCShopSell.Core.Session
                 if(_district.Chapter==2)
                 {
                     var e=DistrictCommerceExpo;var o=DistrictExpoReceipt;
-                    string exhibit=e==null?"尚未报名":e.Missed?"本届已错过":e.Finished?"现场接待完成":"展期第"+(e.Day+1)+"天 09:00—17:00 · 接待 "+e.Stage+"/3";
+                    string exhibit=e==null?"尚未报名":e.Missed?"本届已错过":e.Finished?"展会已完成":e.Format==2?"4天展会 · 现场进度 "+e.Decision+"/24":"旧版展会 · 接待 "+e.Stage+"/3";
                     string delivery=o==null?"尚未取得展会订单":o.Done?"展会订单已到货结算":o.Failed?"订单已逾期":o.Shipped?"订单运输中，尚未到货":"待发货 "+o.Count+" 件 · 截止第"+(o.Due+1)+"天";
                     return b.Name+" · 影响力 "+b.Influence+"/100\n"+exhibit+"\n"+delivery;
                 }

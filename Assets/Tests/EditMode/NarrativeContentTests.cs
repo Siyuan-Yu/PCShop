@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Common;
@@ -13,12 +13,12 @@ namespace PCShopSell.Tests
     {
         private static CityLayout City()=>CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text));
         private static GameSession Session()=>new GameSession(City(),7,Money.FromYuan(10000),GameTimestamp.From(new GameDate(0),9*60));
-        [Test] public void PopulationHas120StableCompleteDistinctProfiles()
+        [Test] public void PopulationHasStableCompleteDistinctProfiles()
         {
             var people=CityLifeCatalog.People.Where(p=>p.Id!=CityLifeCatalog.InvitationTestPersonId).ToArray();
-            Assert.AreEqual(120,people.Length);Assert.AreEqual(120,people.Select(p=>p.Id).Distinct().Count());
-            Assert.AreEqual(120,people.Select(p=>p.Name).Distinct().Count());Assert.AreEqual(20,people.Count(p=>p.KeyCharacter));
-            Assert.AreEqual(360,people.SelectMany(p=>p.Stories).Distinct().Count(),"No shared filler biography paragraphs");
+            Assert.AreEqual(124,people.Length);Assert.AreEqual(124,people.Select(p=>p.Id).Distinct().Count());
+            Assert.AreEqual(124,people.Select(p=>p.Name).Distinct().Count());Assert.AreEqual(20,people.Count(p=>p.KeyCharacter));
+            Assert.AreEqual(372,people.SelectMany(p=>p.Stories).Distinct().Count(),"No shared filler biography paragraphs");
             var city=City();
             foreach(var p in people)
             {

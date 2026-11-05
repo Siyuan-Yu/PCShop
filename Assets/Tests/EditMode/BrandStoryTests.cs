@@ -44,7 +44,9 @@ namespace PCShopSell.Tests
         }
         private static string Register(GameSession s)
         {
-            Assert.True(s.RegisterBrandExpo("b", Shop(s), Product, "buyers")); return s.BrandBusiness.Exhibits.Single().Id;
+            // An explicitly seeded pre-upgrade save tests continued story compatibility.
+            var state=s.BrandBusiness;var e=new BrandExhibit{Id="b:legacy:75",BrandId="b",ShopId=Shop(s),ProductId=Product,Focus="buyers",Day=s.NextBrandExpoDay};
+            state.Exhibits=new[]{e};typeof(GameSession).GetField("_brands",Private).SetValue(s,state);return e.Id;
         }
         private static void Expo(GameSession s)
         {
@@ -201,7 +203,7 @@ namespace PCShopSell.Tests
             }
             Assert.AreEqual("陈启明", CityLifeCatalog.Person("keeper_agent").Name);
             Assert.AreEqual("莫文宁", Creators.Get("momo").Name);
-            Assert.AreEqual(120, CityLifeCatalog.People.Count(p => p.Id != CityLifeCatalog.InvitationTestPersonId));
+            Assert.AreEqual(124, CityLifeCatalog.People.Count(p => p.Id != CityLifeCatalog.InvitationTestPersonId));
         }
         [Test] public void OldNamedPersonRetainsContactRelationshipAndBiographyAfterLoad()
         {

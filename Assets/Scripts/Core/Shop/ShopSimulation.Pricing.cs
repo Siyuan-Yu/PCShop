@@ -13,11 +13,12 @@ namespace PCShopSell.Core.Shop
         private void ClearFixedPartPrices(PartDef part){_fixedSalePrices.Remove(FixedPartKey(part,true));_fixedSalePrices.Remove(FixedPartKey(part,false));}
 
         public Func<double> SalesBonusOf { get; set; } = () => 0;
+        public Func<double> KolIntentOf { get; set; } = () => 0;
         public Func<bool> HasClothingMirror { get; set; } = () => false;
         public double ClothingMirrorPurchaseIntentBonus => HasClothingMirror?.Invoke()==true?.05:0;
         public double GoodsMirrorBonus(string id)=>ClothingProducts.IsClothing(id)?ClothingMirrorPurchaseIntentBonus:0;
         public double RestaurantDrinkPurchaseIntentBonus(string id) => RetailKind == "restaurant" && RetailProducts.IsDrink(id) ? .20 : 0;
-        public double SalesPurchaseIntentBonus => Math.Max(0,Math.Min(.25,SalesBonusOf?.Invoke()??0));
+        public double SalesPurchaseIntentBonus => Math.Max(0,Math.Min(.25,SalesBonusOf?.Invoke()??0))+Math.Max(0,Math.Min(.20,KolIntentOf?.Invoke()??0));
         public double MarkupPurchaseIntent(double markup) => AssistedPurchaseIntent(ShopSettings.BuyChance(markup));
         private double AssistedPurchaseIntent(double baseline)=>Math.Max(0,Math.Min(1,baseline+SalesPurchaseIntentBonus));
         private double PartPurchaseChance(double markup,bool boxed)

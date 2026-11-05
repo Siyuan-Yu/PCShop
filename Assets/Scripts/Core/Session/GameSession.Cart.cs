@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -224,7 +224,7 @@ namespace PCShopSell.Core.Session
         }
         public bool CartAddVehicle(VehicleKind kind)
         {
-            var vehicle=Vehicles.Get(kind);if(!vehicle.Purchasable)return false;
+            var vehicle=Vehicles.Get(kind);if(!vehicle.Purchasable||!DealerSells(MotorCatalog.Legacy(kind).Id))return false;
             return CartAddRegistered("vehicle:"+kind,vehicle.Name,vehicle.Price,()=>BuyVehicle(kind,false),
                 ()=>CurrentPlace?.Kind!=PlaceKind.Dealer?"请到车行购买":null,true);
         }

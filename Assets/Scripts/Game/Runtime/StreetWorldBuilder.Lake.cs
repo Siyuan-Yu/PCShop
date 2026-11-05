@@ -30,6 +30,7 @@ namespace PCShopSell.Game.Runtime
             BuildLakeCourtyards(root);
             BuildShoreFurniture(root,shore);
             BuildLakeIslands(root);
+            BuildRaceCauseways();
         }
 
         private List<Vector3> SmoothShore()

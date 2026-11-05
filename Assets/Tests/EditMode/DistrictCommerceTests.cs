@@ -40,9 +40,11 @@ namespace PCShopSell.Tests
             using(var s=Make(2))
             {
                 Meet(s);Assert.AreEqual("expo.prepare",s.CurrentDistrictNode.Id);Assert.False(s.BeginDistrictMeeting("expo.prepare"));
-                Assert.True(s.RegisterBrandExpo("b",s.MyShops.First().Place.Id,Product,"design"));s.RefreshDistrictNarrative();Assert.AreEqual("expo.reception",s.CurrentDistrictNode.Id);
-                var e=s.BrandBusiness.Exhibits.Single();Time(s,e.Day*1440L+600);At(s,"life_expo");
-                for(int i=0;i<3;i++){Assert.True(s.ActBrandExpo(e.Id,"design"));Time(s,s.Clock.Now.TotalMinutes+30);}
+                s.Meet("momo",0);Assert.True(s.SignKolLive("b","momo"));Assert.True(s.RegisterBrandExpo("b",s.MyShops.First().Place.Id,Product,"design"));s.RefreshDistrictNarrative();Assert.AreEqual("expo.reception",s.CurrentDistrictNode.Id);
+                var e=s.BrandBusiness.Exhibits.Single();Time(s,e.Day*1440L+540);At(s,"life_expo");
+                var host=s.CityPersonState("momo");host.Route=null;host.LocationPlaceId="life_expo";host.ActivityId=null;host.VisitId=null;
+                s.Player.Energy=s.Player.MaxEnergy;Assert.True(s.StartQuarterlyExpo(e.Id));
+                for(int i=0;i<24;i++){var m=s.CurrentExpoMoment(e.Id);Assert.True(s.ChooseExpoAction(e.Id,Array.IndexOf(m.Scores,m.Scores.Max())));}
                 s.RefreshDistrictNarrative();Assert.AreEqual("expo.delivery",s.CurrentDistrictNode.Id);Assert.AreEqual(1,s.DistrictAccessTier);
                 Deliver(s,s.BrandBusiness.Orders.Single(o=>o.Source=="expo"));Assert.AreEqual("expo.review",s.CurrentDistrictNode.Id);Assert.AreEqual(1,s.DistrictAccessTier);
                 Assert.False(s.ActDistrictNode("expo.review"));Meet(s);Assert.AreEqual(2,s.DistrictAccessTier);Assert.IsNull(s.CurrentDistrictNode);
@@ -81,7 +83,7 @@ namespace PCShopSell.Tests
         {
             using(var s=Make(2))
             {
-                Meet(s);Assert.True(s.RegisterBrandExpo("b",s.MyShops.First().Place.Id,Product,"buyers"));s.RefreshDistrictNarrative();
+                Meet(s);s.Meet("momo",0);Assert.True(s.SignKolLive("b","momo"));Assert.True(s.RegisterBrandExpo("b",s.MyShops.First().Place.Id,Product,"buyers"));s.RefreshDistrictNarrative();
                 using(var loaded=GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
                 {Assert.AreEqual("b",loaded.DistrictStoryState.CommerceBrandId);Assert.AreEqual("expo.reception",loaded.CurrentDistrictNode.Id);loaded.RefreshDistrictNarrative();Assert.AreEqual(1,loaded.DistrictAccessTier);Assert.NotNull(loaded.DistrictCommerceBlocker);}
             }

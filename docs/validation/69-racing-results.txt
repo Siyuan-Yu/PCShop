@@ -1,0 +1,54 @@
+﻿2026-11-05 · 湖区赛车与二手车行验证
+
+Unity 2022.3.6f1，隔离工程 D:/UnityProjects/PCShop/_ci_retro_portraits。
+全部使用 batchmode + nographics；未截取、查看或录制游戏画面。
+
+相关联动回归：87 / 87 通过。
+报告：69-racing-final.xml。
+范围：RacingTests（当时23项）、NarrativeContentTests、CityTravelTimingTests、
+ResidentialAgencyTests、ResidentialPropertyTests、QuarterlyExpoTests、KolStreamingTests。
+
+最终赛车专项：26 / 26 通过，4.712秒。
+报告：69-racing-delivery.xml。
+在上轮基础上新增“对手先完赛后的最终名次”和“四位新NPC头像导入”检查，
+另补自用车与不同大小展位的唯一库存流转，并复跑全部赛车专项；两份报告包含23项重复案例，合计90项不同案例。
+车行互相导航和驾驶HUD的最终界面检查另为1 / 1通过（重复案例），报告69-racing-ui-final.xml。
+
+专项覆盖：
+- 五种电驴及车行售卖范围；三轮/四轮独立车型。
+- 老存档按数量迁移车库，独立编号、升级和车况保存。
+- 实际到场、片区、健康、可用车辆和比赛独占限制。
+- 固定步长输入；四条赛道×电驴/三轮/四轮共12种组合完整跑完。
+- 暂停、刹转、复位罚时、撞击损伤；低速轻碰不强制造成损伤。
+- 对手先过线后不会因所有进度归到终点而误发冠军。
+- 退赛不退款不发奖，结算不重复；正常完赛奖金和结识车友。
+- 3D赛道构建和实际UI车行/车库/接待处/驾驶HUD构建。
+- 六车、实际二手车行租约、四片区的独立验收档与读档。
+- 四张独立复古头像可加载。
+- 人脉车源、收购扣款、检测、整备、定价、等待报价、实际售出、重复成交拦截。
+- 有库存不能关闭车行；车辆不会同时留在车库和销售展位。
+
+额外包含员工系统的较广回归最初为72项、67通过、5失败：
+报告：69-racing-regression.xml。
+其中两项本次问题（新车友尚未接入关系网、社区没有中型铺面）已修复，
+分别通过最终人物回归和赛车验收档专项。
+
+其余三项是第36/38篇已经记录的旧员工测试失败，未宣称全项目测试全绿：
+WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("load")
+WorkforceTests.InvalidProcurement_DoesNotChargeReserveVehicleOrCreateGoods("quota")
+WorkforceTests.Transfer_CanCancel_AndCannotOverwriteOccupiedRole
+历史证据：36-shop-core-results.txt、38-supplier-plans-results.txt。
+
+开发时发现并修正：
+1. 赛道/车辆文件首次导入后的编译问题，最终Unity正常编译并运行测试。
+2. 社区可租单位均为小店，二手车行改为小/中/大2/4/6展位。
+3. 新NPC增加已有关系边、独立故事和各自头像。
+4. 复位罚时同步推进对手；按实际过线时间确定最终排名。
+5. 水面连接道路增加实体路堤，车行与改装店有互相导航入口。
+6. 新接入道路额外按旋转后的住宅/商铺占地核对；公园支路改接公共路口s_expo_0，避开residence_s_sports_17，六条接入边均无现有建筑穿越（按5单位半宽检查）。记录69-racing-road-footprints.txt。最终地图加载专项1 / 1通过，报告69-racing-map-final.xml。
+
+图片生成：使用内置 image_gen，一张选址概念、四张NPC头像；PNG与Unity导入配置已入项目。
+提示词：docs/art/racing-image-prompts.md。
+
+未进行截图式或人工操作手感验收；自动驾驶输入通过不代表主观驾驶手感已经由玩家确认。
+未打Windows包、未Git提交、未推送GitHub。此前其他本地工作保留。

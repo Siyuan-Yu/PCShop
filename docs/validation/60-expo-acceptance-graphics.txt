@@ -1,0 +1,10 @@
+SMOKE shot start-window
+SMOKE OK 实际按钮创建独立社区展会档
+SMOKE shot prepared-window
+SMOKE shot registration
+SMOKE OK 真实报名扣款交样
+SMOKE OK 推进开幕但不代做接待
+SMOKE shot opening-window
+SMOKE OK 返回原进度，时间与资金不被测试档改写
+SMOKE EXPO ACCEPTANCE GRAPHICS COMPLETE
+SMOKE RESULT code=0 errors=0

@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.World;
+using PCShopSell.Core.Session;
 using PCShopSell.Game.Runtime;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -28,6 +29,7 @@ namespace PCShopSell.Game.UI
         private float _overviewSize;
         private Bounds _cityBounds;
         private HashSet<string> _placeIds;
+        private HashSet<string> _selectableIds;
         private bool _dragged;
         private Vector2 _previousPointer;
         public Action Changed;
@@ -35,6 +37,9 @@ namespace PCShopSell.Game.UI
         public float Width { get; private set; }
         public float Height { get; private set; }
         public float Zoom => _state.Zoom;
+        public bool CanSelect(string id)=>id!=null&&_selectableIds!=null&&_selectableIds.Contains(id);
+        public static Place[] DistrictPlaces(GameSession session,Place agency)=>session.City.Places
+            .Where(p=>session.AgencyServes(agency,p)).OrderBy(p=>session.City.ViewPosition(p.NodeId).X).ToArray();
 
         public void FrameArea(Vector3 center, float radius)
         {
@@ -45,7 +50,7 @@ namespace PCShopSell.Game.UI
             RenderMap();
         }
 
-        public void Initialize(GameController game, ViewState state, Place[] units, float width, float height)
+        public void Initialize(GameController game, ViewState state, Place[] units, float width, float height, bool residential = false)
         {
             _game = game; _state = state; _rect = (RectTransform)transform;
             Width = width; Height = height;
@@ -60,10 +65,12 @@ namespace PCShopSell.Game.UI
             var extra = _camera.GetUniversalAdditionalCameraData();
             extra.renderPostProcessing = false;
             extra.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
-            _camera.transform.rotation = Quaternion.Euler(40, 45, 0);
+            _camera.transform.rotation = Quaternion.Euler(52, 45, 0);
             _placeIds = new HashSet<string>(units.Select(p => p.Id));
+            _selectableIds=new HashSet<string>(units.Where(p=>!residential||p.Kind==PlaceKind.Home).Select(p=>p.Id));
             bool hasBounds = false;
             var bounds = new Bounds(Vector3.zero, Vector3.zero);
+            var shopBounds = new List<Bounds>();
             foreach (var unit in units)
             {
                 if (!game.World.Places.TryGetValue(unit.Id, out var visual)) continue;
@@ -71,20 +78,20 @@ namespace PCShopSell.Game.UI
                 if (!hasBounds) { bounds = buildingBounds; hasBounds = true; }
                 else bounds.Encapsulate(buildingBounds);
                 bounds.Encapsulate(game.World.NodeWorld(unit.NodeId));
+                // Housing changes the selectable properties, not the district's framing.
+                // Both tabs use the same local street overview and keep distant homes reachable by pan/focus.
+                if (IsDistrictOverviewPlace(unit)) shopBounds.Add(buildingBounds);
             }
             if (!hasBounds) bounds = new Bounds(Vector3.zero, new Vector3(40, 20, 40));
             bounds.Expand(new Vector3(8, 4, 8));
             _cityBounds = bounds;
-            _overview = bounds.center;
-            Quaternion inverse = Quaternion.Inverse(_camera.transform.rotation);
-            float extentX = 0, extentY = 0;
-            foreach (Vector3 corner in Corners(bounds))
-            {
-                Vector3 v = inverse * (corner - _overview);
-                extentX = Mathf.Max(extentX, Mathf.Abs(v.x));
-                extentY = Mathf.Max(extentY, Mathf.Abs(v.y));
-            }
-            _overviewSize = Mathf.Max(extentY, extentX / _camera.aspect) * 1.06f;
+            // A remote venue can belong to this agency administratively without
+            // belonging in the shop-selection overview. Keep it reachable by pan,
+            // but frame actual shop exteriors, not the empty corners of a world AABB.
+            if (shopBounds.Count == 0) shopBounds.Add(bounds);
+            var projected = ProjectedBuildingBounds(shopBounds, _camera.transform.rotation);
+            _overview = _camera.transform.rotation * projected.center;
+            _overviewSize = Mathf.Max(12, Mathf.Max(projected.extents.y, projected.extents.x / _camera.aspect) * 1.12f + 2);
             _texture = new RenderTexture(Mathf.RoundToInt(width * 1.5f), Mathf.RoundToInt(height * 1.5f), 24)
             { name = "AgencyStreetOverview", filterMode = FilterMode.Bilinear };
             _camera.targetTexture = _texture;
@@ -97,6 +104,23 @@ namespace PCShopSell.Game.UI
             return place.BuildingBounds();
         }
 
+        public static Bounds ProjectedBuildingBounds(IEnumerable<Bounds> buildings, Quaternion cameraRotation)
+        {
+            var inverse = Quaternion.Inverse(cameraRotation);
+            bool found = false; var result = new Bounds();
+            foreach (var building in buildings)
+            foreach (var corner in Corners(building))
+            {
+                var point = inverse * corner;
+                if (!found) { result = new Bounds(point, Vector3.zero); found = true; }
+                else result.Encapsulate(point);
+            }
+            return result;
+        }
+
+        public static bool IsDistrictOverviewPlace(Place place) => place.Kind == PlaceKind.Agency
+            || place.Kind == PlaceKind.Shop && place.IsTradable;
+
         public static Vector3[] Corners(Bounds b) => new[]
         {
             new Vector3(b.min.x,b.min.y,b.min.z), new Vector3(b.max.x,b.min.y,b.min.z),
@@ -107,9 +131,10 @@ namespace PCShopSell.Game.UI
 
         private void ApplyCamera()
         {
-            float limit = 1 - 1 / _state.Zoom;
-            _state.Offset.x = Mathf.Clamp(_state.Offset.x, -_cityBounds.extents.x * limit, _cityBounds.extents.x * limit);
-            _state.Offset.y = Mathf.Clamp(_state.Offset.y, -_cityBounds.extents.z * limit, _cityBounds.extents.z * limit);
+            // Clamp the target to the real district, so edge properties can still
+            // be centred rather than pinned against the viewport edge when zoomed.
+            _state.Offset.x = Mathf.Clamp(_state.Offset.x, _cityBounds.min.x - _overview.x, _cityBounds.max.x - _overview.x);
+            _state.Offset.y = Mathf.Clamp(_state.Offset.y, _cityBounds.min.z - _overview.z, _cityBounds.max.z - _overview.z);
             _camera.orthographicSize = _overviewSize / _state.Zoom;
             _camera.transform.position = _overview + new Vector3(_state.Offset.x, 0, _state.Offset.y) - _camera.transform.forward * 240;
         }
@@ -117,6 +142,7 @@ namespace PCShopSell.Game.UI
         public void RenderMap()
         {
             ApplyCamera();
+            if(SystemInfo.graphicsDeviceType==GraphicsDeviceType.Null){Changed?.Invoke();return;}
             // Keep the map legible at night, without modifying the scene's lighting after the capture.
             bool fog = RenderSettings.fog;
             AmbientMode ambientMode = RenderSettings.ambientMode;
@@ -161,12 +187,14 @@ namespace PCShopSell.Game.UI
             return new Vector2(v.x * Width, (1 - v.y) * Height);
         }
 
-        public void ZoomBy(float factor) { _state.Zoom = Mathf.Clamp(_state.Zoom * factor, 1, 3.5f); RenderMap(); }
+        public void ZoomBy(float factor) { _state.Zoom = Mathf.Clamp(_state.Zoom * factor, 1, 8f); RenderMap(); }
         public void ResetView() { _state.Zoom = 1; _state.Offset = Vector2.zero; RenderMap(); }
         public void Focus(Place p)
         {
             Vector3 at = _game.World.Places.TryGetValue(p.Id, out var place) ? place.Entrance : _game.World.NodeWorld(p.NodeId);
-            _state.Zoom = 2.4f;
+            float size = _game.World.Places.TryGetValue(p.Id, out var visual)
+                ? Mathf.Max(14, Mathf.Max(BuildingBounds(visual).size.x, BuildingBounds(visual).size.z) * 1.3f) : 18;
+            _state.Zoom = Mathf.Clamp(_overviewSize / size, 1, 8);
             _state.Offset = new Vector2(at.x - _overview.x, at.z - _overview.z);
             RenderMap();
         }
@@ -197,7 +225,7 @@ namespace PCShopSell.Game.UI
             Ray ray = _camera.ViewportPointToRay(viewport);
             if (!Physics.Raycast(ray, out RaycastHit hit, 600)) return null;
             PlaceMarker marker = hit.collider.GetComponentInParent<PlaceMarker>();
-            return marker != null && _placeIds.Contains(marker.PlaceId) ? marker.PlaceId : null;
+            return marker != null && CanSelect(marker.PlaceId) ? marker.PlaceId : null;
         }
 
         public void OnBeginDrag(PointerEventData e) { _dragged = true; _previousPointer = e.position; }

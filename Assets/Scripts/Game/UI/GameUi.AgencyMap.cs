@@ -13,7 +13,7 @@ namespace PCShopSell.Game.UI
     {
         private void BuildAgencyMap(RectTransform map, Place[] units, Window w, Place agency)
         {
-            AgencyMapText(map, S.City.AgencyCoverageName(agency) + " · 辖区鸟瞰", 23, 16, 6, 280, 34, Ui.TextColor);
+            AgencyMapText(map, S.City.AgencyCoverageName(agency) + " · 商铺集中区", 23, 16, 6, 280, 34, Ui.TextColor);
             AgencyMapText(map, "拖动查看 · 点建筑选址", 15, 300, 9, 238, 30, Ui.Dim);
             var raw = Ui.Rect(map, "StreetViewport");
             AgencyAt(raw, 0, 46, 1120, 650);
@@ -38,7 +38,7 @@ namespace PCShopSell.Game.UI
             AgencyMapControl(map,"定位中介","AgencyFocusCurrent",548,108,()=>view.Focus(agency));
             AgencyMapControl(map, "−", "AgencyZoomOut", 738, 44, () => view.ZoomBy(1 / 1.35f));
             AgencyMapControl(map, "+", "AgencyZoomIn", 788, 44, () => view.ZoomBy(1.35f));
-            AgencyMapControl(map, "全街", "AgencyResetView", 842, 80, view.ResetView);
+            AgencyMapControl(map, "本片区", "AgencyResetView", 842, 80, view.ResetView);
             AgencyMapControl(map, "放大这间", "AgencyFocusUnit", 932, 172,
                 () => { Place p = units.FirstOrDefault(u => u.Id == _agencySelectedId); if (p != null) view.Focus(p); });
             view.Changed();

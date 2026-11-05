@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -26,16 +26,16 @@ namespace PCShopSell.Core.Session
         public event Action<CityTravelIntent> CityTravelRequested;
         public event Action<Place> CityPlaceEntered;
         public CityActivity RunningCityActivity => _cityActivities.FirstOrDefault(a=>a.State==CityActivityPhase.Running);
-        public bool CityActivityExclusive => RunningCityActivity!=null;
+        public bool CityActivityExclusive => RunningCityActivity!=null||BrandExpoExclusive;
         public bool IsCityActivityVenue(Place place)=>place!=null&&CityLifeCatalog.Activities.Any(a=>a.VenueId==place.Id);
         public static string CityPhaseText(CityActivityPhase phase) => phase==CityActivityPhase.Scheduled?"已预约":phase==CityActivityPhase.Gathering?"赴约集合":phase==CityActivityPhase.Running?"活动中":phase==CityActivityPhase.Completed?"已完成":phase==CityActivityPhase.NoShow?"未赴约":phase==CityActivityPhase.Blocked?"路线阻塞":phase==CityActivityPhase.Interrupted?"已中断":phase==CityActivityPhase.Cancelled?"已取消":"待接受";
 
         public bool CityExpoOpen(bool comic)
         {
             int day=Clock.Today.Day;
-            return comic?day>=22&&day<=24:day>=10&&day<=12;
+            return comic?day>=22&&day<=24:Clock.Today.TotalDays%90>=75&&Clock.Today.TotalDays%90<=78;
         }
-        public string CityExpoCalendar => "电子展：每月10—12日；原创漫展：22—24日；每日09:00—18:00。";
+        public string CityExpoCalendar => "品牌展会：每季度一次，每届4天09:00—17:00；原创漫展：每月22—24日。";
         public long SuggestCityActivityStart(string definitionId,string personId=null)
         {
             var def=CityLifeCatalog.Activity(definitionId);if(def==null||!City.HasPlace(def.VenueId))return Clock.Now.TotalMinutes;
@@ -227,6 +227,7 @@ namespace PCShopSell.Core.Session
         }
         public bool BeginCityTravel(string placeId,string activityId=null,bool enter=true)
         {
+            if(Racing)return Fail("请先完成或退出当前比赛。");
             if(!City.HasPlace(placeId))return Fail("目的地不存在，请重新选择");
             if(CityActivityExclusive)return Fail("正在参加活动，请先明确提前离开");
             if(IsWorking)return Fail("正在打工，收工后才能出发");

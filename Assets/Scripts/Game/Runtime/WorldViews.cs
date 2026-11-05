@@ -166,6 +166,18 @@ namespace PCShopSell.Game.Runtime
 
         public Vector3 Position => _root.transform.position;
 
+        private Vector3? _expoPosition;
+        public void PresentInExpo(Vector3? target, Quaternion facing,float dt)
+        {
+            _motion.PresentationAnimation=target.HasValue;
+            if(!target.HasValue){_expoPosition=null;return;}
+            _expoPosition=_expoPosition.HasValue?Vector3.MoveTowards(_expoPosition.Value,target.Value,Mathf.Min(dt,.1f)*5):target;
+            Vector3 delta=target.Value-_expoPosition.Value;delta.y=0;
+            _root.transform.position=_expoPosition.Value;
+            _root.transform.rotation=Quaternion.RotateTowards(_root.transform.rotation,delta.sqrMagnitude>.05f?Quaternion.LookRotation(delta):facing,Mathf.Min(dt,.1f)*240);
+            _motion.ActivityKind=delta.sqrMagnitude>.05f?null:"expo";
+        }
+
         public AvatarView(Transform parent)
         {
             _root = new GameObject("Player");

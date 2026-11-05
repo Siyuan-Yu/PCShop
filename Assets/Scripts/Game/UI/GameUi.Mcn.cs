@@ -26,7 +26,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content,"前往社区澄光传媒",()=>{CloseAllWindows();S.BeginCityTravel(place.Id);},18,Ui.ButtonHot,blocker==null),-1,42);
             }
             var list=Ui.Scroll(w.Content,430);
-            foreach(string person in GameSession.BrandPeople)
+            foreach(string person in KolMarket.All.Select(p=>p.Id).Concat(GameSession.BrandPeople).Distinct())
             {
                 string id=person;string name=S.CityPerson(id)?.Name??id;
                 Line(list,name+" · "+(Creators.Get(id)?.Style??S.CityPerson(id)?.Interest),19,Ui.Accent);

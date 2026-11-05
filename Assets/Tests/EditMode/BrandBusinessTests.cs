@@ -45,18 +45,15 @@ namespace PCShopSell.Tests
                 Assert.True(s.RespondBrandDeal(id,"end"));Assert.False(s.RespondBrandDeal(id,"end"));
             }
         }
-        [Test] public void RegistrationConsumesSamplesOnlyOnceAndRemoteExpoCannotProgress()
+        [Test] public void RegistrationReservesOneHundredAndRemoteExpoCannotProgress()
         {
             using(var s=Make())
             {
-                var shop=s.ShopAt(s.BrandBusiness.Brands[0].ShopIds[0]);shop.Sim.Stock.ForceAddGoods(Product,30);
-                Assert.True(s.RegisterBrandExpo("b",shop.Place.Id,Product,"design"));Assert.AreEqual(27,shop.Sim.Stock.GoodsCount(Product));
+                var shop=s.ShopAt(s.BrandBusiness.Brands[0].ShopIds[0]);shop.Sim.Stock.ForceAddGoods(Product,150);
+                Assert.True(s.SignKolLive("b","momo"));
+                Assert.True(s.RegisterBrandExpo("b",shop.Place.Id,Product,"design"));Assert.AreEqual(50,shop.Sim.Stock.GoodsCount(Product));
                 long balance=s.Ledger.Balance.Cents;Assert.False(s.RegisterBrandExpo("b",shop.Place.Id,Product,"design"));Assert.AreEqual(balance,s.Ledger.Balance.Cents);
-                var e=s.BrandBusiness.Exhibits[0];Day(s,e.Day);Assert.False(s.ActBrandExpo(e.Id,"design"));
-                At(s,"life_expo");Assert.True(s.ActBrandExpo(e.Id,"design"));Assert.False(s.ActBrandExpo(e.Id,"design"));
-                Day(s,e.Day,630);Assert.True(s.ActBrandExpo(e.Id,"design"));Day(s,e.Day,660);Assert.True(s.ActBrandExpo(e.Id,"design"));
-                Assert.True(s.BrandBusiness.Exhibits[0].Finished);Assert.AreEqual(1,s.BrandBusiness.Orders.Length);Assert.False(s.ActBrandExpo(e.Id,"design"));
-                Assert.True(s.FulfilBrandOrder(s.BrandBusiness.Orders[0].Id));Assert.AreEqual(7,shop.Sim.Stock.GoodsCount(Product));
+                var e=s.BrandBusiness.Exhibits[0];Day(s,e.Day);Assert.False(s.StartQuarterlyExpo(e.Id));Assert.False(s.ActBrandExpo(e.Id,"design"));Assert.IsEmpty(s.BrandBusiness.Orders);
             }
         }
         [Test] public void OrderPaysOnArrivalOnceAndSurvivesSave()
@@ -181,7 +178,9 @@ namespace PCShopSell.Tests
             {
                 var shop=s.ShopAt(s.BrandBusiness.Brands[0].ShopIds[0]);shop.Sim.Stock.ForceAddGoods(Product,5);
                 var employee=new Employee{Name="展务测试员",ShiftStart=480,ShiftEnd=1320};shop.Salesperson=employee;
-                string person=s.PersonIdOf(employee);Assert.True(s.RegisterBrandExpo("b",shop.Place.Id,Product,"buyers"));var e=s.BrandBusiness.Exhibits[0];
+                string person=s.PersonIdOf(employee);
+                // Legacy staff reservations remain valid after loading older saves.
+                var state=s.BrandBusiness;var e=new BrandExhibit{Id="b:legacy:75",BrandId="b",ShopId=shop.Place.Id,ProductId=Product,Focus="buyers",Day=s.NextBrandExpoDay};state.Exhibits=new[]{e};Set(s,state);
                 Assert.True(s.AssignBrandExpoPerson(e.Id,person,true));long balance=s.Ledger.Balance.Cents;Assert.False(s.AssignBrandExpoPerson(e.Id,person,true));Assert.AreEqual(balance,s.Ledger.Balance.Cents);
                 Day(s,e.Day,540);var p=s.CityPersonState(person);var point=s.StandOf(shop.Place);p.X=point.X;p.Y=point.Y;p.LocationPlaceId=shop.Place.Id;p.Route=null;
                 Assert.False(s.CityEmployeeAvailable(employee,shop));

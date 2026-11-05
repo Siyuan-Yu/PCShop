@@ -178,7 +178,7 @@ namespace PCShopSell.Core.World
             StreetId = streetId ?? (kind == PlaceKind.Wholesaler ? "s_electronics" : kind == PlaceKind.Home ? "s_oldhomes" : "s_start");
             ExplicitEntrance = explicitEntrance; EntranceX = entranceX; EntranceY = entranceY;
             Width = width > 0 ? width : 10; Depth = depth > 0 ? depth : 9; Heading = heading;
-            IsTradable = tradable || (!explicitEntrance && (kind == PlaceKind.Shop || kind == PlaceKind.Wholesaler));
+            IsTradable = id!="life_expo"&&(tradable || (!explicitEntrance && (kind == PlaceKind.Shop || kind == PlaceKind.Wholesaler)));
             OpenMinute = openMinute; CloseMinute = closeMinute;
         }
     }

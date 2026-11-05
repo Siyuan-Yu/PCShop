@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using PCShopSell.Core.Catalog;
@@ -19,6 +19,10 @@ namespace PCShopSell.Game.UI
         public void OnEnteredPlace(Place p)
         {
             if (S.IsWorking) { UpdateWorkScreen(); return; }
+            if(RaceTracks.Get(p.Id)!=null){OpenPlaceWindow(p,BuildRaceReception,1160,900);return;}
+            if(p.Kind==PlaceKind.Dealer||p.Id=="motor_scooter_mod"){OpenPlaceWindow(p,BuildMotorDealer,1160,900);return;}
+            if(S.VentureAt(p.Id)?.Kind=="cars"){OpenPlaceWindow(p,BuildUsedMotorShop,1160,900);return;}
+            if(p.Id=="life_expo"&&S.CityExpoOpen(false)){CloseAllWindows();OpenQuarterlyExpo();return;}
             if(p.Id==GameSession.CommunityMcnId){OpenCommunityMcn();return;}
             if(S.IsOwnedVenue(p)){OpenVenueManagement(p);return;}
             if(p.Business!=null&&p.Business.StartsWith("venue_")||S.IsCityActivityVenue(p)&&S.CityActivities.Any(a=>a.Active&&a.VenueId==p.Id)){OpenCityVenue(p);return;}
@@ -184,7 +188,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildDealer(Window w, Place p)
         {
-            BuildCarryStore(w,p);
+            BuildMotorDealer(w,p);
         }
 
         // ---------- 地铁 ----------

@@ -28,7 +28,7 @@ namespace PCShopSell.Core.Session
         }
         public string KolContactBlocker(string person)
         {
-            if(!BrandPeople.Contains(person))return "没有这位合作创作者";
+            if(!BrandPeople.Contains(person)&&KolMarket.Get(person)==null)return "没有这位合作创作者";
             return City.IsLakeCity&&!IsMet(person)?"先去社区澄光传媒认识对方、交换业务名片":null;
         }
         private string McnVisitBlocker()
@@ -42,7 +42,7 @@ namespace PCShopSell.Core.Session
         public string McnIntroductionBlocker(string person)
         {
             string why=McnVisitBlocker();if(why!=null)return why;
-            if(!BrandPeople.Contains(person)||CityPersonState(person)==null)return "没有这位合作创作者";
+            if((!BrandPeople.Contains(person)&&KolMarket.Get(person)==null)||CityPersonState(person)==null)return "没有这位合作创作者";
             if(IsMet(person))return "已有联系方式，可直接通过手机联系";
             if(_mcnIntroductions.Any(x=>x.PersonId==person&&!x.Finished&&x.Until>=Clock.Now.TotalMinutes))return "介绍已安排，请等待对方到场";
             var p=CityPersonState(person);
@@ -94,7 +94,7 @@ namespace PCShopSell.Core.Session
         }
         private void RestoreMcnIntroductions(SaveData d)
         {
-            _mcnIntroductions=(d.mcnIntroductions??Array.Empty<McnIntroduction>()).Where(x=>x!=null&&BrandPeople.Contains(x.PersonId)).Select(x=>x.Copy()).ToArray();
+            _mcnIntroductions=(d.mcnIntroductions??Array.Empty<McnIntroduction>()).Where(x=>x!=null&&(BrandPeople.Contains(x.PersonId)||KolMarket.Get(x.PersonId)!=null)).Select(x=>x.Copy()).ToArray();
             // Previously paid business relationships retain contact access; never charge to reacquire them.
             foreach(string person in BrandPeople)
             {

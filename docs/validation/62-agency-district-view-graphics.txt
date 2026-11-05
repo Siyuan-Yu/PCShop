@@ -1,0 +1,62 @@
+SMOKE OK 进入中介 agency
+SMOKE OK 默认视角包含辖区商铺 shop01
+SMOKE OK 默认视角包含辖区商铺 shop02
+SMOKE OK 默认视角包含辖区商铺 shop03
+SMOKE OK 默认视角包含辖区商铺 shop04
+SMOKE OK 默认视角包含辖区商铺 shop05
+SMOKE OK 默认视角包含辖区商铺 shop07
+SMOKE OK 默认视角包含辖区商铺 shop08
+SMOKE OK 默认视角包含辖区商铺 shop09
+SMOKE OK 默认视角包含辖区商铺 shop10
+SMOKE OK 默认视角包含辖区商铺 agency
+SMOKE OK 默认视角包含辖区商铺 shop12
+SMOKE OK 默认视角包含辖区商铺 shop13
+SMOKE OK 默认视角包含辖区商铺 shop14
+SMOKE OK 默认视角包含辖区商铺 shop15
+SMOKE OK 默认视角包含辖区商铺 shop16
+SMOKE OK 默认视角包含辖区商铺 shop17
+SMOKE OK 默认视角包含辖区商铺 shop18
+SMOKE OK 默认视角包含辖区商铺 shop19
+SMOKE OK 默认视角包含辖区商铺 player_shop
+SMOKE OK 默认视角包含辖区商铺 model_market
+SMOKE OK 默认视角包含辖区商铺 clothing_wholesale
+SMOKE shot agency
+SMOKE OK 边缘房源可放大居中 shop01
+SMOKE OK 看房不移动玩家
+SMOKE OK 进入中介 agency_s_services
+SMOKE OK 默认视角包含辖区商铺 life_unit_s_market_0
+SMOKE OK 默认视角包含辖区商铺 life_unit_s_market_2
+SMOKE OK 默认视角包含辖区商铺 life_unit_s_services_0
+SMOKE OK 默认视角包含辖区商铺 life_unit_s_services_2
+SMOKE OK 默认视角包含辖区商铺 life_market
+SMOKE OK 默认视角包含辖区商铺 agency_s_services
+SMOKE shot agency_s_services
+SMOKE OK 边缘房源可放大居中 life_unit_s_market_0
+SMOKE OK 看房不移动玩家
+SMOKE shot community-property-closeup
+SMOKE OK 进入中介 agency_s_night
+SMOKE OK 默认视角包含辖区商铺 life_unit_s_night_0
+SMOKE OK 默认视角包含辖区商铺 life_unit_s_night_2
+SMOKE OK 默认视角包含辖区商铺 life_unit_s_newtown_0
+SMOKE OK 默认视角包含辖区商铺 life_unit_s_newtown_2
+SMOKE OK 默认视角包含辖区商铺 agency_s_night
+SMOKE shot agency_s_night
+SMOKE OK 边缘房源可放大居中 life_unit_s_night_0
+SMOKE OK 看房不移动玩家
+SMOKE OK 进入中介 agency_s_sports
+SMOKE OK 默认视角包含辖区商铺 life_unit_s_creative_0
+SMOKE OK 默认视角包含辖区商铺 life_unit_s_creative_2
+SMOKE OK 默认视角包含辖区商铺 life_unit_s_sports_0
+SMOKE OK 默认视角包含辖区商铺 life_unit_s_sports_2
+SMOKE OK 默认视角包含辖区商铺 life_unit_s_expo_0
+SMOKE OK 默认视角包含辖区商铺 life_unit_s_expo_2
+SMOKE OK 默认视角包含辖区商铺 life_studio
+SMOKE OK 默认视角包含辖区商铺 life_company
+SMOKE OK 默认视角包含辖区商铺 model_workshop
+SMOKE OK 默认视角包含辖区商铺 clothing_boutique
+SMOKE OK 默认视角包含辖区商铺 agency_s_sports
+SMOKE shot agency_s_sports
+SMOKE OK 边缘房源可放大居中 life_unit_s_creative_0
+SMOKE OK 看房不移动玩家
+SMOKE AGENCY DISTRICT VIEW GRAPHICS COMPLETE
+SMOKE RESULT code=0 errors=0

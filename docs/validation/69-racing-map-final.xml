@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Passed" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-04 18:54:51Z" end-time="2026-11-04 18:54:52Z" duration="0.3900947">
+  <test-suite type="TestSuite" id="2398" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1212" result="Passed" start-time="2026-11-04 18:54:51Z" end-time="2026-11-04 18:54:52Z" duration="0.390095" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="3792" name="PCShopSell.Tests.EditMode.dll" fullname="D:/UnityProjects/PCShop/_ci_retro_portraits/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1212" result="Passed" start-time="2026-11-04 18:54:51Z" end-time="2026-11-04 18:54:52Z" duration="0.360782" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="62948" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="3793" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1212" result="Passed" start-time="2026-11-04 18:54:51Z" end-time="2026-11-04 18:54:52Z" duration="0.343593" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3794" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="1212" result="Passed" start-time="2026-11-04 18:54:51Z" end-time="2026-11-04 18:54:52Z" duration="0.327910" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="3255" name="RacingTests" fullname="PCShopSell.Tests.RacingTests" classname="PCShopSell.Tests.RacingTests" runstate="Runnable" testcasecount="26" result="Passed" start-time="2026-11-04 18:54:51Z" end-time="2026-11-04 18:54:52Z" duration="0.299621" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="3278" name="MapHasFourNonTradableReachableVenuesAndSeparateShops" fullname="PCShopSell.Tests.RacingTests.MapHasFourNonTradableReachableVenuesAndSeparateShops" methodname="MapHasFourNonTradableReachableVenuesAndSeparateShops" classname="PCShopSell.Tests.RacingTests" runstate="Runnable" seed="1329733617" result="Passed" start-time="2026-11-04 18:54:51Z" end-time="2026-11-04 18:54:52Z" duration="0.287236" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.RacingTests.MapHasFourNonTradableReachableVenuesAndSeparateShops
+REGRESSION DONE PCShopSell.Tests.RacingTests.MapHasFourNonTradableReachableVenuesAndSeparateShops Passed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>
