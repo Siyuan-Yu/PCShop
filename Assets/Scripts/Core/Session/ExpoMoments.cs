@@ -55,5 +55,15 @@ namespace PCShopSell.Core.Session
             int daily=decision/6,step=decision%6;
             return step%2==1?Stage[daily*3+step/2]:Events[(day/90*3+daily*3+step/2)%Events.Length];
         }
+
+        public static ExpoMoment BrandIntroduction(string brand, string[] presenters)
+        {
+            string lead = string.Join("、", presenters);
+            return new ExpoMoment("开幕日 · 品牌舞台介绍", lead + "已经在舞台等你。观众聚在" + brand + "的展品旁，接下来怎么开场？",
+                new[] { "请代言人介绍品牌", "回答现场观众的问题", "和代言人一起演示展品" },
+                new[] { 8, 16, 12 }, new[] { 11, 5, 8 },
+                new[] { lead + "从品牌故事讲起，吸引了更多观众。", lead + "逐一回应实际问题，观众更信任品牌。",
+                    lead + "用展品展示了一个具体用途，观众留下来继续体验。" });
+        }
     }
 }

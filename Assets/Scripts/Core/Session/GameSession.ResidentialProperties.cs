@@ -10,7 +10,22 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         private string _residentialHomeId;
+        public string CityHomeShortcut { get; private set; }
+        public void SetCityHomeShortcut(Place place)
+        {
+            if (CanSleepAt(place)) CityHomeShortcut = place.Id;
+        }
+
         public Place[] ResidentialPlaces => City.Places.Where(p=>p.Kind==PlaceKind.Home).ToArray();
+        public bool CanSleepAt(Place place)
+        {
+            if (place == null || DistrictAccessBlocker(place) != null) return false;
+            return place == Home || (place.Kind == PlaceKind.Home && PropertyAt(place.Id)?.UseMode == "vacant"
+                && !_cityPeople.Values.Any(p => p.HomePlaceId == place.Id && p.PersonId != CityLifeCatalog.InvitationTestPersonId));
+        }
+
+        public string SecondaryResidenceBed(Place place) =>
+            place.Tier >= 2 ? "bed_good" : place.Tier == 1 ? "bed_spring" : PCShopSell.Core.Home.FurnitureCatalog.BedBoard;
         public CityPersonState[] ResidentialTenants(string id) => _cityPeople.Values.Where(p=>p.PersonId!=CityLifeCatalog.InvitationTestPersonId&&p.HomePlaceId==id).Select(p=>p.Copy()).ToArray();
         public int ResidentialTier(Place place) => Math.Max(0,Math.Min(3,place.Tier));
         public Money ResidentialRent(Place place) => HomeTierRentQuote(ResidentialTier(place));

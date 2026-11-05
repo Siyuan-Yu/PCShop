@@ -28,7 +28,7 @@ namespace PCShopSell.Game.UI
             _sleepBanner.gameObject.SetActive(show);
             if (!show) return;
             int left = S.EnergyAwakeMinutesLeft;
-            string where = _ctrl.InHome ? "走到床边按 F 睡觉" : "快回家睡觉（底栏“回家”）";
+            string where = S.CanSleepAt(S.CurrentPlace) ? "走到床边按 F 睡觉" : "从底栏快捷前往住宅休息";
             _sleepText.text = $"<b>精力耗尽，请安排休息</b>\n<size=22>剩余清醒时间 {left / 60} 小时 {left % 60} 分钟 · {where}</size>";
             _sleepText.color = new Color(1f, 0.85f, 0.3f);
         }

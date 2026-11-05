@@ -96,6 +96,8 @@ namespace PCShopSell.Core.Session
         {
             get
             {
+                if (CurrentPlace != Home && CanSleepAt(CurrentPlace))
+                    return FurnitureCatalog.Get(SecondaryResidenceBed(CurrentPlace)).BedQuality + ResidentialTier(CurrentPlace) * .08;
                 var defs = PlacedDefs(_homeLayout).ToList();
                 double bed = defs.Where(d => d.Role == FurnitureRole.Bed).Select(d => d.BedQuality).DefaultIfEmpty(NoBedSleepQuality).Max();
                 double bonus = defs.Where(d => !CityWeather.IsDevice(d.Id)).Sum(d => d.SleepBonus);

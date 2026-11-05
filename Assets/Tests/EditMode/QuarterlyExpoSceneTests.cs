@@ -37,6 +37,55 @@ namespace PCShopSell.Tests
             root=new GameObject("ExpoSceneTest");root.transform.position=new Vector3(111,0,222);root.transform.rotation=Quaternion.Euler(0,98.5f,0);
             var p=s.City.GetPlace("life_expo");CityVenueView.Build(root.transform,p,(float)p.Width,(float)p.Depth);return root.GetComponent<QuarterlyExpoView>();
         }
+        [Test] public void SignedEndorsersTravelToOpeningAndAppearOnceOnTheBrandStage()
+        {
+            using (var s = Make())
+            {
+                var e = Book(s);
+                foreach (string id in new[] { "momo", "ake" })
+                {
+                    Assert.True(s.SignBrandDeal(e.BrandId, id, "endorse", false));
+                    var person = s.CityPersonState(id);
+                    var start = s.City.GetPlace(GameSession.CommunityMcnId);
+                    var position = s.StandOf(start);
+                    person.LocationPlaceId = start.Id;
+                    person.X = position.X; person.Y = position.Y;
+                    person.Route = null; person.ActivityId = null; person.VisitId = null;
+                }
+                CollectionAssert.AreEquivalent(new[] { "momo", "ake" }, s.ExpoEndorsers(e));
+                Day(s, e.Day, 359);
+                s.AdvanceClock(1);
+                Assert.AreEqual("life_expo", s.CityPersonState("ake").Route?.TargetPlaceId);
+                s.AdvanceClock(180);
+                Assert.True(s.ExpoPersonArrived("ake"));
+                Assert.True(s.ExpoPersonArrived("momo"));
+                At(s, "life_expo");
+                s.Player.Energy = s.Player.MaxEnergy;
+                s.Player.Health = 100;
+                Assert.True(s.StartQuarterlyExpo(e.Id));
+                var view = View(s, out var root);
+                try
+                {
+                    view.Sync(s, 0, true);
+                    var hosts = view.LiveRoot.GetComponentsInChildren<ExpoKolMarker>();
+                    CollectionAssert.AreEquivalent(new[] { "momo", "ake" }, hosts.Select(host => host.PersonId));
+                    var endorser = hosts.Single(host => host.PersonId == "ake");
+                    float booth = endorser.transform.localPosition.z;
+                    Assert.True(view.FocusPerson("ake"));
+                    Assert.AreEqual("person:ake", view.FocusZone);
+                    for (int i = 0; i < GameSession.ExpoEndorserStageDecision; i++) Assert.True(s.ChooseExpoAction(e.Id, 0));
+                    view.Sync(s, 0, true);
+                    Assert.AreEqual("stage", view.FocusZone);
+                    Assert.Greater(endorser.transform.localPosition.z, booth);
+                    StringAssert.Contains(s.CityPerson("ake").Name, s.CurrentExpoMoment(e.Id).Prompt);
+                    int trust = s.ActiveBrandExpo.Trust;
+                    Assert.True(s.ChooseExpoAction(e.Id, 1));
+                    Assert.Greater(s.ActiveBrandExpo.Trust, trust);
+                    StringAssert.Contains("品牌舞台介绍", s.ActiveBrandExpo.Journal.Last());
+                }
+                finally { UnityEngine.Object.DestroyImmediate(root); }
+            }
+        }
         [Test] public void ActualVenueAndExhibitionDateBothGateThePopulatedScene()
         {
             using(var s=Make())

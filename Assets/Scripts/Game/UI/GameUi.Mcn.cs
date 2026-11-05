@@ -7,18 +7,28 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
+        private string _mcnAgencyId = "chengguang";
         public void OpenCommunityMcn()
         {
             if(!S.City.HasPlace(GameSession.CommunityMcnId)){Toast("这张旧地图没有社区MCN");return;}
             var place=S.City.GetPlace(GameSession.CommunityMcnId);
             if(S.CurrentPlace==place)OpenPlaceWindow(place,BuildCommunityMcn,1000,780,holds:true,leaveOnClose:false);
-            else OpenWindow("澄光传媒 MCN",1000,780,w=>BuildCommunityMcn(w,place));
+            else OpenWindow("社区MCN · 联合商务接待",1000,780,w=>BuildCommunityMcn(w,place));
         }
         private void BuildCommunityMcn(Window w,PCShopSell.Core.World.Place place)
         {
             bool here=S.CurrentPlace==place;
             Line(w.Content,"社区 · 商务介绍与创作者合作 · 09:00—18:00",21,Ui.Accent);
             Para(w.Content,"先请公司介绍，实际见面交换名片后，就能通过手机联系与谈合作。",17);
+            var agencies = Ui.Row(w.Content, 36, 6);
+            foreach (var company in BrandAgency.All)
+            {
+                var agency = company;
+                Ui.Size(Ui.Button(agencies, agency.Name, () => { _mcnAgencyId = agency.Id; w.Rebuild(); },
+                    17, _mcnAgencyId == agency.Id ? Ui.ButtonHot : Ui.ButtonBg), -1, 36, 1);
+            }
+            var selected = BrandAgency.Get(_mcnAgencyId) ?? BrandAgency.All[0];
+            Line(w.Content, selected.Specialty + " · " + selected.Description, 16, Ui.Dim);
             if(!here)
             {
                 string blocker=S.DistrictAccessBlocker(place);
@@ -26,10 +36,13 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content,"前往社区澄光传媒",()=>{CloseAllWindows();S.BeginCityTravel(place.Id);},18,Ui.ButtonHot,blocker==null),-1,42);
             }
             var list=Ui.Scroll(w.Content,430);
-            foreach(string person in KolMarket.All.Select(p=>p.Id).Concat(GameSession.BrandPeople).Distinct())
+            foreach(string person in KolMarket.All.Select(p=>p.Id).Concat(GameSession.BrandPeople).Distinct()
+                .Where(p => BrandAgency.ForPerson(p).Id == selected.Id))
             {
                 string id=person;string name=S.CityPerson(id)?.Name??id;
-                Line(list,name+" · "+(Creators.Get(id)?.Style??S.CityPerson(id)?.Interest),19,Ui.Accent);
+                var header = Ui.Row(list, 80, 10);
+                KolAvatar(header, id, 60, 80);
+                Line(header,name+" · "+(Creators.Get(id)?.Style??S.CityPerson(id)?.Interest),19,Ui.Accent);
                 if(S.IsMet(id))
                 {
                     var row=Ui.Row(list,38,6);

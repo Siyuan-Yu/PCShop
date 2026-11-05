@@ -15,6 +15,7 @@ namespace PCShopSell.Core.Shop
         public string personId, visitId, itemId, goodsId, interest;
         public long arrived, ready, waiting, spendCents, budgetCents;
         public bool cash, boxed, chilled, preferenceAssigned;
+        public bool countedBrandVisit;
         public int resaleId;
         public string resaleName;
         public CitySavedCustomer Copy() => (CitySavedCustomer)MemberwiseClone();
@@ -45,7 +46,7 @@ namespace PCShopSell.Core.Shop
             day = new DayReportData { day = _day.Date.TotalDays, customers = _day.Customers, paid = _day.Paid, orders = _day.Orders,
                 expensive = _day.LostTooExpensive, impatient = _day.LostImpatient, stock = _day.LostNoStock, cash = _day.LostNoCash, closed = _day.LostClosed, revenue = _day.Revenue.Cents },
             customers = _active.Where(c => c.State == CustomerState.Browsing || c.State == CustomerState.WaitingCheckout).Select(c => new CitySavedCustomer {
-                id = c.Id, intent = (int)c.Intent, category = (int)c.DesiredCategory, tier = c.BuildTier,
+                id = c.Id, intent = (int)c.Intent, category = (int)c.DesiredCategory, tier = c.BuildTier, countedBrandVisit = c.CountedBrandVisit,
                 state = (int)c.State, reason = (int)c.Reason, paidWith = (int)c.PaidWith,
                 personId = c.PersonId, visitId = c.VisitId, itemId = c.Item?.Id, goodsId = c.GoodsId, interest = c.RetailInterestSeries,
                 arrived = c.ArrivedAt.TotalMinutes, ready = c.ReadyAt.TotalMinutes, waiting = c.WaitingSince.TotalMinutes,
@@ -72,7 +73,7 @@ namespace PCShopSell.Core.Shop
                     throw new InvalidOperationException("存档顾客持有未知商品，保留原存档并检查目录：" + (x.itemId ?? x.goodsId));
                 var c = new ShopCustomer(x.id, (CustomerIntent)x.intent, (PartCategory)x.category,
                     Math.Max(0, Math.Min(PartCatalog.TierCount - 1, x.tier)), new GameTimestamp(x.arrived), new GameTimestamp(x.ready), x.cash) {
-                    State = (CustomerState)x.state, Reason = Enum.IsDefined(typeof(LeaveReason), x.reason) ? (LeaveReason)x.reason : LeaveReason.None,
+                    State = (CustomerState)x.state, CountedBrandVisit = x.countedBrandVisit, Reason = Enum.IsDefined(typeof(LeaveReason), x.reason) ? (LeaveReason)x.reason : LeaveReason.None,
                     PaidWith = Enum.IsDefined(typeof(PayChannel), x.paidWith) ? (PayChannel)x.paidWith : PayChannel.Cash,
                     PersonId = string.IsNullOrEmpty(x.personId) ? null : x.personId, VisitId = string.IsNullOrEmpty(x.visitId) ? null : x.visitId, WaitingSince = new GameTimestamp(x.waiting),
                     Item = itemId == null ? null : PartCatalog.Get(itemId), GoodsId = goodsId,ResaleId=x.resaleId,ResaleName=x.resaleName,

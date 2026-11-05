@@ -285,6 +285,7 @@ namespace PCShopSell.Core.Session
         {
             string districtBlock = DistrictAccessBlocker(p);
             if (districtBlock != null) return districtBlock;
+            if (p?.Kind == PlaceKind.Home && CanSleepAt(p)) return null;
             if(City.LayoutVersion>=7 && p?.Kind==PlaceKind.Home && p!=Home)return HomeVisitBlocker(p);
             if (WorkStaffEntry(p)) return null;
             if (p == null || ShopAt(p) != null || VentureAt(p.Id) != null || IsPlayerPropertyOccupied(p.Id)) return null;

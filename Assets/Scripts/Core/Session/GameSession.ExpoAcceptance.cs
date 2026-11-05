@@ -23,6 +23,56 @@ namespace PCShopSell.Core.Session
         }
 
 #if UNITY_EDITOR
+        private void PrepareBrandCreationAcceptance(int industryCount)
+        {
+            _district = new DistrictProgress { UnlockedTier = 1, Chapter = 1 };
+            _district.Completed = DistrictNodeChains[0].ToArray();
+            _district.CommunityMapDelivered = true;
+            TopUpExpoAcceptanceCash();
+
+            var available = RentableUnits().Where(p => !IsDedicatedVenue(p)
+                && ShopAt(p) == null && PropertyAt(p.Id) == null && VentureAt(p.Id) == null).ToArray();
+            var suburb = new System.Collections.Generic.Queue<Place>(available.Where(p => DistrictTierOf(p) == 0));
+            var community = new System.Collections.Generic.Queue<Place>(available.Where(p => DistrictTierOf(p) == 1));
+            bool useMainShop = DistrictTierOf(MainShop.Place) == 0;
+            if (suburb.Count < 3 * industryCount - (useMainShop ? 1 : 0) || community.Count < 2 * industryCount)
+                throw new InvalidOperationException($"品牌创建验收档的可用铺位不足（城郊 {suburb.Count}，社区 {community.Count}）");
+
+            var kinds = BrandKinds.Take(industryCount).ToArray();
+            foreach (string kind in kinds)
+            {
+                for (int index = 0; index < 5; index++)
+                {
+                    bool inSuburb = index < 3;
+                    if (kind == "computer" && index == 0 && useMainShop) SetFocus(MainShop);
+                    else
+                    {
+                        var place = (inSuburb ? suburb : community).Dequeue();
+                        var rent = ShopRentQuote(place);
+                        PaySigning(rent, place);
+                        OpenNewShop(place, rent, RealEstate.Deposit(rent));
+                    }
+                    var shop = CurrentShop;
+                    shop.RetailKind = shop.Sim.RetailKind = kind;
+                    FitStarterShop();
+                    shop.RenovationDay = BrandDay - 31;
+                    Flags.Remove(OpeningChoicePrefix + shop.Place.Id);
+                    long dailySales = inSuburb ? BrandRivalMonthlySales(kind, BrandDay) / 60 : 100000;
+                    for (int day = BrandDay - 30; day < BrandDay; day++)
+                        Ledger.Credit(new Time.GameDate(day), "零售", Money.FromCents(dailySales),
+                            "品牌创建测试档历史营收", Finance.LedgerAttribution.ForShop(shop.Place.Id));
+                }
+            }
+            _brands = new BrandBusinessState
+            {
+                LastDay = BrandDay,
+                Qualifications = kinds.Select(kind => new BrandQualification
+                    { Kind = kind, LeadingDays = 14, CommunityDays = 30 }).ToArray()
+            };
+            SetFocus(MainShop);
+            RefreshBrandTraffic();
+        }
+
         public bool DebugExpoFastForwarding { get; private set; }
         private void PrepareQuarterlyExpoAcceptance()
         {
@@ -30,7 +80,7 @@ namespace PCShopSell.Core.Session
             if(!DebugPrepareExpoBusinessBase())throw new InvalidOperationException("季度展会验收经营基础准备失败");
             foreach(var talent in KolMarket.All)Meet(talent.Id,25);
             foreach(var part in PartCatalog.All.Where(p=>p.Id!="cpu0"&&p.Id!="gpu0").Take(6).Concat(new[]{PartCatalog.Get("cpu0"),PartCatalog.Get("gpu0")}))MainShop.Sim.Stock.ForceAdd(part,true,Math.Max(0,150-MainShop.Sim.Stock.Count(part,true)));
-            Say("4天季度展会测试档：城郊5店、社区1店已开业并配备店员，住在社区；8种展品各150件，现金150万，影响力320。请亲自升级品牌、签约KOL、预订摊位并委托海报。");
+            Say("4天季度展会测试档：城郊5店、社区1店已开业并配备店员，住在社区；8种展品各150件，现金150万，知名度320。请亲自升级品牌、签约KOL、预订摊位并委托海报。");
         }
 
         public string DebugExpoBusinessBaseBlocker => !IsBrandExpoAcceptance?"仅用于独立展会验收档":

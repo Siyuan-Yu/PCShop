@@ -88,7 +88,11 @@ namespace PCShopSell.Core.Session
             if(Clock.MinuteOfDay<540||Clock.MinuteOfDay>=1080)return "赛场开放时间 9:00–18:00";
             if(v==null||!MotorAvailable(v))return "请准备一辆空闲且未被扣押的自有车辆";
             if(v.Condition<40)return "车况低于40%，先去车间修复";
-            if(Player.Health<40||Player.Energy<30)return "参赛需要健康40、精力30";
+            if(Player.Health<40||Player.Energy<30)
+            {
+                string missing=Player.Health<40?(Player.Energy<30?"健康和精力不足":"健康不足"):"精力不足";
+                return missing+"：健康 "+Math.Floor(Player.Health)+" / 需要 40，精力 "+Math.Floor(Player.Energy)+" / 需要 30";
+            }
             if(!practice&&RacingWins<t.RequiredWins)return "需要累计赢得 "+t.RequiredWins+" 场低级别比赛";
             if(!practice&&Ledger.Balance<Money.FromYuan(t.Fee))return "报名费不足";
             return null;

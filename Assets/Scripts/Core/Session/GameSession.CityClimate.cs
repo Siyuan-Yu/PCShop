@@ -92,7 +92,7 @@ namespace PCShopSell.Core.Session
         {
             if(minutes<120||_climateMoodDay==Clock.Today.TotalDays)return;
             _climateMoodDay=Clock.Today.TotalDays;
-            double felt=SimpleFeltAt(Home.Id,CityAirTemperature);
+            double felt=SimpleFeltAt(CurrentPlace?.Id,CityAirTemperature);
             Player.Mood=Math.Max(0,Math.Min(100,Player.Mood+(felt<16||felt>29?-1:1)));
         }
     }

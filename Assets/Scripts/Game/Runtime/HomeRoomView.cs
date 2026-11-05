@@ -388,6 +388,7 @@ namespace PCShopSell.Game.Runtime
         public void UpdateVisit(GameSession session)
         {
             var home = session.CurrentPlace;
+            bool canSleep = session.CanSleepAt(home);
             if (_visitAddress != home.Id)
             {
                 _visitAddress = home.Id;
@@ -397,18 +398,21 @@ namespace PCShopSell.Game.Runtime
 
                 var furniture = FurnitureCatalog.StartHomeLayout();
                 furniture.RemoveAll(item => item.Id == "fan_broken" || item.Id == "junk");
+                var bed = furniture[0];
+                bed.Id = session.SecondaryResidenceBed(home);
                 if (home.Tier >= 2)
                 {
-                    furniture[0].Id = "bed_good";
                     furniture[1].Id = "wardrobe_wood";
                     furniture.Add(new PlacedFurniture { Id = "sofa", X = 1.2, Z = .65 });
                 }
-                else if (home.Tier == 1) furniture[0].Id = "bed_spring";
                 foreach (string name in new[] { "FloorStain1", "FloorStain2", "Crack1", "Crack2", "LeakStain", "LeakStain2", "Peeling", "Mold" })
                     _root.Find(name).gameObject.SetActive(home.Tier == 0);
                 _furniture.Sync(furniture, RoomSpec.Home);
                 _spots.Clear();
-                _spots.Add(new Spot { Id = Door, Label = "告辞，回到街上", Area = _doorArea, Height = 2.5f });
+                _spots.Add(new Spot { Id = Door, Area = _doorArea, Height = 2.5f });
+                RectD footprint = RoomPlanner.Footprint(RoomSpec.Home, FurnitureCatalog.Get(bed.Id), bed);
+                _spots.Add(new Spot { Id = Bed, Label = "睡觉 / 小睡", Height = 1.1f,
+                    Area = new Rect((float)footprint.MinX, (float)footprint.MinZ, (float)(footprint.MaxX - footprint.MinX), (float)(footprint.MaxZ - footprint.MinZ)) });
                 var floor = _root.Find("Floor").GetComponent<Renderer>();
                 floor.sharedMaterial = IndustrialMaterials.Surface(home.Tier >= 2 ? "wood" : "paving",
                     home.Tier >= 2 ? ArtDirection.Wood : ArtDirection.Cream, new Vector2(3, 3));
@@ -454,10 +458,20 @@ namespace PCShopSell.Game.Runtime
                 NearbyWorld = figure.transform.position + Vector3.up * 2.15f;
             }
             var owner = _owner.transform.localPosition;
+            if (canSleep)
+            {
+                var bed = _spots[1];
+                if (DistToRect(new Vector2(owner.x, owner.z), bed.Area) <= .6f)
+                {
+                    NearbyId = Bed;
+                    NearbyLabel = bed.Label;
+                    NearbyWorld = Origin + new Vector3(bed.Area.center.x, bed.Height, bed.Area.center.y);
+                }
+            }
             if (DistToRect(new Vector2(owner.x, owner.z), _doorArea) <= .75f)
             {
                 NearbyId = Door;
-                NearbyLabel = "告辞，回到街上";
+                NearbyLabel = canSleep ? "出门，回到街上" : "告辞，回到街上";
                 NearbyWorld = Origin + new Vector3(_doorArea.center.x, 2.5f, _doorArea.center.y);
             }
         }

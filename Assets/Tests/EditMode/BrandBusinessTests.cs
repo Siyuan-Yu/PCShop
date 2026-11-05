@@ -27,10 +27,116 @@ namespace PCShopSell.Tests
         private static string Product=>ClothingProducts.All.First().Id;
         private static void Day(GameSession s,int day,int minute=600){s.Clock.Restore(new GameDate(day),minute);typeof(GameSession).GetMethod("TickBrandBusiness",BindingFlags.NonPublic|BindingFlags.Instance).Invoke(s,new object[]{new GameDate(day-1),new GameDate(day)});}
         private static void Delivery(GameSession s){typeof(GameSession).GetMethod("TickBrandDeliveries",BindingFlags.NonPublic|BindingFlags.Instance).Invoke(s,new object[]{s.Clock.Now.TotalMinutes});}
+        [TestCase("brand_ready_two", 2)]
+        [TestCase("brand_ready_three", 3)]
+        public void BrandCreationPresetsKeepBrandsUnfoundedAndEligibleAfterReload(string scenario, int count)
+        {
+            var city = PCShopSell.Core.World.CityLayout.FromData(JsonUtility.FromJson<PCShopSell.Core.World.CityLayoutData>(
+                Resources.Load<TextAsset>("Data/city_layout").text));
+            using (var preset = GameSession.CreateCityLifePreset(city, scenario))
+            using (var s = GameSession.Load(city, preset.CreateSave()))
+            {
+                Assert.True(s.IsCityLifeTest);
+                Assert.IsEmpty(s.BrandBusiness.Brands);
+                var eligible = GameSession.BrandKinds.Where(kind => s.BrandFoundBlocker(kind) == null).ToArray();
+                CollectionAssert.AreEqual(GameSession.BrandKinds.Take(count), eligible);
+                foreach (string kind in eligible)
+                    Assert.True(s.FoundBrand(kind, "测试品牌" + kind, "quality"), s.BrandQualificationText(kind));
+                Assert.AreEqual(count, s.BrandBusiness.Brands.Length);
+            }
+        }
         [Test] public void BrandRequiresCommunityAndSustainedQualifications()
         {
             using(var s=Make(0)){Assert.NotNull(s.BrandFoundBlocker("models"));Assert.False(s.FoundBrand("models","我的品牌","quality"));}
             using(var s=Make()){Assert.NotNull(s.BrandFoundBlocker("models"));Assert.False(s.FoundBrand("models","我的品牌","quality"));Assert.AreEqual(1,s.BrandBusiness.Brands.Length);}
+        }
+        [Test] public void BrandRenameKeepsItsIdentityAndPersistsBothPenalties()
+        {
+            using (var s = Make())
+            {
+                var state = s.BrandBusiness;
+                var brand = state.Brands.Single();
+                brand.Reputation = 51;
+                brand.Influence = 103;
+                Set(s, state);
+
+                Assert.False(s.RenameBrand("b", " 试验服装 "));
+                Assert.False(s.RenameBrand("b", "新"));
+                Assert.AreEqual(51, s.BrandBusiness.Brands.Single().Reputation);
+                Assert.AreEqual(103, s.BrandBusiness.Brands.Single().Influence);
+                Assert.True(s.RenameBrand("b", " 新衣坊 "));
+
+                using (var loaded = GameSession.Load(s.City, s.CreateSave()))
+                {
+                    var renamed = loaded.BrandBusiness.Brands.Single();
+                    Assert.AreEqual("b", renamed.Id);
+                    CollectionAssert.AreEqual(brand.ShopIds, renamed.ShopIds);
+                    Assert.AreEqual("新衣坊", renamed.Name);
+                    Assert.AreEqual(25, renamed.Reputation);
+                    Assert.AreEqual(51, renamed.Influence);
+                }
+            }
+        }
+
+        [Test] public void WeeklyBrandFinanceCountsCommonCostsOnceAndExcludesOtherBrands()
+        {
+            using (var s = Make())
+            {
+                s.Clock.Restore(new GameDate(40), 600);
+                var shop = s.MyShops.First();
+                s.Ledger.Credit(new GameDate(34), "零售", Money.FromYuan(100), "sale", LedgerAttribution.ForShop(shop.Place.Id));
+                s.Ledger.Credit(new GameDate(33), "零售", Money.FromYuan(900), "old", LedgerAttribution.ForShop(shop.Place.Id));
+                s.Ledger.ForceDebit(new GameDate(40), "进货", Money.FromYuan(20), "stock", LedgerAttribution.ForShop(shop.Place.Id));
+                s.Ledger.ForceDebit(new GameDate(40), "品牌经营", Money.FromYuan(30), "common",
+                    new LedgerAttribution(LedgerBusinessKind.Operating, propertyId: "b"));
+                s.Ledger.ForceDebit(new GameDate(40), "展会摊位", Money.FromYuan(40), "both",
+                    new LedgerAttribution(LedgerBusinessKind.Operating, shopId: shop.Place.Id, propertyId: "b"));
+                s.Ledger.ForceDebit(new GameDate(40), "品牌经营", Money.FromYuan(500), "other",
+                    new LedgerAttribution(LedgerBusinessKind.Operating, propertyId: "other"));
+                Assert.AreEqual(10000, s.BrandWeeklyRevenue("b").Cents);
+                Assert.AreEqual(9000, s.BrandWeeklyExpenses("b").Cents);
+                Assert.AreEqual(3000, s.BrandWeeklyExpenses("b", true).Cents);
+            }
+        }
+
+        [Test] public void ActualVisitsAreCountedOnceAndSurviveReload()
+        {
+            using (var s = Make())
+            {
+                var sim = s.MainShop.Sim;
+                typeof(PCShopSell.Core.Shop.ShopSimulation).GetMethod("Spawn", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .Invoke(sim, new object[] { s.Clock.Now });
+                var customer = sim.ActiveCustomers.Last();
+                customer.PersonId = null;
+                Assert.True(sim.CustomerCanBrowse(customer));
+                int visits = s.BrandActualVisits("b");
+                Assert.Greater(visits, 0);
+                Assert.True(sim.CustomerCanBrowse(customer));
+                Assert.AreEqual(visits, s.BrandActualVisits("b"));
+                using (var loaded = GameSession.Load(s.City, s.CreateSave()))
+                {
+                    Assert.AreEqual(visits, loaded.BrandActualVisits("b"));
+                    var restored = loaded.MainShop.Sim.ActiveCustomers.Single(c => c.Id == customer.Id);
+                    Assert.True(loaded.MainShop.Sim.CustomerCanBrowse(restored));
+                    Assert.AreEqual(visits, loaded.BrandActualVisits("b"));
+                    loaded.Clock.Restore(loaded.Clock.Today.AddDays(7), 600);
+                    Assert.Zero(loaded.BrandActualVisits("b"));
+                }
+            }
+        }
+
+        [Test] public void PromotionContributionRespectsTheSameCapAsShopTraffic()
+        {
+            using (var s = Make())
+            {
+                Assert.True(s.SignBrandDeal("b", "momo", "endorse", false));
+                var state = s.BrandBusiness;
+                state.Brands[0].Reputation = 1000;
+                Set(s, state);
+                Assert.AreEqual(.60, s.BrandTraffic(s.MyShops.First()), .000001);
+                Assert.Zero(s.BrandEffectivePromotionTraffic("b"));
+                Assert.Zero(s.BrandEffectiveDealTraffic(s.BrandBusiness.Deals.Single()));
+            }
         }
         [Test] public void PromotionActuallyChangesTrafficAndExclusiveBlocksOtherBrand()
         {

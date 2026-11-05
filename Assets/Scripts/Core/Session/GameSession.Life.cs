@@ -60,7 +60,7 @@ namespace PCShopSell.Core.Session
 
         private bool SleepMinutes(int minutes)
         {
-            if (CurrentPlace != Home) return Fail("只能回家睡觉。");
+            if (!CanSleepAt(CurrentPlace)) return Fail("只能在可入住的自家住宅睡觉。");
             SleepFor(minutes);
             Say($"睡了 {minutes / 60.0:0.#} 小时。过去24小时已睡 {SleepHoursLast24:0.#}/8 小时。");
             return true;
@@ -69,7 +69,7 @@ namespace PCShopSell.Core.Session
         /// <summary>在家睡到下一个早上8:00；白天也可以选择任意睡眠时长。</summary>
         public bool Sleep()
         {
-            if (CurrentPlace != Home) return Fail("只能回家睡觉。");
+            if (!CanSleepAt(CurrentPlace)) return Fail("只能在可入住的自家住宅睡觉。");
             int minutes = NightWorkRest ? NightRestMinutes : Clock.MinutesUntil(WakeUpMinute);
             if (minutes <= 0) minutes = 480;
             SleepFor(minutes);
@@ -81,7 +81,7 @@ namespace PCShopSell.Core.Session
         /// <summary>在家小睡 2 小时。</summary>
         public bool Nap()
         {
-            if (CurrentPlace != Home) return Fail("只能在家小睡。");
+            if (!CanSleepAt(CurrentPlace)) return Fail("只能在可入住的自家住宅小睡。");
             SleepFor(120);
             return true;
         }

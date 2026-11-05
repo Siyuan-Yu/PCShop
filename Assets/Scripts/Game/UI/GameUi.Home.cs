@@ -36,7 +36,16 @@ namespace PCShopSell.Game.UI
             }, true, true);
         }
 
-        public void OpenBedWindow() => OpenRoomWindow(S.HomeHas(FurnitureRole.Bed) ? "床" : "地铺", 760, 560, BuildBed);
+        public void OpenBedWindow()
+        {
+            if (!S.CanSleepAt(S.CurrentPlace)) return;
+            string title = S.CurrentPlace != S.Home || S.HomeHas(FurnitureRole.Bed) ? "床" : "地铺";
+            OpenWindow(title, 760, 560, w =>
+            {
+                if (S.CanSleepAt(S.CurrentPlace)) BuildBed(w);
+                else w.Close();
+            }, true, true);
+        }
 
         public void OpenWardrobeWindow() => OpenRoomWindow("衣柜", 700, 640, BuildWardrobe);
 
@@ -574,7 +583,9 @@ namespace PCShopSell.Game.UI
             Line(w.Content, $"精力 {st.Energy:0}/{st.MaxEnergy:0}  欠觉 {st.SleepDebt:0.##} 小时", 18, Ui.Dim);
                 if(S.EnergyExhausted) Line(w.Content,S.EnergyExhaustionText,17,Ui.Warn);
             Line(w.Content, $"过去24小时已睡 {S.SleepHoursLast24:0.#}/8 小时；睡够8小时就算休息好。", 18);
-              Para(w.Content,S.WeatherSummary+" · "+S.CityComfortSummary+"。可以白天或夜间休息，过去24小时睡足8小时仍恢复精力。床和窗帘继续有效，风扇与空调按季节自动改善睡眠体验。",16,Ui.Dim);
+            bool primaryHome = S.CurrentPlace == S.Home;
+            Para(w.Content, S.WeatherSummary + " · " + S.CityComfortSummary
+                + (primaryHome ? "。床和窗帘影响睡眠质量，风扇与空调按季节改善体感。" : "。这套住宅使用房间里配好的床。"), 16, Ui.Dim);
             Line(w.Content, "选择起床时间（24小时制）", 20, Ui.Accent);
             _wakeMinute=QuarterHourClock(_wakeMinute);
             ClockSelector(w.Content,"起床",_wakeMinute,value=>{_wakeMinute=value;w.RequestRebuild();});
@@ -586,7 +597,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(row, "睡满 8 小时", () => { S.SleepEightHours(); w.Rebuild(); }, 20, Ui.ButtonHot, S.IsSleepTime), 200);
             Ui.Size(Ui.Button(w.Content, "小睡 2 小时", () => { S.Nap(); w.Rebuild(); }, 20), -1, 44);
             Para(w.Content, "可以白天或夜间睡觉。精力耗尽后连续清醒4小时才会疲劳晕倒；实际睡眠结束本轮倒计时。小睡也计入滚动24小时的8小时目标。", 16, Ui.Dim);
-            if (!S.HomeHas(FurnitureRole.Bed)) Para(w.Content, "屋里没有床，只能睡地上；不足8小时的短睡恢复较慢。", 16, Ui.Warn);
+            if (primaryHome && !S.HomeHas(FurnitureRole.Bed)) Para(w.Content, "屋里没有床，只能睡地上；不足8小时的短睡恢复较慢。", 16, Ui.Warn);
         }
 
         private void BuildWardrobe(Window w) { if (_cityClothingPreview == null) _cityClothingPreview = S.EquippedOutfit; BuildCityWardrobe(w); }

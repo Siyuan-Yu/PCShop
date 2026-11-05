@@ -223,7 +223,8 @@ namespace PCShopSell.Game.UI
             _businessButton.gameObject.SetActive(true);
             _businessButton.Tip("<b>经营</b>　快捷键：J\n资产与负债、直供、企业合同、分店、园区等后期经营。");
             _brandButton=Ui.Size(Ui.Button(row,"品牌",OpenBrandBusiness,18),66);
-            _brandButton.name="HudBrand";_brandButton.gameObject.SetActive(S.BrandManagementUnlocked);
+            _brandButton.name="HudBrand";
+            _brandButton.gameObject.SetActive(true);
             _brandButton.Tip("品牌管理、KOL签约、直播排班与直播间。");
             _noticeButtonText = Ui.Size(Ui.Button(row, "通知", OpenNoticeHistory, 16), 66).GetComponentInChildren<Text>();
             Ui.Size(Ui.Button(row, "菜单", OpenSystemPanel, 18), 66).Tip("<b>菜单</b>　快捷键：Esc\n存档、读档、重新开始和音效设置。");
@@ -247,7 +248,7 @@ namespace PCShopSell.Game.UI
             }
             _cargoText = Ui.Size(Ui.Label(brow, "", 16), 155);
             Ui.Size(Ui.Label(brow, "快捷前往：", 17), 90);
-            Ui.Size(Ui.Button(brow, "回家睡觉", _ctrl.GoHomeToSleep, 17), 108).Tip("自动回家并走到床边，打开睡眠选项；按 WASD 随时接管。");
+            BuildShortcutButton(brow, "回家睡觉", SleepShortcut, 108);
             BuildShortcutButton(brow,"我的店铺",0,100);
             BuildShortcutButton(brow,"批发市场",1,100);
             BuildShortcutButton(brow,"中介",2,72);
@@ -333,7 +334,8 @@ namespace PCShopSell.Game.UI
                     : $"<color=#DDC18B>按 F 进入 {S.PlaceTitle(S.NearbyPlace)}</color>";
             else if (_ctrl.InVisit)
                 _hintText.text = _ctrl.VisitRoom?.NearbyLabel is string visitHint
-                    ? "按 F：" + visitHint : "WASD 在屋里走动 · 走近住户或房门按 F";
+                    ? "按 F：" + visitHint
+                    : S.CanSleepAt(S.CurrentPlace) ? "WASD 在屋里走动 · 走近床或房门按 F" : "WASD 在屋里走动 · 走近住户或房门按 F";
             else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#DDC18B>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : "WASD 在屋里走动 · 走近床、衣柜、电饭锅、纸箱、凳子（头顶出现提示按 F）· 房间信息、摆放家具看右上角“我的”";
             else if (S.CurrentPlace != null) _hintText.text = "按 WASD 离开 · 空格暂停";
             else _hintText.text = "WASD 自由走动 · 右键拖动/Q E 转视角 · V 复位 · 滚轮缩放 · 走到门口按 F 进入 · 空格暂停 · 下方按钮可快捷前往";

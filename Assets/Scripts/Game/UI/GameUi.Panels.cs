@@ -39,7 +39,7 @@ namespace PCShopSell.Game.UI
                     OpenPlaceWindow(p, BuildAgency, 1660, 1000);
                     break;
                 case PlaceKind.Home when p != S.Home:
-                    Toast("走近在家的住户按 F 交谈，走回门口按 F 告辞。");
+                    Toast(S.CanSleepAt(p) ? "已到自有住宅。走近床按 F 休息，走回门口按 F 出门。" : "走近在家的住户按 F 交谈，走回门口按 F 告辞。");
                     break;
                 case PlaceKind.Home:
                     Toast("回到出租屋了。走近床、衣柜、电饭锅、纸箱或门，头顶出现提示时按 F；看房间信息点右上角“我的”。");
@@ -91,7 +91,7 @@ namespace PCShopSell.Game.UI
                 var residents = S.CityPeople.Where(person => person.HomePlaceId == residence.Id).ToArray();
                 var present = S.ResidentsAtHome(residence).Select(person => person.PersonId).ToHashSet();
                 if (residents.Length == 0)
-                    Para(portraits, residence == S.Home ? "你的住处" : "暂无登记住户。", 17, Ui.Dim);
+                    Para(portraits, S.CanSleepAt(residence) ? "你的住处" : "暂无登记住户。", 17, Ui.Dim);
                 foreach (var resident in residents)
                 {
                     string id = resident.PersonId;
@@ -115,10 +115,11 @@ namespace PCShopSell.Game.UI
                 Line(details, residence.Name, 22, Ui.Accent);
                 Para(details, "点击左侧头像查看住户资料。", 16, Ui.Dim);
                 string blocker = S.ClosedReason(residence);
-                if (residence != S.Home)
+                bool canSleep = S.CanSleepAt(residence);
+                if (!canSleep)
                     Para(details, "与至少一位住户的好感达到 " + GameSession.HomeVisitMinRelation + "，且这位住户在家时，可以进屋拜访。", 18);
                 if (blocker != null) Para(details, blocker, 17, Ui.Warn);
-                Ui.Size(Ui.Button(details, residence == S.Home ? "回家" : "进屋拜访", () =>
+                Ui.Size(Ui.Button(details, canSleep ? "回家" : "进屋拜访", () =>
                 {
                     if (S.NearbyPlace != residence || !S.EnterNearby())
                     {

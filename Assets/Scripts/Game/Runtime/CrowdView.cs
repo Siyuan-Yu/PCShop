@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using PCShopSell.Core.Session;
 using UnityEngine;
 
@@ -51,9 +52,12 @@ namespace PCShopSell.Game.Runtime
         {
             _citySession = session;
             _expoPresented.Clear();
-            if(session.CurrentPlace?.Id=="life_expo"&&session.CityExpoOpen(false))
-                foreach(string id in session.ExpoAtVenue?.KolIds??Array.Empty<string>())
-                {var p=session.CityPersonState(id);if(p!=null&&p.LocationPlaceId=="life_expo"&&p.Route==null&&string.IsNullOrEmpty(p.ActivityId))_expoPresented.Add(id);}
+            if(session.CurrentPlace?.Id=="life_expo"&&session.CityExpoOpen(false) && session.ExpoAtVenue is BrandExhibit exhibit)
+            {
+                var opening = exhibit.Day == session.Clock.Today.TotalDays ? session.ExpoEndorsers(exhibit) : Array.Empty<string>();
+                foreach (string id in exhibit.KolIds.Union(opening))
+                    if (session.ExpoPersonArrived(id)) _expoPresented.Add(id);
+            }
             if (!_cityMode)
             {
                 foreach (var old in _walkers) if (old.Go != null) Kill.It(old.Go);

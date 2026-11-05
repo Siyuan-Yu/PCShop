@@ -21,7 +21,7 @@ namespace PCShopSell.Core.Session
         private void RefreshBrandTraffic(){foreach(var s in MyShops)WithShop(s,ApplyUpgrades);}
         private IEnumerable<OwnedShop> BrandShops(BrandRecord b) => MyShops.Where(s=>b.ShopIds.Contains(s.Place.Id)&&s.RetailKind==b.Kind);
         private static T[] AppendBrand<T>(T[] array,T value) => (array??Array.Empty<T>()).Concat(new[]{value}).ToArray();
-        private bool BrandPay(long cents,string memo) => !IsGameOver && Ledger.TryDebit(Clock.Today,"品牌经营",Money.FromCents(cents),memo);
+        private bool BrandPay(long cents,string memo,string brandId = null) => !IsGameOver && Ledger.TryDebit(Clock.Today,"品牌经营",Money.FromCents(cents),memo,BrandAttribution(brandId));
         private long BrandRevenue(IEnumerable<OwnedShop> shops,int first,int end)
         {
             var ids=new HashSet<string>(shops.Select(s=>s.Place.Id));
@@ -59,6 +59,25 @@ namespace PCShopSell.Core.Session
                 ShopIds=MyShops.Where(s=>s.RetailKind==kind).Select(s=>s.Place.Id).ToArray()};
             _brands.Brands=AppendBrand(_brands.Brands,b);RefreshBrandTraffic();Say(name+"正式成立，可以参展和洽谈推广。品牌创立不等于上市。");return true;
         }
+        public bool RenameBrand(string brandId, string name)
+        {
+            var brand = Brand(brandId);
+            if (IsGameOver || brand == null) return Fail("当前不能为这个品牌改名");
+
+            name = (name ?? "").Trim();
+            if (name.Length < 2 || name.Length > 16 || name.Any(char.IsControl))
+                return Fail("请输入2—16字的单行品牌名");
+            if (name == brand.Name) return Fail("请输入不同的品牌名");
+
+            brand.Name = name;
+            brand.Reputation /= 2;
+            brand.Influence /= 2;
+            RefreshBrandTraffic();
+            RefreshDistrictNarrative();
+            Say($"品牌已更名为{name}，口碑降至{brand.Reputation}，知名度降至{brand.Influence}。");
+            return true;
+        }
+
         public bool ToggleBrandShop(string brandId,string shopId)
         {
             var b=Brand(brandId);var s=ShopAt(shopId);if(IsGameOver||b==null||s==null||!s.Rented||s.RetailKind!=b.Kind)return false;
@@ -72,7 +91,7 @@ namespace PCShopSell.Core.Session
             string contact=KolContactBlocker(person);if(contact!=null)return Fail(contact);
             if(exclusive&&_kol.Contracts.Any(c=>c.PersonId==person&&c.BrandId!=brandId&&KolContractCurrent(c,Clock.Now.TotalMinutes)))return Fail("该人物已有其他品牌的独家直播合约");
             if(_brands.Deals.Any(d=>d.PersonId==person&&!d.Ended&&d.End>BrandDay&&(d.BrandId==brandId||d.Exclusive||exclusive)))return Fail("该人物已有冲突的合作合约");
-            long fee=BrandDealQuote(person,mode,exclusive);if(!BrandPay(fee,"推广签约 · "+b.Name))return Fail("签约资金不足");
+            long fee=BrandDealQuote(person,mode,exclusive);if(!BrandPay(fee,"推广签约 · "+b.Name,b.Id))return Fail("签约资金不足");
             _brands.Deals=AppendBrand(_brands.Deals,new BrandDeal {Id=Guid.NewGuid().ToString("N"),BrandId=brandId,PersonId=person,Mode=mode,
                 Exclusive=exclusive,Start=BrandDay,End=BrandDay+(mode=="endorse"?90:7),Fee=fee});
             Meet(person,0);RememberSocial(person,"签署了"+b.Name+"的品牌合作，交换了业务联系方式。");
@@ -84,23 +103,21 @@ namespace PCShopSell.Core.Session
             if(response=="end")
             {
                 long penalty=d.Severity>=3?0:d.Fee*(d.End-BrandDay)/(d.End-d.Start)*30/100;
-                if(!BrandPay(penalty,"合作提前解约"))return Fail("解约资金不足");d.Ended=true;if(d.Severity<3)AddRelation(d.PersonId,-3);RefreshBrandTraffic();return true;
+                if(!BrandPay(penalty,"合作提前解约",d.BrandId))return Fail("解约资金不足");d.Ended=true;if(d.Severity<3)AddRelation(d.PersonId,-3);RefreshBrandTraffic();return true;
             }
             if(response!="continue"&&response!="pause"&&response!="negotiate")return false;
             if(d.Response==response)return false;
             if(response=="negotiate")
-            {if(d.Severity==0||d.LastNegotiationDay>=d.NewsDay)return Fail("当前没有尚待核实的新风波");if(!BrandPay(20000,"合作沟通与核实"))return Fail("需要¥200沟通费用");d.LastNegotiationDay=d.NewsDay;AddRelation(d.PersonId,2);}
+            {if(d.Severity==0||d.LastNegotiationDay>=d.NewsDay)return Fail("当前没有尚待核实的新风波");if(!BrandPay(20000,"合作沟通与核实",d.BrandId))return Fail("需要¥200沟通费用");d.LastNegotiationDay=d.NewsDay;AddRelation(d.PersonId,2);}
             d.Response=response;RefreshBrandTraffic();return true;
         }
         public double BrandTraffic(OwnedShop shop)
         {
-            var b=_brands.Brands.FirstOrDefault(x=>x.Kind==shop.RetailKind&&x.ShopIds.Contains(shop.Place.Id));if(b==null)return 0;
-            double boost=Math.Min(.15,b.Influence*.001)+(b.Reputation-50)*.002;
-            foreach(var d in _brands.Deals.Where(x=>x.BrandId==b.Id&&!x.Ended&&x.End>BrandDay&&x.Response!="pause"))
-                boost+=(d.Mode=="endorse"?.12:.08)*(d.Exclusive?1.25:1)*BrandAudienceFit(d.PersonId,b.Kind)
-                    +(_brands.Careers.FirstOrDefault(c=>c.PersonId==d.PersonId)?.Momentum??0)*.002
-                    -(d.Severity*.065)*(d.Response=="negotiate"?.5:1);
-            boost+=_brands.Resources.Where(r=>r.BrandId==b.Id&&r.End>BrandDay).Sum(r=>r.Mode=="channel"?.12:.05);
+            var b = _brands.Brands.FirstOrDefault(x => x.Kind == shop.RetailKind);
+            if (b == null) return 0;
+            double boost = b.ShopIds.Contains(shop.Place.Id)
+                ? BrandBackgroundTraffic(b) + BrandPromotionTraffic(b.Id)
+                : BrandStandingTraffic(b);
             return Math.Max(-.30,Math.Min(.60,boost));
         }
         public double BrandAudienceFit(string person,string kind)=>person=="life_designer"?(kind=="clothing"?1.3:.5):person=="life_creator"?(kind=="models"?1.3:.6):kind=="computer"?1.2:.6;
@@ -148,10 +165,10 @@ namespace PCShopSell.Core.Session
             if(_brands.Resources.Any(r=>r.BrandId==b.Id&&r.Mode=="sponsor"&&r.End>BrandDay))e.Score+=5;
             if(e.Stage>=3)
             {
-                e.Finished=true;b.Influence+=e.Score/3;b.Reputation=Math.Min(100,b.Reputation+5);
+                e.Finished=true;b.Influence+=e.Score/3;b.Reputation=b.Reputation+5;
                 _brands.Orders=AppendBrand(_brands.Orders,new BrandOrder{Id=e.Id+":lead",BrandId=b.Id,ShopId=e.ShopId,ProductId=e.ProductId,Source="expo",Count=20,
                     Due=BrandDay+14,Influence=70,UnitCents=BrandProductPrice(e.ProductId)*90/100});
-                Say("展会结束：获得采购线索，14天内实际交付20件商品后获得70点行业影响力。请在品牌订单中履约。");
+                Say("展会结束：获得采购线索，14天内实际交付20件商品后获得70点品牌知名度。请在品牌订单中履约。");
             }
             return true;
         }
@@ -166,15 +183,23 @@ namespace PCShopSell.Core.Session
             else if(e.GuestPersonId!=null||!new[]{"life_creator","life_designer","life_clothier"}.Contains(personId))return false;
             if(!staff&&(Relation(personId)<20||Employees.Any(a=>PersonIdOf(a.Person)==personId)))return Fail("嘉宾需交情达到20且没有受雇工作安排");
             if(_brands.Exhibits.Any(x=>x.Day==e.Day&&(x.StaffPersonId==personId||x.GuestPersonId==personId)))return Fail("此人当天已有参展安排");
-            if(!BrandPay(staff?20000:50000,staff?"参展员工出勤及交通补贴":"嘉宾接待及交通预算"))return Fail("接待预算不足");
+            if(!BrandPay(staff?20000:50000,staff?"参展员工出勤及交通补贴":"嘉宾接待及交通预算",e.BrandId))return Fail("接待预算不足");
             if(staff)e.StaffPersonId=personId;else e.GuestPersonId=personId;
             Meet(personId,0);Say("参展安排已记录，当天06:00起前往会展中心，活动或采购未结束时会晚到。");return true;
         }
-        private bool BrandExpoPersonReserved(string id)=>_brands.Exhibits.Any(e=>BrandDay>=e.Day&&BrandDay<e.Day+(e.Format==2?4:1)&&!e.Finished&&!e.Missed
-            &&Clock.MinuteOfDay>=360&&Clock.MinuteOfDay<1020&&(e.StaffPersonId==id||e.GuestPersonId==id||(e.Format==2&&e.KolIds.Contains(id)&&_kol.Contracts.Any(c=>c.BrandId==e.BrandId&&c.PersonId==id&&KolContractCurrent(c,Clock.Now.TotalMinutes)))));
+        private bool BrandExpoPersonReserved(string id)
+        {
+            if (Clock.MinuteOfDay < 360 || Clock.MinuteOfDay >= 1020) return false;
+            if (_brands.Exhibits.Any(e => BrandDay >= e.Day && BrandDay < e.Day + (e.Format == 2 ? 4 : 1) && !e.Finished && !e.Missed &&
+                (e.StaffPersonId == id || e.GuestPersonId == id || (e.Format == 2 && e.KolIds.Contains(id) &&
+                    _kol.Contracts.Any(c => c.BrandId == e.BrandId && c.PersonId == id && KolContractCurrent(c, Clock.Now.TotalMinutes))))))
+                return true;
+            return BrandPeople.Contains(id) && _brands.Exhibits.Any(e => e.Format == 2 && e.Day == BrandDay &&
+                !e.Finished && !e.Missed && _brands.Deals.Any(d => d.PersonId == id && ExpoEndorserDeal(e, d)));
+        }
         private bool TickBrandExpoPerson(CityPersonState person,long now)
         {
-            if(!BrandExpoPersonReserved(person.PersonId)||!string.IsNullOrEmpty(person.ActivityId))return false;
+            if(!BrandExpoPersonReserved(person.PersonId)||!string.IsNullOrEmpty(person.ActivityId)||!string.IsNullOrEmpty(person.VisitId))return false;
             if(person.LocationPlaceId!="life_expo")
             {person.Route=PlanCityRoute(person,"life_expo",now);if(person.Route==null)return false;person.LocationPlaceId=null;person.Task=CityPersonTask.Travelling;}
             else person.Task=CityPersonTask.Working;
@@ -188,7 +213,7 @@ namespace PCShopSell.Core.Session
             var route=PlanCityRoute(new CityPersonState{X=start.X,Y=start.Y,LocationPlaceId=o.ShopId},o.Source=="expo"?"life_expo":"life_company",Clock.Now.TotalMinutes,transportChoice:VehicleKind.Van);
             if(route==null)return Fail("货车路线暂不可达");
             if(route.ArriveMinute>=(o.Due+1L)*1440)return Fail("按当前运输路线来不及按期交货");
-            if(!BrandPay(3000,"企业订单运输 · "+id))return Fail("需要¥30运费");
+            if(!BrandPay(3000,"企业订单运输 · "+id,o.BrandId))return Fail("需要¥30运费");
             if(!BrandTake(o.ShopId,o.ProductId,o.Count))return false;
             o.Shipped=true;o.Arrival=route.ArriveMinute;
             Say("货车已发出，库存已扣减。预计"+(o.Arrival-Clock.Now.TotalMinutes)+"分钟后到货结算。");return true;
@@ -205,24 +230,24 @@ namespace PCShopSell.Core.Session
         }
         public bool EnterBrandTender(string brandId,string shopId,string product)
         {
-            var b=Brand(brandId);if(IsGameOver||b==null||DistrictAccessTier<2||b.Influence<100)return Fail("进入公园且品牌影响力达到100后可参与企业采购");
+            var b=Brand(brandId);if(IsGameOver||b==null||DistrictAccessTier<2||b.Influence<100)return Fail("进入公园且品牌知名度达到100后可参与企业采购");
             if(!BrandShops(b).Any(s=>s.Place.Id==shopId)||!BrandProducts(shopId).Contains(product))return false;
             int year=BrandDay/360;if(_brands.Tenders.Any(t=>t.BrandId==brandId&&t.Id.EndsWith(":"+year)))return Fail("每个品牌每年一轮供应商席位竞标");
-            if(!BrandPay(100000,"投标报名与检验"))return Fail("报名需要¥1,000");
+            if(!BrandPay(100000,"投标报名与检验",brandId))return Fail("报名需要¥1,000");
             _brands.Tenders=AppendBrand(_brands.Tenders,new BrandTender{Id=brandId+":tender:"+year,BrandId=brandId,ShopId=shopId,ProductId=product,Deadline=BrandDay+14});return true;
         }
         public bool ResearchBrandTender(string id,int clue)
         {
             var t=_brands.Tenders.FirstOrDefault(x=>x.Id==id);if(IsGameOver||t==null||t.Stage>=2||BrandDay>t.Deadline||(clue!=1&&clue!=2)||(t.Intel&clue)!=0)return false;
             if(!CitySamePlace(clue==1?"life_enterprise":"life_tenant"))return Fail("请找到本人，当面核实采购信息。");
-            if(!BrandPay(20000,"采购访谈与供应商核实"))return Fail("访谈需要¥200");
+            if(!BrandPay(20000,"采购访谈与供应商核实",t.BrandId))return Fail("访谈需要¥200");
             t.Intel|=clue;Say(clue==1?"沈远：采购方更看重按时交付，低价不是唯一标准。":"袁岚：原供应商会降价应对；保留稳定货源比临时承诺更重要。");return true;
         }
         public bool SubmitBrandTender(string id,string offer,bool partner)
         {
             var t=_brands.Tenders.FirstOrDefault(x=>x.Id==id);if(IsGameOver||t==null||t.Stage!=0||BrandDay>t.Deadline)return false;
             if(offer!="cheap"&&offer!="balanced"&&offer!="service")return false;
-            if(partner&&!BrandPay(100000,"联合履约合作费"))return Fail("合作费需要¥1,000");
+            if(partner&&!BrandPay(100000,"联合履约合作费",t.BrandId))return Fail("合作费需要¥1,000");
             t.Offer=offer;t.Partner=partner;t.Stage=1;t.RivalScore=offer=="cheap"?82:76;
             _brands.Orders=AppendBrand(_brands.Orders,new BrandOrder{Id=t.Id+":trial",BrandId=t.BrandId,ShopId=t.ShopId,ProductId=t.ProductId,Source="trial",Count=10,Due=t.Deadline,
                 UnitCents=BrandProductPrice(t.ProductId)*(offer=="cheap"?75:offer=="service"?100:90)/100});
@@ -232,7 +257,7 @@ namespace PCShopSell.Core.Session
         {
             var t=_brands.Tenders.FirstOrDefault(x=>x.Id==id);
             if(IsGameOver||t==null||t.Stage!=1||t.Partner||BrandDay>t.Deadline)return false;
-            if(!BrandPay(100000,"竞标追加联合履约保障"))return Fail("追加合作需要¥1,000");
+            if(!BrandPay(100000,"竞标追加联合履约保障",t.BrandId))return Fail("追加合作需要¥1,000");
             t.Partner=true;t.RivalScore+=3;
             Say("袁岚加入履约保障；对手追加服务承诺，评分再增加3分。试单原报价不变。");return true;
         }
@@ -259,7 +284,7 @@ namespace PCShopSell.Core.Session
             if((institution=="media"&&mode!="talent")||(institution=="exhibition"&&mode!="sponsor")||(institution=="channel"&&mode!="channel"))return false;
             if(_brands.Resources.Any(r=>r.Institution==institution&&r.End>BrandDay&&(r.BrandId==brandId||mode=="channel")))return Fail("资源已有有效合约，独家渠道不能重复签约");
             long fee=mode=="channel"?2000000:mode=="sponsor"?1000000:500000;
-            if(!BrandPay(fee,"机构合作 · "+institution))return Fail("合作预算不足");
+            if(!BrandPay(fee,"机构合作 · "+institution,brandId))return Fail("合作预算不足");
             _brands.Resources=AppendBrand(_brands.Resources,new BrandResource{BrandId=brandId,Institution=institution,Mode=mode,Start=BrandDay,End=BrandDay+90,Fee=fee});
             RefreshBrandTraffic();Say("季度合作已签署。渠道与宣传影响客流，销售仍需现货、价格与服务配合。");return true;
         }
@@ -274,7 +299,6 @@ namespace PCShopSell.Core.Session
                 q.LeadingDays=shops.Count(s=>DistrictTierOf(s.Place)==0)>=3&&BrandSuburbRevenue(kind)>=BrandRivalMonthlySales(kind,day)?q.LeadingDays+1:0;
                 var community=shops.Where(s=>DistrictTierOf(s.Place)==1).ToArray();
                 q.CommunityDays=community.Length>=2&&BrandRevenue(community,day-7,day)>0?q.CommunityDays+1:0;
-                if(!q.Invited&&BrandFoundBlocker(kind)==null){q.Invited=true;Say("唐蔚：你的"+RetailShopTypes.Name(kind)+"已具备创立品牌的基础。请在经营 → 品牌查看邀请。");}
             }
             foreach(string person in BrandPeople)
             {
@@ -295,8 +319,8 @@ namespace PCShopSell.Core.Session
             {
                 var b=Brand(d.BrandId);if(b==null)continue;
                 long fee=BrandRevenue(BrandShops(b),day-1,day)*2/100;
-                if(fee>0){Ledger.ForceDebit(today,"代言分成",Money.FromCents(fee),b.Name+"昨日营业额2%");d.SharePaid+=fee;}
-                if(d.Response!="pause")b.Reputation=Math.Max(0,Math.Min(100,b.Reputation-(d.Response=="negotiate"?Math.Max(0,d.Severity-1):d.Severity)+(d.Severity==0&&day%3==0?1:0)));
+                if(fee>0){Ledger.ForceDebit(today,"代言分成",Money.FromCents(fee),b.Name+"昨日营业额2%",BrandAttribution(b.Id));d.SharePaid+=fee;}
+                if(d.Response!="pause")b.Reputation=Math.Max(0,b.Reputation-(d.Response=="negotiate"?Math.Max(0,d.Severity-1):d.Severity)+(d.Severity==0&&day%3==0?1:0));
             }
             SettleQuarterlyExpoAbsence(day);
             foreach(var e in _brands.Exhibits.Where(e=>e.Format!=2&&!e.Finished&&!e.Missed&&e.Day<day)){e.Missed=true;Say("错过展会："+Brand(e.BrandId)?.Name+"，可报名下一季度，费用不退。");}

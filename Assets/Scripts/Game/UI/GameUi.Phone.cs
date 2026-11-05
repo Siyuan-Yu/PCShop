@@ -85,6 +85,7 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Shop: return new Color(0.88f, 0.28f, 0.35f);
                 case PhoneApps.Chat: return new Color(0.18f, 0.72f, 0.58f);
                 case PhoneApps.Loans: return new Color(0.82f, 0.59f, 0.19f);
+                case PhoneApps.Live: return new Color(0.72f, 0.46f, 0.19f);
                 default: return Ui.ButtonBg;
             }
         }
@@ -99,6 +100,7 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Shop: return "购";
                 case PhoneApps.Chat: return "聊";
                 case PhoneApps.Loans: return "借";
+                case PhoneApps.Live: return "播";
                 default: return "?";
             }
         }
@@ -126,12 +128,13 @@ namespace PCShopSell.Game.UI
                 {
                     PhoneAppDef a = apps[j];
                     Button b = Ui.Button(row, $"<size=34><b>{AppGlyph(a.Id)}</b></size>\n<size=13>{a.Name}</size>", () => LaunchApp(w, a.Id), 13, AppColor(a.Id));
+                    b.name = "PhoneApp_" + a.Id;
                     Ui.Size(b, 84, 100);
                 }
             }
             Ui.Size(Ui.Button(wall.transform, "城市生活", OpenCityLife, 18), -1, 44)
                 .Tip("城市活动、场所与生活安排。");
-            Ui.Size(Ui.Label(wall.transform, S.HasApp(PhoneApps.Shop) && S.HasApp(PhoneApps.Chat)
+            Ui.Size(Ui.Label(wall.transform, PhoneApps.All.All(a => S.HasApp(a.Id))
                 ? "所有 app 都装好了。" : "想要更多功能，到「应用商店」里下载。", 15, TextAnchor.MiddleCenter, Ui.Dim), -1, 36);
         }
 
@@ -156,6 +159,7 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Shop: OpenOnlinePanel(); break;
                 case PhoneApps.Chat: OpenChatPanel(); break;
                 case PhoneApps.Loans: OpenLoansApp(); break;
+                case PhoneApps.Live: w.Close(); OpenKolLobby(); break;
             }
         }
 
@@ -182,7 +186,7 @@ namespace PCShopSell.Game.UI
                 {
                     S.InstallApp(a.Id);
                     w.Rebuild();
-                }, 16, have ? Ui.ButtonBg : Ui.ButtonHot, !have), 80);
+                }, 16, have ? Ui.ButtonBg : Ui.ButtonHot, !have), 80).name = "PhoneDownload_" + a.Id;
             }
         }
 

@@ -81,6 +81,7 @@ namespace PCShopSell.Core.Shop
     public sealed class ShopCustomer
     {
         public string PersonId, VisitId;
+        public bool CountedBrandVisit;
         public int Id { get; }
         public CustomerIntent Intent { get; }
         public PartCategory DesiredCategory { get; }
@@ -298,7 +299,6 @@ namespace PCShopSell.Core.Shop
 
         /// <summary>招牌灯箱之类的升级带来的客流倍数。</summary>
         public double TrafficMultiplier { get; set; } = 1.0;
-        public Func<double> KolTrafficOf { get; set; } = () => 0;
         public double CityRetailDemandMultiplier { get; set; } = 1.0;
         public Func<ShopCustomer, string> RetailInterestOf;
         public Func<ShopCustomer, long> RetailBudgetOf;
@@ -556,7 +556,7 @@ namespace PCShopSell.Core.Shop
                              * ShopSettings.SizeFactor(Size)
                              * LocationFactor
                              * (CompetitionFactorOf?.Invoke() ?? 1.0)
-                              * TrafficMultiplier * (1+Math.Max(0,Math.Min(.9,KolTrafficOf?.Invoke()??0))) * Math.Max(.5, Math.Min(1.5, CityRetailDemandMultiplier))
+                              * TrafficMultiplier * Math.Max(.5, Math.Min(1.5, CityRetailDemandMultiplier))
                              * (1.0 + Reputation / 100.0)
                              * (at.Date.IsWeekend ? Settings.WeekendMultiplier : 1.0);
             return perHour / 60.0;

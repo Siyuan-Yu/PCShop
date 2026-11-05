@@ -10,56 +10,37 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
+        private const int BrandKolTab = 4;
         private int _brandTab;
         private bool _brandCreating;
         private string _brandId, _brandName="我的品牌", _brandPosition="quality", _brandShop, _brandProduct, _brandFocus="buyers";
-        public void OpenBrandBusiness() => OpenWorkspace("business","brands","品牌经营",1160,840,BuildBrandBusiness);
+        public void OpenBrandBusiness()
+        {
+            _brandCreating = false;
+            OpenWorkspace("brands","brands","品牌",1160,840,BuildBrandBusiness);
+        }
         private void BrandButton(Transform parent,string label,Func<bool> action,Window w,bool enabled=true)
         { Ui.Size(Ui.Button(parent,label,()=>{action();S.RefreshDistrictNarrative();w.Rebuild();},17,Ui.ButtonBg,enabled),-1,38,1); }
         private void BuildBrandBusiness(Window w)
         {
             var state=S.BrandBusiness;
-            var tabs=Ui.Row(w.Content,40,6);string[] names={"品牌","推广与代言","展会","企业竞标","机构资源","人物故事","KOL直播"};
-            for(int i=0;i<names.Length;i++){int t=i;Ui.Size(Ui.Button(tabs,names[i],()=>{_brandTab=t;w.Rebuild();},18,t==_brandTab?Ui.ButtonHot:Ui.ButtonBg),-1,40,1);}
+            var tabs=Ui.Row(w.Content,40,6);string[] names={"品牌总览","推广与代言","展会","企业竞标","KOL直播"};
+            for(int i=0;i<names.Length;i++){int t=i;Ui.Size(Ui.Button(tabs,names[i],()=>{_brandTab=t;_brandCreating=false;_promotionPage="overview";_expoPage="overview";w.Rebuild();},18,t==_brandTab?Ui.ButtonHot:Ui.ButtonBg),-1,40,1);}
             if(S.DistrictCommerceActive)Ui.Size(Ui.Button(w.Content,"主线 · "+S.CurrentDistrictNode.Title,OpenDistrictStory,17,Ui.ButtonHot),-1,36);
-            var body=Ui.Scroll(w.Content,570);
-            if(state.Brands.Length==0||_brandTab==0)
+            var body=Ui.Scroll(w.Content,690);
+            if (_brandTab == 0) { BuildBrandOverview(body, w, state); return; }
+            if (state.Brands.Length == 0)
             {
-                if(_brandTab==0&&state.Brands.Length>0)
-                    Ui.Size(Ui.Button(body,_brandCreating?"收起创立条件":"＋ 创立其他行业品牌",()=>{_brandCreating=!_brandCreating;w.Rebuild();},17),-1,36);
-                if(_brandTab==0&&(state.Brands.Length==0||_brandCreating))
-                {
-                    Line(body,"创立品牌",22,Ui.Accent);
-                    Ui.Size(Ui.TextInput(body,_brandName,"品牌名称（2—16字）",v=>_brandName=v),-1,38);
-                    var positioning=Ui.Row(body,36,6);
-                    foreach(var p in new[]{"value","quality"}){string pos=p;Ui.Size(Ui.Button(positioning,(p=="value"?"实惠定位":"品质定位")+(_brandPosition==p?" ✓":""),()=>{_brandPosition=pos;w.Rebuild();},17),-1,36,1);}
-                    foreach(var kind in GameSession.BrandKinds)
-                    {
-                        if(state.Brands.Any(b=>b.Kind==kind))continue;
-                        string k=kind;Line(body,RetailShopTypes.Name(k),20,Ui.Accent);
-                        Para(body,S.BrandQualificationText(k),17);
-                        Para(body,"同行指标为市场营收估计，用作资格基准。",14,Ui.Dim);
-                        string why=S.BrandFoundBlocker(k);BrandButton(body,why??"接受唐蔚邀请 · 创立品牌",()=>S.FoundBrand(k,_brandName,_brandPosition),w,why==null);
-                    }
-                }
-                if(state.Brands.Length==0){if(_brandTab!=0)Para(body,"请先在品牌页创立品牌。未创立品牌仍可前往会展中心参观。",19);return;}
+                Para(body,"请先在品牌总览创建品牌。未创立品牌仍可前往会展中心参观。",19);
+                return;
             }
             if(!state.Brands.Any(b=>b.Id==_brandId))_brandId=state.Brands[0].Id;
             var brands=Ui.Row(body,38,5);
-            foreach(var item in state.Brands){string id=item.Id;Ui.Size(Ui.Button(brands,item.Name,()=>{_brandId=id;_brandShop=null;_brandProduct=null;w.Rebuild();},18,id==_brandId?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);}
+            foreach(var item in state.Brands){string id=item.Id;Ui.Size(Ui.Button(brands,item.Name,()=>{_brandId=id;_promotionPage="overview";_expoPage="overview";_brandShop=null;_brandProduct=null;w.Rebuild();},18,id==_brandId?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);}
             var brand=state.Brands.First(b=>b.Id==_brandId);
-            Line(body,$"{brand.Name}  ·  影响力 {brand.Influence}  ·  口碑 {brand.Reputation}/100",21,Ui.Accent);
-            if(_brandTab==6){BuildKolBrandPage(body,w,brand);return;}
-            if(_brandTab==0)
-            {
-                Para(body,brand.Position=="value"?"实惠定位：参展更适合采购洽谈。":"品质定位：参展更适合设计展示。",17);
-                foreach(var shop in S.MyShops.Where(s=>s.RetailKind==brand.Kind))
-                {string id=shop.Place.Id;BrandButton(body,(brand.ShopIds.Contains(id)?"✓ ":"＋ ")+shop.Place.Name+" · "+GameSession.DistrictName(S.DistrictTierOf(shop.Place)),()=>S.ToggleBrandShop(brand.Id,id),w);}
-                return;
-            }
-            if(_brandTab==5){BuildBrandStories(body,w,brand);return;}
+            Line(body,$"{brand.Name}  ·  知名度 {brand.Influence}  ·  口碑 {brand.Reputation}",21,Ui.Accent);
+            if(_brandTab==BrandKolTab){BuildKolBrandPage(body,w,brand);return;}
             if(_brandTab==1){BuildBrandPromotion(body,w,brand,state);return;}
-            if(_brandTab==4){BuildBrandInstitutions(body,w,brand,state);return;}
             if(_brandTab==2)BuildQuarterlyExpo(body,w,brand,state);
             else
             {
@@ -109,51 +90,6 @@ namespace PCShopSell.Game.UI
             Line(body,"参选商品 · 仅本店同业现货",17,Ui.Dim);
             if(products.Length==0){Para(body,"这家店暂无同业现货，请先采购。",18);return;}
             var list=Ui.Scroll(body,Math.Min(110,products.Length*38));foreach(string product in products){string p=product;Ui.Size(Ui.Button(list,S.BrandProductName(p)+(_brandProduct==p?" ✓":""),()=>{_brandProduct=p;w.Rebuild();},17),-1,32);}
-        }
-        private void BuildBrandPromotion(Transform body,Window w,BrandRecord b,BrandBusinessState state)
-        {
-            Ui.Size(Ui.Button(body,"社区MCN · 认识与联系创作者",OpenCommunityMcn,18),-1,38);
-            Para(body,"推广7天；代言90天＋营业额2%。交情可降低报价。暂停不退固定费；提前解约收剩余固定费30%，重大已核实争议免解约费。",17);
-            foreach(string person in GameSession.BrandPeople)
-            {
-                string p=person;Line(body,S.CityPerson(p)?.Name??p,21,Ui.Accent);
-                if(S.KolContactBlocker(p)!=null)
-                {Para(body,"尚未交换名片，请到社区MCN安排介绍。",17,Ui.Dim);Ui.Size(Ui.Button(body,"请公司安排认识",OpenCommunityMcn,17),-1,36);continue;}
-                Ui.Size(Ui.Button(body,"联系本人",()=>OpenBrandContact(p),17),-1,34);
-                Para(body,"本行业受众适配 "+(S.BrandAudienceFit(p,b.Kind)*100).ToString("0")+"%",16,Ui.Dim);
-                Para(body,state.Careers.FirstOrDefault(c=>c.PersonId==p)?.News??"暂无动态",16);
-                var deal=state.Deals.FirstOrDefault(d=>d.BrandId==b.Id&&d.PersonId==p&&!d.Ended&&d.End>S.Clock.Today.TotalDays);
-                var row=Ui.Row(body,38,5);
-                if(deal==null)
-                {
-                    BrandButton(row,"推广 "+Money.FromCents(S.BrandDealQuote(p,"campaign",false)),()=>S.SignBrandDeal(b.Id,p,"campaign",false),w);
-                    BrandButton(row,"代言 "+Money.FromCents(S.BrandDealQuote(p,"endorse",false)),()=>S.SignBrandDeal(b.Id,p,"endorse",false),w);
-                    BrandButton(row,"独家代言 "+Money.FromCents(S.BrandDealQuote(p,"endorse",true)),()=>S.SignBrandDeal(b.Id,p,"endorse",true),w);
-                }
-                else
-                {
-                    Para(body,$"到期 {new GameDate(deal.End)} · 风波级别 {deal.Severity}/3 · 已付分成 {Money.FromCents(deal.SharePaid)} · "+(deal.Response=="pause"?"暂停曝光":deal.Response=="negotiate"?"核实协商中":"合作中"),16);
-                    BrandButton(row,"继续合作",()=>S.RespondBrandDeal(deal.Id,"continue"),w);
-                    BrandButton(row,"暂停曝光",()=>S.RespondBrandDeal(deal.Id,"pause"),w);
-                    BrandButton(row,"核实协商 ¥200",()=>S.RespondBrandDeal(deal.Id,"negotiate"),w,deal.Severity>0&&deal.LastNegotiationDay<deal.NewsDay);
-                    BrandButton(row,"按约解约",()=>S.RespondBrandDeal(deal.Id,"end"),w);
-                }
-            }
-        }
-        private void BuildBrandInstitutions(Transform body,Window w,BrandRecord b,BrandBusinessState state)
-        {
-            if(S.DistrictAccessTier<3){Para(body,"进入花园后，通过合作方引荐了解机构与渠道关系。",20);return;}
-            string[] ids={"media","exhibition","channel"},modes={"talent","sponsor","channel"};
-            string[] labels={"澄光传媒 → 莫文宁／柯承安／乔雨桐","云帆展务 → 任帆 → 会展中心","花园联合采购 → 沈远 → 企业渠道"};
-            long[] fees={500000,1000000,2000000};
-            Para(body,"人物背后有制作、展务和采购渠道。季度资源合作增加触达机会，不能保证销量，也不能直接决定他人声誉。",18);
-            for(int i=0;i<ids.Length;i++)
-            {
-                string id=ids[i],mode=modes[i];Line(body,labels[i],21,Ui.Accent);
-                var r=state.Resources.FirstOrDefault(x=>x.Institution==id&&x.BrandId==b.Id&&x.End>S.Clock.Today.TotalDays);
-                if(r!=null)Para(body,"合作至 "+new GameDate(r.End)+" · 已付 "+Money.FromCents(r.Fee),18,Ui.Good);
-                else BrandButton(body,(i==0?"支持制作":i==1?"赞助季度展会":"独家渠道合作")+" · 90天 "+Money.FromCents(fees[i]),()=>S.SignBrandResource(b.Id,id,mode),w);
-            }
         }
     }
 }

@@ -41,7 +41,7 @@ namespace PCShopSell.Core.Session
                     case "expo.reception": return e?.Finished==true?null:e?.Missed==true?"本届未完成，保留主线，下一季度重新参展":"开幕当天进入会展中心，连续4天参与事件与舞台互动";
                     case "expo.delivery": case "expo.review":
                         if(e?.Finished!=true||DistrictExpoReceipt?.Done!=true)return DistrictExpoReceipt==null&&e?.Finished==true?"本届没有获得采购订单，下季度改善现场表现后重新参展":DistrictExpoReceipt?.Failed==true?"展会订单已逾期，下季度参展取得新订单后继续":"请实际交付本品牌的展会线索订单；发货不等于到货";
-                        return b.Influence>=100?null:"本品牌影响力 "+b.Influence+"/100，请继续参展和交付";
+                        return b.Influence>=100?null:"本品牌知名度 "+b.Influence+"/100，请继续参展和交付";
                     case "tender.prepare": return t==null?"到企业竞标页报名，联系沈远和袁岚调查需求与对手，再准备报价和试单":t.Intel==3||t.Stage==2||t.Stage==3?null:"报名已完成，请联系沈远核实需求、向袁岚调查对手";
                     case "tender.trial": return _brands.Orders.Any(o=>o.Id==t?.Id+":trial"&&o.Done)?null:"提交本品牌的竞标方案，实际交付10件试单并等待到货";
                     case "tender.decision": return t?.Stage==2||t?.Stage==3?null:t?.Stage==4?"本轮竞标失败，主线保留；下一年度重新报名、试单并评审":"试单到货后提交评审，评分须超过原供应商才能取得席位";
@@ -60,7 +60,7 @@ namespace PCShopSell.Core.Session
                     var e=DistrictCommerceExpo;var o=DistrictExpoReceipt;
                     string exhibit=e==null?"尚未报名":e.Missed?"本届已错过":e.Finished?"展会已完成":e.Format==2?"4天展会 · 现场进度 "+e.Decision+"/24":"旧版展会 · 接待 "+e.Stage+"/3";
                     string delivery=o==null?"尚未取得展会订单":o.Done?"展会订单已到货结算":o.Failed?"订单已逾期":o.Shipped?"订单运输中，尚未到货":"待发货 "+o.Count+" 件 · 截止第"+(o.Due+1)+"天";
-                    return b.Name+" · 影响力 "+b.Influence+"/100\n"+exhibit+"\n"+delivery;
+                    return b.Name+" · 知名度 "+b.Influence+"/100\n"+exhibit+"\n"+delivery;
                 }
                 var t=DistrictCommerceTender;if(t==null)return b.Name+" · 尚未报名企业竞标";
                 var trial=_brands.Orders.FirstOrDefault(o=>o.Id==t.Id+":trial");

@@ -1,5 +1,11 @@
 # 美术/音频资源登记（AI 生成必填）
 
+## 2026-11-05 — 街坊直播品类布景
+
+- 资源目录为 Unity 的 `Assets/Resources/KolStudio`。`computer`、`clothing`、`models` 各有 `studio` 和 `demo` 两张布景，合计六张 PNG。
+- 同一品类的直播间复用 AI 生成的直播台与演示布景。游戏运行时加入对应头像、弹幕、文字、主题及品牌指标。
+- `OfflinePortrait.shader` 用于直播大厅的离线头像。资源及目录的 Unity `.meta` 一并入库。
+
 ## 2026-11-04 — 复古生活漫画NPC头像
 
 - `Assets/Resources/PortraitsRetro/`：120位正式NPC独立头像及1张default，均为内置image_gen生成；初版包含3张已选样本，其余逐人生成。用户后续要求提高颜值，6位已重画，其中5位成年女性仅莫文宁保留眼镜。没有把同一张图复用为多位正式人物。

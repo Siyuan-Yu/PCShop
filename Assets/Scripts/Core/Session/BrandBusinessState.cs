@@ -12,7 +12,10 @@ namespace PCShopSell.Core.Session
         public BrandTender[] Tenders = Array.Empty<BrandTender>();
         public BrandResource[] Resources = Array.Empty<BrandResource>();
         public BrandCareer[] Careers = Array.Empty<BrandCareer>();
+        public int VisitsSinceDay = -1;
+        public BrandShopVisits[] Visits = Array.Empty<BrandShopVisits>();
         public BrandBusinessState Copy() => new BrandBusinessState {Version=Version,LastDay=LastDay,
+            VisitsSinceDay=VisitsSinceDay, Visits=Array.ConvertAll(Visits??Array.Empty<BrandShopVisits>(),x=>x.Copy()),
             Brands=Array.ConvertAll(Brands??Array.Empty<BrandRecord>(),x=>x.Copy()),
             Qualifications=Array.ConvertAll(Qualifications??Array.Empty<BrandQualification>(),x=>x.Copy()),
             Deals=Array.ConvertAll(Deals??Array.Empty<BrandDeal>(),x=>x.Copy()),
@@ -29,6 +32,12 @@ namespace PCShopSell.Core.Session
         public int Level;
         public string[] ShopIds=Array.Empty<string>();
         public BrandRecord Copy(){var c=(BrandRecord)MemberwiseClone();c.ShopIds=(string[])ShopIds.Clone();return c;}
+    }
+    [Serializable] public sealed class BrandShopVisits
+    {
+        public string ShopId;
+        public int Day, Count;
+        public BrandShopVisits Copy() => (BrandShopVisits)MemberwiseClone();
     }
     [Serializable] public sealed class BrandQualification
     {

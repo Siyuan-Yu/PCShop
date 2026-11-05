@@ -373,7 +373,6 @@ namespace PCShopSell.Game.UI
                 bool canTalk = remote || near;
                 void Reply(string text) { ctx.Reply = text; ctx.W.Rebuild(); parent?.RequestRebuild(); }
                 AddDistrictDialogue(options,personId,remote,near,Reply);
-                AddBrandStoryDialogue(options,personId,remote,Reply);
                 if(GameSession.BrandPeople.Contains(personId)&&S.BrandBusiness.Brands.Length>0)
                     options.Add(new TalkOpt{Label="谈品牌推广与代言",Blocker=canTalk?null:"对方已离开",Act=()=>{ctx.W.Close();_brandTab=1;OpenBrandBusiness();}});
                 if(personId=="life_enterprise"||personId=="life_tenant")

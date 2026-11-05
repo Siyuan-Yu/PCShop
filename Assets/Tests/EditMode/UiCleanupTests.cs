@@ -17,6 +17,31 @@ namespace PCShopSell.Tests
 {
     public class UiCleanupTests
     {
+        [Test] public void HudCanBeConstructedBeforeSessionStarts()
+        {
+            var root = new GameObject("HudStartupTest");
+            root.SetActive(false);
+            var controller = root.AddComponent<GameController>();
+            var previous = UnityEngine.EventSystems.EventSystem.current;
+            GameUi ui = null;
+            try
+            {
+                Assert.IsNull(controller.Session);
+                ui = new GameUi(controller);
+                var brand = ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Button>(true))
+                    .Single(b => b.name == "HudBrand");
+                Assert.True(brand.gameObject.activeSelf);
+            }
+            finally
+            {
+                if (ui != null)
+                    foreach (var canvas in ui.Canvases) UnityEngine.Object.DestroyImmediate(canvas.gameObject);
+                UnityEngine.Object.DestroyImmediate(root);
+                if (previous == null && UnityEngine.EventSystems.EventSystem.current != null)
+                    UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);
+            }
+        }
+
         private sealed class Rig : IDisposable
         {
             public readonly GameSession S;
@@ -69,6 +94,73 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(1, r.Components<Transform>().Count(t => t.name == "Workspace_business"));
                 Assert.True(r.S.Time.IsHeld);
                 Assert.True(r.Ui.CloseTopWindow()); Assert.False(r.S.Time.IsHeld);
+            }
+        }
+
+        [Test]
+        public void BrandWindowIsIndependentFromBusinessNavigation()
+        {
+            using (var r = new Rig())
+            {
+                r.Ui.OpenBrandBusiness();
+                var brand = r.Workspace("brands");
+                Assert.False(brand.GetComponentsInChildren<Button>(true).Any(b => b.name.StartsWith("BusinessNav_")));
+                Assert.IsEmpty(r.Components<InputField>());
+                StringAssert.DoesNotContain("创建电脑店品牌", r.Text);
+                r.ClickCaption("＋ 创建品牌");
+                Assert.AreEqual(1, r.Components<InputField>().Length);
+                StringAssert.Contains("创建电脑店品牌", r.Text);
+                r.ClickCaption("收起创建表单");
+                Assert.IsEmpty(r.Components<InputField>());
+                r.Ui.OpenBrandBusiness();
+                Assert.AreSame(brand, r.Workspace("brands"));
+                Assert.True(r.Ui.CloseTopWindow());
+                Assert.False(r.S.Time.IsHeld);
+                r.Ui.OpenBusinessPanel();
+                Assert.False(r.Components<Button>().Any(b => b.name == "BusinessNav_brands"));
+                Assert.True(r.Ui.CloseTopWindow());
+                Assert.False(r.S.Time.IsHeld);
+            }
+        }
+
+        [Test]
+        public void BrandOverviewExpandsStoresAndPromotionUsesNestedCandidatesWithPortraits()
+        {
+            var city = CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text));
+            var session = GameSession.CreateCityLifePreset(city, "brand_ready_two");
+            Assert.True(session.FoundBrand("computer", "卫星", "value"));
+            Assert.True(session.FoundBrand("clothing", "衣坊", "quality"));
+            using (var r = new Rig(session))
+            {
+                r.Ui.OpenBrandBusiness();
+                StringAssert.Contains("近7天营收", r.Text);
+                StringAssert.Contains("近7天支出", r.Text);
+                StringAssert.Contains("知名度", r.Text);
+                r.Button("BrandRename_brand:computer").onClick.Invoke();
+                StringAssert.Contains("50 → 25", r.Text);
+                r.ClickCaption("取消");
+                Assert.AreEqual("卫星", session.BrandBusiness.Brands.First().Name);
+                r.Button("BrandRename_brand:computer").onClick.Invoke();
+                r.Components<InputField>().Single().text = "新卫星";
+                r.ClickCaption("确认改名");
+                StringAssert.Contains("新卫星 · 电脑店", r.Text);
+                Assert.AreEqual(25, session.BrandBusiness.Brands.First().Reputation);
+                Assert.False(r.Text.Contains("调整门店归属"));
+                r.Button("BrandExpand_brand:computer").onClick.Invoke();
+                StringAssert.Contains("调整门店归属", r.Text);
+                r.Call("OpenBrandShopMembership", "brand:computer");
+                r.ClickCaption("返回品牌总览");
+                r.Components<Button>().First(b => b.GetComponentInChildren<Text>()?.text == "查看推广与代言").onClick.Invoke();
+                StringAssert.Contains("实际到店客流", r.Text);
+                Assert.False(r.Text.Contains("查看旗下人选"));
+                r.ClickCaption("请代言人");
+                StringAssert.Contains("衣见文化", r.Text);
+                r.Components<Button>().First(b => b.GetComponentInChildren<Text>()?.text == "查看旗下人选").onClick.Invoke();
+                Assert.True(r.Components<RawImage>().Any(p => p.name == "KolPortrait_momo" && p.texture != null));
+                Assert.True(r.Components<RawImage>().Any(p => p.name == "KolPortrait_ake" && p.texture != null));
+                r.ClickCaption("返回选择渠道");
+                r.ClickCaption("返回推广与代言");
+                StringAssert.Contains("实际到店客流", r.Text);
             }
         }
 

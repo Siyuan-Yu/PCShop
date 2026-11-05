@@ -271,7 +271,7 @@ namespace PCShopSell.Core.Session
                 switch(_district.NodeId)
                 {
                     case "expo.invitation": return "每90天一届；品牌页报名，需¥2,000及3件展示样品。报名截止展前7天。";
-                    case "expo.review": return "同一品牌影响力100，并完成至少一笔真实展会采购订单。";
+                    case "expo.review": return "同一品牌知名度100，并完成至少一笔真实展会采购订单。";
                     case "tender.invitation": return "品牌页调查采购需求、提交方案、交付试单，评审通过才取得席位。";
                     case "tender.review": return "企业合同连续三期交付后再约见；失约失去席位，下一年度可以重新竞标。";
                     case "community.meeting": return "唐蔚筹备街区介绍会，需要找回搬家时寄存的旧街手绘商铺图。先接受寻物委托，再向李秀兰问清箱子去向。没有营业额或交钱要求。";
@@ -420,7 +420,7 @@ namespace PCShopSell.Core.Session
             string why=DistrictMeetingBlocker;if(why!=null)return Fail(why);
             string id=_district.NodeId;
             if(DistrictCommerceActive&&DistrictCommerceBlocker!=null)return Fail(DistrictCommerceBlocker);
-            if(id=="expo.review"&&!_brands.Brands.Any(b=>b.Influence>=100&&_brands.Orders.Any(o=>o.BrandId==b.Id&&o.Source=="expo"&&o.Done)))return Fail("需要同一品牌达到100影响力并交付展会订单");
+            if(id=="expo.review"&&!_brands.Brands.Any(b=>b.Influence>=100&&_brands.Orders.Any(o=>o.BrandId==b.Id&&o.Source=="expo"&&o.Done)))return Fail("需要同一品牌达到100知名度并交付展会订单");
             if(id=="tender.review"&&!_brands.Tenders.Any(t=>t.Stage==3))return Fail("需要赢得席位并完成连续三期履约");
             string taskBlocker=DistrictTasksBlocker;
             if(taskBlocker!=null)return Fail(taskBlocker);

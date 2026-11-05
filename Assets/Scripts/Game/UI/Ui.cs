@@ -182,7 +182,8 @@ namespace PCShopSell.Game.UI
             input.placeholder = hint;
             input.targetGraphic = bg;
             input.text = value ?? "";
-            input.onEndEdit.AddListener(text => { if (text != value) commit(text); });
+            if (commit != null)
+                input.onEndEdit.AddListener(text => { if (text != value) commit(text); });
             return input;
         }
 

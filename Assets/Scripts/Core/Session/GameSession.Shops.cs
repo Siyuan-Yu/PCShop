@@ -74,8 +74,6 @@ namespace PCShopSell.Core.Session
             sim.OpenStatusOf=t=>IsSpecialBusiness(shop)?SpecialOpen(shop,t):sim.IsOpenAt(t);
             sim.Settings.BuildOrdersStartDay = BuildOrdersStartDay;
             sim.SalesBonusOf = () => ShopSalesBonus(shop);
-            sim.KolIntentOf = () => KolShopIntent(shop);
-            sim.KolTrafficOf = () => KolShopTraffic(shop);
             sim.HasClothingMirror = () => shop.Layout.Any(p=>FurnitureCatalog.Canonical(p.Id)==FurnitureCatalog.FittingMirror);
             sim.WorkMinute = now => WithShop(shop, () => UpdateEmployeeWork(now));
             sim.EmployeeBusy = () => shop.EmployeeBuilding;
@@ -83,8 +81,8 @@ namespace PCShopSell.Core.Session
             {
                 if (shop.Rented) Notice?.Invoke((MyShopCount > 1 ? ShopTitle(shop) + " " : "") + DayReportText(r));
             };
-            sim.CustomerArrived += c => {BindCityCustomer(shop,c);ShopCustomerArrived?.Invoke(shop.Place, c);};
-            sim.CustomerCanBrowse=c=>string.IsNullOrEmpty(c.PersonId)||CityPersonState(c.PersonId)?.LocationPlaceId==shop.Place.Id&&CityPersonState(c.PersonId)?.Route==null;
+            sim.CustomerArrived += c => {BindCityCustomer(shop,c);RecordBrandShopVisit(shop,c);ShopCustomerArrived?.Invoke(shop.Place, c);};
+            sim.CustomerCanBrowse=c=>RecordBrandShopVisit(shop,c);
             sim.RetailTemperature=()=>CityOutdoorTemperature(Clock.Now.TotalMinutes);
             sim.RetailInterestOf=c=>CityRetailSeriesFor(c.PersonId ?? c.VisitId ?? (shop.Place.Id + ":" + c.Id));
             sim.RetailBudgetOf=c=>CityRetailBudgetFor(c.PersonId ?? c.VisitId ?? (shop.Place.Id + ":" + c.Id));

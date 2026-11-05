@@ -41,7 +41,14 @@ namespace PCShopSell.Game.Runtime
         private static Transform Child(Transform parent,string name){var g=new GameObject(name).transform;g.SetParent(parent,false);return g;}
         private static Text Label(Transform parent,string text,Vector3 at,float width,float height,Color color)
         {var root=Child(parent,"ExpoLabel");root.localPosition=at;Prims.SignText(root,text,Vector3.zero,width,height,color);var t=root.GetComponentInChildren<Text>();t.raycastTarget=false;return t;}
-        public Vector3 LocalPoint(string zone)=>zone=="stage"?new Vector3(0,.5f,_depth*.78f):zone=="booth"?new Vector3(0,0,_depth*.46f):zone=="aisle"?new Vector3(-7,0,_depth*.34f):zone=="reception"?new Vector3(5,0,4):new Vector3(0,0,_depth*.48f);
+        public Vector3 LocalPoint(string zone)
+        {
+            const string personPrefix = "person:";
+            if (zone.StartsWith(personPrefix, StringComparison.Ordinal) &&
+                _kols.TryGetValue(zone.Substring(personPrefix.Length), out var actor) && actor.activeSelf)
+                return _live.localPosition + actor.transform.localPosition;
+            return zone=="stage"?new Vector3(0,.5f,_depth*.78f):zone=="booth"?new Vector3(0,0,_depth*.46f):zone=="aisle"?new Vector3(-7,0,_depth*.34f):zone=="reception"?new Vector3(5,0,4):new Vector3(0,0,_depth*.48f);
+        }
         public Vector3 WorldPoint(string zone)=>transform.TransformPoint(LocalPoint(zone));
         public Vector3 PlayerPoint(string zone)
         {
@@ -49,8 +56,14 @@ namespace PCShopSell.Game.Runtime
             Vector3 offset=zone=="stage"?new Vector3(-2,0,.45f):zone=="booth"?new Vector3(-6-(_exhibit?.Booth??0)*2,0,.8f):zone=="reception"?new Vector3(-3,0,1.3f):new Vector3(-1,0,-1);
             return transform.TransformPoint(LocalPoint(zone)+offset);
         }
-        public float CameraSize(float aspect)=>FocusZone=="overview"?Mathf.Max(16,_width/(Mathf.Max(1,aspect)*1.30f)):FocusZone=="booth"?7.5f+(_exhibit?.Booth??0)*2:FocusZone=="reception"?7.5f:10.5f;
+        public float CameraSize(float aspect)=>FocusZone=="overview"?Mathf.Max(16,_width/(Mathf.Max(1,aspect)*1.30f)):FocusZone=="booth"?7.5f+(_exhibit?.Booth??0)*2:FocusZone=="reception"||FocusZone.StartsWith("person:",StringComparison.Ordinal)?7.5f:10.5f;
         public void Focus(string zone){if(new[]{"overview","stage","booth","aisle","reception"}.Contains(zone))FocusZone=zone;}
+        public bool FocusPerson(string id)
+        {
+            if (!_kols.TryGetValue(id, out var actor) || !actor.activeSelf) return false;
+            FocusZone = "person:" + id;
+            return true;
+        }
         public void Sync(GameSession session,float dt,bool force=false)
         {
             bool changed=_session!=session;_session=session;
@@ -63,19 +76,22 @@ namespace PCShopSell.Game.Runtime
             if(force||changed||_syncAt<=0)
             {
                 _syncAt=.25f;var e=session.ExpoAtVenue;_exhibit=e;
-                string key=(e?.Id??"public")+":"+(e?.Booth??-1)+":"+string.Join(",",e?.Products.Select(p=>p.ProductId)??Array.Empty<string>())+":"+string.Join(",",e?.KolIds??Array.Empty<string>())+":"+(e?.DesignerId??"")+":"+(e?.DesignerId!=null&&e.PosterReadyAt<=session.Clock.Now.TotalMinutes);
-                if(changed||key!=_layoutKey){_layoutKey=key;Build(e);_progressKey=null;FocusZone="overview";}
-                string progress=(e?.Decision??-1)+":"+(e?.Heat??0)+":"+(e?.Trust??0)+":"+session.Clock.Today.TotalDays+":"+(e?.Attending==true)+":"+(e?.Finished==true);
-                if(progress!=_progressKey){_progressKey=progress;Refresh(e);}
+                var endorsers = e?.Day == session.Clock.Today.TotalDays ? session.ExpoEndorsers(e) : Array.Empty<string>();
+                var presenters = (e?.KolIds ?? Array.Empty<string>()).Union(endorsers).ToArray();
+                string key=(e?.Id??"public")+":"+(e?.Booth??-1)+":"+string.Join(",",e?.Products.Select(p=>p.ProductId)??Array.Empty<string>())+":"+string.Join(",",presenters)+":"+string.Join(",",endorsers)+":"+(e?.DesignerId??"")+":"+(e?.DesignerId!=null&&e.PosterReadyAt<=session.Clock.Now.TotalMinutes);
+                if(changed||key!=_layoutKey){_layoutKey=key;Build(e, presenters, endorsers);_progressKey=null;FocusZone="overview";}
+                string progress=(e?.Decision??-1)+":"+(e?.Heat??0)+":"+(e?.Trust??0)+":"+session.Clock.Today.TotalDays+":"+(e?.Attending==true)+":"+(e?.Finished==true)+":"+string.Join(",",endorsers.Where(session.ExpoPersonArrived));
+                if(progress!=_progressKey){_progressKey=progress;Refresh(e, endorsers);}
                 foreach(var pair in _kols)
                 {
-                    var person=session.CityPersonState(pair.Key);
-                    pair.Value.SetActive(person!=null&&person.LocationPlaceId=="life_expo"&&person.Route==null&&string.IsNullOrEmpty(person.ActivityId));
+                    bool arrived = session.ExpoPersonArrived(pair.Key);
+                    pair.Value.SetActive(arrived);
+                    if (!arrived && FocusZone == "person:" + pair.Key) FocusZone = "overview";
                 }
             }
             Animate(Mathf.Max(0,Mathf.Min(dt,.1f)));
         }
-        private void Build(BrandExhibit e)
+        private void Build(BrandExhibit e, string[] presenters, string[] endorsers)
         {
             foreach(var c in _live.Cast<Transform>().ToArray()){c.gameObject.SetActive(false);Kill.It(c.gameObject);}
             _visitors.Clear();_kols.Clear();_stockLabels.Clear();_stockBoxes.Clear();_eventProps.Clear();BuildVersion++;
@@ -131,11 +147,13 @@ namespace PCShopSell.Game.Runtime
             Label(_live,"报到 / 买家洽谈",reception+new Vector3(0,2,-.85f),5,.6f,ArtDirection.Brass);
             PointBox(_live,"AisleMeetingPoint",LocalPoint("aisle")+Vector3.up*.1f,new Vector3(3,.12f,3),Mats.Lit(ArtDirection.Brass),"aisle");
             Label(_live,"观众互动",LocalPoint("aisle")+new Vector3(0,2,0),4,.5f,ArtDirection.Ink);
-            if(e!=null)foreach(string id in e.KolIds)
+            foreach(string id in presenters)
             {
                 var host=Prims.Figure(_live,"SignedKol_"+id,CrowdView.PersonClothing(id),new Color(.92f,.76f,.61f),1.15f);host.AddComponent<ExpoKolMarker>().PersonId=id;
                 CityNpcClothing.Apply(host,_session,id);var motion=host.GetComponent<FigureMotion>();motion.ActivityKind="expo";motion.PresentationAnimation=true;
-                Label(host.transform,_session.CityPerson(id).Name,new Vector3(0,2.05f,0),2.3f,.35f,ArtDirection.Ink);_kols[id]=host;
+                Label(host.transform,_session.CityPerson(id).Name,new Vector3(0,2.05f,0),2.3f,.35f,ArtDirection.Ink);
+                if (endorsers.Contains(id)) Label(host.transform,"品牌代言人",new Vector3(0,2.48f,0),2.6f,.36f,ArtDirection.Brass);
+                _kols[id]=host;
             }
             for(int n=0;n<26;n++)
             {var visitor=Prims.Figure(_live,"ExpoVisitor_"+n,CrowdView.PersonClothing("expo:"+n),new Color(.85f,.69f,.54f),.95f+(n%3)*.08f);visitor.GetComponent<FigureMotion>().PresentationAnimation=true;visitor.transform.localPosition=new Vector3((n%7-3)*2.4f,0,4+n/7*2.2f);_visitors.Add(visitor);}
@@ -171,7 +189,7 @@ namespace PCShopSell.Game.Runtime
             else {Prims.Box(root,"InteractionSign",Vector3.up*1.5f,new Vector3(1,.8f,.15f),brass);Label(root,effect=="question"?"?":effect=="buyer"?"采购洽谈":effect=="rival"?"同行促销":"演示预告",new Vector3(0,1.5f,-.1f),1,.5f,ArtDirection.Ink);}
             root.gameObject.SetActive(false);return root.gameObject;
         }
-        private void Refresh(BrandExhibit e)
+        private void Refresh(BrandExhibit e, string[] endorsers)
         {
             bool active=e?.Attending==true;int decision=e?.Decision??0;
             EventEffect=active?ExpoMoments.EffectAt(e.Day,decision):null;
@@ -187,10 +205,23 @@ namespace PCShopSell.Game.Runtime
             }
             int audience=e?.Finished==true?6:Mathf.Clamp(8+(e?.Booth??0)*3+(e?.Heat??0)/6,8,26);if(EventEffect=="empty")audience=6;
             for(int n=0;n<_visitors.Count;n++)_visitors[n].SetActive(n<audience);
-            int i=0;foreach(var pair in _kols)
+            var onStage = _kols.Keys.Where(id => endorsers.Contains(id)
+                ? _session.ExpoEndorserOnStage(e, id) || (e.KolIds.Contains(id) && zone == "stage")
+                : zone == "stage").ToArray();
+            var atBooth = _kols.Keys.Except(onStage).ToArray();
+            foreach (var pair in _kols)
             {
-                bool stage=zone=="stage";pair.Value.transform.localPosition=stage?LocalPoint("stage")+new Vector3(-5+i*10f/Math.Max(1,_kols.Count-1),.1f,1):LocalPoint("booth")+new Vector3(-5+i*10f/Math.Max(1,_kols.Count-1),0,2.5f);
-                pair.Value.transform.localRotation=Quaternion.Euler(0,180,0);i++;
+                int stageIndex = Array.IndexOf(onStage, pair.Key);
+                bool stage = stageIndex >= 0;
+                int index = stage ? stageIndex : Array.IndexOf(atBooth, pair.Key);
+                int count = stage ? onStage.Length : atBooth.Length;
+                int columns = Math.Min(9, count);
+                float x = (index % columns - (columns - 1) * .5f) * 1.25f;
+                float z = index / columns * 1.05f;
+                pair.Value.transform.localPosition = stage
+                    ? LocalPoint("stage") + new Vector3(x, -.02f, -.4f + z)
+                    : LocalPoint("booth") + new Vector3(x, 0, 2.5f + z);
+                pair.Value.transform.localRotation = Quaternion.Euler(0,180,0);
             }
         }
         private void Animate(float dt)

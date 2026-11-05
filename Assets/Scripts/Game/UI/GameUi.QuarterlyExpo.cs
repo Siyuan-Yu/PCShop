@@ -15,55 +15,11 @@ namespace PCShopSell.Game.UI
         private string _expoDraftBrand,_expoDraftShop;
         private readonly HashSet<string> _expoProducts=new HashSet<string>(),_expoKols=new HashSet<string>();
         private Window _quarterlyExpoWindow;
-        private void BuildQuarterlyExpo(Transform body,Window w,BrandRecord brand,BrandBusinessState state)
+        private void BuildQuarterlyExpoBooking(Transform body,Window w,BrandRecord brand,BrandBusinessState state)
         {
             int day=S.NextBrandExpoDay;
             Line(body,"云帆会展中心 · 每季度一次 · 每届4天",22,Ui.Accent);
             Line(body,new GameDate(day)+"—"+new GameDate(day+3)+" · 每日09:00—17:00 · 展前7天截止报名",17);
-            var existing=state.Exhibits.Where(e=>e.BrandId==brand.Id).OrderByDescending(e=>e.Day).ToArray();
-            foreach(var exhibit in existing.Take(4))
-            {
-                var e=exhibit;var card=BusinessCard(body,new GameDate(e.Day)+" · "+(e.Format==2?GameSession.ExpoBoothName(e.Booth):"旧版已报名展会"));
-                if(e.Format!=2){BuildLegacyExpoCard(card,w,e);continue;}
-                Line(card,e.Finished?"已闭展":e.Missed?"未到场":e.Attending?"现场进行中 · 第"+(e.Decision/6+1)+"天":"已预订 · 请准备海报与KOL到场",18,Ui.Accent);
-                Line(card,"展品 "+e.Products.Length+"种 · KOL "+e.KolIds.Length+"人 · 现场销售 "+Money.FromCents(e.RevenueCents),17);
-                if(e.LastFeedback!=null)Para(card,e.LastFeedback,17,Ui.Good);
-                if(e.Finished||e.Missed){Line(card,"售出 "+e.Products.Sum(p=>p.Sold)+"件 · 得分 "+e.Score+" · 未售展品"+(e.StockReturned?"已退回":"待退回"),16);continue;}
-                if(e.Booth>0)
-                {
-                    if(e.DesignerId==null)
-                    {
-                        Line(card,"海报：委托制作24小时 · ¥"+GameSession.ExpoPosterFee(e.Booth),17,Ui.Warn);
-                        var designers=Ui.Row(card,36,6);
-                        foreach(string person in new[]{"life_designer","resident_dengyue","life_creator"})
-                        {
-                            string p=person;string why=S.ExpoPosterBlocker(e.Id,p);
-                            Ui.Size(Ui.Button(designers,S.CityPerson(p).Name+(S.IsMet(p)?"":"（需认识）"),()=>ConfirmBusiness("委托展会海报","支付¥"+GameSession.ExpoPosterFee(e.Booth)+"，由"+S.CityPerson(p).Name+"制作，24小时后交付。",()=>{S.CommissionExpoPoster(e.Id,p);w.Rebuild();}),16,Ui.ButtonBg,why==null),-1,36,1);
-                        }
-                    }
-                    else Line(card,"海报 · "+S.CityPerson(e.DesignerId).Name+"："+(e.PosterReadyAt<=S.Clock.Now.TotalMinutes?"制作完成":"还需 "+(e.PosterReadyAt-S.Clock.Now.TotalMinutes)+" 分钟"),17,Ui.Good);
-                }
-                Line(card,"站台日酬合计 ¥"+e.KolDayQuotes.Sum().ToString("N0")+"（含基础日薪；展会每天另结溢价）",16);
-                foreach(string person in e.KolIds)
-                {
-                    string old=person;bool valid=S.ExpoAvailableKols(e.BrandId,e.Day).Contains(person);
-                    Line(card,S.CityPerson(person).Name+" · "+(valid?"合约有效":"合约失效，需替换"),16,valid?Ui.Dim:Ui.Warn);
-                    if(!valid&&!e.Attending)
-                    {
-                        foreach(string candidate in S.ExpoAvailableKols(e.BrandId,e.Day).Except(e.KolIds))
-                        {string next=candidate;Ui.Size(Ui.Button(card,"替换为 "+S.CityPerson(next).Name+" · 日酬¥"+S.ExpoKolDayQuote(next,e.Booth),()=>{S.ReplaceExpoKol(e.Id,old,next);w.Rebuild();},16),-1,34);}
-                    }
-                }
-                string blocker=S.ExpoStartBlocker(e.Id);
-                if(e.Attending)Ui.Size(Ui.Button(card,"继续展会现场",()=>{CloseAllWindows();OpenQuarterlyExpo(e.Id);},18,Ui.ButtonHot),-1,42);
-                else
-                {
-                    if(blocker!=null)Line(card,blocker,16,Ui.Dim);
-                    Ui.Size(Ui.Button(card,"报到并连续参加4天…",()=>ConfirmBusiness("连续4天参展","进入后不能出行、打工或做其他活动，需亲自处理每天6段现场事件/舞台互动。餐宿由展务安排；门店、房租和KOL日薪照常结算，站台溢价每日另结，预计¥"+(e.KolDayQuotes.Sum()*4).ToString("N0")+"的4天KOL总日酬。可中途保存，下次继续。",()=>{if(S.StartQuarterlyExpo(e.Id)){CloseAllWindows();OpenQuarterlyExpo(e.Id);}else w.Rebuild();}),18,Ui.ButtonHot,blocker==null),-1,42).name="ExpoStart_"+e.Id;
-                    Ui.Size(Ui.Button(card,"前往会展中心",()=>{CloseAllWindows();S.BeginCityTravel("life_expo");},17),-1,36);
-                }
-            }
-            if(existing.Any(e=>e.Day==day))return;
             Line(body,"预订本季度摊位",22,Ui.Accent);
             if(_expoDraftBrand!=brand.Id){_expoDraftBrand=brand.Id;_expoProducts.Clear();_expoKols.Clear();_expoDraftShop=null;}
             var sizes=Ui.Row(body,40,6);
@@ -94,12 +50,12 @@ namespace PCShopSell.Game.UI
                 }
             }
             if(talents.Length==0)Para(body,"没有合约覆盖展期的签约KOL，请先在KOL直播页签约。",17,Ui.Warn);
-            Ui.Size(Ui.Button(body,"管理KOL签约",()=>{_brandTab=6;w.Rebuild();},17),-1,36);
+            Ui.Size(Ui.Button(body,"管理KOL签约",()=>{_brandTab=BrandKolTab;w.Rebuild();},17),-1,36);
             long dayWages=_expoKols.Sum(p=>S.ExpoKolDayQuote(p,_expoBooth));
             Line(body,"报名付款 ¥"+GameSession.ExpoBoothFee(_expoBooth).ToString("N0")+" · 海报 ¥"+GameSession.ExpoPosterFee(_expoBooth).ToString("N0")+" · 4天KOL总日酬约¥"+(dayWages*4).ToString("N0"),17,Ui.Warn);
             string reason=S.ExpoBookingBlocker(brand.Id,_expoDraftShop,_expoBooth,_expoProducts.ToArray(),_expoKols.ToArray());
             if(reason!=null)Line(body,reason,16,Ui.Dim);
-            Ui.Size(Ui.Button(body,"确认预订摊位…",()=>ConfirmBusiness("预订4天展会",GameSession.ExpoBoothName(_expoBooth)+"支付¥"+GameSession.ExpoBoothFee(_expoBooth)+"；所选每种展品100件转交展务，未售库存闭展退回；邀请"+_expoKols.Count+"位已签约KOL，4天总日酬约¥"+(dayWages*4)+"，按天结算。海报另行委托，开幕后需亲自连续参与4天。",()=>{S.BookQuarterlyExpo(brand.Id,_expoDraftShop,_expoBooth,_expoProducts.ToArray(),_expoKols.ToArray());w.Rebuild();}),18,Ui.ButtonHot,reason==null),-1,44).name="ExpoBookBooth";
+            Ui.Size(Ui.Button(body,"确认预订摊位…",()=>ConfirmBusiness("预订4天展会",GameSession.ExpoBoothName(_expoBooth)+"支付¥"+GameSession.ExpoBoothFee(_expoBooth)+"；所选每种展品100件转交展务，未售库存闭展退回；邀请"+_expoKols.Count+"位已签约KOL，4天总日酬约¥"+(dayWages*4)+"，按天结算。海报另行委托，开幕后需亲自连续参与4天。",()=>{if(S.BookQuarterlyExpo(brand.Id,_expoDraftShop,_expoBooth,_expoProducts.ToArray(),_expoKols.ToArray())) _expoPage="overview";w.Rebuild();}),18,Ui.ButtonHot,reason==null),-1,44).name="ExpoBookBooth";
         }
         private void BuildLegacyExpoCard(Transform card,Window w,BrandExhibit e)
         {
@@ -137,6 +93,7 @@ namespace PCShopSell.Game.UI
                 for(int n=0;n<zones.Length;n++){string zone=zones[n];Ui.Size(Ui.Button(nav,names[n],()=>_ctrl.FocusExpo(zone),17),-1,38,1);}
                 Line(w.Content,"点选场景切换区域 · 滚轮缩放 · 右拖旋转",15,Ui.Dim);
                 var body=w.Content;
+                if (e != null) BuildExpoEndorsers(body, e, true);
                 if(e==null)
                 {
                     Line(body,S.BrandExpoTheme(S.Clock.Today.TotalDays),23,Ui.Accent);

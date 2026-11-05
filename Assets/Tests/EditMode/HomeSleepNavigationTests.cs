@@ -15,9 +15,9 @@ namespace PCShopSell.Tests
     {
         private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
         private static object Call(object target,string method,params object[] args)=>target.GetType().GetMethod(method,Private).Invoke(target,args);
-        private static void WithHome(Action<GameSession,GameController,HomeRoomView,GameUi> action)
+        private static void WithHome(Action<GameSession,GameController,HomeRoomView,GameUi> action, GameSession session = null)
         {
-            using(var s=HomeTests.Make())
+            using(var s=session ?? HomeTests.Make())
             {
                 s.EventsEnabled=false;s.Time.SetSpeed(1);
                 var host=new GameObject("HomeSleepRegression");host.SetActive(false);
@@ -40,7 +40,62 @@ namespace PCShopSell.Tests
         private static void Frame(GameSession s,GameController c,HomeRoomView room,float dt=.05f)
         {
             s.Tick(dt);room.SetActive(c.InHome);if(c.InHome)room.Update(s,dt,s.Clock.MinuteOfDay);
+            if (c.InVisit) c.VisitRoom.UpdateVisit(s);
             Call(c,"UpdateHomeBedTrip",dt);Call(c,"UpdateCityTravel",dt);
+        }
+        [Test]
+        public void DropdownReachesAnOwnedVacantHomesBedAndCanSleepThere()
+        {
+            var session = DistrictProgressionTests.Make();
+            session.DebugAddCash(1000000);
+            typeof(GameSession).GetField("_district", Private).SetValue(session, new DistrictProgress { UnlockedTier = 3, Chapter = 3 });
+            var home = session.Home;
+            var inhabited = session.ResidentialPlaces.Where(p => session.ResidentialTenants(p.Id).Length > 0).Take(2).ToArray();
+            var vacant = inhabited[0];
+            var occupied = inhabited[1];
+            foreach (var tenant in session.ResidentialTenants(vacant.Id))
+                session.CityPersonState(tenant.PersonId).HomePlaceId = occupied.Id;
+            foreach (var residence in new[] { vacant, occupied })
+            {
+                GameSessionTests.Teleport(session, session.AgencyFor(residence).Id);
+                Assert.True(session.BuyResidentialHome(residence.Id, false, false));
+            }
+            GameSessionTests.Teleport(session, home.Id);
+            session.Leave();
+
+            WithHome((s, c, room, ui) =>
+            {
+                var visit = new HomeRoomView(c.transform);
+                typeof(GameController).GetProperty("VisitRoom").SetValue(c, visit);
+                var dropdown = ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Dropdown>())
+                    .Single(d => d.name == "ShortcutArrow_4");
+                var button = ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Button>())
+                    .Single(b => b.name == "ShortcutGo_4");
+                var caption = button.GetComponentInChildren<Text>();
+                Assert.AreEqual("前往 " + s.HomeTitle, caption.text);
+                Assert.AreEqual(2, dropdown.options.Count);
+                StringAssert.Contains(s.HomeTitle, dropdown.options[0].text);
+                int index = dropdown.options.FindIndex(o => o.text.Contains(vacant.Name));
+                Assert.Greater(index, 0);
+                dropdown.value = index;
+                Assert.AreEqual("前往 " + vacant.Name, caption.text);
+                Assert.AreEqual(index, dropdown.value);
+                Assert.IsNull(s.CityIntent);
+                Assert.IsNull(s.Trip);
+                Assert.False(s.CitySleepRequested);
+                using (var loaded = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
+                    Assert.AreEqual(vacant.Id, loaded.CityHomeShortcut);
+
+                s.Time.SetSpeed(8);
+                button.onClick.Invoke();
+                for (int i = 0; i < 3000 && !BedWindow(ui); i++) Frame(s, c, room);
+
+                Assert.AreSame(vacant, s.CurrentPlace);
+                Assert.True(BedWindow(ui));
+                Assert.True(s.Nap());
+                Assert.GreaterOrEqual(s.SleepHoursLast24, 2);
+                Assert.AreSame(home, s.Home);
+            }, session);
         }
         [TestCase(false,1)] [TestCase(false,8)] [TestCase(true,1)] [TestCase(true,8)]
         public void HomeShortcutReachesBedFromHomeOrStreet(bool street,int speed)

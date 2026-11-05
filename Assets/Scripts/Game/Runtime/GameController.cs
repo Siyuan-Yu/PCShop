@@ -50,7 +50,7 @@ namespace PCShopSell.Game
         private Transform _actors;
         private Transform _policeRoot;
         private Place _pendingEnter;
-        private bool _goHomeToBed;
+        private string _sleepDestinationId;
         private bool _wasChasing;
         private int _wasRoomKind;
         private string _crowdPlace, _crowdActivity;
@@ -142,7 +142,8 @@ namespace PCShopSell.Game
             s.DistrictDialogueReady+=OnDistrictDialogueReady;
             _cityExitIntent=null;
             _pendingEnter = null;
-            _goHomeToBed = s.CitySleepRequested;
+            string sleepDestination = s.CitySleepRequested ? s.CityIntent?.TargetPlaceId ?? s.CurrentPlace?.Id : null;
+            _sleepDestinationId = sleepDestination;
             _gameOverShown = false;
             _autosaveDue = false; _wasPlayerWorking = s.IsWorking;
 
@@ -164,7 +165,12 @@ namespace PCShopSell.Game
             if (s.CurrentPlace != null && !s.IsGameOver) Ui.OnEnteredPlace(s.CurrentPlace);
             if(s.CityIntent!=null&&s.Trip==null&&!s.IsGameOver)
             {
-                bool sleep=s.CitySleepRequested;OnCityTravelRequested(s.CityIntent);s.CitySleepRequested=sleep;_goHomeToBed=sleep;
+                OnCityTravelRequested(s.CityIntent);
+                if (sleepDestination != null && (s.CityIntent?.TargetPlaceId == sleepDestination || s.CurrentPlace?.Id == sleepDestination))
+                {
+                    _sleepDestinationId = sleepDestination;
+                    s.CitySleepRequested = true;
+                }
             }
         }
 
@@ -205,19 +211,26 @@ namespace PCShopSell.Game
             Session.BeginCityTravel(p.Id);
         }
 
-        public void GoHomeToSleep()
+        public void GoHomeToSleep() => GoHomeToSleep(Session.Home);
+
+        public void GoHomeToSleep(Place residence)
         {
             if (Session.IsGameOver || Session.IsWorking || Ui.AnyModalOpen || Placing) return;
-            GoToPlace(Session.Home);
-            _goHomeToBed = InHome || Session.CityIntent?.TargetPlaceId == Session.Home.Id;
-            Session.CitySleepRequested = _goHomeToBed;
+            if (!Session.CanSleepAt(residence)) { Ui.Toast("这套住宅目前不能入住。"); return; }
+            if (!Session.BeginCityTravel(residence.Id)) return;
+            if (Session.CurrentPlace == residence || Session.CityIntent?.TargetPlaceId == residence.Id)
+            {
+                _sleepDestinationId = residence.Id;
+                Session.CitySleepRequested = true;
+            }
         }
 
         private void CancelHomeBedTrip()
         {
-            _goHomeToBed = false;
+            _sleepDestinationId = null;
             if(Session!=null)Session.CitySleepRequested=false;
             HomeRoom?.CancelBedWalk();
+            VisitRoom?.CancelBedWalk();
         }
 
         // Indoor character speeds are authored at 1x; apply the selected speed exactly once.
@@ -225,16 +238,17 @@ namespace PCShopSell.Game
 
         private void UpdateHomeBedTrip(float dt)
         {
-            if (!_goHomeToBed) return;
+            if (_sleepDestinationId == null) return;
             if (Session.IsGameOver || Session.IsWorking || Placing)
             { CancelHomeBedTrip(); return; }
-            if (!InHome)
+            if (Session.CurrentPlace?.Id != _sleepDestinationId)
             {
-                if (Session.CityIntent?.TargetPlaceId != Session.Home.Id) CancelHomeBedTrip();
+                if (Session.CityIntent?.TargetPlaceId != _sleepDestinationId) CancelHomeBedTrip();
                 return;
             }
+            if (!Session.CanSleepAt(Session.CurrentPlace)) { CancelHomeBedTrip(); return; }
             if (Ui.AnyModalOpen || !Session.Time.IsRunning) return;
-            int result = HomeRoom.WalkToBed(IndoorWalkDelta(dt));
+            int result = ActiveResidence.WalkToBed(IndoorWalkDelta(dt));
             if (result == 0) return;
             CancelHomeBedTrip();
             if (result > 0) Ui.OpenBedWindow();
@@ -590,6 +604,7 @@ namespace PCShopSell.Game
         {
             string target = VisitRoom?.NearbyId;
             if (target == HomeRoomView.Door) LeaveHome();
+            else if (target == HomeRoomView.Bed && Session.CanSleepAt(Session.CurrentPlace)) Ui.OpenBedWindow();
             else if (target != null && Session.CitySamePlace(target) && VisitRoom.CanReachResident(target))
                 Ui.OpenCityPerson(target);
             else Ui.Toast("走近住户或房门，再按 F。");

@@ -26,7 +26,7 @@ namespace PCShopSell.Core.Session
         public long cityNextActivity,cityNextIntent;
         public string[] cityEmployeeIds,cityEmployeePersonIds,cityTopicKeys,cityTrustIds,cityFavorites,cityRecent;
         public int[] cityTopicDays,cityTrustValues;
-        public string cityDefaultDestination,cityAgencyShortcut,cityMarketShortcut,cityShopShortcut;
+        public string cityDefaultDestination,cityAgencyShortcut,cityMarketShortcut,cityShopShortcut,cityHomeShortcut;
     }
     [Serializable] public sealed class CitySavedTrip
     {
@@ -58,6 +58,7 @@ namespace PCShopSell.Core.Session
             d.cityTopicKeys=_cityTopicDay.Keys.ToArray();d.cityTopicDays=_cityTopicDay.Values.ToArray();d.cityTrustIds=_cityTrust.Keys.ToArray();d.cityTrustValues=_cityTrust.Values.ToArray();
             d.cityFavorites=_cityFavorites.ToArray();d.cityRecent=_cityRecent.ToArray();d.cityDefaultDestination=CityDefaultDestination;
             d.cityAgencyShortcut=CityAgencyShortcut;d.cityMarketShortcut=CityMarketShortcut;d.cityShopShortcut=CityShopShortcut;
+            d.cityHomeShortcut = CityHomeShortcut;
             SaveCityStories(d);
             SaveCityVisits(d);
         }
@@ -108,6 +109,7 @@ namespace PCShopSell.Core.Session
             CityAgencyShortcut=City.HasPlace(d.cityAgencyShortcut)?d.cityAgencyShortcut:"agency";
             CityMarketShortcut=City.HasPlace(d.cityMarketShortcut)?d.cityMarketShortcut:"stall_cpu";
             CityShopShortcut=MyShops.Any(s=>s.Place.Id==d.cityShopShortcut)?d.cityShopShortcut:null;
+            CityHomeShortcut = City.HasPlace(d.cityHomeShortcut) ? d.cityHomeShortcut : null;
             CityIntent=d.cityTravelIntent!=null&&City.HasPlace(d.cityTravelIntent.TargetPlaceId)&&!d.cityTravelIntent.Cancelled?d.cityTravelIntent:null;
             if(d.cityTrip!=null)
             {

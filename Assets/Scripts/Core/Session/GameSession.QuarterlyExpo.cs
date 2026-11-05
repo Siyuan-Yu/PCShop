@@ -19,6 +19,35 @@ namespace PCShopSell.Core.Session
         public static int ExpoMinKols(int size)=>size==0?1:size==1?5:8;
         public static long ExpoBoothFee(int size)=>size==0?5000:size==1?20000:60000;
         public static long ExpoPosterFee(int size)=>size==0?0:size==1?3000:8000;
+        public const int ExpoEndorserStageDecision = 3;
+
+        private static bool ExpoEndorserDeal(BrandExhibit exhibit, BrandDeal deal) =>
+            deal.BrandId == exhibit.BrandId && deal.Mode == "endorse" && !deal.Ended &&
+            deal.Response != "pause" && deal.Start <= exhibit.Day && deal.End > exhibit.Day;
+
+        public string[] ExpoEndorsers(BrandExhibit e) => e == null || e.Format != 2 || e.Finished || e.Missed
+            ? Array.Empty<string>()
+            : _brands.Deals.Where(d => ExpoEndorserDeal(e, d)).Select(d => d.PersonId).Distinct().ToArray();
+
+        public bool ExpoPersonArrived(string id)
+        {
+            var person = CityPersonState(id);
+            return person != null && person.LocationPlaceId == "life_expo" && person.Route == null &&
+                string.IsNullOrEmpty(person.ActivityId) && string.IsNullOrEmpty(person.VisitId);
+        }
+
+        public bool ExpoEndorserOnStage(BrandExhibit e, string id) => e != null && e.Attending && !e.Finished && !e.Missed &&
+            BrandDay == e.Day && e.Decision == ExpoEndorserStageDecision && ExpoPersonArrived(id);
+
+        public string ExpoEndorserStatus(BrandExhibit e, string id)
+        {
+            if (BrandDay < e.Day || BrandDay == e.Day && Clock.MinuteOfDay < 360) return "开幕日 09:00 到场 · 13:00 舞台介绍";
+            if (BrandDay > e.Day || Clock.MinuteOfDay >= 1020) return "开幕日安排已结束";
+            if (ExpoEndorserOnStage(e, id)) return "正在舞台 · 品牌介绍";
+            if (ExpoPersonArrived(id)) return "已到场 · 品牌展台";
+            return CityPersonState(id)?.Route?.TargetPlaceId == "life_expo" ? "在路上 · 前往会展中心" : "尚未到场";
+        }
+
         public long ExpoKolDayQuote(string id,int booth)=>KolDailyWage(id)*(booth+3);
         public string[] ExpoAvailableKols(string brandId,int day)=>_kol.Contracts.Where(c=>c.BrandId==brandId&&!c.Ended&&c.SignedAt<=Clock.Now.TotalMinutes&&c.EndAt>=(day+3)*1440L+1020)
             .Select(c=>c.PersonId).Distinct().ToArray();
@@ -103,12 +132,22 @@ namespace PCShopSell.Core.Session
             e.ExpoWagesCents+=surcharge*100;e.AttendanceDays++;
         }
         public ExpoMoment CurrentExpoMoment(string id)
-        {var e=_brands.Exhibits.FirstOrDefault(x=>x.Id==id);return e==null||e.Format!=2||e.Decision>=24?null:ExpoMoments.At(e.Day,e.Decision);}
+        {
+            var e = _brands.Exhibits.FirstOrDefault(x => x.Id == id);
+            if (e == null || e.Format != 2 || e.Decision >= 24) return null;
+            if (e.Decision == ExpoEndorserStageDecision)
+            {
+                var present = ExpoEndorsers(e).Where(ExpoPersonArrived).Select(p => CityPerson(p).Name).ToArray();
+                if (present.Length > 0)
+                    return ExpoMoments.BrandIntroduction(Brand(e.BrandId)?.Name ?? "本品牌", present);
+            }
+            return ExpoMoments.At(e.Day, e.Decision);
+        }
         public bool ChooseExpoAction(string id,int choice)
         {
             var e=ActiveBrandExpo;if(IsGameOver||e==null||e.Id!=id||choice<0||choice>2||ExpoTimeAdvancing||e.Decision>=24)return false;
             if(CurrentPlace?.Id!="life_expo"||BrandDay<e.Day||BrandDay>=e.Day+4)return Fail("现场互动需要本人处于本届展会的会展中心内");
-            var moment=ExpoMoments.At(e.Day,e.Decision);int delta=moment.Scores[choice];
+            var moment=CurrentExpoMoment(e.Id);int delta=moment.Scores[choice];
             e.Score=Math.Max(0,e.Score+delta);e.Heat=Math.Max(0,Math.Min(100,e.Heat+moment.Heat[choice]));e.Trust=Math.Max(0,Math.Min(100,e.Trust+delta/2));
             e.LastFeedback=moment.Feedback[choice];e.Journal=AppendBrand(e.Journal,"第"+(e.Decision/6+1)+"天 · "+moment.Title+"："+moment.Options[choice]+"。"+e.LastFeedback);
             int charm=(int)e.KolIds.Average(p=>KolMarket.Get(p).Charm),iq=(int)e.KolIds.Average(p=>KolMarket.Get(p).Intelligence);
@@ -164,11 +203,11 @@ namespace PCShopSell.Core.Session
         private void FinishQuarterlyExpo(BrandExhibit e)
         {
             e.Finished=true;e.Attending=false;ReturnExpoStock(e);var b=Brand(e.BrandId);
-            b.Influence+=Math.Max(5,e.Score/4);b.Reputation=Math.Max(0,Math.Min(100,b.Reputation+(e.Trust>=60?5:e.Trust<30?-5:0)));
+            b.Influence+=Math.Max(5,e.Score/4);b.Reputation=Math.Max(0,b.Reputation+(e.Trust>=60?5:e.Trust<30?-5:0));
             foreach(string id in e.KolIds){var career=EnsureKolCareer(id);career.Popularity=Math.Min(1000,career.Popularity+Math.Max(1,e.Heat/10));career.Followers=Math.Min(2000000,KolFollowers(id)+Math.Max(5,e.Score));var creator=Creator(id);if(creator!=null)creator.Followers=career.Followers;}
             if(e.Score>=180)_brands.Orders=AppendBrand(_brands.Orders,new BrandOrder{Id=e.Id+":lead",BrandId=e.BrandId,ShopId=e.ShopId,ProductId=e.ProductId,Source="expo",Count=20+e.Booth*20,Due=BrandDay+14,Influence=70,UnitCents=BrandProductPrice(e.ProductId)*90/100});
             e.LastFeedback="4天展会结束，未售展品已退回来源门店。"+(e.Score>=180?"获得采购订单，请在14天内实际交货。":"本次未获得采购订单。");
-            RefreshBrandTraffic();InvalidateKolEffects();Say(e.LastFeedback);
+            RefreshBrandTraffic();Say(e.LastFeedback);
         }
         private void SettleQuarterlyExpoAbsence(int day)
         {

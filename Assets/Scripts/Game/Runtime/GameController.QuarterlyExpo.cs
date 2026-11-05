@@ -32,6 +32,15 @@ namespace PCShopSell.Game
             var view=ExpoView;if(view?.Open!=true)return;
             view.Focus(zone);_expoFocus=view.FocusZone;SnapCamera(true);
         }
+        public void FocusExpoPerson(string id)
+        {
+            var view = ExpoView;
+            if (view == null) return;
+            view.Sync(Session, 0, true);
+            if (!view.Open || !view.FocusPerson(id)) return;
+            _expoFocus = view.FocusZone;
+            SnapCamera(true);
+        }
         private Vector3 ExpoCameraFocus(float size)
         {
             return ExpoView.WorldPoint(ExpoView.FocusZone)+Vector3.up+CameraRig.Rotation*Vector3.right*(size*Cam.aspect*.32f);

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace PCShopSell.Core.Session
 {
@@ -7,6 +8,7 @@ namespace PCShopSell.Core.Session
     {
         public readonly string Id,Topic,Kind;
         public readonly int Charm,Intelligence,Audience;
+        public int PublicStartMinute { get; internal set; }
         public KolTalentDef(string id,string topic,string kind,int charm,int intelligence,int audience)
         {Id=id;Topic=topic;Kind=kind;Charm=charm;Intelligence=intelligence;Audience=audience;}
     }
@@ -29,7 +31,12 @@ namespace PCShopSell.Core.Session
             new KolTalentDef("resident_zengyu","创意生活分享","clothing",90,82,4300),
             new KolTalentDef("resident_fanglu","阅读与生活美学","clothing",88,93,2700)
         };
-        public static KolTalentDef Get(string id)=>All.FirstOrDefault(x=>x.Id==id);
+        private static readonly Dictionary<string, KolTalentDef> ById = All.ToDictionary(t => t.Id);
+        public static KolTalentDef Get(string id) => id != null && ById.TryGetValue(id, out var talent) ? talent : null;
+        static KolMarket()
+        {
+            for (int i = 0; i < All.Length; i++) All[i].PublicStartMinute = 19 * 60 + i % 6 * 45;
+        }
     }
     [Serializable] public sealed class KolCareerState
     {
@@ -40,25 +47,50 @@ namespace PCShopSell.Core.Session
     {
         public string Id,BrandId,PersonId;public long SignedAt,EndAt,LastProcessedAt,ScheduleEffectiveAt;
         public int StartMinute=1080,EndMinute=120,ScheduleVersion;public bool Enabled=true,Ended;public long FeeCents;
+        public int FrequencyDays = 1, FirstDay;
         public long LastPaidThrough,WagesPaidCents;
         public KolLiveContract Copy()=>(KolLiveContract)MemberwiseClone();
     }
     [Serializable] public sealed class KolLiveSession
     {
         public string Id,ContractId;public long StartedAt,EndsAt,LiveMinutes,ViewerMinutes,TipsCents,LastTipAt=-999999;
-        public int PeakViewers,TipCount,BrandGiftWins,TipBoost;
+        public int PeakViewers,TipCount,BrandGiftWins,TipBoost,LastGiftYuan;
+        public string PersonId, BrandId, RivalKind;
+        public bool Settled;
+        public long LegacyMinutes;
+        public int ScheduledDay;
+        public int InfluenceBefore, InfluenceAfter, ReputationBefore, ReputationAfter, RecentSpecials;
         public KolLiveSession Copy()=>(KolLiveSession)MemberwiseClone();
     }
     [Serializable] public sealed class KolStreamingState
     {
-        public int Version=1,NextId=1;
+        public int Version=2,NextId=1;
         public KolLiveContract[] Contracts=Array.Empty<KolLiveContract>();
         public KolCareerState[] Careers=Array.Empty<KolCareerState>();
         public KolLiveSession[] Sessions=Array.Empty<KolLiveSession>();
+        public string[] Followed = Array.Empty<string>();
+        public KolRivalStanding[] Rivals = Array.Empty<KolRivalStanding>();
         public KolStreamingState Copy()=>new KolStreamingState{Version=Version,NextId=NextId,
             Contracts=Array.ConvertAll(Contracts??Array.Empty<KolLiveContract>(),c=>c.Copy()),
             Careers=Array.ConvertAll(Careers??Array.Empty<KolCareerState>(),c=>c.Copy()),
-            Sessions=Array.ConvertAll(Sessions??Array.Empty<KolLiveSession>(),c=>c.Copy())};
+            Sessions=Array.ConvertAll(Sessions??Array.Empty<KolLiveSession>(),c=>c.Copy()),
+            Followed=(Followed??Array.Empty<string>()).ToArray(),
+            Rivals=Array.ConvertAll(Rivals??Array.Empty<KolRivalStanding>(),r=>r.Copy())};
+    }
+    [Serializable] public sealed class KolRivalStanding
+    {
+        public string Kind;
+        public int Influence, Reputation = 50;
+        public KolRivalStanding Copy() => (KolRivalStanding)MemberwiseClone();
+    }
+
+    public sealed class KolRoomStatus
+    {
+        public string PersonId, BrandId, Sponsor, Blocker, SessionId;
+        public long NextStart = -1, EndAt = -1;
+        public int Viewers, GiftWait, SponsorInfluence, SponsorReputation = 50;
+        public bool IsLive => Blocker == null;
+        public KolLiveSession Session;
     }
     public sealed partial class SaveData {public KolStreamingState kolStreaming;}
 }
