@@ -200,13 +200,23 @@ namespace PCShopSell.Tests
                 using(var l=Reload(s)){Assert.AreEqual(10,l.FundUnits);Assert.True(l.TradeFund(10,false));Assert.False(l.TradeFund(10,false));Assert.AreEqual(before-amount.Scale(1.005)+amount.Scale(.995),l.NetWorth());}
             }
         }
-        [Test] public void CreatorCampaignHasDurationResourceCost_AndCannotStack()
+        [Test] public void PreviouslyPaidStoreCampaignContinuesUntilItsSavedExpiry()
         {
-            using(var s=Make())
+            using (var s = Make())
             {
-                Assert.True(s.StartCreatorCampaign("momo"));Assert.Greater(s.CreatorTrafficMultiplier,1);Assert.False(s.StartCreatorCampaign("ake"));
-                Assert.True(s.SupportCreator("momo"));Assert.False(s.SupportCreator("momo"));
-                using(var l=Reload(s)){Assert.AreEqual(s.CreatorTrafficMultiplier,l.CreatorTrafficMultiplier);Midnight(l,7);Assert.AreEqual(1,l.CreatorTrafficMultiplier);Assert.True(l.StartCreatorCampaign("ake"));}
+                var save = s.CreateSave();
+                save.cityPromotions = null;
+                var creator = save.business.Creators.Single(c => c.Id == "momo");
+                creator.CampaignShopId = s.MainShop.Place.Id;
+                creator.CampaignUntilDay = 7;
+                using (var loaded = GameSession.Load(s.City, save))
+                {
+                    Assert.Greater(loaded.CreatorTrafficMultiplier, 1);
+                    Assert.True(loaded.SupportCreator("momo"));
+                    Assert.False(loaded.SupportCreator("momo"));
+                    Midnight(loaded, 7);
+                    Assert.AreEqual(1, loaded.CreatorTrafficMultiplier);
+                }
             }
         }
         [Test] public void CarVanAreLegal_PersistCapacity_AndCanBeSold()
@@ -238,7 +248,10 @@ namespace PCShopSell.Tests
             {
                 s.Ledger.Credit(s.Clock.Today,"零售",Money.FromYuan(1000),attribution:LedgerAttribution.ForShop("another-shop"));
                 s.Ledger.Credit(s.Clock.Today,"零售",Money.FromYuan(500),attribution:LedgerAttribution.ForShop(s.MainShop.Place.Id));
-                Assert.True(s.StartCreatorCampaign("momo"));
+                var creator = s.Creator("momo");
+                creator.CampaignShopId = s.MainShop.Place.Id;
+                creator.CampaignUntilDay = 7;
+                creator.LastSalesCents = 50000;
                 Assert.AreEqual(0,s.Creator("momo").AttributedSalesCents,"Pre-campaign sales are not attributable");
                 s.Ledger.Credit(s.Clock.Today,"零售",Money.FromYuan(9000),attribution:LedgerAttribution.ForShop("another-shop"));
                 s.Ledger.Credit(s.Clock.Today,"零售",Money.FromYuan(7000),"old unassigned sale");

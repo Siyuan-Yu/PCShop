@@ -344,7 +344,7 @@ namespace PCShopSell.Game.UI
             }, true, true, onClosed);
         }
 
-        public void OpenPersonDialogue(string personId,Place place=null,Window parent=null,string firstReply=null,StaffDef staff=null,PlaceRoster roster=null,System.Action onClosed=null,int initialPage=0,bool remote=false)
+        public void OpenPersonDialogue(string personId,Place place=null,Window parent=null,string firstReply=null,StaffDef staff=null,PlaceRoster roster=null,System.Action onClosed=null,int initialPage=0,bool remote=false,bool phoneCall=false)
         {
             var definition=S.CityPerson(personId);var npc=Npcs.All.FirstOrDefault(n=>n.Id==personId);
             staff=staff??Rosters.Get(personId)??Residents.Get(personId)?.Person;
@@ -355,7 +355,7 @@ namespace PCShopSell.Game.UI
                 Toast("请走到住户身边再交谈。");
                 return;
             }
-            if(remote){string why=S.RemoteConversationBlocker(personId);if(why!=null){Toast(why);return;}}
+            if(remote){string why=S.RemoteConversationBlocker(personId,phoneCall);if(why!=null){Toast(why);return;}}
             else if(definition!=null&&!S.CitySamePlace(personId)){OpenCityPersonProfile(personId,onClosed);return;}
             string name=definition?.Name??npc?.Name??staff.Name;
             string role=definition!=null?S.CityPersonRole(personId):npc?.Role??staff.Role;
@@ -366,15 +366,27 @@ namespace PCShopSell.Game.UI
                 &&(S.DistrictMeetingContact==null||personId==S.DistrictMeetingContact))greeting=S.CurrentDistrictNode.Dialogue;
             bool creatorChoice = initialPage == 3;
             bool discussingPeople = false;
-            OpenDialogue(personId, name, role+(remote?" · 手机聊天":""), npc, greeting, 6, ctx =>
+            OpenDialogue(personId, name, role+(phoneCall?" · 电话":remote?" · 手机聊天":""), npc, greeting, 6, ctx =>
             {
                 var options = new List<TalkOpt>();
                 bool near = !remote && (definition == null || S.CitySamePlace(personId));
                 bool canTalk = remote || near;
                 void Reply(string text) { ctx.Reply = text; ctx.W.Rebuild(); parent?.RequestRebuild(); }
+                if (!creatorChoice && !discussingPeople)
+                {
+                    if (KolMarket.Get(personId) != null && S.IsMet(personId))
+                        options.Add(new TalkOpt { Label = "谈品牌代言与直播", Blocker = canTalk ? null : "对方已离开",
+                            Act = () => OpenKolNegotiation(personId, ctx.W, remote, phoneCall) });
+                    if (Creators.Get(personId) != null && S.IsMet(personId) && S.HasMcn)
+                        options.Add(new TalkOpt { Label = "谈MCN合作", Blocker = canTalk ? null : "对方已离开",
+                            Act = () => OpenCreatorRelations(personId, ctx.W) });
+                }
+                if (phoneCall && !S.HasChatApp)
+                {
+                    options.Add(new TalkOpt { Label = "电话邀约", Act = () => OpenCityActivityChooser(personId) });
+                    return options;
+                }
                 AddDistrictDialogue(options,personId,remote,near,Reply);
-                if(GameSession.BrandPeople.Contains(personId)&&S.BrandBusiness.Brands.Length>0)
-                    options.Add(new TalkOpt{Label="谈品牌代言与直播",Blocker=canTalk?null:"对方已离开",Act=()=>{ctx.W.Close();_brandTab=BrandKolTab;OpenBrandBusiness();}});
                 if(personId=="life_enterprise"||personId=="life_tenant")
                     foreach(var tender in S.BrandBusiness.Tenders.Where(t=>t.Stage<2))
                     {

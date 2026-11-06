@@ -23,6 +23,8 @@ namespace PCShopSell.Core.Session
             if(HasPark) return "已拥有园区";
             if(!HasShop || PlayerShop.Reputation<35) return "需要主店和知名度 35";
             if(l==null || l.Size!=ShopSize.Large || l.OpenDay>Clock.Today.TotalDays || l.CloseDay<Clock.Today.TotalDays) return "需要一间当前空置的大型铺面";
+            string protection = CommercialPremisesBlocker(City.HasPlace(l.PlaceId) ? City.GetPlace(l.PlaceId) : null);
+            if (protection != null) return protection;
             if(IsMyShop(City.GetPlace(l.PlaceId)) || VentureAt(l.PlaceId)!=null || PropertyAt(l.PlaceId)!=null) return "这处铺面已在使用";
             if(Ledger.Balance<ParkLandPrice(l)+Money.FromYuan(50000)) return "需全额地价和 ¥50,000 公共区域改造费";
             return null;

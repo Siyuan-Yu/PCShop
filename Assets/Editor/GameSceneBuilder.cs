@@ -1386,7 +1386,8 @@ namespace PCShopSell.EditorTools
             staffed.RefreshEnterpriseOffer();
             var contract = staffed.EnterpriseContracts.FirstOrDefault(x => !x.Accepted);
             Check(contract != null && staffed.AcceptEnterprise(contract.Id), "企业订单进入装机队列");
-            Check(staffed.StartCreatorCampaign("momo"), "创作者推广启用");
+            staffed.Meet("momo", 0);
+            Check(staffed.SignKolAmbassador("momo", 90, 1, remote: true, phoneCall: true), "签下待分配的代言人");
             Check(staffed.TradeFund(10, true), "指数投资有持仓");
             var agency = staffed.City.FirstOfKind(PlaceKind.Agency);
             Teleport(staffed, agency.Id);
@@ -1436,7 +1437,10 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Frame(0.4f);
             Shot("vs1_business_van");
-            _game.Ui.DebugOpenCreator("momo");
+            _game.Ui.OpenPersonDialogue("momo", remote: true, phoneCall: true);
+            var mcnTalk = _game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<UnityEngine.UI.Button>())
+                .Single(b => b.GetComponentInChildren<UnityEngine.UI.Text>()?.text == "谈MCN合作");
+            mcnTalk.onClick.Invoke();
             Frame(0.05f);
             Shot("vs1_business_creator");
             _game.Ui.CloseAllWindows();

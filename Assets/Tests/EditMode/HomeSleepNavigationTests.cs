@@ -67,15 +67,20 @@ namespace PCShopSell.Tests
             {
                 var visit = new HomeRoomView(c.transform);
                 typeof(GameController).GetProperty("VisitRoom").SetValue(c, visit);
-                var dropdown = ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Dropdown>())
-                    .Single(d => d.name == "ShortcutArrow_4");
+                var shortcuts = ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Dropdown>()).ToArray();
+                var dropdown = shortcuts.Single(d => d.name == "ShortcutArrow_4");
+                CollectionAssert.Contains(shortcuts.Single(d => d.name == "ShortcutArrow_1").options.Select(o => o.text).ToArray(), "电子批发市场");
+                CollectionAssert.Contains(shortcuts.Single(d => d.name == "ShortcutArrow_2").options.Select(o => o.text).ToArray(), s.City.GetPlace("agency").Name);
                 var button = ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Button>())
                     .Single(b => b.name == "ShortcutGo_4");
                 var caption = button.GetComponentInChildren<Text>();
                 Assert.AreEqual("前往 " + s.HomeTitle, caption.text);
                 Assert.AreEqual(2, dropdown.options.Count);
-                StringAssert.Contains(s.HomeTitle, dropdown.options[0].text);
-                int index = dropdown.options.FindIndex(o => o.text.Contains(vacant.Name));
+                Assert.AreEqual(s.HomeTitle + " · 主住所", dropdown.options[0].text);
+                Assert.AreEqual(VerticalWrapMode.Truncate, dropdown.itemText.verticalOverflow);
+                var tip = button.GetComponent<TipTarget>();
+                StringAssert.Contains(s.City.StreetName(s.Home.StreetId), tip.Text());
+                int index = dropdown.options.FindIndex(o => o.text == vacant.Name);
                 Assert.Greater(index, 0);
                 dropdown.value = index;
                 Assert.AreEqual("前往 " + vacant.Name, caption.text);

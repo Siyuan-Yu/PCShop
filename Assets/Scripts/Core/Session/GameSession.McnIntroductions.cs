@@ -12,6 +12,8 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         public const string CommunityMcnId="life_mcn";
+        public long McnIntroductionFee(string person) =>
+            20000L + KolFollowers(person) / 100 * 100L + KolPopularity(person) * 100L;
         private McnIntroduction[] _mcnIntroductions=Array.Empty<McnIntroduction>();
         public McnIntroduction[] McnIntroductions=>_mcnIntroductions.Select(x=>x.Copy()).ToArray();
         public string McnFoundBlocker
@@ -45,24 +47,19 @@ namespace PCShopSell.Core.Session
             if((!BrandPeople.Contains(person)&&KolMarket.Get(person)==null)||CityPersonState(person)==null)return "没有这位合作创作者";
             if(IsMet(person))return "已有联系方式，可直接通过手机联系";
             if(_mcnIntroductions.Any(x=>x.PersonId==person&&!x.Finished&&x.Until>=Clock.Now.TotalMinutes))return "介绍已安排，请等待对方到场";
-            var p=CityPersonState(person);
-            if(!string.IsNullOrEmpty(p.ActivityId)||!string.IsNullOrEmpty(p.VisitId)||Employees.Any(e=>PersonIdOf(e.Person)==person)
-                ||BrandExpoPersonReserved(person)||_district.MeetingPeople.Contains(person))return "对方已有活动或工作安排，请稍后再约";
-            return null;
+            return Ledger.Balance < PCShopSell.Core.Common.Money.FromYuan(McnIntroductionFee(person)) ? "介绍费不足" : null;
         }
         public bool RequestMcnIntroduction(string person)
         {
-            string why=McnIntroductionBlocker(person);if(why!=null)return Fail(why);
-            var p=CityPersonState(person);long now=Clock.Now.TotalMinutes;
-            var route=p.LocationPlaceId==CommunityMcnId?null:PlanCityRoute(p,CommunityMcnId,now);
-            if(route==null&&p.LocationPlaceId!=CommunityMcnId)return Fail("对方暂时无法到达MCN");
-            long arrival=route?.ArriveMinute??now;
-            long close=BrandDay*1440L+1080;
-            if(arrival+15>close)return Fail("今天来不及会面，明天营业后再安排");
-            _mcnIntroductions=_mcnIntroductions.Where(x=>x.PersonId!=person).Concat(new[]{new McnIntroduction{PersonId=person,Arrival=arrival,Until=Math.Min(close,arrival+120)}}).ToArray();
-            if(route!=null){p.Route=route;p.LocationPlaceId=null;p.Task=CityPersonTask.Travelling;}
-            p.TaskLabel="MCN商务介绍";Say("公司已约好"+CityPerson(person).Name+"，预计"+Math.Max(0,arrival-now)+"分钟后到场。会面后才能交换名片。");return true;
+            string why = McnIntroductionBlocker(person);
+            if (why != null) return Fail(why);
+            string name = CityPerson(person).Name;
+            if (!Ledger.TryDebit(Clock.Today, "MCN介绍费", PCShopSell.Core.Common.Money.FromYuan(McnIntroductionFee(person)),
+                BrandAgency.ForPerson(person).Name + " · " + name + "业务名片")) return Fail("介绍费不足");
+            SaveMcnContact(person);
+            return true;
         }
+
         public string McnExchangeBlocker(string person)
         {
             string why=McnVisitBlocker();if(why!=null)return why;
@@ -76,12 +73,20 @@ namespace PCShopSell.Core.Session
         {
             string why=McnExchangeBlocker(person);if(why!=null)return Fail(why);
             var a=_mcnIntroductions.First(x=>x.PersonId==person&&!x.Finished);a.Finished=true;
-            if(!IsMet(person))
+            SaveMcnContact(person);
+            return true;
+        }
+
+        private void SaveMcnContact(string person)
+        {
+            if (!IsMet(person))
             {
-                Meet(person,0);var c=Creator(person);if(c!=null)c.Relationship=Math.Max(c.Relationship,5);
-                RememberSocial(person,"在社区澄光传媒经公司介绍认识，交换了业务名片。私人交情还需逐步建立。");
+                Meet(person, 0);
+                var creator = Creator(person);
+                if (creator != null) creator.Relationship = Math.Max(creator.Relationship, 5);
+                RememberSocial(person, "经" + BrandAgency.ForPerson(person).Name + "介绍，收到了业务名片。");
             }
-            Say("已保存"+CityPerson(person).Name+"的联系方式，可从手机聊天或品牌推广页联系。");return true;
+            Say("已保存" + CityPerson(person).Name + "的业务名片，可从手机通讯录打电话或发消息。");
         }
         private bool TickMcnIntroduction(CityPersonState p,long now)
         {

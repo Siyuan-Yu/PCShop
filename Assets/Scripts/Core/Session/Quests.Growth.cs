@@ -70,9 +70,9 @@ namespace PCShopSell.Core.Session
             yield return Step("park", 4, QuestTarget.Park, "迎来园区第一家店", "让园区第一家店入驻",
                 $"先开一家，{K("按现金流再扩")}。",
                 s => s.HasPark && s.ManagedVentures.Any(s.IsParkVenture), ParkProgress);
-            yield return Step("creator", 5, QuestTarget.Creators, "尝试一次达人推广", $"做一次{K("达人推广")}",
-                $"{K("先备好库存和人手")}。",
-                s => s.CreatorPartners.Any(c => c.CampaignUntilDay > 0), null);
+            yield return Step("creator", 5, QuestTarget.Creators, "签下一位品牌代言人", $"和主播谈一次{K("代言合约")}",
+                $"{K("到社区MCN拿名片后联系主播")}。",
+                s => s.KolStreaming.Contracts.Length > 0 || s.CreatorPartners.Any(c => c.CampaignUntilDay > 0), null);
             yield return Step("property_lesson", 5, QuestTarget.Property, "看懂住房与物业选择", "比较租房、买房和按揭",
                 $"{K("别把周转资金都压进物业")}。",
                 s => s.QuestLessonRead("property_lesson"), null, true);
@@ -157,7 +157,7 @@ namespace PCShopSell.Core.Session
                 case "branch_review": return ManagedVentures.Any(v => !IsParkVenture(v) && v.LastSettledDay > v.OpenDay);
                 case "park_plan": return HasPark || (QuestCompleted("branch_review") && Listings.Any(l => ParkPurchaseBlocker(l) == null));
                 case "park": return QuestCompleted("park_plan") && (HasPark || Listings.Any(l => ParkPurchaseBlocker(l) == null));
-                case "creator": return CreatorPartners.Any(c => CreatorCampaignBlocker(c) == null);
+                case "creator": return DistrictAccessTier >= 1;
                 case "property_lesson": return HomeTier > 0 || OwnedProperties.Count > 0 || Ledger.Balance >= HomePurchasePrice.Scale(.3);
                 default: return false;
             }

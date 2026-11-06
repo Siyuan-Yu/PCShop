@@ -14,28 +14,6 @@ namespace PCShopSell.Core.Session
         public CreatorState Creator(string id) => _creators.Find(x=>x.Id==id);
         public double CreatorTrafficMultiplier => CityCampaignTraffic(_focus);
         public Money CreatorFee(CreatorState c) => Money.FromYuan(Creators.Get(c.Id).Fee).Scale((.7+c.Followers/(double)Creators.Get(c.Id).Audience*.3)*(1-c.Relationship*.002));
-        public string CreatorCampaignBlocker(CreatorState c)
-        {
-            if(c==null)return "没有这位创作者";
-            string contact=KolContactBlocker(c.Id);if(contact!=null)return contact;
-            if(!HasShop || (!HasSmartphone&&!CanUseHomeWorkbench)) return "需要主店和智能手机";
-            if(PlayerShop.Reputation<8) return "知名度达到 8";
-            if(_cityPromotions.Any(x=>x.ShopId==PlayerShopPlace.Id&&(x.State=="Running"||x.State=="Scheduled"))) return "这家门店已有推广进行中，结束后再合作";
-            if(c.Resources<20) return "创作资源不足，先赞助一次设备";
-            if(Ledger.Balance<CreatorFee(c)) return "推广费用不足";
-            return null;
-        }
-        public bool StartCreatorCampaign(string id)
-        {
-            var c=Creator(id); if(c==null || IsGameOver) return false;
-            string why=CreatorCampaignBlocker(c); if(why!=null) return Fail(why);
-            var campaign=AddCityPromotion(id,PlayerShopPlace.Id,"online",CreatorFee(c),7*1440,
-                Math.Min(.35,Math.Min(.45,.08+c.Followers/200000.0)*(.6+c.Resources/250.0)),null,null);
-            if(campaign==null)return false;
-            c.CampaignShopId=PlayerShopPlace.Id;c.CampaignUntilDay=Clock.Today.TotalDays+7; c.LastSalesCents=CreatorShopRevenue(c,Clock.Today); c.LastLost=PlayerShop.TodayLost; c.AttributedSalesCents=0; c.PoorDays=0;
-            Flags.Add("tutorial:creator");
-            ApplyUpgrades(); Say("七日推广开始：客流增加，资源与服务表现会影响后续合作。经营总览记录期间营业额（包含自然客流，不等同推广净增收益）。"); return true;
-        }
         public bool SupportCreator(string id)
         {
             var c=Creator(id); if(c==null || (!HasSmartphone&&!CanUseHomeWorkbench) || IsGameOver) return false;
@@ -44,7 +22,6 @@ namespace PCShopSell.Core.Session
             if(!Ledger.TryDebit(Clock.Today,"推广",Money.FromYuan(500),Creators.Get(id).Name+"设备与制作赞助")) return Fail("赞助需要 ¥500。");
             c.LastSupportDay=Clock.Today.TotalDays; c.Resources=Math.Min(100,c.Resources+30); c.Relationship=Math.Min(100,c.Relationship+5); return true;
         }
-        private long RetailAndBuildRevenueToday() => Ledger.Entries.Where(x=>x.Date==Clock.Today && x.Amount.IsPositive && (x.Category=="零售" || x.Category=="装机")).Sum(x=>x.Amount.Cents);
         private void TrackCreatorCampaigns(GameTimestamp now)
         {
             foreach(var c in _creators)
@@ -156,6 +133,7 @@ namespace PCShopSell.Core.Session
         private void RestoreBusiness(SaveData d)
         {
             _brands=d.brandBusiness?.Copy()??new BrandBusinessState();
+            foreach (var deal in _brands.Deals.Where(d => d.Mode == "campaign")) deal.Ended = true;
             _brandStories.Clear();
             _brandStories.AddRange((d.brandStories??Array.Empty<BrandStoryRecord>()).Where(s=>s!=null).GroupBy(s=>s.Id).Select(g=>g.First().Copy()));
             var b=d.business; if(!d.hasBusiness || b==null || b.NextDebtId<=0) return;

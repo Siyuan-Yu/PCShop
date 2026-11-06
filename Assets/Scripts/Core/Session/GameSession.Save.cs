@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -219,6 +219,7 @@ namespace PCShopSell.Core.Session
             _focus.RetailKind = PCShopSell.Core.Home.RetailShopTypes.Valid(d.shopRetailKind);
             PlayerShop.RetailKind = _focus.RetailKind;
             PendingRetailKind = PCShopSell.Core.Home.RetailShopTypes.Valid(d.pendingRetailKind);
+            CancelProtectedPendingLease();
             PlayerShop.Stock.Clear();
             Fill(PlayerShop.Stock, d.shopStock);
             string[] goodsIds = d.shopGoodsIds ?? Array.Empty<string>();

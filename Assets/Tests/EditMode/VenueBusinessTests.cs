@@ -14,13 +14,19 @@ namespace PCShopSell.Tests
         private static GameSession Make()
         {
             var city=CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text));
-            var s=new GameSession(city,891,Money.FromYuan(1000000),GameTimestamp.From(new GameDate(5),600),false,true,false);
-            s.EventsEnabled=false;s.PlayerShop.Reputation=100;
-            var court=city.GetPlace("life_court");
-            s.DebugAddListing(court.Id,0,60,Money.FromYuan(1000));
-            GameSessionTests.Teleport(s,s.AgencyFor(court).Id);
-            Assert.True(s.SignRetailLease(court.Id,false,"clothing"));
-            GameSessionTests.Teleport(s,court.Id);return s;
+            using (var seed = new GameSession(city, 891, Money.FromYuan(1000000), GameTimestamp.From(new GameDate(5), 600), false, true, false))
+            {
+                var data = seed.CreateSave();
+                data.shopState = 1;
+                data.leasePlace = "life_court";
+                data.leaseRentCents = 100000;
+                data.leaseDepositCents = 200000;
+                var s = GameSession.Load(city, data);
+                s.EventsEnabled = false;
+                s.PlayerShop.Reputation = 100;
+                GameSessionTests.Teleport(s, "life_court");
+                return s;
+            }
         }
         private static GameSession Reload(GameSession s)=>GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));
         [Test]
@@ -176,7 +182,7 @@ namespace PCShopSell.Tests
             }
         }
         [Test]
-        public void PausedVenueTerminatesLeaseWithDepositForfeitedAndNewLeaseStartsClean()
+        public void LegacyVenueCanCloseAndReturnsToItsPublicUse()
         {
             using(var s=Make())
             {
@@ -185,8 +191,10 @@ namespace PCShopSell.Tests
                 s.CurrentShop.Locker.ClearFurniture();
                 Assert.IsNull(s.CloseShopBlocker(s.CurrentShop));Assert.True(s.CloseShop(place.Id));
                 Assert.AreEqual(cash,s.Ledger.Balance);Assert.IsNull(s.VenueOperation(place.Id));
-                GameSessionTests.Teleport(s,s.AgencyFor(place).Id);Assert.True(s.SignRetailLease(place.Id,false,"computer"));
-                var state=s.VenueOperation(place.Id);Assert.False(state.Accepting);Assert.Zero(state.TotalRevenueCents);
+                GameSessionTests.Teleport(s,s.AgencyFor(place).Id);
+                Assert.False(s.SignRetailLease(place.Id,false,"computer"));
+                Assert.False(s.IsVacant(place));
+                Assert.AreEqual(place.Name, s.PlaceTitle(place));
             }
         }
     }

@@ -58,7 +58,7 @@ namespace PCShopSell.Core.Session
         public bool IsMyShop(Place p) => ShopAt(p) != null;
 
         /// <summary>空着、门上贴着“旺铺招租”的铺面。</summary>
-        public bool IsVacant(Place p) => p != null && _vacant.Contains(p.Id) && !IsMyShop(p) && VentureAt(p.Id) == null && PropertyAt(p.Id) == null;
+        public bool IsVacant(Place p) => IsCommercialPremises(p) && _vacant.Contains(p.Id) && !IsMyShop(p) && VentureAt(p.Id) == null && PropertyAt(p.Id) == null;
 
         /// <summary>街上名牌显示的名字：我的店 / 旺铺招租 / 原来的店名。</summary>
         public string PlaceTitle(Place p) => p == null ? "" : IsMyShop(p) ? ShopTitle(ShopAt(p)) : p == Home ? HomeTitle : p.Id == ParkPlaceId ? "电脑乐园" : VentureAt(p.Id) != null ? Ventures.Get(VentureAt(p.Id).Kind).Name : PropertyAt(p.Id) != null ? CityPropertyTitle(p) : IsVacant(p) ? VacantTitle : p.Name;
@@ -82,7 +82,9 @@ namespace PCShopSell.Core.Session
         /// <summary>为什么现在签不了这一间；能签返回 null。newShop 见 <see cref="LeaseCost"/>。</summary>
         public string LeaseBlocker(ShopListing l, bool newShop = false)
         {
-            if(l==null||l.PlaceId=="life_expo")return "会展中心不整栋出租，请从品牌展会页预订摊位";
+            if (l == null || !City.HasPlace(l.PlaceId)) return "该铺位当前无法签约";
+            string protection = CommercialPremisesBlocker(ListingPlace(l));
+            if (protection != null) return protection;
             if(Lease!=null&&!newShop&&(IsDedicatedVenue(ListingPlace(l))||IsDedicatedVenue(PlayerShopPlace)))return "专用场馆需要独立接手，不能与普通店铺搬店混用";
             if (InAgency && !AgencyServes(CurrentPlace, ListingPlace(l)))
                 return "这家中介只办理" + City.AgencyCoverageName(CurrentPlace) + "的房源，请到房源所属片区的中介";
@@ -176,6 +178,7 @@ namespace PCShopSell.Core.Session
         private void MoveIntoPending(int today)
         {
             if (PendingLease == null || today < PendingLease.StartDay) return;
+            if (CancelProtectedPendingLease()) return;
             ShopLease p = PendingLease;
             PendingLease = null;
             Place place = City.GetPlace(p.PlaceId);
@@ -286,27 +289,64 @@ namespace PCShopSell.Core.Session
         {
             Place p = City.GetPlace(placeId);
             _listings.RemoveAll(x => x.PlaceId == placeId);
-            var l = new ShopListing
-            {
-                PlaceId = placeId, Size = p.Size, OpenDay = openDay, CloseDay = closeDay,
-                Rent = rent ?? ShopRentQuote(p),
-            };
-            _listings.Add(l);
-            if (openDay <= Clock.Today.TotalDays) _vacant.Add(placeId);
-            return l;
+            return AddListing(p, openDay, closeDay, rent);
         }
 
         // ---------- 挂牌 ----------
 
-        private static bool IsFixedBusiness(string b) =>
-            b == MallBusiness || b == PhoneBusiness || b == FarmBusiness || b == Gifts.TobaccoBusiness || b == "电脑";
+        public static bool IsCommercialPremises(Place place)
+        {
+            if (place == null || place.Kind != PlaceKind.Shop || !place.IsTradable) return false;
+            if ((place.Business ?? "").StartsWith("venue_", StringComparison.Ordinal)) return false;
+            switch (place.Business)
+            {
+                case MallBusiness:
+                case PhoneBusiness:
+                case FarmBusiness:
+                case FastFoodBusiness:
+                case Gifts.TobaccoBusiness:
+                case "药店":
+                case "电脑":
+                case "mcn":
+                case "房产中介":
+                case "社区服务":
+                case "企业服务":
+                case "原创设计":
+                    return false;
+            }
+            switch (place.Id)
+            {
+                case "shop02":
+                case "clothing_boutique":
+                case "clothing_wholesale":
+                case "model_workshop":
+                case "model_market":
+                    return false;
+                default:
+                    return true;
+            }
+        }
+
+        private static string CommercialPremisesBlocker(Place place) => IsCommercialPremises(place) ? null
+            : place?.Id == "life_expo" ? "会展中心请从品牌展会页预订摊位"
+            : "该地点保留原有用途，不开放商铺租购";
+
+        private bool CancelProtectedPendingLease()
+        {
+            if (PendingLease == null || IsCommercialPremises(City.GetPlace(PendingLease.PlaceId))) return false;
+            var lease = PendingLease;
+            PendingLease = null;
+            PendingIsNewShop = false;
+            PendingRetailKind = "computer";
+            Ledger.Credit(Clock.Today, "退还预付租金和押金", lease.Rent + lease.Deposit, City.GetPlace(lease.PlaceId).Name);
+            Say("专用场所的待交房租约已取消，已退回预付首月租金和押金。");
+            return true;
+        }
 
         /// <summary>本来就是空铺（开局那间）：没人租也一直空着，不会“被别人租走”。</summary>
         private bool IsBareUnit(Place p) => p.IsPlayerShop || p.Business == RealEstate.VacantBusiness;
 
-        private IEnumerable<Place> RentableUnits() =>
-            City.Places.Where(p => p.Id!="life_expo"&&p.Kind == PlaceKind.Shop && (IsBareUnit(p) || !IsFixedBusiness(p.Business))
-                && (!LookingForFirstShop || !IsDedicatedVenue(p)));
+        private IEnumerable<Place> RentableUnits() => City.Places.Where(IsCommercialPremises);
 
         private void EnsureFirstShopListings(int today)
         {
@@ -316,7 +356,7 @@ namespace PCShopSell.Core.Session
             _vacant.RemoveWhere(id=>City.HasPlace(id)&&IsDedicatedVenue(City.GetPlace(id))
                 &&ShopAt(id)==null&&VentureAt(id)==null&&PropertyAt(id)==null);
             var start=City.PlayerShop();
-            if(IsDedicatedVenue(start)||VentureAt(start.Id)!=null||PropertyAt(start.Id)!=null)return;
+            if(!IsCommercialPremises(start)||VentureAt(start.Id)!=null||PropertyAt(start.Id)!=null)return;
             var listing=_listings.FirstOrDefault(l=>l.PlaceId==start.Id)??AddListing(start,today,today+120);
             listing.OpenDay=Math.Min(listing.OpenDay,today);
             listing.CloseDay=Math.Max(listing.CloseDay,today+120);
@@ -328,6 +368,7 @@ namespace PCShopSell.Core.Session
 
         private ShopListing AddListing(Place p, int openDay, int closeDay, Money? rent = null)
         {
+            if (!IsCommercialPremises(p)) return null;
             var l = new ShopListing
             {
                 PlaceId = p.Id, Size = p.Size, OpenDay = openDay, CloseDay = closeDay,
@@ -493,7 +534,7 @@ namespace PCShopSell.Core.Session
                 _realtyRng.State = st;
             _vacant.Clear();
             foreach (string id in d.vacantPlaces ?? Array.Empty<string>())
-                if (City.HasPlace(id)) _vacant.Add(id);
+                if (City.HasPlace(id) && IsCommercialPremises(City.GetPlace(id))) _vacant.Add(id);
             _listings.Clear();
             if (d.listings == null)
             {
@@ -502,7 +543,7 @@ namespace PCShopSell.Core.Session
             }
             foreach (SaveListing l in d.listings)
             {
-                if (!City.HasPlace(l.place)||l.place=="life_expo") continue;
+                if (!City.HasPlace(l.place) || !IsCommercialPremises(City.GetPlace(l.place))) continue;
                 _listings.Add(new ShopListing
                 {
                     PlaceId = l.place, Size = (ShopSize)l.size, Rent = d.shopFootfallVersion<1 && !IsPendingShop(City.GetPlace(l.place)) ? ShopRentQuote(City.GetPlace(l.place)) : Money.FromCents(l.rentCents), OpenDay = l.openDay, CloseDay = l.closeDay,

@@ -238,7 +238,7 @@ namespace PCShopSell.Tests
         }
         [TestCase(7UL)]
         [TestCase(19UL)]
-        public void FirstShopPoolExcludesLeisureVenuesAndKeepsImmediateStarterEvenAfterMonths(ulong seed)
+        public void ProtectedVenuesNeverEnterListingsAndStarterRemainsAvailable(ulong seed)
         {
             using(var s=new GameSession(FirstShopTestCity(),seed,Money.FromYuan(10000),GameTimestamp.From(new GameDate(0),480),false,true,false))
             {
@@ -253,7 +253,7 @@ namespace PCShopSell.Tests
                 }
                 GameSessionTests.Teleport(s,"agency");Assert.True(s.SignLease("pc"));Assert.False(s.LookingForFirstShop);
                 var pool=(System.Collections.Generic.IEnumerable<Place>)typeof(GameSession).GetMethod("RentableUnits",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).Invoke(s,null);
-                Assert.True(pool.Any(s.IsDedicatedVenue),"租下第一家商铺后恢复正常场馆挂牌池");
+                Assert.False(pool.Any(s.IsDedicatedVenue), "开店后也不会把专用场馆放回挂牌池");
             }
         }
         [Test]
@@ -261,8 +261,10 @@ namespace PCShopSell.Tests
         {
             using(var s=new GameSession(FirstShopTestCity(),7,Money.FromYuan(10000),GameTimestamp.From(new GameDate(0),480),false,true,false))
             {
-                s.DebugAddListing("leisure_small",0,90,Money.FromYuan(1));
-                var save=s.CreateSave();save.listings=save.listings.Where(l=>l.place!="pc").ToArray();
+                var save = s.CreateSave();
+                save.listings = save.listings.Where(l => l.place != "pc").Append(
+                    new SaveListing { place = "leisure_small", openDay = 0, closeDay = 90, rentCents = 100 }).ToArray();
+                save.vacantPlaces = save.vacantPlaces.Append("leisure_small").ToArray();
                 using(var loaded=GameSession.Load(s.City,save))
                 {
                     Assert.AreEqual(s.Ledger.Balance,loaded.Ledger.Balance);

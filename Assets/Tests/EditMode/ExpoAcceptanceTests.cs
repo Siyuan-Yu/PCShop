@@ -3,6 +3,7 @@ using NUnit.Framework;
 using UnityEngine;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Session;
+using PCShopSell.Core.Shop;
 using PCShopSell.Core.World;
 
 namespace PCShopSell.Tests
@@ -45,6 +46,44 @@ namespace PCShopSell.Tests
                     Assert.True(s.CityEmployeeAvailable(shop.Employee,shop),shop.Place.Id);
                     Assert.Greater(shop.Sim.Stock.Count(PartCatalog.Get("cpu0"),true),0);
                     if(shop!=s.MainShop)Assert.Greater(shop.Lease.Deposit.Cents,0);
+                }
+            }
+        }
+
+        [Test] public void ProtectedBuildingsRejectStaleListingsAndPropertyTransactions()
+        {
+            using (var s = Make())
+            {
+                var ids = new[] { "life_mcn", "life_service", "agency", "agency_s_services", "life_expo",
+                    "life_company", "life_studio", "model_market", "clothing_wholesale", "shop12", "shop04",
+                    "shop10", "life_court", "life_restaurant", "metro_community", "race_0", "dealer" };
+                int day = s.Clock.Today.TotalDays;
+                foreach (string id in ids)
+                {
+                    var place = s.City.GetPlace(id);
+                    Assert.False(GameSession.IsCommercialPremises(place), id);
+                    Assert.IsNull(s.DebugAddListing(id, day, day + 30), id);
+                    Assert.NotNull(s.LeaseBlocker(new ShopListing { PlaceId = id }, true), id);
+                    Assert.NotNull(s.CityPropertyPurchaseBlocker(id, false), id);
+                    Assert.NotNull(s.VentureBlocker(id, "branch"), id);
+                }
+                Assert.AreEqual(6, s.CityCommercialProperties.Count(place => s.DistrictTierOf(place) == 1));
+
+                var save = s.CreateSave();
+                save.pendingPlace = "life_mcn";
+                save.pendingRentCents = 100000;
+                save.pendingDepositCents = 200000;
+                save.pendingStartDay = day + 2;
+                save.pendingSignedDay = day;
+                save.listings = save.listings.Concat(new[] { new SaveListing { place = "life_service", openDay = day, closeDay = day + 30 } }).ToArray();
+                using (var loaded = GameSession.Load(s.City, save))
+                {
+                    Assert.IsNull(loaded.PendingLease);
+                    Assert.AreEqual(s.Ledger.Balance.Cents + 300000, loaded.Ledger.Balance.Cents);
+                    Assert.False(loaded.Listings.Any(l => l.PlaceId == "life_service"));
+                    Assert.False(loaded.IsMyShop(s.City.GetPlace("life_mcn")));
+                    using (var again = GameSession.Load(s.City, loaded.CreateSave()))
+                        Assert.AreEqual(loaded.Ledger.Balance.Cents, again.Ledger.Balance.Cents);
                 }
             }
         }

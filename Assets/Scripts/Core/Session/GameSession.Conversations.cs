@@ -40,10 +40,10 @@ namespace PCShopSell.Core.Session
                     Relationship = string.Join("；", group.Select(link => link.Relationship).Distinct())
                 }).OrderBy(link => link.Name).ToArray();
         }
-        public string RemoteConversationBlocker(string id)
+        public string RemoteConversationBlocker(string id, bool phoneCall = false)
         {
             if(IsGameOver)return "现在不能交谈";
-            if(!HasChatApp)return "需要安装聊天软件";
+            if(!phoneCall && !HasChatApp)return "需要安装聊天软件";
             if(!IsMet(id))return "尚未交换联系方式";
             if(CityPerson(id)==null&&Npcs.Get(id)==null&&Rosters.Get(id)==null&&Residents.Get(id)==null)return "找不到这个联系人";
             return null;

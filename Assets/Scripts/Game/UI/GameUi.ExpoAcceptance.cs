@@ -11,9 +11,16 @@ namespace PCShopSell.Game.UI
             OpenWindow("品牌展会验收 · 作弊工具", 760, 700, w =>
             {
                 var body = Ui.Scroll(w.Content, 490);
-                Para(body, "品牌创建测试档已准备门店和经营记录。进入后可填写名称、选择定位并亲手创建品牌。", 18);
+                Para(body, "品牌创建测试档已准备门店、经营记录、小电驴，以及社区主住所和城郊住处。进入后可亲手创建品牌。", 18);
                 Ui.Size(Ui.Button(body, "可创建两个品牌（电脑＋服装）", () => OpenBrandCreationPreset("brand_ready_two"), 18, Ui.ButtonHot), -1, 46);
                 Ui.Size(Ui.Button(body, "可创建三个品牌（电脑＋服装＋模型手办）", () => OpenBrandCreationPreset("brand_ready_three"), 18, Ui.ButtonHot), -1, 46);
+                if (S.IsBrandCreationAcceptance && S.BrandCreationSuburbHomeBlocker == null)
+                    Ui.Size(Ui.Button(body, "给当前品牌测试档补回城郊住处", () =>
+                    {
+                        if (S.DebugRestoreBrandCreationSuburbHome()) RefreshShortcutMenus();
+                        w.Rebuild();
+                    }, 18, Ui.ButtonHot), -1, 46).name = "RestoreBrandCreationSuburbHome";
+
                 Para(body, "准备城郊5家、社区1家实际开业门店，配好库存和店员，并租住社区住宅。完成社区前置条件与引荐背景，使用独立测试档，可返回原进度。", 19, Ui.Warn);
                 Ui.Size(Ui.Button(body, "创建展会测试档（6家店＋社区住处）", () =>
                 {
@@ -37,7 +44,7 @@ namespace PCShopSell.Game.UI
                         : "现场：推进到开幕，进入会展中心报到，连续4天处理24段事件与舞台互动。", 18);
                     Ui.Size(Ui.Button(body, "打开品牌展会（摊位 / KOL / 现场 / 订单）", () =>
                     {
-                        w.Close(); _brandTab = 2; _brandId = "acceptance-expo"; _brandShop = S.MainShop.Place.Id;
+                        w.Close(); _brandTab = BrandExpoTab; _brandId = "acceptance-expo"; _brandShop = S.MainShop.Place.Id;
                         OpenBrandBusiness();
                     }, 18, Ui.ButtonHot), -1, 46).name = "OpenAcceptanceBrandExpo";
                     string blocker = S.DebugExpoOpeningBlocker;

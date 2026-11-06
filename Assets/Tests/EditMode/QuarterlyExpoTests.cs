@@ -20,7 +20,7 @@ namespace PCShopSell.Tests
         private static BrandRecord Brand(GameSession s)=>((BrandBusinessState)typeof(GameSession).GetField("_brands",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(s)).Brands.Single();
         private static void At(GameSession s,string id)=>typeof(GameSession).GetProperty("CurrentPlace").SetValue(s,s.City.GetPlace(id));
         private static void Day(GameSession s,int day,int minute=540)=>s.Clock.Restore(new GameDate(day),minute);
-        private static void Payroll(GameSession s,long until)=>typeof(GameSession).GetMethod("SettleKolDailyWages",BindingFlags.NonPublic|BindingFlags.Instance).Invoke(s,new object[]{until});
+
         private static GameSession Reload(GameSession s)=>GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));
         private static string[] Kols(GameSession s,int n)
         {
@@ -135,7 +135,8 @@ namespace PCShopSell.Tests
                 e=s.BrandBusiness.Exhibits.Single();Assert.True(e.Finished&&e.StockReturned);Assert.False(s.BrandExpoExclusive);
                 Assert.AreEqual(78,s.Clock.Today.TotalDays);Assert.AreEqual(1020,s.Clock.MinuteOfDay);Assert.AreEqual(4,e.AttendanceDays);
                 Assert.AreEqual(24,e.Journal.Length);Assert.Greater(e.RevenueCents,0);Assert.Greater(Brand(s).Influence,320);
-                Assert.GreaterOrEqual(s.Ledger.Entries.Count(x=>x.Category=="KOL日薪"),3);
+                Assert.AreEqual(e.KolDayQuotes.Sum() * 4 * 100, e.ExpoWagesCents);
+                Assert.AreEqual(4, s.Ledger.Entries.Count(x => x.Category == "展会KOL站台"));
                 Assert.AreEqual(150-e.Products.Single().Sold,s.MainShop.Sim.Stock.Count(PartCatalog.Get(e.ProductId),true));
                 Assert.AreEqual(e.RevenueCents,s.Ledger.Entries.Where(x=>x.Category=="展会零售").Sum(x=>x.Amount.Cents));
                 Assert.AreEqual(1,s.BrandBusiness.Orders.Length);long cash=s.Ledger.Balance.Cents;Assert.False(s.ChooseExpoAction(e.Id,0));Assert.AreEqual(cash,s.Ledger.Balance.Cents);
@@ -173,24 +174,6 @@ namespace PCShopSell.Tests
                 var tick=typeof(GameSession).GetMethod("SettleQuarterlyExpoAbsence",BindingFlags.NonPublic|BindingFlags.Instance);
                 tick.Invoke(s,new object[]{e.Day+1});tick.Invoke(s,new object[]{e.Day+1});
                 Assert.True(s.BrandBusiness.Exhibits.Single().Missed);Assert.AreEqual(150,s.MainShop.Sim.Stock.Count(PartCatalog.Get(e.ProductId),true));Assert.AreEqual(cash,s.Ledger.Balance.Cents);
-            }
-        }
-        [Test] public void DailyWagesAreRealProratedAndGrowWithPopularityAndDoNotReplayOnLoad()
-        {
-            using(var s=Make())
-            {
-                Kols(s,1);var c=s.KolStreaming.Contracts.Single();long rate=s.KolDailyWage("momo"),cash=s.Ledger.Balance.Cents;
-                Day(s,69,0);Payroll(s,s.Clock.Now.TotalMinutes);Assert.AreEqual(cash-(long)Math.Ceiling(rate*100.0*15/24),s.Ledger.Balance.Cents);
-                cash=s.Ledger.Balance.Cents;Payroll(s,s.Clock.Now.TotalMinutes);Assert.AreEqual(cash,s.Ledger.Balance.Cents);
-                using(var loaded=Reload(s))
-                {
-                    Payroll(loaded,loaded.Clock.Now.TotalMinutes);Assert.AreEqual(cash,loaded.Ledger.Balance.Cents);
-                    Assert.True(loaded.SetKolSchedule(c.Id,1080,120,false));Day(loaded,70,0);Payroll(loaded,loaded.Clock.Now.TotalMinutes);Assert.AreEqual(cash-rate*100,loaded.Ledger.Balance.Cents);
-                    Assert.True(loaded.SetKolSchedule(c.Id,1080,120,true));Day(loaded,70,1080);var p=loaded.CityPersonState("momo");p.Route=null;p.LocationPlaceId=GameSession.CommunityMcnId;p.ActivityId=null;p.VisitId=null;
-                    loaded.AdvanceClock(1);Assert.True(loaded.TipKolLive(c.Id,1000));Assert.Greater(loaded.KolDailyWage("momo"),rate);
-                    cash=loaded.Ledger.Balance.Cents;Assert.True(loaded.EndKolLive(c.Id));Assert.Less(loaded.Ledger.Balance.Cents,cash);
-                    cash=loaded.Ledger.Balance.Cents;Day(loaded,71);Payroll(loaded,loaded.Clock.Now.TotalMinutes);Assert.AreEqual(cash,loaded.Ledger.Balance.Cents);
-                }
             }
         }
         [Test] public void HeadlessShowHasThreeChoicesKeepsTimeHeldAndCanResumeFromASavedDecision()

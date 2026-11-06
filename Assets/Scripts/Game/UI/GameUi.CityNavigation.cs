@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using PCShopSell.Core.World;
@@ -76,9 +76,15 @@ namespace PCShopSell.Game.UI
             var caption=main.GetComponentInChildren<Text>();
             caption.horizontalOverflow=HorizontalWrapMode.Wrap;
             caption.resizeTextForBestFit=true;caption.resizeTextMinSize=13;caption.resizeTextMaxSize=17;
-            if (kind == SleepShortcut) main.Tip(() => "当前目的地：" + ShortcutPlaceName(kind, SelectedShortcut(kind))
-                + "\n点主按钮前往并走到床边，右侧小三角可切换住宅。");
-            else main.Tip(()=>kind==0&&S.MyShopCount==0?"尚无店铺，租下或购入店铺后可使用。":"当前目的地："+(SelectedShortcut(kind)?.Name??"暂无")+"\n点主按钮直接前往；右侧小三角可切换目的地。");
+            main.Tip(() =>
+            {
+                if (kind == 0 && S.MyShopCount == 0) return "尚无店铺，租下或购入店铺后可使用。";
+                var place = SelectedShortcut(kind);
+                string address = place == null ? "暂无" : ShortcutPlaceAddress(kind, place);
+                return "当前目的地：" + address + (kind == SleepShortcut
+                    ? "\n点主按钮前往并走到床边，右侧小三角可切换住宅。"
+                    : "\n点主按钮直接前往；右侧小三角可切换目的地。");
+            });
             var menu=new ShortcutMenu{Kind=kind,Main=main,Caption=caption,Group=group,MinimumWidth=width};
             if(kind==3)
             {
@@ -93,10 +99,18 @@ namespace PCShopSell.Game.UI
             });
             menu.Dropdown=dropdown;dropdown.name="ShortcutArrow_"+kind;Ui.Size(dropdown,26,42);
             dropdown.captionText.gameObject.SetActive(false);
-            // Bottom-bar choices expand upward and have enough width for street names.
+            var item = dropdown.itemText;
+            item.rectTransform.Anchor(0, 0, 1, 1, 14, 6, 10, 6);
+            item.fontSize = 17;
+            item.resizeTextForBestFit = true;
+            item.resizeTextMinSize = 14;
+            item.resizeTextMaxSize = 17;
+            item.verticalOverflow = VerticalWrapMode.Truncate;
+
+            // Open above the bottom bar without changing the width of the shortcut button.
             var template=dropdown.template;
             template.anchorMin=template.anchorMax=new Vector2(1,1);template.pivot=new Vector2(1,0);
-            template.anchoredPosition=new Vector2(0,4);template.sizeDelta=new Vector2(330,260);
+            template.anchoredPosition=new Vector2(0,4);template.sizeDelta=new Vector2(360,260);
             dropdown.Tip("选择目的地（只切换，不立即出发）");
             _shortcutMenus.Add(menu);
         }
@@ -107,6 +121,28 @@ namespace PCShopSell.Game.UI
             if((kind==0||kind==3) && S.ShopAt(place.Id) is OwnedShop shop)return S.ShopTitle(shop);
             return place.Id=="stall_cpu"?"电子批发市场":place.Name;
         }
+        private string ShortcutPlaceAddress(int kind, Place place)
+        {
+            string name = ShortcutPlaceName(kind, place);
+            string street = S.City.StreetName(place.StreetId);
+            if (name != place.Name) name += "\n" + place.Name;
+            return name.Contains(street) ? name : name + "\n" + street;
+        }
+
+        private string[] ShortcutOptionLabels(int kind, Place[] places)
+        {
+            var names = places.Select(place => ShortcutPlaceName(kind, place)).ToArray();
+            var duplicates = new HashSet<string>(names.GroupBy(name => name)
+                .Where(group => group.Count() > 1).Select(group => group.Key));
+            return places.Select((place, index) =>
+            {
+                string name = names[index];
+                if (duplicates.Contains(name))
+                    name += " · " + (name == place.Name ? S.City.StreetName(place.StreetId) : place.Name);
+                return kind == SleepShortcut && place == S.Home ? name + " · 主住所" : name;
+            }).ToArray();
+        }
+
         private void RefreshShortcutMenus()
         {
             if(S==null)return;
@@ -116,9 +152,7 @@ namespace PCShopSell.Game.UI
                 var destination=SelectedShortcut(menu.Kind, places);
                 string selected=destination?.Id;
                 string caption=destination==null?(menu.Kind==3?"选择目的地":ShortcutPlaceName(menu.Kind,null)):"前往 "+ShortcutPlaceName(menu.Kind,destination);
-                var labels=places.Select(p=>ShortcutPlaceName(menu.Kind,p)
-                    + (menu.Kind == SleepShortcut && p == S.Home ? "（主住所）" : "")
-                    + " · "+S.City.StreetName(p.StreetId)).ToArray();
+                var labels = menu.Dropdown == null ? System.Array.Empty<string>() : ShortcutOptionLabels(menu.Kind, places);
                 string stamp=string.Join("|",places.Select(p=>p.Id))+"/"+string.Join("|",labels)+"/"+selected+"/"+caption;
                 if(menu.Stamp==stamp)continue;
                 menu.Stamp=stamp;menu.Places=places;

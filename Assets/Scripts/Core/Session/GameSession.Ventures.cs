@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -26,7 +26,8 @@ namespace PCShopSell.Core.Session
         public Money VentureOpeningCost(ShopListing listing, VentureDef def) => Money.FromYuan(def.Capital + 5000) + listing.Rent + RealEstate.Deposit(listing.Rent) + AgentFeeFor(listing.Rent);
         public string VentureBlocker(string placeId, string kind)
         {
-            if(placeId=="life_expo")return "会展中心不开放整栋租赁经营";
+            string protection = CommercialPremisesBlocker(City.HasPlace(placeId) ? City.GetPlace(placeId) : null);
+            if (protection != null) return protection;
             if(kind=="cars" && DistrictAccessTier<1)return "二手车行需要先解锁社区片区";
             var d = Ventures.Get(kind); var l = _listings.Find(x => x.PlaceId == placeId);
             if (!HasShop) return "先把主店开起来";

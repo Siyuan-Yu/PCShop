@@ -8,10 +8,14 @@ namespace PCShopSell.Core.Session
         // BrandDeal is a compatibility/story reference, never a second paid contract.
         private void LinkAmbassador(KolLiveContract contract, BrandDeal deal = null)
         {
-            if (deal == null) deal = _brands.Deals.FirstOrDefault(d => d.KolContractId == contract.Id);
+            if (string.IsNullOrEmpty(contract.BrandId)) return;
+            if (deal == null) deal = _brands.Deals.LastOrDefault(d => d.KolContractId == contract.Id
+                && d.BrandId == contract.BrandId && (!d.Ended || contract.Ended));
             if (deal == null)
             {
-                deal = new BrandDeal { Id = "ambassador:" + contract.Id, BrandId = contract.BrandId,
+                string id = "ambassador:" + contract.Id;
+                if (_brands.Deals.Any(d => d.Id == id)) id += ":" + contract.ScheduleVersion;
+                deal = new BrandDeal { Id = id, BrandId = contract.BrandId,
                     PersonId = contract.PersonId, Mode = "endorse", Fee = contract.FeeCents };
                 _brands.Deals = AppendBrand(_brands.Deals, deal);
             }
@@ -32,7 +36,7 @@ namespace PCShopSell.Core.Session
                 {
                     var existing = FindKolContract(d.KolContractId);
                     // A linked projection cannot resurrect a removed/invalid authoritative contract.
-                    d.Ended = existing == null || existing.Ended;
+                    d.Ended = existing == null || existing.Ended || existing.BrandId != d.BrandId;
                     continue;
                 }
                 var c = _kol.Contracts.FirstOrDefault(x => x.BrandId == d.BrandId && x.PersonId == d.PersonId && KolContractCurrent(x, now));

@@ -57,7 +57,7 @@ namespace PCShopSell.Core.Session
             if(position!="value"&&position!="quality")return false;
             var b=new BrandRecord {Id="brand:"+kind,Kind=kind,Name=name,Position=position,Founded=BrandDay,
                 ShopIds=MyShops.Where(s=>s.RetailKind==kind).Select(s=>s.Place.Id).ToArray()};
-            _brands.Brands=AppendBrand(_brands.Brands,b);RefreshBrandTraffic();Say(name+"正式成立，可以参展和洽谈推广。品牌创立不等于上市。");return true;
+            _brands.Brands=AppendBrand(_brands.Brands,b);RefreshBrandTraffic();Say(name+"正式成立。可以准备参展，也可以安排已签约的代言人。");return true;
         }
         public bool RenameBrand(string brandId, string name)
         {
@@ -84,23 +84,9 @@ namespace PCShopSell.Core.Session
             if(b.ShopIds.Contains(shopId)){if(b.ShopIds.Length<=1)return Fail("品牌至少保留一家门店");b.ShopIds=b.ShopIds.Where(id=>id!=shopId).ToArray();}
             else b.ShopIds=AppendBrand(b.ShopIds,shopId);RefreshBrandTraffic();return true;
         }
-        public long BrandDealQuote(string person,string mode,bool exclusive) => mode=="endorse"?KolSigningFee(person)*100:(long)((person=="qiao"?500000L:person=="life_designer"?350000L:180000L)*(mode=="endorse"?8:1)*(exclusive?2:1)*(1-Math.Min(15,Math.Max(0,Relation(person))*.15)/100));
-        public bool SignBrandDeal(string brandId,string person,string mode,bool exclusive)
-        {
-            if(mode=="endorse")return SignKolLive(brandId,person);
-            var b=Brand(brandId);if(b==null||!BrandPeople.Contains(person)||(mode!="campaign"&&mode!="endorse"))return false;
-            string contact=KolContactBlocker(person);if(contact!=null)return Fail(contact);
-            if(exclusive&&_kol.Contracts.Any(c=>c.PersonId==person&&c.BrandId!=brandId&&KolContractCurrent(c,Clock.Now.TotalMinutes)))return Fail("该人物已有其他品牌的独家直播合约");
-            if(_brands.Deals.Any(d=>d.PersonId==person&&!d.Ended&&d.End>BrandDay&&(d.BrandId==brandId||d.Exclusive||exclusive)))return Fail("该人物已有冲突的合作合约");
-            long fee=BrandDealQuote(person,mode,exclusive);if(!BrandPay(fee,"推广签约 · "+b.Name,b.Id))return Fail("签约资金不足");
-            _brands.Deals=AppendBrand(_brands.Deals,new BrandDeal {Id=Guid.NewGuid().ToString("N"),BrandId=brandId,PersonId=person,Mode=mode,
-                Exclusive=exclusive,Start=BrandDay,End=BrandDay+(mode=="endorse"?90:7),Fee=fee});
-            Meet(person,0);RememberSocial(person,"签署了"+b.Name+"的品牌合作，交换了业务联系方式。");
-            RefreshBrandTraffic();Say("短期推广生效：固定费已支付，提前解约支付剩余固定费的30%。");return true;
-        }
         public bool RespondBrandDeal(string id,string response)
         {
-            var d=_brands.Deals.FirstOrDefault(x=>x.Id==id);if(IsGameOver||d==null||d.Ended||d.End<=BrandDay)return false;
+            var d=_brands.Deals.FirstOrDefault(x=>x.Id==id);if(IsGameOver||d==null||d.Mode!="endorse"||d.Ended||d.End<=BrandDay)return false;
             if(!string.IsNullOrEmpty(d.KolContractId))
             {
                 var c=FindKolContract(d.KolContractId);
@@ -143,7 +129,7 @@ namespace PCShopSell.Core.Session
         public string BrandProductName(string id) => PartCatalog.Exists(id)?PartCatalog.Get(id).Name:Gifts.Get(id)?.Name??id;
         private long BrandProductPrice(string id) => PartCatalog.Exists(id)?Market.PriceOf(PartCatalog.Get(id)).Cents:
             Gifts.Get(id)==null?0:Gifts.Get(id).Price.Scale(IndustryCycles.GoodsFactor(Gifts.Get(id),BrandDay)).Cents;
-        private int BrandProductCount(string shopId,string id)
+        public int BrandProductCount(string shopId,string id)
         {var s=ShopAt(shopId);return s==null||!s.Rented?0:PartCatalog.Exists(id)?s.Sim.Stock.Count(PartCatalog.Get(id),true):s.Sim.Stock.GoodsCount(id);}
         private bool BrandTake(string shopId,string id,int count)
         {var s=ShopAt(shopId);return s!=null&&(PartCatalog.Exists(id)?s.Sim.Stock.TryRemove(PartCatalog.Get(id),true,count):s.Sim.Stock.TryRemoveGoods(id,count));}

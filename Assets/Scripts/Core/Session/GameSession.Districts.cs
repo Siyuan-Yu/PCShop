@@ -522,7 +522,7 @@ namespace PCShopSell.Core.Session
             int tier=chapter-1, count=chapter==1?5:chapter==2?6:1;
             var candidates=RentableUnits().Where(p=>DistrictTierOf(p)==tier
                 && ShopAt(p)==null && PropertyAt(p.Id)==null && VentureAt(p.Id)==null)
-                .OrderBy(p=>p==MainShop.Place?0:IsDedicatedVenue(p)?2:1).ToArray();
+                .OrderByDescending(p=>p==MainShop.Place).ToArray();
             if(DistrictOperatingShops(tier)+candidates.Length<count)return Fail("没有足够的可用铺位生成验收门店，未修改条件。");
             var previous=_focus;
             try
@@ -532,13 +532,9 @@ namespace PCShopSell.Core.Session
                     if(DistrictOperatingShops(tier)>=count)break;
                     if(!MainShop.Rented && place==MainShop.Place)MoveInto(place,ShopRentQuote(place),Money.Zero);
                     else OpenNewShop(place,ShopRentQuote(place),Money.Zero);
-                    if(IsDedicatedVenue(place))VenueOperation(place.Id).Accepting=true;
-                    else
-                    {
-                        FitStarterShop();
-                        PlayerShop.Stock.ForceAdd(PartCatalog.Get("cpu0"),true,8);
-                        PlayerShop.Stock.ForceAdd(PartCatalog.Get("gpu0"),true,8);
-                    }
+                    FitStarterShop();
+                    PlayerShop.Stock.ForceAdd(PartCatalog.Get("cpu0"),true,8);
+                    PlayerShop.Stock.ForceAdd(PartCatalog.Get("gpu0"),true,8);
                     CurrentShop.RenovationDay=-1;
                     UpdateShopFit();
                 }

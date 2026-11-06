@@ -9591,7 +9591,7 @@
       "heading": 161.92430074410126,
       "model": "shop",
       "tier": 0,
-      "tradable": true
+      "tradable": false
     },
     {
       "id": "shop03",
@@ -9627,7 +9627,7 @@
       "heading": 161.60505881694868,
       "model": "shop",
       "tier": 0,
-      "tradable": true
+      "tradable": false
     },
     {
       "id": "shop05",
@@ -9680,7 +9680,7 @@
       "heading": 165.33834000942866,
       "model": "shop",
       "tier": 0,
-      "tradable": true
+      "tradable": false
     },
     {
       "id": "shop08",
@@ -9698,7 +9698,7 @@
       "heading": 170.11356454372697,
       "model": "shop",
       "tier": 0,
-      "tradable": true
+      "tradable": false
     },
     {
       "id": "shop09",
@@ -9734,7 +9734,7 @@
       "heading": -18.459334826244437,
       "model": "shop",
       "tier": 0,
-      "tradable": true
+      "tradable": false
     },
     {
       "id": "agency",
@@ -9769,7 +9769,7 @@
       "heading": 164.14484067988738,
       "model": "shop",
       "tier": 0,
-      "tradable": true
+      "tradable": false
     },
     {
       "id": "shop13",
@@ -9787,7 +9787,7 @@
       "heading": 170.12265954506117,
       "model": "shop",
       "tier": 0,
-      "tradable": true
+      "tradable": false
     },
     {
       "id": "shop14",
@@ -9805,7 +9805,7 @@
       "heading": 161.46513244617302,
       "model": "shop",
       "tier": 0,
-      "tradable": true
+      "tradable": false
     },
     {
       "id": "shop15",
@@ -9895,7 +9895,7 @@
       "heading": 163.81210802984955,
       "model": "shop",
       "tier": 0,
-      "tradable": true
+      "tradable": false
     },
     {
       "id": "player_shop",
@@ -9946,7 +9946,7 @@
       "heading": 177.82484533070948,
       "model": "warehouse",
       "tier": 0,
-      "tradable": true
+      "tradable": false
     },
     {
       "id": "stall_gpu",
@@ -9963,7 +9963,7 @@
       "heading": 177.27769225127284,
       "model": "warehouse",
       "tier": 0,
-      "tradable": true
+      "tradable": false
     },
     {
       "id": "stall_mem",
@@ -9980,7 +9980,7 @@
       "heading": 175.1061161857817,
       "model": "warehouse",
       "tier": 0,
-      "tradable": true
+      "tradable": false
     },
     {
       "id": "stall_psu",
@@ -9997,7 +9997,7 @@
       "heading": 170.62115195640595,
       "model": "warehouse",
       "tier": 0,
-      "tradable": true
+      "tradable": false
     },
     {
       "id": "metro_b",
@@ -10209,6 +10209,46 @@
       "width": 7.728636973442182,
       "depth": 11.592955460163273,
       "heading": 158.7876942201977,
+      "tradable": true,
+      "openMinute": 540,
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 1
+    },
+    {
+      "id": "life_unit_s_market_3",
+      "name": "05 社区商业街3号商铺",
+      "street": "s_market",
+      "node": "lake_community_8",
+      "business": "空铺",
+      "kind": "shop",
+      "size": "small",
+      "explicitEntrance": true,
+      "entranceX": 0.8,
+      "entranceY": -8.15,
+      "width": 7.728636973442182,
+      "depth": 11.592955460163273,
+      "heading": 174.4,
+      "tradable": true,
+      "openMinute": 540,
+      "closeMinute": 1260,
+      "model": "shop",
+      "tier": 1
+    },
+    {
+      "id": "life_unit_s_market_4",
+      "name": "05 社区商业街4号商铺",
+      "street": "s_market",
+      "node": "lake_community_11",
+      "business": "空铺",
+      "kind": "shop",
+      "size": "small",
+      "explicitEntrance": true,
+      "entranceX": 0.8,
+      "entranceY": -8.15,
+      "width": 7.728636973442182,
+      "depth": 11.592955460163273,
+      "heading": 174.4,
       "tradable": true,
       "openMinute": 540,
       "closeMinute": 1260,
@@ -10609,7 +10649,7 @@
       "width": 7.728636973442182,
       "depth": 11.592955460163273,
       "heading": 160.07642378129535,
-      "tradable": false,
+      "tradable": true,
       "openMinute": 540,
       "closeMinute": 1260,
       "model": "shop",
@@ -10629,7 +10669,7 @@
       "width": 7.728636973442182,
       "depth": 11.592955460163273,
       "heading": 158.4196566182551,
-      "tradable": false,
+      "tradable": true,
       "openMinute": 540,
       "closeMinute": 1260,
       "model": "shop",
@@ -10669,7 +10709,7 @@
       "width": 23.185910920326545,
       "depth": 13.525114703523819,
       "heading": 161.68600107479787,
-      "tradable": true,
+      "tradable": false,
       "openMinute": 540,
       "closeMinute": 1260,
       "model": "market",
@@ -10689,7 +10729,7 @@
       "width": 17.389433190244908,
       "depth": 11.592955460163273,
       "heading": 105.79976424047067,
-      "tradable": true,
+      "tradable": false,
       "openMinute": 540,
       "closeMinute": 1260,
       "model": "studio",
@@ -10709,7 +10749,7 @@
       "width": 24.151990542006818,
       "depth": 14.491194325204091,
       "heading": 64.06191818797366,
-      "tradable": true,
+      "tradable": false,
       "openMinute": 540,
       "closeMinute": 1260,
       "model": "office",
@@ -10749,7 +10789,7 @@
       "width": 7.728636973442182,
       "depth": 11.592955460163273,
       "heading": 68.29000278751525,
-      "tradable": true,
+      "tradable": false,
       "openMinute": 540,
       "closeMinute": 1260,
       "model": "shop",
@@ -10769,7 +10809,7 @@
       "width": 26.084149785367362,
       "depth": 15.457273946884364,
       "heading": 177.64835374959551,
-      "tradable": true,
+      "tradable": false,
       "openMinute": 540,
       "closeMinute": 1260,
       "model": "warehouse",
@@ -10789,7 +10829,7 @@
       "width": 7.728636973442182,
       "depth": 11.592955460163273,
       "heading": 112.26296593203449,
-      "tradable": true,
+      "tradable": false,
       "openMinute": 600,
       "closeMinute": 1260,
       "model": "shop",
@@ -10809,7 +10849,7 @@
       "width": 26.084149785367362,
       "depth": 15.457273946884364,
       "heading": 176.7735021793256,
-      "tradable": true,
+      "tradable": false,
       "openMinute": 600,
       "closeMinute": 1260,
       "model": "warehouse",

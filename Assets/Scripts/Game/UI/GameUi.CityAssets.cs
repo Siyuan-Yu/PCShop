@@ -42,7 +42,10 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(w.Content, "打开中介租铺地图", () => GoToPropertyAgency(), 19), -1, 44);
                     return;
                 }
-                var places = S.CityCommercialProperties.Where(p => !S.InAgency || S.AgencyServes(S.CurrentPlace, p)).ToArray();
+                var eligible = _cityPropertyTab == 2
+                    ? S.City.Places.Where(p => p.Kind != PlaceKind.Home && S.PropertyAt(p.Id) != null)
+                    : S.CityCommercialProperties;
+                var places = eligible.Where(p => !S.InAgency || S.AgencyServes(S.CurrentPlace, p)).ToArray();
                 Line(w.Content, $"已持有 {S.OwnedProperties.Count} 处 · 估值 {S.PropertyValue} · 现金 {S.Ledger.Balance}", 21, Ui.Accent);
                 HelpLink(w.Content, "物业交易说明", "购买产权不会接管租户的生意；原租约和人物关系保留。房贷36期等额本金，月利率0.4%，另有月维护费。确认购买前会列出房价、费用、押金抵扣和付款后余额。");
                 if (_cityPropertyTarget != null) Ui.Size(Ui.Button(w.Content, "查看全部物业", () => { _cityPropertyTarget = null; w.Rebuild(); }, 16), -1, 32);
@@ -73,7 +76,7 @@ namespace PCShopSell.Game.UI
                         string mode = property.UseMode == "self" ? "自营" : property.UseMode == "npc" ? "保留原租户" : property.UseMode == "managed" ? "中介托管出租" : "空置";
                         Line(card, $"用途：{mode} · 租户：{property.TenantName} · 剩余房贷 {Money.FromCents(property.MortgageCents)}", 18);
                         Line(card, $"月维护 {Money.FromCents(property.PriceCents).Scale(.001)} · 月租 {Money.FromCents(property.MonthlyRentCents)}（自营不收租）", 17, Ui.Dim);
-                        if (property.UseMode == "vacant")
+                        if (property.UseMode == "vacant" && GameSession.IsCommercialPremises(p))
                         {
                             var row = Ui.Row(card, 42);
                             Ui.Size(Ui.Button(row, "登记出租", () => CityAssetConfirm("登记出租", "签30天托管租约，次月账期开始收租，管理与空置折损15%。", () => S.SetCityPropertyRental(p.Id, true), w), 18), -1, 42, 1);

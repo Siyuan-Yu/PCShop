@@ -23,6 +23,41 @@ namespace PCShopSell.Core.Session
         }
 
 #if UNITY_EDITOR
+        private const string BrandCreationSalesMemo = "品牌创建测试档历史营收";
+
+        public bool IsBrandCreationAcceptance => IsCityLifeTest && Ledger.Entries.Any(entry => entry.Memo == BrandCreationSalesMemo);
+
+        public string BrandCreationSuburbHomeBlocker
+        {
+            get
+            {
+                if (!IsBrandCreationAcceptance) return "仅用于品牌创建测试档";
+                if (CanSleepAt(_initialHome)) return "城郊住处已可使用";
+                if (PropertyAt(_initialHome.Id) != null || ResidentialTenants(_initialHome.Id).Length > 0)
+                    return "城郊住处已有租约或住户";
+                return null;
+            }
+        }
+
+        public bool DebugRestoreBrandCreationSuburbHome()
+        {
+            string why = BrandCreationSuburbHomeBlocker;
+            if (why != null) return Fail(why);
+
+            _properties.Add(new OwnedProperty
+            {
+                PlaceId = _initialHome.Id,
+                PriceCents = ResidentialPrice(_initialHome).Cents,
+                MonthlyRentCents = ResidentialRent(_initialHome).Cents,
+                BoughtDay = BrandDay,
+                CitySchema = 1,
+                UseMode = "vacant",
+                LastSettledMonth = BrandDay / 30
+            });
+            Say("城郊住处已加入当前测试档，可从底栏住宅下拉选择。");
+            return true;
+        }
+
         private void PrepareBrandCreationAcceptance(int industryCount)
         {
             _district = new DistrictProgress { UnlockedTier = 1, Chapter = 1 };
@@ -30,8 +65,7 @@ namespace PCShopSell.Core.Session
             _district.CommunityMapDelivered = true;
             TopUpExpoAcceptanceCash();
 
-            var available = RentableUnits().Where(p => !IsDedicatedVenue(p)
-                && ShopAt(p) == null && PropertyAt(p.Id) == null && VentureAt(p.Id) == null).ToArray();
+            var available = RentableUnits().Where(p => ShopAt(p) == null && PropertyAt(p.Id) == null && VentureAt(p.Id) == null).ToArray();
             var suburb = new System.Collections.Generic.Queue<Place>(available.Where(p => DistrictTierOf(p) == 0));
             var community = new System.Collections.Generic.Queue<Place>(available.Where(p => DistrictTierOf(p) == 1));
             bool useMainShop = DistrictTierOf(MainShop.Place) == 0;
@@ -60,7 +94,7 @@ namespace PCShopSell.Core.Session
                     long dailySales = inSuburb ? BrandRivalMonthlySales(kind, BrandDay) / 60 : 100000;
                     for (int day = BrandDay - 30; day < BrandDay; day++)
                         Ledger.Credit(new Time.GameDate(day), "零售", Money.FromCents(dailySales),
-                            "品牌创建测试档历史营收", Finance.LedgerAttribution.ForShop(shop.Place.Id));
+                            BrandCreationSalesMemo, Finance.LedgerAttribution.ForShop(shop.Place.Id));
                 }
             }
             _brands = new BrandBusinessState
@@ -70,6 +104,26 @@ namespace PCShopSell.Core.Session
                     { Kind = kind, LeadingDays = 14, CommunityDays = 30 }).ToArray()
             };
             SetFocus(MainShop);
+
+            var residence = ResidencePlace(1);
+            var agency = residence == null ? null : City.Places.FirstOrDefault(p => p.Kind == PlaceKind.Agency && AgencyServes(p, residence));
+            if (agency == null) throw new InvalidOperationException("品牌创建验收档找不到社区住宅或所属中介");
+            var previousPlace = CurrentPlace;
+            try
+            {
+                CurrentPlace = agency;
+                if (!RentResidentialHome(residence.Id))
+                    throw new InvalidOperationException("品牌创建验收档租住社区住宅失败");
+            }
+            finally { CurrentPlace = previousPlace; }
+
+            if (!DebugRestoreBrandCreationSuburbHome())
+                throw new InvalidOperationException("品牌创建验收档无法保留城郊住处");
+
+            _owned.Add(VehicleKind.EBike);
+            SyncGarage();
+            if (!SetVehicle(VehicleKind.EBike))
+                throw new InvalidOperationException("品牌创建验收档无法启用小电驴");
             RefreshBrandTraffic();
         }
 
@@ -95,8 +149,7 @@ namespace PCShopSell.Core.Session
         public bool DebugPrepareExpoBusinessBase()
         {
             string why=DebugExpoBusinessBaseBlocker;if(why!=null)return Fail(why);
-            var available=RentableUnits().Where(p=>!IsDedicatedVenue(p)&&p.IsTradable&&p.Id!="shop02"&&p.Id!="clothing_boutique"
-                &&ShopAt(p)==null&&PropertyAt(p.Id)==null&&VentureAt(p.Id)==null)
+            var available=RentableUnits().Where(p=>ShopAt(p)==null&&PropertyAt(p.Id)==null&&VentureAt(p.Id)==null)
                 .OrderBy(p=>p.Business==RealEstate.VacantBusiness?0:p.Id.StartsWith("shop",StringComparison.Ordinal)?1:2).ThenBy(p=>p.Id,StringComparer.Ordinal).ToArray();
             int suburbNeed=Math.Max(0,5-DistrictOperatingShops(0)),communityNeed=Math.Max(0,1-DistrictOperatingShops(1));
             var additions=available.Where(p=>DistrictTierOf(p)==0).Take(suburbNeed)

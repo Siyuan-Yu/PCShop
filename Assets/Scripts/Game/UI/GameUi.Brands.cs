@@ -10,10 +10,10 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
-        private const int BrandKolTab = 4;
+        private const int BrandExpoTab = 1, BrandTenderTab = 2, BrandKolTab = 3;
         private int _brandTab;
         private bool _brandCreating;
-        private string _brandId, _brandName="我的品牌", _brandPosition="quality", _brandShop, _brandProduct, _brandFocus="buyers";
+        private string _brandId, _brandShop, _brandProduct;
         public void OpenBrandBusiness()
         {
             _brandCreating = false;
@@ -24,24 +24,23 @@ namespace PCShopSell.Game.UI
         private void BuildBrandBusiness(Window w)
         {
             var state=S.BrandBusiness;
-            var tabs=Ui.Row(w.Content,40,6);string[] names={"品牌总览","短期推广","展会","企业竞标","代言人（KOL）"};
-            for(int i=0;i<names.Length;i++){int t=i;Ui.Size(Ui.Button(tabs,names[i],()=>{_brandTab=t;_brandCreating=false;_promotionPage="overview";_expoPage="overview";w.Rebuild();},18,t==_brandTab?Ui.ButtonHot:Ui.ButtonBg),-1,40,1);}
+            var tabs=Ui.Row(w.Content,40,6);string[] names={"品牌总览","展会","企业竞标","代言人（KOL）"};
+            for(int i=0;i<names.Length;i++){int t=i;Ui.Size(Ui.Button(tabs,names[i],()=>{_brandTab=t;_brandCreating=false;_expoPage="overview";w.Rebuild();},18,t==_brandTab?Ui.ButtonHot:Ui.ButtonBg),-1,40,1);}
             if(S.DistrictCommerceActive)Ui.Size(Ui.Button(w.Content,"主线 · "+S.CurrentDistrictNode.Title,OpenDistrictStory,17,Ui.ButtonHot),-1,36);
             var body=Ui.Scroll(w.Content,690);
             if (_brandTab == 0) { BuildBrandOverview(body, w, state); return; }
+            if (_brandTab == BrandKolTab) { BuildKolBrandPage(body, w, state.Brands); return; }
             if (state.Brands.Length == 0)
             {
-                Para(body,"请先在品牌总览创建品牌。未创立品牌仍可前往会展中心参观。",19);
+                Para(body, "请先在品牌总览创建品牌。未创立品牌仍可前往会展中心参观。", 19);
                 return;
             }
             if(!state.Brands.Any(b=>b.Id==_brandId))_brandId=state.Brands[0].Id;
             var brands=Ui.Row(body,38,5);
-            foreach(var item in state.Brands){string id=item.Id;Ui.Size(Ui.Button(brands,item.Name,()=>{_brandId=id;_promotionPage="overview";_expoPage="overview";_brandShop=null;_brandProduct=null;w.Rebuild();},18,id==_brandId?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);}
+            foreach(var item in state.Brands){string id=item.Id;Ui.Size(Ui.Button(brands,item.Name,()=>{_brandId=id;_expoPage="overview";_brandShop=null;_brandProduct=null;w.Rebuild();},18,id==_brandId?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);}
             var brand=state.Brands.First(b=>b.Id==_brandId);
             Line(body,$"{brand.Name}  ·  知名度 {brand.Influence}  ·  口碑 {brand.Reputation}",21,Ui.Accent);
-            if(_brandTab==BrandKolTab){BuildKolBrandPage(body,w,brand);return;}
-            if(_brandTab==1){BuildBrandPromotion(body,w,brand,state);return;}
-            if(_brandTab==2)BuildQuarterlyExpo(body,w,brand,state);
+            if(_brandTab==BrandExpoTab)BuildQuarterlyExpo(body,w,brand,state);
             else
             {
                 Para(body,"年度采购席位：调查、试单与真实交付决定评审。",18);

@@ -24,14 +24,13 @@ namespace PCShopSell.Tests
             using(var s=Make())
             {
                 long cash=s.Ledger.Balance.Cents, fee=s.KolSigningFee("momo")*100;
-                Assert.True(McnSigningTest.Endorse(s,Brand,"momo","endorse",false));
+                Assert.True(McnSigningTest.Sign(s,Brand,"momo"));
                 Assert.AreEqual(cash-fee,s.Ledger.Balance.Cents);
                 Assert.AreEqual(1,s.BrandKolCount(Brand));
                 var c=s.KolStreaming.Contracts.Single();var d=s.BrandBusiness.Deals.Single();
                 Assert.AreEqual(c.Id,d.KolContractId);
                 Assert.Contains("momo",s.ExpoAvailableKols(Brand,s.NextBrandExpoDay));
-                Assert.False(s.SignKolLive(Brand,"momo"));
-                Assert.False(s.SignBrandDeal(Brand,"momo","endorse",true));
+                Assert.False(s.SignKolAmbassador("momo",90,1,remote:true,phoneCall:true));
                 Assert.AreEqual(cash-fee,s.Ledger.Balance.Cents);
                 Assert.Zero(s.BrandDealTraffic(d),"No second always-on endorsement bonus");
                 Assert.True(s.EndKolLive(c.Id));
@@ -77,12 +76,13 @@ namespace PCShopSell.Tests
             }
         }
 
-        [Test] public void OnlyInvitedAmbassadorsAttendAndShortCampaignDoesNotQualify()
+        [Test] public void OnlyInvitedAmbassadorsAttendAndUnassignedContractDoesNotQualify()
         {
             using(var s=Make())
             {
                 Assert.True(McnSigningTest.Sign(s,Brand,"momo"));Assert.True(McnSigningTest.Sign(s,Brand,"ake"));
-                Assert.True(s.SignBrandDeal(Brand,"qiao","campaign",false));
+                s.Meet("qiao", 0);
+                Assert.True(s.SignKolAmbassador("qiao", 90, 1, remote: true, phoneCall: true));
                 CollectionAssert.DoesNotContain(s.ExpoAvailableKols(Brand,s.NextBrandExpoDay),"qiao");
                 Assert.True(s.BookQuarterlyExpo(Brand,s.MainShop.Place.Id,0,new[]{PartCatalog.All.First().Id},new[]{"momo"}));
                 CollectionAssert.AreEqual(new[]{"momo"},s.ExpoEndorsers(s.BrandBusiness.Exhibits.Single()));
@@ -102,7 +102,7 @@ namespace PCShopSell.Tests
         {
             using(var s=Make())
             {
-                Assert.True(McnSigningTest.Endorse(s,Brand,"momo","endorse",true));
+                Assert.True(McnSigningTest.Sign(s,Brand,"momo"));
                 int day=s.Clock.Today.TotalDays;
                 s.Ledger.Credit(new GameDate(day),"零售",Money.FromYuan(100000),"sale",LedgerAttribution.ForShop(s.MainShop.Place.Id));
                 long balance=s.Ledger.Balance.Cents;
@@ -111,13 +111,6 @@ namespace PCShopSell.Tests
                     .Invoke(s,new object[]{new GameDate(day),s.Clock.Today});
                 Assert.AreEqual(balance,s.Ledger.Balance.Cents);
                 Assert.Zero(s.BrandBusiness.Deals.Single().SharePaid);
-                typeof(GameSession).GetMethod("SettleKolDailyWages",BindingFlags.NonPublic|BindingFlags.Instance)
-                    .Invoke(s,new object[]{s.Clock.Now.TotalMinutes});
-                Assert.Less(s.Ledger.Balance.Cents,balance);
-                long paid=s.Ledger.Balance.Cents;
-                typeof(GameSession).GetMethod("SettleKolDailyWages",BindingFlags.NonPublic|BindingFlags.Instance)
-                    .Invoke(s,new object[]{s.Clock.Now.TotalMinutes});
-                Assert.AreEqual(paid,s.Ledger.Balance.Cents);
             }
         }
     }

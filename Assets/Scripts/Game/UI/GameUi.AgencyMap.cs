@@ -26,7 +26,7 @@ namespace PCShopSell.Game.UI
             AgencyAt(zoom.rectTransform, 664, 8, 62, 30);
             view.Selected = id =>
             {
-                if (!units.Any(p => p.Id == id)) return;
+                if (!view.CanSelect(id)) return;
                 _agencySelectedId = id;
                 w.Rebuild();
             };
@@ -105,7 +105,7 @@ namespace PCShopSell.Game.UI
                 Badge(chosen,"SelectedPropertyMarker","<b>✓ 已选中房源</b>\n"+(S.IsMyShop(chosen.Place)?S.PlaceTitle(chosen.Place):chosen.Place.Name),Ui.Accent,AgencyInk,300);
             foreach(var place in units.OrderBy(p=>S.City.ViewPosition(p.NodeId).X))
             {
-                if(place.Id==agency.Id||place.Id==_agencySelectedId)continue;
+                if (!view.CanSelect(place.Id) || place.Id == agency.Id || place.Id == _agencySelectedId) continue;
                 if(view.Zoom<1.6f&&!S.IsMyShop(place)&&AgencyListing(place)==null)continue;
                 if(!_ctrl.World.Places.TryGetValue(place.Id,out var building))continue;
                 var bounds=AgencyStreetMap.BuildingBounds(building);

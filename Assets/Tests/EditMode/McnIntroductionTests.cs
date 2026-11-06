@@ -18,11 +18,6 @@ namespace PCShopSell.Tests
             At(s,GameSession.CommunityMcnId);return s;
         }
         private static void At(GameSession s,string place)=>typeof(GameSession).GetProperty("CurrentPlace",BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance).SetValue(s,s.City.GetPlace(place));
-        private static void Arrive(GameSession s,string person)
-        {
-            var a=s.McnIntroductions.First(x=>x.PersonId==person);s.Clock.Restore(new GameDate((int)(a.Arrival/1440)),(int)(a.Arrival%1440));
-            typeof(GameSession).GetMethod("TickCityPeople",BindingFlags.NonPublic|BindingFlags.Instance).Invoke(s,new object[]{s.Clock.Now.TotalMinutes});
-        }
         [Test] public void CommunityHasAccessiblePermanentMcnAndCreatorsWorkThere()
         {
             using(var s=Make())
@@ -36,40 +31,58 @@ namespace PCShopSell.Tests
         [Test] public void UnmetCreatorCannotBePaidToBypassIntroduction()
         {
             using(var s=Make())
-            {Assert.False(s.IsMet("momo"));long cash=s.Ledger.Balance.Cents;Assert.NotNull(s.CreatorCampaignBlocker(s.Creator("momo")));Assert.False(s.SupportCreator("momo"));Assert.AreEqual(cash,s.Ledger.Balance.Cents);}
+            {Assert.False(s.IsMet("momo"));long cash=s.Ledger.Balance.Cents;Assert.False(s.SignKolAmbassador("momo", 90, 1, remote: true, phoneCall: true));Assert.False(s.SupportCreator("momo"));Assert.AreEqual(cash,s.Ledger.Balance.Cents);}
         }
         [Test] public void RemoteAndClosedOfficeCannotArrangeIntroduction()
         {
             using(var s=Make())
             {At(s,s.Home.Id);Assert.False(s.RequestMcnIntroduction("momo"));At(s,GameSession.CommunityMcnId);s.Clock.Restore(s.Clock.Today,1200);Assert.False(s.RequestMcnIntroduction("momo"));Assert.Zero(s.McnIntroductions.Length);}
         }
-        [Test] public void IntroductionTravelsBeforeContactAndCannotFarmRelationship()
+        [Test] public void PaidIntroductionGrantsContactImmediatelyAndOnlyChargesOnce()
         {
-            using(var s=Make())
+            using (var s = Make())
             {
-                var person=s.CityPersonState("momo");var home=s.City.GetPlace(person.HomePlaceId);var position=s.City.ViewPosition(home.NodeId);
-                person.LocationPlaceId=home.Id;person.Route=null;person.X=position.X;person.Y=position.Y;
-                Assert.True(s.RequestMcnIntroduction("momo"));Assert.False(s.RequestMcnIntroduction("momo"));Assert.False(s.IsMet("momo"));Assert.NotNull(s.CityPersonState("momo").Route);
-                Assert.False(s.ExchangeMcnContact("momo"));Arrive(s,"momo");Assert.IsNull(s.McnExchangeBlocker("momo"));Assert.True(s.ExchangeMcnContact("momo"));
-                Assert.True(s.IsMet("momo"));Assert.IsNull(s.KolContactBlocker("momo"));Assert.AreEqual(5,s.Creator("momo").Relationship);Assert.AreEqual(0,s.Relation("momo"));
-                Assert.False(s.ExchangeMcnContact("momo"));Assert.AreEqual(5,s.Creator("momo").Relationship);
+                var person = s.CityPersonState("momo");
+                person.LocationPlaceId = person.HomePlaceId;
+                person.Route = null;
+                long cash = s.Ledger.Balance.Cents;
+                Assert.True(s.RequestMcnIntroduction("momo"));
+                Assert.True(s.IsMet("momo"));
+                Assert.Contains("momo", s.SavedConversationContacts().Select(c => c.Id).ToArray());
+                Assert.IsNull(s.RemoteConversationBlocker("momo", phoneCall: true));
+                Assert.AreEqual(cash - s.McnIntroductionFee("momo") * 100, s.Ledger.Balance.Cents);
+                Assert.False(s.RequestMcnIntroduction("momo"));
+                Assert.AreEqual(cash - s.McnIntroductionFee("momo") * 100, s.Ledger.Balance.Cents);
+                Assert.AreEqual(person.HomePlaceId, person.LocationPlaceId);
+                Assert.AreEqual(0, s.Relation("momo"));
+                Assert.AreEqual(5, s.Creator("momo").Relationship);
+                var save = JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()));
+                using (var loaded = GameSession.Load(s.City, save))
+                    Assert.True(loaded.IsMet("momo"));
             }
         }
-        [Test] public void AppointmentAndContactSurviveJsonSave()
+
+        [Test] public void PriorBookedIntroductionCanStillExchangeWithoutCharging()
         {
-            using(var s=Make())
+            using (var s = Make())
             {
-                Assert.True(s.RequestMcnIntroduction("qiao"));var save=JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()));
-                using(var loaded=GameSession.Load(s.City,save))
-                {Assert.AreEqual(1,loaded.McnIntroductions.Length);Assert.False(loaded.IsMet("qiao"));At(loaded,GameSession.CommunityMcnId);Arrive(loaded,"qiao");Assert.True(loaded.ExchangeMcnContact("qiao"));
-                    using(var again=GameSession.Load(s.City,loaded.CreateSave()))Assert.True(again.IsMet("qiao"));}
+                var save = s.CreateSave();
+                long now = s.Clock.Now.TotalMinutes;
+                save.mcnIntroductions = new[] { new McnIntroduction { PersonId = "qiao", Arrival = now, Until = now + 120 } };
+                using (var loaded = GameSession.Load(s.City, save))
+                {
+                    At(loaded, GameSession.CommunityMcnId);
+                    var person = loaded.CityPersonState("qiao");
+                    person.Route = null;
+                    person.LocationPlaceId = GameSession.CommunityMcnId;
+                    long cash = loaded.Ledger.Balance.Cents;
+                    Assert.True(loaded.ExchangeMcnContact("qiao"));
+                    Assert.True(loaded.IsMet("qiao"));
+                    Assert.AreEqual(cash, loaded.Ledger.Balance.Cents);
+                }
             }
         }
-        [Test] public void ExpiredIntroductionCanBeBookedAgainWithoutInstantContact()
-        {
-            using(var s=Make())
-            {Assert.True(s.RequestMcnIntroduction("momo"));s.Clock.Restore(s.Clock.Today.AddDays(1),600);Assert.False(s.ExchangeMcnContact("momo"));Assert.True(s.RequestMcnIntroduction("momo"));Assert.False(s.IsMet("momo"));}
-        }
+
         [Test] public void ExistingPaidContactsAndMcnAreKeptOnOldSaves()
         {
             using(var s=Make(2))

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.World;
@@ -67,7 +67,9 @@ namespace PCShopSell.Game.UI
             extra.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
             _camera.transform.rotation = Quaternion.Euler(52, 45, 0);
             _placeIds = new HashSet<string>(units.Select(p => p.Id));
-            _selectableIds=new HashSet<string>(units.Where(p=>!residential||p.Kind==PlaceKind.Home).Select(p=>p.Id));
+            _selectableIds = new HashSet<string>(units.Where(p => residential ? p.Kind == PlaceKind.Home
+                : IsDistrictOverviewPlace(p) || (p.Kind == PlaceKind.Shop && (game.Session.IsMyShop(p)
+                    || game.Session.VentureAt(p.Id) != null || game.Session.PropertyAt(p.Id) != null))).Select(p => p.Id));
             bool hasBounds = false;
             var bounds = new Bounds(Vector3.zero, Vector3.zero);
             var shopBounds = new List<Bounds>();
@@ -119,7 +121,7 @@ namespace PCShopSell.Game.UI
         }
 
         public static bool IsDistrictOverviewPlace(Place place) => place.Kind == PlaceKind.Agency
-            || place.Kind == PlaceKind.Shop && place.IsTradable;
+            || GameSession.IsCommercialPremises(place);
 
         public static Vector3[] Corners(Bounds b) => new[]
         {

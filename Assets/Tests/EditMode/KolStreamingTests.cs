@@ -5,6 +5,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
 using PCShopSell.Core.Session;
+using PCShopSell.Core.Common;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 using PCShopSell.Game;
@@ -30,6 +31,57 @@ namespace PCShopSell.Tests
         }
         private static void At(GameSession s,int minute)=>s.Clock.Restore(s.Clock.Today,minute);
         private static GameSession Reload(GameSession s)=>GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));
+
+        [Test] public void LiveFeeIsPaidAtOpeningOnlyOnceAcrossMidnightAndReload()
+        {
+            using (var s = Make())
+            {
+                var contract = Sign(s);
+                long fee = s.KolLiveSessionFee(contract);
+                Assert.True(s.SetKolSchedule(contract.Id, 1425, 60, false));
+                At(s, 1420);
+                s.AdvanceClock(10);
+                Assert.False(s.Ledger.Entries.Any(e => e.Category == "KOL直播场次费"));
+
+                Assert.True(s.SetKolSchedule(contract.Id, 1425, 60, true));
+                Ready(s, contract.PersonId);
+                s.AdvanceClock(5);
+                var debit = s.Ledger.Entries.Single(e => e.Category == "KOL直播场次费");
+                Assert.AreEqual(-fee, debit.Amount.Cents);
+                Assert.AreEqual(contract.BrandId, debit.Attribution.PropertyId);
+                using (var loaded = Reload(s))
+                {
+                    Ready(loaded, contract.PersonId);
+                    loaded.AdvanceClock(20);
+                    Assert.True(loaded.SetKolSchedule(contract.Id, 1425, 75, true));
+                    loaded.AdvanceClock(20);
+                    Assert.AreEqual(1, loaded.Ledger.Entries.Count(e => e.Category == "KOL直播场次费"));
+                    Assert.False(loaded.Ledger.Entries.Any(e => e.Category == "KOL日薪"));
+                    Assert.AreEqual(fee, loaded.KolBrandHistory(contract.BrandId).Single().FeeCents);
+                }
+            }
+        }
+
+        [Test] public void UnfundedLiveStreamWaitsForPaymentWithoutChargingAnIdleContract()
+        {
+            using (var s = Make())
+            {
+                var contract = Sign(s);
+                At(s, 1080);
+                Ready(s, contract.PersonId);
+                s.Ledger.ForceDebit(s.Clock.Today, "测试", s.Ledger.Balance);
+                StringAssert.Contains("资金不足", s.GetKolRoom(contract.PersonId, false).Blocker);
+                s.AdvanceClock(1);
+                Assert.False(s.KolStreaming.Sessions.Any(session => session.ContractId == contract.Id));
+                Assert.False(s.Ledger.Entries.Any(e => e.Category == "KOL直播场次费"));
+
+                s.Ledger.Credit(s.Clock.Today, "测试", Money.FromYuan(10000));
+                Ready(s, contract.PersonId);
+                s.AdvanceClock(1);
+                Assert.AreEqual(-s.KolLiveSessionFee(contract),
+                    s.Ledger.Entries.Single(e => e.Category == "KOL直播场次费").Amount.Cents);
+            }
+        }
 
         [Test] public void AcceptancePresetPreparesContactsButRequiresRealSigningAndPayment()
         {
@@ -60,29 +112,47 @@ namespace PCShopSell.Tests
             using(var s=Make())
             {
                 foreach(var d in KolMarket.All.Take(3))Sign(s,d.Id);
-                Assert.False(s.SignKolLive("acceptance-expo",KolMarket.All[3].Id));Assert.AreEqual(3,s.BrandKolCapacity("acceptance-expo"));
+                AssertFull(s, KolMarket.All[3].Id);Assert.AreEqual(3,s.BrandKolCapacity("acceptance-expo"));
                 Assert.False(s.UpgradeKolBrand("acceptance-expo"));Brand(s).Influence=300;
                 long before=s.Ledger.Balance.Cents;Assert.True(s.UpgradeKolBrand("acceptance-expo"));Assert.AreEqual(before-2000000,s.Ledger.Balance.Cents);
-                foreach(var d in KolMarket.All.Skip(3).Take(4))Sign(s,d.Id);
-                Assert.AreEqual(7,s.BrandKolCount("acceptance-expo"));Assert.False(s.SignKolLive("acceptance-expo",KolMarket.All[7].Id));
-                Assert.True(s.UpgradeKolBrand("acceptance-expo"));foreach(var d in KolMarket.All.Skip(7).Take(5))Sign(s,d.Id);
-                Assert.AreEqual(12,s.BrandKolCount("acceptance-expo"));Assert.False(s.SignKolLive("acceptance-expo",KolMarket.All[12].Id));
+                foreach(var d in KolMarket.All.Skip(3).Take(4)) AssignAndSchedule(s, d.Id);
+                Assert.AreEqual(7,s.BrandKolCount("acceptance-expo"));AssertFull(s, KolMarket.All[7].Id);
+                Assert.True(s.UpgradeKolBrand("acceptance-expo"));foreach(var d in KolMarket.All.Skip(7).Take(5)) AssignAndSchedule(s, d.Id);
+                Assert.AreEqual(12,s.BrandKolCount("acceptance-expo"));AssertFull(s, KolMarket.All[12].Id);
                 Assert.False(s.UpgradeKolBrand("acceptance-expo"));
             }
         }
+        private static void AssignAndSchedule(GameSession s, string person)
+        {
+            var contract = s.ActiveKolAmbassador(person);
+            if (contract == null) { Sign(s, person); return; }
+            Assert.True(s.AssignKolBrand(contract.Id, "acceptance-expo"));
+            Assert.True(s.SetKolSchedule(contract.Id, contract.StartMinute, contract.EndMinute, true));
+        }
+
+        private static void AssertFull(GameSession s, string person)
+        {
+            if (s.ActiveKolAmbassador(person) == null)
+                Assert.True(s.SignKolAmbassador(person, 90, 1, remote: true, phoneCall: true));
+            string id = s.ActiveKolAmbassador(person).Id;
+            long before = s.Ledger.Balance.Cents;
+            Assert.False(s.AssignKolBrand(id, "acceptance-expo"));
+            Assert.AreEqual(before, s.Ledger.Balance.Cents);
+        }
+
         [Test] public void ContactDuplicateAndInvalidScheduleRejectWithoutChargingOrChangingContract()
         {
             using(var s=Make())
             {
-                long before=s.Ledger.Balance.Cents;Assert.False(s.SignKolLive("bad","momo"));Assert.AreEqual(before,s.Ledger.Balance.Cents);
-                var c=Sign(s);before=s.Ledger.Balance.Cents;Assert.False(s.SignKolLive(c.BrandId,c.PersonId));Assert.AreEqual(before,s.Ledger.Balance.Cents);
+                long before=s.Ledger.Balance.Cents;Assert.False(s.SignKolAmbassador("momo",31,1,remote:true,phoneCall:true));Assert.AreEqual(before,s.Ledger.Balance.Cents);
+                var c=Sign(s);before=s.Ledger.Balance.Cents;Assert.False(s.SignKolAmbassador(c.PersonId,90,1,remote:true,phoneCall:true));Assert.AreEqual(before,s.Ledger.Balance.Cents);
                 Assert.False(s.SetKolSchedule(c.Id,1080,1080,true));Assert.False(s.SetKolSchedule(c.Id,0,900,true));Assert.False(s.SetKolSchedule(c.Id,1081,120,true));
                 Assert.AreEqual(1080,s.KolStreaming.Contracts.Single().StartMinute);
             }
             using(var s=DistrictProgressionTests.Make())
             {
                 typeof(GameSession).GetField("_brands",BindingFlags.NonPublic|BindingFlags.Instance).SetValue(s,new BrandBusinessState{Brands=new[]{new BrandRecord{Id="b",Kind="computer"}}});
-                long before=s.Ledger.Balance.Cents;Assert.False(s.SignKolLive("b","qiao"));Assert.AreEqual(before,s.Ledger.Balance.Cents);
+                long before=s.Ledger.Balance.Cents;Assert.False(s.SignKolAmbassador("qiao",90,1,remote:true,phoneCall:true));Assert.AreEqual(before,s.Ledger.Balance.Cents);
             }
         }
         [Test] public void OvernightScheduleUsesOneSessionAcrossMidnightAndNoOfflineBackfill()
@@ -376,9 +446,10 @@ namespace PCShopSell.Tests
                 Assert.False(s.IsMet("resident_ningxi"));Assert.True(s.RequestMcnIntroduction("resident_ningxi"));
                 using(var loaded=Reload(s))
                 {
-                    Assert.AreEqual("resident_ningxi",loaded.McnIntroductions.Single().PersonId);
-                    Assert.True(loaded.ExchangeMcnContact("resident_ningxi"));Assert.True(loaded.IsMet("resident_ningxi"));
-                    Assert.False(loaded.ExchangeMcnContact("resident_ningxi"));
+                    Assert.True(loaded.IsMet("resident_ningxi"));
+                    Assert.AreEqual(1, loaded.CityPeople.Count(p => p.PersonId == "resident_ningxi"));
+                    Assert.False(loaded.RequestMcnIntroduction("resident_ningxi"));
+                    Assert.AreEqual(s.Ledger.Balance.Cents, loaded.Ledger.Balance.Cents);
                 }
             }
         }

@@ -26,7 +26,7 @@ namespace PCShopSell.Core.Session
             if(c.Relationship<30)return "商务交情达到 30";
             if(c.Resources<40)return "创作资源达到 40";
             if(BusinessStanding<c.Ambition*.5)return "你的经营地位还不足以匹配对方的抱负";
-            if(Ledger.Balance<CreatorFee(c)*5)return "签约费不足（当期推广费的五倍）";
+            if(Ledger.Balance<CreatorFee(c)*5)return "工作室签约费不足";
             return null;
         }
         public bool SignMcnCreator(string id)
@@ -39,7 +39,7 @@ namespace PCShopSell.Core.Session
         public bool EndMcnContract(string id)
         {
             var c=Creator(id);if(c==null || c.McnUntilDay<=Clock.Today.TotalDays || IsGameOver)return false;
-            if(!Ledger.TryDebit(Clock.Today,"MCN解约",CreatorFee(c),Creators.Get(id).Name))return Fail("提前解约需补偿一次当期推广费。");
+            if(!Ledger.TryDebit(Clock.Today,"MCN解约",CreatorFee(c),Creators.Get(id).Name))return Fail("提前解约需支付所示补偿。");
             c.McnUntilDay=Clock.Today.TotalDays;c.Relationship=Math.Max(0,c.Relationship-5);return true;
         }
         public bool CloseMcn()

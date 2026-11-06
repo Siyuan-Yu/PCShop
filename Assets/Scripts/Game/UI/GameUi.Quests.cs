@@ -239,7 +239,7 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Direct: return "入口：经营 → “直供采购”。";
                 case QuestTarget.Ventures: return "地点：安居房产中介";
                 case QuestTarget.Park: return "入口：经营 → 园区布局";
-                case QuestTarget.Creators: return "入口：经营 → “推广合作”。";
+                case QuestTarget.Creators: return "入口：品牌 → “代言人（KOL）”。";
                 case QuestTarget.Property: return "入口：经营 → “物业与住处”。";
                 default: return "";
             }

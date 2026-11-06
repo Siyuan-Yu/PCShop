@@ -46,7 +46,7 @@ namespace PCShopSell.Core.Session
     [Serializable] public sealed class KolLiveContract
     {
         public string Id,BrandId,PersonId,AgencyId;public long SignedAt,EndAt,LastProcessedAt,ScheduleEffectiveAt;
-        public int StartMinute=1080,EndMinute=120,ScheduleVersion;public bool Enabled=true,Ended;public long FeeCents;
+        public int StartMinute=1080,EndMinute=120,ScheduleVersion;public bool Enabled=true,Ended;public long FeeCents,SessionFeeCents;
         public int FrequencyDays = 1, FirstDay;
         public long LastPaidThrough,WagesPaidCents;
         public KolLiveContract Copy()=>(KolLiveContract)MemberwiseClone();
@@ -55,9 +55,9 @@ namespace PCShopSell.Core.Session
     {
         public string Id,ContractId;public long StartedAt,EndsAt,LiveMinutes,ViewerMinutes,TipsCents,LastTipAt=-999999;
         public int PeakViewers,TipCount,BrandGiftWins,TipBoost,LastGiftYuan;
-        public string PersonId, BrandId, RivalKind;
+        public string PersonId, BrandId, RivalKind, SponsorName, ShowcaseKind;
         public bool Settled;
-        public long LegacyMinutes;
+        public long LegacyMinutes, FeeCents;
         public int ScheduledDay;
         public int InfluenceBefore, InfluenceAfter, ReputationBefore, ReputationAfter, RecentSpecials;
         public KolLiveSession Copy()=>(KolLiveSession)MemberwiseClone();
@@ -87,7 +87,8 @@ namespace PCShopSell.Core.Session
     public sealed class KolRoomStatus
     {
         public string PersonId, BrandId, Sponsor, Blocker, SessionId;
-        public long NextStart = -1, EndAt = -1;
+        public string NextBrandId, NextSponsor, UpcomingBrandName;
+        public long NextStart = -1, EndAt = -1, UpcomingBrandStart = -1;
         public int Viewers, GiftWait, SponsorInfluence, SponsorReputation = 50;
         public bool IsLive => Blocker == null;
         public KolLiveSession Session;

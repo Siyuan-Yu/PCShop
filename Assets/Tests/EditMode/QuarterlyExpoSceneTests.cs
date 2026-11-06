@@ -41,7 +41,7 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                foreach(string id in new[]{"momo","ake"}) Assert.True(McnSigningTest.Endorse(s,"acceptance-expo",id,"endorse",false));
+                foreach(string id in new[]{"momo","ake"}) Assert.True(McnSigningTest.Sign(s,"acceptance-expo",id));
                 Assert.True(s.BookQuarterlyExpo("acceptance-expo",s.MainShop.Place.Id,0,new[]{PartCatalog.All.First().Id},new[]{"momo","ake"}));
                 var e = s.BrandBusiness.Exhibits.Single();
                 foreach (string id in new[] { "momo", "ake" })

@@ -40,8 +40,7 @@ namespace PCShopSell.Core.Session
             }
         }
 
-        public IEnumerable<Place> CityCommercialProperties => City.Places.Where(p => p.Id!="life_expo"&&(p.IsTradable ||
-            (p.Kind == PlaceKind.Shop && !(p.Business ?? "").StartsWith("venue_", StringComparison.Ordinal))));
+        public IEnumerable<Place> CityCommercialProperties => City.Places.Where(IsCommercialPremises);
         public bool IsPlayerPropertyOccupied(string id)
         {
             var p = PropertyAt(id);
@@ -65,7 +64,9 @@ namespace PCShopSell.Core.Session
         public CityPropertyPurchase PreviewCityPropertyPurchase(string id, bool mortgage)
         {
             if (!City.HasPlace(id)) return null;
-            var place = City.GetPlace(id); var shop = ShopAt(id); var venture = VentureAt(id);
+            var place = City.GetPlace(id);
+            if (!IsCommercialPremises(place)) return null;
+            var shop = ShopAt(id); var venture = VentureAt(id);
             var price = CityPropertyPrice(id);
             var quote = new CityPropertyPurchase { PlaceId = id, Address = CityPropertyAddress(place), Price = price,
                 Fee = price.Scale(.02), IsSelfUse = shop != null || venture != null,
@@ -141,6 +142,7 @@ namespace PCShopSell.Core.Session
         {
             if(City.HasPlace(id)&&City.GetPlace(id).Kind==PlaceKind.Home)return Fail("住宅只按实际NPC住户收租，空房不产生托管租金。");
             var p = PropertyAt(id); if (p == null || IsGameOver) return false;
+            if (rentOut && City.HasPlace(id) && !IsCommercialPremises(City.GetPlace(id))) return Fail("专用场所不可重新出租。");
             if (!InAgency) return Fail("请到中介办理出租登记。");
             if (!City.HasPlace(id) || !AgencyServes(CurrentPlace, City.GetPlace(id))) return Fail("请到房源所属片区的中介办理。");
             if (ShopAt(id) != null || VentureAt(id) != null) return Fail("自营物业不能同时向自己收租。");
@@ -152,7 +154,7 @@ namespace PCShopSell.Core.Session
         }
         public bool OpenCityOwnedShop(string id, string retailKind = "computer")
         {
-            if(!City.HasPlace(id)||City.GetPlace(id).Kind!=PlaceKind.Shop)return Fail("住宅不能作为商铺开业。");
+            if (!City.HasPlace(id) || !IsCommercialPremises(City.GetPlace(id))) return Fail("该地点不能作为商铺开业。");
             var p = PropertyAt(id); if (p == null || IsGameOver || !InAgency || !AgencyServes(CurrentPlace, City.GetPlace(id))) return Fail("在中介选择自有空置物业开店。");
             if (p.UseMode != "vacant" || ShopAt(id) != null || VentureAt(id) != null) return Fail("该物业仍被使用，不能清走原租户。");
             var place = City.GetPlace(id); var kind = IsDedicatedVenue(place)?"computer":RetailShopTypes.Valid(retailKind);

@@ -22,48 +22,56 @@ namespace PCShopSell.Tests
             Assert.AreEqual("yijian",BrandAgency.ForPerson("life_clothier").Id);
             Assert.AreEqual("wanjie",BrandAgency.ForPerson("resident_ningxi").Id);
         }
-        [Test] public void KnownPersonStillNeedsPhysicalOfficeAndTheirOwnAgencyReception()
+        [Test] public void SignedThroughPhoneThenAssignedAfterSaveWithoutChargingASecondFee()
         {
-            using(var s=Make())
+            using (var s = Make())
             {
-                s.Meet("momo",0);long cash=s.Ledger.Balance.Cents;
-                At(s,s.Home.Id);
-                Assert.False(s.BeginMcnRecruitment("chengguang"));
-                Assert.False(s.SignKolLive("acceptance-expo","momo"));
-                At(s,GameSession.CommunityMcnId);s.Clock.Restore(s.Clock.Today,600);
-                Assert.False(s.SignKolLive("acceptance-expo","momo"));
-                Assert.True(s.BeginMcnRecruitment("yijian"));
-                Assert.False(s.SignBrandDeal("acceptance-expo","momo","endorse",false));
-                Assert.AreEqual(cash,s.Ledger.Balance.Cents);
-                Assert.IsEmpty(s.KolStreaming.Contracts);
-                Assert.True(s.BeginMcnRecruitment("chengguang"));
-                Assert.True(s.SignKolLive("acceptance-expo","momo"));
-                var c=s.KolStreaming.Contracts.Single();
-                Assert.AreEqual("chengguang",c.AgencyId);
-                Assert.AreEqual(cash-s.KolSigningFee("momo")*100,s.Ledger.Balance.Cents);
-                Assert.AreEqual(c.Id,s.BrandBusiness.Deals.Single().KolContractId);
-                Assert.False(s.SignKolLive("acceptance-expo","momo"));
-                using(var loaded=GameSession.Load(s.City,s.CreateSave()))
-                    Assert.AreEqual("chengguang",loaded.KolStreaming.Contracts.Single().AgencyId);
+                s.Meet("momo", 0);
+                At(s, s.Home.Id);
+                s.CityPersonState("momo").LocationPlaceId = GameSession.CommunityMcnId;
+                long cash = s.Ledger.Balance.Cents;
+                Assert.False(s.SignKolAmbassador("momo", 60, 7));
+                Assert.True(s.SignKolAmbassador("momo", 60, 7, remote: true, phoneCall: true));
+                var pending = s.ActiveKolAmbassador("momo");
+                Assert.IsNull(pending.BrandId);
+                Assert.AreEqual(60 * 1440L, pending.EndAt - pending.SignedAt);
+                Assert.AreEqual(7, pending.FrequencyDays);
+                Assert.False(pending.Enabled);
+                Assert.False(s.SetKolSchedule(pending.Id, 1080, 120, true));
+                Assert.AreEqual(0, s.BrandKolCount("acceptance-expo"));
+                Assert.AreEqual(cash - s.KolSigningFee("momo", 60) * 100, s.Ledger.Balance.Cents);
+                var save = JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()));
+                using (var loaded = GameSession.Load(s.City, save))
+                {
+                    Assert.AreEqual("chengguang", loaded.ActiveKolAmbassador("momo").AgencyId);
+                    Assert.True(loaded.AssignKolBrand(pending.Id, "acceptance-expo"));
+                    Assert.False(loaded.AssignKolBrand(pending.Id, "acceptance-expo"));
+                    Assert.AreEqual(s.Ledger.Balance.Cents, loaded.Ledger.Balance.Cents);
+                    Assert.AreEqual(pending.Id, loaded.BrandBusiness.Deals.Single().KolContractId);
+                    Assert.AreEqual(1, loaded.BrandKolCount("acceptance-expo"));
+                    Assert.True(loaded.SetKolSchedule(pending.Id, 1080, 120, true));
+                    Assert.AreEqual(7, loaded.ActiveKolAmbassador("momo").FrequencyDays);
+                }
             }
         }
-        [Test] public void LeavingClosingOrReturningAnotherDayCannotReuseReceptionToSignRemotely()
+
+        [Test] public void RemovedShortPromotionInOldSaveHasNoTrafficEffectOrNewCharge()
         {
-            using(var s=Make())
+            using (var s = Make())
             {
-                s.Meet("qiao",0);At(s,GameSession.CommunityMcnId);s.Clock.Restore(s.Clock.Today,600);
-                Assert.True(s.BeginMcnRecruitment("chengguang"));long cash=s.Ledger.Balance.Cents;
-                At(s,s.Home.Id);Assert.False(s.SignKolLive("acceptance-expo","qiao"));
-                At(s,GameSession.CommunityMcnId);s.Clock.Restore(s.Clock.Today,1080);
-                Assert.False(s.SignKolLive("acceptance-expo","qiao"));
-                Assert.False(s.BeginMcnRecruitment("chengguang"));
-                s.Clock.Restore(s.Clock.Today.AddDays(1),600);
-                Assert.False(s.SignKolLive("acceptance-expo","qiao"));
-                Assert.AreEqual(cash,s.Ledger.Balance.Cents);
-                Assert.True(s.BeginMcnRecruitment("chengguang"));
-                Assert.True(s.SignKolLive("acceptance-expo","qiao"));
+                var save = s.CreateSave();
+                save.brandBusiness.Deals = new[] { new BrandDeal { Id = "old-campaign", BrandId = "acceptance-expo",
+                    PersonId = "momo", Mode = "campaign", End = s.Clock.Today.TotalDays + 7, Fee = 10000 } };
+                using (var loaded = GameSession.Load(s.City, save))
+                {
+                    Assert.True(loaded.BrandBusiness.Deals.Single().Ended);
+                    Assert.Zero(loaded.BrandDealTraffic(loaded.BrandBusiness.Deals.Single()));
+                    Assert.AreEqual(s.Ledger.Balance.Cents, loaded.Ledger.Balance.Cents);
+                    Assert.True(loaded.IsMet("momo"));
+                }
             }
         }
+
         [Test] public void BrandRecruitmentPageSelectsCompaniesWithoutDirectSigningButtons()
         {
             using(var s=Make())
@@ -83,7 +91,9 @@ namespace PCShopSell.Tests
                     Assert.False(buttons.Any(b=>b.name.StartsWith("KolSign_")));
                     buttons.Single(b=>b.name=="KolAgencyPreview_wanjie").onClick.Invoke();
                     buttons=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).ToArray();
-                    Assert.False(buttons.Single(b=>b.name=="McnReception_wanjie").interactable);
+                    Assert.False(buttons.Any(b => b.name.StartsWith("McnReception_")));
+                    Assert.False(buttons.Any(b => b.name.StartsWith("McnKolProposal_")));
+                    Assert.True(buttons.Any(b => b.name.StartsWith("McnIntroduce_") || b.name.StartsWith("McnContact_")));
                     Assert.IsEmpty(s.KolStreaming.Contracts);
                 }
                 finally

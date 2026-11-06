@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -165,14 +165,14 @@ namespace PCShopSell.Game.UI
             else if(_workbenchBusinessTab==3)
             {
                 WbText(list,"已解锁的业务",20);
-                WbButton(list,"品牌 · 推广 / 展会 / 竞标",OpenBrandBusiness,"WorkbenchBrandBusiness");
+                WbButton(list,"品牌 · 代言人 / 展会 / 竞标",OpenBrandBusiness,"WorkbenchBrandBusiness");
                 if(BusinessUnlocked)
                 {
                     WbButton(list,"直供采购",()=>{_businessTab=1;ShowBusinessPanel(false);},"WorkbenchDirectSupply");
                     WbButton(list,"企业合同",()=>{_businessTab=2;ShowBusinessPanel(false);},"WorkbenchContracts");
-                    WbButton(list,"推广合作",()=>{_businessTab=4;ShowBusinessPanel(false);},"WorkbenchPromotion");
+                    WbButton(list,"MCN工作室",()=>{_businessTab=4;ShowBusinessPanel(false);},"WorkbenchPromotion");
                 }
-                else WbText(list,"经营成长后解锁直供、企业合同和推广合作。",18,WbDim);
+                else WbText(list,"经营成长后解锁直供、企业合同和MCN工作室。",18,WbDim);
                 foreach(var shop in S.MyShops){var target=shop;WbButton(list,S.ShopTitle(shop)+" · 装机订单 "+shop.Sim.Orders.Count+" 单",()=>OpenWorkbenchOrders(target),"WorkbenchOrders_"+shop.Place.Id);}
             }
             else

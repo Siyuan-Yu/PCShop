@@ -58,9 +58,9 @@ namespace PCShopSell.Core.Session
         public double BrandDealTraffic(BrandDeal deal)
         {
             var brand = Brand(deal.BrandId);
-            if (!string.IsNullOrEmpty(deal.KolContractId)) return 0;
+            if (deal.Mode != "endorse" || !string.IsNullOrEmpty(deal.KolContractId)) return 0;
             if (brand == null || deal.Ended || deal.End <= BrandDay || deal.Response == "pause") return 0;
-            return (deal.Mode == "endorse" ? .12 : .08) * (deal.Exclusive ? 1.25 : 1) * BrandAudienceFit(deal.PersonId, brand.Kind)
+            return .12 * (deal.Exclusive ? 1.25 : 1) * BrandAudienceFit(deal.PersonId, brand.Kind)
                 + (_brands.Careers.FirstOrDefault(c => c.PersonId == deal.PersonId)?.Momentum ?? 0) * .002
                 - deal.Severity * .065 * (deal.Response == "negotiate" ? .5 : 1);
         }
@@ -69,27 +69,14 @@ namespace PCShopSell.Core.Session
             _brands.Deals.Where(d => d.BrandId == brandId).Sum(BrandDealTraffic);
 
         private static double BrandStandingTraffic(BrandRecord brand) =>
-            Math.Min(.15, brand.Influence * .001) + (brand.Reputation - 50) * .002;
+            BrandStandingTraffic(brand.Influence, brand.Reputation);
+
+        public static double BrandStandingTraffic(int influence, int reputation) =>
+            Math.Min(.15, influence * .001) + (reputation - 50) * .002;
 
         private double BrandBackgroundTraffic(BrandRecord brand) =>
             BrandStandingTraffic(brand)
             + _brands.Resources.Where(r => r.BrandId == brand.Id && r.End > BrandDay).Sum(r => r.Mode == "channel" ? .12 : .05);
-
-        public double BrandEffectivePromotionTraffic(string brandId)
-        {
-            var brand = Brand(brandId);
-            if (brand == null) return 0;
-            double background = BrandBackgroundTraffic(brand);
-            return Math.Max(-.30, Math.Min(.60, background + BrandPromotionTraffic(brandId)))
-                - Math.Max(-.30, Math.Min(.60, background));
-        }
-
-        public double BrandEffectiveDealTraffic(BrandDeal deal)
-        {
-            double total = BrandPromotionTraffic(deal.BrandId);
-            if (Math.Abs(total) < .000001) return BrandDealTraffic(deal);
-            return BrandDealTraffic(deal) * BrandEffectivePromotionTraffic(deal.BrandId) / total;
-        }
 
         private LedgerAttribution BrandAttribution(string brandId) =>
             new LedgerAttribution(LedgerBusinessKind.Operating, propertyId: brandId);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -484,7 +484,6 @@ namespace PCShopSell.Core.Session
             SpoilRetailGoods(today.TotalDays);
 
             PayWages(previous);
-            SettleKolDailyWages(today.TotalDays*1440L);
             ApplyEmployeeTransfers(today);
             ProcessScheduledCredits(today);
             CollectDueAppLoans();

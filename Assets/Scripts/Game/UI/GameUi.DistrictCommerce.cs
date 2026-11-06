@@ -9,7 +9,7 @@ namespace PCShopSell.Game.UI
         private void OpenDistrictBrandGameplay()
         {
             _brandId=S.DistrictStoryState.CommerceBrandId;
-            _brandTab=S.DistrictStoryState.Chapter==2?2:3;
+            _brandTab=S.DistrictStoryState.Chapter==2?BrandExpoTab:BrandTenderTab;
             OpenBrandBusiness();
         }
         private void BuildDistrictCommerceProgress(Transform body,Window w)

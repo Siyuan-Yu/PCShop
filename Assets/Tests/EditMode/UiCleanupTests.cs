@@ -108,9 +108,10 @@ namespace PCShopSell.Tests
                 Assert.IsEmpty(r.Components<InputField>());
                 StringAssert.DoesNotContain("创建电脑店品牌", r.Text);
                 r.ClickCaption("＋ 创建品牌");
-                Assert.AreEqual(1, r.Components<InputField>().Length);
+                Assert.IsEmpty(r.Components<InputField>());
                 StringAssert.Contains("创建电脑店品牌", r.Text);
-                r.ClickCaption("收起创建表单");
+                Assert.False(r.Button("BrandCreate_computer").interactable);
+                r.ClickCaption("收起行业资格");
                 Assert.IsEmpty(r.Components<InputField>());
                 r.Ui.OpenBrandBusiness();
                 Assert.AreSame(brand, r.Workspace("brands"));
@@ -124,7 +125,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void BrandOverviewExpandsStoresAndPromotionUsesNestedCandidatesWithPortraits()
+        public void BrandOverviewExpandsStoresAndOpensTheAmbassadorMarket()
         {
             var city = CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text));
             var session = GameSession.CreateCityLifePreset(city, "brand_ready_two");
@@ -150,17 +151,86 @@ namespace PCShopSell.Tests
                 StringAssert.Contains("调整门店归属", r.Text);
                 r.Call("OpenBrandShopMembership", "brand:computer");
                 r.ClickCaption("返回品牌总览");
-                r.Components<Button>().First(b => b.GetComponentInChildren<Text>()?.text == "查看推广与代言").onClick.Invoke();
-                StringAssert.Contains("实际到店客流", r.Text);
-                Assert.False(r.Text.Contains("查看旗下人选"));
-                r.ClickCaption("请代言人");
+                r.Components<Button>().First(b => b.GetComponentInChildren<Text>()?.text == "查看品牌代言人").onClick.Invoke();
+                StringAssert.DoesNotContain("短期推广", r.Text);
+                r.ClickCaption("前往代言人市场");
                 StringAssert.Contains("衣见文化", r.Text);
-                r.Components<Button>().First(b => b.GetComponentInChildren<Text>()?.text == "查看旗下人选").onClick.Invoke();
                 Assert.True(r.Components<RawImage>().Any(p => p.name == "KolPortrait_momo" && p.texture != null));
                 Assert.True(r.Components<RawImage>().Any(p => p.name == "KolPortrait_ake" && p.texture != null));
-                r.ClickCaption("返回选择渠道");
-                r.ClickCaption("返回推广与代言");
-                StringAssert.Contains("实际到店客流", r.Text);
+            }
+        }
+
+        [Test]
+        public void BrandCreationAndMcnContractFollowSeparateDialogs()
+        {
+            var city = CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text));
+            using (var r = new Rig(GameSession.CreateCityLifePreset(city, "brand_ready_two")))
+            {
+                r.Ui.OpenBrandBusiness();
+                r.ClickCaption("＋ 创建品牌");
+                Assert.IsEmpty(r.Components<InputField>());
+                r.Button("BrandCreate_computer").onClick.Invoke();
+                r.Components<InputField>().Single().text = "星桥电脑";
+                r.ClickCaption("实惠定位");
+                Assert.AreEqual("星桥电脑", r.Components<InputField>().Single().text);
+                r.Button("BrandConfirmCreation").onClick.Invoke();
+                Assert.AreEqual("value", r.S.BrandBusiness.Brands.Single().Position);
+                Assert.True(r.S.FoundBrand("clothing", "星桥服装", "value"));
+                r.Ui.CloseAllWindows();
+
+                typeof(GameSession).GetProperty("CurrentPlace").SetValue(r.S, city.GetPlace(GameSession.CommunityMcnId));
+                r.S.Flags.Remove(GameSession.MetFlag("momo"));
+                var person = r.S.CityPersonState("momo");
+                person.Route = null;
+                person.LocationPlaceId = person.HomePlaceId;
+                r.Ui.OpenCommunityMcn();
+                StringAssert.DoesNotContain("星桥电脑", r.Text);
+                StringAssert.DoesNotContain("人事洽谈", r.Text);
+                r.Button("McnIntroduce_momo").onClick.Invoke();
+                r.ClickCaption("确定办理");
+                r.Button("McnContact_momo").onClick.Invoke();
+                r.ClickCaption("谈品牌代言与直播");
+                StringAssert.Contains("合约期限", r.Text);
+                StringAssert.Contains("直播频率", r.Text);
+                StringAssert.DoesNotContain("表达心意", r.Text);
+                r.ClickCaption("60天");
+                r.ClickCaption("隔天");
+                r.Button("KolConfirmSign_momo").onClick.Invoke();
+                var contract = r.S.ActiveKolAmbassador("momo");
+                Assert.IsNull(contract.BrandId);
+                Assert.AreEqual(2, contract.FrequencyDays);
+                r.Ui.CloseAllWindows();
+                r.Ui.OpenBrandBusiness();
+                r.ClickCaption("代言人（KOL）");
+                StringAssert.Contains("我的代言人", r.Text);
+                StringAssert.DoesNotContain("星桥电脑  ·  知名度", r.Text);
+                StringAssert.Contains("已一次付清", r.Text);
+                StringAssert.Contains("每场直播费", r.Text);
+                var brands = r.Components<Dropdown>().Single(d => d.name == "KolBrandChoice_" + contract.Id);
+                CollectionAssert.AreEqual(new[] { "未分配", "星桥电脑", "星桥服装" }, brands.options.Select(o => o.text));
+                brands.value = 1;
+                r.Ui.RebuildWindows();
+                var save = r.Button("KolSaveSchedule_" + contract.Id);
+                Assert.True(save.interactable);
+                save.onClick.Invoke();
+                var configured = r.S.ActiveKolAmbassador("momo");
+                Assert.AreEqual("brand:computer", configured.BrandId);
+                Assert.AreEqual(2, configured.FrequencyDays);
+                Assert.True(configured.Enabled);
+
+                var switchBrand = r.Components<Dropdown>().Single(d => d.name == "KolBrandChoice_" + contract.Id);
+                switchBrand.value = 2;
+                r.Ui.RebuildWindows();
+                r.Button("KolSaveSchedule_" + contract.Id).onClick.Invoke();
+                Assert.AreEqual(0, r.S.BrandKolCount("brand:computer"));
+                Assert.AreEqual(1, r.S.BrandKolCount("brand:clothing"));
+                using (var loaded = GameSession.Load(city, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(r.S.CreateSave()))))
+                {
+                    Assert.AreEqual(1, loaded.KolStreaming.Contracts.Length);
+                    Assert.AreEqual("brand:clothing", loaded.BrandBusiness.Deals.Single(d => !d.Ended).BrandId);
+                    Assert.AreEqual(configured.FeeCents, loaded.ActiveKolAmbassador("momo").FeeCents);
+                    Assert.AreEqual(configured.SessionFeeCents, loaded.ActiveKolAmbassador("momo").SessionFeeCents);
+                }
             }
         }
 

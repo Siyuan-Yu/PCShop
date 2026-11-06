@@ -222,7 +222,16 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Label(row, $"<b>{n.Name}</b>  {n.Role}", 17), 260);
                     Ui.Size(Ui.Label(row, $"{Npcs.LevelName(rel)} {rel}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
                     Ui.Size(Ui.Button(row,"人物资料",()=>OpenCityPersonProfile(n.Id),15),100);
-                    Ui.Size(Ui.Button(row, "打电话约出去", () => { var npc = Npcs.Get(n.Id); if (npc != null) OpenInviteWindow(npc, w); else OpenCityActivityChooser(n.Id); }, 15, Ui.ButtonHot), 150);
+                    bool creator = KolMarket.Get(n.Id) != null || Creators.Get(n.Id) != null;
+                    if (creator)
+                        Ui.Size(Ui.Button(row, "打电话", () =>
+                            OpenPersonDialogue(n.Id, parent: w, remote: true, phoneCall: true), 15, Ui.ButtonHot), 100);
+                    Ui.Size(Ui.Button(row, creator ? "邀约活动" : "打电话约出去", () =>
+                    {
+                        var npc = Npcs.Get(n.Id);
+                        if (npc != null) OpenInviteWindow(npc, w);
+                        else OpenCityActivityChooser(n.Id);
+                    }, 15, Ui.ButtonHot), creator ? 100 : 150);
                     Ui.Size(Ui.Button(row, "发消息", () =>
                     {
                         if(S.HasChatApp)OpenPersonDialogue(n.Id,parent:w,remote:true);

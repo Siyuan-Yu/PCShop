@@ -48,7 +48,7 @@ namespace PCShopSell.Core.Session
             return CityPersonState(id)?.Route?.TargetPlaceId == "life_expo" ? "在路上 · 前往会展中心" : "尚未到场";
         }
 
-        public long ExpoKolDayQuote(string id,int booth)=>KolDailyWage(id)*(booth+3);
+        public long ExpoKolDayQuote(string id,int booth)=>KolAppearanceRate(id)*(booth+3);
         public string[] ExpoAvailableKols(string brandId,int day)=>_kol.Contracts.Where(c=>c.BrandId==brandId&&!c.Ended&&c.SignedAt<=Clock.Now.TotalMinutes&&c.EndAt>=(day+3)*1440L+1020)
             .Select(c=>c.PersonId).Distinct().ToArray();
         public string ExpoBookingBlocker(string brandId,string shopId,int booth,string[] products,string[] kols)
@@ -58,9 +58,12 @@ namespace PCShopSell.Core.Session
             if(BrandDay>day-7)return "展前7天截止报名，请等下一季度";
             if(_brands.Exhibits.Any(e=>e.BrandId==brandId&&e.Day==day))return "这个品牌本季度已经报名";
             if(!BrandShops(b).Any(s=>s.Place.Id==shopId))return "请选择品牌关联的同业门店";
-            if(products==null||products.Length<ExpoMinProducts(booth)||products.Length>ExpoMaxProducts(booth)||products.Distinct().Count()!=products.Length)return "请按摊位要求选择不同展品";
+            if(products==null||products.Length<ExpoMinProducts(booth)||products.Length>ExpoMaxProducts(booth)||products.Distinct().Count()!=products.Length)
+                return $"{ExpoBoothName(booth)}需要选择 {ExpoMinProducts(booth)}—{ExpoMaxProducts(booth)} 种不同展品（已选 {products?.Length ?? 0} 种）";
             if(products.Any(p=>!BrandProducts(shopId).Contains(p)||BrandProductCount(shopId,p)<100))return "每种展品需100件本店现货；报名后移交展务保管";
-            if(kols==null||kols.Length<ExpoMinKols(booth)||kols.Distinct().Count()!=kols.Length)return "签约KOL人数不足，重复选择不计人数";
+            int selectedKols = kols?.Distinct().Count() ?? 0;
+            if (selectedKols < ExpoMinKols(booth) || selectedKols != kols?.Length)
+                return $"{ExpoBoothName(booth)}需要至少 {ExpoMinKols(booth)} 位本品牌代言人（已选 {selectedKols} 位）";
             var available=ExpoAvailableKols(brandId,day);
             if(kols.Any(p=>!available.Contains(p)))return "只能邀请本品牌已签约且合约覆盖全部4天的KOL";
             if(_brands.Exhibits.Any(e=>!e.Missed&&!e.Finished&&e.Day==day&&((e.KolIds??Array.Empty<string>()).Intersect(kols).Any())))return "某位KOL已有同期站台安排";
@@ -125,11 +128,10 @@ namespace PCShopSell.Core.Session
         }
         private void PayExpoAttendance(BrandExhibit e)
         {
-            long surcharge=0;
-            for(int i=0;i<e.KolIds.Length;i++)surcharge+=Math.Max(0,e.KolDayQuotes[i]-KolDailyWage(e.KolIds[i]));
-            if(surcharge>0)Ledger.ForceDebit(Clock.Today,"展会KOL站台",Money.FromYuan(surcharge),"第"+(e.AttendanceDays+1)+"天站台溢价（基础日薪另按日结算）",
+            long attendanceFee = e.KolDayQuotes.Sum();
+            if(attendanceFee>0)Ledger.ForceDebit(Clock.Today,"展会KOL站台",Money.FromYuan(attendanceFee),"第"+(e.AttendanceDays+1)+"天站台费",
                 new LedgerAttribution(LedgerBusinessKind.Operating,shopId:e.ShopId,propertyId:e.BrandId,sourceEventId:e.Id+":attendance:"+e.AttendanceDays));
-            e.ExpoWagesCents+=surcharge*100;e.AttendanceDays++;
+            e.ExpoWagesCents+=attendanceFee*100;e.AttendanceDays++;
         }
         public ExpoMoment CurrentExpoMoment(string id)
         {

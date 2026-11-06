@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -54,7 +54,7 @@ namespace PCShopSell.Game.UI
             OpenWorkspace("business", "services", "经营 · 合同与合作", 1160, 840, w =>
             {
                 var tabs = Ui.Row(w.Content, 38, 5);
-                string[] names = { "资产负债", "直供", "企业合同", "托管门店", "推广合作", "住处", "园区" };
+                string[] names = { "资产负债", "直供", "企业合同", "托管门店", "MCN工作室", "住处", "园区" };
                 foreach (int tab in new[] { 0, 1, 2, 3, 4, 6 })
                 {
                     int choice = tab;
@@ -223,22 +223,13 @@ namespace PCShopSell.Game.UI
         private void BuildCreators(Window w)
         {
             BuildMcnHeader(w);
-            Ui.Size(Ui.Button(w.Content,"社区MCN · 介绍创作者",OpenCommunityMcn,18),-1,40);
-            HelpLink(w.Content,"推广合作说明","主店推广同一时间只合作一位创作者，MCN 合约可并行。粉丝量、创作资源影响导流；合作销售表现影响粉丝与关系。高抱负创作者在连续表现不佳时会提前结束合作，不退费用。");
-            foreach(var creator in S.CreatorPartners)
+            Ui.Size(Ui.Button(w.Content, "社区MCN · 介绍创作者", OpenCommunityMcn, 18), -1, 40);
+            if (!S.HasMcn) return;
+            Para(w.Content, "和创作者本人交谈，选择“谈MCN合作”即可洽谈工作室合约。", 17);
+            foreach (var c in S.CreatorPartners.Where(c => c.McnUntilDay > S.Clock.Today.TotalDays))
             {
-                var c=creator;var d=Creators.Get(c.Id);var card=BusinessCard(w.Content,d.Name+" · "+d.Style);
-                if(S.KolContactBlocker(c.Id)!=null)
-                {Para(card,"尚未交换业务名片。请到社区MCN安排实际见面。",17,Ui.Dim);Ui.Size(Ui.Button(card,"去MCN认识对方",OpenCommunityMcn,17),-1,36);continue;}
-                Ui.Size(Ui.Button(card,"合作合约 / 私人相处",()=>OpenCreatorRelations(c.Id,w),17),-1,36);
-                Line(card,$"粉丝 {c.Followers:N0}   交情 {c.Relationship}/100   抱负 {c.Ambition}/100   资源 {c.Resources}/100",17);
-                if(c.CampaignUntilDay>S.Clock.Today.TotalDays) Line(card,$"推广剩余 {c.CampaignUntilDay-S.Clock.Today.TotalDays} 天   主店客流 ×{S.CreatorTrafficMultiplier:0.00}",18,Ui.Good);
-                Para(card,$"本次合作期间主店营业额 {Money.FromCents(c.AttributedSalesCents)}，包含自然客流；不能据此判断推广净增收入或利润。",15,Ui.Dim);
-                string why=S.CreatorCampaignBlocker(c);if(why!=null) Line(card,why,15,Ui.Dim);
-                var row=Ui.Row(card,40);
-                BusinessAction(row,$"合作七天 · {S.CreatorFee(c)}",()=>S.StartCreatorCampaign(c.Id),w,why==null);
-                BusinessAction(row,"设备制作赞助 · ¥500",()=>S.SupportCreator(c.Id),w,(S.HasSmartphone||S.CanUseHomeWorkbench) && S.Ledger.Balance>=Money.FromYuan(500) && c.LastSupportDay!=S.Clock.Today.TotalDays);
-                Para(card,"赞助每日一次：资源 +30、交情 +5。推广日资源 −4；日营业额达到 ¥3,000 提升交情和粉丝，否则回落。",14,Ui.Dim);
+                var card = BusinessCard(w.Content, Creators.Get(c.Id).Name);
+                Line(card, $"剩余 {c.McnUntilDay - S.Clock.Today.TotalDays} 天 · 本期分成 {Money.FromCents(c.McnIncomeCents)}", 17);
             }
         }
         private void BuildResidence(Window w)

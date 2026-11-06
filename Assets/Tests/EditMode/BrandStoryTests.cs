@@ -38,7 +38,7 @@ namespace PCShopSell.Tests
         private static void Day(GameSession s, int day, int minute = 600) => s.Clock.Restore(new GameDate(day), minute);
         private static string BeginDeal(GameSession s, string person)
         {
-            Assert.True(McnSigningTest.Endorse(s,"b", person, "endorse", false)); MeetHere(s, person);
+            Assert.True(McnSigningTest.Sign(s,"b", person)); MeetHere(s, person);
             string id = s.BrandStoryOffers().Single(x => x.PersonId == person).Id; s.BeginBrandStory(id);
             Assert.AreEqual(1, s.BrandStories.Single(x => x.Id == id).Stage); return id;
         }
@@ -64,7 +64,7 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                s.SignBrandDeal("b", "momo", "campaign", false); var first = s.BrandStoryOffers().ToArray();
+                Assert.True(McnSigningTest.Sign(s, "b", "momo")); var first = s.BrandStoryOffers().ToArray();
                 Assert.AreEqual(1, first.Length); first[0].Stage = 3;
                 Assert.AreEqual(0, s.BrandStories.Count); Assert.AreEqual(0, s.BrandStoryOffers().Single().Stage);
                 Assert.False(s.LearnedPersonStories("momo").Any(t => t.Contains("视频带来的")));

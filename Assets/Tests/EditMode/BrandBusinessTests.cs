@@ -8,6 +8,7 @@ using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.Finance;
+using PCShopSell.Core.World;
 
 namespace PCShopSell.Tests
 {
@@ -37,12 +38,38 @@ namespace PCShopSell.Tests
             using (var s = GameSession.Load(city, preset.CreateSave()))
             {
                 Assert.True(s.IsCityLifeTest);
+                Assert.AreEqual(count * 5, s.MyShopCount);
+                Assert.True(s.MyShops.All(shop => GameSession.IsCommercialPremises(shop.Place)));
+                Assert.AreEqual("home_tier1", s.Home.Id);
+                Assert.AreEqual(1, s.DistrictTierOf(s.Home));
+                Assert.True(s.CanSleepAt(s.Home));
+                var suburbHome = city.GetPlace("home");
+                Assert.AreEqual(0, s.DistrictTierOf(suburbHome));
+                Assert.True(s.CanSleepAt(suburbHome));
+                Assert.AreEqual("vacant", s.PropertyAt(suburbHome.Id).UseMode);
+                Assert.AreEqual(1, s.VehicleCount(VehicleKind.EBike));
+                Assert.AreEqual("e_city", s.Garage.Single().ModelId);
+                Assert.AreEqual(VehicleKind.EBike, s.Vehicle);
                 Assert.IsEmpty(s.BrandBusiness.Brands);
                 var eligible = GameSession.BrandKinds.Where(kind => s.BrandFoundBlocker(kind) == null).ToArray();
                 CollectionAssert.AreEqual(GameSession.BrandKinds.Take(count), eligible);
                 foreach (string kind in eligible)
                     Assert.True(s.FoundBrand(kind, "测试品牌" + kind, "quality"), s.BrandQualificationText(kind));
                 Assert.AreEqual(count, s.BrandBusiness.Brands.Length);
+
+                var oldSave = s.CreateSave();
+                oldSave.business.Properties = oldSave.business.Properties.Where(p => p.PlaceId != suburbHome.Id).ToArray();
+                using (var old = GameSession.Load(city, oldSave))
+                {
+                    Assert.False(old.CanSleepAt(suburbHome));
+                    long balance = old.Ledger.Balance.Cents;
+                    Assert.True(old.DebugRestoreBrandCreationSuburbHome());
+                    Assert.False(old.DebugRestoreBrandCreationSuburbHome());
+                    Assert.True(old.CanSleepAt(suburbHome));
+                    Assert.AreEqual("home_tier1", old.Home.Id);
+                    Assert.AreEqual(count, old.BrandBusiness.Brands.Length);
+                    Assert.AreEqual(balance, old.Ledger.Balance.Cents);
+                }
             }
         }
         [Test] public void BrandRequiresCommunityAndSustainedQualifications()
@@ -129,13 +156,12 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                Assert.True(McnSigningTest.Endorse(s,"b", "momo", "endorse", false));
+                Assert.True(McnSigningTest.Sign(s,"b", "momo"));
                 var state = s.BrandBusiness;
                 state.Brands[0].Reputation = 1000;
                 Set(s, state);
                 Assert.AreEqual(.60, s.BrandTraffic(s.MyShops.First()), .000001);
-                Assert.Zero(s.BrandEffectivePromotionTraffic("b"));
-                Assert.Zero(s.BrandEffectiveDealTraffic(s.BrandBusiness.Deals.Single()));
+                Assert.Zero(s.BrandDealTraffic(s.BrandBusiness.Deals.Single()));
             }
         }
         [Test] public void AmbassadorDoesNotAddPassiveTrafficAndBlocksOtherBrand()
@@ -145,8 +171,8 @@ namespace PCShopSell.Tests
                 var state=s.BrandBusiness;var b=state.Brands[0];var shop=s.ShopAt(b.ShopIds[0]);
                 state.Brands=state.Brands.Concat(new[]{new BrandRecord{Id="other",Kind="models",Name="模型"}}).ToArray();Set(s,state);
                 double before=s.CityCampaignTraffic(shop);long balance=s.Ledger.Balance.Cents;
-                Assert.True(McnSigningTest.Endorse(s,"b","momo","endorse",true));Assert.Less(s.Ledger.Balance.Cents,balance);Assert.AreEqual(before,s.CityCampaignTraffic(shop),1e-6);
-                Assert.False(s.SignBrandDeal("other","momo","campaign",false));
+                Assert.True(McnSigningTest.Sign(s,"b","momo"));Assert.Less(s.Ledger.Balance.Cents,balance);Assert.AreEqual(before,s.CityCampaignTraffic(shop),1e-6);
+                Assert.False(s.AssignKolBrand(s.ActiveKolAmbassador("momo").Id,"other"));
                 string id=s.BrandBusiness.Deals[0].Id;Assert.True(s.RespondBrandDeal(id,"pause"));Assert.AreEqual(before,s.CityCampaignTraffic(shop),1e-6);
                 Assert.True(s.RespondBrandDeal(id,"end"));Assert.False(s.RespondBrandDeal(id,"end"));
             }
@@ -182,7 +208,7 @@ namespace PCShopSell.Tests
             using(var s=Make())
             {
                 var state=s.BrandBusiness;state.Orders=new[]{new BrandOrder{Id="o",BrandId="b",ShopId=state.Brands[0].ShopIds[0],ProductId=Product,Count=20,Due=80}};Set(s,state);
-                long money=s.Ledger.Balance.Cents;Assert.False(s.FulfilBrandOrder("o"));Assert.False(s.SignBrandDeal("b","fake","endorse",false));Assert.False(s.SignBrandResource("b","media","channel"));Assert.AreEqual(money,s.Ledger.Balance.Cents);
+                long money=s.Ledger.Balance.Cents;Assert.False(s.FulfilBrandOrder("o"));Assert.False(s.SignKolAmbassador("fake",90,1));Assert.False(s.SignBrandResource("b","media","channel"));Assert.AreEqual(money,s.Ledger.Balance.Cents);
             }
         }
         [Test] public void TenderNeedsTrialAndFailureDoesNotAwardSeat()
@@ -298,7 +324,7 @@ namespace PCShopSell.Tests
         {
             using(var s=Make())
             {
-                Assert.True(McnSigningTest.Endorse(s,"b","momo","endorse",false));var state=s.BrandBusiness;state.Deals[0].Severity=1;state.Deals[0].NewsDay=40;Set(s,state);string id=state.Deals[0].Id;
+                Assert.True(McnSigningTest.Sign(s,"b","momo"));var state=s.BrandBusiness;state.Deals[0].Severity=1;state.Deals[0].NewsDay=40;Set(s,state);string id=state.Deals[0].Id;
                 Assert.True(s.RespondBrandDeal(id,"negotiate"));Assert.True(s.RespondBrandDeal(id,"continue"));long balance=s.Ledger.Balance.Cents;Assert.False(s.RespondBrandDeal(id,"negotiate"));Assert.AreEqual(balance,s.Ledger.Balance.Cents);
             }
         }

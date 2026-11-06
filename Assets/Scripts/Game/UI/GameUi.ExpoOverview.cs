@@ -32,7 +32,7 @@ namespace PCShopSell.Game.UI
             Line(heading, exhibit == null ? "尚未报名 · 报名截止 " + new GameDate(day - 7)
                 : exhibit.Attending ? "现场进行中 · 第" + (exhibit.Decision / 6 + 1) + "天"
                 : "已报名 · " + (day > S.Clock.Today.TotalDays ? "距开幕" + (day - S.Clock.Today.TotalDays) + "天" : "已到展期"), 18, Ui.Accent);
-            Para(heading, "连续参加4天，每天6段现场互动；门店、房租和KOL日薪照常结算。", 15, Ui.Dim);
+            Para(heading, "连续参加4天，每天6段现场互动；门店和房租照常结算。", 15, Ui.Dim);
             if (exhibit == null)
             {
                 bool bookingOpen = S.Clock.Today.TotalDays <= day - 7;
@@ -139,7 +139,7 @@ namespace PCShopSell.Game.UI
                 Line(body, GameSession.ExpoBoothName(e.Booth) + " · 摊位已付 ¥" + GameSession.ExpoBoothFee(e.Booth).ToString("N0"), 20, Ui.Accent);
                 Line(body, "海报 ¥" + GameSession.ExpoPosterFee(e.Booth) + (e.Booth == 0 ? " · 无需制作" : e.DesignerId == null ? " · 尚未支付" : " · 已支付"), 18);
                 Line(body, "KOL每日总日酬 ¥" + e.KolDayQuotes.Sum().ToString("N0") + " · 4天约 ¥" + (e.KolDayQuotes.Sum() * 4).ToString("N0"), 18);
-                Para(body, "报价含基础日薪。基础日薪照常结算，参展期间每日另收站台溢价。已结算站台溢价 " + Money.FromCents(e.ExpoWagesCents), 17);
+                Para(body, "参展期间按报价每日结算站台费。已结算站台费 " + Money.FromCents(e.ExpoWagesCents), 17);
             }
             else if (_expoPage == "poster")
             {
