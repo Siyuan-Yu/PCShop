@@ -21,7 +21,7 @@ namespace PCShopSell.Game.UI
                 var row=Ui.Row(card,36,6);
                 Ui.Size(Ui.Button(row,"检测 ¥300",()=>{S.InspectUsedMotor(c.Vehicle.Id);w.Rebuild();},16,Ui.ButtonBg,!c.Inspected),-1,36,1);
                 Ui.Size(Ui.Button(row,c.Inspected?"整备 ¥"+S.MotorRepairPrice(c.Vehicle).ToString("N0"):"先检测再整备",()=>{S.RepairUsedMotor(c.Vehicle.Id);w.Rebuild();},16,Ui.ButtonBg,c.Inspected&&c.Vehicle.Condition<100),-1,36,1);
-                Ui.Size(Ui.Button(row,"取回自用车库",()=>{S.WithdrawUsedMotor(c.Vehicle.Id);w.Rebuild();},16),-1,36,1);
+                Ui.Size(Ui.Button(row,"转为自用车辆",()=>OpenMotorAcquisition(w,c.Vehicle.ModelId,true,c.Vehicle.Id),16),-1,36,1);
                 if(c.Inspected)
                 {
                     long suggested=(long)(m.Price*(.45+.004*c.Vehicle.Condition));long current=c.ListPrice>0?c.ListPrice:suggested;

@@ -33,6 +33,8 @@ namespace PCShopSell.Game.UI
                 : exhibit.Attending ? "现场进行中 · 第" + (exhibit.Decision / 6 + 1) + "天"
                 : "已报名 · " + (day > S.Clock.Today.TotalDays ? "距开幕" + (day - S.Clock.Today.TotalDays) + "天" : "已到展期"), 18, Ui.Accent);
             Para(heading, "连续参加4天，每天6段现场互动；门店和房租照常结算。", 15, Ui.Dim);
+            if (exhibit != null && !exhibit.Attending)
+                Para(heading, "请于" + new GameDate(exhibit.Day) + "09:00—10:00亲自到云帆会展中心报到。已加入日程，前一天及出发前会提醒。", 18, Ui.Good);
             if (exhibit == null)
             {
                 bool bookingOpen = S.Clock.Today.TotalDays <= day - 7;
@@ -69,7 +71,7 @@ namespace PCShopSell.Game.UI
                     Line(info, available.Contains(person) ? "合约有效" : "需替换", 14, available.Contains(person) ? Ui.Good : Ui.Warn);
                 }
                 int endorserCount = S.ExpoEndorsers(e).Length;
-                if (endorserCount > 0) Line(people, "另有 " + endorserCount + " 位品牌代言人参加开幕日", 16, Ui.Good);
+                if (endorserCount > 0) Line(people, "以上受邀代言人参加本届展会，不另加人。", 16, Ui.Dim);
                 ExpoDetailButton(people, w, "查看人员安排", "people");
                 var poster = BrandCard(body, "海报 · " + (e.Booth == 0 ? "小型摊位无需海报" : e.DesignerId == null
                     ? "尚未委托" : e.PosterReadyAt <= S.Clock.Now.TotalMinutes ? "已完成" : "制作中"));
@@ -94,9 +96,9 @@ namespace PCShopSell.Game.UI
                     Line(body, e.Booth > 0 && e.DesignerId == null ? "下一步：选择制作人，委托海报。" : blocker ?? "准备齐全，可以报到参展。", 17, blocker == null ? Ui.Good : Ui.Warn);
                     var actions = Ui.Row(body, 40, 8);
                     ExpoTravelButton(actions);
-                    Ui.Size(Ui.Button(actions, "报到并参加4天展会…", () => ConfirmBusiness("连续4天参展",
-                        "进入后连续处理24段现场互动。餐宿由展务安排，门店与各项账单照常结算。4天KOL总日酬约¥"
-                        + (e.KolDayQuotes.Sum() * 4).ToString("N0") + "，可中途保存并继续。", () =>
+                    Ui.Size(Ui.Button(actions, S.ExpoJointBrandCount(e.Day)>1?"同届品牌联合报到…":"报到并参加4天展会…", () => ConfirmBusiness("连续4天参展",
+                        "本届"+S.ExpoJointBrandCount(e.Day)+"个品牌联合报到，各自处理24段现场互动，共用4天时间。餐宿由展务安排，库存、站台费和结算各自独立。本品牌4天KOL总日酬约¥"
+                        + (e.KolDayQuotes.Sum() * 4).ToString("N0") + "；其他品牌按各自报名报价结算，可中途保存并继续。", () =>
                         { if (S.StartQuarterlyExpo(e.Id)) { CloseAllWindows(); OpenQuarterlyExpo(e.Id); } else w.Rebuild(); }),
                         18, Ui.ButtonHot, blocker == null), -1, 40, 1).name = "ExpoStart_" + e.Id;
                 }
@@ -123,6 +125,7 @@ namespace PCShopSell.Game.UI
             Line(card, "现场营收 " + Money.FromCents(e.RevenueCents) + " · 售出" + e.Products.Sum(p => p.Sold) + "件 · 得分" + e.Score, 18);
             Line(card, "未售库存" + (e.StockReturned ? "已退回原门店" : "尚未退回"), 16, Ui.Dim);
             foreach (string entry in e.Journal.TakeLast(3)) Para(card, entry, 15, Ui.Dim);
+            if (e.Format == 2) Ui.Size(Ui.Button(card, "查看本届结算", () => OpenExpoSettlement(e.Id), 17), -1, 36);
         }
 
         private void BuildExpoPreparationDetail(Transform body, Window w, BrandExhibit e)
@@ -195,7 +198,7 @@ namespace PCShopSell.Game.UI
                 Line(details, S.CityPerson(person).Name + (exhibit.KolIds.Contains(person) ? " · 兼任站台KOL" : ""), 17, Ui.Accent);
                 Line(details, S.ExpoEndorserStatus(exhibit, person), 15, focus ? Ui.Good : Ui.Dim);
             }
-            Line(card, onsite ? "点击已到场的代言人头像可切换镜头。" : "开幕日出席已包含在代言费里。", 15, Ui.Dim);
+            Line(card, onsite ? "点击已到场的代言人头像可切换镜头。" : "本届站台费按报名报价每日结算。", 15, Ui.Dim);
         }
     }
 }

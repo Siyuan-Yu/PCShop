@@ -58,7 +58,7 @@ namespace PCShopSell.Core.Session
         public string WorkHours => WorkContract == null ? "" : PlayerWorkHours(WorkContract.ShiftStart, WorkContract.ShiftEnd);
         public int WorkMinutesLeft => !IsWorking ? 0 : (int)Math.Max(0, (long)(WorkContract.StartDay + WorkContract.WorkingIndex) * 1440 + WorkContract.ShiftEnd - Clock.Now.TotalMinutes);
 
-        public bool OffersPlayerWork(Place p) => p != null && p.Kind == PlaceKind.Shop && !IsMyShop(p) && !IsVacant(p) && VentureAt(p.Id) == null;
+        public bool OffersPlayerWork(Place p) => p != null && p.Id != "life_expo" && p.Kind == PlaceKind.Shop && !IsMyShop(p) && !IsVacant(p) && VentureAt(p.Id) == null;
         public PlayerWorkOffer PlayerWorkFor(Place p)
         {
             switch (p?.Business)

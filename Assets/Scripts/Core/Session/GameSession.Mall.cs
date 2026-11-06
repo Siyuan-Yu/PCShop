@@ -286,7 +286,8 @@ namespace PCShopSell.Core.Session
             MallPlan plan = PlanLines(lines, mode);
             if (plan.Blocker != null) return Fail(plan.Blocker + "。");
             string what = string.Join("、", lines.Select(l => FurnitureCatalog.Get(l.Id).Name + (l.Count > 1 ? "×" + l.Count : "")));
-            if (!Ledger.TryDebit(Clock.Today, "家具", plan.Total, what + (plan.Trucks > 0 ? $"（含货车运费 {plan.Trucks} 辆）" : ""))) return Fail("钱不够。");
+            if (!Ledger.TryDebit(Clock.Today, "家具", plan.Total, what + (plan.Trucks > 0 ? $"（含货车运费 {plan.Trucks} 辆）" : ""),
+                DeliverToShop&&HasShop?PCShopSell.Core.Finance.LedgerAttribution.ForShop(CurrentShop.Place.Id):null)) return Fail("钱不够。");
 
             foreach (MallCartLine l in plan.SelfItems) Backpack.AddFurniture(l.Id, l.Count);
             if (plan.SelfItems.Count > 0) ApplyCargoLimit();

@@ -55,11 +55,8 @@ namespace PCShopSell.Core.Session
         public Money CityPropertyPrice(string id)
         {
             if (!City.HasPlace(id)) return Money.Zero;
-            var existing = PropertyAt(id); if (existing != null) return Money.FromCents(existing.PriceCents);
-            var own = ShopAt(id); var venture = VentureAt(id); var place = City.GetPlace(id);
-            Money rent = own?.Lease != null ? own.Lease.Rent : venture != null ? Money.FromCents(venture.RentCents) : _listings.Find(l => l.PlaceId == id)?.Rent ?? Money.Zero;
-            if (!rent.IsPositive) rent = ShopRentQuote(place);
-            return rent * 120;
+            var place = City.GetPlace(id);
+            return place.Kind == PlaceKind.Home ? ResidentialPrice(place) : (FootfallOf(place).MonthlyRent * 120).Scale(ShopSaleFactor);
         }
         public CityPropertyPurchase PreviewCityPropertyPurchase(string id, bool mortgage)
         {
@@ -71,8 +68,8 @@ namespace PCShopSell.Core.Session
             var quote = new CityPropertyPurchase { PlaceId = id, Address = CityPropertyAddress(place), Price = price,
                 Fee = price.Scale(.02), IsSelfUse = shop != null || venture != null,
                 Tenant = shop != null ? ShopTitle(shop) : venture != null ? Ventures.Get(venture.Kind).Name : IsVacant(place) || IsBareUnit(place) ? "空置" : place.Name + "原经营者" };
-            quote.Mortgage = mortgage ? price.Scale(.7) : Money.Zero;
-            quote.DownPayment = price - quote.Mortgage;
+            quote.Mortgage = Money.Zero;
+            quote.DownPayment = price;
             if (shop?.Lease != null)
             {
                 quote.DepositCredit = shop.Lease.Deposit;
@@ -92,6 +89,7 @@ namespace PCShopSell.Core.Session
         public string CityPropertyPurchaseBlocker(string id, bool mortgage)
         {
             if (IsGameOver) return "当前不能交易";
+            if (mortgage) return "物业仅支持全款购买";
             if (!CityCommercialProperties.Any(p => p.Id == id)) return "该地点不是可交易的商业物业";
             if (InAgency && !AgencyServes(CurrentPlace, City.GetPlace(id))) return "请到房源所属片区的中介办理";
             if (PropertyAt(id) != null) return "已经持有这处物业";
@@ -106,10 +104,10 @@ namespace PCShopSell.Core.Session
             var q = PreviewCityPropertyPurchase(id, mortgage); var place = City.GetPlace(id); var own = ShopAt(id); var venture = VentureAt(id);
             string eventId = "property:purchase:" + id + ":" + Clock.Now.TotalMinutes + ":" + _cityAssetEffects.Count;
             if (q.TotalDue.IsPositive && !Ledger.TryDebit(Clock.Today, "购置物业", q.TotalDue, q.Address + "（含2%交易费，抵扣已记录的押金及未用首月租金）", LedgerAttribution.ForAsset(id, eventId))) return Fail("交易时现金不足，产权未改变。");
-            var property = new OwnedProperty { PlaceId = id, PriceCents = q.Price.Cents, MortgageCents = q.Mortgage.Cents,
-                MonthlyPrincipalCents = (q.Mortgage.Cents + 35) / 36, BoughtDay = Clock.Today.TotalDays, CitySchema = 1,
+            var property = new OwnedProperty { PlaceId = id, PriceCents = q.Price.Cents,
+                BoughtDay = Clock.Today.TotalDays, CitySchema = 1,
                 UseMode = q.IsSelfUse ? "self" : q.Tenant == "空置" ? "vacant" : "npc", TenantName = q.IsSelfUse ? "玩家自营" : q.Tenant,
-                MonthlyRentCents = q.Price.Cents / 120, LeaseEndDay = Clock.Today.TotalDays + 360, LastSettledMonth = Clock.Today.TotalDays / 30 };
+                MonthlyRentCents = ShopRentQuote(place).Cents, LeaseEndDay = Clock.Today.TotalDays + 360, LastSettledMonth = Clock.Today.TotalDays / 30 };
             _properties.Add(property); _cityAssetEffects.Add(eventId); _listings.RemoveAll(l => l.PlaceId == id); _vacant.Remove(id);
             if (own != null) { own.OwnsProperty = true; own.Lease.Deposit = Money.Zero; own.Lease.Rent = Money.Zero; }
             if (venture != null) { venture.DepositCents = 0; venture.RentCents = 0; }
@@ -122,7 +120,6 @@ namespace PCShopSell.Core.Session
             if (InAgency && !AgencyServes(CurrentPlace, City.GetPlace(id))) return "请到物业所属片区的中介办理";
             if (ShopAt(id) != null || VentureAt(id) != null) return "请先结束自营并清理经营资产；本轮不办理售后回租";
             if (id == ParkPlaceId && _ventures.Any(IsParkVenture)) return "先清退园区全部铺位";
-            if (Ledger.Balance + PropertySaleNet(PropertyAt(id)) < Money.Zero) return "售价不足偿还房贷，需要先补足现金";
             return null;
         }
         private bool SellCityProperty(string id)
@@ -131,8 +128,7 @@ namespace PCShopSell.Core.Session
             string why = CityPropertySaleBlocker(id); if (why != null) return Fail(why + "。");
             var p = PropertyAt(id); Money net = PropertySaleNet(p);
             string key = "property:sale:" + id + ":" + p.BoughtDay + ":" + _cityAssetEffects.Count;
-            if (net.IsPositive) Ledger.Credit(Clock.Today, "物业出售", net, "按估值九折，已扣交易成本并清偿剩余房贷", LedgerAttribution.ForAsset(id, key));
-            else if (net.IsNegative && !Ledger.TryDebit(Clock.Today, "物业出售", -net, "补足房贷差额", LedgerAttribution.ForAsset(id, key))) return false;
+            if (net.IsPositive) Ledger.Credit(Clock.Today, "物业出售", net, "按估值九折，包含交易成本", LedgerAttribution.ForAsset(id, key));
             _cityAssetEffects.Add(key); _properties.Remove(p);
             if (id == ParkPlaceId) { ParkPlaceId = null; ParkReadyDay = 0; }
             if (p.UseMode == "vacant" || p.UseMode == "managed") { _vacant.Add(id); if (!_listings.Any(l => l.PlaceId == id)) AddListing(City.GetPlace(id), Clock.Today.TotalDays, Clock.Today.TotalDays + 45); }
@@ -149,7 +145,7 @@ namespace PCShopSell.Core.Session
             if (p.UseMode == "npc") return Fail("现有租户租约受保护，本轮不提供强制驱逐。");
             if (!rentOut && p.UseMode == "managed" && Clock.Today.TotalDays < p.LeaseEndDay) return Fail("托管租约尚未到期，不能直接腾空。");
             p.UseMode = rentOut ? "managed" : "vacant"; p.TenantName = rentOut ? "中介托管商户" : "";
-            if (rentOut) p.LeaseEndDay = Clock.Today.TotalDays + 30;
+            if (rentOut) { p.LeaseEndDay = Clock.Today.TotalDays + 30; p.MonthlyRentCents = ShopRentQuote(City.GetPlace(id)).Cents; }
             Say(rentOut ? "出租已登记：下一月账期收取租金，管理及空置折损为15%。" : "租约结束，物业恢复空置。"); return true;
         }
         public bool OpenCityOwnedShop(string id, string retailKind = "computer")
@@ -189,14 +185,6 @@ namespace PCShopSell.Core.Session
                 }
                 Money maintenance = Money.FromCents(p.PriceCents).Scale(.001);
                 if (maintenance.IsPositive) Ledger.ForceDebit(today, "物业维护", maintenance, residential?"出租住宅月维护":"商用物业月维护", LedgerAttribution.ForAsset(p.PlaceId, basis + ":maintenance"));
-                if (p.MortgageCents > 0)
-                {
-                    long principal = Math.Min(p.MortgageCents, p.MonthlyPrincipalCents);
-                    Money interest = Money.FromCents(p.MortgageCents).Scale(.004);
-                    if (principal > 0) Ledger.ForceDebit(today, "偿还房贷", Money.FromCents(principal), "物业月供本金", new LedgerAttribution(LedgerBusinessKind.Financing, propertyId: p.PlaceId, sourceEventId: basis + ":principal"));
-                    if (interest.IsPositive) Ledger.ForceDebit(today, "房贷利息", interest, "物业月供利息", new LedgerAttribution(LedgerBusinessKind.Financing, propertyId: p.PlaceId, sourceEventId: basis + ":interest"));
-                    p.MortgageCents -= principal;
-                }
             }
         }
 
@@ -214,8 +202,9 @@ namespace PCShopSell.Core.Session
         public bool CityInvestmentUsesReserve(string id, long units) => Ledger.Balance - CityInvestmentTradeTotal(id, units, true) < GetCityCashReserve().Total;
         public bool TradeCityInvestment(string id, long units, bool buy, bool acknowledgeReserve = false)
         {
+            string appBlocker=AppBlocker(PhoneApps.Securities);if(appBlocker!=null)return Fail(appBlocker);
             var e = _cityEquities.Find(x => x.Id == id);
-            if ((id != "hardware" && e == null) || IsGameOver || !HasSmartphone&&!CanUseHomeWorkbench || units <= 0 || units > 1000000) return Fail("请使用智能手机或居家工作台入口，按整数份额交易。");
+            if ((id != "hardware" && e == null) || IsGameOver || units <= 0 || units > 1000000) return Fail("请通过手机证券，按整数份额交易。");
             Money amount = CityInvestmentTradeTotal(id, units, buy); if (!amount.IsPositive) return Fail("交易金额不足以支付手续费。");
             if (buy && !acknowledgeReserve && CityInvestmentUsesReserve(id, units)) return Fail("这笔买入将动用未来必付款及资金保护额，请在投资确认页阅读预警后继续。");
             long held = CityInvestmentUnits(id); if (!buy && held < units) return Fail("不能卖出超过实际持仓的份额。");
@@ -268,12 +257,14 @@ namespace PCShopSell.Core.Session
         }
         public void LoadCityAssets(SaveData d)
         {
+            // Retire legacy property financing without changing ownership, leases or cash.
+            HomeMortgageCents = HomeMonthlyPrincipalCents = 0;
             var uniqueProperties = _properties.GroupBy(p => p.PlaceId).Select(g => g.First()).ToArray();
             if (uniqueProperties.Length != _properties.Count) { _properties.Clear(); _properties.AddRange(uniqueProperties); }
             foreach (var p in _properties)
             {
-                p.PriceCents = Math.Max(1, p.PriceCents); p.MortgageCents = Math.Max(0, p.MortgageCents);
-                if (p.MortgageCents > 0 && p.MonthlyPrincipalCents <= 0) p.MonthlyPrincipalCents = (p.MortgageCents + 35) / 36;
+                p.PriceCents = Math.Max(1, p.PriceCents);
+                p.MortgageCents = p.MonthlyPrincipalCents = 0;
                 if (p.CitySchema == 0)
                 {
                     p.CitySchema = 1; p.UseMode = ShopAt(p.PlaceId) != null || VentureAt(p.PlaceId) != null ? "self" : "managed";

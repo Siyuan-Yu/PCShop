@@ -66,7 +66,6 @@ namespace PCShopSell.Game.UI
             {
                 if (state.Back.Count > 0)
                     Ui.Size(Ui.Button(w.Content, "‹ 返回上一页", () => BackWorkspace(state), 16), -1, 30).name = "WorkspaceBack";
-                if (group == "business") BuildBusinessNavigation(w, page);
                 build(w);
             }
             if (state.Window == null || state.Window.Closed)
@@ -93,22 +92,9 @@ namespace PCShopSell.Game.UI
             w.Builder = win =>
             {
                 if (state.Back.Count > 0) Ui.Size(Ui.Button(win.Content, "‹ 返回上一页", () => BackWorkspace(state), 16), -1, 30).name = "WorkspaceBack";
-                if (w.Root.name == "Workspace_business") BuildBusinessNavigation(win, page.Id);
                 page.Build(win);
             };
             w.Rebuild(); w.Fitter.Fit(); Ui.RestoreScroll(w.Root, w.Root, page.Scroll);
-        }
-
-        private void BuildBusinessNavigation(Window w, string selected)
-        {
-            var row = Ui.Row(w.Content, 38, 6);
-            void Link(string id, string label, Action action)
-            { Ui.Size(Ui.Button(row, label, action, 17, selected == id ? Ui.ButtonHot : Ui.ButtonBg), -1, 38, 1).name = "BusinessNav_" + id; }
-            Link("finance", "收支", OpenCityFinanceOverview);
-            Link("procurement", "采购", OpenCityProcurement);
-            Link("properties", "物业", OpenCityProperties);
-            Link("investments", "投资", OpenCityInvestments);
-            Link("services", "合同与合作", OpenBusinessServices);
         }
 
         private void HelpLink(Transform parent, string title, string text)
@@ -133,6 +119,12 @@ namespace PCShopSell.Game.UI
 
         private void GoToPropertyAgency(Place property = null)
         {
+            if(property!=null)
+            {
+                _agencyResidential=property.Kind==PlaceKind.Home;
+                _agencySelectedId=property.Id;
+                _residentialSelectedId=property.Id;
+            }
             var agency = PreferredAgency(property);
             if (agency == null) { Toast("当前没有可前往的中介。"); return; }
             CloseModalWindows();

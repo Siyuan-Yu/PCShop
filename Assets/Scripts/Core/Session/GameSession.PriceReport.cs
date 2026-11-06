@@ -17,7 +17,8 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         public static readonly string[] PriceGroups = PartCatalog.Categories.Select(PartCatalog.CategoryName)
-            .Concat(new[] { "米与食材", "烟酒饮料与礼品", "家具与货架", "快餐", "载具", "智能手机", "服装" }).ToArray();
+            .Concat(new[] { "米与食材", "烟酒饮料与礼品", "家具与货架", "快餐", "载具", "智能手机", "服装", "住宅售价", "住宅月租", "商铺售价", "商铺月租" }).ToArray();
+        public static int PropertyPriceGroupStart => PriceGroups.Length - 4;
         private readonly List<PriceDay> _priceDays = new List<PriceDay>();
         private int _nextPriceReportDay;
         public IReadOnlyList<PriceDay> PriceDays => _priceDays;
@@ -43,6 +44,7 @@ namespace PCShopSell.Core.Session
             prices.Add(Vehicles.All.Where(v => v.Purchasable).Average(v => (double)v.Price.Cents));
             prices.Add(PhonePrice.Cents);
             prices.Add(Outfits.All.Where(o => o.Price.IsPositive).Average(o => (double)o.Price.Cents));
+            prices.AddRange(_propertyPriceFactors.Select(v => v * 10000));
             _priceDays.Add(new PriceDay { Day = day, Prices = prices.ToArray() });
             if (_nextPriceReportDay <= 0) _nextPriceReportDay = day + 7;
             if (day < _nextPriceReportDay) return;
@@ -50,7 +52,7 @@ namespace PCShopSell.Core.Session
             if (WeeklyPricesSubscribed)
             {
                 WeeklyPricesPending = true;
-                Notice?.Invoke("本周物价简报已出，可在“行情 → 每周物价简报”查看。");
+                Notice?.Invoke("本周物价简报已出，含住宅与商铺售价、月租涨跌，可在“行情 → 每周物价简报”查看。");
             }
         }
 
@@ -58,9 +60,13 @@ namespace PCShopSell.Core.Session
         {
             _priceDays.Clear();
             foreach (var p in (data.priceDays ?? Array.Empty<PriceDay>()).Where(p => p != null).OrderBy(p => p.Day))
-                if (p.Day >= 0 && p.Day <= Clock.Today.TotalDays && p.Prices != null && p.Prices.Length == PriceGroups.Length
-                    && p.Prices.All(v => v > 0 && !double.IsNaN(v) && !double.IsInfinity(v)) && !_priceDays.Any(d => d.Day == p.Day))
-                    _priceDays.Add(p.Copy());
+            {
+                if (p.Day < 0 || p.Day > Clock.Today.TotalDays || p.Prices == null
+                    || p.Prices.Length != PriceGroups.Length
+                    || p.Prices.Any(v => v <= 0 || double.IsNaN(v) || double.IsInfinity(v))
+                    || _priceDays.Any(d => d.Day == p.Day)) continue;
+                _priceDays.Add(p.Copy());
+            }
             _nextPriceReportDay = data.nextPriceReportDay > 0 ? data.nextPriceReportDay : Clock.Today.TotalDays + 7;
             WeeklyPricesPending = data.weeklyPricesPending && WeeklyPricesSubscribed;
             RecordPriceDay();

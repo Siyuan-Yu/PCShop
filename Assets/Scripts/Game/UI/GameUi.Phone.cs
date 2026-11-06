@@ -86,6 +86,7 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Chat: return new Color(0.18f, 0.72f, 0.58f);
                 case PhoneApps.Loans: return new Color(0.82f, 0.59f, 0.19f);
                 case PhoneApps.Live: return new Color(0.72f, 0.46f, 0.19f);
+                case PhoneApps.Securities: return new Color(.28f,.47f,.58f);
                 default: return Ui.ButtonBg;
             }
         }
@@ -101,6 +102,7 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Chat: return "聊";
                 case PhoneApps.Loans: return "借";
                 case PhoneApps.Live: return "播";
+                case PhoneApps.Securities: return "券";
                 default: return "?";
             }
         }
@@ -160,6 +162,7 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Chat: OpenChatPanel(); break;
                 case PhoneApps.Loans: OpenLoansApp(); break;
                 case PhoneApps.Live: w.Close(); OpenKolLobby(); break;
+                case PhoneApps.Securities: w.Close(); OpenCityInvestments(); break;
             }
         }
 

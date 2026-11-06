@@ -136,7 +136,7 @@ namespace PCShopSell.Game.UI
             if(_workbenchPeriod==0&&S.Clock.Today.TotalDays==0)flow=(Money.Zero,Money.Zero);
             WbText(finance,"收入 +"+flow.income,21);WbText(finance,"支出 "+flow.expense,21);WbText(finance,"日常收支 · 投资与借还单列",14,WbDim);
             WbButton(finance,"完整账本",OpenLedger,"WorkbenchLedger");WbButton(finance,"物业与资产",OpenCityProperties,"WorkbenchProperties");
-            WbButton(finance,"债务与还款",()=>{_businessTab=0;ShowBusinessPanel(false);},"WorkbenchDebt");
+            WbButton(finance,"手机借款与还款",OpenLoansApp,"WorkbenchDebt");
             var alerts=WbColumn(row,"WorkbenchPersonalDecisions");WbText(alerts,"需要我决定",22);
             var list=WbScroll(alerts,"WorkbenchDecisionsList");
             if(S.PendingEvent!=null)WbButton(list,S.PendingEvent.Title,()=>ShowEvent(S.PendingEvent),"WorkbenchPendingEvent");
@@ -295,9 +295,9 @@ namespace PCShopSell.Game.UI
         {
             var reserve=S.GetCityCashReserve();WbText(parent,"投资市值 "+S.CityEquityValue+" · 已实现 "+S.CityEquityRealized,24);
             WbText(parent,"现金 "+S.Ledger.Balance+" · 经营预留 "+reserve.Total+" · 预留后 "+reserve.Available,20);
-            WbButton(parent,"行情、持仓与真实买卖",OpenCityInvestments,"WorkbenchTrade",true);
+            WbButton(parent,"打开手机证券",OpenCityInvestments,"WorkbenchTrade",true);
             var list=WbScroll(parent,"WorkbenchInvestmentNews");WbText(list,S.CityInvestmentNews,18);
-            WbButton(list,"资产与负债",()=>{_businessTab=0;ShowBusinessPanel(false);},"WorkbenchInvestmentDebt");
+            WbButton(list,"门店与自有物业",OpenCityFinanceOverview,"WorkbenchInvestmentDebt");
         }
         private void BuildWorkbenchContacts(Transform parent)
         {

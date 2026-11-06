@@ -13,17 +13,18 @@ namespace PCShopSell.Core.Session
     }
     [Serializable] public sealed class GarageVehicle
     {
-        public string Id,ModelId; public int Motor,Battery,Tyres,Steering; public double Condition=100;
+        public string Id,ModelId,GarageId; public int Motor,Battery,Tyres,Steering; public double Condition=100;
+        public bool Commuter,Impounded;
         public GarageVehicle Copy()=>(GarageVehicle)MemberwiseClone();
     }
     public static class MotorCatalog
     {
         public static readonly MotorModel[] All={
-            new MotorModel("e_city","顺风·轻行",VehicleKind.EBike,1800,40,3.5,72,88),
-            new MotorModel("e_range","顺风·远行",VehicleKind.EBike,3200,48,3.8,80,75),
-            new MotorModel("e_turn","顺风·灵燕",VehicleKind.EBike,5600,55,4.8,90,96),
-            new MotorModel("e_dash","顺风·疾电",VehicleKind.EBike,9000,70,6.5,76,80),
-            new MotorModel("e_race","顺风·逐风R",VehicleKind.EBike,16000,85,7.5,94,90),
+            new MotorModel("e_city","顺风·轻行",VehicleKind.EBike,1800,80,7,72,88),
+            new MotorModel("e_range","顺风·远行",VehicleKind.EBike,3200,96,7.6,80,75),
+            new MotorModel("e_turn","顺风·灵燕",VehicleKind.EBike,5600,110,9.6,90,96),
+            new MotorModel("e_dash","顺风·疾电",VehicleKind.EBike,9000,140,13,76,80),
+            new MotorModel("e_race","顺风·逐风R",VehicleKind.EBike,16000,170,15,94,90),
             new MotorModel("t_cargo","丰运·载星",VehicleKind.Tricycle,2500,38,3,85,55),
             new MotorModel("t_sport","丰运·雷豹",VehicleKind.Tricycle,8800,65,5,90,68),
             new MotorModel("v_basic","五菱宏途",VehicleKind.Van,28000,110,3.8,62,57),
@@ -38,6 +39,10 @@ namespace PCShopSell.Core.Session
         public static MotorModel Get(string id)=>All.FirstOrDefault(m=>m.Id==id);
         public static MotorModel Legacy(VehicleKind k)=>Get(k==VehicleKind.EBike?"e_city":k==VehicleKind.Tricycle?"t_cargo":k==VehicleKind.Van?"v_cargo":"c_city");
         public static int ClassOf(VehicleKind k)=>k==VehicleKind.EBike?0:k==VehicleKind.Tricycle?1:2;
+        public static string ClassName(int category)=>category==0?"小电驴":category==1?"三轮车":"轿车";
+        public static bool CanRace(VehicleKind kind)=>kind==VehicleKind.EBike||kind==VehicleKind.Tricycle||kind==VehicleKind.Car;
+        public static int DealerClass(VehicleKind kind)=>kind==VehicleKind.EBike?0:kind==VehicleKind.Tricycle?1:kind==VehicleKind.Van?2:3;
+        public static string DealerClassName(int category)=>new[]{"小电驴","三轮车","货车","轿车"}[category];
         public static MotorModel Performance(GarageVehicle v)
         {
             var m=Get(v.ModelId);double wear=.75+.25*Math.Max(0,Math.Min(100,v.Condition))/100;
@@ -51,8 +56,12 @@ namespace PCShopSell.Core.Session
     public sealed class RaceTrack
     {
         public string Id,Name,Street,Npc; public int Tier; public double X,Y,Width,Depth; public MapPoint[] Points;
-        public int Laps=>2+Tier/2; public int Fee=>new[]{100,500,2500,10000}[Tier]; public int RequiredWins=>new[]{0,1,3,6}[Tier];
+        public int Laps=>2+Tier/2; public int Fee=>100; public int RequiredWins=>new[]{0,1,3,6}[Tier];
         public double HalfRoad=>Tier==0?5:7;
+        public int OpenMinute=>Tier==0?0:540;
+        public int CloseMinute=>Tier==0?1440:1080;
+        public string OpeningHours=>Tier==0?"24小时全天开放":"9:00—18:00";
+        public bool IsOpenAt(int minute)=>minute>=OpenMinute&&minute<CloseMinute;
     }
     public static class RaceTracks
     {

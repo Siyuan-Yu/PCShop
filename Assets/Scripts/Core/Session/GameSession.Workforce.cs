@@ -76,7 +76,7 @@ namespace PCShopSell.Core.Session
     [Serializable]
     public sealed class EmployeePurchaseTrip
     {
-        public string EmployeeId, ShopId, EmployeeName, OrderId;
+        public string EmployeeId, ShopId, EmployeeName, OrderId, VehicleId;
         public string SkippedNote;
         public VehicleKind Transport;
         public long BoughtAt, ReturnAt, DeliveryAt;
@@ -91,7 +91,7 @@ namespace PCShopSell.Core.Session
         public EmployeePurchaseReceiptLine[] ReceiptLines;
         public EmployeePurchaseTrip Copy() => new EmployeePurchaseTrip
         {
-            EmployeeId = EmployeeId, ShopId = ShopId, EmployeeName = EmployeeName, OrderId = OrderId, Transport = Transport, SkippedNote = SkippedNote,
+            EmployeeId = EmployeeId, ShopId = ShopId, EmployeeName = EmployeeName, OrderId = OrderId, VehicleId=VehicleId, Transport = Transport, SkippedNote = SkippedNote,
             BoughtAt = BoughtAt, ReturnAt = ReturnAt, DeliveryAt = DeliveryAt, Returned = Returned, Delivered = Delivered, ChangeCents = ChangeCents,
             DepartAt=DepartAt,TravelLegs=TravelLegs?.Select(r=>r.Copy()).ToArray(),
             CostsRecorded=CostsRecorded,GoodsCents=GoodsCents,TravelCents=TravelCents,FreightCents=FreightCents,
@@ -454,6 +454,8 @@ namespace PCShopSell.Core.Session
             var row = FindEmployee(id);
             var plan = row.Person.PurchasePlan;
             string orderId = "employee-order:" + _cityProcurementSequence++;
+            var transportMotor=plan.Transport==VehicleKind.Walk||plan.Transport==VehicleKind.Taxi?null:EmployeeTransportMotor(plan.Transport);
+            if(plan.Transport!=VehicleKind.Walk&&plan.Transport!=VehicleKind.Taxi&&transportMotor==null)return Fail("当前没有可供员工使用的空闲车辆。");
             // 统一预付并锁定本趟报价与档口额度，途中不重复扣款。
             if (!Ledger.CanAfford(q.Total)) return false;
             for (int i = 0; i < q.Lines.Count; i++)
@@ -474,7 +476,7 @@ namespace PCShopSell.Core.Session
             long now = Clock.Now.TotalMinutes;
             _employeeTrips.Add(new EmployeePurchaseTrip
             {
-                EmployeeId = id, EmployeeName = row.Person.Name, ShopId = row.Shop.Place.Id, OrderId = orderId, Transport = plan.Transport, ChangeCents = change.Cents,
+                EmployeeId = id, EmployeeName = row.Person.Name, ShopId = row.Shop.Place.Id, OrderId = orderId, VehicleId=transportMotor?.Id, Transport = plan.Transport, ChangeCents = change.Cents,
                 SkippedNote = string.Join("；", q.Skipped),
                 CostsRecorded=true,GoodsCents=q.Goods.Cents,TravelCents=q.Travel.Cents,FreightCents=q.Freight.Cents,
                 ReceiptLines=q.Lines.Select(x=>new EmployeePurchaseReceiptLine {SourceId=x.offer.Source.Id,SourceName=x.offer.Source.Name,
@@ -515,7 +517,7 @@ namespace PCShopSell.Core.Session
                     if (Vehicles.Get(trip.Transport).Illegal && Random.Chance(.15))
                     {
                         Ledger.ForceDebit(to.Date, "罚款", PoliceSystem.Fine, trip.EmployeeName + "进货驾驶" + Vehicles.Get(trip.Transport).Name + "违规");
-                        if (Random.Chance(PoliceSystem.ImpoundChance)) ImpoundVehicle(trip.Transport);
+                        if (Random.Chance(PoliceSystem.ImpoundChance)) ImpoundVehicle(trip.Transport,trip.VehicleId);
                         Say(trip.EmployeeName + "进货途中被交警处罚，请查看车辆余量。");
                     }
                 }
@@ -554,8 +556,10 @@ namespace PCShopSell.Core.Session
         public int VehicleCount(VehicleKind kind) => _owned.Count(x => x == kind);
         public int BusyVehicleCount(VehicleKind kind) => _employeeTrips.Count(t => !t.Returned && t.Transport == kind);
         public int ImpoundedVehicleCount(VehicleKind kind) => kind == VehicleKind.Tricycle ? _impoundedTricycles : kind == VehicleKind.EBike ? _impoundedEBikes : 0;
-        public int FreeVehicleCount(VehicleKind kind) => Math.Max(0, VehicleCount(kind) - BusyVehicleCount(kind)
-            - ImpoundedVehicleCount(kind) - (Vehicle == kind ? 1 : 0));
+        public int FreeVehicleCount(VehicleKind kind)
+        {
+            SyncGarage();return _garage.Count(v=>MotorCatalog.Get(v.ModelId).Kind==kind&&MotorUsable(v)&&!(v.Commuter&&Vehicle==kind));
+        }
         public string VehicleUsage(VehicleKind kind)
         {
             string users = string.Join("、", _employeeTrips.Where(t => !t.Returned && t.Transport == kind).Select(t => t.EmployeeName));

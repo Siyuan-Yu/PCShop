@@ -115,7 +115,7 @@ namespace PCShopSell.Game.UI
         {
             OpenWindow("车辆与占用", 860, 650, w =>
             {
-                Ui.Size(Ui.Button(w.Content,"具体车型 / 改装车库",OpenMotorGarage,18,Ui.ButtonHot),-1,40);
+                Para(w.Content,"通勤车辆与入库车辆可供员工临时使用；管理具体车辆请到赛场旁的车库建筑按 F。",16,Ui.Dim);
                 Ui.Size(Ui.Button(w.Content,"湖区四大赛车场",OpenRacingDestinations,18),-1,40);
                 Para(w.Content, "每台车同时只能给一个人用。员工外出进货占用车辆，返店后释放；老板选中的出行车辆也占一台。", 18);
                 foreach (var v in Vehicles.All.Where(x => x.Purchasable))

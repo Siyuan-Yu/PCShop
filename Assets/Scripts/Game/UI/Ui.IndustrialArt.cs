@@ -9,7 +9,7 @@ namespace PCShopSell.Game.UI
         private static readonly System.Collections.Generic.Dictionary<string,Sprite> NavigationIcons=new System.Collections.Generic.Dictionary<string,Sprite>();
         private static void NavigationArt(Button button,Text label,string title)
         {
-            if(button.transform.parent?.parent?.name!="TopBar"||!new[]{"我的","背包 B","日程","人物","人脉","员工","手机","任务","经营","通知","菜单"}.Contains(title))return;
+            if(button.transform.parent?.parent?.name!="TopBar"||!new[]{"我的","背包 B","日程","人物","人脉","员工","手机","任务","经营","资产","采购","通知","菜单"}.Contains(title))return;
             if(!NavigationIcons.TryGetValue(title,out var sprite))
             {
                 const int n=32;var tex=new Texture2D(n,n,TextureFormat.RGBA32,false){name="Navigation / "+title,filterMode=FilterMode.Bilinear};
@@ -21,7 +21,7 @@ namespace PCShopSell.Game.UI
                 void Head(int x,int y,int r){for(int j=-r;j<=r;j++)for(int i=-r;i<=r;i++)if(i*i+j*j<=r*r)Pixel(x+i,y+j);}
                 if(title=="我的"||title=="人物"||title=="人脉"||title=="员工")
                 {Head(15,23,5);Line(7,5,7,12);Line(7,12,12,16);Line(12,16,19,16);Line(19,16,24,12);Line(24,12,24,5);Line(7,5,24,5);if(title!="我的"){Head(26,22,3);Line(27,15,30,11);}}
-                else if(title=="经营")
+                else if(title=="经营"||title=="资产"||title=="采购")
                 {Box(4,5,24,13);Line(4,18,12,23);Line(12,23,12,18);Line(13,18,21,23);Line(21,23,21,18);Box(23,18,4,10);Box(8,8,4,5);Box(18,8,4,5);}
                 else if(title=="手机"){Box(9,3,14,26);Line(12,25,20,25);Line(13,7,19,7);}
                 else if(title=="菜单"){for(int y=8;y<28;y+=8)Line(5,y,26,y);}

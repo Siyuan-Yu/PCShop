@@ -32,8 +32,8 @@ namespace PCShopSell.Game.UI
         private static string VenuePlayerEffects(CityActivityDefinition def)
         {
             var effects=new List<string>();
-            void Add(string name,int value){if(value!=0)effects.Add(name+" "+(value>0?"+":"")+value);}
-            Add("饱腹",def.Hunger); Add("精力",def.Energy); Add("心情",def.Mood); Add("营养",def.Nutrition);
+            void Add(string name,double value){if(value!=0)effects.Add(name+" "+(value>0?"+":"")+value.ToString("0.#"));}
+            Add("饱腹",def.Hunger); Add("精力",def.Energy<0?def.Energy*PlayerStats.EnergyConsumptionMultiplier:def.Energy); Add("心情",def.Mood); Add("营养",def.Nutrition);
             var completion=new List<string>();
             if(def.Health!=0)completion.Add("健康 +"+def.Health);
             if(def.Charm!=0)completion.Add("魅力 +"+def.Charm);
@@ -43,6 +43,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildCityVenue(Window w, Place place)
         {
+            if (place.Id == "life_expo") { BuildExpoReception(w); return; }
             bool here = S.CurrentPlace == place;
             var pending = S.PendingVenueActivity(place);
             var running = S.RunningCityActivity;

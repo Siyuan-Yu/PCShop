@@ -52,7 +52,12 @@ namespace PCShopSell.Game.UI
             string coverage=district==null?S.City.StreetName(agency.StreetId):string.Join("、",district.streets.Select(S.City.StreetName));
             string discount = S.AgentDiscount > 0 ? $"中介费减免 {S.AgentDiscount * 100:0.#}%" : "中介费暂无折扣";
             Ui.Size(Ui.Label(header, $"<b>{S.City.AgencyCoverageName(agency)} · 本片区房源</b>　现金 {S.Ledger.Balance}\n<size=16>负责：{coverage}\n<color=#ABB5A8>仅办理本片区房源。点建筑查看位置、客流和户型，选好了再签约。{discount}</color></size>", 20), -1, 78, 1);
-            if (BusinessUnlocked) Ui.Size(Ui.Button(header, "分店 / 物业 / 住处", OpenAgencyBusiness, 17), 210);
+            Ui.Size(Ui.Button(header, "商铺产权买卖", OpenAgencyPropertyPurchase, 17), 210);
+            if(BusinessUnlocked)
+            {
+                Ui.Size(Ui.Button(header,"委托店长开店",()=>OpenBusinessSection(3),16),155);
+                Ui.Size(Ui.Button(header,S.HasPark?"园区管理":"园区筹建",()=>OpenBusinessSection(6),16),135);
+            }
 
             var body = Ui.Row(w.Content, 740, 14);
             var map = Ui.Panel(body, "AgencyMap", Ui.PanelBg2).rectTransform;
@@ -131,7 +136,7 @@ namespace PCShopSell.Game.UI
                 string explanation = mine
                         ? own.OwnsProperty?"这是你的自有店铺，可以结束自营并保留产权。":$"这是你的{S.ShopTitle(own)}，已交押金 {own.Lease.Deposit}。可在这里办理退租，押金不退；请先搬走货物。"
                     : pending ? $"你已经提前签下这间，押金 {S.PendingLease.Deposit}。现租户第 {S.PendingLease.StartDay + 1} 天搬走，那天自动交房；在那之前房租照交。"
-                    : S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null ? "这间铺面已经纳入你的经营资产，可在“分店 / 物业 / 住处”里管理。"
+                    : S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null ? "这间铺面已纳入你的资产。经营收支见资产页，出租和出售在上方“商铺产权买卖”办理。"
                     : "这间铺面目前没有出租报价。你可以先了解位置和户型，等它挂牌后再来询价。";
                 Para(parent, explanation, 18, Ui.Dim);
                 if(mine)

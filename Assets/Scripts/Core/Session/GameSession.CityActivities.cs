@@ -405,7 +405,8 @@ namespace PCShopSell.Core.Session
                     {
                         a.MealApplied=true;
                         Player.Hunger=Math.Min(100,Player.Hunger+def.Hunger);
-                        Player.Energy=Math.Max(0,Math.Min(Player.MaxEnergy,Player.Energy+def.Energy));
+                        if(def.Energy<0)Player.SpendEnergy(-def.Energy);
+                        else Player.Energy=Math.Min(Player.MaxEnergy,Player.Energy+def.Energy);
                         Player.Mood=Math.Max(0,Math.Min(100,Player.Mood+def.Mood));
                         Player.Nutrition=Math.Max(0,Math.Min(100,Player.Nutrition+def.Nutrition));
                     }

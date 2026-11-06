@@ -156,6 +156,7 @@ namespace PCShopSell.Core.Session
             SaveGrowth(d);
             d.appLoans = _appLoans.Select(l => l.Copy()).ToArray();
             d.priceDays = _priceDays.Select(p => p.Copy()).ToArray();
+            SavePropertyMarket(d);
             d.nextPriceReportDay = _nextPriceReportDay;
             d.weeklyPricesPending = WeeklyPricesPending;
             SaveRealty(d);
@@ -180,6 +181,7 @@ namespace PCShopSell.Core.Session
         {
             Random.State = rng;
             Clock.Restore(new GameDate(d.day), d.minute);
+            RestorePropertyMarket(d);
             Ledger.Restore(Money.FromCents(d.balanceCents), (d.ledger ?? Array.Empty<SaveLedgerEntry>()).Select(e =>
                 new LedgerEntry(new GameDate(e.day), e.category, Money.FromCents(e.cents), e.memo, Money.FromCents(e.balanceAfter))));
             LoadCityFinance(d);
@@ -287,6 +289,7 @@ namespace PCShopSell.Core.Session
             _focus.AutoBuild = Flags.Contains(AutoBuildFlag);
             RestoreBusiness(d);
             _residentialHomeId=City.HasPlace(d.residentialHomeId)&&City.GetPlace(d.residentialHomeId).Kind==PlaceKind.Home?d.residentialHomeId:null;
+            RestoreHomeLease(d);
             RestorePriceReports(d);
             RestoreAppLoans(d);
             foreach (SaveShop shop in d.extraShops ?? Array.Empty<SaveShop>()) RestoreShop(shop);

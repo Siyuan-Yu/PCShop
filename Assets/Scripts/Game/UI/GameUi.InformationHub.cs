@@ -29,13 +29,17 @@ namespace PCShopSell.Game.UI
 
         private void OpenCalendar(int tab)
         {
-            OpenWorkspace("calendar", "calendar:" + tab, "日程", 1040, 820, w =>
+            bool monthView = tab == 0 && S.HasCalendar;
+            OpenWorkspace("calendar", "calendar:" + tab, "日程", monthView ? 1240 : 1040, monthView ? 900 : 820, w =>
             {
+                if (monthView) { BuildMonthCalendar(w); return; }
                 var tabs = Ui.Row(w.Content, 38, 6);
                 Ui.Size(Ui.Button(tabs, "我的安排", () => OpenCalendar(0), 17, tab == 0 ? Ui.ButtonHot : Ui.ButtonBg), -1, 38, 1).name = "CalendarPersonal";
                 Ui.Size(Ui.Button(tabs, "城市活动", () => OpenCalendar(1), 17, tab == 1 ? Ui.ButtonHot : Ui.ButtonBg), -1, 38, 1).name = "CalendarActivities";
                 Ui.Size(Ui.Button(tabs, "天气", OpenCityClimate, 17), 110, 38);
-                if (tab == 0) BuildPersonalSchedule(w); else BuildActivitySchedule(w);
+                if (tab == 0 && S.HasCalendar) BuildMonthCalendar(w);
+                else if (tab == 0) BuildPersonalSchedule(w);
+                else BuildActivitySchedule(w);
             });
         }
 

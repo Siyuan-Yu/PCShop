@@ -34,25 +34,28 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(nav, "下一周", () => { week++; w.Rebuild(); }, 17, Ui.ButtonBg, week < maxWeek), 110);
                 Ui.Size(Ui.Button(w.Content, "每周自动简报：" + (S.WeeklyPricesSubscribed ? "开（点击取消订阅）" : "关（点击重新订阅）"), () =>
                 { S.ToggleWeeklyPrices(); w.Rebuild(); }, 18, S.WeeklyPricesSubscribed ? Ui.ButtonHot : Ui.ButtonBg), -1, 40);
-                Para(w.Content, "每天记录一次真实标价，每 7 天发布。配件使用市场参考价，其他商品使用商店标价，不含个人交情折扣；固定价格商品如实显示持平。", 15, Ui.Dim);
+                Para(w.Content, "每天记录、每7天发布。住宅和商铺的售价、月租分别每周浮动；已签租约保留原价。其他商品沿用真实标价，不含交情折扣。", 15, Ui.Dim);
                 if (days.Length == 0) { Line(w.Content, "尚无价格记录。", 18); return; }
                 var baseline = days[0].Prices;
                 double Value(PriceDay day) => selected < 0
                     ? day.Prices.Select((v, i) => v / baseline[i] * 100).Average()
                     : day.Prices[selected] / baseline[selected] * 100;
+                string name = selected < 0 ? "综合物价" : GameSession.PriceGroups[selected];
                 double[] values = days.Select(Value).ToArray();
                 double change = values[values.Length - 1] - 100;
-                string name = selected < 0 ? "综合物价" : GameSession.PriceGroups[selected];
-                Line(w.Content, $"{name} · 本期涨跌 {change:+0.00;-0.00;0.00}%" + (days.Length < 8 ? "（本期数据未满一周）" : ""), 21, change > 0 ? Ui.Warn : change < 0 ? Ui.Good : Ui.Accent);
+                Line(w.Content, $"{name} · 本期涨跌 {change:+0.00;-0.00;0.00}%" + (days.Length < 8 ? "（记录未满一周）" : ""), 21, change > 0 ? Ui.Warn : change < 0 ? Ui.Good : Ui.Accent);
                 DrawPriceTrend(w.Content, days, values);
-                Para(w.Content, "折线以期初价格为 100；综合走势为各品类涨跌幅的等权平均，不是每件商品都涨跌相同。点击下方品类查看单独走势。", 15, Ui.Dim);
+                Para(w.Content, "折线以期初价格为100；综合走势为各品类涨跌幅的等权平均。点击下方品类查看单独走势。", 15, Ui.Dim);
                 Ui.Size(Ui.Button(w.Content, "查看综合走势", () => { selected = -1; w.Rebuild(); }, 17, selected < 0 ? Ui.ButtonHot : Ui.ButtonBg), -1, 34);
                 var list = Ui.Scroll(w.Content, 260);
-                for (int i = 0; i < GameSession.PriceGroups.Length; i++)
+                var order = Enumerable.Range(GameSession.PropertyPriceGroupStart, 4).Concat(Enumerable.Range(0, GameSession.PropertyPriceGroupStart));
+                foreach (int i in order)
                 {
                     int group = i;
+                    if (i == GameSession.PropertyPriceGroupStart) Line(list, "住宅与商铺", 18, Ui.Accent);
+                    else if (i == 0) Line(list, "商品与生活物价", 18, Ui.Accent);
                     double pct = (days[days.Length - 1].Prices[i] / baseline[i] - 1) * 100;
-                    string movement = Math.Abs(pct) < 0.005 ? "持平" : pct.ToString("+0.00;-0.00") + "%";
+                    string movement = days.Length == 1 ? "开始记录" : Math.Abs(pct) < 0.005 ? "持平" : pct.ToString("+0.00;-0.00") + "%";
                     Ui.Size(Ui.Button(list, GameSession.PriceGroups[i] + "    " + movement + "    查看走势", () =>
                     { selected = group; w.Rebuild(); }, 17, selected == i ? Ui.ButtonHot : Ui.ButtonBg), -1, 36);
                 }

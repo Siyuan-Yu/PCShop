@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.World;
 
@@ -26,6 +27,35 @@ namespace PCShopSell.Core.Session
         private const string BrandCreationSalesMemo = "品牌创建测试档历史营收";
 
         public bool IsBrandCreationAcceptance => IsCityLifeTest && Ledger.Entries.Any(entry => entry.Memo == BrandCreationSalesMemo);
+
+        public bool DebugPrepareBrandAcceptanceStock()
+        {
+            if (!IsBrandCreationAcceptance && !IsBrandExpoAcceptance) return Fail("仅用于品牌或展会测试档");
+            foreach (var shop in MyShops.Where(s => s.Rented))
+            {
+                if (shop.RetailKind == "computer")
+                {
+                    foreach (string id in new[] { "cpu0", "gpu0", "ram0" })
+                    {
+                        var part = PartCatalog.Get(id);
+                        int missing = Math.Max(0, 100 - shop.Sim.Stock.Count(part, true));
+                        if (missing > 0) shop.Sim.Stock.ForceAdd(part, true, missing);
+                    }
+                }
+                else
+                {
+                    var products = shop.RetailKind == "models" ? ModelProducts.Regular.Select(p => p.Id)
+                        : shop.RetailKind == "clothing" ? ClothingProducts.All.Select(p => p.Id) : Array.Empty<string>();
+                    foreach (string id in products.Take(3))
+                    {
+                        int missing = Math.Max(0, 100 - shop.Sim.Stock.GoodsCount(id));
+                        if (missing > 0) shop.Sim.Stock.ForceAddGoods(id, missing);
+                    }
+                }
+            }
+            Say("测试门店库存已补齐：电脑、服装、模型店各3种同业商品，每种至少100件，已有更多库存保留。");
+            return true;
+        }
 
         public string BrandCreationSuburbHomeBlocker
         {
@@ -103,6 +133,7 @@ namespace PCShopSell.Core.Session
                 Qualifications = kinds.Select(kind => new BrandQualification
                     { Kind = kind, LeadingDays = 14, CommunityDays = 30 }).ToArray()
             };
+            DebugPrepareBrandAcceptanceStock();
             SetFocus(MainShop);
 
             var residence = ResidencePlace(1);
@@ -187,6 +218,7 @@ namespace PCShopSell.Core.Session
                 // The entrance story is background of this explicit cheat preset. Later chapters remain untouched.
                 _district.Completed=_district.Completed.Union(DistrictNodeChains[0]).ToArray();
                 _district.CommunityMapQuest=true;_district.CommunitySearchVersion=2;_district.CommunityMapDelivered=true;
+                DebugPrepareBrandAcceptanceStock();
                 TopUpExpoAcceptanceCash();RefreshBrandTraffic();
             }
             finally{CurrentPlace=placeBefore;SetFocus(keep);}

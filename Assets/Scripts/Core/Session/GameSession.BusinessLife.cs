@@ -67,15 +67,16 @@ namespace PCShopSell.Core.Session
         public long HomeMortgageCents {get;private set;}
         public long HomeMonthlyPrincipalCents {get;private set;}
         public string HomeTitle => City.HasPlace(_residentialHomeId)?City.GetPlace(_residentialHomeId).Name:HomeTier==3 ? "花园独栋别墅" : HomeTier==2 ? "公园豪华公寓" : HomeTier==1 ? "宜居改善住宅" : "城郊老破小出租屋";
-        public Money CurrentHomeRent => HomePriceCents>0 ? Money.Zero : HomeTier==3 ? Money.FromYuan(12000) : HomeTier==2 ? Money.FromYuan(3000) : HomeTier==1 ? Money.FromYuan(1200) : HomeRent;
-        public Money HomePurchasePrice => City.HasPlace(_residentialHomeId)?ResidentialPrice(Home):Money.FromYuan(HomeTier==3 ? 1800000 : HomeTier==2 ? 450000 : 180000);
-        public Money HomeTierRentQuote(int tier) => Money.FromYuan(tier==3 ? 12000 : tier==2 ? 3000 : tier==1 ? 1200 : 450);
+        public Money CurrentHomeRent => HomePriceCents>0 ? Money.Zero : Money.FromCents(_homeLeaseRentCents);
+        public Money HomePurchasePrice => ResidentialPrice(Home);
+        public Money HomeTierRentQuote(int tier) => HomeBaseRent(tier).Scale(HomeRentFactor);
         public bool ChangeHomeTier(int tier)
         {
             string why=ResidenceBlocker(tier,false);if(why!=null)return Fail(why);
             Money rent=HomeTierRentQuote(tier);
             if(!Ledger.TryDebit(Clock.Today,"搬家",rent+Money.FromYuan(500),"住处首月租金及搬家费")) return Fail("需支付新住处首月租金与 ¥500 搬家费。");
             HomeTier=tier;
+            _homeLeaseRentCents=rent.Cents;
             _residentialHomeId=null;
             Say("已换为"+HomeTitle+"。家具与储物保留；睡眠质量提高，次月按新月租扣款。"); return true;
         }
@@ -85,40 +86,32 @@ namespace PCShopSell.Core.Session
         }
         public bool RepayHomeMortgage()
         {
-            if(IsGameOver || HomeMortgageCents<=0) return false;
-            if(!Ledger.TryDebit(Clock.Today,"偿还房贷",Money.FromCents(HomeMortgageCents),"住宅提前还款")) return Fail("现金不足。");
-            HomeMortgageCents=0; return true;
+            return Fail("住宅仅支持全款购买，没有待还房贷。");
         }
         public bool SellHome()
         {
             if(IsGameOver || !InAgency || HomePriceCents<=0) return false;
             if(City.LayoutVersion>=7 && !AgencyServes(CurrentPlace,Home))return Fail("请到自住房所属片区的中介办理。");
-            Money net=Money.FromCents(HomePriceCents).Scale(.9)-Money.FromCents(HomeMortgageCents);
-            if(Ledger.Balance+net<Money.Zero) return Fail("现金不足清偿房贷差额。");
-            if(net.IsPositive) Ledger.Credit(Clock.Today,"住宅出售",net,"售价九折，扣清剩余房贷");
-            else if(net.IsNegative) Ledger.ForceDebit(Clock.Today,"住宅出售",-net,"补足房贷差额");
+            Money net=HomePurchasePrice.Scale(.9);
+            if(net.IsPositive) Ledger.Credit(Clock.Today,"住宅出售",net,"售价九折");
             HomePriceCents=HomeMortgageCents=HomeMonthlyPrincipalCents=0;
+            _homeLeaseRentCents=HomeTierRentQuote(HomeTier).Cents;
             Say("住宅已出售，继续租住，次月恢复月租。"); return true;
         }
-        private void SettleHomeMortgage(GameDate today)
+        private void SettleHomeMaintenance(GameDate today)
         {
             if(!today.IsMonthStart || HomePriceCents<=0) return;
             Ledger.ForceDebit(today,"物业维护",Money.FromCents(HomePriceCents).Scale(.001),"自住房维护费");
-            if(HomeMortgageCents<=0) return;
-            long principal=Math.Min(HomeMortgageCents,HomeMonthlyPrincipalCents);
-            Money interest=Money.FromCents(HomeMortgageCents).Scale(.004);
-            Ledger.ForceDebit(today,"偿还房贷",Money.FromCents(principal),"住宅月供本金");
-            if(interest.IsPositive) Ledger.ForceDebit(today,"房贷利息",interest,"住宅月供利息");
-            HomeMortgageCents-=principal;
         }
         private void OnBusinessDay(GameDate previous,GameDate today)
         {
             if(today.TotalDays<=_lastBusinessDay) return;
             _lastBusinessDay=today.TotalDays;
             TickBrandBusiness(previous,today);
+            SettleGarageRent(today);
             if (_owned.Contains(VehicleKind.Car)) Ledger.ForceDebit(today,"交通",Money.FromYuan(40) * VehicleCount(VehicleKind.Car),"轿车日养护（含油费保险）");
             if (_owned.Contains(VehicleKind.Van)) Ledger.ForceDebit(today,"交通",Money.FromYuan(60) * VehicleCount(VehicleKind.Van),"货车日养护（含油费保险）");
-            TickCityAssets(); SettleSupplierDebts(today.TotalDays); SettleVentures(today); SettleProperties(today); SettleHomeMortgage(today); SettleCreators(previous,today); SettleMcnAndRelationships(previous,today); RefreshEnterpriseOffer();
+            TickCityAssets(); SettleSupplierDebts(today.TotalDays); SettleVentures(today); SettleProperties(today); SettleHomeMaintenance(today); SettleCreators(previous,today); SettleMcnAndRelationships(previous,today); RefreshEnterpriseOffer();
         }
         private void SaveBusiness(SaveData d)
         {
@@ -145,7 +138,7 @@ namespace PCShopSell.Core.Session
             _properties.Clear();_properties.AddRange((b.Properties??Array.Empty<OwnedProperty>()).Where(x=>City.HasPlace(x.PlaceId)).Select(x=>x.Copy()));
             foreach(var c in b.Creators??Array.Empty<CreatorState>()) {int i=_creators.FindIndex(x=>x.Id==c.Id);if(i>=0)_creators[i]=c.Copy();}
             _nextDebtId=Math.Max(1,b.NextDebtId);_lastOfferWeek=b.LastOfferWeek;_lastBusinessDay=b.LastBusinessDay;DirectAgreement=b.DirectAgreement;FundUnits=Math.Max(0,b.FundUnits);
-            HomeTier=Math.Max(0,Math.Min(3,b.HomeTier));HomePriceCents=b.HomePriceCents;HomeMortgageCents=b.HomeMortgageCents;HomeMonthlyPrincipalCents=b.HomeMonthlyPrincipalCents;
+            HomeTier=Math.Max(0,Math.Min(3,b.HomeTier));HomePriceCents=b.HomePriceCents;HomeMortgageCents=HomeMonthlyPrincipalCents=0;
             ApplyUpgrades();
         }
     }

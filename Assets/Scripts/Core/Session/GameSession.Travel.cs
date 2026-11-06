@@ -22,18 +22,20 @@ namespace PCShopSell.Core.Session
 
         public bool CanUse(VehicleKind kind)
         {
+            if(kind==VehicleKind.Van)return false;
             if (!Owns(kind)) return false;
-            if (kind != VehicleKind.Walk && kind != VehicleKind.Taxi && Vehicle != kind && FreeVehicleCount(kind) <= 0) return false;
+            if (kind != VehicleKind.Walk && kind != VehicleKind.Taxi && !MotorUsable(CommuteMotor(kind))) return false;
             return true;
         }
 
         /// <summary>换出行方式（路上不能换）。随身的货放不下时不能换成更小的。</summary>
         public bool SetVehicle(VehicleKind kind)
         {
+            if(kind==VehicleKind.Van)return Fail("货车仅供员工进货，不能作为玩家通勤车。");
             if (kind == Vehicle) return true;
             if (Trip != null) return Fail("在路上不能换交通方式。");
             if (!Owns(kind)) return Fail($"你还没有{Vehicles.Get(kind).Name}。");
-            if (!CanUse(kind)) return Fail("没有空闲的" + Vehicles.Get(kind).Name + "（可能被员工使用或扣押），请先换车或到车行购买。");
+            if (!CanUse(kind)) return Fail("没有可用的" + Vehicles.Get(kind).Name + "通勤车；请到车库设置，或等待员工归还、办理赎车。");
             VehicleSpec v = Vehicles.Get(kind);
             if (CarriedKg > v.CargoCapacity * Backpack.KgPerSpace + 1e-9)
                 return Fail($"身上的东西太重（{CarriedKg:0.##} 千克），{v.Name}最多带 {v.CargoCapacity * Backpack.KgPerSpace:0.##} 千克。");
@@ -227,8 +229,12 @@ namespace PCShopSell.Core.Session
             return v!=null&&SellMotor(v.Id);
         }
 
-        private void ImpoundVehicle(VehicleKind kind)
+        private void ImpoundVehicle(VehicleKind kind,string vehicleId=null)
         {
+            SyncGarage();
+            var motor=vehicleId==null?_garage.FirstOrDefault(v=>v.Commuter&&MotorCatalog.Get(v.ModelId).Kind==kind):_garage.Find(v=>v.Id==vehicleId);
+            if(motor==null||motor.Impounded)return;
+            motor.Impounded=true;
             if (kind == VehicleKind.EBike) _impoundedEBikes++;
             else if (kind == VehicleKind.Tricycle) _impoundedTricycles++;
         }
@@ -241,6 +247,7 @@ namespace PCShopSell.Core.Session
             if (!Ledger.TryDebit(Clock.Today, "罚款", PoliceSystem.RedeemFee, "赎回" + name)) return Fail("钱不够赎车。");
             if (kind == VehicleKind.EBike) _impoundedEBikes = System.Math.Max(0, _impoundedEBikes - 1);
             else if (kind == VehicleKind.Tricycle) _impoundedTricycles = System.Math.Max(0, _impoundedTricycles - 1);
+            var motor=_garage.FirstOrDefault(v=>v.Impounded&&MotorCatalog.Get(v.ModelId).Kind==kind);if(motor!=null)motor.Impounded=false;
             Say(name + "赎回来了。");
             return true;
         }

@@ -414,8 +414,8 @@ namespace PCShopSell.Core.Session
                         {
                             s.EventPay(Y(20), "感冒药");
                             s.Player.Health = System.Math.Max(0, s.Player.Health - 5);
-                            s.Player.Energy = System.Math.Max(0, s.Player.Energy - 10);
-                            return "药劲上来昏昏沉沉的，健康 -5，精力 -10。";
+                            s.Player.SpendEnergy(10);
+                            return "药劲上来昏昏沉沉的，健康 -5，精力 -8。";
                         },
                     },
                     new EventChoice
@@ -424,8 +424,8 @@ namespace PCShopSell.Core.Session
                         Apply = s =>
                         {
                             s.Player.Health = System.Math.Max(0, s.Player.Health - 10);
-                            s.Player.Energy = System.Math.Max(0, s.Player.Energy - 10);
-                            return "没花钱，但整天头昏脑涨。健康 -10，精力 -10。";
+                            s.Player.SpendEnergy(10);
+                            return "没花钱，但整天头昏脑涨。健康 -10，精力 -8。";
                         },
                     },
                 },

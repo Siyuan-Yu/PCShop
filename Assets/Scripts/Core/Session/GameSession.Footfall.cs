@@ -10,7 +10,7 @@ namespace PCShopSell.Core.Session
     {
         private ShopFootfall _shopFootfall;
         public ShopFootfallEstimate FootfallOf(Place place) => (_shopFootfall??(_shopFootfall=new ShopFootfall(City))).For(place);
-        public Money ShopRentQuote(Place place) => FootfallOf(place).MonthlyRent;
+        public Money ShopRentQuote(Place place) => FootfallOf(place).MonthlyRent.Scale(ShopRentFactor);
         // Size is already counted by the footfall estimate; avoid multiplying it twice.
         public double LocationFactorOf(Place place) => FootfallOf(place).DailyPassers/(600.0*ShopSettings.SizeFactor(place.Size));
         public double StationDistance(Place place) => FootfallOf(place).StationMeters;

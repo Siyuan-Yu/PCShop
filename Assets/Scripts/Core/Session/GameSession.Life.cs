@@ -13,6 +13,8 @@ namespace PCShopSell.Core.Session
         private double _energy = 90;
         internal Action EnergyChanged;
         public double Energy { get => _energy; set { _energy = Math.Max(0, Math.Min(MaxEnergy, value)); EnergyChanged?.Invoke(); } }
+        public const double EnergyConsumptionMultiplier=.8;
+        public void SpendEnergy(double amount) { if(amount>0)Energy=Math.Max(0,Energy-amount*EnergyConsumptionMultiplier); }
         public double Health = 100;
         // Display-only diet records; they do not alter health, energy or any other simulation.
         public double Nutrition = 50, Mood = 50;
@@ -124,7 +126,7 @@ namespace PCShopSell.Core.Session
             }
             else
             {
-                p.Energy = Math.Max(0, p.Energy - 5.5 * h);
+                p.SpendEnergy(5.5*h);
                 p.Hunger = Math.Max(0, p.Hunger - 6 * h);
             }
 

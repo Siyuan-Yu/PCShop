@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
@@ -118,6 +119,7 @@ namespace PCShopSell.Game.UI
         public void Update(float dt)
         {
             if (S == null) return;
+            UpdateUpcomingScheduleHud();
             EnsureQuarterlyExpoWindow();
             _expoHudGate.interactable=!ExpoHudOpen;
             _labelCanvas.enabled=!ExpoHudOpen;
@@ -136,6 +138,7 @@ namespace PCShopSell.Game.UI
                 }
                 if (window.RebuildPending) { window.RebuildPending = false; window.Rebuild(); }
             }
+            UpdateAutoExpoChoices();
             UpdateDisplayPreview();
             if (MainMenuOpen) return;
             RefreshOpeningKindChoice();
@@ -177,7 +180,7 @@ namespace PCShopSell.Game.UI
             RectTransform row = Ui.Rect(top.transform, "Row").Fill();
             var h = row.gameObject.AddComponent<HorizontalLayoutGroup>();
             h.padding = new RectOffset(16, 16, 8, 8);
-            h.spacing = 12;
+            h.spacing = 8;
             h.childControlWidth = true;
             h.childControlHeight = true;
             h.childForceExpandWidth = false;
@@ -218,10 +221,13 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(row, "人物", OpenRelationsPanel, 18), 66).Tip("<b>人脉</b>\n认识的人和你有多熟、他们彼此之间的关系（网状图）。");
             Ui.Size(Ui.Button(row, "员工", OpenEmployeesPanel, 18), 66).Tip("所有店的员工列表、明天调店安排、进货清单和车辆占用。");
             Ui.Size(Ui.Button(row, "手机", OpenPhone, 18), 66).Tip("<b>手机</b>　快捷键：P\n买了智能手机才有；通讯录、网购、外卖等 app。");
+            Ui.Size(Ui.Button(row, "日程", OpenSchedulePanel, 18), 66).name = "HudCalendar";
             Ui.Size(Ui.Button(row, "任务", OpenQuests, 18), 66).Tip("<b>任务</b>　快捷键：T\n当前任务怎么做、完成奖励；左上角的任务条收起后从这里再打开。");
-            _businessButton = Ui.Size(Ui.Button(row, "经营", OpenBusinessPanel, 18), 66);
+            _businessButton = Ui.Size(Ui.Button(row, "资产", OpenBusinessPanel, 18), 66);
+            _businessButton.name = "HudAssets";
             _businessButton.gameObject.SetActive(true);
-            _businessButton.Tip("<b>经营</b>　快捷键：J\n资产与负债、直供、企业合同、分店、园区等后期经营。");
+            _businessButton.Tip("<b>资产</b>　快捷键：J\n门店最近7天收支与来源；已购和租用物业的位置、用途与租金。");
+            Ui.Size(Ui.Button(row,"采购",OpenCityProcurement,18),66).Tip("商铺采购、补货目标、在途订单与直供协议。").name="HudProcurement";
             _brandButton=Ui.Size(Ui.Button(row,"品牌",OpenBrandOverview,18),66);
             _brandButton.name="HudBrand";
             _brandButton.gameObject.SetActive(true);
@@ -239,7 +245,7 @@ namespace PCShopSell.Game.UI
             bh.childControlHeight = true;
             bh.childForceExpandWidth = false;
             Ui.Size(Ui.Label(brow, "出行：", 18), 60);
-            foreach (var vehicle in Vehicles.All)
+            foreach (var vehicle in Vehicles.All.Where(v=>v.Kind!=VehicleKind.Van))
             {
                 var kind = vehicle.Kind;
                 var button = Ui.Size(Ui.Button(brow, vehicle.Name, () => S.SetVehicle(kind), 17), 72);
@@ -269,6 +275,7 @@ namespace PCShopSell.Game.UI
             ((RectTransform)_storageWarning.transform).Anchor(0.33f, 1, 0.67f, 1, 0, -108, 0, 72);
             _storageWarning.gameObject.SetActive(false);
             BuildQuestTracker(root);
+            BuildUpcomingScheduleHud(root);
             BuildSleepBanner(root);
 
             _chaseText = Ui.Label(root, "交警在追你！快跑或者躲进店里！", 34, TextAnchor.MiddleCenter, new Color(1f, 0.3f, 0.25f));
@@ -703,6 +710,7 @@ namespace PCShopSell.Game.UI
         }
         public void Toast(string message)
         {
+            _upcomingScheduleDirty = true;
             if (_lastToast == message && _uiTime - _lastToastAt < 8) return;
             _lastToast = message; _lastToastAt = _uiTime;
             _unreadNotices++;
@@ -789,6 +797,7 @@ namespace PCShopSell.Game.UI
         public void CloseWindow(Window w)
         {
             if (w.Closed) return;
+            _upcomingScheduleDirty = true;
             w.Closed = true;
             _windows.Remove(w);
             if (w.Holds && S != null && S.Time.IsHeld) S.Time.Release();

@@ -226,7 +226,7 @@ namespace PCShopSell.Core.Session
         {
             var vehicle=Vehicles.Get(kind);if(!vehicle.Purchasable||!DealerSells(MotorCatalog.Legacy(kind).Id))return false;
             return CartAddRegistered("vehicle:"+kind,vehicle.Name,vehicle.Price,()=>BuyVehicle(kind,false),
-                ()=>CurrentPlace?.Kind!=PlaceKind.Dealer?"请到车行购买":null,true);
+                ()=>MotorPurchaseBlocker(MotorCatalog.Legacy(kind).Id),true);
         }
         public bool CartAddUpgrade(string id)
         {

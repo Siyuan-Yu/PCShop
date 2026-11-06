@@ -3,6 +3,7 @@ using PCShopSell.Core.Common;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Shop;
 
 namespace PCShopSell.Core.Session
 {
@@ -11,7 +12,7 @@ namespace PCShopSell.Core.Session
         public static GameSession CreateCityLifePreset(CityLayout city,string scenario)
         {
             bool clothing=scenario=="clothing"||scenario.StartsWith("clothing_",StringComparison.Ordinal);
-            int day=scenario=="brand_expo"||scenario=="kol_live"||scenario=="quarter_expo"||scenario=="brand_ready_two"||scenario=="brand_ready_three"?68:scenario=="clothing_spring"?44:scenario=="clothing_summer"?134:scenario=="clothing_autumn"?224:clothing?279:scenario=="expo"?21:scenario=="assets"?29:16;
+            int day=scenario=="racing"?21:scenario=="brand_expo"||scenario=="kol_live"||scenario=="quarter_expo"||scenario=="brand_ready_two"||scenario=="brand_ready_three"?68:scenario=="clothing_spring"?44:scenario=="clothing_summer"?134:scenario=="clothing_autumn"?224:clothing?279:scenario=="expo"?21:scenario=="assets"?29:16;
             var s=new GameSession(city,20261101,Money.FromYuan(scenario=="assets"?2500000:150000),GameTimestamp.From(new GameDate(day),scenario=="night"?20*60:9*60),true,true,true);
             s.IsCityLifeTest=true;s.EventsEnabled=false;
             s.Flags.Add("tutorial:issued:cashflow");
@@ -30,7 +31,8 @@ namespace PCShopSell.Core.Session
             {
                 // A prepared second lease is a test asset, not a second source of free income.
                 // Both stores still use the ordinary stock, staffing, service and save systems.
-                s.OpenNewShop(city.GetPlace("life_unit_s_market_2"),Money.FromYuan(1800),Money.FromYuan(3600));
+                var branchPlace=city.GetPlace("life_unit_s_market_2");var rent=s.ShopRentQuote(branchPlace);
+                s.OpenNewShop(branchPlace,rent,RealEstate.Deposit(rent));
                 var branch=s._focus;s.FitStarterShop();s.AddStarterStock();
                 branch.Employee=new Employee{Id="city_test_branch_cashier",PersonId="life_qiao",Name="乔禾",DailyWageYuan=120,CheckoutMinutes=3};
                 var person=s.CityPersonState(s.PersonIdOf(branch.Employee));var pos=s.StandOf(branch.Place);
@@ -62,6 +64,18 @@ namespace PCShopSell.Core.Session
                 s.ApplyUpgrades();
             }
             if(scenario=="expo") {s.Leave();s.ArriveAtNode(city.GetPlace("life_expo").NodeId);}
+            if(scenario=="assets")
+            {
+                s.PreparePropertyMarketAcceptance();
+                s._regionalGarages.Add(new RegionalGarageLease{PlaceId="garage_0",RentedSpaces=6,NextRentDay=s.Clock.Today.TotalDays+30});
+                s._regionalGarages.Add(new RegionalGarageLease{PlaceId="garage_1",OwnedSpaces=6,NextRentDay=-1});
+                s.PlaceAcquiredMotor(s.NewMotor("e_city"),true,null);
+                s.PlaceAcquiredMotor(s.NewMotor("c_su7"),true,null);
+                s.PlaceAcquiredMotor(s.NewMotor("v_cargo"),false,null);
+                s.PlaceAcquiredMotor(s.NewMotor("e_turn"),false,"garage_0");
+                s.PlaceAcquiredMotor(s.NewMotor("t_sport"),false,"garage_0");
+                s.PlaceAcquiredMotor(s.NewMotor("c_718"),false,"garage_1");
+            }
 #if UNITY_EDITOR
             if(scenario=="brand_expo")s.PrepareBrandExpoAcceptance();
             if(scenario=="kol_live")s.PrepareKolLiveAcceptance();

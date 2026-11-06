@@ -73,7 +73,7 @@ namespace PCShopSell.Core.Session
             yield return Step("creator", 5, QuestTarget.Creators, "签下一位品牌代言人", $"和主播谈一次{K("代言合约")}",
                 $"{K("到社区MCN拿名片后联系主播")}。",
                 s => s.KolStreaming.Contracts.Length > 0 || s.CreatorPartners.Any(c => c.CampaignUntilDay > 0), null);
-            yield return Step("property_lesson", 5, QuestTarget.Property, "看懂住房与物业选择", "比较租房、买房和按揭",
+            yield return Step("property_lesson", 5, QuestTarget.Property, "看懂住房与物业选择", "比较租住、全款买房和收租",
                 $"{K("别把周转资金都压进物业")}。",
                 s => s.QuestLessonRead("property_lesson"), null, true);
         }

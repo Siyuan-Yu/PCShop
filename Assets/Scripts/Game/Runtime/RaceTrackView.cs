@@ -7,7 +7,7 @@ namespace PCShopSell.Game.Runtime
     public sealed class RaceTrackView:MonoBehaviour
     {
         public RaceTrack Track {get;private set;}
-        private Transform _moving,_player,_gate;private readonly Transform[] _rivals=new Transform[2];
+        private Transform _moving,_player,_gate;private Transform[] _rivals=Array.Empty<Transform>();
         public void Build(RaceTrack track)
         {
             Track=track;transform.position=new Vector3((float)track.X,.65f,(float)track.Y);
@@ -46,14 +46,19 @@ namespace PCShopSell.Game.Runtime
         {
             foreach(Transform c in _moving)Destroy(c.gameObject);
             _moving.gameObject.SetActive(true);_player=MotorVisual.Build(_moving,race.Model,ArtDirection.Hex("FFD35A"));
-            for(int i=0;i<2;i++){_rivals[i]=MotorVisual.Build(_moving,race.Model,i==0?ArtDirection.Clay:ArtDirection.Blue);_rivals[i].gameObject.SetActive(!race.Practice);}
+            _rivals=new Transform[race.RivalProgress.Length];
+            for(int i=0;i<_rivals.Length;i++)
+            {
+                var paint=Color.Lerp(i%2==0?ArtDirection.Clay:ArtDirection.Blue,ArtDirection.Cream,(i/2)*.12f);
+                _rivals[i]=MotorVisual.Build(_moving,race.Model,paint);_rivals[i].name="Rival_"+(i+1);
+            }
             _gate=Prims.Box(_moving,"NextCheckpoint",Vector3.zero,new Vector3((float)Track.HalfRoad*2,.12f,1),Mats.Unlit(new Color(.3f,1,.55f))).transform;
             Sync(race);
         }
         public void Sync(RaceSimulation r)
         {
             PlaceMotor(_player,r.X,r.Y,r.Heading);
-            for(int i=0;i<2;i++){double h;var p=r.AtDistance(r.RivalProgress[i],out h);PlaceMotor(_rivals[i],p.X+(i==0?-1:1)*Math.Cos(h)*2,p.Y-(i==0?-1:1)*Math.Sin(h)*2,h);}
+            for(int i=0;i<_rivals.Length;i++){double h;var p=r.RivalPosition(i,out h);PlaceMotor(_rivals[i],p.X,p.Y,h);}
             var next=Point(r.Next);_gate.localPosition=next+Vector3.up*.27f;_gate.localRotation=Quaternion.LookRotation(Point(r.Next+1)-Point(r.Next));
         }
         private static void PlaceMotor(Transform t,double x,double y,double h){t.localPosition=new Vector3((float)x,.23f,(float)y);t.localRotation=Quaternion.Euler(0,(float)h*Mathf.Rad2Deg,0);}

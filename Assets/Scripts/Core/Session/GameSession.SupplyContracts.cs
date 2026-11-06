@@ -31,20 +31,17 @@ namespace PCShopSell.Core.Session
             Money total = Money.FromCents(_supplierDebts.Where(x => x.DueDay <= today + horizon).Sum(x => x.Principal + x.Fees));
             total += Money.FromCents(_appLoans.Where(l => !l.Repaid && l.DueDay <= today + horizon).Sum(l => l.TotalDue.Cents));
             foreach (var p in _properties)
-                total += MortgagePayments(p.MortgageCents, p.MonthlyPrincipalCents, p.PriceCents, today, horizon);
-            total += MortgagePayments(HomeMortgageCents, HomeMonthlyPrincipalCents, HomePriceCents, today, horizon);
+                total += PropertyMaintenancePayments(p.PriceCents, today, horizon);
+            total += PropertyMaintenancePayments(HomePriceCents, today, horizon);
             return total;
         }
-        private static Money MortgagePayments(long debt, long installment, long price, int today, int horizon)
+        private static Money PropertyMaintenancePayments(long price, int today, int horizon)
         {
             Money total = Money.Zero;
             int next = 30 - today % 30;
             for (int offset = next; offset <= horizon; offset += 30)
             {
                 total += Money.FromCents(price).Scale(.001);
-                long principal = Math.Min(debt, installment);
-                total += Money.FromCents(principal) + Money.FromCents(debt).Scale(.004);
-                debt -= principal;
             }
             return total;
         }

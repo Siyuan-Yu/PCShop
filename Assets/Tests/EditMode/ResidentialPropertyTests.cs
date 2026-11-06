@@ -80,7 +80,7 @@ namespace PCShopSell.Tests
                 string id=Occupied(s);AtAgency(s,id);var tenants=s.ResidentialTenants(id);
                 foreach(var p in tenants)s.CityPersonState(p.PersonId).LocationPlaceId=s.Home.Id;
                 long cash=s.Ledger.Balance.Cents;Assert.False(s.RentResidentialHome(id));Assert.False(s.BuyResidentialHome(id,false,true));Assert.AreEqual(cash,s.Ledger.Balance.Cents);
-                Assert.True(s.BuyResidentialHome(id,true,false));Assert.False(s.RentResidentialHome(id));Assert.False(s.OpenCityOwnedShop(id));
+                Assert.True(s.BuyResidentialHome(id,false,false));Assert.False(s.RentResidentialHome(id));Assert.False(s.OpenCityOwnedShop(id));
                 Assert.True(s.SellProperty(id));Assert.IsNull(s.PropertyAt(id));
                 CollectionAssert.AreEquivalent(tenants.Select(p=>p.PersonId),s.ResidentialTenants(id).Select(p=>p.PersonId));
                 Assert.False(s.Listings.Any(l=>l.PlaceId==id));
@@ -105,7 +105,7 @@ namespace PCShopSell.Tests
         {
             using(var s=Make())
             {
-                string id=Vacate(s);AtAgency(s,id);Assert.True(s.BuyResidentialHome(id,true,false));
+                string id=Vacate(s);AtAgency(s,id);Assert.True(s.BuyResidentialHome(id,false,false));
                 Assert.False(s.SetCityPropertyRental(id,true));
                 int rents=s.Ledger.Entries.Count(e=>e.Category=="物业租金");Settle(s,(s.Clock.Today.TotalDays/30+1)*30);
                 Assert.AreEqual(rents,s.Ledger.Entries.Count(e=>e.Category=="物业租金"));

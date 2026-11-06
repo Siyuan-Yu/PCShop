@@ -586,6 +586,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildOrders()
         {
+            Ui.Size(Ui.Button(C,"企业采购订单",()=>OpenBusinessSection(2),17),-1,35).name="ShopEnterpriseOrders";
             ShopSimulation shop = S.PlayerShop;
             if (shop.IsGoodsShop) { Line(C, "这家店经营零售商品，不接电脑装机订单。", 18, Ui.Dim); return; }
             if (!shop.BuildOrdersUnlocked) Line(C, "开局前 14 天不接顾客装机订单，第 15 天开始开放。", 17, Ui.Accent);

@@ -158,15 +158,17 @@ namespace PCShopSell.Tests
                 var worth=s.NetWorth();Assert.True(s.CloseVenture("tea"));Assert.AreEqual(worth,s.NetWorth());Assert.False(s.CloseVenture("tea"));Assert.True(s.IsVacant(s.City.GetPlace("tea")));
             }
         }
-        [Test] public void PropertyPurchaseOffsetsMortgage_StopsRent_AndMonthlyPrincipalReducesDebt()
+        [Test] public void CashPropertyPurchaseStopsRentAndLegacyMortgageIsRemovedOnReload()
         {
             using(var s=Make())
             {
-                var worth=s.NetWorth();var purchase=s.PreviewCityPropertyPurchase("pc",true);Assert.True(s.BuyProperty("pc",true));Assert.AreEqual(worth-purchase.Fee+purchase.PrepaidCredit,s.NetWorth());Assert.Zero(s.CurrentShopRent.Cents);
-                var p=s.OwnedProperties.Single();long debt=p.MortgageCents;var cash=s.Ledger.Balance;
-                Midnight(s,30);Assert.AreEqual(debt-p.MonthlyPrincipalCents,p.MortgageCents);
-                Assert.AreEqual(cash-Money.FromCents(p.MonthlyPrincipalCents)-Money.FromCents(debt).Scale(.004)-Money.FromCents(p.PriceCents).Scale(.001)-s.CurrentHomeRent-s.HomeUtilities,s.Ledger.Balance);
-                using(var l=Reload(s)){Assert.Zero(l.CurrentShopRent.Cents);Assert.AreEqual(s.MortgageDebt,l.MortgageDebt);Assert.True(l.RepayMortgage("pc"));Assert.Zero(l.MortgageDebt.Cents);}
+                var cashBefore=s.Ledger.Balance;Assert.False(s.BuyProperty("pc",true));Assert.AreEqual(cashBefore,s.Ledger.Balance);
+                var worth=s.NetWorth();var purchase=s.PreviewCityPropertyPurchase("pc",false);Assert.True(s.BuyProperty("pc",false));Assert.AreEqual(worth-purchase.Fee+purchase.PrepaidCredit,s.NetWorth());Assert.Zero(s.CurrentShopRent.Cents);
+                var p=s.OwnedProperties.Single();var cash=s.Ledger.Balance;
+                Midnight(s,30);Assert.Zero(p.MortgageCents);Assert.Zero(p.MonthlyPrincipalCents);
+                Assert.AreEqual(cash-Money.FromCents(p.PriceCents).Scale(.001)-s.CurrentHomeRent-s.HomeUtilities,s.Ledger.Balance);
+                p.MortgageCents=10000000;p.MonthlyPrincipalCents=300000;
+                using(var l=Reload(s)){Assert.Zero(l.CurrentShopRent.Cents);Assert.Zero(l.PropertyAt("pc").MortgageCents);Assert.Zero(l.PropertyAt("pc").MonthlyPrincipalCents);Assert.AreEqual(s.Ledger.Balance,l.Ledger.Balance);Assert.False(l.RepayMortgage("pc"));Assert.Zero(l.MortgageDebt.Cents);}
             }
         }
         [Test] public void ClosingOwnedVentureKeepsProperty_AndRentalRequiresExplicitRegistration()
@@ -181,13 +183,13 @@ namespace PCShopSell.Tests
                 Assert.True(s.SellProperty("tea"));Assert.Null(s.PropertyAt("tea"));
             }
         }
-        [Test] public void HomePurchaseAndSaleRetainFurniture_AndClearMortgage()
+        [Test] public void CashHomePurchaseAndSaleRetainFurniture()
         {
             using(var s=Make())
             {
                 var furniture=s.HomeLayout.Count;double quality=s.HomeSleepQuality;
                 Assert.True(s.ChangeHomeTier(1));Assert.Greater(s.HomeSleepQuality,quality);Assert.AreEqual(Money.FromYuan(1200),s.CurrentHomeRent);
-                var worth=s.NetWorth();Assert.True(s.BuyHome(true));Assert.AreEqual(worth,s.NetWorth());Assert.Zero(s.CurrentHomeRent.Cents);
+                var worth=s.NetWorth();Assert.True(s.BuyHome(false));Assert.AreEqual(worth,s.NetWorth());Assert.Zero(s.CurrentHomeRent.Cents);
                 using(var l=Reload(s)){Assert.AreEqual(1,l.HomeTier);Assert.AreEqual(furniture,l.HomeLayout.Count);Assert.True(l.SellHome());Assert.Zero(l.HomeMortgageCents);Assert.AreEqual(Money.FromYuan(1200),l.CurrentHomeRent);}
             }
         }
@@ -228,7 +230,7 @@ namespace PCShopSell.Tests
                 using(var l=Reload(s)){Assert.AreEqual(VehicleKind.Van,l.Vehicle);Assert.AreEqual(s.Cargo.Capacity,l.Cargo.Capacity);Assert.True(l.SellVehicle(VehicleKind.Van));Assert.False(l.Owns(VehicleKind.Van));Assert.AreEqual(VehicleKind.Walk,l.Vehicle);Assert.False(l.SellVehicle(VehicleKind.Van));}
             }
         }
-        [Test] public void AutoRestockReservesDueBillsAndMortgagePayments()
+        [Test] public void AutoRestockReservesDueBillsAndPropertyMaintenance()
         {
             using(var s=Make())
             {
@@ -236,9 +238,9 @@ namespace PCShopSell.Tests
                 s.Clock.Restore(new GameDate(10),540);
                 Assert.AreEqual(debt,s.UpcomingBusinessPayments(7));
                 Assert.GreaterOrEqual(s.EffectiveRestockReserve.Cents,debt.Cents+50000);
-                s.BuyProperty("pc",true);s.Clock.Restore(new GameDate(29),540);
+                s.BuyProperty("pc",false);s.Clock.Restore(new GameDate(29),540);
                 var property=s.OwnedProperties.Single();
-                var expected=debt+Money.FromCents(property.MonthlyPrincipalCents)+Money.FromCents(property.MortgageCents).Scale(.004)+Money.FromCents(property.PriceCents).Scale(.001);
+                var expected=debt+Money.FromCents(property.PriceCents).Scale(.001);
                 Assert.AreEqual(expected,s.UpcomingBusinessPayments(1));
             }
         }

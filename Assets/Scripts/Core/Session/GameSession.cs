@@ -101,6 +101,7 @@ namespace PCShopSell.Core.Session
             SetSmartphone(smartphone);
             Random = new GameRandom(seed);
             Clock = new GameClock(start.Date, start.MinuteOfDay);
+            InitializePropertyMarket(seed);
             Player.EnergyChanged = SynchronizeEnergyExhaustion;
             Ledger = new Ledger(openingCash);
             Time = new TimeController();
@@ -298,6 +299,7 @@ namespace PCShopSell.Core.Session
         /// <summary>这个地点的营业时间说明；不限时的地方返回 null。</summary>
         public string OpeningHoursText(Place p)
         {
+            var track=RaceTracks.Get(p?.Id);if(track!=null)return track.OpeningHours;
             if(p.ExplicitEntrance&&p.OpenMinute==0&&p.CloseMinute==1440)return "24小时";
             if(p.ExplicitEntrance && p.OpenMinute!=p.CloseMinute)return $"每天 {Hm(p.OpenMinute)}–{Hm(p.CloseMinute)}";
             switch (p.Kind)
@@ -317,6 +319,7 @@ namespace PCShopSell.Core.Session
         public bool IsPlaceOpen(Place p)
         {
             if (p == null) return false;
+            var track=RaceTracks.Get(p.Id);if(track!=null)return track.IsOpenAt(Clock.MinuteOfDay);
             OwnedShop mine = ShopAt(p);
             if (mine != null) return IsDedicatedVenue(p)?VenueOpen(p):mine.Sim.IsOpen;
             if(SupplierClosesOnWeekend(p)&&Clock.Today.IsWeekend)return false;
@@ -384,7 +387,7 @@ namespace PCShopSell.Core.Session
         public Money ShopDeposits => Money.FromCents(_shops.Where(s => s.Rented).Sum(s => s.Lease.Deposit.Cents));
 
         public Money NetWorth() => Ledger.Balance + InventoryValue() + ShopDeposits + (PendingLease?.Deposit ?? Money.Zero) + ContractDeposits
-            + VehicleValue + UsedMotorAssetValue + VentureValue + PropertyValue + Money.FromCents(HomePriceCents) + FundValue + CityEquityValue - TotalDebt;
+            + VehicleValue + GaragePropertyValue + UsedMotorAssetValue + VentureValue + PropertyValue + (HomePriceCents > 0 ? HomePurchasePrice : Money.Zero) + FundValue + CityEquityValue - TotalDebt;
 
         public void Dispose()
         {
@@ -467,6 +470,7 @@ namespace PCShopSell.Core.Session
 
         private void OnDayAdvanced(GameDate previous, GameDate today)
         {
+            TickPropertyMarket();
             Market.OnNewDay(today);
             RecordPriceDay();
             if (Market.News.Count > 0)

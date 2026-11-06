@@ -1398,7 +1398,7 @@ namespace PCShopSell.EditorTools
                 staffed.DebugAddListing(unit.PlaceId, staffed.Clock.Today.TotalDays, staffed.Clock.Today.TotalDays + 30, Money.FromYuan(1800));
                 Check(staffed.OpenVenture(unit.PlaceId, "branch"), "分店占用真实铺面");
             }
-            Check(staffed.BuyProperty(staffed.PlayerShopPlace.Id, true), "主店按揭购置物业");
+            Check(staffed.BuyProperty(staffed.PlayerShopPlace.Id, false), "主店全款购置物业");
             Check(staffed.ChangeHomeTier(2), "升级安静公寓");
             staffed.Ledger.Credit(staffed.Clock.Today, "验收", Money.FromYuan(2000000), "园区验收资金");
             var parkSite = staffed.City.Places.FirstOrDefault(x => x.Kind == PlaceKind.Shop && x.Size == PCShopSell.Core.Shop.ShopSize.Large && !staffed.IsMyShop(x) && staffed.VentureAt(x.Id) == null && staffed.PropertyAt(x.Id) == null);

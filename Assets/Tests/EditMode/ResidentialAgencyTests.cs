@@ -29,17 +29,19 @@ namespace PCShopSell.Tests
                 long cash=s.Ledger.Balance.Cents;Assert.False(s.BuyResidence(1,false));Assert.AreEqual(cash,s.Ledger.Balance.Cents);
             }
         }
-        [Test] public void DirectMortgageUsesThirtyPercentPlusMoveFeeAndSurvivesJsonReload()
+        [Test] public void LegacyHomeMortgageIsRemovedOnReloadWithoutChangingCashOrOwnership()
         {
             using(var s=Make())
             {
                 long before=s.Ledger.Balance.Cents;
-                Assert.True(s.BuyResidence(1,true));
-                Assert.AreEqual(before-Money.FromYuan(54500).Cents,s.Ledger.Balance.Cents);
-                Assert.AreEqual(Money.FromYuan(126000).Cents,s.HomeMortgageCents);
-                using(var loaded=GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
+                Assert.False(s.BuyResidence(1,true));Assert.AreEqual(before,s.Ledger.Balance.Cents);
+                Assert.True(s.BuyResidence(1,false));
+                Assert.AreEqual(before-Money.FromYuan(180500).Cents,s.Ledger.Balance.Cents);
+                var save=s.CreateSave();save.business.HomeMortgageCents=12600000;save.business.HomeMonthlyPrincipalCents=350000;
+                using(var loaded=GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(save))))
                 {
-                    Assert.AreEqual(1,loaded.HomeTier);Assert.AreEqual(s.HomeMortgageCents,loaded.HomeMortgageCents);
+                    Assert.AreEqual(1,loaded.HomeTier);Assert.Zero(loaded.HomeMortgageCents);Assert.Zero(loaded.HomeMonthlyPrincipalCents);
+                    Assert.AreEqual(s.HomePriceCents,loaded.HomePriceCents);Assert.AreEqual(s.Ledger.Balance,loaded.Ledger.Balance);
                     Assert.True(loaded.SellHome());Assert.Zero(loaded.HomePriceCents);
                     Assert.AreEqual(Money.FromYuan(1200),loaded.CurrentHomeRent);
                 }

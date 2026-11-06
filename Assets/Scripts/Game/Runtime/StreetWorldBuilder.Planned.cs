@@ -83,6 +83,10 @@ namespace PCShopSell.Game.Runtime
             root.rotation=Quaternion.Euler(0,(float)p.Heading,0);
             var vis=new PlaceVisual{Place=p,Entrance=door,Root=root.gameObject};Places[p.Id]=vis;_cur=vis;
             float w=(float)p.Width,d=(float)p.Depth;
+            if(p.Kind==PlaceKind.Garage)
+            {
+                BuildRegionalGarage(root,p,node,door,vis);return;
+            }
             var track=RaceTracks.Get(p.Id);
             if(track!=null)
             {

@@ -19,10 +19,11 @@ namespace PCShopSell.Game.UI
         public void OnEnteredPlace(Place p)
         {
             if (S.IsWorking) { UpdateWorkScreen(); return; }
+            if(p.Kind==PlaceKind.Garage){OpenPlaceWindow(p,BuildRegionalGarage,1160,900);return;}
             if(RaceTracks.Get(p.Id)!=null){OpenPlaceWindow(p,BuildRaceReception,1160,900);return;}
             if(p.Kind==PlaceKind.Dealer||p.Id=="motor_scooter_mod"){OpenPlaceWindow(p,BuildMotorDealer,1160,900);return;}
             if(S.VentureAt(p.Id)?.Kind=="cars"){OpenPlaceWindow(p,BuildUsedMotorShop,1160,900);return;}
-            if(p.Id=="life_expo"&&S.CityExpoOpen(false)){CloseAllWindows();OpenQuarterlyExpo();return;}
+            if(p.Id=="life_expo"){OpenExpoReception();return;}
             if(p.Id==GameSession.CommunityMcnId){OpenCommunityMcn();return;}
             if(S.IsOwnedVenue(p)){OpenVenueManagement(p);return;}
             if(p.Business!=null&&p.Business.StartsWith("venue_")||S.IsCityActivityVenue(p)&&S.CityActivities.Any(a=>a.Active&&a.VenueId==p.Id)){OpenCityVenue(p);return;}
@@ -141,10 +142,9 @@ namespace PCShopSell.Game.UI
                     win.Close();
                     return;
                 }
-                BuildPlayerWorkEntry(win.Content, p, win);
-                if(p.Kind==PlaceKind.Agency)Ui.Size(Ui.Button(win.Content,"购买 / 我的具体物业",OpenCityProperties,18,Ui.ButtonHot),-1,42);
+                if (p.Id != "life_expo"&&p.Kind!=PlaceKind.Garage) BuildPlayerWorkEntry(win.Content, p, win);
                 if (S.HasRetailWholesale(p) && build!=BuildRetailWholesale && (p.Business==GameSession.FarmBusiness || p.Business==Gifts.TobaccoBusiness)) Ui.Size(Ui.Button(win.Content, "批发进货（可供自己店铺销售）", () => OpenRetailWholesale(p), 18, Ui.ButtonHot), -1, 40);
-                RectTransform frame = p.Kind == PlaceKind.Agency || S.VentureAt(p.Id) != null || S.IsPlayerPropertyOccupied(p.Id) ? null : BuildRosterFrame(win, p, h - 170);
+                RectTransform frame = p.Kind == PlaceKind.Agency || p.Kind==PlaceKind.Garage || RaceTracks.Get(p.Id)!=null || S.VentureAt(p.Id) != null || S.IsPlayerPropertyOccupied(p.Id) ? null : BuildRosterFrame(win, p, h - 170);
                 if (frame != null)
                 {
                     RectTransform original = win.Content;
@@ -220,7 +220,7 @@ namespace PCShopSell.Game.UI
             if (p.Id == S.ParkPlaceId)
             {
                 Line(w.Content, "电脑乐园", 22, Ui.Accent);
-                Para(w.Content, S.Clock.Today.TotalDays < S.ParkReadyDay ? $"公共区域正在改造，还有 {S.ParkReadyDay - S.Clock.Today.TotalDays} 天开放铺位。" : "园区已开放。选择铺位招商，调整不同业态之间的位置，在经营总览管理门店收支。", 18);
+                Para(w.Content, S.Clock.Today.TotalDays < S.ParkReadyDay ? $"公共区域正在改造，还有 {S.ParkReadyDay - S.Clock.Today.TotalDays} 天开放铺位。" : "园区已开放。选择铺位招商，调整不同业态之间的位置，在资产页查看门店收支。", 18);
                 Ui.Size(Ui.Button(w.Content, "查看园区布局", () => OpenBusinessSection(6), 18, Ui.ButtonHot), -1, 42);
                 return;
             }
@@ -228,7 +228,7 @@ namespace PCShopSell.Game.UI
             if (venture != null || S.IsPlayerPropertyOccupied(p.Id))
             {
                 Line(w.Content, S.PlaceTitle(p), 22, Ui.Accent);
-                Para(w.Content, venture != null ? "这是你委托店长经营的门店。日常收支留在门店周转金中，可在经营总览管理定价、维护和资金。" : "这处物业由中介托管出租，每日租金进入你的账本。", 18);
+                Para(w.Content, venture != null ? "这是你委托店长经营的门店。日常收支留在门店周转金中，可在资产页选择门店，再管理定价、维护和资金。" : "这处物业由中介托管出租，每月账期租金进入你的账本。", 18);
                 Ui.Size(Ui.Button(w.Content, "管理这处资产", () => { if (venture != null) OpenBusinessSection(3, p.Id); else OpenCityProperty(p); }, 18, Ui.ButtonHot), -1, 42);
                 return;
             }
@@ -357,7 +357,7 @@ namespace PCShopSell.Game.UI
                 Money expense = Money.FromCents(-entries.Where(e => e.Amount.IsNegative).Sum(e => e.Amount.Cents));
                 Line(w.Content, $"总收入 {income}    总支出 {expense}    净收支 {income - expense}", 21, Ui.Accent);
                 Line(w.Content, $"当前现金 {S.Ledger.Balance} · 包含经营、生活、打工、交通、购置、借还款等全部现金往来。", 16, Ui.Dim);
-                Para(w.Content, "现金流水包含借款、押金和个人收支；经营表现请看经营总览。", 15, Ui.Dim);
+                Para(w.Content, "现金流水包含借款、押金和个人收支；门店经营表现请看资产页。", 15, Ui.Dim);
                 var filters = Ui.Row(w.Content, 36);
                 string[] filterNames = { "全部明细", "只看收入", "只看支出" };
                 for (int i = 0; i < filterNames.Length; i++)

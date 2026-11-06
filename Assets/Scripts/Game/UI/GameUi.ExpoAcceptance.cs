@@ -11,9 +11,15 @@ namespace PCShopSell.Game.UI
             OpenWindow("品牌展会验收 · 作弊工具", 760, 700, w =>
             {
                 var body = Ui.Scroll(w.Content, 490);
-                Para(body, "品牌创建测试档已准备门店、经营记录、小电驴，以及社区主住所和城郊住处。进入后可亲手创建品牌。", 18);
+                Para(body, "品牌创建测试档已准备门店、经营记录、小电驴，以及社区主住所和城郊住处；每家店有3种同业商品，各至少100件。进入后可亲手创建品牌。", 18);
                 Ui.Size(Ui.Button(body, "可创建两个品牌（电脑＋服装）", () => OpenBrandCreationPreset("brand_ready_two"), 18, Ui.ButtonHot), -1, 46);
                 Ui.Size(Ui.Button(body, "可创建三个品牌（电脑＋服装＋模型手办）", () => OpenBrandCreationPreset("brand_ready_three"), 18, Ui.ButtonHot), -1, 46);
+                if (S.IsBrandCreationAcceptance || S.IsBrandExpoAcceptance)
+                    Ui.Size(Ui.Button(body, "补齐测试门店商品 · 3种各100件", () =>
+                    {
+                        S.DebugPrepareBrandAcceptanceStock();
+                        w.Rebuild();
+                    }, 18, Ui.ButtonHot), -1, 46).name = "PrepareBrandAcceptanceStock";
                 if (S.IsBrandCreationAcceptance && S.BrandCreationSuburbHomeBlocker == null)
                     Ui.Size(Ui.Button(body, "给当前品牌测试档补回城郊住处", () =>
                     {

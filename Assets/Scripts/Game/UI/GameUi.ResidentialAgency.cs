@@ -92,22 +92,19 @@ namespace PCShopSell.Game.UI
         {
             string id=p.Id;var tenants=S.ResidentialTenants(id);var property=S.PropertyAt(id);bool selfOwned=p==S.Home&&S.HomePriceCents>0;
             Line(detail,p.Name,22,Ui.Accent);Line(detail,ResidentialStatus(p),17,Ui.Good);
-            Line(detail,"月租 "+S.ResidentialRent(p)+" · 房价 "+S.ResidentialPrice(p),20);
+            Line(detail,"新租月租 "+S.ResidentialRent(p)+" · 房价 "+S.ResidentialPrice(p),20);
+            if(p==S.Home&&!selfOwned)Line(detail,"当前租约月租 "+S.CurrentHomeRent+"（保留签约价）",17,Ui.Dim);
             Para(detail,"地址："+S.City.StreetName(p.StreetId)+"\n按住所登记的住户 "+tenants.Length+" 人",16,Ui.Dim);
             if(tenants.Length>0)Para(detail,"住户："+string.Join("、",tenants.Select(t=>S.CityPerson(t.PersonId)?.Name??t.PersonId))+"\n保留住户，不可直接搬入；购买产权后，从下一月账期收租。",17);
             if(selfOwned)
             {
-                Line(detail,"剩余房贷 "+Money.FromCents(S.HomeMortgageCents),18);
-                HousingButton(detail,"提前结清房贷",()=>ConfirmHousing(parent,p,"结清自住房贷款",Money.FromCents(S.HomeMortgageCents),"保留住宅产权。",S.RepayHomeMortgage),S.HomeMortgageCents<=0?"没有待还房贷":null);
-                HousingButton(detail,"出售自住房…",()=>ConfirmHousing(parent,p,"出售自住房",Money.FromCents(S.HomeMortgageCents)-Money.FromCents(S.HomePriceCents).Scale(.9),"出售并结清贷款，之后继续租住。",S.SellHome));
+                HousingButton(detail,"出售自住房…",()=>ConfirmHousing(parent,p,"出售自住房",-S.HomePurchasePrice.Scale(.9),"按当前估值九折出售，之后按当周月租继续租住。",S.SellHome));
             }
             else if(property!=null)
             {
-                Line(detail,"剩余房贷 "+Money.FromCents(property.MortgageCents),18);
                 Line(detail,tenants.Length>0?"下个账期应收月租 "+Money.FromCents(property.MonthlyRentCents):"暂无实际租户，不产生租金",17,Ui.Accent);
-                if(tenants.Length==0)HousingButton(detail,"搬入自有空房…",()=>ConfirmHousing(parent,p,"搬入自有住宅",Money.FromYuan(500),"不付首月租金，产权及贷款转为自住房；家具与储物保留。",()=>S.RentResidentialHome(id)),S.ResidentialTradeBlocker(id,false));
-                HousingButton(detail,"提前结清该房贷款",()=>ConfirmHousing(parent,p,"结清出租房贷款",Money.FromCents(property.MortgageCents),"保留产权与现有住户。",()=>S.RepayMortgage(id)),property.MortgageCents<=0?"没有待还房贷":null);
-                HousingButton(detail,"出售住宅产权…",()=>ConfirmHousing(parent,p,"出售出租住宅",-S.PropertySaleNet(property),"扣除贷款与交易成本，原NPC住户保留。",()=>S.SellResidentialInvestment(id)));
+                if(tenants.Length==0)HousingButton(detail,"搬入自有空房…",()=>ConfirmHousing(parent,p,"搬入自有住宅",Money.FromYuan(500),"不付首月租金，产权转为自住房；家具与储物保留。",()=>S.RentResidentialHome(id)),S.ResidentialTradeBlocker(id,false));
+                HousingButton(detail,"出售住宅产权…",()=>ConfirmHousing(parent,p,"出售出租住宅",-S.PropertySaleNet(property),"包含估值折价与交易成本，原NPC住户保留。",()=>S.SellResidentialInvestment(id)));
             }
             else
             {
@@ -118,19 +115,15 @@ namespace PCShopSell.Game.UI
                 }
                 if(p!=S.Home)HousingPurchaseButtons(detail,parent,p,false);
             }
-            HelpLink(detail,"住宅产权与月租","空房可租住或买来自住；有NPC登记住址的住宅不能搬入，可带住户购买产权。出租房购买收2%交易费，原住户不搬家。按套计租，从下一月账期收款，空房无租金。贷款36期等额本金、月利率0.4%，月维护费为购入价0.1%。");
+            HelpLink(detail,"住宅产权与月租","住宅只支持全款购买。售价与新租月租每周分别浮动，已签租约保留原价。空房可租住或买来自住；有NPC登记住址的住宅不能搬入，可带住户购买产权。出租房购买收2%交易费，原住户不搬家。按套计租，从下一月账期收款，空房无租金。月维护费为购入价0.1%。");
         }
         private void HousingPurchaseButtons(Transform parent,Window window,Place p,bool selfUse)
         {
             Line(parent,selfUse?"买来自住":"购买产权（保留住户 / 空置持有）",18,Ui.Accent);
-            foreach(bool value in new[]{false,true})
-            {
-                bool mortgage=value;string label=(mortgage?"三成首付":"全款")+" · "+S.ResidentialPurchaseDue(p.Id,mortgage,selfUse)+"…";
-                HousingButton(parent,label,()=>ConfirmHousing(window,p,selfUse?"购买并搬入":"购买出租住宅产权",S.ResidentialPurchaseDue(p.Id,mortgage,selfUse),
-                    "房价 "+S.ResidentialPrice(p)+(selfUse?"\n异地自住含¥500搬家费，不收首月租金。":"\n包含2%交易费，原住户及地址保留。")
-                    +(mortgage?"\n首付30%，36期等额本金，月利率0.4%。":"\n全款无新增贷款。")+"\n月维护 "+S.ResidentialPrice(p).Scale(.001),
-                    ()=>S.BuyResidentialHome(p.Id,mortgage,selfUse)),S.ResidentialTradeBlocker(p.Id,true,mortgage,selfUse),selfUse?(mortgage?"ResidenceBuyMortgage":"ResidenceBuyCash"):null);
-            }
+            HousingButton(parent,"全款 · "+S.ResidentialPurchaseDue(p.Id,false,selfUse)+"…",()=>ConfirmHousing(window,p,selfUse?"购买并搬入":"购买出租住宅产权",S.ResidentialPurchaseDue(p.Id,false,selfUse),
+                "房价 "+S.ResidentialPrice(p)+(selfUse?"\n异地自住含¥500搬家费，不收首月租金。":"\n包含2%交易费，原住户及地址保留。")
+                +"\n全款购买。\n月维护 "+S.ResidentialPrice(p).Scale(.001),
+                ()=>S.BuyResidentialHome(p.Id,false,selfUse)),S.ResidentialTradeBlocker(p.Id,true,false,selfUse),selfUse?"ResidenceBuyCash":null);
         }
         private void ConfirmHousing(Window parent,Place p,string title,Money due,string terms,Func<bool> action)
         {

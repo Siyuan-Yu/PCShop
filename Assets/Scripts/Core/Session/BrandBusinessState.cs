@@ -4,6 +4,7 @@ namespace PCShopSell.Core.Session
     [Serializable] public sealed class BrandBusinessState
     {
         public int Version = 1, LastDay = -1;
+        public string SelectedExpoId;
         public BrandRecord[] Brands = Array.Empty<BrandRecord>();
         public BrandQualification[] Qualifications = Array.Empty<BrandQualification>();
         public BrandDeal[] Deals = Array.Empty<BrandDeal>();
@@ -14,7 +15,7 @@ namespace PCShopSell.Core.Session
         public BrandCareer[] Careers = Array.Empty<BrandCareer>();
         public int VisitsSinceDay = -1;
         public BrandShopVisits[] Visits = Array.Empty<BrandShopVisits>();
-        public BrandBusinessState Copy() => new BrandBusinessState {Version=Version,LastDay=LastDay,
+        public BrandBusinessState Copy() => new BrandBusinessState {Version=Version,LastDay=LastDay,SelectedExpoId=SelectedExpoId,
             VisitsSinceDay=VisitsSinceDay, Visits=Array.ConvertAll(Visits??Array.Empty<BrandShopVisits>(),x=>x.Copy()),
             Brands=Array.ConvertAll(Brands??Array.Empty<BrandRecord>(),x=>x.Copy()),
             Qualifications=Array.ConvertAll(Qualifications??Array.Empty<BrandQualification>(),x=>x.Copy()),
@@ -65,6 +66,9 @@ namespace PCShopSell.Core.Session
         public bool Attending,StockReturned;
         public string DesignerId,LastFeedback;
         public long PosterReadyAt,RevenueCents,ExpoWagesCents;
+        public bool ResultRecorded;
+        public long DepartureReminderAt;
+        public int InfluenceBefore,InfluenceAfter,ReputationBefore,ReputationAfter;
         public string[] KolIds=Array.Empty<string>();
         public long[] KolDayQuotes=Array.Empty<long>();
         public ExpoProduct[] Products=Array.Empty<ExpoProduct>();

@@ -29,15 +29,16 @@ namespace PCShopSell.Core.Session
         public CityPersonState[] ResidentialTenants(string id) => _cityPeople.Values.Where(p=>p.PersonId!=CityLifeCatalog.InvitationTestPersonId&&p.HomePlaceId==id).Select(p=>p.Copy()).ToArray();
         public int ResidentialTier(Place place) => Math.Max(0,Math.Min(3,place.Tier));
         public Money ResidentialRent(Place place) => HomeTierRentQuote(ResidentialTier(place));
-        public Money ResidentialPrice(Place place) => ResidentialTier(place)==0?ResidentialRent(place)*120:ResidencePrice(ResidentialTier(place));
+        public Money ResidentialPrice(Place place) => ResidentialTier(place)==0?(HomeBaseRent(0)*120).Scale(HomeSaleFactor):ResidencePrice(ResidentialTier(place));
         public Money ResidentialPurchaseDue(string id,bool mortgage,bool selfUse)
         {
             var place=City.GetPlace(id);var price=ResidentialPrice(place);
-            return price.Scale(mortgage?.3:1)+(selfUse?Money.FromYuan(place==Home?0:500):price.Scale(.02));
+            return price+(selfUse?Money.FromYuan(place==Home?0:500):price.Scale(.02));
         }
         public string ResidentialTradeBlocker(string id,bool purchase,bool mortgage=false,bool selfUse=true)
         {
             if(IsGameOver||!City.HasPlace(id)||City.GetPlace(id).Kind!=PlaceKind.Home)return "该地点不是住宅房源";
+            if(purchase&&mortgage)return "住宅仅支持全款购买";
             var place=City.GetPlace(id);string access=DistrictAccessBlocker(place);if(access!=null)return access;
             if(!InAgency||!AgencyServes(CurrentPlace,place))return "请到住宅所属片区的中介办理";
             var owned=PropertyAt(id);var tenants=ResidentialTenants(id);
@@ -66,9 +67,10 @@ namespace PCShopSell.Core.Session
             Money due=Money.FromYuan(500)+(owned==null?ResidentialRent(place):Money.Zero);
             if(!Ledger.TryDebit(Clock.Today,"搬家",due,place.Name+"首月租金及搬家费"))return false;
             SetResidentialHome(place);
+            _homeLeaseRentCents=owned==null?ResidentialRent(place).Cents:0;
             if(owned!=null)
             {
-                HomePriceCents=owned.PriceCents;HomeMortgageCents=owned.MortgageCents;HomeMonthlyPrincipalCents=owned.MonthlyPrincipalCents;
+                HomePriceCents=owned.PriceCents;HomeMortgageCents=HomeMonthlyPrincipalCents=0;
                 _properties.Remove(owned);
             }
             Say("已搬入"+HomeTitle+"，家具、食品和储物保留。");return true;
@@ -81,18 +83,18 @@ namespace PCShopSell.Core.Session
         public bool BuyResidentialHome(string id,bool mortgage,bool selfUse)
         {
             string why=ResidentialTradeBlocker(id,true,mortgage,selfUse);if(why!=null)return Fail(why);
-            var place=City.GetPlace(id);var price=ResidentialPrice(place);var principal=price.Scale(mortgage?.7:0);
+            var place=City.GetPlace(id);var price=ResidentialPrice(place);
             if(!Ledger.TryDebit(Clock.Today,selfUse?"购置住宅":"购置出租住宅",ResidentialPurchaseDue(id,mortgage,selfUse),place.Name,
                 LedgerAttribution.ForAsset(id,"residential:purchase:"+id+":"+Clock.Now.TotalMinutes)))return false;
             if(selfUse)
             {
-                SetResidentialHome(place);HomePriceCents=price.Cents;HomeMortgageCents=principal.Cents;HomeMonthlyPrincipalCents=(principal.Cents+35)/36;
+                SetResidentialHome(place);HomePriceCents=price.Cents;HomeMortgageCents=HomeMonthlyPrincipalCents=0;
                 Say("已购入并搬入"+HomeTitle+"，不再缴月租；家具与储物保留。");
             }
             else
             {
                 var tenants=ResidentialTenants(id);
-                _properties.Add(new OwnedProperty{PlaceId=id,PriceCents=price.Cents,MortgageCents=principal.Cents,MonthlyPrincipalCents=(principal.Cents+35)/36,
+                _properties.Add(new OwnedProperty{PlaceId=id,PriceCents=price.Cents,
                     BoughtDay=Clock.Today.TotalDays,CitySchema=1,UseMode=tenants.Length>0?"npc":"vacant",TenantPersonId=tenants.FirstOrDefault()?.PersonId,
                     TenantName=string.Join("、",tenants.Select(p=>CityPerson(p.PersonId)?.Name??p.PersonId)),MonthlyRentCents=ResidentialRent(place).Cents,
                     LeaseEndDay=Clock.Today.TotalDays+360,LastSettledMonth=Clock.Today.TotalDays/30});
@@ -104,9 +106,8 @@ namespace PCShopSell.Core.Session
         {
             var property=PropertyAt(id);
             if(property==null||!City.HasPlace(id)||City.GetPlace(id).Kind!=PlaceKind.Home||IsGameOver||!InAgency||!AgencyServes(CurrentPlace,City.GetPlace(id)))return Fail("请到住宅所属中介办理出售");
-            Money net=PropertySaleNet(property);if(Ledger.Balance+net<Money.Zero)return Fail("售价不足结清贷款，请先补足现金");
-            if(net.IsNegative)Ledger.ForceDebit(Clock.Today,"住宅出售",-net,City.GetPlace(id).Name);
-            else if(net.IsPositive)Ledger.Credit(Clock.Today,"住宅出售",net,City.GetPlace(id).Name,LedgerAttribution.ForAsset(id,"residential:sale:"+id+":"+Clock.Now.TotalMinutes));
+            Money net=PropertySaleNet(property);
+            if(net.IsPositive)Ledger.Credit(Clock.Today,"住宅出售",net,City.GetPlace(id).Name,LedgerAttribution.ForAsset(id,"residential:sale:"+id+":"+Clock.Now.TotalMinutes));
             _properties.Remove(property);Say("产权已出售，原住户和住所、人物关系保留。");return true;
         }
     }

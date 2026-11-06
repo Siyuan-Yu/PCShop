@@ -12,29 +12,27 @@ namespace PCShopSell.Game.UI
     {
         /// <summary>All business purchasing begins with product/destination, then chooses an actual execution channel.</summary>
         private string _procurementShopId, _procurementSearch = "";
-        private bool _procurementOrders;
+        private bool _procurementOrders, _procurementAgreement;
         public void OpenCityProcurement() => OpenCityProcurementFor(S.CurrentShop);
         public void OpenCityProcurementFor(OwnedShop target)
         {
             _procurementShopId = target?.Rented == true ? target.Place.Id : S.ShopAt(_procurementShopId)?.Place.Id ?? S.MyShops.FirstOrDefault()?.Place.Id;
-            OpenWorkspace("business", "procurement", "经营 · 采购", 1160, 840, w =>
+            OpenWorkspace("procurement", "main", "商铺采购与补货", 1160, 840, w =>
             {
                 GuideHint(w.Content,QuestTarget.Restock,w.Rebuild);
                 var shop = S.ShopAt(_procurementShopId);
                 var tabs = Ui.Row(w.Content, 42);
-                Ui.Size(Ui.Button(tabs, "商品与补货", () => { _procurementOrders = false; w.Rebuild(); }, 18, _procurementOrders ? Ui.ButtonBg : Ui.ButtonHot), -1, 42, 1);
-                Ui.Size(Ui.Button(tabs, "在途与订单", () => { _procurementOrders = true; w.Rebuild(); }, 18, _procurementOrders ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
+                Ui.Size(Ui.Button(tabs, "商品与补货", () => { _procurementOrders = false; _procurementAgreement = false; w.Rebuild(); }, 18, !_procurementOrders && !_procurementAgreement ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
+                Ui.Size(Ui.Button(tabs, "在途与订单", () => { _procurementOrders = true; _procurementAgreement = false; w.Rebuild(); }, 18, _procurementOrders && !_procurementAgreement ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
+                Ui.Size(Ui.Button(tabs, "直供协议与账款", () => { _procurementAgreement = true; w.Rebuild(); }, 18, _procurementAgreement ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
+                if (_procurementAgreement) { BuildDirectSupply(w); return; }
                 HelpLink(w.Content, "采购与补货说明", "先选收货店和商品，可直接网购，也可安排进货员或使用已有供货协议。商品目标决定补到多少，执行人负责实际采购；渠道的解锁、每日配额、运费和路线照常计算。认领会预留缺口和预算，不会立即下单。");
                 Para(w.Content, $"现金 {S.Ledger.Balance} · 共同保护额 {S.EffectiveRestockReserve} · 已安排预算 {S.ClaimedProcurementBudget}", 18, Ui.Accent);
                 Ui.Size(Ui.Button(w.Content,"全店补货预算",OpenProcurementBudget,16),-1,32).name="ProcurementBudget";
                 if (shop == null) { Para(w.Content, "经营进货需要合法使用的门店。普通生活购物仍可从手机或街上商户进入。", 18); return; }
-                var destinations = Ui.Row(w.Content, 38);
-                foreach (var s in S.MyShops)
-                {
-                    var destination = s;
-                    Ui.Size(Ui.Button(destinations, S.ShopTitle(s), () => { _procurementShopId = destination.Place.Id; w.Rebuild(); }, 16,
-                        _procurementShopId == s.Place.Id ? Ui.ButtonHot : Ui.ButtonBg), -1, 38, 1);
-                }
+                var destinations = S.MyShops.Where(s=>s.Rented).ToArray();
+                Ui.Size(Ui.Choice(w.Content,destinations.Select(S.ShopTitle),Array.FindIndex(destinations,s=>s.Place.Id==_procurementShopId),
+                    index=>{_procurementShopId=destinations[index].Place.Id;w.Rebuild();}),-1,38);
                 Line(w.Content, "收货店：" + S.ShopTitle(shop), 19, Ui.Accent).name="ProcurementDestination";
                 if (_procurementOrders) { BuildCityProcurementOrders(w); return; }
                 Ui.Size(Ui.TextInput(w.Content, _procurementSearch, "搜索商品 / 分类", value => { _procurementSearch = value; w.RequestRebuild(); }), -1, 38);

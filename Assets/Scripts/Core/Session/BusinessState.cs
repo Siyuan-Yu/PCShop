@@ -59,7 +59,13 @@ namespace PCShopSell.Core.Session
         public long CapitalCents, DepositCents, RentCents, ReserveCents, TotalOperatingCents, LastSalesCents, LastCostsCents;
         public double Condition = 1, PriceFactor = 1, LastDemand;
         public bool Paused;
-        public ManagedVenture Copy() => (ManagedVenture)MemberwiseClone();
+        public VentureFinanceDay[] FinanceDays = Array.Empty<VentureFinanceDay>();
+        public ManagedVenture Copy()
+        {
+            var copy = (ManagedVenture)MemberwiseClone();
+            copy.FinanceDays = (FinanceDays ?? Array.Empty<VentureFinanceDay>()).Select(d => d.Copy()).ToArray();
+            return copy;
+        }
     }
     [Serializable] public sealed partial class OwnedProperty
     {

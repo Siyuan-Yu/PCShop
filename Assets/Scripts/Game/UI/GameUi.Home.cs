@@ -521,6 +521,11 @@ namespace PCShopSell.Game.UI
                         Ui.Size(Ui.Button(row, "查看日程", () => OpenCityActivityDetail(id), 16), 90);
                         ScheduleActivityGoButton(row, id);
                     }
+                    if (e.ExpoId != null)
+                    {
+                        string expoId = e.ExpoId;
+                        Ui.Size(Ui.Button(row, "参展安排", () => OpenBookedExpo(expoId), 16), 94, 40);
+                    }
                     if (e.Kind == "repair")
                     {
                         string target = S.HomeVisits.Count > 0 ? S.HomeVisits[0].TargetId : null;

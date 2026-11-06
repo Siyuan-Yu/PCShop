@@ -35,6 +35,7 @@ namespace PCShopSell.Core.Session
         public string Text;
         public string Kind;
         public string ActivityId;
+        public string ExpoId;
         public int Index = -1;
     }
 
@@ -207,6 +208,7 @@ namespace PCShopSell.Core.Session
         /// </summary>
         private void CheckCalendarReminders(GameTimestamp from, GameTimestamp to)
         {
+            CheckExpoCalendarReminders(from.TotalMinutes, to.TotalMinutes);
             if (!HasCalendar) return;
             long f = from.TotalMinutes, t = to.TotalMinutes;
             foreach (ScheduleEntry e in Schedule())
@@ -222,6 +224,7 @@ namespace PCShopSell.Core.Session
         public List<ScheduleEntry> Schedule()
         {
             var l = new List<ScheduleEntry>();
+            AddExpoSchedule(l);
             AddWorkSchedule(l);
             foreach (var activity in _cityActivities.Where(a => a.Active))
             {

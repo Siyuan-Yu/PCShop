@@ -21,7 +21,7 @@ namespace PCShopSell.Game.UI
                 {
                     CloseAllWindows();_ctrl.StartCityLifePreset("kol_live");_ctrl.Ui.OpenKolManagement();
                 },18,Ui.ButtonHot),-1,48).name="CheatKolLive";
-                Ui.Size(Ui.Button(w.Content,"赛车与二手车行验收（独立测试档）",()=>{CloseAllWindows();_ctrl.StartCityLifePreset("racing");_ctrl.Ui.OnEnteredPlace(_ctrl.Session.CurrentPlace);},18,Ui.ButtonHot),-1,48).name="CheatRacing";
+                Ui.Size(Ui.Button(w.Content,"四区车库 / 赛车 / 二手车行验收（独立测试档）",()=>{CloseAllWindows();_ctrl.StartCityLifePreset("racing");_ctrl.Ui.OnEnteredPlace(_ctrl.Session.CurrentPlace);},18,Ui.ButtonHot),-1,48).name="CheatRacing";
                 Ui.Size(Ui.Button(w.Content, "人物与剧情配置（只读）", OpenNarrativeCatalogue, 18), -1, 44);
                 Ui.Size(Ui.Button(w.Content, "三段主线验收：一键满足前置条件", OpenDistrictAcceptance, 18, Ui.ButtonHot), -1, 48).name="CheatDistrictProgression";
                 BuildCommunityConditionsCheat(w.Content,w.Rebuild);
@@ -76,7 +76,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(time, "时间 +1 小时", () => S.DebugSkipHours(1), 17, Ui.ButtonBg, S.Trip == null), -1, -1, 1);
                 Ui.Size(Ui.Button(time, "时间 +6 小时", () => S.DebugSkipHours(6), 17, Ui.ButtonBg, S.Trip == null), -1, -1, 1);
 
-                Ui.Size(Ui.Button(w.Content, "打开经营总览（不管有没有解锁）", () =>
+                Ui.Size(Ui.Button(w.Content, "打开资产页", () =>
                 {
                     w.Close();
                     DebugOpenBusiness(0);

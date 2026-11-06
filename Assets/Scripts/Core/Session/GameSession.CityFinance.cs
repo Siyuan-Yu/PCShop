@@ -29,6 +29,7 @@ namespace PCShopSell.Core.Session
             var result = new CityCashReserve { Days = days, From = today, To = today.AddDays(days), Balance = Ledger.Balance,
                 ExtraProtection = Money.FromYuan(Math.Max(500, RestockReserveYuan)) };
             result.KnownMandatory = UpcomingBusinessPayments(days);
+            result.KnownMandatory += GarageRentDueWithin(days);
             result.KnownMandatory += CityClimatePaymentsWithin(days);
             // Daily wages are contracted fixed bills, not a second additional safety margin.
             result.KnownMandatory += Money.FromYuan(Employees.Sum(x => (long)x.Person.DailyWageYuan) + McnDailyWages) * days;

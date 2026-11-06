@@ -28,6 +28,7 @@ namespace PCShopSell.Core.Session
         public const string Wholesale = "w1788";
         public const string Loans = "loans";
         public const string Live = "live";
+        public const string Securities = "securities";
 
         public static readonly IReadOnlyList<PhoneAppDef> All = new[]
         {
@@ -38,6 +39,7 @@ namespace PCShopSell.Core.Session
             new PhoneAppDef(Chat, "聊天", "和认识的人聊两句，一定有回，涨一点交情（到 40 为止）。不装的话只能发短信，常常没人回。"),
             new PhoneAppDef(Loans, "周转借款", "月息 20% 单利，最长 12 个月；到期自动扣本金和利息，现金不足可扣为负数。"),
             new PhoneAppDef(Live, "街坊直播", "观看街坊的直播、关注主播、提问和送礼。"),
+            new PhoneAppDef(Securities, "证券", "查看指数与企业行情、持仓和买卖交易。"),
         };
 
         /// <summary>刚买手机时自带的。</summary>

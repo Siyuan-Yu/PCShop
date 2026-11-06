@@ -134,6 +134,7 @@ namespace PCShopSell.Core.World
         Station,
         Dealer,
         Agency,
+        Garage,
     }
 
     /// <summary>地点（店铺、住所、批发商、地铁站等），入口位于路径图的某个节点。</summary>
@@ -420,6 +421,7 @@ namespace PCShopSell.Core.World
                 case "station": return PlaceKind.Station;
                 case "dealer": return PlaceKind.Dealer;
                 case "agency": return PlaceKind.Agency;
+                case "garage": return PlaceKind.Garage;
                 default: return PlaceKind.Other;
             }
         }

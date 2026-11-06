@@ -234,13 +234,13 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Pricing: return "位置：自己的店 → 右侧“定价”页";
                 case QuestTarget.Orders: return "位置：自己的店 → 右侧“订单”页";
                 case QuestTarget.Restock: return "入口：手机 → 网购";
-                case QuestTarget.Finance: return "入口：经营 → “资产与负债”。";
-                case QuestTarget.Enterprise: return "入口：经营 → “企业合同”。";
-                case QuestTarget.Direct: return "入口：经营 → “直供采购”。";
+                case QuestTarget.Finance: return "入口：资产 → 经营中的店铺。";
+                case QuestTarget.Enterprise: return "入口：电脑店 → 订单 → 企业采购订单。";
+                case QuestTarget.Direct: return "入口：采购 → 直供协议与账款。";
                 case QuestTarget.Ventures: return "地点：安居房产中介";
-                case QuestTarget.Park: return "入口：经营 → 园区布局";
+                case QuestTarget.Park: return "入口：前往园区 → 园区管理";
                 case QuestTarget.Creators: return "入口：品牌 → “代言人（KOL）”。";
-                case QuestTarget.Property: return "入口：经营 → “物业与住处”。";
+                case QuestTarget.Property: return "入口：资产 → 我的物业；购买前往所属中介。";
                 default: return "";
             }
         }

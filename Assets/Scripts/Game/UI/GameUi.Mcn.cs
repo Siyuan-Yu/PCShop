@@ -36,6 +36,7 @@ namespace PCShopSell.Game.UI
         {
             bool here=S.CurrentPlace==place;
             Line(w.Content,"社区 · 创作者介绍 · 09:00—18:00",21,Ui.Accent);
+            if(here&&BusinessUnlocked)Ui.Size(Ui.Button(w.Content,S.HasMcn?"管理自办MCN工作室":"筹办自己的MCN工作室",()=>OpenBusinessSection(4),17),-1,36);
             Para(w.Content,"选好公司和主播。付介绍费后收到业务名片，可以联系本人洽谈。",17);
             var agencies = Ui.Row(w.Content, 36, 6);
             foreach (var company in BrandAgency.All)

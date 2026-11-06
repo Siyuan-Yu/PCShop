@@ -53,7 +53,7 @@ namespace PCShopSell.Core.Session
             if (CurrentPlace == null || CurrentPlace.Business != u.SoldAt) return Fail($"「{u.Name}」要去{u.SoldAtName}买。");
             string blocker = UpgradeBlocker(u);
             if (blocker != null) return Fail(blocker);
-            if (!Ledger.TryDebit(Clock.Today, "装修", u.Price, u.Name)) return Fail("钱不够。");
+            if (!Ledger.TryDebit(Clock.Today, "装修", u.Price, u.Name, PCShopSell.Core.Finance.LedgerAttribution.ForShop(CurrentShop.Place.Id))) return Fail("钱不够。");
             _upgrades.Add(id);
             ApplyUpgrades();
             Say($"买了「{u.Name}」，当天给你装到店里了。");

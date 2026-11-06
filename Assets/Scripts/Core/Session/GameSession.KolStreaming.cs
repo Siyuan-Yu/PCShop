@@ -128,7 +128,7 @@ namespace PCShopSell.Core.Session
         public bool EndKolLive(string id)
         {
             var c=_kol.Contracts.FirstOrDefault(x=>x.Id==id);if(IsGameOver||c==null||!KolContractCurrent(c,Clock.Now.TotalMinutes))return false;
-            if(ActiveBrandExpo?.KolIds.Contains(c.PersonId)==true)return Fail("正在为展会站台，闭展后才能解除合约");
+            if(_brands.Exhibits.Any(e=>e.Format==2&&e.Attending&&!e.Finished&&!e.Missed&&e.KolIds.Contains(c.PersonId)))return Fail("正在为展会站台，闭展后才能解除合约");
             FinishKolContractSessions(c, Clock.Now.TotalMinutes);
             c.Ended=true;
             foreach(var d in _brands.Deals.Where(d=>d.KolContractId==c.Id))d.Ended=true;

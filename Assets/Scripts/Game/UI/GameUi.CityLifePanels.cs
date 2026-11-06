@@ -30,7 +30,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content, "街坊与已认识的人", OpenCityPeople, 20), -1, 50);
                 Ui.Size(Ui.Button(w.Content, "活动日程 / 展会日历", OpenCityActivities, 20), -1, 50);
                 Ui.Size(Ui.Button(w.Content, "人脉经营故事", OpenCityStories, 20), -1, 50);
-                Ui.Size(Ui.Button(w.Content, "经营总览", OpenCityFinanceOverview, 20), -1, 50);
+                Ui.Size(Ui.Button(w.Content, "资产 · 门店与自有物业", OpenCityFinanceOverview, 20), -1, 50);
                 Ui.Size(Ui.Button(w.Content, "市场变化 / 模型目录", OpenCityRetailPanel, 20), -1, 50);
                 if (S.CurrentPlace != null && CityLifeCatalog.Activities.Any(a => a.VenueId == S.CurrentPlace.Id))
                     Ui.Size(Ui.Button(w.Content, "当前场所：" + S.CurrentPlace.Name, () => OpenCityVenue(S.CurrentPlace), 20), -1, 50);
@@ -279,6 +279,7 @@ namespace PCShopSell.Game.UI
         public void OpenCityVenue(Place place)
         {
             if (place == null) return;
+            if (place.Id == "life_expo") { OpenExpoReception(); return; }
             if (place.Id == GameSession.CommunityMcnId) { OpenCommunityMcn(); return; }
             if (S.CurrentPlace != place)
             {
@@ -497,7 +498,7 @@ namespace PCShopSell.Game.UI
 #if UNITY_EDITOR
                 Ui.Size(Ui.Button(content, "品牌展会验收：社区资格、报名、接待与交付", OpenExpoAcceptance, 19, Ui.ButtonHot), -1, 48);
 #endif
-                Preset("具体物业与投资", "assets", "从正常中介购买、租转买、持仓交易入口验收。 ");
+                Preset("自有物业与每周房产行情", "assets", "准备4处商铺、1套自住房和1套带NPC住户住宅，覆盖自用、出租与空置；全款购入，并提供8日报价样本，可直接查看住宅和商铺的售价、月租涨跌。 ");
                 Preset("夜班精力、自由排班与加班费", "night", "20:00开局，员工日薪200、12小时夜班预计280。玩家精力归零但仍能行动；测试四小时提醒、实际睡眠、跨午夜工时与读档。 ");
                 Preset("服装与冷暖", "clothing", "独立冬季测试档，准备四档服装库存、真实衣架/折叠架/镜子。试穿、更衣、库存转自用和冷暖设备均走正常入口；不快进正式档。 ");
                 var seasons=Ui.Row(content,40,6);

@@ -1,9 +1,30 @@
 using System.Collections.Generic;
+using PCShopSell.Core.World;
 using UnityEngine;
 namespace PCShopSell.Game.Runtime
 {
     public sealed partial class StreetWorldBuilder
     {
+        private static void BuildRegionalGarage(Transform root,Place p,Vector3 node,Vector3 door,PlaceVisual vis)
+        {
+            // A compact annex beside the existing reception, not a new parking island.
+            float w=(float)p.Width,d=(float)p.Depth;
+            Prims.Box(root,"GarageFoundation",new Vector3(0,.12f,d*.5f),new Vector3(w+.5f,.45f,d+.5f),Mats.Lit(ArtDirection.Hex("858B77")));
+            var body=Prims.Box(root,"GarageAnnex",new Vector3(0,1.8f,d*.5f),new Vector3(w,3.6f,d),Mats.Lit(ArtDirection.Cream),true);
+            body.AddComponent<PlaceMarker>().PlaceId=p.Id;
+            Prims.Box(root,"GarageRoof",new Vector3(0,3.7f,d*.5f),new Vector3(w+.4f,.25f,d+.4f),Mats.Lit(ArtDirection.Ink));
+            Prims.Box(root,"RollerDoor",new Vector3(0,1.5f,-.06f),new Vector3(w-1,2.8f,.15f),Mats.Lit(ArtDirection.Blue));
+            for(int i=0;i<7;i++)Prims.Box(root,"DoorSlat",new Vector3(0,.35f+i*.36f,-.16f),new Vector3(w-1,.035f,.025f),Mats.Lit(ArtDirection.Ink));
+            Prims.SignText(root,"车库",new Vector3(0,3.2f,-.2f),w-.7f,.45f,ArtDirection.Cream);
+            var delta=door-node;
+            if(delta.sqrMagnitude>.1f)
+            {
+                var step=Prims.Box(root,"GarageWalkway",root.InverseTransformPoint((door+node)*.5f)+Vector3.up*.08f,
+                    new Vector3(1.8f,.38f,delta.magnitude),Mats.Lit(ArtDirection.Hex("858B77")));
+                step.transform.rotation=Quaternion.LookRotation(delta);
+            }
+            vis.LabelPos=root.TransformPoint(new Vector3(0,4.5f,d*.35f));
+        }
         private static void BuildRaceEntrance(Transform root,Vector3 door,PCShopSell.Core.Session.RaceTrack track)
         {
             var edge=new Vector3(

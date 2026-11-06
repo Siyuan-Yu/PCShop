@@ -21,8 +21,8 @@ namespace PCShopSell.Core.Session
         public OwnedProperty PropertyAt(string id) => _properties.Find(x => x.PlaceId == id);
         public Money VentureReserve => Money.FromCents(_ventures.Sum(x => x.ReserveCents));
         public Money VentureValue => Money.FromCents(_ventures.Sum(x => x.ReserveCents + x.DepositCents + (long)(x.CapitalCents * .3 * x.Condition)));
-        public Money PropertyValue => Money.FromCents(_properties.Sum(x => x.PriceCents));
-        public Money MortgageDebt => Money.FromCents(_properties.Sum(x => x.MortgageCents) + HomeMortgageCents);
+        public Money PropertyValue => Money.FromCents(_properties.Sum(x => PropertyMarketValue(x).Cents));
+        public Money MortgageDebt => Money.Zero;
         public Money VentureOpeningCost(ShopListing listing, VentureDef def) => Money.FromYuan(def.Capital + 5000) + listing.Rent + RealEstate.Deposit(listing.Rent) + AgentFeeFor(listing.Rent);
         public string VentureBlocker(string placeId, string kind)
         {
@@ -91,7 +91,7 @@ namespace PCShopSell.Core.Session
         public bool MaintainVenture(string id)
         {
             var v=VentureAt(id); if (v==null || v.Condition >= .999 || IsGameOver) return false;
-            if(!Ledger.TryDebit(Clock.Today, "企业维护", VentureRepairCost(v), Ventures.Get(v.Kind).Name)) return Fail("维护现金不足。");
+            if(!Ledger.TryDebit(Clock.Today, "企业维护", VentureRepairCost(v), Ventures.Get(v.Kind).Name, LedgerAttribution.ForShop(id))) return Fail("维护现金不足。");
             v.Condition=1; return true;
         }
         public Money VentureExitValue(ManagedVenture v) => Money.FromCents(v.ReserveCents + v.DepositCents + (long)(v.CapitalCents * .3 * v.Condition));
@@ -123,7 +123,7 @@ namespace PCShopSell.Core.Session
                 // 首期租金已付；之后逐日计提。停业仍有租金及 20% 留任工资。
                 long rent=(day-v.OpenDay<=30 || PropertyAt(v.PlaceId)!=null || IsParkVenture(v)) ? 0 : v.RentCents/30;
                 long wages=d.DailyWages*100;
-                if(v.Kind=="cars"){SettleUsedMotors(v,today,rent+(v.Paused?wages/5:wages));continue;}
+                if(v.Kind=="cars"){SettleUsedMotors(v,today,rent,v.Paused?wages/5:wages);continue;}
                 double location=LocationFactorOf(VentureLocation(v));
                 bool weekend=day%7==5 || day%7==6;
                 double seasonal=d.Id=="flowers" && day%30==13 ? 1.8 : weekend && d.Id!="branch" && d.Id!="cars" ? 1.25 : 1;
@@ -145,20 +145,17 @@ namespace PCShopSell.Core.Session
                 v.ReserveCents+=sales-cost;
                 v.TotalOperatingCents+=sales-cost;
                 v.LastSalesCents=sales; v.LastCostsCents=cost; v.LastDemand=demand;
+                RecordVentureFinance(v, day, sales, v.Paused ? 0 : (long)(sales*costRatio), v.Paused ? wages/5 : wages, rent);
             }
         }
         public Money PropertyQuote(string id) => CityPropertyPrice(id);
         public string PropertyBlocker(string id, bool mortgage) => CityPropertyPurchaseBlocker(id, mortgage);
         public bool BuyProperty(string id, bool mortgage) => PurchaseCityProperty(id, mortgage);
-        public Money PropertySaleNet(OwnedProperty p) => Money.FromCents(p.PriceCents).Scale(.9) - Money.FromCents(p.MortgageCents);
+        public Money PropertySaleNet(OwnedProperty p) => PropertyMarketValue(p).Scale(.9);
         public bool SellProperty(string id) => City.HasPlace(id)&&City.GetPlace(id).Kind==PlaceKind.Home?SellResidentialInvestment(id):SellCityProperty(id);
         public bool RepayMortgage(string id)
         {
-            var p = PropertyAt(id); if (p == null || p.MortgageCents <= 0 || IsGameOver) return false;
-            string transaction = "property:" + id + ":repay:" + p.BoughtDay + ":" + _cityAssetEffects.Count;
-            if (!Ledger.TryDebit(Clock.Today, "偿还房贷", Money.FromCents(p.MortgageCents), "提前结清",
-                new LedgerAttribution(LedgerBusinessKind.Financing, propertyId: id, sourceEventId: transaction))) return Fail("现金不足。");
-            _cityAssetEffects.Add(transaction); p.MortgageCents = 0; return true;
+            return Fail("物业仅支持全款购买，没有待还房贷。");
         }
         private void SettleProperties(GameDate today) => SettleCityProperties(today);
     }
