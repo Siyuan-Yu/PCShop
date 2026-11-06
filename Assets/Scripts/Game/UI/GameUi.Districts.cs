@@ -82,7 +82,7 @@ namespace PCShopSell.Game.UI
                 }
                 Line(w.Content,node.Title,25,Ui.Accent);
                 if(!S.DistrictCommerceActive&&(node.Id.StartsWith("expo.")||node.Id.StartsWith("tender.")))
-                    Ui.Size(Ui.Button(w.Content,"打开品牌经营 · 参展与企业竞标",OpenBrandBusiness,18),-1,38);
+                    Ui.Size(Ui.Button(w.Content,"打开品牌经营 · 参展与企业竞标",OpenBrandOverview,18),-1,38);
                 var body=Ui.Scroll(w.Content,430);
                 if(S.DistrictCommerceGameplay){BuildDistrictCommerceGameplay(body,w);return;}
                 if(S.DistrictCommerceActive)BuildDistrictCommerceProgress(body,w);

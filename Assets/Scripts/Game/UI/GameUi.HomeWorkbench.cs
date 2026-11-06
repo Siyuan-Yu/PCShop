@@ -165,7 +165,7 @@ namespace PCShopSell.Game.UI
             else if(_workbenchBusinessTab==3)
             {
                 WbText(list,"已解锁的业务",20);
-                WbButton(list,"品牌 · 代言人 / 展会 / 竞标",OpenBrandBusiness,"WorkbenchBrandBusiness");
+                WbButton(list,"品牌 · 代言人 / 展会 / 竞标",OpenBrandOverview,"WorkbenchBrandBusiness");
                 if(BusinessUnlocked)
                 {
                     WbButton(list,"直供采购",()=>{_businessTab=1;ShowBusinessPanel(false);},"WorkbenchDirectSupply");

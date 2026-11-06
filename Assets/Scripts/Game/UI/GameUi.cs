@@ -222,7 +222,7 @@ namespace PCShopSell.Game.UI
             _businessButton = Ui.Size(Ui.Button(row, "经营", OpenBusinessPanel, 18), 66);
             _businessButton.gameObject.SetActive(true);
             _businessButton.Tip("<b>经营</b>　快捷键：J\n资产与负债、直供、企业合同、分店、园区等后期经营。");
-            _brandButton=Ui.Size(Ui.Button(row,"品牌",OpenBrandBusiness,18),66);
+            _brandButton=Ui.Size(Ui.Button(row,"品牌",OpenBrandOverview,18),66);
             _brandButton.name="HudBrand";
             _brandButton.gameObject.SetActive(true);
             _brandButton.Tip("品牌管理、KOL签约、直播排班与直播间。");

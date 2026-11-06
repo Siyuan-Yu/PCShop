@@ -10,10 +10,16 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
-        private const int BrandExpoTab = 1, BrandTenderTab = 2, BrandKolTab = 3;
+        private const int BrandOverviewTab = 0, BrandExpoTab = 1, BrandTenderTab = 2, BrandKolTab = 3;
         private int _brandTab;
         private bool _brandCreating;
         private string _brandId, _brandShop, _brandProduct;
+        private void OpenBrandOverview()
+        {
+            _brandTab = BrandOverviewTab;
+            OpenBrandBusiness();
+        }
+
         public void OpenBrandBusiness()
         {
             _brandCreating = false;
@@ -25,10 +31,21 @@ namespace PCShopSell.Game.UI
         {
             var state=S.BrandBusiness;
             var tabs=Ui.Row(w.Content,40,6);string[] names={"品牌总览","展会","企业竞标","代言人（KOL）"};
-            for(int i=0;i<names.Length;i++){int t=i;Ui.Size(Ui.Button(tabs,names[i],()=>{_brandTab=t;_brandCreating=false;_expoPage="overview";w.Rebuild();},18,t==_brandTab?Ui.ButtonHot:Ui.ButtonBg),-1,40,1);}
+            for (int i = 0; i < names.Length; i++)
+            {
+                int tab = i;
+                Ui.Size(Ui.Button(tabs, names[i], () =>
+                {
+                    _brandTab = tab;
+                    _brandCreating = false;
+                    _expoPage = "overview";
+                    w.ResetScrollOnRebuild = true;
+                    w.Rebuild();
+                }, 18, tab == _brandTab ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1);
+            }
             if(S.DistrictCommerceActive)Ui.Size(Ui.Button(w.Content,"主线 · "+S.CurrentDistrictNode.Title,OpenDistrictStory,17,Ui.ButtonHot),-1,36);
             var body=Ui.Scroll(w.Content,690);
-            if (_brandTab == 0) { BuildBrandOverview(body, w, state); return; }
+            if (_brandTab == BrandOverviewTab) { BuildBrandOverview(body, w, state); return; }
             if (_brandTab == BrandKolTab) { BuildKolBrandPage(body, w, state.Brands); return; }
             if (state.Brands.Length == 0)
             {
