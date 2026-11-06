@@ -63,6 +63,16 @@ namespace PCShopSell.EditorTools
                 string output="work/art-review";var args=Environment.GetCommandLineArgs();
                 for(int i=0;i<args.Length-1;i++)if(args[i]=="-artReviewOutput")output=args[i+1];
                 Directory.CreateDirectory(output);
+                if(Array.IndexOf(args,"-roadViews")>=0)
+                {
+                    camera.farClipPlane=5000;
+                    Shot(output,"city",new Vector3(0,0,155),0,72,690);
+                    Shot(output,"outskirts",new Vector3(-490,0,-415),0,78,125);
+                    Shot(output,"community",new Vector3(340,0,-335),0,78,130);
+                    Shot(output,"park",new Vector3(650,0,150),0,78,150);
+                    Shot(output,"garden",new Vector3(15,0,705),0,78,140);
+                    Debug.Log("ROAD_REVIEW_COMPLETE "+Path.GetFullPath(output));EditorApplication.Exit(0);return;
+                }
                 if(Array.IndexOf(args,"-racingViews")>=0)
                 {
                     RacingOverview(output);

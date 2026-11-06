@@ -9,7 +9,7 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
-        private string _promotionPage = "overview", _promotionMode = "endorse", _promotionAgency;
+        private string _promotionPage = "overview", _promotionMode = "campaign", _promotionAgency;
 
         private void BuildBrandPromotion(Transform body, Window w, BrandRecord brand, BrandBusinessState state)
         {
@@ -29,12 +29,12 @@ namespace PCShopSell.Game.UI
 
             Line(body, "新增品牌合作", 21, Ui.Accent);
             var actions = Ui.Row(body, 42, 8);
-            Ui.Size(Ui.Button(actions, "请代言人", () => { _promotionMode = "endorse"; _promotionPage = "channels"; w.Rebuild(); }, 18, Ui.ButtonHot), -1, 42, 1);
+            Ui.Size(Ui.Button(actions, "管理品牌代言人", () => { _brandTab = BrandKolTab; w.Rebuild(); }, 18, Ui.ButtonHot), -1, 42, 1);
             Ui.Size(Ui.Button(actions, "发起短期推广", () => { _promotionMode = "campaign"; _promotionPage = "channels"; w.Rebuild(); }, 18), -1, 42, 1);
 
-            var deals = state.Deals.Where(d => d.BrandId == brand.Id && !d.Ended && d.End > S.Clock.Today.TotalDays).ToArray();
+            var deals = state.Deals.Where(d => d.BrandId == brand.Id && d.Mode == "campaign" && !d.Ended && d.End > S.Clock.Today.TotalDays).ToArray();
             Line(body, "当前合作 · " + deals.Length + "项", 21, Ui.Accent);
-            if (deals.Length == 0) Para(body, "尚未安排品牌推广或代言。可以通过MCN介绍或从已认识的人中选择合作。", 18);
+            if (deals.Length == 0) Para(body, "尚未安排短期推广。代言签约、直播排班和展会人员统一在代言人页管理。", 18);
             foreach (var deal in deals)
             {
                 var d = deal;
@@ -56,7 +56,7 @@ namespace PCShopSell.Game.UI
         private void BuildBrandPromotionSelection(Transform body, Window w, BrandRecord brand)
         {
             bool candidates = _promotionPage == "candidates";
-            Ui.Size(Ui.Button(body, candidates ? "返回选择渠道" : "返回推广与代言", () =>
+            Ui.Size(Ui.Button(body, candidates ? "返回选择渠道" : "返回短期推广", () =>
             {
                 _promotionPage = candidates ? "channels" : "overview"; w.Rebuild();
             }, 17), -1, 36);
@@ -80,7 +80,8 @@ namespace PCShopSell.Game.UI
             }
             var selected = BrandAgency.Get(_promotionAgency);
             Line(body, selected?.Name ?? "已认识的人", 19, Ui.Accent);
-            var people = selected?.People ?? GameSession.BrandPeople.Where(p => S.KolContactBlocker(p) == null).ToArray();
+            var people = selected != null ? selected.People.Where(GameSession.BrandPeople.Contains).ToArray()
+                : GameSession.BrandPeople.Where(p => S.KolContactBlocker(p) == null).ToArray();
             if (people.Length == 0) Para(body, "还没有认识可以合作的创作者，可以返回选择MCN公司安排介绍。", 17);
             foreach (string person in people)
             {
@@ -113,14 +114,15 @@ namespace PCShopSell.Game.UI
 
         private void OpenBrandDealProposal(string brandId, string person, string mode)
         {
+            if(mode=="endorse"){_brandId=brandId;OpenKolManagement();return;}
             OpenWindow("合作方案", 780, 650, w =>
             {
                 var brand = S.BrandBusiness.Brands.First(b => b.Id == brandId);
                 var row = Ui.Row(w.Content, 100, 10); KolAvatar(row, person, 75, 100);
                 Line(row, S.CityPerson(person).Name + " · " + brand.Name, 22, Ui.Accent);
-                Para(w.Content, mode == "endorse" ? "代言90天，固定费之外按品牌实际营业额收取2%分成。" : "短期推广7天，一次支付固定费。", 18);
+                Para(w.Content, "短期推广7天，一次支付固定费，不含代言、直播排班或参展资格。", 18);
                 Para(w.Content, "暂停推广不退固定费；提前解约支付剩余固定费的30%，重大已核实争议免解约费。", 16, Ui.Dim);
-                foreach (bool exclusive in mode == "endorse" ? new[] { false, true } : new[] { false })
+                foreach (bool exclusive in new[] { false })
                 {
                     bool chosen = exclusive;
                     long quote = S.BrandDealQuote(person, mode, chosen);
@@ -129,7 +131,7 @@ namespace PCShopSell.Game.UI
                         + " · " + Money.FromCents(quote) + " · 基础客流 " + SignedPercent(traffic), 18);
                     Ui.Size(Ui.Button(w.Content, "确认这份合作…", () => ConfirmBusiness("确认签约",
                         S.CityPerson(person).Name + " · " + brand.Name + "\n支付固定费 " + Money.FromCents(quote)
-                        + (mode == "endorse" ? "，90天，另收营业额2%。" : "，推广7天。"), () =>
+                        + "，推广7天。", () =>
                         {
                             if (S.SignBrandDeal(brandId, person, mode, chosen))
                             {
@@ -142,6 +144,9 @@ namespace PCShopSell.Game.UI
 
         private void OpenBrandDealDetails(string dealId)
         {
+            var contract=S.BrandBusiness.Deals.FirstOrDefault(d=>d.Id==dealId);
+            if(contract!=null&&!string.IsNullOrEmpty(contract.KolContractId))
+            {_brandId=contract.BrandId;_brandTab=BrandKolTab;_kolPage="代言人与排班";OpenBrandBusiness();return;}
             OpenWindow("推广合约", 780, 700, w =>
             {
                 var d = S.BrandBusiness.Deals.First(x => x.Id == dealId);
@@ -160,7 +165,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content, "解除合约…", () => ConfirmBusiness("解除合约",
                     "解约费用 " + Money.FromCents(penalty) + "，确认后合作结束。", () =>
                     { if (S.RespondBrandDeal(d.Id, "end")) { w.Close(); RebuildWindows(); } }), 17, Ui.Warn, active), -1, 38);
-                Ui.Size(Ui.Button(w.Content, "返回推广与代言", () => { w.Close(); RebuildWindows(); }, 17), -1, 38);
+                Ui.Size(Ui.Button(w.Content, "返回短期推广", () => { w.Close(); RebuildWindows(); }, 17), -1, 38);
             });
         }
     }

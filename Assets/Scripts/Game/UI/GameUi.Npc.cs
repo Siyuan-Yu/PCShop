@@ -374,7 +374,7 @@ namespace PCShopSell.Game.UI
                 void Reply(string text) { ctx.Reply = text; ctx.W.Rebuild(); parent?.RequestRebuild(); }
                 AddDistrictDialogue(options,personId,remote,near,Reply);
                 if(GameSession.BrandPeople.Contains(personId)&&S.BrandBusiness.Brands.Length>0)
-                    options.Add(new TalkOpt{Label="谈品牌推广与代言",Blocker=canTalk?null:"对方已离开",Act=()=>{ctx.W.Close();_brandTab=1;OpenBrandBusiness();}});
+                    options.Add(new TalkOpt{Label="谈品牌代言与直播",Blocker=canTalk?null:"对方已离开",Act=()=>{ctx.W.Close();_brandTab=BrandKolTab;OpenBrandBusiness();}});
                 if(personId=="life_enterprise"||personId=="life_tenant")
                     foreach(var tender in S.BrandBusiness.Tenders.Where(t=>t.Stage<2))
                     {

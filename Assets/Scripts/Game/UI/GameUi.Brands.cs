@@ -24,7 +24,7 @@ namespace PCShopSell.Game.UI
         private void BuildBrandBusiness(Window w)
         {
             var state=S.BrandBusiness;
-            var tabs=Ui.Row(w.Content,40,6);string[] names={"品牌总览","推广与代言","展会","企业竞标","KOL直播"};
+            var tabs=Ui.Row(w.Content,40,6);string[] names={"品牌总览","短期推广","展会","企业竞标","代言人（KOL）"};
             for(int i=0;i<names.Length;i++){int t=i;Ui.Size(Ui.Button(tabs,names[i],()=>{_brandTab=t;_brandCreating=false;_promotionPage="overview";_expoPage="overview";w.Rebuild();},18,t==_brandTab?Ui.ButtonHot:Ui.ButtonBg),-1,40,1);}
             if(S.DistrictCommerceActive)Ui.Size(Ui.Button(w.Content,"主线 · "+S.CurrentDistrictNode.Title,OpenDistrictStory,17,Ui.ButtonHot),-1,36);
             var body=Ui.Scroll(w.Content,690);

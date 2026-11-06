@@ -9,7 +9,7 @@ namespace PCShopSell.Game.Runtime
 {
     public sealed class ExpoPointMarker:MonoBehaviour {public string Zone;}
     public sealed class ExpoKolMarker:MonoBehaviour {public string PersonId;}
-    public sealed class QuarterlyExpoView:MonoBehaviour
+    public sealed partial class QuarterlyExpoView:MonoBehaviour
     {
         private Transform _empty,_live,_booth,_stage,_effects;
         private float _width,_depth,_syncAt,_animation;
@@ -78,7 +78,7 @@ namespace PCShopSell.Game.Runtime
                 _syncAt=.25f;var e=session.ExpoAtVenue;_exhibit=e;
                 var endorsers = e?.Day == session.Clock.Today.TotalDays ? session.ExpoEndorsers(e) : Array.Empty<string>();
                 var presenters = (e?.KolIds ?? Array.Empty<string>()).Union(endorsers).ToArray();
-                string key=(e?.Id??"public")+":"+(e?.Booth??-1)+":"+string.Join(",",e?.Products.Select(p=>p.ProductId)??Array.Empty<string>())+":"+string.Join(",",presenters)+":"+string.Join(",",endorsers)+":"+(e?.DesignerId??"")+":"+(e?.DesignerId!=null&&e.PosterReadyAt<=session.Clock.Now.TotalMinutes);
+                string key=(e?.Id??"public")+":"+(e?.Booth??-1)+":"+string.Join(",",e?.Products.Select(p=>p.ProductId)??Array.Empty<string>())+":"+string.Join(",",presenters)+":"+(e?.DesignerId??"")+":"+(e?.DesignerId!=null&&e.PosterReadyAt<=session.Clock.Now.TotalMinutes);
                 if(changed||key!=_layoutKey){_layoutKey=key;Build(e, presenters, endorsers);_progressKey=null;FocusZone="overview";}
                 string progress=(e?.Decision??-1)+":"+(e?.Heat??0)+":"+(e?.Trust??0)+":"+session.Clock.Today.TotalDays+":"+(e?.Attending==true)+":"+(e?.Finished==true)+":"+string.Join(",",endorsers.Where(session.ExpoPersonArrived));
                 if(progress!=_progressKey){_progressKey=progress;Refresh(e, endorsers);}
@@ -88,6 +88,7 @@ namespace PCShopSell.Game.Runtime
                     pair.Value.SetActive(arrived);
                     if (!arrived && FocusZone == "person:" + pair.Key) FocusZone = "overview";
                 }
+                RefreshScreenArtwork(e);
             }
             Animate(Mathf.Max(0,Mathf.Min(dt,.1f)));
         }
@@ -111,8 +112,9 @@ namespace PCShopSell.Game.Runtime
             PointBox(_stage,"StageDeck",new Vector3(0,.24f,0),new Vector3(stageWidth,.48f,5),ink,"stage");
             Prims.Box(_stage,"Screen",new Vector3(0,3,2.3f),new Vector3(stageWidth,5,.2f),Mats.Lit(ArtDirection.Blue));
             string brand=e==null?"云帆季度品牌展":sessionBrandName(e.BrandId);
-            _banner=Label(_stage,brand,new Vector3(0,3.4f,2.1f),stageWidth-1,1,ArtDirection.Cream);
-            _dayLabel=Label(_stage,"",new Vector3(0,2.1f,2.05f),stageWidth-1,.7f,ArtDirection.Brass);
+            _banner=Label(_stage,brand,new Vector3(0,3.7f,2.1f),stageWidth*.38f,1,ArtDirection.Cream);
+            _dayLabel=Label(_stage,"",new Vector3(0,2.1f,2.05f),stageWidth*.38f,.85f,ArtDirection.Brass);
+            BuildScreenArtwork(stageWidth);
             for(int side=-1;side<=1;side+=2)
             {
                 Prims.Box(_stage,"Truss",new Vector3(side*(stageWidth/2+.2f),2.6f,1.8f),new Vector3(.2f,5.2f,.2f),gold);
@@ -131,8 +133,10 @@ namespace PCShopSell.Game.Runtime
                 int columns=Math.Min(4,e.Products.Length);pod.localPosition=new Vector3((n%columns-(columns-1)*.5f)*(boothWidth-2)/columns,0,n/columns*2.5f-1.1f);
                 PointBox(pod,"ProductCounter",new Vector3(0,.58f,0),new Vector3(2,1.16f,1.45f),cream,"booth");
                 var model=ExpoProductVisual.Build(pod,product.ProductId);model.transform.localPosition=Vector3.up*1.17f;
-                Label(pod,_session.BrandProductName(product.ProductId),new Vector3(0,.85f,-.76f),2,.3f,ArtDirection.Ink);
-                _stockLabels[product.ProductId]=Label(pod,"",new Vector3(0,.42f,-.77f),2,.26f,ArtDirection.Clay);
+                var productArt=WorldArtwork(pod,"ExhibitProductArt_"+product.ProductId,new Vector3(-.61f,.56f,-.78f),.65f,.65f);
+                BrandShowcaseArt.ApplyProduct(productArt,product.ProductId);
+                Label(pod,_session.BrandProductName(product.ProductId),new Vector3(.35f,.85f,-.76f),1.2f,.3f,ArtDirection.Ink);
+                _stockLabels[product.ProductId]=Label(pod,"",new Vector3(.35f,.42f,-.77f),1.2f,.26f,ArtDirection.Clay);
                 var boxes=new GameObject[4];for(int nbox=0;nbox<4;nbox++)boxes[nbox]=Prims.Box(pod,"ReservedCarton",new Vector3(.66f,.2f+nbox*.27f,1.1f),new Vector3(.48f,.25f,.42f),Mats.Lit(ArtDirection.Wood));_stockBoxes[product.ProductId]=boxes;
             }
             if(e?.DesignerId!=null&&e.PosterReadyAt<=_session.Clock.Now.TotalMinutes)

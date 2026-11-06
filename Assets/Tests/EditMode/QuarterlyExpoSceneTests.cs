@@ -23,7 +23,7 @@ namespace PCShopSell.Tests
         private static BrandExhibit Book(GameSession s,int size=0)
         {
             if(size>0)Assert.True(s.UpgradeKolBrand("acceptance-expo"));if(size>1)Assert.True(s.UpgradeKolBrand("acceptance-expo"));
-            var kols=KolMarket.All.Take(GameSession.ExpoMinKols(size)).Select(k=>k.Id).ToArray();foreach(string id in kols)Assert.True(s.SignKolLive("acceptance-expo",id));
+            var kols=KolMarket.All.Take(GameSession.ExpoMinKols(size)).Select(k=>k.Id).ToArray();foreach(string id in kols)Assert.True(McnSigningTest.Sign(s,"acceptance-expo",id));
             Assert.True(s.BookQuarterlyExpo("acceptance-expo",s.MainShop.Place.Id,size,PartCatalog.All.Take(GameSession.ExpoMinProducts(size)).Select(p=>p.Id).ToArray(),kols));
             return s.BrandBusiness.Exhibits.Single();
         }
@@ -41,10 +41,11 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                var e = Book(s);
+                foreach(string id in new[]{"momo","ake"}) Assert.True(McnSigningTest.Endorse(s,"acceptance-expo",id,"endorse",false));
+                Assert.True(s.BookQuarterlyExpo("acceptance-expo",s.MainShop.Place.Id,0,new[]{PartCatalog.All.First().Id},new[]{"momo","ake"}));
+                var e = s.BrandBusiness.Exhibits.Single();
                 foreach (string id in new[] { "momo", "ake" })
                 {
-                    Assert.True(s.SignBrandDeal(e.BrandId, id, "endorse", false));
                     var person = s.CityPersonState(id);
                     var start = s.City.GetPlace(GameSession.CommunityMcnId);
                     var position = s.StandOf(start);

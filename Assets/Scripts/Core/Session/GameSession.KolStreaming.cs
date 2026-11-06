@@ -37,19 +37,22 @@ namespace PCShopSell.Core.Session
         {
             if(IsGameOver||Brand(brandId)==null||KolMarket.Get(person)==null)return "无法签约该直播合作";
             if(City.IsLakeCity&&!IsMet(person))return "先去社区MCN实际认识、交换名片，再签约";
-            if(_kol.Contracts.Any(c=>c.PersonId==person&&KolContractCurrent(c,Clock.Now.TotalMinutes)))return "此KOL已有独家直播合约";
-            if(_brands.Deals.Any(c=>c.PersonId==person&&c.BrandId!=brandId&&c.Exclusive&&!c.Ended&&c.End>BrandDay))return "此KOL已有其他品牌独家代言";
-            if(BrandKolCount(brandId)>=BrandKolCapacity(brandId))return "直播签约名额已满，请升级品牌或解除合约";
+            string reception=McnSigningBlocker(person);if(reception!=null)return reception;
+            if(_kol.Contracts.Any(c=>c.PersonId==person&&KolContractCurrent(c,Clock.Now.TotalMinutes)))return "此KOL已有品牌代言合约";
+            if(_brands.Deals.Any(c=>c.PersonId==person&&!c.Ended&&c.End>BrandDay&&(c.BrandId==brandId||c.Exclusive)))return "此KOL已有其他品牌独家代言";
+            if(BrandKolCount(brandId)>=BrandKolCapacity(brandId))return "代言签约名额已满，请升级品牌或解除合约";
             return Ledger.Balance<Money.FromYuan(KolSigningFee(person))?"签约资金不足":null;
         }
         public bool SignKolLive(string brandId,string person)
         {
             string why=KolSigningBlocker(brandId,person);if(why!=null)return Fail(why);
             long fee=KolSigningFee(person)*100;
-            if(!BrandPay(fee,"90天直播签约 · "+(CityPerson(person)?.Name??person),brandId))return false;
+            if(!BrandPay(fee,"90天品牌代言签约 · "+(CityPerson(person)?.Name??person),brandId))return false;
             long now=Clock.Now.TotalMinutes;
             _kol.Contracts=AppendBrand(_kol.Contracts,new KolLiveContract{Id="kol:"+_kol.NextId++,BrandId=brandId,PersonId=person,
-                SignedAt=now,EndAt=now+90*1440L,LastProcessedAt=now,LastPaidThrough=now,ScheduleEffectiveAt=now,FeeCents=fee,FirstDay=BrandDay});
+                SignedAt=now,EndAt=now+90*1440L,LastProcessedAt=now,LastPaidThrough=now,ScheduleEffectiveAt=now,FeeCents=fee,FirstDay=BrandDay,
+                AgencyId=BrandAgency.ForPerson(person).Id});
+            LinkAmbassador(_kol.Contracts.Last());
             EnsureKolCareer(person);return true;
         }
         public bool EndKolLive(string id)
@@ -58,7 +61,9 @@ namespace PCShopSell.Core.Session
             if(ActiveBrandExpo?.KolIds.Contains(c.PersonId)==true)return Fail("正在为展会站台，闭展后才能解除合约");
             AccrueKolWages(c,Clock.Now.TotalMinutes);
             FinishKolContractSessions(c, Clock.Now.TotalMinutes);
-            c.Ended=true;return true;
+            c.Ended=true;
+            foreach(var d in _brands.Deals.Where(d=>d.KolContractId==c.Id))d.Ended=true;
+            RefreshBrandTraffic();return true;
         }
         public bool SetKolSchedule(string id, int start, int end, bool enabled) =>
             SetKolSchedule(id, start, end, enabled, FindKolContract(id)?.FrequencyDays ?? 1, FindKolContract(id)?.FirstDay ?? BrandDay);
@@ -128,7 +133,7 @@ namespace PCShopSell.Core.Session
         {
             var c = FindKolContract(id);
             long now = Clock.Now.TotalMinutes;
-            if (c == null || !KolContractCurrent(c, now)) return "直播合约已结束";
+            if (c == null || !KolContractCurrent(c, now)) return "代言合约已结束";
             if (!c.Enabled) return "品牌专场已暂停";
             if (KolScheduledStart(c, now) < 0) return "未到品牌专场时段";
             return KolPersonAvailable(c.PersonId, now) ? null : "主播正在工作、赶路或参加活动，延迟开播";
@@ -462,6 +467,7 @@ namespace PCShopSell.Core.Session
                 _kolSessionIndex[session.Id] = session;
                 if (!session.Settled) _openKolSessions.Add(session);
             }
+            RestoreBrandAmbassadors();
             _kol.NextId = Math.Max(_kol.NextId, _kol.Contracts.Length + 1);
         }
 

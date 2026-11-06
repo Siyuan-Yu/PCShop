@@ -26,7 +26,8 @@ namespace PCShopSell.Game.Runtime
         }
         private void BuildPlannedCity()
         {
-            BuildRoads(); BatchLakeRoads(); BuildCitySidewalks();
+            if(_city.IsLakeCity)BuildContinuousStreetSurfaces();
+            else {BuildRoads(); BatchLakeRoads(); BuildCitySidewalks();}
             var housing=new GameObject("ResidentialCompounds").transform;housing.SetParent(_root,false);
             var residenceBlocks = _city.Blocks.Where(block => _city.HasPlace(block.homeId))
                 .ToDictionary(block => block.homeId);
@@ -108,8 +109,11 @@ namespace PCShopSell.Game.Runtime
             if (block != null) BuildResidentialPlot(root, block);
             // The route node is on the road; its approach ends at the actual public door.
             var delta=door-node;
-            var approach=Prims.Box(_root,"Approach_"+p.Id,(node+door)*.5f+Vector3.up*.08f,new Vector3(2,.12f,delta.magnitude),Mats.Lit(Sidewalk));
-            if(delta.sqrMagnitude>.01f)approach.transform.rotation=Quaternion.LookRotation(delta);
+            if(!_city.IsLakeCity)
+            {
+                var approach=Prims.Box(_root,"Approach_"+p.Id,(node+door)*.5f+Vector3.up*.08f,new Vector3(2,.12f,delta.magnitude),Mats.Lit(Sidewalk));
+                if(delta.sqrMagnitude>.01f)approach.transform.rotation=Quaternion.LookRotation(delta);
+            }
             vis.LabelPos=root.TransformPoint(new Vector3(0,block!=null?3.3f:CityArchitecture.HasExterior(p)?CityArchitecture.VenueHeight(p)+1:!venue && p.Kind!=PlaceKind.Station?PlannedPlaceHeight(p)+1:5,d*.3f));
             vis.Sign=root.GetComponentInChildren<UnityEngine.UI.Text>();
         }
@@ -266,6 +270,7 @@ namespace PCShopSell.Game.Runtime
             // Perpendicular intersections share visible crosswalks. Pure decoration never adds routes.
             foreach(var n in _city.Map.Nodes)
             {
+                if(_city.IsLakeCity)continue; // Oriented crossings belong to the unified road surface.
                 if(_city.Map.NeighborsOf(n.Id).Count<3)continue;
                 Vector3 at=NodeWorld(n.Id);
                 for(int i=-2;i<=2;i++)Prims.Box(props,"Crosswalk",at+new Vector3(i*.7f,.04f,2.6f),new Vector3(.4f,.02f,1.7f),Mats.Lit(ArtDirection.Cream));

@@ -23,7 +23,7 @@ namespace PCShopSell.Tests
         }
         private static BrandRecord Brand(GameSession s)=>((BrandBusinessState)typeof(GameSession).GetField("_brands",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(s)).Brands.Single();
         private static KolLiveContract Sign(GameSession s,string person="momo")
-        {Assert.True(s.SignKolLive("acceptance-expo",person));return s.KolStreaming.Contracts.Last();}
+        {Assert.True(McnSigningTest.Sign(s,"acceptance-expo",person));return s.KolStreaming.Contracts.Last();}
         private static void Ready(GameSession s,string person)
         {
             var p=s.CityPersonState(person);p.Route=null;p.LocationPlaceId=GameSession.CommunityMcnId;p.ActivityId=null;p.VisitId=null;

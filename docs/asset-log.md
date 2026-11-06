@@ -1,9 +1,16 @@
 # 美术/音频资源登记（AI 生成必填）
 
+## 2026-11-06 — 现有场景的主播与商品透明图层
+
+- 使用内置 image_gen：15 张主播透明半身图和 3 张商品透明图集（6 类电脑配件、12 款模型、8 类服装外形）。参考现有正式 NPC 头像与 `KolStudio/*_demo.png` 的低多边形风格；未改动原三套直播背景。
+- 位置：`Assets/Resources/KolStudio/Hosts/` 与 `Products/`。全部 PNG 保留生成源像素，`.meta` 保留透明，角色最大 1024、图集最大 2048，关闭 mipmap/CPU 可读。衣物运行时按商品颜色着色，图集以 UV 选择单件。
+- [完整提示词及来源](art/kol-scene-layers-prompts.json)、[运行时接入与验证](75-existing-scenes-and-replaceable-showcase-art.md)。主播和商品已接入原直播间、展台正面及舞台屏幕。
+- 同日此前生成的 9 张独立复古漫画场景未被采用，已按用户要求从工程删除，连同 Unity 元数据与空目录一并清理；仅保留[文字生成记录](art/brand-expo-live-prompts.json)，不再展示废弃图片。
+
 ## 2026-11-05 — 街坊直播品类布景
 
 - 资源目录为 Unity 的 `Assets/Resources/KolStudio`。`computer`、`clothing`、`models` 各有 `studio` 和 `demo` 两张布景，合计六张 PNG。
-- 同一品类的直播间复用 AI 生成的直播台与演示布景。游戏运行时加入对应头像、弹幕、文字、主题及品牌指标。
+- 这是11月5日的历史实现。当前直播沿用三张直播台背景，替换为上文的独立主播及商品图层；三张旧演示图保留作为风格参考，当前运行时不再用它们替代实际主播。
 - `OfflinePortrait.shader` 用于直播大厅的离线头像。资源及目录的 Unity `.meta` 一并入库。
 
 ## 2026-11-04 — 复古生活漫画NPC头像

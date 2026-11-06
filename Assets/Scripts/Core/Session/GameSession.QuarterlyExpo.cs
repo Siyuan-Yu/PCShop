@@ -27,7 +27,7 @@ namespace PCShopSell.Core.Session
 
         public string[] ExpoEndorsers(BrandExhibit e) => e == null || e.Format != 2 || e.Finished || e.Missed
             ? Array.Empty<string>()
-            : _brands.Deals.Where(d => ExpoEndorserDeal(e, d)).Select(d => d.PersonId).Distinct().ToArray();
+            : e.KolIds.Where(id => _kol.Contracts.Any(c => c.BrandId == e.BrandId && c.PersonId == id && !c.Ended && c.SignedAt <= e.Day * 1440L && c.EndAt >= (e.Day + 3) * 1440L + 1020)).Distinct().ToArray();
 
         public bool ExpoPersonArrived(string id)
         {

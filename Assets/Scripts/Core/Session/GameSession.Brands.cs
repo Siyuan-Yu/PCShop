@@ -84,9 +84,10 @@ namespace PCShopSell.Core.Session
             if(b.ShopIds.Contains(shopId)){if(b.ShopIds.Length<=1)return Fail("品牌至少保留一家门店");b.ShopIds=b.ShopIds.Where(id=>id!=shopId).ToArray();}
             else b.ShopIds=AppendBrand(b.ShopIds,shopId);RefreshBrandTraffic();return true;
         }
-        public long BrandDealQuote(string person,string mode,bool exclusive) => (long)((person=="qiao"?500000L:person=="life_designer"?350000L:180000L)*(mode=="endorse"?8:1)*(exclusive?2:1)*(1-Math.Min(15,Math.Max(0,Relation(person))*.15)/100));
+        public long BrandDealQuote(string person,string mode,bool exclusive) => mode=="endorse"?KolSigningFee(person)*100:(long)((person=="qiao"?500000L:person=="life_designer"?350000L:180000L)*(mode=="endorse"?8:1)*(exclusive?2:1)*(1-Math.Min(15,Math.Max(0,Relation(person))*.15)/100));
         public bool SignBrandDeal(string brandId,string person,string mode,bool exclusive)
         {
+            if(mode=="endorse")return SignKolLive(brandId,person);
             var b=Brand(brandId);if(b==null||!BrandPeople.Contains(person)||(mode!="campaign"&&mode!="endorse"))return false;
             string contact=KolContactBlocker(person);if(contact!=null)return Fail(contact);
             if(exclusive&&_kol.Contracts.Any(c=>c.PersonId==person&&c.BrandId!=brandId&&KolContractCurrent(c,Clock.Now.TotalMinutes)))return Fail("该人物已有其他品牌的独家直播合约");
@@ -95,11 +96,21 @@ namespace PCShopSell.Core.Session
             _brands.Deals=AppendBrand(_brands.Deals,new BrandDeal {Id=Guid.NewGuid().ToString("N"),BrandId=brandId,PersonId=person,Mode=mode,
                 Exclusive=exclusive,Start=BrandDay,End=BrandDay+(mode=="endorse"?90:7),Fee=fee});
             Meet(person,0);RememberSocial(person,"签署了"+b.Name+"的品牌合作，交换了业务联系方式。");
-            RefreshBrandTraffic();Say("合作生效：固定费已支付；代言另按品牌门店实际营业额收取2%，解约支付剩余固定费的30%。");return true;
+            RefreshBrandTraffic();Say("短期推广生效：固定费已支付，提前解约支付剩余固定费的30%。");return true;
         }
         public bool RespondBrandDeal(string id,string response)
         {
             var d=_brands.Deals.FirstOrDefault(x=>x.Id==id);if(IsGameOver||d==null||d.Ended||d.End<=BrandDay)return false;
+            if(!string.IsNullOrEmpty(d.KolContractId))
+            {
+                var c=FindKolContract(d.KolContractId);
+                if(c==null||!KolContractCurrent(c,Clock.Now.TotalMinutes))return false;
+                if(response=="end")return EndKolLive(c.Id);
+                if(response=="pause"||response=="continue")
+                {
+                    d.Response=response;return SetKolSchedule(c.Id,c.StartMinute,c.EndMinute,response!="pause");
+                }
+            }
             if(response=="end")
             {
                 long penalty=d.Severity>=3?0:d.Fee*(d.End-BrandDay)/(d.End-d.Start)*30/100;
@@ -194,8 +205,7 @@ namespace PCShopSell.Core.Session
                 (e.StaffPersonId == id || e.GuestPersonId == id || (e.Format == 2 && e.KolIds.Contains(id) &&
                     _kol.Contracts.Any(c => c.BrandId == e.BrandId && c.PersonId == id && KolContractCurrent(c, Clock.Now.TotalMinutes))))))
                 return true;
-            return BrandPeople.Contains(id) && _brands.Exhibits.Any(e => e.Format == 2 && e.Day == BrandDay &&
-                !e.Finished && !e.Missed && _brands.Deals.Any(d => d.PersonId == id && ExpoEndorserDeal(e, d)));
+            return false;
         }
         private bool TickBrandExpoPerson(CityPersonState person,long now)
         {
@@ -315,7 +325,7 @@ namespace PCShopSell.Core.Session
             }
             if(day%7==0&&_brands.Resources.Any(r=>r.Mode=="talent"&&r.End>day))
                 foreach(var c in _creators)c.Resources=Math.Min(100,c.Resources+5);
-            foreach(var d in _brands.Deals.Where(d=>!d.Ended&&d.Start<day&&d.End>=day&&d.Mode=="endorse"))
+            foreach(var d in _brands.Deals.Where(d=>!d.Ended&&d.Start<day&&d.End>=day&&d.Mode=="endorse"&&string.IsNullOrEmpty(d.KolContractId)))
             {
                 var b=Brand(d.BrandId);if(b==null)continue;
                 long fee=BrandRevenue(BrandShops(b),day-1,day)*2/100;

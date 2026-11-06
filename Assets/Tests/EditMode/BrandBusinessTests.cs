@@ -129,7 +129,7 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                Assert.True(s.SignBrandDeal("b", "momo", "endorse", false));
+                Assert.True(McnSigningTest.Endorse(s,"b", "momo", "endorse", false));
                 var state = s.BrandBusiness;
                 state.Brands[0].Reputation = 1000;
                 Set(s, state);
@@ -138,14 +138,14 @@ namespace PCShopSell.Tests
                 Assert.Zero(s.BrandEffectiveDealTraffic(s.BrandBusiness.Deals.Single()));
             }
         }
-        [Test] public void PromotionActuallyChangesTrafficAndExclusiveBlocksOtherBrand()
+        [Test] public void AmbassadorDoesNotAddPassiveTrafficAndBlocksOtherBrand()
         {
             using(var s=Make())
             {
                 var state=s.BrandBusiness;var b=state.Brands[0];var shop=s.ShopAt(b.ShopIds[0]);
                 state.Brands=state.Brands.Concat(new[]{new BrandRecord{Id="other",Kind="models",Name="模型"}}).ToArray();Set(s,state);
                 double before=s.CityCampaignTraffic(shop);long balance=s.Ledger.Balance.Cents;
-                Assert.True(s.SignBrandDeal("b","momo","endorse",true));Assert.Less(s.Ledger.Balance.Cents,balance);Assert.Greater(s.CityCampaignTraffic(shop),before);
+                Assert.True(McnSigningTest.Endorse(s,"b","momo","endorse",true));Assert.Less(s.Ledger.Balance.Cents,balance);Assert.AreEqual(before,s.CityCampaignTraffic(shop),1e-6);
                 Assert.False(s.SignBrandDeal("other","momo","campaign",false));
                 string id=s.BrandBusiness.Deals[0].Id;Assert.True(s.RespondBrandDeal(id,"pause"));Assert.AreEqual(before,s.CityCampaignTraffic(shop),1e-6);
                 Assert.True(s.RespondBrandDeal(id,"end"));Assert.False(s.RespondBrandDeal(id,"end"));
@@ -156,7 +156,7 @@ namespace PCShopSell.Tests
             using(var s=Make())
             {
                 var shop=s.ShopAt(s.BrandBusiness.Brands[0].ShopIds[0]);shop.Sim.Stock.ForceAddGoods(Product,150);
-                Assert.True(s.SignKolLive("b","momo"));
+                Assert.True(McnSigningTest.Sign(s,"b","momo"));
                 Assert.True(s.RegisterBrandExpo("b",shop.Place.Id,Product,"design"));Assert.AreEqual(50,shop.Sim.Stock.GoodsCount(Product));
                 long balance=s.Ledger.Balance.Cents;Assert.False(s.RegisterBrandExpo("b",shop.Place.Id,Product,"design"));Assert.AreEqual(balance,s.Ledger.Balance.Cents);
                 var e=s.BrandBusiness.Exhibits[0];Day(s,e.Day);Assert.False(s.StartQuarterlyExpo(e.Id));Assert.False(s.ActBrandExpo(e.Id,"design"));Assert.IsEmpty(s.BrandBusiness.Orders);
@@ -298,7 +298,7 @@ namespace PCShopSell.Tests
         {
             using(var s=Make())
             {
-                Assert.True(s.SignBrandDeal("b","momo","endorse",false));var state=s.BrandBusiness;state.Deals[0].Severity=1;state.Deals[0].NewsDay=40;Set(s,state);string id=state.Deals[0].Id;
+                Assert.True(McnSigningTest.Endorse(s,"b","momo","endorse",false));var state=s.BrandBusiness;state.Deals[0].Severity=1;state.Deals[0].NewsDay=40;Set(s,state);string id=state.Deals[0].Id;
                 Assert.True(s.RespondBrandDeal(id,"negotiate"));Assert.True(s.RespondBrandDeal(id,"continue"));long balance=s.Ledger.Balance.Cents;Assert.False(s.RespondBrandDeal(id,"negotiate"));Assert.AreEqual(balance,s.Ledger.Balance.Cents);
             }
         }

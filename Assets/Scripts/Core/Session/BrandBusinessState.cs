@@ -46,7 +46,7 @@ namespace PCShopSell.Core.Session
     }
     [Serializable] public sealed class BrandDeal
     {
-        public string Id, BrandId, PersonId, Mode, Response="continue";
+        public string Id, BrandId, PersonId, Mode, KolContractId, Response="continue";
         public int Start, End, Severity, NewsDay=-1, LastNegotiationDay=-2; public long Fee, SharePaid;
         public bool Exclusive, Ended;
         public BrandDeal Copy()=>(BrandDeal)MemberwiseClone();

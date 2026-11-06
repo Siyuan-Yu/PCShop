@@ -11,11 +11,11 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
-        private string _kolPage = "主播与排班", _selectedKolContract;
+        private string _kolPage = "代言人与排班", _selectedKolContract;
         private static Material _kolOfflinePortrait;
         private GameSession _kolDraftSession;
         private readonly Dictionary<string,KolLiveContract> _kolScheduleDrafts=new Dictionary<string,KolLiveContract>();
-        public void OpenKolManagement(){_brandTab=BrandKolTab;_kolPage="KOL市场";OpenBrandBusiness();}
+        public void OpenKolManagement(){_brandTab=BrandKolTab;_kolPage="代言人市场";OpenBrandBusiness();}
         private static string KolTime(int minute)=>$"{minute/60:00}:{minute%60:00}";
         private void KolAvatar(Transform parent,string id,float width,float height, bool dimmed = false, Action onClick = null)
         {
@@ -48,7 +48,7 @@ namespace PCShopSell.Game.UI
                 _selectedKolContract = null;
             }
             var nav = Ui.Row(parent, 40, 8);
-            foreach (var page in new[] { "主播与排班", "KOL市场", "专场记录" })
+            foreach (var page in new[] { "代言人与排班", "代言人市场", "专场记录" })
                 Ui.Size(Ui.Button(nav, page, () => { _kolPage = page; w.Rebuild(); }, 18,
                     _kolPage == page ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1);
             if (_kolPage == "专场记录") { BuildKolReports(parent, brand); return; }
@@ -65,20 +65,20 @@ namespace PCShopSell.Game.UI
                 button.name = "KolBrandUpgrade";
                 button.Tip(upgrade ?? "提升品牌签约名额");
             }
-            if (_kolPage == "KOL市场") { BuildKolMarket(parent, w, brand); return; }
+            if (_kolPage == "代言人市场") { BuildKolMarket(parent, w, brand); return; }
 
             long now = S.Clock.Now.TotalMinutes;
             var contracts = S.KolStreaming.Contracts.Where(c => c.BrandId == brand.Id && !c.Ended && c.EndAt > now).ToArray();
             if (contracts.Length == 0)
             {
-                Para(parent, "尚未签约直播KOL。可到KOL市场认识主播并签约。", 19);
-                Ui.Size(Ui.Button(parent, "前往KOL市场", () => { _kolPage = "KOL市场"; w.Rebuild(); }, 18, Ui.ButtonHot), -1, 40);
+                Para(parent, "尚未签约品牌代言人。可到代言人市场认识主播并签约。", 19);
+                Ui.Size(Ui.Button(parent, "前往代言人市场", () => { _kolPage = "代言人市场"; w.Rebuild(); }, 18, Ui.ButtonHot), -1, 40);
                 return;
             }
             var selected = contracts.FirstOrDefault(c => c.Id == _selectedKolContract) ?? contracts[0];
             _selectedKolContract = selected.Id;
             var split = Ui.Row(parent, 490, 10);
-            var roster = BrandCard(split, "签约主播"); Ui.Size(roster, 285, 490);
+            var roster = BrandCard(split, "签约代言人"); Ui.Size(roster, 285, 490);
             var list = Ui.Scroll(roster, 382);
             foreach (var c in contracts)
             {
@@ -160,7 +160,7 @@ namespace PCShopSell.Game.UI
                 OpenKolLiveRoom(contract.Id);
             }, 16, Ui.ButtonBg, room.IsLive), 124, 40).name = "KolWatch_" + contract.Id;
             Ui.Size(Ui.Button(actions, "解除合约…", () =>
-                ConfirmBusiness("解除直播合约", "释放签约名额，已付签约费不退。", () =>
+                ConfirmBusiness("解除代言合约", "释放签约名额，已付签约费不退。", () =>
                 {
                     if (S.EndKolLive(contract.Id)) _kolScheduleDrafts.Remove(contract.Id);
                     w.Rebuild();
@@ -224,21 +224,27 @@ namespace PCShopSell.Game.UI
 
         private void BuildKolMarket(Transform parent,Window w,BrandRecord brand)
         {
-            Para(parent,"90天独家直播合约：一次签约费＋动态日薪，日结，暂停仍计薪。未知联系人可到社区MCN申请介绍并实际见面。",16,Ui.Dim);
-            Ui.Size(Ui.Button(parent,"去社区MCN认识KOL",OpenCommunityMcn,17),-1,36);
-            for(int i=0;i<KolMarket.All.Length;i+=2)
+            Para(parent,"先选MCN公司，再到人事接待处了解主播、安排介绍并签约。一份90天代言合约同时用于品牌直播和参展。",17,Ui.Dim);
+            Line(parent,"三家公司共用社区MCN联合接待处 · 09:00—18:00",16,Ui.Dim);
+            foreach(var agency in BrandAgency.All)
             {
-                var row=Ui.Row(parent,216,10);
-                foreach(var talent in KolMarket.All.Skip(i).Take(2))
+                var company=agency;
+                var card=BrandCard(parent,company.Name+" · "+company.Specialty);
+                Para(card,company.Description,16);
+                var people=KolMarket.All.Where(k=>BrandAgency.ForPerson(k.Id).Id==company.Id).ToArray();
+                var preview=Ui.Row(card,70,8);
+                foreach(var person in people.Take(3))KolAvatar(preview,person.Id,50,68);
+                Line(preview,string.Join("、",people.Take(3).Select(p=>S.CityPerson(p.Id).Name))
+                    +(people.Length>3?"等":"")+" · "+people.Length+"位主播",17,Ui.Accent);
+                var actions=Ui.Row(card,38,8);
+                Ui.Size(Ui.Button(actions,"了解旗下主播",()=>
                 {
-                    var d=talent;var card=Ui.Panel(row,"KolMarket_"+d.Id,Ui.PanelBg2).rectTransform;Ui.Size(card,-1,216,1);Ui.VList(card,4,8);
-                    var top=Ui.Row(card,128,8);KolAvatar(top,d.Id,84,112);var text=Ui.Rect(top,"TalentInfo");Ui.Size(text,-1,128,1);Ui.VList(text,2);
-                    Line(text,S.CityPerson(d.Id).Name,20,Ui.Accent);Line(text,d.Topic,15);
-                    Line(text,$"魅力 {d.Charm}　智力 {d.Intelligence}",17);Line(text,$"粉丝 {S.KolFollowers(d.Id):N0} · 人气 {S.KolPopularity(d.Id)}",15,Ui.Dim);
-                    string why=S.KolSigningBlocker(brand.Id,d.Id);
-                    Ui.Size(Ui.Button(card,"签约 ¥"+S.KolSigningFee(d.Id).ToString("N0")+" · 日薪¥"+S.KolDailyWage(d.Id),()=>ConfirmBusiness("直播签约 · "+S.CityPerson(d.Id).Name,"一次支付¥"+S.KolSigningFee(d.Id)+"，独家直播90天，占用1个名额。当前日薪¥"+S.KolDailyWage(d.Id)+"，随粉丝和人气增加，每日结算；暂停仍计薪，解约结清当日。默认18:00至次日02:00，可独立排班。",()=>{S.SignKolLive(brand.Id,d.Id);w.Rebuild();}),17,Ui.ButtonHot,why==null),-1,36).name="KolSign_"+d.Id;
-                    if(why!=null)Line(card,why,13,Ui.Dim);
-                }
+                    _mcnRecruitBrand=brand.Id;_mcnAgencyId=company.Id;w.Close();OpenCommunityMcn();
+                },17),-1,38,1).name="KolAgencyPreview_"+company.Id;
+                Ui.Size(Ui.Button(actions,"前往"+company.Name+"人事接待",()=>
+                {
+                    _mcnRecruitBrand=brand.Id;GoToBrandAgency(company.Id);
+                },17,Ui.ButtonHot),-1,38,1).name="KolAgencyVisit_"+company.Id;
             }
         }
     }

@@ -70,7 +70,7 @@ namespace PCShopSell.Tests
             using(var s=GameSession.CreateCityLifePreset(CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text)),"brand_expo"))
             {
                 Assert.AreEqual(1,s.MyShopCount);Assert.AreEqual(0,s.HomeTier);Assert.False(s.DebugExpoBusinessBaseReady);
-                Assert.True(s.SignKolLive("acceptance-expo","momo"));s.MainShop.Sim.Stock.ForceAdd(PartCatalog.Get("cpu0"),true,90);
+                Assert.True(McnSigningTest.Sign(s,"acceptance-expo","momo"));s.MainShop.Sim.Stock.ForceAdd(PartCatalog.Get("cpu0"),true,90);
                 Assert.True(s.RegisterBrandExpo("acceptance-expo",s.MainShop.Place.Id,"cpu0","buyers"));
                 string exhibit=s.BrandBusiness.Exhibits.Single().Id,contract=s.KolStreaming.Contracts.Single().Id;
                 int stock=s.MainShop.Sim.Stock.Count(PartCatalog.Get("cpu0"),true);long minute=s.Clock.Now.TotalMinutes;
@@ -95,7 +95,7 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                Assert.True(s.SignKolLive("acceptance-expo","momo"));
+                Assert.True(McnSigningTest.Sign(s,"acceptance-expo","momo"));
                 long cash = s.Ledger.Balance.Cents;
                 Assert.True(s.RegisterBrandExpo("acceptance-expo", s.MainShop.Place.Id, "cpu0", "buyers"));
                 Assert.AreEqual(cash - 500000, s.Ledger.Balance.Cents);
@@ -125,7 +125,7 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                Assert.True(s.SignKolLive("acceptance-expo","momo"));
+                Assert.True(McnSigningTest.Sign(s,"acceptance-expo","momo"));
                 Assert.True(s.RegisterBrandExpo("acceptance-expo", s.MainShop.Place.Id, "cpu0", "buyers"));
                 string id = s.BrandBusiness.Exhibits.Single().Id;
                 Assert.True(s.DebugAdvanceToExpoOpening());

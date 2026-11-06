@@ -1,0 +1,190 @@
+{
+  "date": "2026-11-06",
+  "generator": "built-in image_gen",
+  "mode": "transparent reusable layers in existing scenes",
+  "assets": [
+    {
+      "key": "layer-host-momo",
+      "path": "Assets/Resources/KolStudio/Hosts/momo.png",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-1eb83f6c-0e51-43ee-8f9d-70d94d2017a7.png",
+      "prompt": "Use case: identity-preserve. Produce one reusable TRANSPARENT character cutout for an existing game livestream scene, not a complete scene. Input 1 is the exact character identity reference, input 2 is ONLY the rendering-style reference from the actual game. Preserve the adult character's gender, age, facial identity, hairstyle, accessories and clothing colours from input 1. Use the softly faceted, warmly lit, attractive anime-faced low-poly 3D illustration style of input 2; NOT ink/paper manga. One person only, head to hips, facing the viewer, slight turn toward image right, friendly professional presenter expression. One open hand gesturing toward image right, other relaxed near the waist, both hands fully in frame, five fingers. Preserve glasses ONLY if input 1 wears glasses. Do not copy the other person or any product or background from input 2. Portrait 3:4 canvas, full head and hair and both arms inside with a small transparent margin, body reaches near lower edge. No table, microphone, scenery, product, frame, lettering, logo, opaque background or fake checkerboard. True alpha around the clean silhouette. Warm soft upper-right key light matching the existing wooden studios. Identity: 莫文宁, woman with round glasses, dark side ponytail and flower hairclip, navy cardigan over mustard cable-knit top.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/PortraitsRetro/momo.png",
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/computer_demo.png"
+      ]
+    },
+    {
+      "key": "layer-host-ake",
+      "path": "Assets/Resources/KolStudio/Hosts/ake.png",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-2f9a3938-2573-4faa-8039-34fc5bba9958.png",
+      "prompt": "Use case: identity-preserve. Produce one reusable TRANSPARENT character cutout for an existing game livestream scene, not a complete scene. Input 1 is the exact character identity reference, input 2 is ONLY the rendering-style reference from the actual game. Preserve the adult character's gender, age, facial identity, hairstyle, accessories and clothing colours from input 1. Use the softly faceted, warmly lit, attractive anime-faced low-poly 3D illustration style of input 2; NOT ink/paper manga. One person only, head to hips, facing the viewer, slight turn toward image right, friendly professional presenter expression. One open hand gesturing toward image right, other relaxed near the waist, both hands fully in frame, five fingers. Preserve glasses ONLY if input 1 wears glasses. Do not copy the other person or any product or background from input 2. Portrait 3:4 canvas, full head and hair and both arms inside with a small transparent margin, body reaches near lower edge. No table, microphone, scenery, product, frame, lettering, logo, opaque background or fake checkerboard. True alpha around the clean silhouette. Warm soft upper-right key light matching the existing wooden studios. Identity: 柯骏, adult man with short tousled dark hair, teal zip track jacket with cream stripes, cream shirt, headphones around his neck.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/PortraitsRetro/ake.png",
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/computer_demo.png"
+      ]
+    },
+    {
+      "key": "layer-host-qiao",
+      "path": "Assets/Resources/KolStudio/Hosts/qiao.png",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-9b98d15a-4f79-4e5a-a27d-847cd76e88c1.png",
+      "prompt": "Use case: identity-preserve. Produce one reusable TRANSPARENT character cutout for an existing game livestream scene, not a complete scene. Input 1 is the exact character identity reference, input 2 is ONLY the rendering-style reference from the actual game. Preserve the adult character's gender, age, facial identity, hairstyle, accessories and clothing colours from input 1. Use the softly faceted, warmly lit, attractive anime-faced low-poly 3D illustration style of input 2; NOT ink/paper manga. One person only, head to hips, facing the viewer, slight turn toward image right, friendly professional presenter expression. One open hand gesturing toward image right, other relaxed near the waist, both hands fully in frame, five fingers. Preserve glasses ONLY if input 1 wears glasses. Do not copy the other person or any product or background from input 2. Portrait 3:4 canvas, full head and hair and both arms inside with a small transparent margin, body reaches near lower edge. No table, microphone, scenery, product, frame, lettering, logo, opaque background or fake checkerboard. True alpha around the clean silhouette. Warm soft upper-right key light matching the existing wooden studios. Identity: 乔雨桐, adult woman with flowing long dark waves, silver hoop earrings, plum blazer and cream top.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/PortraitsRetro/qiao.png",
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/computer_demo.png"
+      ]
+    },
+    {
+      "key": "layer-host-life_creator",
+      "path": "Assets/Resources/KolStudio/Hosts/life_creator.png",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-b93dd9d0-9aca-451f-a1c0-731b21534094.png",
+      "prompt": "Use case: identity-preserve. Produce one reusable TRANSPARENT character cutout for an existing game livestream scene, not a complete scene. Input 1 is the exact character identity reference, input 2 is ONLY the rendering-style reference from the actual game. Preserve the adult character's gender, age, facial identity, hairstyle, accessories and clothing colours from input 1. Use the softly faceted, warmly lit, attractive anime-faced low-poly 3D illustration style of input 2; NOT ink/paper manga. One person only, head to hips, facing the viewer, slight turn toward image right, friendly professional presenter expression. One open hand gesturing toward image right, other relaxed near the waist, both hands fully in frame, five fingers. Preserve glasses ONLY if input 1 wears glasses. Do not copy the other person or any product or background from input 2. Portrait 3:4 canvas, full head and hair and both arms inside with a small transparent margin, body reaches near lower edge. No table, microphone, scenery, product, frame, lettering, logo, opaque background or fake checkerboard. True alpha around the clean silhouette. Warm soft upper-right key light matching the existing wooden studios. Identity: 陆栀, adult woman with chestnut waves, white flower and green leaf hairclip, cream ruffle blouse, sage pinafore.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/PortraitsRetro/life_creator.png",
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/models_demo.png"
+      ]
+    },
+    {
+      "key": "layer-host-life_designer",
+      "path": "Assets/Resources/KolStudio/Hosts/life_designer.png",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-e4676932-abbf-43b3-90c1-5684087c049e.png",
+      "prompt": "Use case: identity-preserve. Produce one reusable TRANSPARENT character cutout for an existing game livestream scene, not a complete scene. Input 1 is the exact character identity reference, input 2 is ONLY the rendering-style reference from the actual game. Preserve the adult character's gender, age, facial identity, hairstyle, accessories and clothing colours from input 1. Use the softly faceted, warmly lit, attractive anime-faced low-poly 3D illustration style of input 2; NOT ink/paper manga. One person only, head to hips, facing the viewer, slight turn toward image right, friendly professional presenter expression. One open hand gesturing toward image right, other relaxed near the waist, both hands fully in frame, five fingers. Preserve glasses ONLY if input 1 wears glasses. Do not copy the other person or any product or background from input 2. Portrait 3:4 canvas, full head and hair and both arms inside with a small transparent margin, body reaches near lower edge. No table, microphone, scenery, product, frame, lettering, logo, opaque background or fake checkerboard. True alpha around the clean silhouette. Warm soft upper-right key light matching the existing wooden studios. Identity: 温岚, adult woman with burgundy ribbon in half-up chestnut hair, cream bow blouse, rust waistcoat and gold earrings.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/PortraitsRetro/life_designer.png",
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/clothing_demo.png"
+      ]
+    },
+    {
+      "key": "layer-host-life_clothier",
+      "path": "Assets/Resources/KolStudio/Hosts/life_clothier.png",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-3e0fc15a-8937-42d4-aae1-0e2109959dbb.png",
+      "prompt": "Use case: identity-preserve. Produce one reusable TRANSPARENT character cutout for an existing game livestream scene, not a complete scene. Input 1 is the exact character identity reference, input 2 is ONLY the rendering-style reference from the actual game. Preserve the adult character's gender, age, facial identity, hairstyle, accessories and clothing colours from input 1. Use the softly faceted, warmly lit, attractive anime-faced low-poly 3D illustration style of input 2; NOT ink/paper manga. One person only, head to hips, facing the viewer, slight turn toward image right, friendly professional presenter expression. One open hand gesturing toward image right, other relaxed near the waist, both hands fully in frame, five fingers. Preserve glasses ONLY if input 1 wears glasses. Do not copy the other person or any product or background from input 2. Portrait 3:4 canvas, full head and hair and both arms inside with a small transparent margin, body reaches near lower edge. No table, microphone, scenery, product, frame, lettering, logo, opaque background or fake checkerboard. True alpha around the clean silhouette. Warm soft upper-right key light matching the existing wooden studios. Identity: Use exactly the adult woman with dark bob and straight fringe, pearl studs, teal collared jacket and cream striped shirt in input 1.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/PortraitsRetro/life_clothier.png",
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/clothing_demo.png"
+      ]
+    },
+    {
+      "key": "layer-host-life_singer",
+      "path": "Assets/Resources/KolStudio/Hosts/life_singer.png",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-42092a25-6644-4d22-a6d7-5b05f5ef392e.png",
+      "prompt": "Use case: identity-preserve. Produce one reusable TRANSPARENT character cutout for an existing game livestream scene, not a complete scene. Input 1 is the exact character identity reference, input 2 is ONLY the rendering-style reference from the actual game. Preserve the adult character's gender, age, facial identity, hairstyle, accessories and clothing colours from input 1. Use the softly faceted, warmly lit, attractive anime-faced low-poly 3D illustration style of input 2; NOT ink/paper manga. One person only, head to hips, facing the viewer, slight turn toward image right, friendly professional presenter expression. One open hand gesturing toward image right, other relaxed near the waist, both hands fully in frame, five fingers. Preserve glasses ONLY if input 1 wears glasses. Do not copy the other person or any product or background from input 2. Portrait 3:4 canvas, full head and hair and both arms inside with a small transparent margin, body reaches near lower edge. No table, microphone, scenery, product, frame, lettering, logo, opaque background or fake checkerboard. True alpha around the clean silhouette. Warm soft upper-right key light matching the existing wooden studios. Identity: Exactly the person in input 1, preserve the distinctive face, hair, clothing and adult age, do not change them to the host from input 2.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/PortraitsRetro/life_singer.png",
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/clothing_demo.png"
+      ]
+    },
+    {
+      "key": "layer-host-resident_ningxi",
+      "path": "Assets/Resources/KolStudio/Hosts/resident_ningxi.png",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-9368ddad-faa9-411d-bc31-f281320a862c.png",
+      "prompt": "Use case: identity-preserve. Produce one reusable TRANSPARENT character cutout for an existing game livestream scene, not a complete scene. Input 1 is the exact character identity reference, input 2 is ONLY the rendering-style reference from the actual game. Preserve the adult character's gender, age, facial identity, hairstyle, accessories and clothing colours from input 1. Use the softly faceted, warmly lit, attractive anime-faced low-poly 3D illustration style of input 2; NOT ink/paper manga. One person only, head to hips, facing the viewer, slight turn toward image right, friendly professional presenter expression. One open hand gesturing toward image right, other relaxed near the waist, both hands fully in frame, five fingers. Preserve glasses ONLY if input 1 wears glasses. Do not copy the other person or any product or background from input 2. Portrait 3:4 canvas, full head and hair and both arms inside with a small transparent margin, body reaches near lower edge. No table, microphone, scenery, product, frame, lettering, logo, opaque background or fake checkerboard. True alpha around the clean silhouette. Warm soft upper-right key light matching the existing wooden studios. Identity: Exactly the person in input 1, preserve the distinctive face, hair, clothing and adult age, do not change them to the host from input 2.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/PortraitsRetro/resident_ningxi.png",
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/models_demo.png"
+      ]
+    },
+    {
+      "key": "layer-host-resident_dengyue",
+      "path": "Assets/Resources/KolStudio/Hosts/resident_dengyue.png",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-f6973c3f-a621-4e5c-a6ea-cbdac05e632b.png",
+      "prompt": "Use case: identity-preserve. Produce one reusable TRANSPARENT character cutout for an existing game livestream scene, not a complete scene. Input 1 is the exact character identity reference, input 2 is ONLY the rendering-style reference from the actual game. Preserve the adult character's gender, age, facial identity, hairstyle, accessories and clothing colours from input 1. Use the softly faceted, warmly lit, attractive anime-faced low-poly 3D illustration style of input 2; NOT ink/paper manga. One person only, head to hips, facing the viewer, slight turn toward image right, friendly professional presenter expression. One open hand gesturing toward image right, other relaxed near the waist, both hands fully in frame, five fingers. Preserve glasses ONLY if input 1 wears glasses. Do not copy the other person or any product or background from input 2. Portrait 3:4 canvas, full head and hair and both arms inside with a small transparent margin, body reaches near lower edge. No table, microphone, scenery, product, frame, lettering, logo, opaque background or fake checkerboard. True alpha around the clean silhouette. Warm soft upper-right key light matching the existing wooden studios. Identity: Exactly the person in input 1, preserve the distinctive face, hair, clothing and adult age, do not change them to the host from input 2.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/PortraitsRetro/resident_dengyue.png",
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/models_demo.png"
+      ]
+    },
+    {
+      "key": "layer-host-resident_rongke",
+      "path": "Assets/Resources/KolStudio/Hosts/resident_rongke.png",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-ea3a74da-7468-45fe-be0c-da6903c625dd.png",
+      "prompt": "Use case: identity-preserve. Produce one reusable TRANSPARENT character cutout for an existing game livestream scene, not a complete scene. Input 1 is the exact character identity reference, input 2 is ONLY the rendering-style reference from the actual game. Preserve the adult character's gender, age, facial identity, hairstyle, accessories and clothing colours from input 1. Use the softly faceted, warmly lit, attractive anime-faced low-poly 3D illustration style of input 2; NOT ink/paper manga. One person only, head to hips, facing the viewer, slight turn toward image right, friendly professional presenter expression. One open hand gesturing toward image right, other relaxed near the waist, both hands fully in frame, five fingers. Preserve glasses ONLY if input 1 wears glasses. Do not copy the other person or any product or background from input 2. Portrait 3:4 canvas, full head and hair and both arms inside with a small transparent margin, body reaches near lower edge. No table, microphone, scenery, product, frame, lettering, logo, opaque background or fake checkerboard. True alpha around the clean silhouette. Warm soft upper-right key light matching the existing wooden studios. Identity: Exactly the person in input 1, preserve the distinctive face, hair, clothing and adult age, do not change them to the host from input 2.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/PortraitsRetro/resident_rongke.png",
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/models_demo.png"
+      ]
+    },
+    {
+      "key": "layer-host-resident_wuyou",
+      "path": "Assets/Resources/KolStudio/Hosts/resident_wuyou.png",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-3a9bc3f4-9477-4c26-90db-8d18acb34145.png",
+      "prompt": "Use case: identity-preserve. Produce one reusable TRANSPARENT character cutout for an existing game livestream scene, not a complete scene. Input 1 is the exact character identity reference, input 2 is ONLY the rendering-style reference from the actual game. Preserve the adult character's gender, age, facial identity, hairstyle, accessories and clothing colours from input 1. Use the softly faceted, warmly lit, attractive anime-faced low-poly 3D illustration style of input 2; NOT ink/paper manga. One person only, head to hips, facing the viewer, slight turn toward image right, friendly professional presenter expression. One open hand gesturing toward image right, other relaxed near the waist, both hands fully in frame, five fingers. Preserve glasses ONLY if input 1 wears glasses. Do not copy the other person or any product or background from input 2. Portrait 3:4 canvas, full head and hair and both arms inside with a small transparent margin, body reaches near lower edge. No table, microphone, scenery, product, frame, lettering, logo, opaque background or fake checkerboard. True alpha around the clean silhouette. Warm soft upper-right key light matching the existing wooden studios. Identity: Exactly the adult woman in input 1, preserve her distinctive face, hair, clothing, accessories and adult age, do not change her to the person from input 2.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/PortraitsRetro/resident_wuyou.png",
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/models_demo.png"
+      ]
+    },
+    {
+      "key": "layer-host-resident_lanxin",
+      "path": "Assets/Resources/KolStudio/Hosts/resident_lanxin.png",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-defb139e-f9aa-45b9-8cb9-4722277b0237.png",
+      "prompt": "Use case: identity-preserve. Produce one reusable TRANSPARENT character cutout for an existing game livestream scene, not a complete scene. Input 1 is the exact character identity reference, input 2 is ONLY the rendering-style reference from the actual game. Preserve the adult character's gender, age, facial identity, hairstyle, accessories and clothing colours from input 1. Use the softly faceted, warmly lit, attractive anime-faced low-poly 3D illustration style of input 2; NOT ink/paper manga. One person only, head to hips, facing the viewer, slight turn toward image right, friendly professional presenter expression. One open hand gesturing toward image right, other relaxed near the waist, both hands fully in frame, five fingers. Preserve glasses ONLY if input 1 wears glasses. Do not copy the other person or any product or background from input 2. Portrait 3:4 canvas, full head and hair and both arms inside with a small transparent margin, body reaches near lower edge. No table, microphone, scenery, product, frame, lettering, logo, opaque background or fake checkerboard. True alpha around the clean silhouette. Warm soft upper-right key light matching the existing wooden studios. Identity: Exactly the adult woman in input 1, preserve her distinctive face, hair, clothing, accessories and adult age, do not change her to the person from input 2.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/PortraitsRetro/resident_lanxin.png",
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/models_demo.png"
+      ]
+    },
+    {
+      "key": "layer-host-resident_yujia",
+      "path": "Assets/Resources/KolStudio/Hosts/resident_yujia.png",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-44c44777-aabe-4d6e-b306-f85e0d112818.png",
+      "prompt": "Use case: identity-preserve. Produce one reusable TRANSPARENT character cutout for an existing game livestream scene, not a complete scene. Input 1 is the exact character identity reference, input 2 is ONLY the rendering-style reference from the actual game. Preserve the adult character's gender, age, facial identity, hairstyle, accessories and clothing colours from input 1. Use the softly faceted, warmly lit, attractive anime-faced low-poly 3D illustration style of input 2; NOT ink/paper manga. One person only, head to hips, facing the viewer, slight turn toward image right, friendly professional presenter expression. One open hand gesturing toward image right, other relaxed near the waist, both hands fully in frame, five fingers. Preserve glasses ONLY if input 1 wears glasses. Do not copy the other person or any product or background from input 2. Portrait 3:4 canvas, full head and hair and both arms inside with a small transparent margin, body reaches near lower edge. No table, microphone, scenery, product, frame, lettering, logo, opaque background or fake checkerboard. True alpha around the clean silhouette. Warm soft upper-right key light matching the existing wooden studios. Identity: Exactly the adult woman in input 1, preserve her distinctive face, hair, clothing, accessories and adult age, do not change her to the person from input 2.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/PortraitsRetro/resident_yujia.png",
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/models_demo.png"
+      ]
+    },
+    {
+      "key": "layer-host-resident_zengyu",
+      "path": "Assets/Resources/KolStudio/Hosts/resident_zengyu.png",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-9833fc34-9ca3-44ff-acaf-32711edd634e.png",
+      "prompt": "Use case: identity-preserve. Produce one reusable TRANSPARENT character cutout for an existing game livestream scene, not a complete scene. Input 1 is the exact character identity reference, input 2 is ONLY the rendering-style reference from the actual game. Preserve the adult character's gender, age, facial identity, hairstyle, accessories and clothing colours from input 1. Use the softly faceted, warmly lit, attractive anime-faced low-poly 3D illustration style of input 2; NOT ink/paper manga. One person only, head to hips, facing the viewer, slight turn toward image right, friendly professional presenter expression. One open hand gesturing toward image right, other relaxed near the waist, both hands fully in frame, five fingers. Preserve glasses ONLY if input 1 wears glasses. Do not copy the other person or any product or background from input 2. Portrait 3:4 canvas, full head and hair and both arms inside with a small transparent margin, body reaches near lower edge. No table, microphone, scenery, product, frame, lettering, logo, opaque background or fake checkerboard. True alpha around the clean silhouette. Warm soft upper-right key light matching the existing wooden studios. Identity: Exactly the adult woman in input 1, preserve her distinctive face, hair, clothing, accessories and adult age, do not change her to the person from input 2.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/PortraitsRetro/resident_zengyu.png",
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/clothing_demo.png"
+      ]
+    },
+    {
+      "key": "layer-host-resident_fanglu",
+      "path": "Assets/Resources/KolStudio/Hosts/resident_fanglu.png",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-a791fa1e-1166-4be6-8e29-0fd17f07f0b0.png",
+      "prompt": "Use case: identity-preserve. Produce one reusable TRANSPARENT character cutout for an existing game livestream scene, not a complete scene. Input 1 is the exact character identity reference, input 2 is ONLY the rendering-style reference from the actual game. Preserve the adult character's gender, age, facial identity, hairstyle, accessories and clothing colours from input 1. Use the softly faceted, warmly lit, attractive anime-faced low-poly 3D illustration style of input 2; NOT ink/paper manga. One person only, head to hips, facing the viewer, slight turn toward image right, friendly professional presenter expression. One open hand gesturing toward image right, other relaxed near the waist, both hands fully in frame, five fingers. Preserve glasses ONLY if input 1 wears glasses. Do not copy the other person or any product or background from input 2. Portrait 3:4 canvas, full head and hair and both arms inside with a small transparent margin, body reaches near lower edge. No table, microphone, scenery, product, frame, lettering, logo, opaque background or fake checkerboard. True alpha around the clean silhouette. Warm soft upper-right key light matching the existing wooden studios. Identity: Exactly the adult woman in input 1, preserve her distinctive face, hair, clothing, accessories and adult age, do not change her to the person from input 2.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/PortraitsRetro/resident_fanglu.png",
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/clothing_demo.png"
+      ]
+    },
+    {
+      "key": "atlas-parts",
+      "path": "Assets/Resources/KolStudio/Products/parts.png",
+      "columns": 3,
+      "rows": 2,
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-77894a2d-2c8a-475b-8b90-3bd98c47e5f8.png",
+      "prompt": "Use case: product-mockup. Create a production GAME SPRITE ATLAS, genuinely TRANSPARENT background, no environment. Use input image ONLY for the softly faceted warm low-poly 3D rendering style of the objects. Do NOT reproduce its person, room or tabletop. No manga ink, no photo realism, no words, labels, numerals, borders or grid lines. Invisible exact uniform grid; each complete object centered within its OWN cell, same scale logic, 12% transparent padding to all cell edges, objects never cross cell boundaries. View every product at a consistent front three-quarter angle slightly from above, warm neutral soft light, readable at 300px; simple accurate silhouettes. No cast shadows beyond objects, no other props. Landscape canvas 3:2. EXACT 3 columns and 2 rows of square cells. Exactly SIX isolated computer components. Row 1 left to right: 1 silver square CPU processor with a green PCB edge; 2 green full ATX motherboard with empty CPU socket, black RAM slots and ports; 3 one long RAM stick with dark chips and gold edge. Row 2 left to right: 4 black dual-fan graphics card with gold PCIe edge; 5 small black M.2 SSD stick with a screw hole at one end; 6 cream desktop PC tower with side panel removed and a PSU seated at bottom, NOT a separate monitor. Fictional unbranded hardware.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/computer_demo.png"
+      ]
+    },
+    {
+      "key": "atlas-models",
+      "path": "Assets/Resources/KolStudio/Products/models.png",
+      "columns": 4,
+      "rows": 3,
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-cc0dbae6-6a9a-475c-80f5-ba624cb01dfb.png",
+      "prompt": "Use case: product-mockup. Create a production GAME SPRITE ATLAS, genuinely TRANSPARENT background, no environment. Use input image ONLY for the softly faceted warm low-poly 3D rendering style of the objects. Do NOT reproduce its person, room or tabletop. No manga ink, no photo realism, no words, labels, numerals, borders or grid lines. Invisible exact uniform grid; each complete object centered within its OWN cell, same scale logic, 12% transparent padding to all cell edges, objects never cross cell boundaries. View every product at a consistent front three-quarter angle slightly from above, warm neutral soft light, readable at 300px; simple accurate silhouettes. No cast shadows beyond objects, no other props. Landscape canvas 4:3. EXACT 4 columns and 3 rows of square cells, equal width and height. Exactly TWELVE original toy miniatures, strict reading order left-to-right then next row: Row1: [1 small mail sailboat with warm yellow sail and tiny envelope emblem] [2 coastal patrol boat with a miniature lighthouse on its bow] [3 blue-green twin-hull passenger ferry] [4 friendly square-head robot mail carrier with open paper umbrella]. Row2: [5 clock-repair robot with clock face and toolbox backpack] [6 nightwatch robot with transparent rain hood and warm lantern, copper base] [7 cute round seed visitor with exactly two sprout leaves on head, tiny seed backpack] [8 traveller with large red mushroom hat and walking stick]. Row3: [9 tiny glass greenhouse with plants inside] [10 pocket observatory with a star-shaped lantern shade] [11 sampling rover with exactly four wheels and crate of glowing stones] [12 three-tier beacon tower with star motif]. All 12 distinct items stand alone; small plinths allowed as part of toy, no scene or characters other than the toy characters. Muted cream, sage, ochre and dusty blue.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/models_demo.png"
+      ]
+    },
+    {
+      "key": "atlas-clothing",
+      "path": "Assets/Resources/KolStudio/Products/clothing.png",
+      "columns": 4,
+      "rows": 2,
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-43a5e616-448e-4465-8156-6ae410b634fa.png",
+      "prompt": "Use case: product-mockup. Create a production GAME SPRITE ATLAS, genuinely TRANSPARENT background, no environment. Use input image ONLY for the softly faceted warm low-poly 3D rendering style of the objects. Do NOT reproduce its person, room or tabletop. No manga ink, no photo realism, no words, labels, numerals, borders or grid lines. Invisible exact uniform grid; each complete object centered within its OWN cell, same scale logic, 12% transparent padding to all cell edges, objects never cross cell boundaries. View every product at a consistent front three-quarter angle slightly from above, warm neutral soft light, readable at 300px; simple accurate silhouettes. No cast shadows beyond objects, no other props. Landscape canvas 2:1. EXACT 4 columns and 2 rows of square cells. Exactly EIGHT isolated clothing outfits, ALL WHITE/NEUTRAL LIGHT GRAY fabric, monochrome shading designed for runtime colour tint. NO coloured fabric, no mannequin skin, no people. Tops hang neatly with lower garments slightly below or beside them as one compact cell group. Row1 left-to-right: [1 plain short-sleeved cotton tee and knee-length shorts] [2 breathable short-sleeved athletic tee and sports shorts] [3 long-sleeved button-front collared shirt and straight trousers] [4 padded thick winter coat with windproof high collar and warm trousers]. Row2 left-to-right: [5 casual collared short jacket and relaxed trousers] [6 long-sleeved zip-up athletic track jacket and joggers] [7 formal two-piece blazer suit and smart trousers] [8 fine rib-knit long-sleeved sweater and straight trousers]. Unbranded generic silhouettes, distinguish cuffs, thickness and seams, small gray hangers only, no racks/stands/background.",
+      "references": [
+        "D:/UnityProjects/PCShop/PCShop/Assets/Resources/KolStudio/clothing_demo.png"
+      ]
+    }
+  ]
+}

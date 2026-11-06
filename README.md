@@ -1,6 +1,16 @@
 # PCShopSell（工作名）
 
-**当前完整归档（2026-11-05）：[第72篇：全部游戏内容与版本边界](docs/72-current-game-content-2026-11-05.md)。** 涵盖城市与主线、各类门店、生活与住宅、品牌与推广、手机直播与结算、实体展会、赛车和二手车行。[本版验证结果](docs/validation/72-current-archive-results.md)。[第71篇](docs/71-current-game-content-2026-11-05.md)及下列专题保留历次交付记录。
+**当前完整归档（2026-11-06）：[第77篇：全部游戏内容、素材清理与版本边界](docs/77-current-game-content-2026-11-06.md)。** 覆盖当前全部系统及MCN人事招募、统一代言、直播和展会图层、道路整理；不符合预期的9张独立插画已删除。[验证记录](docs/validation/77-current-archive-results.md) · [源码资源索引](docs/snapshot-2026-11-06-files.json)。
+
+代言人招募恢复公司人事流程：先选MCN公司，实际到场办理介绍、认识主播，再由对应公司人事签订统一代言合约。品牌面板不再直接签约，详见[第76篇](docs/76-mcn-agency-recruitment.md)。
+
+直播与展会素材已按原场景接入：15 位主播透明素材、电脑/模型/服装商品图集，直播使用真实品牌库存，展会屏幕展示实际到场主播和报名展品，详见[第75篇](docs/75-existing-scenes-and-replaceable-showcase-art.md)。
+
+实际道路与人行道叠层已整理：路口、弯道、门前步道和赛场接入共用铺装边界，四区实景前后对照及验证见[第74篇](docs/74-continuous-roads-and-pavements.md)。
+
+当前代言人与KOL已统一为一份合约，签约后可排品牌直播并邀请参展，不再另签第二份代言。旧付费合约免费衔接，详见[第73篇](docs/73-unified-brand-ambassadors.md)。
+
+**历史完整归档（2026-11-05）：[第72篇：全部游戏内容与版本边界](docs/72-current-game-content-2026-11-05.md)。** 涵盖城市与主线、各类门店、生活与住宅、品牌与推广、手机直播与结算、实体展会、赛车和二手车行。[本版验证结果](docs/validation/72-current-archive-results.md)。[第71篇](docs/71-current-game-content-2026-11-05.md)及下列专题保留历次交付记录。
 
 实际赛场选址：[第70篇](docs/70-racing-actual-map-review.md)。按用户要求，用当前游戏场景截取全城鸟瞰及赛场标注图，并修正草坪被底座遮挡和入口登岸间隙。
 

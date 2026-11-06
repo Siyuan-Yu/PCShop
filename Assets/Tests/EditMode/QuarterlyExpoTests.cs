@@ -25,7 +25,7 @@ namespace PCShopSell.Tests
         private static string[] Kols(GameSession s,int n)
         {
             if(n>3)Assert.True(s.UpgradeKolBrand("acceptance-expo"));if(n>7)Assert.True(s.UpgradeKolBrand("acceptance-expo"));
-            var ids=KolMarket.All.Take(n).Select(k=>k.Id).ToArray();foreach(string id in ids)Assert.True(s.SignKolLive("acceptance-expo",id));return ids;
+            var ids=KolMarket.All.Take(n).Select(k=>k.Id).ToArray();foreach(string id in ids)Assert.True(McnSigningTest.Sign(s,"acceptance-expo",id));return ids;
         }
         private static BrandExhibit Book(GameSession s,int size=0)
         {
@@ -94,7 +94,7 @@ namespace PCShopSell.Tests
             {
                 var ids=Kols(s,1);var c=s.KolStreaming.Contracts.Single();Assert.True(s.EndKolLive(c.Id));
                 Assert.False(s.ExpoAvailableKols("acceptance-expo",75).Contains(ids[0]));
-                Day(s,150);Assert.True(s.SignKolLive("acceptance-expo","momo"));
+                Day(s,150);Assert.True(McnSigningTest.Sign(s,"acceptance-expo","momo"));
                 Assert.False(s.ExpoAvailableKols("acceptance-expo",250).Contains("momo"));
             }
         }
@@ -112,7 +112,7 @@ namespace PCShopSell.Tests
             using(var s=Make())
             {
                 var e=Book(s);string old=e.KolIds.Single();Assert.True(s.EndKolLive(s.KolStreaming.Contracts.Single().Id));
-                Assert.True(s.SignKolLive(e.BrandId,"ake"));Assert.True(s.ReplaceExpoKol(e.Id,old,"ake"));
+                Assert.True(McnSigningTest.Sign(s,e.BrandId,"ake"));Assert.True(s.ReplaceExpoKol(e.Id,old,"ake"));
                 e=s.BrandBusiness.Exhibits.Single();PrepareStart(s,e);Assert.True(s.StartQuarterlyExpo(e.Id));
                 Assert.False(s.EndKolLive(s.KolStreaming.Contracts.Last().Id));Assert.False(s.ReplaceExpoKol(e.Id,"ake","qiao"));
                 Assert.False(s.BeginCityTravel(s.Home.Id));Assert.False(s.Enter(s.Home));s.Leave();Assert.AreEqual("life_expo",s.CurrentPlace.Id);

@@ -45,7 +45,7 @@ namespace PCShopSell.Core.Session
     }
     [Serializable] public sealed class KolLiveContract
     {
-        public string Id,BrandId,PersonId;public long SignedAt,EndAt,LastProcessedAt,ScheduleEffectiveAt;
+        public string Id,BrandId,PersonId,AgencyId;public long SignedAt,EndAt,LastProcessedAt,ScheduleEffectiveAt;
         public int StartMinute=1080,EndMinute=120,ScheduleVersion;public bool Enabled=true,Ended;public long FeeCents;
         public int FrequencyDays = 1, FirstDay;
         public long LastPaidThrough,WagesPaidCents;

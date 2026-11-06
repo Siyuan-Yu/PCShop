@@ -58,6 +58,7 @@ namespace PCShopSell.Core.Session
         public double BrandDealTraffic(BrandDeal deal)
         {
             var brand = Brand(deal.BrandId);
+            if (!string.IsNullOrEmpty(deal.KolContractId)) return 0;
             if (brand == null || deal.Ended || deal.End <= BrandDay || deal.Response == "pause") return 0;
             return (deal.Mode == "endorse" ? .12 : .08) * (deal.Exclusive ? 1.25 : 1) * BrandAudienceFit(deal.PersonId, brand.Kind)
                 + (_brands.Careers.FirstOrDefault(c => c.PersonId == deal.PersonId)?.Momentum ?? 0) * .002

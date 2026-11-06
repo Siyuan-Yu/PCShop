@@ -4,6 +4,7 @@ using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
+using PCShopSell.Game.Runtime;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -124,7 +125,7 @@ namespace PCShopSell.Game.UI
             {
                 _brandTab = BrandKolTab;
                 _brandId = contract.BrandId;
-                _kolPage = "主播与排班";
+                _kolPage = "代言人与排班";
                 OpenBrandBusiness();
             });
         }
@@ -182,7 +183,7 @@ namespace PCShopSell.Game.UI
             int phase = KolPhase(room, now);
             var row = Ui.Row(w.Content, 418, 12);
             var stage = Ui.Rect(row, "KolLiveStage"); Ui.Size(stage, 740, 418);
-            BuildKolStage(stage, talent, phase);
+            BuildKolStage(stage, talent, room, phase);
             var badge = Ui.Panel(stage, "LiveBadge", Ui.Warn).rectTransform.Anchor(0, 1, 0, 1, 12, -41, -130, 12);
             Ui.Label(badge, "● 直播中", 16, TextAnchor.MiddleCenter).rectTransform.Fill();
             var audience = Ui.Panel(stage, "LiveAudience", Ui.PanelBg).rectTransform.Anchor(1, 1, 1, 1, -166, -41, 12, 12);
@@ -237,30 +238,23 @@ namespace PCShopSell.Game.UI
             }, 17), 235, 40);
         }
 
-        private void BuildKolStage(RectTransform stage, KolTalentDef talent, int phase)
+        private void BuildKolStage(RectTransform stage, KolTalentDef talent, KolRoomStatus room, int phase)
         {
             var image = Ui.Rect(stage, "KolStudioArt").Fill().gameObject.AddComponent<RawImage>();
-            string lead = talent.Kind == "computer" ? "momo" : talent.Kind == "clothing" ? "life_designer" : "life_creator";
-            bool fullShot = talent.Id == lead && phase >= 1;
-            image.texture = Resources.Load<Texture2D>("KolStudio/" + talent.Kind + (fullShot ? "_demo" : "_studio"));
+            image.texture = BrandShowcaseArt.Studio(S.KolShowcaseKind(room));
             image.color = image.texture == null ? Ui.PanelBg2 : Color.white;
             image.raycastTarget = false;
-            if (fullShot && phase == 2) image.uvRect = new Rect(.03f, .04f, .94f, .94f);
-            if (fullShot) return;
-            if (phase == 2)
-            {
-                var demo = Ui.Rect(stage, "KolCategoryDemo").Anchor(0, 0, 1, 1, 300, 84, 18, 40)
-                    .gameObject.AddComponent<RawImage>();
-                demo.texture = Resources.Load<Texture2D>("KolStudio/" + talent.Kind + "_demo");
-                demo.uvRect = new Rect(.51f, .03f, .49f, .60f);
-                demo.raycastTarget = false;
-            }
-            var face = Ui.Panel(stage, "KolFaceCam", Ui.PanelBg).rectTransform.Anchor(0, 0, 0, 1, 28, 82, -260, 57);
-            var avatar = Ui.Rect(face, "KolFaceCamPortrait").Fill(5).gameObject.AddComponent<RawImage>();
-            avatar.texture = PortraitOf(talent.Id);
-            var fitter = avatar.gameObject.AddComponent<AspectRatioFitter>();
-            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-            fitter.aspectRatio = avatar.texture == null ? .75f : (float)avatar.texture.width / avatar.texture.height;
+            var hostArea = Ui.Rect(stage, "KolPresenterArea").Anchor(.025f, .13f, .53f, .97f);
+            var host = Ui.Rect(hostArea, "KolPresenter_" + talent.Id).Fill().gameObject.AddComponent<RawImage>();
+            BrandShowcaseArt.ApplyHost(host, talent.Id);
+            string product = S.KolShowcaseProduct(room);
+            var productArea = Ui.Rect(stage, "KolProductArea").Anchor(phase == 2 ? .48f : .56f, .23f, .97f, phase == 2 ? .88f : .79f);
+            var demo = Ui.Rect(productArea, "KolProduct_" + (product ?? "none")).Fill().gameObject.AddComponent<RawImage>();
+            BrandShowcaseArt.ApplyProduct(demo, product);
+            var label = Ui.Panel(stage, "KolProductCaption", Ui.PanelBg).rectTransform.Anchor(.53f, .17f, .98f, .25f);
+            Ui.Label(label, product == null ? "待准备品牌货物" :
+                (room.BrandId == null ? "讲解样品 · " : "本场货物 · ") + S.BrandProductName(product),
+                15, TextAnchor.MiddleCenter).rectTransform.Fill(4);
         }
 
         private static int KolPhase(KolRoomStatus room, long now)

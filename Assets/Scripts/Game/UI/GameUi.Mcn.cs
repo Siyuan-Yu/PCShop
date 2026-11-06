@@ -19,7 +19,7 @@ namespace PCShopSell.Game.UI
         {
             bool here=S.CurrentPlace==place;
             Line(w.Content,"社区 · 商务介绍与创作者合作 · 09:00—18:00",21,Ui.Accent);
-            Para(w.Content,"先请公司介绍，实际见面交换名片后，就能通过手机联系与谈合作。",17);
+            Para(w.Content,"选择公司，与人事洽谈品牌代言；未认识的主播先安排介绍，实际见面交换名片。",17);
             var agencies = Ui.Row(w.Content, 36, 6);
             foreach (var company in BrandAgency.All)
             {
@@ -33,7 +33,26 @@ namespace PCShopSell.Game.UI
             {
                 string blocker=S.DistrictAccessBlocker(place);
                 if(blocker!=null)Para(w.Content,blocker,17,Ui.Dim);
-                Ui.Size(Ui.Button(w.Content,"前往社区澄光传媒",()=>{CloseAllWindows();S.BeginCityTravel(place.Id);},18,Ui.ButtonHot,blocker==null),-1,42);
+                Ui.Size(Ui.Button(w.Content,"前往"+selected.Name+"人事 · 社区联合接待处",()=>{CloseAllWindows();S.BeginCityTravel(place.Id);},18,Ui.ButtonHot,blocker==null),-1,42);
+            }
+            var brands=S.BrandBusiness.Brands;
+            if(brands.Length>0)
+            {
+                if(!brands.Any(b=>b.Id==_mcnRecruitBrand))_mcnRecruitBrand=brands[0].Id;
+                var choose=Ui.Row(w.Content,36,6);
+                foreach(var entry in brands)
+                {
+                    var brand=entry;
+                    Ui.Size(Ui.Button(choose,brand.Name,()=>{_mcnRecruitBrand=brand.Id;w.Rebuild();},16,
+                        _mcnRecruitBrand==brand.Id?Ui.ButtonHot:Ui.ButtonBg),-1,36,1);
+                }
+                string reception=S.McnReceptionBlocker(selected.Id);
+                Ui.Size(Ui.Button(w.Content,"与"+selected.Name+"人事洽谈代言 / KOL签约",()=>
+                {
+                    if(S.BeginMcnRecruitment(selected.Id)){w.Close();OpenMcnKolRecruitment(selected.Id,_mcnRecruitBrand);}
+                    else {Toast(S.McnReceptionBlocker(selected.Id));w.Rebuild();}
+                },18,Ui.ButtonHot,reception==null),-1,42).name="McnReception_"+selected.Id;
+                if(here&&reception!=null)Line(w.Content,reception,15,Ui.Dim);
             }
             var list=Ui.Scroll(w.Content,430);
             foreach(string person in KolMarket.All.Select(p=>p.Id).Concat(GameSession.BrandPeople).Distinct()

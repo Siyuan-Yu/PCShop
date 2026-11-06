@@ -25,7 +25,7 @@ namespace PCShopSell.Game.UI
             var sizes=Ui.Row(body,40,6);
             for(int n=0;n<3;n++)
             {int size=n;Ui.Size(Ui.Button(sizes,GameSession.ExpoBoothName(size)+" · ¥"+GameSession.ExpoBoothFee(size).ToString("N0"),()=>{_expoBooth=size;_expoProducts.Clear();w.Rebuild();},17,_expoBooth==size?Ui.ButtonHot:Ui.ButtonBg),-1,40,1);}
-            Line(body,"需 "+GameSession.ExpoMinProducts(_expoBooth)+"—"+GameSession.ExpoMaxProducts(_expoBooth)+"种展品，每种100件；至少 "+GameSession.ExpoMinKols(_expoBooth)+"位签约KOL"+(_expoBooth>0?"，另需海报":""),18,Ui.Accent);
+            Line(body,"需 "+GameSession.ExpoMinProducts(_expoBooth)+"—"+GameSession.ExpoMaxProducts(_expoBooth)+"种展品，每种100件；至少 "+GameSession.ExpoMinKols(_expoBooth)+"位签约代言人"+(_expoBooth>0?"，另需海报":""),18,Ui.Accent);
             var shops=S.MyShops.Where(s=>s.RetailKind==brand.Kind&&brand.ShopIds.Contains(s.Place.Id)).ToArray();
             if(!shops.Any(s=>s.Place.Id==_expoDraftShop))_expoDraftShop=shops.FirstOrDefault()?.Place.Id;
             var storeRow=Ui.Row(body,36,6);
@@ -38,7 +38,7 @@ namespace PCShopSell.Game.UI
             }
             if(goods.Length==0)Para(body,"关联门店暂无同业现货，请先采购准备展品。",18);
             var talents=S.ExpoAvailableKols(brand.Id,day);_expoKols.RemoveWhere(p=>!talents.Contains(p));
-            Line(body,"邀请本品牌签约KOL · 报价为4天展会的每日总日酬",18,Ui.Accent);
+            Line(body,"邀请本品牌签约代言人 · 报价为4天展会的每日总日酬",18,Ui.Accent);
             for(int n=0;n<talents.Length;n+=3)
             {
                 var row=Ui.Row(body,120,8);
@@ -49,13 +49,13 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(card,_expoKols.Contains(p)?"✓ 已邀请":"邀请站台",()=>{if(!_expoKols.Remove(p))_expoKols.Add(p);w.Rebuild();},16,_expoKols.Contains(p)?Ui.ButtonHot:Ui.ButtonBg),-1,32);
                 }
             }
-            if(talents.Length==0)Para(body,"没有合约覆盖展期的签约KOL，请先在KOL直播页签约。",17,Ui.Warn);
-            Ui.Size(Ui.Button(body,"管理KOL签约",()=>{_brandTab=BrandKolTab;w.Rebuild();},17),-1,36);
+            if(talents.Length==0)Para(body,"没有合约覆盖展期的签约代言人，请先在代言人页签约。",17,Ui.Warn);
+            Ui.Size(Ui.Button(body,"管理代言人",()=>{_brandTab=BrandKolTab;w.Rebuild();},17),-1,36);
             long dayWages=_expoKols.Sum(p=>S.ExpoKolDayQuote(p,_expoBooth));
-            Line(body,"报名付款 ¥"+GameSession.ExpoBoothFee(_expoBooth).ToString("N0")+" · 海报 ¥"+GameSession.ExpoPosterFee(_expoBooth).ToString("N0")+" · 4天KOL总日酬约¥"+(dayWages*4).ToString("N0"),17,Ui.Warn);
+            Line(body,"报名付款 ¥"+GameSession.ExpoBoothFee(_expoBooth).ToString("N0")+" · 海报 ¥"+GameSession.ExpoPosterFee(_expoBooth).ToString("N0")+" · 4天代言人总日酬约¥"+(dayWages*4).ToString("N0"),17,Ui.Warn);
             string reason=S.ExpoBookingBlocker(brand.Id,_expoDraftShop,_expoBooth,_expoProducts.ToArray(),_expoKols.ToArray());
             if(reason!=null)Line(body,reason,16,Ui.Dim);
-            Ui.Size(Ui.Button(body,"确认预订摊位…",()=>ConfirmBusiness("预订4天展会",GameSession.ExpoBoothName(_expoBooth)+"支付¥"+GameSession.ExpoBoothFee(_expoBooth)+"；所选每种展品100件转交展务，未售库存闭展退回；邀请"+_expoKols.Count+"位已签约KOL，4天总日酬约¥"+(dayWages*4)+"，按天结算。海报另行委托，开幕后需亲自连续参与4天。",()=>{if(S.BookQuarterlyExpo(brand.Id,_expoDraftShop,_expoBooth,_expoProducts.ToArray(),_expoKols.ToArray())) _expoPage="overview";w.Rebuild();}),18,Ui.ButtonHot,reason==null),-1,44).name="ExpoBookBooth";
+            Ui.Size(Ui.Button(body,"确认预订摊位…",()=>ConfirmBusiness("预订4天展会",GameSession.ExpoBoothName(_expoBooth)+"支付¥"+GameSession.ExpoBoothFee(_expoBooth)+"；所选每种展品100件转交展务，未售库存闭展退回；邀请"+_expoKols.Count+"位已签约代言人，4天总日酬约¥"+(dayWages*4)+"，按天结算。海报另行委托，开幕后需亲自连续参与4天。",()=>{if(S.BookQuarterlyExpo(brand.Id,_expoDraftShop,_expoBooth,_expoProducts.ToArray(),_expoKols.ToArray())) _expoPage="overview";w.Rebuild();}),18,Ui.ButtonHot,reason==null),-1,44).name="ExpoBookBooth";
         }
         private void BuildLegacyExpoCard(Transform card,Window w,BrandExhibit e)
         {

@@ -47,7 +47,7 @@ namespace PCShopSell.Game.UI
                 BrandMetric(metrics, "口碑", b.Reputation.ToString());
                 BrandMetric(metrics, "知名度", b.Influence.ToString());
                 var deals = state.Deals.Where(d => d.BrandId == b.Id && !d.Ended && d.End > S.Clock.Today.TotalDays).ToArray();
-                Line(card, "有效代言 " + deals.Count(d => d.Mode == "endorse")
+                Line(card, "有效代言 " + S.BrandKolCount(b.Id)
                     + "人 · 短期推广 " + deals.Count(d => d.Mode == "campaign") + "项", 16, Ui.Dim);
                 var actions = Ui.Row(card, 36, 8);
                 Ui.Size(Ui.Button(actions, _expandedBrands.Contains(b.Id) ? "收起旗下门店" : "展开旗下门店", () =>
@@ -55,7 +55,7 @@ namespace PCShopSell.Game.UI
                     if (!_expandedBrands.Remove(b.Id)) _expandedBrands.Add(b.Id);
                     w.Rebuild();
                 }, 17), -1, 36, 1).name = "BrandExpand_" + b.Id;
-                Ui.Size(Ui.Button(actions, "查看推广与代言", () =>
+                Ui.Size(Ui.Button(actions, "查看短期推广", () =>
                 {
                     _brandId = b.Id; _brandTab = 1; _promotionPage = "overview"; w.Rebuild();
                 }, 17), -1, 36, 1);

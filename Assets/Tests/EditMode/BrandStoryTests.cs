@@ -38,7 +38,7 @@ namespace PCShopSell.Tests
         private static void Day(GameSession s, int day, int minute = 600) => s.Clock.Restore(new GameDate(day), minute);
         private static string BeginDeal(GameSession s, string person)
         {
-            Assert.True(s.SignBrandDeal("b", person, "endorse", false)); MeetHere(s, person);
+            Assert.True(McnSigningTest.Endorse(s,"b", person, "endorse", false)); MeetHere(s, person);
             string id = s.BrandStoryOffers().Single(x => x.PersonId == person).Id; s.BeginBrandStory(id);
             Assert.AreEqual(1, s.BrandStories.Single(x => x.Id == id).Stage); return id;
         }

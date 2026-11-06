@@ -35,7 +35,7 @@ namespace PCShopSell.Core.Session
         {
             if(IsGameOver||IsWorking||_sleeping||CityActivityExclusive)return "请先结束当前工作或活动";
             if(DistrictAccessTier<1)return "先进入社区阶段";
-            if(CurrentPlace?.Id!=CommunityMcnId)return "请到社区澄光传媒现场办理介绍";
+            if(CurrentPlace?.Id!=CommunityMcnId)return "请到社区MCN联合接待处找公司人事办理";
             if(!IsPlaceOpen(CurrentPlace))return "MCN接待时间09:00—18:00";
             return null;
         }
