@@ -127,7 +127,7 @@ namespace PCShopSell.Game.UI
             var me=WbColumn(row,"WorkbenchPersonalState");
             WbText(me,"我的状态",22);WbVital(me,"健康",S.Player.Health,100);WbVital(me,"精力",S.Player.Energy,S.Player.MaxEnergy);WbVital(me,"饱腹",S.Player.Hunger,100);
             WbText(me,"心情 "+S.Player.Mood.ToString("0")+" · 营养 "+S.Player.Nutrition.ToString("0"),17);
-            WbText(me,S.HomeTitle,20);WbText(me,"月租 "+S.CurrentHomeRent,17,WbDim);
+            WbText(me,S.HomeTitle,20);WbText(me,"周租 "+S.CurrentHomeRent,17,WbDim);
             WbText(me,"载具："+S.CurrentVehicle.Name,18);WbText(me,"过去24小时睡眠 "+S.SleepHoursLast24.ToString("0.#")+" / 8 小时",17);
             WbButton(me,"生活托管设置",OpenHomeAutomation,"WorkbenchPersonalAutomation");
             WbButton(me,"背包与家中物品",OpenBackpackPanel,"WorkbenchBackpack");
@@ -307,16 +307,18 @@ namespace PCShopSell.Game.UI
         private void BuildWorkbenchContacts(Transform parent)
         {
             var actions=Ui.Row(parent,42,10);WbButton(actions,"通讯录与邀约",OpenContactsPanel,"WorkbenchContacts");WbButton(actions,"聊天消息",OpenChatPanel,"WorkbenchChat");WbButton(actions,"日程",OpenCityActivities,"WorkbenchContactCalendar");
-            WbText(parent,"使用已有联系方式，沿用真实NPC的聊天与日程。",17,WbDim);
             var list=WbScroll(parent,"WorkbenchContactsBody");
             foreach(var contact in S.SavedConversationContacts())
             {
-                string id=contact.Id;WbButton(list,contact.Name+" · "+contact.Role,()=>OpenPersonDialogue(id,remote:true),"WorkbenchKnownContact_"+id);
+                string id=contact.Id;
+                var row=PersonSummary(list,id,contact.Name,contact.Role,50,ink:WbInk,muted:WbDim);
+                WbButton(row,"交谈",()=>OpenPersonDialogue(id,remote:true),"WorkbenchKnownContact_"+id);
             }
             foreach(var worker in S.Employees)
             {
                 string personId=S.PersonIdOf(worker.Person);var employee=worker;
-                WbButton(list,employee.Person.Name+" · "+GameSession.RoleName(employee.Role)+" · "+S.EmployeeStatus(employee),()=>OpenPersonDialogue(personId,remote:true),"WorkbenchContact_"+employee.Person.Id,enabled:S.RemoteConversationBlocker(personId)==null);
+                var row=PersonSummary(list,personId,employee.Person.Name,GameSession.RoleName(employee.Role)+" · "+S.EmployeeStatus(employee),50,ink:WbInk,muted:WbDim);
+                WbButton(row,"交谈",()=>OpenPersonDialogue(personId,remote:true),"WorkbenchContact_"+employee.Person.Id,enabled:S.RemoteConversationBlocker(personId)==null);
             }
         }
         private void OpenHomeAutomation()

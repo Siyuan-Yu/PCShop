@@ -19,6 +19,8 @@ namespace PCShopSell.Game.UI
         public static readonly Color Good = Tone("B6D578");
         public static readonly Color Dim = Tone("AAB4BB");
         public static readonly Color TextColor = Tone("ECE8DF");
+        public static readonly Color Edge = Tone("56616B");
+        public static readonly Color WarningSurface = Tone("4B302A");
         private static Color Tone(string hex) { ColorUtility.TryParseHtmlString("#" + hex, out var c); return c; }
         private static Sprite _card;
         private static Sprite Card
@@ -170,6 +172,20 @@ namespace PCShopSell.Game.UI
             return b;
         }
 
+        public static Text Notice(Transform parent, string message, int size = 18)
+        {
+            var panel = Panel(parent, "Notice", WarningSurface);
+            var row = VList(panel.rectTransform, 0, 9);
+            row.padding.left = 14;
+            var rail = Panel(panel.transform, "WarningRail", Warn);
+            rail.rectTransform.Anchor(0, 0, 0, 1, 0, 4, -4, 4);
+            rail.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            rail.raycastTarget = false;
+            var label = Label(panel.transform, message, size, TextAnchor.MiddleLeft, Tone("F2B39C"));
+            label.fontStyle = FontStyle.Bold;
+            return label;
+        }
+
         public static InputField TextInput(Transform parent, string value, string placeholder, Action<string> commit)
         {
             var bg = Panel(parent, "Input", PanelBg2);
@@ -188,15 +204,16 @@ namespace PCShopSell.Game.UI
         }
 
         /// <summary>Finite choices without invoking a keyboard. The native list supports scroll and touch.</summary>
-        public static Dropdown Choice(Transform parent, IEnumerable<string> options, int selected, Action<int> choose)
+        public static Dropdown Choice(Transform parent, IEnumerable<string> options, int selected, Action<int> choose, bool opensUp = false)
         {
             var face=Panel(parent,"Choice",PanelBg2);
             var dropdown=face.gameObject.AddComponent<ChoiceDropdown>();dropdown.targetGraphic=face;
             var caption=Label(face.transform,"",18,TextAnchor.MiddleLeft);caption.rectTransform.Fill(8);caption.raycastTarget=false;
             caption.rectTransform.offsetMax=new Vector2(-25,-4);
-            var arrow=Label(face.transform,"▾",18,TextAnchor.MiddleRight);arrow.rectTransform.Fill(6);arrow.raycastTarget=false;
+            var arrow=Label(face.transform,opensUp ? "▴" : "▾",18,TextAnchor.MiddleRight);arrow.rectTransform.Fill(6);arrow.raycastTarget=false;
             var template=Panel(face.transform,"Template",PanelBg2).rectTransform;
-            template.anchorMin=new Vector2(0,0);template.anchorMax=new Vector2(1,0);template.pivot=new Vector2(.5f,1);
+            float anchorY = opensUp ? 1 : 0;
+            template.anchorMin=new Vector2(0,anchorY);template.anchorMax=new Vector2(1,anchorY);template.pivot=new Vector2(.5f,1-anchorY);
             template.anchoredPosition=Vector2.zero;template.sizeDelta=new Vector2(0,220);
             var viewport=Panel(template,"Viewport",PanelBg2).rectTransform;viewport.Fill();viewport.gameObject.AddComponent<RectMask2D>();
             var content=Rect(viewport,"Content");content.anchorMin=new Vector2(0,1);content.anchorMax=Vector2.one;content.pivot=new Vector2(.5f,1);content.sizeDelta=new Vector2(0,38);
@@ -204,7 +221,7 @@ namespace PCShopSell.Game.UI
             var toggle=item.gameObject.AddComponent<Toggle>();toggle.targetGraphic=item;
             var mark=Panel(item.transform,"Selected",Accent);mark.raycastTarget=false;mark.rectTransform.Anchor(0,0,0,1,2,2,-6,2);toggle.graphic=mark;
             var itemText=Label(item.transform,"",18,TextAnchor.MiddleLeft);itemText.rectTransform.Fill(10);itemText.raycastTarget=false;
-            var scroll=template.gameObject.AddComponent<ScrollRect>();scroll.viewport=viewport;scroll.content=content;scroll.horizontal=false;scroll.scrollSensitivity=38;scroll.movementType=ScrollRect.MovementType.Clamped;
+            AddVerticalScroll(template, viewport, content, 38);
             dropdown.template=template;dropdown.captionText=caption;dropdown.itemText=itemText;
             dropdown.AddOptions(new List<string>(options));dropdown.SetValueWithoutNotify(Mathf.Clamp(selected,0,Math.Max(0,dropdown.options.Count-1)));dropdown.RefreshShownValue();
             template.gameObject.SetActive(false);dropdown.onValueChanged.AddListener(value=>choose(value));
@@ -293,10 +310,6 @@ namespace PCShopSell.Game.UI
         {
             Image bg = Panel(parent, "Scroll", new Color(0, 0, 0, 0.18f));
             if (height >= 0) Size(bg, -1, height);
-            var sr = bg.gameObject.AddComponent<ScrollRect>();
-            sr.horizontal = false;
-            sr.scrollSensitivity = 30;
-            sr.movementType = ScrollRect.MovementType.Clamped;
             RectTransform viewport = Rect(bg.transform, "Viewport").Fill();
             viewport.gameObject.AddComponent<RectMask2D>();
             RectTransform content = Rect(viewport, "Content");
@@ -311,9 +324,41 @@ namespace PCShopSell.Game.UI
                 var fit = content.gameObject.AddComponent<ContentSizeFitter>();
                 fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             }
-            sr.viewport = viewport;
-            sr.content = content;
+            AddVerticalScroll(bg.rectTransform, viewport, content, 30);
             return content;
+        }
+
+        private static void AddVerticalScroll(RectTransform frame, RectTransform viewport, RectTransform content, float sensitivity)
+        {
+            const float scrollbarWidth = 16f;
+            // A fixed gutter keeps controls clear of the scrollbar without reflowing the list as it changes.
+            viewport.offsetMax = new Vector2(-scrollbarWidth - 4, viewport.offsetMax.y);
+
+            var track = Panel(frame, "VerticalScrollbar", Edge);
+            track.rectTransform.Anchor(1, 0, 1, 1, -scrollbarWidth - 2, 2, 2, 2);
+            var slidingArea = Rect(track.transform, "SlidingArea").Fill(2);
+            slidingArea.gameObject.AddComponent<RectMask2D>();
+            var handle = Panel(slidingArea, "Handle", Accent);
+            // Scrollbar drives anchors but leaves offsets unchanged.
+            handle.rectTransform.Fill();
+            handle.sprite = Card;
+            handle.type = Image.Type.Sliced;
+            handle.raycastTarget = false;
+
+            var scrollbar = track.gameObject.AddComponent<ListScrollbar>();
+            scrollbar.targetGraphic = handle;
+            scrollbar.handleRect = handle.rectTransform;
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+            scrollbar.navigation = new Navigation { mode = Navigation.Mode.None };
+
+            var scroll = frame.gameObject.AddComponent<VerticalListScrollRect>();
+            scroll.viewport = viewport;
+            scroll.content = content;
+            scroll.horizontal = false;
+            scroll.scrollSensitivity = sensitivity;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.verticalScrollbar = scrollbar;
+            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
         }
 
         public static Slider Slider(Transform parent, float min, float max, float value, Action<float> onChange)
@@ -367,6 +412,45 @@ namespace PCShopSell.Game.UI
             return n[(int)d];
         }
     }
+    internal sealed class VerticalListScrollRect : ScrollRect
+    {
+        protected override void LateUpdate()
+        {
+            base.LateUpdate();
+            var scrollbar = verticalScrollbar;
+            if (scrollbar == null || !scrollbar.isActiveAndEnabled) return;
+            var area = (RectTransform)scrollbar.handleRect.parent;
+            // A proportional thumb can become almost invisible on long lists such as the purchase catalog.
+            float minimumSize = Mathf.Min(0.65f, 24f / Mathf.Max(1f, area.rect.height));
+            if (scrollbar.size < minimumSize) scrollbar.size = minimumSize;
+        }
+    }
+
+    internal sealed class ListScrollbar : Scrollbar
+    {
+        private static ListScrollbar _pressed;
+
+        public static bool PressedInside(Transform root) => _pressed != null && _pressed.transform.IsChildOf(root);
+
+        public override void OnPointerDown(PointerEventData eventData)
+        {
+            base.OnPointerDown(eventData);
+            if (eventData.button == PointerEventData.InputButton.Left && IsActive() && IsInteractable()) _pressed = this;
+        }
+
+        public override void OnPointerUp(PointerEventData eventData)
+        {
+            base.OnPointerUp(eventData);
+            if (eventData.button == PointerEventData.InputButton.Left && _pressed == this) _pressed = null;
+        }
+
+        protected override void OnDisable()
+        {
+            if (_pressed == this) _pressed = null;
+            base.OnDisable();
+        }
+    }
+
     public sealed class ChoiceDropdown : Dropdown
     {
         public static int CancelFrame = -1;

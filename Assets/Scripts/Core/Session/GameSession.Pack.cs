@@ -598,7 +598,7 @@ namespace PCShopSell.Core.Session
 
         /// <summary>
         /// 一键放下：在店里，配件及有对应陈列的经营商品进入后仓自动上架；其他米菜礼品家具进后仓；
-        /// 在家里，米和菜进厨房，礼品、家具进后仓（装不下的留在背包）。自制饭菜继续随身携带，食品店经营的外带食品可按品类上架。
+        /// 在家里，米、菜、礼品和家具进后仓。自制饭菜继续随身携带，食品店经营的外带食品可按品类上架。
         /// </summary>
         public bool UnloadBackpack()
         {
@@ -625,11 +625,11 @@ namespace PCShopSell.Core.Session
                 }
                 if (food.RiceKg > 0 || food.Ingredient.Count > 0)
                 {
-                    Pantry.RiceKg += food.RiceKg;
+                    HomeBox.Food.RiceKg += food.RiceKg;
                     food.RiceKg = 0;
-                    foreach (FoodBatch b in food.Ingredient) Pantry.Ingredient.Add(b);
+                    HomeBox.Food.Ingredient.AddRange(food.Ingredient);
                     food.Ingredient.Clear();
-                    done.Add("米和菜放进了厨房");
+                    done.Add("食材已放进家中后仓");
                 }
                 int boxed = 0;
                 bool full = false;

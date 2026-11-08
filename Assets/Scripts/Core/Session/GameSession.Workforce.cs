@@ -344,7 +344,7 @@ namespace PCShopSell.Core.Session
                 blocker = blocker ?? PurchaseOpeningBlocker(source, arrival);
                 foreach (var entry in stop)
                 {
-                    buyMinutes += Math.Max(1, row.Person.PurchaseMinutes);
+                    buyMinutes += EmployeePurchaseMinutes(row.Person);
                     q.Goods += entry.offer.Price * entry.item.Count;
                     q.Kg += entry.offer.UnitKg * entry.item.Count;
                     space += entry.offer.StockSpace * entry.item.Count;
@@ -500,7 +500,7 @@ namespace PCShopSell.Core.Session
                 Items = q.Lines.Select(x =>
                 {
                     var item = x.item.Copy(); item.SourceId = x.offer.Source.Id;
-                    if (item.Kind == PurchaseGoodsKind.Ingredient) item.ExpireDay = Clock.Today.TotalDays + Ingredients.Get(item.PartId).ShelfDays;
+                    if (item.Kind == PurchaseGoodsKind.Ingredient) item.ExpireDay = FoodBatch.NoExpiry;
                     if (item.Kind == PurchaseGoodsKind.Gift && Gifts.Get(item.PartId).ShelfDays > 0) item.ExpireDay = Clock.Today.TotalDays + Gifts.Get(item.PartId).ShelfDays;
                     return item;
                 }).ToArray()

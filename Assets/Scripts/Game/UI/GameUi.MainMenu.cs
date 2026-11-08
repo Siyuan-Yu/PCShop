@@ -55,7 +55,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(screen, -1, 200);
             var inset = Ui.Panel(screen.transform, "Monitor", new Color(.07f, .13f, .13f));
             inset.rectTransform.Anchor(.12f, .15f, .88f, .85f);
-            Ui.Label(inset.transform, "> PC SHOP\n" + L("computer_line"), 25, TextAnchor.MiddleCenter, Ui.Good).rectTransform.Fill(16);
+            Ui.Label(inset.transform, "> PET SHOP\n" + L("computer_line"), 25, TextAnchor.MiddleCenter, Ui.Good).rectTransform.Fill(16);
             Ui.Size(Ui.Label(hero, L("development"), 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 36);
 
             var actions = Ui.Panel(body, "MenuActions", Ui.PanelBg2).rectTransform;

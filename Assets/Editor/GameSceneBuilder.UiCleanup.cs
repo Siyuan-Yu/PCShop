@@ -24,7 +24,7 @@ namespace PCShopSell.EditorTools
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single); BuildRig();
             _game = new GameObject("Game").AddComponent<GameController>(); _game.Bootstrap(false, 7); _game.Ui.QuestPopups = false;
             var s = _game.Session; s.EventsEnabled = false; s.DebugAddCash(5000000);
-            Check(s.DebugRentStarterShop(), "准备主店"); s.Clock.Restore(new GameDate(15), 600); s.PlayerShop.Reputation = 100;
+            Check(s.DebugRentStarterShop(computerScenario: true), "准备主店"); s.Clock.Restore(new GameDate(15), 600); s.PlayerShop.Reputation = 100;
             s.Time.SetPaused(true);
             foreach (var canvas in _game.Ui.Canvases) { canvas.renderMode = RenderMode.ScreenSpaceCamera; canvas.worldCamera = _game.Cam; canvas.planeDistance = 1; }
             var main = s.MainShop.Place;
@@ -45,7 +45,7 @@ namespace PCShopSell.EditorTools
             for (int i = 0; i < kitchen.Length; i++) shop.Layout.Add(new PlacedFurniture { Id = kitchen[i], X = 1 + i * 1.25, Z = 4.8 });
             shop.Layout.Add(new PlacedFurniture { Id = "restaurant_table", X = 2, Z = 2 });
             shop.Layout.Add(new PlacedFurniture { Id = "restaurant_table", X = 4, Z = 2 });
-            shop.Fridge.Food.RiceKg = 1; shop.Fridge.Food.AddIngredient("veg", 3, 15);
+            shop.Fridge.Food.RiceKg = 1; shop.Fridge.Food.AddIngredient("veg", 3);
             var state = s.SpecialBusiness(main.Id); state.NextVisit = long.MaxValue;
             state.Orders.Add(new DiningOrder { Id = state.NextId++, Recipe = 0, Table = 0, Stage = DiningStage.Cooking, ReadyAt = s.Clock.Now.TotalMinutes, BurnAt = s.Clock.Now.TotalMinutes + 5, Arrived = s.Clock.Now.TotalMinutes - 8, Price = 18 });
             state.Orders.Add(new DiningOrder { Id = state.NextId++, Recipe = 1, Table = 1, Stage = DiningStage.Waiting, Arrived = s.Clock.Now.TotalMinutes, Price = 22 });

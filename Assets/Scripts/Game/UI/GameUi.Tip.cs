@@ -104,9 +104,10 @@ namespace PCShopSell.Game.UI
         }
 
         private string StatsTip() =>
-            "<b>饥饿</b>：越低越饿，每天 12:00 和 18:30 自动吃饭（先吃背包里的饭盒、家里锅里的饭）；太低会掉健康、昏倒。\n" +
+            "<b>饱腹</b>：越低越饿，每天 12:00 和 18:30 会尝试自动吃饭。饱腹降到 0 时会持续损失健康。\n" +
             "<b>精力</b>：干活、走路消耗，回家睡觉恢复；/ 后面是今天的精力上限，缺觉会变低。\n" +
             "<b>健康</b>：饥饿、精力过低或居住环境差会下降，太低要去医院。\n" +
+            $"<b>压力</b>：打工和疲劳会累积，睡觉和休闲能缓解。到岗时压力达到 {Core.Session.PlayerStats.HighStressThreshold:0}，当班表现奖金少 {Core.Session.GameSession.HighStressWorkPenalty}%。\n" +
             "<b>知名度</b>：越高，路过的顾客越愿意进店。";
 
         private string VehicleTip(Core.Session.VehicleSpec v)

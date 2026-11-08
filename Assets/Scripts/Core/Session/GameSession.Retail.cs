@@ -15,7 +15,7 @@ namespace PCShopSell.Core.Session
             shop.Stock.GoodsLines().ToArray();
         private static GoodsLot[] SaveRetailLots(PCShopSell.Core.Shop.ShopSimulation shop) =>
             shop.Stock.GoodsLots.Select(l => l.Copy()).ToArray();
-        public string PendingRetailKind { get; private set; } = "computer";
+        public string PendingRetailKind { get; private set; } = RetailShopTypes.Default;
         public string RetailKind => _focus.RetailKind;
         public string RetailTypeBlocker(string kind) => RetailShopTypes.All.Contains(kind) ? null : "请选择店铺类型";
         public bool SignRetailLease(string placeId, bool newShop, string kind)
@@ -73,7 +73,7 @@ namespace PCShopSell.Core.Session
             if (!RetailProducts.IsFood(def)) { bag.AddGift(def.Id, count); return; }
             var meal = FastFoodCatalog.Packed(def.Id);
             var batch = new FoodBatch { Id = def.IngredientId ?? def.Id, Name = def.Name, Count = count,
-                ExpireDay = expiry >= 0 ? expiry : Clock.Today.TotalDays + def.ShelfDays,
+                ExpireDay = def.IngredientId != null ? FoodBatch.NoExpiry : expiry >= 0 ? expiry : Clock.Today.TotalDays + def.ShelfDays,
                 Hunger = meal?.Hunger ?? 0, Chilled = chilled, ChilledDays = chilled ? 7 : 0 };
             (def.IngredientId != null ? bag.Food.Ingredient : bag.Food.Packed).Add(batch);
         }

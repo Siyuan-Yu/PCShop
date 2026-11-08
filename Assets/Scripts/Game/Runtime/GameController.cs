@@ -23,7 +23,7 @@ namespace PCShopSell.Game
     public sealed partial class GameController : MonoBehaviour
     {
         public const ulong DefaultSeed = 20261028;
-        public static readonly Money StartingCash = Money.FromYuan(10000);
+        public static readonly Money StartingCash = Money.FromYuan(15000);
 
         public GameSession Session { get; private set; }
         public CityLayout City { get; private set; }
@@ -102,7 +102,7 @@ namespace PCShopSell.Game
 
         private GameSession NewSession(ulong? seed = null) =>
             new GameSession(City, seed ?? (DefaultSeed + (ulong)DateTime.Now.Ticks % 100000), StartingCash,
-                GameTimestamp.From(new GameDate(0), GameSession.WakeUpMinute), true, false, false);
+                GameTimestamp.From(new GameDate(0), GameSession.WakeUpMinute), true, false, false, startWithCookingTutorial: true);
 
         private void StartSession(GameSession s)
         {
@@ -796,7 +796,7 @@ namespace PCShopSell.Game
             Place p = Session.NearbyPlace;
             if (p == null || Session.CurrentPlace != null || !World.Places.TryGetValue(p.Id, out PlaceVisual pv)) return false;
             world = StreetWorldBuilder.ToWorld(Session.DoorOf(p), 3.4f);
-            label = "进入 " + p.Name;
+            label = "进入 " + Session.PlaceTitle(p);
             return true;
         }
 

@@ -30,7 +30,7 @@ namespace PCShopSell.Core.Session
         public const int MonthGoalDay = 30;
         public static readonly Money MonthGoalNetWorth = Money.FromYuan(8000);
         public static readonly Money ShopRent = RealEstate.SmallBaseRent;
-        public static readonly Money HomeRent = Money.FromYuan(450);
+        public static readonly Money HomeRent = Money.FromYuan(500);
         public static readonly Money MetroFare = Money.FromYuan(3);
         public const int MetroMinutes = 12;
         public const int BankruptDays = 3;
@@ -91,16 +91,19 @@ namespace PCShopSell.Core.Session
 
         /// <param name="startWithShop">假 = 新游戏：还没有店，要先去房产中介租铺子（starterStock 此时无效）。</param>
         public GameSession(CityLayout city, ulong seed, Money openingCash, GameTimestamp start, bool starterStock = true, bool smartphone = true,
-            bool startWithShop = true)
+            bool startWithShop = true, bool startWithCookingTutorial = false)
         {
             City = city ?? throw new ArgumentNullException(nameof(city));
             _focus = new OwnedShop { Place = city.PlayerShop() ?? throw new ArgumentException("布局里没有玩家的店。", nameof(city)) };
+            // Prebuilt sessions are used by the legacy PC shop fixtures and specialised acceptance scenarios.
+            if (startWithShop) _focus.RetailKind = "computer";
             _shops.Add(_focus);
             _initialHome = city.FirstOfKind(PlaceKind.Home) ?? throw new ArgumentException("布局里没有住所。", nameof(city));
 
             SetSmartphone(smartphone);
             Random = new GameRandom(seed);
             Clock = new GameClock(start.Date, start.MinuteOfDay);
+            _homeLeaseSignedDay = start.Date.TotalDays;
             InitializePropertyMarket(seed);
             Player.EnergyChanged = SynchronizeEnergyExhaustion;
             Ledger = new Ledger(openingCash);
@@ -127,8 +130,17 @@ namespace PCShopSell.Core.Session
                 _vacant.Add(PlayerShopPlace.Id);
             }
             SeedListings(start.Date.TotalDays);
+            HomeBox.Food.RiceKg = Pantry.StartRiceKg;
 
-            Backpack.Food.Packed.Add(new FoodBatch { Id = "rice", Name = "白米饭", Hunger = Pantry.BaseBowlHunger, Count = StartLunchboxes, ExpireDay = start.Date.TotalDays + 1 });
+            if (startWithCookingTutorial && !startWithShop)
+            {
+                Flags.Add(OpeningMealTutorialFlag);
+                Player.Hunger = 25;
+            }
+            else
+            {
+                Backpack.Food.Packed.Add(new FoodBatch { Id = "rice", Name = "白米饭", Hunger = Pantry.BaseBowlHunger, Count = StartLunchboxes, ExpireDay = start.Date.TotalDays + 1 });
+            }
             ApplyCargoLimit();
 
             PlayerNodeId = Home.NodeId;
@@ -197,7 +209,7 @@ namespace PCShopSell.Core.Session
 
         // ---------- 地点 ----------
 
-        /// <summary>开局背包里带着的饭盒（昨晚焖的）。</summary>
+        /// <summary>跳过做饭教学的预设开局自带的饭盒。</summary>
         public const int StartLunchboxes = 2;
 
         /// <summary>进入地点（玩家必须站在它的入口节点上、没在路上）。进入自己的店即开门营业。背包里的东西不会自动放下，要打开背包一键放。</summary>
@@ -305,11 +317,7 @@ namespace PCShopSell.Core.Session
         {
             if (p == null) return null;
             var track=RaceTracks.Get(p.Id);if(track!=null)return track.OpeningHours;
-            if (SupplierClosesOnWeekend(p))
-            {
-                CityVenueHours(p, out int open, out int close);
-                return $"周一至周五 {Hm(open)}–{Hm(close)}";
-            }
+            if (SupplierClosesOnWeekend(p)) return $"周一至周五 {Hm(WholesalerOpenMinute)}–{Hm(WholesalerCloseMinute)}";
             if(p.ExplicitEntrance&&p.OpenMinute==0&&p.CloseMinute==1440)return "24小时";
             if(p.ExplicitEntrance && p.OpenMinute!=p.CloseMinute)return $"每天 {Hm(p.OpenMinute)}–{Hm(p.CloseMinute)}";
             switch (p.Kind)
@@ -331,13 +339,12 @@ namespace PCShopSell.Core.Session
             var track=RaceTracks.Get(p.Id);if(track!=null)return track.IsOpenAt(Clock.MinuteOfDay);
             OwnedShop mine = ShopAt(p);
             if (mine != null) return IsDedicatedVenue(p)?VenueOpen(p):mine.Sim.IsOpen;
-            if(SupplierClosesOnWeekend(p)&&Clock.Today.IsWeekend)return false;
+            if (SupplierClosesOnWeekend(p)) return IsWholesalerOpen;
             if(p.ExplicitEntrance && p.OpenMinute!=p.CloseMinute)return CityWithinHours(Clock.MinuteOfDay,p.OpenMinute,p.CloseMinute);
             var venture = VentureAt(p.Id);
             if (venture != null && venture.Paused) return false;
             switch (p.Kind)
             {
-                case PlaceKind.Wholesaler: return IsWholesalerOpen;
                 case PlaceKind.Dealer: return IsDealerOpen;
                 case PlaceKind.Shop when p.Business == FarmBusiness: return IsFarmMarketOpen;
                 case PlaceKind.Shop:
@@ -437,7 +444,7 @@ namespace PCShopSell.Core.Session
             {
                 if (!CityActivityExclusive && Crosses(from, to, 12 * 60)) EatMeal("午饭");
                 if (!CityActivityExclusive && Crosses(from, to, 18 * 60 + 30)) EatMeal("晚饭");
-                if (!CityActivityExclusive && !IsWorking && Player.Hunger < 25 && ((CurrentPlace == Home && Pantry.CookedBowls > 0)
+                if (!CityActivityExclusive && !IsWorking && Player.Hunger < 25 && (HasAutomaticHomeMeal
                     || HasFridgeMeal || HasMeal(Backpack.Food.Packed) || RestaurantMealChoices().Length>0
                     || (MealDeliveryEnabled && HasSmartphone && Ledger.CanAfford(Money.FromYuan(SelectedDeliveryMeal.Price))))) EatMeal("加餐");
             }
@@ -505,11 +512,10 @@ namespace PCShopSell.Core.Session
             CollectDueAppLoans();
             DecayRelations();
             CollectWeeklyShopRent(today);
+            ChargeResidentialRent(today);
             if (today.IsMonthStart)
             {
                 if (HomeUtilities.IsPositive) Ledger.ForceDebit(today, "水电", HomeUtilities, "住处固定水电",new LedgerAttribution(LedgerBusinessKind.Personal,sourceEventId:"home:utilities:"+today.TotalDays,transactionKind:"固定水电"));
-                if (CurrentHomeRent.IsPositive) Ledger.ForceDebit(today, "房租", CurrentHomeRent, HomeTitle + "月租");
-                if (CurrentHomeRent.IsPositive) Popup?.Invoke("住宅月租", $"{HomeTitle} {CurrentHomeRent} 已扣款。");
             }
             OnRealtyDay(today.TotalDays);
             OnBusinessDay(previous, today);

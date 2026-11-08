@@ -17,6 +17,19 @@ namespace PCShopSell.Core.Session
             string item = def.Choices != null && choice < def.Choices.Length ? def.Choices[choice] : def.Name;
             return def.Id == "ktv" ? "练歌包间 · " + item : item;
         }
+        public string VenuePriceRange(CityActivityDefinition def)
+        {
+            if (def.ServiceCount < 2) return VenuePlayerPrice(def, 0).ToString();
+            Money first = VenuePlayerPrice(def, 0);
+            Money second = VenuePlayerPrice(def, 1);
+            if (first == second) return first.ToString();
+            return first < second ? $"{first}–{second}" : $"{second}–{first}";
+        }
+        public string CityActivityMidText(CityActivity activity)
+        {
+            var def = CityActivityService(activity);
+            return def?.Service(activity.ServiceChoice).Description ?? def?.MidText;
+        }
         public const int CityArrivalWindowMinutes = 60;
         public CityActivity PendingVenueActivity(Place place) => place == null ? null : _cityActivities
             .Where(a => a.Active && a.State != CityActivityPhase.Running && a.VenueId == place.Id
@@ -76,17 +89,18 @@ namespace PCShopSell.Core.Session
         {
             var def = CityLifeCatalog.Activity(definitionId);
             if (def == null || CurrentPlace?.Id != def.VenueId) return "到场后才能选择服务";
-            if (choice < 0 || choice >= Math.Min(2, def.Choices?.Length ?? 0)) return "请选择菜单或服务项目";
+            if (choice < 0 || choice >= def.ServiceCount) return "请选择菜单或服务项目";
             if (IsGameOver || _sleeping || IsWorking || CityActivityExclusive) return "请先结束正在进行的事情";
             if (!CityVenueFits(CurrentPlace, Clock.Now.TotalMinutes, def.Minutes)) return "该服务无法在闭店前完成";
             if (def.Id.StartsWith("expo_") && !CityExpoDay(Clock.Now.TotalMinutes, def.Id == "expo_comic")) return "本场展会尚未开放";
-            if (VenuePlayerPrice(def).IsPositive&&!Ledger.CanAfford(VenuePlayerPrice(def))) return "现金不足";
+            Money cost = VenuePlayerPrice(def, choice);
+            if (cost.IsPositive && !Ledger.CanAfford(cost)) return $"现金不足，需要 {cost}";
+            var booking = PendingVenueActivity(CurrentPlace);
+            if (booking?.ServiceConfirmed == true) return "本次已选好服务";
             if(IsOwnedVenue(CurrentPlace))
             {
-                var pending=PendingVenueActivity(CurrentPlace);
-                if(VenueOperation(CurrentPlace.Id).CustomersHere.Length+1+(pending?.Participants.Length??0)>VenueCapacity(CurrentPlace))return "场地容量已满，请等待顾客结束后再使用";
+                if(VenueOperation(CurrentPlace.Id).CustomersHere.Length+1+(booking?.Participants.Length??0)>VenueCapacity(CurrentPlace))return "场地容量已满，请等待顾客结束后再使用";
             }
-            var booking = PendingVenueActivity(CurrentPlace);
             if (booking == null) return CityActivityBlocker(definitionId, Array.Empty<string>(), Clock.Now.TotalMinutes);
             if (booking.Duration != def.Minutes) return "请选择与本次日程时长一致的服务";
             if (booking.Participants.Any(p => p.Phase != CityParticipantPhase.Waiting && p.Phase != CityParticipantPhase.Participating)) return "同行者还未到齐，稍等一下";
@@ -106,7 +120,7 @@ namespace PCShopSell.Core.Session
             booking.ServiceConfirmed = true;
             PrepareVenueCompanions(CurrentPlace);
             TickCityActivities(Clock.Now.TotalMinutes);
-            Say("已选择" + VenueServiceName(def, choice) + "，费用 " + VenuePlayerPrice(def) + (IsOwnedVenue(CurrentPlace)?"（老板自用，不计营业收入）":"") + "；开始本次活动。");
+            Say("已选择" + VenueServiceName(def, choice) + "，费用 " + VenuePlayerPrice(def, choice) + (IsOwnedVenue(CurrentPlace)?"（老板自用，不计营业收入）":"") + "。");
             return true;
         }
     }

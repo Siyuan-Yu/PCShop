@@ -6,7 +6,7 @@ using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
-    public enum WorkDayState { Pending, Working, Completed, Absent }
+    public enum WorkDayState { Pending, Working, Completed, Absent, Rest }
     public sealed class PlayerWorkOffer
     {
         public string Title;
@@ -21,6 +21,8 @@ namespace PCShopSell.Core.Session
         public WorkDayState State;
         public int LateMinutes;
         public long EarnedYuan;
+        public long BonusYuan;
+        public double EnergyMultiplier, StressPerHour;
         public bool LunchServed;
         public bool WagePaid;
         public PlayerWorkDay Copy() => (PlayerWorkDay)MemberwiseClone();
@@ -37,10 +39,12 @@ namespace PCShopSell.Core.Session
         public string LastNote;
         public PlayerWorkDay[] Days = Enumerable.Range(0, 7).Select(_ => new PlayerWorkDay()).ToArray();
         public int EndDay => StartDay + 6;
+        public int ScheduledShiftCount => Days.Count(day => day.State != WorkDayState.Rest);
         public bool IsNightShift => ShiftEnd >= 1440;
         public long LatePenaltyPerHalfHour => Math.Max(1, (long)Math.Ceiling(DailyWageYuan * 30.0 / (ShiftEnd - ShiftStart)));
         public long EarnedYuan => Days.Sum(d => d.EarnedYuan);
-        public long DeductionsYuan => Days.Count(d => d.State == WorkDayState.Completed || d.State == WorkDayState.Absent) * DailyWageYuan - EarnedYuan;
+        public long DeductionsYuan => Days.Count(d => d.State == WorkDayState.Completed || d.State == WorkDayState.Absent) * DailyWageYuan
+            - EarnedYuan + Days.Where(d => d.State == WorkDayState.Completed).Sum(d => d.BonusYuan);
         public PlayerWorkContract Copy()
         {
             var c = (PlayerWorkContract)MemberwiseClone();
@@ -50,6 +54,9 @@ namespace PCShopSell.Core.Session
 
     public sealed partial class GameSession
     {
+        private enum WorkAptitude { Charm, Dexterity, Stamina, Intelligence }
+        public const int FatigueWorkPenalty = 50, HighStressWorkPenalty = 25;
+        public const int WorkBonusThreshold = 50;
         public PlayerWorkContract WorkContract { get; private set; }
         public bool IsWorking => WorkContract != null && !WorkContract.Paid && WorkContract.WorkingIndex >= 0;
         public bool HasWorkContract => WorkContract != null && !WorkContract.Paid;
@@ -84,16 +91,54 @@ namespace PCShopSell.Core.Session
         }
         public int PlayerWorkStart(Place p) => PlayerWorkFor(p).Start;
         public int PlayerWorkEnd(Place p) => PlayerWorkFor(p).End;
+
+        private static WorkAptitude WorkAptitudeFor(Place place) => place?.Business switch
+        {
+            "理发" or "修鞋" or "电脑" or "奶茶" or "快餐" or "面包" or "咖啡" or "裁缝" or "钟表维修" or "家具修复" => WorkAptitude.Dexterity,
+            "农贸" or "超市" or "五金" or "药店" => WorkAptitude.Stamina,
+            "企业服务" or "社区服务" or "宠物批发" => WorkAptitude.Intelligence,
+            _ => WorkAptitude.Charm,
+        };
+
+        public (string attribute, int score, long bonus, double energyMultiplier, double stressPerHour, int fatiguePenalty, int stressPenalty)
+            PlayerWorkImpact(Place place, long baseWage, int shiftEnd)
+        {
+            var aptitude = WorkAptitudeFor(place);
+            var (attribute, score) = aptitude switch
+            {
+                WorkAptitude.Dexterity => ("动手能力", Player.Skill),
+                WorkAptitude.Stamina => ("体能", Player.Stamina),
+                WorkAptitude.Intelligence => ("智力", Player.Intelligence),
+                _ => ("魅力", EffectiveCharm),
+            };
+            score = Math.Max(0, Math.Min(100, score));
+            int fatiguePenalty = Player.Tired ? FatigueWorkPenalty : 0;
+            int stressPenalty = Player.Stress >= PlayerStats.HighStressThreshold ? HighStressWorkPenalty : 0;
+            double skillBonus = Math.Max(0, score - WorkBonusThreshold) / (100.0 - WorkBonusThreshold) * .25;
+            long bonus = (long)Math.Floor(baseWage * skillBonus * (1 - fatiguePenalty / 100.0) * (1 - stressPenalty / 100.0));
+            double energyMultiplier = aptitude == WorkAptitude.Stamina ? 1 + (50 - score) * .005 : 1;
+            double stressPerHour = (shiftEnd >= 1440 ? 2.6 : 1.0) * (1 + (50 - score) * .01);
+            return (attribute, score, bonus, energyMultiplier, stressPerHour, fatiguePenalty, stressPenalty);
+        }
+
+        private PlayerWorkDay ActiveWorkDay => IsWorking && Clock.Now.TotalMinutes >
+            (long)(WorkContract.StartDay + WorkContract.WorkingIndex) * 1440 + WorkContract.ShiftStart
+                ? WorkContract.Days[WorkContract.WorkingIndex] : null;
+
         public bool SignPlayerWork(Place p)
         {
             if (IsGameOver || HasWorkContract || CurrentPlace != p || !OffersPlayerWork(p)) return Fail("要到营业中的他人店铺签约，且同一时间只能签一份打工合同。");
+            bool weekdaysOnly = SupplierClosesOnWeekend(p);
+            if (weekdaysOnly && !IsWholesalerOpen) return Fail("请在批发市场营业时签约。");
             var offer = PlayerWorkFor(p);
             WorkContract = new PlayerWorkContract
             {
                 PlaceId = p.Id, StartDay = Clock.Today.TotalDays + 1,
                 ShiftStart = offer.Start, ShiftEnd = offer.End, JobTitle = offer.Title, DailyWageYuan = offer.Wage, HealthCost = offer.HealthCost, MoodCost = offer.MoodCost,
-                LastNote = "已签一周合同，明天开始。每天到店自动上班，每天收工后工资自动到账。"
+                LastNote = weekdaysOnly ? "已签一周合同，明天起算。工作日到店上班，周末休息，工资每天收工后到账。"
+                    : "已签一周合同，明天开始。每天到店自动上班，每天收工后工资自动到账。"
             };
+            SetPlayerWorkRestDays();
             Say(WorkContract.LastNote);
             return true;
         }
@@ -108,6 +153,10 @@ namespace PCShopSell.Core.Session
             var day = c.Days[index];
             day.State = WorkDayState.Working;
             day.LateMinutes = (int)Math.Max(0, Clock.Now.TotalMinutes - ((long)(c.StartDay + index) * 1440 + c.ShiftStart));
+            var impact = PlayerWorkImpact(WorkPlace, c.DailyWageYuan, c.ShiftEnd);
+            day.BonusYuan = impact.bonus;
+            day.EnergyMultiplier = impact.energyMultiplier;
+            day.StressPerHour = impact.stressPerHour;
             c.WorkingIndex = index;
             SetSteer(0, 0); StopTrip();
             c.LastNote = day.LateMinutes == 0 ? "已到岗，按排班时间工作，结束后恢复操作。" : $"迟到 {day.LateMinutes} 分钟，按每 30 分钟扣 ¥{c.LatePenaltyPerHalfHour}（不足 30 分钟按 30 计）。";
@@ -135,18 +184,21 @@ namespace PCShopSell.Core.Session
             {
                 var day = c.Days[i];
                 long end = (long)(c.StartDay + i) * 1440 + c.ShiftEnd;
-                if (end > to.TotalMinutes || day.State == WorkDayState.Completed || day.State == WorkDayState.Absent) continue;
+                if (end > to.TotalMinutes || day.State == WorkDayState.Completed || day.State == WorkDayState.Absent || day.State == WorkDayState.Rest) continue;
                 if (day.State == WorkDayState.Working)
                 {
                     day.State = WorkDayState.Completed;
                     long deduction = Math.Min(c.DailyWageYuan, ((day.LateMinutes + 29) / 30) * c.LatePenaltyPerHalfHour);
-                    day.EarnedYuan = c.DailyWageYuan - deduction;
+                    if (c.DailyWageYuan > 0) day.BonusYuan = day.BonusYuan * (c.DailyWageYuan - deduction) / c.DailyWageYuan;
+                    day.EarnedYuan = c.DailyWageYuan - deduction + day.BonusYuan;
                     SettleCompletedWorkPay(to.Date);
                     c.WorkingIndex = -1;
                     Player.Hunger = Math.Min(100, Player.Hunger + 40); // A closing meal keeps a zero-cash worker able to finish the week.
                     Player.Health = Math.Max(0, Player.Health - c.HealthCost);
                     Player.Mood = Math.Max(0, Player.Mood - c.MoodCost);
-                    c.LastNote = $"今天收工了，工资 ¥{day.EarnedYuan} 已自动到账（迟到扣 ¥{deduction}）；健康 −{c.HealthCost}，心情 −{c.MoodCost}。已提供收工餐，可以回家休息。剩余排班见日程。";
+                    if (day.LateMinutes == 0 && WorkAptitudeFor(WorkPlace) == WorkAptitude.Stamina && Player.Stamina < 85)
+                        Player.Stamina++;
+                    c.LastNote = $"收工到账 ¥{day.EarnedYuan} · 表现奖金 ¥{day.BonusYuan} · 迟到扣 ¥{deduction}。健康 −{c.HealthCost}，心情 −{c.MoodCost}。已提供收工餐。";
                     Say(c.LastNote);
                 }
                 else
@@ -156,7 +208,8 @@ namespace PCShopSell.Core.Session
                     Say(c.LastNote);
                 }
             }
-            if (c.Days.All(d => d.State == WorkDayState.Completed || d.State == WorkDayState.Absent))
+            if (to.TotalMinutes >= (long)c.EndDay * 1440 + c.ShiftEnd &&
+                c.Days.All(d => d.State == WorkDayState.Completed || d.State == WorkDayState.Absent || d.State == WorkDayState.Rest))
             {
                 c.ReadyToPay = false;
                 c.Paid = true;
@@ -195,6 +248,7 @@ namespace PCShopSell.Core.Session
             if (saved == null || !City.HasPlace(saved.PlaceId) || saved.Days == null || saved.Days.Length != 7 || saved.Days.Any(d => d == null)
                 || saved.ShiftStart < 0 || saved.ShiftStart >= 1440 || saved.ShiftEnd <= saved.ShiftStart || saved.ShiftEnd > saved.ShiftStart + 1440 || saved.DailyWageYuan < 0) return;
             WorkContract = saved.Copy();
+            SetPlayerWorkRestDays();
             var c = WorkContract;
             // Old weekly contracts already paid must never pay their completed shifts again.
             if (c.Paid)
@@ -208,6 +262,15 @@ namespace PCShopSell.Core.Session
             if (c.WorkingIndex >= 0 && CurrentPlace != WorkPlace)
             { c.Days[c.WorkingIndex].State = WorkDayState.Pending; c.WorkingIndex = -1; }
             UpdatePlayerWork(Clock.Now);
+        }
+
+        private void SetPlayerWorkRestDays()
+        {
+            if (!SupplierClosesOnWeekend(WorkPlace)) return;
+            var contract = WorkContract;
+            for (int i = 0; i < contract.Days.Length; i++)
+                if (contract.Days[i].State == WorkDayState.Pending && new GameDate(contract.StartDay + i).IsWeekend)
+                    contract.Days[i].State = WorkDayState.Rest;
         }
 
         private void InterruptPlayerWork(string note)
@@ -226,7 +289,7 @@ namespace PCShopSell.Core.Session
 
         private int WorkShiftToJoin()
         {
-            if (!HasWorkContract || WorkContract.ReadyToPay) return -1;
+            if (!HasWorkContract || WorkContract.ReadyToPay || SupplierClosesOnWeekend(WorkPlace) && !IsWholesalerOpen) return -1;
             var c = WorkContract;
             for (int i = 0; i < 7; i++)
             {

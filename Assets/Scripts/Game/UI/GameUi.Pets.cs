@@ -13,12 +13,12 @@ namespace PCShopSell.Game.UI
     {
         private GameObject _travelBar, _worldHintStrip;
         private RectTransform _petFocusHud, _petFocusChoices;
-        private Text _petFocusTitle, _petDetailName, _petCondition, _petHappiness, _petCareStatus, _petDetailInfo, _petToyLabel;
+        private Text _petFocusTitle, _petFocusCoverage, _petDetailName, _petCondition, _petHappiness, _petCareStatus, _petDetailInfo, _petToyLabel;
         private Button _petPatButton, _petToyButton;
         private readonly List<(long id, Button button)> _petFocusButtons = new();
         private readonly Dictionary<PetCareAction,(Text status, Button button)> _sharedPetCare = new();
         private float _nextPetFocusRefresh;
-        private static readonly Color PetUnattended = new Color32(231,160,135,255);
+        private static readonly Color PetUnattended = Ui.Warn;
 
         public void OpenPetOrders()
         {
@@ -37,7 +37,7 @@ namespace PCShopSell.Game.UI
             string owner = S.CityPerson(pet.OwnerId)?.Name ?? "宠物主人";
             OpenWindow(owner+" · "+(dropOff?"送养":"探望"),620,385,w=>
             {
-                Line(w.Content,pet.Name+(pet.Dog?" · 狗":" · 猫"),23,Ui.Accent);
+                PersonSummary(w.Content, pet.OwnerId, owner, pet.Name + (pet.Dog ? " · 狗" : " · 猫"));
                 string reason = dropOff ? S.PetAcceptBlocker(shop) : S.PetVisitBlocker(shop,pet);
                 string action = dropOff ? "接单并入住" : pet.PaidWeeks+1 >= pet.Weeks ? "结算并接回" : "结算本周代养";
                 Para(w.Content,dropOff ? $"代养 {pet.Weeks} 周 · 基础价 ¥{pet.WeeklyPrice}/周\n每周探望时按宠物状态结算。"
@@ -85,9 +85,8 @@ namespace PCShopSell.Game.UI
             }
             if (state?.Offer is PetStay offer)
             {
-                Line(C,"送养 · " + offer.Name + (offer.Dog ? " · 狗" : " · 猫"),19,Ui.Accent);
-                Para(C,(S.CityPerson(offer.OwnerId)?.Name ?? "主人") + " · 代养 " + offer.Weeks + " 周 · 基础价 ¥" + offer.WeeklyPrice
-                    + "/周 · 主人每周来探望，按当时状态付款",17);
+                PersonSummary(C, offer.OwnerId, "送养 · " + offer.Name + (offer.Dog ? " · 狗" : " · 猫"),
+                    (S.CityPerson(offer.OwnerId)?.Name ?? "主人") + $" · {offer.Weeks} 周 · 基础价 ¥{offer.WeeklyPrice}/周");
                 string blocker = S.PetAcceptBlocker(shop);
                 var accept = Ui.Button(C,blocker ?? "接单并入住",() => { if (S.AcceptPetStay()) RebuildDock(); },18,Ui.ButtonHot);
                 accept.interactable = blocker == null;
@@ -97,13 +96,12 @@ namespace PCShopSell.Game.UI
 
             foreach (var pet in guests)
             {
-                Line(C,pet.Name + (pet.Dog ? " · 狗" : " · 猫") + " · 主人 " + (S.CityPerson(pet.OwnerId)?.Name ?? "街坊"),18,Ui.Accent);
                 var visit = new GameTimestamp(pet.NextVisitAt);
-                Para(C,"状态 " + pet.Condition + "/100 · 快乐 "+pet.Happiness+"/100 · 本周预计收 " + GameSession.PetWeeklyPayment(pet),16);
+                PersonSummary(C, pet.OwnerId, pet.Name + (pet.Dog ? " · 狗" : " · 猫"),
+                    (S.CityPerson(pet.OwnerId)?.Name ?? "主人") + $" · {pet.PaidWeeks+1}/{pet.Weeks} 周 · {visit.Date.Month}/{visit.Date.Day} {Ui.Hm(visit.MinuteOfDay)} 探望");
+                Line(C,"状态 " + pet.Condition + "/100 · 快乐 "+pet.Happiness+"/100 · 预计收 " + GameSession.PetWeeklyPayment(pet),16);
                 var care = PetCareStatus(shop,pet);
                 Line(C,care.text,16,care.covered ? Ui.Good : PetUnattended);
-                Para(C,"第 " + (pet.PaidWeeks+1) + "/" + pet.Weeks + " 周 · " + visit.Date + " "
-                    + visit.Hour.ToString("00") + ":" + visit.Minute.ToString("00") + " 探望",16);
                 if (S.Clock.Now.TotalMinutes < pet.NextVisitAt) continue;
                 string blocker = S.PetVisitBlocker(shop,pet);
                 if (blocker != null) { Line(C,blocker,16,Ui.Dim); continue; }
@@ -157,6 +155,7 @@ namespace PCShopSell.Game.UI
             Ui.VList(_petFocusHud,6,9);
             var title = Ui.Row(_petFocusHud,36,8);
             _petFocusTitle = Ui.Size(Ui.Label(title,"",23,color:Ui.Accent),-1,36,1);
+            _petFocusCoverage = Ui.Size(Ui.Label(title,"",19,TextAnchor.MiddleCenter),-1,36,2);
             Ui.Size(Ui.Button(title,"返回店铺 · Esc",_ctrl.ExitPetFocus,17),148,36);
             _petFocusChoices = Ui.Row(_petFocusHud,36,6);
             var body = Ui.Row(_petFocusHud,144,10);
@@ -189,6 +188,11 @@ namespace PCShopSell.Game.UI
             var shop = S.CurrentShop;
             var pets = S.PetGuests(shop);
             _petFocusTitle.text = $"宠物屋 · {pets.Count} / {S.PetCapacity(shop)} 只";
+            var (coveredPets, missingKeepers) = S.PetKeeperCoverage(shop);
+            string staffing = pets.Count == 0 ? "暂不需要饲养员"
+                : missingKeepers == 0 ? "饲养员已配齐" : $"还需安排 {missingKeepers} 名饲养员";
+            _petFocusCoverage.text = $"在岗照顾 {coveredPets} / {pets.Count} 只 · {staffing}";
+            _petFocusCoverage.color = coveredPets < pets.Count ? PetUnattended : pets.Count > 0 ? Ui.Good : Ui.Dim;
             if (_petFocusChoices.childCount == 0 || !_petFocusButtons.Select(entry=>entry.id).SequenceEqual(pets.Select(pet=>pet.Id)))
             {
                 Ui.Clear(_petFocusChoices);

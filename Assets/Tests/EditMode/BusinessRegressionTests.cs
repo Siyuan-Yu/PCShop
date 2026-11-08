@@ -166,7 +166,7 @@ namespace PCShopSell.Tests
                 var worth=s.NetWorth();var purchase=s.PreviewCityPropertyPurchase("pc",false);Assert.True(s.BuyProperty("pc",false));Assert.AreEqual(worth-purchase.Fee+purchase.PrepaidCredit,s.NetWorth());Assert.Zero(s.CurrentShopRent.Cents);
                 var p=s.OwnedProperties.Single();var cash=s.Ledger.Balance;
                 Midnight(s,30);Assert.Zero(p.MortgageCents);Assert.Zero(p.MonthlyPrincipalCents);
-                Assert.AreEqual(cash-Money.FromCents(p.PriceCents).Scale(.001)-s.CurrentHomeRent-s.HomeUtilities,s.Ledger.Balance);
+                Assert.AreEqual(cash-Money.FromCents(p.PriceCents).Scale(.001)-s.HomeUtilities,s.Ledger.Balance);
                 p.MortgageCents=10000000;p.MonthlyPrincipalCents=300000;
                 using(var l=Reload(s)){Assert.Zero(l.CurrentShopRent.Cents);Assert.Zero(l.PropertyAt("pc").MortgageCents);Assert.Zero(l.PropertyAt("pc").MonthlyPrincipalCents);Assert.AreEqual(s.Ledger.Balance,l.Ledger.Balance);Assert.False(l.RepayMortgage("pc"));Assert.Zero(l.MortgageDebt.Cents);}
             }
@@ -188,9 +188,9 @@ namespace PCShopSell.Tests
             using(var s=Make())
             {
                 var furniture=s.HomeLayout.Count;double quality=s.HomeSleepQuality;
-                Assert.True(s.ChangeHomeTier(1));Assert.Greater(s.HomeSleepQuality,quality);Assert.AreEqual(Money.FromYuan(1200),s.CurrentHomeRent);
+                Assert.True(s.ChangeHomeTier(1));Assert.Greater(s.HomeSleepQuality,quality);Assert.AreEqual(Money.FromYuan(280),s.CurrentHomeRent);
                 var worth=s.NetWorth();Assert.True(s.BuyHome(false));Assert.AreEqual(worth,s.NetWorth());Assert.Zero(s.CurrentHomeRent.Cents);
-                using(var l=Reload(s)){Assert.AreEqual(1,l.HomeTier);Assert.AreEqual(furniture,l.HomeLayout.Count);Assert.True(l.SellHome());Assert.Zero(l.HomeMortgageCents);Assert.AreEqual(Money.FromYuan(1200),l.CurrentHomeRent);}
+                using(var l=Reload(s)){Assert.AreEqual(1,l.HomeTier);Assert.AreEqual(furniture,l.HomeLayout.Count);Assert.True(l.SellHome());Assert.Zero(l.HomeMortgageCents);Assert.AreEqual(Money.FromYuan(280),l.CurrentHomeRent);}
             }
         }
         [Test] public void FundRoundtripChargesBothFees_AndNeverSellsUnownedUnits()

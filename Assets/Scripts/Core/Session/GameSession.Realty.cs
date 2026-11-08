@@ -18,10 +18,10 @@ namespace PCShopSell.Core.Session
     /// </summary>
     public sealed partial class GameSession
     {
-        public const string MyShopName = "我的电脑店";
         public const string VacantTitle = "旺铺招租";
         public const int MaxListings = 6;
         public const double DailyListingChance = 0.12;
+        private const int CurrentShopFootfallVersion = 3;
 
         private readonly GameRandom _realtyRng;
         private readonly List<ShopListing> _listings = new List<ShopListing>();
@@ -118,12 +118,13 @@ namespace PCShopSell.Core.Session
             string blocker = LeaseBlocker(l, newShop);
             if (blocker != null) return Fail(blocker + "。");
             newShop = newShop && HasShop;
+            string openingKind = RetailShopTypes.Valid(retailKind);
 
             Place place = City.GetPlace(placeId);
             Money deposit = RealEstate.Deposit(l.Rent);
             if (IsAdvance(l))
             {
-                PendingRetailKind = RetailShopTypes.Valid(retailKind ?? (newShop ? "computer" : RetailKind));
+                PendingRetailKind = newShop || Lease == null ? openingKind : RetailKind;
                 PaySigning(l.Rent, place);
                 PendingLease = new ShopLease { PlaceId = place.Id, Rent = l.Rent, Deposit = deposit, StartDay = l.OpenDay, SignedDay = Clock.Today.TotalDays };
                 PendingIsNewShop = newShop;
@@ -141,7 +142,7 @@ namespace PCShopSell.Core.Session
             {
                 PaySigning(l.Rent, place);
                 OpenNewShop(place, l.Rent, deposit);
-                SetOpeningShopKind(retailKind ?? "computer");
+                SetOpeningShopKind(openingKind);
                 ShowNewShop(place, l.Rent, deposit, "开了新店");
                 RefreshQuestProgress();
                 return true;
@@ -151,7 +152,7 @@ namespace PCShopSell.Core.Session
             PaySigning(l.Rent, place);
             if (moving) Ledger.ForceDebit(Clock.Today, "搬家", RealEstate.MoveFee, "搬店");
             MoveInto(place, l.Rent, deposit);
-            if(!moving)SetOpeningShopKind(retailKind ?? RetailKind);
+            if(!moving)SetOpeningShopKind(openingKind);
             ShowMovedIn(place, l.Rent, deposit, moving, "签约成功");
             RefreshQuestProgress();
             return true;
@@ -161,7 +162,7 @@ namespace PCShopSell.Core.Session
         {
             if(IsDedicatedVenue(place)){ShowVenueHandover(place);return;}
             Show(moving ? "搬店完成" : title,
-                $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）租下来了，周租 {rent}，押金 {deposit}。\n" +
+                $"{ShopTitle(_focus)}已租下{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}），周租 {rent}，押金 {deposit}。\n" +
                 (moving ? "货、储物柜、展示机都搬过去了；原来店里摆的家具、货架、收银台都收回了“我的”，要在新店里重新摆。\n"
                         : "这是间毛坯铺子，只配一个后仓纸箱；请按经营类型摆好开业所需设施。\n") +
                 "签约后每七天交一次店租。");
@@ -171,7 +172,7 @@ namespace PCShopSell.Core.Session
         {
             if(IsDedicatedVenue(place)){ShowVenueHandover(place);return;}
             Show(title,
-                $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）租下来了，是你的{ShopTitle(_focus)}，周租 {rent}，押金 {deposit}。\n" +
+                $"{ShopTitle(_focus)}已租下{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}），周租 {rent}，押金 {deposit}。\n" +
                 "原来的店照常营业，货、员工、设施各管各的。新店是毛坯：按经营类型摆好设施，人不在店里时要雇人看店才开门。\n" +
                 "进哪家店，店里的面板、进货送货就对哪家店。每家店按自己的签约日每七天交租。");
         }
@@ -191,7 +192,7 @@ namespace PCShopSell.Core.Session
                 OpenNewShop(place, p.Rent, p.Deposit);
                 Lease.SignedDay = p.SignedDay;
                 SetOpeningShopKind(PendingRetailKind);
-                PendingRetailKind = "computer";
+                PendingRetailKind = RetailShopTypes.Default;
                 ShowNewShop(place, p.Rent, p.Deposit, "交房了");
                 RefreshQuestProgress();
                 return;
@@ -206,7 +207,7 @@ namespace PCShopSell.Core.Session
             MoveInto(place, p.Rent, p.Deposit);
             Lease.SignedDay = p.SignedDay;
             if(!moving)SetOpeningShopKind(PendingRetailKind);
-            PendingRetailKind = "computer";
+            PendingRetailKind = RetailShopTypes.Default;
             ShowMovedIn(place, p.Rent, p.Deposit, moving, "交房了");
             RefreshQuestProgress();
         }
@@ -214,8 +215,9 @@ namespace PCShopSell.Core.Session
         private void PaySigning(Money rent, Place place)
         {
             GameDate today = Clock.Today;
-            Ledger.ForceDebit(today, "房租", rent, $"{place.Name} 首周租金");
-            Ledger.ForceDebit(today, "押金", RealEstate.Deposit(rent), $"{place.Name} 押金");
+            string street = City.StreetName(place.StreetId);
+            Ledger.ForceDebit(today, "房租", rent, $"{street} · 商铺首周租金");
+            Ledger.ForceDebit(today, "押金", RealEstate.Deposit(rent), $"{street} · 商铺押金");
             Money fee = AgentFeeFor(rent);
             double off = AgentDiscount;
             Ledger.ForceDebit(today, "中介费", fee, off > 0 ? $"安居房产中介（熟人价 {off * 100:0.#}% 折扣）" : "安居房产中介");
@@ -308,30 +310,35 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>
-        /// 作弊 / 验收用：不去中介，直接签下开局那间街尾小店（照常扣首周租金 + 押金 + 中介费），再送旧开局的那几件货。
-        /// 新游戏点这个 = 回到以前“一开局就有店”的状态。
+        /// 作弊 / 验收用：直接签下街尾小店，按店型配置设施和首批货。
         /// </summary>
-        public bool DebugRentStarterShop()
+        public bool DebugRentStarterShop(bool computerScenario = false)
         {
             if (Lease != null) return false;
             Place start = City.PlayerShop();
             Money rent=ShopRentQuote(start);
             PaySigning(rent, start);
             MoveInto(start, rent, RealEstate.Deposit(rent));
+            SetOpeningShopKind(computerScenario ? "computer" : RetailShopTypes.Default);
             FitStarterShop();
-            if (PlayerShop.Stock.IsEmpty) AddStarterStock();
+            if (computerScenario)
+            {
+                if (PlayerShop.Stock.IsEmpty) AddStarterStock();
+            }
+            else if (!PlayerShop.Stock.GoodsLines().Any(line => PetShopCatalog.IsProduct(line.Key))) AddStarterPetStock();
             SkipOpeningQuests();
-            Say("（作弊）直接租下了街尾小店，货架收银台都已摆好，送了几件开局的货。");
+            Say($"（作弊）已开设{RetailShopTypes.Name(RetailKind)}，设施和首批商品已备好。");
             return true;
         }
 
         /// <summary>直接给了一间摆好的店（旧开局 / 作弊）：租铺、家具城两个任务算完成，不再发奖励。</summary>
         private void SkipOpeningQuests()
         {
+            Flags.Remove(OpeningMealTutorialFlag);
             Flags.Add("tutorial:rent");
             Flags.Add("tutorial:mall");
-            Flags.Add("tutorial:reward:rent:computer");
-            Flags.Add("tutorial:reward:mall:computer");
+            Flags.Add("tutorial:reward:rent:" + RetailKind);
+            Flags.Add("tutorial:reward:mall:" + RetailKind);
         }
 
         /// <summary>测试 / 冒烟用：让中介挂出一间指定的铺子。</summary>
@@ -387,7 +394,7 @@ namespace PCShopSell.Core.Session
             var lease = PendingLease;
             PendingLease = null;
             PendingIsNewShop = false;
-            PendingRetailKind = "computer";
+            PendingRetailKind = RetailShopTypes.Default;
             Ledger.Credit(Clock.Today, "退还预付租金和押金", lease.Rent + lease.Deposit, City.GetPlace(lease.PlaceId).Name);
             Say("专用场所的待交房租约已取消，已退回预付首周租金和押金。");
             return true;
@@ -532,7 +539,7 @@ namespace PCShopSell.Core.Session
         private void SaveRealty(SaveData d)
         {
             d.agencyStreetVersion = 1;
-            d.shopFootfallVersion = 2;
+            d.shopFootfallVersion = CurrentShopFootfallVersion;
             d.shopState = Lease != null ? 1 : 2;
             if (Lease != null)
             {
@@ -608,7 +615,9 @@ namespace PCShopSell.Core.Session
                 if (!City.HasPlace(l.place) || !IsCommercialPremises(City.GetPlace(l.place))) continue;
                 _listings.Add(new ShopListing
                 {
-                    PlaceId = l.place, Size = (ShopSize)l.size, Rent = d.shopFootfallVersion<2 ? ShopRentQuote(City.GetPlace(l.place)) : Money.FromCents(l.rentCents), OpenDay = l.openDay, CloseDay = l.closeDay,
+                    PlaceId = l.place, Size = (ShopSize)l.size, OpenDay = l.openDay, CloseDay = l.closeDay,
+                    Rent = d.shopFootfallVersion < CurrentShopFootfallVersion
+                        ? ShopRentQuote(City.GetPlace(l.place)) : Money.FromCents(l.rentCents),
                 });
             }
             if (d.agencyStreetVersion < 1) SeedStreetListings(Clock.Today.TotalDays);

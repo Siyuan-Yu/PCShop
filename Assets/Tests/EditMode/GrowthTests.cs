@@ -200,14 +200,28 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void ScheduledCredit_PaysOutLater()
+        public void ScheduledCredit_ShowsDueDateAndPaysExactlyOnceAfterLoad()
         {
-            GameSession s = GameSessionTests.Make(5000);
-            s.ScheduleCredit(3, Money.FromYuan(800), "还钱");
-            while (s.Clock.Today.TotalDays < 2) { s.Player.Hunger = 100; s.AdvanceClock(60); }
-            Assert.IsFalse(s.Ledger.Entries.Any(e => e.Memo == "还钱"));
-            while (s.Clock.Today.TotalDays < 4) { s.Player.Hunger = 100; s.AdvanceClock(60); }
-            Assert.IsTrue(s.Ledger.Entries.Any(e => e.Memo == "还钱" && e.Amount == Money.FromYuan(800)));
+            using var s = GameSessionTests.Make(5000);
+            var amount = Money.FromYuan(800);
+            var due = s.ScheduleCredit(3, amount, "表哥还钱");
+            using var loaded = GameSession.Load(s.City, s.CreateSave());
+            loaded.EventsEnabled = false;
+            Assert.AreEqual(due.TotalDays * (long)GameTimestamp.MinutesPerDay,
+                loaded.Schedule().Single(e => e.Kind == "npc_repayment").Minute);
+            Assert.IsFalse(loaded.Ledger.Entries.Any(e => e.Memo == "表哥还钱"));
+
+            loaded.Clock.Restore(due.AddDays(-1), GameTimestamp.MinutesPerDay - 1);
+            var before = loaded.Ledger.Balance;
+            loaded.AdvanceClock(1);
+            Assert.AreEqual(before + amount, loaded.Ledger.Balance);
+            Assert.IsFalse(loaded.Schedule().Any(e => e.Kind == "npc_repayment"));
+
+            using var settled = GameSession.Load(s.City, loaded.CreateSave());
+            settled.AdvanceClock(GameTimestamp.MinutesPerDay);
+            var receipt = settled.Ledger.Entries.Single(e => e.Category == GameSession.NpcRepaymentTitle);
+            Assert.AreEqual(amount, receipt.Amount);
+            Assert.AreEqual(due, receipt.Date);
         }
     }
 

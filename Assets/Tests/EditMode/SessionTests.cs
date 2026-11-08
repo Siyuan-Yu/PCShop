@@ -422,19 +422,19 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void WeekAndMonthStart_ChargeShopAndHomeRent()
+        public void WeekBoundaryChargesShopAndHomeRent_MonthBoundaryDoesNotChargeHomeAgain()
         {
             GameSession s = Make();
             s.EventsEnabled = false;
             s.Clock.Restore(new GameDate(s.Lease.SignedDay + 6), 23 * 60);
             Money beforeWeek = s.Ledger.Balance;
             s.AdvanceClock(61);
-            Assert.AreEqual(s.CurrentShopRent, beforeWeek - s.Ledger.Balance);
+            Assert.AreEqual(s.CurrentShopRent + Money.FromYuan(500), beforeWeek - s.Ledger.Balance);
 
             s.Clock.Restore(new GameDate(29), 23 * 60);
             Money before = s.Ledger.Balance;
             s.AdvanceClock(61);
-            Assert.AreEqual(GameSession.HomeRent, before - s.Ledger.Balance);
+            Assert.AreEqual(Money.Zero, before - s.Ledger.Balance);
             Assert.IsTrue(s.MonthGoalEvaluated);
         }
 

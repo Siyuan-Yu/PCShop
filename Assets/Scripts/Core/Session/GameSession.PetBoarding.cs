@@ -22,8 +22,9 @@ namespace PCShopSell.Core.Session
         // Before shared care, these dates were recorded per pet.
         public int LastFedDay = -1, LastWaterDay = -1, LastLitterDay = -1;
         public int LastPlayDay = -1, Happiness = 55, LastPlayBonus;
-        public int Weeks, PaidWeeks, WeeklyPrice, Condition = 68;
+        public int Weeks, PaidWeeks, Condition = 68;
         public int LastConditionDay = -1, LastKeeperDay = -1;
+        public int WeeklyPrice => Dog ? 1800 : 1400;
     }
 
     [Serializable]
@@ -48,7 +49,7 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         private const string PetOwnerVisitLabel = "到店办理宠物代养";
-        private const int PetsPerKeeper = 2;
+        public const int PetsPerKeeper = 2;
         private const int WeekMinutes = GameDate.DaysPerWeek * GameTimestamp.MinutesPerDay;
         private static readonly string[] PetNames = { "团子", "豆豆", "栗子", "阿福", "芝麻", "奶盖", "糯米", "布丁", "点点", "桃子", "雪球", "花卷" };
         private readonly Dictionary<string, PetBoardingState> _petBoarding = new Dictionary<string, PetBoardingState>();
@@ -101,7 +102,7 @@ namespace PCShopSell.Core.Session
                         state.Offer = new PetStay
                         {
                             Id = now, RequestedAt = now, OwnerId = owner.PersonId, Name = name, Dog = dog,
-                            Weeks = 1 + seed % 3, Coat = seed % 4, WeeklyPrice = dog ? 900 : 700,
+                            Weeks = 1 + seed % 3, Coat = seed % 4,
                         };
                         state.NextOfferAt = now + 95;
                     }
@@ -269,6 +270,23 @@ namespace PCShopSell.Core.Session
         private static void AdjustPetCondition(PetStay pet,int delta) => pet.Condition = Math.Max(0,Math.Min(100,pet.Condition+delta));
         public static int PetKeeperCareBonus(Employee keeper) => 3 + EmployeeCharm(keeper) / 10;
         private Employee[] PetKeepers(OwnedShop shop) => ShopStaff(shop,EmployeeRole.PetKeeper).OrderBy(e => e.Id,StringComparer.Ordinal).ToArray();
+
+        public (int coveredPets, int missingKeepers) PetKeeperCoverage(OwnedShop shop)
+        {
+            int petCount = PetGuests(shop).Count;
+            if (petCount == 0) return (0, 0);
+
+            var keepers = PetKeepers(shop);
+            int required = (petCount + PetsPerKeeper - 1) / PetsPerKeeper;
+            int assigned = Math.Min(keepers.Length, required);
+            int covered = 0;
+            // Keep the same pet groups as daily care even when a keeper is off duty.
+            for (int i = 0; i < assigned; i++)
+                if (CityEmployeeAvailable(keepers[i], shop))
+                    covered += Math.Min(PetsPerKeeper, petCount - i * PetsPerKeeper);
+
+            return (covered, required - assigned);
+        }
 
         public Employee PetKeeperOf(OwnedShop shop,PetStay pet)
         {
@@ -441,7 +459,7 @@ namespace PCShopSell.Core.Session
             PetStay Copy(PetStay pet) => pet == null ? null : new PetStay
             {
                 Id = pet.Id, RequestedAt = pet.RequestedAt, NextVisitAt = pet.NextVisitAt, OwnerId = pet.OwnerId, Name = pet.Name,
-                Dog = pet.Dog, Coat = pet.Coat, Weeks = pet.Weeks, PaidWeeks = pet.PaidWeeks, WeeklyPrice = pet.WeeklyPrice,
+                Dog = pet.Dog, Coat = pet.Coat, Weeks = pet.Weeks, PaidWeeks = pet.PaidWeeks,
                 Condition = pet.Condition, LastConditionDay = pet.LastConditionDay, LastKeeperDay = pet.LastKeeperDay,
                 LastPlayDay = pet.LastPlayDay, Happiness = pet.Happiness, LastPlayBonus = pet.LastPlayBonus,
             };
@@ -464,7 +482,6 @@ namespace PCShopSell.Core.Session
                 foreach (var pet in state.Stays.Where(p => p.Weeks <= 0))
                 {
                     pet.Weeks = 1;
-                    pet.WeeklyPrice = pet.Dog ? 900 : 700;
                     pet.Condition = 68;
                     pet.LastConditionDay = Clock.Today.TotalDays;
                     pet.NextVisitAt = Clock.Now.AddMinutes(WeekMinutes).TotalMinutes;

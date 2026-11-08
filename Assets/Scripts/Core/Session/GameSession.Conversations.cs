@@ -198,6 +198,10 @@ namespace PCShopSell.Core.Session
             return text;
         }
 
+        private IEnumerable<FoodBatch> GiftableFoodBatches(bool meal) =>
+            (meal ? Backpack.Food.Packed : Backpack.Food.Ingredient)
+                .Where(b => b.Count > 0 && (!meal || b.ExpireDay >= Clock.Today.TotalDays));
+
         public string PersonGiftBlocker(string id)
         {
             if (IsGameOver) return "当前不能送礼";
@@ -205,7 +209,7 @@ namespace PCShopSell.Core.Session
             if (!HasGreeted(id)) return "先打个招呼";
             var days = Npcs.Get(id) != null ? _giftDays : _staffGiftDay;
             if (days.TryGetValue(id, out int day) && Clock.Today.TotalDays - day < 3) return (3 - Clock.Today.TotalDays + day) + " 天后才能再送";
-            bool food = Backpack.Food.Packed.Concat(Backpack.Food.Ingredient).Any(b => b.Count > 0 && b.ExpireDay >= Clock.Today.TotalDays);
+            bool food = GiftableFoodBatches(true).Any() || GiftableFoodBatches(false).Any();
             if (!Backpack.GiftLines.Any() && !food && Backpack.Food.RiceKg < .5) return "背包里没有可以送的东西";
             return null;
         }
@@ -218,9 +222,9 @@ namespace PCShopSell.Core.Session
             if (key == "rice") return Backpack.Food.RiceKg >= .5 ? null : "至少需要 0.5 千克大米";
             if (key.StartsWith("lunch:") || key.StartsWith("ing:"))
             {
-                var list = key.StartsWith("lunch:") ? Backpack.Food.Packed : Backpack.Food.Ingredient;
+                bool meal = key.StartsWith("lunch:");
                 string item = key.Substring(key.IndexOf(':') + 1);
-                return list.Any(b => b.Id == item && b.Count > 0 && b.ExpireDay >= Clock.Today.TotalDays) ? null : "食物已用完或过期";
+                return GiftableFoodBatches(meal).Any(b => b.Id == item) ? null : meal ? "食物已用完或过期" : "食材已用完";
             }
             return "这类物品不能作为小礼物";
         }
@@ -243,7 +247,7 @@ namespace PCShopSell.Core.Session
                 bool meal = key.StartsWith("lunch:");
                 var list = meal ? Backpack.Food.Packed : Backpack.Food.Ingredient;
                 string item = key.Substring(key.IndexOf(':') + 1);
-                var batch = list.Where(b => b.Id == item && b.Count > 0 && b.ExpireDay >= Clock.Today.TotalDays).OrderBy(b => b.ExpireDay).First();
+                var batch = GiftableFoodBatches(meal).Where(b => b.Id == item).OrderBy(b => b.ExpireDay).First();
                 name = batch.Name;
                 value = meal ? FastFoodCatalog.Packed(item)?.Price.Yuan ?? 12 : Ingredients.Get(item)?.Price.Yuan ?? 3;
                 if (--batch.Count == 0) list.Remove(batch);

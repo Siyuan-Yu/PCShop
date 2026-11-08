@@ -486,6 +486,7 @@ namespace PCShopSell.Core.Session
                     if(DistrictOperatingShops(tier)>=count)break;
                     if(!MainShop.Rented && place==MainShop.Place)MoveInto(place,ShopRentQuote(place),Money.Zero);
                     else OpenNewShop(place,ShopRentQuote(place),Money.Zero);
+                    SetOpeningShopKind("computer");
                     FitStarterShop();
                     PlayerShop.Stock.ForceAdd(PartCatalog.Get("cpu0"),true,8);
                     PlayerShop.Stock.ForceAdd(PartCatalog.Get("gpu0"),true,8);

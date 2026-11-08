@@ -322,7 +322,7 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Shot("vs1_93_agency_discount");
             Teleport(s, "home");
-            Check(s.DebugRentStarterShop(), "作弊：直接租下街尾小店（回到旧开局）");
+            Check(s.DebugRentStarterShop(computerScenario: true), "作弊：直接租下街尾小店（回到旧开局）");
             Check(s.HasShop && !s.PlayerShop.Stock.IsEmpty, "作弊后有店、有开局货");
             _game.Ui.CloseAllWindows();
             s.Leave();
@@ -799,8 +799,8 @@ namespace PCShopSell.EditorTools
             Check(s.TakeFromBox(PCShopSell.Core.Home.Gifts.Wine) && s.TakeFromBox(PCShopSell.Core.Home.Gifts.Cig, 2), "从纸箱拿回礼品");
             s.Backpack.ClearGifts();
 
-            // 电饭锅：真做饭（开局 5 千克米）
-            Check(Math.Abs(s.Pantry.RiceKg - 5) < 1e-6, "开局 5 千克米");
+            // 电饭锅使用家中后仓的开局存粮。
+            Check(Math.Abs(s.HomeBox.Food.RiceKg - PCShopSell.Core.Home.Pantry.StartRiceKg) < 1e-6, "开局大米在家中后仓");
             _game.HomeInteract(PCShopSell.Game.Runtime.HomeRoomView.Cooker);
             Frame(0.05f);
             Check(_game.Ui.AnyModalOpen, "电饭锅窗口打开");
@@ -812,7 +812,8 @@ namespace PCShopSell.EditorTools
             Check(s.Pantry.Cooking != null && s.Pantry.CookedBowls == 0, "焖饭期间锅里还没有饭");
             _game.Ui.CloseAllWindows();
             s.AdvanceClock(PCShopSell.Core.Home.Pantry.CookMinutes);
-            Check(s.Pantry.CookedBowls == 4, "40 分钟后饭焖好了");
+            int cookedBowls = PCShopSell.Core.Home.Pantry.BowlsPerKg;
+            Check(s.Pantry.CookedBowls == cookedBowls, "40 分钟后饭焖好了");
             _game.HomeInteract(PCShopSell.Game.Runtime.HomeRoomView.Cooker);
             Frame(0.05f);
             Shot("vs1_37_cooker_ready");
@@ -822,7 +823,7 @@ namespace PCShopSell.EditorTools
             Shot("vs1_74_rice_ready");
             int boxes = s.Backpack.Lunchboxes;
             Check(s.PackLunch(s.Pantry.CookedBowls), "饭全部装进饭盒");
-            Check(s.Backpack.Lunchboxes == boxes + 4 && s.Pantry.CookedBowls == 0, "饭盒放进背包");
+            Check(s.Backpack.Lunchboxes == boxes + cookedBowls && s.Pantry.CookedBowls == 0, "饭盒放进背包");
             s.Backpack.Food.RiceKg = 3;
             s.Backpack.AddGift(PCShopSell.Core.Home.Gifts.Soda, 2);
             _game.Ui.ToggleBackpack();
@@ -830,9 +831,9 @@ namespace PCShopSell.EditorTools
             Shot("vs1_75_backpack_lunch");
             _game.Ui.CloseAllWindows();
             Check(s.UnloadBackpack(), "在家一键把背包里的东西放下");
-            Check(s.Backpack.Food.RiceKg == 0 && s.Backpack.Lunchboxes == boxes + 4, "米进了厨房，饭盒留在背包");
+            Check(s.Backpack.Food.RiceKg == 0 && s.Backpack.Lunchboxes == boxes + cookedBowls, "米进了家中后仓，饭盒留在背包");
             s.Backpack.ClearGifts();
-            s.Pantry.RiceKg = 4;
+            s.HomeBox.Food.RiceKg = 4;
 
             // “我的”信息菜单、网购
             _game.Ui.OpenMyPanel();
@@ -882,15 +883,15 @@ namespace PCShopSell.EditorTools
             Check(s.BuyGift("fruit"), "农贸市场买水果");
             Check(s.Backpack.Food.IngredientCount("egg") == 2, "买的鸡蛋装进背包");
             s.SendByCourier = true;
-            double homeRice = s.Pantry.RiceKg;
-            Check(s.BuyRice(10), "叫车送 5 千克米回家");
+            double homeRice = s.HomeBox.Food.RiceKg;
+            Check(s.BuyRice(10), "叫车送 10 千克米回家");
             Check(s.Couriers.Count == 1 && Math.Abs(s.Backpack.Food.RiceKg) < 1e-9, "叫车的米不进背包");
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
             Frame(0.05f);
             Shot("vs1_76_farm_courier");
             s.SendByCourier = false;
             s.AdvanceClock(s.CourierQuote(false).minutes + 5);
-            Check(Math.Abs(s.Pantry.RiceKg - homeRice - 10) < 1e-6, "车把米送进了家里厨房");
+            Check(Math.Abs(s.HomeBox.Food.RiceKg - homeRice - 10) < 1e-6, "车把米送进了家中后仓");
             _game.Ui.CloseAllWindows();
 
             // 烟酒茶行、手机店、背包

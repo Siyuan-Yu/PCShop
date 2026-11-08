@@ -131,7 +131,7 @@ namespace PCShopSell.Core.Session
         internal void FitStarterShop()
         {
             if (_shopLayout.Any(p => FurnitureCatalog.Get(p.Id)?.IsFixture == true)) return;
-            _shopLayout.InsertRange(0, FurnitureCatalog.DefaultShopFixtures(PlayerShop.Size));
+            _shopLayout.InsertRange(0, FurnitureCatalog.DefaultShopFixtures(PlayerShop.Size, RetailKind));
             GiveStarterBoxes(_focus);
             UpdateShopFit();
         }

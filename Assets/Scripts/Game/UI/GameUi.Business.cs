@@ -57,7 +57,7 @@ namespace PCShopSell.Game.UI
                 _businessAssetId=assetId;
                 if (section==3 && assetId != null)
                     Ui.Size(Ui.Button(w.Content, "查看全部托管门店", () => { assetId = null; w.Rebuild(); }, 16), -1, 32);
-                GuideHint(w.Content,BusinessTargets[section],w.Rebuild);
+                S.VisitQuestTarget(BusinessTargets[section]);
                 switch (section)
                 {
                     case 1: BuildDirectSupply(w); break;
@@ -259,39 +259,13 @@ namespace PCShopSell.Game.UI
         }
         private void BuildResidence(Window w)
         {
-            var home=BusinessCard(w.Content,"住处 · "+S.HomeTitle);
-            Line(home,$"月租 {S.CurrentHomeRent}    睡眠恢复 ×{S.HomeSleepQuality:0.00}",17);
-            HelpLink(home,"住处与搬家说明","换住处保留家具与储物，搬家需支付新住处首月租金与搬家费。住宅只支持全款购买，售价和新租月租每周浮动，已签租约保留原价。月维护按购入价计算，出售按当前估值九折计算。");
-            if(S.HomePriceCents>0)
+            Line(w.Content, "默认住处 · " + S.HomeTitle, 20, Ui.Accent);
+            foreach (var place in S.RentedResidences)
             {
-                Ui.Size(Ui.Button(home,"出售自住房…",()=>ConfirmBusiness("出售住宅","按当前估值九折出售；按当周月租继续租住。",()=>{S.SellHome();w.Rebuild();}),17,Ui.Warn,S.InAgency),-1,40);
+                var residence = BusinessCard(w.Content, place.Name);
+                Line(residence, "签约周租 " + S.SignedResidentialRent(place), 17);
+                Ui.Size(Ui.Button(residence, "去中介管理租约", () => GoToPropertyAgency(place), 17), -1, 40);
             }
-            else
-            {
-                var row=Ui.Row(home,40);
-                for(int i=0;i<=3;i++) {int tier=i;Ui.Size(Ui.Button(row,new[]{"城郊旧居","改善住宅","豪华公寓","花园别墅"}[i]+"…",()=>ConfirmResidenceMove(tier,w),16,Ui.ButtonBg,tier!=S.HomeTier),-1,40,1);}
-                if(S.HomeTier>0)
-                {
-                    Line(home,$"住宅售价 {S.HomePurchasePrice}",17);
-                    var buy=Ui.Row(home,40);
-                    Ui.Size(Ui.Button(buy,"全款购入…",()=>ConfirmBusiness("购买住宅",$"全款支付房价 {S.HomePurchasePrice}。月维护费 {S.HomePurchasePrice.Scale(.001)}。",()=>{if(S.BuyHome(false))w.Rebuild();}),17,Ui.ButtonHot,S.InAgency&&S.Ledger.Balance>=S.HomePurchasePrice),-1,40,1);
-                }
-            }
-        }
-        private void ConfirmResidenceMove(int tier,Window parent)
-        {
-            string homeId=tier==0?"home":"home_tier"+tier;
-            var target=S.City.HasPlace(homeId)?S.City.GetPlace(homeId):S.Home;
-            var rent=S.HomeTierRentQuote(tier);var cost=rent+Money.FromYuan(500);
-            bool rightAgency=S.InAgency&&(S.City.LayoutVersion<7||!S.City.HasPlace(homeId)||S.AgencyServes(S.CurrentPlace,target));
-            OpenWindow("更换住处",720,440,w=>
-            {
-                Line(w.Content,$"新月租 {rent} · 搬家费 ¥500",20,Ui.Accent);
-                Line(w.Content,$"本次合计 {cost} · 付款后现金 {S.Ledger.Balance-cost}",18);
-                Para(w.Content,"家具与储物保留，次月起按新月租缴费。",17,Ui.Dim);
-                if(!rightAgency)Ui.Size(Ui.Button(w.Content,"前往住宅所属中介",()=>GoToPropertyAgency(target),17),-1,38);
-                Ui.Size(Ui.Button(w.Content,"确认搬家",()=>{if(S.ChangeHomeTier(tier)){w.Close();parent.Rebuild();}},18,Ui.ButtonHot,rightAgency&&S.Ledger.Balance>=cost),-1,44);
-            });
         }
     }
 }

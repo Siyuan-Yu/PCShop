@@ -214,24 +214,23 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(head, kind == null ? "选择摆什么" : "换品类", () => OpenShelfKindChooser(layoutIndex, w), 17, kind == null ? Ui.ButtonHot : Ui.ButtonBg), 160);
 
                 FurnitureDef shelf = FurnitureCatalog.Get(S.ShopLayout[layoutIndex].Id);
-                Para(w.Content, $"本架最多 {shelf.ShelfItems} 件、{shelf.ShelfKg:0} 千克。件数或承重任一达到上限就停止陈列。", 16, Ui.Dim);
-
                 if (kind == null)
                 {
-                    Para(w.Content, "选一类货：店里这一类的货（盒装、散件都算同一类）就会自动摆上来。没有对应货架的货，顾客买不到。", 17, Ui.Warn);
+                    Line(w.Content, $"最多 {shelf.ShelfItems} 件 · {shelf.ShelfKg:0} 千克", 16, Ui.Dim);
+                    Line(w.Content, "选好品类后，从后仓自动上架。", 17, Ui.Dim);
                     Ui.Size(Ui.Button(w.Content, "关闭", w.Close, 20), -1, 46);
                     return;
                 }
 
                 ShelfFill fill = shop.ShelfFillAt(layoutIndex,kind) ?? new ShelfFill(kind,shelf.ShelfKg,shelf.ShelfItems);
                 Line(w.Content,$"本架 {fill.UsedKg:0.##}/{fill.CapacityKg:0} 千克 · {fill.Total}/{fill.CapacityItems} 件"
-                    +(fill.Full?" · 已满":""),17,fill.Full?new Color32(255,102,105,255):Ui.Accent);
+                    +(fill.Full?" · 已满":""),17,fill.Full?Ui.Warn:Ui.Accent);
                 if(kind.Id=="secondhand")
                 {
                     BuildUsedStock(w.Content,w,true,displayed:fill.Resale.Select(o=>o.Id).ToArray());return;
                 }
 
-                Para(w.Content, "在每件商品的价签旁点加减号调价，长按可加速；购买意愿实时预览，点确定后生效。同型号盒装和散件按包装溢价联动。", 15, Ui.Dim);
+                HelpLink(w.Content, "调价说明", "长按加减号可加速。调价时可预览购买意愿，确认后生效；同型号盒装和散件的售价联动。");
                 if (kind.IsParts) BuildPartShelfBody(w, kind, fill);
                 else BuildGoodsShelfBody(w, kind, fill);
                 Ui.Size(Ui.Button(w.Content, "关闭", w.Close, 20), -1, 46);
@@ -292,7 +291,7 @@ namespace PCShopSell.Game.UI
             {
                 bool boxed = board == 0;
                 var sign = Ui.Size(Ui.Panel(list, "ShelfSection", WoodDark), -1, 34);
-                Ui.Label(sign.transform, boxed ? "整盒" : "散件", 18, TextAnchor.MiddleLeft, Ui.Accent)
+                Ui.Label(sign.transform, boxed ? "整盒" : "散件", 18, TextAnchor.MiddleLeft, Ui.TextColor)
                     .rectTransform.Fill(10);
                 var stocked = parts.Where(part => fill.PartCount(part, boxed) > 0).ToArray();
                 if (stocked.Length == 0)

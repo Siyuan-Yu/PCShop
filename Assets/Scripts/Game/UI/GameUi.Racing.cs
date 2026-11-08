@@ -164,25 +164,26 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, "正赛车友 · 已到场 " + roster.Count + " 人", 19, Ui.Accent);
                 for (int first = 0; first < roster.Count; first += 5)
                 {
-                    var row = Ui.Row(w.Content, 42, 6);
+                    var row = Ui.Row(w.Content, 64, 8);
                     foreach (string id in roster.Skip(first).Take(5))
                     {
                         string person = id;
                         string label = S.CityPerson(id)?.Name ?? id;
-                        if (invited.Contains(id)) label += " · 受邀";
-                        Ui.Size(Ui.Button(row, label, () => OpenPersonDialogue(person, parent: w), 16), -1, 42, 1);
+                        var cell = Ui.Size(Ui.Row(row, 64, 4), 0, 64, 1);
+                        PortraitThumb(cell, id, 40, () => OpenPersonDialogue(person, parent: w));
+                        if (invited.Contains(id)) label += "\n<size=13>受邀</size>";
+                        Ui.Size(Ui.Button(cell, label, () => OpenPersonDialogue(person, parent: w), 15), 0, 44, 1);
                     }
                 }
                 if (roster.Count == 0) Para(w.Content, "车友尚未到场。离开接待窗口后，游戏时间继续推进。", 16, Ui.Dim);
             }
             foreach (var invite in bookings)
             {
-                var row = Ui.Row(w.Content, 34, 8);
                 string name = S.CityPerson(invite.PersonId)?.Name ?? invite.PersonId;
                 string state = invite.Day != today.TotalDays ? "已确认"
                     : S.Clock.MinuteOfDay >= RacingSchedule.MeetCloseMinute ? "场次已结束"
                     : S.RaceAttendeeHere(invite.PersonId, track.Id) ? "已到场" : "尚未到场";
-                Ui.Size(Ui.Label(row, new GameDate(invite.Day) + " · " + name + " · " + state, 16), 0, 34, 1);
+                var row = PersonSummary(w.Content, invite.PersonId, name, new GameDate(invite.Day) + " · " + state, 46);
                 if (state != "场次已结束")
                     Ui.Size(Ui.Button(row, "取消邀请", () =>
                     {
@@ -202,10 +203,9 @@ namespace PCShopSell.Game.UI
             }
             int trackIndex = Math.Max(0, Array.FindIndex(tracks, t => t.Id == selectedTrack));
             var track = tracks[trackIndex];
-            Line(w.Content, "与" + person.Name + "一起参赛", 22, Ui.Accent);
+            PersonSummary(w.Content, personId, person.Name, "邀请同场参赛");
             Ui.Size(Ui.Choice(w.Content, tracks.Select(t => t.Name), trackIndex, index =>
             { selectTrack(tracks[index].Id); w.Rebuild(); }), -1, 40);
-            Para(w.Content, "选定比赛后，车友会在比赛日沿道路前往赛场。届时请前往同一赛场，选车参加这场比赛。", 17, Ui.Dim);
             var day = S.Clock.Today;
             if (S.CurrentRaceMeeting == RaceMeeting.None || S.Clock.MinuteOfDay >= RacingSchedule.MeetCloseMinute)
                 day = RacingSchedule.Next(day);
@@ -276,8 +276,8 @@ namespace PCShopSell.Game.UI
             var summary = Ui.Row(content, 68, 8);
             string place = result.Abandoned ? (result.Practice ? "练习已结束" : "已退赛")
                 : result.Practice ? "练习完成" : $"第 {result.Position} / {result.Competitors} 名";
-            Ui.Size(Ui.Label(summary, place, 28, TextAnchor.MiddleCenter, Ui.Accent), 0, 68, 1);
-            Ui.Size(Ui.Label(summary, $"奖金 ¥{result.Prize:N0}", 24, TextAnchor.MiddleCenter, Ui.Good), 0, 68, 1);
+            Ui.Size(Ui.Label(summary, $"<b>{place}</b>", 28, TextAnchor.MiddleCenter, Ui.Accent), 0, 68, 1);
+            Ui.Size(Ui.Label(summary, $"<b>奖金 ¥{result.Prize:N0}</b>", 24, TextAnchor.MiddleCenter, Ui.Good), 0, 68, 1);
             Ui.Size(Ui.Label(summary, $"用时 {result.Seconds:0.00} 秒", 21, TextAnchor.MiddleCenter), 0, 68, 1);
             Line(content, $"罚时 {result.Penalty:0} 秒 · 碰撞 {result.Collisions} 次 · 车况 {result.Condition:0}%"
                 + (result.Injury > 0 ? $" · 健康 -{result.Injury:0}" : " · 未受伤")
@@ -289,17 +289,23 @@ namespace PCShopSell.Game.UI
                 var changes = result.Relationships.OrderByDescending(c => c.Invited).ToArray();
                 for (int first = 0; first < changes.Length; first += 3)
                 {
-                    var row = Ui.Row(content, 30, 8);
+                    var row = Ui.Row(content, 44, 8);
                     foreach (var change in changes.Skip(first).Take(3))
-                        Ui.Size(Ui.Label(row, $"{change.Name}{(change.Invited ? "（受邀）" : "")} +{change.After - change.Before}",
-                            16, color: Ui.Good), 0, 30, 1);
+                    {
+                        var cell = Ui.Size(Ui.Row(row, 44, 6), 0, 44, 1);
+                        PortraitThumb(cell, change.PersonId, 36, null);
+                        Ui.Size(Ui.Label(cell, $"{change.Name}{(change.Invited ? "（受邀）" : "")} +{change.After - change.Before}",
+                            16, color: Ui.Good), 0, 44, 1);
+                    }
                 }
                 Line(content, "完赛排名", 19, Ui.Accent);
                 foreach (var entry in result.Standings)
                 {
-                    var row = Ui.Row(content, 34, 8);
+                    var row = Ui.Row(content, 44, 8);
                     Color color = entry.Player ? Ui.Accent : Ui.TextColor;
                     Ui.Size(Ui.Label(row, entry.Place.ToString(), 17, TextAnchor.MiddleCenter, color), 46, 34);
+                    if (entry.Player) Ui.Size(Ui.Rect(row, "PlayerPortraitSpace"), 36);
+                    else PortraitThumb(row, entry.PersonId, 36, null);
                     Ui.Size(Ui.Label(row, entry.Name + (entry.Invited ? " · 受邀" : ""), 17, color: color), 0, 34, 1);
                     Ui.Size(Ui.Label(row, entry.Vehicle, 15, color: Ui.Dim), 0, 34, 1);
                     Ui.Size(Ui.Label(row, $"{entry.Seconds:0.00} 秒", 16, TextAnchor.MiddleRight, color), 110, 34);

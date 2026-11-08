@@ -74,8 +74,34 @@ namespace PCShopSell.Core.Session
     {
         public string Id, Name, VenueId, StartText, MidText, EndText;
         public string[] Choices;
-        public int Minutes, PriceYuan, Hunger, Energy, Relation;
-        public int Mood, Health, Charm, Intelligence, Nutrition;
+        public int Minutes, PriceMultiplier = 1;
+        public CityVenueService DefaultService;
+        public CityVenueService[] Services;
+        public int PriceYuan => DefaultService.PriceYuan * PriceMultiplier;
+        public int ServiceCount => Math.Min(2, Choices?.Length ?? 0);
+        public CityVenueService Service(int choice) => Services != null && choice >= 0 && choice < Services.Length
+            ? Services[choice] : DefaultService;
+        public int ServicePriceYuan(int choice) => Service(choice).PriceYuan * PriceMultiplier;
+    }
+    public readonly struct CityVenueService
+    {
+        public readonly string Description;
+        public readonly int PriceYuan, Hunger, Energy, Mood, Nutrition, Health, Charm, Intelligence, Relation;
+
+        public CityVenueService(int priceYuan, string description = null, int hunger = 0, int energy = 0, int mood = 0,
+            int nutrition = 0, int health = 0, int charm = 0, int intelligence = 0, int relation = 0)
+        {
+            PriceYuan = priceYuan;
+            Description = description;
+            Hunger = hunger;
+            Energy = energy;
+            Mood = mood;
+            Nutrition = nutrition;
+            Health = health;
+            Charm = charm;
+            Intelligence = intelligence;
+            Relation = relation;
+        }
     }
     [Serializable] public sealed class CityActivityParticipant
     {
@@ -146,16 +172,32 @@ namespace PCShopSell.Core.Session
             return _personById.TryGetValue(id,out var person)?person:null;
         }
         public static readonly CityActivityDefinition[] Activities = ExpandVenueTiers(new CityActivityDefinition[] {
-            A("dinner","一起吃家常饭","life_restaurant",60,100,55,6,6,"选餐与入座","热菜上桌，可以聊聊最近的生活。","吃完饭，记下这次相处。","清淡家常菜","招牌炖菜","聊近况","聊彼此的工作"),
-            A("ktv","练歌与合唱","life_ktv",90,160,0,8,8,"选择包间活动","原创伴奏响起，大家轮流唱或坐下交流。","散场时一起整理好麦克风。","合唱原创曲","独唱练习","聊喜欢的声音","聊创作经历"),
-            A("bar","吧台小聚","life_bar",60,80,10,5,5,"选择饮品","可以选无酒精饮品，认识同桌的人。","结清本次饮品后各自安排返程。","气泡果饮","热茶","聊近况","认识同桌"),
-            A("court","组队打球","life_court",60,30,0,-8,6,"分组或练习","投篮和传球轮流进行，不以输赢决定交情。","赛后喝水，聊聊下一次。","传球练习","轮流投篮","赛后交流","聊运动习惯"),
-            A("golf","练习场体验","life_golf",90,150,0,-5,7,"挑选练习位置","轮流挥杆，留一点时间交流。","归还器材，留下新的合作话题。","基础挥杆","轮流击球","聊生意","聊日常"),
-            A("fishing","河岸钓鱼","life_park",90,40,0,5,6,"整理钓具","鱼漂起伏时，听对方讲一段往事。","收好垃圾和钓具，仍留在河岸。","安静垂钓","交流技巧","听往事","看河景"),
-            A("hike","青湾郊游","life_hike",90,35,0,-8,7,"选择步道","走到观景平台，交流沿途见闻。","从步道回到入口，自己选择下一站。","轻松路线","观景平台","聊生活","分享经历"),
+            WithServices(A("dinner","一起吃家常饭","life_restaurant",60,100,55,6,6,"选餐与入座","热菜上桌，可以聊聊最近的生活。","吃完饭，记下这次相处。","清淡家常菜","招牌炖菜","聊近况","聊彼此的工作"),
+                new CityVenueService(100, "清淡的家常搭配，营养更均衡。", hunger: 55, energy: 6, mood: 6, nutrition: 3, relation: 6),
+                new CityVenueService(140, "一锅炖菜端上桌，更顶饱，适合边吃边聊。", hunger: 70, energy: 6, mood: 9, nutrition: 1, relation: 8)),
+            WithServices(A("ktv","练歌与合唱","life_ktv",90,160,0,8,8,"选择包间活动","原创伴奏响起，大家轮流唱或坐下交流。","散场时一起整理好麦克风。","合唱原创曲","独唱练习","聊喜欢的声音","聊创作经历"),
+                new CityVenueService(160, "跟着伴奏接唱，和同行的人一起找节拍。", energy: 4, mood: 14, charm: 1, relation: 10),
+                new CityVenueService(160, "独自练气息和音准，多练一遍难唱的段落。", energy: -3, mood: 9, charm: 2, relation: 5)),
+            WithServices(A("bar","吧台小聚","life_bar",60,80,10,5,5,"选择饮品","可以选无酒精饮品，认识同桌的人。","结清本次饮品后各自安排返程。","气泡果饮","热茶","聊近况","认识同桌"),
+                new CityVenueService(80, "果香和气泡提振心情，适合小聚。", hunger: 14, energy: 3, mood: 10, charm: 1, relation: 6),
+                new CityVenueService(65, "慢慢喝一杯热茶，歇一歇恢复精力。", hunger: 4, energy: 9, mood: 6, relation: 5)),
+            WithServices(A("court","组队打球","life_court",60,300,0,-8,6,"分组或练习","在场上热身，开始练球。","赛后喝水，聊聊下一次。","传球练习","轮流投篮","赛后交流","聊运动习惯"),
+                new CityVenueService(300, "练胸前传球和接球，有同行者时更容易培养默契。", energy: -8, mood: 8, health: 2, relation: 8),
+                new CityVenueService(300, "轮流投篮、捡球再投，更耗精力，锻炼效果更好。", energy: -13, mood: 10, health: 4, relation: 5)),
+            WithServices(A("golf","练习场体验","life_golf",90,150,0,-5,7,"挑选练习位置","轮流挥杆，留一点时间交流。","归还器材，留下新的合作话题。","基础挥杆","轮流击球","聊生意","聊日常"),
+                new CityVenueService(150, "先练站姿和挥杆节奏，熟悉球杆。", energy: -5, mood: 6, health: 1, intelligence: 1, relation: 5),
+                new CityVenueService(220, "轮流击球，观察对方的落点和节奏。", energy: -8, mood: 8, health: 2, charm: 1, relation: 9)),
+            WithServices(A("fishing","河岸钓鱼","life_park",90,40,0,5,6,"整理钓具","鱼漂起伏时，听对方讲一段往事。","收好垃圾和钓具，仍留在河岸。","安静垂钓","交流技巧","听往事","看河景"),
+                new CityVenueService(40, "安静看鱼漂，放松心情、恢复精力。", energy: 7, mood: 12, relation: 5),
+                new CityVenueService(40, "琢磨抛竿和看漂，有同行者时可以互相指点。", energy: 3, mood: 8, intelligence: 1, relation: 8)),
+            WithServices(A("hike","青湾郊游","life_hike",90,35,0,-8,7,"选择步道","走到观景平台，交流沿途见闻。","从步道回到入口，自己选择下一站。","轻松路线","观景平台","聊生活","分享经历"),
+                new CityVenueService(35, "沿平缓步道散步，边走边聊，体力消耗较低。", energy: -5, mood: 9, health: 2, relation: 8),
+                new CityVenueService(35, "走得更远，到观景平台看湖，运动量更大。", energy: -12, mood: 14, health: 4, relation: 6)),
             A("market","市场走访","stall_cpu",60,0,0,-3,5,"约在电子市场门口","实际走访档口，交换供货信息。","结束走访，不自动购买商品。","看新品","比较供货条件","聊经营","聊行业消息"),
             A("old_market","旧物闲逛","stall_cpu",60,0,0,-3,5,"相约旧电子档口","慢慢看旧收音机和老唱片，听彼此讲旧事。","结束闲逛，各自选择下一站。","看旧收音机","聊评书","找老唱片","听旧设备故事"),
-            A("snack","夜宵小聚","life_restaurant",60,60,40,3,5,"选夜宵","热汤端上来，聊聊一天的收获。","各自离席，约好下次见。","汤面","家常小菜","聊今天","聊共同朋友"),
+            WithServices(A("snack","夜宵小聚","life_restaurant",60,60,40,3,5,"选夜宵","热汤端上来，聊聊一天的收获。","各自离席，约好下次见。","汤面","家常小菜","聊今天","聊共同朋友"),
+                new CityVenueService(60, "一碗热汤面，适合饿着肚子来吃。", hunger: 45, energy: 4, mood: 5, nutrition: 1, relation: 5),
+                new CityVenueService(70, "几碟小菜适合分着吃，坐下来慢慢聊。", hunger: 25, energy: 3, mood: 8, nutrition: 2, relation: 7)),
             A("expo_electronics","电子展游览","life_expo",120,30,0,-4,7,"检票入场","供应商、新品、企业需求与行业联系人分区交流。","可提前离场，已完成展位事件保持记忆。","供应商新品","企业需求","行业联系人","交流试单条件"),
             A("expo_comic","原创潮玩展","life_expo",120,30,0,-4,7,"检票入场","原创模型、创作者工作台和兴趣社交区开放。","原创作品与联系人记录在自己的城市履历中。","原创模型商品","创作者工作台","兴趣社交","讨论推广合作")
         });
@@ -165,22 +207,30 @@ namespace PCShopSell.Core.Session
             foreach(int tier in new[]{2,3,4})
             foreach(var source in originals.Where(a=>a.Id=="dinner"||a.Id=="ktv"||a.Id=="bar"))
             {
-                var copy=A(source.Id+"_tier"+tier,new[]{"","","邻里","云庭","星苑"}[tier]+source.Name,
-                    source.VenueId+"_tier"+tier,source.Minutes,source.PriceYuan*(tier==2?2:tier==3?5:12),source.Hunger,source.Energy,source.Relation,
-                    source.StartText,source.MidText,source.EndText,source.Choices);
-                copy.Mood=source.Mood;copy.Health=source.Health;copy.Charm=source.Charm;copy.Intelligence=source.Intelligence;copy.Nutrition=source.Nutrition;
-                all.Add(copy);
+                all.Add(new CityActivityDefinition {
+                    Id = source.Id + "_tier" + tier, Name = new[]{"","","邻里","云庭","星苑"}[tier] + source.Name,
+                    VenueId = source.VenueId + "_tier" + tier, Minutes = source.Minutes,
+                    PriceMultiplier = tier == 2 ? 2 : tier == 3 ? 5 : 12,
+                    StartText = source.StartText, MidText = source.MidText, EndText = source.EndText,
+                    Choices = source.Choices, DefaultService = source.DefaultService, Services = source.Services
+                });
             }
             return all.ToArray();
         }
         private static CityActivityDefinition A(string id,string name,string venue,int minutes,int price,int hunger,int energy,int relation,
             string start,string mid,string end,params string[] choices) => new CityActivityDefinition {Id=id,Name=name,VenueId=venue,Minutes=minutes,
-                PriceYuan=price,Hunger=hunger,Energy=energy,Relation=relation,StartText=start,MidText=mid,EndText=end,Choices=choices,
-                Mood=id=="ktv"?12:id=="fishing"||id=="hike"?10:id=="bar"||id=="court"?8:id=="market"?3:id=="snack"?5:6,
-                Health=id=="court"||id=="hike"?2:id=="golf"?1:0,
-                Charm=id=="ktv"||id=="bar"||id=="golf"?1:0,
-                Intelligence=id=="market"||id.StartsWith("expo_")?1:0,
-                Nutrition=id=="dinner"?3:id=="snack"?1:0};
+                StartText=start,MidText=mid,EndText=end,Choices=choices,
+                DefaultService = new CityVenueService(price, hunger: hunger, energy: energy, relation: relation,
+                    mood: id=="ktv"?12:id=="fishing"||id=="hike"?10:id=="bar"||id=="court"?8:id=="market"?3:id=="snack"?5:6,
+                    health: id=="court"||id=="hike"?2:id=="golf"?1:0,
+                    charm: id=="ktv"||id=="bar"||id=="golf"?1:0,
+                    intelligence: id=="market"||id.StartsWith("expo_")?1:0,
+                    nutrition: id=="dinner"?3:id=="snack"?1:0)};
+        private static CityActivityDefinition WithServices(CityActivityDefinition activity, params CityVenueService[] services)
+        {
+            activity.Services = services;
+            return activity;
+        }
         public static CityActivityDefinition Activity(string id) => Activities.FirstOrDefault(a=>a.Id==id);
         private static List<CityPersonDefinition> BuildPeople()
         {

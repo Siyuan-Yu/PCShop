@@ -29,7 +29,8 @@ namespace PCShopSell.Core.Session
             offer.Kind==PurchaseGoodsKind.Gift||offer.Kind==PurchaseGoodsKind.Ingredient||offer.Kind==PurchaseGoodsKind.Rice?CitySupplierRemaining(offer.Source.Id,PhysicalProductId(offer)):
             Math.Max(0,PurchaseLimit(offer)-(_citySupplierPurchases.TryGetValue(SupplierCounterKey(offer.Source.Id,PhysicalProductId(offer)),out var used)?used:0));
         private void RecordOtherSupply(PurchaseOffer offer,int count)=>RecordCitySupplierPurchase(offer.Source.Id,PhysicalProductId(offer),count);
-        public static bool SupplierClosesOnWeekend(Place source)=>source.Kind==PlaceKind.Wholesaler||source.Id=="model_market"||source.Id=="clothing_wholesale"||source.Id==PetShopCatalog.SupplierId;
+        public static bool SupplierClosesOnWeekend(Place source) => source != null &&
+            (source.Kind == PlaceKind.Wholesaler || source.Id == "model_market" || source.Id == "clothing_wholesale" || source.Id == PetShopCatalog.SupplierId);
         private static bool SourceWorksOnWeekday(PurchaseOffer offer,int weekday)=>!SupplierClosesOnWeekend(offer.Source)||weekday<5;
         private bool SupplierPlanHasDay(EmployeePurchasePlan plan,int day)
         {

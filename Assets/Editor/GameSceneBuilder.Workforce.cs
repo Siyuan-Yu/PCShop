@@ -33,7 +33,7 @@ namespace PCShopSell.EditorTools
             }
             var s = _game.Session;
             s.DebugAddCash(500000);
-            Check(s.DebugRentStarterShop(), "员工验收：开一家测试店");
+            Check(s.DebugRentStarterShop(computerScenario: true), "员工验收：开一家测试店");
             string mainId = s.MainShop.Place.Id;
             s.PlayerShop.Reputation = 80;
             var second = s.City.OfKind(PlaceKind.Shop).First(p => p.Id != mainId);

@@ -8,7 +8,7 @@ namespace PCShopSell.Core.Session
     public sealed partial class SaveData
     {
         public int agencyStreetVersion;
-        public string shopRetailKind, pendingRetailKind;
+        public string shopRetailKind, pendingRetailKind, shopCustomName;
         public GoodsLot[] shopGoodsLots;
         public AppLoan[] appLoans;
         public PriceDay[] priceDays;
@@ -54,6 +54,9 @@ namespace PCShopSell.Core.Session
         public bool hasDietStats;
         public double nutrition, mood;
         public int intelligence, charm, skill;
+        public double playerStress;
+        public bool hasPlayerWorkAttributes;
+        public int playerStamina;
         public int lastNewsReadDay;
 
         public SaveStockLine[] shopStock;
@@ -281,7 +284,7 @@ namespace PCShopSell.Core.Session
     public sealed class SaveShop
     {
         public double awareness, reputation;
-        public string retailKind;
+        public string retailKind, customName;
         public GoodsLot[] goodsLots;
         public string place;
         public long rentCents, depositCents;
@@ -335,6 +338,8 @@ namespace PCShopSell.Core.Session
         public int employeeCharm;
         public bool hasEmployeeIntelligence;
         public int employeeIntelligence;
+        public bool hasEmployeeWorkAttributes;
+        public int dexterity, stamina;
         public int shiftStart, shiftEnd, buildsCompleted;
         public EmployeeSchedule schedule;
         public bool hasSchedule;

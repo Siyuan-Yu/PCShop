@@ -21,7 +21,7 @@ namespace PCShopSell.EditorTools
         public static void InteractionRevisionFromBatch() => RunSmokeBatch(() =>
         {
             SmokePlayerWork(); // Real scene integration, deliberately no screenshots.
-            var s = _game.Session; s.DebugAddCash(500000); s.DebugRentStarterShop();
+            var s = _game.Session; s.DebugAddCash(500000); s.DebugRentStarterShop(computerScenario: true);
             s.Clock.Restore(s.Clock.Today, 10 * 60);
             Teleport(s, s.MainShop.Place.Id); _game.Ui.CloseAllWindows();
             int index = s.ShelfIndexes().First(); s.SetShelfKind(index, ShelfKinds.ForCategory(PartCategory.Cpu).Id);

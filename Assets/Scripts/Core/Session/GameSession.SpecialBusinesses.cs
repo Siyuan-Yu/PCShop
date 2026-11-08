@@ -279,7 +279,7 @@ namespace PCShopSell.Core.Session
             if(need>1e-9){shop.Sim.Stock.TryRemoveGoods("produce:rice",1);shop.Fridge.Food.RiceKg+=.5-need;}
             foreach(var bag in KitchenBags(shop))
             {
-                var batch=bag.Food.Ingredient.Where(b=>b.Id==id&&b.Count>0).OrderBy(b=>b.ExpireDay).FirstOrDefault();
+                var batch=bag.Food.Ingredient.FirstOrDefault(b=>b.Id==id&&b.Count>0);
                 if(batch==null)continue;if(--batch.Count==0)bag.Food.Ingredient.Remove(batch);return true;
             }
             shop.Sim.Stock.TryRemoveGoods("produce:"+id,1);return true;

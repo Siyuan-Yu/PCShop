@@ -27,7 +27,7 @@ namespace PCShopSell.Game.UI
         {
             OpenWorkspace("property-agency", "purchase", "商铺产权交易", 1160, 840, w =>
             {
-                GuideHint(w.Content,QuestTarget.Property,w.Rebuild);
+                S.VisitQuestTarget(QuestTarget.Property);
                 if (_cityPropertyTab == 3) { BuildResidence(w); AgencyLink(w,S.Home); return; }
                 if (_cityPropertyTab == 0)
                 {
@@ -88,14 +88,15 @@ namespace PCShopSell.Game.UI
             {
                 Ui.Size(Ui.Button(parent,"登记出租…",()=>CityAssetConfirm("登记出租",
                     "托管租期为28天，次月账期开始收租，管理与空置折损15%。",()=>S.SetCityPropertyRental(id,true),w),17),-1,40);
-                var kinds = RetailShopTypes.All.ToArray();
-                var choice = Ui.Choice(parent,new[]{"选择自营店型…"}.Concat(kinds.Select(RetailShopTypes.Name)),0,index=>
+                var kinds = RetailShopTypes.All;
+                string kind = RetailShopTypes.Default;
+                var opening = Ui.Row(parent, 40);
+                Ui.Size(Ui.Choice(opening,kinds.Select(RetailShopTypes.Name),0,index=>kind=kinds[index]),-1,40,1);
+                Ui.Size(Ui.Button(opening,"自营开店",()=>
                 {
-                    if (index == 0) return;
-                    string kind = kinds[index-1];
-                    CityAssetConfirm("在自有铺面开店","免租金；设施、装修与次日开业规则照常。",()=>S.OpenCityOwnedShop(id,kind),w);
-                });
-                Ui.Size(choice,-1,40);
+                    string selected = kind;
+                    CityAssetConfirm("在自有铺面开店","开设"+RetailShopTypes.Name(selected)+"。免租金，按正常流程装修和开业。",()=>S.OpenCityOwnedShop(id,selected),w);
+                },17,Ui.ButtonHot),148,40);
             }
             if (property.UseMode == "managed")
                 Ui.Size(Ui.Button(parent,"到期恢复空置",()=>{if(S.SetCityPropertyRental(id,false))w?.Rebuild();},17),-1,40);

@@ -77,7 +77,7 @@ namespace PCShopSell.Core.Home
 
 public const double LunchboxKg = 0.5;
 
-        /// <summary>刚买、还没放进厨房的米和食材；<c>Food.Packed</c> 是带在身上的饭盒（饭点从这里吃）。</summary>
+        /// <summary>背包里的大米、配菜和饭盒。</summary>
         public readonly Pantry Food = new Pantry { RiceKg = 0 };
 
         public int Lunchboxes => Food.PackedBowls;

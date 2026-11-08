@@ -75,8 +75,8 @@ namespace PCShopSell.Core.Session
             var state=VenueOperation(place?.Id);
             return state!=null&&state.Accepting&&!IsGameOver&&CityWithinHours(Clock.MinuteOfDay,state.Open,state.Close)&&VenueHasAttendant(ShopAt(place),includePlayer);
         }
-        public Money VenuePlayerPrice(CityActivityDefinition def)=>def==null?Money.Zero:
-            IsOwnedVenue(City.GetPlace(def.VenueId))?Money.Zero:Money.FromYuan(def.PriceYuan);
+        public Money VenuePlayerPrice(CityActivityDefinition def, int choice = -1) => def == null ? Money.Zero :
+            IsOwnedVenue(City.GetPlace(def.VenueId)) ? Money.Zero : Money.FromYuan(def.ServicePriceYuan(choice));
         private void ReleaseVenueCustomer(VenueCustomer customer)
         {
             var person=CityPersonState(customer.PersonId);

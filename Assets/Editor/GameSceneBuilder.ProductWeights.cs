@@ -46,7 +46,7 @@ namespace PCShopSell.EditorTools
             _game.Ui.CloseAllWindows(); s.Online.Discover(Online1788.Stores[0].Id); _game.Ui.OpenWholesaleApp(); Frame(0);
             ActiveButtons().First(b => ButtonText(b).StartsWith(Online1788.Stores[0].Name)).onClick.Invoke(); Frame(0);
             Check(HasWeight(cpu.Name, cpuKg), "1788批发商品显示盒装实际重量");
-            _game.Ui.CloseAllWindows(); s.DebugRentStarterShop(); Enter(s.MainShop.Place);
+            _game.Ui.CloseAllWindows(); s.DebugRentStarterShop(computerScenario: true); Enter(s.MainShop.Place);
             s.MainShop.Buyer = new Employee { Name = "测试采购", DailyWageYuan = 150 };
             var buyer = s.Employees.First(e => e.Role == EmployeeRole.Buyer);
             _game.Ui.OpenEmployeePurchase(buyer.Person.Id); Frame(0);

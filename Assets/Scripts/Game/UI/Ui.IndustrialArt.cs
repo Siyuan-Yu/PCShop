@@ -9,7 +9,7 @@ namespace PCShopSell.Game.UI
         private static readonly System.Collections.Generic.Dictionary<string,Sprite> NavigationIcons=new System.Collections.Generic.Dictionary<string,Sprite>();
         private static void NavigationArt(Button button,Text label,string title)
         {
-            if(button.transform.parent?.parent?.name!="TopBar"||!new[]{"我的","背包 B","日程","人物","人脉","员工","手机","任务","经营","资产","采购","通知","菜单"}.Contains(title))return;
+            if(button.transform.parent?.parent?.name!="TopBar"||!new[]{"我的","背包 B","日程","人物","人脉","员工","手机","任务","经营","资产","采购","品牌","通知","菜单"}.Contains(title))return;
             if(!NavigationIcons.TryGetValue(title,out var sprite))
             {
                 const int n=32;var tex=new Texture2D(n,n,TextureFormat.RGBA32,false){name="Navigation / "+title,filterMode=FilterMode.Bilinear};
@@ -30,7 +30,7 @@ namespace PCShopSell.Game.UI
                 else {Box(6,4,20,23);Line(10,29,10,24);Line(22,29,22,24);Line(10,18,22,18);Line(10,12,22,12);}
                 tex.SetPixels32(pixels);tex.Apply();sprite=Sprite.Create(tex,new Rect(0,0,n,n),Vector2.one*.5f);NavigationIcons[title]=sprite;
             }
-            var icon=Rect(button.transform,"NavigationIcon").gameObject.AddComponent<Image>();icon.sprite=sprite;icon.color=TextColor;icon.raycastTarget=false;
+            var icon=Rect(button.transform,"NavigationIcon").gameObject.AddComponent<Image>();icon.sprite=sprite;icon.color=label.color;icon.raycastTarget=false;
             icon.rectTransform.anchorMin=icon.rectTransform.anchorMax=new Vector2(.5f,1);icon.rectTransform.pivot=new Vector2(.5f,1);icon.rectTransform.anchoredPosition=new Vector2(0,-3);icon.rectTransform.sizeDelta=new Vector2(20,20);
             label.fontSize=13;label.rectTransform.Anchor(0,0,1,.48f,2,1,2,0);
         }

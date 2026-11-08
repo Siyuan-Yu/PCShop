@@ -6,12 +6,13 @@ using PCShopSell.Core.World;
 namespace PCShopSell.Core.Session
 {
     /// <summary>
-    /// 玩家自己经营的一家电脑店：铺面、租约、营业模拟、店里摆的家具、装的升级、员工、补货目标都各管各的。
+    /// 玩家经营的一家店：铺面、租约、营业模拟、家具、升级、员工和补货目标各管各的。
     /// 知名度、现金、家具库存是全部店共用的；纸箱和临时存放每家店各有各的。还没租铺子时只有一个 Lease 为 null 的占位。
     /// </summary>
     public sealed class OwnedShop
     {
-        public string RetailKind = "computer";
+        public string RetailKind = RetailShopTypes.Default;
+        public string CustomName;
         public Place Place;
         public ShopLease Lease;
         public bool OwnsProperty;

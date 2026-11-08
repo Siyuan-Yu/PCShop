@@ -37,7 +37,7 @@ namespace PCShopSell.Tests
                 foreach(var place in homes.Where(p=>p.Id=="home"||p.Id.StartsWith("home_tier")))Assert.IsEmpty(s.ResidentialTenants(place.Id));
             }
         }
-        [Test] public void BuyingOccupiedHomePreservesNpcAddressesAndPaysOneRealMonthlyRentAfterPurchase()
+        [Test] public void BuyingOccupiedHomePreservesNpcAddressesAndPaysOneWeeklyRentAfterPurchase()
         {
             using(var s=Make())
             {
@@ -46,8 +46,11 @@ namespace PCShopSell.Tests
                 Assert.True(s.BuyResidentialHome(id,false,false));Assert.AreEqual(before-cost.Cents,s.Ledger.Balance.Cents);
                 Assert.AreEqual("home",s.Home.Id);CollectionAssert.AreEquivalent(residents,s.ResidentialTenants(id).Select(p=>p.PersonId));
                 var property=s.PropertyAt(id);Assert.AreEqual("npc",property.UseMode);Assert.Contains(property.TenantPersonId,residents);
-                long after=s.Ledger.Balance.Cents;int next=(s.Clock.Today.TotalDays/30+1)*30;
-                Settle(s,next);Assert.AreEqual(after+SNet(s,id),s.Ledger.Balance.Cents);
+                long after=s.Ledger.Balance.Cents;int next=property.BoughtDay+GameDate.DaysPerWeek;
+                Settle(s,next-1);Assert.AreEqual(after,s.Ledger.Balance.Cents);
+                Settle(s,next);
+                long maintenance=new GameDate(next).IsMonthStart?Money.FromCents(property.PriceCents).Scale(.001).Cents:0;
+                Assert.AreEqual(after+property.WeeklyRentCents-maintenance,s.Ledger.Balance.Cents);
                 long paid=s.Ledger.Balance.Cents;Settle(s,next);Assert.AreEqual(paid,s.Ledger.Balance.Cents);
                 using(var l=Reload(s))
                 {
@@ -56,13 +59,12 @@ namespace PCShopSell.Tests
                 }
             }
         }
-        private static long SNet(GameSession s,string id)=>s.PropertyAt(id).MonthlyRentCents-Money.FromCents(s.PropertyAt(id).PriceCents).Scale(.001).Cents;
-        [Test] public void ActualMonthBoundaryCreditsRegisteredTenantRentOnceAndReloadDoesNotReplayIt()
+        [Test] public void WeeklyDueDateCreditsRegisteredTenantRentOnceAndReloadDoesNotReplayIt()
         {
             using(var s=Make())
             {
                 string id=Occupied(s);AtAgency(s,id);Assert.True(s.BuyResidentialHome(id,false,false));
-                long rent=s.PropertyAt(id).MonthlyRentCents;int next=(s.Clock.Today.TotalDays/30+1)*30;
+                var property=s.PropertyAt(id);long rent=property.WeeklyRentCents;int next=property.BoughtDay+GameDate.DaysPerWeek;
                 s.Clock.Restore(new GameDate(next-1),1439);s.AdvanceClock(1);
                 var receipts=s.Ledger.Entries.Where(e=>e.Category=="物业租金"&&e.Attribution.PropertyId==id).ToArray();
                 Assert.AreEqual(1,receipts.Length);Assert.AreEqual(rent,receipts[0].Amount.Cents);

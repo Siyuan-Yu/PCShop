@@ -146,6 +146,7 @@ namespace PCShopSell.Game.Runtime
                 if (view.Motion != null)
                 {
                     view.Motion.ActivityKind = participating ? _citySession.CityActivityService(_citySession.RunningCityActivity)?.Id : null;
+                    view.Motion.ActivityOption = participating ? _citySession.RunningCityActivity.ServiceChoice : -1;
                     view.Motion.LocomotionEnabled = state.Route != null;
                     view.Motion.Seated = participating && _citySession.City.GetPlace(_citySession.RunningCityActivity.VenueId).Business == "venue_restaurant";
                 }

@@ -22,7 +22,7 @@ namespace PCShopSell.Core.Session
         {
             string id = kind switch
             {
-                "pet" => PCShopSell.Core.Home.PetShopCatalog.SupplierId,
+                PCShopSell.Core.Home.PetShopCatalog.ShopKind => PCShopSell.Core.Home.PetShopCatalog.SupplierId,
                 "clothing" => "clothing_wholesale",
                 "models" => "model_market",
                 "restaurant" => City.Places.FirstOrDefault(p => p.Business == FarmBusiness)?.Id,
@@ -119,14 +119,18 @@ namespace PCShopSell.Core.Session
         }
         private void CityVenueHours(Place venue,out int open,out int close)
         {
+            if (SupplierClosesOnWeekend(venue))
+            {
+                open = WholesalerOpenMinute;
+                close = WholesalerCloseMinute;
+                return;
+            }
             // An authored entrance with 00:00–00:00 inherits the building's normal
             // business hours, just as IsPlaceOpen does; it is not a 24-hour venue.
             bool customHours=venue.ExplicitEntrance&&venue.OpenMinute!=venue.CloseMinute;
-            open=customHours?venue.OpenMinute:venue.Kind==PlaceKind.Wholesaler?WholesalerOpenMinute
-                :venue.Kind==PlaceKind.Dealer?DealerOpenMinute:venue.Business==FarmBusiness?FarmOpenMinute
+            open=customHours?venue.OpenMinute:venue.Kind==PlaceKind.Dealer?DealerOpenMinute:venue.Business==FarmBusiness?FarmOpenMinute
                 :venue.Kind==PlaceKind.Shop||venue.Kind==PlaceKind.Agency?StreetShopOpenMinute:0;
-            close=customHours?venue.CloseMinute:venue.Kind==PlaceKind.Wholesaler?WholesalerCloseMinute
-                :venue.Kind==PlaceKind.Dealer?DealerCloseMinute:venue.Business==FarmBusiness?FarmCloseMinute
+            close=customHours?venue.CloseMinute:venue.Kind==PlaceKind.Dealer?DealerCloseMinute:venue.Business==FarmBusiness?FarmCloseMinute
                 :venue.Kind==PlaceKind.Shop||venue.Kind==PlaceKind.Agency?StreetShopCloseMinute:0;
         }
         private bool AuthoredCityWorkAt(CityPersonState person,long minute)
@@ -231,7 +235,7 @@ namespace PCShopSell.Core.Session
                   }).ToArray()};
             _cityActivities.Add(activity);
             foreach(string id in ids)RememberSocial(id,"约好到"+City.GetPlace(def.VenueId).Name+"参加"+def.Name+"；此时仅预约，尚未消费或完成活动。");
-            if (sourceId == null || !sourceId.StartsWith("walk-in:", StringComparison.Ordinal)) Say("预约成立："+def.Name+"，请按日程实际前往。预计费用 "+VenuePlayerPrice(def)+(IsOwnedVenue(City.GetPlace(def.VenueId))?"（老板自用免费）。":"，到场开始时支付。"));
+            if (sourceId == null || !sourceId.StartsWith("walk-in:", StringComparison.Ordinal)) Say("预约成立："+def.Name+"，请按日程实际前往。预计费用 "+VenuePriceRange(def)+(IsOwnedVenue(City.GetPlace(def.VenueId))?"（老板自用免费）。":"，到场开始时支付。"));
             return activity;
         }
         public bool GoToCityActivity(string id)
@@ -383,7 +387,7 @@ namespace PCShopSell.Core.Session
                     if (now > a.ScheduledStart + CityArrivalWindowMinutes && !participantsReady)
                     { EndCityActivity(a, CityActivityPhase.Blocked, "同行者未能到齐，请改约；不扣消费与关系", now); continue; }
                     if((now<a.ScheduledStart && !a.RendezvousReady)||!playerReady||!participantsReady)continue;
-                    if (!IsOwnedVenue(venue)&&!CityWithinHours(Clock.MinuteOfDay, venue.OpenMinute, venue.CloseMinute))
+                    if (!CityVenueFits(venue, now, 1))
                     { EndCityActivity(a, CityActivityPhase.Cancelled, "场所已经打烊，尚未消费", now); continue; }
                     // Arriving with friends is not a purchase. Choose a service/menu at the venue first.
                     if (!a.ServiceConfirmed && !a.EntryPaid)
@@ -392,7 +396,7 @@ namespace PCShopSell.Core.Session
                         continue;
                     }
                     if(!CityVenueFits(venue,now,a.Duration)){EndCityActivity(a,CityActivityPhase.Interrupted,"闭店前无法完成，未收整场费用，请改约",now);continue;}
-                    Money cost=VenuePlayerPrice(def);
+                    Money cost=VenuePlayerPrice(def, a.ServiceChoice);
                     string serviceTitle = a.ServiceConfirmed ? VenueServiceName(def, a.ServiceChoice) : def.Name;
                     if(!a.EntryPaid && cost.IsPositive && !Ledger.TryDebit(Clock.Today,"城市活动",cost,serviceTitle,new LedgerAttribution(LedgerBusinessKind.Personal,activityId:a.Id,sourceEventId:a.Id+":entry",transactionKind:"活动消费")))
                     {EndCityActivity(a,CityActivityPhase.Cancelled,"开始时现金不足，未扣活动费",now);continue;}
@@ -411,7 +415,7 @@ namespace PCShopSell.Core.Session
                     Say("开始"+serviceTitle+"："+def.StartText+"。世界时间和后台经营正常继续。");
                 }
                 // A service ending exactly at closing has fulfilled its full duration.
-                if(CurrentPlace!=venue||!IsOwnedVenue(venue)&&!CityWithinHours(Clock.MinuteOfDay,venue.OpenMinute,venue.CloseMinute)&&now<a.ActualStart+a.Duration||_sleeping||IsWorking||IsGameOver)
+                if(CurrentPlace!=venue||now<a.ActualStart+a.Duration&&!CityVenueFits(venue,now,1)||_sleeping||IsWorking||IsGameOver)
                 {EndCityActivity(a,CityActivityPhase.Interrupted,"离开场所或被必要状态中断，只保留已发生阶段",now);continue;}
                 long elapsed=now-a.ActualStart;
                 if(elapsed>=a.Duration/3 && a.Stage<1)
@@ -420,13 +424,14 @@ namespace PCShopSell.Core.Session
                     if(!a.MealApplied)
                     {
                         a.MealApplied=true;
-                        Player.Hunger=Math.Min(100,Player.Hunger+def.Hunger);
-                        if(def.Energy<0)Player.SpendEnergy(-def.Energy);
-                        else Player.Energy=Math.Min(Player.MaxEnergy,Player.Energy+def.Energy);
-                        Player.Mood=Math.Max(0,Math.Min(100,Player.Mood+def.Mood));
-                        Player.Nutrition=Math.Max(0,Math.Min(100,Player.Nutrition+def.Nutrition));
+                        var service = def.Service(a.ServiceChoice);
+                        Player.Hunger=Math.Min(100,Player.Hunger+service.Hunger);
+                        if(service.Energy<0)Player.SpendEnergy(-service.Energy);
+                        else Player.Energy=Math.Min(Player.MaxEnergy,Player.Energy+service.Energy);
+                        Player.Mood=Math.Max(0,Math.Min(100,Player.Mood+service.Mood));
+                        Player.Nutrition=Math.Max(0,Math.Min(100,Player.Nutrition+service.Nutrition));
                     }
-                    Say(def.MidText);
+                    Say(CityActivityMidText(a));
                 }
                 if(elapsed>=a.Duration)EndCityActivity(a,CityActivityPhase.Completed,def.EndText,now);
             }
@@ -437,6 +442,7 @@ namespace PCShopSell.Core.Session
             var a=_cityActivities.FirstOrDefault(x=>x.Id==activityId&&x.State==CityActivityPhase.Running);
             var def=CityActivityService(a);
             if(def==null||choice<0||choice>=def.Choices.Length||CurrentPlace?.Id!=a.VenueId)return false;
+            if (a.ServiceConfirmed && choice < def.ServiceCount && choice != a.ServiceChoice) return false;
             string key=choice.ToString();if(a.Choices.Contains(key)){Say("已经做过这个互动，可以继续相处等待活动结束。");return true;}
             a.Choices=a.Choices.Concat(new[]{key}).ToArray();
             if(!a.MidApplied)
@@ -445,7 +451,7 @@ namespace PCShopSell.Core.Session
                 foreach(var p in a.Participants){AddRelation(p.PersonId,1);RememberSocial(p.PersonId,"活动中："+def.Choices[choice]);}
             }
             OnCityActivityChoice(a,choice);
-            Say(def.Choices[choice]+"："+(choice<2?def.MidText:"聊到各自的兴趣和近况。"));return true;
+            Say(def.Choices[choice]+"："+(choice<def.ServiceCount?CityActivityMidText(a):"聊到各自的兴趣和近况。"));return true;
         }
         public bool CancelCityActivity(string id,bool early=false)
         {
@@ -464,9 +470,10 @@ namespace PCShopSell.Core.Session
             if(phase==CityActivityPhase.Completed&&!a.RewardApplied)
             {
                 a.RewardApplied=true;var def=CityActivityService(a);
+                var service = def.Service(a.ServiceChoice);
                 foreach(var participant in a.Participants)
                 {
-                    AddRelation(participant.PersonId,def.Relation);_cityTrust[participant.PersonId]=CityTrust(participant.PersonId)+1;
+                    AddRelation(participant.PersonId,service.Relation);_cityTrust[participant.PersonId]=CityTrust(participant.PersonId)+1;
                     _outingDay[participant.PersonId]=Clock.Today.TotalDays;
                     RememberSocial(participant.PersonId,"实际完成"+def.Name+"。"+reason);
                     if(a.DefinitionId=="dinner"&&!IsMet(participant.PersonId))
@@ -475,9 +482,10 @@ namespace PCShopSell.Core.Session
                         Say("聚餐后和"+(CityPerson(participant.PersonId)?.Name??"同行者")+"互留了联系方式，已存入通讯录。");
                     }
                 }
-                Player.Health=Math.Max(0,Math.Min(100,Player.Health+def.Health));
-                Player.Charm=Math.Min(100,Player.Charm+def.Charm);
-                Player.Intelligence=Math.Min(100,Player.Intelligence+def.Intelligence);
+                Player.Health=Math.Max(0,Math.Min(100,Player.Health+service.Health));
+                Player.ChangeStress(-Math.Max(0, service.Mood) * .5);
+                Player.Charm=Math.Min(100,Player.Charm+service.Charm);
+                Player.Intelligence=Math.Min(100,Player.Intelligence+service.Intelligence);
                 RecordCommunityOuting(a);
                 OnCityActivityCompleted(a);
             }

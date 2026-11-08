@@ -27,7 +27,7 @@ namespace PCShopSell.Core.Session
             var route = PlanCityRoute(person, shop.Place.Id, Clock.Now.TotalMinutes);
             if (route == null) return;
             customer.PersonId = person.PersonId;
-            person.VisitId = customer.VisitId; person.Task = CityPersonTask.Shopping; person.TaskLabel = "到" + shop.Place.Name + "购物";
+            person.VisitId = customer.VisitId; person.Task = CityPersonTask.Shopping; person.TaskLabel = "到" + ShopTitle(shop) + "购物";
             person.Route = route; person.LocationPlaceId = null;
 
         }

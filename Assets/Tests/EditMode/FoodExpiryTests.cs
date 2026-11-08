@@ -6,6 +6,25 @@ namespace PCShopSell.Tests
 {
     public class FoodExpiryTests
     {
+        [TestCase("veg")]
+        [TestCase("egg")]
+        [TestCase("tofu")]
+        [TestCase("pork")]
+        public void StoredIngredientOnlyGainsAnExpiryAfterCooking(string id)
+        {
+            var pantry = new Pantry();
+            pantry.AddIngredient(id, 2);
+            Assert.AreEqual(FoodBatch.NoExpiry, pantry.Ingredient[0].ExpireDay);
+            Assert.IsEmpty(pantry.Spoil(20));
+            const long cookAt = 20 * 1440;
+            Assert.True(pantry.StartCook(0.25, id, cookAt, out var error), error);
+            var meal = pantry.FinishCook(cookAt + Pantry.CookMinutes);
+            Assert.AreEqual(21, meal.ExpireDay);
+            Assert.IsNotEmpty(pantry.Spoil(22));
+            Assert.AreEqual(0, pantry.CookedBowls);
+            Assert.AreEqual(1, pantry.IngredientCount(id));
+        }
+
         [Test] public void ExpiryCountdown_UsesTheSameInclusiveDayBoundaryAsSpoilage()
         {
             var batch = new FoodBatch { Id = "rice", Name = "白米饭", Count = 1, ExpireDay = 1 };

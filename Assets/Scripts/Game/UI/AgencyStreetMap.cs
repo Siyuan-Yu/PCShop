@@ -20,22 +20,19 @@ namespace PCShopSell.Game.UI
         public readonly struct PedestrianBand
         {
             public readonly Vector2 From, To;
-            public readonly float Height;
+            public readonly float Height, Width;
             public readonly int Level;
-            public PedestrianBand(Vector2 from,Vector2 to,float height,int level)
-            { From=from; To=to; Height=height; Level=level; }
+            public PedestrianBand(Vector2 from,Vector2 to,float height,float width,int level)
+            { From=from; To=to; Height=height; Width=width; Level=level; }
         }
 
         public static readonly Color RentalAvailable = new Color(.15f, 1f, .38f);
         public static readonly Color RentalUpcoming = new Color(1f, .5f, .06f);
-        public static readonly Color PedestrianBandOutline = new Color32(28,32,49,255);
         private static readonly Color[] PedestrianBandColors =
         {
-            new Color32(41,218,248,255), new Color32(156,105,255,255), new Color32(255,63,126,255)
+            new Color32(174,234,244,255), new Color32(80,179,201,255), new Color32(16,106,132,255)
         };
-        private static readonly float[] PedestrianBandWidths = { .58f, .92f, 1.28f };
         public static Color PedestrianBandColor(int level) => PedestrianBandColors[level];
-        public static float PedestrianBandWidth(int level) => PedestrianBandWidths[level];
 
         private GameObject _rentalGlow;
         private GameObject _pedestrianOverlay;
@@ -128,42 +125,45 @@ namespace PCShopSell.Game.UI
         {
             _pedestrianOverlay = new GameObject("AgencyPedestrianOverlay");
             _pedestrianOverlay.SetActive(false);
-            BuildBandMesh("StreetFlowOutline",null,PedestrianBandOutline);
-            BuildBandMesh("StreetFlowLow",0,PedestrianBandColor(0));
-            BuildBandMesh("StreetFlowMedium",1,PedestrianBandColor(1));
-            BuildBandMesh("StreetFlowHigh",2,PedestrianBandColor(2));
-
-            void BuildBandMesh(string name,int? level,Color tint)
+            var roadIndex = new RoadSurfaceGeometry.Index();
+            var vertices = new[] { new List<Vector3>(), new List<Vector3>(), new List<Vector3>() };
+            var indices = new[] { new List<int>(), new List<int>(), new List<int>() };
+            // Use the same ownership order as the road mesh so intersections have one fill.
+            foreach (var band in bands.OrderByDescending(b => b.Height).ThenByDescending(b => (b.To - b.From).sqrMagnitude))
             {
-                bool outline = !level.HasValue;
-                var vertices = new List<Vector3>();
-                var indices = new List<int>();
-                foreach (var band in bands)
+                var road = RoadSurfaceGeometry.Road(band.From, band.To, band.Width);
+                var parts = roadIndex.Cut(new List<Vector2[]> { road }, road);
+                roadIndex.Add(road);
+                var points = vertices[band.Level];
+                var triangles = indices[band.Level];
+                foreach (var part in parts)
                 {
-                    if (!outline && band.Level!=level) continue;
-                    float width = PedestrianBandWidth(band.Level)+(outline ? .26f : 0f);
-                    float height = band.Height+(outline ? 0f : .018f);
-                    var strip = RoadSurfaceGeometry.Road(band.From,band.To,width);
-                    int first = vertices.Count;
-                    foreach (var point in strip)
-                        vertices.Add(new Vector3(point.x,height,point.y));
-                    for (int i=1; i<strip.Length-1; i++)
+                    int first = points.Count;
+                    foreach (var point in part) points.Add(new Vector3(point.x, band.Height, point.y));
+                    for (int i = 1; i < part.Length - 1; i++)
                     {
-                        indices.Add(first);
-                        indices.Add(first+i+1);
-                        indices.Add(first+i);
+                        triangles.Add(first);
+                        triangles.Add(first + i + 1);
+                        triangles.Add(first + i);
                     }
                 }
-                if (vertices.Count==0) return;
+            }
+            BuildBandMesh("StreetFlowLow", 0);
+            BuildBandMesh("StreetFlowMedium", 1);
+            BuildBandMesh("StreetFlowHigh", 2);
+
+            void BuildBandMesh(string name,int level)
+            {
+                if (vertices[level].Count==0) return;
                 var mesh = new Mesh { name = name, indexFormat = IndexFormat.UInt32 };
-                mesh.SetVertices(vertices);
-                mesh.SetTriangles(indices,0);
+                mesh.SetVertices(vertices[level]);
+                mesh.SetTriangles(indices[level],0);
                 _pedestrianMeshes.Add(mesh);
                 var go = new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer));
                 go.transform.SetParent(_pedestrianOverlay.transform,false);
                 go.GetComponent<MeshFilter>().sharedMesh = mesh;
                 var renderer = go.GetComponent<MeshRenderer>();
-                renderer.sharedMaterial = Mats.Unlit(tint);
+                renderer.sharedMaterial = Mats.Unlit(PedestrianBandColor(level));
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
             }

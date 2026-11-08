@@ -20,7 +20,7 @@ namespace PCShopSell.EditorTools
             ShaderUtil.allowAsyncCompilation=false;UrpSetup.Ensure();
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);BuildRig();
             _game=new GameObject("Game").AddComponent<GameController>();_game.Bootstrap(false,7);_game.Ui.QuestPopups=false;
-            var s=_game.Session;s.EventsEnabled=false;s.DebugAddCash(500000);Check(s.DebugRentStarterShop(),"测试夹具实际租下起始店");s.Clock.Restore(new GameDate(15),600);
+            var s=_game.Session;s.EventsEnabled=false;s.DebugAddCash(500000);Check(s.DebugRentStarterShop(computerScenario: true),"测试夹具实际租下起始店");s.Clock.Restore(new GameDate(15),600);
             foreach(var canvas in _game.Ui.Canvases){canvas.renderMode=RenderMode.ScreenSpaceCamera;canvas.worldCamera=_game.Cam;canvas.planeDistance=1;}
             Teleport(s,s.PlayerShopPlace.Id);_game.Ui.CloseAllWindows();
             Check(s.SetShopMainCategory("restaurant"),"可开餐馆");
@@ -28,7 +28,7 @@ namespace PCShopSell.EditorTools
             string[] kitchen={"restaurant_prep","restaurant_stove","restaurant_pass",FurnitureCatalog.Fridge};
             for(int i=0;i<kitchen.Length;i++)shop.Layout.Add(new PlacedFurniture{Id=kitchen[i],X=1+i*1.25,Z=4.8});
             shop.Layout.Add(new PlacedFurniture{Id="restaurant_table",X=2,Z=2});shop.Layout.Add(new PlacedFurniture{Id="restaurant_table",X=4,Z=2});
-            shop.Fridge.Food.RiceKg=1;shop.Fridge.Food.AddIngredient("veg",3,15);shop.Sim.ForcedClosed=false;
+            shop.Fridge.Food.RiceKg=1;shop.Fridge.Food.AddIngredient("veg",3);shop.Sim.ForcedClosed=false;
             var state=s.SpecialBusiness(shop.Place.Id);state.NextVisit=long.MaxValue;
             state.Orders.Add(new DiningOrder{Id=state.NextId++,Recipe=0,Table=0,Stage=DiningStage.Waiting,Arrived=s.Clock.Now.TotalMinutes,Price=18});
             _game.Ui.OnEnteredPlace(s.CurrentPlace);_game.Ui.OpenDock();Frame(0);

@@ -70,7 +70,7 @@ namespace PCShopSell.Tests
             for (int i = 0; i < s.HomeLayout.Count; i++)
                 Assert.IsNull(RoomPlanner.Check(RoomSpec.Home, s.HomeLayout, defs[i], s.HomeLayout[i], i, null), s.HomeLayout[i].Id);
             Assert.AreEqual(1.0, s.HomeSleepQuality, 1e-9);
-            Assert.AreEqual(Pantry.StartRiceKg, s.Pantry.RiceKg, 1e-9, "开局有 2.5 千克米");
+            Assert.AreEqual(Pantry.StartRiceKg, s.HomeBox.Food.RiceKg, 1e-9, "开局大米在家中后仓");
         }
 
         [Test]
@@ -527,7 +527,7 @@ namespace PCShopSell.Tests
             s.Player.Hunger = 30;
             long t0 = s.Clock.Now.TotalMinutes;
             Assert.IsTrue(s.CookRice(0.5, null));
-            Assert.AreEqual(2.0, s.Pantry.RiceKg, 1e-9, "米马上用掉");
+            Assert.AreEqual(Pantry.StartRiceKg - 0.5, s.HomeBox.Food.RiceKg, 1e-9, "米马上用掉");
             Assert.AreEqual(t0, s.Clock.Now.TotalMinutes, "点了就开始焖，时间不会卡住");
             Assert.AreEqual(0, s.Pantry.CookedBowls, "还没焖好");
             Assert.AreEqual(Pantry.CookMinutes, s.Pantry.CookMinutesLeft(t0));
@@ -562,11 +562,34 @@ namespace PCShopSell.Tests
             GameSessionTests.Teleport(s, "pc");
             Assert.IsFalse(s.CookRice(0.5, null), "不在家");
             GameSessionTests.Teleport(s, "flat");
-            Assert.IsFalse(s.CookRice(6, null), "只有 2.5 千克米");
+            Assert.IsFalse(s.CookRice(Pantry.StartRiceKg + 0.25, null), "超过库存不能煮饭");
             Assert.IsFalse(s.CookRice(0.5, "egg"), "没有鸡蛋");
             int cooker = s.HomeLayout.ToList().FindIndex(p => p.Id == FurnitureCatalog.TableCooker);
             Assert.IsTrue(s.StoreFurniture(false, cooker));
             Assert.IsFalse(s.CookRice(0.5, null), "没摆电饭锅");
+        }
+
+        [Test]
+        public void Cook_UsesCombinedBackpackAndWarehouseSupplies()
+        {
+            using var s = Make();
+            GameSessionTests.Teleport(s, "flat");
+            s.Backpack.Food.RiceKg = 0.5;
+            s.Backpack.Food.AddIngredient("pork", 1);
+            s.HomeBox.Food.RiceKg = 0.75;
+            s.HomeBox.Food.AddIngredient("pork", 1);
+
+            Assert.AreEqual(1.25, s.HomeCookingRiceKg);
+            Assert.AreEqual(2, s.HomeCookingIngredientCount("pork"));
+            Assert.IsFalse(s.CookRice(1.25, "pork"), "米够但配菜不足时不扣材料");
+            Assert.AreEqual(1.25, s.HomeCookingRiceKg);
+            Assert.AreEqual(2, s.HomeCookingIngredientCount("pork"));
+
+            Assert.IsTrue(s.CookRice(1, "pork"));
+            Assert.Zero(s.Backpack.Food.RiceKg);
+            Assert.AreEqual(0.25, s.HomeBox.Food.RiceKg);
+            Assert.Zero(s.HomeCookingIngredientCount("pork"));
+            Assert.AreEqual("pork", s.Pantry.Cooking.Batch.Id);
         }
 
         [Test]
@@ -588,16 +611,16 @@ namespace PCShopSell.Tests
             GameSessionTests.Teleport(s, "farm");
             Assert.IsTrue(s.BuyIngredient("egg", 2));
             Assert.IsTrue(s.BuyRice(2));
-            Assert.AreEqual(Pantry.StartRiceKg, s.Pantry.RiceKg, 1e-9, "还在背包里，没到家");
+            Assert.AreEqual(Pantry.StartRiceKg, s.HomeBox.Food.RiceKg, 1e-9, "新买的大米还在背包里");
             Assert.AreEqual(2.0, s.Backpack.Food.RiceKg, 1e-9);
             GameSessionTests.Teleport(s, "flat");
             Assert.AreEqual(2.0, s.Backpack.Food.RiceKg, 1e-9, "回家也不会自己消失");
             Assert.IsTrue(s.UnloadBackpack());
-            Assert.AreEqual(Pantry.StartRiceKg + 2, s.Pantry.RiceKg, 1e-9, "打开背包一键放进厨房");
+            Assert.AreEqual(Pantry.StartRiceKg + 2, s.HomeBox.Food.RiceKg, 1e-9, "打开背包一键放进家中后仓");
             Assert.AreEqual(0.0, s.Backpack.Food.RiceKg, 1e-9);
             Assert.IsTrue(s.CookRice(0.5, "egg"));
             WaitMinutes(s, Pantry.CookMinutes);
-            Assert.AreEqual(1, s.Pantry.IngredientCount("egg"));
+            Assert.AreEqual(1, s.HomeBox.Food.IngredientCount("egg"));
             Assert.Greater(s.Pantry.Cooked.Last().Hunger, Pantry.BaseBowlHunger);
             Assert.AreEqual("鸡蛋焖饭", s.Pantry.Cooked.Last().Name);
         }
@@ -618,12 +641,12 @@ namespace PCShopSell.Tests
             Assert.AreEqual(rice + fee + Ingredients.Get("egg").Price * 3, before - s.Ledger.Balance, "同一车不再收运费");
             Assert.AreEqual(0.0, s.Backpack.Food.RiceKg, 1e-9, "叫车的不进背包");
             Assert.AreEqual(1, s.Couriers.Count);
-            double rice0 = s.Pantry.RiceKg;
+            double rice0 = s.HomeBox.Food.RiceKg;
             s.Leave();
             WaitMinutes(s, minutes + 1);
             Assert.AreEqual(0, s.Couriers.Count);
-            Assert.AreEqual(rice0 + 20, s.Pantry.RiceKg, 1e-9, "送进家里厨房");
-            Assert.AreEqual(3, s.Pantry.IngredientCount("egg"));
+            Assert.AreEqual(rice0 + 20, s.HomeBox.Food.RiceKg, 1e-9, "送进家中后仓");
+            Assert.AreEqual(3, s.HomeBox.Food.IngredientCount("egg"));
         }
 
         [Test]
@@ -695,9 +718,9 @@ namespace PCShopSell.Tests
             GameSession l = GameSession.Load(s.City, s.CreateSave());
             Assert.AreEqual(1, l.Couriers.Count);
             Assert.IsTrue(l.SendByCourier);
-            double rice0 = l.Pantry.RiceKg;
+            double rice0 = l.HomeBox.Food.RiceKg;
             WaitMinutes(l, s.CourierQuote(false).minutes + 2);
-            Assert.AreEqual(rice0 + 5, l.Pantry.RiceKg, 1e-9);
+            Assert.AreEqual(rice0 + 5, l.HomeBox.Food.RiceKg, 1e-9);
         }
 
         [Test]
@@ -821,7 +844,7 @@ namespace PCShopSell.Tests
             Assert.AreEqual(Pantry.CookMinutes - 10, loaded.Pantry.CookMinutesLeft(loaded.Clock.Now.TotalMinutes));
             WaitMinutes(loaded, Pantry.CookMinutes - 10);
             Assert.AreEqual(4, loaded.Pantry.CookedBowls);
-            Assert.AreEqual(s.Pantry.RiceKg, loaded.Pantry.RiceKg, 1e-9);
+            Assert.AreEqual(s.HomeBox.Food.RiceKg, loaded.HomeBox.Food.RiceKg, 1e-9);
         }
 
         [Test]

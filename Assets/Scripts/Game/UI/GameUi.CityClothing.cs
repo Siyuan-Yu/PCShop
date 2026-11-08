@@ -23,7 +23,11 @@ namespace PCShopSell.Game.UI
             var o=Outfits.Get(_cityClothingPreview)??S.Outfit;
             _avatarPreview=_avatarPreview??new AvatarPreview();_avatarPreview.Render(o.Id);
             var row=Ui.Row(w.Content,240,12);
-            var img=Ui.Rect(row,"ClothingPreview").gameObject.AddComponent<RawImage>();img.texture=_avatarPreview.Texture;img.raycastTarget=false;Ui.Size(img,184,234);
+            var portrait = Ui.Size(Ui.Rect(row, "ClothingPreview"), 184, 234);
+            var img = Ui.Rect(portrait, "Image").Fill().gameObject.AddComponent<RawImage>();
+            img.texture = _avatarPreview.Texture;
+            img.raycastTarget = false;
+            FitImageToParent(img);
             Ui.Size(Ui.Label(row,$"<b>{o.Name}</b> · {o.FictionalBrandId} / {o.TierName}\n适温 {o.ComfortMinC:0}—{o.ComfortMaxC:0}℃\n{o.Description}\n\n当前装备：{S.Outfit.Name}\n预览仅试穿；不会购买、换装或增加所有权。\n衣着魅力 +{o.CharmBonus}（总魅力只计算已装备一套）",17,TextAnchor.MiddleLeft),-1,234,1);
             var actions=Ui.Row(w.Content,40,8);
             Ui.Size(Ui.Button(actions,"取消试穿 / 还原",()=>{_cityClothingPreview=S.EquippedOutfit;w.Rebuild();},17),-1,40,1);

@@ -43,7 +43,7 @@ namespace PCShopSell.Tests
                     Assert.AreEqual(1,loaded.HomeTier);Assert.Zero(loaded.HomeMortgageCents);Assert.Zero(loaded.HomeMonthlyPrincipalCents);
                     Assert.AreEqual(s.HomePriceCents,loaded.HomePriceCents);Assert.AreEqual(s.Ledger.Balance,loaded.Ledger.Balance);
                     Assert.True(loaded.SellHome());Assert.Zero(loaded.HomePriceCents);
-                    Assert.AreEqual(Money.FromYuan(1200),loaded.CurrentHomeRent);
+                    Assert.AreEqual(Money.FromYuan(280),loaded.CurrentHomeRent);
                 }
             }
         }

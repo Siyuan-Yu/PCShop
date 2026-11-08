@@ -199,7 +199,7 @@ namespace PCShopSell.Game.UI
                 foreach(var ingredient in Ingredients.All)
                 {
                     var item=ingredient;
-                    Offer("ing:"+item.Id,item.Name,"菜蛋肉",item.WeightKg,item.PricePerKg.Scale(item.WeightKg),"可焖「"+item.DishName+"」 · 保鲜 "+item.ShelfDays+" 天",()=>S.CartAddIngredient(item.Id,1));
+                    Offer("ing:"+item.Id,item.Name,"菜蛋肉",item.WeightKg,item.PricePerKg.Scale(item.WeightKg),"可焖「"+item.DishName+"」",()=>S.CartAddIngredient(item.Id,1));
                 }
             }
             if(!wholesale && !expo)
@@ -209,7 +209,8 @@ namespace PCShopSell.Game.UI
                     Offer("upgrade:"+item.Id,item.Name,source.Business==GameSession.MallBusiness?"电器":"店铺设备",0,item.Price,item.Description+" · 购后安装到门店，不占货运空间",()=>S.CartAddUpgrade(item.Id),
                         ()=>S.HasUpgrade(item.Id)?0:Math.Max(0,1-S.CartAmount("upgrade:"+item.Id)));
                 }
-            Line(w.Content,"商品购买 · "+(S.IsPlaceOpen(source)?"营业中 · ":"已打烊 · ")+S.OpeningHoursText(source),19,Ui.Accent);
+            bool storeOpen = S.IsPlaceOpen(source);
+            Line(w.Content,"商品购买 · "+(storeOpen?"营业中 · ":"已打烊 · ")+S.OpeningHoursText(source),19,Ui.Accent);
             if (source.Kind == PlaceKind.Wholesaler)
                 Para(w.Content, "按配件分类选货，不同档口的商品可以一起结账。每个档口单独计算每日可售数量。", 16, Ui.Dim);
             var missing=S.HasShop && source.Business==GameSession.MallBusiness && !S.QuestCompleted("mall")
@@ -239,23 +240,34 @@ namespace PCShopSell.Game.UI
             var visible=offers.Where(o=>(tab=="全部" || o.Group==tab
                 || tab=="开店清单" && missing.Any(id=>o.Key=="furn:"+id)) && (season=="全部" || o.Season==season)).ToList();
             if(visible.Count==0)Para(list,offers.Count==0?"这里暂时没有可购买的商品。":"当前筛选下没有商品，可切换品质或季节。",18,Ui.Dim);
+            bool supportsMaximum = wholesale || expo || source.Kind == PlaceKind.Wholesaler;
             foreach(var product in visible)
             {
                 var item=product;double remaining=item.Remaining?.Invoke()??double.PositiveInfinity;
+                double amount = S.CartAmount(item.Key);
+                bool limited = !double.IsInfinity(remaining);
+                bool canAdd = storeOpen && remaining > 0;
                 var row=Ui.Row(list,84,10);
                 string detail=item.Season==null?item.Detail:item.Season+" · "+item.Detail;
                 string label=item.Kg>0?ProductLabel(item.Name,item.Kg,detail):item.Name+"\n<size=14>登记为已购资产，不占背包或货车空间</size>\n<size=14>"+detail+"</size>";
                 Ui.Size(ProductText(row,label,17),-1,-1,1);
                 Ui.Size(Ui.Label(row,item.Price.ToString(),19,TextAnchor.MiddleLeft,Ui.Good),100);
                 if(item.Preview!=null)Ui.Size(Ui.Button(row,"试穿",item.Preview,16),68,38);
-                CartAddButton(w,row,item.Key,item.Add,"+1",58,S.IsPlaceOpen(source)&&remaining>0,maxAmount:
-                    double.IsPositiveInfinity(remaining)?1000:Math.Max(S.CartAmount(item.Key),S.CartAmount(item.Key)+remaining));
-                if((wholesale||expo||source.Kind==PlaceKind.Wholesaler)&&remaining>0&&!double.IsInfinity(remaining))
-                    Ui.Size(Ui.Button(row,"最大",()=>{
+                CartAddButton(w,row,item.Key,item.Add,"+1",58,canAdd,maxAmount:
+                    limited ? amount + Math.Max(0, remaining) : 1000);
+                if (supportsMaximum && limited)
+                {
+                    var maximum = Ui.Size(Ui.Button(row,"最大",()=>{
                         for(int n=0;n<1000;n++){double before=S.CartAmount(item.Key);if((item.Remaining?.Invoke()??0)<=0)break;item.Add();if(S.CartAmount(item.Key)<=before)break;}
                         w.RequestRebuild();
-                    },15),58);
-                if(remaining<=0)Ui.Size(Ui.Label(row,"已选满 / 已拥有",14,TextAnchor.MiddleLeft,Ui.Dim),106);
+                    },15,interactable:canAdd),58);
+                    if (remaining <= 0) maximum.Tip(amount > 0 ? "已选满" : "今日无可购库存");
+                }
+                else if (limited)
+                {
+                    string status = remaining > 0 ? "" : amount > 0 ? "已选满" : "已拥有";
+                    Ui.Size(Ui.Label(row,status,14,TextAnchor.MiddleCenter,Ui.Dim),58);
+                }
             }
             CartPanel(w,w.Content,wholesale||expo||source.Kind==PlaceKind.Wholesaler);
         }

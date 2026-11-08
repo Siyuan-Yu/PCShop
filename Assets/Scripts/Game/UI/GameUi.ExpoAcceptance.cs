@@ -37,7 +37,7 @@ namespace PCShopSell.Game.UI
                 {
                     var exhibit = S.BrandBusiness.Exhibits.OrderByDescending(e => e.Day).FirstOrDefault();
                     Line(body, "城郊开业 "+S.DistrictOperatingShops(0)+" / 5家 · 社区开业 "+S.DistrictOperatingShops(1)+"家", 18, Ui.Accent);
-                    Line(body, "住处："+S.HomeTitle+" · 月租 "+S.CurrentHomeRent, 17);
+                    Line(body, "住处："+S.HomeTitle+" · 周租 "+S.CurrentHomeRent, 17);
                     Line(body, "社区前置："+(S.DistrictPrerequisiteBlocker(1)??"已达成（5家城郊店＋100万元现金）"), 17, Ui.Good);
                     if(!S.DebugExpoBusinessBaseReady)
                     {

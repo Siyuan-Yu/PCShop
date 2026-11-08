@@ -20,6 +20,7 @@ namespace PCShopSell.Core.Session
         public int AssemblyMinutes = 90, PurchaseMinutes = 2;
         public int Charm = -1;
         public int Intelligence = 50;
+        public int Dexterity = 50, Stamina = 50;
         public bool AssemblyTrained;
         public EmployeePurchasePlan PurchasePlan = new EmployeePurchasePlan();
         public string LastPurchaseNote;
@@ -203,7 +204,7 @@ namespace PCShopSell.Core.Session
             var hired=_candidates[candidateIndex];AddShopEmployee(_focus,EmployeeRole.Cashier,hired);_employeeHireShops[hired.Id]=_focus.Place.Id;
             if(Employee==hired)_focus.EmployeeTrained = false;
             EverHired = true;
-            PlayerShop.Settings.EmployeeCheckoutMinutes = Employee.CheckoutMinutes;
+            PlayerShop.Settings.EmployeeCheckoutMinutes = EmployeeCheckoutCycleMinutes(Employee) - 1;
             _candidates.Clear();
             Show("雇到人了",IsDedicatedVenue(PlayerShopPlace)?$"{hired.Name}受聘为场馆值守员，默认每天 9:00–21:00，日薪 {hired.DailyWage}，按实际排班与到岗结算。可在员工管理调整班次。":$"{hired.Name} 每天 9:00–21:00 在本店收银（可在员工管理重新安排岗位），日薪 {hired.DailyWage}，每天结算。\n他在班就持续收银，你在店内装机或外出都不影响。");
             return true;
@@ -288,6 +289,8 @@ namespace PCShopSell.Core.Session
                     AssemblyMinutes = Random.Next(70, 131),
                     PurchaseMinutes = Random.Next(2, 7),
                     DailyWageYuan = fast ? Random.Next(150, 181) : Random.Next(100, 131),
+                    Dexterity = Random.Next(15, 96),
+                    Stamina = Random.Next(15, 96),
                 };
                 e.Description = fast ? "有收银经验，其他工作也愿意学" : "踏实肯干，做事比较仔细";
                 BindCityCandidate(e);

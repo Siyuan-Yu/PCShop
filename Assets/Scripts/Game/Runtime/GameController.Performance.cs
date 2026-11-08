@@ -62,7 +62,7 @@ namespace PCShopSell.Game
                 {
                     StartSession(NewSession(7));
                     Ui.QuestPopups = false; Session.EventsEnabled = false;
-                    Session.DebugAddCash(500000); Session.DebugRentStarterShop();
+                    Session.DebugAddCash(500000); Session.DebugRentStarterShop(computerScenario: true);
                     Session.Clock.Restore(new GameDate(0), 600);
                     Session.StopTrip(); Session.Leave();
                     var place = scenario.StartsWith("home") ? Session.Home : Session.MainShop.Place;

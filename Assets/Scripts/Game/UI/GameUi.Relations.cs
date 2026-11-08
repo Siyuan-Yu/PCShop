@@ -48,12 +48,12 @@ namespace PCShopSell.Game.UI
                 Ui.Size(side, -1, -1, 1);
                 ContactInfo sel = people.FirstOrDefault(c => c.Id == _contactSel);
                 if (sel != null) BuildContactDetail(Ui.Scroll(side, GraphHeight - 8), sel, people, w);
-                else BuildContactSummary(side, people);
+                else BuildContactSummary(Ui.Scroll(side, GraphHeight - 8), people, w);
 
                 RectTransform legend = Ui.Row(w.Content, 26, 14);
                 for (int i = 0; i < GroupNames.Length; i++)
                     Ui.Size(Ui.Label(legend, $"<color=#{ColorUtility.ToHtmlStringRGB(GroupColors[i])}>■</color> {GroupNames[i]}", 15, TextAnchor.MiddleLeft, Ui.Dim), 130);
-                Ui.Size(Ui.Label(legend, "越熟离“我”越近，连线越亮：<color=#8C99A8>脸熟</color> · <color=#73D1B8>熟人</color> · <color=#F2C64D>朋友</color>　细线：他们彼此认识", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
+                Ui.Size(Ui.Label(legend, "越熟越靠近「我」 · 细线表示彼此认识", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
             });
         }
 
@@ -128,7 +128,7 @@ namespace PCShopSell.Game.UI
             RectTransform imgRt = Ui.Rect(frame.transform, "Face").Fill(3);
             var raw = imgRt.gameObject.AddComponent<RawImage>();
             raw.texture = PortraitOf(c.Id);
-            raw.uvRect = new Rect(0.12f, 0.48f, 0.76f, 0.5f);
+            CropPortraitToSquare(raw);
             if (raw.texture == null) raw.color = new Color(0.25f, 0.28f, 0.33f);
             var b = imgRt.gameObject.AddComponent<Button>();
             b.targetGraphic = raw;
@@ -144,15 +144,14 @@ namespace PCShopSell.Game.UI
             PlaceAt(name.rectTransform, at + new Vector2(0, -size / 2 - 10), new Vector2(90, 20));
         }
 
-        private void BuildContactSummary(RectTransform side, List<ContactInfo> people)
+        private void BuildContactSummary(RectTransform side, List<ContactInfo> people, Window window)
         {
-            Ui.Size(Ui.Label(side, "认识的人", 22), -1, 34);
-            Ui.Size(Ui.Label(side, $"一共 {people.Count} 个", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 26);
+            Line(side, $"认识的人 · {people.Count}", 21);
             int close = people.Count(c => c.Level >= 60), mid = people.Count(c => c.Level >= 30 && c.Level < 60);
-            Ui.Size(Ui.Label(side, $"<color=#F2C64D>朋友以上 {close}</color>　<color=#73D1B8>熟人 {mid}</color>　脸熟 {people.Count - close - mid}", 16, TextAnchor.MiddleLeft), -1, 26);
+            Line(side, $"朋友 {close} · 熟人 {mid} · 脸熟 {people.Count - close - mid}", 16, Ui.Dim);
             foreach (ContactInfo c in people.OrderByDescending(c => c.Level).Take(12))
-                Ui.Size(Ui.Label(side, $"{c.Name}　<size=13><color=#ABB5A8>{c.Role}</color></size>　<color=#{ColorUtility.ToHtmlStringRGB(ClosenessColor(c.Level))}>{c.LevelName} {c.Level}</color>", 15, TextAnchor.MiddleLeft), -1, 24);
-            Para(side, "点图上的头像看他的详情、和谁有关系。", 15, Ui.Dim);
+                PersonSummary(side, c.Id, c.Name, $"{c.Role} · {c.LevelName} {c.Level}", 44,
+                    () => { _contactSel = c.Id; window.Rebuild(); });
         }
 
         private static string SocialMemoryTime(long minute) =>

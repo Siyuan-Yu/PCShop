@@ -39,7 +39,7 @@ namespace PCShopSell.Game.UI
                     OpenPlaceWindow(p, BuildAgency, 1660, 1000);
                     break;
                 case PlaceKind.Home when p != S.Home:
-                    Toast(S.CanSleepAt(p) ? "已到自有住宅。走近床按 F 休息，走回门口按 F 出门。" : "走近在家的住户按 F 交谈，走回门口按 F 告辞。");
+                    Toast(S.CanSleepAt(p) ? "已到住处。走近床按 F 休息，走回门口按 F 出门。" : "走近在家的住户按 F 交谈，走回门口按 F 告辞。");
                     break;
                 case PlaceKind.Home:
                     Toast("回到出租屋了。走近床、衣柜、电饭锅、纸箱或门，头顶出现提示时按 F；看房间信息点右上角“我的”。");
@@ -159,7 +159,7 @@ namespace PCShopSell.Game.UI
                     if(panel.Find("LeavePlaceFooter")==null)
                     {
                         var footer=Ui.Rect(panel,"LeavePlaceFooter").Anchor(0,0,1,0,16,10,16,-50);
-                        Ui.Button(footer,"离开"+S.PlaceTitle(p),()=>{if(S.CurrentPlace==p&&!S.IsWorking){CloseModalWindows();S.Leave();}},17,Ui.Warn).GetComponent<RectTransform>().Fill().name="LeavePlace";
+                        Ui.Button(footer,"离开"+S.PlaceTitle(p),()=>{if(S.CurrentPlace==p&&!S.IsWorking){CloseModalWindows();S.Leave();}},17).GetComponent<RectTransform>().Fill().name="LeavePlace";
                     }
                     ((RectTransform)win.Content.parent.parent).offsetMin=new Vector2(0,58);
                 }
@@ -170,6 +170,7 @@ namespace PCShopSell.Game.UI
         {
             Text t = Ui.Label(parent, text, size, TextAnchor.MiddleLeft, color);
             Ui.Size(t, -1, size + 12);
+            if (size >= 20 || (size >= 16 && color == Ui.Warn)) t.fontStyle = FontStyle.Bold;
             return t;
         }
 
@@ -328,7 +329,7 @@ namespace PCShopSell.Game.UI
         {
             _ledgerDay = S.Clock.Today.TotalDays;
             _ledgerPage = 0;
-            OpenWorkspace("ledger", "ledger", "现金流水", 1040, 830, w =>
+            OpenWorkspace("ledger", "ledger", "现金流水", 1040, 880, w =>
             {
                 int today = S.Clock.Today.TotalDays;
                 int span = _ledgerPeriod == 0 ? 1 : _ledgerPeriod == 1 ? 7 : 30;
@@ -353,11 +354,25 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(dates, "回到当前", () => { _ledgerDay = today; _ledgerPage = 0; w.Rebuild(); }, 17), 110);
 
                 var entries = S.Ledger.Entries.Where(e => e.Date >= from && e.Date <= to).ToList();
-                Money income = Money.FromCents(entries.Where(e => e.Amount.IsPositive).Sum(e => e.Amount.Cents));
-                Money expense = Money.FromCents(-entries.Where(e => e.Amount.IsNegative).Sum(e => e.Amount.Cents));
+                var dailyIncome = new long[end - start + 1];
+                var dailyExpense = new long[dailyIncome.Length];
+                foreach (var entry in entries)
+                {
+                    int day = entry.Date.TotalDays - start;
+                    if (entry.Amount.IsPositive) dailyIncome[day] += entry.Amount.Cents;
+                    else dailyExpense[day] -= entry.Amount.Cents;
+                }
+                Money income = Money.FromCents(dailyIncome.Sum());
+                Money expense = Money.FromCents(dailyExpense.Sum());
                 Line(w.Content, $"总收入 {income}    总支出 {expense}    净收支 {income - expense}", 21, Ui.Accent);
-                Line(w.Content, $"当前现金 {S.Ledger.Balance} · 包含经营、生活、打工、交通、购置、借还款等全部现金往来。", 16, Ui.Dim);
-                Para(w.Content, "现金流水包含借款、押金和个人收支；门店经营表现请看资产页。", 15, Ui.Dim);
+                Line(w.Content, $"当前现金 {S.Ledger.Balance} · 含经营、个人收支、购置和借还款。", 16, Ui.Dim);
+                var legend = Ui.Row(w.Content, 26);
+                Ui.Size(Ui.Label(legend, "每日现金收支", 18), -1, 26, 1);
+                Ui.Size(Ui.Label(legend, "● 收入", 15, TextAnchor.MiddleRight, Ui.Good), 74);
+                Ui.Size(Ui.Label(legend, "● 支出  ·  元", 15, TextAnchor.MiddleRight, AssetTrendGraphic.ExpenseColor), 105);
+                var chart = Ui.Size(Ui.Rect(w.Content, "LedgerCashTrend"), -1, 180);
+                chart.gameObject.AddComponent<AssetTrendGraphic>().Initialize(dailyIncome, dailyExpense, start, compact: false, groupedBars: true);
+
                 var filters = Ui.Row(w.Content, 36);
                 string[] filterNames = { "全部明细", "只看收入", "只看支出" };
                 for (int i = 0; i < filterNames.Length; i++)
@@ -374,7 +389,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(nav, "上一页", () => { _ledgerPage--; w.Rebuild(); }, 16, Ui.ButtonBg, _ledgerPage > 0), 100);
                 Ui.Size(Ui.Label(nav, $"共 {filtered.Count} 笔 · 第 {_ledgerPage + 1}/{pages} 页", 16, TextAnchor.MiddleCenter), -1, -1, 1);
                 Ui.Size(Ui.Button(nav, "下一页", () => { _ledgerPage++; w.Rebuild(); }, 16, Ui.ButtonBg, _ledgerPage + 1 < pages), 100);
-                RectTransform list = Ui.Scroll(w.Content, 400);
+                RectTransform list = Ui.Scroll(w.Content, 300);
                 if (filtered.Count == 0) Line(list, "这段时间没有符合条件的收支记录。", 18, Ui.Dim);
                 foreach (var e in filtered.Skip(_ledgerPage * pageSize).Take(pageSize))
                 {

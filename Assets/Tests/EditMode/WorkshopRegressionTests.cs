@@ -272,7 +272,12 @@ namespace PCShopSell.Tests
                         Assert.IsTrue(choice.IsChoiceOpen,"点击后必须展开");
                         var list=choice.transform.Find("Dropdown List");
                         var scroll=list.GetComponent<UnityEngine.UI.ScrollRect>();
-                        scroll.verticalNormalizedPosition=.3f;
+                        Assert.NotNull(scroll.verticalScrollbar?.handleRect, "展开的长列表需要可拖动的滚动条");
+                        var handle = scroll.verticalScrollbar.handleRect;
+                        Assert.AreEqual(UnityEngine.Vector2.zero, handle.offsetMin, "滑块不得超出轨道左下边界");
+                        Assert.AreEqual(UnityEngine.Vector2.zero, handle.offsetMax, "滑块不得超出轨道右上边界");
+                        scroll.verticalScrollbar.value=.3f;
+                        Assert.AreEqual(.3f,scroll.verticalNormalizedPosition,.01f,"滚动条应同步移动选项列表");
                         for(int tick=0;tick<4;tick++)
                         {
                             yield return new UnityEngine.WaitForSecondsRealtime(.45f);

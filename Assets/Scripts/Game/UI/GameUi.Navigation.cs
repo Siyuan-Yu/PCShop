@@ -97,9 +97,11 @@ namespace PCShopSell.Game.UI
             w.Rebuild(); w.Fitter.Fit(); Ui.RestoreScroll(w.Root, w.Root, page.Scroll);
         }
 
-        private void HelpLink(Transform parent, string title, string text)
+        private Button HelpLink(Transform parent, string title, string text)
         {
-            Ui.Size(Ui.Button(parent, "说明 · " + title, () => OpenWorkspace("help", title, title, 720, 580, w => Para(w.Content, text, 18)), 15), -1, 30).name = "Help_" + title;
+            var button = Ui.Size(Ui.Button(parent, "说明 · " + title, () => OpenWorkspace("help", title, title, 720, 580, w => Para(w.Content, text, 18)), 15), -1, 30);
+            button.name = "Help_" + title;
+            return button;
         }
 
         private static void DraftQuantityHints(Transform parent)

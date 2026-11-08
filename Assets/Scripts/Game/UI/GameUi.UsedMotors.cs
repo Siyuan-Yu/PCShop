@@ -10,8 +10,8 @@ namespace PCShopSell.Game.UI
     {
         private void BuildUsedMotorShop(Window w,Place place)
         {
-            string id=place.Id;Line(w.Content,"二手车行 · 车源、人脉与成交",23,Ui.Accent);
-            Para(w.Content,"小/中/大店分别有2/4/6个展位。车友每周介绍车源；检测后可整备或挂牌。每3天可能收到一位买家报价，报价保留2天；售价过高可能无人问津。",17,Ui.Dim);
+            string id=place.Id;
+            HelpLink(w.Content,"二手车交易说明","车友每周介绍车源。检测后可整备或挂牌；每 3 天可能收到报价，买家的报价保留 2 天。");
             var stock=S.UsedMotors.Where(c=>c.ShopId==id).ToArray();Line(w.Content,"展位 "+stock.Length+" / "+S.UsedMotorCapacity(id),20);
             if(S.VentureAt(id)?.Paused==true)Ui.Size(Ui.Button(w.Content,"恢复车行营业",()=>{S.ToggleVenture(id);w.Rebuild();},18),-1,38);
             foreach(var s in stock)
@@ -35,11 +35,14 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(card,"接受买家 ¥"+c.Offer.ToString("N0")+" · 毛利 ¥"+(c.Offer-c.Cost).ToString("N0"),()=>ConfirmBusiness("交付二手车","收款并移交这台车，成交后从展位移除。",()=>{S.AcceptMotorBuyer(c.Vehicle.Id);w.Rebuild();}),18,Ui.ButtonHot),-1,42);
             }
             Line(w.Content,"车友介绍的车源 · 本周",21,Ui.Accent);
-            foreach(var lead in S.MotorLeads())
+            var leads=S.MotorLeads().ToArray();
+            foreach(var lead in leads)
             {
-                var l=lead;MotorChoice(w.Content,l.ModelId,S.CityPerson(l.PersonId).Name+"介绍 · "+MotorCatalog.Get(l.ModelId).Name+" · 收购 ¥"+l.Price.ToString("N0"),()=>ConfirmBusiness("收购二手车","成交后车辆进入本店展位，需要支付检测与可能的整备费用。",()=>{S.BuyMotorLead(id,l.Id);w.Rebuild();}),enabled:stock.Length<S.UsedMotorCapacity(id));
+                var l=lead;
+                PersonSummary(w.Content,l.PersonId,S.CityPerson(l.PersonId)?.Name??"车友","介绍车源",42);
+                MotorChoice(w.Content,l.ModelId,MotorCatalog.Get(l.ModelId).Name+" · 收购 ¥"+l.Price.ToString("N0"),()=>ConfirmBusiness("收购二手车","成交后车辆进入本店展位，需要支付检测与可能的整备费用。",()=>{S.BuyMotorLead(id,l.Id);w.Rebuild();}),enabled:stock.Length<S.UsedMotorCapacity(id));
             }
-            if(!S.MotorLeads().Any())Para(w.Content,"暂无新车源，去各级赛场认识车友；下周会有新的介绍。",17,Ui.Dim);
+            if(leads.Length==0)Line(w.Content,"暂无新车源 · 可去赛场认识车友",17,Ui.Dim);
             foreach(var v in S.Garage.Where(v=>MotorCatalog.ClassOf(MotorCatalog.Get(v.ModelId).Kind)==2))
             {var car=v;MotorChoice(w.Content,car.ModelId,"从车库移入展位 · "+MotorCatalog.Get(car.ModelId).Name,()=>{S.ConsignMotor(id,car.Id);w.Rebuild();},enabled:stock.Length<S.UsedMotorCapacity(id)&&S.MotorAvailable(car));}
         }

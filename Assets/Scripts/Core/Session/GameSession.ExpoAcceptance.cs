@@ -78,7 +78,7 @@ namespace PCShopSell.Core.Session
             {
                 PlaceId = _initialHome.Id,
                 PriceCents = ResidentialPrice(_initialHome).Cents,
-                MonthlyRentCents = ResidentialRent(_initialHome).Cents,
+                WeeklyRentCents = ResidentialRent(_initialHome).Cents,
                 BoughtDay = BrandDay,
                 CitySchema = 1,
                 UseMode = "vacant",
@@ -222,7 +222,7 @@ namespace PCShopSell.Core.Session
                 TopUpExpoAcceptanceCash();RefreshBrandTraffic();
             }
             finally{CurrentPlace=placeBefore;SetFocus(keep);}
-            Say("验收经营基础已补齐：城郊"+DistrictOperatingShops(0)+"家、社区"+DistrictOperatingShops(1)+"家开业门店；社区住处"+HomeTitle+"，月租"+CurrentHomeRent+"。租约、库存、工资与房租按正常系统继续结算。");
+            Say("验收经营基础已补齐：城郊"+DistrictOperatingShops(0)+"家、社区"+DistrictOperatingShops(1)+"家开业门店；社区住处"+HomeTitle+"，周租"+CurrentHomeRent+"。租约、库存、工资与房租按正常系统继续结算。");
             return true;
         }
 

@@ -39,10 +39,8 @@ namespace PCShopSell.Core.Session
                 foreach (var shop in _shops)
                     if (shop.Lease?.RentDue(date.TotalDays) == true) result.KnownMandatory += RentOf(shop);
                 if (PendingLease?.RentDue(date.TotalDays) == true) result.KnownMandatory += PendingLease.Rent;
-                if (date.IsMonthStart)
-                {
-                    result.KnownMandatory += CurrentHomeRent + HomeUtilitiesAtDay(date.TotalDays);
-                }
+                foreach (var place in ResidentialRentsDue(date.TotalDays)) result.KnownMandatory += SignedResidentialRent(place);
+                if (date.IsMonthStart) result.KnownMandatory += HomeUtilitiesAtDay(date.TotalDays);
             }
             result.EstimatedDaily = Money.FromYuan(VehicleCount(VehicleKind.Car) * 40L + VehicleCount(VehicleKind.Van) * 60L) * days;
             result.KnownMandatory += Money.FromCents(_employeePayroll.Sum(p=>Math.Max(0,p.OvertimeCents-p.Shops.Sum(x=>x.PaidOvertimeCents))));

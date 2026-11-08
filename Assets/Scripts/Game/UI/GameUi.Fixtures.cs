@@ -53,7 +53,7 @@ namespace PCShopSell.Game.UI
             string head = S.ShopFitted
                 ? "<color=#DDC18B>今天歇业装修，明天恢复营业。</color>"
                 : "<color=#DDC18B>店还没布置好，开不了业：</color>" + S.ShopFitGap();
-            Para(parent, head + "　<color=#9AA7B5>（在“装修”页里摆）</color>", 15);
+            Para(parent, head + "　<color=#AAB4BB>（在“装修”页摆放）</color>", 15);
         }
 
         /// <summary>“装修”页：这间店现在是什么状态、开店清单，以及进入编辑模式（俯视图）摆货架、柜台的入口。</summary>

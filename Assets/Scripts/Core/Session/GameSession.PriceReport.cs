@@ -20,7 +20,7 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         public static readonly string[] PriceGroups = PartCatalog.Categories.Select(PartCatalog.CategoryName)
-            .Concat(new[] { "米与食材", "烟酒饮料与礼品", "家具与货架", "快餐", "载具", "智能手机", "服装", "住宅售价", "住宅月租", "商铺售价", "商铺周租" }).ToArray();
+            .Concat(new[] { "米与食材", "烟酒饮料与礼品", "家具与货架", "快餐", "载具", "智能手机", "服装", "住宅售价", "住宅周租", "商铺售价", "商铺周租" }).ToArray();
         public static int PropertyPriceGroupStart => PriceGroups.Length - 4;
         private readonly List<PriceDay> _priceDays = new List<PriceDay>();
         private const string EconomicReportDisabled = "economy-report:disabled";

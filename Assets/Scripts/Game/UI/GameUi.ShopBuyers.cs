@@ -32,21 +32,19 @@ namespace PCShopSell.Game.UI
             {
                 if(!shop.Rented){w.Close();return;}
                 var buyers=S.Employees.Where(x=>x.Shop==shop&&x.Role==EmployeeRole.Buyer).ToArray();
-                Line(w.Content,$"本店 {buyers.Length} 名进货员 · 送达本店后仓（容量不限）",20,Ui.Accent);
+                Line(w.Content,$"{buyers.Length} 名进货员 · 送达本店后仓",20,Ui.Accent);
                 var list=BuyerScroll(w.Content);
                 list.parent.parent.name="ShopBuyersList";
                 if(buyers.Length==0)
                 {
                     Line(list,"本店还没有进货员",22);
-                    Para(list,"安排现有员工做进货员，或先到“员工”页聘用员工，再设置要采购的商品。",18,Ui.Dim);
-                    Ui.Size(Ui.Button(list,"安排现有员工",()=>ManageBuyerEmployees(w),18,Ui.ButtonHot),-1,42);
                     Ui.Size(Ui.Button(list,S.InPlayerShop?"招聘进货员":"管理员工",()=>{if(S.InPlayerShop){w.Close();OpenDock();SelectTab(ShopTab.Staff);}else OpenEmployeesPanel();},18),-1,42);
                 }
                 foreach(var assignment in buyers)
                 {
                     var person=assignment.Person;
                     var plan=person.PurchasePlan??new EmployeePurchasePlan();
-                    Line(list,person.Name+" · "+S.EmployeeStatus(assignment),21,Ui.Accent);
+                    PersonSummary(list,S.PersonIdOf(person),person.Name,S.EmployeeStatus(assignment));
                     string frequency=plan.Daily?plan.FrequencyText:"定期采购未启用 / 已暂停";
                     Line(list,frequency+" · "+(plan.InventoryThreshold?"库存阈值补货":"固定数量清单"),17);
                     if(plan.Daily)Line(list,S.EmployeePurchaseNextText(person.Id),15,Ui.Dim);
@@ -57,7 +55,7 @@ namespace PCShopSell.Game.UI
                         var offer=S.EmployeePurchaseOffer(line,plan.SourceId);
                         Para(list,GameSession.PurchaseItemName(line)+" ×"+line.Count+" · "+(offer?.Source.Name??"货源不可用"),17);
                     }
-                    if(items.Length>5)Line(list,"另有 "+(items.Length-5)+" 种商品，点“调整进货”查看完整清单。",16,Ui.Dim);
+                    if(items.Length>5)Line(list,"另有 "+(items.Length-5)+" 种商品",16,Ui.Dim);
                     if(items.Length>0||plan.InventoryThreshold)
                     {
                         var quote=S.EstimateEmployeePurchase(person.Id);
@@ -74,7 +72,8 @@ namespace PCShopSell.Game.UI
                     var actions=Ui.Row(list,42);
                     Ui.Size(Ui.Button(actions,"进货记录",()=>OpenBuyerHistory(shop,person.Id,person.Name),18),-1,-1,1);
                     Ui.Size(Ui.Button(actions,items.Length==0?"设置进货":"调整进货",()=>OpenEmployeePurchase(person.Id,w),18,Ui.ButtonHot),-1,-1,1);
-                    Line(list,"────────────────────────",16,Ui.Dim);
+                    var divider = Ui.Size(Ui.Panel(list, "Divider", Ui.Edge), -1, 1);
+                    divider.raycastTarget = false;
                 }
                 var footer=Ui.Row(w.Content,44);
                 footer.name="ShopBuyersActions";

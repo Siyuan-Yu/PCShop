@@ -3,6 +3,7 @@ using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
@@ -336,7 +337,7 @@ namespace PCShopSell.Tests
             Assert.AreEqual(RealEstate.Deposit(openingRent), s.Lease.Deposit);
             // 身家 = 现金 + 押金（租铺不再送货，配件是家具城任务的奖励）
             Assert.AreEqual(s.Ledger.Balance.Yuan + s.Lease.Deposit.Yuan, s.NetWorth().Yuan, "押金算进身家");
-            Assert.AreEqual(GameSession.MyShopName, s.PlaceTitle(s.PlayerShopPlace));
+            Assert.AreEqual("我的宠物用品店", s.PlaceTitle(s.PlayerShopPlace));
             Assert.IsFalse(s.Listings.Any(x => x.PlaceId == "pc"));
 
             GameSessionTests.Teleport(s, "pc");
@@ -465,7 +466,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void DebugRentStarterShop_RecreatesOldStart()
+        public void DebugRentStarterShop_OpensFittedPetShop()
         {
             GameSession s = NoShop();
             Money rent=s.ShopRentQuote(s.City.PlayerShop());
@@ -473,7 +474,9 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.DebugRentStarterShop());
             Assert.IsTrue(s.HasShop);
             Assert.AreEqual("pc", s.PlayerShopPlace.Id);
-            Assert.IsFalse(s.PlayerShop.Stock.IsEmpty, "送开局货");
+            Assert.AreEqual(PetShopCatalog.ShopKind, s.RetailKind);
+            Assert.IsNotNull(s.PetHouse(s.CurrentShop));
+            Assert.Greater(s.PlayerShop.Stock.GoodsCount(PetShopCatalog.CatFood), 0);
             Assert.AreEqual((Money.FromYuan(10000)-cost).Cents, s.Ledger.Balance.Cents);
             Assert.IsFalse(s.DebugRentStarterShop(), "有店了不能再用");
         }

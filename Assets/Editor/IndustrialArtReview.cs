@@ -54,7 +54,7 @@ namespace PCShopSell.EditorTools
                 Shot("city-layout",new Vector3(-20,0,160),0,55,570);
                 foreach(var canvas in game.Ui.Canvases)canvas.gameObject.SetActive(true);
                 Time(1100);game.Step(0);Shot("street-hud",center,shop.Place.Heading+25,36,23,true);
-                var s=game.Session;s.DebugRentStarterShop();game.Ui.CloseAllWindows();s.Leave();s.ArriveAtNode(s.PlayerShopPlace.NodeId);s.Clock.Restore(s.Clock.Today,600);s.Enter(s.PlayerShopPlace);
+                var s=game.Session;s.DebugRentStarterShop(computerScenario: true);game.Ui.CloseAllWindows();s.Leave();s.ArriveAtNode(s.PlayerShopPlace.NodeId);s.Clock.Restore(s.Clock.Today,600);s.Enter(s.PlayerShopPlace);
                 game.Step(0);game.Ui.OnEnteredPlace(s.CurrentPlace);game.Interior.StandAtCounter();game.Step(0);game.Ui.OpenDock();
                 Vector3 inside=ShopInteriorView.Origin+new Vector3(game.Interior.Width*.5f,1,game.Interior.Depth*.5f);
                 Shot("shop-interior-ui",inside,35,38,7,true);

@@ -33,7 +33,7 @@ namespace PCShopSell.Core.Session
                 // Both stores still use the ordinary stock, staffing, service and save systems.
                 var branchPlace=city.GetPlace("life_unit_s_market_2");var rent=s.ShopRentQuote(branchPlace);
                 s.OpenNewShop(branchPlace,rent,RealEstate.Deposit(rent));
-                var branch=s._focus;s.FitStarterShop();s.AddStarterStock();
+                var branch=s._focus;s.SetOpeningShopKind("computer");s.FitStarterShop();s.AddStarterStock();
                 branch.Employee=new Employee{Id="city_test_branch_cashier",PersonId="life_qiao",Name="乔禾",DailyWageYuan=120,CheckoutMinutes=3};
                 var person=s.CityPersonState(s.PersonIdOf(branch.Employee));var pos=s.StandOf(branch.Place);
                 person.WorkPlaceId=branch.Place.Id;person.LocationPlaceId=branch.Place.Id;person.X=pos.X;person.Y=pos.Y;

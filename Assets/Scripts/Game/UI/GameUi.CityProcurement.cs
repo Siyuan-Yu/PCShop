@@ -18,17 +18,17 @@ namespace PCShopSell.Game.UI
             _procurementShopId = target?.Rented == true ? target.Place.Id : S.ShopAt(_procurementShopId)?.Place.Id ?? S.MyShops.FirstOrDefault()?.Place.Id;
             OpenWorkspace("procurement", "main", "商铺采购与补货", 1160, 840, w =>
             {
-                GuideHint(w.Content,QuestTarget.Restock,w.Rebuild);
+                S.VisitQuestTarget(QuestTarget.Restock);
                 var shop = S.ShopAt(_procurementShopId);
                 var tabs = Ui.Row(w.Content, 42);
                 Ui.Size(Ui.Button(tabs, "商品与补货", () => { _procurementOrders = false; _procurementAgreement = false; w.Rebuild(); }, 18, !_procurementOrders && !_procurementAgreement ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
                 Ui.Size(Ui.Button(tabs, "在途与订单", () => { _procurementOrders = true; _procurementAgreement = false; w.Rebuild(); }, 18, _procurementOrders && !_procurementAgreement ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
                 Ui.Size(Ui.Button(tabs, "直供协议与账款", () => { _procurementAgreement = true; w.Rebuild(); }, 18, _procurementAgreement ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
                 if (_procurementAgreement) { BuildDirectSupply(w); return; }
-                HelpLink(w.Content, "采购与补货说明", "选门店后可以查看库存和在途数量，也可以给本店进货员设置补货目标。");
+                HelpLink(w.Content, "采购与补货说明", "自动补货按库存、在途和已安排数量计算，订单材料优先。固定清单按指定数量采购，阈值模式按缺口补货。");
                 Para(w.Content, $"现金 {S.Ledger.Balance} · 共同保护额 {S.EffectiveRestockReserve} · 已安排预算 {S.ClaimedProcurementBudget}", 18, Ui.Accent);
                 Ui.Size(Ui.Button(w.Content,"全店补货预算",OpenProcurementBudget,16),-1,32).name="ProcurementBudget";
-                if (shop == null) { Para(w.Content, "经营进货需要合法使用的门店。普通生活购物仍可从手机或街上商户进入。", 18); return; }
+                if (shop == null) { Line(w.Content, "先开一家店，再安排进货", 18, Ui.Dim); return; }
                 var destinations = S.MyShops.Where(s=>s.Rented).ToArray();
                 Ui.Size(Ui.Choice(w.Content,destinations.Select(S.ShopTitle),Array.FindIndex(destinations,s=>s.Place.Id==_procurementShopId),
                     index=>{_procurementShopId=destinations[index].Place.Id;w.Rebuild();}),-1,38);
@@ -50,7 +50,6 @@ namespace PCShopSell.Game.UI
                     if (coverage.Target > 0 && assigned != null) restock += "\n" + assigned;
                     Ui.Size(Ui.Button(row, restock, () => OpenCityProcurementPolicy(shop.Place.Id, product.Kind, product.Id, product.Name, w), 16), 230, 60);
                 }
-                Para(w.Content, "自动补货按可用库存＋未交付供给＋已安排覆盖量计算；订单材料优先分配，不在零售目标中重复使用。固定清单仍按固定数量，阈值模式才按缺口补齐。", 15, Ui.Dim);
                 if (!string.IsNullOrEmpty(S.LastRestockNote)) Para(w.Content, S.LastRestockNote, 15, Ui.Accent);
             });
         }
@@ -99,8 +98,10 @@ namespace PCShopSell.Game.UI
                 foreach (var worker in workers)
                 {
                     var person = worker.Person;
-                    Ui.Size(Ui.Button(w.Content, person.Name + "（进货员）" + (draft.EmployeeId == person.Id ? " ✓" : ""), () =>
-                    { draft.EmployeeId = person.Id; w.Rebuild(); }, 18), -1, 44);
+                    var row = PersonSummary(w.Content, S.PersonIdOf(person), person.Name, "进货员", 50);
+                    bool selected = draft.EmployeeId == person.Id;
+                    Ui.Size(Ui.Button(row, selected ? "已选 ✓" : "选择", () =>
+                    { draft.EmployeeId = person.Id; w.Rebuild(); }, 17, selected ? Ui.ButtonHot : Ui.ButtonBg), 110, 38);
                 }
                 if (workers.Length == 0) Para(w.Content, "请先到员工管理安排本店进货员。", 16, Ui.Dim);
                 else Para(w.Content, S.ProcurementExecutorStatus(draft), 16, Ui.Accent);

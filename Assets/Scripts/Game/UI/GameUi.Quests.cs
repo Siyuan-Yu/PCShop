@@ -37,6 +37,7 @@ namespace PCShopSell.Game.UI
             _popupPending = false;
             _pendingDone = _pendingNext = null;
             _businessTab = 0;
+            _competitionPreviewKind = RetailShopTypes.Default;
         }
 
         private void BuildQuestTracker(Transform root)
@@ -44,7 +45,8 @@ namespace PCShopSell.Game.UI
             _questPanel = Ui.Panel(root, "QuestTracker", Ui.PanelBg);
             _questPanel.rectTransform.Anchor(0, 1, 0, 1, 16, -332, -456, 82);
 
-            _questHeading = Ui.Label(_questPanel.transform, "", 17, color: Ui.Accent);
+            _questHeading = Ui.Label(_questPanel.transform, "", 17, color: Ui.Warn);
+            _questHeading.fontStyle = FontStyle.Bold;
             _questHeading.rectTransform.Anchor(0, 1, 1, 1, 16, -37, 46, 10);
             _questTitle = Ui.Label(_questPanel.transform, "", 22);
             _questTitle.fontStyle = FontStyle.Bold;
@@ -149,7 +151,7 @@ namespace PCShopSell.Game.UI
             if (completion.HasValue) _questProgressFill.Anchor(0, 0, Mathf.Clamp01(completion.Value), 1);
             float textTop = completion.HasValue ? 116 : showProgress ? 99 : 77;
             _questText.rectTransform.offsetMax = new Vector2(-16, -textTop);
-            _questText.text = "<color=#E8BE62>下一步</color>　" + next
+            _questText.text = "<b><color=#A9C9A9>下一步</color></b>　" + next
                 + (string.IsNullOrEmpty(status) ? "" : "\n<size=15><color=#AAB4BB>" + status + "</color></size>");
             _questPanel.rectTransform.offsetMin = new Vector2(16, -(82 + textTop + 130));
             _questAction = action;
@@ -270,6 +272,9 @@ namespace PCShopSell.Game.UI
         {
             switch (target)
             {
+                case QuestTarget.Cooker:
+                    if (_ctrl.InHome) return ("打开电饭锅", OpenCookerWindow);
+                    return QuestPlaceAction("回家做饭", S.Home);
                 case QuestTarget.Agency:
                 case QuestTarget.Ventures: return QuestPlaceAction("前往中介", S.City.HasPlace("agency") ? S.City.GetPlace("agency") : null);
                 case QuestTarget.Mall: return QuestPlaceAction("前往家具城", S.City.Places.FirstOrDefault(p => p.Business == GameSession.MallBusiness));
@@ -370,28 +375,24 @@ namespace PCShopSell.Game.UI
             Para(w.Content, q.Hint, 18);
             if (q.Reward != null) Para(w.Content, "完成奖励：" + q.RewardText(S), 16, Ui.Good);
             ProgressLine(w.Content, q, 16);
-            Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
+            if (q.Lesson)
+            {
+                bool canComplete = S.CanCompleteQuestLesson(q.Id);
+                if (!canComplete) Para(w.Content, "按上面的指引操作后，回来确认完成。", 16, Ui.Dim);
+                Ui.Size(Ui.Button(w.Content, "已了解，完成这一步", () =>
+                {
+                    if (!S.CompleteQuestLesson(q.Id)) return;
+                    w.Close();
+                    UpdateQuestTracker();
+                }, 18, Ui.ButtonHot, canComplete), -1, 42);
+            }
+            else Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
         }
 
         private static void ResetGuideScroll(Window w)
         {
             Canvas.ForceUpdateCanvases();
             w.Content.parent.parent.GetComponent<ScrollRect>().verticalNormalizedPosition = 1;
-        }
-
-        private void GuideHint(Transform parent, QuestTarget target, Action refresh)
-        {
-            var q = S.CurrentQuest();
-            if (q == null || q.Target != target) return;
-            S.VisitQuestTarget(target);
-            var card = Ui.Panel(parent, "GuideHint", Ui.PanelBg2).rectTransform;
-            Ui.VList(card, 6, 12);
-            Para(card, "<color=#DDC18B><b>当前任务 · " + q.Title + "</b></color>\n" + (target==QuestTarget.Staff&&q.Lesson?q.Hint:q.Short), 16);
-            ProgressLine(card, q, 14);
-            var row = Ui.Row(card, 34, 6);
-            Ui.Size(Ui.Button(row, "查看步骤", OpenQuestWindow, 15), -1, -1, 1);
-            if (q.Lesson)
-                Ui.Size(Ui.Button(row, "已了解，完成这一步", () => { S.CompleteQuestLesson(q.Id); UpdateQuestTracker(); refresh(); }, 15, Ui.ButtonHot, q.LessonReady == null || q.LessonReady(S)), -1, -1, 1);
         }
 
         private static QuestTarget TargetFor(ShopTab tab)
@@ -417,6 +418,7 @@ namespace PCShopSell.Game.UI
             }
             switch (target)
             {
+                case QuestTarget.Cooker: return "位置：家里 · 电饭锅";
                 case QuestTarget.Agency: return "地点：商业街 · <color=#FFC966>安居房产中介</color>";
                 case QuestTarget.Renovate: return "位置：自己的店 → 右侧“装修”页";
                 case QuestTarget.Stock: return "位置：自己的店 · 货架";

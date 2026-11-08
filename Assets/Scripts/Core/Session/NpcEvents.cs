@@ -226,10 +226,10 @@ namespace PCShopSell.Core.Session
                 {
                     Paid("借给他", 1000, s =>
                     {
-                        s.EventPay(Y(1000), "借给唐俊杰");
-                        s.ScheduleCredit(10, Y(1100), "唐俊杰还钱（含谢礼）");
+                        s.EventLendToNpc(Y(1000), "唐俊杰");
                         s.AddRelation(Npcs.Jie, 8);
-                        return "唐俊杰感激不尽：\"十天后连本带利还你。\" 交情 +8。";
+                        return "已借给唐俊杰 ¥1,000，交情 +8。\n" +
+                            s.ScheduleNpcRepayment(10, Y(1100), "唐俊杰还钱（含谢礼）");
                     }),
                     Free("自己也紧，抱歉", s =>
                     {
@@ -289,20 +289,20 @@ namespace PCShopSell.Core.Session
             {
                 Id = "lin_loan", Title = "林远航想借钱", MinDay = 40, CooldownDays = 60, Weight = 6,
                 When = s => s.CitySamePlace(Npcs.Lin) && s.IsMet(Npcs.Lin) && s.Relation(Npcs.Lin) >= 30,
-                Body = "林远航有点不好意思：\"我想报个培训班，缺 ¥2,000，能先借我吗？发了工资就还。\"",
+                Body = "林远航想借 ¥2,000 报培训班，说发了工资就还。交情越高，收回借款的可能性越大。",
                 Choices =
                 {
                     Paid("借给他", 2000, s =>
                     {
-                        s.EventPay(Y(2000), "借给林远航");
+                        s.EventLendToNpc(Y(2000), "林远航");
                         s.AddRelation(Npcs.Lin, 10);
                         double repay = 0.75 + (s.Relation(Npcs.Lin) >= 70 ? 0.2 : 0.0);
                         if (s.Random.Chance(repay))
                         {
-                            s.ScheduleCredit(25, Y(2200), "林远航还钱（含请客）");
-                            return "林远航红着眼眶：\"我记着呢。\" 交情 +10。（约 25 天后有回款）";
+                            return "已借给林远航 ¥2,000，交情 +10。\n" +
+                                s.ScheduleNpcRepayment(25, Y(2200), "林远航还钱（含请客）");
                         }
-                        return "林远航千恩万谢。交情 +10。（后来听说他手头一直紧，这笔钱恐怕要不回来了）";
+                        return "已借给林远航 ¥2,000，交情 +10。后来他一直没还，这笔钱没有收回。";
                     }),
                     Free("我也不宽裕，抱歉", s =>
                     {

@@ -43,7 +43,7 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.StoreInBox(Gifts.Drink, 3), "18 千克放得下");
             Assert.AreEqual(0, s.Backpack.GiftCount(Gifts.Drink));
             Assert.AreEqual(3, s.HomeBoxCount(Gifts.Drink));
-            Assert.AreEqual(18.0, s.HomeBoxKg, 1e-9);
+            Assert.AreEqual(18.0 + Pantry.StartRiceKg, s.HomeBoxKg, 1e-9);
             Assert.AreEqual(1, s.HomeBoxes, "一个纸箱即可使用不限容量后仓");
             Assert.AreEqual(GameSession.WarehouseCapacity, s.HomeBoxLimitKg);
             s.Backpack.AddGift(Gifts.Drink, 48);
@@ -119,7 +119,7 @@ namespace PCShopSell.Tests
             PartDef ram = PartCatalog.Get("ram0");
             s.Cargo.ForceAdd(ram, true, 2);
             s.Backpack.Food.RiceKg = 4;
-            s.Backpack.Food.AddIngredient("egg", 3, s.Clock.Today.TotalDays);
+            s.Backpack.Food.AddIngredient("egg", 3);
             s.Backpack.Food.Packed.Add(new FoodBatch { Id = "rice", Name = "白米饭", Hunger = 22, Count = 2, ExpireDay = s.Clock.Today.TotalDays + 1 });
             s.Backpack.AddFurniture("plant", 1);
             s.ApplyCargoLimit();
@@ -130,7 +130,7 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.StoreInBox("lunch", 2), "饭盒也能放");
             Assert.IsTrue(s.StoreInBox("furn:plant"), "小家具也能放");
             Assert.IsTrue(s.Backpack.IsEmpty && s.Cargo.IsEmpty, "背包清空了");
-            double kg = 2 * Stock.SpaceOf(ram, true, 1) * Backpack.KgPerSpace + 4 * 1.0 + 3 * Backpack.IngredientKg("egg") + 2 * Backpack.LunchboxKg + FurnitureCatalog.Get("plant").WeightKg;
+            double kg = Pantry.StartRiceKg + 2 * Stock.SpaceOf(ram, true, 1) * Backpack.KgPerSpace + 4 * 1.0 + 3 * Backpack.IngredientKg("egg") + 2 * Backpack.LunchboxKg + FurnitureCatalog.Get("plant").WeightKg;
             Assert.AreEqual(kg, s.HomeBoxKg, 1e-9);
 
             s.Backpack.AddFurniture("desk", 12);

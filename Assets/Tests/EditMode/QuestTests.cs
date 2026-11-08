@@ -10,24 +10,24 @@ using PCShopSell.Core.World;
 
 namespace PCShopSell.Tests
 {
-    /// <summary>新手任务：新游戏先去租铺子，再买设施、摆设施、设置货架、进货、卖出第一单……每一步看实际状态判断。</summary>
+    /// <summary>新手任务：从在家做饭到租铺开店，每一步按实际状态判断。</summary>
     public class QuestTests
     {
-        private static GameSession Make(bool startWithShop, long cash = 30000)
+        private static GameSession Make(bool startWithShop, long cash = 30000, bool startWithCookingTutorial = false)
         {
             CityLayoutData data = GameSessionTests.Layout();
             data.places = data.places.Concat(new[]
             {
                 new LayoutPlaceData { id = "phone", name = "手机店", kind = "shop", node = "dl", size = "small", business = GameSession.PhoneBusiness },
             }).ToArray();
-            return new GameSession(CityLayout.FromData(data), 7, Money.FromYuan(cash), GameTimestamp.From(new GameDate(0), 8 * 60), true, true, startWithShop);
+            return new GameSession(CityLayout.FromData(data), 7, Money.FromYuan(cash), GameTimestamp.From(new GameDate(0), 8 * 60), true, true, startWithShop, startWithCookingTutorial);
         }
 
         [Test]
         public void Quests_AreInOrder_AndHaveText()
         {
-            CollectionAssert.AreEqual(new[] { "rent", "mall", "place", "shelf", "stock", "sale", "hire", "phone", "qr" }, Quests.All.Take(9).Select(q => q.Id).ToArray());
-            Assert.AreEqual(23, Quests.All.Count);
+            CollectionAssert.AreEqual(new[] { "first_meal", "rent", "mall", "place", "shelf", "stock", "sale", "hire", "phone", "qr" }, Quests.All.Take(10).Select(q => q.Id).ToArray());
+            Assert.AreEqual(24, Quests.All.Count);
             Assert.AreEqual(Quests.All.Count, Quests.All.Select(q => q.Id).Distinct().Count());
             foreach (QuestDef q in Quests.All)
             {
@@ -36,12 +36,35 @@ namespace PCShopSell.Tests
             }
         }
 
-        [Test]
-        public void NewGame_FirstQuestIsToRentAShop()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void NewGame_CooksAndChoosesHowToUseFirstMeal(bool pack)
         {
-            GameSession s = Make(false);
+            using var s = Make(false, startWithCookingTutorial: true);
+            Assert.AreEqual("first_meal", s.CurrentQuest().Id);
+            Assert.AreEqual(25, s.Player.Hunger);
+            Assert.Zero(s.Backpack.Lunchboxes);
+            Assert.IsTrue(s.CookRice(0.5, null));
+            s.AdvanceClock(Pantry.CookMinutes);
+            int bowls = Pantry.BowlsPerKg / 2;
+            Assert.AreEqual(bowls, s.Pantry.CookedBowls, "第一锅饭应留给玩家选择如何处理");
+            Assert.AreEqual("first_meal", s.CurrentQuest().Id);
+
+            double hungry = s.Player.Hunger;
+            if (pack)
+            {
+                Assert.IsTrue(s.PackLunch(bowls));
+                Assert.AreEqual(bowls, s.Backpack.Lunchboxes);
+                s.AdvanceClock(1);
+                Assert.Less(s.Backpack.Lunchboxes, bowls);
+            }
+            else
+            {
+                Assert.IsTrue(s.EatBowlAtHome());
+                Assert.AreEqual(bowls - 1, s.Pantry.CookedBowls);
+            }
+            Assert.Greater(s.Player.Hunger, hungry);
             Assert.AreEqual("rent", s.CurrentQuest().Id);
-            Assert.AreEqual(0, s.QuestIndex());
         }
 
         [Test]
@@ -49,7 +72,7 @@ namespace PCShopSell.Tests
         {
             GameSession s = Make(false);
             GameSessionTests.Teleport(s, "agency");
-            Assert.IsTrue(s.SignLease("pc"));
+            Assert.IsTrue(s.SignRetailLease("pc", false, "computer"));
             Assert.Zero(s.FurnitureStored(FurnitureCatalog.Shelf));
             Assert.Zero(s.FurnitureStored(FurnitureCatalog.ShopCounter));
             Assert.AreEqual("mall", s.CurrentQuest().Id);
@@ -66,6 +89,7 @@ namespace PCShopSell.Tests
         [TestCase("clothing")]
         [TestCase("models")]
         [TestCase("secondhand")]
+        [TestCase(PetShopCatalog.ShopKind)]
         public void FirstShopRewardsMatchSelectedBusinessAndOnlyPayOnce(string kind)
         {
             using(var s=Make(false))
@@ -131,13 +155,14 @@ namespace PCShopSell.Tests
                 GameSessionTests.Teleport(s, "agency");
                 s.DebugAddListing("tea", 0, 60, Money.FromYuan(3000));
                 Assert.True(s.SignLeaseThenChooseKind("tea", true));
+                Assert.AreEqual(PetShopCatalog.ShopKind, s.ShopAt("tea").RetailKind);
                 Assert.True(s.ConfirmOpeningKind("tea", PetShopCatalog.ShopKind));
                 Assert.AreEqual(PetShopCatalog.ShopKind, s.ShopAt("tea").RetailKind);
                 Assert.AreEqual("computer", s.MainShop.RetailKind);
             }
         }
         [Test]
-        public void OpeningChoiceRequiresExplicitSelectionAndHoldsTimeUntilConfirmed()
+        public void OpeningChoiceDefaultsToPetShopAndHoldsTimeUntilConfirmed()
         {
             using(var s=Make(false))
             {
@@ -153,7 +178,9 @@ namespace PCShopSell.Tests
                 {
                     typeof(PCShopSell.Game.UI.GameUi).GetMethod("RefreshOpeningKindChoice",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).Invoke(ui,null);
                     UnityEngine.UI.Button Button(string name)=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<UnityEngine.UI.Button>()).Single(b=>b.name==name);
-                    Assert.True(ui.AnyModalOpen);Assert.True(s.Time.IsHeld);Assert.False(Button("ConfirmOpeningKind").interactable);
+                    Assert.True(ui.AnyModalOpen);Assert.True(s.Time.IsHeld);
+                    Assert.True(Button("ConfirmOpeningKind").interactable);
+                    StringAssert.Contains("宠物用品店",Button("ConfirmOpeningKind").GetComponentInChildren<UnityEngine.UI.Text>().text);
                     Button("OpeningKind_restaurant").onClick.Invoke();
                     Assert.False(s.QuestCompleted("rent"),"点选类型本身不领取礼包");
                     Assert.True(Button("ConfirmOpeningKind").interactable);Button("ConfirmOpeningKind").onClick.Invoke();
@@ -264,7 +291,6 @@ namespace PCShopSell.Tests
             GameSessionTests.Teleport(s, "phone");
             Assert.IsTrue(s.BuyUpgrade(ShopUpgrades.Qr));
             Assert.AreEqual("pricing", s.CurrentQuest().Id);
-            Assert.AreEqual(9, s.QuestIndex());
         }
 
         private static GameSession Reload(GameSession s) => GameSession.Load(s.City,

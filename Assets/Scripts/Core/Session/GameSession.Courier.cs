@@ -52,7 +52,7 @@ namespace PCShopSell.Core.Session
 
     /// <summary>
     /// 买东西的两种拿法：装进背包自己带（算负重），或者叫车送到家里 / 任意一家自己的店。
-    /// 送到家：吃的进厨房，礼品、配件进纸箱；送到店：配件上货架，吃的、礼品进店里储物柜。家具都进家具背包。
+    /// 送到家时货物进家中后仓。送到店时配件上货架，其余货物进店里后仓。
     /// 叫的是面包车，每辆最多装 <see cref="CourierCapacityKg"/> 千克，运费按路程算（同打车计价再加跑腿费）。
     /// 在同一个地方接着装的东西先往当前这辆里装，装不下就再叫一辆（再付一次运费）；离开这里后再装就是新车。
     /// </summary>
@@ -119,7 +119,7 @@ namespace PCShopSell.Core.Session
 
         /// <summary>“送到”里的名字：家里 / 我的店里（铺子名）；开了几家店时带上是哪家。</summary>
         public string CourierDestName(OwnedShop dest) =>
-            dest == null ? "家里" : MyShopCount > 1 ? $"{ShopTitle(dest)}（{dest.Place.Name}）" : $"我的店里（{dest.Place.Name}）";
+            dest == null ? "家里" : ShopTitle(dest);
 
         /// <summary>这辆车送去哪（给界面列在路上的车用）。</summary>
         public string CourierRunDestName(CourierRun r) => r.ToShop ? CourierDestName(DeliveryShop(r.ShopId)) : "家里";
@@ -361,35 +361,25 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>
-        /// 送到的一样东西放好：送家里，米菜进厨房，礼品、配件进纸箱；送店里，配件上货架，米菜礼品进店里纸箱。
+        /// 送到家中的米菜、礼品和配件进入家中后仓。送店里时配件上货架，米菜和礼品进店里纸箱。
         /// 家具也进纸箱。纸箱放不下的进临时存放（下次打开纸箱要清空）。
         /// </summary>
         private string Unpack(CourierItem it, bool toShop)
         {
             Backpack box = toShop ? ShopLocker : HomeBox;
             Backpack temp = toShop ? ShopTemp : HomeTemp;
-            string boxPlace = toShop ? "放进店里纸箱" : "放进纸箱";
+            string boxPlace = toShop ? "放进店里纸箱" : "放进家中后仓";
             string Where(int overflow, int total) =>
                 overflow <= 0 ? boxPlace : overflow >= total ? "纸箱满了，放在临时存放" : $"纸箱放不下的 {overflow} 件放在临时存放";
             switch (it.Kind)
             {
                 case CourierItemKind.Rice:
-                    if (!toShop)
-                    {
-                        Pantry.RiceKg += it.Kg;
-                        return $"大米 {it.Kg:0.##} 千克（进了厨房）";
-                    }
-                    double riceOver = StoreRiceOrTemp(true, it.Kg);
+                    double riceOver = StoreRiceOrTemp(toShop, it.Kg);
                     return $"大米 {it.Kg:0.##} 千克（{(riceOver <= 1e-9 ? boxPlace : $"纸箱放不下的 {riceOver:0.##} 千克放在临时存放")}）";
                 case CourierItemKind.Ingredient:
                     IngredientDef d = Ingredients.Get(it.Id);
-                    FoodBatch Batch(int n) => new FoodBatch { Id = it.Id, Name = d?.Name ?? it.Id, Count = n, ExpireDay = it.ExpireDay };
-                    if (!toShop)
-                    {
-                        Pantry.Ingredient.Add(Batch(it.Count));
-                        return $"{d?.Name ?? it.Id}×{it.Count}（进了厨房）";
-                    }
-                    int ingOver = StoreOrTemp(true, Backpack.IngredientKg(it.Id), it.Count, n => box.Food.Ingredient.Add(Batch(n)), n => temp.Food.Ingredient.Add(Batch(n)));
+                    FoodBatch Batch(int n) => new FoodBatch { Id = it.Id, Name = d?.Name ?? it.Id, Count = n, ExpireDay = FoodBatch.NoExpiry };
+                    int ingOver = StoreOrTemp(toShop, Backpack.IngredientKg(it.Id), it.Count, n => box.Food.Ingredient.Add(Batch(n)), n => temp.Food.Ingredient.Add(Batch(n)));
                     return $"{d?.Name ?? it.Id}×{it.Count}（{Where(ingOver, it.Count)}）";
                 case CourierItemKind.PackedFood:
                     var food=FastFoodCatalog.Packed(it.Id);
@@ -465,6 +455,8 @@ namespace PCShopSell.Core.Session
                     if ((kind == CourierItemKind.Gift || kind == CourierItemKind.Goods) && Gifts.Get(id) == null) continue;
                     if (kind == CourierItemKind.PackedFood && FastFoodCatalog.Packed(id)==null)continue;
                     if (kind == CourierItemKind.Furniture && FurnitureCatalog.Get(id) == null) continue;
+                    bool rawIngredient = kind == CourierItemKind.Ingredient || (kind == CourierItemKind.Goods && Gifts.Get(id)?.IngredientId != null);
+                    int expiry = s.expireDays != null && i < s.expireDays.Length ? s.expireDays[i] : 0;
                     run.Items.Add(new CourierItem
                     {
                         Kind = kind,
@@ -472,7 +464,7 @@ namespace PCShopSell.Core.Session
                         Count = s.counts != null && i < s.counts.Length ? s.counts[i] : 0,
                         Kg = s.kilos != null && i < s.kilos.Length ? s.kilos[i] : 0,
                         Boxed = s.boxed != null && i < s.boxed.Length && s.boxed[i],
-                        ExpireDay = s.expireDays != null && i < s.expireDays.Length ? s.expireDays[i] : 0,
+                        ExpireDay = rawIngredient ? FoodBatch.NoExpiry : expiry,
                         Chilled = s.chilled != null && i < s.chilled.Length && s.chilled[i],
                     });
                 }

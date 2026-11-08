@@ -128,7 +128,7 @@ namespace PCShopSell.Game.UI
             bagGrid.parent.parent.name="WarehouseBackpackGrid";
 
             Line(w.Content,"—— "+(shop?"本店后仓":"家中后仓")+" · 后仓容量不限 ——",18,Ui.Accent).name="WarehouseStoreHeading";
-            Line(w.Content,"本房间的 "+(shop?S.ShopBoxes:S.HomeBoxes)+" 个纸箱共用一个后仓；背包和运输承重、食品保质期照常计算。",15,Ui.Dim);
+            Line(w.Content,"本房间的 "+(shop?S.ShopBoxes:S.HomeBoxes)+" 个纸箱共用一个后仓。背包和运输仍有承重限制，成品保质期照常计算。",15,Ui.Dim);
             var boxStacks=CollectBox();
             var boxGrid=BagGrid(w.Content,boxStacks,8,_boxSide=="box"?_boxSel:null,key=>
             {_boxSide="box";_boxSel=key;w.Rebuild();},-1,true);
@@ -302,7 +302,7 @@ namespace PCShopSell.Game.UI
             {
                 int n = g.Sum(b => b.Count);
                 double kg = n * Backpack.IngredientKg(g.Key);
-                l.Add(new BagStack { Key = "ing:" + g.Key, Name = g.First().Name, Kind = "买的米和菜", Batches = g.ToArray(), Count = n, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = new Color(0.30f, 0.55f, 0.30f) });
+                l.Add(new BagStack { Key = "ing:" + g.Key, Name = g.First().Name, Kind = "食材", Count = n, Kg = kg, Space = kg / Backpack.KgPerSpace, Color = new Color(0.30f, 0.55f, 0.30f) });
             }
             foreach (var meal in bag.Food.Packed.GroupBy(b => b.Id))
             {
@@ -622,51 +622,53 @@ namespace PCShopSell.Game.UI
             S.RefreshCooking();
             Pantry pan = S.Pantry;
             PlayerStats st = S.Player;
-            Line(w.Content, $"饥饿 {st.Hunger:0}  健康 {st.Health:0}   米缸：{pan.RiceKg:0.##} 千克（1 千克约 {Pantry.BowlsPerKg} 碗）   背包里的饭盒：{S.Backpack.Lunchboxes} 盒", 17);
+            double rice = S.HomeCookingRiceKg;
+            Line(w.Content, $"饱腹 {st.Hunger:0}  健康 {st.Health:0}   可用大米：{rice:0.##} 千克   背包里的饭盒：{S.Backpack.Lunchboxes} 盒", 17);
 
-            // 正在焖：只显示进度，什么都不能动
             if (pan.Cooking != null)
             {
                 long left = pan.CookMinutesLeft(S.Clock.Now.TotalMinutes);
                 int readyMinuteOfDay = (int)(pan.Cooking.ReadyMinute % (24 * 60));
                 Line(w.Content, $"<color=#DDC18B>正在焖饭：{pan.Cooking.Batch.Name}，约 {pan.Cooking.Batch.Count} 碗</color>", 20);
                 Line(w.Content, $"还剩 {left} 分钟（{readyMinuteOfDay / 60:00}:{readyMinuteOfDay % 60:00} 好）。焖好之前锅盖打不开，你可以先去干别的。", 17);
+                if (S.OpeningMealTutorialPending)
+                    Ui.Size(Ui.Button(w.Content, $"等到饭好 · {left} 分钟", () => { S.AdvanceClock((int)left); w.Rebuild(); }, 18, Ui.ButtonHot), -1, 44);
                 return;
             }
 
             // 焖好了：取饭（吃、装饭盒）；取完才能再焖
             if (pan.CookedBowls > 0)
             {
-                Line(w.Content, $"锅里焖好的饭：{pan.CookedBowls} 碗（可装入背包或放冰箱）", 18);
+                Line(w.Content, $"饭煮好了 · 锅里有 {pan.CookedBowls} 碗", 18, Ui.Accent);
                 foreach (FoodBatch b in pan.Cooked) Line(w.Content, $"· {b.Name} ×{b.Count}  （{FoodExpiryBadge.Countdown(b.ExpireDay, S.Clock.Now.TotalMinutes)}）", 15, Ui.Dim);
-                if (S.CanOpenFridge)
-                    Ui.Size(Ui.Button(w.Content, "把做好的饭全部放入冰箱", () => { S.ChillCookedFood(pan.CookedBowls); w.Rebuild(); }, 17, Ui.ButtonHot), -1, 38);
                 RectTransform erow = Ui.Row(w.Content, 46);
-                Ui.Size(Ui.Button(erow, $"吃一碗（{Pantry.EatMinutes} 分钟）", () =>
+                Ui.Size(Ui.Button(erow, $"现在吃一碗（{Pantry.EatMinutes} 分钟）", () =>
                 {
                     S.EatBowlAtHome();
                     w.Rebuild();
                 }, 18, Ui.ButtonHot, pan.CookedBowls > 0), 220);
-                Ui.Size(Ui.Button(erow, "装 1 个饭盒", () =>
+                Ui.Size(Ui.Button(erow, "装 1 盒进背包", () =>
                 {
                     S.PackLunch(1);
                     w.Rebuild();
                 }, 18, Ui.ButtonBg, pan.CookedBowls > 0), 170);
-                Ui.Size(Ui.Button(erow, "全部装饭盒", () =>
+                Ui.Size(Ui.Button(erow, "全部装进背包", () =>
                 {
                     S.PackLunch(pan.CookedBowls);
                     w.Rebuild();
                 }, 18, Ui.ButtonBg, pan.CookedBowls > 0), 170);
-                Line(w.Content, $"饭盒装进背包（每盒 {Backpack.LunchboxKg:0.##} 千克，算负重）。每天 12:00、18:30 饿两次，出门要带够饭盒，不然只能饿着。锅里的饭取完才能再焖新的一锅。", 15, Ui.Dim);
+                Line(w.Content, "饭盒放进背包后，饭点或饿了会自动吃。", 17, Ui.Good);
+                Line(w.Content, $"每盒 {Backpack.LunchboxKg:0.##} 千克。锅里的饭取完才能再焖。", 15, Ui.Dim);
+                if (S.CanOpenFridge && !S.OpeningMealTutorialPending)
+                    Ui.Size(Ui.Button(w.Content, "把做好的饭全部放入冰箱", () => { S.ChillCookedFood(pan.CookedBowls); w.Rebuild(); }, 17, Ui.ButtonBg), -1, 38);
                 return;
             }
 
             // 空锅：选米、选配菜、开始焖
-            var ings = pan.Ingredient.GroupBy(b => b.Id).ToList();
-            Line(w.Content, ings.Count == 0 ? "没有别的食材（农贸市场 6:00–18:00 有卖，可放冰箱保鲜）。" : "食材：" + string.Join("、", ings.Select(g => $"{g.First().Name}×{g.Sum(b => b.Count)}")), 16, Ui.Dim);
+            Line(w.Content, "自动取用背包和家中后仓的食材。", 16, Ui.Dim);
 
-            if (_cookKg > pan.RiceKg) _cookKg = pan.RiceKg;
-            if (_cookKg < 0.25 && pan.RiceKg >= 0.25) _cookKg = 0.25;
+            if (_cookKg > rice) _cookKg = rice;
+            if (_cookKg < Pantry.MinCookRiceKg && rice >= Pantry.MinCookRiceKg) _cookKg = Pantry.MinCookRiceKg;
             Line(w.Content, "往锅里加多少米：", 17);
             RectTransform jrow = Ui.Row(w.Content, 44);
             foreach (double amount in new[] { 0.25, 0.5, 1, 1.5, 2.5 })
@@ -676,7 +678,7 @@ namespace PCShopSell.Game.UI
                 {
                     _cookKg = a;
                     w.Rebuild();
-                }, 17, System.Math.Abs(_cookKg - a) < 1e-6 ? Ui.ButtonHot : Ui.ButtonBg, pan.RiceKg >= a), 90);
+                }, 17, System.Math.Abs(_cookKg - a) < 1e-6 ? Ui.ButtonHot : Ui.ButtonBg, rice >= a), 90);
             }
 
             Line(w.Content, "选择配菜（按食材的实际千克数消耗）：", 17);
@@ -690,22 +692,28 @@ namespace PCShopSell.Game.UI
             foreach (IngredientDef def in Ingredients.All)
             {
                 IngredientDef d = def;
-                int have = pan.IngredientCount(d.Id);
+                int have = S.HomeCookingIngredientCount(d.Id);
                 Ui.Size(Ui.Button(irow, $"{d.DishName}（{have * d.WeightKg:0.##}千克）", () =>
                 {
                     _cookIngredient = d.Id;
                     w.Rebuild();
-                }, 15, _cookIngredient == d.Id ? Ui.ButtonHot : Ui.ButtonBg, have > 0), 150);
+                }, 15, _cookIngredient == d.Id ? Ui.ButtonHot : Ui.ButtonBg, have > 0), 138);
             }
 
             Line(w.Content, GameSession.MealName(_cookIngredient ?? "rice") + "：" + GameSession.MealEffects(_cookIngredient ?? "rice") + "（每顿；暂只记录）", 16, Ui.Accent);
-            if (_cookIngredient != null) Line(w.Content, "本锅配菜：" + Ingredients.Get(_cookIngredient).Name + " " + (System.Math.Ceiling(_cookKg * 2 - 1e-9) * Ingredients.Get(_cookIngredient).WeightKg).ToString("0.##") + " 千克", 16, Ui.Dim);
+            var ingredient = Ingredients.Get(_cookIngredient);
+            int need = Pantry.IngredientUnitsForRice(_cookKg);
+            bool enoughIngredient = ingredient == null || S.HomeCookingIngredientCount(ingredient.Id) >= need;
+            if (ingredient != null)
+                Line(w.Content, $"本锅配菜：{ingredient.Name} {need * ingredient.WeightKg:0.##} 千克" + (enoughIngredient ? "" : " · 库存不足，可少放米或换配菜"), 16, enoughIngredient ? Ui.Dim : Ui.Warn);
+            bool enoughRice = rice >= Pantry.MinCookRiceKg;
+            if (!enoughRice) Line(w.Content, "可用大米不足 0.25 千克。", 16, Ui.Warn);
             int bowls = Mathf.RoundToInt((float)(_cookKg * Pantry.BowlsPerKg));
             Ui.Size(Ui.Button(w.Content, $"开始焖饭：{_cookKg:0.##} 千克，约 {bowls} 碗，{Pantry.CookMinutes} 分钟后好", () =>
             {
                 if (S.CookRice(_cookKg, _cookIngredient)) Toast($"开始焖饭，{Pantry.CookMinutes} 分钟后好。");
                 w.Rebuild();
-            }, 19, Ui.ButtonHot, pan.RiceKg >= 0.25 && _cookKg >= 0.25), -1, 48);
+            }, 19, Ui.ButtonHot, enoughRice && enoughIngredient), -1, 48);
             Line(w.Content, "点了就开始焖，焖的时候锅里不能动，人可以先去忙别的。", 15, Ui.Dim);
         }
 
@@ -720,12 +728,13 @@ namespace PCShopSell.Game.UI
                 var nav=Ui.Row(w.Content,38,6);string[] names={"状态","饮食","住处","物品与包裹"};
                 for(int i=0;i<names.Length;i++){int tab=i;Ui.Size(Ui.Button(nav,names[i],()=>{_myPanelTab=tab;w.Rebuild();},17,_myPanelTab==i?Ui.ButtonHot:Ui.ButtonBg),-1,38,1).name="MyTab_"+i;}
                 var stats=S.Player;
-                Line(w.Content,$"饱腹 {stats.Hunger:0} · 精力 {stats.Energy:0}/{stats.MaxEnergy:0} · 健康 {stats.Health:0}",21,Ui.Good);
+                Line(w.Content,$"饱腹 {stats.Hunger:0} · 精力 {stats.Energy:0}/{stats.MaxEnergy:0} · 健康 {stats.Health:0} · 压力 {stats.Stress:0}/100",21,
+                    stats.Stress >= PlayerStats.HighStressThreshold ? Ui.Warn : Ui.Good);
                 if(S.EnergyExhausted)Para(w.Content,S.EnergyExhaustionText,16,Ui.Warn);
                 if(_myPanelTab==0)
                 {
                     BuildPlayerWorkSummary(w.Content,w);
-                    Line(w.Content,$"智力 {stats.Intelligence} · 魅力 {S.EffectiveCharm} · 技术 {stats.Skill} · 欠觉 {stats.SleepDebt:0.#} 小时",17);
+                    Line(w.Content,$"智力 {stats.Intelligence} · 魅力 {S.EffectiveCharm} · 动手能力 {stats.Skill} · 体能 {stats.Stamina}",17);
                     var links=Ui.Row(w.Content,38,6);
                     Ui.Size(Ui.Button(links,"日程",OpenSchedulePanel,17),-1,38,1);
                     Ui.Size(Ui.Button(links,"天气与穿衣",OpenCityClimate,17),-1,38,1);
@@ -733,15 +742,17 @@ namespace PCShopSell.Game.UI
                     string blocker=WorkbenchAccessReason;
                     Ui.Size(Ui.Button(w.Content,"居家工作台"+(blocker==null?"":" · "+blocker),OpenHomeWorkbench,18,Ui.ButtonHot,blocker==null),-1,40).name="MyHomeWorkbench";
                     if(blocker=="回家后可用")Ui.Size(Ui.Button(w.Content,"回家",()=>{CloseModalWindows();_ctrl.GoToPlace(S.Home);},17),-1,36);
-                    HelpLink(w.Content,"身体详细资料",$"营养 {stats.Nutrition:0.#}/100 · 心情 {stats.Mood:0.#}/100（暂仅记录）\n衣着魅力 +{S.Outfit.CharmBonus} · 现金 {S.Ledger.Balance}");
+                    HelpLink(w.Content,"身体详细资料",$"欠觉 {stats.SleepDebt:0.#} 小时 · 营养 {stats.Nutrition:0.#}/100 · 心情 {stats.Mood:0.#}/100\n衣着魅力 +{S.Outfit.CharmBonus} · 现金 {S.Ledger.Balance}\n打工、疲劳会累积压力，睡觉和令人愉快的活动能减压。压力达到 {PlayerStats.HighStressThreshold:0} 时，到岗表现奖金减少 {GameSession.HighStressWorkPenalty}%。");
                     return;
                 }
                 if(_myPanelTab==1)
                 {
-                    var pan=S.Pantry;Line(w.Content,$"家中厨房 · 大米 {pan.RiceKg:0.##} 千克 · 熟饭 {pan.CookedBowls} 碗",18,Ui.Accent);
+                    var pan=S.Pantry;Line(w.Content,$"电饭锅 · 熟饭 {pan.CookedBowls} 碗",18,Ui.Accent);
                     if(pan.Cooking!=null)Line(w.Content,$"焖饭剩余 {pan.CookMinutesLeft(S.Clock.Now.TotalMinutes)} 分钟",17,Ui.Good);
-                    var ingredients=pan.Ingredient.GroupBy(x=>x.Id).ToArray();
-                    Para(w.Content,"家中食材："+(ingredients.Length==0?"暂无":string.Join("、",ingredients.Select(g=>g.First().Name+"×"+g.Sum(x=>x.Count)))),17);
+                    var ingredients = Ingredients.All.Select(def => (def, count: S.HomeCookingIngredientCount(def.Id)))
+                        .Where(item => item.count > 0).Select(item => $"{item.def.Name} {item.count * item.def.WeightKg:0.##} 千克");
+                    Para(w.Content, $"背包和家中后仓 · 大米 {S.HomeCookingRiceKg:0.##} 千克" +
+                        string.Concat(ingredients.Select(label => " · " + label)), 17);
                     if(S.CanOpenFridge)Ui.Size(Ui.Button(w.Content,"打开当前冰箱",OpenFridgeWindow,17),-1,38);
                     Ui.Size(Ui.Button(w.Content,"自动订餐 · "+(S.MealDeliveryEnabled?S.SelectedDeliveryMeal.Name+" ¥"+S.SelectedDeliveryMeal.Price+"/餐":"关闭"),()=>OpenMealDeliverySettings(w),17),-1,38);
                     HelpLink(w.Content,"用餐与保存说明","到饭点或饥饿时优先吃现有食物，缺餐时按订餐设置处理。冰箱内永久保存，取出后继续消耗剩余保质期。餐馆可用厨房现有大米和配菜做自己的餐食。");
@@ -750,7 +761,7 @@ namespace PCShopSell.Game.UI
                 if(_myPanelTab==2)
                 {
                     Line(w.Content,S.HomeTitle,20,Ui.Accent);
-                    Line(w.Content,$"月租 {S.CurrentHomeRent} · 水电 {S.HomeUtilities}/月 · 睡眠恢复 {S.HomeSleepQuality:0.##}×",17);
+                    Line(w.Content,$"周租 {S.CurrentHomeRent} · 水电 {S.HomeUtilities}/月 · 睡眠恢复 {S.HomeSleepQuality:0.##}×",17);
                     Ui.Size(Ui.Button(w.Content,"摆放家中家具",()=>StartPlacement(false),18,Ui.ButtonHot,_ctrl.InHome),-1,40);
                     if(!_ctrl.InHome)Line(w.Content,"回家后可摆放家具。",15,Ui.Dim);
                     Ui.Size(Ui.Button(w.Content,"管理住处租约与产权",OpenCityResidence,17),-1,38);
@@ -1096,9 +1107,9 @@ namespace PCShopSell.Game.UI
             {
                 IngredientDef d = def;
                 RectTransform row = Ui.Row(list, 80);
-                Ui.Size(ProductText(row, ProductLabel(d.Name + "（" + d.Unit + "）", d.WeightKg, $"可焖「{d.DishName}」，保质 {d.ShelfDays} 天", "每份"), 18), 380);
+                Ui.Size(ProductText(row, ProductLabel(d.Name + "（" + d.Unit + "）", d.WeightKg, $"可焖「{d.DishName}」", "每份"), 18), 380);
                 Ui.Size(Ui.Label(row, d.PricePerKg + "/千克", 17, TextAnchor.MiddleLeft, Ui.Good), 80);
-                Ui.Size(Ui.Label(row, $"背包 {S.Backpack.Food.IngredientCount(d.Id) * d.WeightKg:0.##}千克\n家里 {S.Pantry.IngredientCount(d.Id) * d.WeightKg:0.##}千克", 14, TextAnchor.MiddleLeft, Ui.Dim), 90);
+                Ui.Size(Ui.Label(row, $"背包 {S.Backpack.Food.IngredientCount(d.Id) * d.WeightKg:0.##}千克\n家中后仓 {S.HomeBox.Food.IngredientCount(d.Id) * d.WeightKg:0.##}千克", 14, TextAnchor.MiddleLeft, Ui.Dim), 120);
                 foreach (int n in new[] { 1 })
                 {
                     int count = n;
@@ -1140,10 +1151,10 @@ namespace PCShopSell.Game.UI
             bool shop = _ctrl.PlacingShop;
             Text title = Ui.Label(_placePanel, shop ? "装修店面（今天歇业）" : "摆放家具", 22, TextAnchor.MiddleLeft, Ui.Accent);
             Ui.Size(title, -1, 34);
-            Text mode = Ui.Label(_placePanel, "编辑模式 · 俯视图　格线 1 米，摆放吸附 0.25 米", 15, TextAnchor.MiddleLeft, new Color(0.45f, 0.9f, 1f));
+            Text mode = Ui.Label(_placePanel, "俯视图 · 格线 1 米 · 吸附 0.25 米", 15, TextAnchor.MiddleLeft, Ui.Dim);
             Ui.Size(mode, -1, 24);
-            Text help = Ui.Label(_placePanel, "左键：放下  ·  R：旋转（墙面的自动挂最近的墙）\n右键 / Esc：放回  ·  X：收进后仓  ·  滚轮：缩放\n中键拖动 / Q E：转视角  ·  V：复位视角\n点已经摆好的家具（含墙上的海报）可以拿起来挪", 15, TextAnchor.UpperLeft, Ui.Dim);
-            Ui.Size(help, -1, 84);
+            Text help = Ui.Label(_placePanel, "左键放置或挪动 · R 旋转 · Esc 放回\nX 收纳 · 滚轮缩放 · Q/E 转视角 · V 复位", 15, TextAnchor.UpperLeft, Ui.Dim);
+            Ui.Size(help, -1, 44);
             _placeStatus = Ui.Label(_placePanel, "", 16, TextAnchor.UpperLeft);
             Ui.Size(_placeStatus, -1, 56);
 

@@ -141,6 +141,7 @@ namespace PCShopSell.Game.UI
                 case "repair": case "repairing": return "上门维修";
                 case "parcel": return "快递到货";
                 case "loan": return "贷款到期";
+                case "npc_repayment": return "借款回收";
                 case "cook": return "饭菜做好";
                 case "kol_live": return "品牌直播";
                 case "expo_order": return "采购单截止";

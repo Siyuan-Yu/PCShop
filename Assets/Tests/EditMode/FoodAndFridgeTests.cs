@@ -183,7 +183,7 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                s.Backpack.Food.Ingredient.Add(new FoodBatch { Id = "pork", Name = "五花肉", Count = 1, ExpireDay = 1 });
+                s.Backpack.Food.AddIngredient("pork", 1);
                 Assert.True(s.MoveFridgeFood("ing:pork", 1, true));
                 GameSessionTests.Teleport(s, "pc");
                 s.Backpack.Food.Packed.Add(Meal("veg", 2));
@@ -197,14 +197,14 @@ namespace PCShopSell.Tests
                 }
                 Assert.IsEmpty(s.Backpack.Food.Packed);
                 Assert.IsEmpty(s.HomeBox.Food.Packed);
-                Assert.AreEqual(13, s.HomeFridge.Food.Ingredient.Single().ExpireDay);
+                Assert.AreEqual(FoodBatch.NoExpiry, s.HomeFridge.Food.Ingredient.Single().ExpireDay);
                 Assert.AreEqual(13, s.MainShop.Fridge.Food.Packed.Single().ExpireDay);
                 using (var loaded = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
                 {
                     loaded.EventsEnabled = false;
                     loaded.Clock.Restore(loaded.Clock.Today, 1439);
                     loaded.Clock.Advance(1);
-                    Assert.AreEqual(14, loaded.HomeFridge.Food.Ingredient.Single().ExpireDay);
+                    Assert.AreEqual(FoodBatch.NoExpiry, loaded.HomeFridge.Food.Ingredient.Single().ExpireDay);
                     Assert.AreEqual(14, loaded.MainShop.Fridge.Food.Packed.Single().ExpireDay);
                     GameSessionTests.Teleport(loaded, "pc");
                     Assert.True(loaded.MoveFridgeFood("lunch:veg", 1, false));

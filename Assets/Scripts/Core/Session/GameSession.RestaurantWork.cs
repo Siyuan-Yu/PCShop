@@ -47,7 +47,7 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         public const string RestaurantPlayer="$player";
-        private const double RestaurantOperationMinutes=2;
+        public const int RestaurantOperationMinutes=2;
         public static string RestaurantJobName(RestaurantJob job)=>job==RestaurantJob.Cook?"备料投锅":job==RestaurantJob.Plate?"出锅传菜":job==RestaurantJob.Serve?"上菜":job==RestaurantJob.Clear?"收桌／清锅":"待命";
         public RestaurantWorker RestaurantActor(string shopId,string actor)=>_specialBusinesses.TryGetValue(shopId,out var state)?state.Workers.FirstOrDefault(w=>w.ActorId==actor):null;
         public void CancelPlayerRestaurantWork()
@@ -147,7 +147,8 @@ namespace PCShopSell.Core.Session
         }
         private void TickRestaurantWorkers(OwnedShop shop,SpecialBusinessState state,GameTimestamp now,bool open)
         {
-            long minute=now.TotalMinutes;var staff=SpecialWorkers(shop,EmployeeRole.Chef,now).Concat(SpecialWorkers(shop,EmployeeRole.Waiter,now)).Distinct().ToArray();
+            long minute=now.TotalMinutes;var chefs=SpecialWorkers(shop,EmployeeRole.Chef,now);
+            var staff=chefs.Concat(SpecialWorkers(shop,EmployeeRole.Waiter,now)).Distinct().ToArray();
             state.Workers.RemoveAll(w=>w.ActorId==RestaurantPlayer?!SpecialPlayer(shop):!staff.Any(e=>e.Id==w.ActorId));
             string layout=RestaurantLayoutKey(shop);
             foreach(var worker in state.Workers.ToArray())
@@ -158,7 +159,13 @@ namespace PCShopSell.Core.Session
                 bool stoppedForClosing=!open&&(worker.ActorId!=RestaurantPlayer||worker.Job==RestaurantJob.Cook);
                 if(!JobMatches(worker.Job,order,minute)||worker.LayoutKey!=layout||stoppedForClosing){worker.Job=RestaurantJob.None;continue;}
                 if(minute<worker.Arrive)continue;
-                if(worker.OperateUntil<0){worker.OperateUntil=minute+RestaurantOperationMinutes;continue;}
+                if(worker.OperateUntil<0)
+                {
+                    var employee=staff.FirstOrDefault(e=>e.Id==worker.ActorId);
+                    var role=chefs.Contains(employee)?EmployeeRole.Chef:EmployeeRole.Waiter;
+                    worker.OperateUntil=minute+(employee==null?RestaurantOperationMinutes:RestaurantEmployeeOperationMinutes(employee,role));
+                    continue;
+                }
                 if(minute<worker.OperateUntil)continue;
                 int phases=worker.Job==RestaurantJob.Clear?1:2;
                 if(++worker.Phase<phases)
@@ -176,7 +183,7 @@ namespace PCShopSell.Core.Session
                 var worker=state.Workers.FirstOrDefault(w=>w.ActorId==employee.Id);
                 if(worker==null){var room=RoomSpec.ForShop(shop.Sim.Size);worker=new RestaurantWorker{ActorId=employee.Id,X=room.Width-3,Z=.9};state.Workers.Add(worker);}
                 if(worker.Busy)continue;
-                bool cook=ShopStaff(shop,EmployeeRole.Chef).Any(e=>e.Id==employee.Id);
+                bool cook=chefs.Contains(employee);
                 foreach(var job in cook?new[]{RestaurantJob.Plate,RestaurantJob.Clear,RestaurantJob.Cook}:new[]{RestaurantJob.Serve,RestaurantJob.Clear})
                 {
                     var candidates=state.Orders.Where(o=>JobMatches(job,o,minute)&&(job!=RestaurantJob.Clear||(cook?o.Stage==DiningStage.Burnt:o.Stage!=DiningStage.Burnt))).OrderBy(o=>o.Arrived);

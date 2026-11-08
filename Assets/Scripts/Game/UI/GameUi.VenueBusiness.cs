@@ -17,7 +17,6 @@ namespace PCShopSell.Game.UI
             {
                 var state=S.VenueOperation(place.Id);
                 Line(w.Content,"专用场地 · "+S.VenueBusinessName(place)+" · "+(S.VenueOpen(place)?"营业中":state.Accepting?"等待营业时间或值守到岗":"暂停接客"),22,Ui.Accent);
-                Para(w.Content,"保留场地原用途。原教练不默认受雇；自己值守或另聘员工。老板自用免费，正常消耗时间与体力。关闭管理窗口后时间继续。",17,Ui.Dim);
                 Line(w.Content,"今日顾客 "+state.Customers+" 人 · 收入 "+Money.FromCents(state.RevenueCents)+" · 累计收入 "+Money.FromCents(state.TotalRevenueCents),20,Ui.Good);
                 Line(w.Content,"场地占用（含在途预约） "+state.CustomersHere.Length+" / "+S.VenueCapacity(place)+" 人 · 周租 "+shop.Lease.Rent+" · 维护 ¥"+S.VenueMaintenanceYuan(place)+"/天",18);
                 var hours=Ui.Row(w.Content,42,8);
@@ -31,11 +30,12 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(prices,"− ¥5",()=>{S.ConfigureVenue(place.Id,state.Accepting,state.Open,state.Close,System.Math.Max(100,state.PriceCents-500));w.Rebuild();},18),90,42);
                 Ui.Size(Ui.Label(prices,Money.FromCents(state.PriceCents)+"/次",21),150);
                 Ui.Size(Ui.Button(prices,"+ ¥5",()=>{S.ConfigureVenue(place.Id,state.Accepting,state.Open,state.Close,System.Math.Min(100000,state.PriceCents+500));w.Rebuild();},18),90,42);
-                Line(w.Content,"值守："+(shop.Employee==null?"尚未雇佣值守员":shop.Employee.Name+" · 日薪 "+shop.Employee.DailyWage)+"；"+(S.VenueHasAttendant(shop)?"当前有人值守":"当前无人值守，不能接待新顾客"),18);
+                if (!S.VenueHasAttendant(shop)) Ui.Notice(w.Content, "当前无人值守 · 暂停接待");
                 if(shop.Employee!=null)
                 {
+                    PersonSummary(w.Content, S.PersonIdOf(shop.Employee), shop.Employee.Name, "值守员 · 日薪 " + shop.Employee.DailyWage);
                     Ui.Size(Ui.Button(w.Content,"调整值守班次",()=>OpenEmployeeShift(shop.Employee.Id,w),18),-1,42);
-                    Ui.Size(Ui.Button(w.Content,"员工与排班（沿用实际工资结算）",OpenEmployeesPanel,18),-1,42);
+                    Ui.Size(Ui.Button(w.Content,"员工与排班",OpenEmployeesPanel,18),-1,42);
                 }
                 if(S.StaffCommitted(shop)<GameSession.StaffLimit(shop.Place.Size))
                 {
@@ -43,14 +43,16 @@ namespace PCShopSell.Game.UI
                     foreach(var candidate in S.Candidates.Select((person,index)=>new{person,index}).ToArray())
                     {
                         var c=candidate;
-                        Ui.Size(Ui.Button(w.Content,"雇佣 "+c.person.Name+" 值守 · 日薪 "+c.person.DailyWage,()=>{S.Hire(c.index);w.Rebuild();},17,Ui.ButtonBg,S.CandidateAvailable(c.person)),-1,40);
+                        var row = PersonSummary(w.Content, S.PersonIdOf(c.person), c.person.Name, "日薪 " + c.person.DailyWage, 46);
+                        Ui.Size(Ui.Button(row,"雇佣值守员",()=>{S.Hire(c.index);w.Rebuild();},17,Ui.ButtonBg,S.CandidateAvailable(c.person)),135,36);
                     }
                 }
                 Line(w.Content,"在场顾客 / 在途预约",18,Ui.Accent);
                 var customers=GoodsList(w.Content,120);
                 foreach(var customer in state.CustomersHere)
-                    Line(customers,(S.CityPerson(customer.PersonId)?.Name??customer.PersonId)+" · "+(customer.Started<0?"正在赴场，到场后收费":"使用中，剩余 "+System.Math.Max(0,customer.Until-S.Clock.Now.TotalMinutes)+" 分钟")+" · "+Money.FromCents(customer.PriceCents),17);
-                if(state.CustomersHere.Length==0)Line(customers,"暂无顾客。开启接客、到营业时间并有人值守后，居民会按实际路线到场。",17,Ui.Dim);
+                    PersonSummary(customers, customer.PersonId, S.CityPerson(customer.PersonId)?.Name ?? customer.PersonId,
+                        (customer.Started < 0 ? "在途" : "使用中 · 剩余 " + System.Math.Max(0, customer.Until - S.Clock.Now.TotalMinutes) + " 分钟") + " · " + Money.FromCents(customer.PriceCents), 46);
+                if(state.CustomersHere.Length==0)Line(customers,"暂无顾客",17,Ui.Dim);
                 var actions=Ui.Row(w.Content,44,8);
                 Ui.Size(Ui.Button(actions,"自己使用场地（免费）",()=>{w.Close();OpenCityVenue(place);},17,Ui.ButtonHot),-1,44,1).name="VenueOwnerUse";
                 Ui.Size(Ui.Button(actions,"原有物品 / 搬运",()=>OpenVenueLegacyAssets(shop),17),-1,44,1);

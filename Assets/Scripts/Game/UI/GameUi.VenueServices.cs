@@ -29,15 +29,16 @@ namespace PCShopSell.Game.UI
             if (S.CurrentPlace?.Id == activity.VenueId) OpenCityVenue(S.City.GetPlace(activity.VenueId));
             else S.GoToCityActivity(id);
         }
-        private static string VenuePlayerEffects(CityActivityDefinition def)
+        private static string VenuePlayerEffects(CityVenueService service)
         {
             var effects=new List<string>();
             void Add(string name,double value){if(value!=0)effects.Add(name+" "+(value>0?"+":"")+value.ToString("0.#"));}
-            Add("饱腹",def.Hunger); Add("精力",def.Energy<0?def.Energy*PlayerStats.EnergyConsumptionMultiplier:def.Energy); Add("心情",def.Mood); Add("营养",def.Nutrition);
+            Add("饱腹",service.Hunger); Add("精力",service.Energy<0?service.Energy*PlayerStats.EnergyConsumptionMultiplier:service.Energy); Add("心情",service.Mood); Add("营养",service.Nutrition);
             var completion=new List<string>();
-            if(def.Health!=0)completion.Add("健康 +"+def.Health);
-            if(def.Charm!=0)completion.Add("魅力 +"+def.Charm);
-            if(def.Intelligence!=0)completion.Add("见识 +"+def.Intelligence);
+            if(service.Health!=0)completion.Add("健康 +"+service.Health);
+            if(service.Charm!=0)completion.Add("魅力 +"+service.Charm);
+            if(service.Intelligence!=0)completion.Add("见识 +"+service.Intelligence);
+            if(service.Relation>0)completion.Add("同行好感 +"+service.Relation);
             return string.Join(" · ",effects)+(completion.Count>0?"\n完成后："+string.Join(" · ",completion):"");
         }
 
@@ -54,7 +55,6 @@ namespace PCShopSell.Game.UI
                 + "|" + string.Join("|", S.CityActivities.Where(a => a.Active && a.VenueId == place.Id).SelectMany(a => a.Participants).Select(p => p.PersonId + ":" + p.Phase));
             w.LiveStamp = w.LiveKey();
             Line(w.Content, (S.IsOwnedVenue(place)?"老板自用 · 免费，不计营业收入 · ":"现场消费 · ") + S.City.StreetName(place.StreetId) + " · " + CityPlaceHours(place), 19, Ui.Accent);
-            Para(w.Content,"选择服务后在这里体验，结束时结算个人变化；同行活动额外结算关系进展。",16,Ui.Dim);
             if (!here)
             {
                 Para(w.Content, "到场后可与店内人员交流，并选择菜单或服务。邀约请在和对方聊天时约定。", 17, Ui.Dim);
@@ -79,18 +79,18 @@ namespace PCShopSell.Game.UI
                 Para(w.Content, pending.ServiceConfirmed ? "已选好服务，与同行者一起开始。"
                     : pending.Participants.Length > 0 ? pending.RendezvousReady ? "同行者已到场，点菜或选择服务后一起开始。" : "请在约定时间前后1小时内到场集合。" : "选好项目后开始本次消费。", 17, Ui.Good);
             }
-            else if (here) Para(w.Content, "欢迎光临。可以一个人消费，直接点选下面的菜单或服务。", 17, Ui.Dim);
-
             Line(w.Content, place.Business == "venue_restaurant" ? "菜单" : "服务价目表", 20, Ui.Accent);
             var list = GoodsList(w.Content, 300);
             foreach (var definition in CityLifeCatalog.Activities.Where(def => def.VenueId == place.Id))
-            for (int option = 0; option < Math.Min(2, definition.Choices?.Length ?? 0); option++)
+            for (int option = 0; option < definition.ServiceCount; option++)
             {
                 var def = definition; int choice = option;
-                var row = Ui.Row(list, 90, 10);
-                string description = def.Minutes + " 分钟\n" + VenuePlayerEffects(def);
+                var service = def.Service(choice);
+                var row = Ui.Row(list, service.Description == null ? 90 : 114, 10);
+                string description = def.Minutes + " 分钟\n"
+                    + (service.Description == null ? "" : service.Description + "\n") + VenuePlayerEffects(service);
                 Ui.Size(ProductText(row, "<b>" + GameSession.VenueServiceName(def, choice) + "</b>\n<size=15>" + description + "</size>", 18), -1, -1, 1);
-                Ui.Size(Ui.Label(row, S.IsOwnedVenue(place)?"老板自用\n免费":S.VenuePlayerPrice(def)+"/次", 20, TextAnchor.MiddleLeft, Ui.Good), 100);
+                Ui.Size(Ui.Label(row, S.IsOwnedVenue(place)?"老板自用\n免费":S.VenuePlayerPrice(def, choice)+"/次", 20, TextAnchor.MiddleLeft, Ui.Good), 100);
                 string why = here ? S.VenueServiceBlocker(def.Id, choice) : "到场后选择";
                 var action = Ui.Rect(row, "ServiceAction"); Ui.VList(action, 4, 0); Ui.Size(action, 150);
                 Ui.Size(Ui.Button(action, place.Business == "venue_restaurant" ? "点这份餐" : "选择这项服务", () =>

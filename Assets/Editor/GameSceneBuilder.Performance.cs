@@ -17,7 +17,7 @@ namespace PCShopSell.EditorTools
             ShaderUtil.allowAsyncCompilation=false;
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);BuildRig();
             _game=new GameObject("Game").AddComponent<GameController>();_game.Bootstrap(false,7);_game.Ui.QuestPopups=false;
-            var s=_game.Session;s.EventsEnabled=false;s.DebugAddCash(500000);Check(s.DebugRentStarterShop(),"测试门店已租用");
+            var s=_game.Session;s.EventsEnabled=false;s.DebugAddCash(500000);Check(s.DebugRentStarterShop(computerScenario: true),"测试门店已租用");
             s.Clock.Restore(new GameDate(0),600);s.Time.SetPaused(true);
             foreach(var canvas in _game.Ui.Canvases){canvas.renderMode=RenderMode.ScreenSpaceCamera;canvas.worldCamera=_game.Cam;canvas.planeDistance=1;}
             s.StopTrip();s.Leave();s.ArriveAtNode(s.MainShop.Place.NodeId);Frame(0);Shot("street");

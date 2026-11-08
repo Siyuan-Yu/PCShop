@@ -243,7 +243,8 @@ namespace PCShopSell.Game.UI
             {
                 BuildPeopleNavigation(w,"contacts");
                 RectTransform driver = Ui.Row(w.Content, 52);
-                Ui.Size(Ui.Label(driver, $"<b>{GameSession.TruckDriverName}</b>  <size=15><color=#A8B0BA>开面包车，随叫随到，帮你把东西搬到家里或任意一家店</color></size>", 17), -1, -1, 1);
+                PortraitThumb(driver, "truck_driver", 44, null);
+                Ui.Size(Ui.Label(driver, $"<b>{GameSession.TruckDriverName}</b> · 同城送货", 17), -1, -1, 1);
                 var call = Ui.Button(driver, "联系司机", () =>
                 {
                     w.Close();
@@ -254,7 +255,7 @@ namespace PCShopSell.Game.UI
                 var met = S.SavedConversationContacts().ToList();
                 if (met.Count == 0)
                 {
-                    Line(w.Content, "别的号码还没有。熟悉度达到30后，当面交换联系方式才会存进来。", 17, Ui.Dim);
+                    Line(w.Content, "还没有联系人 · 熟悉度达到 30 后可当面交换号码", 17, Ui.Dim);
                     return;
                 }
                 RectTransform list = Ui.Scroll(w.Content, 440);
@@ -263,6 +264,7 @@ namespace PCShopSell.Game.UI
                     ContactInfo n = def;
                     int rel = S.Relation(n.Id);
                     RectTransform row = Ui.Row(list, 48);
+                    PortraitThumb(row, n.Id, 44, () => OpenCityPersonProfile(n.Id));
                     Ui.Size(Ui.Label(row, $"<b>{n.Name}</b>  {n.Role}", 17), 260);
                     Ui.Size(Ui.Label(row, $"{Npcs.LevelName(rel)} {rel}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
                     Ui.Size(Ui.Button(row,"人物资料",()=>OpenCityPersonProfile(n.Id),15),100);
@@ -282,7 +284,6 @@ namespace PCShopSell.Game.UI
                         else OpenChatPanel();
                     }, 15, Ui.ButtonBg), 90);
                 }
-                Line(w.Content, "送礼要当面送，在“目标”里或去档口。", 15, Ui.Dim);
             });
         }
 
@@ -297,37 +298,33 @@ namespace PCShopSell.Game.UI
                 BuildDistrictMessage(w.Content);
                 if(app)
                 {
-                    Para(w.Content,"选择联系人开始交谈；进入对话后点头像可看资料，也可以聊熟人、邀请活动。",17,Ui.Dim);
                     var contacts=S.SavedConversationContacts().ToArray();
-                    if(contacts.Length==0){Para(w.Content,"还没有联系方式。熟悉度达到30后，当面交换联系方式即可在这里联系。",17,Ui.Dim);return;}
+                    if(contacts.Length==0){Line(w.Content,"还没有联系人 · 熟悉度达到 30 后可当面交换号码",17,Ui.Dim);return;}
                     var contactList=Ui.Scroll(w.Content,460);
                     foreach(var person in contacts)
                     {
                         var contact=person;
-                        var row=Ui.Row(contactList,98,10);
-                        PortraitCard(row,contact.Id,contact.Name,"",70,()=>OpenPersonDialogue(contact.Id,parent:w,remote:true),tagText:null);
-                        Ui.Size(Ui.Label(row,$"<b>{contact.Name}</b>\n<size=14>{contact.Role}</size>",17),-1,72,1);
-                        Ui.Size(Ui.Label(row,$"{Npcs.LevelName(S.Relation(contact.Id))} {S.Relation(contact.Id)}",16,TextAnchor.MiddleCenter,Ui.Good),110,72);
+                        var row=PersonSummary(contactList,contact.Id,contact.Name,contact.Role,54,()=>OpenCityPersonProfile(contact.Id));
+                        Ui.Size(Ui.Label(row,$"{Npcs.LevelName(S.Relation(contact.Id))} {S.Relation(contact.Id)}",16,TextAnchor.MiddleCenter,Ui.Good),110);
                         Ui.Size(Ui.Button(row,"交谈",()=>OpenPersonDialogue(contact.Id,parent:w,remote:true),17,Ui.ButtonHot),100,44);
                     }
                     return;
                 }
-                Line(w.Content, app
-                    ? $"每天和每个人聊一次，一定有回，交情 +{GameSession.ChatGain}（只涨到 {GameSession.ChatMaxRelation}）。再往上得当面送礼、约出去。"
-                    : $"每天给每个人发一条短信。现在大家都不习惯看短信，只有大约 {GameSession.SmsReplyChance * 100:0}% 的把握有人回；回了交情 +{GameSession.ChatGain}（只涨到 {GameSession.ChatMaxRelation}）。装了聊天 app 一定有回。", 15, Ui.Dim);
+                Line(w.Content, $"每人每天 1 条 · 回复率 {GameSession.SmsReplyChance:P0} · 交情 +{GameSession.ChatGain}（上限 {GameSession.ChatMaxRelation}）", 16, Ui.Dim);
                 var met = S.SavedConversationContacts().ToList();
                 if (met.Count == 0)
                 {
                     Line(w.Content, "还没有联系方式。熟悉度达到30后，当面交换联系方式才会存进来。", 17, Ui.Dim);
                     return;
                 }
-                RectTransform list = Ui.Scroll(w.Content, 460);
+                RectTransform list = Ui.Scroll(w.Content, 410);
                 foreach (ContactInfo def in met)
                 {
                     ContactInfo n = def;
                     int rel = S.Relation(n.Id);
                     RectTransform row = Ui.Row(list, 48);
-                    Ui.Size(Ui.Label(row, $"<b>{n.Name}</b>  {n.Role}", 17), 250);
+                    PortraitThumb(row, n.Id, 44, () => OpenCityPersonProfile(n.Id));
+                    Ui.Size(Ui.Label(row, $"<b>{n.Name}</b>  {n.Role}", 17), -1, -1, 1);
                     Ui.Size(Ui.Label(row, $"{Npcs.LevelName(rel)} {rel}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
                     Ui.Bar(row, rel / 100f, Ui.Accent, 100, 14);
                     string blocker = S.ChatBlocker(n.Id);

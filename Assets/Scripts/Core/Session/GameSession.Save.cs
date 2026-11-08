@@ -105,10 +105,12 @@ namespace PCShopSell.Core.Session
                 intelligence = Player.Intelligence,
                 charm = Player.Charm,
                 skill = Player.Skill,
+                playerStress = Player.Stress, hasPlayerWorkAttributes = true,
+                playerStamina = Player.Stamina,
                 lastNewsReadDay = _lastNewsReadDay,
 
                 shopStock = Lines(PlayerShop.Stock),
-                shopRetailKind = MainShop.RetailKind, pendingRetailKind = PendingRetailKind,
+                shopRetailKind = MainShop.RetailKind, pendingRetailKind = PendingRetailKind, shopCustomName = MainShop.CustomName,
                 shopGoodsLots = SaveRetailLots(PlayerShop),
                 shopGoodsIds = SaveRetailCounts(PlayerShop).Select(kv => kv.Key).ToArray(),
                 shopGoodsCounts = SaveRetailCounts(PlayerShop).Select(kv => kv.Value).ToArray(),
@@ -167,6 +169,7 @@ namespace PCShopSell.Core.Session
             SaveBusiness(d);
             d.mcnIntroductions=_mcnIntroductions.Select(x=>x.Copy()).ToArray();
             d.residentialHomeId=_residentialHomeId;
+            d.residentialLeases=SaveResidentialLeases();
             d.kolStreaming=_kol.Copy();
             return d;
         }
@@ -217,10 +220,15 @@ namespace PCShopSell.Core.Session
             Player.Intelligence = d.intelligence;
             Player.Charm = d.charm;
             Player.Skill = d.skill;
+            Player.ChangeStress(d.playerStress - Player.Stress);
+            Player.Stamina = d.hasPlayerWorkAttributes ? Math.Max(0, Math.Min(100, d.playerStamina)) : 50;
             _lastNewsReadDay = d.lastNewsReadDay;
 
             RestoreRealty(d);
-            _focus.RetailKind = PCShopSell.Core.Home.RetailShopTypes.Valid(d.shopRetailKind);
+            _focus.RetailKind = HasShop
+                ? PCShopSell.Core.Home.RetailShopTypes.Valid(string.IsNullOrEmpty(d.shopRetailKind) ? "computer" : d.shopRetailKind)
+                : PCShopSell.Core.Home.RetailShopTypes.Default;
+            _focus.CustomName = _focus.Rented ? d.shopCustomName : null;
             PlayerShop.RetailKind = _focus.RetailKind;
             PendingRetailKind = PCShopSell.Core.Home.RetailShopTypes.Valid(d.pendingRetailKind);
             CancelProtectedPendingLease();
@@ -259,7 +267,7 @@ namespace PCShopSell.Core.Session
             foreach (SaveBargain b in d.bargains ?? Array.Empty<SaveBargain>()) _bargains[b.stall] = (b.day, b.bonus);
 
             Employee = d.hasEmployee && d.employee != null ? FromSave(d.employee) : null;
-            if (Employee != null) PlayerShop.Settings.EmployeeCheckoutMinutes = Employee.CheckoutMinutes;
+            if (Employee != null) PlayerShop.Settings.EmployeeCheckoutMinutes = EmployeeCheckoutCycleMinutes(Employee) - 1;
             Assembler = !d.hasAssembler || d.assembler == null ? null : FromSave(d.assembler);
             if (Assembler != null && !d.assembler.hasWorkSkills) Assembler.AssemblyTrained = true;
             _focus.Buyer = d.hasBuyer && d.buyer != null ? FromSave(d.buyer) : null;
@@ -299,6 +307,7 @@ namespace PCShopSell.Core.Session
             foreach (SaveShop shop in d.extraShops ?? Array.Empty<SaveShop>()) RestoreShop(shop, d.hasShopStanding);
             LoadAdditionalStaff(d);
             LoadCityAssets(d);
+            LoadResidentialLeases(d);
             if (d.shopFootfallVersion < 2) MigrateWeeklyCommercialRent();
             LoadCityProcurement(d);
             LoadCityRetail(d);
@@ -352,6 +361,7 @@ namespace PCShopSell.Core.Session
             candidateLeavesAt = e.CandidateLeavesAt,
             hasCharm = true, employeeCharm = EmployeeCharm(e),
             hasEmployeeIntelligence = true, employeeIntelligence = e.Intelligence,
+            hasEmployeeWorkAttributes = true, dexterity = e.Dexterity, stamina = e.Stamina,
             id = e.Id, transferShopId = e.TransferShopId, transferDay = e.TransferDay,
             hasTransferRole = e.TransferRole >= 0, transferRole = e.TransferRole,
             hasWorkSkills = true, assemblyMinutes = e.AssemblyMinutes, purchaseMinutes = e.PurchaseMinutes, assemblyTrained = e.AssemblyTrained,
@@ -365,6 +375,8 @@ namespace PCShopSell.Core.Session
         {
             CandidateLeavesAt = e.candidateLeavesAt,
             Intelligence = e.hasEmployeeIntelligence ? Math.Max(0,Math.Min(100,e.employeeIntelligence)) : 50,
+            Dexterity = e.hasEmployeeWorkAttributes ? Math.Max(0, Math.Min(100, e.dexterity)) : 50,
+            Stamina = e.hasEmployeeWorkAttributes ? Math.Max(0, Math.Min(100, e.stamina)) : 50,
             Charm = e.hasCharm ? Math.Max(0,Math.Min(100,e.employeeCharm)) : -1,
             Id = string.IsNullOrEmpty(e.id) ? Guid.NewGuid().ToString("N") : e.id, TransferShopId = e.transferShopId, TransferDay = e.transferDay,
             TransferRole = e.hasTransferRole ? e.transferRole : -1,

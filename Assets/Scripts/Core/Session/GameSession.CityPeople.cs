@@ -213,7 +213,7 @@ namespace PCShopSell.Core.Session
             var occupied = _cityPeople.Values.Select(person => person.HomePlaceId).ToHashSet();
             var reserved = City.ExpansionResidents.Select(resident => resident.homeId).ToHashSet();
             bool Available(Place residence) => residence != Home && residence.Kind == PlaceKind.Home &&
-                !occupied.Contains(residence.Id) && PropertyAt(residence.Id) == null;
+                !HasResidentialLease(residence) && !occupied.Contains(residence.Id) && PropertyAt(residence.Id) == null;
 
             foreach (var entry in City.ExpansionResidents)
             {

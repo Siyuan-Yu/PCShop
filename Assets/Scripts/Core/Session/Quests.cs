@@ -50,6 +50,16 @@ namespace PCShopSell.Core.Session
         {
             new QuestDef
             {
+                Id = "first_meal", Title = "做第一顿饭", Target = QuestTarget.Cooker,
+                Short = $"打开家里的{K("电饭锅")}，开始煮饭",
+                Hint = $"选白饭和用米量，点开始焖饭。饭好后可以{K("现在吃或装进背包")}。饭盒在饭点或饿了时会自动吃。",
+                Done = s => !s.OpeningMealTutorialPending,
+                Progress = s => s.Pantry.Cooking != null
+                    ? $"还要 {s.Pantry.CookMinutesLeft(s.Clock.Now.TotalMinutes)} 分钟"
+                    : s.Pantry.CookedBowls > 0 ? $"锅里有 {s.Pantry.CookedBowls} 碗熟饭" : null,
+            },
+            new QuestDef
+            {
                 Id = "rent", Title = "租一间铺子", Target = QuestTarget.Agency,
                 Short = $"去{K("安居房产中介")}租一间铺子",
                 Hint = $"签约要付{K("首周租金 + 押金 + 中介费")}，{K("预留开店设备和进货费用")}。",
@@ -64,7 +74,6 @@ namespace PCShopSell.Core.Session
                 Short = $"去{K("宜居家具城")}买收银台和货架",
                 Hint = "备齐该店型所需的开店设施。",
                 Done = s => s.HasShop && s.MissingOpeningFurniture().Length == 0,
-                Reward = "入门 CPU + 入门显卡",
                 RewardFor=s=>s.OpeningRewardText("mall"),
                 Grant = s => s.GrantOpeningReward("mall"),
             },
@@ -156,6 +165,13 @@ namespace PCShopSell.Core.Session
 
         public static QuestDef ForShop(QuestDef source,GameSession s)
         {
+            if (source?.Target == QuestTarget.Cooker)
+            {
+                if (s.Pantry.Cooking == null && s.Pantry.CookedBowls == 0) return source;
+                var meal = source.Copy();
+                meal.Short = s.Pantry.Cooking != null ? "等饭煮好，再吃或装进背包" : "吃一碗，或装一盒放进背包";
+                return meal;
+            }
             if(source?.Id=="mall" && s.HasShop)
             {
                 var purchase=source.Copy();
@@ -181,6 +197,11 @@ namespace PCShopSell.Core.Session
                 q.Short=s.RetailKind=="restaurant"?"准备大米和配菜":s.RetailKind=="secondhand"?"准备可出售的二手商品":"准备本店品类的第一批商品";
                 q.Hint="先使用开店任务赠送的库存，不足时再按本店品类进货。";
             }
+            if(s.RetailKind==PetShopCatalog.ShopKind)
+            {
+                if(q.Id=="shelf") q.Short="把货架设成基础宠物用品，陈列首批商品";
+                if(q.Id=="stock") q.Short="到暖爪宠物用品批发市场补货";
+            }
             if(q.Id=="sale"&&s.RetailKind=="restaurant"){q.Short="接待一桌客人，完成备菜、烹饪与上菜";q.Hint="顾客吃完后付款，记入餐饮收入。";}
             return q;
         }
@@ -188,6 +209,14 @@ namespace PCShopSell.Core.Session
 
     public sealed partial class GameSession
     {
+        private const string OpeningMealTutorialFlag = "tutorial:opening-meal-pending";
+        public bool OpeningMealTutorialPending => Flags.Contains(OpeningMealTutorialFlag);
+
+        private void CompleteOpeningMealTutorial()
+        {
+            if (Flags.Remove(OpeningMealTutorialFlag)) RefreshQuestProgress();
+        }
+
         /// <summary>只派发当前经营阶段可做的一步；没有合适任务时返回列表长度。</summary>
         public int QuestIndex()
         {

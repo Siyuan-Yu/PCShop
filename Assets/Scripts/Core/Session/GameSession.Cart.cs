@@ -451,11 +451,11 @@ namespace PCShopSell.Core.Session
             }
         }
 
-        /// <summary>这里能交给司机的东西：身上的（背包、随身货）随时都行；在家还有厨房和纸箱，在自己店里还有货架后仓和储物柜。</summary>
+        /// <summary>身上的货随时可以交给司机。在家或店内也可以从当地的后仓和临时存放发货。</summary>
         public List<MovableItem> MovableHere()
         {
             var keys = new List<string>();
-            foreach (string src in new[] { "bag", "temp", "kitchen", "box", "shop", "locker" })
+            foreach (string src in new[] { "bag", "temp", "box", "shop", "locker" })
             {
                 if (!SourceHere(src)) continue;
                 Pantry food = FoodOf(src);
@@ -521,7 +521,6 @@ namespace PCShopSell.Core.Session
             {
                 case "bag": return true;
                 case "temp": return AtHome || InPlayerShop;
-                case "kitchen":
                 case "box": return AtHome;
                 case "shop":
                 case "locker": return InPlayerShop;
@@ -535,8 +534,7 @@ namespace PCShopSell.Core.Session
             {
                 case "bag": return "身上";
                 case "temp": return "临时存放";
-                case "kitchen": return "厨房";
-                case "box": return "家里纸箱";
+                case "box": return "家中后仓";
                 case "shop": return "店里后仓";
                 default: return "店里纸箱";
             }
@@ -545,7 +543,7 @@ namespace PCShopSell.Core.Session
         private Backpack TempHere => AtHome ? HomeTemp : InPlayerShop ? ShopTemp : null;
 
         private Pantry FoodOf(string src) =>
-            src == "bag" ? Backpack.Food : src == "kitchen" ? Pantry : src == "box" ? HomeBox.Food : src == "locker" ? ShopLocker.Food : src == "temp" ? TempHere?.Food : null;
+            src == "bag" ? Backpack.Food : src == "box" ? HomeBox.Food : src == "locker" ? ShopLocker.Food : src == "temp" ? TempHere?.Food : null;
 
         private Backpack BagOf(string src) =>
             src == "bag" ? Backpack : src == "box" ? HomeBox : src == "locker" ? ShopLocker : src == "temp" ? TempHere : null;
@@ -648,7 +646,7 @@ namespace PCShopSell.Core.Session
                     var taken = new List<FoodBatch>();
                     MoveBatches(food.Ingredient, taken, unit.Id, n);
                     foreach (FoodBatch b in taken)
-                        items.Add(new CourierItem { Kind = unit.Kind, Id = b.Id, Count = b.Count, ExpireDay = b.ExpireDay });
+                        items.Add(new CourierItem { Kind = unit.Kind, Id = b.Id, Count = b.Count, ExpireDay = FoodBatch.NoExpiry });
                     break;
                 case CourierItemKind.Gift:
                     for (int i = 0; i < n; i++) bag.TakeGift(unit.Id);
@@ -680,7 +678,7 @@ namespace PCShopSell.Core.Session
                 case CourierItemKind.Goods: PartsOf(src).ForceAddGoods(it.Id, it.Count, it.ExpireDay, it.Chilled); break;
                 case CourierItemKind.Rice: FoodOf(src).RiceKg += it.Kg; break;
                 case CourierItemKind.Ingredient:
-                    FoodOf(src).Ingredient.Add(new FoodBatch { Id = it.Id, Name = Ingredients.Get(it.Id)?.Name ?? it.Id, Count = it.Count, ExpireDay = it.ExpireDay });
+                    FoodOf(src).Ingredient.Add(new FoodBatch { Id = it.Id, Name = Ingredients.Get(it.Id)?.Name ?? it.Id, Count = it.Count, ExpireDay = FoodBatch.NoExpiry });
                     break;
                 case CourierItemKind.Gift: BagOf(src).AddGift(it.Id, it.Count); break;
                 case CourierItemKind.Furniture: BagOf(src).AddFurniture(it.Id, it.Count); break;

@@ -102,9 +102,15 @@ namespace PCShopSell.Tests
                 for(int i=1;i<estimates.Length;i++)Assert.AreEqual(estimates[i].DailyPassers*5,estimates[i].MonthlyRent.Yuan);
                 long initialMs=watch.ElapsedMilliseconds;var first=s.FootfallOf(s.PlayerShopPlace);
                 for(int i=0;i<10000;i++)Assert.AreSame(first,s.FootfallOf(s.PlayerShopPlace));
-                Assert.Less(RealEstate.SignCost(first.WeeklyRent).Yuan,10000,"万元开局能租起首间店");
+                var starterRent = s.ShopRentQuote(s.PlayerShopPlace);
+                var busierShop = s.City.GetPlace("expansion_shop_s_start_04");
+                double rentRatio = (double)s.ShopRentQuote(busierShop).Cents / starterRent.Cents;
+                double trafficRatio = s.ExpectedDailyShopEntrants(busierShop) / s.ExpectedDailyShopEntrants(s.PlayerShopPlace);
+                Assert.Less(RealEstate.SignCost(starterRent).Yuan,10000,"万元开局能租起首间店");
+                Assert.Greater(rentRatio, 1.35, "同面积客流接近翻倍，租金需明显拉开");
+                Assert.Less(rentRatio, trafficRatio, "租金涨幅应低于客流涨幅");
                 Assert.True(s.Listings.All(l=>l.Rent==s.ShopRentQuote(s.ListingPlace(l))));
-                TestContext.WriteLine($"Lake quote count={estimates.Length}; first-pass={initialMs}ms; starter={first.DailyPassers} people/day, rent={first.WeeklyRent.Yuan}/week; range={estimates.First().DailyPassers}-{estimates.Last().DailyPassers}.");
+                TestContext.WriteLine($"Lake quote count={estimates.Length}; first-pass={initialMs}ms; starter={first.DailyPassers} people/day, rent={starterRent.Yuan}/week; range={estimates.First().DailyPassers}-{estimates.Last().DailyPassers}.");
             }
         }
         [TestCase("restaurant")] [TestCase("secondhand")]
@@ -136,20 +142,21 @@ namespace PCShopSell.Tests
                 {Assert.AreEqual(quote,loaded.Lease.Rent);Assert.AreEqual(s.FootfallOf(s.PlayerShopPlace).DailyPassers,loaded.FootfallOf(loaded.PlayerShopPlace).DailyPassers);}
             }
         }
-        [Test] public void OldSaveRequotesWeeklyRentAndPreservesDeposits()
+        [TestCase(0)] [TestCase(2)]
+        public void OldSaveRequotesListingsAndPreservesWeeklyContracts(int version)
         {
             using(var s=Session(City()))
             {
                 s.DebugAddListing("spare",0,60,Money.FromYuan(9999));var data=s.CreateSave();
-                data.shopFootfallVersion=0;data.leaseRentCents=123400;data.leaseDepositCents=123400;
+                data.shopFootfallVersion=version;data.leaseRentCents=123400;data.leaseDepositCents=123400;
                 data.pendingPlace="tea";data.pendingRentCents=234500;data.pendingDepositCents=234500;data.pendingStartDay=40;
                 using(var loaded=GameSession.Load(s.City,data))
                 {
-                    Assert.AreEqual(loaded.ShopRentQuote(loaded.PlayerShopPlace),loaded.Lease.Rent);
-                    Assert.AreEqual(loaded.ShopRentQuote(loaded.City.GetPlace("tea")),loaded.PendingLease.Rent);
+                    Assert.AreEqual(version == 2 ? Money.FromCents(123400) : loaded.ShopRentQuote(loaded.PlayerShopPlace), loaded.Lease.Rent);
+                    Assert.AreEqual(version == 2 ? Money.FromCents(234500) : loaded.ShopRentQuote(loaded.City.GetPlace("tea")), loaded.PendingLease.Rent);
                     Assert.AreEqual(1234,loaded.Lease.Deposit.Yuan);Assert.AreEqual(2345,loaded.PendingLease.Deposit.Yuan);
                     Assert.AreEqual(loaded.ShopRentQuote(loaded.City.GetPlace("spare")),loaded.Listings.Single(l=>l.PlaceId=="spare").Rent);
-                    Assert.AreEqual(s.Ledger.Balance,loaded.Ledger.Balance);Assert.AreEqual(2,loaded.CreateSave().shopFootfallVersion);
+                    Assert.AreEqual(s.Ledger.Balance,loaded.Ledger.Balance);Assert.AreEqual(3,loaded.CreateSave().shopFootfallVersion);
                     using(var twice=GameSession.Load(s.City,loaded.CreateSave()))Assert.AreEqual(loaded.Lease.Rent,twice.Lease.Rent);
                 }
             }

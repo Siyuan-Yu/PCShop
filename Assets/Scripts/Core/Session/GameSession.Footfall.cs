@@ -20,9 +20,18 @@ namespace PCShopSell.Core.Session
         private double _streetTrafficReputation;
         private const int RestaurantVisitMinutes = 12;
         private const double RestaurantTurnoverMinutes = 30;
+        private const double ReferenceStreetDemand = 300;
+        private const double LowStreetDemandFactor = .52;
         private static readonly ShopSettings PreviewShopSettings = new ShopSettings();
         public ShopFootfallEstimate FootfallOf(Place place) => (_shopFootfall??(_shopFootfall=new ShopFootfall(City))).For(place);
-        public Money ShopRentQuote(Place place) => FootfallOf(place).WeeklyRent.Scale(ShopRentFactor);
+        public Money ShopRentQuote(Place place)
+        {
+            // Price the site's baseline arrival demand. Day of week and shop operations affect visits only.
+            const double minimumRent = 2000;
+            double demandRatio = Math.Max(1, ShopArrivalDemand(place) / (ReferenceStreetDemand * LowStreetDemandFactor));
+            double baseRent = minimumRent * Math.Pow(demandRatio, .65);
+            return Money.FromYuan((long)Math.Round(baseRent / 100, MidpointRounding.AwayFromZero) * 100).Scale(ShopRentFactor);
+        }
         private double StreetDemandFactor(Place place)
         {
             _districtDemandRange ??= City.Places.Where(IsCommercialPremises).GroupBy(p=>p.Tier)
@@ -30,7 +39,7 @@ namespace PCShopSell.Core.Session
             double demand = FootfallOf(place).StreetDemand;
             if (!_districtDemandRange.TryGetValue(place.Tier,out var range) || range.max - range.min < 1) return 1;
             double rank = Math.Max(0,Math.Min(1,(demand-range.min)/(range.max-range.min)));
-            return .52 + 1.08 * rank;
+            return LowStreetDemandFactor + 1.08 * rank;
         }
 
         public double StreetTrafficMultiplier(string streetId)
@@ -77,7 +86,11 @@ namespace PCShopSell.Core.Session
         }
 
         // Use one geography adjustment for the map preview and actual arrivals.
-        public double ShopArrivalDemand(Place place) => FootfallOf(place).DailyPassers * StreetDemandFactor(place) * 300 / FootfallOf(place).StreetDemand;
+        public double ShopArrivalDemand(Place place)
+        {
+            var footfall = FootfallOf(place);
+            return footfall.DailyPassers * StreetDemandFactor(place) * ReferenceStreetDemand / footfall.StreetDemand;
+        }
         public double LocationFactorOf(Place place) => ShopArrivalDemand(place)/(600.0*ShopSettings.SizeFactor(place.Size));
         public double StationDistance(Place place) => FootfallOf(place).StationMeters;
         private long SpecialVisitInterval(Place place,int baseMinutes,int competition,double traffic)

@@ -335,7 +335,7 @@ namespace PCShopSell.Game.UI
             OpenWindow("叫货车 · " + GameSession.TruckDriverName, 1180, 860, w =>
             {
                 Para(w.Content, $"每辆货车最多装 {GameSession.CourierCapacityKg:0} 千克，运费按路程算。先选送到哪，再把左边的东西装车。" +
-                    "在家可搬厨房、后仓和临时存放；在店里可搬后仓、后仓和临时存放。摆着的家具先收进后仓，再装车搬走。", 15, Ui.Dim);
+                    "在家或店内可搬后仓和临时存放的货物。摆着的家具先收进后仓。", 15, Ui.Dim);
                 OwnedShop dest = S.TruckDest;
                 RectTransform destRow = Ui.Row(w.Content, 42, 8);
                 Ui.Size(Ui.Label(destRow, "送到", 17, TextAnchor.MiddleLeft, Ui.Dim), 44);
@@ -402,7 +402,7 @@ namespace PCShopSell.Game.UI
             string title = S.ShopTitle(shop);
             OpenWindow((shop.OwnsProperty?"结束自营 · ":"退租 · ") + title, 660, 460, confirm =>
             {
-                Line(confirm.Content, $"{title}（{shop.Place.Name}）· 周租 {shop.Lease.Rent}", 20, Ui.Accent);
+                Line(confirm.Content, $"{title} · {S.City.StreetName(shop.Place.StreetId)} · 周租 {shop.Lease.Rent}", 20, Ui.Accent);
                 Para(confirm.Content, (shop.OwnsProperty?"结束自营后产权保留。":$"主动退租，已交押金 {shop.Lease.Deposit} 全部不退，不会再次扣款。")+
                     "店里摆的家具收回“我的”，本店员工辞退。"+(S.CurrentPlace==shop.Place?"办理后移到店铺门口。":"办理后仍留在中介。")+
                     (S.MyShopCount==1?"这是最后一家店，结束后可到中介重新租铺。":shop==S.MainShop?"下一家店将成为主店。":""),17);

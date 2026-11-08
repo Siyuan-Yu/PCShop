@@ -10,7 +10,7 @@ namespace PCShopSell.Core.Session
     public enum QuestTarget
     {
         Agency, Renovate, Stock, Market, Counter, Staff, PhoneShop, Upgrades, Mall,
-        Pricing, Orders, Restock, Finance, Enterprise, Direct, Ventures, Park, Creators, Property
+        Pricing, Orders, Restock, Finance, Enterprise, Direct, Ventures, Park, Creators, Property, Cooker
     }
 
     public static partial class Quests
@@ -119,10 +119,15 @@ namespace PCShopSell.Core.Session
             var q = CurrentQuest();
             if (q != null && q.Target == target) Flags.Add("tutorial:visited:" + q.Id);
         }
-        public bool CompleteQuestLesson(string id)
+        public bool CanCompleteQuestLesson(string id)
         {
             var q = Quests.Get(id);
-            if (IsGameOver || q == null || !q.Lesson || CurrentQuest()?.Id != id || !Flags.Contains("tutorial:visited:" + id) || (q.LessonReady != null && !q.LessonReady(this))) return false;
+            return !IsGameOver && q != null && q.Lesson && CurrentQuest()?.Id == id
+                && Flags.Contains("tutorial:visited:" + id) && (q.LessonReady == null || q.LessonReady(this));
+        }
+        public bool CompleteQuestLesson(string id)
+        {
+            if (!CanCompleteQuestLesson(id)) return false;
             Flags.Add("tutorial:read:" + id);
             RefreshQuestProgress();
             return true;
@@ -133,7 +138,7 @@ namespace PCShopSell.Core.Session
             if (q.Chapter == 0)
             {
                 // Basic instructions follow actual opening progress, never an old manually pinned task.
-                if (q.Id != "rent" && !HasShop) return false;
+                if (q.Id != "rent" && q.Target != QuestTarget.Cooker && !HasShop) return false;
                 return Quests.All.TakeWhile(x => x.Id != q.Id).All(x => QuestCompleted(x.Id));
             }
             if (!HasShop || Quests.All.Any(x => x.Chapter == 0 && !QuestCompleted(x.Id))) return false;

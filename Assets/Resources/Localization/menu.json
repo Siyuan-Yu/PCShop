@@ -14,9 +14,9 @@
     },
     {
       "key": "story",
-      "zh": "装好第一台电脑，迎来第一位顾客。\n在这条商业街上，经营一家属于自己的电脑店。",
-      "ja": "最初の一台を組み立て、最初のお客様を迎える。\nこの商店街で、自分だけのPCショップを育てよう。",
-      "en": "Build your first PC. Welcome your first customer.\nMake a place for yourself on a lively shopping street."
+      "zh": "备好第一批宠物用品，迎来第一位顾客。\n在这条商业街上，经营一家属于自己的店。",
+      "ja": "ペット用品を仕入れて、最初のお客様を迎えよう。\nこの商店街で、自分だけのお店を育てよう。",
+      "en": "Stock your first pet supplies and welcome your first customer.\nBuild a business of your own on a lively shopping street."
     },
     {
       "key": "computer_line",
@@ -278,9 +278,9 @@
     },
     {
       "key": "about_body",
-      "zh": "一款以电脑城创业为主题的模拟经营游戏。\n从采购、装机与接待顾客开始，逐步经营自己的电脑店。\n\n感谢你参与试玩，帮助我们打磨这个商业街的故事。",
-      "ja": "PCショップ経営をテーマにしたシミュレーションゲームです。\n仕入れ、PC組立、接客から始め、自分のお店を育てましょう。\n\nプレイテストにご参加いただき、ありがとうございます。",
-      "en": "A business simulation about building your own PC shop.\nBuy parts, assemble computers, and look after your customers as your business grows.\n\nThank you for helping shape this shopping-street story."
+      "zh": "一款以商业街创业为主题的模拟经营游戏。\n从进货和接待顾客开始，经营宠物用品店或选择其他店型。\n\n感谢你参与试玩，帮助我们打磨这个商业街的故事。",
+      "ja": "商店街で自分のお店を育てる経営シミュレーションです。\nペット用品店や好きな業種を選び、仕入れと接客から始めましょう。\n\nプレイテストにご参加いただき、ありがとうございます。",
+      "en": "A business simulation about starting your own shop.\nRun a pet supply shop or choose another business, then start stocking shelves and serving customers.\n\nThank you for helping shape this shopping-street story."
     },
     {
       "key": "quit_confirm",
@@ -338,9 +338,9 @@
     },
     {
       "key": "intro_body",
-      "zh": "你带着 ¥10,000 来到电脑城，想开一家自己的电脑店。先安顿下来，出门去房产中介找一间负担得起的铺子。",
-      "ja": "所持金10,000元でこの街にやって来ました。夢は自分のPCショップ。まずは不動産屋で無理なく借りられる店舗を探しましょう。",
-      "en": "You arrive with ¥10,000 and a dream of opening a PC shop. Settle in, then visit the property agency to find an affordable storefront."
+      "zh": "你刚到这座城，肚子已经饿了。先用家里的电饭锅煮顿饭，再去中介找一间铺子，开自己的店。",
+      "ja": "街に着いたばかりで、お腹も空いています。まずは家の炊飯器でご飯を炊きましょう。それから不動産屋で、自分のお店にする物件を探しましょう。",
+      "en": "You just arrived in town and you're hungry. Cook a meal in your rice cooker, then visit the property agency to find a place for your shop."
     },
     {
       "key": "intro_existing",
@@ -356,7 +356,7 @@
     },
     {
       "key": "intro_tasks",
-      "zh": "左上角提示眼前的一件事；需要说明时点“查看步骤”。",
+      "zh": "左上角显示当前任务。点“详情”可以查看做法。",
       "ja": "左上のタスクに次の目標が表示されます。手順ボタンから説明を確認できます。",
       "en": "The task tracker shows your next objective. Open its instructions when you need guidance."
     },

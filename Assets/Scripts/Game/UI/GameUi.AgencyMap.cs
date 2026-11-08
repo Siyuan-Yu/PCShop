@@ -12,8 +12,8 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
-        private readonly Dictionary<string, (Vector2 from, Vector2 to, float height, double strength, string street)[]> _agencyFlows =
-            new Dictionary<string, (Vector2, Vector2, float, double, string)[]>();
+        private readonly Dictionary<string, (Vector2 from, Vector2 to, float height, float width, double strength, string street)[]> _agencyFlows =
+            new Dictionary<string, (Vector2, Vector2, float, float, double, string)[]>();
         private bool _showAgencyFlow = true;
 
         private void BuildAgencyMap(RectTransform map, Place[] units, Window w, Place agency)
@@ -29,10 +29,7 @@ namespace PCShopSell.Game.UI
                 for (int i = 0; i < 3; i++)
                 {
                     float x = 425 + i * 40;
-                    float thickness = AgencyStreetMap.PedestrianBandWidth(i)*6;
-                    float y = 23-thickness*.5f;
-                    AgencyBlock(map,"StreetFlowKeyOutline",AgencyStreetMap.PedestrianBandOutline,x-1,y-1,19,thickness+2);
-                    AgencyBlock(map,"StreetFlowKey",AgencyStreetMap.PedestrianBandColor(i),x,y,17,thickness);
+                    AgencyBlock(map,"StreetFlowKey",AgencyStreetMap.PedestrianBandColor(i),x,18,17,10);
                     AgencyMapText(map,i==0?"少":i==1?"中":"多",14,x+21,8,18,30,Ui.TextColor);
                 }
             }
@@ -143,7 +140,7 @@ namespace PCShopSell.Game.UI
             }
         }
 
-        private AgencyStreetMap.PedestrianBand[] AgencyTrafficBands((Vector2 from, Vector2 to, float height, double strength, string street)[] bands)
+        private AgencyStreetMap.PedestrianBand[] AgencyTrafficBands((Vector2 from, Vector2 to, float height, float width, double strength, string street)[] bands)
         {
             var result = new AgencyStreetMap.PedestrianBand[bands.Length];
             for (int i = 0; i < bands.Length; i++)
@@ -151,7 +148,7 @@ namespace PCShopSell.Game.UI
                 var band = bands[i];
                 double strength = band.strength * System.Math.Sqrt(S.StreetTrafficMultiplier(band.street));
                 int level = strength >= .67 ? 2 : strength >= .34 ? 1 : 0;
-                result[i] = new AgencyStreetMap.PedestrianBand(band.from, band.to, band.height, level);
+                result[i] = new AgencyStreetMap.PedestrianBand(band.from, band.to, band.height, band.width, level);
             }
             return result;
         }
@@ -198,8 +195,9 @@ namespace PCShopSell.Game.UI
             }
 
             var local = units.Select(p=>p.NodeId).Distinct().Select(Point).ToArray();
+            var localStreets = new HashSet<string>(units.Select(p => p.StreetId));
             double peak = paths.Values.DefaultIfEmpty(1).Max();
-            var bands = new List<(Vector2 from, Vector2 to, float height, double strength, string street)>();
+            var bands = new List<(Vector2 from, Vector2 to, float height, float width, double strength, string street)>();
             foreach (var node in map.Nodes)
             foreach (var edge in map.NeighborsOf(node.Id))
             {
@@ -207,19 +205,13 @@ namespace PCShopSell.Game.UI
                 if (string.CompareOrdinal(from,to)>=0) continue;
                 paths.TryGetValue((from,to),out double flow);
                 Vector2 a = Point(from), b = Point(to), delta = b-a;
-                float length = delta.magnitude;
-                if (length<1 || flow==0 && !local.Any(p=>NearSegment(p,a,delta))) continue;
-                if (Mathf.Abs(delta.x)>Mathf.Abs(delta.y) ? delta.x<0 : delta.y<0)
-                    (from,to,a,b,delta) = (to,from,b,a,-delta);
-                Vector2 along = delta/length;
-                Vector2 offset = new Vector2(along.y,-along.x)*(RoadWidth(a,b)*.5f+.7f);
-                float start = JunctionInset(from,to,a,along,offset);
-                float end = JunctionInset(to,from,b,-along,offset);
-                if (length-start-end<.6f) continue;
+                if (delta.sqrMagnitude < 1) continue;
+                string street = S.TrafficStreetOfSegment(from,to);
+                if (flow == 0 && !localStreets.Contains(street) && !local.Any(p=>NearSegment(p,a,delta))) continue;
                 double strength = System.Math.Sqrt(flow/peak);
                 bool raised = city.IsLakeCity && (StreetWorldBuilder.IsLakeAccessNode(from) || StreetWorldBuilder.IsLakeAccessNode(to));
-                float height = raised ? StreetWorldBuilder.LakeAccessHeight(city) + .03f : .055f;
-                bands.Add((a+along*start+offset,b-along*end+offset,height,strength,S.TrafficStreetOfSegment(from,to)));
+                float height = raised ? StreetWorldBuilder.LakeAccessHeight(city) + .008f : city.IsLakeCity ? .032f : .055f;
+                bands.Add((a,b,height,RoadWidth(a,b),strength,street));
             }
             cached = bands.ToArray();
             _agencyFlows.Add(agency.Id,cached);
@@ -236,22 +228,6 @@ namespace PCShopSell.Game.UI
                 var to = new MapPoint(b.x,b.y);
                 return city.LayoutVersion>=7 ? (float)GameSession.CityRoadWidth(from,to)
                     : GameSession.IsShoppingStreet(from,to) ? 14 : GameSession.IsMainRoad(from,to) ? 7 : 5;
-            }
-            float JunctionInset(string nodeId,string otherId,Vector2 at,Vector2 along,Vector2 offset)
-            {
-                float inset = .25f;
-                foreach (var neighbor in map.NeighborsOf(nodeId))
-                {
-                    if (neighbor.To==otherId) continue;
-                    Vector2 next = Point(neighbor.To);
-                    Vector2 direction = (next-at).normalized;
-                    if (direction.sqrMagnitude<.5f || Mathf.Abs(Vector2.Dot(direction,along))>.88f) continue;
-                    Vector2 normal = new Vector2(-direction.y,direction.x);
-                    float across = Vector2.Dot(normal,along);
-                    float gap = (RoadWidth(at,next)*.5f+1-Mathf.Sign(across)*Vector2.Dot(normal,offset))/Mathf.Abs(across);
-                    inset = Mathf.Max(inset,gap);
-                }
-                return inset;
             }
         }
 

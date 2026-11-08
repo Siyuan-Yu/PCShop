@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
@@ -45,9 +46,10 @@ namespace PCShopSell.Game.UI
         private string CityPlaceHours(Place p)
         {
             if(S.IsOwnedVenue(p)){var v=S.VenueOperation(p.Id);return v.Open==v.Close?"全天开放":$"{v.Open/60:00}:{v.Open%60:00}—{v.Close/60:00}:{v.Close%60:00}";}
-            if (GameSession.SupplierClosesOnWeekend(p)) return S.OpeningHoursText(p);
-            int open = p.ExplicitEntrance ? p.OpenMinute : 0;
-            int close = p.ExplicitEntrance ? p.CloseMinute : 0;
+            var shop = S.ShopAt(p);
+            if (shop == null && GameSession.SupplierClosesOnWeekend(p)) return S.OpeningHoursText(p);
+            int open = shop?.Sim.OpenMinute ?? (p.ExplicitEntrance ? p.OpenMinute : 0);
+            int close = shop?.Sim.CloseMinute ?? (p.ExplicitEntrance ? p.CloseMinute : 0);
             if (open == close || open == 0 && close == 1440) return "24小时营业";
             return $"{open / 60:00}:{open % 60:00}—{(close < open ? "次日 " : "")}{close / 60:00}:{close % 60:00}";
         }
@@ -58,6 +60,9 @@ namespace PCShopSell.Game.UI
             || _cityMapType == "source" && (p.Kind == PlaceKind.Wholesaler || S.HasRetailWholesale(p))
             || _cityMapType == "home" && p.Kind == PlaceKind.Home;
         private int CityMapPriority(Place p) => S.CityActivities.Any(a => a.Active && a.VenueId == p.Id) ? 0 : S.CityFavorites.Contains(p.Id) ? 1 : S.CityRecent.Contains(p.Id) ? 2 : 3;
+        private string CityMapPlaceName(Place place) => S.ShopAt(place) is OwnedShop shop ? S.ShopTitle(shop) : place.Name;
+        private string CityMapPlaceType(Place place) => S.ShopAt(place) is OwnedShop shop
+            ? RetailShopTypes.Name(shop.RetailKind) : place.Business ?? place.Kind.ToString();
 
         public void OpenCityMap()=>OpenCityMap(null);
         private void OpenCityMap(Action<Place> onSelected)
@@ -86,19 +91,19 @@ namespace PCShopSell.Game.UI
                     }
                 }
                 if (S.CityDefaultDestination != null && S.City.HasPlace(S.CityDefaultDestination))
-                    Line(w.Content, "底栏自定目的地：" + S.City.GetPlace(S.CityDefaultDestination).Name, 17, Ui.Accent);
+                    Line(w.Content, "底栏自定目的地：" + CityMapPlaceName(S.City.GetPlace(S.CityDefaultDestination)), 17, Ui.Accent);
                 if (S.CityIntent != null || S.Trip != null) Ui.Size(Ui.Button(w.Content, "取消当前路线（预约保留）", () => { S.StopTrip(); S.CancelCityTravel(); w.Rebuild(); }, 18, Ui.Warn), -1, 42);
                 BuildCityRouteMap(w.Content,Pick);
                 var places = S.City.PublicPlaces.Where(p => (_cityMapStreet == null || p.StreetId == _cityMapStreet) && CityMapTypeMatches(p)
-                    && (_cityMapSearch.Length == 0 || (p.Name + " " + p.Business + " " + S.City.StreetName(p.StreetId)).IndexOf(_cityMapSearch, StringComparison.OrdinalIgnoreCase) >= 0))
-                    .OrderBy(CityMapPriority).ThenBy(p => p.StreetId).ThenBy(p => p.Name).ToArray();
+                    && (_cityMapSearch.Length == 0 || (CityMapPlaceName(p) + " " + CityMapPlaceType(p) + " " + S.City.StreetName(p.StreetId)).IndexOf(_cityMapSearch, StringComparison.OrdinalIgnoreCase) >= 0))
+                    .OrderBy(CityMapPriority).ThenBy(p => p.StreetId).ThenBy(CityMapPlaceName).ToArray();
                 _cityMapPage = Math.Max(0, Math.Min(_cityMapPage, Math.Max(0, (places.Length - 1) / 12)));
                 Line(w.Content, onSelected==null?"当前邀约优先，其次收藏和最近前往；地图不显示陌生人的实时位置。":"选择地点后保留在底栏，点击底栏地点主按钮才出发。", 17, Ui.Dim);
                 foreach (var p in places.Skip(_cityMapPage * 12).Take(12))
                 {
                     var place = p;
                     string tag = S.CityActivities.Any(a => a.Active && a.VenueId == p.Id) ? "[邀约] " : S.CityFavorites.Contains(p.Id) ? "★ " : S.CityRecent.Contains(p.Id) ? "[最近] " : "";
-                    Ui.Size(Ui.Button(w.Content, tag + p.Name + " · " + S.City.StreetName(p.StreetId) + " · " + (p.Business ?? p.Kind.ToString()) + "\n" + CityPlaceHours(p) + (S.IsMyShop(p) ? " · 我的店" : S.PropertyAt(p.Id) != null ? " · 已持有物业" : ""), () => Pick(place), 18), -1, 68).name="CityMapList_"+p.Id;
+                    Ui.Size(Ui.Button(w.Content, tag + CityMapPlaceName(p) + " · " + S.City.StreetName(p.StreetId) + " · " + CityMapPlaceType(p) + "\n" + CityPlaceHours(p) + (S.IsMyShop(p) ? " · 我的店" : S.PropertyAt(p.Id) != null ? " · 已持有物业" : ""), () => Pick(place), 18), -1, 68).name="CityMapList_"+p.Id;
                 }
                 if (places.Length == 0) Line(w.Content, "没有匹配地点，可清除搜索或切换筛选。", 18, Ui.Dim);
                 var pages = Ui.Row(w.Content, 40, 8);
@@ -131,7 +136,7 @@ namespace PCShopSell.Game.UI
                     S.CityActivities.Any(a => a.Active && a.VenueId == p.Id) ? Ui.Warn : S.IsMyShop(p) || S.PropertyAt(p.Id) != null ? Ui.ButtonHot : Ui.ButtonBg);
                 button.name="CityMap_"+p.Id;
                 var rect = (RectTransform)button.transform; rect.anchorMin = rect.anchorMax = at; rect.pivot = new Vector2(.5f, .5f); rect.sizeDelta = new Vector2(25, 23);
-                button.Tip(p.Name + " · " + S.City.StreetName(p.StreetId));
+                button.Tip(CityMapPlaceName(p) + " · " + S.City.StreetName(p.StreetId));
             }
             var marker = Ui.Label(background, "我", 18, TextAnchor.MiddleCenter, Ui.Accent); var player = S.PlayerPosition;
             var playerAt = Point(player.X * S.City.DistanceScale, player.Y * S.City.DistanceScale);
@@ -140,14 +145,14 @@ namespace PCShopSell.Game.UI
 
         private void OpenCityPlaceDetail(Place place)
         {
-            OpenWindow(place.Name, 810, 650, w =>
+            OpenWindow(CityMapPlaceName(place), 810, 650, w =>
             {
-                Line(w.Content, S.City.StreetName(place.StreetId) + " · " + (place.Business ?? place.Kind.ToString()), 21, Ui.Accent);
+                Line(w.Content, S.City.StreetName(place.StreetId) + " · " + CityMapPlaceType(place), 21, Ui.Accent);
                 Line(w.Content, "开放：" + CityPlaceHours(place), 19);
                 int minutes = S.CityTravelMinutes(place);
                 Line(w.Content, minutes >= int.MaxValue / 8 ? "当前路线不可达，请换一处目的地。" : "当前交通方式预计 " + minutes + " 游戏分钟；按真实路线出发。", 18, minutes >= int.MaxValue / 8 ? Ui.Warn : Ui.Dim);
                 if (S.ClosedReason(place) != null) Para(w.Content, S.ClosedReason(place) + "。可以走到门口，抵达后会再次检查进入条件。", 17, Ui.Warn);
-                Ui.Size(Ui.Button(w.Content, "前往" + place.Name, () => { CloseAllWindows(); _ctrl.GoToPlace(place); }, 20, Ui.ButtonHot, minutes < int.MaxValue / 8), -1, 48);
+                Ui.Size(Ui.Button(w.Content, "前往" + CityMapPlaceName(place), () => { CloseAllWindows(); _ctrl.GoToPlace(place); }, 20, Ui.ButtonHot, minutes < int.MaxValue / 8), -1, 48);
                 bool favorite = S.CityFavorites.Contains(place.Id);
                 Ui.Size(Ui.Button(w.Content, favorite ? "取消收藏" : "收藏地点（最多5个）", () => { S.SetCityFavorite(place.Id, !favorite); w.Rebuild(); }, 18), -1, 44);
                 Ui.Size(Ui.Button(w.Content, "设为底栏自定目的地", () => { S.SetCityDefault(place.Id); RefreshShortcutMenus(); CloseAllWindows(); }, 18), -1, 44);
@@ -333,9 +338,9 @@ namespace PCShopSell.Game.UI
                 proposed=Math.Max((proposed+14)/15*15,earliestStart);
                 var venue = S.City.GetPlace(def.VenueId);
                 Line(w.Content, venue.Name + " · " + S.City.StreetName(venue.StreetId) + " · " + CityPlaceHours(venue), 20, Ui.Accent);
-                Line(w.Content, $"预约开始 {CityTime(proposed)}\n活动 {def.Minutes}分钟 · 约定时间前后1小时内到场即可集合 · 服务参考价 {S.VenuePlayerPrice(def)}（到场后选定）", 20);
+                Line(w.Content, $"{def.Minutes} 分钟 · 参考价 {S.VenuePriceRange(def)}", 18);
                 int journey = S.CityTravelMinutes(venue);
-                Para(w.Content, "当前交通路程预计 " + (journey >= int.MaxValue / 8 ? "不可达" : journey + "分钟") + "。费用在实际到场并开始时支付；接受只登记日程与时段占用。", 17, Ui.Dim);
+                Line(w.Content, journey >= int.MaxValue / 8 ? "当前路线不可达" : $"路程约 {journey} 分钟 · 到场后付费", 16, Ui.Dim);
                 var date=Ui.Row(w.Content,42,8);Ui.Size(Ui.Label(date,"日期",18),65);
                 int today=(int)(earliestStart/1440);
                 int days=Math.Max(36,(int)(proposed/1440)-today+1);
@@ -343,14 +348,12 @@ namespace PCShopSell.Game.UI
                 ClockSelector(w.Content,"开始",(int)(proposed%1440),value=>{proposed=proposed/1440*1440+value;w.RequestRebuild();},
                     proposed/1440==earliestStart/1440?(int)(earliestStart%1440):0);
                 Ui.Size(Ui.Button(w.Content,"推荐可赴约时间",()=>{proposed=S.SuggestCityActivityStart(definitionId,selected.FirstOrDefault());w.Rebuild();},17),-1,40);
-                Line(w.Content, "同行：" + (S.CityPerson(personId)?.Name ?? "朋友"), 18, Ui.Accent);
-                Para(w.Content, "这次只约定见面地点和时间。约定时间前后1小时内到场，同伴直接在场，再一起选择菜单或服务。", 17, Ui.Dim);
+                PersonSummary(w.Content, personId, S.CityPerson(personId)?.Name ?? "朋友", "约定时间前后 1 小时内到场");
                 bool employee = selected.Any(id => S.Employees.Any(e => S.PersonIdOf(e.Person) == id));
                 if (employee) Ui.Size(Ui.Button(w.Content, (approveEmployee ? "✓ 已批准" : "明确批准") + "所选员工在活动出发/参加期间离岗", () => { approveEmployee = !approveEmployee; w.Rebuild(); }, 18, approveEmployee ? Ui.Warn : Ui.ButtonBg), -1, 48);
-                Para(w.Content, "值守提示：只有你守店时，真正离店后暂停现场服务；被邀请的员工真正出发后不再提供店内能力，其他实际当班员工仍可工作。查看远程经营总览不会恢复值守。", 17, Ui.Warn);
-                foreach (var shop in S.MyShops) Line(w.Content, S.ShopTitle(shop) + "：" + S.CityServiceReason(shop), 17);
+                if (employee) Para(w.Content, "受邀员工出发后将暂时离岗。", 16, Ui.Warn);
                 string blocker = S.CityActivityBlocker(def.Id, selected, proposed, approveEmployee);
-                if (blocker != null) Para(w.Content, blocker, 18, Ui.Warn);
+                if (blocker != null) Ui.Notice(w.Content, blocker);
                 var actions = Ui.Row(w.Content, 48, 8);
                 void ConfirmSchedule()
                 {
@@ -420,10 +423,11 @@ namespace PCShopSell.Game.UI
                 {
                     long remaining = Math.Max(0, a.ActualStart + a.Duration - S.Clock.Now.TotalMinutes);
                     Line(w.Content, "预计剩余 " + remaining + " 游戏分钟；世界时间按原倍速推进。", 19);
-                    Para(w.Content, a.Stage == 0 ? def?.StartText : def?.MidText, 19);
+                    if (a.ServiceConfirmed) Line(w.Content, "已选项目 · " + GameSession.VenueServiceName(def, a.ServiceChoice), 18, Ui.Good);
+                    Para(w.Content, a.Stage == 0 ? def?.StartText : S.CityActivityMidText(a), 19);
                     Ui.Size(Ui.Button(w.Content, "打开场所菜单", () => GoToScheduledCityActivity(activityId), 18, Ui.ButtonHot,
                         CityActivityMenuOrTravelBlocker(activityId) == null), -1, 44);
-                    if (def != null) for (int i = 0; i < def.Choices.Length; i++)
+                    if (def != null) for (int i = a.ServiceConfirmed ? def.ServiceCount : 0; i < def.Choices.Length; i++)
                     {
                         int index = i; bool done = a.Choices.Contains(index.ToString());
                         Ui.Size(Ui.Button(w.Content, (done ? "✓ " : "") + def.Choices[i], () => { CloseAllWindows(); S.ChooseCityActivity(activityId, index); }, 18, done ? Ui.ButtonBg : Ui.ButtonHot), -1, 44);
@@ -491,7 +495,8 @@ namespace PCShopSell.Game.UI
             var def = S.CityActivityService(a);
             string phase = travelling ? "正在赴约" : GameSession.CityPhaseText(a.State);
             string time = a.State == CityActivityPhase.Running ? "剩余 " + Math.Max(0, a.ActualStart + a.Duration - S.Clock.Now.TotalMinutes) + " 分钟" : "预约 " + CityTime(a.ScheduledStart);
-            _cityActivityHudText.text = (def?.Name ?? a.DefinitionId) + " · " + phase + " · " + time + "\n" + (a.State == CityActivityPhase.Running ? a.Stage == 0 ? def?.StartText : def?.MidText : here ? "已经到场。在菜单里选择服务，与同行者一起开始活动。" : travelling ? "正在沿路线前往约定场所；可收起提醒，导航会继续。" : "赴约时间临近；空闲时点击“前往赴约”出发。");
+            string title = a.ServiceConfirmed ? GameSession.VenueServiceName(def, a.ServiceChoice) : def?.Name ?? a.DefinitionId;
+            _cityActivityHudText.text = title + " · " + phase + " · " + time + "\n" + (a.State == CityActivityPhase.Running ? a.Stage == 0 ? def?.StartText : S.CityActivityMidText(a) : here ? "已经到场。在菜单里选择服务，与同行者一起开始活动。" : travelling ? "正在沿路线前往约定场所；可收起提醒，导航会继续。" : "赴约时间临近；空闲时点击“前往赴约”出发。");
         }
 
         public void OpenCityAcceptance()
@@ -511,7 +516,7 @@ namespace PCShopSell.Game.UI
 #if UNITY_EDITOR
                 Ui.Size(Ui.Button(content, "品牌展会验收：社区资格、报名、接待与交付", OpenExpoAcceptance, 19, Ui.ButtonHot), -1, 48);
 #endif
-                Preset("自有物业与每周房产行情", "assets", "准备4处商铺、1套自住房和1套带NPC住户住宅，覆盖自用、出租与空置；全款购入，并提供8日报价样本，可直接查看住宅和商铺的售价、住宅月租及商铺周租涨跌。 ");
+                Preset("自有物业与每周房产行情", "assets", "准备4处商铺、1套自住房和1套带NPC住户住宅，覆盖自用、出租与空置；全款购入，并提供8日报价样本，可直接查看住宅和商铺的售价及周租涨跌。 ");
                 Preset("夜班精力、自由排班与加班费", "night", "20:00开局，员工日薪200、12小时夜班预计280。玩家精力归零但仍能行动；测试四小时提醒、实际睡眠、跨午夜工时与读档。 ");
                 Preset("服装与冷暖", "clothing", "独立冬季测试档，准备四档服装库存、真实衣架/折叠架/镜子。试穿、更衣、库存转自用和冷暖设备均走正常入口；不快进正式档。 ");
                 var seasons=Ui.Row(content,40,6);

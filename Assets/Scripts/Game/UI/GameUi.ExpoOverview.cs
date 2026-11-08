@@ -132,7 +132,7 @@ namespace PCShopSell.Game.UI
         {
             if (_expoPage == "goods")
             {
-                Line(body, "展品 · 来自 " + S.City.GetPlace(e.ShopId).Name, 20, Ui.Accent);
+                Line(body, "展品 · 来自 " + S.PlaceTitle(S.City.GetPlace(e.ShopId)), 20, Ui.Accent);
                 foreach (var product in e.Products)
                     Line(body, S.BrandProductName(product.ProductId) + " · 移交" + product.Reserved + "件 · 已售" + product.Sold + "件", 18);
                 Para(body, "展品已由展务保管，闭展后剩余库存退回原门店。", 16, Ui.Dim);

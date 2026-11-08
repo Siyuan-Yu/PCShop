@@ -95,7 +95,7 @@ namespace PCShopSell.Game.UI
                 {
                     var card = BrandCard(list, S.BrandProductName(order.ProductId) + " ×" + order.Count);
                     Line(card, "货款 " + Money.FromCents(order.UnitCents * order.Count) + " · 截止 " + new GameDate(order.Due), 19);
-                    Line(card, "供货门店：" + S.City.GetPlace(order.ShopId).Name, 17);
+                    Line(card, "供货门店：" + S.PlaceTitle(S.City.GetPlace(order.ShopId)), 17);
                     Line(card, "现货 " + S.BrandProductCount(order.ShopId, order.ProductId) + "件 · 运费¥30 · 到货后结算货款", 16, Ui.Dim);
                     if (order.Done || order.Failed) Line(card, order.Done ? "已交付并结算" : "订单已逾期", 18, order.Done ? Ui.Good : Ui.Warn);
                     else if (order.Shipped) Line(card, "运输中 · 预计" + new GameTimestamp(order.Arrival) + "到货", 18, Ui.Good);

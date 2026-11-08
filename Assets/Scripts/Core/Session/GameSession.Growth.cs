@@ -98,22 +98,35 @@ namespace PCShopSell.Core.Session
 
         // ---------- 延迟到账 ----------
 
+        public const string NpcRepaymentTitle = "借款已收回";
+
         /// <summary>几天后入账一笔钱（借出去又还回来之类）。</summary>
-        public void ScheduleCredit(int inDays, Money amount, string memo)
+        public GameDate ScheduleCredit(int inDays, Money amount, string memo)
         {
-            _scheduledCredits.Add((Clock.Today.TotalDays + inDays, amount.Cents, memo));
+            if (inDays < 1) throw new ArgumentOutOfRangeException(nameof(inDays));
+            if (!amount.IsPositive) throw new ArgumentOutOfRangeException(nameof(amount));
+            var due = Clock.Today.AddDays(inDays);
+            _scheduledCredits.Add((due.TotalDays, amount.Cents, memo));
+            return due;
         }
 
         private void ProcessScheduledCredits(GameDate today)
         {
+            if (_scheduledCredits.Count == 0) return;
+            var receipts = new List<string>();
+            Money total = Money.Zero;
             for (int i = _scheduledCredits.Count - 1; i >= 0; i--)
             {
                 var c = _scheduledCredits[i];
                 if (c.day > today.TotalDays) continue;
+                Money amount = Money.FromCents(c.cents);
+                Ledger.Credit(today, NpcRepaymentTitle, amount, c.memo);
                 _scheduledCredits.RemoveAt(i);
-                Ledger.Credit(today, "事件", Money.FromCents(c.cents), c.memo);
-                Popup?.Invoke("钱回来了", c.memo + "：" + Money.FromCents(c.cents));
+                total += amount;
+                receipts.Add($"{c.memo}　+{amount}");
             }
+            if (receipts.Count > 0)
+                Show(NpcRepaymentTitle, $"已自动到账 +{total}\n{string.Join("\n", receipts)}\n入账后现金 {Ledger.Balance}");
         }
 
         private void RestoreGrowth(SaveData d)
@@ -138,9 +151,10 @@ namespace PCShopSell.Core.Session
             foreach (string f in d.flags ?? Array.Empty<string>()) Flags.Add(f);
 
             _scheduledCredits.Clear();
-            int n = d.scheduledDays?.Length ?? 0;
+            int n = Math.Min(d.scheduledDays?.Length ?? 0, Math.Min(d.scheduledCents?.Length ?? 0, d.scheduledMemos?.Length ?? 0));
             for (int i = 0; i < n; i++)
-                _scheduledCredits.Add((d.scheduledDays[i], d.scheduledCents[i], d.scheduledMemos[i]));
+                if (d.scheduledCents[i] > 0)
+                    _scheduledCredits.Add((d.scheduledDays[i], d.scheduledCents[i], d.scheduledMemos[i]));
 
             RestoreEvents(d);
             RestoreRestock(d);

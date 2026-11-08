@@ -21,7 +21,7 @@ namespace PCShopSell.EditorTools
             ShaderUtil.allowAsyncCompilation = false; UrpSetup.Ensure();
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single); BuildRig();
             _game = new GameObject("Game").AddComponent<GameController>(); _game.Bootstrap(false, 7); _game.Ui.QuestPopups = false;
-            var s = _game.Session; s.EventsEnabled = false; s.DebugAddCash(500000); s.DebugRentStarterShop();
+            var s = _game.Session; s.EventsEnabled = false; s.DebugAddCash(500000); s.DebugRentStarterShop(computerScenario: true);
             s.Clock.Restore(new GameDate(15), 600); s.PlayerShop.Reputation = 100; s.Time.SetPaused(true);
             var place = s.MainShop.Place; var center = s.DoorOf(place);
             var nearby = s.City.OfKind(PlaceKind.Shop).Where(p => p != place && !s.IsDedicatedVenue(p)).Select(p => new { Place = p, Point = s.DoorOf(p) })

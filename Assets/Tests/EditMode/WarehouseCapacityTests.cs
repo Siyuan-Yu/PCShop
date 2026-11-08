@@ -144,7 +144,7 @@ namespace PCShopSell.Tests
                     Assert.AreEqual(1000,loaded.HomeBox.GiftCount(Gifts.Cig));Assert.AreEqual(500,loaded.ShopLocker.GiftCount(Gifts.Cig));
                     Assert.AreEqual(2000,loaded.HomeBoxParts.CountAll(PartCatalog.Get("cpu0")));
                     Assert.AreEqual(50,loaded.HomeBox.FurnitureCount(FurnitureCatalog.Shelf));Assert.AreEqual(300,loaded.ShopLocker.Food.RiceKg);
-                    var food=loaded.HomeBox.Food.Ingredient.Single();Assert.AreEqual(7,food.Count);Assert.AreEqual(90,food.ExpireDay);Assert.True(food.Chilled);
+                    var food=loaded.HomeBox.Food.Ingredient.Single();Assert.AreEqual(7,food.Count);Assert.AreEqual(FoodBatch.NoExpiry,food.ExpireDay);Assert.True(food.Chilled);
                     using(var again=Reload(loaded))Assert.AreEqual(1000,again.HomeBox.GiftCount(Gifts.Cig));
                 }
             }

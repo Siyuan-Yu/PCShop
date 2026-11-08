@@ -51,7 +51,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildAssetStores(Window w)
         {
-            GuideHint(w.Content,QuestTarget.Finance,w.Rebuild);
+            S.VisitQuestTarget(QuestTarget.Finance);
             var reports = S.AssetStoreReports();
             if (_assetStoreId != null && !reports.Any(r => r.Id == _assetStoreId)) _assetStoreId = null;
             if (!reports.Any(r => r.StreetId == _assetStreet)) _assetStreet = null;

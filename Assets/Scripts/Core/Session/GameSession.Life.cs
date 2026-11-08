@@ -16,6 +16,10 @@ namespace PCShopSell.Core.Session
         public const double EnergyConsumptionMultiplier=.8;
         public void SpendEnergy(double amount) { if(amount>0)Energy=Math.Max(0,Energy-amount*EnergyConsumptionMultiplier); }
         public double Health = 100;
+        public const double HighStressThreshold = 70;
+        public const double TiredEnergyThreshold = 25;
+        public double Stress { get; private set; }
+        public void ChangeStress(double amount) => Stress = Math.Max(0, Math.Min(100, Stress + amount));
         // Display-only diet records; they do not alter health, energy or any other simulation.
         public double Nutrition = 50, Mood = 50;
 
@@ -25,15 +29,16 @@ namespace PCShopSell.Core.Session
         public int Intelligence = 10;
         public int Charm = 10;
         public int Skill = 10;
+        public int Stamina = 50;
 
         public double MaxEnergy => Math.Max(50, 100 - SleepDebt * 6);
-        public bool Tired => Energy < 25;
+        public bool Tired => Energy < TiredEnergyThreshold;
     }
 
     public sealed partial class GameSession
     {
         public static readonly Money HospitalPerDay = Money.FromYuan(200);
-        public const int HospitalDays = 2;
+        public const int HospitalDays = 1;
 
         private int _lastNewsReadDay = -1;
 
@@ -123,10 +128,14 @@ namespace PCShopSell.Core.Session
             {
                 p.Energy = Math.Min(p.MaxEnergy, p.Energy + 12.5 * h * HomeSleepQuality * CitySleepComfortFactor);
                 p.Hunger = Math.Max(0, p.Hunger - 2 * h);
+                p.ChangeStress(-2 * h);
             }
             else
             {
-                p.SpendEnergy(5.5*h);
+                var work = ActiveWorkDay;
+                p.SpendEnergy(5.5 * h * (work != null && work.EnergyMultiplier > 0 ? work.EnergyMultiplier : 1));
+                if (work != null) p.ChangeStress(work.StressPerHour * h);
+                else if (p.Tired) p.ChangeStress(.5 * h);
                 p.Hunger = Math.Max(0, p.Hunger - 6 * h);
             }
 
@@ -179,7 +188,7 @@ namespace PCShopSell.Core.Session
             Player.Hunger = 70;
             Player.Energy = Player.MaxEnergy;
             Player.SleepDebt = 0;
-            Show("住院了", $"长期挨饿、透支，你病倒了。住院 {HospitalDays} 天，医药费 {bill}。店也关了两天。");
+            Show("住院了", $"长期挨饿、透支，你病倒了。住院 {HospitalDays} 天，医药费 {bill}。");
         }
     }
 }

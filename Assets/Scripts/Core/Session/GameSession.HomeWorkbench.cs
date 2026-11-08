@@ -174,7 +174,7 @@ namespace PCShopSell.Core.Session
             var a=HomeAutomation;
             if(a.Meals)
             {
-                List<FoodBatch> food=Pantry.CookedBowls>0&&HomeHas(FurnitureRole.Cooker)?Pantry.Cooked:
+                List<FoodBatch> food=HasAutomaticHomeMeal&&HomeHas(FurnitureRole.Cooker)?Pantry.Cooked:
                     HomeHas(FurnitureRole.Fridge)&&HasMeal(HomeFridge.Food.Packed)?HomeFridge.Food.Packed:
                     a.Supplies&&HomeHas(FurnitureRole.Storage)&&HasMeal(HomeBox.Food.Packed)?HomeBox.Food.Packed:
                     HasMeal(Backpack.Food.Packed)?Backpack.Food.Packed:null;

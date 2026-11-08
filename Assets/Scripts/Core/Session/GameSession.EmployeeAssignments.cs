@@ -7,7 +7,14 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         private readonly List<Employee> _idleEmployees = new List<Employee>();
-        public static int AssemblyMinutesOf(Employee person) => Math.Max(45, person.AssemblyMinutes - person.BuildsCompleted / 2);
+        private static int WorkTaskMinutes(int baseline, int aptitude) =>
+            Math.Max(1, (int)Math.Round(baseline * (1 + (50 - aptitude) * .014), MidpointRounding.AwayFromZero));
+
+        public static int EmployeeCheckoutCycleMinutes(Employee person) => WorkTaskMinutes(Math.Max(1, person.CheckoutMinutes), person.Dexterity) + 1;
+        public static int AssemblyMinutesOf(Employee person) => Math.Max(45, WorkTaskMinutes(person.AssemblyMinutes, person.Dexterity) - person.BuildsCompleted / 2);
+        public static int EmployeePurchaseMinutes(Employee person) => WorkTaskMinutes(Math.Max(1, person.PurchaseMinutes), person.Intelligence);
+        public static int RestaurantEmployeeOperationMinutes(Employee person, EmployeeRole role) =>
+            WorkTaskMinutes(RestaurantOperationMinutes, role == EmployeeRole.Chef ? person.Dexterity : person.Stamina);
         public static int EmployeeCharm(Employee person)
         {
             if(person==null)return 0;
@@ -20,8 +27,6 @@ namespace PCShopSell.Core.Session
         public static double EmployeeSalesBonus(Employee person)=>EmployeeCharm(person)*.0025;
         public double ShopSalesBonus(OwnedShop shop)=>Math.Min(.25,ShopStaff(shop,EmployeeRole.Salesperson)
             .Where(e=>CityEmployeeAvailable(e,shop)).Sum(EmployeeSalesBonus));
-        public static string EmployeeAbilities(Employee person) =>
-            $"收银 {person.CheckoutMinutes} 分钟/单 · 装机 {AssemblyMinutesOf(person)} 分钟/台 · 采购 {person.PurchaseMinutes} 分钟/型号\n智力 {person.Intelligence} · 收购判断准确率 {AppraiserAccuracy(person.Intelligence)*100:0.#}%\n魅力 {EmployeeCharm(person)} · 销售购买意愿 +{EmployeeSalesBonus(person)*100:0.#}个百分点";
 
         public Employee RecruitEmployee(int index,string destination=null)
         {
@@ -110,7 +115,7 @@ namespace PCShopSell.Core.Session
                 if (role == EmployeeRole.Cashier&&dest.Employee==person)
                 {
                     dest.EmployeeTrained = person.AssemblyTrained;
-                    dest.Sim.Settings.EmployeeCheckoutMinutes = person.CheckoutMinutes;
+                    dest.Sim.Settings.EmployeeCheckoutMinutes = EmployeeCheckoutCycleMinutes(person) - 1;
                 }
                 if (role == EmployeeRole.Assembler || (role == EmployeeRole.Cashier && person.AssemblyTrained)) dest.AutoBuild = true;
             }

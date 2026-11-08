@@ -20,9 +20,8 @@ namespace PCShopSell.Game.UI
         private void KolAvatar(Transform parent,string id,float width,float height, bool dimmed = false, Action onClick = null)
         {
             var portrait=Ui.Rect(parent,"KolPortraitHolder_"+id);Ui.Size(portrait,width,height);
-            var image = Ui.Rect(portrait, "KolPortrait_"+id);
-            image.anchorMin = image.anchorMax = new Vector2(.5f, .5f);
-            var raw=image.gameObject.AddComponent<RawImage>();raw.texture=PortraitOf(id);
+            var raw = FitPortrait(portrait, id);
+            raw.name = "KolPortrait_" + id;
             if (dimmed)
             {
                 raw.color = new Color(.55f, .55f, .55f);
@@ -33,10 +32,7 @@ namespace PCShopSell.Game.UI
                 }
                 if (_kolOfflinePortrait != null) raw.material = _kolOfflinePortrait;
             }
-            var fit = image.gameObject.AddComponent<AspectRatioFitter>();
-            fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-            fit.aspectRatio = raw.texture == null ? .75f : (float)raw.texture.width / raw.texture.height;
-            var button=image.gameObject.AddComponent<Button>();button.targetGraphic=raw;
+            var button=raw.gameObject.AddComponent<Button>();button.targetGraphic=raw;
             button.onClick.AddListener(() => { if (onClick == null) OpenCityPersonProfile(id); else onClick(); });
         }
         private void BuildKolBrandPage(Transform parent, Window w, BrandRecord[] brands)

@@ -30,6 +30,33 @@ namespace PCShopSell.Game.UI
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         public static void InvalidatePortraitCache() => PortraitCache.Clear();
 
+        private static RawImage FitPortrait(RectTransform frame, string portraitId, float padding = 0)
+        {
+            var holder = Ui.Rect(frame, "PortraitViewport").Fill(padding);
+            var raw = Ui.Rect(holder, "Image").Fill().gameObject.AddComponent<RawImage>();
+            raw.texture = PortraitOf(portraitId);
+            FitImageToParent(raw);
+            return raw;
+        }
+
+        private static void FitImageToParent(RawImage image)
+        {
+            if (image.texture == null) return;
+            var fitter = image.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fitter.aspectRatio = (float)image.texture.width / image.texture.height;
+        }
+
+        private static void CropPortraitToSquare(RawImage image)
+        {
+            if (image.texture == null) return;
+            var crop = new Rect(.12f, .48f, .76f, .5f);
+            float aspect = (float)image.texture.width / image.texture.height;
+            float width = Mathf.Min(crop.width, crop.height / aspect);
+            float height = width * aspect;
+            image.uvRect = new Rect(crop.center.x - width * .5f, crop.center.y - height * .5f, width, height);
+        }
+
         /// <summary>立绘卡片（3:4）。onClick 不为空时可点击，右上角有“点击交谈”小标。unknown = 还不认识，只显示暗色剪影。</summary>
         private RectTransform PortraitCard(Transform parent, NpcDef n, float width, System.Action onClick, bool unknown = false) =>
             PortraitCard(parent, n.Id, n.Name, n.Role, width, onClick, unknown);
@@ -41,15 +68,8 @@ namespace PCShopSell.Game.UI
             Ui.Size(frame, width, height);
             frame.GetComponent<LayoutElement>().minWidth = width;
 
-            RectTransform imgRt = Ui.Rect(frame.transform, "Image").Fill(3);
-            var raw = imgRt.gameObject.AddComponent<RawImage>();
-            raw.texture = PortraitOf(portraitId);
-            if(raw.texture!=null)
-            {
-                var aspect=imgRt.gameObject.AddComponent<AspectRatioFitter>();
-                aspect.aspectMode=AspectRatioFitter.AspectMode.FitInParent;
-                aspect.aspectRatio=(float)raw.texture.width/raw.texture.height;
-            }
+            var raw = FitPortrait(frame.rectTransform, portraitId, 3);
+            var imgRt = raw.rectTransform;
             raw.color = unknown ? new Color(0.12f, 0.12f, 0.14f) : Color.white;
             if (raw.texture == null)
             {
@@ -83,11 +103,22 @@ namespace PCShopSell.Game.UI
                 Image tag = Ui.Panel(frame.transform, "Tag", Ui.ButtonHot);
                 tag.raycastTarget = false;
                 tag.rectTransform.Anchor(1, 1, 1, 1, -96, -30, 6, 6);
-                Text t = Ui.Label(tag.transform, tagText, 14, TextAnchor.MiddleCenter);
+                Text t = Ui.Label(tag.transform, tagText, 14, TextAnchor.MiddleCenter, Ui.TextColor);
                 t.raycastTarget = false;
                 t.rectTransform.Fill(1);
             }
             return frame.rectTransform;
+        }
+
+        private RectTransform PersonSummary(Transform parent, string personId, string name, string detail, int height = 54,
+            System.Action onClick = null, Color? ink = null, Color? muted = null)
+        {
+            var row = Ui.Row(parent, height, 9);
+            PortraitThumb(row, personId, Mathf.Min(48, height - 4), onClick);
+            string secondary = ColorUtility.ToHtmlStringRGB(muted ?? Ui.Dim);
+            var label = Ui.Label(row, $"<b>{name}</b>\n<size=14><color=#{secondary}>{detail}</color></size>", 17, color: ink);
+            Ui.Size(label, -1, -1, 1);
+            return row;
         }
 
         /// <summary>小头像（截取立绘上半部分的脸）。</summary>
@@ -99,18 +130,12 @@ namespace PCShopSell.Game.UI
             Image frame = Ui.Panel(parent, "Thumb", Ui.PanelBg2);
             Ui.Size(frame, size, size);
             frame.GetComponent<LayoutElement>().minWidth = size;
-            RectTransform imgRt = Ui.Rect(frame.transform, "Image").Fill(2);
+            RectTransform imgRt = Ui.Rect(frame.transform, "Image");
+            imgRt.anchorMin = imgRt.anchorMax = Vector2.one * .5f;
+            imgRt.sizeDelta = Vector2.one * (size - 4f);
             var raw = imgRt.gameObject.AddComponent<RawImage>();
             raw.texture = PortraitOf(portraitId);
-            var crop = new Rect(0.12f, 0.48f, 0.76f, 0.5f);
-            if (raw.texture != null)
-            {
-                float textureAspect = (float)raw.texture.width / raw.texture.height;
-                float width = Mathf.Min(crop.width, crop.height / textureAspect);
-                float height = Mathf.Min(crop.height, crop.width * textureAspect);
-                crop = new Rect(crop.center.x - width / 2, crop.center.y - height / 2, width, height);
-            }
-            raw.uvRect = crop;
+            CropPortraitToSquare(raw);
             if (dimmed) raw.color = new Color(.52f, .52f, .52f);
             if (raw.texture == null)
             {
@@ -200,9 +225,8 @@ namespace PCShopSell.Game.UI
             Image frame = Ui.Panel(holder, "Frame", frameColor);
             Ui.Size(frame, OrgCardWidth, OrgCardWidth * 4f / 3f);
             frame.GetComponent<LayoutElement>().minWidth = OrgCardWidth;
-            RectTransform imgRt = Ui.Rect(frame.transform, "Image").Fill(2);
-            var raw = imgRt.gameObject.AddComponent<RawImage>();
-            raw.texture = PortraitOf(portraitId);
+            var raw = FitPortrait(frame.rectTransform, portraitId, 2);
+            var imgRt = raw.rectTransform;
             raw.color = locked ? new Color(0.1f, 0.1f, 0.12f) : Color.white;
             if (raw.texture == null)
             {
@@ -224,7 +248,7 @@ namespace PCShopSell.Game.UI
             }
 
             Ui.Size(Ui.Label(col, $"<b>{name}</b>", 14, TextAnchor.MiddleCenter), -1, 20);
-            Ui.Size(Ui.Label(col, $"<size=11><color={(top ? "#E3B347" : "#ABB5A8")}>{title}</color></size>", 11, TextAnchor.MiddleCenter), -1, 14);
+            Ui.Size(Ui.Label(col, title, 13, TextAnchor.MiddleCenter, top ? Ui.Accent : Ui.Dim), -1, 17);
         }
 
         /// <summary>上下级之间的连线。</summary>
@@ -232,7 +256,7 @@ namespace PCShopSell.Game.UI
         {
             RectTransform row = Ui.Row(parent, 12, 0);
             row.GetComponent<HorizontalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
-            Image line = Ui.Panel(row, "Link", new Color(0.55f, 0.62f, 0.72f));
+            Image line = Ui.Panel(row, "Link", Ui.Edge);
             Ui.Size(line, 2, 12);
         }
 

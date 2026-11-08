@@ -1,6 +1,6 @@
 ﻿# PCShopSell（工作名）
 
-**当前完整归档（2026-11-08）**记录六类自营零售／服务店、湖城 V15、物业与车产、区域主线、品牌与展会、NPC 赛车、证券与做空，以及最新的采购排期、经济简报和还款提醒。[全部游戏内容与验证范围](docs/92-current-game-content-2026-11-08.md)
+**当前完整归档（2026-11-09）**记录湖城 V15、开店与采购、住宅周租、开局做饭、人物属性与压力、打工与招聘、区域主线、品牌展会、赛车、证券和 NPC 还款。[全部游戏内容与验证范围](docs/93-current-game-content-2026-11-09.md)
 
 湖城 V15 的平面距离扩大到 1.3 倍，新增 22 间可租购商铺和 35 处住宅，其中 12 间商铺已在经营，19 处住宅已有登记住户。四区现共 49 间可租购商铺、132 处住宅。[四区房源与实景扩建](docs/91-city-expansion-v15.md)
 
@@ -138,7 +138,7 @@ UI整理已落实：[第50篇：保留员工部分的UI整理](docs/50-ui-cleanu
 - [`docs/21-cart-default-backpack.md`](docs/21-cart-default-backpack.md)：购物默认先放背包，超重再叫车；背包栏在前
 - [`docs/20-unified-clock-and-kilograms.md`](docs/20-unified-clock-and-kilograms.md)：室内/街上走停统一时钟、全游戏重量统一千克、旧档等量转换
 - [`docs/19-fridge-tiers.md`](docs/19-fridge-tiers.md)：四档冰箱、¥1,299–7,999、按型号累加容量及旧档保留
-- [`docs/18-player-work-and-weekly-pay.md`](docs/18-player-work-and-weekly-pay.md)：零库存打工收入、平均约 ¥150/天、各店白/晚/夜班、一周合同及存读档
+- [打工与每日结算](docs/18-player-work-and-weekly-pay.md)记录各店白班、晚班和夜班的底薪、主属性、奖金、压力、一周合同和出勤结算。
 - [`docs/17-food-fridge-and-diet.md`](docs/17-food-fridge-and-diet.md)：家店通用冰箱、按菜名分开的熟饭、可乐购买/饮用、营养与心情记录
 - [`docs/16-daily-multisource-purchasing.md`](docs/16-daily-multisource-purchasing.md)：每日多档口/多店整单采购、自动费用、完成按钮、追加招聘及最新验证
 - [`docs/15-main-menu-and-languages.md`](docs/15-main-menu-and-languages.md)：最新初始菜单、中日英语言设置、存档选择及菜单验收范围

@@ -61,7 +61,7 @@ namespace PCShopSell.Core.Session
             set => _focus.RenovationDay = value;
         }
 
-        public Pantry Pantry { get; } = new Pantry();
+        public Pantry Pantry { get; } = new Pantry { RiceKg = 0 };
         public IReadOnlyList<PlacedFurniture> HomeLayout => _homeLayout;
         public IReadOnlyList<PlacedFurniture> ShopLayout => _shopLayout;
         public IReadOnlyList<Parcel> Parcels => _parcels;
@@ -251,8 +251,8 @@ namespace PCShopSell.Core.Session
                     default:
                         double kg = RiceBagKg * p.Count;
                         if (toShop) WithShop(destination, () => StoreRiceOrTemp(true, kg));
-                        else Pantry.RiceKg += kg;
-                        what = $"大米 {kg:0} 千克" + (toShop ? "（已放进门店后仓）" : "（已放进厨房）");
+                        else HomeBox.Food.RiceKg += kg;
+                        what = $"大米 {kg:0} 千克" + (toShop ? "（已放进门店后仓）" : "（已放进家中后仓）");
                         break;
                 }
                 Popup?.Invoke("快递到了", $"送达{destinationName}：{what}");
@@ -410,12 +410,12 @@ namespace PCShopSell.Core.Session
             if (SendByCourier)
             {
                 bool sent=PayAndSend("买菜",d.Price*count,$"{d.Name} {d.WeightKg*count:0.##} 千克",false,
-                    new CourierItem{Kind=CourierItemKind.Ingredient,Id=id,Count=count,ExpireDay=Clock.Today.TotalDays+d.ShelfDays});
+                    new CourierItem{Kind=CourierItemKind.Ingredient,Id=id,Count=count,ExpireDay=FoodBatch.NoExpiry});
                 if(sent)RecordCitySupplierPurchase(CurrentPlace.Id,"produce:"+id,count);return sent;
             }
             if (!CanCarry(Backpack.IngredientKg(id) * count)) return false;
             if (!Ledger.TryDebit(Clock.Today, "买菜", d.Price * count, $"{d.Name} {d.WeightKg * count:0.##} 千克")) return Fail("钱不够。");
-            Backpack.Food.AddIngredient(id, count, Clock.Today.TotalDays);
+            Backpack.Food.AddIngredient(id, count);
             RecordCitySupplierPurchase(CurrentPlace.Id,"produce:"+id,count);
             ApplyCargoLimit();
             return true;
@@ -423,12 +423,24 @@ namespace PCShopSell.Core.Session
 
         // ---------- 做饭、吃饭 ----------
 
+        private IEnumerable<Pantry> HomeCookingSupplies()
+        {
+            yield return Backpack.Food;
+            yield return HomeBox.Food;
+        }
+
+        public double HomeCookingRiceKg => HomeCookingSupplies().Sum(source => source.RiceKg);
+
+        public int HomeCookingIngredientCount(string id) =>
+            HomeCookingSupplies().Sum(source => source.IngredientCount(id));
+
         /// <summary>用电饭锅开始焖一锅饭（要有小桌上的电饭锅）。点了就开始，40 分钟后才好，期间锅里不能动；人可以去干别的。</summary>
         public bool CookRice(double kg, string ingredientId)
         {
             if (CurrentPlace != Home) return Fail("要在家里做饭。");
             if (!HomeHas(FurnitureRole.Cooker)) return Fail("屋里没摆电饭锅。");
-            if (!Pantry.StartCook(kg, ingredientId, Clock.Now.TotalMinutes, out string err)) return Fail(err);
+            if (!Pantry.StartCook(kg, ingredientId, Clock.Now.TotalMinutes, HomeCookingSupplies(), out string err)) return Fail(err);
+            ApplyCargoLimit();
             Say($"开始焖饭了，大约 {Pantry.CookMinutes} 分钟后好。");
             return true;
         }
@@ -439,7 +451,10 @@ namespace PCShopSell.Core.Session
         private void UpdateCooking(GameTimestamp now)
         {
             FoodBatch b = Pantry.FinishCook(now.TotalMinutes);
-            if (b != null) Say($"电饭锅跳了：{b.Name}×{b.Count} 碗焖好了。可装进背包，或放入冰箱永久保存，取出后继续计算剩余保质期。");
+            if (b == null) return;
+            Say(OpeningMealTutorialPending
+                ? $"饭煮好了：{b.Name} ×{b.Count} 碗。打开电饭锅，选择现在吃或装进背包。"
+                : $"电饭锅跳了：{b.Name}×{b.Count} 碗焖好了。可装进背包，或放入冰箱永久保存，取出后继续计算剩余保质期。");
         }
 
         /// <summary>在家吃一碗（10 分钟）。</summary>
@@ -453,6 +468,7 @@ namespace PCShopSell.Core.Session
             Player.Hunger = Math.Min(100, Player.Hunger + b.Hunger);
             Player.Health = Math.Min(100, Player.Health + b.Health);
             AdvanceClock(Pantry.EatMinutes);
+            CompleteOpeningMealTutorial();
             return true;
         }
 
@@ -472,6 +488,7 @@ namespace PCShopSell.Core.Session
                 moved++;
             }
             ApplyCargoLimit();
+            if (moved > 0) CompleteOpeningMealTutorial();
             Say($"装了 {moved} 个饭盒放进背包。" + (moved < bowls && Pantry.CookedBowls > 0 ? "背包装不下了，剩下的还在锅里。" : ""));
             return true;
         }
@@ -541,6 +558,8 @@ namespace PCShopSell.Core.Session
         }
         public void ToggleMealDelivery() { if (!Flags.Remove("life:meal-delivery")) Flags.Add("life:meal-delivery"); }
 
+        private bool HasAutomaticHomeMeal => CurrentPlace == Home && !OpeningMealTutorialPending && Pantry.CookedBowls > 0;
+
         private void EatMeal(string meal)
         {
             if (IsWorking || _eating) return; // Staff meals are provided at the midpoint of the assigned shift.
@@ -549,7 +568,7 @@ namespace PCShopSell.Core.Session
             if(_lastAutomaticMealMinute>=0&&mealMinute>=_lastAutomaticMealMinute&&mealMinute-_lastAutomaticMealMinute<30)return;
             if(EatWorkbenchMeal(meal))return;
             if(EatRestaurantMeal(meal))return;
-            if (CurrentPlace == Home && Pantry.CookedBowls > 0)
+            if (HasAutomaticHomeMeal)
             {
                 Player.Hunger = Math.Min(100, Player.Hunger + EatFrom(Pantry.Cooked));
                 _lastAutomaticMealMinute=mealMinute;
@@ -588,7 +607,10 @@ namespace PCShopSell.Core.Session
                 Say($"{meal}没有即食食物，{delivery.Name}需 ¥{delivery.Price}，当前现金不足，未下单。");
                 return;
             }
-            Say($"该吃{meal}了，可背包里没有即食食物。可以回家做饭打包，或到快餐店买外带食物。");
+            if (CurrentPlace == Home && OpeningMealTutorialPending && Pantry.CookedBowls > 0)
+                Say("第一锅饭已经煮好。打开电饭锅，选择现在吃或装进背包。");
+            else
+                Say($"该吃{meal}了，可背包里没有即食食物。可以回家做饭打包，或到快餐店买外带食物。");
         }
 
         /// <summary>饿了随时从背包里拿一个饭盒吃（10 分钟）。</summary>
@@ -655,7 +677,7 @@ namespace PCShopSell.Core.Session
             for (int i = 0; i < g.Length; i++)
                 if (Gifts.Get(g[i]) != null && s.giftCounts != null && i < s.giftCounts.Length) b.AddGift(g[i], s.giftCounts[i]);
             b.Food.RiceKg = s.rice;
-            FromSave(s.ingredients, b.Food.Ingredient);
+            FromSave(s.ingredients, b.Food.Ingredient, rawIngredients: true);
             FromSave(s.lunch, b.Food.Packed);
             string[] f = s.furnIds ?? Array.Empty<string>();
             for (int i = 0; i < f.Length; i++)
@@ -687,11 +709,15 @@ namespace PCShopSell.Core.Session
                 Count = b.count, ExpireDay = b.expireDay, Chilled = b.chilled, ChilledDays = b.chilledDays };
         }
 
-        private static void FromSave(SaveBatch[] a, List<FoodBatch> into)
+        private static void FromSave(SaveBatch[] a, List<FoodBatch> into, bool rawIngredients = false, bool append = false)
         {
-            into.Clear();
+            if (!append) into.Clear();
             foreach (SaveBatch b in a ?? Array.Empty<SaveBatch>())
-                into.Add(FromSaveBatch(b));
+            {
+                var batch = FromSaveBatch(b);
+                if (rawIngredients) batch.ExpireDay = FoodBatch.NoExpiry;
+                into.Add(batch);
+            }
         }
 
         private void SaveHomeData(SaveData d)
@@ -706,8 +732,6 @@ namespace PCShopSell.Core.Session
                 shopLayout = ToSave(_shopLayout),
                 parcels = _parcels.Select(p => new SaveParcel { kind = (int)p.Kind, id = p.Id, count = p.Count, dueDay = p.DueDay, toShop = p.ToShop, shopId = p.ShopId }).ToArray(),
                 homeFridge = ToSaveStorage(HomeFridge), mainShopFridge = ToSaveStorage(MainShop.Fridge),
-                riceKg = Pantry.RiceKg,
-                ingredients = ToSave(Pantry.Ingredient),
                 cooked = ToSave(Pantry.Cooked),
                 cooking = Pantry.Cooking == null ? null : ToSave(new[] { Pantry.Cooking.Batch }),
                 cookReadyMinute = Pantry.Cooking == null ? 0 : Pantry.Cooking.ReadyMinute,
@@ -795,8 +819,7 @@ namespace PCShopSell.Core.Session
             {
                 // 老存档：按原来的住处档位把买过的东西放进背包
                 _homeLayout.AddRange(FurnitureCatalog.StartHomeLayout());
-                Pantry.RiceKg = Pantry.StartRiceKg;
-                Pantry.Ingredient.Clear();
+                HomeBox.Food.RiceKg = Pantry.StartRiceKg;
                 Pantry.Cooked.Clear();
                 Pantry.Cooking = null;
                 _visits.Clear();
@@ -815,8 +838,6 @@ namespace PCShopSell.Core.Session
             _shopLayout.AddRange(FromSave(h.shopLayout));
             foreach (SaveParcel p in h.parcels ?? Array.Empty<SaveParcel>())
                 _parcels.Add(new Parcel { Kind = (ParcelKind)p.kind, Id = p.id, Count = p.count, DueDay = p.dueDay, ToShop = p.toShop, ShopId = p.shopId });
-            Pantry.RiceKg = h.riceKg;
-            FromSave(h.ingredients, Pantry.Ingredient);
             FromSave(h.cooked, Pantry.Cooked);
             Pantry.Cooking = null;
             if (h.cooking != null && h.cooking.Length > 0)
@@ -837,15 +858,16 @@ namespace PCShopSell.Core.Session
                 _visits.Add(new HomeVisit { TargetId = h.visitTargets[i], StartMinute = h.visitStarts[i], Price = Money.FromCents(h.visitPrices[i]), WorkStart = h.visitWorkStarts != null && i < h.visitWorkStarts.Length ? h.visitWorkStarts[i] : -1 });
             PlayerShop.ForcedClosed = _renovationDay == Clock.Today.TotalDays;
             Backpack.Food.RiceKg = h.packRice;
-            FromSave(h.packIngredients, Backpack.Food.Ingredient);
+            FromSave(h.packIngredients, Backpack.Food.Ingredient, rawIngredients: true);
             string[] gids = h.giftIds ?? Array.Empty<string>();
             for (int i = 0; i < gids.Length; i++)
                 if (h.giftCounts != null && i < h.giftCounts.Length) Backpack.AddGift(gids[i], h.giftCounts[i]);
             string[] bids = h.boxGiftIds ?? Array.Empty<string>();
             for (int i = 0; i < bids.Length; i++)
                 if (h.boxGiftCounts != null && i < h.boxGiftCounts.Length) HomeBox.AddGift(bids[i], h.boxGiftCounts[i]);
-            HomeBox.Food.RiceKg = h.boxRice;
-            FromSave(h.boxIngredients, HomeBox.Food.Ingredient);
+            HomeBox.Food.RiceKg = h.boxRice + h.riceKg;
+            FromSave(h.boxIngredients, HomeBox.Food.Ingredient, rawIngredients: true);
+            FromSave(h.ingredients, HomeBox.Food.Ingredient, rawIngredients: true, append: true);
             FromSave(h.boxLunch, HomeBox.Food.Packed);
             string[] bf = h.boxFurnIds ?? Array.Empty<string>();
             for (int i = 0; i < bf.Length; i++)

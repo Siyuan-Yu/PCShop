@@ -39,16 +39,32 @@ namespace PCShopSell.Game.UI
                 {
                     BuildPlayerWorkSummary(w.Content, w);
                     if (!S.WorkContract.ReadyToPay && S.Clock.Today.TotalDays < S.WorkContract.StartDay)
-                        Para(w.Content, "明天再来工作。排班开始后，进入签约店铺就会自动上班，不用再点开始。", 20, Ui.Accent);
+                        Para(w.Content, GameSession.SupplierClosesOnWeekend(S.WorkPlace) ? "按日程到店，进入签约店铺就会自动上班。"
+                            : "明天再来工作。排班开始后，进入签约店铺就会自动上班，不用再点开始。", 20, Ui.Accent);
                     return;
                 }
                 var offer = S.PlayerWorkFor(p);
                 long rate = (long)System.Math.Ceiling(offer.Wage * 30.0 / (offer.End - offer.Start));
-                Para(w.Content, $"{offer.Title}\n每天 {offer.Hours}，连续 7 班，明天开始。\n日薪 ¥{offer.Wage}，每天收工后自动到账，无需押金。店里提供免费工作餐和收工餐。", 20, Ui.Accent);
-                Para(w.Content, "每天自行到这家店。开工前 1 小时起可到岗；进入后自动上班，提前到会等到开工。夜间打烊时也能凭合同进店；下班前不能离店、购物或管理其他事项，只能调整时间倍速。", 18);
-                Para(w.Content, $"迟到每 30 分钟扣当天工资 ¥{rate}，不足 30 分钟按 30 分钟计，最多扣完当日工资；缺勤扣完当日工资，不额外欠钱。", 18);
-                Para(w.Content, $"每天收工：健康 −{offer.HealthCost}、心情 −{offer.MoodCost}。夜班可以白天补觉，最长 8 小时，上班前 1 小时醒。工资扣除当天迟到罚款后自动到账，无需领取。", 18, Ui.Warn);
-                Ui.Size(Ui.Button(w.Content, "签一周合同（明天开始）", () => { if (S.SignPlayerWork(p)) { w.Rebuild(); parent?.RequestRebuild(); } }, 20, Ui.ButtonHot, S.CurrentPlace == p && S.OffersPlayerWork(p)), -1, 50);
+                bool weekdaysOnly = GameSession.SupplierClosesOnWeekend(p);
+                string shifts = weekdaysOnly ? $"周一至周五 {offer.Hours}，一周 5 班，明天起算。" : $"每天 {offer.Hours}，连续 7 班，明天开始。";
+                Para(w.Content, $"{offer.Title}\n{shifts}\n底薪 ¥{offer.Wage} / 班 · 收工自动到账 · 提供工作餐和收工餐", 20, Ui.Accent);
+                var impact = S.PlayerWorkImpact(p, offer.Wage, offer.End);
+                var preview = Ui.Panel(w.Content, "WorkImpact", Ui.PanelBg2).rectTransform;
+                Ui.VList(preview, 4, 10);
+                Line(preview, $"主要属性 · {impact.attribute} {impact.score}   表现奖金 +¥{impact.bonus} / 班", 20, Ui.Accent);
+                double stress = impact.stressPerHour * (offer.End - offer.Start) / 60;
+                string energy = impact.energyMultiplier == 1 ? "精力按平常速度消耗" : $"精力消耗 {(impact.energyMultiplier - 1) * 100:+0.#;-0.#}%";
+                Para(preview, $"完整一班 · 压力 +{stress:0.#} · {energy} · 收工健康 −{offer.HealthCost}、心情 −{offer.MoodCost}", 17);
+                var penalties = new List<string>();
+                if (impact.fatiguePenalty > 0) penalties.Add($"疲劳使奖金减少 {impact.fatiguePenalty}%");
+                if (impact.stressPenalty > 0) penalties.Add($"高压力使奖金减少 {impact.stressPenalty}%");
+                if (penalties.Count > 0) Line(preview, string.Join(" · ", penalties), 17, Ui.Warn);
+                Para(preview, $"主属性越高，当班压力越少。超过 {GameSession.WorkBonusThreshold} 可获奖金，最高为底薪的 25%。到岗精力低于 {PlayerStats.TiredEnergyThreshold:0}，奖金减 {GameSession.FatigueWorkPenalty}%。压力达到 {PlayerStats.HighStressThreshold:0}，奖金减 {GameSession.HighStressWorkPenalty}%。", 16, Ui.Dim);
+                Para(w.Content, "到店自动上班，开工前 1 小时起可到岗。夜班可凭合同进店，上班时可调整倍速。", 17);
+                Para(w.Content, $"迟到每 30 分钟扣底薪 ¥{rate}，奖金按比例减少。缺勤当天无工资。", 17, Ui.Dim);
+                Ui.Size(Ui.Button(w.Content, weekdaysOnly ? "签一周合同" : "签一周合同（明天开始）",
+                    () => { if (S.SignPlayerWork(p)) { w.Rebuild(); parent?.RequestRebuild(); } }, 20, Ui.ButtonHot,
+                    S.CurrentPlace == p && S.OffersPlayerWork(p) && (!weekdaysOnly || S.IsWholesalerOpen)), -1, 50);
             });
         }
 
@@ -57,7 +73,8 @@ namespace PCShopSell.Game.UI
             var c = S.WorkContract;
             if (c == null) return;
             Line(parent, "打工合同 · " + (S.WorkPlace?.Name ?? "店铺"), 20, Ui.Accent);
-            Para(parent, $"第 {c.StartDay + 1}–{c.EndDay + 1} 天，每天 {S.WorkHours} · 日薪 ¥{c.DailyWageYuan}，每天收工自动结算\n已出勤 {c.Days.Count(d => d.State == WorkDayState.Completed)}/7 天，缺勤 {c.Days.Count(d => d.State == WorkDayState.Absent)} 天\n已到账工资 ¥{c.Days.Where(d => d.WagePaid).Sum(d => d.EarnedYuan)}，已扣 ¥{c.DeductionsYuan}", 18);
+            string workdays = GameSession.SupplierClosesOnWeekend(S.WorkPlace) ? "周一至周五" : "每天";
+            Para(parent, $"第 {c.StartDay + 1}–{c.EndDay + 1} 天，{workdays} {S.WorkHours} · 底薪 ¥{c.DailyWageYuan} / 班\n已出勤 {c.Days.Count(d => d.State == WorkDayState.Completed)}/{c.ScheduledShiftCount} 天，缺勤 {c.Days.Count(d => d.State == WorkDayState.Absent)} 天\n已到账 ¥{c.Days.Where(d => d.WagePaid).Sum(d => d.EarnedYuan)}（含奖金 ¥{c.Days.Where(d => d.WagePaid).Sum(d => d.BonusYuan)}） · 已扣 ¥{c.DeductionsYuan}", 18);
             Para(parent, c.LastNote, 16, Ui.Dim);
             if (c.Paid) Para(parent, "合同已结束，工资已全部到账，可以再签一周合同。", 16, Ui.Good);
             else Para(parent, "每天自行按时到店，进入签约店铺自动上班；收工后工资自动到账，剩余排班见“日程”。", 16, Ui.Dim);
@@ -95,7 +112,8 @@ namespace PCShopSell.Game.UI
                 var c = S.WorkContract;
                 long start = (long)(c.StartDay + c.WorkingIndex) * 1440 + c.ShiftStart;
                 string state = S.Clock.Now.TotalMinutes < start ? "已到岗，等待开工" : "打工中";
-                _workStatus.text = $"{state} · {S.WorkPlace?.Name} · {c.JobTitle}\n第 {c.WorkingIndex + 1}/7 个工作日 · {S.WorkHours}\n现在 {S.Clock.Now} · 约 {S.WorkMinutesLeft} 分钟后收工\n今日迟到 {c.Days[c.WorkingIndex].LateMinutes} 分钟\n累计已到账 ¥{c.Days.Where(d => d.WagePaid).Sum(d => d.EarnedYuan)} · 当前 {S.Time.Speed}×\n健康 {S.Player.Health:0} · 心情 {S.Player.Mood:0}（收工 −{c.HealthCost}/−{c.MoodCost}）";
+                int shiftNumber = c.Days.Take(c.WorkingIndex + 1).Count(d => d.State != WorkDayState.Rest);
+                _workStatus.text = $"{state} · {S.WorkPlace?.Name} · {c.JobTitle}\n第 {shiftNumber}/{c.ScheduledShiftCount} 个工作日 · {S.WorkHours}\n现在 {S.Clock.Now} · 约 {S.WorkMinutesLeft} 分钟后收工\n今日迟到 {c.Days[c.WorkingIndex].LateMinutes} 分钟 · 表现奖金 ¥{c.Days[c.WorkingIndex].BonusYuan}（扣款前）\n累计已到账 ¥{c.Days.Where(d => d.WagePaid).Sum(d => d.EarnedYuan)} · 当前 {S.Time.Speed}×\n健康 {S.Player.Health:0} · 心情 {S.Player.Mood:0} · 压力 {S.Player.Stress:0}/100";
                 return;
             }
             if (_workScreen != null)

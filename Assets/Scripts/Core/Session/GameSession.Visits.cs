@@ -236,6 +236,9 @@ namespace PCShopSell.Core.Session
             foreach (var loan in _appLoans.Where(x => !x.Repaid))
                 l.Add(new ScheduleEntry { Minute = (long)loan.DueDay * 1440, Day = DescribeDay(loan.DueDay), TimeText = "00:00",
                     Kind = "loan", Text = $"贷款 #{loan.Id} 到期自动扣款 {loan.TotalDue}（含利息 {loan.TermInterest}）" });
+            foreach (var credit in _scheduledCredits)
+                l.Add(new ScheduleEntry { Minute = (long)credit.day * GameTimestamp.MinutesPerDay, Day = DescribeDay(credit.day),
+                    TimeText = "00:00", Kind = "npc_repayment", Text = $"{credit.memo} · 自动到账 {Money.FromCents(credit.cents)}" });
             long now = Clock.Now.TotalMinutes;
             for (int i = 0; i < _appointments.Count; i++)
             {

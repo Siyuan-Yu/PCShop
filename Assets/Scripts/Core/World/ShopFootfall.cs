@@ -13,7 +13,6 @@ namespace PCShopSell.Core.World
         public double StationMeters { get; }
         public double HousingMeters { get; }
         public Money MonthlyRent => Money.FromYuan(DailyPassers * 5L);
-        public Money WeeklyRent => Money.FromYuan(Math.Max(2000L,(long)Math.Round((1100 + DailyPassers * 3.0) / 100.0) * 100));
         internal ShopFootfallEstimate(int passers,double streetDemand,double station,double housing)
         { DailyPassers=passers;StreetDemand=streetDemand;StationMeters=station;HousingMeters=housing; }
     }

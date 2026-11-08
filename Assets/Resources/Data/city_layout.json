@@ -10994,7 +10994,7 @@
       "heading": 177.64835374959551,
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1260,
+      "closeMinute": 1200,
       "model": "warehouse",
       "tier": 0
     },
@@ -11034,7 +11034,7 @@
       "heading": 174.0,
       "tradable": false,
       "openMinute": 540,
-      "closeMinute": 1080,
+      "closeMinute": 1200,
       "model": "warehouse",
       "tier": 0
     },
@@ -11053,8 +11053,8 @@
       "depth": 15.457273946884364,
       "heading": 176.7735021793256,
       "tradable": false,
-      "openMinute": 600,
-      "closeMinute": 1260,
+      "openMinute": 540,
+      "closeMinute": 1200,
       "model": "warehouse",
       "tier": 0
     },

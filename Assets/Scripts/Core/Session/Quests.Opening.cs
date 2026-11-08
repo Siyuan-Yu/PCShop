@@ -86,10 +86,7 @@ namespace PCShopSell.Core.Session
             {
                 var food=CurrentShop.Locker.Food;food.RiceKg+=2;
                 foreach(string ingredient in RecipeIngredients)
-                {
-                    var def=Ingredients.Get(ingredient);
-                    food.Ingredient.Add(new FoodBatch{Id=ingredient,Name=def.Name,Count=4,ExpireDay=Clock.Today.TotalDays+def.ShelfDays});
-                }
+                    food.AddIngredient(ingredient, 4);
             }
             else if(kind=="secondhand")
             {
@@ -107,11 +104,7 @@ namespace PCShopSell.Core.Session
             }
             else if(kind==PetShopCatalog.ShopKind)
             {
-                PlayerShop.Stock.ForceAddGoods(PetShopCatalog.CatFood,3);
-                PlayerShop.Stock.ForceAddGoods(PetShopCatalog.DogFood,3);
-                PlayerShop.Stock.ForceAddGoods(PetShopCatalog.BasicLitter,3);
-                PlayerShop.Stock.ForceAddGoods(PetShopCatalog.Wand,1);
-                PlayerShop.Stock.ForceAddGoods(PetShopCatalog.Ball,1);
+                AddStarterPetStock();
             }
             else
             {
@@ -121,6 +114,16 @@ namespace PCShopSell.Core.Session
             }
             if(legacy)Say("已补齐原开店任务的"+RetailShopTypes.Name(kind)+"礼包："+OpeningRewardText(id)+"。仅补发一次。");
         }
+
+        private void AddStarterPetStock()
+        {
+            PlayerShop.Stock.ForceAddGoods(PetShopCatalog.CatFood, 3);
+            PlayerShop.Stock.ForceAddGoods(PetShopCatalog.DogFood, 3);
+            PlayerShop.Stock.ForceAddGoods(PetShopCatalog.BasicLitter, 3);
+            PlayerShop.Stock.ForceAddGoods(PetShopCatalog.Wand, 1);
+            PlayerShop.Stock.ForceAddGoods(PetShopCatalog.Ball, 1);
+        }
+
         private void MigrateOpeningRewards()
         {
             if(!HasShop||IsDedicatedVenue(CurrentShop.Place))return;

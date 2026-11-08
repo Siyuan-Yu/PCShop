@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Linq;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
@@ -12,6 +13,7 @@ namespace PCShopSell.Core.Session
         public double[] propertyPriceFactors;
         public string propertyPriceRandom;
         public long homeLeaseRentCents;
+        public int residentialWeeklyRentVersion, homeLeaseSignedDay;
     }
 
     public sealed partial class GameSession
@@ -20,12 +22,14 @@ namespace PCShopSell.Core.Session
         private readonly double[] _propertyPriceFactors = { 1, 1, 1, 1 };
         private readonly GameRandom _propertyPriceRandom = new GameRandom(0xC17A55E712UL);
         private int _propertyPriceWeek;
-        private long _homeLeaseRentCents = 45000;
+        private long _homeLeaseRentCents = HomeRent.Cents;
+        private int _homeLeaseSignedDay;
         private double HomeSaleFactor => _propertyPriceFactors[0];
         private double HomeRentFactor => _propertyPriceFactors[1];
         private double ShopSaleFactor => _propertyPriceFactors[2];
         private double ShopRentFactor => _propertyPriceFactors[3];
         private static Money HomeBaseRent(int tier) => Money.FromYuan(tier == 3 ? 12000 : tier == 2 ? 3000 : tier == 1 ? 1200 : 450);
+        private static Money WeeklyResidentialRent(Money monthly) => monthly.Scale((double)GameDate.DaysPerWeek / GameDate.DaysPerMonth);
 
         private void InitializePropertyMarket(ulong seed)
         {
@@ -65,6 +69,8 @@ namespace PCShopSell.Core.Session
             data.propertyPriceFactors = (double[])_propertyPriceFactors.Clone();
             data.propertyPriceRandom = _propertyPriceRandom.State.ToString(CultureInfo.InvariantCulture);
             data.homeLeaseRentCents = _homeLeaseRentCents;
+            data.homeLeaseSignedDay = _homeLeaseSignedDay;
+            data.residentialWeeklyRentVersion = 1;
         }
 
         private void RestorePropertyMarket(SaveData data)
@@ -79,8 +85,13 @@ namespace PCShopSell.Core.Session
 
         private void RestoreHomeLease(SaveData data)
         {
-            _homeLeaseRentCents = data.homeLeaseRentCents > 0
-                ? data.homeLeaseRentCents : HomeBaseRent(HomeTier).Cents;
+            bool weekly = data.residentialWeeklyRentVersion > 0;
+            var savedRent = Money.FromCents(data.homeLeaseRentCents);
+            Money rent = HomeTier == 0 && Home == _initialHome ? HomeRent
+                : savedRent.IsPositive ? (weekly ? savedRent : WeeklyResidentialRent(savedRent))
+                : WeeklyResidentialRent(HomeBaseRent(HomeTier));
+            _homeLeaseRentCents = rent.Cents;
+            _homeLeaseSignedDay = weekly ? Math.Max(0, Math.Min(data.homeLeaseSignedDay, Clock.Today.TotalDays)) : Clock.Today.TotalDays;
         }
     }
 }

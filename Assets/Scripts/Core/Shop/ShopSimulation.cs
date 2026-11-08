@@ -324,7 +324,7 @@ namespace PCShopSell.Core.Shop
 
         /// <summary>这家店的知名度跟 main 共用（开第二家店时用）。</summary>
         public void ShareReputationWith(ShopSimulation main) => _reputationOwner = main == this ? null : main;
-        private static double ClampStanding(double value) => Math.Max(0, Math.Min(100, value));
+        private static double ClampStanding(double value) => Math.Max(0, value);
         internal void RestoreBusinessAwareness(double value) => _reputation = ClampStanding(value);
         internal void RestoreShopStanding(double awareness, double reputation)
         {

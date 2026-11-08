@@ -52,6 +52,7 @@ namespace PCShopSell.Core.Finance
                 case "购车": case "载具出售": case "购买车位":
                     return new LedgerAttribution(LedgerBusinessKind.AssetInvestment, transactionKind: category);
                 case "餐饮": case "生活": case "人情": case "医疗": case "购物": case "网购": case "个人衣物": case "打工": case "罚款":
+                case "借款借出": case "借款已收回":
                 case "交通": case "赛车报名": case "赛车练习": case "赛事奖金": case "车辆改装": case "车辆整备": case "车位租金":
                     return new LedgerAttribution(LedgerBusinessKind.Personal, transactionKind: category);
                 default: return new LedgerAttribution(LedgerBusinessKind.Historical, transactionKind: category);

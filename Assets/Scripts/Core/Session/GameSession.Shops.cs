@@ -45,13 +45,31 @@ namespace PCShopSell.Core.Session
 
         public OwnedShop ShopAt(string placeId) => _shops.Find(s => s.Rented && s.Place.Id == placeId);
 
-        /// <summary>主店叫“我的电脑店”，之后开的叫“我的电脑店·二店”……</summary>
+        public const int MaxShopNameLength = 16;
+
         public string ShopTitle(OwnedShop s)
         {
+            if (!string.IsNullOrEmpty(s.CustomName)) return s.CustomName;
             if(IsDedicatedVenue(s.Place))return "我的"+VenueBusinessName(s.Place);
             int i = _shops.IndexOf(s);
-            if (s.RetailKind != "computer") return "我的" + RetailShopTypes.Name(s.RetailKind) + (i > 0 ? "·" + ChineseNumber(i + 1) + "店" : "");
-            return i <= 0 ? MyShopName : $"{MyShopName}·{ChineseNumber(i + 1)}店";
+            return "我的" + RetailShopTypes.Name(s.RetailKind) + (i > 0 ? "·" + ChineseNumber(i + 1) + "店" : "");
+        }
+
+        public bool TryRenameShop(OwnedShop shop, string name, out string reason)
+        {
+            name = name?.Trim() ?? "";
+            if (IsGameOver || shop == null || ShopAt(shop.Place) != shop || CurrentPlace != shop.Place)
+                reason = "请在自己的店铺柜台修改店名。";
+            else if (name.Length == 0 || name.Length > MaxShopNameLength)
+                reason = $"店名需要 1 至 {MaxShopNameLength} 个字符。";
+            else if (name.Any(c => char.IsControl(c) || c == '<' || c == '>'))
+                reason = "店名不能包含换行或尖括号。";
+            else
+            {
+                shop.CustomName = name;
+                reason = null;
+            }
+            return reason == null;
         }
 
         /// <summary>开了不止一家时，提示里带上是哪家店。</summary>
@@ -70,7 +88,7 @@ namespace PCShopSell.Core.Session
                 CompetitionFactorOf = () => ShopCompetitionFactor(shop.Place),
                 StreetTrafficFactorOf = () => StreetTrafficMultiplier(shop.Place.StreetId),
                 EmployeeOnDuty = t => ShopStaff(shop,EmployeeRole.Cashier).Concat(ShopStaff(shop,EmployeeRole.Assembler)).Any(e=>e.OnDuty(t)&&CityEmployeeAvailable(e,shop)),
-                EmployeeServiceRate = ()=>ShopCheckoutWorkers(shop).Sum(e=>1.0/(Math.Max(1,e.CheckoutMinutes)+1)),
+                EmployeeServiceRate = ()=>ShopCheckoutWorkers(shop).Sum(e=>1.0/EmployeeCheckoutCycleMinutes(e)),
             };
             sim.OpenStatusOf=t=>IsSpecialBusiness(shop)?SpecialOpen(shop,t):sim.IsOpenAt(t);
             sim.Settings.BuildOrdersStartDay = BuildOrdersStartDay;
@@ -213,9 +231,9 @@ namespace PCShopSell.Core.Session
             _vacant.Add(placeId);
             if (PropertyAt(placeId) == null) AddListing(City.GetPlace(placeId), Clock.Today.TotalDays, Clock.Today.TotalDays + 45, rent);
             WithShop(MainShop, ApplyUpgrades);
-            Show(wasOwned ? "自营已结束" : "退租了", $"{title}（{s.Place.Name}）" + (wasOwned ? "已结束自营，产权保留为空置物业" : $"已退租，已交押金 {lostDeposit} 不退还，不会再次扣款")
+            Show(wasOwned ? "自营已结束" : "退租了", title + (wasOwned ? "已结束自营，产权保留为空置物业" : $"已退租，已交押金 {lostDeposit} 不退还，不会再次扣款")
                 + "，店里摆的家具收回“我的”" + (hadStaff ? "，这家店的员工也辞退了" : "")
-                + (wasMain && MyShopCount > 0 ? $"。现在{ShopTitle(MainShop)}（{MainShop.Place.Name}）是主店。" : MyShopCount == 0 ? "。目前没有自营店，可到中介重新租铺。" : "。"));
+                + (wasMain && MyShopCount > 0 ? $"。现在{ShopTitle(MainShop)}是主店。" : MyShopCount == 0 ? "。目前没有自营店，可到中介重新租铺。" : "。"));
             return true;
         }
 
@@ -226,7 +244,7 @@ namespace PCShopSell.Core.Session
             ShopSimulation sim = s.Sim;
             return new SaveShop
             {
-                retailKind = s.RetailKind, goodsLots = SaveRetailLots(sim),
+                retailKind = s.RetailKind, customName = s.CustomName, goodsLots = SaveRetailLots(sim),
                 awareness = sim.Awareness, reputation = sim.ShopReputation,
                 place = s.Place.Id,
                 rentCents = s.Lease.Rent.Cents,
@@ -271,7 +289,7 @@ namespace PCShopSell.Core.Session
         {
             if (d == null || !City.HasPlace(d.place) || _shops.Any(x => x.Place.Id == d.place)) return;
             Place place = City.GetPlace(d.place);
-            var shop = new OwnedShop { Place = place, RetailKind = RetailShopTypes.Valid(d.retailKind) };
+            var shop = new OwnedShop { Place = place, RetailKind = RetailShopTypes.Valid(string.IsNullOrEmpty(d.retailKind) ? "computer" : d.retailKind), CustomName = d.customName };
             shop.Lease = new ShopLease { PlaceId = place.Id, Rent = Money.FromCents(d.rentCents), Deposit = Money.FromCents(d.depositCents), StartDay = d.startDay, SignedDay = d.signedDay };
             shop.Sim = CreateShopSim(shop);
             ShopSimulation sim = shop.Sim;
@@ -291,7 +309,7 @@ namespace PCShopSell.Core.Session
             for (int i = 0; i < mids.Length && i < mvals.Length; i++) marks.Add(new KeyValuePair<string, double>(mids[i], mvals[i]));
             sim.RestorePartMarkups(marks);
             shop.Employee = d.hasEmployee && d.employee != null ? FromSave(d.employee) : null;
-            if (shop.Employee != null) sim.Settings.EmployeeCheckoutMinutes = shop.Employee.CheckoutMinutes;
+            if (shop.Employee != null) sim.Settings.EmployeeCheckoutMinutes = EmployeeCheckoutCycleMinutes(shop.Employee) - 1;
             shop.Assembler = d.hasAssembler && d.assembler != null ? FromSave(d.assembler) : null;
             if (shop.Assembler != null && !d.assembler.hasWorkSkills) shop.Assembler.AssemblyTrained = true;
             shop.Buyer = d.hasBuyer && d.buyer != null ? FromSave(d.buyer) : null;

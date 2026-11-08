@@ -47,7 +47,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(money, "现金 +1 万", () => S.DebugAddCash(10000), 17), -1, -1, 1);
                 Ui.Size(Ui.Button(money, "现金 +10 万", () => S.DebugAddCash(100000), 17), -1, -1, 1);
 
-                Ui.Size(Ui.Button(w.Content, S.HasShop ? "跳过找铺子（已经有店了）" : "跳过找铺子：直接租下街尾小店", () =>
+                Ui.Size(Ui.Button(w.Content, S.HasShop ? "跳过找铺子（已经有店了）" : "跳过找铺子：直接开宠物用品店", () =>
                 {
                     S.DebugRentStarterShop();
                     w.Rebuild();

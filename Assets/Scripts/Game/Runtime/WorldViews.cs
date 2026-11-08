@@ -208,6 +208,7 @@ namespace PCShopSell.Game.Runtime
             _root.transform.position = p;
             var activity=publicSpace?s.RunningCityActivity:null;
             _motion.ActivityKind=activity!=null?s.CityActivityService(activity)?.Id:null;
+            _motion.ActivityOption=activity?.ServiceChoice??-1;
             _motion.Seated=activity!=null&&s.City.GetPlace(activity.VenueId).Business=="venue_restaurant";
             if(activity!=null)
             {

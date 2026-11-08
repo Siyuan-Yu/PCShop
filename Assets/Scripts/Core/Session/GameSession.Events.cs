@@ -177,6 +177,12 @@ namespace PCShopSell.Core.Session
             if (amount.IsPositive) Ledger.ForceDebit(Clock.Today, "事件", amount, memo);
         }
 
+        internal void EventLendToNpc(Money amount, string borrower) =>
+            Ledger.ForceDebit(Clock.Today, "借款借出", amount, "借给" + borrower);
+
+        internal string ScheduleNpcRepayment(int days, Money amount, string memo) =>
+            $"{ScheduleCredit(days, amount, memo)} 00:00 自动到账 {amount}，已加入日程。";
+
         internal void EventRest(int minutes)
         {
             AdvanceClock(minutes);

@@ -23,7 +23,7 @@ namespace PCShopSell.Game.UI
             S.DismissEconomicReport();
             int period = -1, selected = -1;
             bool showPrices = false;
-            OpenWindow("经济简报", 960, 900, w =>
+            var window = OpenWindow("经济简报", 960, 900, w =>
             {
                 int today = S.Clock.Today.TotalDays;
                 int span = S.EconomicReportPeriodDays;
@@ -44,23 +44,6 @@ namespace PCShopSell.Game.UI
                 var tabs = Ui.Row(w.Content, 42);
                 Ui.Size(Ui.Button(tabs, "收支结算", () => { showPrices = false; w.Rebuild(); }, 19, !showPrices ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
                 Ui.Size(Ui.Button(tabs, "物价涨跌", () => { showPrices = true; w.Rebuild(); }, 19, showPrices ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
-
-                var settings = Ui.Row(w.Content, 35);
-                Ui.Size(Ui.Label(settings, "自动弹出", 16, TextAnchor.MiddleLeft, Ui.Dim), 94);
-                CadenceButton("每周", EconomicReportCadence.Weekly);
-                CadenceButton("每两周", EconomicReportCadence.Biweekly);
-                CadenceButton("每月", EconomicReportCadence.Monthly);
-                CadenceButton("关闭", null);
-                void CadenceButton(string label, EconomicReportCadence? cadence)
-                {
-                    bool active = cadence.HasValue ? S.EconomicReportAutomatic && S.ReportCadence == cadence.Value : !S.EconomicReportAutomatic;
-                    Ui.Size(Ui.Button(settings, label, () =>
-                    {
-                        if (cadence.HasValue && S.ReportCadence != cadence.Value) period = -1;
-                        S.SetEconomicReportCadence(cadence);
-                        w.Rebuild();
-                    }, 16, active ? Ui.ButtonHot : Ui.ButtonBg), -1, 35, 1);
-                }
 
                 if (!showPrices)
                 {
@@ -94,6 +77,27 @@ namespace PCShopSell.Game.UI
                     { selected = group; w.ResetScrollOnRebuild = true; w.Rebuild(); }, 17, selected == i ? Ui.ButtonHot : Ui.ButtonBg), -1, 36);
                 }
             });
+
+            var scroll = (RectTransform)window.Content.parent.parent;
+            scroll.Anchor(0, 0, 1, 1, 0, 48, 0, 50);
+            var footer = Ui.Row(scroll.parent, 30);
+            footer.Anchor(0, 0, 1, 0, 16, 10, 16, -40);
+            Ui.Size(Ui.Label(footer, "自动弹出", 15, color: Ui.Dim), 70);
+            var cadences = new (string label, EconomicReportCadence? cadence)[]
+            {
+                ("每周", EconomicReportCadence.Weekly),
+                ("每两周", EconomicReportCadence.Biweekly),
+                ("每月", EconomicReportCadence.Monthly),
+                ("关闭", null)
+            };
+            EconomicReportCadence? currentCadence = S.EconomicReportAutomatic ? S.ReportCadence : (EconomicReportCadence?)null;
+            Ui.Size(Ui.Choice(footer, cadences.Select(option => option.label), Array.FindIndex(cadences, option => option.cadence == currentCadence), index =>
+            {
+                var cadence = cadences[index].cadence;
+                if (cadence.HasValue && S.ReportCadence != cadence.Value) period = -1;
+                S.SetEconomicReportCadence(cadence);
+                window.Rebuild();
+            }, opensUp: true), 120, 30);
         }
 
         private void BuildEconomicCashSummary(Transform parent, GameDate from, GameDate to)

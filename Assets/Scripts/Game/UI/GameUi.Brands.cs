@@ -89,7 +89,7 @@ namespace PCShopSell.Game.UI
             foreach(var o in state.Orders.Where(o=>o.BrandId==brand.Id&&!o.Done&&!o.Failed))
             {
                 Line(body,$"{S.BrandProductName(o.ProductId)} ×{o.Count} · 截止 {new GameDate(o.Due)}",18);
-                Para(body,$"从 {S.City.GetPlace(o.ShopId).Name} 发货 · 货款 {Money.FromCents(o.UnitCents*o.Count)} · 运费¥30",16);
+                Para(body,$"从 {S.PlaceTitle(S.City.GetPlace(o.ShopId))} 发货 · 货款 {Money.FromCents(o.UnitCents*o.Count)} · 运费¥30",16);
                 if(o.Shipped)Para(body,"运输中 · 剩余约 "+Math.Max(0,o.Arrival-S.Clock.Now.TotalMinutes)+" 分钟，到货后结算",17,Ui.Good);
                 else BrandButton(body,"从指定门店发货 · 到货后结算",()=>S.FulfilBrandOrder(o.Id),w);
             }
@@ -101,7 +101,7 @@ namespace PCShopSell.Game.UI
         {
             var shops=S.MyShops.Where(s=>b.ShopIds.Contains(s.Place.Id)&&s.RetailKind==b.Kind).ToArray();
             if(!shops.Any(s=>s.Place.Id==_brandShop)){_brandShop=shops.FirstOrDefault()?.Place.Id;_brandProduct=null;}
-            var row=Ui.Row(body,36,4);foreach(var s in shops){string id=s.Place.Id;Ui.Size(Ui.Button(row,s.Place.Name,()=>{_brandShop=id;_brandProduct=null;w.Rebuild();},16,id==_brandShop?Ui.ButtonHot:Ui.ButtonBg),-1,36,1);}
+            var row=Ui.Row(body,36,4);foreach(var s in shops){string id=s.Place.Id;Ui.Size(Ui.Button(row,S.ShopTitle(s),()=>{_brandShop=id;_brandProduct=null;w.Rebuild();},16,id==_brandShop?Ui.ButtonHot:Ui.ButtonBg),-1,36,1);}
             var products=S.BrandProducts(_brandShop).ToArray();if(!products.Contains(_brandProduct))_brandProduct=products.FirstOrDefault();
             Line(body,"参选商品 · 仅本店同业现货",17,Ui.Dim);
             if(products.Length==0){Para(body,"这家店暂无同业现货，请先采购。",18);return;}

@@ -92,7 +92,7 @@ namespace PCShopSell.Core.Session
         private void PreserveFridges()
         {
             foreach (var bag in _shops.Select(shop => shop.Fridge).Prepend(HomeFridge))
-                foreach (var batch in bag.Food.Ingredient.Concat(bag.Food.Packed))
+                foreach (var batch in bag.Food.Packed)
                     batch.ExpireDay++;
         }
     }

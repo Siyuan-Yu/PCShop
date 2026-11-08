@@ -32,7 +32,7 @@ namespace PCShopSell.Tests
         {
             GameSession s = NoShop(cash);
             GameSessionTests.Teleport(s, "agency");
-            Assert.IsTrue(s.SignLease("pc"));
+            Assert.IsTrue(s.SignRetailLease("pc", false, "computer"));
             return s;
         }
 
@@ -82,7 +82,7 @@ namespace PCShopSell.Tests
             {
                 RoomSpec room = RoomSpec.ForShop(size);
                 var placed = new List<PlacedFurniture>();
-                foreach (PlacedFurniture p in FurnitureCatalog.DefaultShopFixtures(size))
+                foreach (PlacedFurniture p in FurnitureCatalog.DefaultShopFixtures(size, "computer"))
                 {
                     FurnitureDef def = FurnitureCatalog.Get(p.Id);
                     Assert.IsNull(RoomPlanner.Check(room, placed, def, p, -1, null), $"{size} {p.Id} ({p.X},{p.Z})");
@@ -225,7 +225,7 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.ShopFitted);
             Assert.AreEqual(6, s.PlacedFixtures(FixtureKind.Shelf));
             GameSession c = NoShop();
-            Assert.IsTrue(c.DebugRentStarterShop());
+            Assert.IsTrue(c.DebugRentStarterShop(computerScenario: true));
             Assert.IsTrue(c.ShopFitted, "作弊开店直接摆好整套设施");
             Assert.AreEqual(1, c.PlacedFixtures(FixtureKind.Counter));
         }

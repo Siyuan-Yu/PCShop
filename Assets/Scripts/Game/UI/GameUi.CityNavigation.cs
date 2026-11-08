@@ -27,8 +27,9 @@ namespace PCShopSell.Game.UI
         {
             if(S==null)return System.Array.Empty<Place>();
             if (kind == SleepShortcut)
-                return new[] { S.Home }.Concat(S.OwnedProperties.Where(p => S.City.HasPlace(p.PlaceId)).Select(p => S.City.GetPlace(p.PlaceId))
-                    .Where(p => p != S.Home && S.CanSleepAt(p))).ToArray();
+                return new[] { S.Home }.Concat(S.RentedResidences)
+                    .Concat(S.OwnedProperties.Where(p => S.City.HasPlace(p.PlaceId)).Select(p => S.City.GetPlace(p.PlaceId)))
+                    .Distinct().Where(S.CanSleepAt).ToArray();
             if(kind==3)return S.City.PublicPlaces.ToArray();
             if(kind==0)return S.MyShops.Select(s=>s.Place).ToArray();
             if(kind==2)return S.City.Places.Where(p=>p.Kind==PlaceKind.Agency).ToArray();
@@ -60,7 +61,7 @@ namespace PCShopSell.Game.UI
             if(!_shortcutSelectionExplained)
             {
                 _shortcutSelectionExplained=true;
-                Toast("已选目的地："+place.Name+"。点击“前往”出发。");
+                Toast("已选目的地："+ShortcutPlaceName(kind,place)+"。点击“前往”出发。");
             }
         }
         private void TravelShortcut(int kind)
@@ -121,14 +122,14 @@ namespace PCShopSell.Game.UI
         {
             if (kind == SleepShortcut) return place == S.Home ? S.HomeTitle : place?.Name ?? "回家睡觉";
             if(place==null)return kind==3?"自定目的地":kind==0?"我的店铺":kind==1?"批发市场":"中介";
-            if((kind==0||kind==3) && S.ShopAt(place.Id) is OwnedShop shop)return S.ShopTitle(shop);
+            if(S.ShopAt(place) is OwnedShop shop)return S.ShopTitle(shop);
             return place.Id=="stall_cpu"?"电子批发市场":place.Name;
         }
         private string ShortcutPlaceAddress(int kind, Place place)
         {
             string name = ShortcutPlaceName(kind, place);
             string street = S.City.StreetName(place.StreetId);
-            if (name != place.Name) name += "\n" + place.Name;
+            if (!S.IsMyShop(place) && name != place.Name) name += "\n" + place.Name;
             return name.Contains(street) ? name : name + "\n" + street;
         }
 
@@ -141,7 +142,7 @@ namespace PCShopSell.Game.UI
             {
                 string name = names[index];
                 if (duplicates.Contains(name))
-                    name += " · " + (name == place.Name ? S.City.StreetName(place.StreetId) : place.Name);
+                    name += " · " + (S.IsMyShop(place) || name == place.Name ? S.City.StreetName(place.StreetId) : place.Name);
                 return kind == SleepShortcut && place == S.Home ? name + " · 主住所" : name;
             }).ToArray();
         }
@@ -179,7 +180,7 @@ namespace PCShopSell.Game.UI
         }
         private void OpenCityPlacePeople(PCShopSell.Core.World.Place place)
         {
-            OpenWindow(place.Name+" · 在场人物",760,650,w=>
+            OpenWindow(S.PlaceTitle(place)+" · 在场人物",760,650,w=>
             {
                 var people=S.PeopleInPlace(place.Id).ToArray();
                 if(people.Length==0)Para(w.Content,"此刻没有可交谈的人在这里。人员按实际日程和活动到场。",20);

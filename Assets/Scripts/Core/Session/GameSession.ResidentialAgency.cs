@@ -47,14 +47,15 @@ namespace PCShopSell.Core.Session
             HomePriceCents = price.Cents; HomeMortgageCents = 0;
             _residentialHomeId = null;
             HomeMonthlyPrincipalCents = 0;
-            Say("已全款购入" + HomeTitle + "，家具与储物保留，不再支付月租；月维护费为房价0.1%。");
+            Say("已全款购入" + HomeTitle + "，家具与储物保留，不再支付周租；月维护费为房价0.1%。");
             return true;
         }
 
-        private bool PayForResidenceMove(int tier, string category, Money due, string memo, LedgerAttribution attribution = null)
+        private bool PayForResidenceMove(int tier, string category, Money due, string memo, LedgerAttribution attribution = null,
+            bool allowPackedFridge = false)
         {
             var room = RoomSpec.ForResidence(tier);
-            if (room == ResidenceRoom) return Ledger.TryDebit(Clock.Today, category, due, memo, attribution);
+            if (room == ResidenceRoom) return !due.IsPositive || Ledger.TryDebit(Clock.Today, category, due, memo, attribution);
 
             var layout = new List<PlacedFurniture>();
             var packed = new List<PlacedFurniture>();
@@ -69,9 +70,9 @@ namespace PCShopSell.Core.Session
                 else
                     packed.Add(item);
             }
-            if (HomeFridge.WeightKg > FridgeCapacityOf(layout) + 1e-9)
+            if (!allowPackedFridge && HomeFridge.WeightKg > FridgeCapacityOf(layout) + 1e-9)
                 return Fail("新住处放不下足够的冰箱。请先取出部分冷藏食品，再办理搬家。");
-            if (!Ledger.TryDebit(Clock.Today, category, due, memo, attribution)) return false;
+            if (due.IsPositive && !Ledger.TryDebit(Clock.Today, category, due, memo, attribution)) return false;
 
             _homeLayout.Clear();
             _homeLayout.AddRange(layout);

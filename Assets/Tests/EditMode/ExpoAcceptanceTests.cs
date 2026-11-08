@@ -35,7 +35,7 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(6,s.MyShopCount);Assert.AreEqual(5,s.DistrictOperatingShops(0));Assert.AreEqual(1,s.DistrictOperatingShops(1));
                 Assert.IsNull(s.DistrictPrerequisiteBlocker(1));Assert.True(s.DebugExpoBusinessBaseReady);
                 Assert.AreEqual(150000000,s.Ledger.Balance.Cents);
-                Assert.AreEqual("home_tier1",s.Home.Id);Assert.AreEqual(1,s.HomeTier);Assert.AreEqual(120000,s.CurrentHomeRent.Cents);
+                Assert.AreEqual("home_tier1",s.Home.Id);Assert.AreEqual(1,s.HomeTier);Assert.AreEqual(28000,s.CurrentHomeRent.Cents);
                 Assert.AreEqual(6,s.BrandBusiness.Brands.Single().ShopIds.Length);
                 Assert.True(s.DistrictNodeCompleted("community.trial"));Assert.True(s.DistrictStoryState.CommunityMapDelivered);
                 Assert.AreEqual(6,s.MyShops.Select(shop=>shop.Employee.PersonId).Distinct().Count());

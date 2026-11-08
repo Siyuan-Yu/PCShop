@@ -15,6 +15,7 @@ namespace PCShopSell.Game.Runtime
         private bool _sampled, _locomotion = true;
         private bool _seated;
         public string ActivityKind { get; set; }
+        public int ActivityOption { get; set; } = -1;
         public bool Seated
         {
             get=>_seated;
@@ -165,9 +166,27 @@ namespace PCShopSell.Game.Runtime
             }
             if (!string.IsNullOrEmpty(ActivityKind) && _blend < .1f)
             {
+                if (ActivityKind == "court")
+                {
+                    float release = Mathf.Pow((1 + Mathf.Sin(_idleTime * 3.5f)) * .5f, 3f);
+                    bool shooting = ActivityOption == 1;
+                    Torso.localRotation = Quaternion.Euler(shooting ? 6 - 13 * release : 5 + 9 * release, 0, 0);
+                    _visual.localPosition += Vector3.up * (shooting ? .09f * release * _scale : 0);
+                    _arms[0].localRotation = Quaternion.Euler(shooting ? -67 - 83 * release : -44 - 48 * release, 0, -10);
+                    _arms[1].localRotation = Quaternion.Euler(shooting ? -60 - 62 * release : -44 - 48 * release, 0, 10);
+                    return;
+                }
+                if (ActivityKind == "golf")
+                {
+                    float swing = Mathf.Sin(_idleTime * (ActivityOption == 1 ? 2.5f : 1.6f));
+                    Torso.localRotation = Quaternion.Euler(16, swing * 35, 0);
+                    _arms[0].localRotation = Quaternion.Euler(-42 - 24 * swing, swing * 28, -12);
+                    _arms[1].localRotation = Quaternion.Euler(-42 - 24 * swing, swing * 28, 12);
+                    return;
+                }
                 float gesture=Mathf.Sin(_idleTime*2.4f)*12f;
                 // Both participants share a readable activity pose, rather than a walking loop.
-                bool energetic=ActivityKind=="court" || ActivityKind=="golf" || ActivityKind=="hike";
+                bool energetic=ActivityKind=="hike";
                 Torso.localRotation=Quaternion.Euler(energetic?8:0,Mathf.Sin(_idleTime*1.5f)*4,0);
                 _arms[0].localRotation=Quaternion.Euler(ActivityKind=="ktv"?-100+gesture:-45+gesture,0,-12);
                 _arms[1].localRotation=Quaternion.Euler(energetic?-65-gesture:-20-gesture,0,12);

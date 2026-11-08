@@ -60,7 +60,7 @@ namespace PCShopSell.Core.Session
             var routes=new List<CityRoute>();var offsets=new List<(long start,long end)>();
             long offset=0;
             var worker=FindEmployee(trip.EmployeeId)?.Person;
-            int handling=Math.Max(1,worker?.PurchaseMinutes??3);
+            int handling=worker==null?3:EmployeePurchaseMinutes(worker);
             foreach(var source in origins)
             {
                 var route=PlanCityRoute(probe,source.Key,0);if(route==null)return Array.Empty<CityRoute>();

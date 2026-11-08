@@ -268,9 +268,16 @@ namespace PCShopSell.Core.Home
         /// 一间铺子的“标准摆法”：收银台、操作台、展示桌和 6 个货架全摆好。
         /// 只用在作弊开店、没走租铺流程的存档和测试里；正常游戏里这些得自己买自己摆。
         /// </summary>
-        public static List<PlacedFurniture> DefaultShopFixtures(ShopSize size)
+        public static List<PlacedFurniture> DefaultShopFixtures(ShopSize size, string kind)
         {
             (double w, double d) = size == ShopSize.Large ? (18.0, 12.0) : size == ShopSize.Medium ? (12.0, 9.0) : (8.0, 6.0);
+            if (kind == PetShopCatalog.ShopKind)
+                return new List<PlacedFurniture>
+                {
+                    new PlacedFurniture { Id = Shelf, Item = ShelfKinds.ForGift(PetShopCatalog.CatFood).Id, X = w - 1, Z = d - .25 },
+                    new PlacedFurniture { Id = ShopCounter, X = w - 1.25, Z = d - 2.25 },
+                    new PlacedFurniture { Id = PetShopCatalog.SmallHouse, X = 1.75, Z = d - 1.25 },
+                };
             var l = new List<PlacedFurniture>
             {
                 new PlacedFurniture { Id = ShopCounter, X = 0.9, Z = d * 0.55, Rot = 3 },

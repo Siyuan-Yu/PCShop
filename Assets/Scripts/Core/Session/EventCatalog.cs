@@ -306,21 +306,20 @@ namespace PCShopSell.Core.Session
             {
                 Id = "lend", Title = "亲戚来借钱", MinDay = 8, CooldownDays = 20, Weight = 6,
                 When = s => CanPay(s, 2000),
-                Body = "远房表哥找上门，说周转不开，想借 ¥800，三天就还。",
+                Body = "远房表哥找上门，说周转不开，想借 ¥800，三天就还。这笔钱有可能收不回来。",
                 Choices =
                 {
                     new EventChoice
                     {
                         Text = "借给他（¥800）",
+                        Enabled = s => CanPay(s, 800),
+                        DisabledReason = "现金不足",
                         Apply = s =>
                         {
-                            s.EventPay(Y(800), "借给表哥");
+                            s.EventLendToNpc(Y(800), "表哥");
                             if (s.Random.Chance(0.75))
-                            {
-                                s.ScheduleCredit(3, Y(800), "表哥还钱");
-                                return "表哥千恩万谢地走了，说三天后一定还。";
-                            }
-                            return "表哥拿了钱就走，之后再没提这事。";
+                                return "已借给表哥 ¥800。\n" + s.ScheduleNpcRepayment(3, Y(800), "表哥还钱");
+                            return "已借给表哥 ¥800。后来表哥一直没还，这笔钱没有收回。";
                         },
                     },
                     new EventChoice { Text = "婉拒", Apply = s => "你说店里也周转不开。表哥脸色不太好看地走了。" },

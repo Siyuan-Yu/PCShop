@@ -15,7 +15,7 @@ namespace PCShopSell.Tests
             s.PlayerShop.Reputation = 80;
             s.DebugAddListing("tea", 0, 60, Money.FromYuan(3000));
             GameSessionTests.Teleport(s, "agency");
-            Assert.IsTrue(s.SignLease("tea", true));
+            Assert.IsTrue(s.SignRetailLease("tea", true, "computer"));
             return s;
         }
 
@@ -37,7 +37,7 @@ namespace PCShopSell.Tests
             Assert.AreEqual("tea", s.PlayerShopPlace.Id, "签完切到新店");
             Assert.IsTrue(s.PlayerShop.Stock.IsEmpty, "新店是空的");
             Assert.IsFalse(s.MainShop.Sim.Stock.IsEmpty, "主店的货不动");
-            Assert.AreEqual(GameSession.MyShopName + "·二店", s.PlaceTitle(s.City.GetPlace("tea")));
+            Assert.AreEqual("我的电脑店·二店", s.PlaceTitle(s.City.GetPlace("tea")));
         }
 
         [Test]
@@ -64,7 +64,7 @@ namespace PCShopSell.Tests
             s.Leave();
             Money before = s.Ledger.Balance;
             CrossInto(s, 30);
-            long rent = s.Ledger.Entries.Where(e => e.Category == "房租" && e.Date.TotalDays == 30 && (e.Memo ?? "").StartsWith(GameSession.MyShopName)).Sum(e => System.Math.Abs(e.Amount.Cents));
+            long rent = s.Ledger.Entries.Where(e => e.Category == "房租" && e.Date.TotalDays == 30 && (e.Memo ?? "").StartsWith("我的电脑店")).Sum(e => System.Math.Abs(e.Amount.Cents));
             Assert.AreEqual(total.Cents, rent, "两家店的月租都扣");
             Assert.Less(s.Ledger.Balance.Cents, before.Cents);
         }
@@ -126,6 +126,23 @@ namespace PCShopSell.Tests
                     Assert.AreEqual(51, loaded.ShopAt("tea").Sim.ShopReputation);
                 }
             }
+        }
+
+        [Test]
+        public void StoreStandingCanGrowPast100AndSurvivesReload()
+        {
+            using var s = TwoShops();
+            var save = s.CreateSave();
+            save.extraShops.Single().reputation = 100;
+            using var loaded = GameSession.Load(s.City, save);
+            GameSessionTests.Teleport(loaded, "tea");
+            loaded.PlayerShop.Reputation += 120;
+            EventCatalog.Get("inspection").Choices[0].Apply(loaded);
+
+            using var reloaded = GameSession.Load(s.City, loaded.CreateSave());
+            Assert.AreEqual(200, reloaded.MainShop.Sim.Reputation);
+            Assert.AreEqual(120, reloaded.ShopAt("tea").Sim.Awareness);
+            Assert.AreEqual(101, reloaded.ShopAt("tea").Sim.ShopReputation);
         }
 
         [Test]
@@ -230,7 +247,7 @@ namespace PCShopSell.Tests
             Assert.IsNull(s.CloseShopBlocker(s.MainShop));
             Assert.IsTrue(s.CloseShop("pc"));
             Assert.AreEqual("tea", s.MainShop.Place.Id);
-            Assert.AreEqual(GameSession.MyShopName, s.PlaceTitle(s.City.GetPlace("tea")));
+            Assert.AreEqual("我的电脑店", s.PlaceTitle(s.City.GetPlace("tea")));
             Assert.AreEqual(55, s.PlayerShop.Reputation, 1e-6, "知名度跟着新主店");
             GameSession b = GameSession.Load(s.City, s.CreateSave());
             Assert.AreEqual("tea", b.MainShop.Place.Id);

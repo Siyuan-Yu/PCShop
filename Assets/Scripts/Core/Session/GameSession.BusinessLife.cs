@@ -70,15 +70,17 @@ namespace PCShopSell.Core.Session
         public string HomeTitle => City.HasPlace(_residentialHomeId)?City.GetPlace(_residentialHomeId).Name:HomeTier==3 ? "花园独栋别墅" : HomeTier==2 ? "公园豪华公寓" : HomeTier==1 ? "宜居改善住宅" : "城郊老破小出租屋";
         public Money CurrentHomeRent => HomePriceCents>0 ? Money.Zero : Money.FromCents(_homeLeaseRentCents);
         public Money HomePurchasePrice => ResidentialPrice(Home);
-        public Money HomeTierRentQuote(int tier) => HomeBaseRent(tier).Scale(HomeRentFactor);
+        private Money ResidentialMarketRent(int tier) => WeeklyResidentialRent(HomeBaseRent(tier)).Scale(HomeRentFactor);
+        public Money HomeTierRentQuote(int tier) => tier == 0 ? HomeRent : ResidentialMarketRent(tier);
         public bool ChangeHomeTier(int tier)
         {
             string why=ResidenceBlocker(tier,false);if(why!=null)return Fail(why);
             Money rent=HomeTierRentQuote(tier);
-            if(!PayForResidenceMove(tier,"搬家",rent+Money.FromYuan(500),"住处首月租金及搬家费")) return false;
+            if(!PayForResidenceMove(tier,"搬家",rent+Money.FromYuan(500),"住处首周租金及搬家费")) return false;
             _homeLeaseRentCents=rent.Cents;
+            _homeLeaseSignedDay=Clock.Today.TotalDays;
             _residentialHomeId=null;
-            Say("已换为"+HomeTitle+"。家具与储物保留；睡眠质量提高，次月按新月租扣款。"); return true;
+            Say("已换为"+HomeTitle+"。家具与储物保留；此后每七天扣一次住宅周租。"); return true;
         }
         public bool BuyHome(bool mortgage)
         {
@@ -95,8 +97,9 @@ namespace PCShopSell.Core.Session
             Money net=HomePurchasePrice.Scale(.9);
             if(net.IsPositive) Ledger.Credit(Clock.Today,"住宅出售",net,"售价九折");
             HomePriceCents=HomeMortgageCents=HomeMonthlyPrincipalCents=0;
-            _homeLeaseRentCents=HomeTierRentQuote(HomeTier).Cents;
-            Say("住宅已出售，继续租住，次月恢复月租。"); return true;
+            _homeLeaseRentCents=(City.HasPlace(_residentialHomeId) ? ResidentialRent(Home) : HomeTierRentQuote(HomeTier)).Cents;
+            _homeLeaseSignedDay=Clock.Today.TotalDays;
+            Say("住宅已出售，继续租住，七天后开始缴周租。"); return true;
         }
         private void SettleHomeMaintenance(GameDate today)
         {

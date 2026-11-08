@@ -80,7 +80,7 @@ namespace PCShopSell.Tests
         {
             using (var s = HomeTests.Make())
             {
-                Assert.AreEqual(2.5, s.Pantry.RiceKg); Assert.AreEqual(8, Pantry.BowlsPerKg);
+                Assert.AreEqual(20, s.HomeBox.Food.RiceKg); Assert.AreEqual(8, Pantry.BowlsPerKg);
                 GameSessionTests.Teleport(s, "farm"); var before = s.Ledger.Balance;
                 Assert.True(s.BuyRice(1.25));
                 Assert.AreEqual(1.25, s.Backpack.Food.RiceKg); Assert.AreEqual(1.25, s.Backpack.WeightKg);
@@ -88,7 +88,8 @@ namespace PCShopSell.Tests
                 Assert.False(s.BuyRice(12));
                 GameSessionTests.Teleport(s, "flat");
                 Assert.True(s.CookRice(.25, null));
-                Assert.AreEqual(2.25, s.Pantry.RiceKg); s.AdvanceClock(Pantry.CookMinutes);
+                Assert.AreEqual(1, s.Backpack.Food.RiceKg); Assert.AreEqual(20, s.HomeBox.Food.RiceKg);
+                s.AdvanceClock(Pantry.CookMinutes);
                 Assert.AreEqual(2, s.Pantry.CookedBowls);
             }
         }
@@ -108,8 +109,8 @@ namespace PCShopSell.Tests
                 } };
                 using (var loaded = GameSession.Load(source.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(old))))
                 {
-                    Assert.AreEqual(5, loaded.Pantry.RiceKg); Assert.AreEqual(2, loaded.Backpack.Food.RiceKg);
-                    Assert.AreEqual(3, loaded.HomeBox.Food.RiceKg); Assert.AreEqual(4, loaded.HomeTemp.Food.RiceKg);
+                    Assert.AreEqual(2, loaded.Backpack.Food.RiceKg);
+                    Assert.AreEqual(8, loaded.HomeBox.Food.RiceKg); Assert.AreEqual(4, loaded.HomeTemp.Food.RiceKg);
                     Assert.AreEqual(1, loaded.HomeFridge.Food.RiceKg);
                     Assert.AreEqual(5, loaded.ShopAt("tea").Locker.Food.RiceKg); Assert.AreEqual(6, loaded.ShopAt("tea").Fridge.Food.RiceKg);
                     Assert.AreEqual(2, loaded.Couriers.Single().LoadKg);
@@ -117,8 +118,8 @@ namespace PCShopSell.Tests
                     var save = loaded.CreateSave(); Assert.AreEqual(1, save.weightUnitsVersion);
                     using (var again = GameSession.Load(source.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(save))))
                     {
-                        Assert.AreEqual(5, again.Pantry.RiceKg); Assert.AreEqual(2, again.Couriers.Single().LoadKg);
-                        again.AdvanceClock(11); Assert.AreEqual(7, again.Pantry.RiceKg);
+                        Assert.AreEqual(8, again.HomeBox.Food.RiceKg); Assert.AreEqual(2, again.Couriers.Single().LoadKg);
+                        again.AdvanceClock(11); Assert.AreEqual(10, again.HomeBox.Food.RiceKg);
                     }
                 }
             }
