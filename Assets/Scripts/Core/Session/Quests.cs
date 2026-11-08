@@ -52,21 +52,18 @@ namespace PCShopSell.Core.Session
             {
                 Id = "rent", Title = "租一间铺子", Target = QuestTarget.Agency,
                 Short = $"去{K("安居房产中介")}租一间铺子",
-                Hint = $"签约要付{K("首月租金 + 押金 + 中介费")}，{K("留些进货钱")}。",
+                Hint = $"签约要付{K("首周租金 + 押金 + 中介费")}，{K("预留开店设备和进货费用")}。",
                 Done = s => s.HasShop,
                 Progress = s => s.PendingLease != null
                     ? $"已提前签下{s.City.GetPlace(s.PendingLease.PlaceId).Name}，第 {s.PendingLease.StartDay + 1} 天才交房"
                     : null,
-                Reward = "一个货架 + 一个收银台",
-                RewardFor=s=>s.OpeningRewardText("rent"),
-                Grant = s => s.GrantOpeningReward("rent"),
             },
             new QuestDef
             {
-                Id = "mall", Title = "去家具城添置东西", Target = QuestTarget.Mall,
-                Short = $"去{K("宜居家具城")}买任意一件东西",
-                Hint = $"{K("随便买一件就行")}。",
-                Done = s => s.HasShop && s.Flags.Contains(GameSession.MallBoughtFlag),
+                Id = "mall", Title = "购齐开店设施", Target = QuestTarget.Mall,
+                Short = $"去{K("宜居家具城")}买收银台和货架",
+                Hint = "备齐该店型所需的开店设施。",
+                Done = s => s.HasShop && s.MissingOpeningFurniture().Length == 0,
                 Reward = "入门 CPU + 入门显卡",
                 RewardFor=s=>s.OpeningRewardText("mall"),
                 Grant = s => s.GrantOpeningReward("mall"),
@@ -159,9 +156,20 @@ namespace PCShopSell.Core.Session
 
         public static QuestDef ForShop(QuestDef source,GameSession s)
         {
+            if(source?.Id=="mall" && s.HasShop)
+            {
+                var purchase=source.Copy();
+                var required=GameSession.OpeningFurniture(s.RetailKind).Select(FurnitureCatalog.Get).ToArray();
+                var missing=s.MissingOpeningFurniture().Select(FurnitureCatalog.Get).ToArray();
+                purchase.Title=RetailShopTypes.Name(s.RetailKind)+" · 购齐开店设施";
+                purchase.Short=missing.Length==0?"开店设施已备齐":"去家具城买"+string.Join("、",missing.Take(2).Select(f=>f.Name))+(missing.Length>2?"等 "+missing.Length+" 件":"");
+                purchase.Hint="采购清单\n"+string.Join("\n",required.Select(f=>(missing.Contains(f)?"待买  ":"已备  ")+f.Name+" ×1 · "+f.Price));
+                purchase.Progress=_=>"已备 "+(required.Length-missing.Length)+"/"+required.Length+" 项";
+                return purchase;
+            }
             if(source==null||s.RetailKind=="computer")return source;
             var q=source.Copy();
-            if(q.Id=="place")q.Short="在店里装修，摆好"+(s.RetailKind=="restaurant"?"加工台、灶台、传菜台、餐桌和冰箱":s.RetailKind=="secondhand"?"收购鉴定台、二手展示台、货架和收银台":"收银台和货架");
+            if(q.Id=="place")q.Short="在店里装修，摆好"+string.Join("、",GameSession.OpeningFurniture(s.RetailKind).Select(id=>FurnitureCatalog.Get(id).Name));
             if(q.Id=="shelf")
             {
                 q.Title=s.IsSpecialBusiness(s.CurrentShop)?"准备经营设施":"设置第一个商品货架";

@@ -40,7 +40,7 @@ namespace PCShopSell.Core.Inventory
         }
 
         public bool IsGoods => !IsParts;
-        public string BrowseGroup => IsParts?"电脑配件":Id.StartsWith("clothing_")?"服装":Id.StartsWith("model_")?"模型手办":"零售商品";
+        public string BrowseGroup => IsParts?"电脑配件":Id.StartsWith("clothing_")?"服装":Id.StartsWith("model_")?"模型手办":Id.StartsWith("pet_")?"宠物用品":"零售商品";
     }
 
     public static class ShelfKinds
@@ -63,6 +63,9 @@ namespace PCShopSell.Core.Inventory
             new ShelfKind("fruit", "水果", Gifts.Fruit),
             new ShelfKind("secondhand", "二手转售品", Array.Empty<string>()),
             new ShelfKind("flowers", "鲜花与盆栽", RetailProducts.All.Where(g => g.Id.StartsWith("flower_")).Select(g => g.Id).ToArray()),
+            new ShelfKind("pet_supplies", "基础宠物用品", PetShopCatalog.Products.Where(g => PetShopCatalog.Tier(g.Id)==0).Select(g => g.Id).ToArray()),
+            new ShelfKind("pet_supplies_mid", "中档宠物用品", PetShopCatalog.Products.Where(g => PetShopCatalog.Tier(g.Id)==1).Select(g => g.Id).ToArray()),
+            new ShelfKind("pet_supplies_high", "高档宠物用品", PetShopCatalog.Products.Where(g => PetShopCatalog.Tier(g.Id)==2).Select(g => g.Id).ToArray()),
             new ShelfKind("produce", "米与生鲜", RetailProducts.All.Where(g => g.Id.StartsWith("produce:")).Select(g => g.Id).ToArray()),
             new ShelfKind("meals", "外带食品", RetailProducts.All.Where(g => g.MealId != null).Select(g => g.Id).ToArray()),
             new ShelfKind("clothing_0", "平价服装", ClothingProducts.All.Where(g => ClothingProducts.Outfit(g.Id).Tier == 0).Select(g => g.Id).ToArray()),
@@ -107,6 +110,8 @@ namespace PCShopSell.Core.Inventory
         }
 
         public int Total => Parts.Sum(l => l.Count) + Goods.Sum(g => g.Value)+Resale.Count;
+        internal bool WeightBlocked { get; set; }
+        public bool Full => CapacityItems > 0 && CapacityKg > 0 && (WeightBlocked || Total >= CapacityItems || UsedKg >= CapacityKg - 1e-9);
 
         public int PartCount(PartDef part, bool boxed)
         {
@@ -142,8 +147,13 @@ namespace PCShopSell.Core.Inventory
         public static ShelfFill Fill(Stock stock, ShelfKind kind, double capacityKg, int maxItems = int.MaxValue)
         {
             var fill = new ShelfFill(kind, capacityKg, maxItems);
-            if (kind == null || capacityKg <= 0 || maxItems <= 0) return fill;
+            if (capacityKg>0 && maxItems>0) FillShelves(stock,kind,new[]{fill});
+            return fill;
+        }
 
+        internal static void FillShelves(Stock stock, ShelfKind kind, IReadOnlyList<ShelfFill> shelves)
+        {
+            if (kind == null || shelves.Count == 0) return;
             var entries = new List<Entry>();
             if (kind.IsParts)
             {
@@ -163,40 +173,35 @@ namespace PCShopSell.Core.Inventory
                 }
             }
 
-            double used = 0; int taken = 0;
-            if (double.IsPositiveInfinity(capacityKg))
+            foreach (var fill in shelves)
             {
-                foreach (Entry e in entries)
-                {
-                    e.Taken = Math.Min(e.Left, maxItems-taken);
-                    taken += e.Taken;
-                    used += e.Kg * e.Taken;
-                }
-            }
-            else
-            {
+                double used = 0;
+                int taken = 0;
                 bool progress = true;
-                while (progress)
+                while (progress && taken < fill.CapacityItems)
                 {
                     progress = false;
                     foreach (Entry e in entries)
                     {
-                        if (taken>=maxItems || e.Taken >= e.Left || used + e.Kg > capacityKg + 1e-9) continue;
-                        e.Taken++; taken++;
-                        used += e.Kg;
+                        if (taken >= fill.CapacityItems || e.Left == 0 || used + e.Kg > fill.CapacityKg + 1e-9) continue;
+                        int add = double.IsPositiveInfinity(fill.CapacityKg) ? Math.Min(e.Left,fill.CapacityItems-taken) : 1;
+                        e.Taken += add;
+                        e.Left -= add;
+                        taken += add;
+                        used += e.Kg * add;
                         progress = true;
                     }
                 }
+                fill.UsedKg = used;
+                fill.WeightBlocked = taken>0 && entries.Any(e=>e.Left>0 && used+e.Kg>fill.CapacityKg+1e-9);
+                foreach (Entry e in entries)
+                {
+                    if (e.Taken == 0) continue;
+                    if (e.Part != null) fill.Parts.Add(new StockLine(e.Part, e.Boxed, e.Taken));
+                    else fill.Goods.Add(new KeyValuePair<string, int>(e.Gift, e.Taken));
+                    e.Taken = 0;
+                }
             }
-
-            fill.UsedKg = used;
-            foreach (Entry e in entries)
-            {
-                if (e.Taken <= 0) continue;
-                if (e.Part != null) fill.Parts.Add(new StockLine(e.Part, e.Boxed, e.Taken));
-                else fill.Goods.Add(new KeyValuePair<string, int>(e.Gift, e.Taken));
-            }
-            return fill;
         }
 
         private sealed class Entry

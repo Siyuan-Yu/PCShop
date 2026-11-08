@@ -1,5 +1,6 @@
 """V14: approved four-neighbourhood / 24-hour plan; community MCN office.
 Geometry is regenerated from the V8 source, never cumulatively warped.
+Historical generator. Use expand-lake-city.py to rebuild the shipped V15 expansion.
 """
 import json, math, heapq
 from residence_access import assign_residence_entrances

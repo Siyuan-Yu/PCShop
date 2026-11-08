@@ -16,12 +16,13 @@ namespace PCShopSell.Core.Session
         private readonly List<string> _nodeAt = new List<string>();
         private readonly List<double> _viewLen = new List<double>();
         private readonly List<double> _gameLen = new List<double>();
+        private readonly string _firstRoadOtherEnd;
         private int _segment;
         private double _segmentProgress;
         private double _viewMetersDone;
         internal CitySavedTrip SaveCityTrip() => new CitySavedTrip {xs=_points.ConvertAll(p=>p.X).ToArray(),ys=_points.ConvertAll(p=>p.Y).ToArray(),
             viewLengths=_viewLen.ToArray(),gameLengths=_gameLen.ToArray(),nodeAt=_nodeAt.ToArray(),target=TargetNode,segment=_segment,
-            vehicle=(int)Vehicle.Kind,progress=_segmentProgress,viewDone=_viewMetersDone};
+            vehicle=(int)Vehicle.Kind,progress=_segmentProgress,viewDone=_viewMetersDone,firstRoadOtherEnd=_firstRoadOtherEnd};
         private Trip(CitySavedTrip d, CityLayout city)
         {
             TargetNode=d.target;Vehicle=Vehicles.Get((VehicleKind)d.vehicle);
@@ -32,6 +33,7 @@ namespace PCShopSell.Core.Session
                 _gameLen.AddRange(_viewLen.Select(length => length * city.TravelDistanceScale));
             else _gameLen.AddRange(d.gameLengths);
             _nodeAt.AddRange(d.nodeAt);
+            _firstRoadOtherEnd = d.firstRoadOtherEnd;
             _segment=Math.Max(0,Math.Min(d.segment,_viewLen.Count));_segmentProgress=Arrived?0:Math.Min(_viewLen[_segment],Math.Max(0,d.progress));_viewMetersDone=Math.Max(0,d.viewDone);
             TotalViewMeters=_viewLen.Sum();TotalGameMeters=_gameLen.Sum();UpdatePosition();UpdateDirection();
         }
@@ -54,8 +56,21 @@ namespace PCShopSell.Core.Session
         public double DirY { get; private set; } = 1;
         public bool Arrived => _segment >= _viewLen.Count;
 
-        /// <summary>下一个要经过的节点（重新选目的地时从这里接着走）。</summary>
-        public string NextNode => Arrived ? TargetNode : _nodeAt[_segment + 1] ?? TargetNode;
+        /// <summary>当前路线接下来要经过的节点，最后一段进门时返回门前的路网节点。</summary>
+        public string NextNode => Arrived || string.IsNullOrEmpty(_nodeAt[_segment + 1]) ? TargetNode : _nodeAt[_segment + 1];
+
+        // An in-progress reroute starts between nodes. Keep the opposite end of that road
+        // available if the player changes destination again before reaching a junction.
+        internal string PreviousRoadNode
+        {
+            get
+            {
+                if (Arrived) return null;
+                string node = _nodeAt[_segment];
+                if (!string.IsNullOrEmpty(node)) return node;
+                return _segment == 0 && !string.IsNullOrEmpty(_firstRoadOtherEnd) ? _firstRoadOtherEnd : null;
+            }
+        }
 
         public IReadOnlyList<MapPoint> Points => _points;
 
@@ -63,11 +78,13 @@ namespace PCShopSell.Core.Session
         /// <param name="startGameScale">起点到第一个节点这段的"游戏米/画面米"比例。</param>
         /// <param name="pointOf">路过每个节点时实际走的点（步行走人行道，不走路中间）；null 就走节点本身。</param>
         /// <param name="end">最后再走到这里（目的地门口）；null 就停在最后一个节点。</param>
+        /// <param name="firstRoadOtherEnd">若在一段路中间起步，这段路上与 path[0] 相对的另一端。</param>
         internal Trip(CityLayout city, MapPoint start, double startGameScale, IReadOnlyList<string> path, VehicleSpec vehicle,
-            Func<string, MapPoint> pointOf = null, MapPoint? end = null)
+            Func<string, MapPoint> pointOf = null, MapPoint? end = null, string firstRoadOtherEnd = null)
         {
             Vehicle = vehicle;
             TargetNode = path[path.Count - 1];
+            _firstRoadOtherEnd = firstRoadOtherEnd;
             _points.Add(start);
             _nodeAt.Add(null);
 
@@ -171,7 +188,7 @@ namespace PCShopSell.Core.Session
                 return value;
             }
         }
-        public int EstimateRemainingMinutes(double secondsPerMinuteAt1x) => CityTravelTiming.Minutes(RemainingGameMeters, Vehicle);
+        public int EstimateRemainingMinutes(double secondsPerMinuteAt1x) => CityTravelTiming.PlayerMinutes(RemainingGameMeters, Vehicle);
         public int EstimatedMinutes => EstimateRemainingMinutes(TimeController.DefaultSecondsPerMinute);
 
         private void UpdatePosition()

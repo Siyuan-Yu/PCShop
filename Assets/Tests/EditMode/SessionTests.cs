@@ -165,12 +165,20 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void Retarget_MidTrip_ContinuesFromNextNode()
+        public void Retarget_MidTrip_CanReverseAgainBeforeReachingAJunction()
         {
             GameSession s = Make();
-            s.GoTo("st");
+            Assert.IsTrue(s.GoTo("st"));
             for (int i = 0; i < 30; i++) s.Tick(0.05);
             Assert.IsNotNull(s.Trip);
+            var start = s.PlayerPosition;
+            Assert.That(start.Y, Is.GreaterThan(s.City.ViewPosition("home").Y).And.LessThan(0));
+            Assert.IsTrue(s.GoTo("home"));
+            Assert.AreEqual(start, s.PlayerPosition);
+            Assert.Less(s.Trip.DirY, 0);
+            Assert.IsTrue(s.GoTo("st"));
+            Assert.AreEqual(start, s.PlayerPosition);
+            Assert.Greater(s.Trip.DirY, 0);
             Assert.IsTrue(s.GoTo("home"));
             RunTrip(s);
             Assert.AreEqual("home", s.PlayerNodeId);
@@ -414,13 +422,19 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void MonthStart_ChargesRent()
+        public void WeekAndMonthStart_ChargeShopAndHomeRent()
         {
             GameSession s = Make();
+            s.EventsEnabled = false;
+            s.Clock.Restore(new GameDate(s.Lease.SignedDay + 6), 23 * 60);
+            Money beforeWeek = s.Ledger.Balance;
+            s.AdvanceClock(61);
+            Assert.AreEqual(s.CurrentShopRent, beforeWeek - s.Ledger.Balance);
+
             s.Clock.Restore(new GameDate(29), 23 * 60);
             Money before = s.Ledger.Balance;
             s.AdvanceClock(61);
-            Assert.AreEqual(s.CurrentShopRent + GameSession.HomeRent, before - s.Ledger.Balance);
+            Assert.AreEqual(GameSession.HomeRent, before - s.Ledger.Balance);
             Assert.IsTrue(s.MonthGoalEvaluated);
         }
 

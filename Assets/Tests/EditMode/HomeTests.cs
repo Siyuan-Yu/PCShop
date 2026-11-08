@@ -825,6 +825,37 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void PhoneOrdersKeepTheirSelectedBranchAcrossSaveAndDelivery()
+        {
+            using (var s = Make(200000, 10 * 60))
+            {
+                s.PlayerShop.Reputation = 80;
+                s.DebugAddListing("tea", 0, 60, Money.FromYuan(3000));
+                GameSessionTests.Teleport(s, "agency");
+                Assert.True(s.SignLease("tea", true));
+                var branch = s.ShopAt("tea");
+                GameSessionTests.Teleport(s, "flat");
+                var part = PCShopSell.Core.Catalog.PartCatalog.Get("cpu0");
+                Assert.True(s.OrderOnline(ParcelKind.Furniture, "sofa", destination: branch));
+                Assert.True(s.PlaceOnlineOrder("online_shop", new[] { (part, 2) }, branch));
+                Assert.True(s.OrderOnline(ParcelKind.Rice, "rice"));
+                Assert.IsNull(s.LastPurchaseDeliveryShop);
+
+                var save = UnityEngine.JsonUtility.FromJson<SaveData>(UnityEngine.JsonUtility.ToJson(s.CreateSave()));
+                using (var loaded = GameSession.Load(s.City, save))
+                {
+                    var loadedBranch = loaded.ShopAt("tea");
+                    Assert.AreEqual("tea", loaded.Parcels.Single(p => p.Kind == ParcelKind.Furniture).ShopId);
+                    Assert.AreEqual("tea", loaded.Online.Pending.Single().ShopId);
+                    WaitDays(loaded, GameSession.DeliveryDays);
+                    Assert.AreEqual(1, loadedBranch.Locker.FurnitureCount("sofa"));
+                    Assert.AreEqual(2, loadedBranch.Sim.Stock.CountAll(part));
+                    Assert.AreEqual(0, loaded.HomeBox.FurnitureCount("sofa"));
+                }
+            }
+        }
+
+        [Test]
         public void OldSave_WithHomeComfort_GivesFurnitureStored()
         {
             GameSession s = Make();

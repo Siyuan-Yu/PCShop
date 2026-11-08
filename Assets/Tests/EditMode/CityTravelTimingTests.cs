@@ -50,7 +50,7 @@ namespace PCShopSell.Tests
                 walk.SetSteer(-1,0);ride.SetSteer(-1,0);Assert.IsTrue(automatic.GoTo("mk"));
                 for(int i=0;i<30;i++){walk.Tick(.02);ride.Tick(.02);automatic.Tick(.02);}
                 double walked=Math.Abs(walk.PlayerPosition.X-walkStart.X),ridden=Math.Abs(ride.PlayerPosition.X-rideStart.X);
-                Assert.Greater(walked,0);Assert.AreEqual(walked*3,ridden,.0001);
+                Assert.Greater(walked,0);Assert.AreEqual(walked*3/CityTravelTiming.PlayerWalkSpeedFactor,ridden,.0001);
                 Assert.AreEqual(ride.PlayerPosition.X,automatic.PlayerPosition.X,.0001);
                 Assert.AreEqual(walk.Clock.Now,ride.Clock.Now);Assert.AreEqual(ride.Clock.Now,automatic.Clock.Now);
             }
@@ -61,8 +61,8 @@ namespace PCShopSell.Tests
             {
                 Assert.True(s.GoTo("mk"));
                 Assert.AreEqual(2000, s.Trip.TotalGameMeters, 1e-6);
-                Assert.AreEqual(CityTravelTiming.Minutes(2000, Vehicles.Walk), s.Trip.EstimatedMinutes);
-                double gameBudget = CityTravelTiming.SpeedPerMinute(Vehicles.Walk);
+                Assert.AreEqual(CityTravelTiming.PlayerMinutes(2000, Vehicles.Walk), s.Trip.EstimatedMinutes);
+                double gameBudget = CityTravelTiming.SpeedPerMinute(Vehicles.Walk)*CityTravelTiming.PlayerWalkSpeedFactor;
                 for (int i = 0; i < 20; i++) s.Tick(TimeController.DefaultSecondsPerMinute / 20);
                 Assert.That(s.Trip.RemainingGameMeters, Is.EqualTo(2000 - gameBudget).Within(.001));
                 Assert.Less(Math.Abs(s.PlayerPosition.X), 1, "2km road drawn as 100m must not be crossed at uncompressed visual speed");

@@ -162,20 +162,26 @@ namespace PCShopSell.Core.Session
 
         // ---------- 往购物车里放 ----------
 
+        public string StallCartKey(Place stall, PartDef part) =>
+            "part:" + part.Id + (stall == CurrentPlace ? "" : ":" + stall.Id);
+
         public bool CartAddStall(Place stall, PartDef part, int count)
         {
             if (stall == null || part == null || count <= 0) return false;
-            if (CurrentPlace != stall || !StallSells(stall, part)) return Fail("这家档口不卖这个。");
-            string key = "part:" + part.Id;
+            if (!SharesWholesaleMarket(CurrentPlace, stall) || !StallSells(stall, part)) return Fail("这家档口不卖这个。");
+            string key = StallCartKey(stall, part);
             int remaining = StallRemaining(stall, part) - (int)Math.Round(CartAmount(key));
             if (count > remaining)
                 return Fail(remaining <= 0 ? $"老板说{part.Name}今天不能再多给你了，明天再来。" : $"老板说{part.Name}今天最多再给你 {remaining} 个。");
             PutLine(_cart, new CartLine
             {
                 Key = key,
-                Name = part.Name,
+                Name = $"{part.Name} · {StallSupplierName(stall)}",
                 UnitKg = Stock.SpaceOf(part, true, 1) * Backpack.KgPerSpace,
                 UnitPrice = () => StallPrice(stall, part),
+                Blocker = () => !SharesWholesaleMarket(CurrentPlace, stall) || !IsWholesalerOpen
+                    ? "请在电子批发市场营业时结账"
+                    : CartAmount(key) > StallRemaining(stall, part) ? $"{StallSupplierName(stall)}的{part.Name}超过本日剩余配额" : null,
                 Run = n => BuyAtStall(stall, part, (int)Math.Round(n)),
             }, count);
             return true;
@@ -348,10 +354,19 @@ namespace PCShopSell.Core.Session
             bool truck = CartTruckKg > 1e-9;
             OwnedShop dest = CourierShop(defaultToShop);
             int cars = truck ? CartCars(defaultToShop) : 0;
+            string chosenDest = CourierDest;
             if (truck) SetCourierDest(dest);
             bool keep = SendByCourier;
+            if (CurrentPlace?.Kind == PlaceKind.Wholesaler) _stallCheckoutMinutes = 0;
             try { return RunLines(_cart, dest, cars, "结账"); }
-            finally { SendByCourier = keep; }
+            finally
+            {
+                SendByCourier = keep;
+                CourierDest = chosenDest;
+                int purchaseMinutes = _stallCheckoutMinutes.GetValueOrDefault();
+                _stallCheckoutMinutes = null;
+                if (purchaseMinutes > 0) AdvanceClock(purchaseMinutes);
+            }
         }
 
         /// <summary>一行行去做（背包栏的部分和叫车的部分分开）；先一起付好车钱，没用上的车退钱；最后只报一次总账。</summary>
@@ -412,7 +427,7 @@ namespace PCShopSell.Core.Session
         // ---------- 打电话叫货车搬东西 ----------
 
         /// <summary>货车送到哪：在自己店里默认送家里，别处默认送当前这家店（没店只能送家里）。</summary>
-        public OwnedShop TruckDest => CourierShop(!InPlayerShop);
+        public OwnedShop TruckDest => ResolveCourierShop(CourierDest, !InPlayerShop);
 
         /// <summary>选的地方就是这里时不能叫。</summary>
         public string TruckDestBlocker =>

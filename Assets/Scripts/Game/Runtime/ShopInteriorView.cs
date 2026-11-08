@@ -62,9 +62,7 @@ namespace PCShopSell.Game.Runtime
             /// <summary>先依次走过这些点（街上 → 门口 → 店里），再走向 Target。</summary>
             public readonly List<Vector3> Via = new List<Vector3>();
 
-            /// <summary>绕开展示桌的拐点（目标变了才重新规划）。</summary>
-            public readonly List<Vector3> Detours = new List<Vector3>();
-            public Vector3 PlannedFor = new Vector3(float.NaN, 0, 0);
+            public readonly NpcRoute Route = new NpcRoute();
 
             /// <summary>冒烟用：没到目标、又没走出多远的时间（原地打转就会一直涨）。</summary>
             public Vector3 StuckAnchor;
@@ -264,10 +262,7 @@ namespace PCShopSell.Game.Runtime
 
         private static bool Reached(Visitor v)
         {
-            if (v.Via.Count > 0) return false;
-            Vector3 d = v.Go.transform.position - v.Target;
-            d.y = 0;
-            return d.sqrMagnitude < 0.04f;
+            return v.Via.Count == 0 && v.Route.AtGoal(v.Go.transform.position,v.Target,.2f);
         }
 
         private static Color CategoryColor(PartCategory c)
@@ -575,7 +570,9 @@ namespace PCShopSell.Game.Runtime
             _root.position = Origin;
             _decor = new RoomFurniture(_root);
 
-            (Width, Depth) = size == ShopSize.Large ? (18f, 12f) : size == ShopSize.Medium ? (12f, 9f) : (8f, 6f);
+            var room = RoomSpec.ForShop(size);
+            Width = (float)room.Width;
+            Depth = (float)room.Depth;
             float w = Width, d = Depth;
 
             Prims.Box(_root, "Floor", new Vector3(w / 2, -0.05f, d / 2), new Vector3(w, 0.1f, d), Mats.Lit(ArtDirection.Hex("B4AA95"), 0.12f), true);
@@ -629,8 +626,8 @@ namespace PCShopSell.Game.Runtime
                 lamp.range = 9f;
                 lamp.intensity = lampsX * lampsZ > 1 ? 1.6f : 2.2f;
                 lamp.color = new Color(1f, 0.87f, 0.66f);
-                Prims.Box(lampGo.transform, "Steel light housing", Vector3.zero, new Vector3(.7f,.11f,.28f), Mats.Lit(ArtDirection.Ink,.4f,.5f));
-                Prims.Box(lampGo.transform, "Warm diffuser", new Vector3(0,-.06f,0), new Vector3(.58f,.02f,.2f), Mats.Glow(ArtDirection.Cream,new Color(2.3f,1.65f,.8f),false));
+                _shopCeilingLampMeshes.Add(Prims.Box(lampGo.transform, "Steel light housing", Vector3.zero, new Vector3(.7f,.11f,.28f), Mats.Lit(ArtDirection.Ink,.4f,.5f)));
+                _shopCeilingLampMeshes.Add(Prims.Box(lampGo.transform, "Warm diffuser", new Vector3(0,-.06f,0), new Vector3(.58f,.02f,.2f), Mats.Glow(ArtDirection.Cream,new Color(2.3f,1.65f,.8f),false)));
                 _ceilingLights.Add(lamp);
             }
 
@@ -1006,7 +1003,8 @@ namespace PCShopSell.Game.Runtime
             _deskFront = _deskFoots.Count > 0 ? new Vector3(_deskFoots[0].center.x, 0, _deskFoots[0].yMin - 0.4f) : Vector3.zero;
             if (deskSpots.Count > 0) _deskFront = deskSpots[0] - Origin;
             // 顾客走路绕开所有地面家具（货架、柜台、展示桌、沙发……）
-            foreach (Rect r in _decor.Blockers) _walkAround.Add(new Rect(r.x + Origin.x, r.y + Origin.z, r.width, r.height));
+            foreach (Rect r in _decor.Blockers)
+                _walkAround.Add(Grow(new Rect(r.x + Origin.x,r.y + Origin.z,r.width,r.height),BodyRadius));
             _stockTimer = 0f;
         }
         /// <summary>营业：门头绿招牌、顶灯全亮；关门：门头变暗红、挂“休息中”牌 + 拦带、顶灯调暗。</summary>
@@ -1081,6 +1079,7 @@ namespace PCShopSell.Game.Runtime
                     }
                     var preferred = employee.Role == EmployeeRole.Cashier ? _clerkStand
                         : employee.Role == EmployeeRole.Assembler ? _assemblerStand
+                        : employee.Role == EmployeeRole.PetKeeper && PetHousePresent ? new Vector3(_petArea.center.x,0,_petArea.yMin-.42f)
                         : employee.Role == EmployeeRole.Buyer||employee.Role==EmployeeRole.Chef||employee.Role==EmployeeRole.Waiter ? new Vector3(_doorX, 0, .9f) : _salesStand;
                     Vector3 stand = FindStaffStand(preferred, occupied);
                     occupied.Add(stand);
@@ -1107,10 +1106,10 @@ namespace PCShopSell.Game.Runtime
 
         private Vector3 FindStaffStand(Vector3 preferred, List<Vector3> occupied)
         {
-            Vector3 best = new Vector3(Mathf.Clamp(preferred.x, .4f, Width - .4f), 0, Mathf.Clamp(preferred.z, .4f, Depth - .4f));
+            Vector3 best = ClampIndoorNpc(Origin+preferred)-Origin;
             float bestScore = float.PositiveInfinity;
-            for (float x = .4f; x <= Width - .4f; x += .2f)
-                for (float z = .4f; z <= Depth - .4f; z += .2f)
+            for (float x = BodyRadius; x <= Width - BodyRadius; x += .2f)
+                for (float z = BodyRadius; z <= Depth - BodyRadius; z += .2f)
                 {
                     var point = new Vector3(x, 0, z);
                     if (_decor.Blockers.Any(r => new Rect(r.xMin - .24f, r.yMin - .24f, r.width + .48f, r.height + .48f).Contains(new Vector2(x, z)))
@@ -1165,6 +1164,7 @@ namespace PCShopSell.Game.Runtime
             UpdateNearbyShelf(s.InPlayerShop);
             bool building = shop.Orders.Count > 0;
             foreach (GameObject g in _buildGlow) g.SetActive(building);
+            UpdatePetBoardingView(s, realDt);
             UpdateStaff(s);
             UpdateSpecialBusinessVisuals(s);
             UpdateRestaurantPlayer(s);
@@ -1424,7 +1424,7 @@ namespace PCShopSell.Game.Runtime
                 }
                 if (!v.DropFirst || v.Dropped)
                 {
-                    if (v.Via.Count == 0 && (v.Go.transform.position - v.Target).sqrMagnitude < 0.05f)
+                    if (Reached(v))
                     {
                         Kill.It(v.Go);
                         _leaving.RemoveAt(i);
@@ -1488,90 +1488,158 @@ namespace PCShopSell.Game.Runtime
             return $"<size=13><color=#6B6F78>正在挑、比价格… {pct}%</color></size>";
         }
 
-        /// <summary>排队的第 k 个位置：从收银台前沿着收银台长边往前墙方向排，排到离前墙 1.9 米处（或碰到店边）再往门口那头拐。</summary>
+        /// <summary>排队的第 k 个位置：沿柜台长边排，接近前墙或侧墙时转向。</summary>
         private Vector3 QueueSpot(int k)
         {
             float run = k * 0.75f;
-            Vector3 p = _counterFront;
+            Vector3 p = ClampIndoorNpc(_counterFront);
             Vector3 q = _queueDir;
             // 沿 q 能直着走多远：直到离前墙 1.9 米，或离左右墙 0.9 米
             float straight = 40f;
             if (q.z < -0.1f) straight = Mathf.Min(straight, Mathf.Max(0f, (p.z - Origin.z - 1.9f) / -q.z));
             if (q.x > 0.1f) straight = Mathf.Min(straight, Mathf.Max(0f, (Origin.x + Width - 0.9f - p.x) / q.x));
             if (q.x < -0.1f) straight = Mathf.Min(straight, Mathf.Max(0f, (p.x - Origin.x - 0.9f) / -q.x));
-            if (run <= straight) return p + q * run;
+            if (run <= straight) return ClampIndoorNpc(p + q * run);
             Vector3 end = p + q * straight;
+            if (Mathf.Abs(q.x)>.1f)
+            {
+                float direction = end.z-Origin.z > Depth*.5f ? -1f : 1f;
+                return ClampIndoorNpc(end+Vector3.forward*direction*(run-straight));
+            }
             end.z = Mathf.Max(end.z, Origin.z + 1.9f);
             float side = Origin.x + _doorX >= end.x ? 1f : -1f;
-            if (Mathf.Abs(q.x) > 0.1f) side = Mathf.Sign(q.x);
             float x = Mathf.Clamp(end.x + side * (run - straight), Origin.x + 0.9f, Origin.x + Width - 0.9f);
-            return new Vector3(x, p.y, end.z);
-        }
-        private void Move(Visitor v, float dt)
-        {
-            Vector3 p = v.Go.transform.position;
-            Vector3 goal = v.Via.Count > 0 ? v.Via[0] : v.Target;
-            if (float.IsNaN(v.PlannedFor.x) || (v.PlannedFor - goal).sqrMagnitude > 0.01f)
-            {
-                v.PlannedFor = goal;
-                v.Detours.Clear();
-                v.Detours.AddRange(PlanAround(p, goal));
-            }
-            while (v.Detours.Count > 0 && Flat(v.Detours[0] - p).sqrMagnitude < 0.0025f) v.Detours.RemoveAt(0);
-            Vector3 next = v.Detours.Count > 0 ? v.Detours[0] : goal;
-            Vector3 d = next - p;
-            d.y = 0;
-            float m = d.magnitude;
-            if (m < 0.05f)
-            {
-                if (v.Detours.Count > 0) v.Detours.RemoveAt(0);
-                else if (v.Via.Count > 0) v.Via.RemoveAt(0);
-                return;
-            }
-            var local=p-Origin;
-            bool inside=local.x>=0 && local.x<=Width && local.z>=0 && local.z<=Depth;
-            float pace=inside?1f:(float)Vehicles.WalkingSpeedMultiplier;
-            v.Go.transform.position = p + d / m * Mathf.Min(m, OwnerWalkSpeed * pace * (float)CityTravelTiming.NpcWalkSpeedFactor * dt / (float)TimeController.WorldRate);
-            v.Go.transform.rotation = Quaternion.LookRotation(d / m);
+            return ClampIndoorNpc(new Vector3(x, p.y, end.z));
         }
 
-        private const float BodyRadius = 0.35f;
+        private sealed class NpcRoute
+        {
+            public readonly List<Vector3> Detours = new List<Vector3>();
+            public Vector3 Requested = new Vector3(float.NaN,0,0), End;
+            public int LayoutVersion = -1;
+            public bool Indoors;
+
+            public bool AtGoal(Vector3 position,Vector3 requested,float tolerance) =>
+                (Requested-requested).sqrMagnitude < .0004f && Detours.Count == 0
+                && Flat(position-End).sqrMagnitude < tolerance*tolerance;
+        }
+
+        private void Move(Visitor v, float dt)
+        {
+            bool via = v.Via.Count > 0;
+            Vector3 goal = v.Via.Count > 0 ? v.Via[0] : v.Target;
+            bool indoorGoal = via ? goal.z >= Origin.z : !v.Leaving || v.DropFirst && !v.Dropped;
+            bool inside = v.Go.transform.position.z >= Origin.z;
+            float pace = inside ? 1f : (float)Vehicles.WalkingSpeedMultiplier;
+            float step = OwnerWalkSpeed*pace*(float)CityTravelTiming.NpcWalkSpeedFactor*dt/(float)TimeController.WorldRate;
+            if (MoveNpc(v.Go.transform,v.Route,goal,step,indoorGoal) && via) v.Via.RemoveAt(0);
+        }
+
+        private bool MoveNpc(Transform actor,NpcRoute route,Vector3 goal,float step,bool indoorGoal)
+        {
+            Vector3 p = actor.position;
+            if (route.LayoutVersion != _decor.Version || route.Indoors != indoorGoal
+                || float.IsNaN(route.Requested.x) || (route.Requested-goal).sqrMagnitude >= .0004f)
+            {
+                route.LayoutVersion = _decor.Version;
+                route.Indoors = indoorGoal;
+                route.Requested = goal;
+                PlanAround(p,indoorGoal ? ClampIndoorNpc(goal) : goal,route);
+            }
+            Vector3 next = route.Detours.Count > 0 ? route.Detours[0] : route.End;
+            Vector3 delta = Flat(next-p);
+            float distance = delta.magnitude;
+            if (distance > 1e-5f)
+            {
+                actor.position = p+delta/distance*Mathf.Min(distance,step);
+                actor.rotation = Quaternion.LookRotation(delta);
+            }
+            // Reach the corner itself before changing direction so the next segment cannot cut through the wall.
+            if (distance > step + 1e-5f) return false;
+            if (route.Detours.Count == 0) return true;
+            route.Detours.RemoveAt(0);
+            return false;
+        }
+
+        private const float BodyRadius = .43f;
+        private const float DoorwayHalfWidth = .25f;
 
         private static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0, v.z);
 
-        /// <summary>
-        /// 从 p 走到 goal 要绕开展示桌时的拐点（桌角外面一点）：在起点、终点和所有桌角之间找最短的不穿桌路线。
-        /// 起点或终点本身就贴着某张桌子时，那张桌子不算障碍（免得原地打转）。
-        /// </summary>
-        private List<Vector3> PlanAround(Vector3 p, Vector3 goal)
+        private Vector3 ClampIndoorNpc(Vector3 p) => new Vector3(
+            Mathf.Clamp(p.x,Origin.x+BodyRadius,Origin.x+Width-BodyRadius),p.y,
+            Mathf.Clamp(p.z,Origin.z+BodyRadius,Origin.z+Depth-BodyRadius));
+
+        private bool FitsNpcWalls(Vector2 p)
         {
-            var result = new List<Vector3>();
+            if (p.y<=Origin.z-BodyRadius) return true;
+            if (p.y<Origin.z+BodyRadius) return Mathf.Abs(p.x-Origin.x-_doorX)<=DoorwayHalfWidth;
+            Vector3 world = new Vector3(p.x,0,p.y);
+            return (ClampIndoorNpc(world)-world).sqrMagnitude < 1e-8f;
+        }
+
+        private bool NpcDoorClear(Vector2 a,Vector2 b)
+        {
+            float lo = Origin.z-BodyRadius, hi = Origin.z+BodyRadius;
+            if (a.y>b.y) (a,b) = (b,a);
+            if (b.y<=lo || a.y>=hi) return true;
+            float door = Origin.x+_doorX;
+            float dz = b.y-a.y;
+            float first = dz>1e-5f ? Mathf.Lerp(a.x,b.x,Mathf.Clamp01((lo-a.y)/dz)) : a.x;
+            float last = dz>1e-5f ? Mathf.Lerp(a.x,b.x,Mathf.Clamp01((hi-a.y)/dz)) : b.x;
+            return Mathf.Max(Mathf.Abs(first-door),Mathf.Abs(last-door)) <= DoorwayHalfWidth;
+        }
+
+        /// <summary>可见路径的每条边都遵守人物宽度、店面边界及家具占地。</summary>
+        private void PlanAround(Vector3 p,Vector3 goal,NpcRoute route)
+        {
+            route.Detours.Clear();
+            route.End = goal;
             var a = new Vector2(p.x, p.z);
             var b = new Vector2(goal.x, goal.z);
-            var hits = new List<Rect>();
-            foreach (Rect zone in _walkAround)
+            bool Clear(Vector2 u,Vector2 w,bool startsAtActor)
             {
-                Rect hit = Grow(zone, BodyRadius);
-                if (!hit.Contains(a) && !hit.Contains(b)) hits.Add(hit);
-            }
-            bool Clear(Vector2 u, Vector2 w)
-            {
-                foreach (Rect h in hits)
-                    if (SegmentHits(u, w, h)) return false;
+                if (!NpcDoorClear(u,w)) return false;
+                foreach (Rect h in _walkAround)
+                    if (!(startsAtActor && h.Contains(u)) && SegmentHits(u,w,h)) return false;
                 return true;
             }
-            if (hits.Count == 0 || Clear(a, b)) return result;
 
             var nodes = new List<Vector2> { a, b };
+            bool Free(Vector2 point)
+            {
+                if (!FitsNpcWalls(point)) return false;
+                foreach (Rect h in _walkAround) if (h.Contains(point)) return false;
+                return true;
+            }
+            bool goalFree = Free(b);
+            if (goalFree && Clear(a,b,true)) return;
+
+            void Add(Vector2 point)
+            {
+                if (Free(point)) nodes.Add(point);
+            }
+            if (a.y<Origin.z+BodyRadius || b.y<Origin.z+BodyRadius)
+            {
+                Add(new Vector2(Origin.x+_doorX,Origin.z-.65f));
+                Add(new Vector2(Origin.x+_doorX,Origin.z+.65f));
+            }
             foreach (Rect zone in _walkAround)
             {
-                Rect c = Grow(zone, BodyRadius + 0.25f);
-                foreach (Vector2 corner in new[] { new Vector2(c.xMin, c.yMin), new Vector2(c.xMax, c.yMin), new Vector2(c.xMin, c.yMax), new Vector2(c.xMax, c.yMax) })
+                Rect c = Grow(zone,.04f);
+                if (c.yMax<Origin.z+BodyRadius) continue;
+                if (c.yMin>=Origin.z+BodyRadius)
                 {
-                    bool inside = false;
-                    foreach (Rect h in hits) inside |= h.Contains(corner);
-                    if (!inside) nodes.Add(corner);
+                    Add(new Vector2(c.xMin,c.yMin));
+                    Add(new Vector2(c.xMax,c.yMin));
+                    Add(new Vector2(Mathf.Clamp(b.x,c.xMin,c.xMax),c.yMin));
                 }
+                Add(new Vector2(c.xMin,c.yMax));
+                Add(new Vector2(c.xMax,c.yMax));
+                Add(new Vector2(Mathf.Clamp(b.x,c.xMin,c.xMax),c.yMax));
+                float z = Mathf.Clamp(b.y,Mathf.Max(c.yMin,Origin.z+BodyRadius),c.yMax);
+                Add(new Vector2(c.xMin,z));
+                Add(new Vector2(c.xMax,z));
             }
             int n = nodes.Count;
             var dist = new float[n];
@@ -1588,14 +1656,17 @@ namespace PCShopSell.Game.Runtime
                 done[u] = true;
                 for (int k = 0; k < n; k++)
                 {
-                    if (done[k] || k == u) continue;
+                    if (done[k] || k == u || k == 1 && !goalFree) continue;
                     float alt = dist[u] + (nodes[k] - nodes[u]).magnitude;
-                    if (alt < dist[k] && Clear(nodes[u], nodes[k])) { dist[k] = alt; prev[k] = u; }
+                    if (alt < dist[k] && Clear(nodes[u],nodes[k],u==0)) { dist[k] = alt; prev[k] = u; }
                 }
             }
-            if (prev[1] < 0) return result;
-            for (int k = prev[1]; k > 0; k = prev[k]) result.Insert(0, new Vector3(nodes[k].x, p.y, nodes[k].y));
-            return result;
+            int end = 0;
+            for (int i=1; i<n; i++)
+                if (prev[i]>=0 && (nodes[i]-b).sqrMagnitude<(nodes[end]-b).sqrMagnitude) end = i;
+            route.End = new Vector3(nodes[end].x,p.y,nodes[end].y);
+            for (int k=prev[end]; k>0; k=prev[k])
+                route.Detours.Insert(0,new Vector3(nodes[k].x,p.y,nodes[k].y));
         }
 
         private static Rect Grow(Rect r, float k) => Rect.MinMaxRect(r.xMin - k, r.yMin - k, r.xMax + k, r.yMax + k);
@@ -1605,20 +1676,17 @@ namespace PCShopSell.Game.Runtime
         {
             Vector2 d = b - a;
             float t0 = 0f, t1 = 1f;
-            float[] pp = { -d.x, d.x, -d.y, d.y };
-            float[] qq = { a.x - r.xMin, r.xMax - a.x, a.y - r.yMin, r.yMax - a.y };
-            for (int i = 0; i < 4; i++)
+            return Clip(-d.x,a.x-r.xMin) && Clip(d.x,r.xMax-a.x)
+                && Clip(-d.y,a.y-r.yMin) && Clip(d.y,r.yMax-a.y) && t1-t0>1e-4f;
+
+            bool Clip(float direction,float distance)
             {
-                if (Mathf.Abs(pp[i]) < 1e-6f)
-                {
-                    if (qq[i] < 0) return false;
-                    continue;
-                }
-                float t = qq[i] / pp[i];
-                if (pp[i] < 0) { if (t > t1) return false; if (t > t0) t0 = t; }
+                if (Mathf.Abs(direction)<1e-6f) return distance>=0;
+                float t = distance/direction;
+                if (direction < 0) { if (t > t1) return false; if (t > t0) t0 = t; }
                 else { if (t < t0) return false; if (t < t1) t1 = t; }
+                return true;
             }
-            return t1 - t0 > 1e-4f;
         }
 
         /// <summary>顾客从街上一头走过来，到门口拐进店。</summary>
@@ -1641,7 +1709,8 @@ namespace PCShopSell.Game.Runtime
         {
             float side = _rng.NextDouble() < 0.5 ? -1f : 1f;
             v.Via.Clear();
-            v.Via.Add(Origin + new Vector3(_doorX, 0, 0.6f));
+            if (v.Go.transform.position.z >= Origin.z-BodyRadius)
+                v.Via.Add(Origin + new Vector3(_doorX, 0, 0.6f));
             float z = SidewalkZ(_rng);
             v.Via.Add(Origin + new Vector3(_doorX + side * 0.3f, 0, z));
             v.Target = Origin + new Vector3(side < 0 ? -StreetExtent + 1f : Width + StreetExtent - 1f, 0, z);

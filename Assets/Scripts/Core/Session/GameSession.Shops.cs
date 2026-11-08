@@ -68,6 +68,7 @@ namespace PCShopSell.Core.Session
                 RetailKind = shop.RetailKind,
                 LocationFactor = LocationFactorOf(shop.Place),
                 CompetitionFactorOf = () => ShopCompetitionFactor(shop.Place),
+                StreetTrafficFactorOf = () => StreetTrafficMultiplier(shop.Place.StreetId),
                 EmployeeOnDuty = t => ShopStaff(shop,EmployeeRole.Cashier).Concat(ShopStaff(shop,EmployeeRole.Assembler)).Any(e=>e.OnDuty(t)&&CityEmployeeAvailable(e,shop)),
                 EmployeeServiceRate = ()=>ShopCheckoutWorkers(shop).Sum(e=>1.0/(Math.Max(1,e.CheckoutMinutes)+1)),
             };
@@ -130,7 +131,7 @@ namespace PCShopSell.Core.Session
         private void OpenNewShop(Place place, Money rent, Money deposit)
         {
             var shop = new OwnedShop { Place = place };
-            shop.Lease = new ShopLease { PlaceId = place.Id, Rent = rent, Deposit = deposit, StartDay = Clock.Today.TotalDays };
+            shop.Lease = new ShopLease { PlaceId = place.Id, Rent = rent, Deposit = deposit, StartDay = Clock.Today.TotalDays, SignedDay = Clock.Today.TotalDays };
             shop.Sim = CreateShopSim(shop);
             shop.Sim.Markup = PlayerShop.Markup;
             _shops.Add(shop);
@@ -154,6 +155,7 @@ namespace PCShopSell.Core.Session
             if (s.Sim.Queue.Count > 0) return "还有顾客等待结账，请先处理完再退租";
             if (s.Sim.DisplayPcs.Count > 0) return "展示台上还摆着整机，先拆回库存";
             if(IsSpecialBusiness(s)&&SpecialBusinessBusy(s))return "请先处理餐馆订单、二手库存和卖家，再结束经营";
+            if(PetsStaying(s))return "还有宠物在店代养，请先交接结算再结束经营";
             if (!s.Fridge.IsEmpty) return "冰箱里还有食物，请先取走";
             if (!s.Locker.IsEmpty || !s.Temp.IsEmpty) return "纸箱或临时存放还有物品，请先转存或叫货车搬走";
             if (!s.Sim.Stock.IsEmpty) return "店里还有货，先打电话叫货车搬走";
@@ -183,10 +185,11 @@ namespace PCShopSell.Core.Session
             foreach (PlacedFurniture f in s.Layout) AddFurniture(f.Id, 1);
             Money lostDeposit=s.Lease?.Deposit??Money.Zero;
             bool hadStaff = s.Employee != null || s.Assembler != null || s.Buyer != null || s.Salesperson != null;
-            Money rent = s.Lease.Rent;
+            Money rent = s.Lease?.Rent ?? Money.Zero;
             bool wasMain = s == MainShop;
             bool wasOwned = s.OwnsProperty;
             _shops.Remove(s);
+            _petBoarding.Remove(placeId);
             foreach(var idle in _idleEmployees.Where(e=>_employeeHireShops.TryGetValue(e.Id,out var hired)&&hired==placeId).ToArray())_idleEmployees.Remove(idle);
             foreach(var id in _employeeHireShops.Where(p=>p.Value==placeId).Select(p=>p.Key).ToArray())_employeeHireShops.Remove(id);
             ResetVenueLease(placeId);
@@ -196,14 +199,14 @@ namespace PCShopSell.Core.Session
             if (_shops.Count == 0)
             {
                 var placeholder = new OwnedShop { Place = City.PlayerShop() };
-                placeholder.Sim = CreateShopSim(placeholder); placeholder.Sim.Reputation = reputation;
+                placeholder.Sim = CreateShopSim(placeholder);
                 _shops.Add(placeholder);
             }
             if (wasMain)
             {
                 ShopSimulation main = MainShop.Sim;
                 main.ShareReputationWith(main);
-                main.Reputation = reputation;
+                main.RestoreBusinessAwareness(reputation);
                 foreach (OwnedShop o in _shops.Skip(1)) o.Sim.ShareReputationWith(main);
             }
             if (_focus == s) SetFocus(MainShop);
@@ -224,10 +227,12 @@ namespace PCShopSell.Core.Session
             return new SaveShop
             {
                 retailKind = s.RetailKind, goodsLots = SaveRetailLots(sim),
+                awareness = sim.Awareness, reputation = sim.ShopReputation,
                 place = s.Place.Id,
                 rentCents = s.Lease.Rent.Cents,
                 depositCents = s.Lease.Deposit.Cents,
                 startDay = s.Lease.StartDay,
+                signedDay = s.Lease.SignedDay,
                 stock = Lines(sim.Stock),
                 goodsIds = SaveRetailCounts(sim).Select(kv => kv.Key).ToArray(),
                 goodsCounts = SaveRetailCounts(sim).Select(kv => kv.Value).ToArray(),
@@ -262,14 +267,16 @@ namespace PCShopSell.Core.Session
             };
         }
 
-        private void RestoreShop(SaveShop d)
+        private void RestoreShop(SaveShop d, bool hasShopStanding)
         {
             if (d == null || !City.HasPlace(d.place) || _shops.Any(x => x.Place.Id == d.place)) return;
             Place place = City.GetPlace(d.place);
             var shop = new OwnedShop { Place = place, RetailKind = RetailShopTypes.Valid(d.retailKind) };
-            shop.Lease = new ShopLease { PlaceId = place.Id, Rent = Money.FromCents(d.rentCents), Deposit = Money.FromCents(d.depositCents), StartDay = d.startDay };
+            shop.Lease = new ShopLease { PlaceId = place.Id, Rent = Money.FromCents(d.rentCents), Deposit = Money.FromCents(d.depositCents), StartDay = d.startDay, SignedDay = d.signedDay };
             shop.Sim = CreateShopSim(shop);
             ShopSimulation sim = shop.Sim;
+            sim.RestoreShopStanding(hasShopStanding ? d.awareness : MainShop.Sim.Reputation,
+                hasShopStanding ? d.reputation : ShopSimulation.NeutralShopReputation);
             Fill(sim.Stock, d.stock);
             string[] goods = d.goodsIds ?? Array.Empty<string>();
             for (int i = 0; i < goods.Length && d.goodsCounts != null && i < d.goodsCounts.Length; i++) sim.Stock.ForceAddGoods(goods[i], d.goodsCounts[i]);

@@ -28,12 +28,13 @@ namespace PCShopSell.Game.Runtime
         public const string Climate = "climate";
 
         public static readonly Vector3 Origin = new Vector3(600, 0, -470);
-        public const float Width = 6f;
-        public const float Depth = 4.6f;
+        public RoomSpec Room { get; }
+        public float Width => (float)Room.Width;
+        public float Depth => (float)Room.Depth;
         public const float DefaultZoom = 4.2f;
         public const float MinZoom = 2.8f;
         /// <summary>刚好看到整间屋子的镜头大小（缩放上限）。</summary>
-        public static float CameraSize => Mathf.Max(Width, Depth) * 0.62f + 1.5f;
+        public float CameraSize => Mathf.Max(Width, Depth) * 0.62f + 1.5f;
 
         /// <summary>家具的玩法角色对应的互动 ID。</summary>
         public static string RoleId(FurnitureRole role)
@@ -66,7 +67,7 @@ namespace PCShopSell.Game.Runtime
         private readonly Material _windowMat;
         private readonly Light _windowLight;
         private readonly RoomFurniture _furniture;
-        private readonly Rect _doorArea = new Rect(Width - 0.2f, 0.5f, 0.2f, 1.0f);
+        private readonly Rect _doorArea;
         private bool _wasOn;
         private int _homeTier = -1;
         private string _dressed;
@@ -101,8 +102,10 @@ namespace PCShopSell.Game.Runtime
         public Vector3 Center => Origin + new Vector3(Width / 2, 0, Depth / 2);
         public Vector3 OwnerWorld => _owner.transform.position;
 
-        public HomeRoomView(Transform parent)
+        public HomeRoomView(Transform parent, RoomSpec room = null)
         {
+            Room = room ?? RoomSpec.Home;
+            _doorArea = new Rect(Width - 0.2f, 0.5f, 0.2f, 1.0f);
             _root = new GameObject("HomeRoom").transform;
             _root.SetParent(parent, false);
             _root.position = Origin;
@@ -118,8 +121,8 @@ namespace PCShopSell.Game.Runtime
 
             Color wallUpper = ArtDirection.Cream;
             Color wallDado = ArtDirection.Sage;
-            Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), IndustrialMaterials.Surface("concrete", wallUpper, new Vector2(3,1)));
-            Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), IndustrialMaterials.Surface("concrete", wallUpper * .93f, new Vector2(3,1)));
+            Prims.Box(_root, "WallBack", new Vector3(w / 2, 1.5f, d + 0.05f), new Vector3(w + 0.2f, 3f, 0.1f), IndustrialMaterials.Surface("concrete", wallUpper, new Vector2(w/2,1)));
+            Prims.Box(_root, "WallRight", new Vector3(w + 0.05f, 1.5f, d / 2), new Vector3(0.1f, 3f, d + 0.2f), IndustrialMaterials.Surface("concrete", wallUpper * .93f, new Vector2(d/2,1)));
             Prims.Box(_root, "DadoBack", new Vector3(w / 2, 0.55f, d - 0.01f), new Vector3(w, 1.1f, 0.02f), Mats.Lit(wallDado, 0.05f));
             Prims.Box(_root, "DadoRight", new Vector3(w - 0.01f, 0.55f, d / 2), new Vector3(0.02f, 1.1f, d), Mats.Lit(wallDado * 0.93f, 0.05f));
             Prims.Box(_root, "WallLeftLow", new Vector3(-0.05f, 0.3f, d / 2), new Vector3(0.1f, 0.6f, d), Mats.Lit(new Color(0.6f, 0.58f, 0.52f)));
@@ -134,16 +137,22 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(_root, "Line", new Vector3(w * 0.5f, 2.1f, Depth - 0.06f), new Vector3(2.0f, 0.015f, 0.015f), Mats.Lit(new Color(0.2f, 0.2f, 0.2f)));
 
             // ---------- 灯 ----------
-            Prims.Box(_root, "BulbWire", new Vector3(w * 0.5f, 2.78f, d * 0.5f), new Vector3(0.02f, 0.44f, 0.02f), Mats.Lit(new Color(0.1f, 0.1f, 0.1f)));
-            Prims.Shape(PrimitiveType.Sphere, _root, "Bulb", new Vector3(w * 0.5f, 2.5f, d * 0.5f), Vector3.one * 0.17f, Mats.Glow(new Color(1f, 0.95f, 0.7f), new Color(4f, 3.4f, 2f), false));
-            var bulbGo = new GameObject("BulbLight");
-            bulbGo.transform.SetParent(_root, false);
-            bulbGo.transform.localPosition = new Vector3(w * 0.5f, 2.3f, d * 0.5f);
-            var bulb = bulbGo.AddComponent<Light>();
-            bulb.type = LightType.Point;
-            bulb.range = 8f;
-            bulb.intensity = 1.1f;
-            bulb.color = new Color(1f, 0.84f, 0.58f);
+            int lamps = Mathf.CeilToInt(w / 6f);
+            for (int i = 0; i < lamps; i++)
+            {
+                float x = w * (i + .5f) / lamps;
+                Prims.Box(_root, "BulbWire", new Vector3(x, 2.78f, d * .5f), new Vector3(.02f, .44f, .02f), Mats.Lit(new Color(.1f, .1f, .1f)));
+                Prims.Shape(PrimitiveType.Sphere, _root, "Bulb", new Vector3(x, 2.5f, d * .5f), Vector3.one * .17f,
+                    Mats.Glow(new Color(1f, .95f, .7f), new Color(4f, 3.4f, 2f), false));
+                var bulbGo = new GameObject("BulbLight");
+                bulbGo.transform.SetParent(_root, false);
+                bulbGo.transform.localPosition = new Vector3(x, 2.3f, d * .5f);
+                var bulb = bulbGo.AddComponent<Light>();
+                bulb.type = LightType.Point;
+                bulb.range = 8f;
+                bulb.intensity = 1.1f;
+                bulb.color = new Color(1f, .84f, .58f);
+            }
 
             // ---------- 窗（带铁栏杆） ----------
             Prims.Box(_root, "WindowFrame", new Vector3(3.15f, 1.75f, d - 0.02f), new Vector3(1.15f, 1.05f, 0.04f), Mats.Lit(new Color(0.25f, 0.27f, 0.3f), 0.3f, 0.3f));
@@ -197,7 +206,7 @@ namespace PCShopSell.Game.Runtime
         /// <summary>按当前布局重建家具，并重新算互动点。</summary>
         private void SyncFurniture(GameSession s)
         {
-            if (!_furniture.Sync(s.HomeLayout, RoomSpec.Home)) return;
+            if (!_furniture.Sync(s.HomeLayout, Room)) return;
             CancelBedWalk();
             _spots.Clear();
             bool hasBed = false;
@@ -207,7 +216,7 @@ namespace PCShopSell.Game.Runtime
                 string id = def == null ? null : RoleId(def.Role);
                 if (id == null) continue;
                 if (def.Role == FurnitureRole.Bed) hasBed = true;
-                RectD f = RoomPlanner.Footprint(RoomSpec.Home, def, p);
+                RectD f = RoomPlanner.Footprint(Room, def, p);
                 string label = def.Role==FurnitureRole.Climate?"风扇/空调：模式与设温":def.Role == FurnitureRole.Fridge ? "冰箱：存取食物" : def.Role == FurnitureRole.Bed ? "睡觉 / 小睡" : def.Role == FurnitureRole.Wardrobe ? "打开衣柜" : def.Role == FurnitureRole.Seat ? "坐下" : def.Role == FurnitureRole.Broken ? "坏了：约师傅上门修" : def.Role == FurnitureRole.Storage ? "纸箱：存取东西" : "电饭锅：做饭 / 吃饭";
                 _spots.Add(new Spot
                 {
@@ -218,7 +227,7 @@ namespace PCShopSell.Game.Runtime
                 });
             }
             // 没有床也能睡：打地铺
-            if (!hasBed) _spots.Add(new Spot { Id = Bed, Label = "打地铺睡觉", Area = new Rect(2.2f, 2.0f, 1.6f, 0.6f), Height = 0.6f });
+            if (!hasBed) _spots.Add(new Spot { Id = Bed, Label = "打地铺睡觉", Area = new Rect(Width*.5f-.8f, Depth*.5f-.3f, 1.6f, 0.6f), Height = 0.6f });
             _spots.Add(new Spot { Id = Door, Label = "出门，回到街上", Area = _doorArea, Height = 2.5f });
         }
 
@@ -400,25 +409,24 @@ namespace PCShopSell.Game.Runtime
                 furniture.RemoveAll(item => item.Id == "fan_broken" || item.Id == "junk");
                 var bed = furniture[0];
                 bed.Id = session.SecondaryResidenceBed(home);
+                bed.Z = Depth - FurnitureCatalog.Get(bed.Id).Depth*.5 - .05;
+                furniture[1].X += Width - RoomSpec.Home.Width;
+                furniture[2].X += Width - RoomSpec.Home.Width;
+                furniture[2].Z += Depth - RoomSpec.Home.Depth;
+                furniture[3].X += Width - RoomSpec.Home.Width;
+                furniture[3].Z += Depth - RoomSpec.Home.Depth;
                 if (home.Tier >= 2)
                 {
                     furniture[1].Id = "wardrobe_wood";
                     furniture.Add(new PlacedFurniture { Id = "sofa", X = 1.2, Z = .65 });
                 }
-                foreach (string name in new[] { "FloorStain1", "FloorStain2", "Crack1", "Crack2", "LeakStain", "LeakStain2", "Peeling", "Mold" })
-                    _root.Find(name).gameObject.SetActive(home.Tier == 0);
-                _furniture.Sync(furniture, RoomSpec.Home);
+                _furniture.Sync(furniture, Room);
                 _spots.Clear();
                 _spots.Add(new Spot { Id = Door, Area = _doorArea, Height = 2.5f });
-                RectD footprint = RoomPlanner.Footprint(RoomSpec.Home, FurnitureCatalog.Get(bed.Id), bed);
+                RectD footprint = RoomPlanner.Footprint(Room, FurnitureCatalog.Get(bed.Id), bed);
                 _spots.Add(new Spot { Id = Bed, Label = "睡觉 / 小睡", Height = 1.1f,
                     Area = new Rect((float)footprint.MinX, (float)footprint.MinZ, (float)(footprint.MaxX - footprint.MinX), (float)(footprint.MaxZ - footprint.MinZ)) });
-                var floor = _root.Find("Floor").GetComponent<Renderer>();
-                floor.sharedMaterial = IndustrialMaterials.Surface(home.Tier >= 2 ? "wood" : "paving",
-                    home.Tier >= 2 ? ArtDirection.Wood : ArtDirection.Cream, new Vector2(3, 3));
-                var wallColor = home.Tier >= 2 ? ArtDirection.Blue : ArtDirection.Sage;
-                foreach (string name in new[] { "DadoBack", "DadoRight" })
-                    _root.Find(name).GetComponent<Renderer>().sharedMaterial = Mats.Lit(wallColor);
+                ApplyFinish(home.Tier);
             }
 
             if (_dressed != session.EquippedOutfit)
@@ -448,7 +456,8 @@ namespace PCShopSell.Game.Runtime
                 }
                 figure.transform.Find("Painted lettering").rotation = CameraRig.Rotation;
                 figure.SetActive(true);
-                figure.transform.localPosition = new Vector3(1.1f + seat % 3 * 1.5f, 0, 2.65f - seat / 3 * .9f);
+                figure.transform.localPosition = new Vector3(Width*.5f-1.9f + seat % 3 * 1.5f, 0,
+                    Mathf.Max(.4f, Depth*.5f+.35f - seat / 3 * .9f));
                 seat++;
                 float distance = (figure.transform.position - OwnerWorld).sqrMagnitude;
                 if (distance >= nearest) continue;
@@ -478,16 +487,7 @@ namespace PCShopSell.Game.Runtime
 
         public void Update(GameSession s, float realDt, float minuteOfDay)
         {
-            if (_homeTier != s.HomeTier)
-            {
-                _homeTier = s.HomeTier;
-                foreach (string name in new[] { "FloorStain1", "FloorStain2", "Crack1", "Crack2", "LeakStain", "LeakStain2", "Peeling", "Mold" })
-                { var t = _root.Find(name); if (t != null) t.gameObject.SetActive(_homeTier == 0); }
-                var floor = _root.Find("Floor").GetComponent<Renderer>();
-                floor.sharedMaterial = IndustrialMaterials.Surface(_homeTier>=2?"wood":"paving",_homeTier >= 2 ? ArtDirection.Wood : _homeTier == 1 ? ArtDirection.Cream : new Color(.52f, .47f, .41f),new Vector2(3,3));
-                foreach (string name in new[] { "DadoBack", "DadoRight" })
-                    _root.Find(name).GetComponent<Renderer>().sharedMaterial = Mats.Lit(_homeTier >= 2 ? ArtDirection.Blue : ArtDirection.Sage);
-            }
+            if (_homeTier != s.HomeTier) ApplyFinish(s.HomeTier);
             if (_dressed != s.EquippedOutfit)
             {
                 _dressed = s.EquippedOutfit;
@@ -546,6 +546,20 @@ namespace PCShopSell.Game.Runtime
             NearbyWorld = world;
         }
 
+        private void ApplyFinish(int tier)
+        {
+            _homeTier = tier;
+            foreach (string name in new[] { "FloorStain1", "FloorStain2", "Crack1", "Crack2", "LeakStain", "LeakStain2", "Peeling", "Mold", "Line" })
+                _root.Find(name).gameObject.SetActive(tier == 0);
+            Color floor = tier == 3 ? ArtDirection.Hex("BA9472") : tier == 2 ? ArtDirection.Wood
+                : tier == 1 ? ArtDirection.Cream : new Color(.52f, .47f, .41f);
+            _root.Find("Floor").GetComponent<Renderer>().sharedMaterial = IndustrialMaterials.Surface(tier >= 2 ? "wood" : "paving",
+                floor, new Vector2(Width*.5f, Depth*.65f));
+            Color trim = tier == 3 ? ArtDirection.Hex("555F55") : tier == 2 ? ArtDirection.Blue : ArtDirection.Sage;
+            foreach (string name in new[] { "DadoBack", "DadoRight" })
+                _root.Find(name).GetComponent<Renderer>().sharedMaterial = Mats.Lit(trim);
+        }
+
         // ---------- 上门的师傅 ----------
 
         /// <summary>师傅进门干活：从门口走到坏掉的东西旁边，蹲着修一阵，修完走回门口离开。他不能交互。</summary>
@@ -601,6 +615,11 @@ namespace PCShopSell.Game.Runtime
             }
         }
 
-        public void Destroy() => Kill.It(_root.gameObject);
+        public void Destroy()
+        {
+            _root.gameObject.SetActive(false);
+            Kill.It(_windowMat);
+            Kill.It(_root.gameObject);
+        }
     }
 }

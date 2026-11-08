@@ -288,7 +288,7 @@ namespace PCShopSell.Tests
         {
             using(var s=Make(1))
             {
-                typeof(GameSession).GetField("_district",BindingFlags.NonPublic|BindingFlags.Instance).SetValue(s,new DistrictProgress{UnlockedTier=1,Chapter=2,BrandCommerceRoute=true,NodeId="expo.review"});
+                typeof(GameSession).GetField("_district",BindingFlags.NonPublic|BindingFlags.Instance).SetValue(s,new DistrictProgress{UnlockedTier=1,Chapter=2,NodeId="expo.review"});
                 Meeting(s,"expo.review");Assert.False(s.ActDistrictNode("expo.review"));Assert.AreEqual(1,s.DistrictAccessTier);
                 var state=s.BrandBusiness;state.Brands[0].Influence=100;Set(s,state);Assert.False(s.ActDistrictNode("expo.review"));
                 state=s.BrandBusiness;state.Orders=new[]{new BrandOrder{Id="receipt",BrandId="b",Source="expo",Done=true}};Set(s,state);

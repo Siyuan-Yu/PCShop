@@ -99,7 +99,7 @@ namespace PCShopSell.Tests
         }
         [Test] public void OnlyPlannedNewTypesAreOffered_AndLegacyTypesStillLoad()
         {
-            CollectionAssert.AreEquivalent(new[]{"computer","models","clothing","restaurant","secondhand"},RetailShopTypes.All);
+            CollectionAssert.AreEquivalent(new[]{"computer","models","clothing","restaurant","secondhand","pet"},RetailShopTypes.All);
             foreach(string legacy in new[]{"food","flowers","produce"})Assert.AreEqual(legacy,RetailShopTypes.Valid(legacy));
         }
         [TestCase("model:harbor:deck",20)]

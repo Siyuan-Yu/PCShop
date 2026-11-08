@@ -325,7 +325,7 @@ namespace PCShopSell.Core.Session
 
         private bool MarkMallBought(bool ok)
         {
-            if (ok && Flags.Add(MallBoughtFlag)) RefreshQuestProgress();
+            if (ok) { Flags.Add(MallBoughtFlag); RefreshQuestProgress(); }
             return ok;
         }
 

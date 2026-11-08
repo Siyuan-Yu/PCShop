@@ -128,7 +128,7 @@ namespace PCShopSell.Game.Runtime
             BuildRoads();
             BuildSidewalks();
             BuildCitySidewalks();
-            foreach (Place p in _city.Places) BuildPlace(p);
+            foreach (Place p in _city.PublicPlaces) BuildPlace(p);
             BuildFiller();
             BuildStreetProps();
             return _root.gameObject;

@@ -79,6 +79,8 @@ namespace PCShopSell.Game.UI
             {
                 Line(w.Content, candidate.Name + " · 日薪 " + candidate.DailyWage, 22, Ui.Accent);
                 Para(w.Content, GameSession.EmployeeAbilities(candidate), 17, Ui.Dim);
+                if (role == EmployeeRole.PetKeeper)
+                    Line(w.Content,"饲养员 · 照顾 2 只宠物 · 每日照顾状态 +"+GameSession.PetKeeperCareBonus(candidate),17,Ui.Good);
                 Line(w.Content, S.CandidateWaitText(candidate), 17, Ui.Warn);
                 Para(w.Content, "选好后统一确认。关闭此窗口不会聘用；选择待安排仍会按日发薪。", 17);
                 var roles = Ui.Row(w.Content, 44);

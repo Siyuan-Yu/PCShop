@@ -44,7 +44,7 @@ namespace PCShopSell.Core.Session
                         Apply = s =>
                         {
                             s.EventPay(Y(300), "整改");
-                            s.PlayerShop.Reputation += 1;
+                            s.PlayerShop.AdjustShopReputation(1);
                             return "检查员点点头：\"态度不错，下次注意。\" 花了 ¥300，口碑 +1。";
                         },
                     },
@@ -57,7 +57,7 @@ namespace PCShopSell.Core.Session
                             s.EventPay(Y(150), "红包");
                             if (s.Random.Chance(0.6)) return "对方收下，转身走了。花了 ¥150。";
                             s.EventPay(Y(600), "罚款");
-                            s.PlayerShop.Reputation -= 2;
+                            s.PlayerShop.AdjustShopReputation(-2);
                             return "对方当场变脸，开了罚单。红包没收，罚款 ¥600，口碑 -2。";
                         },
                     },
@@ -68,7 +68,7 @@ namespace PCShopSell.Core.Session
                         {
                             if (s.Random.Chance(0.35 + s.EffectiveCharm * 0.01)) return "你笑着递烟递水，对方没多为难就走了。";
                             s.EventPay(Y(500), "罚款");
-                            s.PlayerShop.Reputation -= 2;
+                            s.PlayerShop.AdjustShopReputation(-2);
                             return "没糊弄过去，被罚款 ¥500，口碑 -2。";
                         },
                     },
@@ -95,7 +95,7 @@ namespace PCShopSell.Core.Session
                         Text = "客气两句就好",
                         Apply = s =>
                         {
-                            s.PlayerShop.Reputation += 0.5;
+                            s.PlayerShop.AdjustShopReputation(.5);
                             return "熟客笑笑：\"行，老板实在。\" 口碑 +0.5。";
                         },
                     },
@@ -190,7 +190,7 @@ namespace PCShopSell.Core.Session
                             Money total = (s.Market.PriceOf(p) * 5).Scale(0.95);
                             s.EventGain(total, "学生团购");
                             s.PlayerShop.Reputation += 1;
-                            return $"5 条内存一次出手，收入 {total}，口碑 +1。";
+                            return $"5 条内存一次出手，收入 {total}，知名度 +1。";
                         },
                     },
                     new EventChoice
@@ -232,10 +232,10 @@ namespace PCShopSell.Core.Session
                         {
                             if (s.Random.Chance(0.3 + s.EffectiveCharm * 0.012))
                             {
-                                s.PlayerShop.Reputation += 1;
+                                s.PlayerShop.AdjustShopReputation(1);
                                 return "两边说开了，各卖各的，没再恶性竞争。口碑 +1。";
                             }
-                            s.PlayerShop.Reputation -= 1;
+                            s.PlayerShop.AdjustShopReputation(-1);
                             return "老板阴阳怪气，聊崩了。口碑 -1。";
                         },
                     },
@@ -244,7 +244,7 @@ namespace PCShopSell.Core.Session
                         Text = "不理他",
                         Apply = s =>
                         {
-                            s.PlayerShop.Reputation -= 0.5;
+                            s.PlayerShop.AdjustShopReputation(-.5);
                             return "有几个顾客转身去了隔壁。口碑 -0.5。";
                         },
                     },
@@ -264,7 +264,7 @@ namespace PCShopSell.Core.Session
                             s.Player.Charm = System.Math.Min(100, s.Player.Charm + 1);
                             s.PlayerShop.Reputation += 2;
                             s.EventGain(Y(50), "失主酬谢");
-                            return "失主赶来道谢，硬塞给你 ¥50。事情传开了，口碑 +2，魅力 +1。";
+                            return "失主赶来道谢，硬塞给你 ¥50。事情传开了，知名度 +2，魅力 +1。";
                         },
                     },
                     new EventChoice
@@ -275,7 +275,7 @@ namespace PCShopSell.Core.Session
                             s.EventGain(Y(300), "捡到的钱");
                             if (s.Random.Chance(0.25))
                             {
-                                s.PlayerShop.Reputation -= 4;
+                                s.PlayerShop.AdjustShopReputation(-4);
                                 return "收了 ¥300，但被对面的老板看见，传得街上都知道了。口碑 -4。";
                             }
                             return "收了 ¥300，没人看见。你心里有点不踏实。";
@@ -340,10 +340,10 @@ namespace PCShopSell.Core.Session
                         {
                             if (s.Random.Chance(0.35 + s.EffectiveCharm * 0.008 + s.Player.Intelligence * 0.004))
                             {
-                                s.PlayerShop.Reputation += 1.5;
+                                s.PlayerShop.AdjustShopReputation(1.5);
                                 return "你晒出档口的进货单，网友反而夸你实在。口碑 +1.5。";
                             }
-                            s.PlayerShop.Reputation -= 1;
+                            s.PlayerShop.AdjustShopReputation(-1);
                             return "回应没说到点子上，被截图嘲了。口碑 -1。";
                         },
                     },
@@ -362,7 +362,7 @@ namespace PCShopSell.Core.Session
                         Text = "无视",
                         Apply = s =>
                         {
-                            s.PlayerShop.Reputation -= 2;
+                            s.PlayerShop.AdjustShopReputation(-2);
                             return "帖子越传越广，口碑 -2。";
                         },
                     },
@@ -382,7 +382,7 @@ namespace PCShopSell.Core.Session
                         {
                             s.EventPay(Y(100), "传单");
                             s.PlayerShop.Reputation += 2;
-                            return "第二天有几个学生拿着传单进店。口碑 +2。";
+                            return "第二天有几个学生拿着传单进店。知名度 +2。";
                         },
                     },
                     new EventChoice { Text = "不用", Apply = s => "小伙子点点头，去下一家了。" },

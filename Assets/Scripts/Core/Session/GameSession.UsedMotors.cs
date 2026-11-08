@@ -26,7 +26,8 @@ namespace PCShopSell.Core.Session
             foreach(var t in RaceTracks.All.Where(t=>IsMet(t.Npc)))
             {
                 string id=t.Id+":"+week;if(_boughtMotorLeads.Contains(id))continue;
-                var models=MotorCatalog.All.Where(m=>MotorCatalog.ClassOf(m.Kind)==2&&m.Price<=new[]{100000,600000,1500000,4000000}[t.Tier]).ToArray();
+                var models=MotorCatalog.All.Where(m=>MotorCatalog.ClassOf(m.Kind)==2&&m.Price<=RacingTierRules.For(t.Tier).UsedVehicleCeiling).ToArray();
+                if(models.Length==0)continue;
                 var m=models[(week+t.Tier)%models.Length];double condition=55+(week*13+t.Tier*7)%40;
                 yield return new MotorLead{Id=id,PersonId=t.Npc,ModelId=m.Id,Condition=condition,Price=(long)(m.Price*(.48+condition*.002)-m.Price*Math.Min(.06,Relation(t.Npc)*.0006))};
             }
@@ -42,10 +43,10 @@ namespace PCShopSell.Core.Session
         }
         public bool ConsignMotor(string shopId,string id)
         {
-            SyncGarage();var v=_garage.Find(c=>c.Id==id);
+            var v=_garage.Find(c=>c.Id==id);
             if(!AtUsedDealer(shopId)||v==null||MotorCatalog.ClassOf(MotorCatalog.Get(v.ModelId).Kind)!=2||!MotorAvailable(v)||_usedMotors.Count(s=>s.ShopId==shopId)>=UsedMotorCapacity(shopId))return false;
             var m=MotorCatalog.Get(v.ModelId);if(v.Commuter&&Vehicle==m.Kind&&!SetVehicle(VehicleKind.Walk))return false;
-            _owned.Remove(m.Kind);_garage.Remove(v);_usedMotors.Add(new UsedMotor{ShopId=shopId,Source="自有车辆",Vehicle=v,Cost=(long)(m.Price*.6*v.Condition/100),Inspected=true});return true;
+            _garage.Remove(v);_usedMotors.Add(new UsedMotor{ShopId=shopId,Source="自有车辆",Vehicle=v,Cost=(long)(m.Price*.6*v.Condition/100),Inspected=true});return true;
         }
         public bool InspectUsedMotor(string id)
         {

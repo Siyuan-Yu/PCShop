@@ -80,7 +80,6 @@ namespace PCShopSell.Core.Session
             private set => _focus.Assembler = value;
         }
         public Employee Salesperson => _focus.Salesperson;
-        public string OnDutyStaffName => string.Join("、",ShopStaff(_focus,EmployeeRole.Cashier).Concat(ShopStaff(_focus,EmployeeRole.Assembler)).Where(e=>e.OnDuty(Clock.Now)).Select(e=>e.Name));
         public bool EverHired { get; private set; }
         public IReadOnlyList<Employee> Candidates => _candidates;
 
@@ -248,6 +247,27 @@ namespace PCShopSell.Core.Session
         public bool IsEmployeeOnDuty(GameTimestamp t)
         {
             return Employees.Where(e=>e.Shop==_focus&&(e.Role==EmployeeRole.Cashier||e.Role==EmployeeRole.Assembler||IsSpecialBusiness(_focus)&&(e.Role==EmployeeRole.Chef||e.Role==EmployeeRole.Waiter||e.Role==EmployeeRole.Appraiser))).Any(e=>e.Person.OnDuty(t));
+        }
+
+        public (bool WillClose, string Message) ShopLeaveStatus()
+        {
+            var shop = CurrentShop;
+            bool venue = IsDedicatedVenue(shop.Place);
+            if (!(venue ? VenueOpen(shop.Place) : shop.Sim.IsOpen))
+                return (false, "当前未营业");
+
+            var now = Clock.Now;
+            bool special = IsSpecialBusiness(shop);
+            bool staysOpen = venue ? VenueOpen(shop.Place, false)
+                : special ? SpecialOpen(shop, now, false) : shop.Sim.IsOpenAt(now, false);
+            if (!staysOpen)
+                return (true, venue ? "当前没有在岗值守员，离开后关门" : "当前没有在岗收银员，离开后关门");
+
+            if (ShopStaff(shop, EmployeeRole.Cashier).Any(e => CityEmployeeAvailable(e, shop)))
+                return (false, venue ? "有值守员在岗，离开后继续营业" : "有收银员在岗，离开后继续营业");
+            if (special)
+                return (false, shop.RetailKind == "restaurant" ? "无在岗收银员，餐馆员工继续值守" : "无在岗收银员，收购师继续收购");
+            return (false, "无在岗收银员，装机员代收银，离开后继续营业");
         }
 
         private void OnCandidateHour(GameDate today)

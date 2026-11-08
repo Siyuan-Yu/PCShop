@@ -190,5 +190,37 @@ namespace PCShopSell.Tests
                 }
             }
         }
+
+        [Test]
+        public void WednesdayPlanTakesOverAnOldOnlineTargetForTheSameProduct()
+        {
+            using (var s = Make())
+            {
+                string shop = s.MainShop.Place.Id;
+                var oldPolicy = s.ProcurementPolicyFor(shop, PurchaseGoodsKind.Part, "cpu0");
+                Assert.AreEqual(ProcurementMethod.Online1788, oldPolicy.Primary);
+                Assert.True(s.SetProcurementPolicy(oldPolicy));
+
+                var buyer = new Employee { Name = "采购员", DailyWageYuan = 150 };
+                s.MainShop.Buyer = buyer;
+                CityTestPeople.AtAssignedWork(s, buyer);
+                var offer = s.EmployeePurchaseCatalog().First(o => o.Kind == PurchaseGoodsKind.Part && o.Id == "cpu0");
+                Assert.True(s.CompleteEmployeePurchase(buyer.Id, new EmployeePurchasePlan
+                {
+                    HasWeeklySchedule = true, Frequency = PurchaseFrequency.Wednesday, Items = new[] { offer.Line(2) }
+                }));
+
+                foreach (int day in new[] { 1, 2, 3 })
+                {
+                    s.Clock.Restore(new GameDate(day), 9 * 60);
+                    CityTestPeople.AtAssignedWork(s, buyer);
+                    s.AdvanceClock(1);
+                    Assert.Zero(s.Online.Pending.Count);
+                }
+
+                var purchase = s.EmployeePurchaseRecords(shop, buyer.Id).Single();
+                Assert.AreEqual(GameWeekday.Wednesday, new GameTimestamp(purchase.DepartAt).Date.Weekday);
+            }
+        }
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Finance;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
 
 namespace PCShopSell.Core.Session
@@ -33,6 +34,7 @@ namespace PCShopSell.Core.Session
         public int NextId=1, BudgetDay=-1;
         public long NextVisit, Revenue, SpentToday;
         public int Paid, Lost;
+        public int RestaurantArrivalDay = -1, RestaurantArrivalsToday;
         public int RecipeMask=7;
         public bool AutoPurchase;
         public long DailyBudget=500, MaxOffer=200;
@@ -95,8 +97,12 @@ namespace PCShopSell.Core.Session
         }
         private bool SpecialPlayer(OwnedShop shop)=>shop!=null&&InPlayerShop&&CurrentShop==shop&&!_sleeping&&!IsWorking&&!CityActivityExclusive&&!IsRenovating&&!IsGameOver;
         private Employee[] SpecialWorkers(OwnedShop shop,EmployeeRole role,GameTimestamp now)=>ShopStaff(shop,role).Where(e=>e.OnDuty(now)&&CityEmployeeAvailable(e,shop)).ToArray();
-        public bool SpecialOpen(OwnedShop shop,GameTimestamp now)=>shop.Rented&&!IsGameOver&&!shop.Sim.ForcedClosed&&shop.Sim.InHours(now)&&SpecialFitGap(shop)==null
-            &&(SpecialPlayer(shop)||SpecialWorkers(shop,EmployeeRole.Chef,now).Length>0||SpecialWorkers(shop,EmployeeRole.Waiter,now).Length>0||SpecialWorkers(shop,EmployeeRole.Appraiser,now).Length>0||SpecialWorkers(shop,EmployeeRole.Cashier,now).Length>0);
+        public bool SpecialOpen(OwnedShop shop, GameTimestamp now) => SpecialOpen(shop, now, SpecialPlayer(shop));
+        private bool SpecialOpen(OwnedShop shop, GameTimestamp now, bool playerPresent) =>
+            shop.Rented && !IsGameOver && !shop.Sim.ForcedClosed && shop.Sim.InHours(now) && SpecialFitGap(shop) == null
+            && (playerPresent || SpecialWorkers(shop, EmployeeRole.Chef, now).Length > 0
+                || SpecialWorkers(shop, EmployeeRole.Waiter, now).Length > 0 || SpecialWorkers(shop, EmployeeRole.Appraiser, now).Length > 0
+                || SpecialWorkers(shop, EmployeeRole.Cashier, now).Length > 0);
         private void TickSpecialBusinesses(GameTimestamp from,GameTimestamp to)
         {
             foreach(var shop in MyShops.Where(IsSpecialBusiness))
@@ -319,20 +325,33 @@ namespace PCShopSell.Core.Session
             foreach(var o in state.Orders.ToArray())
             {
                 if(o.Stage==DiningStage.Cooking&&minute>=o.BurnAt)o.Stage=DiningStage.Burnt;
-                if((o.Stage==DiningStage.Waiting||o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Ready||o.Stage==DiningStage.Burnt)&&minute-o.Arrived>=100){o.Stage=DiningStage.Left;state.Lost++;}
+                if((o.Stage==DiningStage.Waiting||o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Ready||o.Stage==DiningStage.Burnt)&&minute-o.Arrived>=100)
+                {
+                    o.Stage=DiningStage.Left;state.Lost++;
+                    shop.Sim.AdjustShopReputation(-.3);
+                }
                 if(o.Stage==DiningStage.Eating&&minute>=o.EatUntil)
                 {
                     Ledger.Credit(now.Date,"餐饮",Money.FromYuan(o.Price),RecipeNames[o.Recipe]+"堂食",LedgerAttribution.ForShop(shop.Place.Id,"meal:"+o.Id+":paid","销售"));
                     state.Revenue+=o.Price;state.Paid++;o.Stage=DiningStage.Completed;
+                    shop.Sim.Reputation += ShopSimulation.SaleReputationGain;
+                    shop.Sim.AdjustShopReputation(.12);
                     SellRestaurantDrink(shop,state,o,now);
                 }
             }
             TickRestaurantWorkers(shop,state,now,open);
             if(!open||minute<state.NextVisit)return;
-            state.NextVisit=minute+SpecialVisitInterval(shop,12);
+            state.NextVisit=minute+SpecialVisitInterval(shop,RestaurantVisitMinutes);
             int tables=Furnished(shop,"restaurant_table");
+            if (state.Orders.Count >= tables) return;
+            if (state.RestaurantArrivalDay != now.Date.TotalDays)
+            {
+                state.RestaurantArrivalDay = now.Date.TotalDays;
+                state.RestaurantArrivalsToday = 0;
+            }
+            state.RestaurantArrivalsToday++;
+            if (!Random.Chance(shop.Sim.MarkupPurchaseIntent(state.MenuMarkup))) return;
             int table=Enumerable.Range(0,tables).FirstOrDefault(index=>!state.Orders.Any(o=>o.Table==index));
-            if(state.Orders.Count>=tables||!Random.Chance(shop.Sim.MarkupPurchaseIntent(state.MenuMarkup)))return;
             var recipes=Enumerable.Range(0,RecipeNames.Length).Where(i=>(state.RecipeMask&(1<<i))!=0).ToArray();
             if(recipes.Length==0)return;
             int recipe=recipes[Random.Next(0,recipes.Length)];

@@ -38,7 +38,7 @@ namespace PCShopSell.Core.Session
             if (PlayerShop.Reputation < d.MinReputation) return $"知名度需要 {d.MinReputation:0}";
             if ((kind == "esports" || kind == "stay") && l.Size == ShopSize.Small) return "该业态需要中型或大型铺面";
             if (d.HardwareCount > 0 && PartCatalog.BuildList(d.HardwareTier).Any(p => PlayerShop.Stock.CountAll(p) < d.HardwareCount)) return $"主店需备齐 {d.HardwareCount} 套{PartCatalog.TierName(d.HardwareTier)}散件";
-            if (Ledger.Balance < VentureOpeningCost(l, d)) return "现金不足（含装修、首月租金、押金、中介费和 5,000 周转金）";
+            if (Ledger.Balance < VentureOpeningCost(l, d)) return "现金不足（含装修、首周租金、押金、中介费和 5,000 周转金）";
             return null;
         }
         public bool OpenVenture(string placeId, string kind)
@@ -54,7 +54,7 @@ namespace PCShopSell.Core.Session
             }
             Ledger.ForceDebit(Clock.Today, "企业投资", VentureOpeningCost(l, d), d.Name + "开办及周转金");
             _ventures.Add(new ManagedVenture { PlaceId = placeId, Kind = kind, OpenDay = Clock.Today.TotalDays, LastSettledDay = Clock.Today.TotalDays,
-                CapitalCents = capital.Cents, DepositCents = RealEstate.Deposit(l.Rent).Cents, RentCents = l.Rent.Cents, ReserveCents = 500000 });
+                CapitalCents = capital.Cents, DepositCents = RealEstate.Deposit(l.Rent).Cents, RentCents = l.Rent.Cents, RentStartDay = Clock.Today.TotalDays, ReserveCents = 500000 });
             _vacant.Remove(placeId); _listings.Remove(l);
             Flags.Add("tutorial:branch");
             Say(d.Name + "已开业，店长负责日常运营。明日起结算；经营总览可调整定价、补充周转金、暂停或退出。");
@@ -120,8 +120,9 @@ namespace PCShopSell.Core.Session
                 if(day<=v.LastSettledDay) continue;
                 v.LastSettledDay=day;
                 var d=Ventures.Get(v.Kind);
-                // 首期租金已付；之后逐日计提。停业仍有租金及 20% 留任工资。
-                long rent=(day-v.OpenDay<=30 || PropertyAt(v.PlaceId)!=null || IsParkVenture(v)) ? 0 : v.RentCents/30;
+                // 首周租金已付，之后每七天从周转金支付。
+                bool rentDue = day > v.RentStartDay && (day - v.RentStartDay) % GameDate.DaysPerWeek == 0;
+                long rent = rentDue && PropertyAt(v.PlaceId)==null && !IsParkVenture(v) ? v.RentCents : 0;
                 long wages=d.DailyWages*100;
                 if(v.Kind=="cars"){SettleUsedMotors(v,today,rent,v.Paused?wages/5:wages);continue;}
                 double location=LocationFactorOf(VentureLocation(v));

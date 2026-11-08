@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
@@ -35,7 +36,7 @@ namespace PCShopSell.Game.UI
         /// <summary>中介里只办和房产有关的事：分店签约、物业与住处、园区。</summary>
         public void OpenAgencyBusiness()
         {
-            OpenAgencyPropertyPurchase();
+            GoToPropertyAgency();
         }
 
         private string _businessAssetId;
@@ -146,10 +147,42 @@ namespace PCShopSell.Game.UI
                 BusinessAction(w.Content,"签订直供协议",S.SignDirectAgreement,w,why==null);return;
             }
             Line(w.Content,$"信用额度 {S.CreditLimit}    已用 {S.SupplierDebtTotal}    仓位已预留在途 {S.IncomingShopSpace:0.#} 格",17);
-            Ui.Size(Ui.Button(w.Content,"选择商品与采购方式",()=>OpenCityProcurementFor(S.MainShop),18,Ui.ButtonHot),-1,42);
+            Ui.Size(Ui.Button(w.Content, "直供下单", () => OpenDirectSupplyOrder(w), 18, Ui.ButtonHot), -1, 42);
             foreach(var x in S.DirectShipments) Line(w.Content,$"在途：{PartCatalog.Get(x.PartId).Name} ×{x.Count} · {new GameTimestamp(x.Arrival)}",15,Ui.Dim);
             if(S.SupplierDebts.Count>0) BuildDebtList(w);
         }
+
+        private void OpenDirectSupplyOrder(Window parent)
+        {
+            var parts = PartCatalog.All.Where(part => IndustryCycles.Available(part, S.Clock.Today.TotalDays)).ToArray();
+            if (parts.Length == 0) return;
+            int selected = 0, quantity = 3;
+            bool credit = false;
+            var shop = S.MainShop;
+            OpenWindow("直供下单", 680, 420, w =>
+            {
+                var part = parts[selected];
+                Line(w.Content, "送到 " + S.ShopTitle(shop) + " · 次日 10:00", 17, Ui.Accent);
+                Ui.Size(Ui.Choice(w.Content, parts.Select(item => item.Name), selected,
+                    index => { selected = index; w.Rebuild(); }), -1, 40);
+                var amount = Ui.Row(w.Content, 42, 8);
+                Ui.Size(Ui.Label(amount, "数量", 17), 100);
+                QuantityStepper(w, amount, "directQuantity", quantity, 3, 30, 1, value => quantity = (int)value);
+                Ui.Size(Ui.Choice(w.Content, new[] { "全款", "付 30% 首款，14 天内结清" }, credit ? 1 : 0,
+                    index => { credit = index == 1; w.Rebuild(); }), -1, 40);
+                Money total = S.DirectPrice(part) * quantity;
+                Line(w.Content, $"总货款 {total} · 本次实付 {(credit ? total.Scale(.3) : total)}", 18);
+                Ui.Size(Ui.Button(w.Content, "确认直供下单", () =>
+                {
+                    if (S.PlaceUnifiedDirectPurchase(shop.Place.Id, part.Id, quantity, credit))
+                    {
+                        w.Close();
+                        parent.Rebuild();
+                    }
+                }, 18, Ui.ButtonHot), -1, 44);
+            });
+        }
+
         private void BuildEnterprise(Window w)
         {
             Para(w.Content,"知名度 8 解锁，每周刷新一份采购邀请。接受后自动进入主店装机队列；可以亲自装，也可以交给受训员工。逐台交付收款，全额完成再奖合同额 3%。",17);
@@ -182,7 +215,7 @@ namespace PCShopSell.Game.UI
                 if(v.Kind=="cars")Ui.Size(Ui.Button(c,"到车行管理车源 / 库存 / 买家",()=>{CloseWindowSilently(w);S.BeginCityTravel(v.PlaceId);},18,Ui.ButtonHot),-1,40);
                 Line(c,$"周转金 {Money.FromCents(v.ReserveCents)}   昨日收入 {Money.FromCents(v.LastSalesCents)} / 成本 {Money.FromCents(v.LastCostsCents)}",17);
                 Line(c,$"累计经营结余 {Money.FromCents(v.TotalOperatingCents)}    定价 {v.PriceFactor:P0}    维护状态 {v.Condition:P0}",17);
-                Para(c,$"月租 {Money.FromCents(v.RentCents)}，首 30 天已付（自有物业免租）。{d.Description}",15,Ui.Dim);
+                Para(c,$"周租 {Money.FromCents(v.RentCents)}，首周已付（自有物业免租）。{d.Description}",15,Ui.Dim);
                 var row=Ui.Row(c,40);
                 BusinessAction(row,"补资 ¥5,000",()=>S.TransferVentureCash(v.PlaceId,5000,false),w,S.Ledger.Balance>=Money.FromYuan(5000));
                 BusinessAction(row,"取回 ¥1,000",()=>S.TransferVentureCash(v.PlaceId,1000,true),w,v.ReserveCents>=100000);
@@ -207,7 +240,7 @@ namespace PCShopSell.Game.UI
             foreach(var listing in S.Listings.Where(x=>x.OpenDay<=S.Clock.Today.TotalDays && (!S.InAgency || S.AgencyServes(S.CurrentPlace, S.ListingPlace(x)))))
             {
                 var l=listing;string why=S.VentureBlocker(l.PlaceId,chosen.Id);var c=BusinessCard(w.Content,S.City.GetPlace(l.PlaceId).Name+" · "+GameSession.SizeName(l.Size));
-                Line(c,$"月租 {l.Rent}    开办现金合计 {S.VentureOpeningCost(l,chosen)}",17);
+                Line(c,$"周租 {l.Rent}    开办现金合计 {S.VentureOpeningCost(l,chosen)}",17);
                 if(why!=null) Para(c,why,15,Ui.Dim);
                 Ui.Size(Ui.Button(c,"在这里开设"+chosen.Name+"…",()=>ConfirmBusiness("开设"+chosen.Name,$"支付 {S.VentureOpeningCost(l,chosen)}。"+(chosen.HardwareCount>0 ? $"另从主店调拨 {chosen.HardwareCount} 套{PartCatalog.TierName(chosen.HardwareTier)}配件，不会返还成散件。" : "")+"每日结算从次日开始。",()=>{S.OpenVenture(l.PlaceId,chosen.Id);w.Rebuild();}),17,Ui.ButtonHot,S.InAgency && why==null),-1,40);
             }

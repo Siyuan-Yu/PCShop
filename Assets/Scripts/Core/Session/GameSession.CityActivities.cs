@@ -16,7 +16,20 @@ namespace PCShopSell.Core.Session
         private readonly List<string> _cityFavorites = new List<string>(), _cityRecent = new List<string>();
         public string CityDefaultDestination { get; private set; }
         public string CityAgencyShortcut { get; private set; } = "agency";
-        public string CityMarketShortcut { get; private set; } = "stall_cpu";
+        private string _cityMarketShortcut;
+        public string CityMarketShortcut => _cityMarketShortcut ?? DefaultMarketShortcut(MainShop?.RetailKind);
+        private string DefaultMarketShortcut(string kind)
+        {
+            string id = kind switch
+            {
+                "pet" => PCShopSell.Core.Home.PetShopCatalog.SupplierId,
+                "clothing" => "clothing_wholesale",
+                "models" => "model_market",
+                "restaurant" => City.Places.FirstOrDefault(p => p.Business == FarmBusiness)?.Id,
+                _ => "stall_cpu"
+            };
+            return City.HasPlace(id) ? id : "stall_cpu";
+        }
         public string CityShopShortcut { get; private set; }
         public void SetCityShopShortcut(string placeId) {if(MyShops.Any(s=>s.Place.Id==placeId))CityShopShortcut=placeId;}
         public IReadOnlyList<string> CityFavorites => _cityFavorites;
@@ -122,6 +135,8 @@ namespace PCShopSell.Core.Session
             if(definition==null||!City.HasPlace(person.WorkPlaceId))return false;
             var workplace=City.GetPlace(person.WorkPlaceId);
             if(workplace.Kind==PlaceKind.Shop&&IsVacant(workplace))return false;
+            if (workplace.Id.StartsWith("expansion_shop_", StringComparison.Ordinal) &&
+                (IsMyShop(workplace) || VentureAt(workplace.Id) != null || IsPlayerPropertyOccupied(workplace.Id))) return false;
             return CityWithinHours((int)(minute%1440),definition.WorkStart,definition.WorkEnd)
                 &&(person.WorkPlaceId==person.HomePlaceId||CityVenueFits(workplace,minute,1));
         }
@@ -181,6 +196,7 @@ namespace PCShopSell.Core.Session
             foreach(string id in ids)
             {
                 var p=CityPersonState(id);if(p==null)return "尚未认识或无法联系该人物";
+                if (RaceInviteOverlaps(id, occupiedFrom, occupiedUntil)) return CityPerson(id)?.Name + "已约好参加这段时间的比赛";
                 var route=PlanCityRoute(p,venue.Id,Clock.Now.TotalMinutes,start-3);if(route==null)return "人物到场路线不可达";
                 var row=Employees.FirstOrDefault(e=>PersonIdOf(e.Person)==id);
                 int personTravel=CityPersonActivityTravel(p,venue,start);
@@ -276,7 +292,7 @@ namespace PCShopSell.Core.Session
             if(_cityFavorites.Count>=5)return Fail("最多收藏五个地点");_cityFavorites.Add(placeId);return true;
         }
         public void SetCityDefault(string placeId) {if(City.HasPlace(placeId))CityDefaultDestination=placeId;}
-        public void SetCityShortcut(string placeId,bool agencySlot) {if(City.HasPlace(placeId)){if(agencySlot)CityAgencyShortcut=placeId;else CityMarketShortcut=placeId;}}
+        public void SetCityShortcut(string placeId,bool agencySlot) {if(City.HasPlace(placeId)){if(agencySlot)CityAgencyShortcut=placeId;else _cityMarketShortcut=placeId;}}
 
         private MapPoint? CityActivityPlayerPosition()
         {
@@ -309,7 +325,7 @@ namespace PCShopSell.Core.Session
             var meters=Enumerable.Range(0,3).Select(i=>DistanceCity(points[i],points[i+1])*City.TravelDistanceScale).ToArray();
             return new CityRoute{IntentId=a.Id+":seat:"+seat,TargetPlaceId=a.VenueId,Nodes=Array.Empty<string>(),
                 X=points.Select(p=>p.X).ToArray(),Y=points.Select(p=>p.Y).ToArray(),Meters=meters,DepartMinute=now,
-                ArriveMinute=now+Math.Max(1,(seat == 0 ? CityTravelTiming.Minutes(meters.Sum(),Vehicles.Walk) : CityTravelTiming.NpcMinutes(meters.Sum(),Vehicles.Walk)))};
+                ArriveMinute=now+Math.Max(1,(seat == 0 ? CityTravelTiming.PlayerMinutes(meters.Sum(),Vehicles.Walk) : CityTravelTiming.NpcMinutes(meters.Sum(),Vehicles.Walk)))};
         }
         private void TickCityActivities(long now)
         {

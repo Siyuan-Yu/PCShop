@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using PCShopSell.Core.Session;
 using UnityEngine;
 using UnityEngine.UI;
@@ -20,8 +20,13 @@ namespace PCShopSell.Game.UI
             if (_phoneWindow != null && !_phoneWindow.Closed) return;
             _phoneScreen = "home";
             _phoneWindow = S.HasSmartphone
-                ? OpenWindow("手机", 440, 800, BuildSmartphone)
+                ? OpenWindow("手机", 440, 850, BuildSmartphone, scrollContent:false)
                 : OpenWindow("手机（按键机）", 380, 760, BuildFeaturePhone);
+            if(S.HasSmartphone)
+            {
+                _phoneWindow.TitleText.rectTransform.offsetMax=new Vector2(-110,_phoneWindow.TitleText.rectTransform.offsetMax.y);
+                _phoneWindow.TimeStatusText.gameObject.SetActive(false);
+            }
         }
 
         public void ClosePhone()
@@ -86,7 +91,7 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Chat: return new Color(0.18f, 0.72f, 0.58f);
                 case PhoneApps.Loans: return new Color(0.82f, 0.59f, 0.19f);
                 case PhoneApps.Live: return new Color(0.72f, 0.46f, 0.19f);
-                case PhoneApps.Securities: return new Color(.28f,.47f,.58f);
+                case PhoneApps.Securities: return new Color(.58f,.34f,.28f);
                 default: return Ui.ButtonBg;
             }
         }
@@ -109,18 +114,22 @@ namespace PCShopSell.Game.UI
 
         private void BuildSmartphone(Window w)
         {
+            var layout=w.Content.GetComponent<VerticalLayoutGroup>();
+            layout.padding=new RectOffset(12,12,8,8);layout.spacing=6;
             RectTransform bar = Ui.Row(w.Content, 28);
             Ui.Size(Ui.Label(bar, GameSession.ClockText(S.Clock.MinuteOfDay), 19, TextAnchor.MiddleLeft), 120);
             Ui.Size(Ui.Label(bar, "5G　电量 100%", 16, TextAnchor.MiddleRight, Ui.Dim), -1, -1, 1);
 
-            if (_phoneScreen == "store")
-            {
-                BuildPhoneStore(w);
-                return;
-            }
+            if (_phoneScreen == "store")BuildPhoneStore(w);
+            else BuildPhoneDesktop(w);
+            BuildPhoneSystemNavigation(w);
+        }
+
+        private void BuildPhoneDesktop(Window w)
+        {
 
             Image wall = Ui.Panel(w.Content, "Wallpaper", new Color(0.10f, 0.20f, 0.36f));
-            Ui.Size(wall, -1, 610);
+            Ui.Size(wall).GetComponent<LayoutElement>().flexibleHeight=1;
             Ui.VList(wall.rectTransform, 14, 14);
             var apps = PhoneApps.All.Where(a => S.HasApp(a.Id)).ToList();
             for (int i = 0; i < apps.Count; i += 4)
@@ -132,6 +141,7 @@ namespace PCShopSell.Game.UI
                     Button b = Ui.Button(row, $"<size=34><b>{AppGlyph(a.Id)}</b></size>\n<size=13>{a.Name}</size>", () => LaunchApp(w, a.Id), 13, AppColor(a.Id));
                     b.name = "PhoneApp_" + a.Id;
                     Ui.Size(b, 84, 100);
+                    if(a.Id==PhoneApps.Securities)BuildStockAppIcon(b,true);
                 }
             }
             Ui.Size(Ui.Button(wall.transform, "城市生活", OpenCityLife, 18), -1, 44)
@@ -177,20 +187,51 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(top, "应用商店", 22, TextAnchor.MiddleCenter), -1, -1, 1);
 
             Ui.Size(Ui.Label(w.Content, "下载都是免费的，装好后主屏幕上就有图标。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 26);
-            RectTransform list = Ui.Scroll(w.Content, 600);
+            RectTransform list = PhoneFlexibleScroll(w.Content,"PhoneStoreList");
             foreach (PhoneAppDef def in PhoneApps.All.Where(a => a.Id != PhoneApps.Store))
             {
                 PhoneAppDef a = def;
                 bool have = S.HasApp(a.Id);
                 RectTransform row = Ui.Row(list, 84, 8);
-                Ui.Size(Ui.Button(row, $"<size=28><b>{AppGlyph(a.Id)}</b></size>", null, 22, AppColor(a.Id), false), 64, 64);
+                var icon=Ui.Size(Ui.Button(row, $"<size=28><b>{AppGlyph(a.Id)}</b></size>", null, 22, AppColor(a.Id), false), 64, 64);
+                if(a.Id==PhoneApps.Securities)BuildStockAppIcon(icon,false);
                 Ui.Size(Ui.Label(row, $"<b>{a.Name}</b>\n<size=14><color=#ABB5A8>{a.Description}</color></size>", 18), 200, -1, 1);
-                Ui.Size(Ui.Button(row, have ? "已安装" : "下载", () =>
+                Ui.Size(Ui.Button(row, have ? "打开" : "下载", () =>
                 {
-                    S.InstallApp(a.Id);
-                    w.Rebuild();
-                }, 16, have ? Ui.ButtonBg : Ui.ButtonHot, !have), 80).name = "PhoneDownload_" + a.Id;
+                    if(have)LaunchApp(w,a.Id);
+                    else if(S.InstallApp(a.Id))w.Rebuild();
+                }, 16, have ? Ui.ButtonBg : Ui.ButtonHot), 70).name = "PhoneDownload_" + a.Id;
             }
+        }
+
+        private static RectTransform PhoneFlexibleScroll(Transform parent,string name)
+        {
+            var content=Ui.Scroll(parent);
+            var frame=(RectTransform)content.parent.parent;frame.name=name;
+            var size=Ui.Size(frame).GetComponent<LayoutElement>();size.minHeight=0;size.preferredHeight=0;size.flexibleHeight=1;
+            var layout=content.GetComponent<VerticalLayoutGroup>();layout.padding=new RectOffset(6,6,6,6);layout.spacing=6;
+            return content;
+        }
+        private static void BuildStockAppIcon(Button button,bool desktop)
+        {
+            var text=button.GetComponentInChildren<Text>();text.text=desktop?"证券":"";text.fontSize=13;text.alignment=TextAnchor.LowerCenter;
+            var icon=Ui.Rect(button.transform,"SecuritiesChartIcon").Anchor(.2f,desktop?.36f:.2f,.8f,desktop?.84f:.8f);
+            float[] heights={.32f,.56f,.85f};
+            for(int i=0;i<heights.Length;i++)
+            {
+                var bar=Ui.Panel(icon,"StockAppBar",Ui.TextColor);bar.raycastTarget=false;
+                bar.rectTransform.Anchor(i*.34f,.03f,i*.34f+.24f,heights[i]);
+            }
+        }
+        private void BuildPhoneSystemNavigation(Window w)
+        {
+            var row=Ui.Row(w.Content,36,6);row.name="PhoneSystemNavigation";
+            Ui.Size(Ui.Button(row,"‹ 返回",()=>
+            {
+                _phoneScreen="home";w.ResetScrollOnRebuild=true;w.Rebuild();
+            },15),-1,36,1);
+            Ui.Size(Ui.Button(row,"桌面",()=>{_phoneScreen="home";w.ResetScrollOnRebuild=true;w.Rebuild();},15),-1,36,1);
+            Ui.Size(Ui.Button(row,"收起手机",w.Close,15),-1,36,1);
         }
 
         // ---------- 通讯录 / 聊天 ----------

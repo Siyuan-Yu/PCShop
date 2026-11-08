@@ -70,6 +70,7 @@ namespace PCShopSell.Core.Session
             if (role == EmployeeRole.Unassigned) return StaffCapacityBlocker(_focus);
             var shop = ShopAt(destination);
             if (shop == null) return "请选择门店";
+            if (role == EmployeeRole.PetKeeper && !IsPetShop(shop)) return "饲养员请安排到宠物用品店";
             string capacity=StaffCapacityBlocker(shop);if(capacity!=null)return capacity;
             if(IsDedicatedVenue(shop.Place)&&role!=EmployeeRole.Cashier)return "场馆仅可招聘值守岗位";
             return null;

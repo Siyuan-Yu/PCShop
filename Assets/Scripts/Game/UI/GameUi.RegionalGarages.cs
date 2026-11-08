@@ -71,24 +71,24 @@ namespace PCShopSell.Game.UI
                     ()=>{S.EndGarageLease(p.Id,count);w.Rebuild();}),16,Ui.ButtonBg,count>0),-1,34);
             }
             BuildMotorClassTabs(w.Content, _garageMotorClass, c => { _garageMotorClass = c; w.Rebuild(); });
-            var commute = motors.Where(v => v.Commuter && MotorCatalog.ClassOf(MotorCatalog.Get(v.ModelId).Kind) == _garageMotorClass).ToArray();
+            var commute = motors.Where(v => v.Commuter && MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind) == _garageMotorClass).ToArray();
             foreach (var v in commute)
             {
                 var car = v; var model = MotorCatalog.Get(car.ModelId);
-                var card = BusinessCard(w.Content, model.Name + " · " + Vehicles.Get(model.Kind).Name + "通勤车");
+                var card = MotorCard(w.Content, model, model.Name + " · " + Vehicles.Get(model.Kind).Name + "通勤车");
                 Line(card, S.MotorLocationText(car) + " · 不可用于比赛或练习", 16, Ui.Dim);
-                Ui.Size(Ui.Button(card, "取消这辆车的通勤用途，停入本区车库", () => ConfirmBusiness("通勤车入库",
-                    model.Name + "入库后，这种出行方式暂不可用；可再指定另一辆同类型车辆通勤。",
+                Ui.Size(Ui.Button(card, "停入车库", () => ConfirmBusiness("取消通勤并停入车库？",
+                    model.Name + "目前是你的" + Vehicles.Get(model.Kind).Name + "通勤车。是否取消通勤用途，并停入" + garage.Name + "？入库后将占用1个车位，这种通勤方式暂不可用；可再指定另一辆同类型车辆通勤。",
                     () => { S.ParkCommuteMotor(car.Id, p.Id); w.Rebuild(); }), 17, Ui.ButtonBg,
                     lease != null && S.GarageFreeSpaces(p.Id) > 0 && S.MotorAvailable(car)), -1, 38);
             }
             if (commute.Length == 0) Line(w.Content, "这一分类尚未指定通勤车", 16, Ui.Dim);
             Line(w.Content, "本区入库车辆 · " + MotorCatalog.ClassName(_garageMotorClass), 20, Ui.Accent);
-            var parked = motors.Where(v => !v.Commuter && v.GarageId == p.Id && MotorCatalog.ClassOf(MotorCatalog.Get(v.ModelId).Kind) == _garageMotorClass).ToArray();
+            var parked = motors.Where(v => !v.Commuter && v.GarageId == p.Id && MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind) == _garageMotorClass).ToArray();
             foreach (var v in parked)
             {
-                var car = v; var model = MotorCatalog.Get(car.ModelId); var card = BusinessCard(w.Content, model.Name);
-                Line(card, PerformanceText(car), 16); Line(card, S.MotorLocationText(car), 15, Ui.Dim);
+                var car = v; var model = MotorCatalog.Get(car.ModelId); var card = MotorCard(w.Content, model);
+                BuildMotorPerformance(card, MotorCatalog.Performance(car), car.Condition); Line(card, S.MotorLocationText(car), 15, Ui.Dim);
                 var old = S.CommuteMotor(model.Kind);
                 Ui.Size(Ui.Button(card, "设为" + Vehicles.Get(model.Kind).Name + "通勤车" + (old != null ? "（原通勤车留在本库）" : ""),
                     () => { S.SetMotorCommuter(car.Id); w.Rebuild(); }, 17, Ui.ButtonBg, S.MotorAvailable(car)), -1, 38);
@@ -111,20 +111,20 @@ namespace PCShopSell.Game.UI
             var sources = RegionalGarages.All.Where(g => g.Id != target.Id && S.HasGarage(g.Id)).ToArray();
             if (sources.Length == 0) { Line(card, "其他车库暂无已租购车位", 17, Ui.Dim); return; }
             _motorTransferSources.TryGetValue(context, out string sourceId);
-            if (!sources.Any(g => g.Id == sourceId)) sourceId = sources.FirstOrDefault(g => all.Any(v => !v.Commuter && v.GarageId == g.Id && MotorCatalog.ClassOf(MotorCatalog.Get(v.ModelId).Kind) == category))?.Id ?? sources[0].Id;
+            if (!sources.Any(g => g.Id == sourceId)) sourceId = sources.FirstOrDefault(g => all.Any(v => !v.Commuter && v.GarageId == g.Id && MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind) == category))?.Id ?? sources[0].Id;
             _motorTransferSources[context] = sourceId;
             var row = Ui.Row(card, 38, 6);
             foreach (var g in sources)
             {
-                var source = g; int count = all.Count(v => !v.Commuter && v.GarageId == source.Id && MotorCatalog.ClassOf(MotorCatalog.Get(v.ModelId).Kind) == category);
+                var source = g; int count = all.Count(v => !v.Commuter && v.GarageId == source.Id && MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind) == category);
                 Ui.Size(Ui.Button(row, GameSession.DistrictName(source.Tier) + " · " + count + "辆",
                     () => { _motorTransferSources[context] = source.Id; w.Rebuild(); }, 17, source.Id == sourceId ? Ui.ButtonHot : Ui.ButtonBg), -1, 38, 1);
             }
-            var vehicles = all.Where(v => !v.Commuter && v.GarageId == sourceId && MotorCatalog.ClassOf(MotorCatalog.Get(v.ModelId).Kind) == category).ToArray();
+            var vehicles = all.Where(v => !v.Commuter && v.GarageId == sourceId && MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind) == category).ToArray();
             foreach (var v in vehicles)
             {
                 var car = v; var fee = S.MotorTransferFee(car.Id, target.Id); string why = S.MotorTransferBlocker(car.Id, target.Id);
-                Line(card, MotorCatalog.Get(car.ModelId).Name + " · " + S.MotorLocationText(car), 17);
+                MotorIdentity(card, car.ModelId, MotorCatalog.Get(car.ModelId).Name, S.MotorLocationText(car));
                 Ui.Size(Ui.Button(card, "支付 " + fee + " 并调入", () => ConfirmBusiness("确认车辆调运",
                     MotorCatalog.Get(car.ModelId).Name + "：" + RegionalGarages.Get(car.GarageId).Name + " → " + target.Name + "，调运费 " + fee + "。",
                     () => { if (S.TransferMotor(car.Id, target.Id)) { _raceSelection = car.Id; _motorTransfersExpanded.Remove(context); } w.Rebuild(); }),
@@ -141,7 +141,7 @@ namespace PCShopSell.Game.UI
             {
                 OpenWindow(withdraw?"转入进货车队":"购买货车",760,400,w=>
                 {
-                    Line(w.Content,model.Name+(withdraw?"":" · ¥"+model.Price.ToString("N0")),23,Ui.Accent);
+                    MotorIdentity(w.Content,model.Id,model.Name,withdraw?"转入进货车队":"¥"+model.Price.ToString("N0"));
                     Para(w.Content,"货车仅供员工外出进货使用，不可通勤、比赛或练习，也不占用任何车库车位。",18);
                     string why=withdraw?S.MotorStorageBlocker(modelId,false,null):S.MotorPurchaseBlocker(modelId,false,null);
                     if(why!=null)Para(w.Content,why,17,Ui.Warn);
@@ -152,7 +152,7 @@ namespace PCShopSell.Game.UI
             string garageId = S.GarageLeases.FirstOrDefault(g => S.GarageFreeSpaces(g.PlaceId) > 0)?.PlaceId ?? S.GarageLeases.FirstOrDefault()?.PlaceId;
             OpenWindow(withdraw ? "自用车辆 · 车辆用途" : "购买确认 · 车辆用途", 800, 680, w =>
             {
-                Line(w.Content, model.Name + (withdraw ? " · 从二手车行展位转出" : " · ¥" + model.Price.ToString("N0")), 23, Ui.Accent);
+                MotorIdentity(w.Content, model.Id, model.Name, withdraw ? "从二手车行展位转出" : "¥" + model.Price.ToString("N0"));
                 var current = S.CommuteMotor(model.Kind);
                 var purpose = Ui.Row(w.Content, 42, 8);
                 Ui.Size(Ui.Button(purpose, "用于通勤", () => { forCommute = true; w.Rebuild(); }, 18, forCommute ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
@@ -189,7 +189,7 @@ namespace PCShopSell.Game.UI
             if(trucks.Length>0)
             {
                 var fleet=BusinessCard(w.Content,"员工进货货车 · 全城车队 · "+trucks.Length+"辆 · 免车位");
-                foreach(var v in trucks)Line(fleet,MotorCatalog.Get(v.ModelId).Name+" · "+S.MotorLocationText(v)+" · 参考残值 ¥"+((long)(MotorCatalog.Get(v.ModelId).Price*.6*v.Condition/100)).ToString("N0"),16,Ui.Dim);
+                foreach(var v in trucks)MotorIdentity(fleet,v.ModelId,MotorCatalog.Get(v.ModelId).Name,S.MotorLocationText(v)+" · 参考残值 ¥"+MotorCatalog.ResaleValue(v).ToString("N0"));
             }
             var region = Ui.Row(w.Content, 40, 8);
             foreach (var g in RegionalGarages.All)
@@ -200,22 +200,22 @@ namespace PCShopSell.Game.UI
             }
             BuildMotorClassTabs(w.Content, _assetMotorClass, c => { _assetMotorClass = c; w.Rebuild(); });
             var garage = RegionalGarages.All[_assetMotorRegion]; var lease = S.GarageLease(garage.Id); var all = S.Garage;
-            var commuters = all.Where(v => v.Commuter && MotorCatalog.ClassOf(MotorCatalog.Get(v.ModelId).Kind) == _assetMotorClass).ToArray();
+            var commuters = all.Where(v => v.Commuter && MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind) == _assetMotorClass).ToArray();
             var commute = BusinessCard(w.Content, "通勤车辆 · 不占车库车位");
-            foreach (var v in commuters) Line(commute, MotorCatalog.Get(v.ModelId).Name + " · " + S.MotorLocationText(v), 17);
+            foreach (var v in commuters) MotorIdentity(commute, v.ModelId, MotorCatalog.Get(v.ModelId).Name, S.MotorLocationText(v));
             if (commuters.Length == 0) Line(commute, "这一分类尚未指定通勤车", 17, Ui.Dim);
             var info = BusinessCard(w.Content, garage.Name + " · 车位资产");
             Line(info,"已购 "+(lease?.OwnedSpaces??0)+"位 · 租用 "+(lease?.RentedSpaces??0)+"位 · 停车 "+S.ParkedMotorCount(garage.Id)+"辆 · 空余 "+S.GarageFreeSpaces(garage.Id)+"位",18,Ui.Accent);
             Line(info,"自有车位参考价值 ¥"+(garage.PriceYuan*(lease?.OwnedSpaces??0)).ToString("N0")+" · 每30天租金 ¥"+(garage.RentYuan*(lease?.RentedSpaces??0)).ToString("N0"),17);
             if (lease?.RentedSpaces>0) Line(info, "下次续租 " + new GameDate(lease.NextRentDay), 16, Ui.Dim);
             Ui.Size(Ui.Button(info, "地图定位车库", () => OpenGarageLocation(garage.Id), 17), -1, 36);
-            var parked = all.Where(v => !v.Commuter && v.GarageId == garage.Id && MotorCatalog.ClassOf(MotorCatalog.Get(v.ModelId).Kind) == _assetMotorClass).ToArray();
+            var parked = all.Where(v => !v.Commuter && v.GarageId == garage.Id && MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind) == _assetMotorClass).ToArray();
             Line(w.Content, GameSession.DistrictName(garage.Tier) + " · " + MotorCatalog.ClassName(_assetMotorClass) + " · " + parked.Length + "辆", 21, Ui.Accent);
             foreach (var v in parked)
             {
-                var card = BusinessCard(w.Content, MotorCatalog.Get(v.ModelId).Name);
+                var card = MotorCard(w.Content, MotorCatalog.Get(v.ModelId));
                 Line(card, S.MotorLocationText(v) + " · 参考残值 ¥" + ((long)(MotorCatalog.Get(v.ModelId).Price * .6 * v.Condition / 100)).ToString("N0"), 17);
-                Line(card, PerformanceText(v), 16, Ui.Dim);
+                BuildMotorPerformance(card, MotorCatalog.Performance(v), v.Condition);
             }
             if (parked.Length == 0) Line(w.Content, "本区车库暂无这一类车辆", 18, Ui.Dim);
             Para(w.Content, "管理车辆与增租、购买车位请前往车库建筑旁按 F。公共车库建筑本身不属于玩家。", 16, Ui.Dim);

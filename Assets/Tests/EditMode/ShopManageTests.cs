@@ -77,6 +77,8 @@ namespace PCShopSell.Tests
                     Assert.AreEqual(before.Yuan+1,shop.GoodsPriceOf(product.Id).Yuan);
                     StringAssert.Contains(ExpectedIntent(),IntentSummary(),"单独改价后顶部参考值也必须更新");
                     ui.CloseAllWindows();ui.OpenDock();ui.DebugSelectTab(1);
+                    Button("ToggleShelfItems_0").onClick.Invoke();
+                    Button("ToggleShelfItems_1").onClick.Invoke();
                     Assert.GreaterOrEqual(Named("ShelfGoods_"+product.Id).Length+Named("WarehouseItem_stockgift:"+product.Id).Length,1);
                     Assert.GreaterOrEqual(Named("ShelfPart_cpu0").Length+Named("WarehouseItem_part:cpu0").Length,1,"实际配件在任何主售店都可管理");
                     Assert.AreEqual(2,shop.Stock.CountAll(part));Assert.AreEqual(3,shop.Stock.GoodsCount(product.Id));

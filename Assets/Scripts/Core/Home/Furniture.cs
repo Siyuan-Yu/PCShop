@@ -199,6 +199,11 @@ namespace PCShopSell.Core.Home
 
             Add(new FurnitureDef("restaurant_prep","餐馆加工台","备料台；餐馆必需。",650,FurnitureSlot.Floor,1.1,.6,true){WeightKg=30});
             Add(new FurnitureDef("restaurant_stove","餐馆炒锅灶台","一个同时烹饪锅位；投料后注意火候，及时出锅。",1400,FurnitureSlot.Floor,.8,.65,true){WeightKg=45});
+            Add(new FurnitureDef(PetShopCatalog.SmallHouse, "小型宠物屋", "最多照顾 4 只猫狗。靠近按 F 聚焦。", 680, FurnitureSlot.Floor, 3.2, 2.1, true) { WeightKg = 24 });
+            Add(new FurnitureDef(PetShopCatalog.MediumHouse, "中型宠物屋", "中型或大型商铺可摆放，最多照顾 8 只猫狗。", 2100, FurnitureSlot.Floor, 4.6, 2.8, true) { WeightKg = 45 });
+            Add(new FurnitureDef(PetShopCatalog.LargeHouse, "大型宠物屋", "大型商铺可摆放，最多照顾 12 只猫狗。", 4300, FurnitureSlot.Floor, 6.0, 3.5, true) { WeightKg = 78 });
+            Add(new FurnitureDef(PetShopCatalog.WandFixture, "逗猫棒（代养区）", "摆在宠物屋旁，近景可以拿起来逗猫。", 19, FurnitureSlot.Floor, .38, .36, true) { WeightKg = .15 });
+            Add(new FurnitureDef(PetShopCatalog.BallFixture, "软球（代养区）", "摆在宠物屋旁，近景可以抛给狗狗捡回来。", 16, FurnitureSlot.Floor, .38, .36, true) { WeightKg = .12 });
             Add(new FurnitureDef("restaurant_pass","餐馆传菜台","出锅的菜放在这里，再送至餐桌。",500,FurnitureSlot.Floor,1,.5,true){WeightKg=20});
             Add(new FurnitureDef("restaurant_table","餐馆餐桌","提供一个堂食桌位；上菜后用餐结账，需要收桌。",380,FurnitureSlot.Floor,.85,.85,true){WeightKg=15});
             Add(new FurnitureDef("used_buydesk","收购鉴定台","听说辞、出价收购；买下后才可鉴定。",650,FurnitureSlot.Floor,1.1,.6,true){WeightKg=25});
@@ -383,6 +388,22 @@ namespace PCShopSell.Core.Home
 
         public static readonly RoomSpec Home = new RoomSpec(6.0, 4.6, new RectD(0.05, 0.05, 5.95, 4.55), new RectD(4.7, 0.2, 6.0, 1.9), 2.55, 3.75, 0.45, 1.55, false);
 
+        private static readonly RoomSpec CommunityHome = LargerHome(8, 6);
+        private static readonly RoomSpec ParkHome = LargerHome(11, 8);
+        private static readonly RoomSpec GardenHome = LargerHome(15, 10);
+
+        public static RoomSpec ForResidence(int tier) => tier switch
+        {
+            3 => GardenHome,
+            2 => ParkHome,
+            1 => CommunityHome,
+            _ => Home,
+        };
+
+        private static RoomSpec LargerHome(double width, double depth) =>
+            new RoomSpec(width, depth, new RectD(.05, .05, width - .05, depth - .05),
+                new RectD(width - 1.3, .2, width, 1.9), Home.WindowMinX, Home.WindowMaxX, Home.DoorMinZ, Home.DoorMaxZ, false);
+
         public static RoomSpec ForShop(ShopSize size)
         {
             (double w, double d) = size == ShopSize.Large ? (18.0, 12.0) : size == ShopSize.Medium ? (12.0, 9.0) : (8.0, 6.0);
@@ -478,9 +499,16 @@ namespace PCShopSell.Core.Home
                 bool bothFlat = def.Slot == FurnitureSlot.Flat && od.Slot == FurnitureSlot.Flat;
                 bool bothFloor = def.Slot == FurnitureSlot.Floor && od.Slot == FurnitureSlot.Floor;
                 if (!bothFlat && !bothFloor) continue;
-                if (r.Overlaps(Footprint(room, od, placed[i]))) return "和别的家具重叠了。";
+                RectD occupied = Footprint(room, od, placed[i]);
+                if (!r.Overlaps(occupied)) continue;
+                if (PetShopCatalog.IsToyFixture(def.Id) && PetShopCatalog.HouseCapacity(od.Id)>0 && FitsInsidePetHouse(r,occupied)) continue;
+                if (PetShopCatalog.HouseCapacity(def.Id)>0 && PetShopCatalog.IsToyFixture(od.Id) && FitsInsidePetHouse(occupied,r)) continue;
+                return "和别的家具重叠了。";
             }
             return null;
         }
+
+        private static bool FitsInsidePetHouse(RectD toy,RectD house) =>
+            toy.MinX>=house.MinX+.12 && toy.MaxX<=house.MaxX-.12 && toy.MinZ>=house.MinZ+.12 && toy.MaxZ<=house.MaxZ-.12;
     }
 }

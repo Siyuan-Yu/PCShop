@@ -3,6 +3,13 @@ namespace PCShopSell.Core.Session
 {
     public static partial class CityLifeCatalog
     {
+        // Existing residents who race as a hobby. The four track contacts host their local meets.
+        internal static readonly string[] RacingEnthusiasts = {
+            "racer_0", "racer_1", "racer_2", "racer_3", "life_ming", "gaobo", "hexin", "sujun",
+            "life_ning", "life_qiao", "life_maker", "life_coach", "life_golfer", "life_bartender",
+            "life_singer", "life_clothsupplier", "res_rider", "zengyu", "life_gardener", "life_creator"
+        };
+
         private static void AddRacingPeople(List<CityPersonDefinition> people)
         {
             string[] names={"许星澜","沈知夏","陆景行","顾若宁"};

@@ -16,9 +16,42 @@ namespace PCShopSell.Core.Finance
         public Money Net => Revenue - Expense;
     }
 
+    public sealed class CashPeriodSummary
+    {
+        public Money Income, Expense, ClosingBalance, InternalNet;
+        public Money Net => Income - Expense;
+        public Money OpeningBalance => ClosingBalance - Net - InternalNet;
+        public readonly Dictionary<string, long> IncomeSources = new Dictionary<string, long>();
+        public readonly Dictionary<string, long> ExpenseSources = new Dictionary<string, long>();
+    }
+
     /// <summary>从账本里按天汇总，给“经营报表”画图用。</summary>
     public static class FinanceReport
     {
+        /// <summary>按入账日期汇总所有实际现金收付，内部调拨单列以便核对余额。</summary>
+        public static CashPeriodSummary CashSummary(Ledger ledger, GameDate from, GameDate to)
+        {
+            var result = new CashPeriodSummary { ClosingBalance = ledger.Balance };
+            foreach (var entry in ledger.Entries)
+            {
+                if (entry.Date > to) { result.ClosingBalance -= entry.Amount; continue; }
+                if (entry.Date < from || entry.Amount == Money.Zero) continue;
+                if (entry.BusinessKind == LedgerBusinessKind.InternalTransfer)
+                {
+                    result.InternalNet += entry.Amount;
+                    continue;
+                }
+
+                bool income = entry.Amount.IsPositive;
+                var amount = entry.Amount.Abs();
+                if (income) result.Income += amount; else result.Expense += amount;
+                var sources = income ? result.IncomeSources : result.ExpenseSources;
+                sources.TryGetValue(entry.Category, out long previous);
+                sources[entry.Category] = previous + amount.Cents;
+            }
+            return result;
+        }
+
         /// <summary>经营现金口径；内部划转、借贷本金、投资交易永远不计入销售或经营净额。</summary>
         public static CityFinanceSummary CitySummary(Ledger ledger, GameDate from, GameDate to, string shopId = null)
         {

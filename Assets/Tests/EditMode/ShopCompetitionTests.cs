@@ -172,7 +172,8 @@ namespace PCShopSell.Tests
                 GameSessionTests.Teleport(s, "pc"); Assert.True(s.SetShopMainCategory(kind));
                 Rent(s, "a", kind); Rent(s, "b", kind);
                 var method = typeof(GameSession).GetMethod("SpecialVisitInterval", BindingFlags.Instance | BindingFlags.NonPublic);
-                long expected = Math.Max(1, (long)Math.Round(minutes * 300.0 * 3 / s.FootfallOf(s.MainShop.Place).DailyPassers));
+                const double footfallIncrease = 3;
+                long expected = Math.Max(1, (long)Math.Round(minutes * 300.0 * 3 / (s.ShopArrivalDemand(s.MainShop.Place)*footfallIncrease)));
                 Assert.AreEqual(expected, method.Invoke(s, new object[] { s.MainShop, minutes }));
             }
         }
@@ -214,7 +215,7 @@ namespace PCShopSell.Tests
                     ui.OpenShopCompetition(s.MainShop.Place);
                     string text = ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Text>()).Single(t => t.name == "ShopCompetitionSummary").text;
                     StringAssert.Contains("2 家", text); StringAssert.Contains("1/2", text);
-                    StringAssert.Contains(s.CompetitionDailyPassers(s.MainShop.Place).ToString("N0"), text);
+                    StringAssert.Contains(s.ExpectedDailyShopEntrants(s.MainShop.Place).ToString("N0"), text);
                 }
                 finally
                 {

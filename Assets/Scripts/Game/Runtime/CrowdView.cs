@@ -35,6 +35,7 @@ namespace PCShopSell.Game.Runtime
         private bool _synced;
         private bool _cityMode;
         private GameSession _citySession;
+        private StreetWorldBuilder _streets;
         private readonly Dictionary<string, Walker> _cityWalkers = new Dictionary<string, Walker>();
         private readonly Dictionary<string, ResidentDef> _cityResidents = new Dictionary<string, ResidentDef>();
         private readonly HashSet<string> _expoPresented=new HashSet<string>();
@@ -48,9 +49,10 @@ namespace PCShopSell.Game.Runtime
         public Vector3 TalkFace { get; set; }
 
         /// <summary>Views follow the session's one authoritative person position. Visibility never advances a person or deletes history.</summary>
-        public void SyncCity(GameSession session, Vector3 playerWorld, Camera camera = null)
+        public void SyncCity(GameSession session, Vector3 playerWorld, Camera camera = null, StreetWorldBuilder streets = null)
         {
             _citySession = session;
+            _streets = streets;
             _expoPresented.Clear();
             if(session.CurrentPlace?.Id=="life_expo"&&session.CityExpoOpen(false) && session.ExpoAtVenue is BrandExhibit exhibit)
             {
@@ -111,12 +113,12 @@ namespace PCShopSell.Game.Runtime
         private static bool CityPersonInVehicle(CityPersonState person) =>
             person.Route != null && person.Route.Transport != VehicleKind.Walk;
 
-        private static Vector3 CityPresentationPosition(GameSession session, CityPersonState person)
+        private Vector3 CityPresentationPosition(GameSession session, CityPersonState person)
         {
             var point = person.Route != null
                 ? person.Route.Position(session.Clock.Now.TotalMinutes + session.Time.FractionalMinute)
                 : new PCShopSell.Core.World.MapPoint(person.X, person.Y);
-            return new Vector3((float)point.X, 0, (float)point.Y);
+            return _streets?.StreetPosition(point) ?? StreetWorldBuilder.ToWorld(point);
         }
 
         private void UpdateCityPresentation(float dt, bool visible)

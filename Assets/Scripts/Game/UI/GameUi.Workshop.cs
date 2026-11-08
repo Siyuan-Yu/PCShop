@@ -41,9 +41,9 @@ namespace PCShopSell.Game.UI
                 {
                     string block = S.AppBlocker(PhoneApps.Shop);
                     if (block != null) { Toast(block); return; }
-                    _onlineToHome = false;
                     foreach (var p in missing) if (S.PendingOnlineCount(p.Id) == 0) _cart[p.Id] = System.Math.Max(1, _cart.TryGetValue(p.Id, out int n) ? n : 0);
-                    w.Close(); OpenWholesaleApp();
+                    _onlineTab = 5;
+                    w.Close(); OpenOnlinePanel(shop);
                 }, 18, Ui.ButtonHot, missing.Count > 0), -1, 42);
             });
         }

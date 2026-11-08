@@ -164,7 +164,7 @@ namespace PCShopSell.EditorTools
             _game.Ui.CloseAllWindows();_game.Ui.OpenBackpackPanel();Capture("pages-in-backpack");
             Must(s.DistrictStoryState.CommunityPieces==7,"三份图页已齐");
             AttendMeeting("交付三份图页");
-            Must(s.DistrictAccessTier==1&&s.CurrentDistrictNode==null&&!s.DistrictStoryState.HasCommunityMap,"交付后移除任务物品、结束第一段、只开放社区");
+            Must(s.DistrictAccessTier==1&&s.CurrentDistrictNode==null,"交付后移除任务物品、结束第一段、只开放社区");
             Guide("completed");Must(!Buttons().Any(b=>b.name.StartsWith("DistrictFindPerson_")||b.name=="DistrictGoToMeeting"),"完成后不残留主线导航");
             Log("COMMUNITY WALKTHROUGH COMPLETE - production navigation, conversations, outings and delivery");
         });
@@ -282,7 +282,7 @@ namespace PCShopSell.EditorTools
                 Shot("community-fragment-box-"+i,1280,720);
                 Check(s.SearchCommunityBox(i),"现场取得一份图页 "+i);_game.Ui.CloseAllWindows();boxes.Refresh();
                 Check(GameObject.Find("CommunityBox_"+i)==null,"取物后该箱隐藏 "+i);
-                Check(!s.DistrictStoryState.HasCommunityMap&&s.DistrictAccessTier==0,"单份图页不自动拼图或开路");
+                Check(s.DistrictAccessTier==0,"单份图页不自动拼图或开路");
             }
             _game.Ui.OpenDistrictStory();Frame(0);Shot("community-three-pieces",1280,720);_game.Ui.CloseAllWindows();
             Check(s.DistrictStoryState.CommunityPieces==7,"三份图页已齐");

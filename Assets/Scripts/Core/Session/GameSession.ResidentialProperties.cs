@@ -65,8 +65,8 @@ namespace PCShopSell.Core.Session
             string why=ResidentialTradeBlocker(id,false);if(why!=null)return Fail(why);
             var place=City.GetPlace(id);var owned=PropertyAt(id);
             Money due=Money.FromYuan(500)+(owned==null?ResidentialRent(place):Money.Zero);
-            if(!Ledger.TryDebit(Clock.Today,"搬家",due,place.Name+"首月租金及搬家费"))return false;
-            SetResidentialHome(place);
+            if(!PayForResidenceMove(ResidentialTier(place),"搬家",due,place.Name+"首月租金及搬家费"))return false;
+            _residentialHomeId=place.Id;
             _homeLeaseRentCents=owned==null?ResidentialRent(place).Cents:0;
             if(owned!=null)
             {
@@ -75,24 +75,21 @@ namespace PCShopSell.Core.Session
             }
             Say("已搬入"+HomeTitle+"，家具、食品和储物保留。");return true;
         }
-        private void SetResidentialHome(Place place)
-        {
-            HomeTier=ResidentialTier(place);
-            _residentialHomeId=place.Id;
-        }
         public bool BuyResidentialHome(string id,bool mortgage,bool selfUse)
         {
             string why=ResidentialTradeBlocker(id,true,mortgage,selfUse);if(why!=null)return Fail(why);
             var place=City.GetPlace(id);var price=ResidentialPrice(place);
-            if(!Ledger.TryDebit(Clock.Today,selfUse?"购置住宅":"购置出租住宅",ResidentialPurchaseDue(id,mortgage,selfUse),place.Name,
-                LedgerAttribution.ForAsset(id,"residential:purchase:"+id+":"+Clock.Now.TotalMinutes)))return false;
+            var due=ResidentialPurchaseDue(id,mortgage,selfUse);
+            var attribution=LedgerAttribution.ForAsset(id,"residential:purchase:"+id+":"+Clock.Now.TotalMinutes);
             if(selfUse)
             {
-                SetResidentialHome(place);HomePriceCents=price.Cents;HomeMortgageCents=HomeMonthlyPrincipalCents=0;
+                if(!PayForResidenceMove(ResidentialTier(place),"购置住宅",due,place.Name,attribution))return false;
+                _residentialHomeId=place.Id;HomePriceCents=price.Cents;HomeMortgageCents=HomeMonthlyPrincipalCents=0;
                 Say("已购入并搬入"+HomeTitle+"，不再缴月租；家具与储物保留。");
             }
             else
             {
+                if(!Ledger.TryDebit(Clock.Today,"购置出租住宅",due,place.Name,attribution))return false;
                 var tenants=ResidentialTenants(id);
                 _properties.Add(new OwnedProperty{PlaceId=id,PriceCents=price.Cents,
                     BoughtDay=Clock.Today.TotalDays,CitySchema=1,UseMode=tenants.Length>0?"npc":"vacant",TenantPersonId=tenants.FirstOrDefault()?.PersonId,

@@ -56,7 +56,7 @@ namespace PCShopSell.Core.Session
         {
             int n = 0;
             foreach (OnlineOrder o in Online.Pending)
-                if (!o.ToHome && DeliveryShop(o.ShopId) == _focus)   // 送家里的不算店里的库存
+                if (OnlineOrderDestination(o) == _focus)
                     foreach (OnlineOrderLine l in o.Lines)
                         if (l.PartId == partId) n += l.Count;
             foreach (var r in Couriers) if (HeadsToThisShop(r))
@@ -123,15 +123,8 @@ namespace PCShopSell.Core.Session
             if (_restock.Count == 0 || IsGameOver || !HasShop) return;
             List<(PartDef part, int count)> needs = RestockNeeds();
             if (needs.Count == 0) return;
-            needs = needs.Where(n =>
-            {
-                var policy = ProcurementPolicyFor(_focus.Place.Id, PurchaseGoodsKind.Part, n.part.Id);
-                if (policy.Primary == ProcurementMethod.Online1788) return true;
-                var worker = FindEmployee(policy.EmployeeId);
-                bool available = worker?.Shop == _focus && worker.Role == EmployeeRole.Buyer && worker.Person.OnDuty(Clock.Now) && EmployeeTrip(worker.Person.Id) == null;
-                return policy.AllowFallback && !available;
-            }).ToList();
-            if (needs.Count == 0) { Note("自动补货：缺口由本店进货员负责，网购不重复下单；可在统一采购页修改主执行方式。"); return; }
+            needs = needs.Where(n => ProcurementPolicyFor(_focus.Place.Id, PurchaseGoodsKind.Part, n.part.Id).Primary == ProcurementMethod.Online1788).ToList();
+            if (needs.Count == 0) return;
 
             string block = AppBlocker(PhoneApps.Shop);
             if (block != null) { Note("自动补货没执行：" + block); return; }

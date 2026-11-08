@@ -95,7 +95,7 @@ namespace PCShopSell.Tests
             {
                 CompleteLeadOuting(s,i);AskLeadLocally(s,i);Assert.True(s.CommunityHasClue(i));
                 Street(s,s.CommunityBoxPosition(i),s.City.GetPlace(GameSession.CommunityBoxPlace(i)).NodeId);
-                Assert.True(s.SearchCommunityBox(i));Assert.False(s.DistrictStoryState.HasCommunityMap);
+                Assert.True(s.SearchCommunityBox(i));
             }
             Assert.AreEqual("community.trial",s.CurrentDistrictNode.Id);
         }
@@ -128,65 +128,13 @@ namespace PCShopSell.Tests
         private static void Finish(GameSession s)
         {
             string id=s.CurrentDistrictNode.Id;Meet(s);
-            CompleteDetailedTasks(s);
             if(s.CurrentDistrictNode?.Id==id)Assert.True(s.ActDistrictNode(id),id);
         }
-        private static void CompleteDetailedTasks(GameSession s)
-        {
-            string originalNode=s.CurrentDistrictNode.Id;
-            foreach(var task in s.DistrictTasks.ToArray())
-            {
-                if(s.HasDistrictTask(task.Id))continue;
-                At(s,s.City.GetPlace(task.PlaceId??s.DistrictStoryState.MeetingPlaceId));
-                Assert.IsNull(s.DistrictTaskBlocker(task.Id),task.Id);
-                s.PerformDistrictTask(task.Id);Assert.True(s.HasDistrictTask(task.Id),task.Id);
-            }
-            if (s.CurrentDistrictNode?.Id==originalNode && !s.DistrictMeetingOutdoors) At(s,s.City.GetPlace(s.DistrictStoryState.MeetingPlaceId));
-        }
 
-        [TestCase("park.change")] [TestCase("model.clues")] [TestCase("model.repair")]
-        [TestCase("model.delivery")] [TestCase("garden.proposal")] [TestCase("garden.terms")]
-        public void LaterTaskMarkersRespectPrerequisitesAndCompletion(string node)
-        {
-            using(var s=Make())
-            {
-                var state=new DistrictProgress{Chapter=node.StartsWith("garden.")?3:2,NodeId=node};
-                typeof(GameSession).GetField("_district",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(s,state);
-                Assert.IsEmpty(s.ReadyDistrictTasks,"No investigation before arranging the current meeting");
-                state.MeetingNodeId=node;
-                foreach(var task in s.DistrictTasks.ToArray())
-                {
-                    Assert.AreEqual(task.Requires.All(s.HasDistrictTask),s.ReadyDistrictTasks.Any(t=>t.Id==task.Id));
-                    state.TaskEvidence=state.TaskEvidence.Concat(new[]{task.Id}).ToArray();
-                    Assert.False(s.ReadyDistrictTasks.Any(t=>t.Id==task.Id));
-                }
-                Assert.IsEmpty(s.ReadyDistrictTasks);
-                foreach(var person in s.CurrentDistrictNode.People.Where(id=>id!=s.DistrictMeetingContact))
-                    Assert.IsNull(s.DistrictPersonObjective(person),"Only the responsible speaker has the final interaction");
-            }
-        }
 
-        [TestCase("park.delivery","life_service","life_curator")]
-        [TestCase("model.dinner","life_restaurant_tier2","life_enterprise")]
-        public void TimedMainlineFinishesWithOneSpeakerAndDoesNotCountTimeAway(string node,string place,string speaker)
-        {
-            using(var s=Make())
-            {
-                var state=new DistrictProgress{Chapter=2,UnlockedTier=1,NodeId=node,MeetingNodeId=node,MeetingPlaceId=place,
-                    WorkStartedAt=s.Clock.Now.TotalMinutes,MeetingAt=s.Clock.Now.TotalMinutes,
-                    TaskEvidence=new[]{"fair.signs","fair.handover"}};
-                typeof(GameSession).GetField("_district",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(s,state);
-                At(s,s.City.GetPlace(place));
-                int replies=0;s.DistrictDialogueReady+=(who,text)=>{Assert.AreEqual(speaker,who);StringAssert.Contains("下一步",text);replies++;};
-                Advance(s,s.Clock.Now.TotalMinutes+10);Assert.Zero(replies);
-                At(s,s.City.GetPlace("agency"));Advance(s,s.Clock.Now.TotalMinutes+40);
-                Assert.AreEqual(10,state.WorkMinutes);Assert.Zero(replies);
-                At(s,s.City.GetPlace(place));Advance(s,s.Clock.Now.TotalMinutes+20);
-                Assert.AreEqual(1,replies);Assert.True(s.DistrictNodeCompleted(node));
-                Advance(s,s.Clock.Now.TotalMinutes+30);Assert.AreEqual(1,replies);Assert.False(s.ActDistrictNode(node));
-                using(var loaded=Reload(s)){Assert.True(loaded.DistrictNodeCompleted(node));Assert.AreEqual(0,loaded.DistrictStoryState.WorkStartedAt);}
-            }
-        }
+
+
+
 
         [Test] public void SavedPagesBringTangFromLockedCommunityToAccessibleHandover()
         {
@@ -491,7 +439,7 @@ namespace PCShopSell.Tests
                 Assert.False(s.SearchCommunityBox(2),"Cannot collect twice");
                 using(var pending=Reload(s)){Assert.AreEqual(7,pending.DistrictStoryState.CommunityPieces);Assert.Zero(pending.DistrictAccessTier);}
                 Finish(s);Assert.AreEqual(1,s.DistrictAccessTier);
-                Assert.False(s.DistrictStoryState.HasCommunityMap);Assert.True(s.DistrictStoryState.CommunityMapDelivered);
+                Assert.True(s.DistrictStoryState.CommunityMapDelivered);
                 Assert.True(s.DistrictRoadOpen(1));Assert.False(s.DistrictRoadOpen(2));
                 using(var loaded=Reload(s)){Assert.AreEqual(1,loaded.DistrictAccessTier);Assert.True(loaded.DistrictNodeCompleted("community.meeting"));}
             }
@@ -531,10 +479,10 @@ namespace PCShopSell.Tests
                         CompleteLeadOuting(loaded,i);AskLeadLocally(loaded,i);
                         ReachCommunityBox(loaded, i);
                         Assert.True(loaded.SearchCommunityBox(i));
-                        Assert.False(loaded.DistrictStoryState.HasCommunityMap);Assert.Zero(loaded.DistrictAccessTier);
+                        Assert.Zero(loaded.DistrictAccessTier);
                     }
                     Assert.AreEqual("community.trial",loaded.CurrentDistrictNode.Id);Assert.Zero(loaded.DistrictAccessTier);
-                    Finish(loaded);Assert.True(loaded.DistrictRoadOpen(1));Assert.False(loaded.DistrictStoryState.HasCommunityMap);
+                    Finish(loaded);Assert.True(loaded.DistrictRoadOpen(1));
                 }
             }
         }
@@ -572,20 +520,7 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(CityActivityPhase.Completed,a.State);Assert.True(a.RewardApplied);
             }
         }
-        [TestCase(false)] [TestCase(true)] public void LegacyMapSavesPreserveEarnedMapAndMigrateUnfinishedSearch(bool hasMap)
-        {
-            using(var s=Make())
-            {
-                var save=s.CreateSave();save.districtProgress=new DistrictProgress{Chapter=1,CommunityMapQuest=true,
-                    NodeId=hasMap?"community.trial":"community.search",HasCommunityMap=hasMap,CommunityBoxesInspected=1};
-                using(var loaded=GameSession.Load(s.City,save))
-                {
-                    Assert.AreEqual(hasMap,loaded.DistrictStoryState.HasCommunityMap);Assert.Zero(loaded.DistrictAccessTier);
-                    Assert.AreEqual(hasMap?"community.trial":"community.search",loaded.CurrentDistrictNode.Id);
-                    if(!hasMap){Assert.AreEqual(2,loaded.DistrictStoryState.CommunitySearchVersion);Assert.Zero(loaded.DistrictStoryState.CommunityClues);Assert.Zero(loaded.DistrictStoryState.CommunityPieces);}
-                }
-            }
-        }
+
         private static void ReachCommunityBox(GameSession s, int index)
         {
             var landmark = s.City.GetPlace(GameSession.CommunityBoxPlace(index));
@@ -677,16 +612,7 @@ namespace PCShopSell.Tests
                 }
             }
         }
-        [Test] public void SupersededTradingAssignmentMigratesToClueWithoutUnlocking()
-        {
-            using(var s=Make())
-            {
-                var save=s.CreateSave();save.districtProgress=new DistrictProgress {Chapter=1,NodeId="community.trial",CommunityTrialStarted=true,
-                    Completed=new[]{"community.intro","community.meeting"}};
-                using(var loaded=GameSession.Load(s.City,save))
-                {Assert.AreEqual("community.clue",loaded.CurrentDistrictNode.Id);Assert.Zero(loaded.DistrictAccessTier);Assert.False(loaded.DistrictStoryState.HasCommunityMap);}
-            }
-        }
+
         [Test] public void PreviouslyUnlockedCommunitySaveKeepsAccessWithoutNewTrial()
         {
             using(var s=Make())
@@ -696,54 +622,7 @@ namespace PCShopSell.Tests
                 {Assert.True(loaded.DistrictRoadOpen(1));Assert.IsNull(loaded.CurrentDistrictNode);}
             }
         }
-        [TestCase("trial")] [TestCase("limited")] [TestCase("respect")]
-        public void AllThreeStoryChainsRequireActualCostsItemTimeAndProjectSalesWithoutReplay(string gardenChoice)
-        {
-            using(var s=Make())
-            {
-                Assert.True(s.DebugPrepareDistrictPrerequisites(1));AwaitInvitation(s);s.BeginDistrictMeeting("community.intro","accept");Finish(s);CompleteCommunitySearch(s);Finish(s);
-                Assert.True(s.DebugPrepareDistrictPrerequisites(2));Assert.AreEqual(6,s.DistrictOperatingShops(1));
-                Assert.GreaterOrEqual(s.NetWorth().Yuan,30000000);Assert.AreEqual(1,s.DistrictAccessTier);AwaitInvitation(s);
-                for(int guard=0;s.CurrentDistrictNode!=null&&s.DistrictAccessTier<2&&guard<12;guard++)
-                {
-                    string id=s.CurrentDistrictNode.Id;Meet(s);CompleteDetailedTasks(s);if(s.CurrentDistrictNode?.Id==id)Assert.True(s.ActDistrictNode(id),id);
-                    if(id=="park.delivery"||id=="model.dinner")
-                    {
-                        Assert.False(s.ActDistrictNode(id));Advance(s,s.Clock.Now.TotalMinutes+30);Assert.True(s.DistrictNodeCompleted(id),"Timed participation should finish and speak automatically");Assert.False(s.ActDistrictNode(id));
-                    }
-                    if(id=="model.repair")
-                    {
-                        var cash=s.Ledger.Balance;Assert.False(s.ActDistrictNode(id));Assert.AreEqual(cash,s.Ledger.Balance);
-                        using(var loaded=Reload(s)){Assert.True(loaded.DistrictStoryState.RepairPaid);Assert.False(loaded.ActDistrictNode(id));Assert.AreEqual(cash,loaded.Ledger.Balance);}
-                        Advance(s,s.DistrictStoryState.RepairReadyAt);CompleteDetailedTasks(s);Assert.True(s.ActDistrictNode(id));Assert.True(s.DistrictStoryState.HasModel);
-                    }
-                    var after=s.Ledger.Balance;Assert.False(s.ActDistrictNode(id));Assert.AreEqual(after,s.Ledger.Balance,"Old callback cannot repeat a transaction");
-                }
-                Assert.AreEqual(2,s.DistrictAccessTier);Assert.True(s.DistrictStoryState.ModelDelivered);Assert.False(s.DistrictStoryState.HasModel);
-                Assert.True(s.DebugPrepareDistrictPrerequisites(3));Assert.IsNull(s.DistrictPrerequisiteBlocker(3));Assert.AreEqual(2,s.DistrictAccessTier);AwaitInvitation(s);
-                Finish(s);
-                var project=s.MyShops.First(shop=>s.DistrictTierOf(shop.Place)==2);
-                Assert.True(s.SelectDistrictProjectShop(project.Place.Id));Finish(s);
-                Meet(s,gardenChoice);CompleteDetailedTasks(s);var beforeContract=s.Ledger.Balance;Assert.True(s.ActDistrictNode("garden.terms"));
-                Assert.AreEqual(gardenChoice=="limited"?50000:gardenChoice=="respect"?10000:5000,(beforeContract-s.Ledger.Balance).Yuan);
-                Assert.AreEqual(gardenChoice=="respect"?"life_clothier":"life_tenant",s.DistrictStoryState.ProjectPartnerId);
-                Assert.AreEqual("garden.fulfilment",s.CurrentDistrictNode.Id);Meet(s);
-                Assert.False(s.ActDistrictNode("garden.fulfilment"));
-                Advance(s,s.DistrictStoryState.ProjectStartedAt+1441);
-                Meet(s);
-                s.Ledger.Credit(s.Clock.Today,"贷款",Money.FromYuan(100000),"不是营业收入",LedgerAttribution.ForShop(project.Place.Id));
-                Assert.False(s.ActDistrictNode("garden.fulfilment"));
-                s.Ledger.Credit(s.Clock.Today,ShopSimulation.SalesCategory,Money.FromYuan(100),"测试实际销售凭据",LedgerAttribution.ForShop(project.Place.Id));
-                CompleteDetailedTasks(s);
-                Assert.True(s.ActDistrictNode("garden.fulfilment"));Assert.AreEqual(3,s.DistrictAccessTier);Finish(s);
-                using(var loaded=Reload(s))
-                {
-                    Assert.AreEqual(3,loaded.DistrictAccessTier);Assert.IsNull(loaded.CurrentDistrictNode);
-                    Assert.AreEqual(18,loaded.DistrictStoryState.Completed.Distinct().Count());
-                    Assert.False(loaded.DebugPrepareDistrictPrerequisites(3));
-                }
-            }
-        }
+
         [Test] public void LegacySaveKeepsAssetsButNewRoadRulesApplyWithoutSharingStateBetweenSessions()
         {
             using(var s=Make())

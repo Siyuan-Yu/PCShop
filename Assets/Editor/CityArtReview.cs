@@ -18,6 +18,7 @@ namespace PCShopSell.EditorTools
         private static DayNightLighting lighting;
         private static int frames;
         private static bool sideViews;
+        private static CityLayout reviewLayout;
         public static void Run()
         {
             try
@@ -26,11 +27,13 @@ namespace PCShopSell.EditorTools
                 EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);
                 var data=JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text);
                 var layout=CityLayout.FromData(data);
+                reviewLayout=layout;
                 if(data.lakeCity&&data.layoutVersion>=13)
                 {
                     var full=Pathfinder.FindPath(layout.Map,data.lakeSouthNode,data.lakeNorthNode);
-                    if(!full.Found||CityTravelTiming.Minutes(full.Distance,Vehicles.Walk)!=1440)
-                        throw new InvalidOperationException("Full lake route must take 1440 game minutes with production walking speed.");
+                    int expectedMinutes=(int)Math.Ceiling(1440*layout.ExpansionScale-1e-7);
+                    if(!full.Found||CityTravelTiming.Minutes(full.Distance,Vehicles.Walk)!=expectedMinutes)
+                        throw new InvalidOperationException("Full lake route must match authored expansion: "+expectedMinutes+" game minutes.");
                     if(layout.FirstOfKind(PlaceKind.Home).Id!="home")throw new InvalidOperationException("Starter home changed.");
                     foreach(var pair in new[]{new[]{"home","player_shop"},new[]{"player_shop","stall_cpu"},new[]{"home","stall_cpu"}})
                     {
@@ -38,7 +41,7 @@ namespace PCShopSell.EditorTools
                         if(!path.Found)throw new InvalidOperationException("Disconnected daily route");
                         Debug.Log("ART_ROUTE "+pair[0]+" -> "+pair[1]+" walk="+CityTravelTiming.Minutes(path.Distance,Vehicles.Walk)+" min; ebike="+CityTravelTiming.Minutes(path.Distance,Vehicles.EBike)+" min (road nodes)");
                     }
-                    Debug.Log("ART_LAYOUT_VALIDATED full walk=1440 min; start home=home");
+                    Debug.Log("ART_LAYOUT_VALIDATED full walk="+expectedMinutes+" min; start home=home");
                 }
                 var world=new StreetWorldBuilder(layout,12345);world.Build();
                 camera=new GameObject("ArtReviewCamera").AddComponent<Camera>();
@@ -106,6 +109,8 @@ namespace PCShopSell.EditorTools
         }
         private static void Shot(string folder,string name,Vector3 focus,float yaw,float pitch,float size,bool perspective=false)
         {
+            float scale=(float)(reviewLayout?.ExpansionScale??1);
+            focus=new Vector3(focus.x*scale,focus.y,focus.z*scale);size*=scale;
             camera.transform.rotation=Quaternion.Euler(pitch,yaw,0);
             // Keep close shots within the production shadow distance.
             float distance=Mathf.Max(75,size*2.2f);

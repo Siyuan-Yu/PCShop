@@ -219,6 +219,7 @@ namespace PCShopSell.Core.Session
             foreach(var o in _brands.Orders.Where(o=>o.Shipped&&!o.Done&&!o.Failed&&o.Arrival<=now))
             {
                 o.Done=true;var b=Brand(o.BrandId);if(b!=null)b.Influence+=o.Influence;
+                RecordExpoMainlineQualifications();
                 Ledger.Credit(Clock.Today,"品牌订单",Money.FromCents(o.UnitCents*o.Count),"真实商品交付 · "+BrandProductName(o.ProductId),LedgerAttribution.ForShop(o.ShopId,o.Id,"品牌交付"));
                 Say("品牌订单已送达并结算："+BrandProductName(o.ProductId)+" ×"+o.Count);
                 RefreshBrandTraffic();

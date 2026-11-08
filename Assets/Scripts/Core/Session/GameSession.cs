@@ -29,7 +29,7 @@ namespace PCShopSell.Core.Session
         public const int DealerCloseMinute = 19 * 60;
         public const int MonthGoalDay = 30;
         public static readonly Money MonthGoalNetWorth = Money.FromYuan(8000);
-        public static readonly Money ShopRent = Money.FromYuan(1500);
+        public static readonly Money ShopRent = RealEstate.SmallBaseRent;
         public static readonly Money HomeRent = Money.FromYuan(450);
         public static readonly Money MetroFare = Money.FromYuan(3);
         public const int MetroMinutes = 12;
@@ -117,7 +117,7 @@ namespace PCShopSell.Core.Session
             _realtyRng = new GameRandom(seed ^ 0x5EA1E57A7EUL);
             if (startWithShop)
             {
-                Lease = new ShopLease { PlaceId = PlayerShopPlace.Id, Rent = ShopRentQuote(PlayerShopPlace), Deposit = Money.Zero, StartDay = start.Date.TotalDays };
+                Lease = new ShopLease { PlaceId = PlayerShopPlace.Id, Rent = ShopRentQuote(PlayerShopPlace), Deposit = Money.Zero, StartDay = start.Date.TotalDays, SignedDay = start.Date.TotalDays };
                 if (starterStock) AddStarterStock();
                 FitStarterShop();
                 SkipOpeningQuests();
@@ -139,10 +139,12 @@ namespace PCShopSell.Core.Session
             Clock.DayAdvanced += OnDayAdvanced;
             InitializeCityPeople();
             AssignCityHomes();
+            InitializeExpansionResidents();
             InitializeCityClimate();
             TickCityRetail();
             TickSpecialBusinesses(start,start);
             RecordWorkbenchPrices();
+            InitializeStockMarket(seed);
         }
 
         public VehicleSpec CurrentVehicle => Vehicles.Get(Vehicle);
@@ -293,18 +295,25 @@ namespace PCShopSell.Core.Session
             if (p.Kind == PlaceKind.Shop && IsVacant(p)) return null;
             string hours = OpeningHoursText(p);
             if (hours == null || IsPlaceOpen(p)) return null;
+            if (SupplierClosesOnWeekend(p) && Clock.Today.IsWeekend)
+                return $"{p.Name}周末休息（{hours}营业）。";
             return $"{p.Name}已经打烊了（{hours}营业）。";
         }
 
         /// <summary>这个地点的营业时间说明；不限时的地方返回 null。</summary>
         public string OpeningHoursText(Place p)
         {
-            var track=RaceTracks.Get(p?.Id);if(track!=null)return track.OpeningHours;
+            if (p == null) return null;
+            var track=RaceTracks.Get(p.Id);if(track!=null)return track.OpeningHours;
+            if (SupplierClosesOnWeekend(p))
+            {
+                CityVenueHours(p, out int open, out int close);
+                return $"周一至周五 {Hm(open)}–{Hm(close)}";
+            }
             if(p.ExplicitEntrance&&p.OpenMinute==0&&p.CloseMinute==1440)return "24小时";
             if(p.ExplicitEntrance && p.OpenMinute!=p.CloseMinute)return $"每天 {Hm(p.OpenMinute)}–{Hm(p.CloseMinute)}";
             switch (p.Kind)
             {
-                case PlaceKind.Wholesaler: return $"工作日 {Hm(WholesalerOpenMinute)}–{Hm(WholesalerCloseMinute)}";
                 case PlaceKind.Dealer: return $"每天 {Hm(DealerOpenMinute)}–{Hm(DealerCloseMinute)}";
                 case PlaceKind.Shop when p.Business == FarmBusiness: return $"每天 {Hm(FarmOpenMinute)}–{Hm(FarmCloseMinute)}";
                 case PlaceKind.Shop:
@@ -387,7 +396,7 @@ namespace PCShopSell.Core.Session
         public Money ShopDeposits => Money.FromCents(_shops.Where(s => s.Rented).Sum(s => s.Lease.Deposit.Cents));
 
         public Money NetWorth() => Ledger.Balance + InventoryValue() + ShopDeposits + (PendingLease?.Deposit ?? Money.Zero) + ContractDeposits
-            + VehicleValue + GaragePropertyValue + UsedMotorAssetValue + VentureValue + PropertyValue + (HomePriceCents > 0 ? HomePurchasePrice : Money.Zero) + FundValue + CityEquityValue - TotalDebt;
+            + VehicleValue + GaragePropertyValue + UsedMotorAssetValue + VentureValue + PropertyValue + (HomePriceCents > 0 ? HomePurchasePrice : Money.Zero) + FundValue + CityEquityValue + ShortPositionEquity - TotalDebt;
 
         public void Dispose()
         {
@@ -400,9 +409,12 @@ namespace PCShopSell.Core.Session
 
         private void OnTimeAdvanced(GameTimestamp from, GameTimestamp to)
         {
+            TickCityAssets();
             TickKolStreams(from.TotalMinutes,to.TotalMinutes);
             TickEmployeePayroll(from.TotalMinutes, to.TotalMinutes);
+            PreparePetVisits(to.TotalMinutes);
             TickCityPeople(to.TotalMinutes);
+            TickPetShopStaff();
             TickBrandDeliveries(to.TotalMinutes);
             TickDistrictNarrative(from.TotalMinutes, to.TotalMinutes);
             TickCityActivities(to.TotalMinutes);
@@ -492,22 +504,12 @@ namespace PCShopSell.Core.Session
             ProcessScheduledCredits(today);
             CollectDueAppLoans();
             DecayRelations();
+            CollectWeeklyShopRent(today);
             if (today.IsMonthStart)
             {
                 if (HomeUtilities.IsPositive) Ledger.ForceDebit(today, "水电", HomeUtilities, "住处固定水电",new LedgerAttribution(LedgerBusinessKind.Personal,sourceEventId:"home:utilities:"+today.TotalDays,transactionKind:"固定水电"));
-                foreach (OwnedShop s in _shops)
-                    if (s.Rented && RentOf(s).IsPositive) Ledger.ForceDebit(today, "房租", RentOf(s), ShopTitle(s) + "月租", LedgerAttribution.ForShop(s.Place.Id,"rent:"+s.Place.Id+":"+today.TotalDays,"租金"));
                 if (CurrentHomeRent.IsPositive) Ledger.ForceDebit(today, "房租", CurrentHomeRent, HomeTitle + "月租");
-                string pending = "";
-                if (PendingLease != null)
-                {
-                    Place pp = City.GetPlace(PendingLease.PlaceId);
-                    Ledger.ForceDebit(today, "房租", PendingLease.Rent, $"{pp.Name} 月租（还没交房）");
-                    pending = $"\n提前签的{pp.Name} {PendingLease.Rent} 也扣了（第 {PendingLease.StartDay + 1} 天才交房）。";
-                }
-                int rented = _shops.Count(s => s.Rented);
-                string shops = rented > 1 ? $"{rented} 家店铺共 {TotalShopRent}" : $"店铺 {TotalShopRent}";
-                Popup?.Invoke("交房租", (HasShop ? $"{shops} + 出租屋 {CurrentHomeRent} 已扣款。" : $"出租屋 {CurrentHomeRent} 已扣款。（还没搬进铺子）") + pending);
+                if (CurrentHomeRent.IsPositive) Popup?.Invoke("住宅月租", $"{HomeTitle} {CurrentHomeRent} 已扣款。");
             }
             OnRealtyDay(today.TotalDays);
             OnBusinessDay(previous, today);

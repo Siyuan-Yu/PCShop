@@ -289,7 +289,7 @@ namespace PCShopSell.Game.UI
             }
         }
 
-        public static RectTransform Scroll(Transform parent, float height = -1)
+        public static RectTransform Scroll(Transform parent, float height = -1, bool autoSize = true)
         {
             Image bg = Panel(parent, "Scroll", new Color(0, 0, 0, 0.18f));
             if (height >= 0) Size(bg, -1, height);
@@ -305,9 +305,12 @@ namespace PCShopSell.Game.UI
             content.pivot = new Vector2(0.5f, 1);
             content.offsetMin = Vector2.zero;
             content.offsetMax = Vector2.zero;
-            VList(content, 4, 6);
-            var fit = content.gameObject.AddComponent<ContentSizeFitter>();
-            fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            if (autoSize)
+            {
+                VList(content, 4, 6);
+                var fit = content.gameObject.AddComponent<ContentSizeFitter>();
+                fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            }
             sr.viewport = viewport;
             sr.content = content;
             return content;

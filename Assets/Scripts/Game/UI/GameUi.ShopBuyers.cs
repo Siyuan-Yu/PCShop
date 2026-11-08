@@ -102,7 +102,8 @@ namespace PCShopSell.Game.UI
         {
             if(trip.DepartAt<=0&&!trip.CostsRecorded)return "旧采购：未记录出发时间 · "+(trip.Delivered?"已送达":"预计送达 "+PurchaseTime(trip.DeliveryAt));
             long elapsed=Math.Max(0,Math.Min(S.Clock.Now.TotalMinutes,Math.Max(trip.ReturnAt,trip.DeliveryAt))-trip.DepartAt);
-            return "出发 "+PurchaseTime(trip.DepartAt)+"\n"
+            var departure = new GameTimestamp(Math.Max(0, trip.DepartAt));
+            return $"出发 {departure}（{Ui.WeekdayName(departure.Date.Weekday)}）\n"
                 +(trip.Delivered?"已送达 ":"预计送达 ")+PurchaseTime(trip.DeliveryAt)+" · "
                 +(trip.Returned&&trip.Delivered?"全程 "+(Math.Max(trip.ReturnAt,trip.DeliveryAt)-trip.DepartAt):"已用 "+elapsed
                     +" 分钟 · 预计全程 "+(Math.Max(trip.ReturnAt,trip.DeliveryAt)-trip.DepartAt))+" 分钟（游戏时间）";

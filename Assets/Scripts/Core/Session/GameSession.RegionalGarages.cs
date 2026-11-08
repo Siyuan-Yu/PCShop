@@ -20,8 +20,8 @@ namespace PCShopSell.Core.Session
     {
         public string Id, TrackId, Name;
         public int Tier;
-        public long RentYuan => new long[] { 50, 150, 400, 1000 }[Tier];
-        public long PriceYuan => new long[] { 5000, 15000, 40000, 100000 }[Tier];
+        public long RentYuan => RacingTierRules.For(Tier).ParkingRent;
+        public long PriceYuan => RacingTierRules.For(Tier).ParkingPrice;
     }
 
     public static class RegionalGarages
@@ -101,13 +101,19 @@ namespace PCShopSell.Core.Session
         private Money GarageRentDueWithin(int days) => Money.FromYuan(_regionalGarages.Where(g => g.RentedSpaces>0)
             .Sum(g => Enumerable.Range(1, days).Count(d => Clock.Today.TotalDays + d >= g.NextRentDay && (Clock.Today.TotalDays + d - g.NextRentDay) % 30 == 0) * RegionalGarages.Get(g.PlaceId).RentYuan*g.RentedSpaces));
 
+        public string CommuteMotorModelId(VehicleKind kind)
+        {
+            foreach(var vehicle in _garage)
+                if(vehicle.Commuter && MotorCatalog.Get(vehicle.ModelId).Kind==kind) return vehicle.ModelId;
+            return null;
+        }
         public GarageVehicle CommuteMotor(VehicleKind kind)
-        { SyncGarage(); return kind==VehicleKind.Van?null:_garage.FirstOrDefault(v => v.Commuter && MotorCatalog.Get(v.ModelId).Kind == kind)?.Copy(); }
+        {  return kind==VehicleKind.Van?null:_garage.FirstOrDefault(v => v.Commuter && MotorCatalog.Get(v.ModelId).Kind == kind)?.Copy(); }
         private bool MotorBusy(GarageVehicle v) => v != null && (_raceVehicle == v.Id || _employeeTrips.Any(t => !t.Returned && t.VehicleId == v.Id));
         private bool MotorUsable(GarageVehicle v) => v != null && !v.Impounded && !MotorBusy(v);
         private GarageVehicle EmployeeTransportMotor(VehicleKind kind)
         {
-            SyncGarage();
+
             return _garage.Where(v => MotorCatalog.Get(v.ModelId).Kind == kind && MotorUsable(v) && !(v.Commuter && Vehicle == kind))
                 .OrderBy(v => v.Commuter).FirstOrDefault();
         }
@@ -131,7 +137,7 @@ namespace PCShopSell.Core.Session
             var model = MotorCatalog.Get(modelId); if (model == null) return "车型不存在";
             if (IsGameOver || Racing || Trip != null || IsWorking) return "请先结束当前活动";
             if(model.Kind==VehicleKind.Van)return null;
-            SyncGarage();
+
             var old = _garage.FirstOrDefault(v => v.Commuter && MotorCatalog.Get(v.ModelId).Kind == model.Kind);
             if (forCommute && old == null) return null;
             if (forCommute && !MotorUsable(old)) return "原通勤车正在使用或被扣押，不能替换";
@@ -141,16 +147,16 @@ namespace PCShopSell.Core.Session
         private void PlaceAcquiredMotor(GarageVehicle v, bool forCommute, string garageId)
         {
             var model = MotorCatalog.Get(v.ModelId);
-            if(model.Kind==VehicleKind.Van){v.Commuter=false;v.GarageId=null;v.Impounded=false;_garage.Add(v);_owned.Add(model.Kind);return;}
+            if(model.Kind==VehicleKind.Van){v.Commuter=false;v.GarageId=null;v.Impounded=false;_garage.Add(v);return;}
             var old = _garage.FirstOrDefault(x => x.Commuter && MotorCatalog.Get(x.ModelId).Kind == model.Kind);
             if (forCommute && old != null) { old.Commuter = false; old.GarageId = garageId; }
             v.Commuter = forCommute; v.GarageId = forCommute ? null : garageId; v.Impounded = false;
-            _garage.Add(v); _owned.Add(model.Kind);
+            _garage.Add(v);
         }
 
         public bool SetMotorCommuter(string id)
         {
-            SyncGarage(); var v = _garage.Find(x => x.Id == id);
+             var v = _garage.Find(x => x.Id == id);
             if (v == null || v.Commuter) return false;
             if(!MotorCatalog.CanRace(MotorCatalog.Get(v.ModelId).Kind))return Fail("货车仅供员工进货，不可设为通勤车。");
             string why = GarageContractBlocker(v.GarageId); if (why != null) return Fail(why);
@@ -165,7 +171,7 @@ namespace PCShopSell.Core.Session
 
         public bool ParkCommuteMotor(string id, string garageId)
         {
-            SyncGarage(); var v = _garage.Find(x => x.Id == id);
+             var v = _garage.Find(x => x.Id == id);
             string why = GarageContractBlocker(garageId) ?? MotorSpaceBlocker(garageId); if (why != null) return Fail(why);
             if (v == null || !v.Commuter || !MotorUsable(v)) return Fail("通勤车正在使用或被扣押，不能入库");
             var kind = MotorCatalog.Get(v.ModelId).Kind;
@@ -181,7 +187,7 @@ namespace PCShopSell.Core.Session
         }
         public string MotorTransferBlocker(string motorId, string targetId)
         {
-            SyncGarage(); var v = _garage.Find(x => x.Id == motorId); var target = RegionalGarages.Get(targetId);
+             var v = _garage.Find(x => x.Id == motorId); var target = RegionalGarages.Get(targetId);
             if (target == null || IsGameOver || Racing || IsWorking || Trip != null) return "当前不能调车";
             if(v!=null&&MotorCatalog.Get(v.ModelId).Kind==VehicleKind.Van)return "货车仅供员工进货，不属于赛车车库车辆";
             if (CurrentPlace?.Id != targetId && CurrentPlace?.Id != target.TrackId) return "请到目标车库或对应赛场办理调入";

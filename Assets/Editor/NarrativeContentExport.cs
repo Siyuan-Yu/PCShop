@@ -30,7 +30,7 @@ public static class NarrativeContentExport
         b.Clear();b.AppendLine("# 成长主线与关键支线节点配置\n\n版本："+DistrictNarrativeCatalog.ContentVersion+"\n\n"+DistrictNarrativeCatalog.IntegrationStatus+"\n\n这里记录内容配置，不代表所有节点已经能在游戏中完整触发。所有行业共用主线，行业教学另行处理。接入任务执行器时，应从真实交易、赴约、物品交付与经营结算生成凭据；查看配置、点开对话或单纯加好感不得伪造履约。\n\n## 当前阶段分配\n");
         foreach(var c in DistrictNarrativeCatalog.CreatePlan())
         {b.AppendLine("### "+c.Title+"\n\n阶段ID：`"+c.Id+"`；模块："+string.Join("、",c.Modules)+"\n");foreach(var g in c.Gates)b.AppendLine("- "+g.Description+"（`"+g.Fact+"` / `"+g.Scope+"`）");b.AppendLine("\n完成后："+c.Reward+"\n");}
-        b.AppendLine("## 配置迁移规则\n\n`CreatePlan(listingAtGarden, dominanceAfterGarden)` 可将品牌上市条件移至花园阶段，或将行业月收入/股价条件移至花园之后的终章。默认两项均为 false。每次调用返回独立配置；节点和事实ID不变。未来任务存档应独立保存已达成事实、节点完成记录和已发放资格，变更阶段映射不得清空既有进度或重复发奖。\n\n当前尚无这套新主线的执行进度字段，因此本轮没有声称完成其存档迁移器。旧有四条人脉故事仍按原系统运行，不被这些配置覆盖。\n\n## 主线节点\n");
+        b.AppendLine("## 正式主线规则\n\n每阶段只保留一条路线：三页寻图、品牌展会与订单交付、企业竞标与三期履约。未达门槛不会启动其他替代剧情。\n\n## 主线节点\n");
         foreach(var n in DistrictNarrativeCatalog.Nodes)
         {
             b.AppendLine($"### {n.Title}\n\n- ID：`{n.Id}`；模块：`{n.Module}`\n- 前置节点：{string.Join("、",n.Prerequisites)}\n- 地点：`{n.PlaceId}`\n- 人物：{string.Join("、",n.People.Select(id=>CityLifeCatalog.Person(id)?.Name??id))}\n- 出现条件：{n.Entry}\n- 玩家目标：{n.Objective}\n\n{n.Dialogue}\n");

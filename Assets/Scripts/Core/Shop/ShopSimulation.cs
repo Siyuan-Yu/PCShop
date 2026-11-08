@@ -167,8 +167,9 @@ namespace PCShopSell.Core.Shop
     {
         public const double MinMarkup = .9;
         public const double MaxMarkup = 3.0;
-        /// <summary>位置最好、规格系数为 1、知名度为 0 时，高峰时段每小时进店人数。</summary>
-        public double BaseCustomersPerHour = 2;
+        internal const double BaseFootfallMultiplier = 3.0;
+        /// <summary>地段、面积及营业加成均为 1 时，高峰时段每小时进店人数。</summary>
+        public double BaseCustomersPerHour = 2 * BaseFootfallMultiplier;
 
         public double WeekendMultiplier = 1.5;
         /// <summary>逛店时间（游戏分钟）。1 倍速下 1 游戏分钟只有 0.25 秒，给顾客留够走到货架、拿货的时间。</summary>
@@ -305,20 +306,32 @@ namespace PCShopSell.Core.Shop
         public Func<double> RetailTemperature;
 
         private ShopSimulation _reputationOwner;
+        public const double NeutralShopReputation = 50;
+        public double Awareness { get; private set; }
+        public double ShopReputation { get; private set; } = NeutralShopReputation;
 
-        /// <summary>知名度 0~100，每 10 点约增加 10% 客流。同一个老板的几家店共用一个知名度。</summary>
+        /// <summary>原有的共用知名度用于解锁。变动同时计入发生业务的门店，客流读取该店的知名度。</summary>
         public double Reputation
         {
             get => _reputationOwner != null ? _reputationOwner.Reputation : _reputation;
             set
             {
-                if (_reputationOwner != null) _reputationOwner.Reputation = value;
-                else _reputation = Math.Max(0, Math.Min(100, value));
+                var owner = _reputationOwner ?? this;
+                Awareness = ClampStanding(Awareness + (value - owner._reputation));
+                owner.RestoreBusinessAwareness(value);
             }
         }
 
         /// <summary>这家店的知名度跟 main 共用（开第二家店时用）。</summary>
         public void ShareReputationWith(ShopSimulation main) => _reputationOwner = main == this ? null : main;
+        private static double ClampStanding(double value) => Math.Max(0, Math.Min(100, value));
+        internal void RestoreBusinessAwareness(double value) => _reputation = ClampStanding(value);
+        internal void RestoreShopStanding(double awareness, double reputation)
+        {
+            Awareness = ClampStanding(awareness);
+            ShopReputation = ClampStanding(reputation);
+        }
+        internal void AdjustShopReputation(double delta) => ShopReputation = ClampStanding(ShopReputation + delta);
 
         /// <summary>售价 = 市场价 × 加价倍率（盒装再加溢价）。范围 0.9~3.0。</summary>
         public double Markup
@@ -356,9 +369,12 @@ namespace PCShopSell.Core.Shop
         /// 某类货没有货架就买不到。没设（null，单元测试里）= 后仓的货都能买。
         /// </summary>
         private IReadOnlyDictionary<string,int> _shelfItemLimits;
-        public void SetShelfCapacity(IReadOnlyDictionary<string, double> kgByKind,IReadOnlyDictionary<string,int> itemLimits=null)
+        private Dictionary<string,(int index,double kg,int items)[]> _shelfSlots;
+        public void SetShelfCapacity(IReadOnlyDictionary<string, double> kgByKind,IReadOnlyDictionary<string,int> itemLimits=null,
+            IReadOnlyList<(int index,string kind,double kg,int items)> slots=null)
         {
             _shelfItemLimits=itemLimits;
+            _shelfSlots=slots?.GroupBy(s=>s.kind).ToDictionary(g=>g.Key,g=>g.Select(s=>(s.index,s.kg,s.items)).ToArray());
             _shelfKg = kgByKind == null ? null : new Dictionary<string, double>(kgByKind.Count);
             if (kgByKind != null)
                 foreach (var kv in kgByKind) _shelfKg[kv.Key] = kv.Value;
@@ -374,7 +390,41 @@ namespace PCShopSell.Core.Shop
         }
 
         /// <summary>这类货现在在货架上摆着哪些（后仓里没摆上去的不算）。</summary>
-        public ShelfFill ShelfFillOf(ShelfKind kind) => kind?.Id=="secondhand"?ResaleShelfFill(kind):ShelfPlanner.Fill(Stock, kind, ShelfCapacityOf(kind),kind!=null && _shelfItemLimits!=null && _shelfItemLimits.TryGetValue(kind.Id,out int max)?max:int.MaxValue);
+        public ShelfFill ShelfFillAt(int layoutIndex, ShelfKind kind)
+        {
+            if (kind == null || _shelfSlots == null || !_shelfSlots.TryGetValue(kind.Id,out var slots)) return null;
+            int index = Array.FindIndex(slots,s=>s.index==layoutIndex);
+            return index < 0 ? null : AllocateShelfSlots(kind,slots)[index];
+        }
+
+        private ShelfFill[] AllocateShelfSlots(ShelfKind kind,(int index,double kg,int items)[] slots)
+        {
+            var fills = slots.Select(s=>new ShelfFill(kind,s.kg,s.items)).ToArray();
+            if (kind.Id == "secondhand") FillResaleShelves(fills);
+            else ShelfPlanner.FillShelves(Stock,kind,fills);
+            return fills;
+        }
+
+        public ShelfFill ShelfFillOf(ShelfKind kind)
+        {
+            if (kind == null) return new ShelfFill(null,0,0);
+            int limit = _shelfItemLimits != null && _shelfItemLimits.TryGetValue(kind.Id,out int max) ? max : int.MaxValue;
+            if (_shelfSlots != null && _shelfSlots.TryGetValue(kind.Id,out var slots) && slots.Length > 1)
+            {
+                var fills = AllocateShelfSlots(kind,slots);
+                var combined = new ShelfFill(kind,ShelfCapacityOf(kind),limit) { UsedKg = fills.Sum(f=>f.UsedKg) };
+                foreach (var group in fills.SelectMany(f=>f.Parts).GroupBy(l=>(l.Part,l.Boxed)))
+                    combined.Parts.Add(new StockLine(group.Key.Part,group.Key.Boxed,group.Sum(l=>l.Count)));
+                foreach (var group in fills.SelectMany(f=>f.Goods).GroupBy(l=>l.Key))
+                    combined.Goods.Add(new KeyValuePair<string,int>(group.Key,group.Sum(l=>l.Value)));
+                combined.Resale.AddRange(fills.SelectMany(f=>f.Resale));
+                return combined;
+            }
+            if (kind.Id != "secondhand") return ShelfPlanner.Fill(Stock,kind,ShelfCapacityOf(kind),limit);
+            var resale = new ShelfFill(kind,ShelfCapacityOf(kind),limit);
+            FillResaleShelves(new[]{resale});
+            return resale;
+        }
 
         public ShelfFill ShelfFillOf(PartCategory cat) => ShelfFillOf(ShelfKinds.ForCategory(cat));
 
@@ -492,9 +542,12 @@ namespace PCShopSell.Core.Shop
         /// <summary>店里还没摆好必需的设施（收银台、货架）：不能营业。</summary>
         public bool NotFitted { get; set; }
 
+        public const int DefaultOpenMinute = 8 * 60;
+        public const int DefaultCloseMinute = 22 * 60;
+
         /// <summary>店主定的营业时间（一天里的分钟）。开门 0、关门 1440 = 不限时，有人看店就开。关门比开门早表示过夜营业。</summary>
-        public int OpenMinute { get; private set; }
-        public int CloseMinute { get; private set; } = 24 * 60;
+        public int OpenMinute { get; private set; } = DefaultOpenMinute;
+        public int CloseMinute { get; private set; } = DefaultCloseMinute;
 
         public bool AllDay => OpenMinute == 0 && CloseMinute == 24 * 60;
 
@@ -515,7 +568,9 @@ namespace PCShopSell.Core.Shop
         }
 
         public bool TradingEnabled = true;
-        public bool IsOpenAt(GameTimestamp t) => TradingEnabled && !ForcedClosed && !NotFitted && InHours(t) && (PlayerPresent || EmployeeOnDuty(t));
+        public bool IsOpenAt(GameTimestamp t) => IsOpenAt(t, PlayerPresent);
+        public bool IsOpenAt(GameTimestamp t, bool playerPresent) =>
+            TradingEnabled && !ForcedClosed && !NotFitted && InHours(t) && (playerPresent || EmployeeOnDuty(t));
 
         public Func<GameTimestamp,bool> OpenStatusOf;
         public bool IsOpen => OpenStatusOf?.Invoke(_clock.Now)??IsOpenAt(_clock.Now);
@@ -548,18 +603,18 @@ namespace PCShopSell.Core.Shop
         }
 
         /// <summary>当前时刻每分钟来客的期望人数。</summary>
-        public double ArrivalRatePerMinute(GameTimestamp at)
+        public double ArrivalRatePerMinute(GameTimestamp at) => ArrivalRatePerMinute(Settings, at, Size, LocationFactor,
+            (CompetitionFactorOf?.Invoke() ?? 1.0) * ArrivalTrafficMultiplier);
+
+        public Func<double> StreetTrafficFactorOf;
+        internal double ArrivalTrafficMultiplier => (StreetTrafficFactorOf?.Invoke() ?? 1.0)
+            * TrafficMultiplier * Math.Max(.5, Math.Min(1.5, CityRetailDemandMultiplier)) * (1.0 + Awareness / 100.0);
+
+        internal static double ArrivalRatePerMinute(ShopSettings settings, GameTimestamp at, ShopSize size, double location, double traffic)
         {
-            double retailTraffic = RetailKind == "flowers" ? 1.8 : RetailKind == "models" ? 1.4 : IsGoodsShop ? 3.0 : 1.0;
-            double perHour = Settings.BaseCustomersPerHour * retailTraffic
-                             * Settings.HourFactors[at.Hour]
-                             * ShopSettings.SizeFactor(Size)
-                             * LocationFactor
-                             * (CompetitionFactorOf?.Invoke() ?? 1.0)
-                              * TrafficMultiplier * Math.Max(.5, Math.Min(1.5, CityRetailDemandMultiplier))
-                             * (1.0 + Reputation / 100.0)
-                             * (at.Date.IsWeekend ? Settings.WeekendMultiplier : 1.0);
-            return perHour / 60.0;
+            double perHour = settings.BaseCustomersPerHour * settings.HourFactors[at.Hour]
+                * ShopSettings.SizeFactor(size) * location * (at.Date.IsWeekend ? settings.WeekendMultiplier : 1.0);
+            return Math.Max(0, Math.Min(1, perHour * traffic / 60.0));
         }
 
         /// <summary>
@@ -598,6 +653,7 @@ namespace PCShopSell.Core.Shop
             _ledger.Credit(at.Date, BuildCategory, o.Price, $"{PartCatalog.TierName(o.Tier)}整机", LedgerAttribution.ForShop(ShopId, "build:" + ShopId + ":" + o.Id, "销售"));
             TodaySales += o.Price;
             Reputation += BuildReputationGain;
+            AdjustShopReputation(.5);
             OrderCompleted?.Invoke(o);
             return true;
         }
@@ -619,6 +675,7 @@ namespace PCShopSell.Core.Shop
             ReturnReservedParts(o);
             _orders.Remove(o);
             Reputation = Math.Max(0, Reputation - 1);
+            AdjustShopReputation(-1);
             OrderCancelled?.Invoke(o);
             return true;
         }
@@ -712,7 +769,8 @@ namespace PCShopSell.Core.Shop
             TodayCustomers = 0;
             TodayLost = 0;
             TodaySales = Money.Zero;
-            if (_reputationOwner == null) Reputation *= DailyReputationRetention;
+            Awareness *= DailyReputationRetention;
+            if (_reputationOwner == null) _reputation *= DailyReputationRetention;
         }
 
         private void OnTimeAdvanced(GameTimestamp from, GameTimestamp to)
@@ -721,6 +779,8 @@ namespace PCShopSell.Core.Shop
                 StepMinute(new GameTimestamp(m));
             ExpireOrders(to);
         }
+
+        private double _arrivalCredit, _arrivalThreshold = 1;
 
         private void StepMinute(GameTimestamp now)
         {
@@ -736,8 +796,18 @@ namespace PCShopSell.Core.Shop
             _wasOpen = true;
             WorkMinute?.Invoke(now);
 
-            if (Random.Chance(ArrivalRatePerMinute(now)))
-                Spawn(now);
+            double arrivalRate = ArrivalRatePerMinute(now);
+            if (arrivalRate > 0)
+            {
+                _arrivalCredit += arrivalRate;
+                if (_arrivalCredit >= _arrivalThreshold)
+                {
+                    // Jitter the next arrival, while carrying the fractional demand forward.
+                    _arrivalCredit -= 1;
+                    _arrivalThreshold = Random.Range(.65, 1.35);
+                    Spawn(now);
+                }
+            }
 
             for (int i = _active.Count - 1; i >= 0; i--)
             {
@@ -1044,6 +1114,7 @@ namespace PCShopSell.Core.Shop
             }
             TodaySales += c.Spend;
             _day.Paid++;
+            AdjustShopReputation(.12);
             CustomerPaid?.Invoke(c);
         }
 
@@ -1065,7 +1136,11 @@ namespace PCShopSell.Core.Shop
                 _display.Add(c.DisplayTier);
                 c.DisplayTier = -1;
             }
-            if (reason == LeaveReason.Impatient) Reputation -= 0.3;
+            if (reason == LeaveReason.Impatient)
+            {
+                Reputation -= .3;
+                AdjustShopReputation(-.3);
+            }
             _active.Remove(c);
             _queue.Remove(c);
             c.State = CustomerState.Left;
@@ -1092,6 +1167,7 @@ namespace PCShopSell.Core.Shop
                 ReturnReservedParts(o);
                 _orders.RemoveAt(i);
                 Reputation -= 3;
+                AdjustShopReputation(-2);
                 OrderExpired?.Invoke(o);
             }
         }

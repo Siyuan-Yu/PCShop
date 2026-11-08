@@ -12,6 +12,8 @@ namespace PCShopSell.Core.World
         public int layoutVersion;
         public bool lakeCity;
         public double lakeSceneScale=1;
+        /// <summary>Authored city positions already include this expansion; procedural race locations use it once.</summary>
+        public double expansionScale=1;
         public LayoutLakeParcel[] lakeParcels;
         public LayoutLakePoint[] lakeShore;
         public LayoutLakeBridge[] lakeBridges;
@@ -19,6 +21,7 @@ namespace PCShopSell.Core.World
         public LayoutAgencyDistrictData[] agencyDistricts;
         public LayoutPlaceAliasData[] placeAliases;
         public LayoutBlockData[] blocks;
+        public LayoutResidentData[] expansionResidents;
         public LayoutStreetData[] streets;
         /// <summary>
         /// 画面距离换算成游戏内距离的倍率。画面里的城市是缩小的：
@@ -52,9 +55,11 @@ namespace PCShopSell.Core.World
         public string[] streets;
     }
     [Serializable] public sealed class LayoutPlaceAliasData { public string from,to; }
+    [Serializable] public sealed class LayoutResidentData { public string id, name, homeId, workId; }
     [Serializable]
     public sealed class LayoutBlockData
     {
+        public bool initiallyVacant;
         public string street, model, homeId, entranceNode;
         public int homeNumber;
         public double x,y,width,depth,height,heading;
@@ -97,6 +102,7 @@ namespace PCShopSell.Core.World
     [Serializable]
     public sealed class LayoutPlaceData
     {
+        public bool initiallyVacant;
         public string model;
         public int tier;
         public string street;
@@ -145,6 +151,7 @@ namespace PCShopSell.Core.World
         public string StreetId { get; }
         public bool ExplicitEntrance { get; }
         public bool IsTradable { get; }
+        public bool InitiallyVacant { get; }
         public double EntranceX { get; }
         public double EntranceY { get; }
         public double Width { get; }
@@ -160,14 +167,16 @@ namespace PCShopSell.Core.World
         public string Business { get; }
         public bool IsPlayerShop { get; }
         public IReadOnlyList<PartCategory> Sells { get; }
+        public bool IsElectronicsCounter => Kind == PlaceKind.Wholesaler && Model == "electronics_counter";
 
         public Place(string id, string name, PlaceKind kind, string nodeId,
             ShopSize size = ShopSize.Small, string business = null, bool isPlayerShop = false,
             IReadOnlyList<PartCategory> sells = null, string streetId = null, bool explicitEntrance = false,
             double entranceX = 0, double entranceY = 0, double width = 10, double depth = 9, double heading = 0,
-            bool tradable = false, int openMinute = 0, int closeMinute = 0, string model = null, int tier = 0)
+            bool tradable = false, int openMinute = 0, int closeMinute = 0, string model = null, int tier = 0, bool initiallyVacant = false)
         {
             Model = model; Tier = tier;
+            InitiallyVacant=initiallyVacant;
             Id = id;
             Name = name;
             Kind = kind;
@@ -209,6 +218,7 @@ namespace PCShopSell.Core.World
         public int LayoutVersion { get; private set; }
         public bool IsLakeCity { get; private set; }
         public float LakeSceneScale { get; private set; }=1;
+        public double ExpansionScale { get; private set; }=1;
         public IReadOnlyList<LayoutLakeParcel> LakeParcels { get; private set; }=Array.Empty<LayoutLakeParcel>();
         public IReadOnlyList<LayoutLakePoint> LakeShore { get; private set; } = Array.Empty<LayoutLakePoint>();
         public IReadOnlyList<LayoutLakeBridge> LakeBridges { get; private set; } = Array.Empty<LayoutLakeBridge>();
@@ -218,11 +228,22 @@ namespace PCShopSell.Core.World
         { foreach(var d in AgencyDistricts)if(Array.IndexOf(d.streets??Array.Empty<string>(),street)>=0)return d;return null; }
         public string AgencyCoverageName(Place p)=>AgencyDistrictFor(p?.StreetId)?.name??StreetName(p?.StreetId);
         public IReadOnlyList<LayoutBlockData> Blocks { get; private set; } = Array.Empty<LayoutBlockData>();
+        public IReadOnlyList<LayoutResidentData> ExpansionResidents { get; private set; } = Array.Empty<LayoutResidentData>();
         public WorldMap Map { get; }
         public double DistanceScale { get; }
         public bool HasUniformRoadScale { get; private set; }
         public double TravelDistanceScale { get; private set; }
         public IReadOnlyList<Place> Places => _placeList;
+        /// <summary>街上可以独立进入的地点；电子市场里的档口共用市场入口。</summary>
+        public IEnumerable<Place> PublicPlaces
+        {
+            get
+            {
+                foreach (Place place in _placeList)
+                    if (!place.IsElectronicsCounter)
+                        yield return place;
+            }
+        }
         public IReadOnlyList<PatrolRoute> Patrols => _patrols;
         public IReadOnlyList<LayoutStreetData> Streets { get; private set; } = Array.Empty<LayoutStreetData>();
         public string StreetName(string id)
@@ -242,7 +263,7 @@ namespace PCShopSell.Core.World
         /// <summary>入口在该节点上的地点；没有则返回 null。</summary>
         public Place PlaceAtNode(string nodeId)
         {
-            foreach (Place p in _placeList)
+            foreach (Place p in PublicPlaces)
             {
                 if (p.NodeId == nodeId) return p;
             }
@@ -288,8 +309,10 @@ namespace PCShopSell.Core.World
             layout.TravelDistanceScale = data.distanceScale * (layout.HasUniformRoadScale ? data.uniformRoadScale : 1);
             layout.AgencyDistricts=data.agencyDistricts??Array.Empty<LayoutAgencyDistrictData>();
             layout.LayoutVersion=data.layoutVersion; layout.Blocks=data.blocks??Array.Empty<LayoutBlockData>();
+            layout.ExpansionResidents = data.expansionResidents ?? Array.Empty<LayoutResidentData>();
             layout.IsLakeCity=data.lakeCity;layout.LakeShore=data.lakeShore??Array.Empty<LayoutLakePoint>();
             layout.LakeSceneScale=data.lakeSceneScale>0?(float)data.lakeSceneScale:1;layout.LakeParcels=data.lakeParcels??Array.Empty<LayoutLakeParcel>();
+            layout.ExpansionScale=data.expansionScale>0?data.expansionScale:1;
             layout.LakeBridges=data.lakeBridges??Array.Empty<LayoutLakeBridge>();
             layout.Streets = data.streets ?? Array.Empty<LayoutStreetData>();
             if (data.patrols != null)
@@ -318,7 +341,7 @@ namespace PCShopSell.Core.World
 
                     var place = new Place(p.id, p.name ?? p.id, ParseKind(p.kind), p.node,
                         ParseSize(p.size), p.business, p.player, ParseSells(p.sells), p.street, p.explicitEntrance,
-                        p.entranceX, p.entranceY, p.width, p.depth, p.heading, p.tradable, p.openMinute, p.closeMinute, p.model, p.tier);
+                        p.entranceX, p.entranceY, p.width, p.depth, p.heading, p.tradable, p.openMinute, p.closeMinute, p.model, p.tier, p.initiallyVacant);
                     layout._places.Add(place.Id, place);
                     layout._placeList.Add(place);
                 }
@@ -333,7 +356,7 @@ namespace PCShopSell.Core.World
                 var residence = new Place(block.homeId, name, PlaceKind.Home, block.entranceNode,
                     streetId: block.street, explicitEntrance: true, entranceX: block.x - node.X,
                     entranceY: block.y - node.Y, width: block.width, depth: block.depth, heading: block.heading,
-                    model: block.model, tier: block.tier);
+                    model: block.model, tier: block.tier, initiallyVacant: block.initiallyVacant);
                 layout._places.Add(residence.Id, residence);
                 layout._placeList.Add(residence);
             }

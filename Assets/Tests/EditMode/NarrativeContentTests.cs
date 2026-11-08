@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Common;
@@ -56,16 +56,18 @@ namespace PCShopSell.Tests
             foreach(var a in DistrictNarrativeCatalog.SideStories){Assert.NotNull(CityLifeCatalog.Person(a.PersonId));foreach(var id in a.RelatedPeople)Assert.NotNull(CityLifeCatalog.Person(id),id);}
             var plan=DistrictNarrativeCatalog.CreatePlan();foreach(var n in nodes)Assert.True(plan.Any(c=>c.Modules.Contains(n.Module)),n.Module);
         }
-        [Test] public void MovingModulesPreservesThresholdsAndDoesNotMutateDefaultPlan()
+
+        [Test] public void MainlineHasExactlyOneCurrentRoutePerDistrict()
         {
-            var original=DistrictNarrativeCatalog.CreatePlan();var moved=DistrictNarrativeCatalog.CreatePlan(true,true);
-            Assert.True(original[1].Gates.Any(g=>g.Fact==NarrativeFact.OwnBrandListed));
-            Assert.False(moved[1].Gates.Any(g=>g.Fact==NarrativeFact.OwnBrandListed));
-            Assert.True(moved[2].Gates.Any(g=>g.Fact==NarrativeFact.OwnBrandListed));
-            Assert.False(moved[2].Gates.Any(g=>g.Fact==NarrativeFact.ClosedSectorMonthlyRevenue));
-            Assert.True(moved[3].Gates.Any(g=>g.Fact==NarrativeFact.ClosedSectorMonthlyRevenue&&g.Minimum==100000000&&g.Scope=="one_owned_sector"));
-            Assert.True(moved[3].Gates.Any(g=>g.Fact==NarrativeFact.FollowingMonth));
-            moved[0].Gates[0].Minimum=99;Assert.AreEqual(5,original[0].Gates[0].Minimum);Assert.AreEqual(5,DistrictNarrativeCatalog.CreatePlan()[0].Gates[0].Minimum);
+            var plan=DistrictNarrativeCatalog.CreatePlan();
+            Assert.AreEqual(3,plan.Length);
+            CollectionAssert.AreEqual(new[]{"community_entry","brand_exhibition","enterprise_tender"},plan.Select(c=>c.Modules.Single()));
+            Assert.AreEqual(16,DistrictNarrativeCatalog.Nodes.Count);
+            Assert.AreEqual(5,DistrictNarrativeCatalog.Nodes.Count(n=>n.Module=="community_entry"));
+            Assert.AreEqual(5,DistrictNarrativeCatalog.Nodes.Count(n=>n.Module=="brand_exhibition"));
+            Assert.AreEqual(6,DistrictNarrativeCatalog.Nodes.Count(n=>n.Module=="enterprise_tender"));
+            Assert.True(plan[1].Gates.Any(g=>g.Fact==NarrativeFact.OwnBrandFormed));
+            Assert.AreEqual(NarrativeFact.ClosedSectorMonthlyRevenue,plan[2].Gates.Single().Fact);
         }
         [Test] public void NewPeopleHaveRealSessionsAndAuthoredStoriesSurviveSaveLoad()
         {

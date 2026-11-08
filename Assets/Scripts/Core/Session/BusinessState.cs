@@ -8,6 +8,7 @@ namespace PCShopSell.Core.Session
     [Serializable] public sealed class SupplierDebt
     {
         public int Id, DueDay, LastFeeDay;
+        public string ShopId, OrderId;
         public long Principal, Fees;
         public Money Amount => Money.FromCents(Principal + Fees);
         public SupplierDebt Copy() => (SupplierDebt)MemberwiseClone();
@@ -54,6 +55,7 @@ namespace PCShopSell.Core.Session
     }
     [Serializable] public sealed class ManagedVenture
     {
+        public int RentStartDay;
         public string PlaceId, Kind;
         public int OpenDay, LastSettledDay;
         public long CapitalCents, DepositCents, RentCents, ReserveCents, TotalOperatingCents, LastSalesCents, LastCostsCents;

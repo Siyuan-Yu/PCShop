@@ -151,8 +151,8 @@ namespace PCShopSell.Core.Session
             if (!DebugRestoreBrandCreationSuburbHome())
                 throw new InvalidOperationException("品牌创建验收档无法保留城郊住处");
 
-            _owned.Add(VehicleKind.EBike);
-            SyncGarage();
+            PlaceAcquiredMotor(NewMotor(MotorCatalog.Legacy(VehicleKind.EBike).Id), true, null);
+
             if (!SetVehicle(VehicleKind.EBike))
                 throw new InvalidOperationException("品牌创建验收档无法启用小电驴");
             RefreshBrandTraffic();

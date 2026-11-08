@@ -128,7 +128,7 @@ namespace PCShopSell.Game.UI
             var agency = PreferredAgency(property);
             if (agency == null) { Toast("当前没有可前往的中介。"); return; }
             CloseModalWindows();
-            if (S.CurrentPlace == agency) OpenStreetPlace(agency);
+            if (S.CurrentPlace == agency) OnEnteredPlace(agency);
             else _ctrl.GoToPlace(agency);
         }
     }

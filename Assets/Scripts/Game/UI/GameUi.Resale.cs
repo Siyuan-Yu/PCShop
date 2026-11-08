@@ -29,12 +29,12 @@ namespace PCShopSell.Game.UI
                 Line(parent,"已售出 · "+GameSession.UsedNames[sold.Product]+" #"+sold.Id+" · 收入 ¥"+price+" · 成本 ¥"+sold.Cost+" · 毛利 ¥"+(price-sold.Cost),15,price>=sold.Cost?Ui.Good:Ui.Warn).name="UsedSold_"+sold.Id;
             }
         }
-        private void BuildUsedStock(Transform parent,Window owner=null,bool shelfOnly=false,bool pricingOnly=false)
+        private void BuildUsedStock(Transform parent,Window owner=null,bool shelfOnly=false,bool pricingOnly=false,int[] displayed=null)
         {
             var state=S.SpecialBusiness(S.CurrentShop.Place.Id);
             var onShelf=S.PlayerShop.ShelfFillOf(ShelfKinds.Get("secondhand")).Resale.Select(i=>i.Id).ToArray();
             Line(parent,pricingOnly?"二手商品定价":"二手转售库存",19,Ui.Accent);
-            var items=state.Used.Where(i=>i.Owned&&!i.Sold&&(!shelfOnly||i.Listed)&&(!pricingOnly||i.Inspected)).ToArray();
+            var items=state.Used.Where(i=>i.Owned&&!i.Sold&&(!shelfOnly||(displayed??onShelf).Contains(i.Id))&&(!pricingOnly||i.Inspected)).ToArray();
             Transform container=parent;
             if(shelfOnly)
             {

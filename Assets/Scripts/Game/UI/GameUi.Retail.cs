@@ -135,11 +135,15 @@ namespace PCShopSell.Game.UI
             }
             else if(source.Kind==PlaceKind.Wholesaler)
             {
-                foreach(var part in PartCatalog.All.Where(item=>S.StallSells(source,item)))
+                var stalls = S.WholesaleStallsAt(source).ToArray();
+                foreach (var part in PartCatalog.All)
+                foreach (var stall in stalls.Where(s => S.StallSells(s, part)))
                 {
-                    var item=part;
-                    Offer("part:"+item.Id,item.Name,PartCatalog.CategoryName(item.Category),PartUnitKg(item),S.StallPrice(source,item),
-                        "市价 "+S.Market.PriceOf(item)+" · 盒装正品 · 本档口该型号每日上限 "+S.SupplierCapacity(source.Id,item.Id)+" · 今日可购 "+S.StallRemaining(source,item),()=>S.CartAddStall(source,item,1),()=>S.StallRemaining(source,item)-S.CartAmount("part:"+item.Id));
+                    string key = S.StallCartKey(stall, part);
+                    string supplier = GameSession.StallSupplierName(stall);
+                    Offer(key, part.Name, PartCatalog.CategoryName(part.Category), PartUnitKg(part), S.StallPrice(stall, part),
+                        $"{supplier} · 今日可购 {S.StallRemaining(stall, part)}/{S.SupplierCapacity(stall.Id, part.Id)} · 市价 {S.Market.PriceOf(part)}",
+                        () => S.CartAddStall(stall, part, 1), () => S.StallRemaining(stall, part) - S.CartAmount(key));
                 }
             }
             else if(S.IsCityClothingRetail(source))
@@ -206,6 +210,14 @@ namespace PCShopSell.Game.UI
                         ()=>S.HasUpgrade(item.Id)?0:Math.Max(0,1-S.CartAmount("upgrade:"+item.Id)));
                 }
             Line(w.Content,"商品购买 · "+(S.IsPlaceOpen(source)?"营业中 · ":"已打烊 · ")+S.OpeningHoursText(source),19,Ui.Accent);
+            if (source.Kind == PlaceKind.Wholesaler)
+                Para(w.Content, "按配件分类选货，不同档口的商品可以一起结账。每个档口单独计算每日可售数量。", 16, Ui.Dim);
+            var missing=S.HasShop && source.Business==GameSession.MallBusiness && !S.QuestCompleted("mall")
+                ? S.MissingOpeningFurniture() : Array.Empty<string>();
+            if (missing.Length>0)
+            {
+                Line(w.Content,"开店待买 · "+string.Join("、",missing.Select(id=>FurnitureCatalog.Get(id).Name+" ×1")),16,Ui.Accent);
+            }
             Para(w.Content,"选择商品数量，加入购物车后统一结账。可携带商品优先放背包，也可叫车；设备和车辆直接登记为已购资产。",16,Ui.Dim);
             var links=Ui.Row(w.Content,36,6);
             if(wholesale && (source.Business==GameSession.FarmBusiness || source.Business==Gifts.TobaccoBusiness))
@@ -218,12 +230,14 @@ namespace PCShopSell.Game.UI
             var tabs=source.Business==GameSession.MallBusiness
                 ?new List<string>{"全部","电器","非电器","装饰"}
                 :new[]{"全部"}.Concat(offers.Select(o=>o.Group)).Distinct().ToList();
+            if(missing.Length>0)tabs.Insert(0,"开店清单");
             bool clothingWholesale=wholesale && offers.Any(o=>o.Season!=null);
             string tab=ShopTabs(w,source,tabs,label:clothingWholesale?"品质":null);
             string season=clothingWholesale?ShopTabs(w,source,new[]{"全部","春秋装","夏装","冬装"},filterKey:"season",label:"季节"):"全部";
             if(clothingWholesale)Line(w.Content,"当前"+CityWeather.Season(S.Clock.Now.TotalMinutes)+"季 · 应季服装需求较多，反季服装仍有需求。",16,Ui.Dim);
             var list=GoodsList(w.Content);
-            var visible=offers.Where(o=>(tab=="全部" || o.Group==tab) && (season=="全部" || o.Season==season)).ToList();
+            var visible=offers.Where(o=>(tab=="全部" || o.Group==tab
+                || tab=="开店清单" && missing.Any(id=>o.Key=="furn:"+id)) && (season=="全部" || o.Season==season)).ToList();
             if(visible.Count==0)Para(list,offers.Count==0?"这里暂时没有可购买的商品。":"当前筛选下没有商品，可切换品质或季节。",18,Ui.Dim);
             foreach(var product in visible)
             {

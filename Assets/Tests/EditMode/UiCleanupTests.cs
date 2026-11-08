@@ -98,6 +98,32 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void QuickStockTradeShowsFailuresAndConfirmsBeforeUsingReserve()
+        {
+            using (var r = new Rig())
+            {
+                r.S.InstallApp(PhoneApps.Securities);
+                r.S.RestockReserveYuan = r.S.Ledger.Balance.Cents / 100;
+                r.Ui.OpenCityInvestments();
+                var cash = r.S.Ledger.Balance;
+
+                r.Button("StockQuickSell_city_chip").onClick.Invoke();
+                var feedback = r.Components<Text>().Single(t => t.name == "StockTradeFeedback");
+                StringAssert.Contains("卖出数量超过实际持股", feedback.text);
+                Assert.AreEqual(cash, r.S.Ledger.Balance);
+
+                r.Button("StockQuickBuy_city_chip").onClick.Invoke();
+                StringAssert.Contains("买入会动用预留资金", r.Text);
+                Assert.AreEqual(cash, r.S.Ledger.Balance);
+                Assert.Zero(r.S.CityInvestmentUnits("city_chip"));
+
+                r.Button("StockReserveConfirm").onClick.Invoke();
+                Assert.AreEqual(GameSession.StockLotSize, r.S.CityInvestmentUnits("city_chip"));
+                StringAssert.Contains("已完成", r.Components<Text>().Single(t => t.name == "StockTradeFeedback").text);
+            }
+        }
+
+        [Test]
         public void BrandWindowIsIndependentFromBusinessNavigation()
         {
             using (var r = new Rig())

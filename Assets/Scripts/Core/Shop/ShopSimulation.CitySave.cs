@@ -26,6 +26,7 @@ namespace PCShopSell.Core.Shop
         public string shopId;
         public int nextCustomerId, checkoutMinutes, todayCustomers, todayLost;
         public long todaySalesCents;
+        public double arrivalCredit, arrivalThreshold = 1;
         public bool wasOpen;
         public CitySavedCustomer[] customers;
         public int[] queue;
@@ -42,6 +43,7 @@ namespace PCShopSell.Core.Shop
         public CitySavedShopVisits SaveCityCustomers() => new CitySavedShopVisits {
             shopId = ShopId, nextCustomerId = _nextCustomerId, checkoutMinutes = _employeeBusyMinutes, wasOpen = _wasOpen,
             todayCustomers = TodayCustomers, todayLost = TodayLost, todaySalesCents = TodaySales.Cents,
+            arrivalCredit = _arrivalCredit, arrivalThreshold = _arrivalThreshold,
             queue = _queue.Select(c => c.Id).ToArray(),
             day = new DayReportData { day = _day.Date.TotalDays, customers = _day.Customers, paid = _day.Paid, orders = _day.Orders,
                 expensive = _day.LostTooExpensive, impatient = _day.LostImpatient, stock = _day.LostNoStock, cash = _day.LostNoCash, closed = _day.LostClosed, revenue = _day.Revenue.Cents },
@@ -89,6 +91,8 @@ namespace PCShopSell.Core.Shop
             _nextCustomerId = Math.Max(Math.Max(1, data.nextCustomerId), byId.Count == 0 ? 1 : byId.Keys.Max() + 1);
             _employeeBusyMinutes = Math.Max(0, data.checkoutMinutes); _wasOpen = data.wasOpen;
             TodayCustomers = Math.Max(0, data.todayCustomers); TodayLost = Math.Max(0, data.todayLost); TodaySales = Money.FromCents(Math.Max(0, data.todaySalesCents));
+            _arrivalCredit = data.arrivalCredit >= -.35 && data.arrivalCredit <= 1.35 ? data.arrivalCredit : 0;
+            _arrivalThreshold = data.arrivalThreshold >= .65 && data.arrivalThreshold <= 1.35 ? data.arrivalThreshold : 1;
             var d = data.day;
             _day = d == null ? new DayReport() : new DayReport { Date = new GameDate(Math.Max(0, d.day)), Customers = d.customers,
                 Paid = d.paid, Orders = d.orders, LostTooExpensive = d.expensive, LostImpatient = d.impatient, LostNoStock = d.stock,

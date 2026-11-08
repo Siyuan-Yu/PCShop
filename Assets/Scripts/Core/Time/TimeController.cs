@@ -13,8 +13,8 @@ namespace PCShopSell.Core.Time
         /// <summary>单次 Tick 最多计入的真实秒数，避免卡顿一帧后时间猛跳。</summary>
         public const double MaxTickSeconds = 0.25;
 
-        /// <summary>整个世界相对最初（1 游戏分钟 = 0.7 秒）的加快倍数：站着的时钟、出行 / 走路、交警追逐、顾客在店里走都按这个倍数一起加快，彼此的比例不变。</summary>
-        public const double WorldRate = 3.0;
+        /// <summary>世界相对最初（1 游戏分钟 = 0.7 秒）的倍率：原 3 倍速度降低 30% 为 2.1 倍。时钟与出行共用倍率，保持每段路的游戏耗时；赛车使用独立真实时间。</summary>
+        public const double WorldRate = 2.1;
 
         /// <summary>
         /// 1× 下 1 游戏分钟的真实秒数。所有实时状态共用此时钟，
@@ -33,7 +33,7 @@ namespace PCShopSell.Core.Time
             LastDeltaMinutes=0;
         }
 
-        /// <summary>1× 下一个游戏分钟对应的真实秒数（一天 3~5 分钟约为 0.19~0.31）。</summary>
+        /// <summary>1× 下一个游戏分钟对应的真实秒数；默认 1/3 秒，即现实 1 秒 = 游戏 3 分钟，一天 8 分钟。</summary>
         public double SecondsPerMinuteAt1x
         {
             get => _secondsPerMinute;

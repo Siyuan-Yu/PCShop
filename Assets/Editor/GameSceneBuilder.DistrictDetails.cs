@@ -26,9 +26,9 @@ namespace PCShopSell.EditorTools
                 Check(s.BeginDistrictMeeting(node,choice),"schedule "+node);
                 _game.Ui.CloseAllWindows();_game.Ui.OpenDistrictStory();Frame(0);_game.SnapCamera();Shot(filename,1600,900);
             }
-            Scenario("park.change",2,"consent","community-coordination");
-            Scenario("model.clues",2,"supplier","model-investigation");
-            Scenario("garden.terms",3,"respect","garden-consent");
+            Scenario("expo.invitation",2,null,"expo-invitation");
+            Scenario("community.meeting",1,null,"community-pages");
+            Scenario("tender.invitation",3,null,"tender-invitation");
             Log("DISTRICT DETAILS GRAPHICS COMPLETE");
         });
     }

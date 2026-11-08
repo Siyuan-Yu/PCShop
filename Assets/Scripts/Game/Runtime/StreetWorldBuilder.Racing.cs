@@ -5,7 +5,7 @@ namespace PCShopSell.Game.Runtime
 {
     public sealed partial class StreetWorldBuilder
     {
-        private static void BuildRegionalGarage(Transform root,Place p,Vector3 node,Vector3 door,PlaceVisual vis)
+        private void BuildRegionalGarage(Transform root,Place p,Vector3 node,Vector3 door,PlaceVisual vis)
         {
             // A compact annex beside the existing reception, not a new parking island.
             float w=(float)p.Width,d=(float)p.Depth;
@@ -17,7 +17,7 @@ namespace PCShopSell.Game.Runtime
             for(int i=0;i<7;i++)Prims.Box(root,"DoorSlat",new Vector3(0,.35f+i*.36f,-.16f),new Vector3(w-1,.035f,.025f),Mats.Lit(ArtDirection.Ink));
             Prims.SignText(root,"车库",new Vector3(0,3.2f,-.2f),w-.7f,.45f,ArtDirection.Cream);
             var delta=door-node;
-            if(delta.sqrMagnitude>.1f)
+            if(!_city.IsLakeCity && delta.sqrMagnitude>.1f)
             {
                 var step=Prims.Box(root,"GarageWalkway",root.InverseTransformPoint((door+node)*.5f)+Vector3.up*.08f,
                     new Vector3(1.8f,.38f,delta.magnitude),Mats.Lit(ArtDirection.Hex("858B77")));
@@ -32,12 +32,15 @@ namespace PCShopSell.Game.Runtime
                 Mathf.Clamp(door.z,(float)(track.Y-track.Depth/2+4),(float)(track.Y+track.Depth/2-4)));
             var delta=edge-door;delta.y=0;
             if(delta.sqrMagnitude<.01f)return;
-            var landing=Prims.Box(root,"RaceEntranceLanding",root.InverseTransformPoint((door+edge)*.5f)+Vector3.up*.02f,
+            var center = (door + edge) * .5f;
+            center.y = Mathf.Max(.32f, door.y - .01f) - .3f;
+            var landing=Prims.Box(root,"RaceEntranceLanding",root.InverseTransformPoint(center),
                 new Vector3(10,.6f,delta.magnitude+10),Mats.Lit(ArtDirection.Hex("858B77")));
             landing.transform.rotation=Quaternion.LookRotation(delta);
             var resources=root.gameObject.AddComponent<CityLandscapeResources>();
             var normal=Vector3.Cross(Vector3.up,delta.normalized)*3.5f;
-            var start=door-delta.normalized*5+Vector3.up*.26f;var end=edge+delta.normalized*3+Vector3.up*.82f;
+            var start=door-delta.normalized*5;start.y=Mathf.Max(.26f,door.y+.02f);
+            var end=edge+delta.normalized*3+Vector3.up*.82f;
             var vertices=new[]{root.InverseTransformPoint(start-normal),root.InverseTransformPoint(end-normal),root.InverseTransformPoint(start+normal),root.InverseTransformPoint(end+normal)};
             var mesh=new Mesh{name="RaceEntranceRamp"};mesh.vertices=vertices;mesh.triangles=new[]{0,1,2,2,1,3};mesh.RecalculateNormals();mesh.RecalculateBounds();resources.Owned.Add(mesh);
             var ramp=new GameObject("RaceEntranceRamp",typeof(MeshFilter),typeof(MeshRenderer));ramp.transform.SetParent(root,false);
@@ -46,16 +49,32 @@ namespace PCShopSell.Game.Runtime
         private void BuildRaceCauseways()
         {
             var root=new GameObject("LakeRaceCauseways").transform;root.SetParent(_root,false);
-            var done=new HashSet<string>();
-            foreach(var n in _city.Map.Nodes)foreach(var e in _city.Map.NeighborsOf(n.Id))
+            root.gameObject.AddComponent<CityLandscapeResources>();
+            float top = LakeAccessHeight(_city) - .01f;
+            const float bottom = -.30f;
+            var vertices = new List<Vector3>();
+            var triangles = new List<int>();
+            foreach (var segment in _lakeAccessSurfaces)
             {
-                if(!n.Id.StartsWith("race_")&&!e.To.StartsWith("race_")&&!n.Id.StartsWith("motor_")&&!e.To.StartsWith("motor_"))continue;
-                string key=string.CompareOrdinal(n.Id,e.To)<0?n.Id+":"+e.To:e.To+":"+n.Id;if(!done.Add(key))continue;
-                var a=NodeWorld(n.Id);var b=NodeWorld(e.To);var delta=b-a;var at=(a+b)*.5f;
-                // Support sits below the shared asphalt/paving; do not draw a second road or crossing kerbs.
-                var road=Prims.Box(root,"RaceAccessCauseway",at-Vector3.up*.06f,new Vector3(9.8f,.48f,delta.magnitude),Mats.Lit(ArtDirection.Hex("858B77")));road.transform.rotation=Quaternion.LookRotation(delta);
+                // Match the rounded paving footprint and let the shared street mesh own the top.
+                var outline = RoadSurfaceGeometry.Road(segment.A, segment.B, segment.Width);
+                for (int i = 0; i < outline.Length; i++)
+                {
+                    var a = outline[i];
+                    var b = outline[(i + 1) % outline.Length];
+                    int start = vertices.Count;
+                    vertices.Add(new Vector3(a.x, bottom, a.y));
+                    vertices.Add(new Vector3(a.x, top, a.y));
+                    vertices.Add(new Vector3(b.x, bottom, b.y));
+                    vertices.Add(new Vector3(b.x, top, b.y));
+                    triangles.Add(start); triangles.Add(start + 1); triangles.Add(start + 2);
+                    triangles.Add(start + 2); triangles.Add(start + 1); triangles.Add(start + 3);
+                }
             }
-            Prims.Box(root,"StarterMotorHubBank",new Vector3(-550,-.005f,-135),new Vector3(65,.45f,65),Mats.Lit(ArtDirection.Sage));
+            if (vertices.Count > 0) LandscapeMesh(root, "RaceAccessCauseway", vertices, triangles, Mats.Lit(ArtDirection.Hex("858B77")));
+            float scale=(float)_city.ExpansionScale;
+            float bankTop = top - .005f;
+            Prims.Box(root,"StarterMotorHubBank",new Vector3(-550*scale,(bankTop+bottom)*.5f,-135*scale),new Vector3(65*scale,bankTop-bottom,65*scale),Mats.Lit(ArtDirection.Sage));
             StaticBatchingUtility.Combine(root.gameObject);
         }
     }

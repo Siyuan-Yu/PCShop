@@ -14,22 +14,16 @@ namespace PCShopSell.Core.Session
         {
             if(PendingShopKindPlaceId!=null)return Fail("请先确认上一间铺子的经营类型。");
             if(!City.HasPlace(placeId))return false;
-            bool first=!HasShop,choose=(first||newShop)&&!IsDedicatedVenue(City.GetPlace(placeId));
-            if(choose)
-            {
-                Flags.Add(OpeningChoicePrefix+placeId);
-                if(first)Flags.Add("shop:choose-first:"+placeId);
-            }
+            bool choose=(!HasShop||newShop)&&!IsDedicatedVenue(City.GetPlace(placeId));
+            if(choose)Flags.Add(OpeningChoicePrefix+placeId);
             if(SignLease(placeId,newShop))return true;
-            if(choose){Flags.Remove(OpeningChoicePrefix+placeId);Flags.Remove("shop:choose-first:"+placeId);}
+            if(choose)Flags.Remove(OpeningChoicePrefix+placeId);
             return false;
         }
-        public string OpeningKindBlocker(string placeId,string kind)=>!RetailShopTypes.All.Contains(kind)?"请选择经营类型"
-            :Flags.Contains("shop:choose-first:"+placeId)?null:RetailTypeBlocker(kind);
         public bool ConfirmOpeningKind(string placeId,string kind)
         {
             if(PendingShopKindPlaceId!=placeId)return Fail("这间店已完成经营类型确认。");
-            string blocker=OpeningKindBlocker(placeId,kind);if(blocker!=null)return Fail(blocker);
+            string blocker=RetailTypeBlocker(kind);if(blocker!=null)return Fail(blocker);
             Flags.Remove(OpeningChoicePrefix+placeId);Flags.Remove("shop:choose-first:"+placeId);
             if(PendingLease?.PlaceId==placeId)PendingRetailKind=kind;
             else
@@ -50,37 +44,45 @@ namespace PCShopSell.Core.Session
         }
 
         public static string[] OpeningFurniture(string kind)=>kind=="restaurant"
-            ?new[]{"restaurant_prep","restaurant_stove","restaurant_pass","restaurant_table",FurnitureCatalog.Fridge}
+            ?new[]{"restaurant_prep","restaurant_stove","restaurant_pass","restaurant_table",FurnitureCatalog.FridgeSmall}
             :kind=="secondhand"?new[]{"used_buydesk","used_display",FurnitureCatalog.Shelf,FurnitureCatalog.ShopCounter}
+            :kind==PetShopCatalog.ShopKind?new[]{FurnitureCatalog.Shelf,FurnitureCatalog.ShopCounter,PetShopCatalog.SmallHouse}
             :new[]{FurnitureCatalog.Shelf,FurnitureCatalog.ShopCounter};
 
         private string OpeningRewardKind(string id)=>Flags.FirstOrDefault(f=>f.StartsWith("tutorial:reward:"+id+":"))?.Substring(("tutorial:reward:"+id+":").Length);
+        public string[] MissingOpeningFurniture()
+        {
+            if (!HasShop) return Array.Empty<string>();
+            return OpeningFurniture(RetailKind).Where(id =>
+            {
+                bool Matches(FurnitureDef item) => item.Id == id
+                    || id == FurnitureCatalog.Shelf && item.Fixture == FixtureKind.Shelf
+                    || id == FurnitureCatalog.FridgeSmall && item.Role == FurnitureRole.Fridge;
+                return !FurnitureCatalog.All.Where(Matches).Any(item => _shopLayout.Any(p => p.Id == item.Id)
+                    || FurnitureOwnedUnplaced(item.Id) > 0);
+            }).ToArray();
+        }
+
         public string OpeningRewardText(string id)
         {
+            if(id=="rent")return null;
             string kind=OpeningRewardKind(id)??RetailKind;
             if(!HasShop&&OpeningRewardKind(id)==null)return "按签约时选择的经营类型发放";
-            if(id=="rent")return string.Join(" + ",OpeningFurniture(kind).Select(f=>FurnitureCatalog.Get(f).Name+" ×1"));
             return kind=="restaurant"?"大米 2 千克 + 青菜、鸡蛋、五花肉各 4 份"
                 :kind=="clothing"?"当季基础服装两款，各 3 件"
                 :kind=="models"?"常规模型两款，各 3 件"
                 :kind=="secondhand"?"两件已鉴定的二手好货"
-                :kind=="computer"?"入门 CPU + 入门显卡":"本店品类商品两款，各 3 件";
+                :kind=="computer"?"入门 CPU + 入门显卡":kind==PetShopCatalog.ShopKind?"猫粮、狗粮、猫砂各 3 袋，逗猫棒、软球各 1 件":"本店品类商品两款，各 3 件";
         }
 
         internal void GrantOpeningReward(string id,bool legacy=false)
         {
-            if(OpeningRewardKind(id)!=null)return;
+            if(id=="rent"||OpeningRewardKind(id)!=null)return;
             string kind=RetailKind;
             Flags.Add("tutorial:reward:"+id+":"+kind);
-            // Old computer rewards already exist. Other old businesses receive their missing opening equipment once.
+            // Old computer saves already received their starter stock.
             if(legacy&&kind=="computer")return;
-            if(id=="rent")
-            {
-                foreach(string furniture in OpeningFurniture(kind))
-                    if(!legacy||FurnitureOwnedUnplaced(furniture)+MyShops.Sum(s=>s.Layout.Count(p=>p.Id==furniture))==0)
-                        AddFurniture(furniture,1);
-            }
-            else if(kind=="restaurant")
+            if(kind=="restaurant")
             {
                 var food=CurrentShop.Locker.Food;food.RiceKg+=2;
                 foreach(string ingredient in RecipeIngredients)
@@ -103,6 +105,14 @@ namespace PCShopSell.Core.Session
                 PlayerShop.Stock.ForceAdd(PartCatalog.Get("cpu0"),true,1);
                 PlayerShop.Stock.ForceAdd(PartCatalog.Get("gpu0"),true,1);
             }
+            else if(kind==PetShopCatalog.ShopKind)
+            {
+                PlayerShop.Stock.ForceAddGoods(PetShopCatalog.CatFood,3);
+                PlayerShop.Stock.ForceAddGoods(PetShopCatalog.DogFood,3);
+                PlayerShop.Stock.ForceAddGoods(PetShopCatalog.BasicLitter,3);
+                PlayerShop.Stock.ForceAddGoods(PetShopCatalog.Wand,1);
+                PlayerShop.Stock.ForceAddGoods(PetShopCatalog.Ball,1);
+            }
             else
             {
                 var goods=kind=="clothing"?ClothingProducts.All.OrderByDescending(g=>ClothingProducts.IsInSeason(g.Id,Clock.Now.TotalMinutes)).ThenBy(g=>g.Price.Yuan)
@@ -114,8 +124,7 @@ namespace PCShopSell.Core.Session
         private void MigrateOpeningRewards()
         {
             if(!HasShop||IsDedicatedVenue(CurrentShop.Place))return;
-            foreach(string id in new[]{"rent","mall"})
-                if(QuestCompleted(id)&&OpeningRewardKind(id)==null)GrantOpeningReward(id,true);
+            if(QuestCompleted("mall")&&OpeningRewardKind("mall")==null)GrantOpeningReward("mall",true);
         }
     }
 }

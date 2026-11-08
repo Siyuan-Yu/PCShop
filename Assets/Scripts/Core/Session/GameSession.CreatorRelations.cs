@@ -9,7 +9,7 @@ namespace PCShopSell.Core.Session
     {
         public bool HasMcn {get;private set;}
         public string RomanceId {get;private set;}
-        public int BusinessStanding => Math.Min(100,(int)(PlayerShop.Reputation*.6 + Math.Log10(Math.Max(1,NetWorth().Yuan/1000.0))*10) + (_owned.Contains(VehicleKind.Car) ? 5 : 0));
+        public int BusinessStanding => Math.Min(100,(int)(PlayerShop.Reputation*.6 + Math.Log10(Math.Max(1,NetWorth().Yuan/1000.0))*10) + (VehicleCount(VehicleKind.Car) > 0 ? 5 : 0));
         public long McnDailyWages => HasMcn ? 60+30*_creators.Count(x=>x.McnUntilDay>Clock.Today.TotalDays) : 0;
         public bool FoundMcn()
         {

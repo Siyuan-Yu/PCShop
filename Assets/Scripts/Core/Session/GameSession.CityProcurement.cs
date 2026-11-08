@@ -70,14 +70,23 @@ namespace PCShopSell.Core.Session
         /// <summary>Reading a default policy never saves, starts a purchase or changes the focused shop.</summary>
         public ProcurementPolicy ProcurementPolicyFor(string shopId, PurchaseGoodsKind kind, string productId)
         {
-            if (_cityProcurementPolicies.TryGetValue(DemandKey(shopId, kind, productId), out var saved)) return saved.Copy();
+            _cityProcurementPolicies.TryGetValue(DemandKey(shopId, kind, productId), out var saved);
+            if (saved != null && saved.Primary != ProcurementMethod.Online1788) return saved.Copy();
             var shop = ShopAt(shopId);
             int target = kind == PurchaseGoodsKind.Part && shop != null && shop.Restock.TryGetValue(productId, out int t) ? t : 0;
-            var buyer = shop?.Buyer;
-            bool assigned = buyer?.PurchasePlan != null && buyer.PurchasePlan.Daily && buyer.PurchasePlan.Items.Any(i => i.Kind == kind && i.PartId == productId);
-            return new ProcurementPolicy { ShopId = shopId, Kind = kind, ProductId = productId, Target = target,
-                Primary = assigned || kind != PurchaseGoodsKind.Part ? ProcurementMethod.Employee : ProcurementMethod.Online1788,
-                EmployeeId = assigned ? buyer.Id : null };
+            var policy = saved?.Copy() ?? new ProcurementPolicy { ShopId = shopId, Kind = kind, ProductId = productId, Target = target,
+                Primary = kind == PurchaseGoodsKind.Part ? ProcurementMethod.Online1788 : ProcurementMethod.Employee };
+            // A scheduled employee list takes precedence over an older automatic online target for the same item.
+            var buyer = ShopStaff(shop, EmployeeRole.Buyer)
+                .Where(e => e?.PurchasePlan?.Items?.Any(i => i.Kind == kind && i.PartId == productId) == true)
+                .OrderByDescending(e => e.PurchasePlan.Daily).FirstOrDefault();
+            if (buyer != null)
+            {
+                policy.Primary = ProcurementMethod.Employee;
+                policy.EmployeeId = buyer.Id;
+                policy.AllowFallback = false;
+            }
+            return policy;
         }
 
         public bool SetProcurementPolicy(ProcurementPolicy policy)
@@ -87,7 +96,7 @@ namespace PCShopSell.Core.Session
             var p = policy.Copy(); p.ExplicitChoice = true; p.Target = Math.Max(0, Math.Min(p.Kind == PurchaseGoodsKind.Part ? RestockMaxTarget : 100, p.Target)); p.Lower = Math.Max(0, Math.Min(p.Target, p.Lower < 0 ? (int)(p.Target * RestockTriggerRatio) : p.Lower));
             if (p.Primary != ProcurementMethod.Online1788 && p.Primary != ProcurementMethod.Employee) return Fail("自动补货请选择网购或指定进货员，直供由玩家确认。");
             if (p.Kind != PurchaseGoodsKind.Part && p.Primary == ProcurementMethod.Online1788) return Fail("网购自动补货目前支持电脑配件；这件商品请选择进货员。");
-            if (p.Primary == ProcurementMethod.Employee)
+            if (p.Primary == ProcurementMethod.Employee && p.Target > 0)
             {
                 var worker = FindEmployee(p.EmployeeId);
                 if (worker?.Shop != shop || worker.Role != EmployeeRole.Buyer) return Fail("请选择本店的进货员。");
@@ -111,8 +120,10 @@ namespace PCShopSell.Core.Session
             {
                 string key=DemandKey(worker.Shop.Place.Id,item.Kind,item.PartId);
                 var policy=ProcurementPolicyFor(worker.Shop.Place.Id,item.Kind,item.PartId);
-                if(policy.Target<=0||policy.ExplicitChoice)continue;
+                _cityProcurementPolicies.TryGetValue(key, out var previous);
+                if (policy.Target <= 0 || (previous?.ExplicitChoice == true && previous.Primary != ProcurementMethod.Online1788)) continue;
                 policy.Primary=ProcurementMethod.Employee;policy.EmployeeId=worker.Person.Id;
+                policy.AllowFallback = false;
                 _cityProcurementPolicies[key]=policy;
             }
         }
@@ -159,7 +170,7 @@ namespace PCShopSell.Core.Session
         public int PendingProcurementCount(OwnedShop shop, PurchaseGoodsKind kind, string productId)
         {
             if (shop == null) return 0;
-            int count = kind == PurchaseGoodsKind.Part ? Online.Pending.Where(o => !o.ToHome && DeliveryShop(o.ShopId) == shop).Sum(o => o.Lines.Where(l => l.PartId == productId).Sum(l => l.Count))
+            int count = kind == PurchaseGoodsKind.Part ? Online.Pending.Where(o => OnlineOrderDestination(o) == shop).Sum(o => o.Lines.Where(l => l.PartId == productId).Sum(l => l.Count))
                 + DirectShipments.Where(o => o.PartId == productId && DeliveryShop(o.ShopId) == shop).Sum(o => o.Count) : 0;
             count += _employeeTrips.Where(t => !t.Delivered && DeliveryShop(t.ShopId) == shop).Sum(t => t.Items.Where(i => i.Kind == kind && i.PartId == productId).Sum(i => i.Count));
             foreach (var route in Couriers.Where(r => r.ToShop && DeliveryShop(r.ShopId) == shop))
@@ -313,23 +324,27 @@ namespace PCShopSell.Core.Session
             WithShop(shop, () => success = PlaceOnlineOrderCore(storeId, new[] { (PartCatalog.Get(partId), count) }, true));
             return success;
         }
-        public bool PlaceUnifiedDirectPurchase(string shopId, string partId, int count)
+        public bool PlaceUnifiedDirectPurchase(string shopId, string partId, int count, bool credit = false)
         {
             var shop = ShopAt(shopId); if (shop == null) return Fail("门店已不可用。");
-            bool result = false; WithShop(shop, () => result = OrderDirect(partId, count, false)); return result;
+            bool result = false; WithShop(shop, () => result = OrderDirect(partId, count, credit)); return result;
         }
 
-        private EmployeePurchasePlan EffectiveEmployeePurchasePlan(EmployeeAssignment row, EmployeePurchasePlan source,bool planningOnly=false)
+        private EmployeePurchasePlan EffectiveEmployeePurchasePlan(EmployeeAssignment row, EmployeePurchasePlan source, bool planningOnly = false,
+            IReadOnlyList<PurchaseOffer> catalog = null)
         {
             if (source == null) return null;
             if (!source.InventoryThreshold)
             {
                 var fixedPlan=source.Copy();
+                int? previewDay = null;
                 foreach(var item in fixedPlan.Items.Where(i=>i.BuyMaximum))
                 {
-                    var offer=EmployeePurchaseOffer(item,source.SourceId);
+                    var offer=EmployeePurchaseOffer(item,source.SourceId,catalog);
                     // Resolve at execution time, not when the recurring plan was saved.
-                    int day=planningOnly?NextEmployeePurchaseDay(row.Person.Id,source,Clock.Today.TotalDays+1):Clock.Today.TotalDays;
+                    if (planningOnly && !previewDay.HasValue)
+                        previewDay = NextEmployeePurchaseDay(row.Person.Id, source, Clock.Today.TotalDays + 1);
+                    int day = previewDay ?? Clock.Today.TotalDays;
                     if(day<0){item.Count=0;item.BuyMaximum=false;continue;}
                     int allocated=source.Daily&&item.ReservedByWeekday!=null&&item.ReservedByWeekday.Length==7?item.ReservedByWeekday[day%7]:item.Count;
                     if(planningOnly&&offer!=null)allocated=SupplierPlanHeadroom(row.Person.Id,source,offer,day%7);
@@ -350,7 +365,7 @@ namespace PCShopSell.Core.Session
                 int need = ProcurementCoverageFor(row.Shop.Place.Id, policy.Kind, policy.ProductId, row.Person.Id).Uncovered;
                 if (need <= 0) continue;
                 var preference = source.Items.FirstOrDefault(i => i.Kind == policy.Kind && i.PartId == policy.ProductId);
-                var offer = EmployeePurchaseOffer(preference ?? new PurchaseLine { Kind = policy.Kind, PartId = policy.ProductId });
+                var offer = EmployeePurchaseOffer(preference ?? new PurchaseLine { Kind = policy.Kind, PartId = policy.ProductId }, catalog: catalog);
                 if (offer == null) continue;
                 int count = Math.Min(100, need);
                 if (policy.Kind == PurchaseGoodsKind.Gift && Gifts.Get(policy.ProductId)?.ShelfDays > 0) count = Math.Min(count, Math.Max(1, Gifts.Get(policy.ProductId).ShelfDays * 2));

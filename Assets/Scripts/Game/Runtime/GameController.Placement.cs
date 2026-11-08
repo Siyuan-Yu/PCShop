@@ -35,7 +35,7 @@ namespace PCShopSell.Game
         /// <summary>当前这个位置摆不了的原因；能摆则为空。</summary>
         public string PlaceError { get; private set; }
 
-        private RoomSpec PlaceRoom => _placeShop ? Session.ShopRoom : RoomSpec.Home;
+        private RoomSpec PlaceRoom => _placeShop ? Session.ShopRoom : Session.ResidenceRoom;
         private Vector3 PlaceOrigin => _placeShop ? ShopInteriorView.Origin : HomeRoomView.Origin;
         private IReadOnlyList<PlacedFurniture> PlaceLayout => _placeShop ? Session.ShopLayout : Session.HomeLayout;
         private RoomFurniture PlaceVisuals => _placeShop ? Interior.Furniture : HomeRoom.Furniture;

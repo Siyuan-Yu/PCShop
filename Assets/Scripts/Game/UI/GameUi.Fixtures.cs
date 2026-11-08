@@ -31,6 +31,8 @@ namespace PCShopSell.Game.UI
             int unset = S.ShelfIndexes().Count(ix => S.ShelfKindAt(ix) == null);
             if (unset > 0) sb.Append($"<color=#ABB5A8>　{unset} 个货架还没设置摆什么（去“库存”页设置）</color>");
 
+            if (S.IsPetShop(S.CurrentShop))
+                sb.Append('\n').Append(FitLine(list.First(n => n.FurnitureId == PetShopCatalog.SmallHouse), "宠物屋（接代养用）", true));
             foreach (FixtureNeed n in list.Where(x => S.RetailKind == "computer" && (x.Kind == FixtureKind.Display || x.Kind == FixtureKind.Bench)))
                 sb.Append('\n').Append(FitLine(n, n.Kind == FixtureKind.Display ? "展示台（可选品类：电脑整机或其他商品）" : "装机操作台（接装机订单用）", false));
             return sb.ToString();
@@ -66,6 +68,7 @@ namespace PCShopSell.Game.UI
                     : "<color=#A9C9A9>已经布置好，正常营业。</color>";
             Line(C, "店面装修　" + state, 18);
             Para(C, FitChecklistText(), 15);
+            if (S.IsPetShop(S.CurrentShop)) BuildPetRenovation();
             string label = S.IsRenovating ? "继续摆放" : S.ShopFitted ? "重新布置" : "开始装修";
             Ui.Size(Ui.Button(C, label, () => StartPlacement(true), 20, Ui.ButtonHot), -1, 48);
             var furniture=S.FurnitureToPlaceList(true).Where(kv=>kv.Value>0&&FurnitureCatalog.Get(kv.Key)!=null)

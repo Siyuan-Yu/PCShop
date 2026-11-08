@@ -3,6 +3,7 @@ using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
 {
@@ -10,6 +11,85 @@ namespace PCShopSell.Game.UI
     {
         private long _loanAmountYuan = 1000;
         private int _loanMonths = 1;
+        private const float LoanReminderHeight = 96f;
+        private RectTransform _loanReminderHud;
+        private Text _loanReminderTitle, _loanReminderDue, _loanReminderCash;
+        private (GameSession Session, int Day, int LedgerRevision) _loanReminderStamp;
+        private bool _loanReminderHasPending;
+
+        private void BuildLoanReminderHud(Transform parent)
+        {
+            var button = Ui.Button(parent, "", OpenLoansApp, 18, Ui.PanelBg);
+            button.name = "LoanReminderHud";
+            _loanReminderHud = (RectTransform)button.transform;
+            _loanReminderHud.anchorMin = _loanReminderHud.anchorMax = _loanReminderHud.pivot = Vector2.one;
+            _loanReminderHud.sizeDelta = new Vector2(UpcomingScheduleWidth, LoanReminderHeight);
+            _loanReminderTitle = Ui.Label(_loanReminderHud, "", 18, color: Ui.Accent);
+            _loanReminderTitle.rectTransform.Anchor(0, 1, 1, 1, 14, -32, 32, 6);
+            var arrow = Ui.Label(_loanReminderHud, "›", 20, TextAnchor.MiddleRight, Ui.Dim);
+            arrow.rectTransform.Anchor(1, 1, 1, 1, -30, -32, 14, 6);
+            _loanReminderDue = Ui.Label(_loanReminderHud, "", 17);
+            _loanReminderDue.rectTransform.Anchor(0, 1, 1, 1, 14, -61, 14, 33);
+            _loanReminderCash = Ui.Label(_loanReminderHud, "", 17);
+            _loanReminderCash.rectTransform.Anchor(0, 1, 1, 1, 14, -88, 14, 62);
+            _loanReminderHud.gameObject.SetActive(false);
+        }
+
+        private void UpdateLoanReminderHud()
+        {
+            int today = S.Clock.Today.TotalDays;
+            var stamp = (S, today, S.Ledger.Revision);
+            if (!_loanReminderStamp.Equals(stamp))
+            {
+                _loanReminderStamp = stamp;
+                RefreshLoanReminder(today);
+            }
+
+            bool visible = _loanReminderHasPending && !MainMenuOpen && !S.IsGameOver && !ExpoHudOpen;
+            if (_loanReminderHud.gameObject.activeSelf != visible)
+                _loanReminderHud.gameObject.SetActive(visible);
+
+            Vector2 schedulePosition = UpcomingScheduleRestPosition;
+            if (visible)
+            {
+                Vector2 position = schedulePosition;
+                if (_shopDockToggle.gameObject.activeSelf) position.y = -120;
+                if (DockOpen) position.x = -(ShopDockWidth + 10);
+                else schedulePosition.y = position.y - LoanReminderHeight - 8;
+                if (_loanReminderHud.anchoredPosition != position) _loanReminderHud.anchoredPosition = position;
+            }
+            if (_upcomingScheduleHud.anchoredPosition != schedulePosition)
+                _upcomingScheduleHud.anchoredPosition = schedulePosition;
+        }
+
+        private void RefreshLoanReminder(int today)
+        {
+            int count = 0;
+            int dueDay = int.MaxValue;
+            Money due = Money.Zero;
+            foreach (var loan in S.AppLoans)
+            {
+                if (loan.Repaid) continue;
+                count++;
+                if (loan.DueDay < dueDay)
+                {
+                    dueDay = loan.DueDay;
+                    due = loan.TotalDue;
+                }
+                else if (loan.DueDay == dueDay) due += loan.TotalDue;
+            }
+            _loanReminderHasPending = count > 0;
+            if (!_loanReminderHasPending) return;
+
+            Money shortfall = Money.Max(Money.Zero, due - S.Ledger.Balance);
+            _loanReminderTitle.text = count == 1 ? "还款提醒" : $"还款提醒 · {count} 笔待还";
+            _loanReminderDue.text = $"最近应还 {due} · {LoanCountdown(dueDay - today)}";
+            _loanReminderCash.text = shortfall.IsPositive ? $"当前现金还差 {shortfall}" : "当前现金足够还款";
+            _loanReminderCash.color = shortfall.IsPositive ? Ui.Warn : Ui.Good;
+        }
+
+        private static string LoanCountdown(int days) => days <= 0 ? "今天还款" : $"还剩 {days} 天";
+
         private void OpenLoansApp()
         {
             string blocker = S.AppBlocker(PhoneApps.Loans);
@@ -49,7 +129,7 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, "我的贷款", 20, Ui.Accent);
                 var list = Ui.Scroll(w.Content, 260);
                 if (S.AppLoans.Count == 0) Line(list, "暂无借款记录。", 17, Ui.Dim);
-                foreach (var loan in S.AppLoans.OrderBy(l => l.Repaid).ThenByDescending(l => l.Id))
+                foreach (var loan in S.AppLoans.OrderBy(l => l.Repaid).ThenBy(l => l.Repaid ? 0 : l.DueDay).ThenByDescending(l => l.Id))
                 {
                     int id = loan.Id;
                     Line(list, $"#{id} · 本金 {loan.Principal} · {loan.Months} 个月 · " + (loan.Repaid ? "已结清" : "待还"), 18, loan.Repaid ? Ui.Dim : Ui.Accent);
@@ -58,7 +138,7 @@ namespace PCShopSell.Game.UI
                         Para(list, $"{new GameDate(loan.RepaidDay)} 结清；实付利息 {Money.FromCents(loan.PaidInterestCents)}。", 16, Ui.Dim);
                         continue;
                     }
-                    Para(list, $"{new GameDate(loan.StartDay)} 借入；{new GameDate(loan.DueDay)} 到期。\n到期本金 {loan.Principal} + 利息 {loan.TermInterest} = {loan.TotalDue}。", 16);
+                    Para(list, $"{new GameDate(loan.StartDay)} 借入，{new GameDate(loan.DueDay)} 到期（{LoanCountdown(loan.DueDay - S.Clock.Today.TotalDays)}）。\n到期本金 {loan.Principal} + 利息 {loan.TermInterest} = {loan.TotalDue}。", 16);
                     Money payoff = S.LoanPayoff(loan);
                     Ui.Size(Ui.Button(list, "提前结清 · " + payoff, () =>
                         ConfirmBusiness("提前结清贷款 #" + id, $"本次支付 {payoff}，其中本金 {loan.Principal}、利息 {payoff - loan.Principal}。", () =>

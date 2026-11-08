@@ -18,7 +18,8 @@ namespace PCShopSell.EditorTools
             canvas.renderMode=RenderMode.ScreenSpaceCamera;canvas.worldCamera=camera;canvas.planeDistance=1;
             foreach(var t in RaceTracks.All)
             {
-                var point=camera.WorldToViewportPoint(new Vector3((float)t.X,7,(float)t.Y));
+                var placed=RaceTracks.Get(t.Id,reviewLayout);
+                var point=camera.WorldToViewportPoint(new Vector3((float)placed.X,7,(float)placed.Y));
                 var color=new[]{new Color(.2f,.48f,.27f),new Color(.15f,.40f,.68f),new Color(.73f,.40f,.12f),new Color(.47f,.27f,.62f)}[t.Tier];
                 var label=Ui.Panel(canvas.transform,"TrackLabel_"+t.Id,color).rectTransform;
                 label.anchorMin=label.anchorMax=new Vector2(point.x,point.y);label.pivot=new Vector2(.5f,0);

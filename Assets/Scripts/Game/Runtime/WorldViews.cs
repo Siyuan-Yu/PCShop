@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.World;
 using UnityEngine;
@@ -156,10 +156,9 @@ namespace PCShopSell.Game.Runtime
     {
         private readonly GameObject _root;
         private readonly GameObject _figure;
-        private readonly GameObject _ebike;
-        private readonly GameObject _tricycle;
+        private GameObject _commuteVehicle;
+        private string _commuteModelId;
         private readonly GameObject _taxi;
-        private readonly GameObject _car, _van;
         private readonly FigureMotion _motion;
         private Transform _activityName;
         private string _dressed;
@@ -186,22 +185,6 @@ namespace PCShopSell.Game.Runtime
             _motion = _figure.GetComponent<FigureMotion>();
             Prims.Shape(PrimitiveType.Cylinder, _root.transform, "Ring", new Vector3(0, 0.03f, 0), new Vector3(1.4f, 0.01f, 1.4f), Mats.Unlit(new Color(1f, 0.85f, 0.2f, 0.6f)));
 
-            _ebike = new GameObject("EBike");
-            _ebike.transform.SetParent(_root.transform, false);
-            Prims.Box(_ebike.transform, "Frame", new Vector3(0, 0.45f, 0), new Vector3(0.35f, 0.4f, 1.5f), Mats.Lit(new Color(0.2f, 0.5f, 0.9f), 0.6f));
-            Prims.Box(_ebike.transform, "Basket", new Vector3(0, 0.8f, 0.7f), new Vector3(0.5f, 0.3f, 0.4f), Mats.Lit(new Color(0.15f, 0.15f, 0.15f)));
-
-            _tricycle = new GameObject("Tricycle");
-            _tricycle.transform.SetParent(_root.transform, false);
-            Prims.Box(_tricycle.transform, "Front", new Vector3(0, 0.45f, 0.4f), new Vector3(0.35f, 0.4f, 1.0f), Mats.Lit(new Color(0.85f, 0.2f, 0.2f), 0.5f));
-            Prims.Box(_tricycle.transform, "Bed", new Vector3(0, 0.55f, -0.9f), new Vector3(1.3f, 0.35f, 1.4f), Mats.Lit(new Color(0.5f, 0.5f, 0.55f), 0.3f, 0.5f));
-            Prims.Box(_tricycle.transform, "Cargo", new Vector3(0, 0.95f, -0.9f), new Vector3(1.0f, 0.5f, 1.0f), Mats.Lit(new Color(0.75f, 0.6f, 0.4f)));
-
-            _car = Prims.ParkedCar(_root.transform, Vector3.zero, ArtDirection.Sage);
-            _car.transform.localRotation = Quaternion.identity;
-            _van = Prims.ParkedCar(_root.transform, Vector3.zero, ArtDirection.Cream);
-            _van.transform.localRotation = Quaternion.identity;
-            Prims.Box(_van.transform, "LoadBox", new Vector3(0, 1.1f, -.75f), new Vector3(1.5f, 1.2f, 1.8f), Mats.Lit(ArtDirection.Cream));
             _taxi = new GameObject("Taxi");
             _taxi.transform.SetParent(_root.transform, false);
             Prims.Box(_taxi.transform, "Body", new Vector3(0, 0.6f, 0), new Vector3(1.8f, 0.9f, 4f), Mats.Lit(new Color(0.95f, 0.8f, 0.1f), 0.7f, 0.2f));
@@ -209,7 +192,7 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(_taxi.transform, "TaxiSign", new Vector3(0, 1.7f, -0.2f), new Vector3(0.6f, 0.2f, 0.3f), Mats.Glow(Color.white, new Color(2f, 2f, 1.5f), false));
         }
 
-        public void Update(GameSession s, float dt)
+        public void Update(GameSession s, float dt, StreetWorldBuilder streets = null)
         {
             bool publicSpace=s.CurrentPlace!=null&&((s.CurrentPlace.Business??"").StartsWith("venue_",System.StringComparison.Ordinal)||((s.CurrentPlace.Business=="服装"||s.IsCityActivityVenue(s.CurrentPlace))&&s.ShopAt(s.CurrentPlace.Id)==null));
             bool visible = s.CurrentPlace == null || publicSpace;
@@ -221,7 +204,7 @@ namespace PCShopSell.Game.Runtime
                 Prims.Dress(_figure, _dressed);
             }
 
-            Vector3 p = StreetWorldBuilder.ToWorld(s.PlayerPosition);
+            Vector3 p = streets?.StreetPosition(s.PlayerPosition) ?? StreetWorldBuilder.ToWorld(s.PlayerPosition);
             _root.transform.position = p;
             var activity=publicSpace?s.RunningCityActivity:null;
             _motion.ActivityKind=activity!=null?s.CityActivityService(activity)?.Id:null;
@@ -250,11 +233,16 @@ namespace PCShopSell.Game.Runtime
             }
 
             VehicleKind v = s.Vehicle;
-            _ebike.SetActive(!publicSpace && v == VehicleKind.EBike);
-            _tricycle.SetActive(!publicSpace && v == VehicleKind.Tricycle);
+            string modelId=s.CommuteMotorModelId(v);
+            if(modelId!=_commuteModelId)
+            {
+                if(_commuteVehicle!=null)Object.Destroy(_commuteVehicle);
+                _commuteModelId=modelId;
+                var model=MotorCatalog.Get(modelId);
+                _commuteVehicle=model==null?null:MotorVisual.Build(_root.transform,model,MotorVisual.Paint(model.Id),false).gameObject;
+            }
+            if(_commuteVehicle!=null)_commuteVehicle.SetActive(!publicSpace);
             _taxi.SetActive(v == VehicleKind.Taxi && s.Trip != null);
-            _car.SetActive(!publicSpace && v == VehicleKind.Car);
-            _van.SetActive(!publicSpace && v == VehicleKind.Van);
             _figure.SetActive(publicSpace || (!(v == VehicleKind.Taxi && s.Trip != null) && v != VehicleKind.Car && v != VehicleKind.Van));
             float lift = !publicSpace && (v == VehicleKind.EBike || v == VehicleKind.Tricycle) ? 0.35f : 0f;
             _motion.LocomotionEnabled = publicSpace || v == VehicleKind.Walk || v == VehicleKind.Taxi;

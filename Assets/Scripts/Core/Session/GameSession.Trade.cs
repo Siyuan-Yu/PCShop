@@ -27,8 +27,18 @@ namespace PCShopSell.Core.Session
 
         /// <summary>档口 → (砍价的日期, 当天的折扣调整)。</summary>
         private readonly Dictionary<string, (int day, double bonus)> _bargains = new Dictionary<string, (int, double)>();
+        private int? _stallCheckoutMinutes;
 
         // ---------- 档口 ----------
+
+        public IEnumerable<Place> WholesaleStallsAt(Place market) =>
+            City.OfKind(PlaceKind.Wholesaler).Where(stall => SharesWholesaleMarket(market, stall));
+
+        private static bool SharesWholesaleMarket(Place a, Place b) =>
+            a?.Kind == PlaceKind.Wholesaler && b?.Kind == PlaceKind.Wholesaler && a.NodeId == b.NodeId;
+
+        public static string StallSupplierName(Place stall) =>
+            stall.Id == Stalls.Cpu && Npcs.OwnerOf(stall.Id) is NpcDef owner ? owner.Name + "档口" : stall.Name;
 
         public bool StallSells(Place stall, PartDef part)
         {
@@ -56,7 +66,7 @@ namespace PCShopSell.Core.Session
         /// <summary>和档口老板砍价：每家每天一次。成功了今天全场便宜 3%~7%，失败了老板不高兴、贵 1%。</summary>
         public BargainResult Bargain(Place stall)
         {
-            if (stall == null || stall.Kind != PlaceKind.Wholesaler || CurrentPlace != stall) return BargainResult.NotAllowed;
+            if (!SharesWholesaleMarket(CurrentPlace, stall)) return BargainResult.NotAllowed;
             if (HasBargainedToday(stall)) return BargainResult.AlreadyTried;
             double chance = 0.35 + EffectiveCharm * 0.01 + (Player.Tired ? -0.15 : 0);
             AdvanceClock(5);
@@ -70,7 +80,7 @@ namespace PCShopSell.Core.Session
         /// <summary>在档口进货（盒装），货放到随身载具上。</summary>
         public bool BuyAtStall(Place stall, PartDef part, int count)
         {
-            if (CurrentPlace != stall || !StallSells(stall, part)) return Fail("这家档口不卖这个。");
+            if (!SharesWholesaleMarket(CurrentPlace, stall) || !StallSells(stall, part)) return Fail("这家档口不卖这个。");
             if (!IsWholesalerOpen) return Fail($"批发市场工作日 {Hm(WholesalerOpenMinute)}–{Hm(WholesalerCloseMinute)} 营业。");
             if (count <= 0) return false;
             int remaining = StallRemaining(stall, part);
@@ -93,7 +103,8 @@ namespace PCShopSell.Core.Session
             RecordStallPurchase(stall, part, count);
             var purchaseOwner = Npcs.OwnerOf(stall.Id);
             if (purchaseOwner != null) RememberSocial(purchaseOwner.Id, $"在{stall.Name}购入{part.Name} ×{count}。");
-            AdvanceClock(2);
+            if (_stallCheckoutMinutes.HasValue) _stallCheckoutMinutes += 2;
+            else AdvanceClock(2);
             return true;
         }
 
@@ -143,19 +154,27 @@ namespace PCShopSell.Core.Session
         public bool PlaceOnlineOrder(string storeId, IReadOnlyList<(PartDef part, int count)> lines, bool toHome = false) =>
             PlaceOnlineOrderCore(storeId, lines, true, toHome);
 
+        public bool PlaceOnlineOrder(string storeId, IReadOnlyList<(PartDef part, int count)> lines, OwnedShop destination)
+        {
+            if (destination != null && ShopAt(destination.Place.Id) != destination) return Fail("所选收货门店已不可用。");
+            return PlaceOnlineOrderCore(storeId, lines, true, destination == null, destination);
+        }
+
         /// <summary>manual = 玩家亲自在手机上挑货下单（花 5 分钟）；自动补货是 app 定时下单。</summary>
-        private bool PlaceOnlineOrderCore(string storeId, IReadOnlyList<(PartDef part, int count)> lines, bool manual, bool toHome = false)
+        private bool PlaceOnlineOrderCore(string storeId, IReadOnlyList<(PartDef part, int count)> lines, bool manual,
+            bool toHome = false, OwnedShop destination = null)
         {
             string appBlock = AppBlocker(PhoneApps.Shop);
             if (appBlock != null) return Fail(appBlock);
-            if (!toHome && !HasShop) return Fail("还没有店铺，货没地方送店里。先去商业街的房产中介租个铺子，或者选“送到家里”。");
+            destination = toHome ? null : destination ?? _focus;
+            if (!toHome && destination?.Rented != true) return Fail("请选择可用的收货门店，或选“送到家里”。");
             // Old callers also use the single shopping channel for new orders.
             OnlineStore store = Online1788.Shopping;
             storeId = store.Id;
 
             Money total = Online1788.ShippingFee;
             double space = 0;
-            var order = new OnlineOrder { Id = Online.NextOrderId, StoreId = storeId, ToHome = toHome, ShopId = toHome ? null : PlayerShopPlace.Id };
+            var order = new OnlineOrder { Id = Online.NextOrderId, StoreId = storeId, ToHome = toHome, ShopId = destination?.Place.Id };
             foreach (var group in lines.Where(l => l.part != null && l.count > 0).GroupBy(l => l.part.Id))
             {
                 var part = group.First().part; int count = group.Sum(l => l.count);
@@ -166,8 +185,9 @@ namespace PCShopSell.Core.Session
                 order.Lines.Add(new OnlineOrderLine { PartId = part.Id, Count = count });
             }
             if (order.Lines.Count == 0) return Fail("购物车是空的。");
-            double free = PlayerShop.Stock.FreeSpace - IncomingShopSpace;
-            if (!toHome && space > free + 1e-9) return Fail($"店里放不下（需要 {space:0.#} 格，只剩 {Math.Max(0, free):0.#} 格）。");
+            double free = double.PositiveInfinity;
+            if (destination != null) WithShop(destination, () => free = PlayerShop.Stock.FreeSpace - IncomingShopSpace);
+            if (space > free + 1e-9) return Fail($"店里放不下（需要 {space:0.#} 格，只剩 {Math.Max(0, free):0.#} 格）。");
             if (!PayUnifiedOnlineOrder(order, total, store)) return Fail($"要 {total}（含运费），钱不够。");
 
             GameDate next = Clock.Today.AddDays(1);
@@ -178,12 +198,18 @@ namespace PCShopSell.Core.Session
             Online.AddPending(order);
             RegisterProcurementOrder("online-order:" + order.Id, "网购", order.ShopId, store.Id, total.Cents, order.DeliverAtMinute,
                 order.Lines.Select(l => new PurchaseLine { Kind = PurchaseGoodsKind.Part, PartId = l.PartId, Count = l.Count, SourceId = store.Id }), order.Id, null);
-            string where = toHome ? "家里（放在纸箱里）" : "店里" + ShopTag;
+            string where = CourierDestName(destination);
             Say(manual ? $"下单成功，{total}，明天 10:00 送到{where}。" : $"自动补货下单：{store.Name}，{total}，明天 10:00 送到店里{ShopTag}。");
 
-            if (manual) AdvanceClock(5);
+            if (manual)
+            {
+                RememberPurchaseDelivery(destination);
+                AdvanceClock(5);
+            }
             return true;
         }
+
+        private OwnedShop OnlineOrderDestination(OnlineOrder order) => PurchaseDeliveryShop(!order.ToHome, order.ShopId);
 
         private void DeliverOnlineOrders(GameTimestamp now)
         {
@@ -192,7 +218,7 @@ namespace PCShopSell.Core.Session
             {
                 OnlineStore store = Online1788.GetStore(o.StoreId);
                 StoreRecord rec = Online.RecordOf(o.StoreId);
-                OwnedShop dest = DeliveryShop(o.ShopId);
+                OwnedShop dest = OnlineOrderDestination(o);
                 int good = 0, bad = 0, toTemp = 0;
                 var badNames = new StringBuilder();
                 foreach (OnlineOrderLine l in o.Lines)
@@ -208,7 +234,7 @@ namespace PCShopSell.Core.Session
                         }
                         else
                         {
-                            if (o.ToHome) toTemp += StorePartAtHome(part, true, 1);
+                            if (dest == null) toTemp += StorePartAtHome(part, true, 1);
                             else dest.Sim.Stock.ForceAdd(part, true, 1);
                             good++;
                         }
@@ -216,8 +242,9 @@ namespace PCShopSell.Core.Session
                 }
                 rec.ItemsReceived += good + bad;
                 rec.Defects += bad;
-                string shopName = MyShopCount > 1 ? ShopTitle(dest) : "店里";
-                string body = $"{store.Name} 的货到了（{(o.ToHome ? "送到家里，放在纸箱里，要自己带去店里" : $"已上{shopName}货架")}）：{good} 件完好。";
+                string delivery = dest != null ? $"已放入{CourierDestName(dest)}后仓"
+                    : o.ToHome ? "已放入家中后仓" : "原门店已停用，已转送家中后仓";
+                string body = $"{store.Name} 的货到了（{delivery}）：{good} 件完好。";
                 if (toTemp > 0) body += $"\n家里纸箱满了，{toTemp} 件放在临时存放，能放 {TempKeepDays} 天，到期前回家打开纸箱清掉。";
                 if (bad > 0) body += $"\n{bad} 件是次品，只能扔掉：{badNames}";
                 Show("网购 到货", body);

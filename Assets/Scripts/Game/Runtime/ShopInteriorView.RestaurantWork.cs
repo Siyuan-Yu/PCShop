@@ -16,10 +16,11 @@ namespace PCShopSell.Game.Runtime
             }
             if(dish!=null)dish.gameObject.SetActive(carrying);
         }
-        private static void ApplyRestaurantActor(GameSession session,RestaurantWorker worker,GameObject figure)
+        private void ApplyRestaurantActor(GameSession session,RestaurantWorker worker,GameObject figure)
         {
             var pos=worker.Position(session.Clock.Now.TotalMinutes+session.Time.FractionalMinute);
-            var target=new Vector3((float)pos.x,0,(float)pos.z);var delta=target-figure.transform.localPosition;
+            var target=ClampIndoorNpc(Origin+new Vector3((float)pos.x,0,(float)pos.z))-Origin;
+            var delta=target-figure.transform.localPosition;
             figure.transform.localPosition=target;
             if(delta.sqrMagnitude>.00001f)figure.transform.localRotation=Quaternion.LookRotation(delta);
             else if(worker.Busy&&worker.OperateUntil>=0)

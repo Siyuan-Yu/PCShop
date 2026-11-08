@@ -3,12 +3,62 @@ using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Finance;
+using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 
 namespace PCShopSell.Tests
 {
     public sealed class CityFinanceTests
     {
+        [Test]
+        public void PeriodCashSummaryClosesBeforeTheNewWeekAndReconcilesTransfers()
+        {
+            var ledger = new Ledger(Money.FromYuan(1000));
+            var from = new GameDate(7);
+            var to = new GameDate(13);
+            ledger.Credit(new GameDate(6), "零售", Money.FromYuan(200));
+            ledger.Credit(from, "打工", Money.FromYuan(150));
+            ledger.ForceDebit(to, "工资", Money.FromYuan(80));
+            ledger.ForceDebit(to, "企业周转金", Money.FromYuan(20));
+            ledger.ForceDebit(new GameDate(14), "房租", Money.FromYuan(100));
+
+            var report = FinanceReport.CashSummary(ledger, from, to);
+            Assert.AreEqual(Money.FromYuan(1200), report.OpeningBalance);
+            Assert.AreEqual(Money.FromYuan(150), report.Income);
+            Assert.AreEqual(Money.FromYuan(80), report.Expense);
+            Assert.AreEqual(Money.FromYuan(-20), report.InternalNet);
+            Assert.AreEqual(Money.FromYuan(1250), report.ClosingBalance);
+        }
+
+        [Test]
+        public void EconomicReportDefaultsToWeeklyAndKeepsRecordingWhenPopupIsDisabled()
+        {
+            using (var session = GameSessionTests.Make(200000))
+            {
+                session.EventsEnabled = false;
+                session.Clock.Restore(new GameDate(6), 23 * 60 + 59);
+                session.Clock.Advance(1);
+                Assert.True(session.EconomicReportPending);
+
+                session.SetEconomicReportCadence(null);
+                session.Clock.Restore(new GameDate(13), 23 * 60 + 59);
+                session.Clock.Advance(1);
+                Assert.False(session.EconomicReportPending);
+                Assert.AreEqual(14, session.PriceDays.Last().Day);
+                using (var loaded = GameSession.Load(session.City, session.CreateSave()))
+                {
+                    Assert.False(loaded.EconomicReportAutomatic);
+                    loaded.SetEconomicReportCadence(EconomicReportCadence.Biweekly);
+                    loaded.Clock.Restore(new GameDate(20), 23 * 60 + 59);
+                    loaded.Clock.Advance(1);
+                    Assert.False(loaded.EconomicReportPending);
+                    loaded.Clock.Restore(new GameDate(27), 23 * 60 + 59);
+                    loaded.Clock.Advance(1);
+                    Assert.True(loaded.EconomicReportPending);
+                }
+            }
+        }
+
         [Test]
         public void OperatingCashExcludesLoanAndInternalTransfers()
         {

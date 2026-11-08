@@ -9,16 +9,14 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
-        private readonly List<VehicleKind> _owned = new List<VehicleKind>();
         private readonly List<string> _passed = new List<string>();
 
         /// <summary>当前出行方式。载具永远跟着玩家。</summary>
         public VehicleKind Vehicle { get; private set; } = VehicleKind.Walk;
 
-        private int _impoundedTricycles, _impoundedEBikes;
-        public bool TricycleImpounded => _impoundedTricycles > 0;
+        public bool TricycleImpounded => ImpoundedVehicleCount(VehicleKind.Tricycle) > 0;
 
-        public bool Owns(VehicleKind kind) => kind == VehicleKind.Walk || kind == VehicleKind.Taxi || _owned.Contains(kind);
+        public bool Owns(VehicleKind kind) => kind == VehicleKind.Walk || kind == VehicleKind.Taxi || VehicleCount(kind) > 0;
 
         public bool CanUse(VehicleKind kind)
         {
@@ -60,7 +58,7 @@ namespace PCShopSell.Core.Session
         /// <summary>出发去某个地点，一直走到它门口的人行道上（到了再进门）。</summary>
         public bool GoTo(Place place) => GoTo(place.NodeId, StandOf(place));
 
-        /// <summary>出发去某节点（路上可以随时改目的地，从下一个路口接着走）。打车先付车费。</summary>
+        /// <summary>出发去某节点。途中改目的地时，从当前位置重新选路。打车先付车费。</summary>
         public bool GoTo(string targetNode) => GoTo(targetNode, null);
 
         private bool GoTo(string targetNode, MapPoint? end)
@@ -101,11 +99,21 @@ namespace PCShopSell.Core.Session
             MapPoint start;
             double scale;
             string from;
+            string otherEnd = null;
+            var vehicle = CurrentVehicle;
             if (Trip != null)
             {
                 start = Trip.Position;
                 scale = Trip.CurrentGameScale;
                 from = Trip.NextNode;
+                otherEnd = Trip.PreviousRoadNode;
+                // Older rerouted trips only saved the road endpoint they were heading toward.
+                if (otherEnd == null && City.Map.HasEdge(PlayerNodeId,from))
+                {
+                    var a = LaneOf(PlayerNodeId,vehicle.Kind);
+                    var b = LaneOf(from,vehicle.Kind);
+                    if (Dist(start,ClosestOnSegment(a,b,start)) < 1e-6) otherEnd = PlayerNodeId;
+                }
             }
             else if (CurrentPlace != null && CurrentPlace.NodeId == PlayerNodeId)
             {
@@ -126,12 +134,24 @@ namespace PCShopSell.Core.Session
                 from = PlayerNodeId;
             }
 
-            PathResult path = Pathfinder.FindPath(City.Map, from, targetNode);
-            if (!path.Found) return null;
-            var vehicle = CurrentVehicle;
-            var trip = new Trip(City, start, scale, path.NodeIds, vehicle, n => LaneOf(n, vehicle.Kind), end);
-            meters = trip.TotalGameMeters;
+            bool twoEnds = City.Map.HasEdge(from,otherEnd);
+            var trip = BuildTrip(from,twoEnds ? otherEnd : null);
+            if (twoEnds)
+            {
+                var reverse = BuildTrip(otherEnd,from);
+                if (reverse != null && (trip == null || reverse.TotalGameMeters < trip.TotalGameMeters - 1e-6))
+                    trip = reverse;
+            }
+            meters = trip?.TotalGameMeters ?? 0;
             return trip;
+
+            Trip BuildTrip(string firstNode,string oppositeNode)
+            {
+                PathResult path = Pathfinder.FindPath(City.Map,firstNode,targetNode);
+                return path.Found
+                    ? new Trip(City,start,scale,path.NodeIds,vehicle,n=>LaneOf(n,vehicle.Kind),end,oppositeNode)
+                    : null;
+            }
         }
 
         /// <summary>取消出行，停在最近经过的节点。</summary>
@@ -144,7 +164,7 @@ namespace PCShopSell.Core.Session
         private string StepTrip(double scaledSeconds)
         {
             _passed.Clear();
-            double remaining = CityTravelTiming.ScaledSecondsMeters(Trip.Vehicle, scaledSeconds, Time.SecondsPerMinuteAt1x);
+            double remaining = CityTravelTiming.PlayerScaledSecondsMeters(Trip.Vehicle, scaledSeconds, Time.SecondsPerMinuteAt1x);
             // Check each short segment so a fast vehicle cannot jump across a curved checkpoint road.
             while (remaining > 1e-8 && !Trip.Arrived)
             {
@@ -225,18 +245,17 @@ namespace PCShopSell.Core.Session
 
         public bool SellVehicle(VehicleKind kind)
         {
-            SyncGarage();var v=_garage.FirstOrDefault(g=>MotorCatalog.Get(g.ModelId).Kind==kind);
+            var v=_garage.FirstOrDefault(g=>MotorCatalog.Get(g.ModelId).Kind==kind);
             return v!=null&&SellMotor(v.Id);
         }
 
         private void ImpoundVehicle(VehicleKind kind,string vehicleId=null)
         {
-            SyncGarage();
+
             var motor=vehicleId==null?_garage.FirstOrDefault(v=>v.Commuter&&MotorCatalog.Get(v.ModelId).Kind==kind):_garage.Find(v=>v.Id==vehicleId);
             if(motor==null||motor.Impounded)return;
             motor.Impounded=true;
-            if (kind == VehicleKind.EBike) _impoundedEBikes++;
-            else if (kind == VehicleKind.Tricycle) _impoundedTricycles++;
+
         }
 
         public bool RedeemVehicle(VehicleKind kind)
@@ -245,8 +264,7 @@ namespace PCShopSell.Core.Session
             if (CurrentPlace == null || CurrentPlace.Kind != PlaceKind.Dealer) return Fail("要在车行办理。");
             string name = Vehicles.Get(kind).Name;
             if (!Ledger.TryDebit(Clock.Today, "罚款", PoliceSystem.RedeemFee, "赎回" + name)) return Fail("钱不够赎车。");
-            if (kind == VehicleKind.EBike) _impoundedEBikes = System.Math.Max(0, _impoundedEBikes - 1);
-            else if (kind == VehicleKind.Tricycle) _impoundedTricycles = System.Math.Max(0, _impoundedTricycles - 1);
+
             var motor=_garage.FirstOrDefault(v=>v.Impounded&&MotorCatalog.Get(v.ModelId).Kind==kind);if(motor!=null)motor.Impounded=false;
             Say(name + "赎回来了。");
             return true;

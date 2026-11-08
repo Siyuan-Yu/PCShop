@@ -45,10 +45,11 @@ namespace PCShopSell.Game.UI
         private string CityPlaceHours(Place p)
         {
             if(S.IsOwnedVenue(p)){var v=S.VenueOperation(p.Id);return v.Open==v.Close?"全天开放":$"{v.Open/60:00}:{v.Open%60:00}—{v.Close/60:00}:{v.Close%60:00}";}
-            int open = p.ExplicitEntrance ? p.OpenMinute : p.Kind == PlaceKind.Wholesaler ? 540 : 0;
-            int close = p.ExplicitEntrance ? p.CloseMinute : p.Kind == PlaceKind.Wholesaler ? 1200 : 0;
+            if (GameSession.SupplierClosesOnWeekend(p)) return S.OpeningHoursText(p);
+            int open = p.ExplicitEntrance ? p.OpenMinute : 0;
+            int close = p.ExplicitEntrance ? p.CloseMinute : 0;
             if (open == close || open == 0 && close == 1440) return "24小时营业";
-            return $"{open / 60:00}:{open % 60:00}—{(close < open ? "次日 " : "")}{close / 60:00}:{close % 60:00}" + (p.Kind == PlaceKind.Wholesaler ? "（工作日）" : "");
+            return $"{open / 60:00}:{open % 60:00}—{(close < open ? "次日 " : "")}{close / 60:00}:{close % 60:00}";
         }
         private bool CityMapTypeMatches(Place p) => _cityMapType == null
             || _cityMapType == "my" && S.IsMyShop(p)
@@ -88,7 +89,7 @@ namespace PCShopSell.Game.UI
                     Line(w.Content, "底栏自定目的地：" + S.City.GetPlace(S.CityDefaultDestination).Name, 17, Ui.Accent);
                 if (S.CityIntent != null || S.Trip != null) Ui.Size(Ui.Button(w.Content, "取消当前路线（预约保留）", () => { S.StopTrip(); S.CancelCityTravel(); w.Rebuild(); }, 18, Ui.Warn), -1, 42);
                 BuildCityRouteMap(w.Content,Pick);
-                var places = S.City.Places.Where(p => (_cityMapStreet == null || p.StreetId == _cityMapStreet) && CityMapTypeMatches(p)
+                var places = S.City.PublicPlaces.Where(p => (_cityMapStreet == null || p.StreetId == _cityMapStreet) && CityMapTypeMatches(p)
                     && (_cityMapSearch.Length == 0 || (p.Name + " " + p.Business + " " + S.City.StreetName(p.StreetId)).IndexOf(_cityMapSearch, StringComparison.OrdinalIgnoreCase) >= 0))
                     .OrderBy(CityMapPriority).ThenBy(p => p.StreetId).ThenBy(p => p.Name).ToArray();
                 _cityMapPage = Math.Max(0, Math.Min(_cityMapPage, Math.Max(0, (places.Length - 1) / 12)));
@@ -122,7 +123,7 @@ namespace PCShopSell.Game.UI
                 var other = S.City.Map.GetNode(edge.To); segments.Add(Point(node.X, node.Y)); segments.Add(Point(other.X, other.Y));
             }
             graphic.SetSegments(segments);
-            foreach (var p in S.City.Places.Where(p => (_cityMapStreet == null || p.StreetId == _cityMapStreet) && CityMapTypeMatches(p)))
+            foreach (var p in S.City.PublicPlaces.Where(p => (_cityMapStreet == null || p.StreetId == _cityMapStreet) && CityMapTypeMatches(p)))
             {
                 var place = p;var door=S.DoorOf(p);
                 Vector2 at=Point(door.X*S.City.DistanceScale,door.Y*S.City.DistanceScale);
@@ -295,9 +296,21 @@ namespace PCShopSell.Game.UI
         public void OpenCityActivityChooser(string personId = null)
         {
             if (string.IsNullOrEmpty(personId) || !S.IsMet(personId)) { Toast("请先交换联系方式，再和对方约定活动。一个人消费可直接到场选择服务。"); return; }
+            bool choosingRace = false;
+            string raceTrack = RaceTracks.Get(S.CurrentPlace?.Id)?.Id;
             OpenWindow("约" + (S.CityPerson(personId)?.Name ?? "朋友") + "一起去", 900, 750, w =>
             {
+                if (choosingRace)
+                {
+                    Ui.Size(Ui.Button(w.Content, "‹ 返回活动列表", () =>
+                    { choosingRace = false; w.ResetScrollOnRebuild = true; w.Rebuild(); }, 17), -1, 38);
+                    BuildRaceInvitationChoices(w, personId, raceTrack, track => raceTrack = track);
+                    return;
+                }
                 Para(w.Content, "先选活动，再看日期、真实路程、费用和店铺值守影响。预约不会立即消费或增加关系。", 18, Ui.Accent);
+                if (GameSession.LikesRacing(personId))
+                    Ui.Size(Ui.Button(w.Content, "一起参赛 · 选择赛场和比赛场次", () =>
+                    { choosingRace = true; w.ResetScrollOnRebuild = true; w.Rebuild(); }, 18), -1, 54).name = "CityActivityOffer_racing";
                 foreach (var definition in CityLifeCatalog.Activities.Where(activity => activity.Id != "snack"))
                 {
                     var def = definition; string location = S.City.HasPlace(def.VenueId) ? S.City.GetPlace(def.VenueId).Name : "场所暂不可用";
@@ -498,7 +511,7 @@ namespace PCShopSell.Game.UI
 #if UNITY_EDITOR
                 Ui.Size(Ui.Button(content, "品牌展会验收：社区资格、报名、接待与交付", OpenExpoAcceptance, 19, Ui.ButtonHot), -1, 48);
 #endif
-                Preset("自有物业与每周房产行情", "assets", "准备4处商铺、1套自住房和1套带NPC住户住宅，覆盖自用、出租与空置；全款购入，并提供8日报价样本，可直接查看住宅和商铺的售价、月租涨跌。 ");
+                Preset("自有物业与每周房产行情", "assets", "准备4处商铺、1套自住房和1套带NPC住户住宅，覆盖自用、出租与空置；全款购入，并提供8日报价样本，可直接查看住宅和商铺的售价、住宅月租及商铺周租涨跌。 ");
                 Preset("夜班精力、自由排班与加班费", "night", "20:00开局，员工日薪200、12小时夜班预计280。玩家精力归零但仍能行动；测试四小时提醒、实际睡眠、跨午夜工时与读档。 ");
                 Preset("服装与冷暖", "clothing", "独立冬季测试档，准备四档服装库存、真实衣架/折叠架/镜子。试穿、更衣、库存转自用和冷暖设备均走正常入口；不快进正式档。 ");
                 var seasons=Ui.Row(content,40,6);

@@ -46,6 +46,8 @@ namespace PCShopSell.Core.Session
         {
             if (!_layoutHistoryActive || !Time.IsHeld || from.Count == 0) return false;
             var state = from[from.Count - 1];
+            if (_layoutHistoryShop && PetGuests(_focus).Count > state.Layout.Select(p => PetShopCatalog.HouseCapacity(p.Id)).DefaultIfEmpty().Max())
+                return Fail("宠物屋里还有客人，这次操作会减少可用名额。");
             double fridgeCapacity = FridgeCapacityOf(state.Layout);
             if (FridgeOf(_layoutHistoryShop).WeightKg > fridgeCapacity + 1e-9)
                 return Fail("冰箱里还有食物，这次撤销/重做会减少冷藏容量。请先取出食物。");

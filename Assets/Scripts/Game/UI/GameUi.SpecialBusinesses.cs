@@ -42,13 +42,27 @@ namespace PCShopSell.Game.UI
                 if(factor>1)Para(parent,factor>1.4?"暴雨影响运输和供给，服装参考价上涨50%，持续至本年第280天。":"棉花减产影响供给，服装参考价上涨35%，持续至本年第90天。",15,Ui.Warn);
             }
         }
-        private void SpecialNumber(Transform parent,string label,long value,long step,long min,long max,Action<long> set)
+        private void SpecialNumber(Transform parent,string label,long value,long step,long min,long max,Action<long> set,Action refresh=null)
         {
+            refresh ??= RebuildDock;
             var row=Ui.Row(parent,34,4);Ui.Size(Ui.Label(row,label+" ¥",16),-1,34,1);
-            var input=Ui.TextInput(row,value.ToString(),"金额",text=>{if(long.TryParse(text,out var number)){set(Math.Max(min,Math.Min(max,number)));RebuildDock();}});
+            var input=Ui.TextInput(row,value.ToString(),"金额",text=>{if(long.TryParse(text,out var number)){set(Math.Max(min,Math.Min(max,number)));refresh();}});
             input.contentType=UnityEngine.UI.InputField.ContentType.IntegerNumber;input.characterLimit=10;Ui.Size(input,100,34);
-            Ui.Size(Ui.Button(row,"−",()=>{set(Math.Max(min,value-step));RebuildDock();},18,Ui.ButtonBg,value>min),40);
-            Ui.Size(Ui.Button(row,"+",()=>{set(Math.Min(max,value+step));RebuildDock();},18,Ui.ButtonBg,value<max),40);
+            Ui.Size(Ui.Button(row,"−",()=>{set(Math.Max(min,value-step));refresh();},18,Ui.ButtonBg,value>min),40);
+            Ui.Size(Ui.Button(row,"+",()=>{set(Math.Min(max,value+step));refresh();},18,Ui.ButtonBg,value<max),40);
+        }
+
+        public void OpenUsedDesk()
+        {
+            if (!S.InPlayerShop || S.RetailKind!="secondhand") return;
+            OpenWindow("收购鉴定台",680,660,w=>
+            {
+                var items = S.SpecialBusiness(S.CurrentShop.Place.Id).Used.Where(i=>!i.Sold&&!i.Listed)
+                    .OrderBy(i=>i.Owned).ToArray();
+                if (items.Length == 0) Line(w.Content,"现在没有卖家或待鉴定旧物。",18,Ui.Dim);
+                foreach (var item in items)
+                    BuildUsedItemAction(w.Content,item,()=>{w.Rebuild();RebuildDock();});
+            });
         }
         private void BuildSpecialCounter()
         {
@@ -60,6 +74,10 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(manage,"经营类型 / 转型",OpenRetailTypeChooser,16),-1,38,1);
             Ui.Size(Ui.Button(manage,shop.OwnsProperty?"结束自营":"退租店铺",()=>ConfirmCloseShop(shop),16,Ui.Warn),110,38);
             ShopHoursRow(shop.Sim);
+            int entrants = shop.RetailKind == "restaurant"
+                ? state.RestaurantArrivalDay == S.Clock.Today.TotalDays ? state.RestaurantArrivalsToday : 0
+                : shop.Sim.TodayCustomers;
+            Line(C,$"今日进店 {entrants} 人",16);
             Line(C,"累计成交 "+state.Paid+" 单 · 营业收入 ¥"+state.Revenue+(shop.RetailKind=="restaurant"?" · 超时流失 "+state.Lost:""),16,Ui.Good);
             if(shop.RetailKind=="restaurant")BuildRestaurantCounter(state);else BuildUsedCounter(state);
         }
@@ -161,33 +179,36 @@ namespace PCShopSell.Game.UI
             Line(C,"收购与待处理物品",19,Ui.Accent);
             Line(C,"收购后鉴定，再定价加入转售库存。",15,Ui.Dim);
             foreach(var item in state.Used.Where(i=>!i.Sold&&!i.Listed).ToArray())
+                BuildUsedItemAction(C,item,RebuildDock);
+        }
+
+        private void BuildUsedItemAction(Transform parent,UsedItem item,Action refresh)
+        {
+            int id=item.Id;string key=S.CurrentShop.Place.Id+":"+id;
+            Line(parent,GameSession.UsedNames[item.Product]+" #"+id,18,Ui.Accent);
+            if(!item.Owned)
             {
-                int id=item.Id;string key=S.CurrentShop.Place.Id+":"+id;
-                Line(C,GameSession.UsedNames[item.Product]+" #"+id,18,Ui.Accent);
-                if(!item.Owned)
-                {
-                    Para(C,GameSession.SellerNames[Math.Max(0,Math.Min(GameSession.SellerNames.Length-1,item.SellerId))]+" · "+GameSession.SellerPersonalities[item.Personality]+" · "+GameSession.SellerSpeech(item),16);
-                    Line(C,"卖家要价 ¥"+item.Asking+" · 状态未鉴定",16,Ui.Warn);
-                    long bid=_usedBids.TryGetValue(key,out var chosen)?chosen:item.Asking;
-                    SpecialNumber(C,"我的报价",bid,1,1,1000000,value=>_usedBids[key]=value);
-                    var bar=Ui.Row(C,36,4);
-                    Ui.Size(Ui.Button(bar,"出价收购",()=>{S.OfferUsedPrice(id,bid);RebuildDock();},17,Ui.ButtonHot),-1,36,1);
-                    Ui.Size(Ui.Button(bar,"拒收",()=>{S.DeclineUsedSeller(id);RebuildDock();},17,Ui.Warn),90,36).name="DeclineUsed_"+id;
-                }
-                else if(!item.Inspected)
-                {
-                    Line(C,"收购成本 ¥"+item.Cost+" · 尚未鉴定",16,Ui.Dim);
-                    Ui.Size(Ui.Button(C,"检查，揭晓状态",()=>{S.InspectUsed(id);RebuildDock();},17,Ui.ButtonHot),-1,36);
-                }
-                else
-                {
-                    Line(C,GameSession.ConditionName(item.Condition)+" · 成本 ¥"+item.Cost+" · 参考转售价 ¥"+GameSession.UsedValue(item),16,Ui.Good);
-                    long price=_usedBids.TryGetValue(key+":sale",out var chosen)?chosen:Math.Max(1,item.Price);
-                    SpecialNumber(C,"出售标价",price,1,1,1000000,value=>_usedBids[key+":sale"]=value);
-                    var bar=Ui.Row(C,36,4);
-                    Ui.Size(Ui.Button(bar,"确认售价并上架",()=>{S.ListUsedItem(id,price);RebuildDock();},17,Ui.ButtonHot),-1,36,1).name="ListUsed_"+id;
-                    Ui.Size(Ui.Button(bar,"丢弃",()=>ConfirmBusiness("丢弃旧物","将损失这件旧物及收购成本。",()=>{S.DiscardUsed(id);RebuildDock();}),16,Ui.Warn),70,36);
-                }
+                Para(parent,GameSession.SellerNames[Math.Max(0,Math.Min(GameSession.SellerNames.Length-1,item.SellerId))]+" · "+GameSession.SellerPersonalities[item.Personality]+" · "+GameSession.SellerSpeech(item),16);
+                Line(parent,"卖家要价 ¥"+item.Asking+" · 状态未鉴定",16,Ui.Warn);
+                long bid=_usedBids.TryGetValue(key,out var chosen)?chosen:item.Asking;
+                SpecialNumber(parent,"我的报价",bid,1,1,1000000,value=>_usedBids[key]=value,refresh);
+                var bar=Ui.Row(parent,36,4);
+                Ui.Size(Ui.Button(bar,"出价收购",()=>{S.OfferUsedPrice(id,bid);refresh();},17,Ui.ButtonHot),-1,36,1);
+                Ui.Size(Ui.Button(bar,"拒收",()=>{S.DeclineUsedSeller(id);refresh();},17,Ui.Warn),90,36).name="DeclineUsed_"+id;
+            }
+            else if(!item.Inspected)
+            {
+                Line(parent,"收购成本 ¥"+item.Cost+" · 尚未鉴定",16,Ui.Dim);
+                Ui.Size(Ui.Button(parent,"检查，揭晓状态",()=>{S.InspectUsed(id);refresh();},17,Ui.ButtonHot),-1,36);
+            }
+            else
+            {
+                Line(parent,GameSession.ConditionName(item.Condition)+" · 成本 ¥"+item.Cost+" · 参考转售价 ¥"+GameSession.UsedValue(item),16,Ui.Good);
+                long price=_usedBids.TryGetValue(key+":sale",out var chosen)?chosen:Math.Max(1,item.Price);
+                SpecialNumber(parent,"出售标价",price,1,1,1000000,value=>_usedBids[key+":sale"]=value,refresh);
+                var bar=Ui.Row(parent,36,4);
+                Ui.Size(Ui.Button(bar,"确认售价并上架",()=>{S.ListUsedItem(id,price);refresh();},17,Ui.ButtonHot),-1,36,1).name="ListUsed_"+id;
+                Ui.Size(Ui.Button(bar,"丢弃",()=>ConfirmBusiness("丢弃旧物","将损失这件旧物及收购成本。",()=>{S.DiscardUsed(id);refresh();}),16,Ui.Warn),70,36);
             }
         }
     }

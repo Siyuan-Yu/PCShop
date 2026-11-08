@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Finance;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
@@ -11,7 +12,7 @@ using PCShopSell.Core.World;
 namespace PCShopSell.Core.Session
 {
     /// <summary>
-    /// 租铺子：商业街上的房产中介挂着在租的铺面（大小、位置、月租各不相同）。
+    /// 租铺子：商业街上的房产中介挂着在租的铺面（大小、位置、周租各不相同）。
     /// 有的铺子现租户还有几个月才到期（先挂出来，到期才能签）；挂牌过期没人签就被别人租走了。
     /// 新游戏没有店，要先去中介签一间；已经开着店再签就是搬过去（货、储物柜跟着走，旧铺押金退还）。
     /// </summary>
@@ -61,7 +62,7 @@ namespace PCShopSell.Core.Session
         public bool IsVacant(Place p) => IsCommercialPremises(p) && _vacant.Contains(p.Id) && !IsMyShop(p) && VentureAt(p.Id) == null && PropertyAt(p.Id) == null;
 
         /// <summary>街上名牌显示的名字：我的店 / 旺铺招租 / 原来的店名。</summary>
-        public string PlaceTitle(Place p) => p == null ? "" : IsMyShop(p) ? ShopTitle(ShopAt(p)) : p == Home ? HomeTitle : p.Id == ParkPlaceId ? "电脑乐园" : VentureAt(p.Id) != null ? Ventures.Get(VentureAt(p.Id).Kind).Name : PropertyAt(p.Id) != null ? CityPropertyTitle(p) : IsVacant(p) ? VacantTitle : p.Name;
+        public string PlaceTitle(Place p) => p == null ? "" : p.IsElectronicsCounter ? "电子批发市场" : IsMyShop(p) ? ShopTitle(ShopAt(p)) : p == Home ? HomeTitle : p.Id == ParkPlaceId ? "电脑乐园" : VentureAt(p.Id) != null ? Ventures.Get(VentureAt(p.Id).Kind).Name : PropertyAt(p.Id) != null ? CityPropertyTitle(p) : IsVacant(p) ? VacantTitle : p.Name;
 
         public Place ListingPlace(ShopListing l) => City.GetPlace(l.PlaceId);
 
@@ -96,6 +97,7 @@ namespace PCShopSell.Core.Session
             if (Lease != null && !newShop)
             {
                 if(IsSpecialBusiness(_focus)&&SpecialBusinessBusy(_focus))return "请先处理专用店铺订单和旧物库存，再搬店";
+                if(PetsStaying(_focus))return "还有宠物在店代养，请先交接结算再搬店";
                 if(StaffCommitted(_focus)>StaffLimit(l.Size))return "新铺最多可雇 "+StaffLimit(l.Size)+" 人，请先调整员工安排再搬店";
                 double cap = ShopSettings.Capacity(l.Size) + ShopUpgrades.ExtraCapacity(_upgrades);
                 if (PlayerShop.Stock.UsedSpace + IncomingShopSpace > cap + 1e-9) return $"铺子太小，放不下现在的 {PlayerShop.Stock.UsedSpace:0.#} 格货";
@@ -128,9 +130,9 @@ namespace PCShopSell.Core.Session
                 _listings.Remove(l);
                 int wait = l.OpenDay - Clock.Today.TotalDays;
                 Show("提前签约",
-                    $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）签下来了，月租 {l.Rent}，押金 {deposit}。\n" +
+                    $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）签下来了，周租 {l.Rent}，押金 {deposit}。\n" +
                     $"不过现租户的租约还没到期，要到第 {l.OpenDay + 1} 天（还有 {wait} 天）才搬走，到那天你才能搬进去。\n" +
-                    "房租从今天就开始算，这段时间每月 1 号照样要交。" +
+                    "房租从今天就开始算，这段时间每七天照样要交。" +
                     (newShop ? "\n交房那天就多了一家新店（毛坯，要自己摆收银台和货架），现在的店照常营业。"
                         : Lease != null ? "\n交房那天自动搬店：退旧铺押金、收搬家费，旧铺之前照常营业。" : "\n在那之前你还是没有店铺。"));
                 return true;
@@ -159,19 +161,19 @@ namespace PCShopSell.Core.Session
         {
             if(IsDedicatedVenue(place)){ShowVenueHandover(place);return;}
             Show(moving ? "搬店完成" : title,
-                $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）租下来了，月租 {rent}，押金 {deposit}。\n" +
+                $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）租下来了，周租 {rent}，押金 {deposit}。\n" +
                 (moving ? "货、储物柜、展示机都搬过去了；原来店里摆的家具、货架、收银台都收回了“我的”，要在新店里重新摆。\n"
                         : "这是间毛坯铺子，只配一个后仓纸箱；请按经营类型摆好开业所需设施。\n") +
-                "以后每月 1 号交房租。");
+                "签约后每七天交一次店租。");
         }
 
         private void ShowNewShop(Place place, Money rent, Money deposit, string title)
         {
             if(IsDedicatedVenue(place)){ShowVenueHandover(place);return;}
             Show(title,
-                $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）租下来了，是你的{ShopTitle(_focus)}，月租 {rent}，押金 {deposit}。\n" +
+                $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）租下来了，是你的{ShopTitle(_focus)}，周租 {rent}，押金 {deposit}。\n" +
                 "原来的店照常营业，货、员工、设施各管各的。新店是毛坯：按经营类型摆好设施，人不在店里时要雇人看店才开门。\n" +
-                "进哪家店，店里的面板、进货送货就对哪家店。以后每月 1 号每家店各交各的房租。");
+                "进哪家店，店里的面板、进货送货就对哪家店。每家店按自己的签约日每七天交租。");
         }
 
         /// <summary>提前签的铺子到了交房日：开新店，或者自动搬进去（搬店：退旧押金、收搬家费）。</summary>
@@ -179,6 +181,7 @@ namespace PCShopSell.Core.Session
         {
             if (PendingLease == null || today < PendingLease.StartDay) return;
             if (CancelProtectedPendingLease()) return;
+            if (!PendingIsNewShop && PetsStaying(_focus)) return;
             ShopLease p = PendingLease;
             PendingLease = null;
             Place place = City.GetPlace(p.PlaceId);
@@ -186,6 +189,7 @@ namespace PCShopSell.Core.Session
             {
                 PendingIsNewShop = false;
                 OpenNewShop(place, p.Rent, p.Deposit);
+                Lease.SignedDay = p.SignedDay;
                 SetOpeningShopKind(PendingRetailKind);
                 PendingRetailKind = "computer";
                 ShowNewShop(place, p.Rent, p.Deposit, "交房了");
@@ -200,6 +204,7 @@ namespace PCShopSell.Core.Session
                 Ledger.ForceDebit(Clock.Today, "搬家", RealEstate.MoveFee, "搬店");
             }
             MoveInto(place, p.Rent, p.Deposit);
+            Lease.SignedDay = p.SignedDay;
             if(!moving)SetOpeningShopKind(PendingRetailKind);
             PendingRetailKind = "computer";
             ShowMovedIn(place, p.Rent, p.Deposit, moving, "交房了");
@@ -209,17 +214,62 @@ namespace PCShopSell.Core.Session
         private void PaySigning(Money rent, Place place)
         {
             GameDate today = Clock.Today;
-            Ledger.ForceDebit(today, "房租", rent, $"{place.Name} 首月租金");
+            Ledger.ForceDebit(today, "房租", rent, $"{place.Name} 首周租金");
             Ledger.ForceDebit(today, "押金", RealEstate.Deposit(rent), $"{place.Name} 押金");
             Money fee = AgentFeeFor(rent);
             double off = AgentDiscount;
             Ledger.ForceDebit(today, "中介费", fee, off > 0 ? $"安居房产中介（熟人价 {off * 100:0.#}% 折扣）" : "安居房产中介");
         }
 
+        private void CollectWeeklyShopRent(GameDate today)
+        {
+            Money paid = Money.Zero;
+            int day = today.TotalDays;
+            foreach (var shop in _shops)
+            {
+                Money rent = RentOf(shop);
+                if (!rent.IsPositive || !shop.Lease.RentDue(day)) continue;
+                paid += rent;
+                Ledger.ForceDebit(today, "房租", rent, ShopTitle(shop) + "周租",
+                    LedgerAttribution.ForShop(shop.Place.Id, "rent:" + shop.Place.Id + ":" + day, "租金"));
+            }
+            if (PendingLease?.RentDue(day) == true)
+            {
+                paid += PendingLease.Rent;
+                Ledger.ForceDebit(today, "房租", PendingLease.Rent, City.GetPlace(PendingLease.PlaceId).Name + "周租（待交房）",
+                    LedgerAttribution.ForShop(PendingLease.PlaceId, "rent:" + PendingLease.PlaceId + ":" + day, "租金"));
+            }
+            if (paid.IsPositive) Say("商铺周租已扣款 " + paid);
+        }
+
+        private void MigrateWeeklyCommercialRent()
+        {
+            int day = Clock.Today.TotalDays;
+            foreach (var shop in _shops)
+            {
+                if (shop.Lease == null || shop.OwnsProperty || !shop.Lease.Rent.IsPositive) continue;
+                shop.Lease.Rent = ShopRentQuote(shop.Place);
+                shop.Lease.SignedDay = day;
+            }
+            foreach (var venture in _ventures)
+                if (venture.RentCents > 0 && City.HasPlace(venture.PlaceId))
+                {
+                    venture.RentCents = ShopRentQuote(City.GetPlace(venture.PlaceId)).Cents;
+                    venture.RentStartDay = day;
+                }
+            foreach (var property in _properties)
+                if (City.HasPlace(property.PlaceId) && City.GetPlace(property.PlaceId).Kind != PlaceKind.Home)
+                {
+                    property.WeeklyRentCents = ShopRentQuote(City.GetPlace(property.PlaceId)).Cents;
+                    property.CommercialRentFromDay = day;
+                }
+        }
+
         private void MoveInto(Place place, Money rent, Money deposit)
         {
             if (Lease != null && PlayerShopPlace != place)
             {
+                _petBoarding.Remove(PlayerShopPlace.Id);
                 _vacant.Add(PlayerShopPlace.Id);
                 foreach (var f in _shopLayout) AddFurniture(f.Id, 1);
                 _shopLayout.Clear();
@@ -235,7 +285,7 @@ namespace PCShopSell.Core.Session
                 _focus.Locker.Food.Packed.Clear();
                 _focus.BoxesGiven = false;
             }
-            Lease = new ShopLease { PlaceId = place.Id, Rent = rent, Deposit = deposit, StartDay = Clock.Today.TotalDays };
+            Lease = new ShopLease { PlaceId = place.Id, Rent = rent, Deposit = deposit, StartDay = Clock.Today.TotalDays, SignedDay = Clock.Today.TotalDays };
             foreach(var id in _employeeHireShops.Where(p=>p.Value==PlayerShopPlace.Id).Select(p=>p.Key).ToArray())_employeeHireShops[id]=place.Id;
             foreach(var row in Employees.Where(e=>e.Person.TransferShopId==PlayerShopPlace.Id))row.Person.TransferShopId=place.Id;
             MoveSpecialBusinessState(PlayerShopPlace.Id,place.Id);
@@ -258,7 +308,7 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>
-        /// 作弊 / 验收用：不去中介，直接签下开局那间街尾小店（照常扣首月租金 + 押金 + 中介费），再送旧开局的那几件货。
+        /// 作弊 / 验收用：不去中介，直接签下开局那间街尾小店（照常扣首周租金 + 押金 + 中介费），再送旧开局的那几件货。
         /// 新游戏点这个 = 回到以前“一开局就有店”的状态。
         /// </summary>
         public bool DebugRentStarterShop()
@@ -339,7 +389,7 @@ namespace PCShopSell.Core.Session
             PendingIsNewShop = false;
             PendingRetailKind = "computer";
             Ledger.Credit(Clock.Today, "退还预付租金和押金", lease.Rent + lease.Deposit, City.GetPlace(lease.PlaceId).Name);
-            Say("专用场所的待交房租约已取消，已退回预付首月租金和押金。");
+            Say("专用场所的待交房租约已取消，已退回预付首周租金和押金。");
             return true;
         }
 
@@ -395,7 +445,8 @@ namespace PCShopSell.Core.Session
             _listings.Clear();
             Place start = City.PlayerShop();
             if (Lease == null) AddListing(start, today, today + 120);
-            List<Place> pool = FreeUnits().Where(p => !IsBareUnit(p) && AgencyStreetOf(p) == "s_start").ToList();
+            List<Place> pool = FreeUnits().Where(p => !IsBareUnit(p) && AgencyStreetOf(p) == "s_start" &&
+                !City.ExpansionResidents.Any(resident => resident.workId == p.Id)).ToList();
 
             Place hardware = pool.FirstOrDefault(p => p.Business == "五金");
             if (hardware != null)
@@ -412,7 +463,14 @@ namespace PCShopSell.Core.Session
             Place medium = Pick(pool.Where(p => p.Size == ShopSize.Medium).ToList());
             if (medium != null) AddListing(medium, today + _realtyRng.Next(20, 40), today + 80);
             SeedStreetListings(today);
+            EnsureVacantUnitListings(today);
             EnsureFirstShopListings(today);
+        }
+
+        private void EnsureVacantUnitListings(int today)
+        {
+            foreach(var place in FreeUnits().Where(IsBareUnit).ToArray())
+                AddListing(place,today,today+120);
         }
 
         private void SeedStreetListings(int today)
@@ -450,7 +508,7 @@ namespace PCShopSell.Core.Session
                 if (l.OpenDay <= today && !_vacant.Contains(l.PlaceId) && today <= l.CloseDay)
                 {
                     _vacant.Add(l.PlaceId);
-                    Say($"房产中介：{p.Name}的租户搬走了，{SizeName(l.Size)}空出来了（月租 {l.Rent}），可以去签约。");
+                    Say($"房产中介：{p.Name}的租户搬走了，{SizeName(l.Size)}空出来了（周租 {l.Rent}），可以去签约。");
                 }
                 if (today > l.CloseDay)
                 {
@@ -458,6 +516,7 @@ namespace PCShopSell.Core.Session
                     if (!IsBareUnit(p) && !IsMyShop(p)) _vacant.Remove(l.PlaceId);
                 }
             }
+            EnsureVacantUnitListings(today);
             foreach (var street in RentableUnits().Select(AgencyStreetOf).Distinct())
                 if (_listings.Count(l => AgencyStreetOf(ListingPlace(l)) == street) < MaxListings && _realtyRng.Chance(DailyListingChance))
                     AddRandomListing(today, street);
@@ -473,7 +532,7 @@ namespace PCShopSell.Core.Session
         private void SaveRealty(SaveData d)
         {
             d.agencyStreetVersion = 1;
-            d.shopFootfallVersion = 1;
+            d.shopFootfallVersion = 2;
             d.shopState = Lease != null ? 1 : 2;
             if (Lease != null)
             {
@@ -481,6 +540,7 @@ namespace PCShopSell.Core.Session
                 d.leaseRentCents = Lease.Rent.Cents;
                 d.leaseDepositCents = Lease.Deposit.Cents;
                 d.leaseStartDay = Lease.StartDay;
+                d.leaseSignedDay = Lease.SignedDay;
             }
             if (PendingLease != null)
             {
@@ -514,17 +574,19 @@ namespace PCShopSell.Core.Session
                 Lease = new ShopLease
                 {
                     PlaceId = PlayerShopPlace.Id,
-                    Rent = saved ? Money.FromCents(d.leaseRentCents) : RealEstate.BaseRent((ShopSize)d.shopSize),
+                    Rent = saved && d.shopFootfallVersion >= 2 ? Money.FromCents(d.leaseRentCents) : ShopRentQuote(PlayerShopPlace),
                     Deposit = saved ? Money.FromCents(d.leaseDepositCents) : Money.Zero,
                     StartDay = saved ? d.leaseStartDay : 0,
+                    SignedDay = d.shopFootfallVersion >= 2 ? d.leaseSignedDay : Clock.Today.TotalDays,
                 };
             }
             PlayerShop.LocationFactor = LocationFactorOf(PlayerShopPlace);
             PendingLease = !string.IsNullOrEmpty(d.pendingPlace) && City.HasPlace(d.pendingPlace)
                 ? new ShopLease
                 {
-                    PlaceId = d.pendingPlace, Rent = Money.FromCents(d.pendingRentCents), Deposit = Money.FromCents(d.pendingDepositCents),
-                    StartDay = d.pendingStartDay, SignedDay = d.pendingSignedDay,
+                    PlaceId = d.pendingPlace, Rent = d.shopFootfallVersion >= 2 ? Money.FromCents(d.pendingRentCents) : ShopRentQuote(City.GetPlace(d.pendingPlace)),
+                    Deposit = Money.FromCents(d.pendingDepositCents),
+                    StartDay = d.pendingStartDay, SignedDay = d.shopFootfallVersion >= 2 ? d.pendingSignedDay : Clock.Today.TotalDays,
                 }
                 : null;
             PendingIsNewShop = PendingLease != null && d.pendingNewShop;
@@ -546,7 +608,7 @@ namespace PCShopSell.Core.Session
                 if (!City.HasPlace(l.place) || !IsCommercialPremises(City.GetPlace(l.place))) continue;
                 _listings.Add(new ShopListing
                 {
-                    PlaceId = l.place, Size = (ShopSize)l.size, Rent = d.shopFootfallVersion<1 && !IsPendingShop(City.GetPlace(l.place)) ? ShopRentQuote(City.GetPlace(l.place)) : Money.FromCents(l.rentCents), OpenDay = l.openDay, CloseDay = l.closeDay,
+                    PlaceId = l.place, Size = (ShopSize)l.size, Rent = d.shopFootfallVersion<2 ? ShopRentQuote(City.GetPlace(l.place)) : Money.FromCents(l.rentCents), OpenDay = l.openDay, CloseDay = l.closeDay,
                 });
             }
             if (d.agencyStreetVersion < 1) SeedStreetListings(Clock.Today.TotalDays);

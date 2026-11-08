@@ -5,6 +5,7 @@ using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
+using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
 using UnityEngine;
 using UnityEngine.UI;
@@ -230,9 +231,12 @@ namespace PCShopSell.Game.UI
             if(S.IsOwnedVenue(shop.Place)){WbButton(parent,"服务价格、营业与值守",()=>OpenVenueManagement(shop.Place),"WorkbenchVenue");return;}
             var sim=shop.Sim;var hours=Ui.Row(parent,38,7);
             WbText(hours,"营业时间",17);var options=Enumerable.Range(0,24).Select(i=>i.ToString("00")+":00").ToArray();
-            var open=Ui.Size(Ui.Choice(hours,options,sim.AllDay?9:sim.OpenMinute/60,i=>{S.SetWorkbenchHours(shop.Place.Id,i,sim.AllDay?21:sim.CloseMinute/60%24,false);w.RequestRebuild();}),150,38);open.name="WorkbenchOpenHour";
-            var close=Ui.Size(Ui.Choice(hours,options,sim.AllDay?21:sim.CloseMinute/60%24,i=>{S.SetWorkbenchHours(shop.Place.Id,sim.AllDay?9:sim.OpenMinute/60,i,false);w.RequestRebuild();}),150,38);close.name="WorkbenchCloseHour";
-            WbButton(hours,sim.AllDay?"不限时 ✓":"不限时",()=>{S.SetWorkbenchHours(shop.Place.Id,9,21,!sim.AllDay);w.RequestRebuild();},"WorkbenchAllDay");
+            const int defaultOpenHour=ShopSimulation.DefaultOpenMinute/60, defaultCloseHour=ShopSimulation.DefaultCloseMinute/60;
+            int openHour=sim.AllDay?defaultOpenHour:sim.OpenMinute/60;
+            int closeHour=sim.AllDay?defaultCloseHour:sim.CloseMinute/60%24;
+            var open=Ui.Size(Ui.Choice(hours,options,openHour,i=>{S.SetWorkbenchHours(shop.Place.Id,i,closeHour,false);w.RequestRebuild();}),150,38);open.name="WorkbenchOpenHour";
+            var close=Ui.Size(Ui.Choice(hours,options,closeHour,i=>{S.SetWorkbenchHours(shop.Place.Id,openHour,i,false);w.RequestRebuild();}),150,38);close.name="WorkbenchCloseHour";
+            WbButton(hours,sim.AllDay?"不限时 ✓":"不限时",()=>{S.SetWorkbenchHours(shop.Place.Id,defaultOpenHour,defaultCloseHour,!sim.AllDay);w.RequestRebuild();},"WorkbenchAllDay");
             WbText(parent,"统一加价 "+sim.Markup.ToString("0.00")+"×",19);
             PriceMultiplierEditor(parent,"WorkbenchMarkup_"+shop.Place.Id,"统一加价",sim.Markup,PCShopSell.Core.Shop.ShopSettings.MinMarkup,PCShopSell.Core.Shop.ShopSettings.MaxMarkup,.05,value=>S.SetWorkbenchMarkup(shop.Place.Id,value),w.RequestRebuild);
             var actions=Ui.Row(parent,40,8);WbButton(actions,"员工与排班",OpenEmployeesPanel,"WorkbenchShopStaff");WbButton(actions,"进货员与记录",()=>OpenShopBuyers(shop),"WorkbenchShopBuyers");WbButton(actions,"本店采购",()=>OpenCityProcurementFor(shop),"WorkbenchShopProcurement");
@@ -293,7 +297,8 @@ namespace PCShopSell.Game.UI
         }
         private void BuildWorkbenchInvestments(Transform parent,Window w)
         {
-            var reserve=S.GetCityCashReserve();WbText(parent,"投资市值 "+S.CityEquityValue+" · 已实现 "+S.CityEquityRealized,24);
+            var reserve=S.GetCityCashReserve();WbText(parent,"股票及指数 "+(S.CityEquityValue+S.FundValue)+" · 已实现 "+S.StockTotalRealized,24);
+            WbText(parent,"做空保证金 "+S.StockFrozenMargin+" · 做空浮盈亏 "+S.StockShortUnrealized,20);
             WbText(parent,"现金 "+S.Ledger.Balance+" · 经营预留 "+reserve.Total+" · 预留后 "+reserve.Available,20);
             WbButton(parent,"打开手机证券",OpenCityInvestments,"WorkbenchTrade",true);
             var list=WbScroll(parent,"WorkbenchInvestmentNews");WbText(list,S.CityInvestmentNews,18);

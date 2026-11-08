@@ -12,7 +12,7 @@ namespace PCShopSell.Core.Session
         public GoodsLot[] shopGoodsLots;
         public AppLoan[] appLoans;
         public PriceDay[] priceDays;
-        public int nextPriceReportDay;
+        public int economicReportCadence;
         public bool weeklyPricesPending;
         public int version = 1;
         public bool hasBusiness;
@@ -69,6 +69,8 @@ namespace PCShopSell.Core.Session
         public long restockReserveYuan, restockDailyBudgetYuan;
         public int restockReserveDays;
         public double reputation;
+        public bool hasShopStanding;
+        public double shopAwareness, shopReputation;
         public int accepted;
         public SaveOrder[] orders;
         public int nextOrderId;
@@ -278,11 +280,12 @@ namespace PCShopSell.Core.Session
     [Serializable]
     public sealed class SaveShop
     {
+        public double awareness, reputation;
         public string retailKind;
         public GoodsLot[] goodsLots;
         public string place;
         public long rentCents, depositCents;
-        public int startDay;
+        public int startDay, signedDay;
         public SaveStockLine[] stock;
         public string[] goodsIds;
         public int[] goodsCounts;
@@ -400,6 +403,9 @@ namespace PCShopSell.Core.Session
 
         /// <summary>courierDest = 2 时具体送哪家店（铺面 id）；空 = 当前这家店。</summary>
         public string courierDestShop;
+
+        /// <summary>最近一次购物配送的地址，家里或实际收货门店的铺面 id。</summary>
+        public string lastPurchaseDeliveryDest;
     }
 
     /// <summary>一个储物处（纸箱 / 临时存放）里的米菜、饭盒、礼品、家具、配件。</summary>
@@ -437,6 +443,7 @@ namespace PCShopSell.Core.Session
         public int count;
         public int dueDay;
         public bool toShop;
+        public string shopId;
     }
 
     [Serializable]

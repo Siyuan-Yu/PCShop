@@ -66,13 +66,14 @@ namespace PCShopSell.Core.Session
             if(open<0||open>=1440||close<0||close>1440||priceCents<100||priceCents>100000)return Fail("请设置有效的营业时间和 ¥1—1,000 的单次价格。");
             state.Accepting=accepting;state.Open=open;state.Close=close;state.PriceCents=priceCents;return true;
         }
-        public bool VenueHasAttendant(OwnedShop shop)=>shop!=null&&(
-            CurrentPlace==shop.Place&&!CityActivityExclusive&&!IsWorking&&!_sleeping
-            ||ShopStaff(shop,EmployeeRole.Cashier).Any(e=>CityEmployeeAvailable(e,shop)));
-        public bool VenueOpen(Place place)
+        public bool VenueHasAttendant(OwnedShop shop) => VenueHasAttendant(shop, true);
+        private bool VenueHasAttendant(OwnedShop shop, bool includePlayer) => shop != null && (
+            includePlayer && CityPlayerCanWork(shop) || ShopStaff(shop, EmployeeRole.Cashier).Any(e => CityEmployeeAvailable(e, shop)));
+        public bool VenueOpen(Place place) => VenueOpen(place, true);
+        private bool VenueOpen(Place place, bool includePlayer)
         {
             var state=VenueOperation(place?.Id);
-            return state!=null&&state.Accepting&&!IsGameOver&&CityWithinHours(Clock.MinuteOfDay,state.Open,state.Close)&&VenueHasAttendant(ShopAt(place));
+            return state!=null&&state.Accepting&&!IsGameOver&&CityWithinHours(Clock.MinuteOfDay,state.Open,state.Close)&&VenueHasAttendant(ShopAt(place),includePlayer);
         }
         public Money VenuePlayerPrice(CityActivityDefinition def)=>def==null?Money.Zero:
             IsOwnedVenue(City.GetPlace(def.VenueId))?Money.Zero:Money.FromYuan(def.PriceYuan);

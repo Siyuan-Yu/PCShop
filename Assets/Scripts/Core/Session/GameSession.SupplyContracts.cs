@@ -55,7 +55,7 @@ namespace PCShopSell.Core.Session
             return true;
         }
         public Money DirectPrice(PartDef p) => Market.PriceOf(p).Scale(.84);
-        public double IncomingShopSpace => Online.Pending.Where(o => !o.ToHome && DeliveryShop(o.ShopId) == _focus).Sum(o => o.Lines.Sum(l => Stock.SpaceOf(PartCatalog.Get(l.PartId), true, l.Count)))
+        public double IncomingShopSpace => Online.Pending.Where(o => OnlineOrderDestination(o) == _focus).Sum(o => o.Lines.Sum(l => Stock.SpaceOf(PartCatalog.Get(l.PartId), true, l.Count)))
             + _directShipments.Where(x => DeliveryShop(x.ShopId) == _focus).Sum(x => Stock.SpaceOf(PartCatalog.Get(x.PartId), true, x.Count))
             + _employeeTrips.Where(t => !t.Delivered && DeliveryShop(t.ShopId) == _focus).Sum(t => t.Items.Sum(PurchaseStockSpace))
             + Couriers.Where(HeadsToThisShop).Sum(x => x.Items.Sum(i => i.Kind == CourierItemKind.Part && PartCatalog.Exists(i.Id)
@@ -86,7 +86,7 @@ namespace PCShopSell.Core.Session
             string orderId = "direct-order:" + _cityProcurementSequence++;
             Ledger.ForceDebit(Clock.Today, "进货", paid, "直供首付/现款 " + partId,
                 LedgerAttribution.ForShop(PlayerShopPlace.Id, orderId + ":goods", "采购").Product(partId, count, DirectPrice(PartCatalog.Get(partId)).Cents));
-            if (credit) _supplierDebts.Add(new SupplierDebt { Id = _nextDebtId++, Principal = (total - paid).Cents, DueDay = Clock.Today.TotalDays + 14, LastFeeDay = Clock.Today.TotalDays + 14 });
+            if (credit) _supplierDebts.Add(new SupplierDebt { Id = _nextDebtId++, ShopId = PlayerShopPlace.Id, OrderId = orderId, Principal = (total - paid).Cents, DueDay = Clock.Today.TotalDays + 14, LastFeeDay = Clock.Today.TotalDays + 14 });
             long arrival = GameTimestamp.From(Clock.Today.AddDays(1), 600).TotalMinutes;
             _directShipments.Add(new DirectShipment { OrderId = orderId, PartId = partId, Count = count, Arrival = arrival, ShopId = PlayerShopPlace.Id });
             RegisterProcurementOrder(orderId, "直供", PlayerShopPlace.Id, "direct:zhou", paid.Cents, arrival,
@@ -99,7 +99,7 @@ namespace PCShopSell.Core.Session
         {
             var d = _supplierDebts.Find(x => x.Id == id);
             if (d == null || IsGameOver) return false;
-            if (!Ledger.TryDebit(Clock.Today, "偿还货款", d.Amount, "直供账单 #" + id)) return Fail("现金不足以结清这笔货款。");
+            if (!Ledger.TryDebit(Clock.Today, "偿还货款", d.Amount, "直供账单 #" + id, SupplierDebtAttribution(d))) return Fail("现金不足以结清这笔货款。");
             _supplierDebts.Remove(d);
             Say("直供账单已结清。");
             return true;
@@ -114,6 +114,9 @@ namespace PCShopSell.Core.Session
                 Say($"直供到货：{PartCatalog.Get(x.PartId).Name} ×{x.Count}，已入{(MyShopCount > 1 ? ShopTitle(dest) : "店里")}后仓。");
             }
         }
+        private static LedgerAttribution SupplierDebtAttribution(SupplierDebt debt) =>
+            LedgerAttribution.ForShop(debt.ShopId, "supplier-debt:" + debt.Id + ":settled", "货款结清");
+
         private void SettleSupplierDebts(int day)
         {
             foreach (var d in _supplierDebts.ToArray())
@@ -129,7 +132,7 @@ namespace PCShopSell.Core.Session
                 if (day == d.DueDay || (day - d.DueDay) % 7 == 0) Say($"直供账单 #{d.Id} 到期未付 {d.Amount}；供货暂停，逾期每日本金 0.1%，累计封顶 10%。");
                 if (day >= d.DueDay + 30)
                 {
-                    Ledger.ForceDebit(Clock.Today, "偿还货款", d.Amount, "直供逾期 30 天强制结算");
+                    Ledger.ForceDebit(Clock.Today, "偿还货款", d.Amount, "直供逾期 30 天强制结算", SupplierDebtAttribution(d));
                     _supplierDebts.Remove(d);
                     DirectAgreement = false;
                     Say("直供账款逾期 30 天已强制扣款，合作解除。负现金按破产规则处理。");

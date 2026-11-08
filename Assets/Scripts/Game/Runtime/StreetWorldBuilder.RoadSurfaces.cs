@@ -3,11 +3,32 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
 using PCShopSell.Core.Session;
+using PCShopSell.Core.World;
 
 namespace PCShopSell.Game.Runtime
 {
     public sealed partial class StreetWorldBuilder
     {
+        private readonly List<StreetSegment> _lakeAccessSurfaces = new List<StreetSegment>();
+
+        internal static bool IsLakeAccessNode(string id) => id.StartsWith("race_", System.StringComparison.Ordinal)
+            || id.StartsWith("motor_", System.StringComparison.Ordinal);
+
+        public Vector3 StreetPosition(MapPoint point) => ToWorld(point, StreetHeightAt((float)point.X, (float)point.Y));
+
+        internal float StreetHeightAt(float x, float z)
+        {
+            var point = new Vector2(x, z);
+            foreach (var segment in _lakeAccessSurfaces)
+            {
+                var delta = segment.B - segment.A;
+                float along = Mathf.Clamp01(Vector2.Dot(point - segment.A, delta) / delta.sqrMagnitude);
+                if ((point - (segment.A + delta * along)).sqrMagnitude <= segment.Width * segment.Width * .25f)
+                    return LakeAccessHeight(_city);
+            }
+            return 0;
+        }
+
         sealed class StreetSegment
         {
             public Vector2 A,B;public float Width;public bool Raised;
@@ -36,13 +57,15 @@ namespace PCShopSell.Game.Runtime
         {
             var root=new GameObject("ContinuousStreetSurfaces").transform;root.SetParent(_root,false);
             var resources=root.gameObject.AddComponent<CityLandscapeResources>();
+            _lakeAccessSurfaces.Clear();
+            float deck = LakeAccessHeight(_city);
             var segments=new List<StreetSegment>();var seen=new HashSet<string>();
             foreach(var n in _city.Map.Nodes)foreach(var e in _city.Map.NeighborsOf(n.Id))
             {
                 string key=string.CompareOrdinal(n.Id,e.To)<0?n.Id+"|"+e.To:e.To+"|"+n.Id;if(!seen.Add(key))continue;
                 var a=NodeWorld(n.Id);var b=NodeWorld(e.To);if((b-a).sqrMagnitude<.01f)continue;
                 segments.Add(new StreetSegment{A=new Vector2(a.x,a.z),B=new Vector2(b.x,b.z),Width=PlannedRoadWidth(a,b),
-                    Raised=n.Id.StartsWith("race_")||e.To.StartsWith("race_")||n.Id.StartsWith("motor_")||e.To.StartsWith("motor_")});
+                    Raised=IsLakeAccessNode(n.Id)||IsLakeAccessNode(e.To)});
             }
             // A raised access road owns its junction; the ground road terminates at that boundary.
             segments=segments.OrderByDescending(s=>s.Raised).ThenByDescending(s=>(s.B-s.A).sqrMagnitude).ToList();
@@ -51,17 +74,29 @@ namespace PCShopSell.Game.Runtime
             foreach(var s in segments)
             {
                 var p=RoadSurfaceGeometry.Road(s.A,s.B,s.Width);
-                roads.Add(roadIndex.Cut(new List<Vector2[]>{p},p),s.Raised?.25f:.025f);roadIndex.Add(p);
+                roads.Add(roadIndex.Cut(new List<Vector2[]>{p},p),s.Raised?deck:.025f);roadIndex.Add(p);
             }
             void Pavement(Vector2[] p,float y)
             {
                 var parts=roadIndex.Cut(new List<Vector2[]>{p},p);parts=pavingIndex.Cut(parts,p);paving.Add(parts,y);pavingIndex.Add(p);
             }
-            foreach(var s in segments)Pavement(RoadSurfaceGeometry.Road(s.A,s.B,s.Width+(float)GameSession.CityPavingWidth*2),s.Raised?.25f:.025f);
-            foreach(var p in _city.Places)
+            foreach (var s in segments)
+            {
+                float width = s.Width + (float)GameSession.CityPavingWidth * 2;
+                Pavement(RoadSurfaceGeometry.Road(s.A, s.B, width), s.Raised ? deck : .025f);
+                if (s.Raised) _lakeAccessSurfaces.Add(new StreetSegment { A = s.A, B = s.B, Width = width });
+            }
+            foreach(var p in _city.PublicPlaces)
             {
                 var a=NodeWorld(p.NodeId);var b=a+new Vector3((float)p.EntranceX,0,(float)p.EntranceY);
-                if((a-b).sqrMagnitude>.01f)Pavement(RoadSurfaceGeometry.Strip(new Vector2(a.x,a.z),new Vector2(b.x,b.z),2),.025f);
+                if ((a-b).sqrMagnitude <= .01f) continue;
+                var from = new Vector2(a.x, a.z);
+                var to = new Vector2(b.x, b.z);
+                bool raised = IsLakeAccessNode(p.NodeId);
+                const float entranceWidth = 2f;
+                Pavement(raised ? RoadSurfaceGeometry.Road(from, to, entranceWidth)
+                    : RoadSurfaceGeometry.Strip(from, to, entranceWidth), raised ? deck : .025f);
+                if (raised) _lakeAccessSurfaces.Add(new StreetSegment { A = from, B = to, Width = entranceWidth });
             }
             var markIndex=new RoadSurfaceGeometry.Index();
             for(int i=0;i<segments.Count;i++)
@@ -71,7 +106,7 @@ namespace PCShopSell.Game.Runtime
                 void Mark(Vector2[] p,SurfaceMesh buffer)
                 {
                     var parts=roadIndex.Cut(new List<Vector2[]>{p},p,id=>id!=i&&Mathf.Abs(Vector2.Dot((segments[id].B-segments[id].A).normalized,d))<.85f);
-                    parts=markIndex.Cut(parts,p);buffer.Add(parts,s.Raised?.265f:.04f);markIndex.Add(p);
+                    parts=markIndex.Cut(parts,p);buffer.Add(parts,s.Raised?deck+.015f:.04f);markIndex.Add(p);
                 }
                 foreach(int sign in new[]{-1,1})
                 {

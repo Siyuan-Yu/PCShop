@@ -77,8 +77,12 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                var cash = s.Ledger.Balance; Assert.True(s.TradeCityInvestment("city_chip", 17, true, true));
-                Assert.True(s.TradeCityInvestment("city_chip", 5, false)); Assert.True(s.TradeCityInvestment("city_chip", 12, false));
+                var cash = s.Ledger.Balance;
+                int lot = GameSession.StockLotSize;
+                Assert.False(s.TradeCityInvestment("city_chip", 1, true, true));
+                Assert.True(s.TradeCityInvestment("city_chip", 2 * lot, true, true));
+                Assert.True(s.TradeCityInvestment("city_chip", lot, false));
+                Assert.True(s.TradeCityInvestment("city_chip", lot, false));
                 Assert.Zero(s.CityInvestmentUnits("city_chip")); Assert.AreEqual(Money.Zero, s.CityInvestmentCost("city_chip"));
                 Assert.Less(s.Ledger.Balance.Cents, cash.Cents); Assert.True(s.CityInvestmentRealized("city_chip").IsNegative);
                 Assert.False(s.TradeCityInvestment("city_chip", 1, false));
@@ -88,11 +92,11 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                Assert.True(s.TradeCityInvestment("city_art", 9, true, true));
+                Assert.True(s.TradeCityInvestment("city_art", GameSession.StockLotSize, true, true));
                 using (var load = Reload(s))
                 {
                     Assert.AreEqual(s.CityInvestmentCost("city_art"), load.CityInvestmentCost("city_art"));
-                    Assert.AreEqual(9, load.CityInvestmentUnits("city_art"));
+                    Assert.AreEqual(GameSession.StockLotSize, load.CityInvestmentUnits("city_art"));
                     s.Clock.Restore(new GameDate(4), 600); load.Clock.Restore(new GameDate(4), 600);
                     s.TickCityAssets(); load.TickCityAssets();
                     CollectionAssert.AreEqual(s.CityInvestmentHistory("city_art"), load.CityInvestmentHistory("city_art"));

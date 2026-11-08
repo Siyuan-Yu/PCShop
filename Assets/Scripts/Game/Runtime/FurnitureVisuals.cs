@@ -31,6 +31,11 @@ namespace PCShopSell.Game.Runtime
                 return root.gameObject;
             }
             if(def.Id.StartsWith("restaurant_")||def.Id.StartsWith("used_")){SpecialFurniture(root,def,c);return root.gameObject;}
+            if(PetShopCatalog.HouseCapacity(def.Id)>0 || PetShopCatalog.IsToyFixture(def.Id))
+            {
+                PetSceneModels.BuildFurniture(root,def,c);
+                return root.gameObject;
+            }
             switch (def.Id)
             {
                 case FurnitureCatalog.FittingMirror:

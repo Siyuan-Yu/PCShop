@@ -17,9 +17,29 @@ namespace PCShopSell.Game.UI
     public sealed class AgencyStreetMap : MonoBehaviour, IPointerDownHandler, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler, IScrollHandler
     {
         public sealed class ViewState { public float Zoom = 1; public Vector2 Offset; }
+        public readonly struct PedestrianBand
+        {
+            public readonly Vector2 From, To;
+            public readonly float Height;
+            public readonly int Level;
+            public PedestrianBand(Vector2 from,Vector2 to,float height,int level)
+            { From=from; To=to; Height=height; Level=level; }
+        }
+
         public static readonly Color RentalAvailable = new Color(.15f, 1f, .38f);
         public static readonly Color RentalUpcoming = new Color(1f, .5f, .06f);
+        public static readonly Color PedestrianBandOutline = new Color32(28,32,49,255);
+        private static readonly Color[] PedestrianBandColors =
+        {
+            new Color32(41,218,248,255), new Color32(156,105,255,255), new Color32(255,63,126,255)
+        };
+        private static readonly float[] PedestrianBandWidths = { .58f, .92f, 1.28f };
+        public static Color PedestrianBandColor(int level) => PedestrianBandColors[level];
+        public static float PedestrianBandWidth(int level) => PedestrianBandWidths[level];
+
         private GameObject _rentalGlow;
+        private GameObject _pedestrianOverlay;
+        private readonly List<Mesh> _pedestrianMeshes = new List<Mesh>();
         private Camera _camera;
         private RenderTexture _texture;
         private GameController _game;
@@ -50,7 +70,8 @@ namespace PCShopSell.Game.UI
             RenderMap();
         }
 
-        public void Initialize(GameController game, ViewState state, Place[] units, float width, float height, bool residential = false)
+        public void Initialize(GameController game, ViewState state, Place[] units, float width, float height,
+            bool residential = false,IReadOnlyList<PedestrianBand> pedestrianBands = null)
         {
             _game = game; _state = state; _rect = (RectTransform)transform;
             Width = width; Height = height;
@@ -98,7 +119,54 @@ namespace PCShopSell.Game.UI
             { name = "AgencyStreetOverview", filterMode = FilterMode.Bilinear };
             _camera.targetTexture = _texture;
             GetComponent<RawImage>().texture = _texture;
+            if (pedestrianBands?.Count>0 && SystemInfo.graphicsDeviceType!=GraphicsDeviceType.Null)
+                BuildPedestrianOverlay(pedestrianBands);
             RenderMap();
+        }
+
+        private void BuildPedestrianOverlay(IReadOnlyList<PedestrianBand> bands)
+        {
+            _pedestrianOverlay = new GameObject("AgencyPedestrianOverlay");
+            _pedestrianOverlay.SetActive(false);
+            BuildBandMesh("StreetFlowOutline",null,PedestrianBandOutline);
+            BuildBandMesh("StreetFlowLow",0,PedestrianBandColor(0));
+            BuildBandMesh("StreetFlowMedium",1,PedestrianBandColor(1));
+            BuildBandMesh("StreetFlowHigh",2,PedestrianBandColor(2));
+
+            void BuildBandMesh(string name,int? level,Color tint)
+            {
+                bool outline = !level.HasValue;
+                var vertices = new List<Vector3>();
+                var indices = new List<int>();
+                foreach (var band in bands)
+                {
+                    if (!outline && band.Level!=level) continue;
+                    float width = PedestrianBandWidth(band.Level)+(outline ? .26f : 0f);
+                    float height = band.Height+(outline ? 0f : .018f);
+                    var strip = RoadSurfaceGeometry.Road(band.From,band.To,width);
+                    int first = vertices.Count;
+                    foreach (var point in strip)
+                        vertices.Add(new Vector3(point.x,height,point.y));
+                    for (int i=1; i<strip.Length-1; i++)
+                    {
+                        indices.Add(first);
+                        indices.Add(first+i+1);
+                        indices.Add(first+i);
+                    }
+                }
+                if (vertices.Count==0) return;
+                var mesh = new Mesh { name = name, indexFormat = IndexFormat.UInt32 };
+                mesh.SetVertices(vertices);
+                mesh.SetTriangles(indices,0);
+                _pedestrianMeshes.Add(mesh);
+                var go = new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer));
+                go.transform.SetParent(_pedestrianOverlay.transform,false);
+                go.GetComponent<MeshFilter>().sharedMesh = mesh;
+                var renderer = go.GetComponent<MeshRenderer>();
+                renderer.sharedMaterial = Mats.Unlit(tint);
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
         }
 
         public static Bounds BuildingBounds(PlaceVisual place)
@@ -160,6 +228,7 @@ namespace PCShopSell.Game.UI
             try
             {
                 _game.World.Root.SetActive(true);
+                if (_pedestrianOverlay != null) _pedestrianOverlay.SetActive(true);
                 foreach (var c in canvases) c.enabled = false;
                 foreach (var place in outside) place.Root.SetActive(false);
                 if (_rentalGlow != null) _rentalGlow.SetActive(false);
@@ -171,6 +240,7 @@ namespace PCShopSell.Game.UI
             }
             finally
             {
+                if (_pedestrianOverlay != null) _pedestrianOverlay.SetActive(false);
                 if (_rentalGlow != null) _rentalGlow.SetActive(false);
                 RenderSettings.fog = fog;
                 RenderSettings.ambientMode = ambientMode;
@@ -247,6 +317,14 @@ namespace PCShopSell.Game.UI
 
         private void ReleasePreview()
         {
+            if (_pedestrianOverlay != null)
+            {
+                _pedestrianOverlay.SetActive(false);
+                Kill.It(_pedestrianOverlay);
+                _pedestrianOverlay = null;
+            }
+            foreach (var mesh in _pedestrianMeshes) Kill.It(mesh);
+            _pedestrianMeshes.Clear();
             if (_rentalGlow != null) { _rentalGlow.SetActive(false); Kill.It(_rentalGlow); _rentalGlow = null; }
             if (_camera != null)
             {

@@ -105,8 +105,9 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(tabs,"我拥有的 · "+owned.Length,()=>{_assetPropertyListTab=0;RenderSide();},15,_assetPropertyListTab==0?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);
                 Ui.Size(Ui.Button(tabs,"我租的 · "+rented.Length,()=>{_assetPropertyListTab=1;RenderSide();},15,_assetPropertyListTab==1?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);
                 var rows=_assetPropertyListTab==0?owned:rented;
-                long monthly=_assetPropertyListTab==0?rows.Sum(AssetPropertyRent):rows.Sum(AssetLeasedRent);
-                var total=Line(detail,(_assetPropertyListTab==0?"每月应收 ":"每月应付 ")+Money.FromCents(monthly),19,
+                long Total(bool homes) => rows.Where(p => (p.Kind == PlaceKind.Home) == homes)
+                    .Sum(p => _assetPropertyListTab==0 ? AssetPropertyRent(p) : AssetLeasedRent(p));
+                var total=Line(detail,(_assetPropertyListTab==0?"应收租金 ":"应付租金 ")+Money.FromCents(Total(false))+"/周 · "+Money.FromCents(Total(true))+"/月",19,
                     _assetPropertyListTab==0?AssetPropertyMap.OwnedColor:AssetPropertyMap.RentedColor);
                 total.resizeTextForBestFit=true;total.resizeTextMinSize=14;total.resizeTextMaxSize=19;
                 Line(detail,"单击查看信息 · 双击定位聚焦",14,Ui.Dim);
@@ -116,7 +117,7 @@ namespace PCShopSell.Game.UI
                 {
                     var target=p;bool mine=_assetPropertyListTab==0;
                     long amount=mine?AssetPropertyRent(target):AssetLeasedRent(target);
-                    string sub=AssetPropertyStatus(target,mine,!mine)+(amount>0?" · "+Money.FromCents(amount)+"/月":"");
+                    string sub=AssetPropertyStatus(target,mine,!mine)+(amount>0?" · "+Money.FromCents(amount)+(p.Kind==PlaceKind.Home?"/月":"/周"):"");
                     var button=Ui.Size(Ui.Button(list,AssetPropertyName(target)+"\n<size=13>"+sub+"</size>",()=>ShowInfo(view.BuildingAt(target.Id)),15,
                         target.Id==_assetPropertyId?Ui.ButtonHot:Ui.ButtonBg),-1,69);
                     var text=button.GetComponentInChildren<Text>();text.alignment=TextAnchor.MiddleLeft;text.resizeTextForBestFit=true;text.resizeTextMinSize=12;text.resizeTextMaxSize=15;
@@ -154,7 +155,8 @@ namespace PCShopSell.Game.UI
             if(place==S.Home&&S.HomePriceCents>0)return 0;
             var p=S.PropertyAt(place.Id);if(p==null||S.ShopAt(place.Id)!=null||S.VentureAt(place.Id)!=null||place.Id==S.ParkPlaceId)return 0;
             if(place.Kind==PlaceKind.Home&&S.ResidentialTenants(place.Id).Length==0)return 0;
-            return p.UseMode=="managed"?Money.FromCents(p.MonthlyRentCents).Scale(.85).Cents:p.UseMode=="npc"?p.MonthlyRentCents:0;
+            long rent=place.Kind==PlaceKind.Home?p.MonthlyRentCents:p.WeeklyRentCents;
+            return p.UseMode=="managed"?Money.FromCents(rent).Scale(.85).Cents:p.UseMode=="npc"?rent:0;
         }
         private long AssetLeasedRent(Place place)
         {
@@ -175,20 +177,21 @@ namespace PCShopSell.Game.UI
         private string[] AssetPropertyInfo(Place place,bool owned,bool rented)
         {
             if(place==null)return new[]{"城市背景建筑，无可办理的房源。"};
+            string period=place.Kind==PlaceKind.Home?"月":"周";
             if(owned)
             {
                 var property=S.PropertyAt(place.Id);
                 Money value=place==S.Home&&S.HomePriceCents>0?S.HomePurchasePrice:S.PropertyMarketValue(property);
-                return new[]{"当前估值 "+value,"每月应收租金 "+Money.FromCents(AssetPropertyRent(place)),
+                return new[]{"当前估值 "+value,"每"+period+"应收租金 "+Money.FromCents(AssetPropertyRent(place)),
                     AssetPropertyRent(place)>0?"租户："+property.TenantName:"产权属于你，无需向房东交租。"};
             }
             if(!rented&&place.Kind!=PlaceKind.Home&&!GameSession.IsCommercialPremises(place))return new[]{"当前用途："+(string.IsNullOrEmpty(place.Business)?place.Name:place.Business),"该地点不开放普通房产租购。"};
             Money asking=place.Kind==PlaceKind.Home?S.ResidentialRent(place):S.ShopRentQuote(place);
-            if(rented)return new[]{"签约月租 "+Money.FromCents(AssetLeasedRent(place))+"（保留签约价）","当前新租参考 "+asking,
+            if(rented)return new[]{"签约"+period+"租 "+Money.FromCents(AssetLeasedRent(place))+"（保留签约价）","当前新租参考 "+asking,
                 S.PendingLease?.PlaceId==place.Id?"交房日期 "+new GameDate(S.PendingLease.StartDay):"你持有租用权，产权属于房东。"};
             Money price=place.Kind==PlaceKind.Home?S.ResidentialPrice(place):S.CityPropertyPrice(place.Id);
             var listing=S.Listings.FirstOrDefault(l=>l.PlaceId==place.Id);
-            return new[]{"参考售价 "+price,(listing==null?"新租参考月租 ":"挂牌月租 ")+(listing?.Rent??asking),
+            return new[]{"参考售价 "+price,(listing==null?"新租参考":"挂牌")+period+"租 "+(listing?.Rent??asking),
                 place.Kind==PlaceKind.Home?"登记住户 "+S.ResidentialTenants(place.Id).Length+"人":listing==null?"当前没有租赁挂牌，可到中介了解产权。":"租赁与购买需在所属中介办理。"};
         }
     }

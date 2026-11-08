@@ -49,8 +49,10 @@ namespace PCShopSell.Core.Finance
                     return new LedgerAttribution(LedgerBusinessKind.InternalTransfer, transactionKind: category);
                 case "购置物业": case "物业出售": case "物业租金": case "物业维护": case "指数投资": case "指数赎回":
                 case "购置住宅": case "住宅出售": case "企业投资": case "园区投资": case "MCN投资": case "押金": case "履约保证金":
+                case "购车": case "载具出售": case "购买车位":
                     return new LedgerAttribution(LedgerBusinessKind.AssetInvestment, transactionKind: category);
                 case "餐饮": case "生活": case "人情": case "医疗": case "购物": case "网购": case "个人衣物": case "打工": case "罚款":
+                case "交通": case "赛车报名": case "赛车练习": case "赛事奖金": case "车辆改装": case "车辆整备": case "车位租金":
                     return new LedgerAttribution(LedgerBusinessKind.Personal, transactionKind: category);
                 default: return new LedgerAttribution(LedgerBusinessKind.Historical, transactionKind: category);
             }

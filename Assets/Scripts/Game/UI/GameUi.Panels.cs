@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using PCShopSell.Core.Catalog;
@@ -35,7 +35,6 @@ namespace PCShopSell.Game.UI
                     OpenDock();
                     break;
                 case PlaceKind.Agency:
-                    _agencySelectedId = null;
                     _agencyViewState = new AgencyStreetMap.ViewState();
                     OpenPlaceWindow(p, BuildAgency, 1660, 1000);
                     break;
@@ -144,7 +143,7 @@ namespace PCShopSell.Game.UI
                 }
                 if (p.Id != "life_expo"&&p.Kind!=PlaceKind.Garage) BuildPlayerWorkEntry(win.Content, p, win);
                 if (S.HasRetailWholesale(p) && build!=BuildRetailWholesale && (p.Business==GameSession.FarmBusiness || p.Business==Gifts.TobaccoBusiness)) Ui.Size(Ui.Button(win.Content, "批发进货（可供自己店铺销售）", () => OpenRetailWholesale(p), 18, Ui.ButtonHot), -1, 40);
-                RectTransform frame = p.Kind == PlaceKind.Agency || p.Kind==PlaceKind.Garage || RaceTracks.Get(p.Id)!=null || S.VentureAt(p.Id) != null || S.IsPlayerPropertyOccupied(p.Id) ? null : BuildRosterFrame(win, p, h - 170);
+                RectTransform frame = p.Kind == PlaceKind.Agency || p.Kind==PlaceKind.Garage || RaceTracks.Get(p.Id)!=null || S.VentureAt(p.Id) != null || S.IsPlayerPropertyOccupied(p.Id) ? null : BuildRosterFrame(win, p, h - 170, p.Kind==PlaceKind.Dealer || p.Kind==PlaceKind.Station || p.Id=="motor_scooter_mod");
                 if (frame != null)
                 {
                     RectTransform original = win.Content;
@@ -160,7 +159,7 @@ namespace PCShopSell.Game.UI
                     if(panel.Find("LeavePlaceFooter")==null)
                     {
                         var footer=Ui.Rect(panel,"LeavePlaceFooter").Anchor(0,0,1,0,16,10,16,-50);
-                        Ui.Button(footer,"离开"+p.Name,()=>{if(S.CurrentPlace==p&&!S.IsWorking){CloseModalWindows();S.Leave();}},17,Ui.Warn).GetComponent<RectTransform>().Fill().name="LeavePlace";
+                        Ui.Button(footer,"离开"+S.PlaceTitle(p),()=>{if(S.CurrentPlace==p&&!S.IsWorking){CloseModalWindows();S.Leave();}},17,Ui.Warn).GetComponent<RectTransform>().Fill().name="LeavePlace";
                     }
                     ((RectTransform)win.Content.parent.parent).offsetMin=new Vector2(0,58);
                 }
@@ -201,10 +200,11 @@ namespace PCShopSell.Game.UI
             foreach(var destination in S.City.OfKind(PlaceKind.Station).Where(x=>x!=p))
             {
                 var target=destination;
-                Ui.Size(Ui.Button(w.Content,"前往 "+target.Name+" · "+S.City.StreetName(target.StreetId),()=>
+                string locked=S.DistrictAccessBlocker(target);
+                Ui.Size(Ui.Button(w.Content,(locked==null?"前往 ":"未开放 · ")+target.Name+" · "+S.City.StreetName(target.StreetId),()=>
                 {
                     if(S.TakeMetro(target.Id)){CloseWindowSilently(w);if(S.CurrentPlace!=null)OnEnteredPlace(S.CurrentPlace);}
-                },19,Ui.ButtonHot),-1,44);
+                },19,locked==null?Ui.ButtonHot:Ui.ButtonBg,locked==null),-1,44).Tip(locked??"乘地铁前往此站");
             }
         }
 
@@ -256,7 +256,7 @@ namespace PCShopSell.Game.UI
         public void OpenMarketPanel() => OpenMarketView(0);
         private void BuildPriceMarket(Window w)
         {
-                Ui.Size(Ui.Button(w.Content, "每周物价简报 · " + (S.WeeklyPricesSubscribed ? "已订阅" : "未订阅"), OpenWeeklyPriceReport, 17), -1, 34);
+                Ui.Size(Ui.Button(w.Content, "经济简报 · 收支与物价", OpenEconomicReport, 17), -1, 34);
 
                 foreach (MacroFactor f in new[] { MacroFactor.Crypto, MacroFactor.AiDemand, MacroFactor.NewGeneration })
                 {

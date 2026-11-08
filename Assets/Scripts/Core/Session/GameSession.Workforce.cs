@@ -12,7 +12,7 @@ using PCShopSell.Core.World;
 namespace PCShopSell.Core.Session
 {
     public enum PurchaseFrequency { Daily, MondayWednesdayFriday, Wednesday }
-    public enum EmployeeRole { Cashier, Assembler, Buyer, Unassigned, Salesperson, Chef, Waiter, Appraiser }
+    public enum EmployeeRole { Cashier, Assembler, Buyer, Unassigned, Salesperson, Chef, Waiter, Appraiser, PetKeeper }
 
     [Serializable]
     public sealed class PurchaseLine
@@ -124,7 +124,7 @@ namespace PCShopSell.Core.Session
         private readonly List<EmployeePurchaseTrip> _employeeTrips = new List<EmployeePurchaseTrip>();
         public IReadOnlyList<EmployeePurchaseTrip> EmployeePurchaseTrips => _employeeTrips;
 
-        public static string RoleName(EmployeeRole role) => role == EmployeeRole.Cashier ? "收银员" : role == EmployeeRole.Assembler ? "装机员" : role == EmployeeRole.Buyer ? "进货员" : role == EmployeeRole.Salesperson ? "销售员" : role == EmployeeRole.Chef ? "厨师" : role == EmployeeRole.Waiter ? "服务员" : role == EmployeeRole.Appraiser ? "收购师" : "待安排";
+        public static string RoleName(EmployeeRole role) => role == EmployeeRole.Cashier ? "收银员" : role == EmployeeRole.Assembler ? "装机员" : role == EmployeeRole.Buyer ? "进货员" : role == EmployeeRole.Salesperson ? "销售员" : role == EmployeeRole.Chef ? "厨师" : role == EmployeeRole.Waiter ? "服务员" : role == EmployeeRole.Appraiser ? "收购师" : role == EmployeeRole.PetKeeper ? "饲养员" : "待安排";
         public static string PurchaseTransportName(VehicleKind kind) =>
             kind == VehicleKind.Walk ? "步行去，叫货车送回" : kind == VehicleKind.Taxi ? "打车去，叫货车送回"
             : "开" + Vehicles.Get(kind).Name + "去，自己运回";
@@ -137,7 +137,7 @@ namespace PCShopSell.Core.Session
             {
                 var rows = new List<EmployeeAssignment>();
                 foreach (var shop in _shops.Where(x => x.Rented))
-                    foreach (EmployeeRole role in new[] { EmployeeRole.Cashier, EmployeeRole.Assembler, EmployeeRole.Buyer, EmployeeRole.Salesperson, EmployeeRole.Chef, EmployeeRole.Waiter, EmployeeRole.Appraiser })
+                    foreach (EmployeeRole role in new[] { EmployeeRole.Cashier, EmployeeRole.Assembler, EmployeeRole.Buyer, EmployeeRole.Salesperson, EmployeeRole.Chef, EmployeeRole.Waiter, EmployeeRole.Appraiser, EmployeeRole.PetKeeper })
                     {
                         foreach(Employee e in ShopStaff(shop,role))
                         {
@@ -291,13 +291,14 @@ namespace PCShopSell.Core.Session
             return $"店内后仓容量不限 · 已存 {stock.UsedSpace * kg:0.##} 千克 · 在途 {incoming * kg:0.##} 千克；采购仍受货款、运输承重和店家本型号余量约束";
         }
 
-        private EmployeePurchaseQuote QuoteEmployeePurchaseExact(string id, EmployeePurchasePlan plan = null,bool planningOnly=false)
+        private EmployeePurchaseQuote QuoteEmployeePurchaseExact(string id, EmployeePurchasePlan plan = null, bool planningOnly = false,
+            IReadOnlyList<PurchaseOffer> catalog = null)
         {
             var q = new EmployeePurchaseQuote();
             var row = FindEmployee(id);
             if (row == null || row.Role != EmployeeRole.Buyer) { q.Error = "请选择进货员"; return q; }
             plan = plan ?? row.Person.PurchasePlan;
-            plan = EffectiveEmployeePurchasePlan(row, plan,planningOnly);
+            plan = EffectiveEmployeePurchasePlan(row, plan, planningOnly, catalog);
             string blocker = planningOnly?null:IsGameOver ? "游戏已结束"
                 : _employeeTrips.Any(t => t.EmployeeId == id) ? "上一趟员工或货物还没回来"
                 : !row.Person.OnDuty(Clock.Now) ? "还没到该员工的上班时间"
@@ -315,18 +316,22 @@ namespace PCShopSell.Core.Session
             var selected = new List<(PurchaseOffer offer, PurchaseLine item)>();
             foreach (var item in plan.Items)
             {
-                var offer = EmployeePurchaseOffer(item, plan.SourceId);
+                var offer = EmployeePurchaseOffer(item, plan.SourceId, catalog);
                 if (item == null || item.Count <= 0 || item.Count > 100 || offer == null) { q.Error = "清单中有不可采购的商品或货源，请重新选择"; return q; }
-                if (offer.Kind == PurchaseGoodsKind.Part && item.Count > StallRemaining(offer.Source, PartCatalog.Get(offer.Id)))
-                    blocker = blocker ?? offer.Source.Name + "的" + offer.Name + "超过今天剩余额度";
-                if (offer.Kind == PurchaseGoodsKind.Gift && item.Count > CitySupplierRemaining(offer.Source.Id, offer.Id))
-                    blocker = blocker ?? offer.Source.Name + "的" + offer.Name + "超过本日供货配额";
-                if (item.Count > EmployeeSupplyAvailable(id,offer,Clock.Today.TotalDays)) blocker=blocker??offer.Name+"超过今日剩余库存";
-                if (item.Count < PurchaseMinimum(offer)) blocker = blocker ?? offer.Source.Name + "的"+offer.Name+"当前起订量为" + PurchaseMinimum(offer) + "件";
+                if (!planningOnly)
+                {
+                    if (offer.Kind == PurchaseGoodsKind.Part && item.Count > StallRemaining(offer.Source, PartCatalog.Get(offer.Id)))
+                        blocker = blocker ?? offer.Source.Name + "的" + offer.Name + "超过今天剩余额度";
+                    if (offer.Kind == PurchaseGoodsKind.Gift && item.Count > CitySupplierRemaining(offer.Source.Id, offer.Id))
+                        blocker = blocker ?? offer.Source.Name + "的" + offer.Name + "超过本日供货配额";
+                    if (item.Count > EmployeeSupplyAvailable(id,offer,Clock.Today.TotalDays)) blocker=blocker??offer.Name+"超过今日剩余库存";
+                    if (item.Count < PurchaseMinimum(offer)) blocker = blocker ?? offer.Source.Name + "的"+offer.Name+"当前起订量为" + PurchaseMinimum(offer) + "件";
+                }
                 selected.Add((offer, item));
             }
-            foreach(var sameStock in selected.GroupBy(x=>PhysicalSupplyKey(x.offer)))
-                if(sameStock.Sum(x=>x.item.Count)>EmployeeSupplyAvailable(id,sameStock.First().offer,Clock.Today.TotalDays))blocker=blocker??sameStock.First().offer.Name+"的不同包装/清单行合计超过剩余供货";
+            if (!planningOnly)
+                foreach(var sameStock in selected.GroupBy(x=>PhysicalSupplyKey(x.offer)))
+                    if(sameStock.Sum(x=>x.item.Count)>EmployeeSupplyAvailable(id,sameStock.First().offer,Clock.Today.TotalDays))blocker=blocker??sameStock.First().offer.Name+"的不同包装/清单行合计超过剩余供货";
             foreach (var stop in selected.GroupBy(x => x.offer.Source.Id))
             {
                 var source = stop.First().offer.Source;
@@ -380,7 +385,8 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>整份清单的预算展示，不按当前现金缩减商品。</summary>
-        public EmployeePurchaseQuote EstimateEmployeePurchase(string id, EmployeePurchasePlan plan = null) => QuoteEmployeePurchaseExact(id, plan,true);
+        public EmployeePurchaseQuote EstimateEmployeePurchase(string id, EmployeePurchasePlan plan = null, IReadOnlyList<PurchaseOffer> catalog = null)
+            => QuoteEmployeePurchaseExact(id, plan, true, catalog);
 
         public EmployeePurchaseQuote QuoteEmployeePurchase(string id, EmployeePurchasePlan plan = null)
         {
@@ -446,12 +452,21 @@ namespace PCShopSell.Core.Session
 
         public bool DispatchEmployeePurchase(string id, EmployeePurchasePlan executionPlan = null)
         {
-            var savedPlan=FindEmployee(id)?.Person.PurchasePlan;
-            if (savedPlan?.FirstDay > Clock.Today.TotalDays) return Fail("采购安排明天开始，今天只保存清单。");
-            if(savedPlan?.Daily==true&&(!savedPlan.ScheduledOn(Clock.Today.TotalDays)||!SupplierPlanHasDay(savedPlan,Clock.Today.TotalDays)))return Fail("今天不在该采购计划的星期安排内。");
+            var row = FindEmployee(id);
+            var savedPlan = row?.Person.PurchasePlan;
+            int today = Clock.Today.TotalDays;
+            if (savedPlan?.FirstDay > today) return Fail("采购安排明天开始，今天只保存清单。");
+            if (savedPlan?.Daily == true && (!savedPlan.ScheduledOn(today) || !SupplierPlanHasDay(savedPlan, today)))
+                return Fail("今天不在该采购计划的星期安排内。");
+            if (savedPlan?.Daily == true && savedPlan.LastDay >= today) return Fail("该进货员今天已经执行过采购计划。");
             var q = QuoteEmployeePurchase(id, executionPlan);
             if (q.Error != null) return Fail(q.Error + "。");
-            var row = FindEmployee(id);
+            return DispatchEmployeePurchase(row, q);
+        }
+
+        private bool DispatchEmployeePurchase(EmployeeAssignment row, EmployeePurchaseQuote q)
+        {
+            string id = row.Person.Id;
             var plan = row.Person.PurchasePlan;
             string orderId = "employee-order:" + _cityProcurementSequence++;
             var transportMotor=plan.Transport==VehicleKind.Walk||plan.Transport==VehicleKind.Taxi?null:EmployeeTransportMotor(plan.Transport);
@@ -547,18 +562,18 @@ namespace PCShopSell.Core.Session
                 plan.LastDay = to.Date.TotalDays;
                 var execution = AutomaticEmployeePurchasePlan(row);
                 var q = QuoteEmployeePurchase(row.Person.Id, execution);
-                if (q.Error == null) DispatchEmployeePurchase(row.Person.Id, execution);
+                if (q.Error == null) DispatchEmployeePurchase(row, q);
                 else { row.Person.LastPurchaseNote = "今日自动进货未出发：" + q.Error; Say(row.Person.Name + "：" + row.Person.LastPurchaseNote); }
             }
             UpdateCityProcurement();
         }
 
-        public int VehicleCount(VehicleKind kind) => _owned.Count(x => x == kind);
+        public int VehicleCount(VehicleKind kind) => _garage.Count(v => MotorCatalog.Get(v.ModelId).Kind == kind);
         public int BusyVehicleCount(VehicleKind kind) => _employeeTrips.Count(t => !t.Returned && t.Transport == kind);
-        public int ImpoundedVehicleCount(VehicleKind kind) => kind == VehicleKind.Tricycle ? _impoundedTricycles : kind == VehicleKind.EBike ? _impoundedEBikes : 0;
+        public int ImpoundedVehicleCount(VehicleKind kind) => _garage.Count(v => v.Impounded && MotorCatalog.Get(v.ModelId).Kind == kind);
         public int FreeVehicleCount(VehicleKind kind)
         {
-            SyncGarage();return _garage.Count(v=>MotorCatalog.Get(v.ModelId).Kind==kind&&MotorUsable(v)&&!(v.Commuter&&Vehicle==kind));
+            return _garage.Count(v=>MotorCatalog.Get(v.ModelId).Kind==kind&&MotorUsable(v)&&!(v.Commuter&&Vehicle==kind));
         }
         public string VehicleUsage(VehicleKind kind)
         {

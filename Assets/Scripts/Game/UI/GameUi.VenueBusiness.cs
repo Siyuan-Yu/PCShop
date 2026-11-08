@@ -19,7 +19,7 @@ namespace PCShopSell.Game.UI
                 Line(w.Content,"专用场地 · "+S.VenueBusinessName(place)+" · "+(S.VenueOpen(place)?"营业中":state.Accepting?"等待营业时间或值守到岗":"暂停接客"),22,Ui.Accent);
                 Para(w.Content,"保留场地原用途。原教练不默认受雇；自己值守或另聘员工。老板自用免费，正常消耗时间与体力。关闭管理窗口后时间继续。",17,Ui.Dim);
                 Line(w.Content,"今日顾客 "+state.Customers+" 人 · 收入 "+Money.FromCents(state.RevenueCents)+" · 累计收入 "+Money.FromCents(state.TotalRevenueCents),20,Ui.Good);
-                Line(w.Content,"场地占用（含在途预约） "+state.CustomersHere.Length+" / "+S.VenueCapacity(place)+" 人 · 月租 "+shop.Lease.Rent+" · 维护 ¥"+S.VenueMaintenanceYuan(place)+"/天",18);
+                Line(w.Content,"场地占用（含在途预约） "+state.CustomersHere.Length+" / "+S.VenueCapacity(place)+" 人 · 周租 "+shop.Lease.Rent+" · 维护 ¥"+S.VenueMaintenanceYuan(place)+"/天",18);
                 var hours=Ui.Row(w.Content,42,8);
                 Ui.Size(Ui.Label(hours,"营业时间",18),100);
                 var options=Enumerable.Range(0,24).Select(h=>h.ToString("00")+":00").ToArray();

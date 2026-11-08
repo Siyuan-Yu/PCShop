@@ -34,11 +34,16 @@ namespace PCShopSell.Core.Session
             // Daily wages are contracted fixed bills, not a second additional safety margin.
             result.KnownMandatory += Money.FromYuan(Employees.Sum(x => (long)x.Person.DailyWageYuan) + McnDailyWages) * days;
             for (int offset = 1; offset <= days; offset++)
-                if (today.AddDays(offset).IsMonthStart)
+            {
+                var date = today.AddDays(offset);
+                foreach (var shop in _shops)
+                    if (shop.Lease?.RentDue(date.TotalDays) == true) result.KnownMandatory += RentOf(shop);
+                if (PendingLease?.RentDue(date.TotalDays) == true) result.KnownMandatory += PendingLease.Rent;
+                if (date.IsMonthStart)
                 {
-                    result.KnownMandatory += TotalShopRent + CurrentHomeRent + HomeUtilitiesAtDay(today.AddDays(offset).TotalDays);
-                    if (PendingLease != null) result.KnownMandatory += PendingLease.Rent;
+                    result.KnownMandatory += CurrentHomeRent + HomeUtilitiesAtDay(date.TotalDays);
                 }
+            }
             result.EstimatedDaily = Money.FromYuan(VehicleCount(VehicleKind.Car) * 40L + VehicleCount(VehicleKind.Van) * 60L) * days;
             result.KnownMandatory += Money.FromCents(_employeePayroll.Sum(p=>Math.Max(0,p.OvertimeCents-p.Shops.Sum(x=>x.PaidOvertimeCents))));
             result.EstimatedDaily += EstimatedEmployeeOvertime(days);

@@ -10,10 +10,16 @@ namespace PCShopSell.Core.World
     {
         // One balance knob, shared by player, NPCs and employee route estimates. Does not change the world's clock rate.
         public const double PaceFactor = .2;
-        // NPC walking remains slightly slower than the player's walk, including ETA estimates.
+        public const double PlayerWalkSpeedFactor = 1.2;
+        // NPC walking uses the shared outdoor pace without the player's walking boost.
         public const double NpcWalkSpeedFactor = .85;
         public static int NpcMinutes(double meters, VehicleSpec vehicle) =>
             Minutes(vehicle.Kind == VehicleKind.Walk ? meters / NpcWalkSpeedFactor : meters, vehicle);
+        public static double PlayerSpeedFactor(VehicleKind kind) => kind == VehicleKind.Walk ? PlayerWalkSpeedFactor : 1;
+        public static int PlayerMinutes(double meters, VehicleSpec vehicle) =>
+            Minutes(meters / PlayerSpeedFactor(vehicle.Kind), vehicle);
+        public static double PlayerScaledSecondsMeters(VehicleSpec vehicle, double scaledSeconds, double secondsPerMinuteAt1x) =>
+            ScaledSecondsMeters(vehicle, scaledSeconds, secondsPerMinuteAt1x) * PlayerSpeedFactor(vehicle.Kind);
         public static double SpeedPerMinute(VehicleSpec vehicle) => Math.Max(.01, vehicle.SpeedPerMinute * PaceFactor);
         public static int Minutes(double meters, VehicleSpec vehicle) => meters <= 1e-8 ? 0 : Math.Max(1,
             (int)Math.Min(int.MaxValue, Math.Ceiling(meters / SpeedPerMinute(vehicle) - 1e-9)));

@@ -136,21 +136,38 @@ namespace PCShopSell.Game.UI
         /// 老板交情够了才见得到，没到时是灰色“？？？”，原因写在图下面。右边是原来的商品内容。
         /// 返回放商品内容的容器；没有人返回 null。
         /// </summary>
-        private RectTransform BuildRosterFrame(Window w, Place p, float bodyHeight)
+        private RectTransform BuildRosterFrame(Window w, Place p, float bodyHeight, bool scrollGoods = false)
         {
-            var present=S.PeopleInPlace(p.Id).Where(person=>S.CityPerson(person.PersonId)!=null).ToArray();
+            var locations = p.Kind == PlaceKind.Wholesaler ? S.WholesaleStallsAt(p) : new[] { p };
+            var present = locations.SelectMany(place => S.PeopleInPlace(place.Id))
+                .Where(person => S.CityPerson(person.PersonId) != null).ToArray();
 
             var body=Ui.Row(w.Content,bodyHeight,12);
-            var people=Ui.Rect(body,"People");Ui.VList(people,8,0);Ui.Size(people,210,-1);
+            var people=Ui.Rect(body,"People");Ui.VList(people,8,0);
+            // Override the vertical group's flexible width: the roster must not share
+            // spare horizontal space with the goods column, especially with a ScrollRect.
+            var peopleSize=Ui.Size(people,210,-1,0).GetComponent<LayoutElement>();
+            peopleSize.minWidth=210;
             Ui.Size(Ui.Label(people,"店内在场人物",17),-1,30);
             var portraits = Ui.Scroll(people, Mathf.Max(140, bodyHeight - 40));
             if(present.Length==0)Para(portraits,"此刻没有可交谈的店员在场。",16,Ui.Dim);
             foreach(var state in present)
             {
                 string id=state.PersonId;var def=S.CityPerson(id);
-                OrgNode(portraits, id, def.Name, S.CityPersonRole(id), state.WorkPlaceId == p.Id, false, () => OpenCityPerson(id));
+                OrgNode(portraits, id, def.Name, S.CityPersonRole(id), state.WorkPlaceId == state.LocationPlaceId, false, () => OpenCityPerson(id));
             }
-            var center=Ui.Rect(body,"Goods");Ui.VList(center,6,0);Ui.Size(center,-1,-1,1);return center;
+            var center=Ui.Rect(body,"Goods");Ui.VList(center,6,0);
+            var goodsSize=Ui.Size(center,0,-1,1).GetComponent<LayoutElement>();
+            goodsSize.minWidth=0;
+            if (!scrollGoods) return center;
+            // The roster row has a fixed height. Its product column needs its own viewport;
+            // overflow inside a plain layout group is invisible to the window's outer scroll.
+            var goods=Ui.Scroll(center);
+            var area=(RectTransform)goods.parent.parent;
+            area.name="PlaceGoodsScroll";
+            var size=area.gameObject.AddComponent<LayoutElement>();
+            size.minHeight=0;size.preferredHeight=0;size.flexibleHeight=1;
+            return goods;
         }
 
         private const float OrgCardWidth = 44;
@@ -224,7 +241,7 @@ namespace PCShopSell.Game.UI
         private sealed class TalkOpt
         {
             public string Label, Blocker;
-            public bool Hot;
+            public bool Hot, SeparateBlocker;
             public System.Action Act;
         }
 
@@ -315,6 +332,8 @@ namespace PCShopSell.Game.UI
                 Ui.Size(bubble, -1, bubbleHeight);
                 bool nearby = remote || S.CityPersonState(portraitId) == null || S.CitySamePlace(portraitId);
                 string text = nearby ? ctx.Reply ?? "“" + greeting.Trim('"') + "”" : "对方已经离开了，等下次见面再聊吧。";
+                string districtContext = DistrictDialogueContext(portraitId);
+                if(districtContext!=null)text=districtContext;
                 var transcript = Ui.Scroll(bubble.transform);
                 var transcriptScroll = transcript.GetComponentInParent<ScrollRect>();
                 transcriptScroll.name = "DialogueTextScroll";
@@ -322,16 +341,24 @@ namespace PCShopSell.Game.UI
                 transcriptScroll.GetComponent<Image>().color = Color.clear;
                 Para(transcript, text, 19, Ui.PanelBg);
 
+                var districtState=S.DistrictStoryState;
+                if(districtContext!=null && S.CurrentDistrictNode!=null && districtState.MeetingNodeId==S.CurrentDistrictNode.Id)
+                {
+                    var meetingCard=BusinessCard(w.Content,"主线会面安排");
+                    Para(meetingCard,S.DistrictMeetingDescription,17,Ui.Accent);
+                    Line(meetingCard,"窗口打开时暂停计时，关闭窗口后继续。",16,Ui.Dim);
+                }
                 Ui.Size(Ui.Label(w.Content, "你想……", 15, TextAnchor.MiddleCenter, Ui.Dim), -1, 26);
 
                 foreach (TalkOpt o in makeOptions(ctx))
                 {
                     TalkOpt opt = o;
-                    string label = opt.Blocker == null ? opt.Label : opt.Label.Split('（')[0] + "（" + opt.Blocker + "）";
+                    string label = opt.Blocker == null || opt.SeparateBlocker ? opt.Label : opt.Label.Split('（')[0] + "（" + opt.Blocker + "）";
                     RectTransform row = Ui.Row(w.Content, 42, 0);
                     Ui.Size(Ui.Rect(row, "L"), -1, -1, 1);
                     Ui.Size(Ui.Button(row, label, opt.Act, 18, opt.Hot ? Ui.ButtonHot : Ui.ButtonBg, opt.Blocker == null), 460);
                     Ui.Size(Ui.Rect(row, "R"), -1, -1, 1);
+                    if(opt.SeparateBlocker && opt.Blocker!=null)Para(w.Content,"尚不能确认："+opt.Blocker,16,Ui.Warn);
                 }
 
                 if (npc != null && !string.IsNullOrEmpty(NpcPerks.Describe(npc.Id)))
@@ -362,7 +389,6 @@ namespace PCShopSell.Game.UI
             string greeting=npc!=null?(S.IsMet(personId)?npc.Intro:npc.FirstMeet??npc.Intro):staff?.LineFor(S.Clock.Today.TotalDays)??"你好，今天过得怎么样？";
             if(!remote&&S.AtCurrentDistrictMeeting&&S.DistrictMeetingBlocker==null
                 &&S.DistrictStoryState.MeetingPeople.Contains(personId)
-                &&!S.ReadyDistrictTasks.Any() && S.CurrentDistrictNode.Id!="park.delivery" && S.CurrentDistrictNode.Id!="model.dinner"
                 &&(S.DistrictMeetingContact==null||personId==S.DistrictMeetingContact))greeting=S.CurrentDistrictNode.Dialogue;
             bool creatorChoice = initialPage == 3;
             bool discussingPeople = false;
@@ -394,11 +420,6 @@ namespace PCShopSell.Game.UI
                         if((tender.Intel&clue)!=0)continue;
                         options.Add(new TalkOpt{Label=(clue==1?"核实企业采购要求":"调查现有供应商")+" · ¥200",Blocker=near?null:"请找到本人，当面核实",Act=()=>Reply(S.ResearchBrandTender(id,clue)?(clue==1?"沈远：按时交付是底线，最低价不一定赢。拿试单证明你能供货。":"袁岚：原供应商一定会还价。我们可以联合履约，你也可以先把自己的供货做稳。"):"这次未能完成核实，请查看预算和截止时间。")});
                     }
-                foreach(var task in S.ReadyDistrictTasks.Where(t=>t.PersonId==personId))
-                {
-                    string taskId=task.Id;
-                    options.Add(new TalkOpt{Label="主线 · "+task.Title,Hot=true,Blocker=S.DistrictTaskBlocker(taskId,remote),Act=()=>Reply(S.PerformDistrictTask(taskId,remote))});
-                }
                 if(S.CommunitySearchActive)
                     for(int i=0;i<3;i++)
                         if(GameSession.CommunityLeadPerson(i)==personId&&!S.CommunityHasClue(i))

@@ -44,7 +44,7 @@ namespace PCShopSell.Core.Session
         }
         private void RecordCommunityOuting(CityActivity activity)
         {
-            if(!_district.CommunityMapQuest||_district.CommunitySearchVersion!=2||_district.HasCommunityMap||_district.CommunityMapDelivered
+            if(!_district.CommunityMapQuest||_district.CommunitySearchVersion!=2||_district.CommunityMapDelivered
                 ||activity.State!=CityActivityPhase.Completed||!activity.RewardApplied||!activity.EntryPaid
                 ||activity.ActualStart<_district.CommunityAcceptedAt)return;
             for(int i=0;i<3;i++)
@@ -143,6 +143,6 @@ namespace PCShopSell.Core.Session
             return true;
         }
         private bool CanDeliverCommunityPages => !_district.CommunityMapDelivered
-            && (_district.CommunityPieces==7 || _district.HasCommunityMap);
+            && _district.CommunityPieces==7;
     }
 }

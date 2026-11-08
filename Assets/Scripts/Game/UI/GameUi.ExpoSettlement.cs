@@ -41,23 +41,19 @@ namespace PCShopSell.Game.UI
                     ExpoRewardMetric(values, "品牌口碑", e.ReputationBefore, e.ReputationAfter);
                 }
                 var goods = BrandCard(body, "商品明细");
-                var sales = S.Ledger.Entries.Where(entry => entry.SourceEventId != null
-                    && entry.SourceEventId.StartsWith(e.Id + ":sale:", StringComparison.Ordinal))
-                    .ToLookup(entry => entry.Attribution?.ProductId);
+                var finance = S.GetExpoFinance(e.Id);
                 foreach (var product in e.Products)
                 {
-                    var entries = sales[product.ProductId];
-                    string income = entries.Any() || product.Sold == 0 ? Money.FromCents(entries.Sum(entry => entry.Amount.Cents)).ToString() : "历史金额待核对";
+                    bool recorded = finance.ProductSales.TryGetValue(product.ProductId, out var revenue);
+                    string income = recorded || product.Sold == 0 ? revenue.ToString() : "历史金额待核对";
                     Line(goods, S.BrandProductName(product.ProductId) + " · 售出" + product.Sold + "件 · 收入 " + income
                         + " · 退回" + (product.Reserved - product.Sold) + "件", 17);
                 }
-                long booth = GameSession.ExpoBoothFee(e.Booth) * 100;
-                long poster = e.DesignerId == null ? 0 : GameSession.ExpoPosterFee(e.Booth) * 100;
                 var costs = BrandCard(body, "本届费用与收支");
                 Line(costs, "商品销售收入  +" + Money.FromCents(e.RevenueCents) + "（已入账）", 20, Ui.Good);
-                Line(costs, "摊位费 " + Money.FromCents(booth) + " · 海报费 " + Money.FromCents(poster), 18);
+                Line(costs, "已记录摊位费 " + finance.BoothPaid + " · 海报费 " + finance.PosterPaid, 18);
                 Line(costs, "实际站台费 " + Money.FromCents(e.ExpoWagesCents) + "（" + e.AttendanceDays + "天）", 18);
-                Line(costs, "现场收支 " + Money.FromCents(e.RevenueCents - booth - poster - e.ExpoWagesCents), 21, Ui.Accent);
+                Line(costs, finance.FeesRecorded ? "现场收支 " + finance.CashNet : "费用记录不完整，暂不计算现场收支", 21, Ui.Accent);
                 Line(costs, "收入减以上费用，未扣商品进货成本；门店日常收支另计。", 15, Ui.Dim);
                 var orders = ExpoResultOrders(id);
                 if (orders.Length == 0)

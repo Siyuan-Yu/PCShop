@@ -40,6 +40,7 @@ namespace PCShopSell.Core.Session
                 d.venueBusinesses=MyShops.Where(s=>IsDedicatedVenue(s.Place)).Select(s=>VenueOperation(s.Place.Id).Copy()).ToArray();
                 SaveAdditionalStaff(d);
                 SaveSpecialBusinesses(d);
+                SavePetBoarding(d);
                 SaveRacing(d);
                 return d;
             }
@@ -79,10 +80,10 @@ namespace PCShopSell.Core.Session
                 playerNode = PlayerNodeId,
                 currentPlace = CurrentPlace?.Id,
                 vehicle = (int)Vehicle,
-                ownedVehicles = _owned.Select(v => (int)v).ToArray(),
+                ownedVehicles = _garage.Select(v => (int)MotorCatalog.Get(v.ModelId).Kind).ToArray(),
                 tricycleImpounded = TricycleImpounded,
-                impoundedTricycles = _impoundedTricycles,
-                impoundedEBikes = _impoundedEBikes,
+                impoundedTricycles = ImpoundedVehicleCount(VehicleKind.Tricycle),
+                impoundedEBikes = ImpoundedVehicleCount(VehicleKind.EBike),
                 hasBuyer = _focus.Buyer != null,
                 hasSalesperson = _focus.Salesperson != null,
                 salesperson = _focus.Salesperson != null ? ToSave(_focus.Salesperson) : null,
@@ -115,6 +116,9 @@ namespace PCShopSell.Core.Session
                 shopOpenMinute = PlayerShop.OpenMinute,
                 shopCloseMinute = PlayerShop.CloseMinute,
                 reputation = PlayerShop.Reputation,
+                hasShopStanding = true,
+                shopAwareness = PlayerShop.Awareness,
+                shopReputation = PlayerShop.ShopReputation,
                 accepted = (int)PlayerShop.Accepted,
                 orders = PlayerShop.Orders.Select(o => new SaveOrder
                 {
@@ -157,8 +161,8 @@ namespace PCShopSell.Core.Session
             d.appLoans = _appLoans.Select(l => l.Copy()).ToArray();
             d.priceDays = _priceDays.Select(p => p.Copy()).ToArray();
             SavePropertyMarket(d);
-            d.nextPriceReportDay = _nextPriceReportDay;
-            d.weeklyPricesPending = WeeklyPricesPending;
+            d.economicReportCadence = (int)ReportCadence;
+            d.weeklyPricesPending = EconomicReportPending;
             SaveRealty(d);
             SaveBusiness(d);
             d.mcnIntroductions=_mcnIntroductions.Select(x=>x.Copy()).ToArray();
@@ -196,11 +200,9 @@ namespace PCShopSell.Core.Session
             PlayerNodeId = City.Map.HasNode(d.playerNode) ? d.playerNode : Home.NodeId;
             CurrentPlace = d.currentPlace != null && City.HasPlace(d.currentPlace) ? City.GetPlace(d.currentPlace) : null;
             if (CurrentPlace != null && CurrentPlace.NodeId != PlayerNodeId) PlayerNodeId = CurrentPlace.NodeId;
-            _owned.Clear();
-            foreach (int v in d.ownedVehicles ?? Array.Empty<int>()) _owned.Add((VehicleKind)v);
-            _impoundedTricycles = Math.Max(d.impoundedTricycles, d.tricycleImpounded ? 1 : 0);
-            _impoundedEBikes = Math.Max(0, d.impoundedEBikes);
+            LoadRacing(d);
             Vehicle = (VehicleKind)d.vehicle;
+            if (!CanUse(Vehicle)) Vehicle = VehicleKind.Walk;
             Cargo.Clear();
             Cargo.Capacity = CurrentVehicle.CargoCapacity;
             Fill(Cargo, d.cargo);
@@ -230,7 +232,9 @@ namespace PCShopSell.Core.Session
             PlayerShop.Stock.RestoreGoodsLots(d.shopGoodsLots, Clock.Today.TotalDays);
             PlayerShop.Markup = d.markup;
             if (d.shopCloseMinute > 0) PlayerShop.SetHours(d.shopOpenMinute, d.shopCloseMinute);
-            PlayerShop.Reputation = d.reputation;
+            PlayerShop.RestoreBusinessAwareness(d.reputation);
+            PlayerShop.RestoreShopStanding(d.hasShopStanding ? d.shopAwareness : d.reputation,
+                d.hasShopStanding ? d.shopReputation : ShopSimulation.NeutralShopReputation);
             PlayerShop.Accepted = (PaymentMethods)d.accepted;
             PlayerShop.RestoreOrders((d.orders ?? Array.Empty<SaveOrder>()).Select(o =>
                 new BuildOrder(o.id, o.tier, Money.FromCents(o.priceCents), new GameTimestamp(o.placedAt), new GameTimestamp(o.dueAt)) { ContractId = o.contractId, PartsReserved = o.partsReserved, Mistakes = Math.Max(0, o.mistakes), EmployeeMinutesLeft = Math.Max(0, o.employeeMinutesLeft) }),
@@ -292,9 +296,10 @@ namespace PCShopSell.Core.Session
             RestoreHomeLease(d);
             RestorePriceReports(d);
             RestoreAppLoans(d);
-            foreach (SaveShop shop in d.extraShops ?? Array.Empty<SaveShop>()) RestoreShop(shop);
+            foreach (SaveShop shop in d.extraShops ?? Array.Empty<SaveShop>()) RestoreShop(shop, d.hasShopStanding);
             LoadAdditionalStaff(d);
             LoadCityAssets(d);
+            if (d.shopFootfallVersion < 2) MigrateWeeklyCommercialRent();
             LoadCityProcurement(d);
             LoadCityRetail(d);
             LoadCityClimate(d);
@@ -310,6 +315,7 @@ namespace PCShopSell.Core.Session
             Trip = null;
             ClearEdge();
             LoadCityLife(d);
+            InitializeExpansionResidents();
             LoadVenueBusinesses(d);
             LoadEnergyPayroll(d);
             MigrateStoreMainCategories();
@@ -318,12 +324,12 @@ namespace PCShopSell.Core.Session
             NormalizeWarehouses();
             MigrateWarehouseBoxAccess(d);
             LoadSpecialBusinesses(d);
+            LoadPetBoarding(d);
             LoadWeeklySupplierPlans();
             LoadHomeWorkbench(d);
             LoadDistrictProgress(d);
             RestoreMcnIntroductions(d);
             RestoreKolStreaming(d);
-            LoadRacing(d);
             RefreshBrandTraffic();
             EnsureFirstShopListings(Clock.Today.TotalDays);
         }

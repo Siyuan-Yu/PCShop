@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.World;
 using UnityEngine;
 using UnityEngine.UI;
@@ -95,6 +96,7 @@ namespace PCShopSell.Game.UI
             Line(detail,"新租月租 "+S.ResidentialRent(p)+" · 房价 "+S.ResidentialPrice(p),20);
             if(p==S.Home&&!selfOwned)Line(detail,"当前租约月租 "+S.CurrentHomeRent+"（保留签约价）",17,Ui.Dim);
             Para(detail,"地址："+S.City.StreetName(p.StreetId)+"\n按住所登记的住户 "+tenants.Length+" 人",16,Ui.Dim);
+            BuildAgencyFloorPlan(detail,p==S.Home?S.ResidenceRoom:RoomSpec.ForResidence(S.ResidentialTier(p)));
             if(tenants.Length>0)Para(detail,"住户："+string.Join("、",tenants.Select(t=>S.CityPerson(t.PersonId)?.Name??t.PersonId))+"\n保留住户，不可直接搬入；购买产权后，从下一月账期收租。",17);
             if(selfOwned)
             {

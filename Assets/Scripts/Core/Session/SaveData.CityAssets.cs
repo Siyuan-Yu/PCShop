@@ -13,5 +13,6 @@ namespace PCShopSell.Core.Session
         public bool cityFundCostEstimated;
         public long[] cityFundHistory;
         public string[] cityAssetEffects;
+        public StockMarketState stockMarket;
     }
 }

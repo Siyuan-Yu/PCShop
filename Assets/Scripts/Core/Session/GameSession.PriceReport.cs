@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Time;
 
 namespace PCShopSell.Core.Session
 {
+    public enum EconomicReportCadence { Weekly, Biweekly, Monthly }
+
     [Serializable]
     public sealed class PriceDay
     {
@@ -17,19 +20,30 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         public static readonly string[] PriceGroups = PartCatalog.Categories.Select(PartCatalog.CategoryName)
-            .Concat(new[] { "米与食材", "烟酒饮料与礼品", "家具与货架", "快餐", "载具", "智能手机", "服装", "住宅售价", "住宅月租", "商铺售价", "商铺月租" }).ToArray();
+            .Concat(new[] { "米与食材", "烟酒饮料与礼品", "家具与货架", "快餐", "载具", "智能手机", "服装", "住宅售价", "住宅月租", "商铺售价", "商铺周租" }).ToArray();
         public static int PropertyPriceGroupStart => PriceGroups.Length - 4;
         private readonly List<PriceDay> _priceDays = new List<PriceDay>();
-        private int _nextPriceReportDay;
+        private const string EconomicReportDisabled = "economy-report:disabled";
         public IReadOnlyList<PriceDay> PriceDays => _priceDays;
-        public bool WeeklyPricesSubscribed => !Flags.Contains("prices:unsubscribed");
-        public bool WeeklyPricesPending { get; private set; }
-        public void ToggleWeeklyPrices()
+        public EconomicReportCadence ReportCadence { get; private set; }
+        public bool EconomicReportAutomatic => !Flags.Contains(EconomicReportDisabled);
+        public bool EconomicReportPending { get; private set; }
+        public int EconomicReportPeriodDays => ReportCadence == EconomicReportCadence.Monthly ? GameDate.DaysPerMonth
+            : ReportCadence == EconomicReportCadence.Biweekly ? 2 * GameDate.DaysPerWeek : GameDate.DaysPerWeek;
+        public int EconomicReportAnchorDay => ReportCadence == EconomicReportCadence.Monthly ? 0
+            : _priceDays.Count > 0 ? _priceDays[0].Day : Clock.Today.TotalDays;
+
+        public void SetEconomicReportCadence(EconomicReportCadence? cadence)
         {
-            if (!Flags.Remove("prices:unsubscribed")) Flags.Add("prices:unsubscribed");
-            WeeklyPricesPending = false;
+            if (cadence.HasValue)
+            {
+                ReportCadence = cadence.Value;
+                Flags.Remove(EconomicReportDisabled);
+            }
+            else Flags.Add(EconomicReportDisabled);
+            EconomicReportPending = false;
         }
-        public void DismissWeeklyPrices() => WeeklyPricesPending = false;
+        public void DismissEconomicReport() => EconomicReportPending = false;
 
         private void RecordPriceDay()
         {
@@ -46,13 +60,11 @@ namespace PCShopSell.Core.Session
             prices.Add(Outfits.All.Where(o => o.Price.IsPositive).Average(o => (double)o.Price.Cents));
             prices.AddRange(_propertyPriceFactors.Select(v => v * 10000));
             _priceDays.Add(new PriceDay { Day = day, Prices = prices.ToArray() });
-            if (_nextPriceReportDay <= 0) _nextPriceReportDay = day + 7;
-            if (day < _nextPriceReportDay) return;
-            _nextPriceReportDay = day + 7;
-            if (WeeklyPricesSubscribed)
+            int elapsed = day - EconomicReportAnchorDay;
+            if (EconomicReportAutomatic && _priceDays.Count > 1 && elapsed > 0 && elapsed % EconomicReportPeriodDays == 0)
             {
-                WeeklyPricesPending = true;
-                Notice?.Invoke("本周物价简报已出，含住宅与商铺售价、月租涨跌，可在“行情 → 每周物价简报”查看。");
+                EconomicReportPending = true;
+                Notice?.Invoke("新一期经济简报已出，可在“行情 → 经济简报”查看收支结算与物价涨跌。");
             }
         }
 
@@ -67,8 +79,9 @@ namespace PCShopSell.Core.Session
                     || _priceDays.Any(d => d.Day == p.Day)) continue;
                 _priceDays.Add(p.Copy());
             }
-            _nextPriceReportDay = data.nextPriceReportDay > 0 ? data.nextPriceReportDay : Clock.Today.TotalDays + 7;
-            WeeklyPricesPending = data.weeklyPricesPending && WeeklyPricesSubscribed;
+            ReportCadence = Enum.IsDefined(typeof(EconomicReportCadence), data.economicReportCadence)
+                ? (EconomicReportCadence)data.economicReportCadence : EconomicReportCadence.Weekly;
+            EconomicReportPending = data.weeklyPricesPending && EconomicReportAutomatic;
             RecordPriceDay();
         }
     }

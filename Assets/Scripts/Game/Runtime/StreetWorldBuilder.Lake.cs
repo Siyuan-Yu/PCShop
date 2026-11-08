@@ -9,6 +9,9 @@ namespace PCShopSell.Game.Runtime
     public sealed partial class StreetWorldBuilder
     {
         private float LakeScale=>_city.LakeSceneScale;
+        private const float LakeWaterLevel = .21f;
+        internal static float LakeAccessHeight(PCShopSell.Core.World.CityLayout city) =>
+            Mathf.Max(.25f, LakeWaterLevel * city.LakeSceneScale + .06f);
         private Vector3 LakeNode(string id)=>NodeWorld(id)/LakeScale;
         // Physical scenery and navigation share the same layout; closed bridges are scenery only.
         private void BuildLakeLandscape()
@@ -22,7 +25,7 @@ namespace PCShopSell.Game.Runtime
             var shader=Resources.Load<Shader>("Shaders/LakeWater");
             var water=shader!=null?new Material(shader):Mats.Lit(ArtDirection.Hex("385E72"),.8f);
             if(shader!=null)resources.Owned.Add(water);
-            LakeSurface(root,"CentralLake",shore,.995f,.21f,water);
+            LakeSurface(root,"CentralLake",shore,.995f,LakeWaterLevel,water);
             BuildMountainGround(root);
             BuildLakeForest(root,shore);
             foreach(var bridge in _city.LakeBridges)BuildClosedLakeBridge(root,bridge);
@@ -113,7 +116,7 @@ namespace PCShopSell.Game.Runtime
                 occupied.Add(Rect.MinMaxRect(bounds.min.x-4,bounds.min.z-4,bounds.max.x+4,bounds.max.z+4));
             }
             foreach(var b in _city.Blocks)Reserve(new Vector3((float)b.x,0,(float)b.y)/LakeScale,(float)b.width/LakeScale,(float)b.depth/LakeScale,(float)b.heading);
-            foreach(var p in _city.Places)Reserve(LakeNode(p.NodeId)+new Vector3((float)p.EntranceX,0,(float)p.EntranceY)/LakeScale,(float)p.Width/LakeScale,(float)p.Depth/LakeScale,(float)p.Heading);
+            foreach(var p in _city.PublicPlaces)Reserve(LakeNode(p.NodeId)+new Vector3((float)p.EntranceX,0,(float)p.EntranceY)/LakeScale,(float)p.Width/LakeScale,(float)p.Depth/LakeScale,(float)p.Heading);
             foreach(var p in _city.LakeParcels)Reserve(new Vector3((float)p.x,0,(float)p.y)/LakeScale,(float)p.width/LakeScale,(float)p.depth/LakeScale,(float)p.heading);
             var roads=new List<(Vector3 a,Vector3 b)>();
             foreach(var n in _city.Map.Nodes)foreach(var e in _city.Map.NeighborsOf(n.Id))

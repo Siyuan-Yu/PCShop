@@ -280,9 +280,9 @@ namespace PCShopSell.Tests
             Assert.AreEqual(0.2, RealEstate.AgentDiscount(40), 1e-9);
             Assert.AreEqual(0.5, RealEstate.AgentDiscount(100), 1e-9);
             Assert.AreEqual(0.5, RealEstate.AgentDiscount(300), 1e-9);
-            Assert.AreEqual(2000, RealEstate.AgentFeeAfter(Money.FromYuan(2000), 0).Yuan);
-            Assert.AreEqual(1600, RealEstate.AgentFeeAfter(Money.FromYuan(2000), 40).Yuan);
-            Assert.AreEqual(1000, RealEstate.AgentFeeAfter(Money.FromYuan(2000), 100).Yuan);
+            Assert.AreEqual(1000, RealEstate.AgentFeeAfter(Money.FromYuan(2000), 0).Yuan);
+            Assert.AreEqual(800, RealEstate.AgentFeeAfter(Money.FromYuan(2000), 40).Yuan);
+            Assert.AreEqual(500, RealEstate.AgentFeeAfter(Money.FromYuan(2000), 100).Yuan);
         }
 
         [Test]

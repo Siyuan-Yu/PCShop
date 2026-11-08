@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using PCShopSell.Core.World;
 using System.Linq;
 
@@ -14,6 +15,7 @@ namespace PCShopSell.Core.Session
         public int Next=1,Passed,Lap,Collisions,Recoveries; public bool Finished,Abandoned,Paused;
         public readonly double[] RivalProgress;
         public readonly double[] RivalFinishTime;
+        public IReadOnlyList<RaceOpponent> Opponents { get; }
         public int CompetitorCount=>RivalProgress.Length+1;
         public double Length {get;} public double Progress {get;private set;}
         public int Position
@@ -26,13 +28,25 @@ namespace PCShopSell.Core.Session
                 return position;
             }
         }
-        private double _accumulator,_collisionCooldown,_lapStart; private readonly double[] _cumulative;
+        private double _accumulator,_collisionCooldown,_lapStart; private readonly double[] _cumulative, _rivalSpeeds;
         public double DisplayKph=>Math.Abs(Speed)*7.2;
-        public RaceSimulation(RaceTrack track,MotorModel model,bool practice,RaceMeeting meeting=RaceMeeting.Small)
+        public RaceSimulation(RaceTrack track,MotorModel model,bool practice,RaceMeeting meeting=RaceMeeting.Small,
+            IReadOnlyList<RaceOpponent> opponents = null)
         {
             Track=track;Model=model;Practice=practice;Meeting=practice?RaceMeeting.None:meeting;_cumulative=new double[track.Points.Length+1];
-            RivalProgress=new double[practice?0:RivalCount];RivalFinishTime=Enumerable.Repeat(double.PositiveInfinity,RivalProgress.Length).ToArray();
-            for(int i=0;i<RivalProgress.Length;i++)RivalProgress[i]=-5*(1+i/2);
+            Opponents = practice || opponents == null ? Array.Empty<RaceOpponent>() : opponents.ToArray();
+            RivalProgress=new double[practice ? 0 : opponents?.Count ?? RivalCount];
+            RivalFinishTime=Enumerable.Repeat(double.PositiveInfinity,RivalProgress.Length).ToArray();
+            _rivalSpeeds = new double[RivalProgress.Length];
+            double speedCap = (10 + Track.Tier * 1.5) * (Model.Kind == VehicleKind.EBike ? 2 : 1);
+            double major = Meeting == RaceMeeting.Major ? .08 : 0;
+            for (int i = 0; i < RivalProgress.Length; i++)
+            {
+                RivalProgress[i] = -5 * (1 + i / 2);
+                double pace = i < Opponents.Count ? Opponents[i].Pace : .62 + i * .018;
+                double driverCap = i < Opponents.Count ? speedCap * (.7 + .4 * pace + major) : speedCap;
+                _rivalSpeeds[i] = Math.Min(driverCap, RivalMotor(i).Speed / 7.2 * (pace + .025 * Track.Tier + major));
+            }
             for(int i=0;i<track.Points.Length;i++)_cumulative[i+1]=_cumulative[i]+Distance(track.Points[i],track.Points[(i+1)%track.Points.Length]);
             Length=_cumulative[track.Points.Length];ResetPosition();
         }
@@ -48,13 +62,15 @@ namespace PCShopSell.Core.Session
             if(Finished)return;if(Countdown>0){Countdown=Math.Max(0,Countdown-dt);return;}
             Elapsed+=dt;_collisionCooldown=Math.Max(0,_collisionCooldown-dt);
             double cap=Model.Speed/7.2,accel=Model.Acceleration*.65;
-            Speed+=throttle>=0?throttle*accel*dt:throttle*(Speed>0?accel*2.5:accel*.5)*dt;
+            Speed+=throttle>=0?throttle*accel*dt:throttle*(Speed>0?Model.Braking*.16:accel*.5)*dt;
             Speed*=Math.Max(0,1-(brake?2.8:throttle==0?.28:.025)*dt);Speed=Math.Max(-cap*.18,Math.Min(cap,Speed));
             double yaw=steer*(Model.Handling/80)*1.65*Math.Min(1,Math.Abs(Speed)/3)/(1+Math.Abs(Speed)/25)*(Speed<0?-1:1);
             Heading+=yaw*dt*(brake?1.4:1);
             // High speed on low-grip tyres pushes the car wide; braking restores cornering.
             double slip=Math.Max(0,Math.Abs(Speed)*Math.Abs(yaw)-Model.Grip*.23);
-            X+=Math.Sin(Heading-yaw*slip*.015)*Speed*dt;Y+=Math.Cos(Heading-yaw*slip*.015)*Speed*dt;
+            // Grip controls when sliding starts; stability limits how far the body drifts.
+            double drift=yaw*slip*.015*75/Math.Max(20,Model.Stability);
+            X+=Math.Sin(Heading-drift)*Speed*dt;Y+=Math.Cos(Heading-drift)*Speed*dt;
             Nearest(X,Y,out double nx,out double ny,out double distance);
             if(distance>Track.HalfRoad)Speed*=Math.Max(.8,1-.9*dt);
             if(distance>Track.HalfRoad+3)
@@ -109,7 +125,10 @@ namespace PCShopSell.Core.Session
             int prize=RacingSchedule.ChampionPrize(Meeting);
             return Practice||Abandoned?0:position==1?prize:position==2?prize*6/10:position==3?prize*3/10:0;
         }
-        private double RivalSpeed(int i)=>Math.Min((10+Track.Tier*1.5)*(Model.Kind==VehicleKind.EBike?2:1),MotorCatalog.Get(Model.Id).Speed/7.2*(.62+.025*Track.Tier+i*.018+(Meeting==RaceMeeting.Major?.08:0)));
+        public MotorModel RivalMotor(int i) => i < Opponents.Count ? Opponents[i].Motor : MotorCatalog.Get(Model.Id) ?? Model;
+        private double RivalSpeed(int i) => _rivalSpeeds[i];
+        public double RivalResultSeconds(int i) => double.IsPositiveInfinity(RivalFinishTime[i])
+            ? Elapsed + Penalty + (Track.Laps * Length - RivalProgress[i]) / RivalSpeed(i) : RivalFinishTime[i];
         private void AdvanceRivals(double seconds,double startTime)
         {
             for(int i=0;i<RivalProgress.Length;i++)

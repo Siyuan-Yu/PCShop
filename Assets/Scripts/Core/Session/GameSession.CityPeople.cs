@@ -60,10 +60,11 @@ namespace PCShopSell.Core.Session
             return p.Task == CityPersonTask.Home || p.Task == CityPersonTask.Working || p.Task == CityPersonTask.Shopping
                 || p.Task == CityPersonTask.Waiting && p.LocationPlaceId == p.WorkPlaceId;
         }
-        // Agencies have a service panel, not a walkable interior. Their people wait
-        // beside the building on the road network, outside every door's F radius.
+        // Agencies and the expo reception have no walkable city interior. Keep their
+        // staff and mainline meetings on the road network, clear of door interactions.
         private bool StreetServicePlace(string placeId) => City.IsLakeCity && City.HasPlace(placeId)
-            && City.GetPlace(placeId).Kind == PlaceKind.Agency;
+            && (City.GetPlace(placeId).Kind == PlaceKind.Agency
+                || City.GetPlace(placeId).Business == "venue_expo");
         private void PositionStreetServicePeople()
         {
             var groups = new Dictionary<string, List<CityPersonState>>();
@@ -116,7 +117,8 @@ namespace PCShopSell.Core.Session
             var person = CityPersonState(personId);
             if (person == null) return false;
             if (CurrentPlace != null)
-                return person.Route == null && person.LocationPlaceId == CurrentPlace.Id
+                return person.Route == null && (person.LocationPlaceId == CurrentPlace.Id
+                    || City.HasPlace(person.LocationPlaceId) && SharesWholesaleMarket(CurrentPlace, City.GetPlace(person.LocationPlaceId)))
                     && (CurrentPlace.Kind != PlaceKind.Home || CurrentPlace == Home || CityPersonInside(person));
             if (CityPersonInside(person) || person.Route != null && person.Route.Transport != VehicleKind.Walk) return false;
             // A walking resident can be stopped for conversation. Match the rendered fractional
@@ -157,8 +159,10 @@ namespace PCShopSell.Core.Session
         private void AssignCityHomes()
         {
             if (!City.Blocks.Any(block => City.HasPlace(block.homeId))) return;
-            var homes = City.Places.Where(place => place.Kind == PlaceKind.Home &&
-                place != Home && place.Id != "home" && !place.Id.StartsWith("home_tier", StringComparison.Ordinal)).ToArray();
+            var reservedHomes = City.ExpansionResidents.Select(resident => resident.homeId).ToHashSet();
+            var homes = City.Places.Where(place => place.Kind == PlaceKind.Home && !place.InitiallyVacant &&
+                !reservedHomes.Contains(place.Id) && place != Home && place.Id != "home" &&
+                !place.Id.StartsWith("home_tier", StringComparison.Ordinal)).ToArray();
             if (homes.Length == 0) return;
             var householdSize = homes.ToDictionary(home => home, home => 0);
             var vacant = new HashSet<Place>(homes);
@@ -199,6 +203,68 @@ namespace PCShopSell.Core.Session
                     .ThenBy(home => DistanceCity(City.ViewPosition(home.NodeId), point)).First();
                 householdSize[next]++;
                 MoveCityHome(person, next);
+            }
+        }
+
+        private void InitializeExpansionResidents()
+        {
+            if (City.ExpansionResidents.Count == 0 || !Flags.Add("city:expansion-occupants-v1")) return;
+
+            var occupied = _cityPeople.Values.Select(person => person.HomePlaceId).ToHashSet();
+            var reserved = City.ExpansionResidents.Select(resident => resident.homeId).ToHashSet();
+            bool Available(Place residence) => residence != Home && residence.Kind == PlaceKind.Home &&
+                !occupied.Contains(residence.Id) && PropertyAt(residence.Id) == null;
+
+            foreach (var entry in City.ExpansionResidents)
+            {
+                if (!City.HasPlace(entry.homeId) || _cityPeople.ContainsKey(entry.id)) continue;
+                var home = City.GetPlace(entry.homeId);
+                var work = City.HasPlace(entry.workId) ? City.GetPlace(entry.workId) : null;
+                if (!IsCommercialPremises(work) || IsMyShop(work) || IsPendingShop(work) ||
+                    VentureAt(work.Id) != null || PropertyAt(work.Id) != null) work = null;
+
+                if (!Available(home))
+                {
+                    // A shopkeeper may use another unclaimed expansion home in the same district.
+                    // A home already occupied by the player or a resident stays with that occupant.
+                    if (work == null) continue;
+                    int tier = home.Tier;
+                    home = City.Places.FirstOrDefault(place => place.Tier == tier && place.InitiallyVacant &&
+                        !reserved.Contains(place.Id) && Available(place));
+                    if (home == null) continue;
+                }
+
+                var definition = new CityPersonDefinition
+                {
+                    Id = entry.id, Name = entry.name, HomeId = home.Id, WorkId = work?.Id,
+                    Role = work == null ? "街坊居民" : work.Business + "店主",
+                    Interest = work == null ? "湖边散步" : work.Business,
+                    WorkStart = work?.OpenMinute ?? StreetShopOpenMinute,
+                    WorkEnd = work?.CloseMinute ?? StreetShopCloseMinute,
+                    Topics = new[] { work == null ? "我就住在这条街，最近常去湖边散步。" : "我在" + work.Name + "做生意，有空来坐坐。" }
+                };
+                _cityExtraDefinitions[entry.id] = definition;
+                var person = new CityPersonState
+                {
+                    PersonId = entry.id, HomePlaceId = home.Id, Address = home.Name, WorkPlaceId = work?.Id,
+                    LocationPlaceId = home.Id, Task = CityPersonTask.Home, TaskLabel = "在家休息"
+                };
+                if (work != null)
+                {
+                    _listings.RemoveAll(listing => listing.PlaceId == work.Id);
+                    _vacant.Remove(work.Id);
+                    if (AuthoredCityWorkAt(person, Clock.Now.TotalMinutes))
+                    {
+                        person.LocationPlaceId = work.Id;
+                        person.Task = CityPersonTask.Working;
+                        person.TaskLabel = "当班工作";
+                    }
+                }
+                var point = StandOf(City.GetPlace(person.LocationPlaceId));
+                person.X = point.X;
+                person.Y = point.Y;
+                _cityPeople.Add(person.PersonId, person);
+                occupied.Add(home.Id);
             }
         }
 
@@ -314,6 +380,8 @@ namespace PCShopSell.Core.Session
                 candidates.TryGetValue(p.PersonId,out var candidate);
                 bool shift=employee!=null?employee.OnDuty(Clock.Now):AuthoredCityWorkAt(p,now);
                 if(employee==null&&shift&&p.WorkPlaceId!=p.HomePlaceId&&!IsPlaceOpen(City.GetPlace(p.WorkPlaceId)))shift=false;
+                if (!CandidateAvailable(candidate) && TickRaceAttendee(p, now, employee != null && shift)) continue;
+                if (!CandidateAvailable(candidate) && TickPetOwnerVisit(p, now, shift)) continue;
                 string target=shift?p.WorkPlaceId:p.HomePlaceId;
                 var desiredTask=shift?CityPersonTask.Working:CityPersonTask.Home;
                 if(candidate!=null && CandidateAvailable(candidate)) {target=PlayerShopPlace.Id;desiredTask=CityPersonTask.Waiting;p.TaskLabel="等待面试";}

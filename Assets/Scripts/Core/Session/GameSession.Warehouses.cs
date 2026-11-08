@@ -31,7 +31,7 @@ namespace PCShopSell.Core.Session
             // One-time recovery for the version that removed box furniture. A player who
             // later removes their final box must not have it silently respawn on every load.
             if(data.warehouseAccessVersion>=1)return;
-            EnsureWarehouseBox(_homeLayout,RoomSpec.Home,FurnitureCatalog.HomeBox);
+            EnsureWarehouseBox(_homeLayout,ResidenceRoom,FurnitureCatalog.HomeBox);
             foreach(var shop in _shops.Where(s=>s.Rented&&!IsDedicatedVenue(s.Place)))
                 EnsureWarehouseBox(shop.Layout,RoomSpec.ForShop(shop.Place.Size),FurnitureCatalog.ShopBox);
         }

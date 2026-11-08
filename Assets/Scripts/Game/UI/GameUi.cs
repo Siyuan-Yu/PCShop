@@ -122,8 +122,9 @@ namespace PCShopSell.Game.UI
             UpdateUpcomingScheduleHud();
             EnsureQuarterlyExpoWindow();
             _expoHudGate.interactable=!ExpoHudOpen;
-            _labelCanvas.enabled=!ExpoHudOpen;
+            _labelCanvas.enabled=!ExpoHudOpen&&!_ctrl.PetFocusActive;
             RefreshShopDockVisibility();
+            UpdateLoanReminderHud();
             RefreshWorkbenchAccess();
             HoldRepeat.AdvanceActiveHold(Time.unscaledDeltaTime);
             foreach (var window in _windows.ToArray())
@@ -144,7 +145,7 @@ namespace PCShopSell.Game.UI
             RefreshOpeningKindChoice();
             UpdateWorkScreen();
             if (S.IsWorking) return;
-            CheckWeeklyPriceReport();
+            CheckEconomicReport();
             _uiTime += dt;
             _hudRefreshTimer -= dt;
             if (_hudRefreshTimer <= 0 || dt <= 0) { _hudRefreshTimer = .1f; UpdateHud(); }
@@ -236,6 +237,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(row, "菜单", OpenSystemPanel, 18), 66).Tip("<b>菜单</b>　快捷键：Esc\n存档、读档、重新开始和音效设置。");
 
             Image bottom = Ui.Panel(root, "BottomBar", Ui.PanelBg);
+            _travelBar = bottom.gameObject;
             bottom.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -58);
             RectTransform brow = Ui.Rect(bottom.transform, "Row").Fill();
             var bh = brow.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -266,6 +268,7 @@ namespace PCShopSell.Game.UI
             BuildShopDockToggle(root);
 
             Image hint = Ui.Panel(root, "HintStrip", new Color(.13f,.17f,.22f,.95f));
+            _worldHintStrip = hint.gameObject;
             hint.rectTransform.Anchor(0, 0, 0, 0, 16, 70, -1136, -122);
             hint.raycastTarget = false;
             _hintText = Ui.Label(hint.transform, "", 16, TextAnchor.MiddleLeft, Ui.TextColor);
@@ -276,6 +279,7 @@ namespace PCShopSell.Game.UI
             _storageWarning.gameObject.SetActive(false);
             BuildQuestTracker(root);
             BuildUpcomingScheduleHud(root);
+            BuildLoanReminderHud(root);
             BuildSleepBanner(root);
 
             _chaseText = Ui.Label(root, "交警在追你！快跑或者躲进店里！", 34, TextAnchor.MiddleCenter, new Color(1f, 0.3f, 0.25f));
@@ -329,6 +333,7 @@ namespace PCShopSell.Game.UI
             if (S.IsGameOver) _hintText.text = "游戏结束：" + S.GameOverReason;
             else if (_ctrl.Placing) _hintText.text = "摆放家具：左键放下 · R 旋转 · 右键/Esc 放回 · X 收进纸箱 · 点已摆的家具可以挪动 · 中键拖动 / Q E 转视角 · V 复位 · 右侧面板点“完成”结束";
             else if(_ctrl.InInterior&&S.IsSpecialBusiness(S.CurrentShop))_hintText.text="WASD 在店里走动 · 靠近专用设施按 F 打开操作 · 右侧柜台管理烹饪 / 收购 · 靠近冰箱按 F 存取食物 · 走到门口按 F 出门";
+            else if(_ctrl.InInterior&&S.IsPetShop(S.CurrentShop))_hintText.text="WASD 在店里走动 · 靠近宠物主人按 F 办理代养 · 靠近宠物屋按 F 照顾猫狗 · 柜台按 F 收银 · 走到门口按 F 出门";
             else if (_ctrl.InInterior) _hintText.text = "WASD 在店里走动 · 走到货架前按 F 查看货物 · 柜台边按 F（或点顾客头顶的“结账”）给顾客结账 · 走到门口按 F 出门 · 右侧面板管理店铺";
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimateRemainingMinutes(S.Time.SecondsPerMinuteAt1x)} 分钟 · 按 WASD 随时接管";
             else if (S.NearbyCommunityBox>=0)
@@ -469,7 +474,7 @@ namespace PCShopSell.Game.UI
             }
             Camera cam = _ctrl.Cam;
             bool show = !_ctrl.InRoom && S.CurrentPlace == null;
-            Vector3 sp = cam.WorldToScreenPoint(StreetWorldBuilder.ToWorld(S.PlayerPosition, 2.6f));
+            Vector3 sp = cam.WorldToScreenPoint(_ctrl.World.StreetPosition(S.PlayerPosition) + Vector3.up * 2.6f);
             show &= sp.z > 0;
             _playerMark.gameObject.SetActive(show);
             if (!show) return;

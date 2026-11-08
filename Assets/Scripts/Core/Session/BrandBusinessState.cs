@@ -67,6 +67,7 @@ namespace PCShopSell.Core.Session
         public string DesignerId,LastFeedback;
         public long PosterReadyAt,RevenueCents,ExpoWagesCents;
         public bool ResultRecorded;
+        public bool MainlineQualified; // Historical expo and delivered-order achievement; survives later brand changes.
         public long DepartureReminderAt;
         public int InfluenceBefore,InfluenceAfter,ReputationBefore,ReputationAfter;
         public string[] KolIds=Array.Empty<string>();

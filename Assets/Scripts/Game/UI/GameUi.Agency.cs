@@ -19,6 +19,8 @@ namespace PCShopSell.Game.UI
         private static readonly Color AgencyInk = new Color32(46, 66, 61, 255);
         private static readonly Color AgencyMuted = new Color32(106, 115, 100, 255);
         private static readonly Color AgencyFuture = new Color32(157, 113, 66, 255);
+        private string AgencyDiscountPercent => $"{S.AgentDiscount * 100:0.#}%";
+        private static string NewShopHours => $"{Ui.Hm(ShopSimulation.DefaultOpenMinute)}–{Ui.Hm(ShopSimulation.DefaultCloseMinute)}";
 
         // Selection is local UI state. Looking at a property never moves the player or signs a lease.
         private void BuildAgency(Window w, Place agency)
@@ -50,9 +52,8 @@ namespace PCShopSell.Game.UI
             }
             var district=S.City.AgencyDistrictFor(agency.StreetId);
             string coverage=district==null?S.City.StreetName(agency.StreetId):string.Join("、",district.streets.Select(S.City.StreetName));
-            string discount = S.AgentDiscount > 0 ? $"中介费减免 {S.AgentDiscount * 100:0.#}%" : "中介费暂无折扣";
-            Ui.Size(Ui.Label(header, $"<b>{S.City.AgencyCoverageName(agency)} · 本片区房源</b>　现金 {S.Ledger.Balance}\n<size=16>负责：{coverage}\n<color=#ABB5A8>仅办理本片区房源。点建筑查看位置、客流和户型，选好了再签约。{discount}</color></size>", 20), -1, 78, 1);
-            Ui.Size(Ui.Button(header, "商铺产权买卖", OpenAgencyPropertyPurchase, 17), 210);
+            string discount = $"与{Rosters.AgentChen.Name}的熟悉度 {S.AgentRapport} · 中介费减免 {AgencyDiscountPercent}";
+            Ui.Size(Ui.Label(header, $"<b>{S.City.AgencyCoverageName(agency)} · 本片区房源</b>　现金 {S.Ledger.Balance}\n<size=16>负责：{coverage}\n<color=#ABB5A8>{discount}</color></size>", 20), -1, 78, 1);
             if(BusinessUnlocked)
             {
                 Ui.Size(Ui.Button(header,"委托店长开店",()=>OpenBusinessSection(3),16),155);
@@ -64,9 +65,10 @@ namespace PCShopSell.Game.UI
             Ui.Size(map, 1120, 740);
             map.GetComponent<LayoutElement>().minWidth = 1120;
             BuildAgencyMap(map, units, w, agency);
-            var detail = Ui.Panel(body, "AgencyDetail", Ui.PanelBg2).rectTransform;
-            Ui.Size(detail, -1, 740, 1);
-            Ui.VList(detail, 4, 12);
+            var detailPanel = Ui.Panel(body, "AgencyDetail", Ui.PanelBg2).rectTransform;
+            Ui.Size(detailPanel, -1, 740, 1);
+            Ui.VList(detailPanel, 4, 10);
+            var detail = Ui.Scroll(detailPanel, 720);
             Place selected = units.FirstOrDefault(p => p.Id == _agencySelectedId);
             if (selected != null) BuildAgencyDetail(detail, selected, System.Array.IndexOf(units, selected) + 1, w);
         }
@@ -110,24 +112,47 @@ namespace PCShopSell.Game.UI
             }
             bool pending = S.IsPendingShop(p);
             OwnedShop own = S.ShopAt(p);
+            var property = S.PropertyAt(p.Id);
+            var purchase = property == null ? S.PreviewCityPropertyPurchase(p.Id, false) : null;
+            bool hasShop = S.HasShop;
+            string leaseBlocker = l != null ? S.LeaseBlocker(l, hasShop) : null;
+            bool advance = l != null && S.IsAdvance(l);
             Money? rent = l != null ? l.Rent : mine ? (Money?)S.RentOf(own) : pending ? (Money?)S.PendingLease.Rent : null;
             var metrics = Ui.Row(parent, 60, 12);
-            Ui.Size(Ui.Label(metrics, $"<size=14>每月租金</size>\n<b>{(rent.HasValue ? rent.Value.ToString() : "未挂牌")}</b>", 27), -1, 60, 1);
-            Ui.Size(Ui.Label(metrics, $"<size=14>室内面积 · {GameSession.SizeName(p.Size)}</size>\n<b>{RealEstate.SizeArea(p.Size)}</b>", 27), -1, 60, 1);
+            Ui.Size(Ui.Label(metrics, $"<size=14>每周租金</size>\n<b>{(rent.HasValue ? rent.Value.ToString() : "未挂牌")}</b>", 23), -1, 60, 1);
+            if (purchase != null)
+                Ui.Size(Ui.Label(metrics, $"<size=14>全款售价</size>\n<b>{purchase.Price}</b>", 23), -1, 60, 1);
+            Ui.Size(Ui.Label(metrics, $"<size=14>室内面积 · {GameSession.SizeName(p.Size)}</size>\n<b>{RealEstate.SizeArea(p.Size)}</b>", 23), -1, 60, 1);
+            if (l != null || purchase != null)
+            {
+                var actions = Ui.Row(parent, 44, 8);
+                string rentAction = mine ? "已租用" : pending ? "已签约" : advance ? "提前租赁…" : l == null ? "暂无租赁" : "租赁…";
+                Ui.Size(Ui.Button(actions,rentAction,()=>ConfirmAgencyLease(w,p.Id,hasShop),18,Ui.ButtonHot,l != null && leaseBlocker == null),-1,44,1)
+                    .name = "AgencyReviewLease";
+                if (purchase != null)
+                    Ui.Size(Ui.Button(actions,mine?"租转买…":"全款购买…",()=>CityPropertyConfirm(p.Id,false,w),18),-1,44,1)
+                        .name = "AgencyReviewPurchase";
+            }
             var flow = S.FootfallOf(p);
+            string previewKind = CompetitionPreviewKind(p);
             if(!S.IsDedicatedVenue(p))Line(parent,"最多 "+GameSession.ShelfLimit(p.Size)+" 个货架 · "+GameSession.StaffLimit(p.Size)+" 名员工 · 后仓不限",16,Ui.Accent);
-            Ui.Size(Ui.Label(parent, $"预计每日经过约 {flow.DailyPassers:N0} 人", 22, TextAnchor.MiddleLeft, Ui.Good), -1, 32).name="AgencyDailyPassers";
+            Ui.Size(Ui.Label(parent, $"预计每日入店约 {S.ExpectedDailyShopEntrants(p,previewKind):N0} 人", 22, TextAnchor.MiddleLeft, Ui.Good), -1, 32).name="AgencyDailyEntrants";
+            if (!mine && !pending && !S.IsDedicatedVenue(p))
+                Ui.Size(Ui.Button(parent,$"{RetailShopTypes.Name(previewKind)} · 新店 {NewShopHours} · 更换店型",()=>ChooseCompetitionKind(w),16),-1,34);
             string station=double.IsPositiveInfinity(flow.StationMeters)?"无可达地铁站":$"距最近地铁 {flow.StationMeters:0} 米";
             string housing=double.IsPositiveInfinity(flow.HousingMeters)?"附近无可达住宅":$"距最近住宅 {flow.HousingMeters:0} 米";
             Ui.Size(Ui.Label(parent,station+" · "+housing,15),-1,24);
-            HelpLink(parent,"租赁与客流说明","地段经过人数由地铁、住宅和店铺面积估算，不等于进店或成交人数。同类自营店会分流客流，已签租金保持原价。提前签约到交房日才能使用；退租前请清理库存，主动退租不退押金。");
+            HelpLink(parent,"租赁与客流说明",
+                $"新店按所选店型、{NewShopHours}正常营业估算。知名度、品牌口碑、街道人流、周末和同类分流会影响客流，实际人数也受开门和值守时长影响。餐馆还受座位周转影响。\n签约付首周租金、一周押金和半周中介费，之后每七天交一次租。\n"
+                + $"与{Rosters.AgentChen.Name}的熟悉度每增加 1 点，中介费减免 {RealEstate.AgentDiscountPerRapport * 100:0.#} 个百分点，最多减免 {RealEstate.MaxAgentDiscount * 100:0.#}%。\n"
+                + "已签租金保留签约价。提前签约到交房日才能使用。退租前请清理库存，主动退租不退押金。");
             if(mine||pending)Line(parent,"已签租约保留原价。",14,Ui.Dim);
             if(!S.IsDedicatedVenue(p))
             {
-                Para(parent, (mine ? "" : "试算开设" + RetailShopTypes.Name(CompetitionPreviewKind(p)) + "：\n") + CompetitionSummary(p), 16, Ui.Accent).name="AgencyCompetitionSummary";
+                Para(parent, CompetitionSummary(p,previewKind,includeEstimate:false), 16, Ui.Accent).name="AgencyCompetitionSummary";
                 Ui.Size(Ui.Button(parent,"商圈详情与试算",()=>OpenShopCompetition(p),16),-1,32);
             }
-            BuildAgencyFloorPlan(parent, p);
+            BuildAgencyFloorPlan(parent, RoomSpec.ForShop(p.Size));
             if(S.IsDedicatedVenue(p))Para(parent,"专用场地 · "+S.VenueBusinessName(p)+"\n只能延续原有服务，不能改作零售店。接手不包含原教练劳动；需自己值守或另行招聘。每日维护 ¥"+S.VenueMaintenanceYuan(p)+"，租金及工资另计。",17,Ui.Accent);
 
             if (l == null)
@@ -136,8 +161,8 @@ namespace PCShopSell.Game.UI
                 string explanation = mine
                         ? own.OwnsProperty?"这是你的自有店铺，可以结束自营并保留产权。":$"这是你的{S.ShopTitle(own)}，已交押金 {own.Lease.Deposit}。可在这里办理退租，押金不退；请先搬走货物。"
                     : pending ? $"你已经提前签下这间，押金 {S.PendingLease.Deposit}。现租户第 {S.PendingLease.StartDay + 1} 天搬走，那天自动交房；在那之前房租照交。"
-                    : S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null ? "这间铺面已纳入你的资产。经营收支见资产页，出租和出售在上方“商铺产权买卖”办理。"
-                    : "这间铺面目前没有出租报价。你可以先了解位置和户型，等它挂牌后再来询价。";
+                    : S.VentureAt(p.Id) != null || property != null ? "这间铺面已纳入你的资产。经营收支可在资产页查看。"
+                    : "这间铺面目前没有出租报价。";
                 Para(parent, explanation, 18, Ui.Dim);
                 if(mine)
                 {
@@ -146,25 +171,19 @@ namespace PCShopSell.Game.UI
                     string why=S.CloseShopBlocker(own);
                     if(why!=null)Line(parent,"办理前需处理："+why,16,Ui.Warn);
                 }
+                if (property != null) BuildCommercialPropertyActions(parent,p,property,w);
                 return;
             }
 
-            bool hasShop = S.HasShop;
             AgencyQuote(parent, l, hasShop);
             Money cost = S.LeaseCost(l, hasShop);
             Ui.Size(Ui.Label(parent, $"<b>{AgencySettlement(cost)}</b>", 23, TextAnchor.MiddleLeft, Ui.Accent), -1, 32);
             Money remaining = S.Ledger.Balance - cost;
             Ui.Size(Ui.Label(parent, remaining.IsNegative ? $"现金还差 {remaining.Abs()}" : $"付清后剩余现金 {remaining}", 17,
                 TextAnchor.MiddleLeft, remaining.IsNegative ? new Color32(231, 160, 135, 255) : Ui.Good), -1, 24);
-            string blocker = S.LeaseBlocker(l, hasShop);
-            bool advance = S.IsAdvance(l);
             if (advance) AgencyEntryWarning(parent, l.OpenDay);
-            else Ui.Size(Ui.Label(parent, blocker ?? $"挂牌还剩 {l.CloseDay - S.Clock.Today.TotalDays + 1} 天 · 可以签约", 16,
-                TextAnchor.MiddleLeft, blocker == null ? Ui.Good : Ui.Accent), -1, 38);
-            var sign = Ui.Button(parent, advance ? $"提前签约（还需等 {l.OpenDay - S.Clock.Today.TotalDays} 天）" : "核对费用，租下这间", () => ConfirmAgencyLease(w, p.Id, hasShop), 19,
-                Ui.ButtonHot, blocker == null);
-            sign.name = "AgencyReviewLease";
-            Ui.Size(sign, -1, 44);
+            Ui.Size(Ui.Label(parent, leaseBlocker ?? $"挂牌还剩 {l.CloseDay - S.Clock.Today.TotalDays + 1} 天 · 可以签约", 16,
+                TextAnchor.MiddleLeft, leaseBlocker == null ? Ui.Good : Ui.Accent), -1, 32);
         }
 
         private void AgencyEntryWarning(Transform parent, int openDay)
@@ -183,9 +202,9 @@ namespace PCShopSell.Game.UI
 
         private void AgencyQuote(Transform parent, ShopListing l, bool newShop)
         {
-            AgencyFeeLine(parent, "首月租金", l.Rent.ToString());
+            AgencyFeeLine(parent, "首周租金", l.Rent.ToString());
             AgencyFeeLine(parent, "押金（主动退租不退）", RealEstate.Deposit(l.Rent).ToString());
-            AgencyFeeLine(parent, S.AgentDiscount > 0 ? $"中介费（已减 {S.AgentDiscount * 100:0.#}%）" : "中介费", S.AgentFeeFor(l.Rent).ToString());
+            AgencyFeeLine(parent, $"中介费（熟悉度 {S.AgentRapport} · 减免 {AgencyDiscountPercent}）", S.AgentFeeFor(l.Rent).ToString());
             if (S.HasShop && !newShop && !S.IsAdvance(l))
             {
                 AgencyFeeLine(parent, "搬家费", RealEstate.MoveFee.ToString());
@@ -210,8 +229,9 @@ namespace PCShopSell.Game.UI
             Money quotedCost = S.LeaseCost(listing, newShop);
             OpenWindow("确认租赁 · " + UnitName(p), 660, S.IsAdvance(listing) ? 620 : 520, confirm =>
             {
-                Line(confirm.Content, $"{GameSession.SizeName(p.Size)} · {RealEstate.SizeArea(p.Size)} · 月租 {listing.Rent}", 21, Ui.Accent);
-                Line(confirm.Content,$"预计每日经过约 {S.FootfallOf(p).DailyPassers:N0} 人",19,Ui.Good);
+                Line(confirm.Content, $"{GameSession.SizeName(p.Size)} · {RealEstate.SizeArea(p.Size)} · 周租 {listing.Rent}", 21, Ui.Accent);
+                string previewKind = CompetitionPreviewKind(p);
+                Line(confirm.Content,$"{RetailShopTypes.Name(previewKind)} · 预计每日入店约 {S.ExpectedDailyShopEntrants(p,previewKind):N0} 人",19,Ui.Good);
                 if (S.IsAdvance(listing)) AgencyEntryWarning(confirm.Content, listing.OpenDay);
                 if(S.IsDedicatedVenue(p))
                     Para(confirm.Content,"专用场地："+S.VenueBusinessName(p)+"，只能延续原用途，不可改作零售店。\n保留原设施，另行安排值守。原教练不自动受雇；维护费 ¥"+S.VenueMaintenanceYuan(p)+"/天，员工按实际排班另付工资。老板自用免费，不产生营业收入。",18,Ui.Accent);
@@ -224,7 +244,7 @@ namespace PCShopSell.Game.UI
                 Para(confirm.Content, S.IsDedicatedVenue(p)?"接手后进入场馆管理，设置营业时间、价格并开启接客。顾客按场地容量付费使用；不提供普通店铺柜台或货架经营。":newShop
                     ? "铺子是毛坯的，原来的店照常营业。货可以打电话叫货车从别的店或家里搬过来；人不在店里时要雇人看店才开门。"
                     : "铺子是毛坯的，签好后自己到店里，按所选经营类型摆好设施再开业。", 17);
-                string fine = "以后每月 1 日交租；主动退租，已交押金不退。";
+                string fine = "签约后每七天交一次周租。主动退租，已交押金不退。";
                 if (S.IsAdvance(listing)) fine += $"现租户第 {listing.OpenDay + 1} 天才搬走，到那天才能搬进去，房租从签约当天算起。";
                 Para(confirm.Content, fine, 14, Ui.Dim);
                 var row = Ui.Row(confirm.Content, 46, 10);
@@ -263,17 +283,18 @@ namespace PCShopSell.Game.UI
             {
                 Line(w.Content,S.City.GetPlace(placeId).Name+" · 已签约",21,Ui.Accent);
                 Para(w.Content,"请选择经营类型，再确认开店。租金已经支付，这一步不会重复扣款。",17);
-                foreach(string value in PCShopSell.Core.Home.RetailShopTypes.All)
+                foreach(string kind in RetailShopTypes.All)
                 {
-                    string kind=value;string blocker=S.OpeningKindBlocker(placeId,kind);
-                    var button=Ui.Size(Ui.Button(w.Content,(selected==kind?"✓ ":"")+PCShopSell.Core.Home.RetailShopTypes.Name(kind)+(blocker==null?"":" · "+blocker),
-                        ()=>{selected=kind;w.Rebuild();},18,selected==kind?Ui.ButtonHot:Ui.ButtonBg,blocker==null),-1,42);
+                    var button=Ui.Size(Ui.Button(w.Content,(selected==kind?"✓ ":"")+RetailShopTypes.Name(kind),
+                        ()=>{selected=kind;w.Rebuild();},18,selected==kind?Ui.ButtonHot:Ui.ButtonBg),-1,42);
                     button.name="OpeningKind_"+kind;
                 }
                 if(selected!=null)
                 {
+                    var place = S.City.GetPlace(placeId);
+                    Line(w.Content,$"新店 {NewShopHours} · 预计每日入店约 {S.ExpectedDailyShopEntrants(place,selected,asNewShop:true):N0} 人",17,Ui.Good);
                     Para(w.Content,PCShopSell.Core.Home.RetailShopTypes.Description(selected),16,Ui.Dim);
-                    if(!S.QuestCompleted("rent"))Para(w.Content,"任务赠品："+string.Join("、",GameSession.OpeningFurniture(selected).Select(id=>PCShopSell.Core.Home.FurnitureCatalog.Get(id).Name)),16,Ui.Good);
+                    Para(w.Content,"家具城开店清单："+string.Join("、",GameSession.OpeningFurniture(selected).Select(id=>PCShopSell.Core.Home.FurnitureCatalog.Get(id).Name)),16,Ui.Good);
                 }
                 Ui.Size(Ui.Button(w.Content,selected==null?"请先选择经营类型":"确认开一家"+PCShopSell.Core.Home.RetailShopTypes.Name(selected),()=>
                 {

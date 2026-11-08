@@ -151,7 +151,7 @@ namespace PCShopSell.Core.Session
                     });
                 }
             }
-            foreach(var place in City.Places)
+            foreach(var place in City.PublicPlaces)
                 if(place.ExplicitEntrance)_corridors.Add(new Corridor { A=City.ViewPosition(place.NodeId), B=DoorOf(place), HalfWidth=1.6, Scale=City.TravelDistanceScale });
             return _corridors;
         }
@@ -232,7 +232,7 @@ namespace PCShopSell.Core.Session
         {
             VehicleSpec v = CurrentVehicle;
             MapPoint from = PlayerPosition, res = from;
-            double budget = CityTravelTiming.ScaledSecondsMeters(v, scaledSeconds, Time.SecondsPerMinuteAt1x);
+            double budget = CityTravelTiming.PlayerScaledSecondsMeters(v, scaledSeconds, Time.SecondsPerMinuteAt1x);
             // Small spatial steps prevent 8x movement from crossing a wall or skipping an entire short road.
             for (int step = 0; budget > 1e-8 && step < 4096; step++)
             {
@@ -272,7 +272,7 @@ namespace PCShopSell.Core.Session
                 MapPoint p = PlayerPosition;
                 Place best = null;
                 double bestDist = EnterRadius;
-                foreach (Place pl in City.Places)
+                foreach (Place pl in City.PublicPlaces)
                 {
                     double d = Dist(p, DoorOf(pl));
                     if (d < bestDist)

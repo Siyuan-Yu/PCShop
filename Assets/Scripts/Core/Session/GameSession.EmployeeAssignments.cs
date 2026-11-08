@@ -56,6 +56,7 @@ namespace PCShopSell.Core.Session
             if (dest == null) return "请选择自己的店铺";
             if ((role==EmployeeRole.Chef||role==EmployeeRole.Waiter)&&dest.RetailKind!="restaurant")return "厨师与服务员请安排到餐馆";
             if(role==EmployeeRole.Appraiser&&dest.RetailKind!="secondhand")return "收购师请安排到二手店";
+            if(role==EmployeeRole.PetKeeper&&!IsPetShop(dest))return "饲养员请安排到宠物用品店";
             if(IsDedicatedVenue(dest.Place)&&role!=EmployeeRole.Cashier)return "场馆本轮只设值守岗位，请选择场馆值守（收银位）";
             string capacity=dest==row.Shop?null:StaffCapacityBlocker(dest,id,replace,role);if(capacity!=null)return capacity;
             if (dest == row.Shop && role == row.Role) return "已经在这家店做这项工作";

@@ -63,6 +63,13 @@ namespace PCShopSell.Game.Runtime
             int minute = session.Clock.MinuteOfDay;
             int daytime = camera == null ? 12 : Mathf.Clamp(Mathf.CeilToInt(camera.orthographicSize * camera.aspect / 7), 8, 28);
             _ambientCount = _visibleAmbientEdges.Count == 0 ? 0 : minute >= 420 && minute < 1200 ? daytime : minute >= 360 && minute < 1380 ? Math.Max(4, daytime / 2) : 2;
+            if (_ambientCount > 0)
+            {
+                double growth = 0;
+                foreach (var edge in _visibleAmbientEdges)
+                    growth += session.StreetTrafficMultiplier(session.TrafficStreetOfSegment(edge.A, edge.B)) - 1;
+                _ambientCount += Mathf.RoundToInt((float)(_ambientCount * growth / _visibleAmbientEdges.Count));
+            }
             for (int i = 0; i < _ambientCount; i++)
             {
                 bool added = i >= _ambient.Count;
@@ -87,7 +94,9 @@ namespace PCShopSell.Game.Runtime
                     Vector3 start = AmbientLane(from, to, false, person.Side);
                     // New views can already be on their way. Recycled views enter near a street end.
                     float progress = added ? (float)_rng.NextDouble() : .02f;
-                    person.Go.transform.position = Vector3.Lerp(start, person.Target, progress);
+                    var position = Vector3.Lerp(start, person.Target, progress);
+                    position.y = _streets?.StreetHeightAt(position.x, position.z) ?? 0;
+                    person.Go.transform.position = position;
                     person.Go.transform.rotation = Quaternion.LookRotation((person.Target - start).normalized);
                     person.Go.GetComponent<FigureMotion>()?.ResetMotion();
                 }
@@ -104,6 +113,7 @@ namespace PCShopSell.Game.Runtime
                 for (int step = 0; remaining > .00001 && step < 128; step++)
                 {
                     Vector3 delta = person.Target - person.Go.transform.position;
+                    delta.y = 0;
                     float distance = delta.magnitude;
                     if (distance < .02f)
                     {
@@ -132,6 +142,9 @@ namespace PCShopSell.Game.Runtime
                     person.Go.transform.rotation = Quaternion.RotateTowards(person.Go.transform.rotation, Quaternion.LookRotation(delta.normalized), 540 * dt);
                     remaining -= move * scale;
                 }
+                var position = person.Go.transform.position;
+                position.y = _streets?.StreetHeightAt(position.x, position.z) ?? 0;
+                person.Go.transform.position = position;
             }
         }
     }

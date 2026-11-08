@@ -1,0 +1,96 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-11-07",
+  "assets": [
+    {
+      "id": "e_city",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-c5ba5488-734f-464c-a7cc-66583017012b.png",
+      "destination": "Assets/Resources/VehiclePortraits/e_city.png",
+      "prompt": "Use case: stylized-concept. Asset type: square vehicle thumbnail for a Chinese low-poly 3D life/business simulation game's dealership UI. One single small affordable mint-green electric step-through seated scooter, black saddle, modest round headlight, short wheelbase, compact battery body, two wheels. No rider. Three-quarter front view, front pointing left, entire vehicle centered with 12% safe padding, clear silhouette recognizable at 100px. Matte low-poly faceted geometry, charming understated toy-scale proportions, soft studio light, no photorealism. Plain solid dark blue-gray background #35424F, subtle contact shadow. No scene, no text, no logo, no watermark. One vehicle only. 1024x1024."
+    },
+    {
+      "id": "e_range",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-c30a5b75-c457-427e-9233-76775582a030.png",
+      "destination": "Assets/Resources/VehiclePortraits/e_range.png",
+      "prompt": "Use case: stylized-concept. Square vehicle thumbnail for a low-poly 3D life/business simulation dealership UI. Subject: A practical slate-blue long-range electric seated step-through scooter, broad comfortable saddle, sturdy large battery compartment and a compact rear storage box, two wheels. No rider. One vehicle only, front three-quarter view pointing left, fully visible centered with safe margins. Matte low-poly faceted geometry, charming toy-like proportions, soft studio lighting, clean silhouette at 100px. Solid dark blue-gray #35424F studio backdrop with subtle ground shadow. No scenery, no text, no logos, no watermark. 1024x1024."
+    },
+    {
+      "id": "e_turn",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-c4b4991b-136d-4ac6-9ff5-bac3644a719c.png",
+      "destination": "Assets/Resources/VehiclePortraits/e_turn.png",
+      "prompt": "Use case: stylized-concept. Square vehicle thumbnail for a low-poly 3D life/business simulation dealership UI. Subject: A nimble cream and coral-red city electric seated scooter, light slim frame, flowing curved front shield, round headlight, short wheelbase, two wheels. No rider. One vehicle only, front three-quarter view pointing left, fully visible centered with safe margins. Matte low-poly faceted geometry, charming toy-like proportions, soft studio lighting, clean silhouette at 100px. Solid dark blue-gray #35424F studio backdrop with subtle ground shadow. No scenery, no text, no logos, no watermark. 1024x1024."
+    },
+    {
+      "id": "e_dash",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-e846be14-bb4e-4c8b-9c1c-51f5237ae915.png",
+      "destination": "Assets/Resources/VehiclePortraits/e_dash.png",
+      "prompt": "Use case: stylized-concept. Square vehicle thumbnail for a low-poly 3D life/business simulation dealership UI. Subject: A sporty bright amber electric seated scooter with angular fairings, black trim, narrow LED headlamp and low aerodynamic front, two wheels. No rider. One vehicle only, front three-quarter view pointing left, fully visible centered with safe margins. Matte low-poly faceted geometry, charming toy-like proportions, soft studio lighting, clean silhouette at 100px. Solid dark blue-gray #35424F studio backdrop with subtle ground shadow. No scenery, no text, no logos, no watermark. 1024x1024."
+    },
+    {
+      "id": "e_race",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-741e772e-ff65-4e80-b758-429e19e72804.png",
+      "destination": "Assets/Resources/VehiclePortraits/e_race.png",
+      "prompt": "Use case: stylized-concept. Square vehicle thumbnail for a low-poly 3D life/business simulation dealership UI. Subject: A premium teal and charcoal electric racing scooter, sporty aggressive fairings, compact windscreen, thicker racing tyres, two wheels, clearly a seated scooter not a full motorcycle. No rider. One vehicle only, front three-quarter view pointing left, fully visible centered with safe margins. Matte low-poly faceted geometry, charming toy-like proportions, soft studio lighting, clean silhouette at 100px. Solid dark blue-gray #35424F studio backdrop with subtle ground shadow. No scenery, no text, no logos, no watermark. 1024x1024."
+    },
+    {
+      "id": "t_cargo",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-1c52d9ca-240e-4f5b-84c3-41af6bf9ac1d.png",
+      "destination": "Assets/Resources/VehiclePortraits/t_cargo.png",
+      "prompt": "Use case: stylized-concept. Square vehicle thumbnail for a low-poly 3D life/business simulation dealership UI. Subject: A modest forest-green open-cab electric cargo tricycle, motorcycle handlebar steering, single front wheel and two rear wheels, open rectangular cargo bed, simple workhorse silhouette. No rider or driver. One vehicle only, front three-quarter view pointing left, fully visible centered with safe margins. Matte low-poly faceted geometry, charming toy-like proportions, soft studio lighting, clean silhouette at 100px. Solid dark blue-gray #35424F studio backdrop with subtle ground shadow. No scenery, no text, no logos, no watermark. 1024x1024."
+    },
+    {
+      "id": "t_sport",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-d3de4243-5a17-4c91-b380-bff630d4c6f3.png",
+      "destination": "Assets/Resources/VehiclePortraits/t_sport.png",
+      "prompt": "Use case: stylized-concept. Square vehicle thumbnail for a low-poly 3D life/business simulation dealership UI. Subject: A sporty cobalt-blue electric cargo tricycle, short streamlined cargo bed, single front wheel and two rear wheels, open motorcycle-style rider seat, chunky tyres, black accents. No rider or driver. One vehicle only, front three-quarter view pointing left, fully visible centered with safe margins. Matte low-poly faceted geometry, charming toy-like proportions, soft studio lighting, clean silhouette at 100px. Solid dark blue-gray #35424F studio backdrop with subtle ground shadow. No scenery, no text, no logos, no watermark. 1024x1024."
+    },
+    {
+      "id": "v_basic",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-9712f5d1-5a5c-44b7-9d2e-79bc69b46f46.png",
+      "destination": "Assets/Resources/VehiclePortraits/v_basic.png",
+      "prompt": "Use case: stylized-concept. Square vehicle thumbnail for a low-poly 3D life/business simulation dealership UI. Subject: An affordable silver-white compact cab-over cargo microvan, tall boxy body, sliding side door, small steel wheels, simple Chinese town delivery van proportions, four wheels. No rider or driver. One vehicle only, front three-quarter view pointing left, fully visible centered with safe margins. Matte low-poly faceted geometry, charming toy-like proportions, soft studio lighting, clean silhouette at 100px. Solid dark blue-gray #35424F studio backdrop with subtle ground shadow. No scenery, no text, no logos, no watermark. 1024x1024."
+    },
+    {
+      "id": "v_cargo",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-0caca66c-4ae6-49c5-bcf7-b6c472ffe7b2.png",
+      "destination": "Assets/Resources/VehiclePortraits/v_cargo.png",
+      "prompt": "Use case: stylized-concept. Square vehicle thumbnail for a low-poly 3D life/business simulation dealership UI. Subject: A sturdy muted yellow compact cab-over light delivery truck, small two-seat cab, separate enclosed cream cargo box, dual rear-view mirrors, four wheels. No rider or driver. One vehicle only, front three-quarter view pointing left, fully visible centered with safe margins. Matte low-poly faceted geometry, charming toy-like proportions, soft studio lighting, clean silhouette at 100px. Solid dark blue-gray #35424F studio backdrop with subtle ground shadow. No scenery, no text, no logos, no watermark. 1024x1024."
+    },
+    {
+      "id": "c_city",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-5cdd1d79-7a6b-4e72-9984-b20f00cdbf2d.png",
+      "destination": "Assets/Resources/VehiclePortraits/c_city.png",
+      "prompt": "Use case: stylized-concept. Square vehicle thumbnail for a low-poly 3D life/business simulation dealership UI. Subject: A modest soft sky-blue compact family hatchback car, friendly rounded headlights, practical five-door body, small alloy wheels, four wheels. No rider or driver. One vehicle only, front three-quarter view pointing left, fully visible centered with safe margins. Matte low-poly faceted geometry, charming toy-like proportions, soft studio lighting, clean silhouette at 100px. Solid dark blue-gray #35424F studio backdrop with subtle ground shadow. No scenery, no text, no logos, no watermark. 1024x1024."
+    },
+    {
+      "id": "c_su7",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-1d5ebd0d-fd8e-4fe4-bb7a-b09e65953948.png",
+      "destination": "Assets/Resources/VehiclePortraits/c_su7.png",
+      "prompt": "Use case: stylized-concept. Square vehicle thumbnail for a low-poly 3D life/business simulation dealership UI. Subject: A premium pale aqua electric sports sedan, flowing low four-door fastback silhouette, slim headlights, black panoramic roof, large silver wheels, original fictional design. No rider or driver. One vehicle only, front three-quarter view pointing left, fully visible centered with safe margins. Matte low-poly faceted geometry, charming toy-like proportions, soft studio lighting, clean silhouette at 100px. Solid dark blue-gray #35424F studio backdrop with subtle ground shadow. No scenery, no text, no logos, no watermark. 1024x1024."
+    },
+    {
+      "id": "c_718",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-56e052b4-147e-4c99-b8a4-65fe2b33a79b.png",
+      "destination": "Assets/Resources/VehiclePortraits/c_718.png",
+      "prompt": "Use case: stylized-concept. Square vehicle thumbnail for a low-poly 3D life/business simulation dealership UI. Subject: A premium ivory-white compact mid-engine two-seat sport coupe, curvaceous small body, rounded headlights, short rear deck, dark wheels, original fictional design. No rider or driver. One vehicle only, front three-quarter view pointing left, fully visible centered with safe margins. Matte low-poly faceted geometry, charming toy-like proportions, soft studio lighting, clean silhouette at 100px. Solid dark blue-gray #35424F studio backdrop with subtle ground shadow. No scenery, no text, no logos, no watermark. 1024x1024."
+    },
+    {
+      "id": "c_921",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-fc0e12c9-f0f1-4ed6-aa43-c15e4cd48197.png",
+      "destination": "Assets/Resources/VehiclePortraits/c_921.png",
+      "prompt": "Use case: stylized-concept. Square vehicle thumbnail for a low-poly 3D life/business simulation dealership UI. Subject: A premium graphite-gray grand touring sports coupe, rear-engine style rounded roofline, sculpted wide rear fenders, oval headlights, a small rear spoiler, original fictional design. No rider or driver. One vehicle only, front three-quarter view pointing left, fully visible centered with safe margins. Matte low-poly faceted geometry, charming toy-like proportions, soft studio lighting, clean silhouette at 100px. Solid dark blue-gray #35424F studio backdrop with subtle ground shadow. No scenery, no text, no logos, no watermark. 1024x1024."
+    },
+    {
+      "id": "c_lambo",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-d18a64d0-a1c3-4bf7-bfba-fa29ad94798b.png",
+      "destination": "Assets/Resources/VehiclePortraits/c_lambo.png",
+      "prompt": "Use case: stylized-concept. Square vehicle thumbnail for a low-poly 3D life/business simulation dealership UI. Subject: A spectacular lime-green exotic supercar, very low angular wedge-shaped body, sharp headlights, large side air intakes, black wheels, original fictional design. No rider or driver. One vehicle only, front three-quarter view pointing left, fully visible centered with safe margins. Matte low-poly faceted geometry, charming toy-like proportions, soft studio lighting, clean silhouette at 100px. Solid dark blue-gray #35424F studio backdrop with subtle ground shadow. No scenery, no text, no logos, no watermark. 1024x1024."
+    },
+    {
+      "id": "c_fa",
+      "source": "C:\\Users\\Pato\\.codex\\generated_images\\01a19bd1-c1ec-70f0-96a9-88cbb5b31544\\exec-2fd3e66b-9c3a-4920-b94f-261851bdc491.png",
+      "destination": "Assets/Resources/VehiclePortraits/c_fa.png",
+      "prompt": "Use case: stylized-concept. Square vehicle thumbnail for a low-poly 3D life/business simulation dealership UI. Subject: A spectacular crimson-red exotic supercar, low elegant flowing body, long sculpted hood, deeply sculpted side ducts, gold wheels, original fictional design. No rider or driver. One vehicle only, front three-quarter view pointing left, fully visible centered with safe margins. Matte low-poly faceted geometry, charming toy-like proportions, soft studio lighting, clean silhouette at 100px. Solid dark blue-gray #35424F studio backdrop with subtle ground shadow. No scenery, no text, no logos, no watermark. 1024x1024."
+    }
+  ]
+}

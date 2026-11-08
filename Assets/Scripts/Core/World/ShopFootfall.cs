@@ -9,11 +9,13 @@ namespace PCShopSell.Core.World
     public sealed class ShopFootfallEstimate
     {
         public int DailyPassers { get; }
+        public double StreetDemand { get; }
         public double StationMeters { get; }
         public double HousingMeters { get; }
         public Money MonthlyRent => Money.FromYuan(DailyPassers * 5L);
-        internal ShopFootfallEstimate(int passers,double station,double housing)
-        { DailyPassers=passers;StationMeters=station;HousingMeters=housing; }
+        public Money WeeklyRent => Money.FromYuan(Math.Max(2000L,(long)Math.Round((1100 + DailyPassers * 3.0) / 100.0) * 100));
+        internal ShopFootfallEstimate(int passers,double streetDemand,double station,double housing)
+        { DailyPassers=passers;StreetDemand=streetDemand;StationMeters=station;HousingMeters=housing; }
     }
 
     // Immutable layout inputs, evaluated once per queried shop. No pathfinding per frame.
@@ -52,8 +54,9 @@ namespace PCShopSell.Core.World
             }
             double metro=double.IsPositiveInfinity(station)?0:220/(1+station/180.0);
             double residential=200*nearbyResidents/(nearbyResidents+160);
-            double frontage=place.Size==ShopSize.Large?4.5:place.Size==ShopSize.Medium?2.25:1;
-            var estimate=new ShopFootfallEstimate(Math.Max(1,(int)Math.Round((80+metro+residential)*frontage)),station,housing);
+            double frontage=place.Size==ShopSize.Large?5.4:place.Size==ShopSize.Medium?2.5:1;
+            double streetDemand = 80 + metro + residential;
+            var estimate=new ShopFootfallEstimate(Math.Max(1,(int)Math.Round(streetDemand*frontage)),streetDemand,station,housing);
             _cache.Add(place.Id,estimate);return estimate;
         }
         private Dictionary<string,double> Distances(string origin)

@@ -28,6 +28,7 @@ namespace PCShopSell.Core.Session
     {
         public string PersonId, HomePlaceId, Address, WorkPlaceId, LocationPlaceId, ActivityId, TaskLabel, VisitId;
         public int StoryChapter, LastStoryDay = -1;
+        public int LastRaceTogetherDayPlusOne;
         public string LeisureTargetId;
         public int LeisureStop;
         public long LeisureNextMove;
@@ -39,7 +40,7 @@ namespace PCShopSell.Core.Session
         public CityPersonState Copy() => new CityPersonState { PersonId=PersonId,HomePlaceId=HomePlaceId,Address=Address,
             WorkPlaceId=WorkPlaceId,LocationPlaceId=LocationPlaceId,ActivityId=ActivityId,TaskLabel=TaskLabel,StoryChapter=StoryChapter,
             LeisureTargetId=LeisureTargetId,LeisureStop=LeisureStop,LeisureNextMove=LeisureNextMove,
-            LastStoryDay=LastStoryDay,Task=Task,X=X,Y=Y,Route=Route?.Copy(),VisitId=VisitId,KnownRelations=KnownRelations?.ToArray()??Array.Empty<string>(),KnownTopics=KnownTopics?.ToArray()??Array.Empty<string>() };
+            LastStoryDay=LastStoryDay,LastRaceTogetherDayPlusOne=LastRaceTogetherDayPlusOne,Task=Task,X=X,Y=Y,Route=Route?.Copy(),VisitId=VisitId,KnownRelations=KnownRelations?.ToArray()??Array.Empty<string>(),KnownTopics=KnownTopics?.ToArray()??Array.Empty<string>() };
     }
     [Serializable] public sealed class CityRoute
     {

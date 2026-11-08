@@ -13,10 +13,8 @@ namespace PCShopSell.Tests
     public sealed class DistrictUiTests
     {
         [TestCase("community.meeting",1)] [TestCase("community.clue",1)] [TestCase("community.trial",1)]
-        [TestCase("park.proposal",2)] [TestCase("park.change",2)] [TestCase("park.delivery",2)]
-        [TestCase("model.dinner",2)] [TestCase("model.clues",2)] [TestCase("model.repair",2)] [TestCase("model.delivery",2)]
-        [TestCase("park.recommendation",2)] [TestCase("garden.invitation",3)] [TestCase("garden.proposal",3)]
-        [TestCase("garden.terms",3)] [TestCase("garden.fulfilment",3)] [TestCase("garden.echo",3)]
+        [TestCase("expo.invitation",2)] [TestCase("expo.review",2)]
+        [TestCase("tender.invitation",3)] [TestCase("tender.review",3)]
         public void QuestTrackerCannotPerformInPersonActions(string node,int chapter)
         {
             using(var s=DistrictProgressionTests.Make())
@@ -239,7 +237,7 @@ namespace PCShopSell.Tests
                     Find("CheatCommunityConditions").onClick.Invoke();
                     Assert.AreEqual(65,s.Relation("lin"));Assert.AreEqual(now,s.Clock.Now);Assert.AreEqual(money,s.Ledger.Balance);
                     Assert.AreEqual(activities,s.CityActivities.Count(),"Cheat evidence must not fabricate real activity history");
-                    Assert.AreEqual(1,state.CommunityClues);Assert.AreEqual(1,state.CommunityPieces);Assert.False(state.HasCommunityMap);Assert.Zero(s.DistrictAccessTier);
+                    Assert.AreEqual(1,state.CommunityClues);Assert.AreEqual(1,state.CommunityPieces);Assert.Zero(s.DistrictAccessTier);
                     Assert.AreEqual("community.search",s.CurrentDistrictNode.Id);
                     ui.CloseAllWindows();ui.OpenDistrictStory();
                     string StoryText()=>string.Join("\n",ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Select(t=>t.text));

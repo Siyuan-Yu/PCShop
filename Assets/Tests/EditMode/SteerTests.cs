@@ -68,7 +68,7 @@ namespace PCShopSell.Tests
                 else s.SetSteer(-1, 0);
                 for (int i = 0; i < 10; i++) s.Tick(.1);
                 double lane = automatic ? GameSession.ShoppingFrontY - GameSession.SidewalkInset : 0;
-                double physical = CityTravelTiming.ScaledSecondsMeters(Vehicles.Walk, PCShopSell.Core.Time.TimeController.WorldRate, s.Time.SecondsPerMinuteAt1x);
+                double physical = CityTravelTiming.PlayerScaledSecondsMeters(Vehicles.Walk, PCShopSell.Core.Time.TimeController.WorldRate, s.Time.SecondsPerMinuteAt1x);
                 double roadScale = CityTravelTiming.EdgeMeters(s.City, "st", "mk") / 100;
                 Assert.That(s.PlayerPosition.X, Is.EqualTo(-(physical - lane * s.City.DistanceScale) / roadScale).Within(.0001));
                 Assert.That(s.PlayerPosition.Y, Is.EqualTo(lane).Within(.0001));
@@ -103,7 +103,7 @@ namespace PCShopSell.Tests
             {
                 Walk(s,0,1,100);double x=s.PlayerPosition.X;
                 Walk(s,1,1,2);
-                double intended=CityTravelTiming.ScaledSecondsMeters(Vehicles.Walk,
+                double intended=CityTravelTiming.PlayerScaledSecondsMeters(Vehicles.Walk,
                     .2*PCShopSell.Core.Time.TimeController.WorldRate,s.Time.SecondsPerMinuteAt1x)/System.Math.Sqrt(2);
                 Assert.AreEqual(x+intended,s.PlayerPosition.X,.01);
                 Assert.AreEqual(GameSession.MainStreetHalfWidth,s.PlayerPosition.Y,1e-6);

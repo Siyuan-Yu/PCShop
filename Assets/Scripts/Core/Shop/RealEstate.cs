@@ -1,5 +1,6 @@
 using System;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Time;
 
 namespace PCShopSell.Core.Shop
 {
@@ -24,18 +25,19 @@ namespace PCShopSell.Core.Shop
         public Money Deposit;
         public int StartDay;
         public int SignedDay;
+        public bool RentDue(int day) => Rent.IsPositive && day > SignedDay && (day - SignedDay) % GameDate.DaysPerWeek == 0;
+        public double UnusedRentShare(int day) => (GameDate.DaysPerWeek - Math.Max(0, day - SignedDay) % GameDate.DaysPerWeek) / (double)GameDate.DaysPerWeek;
     }
 
     /// <summary>
-    /// 租铺子的价钱：月租按大小和位置（离地铁站越近越贵）定，中介再上下浮动一点。
-    /// 签约一次付清：首月租金 + 押金（一个月）+ 中介费（一个月）。
+    /// 租铺子按周计费。签约时支付首周租金、押金和中介费。
     /// </summary>
     public static class RealEstate
     {
         /// <summary>业态写成这个的铺子本来就空着（地图上的“街尾空铺”）。</summary>
         public const string VacantBusiness = "空铺";
 
-        public static readonly Money SmallBaseRent = Money.FromYuan(1500);
+        public static readonly Money SmallBaseRent = Money.FromYuan(2000);
         public static readonly Money MediumBaseRent = Money.FromYuan(4500);
         public static readonly Money LargeBaseRent = Money.FromYuan(12000);
 
@@ -58,8 +60,8 @@ namespace PCShopSell.Core.Shop
 
         public static Money Deposit(Money rent) => rent;
 
-        /// <summary>中介费标价：一个月房租。</summary>
-        public static Money AgentFee(Money rent) => rent;
+        /// <summary>中介费标价：半周房租。</summary>
+        public static Money AgentFee(Money rent) => rent.Scale(.5);
 
         /// <summary>和中介陈启明熟络度每点能打的折扣（0.5%），封顶 <see cref="MaxAgentDiscount"/>。</summary>
         public const double AgentDiscountPerRapport = 0.005;
@@ -71,7 +73,7 @@ namespace PCShopSell.Core.Shop
         /// <summary>按熟络度打折后的中介费，取整到元。</summary>
         public static Money AgentFeeAfter(Money rent, int rapport) => Money.FromYuan((long)Math.Round(AgentFee(rent).Yuan * (1.0 - AgentDiscount(rapport))));
 
-        /// <summary>签约当场要付的钱（首月 + 押金 + 中介费，中介费按标价；真实价格要看和中介的熟络度）。</summary>
+        /// <summary>签约当场要付的钱（首周 + 押金 + 中介费，未计熟络折扣）。</summary>
         public static Money SignCost(Money rent) => rent + Deposit(rent) + AgentFee(rent);
 
         /// <summary>房东要看的知名度（大铺子不租给没名气的）。</summary>

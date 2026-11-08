@@ -100,14 +100,17 @@ namespace PCShopSell.Core.Session
         {
             if (PlayerShop == null) return;
             var kg = new Dictionary<string, double>();var limits=new Dictionary<string,int>();
-            foreach (PlacedFurniture p in _shopLayout)
+            var slots = new List<(int index,string kind,double kg,int items)>();
+            for (int i=0; i<_shopLayout.Count; i++)
             {
+                PlacedFurniture p = _shopLayout[i];
                 FurnitureDef d = p.Item != null ? FurnitureCatalog.Get(p.Id) : null;
                 if(d==null)continue;
                 if(d.Fixture==FixtureKind.Shelf)
                 {
                     kg[p.Item]=(kg.TryGetValue(p.Item,out double v)?v:0)+d.ShelfKg;
                     limits[p.Item]=(limits.TryGetValue(p.Item,out int previous)?previous:0)+d.ShelfItems;
+                    slots.Add((i,p.Item,d.ShelfKg,d.ShelfItems));
                 }
                 else if(d.Fixture==FixtureKind.Display && ShelfKinds.Get(p.Item) is ShelfKind kind)
                 {
@@ -115,9 +118,10 @@ namespace PCShopSell.Core.Session
                     kg[p.Item]=(kg.TryGetValue(p.Item,out double v)?v:0)+DisplayCapacityKg(kind,count);
                     int previous=limits.TryGetValue(p.Item,out int old)?old:0;
                     limits[p.Item]=previous+count;
+                    slots.Add((i,p.Item,DisplayCapacityKg(kind,count),count));
                 }
             }
-            PlayerShop.SetShelfCapacity(kg,limits);
+            PlayerShop.SetShelfCapacity(kg,limits,slots);
         }
 
         /// <summary>现在在店里、能拿来放进后仓的某种杂货有几件（储物柜里的 + 背包里的）。</summary>

@@ -36,7 +36,7 @@ namespace PCShopSell.Core.Session
                 s => $"装机台 {Math.Min(1, s.PlacedFixtures(FixtureKind.Bench))}/1 · 展示桌 {Math.Min(1, s.PlacedFixtures(FixtureKind.Display))}/1");
             yield return Step("build", 1, QuestTarget.Orders, "交付第一台订单电脑", "装好一台顾客订的电脑",
                 $"注意{K("截止时间")}，超时作废。",
-                s => s.Ledger.Entries.Any(e => e.Category == ShopSimulation.BuildCategory && !(e.Memo ?? "").Contains("展示机")),
+                s => s.Flags.Contains("tutorial:build"),
                 BuildProgress);
             yield return Step("restock", 2, QuestTarget.Restock, "让补货有预算", $"设置 网购 {K("自动补货")}",
                 $"设好{K("每日预算")}，{K("保留至少 7 天")}运营资金。",
@@ -54,7 +54,7 @@ namespace PCShopSell.Core.Session
                 s => s.EnterpriseContracts.Any(c => c.Settled && c.Completed == c.Count && c.Failed == 0), EnterpriseProgress);
             yield return Step("direct", 3, QuestTarget.Direct, "建立稳定直供", $"和{K("周维成")}签直供，进一次货",
                 $"进价只要{K("市场价 84%")}。",
-                s => s.DirectShipments.Count > 0 || s.Ledger.Entries.Any(e => e.Category == "进货" && (e.Memo ?? "").StartsWith("直供首付/现款", StringComparison.Ordinal)),
+                s => s.Flags.Contains("tutorial:direct"),
                 s => s.DirectAgreement ? null : $"知名度 {s.PlayerShop.Reputation:0}/10 · 周维成交情 {s.Relation(Npcs.Zhou)}/40");
             yield return Step("branch", 3, QuestTarget.Ventures, "开设第一家托管门店", $"开一家{K("托管门店")}",
                 $"{K("留足主店的周转资金")}再开。",

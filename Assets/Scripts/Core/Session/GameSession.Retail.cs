@@ -15,19 +15,13 @@ namespace PCShopSell.Core.Session
             shop.Stock.GoodsLines().ToArray();
         private static GoodsLot[] SaveRetailLots(PCShopSell.Core.Shop.ShopSimulation shop) =>
             shop.Stock.GoodsLots.Select(l => l.Copy()).ToArray();
-        public bool OtherRetailShopsUnlocked => HasShop && Clock.Today.TotalDays >= 14;
         public string PendingRetailKind { get; private set; } = "computer";
         public string RetailKind => _focus.RetailKind;
-        public string RetailTypeBlocker(string kind)
-        {
-            if (!RetailShopTypes.All.Contains(kind)) return "请选择店铺类型";
-            if (kind != "computer" && HasShop && !OtherRetailShopsUnlocked) return "第 15 天起可开其他类型的分店";
-            return null;
-        }
+        public string RetailTypeBlocker(string kind) => RetailShopTypes.All.Contains(kind) ? null : "请选择店铺类型";
         public bool SignRetailLease(string placeId, bool newShop, string kind)
         {
             if(City.HasPlace(placeId)&&IsDedicatedVenue(City.GetPlace(placeId)))return SignLease(placeId,newShop);
-            string why = HasShop&&!newShop ? (RetailShopTypes.All.Contains(kind)?null:"请选择店铺类型") : RetailTypeBlocker(kind);
+            string why = RetailTypeBlocker(kind);
             if (why != null) return Fail(why);
             if (HasShop && !newShop && kind != RetailKind) return Fail("搬店会保留原来的经营类型。");
             return SignLease(placeId, newShop, kind);
@@ -37,10 +31,12 @@ namespace PCShopSell.Core.Session
         {
             if(IsDedicatedVenue(PlayerShopPlace))return Fail("专用场馆只能延续原有服务，不能改为零售店。");
             if(!InPlayerShop || !RetailShopTypes.All.Contains(kind))return Fail("请在自己的店里选择主售品类。");
+            if(kind!=PetShopCatalog.ShopKind && PetsStaying(_focus))return Fail("还有宠物在店代养，请先交接结算再转型。");
             Flags.Add("shop:main-category:"+_focus.Place.Id);
             if(IsSpecialBusiness(_focus)&&SpecialBusinessBusy(_focus))return Fail("请先完成或清理餐馆订单、二手库存及卖家，再转型。");
-            if((kind=="restaurant"||kind=="secondhand")&&(PlayerShop.Orders.Count>0||PlayerShop.Queue.Count>0))return Fail("请先完成装机订单和排队结账，再转型。");
+            if((kind=="restaurant"||kind=="secondhand"||kind==PetShopCatalog.ShopKind)&&(PlayerShop.Orders.Count>0||PlayerShop.Queue.Count>0))return Fail("请先完成装机订单和排队结账，再转型。");
             _focus.RetailKind=kind;PlayerShop.RetailKind=kind;
+            if(kind!=PetShopCatalog.ShopKind)_petBoarding.Remove(_focus.Place.Id);
             PlayerShop.TradingEnabled=kind!="restaurant";
             if(IsSpecialBusiness(_focus))PlayerShop.ClearCustomers();
             foreach(var competition in _cityCompetitions.Where(e=>e.ShopId==_focus.Place.Id && e.RetailKind!=kind))competition.Ended=true;

@@ -4,6 +4,8 @@ using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
 using System;
 
 namespace PCShopSell.Tests
@@ -51,6 +53,41 @@ namespace PCShopSell.Tests
                 Assert.LessOrEqual(s.CartBagKg, s.FreeKg);
                 Assert.Greater(line.InBag, 1, "拖动整行必须能转移多件");
                 Assert.Greater(line.ByTruck, 0, "超容量的留给货车");
+            }
+        }
+
+        [Test]
+        public void MarketCartBuysFromBothCountersAndKeepsSeparateStock()
+        {
+            var layout = GameSessionTests.Layout();
+            layout.places = layout.places.Append(new LayoutPlaceData
+            {
+                id = "market_counter", name = "显卡档口", kind = "wholesaler", node = "mk",
+                sells = "Cpu,Gpu,Memory", model = "electronics_counter",
+            }).ToArray();
+            using (var s = new GameSession(CityLayout.FromData(layout), 7, Money.FromYuan(500000),
+                       GameTimestamp.From(new GameDate(0), GameSession.WholesalerCloseMinute - 1)))
+            {
+                GameSessionTests.Teleport(s, "stall");
+                var market = s.CurrentPlace;
+                var counter = s.City.GetPlace("market_counter");
+                Assert.False(s.City.PublicPlaces.Contains(counter));
+                CollectionAssert.AreEquivalent(new[] { market, counter }, s.WholesaleStallsAt(market));
+                var cpu = PartCatalog.Get("cpu0");
+                var memory = PartCatalog.Get("ram0");
+                int marketStock = s.StallRemaining(market, cpu);
+                int counterStock = s.StallRemaining(counter, cpu);
+
+                Assert.True(s.CartAddStall(market, cpu, 1));
+                Assert.True(s.CartAddStall(counter, cpu, 2));
+                Assert.True(s.CartAddStall(counter, memory, 1));
+                Assert.AreEqual(3, s.Cart.Count);
+                s.CartAllToTruck();
+                Assert.True(s.Checkout(true));
+                Assert.AreEqual(marketStock - 1, s.StallRemaining(market, cpu));
+                Assert.AreEqual(counterStock - 2, s.StallRemaining(counter, cpu));
+                Assert.AreEqual(3, s.Couriers.SelectMany(run => run.Items).Where(item => item.Id == cpu.Id).Sum(item => item.Count));
+                Assert.AreEqual(1, s.Couriers.SelectMany(run => run.Items).Where(item => item.Id == memory.Id).Sum(item => item.Count));
             }
         }
 

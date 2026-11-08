@@ -104,7 +104,7 @@ namespace PCShopSell.Core.Session
             worker.PathX=path.Select(p=>p.x).ToArray();worker.PathZ=path.Select(p=>p.z).ToArray();
             double length=0;for(int i=1;i<path.Count;i++)length+=RestaurantWorker.Distance(path[i-1].x,path[i-1].z,path[i].x,path[i].z);
             // Matches the indoor 4.8 units/real-second player pace; staff walk at 85% of that pace.
-            double speed=4.8*Time.SecondsPerMinuteAt1x*(worker.ActorId==RestaurantPlayer?1:CityTravelTiming.NpcWalkSpeedFactor);
+            double speed=4.8*Time.SecondsPerMinuteAt1x*(worker.ActorId==RestaurantPlayer?CityTravelTiming.PlayerWalkSpeedFactor:CityTravelTiming.NpcWalkSpeedFactor);
             worker.Depart=minute;worker.Arrive=minute+length/Math.Max(.01,speed);worker.OperateUntil=-1;return true;
         }
         private bool AssignRestaurantWork(OwnedShop shop,SpecialBusinessState state,RestaurantWorker worker,DiningOrder order,RestaurantJob job,double minute)

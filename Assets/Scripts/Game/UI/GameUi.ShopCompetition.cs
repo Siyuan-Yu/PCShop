@@ -11,7 +11,8 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private string _competitionPreviewKind = "computer";
-        private string CompetitionPreviewKind(Place place) => S.ShopAt(place)?.RetailKind ?? _competitionPreviewKind;
+        private string CompetitionPreviewKind(Place place) => S.ShopAt(place)?.RetailKind
+            ?? (S.IsPendingShop(place) ? S.PendingRetailKind : _competitionPreviewKind);
 
         private void ChooseCompetitionKind(Window owner)
         {
@@ -25,11 +26,12 @@ namespace PCShopSell.Game.UI
             });
         }
 
-        private string CompetitionSummary(Place place, string kind = null)
+        private string CompetitionSummary(Place place, string kind = null, bool includeEstimate = true)
         {
             kind = kind ?? CompetitionPreviewKind(place);
             int count = S.ShopCompetitionCount(place, kind);
-            return $"{GameSession.ShopCompetitionRadiusMeters:0}米内同类自营店 {count} 家（含本店） · 客流保留 1/{count}\n分流后预计每日客流约 {S.CompetitionDailyPassers(place, kind):N0} 人";
+            string split = $"{GameSession.ShopCompetitionRadiusMeters:0}米内同类自营店 {count} 家（含本店） · 客流保留 1/{count}";
+            return includeEstimate ? split + $"\n分流后预计每日入店约 {S.ExpectedDailyShopEntrants(place,kind):N0} 人" : split;
         }
 
         private void BuildCompetitionEntry(Transform parent)
@@ -58,8 +60,8 @@ namespace PCShopSell.Game.UI
             OpenWindow("店铺商圈 · " + S.PlaceTitle(place), 1180, 880, w =>
             {
                 Para(w.Content, CompetitionSummary(place), 19, Ui.Accent).name = "ShopCompetitionSummary";
-                if (!S.IsMyShop(place)) Ui.Size(Ui.Button(w.Content, "试算店型：" + RetailShopTypes.Name(CompetitionPreviewKind(place)) + " · 点击更换", () => ChooseCompetitionKind(w), 17), -1, 36);
-                HelpLink(w.Content,"商圈规则","橙圈半径40米，每店统计自己圈内的同类自营店，含本店共N家时客流保留1/N。不同店型、空铺、待交付店不计入；临时关门仍计入，退租或转型后重算。经过人数不等于进店或成交人数。");
+                if (!S.IsMyShop(place) && !S.IsPendingShop(place)) Ui.Size(Ui.Button(w.Content, "试算店型：" + RetailShopTypes.Name(CompetitionPreviewKind(place)) + " · 点击更换", () => ChooseCompetitionKind(w), 17), -1, 36);
+                HelpLink(w.Content,"商圈规则","橙圈半径40米，每店统计自己圈内的同类自营店，含本店共N家时客流保留1/N。不同店型、空铺、待交付店不计入；临时关门仍计入，退租或转型后重算。整日预估会随营业时间、知名度、品牌口碑、街道人流和同类店数量变化。");
                 var others = S.NearbyCompetingShops(place, CompetitionPreviewKind(place));
                 Para(w.Content, others.Count == 0 ? "圈内暂无其他同类自营店。" : "圈内同类店：" + string.Join("、", others.Select(S.ShopTitle)), 16);
                 if (_ctrl.World != null)

@@ -71,7 +71,7 @@ namespace PCShopSell.Game.UI
             }
             foreach (var p in city.LakeShore) { var v = new Vector2((float)p.x, (float)p.y); _lake.Add(v); positions.Add(v); }
             TriangulateLake();
-            foreach (var place in city.Places)
+            foreach (var place in city.PublicPlaces)
             {
                 var center = PlacePosition(place); positions.Add(center);
                 _buildings.Add(new Building { Id = place.Id, Place = place, Name = session.PlaceTitle(place), StreetId = place.StreetId,

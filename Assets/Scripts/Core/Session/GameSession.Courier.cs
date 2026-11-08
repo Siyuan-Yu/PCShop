@@ -93,17 +93,23 @@ namespace PCShopSell.Core.Session
         /// <summary>买东西时叫车送回去（而不是装进背包）。</summary>
         public bool SendByCourier { get; set; }
 
-        /// <summary>叫车送到哪：<see cref="CourierHome"/>、<see cref="CourierCurrentShop"/> 或某家店的铺面 id；null = 按这里的默认（档口送店里，其他送家里）。每进一个地方重置。</summary>
+        private string _lastPurchaseDeliveryDest;
+        public OwnedShop LastPurchaseDeliveryShop => _lastPurchaseDeliveryDest == CourierHome ? null : ShopAt(_lastPurchaseDeliveryDest);
+
+        /// <summary>本次到访手动选择的送货地址；每次进入地点时重置。</summary>
         public string CourierDest { get; set; }
 
-        /// <summary>叫车实际送到哪家店；null = 送家里（defaultToShop 是这里的默认）。还没租铺子时只能送家里。</summary>
-        public OwnedShop CourierShop(bool defaultToShop)
+        /// <summary>购物配送优先使用本次选择，其次使用上一次实际送货的地址。</summary>
+        public OwnedShop CourierShop(bool defaultToShop) =>
+            ResolveCourierShop(CourierDest ?? _lastPurchaseDeliveryDest, defaultToShop);
+
+        private OwnedShop ResolveCourierShop(string destination, bool defaultToShop)
         {
-            if (!HasShop) return null;
-            string d = CourierDest ?? (defaultToShop ? CourierCurrentShop : CourierHome);
-            if (d == CourierHome) return null;
-            if (d == CourierCurrentShop) return _focus;
-            return ShopAt(d) ?? (CourierDest == null || defaultToShop ? _focus : null);
+            if (!HasShop || destination == CourierHome) return null;
+            if (destination == CourierCurrentShop) return _focus;
+            return ShopAt(destination) ?? (CurrentPlace?.Business == MallBusiness
+                ? MyShops.FirstOrDefault()
+                : defaultToShop ? _focus : null);
         }
 
         public bool CourierToShop(bool defaultToShop) => CourierShop(defaultToShop) != null;
@@ -122,6 +128,10 @@ namespace PCShopSell.Core.Session
         private bool HeadsToThisShop(CourierRun r) => r.ToShop && DeliveryShop(r.ShopId) == _focus;
 
         private static string RunKey(OwnedShop dest) => dest == null ? CourierHome : dest.Place.Id;
+        private void RememberPurchaseDelivery(OwnedShop dest) => _lastPurchaseDeliveryDest = RunKey(dest);
+
+        private OwnedShop PurchaseDeliveryShop(bool toShop, string shopId) =>
+            toShop ? ShopAt(string.IsNullOrEmpty(shopId) ? MainShop.Place.Id : shopId) : null;
 
         private OwnedShop AsDest(bool toShop) => toShop && HasShop ? _focus : null;
 
@@ -289,6 +299,7 @@ namespace PCShopSell.Core.Session
                 last.Items.Add(Portion(item, amount));
             }
             _openRuns[RunKey(dest)] = last;
+            if (goods.IsPositive) RememberPurchaseDelivery(dest);
             if (newCars == 0)
                 Say($"{verb}{what}，装上刚叫的车（{last.LoadKg:0.##}/{CourierCapacityKg:0} 千克），一起送到{destName}。");
             else if (plan[0].run != null || newCars > 1)

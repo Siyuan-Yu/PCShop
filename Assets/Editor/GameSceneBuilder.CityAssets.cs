@@ -60,20 +60,21 @@ namespace PCShopSell.EditorTools
             Check(!s.BuyProperty(shop.Place.Id, false) && s.Ledger.Balance == cash, "重复购买不产生第二产权或第二付款");
             _game.Ui.OpenCityProperties(); ClickGuideButton("我的物业"); Shot("city_property_owned"); _game.Ui.CloseAllWindows();
 
-            Check(s.TradeCityInvestment("city_chip", 10, true, true), "正常买入虚构企业10份");
-            Check(s.TradeCityInvestment("city_chip", 4, false), "正常部分卖出4份");
-            Check(s.CityInvestmentUnits("city_chip") == 6 && s.CityInvestmentCost("city_chip").IsPositive,
-                "部分卖出保留6份及剩余成本");
+            int lot = GameSession.StockLotSize;
+            Check(s.TradeCityInvestment("city_chip", 2 * lot, true, true), "正常买入虚构企业两手股票");
+            Check(s.TradeCityInvestment("city_chip", lot, false), "正常部分卖出一手股票");
+            Check(s.CityInvestmentUnits("city_chip") == lot && s.CityInvestmentCost("city_chip").IsPositive,
+                "部分卖出保留一手股票及剩余成本");
             cash = s.Ledger.Balance;
             _game.Ui.OpenCityInvestments(); Shot("city_investments"); Shot("city_investments_1280", 1280, 720);
-            Check(s.Ledger.Balance == cash && s.CityInvestmentUnits("city_chip") == 6, "投资面板重建不买卖或改变持仓");
+            Check(s.Ledger.Balance == cash && s.CityInvestmentUnits("city_chip") == lot, "投资面板重建不买卖或改变持仓");
             _game.Ui.CloseAllWindows();
             var save = JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()));
             using (var restored = GameSession.Load(s.City, save))
             {
                 Check(restored.ShopAt(shop.Place.Id)?.OwnsProperty == true && restored.CurrentShopRent == Money.Zero,
                     "产权与免租使用权读档后恢复");
-                Check(restored.CityInvestmentUnits("city_chip") == 6 && restored.CityInvestmentCost("city_chip") == s.CityInvestmentCost("city_chip")
+                Check(restored.CityInvestmentUnits("city_chip") == lot && restored.CityInvestmentCost("city_chip") == s.CityInvestmentCost("city_chip")
                     && restored.Ledger.Balance == s.Ledger.Balance, "读档不复制持仓、现金或产权交易");
             }
 

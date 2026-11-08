@@ -95,6 +95,40 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void StoreAwarenessAndReputationAffectDifferentDecisionsAndSaveSeparately()
+        {
+            using (var s = TwoShops())
+            {
+                GameSessionTests.Teleport(s, "tea");
+                var branch = s.PlayerShop;
+                Assert.AreEqual(0, branch.Awareness);
+                Assert.AreEqual(80, s.MainShop.Sim.Awareness);
+                double arrivals = branch.ArrivalRatePerMinute(s.Clock.Now);
+                double willingness = branch.MarkupPurchaseIntent(1.25);
+
+                branch.Reputation += 10;
+                Assert.AreEqual(10, branch.Awareness);
+                Assert.AreEqual(80, s.MainShop.Sim.Awareness);
+                Assert.Greater(branch.ArrivalRatePerMinute(s.Clock.Now), arrivals);
+                Assert.AreEqual(willingness, branch.MarkupPurchaseIntent(1.25));
+
+                arrivals = branch.ArrivalRatePerMinute(s.Clock.Now);
+                EventCatalog.Get("inspection").Choices[0].Apply(s);
+                Assert.AreEqual(arrivals, branch.ArrivalRatePerMinute(s.Clock.Now));
+                Assert.Greater(branch.MarkupPurchaseIntent(1.25), willingness);
+                Assert.AreEqual(50, s.MainShop.Sim.ShopReputation);
+
+                using (var loaded = GameSession.Load(s.City, s.CreateSave()))
+                {
+                    Assert.AreEqual(90, loaded.MainShop.Sim.Reputation);
+                    Assert.AreEqual(80, loaded.MainShop.Sim.Awareness);
+                    Assert.AreEqual(10, loaded.ShopAt("tea").Sim.Awareness);
+                    Assert.AreEqual(51, loaded.ShopAt("tea").Sim.ShopReputation);
+                }
+            }
+        }
+
+        [Test]
         public void CloseShop_InsideAndEmpty_ForfeitsDepositWithoutChargingAgain()
         {
             GameSession s = TwoShops();

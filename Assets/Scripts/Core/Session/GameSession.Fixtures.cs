@@ -74,8 +74,8 @@ namespace PCShopSell.Core.Session
         /// <summary>开店清单：每种设施要几个、摆了几个、买了几个还没摆。</summary>
         public IReadOnlyList<FixtureNeed> ShopFitList()
         {
-            if(RetailKind=="restaurant")return new[]{"restaurant_prep","restaurant_stove","restaurant_pass","restaurant_table",FurnitureCatalog.Fridge}.Select(id=>Need(id,1,true)).ToArray();
-            if(RetailKind=="secondhand")return new[]{"used_buydesk","used_display",FurnitureCatalog.Shelf,FurnitureCatalog.ShopCounter}.Select(id=>Need(id,1,true)).ToArray();
+            if (RetailKind == "restaurant" || RetailKind == "secondhand" || RetailKind == PetShopCatalog.ShopKind)
+                return OpeningFurniture(RetailKind).Select(id => Need(id, 1, true)).ToArray();
             var l = new List<FixtureNeed>
             {
                 Need(FurnitureCatalog.ShopCounter, 1, true),
@@ -91,11 +91,15 @@ namespace PCShopSell.Core.Session
             FixtureNeed Need(string id, int want, bool required)
             {
                 FurnitureDef d = FurnitureCatalog.Get(id);
+                bool Matches(FurnitureDef item) => item.Id == id
+                    || d.Fixture == FixtureKind.Shelf && item.Fixture == FixtureKind.Shelf
+                    || d.Role == FurnitureRole.Fridge && item.Role == FurnitureRole.Fridge
+                    || id == PetShopCatalog.SmallHouse && PetShopCatalog.HouseCapacity(item.Id) > 0;
                 return new FixtureNeed
                 {
                     Name = d.Name, FurnitureId = id, Kind = d.Fixture, Want = want, Required = required,
-                    Placed = d.Fixture == FixtureKind.Shelf ? PlacedFixtures(FixtureKind.Shelf) : _shopLayout.Count(p => p.Id == id),
-                    Owned = d.Fixture == FixtureKind.Shelf ? FurnitureCatalog.All.Where(x => x.Fixture == FixtureKind.Shelf).Sum(x => FurnitureOwnedUnplaced(x.Id)) : FurnitureOwnedUnplaced(id),
+                    Placed = _shopLayout.Count(p => Matches(FurnitureCatalog.Get(p.Id))),
+                    Owned = FurnitureCatalog.All.Where(Matches).Sum(x => FurnitureOwnedUnplaced(x.Id)),
                 };
             }
         }

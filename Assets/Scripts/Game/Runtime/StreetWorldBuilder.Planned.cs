@@ -31,7 +31,7 @@ namespace PCShopSell.Game.Runtime
             var housing=new GameObject("ResidentialCompounds").transform;housing.SetParent(_root,false);
             var residenceBlocks = _city.Blocks.Where(block => _city.HasPlace(block.homeId))
                 .ToDictionary(block => block.homeId);
-            foreach (var place in _city.Places)
+            foreach (var place in _city.PublicPlaces)
             {
                 residenceBlocks.TryGetValue(place.Id, out var block);
                 BuildPlannedPlace(place, block, block == null ? _root : housing);
@@ -79,6 +79,7 @@ namespace PCShopSell.Game.Runtime
         private void BuildPlannedPlace(Place p, LayoutBlockData block, Transform parent)
         {
             Vector3 node=NodeWorld(p.NodeId),door=node+new Vector3((float)p.EntranceX,0,(float)p.EntranceY);
+            if (_city.IsLakeCity && IsLakeAccessNode(p.NodeId)) door.y = LakeAccessHeight(_city);
             var root=new GameObject("Place_"+p.Id).transform;root.SetParent(parent,false);root.position=door;
             root.rotation=Quaternion.Euler(0,(float)p.Heading,0);
             var vis=new PlaceVisual{Place=p,Entrance=door,Root=root.gameObject};Places[p.Id]=vis;_cur=vis;
@@ -87,7 +88,7 @@ namespace PCShopSell.Game.Runtime
             {
                 BuildRegionalGarage(root,p,node,door,vis);return;
             }
-            var track=RaceTracks.Get(p.Id);
+            var track=RaceTracks.Get(p.Id,_city);
             if(track!=null)
             {
                 var circuit=new GameObject("Circuit_"+p.Id);circuit.transform.SetParent(root,false);circuit.AddComponent<RaceTrackView>().Build(track);

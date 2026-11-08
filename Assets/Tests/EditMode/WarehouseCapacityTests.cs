@@ -162,6 +162,30 @@ namespace PCShopSell.Tests
             }
         }
         [Test]
+        public void LeaveStatusUsesCashiersActualPresenceAndOpeningHours()
+        {
+            using (var s = Make())
+            {
+                s.PlayerShop.NotFitted = false;
+                var cashier = Candidate(s, "cashier");
+                Assert.True(s.Hire(0));
+                Assert.True(cashier.OnDuty(s.Clock.Now));
+                var person = s.CityPersonState(s.PersonIdOf(cashier));
+                person.Route = null;
+                person.ActivityId = null;
+                person.LocationPlaceId = s.Home.Id;
+                Assert.True(s.ShopLeaveStatus().WillClose);
+
+                person.LocationPlaceId = s.CurrentShop.Place.Id;
+                Assert.False(s.ShopLeaveStatus().WillClose);
+                StringAssert.Contains("有收银员在岗", s.ShopLeaveStatus().Message);
+
+                s.PlayerShop.SetHours(8 * 60, 9 * 60);
+                Assert.False(s.ShopLeaveStatus().WillClose);
+                Assert.AreEqual("当前未营业", s.ShopLeaveStatus().Message);
+            }
+        }
+        [Test]
         public void WarehouseUiUsesOneTilePerStackAndOpensWithBackpack()
         {
             using(var s=Make())

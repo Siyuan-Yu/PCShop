@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.World;
 using PCShopSell.Game.Runtime;
@@ -11,16 +12,37 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
+        private readonly Dictionary<string, (Vector2 from, Vector2 to, float height, double strength, string street)[]> _agencyFlows =
+            new Dictionary<string, (Vector2, Vector2, float, double, string)[]>();
+        private bool _showAgencyFlow = true;
+
         private void BuildAgencyMap(RectTransform map, Place[] units, Window w, Place agency)
         {
             AgencyMapText(map, S.City.AgencyCoverageName(agency) + " · 商铺集中区", 23, 16, 6, 280, 34, Ui.TextColor);
-            AgencyMapText(map, "拖动查看 · 点建筑选址", 15, 300, 9, 238, 30, Ui.Dim);
+            AgencyMapControl(map,_showAgencyFlow?"✓ 街道人流":"街道人流","AgencyTrafficToggle",300,118,()=>
+            {
+                _showAgencyFlow = !_showAgencyFlow;
+                w.Rebuild();
+            });
+            if (_showAgencyFlow)
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    float x = 425 + i * 40;
+                    float thickness = AgencyStreetMap.PedestrianBandWidth(i)*6;
+                    float y = 23-thickness*.5f;
+                    AgencyBlock(map,"StreetFlowKeyOutline",AgencyStreetMap.PedestrianBandOutline,x-1,y-1,19,thickness+2);
+                    AgencyBlock(map,"StreetFlowKey",AgencyStreetMap.PedestrianBandColor(i),x,y,17,thickness);
+                    AgencyMapText(map,i==0?"少":i==1?"中":"多",14,x+21,8,18,30,Ui.TextColor);
+                }
+            }
             var raw = Ui.Rect(map, "StreetViewport");
             AgencyAt(raw, 0, 46, 1120, 650);
             raw.gameObject.AddComponent<RawImage>();
             raw.gameObject.AddComponent<RectMask2D>();
             var view = raw.gameObject.AddComponent<AgencyStreetMap>();
-            view.Initialize(_ctrl, _agencyViewState, units, 1120, 650);
+            view.Initialize(_ctrl, _agencyViewState, units, 1120, 650,
+                pedestrianBands: _showAgencyFlow ? AgencyPedestrianBands(units,agency) : null);
             var overlay = Ui.Rect(raw, "MapAnnotations").Fill();
             var zoom = Ui.Label(map, "", 16, TextAnchor.MiddleCenter, Ui.Dim);
             AgencyAt(zoom.rectTransform, 664, 8, 62, 30);
@@ -121,6 +143,124 @@ namespace PCShopSell.Game.UI
             }
         }
 
+        private AgencyStreetMap.PedestrianBand[] AgencyTrafficBands((Vector2 from, Vector2 to, float height, double strength, string street)[] bands)
+        {
+            var result = new AgencyStreetMap.PedestrianBand[bands.Length];
+            for (int i = 0; i < bands.Length; i++)
+            {
+                var band = bands[i];
+                double strength = band.strength * System.Math.Sqrt(S.StreetTrafficMultiplier(band.street));
+                int level = strength >= .67 ? 2 : strength >= .34 ? 1 : 0;
+                result[i] = new AgencyStreetMap.PedestrianBand(band.from, band.to, band.height, level);
+            }
+            return result;
+        }
+
+        private AgencyStreetMap.PedestrianBand[] AgencyPedestrianBands(Place[] units, Place agency)
+        {
+            if (_agencyFlows.TryGetValue(agency.Id,out var cached)) return AgencyTrafficBands(cached);
+            var city = S.City;
+            var map = city.Map;
+            var paths = new Dictionary<(string from,string to),double>();
+            var homes = city.OfKind(PlaceKind.Home).GroupBy(p=>p.NodeId)
+                .Select(g=>(node:g.Key,weight:System.Math.Min(3,g.Count()))).ToArray();
+            var stations = city.OfKind(PlaceKind.Station).Select(p=>p.NodeId).Distinct().ToArray();
+            // Estimate walking demand from trips between homes, stations and local destinations.
+            var destinations = units.Where(p=>p.Kind==PlaceKind.Shop || p.Kind==PlaceKind.Wholesaler || p.Kind==PlaceKind.Agency)
+                .GroupBy(p=>p.StreetId)
+                .SelectMany(group=>
+                {
+                    var nodes = group.Select(p=>p.NodeId).Distinct().OrderBy(id=>city.ViewPosition(id).X)
+                        .ThenBy(id=>city.ViewPosition(id).Y).ToArray();
+                    int stride = Mathf.Max(1,Mathf.CeilToInt(nodes.Length/6f));
+                    return nodes.Where((id,index)=>index%stride==0);
+                }).Distinct();
+            foreach (string destination in destinations)
+            {
+                foreach (var home in homes.Where(h=>h.node!=destination).OrderBy(h=>map.StraightDistance(h.node,destination)).Take(3))
+                    AddRoute(home.node,destination,home.weight);
+                foreach (string station in stations.Where(id=>id!=destination).OrderBy(id=>map.StraightDistance(id,destination)).Take(1))
+                    AddRoute(station,destination,3);
+            }
+            void AddRoute(string origin,string destination,int weight)
+            {
+                if (map.StraightDistance(origin,destination)>700) return;
+                var path = Pathfinder.FindPath(map,origin,destination);
+                if (!path.Found || path.Distance>700) return;
+                double contribution = weight/(1+path.Distance/100);
+                for (int i=1; i<path.NodeIds.Count; i++)
+                {
+                    string a = path.NodeIds[i-1], b = path.NodeIds[i];
+                    var segment = string.CompareOrdinal(a,b)<0 ? (a,b) : (b,a);
+                    paths.TryGetValue(segment,out double previous);
+                    paths[segment] = previous+contribution;
+                }
+            }
+
+            var local = units.Select(p=>p.NodeId).Distinct().Select(Point).ToArray();
+            double peak = paths.Values.DefaultIfEmpty(1).Max();
+            var bands = new List<(Vector2 from, Vector2 to, float height, double strength, string street)>();
+            foreach (var node in map.Nodes)
+            foreach (var edge in map.NeighborsOf(node.Id))
+            {
+                string from = node.Id, to = edge.To;
+                if (string.CompareOrdinal(from,to)>=0) continue;
+                paths.TryGetValue((from,to),out double flow);
+                Vector2 a = Point(from), b = Point(to), delta = b-a;
+                float length = delta.magnitude;
+                if (length<1 || flow==0 && !local.Any(p=>NearSegment(p,a,delta))) continue;
+                if (Mathf.Abs(delta.x)>Mathf.Abs(delta.y) ? delta.x<0 : delta.y<0)
+                    (from,to,a,b,delta) = (to,from,b,a,-delta);
+                Vector2 along = delta/length;
+                Vector2 offset = new Vector2(along.y,-along.x)*(RoadWidth(a,b)*.5f+.7f);
+                float start = JunctionInset(from,to,a,along,offset);
+                float end = JunctionInset(to,from,b,-along,offset);
+                if (length-start-end<.6f) continue;
+                double strength = System.Math.Sqrt(flow/peak);
+                bool raised = city.IsLakeCity && (StreetWorldBuilder.IsLakeAccessNode(from) || StreetWorldBuilder.IsLakeAccessNode(to));
+                float height = raised ? StreetWorldBuilder.LakeAccessHeight(city) + .03f : .055f;
+                bands.Add((a+along*start+offset,b-along*end+offset,height,strength,S.TrafficStreetOfSegment(from,to)));
+            }
+            cached = bands.ToArray();
+            _agencyFlows.Add(agency.Id,cached);
+            return AgencyTrafficBands(cached);
+
+            Vector2 Point(string id)
+            {
+                MapPoint p = city.ViewPosition(id);
+                return new Vector2((float)p.X,(float)p.Y);
+            }
+            float RoadWidth(Vector2 a,Vector2 b)
+            {
+                var from = new MapPoint(a.x,a.y);
+                var to = new MapPoint(b.x,b.y);
+                return city.LayoutVersion>=7 ? (float)GameSession.CityRoadWidth(from,to)
+                    : GameSession.IsShoppingStreet(from,to) ? 14 : GameSession.IsMainRoad(from,to) ? 7 : 5;
+            }
+            float JunctionInset(string nodeId,string otherId,Vector2 at,Vector2 along,Vector2 offset)
+            {
+                float inset = .25f;
+                foreach (var neighbor in map.NeighborsOf(nodeId))
+                {
+                    if (neighbor.To==otherId) continue;
+                    Vector2 next = Point(neighbor.To);
+                    Vector2 direction = (next-at).normalized;
+                    if (direction.sqrMagnitude<.5f || Mathf.Abs(Vector2.Dot(direction,along))>.88f) continue;
+                    Vector2 normal = new Vector2(-direction.y,direction.x);
+                    float across = Vector2.Dot(normal,along);
+                    float gap = (RoadWidth(at,next)*.5f+1-Mathf.Sign(across)*Vector2.Dot(normal,offset))/Mathf.Abs(across);
+                    inset = Mathf.Max(inset,gap);
+                }
+                return inset;
+            }
+        }
+
+        private static bool NearSegment(Vector2 p,Vector2 a,Vector2 delta)
+        {
+            float t = Mathf.Clamp01(Vector2.Dot(p-a,delta)/delta.sqrMagnitude);
+            return (p-a-delta*t).sqrMagnitude<40*40;
+        }
+
         private static Rect AgencyNameBox(Vector2 roof, float width, List<Rect> occupied, float mapWidth, float mapHeight, float height=22)
         {
             Rect best = default; float bestScore = float.MaxValue;
@@ -136,30 +276,38 @@ namespace PCShopSell.Game.UI
             return best;
         }
 
-        private static void BuildAgencyFloorPlan(RectTransform parent, Place p)
+        private static void BuildAgencyFloorPlan(Transform parent, RoomSpec room)
         {
-            RoomSpec room = RoomSpec.ForShop(p.Size);
             var paper = Ui.Panel(parent, "AgencyFloorPlan", AgencyPaper).rectTransform;
-            Ui.Size(paper, -1, 150);
+            Ui.Size(paper, -1, 178);
             // Fixed drawing space is centered inside the responsive detail column.
             var drawing = Ui.Rect(paper, "PlanDrawing");
             drawing.anchorMin = drawing.anchorMax = new Vector2(.5f, 1);
             drawing.pivot = new Vector2(.5f, 1);
-            drawing.sizeDelta = new Vector2(430, 150);
-            AgencyMapText(drawing, $"室内平面  {room.Width:0} × {room.Depth:0} 米", 14, 12, 0, 405, 24, AgencyInk);
-            float scale = Mathf.Min(270 / (float)room.Width, 100 / (float)room.Depth);
+            drawing.sizeDelta = new Vector2(430, 178);
+            AgencyMapText(drawing, $"室内平面  {room.Width:0.#} × {room.Depth:0.#} 米", 14, 12, 0, 405, 24, AgencyInk);
+            const float scale = 10;
             float width = (float)room.Width * scale, height = (float)room.Depth * scale;
-            float x = (430 - width) / 2, y = 26;
+            float x = (430 - width) / 2, y = 28 + (120 - height) / 2;
             AgencyBlock(drawing, "Walls", AgencyInk, x - 3, y - 3, width + 6, height + 6);
             AgencyBlock(drawing, "Floor", new Color32(247, 242, 226, 255), x, y, width, height);
             for (int i = 1; i < room.Width; i++) AgencyBlock(drawing, "Grid", new Color(0, .15f, .1f, .08f), x + i * scale, y, 1, height);
             for (int i = 1; i < room.Depth; i++) AgencyBlock(drawing, "Grid", new Color(0, .15f, .1f, .08f), x, y + i * scale, width, 1);
             float doorX = x + (float)room.DoorClear.MinX * scale;
             float doorWidth = (float)(room.DoorClear.MaxX - room.DoorClear.MinX) * scale;
-            AgencyBlock(drawing, "DoorClearance", Ui.Accent, doorX, y + height - (float)room.DoorClear.MaxZ * scale, doorWidth, (float)room.DoorClear.MaxZ * scale);
-            AgencyBlock(drawing, "Door", AgencyFuture, doorX, y + height, doorWidth, 4);
-            AgencyMapText(drawing, RealEstate.SizeArea(p.Size), 24, x, y + 12, width, height - 24, AgencyInk, TextAnchor.MiddleCenter);
-            AgencyMapText(drawing, "临街入口 · 黄色区域留通道", 13, 12, 129, 405, 20, AgencyInk, TextAnchor.MiddleCenter);
+            AgencyBlock(drawing, "DoorClearance", Ui.Accent, doorX, y + height - (float)room.DoorClear.MaxZ * scale,
+                doorWidth, (float)(room.DoorClear.MaxZ-room.DoorClear.MinZ) * scale);
+            if (room.IsShop)
+                AgencyBlock(drawing, "Door", AgencyFuture, doorX, y + height, doorWidth, 4);
+            else
+            {
+                AgencyBlock(drawing,"Door",AgencyFuture,x+width,y+height-(float)room.DoorMaxZ*scale,4,(float)(room.DoorMaxZ-room.DoorMinZ)*scale);
+                AgencyBlock(drawing,"Window",new Color32(83,147,170,255),
+                    x+(float)room.WindowMinX*scale,y-3,(float)(room.WindowMaxX-room.WindowMinX)*scale,4);
+            }
+            AgencyMapText(drawing, $"{room.Width*room.Depth:0.#}㎡", 17, x, y, width, height, AgencyInk, TextAnchor.MiddleCenter);
+            string caption = room.IsShop ? "临街入口 · 黄色区域留通道" : "右侧入口 · 黄色区域留通道 · 蓝色为窗";
+            AgencyMapText(drawing, caption, 13, 12, 153, 405, 20, AgencyInk, TextAnchor.MiddleCenter);
         }
 
         private static void AgencyAt(RectTransform rt, float x, float y, float width, float height)

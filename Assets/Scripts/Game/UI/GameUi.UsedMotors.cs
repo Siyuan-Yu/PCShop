@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.World;
@@ -16,7 +16,7 @@ namespace PCShopSell.Game.UI
             if(S.VentureAt(id)?.Paused==true)Ui.Size(Ui.Button(w.Content,"恢复车行营业",()=>{S.ToggleVenture(id);w.Rebuild();},18),-1,38);
             foreach(var s in stock)
             {
-                var c=s;var m=MotorCatalog.Get(c.Vehicle.ModelId);var card=BusinessCard(w.Content,m.Name);
+                var c=s;var m=MotorCatalog.Get(c.Vehicle.ModelId);var card=MotorCard(w.Content,m);
                 Line(card,"累计投入 ¥"+c.Cost.ToString("N0")+" · "+(c.Inspected?"车况 "+c.Vehicle.Condition.ToString("0")+"%":"车况待检测"),17);
                 var row=Ui.Row(card,36,6);
                 Ui.Size(Ui.Button(row,"检测 ¥300",()=>{S.InspectUsedMotor(c.Vehicle.Id);w.Rebuild();},16,Ui.ButtonBg,!c.Inspected),-1,36,1);
@@ -37,11 +37,11 @@ namespace PCShopSell.Game.UI
             Line(w.Content,"车友介绍的车源 · 本周",21,Ui.Accent);
             foreach(var lead in S.MotorLeads())
             {
-                var l=lead;Ui.Size(Ui.Button(w.Content,S.CityPerson(l.PersonId).Name+"介绍 · "+MotorCatalog.Get(l.ModelId).Name+" · 收购 ¥"+l.Price.ToString("N0"),()=>ConfirmBusiness("收购二手车","成交后车辆进入本店展位，需要支付检测与可能的整备费用。",()=>{S.BuyMotorLead(id,l.Id);w.Rebuild();}),17,Ui.ButtonBg,stock.Length<S.UsedMotorCapacity(id)),-1,44);
+                var l=lead;MotorChoice(w.Content,l.ModelId,S.CityPerson(l.PersonId).Name+"介绍 · "+MotorCatalog.Get(l.ModelId).Name+" · 收购 ¥"+l.Price.ToString("N0"),()=>ConfirmBusiness("收购二手车","成交后车辆进入本店展位，需要支付检测与可能的整备费用。",()=>{S.BuyMotorLead(id,l.Id);w.Rebuild();}),enabled:stock.Length<S.UsedMotorCapacity(id));
             }
             if(!S.MotorLeads().Any())Para(w.Content,"暂无新车源，去各级赛场认识车友；下周会有新的介绍。",17,Ui.Dim);
             foreach(var v in S.Garage.Where(v=>MotorCatalog.ClassOf(MotorCatalog.Get(v.ModelId).Kind)==2))
-            {var car=v;Ui.Size(Ui.Button(w.Content,"从车库移入展位 · "+MotorCatalog.Get(car.ModelId).Name,()=>{S.ConsignMotor(id,car.Id);w.Rebuild();},16,Ui.ButtonBg,stock.Length<S.UsedMotorCapacity(id)&&S.MotorAvailable(car)),-1,36);}
+            {var car=v;MotorChoice(w.Content,car.ModelId,"从车库移入展位 · "+MotorCatalog.Get(car.ModelId).Name,()=>{S.ConsignMotor(id,car.Id);w.Rebuild();},enabled:stock.Length<S.UsedMotorCapacity(id)&&S.MotorAvailable(car));}
         }
     }
 }

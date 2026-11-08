@@ -19,7 +19,7 @@ namespace PCShopSell.Tests
             var s=DistrictProgressionTests.Make();s.DebugPrepareDistrictPrerequisites(1);s.DebugAddCash(1000000);
             var shop=s.MyShops.First();shop.RetailKind="clothing";shop.Sim.Stock.ForceAddGoods(Product,200);
             Set(s,"_brands",new BrandBusinessState{Brands=new[]{new BrandRecord{Id="b",Name="主线衣坊",Kind="clothing",Position="quality",Influence=chapter==3?100:0,ShopIds=new[]{shop.Place.Id}}}});
-            Set(s,"_district",new DistrictProgress{UnlockedTier=chapter-1,Chapter=chapter,BrandCommerceRoute=true,CommerceVersion=1,CommerceBrandId="b",NodeId=chapter==2?"expo.invitation":"tender.invitation"});return s;
+            Set(s,"_district",new DistrictProgress{UnlockedTier=chapter-1,Chapter=chapter,CommerceBrandId="b",NodeId=chapter==2?"expo.invitation":"tender.invitation"});return s;
         }
         private static void At(GameSession s,string id)=>typeof(GameSession).GetProperty("CurrentPlace").SetValue(s,s.City.GetPlace(id));
         private static void Time(GameSession s,long minute)=>s.Clock.Restore(new GameDate((int)(minute/1440)),(int)(minute%1440));
@@ -88,12 +88,51 @@ namespace PCShopSell.Tests
                 {Assert.AreEqual("b",loaded.DistrictStoryState.CommerceBrandId);Assert.AreEqual("expo.reception",loaded.CurrentDistrictNode.Id);loaded.RefreshDistrictNarrative();Assert.AreEqual(1,loaded.DistrictAccessTier);Assert.NotNull(loaded.DistrictCommerceBlocker);}
             }
         }
-        [Test] public void OldTwoNodeRouteMigratesToBusinessWorkButKeepsInvitationAndAccess()
+
+        [Test] public void HistoricalQualifiedExpoCountsBeforeAcceptanceAndSurvivesLaterWorseResults()
         {
             using(var s=Make(2))
             {
-                var save=s.CreateSave();save.districtProgress.CommerceVersion=0;save.districtProgress.NodeId="expo.review";save.districtProgress.Completed=new[]{"expo.invitation"};
-                using(var loaded=GameSession.Load(s.City,save)){Assert.AreEqual("expo.prepare",loaded.CurrentDistrictNode.Id);Assert.True(loaded.DistrictNodeCompleted("expo.invitation"));Assert.AreEqual(1,loaded.DistrictAccessTier);}
+                var b=s.BrandBusiness;b.Brands[0].Influence=20;
+                b.Exhibits=new[]{
+                    new BrandExhibit{Id="past",BrandId="b",Finished=true,Score=240,Day=10,InfluenceAfter=120},
+                    new BrandExhibit{Id="new",BrandId="b",Finished=true,Score=300,Day=100},
+                    new BrandExhibit{Id="future",BrandId="b",Day=190}};
+                b.Orders=new[]{new BrandOrder{Id="past:lead",BrandId="b",Source="expo",Done=true}};Set(s,"_brands",b);
+                // Discovery runs while still on the invitation, without advancing acceptance itself.
+                s.RefreshDistrictNarrative();Assert.AreEqual("expo.invitation",s.CurrentDistrictNode.Id);
+                Assert.True(s.BrandBusiness.Exhibits.Single(e=>e.Id=="past").MainlineQualified);
+                var d=s.DistrictStoryState;d.NodeId="expo.prepare";Set(s,"_district",d);
+                s.RefreshDistrictNarrative();Assert.AreEqual("expo.review",s.CurrentDistrictNode.Id);
+                Assert.AreEqual(1,s.DistrictAccessTier);StringAssert.Contains("历史最高评分 300",s.DistrictCommerceStatus);
+                StringAssert.Contains("历史成绩已达标",s.DistrictCommerceStatus);
+                using(var loaded=GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
+                {Assert.AreEqual("expo.review",loaded.CurrentDistrictNode.Id);Assert.IsNull(loaded.DistrictCommerceBlocker);}
+            }
+        }
+        [Test] public void HighScoreAloneDoesNotInventHistoricalDelivery()
+        {
+            using(var s=Make(2))
+            {
+                var b=s.BrandBusiness;b.Brands[0].Influence=120;
+                b.Exhibits=new[]{new BrandExhibit{Id="past",BrandId="b",Finished=true,Score=240,Day=10,InfluenceAfter=120}};
+                b.Orders=new[]{new BrandOrder{Id="past:lead",BrandId="b",Source="expo",Shipped=true}};Set(s,"_brands",b);
+                var d=s.DistrictStoryState;d.NodeId="expo.prepare";Set(s,"_district",d);s.RefreshDistrictNarrative();
+                Assert.AreEqual("expo.delivery",s.CurrentDistrictNode.Id);Assert.False(s.BrandBusiness.Exhibits[0].MainlineQualified);
+                Assert.NotNull(s.DistrictCommerceBlocker);Assert.AreEqual(1,s.DistrictAccessTier);
+            }
+        }
+        [Test] public void FailedHistoryDoesNotHideNextRegisteredExpo()
+        {
+            using(var s=Make(2))
+            {
+                var b=s.BrandBusiness;b.Exhibits=new[]{
+                    new BrandExhibit{Id="past",BrandId="b",Finished=true,Score=50,Day=10},
+                    new BrandExhibit{Id="next",BrandId="b",Day=100}};Set(s,"_brands",b);
+                var d=s.DistrictStoryState;d.NodeId="expo.prepare";Set(s,"_district",d);s.RefreshDistrictNarrative();
+                Assert.AreEqual("expo.reception",s.CurrentDistrictNode.Id);
+                StringAssert.Contains("历史最高评分 50",s.DistrictCommerceStatus);
+                Assert.NotNull(s.DistrictCommerceBlocker);
             }
         }
         [Test] public void FailedTenderDoesNotUnlockRoadAndExplainsRetry()
@@ -105,18 +144,6 @@ namespace PCShopSell.Tests
                 Assert.AreEqual("tender.fulfilment",s.CurrentDistrictNode.Id);StringAssert.Contains("下年度",s.DistrictCommerceBlocker);Assert.AreEqual(2,s.DistrictAccessTier);
             }
         }
-        [Test] public void MigrationHonoursQualifiedBrandInsteadOfUnrelatedHigherInfluence()
-        {
-            using(var s=Make(2))
-            {
-                var save=s.CreateSave();save.districtProgress.CommerceVersion=0;save.districtProgress.NodeId="expo.review";save.districtProgress.CommerceBrandId=null;
-                save.brandBusiness.Brands[0].Influence=100;
-                save.brandBusiness.Brands=save.brandBusiness.Brands.Concat(new[]{new BrandRecord{Id="other",Name="无订单高影响力",Kind="models",Influence=1000}}).ToArray();
-                save.brandBusiness.Exhibits=new[]{new BrandExhibit{Id="b:expo:75",BrandId="b",Finished=true}};
-                save.brandBusiness.Orders=new[]{new BrandOrder{Id="b:expo:75:lead",BrandId="b",Source="expo",Done=true}};
-                using(var loaded=GameSession.Load(s.City,save))
-                {Assert.AreEqual("expo.review",loaded.CurrentDistrictNode.Id);Assert.AreEqual("b",loaded.DistrictStoryState.CommerceBrandId);Assert.IsNull(loaded.DistrictCommerceBlocker);Assert.AreEqual(1,loaded.DistrictAccessTier);}
-            }
-        }
+
     }
 }

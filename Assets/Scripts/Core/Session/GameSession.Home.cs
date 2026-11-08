@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Finance;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Shop;
@@ -18,7 +19,7 @@ namespace PCShopSell.Core.Session
         Gift,
     }
 
-    /// <summary>网购的快递，到了日子送进家里。</summary>
+    /// <summary>按下单时选择的地址投递的快递。</summary>
     public sealed class Parcel
     {
         public ParcelKind Kind;
@@ -26,8 +27,9 @@ namespace PCShopSell.Core.Session
         public int Count;
         public int DueDay;
 
-        /// <summary>货车送到店里（而不是家里）。</summary>
+        /// <summary>送往门店时记录铺面 ID。旧寄存家具的空 ID 表示主店。</summary>
         public bool ToShop;
+        public string ShopId;
     }
 
     /// <summary>
@@ -85,6 +87,7 @@ namespace PCShopSell.Core.Session
             StoreOrTemp(shop, FurnitureCatalog.Get(id)?.WeightKg ?? 0, count, n => BoxOf(shop).AddFurniture(id, n), n => TempOf(shop).AddFurniture(id, n));
 
         public RoomSpec ShopRoom => RoomSpec.ForShop(PlayerShop.Size);
+        public RoomSpec ResidenceRoom => RoomSpec.ForResidence(HomeTier);
 
         // ---------- 家里的效果 ----------
 
@@ -148,12 +151,13 @@ namespace PCShopSell.Core.Session
             }
         }
 
-        /// <summary>网购：随时随地下单，2 天后送到家里。</summary>
-        public bool OrderOnline(ParcelKind kind, string id, int count = 1)
+        /// <summary>网购，2 天后送到选择的门店或家里。</summary>
+        public bool OrderOnline(ParcelKind kind, string id, int count = 1, OwnedShop destination = null)
         {
             if (IsGameOver || count <= 0) return false;
             string appBlock = AppBlocker(PhoneApps.Shop);
             if (appBlock != null) return Fail(appBlock);
+            if (destination != null && ShopAt(destination.Place.Id) != destination) return Fail("所选收货门店已不可用。");
             string name;
             switch (kind)
             {
@@ -182,9 +186,15 @@ namespace PCShopSell.Core.Session
                     break;
             }
             Money total = OnlinePrice(kind, id) * count;
-            if (!Ledger.TryDebit(Clock.Today, "网购", total, name + (count > 1 ? "×" + count : ""))) return Fail("钱不够。");
-            _parcels.Add(new Parcel { Kind = kind, Id = id, Count = count, DueDay = Clock.Today.TotalDays + DeliveryDays });
-            Say($"下单了「{name}」，{DeliveryDays} 天后送到家。");
+            var attribution = destination == null || kind == ParcelKind.Outfit ? null
+                : kind == ParcelKind.Furniture
+                    ? new LedgerAttribution(LedgerBusinessKind.AssetInvestment, shopId: destination.Place.Id, transactionKind: "店铺设施")
+                    : LedgerAttribution.ForShop(destination.Place.Id, transactionKind: "采购");
+            if (!Ledger.TryDebit(Clock.Today, "网购", total, name + (count > 1 ? "×" + count : ""), attribution)) return Fail("钱不够。");
+            _parcels.Add(new Parcel { Kind = kind, Id = id, Count = count, DueDay = Clock.Today.TotalDays + DeliveryDays,
+                ToShop = destination != null, ShopId = destination?.Place.Id });
+            RememberPurchaseDelivery(destination);
+            Say($"下单了「{name}」，{DeliveryDays} 天后送到{CourierDestName(destination)}。");
             return true;
         }
 
@@ -194,6 +204,9 @@ namespace PCShopSell.Core.Session
             _furnStock[id] = FurnitureInStock(id) + count;
         }
 
+        private OwnedShop ParcelDestination(Parcel p) => PurchaseDeliveryShop(p.ToShop, p.ShopId);
+        public string ParcelDestinationName(Parcel p) => CourierDestName(ParcelDestination(p));
+
         private void DeliverParcels(GameDate today)
         {
             for (int i = _parcels.Count - 1; i >= 0; i--)
@@ -201,13 +214,16 @@ namespace PCShopSell.Core.Session
                 Parcel p = _parcels[i];
                 if (p.DueDay > today.TotalDays) continue;
                 _parcels.RemoveAt(i);
+                var destination = ParcelDestination(p);
+                bool toShop = destination != null;
+                string destinationName = CourierDestName(destination);
+                if (p.ToShop && !toShop) destinationName += "（原门店已停用）";
                 string what;
                 switch (p.Kind)
                 {
                     case ParcelKind.Furniture:
-                        bool toShop = p.ToShop && HasShop;
                         int over = 0;
-                        WithShop(toShop ? MainShop : null, () => over = StoreFurnitureHere(toShop, p.Id, p.Count));
+                        WithShop(destination, () => over = StoreFurnitureHere(toShop, p.Id, p.Count));
                         string box = toShop ? "店里后仓" : "后仓";
                         what = FurnitureCatalog.Get(p.Id).Name + (p.Count > 1 ? "×" + p.Count : "")
                             + (over <= 0 ? $"（放进了{box}）" : over >= p.Count ? $"（{box}满了，放在临时存放）" : $"（{box}放不下的 {over} 件放在临时存放）");
@@ -217,16 +233,29 @@ namespace PCShopSell.Core.Session
                         what = Outfits.Get(p.Id).Name + "（在衣柜里换上）";
                         break;
                     case ParcelKind.Gift:
-                        Backpack.AddGift(p.Id, p.Count);
-                        ApplyCargoLimit();
-                        what = Gifts.Get(p.Id).Name + (p.Count > 1 ? "×" + p.Count : "") + "（已放进背包）";
+                        var gift = Gifts.Get(p.Id);
+                        what = gift.Name + (p.Count > 1 ? "×" + p.Count : "");
+                        if (toShop)
+                        {
+                            WithShop(destination, () => StoreOrTemp(true, gift.WeightKg, p.Count,
+                                n => ShopLocker.AddGift(p.Id, n), n => ShopTemp.AddGift(p.Id, n)));
+                            what += "（已放进门店后仓）";
+                        }
+                        else
+                        {
+                            Backpack.AddGift(p.Id, p.Count);
+                            ApplyCargoLimit();
+                            what += "（已放进背包）";
+                        }
                         break;
                     default:
-                        Pantry.RiceKg += RiceBagKg * p.Count;
-                        what = $"大米 {RiceBagKg * p.Count:0} 千克";
+                        double kg = RiceBagKg * p.Count;
+                        if (toShop) WithShop(destination, () => StoreRiceOrTemp(true, kg));
+                        else Pantry.RiceKg += kg;
+                        what = $"大米 {kg:0} 千克" + (toShop ? "（已放进门店后仓）" : "（已放进厨房）");
                         break;
                 }
-                Popup?.Invoke(p.ToShop ? "货车到店里了" : "快递到了", (p.ToShop ? "卸在店门口，工人已经帮你搬进仓库：" : "放在门口：") + what);
+                Popup?.Invoke("快递到了", $"送达{destinationName}：{what}");
             }
         }
 
@@ -263,8 +292,27 @@ namespace PCShopSell.Core.Session
 
         public string PlacementError(bool shop, FurnitureDef def, PlacedFurniture cand, int ignore, IReadOnlyList<RectD> extra = null)
         {
+            int capacity = PetShopCatalog.HouseCapacity(def.Id);
+            if (capacity > 0 || PetShopCatalog.IsToyFixture(def.Id))
+            {
+                if (!shop || !IsPetShop(_focus)) return "代养设施只能摆在宠物用品店。";
+                if (PetShopCatalog.IsToyFixture(def.Id))
+                {
+                    var house = PetHouse(_focus);
+                    if (house == null) return "先摆好宠物屋。";
+                    var area = RoomPlanner.Footprint(ShopRoom,FurnitureCatalog.Get(house.Id),house);
+                    if (!PetToyInReach(cand,area)) return "把玩具摆在围栏内或紧挨着宠物屋。";
+                }
+                if (capacity > 0)
+                {
+                    if (capacity > PetShopCatalog.MaximumCapacity(_focus.Place.Size)) return "这间铺子放不下该规格的宠物屋。";
+                    if (capacity < PetGuests(_focus).Count) return "新的宠物屋名额少于当前在店宠物。";
+                    if (ignore < 0 && capacity > PetCapacity(_focus) + 4) return "请先摆好前一规格的宠物屋。";
+                    if (ignore < 0) ignore = _shopLayout.IndexOf(PetHouse(_focus));
+                }
+            }
             string limit=ShelfPlacementBlocker(shop,def,ignore);if(limit!=null)return limit;
-            RoomSpec room = shop ? ShopRoom : RoomSpec.Home;
+            RoomSpec room = shop ? ShopRoom : ResidenceRoom;
             return RoomPlanner.Check(room, LayoutOf(shop), def, cand, ignore, extra);
         }
 
@@ -279,6 +327,12 @@ namespace PCShopSell.Core.Session
             if (err != null) return Fail(err);
             RememberLayout(shop);
             if (!TempOf(shop).TakeFurniture(id, 1) && !BoxOf(shop).TakeFurniture(id, 1)) _furnStock[id] = FurnitureInStock(id) - 1;
+            var oldHouse = shop && PetShopCatalog.HouseCapacity(id) > 0 ? PetHouse(_focus) : null;
+            if (oldHouse != null)
+            {
+                _shopLayout.Remove(oldHouse);
+                StoreFurnitureHere(true, oldHouse.Id, 1);
+            }
             TrackTempClocks();
             LayoutOf(shop).Add(new PlacedFurniture { Id = id, X = at.X, Z = at.Z, Rot = at.Rot });
             if (shop) ApplyUpgrades();
@@ -304,6 +358,8 @@ namespace PCShopSell.Core.Session
         {
             List<PlacedFurniture> l = LayoutOf(shop);
             if (index < 0 || index >= l.Count || !CanEdit(shop)) return false;
+            if (shop && PetShopCatalog.HouseCapacity(l[index].Id) > 0 && PetsStaying(_focus))
+                return Fail("宠物屋里还有客人。可以摆放更大的宠物屋直接替换。");
             if (FurnitureCatalog.Get(l[index].Id)?.Role == FurnitureRole.Fridge && FridgeOf(shop).WeightKg > FridgeLimitKg(shop) - FurnitureCatalog.Get(l[index].Id).FridgeCapacityKg + 1e-9)
                 return Fail("冰箱里还有食物，先取出一些再收起冰箱。不能丢失冷藏食物。");
             RememberLayout(shop);
@@ -648,7 +704,7 @@ namespace PCShopSell.Core.Session
                 stockCounts = _furnStock.Where(kv => kv.Value > 0).Select(kv => kv.Value).ToArray(),
                 homeLayout = ToSave(_homeLayout),
                 shopLayout = ToSave(_shopLayout),
-                parcels = _parcels.Select(p => new SaveParcel { kind = (int)p.Kind, id = p.Id, count = p.Count, dueDay = p.DueDay, toShop = p.ToShop }).ToArray(),
+                parcels = _parcels.Select(p => new SaveParcel { kind = (int)p.Kind, id = p.Id, count = p.Count, dueDay = p.DueDay, toShop = p.ToShop, shopId = p.ShopId }).ToArray(),
                 homeFridge = ToSaveStorage(HomeFridge), mainShopFridge = ToSaveStorage(MainShop.Fridge),
                 riceKg = Pantry.RiceKg,
                 ingredients = ToSave(Pantry.Ingredient),
@@ -689,6 +745,7 @@ namespace PCShopSell.Core.Session
                 shopTempSince = MainShop.TempSince,
                 courierDest = CourierDest == null ? 0 : CourierDest == CourierHome ? 1 : 2,
                 courierDestShop = CourierDest == null || CourierDest == CourierHome || CourierDest == CourierCurrentShop ? null : CourierDest,
+                lastPurchaseDeliveryDest = _lastPurchaseDeliveryDest,
             };
             d.noPhone = !HasSmartphone;
             d.apps = _apps.ToArray();
@@ -733,6 +790,7 @@ namespace PCShopSell.Core.Session
             CourierDest = h == null || h.courierDest == 0 ? null
                 : h.courierDest == 1 ? CourierHome
                 : string.IsNullOrEmpty(h.courierDestShop) ? CourierCurrentShop : h.courierDestShop;
+            _lastPurchaseDeliveryDest = h?.lastPurchaseDeliveryDest;
             if (h == null || !h.saved)
             {
                 // 老存档：按原来的住处档位把买过的东西放进背包
@@ -756,7 +814,7 @@ namespace PCShopSell.Core.Session
             _homeLayout.AddRange(FromSave(h.homeLayout));
             _shopLayout.AddRange(FromSave(h.shopLayout));
             foreach (SaveParcel p in h.parcels ?? Array.Empty<SaveParcel>())
-                _parcels.Add(new Parcel { Kind = (ParcelKind)p.kind, Id = p.id, Count = p.count, DueDay = p.dueDay, ToShop = p.toShop });
+                _parcels.Add(new Parcel { Kind = (ParcelKind)p.kind, Id = p.id, Count = p.count, DueDay = p.dueDay, ToShop = p.toShop, ShopId = p.shopId });
             Pantry.RiceKg = h.riceKg;
             FromSave(h.ingredients, Pantry.Ingredient);
             FromSave(h.cooked, Pantry.Cooked);

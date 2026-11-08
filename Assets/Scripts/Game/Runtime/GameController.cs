@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -53,6 +53,7 @@ namespace PCShopSell.Game
         private string _sleepDestinationId;
         private bool _wasChasing;
         private int _wasRoomKind;
+        private float _roomOverviewSize;
         private string _crowdPlace, _crowdActivity;
         private bool _autosaveDue, _wasPlayerWorking;
         private bool _bootstrapped;
@@ -105,6 +106,7 @@ namespace PCShopSell.Game
 
         private void StartSession(GameSession s)
         {
+            if (PetFocusActive) ExitPetFocus();
             Ui?.CloseAllWindows();
             if (Session != null)
             {
@@ -119,7 +121,6 @@ namespace PCShopSell.Game
                 Session.CityTravelRequested-=OnCityTravelRequested;
                 Session.CityPlaceEntered-=OnCityPlaceEntered;
                 Session.CityActivitySettled-=OnCityActivitySettled;
-                Session.DistrictDialogueReady-=OnDistrictDialogueReady;
                 Session.Dispose();
             }
             Interior.Clear();
@@ -139,7 +140,6 @@ namespace PCShopSell.Game
             s.CityTravelRequested+=OnCityTravelRequested;
             s.CityPlaceEntered+=OnCityPlaceEntered;
             s.CityActivitySettled+=OnCityActivitySettled;
-            s.DistrictDialogueReady+=OnDistrictDialogueReady;
             _cityExitIntent=null;
             _pendingEnter = null;
             string sleepDestination = s.CitySleepRequested ? s.CityIntent?.TargetPlaceId ?? s.CurrentPlace?.Id : null;
@@ -234,7 +234,9 @@ namespace PCShopSell.Game
         }
 
         // Indoor character speeds are authored at 1x; apply the selected speed exactly once.
-        private float IndoorWalkDelta(float realDt) => Session.Time.IsRunning ? Mathf.Min(realDt,(float)TimeController.MaxTickSeconds) * Session.Time.Speed : 0f;
+        private float IndoorWalkDelta(float realDt) => Session.Time.IsRunning
+            ? Mathf.Min(realDt,(float)TimeController.MaxTickSeconds)*Session.Time.Speed*(float)CityTravelTiming.PlayerWalkSpeedFactor
+            : 0f;
 
         private void UpdateHomeBedTrip(float dt)
         {
@@ -269,6 +271,7 @@ namespace PCShopSell.Game
         private void CounterInteract()
         {
             if (Session.PlayerShop.Queue.Count > 0) Checkout(Session.PlayerShop.Queue[0].Id);
+            else if (Session.IsPetShop(Session.CurrentShop)) Ui.OpenPetOrders();
             else Ui.Toast("现在没人排队。顾客挑好货会拿到收银台前排队，你站在这里按 F 交货收钱。");
         }
 
@@ -299,7 +302,7 @@ namespace PCShopSell.Game
             HandleKeys();
             HandleMovement(dt);
             UpdatePlacement();
-            if (!Ui.AnyModalOpen && !Placing) HandleClicks();
+            if (!Ui.AnyModalOpen && !Placing && !PetFocusActive) HandleClicks();
 
             using (SimulationMarker.Auto()) Session.Tick(dt);
             if (_wasPlayerWorking != Session.IsWorking) { _wasPlayerWorking = Session.IsWorking; _autosaveDue = true; }
@@ -360,12 +363,12 @@ namespace PCShopSell.Game
             bool room = InRoom;
             float worldDt = Session.Time.IsRunning ? Mathf.Min(dt,(float)TimeController.MaxTickSeconds) * Session.Time.Speed * (float)TimeController.WorldRate : 0f;
             Interior.SetActive(interior);
+            bool residenceChanged = EnsureResidenceView();
             HomeRoom.SetActive(InHome);
-            if (InVisit && VisitRoom == null) VisitRoom = new HomeRoomView(_actors);
             VisitRoom?.SetActive(InVisit);
             World.Root.SetActive(!room);
             World.SetVenueFocus(Session.CurrentPlace?.Id);
-            _avatar.Update(Session, dt);
+            _avatar.Update(Session, dt, World);
             SyncExpoView(dt);
             _police.Update(!room);
             _crowdSyncTimer -= dt;
@@ -374,7 +377,7 @@ namespace PCShopSell.Game
             {
                 _crowdPlace=crowdPlace;_crowdActivity=crowdActivity;
                 _crowdSyncTimer = 0.25f;
-                _crowd.SyncCity(Session, FocusPoint(), Cam);
+                _crowd.SyncCity(Session, FocusPoint(), Cam, World);
             }
             _crowd.Update(worldDt, !room);
             UpdateBeacons(dt);
@@ -385,14 +388,19 @@ namespace PCShopSell.Game
                 foreach (PlaceVisual pv in World.Places.Values)
                     if (pv.ClosedOnly.Count > 0) World.SetOpen(pv, Session.IsPlaceOpen(pv.Place));
             }
-            if (interior) Interior.Update(Session, worldDt, dt);
+            if (interior)
+            {
+                Interior.SetCeilingMeshesHidden(Placing || PetFocusActive);
+                Interior.Update(Session, worldDt, dt);
+            }
+            UpdatePetFocus();
             if (InHome) HomeRoom.Update(Session, dt, Session.Clock.MinuteOfDay);
             if (InVisit) VisitRoom.UpdateVisit(Session);
             UpdateHomeBedTrip(dt);
             UpdateCityTravel(dt);
             FigureMotion.AdvanceAll(dt, Session.Time.IsRunning);
 
-            if (RoomKind != _wasRoomKind)
+            if (RoomKind != _wasRoomKind || residenceChanged)
             {
                 _wasRoomKind = RoomKind;
                 SnapCamera();
@@ -421,26 +429,43 @@ namespace PCShopSell.Game
 
         private Vector3 FocusPoint(float zoom = -1f)
         {
+            if (PetFocusActive && InInterior) return Interior.PetHouseWorld;
             if (Placing && _rig.Edit) return EditFocus(zoom > 0 ? zoom : _rig.Size);
+            float size = zoom > 0 ? zoom : _rig.Size;
+            float overview = Mathf.InverseLerp(_rig.MinSize, _roomOverviewSize, size);
             if (InHome || InVisit)
             {
                 var residence = ActiveResidence ?? HomeRoom;
-                Vector3 c = residence.Center + new Vector3(0, 0.8f, 0);
-                return c + (residence.OwnerWorld - residence.Center) * 0.35f;
+                return Vector3.Lerp(residence.OwnerWorld + Vector3.up*.8f, residence.Center + Vector3.up*1.5f, overview);
             }
             if (InInterior && _overview) return Interior.ViewCenter + new Vector3(0, 0.8f, 0);
             if (InInterior)
-                return Interior.OwnerWorld + new Vector3(0, 0.8f, -1.2f) + CameraRig.Rotation * Vector3.right * ((zoom > 0 ? zoom : Cam.orthographicSize) * Cam.aspect * 0.28f);
+            {
+                Vector3 center = Vector3.Lerp(Interior.OwnerWorld + Vector3.up*.8f, Interior.Center + Vector3.up*1.5f, overview);
+                return center + CameraRig.Rotation * Vector3.right * (size * Cam.aspect * ShopDockFraction);
+            }
               var closeView=CityCloseView;
               if(ExpoView?.Open==true)return ExpoCameraFocus(zoom>0?zoom:_rig.Size);
               if(closeView!=null)return CityCloseFocus(closeView);
-            Vector3 p = StreetWorldBuilder.ToWorld(Session.PlayerPosition);
+            Vector3 p = World.StreetPosition(Session.PlayerPosition);
             if (Session.CurrentPlace != null && World.Places.TryGetValue(Session.CurrentPlace.Id, out PlaceVisual pv)) p = pv.Entrance;
             return p + new Vector3(0, 1f, 0);
         }
 
+        private float ShopDockFraction => Ui.DockOpen ? Mathf.Min(.48f, GameUi.ShopDockWidth / Mathf.Max(1f, Ui.CanvasWidth)) : 0f;
+
+        private float FrameRoom(float width, float depth, float coveredWidth)
+        {
+            var right = CameraRig.Rotation * Vector3.right;
+            var up = CameraRig.Rotation * Vector3.up;
+            float halfWidth = (Mathf.Abs(right.x)*width + Mathf.Abs(right.z)*depth)*.5f;
+            float halfHeight = (Mathf.Abs(up.x)*width + Mathf.Abs(up.z)*depth + Mathf.Abs(up.y)*3f)*.5f;
+            return Mathf.Max((halfWidth+.6f)/(Cam.aspect*(1f-coveredWidth)), (halfHeight+.6f)/.83f);
+        }
+
         private void HandleKeys()
         {
+            if (PetFocusActive) { HandlePetFocusKeys(); return; }
             if (Ui.MainMenuOpen)
             {
                 if (Input.GetKeyDown(KeyCode.Escape)) Ui.CloseTopWindow();
@@ -460,34 +485,27 @@ namespace PCShopSell.Game
             }
             if (Session.IsWorking)
             {
-                if (Input.GetKeyDown(KeyCode.Alpha1)) Session.Time.SetSpeed(1);
-                if (Input.GetKeyDown(KeyCode.Alpha2)) Session.Time.SetSpeed(2);
-                if (Input.GetKeyDown(KeyCode.Alpha3)) Session.Time.SetSpeed(4);
-                if (Input.GetKeyDown(KeyCode.Alpha4)) Session.Time.SetSpeed(8);
+                HandleTimeSpeedKeys();
                 return;
             }
             if (Input.GetKeyDown(KeyCode.Space)) Session.Time.TogglePause();
-            if (Input.GetKeyDown(KeyCode.Alpha1)) Session.Time.SetSpeed(1);
-            if (Input.GetKeyDown(KeyCode.Alpha2)) Session.Time.SetSpeed(2);
-            if (Input.GetKeyDown(KeyCode.Alpha3)) Session.Time.SetSpeed(4);
-            if (Input.GetKeyDown(KeyCode.Alpha4)) Session.Time.SetSpeed(8);
+            HandleTimeSpeedKeys();
             if (!GameUi.PointerOverUi) _rig.Zoom(Input.mouseScrollDelta.y);
             HandleCameraOrbit();
             // Esc：关最上面一层窗口；没开窗口时打开菜单。右键不关闭界面。
             if (Input.GetKeyDown(KeyCode.Escape) && !Placing && !Ui.CloseTopWindow() && !Ui.AnyModalOpen) Ui.TryHotkey(KeyCode.Escape);
-            if (!Placing)
-                foreach (KeyCode hk in HotkeyPanels)
-                    if (Input.GetKeyDown(hk) && Ui.TryHotkey(hk)) break;
-            if (Input.GetKeyDown(KeyCode.B) && !Session.IsGameOver && !Placing) Ui.ToggleBackpack();
+            if (!Placing) HandleHudPanelKeys();
             if (Input.GetKeyDown(KeyCode.F) && !Ui.AnyModalOpen && !Session.IsGameOver && !Placing)
             {
-                if(Session.NearbyDistrictTask is DistrictTask task)Ui.Toast(Session.PerformDistrictTask(task.Id));
-                else if (InVisit) InteractVisitRoom();
+                if (InVisit) InteractVisitRoom();
                 else if (InHome) HomeInteract(HomeRoom.NearbyId);
                 else if(Session.IsOwnedVenue(Session.CurrentPlace))Ui.OpenVenueManagement(Session.CurrentPlace);
                 else if (InInterior)
                 {
-                    if(Interior.NearCounter&&Session.PlayerShop.Queue.Count>0)CounterInteract();
+                    if (Interior.NearbyPetOwner(out _) is PetStay pet) Ui.OpenPetOwnerVisit(pet.Id);
+                    else if (Interior.NearUsedBuyDesk) Ui.OpenUsedDesk();
+                    else if(Interior.NearCounter&&Session.PlayerShop.Queue.Count>0)CounterInteract();
+                    else if (Interior.NearPetHouse && Session.IsPetShop(Session.CurrentShop)) EnterPetFocus();
                     else if(Session.IsSpecialBusiness(Session.CurrentShop)&&Interior.NearSpecialFurniture)Ui.OpenSpecialBusinessPanel();
                     else if (Interior.NearCounter) CounterInteract();
                     else if (Interior.NearDoor) Ui.ConfirmLeaveShop();
@@ -498,6 +516,21 @@ namespace PCShopSell.Game
                 else if(Session.NearbyCommunityBox>=0)Session.SearchCommunityBox(Session.NearbyCommunityBox);
                 else TryEnterNearby();
             }
+        }
+
+        private void HandleTimeSpeedKeys()
+        {
+            if (Input.GetKeyDown(KeyCode.Alpha1)) Session.Time.SetSpeed(1);
+            if (Input.GetKeyDown(KeyCode.Alpha2)) Session.Time.SetSpeed(2);
+            if (Input.GetKeyDown(KeyCode.Alpha3)) Session.Time.SetSpeed(4);
+            if (Input.GetKeyDown(KeyCode.Alpha4)) Session.Time.SetSpeed(8);
+        }
+
+        private void HandleHudPanelKeys()
+        {
+            foreach (KeyCode hk in HotkeyPanels)
+                if (Input.GetKeyDown(hk) && Ui.TryHotkey(hk)) break;
+            if (Input.GetKeyDown(KeyCode.B) && !Session.IsGameOver) Ui.ToggleBackpack();
         }
 
         // ---------- 镜头旋转 ----------
@@ -537,7 +570,7 @@ namespace PCShopSell.Game
         /// <summary>WASD / 方向键。相对镜头方向走：W 是屏幕往上（镜头怎么转，方向跟着转）。街上在街道范围内自由走，店里在店内走。</summary>
         private void HandleMovement(float dt)
         {
-            if (Session.IsWorking || Session.CityActivityExclusive || Ui.AnyModalOpen || Session.IsGameOver || !Session.Time.IsRunning || Placing)
+            if (PetFocusActive || Session.IsWorking || Session.CityActivityExclusive || Ui.AnyModalOpen || Session.IsGameOver || !Session.Time.IsRunning || Placing)
             {
                 Session.SetSteer(0, 0);
                 return;
@@ -654,11 +687,6 @@ namespace PCShopSell.Game
             world = Vector3.zero;
             label = null;
             if (Session == null || Session.IsGameOver || Ui.AnyModalOpen || Placing) return false;
-            if(Session.NearbyDistrictTask is DistrictTask task)
-            {
-                world=StreetWorldBuilder.ToWorld(Session.PlayerPosition)+Vector3.up;
-                label=task.Title+"（按 F）";return true;
-            }
             if(Session.IsOwnedVenue(Session.CurrentPlace))
             {world=StreetWorldBuilder.ToWorld(Session.PlayerPosition)+Vector3.up*2;label="场馆管理（按 F 打开）";return true;}
             if (InHome || InVisit)
@@ -683,9 +711,24 @@ namespace PCShopSell.Game
                         return true;
                     }
                 }
+                if (Interior.NearbyPetOwner(out world) is PetStay pet)
+                {
+                    var person = Session.CityPerson(pet.OwnerId);
+                    bool dropOff = Session.PetBoarding(Session.CurrentShop)?.Offer?.Id == pet.Id;
+                    label = (person?.Name ?? "宠物主人") + (dropOff ? " · 送养" : " · 探望结算") + "（按 F）";
+                    return true;
+                }
+                if (Interior.NearUsedBuyDesk)
+                {
+                    world = Interior.UsedBuyDeskWorld; label = "收购鉴定台 · 按 F 办理收购或鉴定"; return true;
+                }
                 if(Session.IsSpecialBusiness(Session.CurrentShop)&&Interior.NearSpecialFurniture&&!(Interior.NearCounter&&Session.PlayerShop.Queue.Count>0))
                 {
                     world=Interior.SpecialFurnitureWorld;label=Interior.SpecialFurnitureName+"：经营操作（按 F 打开）";return true;
+                }
+                if (Interior.NearPetHouse && Session.IsPetShop(Session.CurrentShop) && !(Interior.NearCounter && Session.PlayerShop.Queue.Count > 0))
+                {
+                    world = Interior.PetHouseWorld + Vector3.up*.5f; label = "宠物屋 · 按 F 拉近镜头"; return true;
                 }
                 if (Interior.NearCounter)
                 {
@@ -699,7 +742,7 @@ namespace PCShopSell.Game
                 if (Interior.NearDoor)
                 {
                     world = Interior.DoorWorld;
-                    label = Session.LeaveBlocker ?? (Session.IsEmployeeOnDuty(Session.Clock.Now) ? "出门（店员看店）" : "出门（没人看店就关门）");
+                    label = Session.LeaveBlocker ?? $"出门（{Session.ShopLeaveStatus().Message}）";
                     return true;
                 }
                 if (Interior.NearFridge)
@@ -804,7 +847,7 @@ namespace PCShopSell.Game
             who = null;
             world = Vector3.zero;
             if (_crowd == null || InRoom || Session.CurrentPlace != null) return false;
-            return _crowd.Nearest(StreetWorldBuilder.ToWorld(Session.PlayerPosition), 1.3f, out who, out world);
+            return _crowd.Nearest(World.StreetPosition(Session.PlayerPosition), 1.3f, out who, out world);
         }
 
         /// <summary>和街上的人说话：他停下来面向你，窗口关掉后接着走。</summary>
@@ -940,6 +983,19 @@ namespace PCShopSell.Game
             Interior = new ShopInteriorView(_actors, size);
         }
 
+        private bool EnsureResidenceView()
+        {
+            if (!InHome && !InVisit) return false;
+            var room = InHome ? Session.ResidenceRoom : RoomSpec.ForResidence(Session.ResidentialTier(Session.CurrentPlace));
+            var view = ActiveResidence;
+            if (view?.Room == room) return false;
+            view?.Destroy();
+            view = new HomeRoomView(_actors, room);
+            if (InHome) HomeRoom = view;
+            else VisitRoom = view;
+            return true;
+        }
+
         /// <summary>签了新铺子（搬店）：店内场景按新铺面重建，街上顾客改往新店门走。</summary>
         private void OnShopExpanded(PCShopSell.Core.Shop.ShopSize size)
         {
@@ -954,11 +1010,12 @@ namespace PCShopSell.Game
                 _crowd.ShopDoor = (pv.Place.ExplicitEntrance ? pv.Entrance : pv.Entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZAt(pv.Entrance.x) - 0.3f));
         }
 
-        /// <summary>切换场景时重设镜头：店内比较近、跟着老板，街上拉远。</summary>
+        /// <summary>进入室内时取全景，拉近后跟随玩家。</summary>
         public void SnapCamera(bool smooth = false)
         {
             bool interior = InInterior;
             bool home = InHome || InVisit;
+            if (home) EnsureResidenceView();
             var closeView=interior||home?null:CityCloseView;
             bool editing = Placing && _rig.Edit;
             if (editing) _rig.SetEdit(false);
@@ -966,8 +1023,21 @@ namespace PCShopSell.Game
             if(closeView!=null)_rig.SetPlaceAngles(closeView.Root.transform.eulerAngles.y,61f);
             else if(interior||home)_rig.SetPlaceAngles(CameraRig.DefaultYaw,CameraRig.DefaultPitch);
             _rig.MinSize = home ? HomeRoomView.MinZoom : interior ? ShopInteriorView.MinZoom : 5f;
-            _rig.MaxSize = home ? HomeRoomView.CameraSize : interior ? Interior.CameraSize : closeView!=null?16f:60f;
-            float size = home ? HomeRoomView.DefaultZoom : interior ? Mathf.Min(ShopInteriorView.DefaultZoom, Interior.CameraSize) : closeView!=null?9.5f:16f;
+            float size = closeView!=null?9.5f:16f;
+            _rig.MaxSize = closeView!=null?16f:60f;
+            if (home)
+            {
+                var residence = ActiveResidence;
+                size = Mathf.Max(HomeRoomView.DefaultZoom, FrameRoom(residence.Width,residence.Depth,0f));
+                _rig.MaxSize = Mathf.Max(size,residence.CameraSize);
+            }
+            else if (interior)
+            {
+                float dock = Mathf.Min(.48f, GameUi.ShopDockWidth / Mathf.Max(1f, Ui.CanvasWidth));
+                size = Mathf.Max(ShopInteriorView.DefaultZoom, FrameRoom(Interior.Width,Interior.Depth,dock));
+                _rig.MaxSize = Mathf.Max(size,Interior.CameraSize);
+            }
+            _roomOverviewSize = size;
             if(ExpoView?.Open==true)
             {
                 _rig.SetInterior(true);_rig.SetPlaceAngles(ExpoView.transform.eulerAngles.y,52f);
@@ -979,7 +1049,6 @@ namespace PCShopSell.Game
             if (editing) EnterEditView(true);
         }
 
-        private void OnDistrictDialogueReady(string person,string text) => Ui.OpenDistrictResult(person,text);
         private void OnCityActivitySettled(string activityId) => Ui.OpenCityActivitySettlement(activityId);
 
         private void OnPopup(string title, string body)

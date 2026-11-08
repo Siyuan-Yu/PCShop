@@ -77,7 +77,7 @@ namespace PCShopSell.Core.Session
             {
                 var route=activity.PlayerVenueRoute;
                 if(route!=null&&route.HasPath&&route.Transport==VehicleKind.Walk)
-                    route.ArriveMinute=Math.Max(route.ArriveMinute,route.DepartMinute+CityTravelTiming.Minutes(route.Meters.Sum(),Vehicles.Walk));
+                    route.ArriveMinute=Math.Max(route.ArriveMinute,route.DepartMinute+CityTravelTiming.PlayerMinutes(route.Meters.Sum(),Vehicles.Walk));
             }
             foreach(var trip in _employeeTrips.Where(t=>!t.Returned))
                 NormalizePurchaseWalkingLegs(trip,trip.TravelLegs);

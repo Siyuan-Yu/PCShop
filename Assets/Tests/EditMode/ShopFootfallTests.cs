@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
@@ -66,6 +67,31 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(ratio,b/a,1e-9);Assert.Greater(b,a);
             }
         }
+        [TestCase("computer")]
+        [TestCase(PetShopCatalog.ShopKind)]
+        public void NewShopEstimateMatchesAFullDayOfArrivalsAndGrowsWithReputation(string kind)
+        {
+            var city = City();
+            using (var agency = Session(city, rented:false))
+            using (var live = Session(city))
+            {
+                double estimate = agency.ExpectedDailyShopEntrants(agency.PlayerShopPlace, "computer");
+                Assert.That(agency.ExpectedDailyShopEntrants(agency.PlayerShopPlace, kind), Is.EqualTo(estimate).Within(1e-9));
+                GameSessionTests.Teleport(live, live.PlayerShopPlace.Id);
+                Assert.True(live.SetShopMainCategory(kind));
+                var shop = live.PlayerShop;
+                shop.ForcedClosed = false;
+                shop.NotFitted = false;
+                shop.PlayerPresent = true;
+                live.Clock.Restore(live.Clock.Today, ShopSimulation.DefaultOpenMinute);
+                live.Clock.Advance(ShopSimulation.DefaultCloseMinute - ShopSimulation.DefaultOpenMinute);
+                Assert.That(shop.TodayCustomers, Is.EqualTo(estimate).Within(2));
+
+                shop.Reputation = 60;
+                Assert.Greater(live.StreetTrafficMultiplier(live.PlayerShopPlace.StreetId), 1);
+                Assert.Greater(live.ExpectedDailyShopEntrants(live.PlayerShopPlace), estimate);
+            }
+        }
         [Test] public void ActualLakeMapHasOrderedQuotesAffordableStartAndCachedEstimates()
         {
             var data=JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text);
@@ -76,9 +102,9 @@ namespace PCShopSell.Tests
                 for(int i=1;i<estimates.Length;i++)Assert.AreEqual(estimates[i].DailyPassers*5,estimates[i].MonthlyRent.Yuan);
                 long initialMs=watch.ElapsedMilliseconds;var first=s.FootfallOf(s.PlayerShopPlace);
                 for(int i=0;i<10000;i++)Assert.AreSame(first,s.FootfallOf(s.PlayerShopPlace));
-                Assert.Less(RealEstate.SignCost(first.MonthlyRent).Yuan,10000,"万元开局能租起首间店");
+                Assert.Less(RealEstate.SignCost(first.WeeklyRent).Yuan,10000,"万元开局能租起首间店");
                 Assert.True(s.Listings.All(l=>l.Rent==s.ShopRentQuote(s.ListingPlace(l))));
-                TestContext.WriteLine($"Lake quote count={estimates.Length}; first-pass={initialMs}ms; starter={first.DailyPassers} people/day, rent={first.MonthlyRent.Yuan}/month; range={estimates.First().DailyPassers}-{estimates.Last().DailyPassers}.");
+                TestContext.WriteLine($"Lake quote count={estimates.Length}; first-pass={initialMs}ms; starter={first.DailyPassers} people/day, rent={first.WeeklyRent.Yuan}/week; range={estimates.First().DailyPassers}-{estimates.Last().DailyPassers}.");
             }
         }
         [TestCase("restaurant")] [TestCase("secondhand")]
@@ -110,7 +136,7 @@ namespace PCShopSell.Tests
                 {Assert.AreEqual(quote,loaded.Lease.Rent);Assert.AreEqual(s.FootfallOf(s.PlayerShopPlace).DailyPassers,loaded.FootfallOf(loaded.PlayerShopPlace).DailyPassers);}
             }
         }
-        [Test] public void OldSaveRequotesUnsignedListingsButPreservesSignedAndPendingLeases()
+        [Test] public void OldSaveRequotesWeeklyRentAndPreservesDeposits()
         {
             using(var s=Session(City()))
             {
@@ -119,10 +145,12 @@ namespace PCShopSell.Tests
                 data.pendingPlace="tea";data.pendingRentCents=234500;data.pendingDepositCents=234500;data.pendingStartDay=40;
                 using(var loaded=GameSession.Load(s.City,data))
                 {
-                    Assert.AreEqual(1234,loaded.Lease.Rent.Yuan);Assert.AreEqual(2345,loaded.PendingLease.Rent.Yuan);
+                    Assert.AreEqual(loaded.ShopRentQuote(loaded.PlayerShopPlace),loaded.Lease.Rent);
+                    Assert.AreEqual(loaded.ShopRentQuote(loaded.City.GetPlace("tea")),loaded.PendingLease.Rent);
+                    Assert.AreEqual(1234,loaded.Lease.Deposit.Yuan);Assert.AreEqual(2345,loaded.PendingLease.Deposit.Yuan);
                     Assert.AreEqual(loaded.ShopRentQuote(loaded.City.GetPlace("spare")),loaded.Listings.Single(l=>l.PlaceId=="spare").Rent);
-                    Assert.AreEqual(s.Ledger.Balance,loaded.Ledger.Balance);Assert.AreEqual(1,loaded.CreateSave().shopFootfallVersion);
-                    using(var twice=GameSession.Load(s.City,loaded.CreateSave()))Assert.AreEqual(1234,twice.Lease.Rent.Yuan);
+                    Assert.AreEqual(s.Ledger.Balance,loaded.Ledger.Balance);Assert.AreEqual(2,loaded.CreateSave().shopFootfallVersion);
+                    using(var twice=GameSession.Load(s.City,loaded.CreateSave()))Assert.AreEqual(loaded.Lease.Rent,twice.Lease.Rent);
                 }
             }
         }
@@ -138,7 +166,7 @@ namespace PCShopSell.Tests
                 {
                     typeof(GameUi).GetMethod("BuildAgencyDetail",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(ui,new object[]{detail.GetComponent<RectTransform>(),s.PlayerShopPlace,1,null});
                     var texts=detail.GetComponentsInChildren<Text>();
-                    StringAssert.Contains($"{s.FootfallOf(s.PlayerShopPlace).DailyPassers:N0}",texts.Single(t=>t.name=="AgencyDailyPassers").text);
+                    StringAssert.Contains($"{s.ExpectedDailyShopEntrants(s.PlayerShopPlace):N0}",texts.Single(t=>t.name=="AgencyDailyEntrants").text);
                     Assert.True(texts.Any(t=>t.text.Contains("距最近地铁 100 米")));Assert.True(texts.Any(t=>t.text.Contains("距最近住宅 500 米")));
                     Assert.False(texts.Any(t=>t.text.Contains("地段客流 ×")||t.text.Contains("条越长")));
                 }

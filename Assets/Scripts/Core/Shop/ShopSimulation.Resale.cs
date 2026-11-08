@@ -10,16 +10,21 @@ namespace PCShopSell.Core.Shop
     public sealed partial class ShopSimulation
     {
         public Func<IEnumerable<ResaleOffer>> ResaleOffers;
-        private ShelfFill ResaleShelfFill(ShelfKind kind)
+        private void FillResaleShelves(IReadOnlyList<ShelfFill> shelves)
         {
-            int limit=_shelfItemLimits!=null&&_shelfItemLimits.TryGetValue(kind.Id,out int max)?max:int.MaxValue;
-            var fill=new ShelfFill(kind,ShelfCapacityOf(kind),limit);
-            foreach(var offer in (ResaleOffers?.Invoke()??Enumerable.Empty<ResaleOffer>()).OrderBy(o=>o.Id))
+            var remaining = (ResaleOffers?.Invoke()??Enumerable.Empty<ResaleOffer>()).OrderBy(o=>o.Id).ToList();
+            foreach (var fill in shelves)
             {
-                if(fill.Total>=limit||fill.UsedKg+offer.Kg>fill.CapacityKg+1e-9)continue;
-                fill.Resale.Add(offer);fill.UsedKg+=offer.Kg;
+                for (int i=0; i<remaining.Count && fill.Resale.Count<fill.CapacityItems; i++)
+                {
+                    var offer = remaining[i];
+                    if (fill.UsedKg+offer.Kg>fill.CapacityKg+1e-9) continue;
+                    fill.Resale.Add(offer);
+                    fill.UsedKg += offer.Kg;
+                    remaining.RemoveAt(i--);
+                }
+                fill.WeightBlocked = fill.Resale.Count>0 && remaining.Any(o=>fill.UsedKg+o.Kg>fill.CapacityKg+1e-9);
             }
-            return fill;
         }
         private void DecideResale(ShopCustomer c,GameTimestamp now)
         {

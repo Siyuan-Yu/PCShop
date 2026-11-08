@@ -59,7 +59,8 @@ namespace PCShopSell.Core.Session
         public long FundUnits {get;private set;}
         private long CreatorShopRevenue(CreatorState creator,GameDate day) => Ledger.Entries.Where(e=>e.Date==day&&e.ShopId==(creator.CampaignShopId??MainShop.Place.Id)
             &&e.Amount.IsPositive&&(e.Category=="零售"||e.Category=="装机")).Sum(e=>e.Amount.Cents);
-        public Money FundUnitPrice => Money.FromCents((long)Math.Round(PartCatalog.All.Average(x=>Market.PriceOf(x).Cents/(double)x.BasePrice.Cents)*10000));
+        private Money HardwareMarketIndex => Money.FromCents((long)Math.Round(PartCatalog.All.Average(x=>Market.PriceOf(x).Cents/(double)x.BasePrice.Cents)*10000));
+        public Money FundUnitPrice => Money.FromCents(_stockMarket.IndexPriceCents);
         public Money FundValue => FundUnitPrice*FundUnits;
         public bool TradeFund(int units,bool buy) => TradeCityInvestment("hardware", units, buy);
         public int HomeTier {get;private set;}
@@ -74,8 +75,7 @@ namespace PCShopSell.Core.Session
         {
             string why=ResidenceBlocker(tier,false);if(why!=null)return Fail(why);
             Money rent=HomeTierRentQuote(tier);
-            if(!Ledger.TryDebit(Clock.Today,"搬家",rent+Money.FromYuan(500),"住处首月租金及搬家费")) return Fail("需支付新住处首月租金与 ¥500 搬家费。");
-            HomeTier=tier;
+            if(!PayForResidenceMove(tier,"搬家",rent+Money.FromYuan(500),"住处首月租金及搬家费")) return false;
             _homeLeaseRentCents=rent.Cents;
             _residentialHomeId=null;
             Say("已换为"+HomeTitle+"。家具与储物保留；睡眠质量提高，次月按新月租扣款。"); return true;
@@ -109,8 +109,8 @@ namespace PCShopSell.Core.Session
             _lastBusinessDay=today.TotalDays;
             TickBrandBusiness(previous,today);
             SettleGarageRent(today);
-            if (_owned.Contains(VehicleKind.Car)) Ledger.ForceDebit(today,"交通",Money.FromYuan(40) * VehicleCount(VehicleKind.Car),"轿车日养护（含油费保险）");
-            if (_owned.Contains(VehicleKind.Van)) Ledger.ForceDebit(today,"交通",Money.FromYuan(60) * VehicleCount(VehicleKind.Van),"货车日养护（含油费保险）");
+            if (VehicleCount(VehicleKind.Car) > 0) Ledger.ForceDebit(today,"交通",Money.FromYuan(40) * VehicleCount(VehicleKind.Car),"轿车日养护（含油费保险）");
+            if (VehicleCount(VehicleKind.Van) > 0) Ledger.ForceDebit(today,"交通",Money.FromYuan(60) * VehicleCount(VehicleKind.Van),"货车日养护（含油费保险）");
             TickCityAssets(); SettleSupplierDebts(today.TotalDays); SettleVentures(today); SettleProperties(today); SettleHomeMaintenance(today); SettleCreators(previous,today); SettleMcnAndRelationships(previous,today); RefreshEnterpriseOffer();
         }
         private void SaveBusiness(SaveData d)

@@ -58,28 +58,28 @@ namespace PCShopSell.Core.Session
             return offers.OrderBy(o => (int)o.Kind).ToArray();
         }
 
-        public PurchaseOffer EmployeePurchaseOffer(PurchaseLine line, string legacySource = null)
+        public PurchaseOffer EmployeePurchaseOffer(PurchaseLine line, string legacySource = null, IReadOnlyList<PurchaseOffer> catalog = null)
         {
             if (line == null) return null;
             string source = line.SourceId ?? legacySource;
-            return EmployeePurchaseCatalog().Where(o => o.Kind == line.Kind && o.Id == line.PartId && (string.IsNullOrEmpty(source) || o.Source.Id == source))
+            return (catalog ?? EmployeePurchaseCatalog()).Where(o => o.Kind == line.Kind && o.Id == line.PartId && (string.IsNullOrEmpty(source) || o.Source.Id == source))
                 .OrderBy(o => o.Price.Cents).FirstOrDefault();
         }
 
         // Old saves had one source for the entire plan. Bind it once to each line before editing.
-        public void PrepareEmployeePurchaseDraft(EmployeePurchasePlan plan)
+        public void PrepareEmployeePurchaseDraft(EmployeePurchasePlan plan, IReadOnlyList<PurchaseOffer> catalog = null)
         {
             plan.Items = (plan.Items ?? Array.Empty<PurchaseLine>()).Where(x => x != null).Select(x =>
             {
                 var copy = x.Copy();
-                var offer = EmployeePurchaseOffer(copy, plan.SourceId);
+                var offer = EmployeePurchaseOffer(copy, plan.SourceId, catalog);
                 if (offer != null) copy.SourceId = offer.Source.Id;
                 return copy;
             }).ToArray();
             plan.SourceId = null;
         }
 
-        public string EmployeePurchaseBrowseSource(EmployeePurchasePlan plan)
+        public string EmployeePurchaseBrowseSource(EmployeePurchasePlan plan, IReadOnlyList<PurchaseOffer> catalog = null)
         {
             if(plan==null)return null;
             string source=plan.BrowseSourceId;
@@ -93,7 +93,7 @@ namespace PCShopSell.Core.Session
                     source=sources.Length==1?sources[0]:null;
                 }
             }
-            return !string.IsNullOrEmpty(source) && EmployeePurchaseCatalog().Any(o=>o.Source.Id==source)?source:null;
+            return !string.IsNullOrEmpty(source) && (catalog ?? EmployeePurchaseCatalog()).Any(o=>o.Source.Id==source)?source:null;
         }
 
         public bool RememberEmployeePurchaseSource(string employeeId,string sourceId)
@@ -135,10 +135,17 @@ namespace PCShopSell.Core.Session
 
         private string PurchaseOpeningBlocker(Place source, int arrivalMinute)
         {
-            int open = source.Kind == PlaceKind.Wholesaler ? WholesalerOpenMinute : source.Business == FarmBusiness ? FarmOpenMinute : 9 * 60;
-            int close = source.Kind == PlaceKind.Wholesaler ? WholesalerCloseMinute : source.Business == FarmBusiness ? FarmCloseMinute : 21 * 60;
-            if ((SupplierClosesOnWeekend(source) && Clock.Today.IsWeekend) || arrivalMinute < open || arrivalMinute >= close)
-                return source.Name + "到达时未营业（" + (source.Kind == PlaceKind.Wholesaler ? "工作日 " : "每天 ") + $"{open / 60}:00–{close / 60}:00）";
+            if (SupplierClosesOnWeekend(source))
+            {
+                CityVenueHours(source, out int supplierOpen, out int supplierClose);
+                if (Clock.Today.IsWeekend || arrivalMinute < supplierOpen || arrivalMinute >= supplierClose)
+                    return $"{source.Name}到达时未营业（{OpeningHoursText(source)}）";
+                return null;
+            }
+            int open = source.Business == FarmBusiness ? FarmOpenMinute : StreetShopOpenMinute;
+            int close = source.Business == FarmBusiness ? FarmCloseMinute : StreetShopCloseMinute;
+            if (arrivalMinute < open || arrivalMinute >= close)
+                return $"{source.Name}到达时未营业（每天 {Hm(open)}–{Hm(close)}）";
             return null;
         }
     }

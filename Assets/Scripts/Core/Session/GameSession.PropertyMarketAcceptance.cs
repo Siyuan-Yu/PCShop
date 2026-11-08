@@ -16,7 +16,6 @@ namespace PCShopSell.Core.Session
             int today = Clock.Today.TotalDays, minute = Clock.MinuteOfDay;
             _priceDays.Clear();
             _propertyPriceWeek = (today - 7) / 7;
-            _nextPriceReportDay = today;
             try
             {
                 for (int day = today - 7; day <= today; day++)
@@ -55,8 +54,8 @@ namespace PCShopSell.Core.Session
             CurrentPlace = MainShop.Place;
             MainShop.Sim.PlayerPresent = true;
             Flags.Add("debug:property-market-acceptance");
-            WeeklyPricesPending = WeeklyPricesSubscribed;
-            Say("物业与物价验收：4处商铺、1套自住房、1套带NPC住户住宅；包含自用、出租、空置，全部全款。已准备8日房产报价样本，打开物价简报即可看四项涨跌；下次周更新仍走正常规则。");
+            EconomicReportPending = EconomicReportAutomatic;
+            Say("物业与物价验收：4处商铺、1套自住房、1套带NPC住户住宅；包含自用、出租、空置，全部全款。已准备8日房产报价样本，在经济简报的物价涨跌页查看四项涨跌。");
         }
     }
 }

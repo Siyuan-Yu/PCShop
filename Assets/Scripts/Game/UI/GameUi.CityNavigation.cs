@@ -29,10 +29,10 @@ namespace PCShopSell.Game.UI
             if (kind == SleepShortcut)
                 return new[] { S.Home }.Concat(S.OwnedProperties.Where(p => S.City.HasPlace(p.PlaceId)).Select(p => S.City.GetPlace(p.PlaceId))
                     .Where(p => p != S.Home && S.CanSleepAt(p))).ToArray();
-            if(kind==3)return S.City.Places.ToArray();
+            if(kind==3)return S.City.PublicPlaces.ToArray();
             if(kind==0)return S.MyShops.Select(s=>s.Place).ToArray();
             if(kind==2)return S.City.Places.Where(p=>p.Kind==PlaceKind.Agency).ToArray();
-            return S.City.Places.Where(p=>p.Id=="stall_cpu"||S.HasRetailWholesale(p)).ToArray();
+            return S.City.Places.Where(p=>p.Id=="stall_cpu"||p.Business==GameSession.FarmBusiness||S.HasRetailWholesale(p)).ToArray();
         }
         private string ShortcutSelection(int kind) => kind switch
         {
@@ -45,7 +45,10 @@ namespace PCShopSell.Game.UI
         private Place SelectedShortcut(int kind, Place[] places = null)
         {
             places ??= ShortcutPlaces(kind);
-            return places.FirstOrDefault(p=>p.Id==ShortcutSelection(kind))??(kind==3?null:places.FirstOrDefault());
+            string id = ShortcutSelection(kind);
+            if (kind == 3 && S.City.HasPlace(id) && S.City.GetPlace(id) is Place counter && counter.IsElectronicsCounter)
+                return places.FirstOrDefault(p => p.Kind == PlaceKind.Wholesaler && p.NodeId == counter.NodeId);
+            return places.FirstOrDefault(p => p.Id == id) ?? (kind == 3 ? null : places.FirstOrDefault());
         }
         private void SelectShortcut(int kind,Place place)
         {

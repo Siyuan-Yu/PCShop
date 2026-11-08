@@ -1,0 +1,1697 @@
+[
+  {
+    "path": "Assets/Scripts/Game/Procedural/CityLookProfile.cs",
+    "lines": 143,
+    "bytes": 5356
+  },
+  {
+    "path": "Assets/Scripts/Game/Procedural/ProceduralCityBuilder.Actors.cs",
+    "lines": 131,
+    "bytes": 6465
+  },
+  {
+    "path": "Assets/Scripts/Game/Procedural/ProceduralCityBuilder.Buildings.cs",
+    "lines": 428,
+    "bytes": 22283
+  },
+  {
+    "path": "Assets/Scripts/Game/Procedural/ProceduralCityBuilder.cs",
+    "lines": 398,
+    "bytes": 17607
+  },
+  {
+    "path": "Assets/Scripts/Game/Procedural/ProceduralCityBuilder.Street.cs",
+    "lines": 197,
+    "bytes": 11244
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ArtDirection.cs",
+    "lines": 57,
+    "bytes": 3534
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/AvatarPreview.cs",
+    "lines": 65,
+    "bytes": 2674
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/BrandShowcaseArt.cs",
+    "lines": 75,
+    "bytes": 3861
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityArchitecture.cs",
+    "lines": 156,
+    "bytes": 10468
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityArchitecture.Industrial.cs",
+    "lines": 70,
+    "bytes": 4727
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityArchitecture.ModernVilla.cs",
+    "lines": 118,
+    "bytes": 10572
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityArchitecture.Reference.cs",
+    "lines": 97,
+    "bytes": 6711
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityNpcClothing.cs",
+    "lines": 18,
+    "bytes": 950
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityRoomRoute.cs",
+    "lines": 33,
+    "bytes": 1563
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityVegetation.cs",
+    "lines": 73,
+    "bytes": 4195
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CityVenueView.cs",
+    "lines": 195,
+    "bytes": 15552
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CommunitySearchView.cs",
+    "lines": 44,
+    "bytes": 2258
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CrowdView.Ambient.cs",
+    "lines": 138,
+    "bytes": 8427
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/CrowdView.cs",
+    "lines": 346,
+    "bytes": 17849
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/DayNightLighting.cs",
+    "lines": 160,
+    "bytes": 7860
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/DistrictGateView.cs",
+    "lines": 63,
+    "bytes": 4045
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ExpoProductVisual.cs",
+    "lines": 61,
+    "bytes": 4054
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/FigureMotion.cs",
+    "lines": 177,
+    "bytes": 8829
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/FurnitureVisuals.cs",
+    "lines": 452,
+    "bytes": 29163
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.CityCamera.cs",
+    "lines": 41,
+    "bytes": 2264
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.CityLife.cs",
+    "lines": 70,
+    "bytes": 3747
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.cs",
+    "lines": 1065,
+    "bytes": 49731
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.Performance.cs",
+    "lines": 117,
+    "bytes": 6596
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.Placement.cs",
+    "lines": 490,
+    "bytes": 21168
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.QuarterlyExpo.cs",
+    "lines": 54,
+    "bytes": 2140
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.Racing.cs",
+    "lines": 58,
+    "bytes": 3682
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameController.RestaurantWork.cs",
+    "lines": 20,
+    "bytes": 747
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/GameDisplaySettings.cs",
+    "lines": 82,
+    "bytes": 4595
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/HomeRoomView.cs",
+    "lines": 606,
+    "bytes": 32792
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/IndustrialMaterials.cs",
+    "lines": 51,
+    "bytes": 2644
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/Kill.cs",
+    "lines": 15,
+    "bytes": 433
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/Mats.cs",
+    "lines": 407,
+    "bytes": 23301
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/MenuLocalization.cs",
+    "lines": 49,
+    "bytes": 2285
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/PlacementOutline.cs",
+    "lines": 134,
+    "bytes": 6536
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/QuarterlyExpoView.Art.cs",
+    "lines": 55,
+    "bytes": 2837
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/QuarterlyExpoView.cs",
+    "lines": 254,
+    "bytes": 20829
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/RaceTrackView.cs",
+    "lines": 91,
+    "bytes": 7505
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/RiceCookerVisual.cs",
+    "lines": 55,
+    "bytes": 3027
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/RoadSurfaceGeometry.cs",
+    "lines": 93,
+    "bytes": 4748
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/RoomEditOverlay.cs",
+    "lines": 185,
+    "bytes": 8299
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/SaveStore.cs",
+    "lines": 129,
+    "bytes": 6154
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ShopBeacon.cs",
+    "lines": 123,
+    "bytes": 6282
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ShopFixtures.cs",
+    "lines": 579,
+    "bytes": 38763
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ShopInteriorView.cs",
+    "lines": 1672,
+    "bytes": 91847
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ShopInteriorView.RestaurantWork.cs",
+    "lines": 49,
+    "bytes": 2523
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/ShopInteriorView.SpecialBusinesses.cs",
+    "lines": 97,
+    "bytes": 6389
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/SoundFx.cs",
+    "lines": 104,
+    "bytes": 4235
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.City.cs",
+    "lines": 90,
+    "bytes": 6128
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.cs",
+    "lines": 517,
+    "bytes": 30376
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.Lake.cs",
+    "lines": 412,
+    "bytes": 29838
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.Planned.cs",
+    "lines": 300,
+    "bytes": 19519
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.Racing.cs",
+    "lines": 62,
+    "bytes": 4617
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.ReferenceArchitecture.cs",
+    "lines": 57,
+    "bytes": 4191
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.ReferenceLandscape.cs",
+    "lines": 91,
+    "bytes": 5416
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/StreetWorldBuilder.RoadSurfaces.cs",
+    "lines": 118,
+    "bytes": 7004
+  },
+  {
+    "path": "Assets/Scripts/Game/Runtime/WorldViews.cs",
+    "lines": 307,
+    "bytes": 15210
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/AgencyBuildingGlow.cs",
+    "lines": 64,
+    "bytes": 3510
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/AgencyStreetMap.cs",
+    "lines": 262,
+    "bytes": 14020
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/AssetPropertyDoubleClick.cs",
+    "lines": 16,
+    "bytes": 515
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/AssetPropertyMap.cs",
+    "lines": 241,
+    "bytes": 14041
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/AssetTrendGraphic.cs",
+    "lines": 76,
+    "bytes": 4128
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/BuildMinigame.cs",
+    "lines": 288,
+    "bytes": 14190
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/CityRouteMapGraphic.cs",
+    "lines": 33,
+    "bytes": 1579
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/CompetitionRangeGraphic.cs",
+    "lines": 32,
+    "bytes": 1582
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Agency.cs",
+    "lines": 285,
+    "bytes": 20467
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.AgencyMap.cs",
+    "lines": 194,
+    "bytes": 12331
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.AssetProperties.cs",
+    "lines": 195,
+    "bytes": 14171
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Assets.cs",
+    "lines": 190,
+    "bytes": 13434
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Bench.cs",
+    "lines": 61,
+    "bytes": 3427
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.BrandOverview.cs",
+    "lines": 238,
+    "bytes": 14120
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Brands.cs",
+    "lines": 111,
+    "bytes": 7680
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Business.cs",
+    "lines": 264,
+    "bytes": 19586
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Cart.cs",
+    "lines": 432,
+    "bytes": 23986
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Cheats.cs",
+    "lines": 90,
+    "bytes": 5652
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityAssets.cs",
+    "lines": 180,
+    "bytes": 13943
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityClimate.cs",
+    "lines": 19,
+    "bytes": 892
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityClothing.cs",
+    "lines": 78,
+    "bytes": 5430
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityFinance.cs",
+    "lines": 13,
+    "bytes": 424
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityLifePanels.cs",
+    "lines": 517,
+    "bytes": 43726
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityNavigation.cs",
+    "lines": 188,
+    "bytes": 10191
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityProcurement.cs",
+    "lines": 190,
+    "bytes": 17965
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityRetail.cs",
+    "lines": 67,
+    "bytes": 4123
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CityStories.cs",
+    "lines": 143,
+    "bytes": 12266
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.CreatorRelations.cs",
+    "lines": 47,
+    "bytes": 2770
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.cs",
+    "lines": 882,
+    "bytes": 47712
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.DisplaySettings.cs",
+    "lines": 49,
+    "bytes": 3231
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.DistrictCommerce.cs",
+    "lines": 47,
+    "bytes": 2494
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Districts.cs",
+    "lines": 387,
+    "bytes": 27426
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Edit.cs",
+    "lines": 146,
+    "bytes": 7099
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Employees.cs",
+    "lines": 320,
+    "bytes": 26435
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ExpoAcceptance.cs",
+    "lines": 82,
+    "bytes": 5916
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ExpoAutoChoices.cs",
+    "lines": 64,
+    "bytes": 3141
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ExpoOverview.cs",
+    "lines": 204,
+    "bytes": 13881
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ExpoReception.cs",
+    "lines": 66,
+    "bytes": 3626
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ExpoSettlement.cs",
+    "lines": 114,
+    "bytes": 7444
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.FastFood.cs",
+    "lines": 14,
+    "bytes": 297
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Fixtures.cs",
+    "lines": 88,
+    "bytes": 5744
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Food.cs",
+    "lines": 77,
+    "bytes": 5687
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.FoodExpiry.cs",
+    "lines": 52,
+    "bytes": 2588
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Goals.cs",
+    "lines": 38,
+    "bytes": 2151
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Goods.cs",
+    "lines": 131,
+    "bytes": 7267
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Home.cs",
+    "lines": 1207,
+    "bytes": 69850
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.HomeWorkbench.cs",
+    "lines": 345,
+    "bytes": 28571
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.InformationHub.cs",
+    "lines": 57,
+    "bytes": 2613
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Interactions.cs",
+    "lines": 113,
+    "bytes": 6175
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.JointExpo.cs",
+    "lines": 33,
+    "bytes": 1654
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.KolNegotiation.cs",
+    "lines": 71,
+    "bytes": 4297
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.KolStreaming.cs",
+    "lines": 278,
+    "bytes": 17436
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.KolViewer.cs",
+    "lines": 433,
+    "bytes": 26113
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Loans.cs",
+    "lines": 70,
+    "bytes": 4708
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.MainMenu.cs",
+    "lines": 188,
+    "bytes": 8983
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Mcn.cs",
+    "lines": 93,
+    "bytes": 5210
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.MonthCalendar.cs",
+    "lines": 260,
+    "bytes": 17111
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.NarrativeCatalogue.cs",
+    "lines": 74,
+    "bytes": 4930
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Navigation.cs",
+    "lines": 135,
+    "bytes": 6889
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Npc.cs",
+    "lines": 670,
+    "bytes": 39955
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Panels.cs",
+    "lines": 402,
+    "bytes": 23752
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Park.cs",
+    "lines": 70,
+    "bytes": 5032
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Passerby.cs",
+    "lines": 43,
+    "bytes": 2129
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Phone.cs",
+    "lines": 302,
+    "bytes": 15311
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.PlayerWork.cs",
+    "lines": 113,
+    "bytes": 7537
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.PriceReport.cs",
+    "lines": 109,
+    "bytes": 7478
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ProductLabels.cs",
+    "lines": 41,
+    "bytes": 1951
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Quantities.cs",
+    "lines": 61,
+    "bytes": 3398
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.QuarterlyExpo.cs",
+    "lines": 239,
+    "bytes": 17473
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Quests.cs",
+    "lines": 248,
+    "bytes": 13812
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Racing.cs",
+    "lines": 137,
+    "bytes": 11786
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.RegionalGarages.cs",
+    "lines": 238,
+    "bytes": 18616
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Relations.cs",
+    "lines": 234,
+    "bytes": 12780
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Resale.cs",
+    "lines": 88,
+    "bytes": 6176
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ResidentialAgency.cs",
+    "lines": 140,
+    "bytes": 11370
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.RestaurantDrinks.cs",
+    "lines": 27,
+    "bytes": 1479
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Retail.cs",
+    "lines": 266,
+    "bytes": 18245
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ShelfPricing.cs",
+    "lines": 80,
+    "bytes": 4782
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Shop.cs",
+    "lines": 721,
+    "bytes": 44868
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ShopBuyers.cs",
+    "lines": 164,
+    "bytes": 10634
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ShopCompetition.cs",
+    "lines": 114,
+    "bytes": 7397
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.ShopShelf.cs",
+    "lines": 541,
+    "bytes": 31703
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.SleepBanner.cs",
+    "lines": 36,
+    "bytes": 1606
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Social.cs",
+    "lines": 50,
+    "bytes": 2463
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.SpecialBusinesses.cs",
+    "lines": 194,
+    "bytes": 16539
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Tip.cs",
+    "lines": 120,
+    "bytes": 6384
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.UpcomingSchedule.cs",
+    "lines": 161,
+    "bytes": 9344
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.UsedMotors.cs",
+    "lines": 47,
+    "bytes": 4097
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.VenueBusiness.cs",
+    "lines": 83,
+    "bytes": 6783
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.VenueServices.cs",
+    "lines": 116,
+    "bytes": 7485
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Wholesale.cs",
+    "lines": 78,
+    "bytes": 4228
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/GameUi.Workshop.cs",
+    "lines": 102,
+    "bytes": 6935
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/TipTarget.cs",
+    "lines": 25,
+    "bytes": 742
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/Ui.cs",
+    "lines": 386,
+    "bytes": 19764
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/Ui.IndustrialArt.cs",
+    "lines": 38,
+    "bytes": 3254
+  },
+  {
+    "path": "Assets/Scripts/Game/UI/WindowFit.cs",
+    "lines": 30,
+    "bytes": 1219
+  },
+  {
+    "path": "Assets/Scripts/Core/Catalog/PartCatalog.cs",
+    "lines": 189,
+    "bytes": 7766
+  },
+  {
+    "path": "Assets/Scripts/Core/Common/GameRandom.cs",
+    "lines": 55,
+    "bytes": 1716
+  },
+  {
+    "path": "Assets/Scripts/Core/Common/Money.cs",
+    "lines": 72,
+    "bytes": 3148
+  },
+  {
+    "path": "Assets/Scripts/Core/Finance/CityFinance.cs",
+    "lines": 22,
+    "bytes": 796
+  },
+  {
+    "path": "Assets/Scripts/Core/Finance/FinanceReport.cs",
+    "lines": 90,
+    "bytes": 4287
+  },
+  {
+    "path": "Assets/Scripts/Core/Finance/Ledger.cs",
+    "lines": 168,
+    "bytes": 7841
+  },
+  {
+    "path": "Assets/Scripts/Core/Finance/LedgerAttribution.cs",
+    "lines": 73,
+    "bytes": 5142
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/Backpack.cs",
+    "lines": 162,
+    "bytes": 7264
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/ClothingProducts.cs",
+    "lines": 38,
+    "bytes": 1919
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/FastFoodCatalog.cs",
+    "lines": 39,
+    "bytes": 1890
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/Furniture.cs",
+    "lines": 486,
+    "bytes": 30599
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/IndustryCycles.cs",
+    "lines": 44,
+    "bytes": 2391
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/ModelProducts.cs",
+    "lines": 33,
+    "bytes": 2931
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/Pantry.cs",
+    "lines": 213,
+    "bytes": 9187
+  },
+  {
+    "path": "Assets/Scripts/Core/Home/RetailProducts.cs",
+    "lines": 53,
+    "bytes": 4715
+  },
+  {
+    "path": "Assets/Scripts/Core/Inventory/ShelfPlanner.cs",
+    "lines": 212,
+    "bytes": 9745
+  },
+  {
+    "path": "Assets/Scripts/Core/Inventory/Stock.cs",
+    "lines": 255,
+    "bytes": 10117
+  },
+  {
+    "path": "Assets/Scripts/Core/Market/HardwareMarket.cs",
+    "lines": 249,
+    "bytes": 11143
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/BrandAgencies.cs",
+    "lines": 22,
+    "bytes": 1402
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/BrandBusinessState.cs",
+    "lines": 101,
+    "bytes": 5689
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/BusinessState.cs",
+    "lines": 121,
+    "bytes": 6096
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Campaign.cs",
+    "lines": 99,
+    "bytes": 4929
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityAssets.cs",
+    "lines": 55,
+    "bytes": 2294
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityClimate.cs",
+    "lines": 46,
+    "bytes": 2215
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityClothingCatalog.cs",
+    "lines": 73,
+    "bytes": 6295
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityLife.cs",
+    "lines": 351,
+    "bytes": 48663
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityLife.NarrativeExisting.cs",
+    "lines": 74,
+    "bytes": 15325
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityLife.NarrativePeople.cs",
+    "lines": 138,
+    "bytes": 32539
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/CityLife.Racing.cs",
+    "lines": 16,
+    "bytes": 2355
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Contacts.cs",
+    "lines": 169,
+    "bytes": 8386
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/DistrictNarrativeCatalog.cs",
+    "lines": 128,
+    "bytes": 30834
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/DistrictProgress.cs",
+    "lines": 47,
+    "bytes": 2279
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/EventCatalog.cs",
+    "lines": 440,
+    "bytes": 21762
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/ExpoMoments.cs",
+    "lines": 69,
+    "bytes": 8709
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.AssetReports.cs",
+    "lines": 102,
+    "bytes": 5513
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.BrandAmbassadors.cs",
+    "lines": 58,
+    "bytes": 2950
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.BrandOverview.cs",
+    "lines": 84,
+    "bytes": 4135
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Brands.cs",
+    "lines": 337,
+    "bytes": 26837
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.BrandStories.cs",
+    "lines": 208,
+    "bytes": 18105
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.BusinessLife.cs",
+    "lines": 145,
+    "bytes": 10504
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Campaign.cs",
+    "lines": 181,
+    "bytes": 8274
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Cart.cs",
+    "lines": 675,
+    "bytes": 32409
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Cheats.cs",
+    "lines": 106,
+    "bytes": 4189
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityActivities.cs",
+    "lines": 553,
+    "bytes": 41264
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityAssets.cs",
+    "lines": 307,
+    "bytes": 23006
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityClimate.cs",
+    "lines": 99,
+    "bytes": 6200
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityClothing.cs",
+    "lines": 92,
+    "bytes": 7148
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityCustomers.cs",
+    "lines": 55,
+    "bytes": 3407
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityFinance.cs",
+    "lines": 124,
+    "bytes": 7792
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityLayoutMigration.cs",
+    "lines": 105,
+    "bytes": 5766
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityPeople.cs",
+    "lines": 523,
+    "bytes": 34231
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityPreset.cs",
+    "lines": 90,
+    "bytes": 6483
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityProcurement.cs",
+    "lines": 426,
+    "bytes": 33207
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityPurchaseTravel.cs",
+    "lines": 91,
+    "bytes": 5159
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityRetail.cs",
+    "lines": 217,
+    "bytes": 16595
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityStories.cs",
+    "lines": 421,
+    "bytes": 33508
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CityVisits.cs",
+    "lines": 45,
+    "bytes": 2338
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CommunitySearch.cs",
+    "lines": 148,
+    "bytes": 9818
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Conversations.cs",
+    "lines": 260,
+    "bytes": 15804
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Courier.cs",
+    "lines": 472,
+    "bytes": 26762
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.CreatorRelations.cs",
+    "lines": 131,
+    "bytes": 9717
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.cs",
+    "lines": 609,
+    "bytes": 30947
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.DistrictCommerce.cs",
+    "lines": 104,
+    "bytes": 8741
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Districts.cs",
+    "lines": 584,
+    "bytes": 39525
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.DistrictTasks.cs",
+    "lines": 131,
+    "bytes": 14186
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.EmployeeAssignments.cs",
+    "lines": 121,
+    "bytes": 7569
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Energy.cs",
+    "lines": 33,
+    "bytes": 1783
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Events.cs",
+    "lines": 205,
+    "bytes": 8943
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.ExpoAcceptance.cs",
+    "lines": 319,
+    "bytes": 18247
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.ExpoCalendar.cs",
+    "lines": 52,
+    "bytes": 2536
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.ExpoFinance.cs",
+    "lines": 51,
+    "bytes": 2300
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.FastFood.cs",
+    "lines": 45,
+    "bytes": 2511
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Fixtures.cs",
+    "lines": 164,
+    "bytes": 8771
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Food.cs",
+    "lines": 99,
+    "bytes": 6206
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Footfall.cs",
+    "lines": 19,
+    "bytes": 1070
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Goods.cs",
+    "lines": 226,
+    "bytes": 13205
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Growth.cs",
+    "lines": 166,
+    "bytes": 7253
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Home.cs",
+    "lines": 808,
+    "bytes": 43455
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.HomeWorkbench.cs",
+    "lines": 223,
+    "bytes": 16478
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Interactions.cs",
+    "lines": 100,
+    "bytes": 5163
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.JointExpo.cs",
+    "lines": 62,
+    "bytes": 3171
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.KolFees.cs",
+    "lines": 12,
+    "bytes": 502
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.KolShowcase.cs",
+    "lines": 43,
+    "bytes": 1913
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.KolStreaming.cs",
+    "lines": 652,
+    "bytes": 36218
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.LayoutHistory.cs",
+    "lines": 72,
+    "bytes": 3923
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Life.cs",
+    "lines": 185,
+    "bytes": 8064
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Loans.cs",
+    "lines": 84,
+    "bytes": 4541
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Mall.cs",
+    "lines": 350,
+    "bytes": 17319
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.McnIntroductions.cs",
+    "lines": 113,
+    "bytes": 6227
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Npcs.cs",
+    "lines": 191,
+    "bytes": 9769
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Pack.cs",
+    "lines": 681,
+    "bytes": 34776
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Park.cs",
+    "lines": 83,
+    "bytes": 5638
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Payroll.cs",
+    "lines": 181,
+    "bytes": 11836
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.PlayerWork.cs",
+    "lines": 268,
+    "bytes": 15199
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.PriceReport.cs",
+    "lines": 75,
+    "bytes": 3915
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.PropertyMarket.cs",
+    "lines": 86,
+    "bytes": 3846
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.PropertyMarketAcceptance.cs",
+    "lines": 62,
+    "bytes": 2780
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.PurchaseCatalog.cs",
+    "lines": 145,
+    "bytes": 8764
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.PurchaseHistory.cs",
+    "lines": 27,
+    "bytes": 1437
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.QuarterlyExpo.cs",
+    "lines": 236,
+    "bytes": 18182
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Racing.cs",
+    "lines": 170,
+    "bytes": 13126
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.RacingAcceptance.cs",
+    "lines": 29,
+    "bytes": 1713
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Realty.cs",
+    "lines": 555,
+    "bytes": 29952
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.RegionalGarages.cs",
+    "lines": 205,
+    "bytes": 13385
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Resale.cs",
+    "lines": 44,
+    "bytes": 2836
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.ResidentialAgency.cs",
+    "lines": 50,
+    "bytes": 3191
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.ResidentialProperties.cs",
+    "lines": 114,
+    "bytes": 7173
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.RestaurantDrinks.cs",
+    "lines": 24,
+    "bytes": 1158
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.RestaurantWork.cs",
+    "lines": 189,
+    "bytes": 13660
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Restock.cs",
+    "lines": 205,
+    "bytes": 11710
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Retail.cs",
+    "lines": 139,
+    "bytes": 9672
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Save.cs",
+    "lines": 371,
+    "bytes": 20197
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Shop.cs",
+    "lines": 285,
+    "bytes": 15725
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.ShopCompetition.cs",
+    "lines": 60,
+    "bytes": 2942
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Shops.cs",
+    "lines": 325,
+    "bytes": 19616
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Social.cs",
+    "lines": 423,
+    "bytes": 20836
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.SpecialBusinesses.cs",
+    "lines": 367,
+    "bytes": 26014
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Staff.cs",
+    "lines": 164,
+    "bytes": 8553
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.StaffCapacity.cs",
+    "lines": 82,
+    "bytes": 4919
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Steer.cs",
+    "lines": 300,
+    "bytes": 13307
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.SupplierLimits.cs",
+    "lines": 138,
+    "bytes": 10006
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.SupplyContracts.cs",
+    "lines": 197,
+    "bytes": 12848
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Talk.cs",
+    "lines": 158,
+    "bytes": 8456
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Trade.cs",
+    "lines": 227,
+    "bytes": 12397
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Travel.cs",
+    "lines": 253,
+    "bytes": 11618
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.UsedMotors.cs",
+    "lines": 98,
+    "bytes": 7567
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Ventures.cs",
+    "lines": 162,
+    "bytes": 11176
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.VenueBusiness.cs",
+    "lines": 164,
+    "bytes": 11066
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.VenueServices.cs",
+    "lines": 113,
+    "bytes": 7629
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Visits.cs",
+    "lines": 303,
+    "bytes": 15949
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Warehouses.cs",
+    "lines": 66,
+    "bytes": 3466
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.WeightMigration.cs",
+    "lines": 30,
+    "bytes": 1254
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Workforce.cs",
+    "lines": 571,
+    "bytes": 36621
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/GameSession.Workshop.cs",
+    "lines": 86,
+    "bytes": 4534
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/KolStreamingState.cs",
+    "lines": 97,
+    "bytes": 5455
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/NpcEvents.cs",
+    "lines": 320,
+    "bytes": 16915
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/NpcNames.cs",
+    "lines": 53,
+    "bytes": 1961
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Npcs.cs",
+    "lines": 178,
+    "bytes": 9941
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/NpcTalk.cs",
+    "lines": 167,
+    "bytes": 11050
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/OwnedShop.cs",
+    "lines": 46,
+    "bytes": 2272
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/PhoneApps.cs",
+    "lines": 51,
+    "bytes": 2544
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/PlaceRoster.cs",
+    "lines": 235,
+    "bytes": 15669
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Police.cs",
+    "lines": 254,
+    "bytes": 9248
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Quests.cs",
+    "lines": 206,
+    "bytes": 10167
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Quests.Growth.cs",
+    "lines": 166,
+    "bytes": 10708
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Quests.Opening.cs",
+    "lines": 121,
+    "bytes": 6602
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/RaceSimulation.cs",
+    "lines": 125,
+    "bytes": 8145
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/RacingCatalog.cs",
+    "lines": 124,
+    "bytes": 8844
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/RacingSchedule.cs",
+    "lines": 16,
+    "bytes": 989
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Residents.cs",
+    "lines": 257,
+    "bytes": 15999
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityAssets.cs",
+    "lines": 17,
+    "bytes": 499
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityClimate.cs",
+    "lines": 11,
+    "bytes": 380
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityClothing.cs",
+    "lines": 12,
+    "bytes": 380
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityFinance.cs",
+    "lines": 19,
+    "bytes": 558
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityLife.cs",
+    "lines": 135,
+    "bytes": 9617
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityProcurement.cs",
+    "lines": 10,
+    "bytes": 337
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityRetail.cs",
+    "lines": 22,
+    "bytes": 741
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.CityVisits.cs",
+    "lines": 10,
+    "bytes": 211
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/SaveData.cs",
+    "lines": 482,
+    "bytes": 15819
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Social.cs",
+    "lines": 109,
+    "bytes": 4043
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Trip.cs",
+    "lines": 219,
+    "bytes": 9901
+  },
+  {
+    "path": "Assets/Scripts/Core/Session/Vehicles.cs",
+    "lines": 87,
+    "bytes": 3853
+  },
+  {
+    "path": "Assets/Scripts/Core/Shop/RealEstate.cs",
+    "lines": 82,
+    "bytes": 4064
+  },
+  {
+    "path": "Assets/Scripts/Core/Shop/ShopSimulation.CitySave.cs",
+    "lines": 98,
+    "bytes": 7137
+  },
+  {
+    "path": "Assets/Scripts/Core/Shop/ShopSimulation.cs",
+    "lines": 1108,
+    "bytes": 50386
+  },
+  {
+    "path": "Assets/Scripts/Core/Shop/ShopSimulation.Pricing.cs",
+    "lines": 72,
+    "bytes": 4377
+  },
+  {
+    "path": "Assets/Scripts/Core/Shop/ShopSimulation.Resale.cs",
+    "lines": 39,
+    "bytes": 1770
+  },
+  {
+    "path": "Assets/Scripts/Core/Shop/ShopUpgrades.cs",
+    "lines": 111,
+    "bytes": 5434
+  },
+  {
+    "path": "Assets/Scripts/Core/Time/GameClock.cs",
+    "lines": 101,
+    "bytes": 3895
+  },
+  {
+    "path": "Assets/Scripts/Core/Time/GameDate.cs",
+    "lines": 71,
+    "bytes": 3245
+  },
+  {
+    "path": "Assets/Scripts/Core/Time/GameTimestamp.cs",
+    "lines": 57,
+    "bytes": 2857
+  },
+  {
+    "path": "Assets/Scripts/Core/Time/TimeController.cs",
+    "lines": 99,
+    "bytes": 3885
+  },
+  {
+    "path": "Assets/Scripts/Core/Trade/Online1788.cs",
+    "lines": 209,
+    "bytes": 7988
+  },
+  {
+    "path": "Assets/Scripts/Core/World/CityLayout.cs",
+    "lines": 451,
+    "bytes": 19536
+  },
+  {
+    "path": "Assets/Scripts/Core/World/CityTravelTiming.cs",
+    "lines": 57,
+    "bytes": 3605
+  },
+  {
+    "path": "Assets/Scripts/Core/World/DistrictRoadGate.cs",
+    "lines": 51,
+    "bytes": 2452
+  },
+  {
+    "path": "Assets/Scripts/Core/World/Pathfinder.cs",
+    "lines": 91,
+    "bytes": 3283
+  },
+  {
+    "path": "Assets/Scripts/Core/World/PathWalker.cs",
+    "lines": 84,
+    "bytes": 3123
+  },
+  {
+    "path": "Assets/Scripts/Core/World/ShopFootfall.cs",
+    "lines": 78,
+    "bytes": 4011
+  },
+  {
+    "path": "Assets/Scripts/Core/World/Transport.cs",
+    "lines": 34,
+    "bytes": 1255
+  },
+  {
+    "path": "Assets/Scripts/Core/World/TravelPlanner.cs",
+    "lines": 94,
+    "bytes": 3647
+  },
+  {
+    "path": "Assets/Scripts/Core/World/WorldMap.cs",
+    "lines": 120,
+    "bytes": 4223
+  }
+]

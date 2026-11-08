@@ -27,12 +27,13 @@ namespace PCShopSell.Core.Session
         public string[] cityEmployeeIds,cityEmployeePersonIds,cityTopicKeys,cityTrustIds,cityFavorites,cityRecent;
         public int[] cityTopicDays,cityTrustValues;
         public string cityDefaultDestination,cityAgencyShortcut,cityMarketShortcut,cityShopShortcut,cityHomeShortcut;
+        public bool cityMarketShortcutExplicit;
     }
     [Serializable] public sealed class CitySavedTrip
     {
         public double[] xs,ys,viewLengths,gameLengths;
         public string[] nodeAt;
-        public string target;
+        public string target,firstRoadOtherEnd;
         public int segment,vehicle;
         public double progress,viewDone;
     }
@@ -57,7 +58,8 @@ namespace PCShopSell.Core.Session
             d.cityEmployeeIds=_cityEmployeeAliases.Keys.ToArray();d.cityEmployeePersonIds=_cityEmployeeAliases.Values.ToArray();
             d.cityTopicKeys=_cityTopicDay.Keys.ToArray();d.cityTopicDays=_cityTopicDay.Values.ToArray();d.cityTrustIds=_cityTrust.Keys.ToArray();d.cityTrustValues=_cityTrust.Values.ToArray();
             d.cityFavorites=_cityFavorites.ToArray();d.cityRecent=_cityRecent.ToArray();d.cityDefaultDestination=CityDefaultDestination;
-            d.cityAgencyShortcut=CityAgencyShortcut;d.cityMarketShortcut=CityMarketShortcut;d.cityShopShortcut=CityShopShortcut;
+            d.cityAgencyShortcut=CityAgencyShortcut;d.cityMarketShortcut=_cityMarketShortcut;d.cityShopShortcut=CityShopShortcut;
+            d.cityMarketShortcutExplicit=_cityMarketShortcut!=null;
             d.cityHomeShortcut = CityHomeShortcut;
             SaveCityStories(d);
             SaveCityVisits(d);
@@ -107,7 +109,7 @@ namespace PCShopSell.Core.Session
             _cityRecent.Clear();_cityRecent.AddRange((d.cityRecent??Array.Empty<string>()).Where(City.HasPlace).Distinct().Take(6));
             CityDefaultDestination=City.HasPlace(d.cityDefaultDestination)?d.cityDefaultDestination:null;
             CityAgencyShortcut=City.HasPlace(d.cityAgencyShortcut)?d.cityAgencyShortcut:"agency";
-            CityMarketShortcut=City.HasPlace(d.cityMarketShortcut)?d.cityMarketShortcut:"stall_cpu";
+            _cityMarketShortcut=City.HasPlace(d.cityMarketShortcut)&&(d.cityMarketShortcutExplicit||d.cityMarketShortcut!="stall_cpu")?d.cityMarketShortcut:null;
             CityShopShortcut=MyShops.Any(s=>s.Place.Id==d.cityShopShortcut)?d.cityShopShortcut:null;
             CityHomeShortcut = City.HasPlace(d.cityHomeShortcut) ? d.cityHomeShortcut : null;
             CityIntent=d.cityTravelIntent!=null&&City.HasPlace(d.cityTravelIntent.TargetPlaceId)&&!d.cityTravelIntent.Cancelled?d.cityTravelIntent:null;

@@ -18,8 +18,9 @@ namespace PCShopSell.Core.Shop
         public double GoodsMirrorBonus(string id)=>ClothingProducts.IsClothing(id)?ClothingMirrorPurchaseIntentBonus:0;
         public double RestaurantDrinkPurchaseIntentBonus(string id) => RetailKind == "restaurant" && RetailProducts.IsDrink(id) ? .20 : 0;
         public double SalesPurchaseIntentBonus => Math.Max(0,Math.Min(.25,SalesBonusOf?.Invoke()??0));
+        public double ReputationPurchaseIntentBonus => (ShopReputation - NeutralShopReputation) * .003;
         public double MarkupPurchaseIntent(double markup) => AssistedPurchaseIntent(ShopSettings.BuyChance(markup));
-        private double AssistedPurchaseIntent(double baseline)=>Math.Max(0,Math.Min(1,baseline+SalesPurchaseIntentBonus));
+        private double AssistedPurchaseIntent(double baseline)=>Math.Max(0,Math.Min(1,baseline+SalesPurchaseIntentBonus+ReputationPurchaseIntentBonus));
         private double PartPurchaseChance(double markup,bool boxed)
         {
             double chance=ShopSettings.BuyChance(markup);

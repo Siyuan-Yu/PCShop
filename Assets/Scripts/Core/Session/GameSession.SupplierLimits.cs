@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Catalog;
+using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
@@ -10,7 +11,7 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         // Baselines only; actual capacity belongs to the merchant + exact product pair.
-        public static int SupplierDailyLimit(string productId) => ModelProducts.IsModel(productId)?20:ClothingProducts.IsClothing(productId)?60:
+        public static int SupplierDailyLimit(string productId) => PetShopCatalog.IsProduct(productId) ? (PetShopCatalog.IsFood(productId) ? 60 : 32) - PetShopCatalog.Tier(productId)*10 : ModelProducts.IsModel(productId)?20:ClothingProducts.IsClothing(productId)?60:
             productId!=null&&(productId.StartsWith("produce:")||productId.StartsWith("fast:"))?80:40;
         public int SupplierCapacity(string sourceId,string productId)
         {
@@ -28,7 +29,7 @@ namespace PCShopSell.Core.Session
             offer.Kind==PurchaseGoodsKind.Gift||offer.Kind==PurchaseGoodsKind.Ingredient||offer.Kind==PurchaseGoodsKind.Rice?CitySupplierRemaining(offer.Source.Id,PhysicalProductId(offer)):
             Math.Max(0,PurchaseLimit(offer)-(_citySupplierPurchases.TryGetValue(SupplierCounterKey(offer.Source.Id,PhysicalProductId(offer)),out var used)?used:0));
         private void RecordOtherSupply(PurchaseOffer offer,int count)=>RecordCitySupplierPurchase(offer.Source.Id,PhysicalProductId(offer),count);
-        private static bool SupplierClosesOnWeekend(Place source)=>source.Kind==PlaceKind.Wholesaler||source.Id=="model_market"||source.Id=="clothing_wholesale";
+        public static bool SupplierClosesOnWeekend(Place source)=>source.Kind==PlaceKind.Wholesaler||source.Id=="model_market"||source.Id=="clothing_wholesale"||source.Id==PetShopCatalog.SupplierId;
         private static bool SourceWorksOnWeekday(PurchaseOffer offer,int weekday)=>!SupplierClosesOnWeekend(offer.Source)||weekday<5;
         private bool SupplierPlanHasDay(EmployeePurchasePlan plan,int day)
         {
@@ -49,7 +50,10 @@ namespace PCShopSell.Core.Session
         }
         public string EmployeePurchaseNextText(string employeeId)
         {
-            int next=NextEmployeePurchaseDay(employeeId);return next<0?"暂无可执行配额，请调整清单":"下次最早第"+(next+1)+"天上班时尝试";
+            int next = NextEmployeePurchaseDay(employeeId);
+            if (next < 0) return "暂无可执行配额，请调整清单";
+            var date = new GameDate(next);
+            return $"下次采购 {date}（周{"一二三四五六日"[(int)date.Weekday]}）上班后";
         }
         private static int ReservationCount(EmployeePurchasePlan plan,PurchaseLine line,int weekday)
         {
@@ -89,14 +93,23 @@ namespace PCShopSell.Core.Session
         }
         public int SupplierPlanMaximum(string employeeId,EmployeePurchasePlan draft,PurchaseOffer offer,bool allDays)
         {
-            var days=Enumerable.Range(0,7).Where(d=>draft.MatchesWeekday(d)&&SourceWorksOnWeekday(offer,d)).ToArray();
-            if(days.Length==0)return 0;
-            return allDays?days.Min(d=>SupplierPlanHeadroom(employeeId,draft,offer,d)):days.Max(d=>SupplierPlanHeadroom(employeeId,draft,offer,d));
+            var rooms = SupplierPlanRooms(employeeId, draft, offer).Select(entry => entry.Room).DefaultIfEmpty(0);
+            return allDays ? rooms.Min() : rooms.Max();
         }
-        public string SupplierAllocationText(string employeeId,EmployeePurchasePlan draft,PurchaseOffer offer)
+
+        private IEnumerable<(int Weekday, int Room)> SupplierPlanRooms(string employeeId, EmployeePurchasePlan draft, PurchaseOffer offer)
         {
-            string[] names={"一","二","三","四","五","六","日"};
-            return "计划可分配："+string.Join(" / ",Enumerable.Range(0,7).Where(d=>draft.MatchesWeekday(d)&&SourceWorksOnWeekday(offer,d)).Select(d=>"周"+names[d]+" "+SupplierPlanHeadroom(employeeId,draft,offer,d)));
+            for (int day = 0; day < 7; day++)
+                if (draft.MatchesWeekday(day) && SourceWorksOnWeekday(offer, day))
+                    yield return (day, SupplierPlanHeadroom(employeeId, draft, offer, day));
+        }
+
+        public (int FixedMaximum, int Maximum, string Allocation) SupplierAllocationPreview(string employeeId, EmployeePurchasePlan draft, PurchaseOffer offer)
+        {
+            var rooms = SupplierPlanRooms(employeeId, draft, offer).ToArray();
+            if (rooms.Length == 0) return (0, 0, "计划可分配：无");
+            string days = string.Join(" / ", rooms.Select(entry => $"周{"一二三四五六日"[entry.Weekday]} {entry.Room}"));
+            return (rooms.Min(entry => entry.Room), rooms.Max(entry => entry.Room), "计划可分配：" + days);
         }
         private string AllocateSupplierPlan(string employeeId,EmployeePurchasePlan plan,bool migrate=false)
         {

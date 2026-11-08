@@ -63,6 +63,7 @@ namespace PCShopSell.Core.Session
         /// <summary>把所有升级的效果套到店铺上（幂等）。</summary>
         internal void ApplyUpgrades()
         {
+            _streetTrafficAt = -1;
             PaymentMethods acc = PaymentMethods.Cash;
             if (_upgrades.Contains(ShopUpgrades.Qr)) acc |= PaymentMethods.QrCode;
             if (_upgrades.Contains(ShopUpgrades.SelfCheckout)) acc |= PaymentMethods.SelfCheckout;
@@ -78,7 +79,7 @@ namespace PCShopSell.Core.Session
         public OutfitDef Outfit => Outfits.Get(EquippedOutfit) ?? Outfits.Get(Outfits.Default);
 
         /// <summary>基础魅力 + 衣服加成。</summary>
-        public int EffectiveCharm => Player.Charm + Outfit.CharmBonus + (_owned.Contains(VehicleKind.Car) ? 2 : 0);
+        public int EffectiveCharm => Player.Charm + Outfit.CharmBonus + (VehicleCount(VehicleKind.Car) > 0 ? 2 : 0);
 
         /// <summary>换上一件已经有的衣服（在衣柜里）。</summary>
         /// <summary>调试 / 冒烟：直接拥有一件衣服。</summary>
