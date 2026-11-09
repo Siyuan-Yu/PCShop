@@ -516,18 +516,17 @@ namespace PCShopSell.Core.Session
                 var lines=new List<string> {attendance+"在"+City.GetPlace(a.VenueId).Name+"参加了"+(def?.Name??"活动")+"。",
                     "本次服务："+VenueServiceName(def,Math.Max(0,a.ServiceChoice))+" · 支出 "+(a.EntryCostRecorded?Money.FromCents(a.EntryCostCents):Money.FromYuan(def?.PriceYuan??0)),
                     "体验时长："+Math.Max(0,now-a.ActualStart)+" 分钟", ""};
-                string[] statNames={"饱腹","精力","心情","健康","魅力","见识","营养"};
                 lines.Add("你的变化（含这段时间的正常消耗）：");
-                for(int i=0;i<statNames.Length;i++)
+                for(int i=0;i<CityActivityStatNames.Count;i++)
                 {
                     double after=a.PlayerStatsAfter[i];
-                    if(a.PlayerStatsBefore!=null && a.PlayerStatsBefore.Length==statNames.Length)
+                    if(a.PlayerStatsBefore!=null && a.PlayerStatsBefore.Length==CityActivityStatNames.Count)
                     {
                         double before=a.PlayerStatsBefore[i]; double delta=Math.Round(after-before,1);
-                        lines.Add(statNames[i]+" "+before.ToString("0.#")+" → "+after.ToString("0.#")
+                        lines.Add(CityActivityStatNames[i]+" "+before.ToString("0.#")+" → "+after.ToString("0.#")
                             +"（"+(delta>0?"+":"")+delta.ToString("0.#")+"）");
                     }
-                    else lines.Add(statNames[i]+"："+after.ToString("0.#"));
+                    else lines.Add(CityActivityStatNames[i]+"："+after.ToString("0.#"));
                 }
                 lines.Add("");
                 foreach(var participant in a.Participants)
@@ -556,6 +555,8 @@ namespace PCShopSell.Core.Session
             }
             Say(reason+"；你仍在当前场所，可回店、回家或继续逛。");
         }
+        public static IReadOnlyList<string> CityActivityStatNames { get; } = Array.AsReadOnly(new[] { "饱腹", "精力", "心情", "健康", "魅力", "见识", "营养" });
+
         private double[] CityActivityPlayerStats() => new double[] {
             Player.Hunger,Player.Energy,Player.Mood,Player.Health,Player.Charm,Player.Intelligence,Player.Nutrition
         };

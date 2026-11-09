@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
@@ -386,14 +387,120 @@ namespace PCShopSell.Game.UI
 
         public void OpenCityActivitySettlement(string activityId)
         {
-            var activity=S.CityActivities.FirstOrDefault(a=>a.Id==activityId);
-            if(string.IsNullOrEmpty(activity?.SettlementSummary))return;
-            bool solo=activity.Participants.Length==0;
-            OpenWindow(solo?"活动结算":"相处结算",800,740,w=>
+            var activity = S.CityActivities.FirstOrDefault(a => a.Id == activityId);
+            if (string.IsNullOrEmpty(activity?.SettlementSummary)) return;
+            bool solo = activity.Participants.Length == 0;
+            OpenWindow(solo ? "活动结算" : "相处结算", solo ? 780 : 960, 650, w =>
             {
-                Para(w.Content,activity.SettlementSummary,19);
-                Ui.Size(Ui.Button(w.Content,"收好这段回忆",w.Close,20,Ui.ButtonHot),-1,46);
-            },onClosed:()=>OpenCommunityActivityClue(activityId));
+                var definition = S.CityActivityService(activity);
+                var overview = Ui.Row(w.Content, 98, 14);
+                var heading = SettlementCard(overview, "ActivityOverview", 2);
+                Line(heading, definition?.Name ?? "活动", 24);
+                string venue = S.City.HasPlace(activity.VenueId) ? S.City.GetPlace(activity.VenueId).Name : activity.VenueId;
+                Para(heading, venue + " · " + GameSession.VenueServiceName(definition, Math.Max(0, activity.ServiceChoice)), 16, Ui.Dim);
+
+                var cost = SettlementCard(overview, "ActivityCost");
+                Line(cost, activity.EntryCostRecorded ? "本次支出" : "参考费用", 15, Ui.Dim);
+                var amount = activity.EntryCostRecorded ? Money.FromCents(activity.EntryCostCents) : Money.FromYuan(definition?.PriceYuan ?? 0);
+                Line(cost, amount.ToString(), 24, Ui.Accent);
+
+                var duration = SettlementCard(overview, "ActivityDuration");
+                Line(duration, "体验时长", 15, Ui.Dim);
+                string minutes = activity.ActualStart >= 0 && activity.ActualEnd >= activity.ActualStart
+                    ? $"{activity.ActualEnd - activity.ActualStart} 分钟" : "—";
+                Line(duration, minutes, 24);
+
+                var body = Ui.Scroll(w.Content);
+                Ui.Size((RectTransform)body.parent.parent, -1, 0).GetComponent<LayoutElement>().flexibleHeight = 1;
+                var bodyLayout = body.GetComponent<VerticalLayoutGroup>();
+                bodyLayout.spacing = 10;
+                bodyLayout.padding = new RectOffset(0, 2, 2, 2);
+                if (activity.PlayerStatsAfter == null || activity.PlayerStatsAfter.Length == 0)
+                    Para(body, activity.SettlementSummary, 17);
+                else
+                {
+                    var results = Ui.Row(body, -1, 12);
+                    var layout = results.GetComponent<HorizontalLayoutGroup>();
+                    layout.childAlignment = TextAnchor.UpperLeft;
+                    layout.childForceExpandHeight = false;
+                    if (!solo) BuildActivityRelationshipResults(results, activity);
+                    BuildActivityPersonalResults(results, activity);
+
+                    var memory = SettlementCard(body, "ActivityMemory");
+                    string[] interactions = (activity.Choices ?? Array.Empty<string>())
+                        .Select(key => int.TryParse(key, out int index) && index >= 0 && index < (definition?.Choices.Length ?? 0)
+                            ? definition.Choices[index] : null).Where(choice => choice != null).ToArray();
+                    if (interactions.Length > 0)
+                    {
+                        Line(memory, solo ? "体验内容" : "一起做过", 18, Ui.Accent);
+                        Para(memory, string.Join("、", interactions), 17);
+                    }
+                    if (!string.IsNullOrWhiteSpace(activity.EndReason)) Para(memory, activity.EndReason, 16, Ui.Dim);
+                }
+
+                var footer = Ui.Row(w.Content, 44, 10);
+                bool completed = activity.State == CityActivityPhase.Completed;
+                string status = completed && !solo ? "已记入人脉记录" : GameSession.CityPhaseText(activity.State);
+                Ui.Size(Ui.Label(footer, status, 16, TextAnchor.MiddleLeft, completed ? Ui.Good : Ui.FlatDown), 0, -1, 1);
+                Ui.Size(Ui.Button(footer, solo ? "完成" : "收好这段回忆", w.Close, 18, Ui.ButtonHot), 200, 44);
+            }, onClosed: () => OpenCommunityActivityClue(activityId), scrollContent: false);
+        }
+
+        private static RectTransform SettlementCard(Transform parent, string name, float flexWidth = 1)
+        {
+            var card = Ui.FlatPanel(parent, name).rectTransform;
+            Ui.VList(card, 3, 10);
+            var size = Ui.Size(card, 0, -1, flexWidth).GetComponent<LayoutElement>();
+            size.minWidth = 0;
+            return card;
+        }
+
+        private void BuildActivityRelationshipResults(Transform parent, CityActivity activity)
+        {
+            var card = SettlementCard(parent, "ActivityRelationships", 1.2f);
+            Line(card, "关系变化", 20, Ui.Accent);
+            foreach (var participant in activity.Participants)
+            {
+                var person = SettlementCard(card, "ActivityCompanion");
+                person.GetComponent<Image>().color = Ui.FlatBand;
+                var identity = Ui.Row(person, 46, 9);
+                PortraitThumb(identity, participant.PersonId, 44, null);
+                Ui.Size(Ui.Label(identity, "<b>" + (S.CityPerson(participant.PersonId)?.Name ?? "同行者") + "</b>", 19), 0, -1, 1);
+                SettlementChange(person, "好感", participant.ResultCaptured ? participant.RelationBefore : (double?)null, participant.RelationAfter);
+                SettlementChange(person, "履约信任", participant.ResultCaptured ? participant.TrustBefore : (double?)null, participant.TrustAfter);
+                if (activity.State == CityActivityPhase.Completed && activity.DefinitionId == "dinner" && S.IsMet(participant.PersonId))
+                    Para(person, "可在手机通讯录联系", 14, Ui.Dim);
+            }
+        }
+
+        private static void BuildActivityPersonalResults(Transform parent, CityActivity activity)
+        {
+            var card = SettlementCard(parent, "ActivityPersonalChanges");
+            Line(card, "个人状态", 20, Ui.Accent);
+            Para(card, "含活动期间的日常消耗", 14, Ui.Dim);
+            var names = GameSession.CityActivityStatNames;
+            bool any = false;
+            for (int i = 0; i < Math.Min(names.Count, activity.PlayerStatsAfter.Length); i++)
+            {
+                double after = activity.PlayerStatsAfter[i];
+                double? before = i < (activity.PlayerStatsBefore?.Length ?? 0) ? activity.PlayerStatsBefore[i] : (double?)null;
+                if (before.HasValue && Math.Round(after - before.Value, 1) == 0) continue;
+                SettlementChange(card, names[i], before, after);
+                any = true;
+            }
+            if (!any) Para(card, "本次没有数值变化", 16, Ui.Dim);
+        }
+
+        private static void SettlementChange(Transform parent, string label, double? before, double after)
+        {
+            var row = Ui.Row(parent, 26, 6);
+            Ui.Size(Ui.Label(row, label, 16), 82);
+            string values = before.HasValue ? $"{before.Value:0.#} → {after:0.#}" : $"{after:0.#}";
+            Ui.Size(Ui.Label(row, values, 16, TextAnchor.MiddleLeft, Ui.Dim), 0, -1, 1);
+            if (!before.HasValue) return;
+            double delta = Math.Round(after - before.Value, 1);
+            var color = delta > 0 ? Ui.Good : delta < 0 ? Ui.FlatDown : Ui.Dim;
+            Ui.Size(Ui.Label(row, $"<b>{delta:+0.#;-0.#;0}</b>", 20, TextAnchor.MiddleRight, color), 68);
         }
 
         private void OpenCommunityActivityClue(string activityId)
