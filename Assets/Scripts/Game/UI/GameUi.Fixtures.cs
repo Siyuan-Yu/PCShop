@@ -4,6 +4,7 @@ using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
 {
@@ -46,14 +47,65 @@ namespace PCShopSell.Game.UI
             return s;
         }
 
-        /// <summary>柜台页顶部的一行提示：毛坯 / 装修中，点一下去“装修”页。装修好了且今天能开业就不显示。</summary>
-        private void FitBanner(Transform parent)
+        private const float DockContentBottom = 54;
+        private const float ShopFitWarningMinHeight = 78;
+        private const float ShopFitDetailTop = 34;
+        private const float ShopFitDetailBottom = 8;
+        private RectTransform _shopFitWarning;
+        private Text _shopFitTitle, _shopFitDetail, _shopFitActionLabel;
+
+        private void BuildShopFitWarning()
         {
-            if (S.ShopFitted && !S.IsRenovating) return;
-            string head = S.ShopFitted
-                ? "<color=#DDC18B>今天歇业装修，明天恢复营业。</color>"
-                : "<color=#DDC18B>店还没布置好，开不了业：</color>" + S.ShopFitGap();
-            Para(parent, head + "　<color=#AAB4BB>（在“装修”页摆放）</color>", 15);
+            _shopFitWarning = Ui.Panel(_dock, "ShopFitWarning", new Color32(91, 47, 31, 255)).rectTransform
+                .Anchor(0, 0, 1, 0, 12, DockContentBottom, 12, -(DockContentBottom + ShopFitWarningMinHeight));
+            var highlight = new Color32(255, 198, 134, 255);
+            Ui.Panel(_shopFitWarning, "Accent", highlight).rectTransform.Anchor(0, 0, 0, 1, 0, 0, -4, 0);
+            _shopFitTitle = Ui.Label(_shopFitWarning, "", 21, color: highlight);
+            _shopFitTitle.fontStyle = FontStyle.Bold;
+            _shopFitTitle.rectTransform.Anchor(0, 1, 1, 1, 14, -31, 124, 6);
+            _shopFitDetail = Ui.Label(_shopFitWarning, "", 17, TextAnchor.UpperLeft, Color.white);
+            _shopFitDetail.rectTransform.Anchor(0, 0, 1, 1, 14, ShopFitDetailBottom, 124, ShopFitDetailTop);
+            var action = Ui.Button(_shopFitWarning, "去装修", GoToShopFitAction, 17, Ui.ButtonHot);
+            action.name = "ShopFitWarningAction";
+            ((RectTransform)action.transform).Anchor(1, .5f, 1, .5f, -110, -20, 10, -20);
+            _shopFitActionLabel = action.GetComponentInChildren<Text>();
+            _shopFitWarning.gameObject.SetActive(false);
+        }
+
+        private void RefreshShopFitWarning()
+        {
+            bool fitted = S.ShopFitted;
+            bool visible = !fitted || S.IsRenovating;
+            bool visibilityChanged = _shopFitWarning.gameObject.activeSelf != visible;
+            if (visibilityChanged) _shopFitWarning.gameObject.SetActive(visible);
+
+            float contentBottom = DockContentBottom;
+            if (visible)
+            {
+                string missing = fitted ? null : S.ShopFitGap();
+                string detail = fitted ? "今天可以继续摆放设施。" : missing == null ? "请先确认经营类型。" : $"缺少：{missing}";
+                _shopFitTitle.text = fitted ? "今日歇业装修 · 明天恢复营业" : "暂不能开业";
+                _shopFitActionLabel.text = !fitted && missing == null ? "选店型" : _tab == ShopTab.Renovate ? "摆放设施" : "去装修";
+                if (visibilityChanged || _shopFitDetail.text != detail)
+                {
+                    _shopFitDetail.text = detail;
+                    float height = Mathf.Max(ShopFitWarningMinHeight,
+                        ShopFitDetailTop + Mathf.Ceil(_shopFitDetail.preferredHeight) + ShopFitDetailBottom);
+                    _shopFitWarning.offsetMax = new Vector2(_shopFitWarning.offsetMax.x, DockContentBottom + height);
+                }
+                contentBottom = _shopFitWarning.offsetMax.y + 8;
+            }
+
+            var viewportFrame = (RectTransform)_dockContent.parent.parent;
+            if (!Mathf.Approximately(viewportFrame.offsetMin.y, contentBottom))
+                viewportFrame.offsetMin = new Vector2(viewportFrame.offsetMin.x, contentBottom);
+        }
+
+        private void GoToShopFitAction()
+        {
+            if (!S.ShopFitted && S.ShopFitGap() == null) RefreshOpeningKindChoice();
+            else if (_tab == ShopTab.Renovate) StartPlacement(true);
+            else SelectTab(ShopTab.Renovate);
         }
 
         /// <summary>“装修”页：这间店现在是什么状态、开店清单，以及进入编辑模式（俯视图）摆货架、柜台的入口。</summary>
@@ -61,12 +113,7 @@ namespace PCShopSell.Game.UI
         {
             _renovationStockSignature=RenovationStockSignature();
             Line(C,GameSession.SizeName(S.PlayerShop.Size)+" · 最多 "+S.ShopShelfLimit+" 个货架 · 已摆 "+S.ShelvesPlaced+" 个",18,Ui.Accent).name="RenovationShopCapacity";
-            string state = S.IsRenovating
-                ? "<color=#DDC18B>装修中：今天歇业，明天恢复营业。</color>"
-                : !S.ShopFitted
-                    ? "<color=#DDC18B>毛坯：还不能开业。</color>"
-                    : "<color=#A9C9A9>已经布置好，正常营业。</color>";
-            Line(C, "店面装修　" + state, 18);
+            Line(C, "开业设施清单", 18, Ui.Accent);
             Para(C, FitChecklistText(), 15);
             if (S.IsPetShop(S.CurrentShop)) BuildPetRenovation();
             string label = S.IsRenovating ? "继续摆放" : S.ShopFitted ? "重新布置" : "开始装修";

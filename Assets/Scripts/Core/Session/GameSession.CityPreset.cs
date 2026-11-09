@@ -20,7 +20,7 @@ namespace PCShopSell.Core.Session
             if(scenario=="staff"||scenario=="assets"||scenario=="night")
             {
                 s.MainShop.Employee=new Employee{Id="city_test_cashier",PersonId="life_ming",Name="许明",DailyWageYuan=150,CheckoutMinutes=2};
-                s.MainShop.Assembler=new Employee{Id="city_test_assembler",PersonId="life_ning",Name="顾宁",DailyWageYuan=180,AssemblyMinutes=80,AssemblyTrained=true};
+                s.MainShop.Assembler=new Employee{Id="city_test_assembler",PersonId="life_ning",Name="顾宁",DailyWageYuan=180,AssemblyMinutes=80};
                 foreach(var e in new[]{s.MainShop.Employee,s.MainShop.Assembler})
                 {
                     var person=s.CityPersonState(s.PersonIdOf(e));person.WorkPlaceId=s.MainShop.Place.Id;person.LocationPlaceId=s.MainShop.Place.Id;

@@ -111,10 +111,10 @@ namespace PCShopSell.Game.UI
             for(int i=0;i<tabs.Length;i++){int index=i;WbMainTab(nav,tabs[i],()=>{_workbenchTab=index;w.RequestRebuild();},"WorkbenchTab_"+i,_workbenchTab==i);}
             WbFlex(nav);
             Ui.Size(WbControl(nav,S.Time.IsRunning?"暂停":"继续",()=>{S.Time.TogglePause();w.RequestRebuild();},"WorkbenchPause",false),76,34,0);
-            foreach(int speed in new[]{1,2,4})
+            foreach(int speed in TimeController.Speeds)
             {
                 int chosen=speed;
-                Ui.Size(WbControl(nav,speed+"×",()=>{S.Time.SetSpeed(chosen);w.RequestRebuild();},"WorkbenchSpeed_"+speed,S.Time.IsRunning&&S.Time.Speed==speed),48,34,0);
+                Ui.Size(WbControl(nav,TimeController.SpeedLabel(speed),()=>{S.Time.SetSpeed(chosen);w.RequestRebuild();},"WorkbenchSpeed_"+speed,S.Time.IsRunning&&S.Time.Speed==speed),50,34,0);
             }
             Ui.Size(WbControl(nav,"生活托管",OpenHomeAutomation,"WorkbenchAutomation",false),110,34,0);
             var body=Ui.Rect(w.Content,"WorkbenchBody");var le=Ui.Size(body).GetComponent<LayoutElement>();le.minHeight=160;le.flexibleHeight=1;Ui.VList(body,8,0);

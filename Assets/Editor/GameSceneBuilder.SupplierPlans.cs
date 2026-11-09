@@ -19,7 +19,7 @@ namespace PCShopSell.EditorTools
             _game=new GameObject("Game").AddComponent<GameController>();_game.Bootstrap(false,7);_game.Ui.QuestPopups=false;
             var s=_game.Session;s.EventsEnabled=false;s.DebugAddCash(500000);Check(s.DebugRentStarterShop(computerScenario: true),"租下测试门店");s.Clock.Restore(new GameDate(0),600);
             foreach(var canvas in _game.Ui.Canvases){canvas.renderMode=RenderMode.ScreenSpaceCamera;canvas.worldCamera=_game.Cam;canvas.planeDistance=1;}
-            var offer=s.EmployeePurchaseCatalog().First(o=>o.Kind==PurchaseGoodsKind.Part&&o.Source.Id=="stall_gpu"&&o.Id=="gpu0");
+            var offer=s.EmployeePurchaseCatalog().First(o=>o.Kind==PurchaseGoodsKind.Part&&o.Source.Id==Stalls.Cpu&&o.Id=="gpu0");
             var employees=new Employee[3];
             for(int i=0;i<3;i++)
             {

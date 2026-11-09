@@ -101,12 +101,12 @@ namespace PCShopSell.Game.Runtime
                 Prims.Box(root,"DiningChair",new Vector3(0,.25f,-d*.6f),new Vector3(.38f,.5f,.35f),Mats.Lit(ArtDirection.Wood),collider);
                 Prims.Shape(PrimitiveType.Cylinder,root,"DiningPlate",new Vector3(0,.88f,0),new Vector3(.3f,.015f,.3f),Mats.Lit(Color.white));
             }
-            else if(def.Id=="restaurant_prep")
+            else if(def.Id==FurnitureCatalog.LegacyRestaurantPrep)
             {
                 Prims.Box(root,"ChoppingBoard",new Vector3(0,.87f,0),new Vector3(.55f,.04f,.35f),Mats.Lit(new Color(.72f,.51f,.3f)));
                 Prims.Box(root,"Vegetable",new Vector3(-.15f,.92f,0),new Vector3(.2f,.07f,.13f),Mats.Lit(new Color(.25f,.55f,.25f)));
             }
-            else if(def.Id=="restaurant_pass")
+            else if(def.Id==FurnitureCatalog.LegacyRestaurantPass)
                 Prims.Box(root,"PassTop",new Vector3(0,1.3f,.12f),new Vector3(w,.05f,.3f),Mats.Lit(Metal));
             else if(def.Id=="used_buydesk")
             {

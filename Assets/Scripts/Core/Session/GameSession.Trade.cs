@@ -28,45 +28,54 @@ namespace PCShopSell.Core.Session
         /// <summary>档口 → (砍价的日期, 当天的折扣调整)。</summary>
         private readonly Dictionary<string, (int day, double bonus)> _bargains = new Dictionary<string, (int, double)>();
         private int? _stallCheckoutMinutes;
+        private readonly Dictionary<string, Place[]> _wholesalePlacesByNode = new Dictionary<string, Place[]>();
 
         // ---------- 档口 ----------
 
-        public IEnumerable<Place> WholesaleStallsAt(Place market) =>
-            City.OfKind(PlaceKind.Wholesaler).Where(stall => SharesWholesaleMarket(market, stall));
+        public IEnumerable<Place> WholesaleStallsAt(Place market)
+        {
+            if (market?.Kind != PlaceKind.Wholesaler) return Array.Empty<Place>();
+            if (!_wholesalePlacesByNode.TryGetValue(market.NodeId, out var stalls))
+                _wholesalePlacesByNode[market.NodeId] = stalls = City.OfKind(PlaceKind.Wholesaler)
+                    .Where(stall => SharesWholesaleMarket(market, stall)).ToArray();
+            return stalls;
+        }
 
         private static bool SharesWholesaleMarket(Place a, Place b) =>
             a?.Kind == PlaceKind.Wholesaler && b?.Kind == PlaceKind.Wholesaler && a.NodeId == b.NodeId;
 
-        public static string StallSupplierName(Place stall) =>
-            stall.Id == Stalls.Cpu && Npcs.OwnerOf(stall.Id) is NpcDef owner ? owner.Name + "档口" : stall.Name;
+        public bool StallSells(Place stall, PartDef part) => IndustryCycles.Available(part, Clock.Today.TotalDays)
+            && WholesaleStallsAt(stall).Any(source => StallCarries(source, part.Category));
 
-        public bool StallSells(Place stall, PartDef part)
+        private static bool StallCarries(Place stall, PartCategory category)
         {
-            if (stall == null || stall.Kind != PlaceKind.Wholesaler || !IndustryCycles.Available(part,Clock.Today.TotalDays)) return false;
-            foreach (PartCategory c in stall.Sells) if(c==part.Category)return true;
-            // Existing specialist stalls also carry a small overlapping range, so the same
-            // model has real alternative merchants without creating duplicate city buildings.
-            if(stall.Id=="stall_cpu")return part.Category==PartCategory.Gpu||part.Category==PartCategory.PowerCase;
-            if(stall.Id=="stall_gpu")return part.Category==PartCategory.Cpu||part.Category==PartCategory.Storage;
-            if(stall.Id=="stall_mem")return part.Category==PartCategory.Motherboard||part.Category==PartCategory.Cpu;
-            if(stall.Id=="stall_psu")return part.Category==PartCategory.Gpu||part.Category==PartCategory.Memory;
-            return false;
+            if (stall.Sells.Contains(category)) return true;
+            return stall.Id switch
+            {
+                Stalls.Cpu => category == PartCategory.Gpu || category == PartCategory.PowerCase,
+                Stalls.Gpu => category == PartCategory.Cpu || category == PartCategory.Storage,
+                Stalls.Memory => category == PartCategory.Motherboard || category == PartCategory.Cpu,
+                Stalls.PowerCase => category == PartCategory.Gpu || category == PartCategory.Memory,
+                _ => false
+            };
         }
 
-        /// <summary>档口今天的批发价。</summary>
+        /// <summary>同一批发市场的统一报价。</summary>
         public Money StallPrice(Place stall, PartDef part)
         {
+            stall = PurchaseDestination(stall);
             double f = StallBaseFactor + StallVariation(stall.Id) - BargainBonus(stall.Id) - NpcPerks.StallDiscount(Relation(Npcs.Jie)) - StallOwnerDiscount(stall);
             return Money.FromYuan((long)Math.Round(Market.PriceOf(part).Yuan * f));
         }
 
         public bool HasBargainedToday(Place stall) =>
-            _bargains.TryGetValue(stall.Id, out var b) && b.day == Clock.Today.TotalDays;
+            _bargains.TryGetValue(PurchaseDestination(stall).Id, out var b) && b.day == Clock.Today.TotalDays;
 
-        /// <summary>和档口老板砍价：每家每天一次。成功了今天全场便宜 3%~7%，失败了老板不高兴、贵 1%。</summary>
+        /// <summary>批发市场每天可议价一次，结果适用于市场的所有型号。</summary>
         public BargainResult Bargain(Place stall)
         {
             if (!SharesWholesaleMarket(CurrentPlace, stall)) return BargainResult.NotAllowed;
+            stall = PurchaseDestination(stall);
             if (HasBargainedToday(stall)) return BargainResult.AlreadyTried;
             double chance = 0.35 + EffectiveCharm * 0.01 + (Player.Tired ? -0.15 : 0);
             AdvanceClock(5);
@@ -80,7 +89,8 @@ namespace PCShopSell.Core.Session
         /// <summary>在档口进货（盒装），货放到随身载具上。</summary>
         public bool BuyAtStall(Place stall, PartDef part, int count)
         {
-            if (!SharesWholesaleMarket(CurrentPlace, stall) || !StallSells(stall, part)) return Fail("这家档口不卖这个。");
+            if (!SharesWholesaleMarket(CurrentPlace, stall) || !StallSells(stall, part)) return Fail("这个市场没有这种配件。");
+            stall = PurchaseDestination(stall);
             if (!IsWholesalerOpen) return Fail($"批发市场工作日 {Hm(WholesalerOpenMinute)}–{Hm(WholesalerCloseMinute)} 营业。");
             if (count <= 0) return false;
             int remaining = StallRemaining(stall, part);
@@ -137,7 +147,7 @@ namespace PCShopSell.Core.Session
         private double BargainBonus(string stallId) =>
             _bargains.TryGetValue(stallId, out var b) && b.day == Clock.Today.TotalDays ? b.bonus : 0;
 
-        /// <summary>每家档口固定的价格差异（-2%~+2%），由 ID 决定。</summary>
+        /// <summary>批发市场固定的报价系数调整（-2%~+2%），由市场 ID 决定。</summary>
         private static double StallVariation(string id)
         {
             uint h = 2166136261;

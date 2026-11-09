@@ -14,6 +14,8 @@ namespace PCShopSell.Game.UI
         private string _agencySelectedId;
         private bool _agencyResidential;
         private string _agencyMapDistrictId;
+        private string _agencyQuotePlaceId;
+        private bool _agencyPurchaseSelected;
         private AgencyStreetMap.ViewState _agencyViewState = new AgencyStreetMap.ViewState();
         private static readonly Color AgencyPaper = new Color32(230, 224, 207, 255);
         private static readonly Color AgencyInk = new Color32(46, 66, 61, 255);
@@ -47,7 +49,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildAgencyHeader(Window w, Place agency)
         {
-            var header = Ui.Row(w.Content, 78, 12);
+            var header = Ui.Row(w.Content, 62, 12);
             if (agency.Id == "agency")
             {
                 var portrait = Ui.Rect(header, "AgentPortrait");
@@ -62,7 +64,7 @@ namespace PCShopSell.Game.UI
             string coverage=district==null?S.City.StreetName(agency.StreetId):string.Join("、",district.streets.Select(S.City.StreetName));
             string detail = _agencyResidential ? "当前住处：" + S.HomeTitle
                 : $"与{Rosters.AgentChen.Name}的熟悉度 {S.AgentRapport} · 中介费减免 {AgencyDiscountPercent}";
-            Ui.Size(Ui.Label(header, $"<b>{S.City.AgencyCoverageName(agency)} · 本片区房源</b>　现金 {S.Ledger.Balance}\n<size=16>负责：{coverage}\n<color=#ABB5A8>{detail}</color></size>", 20), -1, 78, 1);
+            Ui.Size(Ui.Label(header, $"<b>{S.City.AgencyCoverageName(agency)} · 本片区房源</b>　现金 {S.Ledger.Balance}\n<size=16>负责：{coverage}\n<color=#ABB5A8>{detail}</color></size>", 20), -1, 62, 1);
             if(BusinessUnlocked && !_agencyResidential)
             {
                 Ui.Size(Ui.Button(header,"委托店长开店",()=>OpenBusinessSection(3),16),155);
@@ -78,42 +80,70 @@ namespace PCShopSell.Game.UI
             map.GetComponent<LayoutElement>().minWidth = 1120;
             var detailPanel = Ui.Panel(body, detailName, Ui.PanelBg2).rectTransform;
             Ui.Size(detailPanel, -1, 740, 1);
-            Ui.VList(detailPanel, 4, 10);
-            return (map, Ui.Scroll(detailPanel, 720));
+            Ui.VList(detailPanel, 10, 10);
+            return (map, detailPanel);
         }
 
         private static void AgencyPropertyHeading(Transform parent, string title, string status)
         {
-            Ui.Size(Ui.Label(parent, $"<b>{title}</b>", 23), -1, 30);
+            Para(parent, $"<b>{title}</b>", 23);
             Ui.Size(Ui.Label(parent, status, 17, color: Ui.Accent), -1, 22);
         }
 
-        private static void AgencyPropertyMetrics(Transform parent, string rentLabel, string rent, string price,
-            string areaLabel, string area, string capacity = null)
+        private static RectTransform AgencyPropertyCard(Transform parent, string name)
         {
-            var row = Ui.Row(parent, 60, 12);
-            Metric(rentLabel, rent);
-            Metric("全款售价", price);
-            Metric(areaLabel, area, capacity);
-
-            void Metric(string caption, string value, string note = null)
-            {
-                string text = $"<size=14>{caption}</size>\n<b>{value}</b>";
-                if (note != null) text += $"\n<size=13>{note}</size>";
-                var label = Ui.Size(Ui.Label(row, text, 23), 0, 60, 1);
-                label.resizeTextForBestFit = true;
-                label.resizeTextMinSize = 16;
-                label.resizeTextMaxSize = 23;
-            }
+            var card = Ui.FlatPanel(parent, name, Ui.PanelBg).rectTransform;
+            Ui.VList(card, 6, 12);
+            return card;
         }
 
-        private static void AgencyPropertyAction(Transform parent, string label, System.Action action, string name = null,
-            bool primary = true, string blocker = null)
+        private static RectTransform AgencyPropertySummary(Transform parent, RoomSpec room)
         {
-            var button = Ui.Size(Ui.Button(parent, label, action, 18, primary ? Ui.ButtonHot : Ui.ButtonBg,
-                blocker == null), -1, 44);
+            var row = Ui.Row(parent, 110, 12);
+            BuildAgencyFloorPlan(row, room);
+            var info = Ui.Size(Ui.Rect(row, "AgencyPropertyFacts"), 0, 110, 1);
+            Ui.VList(info, 3, 0).childAlignment = TextAnchor.MiddleLeft;
+            return info;
+        }
+
+        private static RectTransform AgencySettlementCard(Transform parent)
+        {
+            Ui.Size(Ui.Rect(parent, "AgencySettlementSpacer")).GetComponent<LayoutElement>().flexibleHeight = 1;
+            return AgencyPropertyCard(parent, "AgencySettlement");
+        }
+
+        private bool AgencyPurchaseMode(Transform card, Place place, System.Action rebuild, bool hasRental, bool hasPurchase)
+        {
+            if (_agencyQuotePlaceId != place.Id)
+            {
+                _agencyQuotePlaceId = place.Id;
+                _agencyPurchaseSelected = !hasRental;
+            }
+            if (!hasRental || !hasPurchase) return hasPurchase;
+
+            var modes = Ui.Row(card, 40, 6);
+            Ui.Size(Ui.Button(modes, "租赁", () => { _agencyPurchaseSelected = false; rebuild(); },
+                17, _agencyPurchaseSelected ? Ui.ButtonBg : Ui.ButtonHot), 0, 40, 1).name = "AgencyRentMode";
+            Ui.Size(Ui.Button(modes, "全款购买", () => { _agencyPurchaseSelected = true; rebuild(); },
+                17, _agencyPurchaseSelected ? Ui.ButtonHot : Ui.ButtonBg), 0, 40, 1).name = "AgencyPurchaseMode";
+            return _agencyPurchaseSelected;
+        }
+
+        private void AgencyPaymentSummary(Transform card, Money cost, string actionLabel, System.Action action,
+            string name = null, string blocker = null)
+        {
+            Ui.Size(Ui.Panel(card, "AgencyPaymentDivider", Ui.Edge), -1, 1);
+            var total = Ui.Row(card, 34);
+            Ui.Size(Ui.Label(total, cost.IsNegative ? "<b>本次净收</b>" : "<b>本次实付</b>", 22, color: Ui.Accent), 0, 34, 1);
+            Ui.Size(Ui.Label(total, $"<b>{cost.Abs()}</b>", 24, TextAnchor.MiddleRight, Ui.Accent), 210, 34);
+            Money remaining = S.Ledger.Balance - cost;
+            bool cashShort = cost.IsPositive && remaining.IsNegative;
+            Line(card, cashShort ? $"现金还差 {remaining.Abs()}" : $"办理后余额 {remaining}",
+                17, remaining.IsNegative ? Ui.Warn : Ui.Good);
+            if (blocker != null && (!cashShort || !blocker.StartsWith("现金", System.StringComparison.Ordinal)))
+                Para(card, blocker, 16, Ui.Warn);
+            var button = Ui.Size(Ui.Button(card, actionLabel, action, 18, Ui.ButtonHot, blocker == null), -1, 46);
             if (name != null) button.name = name;
-            if (blocker != null) Para(parent, blocker, 15, Ui.Dim);
         }
 
         private ShopListing AgencyListing(Place p) => S.Listings.FirstOrDefault(l => l.PlaceId == p.Id);
@@ -141,82 +171,113 @@ namespace PCShopSell.Game.UI
         {
             ShopListing l = AgencyListing(p);
             bool mine = S.IsMyShop(p);
-            AgencyPropertyHeading(parent, $"{number:00}　{(mine ? S.PlaceTitle(p) : l != null ? UnitName(p) : p.Name)}", AgencyStatus(p, l));
+            var overview = AgencyPropertyCard(parent, "AgencyPropertyOverview");
+            AgencyPropertyHeading(overview, $"{number:00}　{(mine ? S.PlaceTitle(p) : l != null ? UnitName(p) : p.Name)}", AgencyStatus(p, l));
             if (p.Kind == PlaceKind.Agency)
             {
-                Para(parent, "你正在本片区中介办公室里看房。地图只包含本片区沿街建筑；绿光表示现在可租，橙光表示之后可租；其余建筑保持原样。点建筑后在右侧查看报价与户型。", 18, Ui.Dim);
+                Para(overview, "点击地图上的房源查看户型与租购费用。", 18, Ui.Dim);
                 return;
             }
             if (p.Kind != PlaceKind.Shop)
             {
-                Para(parent, "这是本片区地点，不属于商铺租赁房源。请选择发出绿光或橙光的铺面。", 18, Ui.Dim);
+                Para(overview, "这是本片区地点，不属于商铺租赁房源。请选择发出绿光或橙光的铺面。", 18, Ui.Dim);
                 return;
             }
+            bool dedicatedVenue = S.IsDedicatedVenue(p);
+            var facts = AgencyPropertySummary(overview, RoomSpec.ForShop(p.Size));
+            Line(facts, $"{GameSession.SizeName(p.Size)} · {RealEstate.SizeArea(p.Size)}", 18);
+            if (!dedicatedVenue)
+                Para(facts, $"{GameSession.ShelfLimit(p.Size)} 个货架 · {GameSession.StaffLimit(p.Size)} 名员工", 16, Ui.Dim);
+            else
+                Para(facts, "专用场地 · " + S.VenueBusinessName(p), 16, Ui.Dim);
+            Para(facts, $"预计每日入店约 {S.ExpectedDailyShopEntrants(p, CompetitionPreviewKind(p)):N0} 人", 19, Ui.Good).name = "AgencyDailyEntrants";
+            Ui.Size(Ui.Button(overview, dedicatedVenue ? "场地详情 ›" : "商圈详情与试算 ›", () =>
+            {
+                if (dedicatedVenue)
+                    OpenWindow("场地详情 · " + p.Name, 660, 470, details =>
+                    {
+                        BuildAgencyShopNotes(details.Content, p);
+                        Para(details.Content, $"只能延续原有服务。接手后需自己值守或另行招聘。每日维护 ¥{S.VenueMaintenanceYuan(p)}，租金及工资另计。", 17);
+                    });
+                else OpenShopCompetition(p, agencyDetails: true);
+            }, 16), -1, 32);
+            BuildCommercialSettlement(AgencySettlementCard(parent), p, w);
+        }
+
+        private void BuildCommercialSettlement(Transform settlement, Place p, Window w)
+        {
+            ShopListing l = AgencyListing(p);
+            var own = S.ShopAt(p);
             bool pending = S.IsPendingShop(p);
-            OwnedShop own = S.ShopAt(p);
             var property = S.PropertyAt(p.Id);
             var purchase = property == null ? S.PreviewCityPropertyPurchase(p.Id, false) : null;
-            bool hasShop = S.HasShop;
-            string leaseBlocker = l != null ? S.LeaseBlocker(l, hasShop) : null;
-            bool advance = l != null && S.IsAdvance(l);
-            Money? rent = l != null ? l.Rent : mine ? (Money?)S.RentOf(own) : pending ? (Money?)S.PendingLease.Rent : null;
-            bool dedicatedVenue = S.IsDedicatedVenue(p);
-            string capacity = dedicatedVenue ? null : $"最多{GameSession.ShelfLimit(p.Size)}个货架 · {GameSession.StaffLimit(p.Size)}名员工";
-            AgencyPropertyMetrics(parent, "每周租金", rent?.ToString() ?? "未挂牌", purchase?.Price.ToString() ?? "—",
-                $"室内面积 · {GameSession.SizeName(p.Size)}", RealEstate.SizeArea(p.Size), capacity);
-            if (l != null)
-                AgencyPropertyAction(parent, advance ? "提前租赁" : "租赁", () => ConfirmAgencyLease(w, p.Id, hasShop),
-                    "AgencyReviewLease", blocker: leaseBlocker);
-            if (purchase != null)
-                AgencyPropertyAction(parent, mine ? "全款买下当前租用铺面" : "全款购买", () => CityPropertyConfirm(p.Id, false, w),
-                    "AgencyReviewPurchase", primary: l == null);
-            BuildAgencyFloorPlan(parent, RoomSpec.ForShop(p.Size));
-            var flow = S.FootfallOf(p);
-            string previewKind = CompetitionPreviewKind(p);
-            Ui.Size(Ui.Label(parent, $"预计每日入店约 {S.ExpectedDailyShopEntrants(p,previewKind):N0} 人", 22, TextAnchor.MiddleLeft, Ui.Good), -1, 32).name="AgencyDailyEntrants";
-            string station=double.IsPositiveInfinity(flow.StationMeters)?"无可达地铁站":$"距最近地铁 {flow.StationMeters:0} 米";
-            string housing=double.IsPositiveInfinity(flow.HousingMeters)?"附近无可达住宅":$"距最近住宅 {flow.HousingMeters:0} 米";
-            Ui.Size(Ui.Label(parent,station+" · "+housing,15),-1,24);
-            var information = Ui.Row(parent, 32, 6);
-            var rentHelp = HelpLink(information,"租赁与客流说明",
-                $"新店按所选店型、{NewShopHours}正常营业估算。知名度、品牌口碑、街道人流、周末和同类分流会影响客流，实际人数也受开门和值守时长影响。餐馆还受座位周转影响。\n新租报价随地段和面积带来的基础客流及周行情变化。签约付首周租金、一周押金和半周中介费，之后每七天交一次租。\n"
-                + $"与{Rosters.AgentChen.Name}的熟悉度每增加 1 点，中介费减免 {RealEstate.AgentDiscountPerRapport * 100:0.#} 个百分点，最多减免 {RealEstate.MaxAgentDiscount * 100:0.#}%。\n"
-                + "已签租金保留签约价。提前签约到交房日才能使用。退租前请清理库存，主动退租不退押金。");
-            Ui.Size(rentHelp, 0, 32, 1);
-            if (!dedicatedVenue)
-                Ui.Size(Ui.Button(information, "商圈详情与试算", () => OpenShopCompetition(p), 15), 0, 32, 1);
-            if(mine||pending)Line(parent,"已签租约保留原价。",14,Ui.Dim);
-            if(dedicatedVenue)Para(parent,"专用场地 · "+S.VenueBusinessName(p)+"\n只能延续原有服务，不能改作零售店。接手不包含原教练劳动；需自己值守或另行招聘。每日维护 ¥"+S.VenueMaintenanceYuan(p)+"，租金及工资另计。",17,Ui.Accent);
-
-            if (l == null)
+            bool managesLease = own != null && !own.OwnsProperty;
+            bool hasRental = l != null || managesLease || pending;
+            Line(settlement, purchase != null ? (hasRental ? "办理结算" : "全款购买结算") :
+                l != null ? "租赁结算" : "房源管理", 21);
+            if (AgencyPurchaseMode(settlement, p, () =>
             {
-                if (pending) AgencyEntryWarning(parent, S.PendingLease.StartDay);
-                string explanation = mine
-                        ? own.OwnsProperty?"这是你的自有店铺，可以结束自营并保留产权。":$"这是你的{S.ShopTitle(own)}，已交押金 {own.Lease.Deposit}。可在这里办理退租，押金不退；请先搬走货物。"
-                    : pending ? $"你已经提前签下这间，押金 {S.PendingLease.Deposit}。现租户第 {S.PendingLease.StartDay + 1} 天搬走，那天自动交房；在那之前房租照交。"
-                    : S.VentureAt(p.Id) != null || property != null ? "这间铺面已纳入你的资产。经营收支可在资产页查看。"
-                    : "这间铺面目前没有出租报价。";
-                Para(parent, explanation, 18, Ui.Dim);
-                if(mine)
-                {
-                    var close=Ui.Size(Ui.Button(parent,own.OwnsProperty?"结束自营":"退租店铺",()=>ConfirmCloseShop(own),18,Ui.Warn),-1,44);
-                    close.name="AgencyCloseShop_"+p.Id;
-                    string why=S.CloseShopBlocker(own);
-                    if(why!=null)Line(parent,"办理前需处理："+why,16,Ui.Warn);
-                }
-                if (property != null) BuildCommercialPropertyActions(parent,p,property,w);
+                Ui.Clear(settlement);
+                BuildCommercialSettlement(settlement, p, w);
+            }, hasRental, purchase != null))
+            {
+                AgencyFeeLine(settlement, "全款售价", purchase.Price.ToString());
+                AgencyFeeLine(settlement, "交易费", purchase.Fee.ToString());
+                if (purchase.DepositCredit.IsPositive) AgencyFeeLine(settlement, "抵扣押金", "− " + purchase.DepositCredit);
+                if (purchase.PrepaidCredit.IsPositive) AgencyFeeLine(settlement, "抵扣本周未使用租金", "− " + purchase.PrepaidCredit);
+                AgencyPaymentSummary(settlement, purchase.TotalDue, own != null ? "全款买下铺面" : "确认全款购买",
+                    () => CityPropertyConfirm(p.Id, false, w), "AgencyReviewPurchase", S.CityPropertyPurchaseBlocker(p.Id, false));
+                return;
+            }
+            if (l != null)
+            {
+                bool newShop = S.HasShop;
+                bool advance = S.IsAdvance(l);
+                AgencyQuote(settlement, l, newShop);
+                if (advance)
+                    Line(settlement, $"第 {l.OpenDay + 1} 天交房 · 签约起计租", 16, Ui.Warn).name = "AgencyEntryCountdown";
+                AgencyPaymentSummary(settlement, S.LeaseCost(l, newShop), advance ? "确认提前租赁" : "确认租赁",
+                    () => ConfirmAgencyLease(w, p.Id, newShop), "AgencyReviewLease", S.LeaseBlocker(l, newShop));
                 return;
             }
 
-            AgencyQuote(parent, l, hasShop);
-            Money cost = S.LeaseCost(l, hasShop);
-            Ui.Size(Ui.Label(parent, $"<b>{AgencySettlement(cost)}</b>", 23, TextAnchor.MiddleLeft, Ui.Accent), -1, 32);
-            Money remaining = S.Ledger.Balance - cost;
-            Ui.Size(Ui.Label(parent, remaining.IsNegative ? $"现金还差 {remaining.Abs()}" : $"付清后剩余现金 {remaining}", 17,
-                TextAnchor.MiddleLeft, remaining.IsNegative ? new Color32(231, 160, 135, 255) : Ui.Good), -1, 24);
-            if (advance) AgencyEntryWarning(parent, l.OpenDay);
-            if (leaseBlocker == null)
-                Line(parent, $"挂牌还剩 {l.CloseDay - S.Clock.Today.TotalDays + 1} 天 · 可以签约", 16, Ui.Good);
+            if (own != null)
+            {
+                if (managesLease)
+                {
+                    AgencyFeeLine(settlement, "签约周租", S.RentOf(own).ToString());
+                    AgencyFeeLine(settlement, "已交押金（主动退租不退）", own.Lease.Deposit.ToString());
+                }
+                string why = S.CloseShopBlocker(own);
+                if (why != null) Para(settlement, "办理前需处理：" + why, 16, Ui.Warn);
+                Ui.Size(Ui.Button(settlement, own.OwnsProperty ? "结束自营" : "退租店铺",
+                    () => ConfirmCloseShop(own), 18, Ui.Warn), -1, 44).name = "AgencyCloseShop_" + p.Id;
+            }
+            else if (pending)
+            {
+                AgencyFeeLine(settlement, "签约周租", S.PendingLease.Rent.ToString());
+                AgencyFeeLine(settlement, "已交押金", S.PendingLease.Deposit.ToString());
+                Line(settlement, $"第 {S.PendingLease.StartDay + 1} 天交房 · 等待期间照常计租", 16, Ui.Warn).name = "AgencyEntryCountdown";
+            }
+            else if (property == null)
+                Para(settlement, S.VentureAt(p.Id) != null ? "这间铺面已纳入你的资产。" : "这间铺面目前没有租购报价。", 17, Ui.Dim);
+            if (property != null) BuildCommercialPropertyActions(settlement, p, property, w);
+        }
+
+        private void BuildAgencyShopNotes(Transform parent, Place place)
+        {
+            var flow = S.FootfallOf(place);
+            string station = double.IsPositiveInfinity(flow.StationMeters) ? "无可达地铁站" : $"距最近地铁 {flow.StationMeters:0} 米";
+            string housing = double.IsPositiveInfinity(flow.HousingMeters) ? "附近无可达住宅" : $"距最近住宅 {flow.HousingMeters:0} 米";
+            Line(parent, station + " · " + housing, 16, Ui.Dim);
+            var listing = AgencyListing(place);
+            if (listing != null)
+                Line(parent, $"挂牌还剩 {listing.CloseDay - S.Clock.Today.TotalDays + 1} 天", 16, Ui.Dim);
+            HelpLink(parent, "租赁与客流说明",
+                $"新店按所选店型、{NewShopHours}正常营业估算。知名度、品牌口碑、街道人流、周末和同类分流会影响客流，实际人数也受开门和值守时长影响。餐馆还受座位周转影响。\n"
+                + "新租报价随地段和面积带来的基础客流及周行情变化。签约付首周租金、一周押金和半周中介费，之后每七天交一次租。\n"
+                + $"与{Rosters.AgentChen.Name}的熟悉度每增加 1 点，中介费减免 {RealEstate.AgentDiscountPerRapport * 100:0.#} 个百分点，最多减免 {RealEstate.MaxAgentDiscount * 100:0.#}%。\n"
+                + "已签租金保留签约价。提前签约到交房日才能使用。退租前请清理库存，主动退租不退押金。");
         }
 
         private void AgencyEntryWarning(Transform parent, int openDay)

@@ -255,14 +255,31 @@ namespace PCShopSell.Core.Session
             foreach(var n in Npcs.All)
             {
                 if(result.Any(p=>p.Id==n.Id))continue;
-                result.Add(new CityPersonDefinition {Id=n.Id,Name=n.Name,Role=n.Role,HomeId=Home(i++),WorkId=n.StallId??(n.Id==Npcs.Jie?"shop04":n.Id==Npcs.Zhang?"life_company":"life_studio"),
+                string work=n.Id switch
+                {
+                    Npcs.Wang => "shop07",
+                    Npcs.Sun => "life_company",
+                    Npcs.Li or Npcs.Qian => Stalls.Cpu,
+                    Npcs.Jie => "shop04",
+                    Npcs.Zhang => "life_company",
+                    _ => n.StallId ?? "life_studio"
+                };
+                result.Add(new CityPersonDefinition {Id=n.Id,Name=n.Name,Role=n.Role,HomeId=Home(i++),WorkId=work,
                     Interest=n.Likes??"dinner",Goal=n.Intro,Experience=n.FirstMeet??n.Intro,Topics=new[]{n.Intro,n.GiftReply,n.FirstMeet??"最近在忙自己店里的事。",n.Role},
                     Stories=new[]{n.Intro,"从第一份工作到现在的小生意，我花了好些年才学会量力而行。","有空一起到别的街区走走，生意之外也有想做的事。"},Age=34});
             }
             foreach(var staff in Rosters.All)
             {
                 if(result.Any(p=>p.Id==staff.Id))continue;
-                string work=staff==Rosters.CpuClerk?"stall_cpu":staff==Rosters.GpuClerk||staff==Rosters.GpuAssistant?"stall_gpu":staff==Rosters.MemClerk?"stall_mem":staff==Rosters.PsuClerk?"stall_psu":"agency";
+                string work=staff.Id switch
+                {
+                    "staff_cpu" => Stalls.Cpu,
+                    "staff_gpu" => "shop07",
+                    "staff_gpu2" => "life_company",
+                    "staff_mem" => "shop03",
+                    "staff_psu" => "shop04",
+                    _ => "agency"
+                };
                 var stories=Rosters.StoriesOf(staff.Id)??new[]{staff.LineFor(0),staff.LineFor(1),staff.LineFor(2)};
                 result.Add(new CityPersonDefinition{Id=staff.Id,Name=staff.Name,Role=staff.Role,HomeId=Home(i++),WorkId=work,WorkStart=540,WorkEnd=1200,
                     Interest=Interest(i),Goal=stories.LastOrDefault(),Experience=stories.FirstOrDefault(),Topics=new[]{staff.LineFor(0),staff.LineFor(1),staff.LineFor(2),stories.FirstOrDefault()},Stories=stories,Age=25+i%14});

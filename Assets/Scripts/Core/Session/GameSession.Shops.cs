@@ -270,7 +270,6 @@ namespace PCShopSell.Core.Session
                 hasSalesperson = s.Salesperson != null,
                 salesperson = s.Salesperson != null ? ToSave(s.Salesperson) : null,
                 buyer = s.Buyer != null ? ToSave(s.Buyer) : null,
-                employeeTrained = s.EmployeeTrained,
                 autoBuild = s.AutoBuild,
                 layout = ToSave(s.Layout),
                 upgrades = s.Upgrades.ToArray(),
@@ -311,10 +310,8 @@ namespace PCShopSell.Core.Session
             shop.Employee = d.hasEmployee && d.employee != null ? FromSave(d.employee) : null;
             if (shop.Employee != null) sim.Settings.EmployeeCheckoutMinutes = EmployeeCheckoutCycleMinutes(shop.Employee) - 1;
             shop.Assembler = d.hasAssembler && d.assembler != null ? FromSave(d.assembler) : null;
-            if (shop.Assembler != null && !d.assembler.hasWorkSkills) shop.Assembler.AssemblyTrained = true;
             shop.Buyer = d.hasBuyer && d.buyer != null ? FromSave(d.buyer) : null;
             shop.Salesperson = d.hasSalesperson && d.salesperson != null ? FromSave(d.salesperson) : null;
-            shop.EmployeeTrained = d.employeeTrained;
             shop.AutoBuild = d.autoBuild;
             shop.Layout.AddRange(FromSave(d.layout));
             foreach (string id in d.upgrades ?? Array.Empty<string>())

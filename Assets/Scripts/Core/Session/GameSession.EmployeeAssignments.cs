@@ -102,22 +102,16 @@ namespace PCShopSell.Core.Session
             if (source == null) _idleEmployees.Remove(person);
             else
             {
-                if (row.Role == EmployeeRole.Cashier && source.Employee==person&&source.EmployeeTrained) person.AssemblyTrained = true;
                 RemoveShopEmployee(source, row.Role, person);
                 source.EmployeeBuilding = false;
-                if (source.Assembler == null && !source.EmployeeTrained)
-                    foreach (var order in source.Sim.Orders) order.EmployeeMinutesLeft = 0;
             }
             if (role == EmployeeRole.Unassigned) _idleEmployees.Add(person);
             else
             {
                 AddShopEmployee(dest, role, person);_employeeHireShops[person.Id]=dest.Place.Id;
                 if (role == EmployeeRole.Cashier&&dest.Employee==person)
-                {
-                    dest.EmployeeTrained = person.AssemblyTrained;
                     dest.Sim.Settings.EmployeeCheckoutMinutes = EmployeeCheckoutCycleMinutes(person) - 1;
-                }
-                if (role == EmployeeRole.Assembler || (role == EmployeeRole.Cashier && person.AssemblyTrained)) dest.AutoBuild = true;
+                if (role == EmployeeRole.Assembler) dest.AutoBuild = true;
             }
             person.TransferShopId = null;
             person.TransferRole = -1;

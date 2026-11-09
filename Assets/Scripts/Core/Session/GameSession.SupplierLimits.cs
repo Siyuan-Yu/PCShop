@@ -10,10 +10,22 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
-        // Baselines only; actual capacity belongs to the merchant + exact product pair.
+        // Baselines only; actual capacity belongs to the supplier and exact product.
         public static int SupplierDailyLimit(string productId) => PetShopCatalog.IsProduct(productId) ? (PetShopCatalog.IsFood(productId) ? 60 : 32) - PetShopCatalog.Tier(productId)*10 : ModelProducts.IsModel(productId)?20:ClothingProducts.IsClothing(productId)?60:
             productId!=null&&(productId.StartsWith("produce:")||productId.StartsWith("fast:"))?80:40;
         public int SupplierCapacity(string sourceId,string productId)
+        {
+            if (City.HasPlace(sourceId) && City.GetPlace(sourceId) is Place market
+                && market.Kind == PlaceKind.Wholesaler && PartCatalog.Exists(productId))
+            {
+                var part = PartCatalog.Get(productId);
+                return WholesaleStallsAt(market).Where(stall => StallCarries(stall, part.Category))
+                    .Sum(stall => SourceCapacity(stall.Id, productId));
+            }
+            return SourceCapacity(sourceId, productId);
+        }
+
+        private static int SourceCapacity(string sourceId,string productId)
         {
             uint hash=2166136261;
             foreach(char ch in (sourceId??"")+"|"+(productId??""))hash=unchecked((hash^ch)*16777619);
@@ -74,6 +86,7 @@ namespace PCShopSell.Core.Session
                 {
                     string source=line.SourceId??plan.SourceId;
                     if(source==null)source=EmployeePurchaseOffer(line,plan.SourceId)?.Source.Id;
+                    if(line.Kind==PurchaseGoodsKind.Part)source=PurchaseDestinationId(source)??source;
                     if(source+"|"+PhysicalProductId(line)==key&&SourceWorksOnWeekday(offer,weekday))total+=ReservationCount(plan,line,weekday);
                 }
             }
@@ -126,7 +139,7 @@ namespace PCShopSell.Core.Session
                     used.TryGetValue(key,out int assigned);
                     int free=Math.Max(0,PurchaseLimit(offer)-OtherSupplierReservations(employeeId,offer,day)-assigned);
                     int amount=line.BuyMaximum?free:Math.Min(free,line.Count);
-                    if(!migrate&&!line.BuyMaximum&&line.Count>free)return offer.Source.Name+"的"+offer.Name+"周"+names[day]+"仅剩 "+free+" 份计划额度，请减少数量或更换货源/星期。";
+                    if(!migrate&&!line.BuyMaximum&&line.Count>free)return offer.SupplierName+"的"+offer.Name+"周"+names[day]+"仅剩 "+free+" 份计划额度，请减少数量或更换货源/星期。";
                     if(amount<PurchaseMinimum(offer))amount=0;
                     line.ReservedByWeekday[day]=amount;used[key]=assigned+amount;
                 }
@@ -138,8 +151,22 @@ namespace PCShopSell.Core.Session
         private int EmployeeSupplyAvailable(string employeeId,PurchaseOffer offer,int day)=>Math.Max(0,PurchaseRemaining(offer)-OtherSupplierReservations(employeeId,offer,day%7,day));
         private void LoadWeeklySupplierPlans()
         {
-            var legacy=Employees.Where(e=>e.Role==EmployeeRole.Buyer&&e.Person.PurchasePlan?.Daily==true&&
-                (e.Person.PurchasePlan.Items??Array.Empty<PurchaseLine>()).Any(i=>i.ReservedByWeekday==null||i.ReservedByWeekday.Length!=7))
+            bool UsesFormerCounter(PurchaseLine line, EmployeePurchasePlan plan)
+            {
+                string source = line.SourceId ?? plan.SourceId;
+                return line.Kind == PurchaseGoodsKind.Part && City.HasPlace(source)
+                    && PurchaseDestinationId(source) != source;
+            }
+            var buyers=Employees.Where(e=>e.Role==EmployeeRole.Buyer&&e.Person.PurchasePlan!=null).ToArray();
+            foreach(var buyer in buyers.Where(e=>!e.Person.PurchasePlan.Daily))
+            {
+                var plan=buyer.Person.PurchasePlan;
+                if((plan.Items??Array.Empty<PurchaseLine>()).Any(i=>i!=null&&UsesFormerCounter(i,plan)))
+                    PrepareEmployeePurchaseDraft(plan);
+            }
+            var legacy=buyers.Where(e=>e.Person.PurchasePlan.Daily&&
+                (e.Person.PurchasePlan.Items??Array.Empty<PurchaseLine>()).Any(i=>i!=null&&
+                    (i.ReservedByWeekday==null||i.ReservedByWeekday.Length!=7||UsesFormerCounter(i,e.Person.PurchasePlan))))
                 .OrderBy(e=>e.Shop.Place.Id,StringComparer.Ordinal).ThenBy(e=>e.Person.Id,StringComparer.Ordinal).ToArray();
             foreach(var worker in legacy)worker.Person.PurchasePlan.Daily=false;
             foreach(var worker in legacy)

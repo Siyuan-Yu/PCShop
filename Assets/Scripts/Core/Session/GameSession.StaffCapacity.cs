@@ -53,9 +53,9 @@ namespace PCShopSell.Core.Session
                 var next=shop.AdditionalEmployees.FirstOrDefault(e=>e.Role==role);
                 PutEmployee(shop,role,next?.Person);
                 if(next!=null)shop.AdditionalEmployees.Remove(next);
-                if(role==EmployeeRole.Cashier)shop.EmployeeTrained=shop.Employee?.AssemblyTrained??false;
             }
             else shop.AdditionalEmployees.RemoveAll(e=>e.Person==person);
+            if (role == EmployeeRole.Assembler) ClearUnstaffedAssembly(shop);
         }
         private void SaveAdditionalStaff(SaveData data)
         {

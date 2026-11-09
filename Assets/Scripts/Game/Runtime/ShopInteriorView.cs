@@ -1166,7 +1166,7 @@ namespace PCShopSell.Game.Runtime
             foreach (GameObject g in _buildGlow) g.SetActive(building);
             UpdatePetBoardingView(s, realDt);
             UpdateStaff(s);
-            UpdateSpecialBusinessVisuals(s);
+            UpdateSpecialBusinessVisuals(s,realDt);
             UpdateRestaurantPlayer(s);
 
             // Shelf meshes are presentation, not simulation. 8x must not rebuild

@@ -67,28 +67,28 @@ namespace PCShopSell.Core.Session
         /// <summary>唐俊杰是隔壁手机店老板，平时是唐晓芸在柜台。</summary>
         public const int PhoneBossGate = 20;
 
-        public static readonly StaffDef CpuClerk = new StaffDef("staff_cpu", "许慧", "CPU 档口店员", new[]
+        public static readonly StaffDef CpuClerk = new StaffDef("staff_cpu", "许慧", "市场配货员", new[]
         {
-            "要什么 CPU？这边都是盒装正品。",
+            "要什么配件？各家档口的货都能在这里一起挑。",
             "老板在里间对账，熟了才好找他。",
             "这两天出货挺快的，要的话趁早。",
         });
 
-        public static readonly StaffDef GpuClerk = new StaffDef("staff_gpu", "赵志强", "显卡王档口店员", new[]
+        public static readonly StaffDef GpuClerk = new StaffDef("staff_gpu", "赵志强", "电脑城售后店员", new[]
         {
             "显卡随便看，别用手摸风扇！",
             "我们老板嗓门大，在里面打电话呢，熟人才能见。",
             "矿潮那会儿，一天能走几十块。",
         });
 
-        public static readonly StaffDef MemClerk = new StaffDef("staff_mem", "沈静", "存储专营店员", new[]
+        public static readonly StaffDef MemClerk = new StaffDef("staff_mem", "沈静", "超市库存文员", new[]
         {
             "内存和硬盘都在这边，要多少说一声。",
             "钱慧珍在后面算账，没熟之前不接待新客人。",
             "这批货刚到，价格我帮你看着。",
         });
 
-        public static readonly StaffDef PsuClerk = new StaffDef("staff_psu", "徐峰", "机箱电源城店员", new[]
+        public static readonly StaffDef PsuClerk = new StaffDef("staff_psu", "徐峰", "电子维修店员", new[]
         {
             "机箱电源都是实价，不用问能不能便宜。",
             "孙老板在仓库点货，熟人他才出来。",
@@ -139,7 +139,7 @@ namespace PCShopSell.Core.Session
             "有了车，去市场进货能省一半时间。",
         }, true);
 
-        public static readonly StaffDef GpuAssistant = new StaffDef("staff_gpu2", "郑凯", "显卡档口打包员", new[]
+        public static readonly StaffDef GpuAssistant = new StaffDef("staff_gpu2", "郑凯", "设备出货员", new[]
         {
             "显卡我都亲手擦过、封好了，放心拿。",
             "强哥脾气急，其实人不坏。",
@@ -210,20 +210,8 @@ namespace PCShopSell.Core.Session
             if (p == null) return null;
             if (p.Kind == PlaceKind.Dealer) return new PlaceRoster(DealerBoss);
             if (p.Kind == PlaceKind.Agency) return p.Id == "agency" ? new PlaceRoster(AgentChen) : null;
-            if (p.Kind == PlaceKind.Wholesaler)
-            {
-                NpcDef owner = Npcs.OwnerOf(p.Id);
-                if (owner == null) return null;
-                StaffDef clerk = null;
-                switch (p.Id)
-                {
-                    case Stalls.Cpu: clerk = CpuClerk; break;
-                    case Stalls.Gpu: clerk = GpuClerk; break;
-                    case Stalls.Memory: clerk = MemClerk; break;
-                    case Stalls.PowerCase: clerk = PsuClerk; break;
-                }
-                return clerk == null ? null : new PlaceRoster(clerk, owner.Id, StallBossGate, null, p.Id == Stalls.Gpu ? new[] { GpuAssistant } : null);
-            }
+            if (p.Id == Stalls.Cpu || p.IsElectronicsCounter)
+                return new PlaceRoster(CpuClerk, Npcs.Li, StallBossGate);
             if (p.Kind != PlaceKind.Shop || p.IsPlayerShop) return null;
             if (p.Business == Gifts.TobaccoBusiness) return new PlaceRoster(TobaccoBoss);
             if (p.Business == GameSession.PhoneBusiness) return new PlaceRoster(PhoneClerk, Npcs.Jie, PhoneBossGate, null, new[] { PhoneApprentice });

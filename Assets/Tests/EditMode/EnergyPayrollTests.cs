@@ -202,14 +202,5 @@ namespace PCShopSell.Tests
                 s.Player.Energy=1;s.Player.Energy=0;Assert.AreEqual(4,count);Assert.AreEqual(240,s.EnergyAwakeMinutesLeft);
             }
         }
-        [Test] public void TrainingAtShiftStartKeepsTheAlreadyActiveDayRateSnapshot()
-        {
-            using(var s=Make(540))
-            {
-                var e=Employ(s,540,1260);s.Leave();s.ArriveAtNode(s.MainShop.Place.NodeId);Assert.True(s.Enter(s.MainShop.Place));
-                Assert.True(s.TrainEmployee());Assert.AreEqual(260,e.DailyWageYuan);Assert.AreEqual(20000,s.EmployeePayroll.Single().DailyCents);
-                s.AdvanceClock(720);Assert.AreEqual(28000,s.EmployeePayroll.Single(p=>p.Minutes>0).DailyCents+s.EmployeePayroll.Single(p=>p.Minutes>0).OvertimeCents);
-            }
-        }
     }
 }

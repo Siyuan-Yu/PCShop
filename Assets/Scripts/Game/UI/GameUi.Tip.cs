@@ -78,6 +78,8 @@ namespace PCShopSell.Game.UI
         public bool TryHotkey(KeyCode key)
         {
             if (AnyModalOpen || S == null || S.IsGameOver || S.IsWorking) return false;
+            if (OpeningMealRestricted && key != KeyCode.Escape)
+            { RemindOpeningMeal(); return true; }
             switch (key)
             {
                 case KeyCode.M: OpenMyPanel(); return true;

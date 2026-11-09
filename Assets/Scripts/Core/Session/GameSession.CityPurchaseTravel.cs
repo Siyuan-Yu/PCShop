@@ -53,7 +53,8 @@ namespace PCShopSell.Core.Session
         private CityRoute[] BuildCityPurchaseLegs(EmployeePurchaseTrip trip,CityPersonState person)
         {
             var shop=DeliveryShop(trip.ShopId);if(shop==null)return Array.Empty<CityRoute>();
-            var origins=(trip.Items??Array.Empty<PurchaseLine>()).Where(i=>i!=null&&City.HasPlace(i.SourceId)).GroupBy(i=>i.SourceId).ToArray();
+            var origins = (trip.Items ?? Array.Empty<PurchaseLine>()).Where(i => i != null && City.HasPlace(i.SourceId))
+                .GroupBy(i => PurchaseDestination(City.GetPlace(i.SourceId))).ToArray();
             if(origins.Length==0)return Array.Empty<CityRoute>();
             var probe=person.Copy();var home=StandOf(shop.Place);
             probe.X=home.X;probe.Y=home.Y;probe.LocationPlaceId=shop.Place.Id;
@@ -63,10 +64,10 @@ namespace PCShopSell.Core.Session
             int handling=worker==null?3:EmployeePurchaseMinutes(worker);
             foreach(var source in origins)
             {
-                var route=PlanCityRoute(probe,source.Key,0);if(route==null)return Array.Empty<CityRoute>();
+                var route=PlanCityRoute(probe,source.Key.Id,0);if(route==null)return Array.Empty<CityRoute>();
                 long duration=Math.Max(1,CityTravelTiming.NpcMinutes(route.Meters.Sum(),Vehicles.Get(trip.Transport)));
                 offsets.Add((offset,offset+duration));offset+=duration+handling*source.Count();routes.Add(route);
-                var position=StandOf(City.GetPlace(source.Key));probe.X=position.X;probe.Y=position.Y;probe.LocationPlaceId=source.Key;
+                var position=StandOf(source.Key);probe.X=position.X;probe.Y=position.Y;probe.LocationPlaceId=source.Key.Id;
             }
             // Legacy orders did not retain a departure. Derive it once without changing their
             // already-promised purchase, delivery or return dates.

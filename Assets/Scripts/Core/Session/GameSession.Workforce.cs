@@ -85,6 +85,7 @@ namespace PCShopSell.Core.Session
         public long ChangeCents;
         public bool Returned, Delivered;
         public PurchaseLine[] Items;
+        public PurchaseLine[] RemainingItems;
         // Snapshot the paid quote: later market prices, plans and supplier names must not rewrite receipts.
         public bool CostsRecorded;
         public long GoodsCents, TravelCents, FreightCents;
@@ -96,7 +97,8 @@ namespace PCShopSell.Core.Session
             DepartAt=DepartAt,TravelLegs=TravelLegs?.Select(r=>r.Copy()).ToArray(),
             CostsRecorded=CostsRecorded,GoodsCents=GoodsCents,TravelCents=TravelCents,FreightCents=FreightCents,
             ReceiptLines=ReceiptLines?.Where(r=>r!=null).Select(r=>r.Copy()).ToArray(),
-            Items = (Items ?? Array.Empty<PurchaseLine>()).Where(x => x != null).Select(x => x.Copy()).ToArray()
+            Items = (Items ?? Array.Empty<PurchaseLine>()).Where(x => x != null).Select(x => x.Copy()).ToArray(),
+            RemainingItems = RemainingItems?.Where(x => x != null).Select(x => x.Copy()).ToArray()
         };
     }
 
@@ -123,15 +125,20 @@ namespace PCShopSell.Core.Session
         public Money RequiredTotal, Budget;
         public double Kg;
         public int BuyMinutes, ReturnMinutes, DeliveryMinutes, Trucks;
+        public bool NeedsMultipleLoads;
+        internal VehicleKind Transport;
+        internal readonly List<PurchaseLine> RemainingItems = new List<PurchaseLine>();
         public Money Total => Goods + Travel + Freight;
         internal readonly List<(PurchaseOffer offer, PurchaseLine item)> Lines = new List<(PurchaseOffer, PurchaseLine)>();
         /// <summary>给界面看的只读明细：商品、货源、件数、小计。</summary>
         public IReadOnlyList<EmployeePurchaseQuoteLine> Preview => Lines.Select(l => new EmployeePurchaseQuoteLine
-        { Name = l.offer.Name, SourceName = l.offer.Source.Name, Count = l.item.Count, Total = l.offer.Price * l.item.Count, Kg = l.offer.UnitKg * l.item.Count }).ToArray();
+        { Name = l.offer.Name, SourceName = l.offer.SupplierName, Count = l.item.Count, Total = l.offer.Price * l.item.Count, Kg = l.offer.UnitKg * l.item.Count }).ToArray();
     }
 
     public sealed partial class GameSession
     {
+        public const string EmployeePurchaseDeliveryTitle = "进货送到了";
+        public const string EmployeePurchaseIncompleteTitle = "分趟进货结束";
         private readonly List<EmployeePurchaseTrip> _employeeTrips = new List<EmployeePurchaseTrip>();
         public IReadOnlyList<EmployeePurchaseTrip> EmployeePurchaseTrips => _employeeTrips;
 
@@ -154,7 +161,6 @@ namespace PCShopSell.Core.Session
                         {
                         if (e == null) continue;
                         if (string.IsNullOrEmpty(e.Id)) e.Id = Guid.NewGuid().ToString("N");
-                        if (role == EmployeeRole.Cashier && shop.Employee==e&&shop.EmployeeTrained) e.AssemblyTrained = true;
                         rows.Add(new EmployeeAssignment { Shop = shop, Person = e, Role = role });
                         }
                     }
@@ -277,6 +283,8 @@ namespace PCShopSell.Core.Session
             }
             copy.LastDay = row.Person.PurchasePlan?.LastDay ?? -1;
             row.Person.PurchasePlan = copy;
+            if (!copy.Daily)
+                foreach (var trip in _employeeTrips.Where(t => t.EmployeeId == id)) trip.RemainingItems = null;
             if(copy.Daily)BindDefaultProcurementOwner(row,copy);
             return true;
         }
@@ -299,17 +307,20 @@ namespace PCShopSell.Core.Session
             var stock = row.Shop.Sim.Stock;
             double available = Math.Max(0, stock.FreeSpace - incoming);
             double kg = Backpack.KgPerSpace;
-            return $"店内后仓容量不限 · 已存 {stock.UsedSpace * kg:0.##} 千克 · 在途 {incoming * kg:0.##} 千克；采购仍受货款、运输承重和店家本型号余量约束";
+            return $"店内后仓容量不限 · 已存 {stock.UsedSpace * kg:0.##} 千克 · 在途 {incoming * kg:0.##} 千克；自运超载会分趟";
         }
 
+        private static bool UsesPurchaseCourier(VehicleKind transport) => transport == VehicleKind.Walk || transport == VehicleKind.Taxi;
+        private static double PurchaseLoadKg(VehicleKind transport) => Vehicles.Get(transport).CargoCapacity * Backpack.KgPerSpace;
+
         private EmployeePurchaseQuote QuoteEmployeePurchaseExact(string id, EmployeePurchasePlan plan = null, bool planningOnly = false,
-            IReadOnlyList<PurchaseOffer> catalog = null)
+            IReadOnlyList<PurchaseOffer> catalog = null, bool resolved = false)
         {
             var q = new EmployeePurchaseQuote();
             var row = FindEmployee(id);
             if (row == null || row.Role != EmployeeRole.Buyer) { q.Error = "请选择进货员"; return q; }
             plan = plan ?? row.Person.PurchasePlan;
-            plan = EffectiveEmployeePurchasePlan(row, plan, planningOnly, catalog);
+            if (!resolved) plan = EffectiveEmployeePurchasePlan(row, plan, planningOnly, catalog);
             string blocker = planningOnly?null:IsGameOver ? "游戏已结束"
                 : _employeeTrips.Any(t => t.EmployeeId == id) ? "上一趟员工或货物还没回来"
                 : !row.Person.OnDuty(Clock.Now) ? "还没到该员工的上班时间"
@@ -318,7 +329,8 @@ namespace PCShopSell.Core.Session
             if (plan == null || (plan.Items?.Length ?? 0) == 0) q.Error = plan?.InventoryThreshold == true ? "当前没有未覆盖的阈值缺口（含现货、在途和已认领）" : row.Person.PurchasePlan.Items.Any(i=>i.BuyMaximum)?"该采购日暂无可用的店家份额或实货":"先在采购清单里添加商品";
             else if (!IsPurchaseTransport(plan.Transport)) q.Error = "请选择有效运输方式";
             if (q.Error != null) return q;
-            bool truck = plan.Transport == VehicleKind.Walk || plan.Transport == VehicleKind.Taxi;
+            q.Transport = plan.Transport;
+            bool truck = UsesPurchaseCourier(plan.Transport);
             if (!truck && FreeVehicleCount(plan.Transport) <= 0) blocker = blocker ?? "没有空闲的" + Vehicles.Get(plan.Transport).Name + "，到车行再买一台或换运输方式";
             var shopStand=StandOf(row.Shop.Place);
             var probe=new CityPersonState {PersonId=PersonIdOf(row.Person),X=shopStand.X,Y=shopStand.Y,LocationPlaceId=row.Shop.Place.Id};
@@ -332,7 +344,7 @@ namespace PCShopSell.Core.Session
                 if (!planningOnly)
                 {
                     if (offer.Kind == PurchaseGoodsKind.Part && item.Count > StallRemaining(offer.Source, PartCatalog.Get(offer.Id)))
-                        blocker = blocker ?? offer.Source.Name + "的" + offer.Name + "超过今天剩余额度";
+                        blocker = blocker ?? offer.SupplierName + "的" + offer.Name + "超过今天剩余额度";
                     if (offer.Kind == PurchaseGoodsKind.Gift && item.Count > CitySupplierRemaining(offer.Source.Id, offer.Id))
                         blocker = blocker ?? offer.Source.Name + "的" + offer.Name + "超过本日供货配额";
                     if (item.Count > EmployeeSupplyAvailable(id,offer,Clock.Today.TotalDays)) blocker=blocker??offer.Name+"超过今日剩余库存";
@@ -343,9 +355,9 @@ namespace PCShopSell.Core.Session
             if (!planningOnly)
                 foreach(var sameStock in selected.GroupBy(x=>PhysicalSupplyKey(x.offer)))
                     if(sameStock.Sum(x=>x.item.Count)>EmployeeSupplyAvailable(id,sameStock.First().offer,Clock.Today.TotalDays))blocker=blocker??sameStock.First().offer.Name+"的不同包装/清单行合计超过剩余供货";
-            foreach (var stop in selected.GroupBy(x => x.offer.Source.Id))
+            foreach (var stop in selected.GroupBy(x => PurchaseDestination(x.offer.Source)))
             {
-                var source = stop.First().offer.Source;
+                var source = stop.Key;
                 var leg=PlanCityRoute(probe,source.Id,Clock.Now.TotalMinutes);
                 if(leg==null){q.Error="去不了"+source.Name;return q;}
                 double legMeters=leg.Meters.Sum();route+=legMeters;
@@ -366,7 +378,8 @@ namespace PCShopSell.Core.Session
             var back=PlanCityRoute(probe,row.Shop.Place.Id,Clock.Now.TotalMinutes);
             if(back==null){q.Error="找不到回店路线";return q;}
             homeLeg=back.Meters.Sum();
-            if (!truck && q.Kg > Vehicles.Get(plan.Transport).CargoCapacity * Backpack.KgPerSpace + 1e-9) blocker = blocker ?? $"清单重 {q.Kg:0.##} 千克，{Vehicles.Get(plan.Transport).Name}装不下；减少数量或改叫货车";
+            q.NeedsMultipleLoads = !truck && q.Kg > PurchaseLoadKg(plan.Transport) + 1e-9;
+            if (q.NeedsMultipleLoads) blocker = blocker ?? "这批货超过单趟载重";
             double incoming = 0;
             WithShop(row.Shop, () => incoming = IncomingShopSpace);
             incoming -= _cityProcurementClaims.Where(c => c.State == ProcurementClaimState.Claimed && c.ShopId == row.Shop.Place.Id && c.OwnerId == id)
@@ -403,37 +416,67 @@ namespace PCShopSell.Core.Session
         {
             var row = FindEmployee(id);
             plan = plan ?? row?.Person.PurchasePlan;
-            if (row != null) plan = EffectiveEmployeePurchasePlan(row, plan);
-            var full = QuoteEmployeePurchaseExact(id, plan);
+            var catalog = EmployeePurchaseCatalog();
+            if (row != null) plan = EffectiveEmployeePurchasePlan(row, plan, catalog: catalog);
+            var full = QuoteEmployeePurchaseExact(id, plan, catalog: catalog, resolved: true);
             if (full.Error == null) return full;
             // These conditions prevent the employee from making any trip. Item-specific failures do not.
             if (row == null || row.Role != EmployeeRole.Buyer || plan == null || (plan.Items?.Length ?? 0) == 0
                 || IsGameOver || _employeeTrips.Any(t => t.EmployeeId == id) || !row.Person.OnDuty(Clock.Now) || !CityEmployeeAvailable(row.Person, row.Shop)
                 || !IsPurchaseTransport(plan.Transport)) return full;
-            bool truck = plan.Transport == VehicleKind.Walk || plan.Transport == VehicleKind.Taxi;
+            bool truck = UsesPurchaseCourier(plan.Transport);
             if (!truck && FreeVehicleCount(plan.Transport) <= 0) return full;
             var partial = plan.Copy();
             var selected = new List<PurchaseLine>();
             var skipped = new List<string>();
+            var remaining = new List<PurchaseLine>();
+            double load = PurchaseLoadKg(plan.Transport);
             EmployeePurchaseQuote best = null;
             // Visit the entire list in priority order. Reduce quantities to what fits the quota,
             // cash, vehicle and storage, and continue after a closed or unreachable source.
             foreach (var item in plan.Items)
             {
-                var offer = EmployeePurchaseOffer(item, plan.SourceId);
+                var offer = EmployeePurchaseOffer(item, plan.SourceId, catalog);
                 if (item == null || item.Count <= 0 || item.Count > 100 || offer == null)
                 { skipped.Add((item == null ? "无效清单项" : PurchaseItemName(item)) + "：商品或货源不可用"); continue; }
-                string label = offer.Source.Name + " · " + offer.Name;
+                string label = offer.SupplierName + " · " + offer.Name;
                 int minimum = Math.Max(1, PurchaseMinimum(offer));
                 string reason = item.Count < minimum ? "当前起订量为"+minimum+"件" : "本次条件不满足";
-                int lo = minimum - 1, hi = item.Count;
+                int plannedThisTrip = item.Count;
+                if (!truck && offer.UnitKg > 0 && item.Count >= minimum)
+                {
+                    if (offer.UnitKg * minimum > load + 1e-9)
+                    {
+                        skipped.Add(label + "：单件或起订量超过单趟载重，请换车或叫货车");
+                        continue;
+                    }
+                    int fits = (int)Math.Floor((load - (best?.Kg ?? 0) + 1e-9) / offer.UnitKg);
+                    if (fits < item.Count)
+                    {
+                        plannedThisTrip = Math.Max(0, fits);
+                        // Leave enough for the supplier's minimum on the next trip.
+                        if (plannedThisTrip < minimum || item.Count - plannedThisTrip < minimum)
+                            plannedThisTrip = item.Count >= 2 * minimum && plannedThisTrip >= minimum
+                                ? item.Count - minimum : best == null ? plannedThisTrip : 0;
+                        int deferred = item.Count - plannedThisTrip;
+                        if (deferred >= minimum)
+                        {
+                            var next = offer.Line(deferred);
+                            remaining.Add(next);
+                        }
+                        else if (deferred > 0)
+                            skipped.Add(label + $"：余下 {deferred} 件不足起订量");
+                    }
+                }
+                if (plannedThisTrip == 0) continue;
+                int lo = minimum - 1, hi = plannedThisTrip;
                 EmployeePurchaseQuote accepted = null;
                 while (lo < hi)
                 {
                     int count = (lo + hi + 1) / 2;
                     var candidate = item.Copy(); candidate.Count = count;
                     partial.Items = selected.Concat(new[] { candidate }).ToArray();
-                    var quote = QuoteEmployeePurchaseExact(id, partial);
+                    var quote = QuoteEmployeePurchaseExact(id, partial, catalog: catalog, resolved: true);
                     if (quote.Error == null) { lo = count; accepted = quote; }
                     else { hi = count - 1; reason = quote.Error; }
                 }
@@ -442,10 +485,10 @@ namespace PCShopSell.Core.Session
                 {
                     var bought = item.Copy(); bought.Count = lo; selected.Add(bought);
                     partial.Items = selected.ToArray();
-                    best = accepted ?? QuoteEmployeePurchaseExact(id, partial);
+                    best = accepted;
                 }
-                if (lo < item.Count)
-                    skipped.Add(label + (lo > 0 ? $"：计划 {item.Count} 件，购入 {lo} 件；" : "：未购；") + reason);
+                if (lo < plannedThisTrip)
+                    skipped.Add(label + (lo > 0 ? $"：本趟计划 {plannedThisTrip} 件，购入 {lo} 件；" : "：未购；") + reason);
             }
             if (best == null)
             {
@@ -458,6 +501,7 @@ namespace PCShopSell.Core.Session
             if(available<Money.Zero)available=Money.Zero;
             best.Budget = full.Total > available ? available : full.Total;
             best.Skipped.AddRange(skipped);
+            best.RemainingItems.AddRange(remaining);
             return best;
         }
 
@@ -475,14 +519,14 @@ namespace PCShopSell.Core.Session
             return DispatchEmployeePurchase(row, q);
         }
 
-        private bool DispatchEmployeePurchase(EmployeeAssignment row, EmployeePurchaseQuote q)
+        private bool DispatchEmployeePurchase(EmployeeAssignment row, EmployeePurchaseQuote q, string previousSkipped = null)
         {
             string id = row.Person.Id;
             var plan = row.Person.PurchasePlan;
             string orderId = "employee-order:" + _cityProcurementSequence++;
-            var transportMotor=plan.Transport==VehicleKind.Walk||plan.Transport==VehicleKind.Taxi?null:EmployeeTransportMotor(plan.Transport);
-            if(plan.Transport!=VehicleKind.Walk&&plan.Transport!=VehicleKind.Taxi&&transportMotor==null)return Fail("当前没有可供员工使用的空闲车辆。");
-            // 统一预付并锁定本趟报价与档口额度，途中不重复扣款。
+            var transportMotor=UsesPurchaseCourier(q.Transport)?null:EmployeeTransportMotor(q.Transport);
+            if(!UsesPurchaseCourier(q.Transport)&&transportMotor==null)return Fail("当前没有可供员工使用的空闲车辆。");
+            // 统一预付并锁定本趟报价与货源额度，途中不重复扣款。
             if (!Ledger.CanAfford(q.Total)) return false;
             for (int i = 0; i < q.Lines.Count; i++)
             {
@@ -502,10 +546,11 @@ namespace PCShopSell.Core.Session
             long now = Clock.Now.TotalMinutes;
             _employeeTrips.Add(new EmployeePurchaseTrip
             {
-                EmployeeId = id, EmployeeName = row.Person.Name, ShopId = row.Shop.Place.Id, OrderId = orderId, VehicleId=transportMotor?.Id, Transport = plan.Transport, ChangeCents = change.Cents,
-                SkippedNote = string.Join("；", q.Skipped),
+                EmployeeId = id, EmployeeName = row.Person.Name, ShopId = row.Shop.Place.Id, OrderId = orderId, VehicleId=transportMotor?.Id, Transport = q.Transport, ChangeCents = change.Cents,
+                SkippedNote = string.Join("\n", new[] { previousSkipped }.Concat(q.Skipped).Where(note => !string.IsNullOrEmpty(note))),
+                RemainingItems = q.RemainingItems.Count == 0 ? null : q.RemainingItems.ToArray(),
                 CostsRecorded=true,GoodsCents=q.Goods.Cents,TravelCents=q.Travel.Cents,FreightCents=q.Freight.Cents,
-                ReceiptLines=q.Lines.Select(x=>new EmployeePurchaseReceiptLine {SourceId=x.offer.Source.Id,SourceName=x.offer.Source.Name,
+                ReceiptLines=q.Lines.Select(x=>new EmployeePurchaseReceiptLine {SourceId=x.offer.Source.Id,SourceName=x.offer.SupplierName,
                     ProductName=x.offer.Name,Count=x.item.Count,UnitCents=x.offer.Price.Cents}).ToArray(),
                 DepartAt=now,BoughtAt = now + q.BuyMinutes, ReturnAt = now + q.ReturnMinutes, DeliveryAt = now + q.DeliveryMinutes,
                 Items = q.Lines.Select(x =>
@@ -524,6 +569,7 @@ namespace PCShopSell.Core.Session
             HandOffProcurementClaims(id, row.Shop.Place.Id, q.Lines.Select(x => x.item), orderId);
             plan.LastDay = Clock.Today.TotalDays;
             row.Person.LastPurchaseNote = $"已出发：采购 {q.Lines.Count} 种商品、{q.Kg:0.##} 千克，本趟费用 {q.Total}，货约 {q.DeliveryMinutes} 分钟送到{ShopTitle(row.Shop)}。"
+                + (q.RemainingItems.Count > 0 ? $" 还有 {q.RemainingItems.Sum(item => item.Count)} 件，返店卸货后继续采购。" : "")
                 + (q.Skipped.Count > 0 ? "\n部分未购：" + string.Join("；", q.Skipped) : "");
             Say(row.Person.Name + row.Person.LastPurchaseNote);
             return true;
@@ -555,14 +601,20 @@ namespace PCShopSell.Core.Session
                     trip.Delivered = true;
                     var person = FindEmployee(trip.EmployeeId)?.Person;
                     string note = $"{trip.EmployeeName}采购的货已送到{ShopTitle(dest)}：" + string.Join("、", trip.Items.Select(x => PurchaseItemName(x) + "×" + x.Count)) + "。";
-                    if (!string.IsNullOrEmpty(trip.SkippedNote)) note += "\n部分未购：" + trip.SkippedNote;
+                    bool more = trip.RemainingItems?.Length > 0;
+                    if (more) note += $" 还有 {trip.RemainingItems.Sum(item => item.Count)} 件待采购。";
+                    if (!string.IsNullOrEmpty(trip.SkippedNote)) note += "\n\n部分未购\n" + trip.SkippedNote;
                     if (person != null) person.LastPurchaseNote = note;
-                    Show("进货送到了", note);
+                    if (more) Say($"{trip.EmployeeName}已送到 {trip.Items.Sum(item => item.Count)} 件，剩余货物待采购。");
+                    else Show(EmployeePurchaseDeliveryTitle, note);
                 }
                 if (trip.Returned && trip.Delivered)
                 {
+                    var remaining = trip.RemainingItems;
+                    trip.RemainingItems = null;
                     _employeePurchaseHistory.Add(trip.Copy());
                     _employeeTrips.Remove(trip);
+                    if (remaining?.Length > 0) ContinueEmployeePurchase(trip, remaining, to);
                 }
             }
             foreach (var row in Employees.Where(x => x.Role == EmployeeRole.Buyer).ToList())
@@ -577,6 +629,22 @@ namespace PCShopSell.Core.Session
                 else { row.Person.LastPurchaseNote = "今日自动进货未出发：" + q.Error; Say(row.Person.Name + "：" + row.Person.LastPurchaseNote); }
             }
             UpdateCityProcurement();
+        }
+
+        private void ContinueEmployeePurchase(EmployeePurchaseTrip trip, PurchaseLine[] remaining, GameTimestamp now)
+        {
+            var row = FindEmployee(trip.EmployeeId);
+            if (row?.Role != EmployeeRole.Buyer || row.Shop.Place.Id != trip.ShopId) return;
+            string blocker = "当天的采购时间已结束";
+            if (new GameDate((int)(trip.DepartAt / GameClock.MinutesPerDay)) == now.Date)
+            {
+                var quote = QuoteEmployeePurchase(trip.EmployeeId, new EmployeePurchasePlan { Transport = trip.Transport, Items = remaining });
+                if (quote.Error == null && DispatchEmployeePurchase(row, quote, trip.SkippedNote)) return;
+                blocker = quote.Error ?? "车辆或资金不可用";
+            }
+            row.Person.LastPurchaseNote = $"分趟采购结束，还有 {remaining.Sum(item => item.Count)} 件未买。{blocker}。";
+            if (!string.IsNullOrEmpty(trip.SkippedNote)) row.Person.LastPurchaseNote += "\n\n此前未购\n" + trip.SkippedNote;
+            Show(EmployeePurchaseIncompleteTitle, row.Person.Name + "：" + row.Person.LastPurchaseNote);
         }
 
         public int VehicleCount(VehicleKind kind) => _garage.Count(v => MotorCatalog.Get(v.ModelId).Kind == kind);

@@ -254,17 +254,15 @@ namespace PCShopSell.Game.UI
 
         private static void BuildAgencyFloorPlan(Transform parent, RoomSpec room)
         {
-            var paper = Ui.Panel(parent, "AgencyFloorPlan", AgencyPaper).rectTransform;
-            Ui.Size(paper, -1, 178);
-            // Fixed drawing space is centered inside the responsive detail column.
-            var drawing = Ui.Rect(paper, "PlanDrawing");
-            drawing.anchorMin = drawing.anchorMax = new Vector2(.5f, 1);
-            drawing.pivot = new Vector2(.5f, 1);
-            drawing.sizeDelta = new Vector2(430, 178);
-            AgencyMapText(drawing, $"室内平面  {room.Width:0.#} × {room.Depth:0.#} 米", 14, 12, 0, 405, 24, AgencyInk);
-            const float scale = 10;
+            var paper = Ui.Panel(parent, "AgencyFloorPlan", AgencyPaper);
+            const float thumbnailWidth = 170, thumbnailHeight = 110;
+            Ui.Size(paper, thumbnailWidth, thumbnailHeight);
+            string caption = room.IsShop ? "临街入口 · 黄色区域留通道" : "右侧入口 · 黄色区域留通道 · 蓝色为窗";
+            paper.Tip($"室内平面 {room.Width:0.#} × {room.Depth:0.#} 米\n{caption}");
+            var drawing = paper.rectTransform;
+            float scale = Mathf.Min(9, Mathf.Min((thumbnailWidth - 20) / (float)room.Width, (thumbnailHeight - 18) / (float)room.Depth));
             float width = (float)room.Width * scale, height = (float)room.Depth * scale;
-            float x = (430 - width) / 2, y = 28 + (120 - height) / 2;
+            float x = (thumbnailWidth - width) / 2, y = (thumbnailHeight - height) / 2;
             AgencyBlock(drawing, "Walls", AgencyInk, x - 3, y - 3, width + 6, height + 6);
             AgencyBlock(drawing, "Floor", new Color32(247, 242, 226, 255), x, y, width, height);
             for (int i = 1; i < room.Width; i++) AgencyBlock(drawing, "Grid", new Color(0, .15f, .1f, .08f), x + i * scale, y, 1, height);
@@ -282,8 +280,6 @@ namespace PCShopSell.Game.UI
                     x+(float)room.WindowMinX*scale,y-3,(float)(room.WindowMaxX-room.WindowMinX)*scale,4);
             }
             AgencyMapText(drawing, $"{room.Width*room.Depth:0.#}㎡", 17, x, y, width, height, AgencyInk, TextAnchor.MiddleCenter);
-            string caption = room.IsShop ? "临街入口 · 黄色区域留通道" : "右侧入口 · 黄色区域留通道 · 蓝色为窗";
-            AgencyMapText(drawing, caption, 13, 12, 153, 405, 20, AgencyInk, TextAnchor.MiddleCenter);
         }
 
         private static void AgencyAt(RectTransform rt, float x, float y, float width, float height)

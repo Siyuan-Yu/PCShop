@@ -21,7 +21,6 @@ namespace PCShopSell.Core.Session
         public int Charm = -1;
         public int Intelligence = 50;
         public int Dexterity = 50, Stamina = 50;
-        public bool AssemblyTrained;
         public EmployeePurchasePlan PurchasePlan = new EmployeePurchasePlan();
         public string LastPurchaseNote;
         public string Name;
@@ -202,7 +201,6 @@ namespace PCShopSell.Core.Session
             string capacity=StaffCapacityBlocker(_focus);if(capacity!=null)return Fail(capacity);
             if (!CandidateAvailable(_candidates[candidateIndex])) return Fail("这位应聘者已经离开了。");
             var hired=_candidates[candidateIndex];AddShopEmployee(_focus,EmployeeRole.Cashier,hired);_employeeHireShops[hired.Id]=_focus.Place.Id;
-            if(Employee==hired)_focus.EmployeeTrained = false;
             EverHired = true;
             PlayerShop.Settings.EmployeeCheckoutMinutes = EmployeeCheckoutCycleMinutes(Employee) - 1;
             _candidates.Clear();
@@ -210,23 +208,10 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
-        public bool HireAssembler(int index)
-        {
-            if (!InPlayerShop || index < 0 || index >= _candidates.Count) return false;
-            string capacity=StaffCapacityBlocker(_focus);if(capacity!=null)return Fail(capacity);
-            if (!CandidateAvailable(_candidates[index])) return Fail("这位应聘者已经离开了。");
-            if (!Ledger.TryDebit(Clock.Today, "培训", Money.FromYuan(1200), "装机员入职培训")) return Fail("入职培训需要 ¥1,200。");
-            var hired=_candidates[index];hired.DailyWageYuan += 60;hired.AssemblyTrained=true;
-            AddShopEmployee(_focus,EmployeeRole.Assembler,hired);_employeeHireShops[hired.Id]=_focus.Place.Id;
-            EverHired = true; _candidates.Clear(); _focus.AutoBuild = true;
-            Say($"{hired.Name}入职装机岗位，日薪 {hired.DailyWage}。可与收银员同时工作。");
-            return true;
-        }
         public void FireAssembler()
         {
             if (Assembler == null) return;
             Say(Assembler.Name + "离职了。"); RemoveShopEmployee(_focus,EmployeeRole.Assembler,Assembler);
-            foreach (var o in PlayerShop.Orders) o.EmployeeMinutesLeft = 0;
         }
         public void CycleShift(bool assembly)
         {
@@ -240,9 +225,6 @@ namespace PCShopSell.Core.Session
             if (Employee == null) return;
             Say($"{Employee.Name} 走了。");
             RemoveShopEmployee(_focus,EmployeeRole.Cashier,Employee);
-            _employeeBuilding = false;
-            if (Assembler == null) foreach (var order in PlayerShop.Orders) order.EmployeeMinutesLeft = 0;
-            _focus.EmployeeTrained = Employee?.AssemblyTrained??false;
         }
 
         public bool IsEmployeeOnDuty(GameTimestamp t)
@@ -267,7 +249,7 @@ namespace PCShopSell.Core.Session
             if (ShopStaff(shop, EmployeeRole.Cashier).Any(e => CityEmployeeAvailable(e, shop)))
                 return (false, venue ? "有值守员在岗，离开后继续营业" : "有收银员在岗，离开后继续营业");
             if (special)
-                return (false, shop.RetailKind == "restaurant" ? "无在岗收银员，餐馆员工继续值守" : "无在岗收银员，收购师继续收购");
+                return (false, shop.RetailKind == "restaurant" ? "餐馆继续营业，暂无收银员，顾客会等候结账" : "无在岗收银员，收购师继续收购");
             return (false, "无在岗收银员，装机员代收银，离开后继续营业");
         }
 

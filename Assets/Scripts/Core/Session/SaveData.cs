@@ -303,7 +303,7 @@ namespace PCShopSell.Core.Session
         public SaveEmployee employee, assembler, buyer, salesperson;
         public bool hasBuyer;
         public bool hasSalesperson;
-        public bool employeeTrained, autoBuild;
+        public bool autoBuild;
         public SavePlaced[] layout;
         public string[] upgrades;
         public string[] restockIds;
@@ -328,7 +328,7 @@ namespace PCShopSell.Core.Session
         public long candidateLeavesAt;
         public string id, transferShopId, lastPurchaseNote;
         public int transferDay = -1;
-        public bool hasTransferRole, hasWorkSkills, assemblyTrained;
+        public bool hasTransferRole, hasWorkSkills;
         public int transferRole, assemblyMinutes, purchaseMinutes;
         public EmployeePurchasePlan purchasePlan;
         public string name;

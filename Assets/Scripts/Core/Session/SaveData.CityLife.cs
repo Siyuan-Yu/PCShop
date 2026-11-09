@@ -80,6 +80,7 @@ namespace PCShopSell.Core.Session
                 // Even a deleted route target must not teleport the saved physical person.
                 if(copy.Route!=null&&(!City.HasPlace(copy.Route.TargetPlaceId)||copy.Route.X==null||copy.Route.Y==null||copy.Route.X.Length<2||copy.Route.Y.Length!=copy.Route.X.Length))
                     copy.Route=null;
+                RefreshElectronicsMarketWorkplace(copy);
                 _cityPeople.Add(copy.PersonId,copy);
             }
             InitializeCityPeople();
@@ -128,6 +129,28 @@ namespace PCShopSell.Core.Session
                 &&!(d.venueBusinesses??Array.Empty<VenueBusiness>()).Any(v=>v!=null&&ShopAt(v.PlaceId)!=null&&(v.CustomersHere??Array.Empty<VenueCustomer>()).Any(c=>c.PersonId==p.PersonId&&c.ReservationId==p.ActivityId)))p.ActivityId=null;
             foreach(var shop in _shops)shop.Sim.PlayerPresent=CityPlayerCanWork(shop);
             PositionStreetServicePeople();
+        }
+
+        private void RefreshElectronicsMarketWorkplace(CityPersonState person)
+        {
+            if (!City.HasPlace(person.WorkPlaceId) || !City.HasPlace(Stalls.Cpu)) return;
+            var oldWork = City.GetPlace(person.WorkPlaceId);
+            if (!SharesWholesaleMarket(City.GetPlace(Stalls.Cpu), oldWork)) return;
+            string newWork = CityPerson(person.PersonId)?.WorkId;
+            if (!City.HasPlace(newWork) || City.CanonicalPlaceId(newWork) == oldWork.Id
+                || Employees.Any(row => PersonIdOf(row.Person) == person.PersonId)) return;
+
+            person.WorkPlaceId = City.CanonicalPlaceId(newWork);
+            if (person.Route != null || person.ActivityId != null || person.VisitId != null || person.LocationPlaceId != oldWork.Id
+                || (person.Task != CityPersonTask.Working && person.Task != CityPersonTask.Waiting)) return;
+
+            bool working = AuthoredCityWorkAt(person, Clock.Now.TotalMinutes);
+            person.LocationPlaceId = working ? person.WorkPlaceId : person.HomePlaceId;
+            person.Task = working ? CityPersonTask.Working : CityPersonTask.Home;
+            person.TaskLabel = working ? "当班工作" : "在家休息";
+            var point = StandOf(City.GetPlace(person.LocationPlaceId));
+            person.X = point.X;
+            person.Y = point.Y;
         }
     }
     public sealed partial class CityStoryProgress

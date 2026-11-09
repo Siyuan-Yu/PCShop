@@ -130,7 +130,9 @@ namespace PCShopSell.Core.Session
 
         public int ClaimedProcurementCount(string shopId, PurchaseGoodsKind kind, string productId, string excludingOwner = null) =>
             _cityProcurementClaims.Where(c => c.State == ProcurementClaimState.Claimed && c.ShopId == shopId && c.Kind == kind && c.ProductId == productId
-                && (excludingOwner == null || c.OwnerId != excludingOwner)).Sum(c => c.Count);
+                && (excludingOwner == null || c.OwnerId != excludingOwner)).Sum(c => c.Count)
+            + _employeeTrips.Where(t => t.ShopId == shopId && t.EmployeeId != excludingOwner && t.RemainingItems != null)
+                .Sum(t => t.RemainingItems.Where(item => item.Kind == kind && item.PartId == productId).Sum(item => item.Count));
         public Money ClaimedProcurementBudget => ClaimedProcurementBudgetExcept(null);
         private Money ClaimedProcurementBudgetExcept(string ownerId) => Money.FromCents(_cityProcurementClaims.Where(c => c.State == ProcurementClaimState.Claimed && (ownerId == null || c.OwnerId != ownerId)).Sum(c => c.BudgetCents));
         private double ClaimedProcurementSpace(string shopId) => _cityProcurementClaims.Where(c => c.State == ProcurementClaimState.Claimed && c.ShopId == shopId).Sum(c =>
@@ -285,7 +287,7 @@ namespace PCShopSell.Core.Session
         {
             var result = new List<ProcurementSourceQuote>();
             foreach (var offer in EmployeePurchaseCatalog().Where(o => o.Kind == kind && o.Id == productId))
-                result.Add(new ProcurementSourceQuote { OfferId = offer.Key, SupplierId = offer.Source.Id, SupplierName = offer.Source.Name, ProductId = productId,
+                result.Add(new ProcurementSourceQuote { OfferId = offer.Key, SupplierId = offer.Source.Id, SupplierName = offer.SupplierName, ProductId = productId,
                     Kind = kind, Name = offer.Name, PlaceId = offer.Source.Id, UnitPrice = offer.Price, Method = ProcurementMethod.Employee,
                     Minimum = PurchaseMinimum(offer),
                     Conditions = "线下看货/议价；员工按真实路线与运费执行 · 起订 " + PurchaseMinimum(offer) + " 件"
@@ -311,7 +313,7 @@ namespace PCShopSell.Core.Session
             var plan = row.Person.PurchasePlan?.Copy() ?? new EmployeePurchasePlan(); PrepareEmployeePurchaseDraft(plan);
             var offer = EmployeePurchaseOffer(new PurchaseLine { Kind = kind, PartId = productId, SourceId = sourceId, Count = count });
             if (offer == null || count <= 0 || count > 100) return Fail("该来源没有此商品，或数量超出范围。");
-            var items = plan.Items.ToList(); var existing = items.FirstOrDefault(i => i.Kind == kind && i.PartId == productId && i.SourceId == sourceId);
+            var items = plan.Items.ToList(); var existing = items.FirstOrDefault(i => GameSession.PurchaseKey(i) == offer.Key);
             if (existing == null) items.Add(offer.Line(count)); else existing.Count = Math.Max(existing.Count, count);
             plan.Items = items.ToArray(); return CompleteEmployeePurchase(employeeId, plan);
         }

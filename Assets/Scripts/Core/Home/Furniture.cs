@@ -162,6 +162,8 @@ namespace PCShopSell.Core.Home
         public const string ShopCounter = "shop_counter";
         public const string ShopDisplay = "shop_display";
         public const string ShopBench = "shop_bench";
+        public const string LegacyRestaurantPass = "restaurant_pass";
+        public const string LegacyRestaurantPrep = "restaurant_prep";
 
         /// <summary>货架（只有一种，摆什么货自己在店里设置）。</summary>
         public const string Shelf = "shelf";
@@ -197,14 +199,14 @@ namespace PCShopSell.Core.Home
                 return d;
             }
 
-            Add(new FurnitureDef("restaurant_prep","餐馆加工台","备料台；餐馆必需。",650,FurnitureSlot.Floor,1.1,.6,true){WeightKg=30});
+            Add(new FurnitureDef(LegacyRestaurantPrep,"旧餐馆加工台","旧版餐馆家具，可在装修时收起。",650,FurnitureSlot.Floor,1.1,.6,forShop:true,starter:true){WeightKg=30});
             Add(new FurnitureDef("restaurant_stove","餐馆炒锅灶台","一个同时烹饪锅位；投料后注意火候，及时出锅。",1400,FurnitureSlot.Floor,.8,.65,true){WeightKg=45});
             Add(new FurnitureDef(PetShopCatalog.SmallHouse, "小型宠物屋", "最多照顾 4 只猫狗。靠近按 F 聚焦。", 680, FurnitureSlot.Floor, 3.2, 2.1, true) { WeightKg = 24 });
             Add(new FurnitureDef(PetShopCatalog.MediumHouse, "中型宠物屋", "中型或大型商铺可摆放，最多照顾 8 只猫狗。", 2100, FurnitureSlot.Floor, 4.6, 2.8, true) { WeightKg = 45 });
             Add(new FurnitureDef(PetShopCatalog.LargeHouse, "大型宠物屋", "大型商铺可摆放，最多照顾 12 只猫狗。", 4300, FurnitureSlot.Floor, 6.0, 3.5, true) { WeightKg = 78 });
             Add(new FurnitureDef(PetShopCatalog.WandFixture, "逗猫棒（代养区）", "摆在宠物屋旁，近景可以拿起来逗猫。", 19, FurnitureSlot.Floor, .38, .36, true) { WeightKg = .15 });
             Add(new FurnitureDef(PetShopCatalog.BallFixture, "软球（代养区）", "摆在宠物屋旁，近景可以抛给狗狗捡回来。", 16, FurnitureSlot.Floor, .38, .36, true) { WeightKg = .12 });
-            Add(new FurnitureDef("restaurant_pass","餐馆传菜台","出锅的菜放在这里，再送至餐桌。",500,FurnitureSlot.Floor,1,.5,true){WeightKg=20});
+            Add(new FurnitureDef(LegacyRestaurantPass,"旧传菜台","旧版餐馆家具，可在装修时收起。",500,FurnitureSlot.Floor,1,.5,forShop:true,starter:true){WeightKg=20});
             Add(new FurnitureDef("restaurant_table","餐馆餐桌","提供一个堂食桌位；上菜后用餐结账，需要收桌。",380,FurnitureSlot.Floor,.85,.85,true){WeightKg=15});
             Add(new FurnitureDef("used_buydesk","收购鉴定台","听说辞、出价收购；买下后才可鉴定。",650,FurnitureSlot.Floor,1.1,.6,true){WeightKg=25});
             Add(new FurnitureDef("used_display","二手销售展示台","每台展示4件已鉴定的旧物，按真实状态标价出售。",450,FurnitureSlot.Floor,1,.65,true){WeightKg=20});

@@ -38,7 +38,7 @@ namespace PCShopSell.EditorTools
             Check(screen.GetComponentsInChildren<Button>().Length == 4, "打工界面仅提供四档时间速度，无离开或购物按钮");
             Check(!_game.Ui.TryHotkey(KeyCode.M) && !_game.Ui.TryHotkey(KeyCode.Escape), "工作中不能通过快捷键打开管理或菜单");
             long before = s.Clock.Now.TotalMinutes;
-            ClickGuideButton("8×"); Frame(.25f);
+            ClickGuideButton("4×"); Frame(.25f);
             Check(s.Clock.Now.TotalMinutes > before && s.Time.Speed == 8, "打工中倍速实际推进时间");
             _game.Ui.Popup("后台配送消息", "货已送到，收工后查看。");
             var e = EventCatalog.All.First(); s.RaiseEvent(e.Id);

@@ -90,11 +90,6 @@ namespace PCShopSell.Core.Session
             }
             if(e.TryShift(at,out long start,out long end)) { schedule.ActiveStart=start;schedule.ActiveEnd=end; }
         }
-        private void SnapshotCurrentEmployeePay(Employee e)
-        {
-            PrepareEmployeeShift(e,Clock.Now.TotalMinutes);
-            if(e.TryShift(Clock.Now.TotalMinutes,out long start,out long end))PayrollDay(e,start,end);
-        }
         private EmployeePayrollDay PayrollDay(Employee e,long start,long end)
         {
             int day=(int)(start/1440);

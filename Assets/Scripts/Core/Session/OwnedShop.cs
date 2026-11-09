@@ -22,7 +22,7 @@ namespace PCShopSell.Core.Session
         public readonly Dictionary<string, int> Restock = new Dictionary<string, int>();
         public Employee Employee, Assembler, Buyer, Salesperson;
         public readonly List<AdditionalShopEmployee> AdditionalEmployees=new List<AdditionalShopEmployee>();
-        public bool EmployeeTrained, AutoBuild;
+        public bool AutoBuild;
         public bool EmployeeBuilding;
         public int PendingDisplayTier = -1, PendingDisplayMinutes;
         public int RenovationDay = -1;

@@ -88,6 +88,32 @@ namespace PCShopSell.Tests
             }
         }
         [Test]
+        public void ElectronicsCountersResolveToOneQuoteAndMergeLegacyPurchaseLines()
+        {
+            using (var s = Make())
+            {
+                var buyer = s.MainShop.Buyer;
+                var catalog = s.EmployeePurchaseCatalog();
+                var first = catalog.Single(o => o.Id == "cpu0");
+                Assert.AreEqual(Stalls.Cpu,first.Source.Id);
+                var second = first.Line(2);
+                second.SourceId = Stalls.Gpu;
+                var plan = new EmployeePurchasePlan { Items = new[] { first.Line(1), second } };
+                Assert.AreEqual(Stalls.Cpu, s.EmployeePurchaseBrowseSource(plan, catalog));
+                plan.BrowseSourceSelected = true;
+                plan.BrowseSourceId = Stalls.Gpu;
+                Assert.AreEqual(Stalls.Cpu, s.EmployeePurchaseBrowseSource(plan, catalog));
+                Assert.True(s.ConfigureEmployeePurchase(buyer.Id, plan));
+                Assert.AreEqual(3,buyer.PurchasePlan.Items.Single().Count);
+                int firstStock = s.PurchaseRemaining(first);
+                Assert.True(s.DispatchEmployeePurchase(buyer.Id));
+                var trip = s.EmployeeTrip(buyer.Id);
+                CollectionAssert.AreEqual(new[] { Stalls.Cpu, s.MainShop.Place.Id }, trip.TravelLegs.Select(leg => leg.TargetPlaceId));
+                Assert.AreEqual(firstStock - 3, s.PurchaseRemaining(first));
+            }
+        }
+
+        [Test]
         public void EmployeePurchaseWindowReopensAtTheLastBrowsedSource()
         {
             using(var s=Make())
@@ -154,11 +180,17 @@ namespace PCShopSell.Tests
                 try
                 {
                     var source=s.City.GetPlace("clothing_wholesale");
+                    s.MainShop.RetailKind = "clothing";
+                    var catalog = s.EmployeePurchaseCatalog();
+                    var shopCategories = new[] { "全部" }.Concat(catalog.Where(o => o.Kind == PurchaseGoodsKind.Gift && ClothingProducts.IsClothing(o.Id)).Select(o => o.Category)).Distinct().ToArray();
                     var plan=Mixed(s);
                     Assert.IsTrue(s.ConfigureEmployeePurchase(s.MainShop.Buyer.Id,plan));
                     ui.OpenEmployeePurchase(s.MainShop.Buyer.Id);
                     AssertFixedLayout();
-                    Button("全部货源  ▼").onClick.Invoke();
+                    Button("全部 ▾").onClick.Invoke();
+                    CollectionAssert.AreEquivalent(shopCategories, CategoryButtons().Select(b => b.GetComponentInChildren<UnityEngine.UI.Text>().text));
+                    Assert.IsTrue(ui.CloseTopWindow());
+                    Button("本店商品  ▼").onClick.Invoke();
                     Button(source.Name).onClick.Invoke();
                     Button("全部 ▾").onClick.Invoke();
                     var clothingCategories=new[]{"全部"}.Concat(s.EmployeePurchaseCatalog().Where(o=>o.Source.Id==source.Id).Select(o=>o.Category)).Distinct().ToArray();
@@ -171,7 +203,7 @@ namespace PCShopSell.Tests
                     Button(electronics.Name).onClick.Invoke();
                     Assert.IsNotNull(Button("全部 ▾"),"切换到不包含旧分类的货源时，分类应回到全部");
                     Button("全部 ▾").onClick.Invoke();
-                    CollectionAssert.AreEquivalent(new[]{"全部"}.Concat(s.EmployeePurchaseCatalog().Where(o=>o.Source.Id==electronics.Id).Select(o=>o.Category)).Distinct(),CategoryButtons().Select(b=>b.GetComponentInChildren<UnityEngine.UI.Text>().text));
+                    CollectionAssert.AreEquivalent(new[]{"全部"}.Concat(catalog.Where(o=>s.PurchaseDestination(o.Source)==electronics).Select(o=>o.Category)).Distinct(),CategoryButtons().Select(b=>b.GetComponentInChildren<UnityEngine.UI.Text>().text));
                     Assert.IsTrue(ui.CloseTopWindow());
                     Button(electronics.Name+"  ▼").onClick.Invoke();
                     Button("全部货源").onClick.Invoke();
@@ -188,6 +220,11 @@ namespace PCShopSell.Tests
                     ui.OpenEmployeePurchase(s.MainShop.Buyer.Id);
                     Assert.IsNotNull(Button(source.Name+"  ▼"),"完成后删除草稿，也必须恢复上次的浏览货源");
                     AssertFixedLayout();
+                    Button(source.Name+"  ▼").onClick.Invoke();
+                    Button("本店商品").onClick.Invoke();
+                    ui.CloseAllWindows();
+                    ui.OpenEmployeePurchase(s.MainShop.Buyer.Id);
+                    Assert.IsNotNull(Button("本店商品  ▼"));
                 }
                 finally
                 {

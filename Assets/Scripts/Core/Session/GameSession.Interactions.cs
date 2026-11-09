@@ -21,7 +21,6 @@ namespace PCShopSell.Core.Session
 
         public bool CanEditShop => IsRenovating;
 
-        public void TrainEmployeeAt(OwnedShop shop) => WithShop(shop, () => { TrainEmployee(); });
         public void ToggleAutoBuildAt(OwnedShop shop) => WithShop(shop, ToggleAutoBuild);
 
         public int PendingPurchaseCount(OwnedShop shop, string partId)

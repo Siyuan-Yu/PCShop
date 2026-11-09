@@ -4,6 +4,7 @@ using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -95,7 +96,11 @@ namespace PCShopSell.Game.UI
                 ProductName=GameSession.PurchaseItemName(item),Count=item.Count
             }).ToArray();
 
-        private string PurchaseSources(EmployeePurchaseTrip trip) => string.Join(" → ",PurchaseReceiptLines(trip).Select(r=>r.SourceName).Distinct());
+        private Place ReceiptPurchaseDestination(string sourceId) => S.City.HasPlace(sourceId)
+            ? S.PurchaseDestination(S.City.GetPlace(sourceId)) : null;
+
+        private string PurchaseSources(EmployeePurchaseTrip trip) => string.Join(" → ", PurchaseReceiptLines(trip)
+            .Select(r => ReceiptPurchaseDestination(r.SourceId)?.Name ?? r.SourceName).Distinct());
         private static string PurchaseTime(long minute) => new GameTimestamp(Math.Max(0,minute)).ToString();
         private string PurchaseTripTiming(EmployeePurchaseTrip trip)
         {
@@ -136,9 +141,11 @@ namespace PCShopSell.Game.UI
         private void BuildBuyerReceipt(Transform parent,EmployeePurchaseTrip trip)
         {
             var legs=trip.TravelLegs??Array.Empty<CityRoute>();
-            foreach(var source in PurchaseReceiptLines(trip).GroupBy(r=>r.SourceId))
+            foreach(var source in PurchaseReceiptLines(trip).GroupBy(r => legs.Any(l => l.TargetPlaceId == r.SourceId)
+                ? r.SourceId : ReceiptPurchaseDestination(r.SourceId)?.Id ?? r.SourceId))
             {
-                Line(parent,source.First().SourceName,18,Ui.Accent);
+                string name = ReceiptPurchaseDestination(source.Key)?.Name ?? source.First().SourceName;
+                Line(parent,name,18,Ui.Accent);
                 var leg=legs.FirstOrDefault(r=>r.TargetPlaceId==source.Key);
                 if(leg!=null)
                 {
@@ -150,7 +157,8 @@ namespace PCShopSell.Game.UI
                 }
                 else Line(parent,"旧采购未保存该货源的到店时间",16,Ui.Dim);
                 foreach(var item in source)
-                    Para(parent,item.ProductName+" ×"+item.Count+(trip.CostsRecorded?" · 单价 "+Money.FromCents(item.UnitCents):""),18);
+                    Para(parent,item.ProductName+" ×"+item.Count+(trip.CostsRecorded?" · 单价 "+Money.FromCents(item.UnitCents):"")
+                        +(item.SourceName != name ? " · " + item.SourceName : ""),18);
             }
             Line(parent,GameSession.PurchaseTransportName(trip.Transport),17,Ui.Dim);
             if(trip.CostsRecorded)

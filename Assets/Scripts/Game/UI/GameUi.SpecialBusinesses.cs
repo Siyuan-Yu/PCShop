@@ -68,8 +68,6 @@ namespace PCShopSell.Game.UI
         {
             var shop=S.CurrentShop;var state=S.SpecialBusiness(shop.Place.Id);
             Line(C,RetailShopTypes.Name(shop.RetailKind)+" · "+(S.SpecialOpen(shop,S.Clock.Now)?"营业中":"未营业"),21,Ui.Accent);
-            string gap=S.SpecialFitGap(shop);
-            if(gap!=null)Para(C,"请先去家具城购买并在装修页摆好："+gap,17,Ui.Warn);
             var manage=Ui.Row(C,38,4);
             Ui.Size(Ui.Button(manage,"经营类型 / 转型",OpenRetailTypeChooser,16),-1,38,1);
             Ui.Size(Ui.Button(manage,shop.OwnsProperty?"结束自营":"退租店铺",()=>ConfirmCloseShop(shop),16,Ui.Warn),110,38);
@@ -84,7 +82,16 @@ namespace PCShopSell.Game.UI
         private void BuildRestaurantCounter(SpecialBusinessState state)
         {
             var shop=S.CurrentShop;
-            HelpLink(C,"烹饪说明","加工台备料→投锅→出锅到传菜台→上菜→收桌。锅内8分钟熟，38分钟焦糊；顾客最多等餐100分钟。点操作后会走到设备旁执行，WASD可接管。暂停时操作和火候都暂停。厨师和服务员须实际在岗；菜单与售价在定价页设置。");
+            int waiting=S.RestaurantCheckoutCount(shop);
+            if(S.RestaurantCheckoutCustomer is DiningOrder customer)
+            {
+                var row=Ui.Row(C,36,4);
+                Line(row,$"收银台 · {waiting} 人排队 · ¥{customer.Price}",17,Ui.Accent);
+                var checkout=Ui.Size(Ui.Button(row,"结账",()=>_ctrl.CheckoutRestaurant(customer.Id),17,Ui.ButtonHot,
+                    _ctrl.Interior?.NearCounter==true),90,36);
+                _counterRefresh.Add(()=>checkout.interactable=_ctrl.Interior?.NearCounter==true);
+            }
+            HelpLink(C,"烹饪说明","在灶台备料投锅，8分钟后熟，38分钟后焦糊。出锅后直接送到餐桌。顾客吃完到收银台排队，可由玩家按 F 或由在岗收银员结账。顾客排队等候60分钟仍未结账就会离开。服务员负责上菜和收桌。");
             Line(C,"厨房大米 "+S.KitchenRice(shop).ToString("0.##")+" 千克 · 青菜 "+S.KitchenIngredientCount(shop,"veg")+" · 鸡蛋 "+S.KitchenIngredientCount(shop,"egg")+" · 肉 "+S.KitchenIngredientCount(shop,"pork"),15,Ui.Dim);
             string coldStorageBlocker=S.KitchenColdStorageBlocker;
             Ui.Size(Ui.Button(C,"店内食材放入冰箱",()=>{S.ChillKitchenIngredients();RebuildDock();},16,Ui.ButtonHot,coldStorageBlocker==null),-1,34).name="ChillKitchenIngredients";
@@ -94,14 +101,15 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(storage,"打开冰箱",OpenFridgeWindow,15,Ui.ButtonBg,S.CanOpenFridge),110,36);
 
 
-            foreach(var order in state.Orders.OrderBy(o=>o.Stage==DiningStage.Cooking&&S.Clock.Now.TotalMinutes>=o.ReadyAt?0:o.Stage==DiningStage.Burnt?1:o.Stage==DiningStage.Ready?2:o.Stage==DiningStage.Waiting?3:4).ToArray())
+            foreach(var order in state.Orders.Where(o=>!o.TableCleared).OrderBy(o=>o.Stage==DiningStage.Cooking&&S.Clock.Now.TotalMinutes>=o.ReadyAt?0:o.Stage==DiningStage.Burnt?1:o.Stage==DiningStage.Ready?2:o.Stage==DiningStage.Waiting?3:4).ToArray())
             {
                 int id=order.Id;long now=S.Clock.Now.TotalMinutes;
-                string status=order.Stage==DiningStage.Waiting?"等待烹饪":order.Stage==DiningStage.Cooking?(now<order.ReadyAt?"烹饪中 · 还有"+(order.ReadyAt-now)+"分钟熟":"可出锅 · 距焦糊"+(order.BurnAt-now)+"分钟"):
-                    order.Stage==DiningStage.Ready?"传菜台待上菜":order.Stage==DiningStage.Eating?"正在用餐":order.Stage==DiningStage.Completed?"已付款，待收桌":order.Stage==DiningStage.Burnt?"焦糊，需重做":"顾客已离开";
+                var assigned=state.Workers.FirstOrDefault(w=>w.Busy&&w.OrderId==id);
+                string status=assigned?.Carrying==true?"正在送往餐桌":
+                    order.Stage==DiningStage.Waiting?"等待烹饪":order.Stage==DiningStage.Cooking?(now<order.ReadyAt?"烹饪中 · 还有"+(order.ReadyAt-now)+"分钟熟":"可出锅 · 距焦糊"+(order.BurnAt-now)+"分钟"):
+                    order.Stage==DiningStage.Ready?"已出锅 · 待上菜":order.Stage==DiningStage.Eating?"正在用餐":order.Stage==DiningStage.Checkout?"已离桌 · 待收桌":order.Stage==DiningStage.Completed?"已付款 · 待收桌":order.Stage==DiningStage.Burnt?"焦糊，需重做":"顾客已离开";
                 Line(C,(order.Table+1)+"号桌 · "+GameSession.RecipeNames[order.Recipe]+" · ¥"+order.Price,17,Ui.Accent);
                 Line(C,status,16,order.Stage==DiningStage.Burnt?Ui.Warn:Ui.Good);
-                var assigned=state.Workers.FirstOrDefault(w=>w.Busy&&w.OrderId==id);
                 bool playerBusy=state.Workers.Any(w=>w.ActorId==GameSession.RestaurantPlayer&&w.Busy);
                 if(assigned!=null)
                 {
@@ -114,9 +122,9 @@ namespace PCShopSell.Game.UI
                 bool canRequest=assigned==null&&!playerBusy;
                 var bar=Ui.Row(C,36,4);
                 if(order.Stage==DiningStage.Waiting)Ui.Size(Ui.Button(bar,"备料投锅",()=>Request(RestaurantJob.Cook),17,Ui.ButtonHot,canRequest),-1,36,1);
-                if(order.Stage==DiningStage.Cooking)Ui.Size(Ui.Button(bar,"出锅到传菜台",()=>Request(RestaurantJob.Plate),17,Ui.ButtonHot,canRequest&&now>=order.ReadyAt&&now<order.BurnAt),-1,36,1);
+                if(order.Stage==DiningStage.Cooking)Ui.Size(Ui.Button(bar,"出锅上菜",()=>Request(RestaurantJob.Serve),17,Ui.ButtonHot,canRequest&&now>=order.ReadyAt&&now<order.BurnAt),-1,36,1);
                 if(order.Stage==DiningStage.Ready)Ui.Size(Ui.Button(bar,"上菜",()=>Request(RestaurantJob.Serve),17,Ui.ButtonHot,canRequest),-1,36,1);
-                if(order.Stage==DiningStage.Completed||order.Stage==DiningStage.Left||order.Stage==DiningStage.Burnt)
+                if(order.NeedsClearing)
                     Ui.Size(Ui.Button(bar,order.Stage==DiningStage.Burnt?"倒掉重做":"收桌",()=>Request(RestaurantJob.Clear),17,Ui.ButtonBg,canRequest),-1,36,1);
             }
             if(state.Orders.Count==0)Para(C,"等待顾客入座；请检查营业时间、厨房设施和餐桌。",17,Ui.Dim);
@@ -156,10 +164,10 @@ namespace PCShopSell.Game.UI
                 if(!state.Used.Any(i=>i.Owned))Line(C,"暂无收购记录。",16,Ui.Dim);
                 return;
             }
-            Line(C,$"当前桌单 {state.Orders.Count} · 超时流失 {state.Lost}",17);
+            Line(C,$"当前订单 {state.Orders.Count} · 超时流失 {state.Lost}",17);
             foreach(var order in state.Orders.OrderBy(o=>o.Table))
             {
-                string status=order.Stage==DiningStage.Waiting?"待备料":order.Stage==DiningStage.Cooking?"烹饪中":order.Stage==DiningStage.Ready?"待上菜":order.Stage==DiningStage.Eating?"用餐中":order.Stage==DiningStage.Completed?"已付款":order.Stage==DiningStage.Burnt?"已焦糊":"已离开";
+                string status=order.Stage==DiningStage.Waiting?"待备料":order.Stage==DiningStage.Cooking?"烹饪中":order.Stage==DiningStage.Ready?"待上菜":order.Stage==DiningStage.Eating?"用餐中":order.Stage==DiningStage.Checkout?"待收银台结账":order.Stage==DiningStage.Completed?"已付款":order.Stage==DiningStage.Burnt?"已焦糊":"已离开";
                 Line(C,$"{order.Table+1}号桌 · {GameSession.RecipeNames[order.Recipe]} · ¥{order.Price} · {status}",17);
             }
             if(state.Orders.Count==0)Line(C,"当前没有桌单。",16,Ui.Dim);

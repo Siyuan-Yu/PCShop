@@ -65,6 +65,9 @@ namespace PCShopSell.Core.Session
 
         public bool SleepEightHours() => SleepMinutes(480);
 
+        public bool SleepUntilTomorrowMorning() =>
+            SleepMinutes(GameTimestamp.MinutesPerDay - Clock.MinuteOfDay + WakeUpMinute);
+
         private bool SleepMinutes(int minutes)
         {
             if (!CanSleepAt(CurrentPlace)) return Fail("只能在可入住的自家住宅睡觉。");

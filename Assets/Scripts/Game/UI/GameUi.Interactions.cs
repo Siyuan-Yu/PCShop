@@ -71,6 +71,27 @@ namespace PCShopSell.Game.UI
             });
         }
 
+        private static readonly EmployeeRole[] EmployeeRoleChoices = Enum.GetValues(typeof(EmployeeRole))
+            .Cast<EmployeeRole>().OrderBy(role => role == EmployeeRole.Unassigned).ToArray();
+        private static readonly Color UnassignedRoleColor = new Color32(63, 77, 97, 255);
+        private static readonly Color UnassignedRoleSelectedColor = new Color32(80, 105, 143, 255);
+
+        private static void BuildEmployeeRoleChoices(Transform parent, EmployeeRole selected, Action<EmployeeRole> select, bool venue = false)
+        {
+            var roles = Ui.Row(parent, 44);
+            foreach (var role in EmployeeRoleChoices)
+            {
+                bool unassigned = role == EmployeeRole.Unassigned;
+                bool active = role == selected;
+                Color background = unassigned
+                    ? (active ? UnassignedRoleSelectedColor : UnassignedRoleColor)
+                    : (active ? Ui.ButtonHot : Ui.ButtonBg);
+                bool cashier = role == EmployeeRole.Cashier;
+                string label = venue && cashier ? "场馆值守" : GameSession.RoleName(role);
+                Ui.Size(Ui.Button(roles, label, () => select(role), 18, background, !venue || cashier || unassigned), -1, -1, 1);
+            }
+        }
+
         private void OpenRecruitWork(Employee candidate)
         {
             EmployeeRole role = EmployeeRole.Cashier;
@@ -79,13 +100,7 @@ namespace PCShopSell.Game.UI
             {
                 PersonSummary(w.Content, S.PersonIdOf(candidate), candidate.Name, "日薪 " + candidate.DailyWage);
                 Line(w.Content, S.CandidateWaitText(candidate), 17, Ui.Warn);
-                var roles = Ui.Row(w.Content, 44);
-                foreach (EmployeeRole option in Enum.GetValues(typeof(EmployeeRole)))
-                {
-                    var choice = option;
-                    Ui.Size(Ui.Button(roles, GameSession.RoleName(choice), () => { role = choice; w.Rebuild(); }, 18,
-                        role == choice ? Ui.ButtonHot : Ui.ButtonBg), -1, -1, 1);
-                }
+                BuildEmployeeRoleChoices(w.Content, role, choice => { role = choice; w.Rebuild(); });
                 BuildRecruitRolePreview(w.Content, candidate, role, S.ShopAt(shopId));
                 if (role != EmployeeRole.Unassigned)
                 {

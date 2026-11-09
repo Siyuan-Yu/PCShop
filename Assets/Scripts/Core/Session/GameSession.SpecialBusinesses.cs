@@ -10,7 +10,7 @@ using PCShopSell.Core.Time;
 namespace PCShopSell.Core.Session
 {
     public enum UsedCondition { Good, Flawed, Replica, Broken }
-    public enum DiningStage { Waiting, Cooking, Ready, Eating, Completed, Left, Burnt }
+    public enum DiningStage { Waiting, Cooking, Ready, Eating, Completed, Left, Burnt, Checkout }
     [Serializable] public sealed class UsedItem
     {
         public int Id, Product, Personality, Statement, SellerId;
@@ -25,7 +25,10 @@ namespace PCShopSell.Core.Session
         public int Id, Recipe, Table;
         public int Stove=-1;
         public DiningStage Stage;
-        public long Arrived, Started, ReadyAt, BurnAt, EatUntil, Price;
+        public bool TableCleared;
+        public bool NeedsClearing => !TableCleared && (Stage == DiningStage.Checkout || Stage == DiningStage.Completed
+            || Stage == DiningStage.Left || Stage == DiningStage.Burnt);
+        public long Arrived, Started, ReadyAt, BurnAt, EatUntil, CheckoutAt, Price;
         public DiningOrder Copy() => (DiningOrder)MemberwiseClone();
     }
     [Serializable] public sealed partial class SpecialBusinessState
@@ -33,6 +36,7 @@ namespace PCShopSell.Core.Session
         public string ShopId;
         public int NextId=1, BudgetDay=-1;
         public long NextVisit, Revenue, SpentToday;
+        public long NextCashierCheckout;
         public int Paid, Lost;
         public int RestaurantArrivalDay = -1, RestaurantArrivalsToday;
         public int RecipeMask=7;
@@ -79,11 +83,11 @@ namespace PCShopSell.Core.Session
         {
             if(shop.RetailKind=="restaurant")
             {
-                var missing=new List<string>();
-                foreach(var id in new[]{"restaurant_prep","restaurant_stove","restaurant_pass","restaurant_table"})
-                    if(Furnished(shop,id)==0)missing.Add(FurnitureCatalog.Get(id).Name);
-                if(!shop.Layout.Any(p=>FurnitureCatalog.Get(p.Id)?.Role==FurnitureRole.Fridge))missing.Add("冰箱");
-                return missing.Count==0?null:string.Join("、",missing);
+                List<string> missing = null;
+                foreach (string id in RestaurantOpeningFurniture)
+                    if (!OpeningFurniturePlaced(shop, id))
+                        (missing ??= new List<string>()).Add(OpeningFurnitureName(id));
+                return missing == null ? null : string.Join("、", missing);
             }
             if(shop.RetailKind=="secondhand")
             {
@@ -252,7 +256,7 @@ namespace PCShopSell.Core.Session
         private int[] RestaurantMealChoices()
         {
             var shop=CurrentShop;
-            if(!SpecialPlayer(shop)||shop.RetailKind!="restaurant"||Furnished(shop,"restaurant_prep")==0
+            if(!SpecialPlayer(shop)||shop.RetailKind!="restaurant"
                 ||Furnished(shop,"restaurant_stove")==0||KitchenRice(shop)<.25-1e-9)return Array.Empty<int>();
             return Enumerable.Range(0,RecipeNames.Length).Where(i=>KitchenIngredientCount(shop,RecipeIngredients[i])>0).ToArray();
         }
@@ -303,21 +307,66 @@ namespace PCShopSell.Core.Session
         {
             if(!SpecialPlayer(CurrentShop)||CurrentShop.RetailKind!="restaurant")return false;
             var o=SpecialBusiness(CurrentShop.Place.Id).Orders.FirstOrDefault(x=>x.Id==id);
-            if(o==null||o.Stage!=DiningStage.Cooking||Clock.Now.TotalMinutes<o.ReadyAt||Clock.Now.TotalMinutes>=o.BurnAt)return Fail("还没熟或已经焦糊。");
+            if(!CanTakeOffHeat(o,Clock.Now.TotalMinutes))return Fail("还没熟或已经焦糊。");
             o.Stage=DiningStage.Ready;return true;
         }
         public bool ServeRestaurantOrder(int id)
         {
             if(!SpecialPlayer(CurrentShop)||CurrentShop.RetailKind!="restaurant")return false;
             var o=SpecialBusiness(CurrentShop.Place.Id).Orders.FirstOrDefault(x=>x.Id==id);
-            if(o==null||o.Stage!=DiningStage.Ready)return false;o.Stage=DiningStage.Eating;o.EatUntil=Clock.Now.TotalMinutes+15;return true;
+            if(!JobMatches(RestaurantJob.Serve,o,Clock.Now.TotalMinutes))return false;
+            o.Stage=DiningStage.Eating;o.EatUntil=Clock.Now.TotalMinutes+15;return true;
         }
         public bool ClearRestaurantOrder(int id)
         {
             if(!SpecialPlayer(CurrentShop))return false;var s=SpecialBusiness(CurrentShop.Place.Id);var o=s.Orders.FirstOrDefault(x=>x.Id==id);
-            if(o==null)return false;
-            if(o.Stage==DiningStage.Burnt&&Clock.Now.TotalMinutes-o.Arrived<100){o.Stage=DiningStage.Waiting;o.Stove=-1;return true;}
-            if(o.Stage==DiningStage.Completed||o.Stage==DiningStage.Left||o.Stage==DiningStage.Burnt)return s.Orders.Remove(o);return false;
+            return ClearRestaurantOrder(s,o,Clock.Now.TotalMinutes);
+        }
+        private static bool ClearRestaurantOrder(SpecialBusinessState state,DiningOrder order,long minute)
+        {
+            if(order?.NeedsClearing!=true)return false;
+            if(order.Stage==DiningStage.Burnt&&minute-order.Arrived<100){order.Stage=DiningStage.Waiting;order.Stove=-1;return true;}
+            if(order.Stage==DiningStage.Checkout){order.TableCleared=true;return true;}
+            return state.Orders.Remove(order);
+        }
+
+        private const int RestaurantCheckoutPatienceMinutes = 60;
+
+        private static DiningOrder FirstRestaurantCheckout(SpecialBusinessState state,long minute)
+        {
+            DiningOrder first=null;
+            foreach(var order in state.Orders)
+                if(order.Stage==DiningStage.Checkout&&minute>=order.CheckoutAt
+                    &&(first==null||order.CheckoutAt<first.CheckoutAt||order.CheckoutAt==first.CheckoutAt&&order.Id<first.Id))
+                    first=order;
+            return first;
+        }
+
+        public DiningOrder RestaurantCheckoutCustomer => CurrentShop?.RetailKind=="restaurant"
+            && _specialBusinesses.TryGetValue(CurrentShop.Place.Id,out var state) ? FirstRestaurantCheckout(state,Clock.Now.TotalMinutes) : null;
+
+        public int RestaurantCheckoutCount(OwnedShop shop) => shop?.RetailKind=="restaurant"
+            && _specialBusinesses.TryGetValue(shop.Place.Id,out var state)
+                ? state.Orders.Count(o=>o.Stage==DiningStage.Checkout&&Clock.Now.TotalMinutes>=o.CheckoutAt) : 0;
+
+        public bool CheckoutRestaurantCustomer(int id)
+        {
+            var shop=CurrentShop;
+            var order=RestaurantCheckoutCustomer;
+            if(!SpecialPlayer(shop)||order?.Id!=id||Furnished(shop,FurnitureCatalog.ShopCounter)==0)return false;
+            SettleRestaurantCheckout(shop,SpecialBusiness(shop.Place.Id),order,Clock.Now);
+            AdvanceClock(shop.Sim.Settings.CheckoutMinutesCash+(Player.Tired?1:0));
+            return true;
+        }
+
+        private void SettleRestaurantCheckout(OwnedShop shop,SpecialBusinessState state,DiningOrder order,GameTimestamp now)
+        {
+            Ledger.Credit(now.Date,"餐饮",Money.FromYuan(order.Price),RecipeNames[order.Recipe]+"堂食",LedgerAttribution.ForShop(shop.Place.Id,"meal:"+order.Id+":paid","销售"));
+            state.Revenue+=order.Price;state.Paid++;order.Stage=DiningStage.Completed;
+            shop.Sim.Reputation+=ShopSimulation.SaleReputationGain;
+            shop.Sim.AdjustShopReputation(.12);
+            SellRestaurantDrink(shop,state,order,now);
+            if(order.TableCleared)state.Orders.Remove(order);
         }
         private void TickRestaurant(OwnedShop shop,SpecialBusinessState state,GameTimestamp now,bool open)
         {
@@ -332,18 +381,30 @@ namespace PCShopSell.Core.Session
                 }
                 if(o.Stage==DiningStage.Eating&&minute>=o.EatUntil)
                 {
-                    Ledger.Credit(now.Date,"餐饮",Money.FromYuan(o.Price),RecipeNames[o.Recipe]+"堂食",LedgerAttribution.ForShop(shop.Place.Id,"meal:"+o.Id+":paid","销售"));
-                    state.Revenue+=o.Price;state.Paid++;o.Stage=DiningStage.Completed;
-                    shop.Sim.Reputation += ShopSimulation.SaleReputationGain;
-                    shop.Sim.AdjustShopReputation(.12);
-                    SellRestaurantDrink(shop,state,o,now);
+                    o.Stage=DiningStage.Checkout;
+                    o.CheckoutAt=minute+RestaurantCheckoutWalkMinutes(shop,o);
                 }
+                if(o.Stage==DiningStage.Checkout&&minute>=o.CheckoutAt+RestaurantCheckoutPatienceMinutes)
+                {
+                    o.Stage=DiningStage.Left;state.Lost++;
+                    shop.Sim.AdjustShopReputation(-.3);
+                    if(o.TableCleared)state.Orders.Remove(o);
+                }
+            }
+            if(minute>=state.NextCashierCheckout&&FirstRestaurantCheckout(state,minute) is DiningOrder paying
+                && Furnished(shop,FurnitureCatalog.ShopCounter)>0
+                && SpecialWorkers(shop,EmployeeRole.Cashier,now).FirstOrDefault() is Employee cashier)
+            {
+                SettleRestaurantCheckout(shop,state,paying,now);
+                state.NextCashierCheckout=minute+EmployeeCheckoutCycleMinutes(cashier);
             }
             TickRestaurantWorkers(shop,state,now,open);
             if(!open||minute<state.NextVisit)return;
             state.NextVisit=minute+SpecialVisitInterval(shop,RestaurantVisitMinutes);
             int tables=Furnished(shop,"restaurant_table");
-            if (state.Orders.Count >= tables) return;
+            int table=0;
+            while(table<tables&&state.Orders.Any(o=>!o.TableCleared&&o.Table==table))table++;
+            if(table>=tables)return;
             if (state.RestaurantArrivalDay != now.Date.TotalDays)
             {
                 state.RestaurantArrivalDay = now.Date.TotalDays;
@@ -351,7 +412,6 @@ namespace PCShopSell.Core.Session
             }
             state.RestaurantArrivalsToday++;
             if (!Random.Chance(shop.Sim.MarkupPurchaseIntent(state.MenuMarkup))) return;
-            int table=Enumerable.Range(0,tables).FirstOrDefault(index=>!state.Orders.Any(o=>o.Table==index));
             var recipes=Enumerable.Range(0,RecipeNames.Length).Where(i=>(state.RecipeMask&(1<<i))!=0).ToArray();
             if(recipes.Length==0)return;
             int recipe=recipes[Random.Next(0,recipes.Length)];
@@ -376,6 +436,12 @@ namespace PCShopSell.Core.Session
                 {
                     saved.Used=saved.Used??new List<UsedItem>();saved.Orders=saved.Orders??new List<DiningOrder>();saved.Workers=saved.Workers??new List<RestaurantWorker>();
                     var state=saved.Copy();var used=new HashSet<int>();
+                    foreach (var worker in state.Workers.Where(w => w.Station == FurnitureCatalog.LegacyRestaurantPass && w.Job == RestaurantJob.Plate && w.Phase == 1))
+                    {
+                        var order = state.Orders.FirstOrDefault(o => o.Id == worker.OrderId);
+                        if (order?.Stage == DiningStage.Cooking) order.Stage = DiningStage.Ready;
+                    }
+                    state.Workers.RemoveAll(w => w.Station == FurnitureCatalog.LegacyRestaurantPass || w.Station == FurnitureCatalog.LegacyRestaurantPrep);
                     foreach(var order in state.Orders.Where(o=>o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Burnt))
                     {if(order.Stove<0||used.Contains(order.Stove))order.Stove=Enumerable.Range(0,state.Orders.Count+1).First(i=>!used.Contains(i));used.Add(order.Stove);}
                     _specialBusinesses[saved.ShopId]=state;

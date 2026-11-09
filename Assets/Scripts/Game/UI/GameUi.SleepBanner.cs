@@ -61,7 +61,7 @@ namespace PCShopSell.Game.UI
 
         private void UpdateHungerBanner(double hunger)
         {
-            bool show = hunger <= HungerWarningThreshold && !S.IsGameOver && !AnyModalOpen && !_ctrl.Placing;
+            bool show = !OpeningMealPreludePending && hunger <= HungerWarningThreshold && !S.IsGameOver && !AnyModalOpen && !_ctrl.Placing;
             _hungerBanner.gameObject.SetActive(show);
             if (!show) return;
 

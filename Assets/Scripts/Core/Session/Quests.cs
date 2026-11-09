@@ -52,7 +52,7 @@ namespace PCShopSell.Core.Session
             {
                 Id = "first_meal", Title = "做第一顿饭", Target = QuestTarget.Cooker,
                 Short = $"打开家里的{K("电饭锅")}，开始煮饭",
-                Hint = $"选白饭和用米量，点开始焖饭。饭好后可以{K("现在吃或装进背包")}。饭盒在饭点或饿了时会自动吃。",
+                Hint = $"选白饭和用米量，点开始焖饭。饭好后先{K("吃一碗，再把剩饭全部装进背包")}。饭盒在饭点或饿了时会自动吃。",
                 Done = s => !s.OpeningMealTutorialPending,
                 Progress = s => s.Pantry.Cooking != null
                     ? $"还要 {s.Pantry.CookMinutesLeft(s.Clock.Now.TotalMinutes)} 分钟"
@@ -183,6 +183,14 @@ namespace PCShopSell.Core.Session
                 purchase.Progress=_=>"已备 "+(required.Length-missing.Length)+"/"+required.Length+" 项";
                 return purchase;
             }
+            if (source?.Id == "sale" && s.HasShop && s.IsRenovating)
+            {
+                var rest = source.Copy();
+                rest.Target = QuestTarget.Bed;
+                rest.Short = "店铺今天歇业，回家睡到明早";
+                rest.Hint = "装修当天不能营业。回家睡到明早，第二天营业时再回店接待顾客，完成第一单。";
+                return rest;
+            }
             if(source==null||s.RetailKind=="computer")return source;
             var q=source.Copy();
             if(q.Id=="place")q.Short="在店里装修，摆好"+string.Join("、",GameSession.OpeningFurniture(s.RetailKind).Select(id=>FurnitureCatalog.Get(id).Name));
@@ -212,10 +220,11 @@ namespace PCShopSell.Core.Session
         private const string OpeningMealTutorialFlag = "tutorial:opening-meal-pending";
         public bool OpeningMealTutorialPending => Flags.Contains(OpeningMealTutorialFlag);
 
-        public const string OpeningMealLeaveBlock = "还没做饭、吃饭，先把电饭锅里的饭焖好吃一顿再出门。";
+        public const string OpeningMealLeaveBlock = "先做饭，吃一碗，再把剩下的饭全部装进背包，才能出门。";
+        public bool OpeningMealEaten => Flags.Contains("tutorial:opening-meal-eaten");
 
-        /// <summary>开局做饭引导进行到哪一步：-1 没在引导；0 还没开始焖；1 正在焖；2 饭好了等着吃 / 装盒。</summary>
-        public int OpeningMealStep => !OpeningMealTutorialPending ? -1 : Pantry.CookedBowls > 0 ? 2 : Pantry.Cooking != null ? 1 : 0;
+        /// <summary>开局做饭引导进行到哪一步：-1 没在引导；0 还没开始焖；1 正在焖；2 饭好了等着吃；3 吃过了等着装盒。</summary>
+        public int OpeningMealStep => !OpeningMealTutorialPending ? -1 : Pantry.CookedBowls > 0 ? (OpeningMealEaten ? 3 : 2) : Pantry.Cooking != null ? 1 : 0;
 
         private void CompleteOpeningMealTutorial()
         {

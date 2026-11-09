@@ -271,8 +271,23 @@ namespace PCShopSell.Game
         private void CounterInteract()
         {
             if (Session.PlayerShop.Queue.Count > 0) Checkout(Session.PlayerShop.Queue[0].Id);
+            else if (Session.CurrentShop.RetailKind=="restaurant")
+            {
+                if (Session.RestaurantCheckoutCustomer is DiningOrder order) CheckoutRestaurant(order.Id);
+                else Ui.Toast("现在没有堂食顾客在收银台等候结账。");
+            }
             else if (Session.IsPetShop(Session.CurrentShop)) Ui.OpenPetOrders();
             else Ui.Toast("现在没人排队。顾客挑好货会拿到收银台前排队，你站在这里按 F 交货收钱。");
+        }
+
+        public void CheckoutRestaurant(int orderId)
+        {
+            if (!InInterior || !Interior.NearCounter)
+            {
+                Ui.Toast("先走到收银台，再给堂食顾客结账。");
+                return;
+            }
+            if (Session.CheckoutRestaurantCustomer(orderId)) Ui.RebuildDock();
         }
 
         private void EnterPlace(Place p)
@@ -504,7 +519,7 @@ namespace PCShopSell.Game
                 {
                     if (Interior.NearbyPetOwner(out _) is PetStay pet) Ui.OpenPetOwnerVisit(pet.Id);
                     else if (Interior.NearUsedBuyDesk) Ui.OpenUsedDesk();
-                    else if(Interior.NearCounter&&Session.PlayerShop.Queue.Count>0)CounterInteract();
+                    else if(Interior.NearCounter&&(Session.PlayerShop.Queue.Count>0||Session.RestaurantCheckoutCustomer!=null))CounterInteract();
                     else if (Interior.NearPetHouse && Session.IsPetShop(Session.CurrentShop)) EnterPetFocus();
                     else if(Session.IsSpecialBusiness(Session.CurrentShop)&&Interior.NearSpecialFurniture)Ui.OpenSpecialBusinessPanel();
                     else if (Interior.NearCounter) CounterInteract();
@@ -608,7 +623,7 @@ namespace PCShopSell.Game
             if (InHome || InVisit)
             {
                 Session.SetSteer(0, 0);
-                ActiveResidence?.MoveOwner(dir, IndoorWalkDelta(dt));
+                MoveInResidence(dir, dt);
                 return;
             }
 
@@ -633,6 +648,16 @@ namespace PCShopSell.Game
         }
 
         /// <summary>出租屋里的互动：床 = 睡觉，衣柜 = 换衣服，电饭锅 = 做饭，凳子 / 沙发 = 坐下歇，门 = 出门。查看房间信息用右上角“我的”。</summary>
+        public void MoveInResidence(Vector3 direction, float realDt)
+        {
+            if (!(InHome || InVisit) || Ui.AnyModalOpen || !Session.Time.IsRunning || Session.IsGameOver) return;
+            var room = ActiveResidence;
+            if (room == null) return;
+            Vector3 before = room.OwnerWorld;
+            room.MoveOwner(direction, IndoorWalkDelta(realDt));
+            if (InHome) Ui.RecordOpeningWalk(Vector3.Distance(before, room.OwnerWorld));
+        }
+
         private void InteractVisitRoom()
         {
             string target = VisitRoom?.NearbyId;
@@ -645,6 +670,8 @@ namespace PCShopSell.Game
 
         public void HomeInteract(string id)
         {
+            if (Ui.OpeningMealPreludePending || (Session.OpeningMealTutorialPending && id != HomeRoomView.Cooker))
+            { Ui.RemindOpeningMeal(); return; }
             CancelHomeBedTrip();
             switch (id)
             {
@@ -695,6 +722,8 @@ namespace PCShopSell.Game
                 if (room?.NearbyId == null) return false;
                 world = room.NearbyWorld;
                 label = room.NearbyLabel;
+                if (InHome && Session.OpeningMealTutorialPending && room.NearbyId != HomeRoomView.Cooker)
+                    label = "先做饭 · 请先使用电饭锅";
                 return true;
             }
             if (InInterior)
@@ -722,7 +751,8 @@ namespace PCShopSell.Game
                 {
                     world = Interior.UsedBuyDeskWorld; label = "收购鉴定台 · 按 F 办理收购或鉴定"; return true;
                 }
-                if(Session.IsSpecialBusiness(Session.CurrentShop)&&Interior.NearSpecialFurniture&&!(Interior.NearCounter&&Session.PlayerShop.Queue.Count>0))
+                var diningCheckout=Session.RestaurantCheckoutCustomer;
+                if(Session.IsSpecialBusiness(Session.CurrentShop)&&Interior.NearSpecialFurniture&&!(Interior.NearCounter&&(Session.PlayerShop.Queue.Count>0||diningCheckout!=null)))
                 {
                     world=Interior.SpecialFurnitureWorld;label=Interior.SpecialFurnitureName+"：经营操作（按 F 打开）";return true;
                 }
@@ -734,7 +764,7 @@ namespace PCShopSell.Game
                 {
                     var queue = Session.PlayerShop.Queue;
                     world = Interior.CounterWorld;
-                    label = queue.Count > 0
+                    label = diningCheckout != null ? $"堂食结账 · ¥{diningCheckout.Price}（按 F）" : queue.Count > 0
                         ? $"收银：给顾客结账 {queue[0].ItemName} {queue[0].Spend}（{queue.Count} 人排队）"
                         : "收银台（现在没人排队）";
                     return true;

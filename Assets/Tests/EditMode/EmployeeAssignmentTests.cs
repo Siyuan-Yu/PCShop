@@ -156,13 +156,12 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void UntrainedSlowEmployeeCanActuallyAssemble_AfterReassignment()
+        public void SlowEmployeeCanActuallyAssemble_AfterReassignment()
         {
             using (var s = Make())
             {
                 s.Clock.Restore(new PCShopSell.Core.Time.GameDate(GameSession.BuildOrdersStartDay),9*60);
                 var e = Person(); s.MainShop.Employee = e;
-                Assert.False(e.AssemblyTrained);
                 Assert.True(s.ArrangeEmployeeWork(e.Id, "pc", EmployeeRole.Assembler));
                 var order = new BuildOrder(1, 0, Money.FromYuan(3000), s.Clock.Now, s.Clock.Now.AddMinutes(600));
                 s.PlayerShop.RestoreOrders(new[] { order }, 2);

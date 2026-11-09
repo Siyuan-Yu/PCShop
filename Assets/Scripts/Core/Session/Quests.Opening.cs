@@ -43,24 +43,38 @@ namespace PCShopSell.Core.Session
             UpdateShopFit();
         }
 
+        private static readonly string[] RestaurantOpeningFurniture =
+        {
+            FurnitureCatalog.ShopCounter, "restaurant_stove",
+            "restaurant_table", FurnitureCatalog.FridgeSmall
+        };
+
         public static string[] OpeningFurniture(string kind)=>kind=="restaurant"
-            ?new[]{"restaurant_prep","restaurant_stove","restaurant_pass","restaurant_table",FurnitureCatalog.FridgeSmall}
+            ?(string[])RestaurantOpeningFurniture.Clone()
             :kind=="secondhand"?new[]{"used_buydesk","used_display",FurnitureCatalog.Shelf,FurnitureCatalog.ShopCounter}
             :kind==PetShopCatalog.ShopKind?new[]{FurnitureCatalog.Shelf,FurnitureCatalog.ShopCounter,PetShopCatalog.SmallHouse}
             :new[]{FurnitureCatalog.Shelf,FurnitureCatalog.ShopCounter};
+
+        private static bool MatchesOpeningFurniture(string id, FurnitureDef item) => item != null && (item.Id == id
+            || id == FurnitureCatalog.Shelf && item.Fixture == FixtureKind.Shelf
+            || id == FurnitureCatalog.FridgeSmall && item.Role == FurnitureRole.Fridge
+            || id == PetShopCatalog.SmallHouse && PetShopCatalog.HouseCapacity(item.Id) > 0);
+
+        public static bool OpeningFurniturePlaced(OwnedShop shop, string id)
+        {
+            foreach (var placed in shop.Layout)
+                if (MatchesOpeningFurniture(id, FurnitureCatalog.Get(placed.Id))) return true;
+            return false;
+        }
+
+        public static string OpeningFurnitureName(string id) => id == FurnitureCatalog.FridgeSmall ? "冰箱" : FurnitureCatalog.Get(id).Name;
 
         private string OpeningRewardKind(string id)=>Flags.FirstOrDefault(f=>f.StartsWith("tutorial:reward:"+id+":"))?.Substring(("tutorial:reward:"+id+":").Length);
         public string[] MissingOpeningFurniture()
         {
             if (!HasShop) return Array.Empty<string>();
-            return OpeningFurniture(RetailKind).Where(id =>
-            {
-                bool Matches(FurnitureDef item) => item.Id == id
-                    || id == FurnitureCatalog.Shelf && item.Fixture == FixtureKind.Shelf
-                    || id == FurnitureCatalog.FridgeSmall && item.Role == FurnitureRole.Fridge;
-                return !FurnitureCatalog.All.Where(Matches).Any(item => _shopLayout.Any(p => p.Id == item.Id)
-                    || FurnitureOwnedUnplaced(item.Id) > 0);
-            }).ToArray();
+            return OpeningFurniture(RetailKind).Where(id => !OpeningFurniturePlaced(_focus, id)
+                && !FurnitureCatalog.All.Any(item => MatchesOpeningFurniture(id, item) && FurnitureOwnedUnplaced(item.Id) > 0)).ToArray();
         }
 
         public string OpeningRewardText(string id)

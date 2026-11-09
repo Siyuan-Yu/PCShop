@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Catalog;
@@ -36,61 +36,34 @@ namespace PCShopSell.Tests
             }
         }
 
-        [TestCase(false)]
-        [TestCase(true)]
-        public void NewGame_CooksAndChoosesHowToUseFirstMeal(bool pack)
+        [Test]
+        public void OpeningMeal_MustEatThenPackAll_AndResumeAfterSave()
         {
             using var s = Make(false, startWithCookingTutorial: true);
             Assert.AreEqual("first_meal", s.CurrentQuest().Id);
-            Assert.AreEqual(25, s.Player.Hunger);
-            Assert.Zero(s.Backpack.Lunchboxes);
-            Assert.IsTrue(s.CookRice(0.5, null));
-            s.AdvanceClock(Pantry.CookMinutes);
-            int bowls = Pantry.BowlsPerKg / 2;
-            Assert.AreEqual(bowls, s.Pantry.CookedBowls, "第一锅饭应留给玩家选择如何处理");
-            Assert.AreEqual("first_meal", s.CurrentQuest().Id);
-
-            double hungry = s.Player.Hunger;
-            if (pack)
-            {
-                Assert.IsTrue(s.PackLunch(bowls));
-                Assert.AreEqual(bowls, s.Backpack.Lunchboxes);
-                s.AdvanceClock(1);
-                Assert.Less(s.Backpack.Lunchboxes, bowls);
-            }
-            else
-            {
-                Assert.IsTrue(s.EatBowlAtHome());
-                Assert.AreEqual(bowls - 1, s.Pantry.CookedBowls);
-            }
-            Assert.Greater(s.Player.Hunger, hungry);
-            Assert.AreEqual("rent", s.CurrentQuest().Id);
-        }
-
-        [TestCase(false)]
-        [TestCase(true)]
-        public void OpeningMeal_BlocksLeavingHomeUntilCookedAndEaten(bool pack)
-        {
-            using var s = Make(false, startWithCookingTutorial: true);
-            Assert.AreEqual(0, s.OpeningMealStep);
-            Assert.AreEqual(GameSession.OpeningMealLeaveBlock, s.LeaveBlocker);
-            s.Leave();
-            Assert.AreSame(s.Home, s.CurrentPlace, "没做饭不能出门");
-            Assert.IsFalse(s.GoTo(s.City.GetPlace("agency")), "没做饭也不能直接出行");
-            Assert.AreSame(s.Home, s.CurrentPlace);
-
+            Assert.AreEqual(25, s.Player.Hunger); Assert.Zero(s.Backpack.Lunchboxes);
+            Assert.IsFalse(s.GoTo(s.City.GetPlace("agency")));
             Assert.IsTrue(s.CookRice(0.5, null));
             Assert.AreEqual(1, s.OpeningMealStep);
-            Assert.IsNotNull(s.LeaveBlocker, "饭在焖时仍不能出门");
             s.AdvanceClock(Pantry.CookMinutes);
             Assert.AreEqual(2, s.OpeningMealStep);
-            Assert.IsNotNull(s.LeaveBlocker, "饭好了没吃也不能出门");
-
-            Assert.IsTrue(pack ? s.PackLunch(1) : s.EatBowlAtHome());
-            Assert.AreEqual(-1, s.OpeningMealStep);
-            Assert.IsNull(s.LeaveBlocker);
-            s.Leave();
-            Assert.IsNull(s.CurrentPlace, "吃过饭或装了饭盒就可以出门");
+            int bowls = s.Pantry.CookedBowls;
+            Assert.False(s.PackLunch(bowls), "不能用直接打包绕过吃饭");
+            double hunger = s.Player.Hunger;
+            Assert.True(s.EatBowlAtHome()); Assert.Greater(s.Player.Hunger, hunger);
+            Assert.AreEqual(3, s.OpeningMealStep); Assert.NotNull(s.LeaveBlocker);
+            Assert.False(s.EatBowlAtHome(), "教学只吃一碗，余下打包");
+            using var loaded = Reload(s);
+            Assert.AreEqual(3, loaded.OpeningMealStep); Assert.True(loaded.OpeningMealEaten);
+            Assert.AreEqual(bowls - 1, loaded.Pantry.CookedBowls);
+            Assert.True(loaded.PackLunch(1)); Assert.True(loaded.OpeningMealTutorialPending, "部分打包不算完成");
+            Assert.True(loaded.PackLunch(loaded.Pantry.CookedBowls));
+            Assert.AreEqual(bowls - 1, loaded.Backpack.Lunchboxes); Assert.Zero(loaded.Pantry.CookedBowls);
+            Assert.AreEqual(-1, loaded.OpeningMealStep); Assert.Null(loaded.LeaveBlocker);
+            Assert.AreEqual("rent", loaded.CurrentQuest().Id);
+            using var again = Reload(loaded);
+            Assert.False(again.OpeningMealTutorialPending); Assert.AreEqual(bowls - 1, again.Backpack.Lunchboxes);
+            again.Leave(); Assert.Null(again.CurrentPlace);
         }
 
         [Test]
@@ -211,7 +184,7 @@ namespace PCShopSell.Tests
                     Assert.False(s.QuestCompleted("rent"),"点选类型本身不领取礼包");
                     Assert.True(Button("ConfirmOpeningKind").interactable);Button("ConfirmOpeningKind").onClick.Invoke();
                     Assert.False(ui.AnyModalOpen);Assert.False(s.Time.IsHeld);Assert.AreEqual(cash,s.Ledger.Balance);
-                    Assert.AreEqual("restaurant",s.RetailKind);Assert.Zero(s.FurnitureStored("restaurant_pass"));
+                    Assert.AreEqual("restaurant",s.RetailKind);Assert.Zero(s.FurnitureStored("restaurant_stove"));
                 }
                 finally
                 {
@@ -251,8 +224,8 @@ namespace PCShopSell.Tests
                 foreach(string id in s.MissingOpeningFurniture())s.DebugGiveFurniture(id,1);
                 s.RefreshQuestProgress();
                 Assert.Zero(s.FurnitureStored("restaurant_stove"),"已有灶台不再重复补发");
-                Assert.AreEqual(1,s.FurnitureStored("restaurant_pass"));Assert.AreEqual(2,s.KitchenRice(s.CurrentShop));
-                s.RefreshQuestProgress();Assert.AreEqual(1,s.FurnitureStored("restaurant_pass"));Assert.AreEqual(2,s.KitchenRice(s.CurrentShop));
+                Assert.AreEqual(1,s.FurnitureStored("restaurant_table"));Assert.AreEqual(2,s.KitchenRice(s.CurrentShop));
+                s.RefreshQuestProgress();Assert.AreEqual(1,s.FurnitureStored("restaurant_table"));Assert.AreEqual(2,s.KitchenRice(s.CurrentShop));
                 Assert.AreEqual(oldParts,PartCatalog.All.Sum(p=>s.PlayerShop.Stock.CountAll(p)));
             }
         }

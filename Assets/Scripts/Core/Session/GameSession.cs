@@ -139,7 +139,7 @@ namespace PCShopSell.Core.Session
             }
             else
             {
-                Backpack.Food.Packed.Add(new FoodBatch { Id = "rice", Name = "白米饭", Hunger = Pantry.BaseBowlHunger, Count = StartLunchboxes, ExpireDay = start.Date.TotalDays + 1 });
+                Backpack.Food.Packed.Add(new FoodBatch { Id = "rice", Name = "白米饭", Hunger = Pantry.BaseBowlHunger, Count = StartLunchboxes, ExpireDay = start.Date.TotalDays + 2 });
             }
             ApplyCargoLimit();
 

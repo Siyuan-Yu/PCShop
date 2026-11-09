@@ -38,7 +38,7 @@ namespace PCShopSell.Game.UI
             {
                 _mainMenu = null;
                 SetGameplayUiVisible(true);
-            });
+            }, allowDuringOpeningMeal: true);
         }
 
         private void BuildMainMenu(Window w)

@@ -53,7 +53,6 @@ namespace PCShopSell.Core.Session
         /// <summary>主店的数据还按原来的字段存（老存档也是这么读的）。</summary>
         private SaveData CreateSaveOfMain()
         {
-            if (_focus.EmployeeTrained) Flags.Add(TrainedFlag); else Flags.Remove(TrainedFlag);
             if (_focus.AutoBuild) Flags.Add(AutoBuildFlag); else Flags.Remove(AutoBuildFlag);
             var d = new SaveData
             {
@@ -269,7 +268,6 @@ namespace PCShopSell.Core.Session
             Employee = d.hasEmployee && d.employee != null ? FromSave(d.employee) : null;
             if (Employee != null) PlayerShop.Settings.EmployeeCheckoutMinutes = EmployeeCheckoutCycleMinutes(Employee) - 1;
             Assembler = !d.hasAssembler || d.assembler == null ? null : FromSave(d.assembler);
-            if (Assembler != null && !d.assembler.hasWorkSkills) Assembler.AssemblyTrained = true;
             _focus.Buyer = d.hasBuyer && d.buyer != null ? FromSave(d.buyer) : null;
             _focus.Salesperson = d.hasSalesperson && d.salesperson != null ? FromSave(d.salesperson) : null;
             _idleEmployees.Clear();
@@ -297,7 +295,7 @@ namespace PCShopSell.Core.Session
             RestoreGrowth(d);
             LoadCityClothing(d);
             RestorePlayerWork(d.playerWork);
-            _focus.EmployeeTrained = Flags.Contains(TrainedFlag);
+            Flags.Remove("employee:trained");
             _focus.AutoBuild = Flags.Contains(AutoBuildFlag);
             RestoreBusiness(d);
             _residentialHomeId=City.HasPlace(d.residentialHomeId)&&City.GetPlace(d.residentialHomeId).Kind==PlaceKind.Home?d.residentialHomeId:null;
@@ -306,6 +304,7 @@ namespace PCShopSell.Core.Session
             RestoreAppLoans(d);
             foreach (SaveShop shop in d.extraShops ?? Array.Empty<SaveShop>()) RestoreShop(shop, d.hasShopStanding);
             LoadAdditionalStaff(d);
+            foreach (OwnedShop shop in _shops) ClearUnstaffedAssembly(shop);
             LoadCityAssets(d);
             LoadResidentialLeases(d);
             if (d.shopFootfallVersion < 2) MigrateWeeklyCommercialRent();
@@ -343,7 +342,7 @@ namespace PCShopSell.Core.Session
             EnsureFirstShopListings(Clock.Today.TotalDays);
         }
 
-        private const string TrainedFlag = "employee:trained", AutoBuildFlag = "employee:auto-build";
+        private const string AutoBuildFlag = "employee:auto-build";
 
         private static SaveStockLine[] Lines(Stock stock) =>
             stock.Lines().Select(l => new SaveStockLine { part = l.Part.Id, boxed = l.Boxed, count = l.Count }).ToArray();
@@ -364,7 +363,7 @@ namespace PCShopSell.Core.Session
             hasEmployeeWorkAttributes = true, dexterity = e.Dexterity, stamina = e.Stamina,
             id = e.Id, transferShopId = e.TransferShopId, transferDay = e.TransferDay,
             hasTransferRole = e.TransferRole >= 0, transferRole = e.TransferRole,
-            hasWorkSkills = true, assemblyMinutes = e.AssemblyMinutes, purchaseMinutes = e.PurchaseMinutes, assemblyTrained = e.AssemblyTrained,
+            hasWorkSkills = true, assemblyMinutes = e.AssemblyMinutes, purchaseMinutes = e.PurchaseMinutes,
             purchasePlan = e.PurchasePlan?.Copy(), lastPurchaseNote = e.LastPurchaseNote,
             schedule = e.Schedule?.Copy(),
             hasSchedule = true,
@@ -381,7 +380,7 @@ namespace PCShopSell.Core.Session
             Id = string.IsNullOrEmpty(e.id) ? Guid.NewGuid().ToString("N") : e.id, TransferShopId = e.transferShopId, TransferDay = e.transferDay,
             TransferRole = e.hasTransferRole ? e.transferRole : -1,
             AssemblyMinutes = e.hasWorkSkills ? Math.Max(45, e.assemblyMinutes) : 90,
-            PurchaseMinutes = e.hasWorkSkills ? Math.Max(1, e.purchaseMinutes) : 2, AssemblyTrained = e.assemblyTrained,
+            PurchaseMinutes = e.hasWorkSkills ? Math.Max(1, e.purchaseMinutes) : 2,
             PurchasePlan = e.purchasePlan?.Copy() ?? new EmployeePurchasePlan(), LastPurchaseNote = e.lastPurchaseNote,
             Name = e.name, DailyWageYuan = e.wage, CheckoutMinutes = e.checkoutMinutes, Description = e.description,
             Schedule = e.hasSchedule ? e.schedule?.Copy() ?? new EmployeeSchedule() : new EmployeeSchedule(),

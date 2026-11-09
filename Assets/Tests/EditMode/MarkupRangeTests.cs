@@ -101,7 +101,7 @@ namespace PCShopSell.Tests
             {
                 s.EventsEnabled=false;GameSessionTests.Teleport(s,"pc");Assert.True(s.SetShopMainCategory("restaurant"));
                 s.CurrentShop.Layout.Clear();
-                var ids=new[]{"restaurant_prep","restaurant_stove","restaurant_pass","restaurant_table",FurnitureCatalog.Fridge};
+                var ids = GameSession.OpeningFurniture("restaurant");
                 for(int i=0;i<ids.Length;i++)s.CurrentShop.Layout.Add(new PlacedFurniture{Id=ids[i],X=1+i,Z=2});
                 s.PlayerShop.ForcedClosed=false;s.PlayerShop.SalesBonusOf=()=>salesBonus;
                 var state=s.SpecialBusiness("pc");state.MenuMarkup=3;

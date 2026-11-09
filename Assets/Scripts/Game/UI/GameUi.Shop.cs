@@ -34,6 +34,7 @@ namespace PCShopSell.Game.UI
         private RectTransform _dock;
         private RectTransform _dockContent;
         private Text _dockTitle, _dockStatus;
+        private GameObject _staffPurchaseAlert;
         private readonly List<(Button b, ShopTab tab)> _tabButtons = new List<(Button, ShopTab)>();
         private ShopTab _tab = ShopTab.Counter;
         private Button _shopDockToggle;
@@ -98,15 +99,18 @@ namespace PCShopSell.Game.UI
             foreach (var (tab, name) in Tabs)
             {
                 ShopTab t = tab;
-                _tabButtons.Add((Ui.Button(tabs, name, () => SelectTab(t), 17), t));
+                var button = Ui.Button(tabs, name, () => SelectTab(t), 17);
+                _tabButtons.Add((button, t));
+                if (t == ShopTab.Staff) _staffPurchaseAlert = AddPurchaseAlertDot(button.transform);
             }
             Ui.Panel(_dock, "TabRule", Ui.Edge).rectTransform.Anchor(0, 1, 1, 1, 12, -99, 12, 98);
 
             _dockContent = Ui.Scroll(_dock);
-            ((RectTransform)_dockContent.parent.parent).Anchor(0, 0, 1, 1, 8, 54, 5, 103);
+            ((RectTransform)_dockContent.parent.parent).Anchor(0, 0, 1, 1, 8, DockContentBottom, 5, 103);
 
             Button leave = Ui.Button(_dock, "离开店铺", ConfirmLeaveShop, 16);
             ((RectTransform)leave.transform).Anchor(1, 0, 1, 0, -146, 8, 12, -44);
+            BuildShopFitWarning();
 
             SelectTab(_tab);
         }
@@ -150,6 +154,7 @@ namespace PCShopSell.Game.UI
             if (_dock == null) return;
             Kill.It(_dock.gameObject);
             _dock = null;
+            _staffPurchaseAlert = null;
             _counterRefresh.Clear();
             _counterStructure = null;
         }
@@ -177,6 +182,24 @@ namespace PCShopSell.Game.UI
             bool open = S.IsPlaceOpen(S.CurrentShop.Place);
             _dockStatus.text = open ? "● 营业中" : "● 已关门";
             _dockStatus.color = open ? Ui.Good : Ui.Warn;
+            RefreshStaffPurchaseAlert();
+        }
+
+        private bool BuyerNeedsPurchasePlan(Employee buyer) => buyer.PurchasePlan?.Daily != true && S.EmployeeTrip(buyer.Id) == null;
+
+        private void RefreshStaffPurchaseAlert()
+        {
+            bool needsPlan = S.ShopStaff(S.CurrentShop, EmployeeRole.Buyer).Any(BuyerNeedsPurchasePlan);
+            _staffPurchaseAlert.SetActive(needsPlan);
+        }
+
+        private static GameObject AddPurchaseAlertDot(Transform parent)
+        {
+            var dot = Ui.Panel(parent, "PurchaseAlertDot", Ui.FlatDown);
+            dot.sprite = CircleSprite();
+            dot.raycastTarget = false;
+            dot.rectTransform.Anchor(1, 1, 1, 1, -16, -16, 6, 6);
+            return dot.gameObject;
         }
 
         private void RefreshDock()
@@ -191,6 +214,7 @@ namespace PCShopSell.Game.UI
             // Keep the current controls alive while the player is choosing or scrolling a dropdown.
             if (ListScrollbar.PressedInside(_dock) || _dock.GetComponentsInChildren<ChoiceDropdown>().Any(choice=>choice.IsChoiceOpen)
                 || _dock.GetComponentsInChildren<InputField>().Any(input=>input.isFocused)) return;
+            RefreshShopFitWarning();
             if((_tab==ShopTab.Stock || _tab==ShopTab.Pricing) && !AnyModalOpen && _stockViewSignature!=StockViewSignature())
             {RebuildDock();return;}
             if(_tab==ShopTab.Renovate&&!AnyModalOpen&&_renovationStockSignature!=RenovationStockSignature())
@@ -212,6 +236,7 @@ namespace PCShopSell.Game.UI
             // Rows/buttons only rebuild on structural changes; ticking numbers keep their Text objects.
             return S.CurrentShop.Place.Id + "|" + S.RetailKind + "|" + S.Clock.Today.TotalDays
                 + "|" + S.ShopFitGap() + "|" + S.IsRenovating + "|" + S.CurrentShop.OwnsProperty
+                + (S.IsPetShop(S.CurrentShop) ? "|" + S.PetCapacity(S.CurrentShop) : "")
                 + "|" + shop.OpenMinute + ":" + shop.CloseMinute + ":" + shop.InHours(S.Clock.Now) + ":" + shop.Accepted
                 + "|" + S.Employee?.Id + ":" + (S.Employee != null && S.CityEmployeeAvailable(S.Employee, S.CurrentShop))
                 + "|" + S.Salesperson?.Id + ":" + (S.Salesperson != null ? GameSession.EmployeeCharm(S.Salesperson) : 0) + ":" + shop.SalesPurchaseIntentBonus
@@ -247,6 +272,7 @@ namespace PCShopSell.Game.UI
         public void RebuildDock()
         {
             if (_dock == null) return;
+            RefreshStaffPurchaseAlert();
             var scrolled = _scrollTab == _tab ? Ui.SaveScroll(_dock) : null;
             _scrollTab = _tab;
             _counterRefresh.Clear();
@@ -266,6 +292,7 @@ namespace PCShopSell.Game.UI
                 case ShopTab.Renovate: BuildRenovate(); break;
                 case ShopTab.Staff: BuildStaff(); break;
             }
+            RefreshShopFitWarning();
             Ui.RestoreScroll(_dock, _dock, scrolled);
             if (scrolled == null) _dockContent.anchoredPosition = Vector2.zero;
             if(_tab==ShopTab.Stock || _tab==ShopTab.Pricing)_stockViewSignature=StockViewSignature();
@@ -336,13 +363,15 @@ namespace PCShopSell.Game.UI
             BuildIndustryBrief(C);
             ShopSimulation shop = S.PlayerShop;
             bool fitBanner = !S.ShopFitted || S.IsRenovating;
-            FitBanner(C);
             var management=Ui.Row(C,42,6);
             Ui.Size(Ui.Button(management,RetailShopTypes.Name(S.RetailKind)+" ▾",OpenRetailTypeChooser,17),-1,42,1).name="ShopMainCategory";
             var closeShop=Ui.Size(Ui.Button(management,S.CurrentShop.OwnsProperty?"结束自营":"退租店铺",()=>ConfirmCloseShop(S.CurrentShop),16),110,42);
             closeShop.name="CloseShopCounter";
             if (S.IsPetShop(S.CurrentShop))
+            {
                 Ui.Size(Ui.Button(C,"代养订单",OpenPetOrders,17),-1,38);
+                if (S.PetCapacity(ownedShop) == 0) Para(C, "宠物代养需摆放宠物屋", 15, Ui.Dim);
+            }
             ShopHoursRow(shop);
             if(S.Salesperson!=null)
                 PersonSummary(C, S.PersonIdOf(S.Salesperson), S.Salesperson.Name + " · 销售员",
@@ -404,7 +433,7 @@ namespace PCShopSell.Game.UI
             Metric("今日营业额", () => shop.TodaySales.ToString(), Ui.Good);
             Metric("今日进店", () => $"{shop.TodayCustomers} 人", Ui.TextColor);
             Metric("今日流失", () => $"{shop.TodayLost} 人", Ui.Warn);
-            Metric("排队结账", () => $"{shop.Queue.Count} 人", Ui.TextColor).Tip(() => PaymentText(shop.Accepted));
+            Metric("排队结账", () => $"{shop.Queue.Count + S.RestaurantCheckoutCount(S.CurrentShop)} 人", Ui.TextColor).Tip(() => PaymentText(shop.Accepted));
 
             Text Metric(string title, System.Func<string> value, Color ink)
             {
@@ -745,7 +774,8 @@ namespace PCShopSell.Game.UI
         private int _staffCandidateCount;
         private string _staffRosterSignature;
         private string StaffRosterSignature()=>string.Join(";",S.EmployeesForShop(S.CurrentShop).Select(r=>r.Person.Id+":"+r.Role+":"+r.Shop?.Place.Id
-            +":"+r.Person.ShiftStart+":"+r.Person.ShiftEnd+":"+r.Person.DailyWageYuan+":"+r.Person.TransferShopId+":"+S.EmployeeStatus(r)));
+            +":"+r.Person.ShiftStart+":"+r.Person.ShiftEnd+":"+r.Person.DailyWageYuan+":"+r.Person.TransferShopId+":"+S.EmployeeStatus(r)
+            +":"+(r.Role==EmployeeRole.Buyer ? r.Person.PurchasePlan?.Daily : null)));
         private void BuildStaff()
         {
             _staffRefreshMinute = S.Clock.Now.TotalMinutes;
@@ -762,6 +792,15 @@ namespace PCShopSell.Game.UI
                 bool incoming=assignment.Shop!=S.CurrentShop&&worker.TransferShopId==S.CurrentShop.Place.Id;
                 string role=GameSession.RoleName(incoming?S.PlannedEmployeeRole(assignment):assignment.Role);
                 string state=incoming?"明日调入 · 当前"+(assignment.Shop==null?"待安排":S.ShopTitle(assignment.Shop)):ShopEmployeeWorkText(assignment);
+                bool isShopBuyer = assignment.Shop == S.CurrentShop && assignment.Role == EmployeeRole.Buyer;
+                bool needsPlan = isShopBuyer && BuyerNeedsPurchasePlan(worker);
+                if (needsPlan)
+                {
+                    var plan = worker.PurchasePlan;
+                    bool paused = plan?.InventoryThreshold == true || (plan?.Items?.Length ?? 0) > 0;
+                    string reminder = paused ? "采购已暂停" : "未安排进货";
+                    state += $" · <b><color=#{ColorUtility.ToHtmlStringRGB(Ui.FlatDown)}>{reminder}</color></b>";
+                }
                 var row=Ui.Row(C,108,8);row.name="ShopEmployee_"+worker.Id;
                 PortraitCard(row,personId,worker.Name,"",64,()=>OpenPersonDialogue(personId),tagText:null);
                 var nextShop=S.ShopAt(worker.TransferShopId);
@@ -769,6 +808,10 @@ namespace PCShopSell.Game.UI
                 var card=Ui.Size(Ui.Button(row,"<b>"+worker.Name+"</b> · "+role+"\n"+state+"\n班次 "+Ui.Hm(worker.ShiftStart)+"—"+Ui.Hm(worker.ShiftEnd)+" · 日薪 "+worker.DailyWage+next,
                     ()=>OpenPersonDialogue(personId),16,Ui.ButtonBg),-1,-1,1);
                 card.name="ShopEmployeeChat_"+worker.Id;
+                if (needsPlan) AddPurchaseAlertDot(card.transform);
+                if (isShopBuyer)
+                    Ui.Size(Ui.Button(row, "安排进货", () => OpenEmployeePurchase(worker.Id), 15,
+                        needsPlan ? Ui.ButtonHot : Ui.ButtonBg), 96, 36);
             }
             Ui.Size(Ui.Button(C,"管理岗位与排班",OpenEmployeesPanel,17),-1,38);
             Line(C,"招聘",19,Ui.Accent);
@@ -783,7 +826,8 @@ namespace PCShopSell.Game.UI
                 {
                     Employee c = S.Candidates[i];
                     string personId = S.PersonIdOf(c);
-                    RectTransform row = PersonSummary(C, personId, c.Name, $"日薪 {c.DailyWage} · 智力 {c.Intelligence} · 魅力 {GameSession.EmployeeCharm(c)}",
+                    string abilities = $"智力 {c.Intelligence} · 魅力 {GameSession.EmployeeCharm(c)}\n动手能力 {c.Dexterity} · 体能 {c.Stamina}";
+                    RectTransform row = PersonSummary(C, personId, $"{c.Name} · 日薪 {c.DailyWage}", abilities, 68,
                         onClick: () => OpenPersonDialogue(personId));
                     Ui.Size(Ui.Button(row, "聘用并安排工作", () => OpenRecruitWork(c), 16, Ui.ButtonHot), 132, 36);
                     Ui.Size(Ui.Button(row,"交谈",()=>OpenPersonDialogue(personId),16),66,36);
@@ -799,12 +843,14 @@ namespace PCShopSell.Game.UI
             if(row.Role==EmployeeRole.Unassigned||!S.CityEmployeeAvailable(row.Person,row.Shop))return S.EmployeeStatus(row);
             switch(row.Role)
             {
-                case EmployeeRole.Cashier:return row.Shop.Sim.Queue.Count>0?"在岗 · 接待结账（"+row.Shop.Sim.Queue.Count+" 人排队）":"在岗 · 收银值守，等待顾客";
+                case EmployeeRole.Cashier:
+                    int waiting=row.Shop.Sim.Queue.Count+S.RestaurantCheckoutCount(row.Shop);
+                    return waiting>0?"在岗 · 接待结账（"+waiting+" 人排队）":"在岗 · 收银值守，等待顾客";
                 case EmployeeRole.Assembler:return !row.Shop.AutoBuild?"在岗 · 自动装机未开启":row.Shop.Sim.Orders.Count>0?"在岗 · 装机值守（店内 "+row.Shop.Sim.Orders.Count+" 单待处理）":"在岗 · 等待装机订单";
                 case EmployeeRole.Salesperson:return "在岗 · 导购与销售接待";
                 case EmployeeRole.Buyer:
                     var trip=S.EmployeePurchaseTrips.FirstOrDefault(t=>t.EmployeeId==row.Person.Id);
-                    return trip!=null?S.EmployeePurchaseTripStatus(trip):row.Person.PurchasePlan?.Daily==true?"在店待命 · 等待下次采购":"在店待命 · 尚未启用定期采购";
+                    return trip!=null?S.EmployeePurchaseTripStatus(trip):row.Person.PurchasePlan?.Daily==true?"在店待命 · 等待下次采购":"在店待命";
                 default:return S.EmployeeStatus(row);
             }
         }

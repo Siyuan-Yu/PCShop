@@ -25,8 +25,9 @@ namespace PCShopSell.EditorTools
             Teleport(s,s.PlayerShopPlace.Id);_game.Ui.CloseAllWindows();
             Check(s.SetShopMainCategory("restaurant"),"可开餐馆");
             var shop=s.CurrentShop;shop.Layout.Clear();
-            string[] kitchen={"restaurant_prep","restaurant_stove","restaurant_pass",FurnitureCatalog.Fridge};
+            string[] kitchen={"restaurant_stove",FurnitureCatalog.Fridge};
             for(int i=0;i<kitchen.Length;i++)shop.Layout.Add(new PlacedFurniture{Id=kitchen[i],X=1+i*1.25,Z=4.8});
+            shop.Layout.Add(new PlacedFurniture{Id=FurnitureCatalog.ShopCounter,X=6,Z=4.8});
             shop.Layout.Add(new PlacedFurniture{Id="restaurant_table",X=2,Z=2});shop.Layout.Add(new PlacedFurniture{Id="restaurant_table",X=4,Z=2});
             shop.Fridge.Food.RiceKg=1;shop.Fridge.Food.AddIngredient("veg",3);shop.Sim.ForcedClosed=false;
             var state=s.SpecialBusiness(shop.Place.Id);state.NextVisit=long.MaxValue;
@@ -35,7 +36,9 @@ namespace PCShopSell.EditorTools
             Check(_game.Ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text.Contains("厨房大米")),"餐馆使用独立厨房操作界面");
             Shot("restaurant_waiting");Shot("restaurant_waiting_720",1280,720);
             Check(s.StartRestaurantCooking(1),"实际食材投入炒锅");s.AdvanceClock(8);_game.Ui.RebuildDock();Frame(0);Shot("restaurant_ready_to_plate");
-            Check(s.PlateRestaurantOrder(1)&&s.ServeRestaurantOrder(1),"实际出锅并上菜");s.AdvanceClock(15);
+            Check(s.ServeRestaurantOrder(1),"实际出锅并上菜");s.AdvanceClock(15);
+            s.AdvanceClock((int)(state.Orders[0].CheckoutAt-s.Clock.Now.TotalMinutes));
+            Check(s.CheckoutRestaurantCustomer(1),"堂食顾客到收银台后结账");
             Check(state.Paid==1&&state.Revenue==18,"吃完实际收款且无重复收费");s.ClearRestaurantOrder(1);
             Check(s.SetShopMainCategory("secondhand"),"清理餐馆订单后可转型二手店");
             shop.Layout.Clear();shop.Layout.Add(new PlacedFurniture{Id="used_buydesk",X=2,Z=4.2});shop.Layout.Add(new PlacedFurniture{Id="used_display",X=4,Z=3});

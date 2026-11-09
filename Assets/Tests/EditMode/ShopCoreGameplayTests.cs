@@ -18,8 +18,7 @@ namespace PCShopSell.Tests
             s.Clock.Restore(new GameDate(15),600);GameSessionTests.Teleport(s,"pc");
             Assert.True(s.SetShopMainCategory(kind));
             s.CurrentShop.Layout.Clear();
-            var ids=kind=="restaurant"?new[]{"restaurant_prep","restaurant_stove","restaurant_pass","restaurant_table",FurnitureCatalog.Fridge}:
-                kind=="secondhand"?new[]{"used_buydesk","used_display",FurnitureCatalog.Shelf,FurnitureCatalog.ShopCounter}:new string[0];
+            var ids = s.IsSpecialBusiness(s.CurrentShop) ? GameSession.OpeningFurniture(kind) : Array.Empty<string>();
             for(int i=0;i<ids.Length;i++)s.CurrentShop.Layout.Add(new PlacedFurniture{Id=ids[i],X=1+i,Z=2});
             if(kind=="secondhand")Assert.True(s.SetShelfKind(2,"secondhand"));
             typeof(GameSession).GetMethod("UpdateShopFit",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).Invoke(s,null);
@@ -150,11 +149,17 @@ namespace PCShopSell.Tests
                 Assert.That(sim.GoodsPurchaseIntentAtPrice(model.Id,range.max),Is.InRange(0,1));
             }
         }
-        [Test] public void RestaurantRequiresKitchenNotRetailShelfAndCashCounter()
+        [Test] public void RestaurantRequiresKitchenAndCashCounterWithoutRetailShelf()
         {
             using(var s=Make("restaurant"))
             {
                 Assert.IsNull(s.SpecialFitGap(s.CurrentShop));Assert.True(s.ShopFitted);
+                var counter = s.CurrentShop.Layout.Single(p => p.Id == FurnitureCatalog.ShopCounter);
+                s.CurrentShop.Layout.Remove(counter);
+                Assert.AreEqual("收银台", s.SpecialFitGap(s.CurrentShop));
+                Assert.False(s.ShopFitted);
+                Assert.False(s.SpecialOpen(s.CurrentShop, s.Clock.Now));
+                s.CurrentShop.Layout.Add(counter);
                 s.CurrentShop.Layout.RemoveAll(p=>p.Id=="restaurant_stove");Assert.AreEqual("餐馆炒锅灶台",s.SpecialFitGap(s.CurrentShop));Assert.False(s.ShopFitted);
             }
         }
@@ -168,7 +173,7 @@ namespace PCShopSell.Tests
                 Assert.False(s.PlateRestaurantOrder(first.Id));Assert.False(s.ServeRestaurantOrder(first.Id));
             }
         }
-        [Test] public void CompleteRestaurantFlowChargesCustomerOnceAfterEatingAndRequiresClearingTable()
+        [Test] public void ClearingTableDoesNotSettleTheMealAndCounterChargesOnlyOnce()
         {
             using(var s=Make("restaurant"))
             {
@@ -176,9 +181,13 @@ namespace PCShopSell.Tests
                 Assert.True(s.StartRestaurantCooking(order.Id));s.Clock.Advance(8);
                 Assert.True(s.PlateRestaurantOrder(order.Id));Assert.True(s.ServeRestaurantOrder(order.Id));Assert.False(s.ServeRestaurantOrder(order.Id));
                 Assert.AreEqual(balance,s.Ledger.Balance);s.Clock.Advance(15);
-                Assert.AreEqual(DiningStage.Completed,order.Stage);Assert.AreEqual(balance+Money.FromYuan(18),s.Ledger.Balance);
-                s.Clock.Advance(2);Assert.AreEqual(balance+Money.FromYuan(18),s.Ledger.Balance);
-                Assert.True(s.ClearRestaurantOrder(order.Id));Assert.IsEmpty(s.SpecialBusiness("pc").Orders);
+                Assert.AreEqual(DiningStage.Checkout,order.Stage);Assert.AreEqual(balance,s.Ledger.Balance);
+                Assert.False(s.CheckoutRestaurantCustomer(order.Id));
+                Assert.True(s.ClearRestaurantOrder(order.Id));Assert.True(order.TableCleared);
+                Assert.AreEqual(balance,s.Ledger.Balance);
+                Until(s,()=>s.RestaurantCheckoutCustomer==order);
+                Assert.True(s.CheckoutRestaurantCustomer(order.Id));Assert.False(s.CheckoutRestaurantCustomer(order.Id));
+                Assert.AreEqual(balance+Money.FromYuan(18),s.Ledger.Balance);Assert.IsEmpty(s.SpecialBusiness("pc").Orders);
             }
         }
         [Test] public void FoodBurnsIfIgnoredAndRemakingNeedsAnotherPortion()
@@ -203,7 +212,18 @@ namespace PCShopSell.Tests
                 {
                     var restored=loaded.SpecialBusiness("pc").Orders.Single();Assert.AreEqual(order.ReadyAt,restored.ReadyAt);Assert.AreEqual(order.BurnAt,restored.BurnAt);
                     loaded.Clock.Advance(4);Assert.True(loaded.PlateRestaurantOrder(order.Id));Assert.True(loaded.ServeRestaurantOrder(order.Id));loaded.Clock.Advance(15);
-                    using(var again=Reload(loaded)){var balance=again.Ledger.Balance;again.Clock.Advance(2);Assert.AreEqual(balance,again.Ledger.Balance);}
+                    using(var again=Reload(loaded))
+                    {
+                        var balance=again.Ledger.Balance;
+                        Until(again,()=>again.RestaurantCheckoutCustomer?.Id==order.Id);
+                        Assert.AreEqual(balance,again.Ledger.Balance);
+                        Assert.True(again.CheckoutRestaurantCustomer(order.Id));
+                        using(var paid=Reload(again))
+                        {
+                            Assert.False(paid.CheckoutRestaurantCustomer(order.Id));
+                            Assert.AreEqual(balance+Money.FromYuan(order.Price),paid.Ledger.Balance);
+                        }
+                    }
                 }
             }
         }
@@ -439,16 +459,22 @@ namespace PCShopSell.Tests
                 s.AdvanceClock(2);Assert.AreEqual(.25,s.KitchenRice(s.CurrentShop));
             }
         }
-        [Test] public void ServingVisitsPassThenTableAndClearingAlsoTakesWork()
+        [Test] public void ServingPicksUpFromStoveThenDeliversToTable()
         {
             using(var s=Make("restaurant"))
             {
-                var order=Order(s);order.Stage=DiningStage.Ready;var balance=s.Ledger.Balance;
+                var order=Order(s);order.Stage=DiningStage.Cooking;order.Stove=0;
+                order.ReadyAt=s.Clock.Now.TotalMinutes;order.BurnAt=order.ReadyAt+30;
+                var balance=s.Ledger.Balance;
                 Assert.True(s.RequestRestaurantWork(order.Id,RestaurantJob.Serve,7,.9));
-                Assert.AreEqual(DiningStage.Ready,order.Stage);
+                Assert.AreEqual(DiningStage.Cooking,order.Stage);
+                Assert.AreEqual("restaurant_stove",s.RestaurantActor("pc",GameSession.RestaurantPlayer).Station);
                 Until(s,()=>s.RestaurantActor("pc",GameSession.RestaurantPlayer).Carrying);
                 Assert.AreEqual(DiningStage.Ready,order.Stage);Assert.AreEqual(balance,s.Ledger.Balance);
-                Until(s,()=>order.Stage==DiningStage.Eating);s.AdvanceClock(15);
+                Assert.AreEqual("restaurant_table",s.RestaurantActor("pc",GameSession.RestaurantPlayer).Station);
+                Until(s,()=>s.RestaurantCheckoutCustomer==order);
+                Assert.AreEqual(balance,s.Ledger.Balance);
+                Assert.True(s.CheckoutRestaurantCustomer(order.Id));
                 Assert.AreEqual(DiningStage.Completed,order.Stage);Assert.AreEqual(balance+Money.FromYuan(order.Price),s.Ledger.Balance);
                 Assert.True(s.RequestRestaurantWork(order.Id,RestaurantJob.Clear,7,.9));Assert.Contains(order,s.SpecialBusiness("pc").Orders);
                 Until(s,()=>!s.SpecialBusiness("pc").Orders.Contains(order));
@@ -533,8 +559,10 @@ namespace PCShopSell.Tests
                     Until(s,()=>order.Stage==DiningStage.Eating);view.Update(s,0,0);
                     Assert.False(figure.transform.Find("RestaurantCarriedDish").gameObject.activeSelf);
                     Assert.NotNull(root.GetComponentsInChildren<Transform>().SingleOrDefault(t=>t.name=="SpecialGoods_meal:"+order.Id));
-                    s.AdvanceClock(15);Assert.AreEqual(DiningStage.Completed,order.Stage);
-                    Until(s,()=>!s.SpecialBusiness("pc").Orders.Contains(order));Assert.AreEqual(1,s.SpecialBusiness("pc").Paid);
+                    Until(s,()=>order.TableCleared);
+                    Assert.AreEqual(DiningStage.Checkout,order.Stage);Assert.Zero(s.SpecialBusiness("pc").Paid);
+                    Until(s,()=>s.RestaurantCheckoutCustomer==order);
+                    Assert.True(s.CheckoutRestaurantCustomer(order.Id));Assert.AreEqual(1,s.SpecialBusiness("pc").Paid);
                 }
                 finally{UnityEngine.Object.DestroyImmediate(root);}
             }
@@ -545,7 +573,7 @@ namespace PCShopSell.Tests
             {
                 var order=Order(s);order.Stage=DiningStage.Ready;s.PlayerShop.ForcedClosed=true;
                 Assert.True(s.RequestRestaurantWork(order.Id,RestaurantJob.Serve,7,.9));Until(s,()=>order.Stage==DiningStage.Eating);
-                s.AdvanceClock(15);Assert.AreEqual(DiningStage.Completed,order.Stage);
+                Until(s,()=>s.RestaurantCheckoutCustomer==order);Assert.True(s.CheckoutRestaurantCustomer(order.Id));
                 Assert.True(s.RequestRestaurantWork(order.Id,RestaurantJob.Clear,7,.9));Until(s,()=>!s.SpecialBusiness("pc").Orders.Contains(order));
                 Assert.True(s.PlayerShop.ForcedClosed);
             }

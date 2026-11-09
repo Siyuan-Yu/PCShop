@@ -155,6 +155,8 @@ namespace PCShopSell.Core.Session
 
         private string NpcWhere(NpcDef n)
         {
+            if (n.StallId != null && StaffWorkplace(n.Id) is Place work)
+                return $"在「{work.Name}」工作";
             if (n.StallId != null && City.HasPlace(n.StallId)) return $"在电子市场「{City.GetPlace(n.StallId).Name}」";
             switch (n.Id)
             {

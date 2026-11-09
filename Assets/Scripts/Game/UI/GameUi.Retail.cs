@@ -143,15 +143,13 @@ namespace PCShopSell.Game.UI
             }
             else if(source.Kind==PlaceKind.Wholesaler)
             {
-                var stalls = S.WholesaleStallsAt(source).ToArray();
-                foreach (var part in PartCatalog.All)
-                foreach (var stall in stalls.Where(s => S.StallSells(s, part)))
+                var market = S.PurchaseDestination(source);
+                foreach (var part in PartCatalog.All.Where(part => S.StallSells(market, part)))
                 {
-                    string key = S.StallCartKey(stall, part);
-                    string supplier = GameSession.StallSupplierName(stall);
-                    Offer(key, part.Name, PartCatalog.CategoryName(part.Category), PartUnitKg(part), S.StallPrice(stall, part),
-                        $"{supplier} · 今日可购 {S.StallRemaining(stall, part)}/{S.SupplierCapacity(stall.Id, part.Id)} · 市价 {S.Market.PriceOf(part)}",
-                        () => S.CartAddStall(stall, part, 1), () => S.StallRemaining(stall, part) - S.CartAmount(key));
+                    string key = GameSession.StallCartKey(part);
+                    Offer(key, part.Name, PartCatalog.CategoryName(part.Category), PartUnitKg(part), S.StallPrice(market, part),
+                        $"今日可购 {S.StallRemaining(market, part)}/{S.SupplierCapacity(market.Id, part.Id)} · 市价 {S.Market.PriceOf(part)}",
+                        () => S.CartAddStall(market, part, 1), () => S.StallRemaining(market, part) - S.CartAmount(key));
                 }
             }
             else if(S.IsCityClothingRetail(source))
@@ -220,7 +218,7 @@ namespace PCShopSell.Game.UI
             bool storeOpen = S.IsPlaceOpen(source);
             Line(w.Content,"商品购买 · "+(storeOpen?"营业中 · ":"已打烊 · ")+S.OpeningHoursText(source),19,Ui.Accent);
             if (source.Kind == PlaceKind.Wholesaler)
-                Line(w.Content, "按配件分类选货；不同档口的商品可一起结账，每个档口单独计算每日可售数量。", 14, Ui.Dim);
+                Line(w.Content, "按配件分类选货。同型号统一报价，每日库存由全市场共用。", 14, Ui.Dim);
             var missing=S.HasShop && source.Business==GameSession.MallBusiness && !S.QuestCompleted("mall")
                 ? S.MissingOpeningFurniture() : Array.Empty<string>();
             if (missing.Length>0)

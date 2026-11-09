@@ -7,7 +7,7 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
-        // Called only on Eating -> Completed, so every dining order gets one attempt,
+        // Called only at checkout, so every dining order gets one attempt,
         // including across save/load. Keep the dedicated restaurant customer flow.
         private void SellRestaurantDrink(OwnedShop shop,SpecialBusinessState state,DiningOrder order,GameTimestamp now)
         {

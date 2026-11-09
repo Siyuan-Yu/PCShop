@@ -97,6 +97,7 @@ namespace PCShopSell.Game.UI
         private void UpdateQuestTracker()
         {
             if (_questPanel == null) return;
+            if (OpeningMealPreludePending) { _questPanel.gameObject.SetActive(false); return; }
             if(S.IsOwnedVenue(S.CurrentPlace))
             {
                 _questPanel.gameObject.SetActive(!_questHidden&&!S.IsGameOver&&!_ctrl.Placing);
@@ -275,6 +276,12 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Cooker:
                     if (_ctrl.InHome) return ("打开电饭锅", OpenCookerWindow);
                     return QuestPlaceAction("回家做饭", S.Home);
+                case QuestTarget.Bed:
+                    if (S.CanSleepAt(S.CurrentPlace)) return ("睡到明早 08:00", () =>
+                    {
+                        if (S.SleepUntilTomorrowMorning()) UpdateQuestTracker();
+                    });
+                    return QuestPlaceAction("回家休息", S.Home);
                 case QuestTarget.Agency:
                 case QuestTarget.Ventures: return QuestPlaceAction("前往中介", S.City.HasPlace("agency") ? S.City.GetPlace("agency") : null);
                 case QuestTarget.Mall: return QuestPlaceAction("前往家具城", S.City.Places.FirstOrDefault(p => p.Business == GameSession.MallBusiness));
@@ -419,6 +426,7 @@ namespace PCShopSell.Game.UI
             switch (target)
             {
                 case QuestTarget.Cooker: return "位置：家里 · 电饭锅";
+                case QuestTarget.Bed: return "位置：家里 · 明早 08:00 起床";
                 case QuestTarget.Agency: return "地点：商业街 · <color=#FFC966>安居房产中介</color>";
                 case QuestTarget.Renovate: return "位置：自己的店 → 右侧“装修”页";
                 case QuestTarget.Stock: return "位置：自己的店 · 货架";

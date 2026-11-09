@@ -64,13 +64,15 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(PurchaseFrequency.Wednesday,s.FindEmployee(Buyer("a")).Person.PurchasePlan.Schedule);
             }
         }
-        [Test] public void MerchantAndModelEachHaveTheirOwnCapacityAndDoNotShareReservations()
+        [Test] public void FormerCountersShareReservationsButDifferentModelsDoNot()
         {
             using(var s=Make())
             {
                 var first=Offer(s);int cap=s.PurchaseLimit(first);Assert.True(s.ConfigureEmployeePurchase(Buyer("a"),Plan(first,cap)));
-                var sources=s.EmployeePurchaseCatalog().Where(o=>o.Kind==PurchaseGoodsKind.Part&&o.Id==first.Id&&o.Source.Id!=first.Source.Id).ToArray();Assert.IsNotEmpty(sources);
-                var other=sources.First();Assert.AreEqual(s.PurchaseLimit(other),s.SupplierPlanHeadroom(Buyer("b"),Plan(other,1),other,0));
+                var oldLine=first.Line(1);oldLine.SourceId=Stalls.Gpu;
+                var sameMarket=s.EmployeePurchaseOffer(oldLine);
+                Assert.AreEqual(first.Key,sameMarket.Key);
+                Assert.Zero(s.SupplierPlanHeadroom(Buyer("b"),Plan(sameMarket,1),sameMarket,0));
                 var anotherModel=s.EmployeePurchaseCatalog().First(o=>o.Kind==PurchaseGoodsKind.Part&&o.Source.Id==first.Source.Id&&o.Id!=first.Id);
                 Assert.AreEqual(s.PurchaseLimit(anotherModel),s.SupplierPlanHeadroom(Buyer("b"),Plan(anotherModel,1),anotherModel,0));
                 Assert.Greater(Enumerable.Range(0,20).Select(i=>s.SupplierCapacity("merchant-"+i,"gpu0")).Distinct().Count(),1);

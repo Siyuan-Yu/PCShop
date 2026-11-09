@@ -23,7 +23,7 @@ namespace PCShopSell.Game.UI
         // ---------- 屋内小窗口 ----------
 
         /// <summary>在出租屋里打开的小窗口：不会离开屋子，关掉就回到屋里。</summary>
-        private void OpenRoomWindow(string title, float w, float h, System.Action<Window> build)
+        private void OpenRoomWindow(string title, float w, float h, System.Action<Window> build, bool allowDuringOpeningMeal = false)
         {
             OpenWindow(title, w, h, win =>
             {
@@ -34,7 +34,7 @@ namespace PCShopSell.Game.UI
                 }
                 build(win);
 
-            }, true, true);
+            }, true, true, allowDuringOpeningMeal: allowDuringOpeningMeal);
         }
 
         public void OpenBedWindow()
@@ -586,7 +586,11 @@ namespace PCShopSell.Game.UI
             line.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -1);
         }
 
-        public void OpenCookerWindow() => OpenRoomWindow("电饭锅", 760, 640, BuildCooker);
+        public void OpenCookerWindow()
+        {
+            if (OpeningMealPreludePending) { RemindOpeningMeal(); return; }
+            OpenRoomWindow("电饭锅", 760, 740, BuildCooker, true);
+        }
 
         private int _wakeMinute = 8 * 60;
         private void BuildBed(Window w)
@@ -623,7 +627,6 @@ namespace PCShopSell.Game.UI
             Pantry pan = S.Pantry;
             PlayerStats st = S.Player;
             double rice = S.HomeCookingRiceKg;
-            if (S.OpeningMealTutorialPending) OpeningMealWindowGuide(w, S.OpeningMealStep);
             Line(w.Content, $"饱腹 {st.Hunger:0}  健康 {st.Health:0}   可用大米：{rice:0.##} 千克   背包里的饭盒：{S.Backpack.Lunchboxes} 盒", 17);
 
             if (pan.Cooking != null)
@@ -631,14 +634,15 @@ namespace PCShopSell.Game.UI
                 long left = pan.CookMinutesLeft(S.Clock.Now.TotalMinutes);
                 int readyMinuteOfDay = (int)(pan.Cooking.ReadyMinute % (24 * 60));
                 Line(w.Content, $"<color=#DDC18B>正在焖饭：{pan.Cooking.Batch.Name}，约 {pan.Cooking.Batch.Count} 碗</color>", 20);
-                Line(w.Content, $"还剩 {left} 分钟（{readyMinuteOfDay / 60:00}:{readyMinuteOfDay % 60:00} 好）。焖好之前锅盖打不开，你可以先去干别的。", 17);
+                Line(w.Content, $"还剩 {left} 分钟（{readyMinuteOfDay / 60:00}:{readyMinuteOfDay % 60:00} 好）。焖好之前锅盖打不开。", 17);
                 if (S.OpeningMealTutorialPending)
                 {
                     var wait = Ui.Button(w.Content, $"等到饭好 · {left} 分钟", () => { S.AdvanceClock((int)left); w.Rebuild(); }, 18, Ui.ButtonHot);
                     Ui.Size(wait, -1, 44);
                     wait.name = "OpeningMealWait";
-                    GuideHighlight(wait);
+
                 }
+                BindOpeningMealCooker(w);
                 return;
             }
 
@@ -648,6 +652,7 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, $"饭煮好了 · 锅里有 {pan.CookedBowls} 碗", 18, Ui.Accent);
                 foreach (FoodBatch b in pan.Cooked) Line(w.Content, $"· {b.Name} ×{b.Count}  （{FoodExpiryBadge.Countdown(b.ExpireDay, S.Clock.Now.TotalMinutes)}）", 15, Ui.Dim);
                 RectTransform erow = Ui.Row(w.Content, 46);
+                erow.name = "OpeningMealTake";
                 var eat = Ui.Button(erow, $"现在吃一碗（{Pantry.EatMinutes} 分钟）", () =>
                 {
                     S.EatBowlAtHome();
@@ -655,21 +660,29 @@ namespace PCShopSell.Game.UI
                 }, 18, Ui.ButtonHot, pan.CookedBowls > 0);
                 Ui.Size(eat, 220);
                 eat.name = "OpeningMealEat";
-                if (S.OpeningMealTutorialPending) GuideHighlight(eat);
+
                 Ui.Size(Ui.Button(erow, "装 1 盒进背包", () =>
                 {
                     S.PackLunch(1);
                     w.Rebuild();
                 }, 18, Ui.ButtonBg, pan.CookedBowls > 0), 170);
-                Ui.Size(Ui.Button(erow, "全部装进背包", () =>
+                var packAll = Ui.Button(erow, "全部装进背包", () =>
                 {
-                    S.PackLunch(pan.CookedBowls);
-                    w.Rebuild();
-                }, 18, Ui.ButtonBg, pan.CookedBowls > 0), 170);
+                    bool tutorial = S.OpeningMealTutorialPending;
+                    if (!S.PackLunch(pan.CookedBowls)) return;
+                    if (tutorial && !S.OpeningMealTutorialPending)
+                    {
+                        w.Close();
+                        Popup("饭盒已经带好了", "放进背包的食物会在饭点或饿了时自动吃，不用每顿手动操作。\n\n注意饭盒的重量和保质期；放进冰箱可以暂停到期计时。\n\n现在吃饱了，也带好了午饭，可以出门看看了。");
+                    }
+                    else w.Rebuild();
+                }, 18, Ui.ButtonBg, pan.CookedBowls > 0);
+                packAll.name = "OpeningMealPackAll"; Ui.Size(packAll, 170);
                 Line(w.Content, "饭盒放进背包后，饭点或饿了会自动吃。", 17, Ui.Good);
                 Line(w.Content, $"每盒 {Backpack.LunchboxKg:0.##} 千克。锅里的饭取完才能再焖。", 15, Ui.Dim);
                 if (S.CanOpenFridge && !S.OpeningMealTutorialPending)
                     Ui.Size(Ui.Button(w.Content, "把做好的饭全部放入冰箱", () => { S.ChillCookedFood(pan.CookedBowls); w.Rebuild(); }, 17, Ui.ButtonBg), -1, 38);
+                BindOpeningMealCooker(w);
                 return;
             }
 
@@ -680,21 +693,25 @@ namespace PCShopSell.Game.UI
             if (_cookKg < Pantry.MinCookRiceKg && rice >= Pantry.MinCookRiceKg) _cookKg = Pantry.MinCookRiceKg;
             Line(w.Content, "往锅里加多少米：", 17);
             RectTransform jrow = Ui.Row(w.Content, 44);
+            jrow.name = "OpeningMealRice";
             foreach (double amount in new[] { 0.25, 0.5, 1, 1.5, 2.5 })
             {
                 double a = amount;
                 Ui.Size(Ui.Button(jrow, a + " 千克", () =>
                 {
                     _cookKg = a;
+                    if (S.OpeningMealTutorialPending) _openingMealCookStage = 1;
                     w.Rebuild();
                 }, 17, System.Math.Abs(_cookKg - a) < 1e-6 ? Ui.ButtonHot : Ui.ButtonBg, rice >= a), 90);
             }
 
             Line(w.Content, "选择配菜（按食材的实际千克数消耗）：", 17);
             RectTransform irow = Ui.Row(w.Content, 44);
+            irow.name = "OpeningMealRecipe";
             Ui.Size(Ui.Button(irow, "白饭", () =>
             {
                 _cookIngredient = null;
+                if (S.OpeningMealTutorialPending) _openingMealCookStage = 2;
                 w.Rebuild();
             }, 17, _cookIngredient == null ? Ui.ButtonHot : Ui.ButtonBg), 100);
 
@@ -705,6 +722,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(irow, $"{d.DishName}（{have * d.WeightKg:0.##}千克）", () =>
                 {
                     _cookIngredient = d.Id;
+                    if (S.OpeningMealTutorialPending) _openingMealCookStage = 2;
                     w.Rebuild();
                 }, 15, _cookIngredient == d.Id ? Ui.ButtonHot : Ui.ButtonBg, have > 0), 138);
             }
@@ -725,8 +743,9 @@ namespace PCShopSell.Game.UI
             }, 19, Ui.ButtonHot, enoughRice && enoughIngredient);
             Ui.Size(start, -1, 48);
             start.name = "OpeningMealStart";
-            if (S.OpeningMealTutorialPending) GuideHighlight(start);
-            Line(w.Content, "点了就开始焖，焖的时候锅里不能动，人可以先去忙别的。", 15, Ui.Dim);
+
+            if (!S.OpeningMealTutorialPending) Line(w.Content, "点了就开始焖，焖的时候锅里不能动，人可以先去忙别的。", 15, Ui.Dim);
+            BindOpeningMealCooker(w);
         }
 
         // ---------- “我的” ----------

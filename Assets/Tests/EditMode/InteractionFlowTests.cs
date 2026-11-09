@@ -57,7 +57,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void MarketCartBuysFromBothCountersAndKeepsSeparateStock()
+        public void MarketCartCombinesFormerCountersAtOnePriceAndUsesSharedStock()
         {
             var layout = GameSessionTests.Layout();
             layout.places = layout.places.Append(new LayoutPlaceData
@@ -76,16 +76,17 @@ namespace PCShopSell.Tests
                 var cpu = PartCatalog.Get("cpu0");
                 var memory = PartCatalog.Get("ram0");
                 int marketStock = s.StallRemaining(market, cpu);
-                int counterStock = s.StallRemaining(counter, cpu);
+                Assert.AreEqual(marketStock, s.StallRemaining(counter, cpu));
+                Assert.AreEqual(s.StallPrice(market, cpu), s.StallPrice(counter, cpu));
 
                 Assert.True(s.CartAddStall(market, cpu, 1));
                 Assert.True(s.CartAddStall(counter, cpu, 2));
                 Assert.True(s.CartAddStall(counter, memory, 1));
-                Assert.AreEqual(3, s.Cart.Count);
+                Assert.AreEqual(2, s.Cart.Count);
                 s.CartAllToTruck();
                 Assert.True(s.Checkout(true));
-                Assert.AreEqual(marketStock - 1, s.StallRemaining(market, cpu));
-                Assert.AreEqual(counterStock - 2, s.StallRemaining(counter, cpu));
+                Assert.AreEqual(marketStock - 3, s.StallRemaining(market, cpu));
+                Assert.AreEqual(marketStock - 3, s.StallRemaining(counter, cpu));
                 Assert.AreEqual(3, s.Couriers.SelectMany(run => run.Items).Where(item => item.Id == cpu.Id).Sum(item => item.Count));
                 Assert.AreEqual(1, s.Couriers.SelectMany(run => run.Items).Where(item => item.Id == memory.Id).Sum(item => item.Count));
             }

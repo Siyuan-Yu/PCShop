@@ -75,7 +75,14 @@ namespace PCShopSell.Game.UI
             foreach (var v in commute)
             {
                 var car = v; var model = MotorCatalog.Get(car.ModelId);
-                var card = MotorCard(w.Content, model, model.Name + " · " + Vehicles.Get(model.Kind).Name + "通勤车");
+                var card = MotorCard(w.Content, model, $"{model.Name} · {Vehicles.Get(model.Kind).Name}");
+                var badgeRow = Ui.Row(card, 38);
+                badgeRow.SetAsFirstSibling();
+                var badge = Ui.Size(Ui.Panel(badgeRow, "CommuteVehicleBadge", Ui.Accent), 112, 38);
+                badge.raycastTarget = false;
+                var badgeText = Ui.Label(badge.transform, "通勤车", 24, TextAnchor.MiddleCenter, Ui.FlatWell);
+                badgeText.fontStyle = FontStyle.Bold;
+                badgeText.rectTransform.Fill();
                 Line(card, S.MotorLocationText(car) + " · 不可用于比赛或练习", 16, Ui.Dim);
                 Ui.Size(Ui.Button(card, "停入车库", () => ConfirmBusiness("取消通勤并停入车库？",
                     model.Name + "目前是你的" + Vehicles.Get(model.Kind).Name + "通勤车。是否取消通勤用途，并停入" + garage.Name + "？入库后将占用1个车位，这种通勤方式暂不可用；可再指定另一辆同类型车辆通勤。",

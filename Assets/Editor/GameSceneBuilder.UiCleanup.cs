@@ -41,13 +41,14 @@ namespace PCShopSell.EditorTools
             _game.Ui.CloseAllWindows(); Teleport(s, main.Id);
             Check(s.SetShopMainCategory("restaurant"), "主店转为餐馆");
             var shop = s.CurrentShop; shop.Layout.Clear();
-            string[] kitchen = { "restaurant_prep", "restaurant_stove", "restaurant_pass", FurnitureCatalog.Fridge };
+            string[] kitchen = { "restaurant_stove", FurnitureCatalog.Fridge };
             for (int i = 0; i < kitchen.Length; i++) shop.Layout.Add(new PlacedFurniture { Id = kitchen[i], X = 1 + i * 1.25, Z = 4.8 });
+            shop.Layout.Add(new PlacedFurniture { Id = FurnitureCatalog.ShopCounter, X = 6, Z = 4.8 });
             shop.Layout.Add(new PlacedFurniture { Id = "restaurant_table", X = 2, Z = 2 });
             shop.Layout.Add(new PlacedFurniture { Id = "restaurant_table", X = 4, Z = 2 });
             shop.Fridge.Food.RiceKg = 1; shop.Fridge.Food.AddIngredient("veg", 3);
             var state = s.SpecialBusiness(main.Id); state.NextVisit = long.MaxValue;
-            state.Orders.Add(new DiningOrder { Id = state.NextId++, Recipe = 0, Table = 0, Stage = DiningStage.Cooking, ReadyAt = s.Clock.Now.TotalMinutes, BurnAt = s.Clock.Now.TotalMinutes + 5, Arrived = s.Clock.Now.TotalMinutes - 8, Price = 18 });
+            state.Orders.Add(new DiningOrder { Id = state.NextId++, Recipe = 0, Table = 0, Stove = 0, Stage = DiningStage.Cooking, ReadyAt = s.Clock.Now.TotalMinutes, BurnAt = s.Clock.Now.TotalMinutes + 5, Arrived = s.Clock.Now.TotalMinutes - 8, Price = 18 });
             state.Orders.Add(new DiningOrder { Id = state.NextId++, Recipe = 1, Table = 1, Stage = DiningStage.Waiting, Arrived = s.Clock.Now.TotalMinutes, Price = 22 });
             _game.Ui.OnEnteredPlace(s.CurrentPlace); _game.Ui.OpenDock(); _game.Ui.DebugSelectTab(0); Frame(0);
             Shot("restaurant_counter"); Shot("restaurant_counter_720", 1280, 720);

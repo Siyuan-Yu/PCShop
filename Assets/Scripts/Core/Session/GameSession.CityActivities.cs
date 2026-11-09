@@ -17,8 +17,8 @@ namespace PCShopSell.Core.Session
         public string CityDefaultDestination { get; private set; }
         public string CityAgencyShortcut { get; private set; } = "agency";
         private string _cityMarketShortcut;
-        public string CityMarketShortcut => _cityMarketShortcut ?? DefaultMarketShortcut(MainShop?.RetailKind);
-        private string DefaultMarketShortcut(string kind)
+        public string CityMarketShortcut => _cityMarketShortcut ?? ShopSupplyMarketId(MainShop?.RetailKind) ?? Stalls.Cpu;
+        public string ShopSupplyMarketId(string kind)
         {
             string id = kind switch
             {
@@ -26,9 +26,10 @@ namespace PCShopSell.Core.Session
                 "clothing" => "clothing_wholesale",
                 "models" => "model_market",
                 "restaurant" => City.Places.FirstOrDefault(p => p.Business == FarmBusiness)?.Id,
-                _ => "stall_cpu"
+                "computer" => Stalls.Cpu,
+                _ => null
             };
-            return City.HasPlace(id) ? id : "stall_cpu";
+            return City.HasPlace(id) ? id : null;
         }
         public string CityShopShortcut { get; private set; }
         public void SetCityShopShortcut(string placeId) {if(MyShops.Any(s=>s.Place.Id==placeId))CityShopShortcut=placeId;}

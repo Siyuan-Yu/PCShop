@@ -298,7 +298,7 @@ namespace PCShopSell.Game.UI
             if (S.MyShops.Count == 0) { WbText(parent, "还没有经营中的门店。", 20); return; }
             var top = Ui.Row(parent, 32, 8);
             WbAction(top, "统一采购与补货责任", OpenCityProcurement, "WorkbenchProcurement", 190);
-            WbAction(top, "全部员工 · 岗位 / 排班 / 培训", OpenEmployeesPanel, "WorkbenchEmployees", 250); WbFlex(top);
+            WbAction(top, "全部员工 · 岗位 / 排班", OpenEmployeesPanel, "WorkbenchEmployees", 250); WbFlex(top);
             BuildWorkbenchStreetFilter(parent, w);
             BuildWorkbenchShopGroups(parent, w,
                 shop => new[] { ("员工", S.Employees.Count(e => e.Shop == shop) + " 人"), ("进货员", S.Employees.Any(e => e.Shop == shop && e.Role == EmployeeRole.Buyer) ? "已安排" : "未指定") },
@@ -306,7 +306,7 @@ namespace PCShopSell.Game.UI
                 (body, shop) =>
                 {
                     var staff = S.Employees.Where(e => e.Shop == shop).ToArray();
-                    WbHeading(body, "员工 · 岗位 / 排班 / 培训");
+                    WbHeading(body, "员工 · 岗位 / 排班");
                     if (staff.Length == 0) WbText(body, "这家店还没有员工。", 17, WbDim);
                     foreach (var employee in staff)
                         WbText(body, employee.Person.Name + " · " + GameSession.RoleName(employee.Role) + " · " + S.EmployeeStatus(employee), 17);

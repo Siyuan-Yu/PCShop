@@ -9,6 +9,11 @@ namespace PCShopSell.Core.Time
     public sealed class TimeController
     {
         public static readonly int[] Speeds = { 1, 2, 4, 8 };
+        public const int DefaultSpeed = 2;
+
+        /// <summary>界面以默认档为 1×，内部档位沿用世界时钟和移动的倍率。</summary>
+        public static string SpeedLabel(int speed) =>
+            (speed / (double)DefaultSpeed).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "×";
 
         /// <summary>单次 Tick 最多计入的真实秒数，避免卡顿一帧后时间猛跳。</summary>
         public const double MaxTickSeconds = 0.25;
@@ -17,7 +22,7 @@ namespace PCShopSell.Core.Time
         public const double WorldRate = 2.1;
 
         /// <summary>
-        /// 1× 下 1 游戏分钟的真实秒数。所有实时状态共用此时钟，
+        /// 内部倍率为 1（界面 0.5×）时，1 游戏分钟的真实秒数。所有实时状态共用此时钟，
         /// 不根据走路距离、地图压缩比例或是否停下来重新计时。
         /// </summary>
         public const double DefaultSecondsPerMinute = 0.7 / WorldRate;
@@ -33,7 +38,7 @@ namespace PCShopSell.Core.Time
             LastDeltaMinutes=0;
         }
 
-        /// <summary>1× 下一个游戏分钟对应的真实秒数；默认 1/3 秒，即现实 1 秒 = 游戏 3 分钟，一天 8 分钟。</summary>
+        /// <summary>内部倍率为 1 时每游戏分钟的真实秒数，默认 1/3 秒。界面 1× 使用内部倍率 2。</summary>
         public double SecondsPerMinuteAt1x
         {
             get => _secondsPerMinute;
@@ -44,7 +49,7 @@ namespace PCShopSell.Core.Time
             }
         }
 
-        public int Speed { get; private set; } = 1;
+        public int Speed { get; private set; } = DefaultSpeed;
         public bool IsUserPaused { get; private set; }
 
         /// <summary>有面板打开（Hold 次数大于 0）时自动暂停。</summary>

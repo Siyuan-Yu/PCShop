@@ -90,15 +90,19 @@ namespace PCShopSell.Core.Session
 
         private static string BoughtKey(Place stall, PartDef part) => stall.Id + "|" + part.Id;
 
-        public int StallBoughtToday(Place stall, PartDef part) =>
+        private int SourceBoughtToday(Place stall, PartDef part) =>
             _stallBought.TryGetValue(BoughtKey(stall, part), out var b) && b.day == Clock.Today.TotalDays ? b.count : 0;
+
+        public int StallBoughtToday(Place stall, PartDef part) =>
+            WholesaleStallsAt(stall).Sum(source => SourceBoughtToday(source, part));
 
         public int StallRemaining(Place stall, PartDef part) => Math.Max(0, SupplierCapacity(stall.Id,part.Id) - StallBoughtToday(stall, part));
 
         private void RecordStallPurchase(Place stall, PartDef part, int count)
         {
-            string key = BoughtKey(stall, part);
-            _stallBought[key] = (Clock.Today.TotalDays, StallBoughtToday(stall, part) + count);
+            var market = PurchaseDestination(stall);
+            string key = BoughtKey(market, part);
+            _stallBought[key] = (Clock.Today.TotalDays, SourceBoughtToday(market, part) + count);
         }
 
         // ---------- 约出去玩 ----------

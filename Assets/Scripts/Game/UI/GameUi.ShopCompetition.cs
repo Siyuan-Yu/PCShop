@@ -55,11 +55,14 @@ namespace PCShopSell.Game.UI
             ring.gameObject.AddComponent<CompetitionRangeGraphic>().Initialize(points);
         }
 
-        public void OpenShopCompetition(Place place)
+        public void OpenShopCompetition(Place place) => OpenShopCompetition(place, agencyDetails: false);
+
+        private void OpenShopCompetition(Place place, bool agencyDetails)
         {
             OpenWindow("店铺商圈 · " + S.PlaceTitle(place), 1180, 880, w =>
             {
                 Para(w.Content, CompetitionSummary(place), 19, Ui.Accent).name = "ShopCompetitionSummary";
+                if (agencyDetails) BuildAgencyShopNotes(w.Content, place);
                 if (!S.IsMyShop(place) && !S.IsPendingShop(place)) Ui.Size(Ui.Button(w.Content, "试算店型：" + RetailShopTypes.Name(CompetitionPreviewKind(place)) + " · 点击更换", ChooseCompetitionKind, 17), -1, 36);
                 HelpLink(w.Content,"商圈规则","橙圈半径40米，每店统计自己圈内的同类自营店，含本店共N家时客流保留1/N。不同店型、空铺、待交付店不计入；临时关门仍计入，退租或转型后重算。整日预估会随营业时间、知名度、品牌口碑、街道人流和同类店数量变化。");
                 var others = S.NearbyCompetingShops(place, CompetitionPreviewKind(place));

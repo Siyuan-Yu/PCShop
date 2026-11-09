@@ -19,6 +19,7 @@ namespace PCShopSell.Core.Session
         public string Id, Name, Category;
         public Money Price;
         public double UnitKg, StockSpace;
+        public string SupplierName => Source.Name;
         public string Key => GameSession.PurchaseKey(Kind, Id, Source.Id);
         public PurchaseLine Line(int count) => new PurchaseLine { Kind = Kind, PartId = Id, SourceId = Source.Id, Count = count };
     }
@@ -28,12 +29,19 @@ namespace PCShopSell.Core.Session
         public static string PurchaseKey(PurchaseGoodsKind kind, string id, string source) => ((int)kind) + "|" + id + "|" + source;
         public static string PurchaseKey(PurchaseLine line) => PurchaseKey(line.Kind, line.PartId, line.SourceId);
 
+        public Place PurchaseDestination(Place source) => source?.IsElectronicsCounter == true
+            ? WholesaleStallsAt(source).FirstOrDefault(stall => !stall.IsElectronicsCounter) ?? source
+            : source;
+
+        private string PurchaseDestinationId(string sourceId) => City.HasPlace(sourceId)
+            ? PurchaseDestination(City.GetPlace(sourceId)).Id : null;
+
         public IReadOnlyList<PurchaseOffer> EmployeePurchaseCatalog()
         {
             var offers = new List<PurchaseOffer>();
             foreach (var source in City.Places)
             {
-                if (source.Kind == PlaceKind.Wholesaler)
+                if (source.Kind == PlaceKind.Wholesaler && PurchaseDestination(source) == source)
                     foreach (var p in PartCatalog.All.Where(p => StallSells(source, p)))
                         offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Part, Id = p.Id, Name = p.Name,
                             Category = PartCatalog.CategoryName(p.Category), Price = StallPrice(source, p),
@@ -62,20 +70,35 @@ namespace PCShopSell.Core.Session
         {
             if (line == null) return null;
             string source = line.SourceId ?? legacySource;
+            if (line.Kind == PurchaseGoodsKind.Part)
+                source = PurchaseDestinationId(source) ?? source;
             return (catalog ?? EmployeePurchaseCatalog()).Where(o => o.Kind == line.Kind && o.Id == line.PartId && (string.IsNullOrEmpty(source) || o.Source.Id == source))
                 .OrderBy(o => o.Price.Cents).FirstOrDefault();
         }
 
-        // Old saves had one source for the entire plan. Bind it once to each line before editing.
+        // Bind legacy plan-level sources and combine former counters that now share a market.
         public void PrepareEmployeePurchaseDraft(EmployeePurchasePlan plan, IReadOnlyList<PurchaseOffer> catalog = null)
         {
-            plan.Items = (plan.Items ?? Array.Empty<PurchaseLine>()).Where(x => x != null).Select(x =>
+            catalog ??= EmployeePurchaseCatalog();
+            var items = new List<PurchaseLine>();
+            var partsByMarket = new Dictionary<string, PurchaseLine>();
+            foreach (var line in plan.Items ?? Array.Empty<PurchaseLine>())
             {
-                var copy = x.Copy();
+                if (line == null) continue;
+                var copy = line.Copy();
                 var offer = EmployeePurchaseOffer(copy, plan.SourceId, catalog);
                 if (offer != null) copy.SourceId = offer.Source.Id;
-                return copy;
-            }).ToArray();
+                if (offer?.Kind == PurchaseGoodsKind.Part && partsByMarket.TryGetValue(offer.Key, out var combined))
+                {
+                    combined.Count += copy.Count;
+                    combined.BuyMaximum |= copy.BuyMaximum;
+                    combined.ReservedByWeekday = null;
+                    continue;
+                }
+                if (offer?.Kind == PurchaseGoodsKind.Part) partsByMarket.Add(offer.Key, copy);
+                items.Add(copy);
+            }
+            plan.Items = items.ToArray();
             plan.SourceId = null;
         }
 
@@ -89,20 +112,22 @@ namespace PCShopSell.Core.Session
                 if(string.IsNullOrEmpty(source))
                 {
                     var sources=(plan.Items??Array.Empty<PurchaseLine>()).Where(x=>x!=null && !string.IsNullOrEmpty(x.SourceId))
-                        .Select(x=>x.SourceId).Distinct().ToArray();
+                        .Select(x=>PurchaseDestinationId(x.SourceId) ?? x.SourceId).Distinct().ToArray();
                     source=sources.Length==1?sources[0]:null;
                 }
             }
-            return !string.IsNullOrEmpty(source) && (catalog ?? EmployeePurchaseCatalog()).Any(o=>o.Source.Id==source)?source:null;
+            source = PurchaseDestinationId(source);
+            return source != null && (catalog ?? EmployeePurchaseCatalog()).Any(o => PurchaseDestination(o.Source).Id == source) ? source : null;
         }
 
-        public bool RememberEmployeePurchaseSource(string employeeId,string sourceId)
+        public bool RememberEmployeePurchaseSource(string employeeId, string sourceId)
         {
             var worker=FindEmployee(employeeId);
             if(worker==null || worker.Role!=EmployeeRole.Buyer)return false;
-            if(!string.IsNullOrEmpty(sourceId) && !EmployeePurchaseCatalog().Any(o=>o.Source.Id==sourceId))return false;
-            worker.Person.PurchasePlan.BrowseSourceId=string.IsNullOrEmpty(sourceId)?null:sourceId;
-            worker.Person.PurchasePlan.BrowseSourceSelected=true;
+            string destinationId = PurchaseDestinationId(sourceId);
+            if (!string.IsNullOrEmpty(sourceId) && (destinationId == null || !EmployeePurchaseCatalog().Any(o => PurchaseDestination(o.Source).Id == destinationId))) return false;
+            worker.Person.PurchasePlan.BrowseSourceId = destinationId;
+            worker.Person.PurchasePlan.BrowseSourceSelected = true;
             return true;
         }
 

@@ -121,7 +121,7 @@ namespace PCShopSell.Tests
                 using(var s=Session(City(size:size)))
                 {
                     GameSessionTests.Teleport(s,"pc");Assert.True(s.SetShopMainCategory(kind));s.CurrentShop.Layout.Clear();
-                    var ids=kind=="restaurant"?new[]{"restaurant_prep","restaurant_stove","restaurant_pass","restaurant_table",PCShopSell.Core.Home.FurnitureCatalog.Fridge}:new[]{"used_buydesk","used_display"};
+                    var ids = GameSession.OpeningFurniture(kind);
                     for(int i=0;i<ids.Length;i++)s.CurrentShop.Layout.Add(new PCShopSell.Core.Home.PlacedFurniture{Id=ids[i],X=1+i,Z=2});
                     s.PlayerShop.ForcedClosed=false;var state=s.SpecialBusiness("pc");state.NextVisit=s.Clock.Now.TotalMinutes;
                     s.AdvanceClock(1);return state.NextVisit-s.Clock.Now.TotalMinutes;

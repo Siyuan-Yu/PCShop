@@ -150,12 +150,11 @@ namespace PCShopSell.Tests
             }
         }
         [Test]
-        public void ExtraCashierCanOperateWhilePrimaryIsOffShiftAndTrainingTargetsCorrectPerson()
+        public void ExtraCashierCanOperateWhilePrimaryIsOffShift()
         {
             using(var s=Make())
             {
                 var first=Candidate(s,"first");Assert.True(s.Hire(0));var second=Candidate(s,"second");Assert.True(s.Hire(0));
-                Assert.True(s.TrainNamedEmployee(second.Id));Assert.True(second.AssemblyTrained);Assert.False(first.AssemblyTrained);
                 first.ShiftStart=1200;first.ShiftEnd=1380;var p=s.CityPersonState(s.PersonIdOf(second));
                 p.LocationPlaceId=s.PlayerShopPlace.Id;p.Route=null;p.ActivityId=null;
                 s.Leave();Assert.True(s.PlayerShop.EmployeeOnDuty(s.Clock.Now));Assert.Greater(s.PlayerShop.EmployeeServiceRate(),0);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -15,7 +15,7 @@ namespace PCShopSell.Core.Home
         public int Minutes { get; }
         public bool Drink { get; }
         public double WeightKg { get; }
-        public int ShelfDays => Drink ? 7 : 1;
+        public int ShelfDays => Drink ? 8 : 2;
         private static string Signed(int n) => n > 0 ? "+" + n : n.ToString();
         internal FastFoodItem(string id, string name, long yuan, int hunger, int nutrition, int mood, int minutes, double kg, bool drink = false)
         { Id = id; Name = name; Price = Money.FromYuan(yuan); Hunger = hunger; Nutrition = nutrition; Mood = mood; Minutes = minutes; Drink = drink; WeightKg = kg; }

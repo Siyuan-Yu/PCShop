@@ -104,7 +104,7 @@ namespace PCShopSell.Game.UI
                     foreach (int speed in TimeController.Speeds)
                     {
                         int mode = speed;
-                        Ui.Size(Ui.Button(row, mode + "×", () => S.Time.SetSpeed(mode), 21, Ui.ButtonHot), -1, -1, 1);
+                        Ui.Size(Ui.Button(row, TimeController.SpeedLabel(mode), () => S.Time.SetSpeed(mode), 21, Ui.ButtonHot), -1, -1, 1);
                     }
                     Para(content, "打工中暂不能进行其他操作。可点击倍速，或按数字键 1/2/3/4；下班后自动恢复操作。", 17, Ui.Dim);
                 }
@@ -113,7 +113,7 @@ namespace PCShopSell.Game.UI
                 long start = (long)(c.StartDay + c.WorkingIndex) * 1440 + c.ShiftStart;
                 string state = S.Clock.Now.TotalMinutes < start ? "已到岗，等待开工" : "打工中";
                 int shiftNumber = c.Days.Take(c.WorkingIndex + 1).Count(d => d.State != WorkDayState.Rest);
-                _workStatus.text = $"{state} · {S.WorkPlace?.Name} · {c.JobTitle}\n第 {shiftNumber}/{c.ScheduledShiftCount} 个工作日 · {S.WorkHours}\n现在 {S.Clock.Now} · 约 {S.WorkMinutesLeft} 分钟后收工\n今日迟到 {c.Days[c.WorkingIndex].LateMinutes} 分钟 · 表现奖金 ¥{c.Days[c.WorkingIndex].BonusYuan}（扣款前）\n累计已到账 ¥{c.Days.Where(d => d.WagePaid).Sum(d => d.EarnedYuan)} · 当前 {S.Time.Speed}×\n健康 {S.Player.Health:0} · 心情 {S.Player.Mood:0} · 压力 {S.Player.Stress:0}/100";
+                _workStatus.text = $"{state} · {S.WorkPlace?.Name} · {c.JobTitle}\n第 {shiftNumber}/{c.ScheduledShiftCount} 个工作日 · {S.WorkHours}\n现在 {S.Clock.Now} · 约 {S.WorkMinutesLeft} 分钟后收工\n今日迟到 {c.Days[c.WorkingIndex].LateMinutes} 分钟 · 表现奖金 ¥{c.Days[c.WorkingIndex].BonusYuan}（扣款前）\n累计已到账 ¥{c.Days.Where(d => d.WagePaid).Sum(d => d.EarnedYuan)} · 当前 {TimeController.SpeedLabel(S.Time.Speed)}\n健康 {S.Player.Health:0} · 心情 {S.Player.Mood:0} · 压力 {S.Player.Stress:0}/100";
                 return;
             }
             if (_workScreen != null)

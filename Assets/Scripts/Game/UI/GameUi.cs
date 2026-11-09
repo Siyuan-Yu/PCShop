@@ -32,6 +32,7 @@ namespace PCShopSell.Game.UI
         internal bool ResetScrollOnRebuild;
         internal WindowFit Fitter;
         internal GameUi Owner;
+        internal bool OpeningMealSystem;
 
         public void Rebuild()
         {
@@ -70,7 +71,8 @@ namespace PCShopSell.Game.UI
         private readonly Canvas _toastCanvas;
         private readonly List<Window> _windows = new List<Window>();
         private readonly List<(GameObject go, float until)> _toasts = new List<(GameObject, float)>();
-        private readonly Dictionary<string, (RectTransform rt, Text text)> _labels = new Dictionary<string, (RectTransform, Text)>();
+        private readonly Dictionary<string, (RectTransform rt, Text text, Image plate, Outline textEdge)> _labels =
+            new Dictionary<string, (RectTransform, Text, Image, Outline)>();
         private readonly List<(RectTransform rt, Text text, Button button)> _queueLabels = new List<(RectTransform, Text, Button)>();
         private RectTransform _toastList;
 
@@ -214,9 +216,10 @@ namespace PCShopSell.Game.UI
             foreach (int sp in TimeController.Speeds)
             {
                 int speed = sp;
-                Button b = Ui.Size(Ui.Button(row, speed + "×", () => S.Time.SetSpeed(speed), 17), 38);
+                string label = TimeController.SpeedLabel(speed);
+                Button b = Ui.Size(Ui.Button(row, label, () => S.Time.SetSpeed(speed), 17), speed < TimeController.DefaultSpeed ? 50 : 38);
                 int keyNo = System.Array.IndexOf(TimeController.Speeds, speed) + 1;
-                b.Tip($"<b>{speed} 倍速</b>　快捷键：{keyNo}");
+                b.Tip($"<b>{label} 游戏速度</b>　快捷键：{keyNo}");
                 _speedButtons.Add((b, speed));
             }
 
@@ -432,7 +435,11 @@ namespace PCShopSell.Game.UI
                     rt.anchorMin = rt.anchorMax = Vector2.zero;
                     rt.pivot = new Vector2(0.5f, 0);
                     rt.sizeDelta = new Vector2(important ? 170 : 120, important ? 46 : 30);
-                    label = (rt, b.GetComponentInChildren<Text>());
+                    var text = b.GetComponentInChildren<Text>();
+                    var textEdge = text.gameObject.AddComponent<Outline>();
+                    textEdge.effectColor = new Color(0.07f, 0.10f, 0.13f, 0.9f);
+                    textEdge.effectDistance = new Vector2(1f, -1f);
+                    label = (rt, text, b.image, textEdge);
                     _labels[kv.Key] = label;
                 }
 
@@ -443,17 +450,29 @@ namespace PCShopSell.Game.UI
                 var canvasRt = (RectTransform)_labelCanvas.transform;
                 label.rt.anchoredPosition = local + canvasRt.rect.size * 0.5f;
                 if (!refresh && !created && !appeared) continue;
-                label.text.text = LabelText(pv.Place);
-                var shop = S.ShopAt(pv.Place);
-                bool owned = shop != null || S.VentureAt(pv.Place.Id) != null || S.PropertyAt(pv.Place.Id) != null;
-                bool major = owned || pv.Place.Kind != PlaceKind.Shop || pv.Place.IsPlayerShop;
-                float width = major ? 180 : 120;
+                Place location = pv.Place;
+                var shop = S.ShopAt(location);
+                bool owned = shop != null || S.VentureAt(location.Id) != null || S.PropertyAt(location.Id) != null;
+                bool major = owned || location.Kind != PlaceKind.Shop || location.IsPlayerShop;
+                bool residential = location.Kind == PlaceKind.Home;
+                bool plainShop = !major && !S.IsVacant(location) && !HasStreetShopService(location);
+                bool plain = residential || plainShop;
+                label.text.text = plainShop ? S.PlaceTitle(location) : LabelText(location);
+                float width = residential ? 156 : major ? 180 : 120;
                 if (shop != null) width = Mathf.Max(width, S.ShopTitle(shop).Length * 18 + 18);
-                label.rt.sizeDelta = new Vector2(width, major ? 52 : 30);
-                label.text.fontSize = major ? 18 : 15;
-                label.rt.GetComponent<Image>().color = LabelColor(pv.Place, pv.Place.Kind != PlaceKind.Shop || pv.Place.IsPlayerShop);
+                label.rt.sizeDelta = new Vector2(width, residential ? 38 : major ? 52 : 30);
+                label.text.fontSize = plain ? 14 : major ? 18 : 15;
+                label.text.color = plain ? Ui.Dim : Ui.TextColor;
+                label.textEdge.enabled = plain;
+                label.text.raycastTarget = plain;
+                label.plate.enabled = !plain;
+                if (!plain) label.plate.color = LabelColor(location, location.Kind != PlaceKind.Shop || location.IsPlayerShop);
             }
         }
+
+        private bool HasStreetShopService(Place place) => IsCarryStore(place) || UsesCityVenuePanel(place)
+            || RaceTracks.Get(place.Id) != null || place.Id == "motor_scooter_mod" || place.Id == "life_expo"
+            || place.Id == GameSession.CommunityMcnId || place.Id == S.ParkPlaceId;
 
         /// <summary>按地点类型区分街景名牌。</summary>
         private void OpenStreetPlace(Place p)
@@ -778,9 +797,16 @@ namespace PCShopSell.Game.UI
 
         // ---------- 窗口 ----------
 
-        public Window OpenWindow(string title, float width, float height, Action<Window> builder, bool holds = true, bool closable = true, Action onClosed = null, bool scrollContent = true)
+        public Window OpenWindow(string title, float width, float height, Action<Window> builder, bool holds = true, bool closable = true, Action onClosed = null, bool scrollContent = true, bool allowDuringOpeningMeal = false, bool systemWindow = false)
         {
+            bool system = systemWindow || _windows.Any(window => window.OpeningMealSystem && !window.Closed);
+            if (OpeningMealRestricted && !allowDuringOpeningMeal && !system)
+            {
+                title = "先做饭"; width = 700; height = 390; holds = true; closable = true; onClosed = null; scrollContent = true;
+                builder = BuildOpeningMealReminder;
+            }
             var w = new Window { Builder = builder, Holds = holds, Owner = this, OnClosed = onClosed, Closable = closable };
+            w.OpeningMealSystem = system;
             Image dim = Ui.Panel(_modalCanvas.transform, "Window_" + title, new Color(.025f,.035f,.06f,.48f));
             dim.rectTransform.Fill();
             Image panel = Ui.Panel(dim.transform, "Panel", Ui.PanelBg);
@@ -861,10 +887,11 @@ namespace PCShopSell.Game.UI
         public void Popup(string title, string body)
         {
             if (S.IsWorking) { Toast(title + "：" + body); _workMessages.Add(title); return; }
+            bool purchaseResult = title == GameSession.EmployeePurchaseDeliveryTitle || title == GameSession.EmployeePurchaseIncompleteTitle;
             _popups.Add(OpenWindow(title, 640, 380, w =>
             {
-                Text t = Ui.Label(w.Content, body, 21, TextAnchor.UpperLeft);
-                Ui.Size(t, -1, 230);
+                if (purchaseResult) Ui.Label(Ui.Scroll(w.Content, 230), body, 19, TextAnchor.UpperLeft);
+                else Ui.Size(Ui.Label(w.Content, body, 21, TextAnchor.UpperLeft), -1, 230);
                 if(title.EndsWith("发来主线邀请"))
                     Ui.Size(Ui.Button(w.Content, "查看并回复邀请", () => { w.Close(); OpenDistrictStory(); }, 20, Ui.ButtonHot), -1, 44);
                 if (title == GameSession.NpcRepaymentTitle)
@@ -907,6 +934,7 @@ namespace PCShopSell.Game.UI
         /// <summary>开局介绍。</summary>
         public void ShowIntro()
         {
+            if (S.OpeningMealTutorialPending) { UpdateOpeningMealGuide(); return; }
             OpenWindow(L("welcome"), 740, 460, w =>
             {
                 MenuTitle(w, "welcome");

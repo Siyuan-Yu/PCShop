@@ -55,7 +55,7 @@ namespace PCShopSell.Tests
             {
                 var e = Worker();
                 e.BuildsCompleted = 9;
-                if (role == EmployeeRole.Cashier) { s.MainShop.Employee = e; s.MainShop.EmployeeTrained = true; }
+                if (role == EmployeeRole.Cashier) s.MainShop.Employee = e;
                 if (role == EmployeeRole.Assembler) s.MainShop.Assembler = e;
                 if (role == EmployeeRole.Buyer) s.MainShop.Buyer = e; CityTestPeople.AtAssignedWork(s,e);
                 Assert.True(s.ScheduleEmployeeTransfer(e.Id, "tea"));
@@ -70,7 +70,6 @@ namespace PCShopSell.Tests
                     Assert.AreEqual(150, row.Person.DailyWageYuan);
                     Assert.AreEqual(9, row.Person.BuildsCompleted);
                     Assert.IsNull(row.Person.TransferShopId);
-                    if (role == EmployeeRole.Cashier) Assert.True(row.Shop.EmployeeTrained);
                     Assert.AreEqual(1, loaded.Employees.Count);
                 }
             }
@@ -180,8 +179,42 @@ namespace PCShopSell.Tests
             }
         }
 
+        [Test]
+        public void OverweightPurchase_UnloadsAndContinuesSameDayAfterLoadingSave()
+        {
+            using (var s = Make())
+            {
+                Buy(s, VehicleKind.Van);
+                var buyer = Worker();
+                s.MainShop.Buyer = buyer;
+                CityTestPeople.AtAssignedWork(s, buyer);
+                var plan = Plan(VehicleKind.Van);
+                plan.Items = new[] { "gpu0", "gpu1", "gpu2", "cpu0", "cpu1", "cpu2" }
+                    .Select(id => new PurchaseLine { PartId = id, Count = 10 }).ToArray();
+                Assert.True(s.ConfigureEmployeePurchase(buyer.Id, plan));
+                Assert.True(s.DispatchEmployeePurchase(buyer.Id));
+                using (var loaded = RoundTrip(s))
+                {
+                    loaded.MainShop.Sim.Settings.BaseCustomersPerHour = 0;
+                    var first = loaded.EmployeePurchaseTrips.Single();
+                    Assert.IsNotNull(first.RemainingItems);
+                    Assert.Greater(first.RemainingItems.Length, 0);
+                    int firstCount = first.Items.Sum(item => item.Count);
+                    int openingStock = plan.Items.Sum(item => loaded.MainShop.Sim.Stock.CountAll(PartCatalog.Get(item.PartId)));
+                    loaded.AdvanceClock((int)(Math.Max(first.ReturnAt, first.DeliveryAt) - loaded.Clock.Now.TotalMinutes));
+                    var second = loaded.EmployeePurchaseTrips.Single();
+                    Assert.AreEqual(loaded.Clock.Today.TotalDays, first.DepartAt / GameClock.MinutesPerDay);
+                    Assert.AreNotEqual(first.OrderId, second.OrderId);
+                    Assert.AreEqual(60, firstCount + second.Items.Sum(item => item.Count));
+                    Assert.IsNull(second.RemainingItems);
+                    loaded.AdvanceClock((int)(Math.Max(second.ReturnAt, second.DeliveryAt) - loaded.Clock.Now.TotalMinutes + 1));
+                    Assert.IsEmpty(loaded.EmployeePurchaseTrips);
+                    Assert.AreEqual(openingStock + 60, plan.Items.Sum(item => loaded.MainShop.Sim.Stock.CountAll(PartCatalog.Get(item.PartId))));
+                }
+            }
+        }
+
         [TestCase("cash")]
-        [TestCase("load")]
         [TestCase("source")]
         [TestCase("quota")]
         [TestCase("closed")]
@@ -195,7 +228,6 @@ namespace PCShopSell.Tests
                 var e = Worker(); s.MainShop.Buyer = e; CityTestPeople.AtAssignedWork(s,e);
                 var plan = Plan(VehicleKind.EBike);
                 if (failure == "cash") s.Ledger.ForceDebit(s.Clock.Today, "测试", s.Ledger.Balance - Money.FromYuan(1), "现金只留一元");
-                if (failure == "load") { plan.Items[0].PartId = "gpu0"; plan.Items[0].Count = 6; }
                 if (failure == "source") plan.Items[0].PartId = "ram0";
                 if (failure == "quota") plan.Items[0].Count = 50;
                 if (failure == "closed") s.Clock.Restore(new GameDate(5), 10 * 60);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -159,12 +159,12 @@ namespace PCShopSell.Core.Home
         /// <summary>还要焖多少分钟（没在焖返回 0）。</summary>
         public long CookMinutesLeft(long nowMinute) => Cooking == null ? 0 : Math.Max(0, Cooking.ReadyMinute - nowMinute);
 
-        /// <summary>到点了就把这一锅放进“做好的饭”，返回这一批；还没好返回 null。做好的饭放不过第二天。</summary>
+        /// <summary>到点了就把这一锅放进“做好的饭”，返回这一批；还没好返回 null。做好的饭可保存至第三天。</summary>
         public FoodBatch FinishCook(long nowMinute)
         {
             if (Cooking == null || nowMinute < Cooking.ReadyMinute) return null;
             FoodBatch b = Cooking.Batch;
-            b.ExpireDay = (int)(Cooking.ReadyMinute / (24 * 60)) + 1;
+            b.ExpireDay = (int)(Cooking.ReadyMinute / (24 * 60)) + 2;
             Cooked.Add(b);
             Cooking = null;
             return b;

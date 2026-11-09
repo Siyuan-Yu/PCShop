@@ -453,7 +453,7 @@ namespace PCShopSell.Core.Session
             FoodBatch b = Pantry.FinishCook(now.TotalMinutes);
             if (b == null) return;
             Say(OpeningMealTutorialPending
-                ? $"饭煮好了：{b.Name} ×{b.Count} 碗。打开电饭锅，选择现在吃或装进背包。"
+                ? $"饭煮好了：{b.Name} ×{b.Count} 碗。打开电饭锅，先吃一碗，再把剩饭全部装进背包。"
                 : $"电饭锅跳了：{b.Name}×{b.Count} 碗焖好了。可装进背包，或放入冰箱永久保存，取出后继续计算剩余保质期。");
         }
 
@@ -461,6 +461,7 @@ namespace PCShopSell.Core.Session
         public bool EatBowlAtHome()
         {
             if (CurrentPlace != Home) return Fail("要在家里吃。");
+            if (OpeningMealTutorialPending && OpeningMealEaten) return Fail("已经吃过一碗了，先把剩饭全部装进背包。");
             if (Player.Hunger >= 99) return Fail("不饿。");
             FoodBatch b = Pantry.TakeBowl(Pantry.Cooked);
             if (b == null) return Fail("没有做好的饭。");
@@ -468,7 +469,11 @@ namespace PCShopSell.Core.Session
             Player.Hunger = Math.Min(100, Player.Hunger + b.Hunger);
             Player.Health = Math.Min(100, Player.Health + b.Health);
             AdvanceClock(Pantry.EatMinutes);
-            CompleteOpeningMealTutorial();
+            if (OpeningMealTutorialPending)
+            {
+                Flags.Add("tutorial:opening-meal-eaten");
+                if (Pantry.CookedBowls == 0) CompleteOpeningMealTutorial();
+            }
             return true;
         }
 
@@ -476,6 +481,7 @@ namespace PCShopSell.Core.Session
         public bool PackLunch(int bowls)
         {
             if (CurrentPlace != Home) return Fail("要在家里装饭盒。");
+            if (OpeningMealTutorialPending && !OpeningMealEaten) return Fail("先吃一碗，再把剩饭全部装进背包。");
             if (Pantry.CookedBowls == 0) return Fail("没有做好的饭。");
             int fit = (int)Math.Floor(FreeKg / Backpack.LunchboxKg + 1e-9);
             if (fit <= 0) return CanCarry(Backpack.LunchboxKg);
@@ -488,7 +494,7 @@ namespace PCShopSell.Core.Session
                 moved++;
             }
             ApplyCargoLimit();
-            if (moved > 0) CompleteOpeningMealTutorial();
+            if (moved > 0 && OpeningMealEaten && Pantry.CookedBowls == 0) CompleteOpeningMealTutorial();
             Say($"装了 {moved} 个饭盒放进背包。" + (moved < bowls && Pantry.CookedBowls > 0 ? "背包装不下了，剩下的还在锅里。" : ""));
             return true;
         }
@@ -608,7 +614,7 @@ namespace PCShopSell.Core.Session
                 return;
             }
             if (CurrentPlace == Home && OpeningMealTutorialPending && Pantry.CookedBowls > 0)
-                Say("第一锅饭已经煮好。打开电饭锅，选择现在吃或装进背包。");
+                Say("第一锅饭已经煮好。打开电饭锅，先吃一碗，再把剩饭全部装进背包。");
             else
                 Say($"该吃{meal}了，可背包里没有即食食物。可以回家做饭打包，或到快餐店买外带食物。");
         }

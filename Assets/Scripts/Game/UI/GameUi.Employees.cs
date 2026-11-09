@@ -50,7 +50,7 @@ namespace PCShopSell.Game.UI
 
                     var body = Ui.Rect(w.Content, "EmployeeGroup_" + (id ?? "Unassigned"));
                     Ui.VList(body, 5, 0).padding = new RectOffset(14, 0, 0, 3);
-                    if (shop != null && (shop.Assembler != null || shop.EmployeeTrained))
+                    if (shop?.Assembler != null)
                         Ui.Size(Ui.Button(body, "自动装机 · " + (shop.AutoBuild ? "开" : "关"),
                             () => { S.ToggleAutoBuildAt(shop); w.Rebuild(); }, 16), -1, 34);
                     if (!employees.Any()) Line(body, "本店暂无在编员工。", 16, Ui.Dim);
@@ -99,8 +99,6 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(actions, "安排工作", () => OpenEmployeeWork(e.Id, w), 17, Ui.ButtonHot), 150);
             if (destination != null) Ui.Size(Ui.Button(actions, "取消明日安排", () => { S.CancelEmployeeTransfer(e.Id); w.Rebuild(); }, 16), 150);
             Ui.Size(Ui.Button(actions, "调整班次", () => OpenEmployeeShift(e.Id, w), 16), 140);
-            if (row.Shop != null && row.Role == EmployeeRole.Cashier && !e.AssemblyTrained && !S.IsDedicatedVenue(row.Shop.Place))
-                Ui.Size(Ui.Button(actions, "装机培训…", () => ConfirmAction("装机培训", "培训费 ¥1,200，日薪增加 ¥60，可在收银空闲时装机。", "确认培训", () => { S.TrainNamedEmployee(e.Id); w.Rebuild(); }), 15), 130);
             if (row.Role == EmployeeRole.Buyer)
                 Ui.Size(Ui.Button(actions, "安排进货", () => OpenEmployeePurchase(e.Id, w), 17, Ui.ButtonHot), 150);
             Ui.Size(Ui.Button(actions, "辞退…", () => ConfirmAction("辞退员工", $"辞退{e.Name}，同时取消未生效的安排。正在进货时需要先等人和货回店。", "确认辞退", () => { S.DismissEmployee(e.Id); w.Rebuild(); }), 16, Ui.Warn), 110);
@@ -122,13 +120,8 @@ namespace PCShopSell.Game.UI
             {
                 PersonSummary(w.Content, S.PersonIdOf(row.Person), row.Person.Name, "日薪 " + row.Person.DailyWage);
                 Line(w.Content, "1. 做什么工作", 20);
-                var roles = Ui.Row(w.Content, 44);
-                foreach (EmployeeRole option in Enum.GetValues(typeof(EmployeeRole)))
-                {
-                    var choice = option;
-                    bool venue=S.IsDedicatedVenue(S.ShopAt(destination)?.Place);
-                    Ui.Size(Ui.Button(roles, venue&&choice==EmployeeRole.Cashier?"场馆值守":GameSession.RoleName(choice), () => { role = choice; w.Rebuild(); }, 18, role == choice ? Ui.ButtonHot : Ui.ButtonBg,!venue||choice==EmployeeRole.Cashier||choice==EmployeeRole.Unassigned), -1, -1, 1);
-                }
+                BuildEmployeeRoleChoices(w.Content, role, choice => { role = choice; w.Rebuild(); },
+                    venue: S.IsDedicatedVenue(S.ShopAt(destination)?.Place));
                 BuildRecruitRolePreview(w.Content, row.Person, role, S.ShopAt(destination));
                 if (role != EmployeeRole.Unassigned)
                 {
@@ -183,17 +176,23 @@ namespace PCShopSell.Game.UI
             var worker = S.FindEmployee(employeeId);
             if (worker == null || worker.Role != EmployeeRole.Buyer) return;
             var catalog = S.EmployeePurchaseCatalog();
+            var offersByDestination = catalog.ToLookup(o => S.PurchaseDestination(o.Source));
             var draft = _purchaseDrafts.TryGetValue(employeeId, out var savedDraft) ? savedDraft.Copy() : worker.Person.PurchasePlan.Copy();
             S.PrepareEmployeePurchaseDraft(draft, catalog);
             _purchaseDrafts[employeeId] = draft;
-            string browseSource = S.EmployeePurchaseBrowseSource(draft, catalog);
-            string category = browseSource!=null ? "全部" : worker.Shop.RetailKind == "flowers" ? "鲜花与盆栽" : worker.Shop.RetailKind == "produce" ? "米与生鲜" : worker.Shop.RetailKind == "food" ? "外带食品" : "全部", search = "";
+            string browseSource = draft.BrowseSourceSelected ? S.EmployeePurchaseBrowseSource(draft, catalog) : null;
+            if (!draft.BrowseSourceSelected || (draft.BrowseSourceId != null && browseSource == null))
+            {
+                string defaultSource = S.ShopSupplyMarketId(worker.Shop.RetailKind);
+                if (defaultSource != null && offersByDestination.Contains(S.City.GetPlace(defaultSource)))
+                    browseSource = defaultSource;
+            }
+            string category = "全部", search = "";
             void BrowseSource(string sourceId)
             {
-                if(!S.RememberEmployeePurchaseSource(employeeId,sourceId))return;
-                browseSource=sourceId;
-                draft.BrowseSourceId=sourceId;
-                draft.BrowseSourceSelected=true;
+                if (!S.RememberEmployeePurchaseSource(employeeId, sourceId)) return;
+                browseSource = draft.BrowseSourceId = sourceId;
+                draft.BrowseSourceSelected = true;
             }
             bool selectedOnly = importedOrderId.HasValue;
             var selected = draft.Items.ToDictionary(GameSession.PurchaseKey, x => x.Copy());
@@ -207,7 +206,7 @@ namespace PCShopSell.Game.UI
             Sync();
             OpenWindow("定期采购清单 · " + worker.Person.Name + " · " + S.ShopTitle(worker.Shop), 1560, 880, w =>
             {
-                var sourceOffers = catalog.Where(o => browseSource == null || o.Source.Id == browseSource).ToArray();
+                var sourceOffers = browseSource == null ? catalog : offersByDestination[S.City.GetPlace(browseSource)];
                 var categories = new[]{"全部"}.Concat(sourceOffers.Select(o => o.Category)).Distinct().ToArray();
                 if (!categories.Contains(category)) category = "全部";
                 var savedPlan = worker.Person.PurchasePlan;
@@ -248,9 +247,9 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(filters, sourceName + "  ▼", () => OpenWindow("浏览货源", 740, 660, picker =>
                     {
                         Ui.Size(Ui.Button(picker.Content, "全部货源", () => { BrowseSource(null); picker.Close(); w.Rebuild(); }, 18), -1, 42);
-                        foreach (var place in catalog.Select(x => x.Source).GroupBy(x => x.Id).Select(g => g.First()))
+                        foreach (var destination in offersByDestination)
                         {
-                            var source = place;
+                            var source = destination.Key;
                             Ui.Size(Ui.Button(picker.Content, source.Name, () => { BrowseSource(source.Id); picker.Close(); w.Rebuild(); }, 18), -1, 42);
                         }
                     }), 16, Ui.ButtonHot), 255, 36);
@@ -264,15 +263,18 @@ namespace PCShopSell.Game.UI
                     }), 16), 175, 36);
                     Ui.Size(Ui.TextInput(filters, search, "搜索商品", v => { search = v; w.RequestRebuild(); }), -1, 36, 1);
                     Ui.Size(Ui.Button(filters, selectedOnly ? "只看已选 ✓" : "只看已选", () => { selectedOnly = !selectedOnly; w.Rebuild(); }, 15), 130, 36);
+                    var filtered = sourceOffers.Where(o => (category == "全部" || o.Category == category)
+                        && (!selectedOnly || selected.TryGetValue(o.Key, out var selectedLine) && selectedLine.Count > 0)
+                        && (string.IsNullOrWhiteSpace(search) || o.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
+                            || o.SupplierName.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
+                            || S.PurchaseDestination(o.Source).Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)).ToArray();
+                    if (filtered.Length == 0)
+                        Line(left, "没有符合筛选条件的商品。", 16, Ui.Dim);
                     var goods = Ui.Scroll(left, autoSize: false);
                     var goodsFrame = (RectTransform)goods.parent.parent;
                     goodsFrame.name = "PurchaseCatalog";
                     var goodsLayout = Ui.Size(goodsFrame, -1, 160).GetComponent<LayoutElement>();
                     goodsLayout.preferredHeight = 280; goodsLayout.flexibleHeight = 1;
-                    var filtered = sourceOffers.Where(o => (category == "全部" || o.Category == category)
-                        && (!selectedOnly || selected.TryGetValue(o.Key, out var selectedLine) && selectedLine.Count > 0)
-                        && (string.IsNullOrWhiteSpace(search) || o.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
-                            || o.Source.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)).ToArray();
                     PurchaseListViewport.Bind(goods, filtered.Length, 74, (index, card) =>
                     {
                         var offer = filtered[index];
@@ -297,7 +299,7 @@ namespace PCShopSell.Game.UI
                         var line = Ui.Row(card, 66, 8);
                         line.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
                         if (count > 0) line.gameObject.AddComponent<Image>().color = Ui.FlatRow;
-                        string details = offer.Source.Name + (minimum > 1 ? " · 起订 " + minimum + " 件" : "");
+                        string details = offer.SupplierName + (minimum > 1 ? " · 起订 " + minimum + " 件" : "");
                         if (offer.Kind == PurchaseGoodsKind.Part)
                             details += $" · 库存 {worker.Shop.Sim.Stock.CountAll(PartCatalog.Get(offer.Id))} · 在途 {S.PendingPurchaseCount(worker.Shop, offer.Id)}";
                         else if (offer.Kind == PurchaseGoodsKind.Gift)
@@ -347,7 +349,7 @@ namespace PCShopSell.Game.UI
                         string count = choice.BuyMaximum ? "最大" : "×" + choice.Count;
                         var row = Ui.Row(chosenList, 50, 4);
                         row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
-                        var label = Ui.Label(row, GameSession.PurchaseItemName(choice) + " <color=#E8BE62>" + count + "</color>\n<size=13><color=#AAB4BB>" + (offer?.Source.Name ?? choice.SourceId ?? "自动选货源") + "</color></size>", 16, TextAnchor.MiddleLeft);
+                        var label = Ui.Label(row, GameSession.PurchaseItemName(choice) + " <color=#E8BE62>" + count + "</color>\n<size=13><color=#AAB4BB>" + (offer?.SupplierName ?? choice.SourceId ?? "自动选货源") + "</color></size>", 16, TextAnchor.MiddleLeft);
                         label.verticalOverflow = VerticalWrapMode.Truncate;
                         Ui.Size(label, -1, 46, 1); { var le = label.GetComponent<LayoutElement>(); le.minWidth = 0; le.preferredWidth = 0; }
                         Ui.Size(Ui.Label(row, offer == null ? "不可用" : (offer.Price * choice.Count).ToString(), 15, TextAnchor.MiddleRight, offer == null ? Ui.Warn : Ui.Good), 84, 46);
@@ -389,9 +391,10 @@ namespace PCShopSell.Game.UI
                 }
                 if (releaseVehicle)
                     Ui.Size(Ui.Button(right, "老板改为步行，释放这台车", () => { S.SetVehicle(VehicleKind.Walk); w.Rebuild(); }, 14), -1, 32);
+                if (quote.NeedsMultipleLoads)
+                    Line(right, "超过单趟载重，返店卸货后继续采购。", 14, Ui.Accent);
                 var budget = Ui.Row(right, 40, 6);
-                string budgetName = draft.Schedule == PurchaseFrequency.Daily ? "每日" : "每趟";
-                var budgetLabel = Ui.Size(Ui.Label(budget, $"{budgetName}预算  货款 {quote.Goods} + 车费 {quote.Travel} + 运费 {quote.Freight}", 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 38, 1);
+                var budgetLabel = Ui.Size(Ui.Label(budget, $"计划预算  货款 {quote.Goods} + 车费 {quote.Travel} + 运费 {quote.Freight}", 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 38, 1);
                 budgetLabel.name = "EmployeePurchaseBudget";
                 Ui.Size(Ui.Label(budget, "<b>" + quote.Total + "</b>", 24, TextAnchor.MiddleRight, Ui.Accent), 170, 38);
 

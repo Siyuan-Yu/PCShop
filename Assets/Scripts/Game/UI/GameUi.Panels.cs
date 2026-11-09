@@ -26,7 +26,7 @@ namespace PCShopSell.Game.UI
             if(p.Id=="life_expo"){OpenExpoReception();return;}
             if(p.Id==GameSession.CommunityMcnId){OpenCommunityMcn();return;}
             if(S.IsOwnedVenue(p)){OpenVenueManagement(p);return;}
-            if(p.Business!=null&&p.Business.StartsWith("venue_")||S.IsCityActivityVenue(p)&&S.CityActivities.Any(a=>a.Active&&a.VenueId==p.Id)){OpenCityVenue(p);return;}
+            if (UsesCityVenuePanel(p)) { OpenCityVenue(p); return; }
             if(IsCarryStore(p)){OpenPlaceWindow(p,BuildCarryStore,StoreWindowWidth,960);return;}
             if(!S.IsMyShop(p)&&(p.Id=="shop02"||p.Id=="clothing_boutique")){OpenCityClothingShop(p);return;}
             switch (p.Kind)
@@ -74,6 +74,9 @@ namespace PCShopSell.Game.UI
                     break;
             }
         }
+
+        private bool UsesCityVenuePanel(Place place) => place.Business?.StartsWith("venue_") == true
+            || (S.IsCityActivityVenue(place) && S.CityActivities.Any(activity => activity.Active && activity.VenueId == place.Id));
 
         public void OpenResidence(Place residence)
         {
@@ -134,6 +137,7 @@ namespace PCShopSell.Game.UI
 
         private void OpenPlaceWindow(Place p, System.Action<Window, Place> build, float w = 640, float h = 520, bool holds = true, bool leaveOnClose = true)
         {
+            bool fixedLayout = p.Kind == PlaceKind.Agency;
             OpenWindow(S.PlaceTitle(p), w, h, win =>
             {
                 if (S.CurrentPlace != p)
@@ -163,9 +167,10 @@ namespace PCShopSell.Game.UI
                         var footer=Ui.Rect(panel,"LeavePlaceFooter").Anchor(0,0,1,0,16,10,16,-50);
                         Ui.Button(footer,"离开"+S.PlaceTitle(p),()=>{if(S.CurrentPlace==p&&!S.IsWorking){CloseModalWindows();S.Leave();}},17).GetComponent<RectTransform>().Fill().name="LeavePlace";
                     }
-                    ((RectTransform)win.Content.parent.parent).offsetMin=new Vector2(0,58);
+                    var contentFrame = fixedLayout ? win.Content : (RectTransform)win.Content.parent.parent;
+                    contentFrame.offsetMin = new Vector2(0, 58);
                 }
-            }, holds, true);
+            }, holds, true, scrollContent: !fixedLayout);
         }
 
         private static Text Line(Transform parent, string text, int size = 19, Color? color = null)
@@ -321,7 +326,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content, L("about"), OpenAboutMenu, 20), -1, 50);
                 Ui.Size(Ui.Button(w.Content, L("return_title"), () => ShowMainMenu(true), 20), -1, 50);
                 Ui.Size(Ui.Button(w.Content, L("quit"), OpenQuitMenu, 20, Ui.Warn), -1, 50);
-            });
+            }, systemWindow: true);
         }
 
         private int _ledgerPeriod, _ledgerFilter, _ledgerPage;

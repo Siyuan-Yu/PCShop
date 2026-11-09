@@ -99,29 +99,26 @@ namespace PCShopSell.Tests
             Assert.AreEqual(Money.FromYuan(1600), report.CashChange);
         }
         [Test]
-        public void EmployeeCanAssembleWhileOwnerIsPresent_AndResumeAfterLoad()
+        public void LegacyCashierAssemblyReleasesOrderForManualWorkAfterLoad()
         {
             using (var s = Make())
             {
+                var order = Order(s);
+                Assert.True(s.PlayerShop.ReserveBuild(order.Id));
+                order.EmployeeMinutesLeft = 20;
                 var save = s.CreateSave();
                 save.hasEmployee = true;
                 save.employee = new SaveEmployee { name = "小王", wage = 120, checkoutMinutes = 3 };
+                save.flags = save.flags.Concat(new[] { "employee:trained", "employee:auto-build" }).ToArray();
                 using (var staffed = GameSession.Load(s.City, save))
                 {
-                    Assert.IsTrue(staffed.TrainEmployee());
-                    Order(staffed);
+                    staffed.EventsEnabled = false;
                     staffed.PlayerShop.Settings.BaseCustomersPerHour = 0;
-                    staffed.AdvanceClock(30);
-                    Assert.Greater(staffed.PlayerShop.Orders[0].EmployeeMinutesLeft, 0);
-                    using (var loaded = GameSession.Load(s.City, staffed.CreateSave()))
-                    {
-                        loaded.EventsEnabled = false;
-                        loaded.PlayerShop.Settings.BaseCustomersPerHour = 0;
-                        var balance = loaded.Ledger.Balance;
-                        loaded.AdvanceClock(70);
-                        Assert.AreEqual(0, loaded.PlayerShop.Orders.Count);
-                        Assert.AreEqual(balance + Money.FromYuan(3000), loaded.Ledger.Balance);
-                    }
+                    staffed.AdvanceClock(1);
+                    var restored = staffed.PlayerShop.Orders.Single();
+                    Assert.AreEqual(0, restored.EmployeeMinutesLeft);
+                    Assert.True(restored.PartsReserved);
+                    Assert.True(staffed.CompleteBuild(restored.Id, 0));
                 }
             }
         }

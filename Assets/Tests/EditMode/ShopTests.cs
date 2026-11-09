@@ -18,17 +18,22 @@ namespace PCShopSell.Tests
         public void Tick_AccumulatesFractionalMinutes()
         {
             var t = new TimeController(0.25);
+            t.SetSpeed(1);
             Assert.AreEqual(0, t.Tick(0.1));
             Assert.AreEqual(0, t.Tick(0.1));
             Assert.AreEqual(1, t.Tick(0.1));
         }
 
-        [Test]
-        public void Speed_MultipliesMinutes()
+        [TestCase(1, "0.5×")]
+        [TestCase(2, "1×")]
+        [TestCase(4, "2×")]
+        [TestCase(8, "4×")]
+        public void Speed_LabelMatchesTheWorldRate(int speed, string label)
         {
             var t = new TimeController(0.25);
-            t.SetSpeed(4);
-            Assert.AreEqual(4, t.Tick(0.25));
+            t.SetSpeed(speed);
+            Assert.AreEqual(label, TimeController.SpeedLabel(t.Speed));
+            Assert.AreEqual(speed, t.Tick(0.25));
         }
 
         [Test]
@@ -49,7 +54,8 @@ namespace PCShopSell.Tests
         public void LongFrame_IsClamped()
         {
             var t = new TimeController(0.25);
-            Assert.AreEqual(1, t.Tick(5.0));
+            Assert.AreEqual("1×", TimeController.SpeedLabel(t.Speed));
+            Assert.AreEqual(2, t.Tick(5.0));
         }
 
         [Test]

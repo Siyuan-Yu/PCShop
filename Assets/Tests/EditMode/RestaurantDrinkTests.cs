@@ -18,10 +18,11 @@ namespace PCShopSell.Tests
             s.Clock.Restore(new GameDate(15),600);GameSessionTests.Teleport(s,"pc");
             Assert.True(s.SetShopMainCategory("restaurant"));
             s.CurrentShop.Layout.Clear();s.PlayerShop.Stock.Clear();
+            s.CurrentShop.Layout.Add(new PlacedFurniture{Id=FurnitureCatalog.ShopCounter,X=4,Z=4});
             if(shelf)
             {
                 s.CurrentShop.Layout.Add(new PlacedFurniture{Id=FurnitureCatalog.Shelf,X=2,Z=2});
-                Assert.True(s.SetShelfKind(0,"drink"));
+                Assert.True(s.SetShelfKind(1,"drink"));
             }
             else s.PlayerShop.SetShelfCapacity(new System.Collections.Generic.Dictionary<string,double>());
             s.PlayerShop.ForcedClosed=true;
@@ -35,6 +36,16 @@ namespace PCShopSell.Tests
             s.SpecialBusiness("pc").Orders.Add(order);return order;
         }
         private static GameSession Reload(GameSession s)=>GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));
+        private static void PayMeals(GameSession s,int count)
+        {
+            s.AdvanceClock(2);
+            for(int i=0;i<count;i++)
+            {
+                var next=s.RestaurantCheckoutCustomer;
+                Assert.NotNull(next);
+                Assert.True(s.CheckoutRestaurantCustomer(next.Id));
+            }
+        }
 
         [TestCase(Gifts.Soda)] [TestCase(Gifts.Drink)]
         public void RestaurantDrinksHaveHigherIntent_StillSensitiveToPrice(string id)
@@ -62,7 +73,7 @@ namespace PCShopSell.Tests
                 Eating(s);
                 using(var loaded=Reload(s))
                 {
-                    loaded.AdvanceClock(1);
+                    PayMeals(loaded,1);
                     Assert.AreEqual(2,loaded.PlayerShop.Stock.GoodsCount(id));
                     var sale=loaded.Ledger.Entries.Single(e=>e.SourceEventId=="meal:1:drink");
                     Assert.AreEqual(price,sale.Amount.Yuan);Assert.AreEqual("pc",sale.ShopId);
@@ -84,7 +95,7 @@ namespace PCShopSell.Tests
         {
             using(var s=Make(shelf))
             {
-                s.PlayerShop.Stock.ForceAddGoods(id,2);Eating(s);s.AdvanceClock(1);
+                s.PlayerShop.Stock.ForceAddGoods(id,2);Eating(s);PayMeals(s,1);
                 Assert.AreEqual(2,s.PlayerShop.Stock.GoodsCount(id));
                 Assert.AreEqual(18,s.SpecialBusiness("pc").Revenue);
                 Assert.False(s.Ledger.Entries.Any(e=>e.SourceEventId=="meal:1:drink"));
@@ -98,7 +109,7 @@ namespace PCShopSell.Tests
                 Assert.True(s.PlayerShop.SetGoodsSalePrice(Gifts.Soda,5));
                 Eating(s,1);Eating(s,2);var waiting=Eating(s,3);waiting.Stage=DiningStage.Waiting;
                 var left=Eating(s,4);left.Stage=DiningStage.Left;
-                s.AdvanceClock(1);
+                PayMeals(s,2);
                 Assert.Zero(s.PlayerShop.Stock.GoodsCount(Gifts.Soda));
                 Assert.AreEqual(41,s.SpecialBusiness("pc").Revenue);
                 Assert.AreEqual(2,s.SpecialBusiness("pc").Paid);

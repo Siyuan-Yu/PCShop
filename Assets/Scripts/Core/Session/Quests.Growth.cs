@@ -10,7 +10,7 @@ namespace PCShopSell.Core.Session
     public enum QuestTarget
     {
         Agency, Renovate, Stock, Market, Counter, Staff, PhoneShop, Upgrades, Mall,
-        Pricing, Orders, Restock, Finance, Enterprise, Direct, Ventures, Park, Creators, Property, Cooker
+        Pricing, Orders, Restock, Finance, Enterprise, Direct, Ventures, Park, Creators, Property, Cooker, Bed
     }
 
     public static partial class Quests
@@ -42,9 +42,9 @@ namespace PCShopSell.Core.Session
                 $"设好{K("每日预算")}，{K("保留至少 7 天")}运营资金。",
                 s => s.HasShop && s.AppBlocker(PhoneApps.Shop) == null && s.RestockTargets.Any() && s.RestockDailyBudgetYuan > 0 && s.RestockReserveDays >= 7,
                 null);
-            yield return Step("automation", 2, QuestTarget.Staff, "把装机交给店员", $"让店员会装机，打开{K("自动装机")}",
-                $"{K("培训店员")}或招{K("装机师")}。",
-                s => (s.EmployeeTrained || s.Assembler != null) && s.AutoBuildEnabled,
+            yield return Step("automation", 2, QuestTarget.Staff, "把装机交给店员", $"安排一名{K("装机员")}",
+                $"在员工管理里将一名员工安排为{K("装机员")}，并保持{K("自动装机")}开启。",
+                s => s.Assembler != null && s.AutoBuildEnabled,
                 null);
             yield return Step("cashflow", 2, QuestTarget.Finance, "留住能周转的现金", "看懂资产与负债",
                 $"净资产{K("不等于能花的现金")}。",
