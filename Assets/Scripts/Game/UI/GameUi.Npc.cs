@@ -161,7 +161,7 @@ namespace PCShopSell.Game.UI
         /// 老板交情够了才见得到，没到时是灰色“？？？”，原因写在图下面。右边是原来的商品内容。
         /// 返回放商品内容的容器；没有人返回 null。
         /// </summary>
-        private RectTransform BuildRosterFrame(Window w, Place p, float bodyHeight, bool scrollGoods = false)
+        private RectTransform BuildRosterFrame(Window w, Place p, float bodyHeight, bool scrollGoods = false, float rosterWidth = 210)
         {
             var locations = p.Kind == PlaceKind.Wholesaler ? S.WholesaleStallsAt(p) : new[] { p };
             var present = locations.SelectMany(place => S.PeopleInPlace(place.Id))
@@ -171,8 +171,8 @@ namespace PCShopSell.Game.UI
             var people=Ui.Rect(body,"People");Ui.VList(people,8,0);
             // Override the vertical group's flexible width: the roster must not share
             // spare horizontal space with the goods column, especially with a ScrollRect.
-            var peopleSize=Ui.Size(people,210,-1,0).GetComponent<LayoutElement>();
-            peopleSize.minWidth=210;
+            var peopleSize=Ui.Size(people,rosterWidth,-1,0).GetComponent<LayoutElement>();
+            peopleSize.minWidth=rosterWidth;
             Ui.Size(Ui.Label(people,"店内在场人物",17),-1,30);
             var portraits = Ui.Scroll(people, Mathf.Max(140, bodyHeight - 40));
             if(present.Length==0)Para(portraits,"此刻没有可交谈的店员在场。",16,Ui.Dim);

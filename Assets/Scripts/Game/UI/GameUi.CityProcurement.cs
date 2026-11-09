@@ -11,49 +11,31 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private string _procurementShopId, _procurementSearch = "";
-        private bool _procurementOrders, _procurementAgreement;
-        public void OpenCityProcurement() => OpenCityProcurementFor(S.CurrentShop);
-        public void OpenCityProcurementFor(OwnedShop target)
+        private bool _procurementOrders, _procurementAgreement, _procurementDetail, _procurementOrdersOpen;
+        private int _procurementFilter;
+        public void OpenCityProcurement()
         {
-            _procurementShopId = target?.Rented == true ? target.Place.Id : S.ShopAt(_procurementShopId)?.Place.Id ?? S.MyShops.FirstOrDefault()?.Place.Id;
-            OpenWorkspace("procurement", "main", "商铺采购与补货", 1160, 840, w =>
+            var rented = S.MyShops.Where(s => s.Rented).ToArray();
+            OpenProcurement(rented.Length == 1 ? rented[0] : null);
+        }
+        public void OpenCityProcurementFor(OwnedShop target) => OpenProcurement(target?.Rented == true ? target : null);
+        public void OpenProcurementAgreement() => OpenProcurement(null, true);
+        private void OpenProcurement(OwnedShop shop, bool agreement = false)
+        {
+            if (shop != null) _procurementShopId = shop.Place.Id;
+            else if (S.ShopAt(_procurementShopId)?.Rented != true) _procurementShopId = S.MyShops.FirstOrDefault(s => s.Rented)?.Place.Id;
+            _procurementDetail = shop != null; _procurementAgreement = agreement; _procurementOrders = false; _procurementFilter = 0; _procurementSearch = "";
+            OpenWorkspace("procurement", "main", "商铺采购与补货", 1160, 860, w =>
             {
                 S.VisitQuestTarget(QuestTarget.Restock);
-                var shop = S.ShopAt(_procurementShopId);
-                var tabs = Ui.Row(w.Content, 42);
-                Ui.Size(Ui.Button(tabs, "商品与补货", () => { _procurementOrders = false; _procurementAgreement = false; w.Rebuild(); }, 18, !_procurementOrders && !_procurementAgreement ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
-                Ui.Size(Ui.Button(tabs, "在途与订单", () => { _procurementOrders = true; _procurementAgreement = false; w.Rebuild(); }, 18, _procurementOrders && !_procurementAgreement ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
-                Ui.Size(Ui.Button(tabs, "直供协议与账款", () => { _procurementAgreement = true; w.Rebuild(); }, 18, _procurementAgreement ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
-                if (_procurementAgreement) { BuildDirectSupply(w); return; }
-                HelpLink(w.Content, "采购与补货说明", "自动补货按库存、在途和已安排数量计算，订单材料优先。固定清单按指定数量采购，阈值模式按缺口补货。");
-                Para(w.Content, $"现金 {S.Ledger.Balance} · 共同保护额 {S.EffectiveRestockReserve} · 已安排预算 {S.ClaimedProcurementBudget}", 18, Ui.Accent);
-                Ui.Size(Ui.Button(w.Content,"全店补货预算",OpenProcurementBudget,16),-1,32).name="ProcurementBudget";
-                if (shop == null) { Line(w.Content, "先开一家店，再安排进货", 18, Ui.Dim); return; }
-                var destinations = S.MyShops.Where(s=>s.Rented).ToArray();
-                Ui.Size(Ui.Choice(w.Content,destinations.Select(S.ShopTitle),Array.FindIndex(destinations,s=>s.Place.Id==_procurementShopId),
-                    index=>{_procurementShopId=destinations[index].Place.Id;w.Rebuild();}),-1,38);
-                Line(w.Content, "收货店：" + S.ShopTitle(shop), 19, Ui.Accent).name="ProcurementDestination";
-                if (_procurementOrders) { BuildCityProcurementOrders(w); return; }
-                Ui.Size(Ui.TextInput(w.Content, _procurementSearch, "搜索商品 / 分类", value => { _procurementSearch = value; w.RequestRebuild(); }), -1, 38);
-                var list = Ui.Scroll(w.Content, 420);
-                var catalog = S.EmployeePurchaseCatalog().Where(o => o.Kind == PurchaseGoodsKind.Part || o.Kind == PurchaseGoodsKind.Gift)
-                    .GroupBy(o => ((int)o.Kind) + ":" + o.Id).Select(g => g.First());
-                foreach (var entry in catalog.Where(o => string.IsNullOrWhiteSpace(_procurementSearch) || (o.Name + o.Category).IndexOf(_procurementSearch, StringComparison.OrdinalIgnoreCase) >= 0))
-                {
-                    var product = entry;
-                    var coverage = S.ProcurementCoverageFor(_procurementShopId, product.Kind, product.Id);
-                    var policy = S.ProcurementPolicyFor(_procurementShopId, product.Kind, product.Id);
-                    string restock = coverage.Target == 0 ? "设置补货" : $"目标 {coverage.Target} / 下限 {coverage.Lower}";
-                    var row = Ui.Row(list, 76);
-                    Ui.Size(Ui.Label(row, product.Name + $"\n<size=14>可用库存 {coverage.FreeStock} · 在途 {coverage.InTransit} · 已安排 {coverage.Claimed} · 订单缺货 {coverage.ContractMissing}</size>", 17), -1, 76, 1);
-                    string assigned = policy.Primary == ProcurementMethod.Employee ? S.FindEmployee(policy.EmployeeId)?.Person.Name : null;
-                    if (coverage.Target > 0 && assigned != null) restock += "\n" + assigned;
-                    Ui.Size(Ui.Button(row, restock, () => OpenCityProcurementPolicy(shop.Place.Id, product.Kind, product.Id, product.Name, w), 16), 230, 60);
-                }
-                if (!string.IsNullOrEmpty(S.LastRestockNote)) Para(w.Content, S.LastRestockNote, 15, Ui.Accent);
+                var shops = S.MyShops.Where(s => s.Rented).ToArray();
+                if (shops.Length == 0) { Line(w.Content, "先开一家店，再安排进货", 18, Ui.Dim); return; }
+                var current = shops.FirstOrDefault(s => s.Place.Id == _procurementShopId);
+                if (_procurementAgreement) { BuildProcurementAgreement(w, shops.Length > 1); return; }
+                if (_procurementDetail && current != null) BuildProcurementShop(w, current, shops.Length > 1);
+                else BuildProcurementShops(w, shops);
             });
         }
-
         private void OpenProcurementBudget()
         {
             int days=S.RestockReserveDays;long cash=S.RestockReserveYuan,budget=S.RestockDailyBudgetYuan;
@@ -119,9 +101,9 @@ namespace PCShopSell.Game.UI
             });
         }
 
-        private void BuildCityProcurementOrders(Window w)
+        private void BuildCityProcurementOrders(Window w, float height = 480)
         {
-            var list = Ui.Scroll(w.Content, 480);
+            var list = Ui.Scroll(w.Content, height);
             foreach (var claim in S.ProcurementClaims.Where(c => c.State == ProcurementClaimState.Claimed && c.ShopId == _procurementShopId))
             {
                 var c = claim; Line(list, "认领 " + c.Id + " · " + GameSession.PurchaseItemName(new PurchaseLine { Kind = c.Kind, PartId = c.ProductId }) + " ×" + c.Count, 18, Ui.Accent);

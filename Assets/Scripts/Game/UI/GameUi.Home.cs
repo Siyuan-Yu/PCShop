@@ -623,6 +623,7 @@ namespace PCShopSell.Game.UI
             Pantry pan = S.Pantry;
             PlayerStats st = S.Player;
             double rice = S.HomeCookingRiceKg;
+            if (S.OpeningMealTutorialPending) OpeningMealWindowGuide(w, S.OpeningMealStep);
             Line(w.Content, $"饱腹 {st.Hunger:0}  健康 {st.Health:0}   可用大米：{rice:0.##} 千克   背包里的饭盒：{S.Backpack.Lunchboxes} 盒", 17);
 
             if (pan.Cooking != null)
@@ -632,7 +633,12 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, $"<color=#DDC18B>正在焖饭：{pan.Cooking.Batch.Name}，约 {pan.Cooking.Batch.Count} 碗</color>", 20);
                 Line(w.Content, $"还剩 {left} 分钟（{readyMinuteOfDay / 60:00}:{readyMinuteOfDay % 60:00} 好）。焖好之前锅盖打不开，你可以先去干别的。", 17);
                 if (S.OpeningMealTutorialPending)
-                    Ui.Size(Ui.Button(w.Content, $"等到饭好 · {left} 分钟", () => { S.AdvanceClock((int)left); w.Rebuild(); }, 18, Ui.ButtonHot), -1, 44);
+                {
+                    var wait = Ui.Button(w.Content, $"等到饭好 · {left} 分钟", () => { S.AdvanceClock((int)left); w.Rebuild(); }, 18, Ui.ButtonHot);
+                    Ui.Size(wait, -1, 44);
+                    wait.name = "OpeningMealWait";
+                    GuideHighlight(wait);
+                }
                 return;
             }
 
@@ -642,11 +648,14 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, $"饭煮好了 · 锅里有 {pan.CookedBowls} 碗", 18, Ui.Accent);
                 foreach (FoodBatch b in pan.Cooked) Line(w.Content, $"· {b.Name} ×{b.Count}  （{FoodExpiryBadge.Countdown(b.ExpireDay, S.Clock.Now.TotalMinutes)}）", 15, Ui.Dim);
                 RectTransform erow = Ui.Row(w.Content, 46);
-                Ui.Size(Ui.Button(erow, $"现在吃一碗（{Pantry.EatMinutes} 分钟）", () =>
+                var eat = Ui.Button(erow, $"现在吃一碗（{Pantry.EatMinutes} 分钟）", () =>
                 {
                     S.EatBowlAtHome();
                     w.Rebuild();
-                }, 18, Ui.ButtonHot, pan.CookedBowls > 0), 220);
+                }, 18, Ui.ButtonHot, pan.CookedBowls > 0);
+                Ui.Size(eat, 220);
+                eat.name = "OpeningMealEat";
+                if (S.OpeningMealTutorialPending) GuideHighlight(eat);
                 Ui.Size(Ui.Button(erow, "装 1 盒进背包", () =>
                 {
                     S.PackLunch(1);
@@ -709,11 +718,14 @@ namespace PCShopSell.Game.UI
             bool enoughRice = rice >= Pantry.MinCookRiceKg;
             if (!enoughRice) Line(w.Content, "可用大米不足 0.25 千克。", 16, Ui.Warn);
             int bowls = Mathf.RoundToInt((float)(_cookKg * Pantry.BowlsPerKg));
-            Ui.Size(Ui.Button(w.Content, $"开始焖饭：{_cookKg:0.##} 千克，约 {bowls} 碗，{Pantry.CookMinutes} 分钟后好", () =>
+            var start = Ui.Button(w.Content, $"开始焖饭：{_cookKg:0.##} 千克，约 {bowls} 碗，{Pantry.CookMinutes} 分钟后好", () =>
             {
                 if (S.CookRice(_cookKg, _cookIngredient)) Toast($"开始焖饭，{Pantry.CookMinutes} 分钟后好。");
                 w.Rebuild();
-            }, 19, Ui.ButtonHot, enoughRice && enoughIngredient), -1, 48);
+            }, 19, Ui.ButtonHot, enoughRice && enoughIngredient);
+            Ui.Size(start, -1, 48);
+            start.name = "OpeningMealStart";
+            if (S.OpeningMealTutorialPending) GuideHighlight(start);
             Line(w.Content, "点了就开始焖，焖的时候锅里不能动，人可以先去忙别的。", 15, Ui.Dim);
         }
 
@@ -740,7 +752,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(links,"天气与穿衣",OpenCityClimate,17),-1,38,1);
                     Ui.Size(Ui.Button(links,"行情",OpenMarketPanel,17),-1,38,1);
                     string blocker=WorkbenchAccessReason;
-                    Ui.Size(Ui.Button(w.Content,"居家工作台"+(blocker==null?"":" · "+blocker),OpenHomeWorkbench,18,Ui.ButtonHot,blocker==null),-1,40).name="MyHomeWorkbench";
+                    Ui.Size(Ui.Button(w.Content,"居家工作台"+(blocker==null?"":" · "+blocker),OpenHomeWorkbench,18,blocker==null?Ui.ButtonHot:Ui.ButtonBg,blocker==null),-1,40).name="MyHomeWorkbench";
                     if(blocker=="回家后可用")Ui.Size(Ui.Button(w.Content,"回家",()=>{CloseModalWindows();_ctrl.GoToPlace(S.Home);},17),-1,36);
                     HelpLink(w.Content,"身体详细资料",$"欠觉 {stats.SleepDebt:0.#} 小时 · 营养 {stats.Nutrition:0.#}/100 · 心情 {stats.Mood:0.#}/100\n衣着魅力 +{S.Outfit.CharmBonus} · 现金 {S.Ledger.Balance}\n打工、疲劳会累积压力，睡觉和令人愉快的活动能减压。压力达到 {PlayerStats.HighStressThreshold:0} 时，到岗表现奖金减少 {GameSession.HighStressWorkPenalty}%。");
                     return;
@@ -859,7 +871,7 @@ namespace PCShopSell.Game.UI
                 return;
             }
             OwnedShop destination = preferredShop ?? S.LastPurchaseDeliveryShop;
-            OpenWindow("网购", 1000, 850, w =>
+            OpenWindow("网购", 1500, 880, w =>
             {
                 RectTransform tabs = Ui.Row(w.Content, 46);
                 string[] names = { "家具", "店里摆设", "衣服", "礼品", "大米", "电脑配件" };
@@ -882,81 +894,8 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Label(delivery, _onlineTab == 5 ? "次日 10:00 送达" : $"{GameSession.DeliveryDays} 天后送达",
                     16, color: Ui.Dim), -1, -1, 1);
                 if (_onlineTab == 5) { BuildOnline(w, destination); return; }
-                Line(w.Content, $"现金 {S.Ledger.Balance} · 家具和礼品享门店价 85 折", 16, Ui.Dim);
-                RectTransform list = Ui.Scroll(w.Content, 540);
-                switch (_onlineTab)
-                {
-                    case 0:
-                        foreach (FurnitureDef f in FurnitureCatalog.Purchasable(false)) OnlineFurnitureRow(w, list, f, destination);
-                        break;
-                    case 1:
-                        foreach (FurnitureDef f in FurnitureCatalog.Purchasable(true)) OnlineFurnitureRow(w, list, f, destination);
-                        break;
-                    case 2:
-                        foreach (OutfitDef o in Outfits.All.Where(x => x.Id != Outfits.Default)) OnlineOutfitRow(w, list, o, destination);
-                        break;
-                    case 3:
-                        Line(list, destination == null ? "送到家里的礼品会放进背包。" : "礼品送达后放进所选门店后仓。", 15, Ui.Dim);
-                        foreach (GiftDef g in Gifts.All.Where(g => !RetailProducts.IsFood(g) && !g.LimitedEdition && !ClothingProducts.IsClothing(g.Id))) OnlineGiftRow(w, list, g, destination);
-                        break;
-                    default:
-                        RectTransform row = Ui.Row(list, 80);
-                        Ui.Size(ProductText(row, ProductLabel("大米", GameSession.RiceBagKg, "也可以去农贸市场按千克买，更便宜。", "每袋"), 18), -1, -1, 1);
-                        Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Rice, "rice").ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 100);
-                        int count = OnlineQuantity(w, row, "rice");
-                        Ui.Size(Ui.Button(row, "下单", () =>
-                        {
-                            S.OrderOnline(ParcelKind.Rice, "rice", count, destination);
-                            w.Rebuild();
-                        }, 17, Ui.ButtonHot), 90);
-                        break;
-                }
-                if (S.Parcels.Count > 0) Line(w.Content, "在路上：" + string.Join("、", S.Parcels.Select(p => $"{ParcelName(p)}（{Mathf.Max(0, p.DueDay - S.Clock.Today.TotalDays)} 天 · {S.ParcelDestinationName(p)}）")), 15, Ui.Dim);
+                BuildOnlineParcels(w, destination);
             });
-        }
-
-        private void OnlineFurnitureRow(Window w, RectTransform list, FurnitureDef def, OwnedShop destination)
-        {
-            RectTransform row = Ui.Row(list, 80);
-            Ui.Size(ProductText(row, ProductLabel(def.Name, def.WeightKg, def.Description), 18), -1, -1, 1);
-            Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Furniture, def.Id).ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 145);
-            int count = OnlineQuantity(w, row, "furn:" + def.Id);
-            int have = S.FurnitureInStock(def.Id);
-            Ui.Size(Ui.Label(row, have > 0 ? $"背包 ×{have}" : "", 15, TextAnchor.MiddleLeft, Ui.Dim), 80);
-            Ui.Size(Ui.Button(row, "下单", () =>
-            {
-                S.OrderOnline(ParcelKind.Furniture, def.Id, count, destination);
-                w.Rebuild();
-            }, 17, Ui.ButtonHot), 80);
-        }
-
-        private void OnlineGiftRow(Window w, RectTransform list, GiftDef g, OwnedShop destination)
-        {
-            RectTransform row = Ui.Row(list, 80);
-            Ui.Size(ProductText(row, ProductLabel(g.Name, g.WeightKg, g.Description), 18), -1, -1, 1);
-            Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Gift, g.Id).ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 145);
-            int count = OnlineQuantity(w, row, "gift:" + g.Id);
-            int have = S.Backpack.GiftCount(g.Id);
-            Ui.Size(Ui.Label(row, have > 0 ? $"背包 ×{have}" : "", 15, TextAnchor.MiddleLeft, Ui.Dim), 80);
-            Ui.Size(Ui.Button(row, "下单", () =>
-            {
-                S.OrderOnline(ParcelKind.Gift, g.Id, count, destination);
-                w.Rebuild();
-            }, 17, Ui.ButtonHot), 80);
-        }
-
-        private void OnlineOutfitRow(Window w, RectTransform list, OutfitDef o, OwnedShop destination)
-        {
-            RectTransform row = Ui.Row(list, 80);
-            bool has = S.OwnedOutfits.Contains(o.Id);
-            bool coming = S.Parcels.Any(p => p.Kind == ParcelKind.Outfit && p.Id == o.Id);
-            Ui.Size(Ui.Label(row, $"{o.Name}  魅力 +{o.CharmBonus}\n<size=13><color=#A8B0BA>穿戴物品，不计背包负重</color></size>\n<size=13>{o.Description}</size>", 18), 480);
-            Ui.Size(Ui.Label(row, S.OnlinePrice(ParcelKind.Outfit, o.Id).ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 145);
-            Ui.Size(Ui.Button(row, has ? "已有" : coming ? "在路上" : "下单", () =>
-            {
-                S.OrderOnline(ParcelKind.Outfit, o.Id, destination: destination);
-                w.Rebuild();
-            }, 17, Ui.ButtonHot, !has && !coming), 100);
         }
 
         // ---------- 家具城、农贸市场 ----------

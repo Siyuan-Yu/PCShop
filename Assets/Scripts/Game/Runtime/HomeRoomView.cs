@@ -540,7 +540,8 @@ namespace PCShopSell.Game.Runtime
             if (best == Repair && s.RepairmanAtWork != null) label = "师傅正在修…";
             if (best == Cooker && s.Pantry.Cooking != null) label = "正在煮饭：还剩" + s.Pantry.CookMinutesLeft(s.Clock.Now.TotalMinutes) + "分钟";
             if (best == Cooker && s.Pantry.CookedBowls > 0) label = "饭好了：取饭 / 装饭盒";
-            if (best == Door && s.LeaveBlocker != null) label = "师傅在修东西，暂时不能出门";
+            if (best == Door && s.OpeningMealTutorialPending) label = "先做饭、吃饭，才能出门";
+            else if (best == Door && s.LeaveBlocker != null) label = "师傅在修东西，暂时不能出门";
             NearbyId = best;
             NearbyLabel = label;
             NearbyWorld = world;

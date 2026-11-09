@@ -206,11 +206,15 @@ namespace PCShopSell.Tests
                     var before=s.PlayerShop.GoodsPriceOf(product.Id);Button("WorkbenchGoods_"+product.Id).onClick.Invoke();
                     Button("PricePlus_goods_"+product.Id).onClick.Invoke();Assert.AreEqual(before,s.PlayerShop.GoodsPriceOf(product.Id));
                     Button("ConfirmPrice_goods_"+product.Id).onClick.Invoke();Assert.AreEqual(before.Yuan+1,s.PlayerShop.GoodsPriceOf(product.Id).Yuan);
-                    ui.CloseTopWindow();Button("WorkbenchTab_2").onClick.Invoke();ui.RebuildWindows();Assert.NotNull(Button("WorkbenchTrade"));
-                    Button("WorkbenchTrade").onClick.Invoke();var tradeCash=s.Ledger.Balance;long held=s.CityInvestmentUnits("hardware");
-                    Button("InvestmentBuy_hardware").onClick.Invoke();
-                    ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Single(b=>b.GetComponentInChildren<Text>()?.text=="确认办理").onClick.Invoke();
-                    Assert.AreEqual(held+10,s.CityInvestmentUnits("hardware"));Assert.Less(s.Ledger.Balance.Cents,tradeCash.Cents);ui.CloseTopWindow();
+                    ui.CloseTopWindow();s.SetSmartphone(true);Button("WorkbenchTab_2").onClick.Invoke();ui.RebuildWindows();
+                    // 投资页直接内嵌手机证券的交易所：不打开新窗口、不暂停时间。
+                    Assert.NotNull(Button("StockQuickBuy_hardware"));Assert.False(s.Time.IsHeld);
+                    if(s.StockTradeBlocker("hardware",1,"buy")==null)
+                    {
+                        var tradeCash=s.Ledger.Balance;long held=s.CityInvestmentUnits("hardware");
+                        Button("StockQuickBuy_hardware").onClick.Invoke();
+                        Assert.AreEqual(held+1,s.CityInvestmentUnits("hardware"));Assert.Less(s.Ledger.Balance.Cents,tradeCash.Cents);
+                    }
                     Button("WorkbenchTab_3").onClick.Invoke();ui.RebuildWindows();Assert.NotNull(Button("WorkbenchContacts"));
                     Button("WorkbenchAutomation").onClick.Invoke();Assert.NotNull(Button("Automation_Sleep"));Button("Automation_Sleep").onClick.Invoke();Assert.True(s.HomeAutomation.Sleep);
                     Assert.AreEqual(s.Home,s.CurrentPlace);

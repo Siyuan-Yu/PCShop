@@ -153,7 +153,7 @@ namespace PCShopSell.Game.UI
             _questText.rectTransform.offsetMax = new Vector2(-16, -textTop);
             _questText.text = "<b><color=#A9C9A9>下一步</color></b>　" + next
                 + (string.IsNullOrEmpty(status) ? "" : "\n<size=15><color=#AAB4BB>" + status + "</color></size>");
-            _questPanel.rectTransform.offsetMin = new Vector2(16, -(82 + textTop + 130));
+            _questPanel.rectTransform.offsetMin = new Vector2(16, -(82 + textTop + 118));
             _questAction = action;
             _questActionText.text = actionLabel ?? "";
             _questActionButton.gameObject.SetActive(action != null);

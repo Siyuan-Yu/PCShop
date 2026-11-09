@@ -61,7 +61,7 @@ namespace PCShopSell.Game.UI
             if(!S.CityComicExpoOpen){Toast("请在漫展开放时到会展中心现场选购。");return;}
             var place=S.CurrentPlace;
             CloseStoreWindows();
-            OpenPlaceWindow(place,(w,p)=>BuildCarryCatalog(w,p,"expo"),1120,960,holds:true,leaveOnClose:false);
+            OpenPlaceWindow(place,(w,p)=>BuildCarryCatalog(w,p,"expo"),StoreWindowWidth,960,holds:true,leaveOnClose:false);
         }
     }
 }

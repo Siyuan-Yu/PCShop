@@ -142,7 +142,7 @@ namespace PCShopSell.Game.UI
         {
             var b = Ui.Button(parent, text, null, 15, color, enabled && max > 1e-9);
             b.name = "Hold_" + text;
-            Ui.Size(b, width);
+            Ui.Size(b, width, 34);
             var hold = b.gameObject.AddComponent<HoldRepeat>();
             hold.Owner=w;hold.Key=parent.name+"|"+b.name;
             hold.Max = Math.Max(1, (int)Math.Ceiling(max - 1e-9));

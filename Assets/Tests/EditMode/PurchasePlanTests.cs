@@ -105,11 +105,11 @@ namespace PCShopSell.Tests
                     .Where(b=>b.GetComponentInChildren<UnityEngine.UI.Text>().text!="关闭").ToArray();
                 void AssertFixedLayout()
                 {
-                    var window=ui.Canvases.SelectMany(c=>c.transform.Cast<Transform>()).Single(t=>t.name.StartsWith("Window_定期采购清单"));
+                    var window=ui.Canvases.SelectMany(c=>c.transform.Cast<Transform>()).Single(t=>t.name.StartsWith("Window_定期采购"));
                     var panel=(RectTransform)window.Find("Panel");
                     var body=(RectTransform)panel.Find("FixedContent");
-                    var footer=(RectTransform)panel.Find("PurchaseFooter");
-                    var budget=(RectTransform)footer.Find("EmployeePurchaseBudget");
+                    var footer=(RectTransform)panel.Find("FixedContent/BuyerSplit/BuyerSide");
+                    var budget=footer.GetComponentsInChildren<RectTransform>().First(t=>t.name=="EmployeePurchaseBudget");
                     Assert.IsNotNull(body,"外层应为固定布局");
                     Assert.IsNull(body.GetComponent<UnityEngine.UI.ContentSizeFitter>());
                     var scrolls=window.GetComponentsInChildren<UnityEngine.UI.ScrollRect>();
@@ -147,8 +147,8 @@ namespace PCShopSell.Tests
                         foreach(var scroll in scrolls)scroll.verticalNormalizedPosition=0;
                         Canvas.ForceUpdateCanvases();
                         Assert.AreEqual(before,BoundsIn(viewport,budget),"滚动商品列表不能带动预算");
-                        Assert.GreaterOrEqual(panel.Find("FixedContent/PurchaseCatalog").GetComponent<RectTransform>().rect.height,160);
-                        Assert.GreaterOrEqual(panel.Find("FixedContent/PurchaseSelected").GetComponent<RectTransform>().rect.height,100);
+                        Assert.GreaterOrEqual(panel.Find("FixedContent/BuyerSplit/BuyerCatalog/PurchaseCatalog").GetComponent<RectTransform>().rect.height,160);
+                        Assert.GreaterOrEqual(panel.Find("FixedContent/BuyerSplit/BuyerSide/PurchaseSelected").GetComponent<RectTransform>().rect.height,100);
                     }
                 }
                 try

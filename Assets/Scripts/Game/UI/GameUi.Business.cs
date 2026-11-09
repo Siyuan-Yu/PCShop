@@ -47,7 +47,7 @@ namespace PCShopSell.Game.UI
         private void ShowBusinessPanel(bool agencyOnly)
         {
             if (_businessTab == 0) { OpenAssetWorkspace(); return; }
-            if (_businessTab == 1) { _procurementAgreement = true; OpenCityProcurement(); return; }
+            if (_businessTab == 1) { OpenProcurementAgreement(); return; }
             if (_businessTab == 5) { OpenCityResidence(); return; }
             S.RefreshEnterpriseOffer();
             int section=_businessTab;string assetId=_businessAssetId;

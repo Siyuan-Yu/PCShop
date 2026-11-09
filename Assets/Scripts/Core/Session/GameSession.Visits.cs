@@ -89,6 +89,7 @@ namespace PCShopSell.Core.Session
                 if(Racing)return "请先完成或退出当前比赛。";
                 if(BrandExpoExclusive)return "正在连续参加4天展会，闭展后才能离开。";
                 if (IsWorking) return "正在打工，收工后才能离开。";
+                if (CurrentPlace == Home && OpeningMealTutorialPending) return OpeningMealLeaveBlock;
                 if (CurrentPlace == null || CurrentPlace != Home) return null;
                 HomeVisit v = RepairmanAtWork;
                 if (v == null) return null;

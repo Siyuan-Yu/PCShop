@@ -1807,6 +1807,9 @@ namespace PCShopSell.EditorTools
         private static void Shot(string name, int w = 1920, int h = 1080)
         {
             Camera cam = _game.Cam;
+            // 后处理会把界面压暗、加饱和，截图和真机 Game 视图对不上，所以截图时关掉。
+            var cameraData = cam.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
+            if (cameraData != null) cameraData.renderPostProcessing = false;
             var rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32);
             cam.targetTexture = rt;
             Canvas.ForceUpdateCanvases();

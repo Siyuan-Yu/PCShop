@@ -39,6 +39,7 @@ namespace PCShopSell.Game.UI
             var scrolled = Ui.SaveScroll(Root);
             Ui.Clear(Content);
             Builder?.Invoke(this);
+            GameUi.TabStrips.Restyle(Content);
             Ui.RestoreScroll(Root, Root, scrolled);
             if (ResetScrollOnRebuild)
             {
@@ -108,11 +109,12 @@ namespace PCShopSell.Game.UI
             _modalCanvas = Ui.CreateCanvas("UI_Modal", 30);
             _toastCanvas = Ui.CreateCanvas("UI_Toast", 25);
             BuildHud();
+            BuildOpeningMealGuide();
             BuildToasts();
             BuildTip();
         }
 
-        public IEnumerable<Canvas> Canvases => new[] { _labelCanvas, _hudCanvas, _dockCanvas, _modalCanvas, _toastCanvas, _tipCanvas };
+        public IEnumerable<Canvas> Canvases => new[] { _labelCanvas, _hudCanvas, _dockCanvas, _modalCanvas, _toastCanvas, _tipCanvas, _tutorialCanvas };
 
         // ---------- 每帧 ----------
 
@@ -142,6 +144,8 @@ namespace PCShopSell.Game.UI
             }
             UpdateAutoExpoChoices();
             UpdateDisplayPreview();
+            UpdateOpeningMealGuide();
+            UpdateHudMore();
             if (MainMenuOpen) return;
             RefreshOpeningKindChoice();
             UpdateWorkScreen();
@@ -224,21 +228,15 @@ namespace PCShopSell.Game.UI
             _statsText.Tip(StatsTip);
             Ui.Size(Ui.Button(row, "我的", OpenMyPanel, 18, Ui.ButtonHot), 59).Tip("<b>我的</b>　快捷键：M\n身体状况、住处与饮食；在家可以摆家具，店面整理在店铺“装修”页。");
             Ui.Size(Ui.Button(row, "背包 B", ToggleBackpack, 18), 68).Tip("<b>背包</b>　快捷键：B\n身上带的货和负重；在家或店里一键全放下。");
-            Ui.Size(Ui.Button(row, "人物", OpenRelationsPanel, 18), 59).Tip("<b>人脉</b>\n认识的人和你有多熟、他们彼此之间的关系（网状图）。");
-            Ui.Size(Ui.Button(row, "员工", OpenEmployeesPanel, 18), 59).Tip("所有店的员工列表、明天调店安排、进货清单和车辆占用。");
             Ui.Size(Ui.Button(row, "手机", OpenPhone, 18), 59).Tip("<b>手机</b>　快捷键：P\n买了智能手机才有；通讯录、网购、外卖等 app。");
-            Ui.Size(Ui.Button(row, "日程", OpenSchedulePanel, 18), 59).name = "HudCalendar";
             Ui.Size(Ui.Button(row, "任务", OpenQuests, 18), 59).Tip("<b>任务</b>　快捷键：T\n当前任务怎么做、完成奖励；左上角的任务条收起后从这里再打开。");
             _businessButton = Ui.Size(Ui.Button(row, "资产", OpenBusinessPanel, 18), 59);
             _businessButton.name = "HudAssets";
             _businessButton.gameObject.SetActive(true);
             _businessButton.Tip("<b>资产</b>　快捷键：J\n门店最近7天收支与来源；已购和租用物业的位置、用途与租金。");
             Ui.Size(Ui.Button(row,"采购",OpenCityProcurement,18),59).Tip("商铺采购、补货目标、在途订单与直供协议。").name="HudProcurement";
-            _brandButton=Ui.Size(Ui.Button(row,"品牌",OpenBrandOverview,18),59);
-            _brandButton.name="HudBrand";
-            _brandButton.gameObject.SetActive(true);
-            _brandButton.Tip("品牌管理、KOL签约、直播排班与直播间。");
             _noticeButtonText = Ui.Size(Ui.Button(row, "通知", OpenNoticeHistory, 16), 59).GetComponentInChildren<Text>();
+            BuildHudMoreMenu(row);
             Ui.Size(Ui.Button(row, "菜单", OpenSystemPanel, 18), 59).Tip("<b>菜单</b>　快捷键：Esc\n存档、读档、重新开始和音效设置。");
 
             Image bottom = Ui.Panel(root, "BottomBar", Ui.PanelBg);
@@ -274,6 +272,7 @@ namespace PCShopSell.Game.UI
 
             Image hint = Ui.Panel(root, "HintStrip", new Color(.13f,.17f,.22f,.95f));
             _worldHintStrip = hint.gameObject;
+            _hintStrip = hint;
             hint.rectTransform.Anchor(0, 0, 0, 0, 16, 70, -1136, -122);
             hint.raycastTarget = false;
             _hintText = Ui.Label(hint.transform, "", 16, TextAnchor.MiddleLeft, Ui.TextColor);
@@ -341,9 +340,11 @@ namespace PCShopSell.Game.UI
             if (warnStorage) _storageWarning.GetComponentInChildren<Text>().text = S.TempDueHere
                 ? "临时存放已到期 · 点击清理（可稍后处理）" : "临时存放不足1天 · 点击整理";
 
+            if (_hintBaseDay < -1000000) _hintBaseDay = S.Clock.Today.TotalDays;
+            bool early = S.Clock.Today.TotalDays - _hintBaseDay < 2;
             if (S.IsGameOver) _hintText.text = "游戏结束：" + S.GameOverReason;
             else if (_ctrl.Placing) _hintText.text = "左键放置 · R 旋转 · X 收纳 · Esc 取消 · Q/E 转视角 · V 复位";
-            else if (_ctrl.InInterior) _hintText.text = "WASD 移动 · 靠近人物或设施按 F 交互 · 门口按 F 离店";
+            else if (_ctrl.InInterior) _hintText.text = early ? "WASD 移动 · 靠近人物或设施按 F 交互 · 门口按 F 离店" : "";
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimateRemainingMinutes(S.Time.SecondsPerMinuteAt1x)} 分钟 · 按 WASD 随时接管";
             else if (S.NearbyCommunityBox>=0)
                 _hintText.text = "<color=#DDC18B>按 F 调查"+GameSession.CommunityBoxName(S.NearbyCommunityBox)+"，取回这一份图页</color>";
@@ -356,10 +357,11 @@ namespace PCShopSell.Game.UI
             else if (_ctrl.InVisit)
                 _hintText.text = _ctrl.VisitRoom?.NearbyLabel is string visitHint
                     ? "按 F：" + visitHint
-                    : S.CanSleepAt(S.CurrentPlace) ? "WASD 在屋里走动 · 走近床或房门按 F" : "WASD 在屋里走动 · 走近住户或房门按 F";
-            else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#DDC18B>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : "WASD 在屋里走动 · 走近床、衣柜、电饭锅、纸箱、凳子（头顶出现提示按 F）· 房间信息、摆放家具看右上角“我的”";
-            else if (S.CurrentPlace != null) _hintText.text = "按 WASD 离开 · 空格暂停";
-            else _hintText.text = "WASD 移动 · F 进入 · 空格暂停 · 右键拖动 / 滚轮缩放";
+                    : !early ? "" : S.CanSleepAt(S.CurrentPlace) ? "WASD 在屋里走动 · 走近床或房门按 F" : "WASD 在屋里走动 · 走近住户或房门按 F";
+            else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#DDC18B>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : early ? "WASD 在屋里走动 · 走近床、衣柜、电饭锅、纸箱、凳子（头顶出现提示按 F）· 房间信息、摆放家具看右上角“我的”" : "";
+            else if (S.CurrentPlace != null) _hintText.text = early ? "按 WASD 离开 · 空格暂停" : "";
+            else _hintText.text = early ? "WASD 移动 · F 进入 · 空格暂停 · 右键拖动 / 滚轮缩放" : "";
+            _hintStrip.enabled = !string.IsNullOrEmpty(_hintText.text);
 
             _chaseText.transform.parent.gameObject.SetActive(S.Police.AnyChasing && S.CurrentPlace == null);
         }
@@ -372,6 +374,7 @@ namespace PCShopSell.Game.UI
             {
                 bool can = S.CanUse(kind);
                 b.interactable = can;
+                b.gameObject.SetActive(can || S.Vehicle == kind || kind <= VehicleKind.Taxi || S.ImpoundedVehicleCount(kind) > 0);
                 b.image.color = S.Vehicle == kind ? Ui.ButtonHot : Ui.ButtonBg;
                 Text t = b.GetComponentInChildren<Text>();
                 t.color = can ? Ui.TextColor : Ui.Dim;
@@ -718,6 +721,8 @@ namespace PCShopSell.Game.UI
         }
 
         private readonly List<string> _noticeHistory = new List<string>();
+        private Image _hintStrip;
+        private int _hintBaseDay = int.MinValue / 2;
         private string _lastToast;
         private float _lastToastAt;
         public void OpenNoticeHistory()
@@ -733,6 +738,11 @@ namespace PCShopSell.Game.UI
         public void Toast(string message)
         {
             _upcomingScheduleDirty = true;
+            for (int i = 0; i < _toasts.Count; i++)
+            {
+                var live = _toasts[i].go != null ? _toasts[i].go.GetComponentInChildren<Text>() : null;
+                if (live != null && live.text == message) { _toasts[i] = (_toasts[i].go, _uiTime + 5f); return; }
+            }
             if (_lastToast == message && _uiTime - _lastToastAt < 8) return;
             _lastToast = message; _lastToastAt = _uiTime;
             _unreadNotices++;

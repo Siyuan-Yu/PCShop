@@ -212,6 +212,11 @@ namespace PCShopSell.Core.Session
         private const string OpeningMealTutorialFlag = "tutorial:opening-meal-pending";
         public bool OpeningMealTutorialPending => Flags.Contains(OpeningMealTutorialFlag);
 
+        public const string OpeningMealLeaveBlock = "还没做饭、吃饭，先把电饭锅里的饭焖好吃一顿再出门。";
+
+        /// <summary>开局做饭引导进行到哪一步：-1 没在引导；0 还没开始焖；1 正在焖；2 饭好了等着吃 / 装盒。</summary>
+        public int OpeningMealStep => !OpeningMealTutorialPending ? -1 : Pantry.CookedBowls > 0 ? 2 : Pantry.Cooking != null ? 1 : 0;
+
         private void CompleteOpeningMealTutorial()
         {
             if (Flags.Remove(OpeningMealTutorialFlag)) RefreshQuestProgress();

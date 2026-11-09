@@ -34,36 +34,40 @@ namespace PCShopSell.Game.UI
         private Button _workbenchLauncher;
         private int _workbenchTab,_workbenchPeriod,_workbenchBusinessTab;
         private string _workbenchShop;
-        private static readonly Color WbPaper=new Color32(240,237,223,255),WbCard=new Color32(250,247,238,255),WbInk=new Color32(41,61,54,255),WbDim=new Color32(101,115,105,255);
+        // 与游戏其他窗口同一套深蓝金配色：窗口底色用 Ui.PanelBg，卡片用 Ui.PanelBg2。
+        private static readonly Color WbCard=Ui.PanelBg2,WbInk=Ui.TextColor,WbDim=Ui.Dim;
+        private Image _wbDayFill;
+        private RectTransform _wbDayMarker;
+        private Text _wbClockText;
         private static Text WbText(Transform parent,string text,int size=18,Color? color=null)
         {var t=Ui.Label(parent,text,size,TextAnchor.MiddleLeft,color??WbInk);Ui.Size(t,-1,size*1.6f);return t;}
         private static Button WbButton(Transform parent,string label,Action action,string name=null,bool selected=false,bool enabled=true)
         {
-            var b=Ui.Size(Ui.Button(parent,label,action,17,selected?Ui.ButtonHot:new Color32(224,232,220,255),enabled),-1,40,1);
-            b.GetComponentInChildren<Text>().color=selected?Ui.TextColor:WbInk;if(name!=null)b.name=name;return b;
+            var b=Ui.Size(Ui.Button(parent,label,action,17,selected?Ui.ButtonHot:Ui.ButtonBg,enabled),-1,40,1);
+            if(name!=null)b.name=name;return b;
         }
         private static RectTransform WbScroll(Transform parent,string name)
         {
             var list=Ui.Scroll(parent);var area=(RectTransform)list.parent.parent;area.name=name;
             var layout=Ui.Size(area).GetComponent<LayoutElement>();layout.minHeight=80;layout.flexibleHeight=1;
-            area.GetComponent<Image>().color=WbCard;return list;
+            var areaImage=area.GetComponent<Image>();areaImage.color=Ui.FlatBand;Ui.FlatBorder(areaImage,Ui.FlatCardEdge);return list;
         }
         private static RectTransform WbColumn(Transform parent,string name,float weight=1)
         {
-            var panel=Ui.Panel(parent,name,WbCard).rectTransform;Ui.Size(panel,-1,-1,weight);Ui.VList(panel,8,14);return panel;
+            var panel=Ui.FlatPanel(parent,name).rectTransform;Ui.Size(panel,-1,-1,weight);Ui.VList(panel,5,12);return panel;
         }
         private static void WbVital(Transform parent,string label,double value,double max)
         {
             WbText(parent,label+" "+value.ToString("0")+" / "+max.ToString("0"),17);
-            var track=Ui.Panel(parent,"Vital_"+label,new Color32(220,225,214,255)).rectTransform;Ui.Size(track,-1,7);
-            Ui.Panel(track,"Value",Ui.ButtonHot).rectTransform.Anchor(0,0,(float)Math.Max(0,Math.Min(1,value/Math.Max(1,max))),1);
+            var track=Ui.Panel(parent,"Vital_"+label,new Color32(21,28,38,255)).rectTransform;Ui.Size(track,-1,8);
+            Ui.Panel(track,"Value",Ui.Accent).rectTransform.Anchor(0,0,(float)Math.Max(0,Math.Min(1,value/Math.Max(1,max))),1);
         }
-        private static void WbPriceGraph(Transform parent,WorkbenchPriceDay[] data,float height)
+        private static RectTransform WbPriceGraph(Transform parent,WorkbenchPriceDay[] data,float height)
         {
             var rect=Ui.Rect(parent,"WorkbenchPriceTrend");Ui.Size(rect,-1,height);
             rect.gameObject.AddComponent<CanvasRenderer>();
             var graphic=rect.gameObject.AddComponent<WorkbenchHistoryGraphic>();graphic.raycastTarget=false;graphic.Values=data.Select(d=>d.Price).ToArray();
-            graphic.color=data.Length>1&&data.Last().Price<data.First().Price?new Color(.3f,.5f,.65f):Ui.Warn;
+            graphic.color=data.Length>1&&data.Last().Price<data.First().Price?new Color(.3f,.5f,.65f):Ui.Warn;return rect;
         }
         private void RefreshWorkbenchAccess()
         {
@@ -78,25 +82,41 @@ namespace PCShopSell.Game.UI
             _workbenchLauncher.interactable=S.CanUseHomeWorkbench;
             _workbenchLauncher.GetComponentInChildren<Text>().text=S.DebugHomeWorkbenchEnabled?"居家工作台 · 测试":S.OwnsHomeWorkbench?"居家工作台":"居家工作台 · 未购大屏";
             if(_homeWorkbench!=null&&!S.CanUseHomeWorkbench)_homeWorkbench.Close();
+            UpdateWorkbenchDayBar();
         }
         public void OpenHomeWorkbench()
         {
             if(!S.CanUseHomeWorkbench){Toast("在家具城购买家庭经营大屏，送达后可在家打开工作台。");return;}
             if(_homeWorkbench!=null)return;
-            _homeWorkbench=OpenWindow("居家工作台",1420,800,BuildHomeWorkbench,holds:false,onClosed:()=>_homeWorkbench=null,scrollContent:false);
+            _homeWorkbench=OpenWindow("居家工作台",1780,1000,BuildHomeWorkbench,holds:false,onClosed:()=>_homeWorkbench=null,scrollContent:false);
+            // 大屏接近全屏：背后的 HUD 几乎压黑，看起来是一块独立的屏幕。
+            var backdrop=_homeWorkbench.Root.GetComponent<Image>();if(backdrop!=null)backdrop.color=new Color(.02f,.03f,.05f,.94f);
             _homeWorkbench.LiveConversation=true;
-            _homeWorkbench.LiveKey=()=>S.CanUseHomeWorkbench?S.Clock.Now.TotalMinutes+":"+S.Ledger.Revision+":"+S.WorkbenchAlerts.Count+":"+S.Player.Health+":"+S.Player.Hunger:"closed";
+            _homeWorkbench.LiveKey=()=>S.CanUseHomeWorkbench?(S.Clock.Now.TotalMinutes/30)+":"+S.StockNextQuote+":"+S.Ledger.Revision+":"+S.WorkbenchAlerts.Count+":"+S.Player.Health+":"+S.Player.Hunger:"closed";
             _homeWorkbench.LiveStamp=_homeWorkbench.LiveKey();
         }
         private void BuildHomeWorkbench(Window w)
         {
             if(!S.CanUseHomeWorkbench){w.Close();return;}
-            w.Content.GetComponentInParent<Image>().color=WbPaper;
-            var title=Ui.Row(w.Content,38,10);title.name="WorkbenchStatusBar";
-            Ui.Size(WbText(title,S.Clock.Now+" · 在家",17),-1,38,1);
-            Ui.Size(WbText(title,"现金 "+S.Ledger.Balance,20),260,38);
-            Ui.Size(WbButton(title,S.Time.IsRunning?"暂停":"继续",()=>{S.Time.TogglePause();w.RequestRebuild();},"WorkbenchPause"),100,38,0);
-            Ui.Size(WbButton(title,"生活托管",OpenHomeAutomation,"WorkbenchAutomation"),180,38,0);
+            var padding=w.Content.GetComponent<VerticalLayoutGroup>();padding.padding=new RectOffset(14,14,8,12);padding.spacing=6;
+            var title=Ui.Row(w.Content,28,10);title.name="WorkbenchStatusBar";
+            _wbClockText=WbText(title,S.Clock.Now+" · 在家",16);Ui.Size(_wbClockText,-1,28,1);
+            Ui.Size(WbText(title,"现金 "+S.Ledger.Balance,18,Ui.Accent),230,28);
+            Ui.Size(WbText(title,"净资产 "+S.NetWorth(),16),240,28);
+            Ui.Size(WbText(title,"压力 "+S.Player.Stress.ToString("0")+"/100",16,S.Player.Stress>=70?Ui.Warn:WbDim),130,28);
+            BuildWorkbenchDayBar(w.Content);
+            // 一级页签 + 时间控制挤在同一行：页签靠左，暂停/倍速/托管靠右。
+            var nav=Ui.Row(w.Content,38,6);nav.name="WorkbenchNavigation";
+            string[] tabs={"总览","经营","投资","联系人"};
+            for(int i=0;i<tabs.Length;i++){int index=i;WbMainTab(nav,tabs[i],()=>{_workbenchTab=index;w.RequestRebuild();},"WorkbenchTab_"+i,_workbenchTab==i);}
+            WbFlex(nav);
+            Ui.Size(WbControl(nav,S.Time.IsRunning?"暂停":"继续",()=>{S.Time.TogglePause();w.RequestRebuild();},"WorkbenchPause",false),76,34,0);
+            foreach(int speed in new[]{1,2,4})
+            {
+                int chosen=speed;
+                Ui.Size(WbControl(nav,speed+"×",()=>{S.Time.SetSpeed(chosen);w.RequestRebuild();},"WorkbenchSpeed_"+speed,S.Time.IsRunning&&S.Time.Speed==speed),48,34,0);
+            }
+            Ui.Size(WbControl(nav,"生活托管",OpenHomeAutomation,"WorkbenchAutomation",false),110,34,0);
             var body=Ui.Rect(w.Content,"WorkbenchBody");var le=Ui.Size(body).GetComponent<LayoutElement>();le.minHeight=160;le.flexibleHeight=1;Ui.VList(body,8,0);
             switch(_workbenchTab)
             {
@@ -105,9 +125,46 @@ namespace PCShopSell.Game.UI
                 case 2:BuildWorkbenchInvestments(body,w);break;
                 case 3:BuildWorkbenchContacts(body);break;
             }
-            var nav=Ui.Row(w.Content,46,9);nav.name="WorkbenchNavigation";
-            string[] tabs={"总览","经营","投资","联系人"};
-            for(int i=0;i<tabs.Length;i++){int index=i;WbButton(nav,tabs[i],()=>{_workbenchTab=index;w.RequestRebuild();},"WorkbenchTab_"+i,_workbenchTab==i);}
+        }
+        /// <summary>一级页签：选中是金色实心，未选中是压暗的底色，一眼能看出当前在哪。</summary>
+        private static Button WbMainTab(Transform parent,string label,Action action,string name,bool selected)
+        {
+            var b=Ui.Button(parent,label,action,18,selected?Ui.ButtonHot:Ui.FlatBand);
+            var text=b.GetComponentInChildren<Text>();if(text!=null){text.color=selected?Ui.TextColor:WbDim;text.fontStyle=selected?FontStyle.Bold:FontStyle.Normal;}
+            b.name=name;Ui.Size(b,136,38,0);return b;
+        }
+        /// <summary>二级页签 / 周期切换：选中只是浅蓝底加金字，比一级页签轻。</summary>
+        private static Button WbSubTab(Transform parent,string label,Action action,string name,bool selected,float width=120,float height=32)
+        {
+            var b=Ui.Button(parent,label,action,16,selected?Ui.FlatRow:Ui.FlatBand);
+            var text=b.GetComponentInChildren<Text>();if(text!=null)text.color=selected?Ui.Accent:WbDim;
+            b.name=name;Ui.Size(b,width,height,0);return b;
+        }
+        private static Button WbControl(Transform parent,string label,Action action,string name,bool selected)
+        {
+            var b=Ui.Button(parent,label,action,16,selected?Ui.ButtonHot:Ui.ButtonBg);b.name=name;return b;
+        }
+        /// <summary>今日进度条：金色为已过去的时间，白线为现在；夜间（0–6 点、22–24 点）底色更暗。每帧由 UpdateWorkbenchDayBar 推进，不触发重建。</summary>
+        private void BuildWorkbenchDayBar(Transform parent)
+        {
+            var row=Ui.Row(parent,10,0);row.name="WorkbenchDayBar";
+            var holder=Ui.Rect(row,"DayTrack");Ui.Size(holder,-1,10,1);
+            var back=Ui.Panel(holder,"DayTrackBack",new Color32(58,74,99,255));back.raycastTarget=false;back.rectTransform.Anchor(0,.5f,1,.5f,0,-4,0,-4);
+            foreach(var night in new[]{(0f,.25f),(22f/24f,1f)})
+            {var shade=Ui.Panel(back.transform,"Night",new Color32(24,30,42,255));shade.raycastTarget=false;shade.rectTransform.Anchor(night.Item1,0,night.Item2,1);}
+            _wbDayFill=Ui.Panel(back.transform,"DayFill",Ui.ButtonHot);_wbDayFill.raycastTarget=false;_wbDayFill.rectTransform.Anchor(0,0,0,1);
+            foreach(float tick in new[]{.25f,.5f,.75f}){var line=Ui.Panel(back.transform,"Tick",new Color(0,0,0,.35f));line.raycastTarget=false;line.rectTransform.Anchor(tick,0,tick,1,-.5f,0,-.5f,0);}
+            var marker=Ui.Panel(holder,"DayNow",Color.white);marker.raycastTarget=false;_wbDayMarker=marker.rectTransform;_wbDayMarker.Anchor(0,0,0,1,-1.5f,0,-1.5f,0);
+            UpdateWorkbenchDayBar();
+        }
+        private void UpdateWorkbenchDayBar()
+        {
+            if(_homeWorkbench==null||_homeWorkbench.Closed)return;
+            if(_wbClockText!=null)_wbClockText.text=S.Clock.Now+" · 在家";
+            if(_wbDayFill==null||_wbDayMarker==null)return;
+            float progress=Mathf.Clamp01(S.Clock.MinuteOfDay/1440f);
+            var fill=_wbDayFill.rectTransform;fill.anchorMax=new Vector2(progress,1);
+            _wbDayMarker.anchorMin=new Vector2(progress,0);_wbDayMarker.anchorMax=new Vector2(progress,1);
         }
         private (GameDate from,GameDate to) WorkbenchDates(bool personal=false)
         {
@@ -121,96 +178,6 @@ namespace PCShopSell.Game.UI
             var row=Ui.Row(parent,34,6);string[] names={personal?"昨日":"今日","近7日","本月"};
             for(int i=0;i<names.Length;i++){int n=i;WbButton(row,names[i],()=>{_workbenchPeriod=n;w.RequestRebuild();},"WorkbenchPeriod_"+i,_workbenchPeriod==i);}
         }
-        private void BuildWorkbenchPersonal(Transform parent,Window w)
-        {
-            var row=Ui.Row(parent,-1,14);Ui.Size(row,-1,-1,1).GetComponent<LayoutElement>().flexibleHeight=1;
-            var me=WbColumn(row,"WorkbenchPersonalState");
-            WbText(me,"我的状态",22);WbVital(me,"健康",S.Player.Health,100);WbVital(me,"精力",S.Player.Energy,S.Player.MaxEnergy);WbVital(me,"饱腹",S.Player.Hunger,100);
-            WbText(me,"心情 "+S.Player.Mood.ToString("0")+" · 营养 "+S.Player.Nutrition.ToString("0"),17);
-            WbText(me,S.HomeTitle,20);WbText(me,"周租 "+S.CurrentHomeRent,17,WbDim);
-            WbText(me,"载具："+S.CurrentVehicle.Name,18);WbText(me,"过去24小时睡眠 "+S.SleepHoursLast24.ToString("0.#")+" / 8 小时",17);
-            WbButton(me,"生活托管设置",OpenHomeAutomation,"WorkbenchPersonalAutomation");
-            WbButton(me,"背包与家中物品",OpenBackpackPanel,"WorkbenchBackpack");
-            var finance=WbColumn(row,"WorkbenchPersonalFinance",1.1f);
-            WbText(finance,"我的财务",22);WbText(finance,"现金 "+S.Ledger.Balance,25);WbText(finance,"净资产 "+S.NetWorth(),19);WbText(finance,"债务 "+S.TotalDebt,18);
-            WorkbenchPeriods(finance,w,true);var range=WorkbenchDates(true);var flow=S.WorkbenchPersonalCash(range.from,range.to);
-            if(_workbenchPeriod==0&&S.Clock.Today.TotalDays==0)flow=(Money.Zero,Money.Zero);
-            WbText(finance,"收入 +"+flow.income,21);WbText(finance,"支出 "+flow.expense,21);WbText(finance,"日常收支 · 投资与借还单列",14,WbDim);
-            WbButton(finance,"完整账本",OpenLedger,"WorkbenchLedger");WbButton(finance,"物业与资产",OpenCityProperties,"WorkbenchProperties");
-            WbButton(finance,"手机借款与还款",OpenLoansApp,"WorkbenchDebt");
-            var alerts=WbColumn(row,"WorkbenchPersonalDecisions");WbText(alerts,"需要我决定",22);
-            var list=WbScroll(alerts,"WorkbenchDecisionsList");
-            if(S.PendingEvent!=null)WbButton(list,S.PendingEvent.Title,()=>ShowEvent(S.PendingEvent),"WorkbenchPendingEvent");
-            foreach(var alert in S.WorkbenchAlerts)WbText(list,alert.Text,17,Ui.Warn);
-            var offered=S.CityActivities.Where(a=>a.State==CityActivityPhase.Offered).ToArray();
-            foreach(var activity in offered){string id=activity.Id;WbButton(list,"待回复邀约 · "+(CityLifeCatalog.Activities.FirstOrDefault(d=>d.Id==activity.DefinitionId)?.Name??activity.DefinitionId),()=>OpenCityActivityDetail(id),"WorkbenchInvitation_"+id);}
-            if(S.PendingEvent==null&&S.WorkbenchAlerts.Count==0&&offered.Length==0)WbText(list,"暂无待处理事项",18,WbDim);
-            foreach(var activity in S.CityActivities.Where(a=>a.State==CityActivityPhase.Scheduled||a.State==CityActivityPhase.Gathering).OrderBy(a=>a.ScheduledStart).Take(3))
-            {string id=activity.Id;WbButton(list,"日程 · "+new GameTimestamp(activity.ScheduledStart),()=>OpenCityActivityDetail(id),"WorkbenchUpcoming_"+id);}
-            WbButton(alerts,"日程与邀约",OpenCityActivities,"WorkbenchCalendar");
-            WbButton(alerts,"手机消息",OpenChatPanel,"WorkbenchMessages");
-        }
-        private void BuildWorkbenchBusiness(Transform parent,Window w)
-        {
-            var nav=Ui.Row(parent,38,6);string[] names={"报表","门店","人员采购","订单合作","资产"};
-            for(int i=0;i<names.Length;i++){int index=i;WbButton(nav,names[i],()=>{_workbenchBusinessTab=index;w.RequestRebuild();},"WorkbenchBusiness_"+i,_workbenchBusinessTab==i);}
-            if(_workbenchBusinessTab==0){BuildWorkbenchReport(parent,w);return;}
-            if(_workbenchBusinessTab==1){BuildWorkbenchShops(parent,w);return;}
-            var list=WbScroll(parent,"WorkbenchBusinessFunctions");
-            if(_workbenchBusinessTab==2)
-            {
-                WbButton(list,"员工 · 岗位 / 排班 / 培训",OpenEmployeesPanel,"WorkbenchEmployees");
-                WbButton(list,"统一采购与补货责任",OpenCityProcurement,"WorkbenchProcurement");
-                foreach(var shop in S.MyShops){var target=shop;WbButton(list,S.ShopTitle(shop)+" · 进货员与采购记录",()=>OpenShopBuyers(target),"WorkbenchBuyers_"+shop.Place.Id);}
-            }
-            else if(_workbenchBusinessTab==3)
-            {
-                WbText(list,"已解锁的业务",20);
-                WbButton(list,"品牌 · 代言人 / 展会 / 竞标",OpenBrandOverview,"WorkbenchBrandBusiness");
-                if(BusinessUnlocked)
-                {
-                    WbButton(list,"直供采购",()=>{_businessTab=1;ShowBusinessPanel(false);},"WorkbenchDirectSupply");
-                    WbButton(list,"企业合同",()=>{_businessTab=2;ShowBusinessPanel(false);},"WorkbenchContracts");
-                    WbButton(list,"MCN工作室",()=>{_businessTab=4;ShowBusinessPanel(false);},"WorkbenchPromotion");
-                }
-                else WbText(list,"经营成长后解锁直供、企业合同和MCN工作室。",18,WbDim);
-                foreach(var shop in S.MyShops){var target=shop;WbButton(list,S.ShopTitle(shop)+" · 装机订单 "+shop.Sim.Orders.Count+" 单",()=>OpenWorkbenchOrders(target),"WorkbenchOrders_"+shop.Place.Id);}
-            }
-            else
-            {
-                WbButton(list,"具体物业、租约与收租",OpenCityProperties,"WorkbenchAssets");
-                WbButton(list,"车辆与占用",OpenFleetPanel,"WorkbenchVehicles");
-                if(S.RacingUnlocked)WbButton(list,"湖区赛车",OpenRacingDestinations,"WorkbenchRacing");
-                if(BusinessUnlocked)WbButton(list,"住处租约",OpenCityResidence,"WorkbenchPropertyAccounts");
-                if(S.HasPark)WbButton(list,"园区管理",()=>{_businessTab=6;ShowBusinessPanel(false);},"WorkbenchPark");
-            }
-        }
-        private void BuildWorkbenchReport(Transform parent,Window w)
-        {
-            WorkbenchPeriods(parent,w,false);var range=WorkbenchDates();var summary=S.GetCityFinance(range.from,range.to);
-            WbText(parent,"销售 "+summary.Sales+"    经营支出 "+summary.OperatingOut+"    现金净额 "+summary.OperatingNet,22).name="WorkbenchOperatingSummary";
-            var row=Ui.Row(parent,-1,15);Ui.Size(row,-1,-1,1).GetComponent<LayoutElement>().flexibleHeight=1;
-            var report=WbColumn(row,"WorkbenchShopReports",1.3f);WbText(report,"门店收支",21);
-            var list=WbScroll(report,"WorkbenchShopReportList");
-            foreach(var shop in S.MyShops)
-            {
-                var result=S.GetCityFinance(range.from,range.to,shop.Place.Id);
-                WbText(list,S.ShopTitle(shop)+" · "+(shop.Sim.IsOpen?"营业":"休息"),20);
-                WbText(list,"销售 "+result.Sales+" / 支出 "+result.OperatingOut+" / 净额 "+result.OperatingNet,17);
-            }
-            WbText(report,"现金净额反映经营收付，不等于库存销售利润。",14,WbDim);
-            var market=WbColumn(row,"WorkbenchCategoryPrices");WbText(market,"品类进货行情",21);
-            var prices=WbScroll(market,"WorkbenchCategoryPriceList");
-            var kinds=S.MyShops.Select(s=>s.RetailKind).Concat(new[]{"clothing","models","computer"}).Distinct().Where(k=>S.WorkbenchPrices(k).Length>0).ToArray();
-            foreach(string kind in kinds)
-            {
-                string id=kind;var history=S.WorkbenchPrices(id);double? change=S.WorkbenchPriceChange(id);
-                int span=history.Length>1?Math.Min(7,history.Last().Day-history.First().Day):0;
-                WbText(prices,RetailShopTypes.Name(id)+(S.MyShops.Any(s=>s.RetailKind==id)?" · 经营中":" · 关注"),18);
-                WbPriceGraph(prices,history,44);
-                WbButton(prices,change.HasValue?"近"+span+"日 "+change.Value.ToString("+0.0;-0.0;0.0")+"%":"历史记录中 · "+history.Length+" 日",()=>OpenWorkbenchPriceHistory(id),"WorkbenchPrice_"+id);
-            }
-        }
         private void OpenWorkbenchPriceHistory(string kind)
         {
             OpenWindow(RetailShopTypes.Name(kind)+" · 进货价格历史",820,610,w=>
@@ -222,43 +189,6 @@ namespace PCShopSell.Game.UI
                 foreach(var sample in data.Reverse())Line(w.Content,new GameDate(sample.Day)+" · 指数 "+(first<=0?"—":(sample.Price/first*100).ToString("0.00")),18);
                 Para(w.Content,"分类数据来自实际进货价；平价商品可能保持不变。具体供货与配额以供应商为准。",16,Ui.Dim);
             });
-        }
-        private void BuildWorkbenchShops(Transform parent,Window w)
-        {
-            var shops=S.MyShops.ToArray();if(shops.Length==0){WbText(parent,"还没有经营中的门店。",20);return;}
-            int index=Array.FindIndex(shops,s=>s.Place.Id==_workbenchShop);if(index<0)index=0;var shop=shops[index];_workbenchShop=shop.Place.Id;
-            var selector=Ui.Row(parent,38);Ui.Size(Ui.Choice(selector,shops.Select(S.ShopTitle).ToArray(),index,i=>{_workbenchShop=shops[i].Place.Id;w.RequestRebuild();}),-1,38,1);
-            if(S.IsOwnedVenue(shop.Place)){WbButton(parent,"服务价格、营业与值守",()=>OpenVenueManagement(shop.Place),"WorkbenchVenue");return;}
-            var sim=shop.Sim;var hours=Ui.Row(parent,38,7);
-            WbText(hours,"营业时间",17);var options=Enumerable.Range(0,24).Select(i=>i.ToString("00")+":00").ToArray();
-            const int defaultOpenHour=ShopSimulation.DefaultOpenMinute/60, defaultCloseHour=ShopSimulation.DefaultCloseMinute/60;
-            int openHour=sim.AllDay?defaultOpenHour:sim.OpenMinute/60;
-            int closeHour=sim.AllDay?defaultCloseHour:sim.CloseMinute/60%24;
-            var open=Ui.Size(Ui.Choice(hours,options,openHour,i=>{S.SetWorkbenchHours(shop.Place.Id,i,closeHour,false);w.RequestRebuild();}),150,38);open.name="WorkbenchOpenHour";
-            var close=Ui.Size(Ui.Choice(hours,options,closeHour,i=>{S.SetWorkbenchHours(shop.Place.Id,openHour,i,false);w.RequestRebuild();}),150,38);close.name="WorkbenchCloseHour";
-            WbButton(hours,sim.AllDay?"不限时 ✓":"不限时",()=>{S.SetWorkbenchHours(shop.Place.Id,defaultOpenHour,defaultCloseHour,!sim.AllDay);w.RequestRebuild();},"WorkbenchAllDay");
-            WbText(parent,"统一加价 "+sim.Markup.ToString("0.00")+"×",19);
-            PriceMultiplierEditor(parent,"WorkbenchMarkup_"+shop.Place.Id,"统一加价",sim.Markup,PCShopSell.Core.Shop.ShopSettings.MinMarkup,PCShopSell.Core.Shop.ShopSettings.MaxMarkup,.05,value=>S.SetWorkbenchMarkup(shop.Place.Id,value),w.RequestRebuild);
-            var actions=Ui.Row(parent,40,8);WbButton(actions,"员工与排班",OpenEmployeesPanel,"WorkbenchShopStaff");WbButton(actions,"进货员与记录",()=>OpenShopBuyers(shop),"WorkbenchShopBuyers");WbButton(actions,"本店采购",()=>OpenCityProcurementFor(shop),"WorkbenchShopProcurement");
-            var list=WbScroll(parent,"WorkbenchDisplayedProducts");WbText(list,"已陈列商品 · 定价",20);
-            foreach(var kind in ShelfKinds.All)
-            {
-                var fill=sim.ShelfFillOf(kind);
-                foreach(var line in fill.Goods)
-                {
-                    string id=line.Key;WbButton(list,Gifts.Get(id).Name+" ×"+line.Value+" · "+sim.GoodsPriceOf(id)+" · 购买意愿 "+(sim.GoodsPurchaseIntentAtPrice(id,sim.GoodsPriceOf(id).Yuan)*100).ToString("0")+"%",
-                        ()=>OpenWorkbenchGoodsPrice(shop,id),"WorkbenchGoods_"+id);
-                }
-                foreach(var line in fill.Parts)
-                {
-                    var part=line.Part;bool boxed=line.Boxed;WbButton(list,part.Name+(boxed?" 盒装":" 散件")+" ×"+line.Count+" · "+sim.PriceOf(part,boxed),
-                        ()=>OpenWorkbenchPartPrice(shop,part,boxed),"WorkbenchPart_"+part.Id+(boxed?"_b":"_l"));
-                }
-            }
-            WbText(list,"后仓库存（查看）",20);
-            foreach(var line in sim.Stock.GoodsLines())WbText(list,Gifts.Get(line.Key).Name+" · 总库存 "+line.Value+"，陈列 "+sim.OnShelfGoods(line.Key),16);
-            foreach(var line in sim.Stock.Lines())WbText(list,line.Part.Name+(line.Boxed?" 盒装":" 散件")+" · 总库存 "+line.Count,16);
-            WbText(list,"搬运、摆放家具和手工装机需本人到店。",15,WbDim);
         }
         private void OpenWorkbenchGoodsPrice(OwnedShop shop,string id)
         {
@@ -297,31 +227,29 @@ namespace PCShopSell.Game.UI
         }
         private void BuildWorkbenchInvestments(Transform parent,Window w)
         {
-            var reserve=S.GetCityCashReserve();WbText(parent,"股票及指数 "+(S.CityEquityValue+S.FundValue)+" · 已实现 "+S.StockTotalRealized,24);
-            WbText(parent,"做空保证金 "+S.StockFrozenMargin+" · 做空浮盈亏 "+S.StockShortUnrealized,20);
-            WbText(parent,"现金 "+S.Ledger.Balance+" · 经营预留 "+reserve.Total+" · 预留后 "+reserve.Available,20);
-            WbButton(parent,"打开手机证券",OpenCityInvestments,"WorkbenchTrade",true);
-            var list=WbScroll(parent,"WorkbenchInvestmentNews");WbText(list,S.CityInvestmentNews,18);
-            WbButton(list,"门店与自有物业",OpenCityFinanceOverview,"WorkbenchInvestmentDebt");
+            // 与手机证券是同一套看盘交易界面；这里不暂停时间，也不需要返回手机。
+            BuildEmbeddedStock(w,parent);
         }
         private void BuildWorkbenchContacts(Transform parent)
         {
-            var actions=Ui.Row(parent,42,10);WbButton(actions,"通讯录与邀约",OpenContactsPanel,"WorkbenchContacts");WbButton(actions,"聊天消息",OpenChatPanel,"WorkbenchChat");WbButton(actions,"日程",OpenCityActivities,"WorkbenchContactCalendar");
+            // 只有「通讯录」和「日程」：通讯录就是下面这份名单，点头像看资料/邀约，右侧固定大小的按钮直接交谈。
+            var actions=Ui.Row(parent,32,6);WbSubTab(actions,"通讯录",()=>{},"WorkbenchContacts",true,128);WbSubTab(actions,"日程",OpenCityActivities,"WorkbenchContactCalendar",false,128);WbFlex(actions);
             var list=WbScroll(parent,"WorkbenchContactsBody");
             foreach(var contact in S.SavedConversationContacts())
             {
                 string id=contact.Id;
-                var row=PersonSummary(list,id,contact.Name,contact.Role,50,ink:WbInk,muted:WbDim);
-                WbButton(row,"交谈",()=>OpenPersonDialogue(id,remote:true),"WorkbenchKnownContact_"+id);
+                var row=PersonSummary(list,id,contact.Name,contact.Role,54,()=>OpenCityPersonProfile(id),ink:WbInk,muted:WbDim);
+                Ui.Size(Ui.Label(row,Npcs.LevelName(S.Relation(id))+" "+S.Relation(id),16,TextAnchor.MiddleCenter,Ui.Good),110);
+                var talk=Ui.Size(Ui.Button(row,"交谈",()=>OpenPersonDialogue(id,remote:true),17,Ui.ButtonHot),100,44,0);talk.name="WorkbenchKnownContact_"+id;
             }
             foreach(var worker in S.Employees)
             {
                 string personId=S.PersonIdOf(worker.Person);var employee=worker;
-                var row=PersonSummary(list,personId,employee.Person.Name,GameSession.RoleName(employee.Role)+" · "+S.EmployeeStatus(employee),50,ink:WbInk,muted:WbDim);
-                WbButton(row,"交谈",()=>OpenPersonDialogue(personId,remote:true),"WorkbenchContact_"+employee.Person.Id,enabled:S.RemoteConversationBlocker(personId)==null);
+                var row=PersonSummary(list,personId,employee.Person.Name,GameSession.RoleName(employee.Role)+" · "+S.EmployeeStatus(employee),54,ink:WbInk,muted:WbDim);
+                Ui.Size(Ui.Label(row,"员工",16,TextAnchor.MiddleCenter,WbDim),110);
+                var talk=Ui.Size(Ui.Button(row,"交谈",()=>OpenPersonDialogue(personId,remote:true),17,Ui.ButtonHot,S.RemoteConversationBlocker(personId)==null),100,44,0);talk.name="WorkbenchContact_"+employee.Person.Id;
             }
-        }
-        private void OpenHomeAutomation()
+        }        private void OpenHomeAutomation()
         {
             if(!S.CanUseHomeWorkbench)return;
             OpenWindow("生活托管",830,700,w=>

@@ -76,7 +76,7 @@ namespace PCShopSell.Game.UI
         }
         public void OpenCityClothingShop(Place place)
         {
-            OpenPlaceWindow(place,BuildCarryStore,1120,960);
+            OpenPlaceWindow(place,BuildCarryStore,StoreWindowWidth,960);
         }
     }
 }

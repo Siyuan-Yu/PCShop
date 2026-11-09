@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -10,16 +10,16 @@ namespace PCShopSell.Game.UI
     public static partial class Ui
     {
         public static Color Gold => Accent;
-        public static readonly Color PanelBg = Tone("29333F");
-        public static readonly Color PanelBg2 = Tone("35424F");
+        public static readonly Color PanelBg = Tone("1B2840");
+        public static readonly Color PanelBg2 = Tone("223350");
         public static readonly Color Accent = Tone("E8BE62");
-        public static readonly Color ButtonBg = Tone("455362");
+        public static readonly Color ButtonBg = Tone("27384F");
         public static readonly Color ButtonHot = Tone("9F7B36");
         public static readonly Color Warn = Tone("B5603E");
         public static readonly Color Good = Tone("B6D578");
         public static readonly Color Dim = Tone("AAB4BB");
         public static readonly Color TextColor = Tone("ECE8DF");
-        public static readonly Color Edge = Tone("56616B");
+        public static readonly Color Edge = Tone("3D516B");
         public static readonly Color WarningSurface = Tone("4B302A");
         private static Color Tone(string hex) { ColorUtility.TryParseHtmlString("#" + hex, out var c); return c; }
         private static Sprite _card;
@@ -112,18 +112,8 @@ namespace PCShopSell.Game.UI
             RectTransform rt = Rect(parent, name);
             var img = rt.gameObject.AddComponent<Image>();
             img.color = color;
-            if (name == "Button" || name == "Panel" || name == "ShopDock" || name == "Toast" || name == "Bubble" || name == "QuestTracker" || name == "Portrait" || name == "TopBar" || name == "BottomBar" || name == "TitleBar" || name == "Choice" || name == "Input")
-            {
-                img.sprite = Card; img.type = Image.Type.Sliced;
-                if (name != "Bubble")
-                {
-                    var line = rt.gameObject.AddComponent<Outline>();
-                    line.effectColor = new Color(.72f,.77f,.81f,name=="Button"?.25f:.36f);
-                    line.effectDistance = new Vector2(.8f,-.8f);
-                    var shadow=rt.gameObject.AddComponent<Shadow>();
-                    shadow.effectColor=new Color(.025f,.035f,.05f,.32f);shadow.effectDistance=new Vector2(0,-2);
-                }
-            }
+            // 全游戏统一的平面深蓝样式：方角、细描边，没有拉丝钢板贴图和投影。
+            if (IsFlatSkinned(name)) SkinFlat(img, name, color);
             return img;
         }
 
@@ -330,19 +320,17 @@ namespace PCShopSell.Game.UI
 
         private static void AddVerticalScroll(RectTransform frame, RectTransform viewport, RectTransform content, float sensitivity)
         {
-            const float scrollbarWidth = 16f;
+            const float scrollbarWidth = 10f;
             // A fixed gutter keeps controls clear of the scrollbar without reflowing the list as it changes.
             viewport.offsetMax = new Vector2(-scrollbarWidth - 4, viewport.offsetMax.y);
 
-            var track = Panel(frame, "VerticalScrollbar", Edge);
+            var track = Panel(frame, "VerticalScrollbar", Tone("141E31"));
             track.rectTransform.Anchor(1, 0, 1, 1, -scrollbarWidth - 2, 2, 2, 2);
             var slidingArea = Rect(track.transform, "SlidingArea").Fill(2);
             slidingArea.gameObject.AddComponent<RectMask2D>();
-            var handle = Panel(slidingArea, "Handle", Accent);
+            var handle = Panel(slidingArea, "Handle", Tone("5E7699"));
             // Scrollbar drives anchors but leaves offsets unchanged.
             handle.rectTransform.Fill();
-            handle.sprite = Card;
-            handle.type = Image.Type.Sliced;
             handle.raycastTarget = false;
 
             var scrollbar = track.gameObject.AddComponent<ListScrollbar>();

@@ -824,6 +824,7 @@ namespace PCShopSell.Game
         public void LeaveHome()
         {
             CancelHomeBedTrip();
+            if (Session.LeaveBlocker != null) { Session.Leave(); return; }
             Ui.CloseAllWindows();
             Session.Leave();
         }

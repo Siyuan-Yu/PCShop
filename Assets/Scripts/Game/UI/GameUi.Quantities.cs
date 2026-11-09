@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
@@ -40,7 +40,13 @@ namespace PCShopSell.Game.UI
             if (row.Find("Quantity_" + key) != null) return;
             double amount = S.CartAmount(key), step = key == "rice" ? .25 : 1;
             double max = maxAmount??1000;
-            if (key.StartsWith("part:")) max = Math.Min(1000, S.StallRemaining(S.CurrentPlace, PartCatalog.Get(key.Substring(5))));
+            if (key.StartsWith("part:"))
+            {
+                // 共享批发市场里别家档口的货，key 形如 part:<配件>:<档口id>。
+                var bits = key.Split(':');
+                var stall = bits.Length > 2 ? S.City.GetPlace(bits[2]) : S.CurrentPlace;
+                max = Math.Min(1000, S.StallRemaining(stall, PartCatalog.Get(bits[1])));
+            }
             QuantityStepper(w, row, key, amount, 0, max, step, value =>
             {
                 double delta = value - S.CartAmount(key);

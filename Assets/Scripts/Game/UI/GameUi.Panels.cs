@@ -27,7 +27,7 @@ namespace PCShopSell.Game.UI
             if(p.Id==GameSession.CommunityMcnId){OpenCommunityMcn();return;}
             if(S.IsOwnedVenue(p)){OpenVenueManagement(p);return;}
             if(p.Business!=null&&p.Business.StartsWith("venue_")||S.IsCityActivityVenue(p)&&S.CityActivities.Any(a=>a.Active&&a.VenueId==p.Id)){OpenCityVenue(p);return;}
-            if(IsCarryStore(p)){OpenPlaceWindow(p,BuildCarryStore,1120,960);return;}
+            if(IsCarryStore(p)){OpenPlaceWindow(p,BuildCarryStore,StoreWindowWidth,960);return;}
             if(!S.IsMyShop(p)&&(p.Id=="shop02"||p.Id=="clothing_boutique")){OpenCityClothingShop(p);return;}
             switch (p.Kind)
             {
@@ -45,22 +45,22 @@ namespace PCShopSell.Game.UI
                     Toast("回到出租屋了。走近床、衣柜、电饭锅、纸箱或门，头顶出现提示时按 F；看房间信息点右上角“我的”。");
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.FastFoodBusiness && !S.IsVacant(p) && S.VentureAt(p.Id) == null && !S.IsPlayerPropertyOccupied(p.Id):
-                    OpenPlaceWindow(p, BuildFastFood, 1080, 850);
+                    OpenPlaceWindow(p, BuildFastFood, StoreWindowWidth, 900);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.MallBusiness:
-                    OpenPlaceWindow(p, BuildMall, 1140, 960);
+                    OpenPlaceWindow(p, BuildMall, StoreWindowWidth, 960);
                     break;
                 case PlaceKind.Shop when p.Business == Gifts.TobaccoBusiness:
-                    OpenPlaceWindow(p, BuildTobacco, 1040, 900);
+                    OpenPlaceWindow(p, BuildTobacco, StoreWindowWidth, 900);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.PhoneBusiness:
-                    OpenPlaceWindow(p, BuildPhoneShop, 960, 860);
+                    OpenPlaceWindow(p, BuildPhoneShop, StoreWindowWidth, 900);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.FarmBusiness:
-                    OpenPlaceWindow(p, BuildFarm, 1060, 960);
+                    OpenPlaceWindow(p, BuildFarm, StoreWindowWidth, 960);
                     break;
                 case PlaceKind.Wholesaler:
-                    OpenPlaceWindow(p, BuildStall, 1060, 940);
+                    OpenPlaceWindow(p, BuildStall, StoreWindowWidth, 940);
                     break;
                 case PlaceKind.Dealer:
                     OpenPlaceWindow(p, BuildDealer, 1180, 760);
@@ -69,7 +69,7 @@ namespace PCShopSell.Game.UI
                     OpenPlaceWindow(p, BuildStation);
                     break;
                 default:
-                    if(S.HasRetailWholesale(p))OpenPlaceWindow(p,BuildRetailWholesale,1120,940);
+                    if(S.HasRetailWholesale(p))OpenPlaceWindow(p,BuildRetailWholesale,StoreWindowWidth,940);
                     else OpenPlaceWindow(p, BuildNeighbour);
                     break;
             }
@@ -141,9 +141,10 @@ namespace PCShopSell.Game.UI
                     win.Close();
                     return;
                 }
+                int contentBefore = win.Content.childCount;
                 if (p.Id != "life_expo"&&p.Kind!=PlaceKind.Garage) BuildPlayerWorkEntry(win.Content, p, win);
                 if (S.HasRetailWholesale(p) && build!=BuildRetailWholesale && (p.Business==GameSession.FarmBusiness || p.Business==Gifts.TobaccoBusiness)) Ui.Size(Ui.Button(win.Content, "批发进货（可供自己店铺销售）", () => OpenRetailWholesale(p), 18, Ui.ButtonHot), -1, 40);
-                RectTransform frame = p.Kind == PlaceKind.Agency || p.Kind==PlaceKind.Garage || RaceTracks.Get(p.Id)!=null || S.VentureAt(p.Id) != null || S.IsPlayerPropertyOccupied(p.Id) ? null : BuildRosterFrame(win, p, h - 170, p.Kind==PlaceKind.Dealer || p.Kind==PlaceKind.Station || p.Id=="motor_scooter_mod");
+                RectTransform frame = p.Kind == PlaceKind.Agency || p.Kind==PlaceKind.Garage || RaceTracks.Get(p.Id)!=null || S.VentureAt(p.Id) != null || S.IsPlayerPropertyOccupied(p.Id) ? null : BuildRosterFrame(win, p, h - 170 - (win.Content.childCount - contentBefore) * 52, p.Kind==PlaceKind.Dealer || p.Kind==PlaceKind.Station || p.Id=="motor_scooter_mod", w >= StoreWindowWidth ? 150 : 210);
                 if (frame != null)
                 {
                     RectTransform original = win.Content;

@@ -67,7 +67,7 @@ namespace PCShopSell.Game.UI
         private void OpenRetailWholesale(Place source)
         {
             CloseStoreWindows();
-            OpenPlaceWindow(source,BuildRetailWholesale,1120,960);
+            OpenPlaceWindow(source,BuildRetailWholesale,StoreWindowWidth,960);
         }
         private void BuildRetailWholesale(Window w,Place source) => BuildCarryCatalog(w,source,"wholesale");
         private sealed class CarryOffer
@@ -108,6 +108,14 @@ namespace PCShopSell.Game.UI
             BuildCarryCatalog(w,source,wholesale?"wholesale":"retail");
         }
         private void BuildCarryCatalog(Window w,Place source,string mode="retail")
+        {
+            var host=w.Content;
+            BuildStoreSplit(host,out var goodsColumn,out var cartColumn);
+            w.Content=goodsColumn;
+            try{BuildCarryCatalogBody(w,source,mode,cartColumn);}
+            finally{w.Content=host;}
+        }
+        private void BuildCarryCatalogBody(Window w,Place source,string mode,RectTransform cartColumn)
         {
             bool wholesale=mode=="wholesale",expo=mode=="expo";
             var offers=new List<CarryOffer>();
@@ -212,17 +220,16 @@ namespace PCShopSell.Game.UI
             bool storeOpen = S.IsPlaceOpen(source);
             Line(w.Content,"商品购买 · "+(storeOpen?"营业中 · ":"已打烊 · ")+S.OpeningHoursText(source),19,Ui.Accent);
             if (source.Kind == PlaceKind.Wholesaler)
-                Para(w.Content, "按配件分类选货，不同档口的商品可以一起结账。每个档口单独计算每日可售数量。", 16, Ui.Dim);
+                Line(w.Content, "按配件分类选货；不同档口的商品可一起结账，每个档口单独计算每日可售数量。", 14, Ui.Dim);
             var missing=S.HasShop && source.Business==GameSession.MallBusiness && !S.QuestCompleted("mall")
                 ? S.MissingOpeningFurniture() : Array.Empty<string>();
             if (missing.Length>0)
             {
                 Line(w.Content,"开店待买 · "+string.Join("、",missing.Select(id=>FurnitureCatalog.Get(id).Name+" ×1")),16,Ui.Accent);
             }
-            Para(w.Content,"选择商品数量，加入购物车后统一结账。可携带商品优先放背包，也可叫车；设备和车辆直接登记为已购资产。",16,Ui.Dim);
             var links=Ui.Row(w.Content,36,6);
             if(wholesale && (source.Business==GameSession.FarmBusiness || source.Business==Gifts.TobaccoBusiness))
-                Ui.Size(Ui.Button(links,"切回零售",()=>{CloseStoreWindows();OpenPlaceWindow(source,BuildCarryStore,1120,960);},16),120,36);
+                Ui.Size(Ui.Button(links,"切回零售",()=>{CloseStoreWindows();OpenPlaceWindow(source,BuildCarryStore,StoreWindowWidth,960);},16),120,36);
             if(S.IsCityClothingRetail(source))Ui.Size(Ui.Button(links,"我的衣柜",OpenCityWardrobe,16),120,36);
             if(source.Kind==PlaceKind.Dealer)Ui.Size(Ui.Button(links,"已购车辆 / 赎回",OpenCarryVehicleManagement,16),180,36);
             if(source.Business==GameSession.MallBusiness && S.MallStashCount>0)
@@ -247,20 +254,20 @@ namespace PCShopSell.Game.UI
                 double amount = S.CartAmount(item.Key);
                 bool limited = !double.IsInfinity(remaining);
                 bool canAdd = storeOpen && remaining > 0;
-                var row=Ui.Row(list,84,10);
+                var row=Ui.Row(list,68,10);row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight=false;if(amount>0)row.gameObject.AddComponent<Image>().color=Ui.FlatRow;
                 string detail=item.Season==null?item.Detail:item.Season+" · "+item.Detail;
-                string label=item.Kg>0?ProductLabel(item.Name,item.Kg,detail):item.Name+"\n<size=14>登记为已购资产，不占背包或货车空间</size>\n<size=14>"+detail+"</size>";
-                Ui.Size(ProductText(row,label,17),-1,-1,1);
-                Ui.Size(Ui.Label(row,item.Price.ToString(),19,TextAnchor.MiddleLeft,Ui.Good),100);
+                CompactProduct(row,item.Name,item.Kg,detail,item.Kg<=0);
+                Ui.Size(Ui.Label(row,item.Price.ToString(),19,TextAnchor.MiddleLeft,Ui.Good),96);
                 if(item.Preview!=null)Ui.Size(Ui.Button(row,"试穿",item.Preview,16),68,38);
                 CartAddButton(w,row,item.Key,item.Add,"+1",58,canAdd,maxAmount:
                     limited ? amount + Math.Max(0, remaining) : 1000);
+                var stepper=row.Find("Quantity_"+item.Key);if(stepper!=null){var stepperSize=stepper.GetComponent<LayoutElement>();stepperSize.minWidth=184;stepperSize.flexibleWidth=0;}
                 if (supportsMaximum && limited)
                 {
                     var maximum = Ui.Size(Ui.Button(row,"最大",()=>{
                         for(int n=0;n<1000;n++){double before=S.CartAmount(item.Key);if((item.Remaining?.Invoke()??0)<=0)break;item.Add();if(S.CartAmount(item.Key)<=before)break;}
                         w.RequestRebuild();
-                    },15,interactable:canAdd),58);
+                    },15,interactable:canAdd),58,34);
                     if (remaining <= 0) maximum.Tip(amount > 0 ? "已选满" : "今日无可购库存");
                 }
                 else if (limited)
@@ -269,7 +276,7 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Label(row,status,14,TextAnchor.MiddleCenter,Ui.Dim),58);
                 }
             }
-            CartPanel(w,w.Content,wholesale||expo||source.Kind==PlaceKind.Wholesaler);
+            CartSidebar(w,cartColumn,wholesale||expo||source.Kind==PlaceKind.Wholesaler);
         }
         private void OpenCarryVehicleManagement()
         {

@@ -67,6 +67,32 @@ namespace PCShopSell.Tests
             Assert.AreEqual("rent", s.CurrentQuest().Id);
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void OpeningMeal_BlocksLeavingHomeUntilCookedAndEaten(bool pack)
+        {
+            using var s = Make(false, startWithCookingTutorial: true);
+            Assert.AreEqual(0, s.OpeningMealStep);
+            Assert.AreEqual(GameSession.OpeningMealLeaveBlock, s.LeaveBlocker);
+            s.Leave();
+            Assert.AreSame(s.Home, s.CurrentPlace, "没做饭不能出门");
+            Assert.IsFalse(s.GoTo(s.City.GetPlace("agency")), "没做饭也不能直接出行");
+            Assert.AreSame(s.Home, s.CurrentPlace);
+
+            Assert.IsTrue(s.CookRice(0.5, null));
+            Assert.AreEqual(1, s.OpeningMealStep);
+            Assert.IsNotNull(s.LeaveBlocker, "饭在焖时仍不能出门");
+            s.AdvanceClock(Pantry.CookMinutes);
+            Assert.AreEqual(2, s.OpeningMealStep);
+            Assert.IsNotNull(s.LeaveBlocker, "饭好了没吃也不能出门");
+
+            Assert.IsTrue(pack ? s.PackLunch(1) : s.EatBowlAtHome());
+            Assert.AreEqual(-1, s.OpeningMealStep);
+            Assert.IsNull(s.LeaveBlocker);
+            s.Leave();
+            Assert.IsNull(s.CurrentPlace, "吃过饭或装了饭盒就可以出门");
+        }
+
         [Test]
         public void RentReward_ThenMallQuest_ThenPlaceFixtures()
         {

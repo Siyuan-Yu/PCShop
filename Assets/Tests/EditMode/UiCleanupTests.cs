@@ -265,7 +265,7 @@ namespace PCShopSell.Tests
         {
             using (var r = new Rig())
             {
-                r.RentSecond(); r.Ui.OpenCityProcurement();
+                r.RentSecond(); r.Ui.OpenCityProcurementFor(r.S.CurrentShop);
                 string title = r.S.ShopTitle(r.S.CurrentShop);
                 StringAssert.Contains(title, r.Components<Text>().Single(t => t.name == "ProcurementDestination").text);
                 var input = r.Components<InputField>().Single(); input.onEndEdit.Invoke("显卡"); r.Ui.RebuildWindows();
