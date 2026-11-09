@@ -134,6 +134,38 @@ namespace PCShopSell.EditorTools
                 Snap2("30-online-tab" + tab);
                 ui.CloseAllWindows();
             }            Log("PURCHASE AUDIT4 COMPLETE");
+        });        /// <summary>复现：在电子批发市场本体（不是档口）里买东西。</summary>
+        public static void PurchaseAudit5FromBatch() => RunSmokeBatch(() =>
+        {
+            _outDir = Path.GetFullPath("docs/previews/purchase-audit"); Directory.CreateDirectory(_outDir);
+            ShaderUtil.allowAsyncCompilation = false; UrpSetup.Ensure(); EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single); BuildRig();
+            _game = new GameObject("Game").AddComponent<GameController>(); _game.Bootstrap(false, 11); _game.Ui.QuestPopups = false;
+            var s = _game.Session; var ui = _game.Ui; s.EventsEnabled = false; s.Time.SetPaused(true); s.DebugAddCash(3000000); s.SetSmartphone(true);
+            foreach (var canvas in ui.Canvases) { canvas.renderMode = RenderMode.ScreenSpaceCamera; canvas.worldCamera = _game.Cam; canvas.planeDistance = 1; }
+            Log("STARTER " + s.DebugRentStarterShop(true));
+            s.Clock.Restore(s.Clock.Today, 10 * 60);
+            void Snap2(string name) { Frame(0); _game.SnapCamera(); Shot(name, 1920, 1080); Shot(name, 1920, 1080); }
+            var market = s.City.Places.First(pl => pl.Kind == PCShopSell.Core.World.PlaceKind.Wholesaler && pl.Name.Contains("电子"));
+            Log("MARKET " + market.Id + " " + market.Name);
+            Teleport(s, market.Id); s.Clock.Restore(s.Clock.Today, 18 * 60); s.AdvanceClock(5); Log("PEOPLE " + s.PeopleInPlace(market.Id).Count());
+            try { ui.OnEnteredPlace(s.CurrentPlace); } catch (System.Exception e) { Log("EXC1 " + e); }
+            Frame(0.1f); Snap2("40-market-all");
+            foreach (var label in new[] { "电源机箱", "CPU" })
+            {
+                try
+                {
+                    var b = ui.Canvases.SelectMany(c => c.GetComponentsInChildren<UnityEngine.UI.Button>()).FirstOrDefault(x => x.GetComponentInChildren<UnityEngine.UI.Text>()?.text == label);
+                    Log("TAB " + label + " found=" + (b != null));
+                    b?.onClick.Invoke();
+                }
+                catch (System.Exception e) { Log("EXC2 " + e); }
+                Frame(0.1f);
+                try { var plus = ui.Canvases.SelectMany(c => c.GetComponentsInChildren<UnityEngine.UI.Button>()).FirstOrDefault(x => x.GetComponentInChildren<UnityEngine.UI.Text>()?.text == "+"); Log("PLUS " + (plus != null)); plus?.onClick.Invoke(); } catch (System.Exception e) { Log("EXC3 " + e); }
+                Frame(0.1f); Snap2("41-market-" + label);
+            }
+            foreach (var tr in ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Transform>(true))) if (tr.name.StartsWith("Quantity_")) Log("QKEY " + tr.name);
+            ui.CloseAllWindows();
+            Log("PURCHASE AUDIT5 COMPLETE");
         });        /// <summary>只截图：各类店铺与网购的购买界面（左商品右购物车）。</summary>
         public static void PurchaseAudit3FromBatch() => RunSmokeBatch(() =>
         {

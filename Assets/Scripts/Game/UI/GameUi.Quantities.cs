@@ -40,12 +40,13 @@ namespace PCShopSell.Game.UI
             if (row.Find("Quantity_" + key) != null) return;
             double amount = S.CartAmount(key), step = key == "rice" ? .25 : 1;
             double max = maxAmount??1000;
-            if (key.StartsWith("part:"))
+            if (maxAmount == null && key.StartsWith("part:"))
             {
                 // 共享批发市场里别家档口的货，key 形如 part:<配件>:<档口id>。
                 var bits = key.Split(':');
-                var stall = bits.Length > 2 ? S.City.GetPlace(bits[2]) : S.CurrentPlace;
-                max = Math.Min(1000, S.StallRemaining(stall, PartCatalog.Get(bits[1])));
+                var stall = bits.Length > 2 && S.City.HasPlace(bits[2]) ? S.City.GetPlace(bits[2]) : S.CurrentPlace;
+                var part = PartCatalog.Get(bits[1]);
+                if (stall != null && part != null) max = Math.Min(1000, S.StallRemaining(stall, part));
             }
             QuantityStepper(w, row, key, amount, 0, max, step, value =>
             {

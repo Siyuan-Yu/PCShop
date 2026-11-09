@@ -149,8 +149,9 @@ namespace PCShopSell.Game.UI
                 {
                     RectTransform original = win.Content;
                     win.Content = frame;
-                    build(win, p);
-                    win.Content = original;
+                    // 构建中途出错也必须还原 Content，否则下次重建会把整页再嵌进上一次的残页里（越点越套娃）。
+                    try { build(win, p); }
+                    finally { win.Content = original; }
                 }
                 else build(win, p);
                 win.TitleText.text = S.PlaceTitle(p);
