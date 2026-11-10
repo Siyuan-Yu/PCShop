@@ -58,10 +58,10 @@ namespace PCShopSell.Core.Session
             new MilestoneDef
             {
                 Id = "y1", Day = Year1Day, Title = "站稳一年",
-                Goal = $"第 {Year1Day} 天：身家 ≥ {Year1Wealth}，知名度 ≥ {Year1Reputation:0}（奖励：自助结账平台）",
+                Goal = $"第 {Year1Day} 天：身家 ≥ {Year1Wealth}，名望 ≥ {Year1Reputation:0}（奖励：自助结账平台）",
                 Check = s => s.NetWorth() >= Year1Wealth && s.PlayerShop.Reputation >= Year1Reputation,
-                Progress = s => $"身家 {s.NetWorth()} / {Year1Wealth}　知名度 {s.PlayerShop.Reputation:0} / {Year1Reputation:0}",
-                PassText = "一年了，这条街上没人再把你当过路的。知名度 +5，店里解锁「自助结账平台」：排队的顾客自动结账。",
+                Progress = s => $"身家 {s.NetWorth()} / {Year1Wealth}　名望 {s.PlayerShop.Reputation:0} / {Year1Reputation:0}",
+                PassText = "一年了，这条街上没人再把你当过路的。名望 +5，店里解锁「自助结账平台」：排队的顾客自动结账。",
                 FailText = "一年过去，生意不上不下。房东嘀咕着要涨租，店租 +10%。",
             },
             new MilestoneDef
@@ -70,7 +70,7 @@ namespace PCShopSell.Core.Session
                 Goal = $"第 {Year2Day} 天：身家 ≥ {Year2Wealth}，并且在房产中介换到中型以上的铺面",
                 Check = s => s.NetWorth() >= Year2Wealth && s.HasShop && s.PlayerShop.Size != ShopSize.Small,
                 Progress = s => $"身家 {s.NetWorth()} / {Year2Wealth}　店面：{GameSession.SizeName(s.PlayerShop.Size)}",
-                PassText = "两年下来，电脑城里提起你的店都会说一句“靠谱”。知名度 +5。",
+                PassText = "两年下来，电脑城里提起你的店都会说一句“靠谱”。名望 +5。",
                 FailText = "两年了还是小打小闹，房东又提了租金。店租 +10%。",
             },
         };

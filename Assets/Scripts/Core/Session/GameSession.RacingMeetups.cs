@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Time;
@@ -103,6 +103,18 @@ namespace PCShopSell.Core.Session
             _raceInvitations.Add(new RaceInvitation { PersonId = personId, TrackId = trackId, Day = day.TotalDays });
             Say(CityPerson(personId).Name + "接受邀请，将参加 " + day + " 的" + RaceTracks.Get(trackId).Name + "比赛。");
             return true;
+        }
+
+        /// <summary>事件里约对方参加下一场正式比赛；约不成时返回原因（不弹窗、不扣任何东西）。</summary>
+        internal string EventRaceInvite(string personId, string trackId)
+        {
+            string name = CityPerson(personId)?.Name ?? personId;
+            var day = RacingSchedule.On(Clock.Today) != RaceMeeting.None && Clock.MinuteOfDay < RacingSchedule.MeetOpenMinute ? Clock.Today : RacingSchedule.Next(Clock.Today);
+            string why = RaceInviteBlocker(personId, trackId, day);
+            if (why != null) return "（" + name + "的赛车邀约这次没约成：" + why + "。）";
+            _raceInvitations.RemoveAll(i => i.Day < Clock.Today.TotalDays);
+            _raceInvitations.Add(new RaceInvitation { PersonId = personId, TrackId = trackId, Day = day.TotalDays });
+            return name + "约好和你一起参加 " + day + " 的" + RaceTracks.Get(trackId).Name + "比赛，记得去报名。";
         }
 
         public bool CancelRaceInvitation(string personId, string trackId, int day)

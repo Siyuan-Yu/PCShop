@@ -45,7 +45,7 @@ namespace PCShopSell.Core.Finance
                     return new LedgerAttribution(LedgerBusinessKind.Operating, transactionKind: category);
                 case "贷款到账": case "偿还贷款": case "贷款利息": case "偿还房贷": case "房贷利息":
                     return new LedgerAttribution(LedgerBusinessKind.Financing, transactionKind: category);
-                case "企业资金转回": case "企业周转金": case "采购暂存": case "采购找零":
+                case "企业资金转回": case "企业周转金": case "采购暂存": case "采购找零": case "银行存入": case "银行取出":
                     return new LedgerAttribution(LedgerBusinessKind.InternalTransfer, transactionKind: category);
                 case "购置物业": case "物业出售": case "物业租金": case "物业维护": case "指数投资": case "指数赎回":
                 case "购置住宅": case "住宅出售": case "企业投资": case "园区投资": case "MCN投资": case "押金": case "履约保证金":

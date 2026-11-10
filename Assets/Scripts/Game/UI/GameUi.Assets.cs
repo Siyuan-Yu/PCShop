@@ -42,7 +42,7 @@ namespace PCShopSell.Game.UI
                 for (int i = 0; i < 3; i++)
                 {
                     int choice = i;
-                    Ui.Size(Ui.Button(tabs, new[]{"经营中的店铺","我的物业","车产"}[i], () => { _assetPage = choice; w.Rebuild(); }, 20,
+                    Ui.Size(Ui.Button(tabs, new[]{"门店","物业","车产"}[i], () => { _assetPage = choice; w.Rebuild(); }, 20,
                         _assetPage == i ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1).name = "AssetPage_" + i;
                 }
                 if (_assetPage == 0) BuildAssetStores(w); else if(_assetPage==1) BuildAssetProperties(w);else BuildAssetVehicles(w);
@@ -101,8 +101,8 @@ namespace PCShopSell.Game.UI
             string title = _assetStoreId != null ? scope.FirstOrDefault()?.Name : (_assetKind ?? (_assetStreet == null ? "全部门店" : S.City.StreetName(_assetStreet))) + " · " + scope.Length + "家";
             Ui.Size(Ui.Label(head, title ?? "门店收支", 21, TextAnchor.MiddleLeft, Ui.Accent), -1, 32, 1);
             var from = new GameDate(Math.Max(0, S.Clock.Today.TotalDays - 6));
-            Ui.Size(Ui.Label(head, $"最近7天 · {from.Month}/{from.Day}—{S.Clock.Today.Month}/{S.Clock.Today.Day}", 15, TextAnchor.MiddleRight, Ui.Dim), 220);
-            if (reports.Length == 0) { Line(main, "还没有经营中的门店，先去所属片区中介租铺。", 19); return; }
+            Ui.Size(Ui.Label(head, $"近7天 · {from.Month}/{from.Day}—{S.Clock.Today.Month}/{S.Clock.Today.Day}", 15, TextAnchor.MiddleRight, Ui.Dim), 220);
+            if (reports.Length == 0) { Line(main, "还没有门店 · 去片区中介租一间", 19); return; }
             var income = MergeAssetSources(scope, true); var expense = MergeAssetSources(scope, false);
             long totalIn = scope.Sum(r => r.IncomeCents), totalOut = scope.Sum(r => r.ExpenseCents);
             var cards = Ui.Row(main, 160, 8);
@@ -112,14 +112,14 @@ namespace PCShopSell.Game.UI
             Line(net, "收支差额", 16, Ui.Dim);
             var netAmount=Line(net,(totalIn>=totalOut?"+":"−")+Money.FromCents(Math.Abs(totalIn-totalOut)),27,Ui.Accent);
             netAmount.resizeTextForBestFit=true;netAmount.resizeTextMinSize=17;netAmount.resizeTextMaxSize=27;
-            Line(net, "收入 − 支出", 15, Ui.Dim); Line(net, "按实际收付统计", 15, Ui.Dim);
+            net.Tip("收入 − 支出，按实际收付统计。含进货付款，所以差额不等于利润。");
             var legend = Ui.Row(main, 22); Ui.Size(Ui.Label(legend, "每日收支", 17), -1, 22, 1);
             Ui.Size(Ui.Label(legend, "● 收入", 15, TextAnchor.MiddleRight, Ui.Good), 80); Ui.Size(Ui.Label(legend, "● 支出  ·  元", 15, TextAnchor.MiddleRight, new Color32(233,178,150,255)), 135);
             int dayCount = S.Clock.Today.TotalDays - from.TotalDays + 1;
             long[] ins = Enumerable.Range(0, dayCount).Select(i => scope.Sum(r => r.IncomeDays[i])).ToArray();
             long[] outs = Enumerable.Range(0, dayCount).Select(i => scope.Sum(r => r.ExpenseDays[i])).ToArray();
             BuildAssetTrend(main, ins, outs, from.TotalDays, 155);
-            Ui.Size(Ui.Button(main, "查看收支来源明细", () => OpenAssetSources(scope, from, S.Clock.Today), 15), -1, 31);
+            Ui.Size(Ui.Button(main, "收支明细", () => OpenAssetSources(scope, from, S.Clock.Today), 15), -1, 31);
             var labels = Ui.Row(main, 25);
             Ui.Size(Ui.Label(labels, "门店", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 25, 1);
             foreach (string text in new[] { "收入", "支出", "差额", "7天走势" }) Ui.Size(Ui.Label(labels, text, 15, TextAnchor.MiddleRight, Ui.Dim), text == "7天走势" ? 100 : 127);
@@ -136,7 +136,7 @@ namespace PCShopSell.Game.UI
                 BuildAssetTrend(row, report.IncomeDays, report.ExpenseDays, report.FirstDay, 34, true);
             }
             var foot = Ui.Row(main, 32);
-            Ui.Size(Ui.Label(foot, "含进货付款；收支差额不等于利润。托管营业额包含门店周转金账户。", 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 32, 1);
+            Ui.Size(Ui.Label(foot, "ⓘ", 16, TextAnchor.MiddleLeft, Ui.Dim), -1, 32, 1).Tip("含进货付款；收支差额不等于利润。托管营业额包含门店周转金账户。");
             if (_assetStoreId != null && scope[0].Managed)
                 Ui.Size(Ui.Button(foot, "管理门店", () => OpenBusinessSection(3, _assetStoreId), 16), 116, 32);
         }
@@ -156,7 +156,7 @@ namespace PCShopSell.Game.UI
             var sorted = sources.OrderByDescending(p => p.Value).ToArray();
             for (int i = 0; i < Math.Min(3, sorted.Length); i++) Ui.Size(Ui.Label(card,sorted[i].Key+"  "+Money.FromCents(sorted[i].Value),14),-1,19);
             if (sorted.Length > 3) Ui.Size(Ui.Label(card,"其余 "+(sorted.Length-3)+"项  "+Money.FromCents(sorted.Skip(3).Sum(p=>p.Value)),14,TextAnchor.MiddleLeft,Ui.Dim),-1,19);
-            if (sorted.Length == 0) Line(card, "本期暂无" + title, 15, Ui.Dim);
+
         }
 
         private void OpenAssetSources(AssetStoreReport[] scope, GameDate from, GameDate to)

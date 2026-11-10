@@ -45,7 +45,7 @@ namespace PCShopSell.Core.Session
             }
             return total;
         }
-        public string DirectAgreementBlocker => !HasShop ? "先租下主店" : !HasSmartphone ? "需要智能手机" : PlayerShop.Reputation < 10 ? "知名度达到 10" : Relation(Npcs.Zhou) < 40 ? "与周维成交情达到 40" : null;
+        public string DirectAgreementBlocker => !HasShop ? "先租下主店" : !HasSmartphone ? "需要智能手机" : PlayerShop.Reputation < 10 ? "名望达到 10" : Relation(Npcs.Zhou) < 40 ? "与周维成交情达到 40" : null;
         public bool SignDirectAgreement()
         {
             if (IsGameOver || DirectAgreement) return false;
@@ -155,7 +155,7 @@ namespace PCShopSell.Core.Session
             if (c == null || c.Accepted || Clock.Today.TotalDays >= c.OfferUntilDay) return "本期招标已结束";
             if (!HasShop || !HasSmartphone) return "需要主店和智能手机";
             if (_contracts.Any(x => x.Accepted && !x.Settled)) return "先完成手上的企业合同";
-            if (PlayerShop.Reputation < 8) return "知名度达到 8";
+            if (PlayerShop.Reputation < 8) return "名望达到 8";
             if (Ledger.Balance < c.Total.Scale(.05)) return "需预留合同额 5% 的履约保证金";
             return null;
         }

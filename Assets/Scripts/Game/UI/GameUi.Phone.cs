@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using PCShopSell.Core.Session;
 using UnityEngine;
 using UnityEngine.UI;
@@ -54,7 +54,7 @@ namespace PCShopSell.Game.UI
             Color lcd = new Color(0.22f, 0.33f, 0.20f);
             Ui.Size(Ui.Button(screen.transform, "1  通讯录", () => LaunchFeatureApp(w, 1), 20, lcd), -1, 54);
             Ui.Size(Ui.Button(screen.transform, "2  短信", () => LaunchFeatureApp(w, 2), 20, lcd), -1, 54);
-            Ui.Size(Ui.Button(screen.transform, "3  上网（按键机上不了网）", null, 18, lcd, false), -1, 54);
+            Ui.Size(Ui.Button(screen.transform, "3  上网（需智能手机）", null, 18, lcd, false), -1, 54);
 
             Color key = new Color(0.30f, 0.31f, 0.34f);
             string[] keys = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#" };
@@ -69,7 +69,7 @@ namespace PCShopSell.Game.UI
                 }
             }
 
-            Ui.Size(Ui.Label(w.Content, "按键机只能打电话、发短信。现在大家都不习惯看短信，常常没人回。要网购、下载 app，得去街上的手机店买一部智能手机。", 15, TextAnchor.UpperLeft, Ui.Dim), -1, 70);
+            Ui.Size(Ui.Label(w.Content, "按键机只能打电话、发短信。网购、下载 app 要去手机店买智能手机。", 15, TextAnchor.UpperLeft, Ui.Dim), -1, 70);
         }
 
         private void LaunchFeatureApp(Window w, int n)
@@ -144,10 +144,8 @@ namespace PCShopSell.Game.UI
                     if(a.Id==PhoneApps.Securities)BuildStockAppIcon(b,true);
                 }
             }
-            Ui.Size(Ui.Button(wall.transform, "城市生活", OpenCityLife, 18), -1, 44)
-                .Tip("城市活动、场所与生活安排。");
             Ui.Size(Ui.Label(wall.transform, PhoneApps.All.All(a => S.HasApp(a.Id))
-                ? "所有 app 都装好了。" : "想要更多功能，到「应用商店」里下载。", 15, TextAnchor.MiddleCenter, Ui.Dim), -1, 36);
+                ? "" : "更多 app 在「应用商店」", 15, TextAnchor.MiddleCenter, Ui.Dim), -1, 36);
         }
 
         private void LaunchApp(Window w, string id)
@@ -186,7 +184,7 @@ namespace PCShopSell.Game.UI
             }, 17, Ui.ButtonBg), 96);
             Ui.Size(Ui.Label(top, "应用商店", 22, TextAnchor.MiddleCenter), -1, -1, 1);
 
-            Ui.Size(Ui.Label(w.Content, "下载都是免费的，装好后主屏幕上就有图标。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 26);
+            Ui.Size(Ui.Label(w.Content, "免费下载", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 26);
             RectTransform list = PhoneFlexibleScroll(w.Content,"PhoneStoreList");
             foreach (PhoneAppDef def in PhoneApps.All.Where(a => a.Id != PhoneApps.Store))
             {
@@ -231,7 +229,7 @@ namespace PCShopSell.Game.UI
                 _phoneScreen="home";w.ResetScrollOnRebuild=true;w.Rebuild();
             },15),-1,36,1);
             Ui.Size(Ui.Button(row,"桌面",()=>{_phoneScreen="home";w.ResetScrollOnRebuild=true;w.Rebuild();},15),-1,36,1);
-            Ui.Size(Ui.Button(row,"收起手机",w.Close,15),-1,36,1);
+            Ui.Size(Ui.Button(row,"收起",w.Close,15),-1,36,1);
         }
 
         // ---------- 通讯录 / 聊天 ----------

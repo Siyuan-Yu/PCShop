@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -26,9 +26,15 @@ namespace PCShopSell.Core.Session
     public sealed class EventDef
     {
         public string Id;
+        /// <summary>分组，目前只有 npc（围绕固定人物）用到。</summary>
+        public string Group;
         public string Title;
         public string Body;
         public int MinDay;
+        /// <summary>最晚触发的游戏天数；-1 = 没有上限。</summary>
+        public int MaxDay = -1;
+        /// <summary>每次轮到它时先掷一次，掷中才有资格被抽（0–1，默认 1）。</summary>
+        public double TriggerChance = 1;
         public int CooldownDays = 10;
         public int Weight = 10;
         public Func<GameSession, bool> When;
@@ -37,9 +43,15 @@ namespace PCShopSell.Core.Session
 
     public sealed partial class GameSession
     {
-        public const int EventMinute = 11 * 60;
-        public const double EventDailyChance = 0.55;
-
+        /// <summary>每天的抽取时刻：11:00、15:00、20:00。每个时刻各掷一次，没有未处理的事件才会抽。</summary>
+        public static readonly int[] EventMinutes = { 11 * 60, 15 * 60, 20 * 60 };
+        /// <summary>每个时刻出事件的概率（一天三次，满足条件的事件够多时约 1.2 个/天，实际受条件限制会少一些）。</summary>
+        public const double EventSlotChance = 0.4;
+        /// <summary>频率保障：每天最多 EventDayCap 个，任意连续 7 天最多 EventWeekCap 个；前 EventEarlyDays 天（第 0–13 天）概率只有一半。
+        /// 只统计随机抽出来的事件，约会、剧情等不算。</summary>
+        public const int EventDayCap = 3, EventWeekCap = 10, EventEarlyDays = 14;
+        public const double EventEarlyFactor = 0.5;
+        private readonly List<int> _randomEventDays = new List<int>();
         private readonly Dictionary<string, int> _eventLastDay = new Dictionary<string, int>();
         private readonly Dictionary<string, int> _eventCount = new Dictionary<string, int>();
         private int _basePatience;
@@ -58,14 +70,21 @@ namespace PCShopSell.Core.Session
         {
             if (!EventsEnabled || IsGameOver || PendingEvent != null || _sleeping || !HasShop || BrandExpoExclusive) return;
             if (today.TotalDays < 2) return;
-            if (!Random.Chance(EventDailyChance)) return;
+            int day = today.TotalDays;
+            _randomEventDays.RemoveAll(d => day - d >= 7);
+            if (_randomEventDays.Count(d => d == day) >= EventDayCap) return;
+            if (_randomEventDays.Count >= EventWeekCap) return;
+            double chance = day < EventEarlyDays ? EventSlotChance * EventEarlyFactor : EventSlotChance;
+            if (!Random.Chance(chance)) return;
 
             var eligible = new List<EventDef>();
             foreach (EventDef def in EventCatalog.All)
             {
                 if (today.TotalDays < def.MinDay) continue;
+                if (def.MaxDay >= 0 && today.TotalDays > def.MaxDay) continue;
                 if (_eventLastDay.TryGetValue(def.Id, out int last) && today.TotalDays - last < def.CooldownDays) continue;
                 if (def.When != null && !def.When(this)) continue;
+                if (def.TriggerChance < 1 && !Random.Chance(def.TriggerChance)) continue;
                 eligible.Add(def);
             }
             if (eligible.Count == 0) return;
@@ -77,6 +96,7 @@ namespace PCShopSell.Core.Session
                 roll -= def.Weight;
                 if (roll >= 0) continue;
                 Raise(def, today);
+                if (PendingEvent != null) _randomEventDays.Add(day);
                 return;
             }
         }
@@ -190,6 +210,7 @@ namespace PCShopSell.Core.Session
 
         private void SaveEvents(SaveData d)
         {
+            d.randomEventDays = _randomEventDays.ToArray();
             d.eventIds = _eventLastDay.Keys.ToArray();
             d.eventLastDays = d.eventIds.Select(k => _eventLastDay[k]).ToArray();
             d.eventCounts = d.eventIds.Select(EventCountOf).ToArray();
@@ -197,6 +218,8 @@ namespace PCShopSell.Core.Session
 
         private void RestoreEvents(SaveData d)
         {
+            _randomEventDays.Clear();
+            if (d.randomEventDays != null) _randomEventDays.AddRange(d.randomEventDays);
             _eventLastDay.Clear();
             _eventCount.Clear();
             int n = d.eventIds?.Length ?? 0;

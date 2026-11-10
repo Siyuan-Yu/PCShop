@@ -20,7 +20,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(row, "缺件采购清单", () => OpenOrderShopping(order), 15), 160);
             Ui.Size(Ui.Button(row, "取消订单…", () => OpenWindow("取消订单", 520, 250, w =>
             {
-                Para(w.Content, "取消后预留配件退回为散件，知名度降低 1。确定取消这笔订单？");
+                Para(w.Content, "取消后预留配件退回为散件，名望降低 1。确定取消这笔订单？");
                 Ui.Size(Ui.Button(w.Content, "确认取消", () => { S.PlayerShop.CancelBuild(order.Id); w.Close(); refresh(); }, 17, Ui.Warn), -1, 40);
             }), 15), 140);
         }

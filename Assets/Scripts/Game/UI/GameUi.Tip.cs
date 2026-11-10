@@ -110,7 +110,8 @@ namespace PCShopSell.Game.UI
             "<b>精力</b>：干活、走路消耗，回家睡觉恢复；/ 后面是今天的精力上限，缺觉会变低。\n" +
             "<b>健康</b>：饥饿、精力过低或居住环境差会下降，太低要去医院。\n" +
             $"<b>压力</b>：打工和疲劳会累积，睡觉和休闲能缓解。到岗时压力达到 {Core.Session.PlayerStats.HighStressThreshold:0}，当班表现奖金少 {Core.Session.GameSession.HighStressWorkPenalty}%。\n" +
-            "<b>知名度</b>：越高，路过的顾客越愿意进店。";
+            "<b>名望</b>：你本人在行业里的名气，所有店共用。租大铺、开分店、直供、企业订单、公园这些都看它；经营得好涨，出岔子会掉。\n" +
+            "<b>本店知名度</b>：每家店各自一个，越高路过的顾客越愿意进店（在店铺页里看）。";
 
         private string VehicleTip(Core.Session.VehicleSpec v)
         {

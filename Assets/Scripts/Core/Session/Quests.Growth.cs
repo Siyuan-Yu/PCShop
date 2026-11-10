@@ -55,17 +55,17 @@ namespace PCShopSell.Core.Session
             yield return Step("direct", 3, QuestTarget.Direct, "建立稳定直供", $"和{K("周维成")}签直供，进一次货",
                 $"进价只要{K("市场价 84%")}。",
                 s => s.Flags.Contains("tutorial:direct"),
-                s => s.DirectAgreement ? null : $"知名度 {s.PlayerShop.Reputation:0}/10 · 周维成交情 {s.Relation(Npcs.Zhou)}/40");
+                s => s.DirectAgreement ? null : $"名望 {s.PlayerShop.Reputation:0}/10 · 周维成交情 {s.Relation(Npcs.Zhou)}/40");
             yield return Step("branch", 3, QuestTarget.Ventures, "开设第一家托管门店", $"开一家{K("托管门店")}",
                 $"{K("留足主店的周转资金")}再开。",
                 s => s.ManagedVentures.Any(v => !s.IsParkVenture(v)),
-                s => $"知名度 {s.PlayerShop.Reputation:0}/12");
+                s => $"名望 {s.PlayerShop.Reputation:0}/12");
             yield return Step("branch_review", 3, QuestTarget.Ventures, "检查分店第一天结算", "看分店第一天的结算",
                 $"看{K("收入能否覆盖成本")}。",
                 s => s.QuestLessonRead("branch_review"), null,
                 true, s => s.ManagedVentures.Any(v => !s.IsParkVenture(v) && v.LastSettledDay > v.OpenDay));
             yield return Step("park_plan", 4, QuestTarget.Park, "先算一遍园区预算", "了解园区的总花费",
-                $"要{K("知名度 35")}，买地加改造至少 {K("¥350,000")}。",
+                $"要{K("名望 35")}，买地加改造至少 {K("¥350,000")}。",
                 s => s.QuestLessonRead("park_plan"), null, true);
             yield return Step("park", 4, QuestTarget.Park, "迎来园区第一家店", "让园区第一家店入驻",
                 $"先开一家，{K("按现金流再扩")}。",

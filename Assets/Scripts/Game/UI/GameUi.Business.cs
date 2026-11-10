@@ -185,8 +185,8 @@ namespace PCShopSell.Game.UI
 
         private void BuildEnterprise(Window w)
         {
-            Para(w.Content,"知名度 8 解锁，每周刷新一份采购邀请。接受后自动进入主店装机队列；可以亲自装，也可以交给受训员工。逐台交付收款，全额完成再奖合同额 3%。",17);
-            if(S.EnterpriseContracts.Count==0) Line(w.Content,"暂时没有采购邀请。提高知名度后再来看看。",17,Ui.Dim);
+            Para(w.Content,"名望 8 解锁，每周刷新一份采购邀请。接受后自动进入主店装机队列；可以亲自装，也可以交给受训员工。逐台交付收款，全额完成再奖合同额 3%。",17);
+            if(S.EnterpriseContracts.Count==0) Line(w.Content,"暂时没有采购邀请。提高名望后再来看看。",17,Ui.Dim);
             foreach(var contract in S.EnterpriseContracts.Reverse())
             {
                 var c=contract;var card=BusinessCard(w.Content,c.Client+" · "+PartCatalog.TierName(c.Tier)+"整机 ×"+c.Count);
@@ -235,7 +235,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(choose,"上一业态",()=>{_ventureKind=(_ventureKind+Ventures.All.Length-1)%Ventures.All.Length;w.Rebuild();},17),150);
             Ui.Size(Ui.Label(choose,chosen.Name,21,TextAnchor.MiddleCenter,Ui.Accent),620);
             Ui.Size(Ui.Button(choose,"下一业态",()=>{_ventureKind=(_ventureKind+1)%Ventures.All.Length;w.Rebuild();},17),150);
-            Para(w.Content,$"{chosen.Description} 装修设备 {Money.FromYuan(chosen.Capital)}，员工日薪 {Money.FromYuan(chosen.DailyWages)}，知名度要求 {chosen.MinReputation:0}。另需租赁签约款及 5,000 周转金。",16);
+            Para(w.Content,$"{chosen.Description} 装修设备 {Money.FromYuan(chosen.Capital)}，员工日薪 {Money.FromYuan(chosen.DailyWages)}，名望要求 {chosen.MinReputation:0}。另需租赁签约款及 5,000 周转金。",16);
             if (!S.Listings.Any(x=>x.OpenDay<=S.Clock.Today.TotalDays && (!S.InAgency || S.AgencyServes(S.CurrentPlace, S.ListingPlace(x))))) Para(w.Content,"当前没有可签约的空铺。中介会陆续挂出新房源；也可等已挂牌铺面的现租户到期。",16,Ui.Dim);
             foreach(var listing in S.Listings.Where(x=>x.OpenDay<=S.Clock.Today.TotalDays && (!S.InAgency || S.AgencyServes(S.CurrentPlace, S.ListingPlace(x)))))
             {

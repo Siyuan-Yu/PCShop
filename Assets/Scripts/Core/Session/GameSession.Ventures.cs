@@ -35,7 +35,7 @@ namespace PCShopSell.Core.Session
             if (InAgency && !AgencyServes(CurrentPlace, City.GetPlace(placeId))) return "请到房源所属片区的中介签约";
             if (IsMyShop(City.GetPlace(placeId)) || VentureAt(placeId) != null) return "这间铺子已在经营";
             if (_ventures.Count(x => !IsParkVenture(x)) >= 6) return "最多管理 6 家委托经营的门店";
-            if (PlayerShop.Reputation < d.MinReputation) return $"知名度需要 {d.MinReputation:0}";
+            if (PlayerShop.Reputation < d.MinReputation) return $"名望需要 {d.MinReputation:0}";
             if ((kind == "esports" || kind == "stay") && l.Size == ShopSize.Small) return "该业态需要中型或大型铺面";
             if (d.HardwareCount > 0 && PartCatalog.BuildList(d.HardwareTier).Any(p => PlayerShop.Stock.CountAll(p) < d.HardwareCount)) return $"主店需备齐 {d.HardwareCount} 套{PartCatalog.TierName(d.HardwareTier)}散件";
             if (Ledger.Balance < VentureOpeningCost(l, d)) return "现金不足（含装修、首周租金、押金、中介费和 5,000 周转金）";

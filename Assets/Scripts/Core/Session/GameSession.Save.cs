@@ -160,6 +160,7 @@ namespace PCShopSell.Core.Session
             };
             SaveGrowth(d);
             d.appLoans = _appLoans.Select(l => l.Copy()).ToArray();
+            d.bankDepositCents = _bankDepositCents; d.bankInterestCents = _bankInterestCents; d.bankFraction = _bankFraction;
             d.priceDays = _priceDays.Select(p => p.Copy()).ToArray();
             SavePropertyMarket(d);
             d.economicReportCadence = (int)ReportCadence;
@@ -302,6 +303,7 @@ namespace PCShopSell.Core.Session
             RestoreHomeLease(d);
             RestorePriceReports(d);
             RestoreAppLoans(d);
+            RestoreBank(d);
             foreach (SaveShop shop in d.extraShops ?? Array.Empty<SaveShop>()) RestoreShop(shop, d.hasShopStanding);
             LoadAdditionalStaff(d);
             foreach (OwnedShop shop in _shops) ClearUnstaffedAssembly(shop);

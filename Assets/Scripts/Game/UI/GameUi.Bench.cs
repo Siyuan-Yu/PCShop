@@ -15,7 +15,7 @@ namespace PCShopSell.Game.UI
             OpenWindow("装机台", 900, 680, w =>
             {
                 ShopSimulation shop = S.PlayerShop;
-                Line(w.Content, "顾客下单后离开，两天内装好交付才收钱；超时取消、掉知名度。配件从库存里出，先备齐。", 15, Ui.Dim);
+                Line(w.Content, "顾客下单后离开，两天内装好交付才收钱；超时取消、掉名望。配件从库存里出，先备齐。", 15, Ui.Dim);
 
                 // 台面：深色桌面，每张装机单是一张工单卡
                 Image desk = Ui.Panel(w.Content, "Desk", new Color(0.12f, 0.13f, 0.16f));

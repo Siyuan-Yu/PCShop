@@ -187,6 +187,14 @@ namespace PCShopSell.Game.UI
             });
         }
 
+        /// <summary>名望一行字：数值 + 档位；看别人时再和玩家自己比一比。</summary>
+        private string StandingText(double value, bool compareWithPlayer)
+        {
+            string text = "名望 " + value.ToString("0") + " · " + PersonStanding.Label(value);
+            if (!compareWithPlayer || !S.HasShop) return text;
+            double mine = S.PlayerShop.Reputation;
+            return text + (value > mine + 2 ? " · 比你高" : value < mine - 2 ? " · 比你低" : " · 和你相当");
+        }
         public void OpenCityPerson(string personId) => OpenPersonDialogue(personId);
         public void OpenCityPersonProfile(string personId, Action onClosed = null, bool fromConversation = false)
         {
@@ -207,13 +215,14 @@ namespace PCShopSell.Game.UI
                     w.LiveKey = () => ConversationViewKey(personId) + "|" + S.MemoriesOf(personId).Count() + "|" + S.LearnedPersonStories(personId).Length;
                     w.LiveStamp = w.LiveKey();
                 }
-                var top = Ui.Row(w.Content, 200, 16);
+                var top = Ui.Row(w.Content, 232, 16);
                 PortraitCard(top, personId, name, "", 145, null);
                 var info = Ui.Rect(top, "PersonDetails"); Ui.VList(info, 6, 0); Ui.Size(info, -1, -1, 1);
                 Line(info, name, 25, Ui.Accent);
                 if(NpcNames.Alias(personId) is string alias)Line(info,"熟人称呼："+alias,15,Ui.Dim);
                 Para(info, definition != null ? S.CityPersonRole(personId) : npc?.Role ?? staff?.Role, 18);
                 Line(info, "熟悉度 " + S.Relation(personId), 17, Ui.Good);
+                Line(info, StandingText(S.PersonStandingOf(personId), true), 17, Ui.Accent).name = "PersonStanding";
                 Ui.Size(Ui.Bar(info, S.Relation(personId) / 100f, Ui.Accent), -1, 8);
                 Para(info, S.IsMet(personId) ? "已交换联系方式" : known ? "已经认识 · 尚未交换联系方式" : S.Flags.Contains("heard:" + personId) ? "从熟人口中听说过 · 尚未与本人见面" : "尚未打过招呼", 16, Ui.Dim);
                 var tags = Ui.Row(info, 32, 6);

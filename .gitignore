@@ -116,3 +116,7 @@ steam_appid.txt
 Thumbs.db
 
 /work/
+
+!ExternalTools/EventEditor/EventEditor.csproj
+ExternalTools/EventEditor/bin/
+ExternalTools/EventEditor/obj/

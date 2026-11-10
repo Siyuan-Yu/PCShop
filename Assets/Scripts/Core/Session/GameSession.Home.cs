@@ -457,7 +457,7 @@ namespace PCShopSell.Core.Session
                 : $"电饭锅跳了：{b.Name}×{b.Count} 碗焖好了。可装进背包，或放入冰箱永久保存，取出后继续计算剩余保质期。");
         }
 
-        /// <summary>在家吃一碗（10 分钟）。</summary>
+        /// <summary>在家立即吃一碗熟饭。</summary>
         public bool EatBowlAtHome()
         {
             if (CurrentPlace != Home) return Fail("要在家里吃。");
@@ -468,7 +468,6 @@ namespace PCShopSell.Core.Session
             ApplyDiet(MealNutrition(b.Id), MealMood(b.Id));
             Player.Hunger = Math.Min(100, Player.Hunger + b.Hunger);
             Player.Health = Math.Min(100, Player.Health + b.Health);
-            AdvanceClock(Pantry.EatMinutes);
             if (OpeningMealTutorialPending)
             {
                 Flags.Add("tutorial:opening-meal-eaten");

@@ -134,7 +134,7 @@ namespace PCShopSell.Game.UI
             foreach (var window in _windows.ToArray())
             {
                 window.Fitter?.Fit();
-                if(window.TimeStatusText!=null)window.TimeStatusText.text=S.Time.IsRunning?"时间在推进":"时间已暂停";
+                if(window.TimeStatusText!=null)window.TimeStatusText.text=S.Time.IsRunning&&!S.OpeningClockFrozen?"时间在推进":"时间已暂停";
                 if (window.LiveConversation && Time.unscaledTime >= window.LiveRefreshAt)
                 {
                     window.LiveRefreshAt = Time.unscaledTime + 1;
@@ -312,9 +312,9 @@ namespace PCShopSell.Game.UI
             _cashText.text = S.Ledger.Balance.ToString();
             _cashText.color = S.Ledger.Balance.IsNegative ? Ui.Warn : Ui.Good;
 
-            bool paused = !S.Time.IsRunning;
+            bool paused = !S.Time.IsRunning || S.OpeningClockFrozen;
             _pauseButton.image.color = paused ? Ui.Warn : Ui.ButtonBg;
-            _pauseButton.GetComponentInChildren<Text>().text = S.Time.IsHeld ? "窗口暂停" : (S.Time.IsUserPaused ? "继续" : "暂停");
+            _pauseButton.GetComponentInChildren<Text>().text = S.Time.IsHeld ? "窗口暂停" : (S.Time.IsUserPaused ? "继续" : S.OpeningClockFrozen ? "教学暂停" : "暂停");
             foreach (var (b, speed) in _speedButtons)
                 b.image.color = !paused && S.Time.Speed == speed ? Ui.ButtonHot : Ui.ButtonBg;
 
@@ -324,7 +324,7 @@ namespace PCShopSell.Game.UI
             if (p.Stress >= PlayerStats.HighStressThreshold) stress = $"<b><color=#D79780>{stress}</color></b>";
             _statsText.text = $"{HungerHudText(p.Hunger)} · 健康 {Pct(p.Health)} · {stress}\n" + (S.EnergyExhausted
                 ? $"<b><color=#D79780>精力耗尽 · {S.EnergyAwakeMinutesLeft/60}:{S.EnergyAwakeMinutesLeft%60:00}</color></b>"
-                : $"精力 {Pct(p.Energy)}/{p.MaxEnergy:0} · 知名度 {S.PlayerShop.Reputation:0.0}");
+                : $"精力 {Pct(p.Energy)}/{p.MaxEnergy:0} · 名望 {S.PlayerShop.Reputation:0.0}");
 
             string where;
             if (S.Trip != null)
@@ -848,7 +848,7 @@ namespace PCShopSell.Game.UI
             _windows.Add(w);
             if (holds) S?.Time.Hold();
             w.Rebuild();
-            if(w.TimeStatusText!=null)w.TimeStatusText.text=S?.Time.IsRunning==true?"时间在推进":"时间已暂停";
+            if(w.TimeStatusText!=null)w.TimeStatusText.text=S?.Time.IsRunning==true&&!S.OpeningClockFrozen?"时间在推进":"时间已暂停";
             return w;
         }
 

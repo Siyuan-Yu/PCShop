@@ -103,7 +103,7 @@ namespace PCShopSell.Tests
                 long initialMs=watch.ElapsedMilliseconds;var first=s.FootfallOf(s.PlayerShopPlace);
                 for(int i=0;i<10000;i++)Assert.AreSame(first,s.FootfallOf(s.PlayerShopPlace));
                 var starterRent = s.ShopRentQuote(s.PlayerShopPlace);
-                var busierShop = s.City.GetPlace("expansion_shop_s_start_04");
+                var busierShop = s.City.GetPlace("expansion_shop_s_start_02");
                 double rentRatio = (double)s.ShopRentQuote(busierShop).Cents / starterRent.Cents;
                 double trafficRatio = s.ExpectedDailyShopEntrants(busierShop) / s.ExpectedDailyShopEntrants(s.PlayerShopPlace);
                 Assert.Less(RealEstate.SignCost(starterRent).Yuan,10000,"万元开局能租起首间店");

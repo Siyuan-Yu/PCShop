@@ -399,7 +399,7 @@ namespace PCShopSell.Tests
             GameSession s = GameSessionTests.Make(200000);
             ShopListing l = s.DebugAddListing("tea", 0, 30);
             s.PlayerShop.Reputation = 10;
-            StringAssert.Contains("知名度", s.LeaseBlocker(l));
+            StringAssert.Contains("名望", s.LeaseBlocker(l));
             s.PlayerShop.Reputation = 80;
             Assert.IsNull(s.LeaseBlocker(l));
         }

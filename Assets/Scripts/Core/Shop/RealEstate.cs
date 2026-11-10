@@ -76,7 +76,7 @@ namespace PCShopSell.Core.Shop
         /// <summary>签约当场要付的钱（首周 + 押金 + 中介费，未计熟络折扣）。</summary>
         public static Money SignCost(Money rent) => rent + Deposit(rent) + AgentFee(rent);
 
-        /// <summary>房东要看的知名度（大铺子不租给没名气的）。</summary>
+        /// <summary>房东要看的名望（大铺子不租给没名望的）。</summary>
         public static double MinReputation(ShopSize size) => size == ShopSize.Large ? 60 : size == ShopSize.Medium ? 25 : 0;
 
         public static string SizeArea(ShopSize size) => size == ShopSize.Large ? "216㎡" : size == ShopSize.Medium ? "108㎡" : "48㎡";

@@ -93,7 +93,7 @@ namespace PCShopSell.Core.Session
             if (PendingLease != null) return $"你已经提前签了{City.GetPlace(PendingLease.PlaceId).Name}，第 {PendingLease.StartDay + 1} 天交房前不能再签";
             if (ShopAt(l.PlaceId) != null) return "这已经是你的店了";
             double rep = RealEstate.MinReputation(l.Size);
-            if (PlayerShop.Reputation < rep) return $"房东要看名气：知名度要到 {rep:0}";
+            if (PlayerShop.Reputation < rep) return $"房东要看名望：名望要到 {rep:0}";
             if (Lease != null && !newShop)
             {
                 if(IsSpecialBusiness(_focus)&&SpecialBusinessBusy(_focus))return "请先处理专用店铺订单和旧物库存，再搬店";

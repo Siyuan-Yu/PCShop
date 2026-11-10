@@ -82,8 +82,8 @@ namespace PCShopSell.Core.Session
             list.Add(new GoalLine
             {
                 Id = "end", Title = "三年之后", Day = Campaign.TotalDays,
-                Goal = $"第 {Campaign.TotalDays} 天：看你把店经营成什么样（身家、店面、知名度、人脉都会写进结局）",
-                Progress = $"现在身家 {NetWorth()}　店面 {SizeName(PlayerShop.Size)}　知名度 {PlayerShop.Reputation:0}",
+                Goal = $"第 {Campaign.TotalDays} 天：看你把店经营成什么样（身家、店面、名望、人脉都会写进结局）",
+                Progress = $"现在身家 {NetWorth()}　店面 {SizeName(PlayerShop.Size)}　名望 {PlayerShop.Reputation:0}",
                 State = EndingId == null ? GoalState.Pending : GoalState.Passed,
             });
             return list;
@@ -130,7 +130,7 @@ namespace PCShopSell.Core.Session
             var sb = new StringBuilder();
             sb.AppendLine(e.Summary);
             sb.AppendLine();
-            sb.AppendLine($"身家 {NetWorth()}　店面 {SizeName(PlayerShop.Size)}　知名度 {PlayerShop.Reputation:0}");
+            sb.AppendLine($"身家 {NetWorth()}　店面 {SizeName(PlayerShop.Size)}　名望 {PlayerShop.Reputation:0}");
             sb.AppendLine($"一年目标：{(MilestonePassed("y1") ? "达标" : "未达标")}　两年目标：{(MilestonePassed("y2") ? "达标" : "未达标")}");
             if (Player.Health < 50) sb.AppendLine("这些年熬夜太多，你的身体亏得厉害，医生让你多休息。");
             foreach (NpcDef n in Npcs.All)

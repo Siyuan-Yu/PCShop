@@ -11766,24 +11766,24 @@
       "closeMinute": 1260
     },
     {
-      "id": "expansion_shop_s_start_04",
-      "name": "03 创业商业街 · 4号招租商铺",
+      "id": "city_bank",
+      "name": "城郊银行",
       "kind": "shop",
       "node": "expansion_1051",
       "street": "s_start",
-      "business": "空铺",
+      "business": "银行",
       "size": "small",
       "explicitEntrance": true,
-      "tradable": true,
+      "tradable": false,
       "entranceX": 1.2354319595287961,
       "entranceY": -7.904031115410362,
       "width": 12,
       "depth": 11,
       "heading": 171.11631865673118,
       "model": "shop",
-      "tier": 0,
+      "tier": 2,
       "openMinute": 540,
-      "closeMinute": 1260
+      "closeMinute": 1020
     },
     {
       "id": "expansion_shop_s_oldhomes_01",

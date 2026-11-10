@@ -67,6 +67,31 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void OpeningMeal_ClockStandsStillExceptWhileCooking()
+        {
+            using var s = Make(false, startWithCookingTutorial: true);
+            var before = s.Clock.Now.TotalMinutes;
+            for (int i = 0; i < 400; i++) s.Tick(0.25);
+            Assert.AreEqual(before, s.Clock.Now.TotalMinutes, "做饭教学里没动手时，时间不走");
+            Assert.IsTrue(s.CookRice(0.5, null));
+            Assert.IsFalse(s.OpeningClockFrozen);
+            for (int i = 0; i < 400 && s.OpeningMealStep == 1; i++) s.Tick(0.25);
+            Assert.AreEqual(2, s.OpeningMealStep, "焖饭时时间照走，饭能焖好");
+            Assert.IsTrue(s.OpeningClockFrozen);
+        }
+        [Test]
+        public void Standing_IsOneScaleForEveryone_AndStableForNpcs()
+        {
+            Assert.AreEqual(PersonStanding.ForNpc("a", "电脑店老板", 40, false, false), PersonStanding.ForNpc("a", "电脑店老板", 40, false, false));
+            Assert.Greater(PersonStanding.ForNpc("x", "电脑城董事长", 55, true, false), PersonStanding.ForNpc("y", "档口店员", 22, false, false));
+            Assert.AreEqual("默默无闻", PersonStanding.Label(3)); Assert.AreEqual("街坊熟知", PersonStanding.Label(8));
+            Assert.AreEqual("小有名气", PersonStanding.Label(25)); Assert.AreEqual("圈内知名", PersonStanding.Label(60));
+            using var s = Make(false);
+            Assert.Greater(s.PersonStandingOf(Npcs.Zhang), 0);
+            Assert.AreEqual(s.PersonStandingOf(Npcs.Zhang), s.PersonStandingOf(Npcs.Zhang));
+            Assert.AreEqual(0, s.PersonStandingOf(null));
+        }
+        [Test]
         public void RentReward_ThenMallQuest_ThenPlaceFixtures()
         {
             GameSession s = Make(false);

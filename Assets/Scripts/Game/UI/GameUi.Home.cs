@@ -404,7 +404,8 @@ namespace PCShopSell.Game.UI
                 BuildQuestItems(w);
                 double carried = S.CarriedKg, limit = S.CarryLimitKg;
                 bool heavy = carried > limit * 0.85;
-                Line(w.Content, $"{S.CurrentVehicle.Name}　负重 {carried:0.##}/{limit:0.##} 千克（1 格 = {Backpack.KgPerSpace:0.##} 千克）", 17, heavy ? Ui.Warn : Ui.Dim);
+                Line(w.Content, $"{S.CurrentVehicle.Name}　负重 {carried:0.##}/{limit:0.##} 千克", 17, heavy ? Ui.Warn : Ui.Dim)
+                    .Tip($"1 格 = {Backpack.KgPerSpace:0.##} 千克。\n营养 {S.Player.Nutrition:0.##}/100 · 心情 {S.Player.Mood:0.##}/100。\n选中饭菜后可吃指定饭菜；每天 12:00、18:30 或饱腹低于 25 时自动进餐，先吃最早到期的。\n摆有纸箱的家或店里，按 B 使用后仓。");
                 Ui.Bar(w.Content, (float)(limit <= 0 ? 0 : carried / limit), heavy ? Ui.Warn : Ui.Accent, 700, 10);
 
                 var stacks = CollectBag(includeQuestPages: true);
@@ -418,8 +419,7 @@ namespace PCShopSell.Game.UI
                 if (pick != null)
                     Para(w.Content, $"<b>{pick.Name}</b> ×{pick.Count}　占 {Mathf.Max(1, Mathf.CeilToInt((float)(pick.Space - 1e-6)))} 格　{pick.Kg:0.##} 千克\n<color=#ABB5A8>{pick.Kind}</color>", 17);
                 else
-                    Line(w.Content, stacks.Count == 0 ? "背包是空的。去买点东西：礼品在烟酒茶行 / 农贸市场 / 手机网购，进货在电子市场。" : "点一格看详情。", 17, Ui.Dim);
-                Para(w.Content, $"营养 {S.Player.Nutrition:0.##}/100 · 心情 {S.Player.Mood:0.##}/100（暂只记录，无其他影响）\n饭菜按菜名分开。选中后可吃指定饭菜或喝饮料；每天12:00、18:30或饱腹低于25时自动进餐；同种食物先用最早到期的批次。", 15, Ui.Dim);
+                    Line(w.Content, stacks.Count == 0 ? "背包是空的 · 去市场 / 农贸 / 网购添置" : "点一格看详情", 17, Ui.Dim);
 
                 if (S.CanOpenFridge) Ui.Size(Ui.Button(w.Content, "打开这里的冰箱", () => OpenFridgeWindow(), 17), -1, 34);
                 RectTransform acts = Ui.Row(w.Content, 46);
@@ -431,7 +431,6 @@ namespace PCShopSell.Game.UI
                     }, 18), 180);
                 if (pick != null && pick.Key.StartsWith("gift:") && GameSession.IsEdibleGift(pick.Key.Substring(5)))
                     Ui.Size(Ui.Button(acts, pick.Key == "gift:" + Gifts.Soda ? "喝一瓶可乐" : "吃一份" + pick.Name, () => { S.ConsumeGift(pick.Key.Substring(5)); w.Rebuild(); }, 17, Ui.ButtonHot), 180);
-                Para(w.Content,S.InPlayerShop||S.CurrentPlace==S.Home?"这里没有摆纸箱，摆好后按 B 可使用后仓。":"回到摆有纸箱的家或店里，按 B 可使用后仓。",16,Ui.Dim);
 
             });
         }
@@ -653,7 +652,7 @@ namespace PCShopSell.Game.UI
                 foreach (FoodBatch b in pan.Cooked) Line(w.Content, $"· {b.Name} ×{b.Count}  （{FoodExpiryBadge.Countdown(b.ExpireDay, S.Clock.Now.TotalMinutes)}）", 15, Ui.Dim);
                 RectTransform erow = Ui.Row(w.Content, 46);
                 erow.name = "OpeningMealTake";
-                var eat = Ui.Button(erow, $"现在吃一碗（{Pantry.EatMinutes} 分钟）", () =>
+                var eat = Ui.Button(erow, "现在吃一碗", () =>
                 {
                     S.EatBowlAtHome();
                     w.Rebuild();
@@ -766,6 +765,7 @@ namespace PCShopSell.Game.UI
                 {
                     BuildPlayerWorkSummary(w.Content,w);
                     Line(w.Content,$"智力 {stats.Intelligence} · 魅力 {S.EffectiveCharm} · 动手能力 {stats.Skill} · 体能 {stats.Stamina}",17);
+                    Line(w.Content,StandingText(S.HasShop?S.PlayerShop.Reputation:0,false),17,Ui.Accent).name="MyStanding";
                     var links=Ui.Row(w.Content,38,6);
                     Ui.Size(Ui.Button(links,"日程",OpenSchedulePanel,17),-1,38,1);
                     Ui.Size(Ui.Button(links,"天气与穿衣",OpenCityClimate,17),-1,38,1);

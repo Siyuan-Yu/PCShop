@@ -242,7 +242,7 @@ namespace PCShopSell.Game.UI
                 + "|" + S.Salesperson?.Id + ":" + (S.Salesperson != null ? GameSession.EmployeeCharm(S.Salesperson) : 0) + ":" + shop.SalesPurchaseIntentBonus
                 + "|" + shop.ClothingMirrorPurchaseIntentBonus + "|" + shop.Orders.Count
                 + "|" + string.Join(",", shop.Queue.Select(c => c.Id))
-                + (S.IsSpecialBusiness(S.CurrentShop) ? "|" + S.Clock.Now.TotalMinutes : "")
+                + (S.IsSpecialBusiness(S.CurrentShop) ? "|" + SpecialCounterStructure() : "")
                 + (_tab==ShopTab.Orders ? PetOrdersSignature() : "");
         }
         private Text CounterText(System.Func<string> value, int size, Color? color = null)
@@ -344,8 +344,6 @@ namespace PCShopSell.Game.UI
             },15,allDay?Ui.ButtonHot:Ui.ButtonBg);
             unlimited.name="ShopUnlimitedHours";Ui.Size(unlimited,90,36);
             if(!allDay&&close<open&&close!=0)Line(C,"跨午夜营业，次日 "+Ui.Hm(close)+" 关门。",14,Ui.Dim);
-            var place = S.CurrentShop.Place;
-            CounterText(() => $"预计进店 {S.ExpectedDailyShopEntrants(place):N0} 人 / 日", 15, Ui.Dim);
             if(!allDay&&!shop.InHours(S.Clock.Now))
                 Ui.Notice(C,$"已关门 · {Ui.Hm(shop.OpenMinute)} 开门");
         }
@@ -355,7 +353,7 @@ namespace PCShopSell.Game.UI
             var ownedShop = S.CurrentShop;
             var identity = Ui.Row(C, 38, 6);
             Ui.Size(Ui.Label(identity, S.ShopTitle(ownedShop), 19, TextAnchor.MiddleLeft, Ui.Accent), -1, 38, 1);
-            Ui.Size(Ui.Button(identity, "修改店名", () => OpenShopRename(ownedShop), 16), 108, 38).name = "RenameShop";
+            Ui.Size(Ui.Button(identity, "改名", () => OpenShopRename(ownedShop), 16), 76, 38).name = "RenameShop";
             BuildCounterTotals(S.PlayerShop);
             BuildShopStanding(S.PlayerShop);
             BuildCompetitionEntry(C);
@@ -399,7 +397,7 @@ namespace PCShopSell.Game.UI
             int orders = shop.Orders.Count;
             if (orders > 0) Ui.Size(Ui.Button(C, $"处理 {orders} 个装机订单 →", () => SelectTab(ShopTab.Orders), 18, Ui.ButtonHot), -1, 38);
 
-            Ui.Size(Ui.Button(C, "经营报表 · 近 14 天", OpenReportWindow, 17), -1, 38);
+            Ui.Size(Ui.Button(C, "经营报表", OpenReportWindow, 17), -1, 38);
         }
 
         private void OpenShopRename(OwnedShop shop)
@@ -449,27 +447,16 @@ namespace PCShopSell.Game.UI
 
         private void BuildShopStanding(ShopSimulation shop)
         {
-            var row = Ui.Row(C, 82, 6);
-            Metric("本店知名度", () => shop.Awareness, () => $"进店客流 +{shop.Awareness:0.#}%");
-            Metric("本店口碑", () => shop.ShopReputation,
-                () => $"购买意愿 {shop.ReputationPurchaseIntentBonus * 100:+0.#;-0.#;0} 个百分点");
-
-            void Metric(string title, System.Func<double> score, System.Func<string> effect)
+            var place = S.CurrentShop.Place;
+            var text = Line(C, "", 16, Ui.Dim);
+            text.name = "ShopStandingLine";
+            void Refresh()
             {
-                var card = Ui.Size(Ui.Panel(row, title, Ui.PanelBg2), -1, -1, 1).rectTransform;
-                Ui.VList(card, 0, 6);
-                Ui.Size(Ui.Label(card, title, 16, TextAnchor.MiddleLeft), -1, 20);
-                var value = Ui.Size(Ui.Label(card, "", 23, TextAnchor.MiddleLeft, Ui.Accent), -1, 28);
-                value.fontStyle = FontStyle.Bold;
-                var impact = Ui.Size(Ui.Label(card, "", 14, TextAnchor.MiddleLeft, Ui.Dim), -1, 20);
-                void Refresh()
-                {
-                    value.text = $"{score():0.0}";
-                    impact.text = effect();
-                }
-                Refresh();
-                _counterRefresh.Add(Refresh);
+                text.text = $"知名度 {shop.Awareness:0.0} · 口碑 {shop.ShopReputation:0.0} · 预计进店 {S.ExpectedDailyShopEntrants(place):N0} 人/日";
             }
+            text.Tip(() => $"<b>知名度</b>：进店客流 +{shop.Awareness:0.#}%\n<b>口碑</b>：购买意愿 {shop.ReputationPurchaseIntentBonus * 100:+0.#;-0.#;0} 个百分点\n<b>预计进店</b>：按营业时间、知名度、街道人流和同类店估算。");
+            Refresh();
+            _counterRefresh.Add(Refresh);
         }
 
         // ---------- 库存 ----------
@@ -714,7 +701,7 @@ namespace PCShopSell.Game.UI
             ShopSimulation shop = S.PlayerShop;
             if (shop.IsGoodsShop) { Line(C, "这家店经营零售商品，不接电脑装机订单。", 18, Ui.Dim); return; }
             if (!shop.BuildOrdersUnlocked) Line(C, "开局前 14 天不接顾客装机订单，第 15 天开始开放。", 17, Ui.Accent);
-            Line(C, "顾客下的订单都在这里（目前是装机订单）：两天内做好交付才收钱，超时取消、掉知名度。配件从库存里出。", 15, Ui.Dim);
+            Line(C, "顾客下的订单都在这里（目前是装机订单）：两天内做好交付才收钱，超时取消、掉名望。配件从库存里出。", 15, Ui.Dim);
             RectTransform list = Ui.Scroll(C, 430);
             foreach (BuildOrder o in shop.Orders)
             {

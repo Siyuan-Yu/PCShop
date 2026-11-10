@@ -116,6 +116,9 @@ namespace PCShopSell.Core.Session
         public string[] scheduledMemos;
         public string[] eventIds;
         public int[] eventLastDays;
+        public int[] randomEventDays;
+        public long bankDepositCents, bankInterestCents;
+        public double bankFraction;
         public int[] eventCounts;
 
         // 长线目标 / 人脉 / 扩建

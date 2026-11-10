@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -167,11 +167,16 @@ namespace PCShopSell.Core.Session
         public bool InPlayerShop => Lease != null && CurrentPlace == PlayerShopPlace;
         private double _activeCheckoutSeconds;
 
+        /// <summary>开局做饭教学期间（锅没在焖饭时）世界时钟不自己走。</summary>
+        public bool OpeningClockFrozen => OpeningMealTutorialPending && Pantry.Cooking == null;
+
         /// <summary>按真实时间推进世界：移动和静止都按同一个真实时间与倍速推进时钟。返回推进的整分钟数。</summary>
         public int Tick(double realSeconds)
         {
             _manualMoving = false;
             if (Racing || IsGameOver || !Time.IsRunning || realSeconds <= 0) return 0;
+            // 开局做饭教学：世界时钟不自己走，玩家可以慢慢看；只有锅在焖饭时才走，否则饭永远焖不好。吃饭、装包这些操作自己会推进相应的分钟。
+            if (OpeningClockFrozen) return 0;
             _activeCheckoutSeconds+=Math.Min(realSeconds,TimeController.MaxTickSeconds);
             double scaled = Math.Min(realSeconds, TimeController.MaxTickSeconds) * Time.Speed * TimeController.WorldRate;
 
@@ -403,7 +408,7 @@ namespace PCShopSell.Core.Session
         public Money ShopDeposits => Money.FromCents(_shops.Where(s => s.Rented).Sum(s => s.Lease.Deposit.Cents));
 
         public Money NetWorth() => Ledger.Balance + InventoryValue() + ShopDeposits + (PendingLease?.Deposit ?? Money.Zero) + ContractDeposits
-            + VehicleValue + GaragePropertyValue + UsedMotorAssetValue + VentureValue + PropertyValue + (HomePriceCents > 0 ? HomePurchasePrice : Money.Zero) + FundValue + CityEquityValue + ShortPositionEquity - TotalDebt;
+            + VehicleValue + GaragePropertyValue + UsedMotorAssetValue + VentureValue + PropertyValue + (HomePriceCents > 0 ? HomePurchasePrice : Money.Zero) + FundValue + CityEquityValue + ShortPositionEquity + BankDeposit - TotalDebt;
 
         public void Dispose()
         {
@@ -453,7 +458,7 @@ namespace PCShopSell.Core.Session
             if (!_pendingFaint) UpdatePlayerWork(to);
             if (Crosses(from, to, CandidateMinute)) OnCandidateHour(to.Date);
             ExpireCandidates();
-            if (Crosses(from, to, EventMinute)) RollDailyEvent(to.Date);
+            foreach (int eventMinute in EventMinutes) if (Crosses(from, to, eventMinute)) RollDailyEvent(to.Date);
             CheckAppointments(to);
             DeliverOnlineOrders(to);
             DeliverCouriers(to);
@@ -509,6 +514,7 @@ namespace PCShopSell.Core.Session
             PayWages(previous);
             ApplyEmployeeTransfers(today);
             ProcessScheduledCredits(today);
+            AccrueBankInterest();
             CollectDueAppLoans();
             DecayRelations();
             CollectWeeklyShopRent(today);

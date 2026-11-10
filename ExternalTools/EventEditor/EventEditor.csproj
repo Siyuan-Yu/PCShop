@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>EventEditor</AssemblyName>
+    <RootNamespace>PCShopSell.EventEditor</RootNamespace>
+    <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <!-- 和游戏共用同一份数据结构 / 读取 / 写出 / 校验，格式永远不会和游戏对不上。 -->
+  <ItemGroup>
+    <Compile Include="*.cs" />
+    <Compile Include="..\..\Assets\Scripts\Core\Session\EventScriptModel.cs" Link="Shared\EventScriptModel.cs" />
+    <Compile Include="..\..\Assets\Scripts\Core\Session\EventScriptReader.cs" Link="Shared\EventScriptReader.cs" />
+    <Compile Include="..\..\Assets\Scripts\Core\Session\EventScriptWriter.cs" Link="Shared\EventScriptWriter.cs" />
+    <None Include="npcs.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('npcs.json')" />
+  </ItemGroup>
+
+</Project>

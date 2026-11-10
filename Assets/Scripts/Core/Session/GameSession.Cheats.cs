@@ -76,7 +76,7 @@ namespace PCShopSell.Core.Session
         {
             if (!HasShop) return;
             PlayerShop.Reputation += delta;
-            Say($"作弊：知名度 {PlayerShop.Reputation:0.0}。");
+            Say($"作弊：名望 {PlayerShop.Reputation:0.0}。");
         }
 
         /// <summary>所有有交情的人都认识、交情 +delta；店员和街坊的熟络度也 +delta。</summary>

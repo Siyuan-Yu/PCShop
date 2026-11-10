@@ -23,7 +23,7 @@ namespace PCShopSell.Core.Session
                 if(IsGameOver)return "当前不能创办公司";
                 if(HasMcn)return "已经成立MCN公司";
                 if(City.IsLakeCity&&DistrictAccessTier<2)return "进入公园阶段后才能开办自己的MCN公司";
-                if(!HasShop||PlayerShop.Reputation<25)return "需要自己的门店和知名度25";
+                if(!HasShop||PlayerShop.Reputation<25)return "需要自己的门店和名望25";
                 if(Ledger.Balance<PCShopSell.Core.Common.Money.FromYuan(50000))return "成立公司需要¥50,000";
                 return null;
             }

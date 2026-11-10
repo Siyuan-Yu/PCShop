@@ -67,8 +67,8 @@ namespace PCShopSell.Game.UI
                 }, 17, Ui.ButtonBg, q != null), -1, 44);
 
                 RectTransform rep = Ui.Row(w.Content, 44, 8);
-                Ui.Size(Ui.Button(rep, "知名度 +5", () => S.DebugAddReputation(5), 17, Ui.ButtonBg, S.HasShop), -1, -1, 1);
-                Ui.Size(Ui.Button(rep, "知名度 +20", () => S.DebugAddReputation(20), 17, Ui.ButtonBg, S.HasShop), -1, -1, 1);
+                Ui.Size(Ui.Button(rep, "名望 +5", () => S.DebugAddReputation(5), 17, Ui.ButtonBg, S.HasShop), -1, -1, 1);
+                Ui.Size(Ui.Button(rep, "名望 +20", () => S.DebugAddReputation(20), 17, Ui.ButtonBg, S.HasShop), -1, -1, 1);
 
                 Ui.Size(Ui.Button(w.Content, "所有人交情 / 熟络 +20（并都认识）", () => S.DebugRaiseAllRelations(20), 17), -1, 44);
 

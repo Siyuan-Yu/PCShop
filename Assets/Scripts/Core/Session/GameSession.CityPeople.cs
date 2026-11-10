@@ -45,6 +45,14 @@ namespace PCShopSell.Core.Session
                 (_cityEmployeeAliases.TryGetValue(e.Person.Id,out var known)&&known==id));
             return job!=null?(job.Role==EmployeeRole.Cashier&&IsDedicatedVenue(job.Shop?.Place)?"场馆值守员":RoleName(job.Role))+"（受聘）":CityPerson(id)?.Role??"居民";
         }
+        /// <summary>这个人的名望：玩家是经营出来的共用值，NPC 按身份推算。见 <see cref="PersonStanding"/>。</summary>
+        public double PersonStandingOf(string personId)
+        {
+            if(personId==null)return 0;
+            var def=CityPerson(personId);var npc=Npcs.Get(personId);var staff=Rosters.Get(personId)??Residents.Get(personId)?.Person;
+            string role=def?.Role??npc?.Role??staff?.Role;
+            return PersonStanding.ForNpc(personId,role,def?.Age??35,def?.KeyCharacter==true||npc!=null,npc?.StallId!=null);
+        }
         public IEnumerable<CityPersonState> PeopleInPlace(string placeId) => _cityPeople.Values.Where(p=>p.LocationPlaceId==placeId && p.Route==null);
         // Coordinates stay at the entrance as a route anchor while the person is inside.
         // They are not a street position until a commute actually starts.

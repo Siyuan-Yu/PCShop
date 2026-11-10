@@ -134,7 +134,58 @@ namespace PCShopSell.EditorTools
                 Snap2("30-online-tab" + tab);
                 ui.CloseAllWindows();
             }            Log("PURCHASE AUDIT4 COMPLETE");
-        });        /// <summary>复现：在电子批发市场本体（不是档口）里买东西。</summary>
+        });        /// <summary>截图：银行柜台（没手机）。</summary>
+        public static void PurchaseAudit8FromBatch() => RunSmokeBatch(() =>
+        {
+            _outDir = Path.GetFullPath("docs/previews/purchase-audit"); Directory.CreateDirectory(_outDir);
+            ShaderUtil.allowAsyncCompilation = false; UrpSetup.Ensure(); EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single); BuildRig();
+            _game = new GameObject("Game").AddComponent<GameController>(); _game.Bootstrap(false, 11); _game.Ui.QuestPopups = false;
+            var s = _game.Session; var ui = _game.Ui; s.EventsEnabled = false; s.Time.SetPaused(true); s.DebugAddCash(30000); s.SetSmartphone(false);
+            foreach (var canvas in ui.Canvases) { canvas.renderMode = RenderMode.ScreenSpaceCamera; canvas.worldCamera = _game.Cam; canvas.planeDistance = 1; }
+            Log("STARTER " + s.DebugRentStarterShop(true)); s.SetSmartphone(false);
+            s.Clock.Restore(s.Clock.Today, 10 * 60);
+            Teleport(s, GameSession.BankPlaceId);
+            Log("BANK " + s.CurrentPlace?.Id + " blocker=" + (s.BankBlocker() ?? "none"));
+            Log("DEPOSIT " + s.BankDepositMoney(5000) + " LOAN " + s.BorrowAppLoan(2000, 2, true));
+            ui.CloseAllWindows();
+            try { ui.OnEnteredPlace(s.CurrentPlace); } catch (System.Exception e) { Log("EXC1 " + e); }
+            Frame(0.1f); _game.SnapCamera(); Shot("70-bank", 1920, 1080); Shot("70-bank", 1920, 1080);
+            Log("PURCHASE AUDIT8 COMPLETE");
+        });        /// <summary>截图：人物资料和“我的”里的名望。</summary>
+        public static void PurchaseAudit7FromBatch() => RunSmokeBatch(() =>
+        {
+            _outDir = Path.GetFullPath("docs/previews/purchase-audit"); Directory.CreateDirectory(_outDir);
+            ShaderUtil.allowAsyncCompilation = false; UrpSetup.Ensure(); EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single); BuildRig();
+            _game = new GameObject("Game").AddComponent<GameController>(); _game.Bootstrap(false, 11); _game.Ui.QuestPopups = false;
+            var s = _game.Session; var ui = _game.Ui; s.EventsEnabled = false; s.Time.SetPaused(true); s.DebugAddCash(3000000);
+            foreach (var canvas in ui.Canvases) { canvas.renderMode = RenderMode.ScreenSpaceCamera; canvas.worldCamera = _game.Cam; canvas.planeDistance = 1; }
+            Log("STARTER " + s.DebugRentStarterShop(true));
+            s.PlayerShop.Reputation = 27;
+            ui.OpenMyPanel(); Frame(0.1f); _game.SnapCamera(); Shot("60-my-standing", 1920, 1080); Shot("60-my-standing", 1920, 1080);
+            ui.CloseAllWindows();
+            foreach (var id in new[] { "zhang", "zhou", "xuweilin" })
+            {
+                Log("STANDING " + id + " " + s.PersonStandingOf(id));
+            }
+            ui.OpenCityPersonProfile("zhang"); Frame(0.1f); _game.SnapCamera(); Shot("61-npc-standing", 1920, 1080); Shot("61-npc-standing", 1920, 1080);
+            Log("PURCHASE AUDIT7 COMPLETE");
+        });
+        /// <summary>截图：准备开什么店里的二手车行（灰态）。</summary>
+        public static void PurchaseAudit6FromBatch() => RunSmokeBatch(() =>
+        {
+            _outDir = Path.GetFullPath("docs/previews/purchase-audit"); Directory.CreateDirectory(_outDir);
+            ShaderUtil.allowAsyncCompilation = false; UrpSetup.Ensure(); EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single); BuildRig();
+            _game = new GameObject("Game").AddComponent<GameController>(); _game.Bootstrap(false, 11); _game.Ui.QuestPopups = false;
+            var s = _game.Session; var ui = _game.Ui; s.EventsEnabled = false; s.Time.SetPaused(true); s.DebugAddCash(3000000);
+            foreach (var canvas in ui.Canvases) { canvas.renderMode = RenderMode.ScreenSpaceCamera; canvas.worldCamera = _game.Cam; canvas.planeDistance = 1; }
+            Log("STARTER " + s.DebugRentStarterShop(true));
+            s.Flags.Add("shop:choose-kind:" + s.CurrentShop.Place.Id);
+            typeof(PCShopSell.Game.UI.GameUi).GetMethod("RefreshOpeningKindChoice", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).Invoke(ui, null);
+            Frame(0.1f); _game.SnapCamera(); Shot("50-opening-kind", 1920, 1080); Shot("50-opening-kind", 1920, 1080);
+            Log("CARS " + (ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Transform>(true)).Any(x => x.name == "OpeningKind_cars")));
+            Log("PURCHASE AUDIT6 COMPLETE");
+        });
+        /// <summary>复现：在电子批发市场本体（不是档口）里买东西。</summary>
         public static void PurchaseAudit5FromBatch() => RunSmokeBatch(() =>
         {
             _outDir = Path.GetFullPath("docs/previews/purchase-audit"); Directory.CreateDirectory(_outDir);

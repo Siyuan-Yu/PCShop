@@ -373,7 +373,7 @@ namespace PCShopSell.Game.UI
             string placeId=S.PendingShopKindPlaceId;
             if(placeId==null||AnyModalOpen||PopupOpen||S.IsGameOver)return;
             string selected=RetailShopTypes.Default;
-            OpenWindow("准备开什么店？",720,640,w=>
+            OpenWindow("准备开什么店？",720,780,w=>
             {
                 Line(w.Content,S.City.StreetName(S.City.GetPlace(placeId).StreetId)+" · 已签约",21,Ui.Accent);
                 Para(w.Content,"确认店型后即可准备开业。租金已经支付。",17);
@@ -383,6 +383,10 @@ namespace PCShopSell.Game.UI
                         ()=>{selected=kind;w.Rebuild();},18,selected==kind?Ui.ButtonHot:Ui.ButtonBg),-1,42);
                     button.name="OpeningKind_"+kind;
                 }
+                // 二手车行不是普通店型：它是分店业态，要先开好主店、解锁社区片区后到房产中介签约。这里先摆出来，灰着，写清楚怎么解锁。
+                var cars=Ventures.Get("cars");
+                Ui.Size(Ui.Button(w.Content,"二手车行（暂未解锁）",null,18,Ui.ButtonBg,false),-1,42).name="OpeningKind_cars";
+                Para(w.Content,"二手车行："+cars.Description+" 解锁：开好主店、"+(S.DistrictAccessTier<1?"解锁社区片区、":"")+"名望 "+cars.MinReputation.ToString("0")+"、本金 "+cars.Capital.ToString("N0")+" 元；到房产中介的分店合同里签约，不能作为第一家店。",15,Ui.Dim);
                 var place = S.City.GetPlace(placeId);
                 Line(w.Content,$"新店 {NewShopHours} · 预计每日入店约 {S.ExpectedDailyShopEntrants(place,selected,asNewShop:true):N0} 人",17,Ui.Good);
                 Para(w.Content,RetailShopTypes.Description(selected),16,Ui.Dim);

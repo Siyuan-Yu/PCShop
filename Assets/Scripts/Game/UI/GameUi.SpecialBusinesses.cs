@@ -28,16 +28,16 @@ namespace PCShopSell.Game.UI
             if(S.RetailKind=="computer")
             {
                 int generation=IndustryCycles.CurrentGeneration(day);
-                Line(parent,"科技行情 · 当前第"+(generation+1)+"代",18,Ui.Accent);
-                Para(parent,day<30?"第31天新一代配件上市，原有配件参考价下降22%；留意旧货积压。":day<90?"第91天第三代上市；第一代将退出主流，参考价累计下降45%。":"第三代已上市。旧配件仍可销售、装机；低价整机可消化库存。",15,Ui.Dim);
+                var brief=Line(parent,"科技行情 · 第"+(generation+1)+"代",18,Ui.Accent);
+                brief.Tip(day<30?"第31天新一代配件上市，原有配件参考价下降22%；留意旧货积压。":day<90?"第91天第三代上市；第一代将退出主流，参考价累计下降45%。":"第三代已上市。旧配件仍可销售、装机；低价整机可消化库存。");
             }
             else if(S.RetailKind=="models")
                 foreach(string series in ModelProducts.SeriesIds)
                     Line(parent,IndustryCycles.ModelNews(series,day)+" · 行情 ×"+IndustryCycles.ModelFactor(series,day).ToString("0.##"),15,Ui.Accent);
             else if(S.RetailKind=="clothing")
             {
-                Line(parent,"季节经营 · "+CityWeather.Season(S.Clock.Now.TotalMinutes)+"季",18,Ui.Accent);
-                Para(parent,"约90%的顾客只选应季服装；换季前准备货品，过季库存可留待下一季或调整售价。",15,Ui.Dim);
+                var seasonLine=Line(parent,"季节经营 · "+CityWeather.Season(S.Clock.Now.TotalMinutes)+"季",18,Ui.Accent);
+                seasonLine.Tip("约90%的顾客只选应季服装；换季前准备货品，过季库存可留待下一季或调整售价。");
                 double factor=IndustryCycles.ClothingFactor(day);
                 if(factor>1)Para(parent,factor>1.4?"暴雨影响运输和供给，服装参考价上涨50%，持续至本年第280天。":"棉花减产影响供给，服装参考价上涨35%，持续至本年第90天。",15,Ui.Warn);
             }
@@ -64,52 +64,97 @@ namespace PCShopSell.Game.UI
                     BuildUsedItemAction(w.Content,item,()=>{w.Rebuild();RebuildDock();});
             });
         }
+        private string SpecialCounterStructure()
+        {
+            var state = S.SpecialBusiness(S.CurrentShop.Place.Id);
+            if (S.RetailKind == "secondhand")
+                return string.Join(",", state.Used.Select(i => $"{i.Id}:{i.Owned}:{i.Inspected}:{i.Listed}:{i.Sold}:{i.Price}:{i.SalePrice}"));
+
+            string orders = string.Join(",", state.Orders.Select(o => $"{o.Id}:{o.Table}:{o.Recipe}:{o.Price}:{o.Stage}:{o.TableCleared}"));
+            if (_tab == ShopTab.Orders) return orders;
+
+            long now = S.Clock.Now.TotalMinutes;
+            string ready = string.Join(",", state.Orders.Where(o => o.Stage == DiningStage.Cooking && now >= o.ReadyAt).Select(o => o.Id));
+            string workers = string.Join(",", state.Workers.Where(w => w.Busy)
+                .Select(w => $"{w.ActorId}:{w.OrderId}:{w.Job}:{w.Station}:{w.Carrying}:{w.OperateUntil < 0}"));
+            return $"{orders}|{ready}|{workers}|{S.RestaurantCheckoutCustomer?.Id}";
+        }
+
         private void BuildSpecialCounter()
         {
             var shop=S.CurrentShop;var state=S.SpecialBusiness(shop.Place.Id);
-            Line(C,RetailShopTypes.Name(shop.RetailKind)+" · "+(S.SpecialOpen(shop,S.Clock.Now)?"营业中":"未营业"),21,Ui.Accent);
+            CounterText(() => RetailShopTypes.Name(shop.RetailKind) + " · " + (S.SpecialOpen(shop, S.Clock.Now) ? "营业中" : "未营业"), 21, Ui.Accent);
             var manage=Ui.Row(C,38,4);
             Ui.Size(Ui.Button(manage,"经营类型 / 转型",OpenRetailTypeChooser,16),-1,38,1);
             Ui.Size(Ui.Button(manage,shop.OwnsProperty?"结束自营":"退租店铺",()=>ConfirmCloseShop(shop),16,Ui.Warn),110,38);
             ShopHoursRow(shop.Sim);
-            int entrants = shop.RetailKind == "restaurant"
+            int Entrants() => shop.RetailKind == "restaurant"
                 ? state.RestaurantArrivalDay == S.Clock.Today.TotalDays ? state.RestaurantArrivalsToday : 0
                 : shop.Sim.TodayCustomers;
-            Line(C,$"今日进店 {entrants} 人",16);
-            Line(C,"累计成交 "+state.Paid+" 单 · 营业收入 ¥"+state.Revenue+(shop.RetailKind=="restaurant"?" · 超时流失 "+state.Lost:""),16,Ui.Good);
+            CounterText(() => $"今日进店 {Entrants()} 人", 16);
+            CounterText(() => $"累计成交 {state.Paid} 单 · 营业收入 ¥{state.Revenue}"
+                + (shop.RetailKind == "restaurant" ? $" · 超时流失 {state.Lost}" : ""), 16, Ui.Good);
             if(shop.RetailKind=="restaurant")BuildRestaurantCounter(state);else BuildUsedCounter(state);
         }
         private void BuildRestaurantCounter(SpecialBusinessState state)
         {
             var shop=S.CurrentShop;
-            int waiting=S.RestaurantCheckoutCount(shop);
             if(S.RestaurantCheckoutCustomer is DiningOrder customer)
             {
                 var row=Ui.Row(C,36,4);
-                Line(row,$"收银台 · {waiting} 人排队 · ¥{customer.Price}",17,Ui.Accent);
+                string CheckoutText() => $"收银台 · {S.RestaurantCheckoutCount(shop)} 人排队 · ¥{customer.Price}";
+                var queue = Line(row, CheckoutText(), 17, Ui.Accent);
+                _counterRefresh.Add(() => queue.text = CheckoutText());
                 var checkout=Ui.Size(Ui.Button(row,"结账",()=>_ctrl.CheckoutRestaurant(customer.Id),17,Ui.ButtonHot,
                     _ctrl.Interior?.NearCounter==true),90,36);
                 _counterRefresh.Add(()=>checkout.interactable=_ctrl.Interior?.NearCounter==true);
             }
             HelpLink(C,"烹饪说明","在灶台备料投锅，8分钟后熟，38分钟后焦糊。出锅后直接送到餐桌。顾客吃完到收银台排队，可由玩家按 F 或由在岗收银员结账。顾客排队等候60分钟仍未结账就会离开。服务员负责上菜和收桌。");
-            Line(C,"厨房大米 "+S.KitchenRice(shop).ToString("0.##")+" 千克 · 青菜 "+S.KitchenIngredientCount(shop,"veg")+" · 鸡蛋 "+S.KitchenIngredientCount(shop,"egg")+" · 肉 "+S.KitchenIngredientCount(shop,"pork"),15,Ui.Dim);
-            string coldStorageBlocker=S.KitchenColdStorageBlocker;
-            Ui.Size(Ui.Button(C,"店内食材放入冰箱",()=>{S.ChillKitchenIngredients();RebuildDock();},16,Ui.ButtonHot,coldStorageBlocker==null),-1,34).name="ChillKitchenIngredients";
-            if(coldStorageBlocker!=null)Line(C,coldStorageBlocker,14,Ui.Dim);
-            var storage=Ui.Row(C,36,4);
-            Ui.Size(Ui.Button(storage,"背包全部存入后仓",()=>{S.StoreBackpackInWarehouse();RebuildDock();},15,Ui.ButtonBg,S.HasWarehouseHere),-1,36,1);
-            Ui.Size(Ui.Button(storage,"打开冰箱",OpenFridgeWindow,15,Ui.ButtonBg,S.CanOpenFridge),110,36);
+            CounterText(() => $"厨房大米 {S.KitchenRice(shop):0.##} 千克 · 青菜 {S.KitchenIngredientCount(shop, "veg")}"
+                + $" · 鸡蛋 {S.KitchenIngredientCount(shop, "egg")} · 肉 {S.KitchenIngredientCount(shop, "pork")}", 15, Ui.Dim);
+            var chill = Ui.Size(Ui.Button(C, "店内食材放入冰箱", () => { S.ChillKitchenIngredients(); RebuildDock(); }, 16, Ui.ButtonHot), -1, 34);
+            chill.name = "ChillKitchenIngredients";
+            var coldStorageHint = Line(C, "", 14, Ui.Dim);
+            var storage = Ui.Row(C, 36, 4);
+            var warehouse = Ui.Size(Ui.Button(storage, "背包全部存入后仓", () => { S.StoreBackpackInWarehouse(); RebuildDock(); }, 15), -1, 36, 1);
+            var fridge = Ui.Size(Ui.Button(storage, "打开冰箱", OpenFridgeWindow, 15), 110, 36);
+            void RefreshStorage()
+            {
+                string blocker = S.KitchenColdStorageBlocker;
+                chill.interactable = blocker == null;
+                coldStorageHint.text = blocker ?? "";
+                coldStorageHint.gameObject.SetActive(blocker != null);
+                warehouse.interactable = S.HasWarehouseHere;
+                fridge.interactable = S.CanOpenFridge;
+            }
+            RefreshStorage();
+            _counterRefresh.Add(RefreshStorage);
 
 
             foreach(var order in state.Orders.Where(o=>!o.TableCleared).OrderBy(o=>o.Stage==DiningStage.Cooking&&S.Clock.Now.TotalMinutes>=o.ReadyAt?0:o.Stage==DiningStage.Burnt?1:o.Stage==DiningStage.Ready?2:o.Stage==DiningStage.Waiting?3:4).ToArray())
             {
                 int id=order.Id;long now=S.Clock.Now.TotalMinutes;
                 var assigned=state.Workers.FirstOrDefault(w=>w.Busy&&w.OrderId==id);
-                string status=assigned?.Carrying==true?"正在送往餐桌":
-                    order.Stage==DiningStage.Waiting?"等待烹饪":order.Stage==DiningStage.Cooking?(now<order.ReadyAt?"烹饪中 · 还有"+(order.ReadyAt-now)+"分钟熟":"可出锅 · 距焦糊"+(order.BurnAt-now)+"分钟"):
-                    order.Stage==DiningStage.Ready?"已出锅 · 待上菜":order.Stage==DiningStage.Eating?"正在用餐":order.Stage==DiningStage.Checkout?"已离桌 · 待收桌":order.Stage==DiningStage.Completed?"已付款 · 待收桌":order.Stage==DiningStage.Burnt?"焦糊，需重做":"顾客已离开";
+                string Status()
+                {
+                    long minute = S.Clock.Now.TotalMinutes;
+                    if (assigned?.Carrying == true) return "正在送往餐桌";
+                    if (order.Stage == DiningStage.Cooking)
+                        return minute < order.ReadyAt ? $"烹饪中 · 还有{order.ReadyAt - minute}分钟熟"
+                            : $"可出锅 · 距焦糊{Math.Max(0, order.BurnAt - minute)}分钟";
+                    return order.Stage switch
+                    {
+                        DiningStage.Waiting => "等待烹饪",
+                        DiningStage.Ready => "已出锅 · 待上菜",
+                        DiningStage.Eating => "正在用餐",
+                        DiningStage.Checkout => "已离桌 · 待收桌",
+                        DiningStage.Completed => "已付款 · 待收桌",
+                        DiningStage.Burnt => "焦糊，需重做",
+                        _ => "顾客已离开"
+                    };
+                }
                 Line(C,(order.Table+1)+"号桌 · "+GameSession.RecipeNames[order.Recipe]+" · ¥"+order.Price,17,Ui.Accent);
-                Line(C,status,16,order.Stage==DiningStage.Burnt?Ui.Warn:Ui.Good);
+                CounterText(Status, 16, order.Stage == DiningStage.Burnt ? Ui.Warn : Ui.Good);
                 bool playerBusy=state.Workers.Any(w=>w.ActorId==GameSession.RestaurantPlayer&&w.Busy);
                 if(assigned!=null)
                 {
@@ -122,7 +167,12 @@ namespace PCShopSell.Game.UI
                 bool canRequest=assigned==null&&!playerBusy;
                 var bar=Ui.Row(C,36,4);
                 if(order.Stage==DiningStage.Waiting)Ui.Size(Ui.Button(bar,"备料投锅",()=>Request(RestaurantJob.Cook),17,Ui.ButtonHot,canRequest),-1,36,1);
-                if(order.Stage==DiningStage.Cooking)Ui.Size(Ui.Button(bar,"出锅上菜",()=>Request(RestaurantJob.Serve),17,Ui.ButtonHot,canRequest&&now>=order.ReadyAt&&now<order.BurnAt),-1,36,1);
+                if (order.Stage == DiningStage.Cooking)
+                {
+                    bool CanServe(long minute) => canRequest && minute >= order.ReadyAt && minute < order.BurnAt;
+                    var serve = Ui.Size(Ui.Button(bar, "出锅上菜", () => Request(RestaurantJob.Serve), 17, Ui.ButtonHot, CanServe(now)), -1, 36, 1);
+                    _counterRefresh.Add(() => serve.interactable = CanServe(S.Clock.Now.TotalMinutes));
+                }
                 if(order.Stage==DiningStage.Ready)Ui.Size(Ui.Button(bar,"上菜",()=>Request(RestaurantJob.Serve),17,Ui.ButtonHot,canRequest),-1,36,1);
                 if(order.NeedsClearing)
                     Ui.Size(Ui.Button(bar,order.Stage==DiningStage.Burnt?"倒掉重做":"收桌",()=>Request(RestaurantJob.Clear),17,Ui.ButtonBg,canRequest),-1,36,1);
@@ -155,7 +205,7 @@ namespace PCShopSell.Game.UI
         private void BuildSpecialOrders()
         {
             var state=S.SpecialBusiness(S.CurrentShop.Place.Id);
-            Line(C,$"累计成交 {state.Paid} 单 · 营业收入 ¥{state.Revenue}",19,Ui.Accent);
+            CounterText(() => $"累计成交 {state.Paid} 单 · 营业收入 ¥{state.Revenue}", 19, Ui.Accent);
             if(S.RetailKind=="secondhand")
             {
                 Line(C,"收购与售出记录",18,Ui.Accent);
@@ -164,7 +214,7 @@ namespace PCShopSell.Game.UI
                 if(!state.Used.Any(i=>i.Owned))Line(C,"暂无收购记录。",16,Ui.Dim);
                 return;
             }
-            Line(C,$"当前订单 {state.Orders.Count} · 超时流失 {state.Lost}",17);
+            CounterText(() => $"当前订单 {state.Orders.Count} · 超时流失 {state.Lost}", 17);
             foreach(var order in state.Orders.OrderBy(o=>o.Table))
             {
                 string status=order.Stage==DiningStage.Waiting?"待备料":order.Stage==DiningStage.Cooking?"烹饪中":order.Stage==DiningStage.Ready?"待上菜":order.Stage==DiningStage.Eating?"用餐中":order.Stage==DiningStage.Checkout?"待收银台结账":order.Stage==DiningStage.Completed?"已付款":order.Stage==DiningStage.Burnt?"已焦糊":"已离开";
@@ -182,7 +232,7 @@ namespace PCShopSell.Game.UI
             SpecialNumber(C,"单件最高收购价",state.MaxOffer,10,0,10000,value=>state.MaxOffer=value);
             var risk=Ui.Row(C,34,4);Ui.Size(Ui.Label(risk,"风险倾向："+(state.Risk<.4?"谨慎":state.Risk>.6?"积极":"均衡"),16),-1,34,1);
             foreach(var level in new[]{.2,.5,.8}){double choice=level;Ui.Size(Ui.Button(risk,level<.4?"谨慎":level>.6?"积极":"均衡",()=>{state.Risk=choice;RebuildDock();},15),65);}
-            Line(C,"今日收购已支出 ¥"+state.SpentToday+" · 员工须实际在岗；智力越高判断越可靠，仍可能亏损。",15,Ui.Dim);
+            CounterText(() => $"今日收购已支出 ¥{state.SpentToday} · 员工须实际在岗；智力越高判断越可靠，仍可能亏损。", 15, Ui.Dim);
             BuildUsedSalesHistory(C,state);
             Line(C,"收购与待处理物品",19,Ui.Accent);
             Line(C,"收购后鉴定，再定价加入转售库存。",15,Ui.Dim);

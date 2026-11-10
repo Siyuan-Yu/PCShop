@@ -206,7 +206,7 @@ namespace PCShopSell.Core.Session
             if(story.Stage!=2&&!(story.Stage==3&&story.Failed)&&story.Stage<5)return "先完成供应商引荐饭局";
             if(!CitySamePlace("life_enterprise"))return "需要与沈远实际见面确认试单";
             if(!HasShop||(!HasSmartphone&&!CanUseHomeWorkbench))return "需要正常经营门店和智能手机";
-            if(PlayerShop.Reputation<8)return "店铺知名度达到8，可先继续普通经营";
+            if(PlayerShop.Reputation<8)return "名望达到8，可先继续普通经营";
             if(_contracts.Any(c=>c.Accepted&&!c.Settled))return "先完成或处理已有企业订单";
             var shop=MyShops.FirstOrDefault(s=>s.RetailKind=="computer");if(shop==null)return "需要一家电脑店承担装机交付";
             Money total=shop.Sim.QuoteBuild(0)*2;

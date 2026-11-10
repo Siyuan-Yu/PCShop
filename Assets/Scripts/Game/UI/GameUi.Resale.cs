@@ -10,7 +10,7 @@ namespace PCShopSell.Game.UI
     {
         private void BuildUsedCheckout()
         {
-            Line(C,$"今日进店 {S.PlayerShop.TodayCustomers} 人 · 等待结账 {S.PlayerShop.Queue.Count} 人 · 今日营业额 {S.PlayerShop.TodaySales}",16,Ui.Good);
+            CounterText(() => $"今日进店 {S.PlayerShop.TodayCustomers} 人 · 等待结账 {S.PlayerShop.Queue.Count} 人 · 今日营业额 {S.PlayerShop.TodaySales}", 16, Ui.Good);
             foreach(var customer in S.PlayerShop.Queue)
             {
                 int id=customer.Id;var row=Ui.Row(C,58,5);

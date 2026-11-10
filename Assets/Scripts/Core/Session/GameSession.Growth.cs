@@ -33,7 +33,7 @@ namespace PCShopSell.Core.Session
             if (!HasShop) return "先去房产中介租一间铺子";
             if (u.NeedsSmartphone && !HasSmartphone) return "先去手机店买智能手机";
             if (u.Requires != null && !_upgrades.Contains(u.Requires)) return "需要先买：" + ShopUpgrades.Get(u.Requires).Name;
-            if (PlayerShop.Reputation < u.MinReputation) return $"知名度要到 {u.MinReputation:0}";
+            if (PlayerShop.Reputation < u.MinReputation) return $"名望要到 {u.MinReputation:0}";
             if (Ledger.Balance < u.Price) return "钱不够";
             return null;
         }
