@@ -188,6 +188,8 @@ namespace PCShopSell.Game.UI
                     browseSource = defaultSource;
             }
             string category = "全部", search = "";
+            // 筛选维度选择保留在窗口外，重建界面时不会丢掉。
+            var facets = new Dictionary<string, string>();
             void BrowseSource(string sourceId)
             {
                 if (!S.RememberEmployeePurchaseSource(employeeId, sourceId)) return;
@@ -263,7 +265,32 @@ namespace PCShopSell.Game.UI
                     }), 16), 175, 36);
                     Ui.Size(Ui.TextInput(filters, search, "搜索商品", v => { search = v; w.RequestRebuild(); }), -1, 36, 1);
                     Ui.Size(Ui.Button(filters, selectedOnly ? "只看已选 ✓" : "只看已选", () => { selectedOnly = !selectedOnly; w.Rebuild(); }, 15), 130, 36);
-                    var filtered = sourceOffers.Where(o => (category == "全部" || o.Category == category)
+                    // 按商品自带的筛选维度逐层生成筛选条：季节、适用店铺…有几种维度就有几层，每层只有一种取值时自动隐藏。
+                    void FacetBar(string key)
+                    {
+                        var values = sourceOffers.Select(o => o.Facet(key)).Where(v => !string.IsNullOrEmpty(v))
+                            .SelectMany(v => v.Split(PurchaseOffer.FacetSeparator)).Distinct().ToList();
+                        if (values.Count <= 1) return;
+                        facets.TryGetValue(key, out string picked);
+                        if (picked != null && !values.Contains(picked)) picked = null;
+                        var bar = Ui.Row(left, 36, 6);
+                        bar.name = "BuyerFacetBar_" + key;
+                        Ui.Size(Ui.Label(bar, PurchaseFacets.Label(key), 15, TextAnchor.MiddleLeft, Ui.Dim), 68);
+                        foreach (string name in new[] { PurchaseFacets.All }.Concat(values))
+                        {
+                            string choice = name;
+                            bool on = picked == null ? choice == PurchaseFacets.All : choice == picked;
+                            var chip = Ui.Button(bar, choice,
+                                () => { facets[key] = choice == PurchaseFacets.All ? null : choice; w.Rebuild(); }, 15,
+                                on ? Ui.ButtonHot : new Color(0.2f, 0.24f, 0.3f));
+                            chip.name = "BuyerFacet_" + key + "_" + choice;
+                            Ui.Size(chip, Mathf.Max(78, choice.Length * 17 + 30));
+                        }
+                    }
+                    if (category == PurchaseFacets.All) FacetBar(PurchaseFacets.Season);
+                    if (category == PurchaseFacets.All) FacetBar(PurchaseFacets.Shop);
+                    var filtered = sourceOffers.Where(o => (category == PurchaseFacets.All || o.Category == category)
+                        && o.Matches(facets)
                         && (!selectedOnly || selected.TryGetValue(o.Key, out var selectedLine) && selectedLine.Count > 0)
                         && (string.IsNullOrWhiteSpace(search) || o.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
                             || o.SupplierName.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0

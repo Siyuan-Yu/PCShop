@@ -104,7 +104,7 @@ namespace PCShopSell.Game.UI
                     Para(body,"转介绍："+offer.Client+" · "+offer.Count+"台 · "+(offer.Discount?"正常报价95%":"正常报价"),17,Ui.Accent);
                     Ui.Size(Ui.Button(body,"核对并确认真实订单…",()=>ConfirmAction("转介绍试单", "按电脑店现行整机报价确认，支付5%保证金；仍需库存、装机和真实交付，不直接领取所谓净收益。", "确认合同",()=>{S.AcceptCityReferral(offer.Id);w.Rebuild();}),17,Ui.ButtonHot),-1,42);
                 }
-                Para(w.Content,S.CityExpoCalendar,15,Ui.Dim);
+                if (!GameSession.FirstChapterTrial) Para(w.Content,S.CityExpoCalendar,15,Ui.Dim);
             });
         }
         private void CityStoryPersonActions(Transform content,string personId,Window parent,string role)

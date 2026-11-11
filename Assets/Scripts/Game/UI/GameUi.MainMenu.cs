@@ -1,4 +1,5 @@
 using System;
+using PCShopSell.Core.Session;
 using PCShopSell.Game.Runtime;
 using UnityEngine;
 using UnityEngine.UI;
@@ -48,7 +49,7 @@ namespace PCShopSell.Game.UI
             var hero = Ui.Rect(body, "MainMenuHero");
             Ui.Size(hero, -1, 680, 1);
             Ui.VList(hero, 20, 18);
-            Ui.Size(Ui.Label(hero, "PC SHOP", 60, TextAnchor.MiddleLeft, Ui.Accent), -1, 105);
+            Ui.Size(Ui.Label(hero, GameSession.FirstChapterTrial ? "PC SHOP 试玩版" : "PC SHOP", 60, TextAnchor.MiddleLeft, Ui.Accent), -1, 105);
             Ui.Size(Ui.Label(hero, L("tagline"), 32, TextAnchor.MiddleLeft), -1, 100);
             Para(hero, L("story"), 21, Ui.Dim);
             var screen = Ui.Panel(hero, "MenuComputer", Ui.PanelBg2);

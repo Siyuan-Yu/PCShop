@@ -448,15 +448,38 @@ namespace PCShopSell.Game.UI
         private void BuildShopStanding(ShopSimulation shop)
         {
             var place = S.CurrentShop.Place;
-            var text = Line(C, "", 16, Ui.Dim);
-            text.name = "ShopStandingLine";
+            var row = Ui.Row(C, 84, 8);
+            Text awareness = StandingCard(row, "知名度", out Text awarenessNote);
+            awareness.name = "ShopStandingLine";
+            Text reputation = StandingCard(row, "口碑", out Text reputationNote);
+            reputation.name = "ShopReputationLine";
+            var estimate = Line(C, "", 15, Ui.Dim);
+            estimate.name = "ShopEntrantsEstimate";
             void Refresh()
             {
-                text.text = $"知名度 {shop.Awareness:0.0} · 口碑 {shop.ShopReputation:0.0} · 预计进店 {S.ExpectedDailyShopEntrants(place):N0} 人/日";
+                awareness.text = $"{shop.Awareness:0.0}";
+                awarenessNote.text = $"进店客流 {shop.Awareness:+0.#;-0.#;0}%";
+                reputation.text = $"{shop.ShopReputation:0.0}";
+                reputationNote.text = $"购买意愿 {shop.ReputationPurchaseIntentBonus * 100:+0.#;-0.#;0} 个百分点";
+                estimate.text = $"预计进店 {S.ExpectedDailyShopEntrants(place):N0} 人/日";
             }
-            text.Tip(() => $"<b>知名度</b>：进店客流 +{shop.Awareness:0.#}%\n<b>口碑</b>：购买意愿 {shop.ReputationPurchaseIntentBonus * 100:+0.#;-0.#;0} 个百分点\n<b>预计进店</b>：按营业时间、知名度、街道人流和同类店估算。");
+            string StandingTip() => $"<b>知名度</b>：进店客流 +{shop.Awareness:0.#}%\n<b>口碑</b>：购买意愿 {shop.ReputationPurchaseIntentBonus * 100:+0.#;-0.#;0} 个百分点\n<b>预计进店</b>：按营业时间、知名度、街道人流和同类店估算。";
+            awareness.Tip(StandingTip);
+            reputation.Tip(StandingTip);
+            estimate.Tip(StandingTip);
             Refresh();
             _counterRefresh.Add(Refresh);
+
+            Text StandingCard(Transform parent, string title, out Text note)
+            {
+                var card = Ui.Size(Ui.Panel(parent, "Standing_" + title, Ui.PanelBg2), -1, -1, 1).rectTransform;
+                Ui.VList(card, 0, 7);
+                Line(card, title, 14, Ui.Dim);
+                var value = Ui.Label(card, "", 26, color: Ui.Accent);
+                value.fontStyle = FontStyle.Bold;
+                note = Line(card, "", 13, Ui.Dim);
+                return value;
+            }
         }
 
         // ---------- 库存 ----------

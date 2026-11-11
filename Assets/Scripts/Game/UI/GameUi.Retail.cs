@@ -73,6 +73,7 @@ namespace PCShopSell.Game.UI
         private sealed class CarryOffer
         {
             public string Key,Name,Group,Detail,Season;
+            public string[] Shops;
             public double Kg;
             public Money Price;
             public Func<bool> Add;
@@ -117,10 +118,10 @@ namespace PCShopSell.Game.UI
         }
         private void BuildCarryCatalogBody(Window w,Place source,string mode,RectTransform cartColumn)
         {
-            bool wholesale=mode=="wholesale",expo=mode=="expo";
+            bool wholesale=mode=="wholesale",expo=mode=="expo",mall=source.Business==GameSession.MallBusiness;
             var offers=new List<CarryOffer>();
-            void Offer(string key,string name,string group,double kg,Money price,string detail,Func<bool> add,Func<double> remaining=null,Action preview=null,string season=null)
-                =>offers.Add(new CarryOffer {Key=key,Name=name,Group=group,Kg=kg,Price=price,Detail=detail,Add=add,Remaining=remaining,Preview=preview,Season=season});
+            void Offer(string key,string name,string group,double kg,Money price,string detail,Func<bool> add,Func<double> remaining=null,Action preview=null,string season=null,string[] shops=null)
+                =>offers.Add(new CarryOffer {Key=key,Name=name,Group=group,Kg=kg,Price=price,Detail=detail,Add=add,Remaining=remaining,Preview=preview,Season=season,Shops=shops});
             if(expo)
             {
                 foreach(var item in ModelProducts.Limited)
@@ -176,7 +177,7 @@ namespace PCShopSell.Game.UI
                 foreach(var item in FurnitureCatalog.Purchasable(false).Concat(FurnitureCatalog.Purchasable(true)).GroupBy(f=>f.Id).Select(g=>g.First()))
                 {
                     var product=item;
-                    Offer("furn:"+product.Id,product.Name,FurniturePurchaseGroup(product),product.WeightKg,product.Price,product.Description,()=>S.CartAddFurniture(product.Id));
+                    Offer("furn:"+product.Id,product.Name,FurniturePurchaseGroup(product),product.WeightKg,product.Price,product.Description,()=>S.CartAddFurniture(product.Id),shops:FurnitureShops.For(product));
                 }
             }
             else if(source.Business==GameSession.FastFoodBusiness)
@@ -233,18 +234,23 @@ namespace PCShopSell.Game.UI
             if(source.Business==GameSession.MallBusiness && S.MallStashCount>0)
                 Ui.Size(Ui.Button(links,"取寄存的货",()=>OpenWindow("家具城寄存",1000,760,detail=>BuildMallStash(detail,detail.Content)),16),150,36);
             if(links.childCount==0)links.gameObject.SetActive(false);
-            var tabs=source.Business==GameSession.MallBusiness
-                ?new List<string>{"全部","电器","非电器","装饰"}
-                :new[]{"全部"}.Concat(offers.Select(o=>o.Group)).Distinct().ToList();
+            // 家具城：第一层按「能开哪种店」，第二层再按设施类别；其余店铺保持原来的分类。
+            var tabs=mall
+                ?new List<string>{PurchaseFacets.All}.Concat(FurnitureShops.Tabs()).Distinct().ToList()
+                :new[]{PurchaseFacets.All}.Concat(offers.Select(o=>o.Group)).Distinct().ToList();
             if(missing.Length>0)tabs.Insert(0,"开店清单");
-            bool clothingWholesale=wholesale && offers.Any(o=>o.Season!=null);
-            string tab=ShopTabs(w,source,tabs,label:clothingWholesale?"品质":null);
-            string season=clothingWholesale?ShopTabs(w,source,new[]{"全部","春秋装","夏装","冬装"},filterKey:"season",label:"季节"):"全部";
-            if(clothingWholesale)Line(w.Content,"当前"+CityWeather.Season(S.Clock.Now.TotalMinutes)+"季 · 应季服装需求较多，反季服装仍有需求。",16,Ui.Dim);
+            bool hasSeason=offers.Any(o=>o.Season!=null);
+            string tab=ShopTabs(w,source,tabs,label:hasSeason?"品质":mall?"适用店铺":null);
+            string facility=mall?ShopTabs(w,source,new[]{PurchaseFacets.All,"电器","非电器","装饰"},filterKey:"facility",label:"设施"):PurchaseFacets.All;
+            string season=hasSeason?ShopTabs(w,source,new[]{PurchaseFacets.All,"春秋装","夏装","冬装"},filterKey:"season",label:"季节"):PurchaseFacets.All;
+            if(hasSeason)Line(w.Content,"当前"+CityWeather.Season(S.Clock.Now.TotalMinutes)+"季 · 应季服装需求较多，反季服装仍有需求。",16,Ui.Dim);
             var list=GoodsList(w.Content);
-            var visible=offers.Where(o=>(tab=="全部" || o.Group==tab
-                || tab=="开店清单" && missing.Any(id=>o.Key=="furn:"+id)) && (season=="全部" || o.Season==season)).ToList();
-            if(visible.Count==0)Para(list,offers.Count==0?"这里暂时没有可购买的商品。":"当前筛选下没有商品，可切换品质或季节。",18,Ui.Dim);
+            var visible=offers.Where(o=>(tab==PurchaseFacets.All
+                || (mall?(o.Shops!=null&&o.Shops.Contains(tab)):o.Group==tab)
+                || tab=="开店清单" && missing.Any(id=>o.Key=="furn:"+id))
+                && (facility==PurchaseFacets.All || o.Group==facility)
+                && (season==PurchaseFacets.All || o.Season==season)).ToList();
+            if(visible.Count==0)Para(list,offers.Count==0?"这里暂时没有可购买的商品。":"当前筛选下没有商品，可换一个店铺、设施或季节。",18,Ui.Dim);
             bool supportsMaximum = wholesale || expo || source.Kind == PlaceKind.Wholesaler;
             foreach(var product in visible)
             {

@@ -22,6 +22,7 @@ namespace PCShopSell.Game.UI
 
         public void OpenBrandBusiness()
         {
+            if (!S.BrandManagementUnlocked) return;
             _brandCreating = false;
             OpenWorkspace("brands","brands","品牌",1160,840,BuildBrandBusiness);
         }

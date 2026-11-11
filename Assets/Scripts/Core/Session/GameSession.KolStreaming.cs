@@ -14,7 +14,7 @@ namespace PCShopSell.Core.Session
         private readonly List<KolLiveSession> _openKolSessions = new List<KolLiveSession>();
         public KolStreamingState KolStreaming=>_kol.Copy();
         public const int KolMinimumLiveMinutes = 180;
-        public bool BrandManagementUnlocked=>true;
+        public bool BrandManagementUnlocked => !FirstChapterTrial;
         public static int KolCapacity(int level)=>level>=2?12:level==1?7:3;
         public string BrandLevelName(string id)=>Brand(id)?.Level>=2?"高级品牌":Brand(id)?.Level==1?"中级品牌":"初级品牌";
         public int BrandKolCapacity(string id)=>KolCapacity(Brand(id)?.Level??0);

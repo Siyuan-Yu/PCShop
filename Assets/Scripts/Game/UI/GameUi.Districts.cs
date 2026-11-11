@@ -70,6 +70,11 @@ namespace PCShopSell.Game.UI
                 Line(w.Content,"道路已开放至："+GameSession.DistrictName(S.DistrictAccessTier),20,Ui.Good);
                 if(node==null)
                 {
+                    if (S.FirstChapterTrialCompleted)
+                    {
+                        Para(w.Content, "试玩主线已完成 · 已向唐蔚交付三页商铺图。你可以继续在城郊经营。", 18, Ui.Good);
+                        return;
+                    }
                     if(state.PendingChapter>0)
                     {
                         Para(w.Content,S.DistrictInvitationStatus+"\n从首次达标起等待满72小时；到期时若正在睡觉，会改为醒来2小时后主动联系。资金随后减少不会取消邀请。关闭窗口后时间才会继续。",18);

@@ -172,7 +172,7 @@ namespace PCShopSell.Game.UI
                 if (needsSpace)
                 {
                     Line(w.Content, "选择停放车库", 20, Ui.Accent);
-                    foreach (var g in RegionalGarages.All)
+                    foreach (var g in RegionalGarages.All.Where(garage => !GameSession.FirstChapterTrial || garage.Tier <= S.DistrictAccessTier))
                     {
                         var target = g; var lease = S.GarageLease(g.Id); bool accessible = S.DistrictAccessTier >= g.Tier;
                         Ui.Size(Ui.Button(w.Content, g.Name + (lease == null ? " · 未持有车位" : " · 空余 " + S.GarageFreeSpaces(g.Id) + " / "+lease.Capacity+"位"),
@@ -199,7 +199,7 @@ namespace PCShopSell.Game.UI
                 foreach(var v in trucks)MotorIdentity(fleet,v.ModelId,MotorCatalog.Get(v.ModelId).Name,S.MotorLocationText(v)+" · 参考残值 ¥"+MotorCatalog.ResaleValue(v).ToString("N0"));
             }
             var region = Ui.Row(w.Content, 40, 8);
-            foreach (var g in RegionalGarages.All)
+            foreach (var g in RegionalGarages.All.Where(garage => !GameSession.FirstChapterTrial || garage.Tier <= S.DistrictAccessTier))
             {
                 var target = g;
                 Ui.Size(Ui.Button(region, GameSession.DistrictName(g.Tier), () => { _assetMotorRegion = target.Tier; w.Rebuild(); }, 19,

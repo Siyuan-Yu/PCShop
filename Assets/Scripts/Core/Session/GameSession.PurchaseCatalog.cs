@@ -19,9 +19,54 @@ namespace PCShopSell.Core.Session
         public string Id, Name, Category;
         public Money Price;
         public double UnitKg, StockSpace;
+
+        /// <summary>同一件商品可以同时属于多个取值，用这个字符连接（例如一件家具适用多种店型）。</summary>
+        public const char FacetSeparator = '|';
+
+        /// <summary>各筛选维度的取值。键见 <see cref="PurchaseFacets"/>，界面按维度自动生成多级筛选。</summary>
+        public readonly Dictionary<string, string> Facets = new Dictionary<string, string>();
+
         public string SupplierName => Source.Name;
         public string Key => GameSession.PurchaseKey(Kind, Id, Source.Id);
         public PurchaseLine Line(int count) => new PurchaseLine { Kind = Kind, PartId = Id, SourceId = Source.Id, Count = count };
+
+        /// <summary>取某个维度的值；这件商品没有这个维度时返回 null。</summary>
+        public string Facet(string key) => key != null && Facets.TryGetValue(key, out string value) ? value : null;
+
+        /// <summary>该维度是否包含指定取值。</summary>
+        public bool HasFacet(string key, string value) =>
+            value != null && Facet(key)?.Split(FacetSeparator).Contains(value) == true;
+
+        /// <summary>按一组筛选条件判断是否命中；取值为 null、空或「全部」表示该维度不限制。</summary>
+        public bool Matches(IReadOnlyDictionary<string, string> filters)
+        {
+            if (filters == null) return true;
+            foreach (var pair in filters)
+            {
+                if (string.IsNullOrEmpty(pair.Value) || pair.Value == PurchaseFacets.All) continue;
+                if (!HasFacet(pair.Key, pair.Value)) return false;
+            }
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// 采购商品的筛选维度登记处。新增一个维度只要在这里加一行常量与 <see cref="Order"/> 条目，
+    /// 线下进货与进货员两套界面就会自动多出一层筛选，无需再改界面代码。
+    /// </summary>
+    public static class PurchaseFacets
+    {
+        /// <summary>表示该维度不限制。</summary>
+        public const string All = "全部";
+        public const string Category = "category";
+        public const string Shop = "shop";
+        public const string Season = "season";
+
+        /// <summary>维度顺序：越靠前越先筛，界面也按这个顺序排列。</summary>
+        public static readonly string[] Order = { Category, Shop, Season };
+
+        public static string Label(string key) =>
+            key == Shop ? "适用店铺" : key == Season ? "季节" : "分类";
     }
 
     public sealed partial class GameSession
@@ -39,29 +84,40 @@ namespace PCShopSell.Core.Session
         public IReadOnlyList<PurchaseOffer> EmployeePurchaseCatalog()
         {
             var offers = new List<PurchaseOffer>();
+            // 统一入口：分类是每个商品必有的维度，季节与适用店铺按需附加。
+            void Add(PurchaseOffer offer, string category, string season = null, string[] shops = null)
+            {
+                offer.Category = offer.Facets[PurchaseFacets.Category] = category;
+                if (season != null) offer.Facets[PurchaseFacets.Season] = season;
+                if (shops != null && shops.Length > 0)
+                    offer.Facets[PurchaseFacets.Shop] = string.Join(PurchaseOffer.FacetSeparator.ToString(), shops);
+                offers.Add(offer);
+            }
             foreach (var source in City.Places)
             {
                 if (source.Kind == PlaceKind.Wholesaler && PurchaseDestination(source) == source)
                     foreach (var p in PartCatalog.All.Where(p => StallSells(source, p)))
-                        offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Part, Id = p.Id, Name = p.Name,
-                            Category = PartCatalog.CategoryName(p.Category), Price = StallPrice(source, p),
-                            UnitKg = Stock.SpaceOf(p, true, 1) * Backpack.KgPerSpace, StockSpace = Stock.SpaceOf(p, true, 1) });
+                        Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Part, Id = p.Id, Name = p.Name,
+                            Price = StallPrice(source, p),
+                            UnitKg = Stock.SpaceOf(p, true, 1) * Backpack.KgPerSpace, StockSpace = Stock.SpaceOf(p, true, 1) },
+                            PartCatalog.CategoryName(p.Category));
                 if (ShopAt(source) != null || IsVacant(source) || VentureAt(source.Id) != null) continue;
                 foreach (var gift in Gifts.All.Where(g => g.SoldAt == source.Business && CityRetailGoodsAvailable(source, g)))
-                    offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Gift, Id = gift.Id, Name = gift.Name + (HasDualRetailWholesale(source) ? "（批发）" : ""),
-                        Category = ShelfKinds.ForGift(gift.Id)?.Name ?? "其他商品", Price = CityRetailWholesalePrice(source, gift), UnitKg = gift.WeightKg, StockSpace = Stock.GoodsSpace(gift.Id, 1) });
+                    Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Gift, Id = gift.Id, Name = gift.Name + (HasDualRetailWholesale(source) ? "（批发）" : ""),
+                        Price = CityRetailWholesalePrice(source, gift), UnitKg = gift.WeightKg, StockSpace = Stock.GoodsSpace(gift.Id, 1) },
+                        ShelfKinds.ForGift(gift.Id)?.Name ?? "其他商品", ClothingProducts.SeasonGroup(gift.Id));
                 if (source.Business == FarmBusiness)
                 {
-                    offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Rice, Id = "rice", Name = "大米（零售，0.5千克/袋）",
-                        Category = "米与食材", Price = Pantry.RicePricePerKg.Scale(0.5), UnitKg = 0.5 });
+                    Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Rice, Id = "rice", Name = "大米（零售，0.5千克/袋）",
+                        Price = Pantry.RicePricePerKg.Scale(0.5), UnitKg = 0.5 }, "米与食材");
                     foreach (var ingredient in Ingredients.All)
-                        offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Ingredient, Id = ingredient.Id, Name = ingredient.Name + "（零售，" + ingredient.WeightKg.ToString("0.##") + "千克/份）",
-                            Category = "米与食材", Price = ingredient.Price, UnitKg = Backpack.IngredientKg(ingredient.Id) });
+                        Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Ingredient, Id = ingredient.Id, Name = ingredient.Name + "（零售，" + ingredient.WeightKg.ToString("0.##") + "千克/份）",
+                            Price = ingredient.Price, UnitKg = Backpack.IngredientKg(ingredient.Id) }, "米与食材");
                 }
                 if (source.Business == MallBusiness)
                     foreach (var furniture in FurnitureCatalog.All.Where(f => !f.Starter))
-                        offers.Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Furniture, Id = furniture.Id, Name = furniture.Name,
-                            Category = "家具与货架", Price = furniture.Price, UnitKg = furniture.WeightKg });
+                        Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Furniture, Id = furniture.Id, Name = furniture.Name,
+                            Price = furniture.Price, UnitKg = furniture.WeightKg }, "家具与货架", null, FurnitureShops.For(furniture));
             }
             return offers.OrderBy(o => (int)o.Kind).ToArray();
         }

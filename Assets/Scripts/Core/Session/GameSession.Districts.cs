@@ -16,7 +16,19 @@ namespace PCShopSell.Core.Session
         private int _lastDistrictGate;
         private long _lastDistrictGateMinute = -100;
         public IReadOnlyList<DistrictRoadGate> DistrictRoadGates => _districtRoadGates ?? (_districtRoadGates = DistrictRoadGate.ForCity(City));
-        public int DistrictAccessTier => _district.UnlockedTier;
+        public static bool FirstChapterTrial
+        {
+            get
+            {
+#if PCSHOP_FIRST_CHAPTER_TRIAL
+                return true;
+#else
+                return false;
+#endif
+            }
+        }
+        public bool FirstChapterTrialCompleted => FirstChapterTrial && DistrictNodeCompleted("community.trial");
+        public int DistrictAccessTier => FirstChapterTrial ? 0 : _district.UnlockedTier;
         public DistrictProgress DistrictStoryState => _district.Copy();
         public static string DistrictName(int tier) => new[] { "城郊", "社区", "公园", "花园" }[Math.Max(0,Math.Min(3,tier))];
         public int DistrictTierOf(Place place)
@@ -26,7 +38,7 @@ namespace PCShopSell.Core.Session
         }
         public bool DistrictRoadOpen(int tier) => !City.IsLakeCity || tier <= DistrictAccessTier;
         public string DistrictAccessBlocker(Place place) => place != null && !DistrictRoadOpen(DistrictTierOf(place))
-            ? "前方" + DistrictName(DistrictTierOf(place)) + "片区暂未开放，请先完成对应的主线引荐。手机聊天中可查看进度。" : null;
+            ? FirstChapterTrial ? "试玩版开放城郊片区。" : "前方" + DistrictName(DistrictTierOf(place)) + "片区暂未开放，请先完成对应的主线引荐。手机聊天中可查看进度。" : null;
         public bool TryDistrictRoadStop(MapPoint from, MapPoint to, out MapPoint stop, out int tier)
         {
             stop = to; tier = 0;
@@ -38,6 +50,7 @@ namespace PCShopSell.Core.Session
         {
             if (_lastDistrictGate == tier && Clock.Now.TotalMinutes-_lastDistrictGateMinute < 10) return;
             _lastDistrictGate = tier; _lastDistrictGateMinute = Clock.Now.TotalMinutes;
+            if (FirstChapterTrial) { Show("试玩区域边界", "试玩版开放城郊片区。你可以返回城郊继续经营。"); return; }
             Show("前方暂不通行", "通往" + DistrictName(tier) + "的道路尚未开放。\n完成“" + DistrictName(tier-1) + " → " + DistrictName(tier) + "”主线引荐后放行。\n请到手机聊天查看主线消息；满足资金条件不会直接开路。");
         }
         private int BlockedDistrictOnTrip(Trip trip)
@@ -75,6 +88,7 @@ namespace PCShopSell.Core.Session
         public string DistrictPrerequisiteBlocker(int chapter)
         {
             if (chapter < 1 || chapter > 3) return "未知阶段";
+            if (FirstChapterTrial && chapter > 1) return "已到达试玩主线结尾";
             if (!City.IsLakeCity) return "主线验收需要当前湖城地图";
             if (DistrictAccessTier < chapter-1) return "请先完成上一段主线，开放"+DistrictName(chapter-1)+"道路";
             if (chapter==1)
@@ -103,7 +117,7 @@ namespace PCShopSell.Core.Session
             RefreshDistrictCommerce();
             if(CurrentDistrictNode!=null)return;
             int chapter = _district.Chapter+1;
-            if (chapter>3) return;
+            if (chapter > (FirstChapterTrial ? 1 : 3)) return;
             if (_district.PendingChapter!=chapter)
             {
                 if (DistrictPrerequisiteBlocker(chapter)!=null) return;
@@ -393,13 +407,15 @@ namespace PCShopSell.Core.Session
             var node=CurrentDistrictNode;if(node==null||DistrictNodeCompleted(node.Id))return;
             _district.Completed=_district.Completed.Concat(new[]{node.Id}).ToArray();
             foreach(var id in _district.MeetingPeople)RememberSocial(id,node.Title+"："+node.Result);
-            if(node.Id=="community.trial")GrantDistrictAccess(1);
+            if(node.Id=="community.trial" && !FirstChapterTrial)GrantDistrictAccess(1);
             if(node.Id=="expo.review")GrantDistrictAccess(2);
             if(node.Id=="tender.review")GrantDistrictAccess(3);
             _district.MeetingPeople=Array.Empty<string>();_district.MeetingPlaceId=null;_district.MeetingNodeId=null;
             var chain=ActiveDistrictChain(_district.Chapter);int index=Array.IndexOf(chain,node.Id)+1;
             _district.NodeId=index<chain.Length?chain[index]:null;
             Say("主线完成："+node.Title+(CurrentDistrictNode==null?"":"。下一条消息："+CurrentDistrictNode.Title));
+            if (node.Id == "community.trial" && FirstChapterTrial)
+                Show("试玩主线已完成", "你找齐三页商铺图，并交还给了唐蔚。感谢试玩！\n\n你可以留在城郊继续经营和探索。");
         }
         private void GrantDistrictAccess(int tier)
         {

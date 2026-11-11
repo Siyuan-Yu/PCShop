@@ -204,12 +204,13 @@ namespace PCShopSell.Game.UI
 
         private void BuildStation(Window w, Place p)
         {
-            Line(w.Content,"城市地铁 · 全站互通");
+            Line(w.Content, GameSession.FirstChapterTrial ? "城郊地铁" : "城市地铁 · 全站互通");
             Line(w.Content,$"票价 {GameSession.MetroFare}，约 {GameSession.MetroMinutes} 分钟。运营 6:00–23:00。",18,Ui.Dim);
             foreach(var destination in S.City.OfKind(PlaceKind.Station).Where(x=>x!=p))
             {
                 var target=destination;
                 string locked=S.DistrictAccessBlocker(target);
+                if (GameSession.FirstChapterTrial && locked != null) continue;
                 Ui.Size(Ui.Button(w.Content,(locked==null?"前往 ":"未开放 · ")+target.Name+" · "+S.City.StreetName(target.StreetId),()=>
                 {
                     if(S.TakeMetro(target.Id)){CloseWindowSilently(w);if(S.CurrentPlace!=null)OnEnteredPlace(S.CurrentPlace);}

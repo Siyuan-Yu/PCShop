@@ -14,7 +14,8 @@ namespace PCShopSell.Game
         private static extern void PCShop_SyncStorage();
 #endif
         public static string DirectoryOverride { get; set; }
-        private static string SaveDirectory => DirectoryOverride ?? Application.persistentDataPath;
+        private static string SaveDirectory => DirectoryOverride ?? (GameSession.FirstChapterTrial
+            ? Path.Combine(Application.persistentDataPath, "first-chapter-trial") : Application.persistentDataPath);
         public static string PathOf => Path.Combine(SaveDirectory, "save1.json");
         public static string AutoPath => Path.Combine(SaveDirectory, "autosave.json");
         public static string CityTestPath => Path.Combine(SaveDirectory,"city-life-test.json");

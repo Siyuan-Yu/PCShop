@@ -69,7 +69,7 @@ namespace PCShopSell.Game.UI
         private void OpenCityMap(Action<Place> onSelected)
         {
             _cityMapPage = 0;
-            OpenWindow(onSelected==null?"十街地图 / 自定义目的地":"选择自定目的地", 1110, 790, w =>
+            OpenWindow(onSelected == null ? (GameSession.FirstChapterTrial ? "城郊地图" : "十街地图 / 自定义目的地") : "选择自定目的地", 1110, 790, w =>
             {
                 void Pick(Place place)
                 {
@@ -80,7 +80,7 @@ namespace PCShopSell.Game.UI
                 var types = Ui.Row(w.Content, 40, 6);
                 void Type(string title, string key) => Ui.Size(Ui.Button(types, title, () => { _cityMapType = key; _cityMapPage = 0; w.Rebuild(); }, 17, _cityMapType == key ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1);
                 Type("全部", null); Type("我的店", "my"); Type("已购物业", "property"); Type("娱乐活动", "venue"); Type("采购货源", "source"); Type("住处", "home");
-                var streets = S.City.Streets.ToArray();
+                var streets = S.City.Streets.Where(street => !GameSession.FirstChapterTrial || S.City.AgencyDistrictFor(street.id)?.id == "suburb").ToArray();
                 for (int i = 0; i < streets.Length; i += 5)
                 {
                     var row = Ui.Row(w.Content, 38, 6);
@@ -95,7 +95,7 @@ namespace PCShopSell.Game.UI
                     Line(w.Content, "底栏自定目的地：" + CityMapPlaceName(S.City.GetPlace(S.CityDefaultDestination)), 17, Ui.Accent);
                 if (S.CityIntent != null || S.Trip != null) Ui.Size(Ui.Button(w.Content, "取消当前路线（预约保留）", () => { S.StopTrip(); S.CancelCityTravel(); w.Rebuild(); }, 18, Ui.Warn), -1, 42);
                 BuildCityRouteMap(w.Content,Pick);
-                var places = S.City.PublicPlaces.Where(p => (_cityMapStreet == null || p.StreetId == _cityMapStreet) && CityMapTypeMatches(p)
+                var places = CityMapPlaces().Where(p => (_cityMapStreet == null || p.StreetId == _cityMapStreet) && CityMapTypeMatches(p)
                     && (_cityMapSearch.Length == 0 || (CityMapPlaceName(p) + " " + CityMapPlaceType(p) + " " + S.City.StreetName(p.StreetId)).IndexOf(_cityMapSearch, StringComparison.OrdinalIgnoreCase) >= 0))
                     .OrderBy(CityMapPriority).ThenBy(p => p.StreetId).ThenBy(CityMapPlaceName).ToArray();
                 _cityMapPage = Math.Max(0, Math.Min(_cityMapPage, Math.Max(0, (places.Length - 1) / 12)));
@@ -129,7 +129,7 @@ namespace PCShopSell.Game.UI
                 var other = S.City.Map.GetNode(edge.To); segments.Add(Point(node.X, node.Y)); segments.Add(Point(other.X, other.Y));
             }
             graphic.SetSegments(segments);
-            foreach (var p in S.City.PublicPlaces.Where(p => (_cityMapStreet == null || p.StreetId == _cityMapStreet) && CityMapTypeMatches(p)))
+            foreach (var p in CityMapPlaces().Where(p => (_cityMapStreet == null || p.StreetId == _cityMapStreet) && CityMapTypeMatches(p)))
             {
                 var place = p;var door=S.DoorOf(p);
                 Vector2 at=Point(door.X*S.City.DistanceScale,door.Y*S.City.DistanceScale);
@@ -143,6 +143,8 @@ namespace PCShopSell.Game.UI
             var playerAt = Point(player.X * S.City.DistanceScale, player.Y * S.City.DistanceScale);
             marker.raycastTarget = false; marker.rectTransform.anchorMin = marker.rectTransform.anchorMax = playerAt; marker.rectTransform.pivot = new Vector2(.5f, .5f); marker.rectTransform.sizeDelta = new Vector2(26, 26);
         }
+
+        private IEnumerable<Place> CityMapPlaces() => S.City.PublicPlaces.Where(place => !GameSession.FirstChapterTrial || S.DistrictAccessBlocker(place) == null);
 
         private void OpenCityPlaceDetail(Place place)
         {
@@ -328,6 +330,7 @@ namespace PCShopSell.Game.UI
                     { choosingRace = true; w.ResetScrollOnRebuild = true; w.Rebuild(); }, 18), -1, 54).name = "CityActivityOffer_racing";
                 foreach (var definition in CityLifeCatalog.Activities.Where(activity => activity.Id != "snack"))
                 {
+                    if (GameSession.FirstChapterTrial && (!S.City.HasPlace(definition.VenueId) || S.DistrictAccessBlocker(S.City.GetPlace(definition.VenueId)) != null)) continue;
                     var def = definition; string location = S.City.HasPlace(def.VenueId) ? S.City.GetPlace(def.VenueId).Name : "场所暂不可用";
                     Ui.Size(Ui.Button(w.Content, $"{def.Name} · {location} · {def.Minutes}分钟\n到场后选择菜单或服务", () => OpenCityActivityOffer(def.Id, personId), 18), -1, 66).name="CityActivityOffer_"+def.Id;
                 }
@@ -383,7 +386,7 @@ namespace PCShopSell.Game.UI
         public void OpenCityActivities() => OpenCalendar(1);
         private void BuildActivitySchedule(Window w)
         {
-                Para(w.Content, S.CityExpoCalendar, 19, Ui.Accent);
+                if (!GameSession.FirstChapterTrial) Para(w.Content, S.CityExpoCalendar, 19, Ui.Accent);
                 HelpLink(w.Content,"邀约与活动说明","从人物资料发出邀约，到约定地点后选择服务。个人维修、快递和用餐等安排在“我的安排”中查看。");
                 foreach (var activity in S.CityActivities.OrderByDescending(a => a.Active).ThenBy(a => a.Active ? a.ScheduledStart : -a.ScheduledStart).Take(30))
                 {

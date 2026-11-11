@@ -110,7 +110,7 @@ namespace PCShopSell.Game.UI
                 Line(w.Content,"比赛胜场 "+S.RacingWins+" · 参赛和练习使用对应片区的入库车辆",20,Ui.Accent);
                 Para(w.Content, "周一大赛冠军 ¥2,000，三日小赛冠军 ¥1,000。同日优先举行大赛，最多10名车友同场。", 17);
                 Para(w.Content,S.RaceMeetingSummary(),17,Ui.Accent);
-                foreach(var track in RaceTracks.All)
+                foreach(var track in RaceTracks.All.Where(track => !GameSession.FirstChapterTrial || track.Tier <= S.DistrictAccessTier))
                 {
                     var t=track;var card=BusinessCard(w.Content,t.Name);Line(card,t.OpeningHours,16,Ui.Dim);Line(card,$"{GameSession.DistrictName(t.Tier)}进度 · 正赛需 {t.RequiredWins} 胜 · {t.Laps} 圈 · 练习 ¥{RacingSchedule.PracticeFee}/次",17);
                     Ui.Size(Ui.Button(card,"前往赛场",()=>{CloseWindowSilently(w);S.BeginCityTravel(t.Id);},18,Ui.ButtonHot,S.DistrictAccessTier>=t.Tier),-1,38);

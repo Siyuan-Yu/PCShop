@@ -328,16 +328,20 @@ namespace PCShopSell.Game.UI
                 g => "订单 " + g.Sum(s => s.Sim.Orders.Count) + " 单",
                 (body, shop) => BuildWorkbenchOrders(body, w, shop));
             var right = WbColumn(row, "WorkbenchCooperation", .9f);
-            WbHeading(right, "品牌与合作");
+            WbHeading(right, GameSession.FirstChapterTrial ? "直供采购" : "品牌与合作");
             var list = WbScroll(right, "WorkbenchCooperationList");
-            WbLink(list, "品牌 · 代言人 / 展会 / 竞标", OpenBrandOverview, "WorkbenchBrandBusiness");
+            if (S.BrandManagementUnlocked)
+                WbLink(list, "品牌 · 代言人 / 展会 / 竞标", OpenBrandOverview, "WorkbenchBrandBusiness");
             if (BusinessUnlocked)
             {
                 WbLink(list, "直供采购", () => { _businessTab = 1; ShowBusinessPanel(false); }, "WorkbenchDirectSupply");
-                WbLink(list, "企业合同", () => { _businessTab = 2; ShowBusinessPanel(false); }, "WorkbenchContracts");
-                WbLink(list, "MCN工作室", () => { _businessTab = 4; ShowBusinessPanel(false); }, "WorkbenchPromotion");
+                if (!GameSession.FirstChapterTrial)
+                {
+                    WbLink(list, "企业合同", () => { _businessTab = 2; ShowBusinessPanel(false); }, "WorkbenchContracts");
+                    WbLink(list, "MCN工作室", () => { _businessTab = 4; ShowBusinessPanel(false); }, "WorkbenchPromotion");
+                }
             }
-            else WbText(list, "经营成长后解锁直供、企业合同和MCN工作室。", 17, WbDim);
+            else WbText(list, GameSession.FirstChapterTrial ? "经营成长后解锁直供采购。" : "经营成长后解锁直供、企业合同和MCN工作室。", 17, WbDim);
         }
 
         private void BuildWorkbenchOrders(Transform body, Window w, OwnedShop shop)

@@ -116,7 +116,8 @@ namespace PCShopSell.Game.UI
                 foreach (var item in selected) BuildCalendarDayItem(list, item, w);
             }
             var footer = Ui.Row(w.Content, 36, 10);
-            Ui.Size(Ui.Label(footer, "<color=#E8BE62>●</color> 展会 / 交付    <color=#B8CDE3>●</color> 直播    <color=#B6D578>●</color> 邀约 / 生活", 15, color: Ui.Dim), 0, 36, 1);
+            if (!GameSession.FirstChapterTrial)
+                Ui.Size(Ui.Label(footer, "<color=#E8BE62>●</color> 展会 / 交付    <color=#B8CDE3>●</color> 直播    <color=#B6D578>●</color> 邀约 / 生活", 15, color: Ui.Dim), 0, 36, 1);
             Ui.Size(Ui.Button(footer, "城市活动", () => OpenCalendar(1), 16), 110, 34);
             Ui.Size(Ui.Button(footer, "天气", OpenCityClimate, 16), 80, 34);
             w.LiveConversation = true;
