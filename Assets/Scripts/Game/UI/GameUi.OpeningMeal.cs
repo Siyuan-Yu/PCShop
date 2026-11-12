@@ -1,11 +1,25 @@
 using System.Linq;
 using System.Collections.Generic;
+using PCShopSell.Core.Session;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
 {
+    internal sealed class OpeningGuideInputBlock : Image
+    {
+        public Button PassThrough { get; set; }
+
+        public override bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera)
+        {
+            if (PassThrough == null) return base.IsRaycastLocationValid(screenPoint, eventCamera);
+            var canvas = PassThrough.image.canvas;
+            var camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+            return !RectTransformUtility.RectangleContainsScreenPoint(PassThrough.image.rectTransform, screenPoint, camera);
+        }
+    }
+
     /// <summary>
     /// 开局做饭强制引导：整个屋子压暗，只留电饭锅一块高亮；下面一张步骤卡说清楚该怎么做。
     /// 做完（吃了饭或装了饭盒）之前，核心层会拦住出门（GameSession.LeaveBlocker）。
@@ -13,10 +27,11 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private Canvas _tutorialCanvas;
-        private Image _openingMealInputBlock;
+        private OpeningGuideInputBlock _openingMealInputBlock;
         private Button _openingMealIntroNext;
         private Window _openingMealCooker;
-        private object _openingMealSession;
+        private GameSession _openingMealSession;
+        private Navigation _questActionNavigation;
         private int _openingMealCookStage;
         private string _openingMealFocus;
         private bool _openingMealIntroHeld;
@@ -76,6 +91,7 @@ namespace PCShopSell.Game.UI
 
         private void OpeningMealOverlayClick()
         {
+            if (S.OpeningAgencyGuidePending) return;
             if (OpeningMealPreludePending) { RemindOpeningMeal(); return; }
             // Keep the existing cooking quest shortcut usable through the teaching overlay.
             var questCanvas = _questActionButton?.GetComponentInParent<Canvas>();
@@ -101,9 +117,13 @@ namespace PCShopSell.Game.UI
             _tutorialCanvas = Ui.CreateCanvas("UI_Tutorial", 40);
             _guideRoot = Ui.Rect(_tutorialCanvas.transform, "OpeningMealGuide");
             _guideRoot.Anchor(0, 0, 1, 1, 0, 0, 0, 0);
-            var inputBlock = _openingMealInputBlock = Ui.Panel(_guideRoot, "OpeningMealInputBlock", Color.clear);
+            var inputBlock = _openingMealInputBlock = Ui.Rect(_guideRoot, "OpeningMealInputBlock").gameObject.AddComponent<OpeningGuideInputBlock>();
+            inputBlock.color = Color.clear;
             inputBlock.rectTransform.Fill();
-            inputBlock.gameObject.AddComponent<Button>().onClick.AddListener(OpeningMealOverlayClick);
+            var blockerButton = inputBlock.gameObject.AddComponent<Button>();
+            blockerButton.targetGraphic = inputBlock;
+            blockerButton.navigation = new Navigation { mode = Navigation.Mode.None };
+            blockerButton.onClick.AddListener(OpeningMealOverlayClick);
             string[] dimNames = { "GuideDimTop", "GuideDimBottom", "GuideDimLeft", "GuideDimRight" };
             for (int i = 0; i < 4; i++)
             {
@@ -165,7 +185,7 @@ namespace PCShopSell.Game.UI
             _guideRoot.gameObject.SetActive(false);
         }
 
-        public bool OpeningMealGuideVisible => _guideRoot != null && _guideRoot.gameObject.activeSelf;
+        public bool OpeningMealGuideVisible => _guideRoot != null && _guideRoot.gameObject.activeSelf && _openingMealInputBlock.PassThrough == null;
 
         private static void GuideRect(RectTransform r, float x, float y, float w, float h)
         {
@@ -177,7 +197,16 @@ namespace PCShopSell.Game.UI
         {
             if (_tutorialCanvas == null) return;
             if (!ReferenceEquals(_openingMealSession, S))
-            { RestoreOpeningMealButtons(); _openingMealSession = S; _openingMealIntroHeld = false; _openingMealCookStage = 0; _openingWalked = 0; _openingMealCooker = null; }
+            {
+                SetOpeningAgencyGuideVisible(false);
+                RestoreOpeningMealButtons();
+                _openingMealSession = S;
+                _openingMealIntroHeld = false;
+                _openingMealCookStage = 0;
+                _openingWalked = 0;
+                _openingMealCooker = null;
+            }
+            if (UpdateOpeningAgencyGuide()) return;
             int step = S.OpeningMealStep;
             bool cookerOpen = _openingMealCooker != null && !_openingMealCooker.Closed
                 && _windows.Count > 0 && _windows[_windows.Count - 1] == _openingMealCooker;
@@ -191,6 +220,7 @@ namespace PCShopSell.Game.UI
             else if ((!show || !intro) && _openingMealIntroHeld) { S.Time.Release(); _openingMealIntroHeld = false; }
             _guideRoot.gameObject.SetActive(show);
             if (!show) { if (step < 0) RestoreOpeningMealButtons(); return; }
+            _guideCard.gameObject.SetActive(true);
             Canvas.ForceUpdateCanvases();
             var canvasRt = (RectTransform)_tutorialCanvas.transform;
             Vector2 size = canvasRt.rect.size;
@@ -265,7 +295,68 @@ namespace PCShopSell.Game.UI
                 GuideRect(_guideCard, (size.x - 880) * .5f, 150, 880, 220);
                 _guideFoot.text = "先做饭再做其他事 · WASD / 方向键走路，F 交互；Esc 打开系统菜单。";
             }
-            if (hasHole)
+            DrawGuideSpotlight(size, hasHole ? (Rect?)hole : null);
+            _guideTitle.text = text.title; _guideBody.text = text.body;
+            for (int i = 0; i < 3; i++) _guideDots[i].color = i < step ? Ui.FlatUp : i == step ? Ui.FlatHotEdge : Ui.FlatWellEdge;
+        }
+
+        private bool UpdateOpeningAgencyGuide()
+        {
+            bool show = S.OpeningAgencyGuidePending && !MainMenuOpen && !AnyModalOpen;
+            if (show && _openingMealInputBlock.PassThrough == null)
+            {
+                _questHidden = false;
+                UpdateQuestTracker();
+                show = !AnyModalOpen && _questActionButton.gameObject.activeInHierarchy;
+            }
+            SetOpeningAgencyGuideVisible(show);
+            if (!show) return false;
+
+            _guideRoot.gameObject.SetActive(true);
+            _openingMealInputBlock.gameObject.SetActive(true);
+            _guideCard.gameObject.SetActive(false);
+            _guideArrow.gameObject.SetActive(false);
+            foreach (var dim in _guideDim) dim.raycastTarget = false;
+            var size = ((RectTransform)_tutorialCanvas.transform).rect.size;
+            DrawGuideSpotlight(size, GuideTargetBounds(_questPanel.rectTransform, size, 6));
+            return true;
+        }
+
+        private void SetOpeningAgencyGuideVisible(bool show)
+        {
+            if (show == (_openingMealInputBlock.PassThrough != null)) return;
+            if (show)
+            {
+                _openingMealInputBlock.PassThrough = _questActionButton;
+                _questActionNavigation = _questActionButton.navigation;
+                _questActionButton.navigation = new Navigation { mode = Navigation.Mode.None };
+                EventSystem.current?.SetSelectedGameObject(null);
+                _openingMealSession.Time.Hold();
+            }
+            else
+            {
+                _openingMealInputBlock.PassThrough = null;
+                _questActionButton.navigation = _questActionNavigation;
+                _openingMealSession.Time.Release();
+            }
+        }
+
+        private readonly Vector3[] _guideTargetCorners = new Vector3[4];
+
+        private Rect GuideTargetBounds(RectTransform target, Vector2 size, float padding)
+        {
+            target.GetWorldCorners(_guideTargetCorners);
+            var canvas = (RectTransform)_tutorialCanvas.transform;
+            var sourceCanvas = target.GetComponentInParent<Canvas>();
+            var sourceCam = sourceCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : sourceCanvas.worldCamera;
+            Vector2 low = GuidePoint(canvas, RectTransformUtility.WorldToScreenPoint(sourceCam, _guideTargetCorners[0]), size);
+            Vector2 high = GuidePoint(canvas, RectTransformUtility.WorldToScreenPoint(sourceCam, _guideTargetCorners[2]), size);
+            return Rect.MinMaxRect(low.x - padding, low.y - padding, high.x + padding, high.y + padding);
+        }
+
+        private void DrawGuideSpotlight(Vector2 size, Rect? spotlight)
+        {
+            if (spotlight is Rect hole)
             {
                 float x0 = Mathf.Clamp(hole.xMin, 0, size.x), x1 = Mathf.Clamp(hole.xMax, 0, size.x);
                 float y0 = Mathf.Clamp(hole.yMin, 0, size.y), y1 = Mathf.Clamp(hole.yMax, 0, size.y);
@@ -287,8 +378,6 @@ namespace PCShopSell.Game.UI
                 foreach (var f in _guideFrame) GuideRect(f.rectTransform, 0, 0, 0, 0);
                 _guideArrow.gameObject.SetActive(false);
             }
-            _guideTitle.text = text.title; _guideBody.text = text.body;
-            for (int i = 0; i < 3; i++) _guideDots[i].color = i < step ? Ui.FlatUp : i == step ? Ui.FlatHotEdge : Ui.FlatWellEdge;
         }
 
         private Vector2 GuidePoint(RectTransform canvas, Vector2 screen, Vector2 size)

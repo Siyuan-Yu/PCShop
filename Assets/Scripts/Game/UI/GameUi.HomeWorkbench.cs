@@ -233,7 +233,7 @@ namespace PCShopSell.Game.UI
         private void BuildWorkbenchContacts(Transform parent)
         {
             // 只有「通讯录」和「日程」：通讯录就是下面这份名单，点头像看资料/邀约，右侧固定大小的按钮直接交谈。
-            var actions=Ui.Row(parent,32,6);WbSubTab(actions,"通讯录",()=>{},"WorkbenchContacts",true,128);WbSubTab(actions,"日程",OpenCityActivities,"WorkbenchContactCalendar",false,128);WbFlex(actions);
+            var actions=Ui.Row(parent,32,6);WbSubTab(actions,"通讯录",()=>{},"WorkbenchContacts",true,128);WbSubTab(actions,"日程",OpenSchedulePanel,"WorkbenchContactCalendar",false,128);WbFlex(actions);
             var list=WbScroll(parent,"WorkbenchContactsBody");
             foreach(var contact in S.SavedConversationContacts())
             {

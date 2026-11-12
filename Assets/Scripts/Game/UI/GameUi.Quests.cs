@@ -60,7 +60,7 @@ namespace PCShopSell.Game.UI
             _questText.rectTransform.Anchor(0, 0, 1, 1, 16, 58, 16, 76);
             _questText.verticalOverflow = VerticalWrapMode.Truncate;
 
-            _questActionButton = Ui.Button(_questPanel.transform, "", () => _questAction?.Invoke(), 18, Ui.ButtonHot);
+            _questActionButton = Ui.Button(_questPanel.transform, "", ActivateQuestAction, 18, Ui.ButtonHot);
             _questActionButton.name = "QuestPrimaryAction";
             _questActionText = _questActionButton.GetComponentInChildren<Text>();
             ((RectTransform)_questActionButton.transform).Anchor(0, 0, .74f, 0, 14, 12, 4, -49);
@@ -75,6 +75,16 @@ namespace PCShopSell.Game.UI
             ((RectTransform)close.transform).Anchor(1, 1, 1, 1, -38, -36, 6, 6);
             close.Tip("收起任务条（顶栏“任务”按钮可重新打开）");
             _questPanel.gameObject.SetActive(false);
+        }
+
+        private void ActivateQuestAction()
+        {
+            if (S.OpeningAgencyGuidePending)
+            {
+                if (!AnyModalOpen && S.StartOpeningAgencyTravel()) UpdateOpeningMealGuide();
+                return;
+            }
+            _questAction?.Invoke();
         }
 
         /// <summary>顶栏“任务”按钮：打开当前任务说明，并重新显示左上角的任务条。</summary>
@@ -287,11 +297,10 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Mall: return QuestPlaceAction("前往家具城", S.City.Places.FirstOrDefault(p => p.Business == GameSession.MallBusiness));
                 case QuestTarget.PhoneShop: return QuestPlaceAction("前往手机店", S.City.Places.FirstOrDefault(p => p.Business == GameSession.PhoneBusiness));
                 case QuestTarget.Market:
-                    if (S.RetailKind == "restaurant") return QuestPlaceAction("前往农贸市场", S.City.Places.FirstOrDefault(p => p.Business == GameSession.FarmBusiness));
-                    if (S.RetailKind == PetShopCatalog.ShopKind && S.City.HasPlace(PetShopCatalog.SupplierId)) return QuestPlaceAction("前往宠物批发市场", S.City.GetPlace(PetShopCatalog.SupplierId));
-                    if (S.RetailKind == "computer") return QuestPlaceAction("前往电子市场", S.City.HasPlace("stall_cpu") ? S.City.GetPlace("stall_cpu") : null);
-                    if (S.RetailKind != "secondhand") return ("打开采购", OpenCityProcurement);
-                    return QuestShopAction(ShopTab.Counter, "打开柜台");
+                    if (S.ShopSupplyMarketId(S.RetailKind) is string marketId)
+                        return QuestPlaceAction("前往批发市场", S.PurchaseDestination(S.City.GetPlace(marketId)));
+                    return S.RetailKind == "secondhand" ? QuestShopAction(ShopTab.Counter, "打开柜台")
+                        : ("打开采购", OpenCityProcurement);
                 case QuestTarget.Renovate: return QuestShopAction(ShopTab.Renovate, "打开装修");
                 case QuestTarget.Stock: return QuestShopAction(ShopTab.Stock, "打开库存");
                 case QuestTarget.Counter: return QuestShopAction(ShopTab.Counter, "打开柜台");
@@ -417,6 +426,11 @@ namespace PCShopSell.Game.UI
         private static readonly QuestTarget[] BusinessTargets = { QuestTarget.Finance, QuestTarget.Direct, QuestTarget.Enterprise, QuestTarget.Ventures, QuestTarget.Creators, QuestTarget.Property, QuestTarget.Park };
         private string GuideLocation(QuestTarget target)
         {
+            if (target == QuestTarget.Market && S.ShopSupplyMarketId(S.RetailKind) is string marketId)
+            {
+                var market = S.PurchaseDestination(S.City.GetPlace(marketId));
+                return $"地点：{S.City.StreetName(market.StreetId)} · <color=#FFC966>{market.Name}</color>";
+            }
             if(S.RetailKind!="computer")
             {
                 if(target==QuestTarget.Market)return S.RetailKind=="restaurant"?"地点：农贸市场 · 采购大米与配菜":S.RetailKind=="secondhand"?"位置：自己的店 → 柜台 · 收购旧物":S.RetailKind==PetShopCatalog.ShopKind?"地点：城外批发街 · 暖爪宠物用品批发市场":"地点：对应品类的批发店 · 或手机网购";

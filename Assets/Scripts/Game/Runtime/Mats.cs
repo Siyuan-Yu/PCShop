@@ -317,7 +317,8 @@ namespace PCShopSell.Game.Runtime
         /// 按衣服给 Figure 换装：T 恤（橙）/ 衬衫（白）/ 夹克（棕）/ 西装（深灰 + 领带），
         /// 同时给所有小人统一加上裤子和头发。可以反复调用，旧的衣着配件会被换掉。
         /// </summary>
-        public static void Dress(GameObject figure, string outfitId, Color? identityColor = null)
+        public static void Dress(GameObject figure, string outfitId, Color? identityColor = null,
+            Color? trouserColor = null, bool standardTrim = true)
         {
             var motion = figure.GetComponent<FigureMotion>();
             Transform t = motion.Torso;
@@ -344,15 +345,19 @@ namespace PCShopSell.Game.Runtime
             }
             top=identityColor??ArtDirection.Hex(outfit.ColorHex);
             body.GetComponent<Renderer>().sharedMaterial = Mats.Lit(top);
-            body.localScale=new Vector3(outfit.VisualPreset=="winter"?.48f:.39f,.57f,outfit.VisualPreset=="winter"?.36f:.27f);
+            bool winter = outfit.VisualPreset == "winter";
+            body.localScale = new Vector3(winter ? .48f : .39f, .57f, winter ? .36f : .27f);
 
             void Add(string n, Vector3 p, Vector3 sz, Color c) => Box(t, "Outfit_" + n, p * s, sz * s, Mats.Lit(c));
-            motion.RecolorLimbs(Mats.Lit(pants), Mats.Lit(top));
+            motion.RecolorLimbs(Mats.Lit(trouserColor ?? pants), Mats.Lit(top));
             bool shortCut=outfit.VisualPreset=="short"||outfit.VisualPreset=="sport";
-            motion.SetClothingCut(shortCut,shortCut,outfit.VisualPreset=="winter",head.GetComponent<Renderer>().sharedMaterial);
-            if(outfit.VisualPreset=="winter")
-            {
+            motion.SetClothingCut(shortCut, shortCut, winter, head.GetComponent<Renderer>().sharedMaterial);
+            if (winter)
                 Add("CoatHem",new Vector3(0,.50f,0),new Vector3(.49f,.20f,.36f),top);
+
+            if (!standardTrim) return;
+            if (winter)
+            {
                 Add("PaddedCollar",new Vector3(0,1.06f,0),new Vector3(.35f,.13f,.32f),top*.8f);
                 Add("WinterZip",new Vector3(0,.78f,.19f),new Vector3(.025f,.58f,.02f),ArtDirection.Cream);
             }

@@ -68,7 +68,24 @@ namespace PCShopSell.Game.Runtime
             return wand;
         }
 
-        internal static GameObject BuildAnimal(Transform parent, bool dog, int coat, out Transform tail, out Transform[] feet)
+        private static Mesh _catEarMesh;
+
+        private static Mesh CatEarMesh()
+        {
+            if (_catEarMesh != null) return _catEarMesh;
+            _catEarMesh = new Mesh { name = "CatEar" };
+            _catEarMesh.vertices = new[]
+            {
+                new Vector3(-.5f, 0, .5f), new Vector3(.5f, 0, .5f), new Vector3(0, 1, .12f),
+                new Vector3(-.5f, 0, -.5f), new Vector3(.5f, 0, -.5f), new Vector3(0, 1, -.12f),
+            };
+            _catEarMesh.triangles = new[] { 0, 1, 2, 4, 3, 5, 3, 4, 1, 3, 1, 0, 1, 4, 5, 1, 5, 2, 3, 0, 2, 3, 2, 5 };
+            _catEarMesh.RecalculateNormals();
+            _catEarMesh.RecalculateBounds();
+            return _catEarMesh;
+        }
+
+        internal static GameObject BuildAnimal(Transform parent, bool dog, int coat, out Transform head, out Transform tail, out Transform[] legs)
         {
             var figure = new GameObject(dog?"BoardingDog":"BoardingCat");
             var root = figure.transform;
@@ -78,48 +95,72 @@ namespace PCShopSell.Game.Runtime
             Color muzzle = Color.Lerp(fur,Color.white,.45f);
             Color dark = Color.Lerp(fur,Ink,.35f);
             float height = dog ? .25f : .19f;
-            float length = dog ? .51f : .39f;
-            float width = dog ? .27f : .21f;
-            Sphere("Body",new Vector3(0,height,0),new Vector3(width,height*.92f,length),fur);
-            Sphere("Chest",new Vector3(0,height,.12f),new Vector3(width*.82f,height*.92f,.22f),muzzle);
-            Sphere("Head",new Vector3(0,height+.10f,length*.46f),new Vector3(width*.86f,.21f,.20f),fur);
-            Sphere("Muzzle",new Vector3(0,height+.055f,length*.66f),new Vector3(.13f,.075f,.11f),muzzle);
-            Sphere("Nose",new Vector3(0,height+.074f,length*.75f),new Vector3(.046f,.033f,.031f),Ink);
+            float length = dog ? .50f : .43f;
+            float width = dog ? .26f : .20f;
+            Sphere(root,"Body",new Vector3(0,height,0),new Vector3(width,height*.95f,length),fur);
+            Sphere(root,"Chest",new Vector3(0,height,.13f),new Vector3(width*.88f,height,.25f),muzzle);
+            head = Joint(root, "PetHead", new Vector3(0, height + (dog ? .088f : .070f), length * .44f));
+            Sphere(head,"Head",Vector3.zero,dog?new Vector3(.24f,.22f,.24f):new Vector3(.24f,.19f,.19f),fur);
+            Sphere(head,"Muzzle",new Vector3(0,-.045f,dog?.113f:.085f),
+                dog?new Vector3(.158f,.106f,.154f):new Vector3(.112f,.065f,.052f),muzzle);
+            Sphere(head,"Nose",new Vector3(0,-.029f,dog?.179f:.112f),new Vector3(.041f,.030f,.029f),Ink);
             if (dog)
-                Sphere("Saddle",new Vector3(0,height+.085f,-.065f),new Vector3(width*.78f,.07f,length*.48f),dark);
+                Sphere(root,"Saddle",new Vector3(0,height+.084f,-.068f),new Vector3(width*.78f,.073f,length*.48f),dark);
             for(int side=-1;side<=1;side+=2)
             {
-                Sphere("Eye",new Vector3(side*width*.29f,height+.13f,length*.627f),new Vector3(.026f,.028f,.023f),Ink);
-                var ear = Sphere("Ear",new Vector3(side*width*.36f,height+(dog?.115f:.214f),length*.43f),
-                    dog?new Vector3(.066f,.15f,.08f):new Vector3(.072f,.116f,.056f),dark);
-                ear.transform.localRotation = Quaternion.Euler(0,0,side*(dog?22f:-19f));
-                if (!dog)
+                Sphere(head,"Eye",new Vector3(side*.067f,.026f,dog?.099f:.074f),new Vector3(.024f,.028f,.020f),Ink);
+                if (dog)
                 {
-                    var inner = Sphere("InnerEar",new Vector3(side*width*.36f,height+.217f,length*.48f),
-                        new Vector3(.042f,.076f,.026f),Color.Lerp(Rose,fur,.4f));
-                    inner.transform.localRotation = ear.transform.localRotation;
+                    var ear = Sphere(head,"FloppyEar",new Vector3(side*.108f,-.028f,-.021f),new Vector3(.079f,.174f,.102f),dark);
+                    ear.transform.localRotation = Quaternion.Euler(13,0,side*17f);
+                }
+                else
+                {
+                    var ear = Joint(head,"Ear",new Vector3(side*.074f,.059f,-.01f));
+                    ear.localRotation = Quaternion.Euler(-8,0,side*-15f);
+                    AddEar(ear,"Fur",Vector3.zero,new Vector3(.101f,.115f,.071f),fur);
+                    AddEar(ear,"InnerEar",new Vector3(0,.014f,.035f),new Vector3(.061f,.073f,.016f),Color.Lerp(Rose,fur,.28f));
                     for (int i=0;i<2;i++)
                     {
-                        var whisker = Prims.Box(root,"Whisker",new Vector3(side*.084f,height+.052f+i*.018f,length*.72f),
-                            new Vector3(.082f,.006f,.006f),Mats.Lit(muzzle));
-                        whisker.transform.localRotation = Quaternion.Euler(0,side*9,side*(i==0?-12:7));
+                        var whisker = Prims.Box(head,"Whisker",new Vector3(side*.083f,-.047f+i*.013f,.099f),
+                            new Vector3(.085f,.003f,.004f),Mats.Lit(dark));
+                        whisker.transform.localRotation = Quaternion.Euler(0,side*8,side*(i==0?-11:8));
                     }
                 }
             }
-            feet = new Transform[4];
-            for(int i=0;i<feet.Length;i++)
-                feet[i]=Sphere("Paw",new Vector3((i%2==0?-1:1)*width*.31f,height*.43f,(i<2?-1:1)*length*.28f),
-                    new Vector3(.075f,height*.92f,.083f),dark).transform;
-            tail = new GameObject("TailPivot").transform;
-            tail.SetParent(root,false);
-            tail.localPosition = new Vector3(0,height+.04f,-length*.46f);
-            var curl = Prims.Shape(PrimitiveType.Sphere,tail,"Tail",new Vector3(0,.06f,-.09f),
-                new Vector3(.055f,.065f,dog?.24f:.29f),Mats.Lit(dark));
-            curl.transform.localRotation = Quaternion.Euler(31,0,0);
+            legs = new Transform[4];
+            for(int i=0;i<legs.Length;i++)
+            {
+                float hip = height * .85f;
+                var leg = Joint(root,"PetHip",new Vector3((i%2==0?-1:1)*width*.30f,hip,(i<2?-1:1)*length*.31f));
+                legs[i] = leg;
+                Sphere(leg,"Leg",new Vector3(0,-hip*.46f,0),new Vector3(dog?.084f:.065f,hip*.98f,.076f),fur);
+                Sphere(leg,"Paw",new Vector3(0,-hip+.032f,.016f),new Vector3(dog?.083f:.065f,.063f,.103f),muzzle);
+            }
+            tail = Joint(root,"TailPivot",new Vector3(0,height+.025f,-length*.46f));
+            var curl = Sphere(tail,"Tail",new Vector3(0,dog?.058f:.115f,dog?-.090f:-.078f),
+                new Vector3(dog?.063f:.040f,dog?.065f:.045f,dog?.238f:.299f),dark);
+            curl.transform.localRotation = Quaternion.Euler(dog ? 31 : 55,0,0);
             return figure;
 
-            GameObject Sphere(string name, Vector3 position, Vector3 size, Color color)
-                => Prims.Shape(PrimitiveType.Sphere,root,name,position,size,Mats.Lit(color));
+            GameObject Sphere(Transform joint, string name, Vector3 position, Vector3 size, Color color)
+                => Prims.Shape(PrimitiveType.Sphere,joint,name,position,size,Mats.Lit(color));
+        }
+
+        private static Transform Joint(Transform parent, string name, Vector3 position)
+        {
+            var joint = new GameObject(name).transform;
+            joint.SetParent(parent,false);
+            joint.localPosition = position;
+            return joint;
+        }
+
+        private static void AddEar(Transform parent, string name, Vector3 position, Vector3 size, Color color)
+        {
+            var ear = Joint(parent, name, position);
+            ear.localScale = size;
+            ear.gameObject.AddComponent<MeshFilter>().sharedMesh = CatEarMesh();
+            ear.gameObject.AddComponent<MeshRenderer>().sharedMaterial = Mats.Lit(color);
         }
     }
 }

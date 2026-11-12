@@ -87,7 +87,11 @@ namespace PCShopSell.EditorTools
             _game.Ui.CloseAllWindows(); s.SetSmartphone(true); _game.Ui.OpenWholesaleApp(true); Frame(0);
             Check(ActiveInputs().Length == 0 && ActiveButtons().Any(b => b.name == "QuantityPlus_dailyBudget"), "自动补货政策也没有数字输入框");
             _game.Ui.CloseAllWindows(); Teleport(s, s.Home.Id); _game.Ui.OpenBedWindow(); Frame(0);
-            ClickGuideButton("+30分钟"); Check(ActiveButtons().Any(b => ButtonText(b) == "睡到选定时间"), "床提供起床时间加减选择与确认");
+            var modal = _game.Ui.Canvases.First(c => c.name == "UI_Modal");
+            var hour = modal.GetComponentsInChildren<Dropdown>().First(d => d.name == "ClockHour_起床");
+            hour.value = (s.Clock.MinuteOfDay / 60 + 1) % 24; Frame(0);
+            Check(ActiveButtons().Any(b => ButtonText(b) == "睡到这个时间" && b.interactable), "自选起床时间无需展开，选择后可确认");
+            Check(modal.GetComponentsInChildren<Text>().Any(t => t.name == "SleepDebt" && t.text.Contains($"{s.Player.SleepDebt:0.##} 小时")), "睡觉窗口显示当前欠觉");
             _game.Ui.CloseAllWindows();
         });
     }

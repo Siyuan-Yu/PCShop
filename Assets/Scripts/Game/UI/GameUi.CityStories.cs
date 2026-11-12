@@ -91,12 +91,7 @@ namespace PCShopSell.Game.UI
                     CityStoryPersonActions(body,"life_creator",w,"陆栀 · 私人相处");
                     if(story.Stage==1)Ui.Size(Ui.Button(body,"当面听一段个人经历",()=>OpenPersonDialogue("life_creator",parent:w,firstReply:S.HearCityPersonalStory("life_creator")),18,Ui.ButtonHot,S.CitySamePlace("life_creator")),-1,44);
                     if(story.Stage==2)BuildStoryActivityActions(body,story,w,"河岸相处");
-                    if(story.Stage==3)
-                    {
-                        Ui.Size(Ui.Button(body,"当面表达：继续朋友与合作",()=>{S.ChooseCityRomance(false);w.Rebuild();},18,Ui.ButtonHot,S.CitySamePlace("life_creator")),-1,44);
-                        Ui.Size(Ui.Button(body,"当面表达：认真发展感情…",()=>ConfirmAction("个人关系选择", "双方都是成年人。你希望与陆栀确认恋爱关系，商业合同与费用仍独立。", "确认表达",()=>{S.ChooseCityRomance(true);w.Rebuild();}),18,Ui.ButtonHot,S.CitySamePlace("life_creator")),-1,44);
-                    }
-                    if(story.Stage>=4)Para(body,S.CityPersonalFeedback("life_creator"),18,Ui.Good);
+                    if(story.Stage>=3)Para(body,S.CityPersonalFeedback("life_creator"),18,Ui.Good);
                 }
                 foreach(var referral in S.CityReferrals.Where(o=>o.ContractId==null))
                 {
@@ -127,7 +122,7 @@ namespace PCShopSell.Game.UI
                 if(activity.EndReason!=null)Para(content,activity.EndReason,16,Ui.Dim);
                 if(activity.Active)
                 {
-                    Ui.Size(Ui.Button(content,"实际前往赴约",()=>{CloseModalWindows();S.GoToCityActivity(activity.Id);},18,Ui.ButtonHot),-1,46);
+                    Ui.Size(Ui.Button(content,"实际前往赴约",()=>GoToScheduledCityActivity(activity.Id),18,Ui.ButtonHot),-1,46);
                     Ui.Size(Ui.Button(content,"取消/改约…",()=>ConfirmAction("取消日程", "尚未发生的费用不会扣除，已经发生的消费保留。下次仍可重新安排这一步。", "确认取消",()=>{S.CancelCityActivity(activity.Id);parent.Rebuild();}),17),-1,42);return;
                 }
             }

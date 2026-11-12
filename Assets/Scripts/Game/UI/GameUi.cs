@@ -19,6 +19,7 @@ namespace PCShopSell.Game.UI
         public RectTransform Content;
         public Text TitleText;
         public Text TimeStatusText;
+        internal string TimeStatusOverride;
         public Action<Window> Builder;
         public Action OnClosed;
         public bool Holds;
@@ -134,7 +135,7 @@ namespace PCShopSell.Game.UI
             foreach (var window in _windows.ToArray())
             {
                 window.Fitter?.Fit();
-                if(window.TimeStatusText!=null)window.TimeStatusText.text=S.Time.IsRunning&&!S.OpeningClockFrozen?"时间在推进":"时间已暂停";
+                RefreshWindowTimeStatus(window);
                 if (window.LiveConversation && Time.unscaledTime >= window.LiveRefreshAt)
                 {
                     window.LiveRefreshAt = Time.unscaledTime + 1;
@@ -351,8 +352,8 @@ namespace PCShopSell.Game.UI
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimateRemainingMinutes(S.Time.SecondsPerMinuteAt1x)} 分钟 · 按 WASD 随时接管";
             else if (S.NearbyCommunityBox>=0)
                 _hintText.text = "<color=#DDC18B>按 F 调查"+GameSession.CommunityBoxName(S.NearbyCommunityBox)+"，取回这一份图页</color>";
-            else if (S.NearbyPlace?.Kind == PlaceKind.Home)
-                _hintText.text = $"<color=#DDC18B>按 F 查看住户 · {S.PlaceTitle(S.NearbyPlace)}</color>";
+            else if (S.NearbyPlace is Place residence && residence.Kind == PlaceKind.Home)
+                _hintText.text = $"<color=#DDC18B>按 F {(S.CanSleepAt(residence) ? "回家" : "查看住户")} · {S.PlaceTitle(residence)}</color>";
             else if (S.NearbyPlace != null)
                 _hintText.text = S.ClosedReason(S.NearbyPlace) is string closed
                     ? $"<color=#D79780>{closed}</color>"
@@ -471,6 +472,7 @@ namespace PCShopSell.Game.UI
         }
 
         private bool HasStreetShopService(Place place) => IsCarryStore(place) || UsesCityVenuePanel(place)
+            || place.Business == GameSession.BankBusiness
             || RaceTracks.Get(place.Id) != null || place.Id == "motor_scooter_mod" || place.Id == "life_expo"
             || place.Id == GameSession.CommunityMcnId || place.Id == S.ParkPlaceId;
 
@@ -555,6 +557,7 @@ namespace PCShopSell.Game.UI
             int n = 0;
             _emoteBuf.Clear();
             if (_ctrl.InInterior) _emoteBuf.AddRange(_ctrl.Interior.Emotes);
+            AddPetHouseReminder();
             if (_ctrl.InHome && S.Pantry.CookedBowls > 0 && _ctrl.HomeRoom.CookerWorld is Vector3 cooker)
             {
                 float t = Time.unscaledTime;
@@ -797,12 +800,13 @@ namespace PCShopSell.Game.UI
 
         // ---------- 窗口 ----------
 
-        public Window OpenWindow(string title, float width, float height, Action<Window> builder, bool holds = true, bool closable = true, Action onClosed = null, bool scrollContent = true, bool allowDuringOpeningMeal = false, bool systemWindow = false)
+        public Window OpenWindow(string title, float width, float height, Action<Window> builder, bool holds = true, bool closable = true, Action onClosed = null, bool scrollContent = true, bool allowDuringOpeningMeal = false, bool systemWindow = false, bool showTitleBar = true)
         {
             bool system = systemWindow || _windows.Any(window => window.OpeningMealSystem && !window.Closed);
             if (OpeningMealRestricted && !allowDuringOpeningMeal && !system)
             {
                 title = "先做饭"; width = 700; height = 390; holds = true; closable = true; onClosed = null; scrollContent = true;
+                showTitleBar = true;
                 builder = BuildOpeningMealReminder;
             }
             var w = new Window { Builder = builder, Holds = holds, Owner = this, OnClosed = onClosed, Closable = closable };
@@ -817,30 +821,35 @@ namespace PCShopSell.Game.UI
             w.Fitter.Fit();
             prt.anchoredPosition = new Vector2(0, -10 * _windows.Count);
 
-            Image bar = Ui.Panel(prt, "TitleBar", Ui.PanelBg2);
-            bar.rectTransform.Anchor(0, 1, 1, 1, 0, -50, 0, 0);
-            w.TitleText = Ui.Label(bar.transform, title, 24);
-            w.TitleText.rectTransform.Anchor(0, 0, 1, 1, 24, 0, 112, 0);
-            w.TitleText.fontStyle = FontStyle.Bold;
-            w.TitleText.rectTransform.offsetMax=new Vector2(-220,w.TitleText.rectTransform.offsetMax.y);
-            w.TimeStatusText=Ui.Label(bar.transform,"",13,TextAnchor.MiddleRight,Ui.Dim);
-            w.TimeStatusText.rectTransform.Anchor(1,0,1,1,-216,0,112,0);
-            Ui.Panel(prt, "BrassRule", Ui.Accent).rectTransform.Anchor(0, 1, 1, 1, 20, -51, 20, 49);
-            if (closable)
+            const float titleBarHeight = 50;
+            if (showTitleBar)
             {
-                Button close = Ui.Button(bar.transform, MenuLocalization.Get("close"), w.Close, 18, Ui.Warn);
-                ((RectTransform)close.transform).Anchor(1, 0, 1, 1, -96, 8, 10, 8);
+                Image bar = Ui.Panel(prt, "TitleBar", Ui.PanelBg2);
+                bar.rectTransform.Anchor(0, 1, 1, 1, 0, -titleBarHeight, 0, 0);
+                w.TitleText = Ui.Label(bar.transform, title, 24);
+                w.TitleText.rectTransform.Anchor(0, 0, 1, 1, 24, 0, 112, 0);
+                w.TitleText.fontStyle = FontStyle.Bold;
+                w.TitleText.rectTransform.offsetMax = new Vector2(-220, w.TitleText.rectTransform.offsetMax.y);
+                w.TimeStatusText = Ui.Label(bar.transform, "", 13, TextAnchor.MiddleRight, Ui.Dim);
+                w.TimeStatusText.rectTransform.Anchor(1, 0, 1, 1, -216, 0, 112, 0);
+                Ui.Panel(prt, "BrassRule", Ui.Accent).rectTransform.Anchor(0, 1, 1, 1, 20, -51, 20, 49);
+                if (closable)
+                {
+                    Button close = Ui.Button(bar.transform, MenuLocalization.Get("close"), w.Close, 18, Ui.Warn);
+                    ((RectTransform)close.transform).Anchor(1, 0, 1, 1, -96, 8, 10, 8);
+                }
             }
 
             w.Root = dim.rectTransform;
+            float topInset = showTitleBar ? titleBarHeight : 0;
             if(scrollContent)
             {
                 w.Content = Ui.Scroll(prt);
-                ((RectTransform)w.Content.parent.parent).Anchor(0, 0, 1, 1, 0, 0, 0, 50);
+                ((RectTransform)w.Content.parent.parent).Anchor(0, 0, 1, 1, 0, 0, 0, topInset);
             }
             else
             {
-                w.Content = Ui.Rect(prt,"FixedContent").Anchor(0,0,1,1,0,0,0,50);
+                w.Content = Ui.Rect(prt,"FixedContent").Anchor(0,0,1,1,0,0,0,topInset);
                 Ui.VList(w.Content);
             }
             var contentLayout = w.Content.GetComponent<VerticalLayoutGroup>();
@@ -848,8 +857,15 @@ namespace PCShopSell.Game.UI
             _windows.Add(w);
             if (holds) S?.Time.Hold();
             w.Rebuild();
-            if(w.TimeStatusText!=null)w.TimeStatusText.text=S?.Time.IsRunning==true&&!S.OpeningClockFrozen?"时间在推进":"时间已暂停";
+            RefreshWindowTimeStatus(w);
             return w;
+        }
+
+        private void RefreshWindowTimeStatus(Window w)
+        {
+            if (w.TimeStatusText == null) return;
+            w.TimeStatusText.text = w.TimeStatusOverride
+                ?? (S?.Time.IsRunning == true && !S.OpeningClockFrozen ? "时间在推进" : "时间已暂停");
         }
 
         public void CloseWindow(Window w)

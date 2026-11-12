@@ -224,7 +224,7 @@ namespace PCShopSell.Game.UI
                 if(e!=null&&e.Journal.Length>0)HelpLink(body,"本届现场记录",string.Join("\n",e.Journal));
                 if(e?.Attending==true)Ui.Size(Ui.Button(body,"保存现场进度",()=>Toast(_ctrl.SaveGame()?"现场进度已保存，下次从当前事件继续。":"请先处理待选择事件。"),18),-1,40);
                 else if(S.BrandExpoExclusive)Ui.Size(Ui.Button(body,"返回正在进行的品牌",()=>{S.SelectExpoBrand(S.ActiveBrandExpo.Id);w.Rebuild();},18),-1,42);
-                else Ui.Size(Ui.Button(body,"离开展馆",()=>{w.Close();S.Leave();},18,Ui.Warn),-1,42);
+                else Ui.Size(Ui.Button(body,"离开展馆",()=>{w.Close();_ctrl.LeaveCurrentPlace();},18,Ui.Warn),-1,42);
             },holds:true,closable:false);
             _quarterlyExpoWindow.LiveConversation=true;
             _quarterlyExpoWindow.LiveKey=()=>S.Clock.Now.TotalMinutes+":"+S.ExpoAtVenue?.Id+":"+string.Join(",",S.ExpoAtVenue?.KolIds.Select(p=>S.CityPersonState(p)?.LocationPlaceId)??System.Array.Empty<string>());

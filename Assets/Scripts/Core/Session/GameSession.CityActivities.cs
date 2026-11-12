@@ -248,10 +248,12 @@ namespace PCShopSell.Core.Session
         }
         public bool BeginCityTravel(string placeId,string activityId=null,bool enter=true)
         {
+            if(IsGameOver)return false;
             if(Racing)return Fail("请先完成或退出当前比赛。");
             if(!City.HasPlace(placeId))return Fail("目的地不存在，请重新选择");
             if(CityActivityExclusive)return Fail("正在参加活动，请先明确提前离开");
             if(IsWorking)return Fail("正在打工，收工后才能出发");
+            if(CurrentPlace?.Id!=placeId && LeaveBlocker is string leaveBlocker)return Fail(leaveBlocker);
             CancelCityTravel();
             CityIntent=new CityTravelIntent {Id="travel_"+_nextCityIntent++,TargetPlaceId=placeId,ActivityId=activityId,EnterOnArrival=enter};
             if(activityId!=null){var a=_cityActivities.FirstOrDefault(x=>x.Id==activityId);if(a!=null)a.PlayerIntentId=CityIntent.Id;}
@@ -263,7 +265,7 @@ namespace PCShopSell.Core.Session
         {
             if(CityIntent==null||CityIntent.Id!=id||CityIntent.Cancelled||!City.HasPlace(CityIntent.TargetPlaceId))return false;
             var place=City.GetPlace(CityIntent.TargetPlaceId);
-            if(CurrentPlace==place){CityIntent=null;return true;}
+            if(CurrentPlace==place){CityIntent=null;Time.SetPaused(false);return true;}
             bool result=GoTo(place);
             if(!result) {CancelCityTravel();return false;}
             CompleteCityTravel();return true;
@@ -438,6 +440,14 @@ namespace PCShopSell.Core.Session
             }
             CompleteCityTravel();
         }
+        public static string CityActivityChoiceText(CityActivityDefinition definition, string key)
+        {
+            if (key == HoldHandsChoice) return "牵手";
+            if (key == PersonalTalkChoice) return "聊聊心事";
+            return int.TryParse(key, out int index) && index >= 0 && index < (definition?.Choices.Length ?? 0)
+                ? definition.Choices[index] : null;
+        }
+
         public bool ChooseCityActivity(string activityId,int choice)
         {
             var a=_cityActivities.FirstOrDefault(x=>x.Id==activityId&&x.State==CityActivityPhase.Running);
@@ -547,7 +557,7 @@ namespace PCShopSell.Core.Session
                         lines.Add("已互留联系方式，可在手机通讯录继续联系。");
                     lines.Add("");
                 }
-                var interactions=a.Choices.Select(key=>int.TryParse(key,out int index)&&index>=0&&index<(def?.Choices.Length??0)?def.Choices[index]:null).Where(text=>text!=null).ToArray();
+                var interactions=a.Choices.Select(key=>CityActivityChoiceText(def,key)).Where(text=>text!=null).ToArray();
                 if(interactions.Length>0)lines.Add((a.Participants.Length==0?"体验内容：":"一起做过：")+string.Join("、",interactions));
                 lines.Add(reason);
                 a.SettlementSummary=string.Join("\n",lines);

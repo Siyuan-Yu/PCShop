@@ -38,11 +38,11 @@ namespace PCShopSell.EditorTools
             Check(s.CityPersonState("life_creator").LocationPlaceId=="life_restaurant","同行人物实际到场");
             _game.Ui.CloseAllWindows();for(int f=0;f<8;f++)Frame(.05f);Shot("city_activity_02_at_restaurant",1280,720);
             Check(s.ChooseCityActivity(a.Id,0),"实际在场选择餐馆互动");
-            _game.Ui.OpenCityActivities();Shot("city_activity_03_running",1280,720);_game.Ui.CloseAllWindows();
+            s.SetSmartphone(true); _game.Ui.OpenSchedulePanel();Shot("city_activity_03_running",1280,720);_game.Ui.CloseAllWindows();
             while(a.Active&&frames++<23000){s.Player.Hunger=100;s.Player.Energy=100;Frame(.05f);}
             Check(a.State==CityActivityPhase.Completed,"饭局随世界时钟真实结束");
             Check(s.CurrentPlace?.Id=="life_restaurant","活动结束不把老板传回柜台");
-            _game.Ui.OpenCityActivities();Shot("city_activity_04_completed",1280,720);
+            _game.Ui.OpenSchedulePanel();Shot("city_activity_04_completed",1280,720);
             Log("city activity actual departure, travel, gathering and timed meal smoke completed");
         }
     }

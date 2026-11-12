@@ -21,6 +21,7 @@ namespace PCShopSell.Core.Session
         public long cityLastAutomaticMealMinute=-1;
         public CityActivity[] cityActivities;
         public CityStoryProgress[] cityStories;
+        public bool cityRomanceStateRecorded;
         public CityTravelIntent cityTravelIntent;
         public CitySavedTrip cityTrip;
         public long cityNextActivity,cityNextIntent;
@@ -51,6 +52,7 @@ namespace PCShopSell.Core.Session
             d.cityLifeVersion=3;d.cityLifeTest=IsCityLifeTest;d.cityPeople=_cityPeople.Values.Select(p=>p.Copy()).ToArray();
             d.cityExtraPeople=_cityExtraDefinitions.Values.ToArray();d.cityNextVisit=_nextCityVisit;
             d.cityActivities=_cityActivities.Select(a=>a.Copy()).ToArray();d.cityStories=_cityStories.Select(a=>a.Copy()).ToArray();
+            d.cityRomanceStateRecorded = true;
             d.cityTravelIntent=CityIntent==null?null:new CityTravelIntent {Id=CityIntent.Id,TargetPlaceId=CityIntent.TargetPlaceId,ActivityId=CityIntent.ActivityId,
                 EnterOnArrival=CityIntent.EnterOnArrival,Cancelled=CityIntent.Cancelled,NotifiedClosed=CityIntent.NotifiedClosed};
             d.cityNextActivity=_nextCityActivity;d.cityNextIntent=_nextCityIntent;d.cityTrip=Trip?.SaveCityTrip();
@@ -81,6 +83,22 @@ namespace PCShopSell.Core.Session
                 if(copy.Route!=null&&(!City.HasPlace(copy.Route.TargetPlaceId)||copy.Route.X==null||copy.Route.Y==null||copy.Route.X.Length<2||copy.Route.Y.Length!=copy.Route.X.Length))
                     copy.Route=null;
                 RefreshElectronicsMarketWorkplace(copy);
+                if (copy.PersonId == CityLifeCatalog.BankTellerId && copy.WorkPlaceId == null && BankPlace is Place bank)
+                {
+                    // Existing saves predate this resident's job at the bank.
+                    copy.WorkPlaceId = bank.Id;
+                    if (string.IsNullOrEmpty(copy.ActivityId) && string.IsNullOrEmpty(copy.VisitId)
+                        && AuthoredCityWorkAt(copy, Clock.Now.TotalMinutes))
+                    {
+                        var point = StandOf(bank);
+                        copy.LocationPlaceId = bank.Id;
+                        copy.Route = null;
+                        copy.Task = CityPersonTask.Working;
+                        copy.TaskLabel = "当班工作";
+                        copy.X = point.X;
+                        copy.Y = point.Y;
+                    }
+                }
                 _cityPeople.Add(copy.PersonId,copy);
             }
             InitializeCityPeople();

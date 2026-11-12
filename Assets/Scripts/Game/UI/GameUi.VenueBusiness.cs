@@ -58,7 +58,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(actions,"原有物品 / 搬运",()=>OpenVenueLegacyAssets(shop),17),-1,44,1);
                 Ui.Size(Ui.Button(actions,"退租 / 结束自营",()=>ConfirmCloseShop(shop),17,Ui.Warn),-1,44,1);
                 Ui.Size(Ui.Button(w.Content,"返回场地",w.Close,18),-1,42);
-                Ui.Size(Ui.Button(w.Content,"返回街上",()=>{CloseAllWindows();S.Leave();},18),-1,42);
+                Ui.Size(Ui.Button(w.Content,"返回街上",()=>{CloseAllWindows();_ctrl.LeaveCurrentPlace();},18),-1,42);
             });
         }
         private void OpenVenueLegacyAssets(OwnedShop shop)

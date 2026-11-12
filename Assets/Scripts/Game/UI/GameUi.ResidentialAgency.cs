@@ -94,7 +94,7 @@ namespace PCShopSell.Game.UI
             if (property != null && tenants.Length > 0)
                 Line(facts, "每周应收租金 " + Money.FromCents(property.WeeklyRentCents), 16, Ui.Good);
             Ui.Size(Ui.Button(overview, "住宅详情 ›", () => OpenResidentialAgencyDetails(p), 16), -1, 32);
-            BuildResidentialSettlement(AgencySettlementCard(detail), p, parent, tenants.Length > 0);
+            BuildResidentialSettlement(AgencyPropertyCard(detail, "AgencySettlement"), p, parent, tenants.Length > 0);
         }
 
         private void BuildResidentialSettlement(Transform settlement, Place p, Window parent, bool occupied)

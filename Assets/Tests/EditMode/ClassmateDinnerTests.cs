@@ -49,7 +49,11 @@ namespace PCShopSell.Tests
         {
             using(var s=Make())
             {
-                var a=Accept(s);Assert.True(s.GoToCityActivity(a.Id));
+                var a = Accept(s);
+                var venue = s.City.GetPlace(a.VenueId);
+                long departure = a.ScheduledStart - s.CityTravelMinutes(venue) - GameSession.CityArrivalWindowMinutes;
+                for (int i = 0; i < 60000 && s.Clock.Now.TotalMinutes < departure && a.Active; i++) Step(s);
+                Assert.True(s.GoToCityActivity(a.Id));
                 for(int i=0;i<60000&&a.Active&&!a.ServiceConfirmed;i++)
                 {
                     Step(s);

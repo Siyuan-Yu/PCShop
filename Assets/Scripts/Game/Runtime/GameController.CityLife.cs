@@ -22,6 +22,7 @@ namespace PCShopSell.Game
             if(Session.CurrentPlace?.Id==intent.TargetPlaceId){Session.ActivateCityTravel(intent.Id);return;}
             if(InRoom)
             {
+                Session.Time.SetPaused(false);
                 _cityExitIntent=intent.Id;
                 Interior?.CancelCityDoorWalk();ActiveResidence?.CancelBedWalk();
                 Ui.Toast("先走到门口，再沿城市路网前往；WASD可接管。 ");
@@ -42,7 +43,8 @@ namespace PCShopSell.Game
             if(InInterior)Interior.StepBackInside();
             if(Session.CurrentPlace==Session.Home)Session.PrepareCityClothingDeparture(Session.CityOutdoorTemperature(Session.Clock.Now.TotalMinutes));
             Session.Leave();
-            Session.ActivateCityTravel(intent);
+            if (Session.OpeningAgencyGuidePending) Session.CancelCityTravel();
+            else Session.ActivateCityTravel(intent);
         }
         public void StartCityLifePreset(string scenario)
         {

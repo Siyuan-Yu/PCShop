@@ -130,7 +130,7 @@ namespace PCShopSell.Tests
                 Assert.False(Dock().GetComponentsInChildren<Text>().Any(t=>t.text.Contains("其他待安排员工")));
                 var state=s.CityPersonState(s.PersonIdOf(cashier));string place=state.LocationPlaceId;long now=s.Clock.Now.TotalMinutes;
                 Card(cashier.Id).onClick.Invoke();Assert.True(ui.AnyModalOpen);Assert.True(s.Time.IsHeld);
-                Assert.True(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text=="随便聊聊"));
+                Assert.True(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text=="聊聊"));
                 string fromCard=DialogName();ui.CloseTopWindow();
                 ui.OpenPersonDialogue(s.PersonIdOf(cashier));Assert.AreEqual(fromCard,DialogName(),"与其他NPC复用完全相同的对话入口");
                 Assert.AreEqual(place,state.LocationPlaceId);Assert.AreEqual(now,s.Clock.Now.TotalMinutes);

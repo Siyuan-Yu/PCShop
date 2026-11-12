@@ -48,6 +48,9 @@ namespace PCShopSell.Tests
                 s.RefreshDistrictNarrative();Assert.AreEqual("expo.delivery",s.CurrentDistrictNode.Id);Assert.AreEqual(1,s.DistrictAccessTier);
                 Deliver(s,s.BrandBusiness.Orders.Single(o=>o.Source=="expo"));Assert.AreEqual("expo.review",s.CurrentDistrictNode.Id);Assert.AreEqual(1,s.DistrictAccessTier);
                 Assert.False(s.ActDistrictNode("expo.review"));Meet(s);Assert.AreEqual(2,s.DistrictAccessTier);Assert.IsNull(s.CurrentDistrictNode);
+                Assert.GreaterOrEqual(s.Relation("life_creator"), 20);
+                Assert.AreEqual(1, s.CityStory("romance").Stage);
+                Assert.IsNull(s.RomanceId);
             }
         }
         [Test] public void TenderMainlineRequiresTrialWinThreeRealPeriodsThenRecommendation()

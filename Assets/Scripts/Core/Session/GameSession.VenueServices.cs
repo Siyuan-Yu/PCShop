@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
@@ -76,14 +77,28 @@ namespace PCShopSell.Core.Session
             activity.RendezvousReady=true; activity.State=CityActivityPhase.Gathering;
             return true;
         }
-        public string CityActivityTravelBlocker(string id)
+        public string CityActivityEarlyDepartureHint(CityActivity activity)
+        {
+            long remaining = activity.ScheduledStart - Clock.Now.TotalMinutes;
+            if (remaining <= CityArrivalWindowMinutes || !City.HasPlace(activity.VenueId)) return null;
+            var venue = City.GetPlace(activity.VenueId);
+            int travel = CurrentPlace == venue ? 0 : CityTravelMinutes(venue);
+            if (travel >= int.MaxValue / 4) travel = 0;
+            long lead = (long)travel + CityArrivalWindowMinutes;
+            if (remaining <= lead) return null;
+            var appointment = new GameTimestamp(activity.ScheduledStart);
+            var departure = appointment.AddMinutes(-lead);
+            return $"还早呢！预约时间是 {appointment}。\n按当前路程，最早可在 {departure} 出发。";
+        }
+
+        public string CityActivityTravelBlocker(string id, bool checkDepartureTime = true)
         {
             var a = _cityActivities.FirstOrDefault(x => x.Id == id && x.Active);
             if (a == null) return "日程已经结束";
             if (IsGameOver || _sleeping || IsWorking) return "正在休息或工作，当前不能出发";
             if (CityActivityExclusive) return "正在参加活动，请先结束当前活动";
             if (Trip != null || CityIntent != null) return "正在前往目的地，请先完成或取消当前行程";
-            return LeaveBlocker;
+            return LeaveBlocker ?? (checkDepartureTime ? CityActivityEarlyDepartureHint(a) : null);
         }
         public string VenueServiceBlocker(string definitionId, int choice)
         {

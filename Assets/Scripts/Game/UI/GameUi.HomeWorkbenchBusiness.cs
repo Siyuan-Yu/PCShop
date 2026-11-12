@@ -42,7 +42,7 @@ namespace PCShopSell.Game.UI
             WbHeading(todo, "今日待办");
             BuildWorkbenchTodos(WbScroll(todo, "WorkbenchDecisionsList"), w);
             var links = Ui.Row(todo, 32, 8);
-            WbAction(links, "日程与邀约", OpenCityActivities, "WorkbenchCalendar");
+            WbAction(links, "日程与邀约", OpenSchedulePanel, "WorkbenchCalendar");
             WbAction(links, "手机消息", OpenChatPanel, "WorkbenchMessages"); WbFlex(links);
 
             var finance = WbColumn(row, "WorkbenchPersonalFinance", 1.1f);

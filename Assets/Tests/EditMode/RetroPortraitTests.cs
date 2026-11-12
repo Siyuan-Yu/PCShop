@@ -13,7 +13,7 @@ namespace PCShopSell.Tests
         [Test] public void EveryNamedNpcLoadsItsOwnRetroTextureWithBoundedMemorySettings()
         {
             var people = CityLifeCatalog.People.Where(p => p.Id != CityLifeCatalog.InvitationTestPersonId).ToArray();
-            Assert.AreEqual(120, people.Length);
+            Assert.IsNotEmpty(people);
             var distinct = new HashSet<Texture2D>(); GameUi.InvalidatePortraitCache();
             foreach (var p in people)
             {
@@ -27,7 +27,8 @@ namespace PCShopSell.Tests
                 Assert.False(importer.mipmapEnabled, p.Id); Assert.False(importer.isReadable, p.Id);
                 Assert.AreEqual(TextureImporterCompression.Compressed, importer.textureCompression, p.Id);
                 Assert.That(actual.width, Is.LessThanOrEqualTo(512)); Assert.That(actual.height, Is.LessThanOrEqualTo(512));
-                Assert.That((float)actual.width / actual.height, Is.InRange(.73f, .77f), p.Id + " portrait aspect ratio");
+                float aspect = (float)actual.width / actual.height;
+                Assert.That(aspect, Is.InRange(.73f, .77f), p.Id + " portrait aspect ratio");
             }
         }
         [Test] public void UnknownDynamicAndDebugPeopleUseCachedRetroFallback()

@@ -20,9 +20,10 @@ namespace PCShopSell.Game.Runtime
         private sealed class PetActor
         {
             public GameObject Figure;
-            public Transform Tail;
-            public Transform[] Feet;
+            public Transform Head, Tail;
+            public Transform[] Legs;
             public bool Dog;
+            public float HeadRestY, WalkPhase, WalkWeight;
         }
 
         private readonly Dictionary<long, PetActor> _petActors = new Dictionary<long, PetActor>();
@@ -35,7 +36,10 @@ namespace PCShopSell.Game.Runtime
         private float _petTime, _petActionTime, _petActionDuration;
         private string _petAction;
         private long _petActionId;
-        private Vector3 _petActionStart, _petActionTarget;
+        private Vector3 _petActionStart, _petActionMeeting, _petActionTarget, _petBallLaunch;
+        private bool _petBallReleased;
+        private bool _petReachLeft;
+        private FigureMotion _petOwnerMotion;
         private GameObject _heldPetToy, _petSelection, _toyOnStand, _petBeingDroppedOff;
         private long _dropOffId = -1;
         private int _petCareDecorVersion = -1;
@@ -47,6 +51,12 @@ namespace PCShopSell.Game.Runtime
         public Vector3 PetHouseWorld => _root.TransformPoint(new Vector3(_petArea.center.x,.5f,_petArea.center.y));
         public float PetCameraSize => Mathf.Clamp(Mathf.Max(_petArea.width*.55f,_petArea.height*.72f),1.85f,3.65f);
         public bool PetActionPlaying => _petActionTime < _petActionDuration;
+
+        public void SetPetReachSide(Vector3 towardsCamera)
+        {
+            Vector3 facing = FlatPetDirection(PetHouseWorld - OwnerWorld);
+            _petReachLeft = Vector3.Dot(towardsCamera, Vector3.Cross(Vector3.up, facing)) < 0;
+        }
 
         private float PetHouseDistance(Vector3 world)
         {
@@ -79,16 +89,18 @@ namespace PCShopSell.Game.Runtime
             UpdatePetCareProps(session,house,shop);
             _petTime += session.Time.IsRunning ? realDt : 0;
             _petActionTime = Mathf.Min(_petActionDuration,_petActionTime+realDt);
+            float idleDt = session.Time.IsRunning ? realDt : 0;
             for (int i = 0; i < stays.Count; i++)
             {
                 var stay = stays[i];
                 if (!_petActors.TryGetValue(stay.Id,out var actor))
                 {
-                    var figure = PetSceneModels.BuildAnimal(_root,stay.Dog,stay.Coat,out var tail,out var feet);
-                    actor = new PetActor { Figure = figure, Dog = stay.Dog, Tail = tail, Feet = feet };
+                    var figure = PetSceneModels.BuildAnimal(_root,stay.Dog,stay.Coat,out var head,out var tail,out var legs);
+                    figure.transform.localPosition = PetIdleTarget(i);
+                    actor = new PetActor { Figure = figure, Dog = stay.Dog, Head = head, HeadRestY = head.localPosition.y, Tail = tail, Legs = legs };
                     _petActors.Add(stay.Id,actor);
                 }
-                UpdatePetPose(stay.Id,actor,i,realDt);
+                UpdatePetPose(stay.Id,actor,i,realDt,idleDt);
             }
             _retiredPets.Clear();
             foreach (long id in _petActors.Keys)
@@ -101,7 +113,9 @@ namespace PCShopSell.Game.Runtime
             {
                 Kill.It(_petActors[id].Figure);
                 _petActors.Remove(id);
+                if (id == _petActionId) _petActionDuration = 0;
             }
+            UpdatePetOwnerPose(realDt);
             UpdateHeldToy();
             UpdatePetOwners(session,shop,stays,realDt);
         }
@@ -155,43 +169,105 @@ namespace PCShopSell.Game.Runtime
         }
 
         private Vector3 ClampToPetArea(Vector3 p) => new Vector3(
-            Mathf.Clamp(p.x,_petArea.xMin+.32f,_petArea.xMax-.32f),p.y,
-            Mathf.Clamp(p.z,_petArea.yMin+.34f,_petArea.yMax-.34f));
+            Mathf.Clamp(p.x,_petArea.xMin+.33f,_petArea.xMax-.33f),p.y,
+            Mathf.Clamp(p.z,_petArea.yMin+.40f,_petArea.yMax-.54f));
 
-        private void UpdatePetPose(long id, PetActor actor, int slot, float dt)
+        private static float PetEase(float t, float start, float end) =>
+            Mathf.SmoothStep(0, 1, Mathf.InverseLerp(start, end, t));
+
+        private static Vector3 FlatPetDirection(Vector3 direction)
+        {
+            direction.y = 0;
+            return direction.sqrMagnitude > .0001f ? direction.normalized : Vector3.forward;
+        }
+
+        private Vector3 PetIdleTarget(int slot)
+        {
+            int columns = _petArea.width < 3.4f ? 3 : 4;
+            float x = Mathf.Lerp(_petArea.xMin+.42f,_petArea.xMax-.42f,(slot%columns+.5f)/columns);
+            float z = Mathf.Lerp(_petArea.yMin+.55f,_petArea.yMax-.63f,(slot/columns+.5f)/3f);
+            float angle = slot * 2.4f + Mathf.Floor(_petTime * .53f + slot * .31f) * 2.4f;
+            return ClampToPetArea(new Vector3(x + Mathf.Cos(angle) * .19f, .052f, z + Mathf.Sin(angle) * .13f));
+        }
+
+        private void UpdatePetPose(long id, PetActor actor, int slot, float dt, float idleDt)
         {
             var figure = actor.Figure.transform;
-            int columns = _petArea.width < 3.4f ? 3 : 4;
-            float phase = _petTime*.82f + slot*1.94f;
-            float x = Mathf.Lerp(_petArea.xMin+.48f,_petArea.xMax-.48f,(slot%columns+.5f)/columns);
-            float z = Mathf.Lerp(_petArea.yMin+.44f,_petArea.yMax-.54f,(slot/columns+.5f)/3f);
-            Vector3 next = ClampToPetArea(new Vector3(x+Mathf.Sin(phase)*.22f,.05f,z+Mathf.Cos(phase*.79f)*.20f));
-            Vector3 direction = new Vector3(Mathf.Cos(phase),0,-Mathf.Sin(phase*.79f));
-            if (id == _petActionId && PetActionPlaying)
+            var previous = figure.localPosition;
+            bool acting = id == _petActionId && PetActionPlaying;
+            float t = acting ? _petActionTime / _petActionDuration : 0;
+            float paw = 0, headPitch = 0, headTilt = 0;
+            Vector3 idleTarget = PetIdleTarget(slot);
+            float moveDt = idleDt;
+            if (!acting && PetActionPlaying)
             {
-                float t = _petActionTime / _petActionDuration;
+                Vector3 away = idleTarget - _petActionMeeting;
+                if (away.sqrMagnitude < .68f * .68f)
+                {
+                    idleTarget = ClampToPetArea(_petActionMeeting + FlatPetDirection(away) * .72f);
+                    moveDt = dt;
+                }
+            }
+            Vector3 next = Vector3.MoveTowards(previous, idleTarget, moveDt * (actor.Dog ? .74f : .60f));
+            Vector3 direction = next - previous;
+            if (acting)
+            {
+                Vector3 owner = _owner.transform.localPosition;
                 if (_petAction == PetShopCatalog.Ball)
                 {
-                    float run = Mathf.Clamp01((t-.23f)/.34f);
-                    float back = Mathf.Clamp01((t-.60f)/.40f);
-                    next = Vector3.Lerp(Vector3.Lerp(_petActionStart,_petActionTarget,run),_petActionStart,back);
-                    direction = back > 0 ? _petActionStart-_petActionTarget : _petActionTarget-_petActionStart;
+                    Vector3 chase = FlatPetDirection(_petActionTarget - _petActionStart);
+                    Vector3 pickup = ClampToPetArea(_petActionTarget - chase * .36f);
+                    float returning = PetEase(t, .66f, .94f);
+                    next = Vector3.Lerp(Vector3.Lerp(_petActionStart, pickup, PetEase(t, .23f, .60f)), _petActionMeeting, returning);
+                    direction = t < .66f ? chase : FlatPetDirection(owner - next);
+                    headPitch = 32f * PetEase(t, .51f, .62f) * (1 - PetEase(t, .64f, .75f));
                 }
                 else
                 {
-                    next = Vector3.Lerp(_petActionStart,_petActionTarget,Mathf.Sin(Mathf.PI*t));
-                    next.y += Mathf.Sin(Mathf.PI*t)*(_petAction == PetShopCatalog.Wand ? .16f : .025f);
-                    direction = _petActionTarget-_petActionStart;
+                    next = Vector3.Lerp(_petActionStart, _petActionMeeting, PetEase(t, 0, .34f));
+                    direction = owner - next;
+                    if (_petAction == PetShopCatalog.Wand)
+                    {
+                        Vector3 sideways = Vector3.Cross(Vector3.up, FlatPetDirection(_petActionMeeting - owner));
+                        float track = PetEase(t, .26f, .40f) * (1 - PetEase(t, .87f, 1));
+                        next += sideways * (Mathf.Sin(t * 17f) * .13f * track);
+                        paw = Mathf.Sin(t * 26f) * track;
+                        next.y += Mathf.Abs(paw) * .043f;
+                        headPitch = -13f * track;
+                    }
+                    else
+                    {
+                        float touch = PetEase(t, .31f, .46f) * (1 - PetEase(t, .78f, 1));
+                        headPitch = -9f * touch;
+                        headTilt = Mathf.Sin(t * 16f) * 8f * touch;
+                    }
                 }
-                phase = t * 13f;
+                next = ClampToPetArea(next);
             }
             figure.localPosition = next;
             direction.y = 0;
             if (direction.sqrMagnitude > .001f)
-                figure.localRotation = Quaternion.Slerp(figure.localRotation,Quaternion.LookRotation(direction),dt*12);
-            actor.Tail.localRotation = Quaternion.Euler(0,Mathf.Sin(phase*(actor.Dog?5f:2.7f))*(actor.Dog?39f:19f),0);
-            for (int i = 0; i < actor.Feet.Length; i++)
-                actor.Feet[i].localRotation = Quaternion.Euler(Mathf.Sin(phase*4f+(i%3==0?0:Mathf.PI))*19f,0,0);
+                figure.localRotation = Quaternion.RotateTowards(figure.localRotation, Quaternion.LookRotation(direction), dt * (acting ? 650f : 350f));
+            float distance = Vector2.Distance(new Vector2(next.x, next.z), new Vector2(previous.x, previous.z));
+            actor.WalkPhase = Mathf.Repeat(actor.WalkPhase + distance * (actor.Dog ? 13f : 17f), Mathf.PI * 2);
+            float poseDt = acting ? dt : moveDt;
+            float walk = acting && _petAction == PetShopCatalog.Wand && t >= .34f ? 0
+                : Mathf.Clamp01(distance / Mathf.Max(.001f, poseDt * .45f));
+            actor.WalkWeight = Mathf.MoveTowards(actor.WalkWeight, walk, poseDt * 9);
+            float idle = _petTime + slot * .7f;
+            var headPosition = actor.Head.localPosition;
+            headPosition.y = actor.HeadRestY - (actor.Dog ? Mathf.Max(0, headPitch) * .002f : 0);
+            actor.Head.localPosition = headPosition;
+            actor.Head.localRotation = Quaternion.Euler(headPitch + Mathf.Sin(idle * 2.1f) * 2f, 0, headTilt);
+            float wagTime = acting ? _petActionTime : idle;
+            actor.Tail.localRotation = Quaternion.Euler(Mathf.Sin(idle * 2f) * 5f,
+                Mathf.Sin(wagTime * (actor.Dog ? (acting ? 18f : 7f) : 3f)) * (actor.Dog ? (acting ? 39f : 17f) : 12f), 0);
+            for (int i = 0; i < actor.Legs.Length; i++)
+            {
+                float stride = Mathf.Sin(actor.WalkPhase + (i == 0 || i == 3 ? 0 : Mathf.PI)) * 23f * actor.WalkWeight;
+                float swipe = i == 2 ? Mathf.Max(0, paw) : i == 3 ? Mathf.Max(0, -paw) : 0;
+                actor.Legs[i].localRotation = Quaternion.Euler(stride - swipe * 67f, 0, swipe * (i == 2 ? -9f : 9f));
+            }
         }
 
         private void UpdatePetOwners(GameSession session, OwnedShop shop, IReadOnlyList<PetStay> stays, float dt)
@@ -215,7 +291,7 @@ namespace PCShopSell.Game.Runtime
                 if (_dropOffId != offer.Id)
                 {
                     RemoveDropOffVisual();
-                    _petBeingDroppedOff = PetSceneModels.BuildAnimal(_root,offer.Dog,offer.Coat,out _,out _);
+                    _petBeingDroppedOff = PetSceneModels.BuildAnimal(_root,offer.Dog,offer.Coat,out _,out _,out _);
                     _dropOffId = offer.Id;
                 }
                 var owner = _petOwners[offer.OwnerId].transform;
@@ -310,29 +386,108 @@ namespace PCShopSell.Game.Runtime
             UpdateHeldToy();
         }
 
-        private Vector3 PetHand => _root.InverseTransformPoint(OwnerWorld)+new Vector3(.20f,.75f,.16f);
+        private FigureMotion PetOwnerMotion => _petOwnerMotion ??= _owner.GetComponent<FigureMotion>();
+
+        private void UpdatePetOwnerPose(float dt)
+        {
+            if (!PetActionPlaying || !_petActors.TryGetValue(_petActionId, out var actor))
+            {
+                if (_heldPetToy != null)
+                {
+                    var tr = _owner.transform;
+                    PetOwnerMotion.SetReachPose(tr.TransformPoint(new Vector3(_petReachLeft ? -.24f : .24f, .82f, .36f)),
+                        .88f, 0, _petReachLeft);
+                }
+                else _petOwnerMotion?.ClearReachPose();
+                return;
+            }
+
+            float t = _petActionTime / _petActionDuration;
+            Transform owner = _owner.transform;
+            Vector3 target = _petActionMeeting - owner.localPosition;
+            target.y = 0;
+            if (t < .25f && target.magnitude > .72f)
+                MoveOwner(_root.TransformDirection(target), Mathf.Min(dt, (target.magnitude - .72f) / OwnerWalkSpeed));
+
+            Vector3 look = _petAction == PetShopCatalog.Ball && t < .64f ? _petActionTarget : _petActionMeeting;
+            Vector3 forward = FlatPetDirection(look - owner.localPosition);
+            float stanceAngle = _petAction == PetShopCatalog.Ball ? 0 : _petReachLeft ? 20 : -20;
+            Vector3 stance = Quaternion.AngleAxis(stanceAngle, Vector3.up) * forward;
+            owner.localRotation = Quaternion.RotateTowards(owner.localRotation, Quaternion.LookRotation(stance), dt * 620f);
+            Vector3 right = Vector3.Cross(Vector3.up, forward);
+            Vector3 handSide = _petReachLeft ? -right : right;
+            Vector3 handTarget = owner.localPosition + handSide * .22f + forward * .36f + Vector3.up * .84f;
+            float crouch = 0, weight = .9f;
+            switch (_petAction)
+            {
+                case PetShopCatalog.Ball:
+                    float throwSwing = PetEase(t, .10f, .25f);
+                    var release = owner.localPosition + forward * Mathf.Lerp(-.27f, .55f, throwSwing) + handSide * .28f
+                        + Vector3.up * Mathf.Lerp(1.13f, .94f, throwSwing);
+                    handTarget = Vector3.Lerp(handTarget, release, PetEase(t, 0, .10f) * (1 - PetEase(t, .29f, .49f)));
+                    float receive = PetEase(t, .77f, .90f) * (1 - PetEase(t, .96f, 1));
+                    handTarget = Vector3.Lerp(handTarget, _root.InverseTransformPoint(actor.Head.TransformPoint(new Vector3(0,-.055f,.17f))), receive);
+                    crouch = .82f * receive;
+                    break;
+                case PetShopCatalog.Wand:
+                    float tease = PetEase(t, .16f, .35f) * (1 - PetEase(t, .84f, 1));
+                    Vector3 wandHand = _petActionMeeting - forward * .40f + right * (Mathf.Sin(t * 17f) * .24f)
+                        + Vector3.up * (.52f + Mathf.Sin(t * 26f) * .045f);
+                    handTarget = Vector3.Lerp(handTarget, wandHand, tease);
+                    crouch = .76f * tease;
+                    break;
+                default:
+                    float touch = PetEase(t, .11f, .37f) * (1 - PetEase(t, .79f, 1));
+                    float stroke = Mathf.Sin(PetEase(t, .38f, .79f) * Mathf.PI * 4);
+                    handTarget = _root.InverseTransformPoint(actor.Head.TransformPoint(new Vector3(
+                        _petReachLeft ? .025f : -.025f, .12f + .014f * Mathf.Abs(stroke), -.015f + .065f * stroke)));
+                    weight = touch;
+                    crouch = 1;
+                    break;
+            }
+            if (weight > 0) PetOwnerMotion.SetReachPose(_root.TransformPoint(handTarget), weight, crouch, _petReachLeft);
+            else PetOwnerMotion.ClearReachPose();
+        }
 
         private void UpdateHeldToy()
         {
             if (_heldPetToy == null) return;
-            var hand = PetHand;
+            var handTransform = PetOwnerMotion.ReachingHand;
+            Vector3 hand = _root.InverseTransformPoint(handTransform.position);
+            Vector3 forward = _owner.transform.localRotation * Vector3.forward;
+            Vector3 right = Vector3.Cross(Vector3.up, forward);
+            if (_heldPetToy.name == "SoftBall") hand += forward * .07f;
             var item = _heldPetToy.transform;
-            item.localRotation = Quaternion.identity;
             item.localPosition = hand;
+            item.localRotation = Quaternion.LookRotation(forward + Vector3.down * .15f);
             if (!PetActionPlaying) return;
             float t = _petActionTime / _petActionDuration;
             if (_petAction == PetShopCatalog.Ball)
             {
-                float toss = Mathf.Clamp01(t/.29f);
-                var landing = _petActionTarget + Vector3.up*.12f;
-                item.localPosition = t < .60f ? Vector3.Lerp(hand,landing,toss)+Vector3.up*Mathf.Sin(Mathf.PI*toss)*.58f
-                    : Vector3.Lerp(landing,hand,Mathf.Clamp01((t-.60f)/.4f));
+                if (t < .21f) return;
+                if (!_petBallReleased)
+                {
+                    _petBallReleased = true;
+                    _petBallLaunch = hand;
+                }
+                var landing = _petActionTarget + Vector3.up * .07f;
+                float toss = Mathf.InverseLerp(.21f, .43f, t);
+                if (t < .59f)
+                {
+                    item.localPosition = Vector3.Lerp(_petBallLaunch, landing, toss) + Vector3.up * (Mathf.Sin(Mathf.PI * toss) * .37f);
+                    return;
+                }
+                if (!_petActors.TryGetValue(_petActionId, out var dog)) return;
+                Vector3 mouth = _root.InverseTransformPoint(dog.Head.TransformPoint(new Vector3(0, -.055f, .17f)));
+                item.localPosition = Vector3.Lerp(Vector3.Lerp(landing, mouth, PetEase(t, .59f, .67f)), hand, PetEase(t, .89f, .99f));
             }
             else if (_petAction == PetShopCatalog.Wand)
             {
-                var feather = Vector3.Lerp(hand,_petActionTarget+Vector3.up*.42f,.65f);
-                item.localPosition = feather+new Vector3(Mathf.Sin(t*21)*.18f,Mathf.Sin(t*16)*.10f,0);
-                item.localRotation = Quaternion.Euler(12,Mathf.Sin(t*18)*38,-18);
+                forward = FlatPetDirection(_petActionMeeting - _owner.transform.localPosition);
+                right = Vector3.Cross(Vector3.up, forward);
+                float tease = PetEase(t, .13f, .32f) * (1 - PetEase(t, .86f, 1));
+                item.localRotation = Quaternion.LookRotation(forward + right * (Mathf.Sin(t * 17f) * .55f * tease)
+                    + Vector3.down * (.15f + .2f * tease));
             }
         }
 
@@ -342,18 +497,25 @@ namespace PCShopSell.Game.Runtime
             _petActionId = id;
             _petAction = toy;
             _petActionTime = 0;
-            _petActionDuration = toy == PetShopCatalog.Ball ? 1.65f : toy == PetShopCatalog.Wand ? .95f : .65f;
+            _petActionDuration = toy == PetShopCatalog.Ball ? 2.7f : toy == PetShopCatalog.Wand ? 2.25f : 1.6f;
+            _petBallReleased = false;
             _petActionStart = actor.Figure.transform.localPosition;
-            var hand = ClampToPetArea(PetHand);
-            var middle = new Vector3(_petArea.center.x,.05f,_petArea.center.y);
-            _petActionTarget = toy == PetShopCatalog.Ball
-                ? ClampToPetArea(Vector3.Lerp(_petActionStart,middle,.65f)+new Vector3(_petActionStart.x > middle.x ? -.72f : .72f,0,.23f))
-                : Vector3.Lerp(_petActionStart,new Vector3(hand.x,.05f,hand.z),toy == null ? .34f : .66f);
+            var owner = _owner.transform.localPosition;
+            owner.y = .052f;
+            _petActionMeeting = ClampToPetArea(owner);
+            if ((_petActionMeeting - owner).sqrMagnitude < .12f)
+                _petActionMeeting = ClampToPetArea(owner + FlatPetDirection(_petActionStart - owner) * .64f);
+            var middle = new Vector3(_petArea.center.x,.052f,_petArea.center.y);
+            Vector3 inward = FlatPetDirection(middle - owner);
+            Vector3 nearSide = Vector3.Cross(Vector3.up, inward) * (_petReachLeft ? -1 : 1);
+            _petActionMeeting = ClampToPetArea(_petActionMeeting + nearSide * .24f);
+            _petActionTarget = ClampToPetArea(middle + inward * .64f + Vector3.Cross(Vector3.up, inward) * .23f);
         }
 
         public void EndPetInteraction()
         {
             _petActionDuration = 0;
+            _petOwnerMotion?.ClearReachPose();
             HoldPetToy(null);
             MarkPet(-1);
         }

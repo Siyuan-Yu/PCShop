@@ -79,13 +79,17 @@ namespace PCShopSell.Game.UI
             Image panel = Ui.Panel(_dockCanvas.transform, "ShopDock", Ui.PanelBg);
             _dock = panel.rectTransform.Anchor(1, 0, 1, 1, -ShopDockWidth, 70, 10, 120);
 
-            _dockTitle = Ui.Label(_dock, "", 23);
+            var titleRow = Ui.Row(_dock, 40, 10).Anchor(0, 1, 1, 1, 16, -49, 120, 6);
+            titleRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+            _dockTitle = Ui.Size(Ui.Label(titleRow, "", 23), -1, 40);
             _dockTitle.fontStyle = FontStyle.Bold;
             _dockTitle.resizeTextForBestFit = true;
             _dockTitle.resizeTextMinSize = 16;
             _dockTitle.resizeTextMaxSize = 23;
             _dockTitle.verticalOverflow = VerticalWrapMode.Truncate;
-            _dockTitle.rectTransform.Anchor(0, 1, 1, 1, 16, -49, 120, 6);
+            var rename = Ui.Size(Ui.Button(titleRow, "改名", () => OpenShopRename(S.CurrentShop), 16), 76, 34);
+            rename.name = "RenameShop";
+            rename.GetComponent<LayoutElement>().minWidth = 76;
             _dockStatus = Ui.Label(_dock, "", 16, TextAnchor.MiddleRight);
             _dockStatus.rectTransform.Anchor(1, 1, 1, 1, -110, -49, 16, 6);
 
@@ -351,25 +355,21 @@ namespace PCShopSell.Game.UI
         private void BuildCounter()
         {
             var ownedShop = S.CurrentShop;
-            var identity = Ui.Row(C, 38, 6);
-            Ui.Size(Ui.Label(identity, S.ShopTitle(ownedShop), 19, TextAnchor.MiddleLeft, Ui.Accent), -1, 38, 1);
-            Ui.Size(Ui.Button(identity, "改名", () => OpenShopRename(ownedShop), 16), 76, 38).name = "RenameShop";
+            bool specialBusiness = S.IsSpecialBusiness(ownedShop);
+            var management = Ui.Row(C, 38, 6);
+            Ui.Size(Ui.Button(management, RetailShopTypes.Name(ownedShop.RetailKind) + " ▾", OpenRetailTypeChooser, 17), -1, 38, 1)
+                .name = "ShopMainCategory";
+            Ui.Size(Ui.Button(management, ownedShop.OwnsProperty ? "结束自营" : "退租店铺",
+                () => ConfirmCloseShop(ownedShop), 16, specialBusiness ? Ui.Warn : Ui.ButtonBg), 110, 38)
+                .name = "CloseShopCounter";
             BuildCounterTotals(S.PlayerShop);
             BuildShopStanding(S.PlayerShop);
             BuildCompetitionEntry(C);
-            if(S.IsSpecialBusiness(S.CurrentShop)){BuildSpecialCounter();return;}
+            if (specialBusiness) { BuildSpecialCounter(); return; }
             BuildIndustryBrief(C);
             ShopSimulation shop = S.PlayerShop;
             bool fitBanner = !S.ShopFitted || S.IsRenovating;
-            var management=Ui.Row(C,42,6);
-            Ui.Size(Ui.Button(management,RetailShopTypes.Name(S.RetailKind)+" ▾",OpenRetailTypeChooser,17),-1,42,1).name="ShopMainCategory";
-            var closeShop=Ui.Size(Ui.Button(management,S.CurrentShop.OwnsProperty?"结束自营":"退租店铺",()=>ConfirmCloseShop(S.CurrentShop),16),110,42);
-            closeShop.name="CloseShopCounter";
-            if (S.IsPetShop(S.CurrentShop))
-            {
-                Ui.Size(Ui.Button(C,"代养订单",OpenPetOrders,17),-1,38);
-                if (S.PetCapacity(ownedShop) == 0) Para(C, "宠物代养需摆放宠物屋", 15, Ui.Dim);
-            }
+            if (S.IsPetShop(ownedShop) && S.PetCapacity(ownedShop) == 0) Para(C, "宠物代养需摆放宠物屋", 15, Ui.Dim);
             ShopHoursRow(shop);
             if(S.Salesperson!=null)
                 PersonSummary(C, S.PersonIdOf(S.Salesperson), S.Salesperson.Name + " · 销售员",

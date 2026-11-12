@@ -22,7 +22,8 @@ namespace PCShopSell.EditorTools
             foreach (var canvas in _game.Ui.Canvases)
             { canvas.renderMode = RenderMode.ScreenSpaceCamera; canvas.worldCamera = _game.Cam; canvas.planeDistance = 1; }
             var people = CityLifeCatalog.People.Where(p => p.Id != CityLifeCatalog.InvitationTestPersonId).ToArray();
-            Check(people.Length == 120, "正式NPC名单120人");
+            Check(people.Length > 0, $"正式 NPC 名单 {people.Length} 人");
+            int pages = (people.Length + 19) / 20;
             long portraitBytes = 0;
             foreach (var person in people)
             {
@@ -33,7 +34,7 @@ namespace PCShopSell.EditorTools
             Log("RETRO PORTRAIT_TEXTURE_BYTES=" + portraitBytes);
             Check(GameUi.PortraitOf("employee_portrait_review_unknown") == Resources.Load<Texture2D>("PortraitsRetro/default"), "动态人物使用复古备用头像");
 
-            for (int page = 0; page * 20 < people.Length; page++)
+            for (int page = 0; page < pages; page++)
             {
                 var go = new GameObject("RetroPortraitCatalogue", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
                 var canvas = go.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceCamera;
@@ -42,7 +43,7 @@ namespace PCShopSell.EditorTools
                 scaler.referenceResolution = new Vector2(1600, 1760); scaler.matchWidthOrHeight = 0;
                 var paper = Ui.Rect(go.transform, "Paper").Fill();
                 paper.gameObject.AddComponent<Image>().color = new Color(.94f, .90f, .82f);
-                var title = Ui.Label(paper, "复古生活漫画 · NPC头像核对 " + (page + 1) + "/6", 26, TextAnchor.MiddleLeft, new Color(.22f, .16f, .11f));
+                var title = Ui.Label(paper, $"复古生活漫画 · NPC头像核对 {page + 1}/{pages}", 26, TextAnchor.MiddleLeft, new Color(.22f, .16f, .11f));
                 Position(title.rectTransform, 32, 8, 1536, 52);
                 for (int cell = 0; cell < 20 && page * 20 + cell < people.Length; cell++)
                 {

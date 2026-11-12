@@ -19,6 +19,46 @@ namespace PCShopSell.Game.UI
         private readonly Dictionary<PetCareAction,(Text status, Button button)> _sharedPetCare = new();
         private float _nextPetFocusRefresh;
         private static readonly Color PetUnattended = Ui.Warn;
+        private readonly List<string> _petCareReminders = new List<string>(5);
+        private readonly List<string> _missingPetSupplies = new List<string>(3);
+
+        private void AddPetHouseReminder()
+        {
+            if (!_ctrl.InInterior || _ctrl.PetFocusActive || _ctrl.Placing || AnyModalOpen || !_ctrl.Interior.PetHousePresent)
+                return;
+            var shop = S.CurrentShop;
+            if (!S.IsPetShop(shop)) return;
+            var pets = S.PetGuests(shop);
+            if (pets.Count == 0) return;
+
+            _petCareReminders.Clear();
+            _missingPetSupplies.Clear();
+            foreach (var action in GameSession.PetCareActions)
+            {
+                if (!S.HasPetsForCare(shop, action) || S.PetCareDoneToday(shop, action)) continue;
+                if (action == PetCareAction.Water || S.PetCareStock(shop, action) > 0)
+                    _petCareReminders.Add(GameSession.PetCareName(action));
+                else
+                    _missingPetSupplies.Add(action == PetCareAction.Litter ? "猫砂" : action == PetCareAction.CatFood ? "猫粮" : "狗粮");
+            }
+
+            int today = S.Clock.Today.TotalDays;
+            int waitingForPlay = pets.Count(pet => pet.LastPlayDay != today);
+            if (waitingForPlay > 0) _petCareReminders.Add($"陪玩 {waitingForPlay} 只");
+            if (_petCareReminders.Count == 0 && _missingPetSupplies.Count == 0) return;
+
+            string text = _petCareReminders.Count == 0 ? "" : "<b>待照料</b>　" + string.Join(" · ", _petCareReminders) + "\n";
+            if (_missingPetSupplies.Count > 0)
+                text += "<color=#A44824><b>缺货</b>　" + string.Join(" · ", _missingPetSupplies) + "</color>\n";
+            _emoteBuf.Add(new ShopInteriorView.EmoteInfo
+            {
+                Pos = _ctrl.Interior.PetHouseWorld + Vector3.up * 1.6f,
+                Text = text + "<size=14>靠近宠物屋按 F</size>",
+                Color = new Color32(62, 44, 32, 255),
+                Size = 17,
+                Bubble = true,
+            });
+        }
 
         public void OpenPetOrders()
         {

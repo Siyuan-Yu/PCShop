@@ -95,6 +95,28 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void ExistingResidentWorksAtBankInNewAndOlderSaves()
+        {
+            using var s = Make(false);
+            GoToBank(s);
+            string id = CityLifeCatalog.BankTellerId;
+            Assert.AreEqual("张淑琴", s.CityPerson(id).Name);
+            Assert.AreEqual(GameSession.BankPlaceId, s.CityPersonState(id).WorkPlaceId);
+            Assert.True(s.CitySamePlace(id));
+            s.Meet(id, 22);
+
+            var save = s.CreateSave();
+            var oldState = save.cityPeople.Single(p => p.PersonId == id);
+            oldState.WorkPlaceId = null;
+            oldState.LocationPlaceId = oldState.HomePlaceId;
+            oldState.Task = CityPersonTask.Home;
+            using var loaded = GameSession.Load(s.City, save);
+            Assert.True(loaded.CitySamePlace(id));
+            Assert.AreEqual("银行柜员", loaded.CityPersonRole(id));
+            Assert.AreEqual(22, loaded.Relation(id));
+        }
+
+        [Test]
         public void BankLoan_ClosedOutsideHours()
         {
             using var s = Make(false);

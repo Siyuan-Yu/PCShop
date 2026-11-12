@@ -1,44 +1,44 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using PCShopSell.Core.Session;
 
 namespace PCShopSell.Core.Home
 {
     /// <summary>
-    /// 家具按「哪一种店会用到它」归类。家具城与进货员界面都用这份归类做筛选，
-    /// 以后新增店型或专用设施只要改这里，界面自动跟上。
+    /// 家具城与进货员按各店型的开店设施及专用设备筛选。
     /// </summary>
     public static class FurnitureShops
     {
         /// <summary>玩家真能开的每一种店。花店、生鲜店、食品店尚未开放，故不计入。</summary>
         public static readonly string[] AllKinds = RetailShopTypes.All;
+        private static readonly IReadOnlyDictionary<string, string[]> OpeningRequirements =
+            AllKinds.ToDictionary(kind => kind, GameSession.OpeningFurniture);
 
-        /// <summary>只给某几种店用的专用设施；返回空数组表示这是通用设施。</summary>
-        public static string[] Dedicated(FurnitureDef item)
+        /// <summary>开店基础款排在前面，之后是可替代的规格和专用设备。无关家具返回 -1。</summary>
+        public static int ShopOrder(string kind, FurnitureDef item)
         {
-            if (item == null) return Array.Empty<string>();
-            if (item.Id == "restaurant_stove" || item.Id == "restaurant_table") return new[] { "restaurant" };
-            if (item.Id == "used_buydesk" || item.Id == "used_display") return new[] { "secondhand" };
-            if (PetShopCatalog.HouseCapacity(item.Id) > 0 || PetShopCatalog.IsToyFixture(item.Id))
-                return new[] { PetShopCatalog.ShopKind };
-            if (item.Id == FurnitureCatalog.ShopBench || item.Id == FurnitureCatalog.ShopDisplay)
-                return new[] { "computer" };
-            return Array.Empty<string>();
+            if (item == null || kind == null || !OpeningRequirements.TryGetValue(kind, out var required)) return -1;
+            int exact = Array.IndexOf(required, item.Id);
+            if (exact >= 0) return exact;
+            int substitute = Array.FindIndex(required, id => GameSession.MatchesOpeningFurniture(id, item));
+            if (substitute >= 0) return required.Length + substitute;
+
+            bool useful = kind switch
+            {
+                PetShopCatalog.ShopKind => PetShopCatalog.IsToyFixture(item.Id),
+                "computer" => item.Id == FurnitureCatalog.ShopBench || item.Id == FurnitureCatalog.ShopDisplay,
+                "models" => item.Id == FurnitureCatalog.ShopDisplay,
+                "clothing" => item.Id == FurnitureCatalog.ShopDisplay || item.Id == FurnitureCatalog.FittingMirror,
+                _ => false,
+            };
+            return useful ? required.Length * 2 : -1;
         }
 
-        /// <summary>
-        /// 这件家具的「适用店铺」取值。货架、收银台、冰箱、装饰这类没有专属归属的设施，
-        /// 归到每一种店名下，这样按任意店型筛选都不会把它们漏掉。
-        /// </summary>
-        public static string[] For(FurnitureDef item)
-        {
-            var dedicated = Dedicated(item);
-            return (dedicated.Length > 0 ? dedicated : AllKinds)
-                .Select(RetailShopTypes.Name).ToArray();
-        }
+        public static string[] For(FurnitureDef item) =>
+            AllKinds.Where(kind => ShopOrder(kind, item) >= 0).Select(RetailShopTypes.Name).ToArray();
 
-        /// <summary>货架、收银台、冰箱、装饰这类每家店都用得上的设施。</summary>
-        public static bool IsUniversal(FurnitureDef item) => Dedicated(item).Length == 0;
+        public static bool IsUniversal(FurnitureDef item) => AllKinds.All(kind => ShopOrder(kind, item) >= 0);
 
         /// <summary>家具城第一层的店型标签（不含「全部」，由界面自己加）。</summary>
         public static IReadOnlyList<string> Tabs() =>

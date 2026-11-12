@@ -46,7 +46,7 @@ namespace PCShopSell.EditorTools
             var activity = s.ScheduleCityActivity("dinner", new[] { "life_creator" }, start);
             Check(activity != null, "通过正常预约服务创建真实饭局日程");
             Check(s.Ledger.Balance == cash && s.Relation("life_creator") == relation, "接受未来饭局不提前扣费或加关系");
-            _game.Ui.OpenCityActivities(); Shot("citylife_06_schedule", 1280, 720);
+            _game.Ui.OpenSchedulePanel(); Shot("citylife_06_schedule", 1280, 720);
             _game.Ui.CloseAllWindows(); _game.Ui.OpenCityModelCatalog(); Shot("citylife_07_models", 1280, 720);
             Check(s.Ledger.Balance == cash, "查看原创模型目录不产生商品和收益");
             _game.Ui.CloseAllWindows();

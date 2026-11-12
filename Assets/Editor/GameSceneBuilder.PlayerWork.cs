@@ -68,7 +68,7 @@ namespace PCShopSell.EditorTools
             s.AdvanceClock(s.WorkMinutesLeft); Frame(0);
             Check(!s.IsWorking && s.WorkContract.EarnedYuan == 175 && s.WorkContract.HealthCost == 11 && s.WorkContract.MoodCost == 12, "夜班次日6点收工，工资和消耗使用本店参数");
             Teleport(s, s.Home.Id); _game.Ui.OpenBedWindow(); Frame(0);
-            ClickGuideButton("睡满 8 小时");
+            ClickGuideButton("睡 8 小时");
             Check(s.Clock.MinuteOfDay == 14 * 60, "夜班下班后能白天补觉，不被原白天不能睡规则卡住");
             _game.Ui.CloseAllWindows();
         }

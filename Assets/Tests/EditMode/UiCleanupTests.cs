@@ -353,15 +353,42 @@ namespace PCShopSell.Tests
         }
 
         [TestCase(false)] [TestCase(true)]
-        public void CalendarAndActivityLinksShareOneWindowAndBothRemainReachable(bool smartphone)
+        public void ScheduleUsesMonthGridWithSmartphoneAndNotebookWithoutIt(bool smartphone)
         {
             using (var r = new Rig())
             {
                 r.S.SetSmartphone(smartphone);
+                if (smartphone)
+                {
+                    Assert.True(r.S.OrderOnline(ParcelKind.Rice, "rice"));
+                    Assert.True(r.S.OrderOnline(ParcelKind.Rice, "rice"));
+                }
                 r.Ui.OpenSchedulePanel(); var window = r.Workspace("calendar");
-                Assert.NotNull(r.Button("CalendarActivities")); r.Button("CalendarActivities").onClick.Invoke();
-                Assert.AreSame(window, r.Workspace("calendar")); r.Button("CalendarPersonal").onClick.Invoke();
-                Assert.AreSame(window, r.Workspace("calendar")); StringAssert.Contains(r.S.HasCalendar ? "我的安排 · 到期前提醒" : "笔记本", r.Text);
+                Assert.False(window.GetComponentsInChildren<Button>().Any(b => b.GetComponentInChildren<Text>().text == "城市活动"));
+                Assert.NotNull(r.Button("CalendarWeather"));
+                if (smartphone)
+                {
+                    int today = r.S.Clock.Today.TotalDays;
+                    int due = r.S.Parcels[0].DueDay;
+                    Assert.AreEqual(GameDate.DaysPerMonth, window.GetComponentsInChildren<Button>().Count(b => b.name.StartsWith("CalendarDay_")));
+                    var captions = r.Button("CalendarDay_" + due).GetComponentsInChildren<Text>().Select(t => t.text).ToArray();
+                    CollectionAssert.Contains(captions, "快递到货");
+                    CollectionAssert.Contains(captions, "+1");
+                    r.Button("CalendarDay_" + due).onClick.Invoke();
+                    StringAssert.Contains("2 项安排", r.Text);
+                    StringAssert.Contains("快递到家：大米", r.Text);
+                    r.Button("CalendarNextMonth").onClick.Invoke();
+                    Assert.NotNull(r.Button("CalendarDay_" + GameDate.DaysPerMonth));
+                    r.Button("CalendarToday").onClick.Invoke();
+                    StringAssert.Contains("今", r.Button("CalendarDay_" + today).GetComponentInChildren<Text>().text);
+                }
+                else
+                {
+                    Assert.False(window.GetComponentsInChildren<Button>().Any(b => b.name.StartsWith("CalendarDay_")));
+                    StringAssert.Contains("笔记本", r.Text);
+                }
+                r.Ui.OpenSchedulePanel();
+                Assert.AreSame(window, r.Workspace("calendar"));
                 r.Ui.CloseAllWindows(); Assert.False(r.S.Time.IsHeld);
             }
         }

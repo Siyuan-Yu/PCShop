@@ -133,7 +133,7 @@ namespace PCShopSell.Core.Session
             _brandStories.Clear();
             _brandStories.AddRange((d.brandStories??Array.Empty<BrandStoryRecord>()).Where(s=>s!=null).GroupBy(s=>s.Id).Select(g=>g.First().Copy()));
             var b=d.business; if(!d.hasBusiness || b==null || b.NextDebtId<=0) return;
-            ParkPlaceId=City.HasPlace(b.ParkPlaceId) ? b.ParkPlaceId : null; ParkReadyDay=b.ParkReadyDay; HasMcn=b.HasMcn; RomanceId=Creators.Get(b.RomanceId)!=null ? b.RomanceId : null;
+            ParkPlaceId=City.HasPlace(b.ParkPlaceId) ? b.ParkPlaceId : null; ParkReadyDay=b.ParkReadyDay; HasMcn=b.HasMcn; RomanceId=IsRomanceCandidate(b.RomanceId) ? b.RomanceId : null;
             _supplierDebts.Clear();_supplierDebts.AddRange((b.Debts??Array.Empty<SupplierDebt>()).Select(x=>x.Copy()));
             _directShipments.Clear();_directShipments.AddRange((b.Shipments??Array.Empty<DirectShipment>()).Where(x=>PartCatalog.Exists(x.PartId) && x.Count>0).Select(x=>x.Copy()));
             _contracts.Clear();_contracts.AddRange((b.Contracts??Array.Empty<EnterpriseContract>()).Select(x=>x.Copy()));

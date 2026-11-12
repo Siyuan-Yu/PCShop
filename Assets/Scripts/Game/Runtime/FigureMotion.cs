@@ -8,12 +8,15 @@ namespace PCShopSell.Game.Runtime
     {
         private static readonly List<FigureMotion> Active = new List<FigureMotion>();
         private Transform _visual;
-        private readonly Transform[] _hips = new Transform[2], _knees = new Transform[2], _feet = new Transform[2], _arms = new Transform[2];
+        private readonly Transform[] _hips = new Transform[2], _knees = new Transform[2], _feet = new Transform[2], _arms = new Transform[2], _hands = new Transform[2];
         private readonly List<Renderer> _pants = new List<Renderer>(), _sleeves = new List<Renderer>();
         private Vector3 _previousPosition;
         private float _phase, _blend, _idleTime, _scale;
         private bool _sampled, _locomotion = true;
         private bool _seated;
+        private Vector3 _reachTarget;
+        private float _reachWeight, _reachCrouch;
+        private int _reachArm = 1;
         public string ActivityKind { get; set; }
         public int ActivityOption { get; set; } = -1;
         public bool Seated
@@ -23,6 +26,7 @@ namespace PCShopSell.Game.Runtime
         }
 
         public Transform Torso { get; private set; }
+        public Transform ReachingHand => _hands[_reachArm];
         public float WalkBlend => _blend;
         public bool LocomotionEnabled
         {
@@ -42,11 +46,28 @@ namespace PCShopSell.Game.Runtime
                 _knees[i] = _hips[i].Find("Knee" + side);
                 _feet[i] = _knees[i].Find("Foot" + side);
                 _arms[i] = torso.Find("Shoulder" + side);
+                _hands[i] = _arms[i].Find("Hand");
                 _pants.Add(_hips[i].Find("Leg" + side).GetComponent<Renderer>());
                 _pants.Add(_knees[i].Find("Shin" + side).GetComponent<Renderer>());
                 _sleeves.Add(_arms[i].Find("Sleeve" + side).GetComponent<Renderer>());
             }
             if (!Active.Contains(this)) Active.Add(this); // Also register in edit-mode rendering.
+            ResetMotion();
+        }
+
+        public void SetReachPose(Vector3 target, float weight, float crouch, bool leftHand)
+        {
+            _reachTarget = target;
+            _reachWeight = weight;
+            _reachCrouch = crouch;
+            _reachArm = leftHand ? 0 : 1;
+            ApplyPose();
+        }
+
+        public void ClearReachPose()
+        {
+            if (_reachWeight <= 0) return;
+            _reachWeight = 0;
             ResetMotion();
         }
 
@@ -163,6 +184,29 @@ namespace PCShopSell.Game.Runtime
                 _feet[i].localRotation = Quaternion.Euler(-hip - knee, 0, 0);
                 float arm = -Mathf.Sin(phase) * 26f * _blend;
                 _arms[i].localRotation = Quaternion.Euler(arm, 0, i == 0 ? -8f : 8f);
+            }
+            if (_reachWeight > 0)
+            {
+                float bend = 68f * _reachCrouch * _reachWeight;
+                _visual.localPosition = Vector3.down * (.5f * (1f - Mathf.Cos(bend * Mathf.Deg2Rad)) * _scale);
+                Torso.localRotation = Quaternion.Euler(24f * _reachCrouch * _reachWeight, 0, 0);
+                if (bend > 0)
+                {
+                    for (int i = 0; i < 2; i++)
+                    {
+                        _hips[i].localRotation = Quaternion.Euler(-bend, 0, 0);
+                        _knees[i].localRotation = Quaternion.Euler(2 * bend, 0, 0);
+                        _feet[i].localRotation = Quaternion.Euler(-bend, 0, 0);
+                    }
+                }
+                int other = 1 - _reachArm;
+                _arms[other].localRotation = Quaternion.Slerp(_arms[other].localRotation,
+                    Quaternion.Euler(-24, 0, other == 0 ? -17 : 17), _reachWeight * _reachCrouch);
+                var arm = _arms[_reachArm];
+                Vector3 direction = Torso.InverseTransformPoint(_reachTarget) - arm.localPosition;
+                if (direction.sqrMagnitude > .0001f)
+                    arm.localRotation = Quaternion.Slerp(arm.localRotation, Quaternion.FromToRotation(Vector3.down, direction), _reachWeight);
+                return;
             }
             if (!string.IsNullOrEmpty(ActivityKind) && _blend < .1f)
             {

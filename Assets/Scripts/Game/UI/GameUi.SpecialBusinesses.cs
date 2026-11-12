@@ -84,9 +84,6 @@ namespace PCShopSell.Game.UI
         {
             var shop=S.CurrentShop;var state=S.SpecialBusiness(shop.Place.Id);
             CounterText(() => RetailShopTypes.Name(shop.RetailKind) + " · " + (S.SpecialOpen(shop, S.Clock.Now) ? "营业中" : "未营业"), 21, Ui.Accent);
-            var manage=Ui.Row(C,38,4);
-            Ui.Size(Ui.Button(manage,"经营类型 / 转型",OpenRetailTypeChooser,16),-1,38,1);
-            Ui.Size(Ui.Button(manage,shop.OwnsProperty?"结束自营":"退租店铺",()=>ConfirmCloseShop(shop),16,Ui.Warn),110,38);
             ShopHoursRow(shop.Sim);
             int Entrants() => shop.RetailKind == "restaurant"
                 ? state.RestaurantArrivalDay == S.Clock.Today.TotalDays ? state.RestaurantArrivalsToday : 0

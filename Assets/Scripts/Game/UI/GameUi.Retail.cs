@@ -73,7 +73,7 @@ namespace PCShopSell.Game.UI
         private sealed class CarryOffer
         {
             public string Key,Name,Group,Detail,Season;
-            public string[] Shops;
+            public FurnitureDef Furniture;
             public double Kg;
             public Money Price;
             public Func<bool> Add;
@@ -120,8 +120,8 @@ namespace PCShopSell.Game.UI
         {
             bool wholesale=mode=="wholesale",expo=mode=="expo",mall=source.Business==GameSession.MallBusiness;
             var offers=new List<CarryOffer>();
-            void Offer(string key,string name,string group,double kg,Money price,string detail,Func<bool> add,Func<double> remaining=null,Action preview=null,string season=null,string[] shops=null)
-                =>offers.Add(new CarryOffer {Key=key,Name=name,Group=group,Kg=kg,Price=price,Detail=detail,Add=add,Remaining=remaining,Preview=preview,Season=season,Shops=shops});
+            void Offer(string key,string name,string group,double kg,Money price,string detail,Func<bool> add,Func<double> remaining=null,Action preview=null,string season=null,FurnitureDef furniture=null)
+                =>offers.Add(new CarryOffer {Key=key,Name=name,Group=group,Kg=kg,Price=price,Detail=detail,Add=add,Remaining=remaining,Preview=preview,Season=season,Furniture=furniture});
             if(expo)
             {
                 foreach(var item in ModelProducts.Limited)
@@ -177,7 +177,7 @@ namespace PCShopSell.Game.UI
                 foreach(var item in FurnitureCatalog.Purchasable(false).Concat(FurnitureCatalog.Purchasable(true)).GroupBy(f=>f.Id).Select(g=>g.First()))
                 {
                     var product=item;
-                    Offer("furn:"+product.Id,product.Name,FurniturePurchaseGroup(product),product.WeightKg,product.Price,product.Description,()=>S.CartAddFurniture(product.Id),shops:FurnitureShops.For(product));
+                    Offer("furn:"+product.Id,product.Name,FurniturePurchaseGroup(product),product.WeightKg,product.Price,product.Description,()=>S.CartAddFurniture(product.Id),furniture:product);
                 }
             }
             else if(source.Business==GameSession.FastFoodBusiness)
@@ -220,12 +220,6 @@ namespace PCShopSell.Game.UI
             Line(w.Content,"商品购买 · "+(storeOpen?"营业中 · ":"已打烊 · ")+S.OpeningHoursText(source),19,Ui.Accent);
             if (source.Kind == PlaceKind.Wholesaler)
                 Line(w.Content, "按配件分类选货。同型号统一报价，每日库存由全市场共用。", 14, Ui.Dim);
-            var missing=S.HasShop && source.Business==GameSession.MallBusiness && !S.QuestCompleted("mall")
-                ? S.MissingOpeningFurniture() : Array.Empty<string>();
-            if (missing.Length>0)
-            {
-                Line(w.Content,"开店待买 · "+string.Join("、",missing.Select(id=>FurnitureCatalog.Get(id).Name+" ×1")),16,Ui.Accent);
-            }
             var links=Ui.Row(w.Content,36,6);
             if(wholesale && (source.Business==GameSession.FarmBusiness || source.Business==Gifts.TobaccoBusiness))
                 Ui.Size(Ui.Button(links,"切回零售",()=>{CloseStoreWindows();OpenPlaceWindow(source,BuildCarryStore,StoreWindowWidth,960);},16),120,36);
@@ -238,17 +232,31 @@ namespace PCShopSell.Game.UI
             var tabs=mall
                 ?new List<string>{PurchaseFacets.All}.Concat(FurnitureShops.Tabs()).Distinct().ToList()
                 :new[]{PurchaseFacets.All}.Concat(offers.Select(o=>o.Group)).Distinct().ToList();
-            if(missing.Length>0)tabs.Insert(0,"开店清单");
             bool hasSeason=offers.Any(o=>o.Season!=null);
             string tab=ShopTabs(w,source,tabs,label:hasSeason?"品质":mall?"适用店铺":null);
-            string facility=mall?ShopTabs(w,source,new[]{PurchaseFacets.All,"电器","非电器","装饰"},filterKey:"facility",label:"设施"):PurchaseFacets.All;
+            var selectedOffers = offers;
+            if (tab != PurchaseFacets.All)
+            {
+                if (mall)
+                {
+                    string kind = FurnitureShops.AllKinds.First(k => RetailShopTypes.Name(k) == tab);
+                    selectedOffers = offers.Select(o => (offer: o, order: FurnitureShops.ShopOrder(kind, o.Furniture)))
+                        .Where(x => x.order >= 0).OrderBy(x => x.order).ThenBy(x => x.offer.Price.Cents)
+                        .Select(x => x.offer).ToList();
+                }
+                else selectedOffers = offers.Where(o => o.Group == tab).ToList();
+            }
+            string facility = PurchaseFacets.All;
+            if (mall)
+            {
+                var facilityTabs = new[] { PurchaseFacets.All, "电器", "非电器", "装饰" }
+                    .Where(group => group == PurchaseFacets.All || selectedOffers.Any(o => o.Group == group)).ToArray();
+                if (facilityTabs.Length > 2) facility = ShopTabs(w, source, facilityTabs, filterKey: "facility", label: "设施");
+            }
             string season=hasSeason?ShopTabs(w,source,new[]{PurchaseFacets.All,"春秋装","夏装","冬装"},filterKey:"season",label:"季节"):PurchaseFacets.All;
             if(hasSeason)Line(w.Content,"当前"+CityWeather.Season(S.Clock.Now.TotalMinutes)+"季 · 应季服装需求较多，反季服装仍有需求。",16,Ui.Dim);
             var list=GoodsList(w.Content);
-            var visible=offers.Where(o=>(tab==PurchaseFacets.All
-                || (mall?(o.Shops!=null&&o.Shops.Contains(tab)):o.Group==tab)
-                || tab=="开店清单" && missing.Any(id=>o.Key=="furn:"+id))
-                && (facility==PurchaseFacets.All || o.Group==facility)
+            var visible=selectedOffers.Where(o=>(facility==PurchaseFacets.All || o.Group==facility)
                 && (season==PurchaseFacets.All || o.Season==season)).ToList();
             if(visible.Count==0)Para(list,offers.Count==0?"这里暂时没有可购买的商品。":"当前筛选下没有商品，可换一个店铺、设施或季节。",18,Ui.Dim);
             bool supportsMaximum = wholesale || expo || source.Kind == PlaceKind.Wholesaler;

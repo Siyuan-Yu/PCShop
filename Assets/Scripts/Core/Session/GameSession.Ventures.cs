@@ -23,7 +23,9 @@ namespace PCShopSell.Core.Session
         public Money VentureValue => Money.FromCents(_ventures.Sum(x => x.ReserveCents + x.DepositCents + (long)(x.CapitalCents * .3 * x.Condition)));
         public Money PropertyValue => Money.FromCents(_properties.Sum(x => PropertyMarketValue(x).Cents));
         public Money MortgageDebt => Money.Zero;
-        public Money VentureOpeningCost(ShopListing listing, VentureDef def) => Money.FromYuan(def.Capital + 5000) + listing.Rent + RealEstate.Deposit(listing.Rent) + AgentFeeFor(listing.Rent);
+        public static Money VentureOpeningFunds(VentureDef def) => Money.FromYuan(def.Capital + 5000);
+        public Money VentureOpeningCost(ShopListing listing, VentureDef def) =>
+            VentureOpeningFunds(def) + listing.Rent + RealEstate.Deposit(listing.Rent) + AgentFeeFor(listing.Rent);
         public string VentureBlocker(string placeId, string kind)
         {
             string protection = CommercialPremisesBlocker(City.HasPlace(placeId) ? City.GetPlace(placeId) : null);

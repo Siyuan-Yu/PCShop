@@ -26,7 +26,7 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, "每日展出：09:00—17:00 · 连续4天", 19);
                 Para(w.Content, "请提前出发。参展安排已记入日程，前一天和临近出发时会提醒。展品已交展务保管，未售库存闭展退回。", 18);
                 var actions = Ui.Row(w.Content, 44, 8);
-                Ui.Size(Ui.Button(actions, "查看日程", () => { w.Close(); OpenSchedulePanel(); }, 18), -1, 44, 1);
+                Ui.Size(Ui.Button(actions, "查看日程", () => { w.Close(); OpenCalendar(day); }, 18), -1, 44, 1);
                 Ui.Size(Ui.Button(actions, "知道了", w.Close, 18, Ui.ButtonHot), -1, 44, 1);
             });
         }
@@ -59,7 +59,7 @@ namespace PCShopSell.Game.UI
             if (comicOpen && S.CurrentPlace?.Id == "life_expo" && S.Clock.MinuteOfDay >= 540 && S.Clock.MinuteOfDay < 1020)
                 Ui.Size(Ui.Button(comic, "进入原创模型展位", () => { w.Close(); OpenCityModelExpo(); }, 18), -1, 40);
             if (S.CurrentPlace?.Id == "life_expo")
-                Ui.Size(Ui.Button(w.Content, "返回街上", () => { w.Close(); S.Leave(); }, 18), -1, 42);
+                Ui.Size(Ui.Button(w.Content, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18), -1, 42);
             else ExpoTravelButton(w.Content);
         }
     }

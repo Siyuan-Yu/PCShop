@@ -100,6 +100,7 @@ namespace PCShopSell.Core.Session
         {
             if(PendingShopKindPlaceId!=null)return;
             MigrateOpeningRewards();
+            MigrateOpeningStockProgress();
             // Ignore the old directory's arbitrary selection/skip state, preserving real achievements.
             Flags.RemoveWhere(f => f.StartsWith("tutorial:track:", StringComparison.Ordinal) || f.StartsWith("tutorial:defer:", StringComparison.Ordinal));
             // Observe every milestone, including out-of-order achievements; all flags use the existing save format.

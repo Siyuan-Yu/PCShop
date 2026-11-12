@@ -63,7 +63,7 @@ namespace PCShopSell.Core.Session
             string[] names=id=="supply"?new[]{"认识供应商","真实饭局引荐","确认小规模试单","实际交付两台电脑","下一届电子展合作","长期供货机会"}
                 :id=="creator"?new[]{"了解员工的兴趣","听一段生活经历","由朋友引荐创作者","一起到原创漫展","签订真实推广","用库存与服务兑现推广","后续口碑合作"}
                 :id=="property"?new[]{"认识中介","走访文创街租户","了解续租与生活","通过正常交易购买物业","与租户和创作者再见面","邻里合作"}
-                :new[]{"当面认识成年创作者","了解工作之外的生活","实际一起赴约","明确朋友或感情选择","关系中的日常"};
+                :new[]{"认识陆栀","了解工作之外的生活","实际一起赴约","作品以外的生活","作品以外的生活"};
             return names[Math.Max(0,Math.Min(names.Length-1,stage))];
         }
 
@@ -87,11 +87,11 @@ namespace PCShopSell.Core.Session
                 :p.Stage==2?"回中介核实这处具体物业的产权、租约和资金条件；不免费获得房产。"
                 :p.Stage==3?"通过中介正常购买已了解的物业。原租户、货物与人物关系保留，钱不够可以以后再来。"
                 :p.Stage==4?"约袁岚与陆栀实际吃顿饭，谈租户合作；产权本身不代替邻里信任。":"物业与租户仍按正常规则运作，邻里口碑会带来有限的真实询价。";
-            return p.Stage==0?"当面认识陆栀，聊她的兴趣；商业费用不会增加这一条个人进展。"
+            return p.Stage==0?"到纸风车原创工作室当面找陆栀聊聊。"
                 :p.Stage==1?"当面听她讲一段个人经历，尊重她把作品与私人生活分开的想法。"
-                :p.Stage==2?"约她去河岸钓鱼/散步，真实到场并共同度过活动时间。"
-                :p.Stage==3?"下次当面明确选择：继续朋友合作，或互相确认恋爱关系。"
-                :p.Branch=="romance"?"你们已确认关系。日常交流会提到相处，商业合作仍按独立条款。":"你们选择继续朋友与合作，普通经营和人物故事继续推进。";
+                :p.Stage==2?"约她去河岸钓鱼，实际到场并完成活动。"
+                :IsPlayerPartner(LuZhi)?"你们已确认关系，可以继续相约，也会有只属于你们的日常对话。"
+                :"河岸的相处已经完成。以后可以继续做朋友，也可以在日常对话中选择表白。";
         }
 
         private void CityStoryRemember(string person,string text) { if(CityPerson(person)!=null) RememberSocial(person,text); }
@@ -126,22 +126,44 @@ namespace PCShopSell.Core.Session
             }
             else if(property.Stage==2&&id==Rosters.AgentChen.Id&&(topic=="work"||topic=="friends"))
             {property.Stage=3;CityStoryRemember(id,"核实了袁岚店面的产权与带租约交易条件；购买仍按中介报价实际支付。");}
-            var romance=CityStory("romance");
-            if(id=="life_creator"&&romance.Stage==0&&(topic=="interest"||topic=="life"))
-            {romance.Stage=1;romance.StartedMinute=Clock.Now.TotalMinutes;CityStoryRemember(id,"陆栀希望作品可以公开讨论，私人相处则由彼此决定，不拿商业费用衡量。");}
-            if(id=="life_creator"&&romance.Stage>=4)Say(CityPersonalFeedback(id));
+            if(id==LuZhi && (topic=="interest"||topic=="life") && CitySamePlace(id)) BeginLuPersonalStory();
+        }
+
+        private void BeginLuPersonalStory()
+        {
+            var story = CityStory("romance");
+            if (story.Stage != 0) return;
+            story.Stage = 1;
+            story.StartedMinute = Clock.Now.TotalMinutes;
+            RaiseLuStoryFamiliarity(20);
+            CityStoryRemember(LuZhi, "陆栀聊起自己下班后的生活，愿意下次接着聊。");
+        }
+
+        private void AdvanceLuPersonalStoryAfterHearing()
+        {
+            var story = CityStory("romance");
+            if (story.Stage != 1 || (CityPersonState(LuZhi)?.StoryChapter ?? 0) == 0) return;
+            story.Stage = 2;
+            RaiseLuStoryFamiliarity(45);
+        }
+
+        private void RaiseLuStoryFamiliarity(int minimum)
+        {
+            int relation = Relation(LuZhi);
+            if (relation < minimum) AddRelation(LuZhi, minimum - relation);
         }
 
         public string CityPersonalFeedback(string personId)
         {
-            var p=CityStory("romance");if(personId!="life_creator"||p.Stage<4)return null;
-            return p.Branch=="romance"?"陆栀：今天也想留一点时间给彼此。合作的事照合同来，散步时可以只聊生活。":"陆栀：做朋友也很好，作品和生意之外，我们仍然可以聊日常。";
+            var story = CityStory("romance");
+            if (personId != LuZhi || story.Stage < 3) return null;
+            return IsPlayerPartner(personId) ? "陆栀：" + PartnerConversation(personId)
+                : "陆栀：上次在河边待得很舒服。有空还可以再去走走。";
         }
         public string HearCityPersonalStory(string personId)
         {
             string text=CityHearStory(personId);
-            var romance=CityStory("romance");
-            if(personId=="life_creator"&&romance.Stage==1&&CitySamePlace(personId)&&CityPersonState(personId)?.StoryChapter>0)romance.Stage=2;
+            if(personId==LuZhi && CitySamePlace(personId)) AdvanceLuPersonalStoryAfterHearing();
             return text;
         }
         public string CityStoryMeetingPlace(string personId)
@@ -254,7 +276,13 @@ namespace PCShopSell.Core.Session
                     var shop=MyShops.FirstOrDefault();if(shop!=null)AddCityPromotion("life_tenant",shop.Place.Id,"neighborhood",Money.Zero,3*1440, .10, null,"property");
                     CityStoryRemember("life_tenant","一次真实饭局后，愿意向街坊介绍这位遵守带租约约定的新房东；原店与邻里生活继续。");
                 }
-                else if(story.Id=="romance"&&story.Stage==2){story.Stage=3;CityStoryRemember("life_creator","在河岸一起度过了真实的一段时间；可以选择继续朋友，也可以当面明确个人关系。");}
+                else if(story.Id=="romance"&&story.Stage==2)
+                {
+                    story.Stage=4;
+                    story.Branch=IsPlayerPartner(LuZhi)?"romance":"story-complete";
+                    RaiseLuStoryFamiliarity(75);
+                    CityStoryRemember(LuZhi,"在河岸一起度过了一段时间，约好有空再见。");
+                }
             }
             if(activity.SourceId!=null&&activity.SourceId.StartsWith("legacy-creator-private:"))
             {
@@ -272,11 +300,14 @@ namespace PCShopSell.Core.Session
             var progress=CityStory("romance");
             if(progress.Stage!=3)return Fail("先当面了解经历并完成实际相处，再决定个人关系。");
             if(!CitySamePlace("life_creator"))return Fail("需要当面表达这个选择。");
-            if(romantic&&RomanceId!=null&&RomanceId!="life_creator")return Fail("已有个人关系，请先认真处理原关系。");
-            progress.Stage=4;progress.Branch=romantic?"romance":"friends";
-            if(romantic)RomanceId="life_creator";
-            CityStoryRemember("life_creator",romantic?"彼此明确确认成年人的恋爱关系，商业合作仍独立履约。":"明确选择继续朋友与合作，普通经营与今后的相处都不受惩罚。");
-            Say(CityPersonalFeedback("life_creator"));return true;
+            if(romantic)
+            {
+                Say(ConfessToPerson(LuZhi));
+                if(!IsPlayerPartner(LuZhi))return false;
+            }
+            progress.Stage=4;progress.Branch=IsPlayerPartner(LuZhi)?"romance":"friends";
+            if(!romantic)CityStoryRemember(LuZhi,"选择继续作为朋友相处。");
+            Say(CityPersonalFeedback(LuZhi));return true;
         }
 
         public double CityCampaignTraffic(OwnedShop shop)
@@ -319,7 +350,7 @@ namespace PCShopSell.Core.Session
 
         private void TickCityStories(long now)
         {
-            var romance=CityStory("romance");if(romance.Stage==1&&CityPersonState("life_creator")?.StoryChapter>0)romance.Stage=2;
+            AdvanceLuPersonalStoryAfterHearing();
             var supply=CityStory("supply");
             if(supply.Stage==3||(supply.Stage>=5&&supply.OrderSource!=null&&!_cityStoryEffects.Contains("trial:"+supply.OrderSource)))
             {
@@ -403,6 +434,12 @@ namespace PCShopSell.Core.Session
             var defaults=_cityStories.Select(s=>s.Copy()).ToArray();_cityStories.Clear();
             foreach(var old in d.cityStories??Array.Empty<CityStoryProgress>())if(old!=null&&!string.IsNullOrEmpty(old.Id)&&!_cityStories.Any(s=>s.Id==old.Id))_cityStories.Add(old.Copy());
             foreach(var expected in defaults)if(!_cityStories.Any(s=>s.Id==expected.Id))_cityStories.Add(new CityStoryProgress{Id=expected.Id,PersonId=expected.PersonId});
+            var romance = CityStory("romance");
+            if (romance.Stage >= 3)
+            {
+                if (!d.cityRomanceStateRecorded && RomanceId == null && romance.Branch == "romance") RomanceId = LuZhi;
+                RaiseLuStoryFamiliarity(75);
+            }
             _cityPromotions.Clear();foreach(var c in d.cityPromotions??Array.Empty<CityPromotion>())if(c!=null&&!_cityPromotions.Any(p=>p.Id==c.Id))_cityPromotions.Add(c.Copy());
             _cityReferrals.Clear();foreach(var o in d.cityReferrals??Array.Empty<CityReferralOffer>())if(o!=null&&!_cityReferrals.Any(p=>p.Id==o.Id))_cityReferrals.Add(o.Copy());
             _cityStoryEffects.Clear();foreach(string key in d.cityStoryEffects??Array.Empty<string>())if(key!=null)_cityStoryEffects.Add(key);

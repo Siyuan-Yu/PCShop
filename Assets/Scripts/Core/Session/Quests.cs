@@ -5,6 +5,7 @@ using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Shop;
+using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
@@ -97,7 +98,8 @@ namespace PCShopSell.Core.Session
                 Id = "stock", Title = "进第一批货", Target = QuestTarget.Market,
                 Short = $"店里要有货，缺货去{K("电子市场")}进",
                 Hint = $"先卖{K("奖励的 CPU 和显卡")}。",
-                Done = s => StockCount(s) >= 1,
+                Done = s => s.OpeningSupplyMarket is Place market
+                    ? s.HasOpeningStockPurchase(market) : StockCount(s) >= 1,
             },
             new QuestDef
             {
@@ -191,6 +193,15 @@ namespace PCShopSell.Core.Session
                 rest.Hint = "装修当天不能营业。回家睡到明早，第二天营业时再回店接待顾客，完成第一单。";
                 return rest;
             }
+            if (source?.Id == "stock" && s.OpeningSupplyMarket is Place market)
+            {
+                var purchase = source.Copy();
+                purchase.Short = $"去{K(market.Name)}买第一批货";
+                purchase.Hint = s.RetailKind == "restaurant"
+                    ? "买些大米或配菜，带回店里做开业准备。"
+                    : "挑选本店能卖的商品并结账。可以自己带回店入库，也可以叫货车送到店。";
+                return purchase;
+            }
             if(source==null||s.RetailKind=="computer")return source;
             var q=source.Copy();
             if(q.Id=="place")q.Short="在店里装修，摆好"+string.Join("、",GameSession.OpeningFurniture(s.RetailKind).Select(id=>FurnitureCatalog.Get(id).Name));
@@ -218,7 +229,10 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         private const string OpeningMealTutorialFlag = "tutorial:opening-meal-pending";
+        private const string OpeningAgencyGuideFlag = "tutorial:opening-agency-pending";
         public bool OpeningMealTutorialPending => Flags.Contains(OpeningMealTutorialFlag);
+        public bool OpeningAgencyGuidePending => CurrentPlace == null && !IsGameOver && LookingForFirstShop
+            && Flags.Contains(OpeningAgencyGuideFlag) && City.HasPlace("agency");
 
         public const string OpeningMealLeaveBlock = "先做饭，吃一碗，再把剩下的饭全部装进背包，才能出门。";
         public bool OpeningMealEaten => Flags.Contains("tutorial:opening-meal-eaten");
@@ -228,7 +242,17 @@ namespace PCShopSell.Core.Session
 
         private void CompleteOpeningMealTutorial()
         {
-            if (Flags.Remove(OpeningMealTutorialFlag)) RefreshQuestProgress();
+            if (!Flags.Remove(OpeningMealTutorialFlag)) return;
+            Flags.Add(OpeningAgencyGuideFlag);
+            RefreshQuestProgress();
+        }
+
+        public bool StartOpeningAgencyTravel()
+        {
+            if (!OpeningAgencyGuidePending || !BeginCityTravel("agency")) return false;
+            if (CityIntent?.TargetPlaceId != "agency" && CurrentPlace?.Id != "agency") return false;
+            Flags.Remove(OpeningAgencyGuideFlag);
+            return true;
         }
 
         /// <summary>只派发当前经营阶段可做的一步；没有合适任务时返回列表长度。</summary>

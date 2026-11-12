@@ -2,11 +2,46 @@ using System;
 using System.Linq;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
+        private const string OpeningStockMigrationFlag = "tutorial:opening-stock-purchase-checked";
+
+        // The rent reward marker is set by the prebuilt-shop setup, which already supplies stock.
+        internal Place OpeningSupplyMarket => HasShop && OpeningRewardKind("rent") == null
+            && ShopSupplyMarketId(RetailKind) is string id ? PurchaseDestination(City.GetPlace(id)) : null;
+
+        internal bool HasOpeningStockPurchase(Place market)
+        {
+            int signedDay = CurrentShop.Lease?.SignedDay ?? 0;
+            string wholesaleMemo = market.Name + "批发 ";
+            string partsMemo = market.Name + " ";
+            return Ledger.Entries.Any(entry =>
+            {
+                if (entry.Date.TotalDays < signedDay || !entry.Amount.IsNegative) return false;
+                if (RetailKind == "restaurant" && entry.Category == "买菜") return true;
+                if (entry.Category != "进货") return false;
+                if (RetailKind == "computer")
+                    return entry.Memo?.StartsWith(partsMemo, StringComparison.Ordinal) == true;
+                if (entry.Memo?.StartsWith(wholesaleMemo, StringComparison.Ordinal) != true) return false;
+                string product = entry.Attribution?.ProductId;
+                return RetailKind == "restaurant" ? product?.StartsWith("produce:", StringComparison.Ordinal) == true
+                    : RetailShopTypes.Sells(RetailKind, product);
+            });
+        }
+
+        private void MigrateOpeningStockProgress()
+        {
+            // Older saves completed stock from the free furniture-store reward.
+            if (Flags.Contains(OpeningStockMigrationFlag) || QuestCompleted("sale")
+                || !(OpeningSupplyMarket is Place market)) return;
+            Flags.Add(OpeningStockMigrationFlag);
+            if (QuestCompleted("stock") && !HasOpeningStockPurchase(market)) Flags.Remove("tutorial:stock");
+        }
+
         private const string OpeningChoicePrefix="shop:choose-kind:";
         public string PendingShopKindPlaceId=>Flags.Where(f=>f.StartsWith(OpeningChoicePrefix))
             .Select(f=>f.Substring(OpeningChoicePrefix.Length)).FirstOrDefault(id=>ShopAt(id)!=null||PendingLease?.PlaceId==id);
@@ -55,7 +90,7 @@ namespace PCShopSell.Core.Session
             :kind==PetShopCatalog.ShopKind?new[]{FurnitureCatalog.Shelf,FurnitureCatalog.ShopCounter,PetShopCatalog.SmallHouse}
             :new[]{FurnitureCatalog.Shelf,FurnitureCatalog.ShopCounter};
 
-        private static bool MatchesOpeningFurniture(string id, FurnitureDef item) => item != null && (item.Id == id
+        internal static bool MatchesOpeningFurniture(string id, FurnitureDef item) => item != null && (item.Id == id
             || id == FurnitureCatalog.Shelf && item.Fixture == FixtureKind.Shelf
             || id == FurnitureCatalog.FridgeSmall && item.Role == FurnitureRole.Fridge
             || id == PetShopCatalog.SmallHouse && PetShopCatalog.HouseCapacity(item.Id) > 0);

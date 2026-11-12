@@ -36,7 +36,7 @@ namespace PCShopSell.Tests
                 }
             }
         }
-        private static bool BedWindow(GameUi ui)=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text=="床"||t.text=="地铺");
+        private static bool BedWindow(GameUi ui)=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.name=="SleepWakePreview");
         private static void Frame(GameSession s,GameController c,HomeRoomView room,float dt=.05f)
         {
             s.Tick(dt);room.SetActive(c.InHome);if(c.InHome)room.Update(s,dt,s.Clock.MinuteOfDay);
@@ -109,10 +109,54 @@ namespace PCShopSell.Tests
             {
                 GameSessionTests.Teleport(s,s.Home.Id);room.SetActive(true);room.Update(s,0,s.Clock.MinuteOfDay);
                 if(street){s.Leave();s.ArriveAtNode(s.City.GetPlace("pc").NodeId);}
-                s.Time.SetSpeed(speed);c.GoHomeToSleep();
+                s.Time.SetSpeed(speed);s.Time.SetPaused(true);c.GoHomeToSleep();
+                Assert.False(s.Time.IsUserPaused);Assert.AreEqual(speed,s.Time.Speed);
                 for(int i=0;i<2000&&!BedWindow(ui);i++)Frame(s,c,room);
                 Assert.AreSame(s.Home,s.CurrentPlace);Assert.True(BedWindow(ui),"回家后必须继续走到床并打开睡眠选项");
                 Assert.AreEqual(HomeRoomView.Bed,room.NearbyId);
+            });
+        }
+
+        [Test]
+        public void NewDirectionResumesPauseButAHeldDirectionOrModalDoesNot()
+        {
+            WithHome((s, c, room, ui) =>
+            {
+                room.SetActive(true);
+                room.Update(s, 0, s.Clock.MinuteOfDay);
+                typeof(GameController).GetProperty("Cam").SetValue(c, c.gameObject.AddComponent<Camera>());
+                var start = room.OwnerWorld;
+                s.Time.SetPaused(true);
+                Call(c, "ApplyMovement", .1f, -1f, 0f, false);
+                Assert.True(s.Time.IsUserPaused);
+                Assert.AreEqual(start, room.OwnerWorld);
+
+                ui.OpenWindow("测试窗口", 400, 300, _ => { });
+                Call(c, "ApplyMovement", .1f, -1f, 0f, true);
+                Assert.True(s.Time.IsUserPaused);
+                Assert.AreEqual(start, room.OwnerWorld);
+
+                ui.CloseAllWindows();
+                Call(c, "ApplyMovement", .1f, -1f, 0f, true);
+                Assert.False(s.Time.IsUserPaused);
+                Assert.AreNotEqual(start, room.OwnerWorld);
+            });
+        }
+
+        [Test]
+        public void DestinationFromInsideResumesAndWalksToDoor()
+        {
+            WithHome((s, c, room, ui) =>
+            {
+                room.SetActive(true);
+                room.Update(s, 0, s.Clock.MinuteOfDay);
+                s.Time.SetPaused(true);
+                c.GoToPlace(s.City.GetPlace("pc"));
+                Assert.False(s.Time.IsUserPaused);
+                Assert.AreEqual("pc", s.CityIntent.TargetPlaceId);
+                for (int i = 0; i < 200 && c.InHome; i++) Frame(s, c, room);
+                Assert.False(c.InHome);
+                Assert.NotNull(s.Trip);
             });
         }
         [Test]

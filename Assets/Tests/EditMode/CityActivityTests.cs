@@ -107,6 +107,40 @@ namespace PCShopSell.Tests
                 Assert.False(a.EntryPaid);Assert.False(a.RewardApplied);Assert.AreEqual(cash,s.Ledger.Balance);
             }
         }
+        [Test] public void AppointmentTravelWaitsForTheDepartureWindowWithoutChargingTaxiFare()
+        {
+            using (var s = Make())
+            {
+                s.Clock.Restore(new GameDate(6), 21 * 60 + 53);
+                Assert.True(s.SetVehicle(VehicleKind.Taxi));
+                var venue = s.City.GetPlace("life_restaurant");
+                var appointment = GameTimestamp.From(s.Clock.Today.AddDays(1), 18 * 60 + 15);
+                var activity = s.ScheduleCityActivity("dinner", System.Array.Empty<string>(), appointment.TotalMinutes);
+                Assert.NotNull(activity);
+                var departure = appointment.AddMinutes(-s.CityTravelMinutes(venue) - GameSession.CityArrivalWindowMinutes);
+                var cash = s.Ledger.Balance;
+                var location = s.CurrentPlace;
+
+                string hint = s.CityActivityTravelBlocker(activity.Id);
+                StringAssert.Contains("还早呢", hint);
+                StringAssert.Contains(departure.ToString(), hint);
+                Assert.False(s.GoToCityActivity(activity.Id));
+                Assert.IsNull(s.CityIntent);
+                Assert.IsNull(s.Trip);
+                Assert.AreEqual(cash, s.Ledger.Balance);
+                Assert.AreSame(location, s.CurrentPlace);
+                Assert.True(activity.Active);
+
+                var justBefore = departure.AddMinutes(-1);
+                s.Clock.Restore(justBefore.Date, justBefore.MinuteOfDay);
+                Assert.False(s.GoToCityActivity(activity.Id));
+                s.Clock.Restore(departure.Date, departure.MinuteOfDay);
+                Assert.IsNull(s.CityActivityTravelBlocker(activity.Id));
+                Assert.True(s.GoToCityActivity(activity.Id));
+                Assert.AreEqual(activity.Id, s.CityIntent?.ActivityId);
+                Assert.NotNull(s.Trip);
+            }
+        }
         [Test] public void RealTravelMealAndReloadSettleEachStageOnce()
         {
             using(var s=Make())

@@ -72,6 +72,7 @@ namespace PCShopSell.Core.Session
             if (Trip == null && targetNode == PlayerNodeId && (insideHere || (end.HasValue ? Dist(PlayerPosition, end.Value) < 1e-6 : !OffNode)))
             {
                 if (CurrentPlace != null) Leave();
+                Time.SetPaused(false);
                 return true;
             }
 
@@ -90,6 +91,7 @@ namespace PCShopSell.Core.Session
             if (CurrentPlace != null) Leave();
             Trip = planned;
             ClearEdge();
+            Time.SetPaused(false);
             return true;
         }
 
@@ -230,6 +232,7 @@ namespace PCShopSell.Core.Session
             if(Clock.MinuteOfDay<360||Clock.MinuteOfDay>=1380)return Fail("地铁运营时间 6:00–23:00。");
             if(!Ledger.TryDebit(Clock.Today,"交通",MetroFare,origin.Name+"→"+destination.Name))return Fail("连地铁票都买不起了。");
             CancelCityTravel();Trip=null;
+            Time.SetPaused(false);
             AdvanceClock(MetroMinutes);
             if(IsGameOver||CurrentPlace!=origin)return true;
             PlayerNodeId=destination.NodeId;ClearEdge();CurrentPlace=destination;

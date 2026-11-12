@@ -100,15 +100,16 @@ namespace PCShopSell.Core.Session
         {
             var c=Creator(id);if(c==null || IsGameOver)return false;
             string why=RomanceBlocker(c);if(why!=null)return Fail(why);
-            RomanceId=id;Say("你与"+Creators.Get(id).Name+"确认了恋爱关系。保持联系与相处，商业合约仍按原条款独立执行。");return true;
+            ConfirmPartner(id);Say("你与"+Creators.Get(id).Name+"确认了恋爱关系。保持联系与相处，商业合约仍按原条款独立执行。");return true;
         }
         public bool EndRomance()
         {
             if(RomanceId==null || IsGameOver)return false;
             var c=Creator(RomanceId);if(c!=null)c.Affection=Math.Max(0,c.Affection-20);
-            if(RomanceId=="life_creator"){var p=CityStory("romance");p.Branch="friends";p.Stage=Math.Max(4,p.Stage);}
+            if(RomanceId==LuZhi && CityStory("romance") is CityStoryProgress p && p.Stage>=3){p.Branch="friends";p.Stage=4;}
+            RememberSocial(RomanceId, "你们结束了恋爱关系，之后可以继续正常相处。");
             RomanceId=null;
-            Say("你们结束了私人关系，已经签署的商务合同继续按约执行。");return true;
+            Say("你们结束了恋爱关系。");return true;
         }
         private void SettleMcnAndRelationships(GameDate previous,GameDate today)
         {

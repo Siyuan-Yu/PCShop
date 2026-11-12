@@ -24,11 +24,16 @@ namespace PCShopSell.Game.UI
             if(p.Kind==PlaceKind.Dealer||p.Id=="motor_scooter_mod"){OpenPlaceWindow(p,BuildMotorDealer,1160,900);return;}
             if(S.VentureAt(p.Id)?.Kind=="cars"){OpenPlaceWindow(p,BuildUsedMotorShop,1160,900);return;}
             if(p.Id=="life_expo"){OpenExpoReception();return;}
-            if(p.Business==GameSession.BankBusiness){OpenPlaceWindow(p,BuildBank,860,940);return;}
+            if(p.Business==GameSession.BankBusiness){OpenBank(p);return;}
             if(p.Id==GameSession.CommunityMcnId){OpenCommunityMcn();return;}
             if(S.IsOwnedVenue(p)){OpenVenueManagement(p);return;}
             if (UsesCityVenuePanel(p)) { OpenCityVenue(p); return; }
-            if(IsCarryStore(p)){OpenPlaceWindow(p,BuildCarryStore,StoreWindowWidth,960);return;}
+            if (IsCarryStore(p))
+            {
+                if (p.Business == GameSession.MallBusiness) OpenMall(p);
+                else OpenPlaceWindow(p, BuildCarryStore, StoreWindowWidth, 960);
+                return;
+            }
             if(!S.IsMyShop(p)&&(p.Id=="shop02"||p.Id=="clothing_boutique")){OpenCityClothingShop(p);return;}
             switch (p.Kind)
             {
@@ -49,7 +54,7 @@ namespace PCShopSell.Game.UI
                     OpenPlaceWindow(p, BuildFastFood, StoreWindowWidth, 900);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.MallBusiness:
-                    OpenPlaceWindow(p, BuildMall, StoreWindowWidth, 960);
+                    OpenMall(p);
                     break;
                 case PlaceKind.Shop when p.Business == Gifts.TobaccoBusiness:
                     OpenPlaceWindow(p, BuildTobacco, StoreWindowWidth, 900);
@@ -95,7 +100,7 @@ namespace PCShopSell.Game.UI
                 var residents = S.CityPeople.Where(person => person.HomePlaceId == residence.Id).ToArray();
                 var present = S.ResidentsAtHome(residence).Select(person => person.PersonId).ToHashSet();
                 if (residents.Length == 0)
-                    Para(portraits, S.CanSleepAt(residence) ? "你的住处" : "暂无登记住户。", 17, Ui.Dim);
+                    Para(portraits, "暂无登记住户。", 17, Ui.Dim);
                 foreach (var resident in residents)
                 {
                     string id = resident.PersonId;
@@ -119,11 +124,9 @@ namespace PCShopSell.Game.UI
                 Line(details, residence.Name, 22, Ui.Accent);
                 Para(details, "点击左侧头像查看住户资料。", 16, Ui.Dim);
                 string blocker = S.ClosedReason(residence);
-                bool canSleep = S.CanSleepAt(residence);
-                if (!canSleep)
-                    Para(details, "与至少一位住户的好感达到 " + GameSession.HomeVisitMinRelation + "，且这位住户在家时，可以进屋拜访。", 18);
+                Para(details, "与至少一位住户的好感达到 " + GameSession.HomeVisitMinRelation + "，且这位住户在家时，可以进屋拜访。", 18);
                 if (blocker != null) Para(details, blocker, 17, Ui.Warn);
-                Ui.Size(Ui.Button(details, canSleep ? "回家" : "进屋拜访", () =>
+                Ui.Size(Ui.Button(details, "进屋拜访", () =>
                 {
                     if (S.NearbyPlace != residence || !S.EnterNearby())
                     {
@@ -149,7 +152,7 @@ namespace PCShopSell.Game.UI
                 int contentBefore = win.Content.childCount;
                 if (p.Id != "life_expo"&&p.Kind!=PlaceKind.Garage&&p.Business!=GameSession.BankBusiness) BuildPlayerWorkEntry(win.Content, p, win);
                 if (S.HasRetailWholesale(p) && build!=BuildRetailWholesale && (p.Business==GameSession.FarmBusiness || p.Business==Gifts.TobaccoBusiness)) Ui.Size(Ui.Button(win.Content, "批发进货（可供自己店铺销售）", () => OpenRetailWholesale(p), 18, Ui.ButtonHot), -1, 40);
-                RectTransform frame = p.Kind == PlaceKind.Agency || p.Business == GameSession.BankBusiness || p.Kind==PlaceKind.Garage || RaceTracks.Get(p.Id)!=null || S.VentureAt(p.Id) != null || S.IsPlayerPropertyOccupied(p.Id) ? null : BuildRosterFrame(win, p, h - 170 - (win.Content.childCount - contentBefore) * 52, p.Kind==PlaceKind.Dealer || p.Kind==PlaceKind.Station || p.Id=="motor_scooter_mod", w >= StoreWindowWidth ? 150 : 210);
+                RectTransform frame = p.Kind == PlaceKind.Agency || p.Kind==PlaceKind.Garage || RaceTracks.Get(p.Id)!=null || S.VentureAt(p.Id) != null || S.IsPlayerPropertyOccupied(p.Id) ? null : BuildRosterFrame(win, p, h - 170 - (win.Content.childCount - contentBefore) * 52, p.Kind==PlaceKind.Dealer || p.Kind==PlaceKind.Station || p.Id=="motor_scooter_mod", w >= StoreWindowWidth ? 150 : 210);
                 if (frame != null)
                 {
                     RectTransform original = win.Content;
@@ -166,7 +169,7 @@ namespace PCShopSell.Game.UI
                     if(panel.Find("LeavePlaceFooter")==null)
                     {
                         var footer=Ui.Rect(panel,"LeavePlaceFooter").Anchor(0,0,1,0,16,10,16,-50);
-                        Ui.Button(footer,"离开"+S.PlaceTitle(p),()=>{if(S.CurrentPlace==p&&!S.IsWorking){CloseModalWindows();S.Leave();}},17).GetComponent<RectTransform>().Fill().name="LeavePlace";
+                        Ui.Button(footer,"离开"+S.PlaceTitle(p),()=>{if(S.CurrentPlace==p&&!S.IsWorking){CloseModalWindows();_ctrl.LeaveCurrentPlace();}},17).GetComponent<RectTransform>().Fill().name="LeavePlace";
                     }
                     var contentFrame = fixedLayout ? win.Content : (RectTransform)win.Content.parent.parent;
                     contentFrame.offsetMin = new Vector2(0, 58);

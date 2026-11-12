@@ -76,6 +76,7 @@ namespace PCShopSell.Game.Runtime
                 if (added)
                 {
                     var model = Spawn(null, Vector3.zero).Go;
+                    CityNpcClothing.Apply(model, session, "ambient:" + i);
                     var collider = model.AddComponent<SphereCollider>(); collider.center = Vector3.up * .9f; collider.radius = .5f;
                     model.AddComponent<AmbientPersonMarker>().Status = i % 3 == 0 ? "正在逛街" : "正在路过";
                     _ambient.Add(new AmbientWalker { Go = model, Side = i % 2 == 0 ? 1 : -1 });

@@ -11,7 +11,7 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private GameSession _calendarSession;
-        private int _calendarMonth, _calendarDay;
+        private int _calendarDay;
 
         private sealed class CalendarItem
         {
@@ -23,113 +23,94 @@ namespace PCShopSell.Game.UI
         private void BuildMonthCalendar(Window w)
         {
             int today = S.Clock.Today.TotalDays;
-            if (_calendarSession != S)
-            { _calendarSession = S; _calendarMonth = today / 30; _calendarDay = today; }
-            int first = _calendarMonth * 30;
-            _calendarDay = Math.Max(first, Math.Min(first + 29, _calendarDay));
-            var items = CalendarMonthItems(first);
-            var days = items.ToLookup(i => (int)(i.Entry.Minute / 1440));
-            var navigation = Ui.Row(w.Content, 42, 10);
-            Ui.Size(Ui.Button(navigation, "‹", () => ChangeCalendarMonth(-1, w), 22,
-                Ui.ButtonBg, _calendarMonth > 0), 42, 42).name = "CalendarPreviousMonth";
-            var date = new GameDate(first);
-            Ui.Size(Ui.Label(navigation, "第" + date.Year + "年 " + date.Month + "月", 24, TextAnchor.MiddleCenter, Ui.Accent), 150, 42);
-            Ui.Size(Ui.Button(navigation, "›", () => ChangeCalendarMonth(1, w), 22), 42, 42).name = "CalendarNextMonth";
-            Ui.Size(Ui.Rect(navigation, "CalendarNavigationSpace"), 0, 42, 1);
-            Ui.Size(Ui.Button(navigation, "回到今天 · " + S.Clock.Today.Month + "月" + S.Clock.Today.Day + "日", () =>
-            { _calendarMonth = today / 30; _calendarDay = today; w.Rebuild(); }, 17), 210, 42).name = "CalendarToday";
-
-            var upcoming = S.BrandBusiness.Exhibits.Where(e => e.Format == 2 && !e.Finished && !e.Missed)
-                .OrderBy(e => e.Day).FirstOrDefault();
-            var reminder = Ui.Panel(w.Content, "CalendarExpoReminder", Ui.PanelBg2).rectTransform;
-            Ui.Size(reminder, -1, 58); Ui.VList(reminder, 0, 10);
-            if (upcoming != null)
+            int first = _calendarDay - _calendarDay % GameDate.DaysPerMonth;
+            var monthStart = new GameDate(first);
+            var days = CalendarMonthItems(first).ToLookup(i => (int)(i.Entry.Minute / GameTimestamp.MinutesPerDay));
+            var navigation = Ui.Row(w.Content, 46, 8);
+            Ui.Size(Ui.Label(navigation, $"<b>{monthStart.Month}月</b>  <size=16>第{monthStart.Year}年</size>", 28), 0, -1, 1)
+                .name = "CalendarMonthTitle";
+            void Select(int day)
             {
-                Para(reminder, "<color=#E8BE62>已报名 · 品牌展会</color>   " + new GameDate(upcoming.Day)
-                    + "09:00—10:00报到 · 云帆会展中心   <size=15>"
-                    + (upcoming.Day > today ? "距开幕" + (upcoming.Day - today) + "天" : "已到展期")
-                    + " · 提前一天及出发前提醒</size>", 17);
+                _calendarDay = day;
+                w.ResetScrollOnRebuild = true;
+                w.Rebuild();
             }
-            else
-            {
-                Para(reminder, "<color=#E8BE62>今天 · " + S.Clock.Today + " " + Ui.WeekdayName(S.Clock.Today.Weekday)
-                    + "</color>   <size=15>点选日期查看当天安排</size>", 17);
-            }
+            Ui.Size(Ui.Button(navigation, "‹", () => Select(first - GameDate.DaysPerMonth), 24, Ui.ButtonBg, first > 0), 40, 38)
+                .Tip("上个月").name = "CalendarPreviousMonth";
+            Ui.Size(Ui.Button(navigation, "今天", () => Select(today), 17), 76, 38).name = "CalendarToday";
+            Ui.Size(Ui.Button(navigation, "›", () => Select(first + GameDate.DaysPerMonth), 24), 40, 38)
+                .Tip("下个月").name = "CalendarNextMonth";
+            Ui.Size(Ui.Button(navigation, "天气", OpenCityClimate, 16), 76, 38).name = "CalendarWeather";
 
-            // Anchor both columns explicitly: layout-derived minimum text widths must not squeeze the month.
-            var split = Ui.Rect(w.Content, "CalendarColumns"); Ui.Size(split, -1, 570);
-            var month = Ui.Rect(split, "CalendarMonthGrid").Anchor(0, 0, .72f, 1);
-            Ui.VList(month, 5, 0);
-            var divider = Ui.Panel(split, "CalendarColumnDivider", new Color(.33f, .39f, .43f));
-            divider.raycastTarget = false;
-            divider.rectTransform.Anchor(.74f, 0, .74f, 1); divider.rectTransform.sizeDelta = new Vector2(1, 0);
-            var weekdays = Ui.Row(month, 28, 5);
+            const int gap = 4, cellHeight = 62, weekdayHeight = 26;
+            int offset = (int)monthStart.Weekday;
+            int rows = (offset + GameDate.DaysPerMonth + GameDate.DaysPerWeek - 1) / GameDate.DaysPerWeek;
+            var month = Ui.Size(Ui.Rect(w.Content, "CalendarMonthGrid"), -1, weekdayHeight + rows * (cellHeight + gap));
+            Ui.VList(month, gap, 0);
+            var weekdays = Ui.Row(month, weekdayHeight, gap);
             foreach (string weekday in new[] { "一", "二", "三", "四", "五", "六", "日" })
-                Ui.Size(Ui.Label(weekdays, weekday, 17, TextAnchor.MiddleCenter, Ui.Dim), 0, 28, 1);
-            int offset = first % 7;
-            int rows = (offset + 30 + 6) / 7;
-            float cellHeight = (570 - 28 - rows * 5) / rows;
+                Ui.Size(Ui.Label(weekdays, weekday, 16, TextAnchor.MiddleCenter, Ui.Dim), 0, weekdayHeight, 1);
             for (int rowIndex = 0; rowIndex < rows; rowIndex++)
             {
-                var row = Ui.Row(month, cellHeight, 5);
-                for (int column = 0; column < 7; column++)
+                var row = Ui.Row(month, cellHeight, gap);
+                for (int column = 0; column < GameDate.DaysPerWeek; column++)
                 {
-                    int number = rowIndex * 7 + column - offset;
-                    if (number < 0 || number >= 30)
+                    int number = rowIndex * GameDate.DaysPerWeek + column - offset;
+                    if (number < 0 || number >= GameDate.DaysPerMonth)
                     { Ui.Size(Ui.Rect(row, "CalendarEmptyDay"), 0, cellHeight, 1); continue; }
                     int day = first + number;
-                    var entries = days[day].ToArray();
-                    var button = Ui.Size(Ui.Button(row, "", () => { _calendarDay = day; w.Rebuild(); }, 17,
-                        day == _calendarDay ? new Color(.30f, .27f, .20f) : Ui.PanelBg2), 0, cellHeight, 1);
-                    button.name = "CalendarDay_" + day;
-                    var image = button.GetComponent<Image>(); image.sprite = null;
-                    foreach (var effect in button.GetComponents<Shadow>()) effect.enabled = false;
-                    if (day == _calendarDay)
-                    {
-                        var outline = button.GetComponent<Outline>() ?? button.gameObject.AddComponent<Outline>();
-                        outline.enabled = true; outline.effectColor = Ui.Accent; outline.effectDistance = new Vector2(1, -1);
-                    }
-                    button.gameObject.AddComponent<RectMask2D>();
-                    var content = Ui.Rect(button.transform, "CalendarDayContent").Fill(5); Ui.VList(content, 1, 0);
-                    Ui.Size(Ui.Label(content, (number + 1) + (day == today ? " · 今" : ""), 17,
-                        TextAnchor.MiddleLeft, day == today ? Ui.Accent : Ui.TextColor), -1, 22);
-                    foreach (var item in entries.Take(entries.Length > 2 ? 1 : 2))
-                    {
-                        var text = Ui.Size(Ui.Label(content, item.Label, 14, color: CalendarItemColor(item)), -1, 19);
-                        text.verticalOverflow = VerticalWrapMode.Truncate;
-                    }
-                    if (entries.Length > 2) Ui.Size(Ui.Label(content, "还有" + (entries.Length - 1) + "项", 13, color: Ui.Dim), -1, 18);
-                    button.Tip(new GameDate(day) + (entries.Length == 0 ? " · 暂无安排"
-                        : "\n" + string.Join("\n", entries.Select(i => i.Entry.TimeText + " " + i.Entry.Text))));
+                    BuildCalendarDateCell(row, new GameDate(day), day == today, days[day].ToArray(), cellHeight, () => Select(day));
                 }
             }
-            var details = Ui.Rect(split, "CalendarDayDetails").Anchor(.76f, 0, 1, 1);
-            Ui.VList(details, 5, 0);
-            var selectedDate = new GameDate(_calendarDay);
-            Line(details, selectedDate.Month + "月" + selectedDate.Day + "日 · " + Ui.WeekdayName(selectedDate.Weekday), 22, Ui.Accent);
+
             var selected = days[_calendarDay].ToArray();
-            Line(details, selected.Length == 0 ? "当天暂无安排" : selected.Length + "项安排", 16, Ui.Dim);
-            if (selected.Length > 0)
+            var agenda = Ui.FlatPanel(w.Content, "CalendarDayDetails", Ui.FlatBand, Ui.FlatCardEdge).rectTransform;
+            Ui.VList(agenda, 5, 10);
+            var heading = Ui.Row(agenda, 34);
+            Ui.Size(Ui.Label(heading, "<b>" + DateLabel(_calendarDay) + "</b>", 20), 0, -1, 1).name = "CalendarSelectedDate";
+            if (selected.Length == 0)
+                Line(agenda, "当天暂无安排", 17, Ui.Dim);
+            else
             {
-                var list = Ui.Scroll(details, 485);
+                Ui.Size(Ui.Label(heading, selected.Length + " 项安排", 16, TextAnchor.MiddleRight, Ui.Dim), 110);
+                var list = Ui.Scroll(agenda, 590 - rows * cellHeight);
                 list.parent.parent.GetComponent<Image>().color = Color.clear;
                 foreach (var item in selected) BuildCalendarDayItem(list, item, w);
             }
-            var footer = Ui.Row(w.Content, 36, 10);
-            if (!GameSession.FirstChapterTrial)
-                Ui.Size(Ui.Label(footer, "<color=#E8BE62>●</color> 展会 / 交付    <color=#B8CDE3>●</color> 直播    <color=#B6D578>●</color> 邀约 / 生活", 15, color: Ui.Dim), 0, 36, 1);
-            Ui.Size(Ui.Button(footer, "城市活动", () => OpenCalendar(1), 16), 110, 34);
-            Ui.Size(Ui.Button(footer, "天气", OpenCityClimate, 16), 80, 34);
             w.LiveConversation = true;
             w.LiveKey = () => S.Clock.Now.TotalMinutes.ToString();
             w.LiveStamp = w.LiveKey();
         }
 
-        private void ChangeCalendarMonth(int delta, Window w)
+        private void BuildCalendarDateCell(Transform row, GameDate date, bool today, CalendarItem[] items, int height, Action select)
         {
-            _calendarMonth = Math.Max(0, _calendarMonth + delta);
-            _calendarDay = _calendarMonth * 30 + Math.Min(29, _calendarDay % 30);
-            w.Rebuild();
+            bool selected = date.TotalDays == _calendarDay;
+            var fill = selected ? Color.Lerp(Ui.FlatRow, Ui.ButtonHot, .3f) : Ui.FlatBand;
+            var button = Ui.Size(Ui.Button(row, "", select, 17, fill), 0, height, 1);
+            button.name = "CalendarDay_" + date.TotalDays;
+            Ui.FlatBorder(button.image, selected ? Ui.Accent : Ui.FlatCardEdge);
+            button.gameObject.AddComponent<RectMask2D>();
+            var caption = button.GetComponentInChildren<Text>();
+            caption.text = date.Day + (today ? "  今" : "");
+            caption.alignment = TextAnchor.MiddleLeft;
+            caption.color = today || selected ? Ui.Accent : Ui.TextColor;
+            caption.fontStyle = today || selected ? FontStyle.Bold : FontStyle.Normal;
+            caption.rectTransform.Anchor(0, 1, 1, 1, 8, -31, 8, 4);
+            if (items.Length == 0) return;
+
+            var item = items.FirstOrDefault(i => !i.Completed) ?? items[0];
+            Color color = CalendarItemColor(item);
+            var chip = Ui.Panel(button.transform, "CalendarEvent", Color.Lerp(fill, color, .17f));
+            chip.raycastTarget = false;
+            chip.rectTransform.Anchor(0, 0, 1, 0, 5, 5, 5, -27);
+            string title = item.Label.Length > 6 ? item.Label.Substring(0, 5) + "…" : item.Label;
+            var label = Ui.Label(chip.transform, title, 15, TextAnchor.MiddleLeft, color);
+            label.rectTransform.Fill(4);
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            if (items.Length > 1)
+                Ui.Label(button.transform, "+" + (items.Length - 1), 14, TextAnchor.MiddleRight, Ui.Dim)
+                    .rectTransform.Anchor(0, 1, 1, 1, 8, -31, 8, 4);
+            button.Tip(date + "\n" + string.Join("\n", items.Select(i => (i.Entry.HasTime ? i.Entry.TimeText : "全天") + " " + i.Entry.Text)));
         }
 
         private static string CalendarEntryLabel(ScheduleEntry e)
@@ -137,7 +118,7 @@ namespace PCShopSell.Game.UI
             switch (e.Kind)
             {
                 case "brand_expo": return "品牌展会";
-                case "city_activity": case "appointment": return "邀约 / 活动";
+                case "city_activity": case "appointment": return "朋友邀约";
                 case "work": return "打工班次";
                 case "repair": case "repairing": return "上门维修";
                 case "parcel": return "快递到货";
@@ -150,19 +131,29 @@ namespace PCShopSell.Game.UI
             }
         }
 
-        private static Color CalendarItemColor(CalendarItem item) => item.Entry.Kind == "brand_expo" || item.Entry.Kind == "expo_order" ? Ui.Accent
-            : item.Entry.Kind == "kol_live" ? new Color(.72f, .81f, .9f) : item.Entry.Kind == "loan" ? Ui.Warn : Ui.Good;
+        private static Color CalendarItemColor(CalendarItem item) => item.Completed ? Ui.Dim
+            : item.Entry.Kind == "brand_expo" || item.Entry.Kind == "expo_order" ? Ui.Accent
+            : item.Entry.Kind == "kol_live" ? new Color(.72f, .81f, .9f) : item.Entry.Kind == "loan" ? Ui.FlatDown : Ui.Good;
 
         private List<CalendarItem> CalendarMonthItems(int first)
         {
             long start = first * 1440L, until = (first + 30L) * 1440;
+            var activities = S.CityActivities.Where(a => a.ScheduledStart >= start && a.ScheduledStart < until).ToDictionary(a => a.Id);
             var items = S.Schedule().Where(e => e.Minute >= start && e.Minute < until)
-                .Select(e => new CalendarItem { Entry = e, Label = CalendarEntryLabel(e) }).ToList();
-            foreach (var activity in S.CityActivities.Where(a => !a.Active && a.ScheduledStart >= start && a.ScheduledStart < until))
+                .Select(e => new CalendarItem
+                {
+                    Entry = e,
+                    Label = e.ActivityId != null && activities.TryGetValue(e.ActivityId, out var activity)
+                        ? S.CityActivityService(activity)?.Name ?? CalendarEntryLabel(e) : CalendarEntryLabel(e)
+                }).ToList();
+            foreach (var activity in activities.Values.Where(a => !a.Active))
             {
+                string label = S.CityActivityService(activity)?.Name ?? "活动";
                 var entry = new ScheduleEntry { Minute = activity.ScheduledStart, TimeText = GameSession.ClockText((int)(activity.ScheduledStart % 1440)),
-                    ActivityId = activity.Id, Kind = "city_activity", Text = (S.City.HasPlace(activity.VenueId) ? S.City.GetPlace(activity.VenueId).Name : "场所失效") + " · " + GameSession.CityPhaseText(activity.State) };
-                items.Add(new CalendarItem { Entry = entry, Label = "活动 · " + GameSession.CityPhaseText(activity.State), Completed = true });
+                    ActivityId = activity.Id, Kind = "city_activity", Text = label + " · "
+                        + (S.City.HasPlace(activity.VenueId) ? S.City.GetPlace(activity.VenueId).Name : "场所失效")
+                        + " · " + GameSession.CityPhaseText(activity.State) };
+                items.Add(new CalendarItem { Entry = entry, Label = label, Completed = true });
             }
             var brandState = S.BrandBusiness;
             foreach (var e in brandState.Exhibits.Where(e => e.Format == 2))
@@ -225,37 +216,47 @@ namespace PCShopSell.Game.UI
         {
             var e = item.Entry;
             var card = BrandCard(list, "");
-            Line(card, e.HasTime ? e.TimeText : "全天 / 当天截止", 16, Ui.Dim);
-            Para(card, e.Text, 18, CalendarItemColor(item));
+            var summary = Ui.Row(card, -1, 10);
+            var layout = summary.GetComponent<HorizontalLayoutGroup>();
+            layout.childAlignment = TextAnchor.UpperLeft;
+            layout.childForceExpandHeight = false;
+            Ui.Size(Ui.Label(summary, e.HasTime ? e.TimeText : "全天", 16, TextAnchor.UpperLeft, CalendarItemColor(item)), 116, 23);
+            Ui.Size(Para(summary, e.Text, 17, item.Completed ? Ui.Dim : Ui.TextColor), 0, -1, 1);
+            RectTransform actions = null;
+            RectTransform Actions() => actions ??= Ui.Row(card, 40, 8);
+            void ActionButton(string title, Action click, Color? color = null) =>
+                Ui.Size(Ui.Button(Actions(), title, click, 16, color), 160, 36);
             if (e.ActivityId != null)
             {
                 string id = e.ActivityId;
-                Ui.Size(Ui.Button(card, "查看活动详情", () => OpenCityActivityDetail(id), 17), -1, 36);
-                if (!item.Completed) ScheduleActivityGoButton(card, id);
+                ActionButton("查看活动详情", () => OpenCityActivityDetail(id));
+                if (!item.Completed) ScheduleActivityGoButton(Actions(), id);
             }
             if (e.ExpoId != null)
             {
                 string id = e.ExpoId;
                 var expo = S.BrandBusiness.Exhibits.FirstOrDefault(x => x.Id == id);
-                Ui.Size(Ui.Button(card, e.Kind == "expo_order" ? "查看本届采购订单" : expo?.Finished == true || expo?.Missed == true ? "查看本届结算" : "查看参展安排", () =>
-                { if (e.Kind == "expo_order") OpenExpoOrders(id); else if (expo?.Finished == true || expo?.Missed == true) OpenExpoSettlement(id); else OpenBookedExpo(id); }, 17), -1, 36);
-                if (!item.Completed) ExpoTravelButton(card);
+                bool closed = expo?.Finished == true || expo?.Missed == true;
+                if (e.Kind == "expo_order") ActionButton("查看本届采购订单", () => OpenExpoOrders(id));
+                else if (closed) ActionButton("查看本届结算", () => OpenExpoSettlement(id));
+                else ActionButton("查看参展安排", () => OpenBookedExpo(id));
+                if (!item.Completed) ExpoTravelButton(Actions());
             }
             if (item.ContractId != null)
-                Ui.Size(Ui.Button(card, "查看代言与直播安排", () =>
-                { _selectedKolContract = item.ContractId; _brandTab = BrandKolTab; _kolPage = "我的代言人"; OpenBrandBusiness(); }, 17), -1, 36);
+                ActionButton("查看代言与直播安排", () =>
+                { _selectedKolContract = item.ContractId; _brandTab = BrandKolTab; _kolPage = "我的代言人"; OpenBrandBusiness(); });
             if (item.HistoryBrandId != null)
-                Ui.Size(Ui.Button(card, "查看品牌专场记录", () =>
-                { _brandId = item.HistoryBrandId; _brandTab = BrandKolTab; _kolPage = "专场记录"; OpenBrandBusiness(); }, 17), -1, 36);
+                ActionButton("查看品牌专场记录", () =>
+                { _brandId = item.HistoryBrandId; _brandTab = BrandKolTab; _kolPage = "专场记录"; OpenBrandBusiness(); });
             if (e.Kind == "parcel" || e.Kind == "cook" || e.Kind == "repair" || e.Kind == "repairing")
-                Ui.Size(Ui.Button(card, "前往住处", () => { CloseAllWindows(); _ctrl.GoToPlace(S.Home); }, 17), -1, 36);
+                ActionButton("前往住处", () => { CloseAllWindows(); _ctrl.GoToPlace(S.Home); });
             if (e.Kind == "work" && S.WorkPlace != null)
-                Ui.Size(Ui.Button(card, "前往打工地点", () => { CloseAllWindows(); _ctrl.GoToPlace(S.WorkPlace); }, 17), -1, 36);
-            if (e.Kind == "loan") Ui.Size(Ui.Button(card, "查看贷款", OpenLoansApp, 17), -1, 36);
+                ActionButton("前往打工地点", () => { CloseAllWindows(); _ctrl.GoToPlace(S.WorkPlace); });
+            if (e.Kind == "loan") ActionButton("查看贷款", OpenLoansApp);
             if (e.Kind == "repair")
             {
                 string target = S.HomeVisits.FirstOrDefault(v => v.StartMinute == e.Minute)?.TargetId;
-                if (target != null) Ui.Size(Ui.Button(card, "取消维修（不退款）", () => { S.CancelRepair(target); w.Rebuild(); }, 16, Ui.Warn), -1, 36);
+                if (target != null) ActionButton("取消维修（不退款）", () => { S.CancelRepair(target); w.Rebuild(); }, Ui.Warn);
             }
         }
     }

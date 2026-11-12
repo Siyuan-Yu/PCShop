@@ -317,7 +317,7 @@ namespace PCShopSell.Game
             HandleKeys();
             HandleMovement(dt);
             UpdatePlacement();
-            if (!Ui.AnyModalOpen && !Placing && !PetFocusActive) HandleClicks();
+            if (!Ui.AnyModalOpen && !Placing && !PetFocusActive && !Session.OpeningAgencyGuidePending) HandleClicks();
 
             using (SimulationMarker.Auto()) Session.Tick(dt);
             if (_wasPlayerWorking != Session.IsWorking) { _wasPlayerWorking = Session.IsWorking; _autosaveDue = true; }
@@ -486,6 +486,12 @@ namespace PCShopSell.Game
                 if (Input.GetKeyDown(KeyCode.Escape)) Ui.CloseTopWindow();
                 return;
             }
+            if (Session.OpeningAgencyGuidePending)
+            {
+                _orbiting = false;
+                if (Input.GetKeyDown(KeyCode.Escape) && !Ui.CloseTopWindow()) Ui.TryHotkey(KeyCode.Escape);
+                return;
+            }
             var selected = UnityEngine.EventSystems.EventSystem.current?.currentSelectedGameObject;
             var input = selected != null ? selected.GetComponent<UnityEngine.UI.InputField>() : null;
             if (input != null && input.isFocused) return;
@@ -585,19 +591,37 @@ namespace PCShopSell.Game
         /// <summary>WASD / 方向键。相对镜头方向走：W 是屏幕往上（镜头怎么转，方向跟着转）。街上在街道范围内自由走，店里在店内走。</summary>
         private void HandleMovement(float dt)
         {
-            if (PetFocusActive || Session.IsWorking || Session.CityActivityExclusive || Ui.AnyModalOpen || Session.IsGameOver || !Session.Time.IsRunning || Placing)
-            {
-                Session.SetSteer(0, 0);
-                return;
-            }
             float h = (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow) ? 1f : 0f) - (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow) ? 1f : 0f);
             float v = (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow) ? 1f : 0f) - (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow) ? 1f : 0f);
-            if (Mathf.Abs(h) < 0.01f && Mathf.Abs(v) < 0.01f)
+            // A held direction must not cancel a pause just triggered with Space.
+            bool newMovement = Session.Time.IsUserPaused && !Input.GetKeyDown(KeyCode.Space) &&
+                (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.D) ||
+                 Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.RightArrow));
+            ApplyMovement(dt, h, v, newMovement);
+        }
+
+        private void ApplyMovement(float dt, float h, float v, bool newMovement)
+        {
+            if (PetFocusActive || Session.IsWorking || Session.CityActivityExclusive || Ui.AnyModalOpen || Session.IsGameOver
+                || Session.OpeningAgencyGuidePending || Session.Time.IsHeld || Placing ||
+                (Session.Time.IsUserPaused && !newMovement) || (h == 0 && v == 0))
             {
                 Session.SetSteer(0, 0);
                 return;
             }
 
+            if (!InRoom && !Session.CanSteer)
+            {
+                if (!_taxiHinted)
+                {
+                    _taxiHinted = true;
+                    Ui.Toast("打车由司机开：点下方“去…”按钮。想自己走，换成步行、小电驴或三轮车。");
+                }
+                Session.SetSteer(0, 0);
+                return;
+            }
+
+            Session.Time.SetPaused(false);
             CancelHomeBedTrip();
             Session.CancelCityTravel();_cityExitIntent=null;Interior?.CancelCityDoorWalk();
             Session.CancelPlayerRestaurantWork();
@@ -624,17 +648,6 @@ namespace PCShopSell.Game
             {
                 Session.SetSteer(0, 0);
                 MoveInResidence(dir, dt);
-                return;
-            }
-
-            if (!Session.CanSteer)
-            {
-                if (!_taxiHinted)
-                {
-                    _taxiHinted = true;
-                    Ui.Toast("打车由司机开：点下方“去…”按钮。想自己走，换成步行、小电驴或三轮车。");
-                }
-                Session.SetSteer(0, 0);
                 return;
             }
 
@@ -814,7 +827,7 @@ namespace PCShopSell.Game
             if (Session.NearbyPlace is Place residence && residence.Kind == PlaceKind.Home)
             {
                 world = StreetWorldBuilder.ToWorld(Session.DoorOf(residence), 3.4f);
-                label = "查看住户 · " + residence.Name;
+                label = Session.CanSleepAt(residence) ? "回家 · " + Session.PlaceTitle(residence) : "查看住户 · " + residence.Name;
                 return true;
             }
             if (NearPasserby(out ResidentDef who, out Vector3 pw))
@@ -856,7 +869,14 @@ namespace PCShopSell.Game
             CancelHomeBedTrip();
             if (Session.LeaveBlocker != null) { Session.Leave(); return; }
             Ui.CloseAllWindows();
+            LeaveCurrentPlace();
+        }
+
+        public void LeaveCurrentPlace()
+        {
+            if (Session.CurrentPlace == null) return;
             Session.Leave();
+            if (Session.CurrentPlace == null) Session.Time.SetPaused(false);
         }
 
         /// <summary>从店门走出去回到街上；走不开（有事拦着）就退回门里。</summary>
@@ -864,7 +884,7 @@ namespace PCShopSell.Game
         {
             Ui.CloseAllWindows();
             Ui.CloseDock();
-            Session.Leave();
+            LeaveCurrentPlace();
             if (Session.InPlayerShop)
             {
                 Interior.StepBackInside();
@@ -893,18 +913,19 @@ namespace PCShopSell.Game
 
         private void TryEnterNearby()
         {
-            if (Session.NearbyPlace is Place residence && residence.Kind == PlaceKind.Home)
+            Place p = Session.NearbyPlace;
+            bool atResidence = p?.Kind == PlaceKind.Home;
+            if (atResidence && !Session.CanSleepAt(p))
             {
                 Session.SetSteer(0, 0);
-                Ui.OpenResidence(residence);
+                Ui.OpenResidence(p);
                 return;
             }
-            if (NearPasserby(out ResidentDef who, out _))
+            if (!atResidence && NearPasserby(out ResidentDef who, out _))
             {
                 TalkToPasserby(who);
                 return;
             }
-            Place p = Session.NearbyPlace;
             if (p == null)
             {
                 Ui.Toast("附近没有能进的地方，走到门口再按 F。");
@@ -913,7 +934,11 @@ namespace PCShopSell.Game
             Session.SetSteer(0, 0);
             if (Session.Trip != null) Session.StopTrip();
             if (ShowClosed(p)) return;
-            if (Session.EnterNearby()) Ui.OnEnteredPlace(p);
+            if (Session.EnterNearby())
+            {
+                Session.Time.SetPaused(false);
+                Ui.OnEnteredPlace(p);
+            }
         }
 
         private void HandleClicks()

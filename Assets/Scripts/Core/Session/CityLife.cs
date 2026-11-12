@@ -28,6 +28,7 @@ namespace PCShopSell.Core.Session
     {
         public string PersonId, HomePlaceId, Address, WorkPlaceId, LocationPlaceId, ActivityId, TaskLabel, VisitId;
         public int StoryChapter, LastStoryDay = -1;
+        public int ConfessionRetryDay;
         public int LastRaceTogetherDayPlusOne;
         public string LeisureTargetId;
         public int LeisureStop;
@@ -40,7 +41,7 @@ namespace PCShopSell.Core.Session
         public CityPersonState Copy() => new CityPersonState { PersonId=PersonId,HomePlaceId=HomePlaceId,Address=Address,
             WorkPlaceId=WorkPlaceId,LocationPlaceId=LocationPlaceId,ActivityId=ActivityId,TaskLabel=TaskLabel,StoryChapter=StoryChapter,
             LeisureTargetId=LeisureTargetId,LeisureStop=LeisureStop,LeisureNextMove=LeisureNextMove,
-            LastStoryDay=LastStoryDay,LastRaceTogetherDayPlusOne=LastRaceTogetherDayPlusOne,Task=Task,X=X,Y=Y,Route=Route?.Copy(),VisitId=VisitId,KnownRelations=KnownRelations?.ToArray()??Array.Empty<string>(),KnownTopics=KnownTopics?.ToArray()??Array.Empty<string>() };
+            LastStoryDay=LastStoryDay,LastRaceTogetherDayPlusOne=LastRaceTogetherDayPlusOne,ConfessionRetryDay=ConfessionRetryDay,Task=Task,X=X,Y=Y,Route=Route?.Copy(),VisitId=VisitId,KnownRelations=KnownRelations?.ToArray()??Array.Empty<string>(),KnownTopics=KnownTopics?.ToArray()??Array.Empty<string>() };
     }
     [Serializable] public sealed class CityRoute
     {
@@ -161,6 +162,7 @@ namespace PCShopSell.Core.Session
     /// <summary>原创静态内容。原居民和重点人物保留ID，不能按显示名合并。</summary>
     public static partial class CityLifeCatalog
     {
+        public const string BankTellerId = "res_auntie";
         public const string InvitationTestPersonId = "life_invitation_test";
         private static List<CityPersonDefinition> _people;
         public static IReadOnlyList<CityPersonDefinition> People => _people ?? (_people=BuildPeople());
@@ -250,7 +252,16 @@ namespace PCShopSell.Core.Session
                 result.Add(new CityPersonDefinition {Id=r.Id,Name=r.Person.Name,Role=r.Person.Role,HomeId=Home(i++),WorkId=r.WorkPlaceId,
                     WorkStart=r.WorkStart,WorkEnd=r.WorkEnd,Interest=Interest(i),Goal=stories.LastOrDefault()??"把日子过安稳。",Experience=stories[0],
                     Topics=new[]{r.Person.LineFor(0),r.Person.LineFor(1),r.Person.LineFor(2),stories[0]},Stories=stories,
-                    Age=r.Id=="res_pupil"?14:r.Id=="res_grandpa"?67:r.Id=="res_student"?21:26+i%28});
+                    Age = r.Id switch
+                    {
+                        "res_pupil" => 14,
+                        "res_grandpa" => 67,
+                        "res_student" => 21,
+                        "res_auntie" => 42,
+                        "res_mom" => 33,
+                        "res_coder" => 31,
+                        _ => 26 + i % 28,
+                    }});
             }
             foreach(var n in Npcs.All)
             {
@@ -361,6 +372,8 @@ namespace PCShopSell.Core.Session
                 new[]{"口述资料会注明是谁在什么时候说的，记忆和档案对不上也先保留差异，不替别人编一个漂亮而确定的故事。","我喜欢比对旧地图和现在的路口。看见街道改了名字，再听人说当年的日常，城市才不只是几个地标。","家里有一只装着待整理纸条的木盒。我给自己定了每周一小叠，休息时就合上，不把兴趣变成永远做不完的加班。","程弈会来查老工坊结构，宋棉在旧街散步时能记住很多细节。介绍他们认识前，我会先问双方愿不愿意留联系方式。"},
                 new[]{"第一次整理邻里的旧照片，我急着写齐所有名字。有位老人指着空白说，想不起来就先空着，这句话后来成了我的工作习惯。","程弈查一间老工坊，我找到的图纸只有半张。我们沿着旧地图走到原址，没找到答案，却弄清哪一部分只能说是推测。","现在我给每份口述留下回访位置。有人过很久才补上一段记忆也没关系，记录不是一次问完后就再也不见。"});
             ConfigureNarrativePeople(result);
+            var coder = result.First(person => person.Id == "res_coder");
+            coder.LeisurePlaces = new[] { "life_park" }.Concat(coder.LeisurePlaces).ToArray();
             AddRacingPeople(result);
             return result;
         }

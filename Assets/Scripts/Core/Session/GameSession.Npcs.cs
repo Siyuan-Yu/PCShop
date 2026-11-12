@@ -76,7 +76,7 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>当面要联系方式至少要多熟（档口老板走进去就是脸熟，到这个数才好意思开口）。</summary>
-        public const int ContactMinRelation = 30;
+        public const int ContactMinRelation = 10;
 
         /// <summary>现在能不能向他要联系方式；能返回 null。</summary>
         public string ContactBlocker(string npcId)
@@ -84,7 +84,7 @@ namespace PCShopSell.Core.Session
             if (Npcs.Get(npcId) == null && CityPerson(npcId) == null && Rosters.Get(npcId) == null && Residents.Get(npcId) == null) return "没这个人";
             if(CityPersonState(npcId)!=null&&!CitySamePlace(npcId))return "需要当面交换联系方式";
             if (IsMet(npcId)) return "已经存了联系方式";
-            if (Relation(npcId) < ContactMinRelation) return $"还不够熟（交情 {ContactMinRelation}）";
+            if (Relation(npcId) < ContactMinRelation) return $"熟悉度 {ContactMinRelation}";
             return null;
         }
 

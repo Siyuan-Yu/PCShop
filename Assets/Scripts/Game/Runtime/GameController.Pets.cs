@@ -12,6 +12,7 @@ namespace PCShopSell.Game
         private string _petFocusShop, _petToy;
         private float _petPreviousSize, _petPreviousYaw, _petPreviousPitch;
         private long _selectedPet = -1;
+        private bool _petActionWasPlaying;
         public bool PetFocusActive => _petFocusShop != null;
         public long SelectedPet => _selectedPet;
         public string HeldPetToy => _petToy;
@@ -25,6 +26,7 @@ namespace PCShopSell.Game
             _petPreviousPitch = CameraRig.Pitch;
             _rig.SetPlaceAngles(CameraRig.DefaultYaw,43);
             _rig.Size = Interior.PetCameraSize;
+            Interior.SetPetReachSide(CameraRig.Rotation * Vector3.back);
             _selectedPet = Session.PetGuests(Session.CurrentShop).FirstOrDefault()?.Id ?? -1;
             Ui.OpenPetFocusHud();
         }
@@ -35,6 +37,7 @@ namespace PCShopSell.Game
             _petFocusShop = null;
             _petToy = null;
             _selectedPet = -1;
+            _petActionWasPlaying = false;
             Interior?.EndPetInteraction();
             _rig.Size = _petPreviousSize;
             _rig.SetPlaceAngles(_petPreviousYaw,_petPreviousPitch);
@@ -55,12 +58,14 @@ namespace PCShopSell.Game
                 SelectBoardedPet(pets.FirstOrDefault()?.Id ?? -1);
             else ClearIncompatiblePetToy(selected);
             Interior.MarkPet(_selectedPet);
-            Ui.RefreshPetFocusHud(false);
+            bool playing = Interior.PetActionPlaying;
+            Ui.RefreshPetFocusHud(_petActionWasPlaying != playing);
+            _petActionWasPlaying = playing;
         }
 
         public void SelectBoardedPet(long id)
         {
-            if (!PetFocusActive || _selectedPet == id) return;
+            if (!PetFocusActive || Interior.PetActionPlaying || _selectedPet == id) return;
             var pet = Session.PetGuests(Session.CurrentShop).FirstOrDefault(p=>p.Id==id);
             if (id >= 0 && pet == null) return;
             _selectedPet = id;
@@ -94,7 +99,13 @@ namespace PCShopSell.Game
             if (!PetFocusActive || Interior.PetActionPlaying || useToy && _petToy == null) return;
             string toy = useToy ? _petToy : null;
             if (!Session.PlayWithBoardedPet(_selectedPet,toy)) return;
+            if (!useToy && _petToy != null)
+            {
+                _petToy = null;
+                Interior.HoldPetToy(null);
+            }
             Interior.AnimatePetAction(_selectedPet,toy);
+            _petActionWasPlaying = Interior.PetActionPlaying;
             Ui.RefreshPetFocusHud();
         }
 

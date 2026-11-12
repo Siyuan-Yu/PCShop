@@ -34,7 +34,7 @@ namespace PCShopSell.EditorTools
             {
                 ("OpenBackpackPanel", "03-backpack"), ("OpenEmployeesPanel", "04-employees"), ("OpenMyPanel", "05-my"), ("OpenBusinessPanel", "06-business"),
                 ("OpenQuests", "07-quests"), ("OpenPhone", "08-phone"), ("OpenLedger", "09-ledger"), ("OpenCityProcurement", "10-procurement"),
-                ("OpenCityProperties", "11-properties"), ("OpenBrandOverview", "12-brand"), ("OpenCityActivities", "13-calendar"), ("OpenChatPanel", "14-chat"),
+                ("OpenCityProperties", "11-properties"), ("OpenBrandOverview", "12-brand"), ("OpenSchedulePanel", "13-calendar"), ("OpenChatPanel", "14-chat"),
             })
             { Call(m.Item1); Snap2(m.Item2); }
             ui.CloseAllWindows();

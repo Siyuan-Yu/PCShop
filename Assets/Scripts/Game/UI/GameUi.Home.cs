@@ -40,12 +40,14 @@ namespace PCShopSell.Game.UI
         public void OpenBedWindow()
         {
             if (!S.CanSleepAt(S.CurrentPlace)) return;
-            string title = S.CurrentPlace != S.Home || S.HomeHas(FurnitureRole.Bed) ? "床" : "地铺";
-            OpenWindow(title, 760, 560, w =>
+            bool showHelp = false;
+            OpenWindow("睡觉", 620, 410, w =>
             {
-                if (S.CanSleepAt(S.CurrentPlace)) BuildBed(w);
-                else w.Close();
-            }, true, true);
+                if (!S.CanSleepAt(S.CurrentPlace)) { w.Close(); return; }
+                w.TimeStatusOverride = $"当前 {Ui.Hm(S.Clock.MinuteOfDay)}";
+                RefreshWindowTimeStatus(w);
+                BuildBed(w, showHelp, () => { showHelp = !showHelp; w.Rebuild(); });
+            });
         }
 
         public void OpenWardrobeWindow() => OpenRoomWindow("衣柜", 700, 640, BuildWardrobe);
@@ -498,25 +500,26 @@ namespace PCShopSell.Game.UI
 
         // ---------- 日程 ----------
 
-        public void OpenSchedulePanel() => OpenCalendar(0);
+        public void OpenSchedulePanel() => OpenCalendar();
         private void BuildPersonalSchedule(Window w)
         {
-            Line(w.Content,S.HasCalendar?"我的安排 · 到期前提醒":"笔记本 · 最近5天（升级智能手机后可看全部）",17,Ui.Accent);
-                var entries = S.Schedule().Where(e => S.HasCalendar || e.Minute / GameTimestamp.MinutesPerDay < S.Clock.Today.TotalDays + NotebookDays).ToList();
-                if (entries.Count == 0)
+            w.LiveConversation = false;
+            var header = Ui.Row(w.Content, 38);
+            Ui.Size(Ui.Label(header, "笔记本 · 最近5天（购买智能手机后可查看月历）", 17, color: Ui.Accent), 0, -1, 1);
+            Ui.Size(Ui.Button(header, "天气", OpenCityClimate, 16), 76, 38).name = "CalendarWeather";
+            int limit = S.Clock.Today.TotalDays + NotebookDays;
+            var entries = S.Schedule().Where(e => e.Minute / GameTimestamp.MinutesPerDay < limit).ToArray();
+            if (entries.Length == 0)
+            {
+                Line(w.Content, "最近没有安排。", 17, Ui.Dim);
+                return;
+            }
+            RectTransform list = Ui.Scroll(w.Content, 520);
+            foreach (var day in entries.GroupBy(e => (int)(e.Minute / GameTimestamp.MinutesPerDay)))
+            {
+                Line(list, DateLabel(day.Key), 18, Ui.Accent);
+                foreach (var e in day)
                 {
-                    Line(w.Content, "最近没有安排。约朋友、约师傅上门修东西、网购的快递、焖饭，都会出现在这里。", 17, Ui.Dim);
-                    return;
-                }
-                RectTransform list = Ui.Scroll(w.Content, 520);
-                string lastDay = null;
-                foreach (ScheduleEntry e in entries)
-                {
-                    if (e.Day != lastDay)
-                    {
-                        lastDay = e.Day;
-                        Line(list, "—— " + DateLabel((int)(e.Minute / PCShopSell.Core.Time.GameTimestamp.MinutesPerDay)) + " ——", 18, Ui.Accent);
-                    }
                     RectTransform row = Ui.Row(list, 44);
                     string color = e.Kind == "appointment" ? "#DDC18B" : (e.Kind == "repair" || e.Kind == "repairing") ? "#A9C9A9" : "#C8D0DA";
                     Ui.Size(Ui.Label(row, e.HasTime ? e.TimeText : "全天", 18, TextAnchor.MiddleLeft, Ui.Dim), 80);
@@ -534,7 +537,7 @@ namespace PCShopSell.Game.UI
                     }
                     if (e.Kind == "repair")
                     {
-                        string target = S.HomeVisits.Count > 0 ? S.HomeVisits[0].TargetId : null;
+                        string target = S.HomeVisits.FirstOrDefault(v => v.StartMinute == e.Minute)?.TargetId;
                         Ui.Size(Ui.Button(row, "取消（不退款）", () =>
                         {
                             if (target != null) S.CancelRepair(target);
@@ -542,6 +545,7 @@ namespace PCShopSell.Game.UI
                         }, 16, Ui.Warn), 100);
                     }
                 }
+            }
         }
 
         private void ScheduleActivityGoButton(Transform row, string activityId)
@@ -549,9 +553,10 @@ namespace PCShopSell.Game.UI
             var activity=S.CityActivities.FirstOrDefault(a=>a.Id==activityId && a.Active);
             bool here=activity!=null && S.CurrentPlace?.Id==activity.VenueId;
             string blocker=_ctrl.Placing?"请先结束摆放家具。":CityActivityMenuOrTravelBlocker(activityId);
+            string early = activity != null && !here && blocker == null ? S.CityActivityEarlyDepartureHint(activity) : null;
             Ui.Size(Ui.Button(row,here?"打开菜单":"一键前往",()=>GoToScheduledCityActivity(activityId),16,
-                Ui.ButtonHot,blocker==null),94,40)
-                .Tip(blocker ?? (here?"已到达约定场所，打开菜单或服务。":"沿实际路线前往约定场所；按 WASD 可随时接管。"));
+                early == null ? Ui.ButtonHot : Ui.ButtonBg,blocker==null),94,40)
+                .Tip(blocker ?? early ?? (here?"已到达约定场所，打开菜单或服务。":"沿实际路线前往约定场所；按 WASD 可随时接管。"));
         }
 
         // ---------- 笔记本（没智能手机时的日程）----------
@@ -574,7 +579,7 @@ namespace PCShopSell.Game.UI
         private static readonly Color PaperLine = new Color(0.55f, 0.65f, 0.80f, 0.55f);
 
         /// <summary>笔记本：约好的事自动记在本子上，纸张、横线、红边线、螺旋圈，没有提醒。</summary>
-        public void OpenNotebook() => OpenCalendar(0);
+        public void OpenNotebook() => OpenSchedulePanel();
 
 
 
@@ -592,27 +597,73 @@ namespace PCShopSell.Game.UI
         }
 
         private int _wakeMinute = 8 * 60;
-        private void BuildBed(Window w)
+        private void BuildBed(Window w, bool showHelp, Action toggleHelp)
         {
-            PlayerStats st = S.Player;
-            Line(w.Content, $"精力 {st.Energy:0}/{st.MaxEnergy:0}  欠觉 {st.SleepDebt:0.##} 小时", 18, Ui.Dim);
-                if(S.EnergyExhausted) Line(w.Content,S.EnergyExhaustionText,17,Ui.Warn);
-            Line(w.Content, $"过去24小时已睡 {S.SleepHoursLast24:0.#}/8 小时；睡够8小时就算休息好。", 18);
+            PlayerStats stats = S.Player;
+            var status = Ui.Row(w.Content, 28, 12);
+            Ui.Size(Ui.Label(status, $"精力 <b>{stats.Energy:0}/{stats.MaxEnergy:0}</b>", 17), 130);
+            Ui.Size(Ui.Label(status, $"近 24 小时已睡 <b>{S.SleepHoursLast24:0.#}/8 小时</b>", 17), 225);
+            Ui.Size(Ui.Label(status, $"欠觉 <b>{stats.SleepDebt:0.##} 小时</b>", 17,
+                color: stats.SleepDebt > 0 ? Ui.Accent : Ui.TextColor), -1, -1, 1).name = "SleepDebt";
+            if (S.EnergyExhausted) Line(w.Content, S.EnergyExhaustionText, 17, Ui.Warn);
             bool primaryHome = S.CurrentPlace == S.Home;
-            Para(w.Content, S.WeatherSummary + " · " + S.CityComfortSummary
-                + (primaryHome ? "。床和窗帘影响睡眠质量，风扇与空调按季节改善体感。" : "。这套住宅使用房间里配好的床。"), 16, Ui.Dim);
-            Line(w.Content, "选择起床时间（24小时制）", 20, Ui.Accent);
-            _wakeMinute=QuarterHourClock(_wakeMinute);
-            ClockSelector(w.Content,"起床",_wakeMinute,value=>{_wakeMinute=value;w.RequestRebuild();});
-            int duration = (_wakeMinute - S.Clock.MinuteOfDay + 1440) % 1440;
-            string day = _wakeMinute <= S.Clock.MinuteOfDay ? "明天" : "今天";
-            Line(w.Content, $"{day} {_wakeMinute / 60:00}:{_wakeMinute % 60:00} 起床，睡 {duration / 60.0:0.##} 小时。", 18, Ui.Dim);
-            var row = Ui.Row(w.Content, 50);
-            Ui.Size(Ui.Button(row, "睡到选定时间", () => { S.SleepUntil(_wakeMinute); w.Rebuild(); }, 20, Ui.ButtonHot, S.IsSleepTime && duration > 0), 220);
-            Ui.Size(Ui.Button(row, "睡满 8 小时", () => { S.SleepEightHours(); w.Rebuild(); }, 20, Ui.ButtonHot, S.IsSleepTime), 200);
-            Ui.Size(Ui.Button(w.Content, "小睡 2 小时", () => { S.Nap(); w.Rebuild(); }, 20), -1, 44);
-            Para(w.Content, "可以白天或夜间睡觉。精力耗尽后连续清醒4小时才会疲劳晕倒；实际睡眠结束本轮倒计时。小睡也计入滚动24小时的8小时目标。", 16, Ui.Dim);
-            if (primaryHome && !S.HomeHas(FurnitureRole.Bed)) Para(w.Content, "屋里没有床，只能睡地上；不足8小时的短睡恢复较慢。", 16, Ui.Warn);
+            if (primaryHome && !S.HomeHas(FurnitureRole.Bed))
+                Line(w.Content, "屋里没有床，睡地铺恢复较慢。", 16, Ui.Warn);
+
+            int now = S.Clock.MinuteOfDay;
+            const int dayMinutes = GameTimestamp.MinutesPerDay;
+            string WakeLabel(int duration)
+            {
+                int wake = now + duration;
+                return $"{(wake < dayMinutes ? "今天" : "明天")} {Ui.Hm(wake % dayMinutes)} 起床";
+            }
+
+            var presets = Ui.Row(w.Content, 74, 8);
+            SleepPreset(presets, "睡 8 小时", WakeLabel(8 * 60), () => { if (S.SleepEightHours()) w.Rebuild(); },
+                Ui.ButtonHot, S.IsSleepTime);
+            SleepPreset(presets, "小睡 2 小时", WakeLabel(2 * 60), () => { if (S.Nap()) w.Rebuild(); },
+                Ui.ButtonBg, true);
+
+            var rule = Ui.Panel(w.Content, "SleepSectionRule", Ui.Edge);
+            rule.raycastTarget = false;
+            Ui.Size(rule, -1, 1);
+            Line(w.Content, "自选起床时间", 20);
+            _wakeMinute = QuarterHourClock(_wakeMinute);
+            int duration = (_wakeMinute - now + dayMinutes) % dayMinutes;
+            var picker = ClockSelector(w.Content, "起床", _wakeMinute,
+                value => { _wakeMinute = value; w.RequestRebuild(); }, showLabel: false);
+            Ui.Size(Ui.Button(picker, "睡到这个时间", () => { if (S.SleepUntil(_wakeMinute)) w.Rebuild(); },
+                19, Ui.ButtonHot, S.IsSleepTime && duration > 0), 150, 42);
+            string preview = "请选择与当前不同的起床时间";
+            if (duration > 0)
+            {
+                string hours = duration >= 60 ? $"{duration / 60} 小时" : "";
+                string minutes = duration % 60 > 0 ? $"{duration % 60} 分钟" : "";
+                string durationText = (hours + " " + minutes).Trim();
+                preview = $"{WakeLabel(duration)} · 睡 {durationText}";
+            }
+            Line(w.Content, preview, 17, Ui.Dim).name = "SleepWakePreview";
+
+            var help = Ui.Button(w.Content, (showHelp ? "▾ " : "▸ ") + "睡眠说明", toggleHelp, 16, Ui.PanelBg);
+            help.GetComponentInChildren<Text>().alignment = TextAnchor.MiddleLeft;
+            Ui.Size(help, -1, 28);
+            if (showHelp)
+            {
+                Para(w.Content, "小睡也计入近 24 小时的睡眠。精力耗尽后连续清醒 4 小时会疲劳晕倒，睡觉可结束倒计时。", 16, Ui.Dim);
+                Para(w.Content, S.WeatherSummary + " · " + S.CityComfortSummary
+                    + (primaryHome ? "。床、窗帘和室温会影响休息效果。" : "。这套住宅使用房间里配好的床。"), 16, Ui.Dim);
+            }
+        }
+
+        private static void SleepPreset(Transform parent, string title, string wake, Action sleep, Color color, bool enabled)
+        {
+            var button = Ui.Button(parent, title, sleep, 22, color, enabled);
+            Ui.Size(button, -1, 74, 1);
+            var label = button.GetComponentInChildren<Text>();
+            label.fontStyle = FontStyle.Bold;
+            label.rectTransform.Anchor(0, 1, 1, 1, 8, -38, 8, 7);
+            Ui.Label(button.transform, wake, 16, TextAnchor.MiddleCenter, color == Ui.ButtonHot ? Ui.TextColor : Ui.Dim)
+                .rectTransform.Anchor(0, 0, 1, 1, 8, 7, 8, 38);
         }
 
         private void BuildWardrobe(Window w) { if (_cityClothingPreview == null) _cityClothingPreview = S.EquippedOutfit; BuildCityWardrobe(w); }
@@ -919,9 +970,13 @@ namespace PCShopSell.Game.UI
 
         // ---------- 家具城、农贸市场 ----------
 
-        private void BuildMall(Window w, Place p)
+        private void OpenMall(Place p)
         {
-            BuildCarryStore(w,p);
+            const string firstShopFilterSeen = "tutorial:mall-shop-filter-seen";
+            bool useFirstShop = S.MainShop.Rented && S.PendingShopKindPlaceId == null && S.Flags.Add(firstShopFilterSeen);
+            _shopTabs[p.Id] = useFirstShop ? RetailShopTypes.Name(S.MainShop.RetailKind) : PurchaseFacets.All;
+            _shopTabs.Remove(p.Id + ":facility");
+            OpenPlaceWindow(p, BuildCarryStore, StoreWindowWidth, 960);
         }
 
         private readonly Dictionary<string, string> _shopTabs = new Dictionary<string, string>();

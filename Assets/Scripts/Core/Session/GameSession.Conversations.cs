@@ -164,8 +164,17 @@ namespace PCShopSell.Core.Session
         {
             if(remote){var why=RemoteConversationBlocker(id);if(why!=null)return why;}
             else if (CityPersonState(id) != null && !CitySamePlace(id)) return "对方已经离开了，等下次见面再聊吧。";
+            bool firstConversation = !HasGreeted(id);
             if (!GreetPerson(id,remote)) return "现在无法和对方交谈。";
             var def = CityPerson(id);
+            if (!remote && id == LuZhi) BeginLuPersonalStory();
+            if (firstConversation)
+            {
+                var npc = Npcs.All.FirstOrDefault(person => person.Id == id);
+                var staff = Rosters.Get(id) ?? Residents.Get(id)?.Person;
+                string name = def?.Name ?? npc?.Name ?? staff?.Name;
+                return npc?.FirstMeet ?? $"你好，我是{name}。以后见面打声招呼。";
+            }
             if (def == null)
             {
                 var staff = Rosters.Get(id) ?? Residents.Get(id)?.Person;
@@ -206,7 +215,7 @@ namespace PCShopSell.Core.Session
         {
             if (IsGameOver) return "当前不能送礼";
             if (CityPersonState(id) != null && !CitySamePlace(id)) return "需要当面送礼";
-            if (!HasGreeted(id)) return "先打个招呼";
+            if (!HasGreeted(id)) return "先聊聊认识一下";
             var days = Npcs.Get(id) != null ? _giftDays : _staffGiftDay;
             if (days.TryGetValue(id, out int day) && Clock.Today.TotalDays - day < 3) return (3 - Clock.Today.TotalDays + day) + " 天后才能再送";
             bool food = GiftableFoodBatches(true).Any() || GiftableFoodBatches(false).Any();

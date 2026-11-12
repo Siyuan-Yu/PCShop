@@ -34,18 +34,19 @@ namespace PCShopSell.Game.UI
 
         private static int QuarterHourClock(int minute) => ((minute + 14) / 15 * 15) % 1440;
 
-        private void ClockSelector(Transform parent,string label,int minute,Action<int> choose,int earliestMinute=0)
+        private RectTransform ClockSelector(Transform parent,string label,int minute,Action<int> choose,int earliestMinute=0,bool showLabel=true)
         {
             minute=Math.Max(QuarterHourClock(minute),earliestMinute);
             var hours=Enumerable.Range(0,24).Where(h=>h*60+45>=earliestMinute).ToArray();
             var minuteOptions=new[]{0,15,30,45}.Where(m=>minute/60*60+m>=earliestMinute).ToArray();
             var row=Ui.Row(parent,44,6);
-            Ui.Size(Ui.Label(row,label,18),65);
+            if (showLabel) Ui.Size(Ui.Label(row,label,18),65);
             var hour=Ui.Choice(row,hours.Select(n=>n.ToString("00")),Array.IndexOf(hours,minute/60),h=>choose(Math.Max(earliestMinute,hours[h]*60+minute%60)));
             hour.name="ClockHour_"+label;Ui.Size(hour,85,42);
             Ui.Size(Ui.Label(row,":",20,TextAnchor.MiddleCenter),12);
             var minutes=Ui.Choice(row,minuteOptions.Select(n=>n.ToString("00")),Array.IndexOf(minuteOptions,minute%60),m=>choose(minute/60*60+minuteOptions[m]));
             minutes.name="ClockMinute_"+label;Ui.Size(minutes,85,42);
+            return row;
         }
         private void OpenEmployeeShift(string id, Window parent)
         {

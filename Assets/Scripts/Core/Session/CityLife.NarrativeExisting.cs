@@ -16,14 +16,14 @@ namespace PCShopSell.Core.Session
             void Place(string id,string home,string work,int start=540,int end=1080)
             {var p=people.First(x=>x.Id==id);p.HomeId=home;p.WorkId=work;p.WorkStart=start;p.WorkEnd=end;}
             foreach(var row in new[]{
-                new[]{"landlady","52","照看老房子和种花","把房屋维护和租约交代清楚，也给自己留些休息时间。"},
+                new[]{"landlady","44","照看老房子和种花","把房屋维护和租约交代清楚，也给自己留些休息时间。"},
                 new[]{"lin","29","玩游戏和约老朋友吃饭","工作稳定以后，还能和老朋友认真见面。"},
-                new[]{"zhou","48","旧电子设备和听评书","把熟人的信任和自己能承担的风险分清楚。"},
+                new[]{"zhou","40","旧电子设备和听评书","把熟人的信任和自己能承担的风险分清楚。"},
                 new[]{"jie","32","拆手机和街边小吃","守好自己的店，不为扩张压垮原有生活。"},
-                new[]{"li","45","钓鱼和研究硬件","让老客户放心，也给新店一次靠谱合作的机会。"},
+                new[]{"li","39","钓鱼和研究硬件","让老客户放心，也给新店一次靠谱合作的机会。"},
                 new[]{"wang","36","研究显卡和逛市场","消息说清来处，不再拿猜测当保证。"},
                 new[]{"qian","41","记账和看老电影","经营稳妥，也能按时下班。"},
-                new[]{"sun","56","修电器和听球赛","教会年轻人先把质量和承诺说清楚。"},
+                new[]{"sun","44","修电器和听球赛","教会年轻人先把质量和承诺说清楚。"},
                 new[]{"zhang","62","读书和写短篇","在附近留一个愿意坐下读书的角落。"},
                 new[]{"keeper_agent","30","走街看建筑和拍门头","让签约的人知道自己签下的责任。"}})
             {var p=people.First(x=>x.Id==row[0]);p.Age=int.Parse(row[1]);p.Interest=row[2];p.Goal=row[3];}

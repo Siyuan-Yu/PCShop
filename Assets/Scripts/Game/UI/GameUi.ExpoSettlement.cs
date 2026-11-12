@@ -71,7 +71,7 @@ namespace PCShopSell.Game.UI
                 var actions = Ui.Row(w.Content, 44, 10);
                 Ui.Size(Ui.Button(actions, "关闭结算", w.Close, 18), -1, 44, 1);
                 if (S.CurrentPlace?.Id == "life_expo")
-                    Ui.Size(Ui.Button(actions, "离开展馆", () => { w.Close(); S.Leave(); }, 18, Ui.ButtonHot), -1, 44, 1);
+                    Ui.Size(Ui.Button(actions, "离开展馆", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18, Ui.ButtonHot), -1, 44, 1);
             });
         }
 

@@ -15,7 +15,8 @@ namespace PCShopSell.Game.UI
             var activity = S.CityActivities.FirstOrDefault(a => a.Id == id && a.Active);
             if (activity != null && S.CurrentPlace?.Id == activity.VenueId && !S.IsWorking && !S.IsGameOver)
                 return null; // Browsing the current venue is not leaving or starting another activity.
-            return S.CityActivityTravelBlocker(id);
+            // Keep early departures clickable so the player can see when to leave.
+            return S.CityActivityTravelBlocker(id, checkDepartureTime: false);
         }
 
         private void GoToScheduledCityActivity(string id)
@@ -25,8 +26,14 @@ namespace PCShopSell.Game.UI
             if (_ctrl.Placing) { Toast("请先结束摆放家具。"); return; }
             string why = CityActivityMenuOrTravelBlocker(id);
             if (why != null) { Toast(why); return; }
+            bool here = S.CurrentPlace?.Id == activity.VenueId;
+            if (!here && S.CityActivityEarlyDepartureHint(activity) is string early)
+            {
+                Popup("赴约提醒", early);
+                return;
+            }
             CloseAllWindows();
-            if (S.CurrentPlace?.Id == activity.VenueId) OpenCityVenue(S.City.GetPlace(activity.VenueId));
+            if (here) OpenCityVenue(S.City.GetPlace(activity.VenueId));
             else S.GoToCityActivity(id);
         }
         private static string VenuePlayerEffects(CityVenueService service)
@@ -40,6 +47,23 @@ namespace PCShopSell.Game.UI
             if(service.Intelligence!=0)completion.Add("见识 +"+service.Intelligence);
             if(service.Relation>0)completion.Add("同行好感 +"+service.Relation);
             return string.Join(" · ",effects)+(completion.Count>0?"\n完成后："+string.Join(" · ",completion):"");
+        }
+
+        private void BuildPartnerActivityChoices(Window w, CityActivity activity)
+        {
+            string line = S.PartnerActivityLine(activity);
+            if (line == null) return;
+            Para(w.Content, line, 17, Ui.Accent);
+            if (!S.CanTalkToActivityPartner(activity)) return;
+            var row = Ui.Row(w.Content, 40, 6);
+            void Interact(bool holdHands)
+            {
+                string name = S.CityPerson(S.ActivityPartnerId(activity))?.Name;
+                string reply = S.InteractWithActivityPartner(activity.Id, holdHands);
+                if (reply != null) Toast(name + "：" + reply);
+            }
+            Ui.Size(Ui.Button(row, "牵手", () => Interact(true), 16), -1, 40, 1);
+            Ui.Size(Ui.Button(row, "聊聊心事", () => Interact(false), 16), -1, 40, 1);
         }
 
         private void BuildCityVenue(Window w, Place place)
@@ -66,7 +90,9 @@ namespace PCShopSell.Game.UI
             if (running?.VenueId == place.Id)
             {
                 Line(w.Content, "正在体验：" + GameSession.VenueServiceName(S.CityActivityService(running), Math.Max(0, running.ServiceChoice)), 19, Ui.Good);
-                Ui.Size(Ui.Button(w.Content, "查看本次消费", () => OpenCityActivityDetail(running.Id), 18), -1, 42);
+                BuildPartnerActivityChoices(w, running);
+                Ui.Size(Ui.Button(w.Content, S.ActivityPartnerId(running) == null ? "查看本次消费" : "查看约会详情",
+                    () => OpenCityActivityDetail(running.Id), 18), -1, 42);
             }
             else if (pending != null)
             {
@@ -109,7 +135,7 @@ namespace PCShopSell.Game.UI
                     OpenCityActivityDetail(S.RunningCityActivity.Id);
                     return;
                 }
-                w.Close(); S.Leave();
+                w.Close(); _ctrl.LeaveCurrentPlace();
             }, 18), -1, 42);
         }
     }

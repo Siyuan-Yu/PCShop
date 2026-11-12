@@ -154,8 +154,8 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(actions, "返回", w.Close, 18), -1, 42, 1);
                 Ui.Size(Ui.Button(actions, "查看当天日程", () =>
                 {
-                    _calendarSession = S; _calendarDay = (int)(item.Entry.Minute / 1440); _calendarMonth = _calendarDay / 30;
-                    w.Close(); OpenSchedulePanel();
+                    w.Close();
+                    OpenCalendar((int)(item.Entry.Minute / GameTimestamp.MinutesPerDay));
                 }, 18), -1, 42, 1);
             });
         }

@@ -21,7 +21,7 @@ namespace PCShopSell.Core.Session
         public long PaidInterestCents;
         public int DueDay => StartDay + Months * GameDate.DaysPerMonth;
         public Money Principal => Money.FromCents(PrincipalCents);
-        public Money MonthlyInterest => NoInterest ? Money.Zero : Money.FromCents(PrincipalCents / 5);
+        public Money MonthlyInterest => NoInterest ? Money.Zero : Money.FromCents(PrincipalCents * GameSession.AppLoanMonthlyRatePercent / 100);
         public Money TermInterest => MonthlyInterest * Months;
         public Money TotalDue => Principal + TermInterest;
         public AppLoan Copy() => (AppLoan)MemberwiseClone();
@@ -29,6 +29,10 @@ namespace PCShopSell.Core.Session
 
     public sealed partial class GameSession
     {
+        public const int AppLoanAmountStep = 100;
+        public const int AppLoanMaximumYuan = 10000000;
+        public const int AppLoanMaximumMonths = 12;
+        public const int AppLoanMonthlyRatePercent = 20;
         private readonly List<AppLoan> _appLoans = new List<AppLoan>();
         private int _nextAppLoanId = 1;
         public IReadOnlyList<AppLoan> AppLoans => _appLoans;
@@ -43,7 +47,9 @@ namespace PCShopSell.Core.Session
             if (IsGameOver || IsWorking) return Fail("当前不能办理贷款。");
             string blocker = atBank ? BankBlocker() : AppBlocker(PhoneApps.Loans);
             if (blocker != null) return Fail(blocker);
-            if (yuan < 100 || yuan > 10000000 || yuan % 100 != 0 || months < 1 || months > 12) return Fail("金额按 ¥100 调整，期限为 1–12 个月。");
+            if (yuan < AppLoanAmountStep || yuan > AppLoanMaximumYuan || yuan % AppLoanAmountStep != 0
+                || months < 1 || months > AppLoanMaximumMonths)
+                return Fail($"金额按 ¥{AppLoanAmountStep} 调整，期限为 1–{AppLoanMaximumMonths} 个月。");
             var loan = new AppLoan { Id = _nextAppLoanId++, StartDay = Clock.Today.TotalDays, Months = months,
                 PrincipalCents = Money.FromYuan(yuan).Cents, AtBank = atBank };
             _appLoans.Add(loan);
@@ -93,7 +99,8 @@ namespace PCShopSell.Core.Session
             _appLoans.Clear();
             foreach (var loan in data.appLoans ?? Array.Empty<AppLoan>())
                 if (loan != null && loan.Id > 0 && loan.StartDay >= 0 && loan.StartDay <= Clock.Today.TotalDays
-                    && loan.Months >= 1 && loan.Months <= 12 && loan.PrincipalCents >= 10000 && loan.PrincipalCents <= 1000000000
+                    && loan.Months >= 1 && loan.Months <= AppLoanMaximumMonths
+                    && loan.PrincipalCents >= AppLoanAmountStep * 100L && loan.PrincipalCents <= AppLoanMaximumYuan * 100L
                     && !_appLoans.Any(l => l.Id == loan.Id)) _appLoans.Add(loan.Copy());
             _nextAppLoanId = _appLoans.Count == 0 ? 1 : _appLoans.Max(l => l.Id) + 1;
             CollectDueAppLoans();

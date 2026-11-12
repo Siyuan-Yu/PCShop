@@ -119,6 +119,30 @@ namespace PCShopSell.Tests
                 }
             }
         }
+
+        [Test] public void NewDestinationResumesManualPauseWithoutReleasingWindowHold()
+        {
+            using (var s = Make())
+            {
+                s.Time.SetSpeed(4);
+                s.Time.SetPaused(true);
+                Assert.False(s.GoTo("missing"));
+                Assert.True(s.Time.IsUserPaused);
+
+                s.Time.Hold();
+                Assert.True(s.BeginCityTravel("flat"));
+                Assert.False(s.Time.IsUserPaused);
+                Assert.True(s.Time.IsHeld);
+                Assert.AreEqual(4, s.Time.Speed);
+                var distance = s.Trip.RemainingGameMeters;
+                s.Tick(.2);
+                Assert.AreEqual(distance, s.Trip.RemainingGameMeters);
+                s.Time.Release();
+                s.Tick(.2);
+                Assert.Less(s.Trip.RemainingGameMeters, distance);
+            }
+        }
+
         [Test] public void CancelOrRetargetNearFinalApproachKeepsRealPosition()
         {
             using (var s = Make())

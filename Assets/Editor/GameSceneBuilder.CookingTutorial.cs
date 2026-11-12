@@ -7,6 +7,7 @@ using PCShopSell.Game.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace PCShopSell.EditorTools
@@ -82,8 +83,92 @@ namespace PCShopSell.EditorTools
             Snap("08-done");
             ui.OpenBedWindow(); Check(ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Text>()).Any(t => t.text == "睡觉" || t.text.Contains("睡到")), "完成后床交互恢复");
             ui.CloseAllWindows();
+            AssertOpeningAgencyGuide();
             Log("COOKING TUTORIAL COMPLETE");
         });
+
+        private static void AssertOpeningAgencyGuide()
+        {
+            var ui = _game.Ui;
+            var s = _game.Session;
+            Check(!s.OpeningAgencyGuidePending, "留在家里时不强制前往中介");
+            _game.LeaveHome();
+            Frame(.05f);
+            Snap("09-first-departure");
+            Check(s.OpeningAgencyGuidePending && s.CurrentPlace == null && s.Time.IsHeld, "首次出门时暂停并引导前往中介");
+            Check(ui.TryHotkey(KeyCode.T) && !ui.AnyModalOpen, "首次出门拦截任务快捷键");
+            Check(ui.TryHotkey(KeyCode.Escape) && ui.AnyModalOpen, "首次出门保留系统菜单");
+            ui.CloseAllWindows();
+            Frame(.05f);
+            Canvas.ForceUpdateCanvases();
+            using (var restored = GameSession.Load(s.City, s.CreateSave()))
+                Check(restored.OpeningAgencyGuidePending, "读档后仍保留未完成的首次出门引导");
+
+            var hud = ui.Canvases.First(c => c.name == "UI_Hud");
+            var guide = ui.Canvases.First(c => c.name == "UI_Tutorial").GetComponent<GraphicRaycaster>();
+            var action = hud.GetComponentsInChildren<Button>().Single(b => b.name == "QuestPrimaryAction");
+            var card = action.transform.parent;
+            foreach (var button in card.GetComponentsInChildren<Button>())
+            {
+                var rect = (RectTransform)button.transform;
+                var point = RectTransformUtility.WorldToScreenPoint(hud.worldCamera, rect.TransformPoint(rect.rect.center));
+                var data = new PointerEventData(EventSystem.current) { position = point, button = PointerEventData.InputButton.Left };
+                var hits = new System.Collections.Generic.List<RaycastResult>();
+                guide.Raycast(data, hits);
+                if (button != action)
+                    Check(hits.Any(hit => hit.gameObject.name == "OpeningMealInputBlock"), "任务卡的其他按钮被拦截");
+                else
+                {
+                    Check(hits.Count == 0, "前往中介按钮可穿过教学遮罩");
+                    hud.GetComponent<GraphicRaycaster>().Raycast(data, hits);
+                    Check(hits.Any(hit => hit.gameObject.transform.IsChildOf(button.transform)),
+                        "前往中介按钮收到实际点击射线 · " + string.Join(", ", hits.Select(hit => hit.gameObject.name)));
+                }
+            }
+            ExecuteEvents.Execute(action.gameObject, new PointerEventData(EventSystem.current)
+                { button = PointerEventData.InputButton.Left }, ExecuteEvents.pointerClickHandler);
+            Check(!s.OpeningAgencyGuidePending && !s.Time.IsHeld && s.CityIntent?.TargetPlaceId == "agency" && s.Trip != null,
+                "点击前往中介后解除限制并开始出行");
+            using (var restored = GameSession.Load(s.City, s.CreateSave()))
+                Check(!restored.OpeningAgencyGuidePending, "已完成的首次出门引导在读档后不重复");
+
+            s.Time.SetSpeed(8);
+            Run(() => s.InAgency, 2000);
+            Check(s.InAgency && ui.AnyModalOpen, "到达后自动打开中介窗口");
+            if (s.InAgency)
+            {
+                Snap("10-agency-property-and-settlement");
+                AssertMallOpeningFilter();
+            }
+        }
+
+        private static void AssertMallOpeningFilter()
+        {
+            var ui = _game.Ui;
+            var s = _game.Session;
+            string firstShop = s.Listings.First(l => s.LeaseBlocker(l) == null).PlaceId;
+            Check(s.SignLeaseThenChooseKind(firstShop, false) && s.ConfirmOpeningKind(firstShop, PetShopCatalog.ShopKind),
+                "签下第一间铺子并确认经营宠物用品店");
+            Teleport(s, "shop12");
+            ui.OnEnteredPlace(s.CurrentPlace);
+            Frame(.05f);
+
+            Button Tab(string name) => ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Button>())
+                .FirstOrDefault(b => b.name == "ShopTab_" + name);
+            Check(Tab("宠物用品店")?.image.color == Ui.ButtonHot, "首次打开家具城默认选择第一家店的店型");
+            Check(Tab("开店清单") == null && !ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Text>())
+                .Any(t => t.text.StartsWith("开店待买")), "家具城不再显示开店清单和待买提示");
+            ui.RebuildWindows();
+            Check(Tab("宠物用品店")?.image.color == Ui.ButtonHot, "同一个窗口刷新时保留已选店型");
+            Snap("11-mall-first-open");
+
+            ClickCooking(null, "ShopTab_餐馆");
+            ui.CloseAllWindows();
+            ui.OnEnteredPlace(s.CurrentPlace);
+            Check(Tab("全部")?.image.color == Ui.ButtonHot, "再次打开家具城默认全部");
+            Check(_game.SaveGame() && _game.TryLoadGame(), "家具城重开测试存档可读");
+            Check(Tab("全部")?.image.color == Ui.ButtonHot, "重新读档后家具城仍默认全部");
+        }
 
         private static void AssertCookingSpotlight(string targetName)
         {

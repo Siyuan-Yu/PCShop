@@ -358,7 +358,7 @@ namespace PCShopSell.Core.Session
             {
                 var person=CityPersonState(entry.Key);
                 person.Route=entry.Value;person.LocationPlaceId=null;person.Task=CityPersonTask.Travelling;person.TaskLabel="赴主线会面";
-                Meet(entry.Key,0);
+                if (nodeId != "expo.review" || entry.Key != LuZhi) Meet(entry.Key,0);
             }
             Say(DistrictMeetingDescription); return true;
         }
@@ -408,7 +408,11 @@ namespace PCShopSell.Core.Session
             _district.Completed=_district.Completed.Concat(new[]{node.Id}).ToArray();
             foreach(var id in _district.MeetingPeople)RememberSocial(id,node.Title+"："+node.Result);
             if(node.Id=="community.trial" && !FirstChapterTrial)GrantDistrictAccess(1);
-            if(node.Id=="expo.review")GrantDistrictAccess(2);
+            if(node.Id=="expo.review")
+            {
+                if (_district.MeetingPeople.Contains(LuZhi)) BeginLuPersonalStory();
+                GrantDistrictAccess(2);
+            }
             if(node.Id=="tender.review")GrantDistrictAccess(3);
             _district.MeetingPeople=Array.Empty<string>();_district.MeetingPlaceId=null;_district.MeetingNodeId=null;
             var chain=ActiveDistrictChain(_district.Chapter);int index=Array.IndexOf(chain,node.Id)+1;
@@ -421,6 +425,11 @@ namespace PCShopSell.Core.Session
         {
             _district.UnlockedTier=Math.Max(tier,_district.UnlockedTier);
             Show("道路已开放", "你完成了引荐与合作，通往"+DistrictName(tier)+"的道路已经放行。房租、采购和经营费用仍按正常规则支付。");
+            if (tier == 2 && Flags.Add("district:introduced-lu"))
+            {
+                IntroduceCityPerson("life_curator", LuZhi);
+                Say("陆栀在公园片区的纸风车原创工作室，有空可以去找她聊聊。");
+            }
         }
 
         public string DebugDistrictAcceptanceBlocker(int chapter)

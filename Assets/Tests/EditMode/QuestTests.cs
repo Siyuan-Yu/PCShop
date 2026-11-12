@@ -3,6 +3,7 @@ using NUnit.Framework;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
@@ -288,6 +289,45 @@ namespace PCShopSell.Tests
             s.PlayerShop.Stock.ForceAdd(PCShopSell.Core.Catalog.PartCatalog.Get("ssd0"), true, 1);
             s.PlayerShop.Stock.ForceAdd(PCShopSell.Core.Catalog.PartCatalog.Get("cpu0"), true, 1);
             Assert.AreEqual("sale", s.CurrentQuest().Id);
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void PetShopStarterGiftDoesNotSkipFirstWholesalePurchase(bool toBag)
+        {
+            var layout = GameSessionTests.Layout();
+            layout.places = layout.places.Append(new LayoutPlaceData
+            {
+                id = PetShopCatalog.SupplierId, name = "宠物用品批发市场", kind = "shop",
+                node = "dl", size = "small", business = PetShopCatalog.SupplierBusiness, explicitEntrance = true,
+            }).ToArray();
+            var city = CityLayout.FromData(layout);
+            using var s = new GameSession(city, 7, Money.FromYuan(30000), GameTimestamp.From(new GameDate(0), 10 * 60),
+                startWithShop: false);
+            GameSessionTests.Teleport(s, "agency");
+            Assert.True(s.SignRetailLease("pc", false, PetShopCatalog.ShopKind));
+            foreach (string id in GameSession.OpeningFurniture(s.RetailKind)) s.DebugGiveFurniture(id, 1);
+            Assert.AreEqual("place", s.CurrentQuest().Id);
+            Assert.Greater(s.PlayerShop.Stock.GoodsCount(PetShopCatalog.CatFood), 0);
+            GameSessionTests.Teleport(s, "pc");
+            foreach (string id in GameSession.OpeningFurniture(s.RetailKind)) s.CurrentShop.Layout.Add(new PlacedFurniture { Id = id });
+            Assert.AreEqual("shelf", s.CurrentQuest().Id);
+            Assert.True(s.SetShelfKind(s.ShelfIndexes()[0], ShelfKinds.ForGift(PetShopCatalog.CatFood).Id));
+            Assert.AreEqual("stock", s.CurrentQuest().Id);
+
+            s.Flags.Remove("tutorial:opening-stock-purchase-checked");
+            s.Flags.Add("tutorial:stock"); // A save from before purchases were required.
+            using var loaded = Reload(s);
+            Assert.AreEqual("stock", loaded.CurrentQuest().Id);
+            GameSessionTests.Teleport(loaded, PetShopCatalog.SupplierId);
+            var market = city.GetPlace(PetShopCatalog.SupplierId);
+            Assert.True(loaded.CartAddRetailWholesale(market, PetShopCatalog.CatFood), "营业中的宠物批发市场可以加购");
+            Assert.AreEqual("stock", loaded.CurrentQuest().Id);
+            Assert.True(toBag ? loaded.Checkout(true)
+                : loaded.BuyRetailWholesale(market.Id, PetShopCatalog.CatFood, 1, toBag: false, shopId: "pc"));
+            Assert.AreEqual("sale", loaded.CurrentQuest().Id);
+            using var afterPurchase = Reload(loaded);
+            Assert.AreEqual("sale", afterPurchase.CurrentQuest().Id);
         }
 
         private static void HireSomeone(GameSession s)

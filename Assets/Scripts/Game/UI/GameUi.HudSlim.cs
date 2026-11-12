@@ -59,7 +59,7 @@ namespace PCShopSell.Game.UI
                 if (content == null) return;
                 foreach (var row in content.GetComponentsInChildren<HorizontalLayoutGroup>(true))
                 {
-                    if (row.GetComponent<Done>() != null) continue;
+                    if (row.GetComponent<Done>() != null || row.name == "DialogueOptionRow") continue;
                     var buttons = new List<Button>();
                     bool onlyButtons = true;
                     foreach (Transform child in row.transform)
