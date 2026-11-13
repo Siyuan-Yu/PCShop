@@ -3,7 +3,7 @@
 文件：`Assets/Resources/Data/events.json`。常规随机事件可直接编辑内容、时间、概率和权重。标记为 `code: true` 的事件由 C# 实现业务和选项，JSON 可覆盖抽取参数。
 **推荐用外部事件编辑器改**：`ExternalTools/EventEditor`（见文末）。
 Unity 菜单 `PCShop/事件/事件清单与触发` 可以看清单、校验格式、运行时一键触发；`PCShop/事件/校验 events.json` 只做校验。
-`EventScriptTests` 覆盖格式和编号。游戏内批量入口为「作弊 → 随机事件批量验收」。[事件编号、分批操作和前 10 项规则](98-random-event-index.md)
+`EventScriptTests` 覆盖格式和编号。游戏内批量入口为「作弊 → 随机事件批量验收」。[事件编号、分批操作和前 10 项规则](98-random-event-index.md) · [现状与接续流程](99-random-event-handoff.md)
 
 ## 触发规则（代码里，`GameSession.Events.cs`）
 从开局计日第 2 天起，每天 11:00、15:00、20:00 各抽一次（`EventSlotChance` = 0.4；条件都满足时约 1.2 个/天，实际受条件限制会少一些）；要有店、没有未处理的事件。
