@@ -174,9 +174,12 @@ namespace PCShopSell.Core.Session
         public int Tick(double realSeconds)
         {
             _manualMoving = false;
+            CheckRacingAccess();
             if (Racing || IsGameOver || !Time.IsRunning || realSeconds <= 0) return 0;
             // 开局做饭教学：世界时钟不自己走，玩家可以慢慢看；只有锅在焖饭时才走，否则饭永远焖不好。吃饭、装包这些操作自己会推进相应的分钟。
             if (OpeningClockFrozen) return 0;
+            if (!_sleeping && !IsWorking && !CityActivityExclusive && !BrandExpoExclusive && PendingEvent == null && Trip == null
+                && (TryShowRacingIntroduction() || TryShowRelativeOverdue() || TryOfferLeisureInvitation())) return 0;
             _activeCheckoutSeconds+=Math.Min(realSeconds,TimeController.MaxTickSeconds);
             double scaled = Math.Min(realSeconds, TimeController.MaxTickSeconds) * Time.Speed * TimeController.WorldRate;
 
@@ -203,7 +206,7 @@ namespace PCShopSell.Core.Session
             {
                 if (IsWorking && WorkMinutesLeft <= 0) UpdatePlayerWork(Clock.Now);
                 int step = Math.Min(1, IsWorking ? Math.Min(minutes, Math.Max(1, WorkMinutesLeft)) : minutes);
-                if (IsWorking && !WorkContract.Days[WorkContract.WorkingIndex].LunchServed)
+                if (IsContractWorking && !WorkContract.Days[WorkContract.WorkingIndex].LunchServed)
                     step = (int)Math.Min(step, Math.Max(1, WorkMealAt - Clock.Now.TotalMinutes));
                 Clock.Advance(step); minutes -= step;
                 ProcessPending();
@@ -305,6 +308,7 @@ namespace PCShopSell.Core.Session
         {
             string districtBlock = DistrictAccessBlocker(p);
             if (districtBlock != null) return districtBlock;
+            if (p != null && RaceTracks.Get(p.Id) != null && RacingAccessBlocker is string racingBlock) return racingBlock;
             if (p?.Kind == PlaceKind.Home && CanSleepAt(p)) return null;
             if(City.LayoutVersion>=7 && p?.Kind==PlaceKind.Home && p!=Home)return HomeVisitBlocker(p);
             if (WorkStaffEntry(p)) return null;
@@ -341,7 +345,7 @@ namespace PCShopSell.Core.Session
         public bool IsPlaceOpen(Place p)
         {
             if (p == null) return false;
-            var track=RaceTracks.Get(p.Id);if(track!=null)return track.IsOpenAt(Clock.MinuteOfDay);
+            var track=RaceTracks.Get(p.Id);if(track!=null)return RacingUnlocked&&track.IsOpenAt(Clock.MinuteOfDay);
             OwnedShop mine = ShopAt(p);
             if (mine != null) return IsDedicatedVenue(p)?VenueOpen(p):mine.Sim.IsOpen;
             if (SupplierClosesOnWeekend(p)) return IsWholesalerOpen;
@@ -435,6 +439,7 @@ namespace PCShopSell.Core.Session
             TickCityStories(to.TotalMinutes);
             TickCityRetail();
             TickSpecialBusinesses(from,to);
+            TickEventFollowups(to);
             TickCityClimate(from.TotalMinutes,to.TotalMinutes);
             foreach(var shop in _shops)shop.Sim.PlayerPresent=CityPlayerCanWork(shop);
             int minutes = (int)from.MinutesUntil(to);
@@ -449,7 +454,7 @@ namespace PCShopSell.Core.Session
             {
                 if (!CityActivityExclusive && Crosses(from, to, 12 * 60)) EatMeal("午饭");
                 if (!CityActivityExclusive && Crosses(from, to, 18 * 60 + 30)) EatMeal("晚饭");
-                if (!CityActivityExclusive && !IsWorking && Player.Hunger < 25 && (HasAutomaticHomeMeal
+                if (!CityActivityExclusive && !IsContractWorking && Player.Hunger < 25 && (HasAutomaticHomeMeal
                     || HasFridgeMeal || HasMeal(Backpack.Food.Packed) || RestaurantMealChoices().Length>0
                     || (MealDeliveryEnabled && HasSmartphone && Ledger.CanAfford(Money.FromYuan(SelectedDeliveryMeal.Price))))) EatMeal("加餐");
             }
@@ -467,6 +472,7 @@ namespace PCShopSell.Core.Session
             DeliverDirect(to);
             if (from.Date == to.Date) TrackCreatorCampaigns(to);
 
+            CheckRacingAccess();
             if (!_sleeping && Player.Health < 15) _pendingHospital = true;
         }
 
@@ -514,6 +520,8 @@ namespace PCShopSell.Core.Session
             PayWages(previous);
             ApplyEmployeeTransfers(today);
             ProcessScheduledCredits(today);
+            CheckRelativeRepayment(today);
+            CheckInspectionFollowups(today);
             AccrueBankInterest();
             CollectDueAppLoans();
             DecayRelations();

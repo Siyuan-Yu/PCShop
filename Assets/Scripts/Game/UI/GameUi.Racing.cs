@@ -107,8 +107,14 @@ namespace PCShopSell.Game.UI
         {
             OpenWindow("湖区赛车",840,670,w=>
             {
+                if (S.RacingAccessBlocker is string blocker)
+                {
+                    Para(w.Content, blocker, 20, Ui.Warn);
+                    return;
+                }
+                BuildRacingIntroduction(w);
                 Line(w.Content,"比赛胜场 "+S.RacingWins+" · 参赛和练习使用对应片区的入库车辆",20,Ui.Accent);
-                Para(w.Content, "周一大赛冠军 ¥2,000，三日小赛冠军 ¥1,000。同日优先举行大赛，最多10名车友同场。", 17);
+                Para(w.Content, $"周一大赛冠军 ¥{RacingSchedule.ChampionPrize(RaceMeeting.Major):N0} · 三日小赛冠军 ¥{RacingSchedule.ChampionPrize(RaceMeeting.Small):N0}。同日优先举行大赛，最多10名车友同场。", 17);
                 Para(w.Content,S.RaceMeetingSummary(),17,Ui.Accent);
                 foreach(var track in RaceTracks.All.Where(track => !GameSession.FirstChapterTrial || track.Tier <= S.DistrictAccessTier))
                 {
@@ -117,9 +123,45 @@ namespace PCShopSell.Game.UI
                 }
             });
         }
+
+        private void BuildRacingIntroduction(Window w)
+        {
+            if (!S.RacingUnlocked) return;
+            string destination, instruction;
+            switch (S.RacingIntroduction)
+            {
+                case RacingIntroStep.GetVehicle:
+                    destination = "dealer";
+                    instruction = "先到顺丰车行买一辆小电驴或三轮车。";
+                    break;
+                case RacingIntroStep.GetParking:
+                    destination = GameSession.StarterRaceGarageId;
+                    instruction = "到城郊赛场车库租用或全款购买一个车位。";
+                    break;
+                case RacingIntroStep.ParkVehicle:
+                    destination = GameSession.StarterRaceGarageId;
+                    instruction = "把小电驴或三轮车停入城郊车库。通勤车入库时会取消通勤用途，也可从其他车库调入。";
+                    break;
+                case RacingIntroStep.Drive:
+                    destination = GameSession.StarterRaceTrackId;
+                    instruction = $"在城郊练习场选入库车辆，完成一次计时练习（¥{RacingSchedule.PracticeFee}）或正式比赛。";
+                    break;
+                default: return;
+            }
+            var card = BusinessCard(w.Content, "许星澜 · 赛车入门");
+            Para(card, instruction, 17);
+            if (S.CurrentPlace?.Id != destination && S.City.HasPlace(destination))
+                Ui.Size(Ui.Button(card, "前往" + S.City.GetPlace(destination).Name, () =>
+                {
+                    if (S.BeginCityTravel(destination)) CloseWindowSilently(w);
+                }, 18, Ui.ButtonHot), -1, 38);
+        }
+
         private void BuildRaceReception(Window w,Place place)
         {
             var t=RaceTracks.Get(place.Id);Line(w.Content,t.Name+" · "+t.OpeningHours,23,Ui.Accent);
+            if (S.RacingAccessBlocker is string blocker) { Para(w.Content, blocker, 20, Ui.Warn); return; }
+            if (t.Id == GameSession.StarterRaceTrackId) BuildRacingIntroduction(w);
             Para(w.Content,S.RaceMeetingSummary(),18,Ui.Accent);
             Para(w.Content,"比赛与练习固定1倍速。W沿车头方向加速，S刹车/倒车，A/D只控制车辆转向；鼠标右键拖动调整视角。空格或Esc暂停/恢复，Shift手刹，R复位（罚5秒），Tab切换全景。默认后上方跟随，右键调整角度，滚轮缩放，V回正。",17,Ui.Dim);
             var npc=S.CityPerson(t.Npc);var contact=Ui.Row(w.Content,92,12);PortraitThumb(contact,t.Npc,88,()=>OpenCityPersonProfile(t.Npc));

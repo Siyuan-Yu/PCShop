@@ -204,8 +204,21 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef(PetShopCatalog.SmallHouse, "小型宠物屋", "最多照顾 4 只猫狗。靠近按 F 聚焦。", 680, FurnitureSlot.Floor, 3.2, 2.1, true) { WeightKg = 24 });
             Add(new FurnitureDef(PetShopCatalog.MediumHouse, "中型宠物屋", "中型或大型商铺可摆放，最多照顾 8 只猫狗。", 2100, FurnitureSlot.Floor, 4.6, 2.8, true) { WeightKg = 45 });
             Add(new FurnitureDef(PetShopCatalog.LargeHouse, "大型宠物屋", "大型商铺可摆放，最多照顾 12 只猫狗。", 4300, FurnitureSlot.Floor, 6.0, 3.5, true) { WeightKg = 78 });
-            Add(new FurnitureDef(PetShopCatalog.WandFixture, "逗猫棒（代养区）", "摆在宠物屋旁，近景可以拿起来逗猫。", 19, FurnitureSlot.Floor, .38, .36, true) { WeightKg = .15 });
-            Add(new FurnitureDef(PetShopCatalog.BallFixture, "软球（代养区）", "摆在宠物屋旁，近景可以抛给狗狗捡回来。", 16, FurnitureSlot.Floor, .38, .36, true) { WeightKg = .12 });
+            for (int tier = 0; tier < PetShopCatalog.ToyTierCount; tier++)
+            {
+                string grade = PetShopCatalog.ToyTierName(tier);
+                int priceMultiplier = 10 << tier;
+                AddToy(false, "逗猫棒", 19 * priceMultiplier, .15);
+                AddToy(true, "软球", 16 * priceMultiplier, .12);
+
+                void AddToy(bool dog, string name, int price, double weight)
+                {
+                    string id = PetShopCatalog.ToyFixture(dog, tier);
+                    Add(new FurnitureDef(id, grade + name + "（代养区）",
+                        $"摆在宠物屋旁使用。陪玩可将{(dog ? "狗" : "猫")}的快乐提升至 {PetShopCatalog.ToyHappinessLimit(id)}。",
+                        price, FurnitureSlot.Floor, .38, .36, true) { WeightKg = weight });
+                }
+            }
             Add(new FurnitureDef(LegacyRestaurantPass,"旧传菜台","旧版餐馆家具，可在装修时收起。",500,FurnitureSlot.Floor,1,.5,forShop:true,starter:true){WeightKg=20});
             Add(new FurnitureDef("restaurant_table","餐馆餐桌","提供一个堂食桌位；上菜后用餐结账，需要收桌。",380,FurnitureSlot.Floor,.85,.85,true){WeightKg=15});
             Add(new FurnitureDef("used_buydesk","收购鉴定台","听说辞、出价收购；买下后才可鉴定。",650,FurnitureSlot.Floor,1.1,.6,true){WeightKg=25});

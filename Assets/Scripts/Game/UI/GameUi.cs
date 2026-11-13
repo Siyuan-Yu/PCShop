@@ -150,6 +150,7 @@ namespace PCShopSell.Game.UI
             UpdateOpeningMealGuide();
             UpdateHudMore();
             if (MainMenuOpen) return;
+            UpdateEventBatch();
             RefreshOpeningKindChoice();
             UpdateWorkScreen();
             if (S.IsWorking) return;
@@ -178,6 +179,8 @@ namespace PCShopSell.Game.UI
                 if (!Input.GetMouseButton(0)) RefreshDock();
             }
         }
+
+        partial void UpdateEventBatch();
 
         // ---------- HUD ----------
 
@@ -904,13 +907,29 @@ namespace PCShopSell.Game.UI
         {
             if (S.IsWorking) { Toast(title + "：" + body); _workMessages.Add(title); return; }
             bool purchaseResult = title == GameSession.EmployeePurchaseDeliveryTitle || title == GameSession.EmployeePurchaseIncompleteTitle;
-            _popups.Add(OpenWindow(title, 640, 380, w =>
+            string windowTitle = title;
+#if UNITY_EDITOR
+            if (_eventBatchCurrent == 126) windowTitle = $"#{_eventBatchCurrent:00} · {title}";
+#endif
+            _popups.Add(OpenWindow(windowTitle, 640, 380, w =>
             {
                 if (purchaseResult) Ui.Label(Ui.Scroll(w.Content, 230), body, 19, TextAnchor.UpperLeft);
                 else Ui.Size(Ui.Label(w.Content, body, 21, TextAnchor.UpperLeft), -1, 230);
                 if(title.EndsWith("发来主线邀请"))
                     Ui.Size(Ui.Button(w.Content, "查看并回复邀请", () => { w.Close(); OpenDistrictStory(); }, 20, Ui.ButtonHot), -1, 44);
-                if (title == GameSession.NpcRepaymentTitle)
+                if (title == GameSession.RacingIntroTitle)
+                {
+                    var actions = Ui.Row(w.Content, 48);
+                    Ui.Size(Ui.Button(actions, "查看入门路线", () => { w.Close(); OpenRacingDestinations(); }, 19, Ui.ButtonHot), -1, 48, 1);
+                    Ui.Size(Ui.Button(actions, "有空再去", w.Close, 18), -1, 48, 1);
+                }
+                else if (title == GameSession.MealDeliveryUnlockedTitle)
+                {
+                    var actions = Ui.Row(w.Content, 48);
+                    Ui.Size(Ui.Button(actions, "去设置自动订餐", () => { w.Close(); OpenMealDeliverySettings(null); }, 19, Ui.ButtonHot), -1, 48, 1);
+                    Ui.Size(Ui.Button(actions, "稍后再说", w.Close, 18), -1, 48, 1);
+                }
+                else if (title == GameSession.NpcRepaymentTitle)
                 {
                     var actions = Ui.Row(w.Content, 48);
                     Ui.Size(Ui.Button(actions, "查看现金流水", () => { w.Close(); _ledgerFilter = 1; OpenLedger(); }, 20), -1, 48, 1);
@@ -925,7 +944,11 @@ namespace PCShopSell.Game.UI
         {
             if (S.IsWorking) { _workEvent = def; return; }
             float h = 250 + def.Choices.Count * 62;
-            OpenWindow(def.Title, 720, h, w =>
+            string title = def.Title;
+#if UNITY_EDITOR
+            if (_eventBatchCurrent > 0) title = $"#{_eventBatchCurrent:00} · {title}";
+#endif
+            OpenWindow(title, 720, h, w =>
             {
                 if (S == null || S.PendingEvent != def)
                 {

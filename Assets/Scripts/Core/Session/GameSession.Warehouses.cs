@@ -35,11 +35,19 @@ namespace PCShopSell.Core.Session
             foreach(var shop in _shops.Where(s=>s.Rented&&!IsDedicatedVenue(s.Place)))
                 EnsureWarehouseBox(shop.Layout,RoomSpec.ForShop(shop.Place.Size),FurnitureCatalog.ShopBox);
         }
-        private static void MergeStorage(Backpack from,Backpack to)
+        private static bool IsBulkStorageFood(string id) => IsEdibleGift(id) || RetailProducts.IsFood(Gifts.Get(id));
+
+        private static void MergeStorage(Backpack from,Backpack to,bool includeFood = true)
         {
-            foreach(var item in from.GiftLines.ToArray())to.AddGift(item.Key,item.Value);
+            foreach (var item in from.GiftLines.ToArray())
+            {
+                if (!includeFood && IsBulkStorageFood(item.Key)) continue;
+                to.AddGift(item.Key, item.Value);
+                from.TakeGift(item.Key, item.Value);
+            }
             foreach(var item in from.FurnitureLines.ToArray())to.AddFurniture(item.Key,item.Value);
-            from.ClearGifts();from.ClearFurniture();
+            from.ClearFurniture();
+            if (!includeFood) return;
             to.Food.RiceKg+=from.Food.RiceKg;from.Food.RiceKg=0;
             to.Food.Ingredient.AddRange(from.Food.Ingredient);from.Food.Ingredient.Clear();
             to.Food.Packed.AddRange(from.Food.Packed);from.Food.Packed.Clear();

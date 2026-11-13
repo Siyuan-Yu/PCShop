@@ -135,7 +135,7 @@ namespace PCShopSell.Core.Session
         public bool EntryCostRecorded;
         public double[] PlayerStatsBefore, PlayerStatsAfter;
         public CityActivityPhase State;
-        public bool Reminder, EntryPaid, MealApplied, MidApplied, RewardApplied;
+        public bool Reminder, EntryPaid, MealApplied, MidApplied, RewardApplied, NoShowNoticeRead, HostPays;
         public string[] Choices = Array.Empty<string>();
         public CityActivityParticipant[] Participants = Array.Empty<CityActivityParticipant>();
         public bool Active => State==CityActivityPhase.Scheduled || State==CityActivityPhase.Gathering || State==CityActivityPhase.Running;
@@ -143,7 +143,7 @@ namespace PCShopSell.Core.Session
             EndReason=EndReason,ServiceDefinitionId=ServiceDefinitionId,ServiceConfirmed=ServiceConfirmed,ServiceChoice=ServiceChoice,PlayerIntentId=PlayerIntentId,PlayerVenueRoute=PlayerVenueRoute?.Copy(),OccupiedFrom=OccupiedFrom,OccupiedUntil=OccupiedUntil,EmployeeLeaveApproved=EmployeeLeaveApproved,ScheduledStart=ScheduledStart,ActualStart=ActualStart,ActualEnd=ActualEnd,
             Duration=Duration,Grace=Grace,Stage=Stage,Seat=Seat,State=State,RendezvousReady=RendezvousReady,SettlementSummary=SettlementSummary,CommunityClueMask=CommunityClueMask,CommunityClueShownMask=CommunityClueShownMask,EntryCostCents=EntryCostCents,EntryCostRecorded=EntryCostRecorded,
             PlayerStatsBefore=PlayerStatsBefore?.ToArray(),PlayerStatsAfter=PlayerStatsAfter?.ToArray(),Reminder=Reminder,EntryPaid=EntryPaid,MealApplied=MealApplied,
-            MidApplied=MidApplied,RewardApplied=RewardApplied,Choices=Choices?.ToArray()??Array.Empty<string>(),
+            MidApplied=MidApplied,RewardApplied=RewardApplied,NoShowNoticeRead=NoShowNoticeRead,HostPays=HostPays,Choices=Choices?.ToArray()??Array.Empty<string>(),
             Participants=(Participants??Array.Empty<CityActivityParticipant>()).Select(p=>p.Copy()).ToArray()};
     }
     [Serializable] public sealed class CityTravelIntent

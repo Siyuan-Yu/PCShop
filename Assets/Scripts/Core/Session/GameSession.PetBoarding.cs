@@ -316,8 +316,8 @@ namespace PCShopSell.Core.Session
                     }
                     foreach (var action in PetCareActions)
                         if (UsesSharedCare(pet,action)) TryCompleteSharedCare(shop,state,action);
-                    string toy = pet.Dog ? PetShopCatalog.Ball : PetShopCatalog.Wand;
-                    RaisePetHappiness(pet,PetToyReady(shop,toy) ? 18 : 12);
+                    var toy = PetToy(shop, pet.Dog);
+                    RaisePetHappiness(pet, toy == null ? 12 : 18, PetShopCatalog.ToyHappinessLimit(toy?.Id));
                 }
             }
         }
@@ -391,35 +391,36 @@ namespace PCShopSell.Core.Session
         {
             if (!InPlayerShop || PetCapacity(_focus) == 0 || IsGameOver) return false;
             var pet = PetGuests(_focus).FirstOrDefault(p => p.Id == id);
-            if (pet == null || toy != null && (toy != (pet.Dog ? PetShopCatalog.Ball : PetShopCatalog.Wand)
-                || !PetToyReady(_focus, toy))) return false;
-            RaisePetHappiness(pet,toy == null ? 12 : 22);
+            if (pet == null || toy != null && !PetToys(_focus, pet.Dog).Any(p => p.Id == toy)) return false;
+            RaisePetHappiness(pet, toy == null ? 12 : 22, PetShopCatalog.ToyHappinessLimit(toy));
             return true;
         }
 
-        private void RaisePetHappiness(PetStay pet,int bonus)
+        private void RaisePetHappiness(PetStay pet, int bonus, int limit)
         {
             int day = Clock.Today.TotalDays;
             int previous = pet.LastPlayDay == day ? pet.LastPlayBonus : 0;
-            if (bonus <= previous) return;
+            int gain = Math.Max(0, Math.Min(bonus - previous, limit - pet.Happiness));
             pet.LastPlayDay = day;
-            pet.LastPlayBonus = bonus;
-            pet.Happiness = Math.Min(100,pet.Happiness+bonus-previous);
+            pet.LastPlayBonus = previous + gain;
+            pet.Happiness += gain;
         }
 
-        public PlacedFurniture PetToy(OwnedShop shop, string toy)
+        public PlacedFurniture PetToy(OwnedShop shop, bool dog) =>
+            PetToys(shop, dog).OrderByDescending(p => PetShopCatalog.ToyTier(p.Id)).FirstOrDefault();
+
+        public IEnumerable<PlacedFurniture> PetToys(OwnedShop shop, bool dog)
         {
             var house = PetHouse(shop);
-            string fixture = PetShopCatalog.ToyFixture(toy);
-            if (house == null || fixture == null) return null;
+            if (house == null) yield break;
             var rect = RoomPlanner.Footprint(RoomSpec.ForShop(shop.Place.Size), FurnitureCatalog.Get(house.Id), house);
-            return shop.Layout.Find(p => p.Id == fixture && PetToyInReach(p,rect));
+            foreach (var item in shop.Layout)
+                if (PetShopCatalog.IsToyFixture(item.Id) && PetShopCatalog.IsDogToy(item.Id) == dog && PetToyInReach(item, rect))
+                    yield return item;
         }
 
         private static bool PetToyInReach(PlacedFurniture toy,RectD rect) =>
             toy.X >= rect.MinX - 1.4 && toy.X <= rect.MaxX + 1.4 && toy.Z >= rect.MinZ - 1.4 && toy.Z <= rect.MaxZ + 1.4;
-
-        public bool PetToyReady(OwnedShop shop, string toy) => PetToy(shop, toy) != null;
 
         public bool BuyPetHouse(string id)
         {
@@ -435,13 +436,13 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
-        public bool PreparePetToy(string toy)
+        public bool BuyPetToy(string fixture)
         {
-            string fixture = PetShopCatalog.ToyFixture(toy);
-            if (!InPlayerShop || !IsPetShop(_focus) || fixture == null || IsGameOver) return false;
-            if (!_focus.Sim.Stock.TryRemoveGoods(toy, 1)) return Fail("门店库存里没有这件玩具。");
+            if (!InPlayerShop || !IsPetShop(_focus) || !PetShopCatalog.IsToyFixture(fixture) || IsGameOver) return false;
+            var def = FurnitureCatalog.Get(fixture);
+            if (!Ledger.TryDebit(Clock.Today, "装修", def.Price, def.Name, LedgerAttribution.ForShop(_focus.Place.Id)))
+                return Fail("现金不足。");
             AddFurniture(fixture, 1);
-            Say("已从库存取出" + Gifts.Get(toy).Name + "，可在装修中摆到宠物屋旁。");
             return true;
         }
 

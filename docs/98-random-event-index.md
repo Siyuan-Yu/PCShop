@@ -1,0 +1,157 @@
+# 随机事件编号与验收
+
+日常随机池共有 123 项。编号沿用逐项讨论和游戏内验收工具的顺序。第 102 项的亲戚借款已合并到第 09 项。第 125、126 项由独立流程触发，也可在同一工具验收。片区主线和许星澜的首次赛车引导使用各自的验收入口。
+
+## 批量验收
+
+在 Unity 编辑器游戏界面打开「作弊 → 随机事件批量验收」，选 01–10、02–20、11–20、21–30 等区间。最后一个区间为 121–126。每批使用独立测试场景，选完当前事件、关闭结果窗口后，会按编号弹出下一项。当前动作需要时间时，先让它结束。批次结束会列出跳过的事件，可以重开批次或返回进入测试前的进度。测试场景会准备营业中的电脑店、商品和必要的人物条件，选项仍走实际的经营、活动和账务规则。
+
+## 前 10 项玩法
+
+| 编号 | 事件 | 实际影响 |
+| --- | --- | --- |
+| 01 | 市场监管来检查 | 检查实际门店的开业设施与采购记录。通过则口碑 +1。补办费用 ¥300，也可申请 3 天复查。有效魅力低于 45 时不能靠说明获得宽限，达到 45 时成功率 35%，之后每点加 1 个百分点，最高 100%。成功给 7 天，失败罚 ¥500、口碑减 2。 |
+| 02 | 熟客想带朋友 | 张绍文在接下来两天安排 2–3 位实际顾客到店。可以为他们从可售库存预留指定商品，未售出的预留会退回。交情达到 35 可看到预算。 |
+| 03 | 停电了 | 停电持续 2 游戏小时。缺灯或灯坏的自营门店按每家 ¥150 安装实体应急灯，灯装在后墙并会在停电时亮起，45–90 天后可能失效。有好灯的店正常接待。缺灯可暂停接待或点蜡烛。蜡烛有 30% 概率造成 ¥200 火警损失，正常点亮时按平常 40% 的客流接待。 |
+| 04 | 货少了 | 从门店陈列选中一件实货。可能只是盘点记错。可以花时间复盘、查监控或直接登记损耗。智力与监控影响核查效果，登记损耗只扣该商品一件。 |
+| 05 | 学生团购 | 电脑店的内存团购按真实陈列库存结算。可给 5 件报九五折、按原价卖部分，或在符合条件时推荐替代品。成交扣货并进入门店营业额、现金流水与到访明细。 |
+| 06 | 同行价格战 | 附近同业的实际促销影响商圈。可维持价格、加强服务，或在竞争持续期间把受影响商品临时降价 10%。服务策略会参考人物关系及实际门店状态。 |
+| 07 | 捡到钱包 | 可去地铁站交还，也可花 20 分钟等失主。私留可能被目击并影响口碑。 |
+| 08 | 老同学请吃饭 | 陈志衡做东，可接受建议时间或改约。赴约需要到真实场所，活动经过正常时长并结算关系。 |
+| 09 | 亲戚来借钱 | 可借 ¥800、¥400 或婉拒，约定 3 天后还款。到期还款会实际入账。逾期可催款、延 3 天一次或认亏，记录按时归还、逾期归还与未收回次数。 |
+| 10 | 老同学雪中送炭 | 在开局资金持续为负时有机会出现。可接受饭局、¥5,000 无息借款，或两者都接受。借款 90 天到期，与陈志衡交情达到 55 且进入到期前 7 天时，可商量延期 30 天一次。 |
+
+周末搬货兼职在周末 09:00–15:59 可开工。工作时实际推进 8 小时，结束收到 ¥300，并结算精力和健康。首单后已有营业基础、现金达到 ¥50,000，且认识交情至少 30 的人物时，可收到一次熟人休闲邀请。接受后走正常活动预约和赴约流程。
+
+## 事件目录
+
+| 编号 | 事件 | 配置 ID |
+| --- | --- | --- |
+| 01 | 市场监管来检查 | `inspection` |
+| 02 | 熟客想带朋友 | `regulars` |
+| 03 | 停电了 | `blackout` |
+| 04 | 货少了 | `thief` |
+| 05 | 学生团购 | `students` |
+| 06 | 同行价格战 | `rival` |
+| 07 | 捡到钱包 | `wallet` |
+| 08 | 老同学请吃饭 | `friend_meal` |
+| 09 | 亲戚来借钱 | `lend` |
+| 10 | 老同学雪中送炭 | `classmate_help` |
+| 11 | 网上有人说你家卖翻新货 | `review` |
+| 12 | 发传单的上门了 | `flyer` |
+| 13 | 身体不舒服 | `cold` |
+| 14 | 戴眼镜的熟客 | `intro_zhang` |
+| 15 | 房东上门 | `intro_landlady` |
+| 16 | 发小来看你 | `intro_lin` |
+| 17 | 张绍文来闲坐 | `zhang_visit` |
+| 18 | 张绍文介绍亲戚 | `zhang_family` |
+| 19 | 房东想涨租 | `landlady_rent` |
+| 20 | 李秀兰介绍大客户 | `landlady_help` |
+| 21 | 周维成出清库存 | `zhou_deal` |
+| 22 | 唐俊杰周转不开 | `jie_loan` |
+| 23 | 唐俊杰缺个配件 | `jie_trade` |
+| 24 | 林远航来吐槽 | `lin_visit` |
+| 25 | 林远航想借钱 | `lin_loan` |
+| 26 | 星澜约你上赛道 | `race_xinglan_invite` |
+| 27 | 车友俱乐部的邀请 | `race_zhixia_club` |
+| 28 | 赛前整备 | `race_jingxing_tuning` |
+| 29 | 收藏车的试驾 | `race_ruoning_rare` |
+| 30 | 待业的朋友约比赛 | `race_ming_lunch` |
+| 31 | 骑手的小挑战 | `race_rider_bet` |
+| 32 | 电池掉电 | `race_battery_old` |
+| 33 | 再来一场？ | `race_rematch` |
+| 34 | 车身贴纸赞助 | `race_sponsor_sticker` |
+| 35 | 弯道边的意外 | `race_crash_help` |
+| 36 | 来赛道看看 | `race_spectator` |
+| 37 | 慈善赛 | `race_charity` |
+| 38 | 旧护具 | `race_maker_gear` |
+| 39 | 夜骑小队 | `race_night_ride` |
+| 40 | 头盔清仓 | `race_helmet_deal` |
+| 41 | 庆功饭 | `race_prize_dinner` |
+| 42 | 雨天的赛道 | `race_track_visit_rain` |
+| 43 | 夜校同学爱好赛车 | `race_ning_study` |
+| 44 | 罗师傅请你尝新菜 | `act_dinner_cook` |
+| 45 | 同桌家常馆的邀请 | `act_dinner_chef` |
+| 46 | 社区餐厅领班约饭 | `act_dinner_linhe` |
+| 47 | 农贸市场的王婶请客 | `act_dinner_farm` |
+| 48 | 练歌房的新歌 | `act_ktv_singer` |
+| 49 | 音响助理的调试局 | `act_ktv_fuzhi` |
+| 50 | 合唱团的练习 | `act_ktv_luoya` |
+| 51 | 灯塔吧台的新饮品 | `act_bar_bartender` |
+| 52 | 跑团领队的聚会 | `act_bar_taoran` |
+| 53 | 饮品研发助理的试饮 | `act_bar_zengyu` |
+| 54 | 社区篮球教练的邀请 | `act_court_coach` |
+| 55 | 球场管理员的邀请 | `act_court_dongyu` |
+| 56 | 张老师约你打球 | `act_court_zhang` |
+| 57 | 练习场体验 | `act_golf_golfer` |
+| 58 | 企业采购的高尔夫局 | `act_golf_enterprise` |
+| 59 | 周末钓友的邀请 | `act_fishing_shaoan` |
+| 60 | 退休老园艺的钓鱼局 | `act_fishing_qiaosong` |
+| 61 | 周大爷约你钓鱼 | `act_fishing_grandpa` |
+| 62 | 户外领队的郊游 | `act_hike_luqiao` |
+| 63 | 公园维护员的步道 | `act_hike_gardener` |
+| 64 | 绿化员带你认植物 | `act_hike_shiyang` |
+| 65 | 便利店夜宵局 | `act_snack_moxin` |
+| 66 | 夜班保安的夜宵 | `act_snack_maoning` |
+| 67 | 骑手收工宵夜 | `act_snack_rider` |
+| 68 | 周维成带你逛市场 | `act_market_zhou` |
+| 69 | 李承业的行情走访 | `act_market_li` |
+| 70 | 显卡供货商的看货邀请 | `act_market_wang` |
+| 71 | 钟表师傅的旧物局 | `act_oldmarket_guwen` |
+| 72 | 电路维修员的旧物局 | `act_oldmarket_leiming` |
+| 73 | 会展策划的电子展邀请 | `act_expo_curator` |
+| 74 | 展会电工的内部场 | `act_expo_hanzheng` |
+| 75 | 陆栀的原创潮玩展 | `act_comic_creator` |
+| 76 | 模型摄影师的邀请 | `act_comic_ningxi` |
+| 77 | 喜欢城市模型的小学生 | `act_comic_shenxiao` |
+| 78 | 熟客的好评 | `shop_regular_review` |
+| 79 | 找错零钱 | `shop_wrong_change` |
+| 80 | 团购订单 | `shop_bulk_order` |
+| 81 | 快递丢件 | `shop_lost_delivery` |
+| 82 | 对面贴了降价单 | `shop_price_war_leaflet` |
+| 83 | 店里来了只猫 | `shop_cat_visitor` |
+| 84 | 供货商送样品 | `shop_supplier_gift` |
+| 85 | 邻居借梯子 | `shop_neighbor_help` |
+| 86 | 差评 | `shop_complaint_online` |
+| 87 | 学生党想要折扣 | `shop_student_discount` |
+| 88 | 橱窗灵感 | `shop_window_dressing` |
+| 89 | 盘点发现差额 | `shop_inventory_audit` |
+| 90 | 热得没人逛 | `shop_summer_heat` |
+| 91 | 老客户回头 | `shop_old_customer_return` |
+| 92 | 朋友圈限时抢 | `shop_flash_sale` |
+| 93 | 骑手想蹭个位置 | `shop_delivery_boy` |
+| 94 | 上次检查的回头看 | `shop_inspection_followup` |
+| 95 | 爆款传闻 | `shop_hot_item_rumor` |
+| 96 | 会员卡的点子 | `shop_loyalty_card` |
+| 97 | 捡到优惠券 | `money_found_coupon` |
+| 98 | 退税到账 | `money_tax_refund` |
+| 99 | 诈骗电话 | `money_phone_scam` |
+| 100 | 银行客户经理 | `money_bank_manager` |
+| 101 | 水电多收了 | `money_utility_refund` |
+| 102 | 已合并到 09 · 亲戚来借钱 | — |
+| 103 | 刮刮乐 | `money_win_lottery` |
+| 104 | 钱包找不到了 | `money_lost_wallet_own` |
+| 105 | 多交了房租 | `money_overpaid_rent` |
+| 106 | 保险推销 | `money_insurance_agent` |
+| 107 | 朋友推荐的理财 | `money_invest_tip` |
+| 108 | 周末搬货兼职 | `money_parttime_offer` |
+| 109 | 二手货处理 | `money_second_hand` |
+| 110 | 电费涨价 | `money_utilities_hike` |
+| 111 | 街头募捐 | `money_charity_box` |
+| 112 | 流感季 | `life_flu_season` |
+| 113 | 邻居嫌吵 | `life_neighbor_noise` |
+| 114 | 流浪狗跟了你一路 | `life_pet_adopt` |
+| 115 | 街头艺人 | `life_street_music` |
+| 116 | 老友的消息 | `life_old_friend_text` |
+| 117 | 健身房体验 | `life_gym_trial` |
+| 118 | 图书漂流 | `life_book_swap` |
+| 119 | 夜校开班 | `life_night_class` |
+| 120 | 社区集市 | `life_street_fair` |
+| 121 | 献血车 | `life_blood_donation` |
+| 122 | 走丢的孩子 | `life_lost_child` |
+| 123 | 屋顶漏水 | `life_roof_leak` |
+| 124 | 社区花灯会 | `life_festival_lantern` |
+| 125 | 熟人约你出去走走 | 独立流程 |
+| 126 | 林远航来了 | 独立流程 |
+
+[事件配置与编辑器](events-json.md) · [当前游戏完整内容归档](97-current-game-content-2026-11-13.md)

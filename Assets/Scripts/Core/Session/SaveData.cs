@@ -120,6 +120,8 @@ namespace PCShopSell.Core.Session
         public long bankDepositCents, bankInterestCents;
         public double bankFraction;
         public int[] eventCounts;
+        public long weekendWorkEnds;
+        public ShopEmergencyLighting shopEmergencyLighting;
 
         // 长线目标 / 人脉 / 扩建
         public string[] milestoneIds;
@@ -286,6 +288,7 @@ namespace PCShopSell.Core.Session
     [Serializable]
     public sealed class SaveShop
     {
+        public ShopEmergencyLighting emergencyLighting;
         public double awareness, reputation;
         public string retailKind, customName;
         public GoodsLot[] goodsLots;

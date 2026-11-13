@@ -108,9 +108,9 @@ namespace PCShopSell.Core.Session
             if (IsGameOver || _sleeping || IsWorking || CityActivityExclusive) return "请先结束正在进行的事情";
             if (!CityVenueFits(CurrentPlace, Clock.Now.TotalMinutes, def.Minutes)) return "该服务无法在闭店前完成";
             if (def.Id.StartsWith("expo_") && !CityExpoDay(Clock.Now.TotalMinutes, def.Id == "expo_comic")) return "本场展会尚未开放";
-            Money cost = VenuePlayerPrice(def, choice);
-            if (cost.IsPositive && !Ledger.CanAfford(cost)) return $"现金不足，需要 {cost}";
             var booking = PendingVenueActivity(CurrentPlace);
+            Money cost = booking?.HostPays == true ? Money.Zero : VenuePlayerPrice(def, choice);
+            if (cost.IsPositive && !Ledger.CanAfford(cost)) return $"现金不足，需要 {cost}";
             if (booking?.ServiceConfirmed == true) return "本次已选好服务";
             if(IsOwnedVenue(CurrentPlace))
             {
@@ -135,7 +135,8 @@ namespace PCShopSell.Core.Session
             booking.ServiceConfirmed = true;
             PrepareVenueCompanions(CurrentPlace);
             TickCityActivities(Clock.Now.TotalMinutes);
-            Say("已选择" + VenueServiceName(def, choice) + "，费用 " + VenuePlayerPrice(def, choice) + (IsOwnedVenue(CurrentPlace)?"（老板自用，不计营业收入）":"") + "。");
+            Say("已选择" + VenueServiceName(def, choice) + (booking.HostPays ? "，由邀请人请客。"
+                : "，费用 " + VenuePlayerPrice(def, choice) + (IsOwnedVenue(CurrentPlace)?"（老板自用，不计营业收入）":"") + "。"));
             return true;
         }
     }

@@ -62,6 +62,7 @@ namespace PCShopSell.Core.Session
 
         public string RaceInviteBlocker(string personId, string trackId, GameDate day)
         {
+            if (RacingAccessBlocker is string accessBlocker) return accessBlocker;
             var track = RaceTracks.Get(trackId);
             var person = CityPersonState(personId);
             if (IsGameOver || Racing) return "请先结束当前比赛";

@@ -12,6 +12,7 @@ namespace PCShopSell.Game.UI
     {
         private Image _workScreen;
         private Text _workStatus;
+        private bool _workScreenForWeekend;
         private readonly List<string> _workMessages = new List<string>();
         private EventDef _workEvent;
         public bool WorkScreenVisible => _workScreen != null && _workScreen.gameObject.activeSelf;
@@ -109,6 +110,13 @@ namespace PCShopSell.Game.UI
                     Para(content, "打工中暂不能进行其他操作。可点击倍速，或按数字键 1/2/3/4；下班后自动恢复操作。", 17, Ui.Dim);
                 }
                 _workScreen.transform.SetAsLastSibling();
+                _workScreenForWeekend = S.IsWeekendWorking;
+                if (_workScreenForWeekend)
+                {
+                    var end = S.WeekendWorkEnds;
+                    _workStatus.text = $"打工中 · 周末搬货\n预计 {end.Hour:00}:{end.Minute:00} 收工 · 工资 ¥{GameSession.WeekendWorkPay}\n现在 {S.Clock.Now} · 还剩 {S.WorkMinutesLeft} 分钟\n当前 {TimeController.SpeedLabel(S.Time.Speed)}";
+                    return;
+                }
                 var c = S.WorkContract;
                 long start = (long)(c.StartDay + c.WorkingIndex) * 1440 + c.ShiftStart;
                 string state = S.Clock.Now.TotalMinutes < start ? "已到岗，等待开工" : "打工中";
@@ -119,7 +127,7 @@ namespace PCShopSell.Game.UI
             if (_workScreen != null)
             {
                 Kill.It(_workScreen.gameObject); _workScreen = null;
-                Toast(S.WorkContract?.LastNote ?? "今天收工了。");
+                if (!_workScreenForWeekend) Toast(S.WorkContract?.LastNote ?? "今天收工了。");
             }
             if (_workEvent != null) { var e = _workEvent; _workEvent = null; ShowEvent(e); }
             if (_workMessages.Count > 0)

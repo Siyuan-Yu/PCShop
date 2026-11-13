@@ -303,7 +303,9 @@ namespace PCShopSell.Game
             string closed = Session.ClosedReason(p);
             if (closed == null) return false;
             SoundFx.Play(Sfx.Error);
-            Ui.Popup("打烊了", closed + "\n营业时间再来吧。");
+            if (RaceTracks.Get(p.Id) != null && closed == Session.RacingAccessBlocker)
+                Ui.Popup("赛车场暂未开放", closed);
+            else Ui.Popup("打烊了", closed + "\n营业时间再来吧。");
             return true;
         }
 

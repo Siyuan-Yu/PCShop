@@ -1,3 +1,4 @@
+using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -36,6 +37,21 @@ namespace PCShopSell.Tests
                 Assert.GreaterOrEqual(shop.Checkout(7), 0);
                 Assert.AreEqual(-1, shop.Checkout(7));
                 Assert.AreEqual(Money.FromYuan(48), ledger.Balance); Assert.AreEqual(1, ledger.Entries.Count);
+                shop.RestoreCityCustomers(shop.SaveCityCustomers());
+                var purchase = shop.TodayVisitDetails(false).Single();
+                Assert.AreEqual(CustomerState.Paid, purchase.State);
+                Assert.AreEqual(Gifts.Get(goods).Name, purchase.ProductName);
+                Assert.AreEqual(4800L, purchase.PaidCents);
+                Assert.AreEqual("same-person", purchase.PersonId);
+                Assert.IsEmpty(shop.TodayVisitDetails(true));
+
+                data.customers[0].state = (int)CustomerState.Browsing;
+                data.customers[0].goodsId = null;
+                shop.RestoreCityCustomers(data);
+                shop.ClearCustomers();
+                shop.RestoreCityCustomers(shop.SaveCityCustomers());
+                Assert.AreEqual(shop.TodayLost, shop.TodayVisitDetails(true).Count());
+                Assert.AreEqual(LeaveReason.ShopClosed, shop.TodayVisitDetails(true).Single().Reason);
             }
         }
     }

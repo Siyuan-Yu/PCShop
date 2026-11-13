@@ -16,11 +16,28 @@ namespace PCShopSell.Tests
         private static GameSession Make(string kind="clothing",bool fullCity=false)
         {
             var data=fullCity?JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text):GameSessionTests.Layout();
+            if (!fullCity)
+                data.places = data.places.Append(new LayoutPlaceData { id = "rival_shop", name = "邻街同行",
+                    kind = "shop", node = "s1", size = "small", business = kind == "computer" ? "电脑" : "服装" }).ToArray();
             var s=new GameSession(CityLayout.FromData(data),71,Money.FromYuan(300000),GameTimestamp.From(new GameDate(0),11*60),false);
             s.EventsEnabled=false;GameSessionTests.Teleport(s,s.MainShop.Place.Id);
             Assert.IsTrue(s.SetShopMainCategory(kind));
             s.PlayerShop.SetHours(0,1440);s.PlayerShop.ForcedClosed=false;s.PlayerShop.NotFitted=false;s.PlayerShop.Markup=1.4;
             return s;
+        }
+
+        private static void PutClothingOnShelf(GameSession s)
+        {
+            var product = Gifts.Get("clothing:jacket");
+            s.PlayerShop.Stock.ForceAddGoods(product.Id, 2);
+            s.PlayerShop.SetShelfCapacity(new System.Collections.Generic.Dictionary<string, double>
+                { { ShelfKinds.ForGift(product.Id).Id, 60 } });
+        }
+
+        private static void BeginPromotionRound(GameSession s)
+        {
+            s.Clock.Restore(new GameDate(14), 11 * 60);
+            s.TickCityRetail();
         }
         [Test]
         public void ComputerStoryBindsToTheComputerBranchWithoutTakingClothingShopStock()
@@ -108,6 +125,8 @@ namespace PCShopSell.Tests
         {
             using(var s=Make("computer"))
             {
+                s.PlayerShop.Stock.ForceAdd(PartCatalog.Get("ram0"), true, 5);
+                s.PlayerShop.SetShelfCapacity(new System.Collections.Generic.Dictionary<string, double> { { "memory", 60 } });
                 s.PlayerShop.ForcedClosed=true;
                 Assert.IsFalse(EventCatalog.Get("rival").When(s));
                 s.RaiseEvent("rival");Assert.IsNull(s.PendingEvent);Assert.AreEqual(0,s.EventCountOf("rival"));
@@ -118,17 +137,23 @@ namespace PCShopSell.Tests
             }
         }
         [Test]
-        public void ClothingPriceWarUsesAClothingBrandAndIgnoresComputerFriendshipPerks()
+        public void ClothingPriceWarNamesTheActualRivalAndTemporarilyDiscountsOnlyThePromotedProduct()
         {
             using(var s=Make())
             {
-                s.PlayerShop.Stock.ForceAddGoods("clothing:jacket",2);
-                s.Meet(Npcs.Jie,100);s.AddRelation(Npcs.Jie,100);
+                PutClothingOnShelf(s);
+                BeginPromotionRound(s);
                 Assert.IsTrue(EventCatalog.Get("rival").When(s));s.RaiseEvent("rival");
-                Assert.IsNotNull(s.PendingEvent);StringAssert.Contains("服装",s.PendingEvent.Title);
-                StringAssert.Contains("远迹服饰",s.PendingEvent.Body);StringAssert.DoesNotContain("电脑",s.PendingEvent.Body);
-                var before=s.PlayerShop.Markup;Assert.IsTrue(s.ResolveEvent(0));
-                Assert.AreEqual(before-.1,s.PlayerShop.Markup,1e-9);Assert.IsFalse(s.ResolveEvent(0));
+                Assert.IsNotNull(s.PendingEvent);
+                StringAssert.Contains("邻街同行",s.PendingEvent.Body);
+                var price=s.PlayerShop.GoodsPriceOf("clothing:jacket");
+                var markup=s.PlayerShop.Markup;
+                Assert.IsTrue(s.ResolveEvent(0));
+                Assert.AreEqual(price.Scale(.9), s.PlayerShop.GoodsPriceOf("clothing:jacket"));
+                Assert.AreEqual(markup,s.PlayerShop.Markup,1e-9);
+                s.Clock.Restore(new GameDate(17),11*60);
+                s.TickCityRetail();
+                Assert.AreEqual(price,s.PlayerShop.GoodsPriceOf("clothing:jacket"));
             }
         }
         [Test]
@@ -136,6 +161,8 @@ namespace PCShopSell.Tests
         {
             using(var s=Make())
             {
+                PutClothingOnShelf(s);
+                BeginPromotionRound(s);
                 s.RaiseEvent("rival");Assert.IsNotNull(s.PendingEvent);
                 Assert.IsTrue(s.SetShopMainCategory("models"));double markup=s.PlayerShop.Markup;
                 Assert.IsTrue(s.ResolveEvent(0));Assert.AreEqual(markup,s.PlayerShop.Markup);
@@ -144,17 +171,21 @@ namespace PCShopSell.Tests
         [Test]
         public void PriceWarResponseStaysBoundToTheOriginalOperatingShopAfterSwitchingFocus()
         {
-            using(var s=Make("computer"))
+            using(var s=Make("clothing"))
             {
                 s.PlayerShop.Reputation=80;s.PlayerShop.Markup=1.1;
+                s.PlayerShop.ForcedClosed = true;
                 s.DebugAddListing("tea",0,60,Money.FromYuan(3000));GameSessionTests.Teleport(s,"agency");
                 Assert.IsTrue(s.SignLease("tea",true));GameSessionTests.Teleport(s,"tea");Assert.IsTrue(s.SetShopMainCategory("clothing"));
                 var target=s.CurrentShop;target.Sim.NotFitted=false;target.Sim.ForcedClosed=false;target.Sim.SetHours(0,1440);
                 target.Sim.Markup=1.4;target.Sim.EmployeeOnDuty=_=>true;
-                s.RaiseEvent("rival");Assert.IsNotNull(s.PendingEvent);StringAssert.Contains("服装",s.PendingEvent.Body);
+                PutClothingOnShelf(s);
+                BeginPromotionRound(s);
+                var price=target.Sim.GoodsPriceOf("clothing:jacket");
+                s.RaiseEvent("rival");Assert.IsNotNull(s.PendingEvent);
                 GameSessionTests.Teleport(s,"pc");var current=s.CurrentShop;double unchanged=current.Sim.Markup;
                 Assert.IsTrue(s.ResolveEvent(0));Assert.AreSame(current,s.CurrentShop);
-                Assert.AreEqual(1.3,target.Sim.Markup,1e-9);Assert.AreEqual(unchanged,current.Sim.Markup);
+                Assert.AreEqual(price.Scale(.9),target.Sim.GoodsPriceOf("clothing:jacket"));Assert.AreEqual(unchanged,current.Sim.Markup);
             }
         }
         [TestCase(21,"quota")]

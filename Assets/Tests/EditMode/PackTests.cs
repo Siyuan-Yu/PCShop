@@ -172,10 +172,14 @@ namespace PCShopSell.Tests
             Assert.IsFalse(s.BuySmartphone(), "不在手机店");
             GameSessionTests.Teleport(s, "phone");
             Money before = s.Ledger.Balance;
+            int mealPrompts = 0;
+            s.Popup += (title, _) => { if (title == GameSession.MealDeliveryUnlockedTitle) mealPrompts++; };
             Assert.IsTrue(s.BuySmartphone());
             Assert.AreEqual((before - GameSession.PhonePrice).Cents, s.Ledger.Balance.Cents);
             Assert.IsTrue(s.HasSmartphone);
             Assert.IsFalse(s.BuySmartphone(), "已经有了");
+            Assert.AreEqual(1, mealPrompts);
+            Assert.IsFalse(s.MealDeliveryEnabled);
             GameSessionTests.Teleport(s, "flat");
             Assert.IsFalse(s.OrderOnline(ParcelKind.Furniture, "aircon"), "刚买的手机里没有网购 app");
             Assert.IsTrue(s.InstallApp(PhoneApps.Shop));

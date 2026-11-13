@@ -113,7 +113,7 @@ namespace PCShopSell.Game.UI
             chill.name = "ChillKitchenIngredients";
             var coldStorageHint = Line(C, "", 14, Ui.Dim);
             var storage = Ui.Row(C, 36, 4);
-            var warehouse = Ui.Size(Ui.Button(storage, "背包全部存入后仓", () => { S.StoreBackpackInWarehouse(); RebuildDock(); }, 15), -1, 36, 1);
+            var warehouse = Ui.Size(Ui.Button(storage, "全部存入后仓（保留食物）", () => { S.StoreBackpackInWarehouse(); RebuildDock(); }, 15), -1, 36, 1);
             var fridge = Ui.Size(Ui.Button(storage, "打开冰箱", OpenFridgeWindow, 15), 110, 36);
             void RefreshStorage()
             {
@@ -121,7 +121,7 @@ namespace PCShopSell.Game.UI
                 chill.interactable = blocker == null;
                 coldStorageHint.text = blocker ?? "";
                 coldStorageHint.gameObject.SetActive(blocker != null);
-                warehouse.interactable = S.HasWarehouseHere;
+                warehouse.interactable = S.CanStoreBackpackInWarehouse;
                 fridge.interactable = S.CanOpenFridge;
             }
             RefreshStorage();
@@ -224,7 +224,11 @@ namespace PCShopSell.Game.UI
         {
             BuildUsedCheckout();
             HelpLink(C,"二手收购说明","先听卖家说法和报价，再决定收购；买下后才能鉴定。性格影响可信度，不保证真假。鉴定并定价后可在二手转售品货架出售；代管收购仍有亏损风险。");
-            Ui.Size(Ui.Button(C,state.AutoPurchase?"收购师代管：开":"收购师代管：关",()=>{state.AutoPurchase=!state.AutoPurchase;RebuildDock();},17,state.AutoPurchase?Ui.ButtonHot:Ui.ButtonBg),-1,36);
+            bool hasAppraiser = S.ShopStaff(S.CurrentShop, EmployeeRole.Appraiser).Any();
+            bool automatic = hasAppraiser && !state.AutoPurchasePaused;
+            string delegation = !hasAppraiser ? "收购师代管 · 尚未安排收购师" : automatic ? "收购师代管：开" : "收购师代管：关";
+            Ui.Size(Ui.Button(C, delegation, () => { state.AutoPurchasePaused = !state.AutoPurchasePaused; RebuildDock(); },
+                17, automatic ? Ui.ButtonHot : Ui.ButtonBg, hasAppraiser), -1, 36);
             SpecialNumber(C,"每日收购预算",state.DailyBudget,100,0,100000,value=>state.DailyBudget=value);
             SpecialNumber(C,"单件最高收购价",state.MaxOffer,10,0,10000,value=>state.MaxOffer=value);
             var risk=Ui.Row(C,34,4);Ui.Size(Ui.Label(risk,"风险倾向："+(state.Risk<.4?"谨慎":state.Risk>.6?"积极":"均衡"),16),-1,34,1);

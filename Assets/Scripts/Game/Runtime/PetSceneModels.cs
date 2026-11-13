@@ -17,7 +17,7 @@ namespace PCShopSell.Game.Runtime
             if (count == 0)
             {
                 Prims.Box(root,"ToyMat",new Vector3(0,.025f,0),new Vector3(.36f,.05f,.34f),Mats.Lit(Moss),collider);
-                var toy = BuildToy(root, def.Id == PetShopCatalog.BallFixture);
+                var toy = BuildToy(root, PetShopCatalog.IsDogToy(def.Id), PetShopCatalog.ToyTier(def.Id));
                 toy.transform.localPosition = new Vector3(0,.09f,0);
                 return;
             }
@@ -56,15 +56,16 @@ namespace PCShopSell.Game.Runtime
             }
         }
 
-        internal static GameObject BuildToy(Transform root, bool ball)
+        internal static GameObject BuildToy(Transform root, bool ball, int tier)
         {
-            if (ball) return Prims.Shape(PrimitiveType.Sphere,root,"SoftBall",Vector3.zero,Vector3.one*.14f,Mats.Lit(Rose));
+            Color color = tier == 2 ? new Color(.66f,.42f,.81f) : tier == 1 ? new Color(.23f,.65f,.78f) : Rose;
+            if (ball) return Prims.Shape(PrimitiveType.Sphere,root,"SoftBall",Vector3.zero,Vector3.one*.14f,Mats.Lit(color));
             var wand = new GameObject("Wand");
             wand.transform.SetParent(root,false);
             Prims.Box(wand.transform,"Handle",new Vector3(0,0,.14f),new Vector3(.03f,.025f,.30f),Mats.Lit(Linen));
             Prims.Box(wand.transform,"Cord",new Vector3(0,-.055f,.29f),new Vector3(.012f,.13f,.012f),Mats.Lit(Ink));
             Prims.Shape(PrimitiveType.Sphere,wand.transform,"Feather",new Vector3(0,-.1f,.29f),
-                new Vector3(.10f,.045f,.09f),Mats.Lit(Rose));
+                new Vector3(.10f,.045f,.09f),Mats.Lit(color));
             return wand;
         }
 

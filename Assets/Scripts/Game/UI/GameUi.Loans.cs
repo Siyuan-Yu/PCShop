@@ -174,6 +174,13 @@ namespace PCShopSell.Game.UI
                 Money payoff = S.LoanPayoff(loan);
                 Ui.Size(Ui.Button(list, "提前结清 · " + payoff, () => ConfirmLoanRepayment(w, loan),
                     17, Ui.ButtonBg, S.Ledger.CanAfford(payoff)), -1, 38);
+                if (S.IsClassmateLoan(loan) && loan.ExtensionDays == 0)
+                {
+                    string reason = S.FriendLoanExtensionBlocker(loan);
+                    Ui.Size(Ui.Button(list, "和陈志衡商量延期 30 天", () => { if (S.ExtendFriendLoan(loan.Id)) w.Rebuild(); },
+                        17, Ui.ButtonBg, reason == null), -1, 38);
+                    if (reason != null) Line(list, reason, 15, Ui.Dim);
+                }
             }
         }
     }

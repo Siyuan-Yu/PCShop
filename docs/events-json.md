@@ -1,12 +1,12 @@
-﻿# events.json 说明
+# events.json 说明
 
-文件：`Assets/Resources/Data/events.json`。随机事件的内容、触发时间、概率、权重都在这里改，改完不用动代码。
+文件：`Assets/Resources/Data/events.json`。常规随机事件可直接编辑内容、时间、概率和权重。标记为 `code: true` 的事件由 C# 实现业务和选项，JSON 可覆盖抽取参数。
 **推荐用外部事件编辑器改**：`ExternalTools/EventEditor`（见文末）。
 Unity 菜单 `PCShop/事件/事件清单与触发` 可以看清单、校验格式、运行时一键触发；`PCShop/事件/校验 events.json` 只做校验。
-单元测试 `EventScriptTests` 会在提交前检查格式（包括 json 必须是编辑器的标准格式）。
+`EventScriptTests` 覆盖格式和编号。游戏内批量入口为「作弊 → 随机事件批量验收」。[事件编号、分批操作和前 10 项规则](98-random-event-index.md)
 
 ## 触发规则（代码里，`GameSession.Events.cs`）
-游戏第 2 天起，每天 11:00、15:00、20:00 各抽一次（`EventSlotChance` = 0.4；条件都满足时约 1.2 个/天，实际受条件限制会少一些）；要有店、没有未处理的事件。
+从开局计日第 2 天起，每天 11:00、15:00、20:00 各抽一次（`EventSlotChance` = 0.4；条件都满足时约 1.2 个/天，实际受条件限制会少一些）；要有店、没有未处理的事件。
 **频率保障**（`GameSession.Events.cs` 里的常量）：每天最多 `EventDayCap` = 3 个，任意连续 7 天最多 `EventWeekCap` = 10 个；前 `EventEarlyDays` = 14 天（第 0–13 天）概率只有一半（`EventEarlyFactor` = 0.5）。约会、剧情这类非随机事件不占名额。
 依次筛：`minDay` ≤ 今天 ≤ `maxDay`、冷却、`when` / `whenAny`，再对剩下的每个事件各掷一次 `triggerChance`（没写 = 必过），最后按 `weight` 抽一个。
 
@@ -28,7 +28,7 @@ Unity 菜单 `PCShop/事件/事件清单与触发` 可以看清单、校验格�
 - `when`：全部满足才可能被抽到；`whenAny`：其中至少一条满足。
 - `requires`：全部满足这个选项才能点，没满足灰掉并显示 `disabledReason`（写了 requires 就必须写）。至少要有一个没有 requires 的选项。
 - `group: "npc"`：围绕固定人物的事件。
-- `code: true`：内容在 C# 里（`regulars` / `students` / `rival` / `review` / `zhou_deal`），json 里只负责排序，并可覆盖 `minDay` / `maxDay` / `cooldownDays` / `weight` / `triggerChance`。
+- `code: true`：内容在 C# 里（例如 `inspection`、`blackout`、`rival`、`classmate_help`），json 里只负责排序，并可覆盖 `minDay` / `maxDay` / `cooldownDays` / `weight` / `triggerChance`。
 - 事件按 json 里的顺序参与抽取。
 
 ## 掷骰
@@ -40,7 +40,7 @@ Unity 菜单 `PCShop/事件/事件清单与触发` 可以看清单、校验格�
 `flag`(key) · `upgrade`(key，店铺升级) · `stock`(店里有货) · `samePlace`(key=人物) · `met`(key=人物) ·
 `relationAtLeast` / `relationBelow`(key=人物, value) · `rentHikesBelow`(value) · `energyBelow` / `sleepDebtAbove` / `healthBelow`(value) ·
 `hasPhone` · `bankDeposit`(银行存款≥value 元) · `hasLoan`(有未还贷款) · `reputationAtLeast`(名望≥value) ·
-`racingUnlocked`(已有能比赛的车) · `racingWins`(赛车累计胜场≥value) · `netWorthAtLeast`(身家≥value 元) · `charmAtLeast` / `intelAtLeast`(value)。任何条件加 `"not": true` 取反。
+`racingUnlocked`(已取得赛车资格) · `racingWins`(赛车累计胜场≥value) · `netWorthAtLeast`(身家≥value 元) · `charmAtLeast` / `intelAtLeast`(value)。任何条件加 `"not": true` 取反。
 
 ## 效果 `type`
 `text`(text) · `pay` / `gain`(yuan, memo) · `shopRep`(value，本店口碑) · `rep`(value，名望) · `charm`(value) · `health`(value) · `energy`(value，消耗精力) ·
@@ -53,8 +53,9 @@ Unity 菜单 `PCShop/事件/事件清单与触发` 可以看清单、校验格�
 
 人物 id：`zhang` `landlady` `lin` `zhou` `jie`，另有 `res_coder`（老同学陈志衡）等，完整名单见 `ExternalTools/EventEditor/npcs.json`。
 
-## 例：开局 30 天内，账户连续 3 天为负，老同学请吃饭并无息借 5000
-见 `events.json` 里的 `classmate_help`：`maxDay: 30`，`when` = `negativeCashDays ≥ 3` 且 `cashBelow 0`；选项 1 = `meeting`（陈志衡做东）+ `interestFreeLoan`（res_coder，5000，3 个月）。
+## C# 示例：老同学雪中送炭
+
+`classmate_help` 使用 `code: true`，开局计日第 3–30 天且连续 3 天现金为负时可进入候选。饭局和 ¥5,000 无息借款走实际预约与贷款流程。代码在 `EventCatalog.cs` 和 `GameSession.Events.cs`。赛车组另外要求已完成城郊首跑。
 
 ## 外部事件编辑器
 `ExternalTools/EventEditor`（WinForms，`dotnet build -c Release`，运行 `bin/Release/net10.0-windows/EventEditor.exe`）：

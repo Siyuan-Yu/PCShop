@@ -40,7 +40,7 @@ namespace PCShopSell.Core.Session
         public int Paid, Lost;
         public int RestaurantArrivalDay = -1, RestaurantArrivalsToday;
         public int RecipeMask=7;
-        public bool AutoPurchase;
+        public bool AutoPurchasePaused;
         public long DailyBudget=500, MaxOffer=200;
         public double Risk=.5, MenuMarkup=1;
         public List<UsedItem> Used=new List<UsedItem>();
@@ -103,7 +103,8 @@ namespace PCShopSell.Core.Session
         private Employee[] SpecialWorkers(OwnedShop shop,EmployeeRole role,GameTimestamp now)=>ShopStaff(shop,role).Where(e=>e.OnDuty(now)&&CityEmployeeAvailable(e,shop)).ToArray();
         public bool SpecialOpen(OwnedShop shop, GameTimestamp now) => SpecialOpen(shop, now, SpecialPlayer(shop));
         private bool SpecialOpen(OwnedShop shop, GameTimestamp now, bool playerPresent) =>
-            shop.Rented && !IsGameOver && !shop.Sim.ForcedClosed && shop.Sim.InHours(now) && SpecialFitGap(shop) == null
+            shop.Rented && !IsGameOver && !shop.Sim.ForcedClosed && ShopPowerTraffic(shop, now) > 0
+            && shop.Sim.InHours(now) && SpecialFitGap(shop) == null
             && (playerPresent || SpecialWorkers(shop, EmployeeRole.Chef, now).Length > 0
                 || SpecialWorkers(shop, EmployeeRole.Waiter, now).Length > 0 || SpecialWorkers(shop, EmployeeRole.Appraiser, now).Length > 0
                 || SpecialWorkers(shop, EmployeeRole.Cashier, now).Length > 0);
@@ -185,10 +186,10 @@ namespace PCShopSell.Core.Session
             if(!open)return;
             if(minute>=state.NextVisit)
             {
-                state.NextVisit=minute+SpecialVisitInterval(shop,45);
+                state.NextVisit=minute+(long)Math.Ceiling(SpecialVisitInterval(shop,45)/ShopPowerTraffic(shop,now));
                 if(!state.Used.Any(i=>!i.Owned)&&state.Used.Count(i=>i.Owned&&!i.Sold)<20)state.Used.Add(CreateSeller(state,minute));
             }
-            if(!state.AutoPurchase)return;
+            if(state.AutoPurchasePaused)return;
             var worker=SpecialWorkers(shop,EmployeeRole.Appraiser,now).OrderByDescending(e=>e.Intelligence).FirstOrDefault();
             if(worker==null)return;
             // Each seller is considered once: staff cannot reroll a judgement every minute.
@@ -400,7 +401,7 @@ namespace PCShopSell.Core.Session
             }
             TickRestaurantWorkers(shop,state,now,open);
             if(!open||minute<state.NextVisit)return;
-            state.NextVisit=minute+SpecialVisitInterval(shop,RestaurantVisitMinutes);
+            state.NextVisit=minute+(long)Math.Ceiling(SpecialVisitInterval(shop,RestaurantVisitMinutes)/ShopPowerTraffic(shop,now));
             int tables=Furnished(shop,"restaurant_table");
             int table=0;
             while(table<tables&&state.Orders.Any(o=>!o.TableCleared&&o.Table==table))table++;

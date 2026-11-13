@@ -77,6 +77,7 @@ namespace PCShopSell.Core.Session
                 s.PlaceAcquiredMotor(s.NewMotor("c_718"),false,"garage_1");
             }
 #if UNITY_EDITOR
+            if(scenario=="events")s.PrepareEventAcceptance();
             if(scenario=="brand_expo")s.PrepareBrandExpoAcceptance();
             if(scenario=="kol_live")s.PrepareKolLiveAcceptance();
             if(scenario=="quarter_expo")s.PrepareQuarterlyExpoAcceptance();

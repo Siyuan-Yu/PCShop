@@ -7,6 +7,7 @@ using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Finance;
 using PCShopSell.Core.World;
+using PCShopSell.Core.Time;
 
 namespace PCShopSell.Core.Session
 {
@@ -15,43 +16,54 @@ namespace PCShopSell.Core.Session
         private readonly List<CityCompetition> _cityCompetitions = new List<CityCompetition>();
         private readonly Dictionary<string, int> _citySupplierPurchases = new Dictionary<string, int>();
         private readonly Dictionary<string, int> _cityExpoModels = new Dictionary<string, int>();
+        private readonly HashSet<(string shop, string kind, string product)> _matchedPromotions = new HashSet<(string, string, string)>();
         private int _cityCompetitionSlot = -1, _cityRetailTickDay = -1;
         public IReadOnlyList<CityCompetition> CityCompetitions => _cityCompetitions;
         private bool IsCompetingRetailShop(OwnedShop shop,bool requireOpen=true)=>shop!=null && shop.Rented
             && RetailShopTypes.All.Contains(shop.RetailKind) && !IsSpecialBusiness(shop) && !(shop.Place.Business??"").StartsWith("venue_",StringComparison.Ordinal)
             && (!requireOpen || shop.Sim.IsOpen);
-        internal OwnedShop PriceWarTarget()=>MyShops.Where(shop=>IsCompetingRetailShop(shop) && shop.Sim.Markup>1.2
-            && (shop.RetailKind!="computer" || Relation(Npcs.Jie)<NpcPerks.JieNoPriceWar))
-            .OrderBy(shop=>shop==CurrentShop?0:1).ThenBy(shop=>shop.Place.Id,StringComparer.Ordinal).FirstOrDefault();
-        private string RetailRivalName(OwnedShop shop)
+        internal CityCompetition EventPromotion() => ActiveCityCompetition("promotion")
+            .FirstOrDefault(e => e.RivalPlaceId != null && e.ProductId != null && e.Response == null
+                && PromotionRivalStillTrading(e) && ShopAt(e.ShopId)?.Sim.IsOpen == true);
+
+        private bool PromotionRivalStillTrading(CityCompetition promotion)
         {
-            if(shop.RetailKind=="clothing")
-            {
-                int tier=shop.Sim.Stock.GoodsLines().Where(l=>ClothingProducts.IsClothing(l.Key))
-                    .GroupBy(l=>ClothingProducts.Outfit(l.Key).Tier).OrderByDescending(g=>g.Sum(l=>l.Value)).Select(g=>g.Key).FirstOrDefault();
-                return Outfits.All.First(o=>o.Id!=Outfits.Default && o.Tier==tier).FictionalBrandId+"服饰";
-            }
-            return "同商圈"+RetailShopTypes.Name(shop.RetailKind);
+            if (!City.HasPlace(promotion.RivalPlaceId)) return false;
+            var place = City.GetPlace(promotion.RivalPlaceId);
+            return !IsVacant(place) && ShopAt(place) == null && VentureAt(place.Id) == null && !IsPlayerPropertyOccupied(place.Id);
         }
+
+        private Place LocalPromotionRival(OwnedShop shop) => City.Places.Where(place => place.Id != shop.Place.Id
+            && place.Kind == PlaceKind.Shop && !IsVacant(place) && ShopAt(place) == null && VentureAt(place.Id) == null && !IsPlayerPropertyOccupied(place.Id)
+            && DistanceCity(StandOf(shop.Place), StandOf(place)) <= ShopCompetitionRadiusWorld
+            && (shop.RetailKind == "computer" && place.Business == "电脑"
+                || shop.RetailKind == "clothing" && place.Business == "服装" && place.Id != "clothing_wholesale"
+                || shop.RetailKind == "models" && (place.Business == "模型手办" || place.Business == "潮玩模型")
+                || shop.RetailKind == PetShopCatalog.ShopKind && place.Business == "宠物用品"))
+            .OrderBy(place => DistanceCity(StandOf(shop.Place), StandOf(place))).FirstOrDefault();
+
+        private double EventPriceFactor(OwnedShop shop, string productId) =>
+            _matchedPromotions.Contains((shop.Place.Id, shop.RetailKind, productId)) ? .9 : 1;
         private EventDef BindPriceWar(EventDef template)
         {
-            var target=PriceWarTarget();if(target==null)return null;
-            string kind=target.RetailKind,title=ShopTitle(target),rival=RetailRivalName(target);
-            var bound=new EventDef{Id=template.Id,Title=RetailShopTypes.Name(kind)+"同行价格战",MinDay=template.MinDay,
-                CooldownDays=template.CooldownDays,Weight=template.Weight,
-                Body=$"{title}正在营业。{rival}推出了同类商品促销，宣传比同行便宜一成，顾客来询问你的价格是否也会调整。"};
-            foreach(var item in template.Choices)
+            var promotion = EventPromotion();
+            if (promotion == null) return null;
+            var shop = ShopAt(promotion.ShopId);
+            string product = new EventStock { Id = promotion.ProductId }.Name;
+            string Respond(string response)
             {
-                var choice=item;
-                bound.Choices.Add(new EventChoice{Text=choice.Text,DisabledReason=choice.DisabledReason,
-                    Apply=session=>
-                    {
-                        if(session.ShopAt(target.Place.Id)!=target || target.RetailKind!=kind || !session.IsCompetingRetailShop(target))
-                            return "目标店铺已停业、退租或改变主售，本次竞争不再结算，其他店铺未受影响。";
-                        string result=null;session.WithShop(target,()=>result=choice.Apply(session));return result;
-                    }});
+                if (!PromotionRivalStillTrading(promotion) || !IsCompetingRetailShop(shop))
+                    return "促销门店或经营状态已变化，本次没有调整售价。";
+                if (!RespondCityCompetition(promotion.Id, response)) return "这轮促销已经结束。";
+                return response == "match" ? $"{product}临时九折，促销结束后恢复原价。"
+                    : response == "position" ? $"维持原价并突出服务，本轮预计保留 {promotion.RetainedDemand:P0} 客流。"
+                    : "维持原价，客流会在对手促销结束后恢复。";
             }
-            return bound;
+            return EventScene(template, $"{promotion.RivalName}正在给{product}做九折促销，持续至 {new GameDate(promotion.EndDay)} 00:00。"
+                + $"\n受影响门店：{ShopTitle(shop)}。",
+                Choose($"只对{product}限时跟价", _ => Respond("match")),
+                Choose("维持价格，说明服务差异", _ => Respond("position")),
+                Choose("保持现有安排", _ => Respond("maintain")));
         }
         private bool CompetitionMatchesShop(CityCompetition competition)
         {
@@ -104,7 +116,10 @@ namespace PCShopSell.Core.Session
         public string CityCompetitionTitle(CityCompetition e) => e.Kind == "promotion" ? RetailShopTypes.Name(e.RetailKind)+"同行促销" : e.Kind == "quota" ? "同行业货源配额紧张" : "同行业供应商调整合作条件";
         public string CityCompetitionTerms(CityCompetition e)
         {
-            if (e.Kind == "promotion") return (e.RivalName??"同商圈同行")+"正在促销，目标门店潜在询价客流暂为85%。可维持定位、调整陈列价格，或突出特色系列（潜在客流恢复到95%）；只影响对应店铺，收入仍需实际成交。";
+            if (e.Kind == "promotion") return $"{e.RivalName ?? "同商圈同行"}促销至 {new GameDate(e.EndDay)} 00:00。"
+                + (e.Response == "match" ? $"已对{new EventStock { Id = e.ProductId }.Name}临时跟价，其余售价不变。"
+                    : e.Response == "position" ? $"维持原价，预计保留 {(e.RetainedDemand > 0 ? e.RetainedDemand : .95):P0} 客流。"
+                    : "暂时保留 85% 客流，可突出服务差异。");
             if (e.Kind == "quota") return $"{(City.HasPlace(e.SupplierId) ? City.GetPlace(e.SupplierId).Name : e.SupplierId)} 的 {Gifts.Get(e.ProductId)?.Name ?? (PartCatalog.Exists(e.ProductId) ? PartCatalog.Get(e.ProductId).Name : e.ProductId)} 每日最多供应4件。可选其他来源，不影响已有在途订单。";
             return (City.HasPlace(e.SupplierId)?City.GetPlace(e.SupplierId).Name:"对应供应商")+"这轮将常规起订量提高到3倍。可选择小批次合作：恢复常规起订量、批发价提高8%。兼营零售的店铺仍须满足零售数量10倍的批发门槛。仅影响本货源和事件期间的后续订单。";
         }
@@ -112,24 +127,35 @@ namespace PCShopSell.Core.Session
         {
             var e = ActiveCityCompetition().FirstOrDefault(x => x.Id == id);
             if (e == null) return Fail("这项市场变化已经结束。 ");
-            if (e.Kind == "promotion" && response != "position" && response != "maintain") return false;
+            if (e.Kind == "promotion" && response != "position" && response != "maintain" && response != "match") return false;
             if (e.Kind == "terms" && response != "small" && response != "batch") return false;
             if (e.Kind == "quota" && response != "alternative") return false;
-            e.Response = response; ApplyCityRetailDemand();
+            e.Response = response;
+            if (e.Kind == "promotion" && response == "position" && ShopAt(e.ShopId) is OwnedShop shop)
+            {
+                double advice = shop.RetailKind == "computer" && Relation(Npcs.Jie) >= NpcPerks.JiePriceWarAdvice ? .025 : 0;
+                e.RetainedDemand = Math.Min(1, .90 + ShopSalesBonus(shop) * .3 + Math.Max(0, shop.Sim.ShopReputation - 50) * .001 + advice);
+            }
+            ApplyCityRetailDemand();
             Say("已记录应对：" + CityCompetitionTitle(e) + "。市场变化按到期时间自然结束。"); return true;
         }
         private void ApplyCityRetailDemand()
         {
+            _matchedPromotions.Clear();
+            foreach (var promotion in ActiveCityCompetition("promotion"))
+                if (promotion.Response == "match") _matchedPromotions.Add((promotion.ShopId, promotion.RetailKind, promotion.ProductId));
             foreach (var shop in _shops)
                 shop.Sim.CityRetailDemandMultiplier = ActiveCityCompetition("promotion").Where(e => e.ShopId == shop.Place.Id)
-                    .Aggregate(1.0, (f, e) => f * (e.Response == "position" ? .95 : .85));
+                    .Aggregate(1.0, (f, e) => f * (e.Response == "match" ? 1 : e.Response == "position"
+                        ? (e.RetainedDemand > 0 ? e.RetainedDemand : .95) : .85));
         }
         public void TickCityRetail()
         {
             int day = Clock.Today.TotalDays;
             bool newDay=_cityRetailTickDay!=day;
             _cityRetailTickDay = day;
-            foreach (var e in _cityCompetitions.Where(e => !e.Ended && (day >= e.EndDay || !CompetitionMatchesShop(e))))
+            foreach (var e in _cityCompetitions.Where(e => !e.Ended && (day >= e.EndDay || !CompetitionMatchesShop(e)
+                || e.RivalPlaceId != null && !PromotionRivalStillTrading(e))))
             { e.Ended = true; Say(CityCompetitionTitle(e) + "已结束，对应临时影响解除。"); }
             int slot = day < 14 ? -1 : (day - 14) / 7;
             if (slot >= 0 && slot > _cityCompetitionSlot && MyShopCount > 0)
@@ -154,10 +180,19 @@ namespace PCShopSell.Core.Session
                         .OrderByDescending(o=>o.Kind==PurchaseGoodsKind.Part?target.Sim.Stock.CountAll(PartCatalog.Get(o.Id)):target.Sim.Stock.GoodsCount(o.Id))
                         .ThenBy(o=>o.Price.Cents).ThenBy(o=>o.Source.Id,StringComparer.Ordinal).FirstOrDefault();
                     if(kind!="promotion" && offer==null)kind="promotion";
+                    var rival = kind == "promotion" ? LocalPromotionRival(target) : null;
+                    var promoted = rival == null ? null : EventShelfProducts(target)
+                        .Where(product => target.RetailKind != "computer" || product.Part != null)
+                        .OrderByDescending(product => product.Count).FirstOrDefault();
                     var e = new CityCompetition { Id = "city-market:" + slot, Kind = kind, ShopId = target.Place.Id,
-                        RetailKind=target.RetailKind,RivalName=RetailRivalName(target),SupplierId=offer?.Source.Id, ProductId=offer?.Id,
+                        RetailKind=target.RetailKind,RivalName=rival?.Name,RivalPlaceId=rival?.Id,
+                        SupplierId=offer?.Source.Id, ProductId=kind == "promotion" ? promoted?.Id : offer?.Id,
                         StartDay = start, EndDay = start + 3, Announced = true };
-                    if (!_cityCompetitions.Any(x => x.Id == e.Id)) { _cityCompetitions.Add(e); Say(CityCompetitionTitle(e) + "：" + CityCompetitionTerms(e)); }
+                    if ((kind != "promotion" || promoted != null) && !_cityCompetitions.Any(x => x.Id == e.Id))
+                    {
+                        _cityCompetitions.Add(e);
+                        Say(CityCompetitionTitle(e) + "：" + CityCompetitionTerms(e));
+                    }
                     _cityCompetitionSlot=slot;
                 }
             }

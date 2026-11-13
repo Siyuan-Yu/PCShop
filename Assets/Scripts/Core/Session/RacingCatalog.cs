@@ -91,10 +91,10 @@ namespace PCShopSell.Core.Session
         { Laps=laps; RequiredWins=wins; HalfRoad=halfRoad; OpenMinute=open; CloseMinute=close;
             ParkingRent=rent; ParkingPrice=price; UsedVehicleCeiling=ceiling; }
         private static readonly RacingTierRules[] All = {
-            new RacingTierRules(2,0,5,0,1440,50,5000,100000),
-            new RacingTierRules(2,1,7,540,1080,150,15000,600000),
-            new RacingTierRules(3,3,7,540,1080,400,40000,1500000),
-            new RacingTierRules(3,6,7,540,1080,1000,100000,4000000)
+            new RacingTierRules(2,0,5,0,1440,500,10000,100000),
+            new RacingTierRules(2,1,7,540,1080,500,10000,600000),
+            new RacingTierRules(3,3,7,540,1080,500,10000,1500000),
+            new RacingTierRules(3,6,7,540,1080,500,10000,4000000)
         };
         public static RacingTierRules For(int tier)
         {

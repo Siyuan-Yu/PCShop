@@ -111,6 +111,8 @@ namespace PCShopSell.Core.Shop
         public string RetailInterestSeries;
         public long RetailBudgetCents;
         internal bool RetailPreferenceAssigned;
+        internal string ReferralProductId;
+        internal bool ReferralBoxed, ReferralReserved;
         public int GoodsExpiryDay = -1;
         public bool GoodsChilled;
 
@@ -282,6 +284,7 @@ namespace PCShopSell.Core.Shop
         private readonly Ledger _ledger;
         private readonly HardwareMarket _market;
         private readonly List<ShopCustomer> _active = new List<ShopCustomer>();
+        private readonly List<ShopVisitDetail> _completedVisits = new List<ShopVisitDetail>();
         private readonly List<ShopCustomer> _queue = new List<ShopCustomer>();
         private readonly List<BuildOrder> _orders = new List<BuildOrder>();
         private int _nextCustomerId = 1;
@@ -463,8 +466,9 @@ namespace PCShopSell.Core.Shop
         {
             GiftDef g = Gifts.Get(id);
             if (g == null) return Money.Zero;
-            if(_fixedSalePrices.TryGetValue("g:"+id,out var fixedPrice))return Money.FromYuan(fixedPrice);
-            return Money.FromYuan(Math.Max(1, (long)Math.Round(g.Price.Yuan * IndustryCycles.GoodsFactor(g,_clock.Today.TotalDays) * MarkupOfGoods(id))));
+            double promotion = TemporaryPriceFactorOf?.Invoke(id) ?? 1;
+            if(_fixedSalePrices.TryGetValue("g:"+id,out var fixedPrice))return Money.FromYuan(fixedPrice).Scale(promotion);
+            return Money.FromYuan(Math.Max(1, (long)Math.Round(g.Price.Yuan * IndustryCycles.GoodsFactor(g,_clock.Today.TotalDays) * MarkupOfGoods(id)))).Scale(promotion);
         }
 
         public void RestorePartMarkups(IEnumerable<KeyValuePair<string, double>> items)
@@ -498,6 +502,32 @@ namespace PCShopSell.Core.Shop
 
         public int TodayCustomers { get; private set; }
         public int TodayLost { get; private set; }
+
+        public IEnumerable<ShopVisitDetail> TodayVisitDetails(bool lossesOnly)
+        {
+            long dayStart = (long)_clock.Today.TotalDays * GameTimestamp.MinutesPerDay;
+            foreach (var visit in _completedVisits)
+                if (lossesOnly ? visit.CountedAsLost : visit.ArrivalMinute >= dayStart)
+                    yield return visit;
+            if (lossesOnly) yield break;
+            foreach (var customer in _active)
+                if (customer.ArrivedAt.TotalMinutes >= dayStart)
+                    yield return VisitDetail(customer);
+        }
+
+        private static ShopVisitDetail VisitDetail(ShopCustomer customer, bool countedAsLost = false) => new ShopVisitDetail
+        {
+            CustomerId = customer.Id,
+            PersonId = customer.PersonId,
+            ArrivalMinute = customer.ArrivedAt.TotalMinutes,
+            State = customer.State,
+            Reason = customer.Reason,
+            ProductName = customer.Reason == LeaveReason.OrderPlaced
+                ? PartCatalog.TierName(customer.BuildTier) + "整机"
+                : customer.ItemName,
+            PaidCents = customer.State == CustomerState.Paid ? customer.Spend.Cents : 0,
+            CountedAsLost = countedAsLost,
+        };
         public Money TodaySales { get; private set; }
 
         public event Action<ShopCustomer> CustomerArrived;
@@ -568,9 +598,12 @@ namespace PCShopSell.Core.Shop
         }
 
         public bool TradingEnabled = true;
+        public Func<GameTimestamp, double> PowerTrafficOf;
+        public Func<string, double> TemporaryPriceFactorOf;
         public bool IsOpenAt(GameTimestamp t) => IsOpenAt(t, PlayerPresent);
         public bool IsOpenAt(GameTimestamp t, bool playerPresent) =>
-            TradingEnabled && !ForcedClosed && !NotFitted && InHours(t) && (playerPresent || EmployeeOnDuty(t));
+            TradingEnabled && !ForcedClosed && !NotFitted && (PowerTrafficOf?.Invoke(t) ?? 1) > 0
+            && InHours(t) && (playerPresent || EmployeeOnDuty(t));
 
         public Func<GameTimestamp,bool> OpenStatusOf;
         public bool IsOpen => OpenStatusOf?.Invoke(_clock.Now)??IsOpenAt(_clock.Now);
@@ -578,9 +611,10 @@ namespace PCShopSell.Core.Shop
         /// <summary>当前售价。</summary>
         public Money PriceOf(PartDef part, bool boxed)
         {
-            if(_fixedSalePrices.TryGetValue(FixedPartKey(part,boxed),out var fixedPrice))return Money.FromYuan(fixedPrice);
+            double promotion = TemporaryPriceFactorOf?.Invoke(part.Id) ?? 1;
+            if(_fixedSalePrices.TryGetValue(FixedPartKey(part,boxed),out var fixedPrice))return Money.FromYuan(fixedPrice).Scale(promotion);
             double k = MarkupOf(part) * (boxed ? 1.0 + Settings.BoxedPremium : 1.0);
-            return Money.FromYuan((long)Math.Round(_market.PriceOf(part).Yuan * k));
+            return Money.FromYuan((long)Math.Round(_market.PriceOf(part).Yuan * k)).Scale(promotion);
         }
 
         /// <summary>同一套配件按本店当前盒装零售价分卖的合计。</summary>
@@ -604,7 +638,7 @@ namespace PCShopSell.Core.Shop
 
         /// <summary>当前时刻每分钟来客的期望人数。</summary>
         public double ArrivalRatePerMinute(GameTimestamp at) => ArrivalRatePerMinute(Settings, at, Size, LocationFactor,
-            (CompetitionFactorOf?.Invoke() ?? 1.0) * ArrivalTrafficMultiplier);
+            (CompetitionFactorOf?.Invoke() ?? 1.0) * ArrivalTrafficMultiplier * (PowerTrafficOf?.Invoke(at) ?? 1));
 
         public Func<double> StreetTrafficFactorOf;
         internal double ArrivalTrafficMultiplier => (StreetTrafficFactorOf?.Invoke() ?? 1.0)
@@ -769,6 +803,7 @@ namespace PCShopSell.Core.Shop
             TodayCustomers = 0;
             TodayLost = 0;
             TodaySales = Money.Zero;
+            _completedVisits.Clear();
             Awareness *= DailyReputationRetention;
             if (_reputationOwner == null) _reputation *= DailyReputationRetention;
         }
@@ -852,6 +887,74 @@ namespace PCShopSell.Core.Shop
             TodayCustomers++;
             CustomerArrived?.Invoke(c);
         }
+
+        internal void ArriveReferral(PartDef part, string goodsId, bool boxed, long budgetCents, bool reserved)
+        {
+            var now = _clock.Now;
+            var customer = new ShopCustomer(_nextCustomerId++, goodsId == null ? CustomerIntent.Retail : CustomerIntent.Goods,
+                part?.Category ?? PartCatalog.Categories[0], 0, now, now.AddMinutes(3), true)
+            {
+                ReferralProductId = part?.Id ?? goodsId, ReferralBoxed = boxed, ReferralReserved = reserved,
+                RetailBudgetCents = budgetCents,
+            };
+            _active.Add(customer);
+            TodayCustomers++;
+            CustomerArrived?.Invoke(customer);
+        }
+
+        private void DecideReferral(ShopCustomer customer, GameTimestamp now)
+        {
+            string id = customer.ReferralProductId;
+            PartDef part = PartCatalog.Exists(id) ? PartCatalog.Get(id) : null;
+            string goodsId = part == null ? id : null;
+            bool boxed = customer.ReferralBoxed;
+            bool reserved = customer.ReferralReserved;
+            Money price = goodsId == null ? PriceOf(part, boxed) : GoodsPriceOf(goodsId);
+            double intent = goodsId == null ? PartPurchaseIntentAtPrice(part, boxed, price.Yuan)
+                : GoodsPurchaseIntentAtPrice(goodsId, price.Yuan);
+            bool available = reserved || (goodsId == null
+                ? ShelfFillOf(part.Category).Parts.Any(line => line.Part == part && line.Boxed == boxed && line.Count > 0)
+                : OnShelfGoods(goodsId) > 0);
+            if (!available || price.Cents > customer.RetailBudgetCents || !Random.Chance(Math.Min(1, intent + (reserved ? .18 : .08))))
+            {
+                Leave(customer, available ? LeaveReason.TooExpensive : LeaveReason.NoStock);
+                return;
+            }
+            if (goodsId != null)
+            {
+                customer.GoodsExpiryDay = Stock.GoodsExpiry(goodsId);
+                customer.GoodsChilled = Stock.GoodsChilled(goodsId);
+            }
+            if (!reserved)
+            {
+                bool removed = goodsId == null ? Stock.TryRemove(part, boxed, 1) : Stock.TryRemoveGoods(goodsId, 1);
+                if (!removed) { Leave(customer, LeaveReason.NoStock); return; }
+            }
+            customer.Item = part;
+            customer.ReferralReserved = false;
+            customer.ItemBoxed = boxed;
+            customer.GoodsId = goodsId;
+            customer.Spend = price;
+            customer.State = CustomerState.WaitingCheckout;
+            customer.WaitingSince = now;
+            customer.CheckoutStartedSeconds = CheckoutClock?.Invoke() ?? double.NaN;
+            _queue.Add(customer);
+            CustomerReadyToPay?.Invoke(customer);
+        }
+
+        internal void RecordBulkSale(string itemName, int count, Money total)
+        {
+            _ledger.Credit(_clock.Today, SalesCategory, total, $"学生团购 · {itemName} ×{count}",
+                LedgerAttribution.ForShop(ShopId, transactionKind: "销售"));
+            TodaySales += total;
+            TodayCustomers++;
+            _day.Paid++;
+            _completedVisits.Add(new ShopVisitDetail { CustomerId = _nextCustomerId++,
+                ProductName = itemName + " ×" + count, PaidCents = total.Cents,
+                ArrivalMinute = _clock.Now.TotalMinutes, State = CustomerState.Paid });
+            Reputation += 1;
+            AdjustShopReputation(.12);
+        }
         private bool CheckoutPatienceElapsed(ShopCustomer customer)
         {
             double seconds=CheckoutClock?.Invoke()??double.NaN;
@@ -873,6 +976,7 @@ namespace PCShopSell.Core.Shop
 
         private void Decide(ShopCustomer c, GameTimestamp now)
         {
+            if (c.ReferralProductId != null) { DecideReferral(c, now); return; }
             if(RetailKind=="secondhand"){DecideResale(c,now);return;}
             bool browseComputer=IsGoodsShop && (_display.Count>0 || PartCatalog.Categories.Any(cat=>ShelfFillOf(cat).Total>0))
                 && (!GoodsOnSale || Random.Chance(.2));
@@ -1000,7 +1104,7 @@ namespace PCShopSell.Core.Shop
                 foreach (var l in lines) { pick -= ClothingProducts.SeasonDemandAt(l.Key, temp); if (pick < 0) { id = l.Key; break; } }
             }
             else id = lines[Random.Next(0, lines.Count)].Key;
-            if (!Random.Chance(GoodsPurchaseChance(id,MarkupOfGoods(id)))) return false;
+            if (!Random.Chance(GoodsPurchaseChance(id,MarkupOfGoods(id) * (TemporaryPriceFactorOf?.Invoke(id) ?? 1)))) return false;
             if (!CanPay(c))
             {
                 Leave(c, LeaveReason.NoCash);
@@ -1114,12 +1218,19 @@ namespace PCShopSell.Core.Shop
             }
             TodaySales += c.Spend;
             _day.Paid++;
+            _completedVisits.Add(VisitDetail(c));
             AdjustShopReputation(.12);
             CustomerPaid?.Invoke(c);
         }
 
         private void Leave(ShopCustomer c, LeaveReason reason, bool countAsLost = true)
         {
+            if (c.ReferralReserved)
+            {
+                if (PartCatalog.Exists(c.ReferralProductId)) Stock.ForceAdd(PartCatalog.Get(c.ReferralProductId), c.ReferralBoxed, 1);
+                else Stock.ForceAddGoods(c.ReferralProductId, 1);
+                c.ReferralReserved = false;
+            }
             c.ResaleId=0;c.ResaleName=null;
             if (c.State == CustomerState.WaitingCheckout && c.Item != null)
             {
@@ -1146,6 +1257,7 @@ namespace PCShopSell.Core.Shop
             c.State = CustomerState.Left;
             c.Reason = reason;
             if (countAsLost) TodayLost++;
+            _completedVisits.Add(VisitDetail(c, countAsLost));
             switch (reason)
             {
                 case LeaveReason.TooExpensive: _day.LostTooExpensive++; break;

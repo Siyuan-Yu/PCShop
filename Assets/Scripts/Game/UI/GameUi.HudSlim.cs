@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using PCShopSell.Core.Session;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,7 +17,8 @@ namespace PCShopSell.Game.UI
         {
             var panel = Ui.FlatPanel(_dockCanvas.transform, "HudMorePanel", Ui.FlatBand, Ui.FlatHotEdge);
             _hudMore = panel.gameObject;
-            panel.rectTransform.Anchor(1, 1, 1, 1, -166, -(68 + 4 * 42 + 20), 8, 68);
+            int entries = GameSession.FirstChapterTrial ? 4 : 5;
+            panel.rectTransform.Anchor(1, 1, 1, 1, -166, -(68 + entries * 42 + 20), 8, 68);
             Ui.VList(panel.rectTransform, 4, 8);
 
             void Entry(string label, Action action, string name, string tip)
@@ -28,6 +30,8 @@ namespace PCShopSell.Game.UI
             Entry("员工", OpenEmployeesPanel, "HudEmployees", "所有店的员工列表、明天调店安排、进货清单和车辆占用。");
             Entry("日程", OpenSchedulePanel, "HudCalendar", "日程、邀约与已安排的活动。");
             Entry("品牌", OpenBrandOverview, "HudBrand", "品牌管理、KOL签约、直播排班与直播间。");
+            if (!GameSession.FirstChapterTrial)
+                Entry("赛车", OpenRacingDestinations, "HudRacing", "查看赛场开放条件、入门路线和比赛安排。");
             _brandButton = panel.transform.Find("HudBrand")?.GetComponent<Button>();
             _hudMore.SetActive(false);
 
@@ -38,7 +42,7 @@ namespace PCShopSell.Game.UI
                 if (open) _hudMore.transform.SetAsLastSibling();
             }, 17), 76);
             more.name = "HudMore";
-            more.Tip("人物、员工、日程、品牌");
+            more.Tip(GameSession.FirstChapterTrial ? "人物、员工、日程、品牌" : "人物、员工、日程、品牌、赛车");
         }
 
         private void UpdateHudMore()

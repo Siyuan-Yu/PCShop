@@ -13,8 +13,6 @@ namespace PCShopSell.Core.Session
     /// </summary>
     public static class EventCatalog
     {
-        public const string EmergencyLightFlag = "emergency_light";
-
         private static Money Y(long yuan) => Money.FromYuan(yuan);
 
         private static bool CanPay(GameSession s, long yuan) => s.Ledger.Balance >= Y(yuan);
@@ -33,108 +31,36 @@ namespace PCShopSell.Core.Session
         {
             new EventDef
             {
-                Id = "regulars", Title = "熟客想带朋友", MinDay = 3, CooldownDays = 6, Weight = 10,
-                When = s => s.RetailStoryTarget("regulars")!=null,
-                Body = "常来的一位熟客说：\"下回我带几个同学一起来，都要配电脑。\"",
-                Choices =
-                {
-                    new EventChoice
-                    {
-                        Text = "约一次真实饭局（到场后消费）",
-                        Enabled = s => CanPay(s, 100), DisabledReason = "预计家常饭费用不足",
-                        Apply = s =>
-                        {
-                            return s.ScheduleLegacyCityMeeting(Npcs.Zhang,"dinner","legacy-regulars-meal:"+s.Clock.Today.TotalDays);
-                        },
-                    },
-                    new EventChoice
-                    {
-                        Text = "客气两句就好",
-                        Apply = s =>
-                        {
-                            s.PlayerShop.AdjustShopReputation(.5);
-                            return "熟客笑笑：\"行，老板实在。\" 口碑 +0.5。";
-                        },
-                    },
-                },
+                Id = "blackout", Title = "停电了", MinDay = 3, CooldownDays = 25, Weight = 8,
+                When = s => s.NeedsEmergencyLighting,
             },
             new EventDef
             {
-                Id = "students", Title = "学生团购", MinDay = 6, CooldownDays = 12, Weight = 9,
-                When = s => s.RetailStoryTarget("students")!=null,
-                Body = "几个学生凑在一起，想一次买 5 条「入门内存」装宿舍的电脑，问你能不能给个团购价。",
+                Id = "money_parttime_offer", Title = "周末搬货兼职", Group = "money", MinDay = 4, CooldownDays = 30, Weight = 6,
+                Body = $"朋友今天缺人帮忙搬货。现在开工，干满 {GameSession.WeekendWorkHours} 小时后结算 ¥{GameSession.WeekendWorkPay}。",
+                When = s => s.CanStartWeekendWork,
                 Choices =
                 {
                     new EventChoice
                     {
-                        Text = "按市价 95 折卖给他们",
-                        Apply = s =>
-                        {
-                            PartDef p = PartCatalog.Get("ram0");
-                            for (int i = 0; i < 5; i++) s.PlayerShop.Stock.TakeOne(p);
-                            Money total = (s.Market.PriceOf(p) * 5).Scale(0.95);
-                            s.EventGain(total, "学生团购");
-                            s.PlayerShop.Reputation += 1;
-                            return $"5 条内存一次出手，收入 {total}，名望 +1。";
-                        },
+                        Text = $"开工 · {GameSession.WeekendWorkHours} 小时",
+                        Enabled = s => s.CanStartWeekendWork,
+                        DisabledReason = "周末白天且空闲时可以接班",
+                        Apply = s => { s.StartWeekendWork(); return null; },
                     },
-                    new EventChoice
-                    {
-                        Text = "一口价，不讲价（按市价加 10%）",
-                        Apply = s =>
-                        {
-                            if (!s.Random.Chance(0.5)) return "学生们商量了一下，说回去再想想，走了。";
-                            PartDef p = PartCatalog.Get("ram0");
-                            for (int i = 0; i < 5; i++) s.PlayerShop.Stock.TakeOne(p);
-                            Money total = (s.Market.PriceOf(p) * 5).Scale(1.10);
-                            s.EventGain(total, "学生团购");
-                            return $"他们咬咬牙接受了，收入 {total}。";
-                        },
-                    },
-                    new EventChoice { Text = "不接", Apply = s => "你说库存要留给零售顾客，学生们嘀咕着走了。" },
+                    new EventChoice { Text = "不去", Apply = _ => "你婉拒了这次兼职。" },
                 },
             },
-            new EventDef
-            {
-                Id = "rival", Title = "隔壁打价格战", MinDay = 7, CooldownDays = 14, Weight = 8,
-                When = s => s.PriceWarTarget()!=null,
-                Body = "同商圈同行正在促销，有顾客询问是否跟进价格。",
-                Choices =
-                {
-                    new EventChoice
-                    {
-                        Text = "跟着降价（加价倍率 -0.10）",
-                        Apply = s =>
-                        {
-                            s.PlayerShop.Markup -= 0.10;
-                            return $"你把加价倍率调到了 {s.PlayerShop.Markup:0.00}×。薄利多销。";
-                        },
-                    },
-                    new EventChoice
-                    {
-                        Text = "和同行沟通（看魅力）",
-                        Apply = s =>
-                        {
-                            if (s.Random.Chance(0.3 + s.EffectiveCharm * 0.012))
-                            {
-                                s.PlayerShop.AdjustShopReputation(1);
-                                return "两边说开了，各卖各的，没再恶性竞争。口碑 +1。";
-                            }
-                            s.PlayerShop.AdjustShopReputation(-1);
-                            return "老板阴阳怪气，聊崩了。口碑 -1。";
-                        },
-                    },
-                    new EventChoice
-                    {
-                        Text = "不理他",
-                        Apply = s =>
-                        {
-                            s.PlayerShop.AdjustShopReputation(-.5);
-                            return "有几个顾客转身去了隔壁。口碑 -0.5。";
-                        },
-                    },
-                },
-            },
+            new EventDef { Id = "inspection", Title = "市场监管来检查", When = s => s.InspectionShop() != null },
+            new EventDef { Id = "regulars", Title = "熟客想带朋友", MinDay = 3, CooldownDays = 6, Weight = 10, When = s => s.ReferralShop() != null },
+            new EventDef { Id = "thief", Title = "货少了", When = s => s.DiscrepancyShop() != null },
+            new EventDef { Id = "students", Title = "学生团购", MinDay = 6, CooldownDays = 12, Weight = 9, When = s => s.RetailStoryTarget("students") != null },
+            new EventDef { Id = "rival", Title = "同行价格战", MinDay = 7, CooldownDays = 14, Weight = 8, When = s => s.EventPromotion() != null },
+            new EventDef { Id = "wallet", Title = "捡到钱包", When = s => s.CanFindWallet },
+            new EventDef { Id = "friend_meal", Title = "老同学请吃饭", When = s => s.CanOfferClassmateDinner },
+            new EventDef { Id = "lend", Title = "亲戚来借钱", When = s => s.CanOfferRelativeLoan },
+            new EventDef { Id = "classmate_help", Title = "老同学雪中送炭", Group = "npc",
+                When = s => s.NegativeCashDays >= 3 && s.Ledger.Balance.IsNegative },
             new EventDef
             {
                 Id = "review", Title = "网上有人说你家卖翻新货", MinDay = 10, CooldownDays = 14, Weight = 7,

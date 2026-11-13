@@ -6,6 +6,8 @@ using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
+    public enum RacingIntroStep { GetVehicle, GetParking, ParkVehicle, Drive, Complete }
+
     [Serializable] public sealed class RaceRecord
     {public string Key;public double BestSeconds;public int Wins,Starts;public RaceRecord Copy()=>(RaceRecord)MemberwiseClone();}
     [Serializable] public sealed class RacingSave
@@ -30,7 +32,44 @@ namespace PCShopSell.Core.Session
             return (meeting==RaceMeeting.None?"今天无比赛，可练习 · ¥"+RacingSchedule.PracticeFee+"/次":RacingSchedule.Name(meeting)+" · 09:00—18:00 · 参赛 ¥"+RacingSchedule.Fee(meeting)+" · 冠军 ¥"+RacingSchedule.ChampionPrize(meeting))
                 +"\n下一场："+next+" · "+RacingSchedule.Name(RacingSchedule.On(next));
         }
-        public bool RacingUnlocked=>_garage.Any(v => MotorCatalog.CanRace(MotorCatalog.Get(v.ModelId).Kind));
+        public const string StarterRaceTrackId = "race_0";
+        public const string StarterRaceGarageId = "garage_0";
+        public const string RacingIntroTitle = "许星澜邀请你去城郊练习场";
+        private const string RacingAccessFlag = "racing:access";
+        private const string RacingIntroShownFlag = "racing:intro-shown";
+        public bool RacingUnlocked => Flags.Contains(RacingAccessFlag);
+        public string RacingAccessBlocker => FirstChapterTrial ? "赛车场暂未开放。"
+            : RacingUnlocked ? null : "赛车场暂未开放。现金超过 ¥100,000 且结清所有欠款后，会有车友邀请你。";
+
+        public RacingIntroStep RacingIntroduction
+        {
+            get
+            {
+                if (_raceRecords.Any(record => record.Key.StartsWith(StarterRaceTrackId + ":", StringComparison.Ordinal)
+                    && record.BestSeconds > 0)) return RacingIntroStep.Complete;
+                bool IsStarterVehicle(GarageVehicle vehicle) =>
+                    MotorCatalog.Get(vehicle.ModelId)?.Kind is VehicleKind.EBike or VehicleKind.Tricycle;
+                if (!_garage.Any(IsStarterVehicle)) return RacingIntroStep.GetVehicle;
+                if (!HasGarage(StarterRaceGarageId)) return RacingIntroStep.GetParking;
+                return _garage.Any(vehicle => IsStarterVehicle(vehicle) && !vehicle.Commuter && vehicle.GarageId == StarterRaceGarageId)
+                    ? RacingIntroStep.Drive : RacingIntroStep.ParkVehicle;
+            }
+        }
+
+        private void CheckRacingAccess()
+        {
+            if (!RacingUnlocked && !FirstChapterTrial && !IsGameOver && Ledger.Balance > Money.FromYuan(100000)
+                && TotalDebt == Money.Zero && City.HasPlace(StarterRaceTrackId))
+                Flags.Add(RacingAccessFlag);
+        }
+
+        private bool TryShowRacingIntroduction()
+        {
+            if (!RacingUnlocked || Popup == null || !Flags.Add(RacingIntroShownFlag)) return false;
+            Popup.Invoke(RacingIntroTitle,
+                "「等你有空，来城郊跑两圈吧。小电驴、三轮车都行。先去旁边的车库租或买个车位，把车停进去，再到练习场选车。我白天常在那儿。」");
+            return true;
+        }
         private GarageVehicle NewMotor(string model)=>new GarageVehicle{Id="motor_"+(++_motorSerial),ModelId=model};
         public bool DealerSells(string modelId)
         {
@@ -92,6 +131,7 @@ namespace PCShopSell.Core.Session
         public string RaceBlocker(string trackId,string motorId,bool practice)
         {
             var t=RaceTracks.Get(trackId,City);var v=_garage.Find(g=>g.Id==motorId);
+            if(RacingAccessBlocker is string accessBlocker)return accessBlocker;
             if(Racing||IsGameOver||IsWorking||_sleeping||CityActivityExclusive||PendingEvent!=null)return "请先结束当前活动";
             if(t==null||CurrentPlace?.Id!=trackId)return "请实际前往赛场";
             if(DistrictAccessTier<t.Tier)return "先解锁"+DistrictName(t.Tier)+"片区";
@@ -159,7 +199,7 @@ namespace PCShopSell.Core.Session
         }
         public bool MeetRacer(string trackId)
         {
-            var t=RaceTracks.Get(trackId,City);if(t==null||Racing||CurrentPlace?.Id!=trackId||Clock.MinuteOfDay<540||Clock.MinuteOfDay>=1080||!CitySamePlace(t.Npc))return false;
+            var t=RaceTracks.Get(trackId,City);if(t==null||!RacingUnlocked||Racing||CurrentPlace?.Id!=trackId||Clock.MinuteOfDay<540||Clock.MinuteOfDay>=1080||!CitySamePlace(t.Npc))return false;
             Meet(t.Npc);string flag="race_chat:"+t.Id+":"+Clock.Today.TotalDays;if(Flags.Add(flag))AddRelation(t.Npc,2);return true;
         }
         private void SaveRacing(SaveData d)

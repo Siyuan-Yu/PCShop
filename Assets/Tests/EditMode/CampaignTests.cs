@@ -213,15 +213,15 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void JiePriceWar_StopsAtHighFriendship()
+        public void PriceWarNeedsAnActiveCompetitorPromotion()
         {
             GameSession s = Make();
             s.PlayerShop.NotFitted=false;s.PlayerShop.ForcedClosed=false;s.PlayerShop.PlayerPresent=true;s.PlayerShop.SetHours(0,1440);
             s.PlayerShop.Markup = 1.4;
             EventDef rival = EventCatalog.Get("rival");
-            Assert.IsTrue(rival.When(s));
+            Assert.IsFalse(rival.When(s));
             s.Meet(Npcs.Jie, 20);
-            s.AddRelation(Npcs.Jie, NpcPerks.JieNoPriceWar);
+            s.AddRelation(Npcs.Jie, NpcPerks.JiePriceWarAdvice);
             Assert.IsFalse(rival.When(s));
         }
     }

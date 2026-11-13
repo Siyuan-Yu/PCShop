@@ -162,7 +162,7 @@ namespace PCShopSell.Game.UI
             var side = _boxSide == "temp" ? tempStacks : _boxSide == "box" ? boxStacks : bagStacks;
             BagStack pick = side.FirstOrDefault(s => s.Key == _boxSel);
             var tools=Ui.Row(w.Content,40);
-            Ui.Size(Ui.Button(tools,"背包全部放进后仓",()=>{S.StoreBackpackInWarehouse();_boxSel=null;w.Rebuild();if(shop)RebuildDock();},17,Ui.ButtonHot,!S.Backpack.IsEmpty||!S.Cargo.IsEmpty),-1,-1,1);
+            Ui.Size(Ui.Button(tools,"全部放进后仓（保留食物）",()=>{S.StoreBackpackInWarehouse();_boxSel=null;w.Rebuild();if(shop)RebuildDock();},17,Ui.ButtonHot,S.CanStoreBackpackInWarehouse),-1,-1,1);
             if(S.CanOpenFridge)Ui.Size(Ui.Button(tools,"打开冰箱",()=>OpenFridgeWindow(),17),140);
             if(_boxSide=="bag"&&pick!=null)
             {

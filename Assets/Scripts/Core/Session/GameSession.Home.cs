@@ -567,7 +567,7 @@ namespace PCShopSell.Core.Session
 
         private void EatMeal(string meal)
         {
-            if (IsWorking || _eating) return; // Staff meals are provided at the midpoint of the assigned shift.
+            if (IsContractWorking || _eating) return; // Staff meals are provided at the midpoint of the assigned shift.
             if (Player.Hunger >= 90) return;
             long mealMinute=Clock.Now.TotalMinutes;
             if(_lastAutomaticMealMinute>=0&&mealMinute>=_lastAutomaticMealMinute&&mealMinute-_lastAutomaticMealMinute<30)return;

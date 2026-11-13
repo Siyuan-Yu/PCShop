@@ -16,9 +16,21 @@ namespace PCShopSell.Core.Shop
         public long arrived, ready, waiting, spendCents, budgetCents;
         public bool cash, boxed, chilled, preferenceAssigned;
         public bool countedBrandVisit;
+        public string referralProductId;
+        public bool referralBoxed, referralReserved;
         public int resaleId;
         public string resaleName;
         public CitySavedCustomer Copy() => (CitySavedCustomer)MemberwiseClone();
+    }
+    [Serializable]
+    public struct ShopVisitDetail
+    {
+        public int CustomerId;
+        public string PersonId, ProductName;
+        public long ArrivalMinute, PaidCents;
+        public CustomerState State;
+        public LeaveReason Reason;
+        public bool CountedAsLost;
     }
     [Serializable]
     public sealed class CitySavedShopVisits
@@ -29,6 +41,7 @@ namespace PCShopSell.Core.Shop
         public double arrivalCredit, arrivalThreshold = 1;
         public bool wasOpen;
         public CitySavedCustomer[] customers;
+        public ShopVisitDetail[] completedVisits;
         public int[] queue;
         public DayReportData day;
     }
@@ -45,6 +58,7 @@ namespace PCShopSell.Core.Shop
             todayCustomers = TodayCustomers, todayLost = TodayLost, todaySalesCents = TodaySales.Cents,
             arrivalCredit = _arrivalCredit, arrivalThreshold = _arrivalThreshold,
             queue = _queue.Select(c => c.Id).ToArray(),
+            completedVisits = _completedVisits.ToArray(),
             day = new DayReportData { day = _day.Date.TotalDays, customers = _day.Customers, paid = _day.Paid, orders = _day.Orders,
                 expensive = _day.LostTooExpensive, impatient = _day.LostImpatient, stock = _day.LostNoStock, cash = _day.LostNoCash, closed = _day.LostClosed, revenue = _day.Revenue.Cents },
             customers = _active.Where(c => c.State == CustomerState.Browsing || c.State == CustomerState.WaitingCheckout).Select(c => new CitySavedCustomer {
@@ -54,7 +68,8 @@ namespace PCShopSell.Core.Shop
                 arrived = c.ArrivedAt.TotalMinutes, ready = c.ReadyAt.TotalMinutes, waiting = c.WaitingSince.TotalMinutes,
                 spendCents = c.Spend.Cents, budgetCents = c.RetailBudgetCents, cash = c.CarriesCash,
                 boxed = c.ItemBoxed, chilled = c.GoodsChilled, goodsExpiry = c.GoodsExpiryDay, displayTier = c.DisplayTier,
-                resaleId=c.ResaleId,resaleName=c.ResaleName,preferenceAssigned = c.RetailPreferenceAssigned }).ToArray()
+                resaleId=c.ResaleId,resaleName=c.ResaleName,preferenceAssigned = c.RetailPreferenceAssigned,
+                referralProductId = c.ReferralProductId, referralBoxed = c.ReferralBoxed, referralReserved = c.ReferralReserved }).ToArray()
         };
 
         /// <summary>Inventory already excludes goods held by these visitors. Restore references only: no arrival events, purchases or stock removal.</summary>
@@ -62,6 +77,8 @@ namespace PCShopSell.Core.Shop
         {
             if (data == null || data.shopId != ShopId) return;
             _active.Clear(); _queue.Clear();
+            _completedVisits.Clear();
+            _completedVisits.AddRange(data.completedVisits ?? Array.Empty<ShopVisitDetail>());
             var byId = new Dictionary<int, ShopCustomer>();
             foreach (var x in data.customers ?? Array.Empty<CitySavedCustomer>())
             {
@@ -82,7 +99,8 @@ namespace PCShopSell.Core.Shop
                     ItemBoxed = x.boxed, GoodsChilled = x.chilled, GoodsExpiryDay = x.goodsExpiry,
                     DisplayTier = x.displayTier >= 0 && x.displayTier < PartCatalog.TierCount ? x.displayTier : -1,
                     Spend = Money.FromCents(x.spendCents), RetailInterestSeries = x.interest,
-                    RetailBudgetCents = Math.Max(0, x.budgetCents), RetailPreferenceAssigned = x.preferenceAssigned };
+                    RetailBudgetCents = Math.Max(0, x.budgetCents), RetailPreferenceAssigned = x.preferenceAssigned,
+                    ReferralProductId = x.referralProductId, ReferralBoxed = x.referralBoxed, ReferralReserved = x.referralReserved };
                 _active.Add(c); byId[c.Id] = c;
             }
             foreach (int id in data.queue ?? Array.Empty<int>())

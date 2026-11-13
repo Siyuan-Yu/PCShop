@@ -57,13 +57,21 @@ namespace PCShopSell.Core.Session
         private enum WorkAptitude { Charm, Dexterity, Stamina, Intelligence }
         public const int FatigueWorkPenalty = 50, HighStressWorkPenalty = 25;
         public const int WorkBonusThreshold = 50;
+        public const int WeekendWorkHours = 8, WeekendWorkPay = 300;
+        private long _weekendWorkEnds;
         public PlayerWorkContract WorkContract { get; private set; }
-        public bool IsWorking => WorkContract != null && !WorkContract.Paid && WorkContract.WorkingIndex >= 0;
+        private bool IsContractWorking => WorkContract != null && !WorkContract.Paid && WorkContract.WorkingIndex >= 0;
+        public bool IsWeekendWorking => _weekendWorkEnds > 0;
+        public bool IsWorking => IsContractWorking || IsWeekendWorking;
+        public GameTimestamp WeekendWorkEnds => new GameTimestamp(_weekendWorkEnds);
+        internal bool CanStartWeekendWork => Clock.Today.IsWeekend && Clock.Now.Hour >= 9 && Clock.Now.Hour <= 15
+            && !IsWorking && !IsGameOver && !_sleeping && !Racing && !CityActivityExclusive && Trip == null;
         public bool HasWorkContract => WorkContract != null && !WorkContract.Paid;
         public Place WorkPlace => WorkContract == null || !City.HasPlace(WorkContract.PlaceId) ? null : City.GetPlace(WorkContract.PlaceId);
         public static string PlayerWorkHours(int start, int end) => $"{start / 60:00}:{start % 60:00}–" + (end >= 1440 ? "次日 " : "") + $"{end % 1440 / 60:00}:{end % 60:00}";
         public string WorkHours => WorkContract == null ? "" : PlayerWorkHours(WorkContract.ShiftStart, WorkContract.ShiftEnd);
-        public int WorkMinutesLeft => !IsWorking ? 0 : (int)Math.Max(0, (long)(WorkContract.StartDay + WorkContract.WorkingIndex) * 1440 + WorkContract.ShiftEnd - Clock.Now.TotalMinutes);
+        public int WorkMinutesLeft => IsWeekendWorking ? (int)Math.Max(0, Clock.Now.MinutesUntil(WeekendWorkEnds))
+            : !IsContractWorking ? 0 : (int)Math.Max(0, (long)(WorkContract.StartDay + WorkContract.WorkingIndex) * 1440 + WorkContract.ShiftEnd - Clock.Now.TotalMinutes);
 
         public bool OffersPlayerWork(Place p) => p != null && p.Id != "life_expo" && p.Kind == PlaceKind.Shop && !IsMyShop(p) && !IsVacant(p) && VentureAt(p.Id) == null;
         public PlayerWorkOffer PlayerWorkFor(Place p)
@@ -121,7 +129,7 @@ namespace PCShopSell.Core.Session
             return (attribute, score, bonus, energyMultiplier, stressPerHour, fatiguePenalty, stressPenalty);
         }
 
-        private PlayerWorkDay ActiveWorkDay => IsWorking && Clock.Now.TotalMinutes >
+        private PlayerWorkDay ActiveWorkDay => IsContractWorking && Clock.Now.TotalMinutes >
             (long)(WorkContract.StartDay + WorkContract.WorkingIndex) * 1440 + WorkContract.ShiftStart
                 ? WorkContract.Days[WorkContract.WorkingIndex] : null;
 
@@ -166,7 +174,7 @@ namespace PCShopSell.Core.Session
 
         private void ServeWorkMeal()
         {
-            if (!IsWorking) return;
+            if (!IsContractWorking) return;
             var day = WorkContract.Days[WorkContract.WorkingIndex];
             if (day.LunchServed) return;
             day.LunchServed = true;
@@ -176,10 +184,19 @@ namespace PCShopSell.Core.Session
 
         private void UpdatePlayerWork(GameTimestamp to)
         {
+            if (IsWeekendWorking && to.TotalMinutes >= _weekendWorkEnds)
+            {
+                _weekendWorkEnds = 0;
+                Ledger.Credit(to.Date, "打工", Money.FromYuan(WeekendWorkPay), "周末搬货兼职");
+                double energyBefore = Player.Energy, healthBefore = Player.Health;
+                Player.SpendEnergy(10);
+                Player.Health = Math.Max(0, Player.Health - 2);
+                Popup?.Invoke("搬货收工", $"工资已到账 ¥{WeekendWorkPay}。\n额外消耗精力 {energyBefore - Player.Energy:0.#}，健康 −{healthBefore - Player.Health:0.#}。");
+            }
             if (!HasWorkContract) return;
             var c = WorkContract;
             SettleCompletedWorkPay(to.Date);
-            if (IsWorking && to.TotalMinutes >= WorkMealAt) ServeWorkMeal();
+            if (IsContractWorking && to.TotalMinutes >= WorkMealAt) ServeWorkMeal();
             for (int i = 0; i < 7; i++)
             {
                 var day = c.Days[i];
@@ -216,6 +233,13 @@ namespace PCShopSell.Core.Session
                 c.LastNote = $"一周合同已结束，累计实发工资 ¥{c.EarnedYuan}，迟到/缺勤合计扣 ¥{c.DeductionsYuan}。工资已每日到账，可再签下一周。";
                 Say(c.LastNote);
             }
+        }
+
+        internal void StartWeekendWork()
+        {
+            if (!CanStartWeekendWork) return;
+            SetSteer(0, 0);
+            _weekendWorkEnds = Clock.Now.AddMinutes(WeekendWorkHours * 60).TotalMinutes;
         }
 
         private bool SettleCompletedWorkPay(GameDate date)
@@ -275,7 +299,12 @@ namespace PCShopSell.Core.Session
 
         private void InterruptPlayerWork(string note)
         {
-            if (!IsWorking) return;
+            if (IsWeekendWorking)
+            {
+                _weekendWorkEnds = 0;
+                Say(note);
+            }
+            if (!IsContractWorking) return;
             var c = WorkContract;
             c.Days[c.WorkingIndex].State = WorkDayState.Absent;
             c.WorkingIndex = -1; c.LastNote = note;
@@ -299,8 +328,8 @@ namespace PCShopSell.Core.Session
             return -1;
         }
         public bool CanStartPlayerWork => !IsWorking && CurrentPlace == WorkPlace && WorkShiftToJoin() >= 0;
-        private bool WorkStaffEntry(Place p) => p != null && p == WorkPlace && (IsWorking || WorkShiftToJoin() >= 0);
-        private long WorkMealAt => !IsWorking ? long.MaxValue : (long)(WorkContract.StartDay + WorkContract.WorkingIndex) * 1440
+        private bool WorkStaffEntry(Place p) => p != null && p == WorkPlace && (IsContractWorking || !IsWorking && WorkShiftToJoin() >= 0);
+        private long WorkMealAt => !IsContractWorking ? long.MaxValue : (long)(WorkContract.StartDay + WorkContract.WorkingIndex) * 1440
             + WorkContract.ShiftStart + (WorkContract.ShiftEnd - WorkContract.ShiftStart) / 2;
         public bool NightWorkRest => WorkContract != null && WorkContract.IsNightShift && Clock.Today.TotalDays <= WorkContract.EndDay + 2;
         private int NightRestMinutes

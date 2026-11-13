@@ -306,23 +306,56 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void Blackout_EmergencyLight_PreventsRepeat()
+        public void Blackout_ChargesPerUnprotectedShopAndCanRecurAfterFailure()
         {
-            GameSession s = Make();
-            s.RaiseEvent("blackout");
-            Assert.IsTrue(s.ResolveEvent(0));
-            Assert.IsTrue(s.Flags.Contains(EventCatalog.EmergencyLightFlag));
-            Assert.IsFalse(EventCatalog.Get("blackout").When(s));
+            using (var s = Make(200000))
+            {
+                s.PlayerShop.Reputation = 80;
+                s.DebugAddListing("tea", 0, 60, Money.FromYuan(3000));
+                GameSessionTests.Teleport(s, "agency");
+                Assert.IsTrue(s.SignRetailLease("tea", true, "computer"));
+
+                Money cash = s.Ledger.Balance;
+                s.RaiseEvent("blackout");
+                Assert.IsTrue(s.ResolveEvent(0));
+                Assert.AreEqual(cash - Money.FromYuan(300), s.Ledger.Balance);
+                Assert.IsFalse(EventCatalog.Get("blackout").When(s));
+                using (var loaded = GameSession.Load(s.City, s.CreateSave()))
+                {
+                    var main = loaded.MainShop;
+                    var branch = loaded.ShopAt("tea");
+                    Assert.AreEqual(s.MainShop.EmergencyLighting.FailureDay, main.EmergencyLighting.FailureDay);
+                    Assert.AreEqual(s.ShopAt("tea").EmergencyLighting.FailureDay, branch.EmergencyLighting.FailureDay);
+                    Assert.IsTrue(branch.EmergencyLighting.PowerOutAt(loaded.Clock.Now.TotalMinutes));
+                    int day = main.EmergencyLighting.FailureDay;
+                    branch.EmergencyLighting.FailureDay = day + 1;
+                    loaded.Clock.Restore(new GameDate(day), 15 * 60);
+                    Assert.IsTrue(EventCatalog.Get("blackout").When(loaded));
+                    cash = loaded.Ledger.Balance;
+                    loaded.RaiseEvent("blackout");
+                    Assert.IsTrue(loaded.ResolveEvent(0));
+                    Assert.AreEqual(cash - Money.FromYuan(150), loaded.Ledger.Balance);
+                    Assert.AreEqual(day + 1, branch.EmergencyLighting.FailureDay);
+                }
+            }
         }
 
         [Test]
-        public void Thief_DoesNotHappenWithCctv()
+        public void StockDiscrepancyEnablesVideoReviewWhenCctvIsInstalled()
         {
             GameSession s = Make();
             GameSessionTests.Teleport(s, "pc");
+            s.PlayerShop.SetHours(0,1440);s.PlayerShop.ForcedClosed=false;s.PlayerShop.NotFitted=false;
+            s.SetShopMainCategory("computer");
+            s.PlayerShop.SetShelfCapacity(new System.Collections.Generic.Dictionary<string,double>{{"memory",60}});
+            s.PlayerShop.Stock.ForceAdd(PartCatalog.Get("ram0"), true, 5);
             Assert.IsTrue(EventCatalog.Get("thief").When(s));
+            s.RaiseEvent("thief");
+            Assert.IsFalse(s.IsChoiceEnabled(s.PendingEvent.Choices[1]));
+            Assert.IsTrue(s.ResolveEvent(2));
             s.GrantUpgrade(ShopUpgrades.Cctv);
-            Assert.IsFalse(EventCatalog.Get("thief").When(s));
+            s.RaiseEvent("thief");
+            Assert.IsTrue(s.IsChoiceEnabled(s.PendingEvent.Choices[1]));
         }
 
         [Test]
@@ -330,6 +363,7 @@ namespace PCShopSell.Tests
         {
             GameSession s = Make();
             GameSessionTests.Teleport(s,"pc");
+            s.SetShopMainCategory("computer");
             s.PlayerShop.SetHours(0,1440);s.PlayerShop.ForcedClosed=false;s.PlayerShop.NotFitted=false;
             s.PlayerShop.SetShelfCapacity(new System.Collections.Generic.Dictionary<string,double>{{"memory",60}});
             PartDef ram = PartCatalog.Get("ram0");
@@ -379,7 +413,8 @@ namespace PCShopSell.Tests
         {
             var ids = EventCatalog.All.Select(e => e.Id).ToList();
             Assert.AreEqual(ids.Count, ids.Distinct().Count(), "事件 id 不能重复");
-            foreach (EventDef def in EventCatalog.All)
+            var scriptIds = EventLoader.ReadFile().events.Where(entry => !entry.code).Select(entry => entry.id).ToHashSet();
+            foreach (EventDef def in EventCatalog.All.Where(def => scriptIds.Contains(def.Id)))
             {
                 Assert.IsNotEmpty(def.Title);
                 Assert.IsNotEmpty(def.Body);

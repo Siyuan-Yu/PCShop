@@ -420,7 +420,7 @@ namespace PCShopSell.Tests
             {
                 var worker=new Employee{Name="收购员",Intelligence=90,DailyWageYuan=150,CheckoutMinutes=3};s.CurrentShop.Employee=worker;
                 Assert.True(s.ArrangeEmployeeWork(worker.Id,"pc",EmployeeRole.Appraiser));CityTestPeople.AtAssignedWork(s,worker);
-                var state=s.SpecialBusiness("pc");state.AutoPurchase=true;state.DailyBudget=40;state.MaxOffer=40;
+                var state=s.SpecialBusiness("pc");state.DailyBudget=40;state.MaxOffer=40;
                 var item=Seller(s);s.AdvanceClock(1);Assert.True(item.Owned);Assert.AreEqual(40,state.SpentToday);Assert.True(item.Inspected);
                 var second=Seller(s);s.AdvanceClock(1);Assert.False(second.Owned);Assert.AreEqual(40,state.SpentToday);
             }

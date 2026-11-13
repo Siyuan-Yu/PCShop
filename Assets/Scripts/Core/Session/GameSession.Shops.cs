@@ -91,6 +91,8 @@ namespace PCShopSell.Core.Session
                 EmployeeServiceRate = ()=>ShopCheckoutWorkers(shop).Sum(e=>1.0/EmployeeCheckoutCycleMinutes(e)),
             };
             sim.OpenStatusOf=t=>IsSpecialBusiness(shop)?SpecialOpen(shop,t):sim.IsOpenAt(t);
+            sim.PowerTrafficOf = t => ShopPowerTraffic(shop, t);
+            sim.TemporaryPriceFactorOf = id => EventPriceFactor(shop, id);
             sim.Settings.BuildOrdersStartDay = BuildOrdersStartDay;
             sim.SalesBonusOf = () => ShopSalesBonus(shop);
             sim.HasClothingMirror = () => shop.Layout.Any(p=>FurnitureCatalog.Canonical(p.Id)==FurnitureCatalog.FittingMirror);
@@ -176,6 +178,8 @@ namespace PCShopSell.Core.Session
             if(PetsStaying(s))return "还有宠物在店代养，请先交接结算再结束经营";
             if (!s.Fridge.IsEmpty) return "冰箱里还有食物，请先取走";
             if (!s.Locker.IsEmpty || !s.Temp.IsEmpty) return "纸箱或临时存放还有物品，请先转存或叫货车搬走";
+            if (HasEventReservedStock(s.Place.Id) || s.Sim.ActiveCustomers.Any(customer => customer.ReferralReserved))
+                return "店里还有熟客预留的货，请等这次到访结束";
             if (!s.Sim.Stock.IsEmpty) return "店里还有货，先打电话叫货车搬走";
             if (_couriers.Any(r => r.ToShop && r.ShopId == s.Place.Id)) return "还有车在往这家店送货";
             if (Online.Pending.Any(o => !o.ToHome && o.ShopId == s.Place.Id) || _directShipments.Any(x => x.ShopId == s.Place.Id)) return "还有货在往这家店寄";
@@ -245,6 +249,7 @@ namespace PCShopSell.Core.Session
             return new SaveShop
             {
                 retailKind = s.RetailKind, customName = s.CustomName, goodsLots = SaveRetailLots(sim),
+                emergencyLighting = s.EmergencyLighting,
                 awareness = sim.Awareness, reputation = sim.ShopReputation,
                 place = s.Place.Id,
                 rentCents = s.Lease.Rent.Cents,
@@ -289,6 +294,7 @@ namespace PCShopSell.Core.Session
             if (d == null || !City.HasPlace(d.place) || _shops.Any(x => x.Place.Id == d.place)) return;
             Place place = City.GetPlace(d.place);
             var shop = new OwnedShop { Place = place, RetailKind = RetailShopTypes.Valid(string.IsNullOrEmpty(d.retailKind) ? "computer" : d.retailKind), CustomName = d.customName };
+            shop.EmergencyLighting = d.emergencyLighting;
             shop.Lease = new ShopLease { PlaceId = place.Id, Rent = Money.FromCents(d.rentCents), Deposit = Money.FromCents(d.depositCents), StartDay = d.startDay, SignedDay = d.signedDay };
             shop.Sim = CreateShopSim(shop);
             ShopSimulation sim = shop.Sim;

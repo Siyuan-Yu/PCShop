@@ -166,12 +166,13 @@ namespace PCShopSell.Core.Session
             return _shopLayout.Any(p=>p.Item==kind.Id &&
                 (FurnitureCatalog.Get(p.Id)?.Fixture==FixtureKind.Shelf || FurnitureCatalog.Get(p.Id)?.Fixture==FixtureKind.Display));
         }
-        private int ListAutomaticShopGoods(out bool full)
+        private int ListAutomaticShopGoods(out bool full, bool includeFood = true)
         {
             full=false;int moved=0;
             ApplyShelfCapacity();
             foreach(var goods in Gifts.All)
             {
+                if (!includeFood && IsBulkStorageFood(goods.Id)) continue;
                 if(ShelfKinds.ForGift(goods.Id)==null)continue;
                 int available=GoodsAvailableToList(goods.Id);if(available<=0)continue;
                 double space=Stock.GoodsSpace(goods.Id,1);

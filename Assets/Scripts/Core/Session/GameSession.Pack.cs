@@ -14,6 +14,7 @@ namespace PCShopSell.Core.Session
         public const string PhoneBusiness = "手机";
         public static readonly Money PhonePrice = Money.FromYuan(800);
         public const string NoPhoneMessage = "你还没有智能手机，上不了网。去街上的手机店买一部。";
+        public const string MealDeliveryUnlockedTitle = "现在可以设置自动订餐";
 
         /// <summary>有没有智能手机：没有就用不了网购。新游戏开局没有。</summary>
         public bool HasSmartphone { get; private set; } = true;
@@ -79,6 +80,8 @@ namespace PCShopSell.Core.Session
             _apps.Clear();
             foreach (string id in PhoneApps.Preinstalled) _apps.Add(id);
             Say("买了一部智能手机。里面只有应用商店、通讯录和日历，要网购先去应用商店下载 app。");
+            if (!MealDeliveryEnabled)
+                Popup?.Invoke(MealDeliveryUnlockedTitle, "开启后，饭点或饿了时会优先吃手头的食物。没有可吃的食物时，才会按你选的价位自动下单。以后也可以在「我的 → 饮食 → 自动订餐」调整。");
             return true;
         }
 
@@ -206,16 +209,21 @@ namespace PCShopSell.Core.Session
         /// <summary>从储物处拿东西放进背包（不能超过出行方式的承重）。</summary>
         public bool TakeFromBox(string key, int count = 1) => MoveBox(key, count, false);
 
+        public bool CanStoreBackpackInWarehouse => HasWarehouseHere && HasBulkStorageItems;
+        private bool HasBulkStorageItems => !Cargo.IsEmpty || Backpack.FurnitureLines.Any()
+            || Backpack.GiftLines.Any(item => !IsBulkStorageFood(item.Key));
+
         public bool StoreBackpackInWarehouse()
         {
             if(!HasWarehouseHere)return Fail("这里还没摆纸箱，摆一个纸箱后才能使用后仓。");
+            if (!HasBulkStorageItems) return Fail("没有可批量入库的物品。食物留在背包里。");
             var storage=InPlayerShop?ShopLocker:HomeBox;
             var parts=InPlayerShop?PlayerShop.Stock:HomeBoxParts;
             foreach(var line in Cargo.Lines().ToArray())
                 if(Cargo.TryRemove(line.Part,line.Boxed,line.Count))parts.ForceAdd(line.Part,line.Boxed,line.Count);
-            MergeStorage(Backpack,storage);
-            if(InPlayerShop)ListAutomaticShopGoods(out _);
-            ApplyCargoLimit();Say("背包物品已放入后仓。");return true;
+            MergeStorage(Backpack,storage,includeFood:false);
+            if(InPlayerShop)ListAutomaticShopGoods(out _,includeFood:false);
+            ApplyCargoLimit();Say("物品已放入后仓，食物留在背包里。");return true;
         }
 
         private bool MoveBox(string key, int count, bool intoBox)

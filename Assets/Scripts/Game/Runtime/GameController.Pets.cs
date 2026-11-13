@@ -77,20 +77,18 @@ namespace PCShopSell.Game
         private void ClearIncompatiblePetToy(PetStay pet)
         {
             if (_petToy == null || Interior.PetActionPlaying) return;
-            if (pet != null && _petToy == (pet.Dog ? PetShopCatalog.Ball : PetShopCatalog.Wand)) return;
+            if (pet != null && PetShopCatalog.IsDogToy(_petToy) == pet.Dog) return;
             _petToy = null;
             Interior.HoldPetToy(null);
         }
 
-        public void PickUpPetToy(string toy)
+        public void PickUpPetToy(PlacedFurniture station)
         {
-            if (!PetFocusActive || Interior.PetActionPlaying) return;
-            var station = Session.PetToy(Session.CurrentShop,toy);
-            if (station == null) return;
+            if (!PetFocusActive || Interior.PetActionPlaying || station == null) return;
             var pet = Session.PetGuests(Session.CurrentShop).FirstOrDefault(p => p.Id == _selectedPet);
-            if (pet == null || toy != (pet.Dog ? PetShopCatalog.Ball : PetShopCatalog.Wand)) return;
-            _petToy = toy;
-            Interior.HoldPetToy(toy,station);
+            if (pet == null || !Session.PetToys(Session.CurrentShop, pet.Dog).Contains(station)) return;
+            _petToy = station.Id;
+            Interior.HoldPetToy(_petToy, station);
             Ui.RefreshPetFocusHud();
         }
 
@@ -104,7 +102,7 @@ namespace PCShopSell.Game
                 _petToy = null;
                 Interior.HoldPetToy(null);
             }
-            Interior.AnimatePetAction(_selectedPet,toy);
+            Interior.AnimatePetAction(_selectedPet, toy == null ? null : PetShopCatalog.IsDogToy(toy) ? PetShopCatalog.Ball : PetShopCatalog.Wand);
             _petActionWasPlaying = Interior.PetActionPlaying;
             Ui.RefreshPetFocusHud();
         }
@@ -135,17 +133,18 @@ namespace PCShopSell.Game
             var stay = Session.PetGuests(Session.CurrentShop).FirstOrDefault(p => p.Id == _selectedPet);
             if (stay != null)
             {
-                string toyId = stay.Dog ? PetShopCatalog.Ball : PetShopCatalog.Wand;
-                var toy = Session.PetToy(Session.CurrentShop,toyId);
-                if (toy != null)
+                PlacedFurniture closest = null;
+                float nearest = float.PositiveInfinity;
+                foreach (var toy in Session.PetToys(Session.CurrentShop, stay.Dog))
                 {
                     var point = ShopInteriorView.Origin + new Vector3((float)toy.X,.14f,(float)toy.Z);
-                    if (new Bounds(point,new Vector3(.40f,.32f,.40f)).IntersectRay(ray))
+                    if (new Bounds(point,new Vector3(.40f,.32f,.40f)).IntersectRay(ray, out float distance) && distance < nearest)
                     {
-                        PickUpPetToy(toyId);
-                        return;
+                        closest = toy;
+                        nearest = distance;
                     }
                 }
+                if (closest != null) PickUpPetToy(closest);
             }
         }
     }

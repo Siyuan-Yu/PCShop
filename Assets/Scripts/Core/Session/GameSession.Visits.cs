@@ -240,6 +240,10 @@ namespace PCShopSell.Core.Session
             foreach (var credit in _scheduledCredits)
                 l.Add(new ScheduleEntry { Minute = (long)credit.day * GameTimestamp.MinutesPerDay, Day = DescribeDay(credit.day),
                     TimeText = "00:00", Kind = "npc_repayment", Text = $"{credit.memo} · 自动到账 {Money.FromCents(credit.cents)}" });
+            if (_relativeReceivable.Amount > 0 && _relativeReceivable.DueDay > Clock.Today.TotalDays)
+                l.Add(new ScheduleEntry { Minute = (long)_relativeReceivable.DueDay * GameTimestamp.MinutesPerDay,
+                    Day = DescribeDay(_relativeReceivable.DueDay), TimeText = "00:00", Kind = "npc_repayment",
+                    Text = $"表哥约定还款 · ¥{_relativeReceivable.Amount}" });
             long now = Clock.Now.TotalMinutes;
             for (int i = 0; i < _appointments.Count; i++)
             {

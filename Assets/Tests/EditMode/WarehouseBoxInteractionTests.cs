@@ -75,9 +75,19 @@ namespace PCShopSell.Tests
             using(var s=Make())
             {
                 s.Backpack.Food.Packed.Add(new FoodBatch{Id="rice",Name="白米饭",Count=2,ExpireDay=80,Chilled=true,ChilledDays=4});
+                s.Backpack.Food.RiceKg = 1;
+                s.Backpack.Food.Ingredient.Add(new FoodBatch { Id = "veg", Count = 1, ExpireDay = FoodBatch.NoExpiry });
+                s.Backpack.AddGift(Gifts.Soda, 1);
                 s.Cargo.ForceAdd(PartCatalog.Get("cpu0"),true,2);s.Backpack.AddGift(Gifts.Cig,3);
-                Assert.True(s.StoreBackpackInWarehouse());Assert.True(s.Backpack.IsEmpty);Assert.True(s.Cargo.IsEmpty);
+                Assert.True(s.StoreBackpackInWarehouse());Assert.True(s.Cargo.IsEmpty);
+                Assert.False(s.CanStoreBackpackInWarehouse, "只有食物时禁用批量入库");
+                Assert.False(s.StoreBackpackInWarehouse());
                 Assert.AreEqual(2,s.HomeBoxParts.CountAll(PartCatalog.Get("cpu0")));
+                Assert.AreEqual(1, s.Backpack.Food.RiceKg);
+                Assert.AreEqual(1, s.Backpack.Food.IngredientCount("veg"));
+                Assert.AreEqual(1, s.Backpack.GiftCount(Gifts.Soda));
+                Assert.IsEmpty(s.HomeBox.Food.Packed);
+                Assert.True(s.StoreInBox("lunch:rice", 2), "仍可手动存放食物");
                 var batch=s.HomeBox.Food.Packed.Single();Assert.AreEqual(80,batch.ExpireDay);Assert.True(batch.Chilled);Assert.AreEqual(4,batch.ChilledDays);
                 GameSessionTests.Teleport(s,"pc");Assert.AreEqual(1,s.ShopBoxes);
                 var clothing=Gifts.All.First(g=>ClothingProducts.IsClothing(g.Id));
@@ -86,6 +96,7 @@ namespace PCShopSell.Tests
                 Assert.True(s.TakeShopGoodsIntoBag(clothing.Id));Assert.AreEqual(1,s.Backpack.GiftCount(clothing.Id));
                 Assert.AreEqual(999,s.PlayerShop.Stock.GoodsCount(clothing.Id));
                 Assert.True(s.StoreBackpackInWarehouse());Assert.AreEqual(1000,s.PlayerShop.Stock.GoodsCount(clothing.Id),"店内一键转存继续按原规则加入商品库存");
+                Assert.AreEqual(1, s.Backpack.GiftCount(Gifts.Soda), "店内批量入库也不自动上架饮料");
                 Assert.AreEqual(3,s.HomeBoxCount(Gifts.Cig),"家和店使用不同后仓");
             }
         }

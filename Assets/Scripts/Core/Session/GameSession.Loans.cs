@@ -18,8 +18,9 @@ namespace PCShopSell.Core.Session
         public bool NoInterest;
         public string Lender;
         public int RepaidDay;
+        public int ExtensionDays;
         public long PaidInterestCents;
-        public int DueDay => StartDay + Months * GameDate.DaysPerMonth;
+        public int DueDay => StartDay + Months * GameDate.DaysPerMonth + ExtensionDays;
         public Money Principal => Money.FromCents(PrincipalCents);
         public Money MonthlyInterest => NoInterest ? Money.Zero : Money.FromCents(PrincipalCents * GameSession.AppLoanMonthlyRatePercent / 100);
         public Money TermInterest => MonthlyInterest * Months;
@@ -77,6 +78,28 @@ namespace PCShopSell.Core.Session
             Money due = LoanPayoff(loan);
             if (!Ledger.CanAfford(due)) return Fail($"结清需 {due}，当前现金不足。");
             SettleAppLoan(loan, due - loan.Principal, false);
+            return true;
+        }
+        public bool IsClassmateLoan(AppLoan loan) => loan?.NoInterest == true && loan.Lender == ClassmateId;
+
+        public string FriendLoanExtensionBlocker(AppLoan loan)
+        {
+            if (!IsClassmateLoan(loan) || loan.Repaid)
+                return "仅适用于陈志衡的未结清借款";
+            if (loan.ExtensionDays > 0) return "这笔借款已经延期过一次";
+            if (Relation(loan.Lender) < 55) return "与陈志衡的交情需要达到 55";
+            if (loan.DueDay - Clock.Today.TotalDays > 7) return "到期前 7 天可以商量";
+            return null;
+        }
+
+        public bool ExtendFriendLoan(int id)
+        {
+            var loan = _appLoans.FirstOrDefault(entry => entry.Id == id);
+            string blocker = FriendLoanExtensionBlocker(loan);
+            if (blocker != null) return Fail(blocker);
+            loan.ExtensionDays = 30;
+            RememberSocial(loan.Lender, "同意把无息借款还款日延后30天。");
+            Show("借款已延期", $"陈志衡同意延后 30 天，仍为无息。新的还款日是 {new GameDate(loan.DueDay)}。");
             return true;
         }
         private void SettleAppLoan(AppLoan loan, Money interest, bool automatic)

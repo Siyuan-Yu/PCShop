@@ -11,6 +11,7 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         private readonly List<CityActivity> _cityActivities = new List<CityActivity>();
+        private const int NoShowRelationPenalty = 8;
         public event Action<string> CityActivitySettled;
         private long _nextCityActivity=1, _nextCityIntent=1;
         private readonly List<string> _cityFavorites = new List<string>(), _cityRecent = new List<string>();
@@ -50,7 +51,7 @@ namespace PCShopSell.Core.Session
             return comic?day>=22&&day<=24:Clock.Today.TotalDays%90>=75&&Clock.Today.TotalDays%90<=78;
         }
         public string CityExpoCalendar => "品牌展会：每季度一次，每届4天09:00—17:00；原创漫展：每月22—24日。";
-        public long SuggestCityActivityStart(string definitionId,string personId=null)
+        public long SuggestCityActivityStart(string definitionId,string personId=null,long earliest=0)
         {
             var def=CityLifeCatalog.Activity(definitionId);if(def==null||!City.HasPlace(def.VenueId))return Clock.Now.TotalMinutes;
             if(IsWorking||_sleeping||IsGameOver)return Clock.Now.TotalMinutes;
@@ -58,7 +59,7 @@ namespace PCShopSell.Core.Session
             int trip=CityTravelMinutes(venue);
             var person=CityPersonState(personId);var npcRoute=person!=null?PlanCityRoute(person,venue.Id,now):null;
             if(npcRoute!=null)trip=Math.Max(trip,(int)(npcRoute.ArriveMinute-now));
-            long start=now+trip+8;
+            long start=Math.Max(now+trip+8,earliest);
             var employee=Employees.FirstOrDefault(e=>PersonIdOf(e.Person)==personId)?.Person;
             if(employee!=null&&employee.TryShift(now,out _,out long shiftEnd))start=Math.Max(start,shiftEnd+trip+5);
             // Offer only quarter-hour appointments, rounding later so the journey still fits.
@@ -385,7 +386,7 @@ namespace PCShopSell.Core.Session
                 if(!a.Active)continue;
                 if(a.State!=CityActivityPhase.Running)
                 {
-                    if(now>a.ScheduledStart+CityArrivalWindowMinutes && !playerReady)
+                    if(now>a.ScheduledStart+CityArrivalWindowMinutes && CurrentPlace!=venue)
                     {EndCityActivity(a,participantsReady?CityActivityPhase.NoShow:CityActivityPhase.Blocked,participantsReady?"未在宽限时间内到场":"参与者未能准时到达，请改约；不扣关系",now);continue;}
                     if (now > a.ScheduledStart + CityArrivalWindowMinutes && !participantsReady)
                     { EndCityActivity(a, CityActivityPhase.Blocked, "同行者未能到齐，请改约；不扣消费与关系", now); continue; }
@@ -399,7 +400,7 @@ namespace PCShopSell.Core.Session
                         continue;
                     }
                     if(!CityVenueFits(venue,now,a.Duration)){EndCityActivity(a,CityActivityPhase.Interrupted,"闭店前无法完成，未收整场费用，请改约",now);continue;}
-                    Money cost=VenuePlayerPrice(def, a.ServiceChoice);
+                    Money cost=a.HostPays?Money.Zero:VenuePlayerPrice(def, a.ServiceChoice);
                     string serviceTitle = a.ServiceConfirmed ? VenueServiceName(def, a.ServiceChoice) : def.Name;
                     if(!a.EntryPaid && cost.IsPositive && !Ledger.TryDebit(Clock.Today,"城市活动",cost,serviceTitle,new LedgerAttribution(LedgerBusinessKind.Personal,activityId:a.Id,sourceEventId:a.Id+":entry",transactionKind:"活动消费")))
                     {EndCityActivity(a,CityActivityPhase.Cancelled,"开始时现金不足，未扣活动费",now);continue;}
@@ -517,6 +518,25 @@ namespace PCShopSell.Core.Session
                     }
                 }
                 _appointments.RemoveAll(x=>x.NpcId==participant.PersonId && Math.Abs((long)x.Day*1440+x.StartMinute-a.ScheduledStart)<240);
+            }
+            if (phase == CityActivityPhase.NoShow)
+            {
+                string name = CityActivityService(a)?.Name ?? "预约活动";
+                foreach (var participant in a.Participants)
+                {
+                    string id = participant.PersonId;
+                    participant.RelationBefore = Relation(id);
+                    participant.TrustBefore = CityTrust(id);
+                    AddRelation(id, -NoShowRelationPenalty);
+                    if (participant.TrustBefore > 0) _cityTrust[id] = participant.TrustBefore - 1;
+                    participant.RelationAfter = Relation(id);
+                    participant.TrustAfter = CityTrust(id);
+                    participant.ResultCaptured = true;
+                    RememberSocial(id, $"约好一起参加「{name}」，对方到场等候，你未赴约。");
+                }
+                a.SettlementSummary = $"你{reason}。本次未扣活动费。";
+                Say($"未赴约 · {name}。");
+                return;
             }
             if (a.EntryPaid && (phase==CityActivityPhase.Completed || phase==CityActivityPhase.Interrupted))
             {

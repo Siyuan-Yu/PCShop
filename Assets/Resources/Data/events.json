@@ -1,222 +1,15 @@
 {
   "events": [
-    {
-      "id": "inspection", "title": "市场监管来检查", "body": "两个穿制服的人走进店里，说是例行检查：消防、线路、进货单据都要看。", "minDay": 5, "cooldownDays": 20, "weight": 8,
-      "choices": [
-        {
-          "text": "配合整改（¥300，买灭火器、理线）", "disabledReason": "钱不够",
-          "requires": [
-            {"type": "cash", "value": 300}
-          ],
-          "effects": [
-            {"type": "pay", "memo": "整改", "yuan": 300},
-            {"type": "shopRep", "value": 1},
-            {"type": "text", "text": "检查员点点头：\"态度不错，下次注意。\" 花了 ¥300，口碑 +1。"}
-          ]
-        },
-        {
-          "text": "塞个红包（¥150）", "disabledReason": "钱不够", "chance": 0.6,
-          "requires": [
-            {"type": "cash", "value": 150}
-          ],
-          "effects": [
-            {"type": "pay", "memo": "红包", "yuan": 150}
-          ],
-          "onHit": [
-            {"type": "text", "text": "对方收下，转身走了。花了 ¥150。"}
-          ],
-          "onMiss": [
-            {"type": "pay", "memo": "罚款", "yuan": 600},
-            {"type": "shopRep", "value": -2},
-            {"type": "text", "text": "对方当场变脸，开了罚单。红包没收，罚款 ¥600，口碑 -2。"}
-          ]
-        },
-        {
-          "text": "说好话糊弄过去", "chance": 0.35, "chanceCharm": 0.01,
-          "onHit": [
-            {"type": "text", "text": "你笑着递烟递水，对方没多为难就走了。"}
-          ],
-          "onMiss": [
-            {"type": "pay", "memo": "罚款", "yuan": 500},
-            {"type": "shopRep", "value": -2},
-            {"type": "text", "text": "没糊弄过去，被罚款 ¥500，口碑 -2。"}
-          ]
-        }
-      ]
-    },
+    {"id": "inspection", "code": true, "minDay": 5, "cooldownDays": 20, "weight": 8},
     {"id": "regulars", "code": true},
-    {
-      "id": "blackout", "title": "停电了", "body": "整条街突然停电，店里一片漆黑。听说要修一两个小时。", "minDay": 3, "cooldownDays": 25, "weight": 8,
-      "when": [
-        {"type": "flag", "key": "emergency_light", "not": true}
-      ],
-      "choices": [
-        {
-          "text": "买盏应急灯（¥150，以后停电不怕了）", "disabledReason": "钱不够",
-          "requires": [
-            {"type": "cash", "value": 150}
-          ],
-          "effects": [
-            {"type": "pay", "memo": "应急灯", "yuan": 150},
-            {"type": "flag", "key": "emergency_light"},
-            {"type": "rep", "value": 0.5},
-            {"type": "text", "text": "有了应急灯，顾客觉得这家店靠谱。以后停电不会再影响你。"}
-          ]
-        },
-        {
-          "text": "趁机歇两个钟头",
-          "effects": [
-            {"type": "rest", "value": 120},
-            {"type": "rep", "value": -0.3},
-            {"type": "text", "text": "你靠在椅子上打了个盹，缓过来不少。两小时过去了。"}
-          ]
-        },
-        {
-          "text": "点蜡烛硬撑", "chance": 0.3,
-          "onHit": [
-            {"type": "pay", "memo": "小火警", "yuan": 200},
-            {"type": "text", "text": "蜡烛烧着了纸箱，扑灭了但烧坏一些东西，损失 ¥200。"}
-          ],
-          "onMiss": [
-            {"type": "text", "text": "烛光里居然还卖出去一单，气氛不错。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "thief", "title": "货少了", "body": "你盘点货架，发现好像少了东西，可能被人顺手牵羊了。没有监控，没法确认。", "minDay": 4, "cooldownDays": 15, "weight": 7,
-      "when": [
-        {"type": "upgrade", "key": "cctv", "not": true},
-        {"type": "stock"}
-      ],
-      "choices": [
-        {
-          "text": "报警", "chance": 0.3,
-          "onHit": [
-            {"type": "text", "text": "警察问了一圈，说查到了线索，东西找回来了。"}
-          ],
-          "onMiss": [
-            {"type": "loseItem", "text": "警察登记了一下，没下文。丢了「{item}」一件。（装个监控就不会再有这种事）", "alt": "警察没查出什么。"}
-          ]
-        },
-        {
-          "text": "算了，吃个亏",
-          "effects": [
-            {"type": "loseItem", "text": "丢了「{item}」一件。（装个监控就不会再有这种事）", "alt": "好在没丢什么。"}
-          ]
-        }
-      ]
-    },
+    {"id": "blackout", "code": true, "minDay": 3, "cooldownDays": 25, "weight": 8},
+    {"id": "thief", "code": true, "minDay": 4, "cooldownDays": 15, "weight": 7},
     {"id": "students", "code": true},
     {"id": "rival", "code": true},
-    {
-      "id": "wallet", "title": "捡到钱包", "body": "你在店门口捡到一个钱包，里面有 ¥300 现金和一张学生证。", "minDay": 2, "cooldownDays": 12, "weight": 8,
-      "choices": [
-        {
-          "text": "按学生证联系失主还回去",
-          "effects": [
-            {"type": "charm", "value": 1},
-            {"type": "rep", "value": 2},
-            {"type": "gain", "memo": "失主酬谢", "yuan": 50},
-            {"type": "text", "text": "失主赶来道谢，硬塞给你 ¥50。事情传开了，名望 +2，魅力 +1。"}
-          ]
-        },
-        {
-          "text": "把钱留下", "chance": 0.25,
-          "effects": [
-            {"type": "gain", "memo": "捡到的钱", "yuan": 300}
-          ],
-          "onHit": [
-            {"type": "shopRep", "value": -4},
-            {"type": "text", "text": "收了 ¥300，但被对面的老板看见，传得街上都知道了。口碑 -4。"}
-          ],
-          "onMiss": [
-            {"type": "text", "text": "收了 ¥300，没人看见。你心里有点不踏实。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "friend_meal", "title": "老同学请吃饭", "body": "你的大学同学陈志衡（程序员）托人联系上你：\"来城里了？找时间一起吃个饭，聊聊，见面后把联系方式重新存上。\"", "minDay": 5, "cooldownDays": 15, "weight": 7,
-      "when": [
-        {"type": "cash", "value": 100}
-      ],
-      "choices": [
-        {
-          "text": "接受，安排真实饭局（到场后消费）", "disabledReason": "预计家常饭费用不足",
-          "requires": [
-            {"type": "cash", "value": 100}
-          ],
-          "effects": [
-            {"type": "meeting", "key": "legacy-friend-meal:", "npc": "res_coder", "kind": "dinner", "flag": true}
-          ]
-        },
-        {
-          "text": "推掉，店里忙",
-          "effects": [
-            {"type": "text", "text": "你说这周走不开。陈志衡说下次约。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "lend", "title": "亲戚来借钱", "body": "远房表哥找上门，说周转不开，想借 ¥800，三天就还。这笔钱有可能收不回来。", "minDay": 8, "cooldownDays": 20, "weight": 6,
-      "when": [
-        {"type": "cash", "value": 2000}
-      ],
-      "choices": [
-        {
-          "text": "借给他（¥800）", "disabledReason": "现金不足", "chance": 0.75,
-          "requires": [
-            {"type": "cash", "value": 800}
-          ],
-          "effects": [
-            {"type": "lend", "memo": "表哥", "yuan": 800}
-          ],
-          "onHit": [
-            {"type": "text", "text": "已借给表哥 ¥800。"},
-            {"type": "repay", "memo": "表哥还钱", "yuan": 800, "days": 3}
-          ],
-          "onMiss": [
-            {"type": "text", "text": "已借给表哥 ¥800。后来表哥一直没还，这笔钱没有收回。"}
-          ]
-        },
-        {
-          "text": "婉拒",
-          "effects": [
-            {"type": "text", "text": "你说店里也周转不开。表哥脸色不太好看地走了。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "classmate_help", "title": "老同学雪中送炭", "body": "陈志衡听说你最近手头一直很紧，特地打来电话：\"别硬撑着，周末出来吃顿饭，我请。顺便说一句，我手上有点闲钱，先借你五千应急，不要利息，什么时候宽裕什么时候还。\"", "group": "npc", "minDay": 3, "maxDay": 30, "cooldownDays": 9999, "weight": 40,
-      "when": [
-        {"type": "negativeCashDays", "value": 3},
-        {"type": "cashBelow"}
-      ],
-      "choices": [
-        {
-          "text": "赴约吃饭，收下这笔无息借款",
-          "effects": [
-            {"type": "meeting", "key": "legacy-classmate-help:", "npc": "res_coder", "kind": "dinner", "flag": true},
-            {"type": "interestFreeLoan", "npc": "res_coder", "yuan": 5000, "count": 3}
-          ]
-        },
-        {
-          "text": "饭局我去，钱就不借了",
-          "effects": [
-            {"type": "meeting", "key": "legacy-classmate-help-meal:", "npc": "res_coder", "kind": "dinner", "flag": true}
-          ]
-        },
-        {
-          "text": "谢谢，我自己能撑过去",
-          "effects": [
-            {"type": "text", "text": "陈志衡叹了口气：\"那你有事随时开口。\""}
-          ]
-        }
-      ]
-    },
+    {"id": "wallet", "code": true, "minDay": 2, "cooldownDays": 12, "weight": 8},
+    {"id": "friend_meal", "code": true, "minDay": 5, "cooldownDays": 15, "weight": 7},
+    {"id": "lend", "code": true, "minDay": 8, "cooldownDays": 20, "weight": 6},
+    {"id": "classmate_help", "code": true, "minDay": 3, "maxDay": 30, "cooldownDays": 9999, "weight": 40},
     {"id": "review", "code": true},
     {
       "id": "flyer", "title": "发传单的上门了", "body": "一个做地推的小伙子问：\"老板，花 ¥100 帮你在附近大学门口发一天传单，要不要？\"", "minDay": 2, "cooldownDays": 10, "weight": 9,
@@ -1960,24 +1753,6 @@
       ]
     },
     {
-      "id": "shop_power_cut_evening", "title": "傍晚停电", "body": "傍晚忽然停电，店里一片漆黑，客人在门口犹豫。", "group": "shop", "minDay": 5, "cooldownDays": 40, "weight": 4,
-      "choices": [
-        {
-          "text": "点蜡烛继续营业",
-          "effects": [
-            {"type": "rest", "value": 60},
-            {"type": "text", "text": "你点起蜡烛，居然有几位客人觉得挺有氛围。"}
-          ]
-        },
-        {
-          "text": "提前打烊",
-          "effects": [
-            {"type": "text", "text": "你提前关了门。"}
-          ]
-        }
-      ]
-    },
-    {
       "id": "shop_cat_visitor", "title": "店里来了只猫", "body": "一只流浪猫钻进了店里，趴在货架旁不肯走。", "group": "shop", "minDay": 3, "cooldownDays": 40, "weight": 4,
       "choices": [
         {
@@ -2410,30 +2185,6 @@
       ]
     },
     {
-      "id": "money_cousin_borrow", "title": "亲戚借钱", "body": "远房亲戚打来电话，说周转不开，想借 ¥600。", "group": "money", "minDay": 8, "cooldownDays": 60, "weight": 5,
-      "when": [
-        {"type": "cash", "value": 600}
-      ],
-      "choices": [
-        {
-          "text": "借给他", "disabledReason": "现金不够 ¥600",
-          "requires": [
-            {"type": "cash", "value": 600}
-          ],
-          "effects": [
-            {"type": "lend", "memo": "远房亲戚", "yuan": 600},
-            {"type": "repay", "memo": "亲戚还钱", "yuan": 600, "days": 7}
-          ]
-        },
-        {
-          "text": "婉拒",
-          "effects": [
-            {"type": "text", "text": "你说自己也紧，亲戚叹了口气。"}
-          ]
-        }
-      ]
-    },
-    {
       "id": "money_win_lottery", "title": "刮刮乐", "body": "路过彩票站，朋友起哄让你试试手气，¥20 一张。", "group": "money", "minDay": 4, "cooldownDays": 40, "weight": 4,
       "choices": [
         {
@@ -2553,26 +2304,7 @@
         }
       ]
     },
-    {
-      "id": "money_parttime_offer", "title": "兼职机会", "body": "朋友问你周末能不能去帮忙搬货，一天 ¥300。", "group": "money", "minDay": 4, "cooldownDays": 30, "weight": 6,
-      "choices": [
-        {
-          "text": "去干一天",
-          "effects": [
-            {"type": "gain", "memo": "搬货兼职", "yuan": 300},
-            {"type": "energy", "value": 10},
-            {"type": "health", "value": -2},
-            {"type": "text", "text": "累得够呛，但赚了 ¥300。（精力 -10，健康 -2）"}
-          ]
-        },
-        {
-          "text": "不去",
-          "effects": [
-            {"type": "text", "text": "你没去。"}
-          ]
-        }
-      ]
-    },
+    {"id": "money_parttime_offer", "code": true, "minDay": 4, "cooldownDays": 30, "weight": 6},
     {
       "id": "money_second_hand", "title": "二手货处理", "body": "你整理出一批用不上的旧东西，朋友问要不要处理掉。", "group": "money", "minDay": 5, "cooldownDays": 45, "weight": 4,
       "choices": [

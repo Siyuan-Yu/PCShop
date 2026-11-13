@@ -110,6 +110,7 @@ namespace PCShopSell.Core.Session
 
                 shopStock = Lines(PlayerShop.Stock),
                 shopRetailKind = MainShop.RetailKind, pendingRetailKind = PendingRetailKind, shopCustomName = MainShop.CustomName,
+                shopEmergencyLighting = MainShop.EmergencyLighting,
                 shopGoodsLots = SaveRetailLots(PlayerShop),
                 shopGoodsIds = SaveRetailCounts(PlayerShop).Select(kv => kv.Key).ToArray(),
                 shopGoodsCounts = SaveRetailCounts(PlayerShop).Select(kv => kv.Value).ToArray(),
@@ -229,6 +230,7 @@ namespace PCShopSell.Core.Session
                 ? PCShopSell.Core.Home.RetailShopTypes.Valid(string.IsNullOrEmpty(d.shopRetailKind) ? "computer" : d.shopRetailKind)
                 : PCShopSell.Core.Home.RetailShopTypes.Default;
             _focus.CustomName = _focus.Rented ? d.shopCustomName : null;
+            if (_focus.Rented) _focus.EmergencyLighting = d.shopEmergencyLighting;
             PlayerShop.RetailKind = _focus.RetailKind;
             PendingRetailKind = PCShopSell.Core.Home.RetailShopTypes.Valid(d.pendingRetailKind);
             CancelProtectedPendingLease();

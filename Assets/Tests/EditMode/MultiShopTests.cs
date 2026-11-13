@@ -113,7 +113,10 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(willingness, branch.MarkupPurchaseIntent(1.25));
 
                 arrivals = branch.ArrivalRatePerMinute(s.Clock.Now);
-                EventCatalog.Get("inspection").Choices[0].Apply(s);
+                branch.NotFitted = false;
+                branch.Stock.Clear();
+                s.RaiseEvent("inspection");
+                Assert.IsTrue(s.ResolveEvent(0));
                 Assert.AreEqual(arrivals, branch.ArrivalRatePerMinute(s.Clock.Now));
                 Assert.Greater(branch.MarkupPurchaseIntent(1.25), willingness);
                 Assert.AreEqual(50, s.MainShop.Sim.ShopReputation);
@@ -137,7 +140,10 @@ namespace PCShopSell.Tests
             using var loaded = GameSession.Load(s.City, save);
             GameSessionTests.Teleport(loaded, "tea");
             loaded.PlayerShop.Reputation += 120;
-            EventCatalog.Get("inspection").Choices[0].Apply(loaded);
+            loaded.PlayerShop.NotFitted = false;
+            loaded.PlayerShop.Stock.Clear();
+            loaded.RaiseEvent("inspection");
+            Assert.IsTrue(loaded.ResolveEvent(0));
 
             using var reloaded = GameSession.Load(s.City, loaded.CreateSave());
             Assert.AreEqual(200, reloaded.MainShop.Sim.Reputation);

@@ -5,6 +5,18 @@ using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
+    [System.Serializable]
+    public struct ShopEmergencyLighting
+    {
+        public int FailureDay;
+        public long OutageEndsAt;
+        public bool UsingCandles;
+
+        public bool Installed => FailureDay > 0;
+        public bool WorksOn(int day) => Installed && day < FailureDay;
+        public bool PowerOutAt(long minute) => minute < OutageEndsAt;
+    }
+
     /// <summary>
     /// 玩家经营的一家店：铺面、租约、营业模拟、家具、升级、员工和补货目标各管各的。
     /// 知名度、现金、家具库存是全部店共用的；纸箱和临时存放每家店各有各的。还没租铺子时只有一个 Lease 为 null 的占位。
@@ -26,6 +38,7 @@ namespace PCShopSell.Core.Session
         public bool EmployeeBuilding;
         public int PendingDisplayTier = -1, PendingDisplayMinutes;
         public int RenovationDay = -1;
+        public ShopEmergencyLighting EmergencyLighting;
 
         /// <summary>这家店纸箱里的东西（吃的、礼品、小家具），容量看店里摆了几个纸箱。</summary>
         public readonly Backpack Fridge = new Backpack();

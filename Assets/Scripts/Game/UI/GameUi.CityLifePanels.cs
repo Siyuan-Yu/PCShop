@@ -394,6 +394,11 @@ namespace PCShopSell.Game.UI
         {
             var activity = S.CityActivities.FirstOrDefault(a => a.Id == activityId);
             if (string.IsNullOrEmpty(activity?.SettlementSummary)) return;
+            if (activity.State == CityActivityPhase.NoShow)
+            {
+                OpenCityActivityNoShow(activity);
+                return;
+            }
             bool solo = activity.Participants.Length == 0;
             OpenWindow(solo ? "活动结算" : "相处结算", solo ? 780 : 960, 650, w =>
             {
@@ -448,6 +453,20 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Label(footer, status, 16, TextAnchor.MiddleLeft, completed ? Ui.Good : Ui.FlatDown), 0, -1, 1);
                 Ui.Size(Ui.Button(footer, solo ? "完成" : "收好这段回忆", w.Close, 18, Ui.ButtonHot), 200, 44);
             }, onClosed: () => OpenCommunityActivityClue(activityId), scrollContent: false);
+        }
+
+        private void OpenCityActivityNoShow(CityActivity activity)
+        {
+            OpenWindow("未赴约", 700, 545, w =>
+            {
+                Line(w.Content, S.CityActivityService(activity)?.Name ?? "预约活动", 23, Ui.Accent);
+                string venue = S.City.HasPlace(activity.VenueId) ? S.City.GetPlace(activity.VenueId).Name : activity.VenueId;
+                Line(w.Content, $"{CityTime(activity.ScheduledStart)} · {venue}", 17, Ui.Dim);
+                Para(w.Content, activity.SettlementSummary, 18);
+                if (activity.Participants.Length > 0)
+                    BuildActivityRelationshipResults(w.Content, activity);
+                Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 19, Ui.ButtonHot), -1, 44);
+            }, onClosed: () => activity.NoShowNoticeRead = true);
         }
 
         private static RectTransform SettlementCard(Transform parent, string name, float flexWidth = 1)
@@ -529,7 +548,8 @@ namespace PCShopSell.Game.UI
                 if(a.HostId!="player"&&S.CityPerson(a.HostId)!=null)
                     Line(w.Content,"邀请人："+S.CityPerson(a.HostId).Name,18,Ui.Accent);
                 foreach (var p in a.Participants) Line(w.Content, (S.CityPerson(p.PersonId)?.Name ?? "同行者") + " · " + CityParticipantText(p.Phase), 18);
-                Para(w.Content, $"阶段 {a.Stage + 1}/3 · 活动费用 {(a.EntryPaid ? "已支付" : "尚未支付")} · 完成奖励 {(a.RewardApplied ? "已结算" : "尚未结算")}", 18);
+                string payment = a.HostPays ? "邀请人请客" : a.EntryPaid ? "费用已支付" : "费用尚未支付";
+                Para(w.Content, $"阶段 {a.Stage + 1}/3 · {payment} · 完成奖励 {(a.RewardApplied ? "已结算" : "尚未结算")}", 18);
                 if (a.State == CityActivityPhase.Running)
                 {
                     long remaining = Math.Max(0, a.ActualStart + a.Duration - S.Clock.Now.TotalMinutes);
@@ -564,7 +584,11 @@ namespace PCShopSell.Game.UI
                         Ui.Size(Ui.Button(w.Content,worker.Person.Name+(work?"：展位工作（含路程计工时）":"：私人同行，改为展位工作"),()=>{S.SetEmployeeExhibitionWork(activityId,employeeId,!work);w.Rebuild();},17),-1,42);
                     }
                 if (!string.IsNullOrEmpty(a.SettlementSummary))
-                    Ui.Size(Ui.Button(w.Content,a.Participants.Length==0?"查看活动结算":"查看相处结算",()=>OpenCityActivitySettlement(activityId),19,Ui.ButtonHot),-1,44);
+                {
+                    string settlement = a.State == CityActivityPhase.NoShow ? "查看未赴约记录"
+                        : a.Participants.Length == 0 ? "查看活动结算" : "查看相处结算";
+                    Ui.Size(Ui.Button(w.Content, settlement, () => OpenCityActivitySettlement(activityId), 19, Ui.ButtonHot), -1, 44);
+                }
                 if (a.EndReason != null) Para(w.Content, a.EndReason, 18, Ui.Dim);
             });
         }
@@ -594,6 +618,12 @@ namespace PCShopSell.Game.UI
             if (_cityActivityHud == null || S == null) return;
             _cityHudRefresh -= dt; if (_cityHudRefresh > 0) return; _cityHudRefresh = .2f;
             if (_cityHudSession != S) { _cityHudSession = S; _dismissedCityActivityHud.Clear(); }
+            if (!AnyModalOpen && !S.IsGameOver && !S.Racing && !S.CityActivityExclusive && !OpeningMealRestricted)
+            {
+                var missed = S.CityActivities.FirstOrDefault(x => x.State == CityActivityPhase.NoShow
+                    && !x.NoShowNoticeRead && !string.IsNullOrEmpty(x.SettlementSummary));
+                if (missed != null) OpenCityActivityNoShow(missed);
+            }
             var a = S.RunningCityActivity;
             if (a != null && _dismissedCityActivityHud.Contains(a.Id)) a = null;
             if (a == null) a = S.CityActivities.Where(x => x.Active && !_dismissedCityActivityHud.Contains(x.Id)

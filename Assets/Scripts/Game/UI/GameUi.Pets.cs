@@ -170,18 +170,36 @@ namespace PCShopSell.Game.UI
                     });
                 },17),-1,38);
             }
-            foreach (string id in new[] { PetShopCatalog.Wand, PetShopCatalog.Ball })
+            Ui.Size(Ui.Button(C, "购置代养玩具", OpenPetToyShop, 17), -1, 38);
+        }
+
+        private void OpenPetToyShop()
+        {
+            OpenWindow("购置代养玩具", 640, 375, w =>
             {
-                string fixture = PetShopCatalog.ToyFixture(id);
-                if (S.PetToyReady(shop,id) || S.FurnitureToPlace(true,fixture) > 0) continue;
-                int count = shop.Sim.Stock.GoodsCount(id);
-                if (count <= 0) continue;
-                Ui.Size(Ui.Button(C,"从库存取用并摆放" + Gifts.Get(id).Name,() =>
+                Para(w.Content, "将玩具摆在宠物屋内或旁边，靠近宠物屋后即可使用。", 16, Ui.Dim);
+                for (int tier = 0; tier < PetShopCatalog.ToyTierCount; tier++)
                 {
-                    if (S.PreparePetToy(id)) { RebuildDock(); StartPlacement(true,fixture); }
-                },16),-1,34);
-            }
-            Line(C,"玩具可摆在围栏内或宠物屋旁，进入近景后即可拿起来。",15,Ui.Dim);
+                    string wand = PetShopCatalog.ToyFixture(false, tier);
+                    Line(w.Content, $"{PetShopCatalog.ToyTierName(tier)} · 快乐最高 {PetShopCatalog.ToyHappinessLimit(wand)}", 16, Ui.Accent);
+                    var row = Ui.Row(w.Content, 38, 8);
+                    Offer(wand, "逗猫棒");
+                    Offer(PetShopCatalog.ToyFixture(true, tier), "软球");
+
+                    void Offer(string id, string name)
+                    {
+                        var item = FurnitureCatalog.Get(id);
+                        bool affordable = S.Ledger.Balance >= item.Price;
+                        Ui.Size(Ui.Button(row, name + " · " + item.Price + (affordable ? "" : " · 现金不足"), () =>
+                        {
+                            if (!S.BuyPetToy(id)) return;
+                            w.Close();
+                            RebuildDock();
+                            if (S.PetHouse(S.CurrentShop) != null) StartPlacement(true, id);
+                        }, 16, interactable: affordable), -1, 38, 1);
+                    }
+                }
+            });
         }
 
         public void OpenPetFocusHud()
@@ -327,12 +345,15 @@ namespace PCShopSell.Game.UI
             var care = PetCareStatus(shop,pet);
             _petCareStatus.text = care.text;
             _petCareStatus.color = care.covered ? Ui.Good : PetUnattended;
-            _petDetailInfo.text = pet.LastPlayDay == S.Clock.Today.TotalDays ? "今天已陪玩" : "今天还没陪玩";
-            string toy = pet.Dog ? PetShopCatalog.Ball : PetShopCatalog.Wand;
-            bool ready = S.PetToyReady(shop,toy);
-            _petToyButton.interactable = !playing && ready;
-            _petToyLabel.text = !ready ? (pet.Dog ? "尚未摆放软球" : "尚未摆放逗猫棒")
-                : _ctrl.HeldPetToy == toy ? (pet.Dog ? "抛球 · F" : "挥动逗猫棒 · F")
+            string held = _ctrl.HeldPetToy;
+            string fixture = held ?? S.PetToy(shop, pet.Dog)?.Id;
+            int tier = PetShopCatalog.ToyTier(fixture);
+            string play = pet.LastPlayDay == S.Clock.Today.TotalDays ? "今天已陪玩" : "今天还没陪玩";
+            string method = tier >= 0 ? PetShopCatalog.ToyTierName(tier) + (pet.Dog ? "软球" : "逗猫棒") : "徒手陪玩";
+            _petDetailInfo.text = $"{play} · {method}可提升至 {PetShopCatalog.ToyHappinessLimit(fixture)}";
+            _petToyButton.interactable = !playing && fixture != null;
+            _petToyLabel.text = fixture == null ? (pet.Dog ? "尚未摆放软球" : "尚未摆放逗猫棒")
+                : held != null ? (pet.Dog ? "抛球 · F" : "挥动逗猫棒 · F")
                 : (pet.Dog ? "拿球" : "拿逗猫棒");
         }
 
@@ -340,9 +361,8 @@ namespace PCShopSell.Game.UI
         {
             var pet = S.PetGuests(S.CurrentShop).FirstOrDefault(p=>p.Id==_ctrl.SelectedPet);
             if (pet == null) return;
-            string toy = pet.Dog ? PetShopCatalog.Ball : PetShopCatalog.Wand;
-            if (_ctrl.HeldPetToy == toy) _ctrl.InteractWithPet(true);
-            else _ctrl.PickUpPetToy(toy);
+            if (_ctrl.HeldPetToy != null) _ctrl.InteractWithPet(true);
+            else _ctrl.PickUpPetToy(S.PetToy(S.CurrentShop, pet.Dog));
         }
     }
 }

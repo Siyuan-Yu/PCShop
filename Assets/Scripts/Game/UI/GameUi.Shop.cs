@@ -429,21 +429,101 @@ namespace PCShopSell.Game.UI
         {
             var row = Ui.Row(C, 76, 6);
             Metric("今日营业额", () => shop.TodaySales.ToString(), Ui.Good);
-            Metric("今日进店", () => $"{shop.TodayCustomers} 人", Ui.TextColor);
-            Metric("今日流失", () => $"{shop.TodayLost} 人", Ui.Warn);
+            Metric("今日进店", () => $"{shop.TodayCustomers} 人", Ui.TextColor, () => OpenShopVisitDetails(shop, false));
+            Metric("今日流失", () => $"{shop.TodayLost} 人", Ui.Warn, () => OpenShopVisitDetails(shop, true));
             Metric("排队结账", () => $"{shop.Queue.Count + S.RestaurantCheckoutCount(S.CurrentShop)} 人", Ui.TextColor).Tip(() => PaymentText(shop.Accepted));
 
-            Text Metric(string title, System.Func<string> value, Color ink)
+            Text Metric(string title, System.Func<string> value, Color ink, System.Action openDetails = null)
             {
-                var card = Ui.Size(Ui.Panel(row, title, Ui.PanelBg2), -1, -1, 1).rectTransform;
+                var background = Ui.Size(Ui.Panel(row, title, Ui.PanelBg2), -1, -1, 1);
+                var card = background.rectTransform;
+                if (openDetails != null)
+                {
+                    var button = card.gameObject.AddComponent<Button>();
+                    button.targetGraphic = background;
+                    var colors = button.colors;
+                    colors.highlightedColor = new Color(1.18f, 1.18f, 1.18f);
+                    button.colors = colors;
+                    button.onClick.AddListener(() => openDetails());
+                }
                 Ui.VList(card, 1, 9);
-                Line(card, title, 15, Ui.Dim);
+                Line(card, openDetails == null ? title : title + " ›", 15, openDetails == null ? Ui.Dim : Ui.TextColor);
                 var text = Ui.Label(card, value(), 25, color: ink);
                 text.fontStyle = FontStyle.Bold;
                 _counterRefresh.Add(() => text.text = value());
                 return text;
             }
         }
+
+        private void OpenShopVisitDetails(ShopSimulation shop, bool lossesOnly)
+        {
+            var visits = shop.TodayVisitDetails(lossesOnly).OrderByDescending(v => v.ArrivalMinute)
+                .ThenByDescending(v => v.CustomerId).ToArray();
+            int total = lossesOnly ? shop.TodayLost : shop.TodayCustomers;
+            int page = 0;
+            const int pageSize = 15;
+            int pageCount = Mathf.Max(1, (visits.Length + pageSize - 1) / pageSize);
+            string title = lossesOnly ? "今日流失" : "今日进店";
+            OpenWindow(title + "明细", 760, 670, w =>
+            {
+                Line(w.Content, $"{S.Clock.Today} · {title} {total:N0} 人", 21, Ui.Accent);
+                if (lossesOnly && visits.Length > 0)
+                {
+                    string reasons = string.Join("　", visits.GroupBy(v => v.Reason).OrderByDescending(g => g.Count())
+                        .Select(g => $"{ShopLossText(g.Key)} {g.Count()} 人"));
+                    Para(w.Content, reasons, 16, Ui.Dim);
+                }
+                if (total > visits.Length)
+                    Para(w.Content, $"其中 {total - visits.Length} 人只有人数记录。", 15, Ui.Dim);
+                if (visits.Length == 0)
+                {
+                    Line(w.Content, total > 0 ? "暂无可查看的明细" : lossesOnly ? "今天暂无流失顾客" : "今天暂无顾客进店", 17, Ui.Dim);
+                    return;
+                }
+
+                if (pageCount > 1)
+                {
+                    var navigation = Ui.Row(w.Content, 34, 8);
+                    Ui.Size(Ui.Button(navigation, "上一页", () => { page--; w.Rebuild(); }, 15, interactable: page > 0), 100, 34);
+                    Ui.Size(Ui.Label(navigation, $"{page + 1} / {pageCount}", 15, TextAnchor.MiddleCenter), -1, 34, 1);
+                    Ui.Size(Ui.Button(navigation, "下一页", () => { page++; w.Rebuild(); }, 15, interactable: page + 1 < pageCount), 100, 34);
+                }
+                var header = Ui.Row(w.Content, 24, 8);
+                Ui.Size(Ui.Label(header, "进店时间", 15, color: Ui.Dim), 108, 24);
+                Ui.Size(Ui.Label(header, "顾客", 15, color: Ui.Dim), 150, 24);
+                Ui.Size(Ui.Label(header, lossesOnly ? "离店原因" : "购买或离店情况", 15, color: Ui.Dim), -1, 24, 1);
+                foreach (var visit in visits.Skip(page * pageSize).Take(pageSize))
+                {
+                    var time = new GameTimestamp(visit.ArrivalMinute);
+                    var row = Ui.Row(w.Content, 34, 8);
+                    string day = time.Date.Equals(S.Clock.Today) ? "" : $"{time.Date.Month}/{time.Date.Day} ";
+                    Ui.Size(Ui.Label(row, $"{day}{time.Hour:00}:{time.Minute:00}", 16), 108, 34);
+                    string name = S.CityPerson(visit.PersonId)?.Name ?? $"顾客 #{visit.CustomerId}";
+                    Ui.Size(Ui.Label(row, name, 16), 150, 34);
+                    string result = visit.State switch
+                    {
+                        CustomerState.Paid => $"已购买 {visit.ProductName} · {Money.FromCents(visit.PaidCents)}",
+                        CustomerState.WaitingCheckout => $"排队结账 · {visit.ProductName}",
+                        CustomerState.Browsing => "正在选购",
+                        _ when visit.Reason == LeaveReason.OrderPlaced => $"已下单 {visit.ProductName} · 待交付",
+                        _ when !visit.CountedAsLost && visit.Reason == LeaveReason.NoStock => "商品已过期 · 未成交",
+                        _ => $"已离店 · {ShopLossText(visit.Reason)}",
+                    };
+                    Color ink = visit.State == CustomerState.Paid ? Ui.Good : visit.CountedAsLost ? Ui.Warn : Ui.Dim;
+                    Ui.Size(Ui.Label(row, result, 16, color: ink), -1, 34, 1);
+                }
+            });
+        }
+
+        private static string ShopLossText(LeaveReason reason) => reason switch
+        {
+            LeaveReason.Impatient => "等候结账超时",
+            LeaveReason.NoCash => "没有可用的付款方式",
+            LeaveReason.ShopClosed => "店铺停止营业",
+            LeaveReason.NoStock => "没有合适的现货",
+            LeaveReason.TooExpensive => "价格太高",
+            _ => "未成交",
+        };
 
         private void BuildShopStanding(ShopSimulation shop)
         {

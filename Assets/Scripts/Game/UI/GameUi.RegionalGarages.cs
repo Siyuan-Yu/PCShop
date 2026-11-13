@@ -45,6 +45,7 @@ namespace PCShopSell.Game.UI
             var garage = RegionalGarages.Get(p.Id); var lease = S.GarageLease(p.Id);
             var motors = S.Garage;
             Line(w.Content, garage.Name + " · 已停车 " + S.ParkedMotorCount(p.Id) + " / " + S.GarageCapacity(p.Id)+"位", 23, Ui.Accent);
+            if (p.Id == GameSession.StarterRaceGarageId) BuildRacingIntroduction(w);
             Line(w.Content,"已购车位 "+(lease?.OwnedSpaces??0)+" · 租用车位 "+(lease?.RentedSpaces??0)+" · 空位 "+S.GarageFreeSpaces(p.Id),18);
             Para(w.Content,"公共车库建筑不出售、不出租。车位按需增加，供应不限；每辆入库车占1位，通勤车不占位。",16,Ui.Dim);
             var quantityRow=Ui.Row(w.Content,38,6);

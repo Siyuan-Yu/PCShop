@@ -2,6 +2,8 @@
 using NUnit.Framework;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
+using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
 
 namespace PCShopSell.Tests
 {
@@ -30,6 +32,26 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void DebugEventPresetCanRaiseTheFirstTenInOrder()
+        {
+            using var fixture = DistrictProgressionTests.Make();
+            using var session = GameSession.CreateCityLifePreset(fixture.City, "events");
+            var expected = new[] { "inspection", "regulars", "blackout", "thief", "students",
+                "rival", "wallet", "friend_meal", "lend", "classmate_help" };
+            for (int number = 1; number <= expected.Length; number++)
+            {
+                Assert.IsTrue(session.DebugRaiseNumberedEvent(number), $"#{number:00} {expected[number - 1]}");
+                Assert.AreEqual(expected[number - 1], session.PendingEvent.Id);
+                int choice = Enumerable.Range(0, session.PendingEvent.Choices.Count)
+                    .Last(index => session.IsChoiceEnabled(session.PendingEvent.Choices[index]));
+                Assert.IsTrue(session.ResolveEvent(choice));
+            }
+            Assert.IsNull(GameSession.DebugNumberedEvent(102));
+            Assert.AreEqual("money_win_lottery", GameSession.DebugNumberedEvent(103).Id);
+            Assert.AreEqual("life_festival_lantern", GameSession.DebugNumberedEvent(124).Id);
+        }
+
+        [Test]
         public void Reader_ReportsTypos_AndBadJson()
         {
             var typo = EventScriptReader.Read("{\"events\":[{\"id\":\"x\",\"titel\":\"a\",\"choices\":[{\"text\":\"t\",\"effects\":[{\"type\":\"pay\",\"yaun\":5}]}]}]}");
@@ -41,13 +63,21 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void JsonChoice_PayThenRoll_CanBeDisabledByCash()
+        public void InspectionRequiresMinimumCharmAndShowsTheActualChance()
         {
             using (var s = new GameSession(PCShopSell.Core.World.CityLayout.FromData(PCShopSell.Tests.GameSessionTests.Layout()), 3, Money.FromYuan(100), PCShopSell.Core.Time.GameTimestamp.From(new PCShopSell.Core.Time.GameDate(5), 600), true))
             {
-                var def = EventCatalog.Get("inspection");
-                Assert.IsFalse(def.Choices[0].Enabled(s), "只有 ¥100，配合整改（¥300）要灰掉");
-                Assert.IsNull(def.Choices[2].Enabled, "糊弄这条不要钱，总能选");
+                s.DebugRentStarterShop(true);
+                s.PlayerShop.NotFitted = true;
+                s.Player.Charm += 44 - s.EffectiveCharm;
+                s.RaiseEvent("inspection");
+                Assert.That(s.PendingEvent.Choices[2].Text, Does.Contain("0"));
+                Assert.IsFalse(s.IsChoiceEnabled(s.PendingEvent.Choices[2]));
+                Assert.IsTrue(s.ResolveEvent(1));
+                s.Player.Charm += 45 - s.EffectiveCharm;
+                s.RaiseEvent("inspection");
+                Assert.That(s.PendingEvent.Choices[2].Text, Does.Contain("35"));
+                Assert.IsTrue(s.IsChoiceEnabled(s.PendingEvent.Choices[2]));
             }
         }
 
@@ -96,6 +126,32 @@ namespace PCShopSell.Tests
                 var loan = s.AppLoans.Single(l => l.NoInterest);
                 Assert.AreEqual("res_coder", loan.Lender);
                 Assert.AreEqual(Money.FromYuan(5000), loan.TotalDue, "无息：到期只还本金");
+            }
+        }
+
+        [Test]
+        public void WeekendWorkPaysOnlyAfterElapsedShiftEvenAfterReload()
+        {
+            var city = CityLayout.FromData(GameSessionTests.Layout());
+            var start = GameTimestamp.From(new GameDate(5), 11 * 60);
+            using (var session = new GameSession(city, 3, Money.FromYuan(30000), start, true))
+            {
+                session.RaiseEvent("money_parttime_offer");
+                Assert.IsTrue(session.ResolveEvent(0));
+                Assert.AreEqual(start, session.Clock.Now);
+                Assert.IsTrue(session.IsWeekendWorking);
+                Assert.IsFalse(session.Ledger.Entries.Any(e => e.Memo == "周末搬货兼职"));
+                using (var restored = GameSession.Load(city, session.CreateSave()))
+                {
+                    Assert.IsTrue(restored.IsWeekendWorking);
+                    Assert.AreEqual(GameSession.WeekendWorkHours * 60, restored.WorkMinutesLeft);
+                    restored.AdvanceClock(restored.WorkMinutesLeft - 1);
+                    Assert.IsFalse(restored.Ledger.Entries.Any(e => e.Memo == "周末搬货兼职"));
+                    restored.AdvanceClock(1);
+                    Assert.IsFalse(restored.IsWeekendWorking);
+                    restored.AdvanceClock(1);
+                    Assert.AreEqual(1, restored.Ledger.Entries.Count(e => e.Memo == "周末搬货兼职"));
+                }
             }
         }
 

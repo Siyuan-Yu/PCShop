@@ -121,12 +121,14 @@ public const double LunchboxKg = 0.5;
             _gifts[id] = GiftCount(id) + count;
         }
 
-        public bool TakeGift(string id)
+        public bool TakeGift(string id) => TakeGift(id, 1);
+
+        public bool TakeGift(string id, int count)
         {
             int have = GiftCount(id);
-            if (have <= 0) return false;
-            if (have == 1) _gifts.Remove(id);
-            else _gifts[id] = have - 1;
+            if (count <= 0 || have < count) return false;
+            if (have == count) _gifts.Remove(id);
+            else _gifts[id] = have - count;
             return true;
         }
 

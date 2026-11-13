@@ -374,12 +374,12 @@ namespace PCShopSell.Game.Runtime
             if (_toyOnStand != null) _toyOnStand.SetActive(true);
             _toyOnStand = null;
             if (_heldPetToy != null) Kill.It(_heldPetToy);
-            _heldPetToy = toy != null ? PetSceneModels.BuildToy(_root,toy == PetShopCatalog.Ball) : null;
+            _heldPetToy = toy != null ? PetSceneModels.BuildToy(_root, PetShopCatalog.IsDogToy(toy), PetShopCatalog.ToyTier(toy)) : null;
             if (station != null)
                 foreach (var entry in _decor.Entries)
                     if (ReferenceEquals(entry.Placed,station))
                     {
-                        _toyOnStand = entry.Go.transform.Find(toy == PetShopCatalog.Ball ? "SoftBall" : "Wand")?.gameObject;
+                        _toyOnStand = entry.Go.transform.Find(PetShopCatalog.IsDogToy(toy) ? "SoftBall" : "Wand")?.gameObject;
                         if (_toyOnStand != null) _toyOnStand.SetActive(false);
                         break;
                     }

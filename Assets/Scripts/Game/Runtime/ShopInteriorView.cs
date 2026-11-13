@@ -321,6 +321,12 @@ namespace PCShopSell.Game.Runtime
         // 营业 / 关门的区别：门头招牌（绿 / 暗红）、门口挂牌、顶灯亮度
         private GameObject _signOpen, _signClosed, _doorHang;
         private readonly List<Light> _ceilingLights = new List<Light>();
+        private readonly List<Renderer> _ceilingDiffusers = new List<Renderer>();
+        private Material _ceilingLit, _ceilingDark;
+        private bool _shopPowerOut;
+        private (bool installed, bool working, bool outage, bool candle)? _emergencyLook;
+        private GameObject _emergencyFixture, _emergencyBulbs, _emergencyReady, _emergencyBroken;
+        private Light _backupLight;
         private float _openBlend = 1f;
         private RoomFurniture _decor;
         private GameObject _upgradeClimate;
@@ -613,7 +619,10 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(_doorHang.transform, "Tape2", new Vector3(doorX, 0.55f, -0.1f), new Vector3(1.34f, 0.07f, 0.03f), Mats.Lit(new Color(0.95f, 0.95f, 0.95f), 0.2f));
 
             BuildDecor(w, d, doorX);
+            BuildEmergencyFixture();
 
+            _ceilingLit = Mats.Glow(ArtDirection.Cream, new Color(2.3f, 1.65f, .8f), false);
+            _ceilingDark = Mats.Lit(new Color(.47f, .46f, .42f));
             int lampsX = Mathf.Max(1, Mathf.CeilToInt(w / 6f)), lampsZ = Mathf.Max(1, Mathf.CeilToInt(d / 6f));
             for (int lx = 0; lx < lampsX; lx++)
             for (int lz = 0; lz < lampsZ; lz++)
@@ -627,7 +636,9 @@ namespace PCShopSell.Game.Runtime
                 lamp.intensity = lampsX * lampsZ > 1 ? 1.6f : 2.2f;
                 lamp.color = new Color(1f, 0.87f, 0.66f);
                 _shopCeilingLampMeshes.Add(Prims.Box(lampGo.transform, "Steel light housing", Vector3.zero, new Vector3(.7f,.11f,.28f), Mats.Lit(ArtDirection.Ink,.4f,.5f)));
-                _shopCeilingLampMeshes.Add(Prims.Box(lampGo.transform, "Warm diffuser", new Vector3(0,-.06f,0), new Vector3(.58f,.02f,.2f), Mats.Glow(ArtDirection.Cream,new Color(2.3f,1.65f,.8f),false)));
+                var diffuser = Prims.Box(lampGo.transform, "Warm diffuser", new Vector3(0,-.06f,0), new Vector3(.58f,.02f,.2f), _ceilingLit);
+                _shopCeilingLampMeshes.Add(diffuser);
+                _ceilingDiffusers.Add(diffuser.GetComponent<Renderer>());
                 _ceilingLights.Add(lamp);
             }
 
@@ -1121,6 +1132,70 @@ namespace PCShopSell.Game.Runtime
             return best;
         }
 
+        private void BuildEmergencyFixture()
+        {
+            _emergencyFixture = new GameObject("Emergency wall light");
+            var fixture = _emergencyFixture.transform;
+            fixture.SetParent(_root, false);
+            fixture.localPosition = new Vector3(Width * .36f, 2.58f, Depth - .11f);
+            Prims.Box(fixture, "Emergency housing", Vector3.zero, new Vector3(.56f, .23f, .17f), Mats.Lit(ArtDirection.Ink));
+            _emergencyBulbs = new GameObject("Emergency bulbs");
+            _emergencyBulbs.transform.SetParent(fixture, false);
+            var lens = Mats.Lit(ArtDirection.Cream);
+            var lit = Mats.Glow(ArtDirection.Cream, new Color(2.7f, 2.4f, 1.9f), false);
+            foreach (float x in new[] { -.16f, .16f })
+            {
+                Prims.Box(fixture, "Lens", new Vector3(x, .01f, -.1f), new Vector3(.17f, .14f, .07f), lens);
+                Prims.Box(_emergencyBulbs.transform, "Lit lens", new Vector3(x, .01f, -.14f), new Vector3(.16f, .13f, .015f), lit);
+            }
+            _emergencyReady = Indicator("Ready", new Color(.22f, .91f, .48f));
+            _emergencyBroken = Indicator("Broken", new Color(1f, .23f, .14f));
+            _emergencyFixture.SetActive(false);
+
+            var light = new GameObject("Backup shop illumination");
+            light.transform.SetParent(_root, false);
+            _backupLight = light.AddComponent<Light>();
+            _backupLight.type = LightType.Point;
+            _backupLight.enabled = false;
+
+            GameObject Indicator(string name, Color color) =>
+                Prims.Box(fixture, name, new Vector3(0, -.035f, -.096f), new Vector3(.072f, .035f, .027f), Mats.Glow(color, color * 2f, false));
+        }
+
+        private void UpdateEmergencyLighting(ShopEmergencyLighting lighting, int day, long minute)
+        {
+            bool outage = lighting.PowerOutAt(minute);
+            bool working = lighting.WorksOn(day);
+            bool battery = outage && working;
+            bool candle = outage && !battery && lighting.UsingCandles;
+            var look = (lighting.Installed, working, outage, candle);
+            if (_emergencyLook.HasValue && _emergencyLook.Value == look) return;
+            _emergencyLook = look;
+            _emergencyFixture.SetActive(lighting.Installed);
+            _emergencyBulbs.SetActive(battery);
+            _emergencyReady.SetActive(working);
+            _emergencyBroken.SetActive(lighting.Installed && !working);
+            _backupLight.enabled = battery || candle;
+            if (battery)
+            {
+                _backupLight.transform.localPosition = _emergencyFixture.transform.localPosition + new Vector3(0, -.18f, -.45f);
+                _backupLight.color = new Color(1f, .95f, .82f);
+                _backupLight.range = Mathf.Max(Width, Depth);
+                _backupLight.intensity = 1.4f;
+            }
+            else if (candle)
+            {
+                _backupLight.transform.localPosition = new Vector3(Width * .5f, 1f, Depth * .5f);
+                _backupLight.color = new Color(1f, .61f, .27f);
+                _backupLight.range = 4f;
+                _backupLight.intensity = .75f;
+            }
+            if (_shopPowerOut == outage) return;
+            _shopPowerOut = outage;
+            foreach (var diffuser in _ceilingDiffusers)
+                diffuser.sharedMaterial = outage ? _ceilingDark : _ceilingLit;
+        }
+
         private void UpdateOpenLook(bool open, float realDt)
         {
             _openBlend = Mathf.MoveTowards(_openBlend, open ? 1f : 0f, realDt * 2f);
@@ -1129,7 +1204,7 @@ namespace PCShopSell.Game.Runtime
             if (_doorHang != null) _doorHang.SetActive(!open);
             float k = Mathf.Lerp(0.3f, 1f, _openBlend);
             float baseI = _ceilingLights.Count > 1 ? 1.6f : 2.2f;
-            foreach (Light l in _ceilingLights) l.intensity = baseI * k;
+            foreach (Light l in _ceilingLights) l.intensity = _shopPowerOut ? 0 : baseI * k;
         }
 
         public void Update(GameSession s, float dt, float realDt)
@@ -1157,6 +1232,7 @@ namespace PCShopSell.Game.Runtime
             }
             UpdateStreet(s.Time.IsRunning ? realDt * s.Time.Speed : 0f, s.Clock.MinuteOfDay);
             ShopSimulation shop = s.PlayerShop;
+            UpdateEmergencyLighting(climateShop?.EmergencyLighting ?? default, s.Clock.Today.TotalDays, s.Clock.Now.TotalMinutes);
             UpdateOpenLook(shop.IsOpen, realDt);
             _decor.Sync(s.ShopLayout, s.ShopRoom);
             if (_fxVersion != _decor.Version) RebuildFixtures();

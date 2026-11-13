@@ -8,6 +8,8 @@ namespace PCShopSell.Core.Session
     {
         private void PrepareRacingAcceptance()
         {
+            Flags.Add(RacingAccessFlag);
+            Flags.Add(RacingIntroShownFlag);
             DebugAddCash(5000000);_district.UnlockedTier=3;DebugAddReputation(50);
             foreach(var g in RegionalGarages.All)_regionalGarages.Add(new RegionalGarageLease{PlaceId=g.Id,OwnedSpaces=6,NextRentDay=-1});
             foreach(string model in new[]{"e_city","v_basic","c_su7"})PlaceAcquiredMotor(NewMotor(model),true,null);

@@ -220,16 +220,21 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void MissedAppointmentRecordsNoShowWithoutFalseCompletionOrMealCharge()
+        public void MissedAppointmentReducesRelationOnceWithoutChargingForTheMeal()
         {
             using(var s=MakeCitySocial())
             {
                 var a=MigrateLegacyInvite(s);var cash=s.Ledger.Balance;int relation=s.Relation(Npcs.Li);
-                AdvanceSocial(s,(int)(a.ScheduledStart+16-s.Clock.Now.TotalMinutes));
+                AdvanceSocial(s,(int)(a.ScheduledStart+GameSession.CityArrivalWindowMinutes+1-s.Clock.Now.TotalMinutes));
                 Assert.AreEqual(CityActivityPhase.NoShow,a.State,a.EndReason+" | "+_socialRouteTrace);Assert.AreEqual(0,s.Appointments.Count);
-                Assert.AreEqual(relation,s.Relation(Npcs.Li),"A missed meal does not apply the removed event's arbitrary penalty or completion gain");
+                Assert.AreEqual(relation-8,s.Relation(Npcs.Li));
+                Assert.AreEqual(relation,a.Participants.Single().RelationBefore);
+                Assert.AreEqual(relation-8,a.Participants.Single().RelationAfter);
+                Assert.IsNotEmpty(a.SettlementSummary);
+                Assert.IsFalse(a.NoShowNoticeRead);
+                Assert.IsTrue(s.MemoriesOf(Npcs.Li).Any(m=>m.Text.Contains("未赴约")));
                 Assert.AreEqual(cash,s.Ledger.Balance);Assert.IsFalse(a.EntryPaid);Assert.IsFalse(a.MealApplied);Assert.IsFalse(a.RewardApplied);
-                AdvanceSocial(s,30);Assert.AreEqual(relation,s.Relation(Npcs.Li));Assert.AreEqual(cash,s.Ledger.Balance,"No replay on later ticks");
+                AdvanceSocial(s,30);Assert.AreEqual(relation-8,s.Relation(Npcs.Li));Assert.AreEqual(cash,s.Ledger.Balance,"No replay on later ticks");
             }
         }
 

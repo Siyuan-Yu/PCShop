@@ -140,8 +140,8 @@ namespace PCShopSell.Core.Session
         /// <summary>历史关系额度公式，仅保留兼容；实际库存现由货源和具体型号决定。</summary>
         public static int StallQuota(int rel) => rel >= 80 ? 45 : rel >= 60 ? 28 : rel >= 40 ? 18 : rel >= 20 ? 12 : 8;
 
-        /// <summary>唐俊杰到了这个交情就不会跟你打价格战。</summary>
-        public const int JieNoPriceWar = 50;
+        /// <summary>唐俊杰在电脑店应对同行促销时提供行情和销售建议。</summary>
+        public const int JiePriceWarAdvice = 50;
 
         /// <summary>林远航到了这个交情，你快破产时他会救急一次。</summary>
         public const int LinBailout = 50;
@@ -155,7 +155,7 @@ namespace PCShopSell.Core.Session
                 case Npcs.Zhang: return "40：客流 +5%　70：客流 +10%";
                 case Npcs.Landlady: return "40：店租 -5%　70：店租 -12%";
                 case Npcs.Zhou: return "40：网购配件 -3%　70：-6%。会透露行情";
-                case Npcs.Jie: return "50：不再打价格战，档口批发价 -2%　80：-4%。会透露行情（不太靠谱）";
+                case Npcs.Jie: return "50：帮电脑店应对同行促销，档口批发价 -2%　80：-4%。会透露行情（不太靠谱）";
                 case Npcs.Lin: return "50：快破产时借你 ¥3,000 救急（仅一次）";
                 case Npcs.Li:
                 case Npcs.Wang:
