@@ -75,7 +75,7 @@ namespace PCShopSell.Game.UI
             {
                 case 0: return true;
                 case 1: return S.DirectAgreement || (S.HasShop && S.PlayerShop.Reputation >= 10);
-                case 2: return S.EnterpriseContracts.Any(c => c.Accepted) || (S.HasShop && S.PlayerShop.Reputation >= 8);
+                case 2: return S.EnterpriseContracts.Any(c => c.Accepted && !c.PersonalReferral) || (S.HasShop && S.PlayerShop.Reputation >= 8);
                 case 3: return S.ManagedVentures.Count > 0 || (S.HasShop && S.PlayerShop.Reputation >= 8);
                 case 4: return S.CreatorPartners.Any(c => c.CampaignUntilDay > 0) || (S.HasShop && S.PlayerShop.Reputation >= 8);
                 case 5: return true;
@@ -186,8 +186,9 @@ namespace PCShopSell.Game.UI
         private void BuildEnterprise(Window w)
         {
             Para(w.Content,"名望 8 解锁，每周刷新一份采购邀请。接受后自动进入主店装机队列；可以亲自装，也可以交给受训员工。逐台交付收款，全额完成再奖合同额 3%。",17);
-            if(S.EnterpriseContracts.Count==0) Line(w.Content,"暂时没有采购邀请。提高名望后再来看看。",17,Ui.Dim);
-            foreach(var contract in S.EnterpriseContracts.Reverse())
+            var contracts = S.EnterpriseContracts.Where(c => !c.PersonalReferral).Reverse().ToArray();
+            if(contracts.Length==0) Line(w.Content,"暂时没有采购邀请。提高名望后再来看看。",17,Ui.Dim);
+            foreach(var contract in contracts)
             {
                 var c=contract;var card=BusinessCard(w.Content,c.Client+" · "+PartCatalog.TierName(c.Tier)+"整机 ×"+c.Count);
                 Line(card,$"合同额 {c.Total}    单台收款 {Money.FromCents(c.UnitCents)}    履约保证金 {c.Total.Scale(.05)}",17);

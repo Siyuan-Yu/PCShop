@@ -19,11 +19,16 @@ namespace PCShopSell.Game.UI
                     Line(w.Content, S.CityCompetitionTitle(item) + (active ? " · 进行中" : " · 已结束"), 20, active ? Ui.Warn : Ui.Dim);
                     Line(w.Content, $"{new GameDate(item.StartDay)} — {new GameDate(item.EndDay - 1)} · 目标：{(S.ShopAt(item.ShopId) != null ? S.ShopTitle(S.ShopAt(item.ShopId)) : item.ShopId)}", 16);
                     Para(w.Content, S.CityCompetitionTerms(item), 17);
-                    if (active)
+                    if (active && (item.Kind != "promotion" || item.Response == null))
                     {
                         var actions = Ui.Row(w.Content, 42, 8);
                         void Choose(string title, string response) => Ui.Size(Ui.Button(actions, title + (item.Response == response ? " ✓" : ""), () => { S.RespondCityCompetition(item.Id, response); w.Rebuild(); }, 17), -1, 42, 1);
-                        if (item.Kind == "promotion") { Choose("维持定位", "maintain"); Choose("突出特色陈列", "position"); }
+                        if (item.Kind == "promotion")
+                        {
+                            Choose("受影响商品限时九折", "match");
+                            Choose($"加强服务 · 日薪每人 +¥{GameSession.PromotionServiceWageRaise}", "position");
+                            Choose("维持原价 · 人气 −1", "maintain");
+                        }
                         else if (item.Kind == "terms") { Choose("接受3件起订", "batch"); Choose("小批次 / 价格+8%", "small"); }
                         else Choose("改看其他已知货源", "alternative");
                     }

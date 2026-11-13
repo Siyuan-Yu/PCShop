@@ -44,6 +44,8 @@ namespace PCShopSell.Core.Session
 
         private double EventPriceFactor(OwnedShop shop, string productId) =>
             _matchedPromotions.Contains((shop.Place.Id, shop.RetailKind, productId)) ? .9 : 1;
+        public const int PromotionServiceWageRaise = 20;
+
         private EventDef BindPriceWar(EventDef template)
         {
             var promotion = EventPromotion();
@@ -54,16 +56,18 @@ namespace PCShopSell.Core.Session
             {
                 if (!PromotionRivalStillTrading(promotion) || !IsCompetingRetailShop(shop))
                     return "促销门店或经营状态已变化，本次没有调整售价。";
-                if (!RespondCityCompetition(promotion.Id, response)) return "这轮促销已经结束。";
+                double awarenessBefore = shop.Sim.Awareness;
+                if (!RespondCityCompetition(promotion.Id, response)) return "这轮促销已处理，或门店已无法采取这个方案。";
                 return response == "match" ? $"{product}临时九折，促销结束后恢复原价。"
-                    : response == "position" ? $"维持原价并突出服务，本轮预计保留 {promotion.RetainedDemand:P0} 客流。"
-                    : "维持原价，客流会在对手促销结束后恢复。";
+                    : response == "position" ? $"已加强服务，员工基础日薪每人增加 ¥{PromotionServiceWageRaise}。本轮预计保留 {promotion.RetainedDemand:P0} 客流。"
+                    : $"维持原价，门店人气减少 {awarenessBefore - shop.Sim.Awareness:0.##}。促销结束后解除临时客流影响。";
             }
             return EventScene(template, $"{promotion.RivalName}正在给{product}做九折促销，持续至 {new GameDate(promotion.EndDay)} 00:00。"
                 + $"\n受影响门店：{ShopTitle(shop)}。",
                 Choose($"只对{product}限时跟价", _ => Respond("match")),
-                Choose("维持价格，说明服务差异", _ => Respond("position")),
-                Choose("保持现有安排", _ => Respond("maintain")));
+                Choose($"加强服务 · 基础日薪每人 +¥{PromotionServiceWageRaise}", _ => Respond("position"),
+                    s => s.Employees.Any(e => e.Shop == shop), "这家店目前没有员工"),
+                Choose("维持原价 · 门店人气 −1", _ => Respond("maintain")));
         }
         private bool CompetitionMatchesShop(CityCompetition competition)
         {
@@ -118,8 +122,9 @@ namespace PCShopSell.Core.Session
         {
             if (e.Kind == "promotion") return $"{e.RivalName ?? "同商圈同行"}促销至 {new GameDate(e.EndDay)} 00:00。"
                 + (e.Response == "match" ? $"已对{new EventStock { Id = e.ProductId }.Name}临时跟价，其余售价不变。"
-                    : e.Response == "position" ? $"维持原价，预计保留 {(e.RetainedDemand > 0 ? e.RetainedDemand : .95):P0} 客流。"
-                    : "暂时保留 85% 客流，可突出服务差异。");
+                    : e.Response == "position" ? $"已加强服务，预计保留 {(e.RetainedDemand > 0 ? e.RetainedDemand : .95):P0} 客流。"
+                    : e.Response == "maintain" ? "已维持原价，促销期间保留 85% 客流。"
+                    : "暂时保留 85% 客流，可选择应对方式。");
             if (e.Kind == "quota") return $"{(City.HasPlace(e.SupplierId) ? City.GetPlace(e.SupplierId).Name : e.SupplierId)} 的 {Gifts.Get(e.ProductId)?.Name ?? (PartCatalog.Exists(e.ProductId) ? PartCatalog.Get(e.ProductId).Name : e.ProductId)} 每日最多供应4件。可选其他来源，不影响已有在途订单。";
             return (City.HasPlace(e.SupplierId)?City.GetPlace(e.SupplierId).Name:"对应供应商")+"这轮将常规起订量提高到3倍。可选择小批次合作：恢复常规起订量、批发价提高8%。兼营零售的店铺仍须满足零售数量10倍的批发门槛。仅影响本货源和事件期间的后续订单。";
         }
@@ -130,12 +135,22 @@ namespace PCShopSell.Core.Session
             if (e.Kind == "promotion" && response != "position" && response != "maintain" && response != "match") return false;
             if (e.Kind == "terms" && response != "small" && response != "batch") return false;
             if (e.Kind == "quota" && response != "alternative") return false;
-            e.Response = response;
-            if (e.Kind == "promotion" && response == "position" && ShopAt(e.ShopId) is OwnedShop shop)
+            if (e.Kind == "promotion")
             {
-                double advice = shop.RetailKind == "computer" && Relation(Npcs.Jie) >= NpcPerks.JiePriceWarAdvice ? .025 : 0;
-                e.RetainedDemand = Math.Min(1, .90 + ShopSalesBonus(shop) * .3 + Math.Max(0, shop.Sim.ShopReputation - 50) * .001 + advice);
+                var shop = ShopAt(e.ShopId);
+                if (e.Response != null || !PromotionRivalStillTrading(e) || !IsCompetingRetailShop(shop))
+                    return Fail("这轮促销已处理或已结束。");
+                if (response == "position")
+                {
+                    var staff = Employees.Where(row => row.Shop == shop).Select(row => row.Person).Distinct().ToArray();
+                    if (staff.Length == 0) return Fail("这家店目前没有员工可以加强服务。");
+                    foreach (var employee in staff) employee.DailyWageYuan += PromotionServiceWageRaise;
+                    double advice = shop.RetailKind == "computer" && Relation(Npcs.Jie) >= NpcPerks.JiePriceWarAdvice ? .025 : 0;
+                    e.RetainedDemand = Math.Min(1, .90 + ShopSalesBonus(shop) * .3 + Math.Max(0, shop.Sim.ShopReputation - 50) * .001 + advice);
+                }
+                else if (response == "maintain") shop.Sim.AdjustShopAwareness(-1);
             }
+            e.Response = response;
             ApplyCityRetailDemand();
             Say("已记录应对：" + CityCompetitionTitle(e) + "。市场变化按到期时间自然结束。"); return true;
         }

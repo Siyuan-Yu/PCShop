@@ -3,7 +3,7 @@
 文件：`Assets/Resources/Data/events.json`。常规随机事件可直接编辑内容、时间、概率和权重。标记为 `code: true` 的事件由 C# 实现业务和选项，JSON 可覆盖抽取参数。
 **推荐用外部事件编辑器改**：`ExternalTools/EventEditor`（见文末）。
 Unity 菜单 `PCShop/事件/事件清单与触发` 可以看清单、校验格式、运行时一键触发；`PCShop/事件/校验 events.json` 只做校验。
-`EventScriptTests` 覆盖格式和编号。游戏内批量入口为「作弊 → 随机事件批量验收」。[事件编号、分批操作和前 10 项规则](98-random-event-index.md) · [现状与接续流程](99-random-event-handoff.md)
+`EventScriptTests` 覆盖格式和编号。游戏内批量入口为「作弊 → 随机事件批量验收」。[事件编号与 01–30 快查](98-random-event-index.md) · [现状与接续流程](99-random-event-handoff.md)
 
 ## 触发规则（代码里，`GameSession.Events.cs`）
 从开局计日第 2 天起，每天 11:00、15:00、20:00 各抽一次（`EventSlotChance` = 0.4；条件都满足时约 1.2 个/天，实际受条件限制会少一些）；要有店、没有未处理的事件。
@@ -13,27 +13,31 @@ Unity 菜单 `PCShop/事件/事件清单与触发` 可以看清单、校验格�
 ## 一个事件
 ```json
 {
-  "id": "flyer", "title": "标题", "body": "正文", "minDay": 2, "maxDay": 30, "cooldownDays": 10, "weight": 9, "triggerChance": 0.5,
+  "id": "sample_event", "title": "标题", "body": "正文", "minDay": 2, "maxDay": 30, "cooldownDays": 10, "weight": 9, "triggerChance": 0.5,
   "when": [ {"type": "cash", "value": 100} ],
   "choices": [
     { "text": "选项文字", "disabledReason": "灰掉时的提示",
       "requires": [ {"type": "cash", "value": 100} ],
-      "effects": [ {"type": "pay", "yuan": 100, "memo": "传单"}, {"type": "text", "text": "结果文字"} ] }
+      "effects": [ {"type": "pay", "yuan": 100, "memo": "示例支出"}, {"type": "text", "text": "结果文字"} ] },
+    { "text": "婉拒", "effects": [ {"type": "text", "text": "本次没有花费。"} ] }
   ]
 }
 ```
 - `minDay` / `maxDay`：最早 / 最晚第几天（开局那天是第 0 天）。不写 `maxDay` = 没有上限；`30` = 只在开局前 30 天内出现。
 - `triggerChance`：0–1，轮到它时再掷一次，没掷中就当没有；不写 = 100%。
-- `cooldownDays: 9999` = 一局只会触发一次。
+- `cooldownDays: 9999` 表示两次触发之间至少相隔 9,999 个游戏日。需要严格只触发一次时使用持久标记。
 - `when`：全部满足才可能被抽到；`whenAny`：其中至少一条满足。
 - `requires`：全部满足这个选项才能点，没满足灰掉并显示 `disabledReason`（写了 requires 就必须写）。至少要有一个没有 requires 的选项。
 - `group: "npc"`：围绕固定人物的事件。
-- `code: true`：内容在 C# 里（例如 `inspection`、`blackout`、`rival`、`classmate_help`），json 里只负责排序，并可覆盖 `minDay` / `maxDay` / `cooldownDays` / `weight` / `triggerChance`。
+- `code: true` 表示实际条件、文案和结算在 C#。目前 01–30 和 108 使用此方式。JSON 控制目录顺序，并可覆盖 `minDay` / `maxDay` / `cooldownDays` / `weight` / `triggerChance`。
 - 事件按 json 里的顺序参与抽取。
 
 ## 掷骰
-选项里写 `chance`（0–1）就会在 `effects` 执行完后掷一次：掷中执行 `onHit`，没中执行 `onMiss`。
-概率 = `chance` + 魅力×`chanceCharm` + 智力×`chanceIntel` + 交情×`chanceRelation`（人物 `chanceNpc`）+ 命中的 `chanceBonus`（`{"when": [条件], "add": 0.2}`）。
+选项里写 `chance`（0–1）时，先按选择前的数值算概率，再执行 `effects`，最后掷骰进入 `onHit` 或 `onMiss`。
+
+配置了每点系数的属性必须达到门槛。有效魅力 `chanceCharm` 从 45 起，智力 `chanceIntel` 从 50 起，指定人物 `chanceNpc` 的交情 `chanceRelation` 从 35 起。任一参与属性低于门槛时成功率为 0%。全部达标后，在 `chance` 上加各属性超出门槛的点数乘以各自系数。
+
+`chanceBonus` 可以包含固定加成 `{"when": [条件], "add": 0.2}`。如需指定交情或胜场门槛，使用单一未取反的 `relationAtLeast` 或 `racingWins` 条件，并设正数 `perPoint`。未达门槛时成功率为 0%，达标后加 `add`，每超出一点再加 `perPoint`。最终概率限制在 0–100%。
 
 ## 条件 `type`
 `cash`(现金≥value 元) · `cashBelow`(现金<value 元，填 0 = 账户为负) · `negativeCashDays`(账户已连续为负≥value 天) ·

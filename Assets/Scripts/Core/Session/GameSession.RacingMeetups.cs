@@ -38,7 +38,7 @@ namespace PCShopSell.Core.Session
 
     public sealed class RaceSettlement
     {
-        public string Track, Vehicle;
+        public string Track, Vehicle, Extra;
         public RaceMeeting Meeting;
         public bool Practice, Abandoned, PersonalBest;
         public int Position, Competitors, Collisions;
@@ -61,13 +61,16 @@ namespace PCShopSell.Core.Session
         private RaceInvitation RaceInviteFor(string personId, int day) => _raceInvitations.Find(i => i.Day == day && i.PersonId == personId);
 
         public string RaceInviteBlocker(string personId, string trackId, GameDate day)
+            => RaceInviteBlocker(personId, trackId, day, false);
+
+        private string RaceInviteBlocker(string personId, string trackId, GameDate day, bool invitedByNpc)
         {
             if (RacingAccessBlocker is string accessBlocker) return accessBlocker;
             var track = RaceTracks.Get(trackId);
             var person = CityPersonState(personId);
             if (IsGameOver || Racing) return "请先结束当前比赛";
             if (person == null || !LikesRacing(personId)) return "对方平时不参加赛车";
-            if (!IsMet(personId) && !CitySamePlace(personId)) return "请先当面交谈或交换联系方式";
+            if (!invitedByNpc && !IsMet(personId) && !CitySamePlace(personId)) return "请先当面交谈或交换联系方式";
             if (track == null || !City.HasPlace(trackId) || DistrictAccessTier < track.Tier) return "赛场还未开放";
             if (RacingWins < track.RequiredWins) return "这座赛场的正赛需要累计 " + track.RequiredWins + " 胜";
             int date = day.TotalDays;

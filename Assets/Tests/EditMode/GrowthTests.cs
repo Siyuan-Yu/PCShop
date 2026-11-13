@@ -288,21 +288,21 @@ namespace PCShopSell.Tests
         {
             GameSession s = Make(50);
             s.RaiseEvent("flyer");
-            Assert.IsFalse(s.ResolveEvent(0), "钱不够不能花 ¥100");
+            Assert.IsFalse(s.ResolveEvent(0), "钱不够不能花 ¥200");
             Assert.IsNotNull(s.PendingEvent);
             Assert.IsTrue(s.ResolveEvent(1));
         }
 
         [Test]
-        public void Flyer_BuysReputation()
+        public void Flyer_ChargesPromotionWithoutImmediateReputation()
         {
             GameSession s = Make();
             double rep = s.PlayerShop.Reputation;
             Money cash = s.Ledger.Balance;
             s.RaiseEvent("flyer");
             Assert.IsTrue(s.ResolveEvent(0));
-            Assert.AreEqual(rep + 2, s.PlayerShop.Reputation, 1e-9);
-            Assert.AreEqual((cash - Money.FromYuan(100)).Cents, s.Ledger.Balance.Cents);
+            Assert.AreEqual(rep, s.PlayerShop.Reputation, 1e-9);
+            Assert.AreEqual(cash - Money.FromYuan(200), s.Ledger.Balance);
         }
 
         [Test]
@@ -352,7 +352,16 @@ namespace PCShopSell.Tests
             Assert.IsTrue(EventCatalog.Get("thief").When(s));
             s.RaiseEvent("thief");
             Assert.IsFalse(s.IsChoiceEnabled(s.PendingEvent.Choices[1]));
+            var start = s.Clock.Now.TotalMinutes;
+            int before = s.PlayerShop.Stock.CountAll(PartCatalog.Get("ram0"));
+            Assert.IsTrue(s.ResolveEvent(0));
+            Assert.AreEqual(start, s.Clock.Now.TotalMinutes);
+            Assert.That(before - s.PlayerShop.Stock.CountAll(PartCatalog.Get("ram0")), Is.InRange(0, 3));
+            s.RaiseEvent("thief");
+            before = s.PlayerShop.Stock.CountAll(PartCatalog.Get("ram0"));
             Assert.IsTrue(s.ResolveEvent(2));
+            Assert.That(before - s.PlayerShop.Stock.CountAll(PartCatalog.Get("ram0")), Is.InRange(1, 3));
+            s.PlayerShop.Stock.ForceAdd(PartCatalog.Get("ram0"), true, 5);
             s.GrantUpgrade(ShopUpgrades.Cctv);
             s.RaiseEvent("thief");
             Assert.IsTrue(s.IsChoiceEnabled(s.PendingEvent.Choices[1]));

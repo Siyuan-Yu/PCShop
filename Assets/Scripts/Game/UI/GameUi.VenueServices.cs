@@ -117,7 +117,9 @@ namespace PCShopSell.Game.UI
                     + (service.Description == null ? "" : service.Description + "\n") + VenuePlayerEffects(service);
                 Ui.Size(ProductText(row, "<b>" + GameSession.VenueServiceName(def, choice) + "</b>\n<size=15>" + description + "</size>", 18), -1, -1, 1);
                 Ui.Size(Ui.Label(row, pending?.HostPays == true ? "邀请人请客\n免费"
-                    : S.IsOwnedVenue(place)?"老板自用\n免费":S.VenuePlayerPrice(def, choice)+"/次", 20, TextAnchor.MiddleLeft, Ui.Good), 100);
+                    : S.IsOwnedVenue(place)?"老板自用\n免费":pending?.PlayerTreat == true
+                        ? S.VenuePlayerPrice(def, choice) * (pending.Participants.Length + 1) + "\n请客合计"
+                        : S.VenuePlayerPrice(def, choice)+"/次", 20, TextAnchor.MiddleLeft, Ui.Good), 100);
                 string why = here ? S.VenueServiceBlocker(def.Id, choice) : "到场后选择";
                 var action = Ui.Rect(row, "ServiceAction"); Ui.VList(action, 4, 0); Ui.Size(action, 150);
                 Ui.Size(Ui.Button(action, place.Business == "venue_restaurant" ? "点这份餐" : "选择这项服务", () =>

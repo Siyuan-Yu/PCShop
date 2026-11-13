@@ -172,6 +172,8 @@ namespace PCShopSell.Core.Session
             if (_employeeTrips.Any(t => t.ShopId == s.Place.Id)) return "进货员或采购货物还在路上";
             if (Employees.Any(x => x.Person.TransferShopId == s.Place.Id)) return "已有员工安排明天调入，先取消调店安排";
             if (s.Sim.Orders.Count > 0) return "还有没交付的装机单";
+            if (_cityReferrals.Any(offer => offer.ShopId == s.Place.Id && offer.ContractId != null && !offer.Settled))
+                return "还有没交付的转介绍订单";
             if (s.Sim.Queue.Count > 0) return "还有顾客等待结账，请先处理完再退租";
             if (s.Sim.DisplayPcs.Count > 0) return "展示台上还摆着整机，先拆回库存";
             if(IsSpecialBusiness(s)&&SpecialBusinessBusy(s))return "请先处理餐馆订单、二手库存和卖家，再结束经营";

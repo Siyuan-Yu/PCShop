@@ -1,6 +1,8 @@
 ﻿# PCShopSell（工作名）
 
-**当前完整归档（2026-11-13）**覆盖城市、门店、宠物、社交、品牌与展会、证券和赛车。[现行游戏内容与验证范围](docs/97-current-game-content-2026-11-13.md) · [上版归档](docs/96-current-game-content-2026-11-12.md) · [事件优化进度与换机交接](docs/99-random-event-handoff.md) · [全部事件现状](docs/100-random-event-details.md)
+**当前完整归档（2026-11-13）**覆盖城市、门店、宠物、社交、品牌与展会、证券、赛车和前 30 项随机事件改造。[现行游戏内容与验证范围](docs/97-current-game-content-2026-11-13.md) · [上版归档](docs/96-current-game-content-2026-11-12.md)
+
+**随机事件**共有 123 项进入随机池，验收编号 01–126。01–30 已完成本轮改造，下一批从 31「骑手的小挑战」开始。[事件编号](docs/98-random-event-index.md) · [全部事件的触发、选项与结算](docs/100-random-event-details.md) · [运行规则、验收与换机交接](docs/99-random-event-handoff.md) · [配置和编辑器](docs/events-json.md)
 
 湖城 V15 的平面距离扩大到 1.3 倍，新增 22 间可租购商铺和 35 处住宅，其中 12 间商铺已在经营，19 处住宅已有登记住户。四区现共 49 间可租购商铺、132 处住宅。[四区房源与实景扩建](docs/91-city-expansion-v15.md)
 

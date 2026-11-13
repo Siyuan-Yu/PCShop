@@ -261,6 +261,12 @@ namespace PCShopSell.Game.UI
                     : "尚未聊起";
                 Para(w.Content, "工作地点：" + workplace, 17);
                 Para(w.Content, "生活与住处：" + (topics.Contains("life") && state != null ? state.Address : "尚未聊起"), 17, Ui.Dim);
+                if (topics.Contains("life") && state != null && S.City.HasPlace(state.HomePlaceId))
+                {
+                    var home = S.City.GetPlace(state.HomePlaceId);
+                    Ui.Size(Ui.Button(w.Content, "前往住址", () => { CloseAllWindows(); _ctrl.GoToPlace(home); },
+                        17, Ui.ButtonBg, S.DistrictAccessBlocker(home) == null), -1, 38);
+                }
 
                 Line(w.Content, "生平与故事", 20, Ui.Accent);
                 var stories = S.LearnedPersonStories(personId);
@@ -411,7 +417,8 @@ namespace PCShopSell.Game.UI
 
                 var cost = SettlementCard(overview, "ActivityCost");
                 Line(cost, activity.EntryCostRecorded ? "本次支出" : "参考费用", 15, Ui.Dim);
-                var amount = activity.EntryCostRecorded ? Money.FromCents(activity.EntryCostCents) : Money.FromYuan(definition?.PriceYuan ?? 0);
+                var amount = activity.EntryCostRecorded ? Money.FromCents(activity.EntryCostCents)
+                    : Money.FromYuan(definition?.PriceYuan ?? 0) * (activity.PlayerTreat ? activity.Participants.Length + 1 : 1);
                 Line(cost, amount.ToString(), 24, Ui.Accent);
 
                 var duration = SettlementCard(overview, "ActivityDuration");
@@ -548,7 +555,7 @@ namespace PCShopSell.Game.UI
                 if(a.HostId!="player"&&S.CityPerson(a.HostId)!=null)
                     Line(w.Content,"邀请人："+S.CityPerson(a.HostId).Name,18,Ui.Accent);
                 foreach (var p in a.Participants) Line(w.Content, (S.CityPerson(p.PersonId)?.Name ?? "同行者") + " · " + CityParticipantText(p.Phase), 18);
-                string payment = a.HostPays ? "邀请人请客" : a.EntryPaid ? "费用已支付" : "费用尚未支付";
+                string payment = a.HostPays ? "邀请人请客" : a.EntryPaid ? "费用已支付" : a.PlayerTreat ? "你请客 · 到场点单后支付" : "费用尚未支付";
                 Para(w.Content, $"阶段 {a.Stage + 1}/3 · {payment} · 完成奖励 {(a.RewardApplied ? "已结算" : "尚未结算")}", 18);
                 if (a.State == CityActivityPhase.Running)
                 {

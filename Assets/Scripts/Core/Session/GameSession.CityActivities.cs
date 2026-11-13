@@ -400,7 +400,7 @@ namespace PCShopSell.Core.Session
                         continue;
                     }
                     if(!CityVenueFits(venue,now,a.Duration)){EndCityActivity(a,CityActivityPhase.Interrupted,"闭店前无法完成，未收整场费用，请改约",now);continue;}
-                    Money cost=a.HostPays?Money.Zero:VenuePlayerPrice(def, a.ServiceChoice);
+                    Money cost = a.HostPays ? Money.Zero : VenuePlayerPrice(def, a.ServiceChoice) * (a.PlayerTreat ? a.Participants.Length + 1 : 1);
                     string serviceTitle = a.ServiceConfirmed ? VenueServiceName(def, a.ServiceChoice) : def.Name;
                     if(!a.EntryPaid && cost.IsPositive && !Ledger.TryDebit(Clock.Today,"城市活动",cost,serviceTitle,new LedgerAttribution(LedgerBusinessKind.Personal,activityId:a.Id,sourceEventId:a.Id+":entry",transactionKind:"活动消费")))
                     {EndCityActivity(a,CityActivityPhase.Cancelled,"开始时现金不足，未扣活动费",now);continue;}

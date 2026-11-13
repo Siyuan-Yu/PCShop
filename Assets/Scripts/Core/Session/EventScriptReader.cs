@@ -91,7 +91,7 @@ namespace PCShopSell.Core.Session
         private static readonly string[] ChoiceKeys = { "text", "disabledReason", "requires", "effects", "chance", "chanceCharm", "chanceIntel", "chanceRelation", "chanceNpc", "chanceBonus", "onHit", "onMiss" };
         private static readonly string[] CondKeys = { "type", "key", "value", "not" };
         private static readonly string[] OpKeys = { "type", "text", "alt", "key", "npc", "kind", "memo", "value", "yuan", "days", "count", "flag", "stopIfNone" };
-        private static readonly string[] BonusKeys = { "when", "add" };
+        private static readonly string[] BonusKeys = { "when", "add", "perPoint" };
 
         public static EventScriptFile Read(string json)
         {
@@ -152,7 +152,7 @@ namespace PCShopSell.Core.Session
             foreach (var x in Items(d, "chanceBonus"))
             {
                 CheckKeys(x, BonusKeys, where + " chanceBonus", errors);
-                var b = new EventChanceBonus { add = D(x, "add", 0) };
+                var b = new EventChanceBonus { add = D(x, "add", 0), perPoint = D(x, "perPoint", 0) };
                 foreach (var w in Items(x, "when")) b.when.Add(ReadCond(w, where, errors));
                 c.chanceBonus.Add(b);
             }

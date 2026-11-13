@@ -5361,6 +5361,11 @@
       "id": "expansion_1071",
       "x": -492.24380970898363,
       "y": 1050.3502725679368
+    },
+    {
+      "id": "expansion_1072",
+      "x": -151.2435645145428,
+      "y": 905.5943163784348
     }
   ],
   "edges": [
@@ -6442,6 +6447,10 @@
     },
     {
       "a": "lake_garden_27",
+      "b": "expansion_1072"
+    },
+    {
+      "a": "expansion_1072",
       "b": "agency_s_newtown_door"
     },
     {
@@ -12144,6 +12153,86 @@
       "tier": 3,
       "openMinute": 540,
       "closeMinute": 1260
+    },
+    {
+      "id": "hospital_outskirts",
+      "name": "城郊医院",
+      "kind": "other",
+      "node": "expansion_1051",
+      "street": "s_start",
+      "business": "医院",
+      "size": "medium",
+      "explicitEntrance": true,
+      "tradable": false,
+      "entranceX": -1.2354319595287961,
+      "entranceY": 7.904031115410362,
+      "width": 16,
+      "depth": 12,
+      "heading": -8.883681343268835,
+      "model": "office",
+      "tier": 0,
+      "openMinute": 0,
+      "closeMinute": 1440
+    },
+    {
+      "id": "hospital_community",
+      "name": "社区医院",
+      "kind": "other",
+      "node": "lake_community_back_2",
+      "street": "s_services",
+      "business": "医院",
+      "size": "medium",
+      "explicitEntrance": true,
+      "tradable": false,
+      "entranceX": -0.3038979524526155,
+      "entranceY": 7.994225793314513,
+      "width": 16,
+      "depth": 12,
+      "heading": -2.177032561481759,
+      "model": "office",
+      "tier": 1,
+      "openMinute": 0,
+      "closeMinute": 1440
+    },
+    {
+      "id": "hospital_park",
+      "name": "公园医院",
+      "kind": "other",
+      "node": "lake_park_back_13",
+      "street": "s_sports",
+      "business": "医院",
+      "size": "medium",
+      "explicitEntrance": true,
+      "tradable": false,
+      "entranceX": -7.858596176948481,
+      "entranceY": 1.4974866034964975,
+      "width": 16,
+      "depth": 12,
+      "heading": -79.21140245953613,
+      "model": "office",
+      "tier": 2,
+      "openMinute": 0,
+      "closeMinute": 1440
+    },
+    {
+      "id": "hospital_garden",
+      "name": "花园医院",
+      "kind": "other",
+      "node": "expansion_1072",
+      "street": "s_night",
+      "business": "医院",
+      "size": "medium",
+      "explicitEntrance": true,
+      "tradable": false,
+      "entranceX": 0.45354160270105126,
+      "entranceY": -7.987133404083011,
+      "width": 16,
+      "depth": 12,
+      "heading": 176.750005005718,
+      "model": "office",
+      "tier": 3,
+      "openMinute": 0,
+      "closeMinute": 1440
     }
   ],
   "patrols": [

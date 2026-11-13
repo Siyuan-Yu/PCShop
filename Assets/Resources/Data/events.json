@@ -11,518 +11,25 @@
     {"id": "lend", "code": true, "minDay": 8, "cooldownDays": 20, "weight": 6},
     {"id": "classmate_help", "code": true, "minDay": 3, "maxDay": 30, "cooldownDays": 9999, "weight": 40},
     {"id": "review", "code": true},
-    {
-      "id": "flyer", "title": "发传单的上门了", "body": "一个做地推的小伙子问：\"老板，花 ¥100 帮你在附近大学门口发一天传单，要不要？\"", "minDay": 2, "cooldownDays": 10, "weight": 9,
-      "choices": [
-        {
-          "text": "来一天（¥100）", "disabledReason": "钱不够",
-          "requires": [
-            {"type": "cash", "value": 100}
-          ],
-          "effects": [
-            {"type": "pay", "memo": "传单", "yuan": 100},
-            {"type": "rep", "value": 2},
-            {"type": "text", "text": "第二天有几个学生拿着传单进店。名望 +2。"}
-          ]
-        },
-        {
-          "text": "不用",
-          "effects": [
-            {"type": "text", "text": "小伙子点点头，去下一家了。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "cold", "title": "身体不舒服", "body": "你从早上就觉得头沉、嗓子疼，像是要感冒。", "minDay": 3, "cooldownDays": 12, "weight": 9,
-      "whenAny": [
-        {"type": "energyBelow", "value": 45},
-        {"type": "sleepDebtAbove", "value": 2},
-        {"type": "healthBelow", "value": 85}
-      ],
-      "choices": [
-        {
-          "text": "去诊所看看（¥150）", "disabledReason": "钱不够",
-          "requires": [
-            {"type": "cash", "value": 150}
-          ],
-          "effects": [
-            {"type": "pay", "memo": "诊所", "yuan": 150},
-            {"type": "health", "value": 20},
-            {"type": "text", "text": "医生开了药，叮嘱你别熬夜。健康 +20。"}
-          ]
-        },
-        {
-          "text": "吃片药硬扛（¥20）", "disabledReason": "钱不够",
-          "requires": [
-            {"type": "cash", "value": 20}
-          ],
-          "effects": [
-            {"type": "pay", "memo": "感冒药", "yuan": 20},
-            {"type": "health", "value": -5},
-            {"type": "energy", "value": 10},
-            {"type": "text", "text": "药劲上来昏昏沉沉的，健康 -5，精力 -8。"}
-          ]
-        },
-        {
-          "text": "咬牙硬挺",
-          "effects": [
-            {"type": "health", "value": -10},
-            {"type": "energy", "value": 10},
-            {"type": "text", "text": "没花钱，但整天头昏脑涨。健康 -10，精力 -8。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "intro_zhang", "title": "戴眼镜的熟客", "body": "一位戴眼镜的中年人在店里转了半天，终于开口：\"小伙子，我是隔壁中学的张绍文，学校机房有几台电脑老坏，你这儿能修吗？\"", "group": "npc", "minDay": 3, "cooldownDays": 9999, "weight": 30,
-      "when": [
-        {"type": "samePlace", "key": "zhang"},
-        {"type": "met", "key": "zhang", "not": true}
-      ],
-      "choices": [
-        {
-          "text": "热情招呼，泡杯茶慢慢聊",
-          "effects": [
-            {"type": "meet", "npc": "zhang", "value": 22},
-            {"type": "rep", "value": 0.5},
-            {"type": "text", "text": "张绍文说你实在，留了电话。以后他就是你的熟客了。（认识了张绍文）"}
-          ]
-        },
-        {
-          "text": "简单介绍几款入门配置",
-          "effects": [
-            {"type": "meet", "npc": "zhang", "value": 16},
-            {"type": "text", "text": "张绍文记下了几个型号，说回去和同事商量。（认识了张绍文）"}
-          ]
-        },
-        {
-          "text": "店里忙，随口应付",
-          "effects": [
-            {"type": "meet", "npc": "zhang", "value": 8},
-            {"type": "text", "text": "张绍文点点头走了，看起来不太热络。（认识了张绍文）"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "intro_landlady", "title": "房东上门", "body": "一位烫着卷发的中年女人拎着钥匙串上门：\"我是李秀兰，你这铺面和楼上的出租屋都是我的。来看看租客过得怎么样。\"", "group": "npc", "minDay": 6, "cooldownDays": 9999, "weight": 30,
-      "when": [
-        {"type": "samePlace", "key": "landlady"},
-        {"type": "met", "key": "landlady", "not": true}
-      ],
-      "choices": [
-        {
-          "text": "递上一杯茶，请她坐",
-          "effects": [
-            {"type": "meet", "npc": "landlady", "value": 22},
-            {"type": "text", "text": "李秀兰喝着茶打量店面：\"小伙子挺勤快的，我喜欢准时交租的。\"（认识了李秀兰）"}
-          ]
-        },
-        {
-          "text": "保证每个月准时交租",
-          "effects": [
-            {"type": "meet", "npc": "landlady", "value": 16},
-            {"type": "text", "text": "李秀兰点点头：\"那就好，别拖我房租。\"（认识了李秀兰）"}
-          ]
-        },
-        {
-          "text": "说要去进货，匆匆出门",
-          "effects": [
-            {"type": "meet", "npc": "landlady", "value": 8},
-            {"type": "text", "text": "李秀兰在门口撇了撇嘴。（认识了李秀兰）"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "intro_lin", "title": "发小来看你", "body": "门口探进一个熟悉的脑袋：\"我听说你在电脑城开店了，来看看你！\" 是你从小一起长大的林远航。", "group": "npc", "minDay": 5, "cooldownDays": 9999, "weight": 30,
-      "when": [
-        {"type": "samePlace", "key": "lin"},
-        {"type": "met", "key": "lin", "not": true}
-      ],
-      "choices": [
-        {
-          "text": "拉他去吃顿好的（¥60）", "disabledReason": "钱不够",
-          "requires": [
-            {"type": "cash", "value": 60}
-          ],
-          "effects": [
-            {"type": "pay", "memo": "请发小", "yuan": 60},
-            {"type": "meet", "npc": "lin", "value": 30},
-            {"type": "text", "text": "两个人边吃边聊起小时候的事。林远航说：\"以后有事儿找我。\"（认识了林远航）"}
-          ]
-        },
-        {
-          "text": "在店里聊几句",
-          "effects": [
-            {"type": "meet", "npc": "lin", "value": 20},
-            {"type": "text", "text": "林远航拍拍你肩膀：\"别太累了，注意身体。\"（认识了林远航）"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "zhang_visit", "title": "张绍文来闲坐", "body": "张绍文下课后晃进店里，往椅子上一坐：\"今天没什么事，来你这儿歇会儿。\"", "group": "npc", "minDay": 5, "cooldownDays": 12, "weight": 10,
-      "when": [
-        {"type": "samePlace", "key": "zhang"},
-        {"type": "met", "key": "zhang"},
-        {"type": "relationBelow", "key": "zhang", "value": 95}
-      ],
-      "choices": [
-        {
-          "text": "约到家常馆慢慢聊（实际赴约）",
-          "effects": [
-            {"type": "meeting", "key": "legacy-zhang-chat:", "npc": "zhang", "kind": "dinner"}
-          ]
-        },
-        {
-          "text": "约好一起去市场看样机",
-          "effects": [
-            {"type": "meeting", "key": "legacy-zhang-market:", "npc": "zhang", "kind": "market"}
-          ]
-        },
-        {
-          "text": "说店里忙，请他改天",
-          "effects": [
-            {"type": "relation", "npc": "zhang", "value": -1},
-            {"type": "text", "text": "张绍文讪讪地走了。交情 -1。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "zhang_family", "title": "张绍文介绍亲戚", "body": "张绍文领着一位亲戚进店：\"我外甥要配台电脑上大学，你给个实在价。\"", "group": "npc", "minDay": 20, "cooldownDays": 40, "weight": 8,
-      "when": [
-        {"type": "samePlace", "key": "zhang"},
-        {"type": "relationAtLeast", "key": "zhang", "value": 40}
-      ],
-      "choices": [
-        {
-          "text": "登记熟客报价的真实订单",
-          "effects": [
-            {"type": "referral", "key": "zhang_family", "memo": "张绍文介绍的学生", "count": 1, "flag": true}
-          ]
-        },
-        {
-          "text": "登记正常报价的真实订单",
-          "effects": [
-            {"type": "referral", "key": "zhang_family", "memo": "张绍文介绍的学生", "count": 1}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "landlady_rent", "title": "房东想涨租", "body": "李秀兰在门口叹气：\"这边房价又涨了，我这铺面租金也得跟着涨涨了……\"", "group": "npc", "minDay": 60, "cooldownDays": 90, "weight": 8,
-      "when": [
-        {"type": "samePlace", "key": "landlady"},
-        {"type": "met", "key": "landlady"},
-        {"type": "rentHikesBelow", "value": 3},
-        {"type": "relationBelow", "key": "landlady", "value": 70}
-      ],
-      "choices": [
-        {
-          "text": "预约饭局，再当面聊租约",
-          "effects": [
-            {"type": "meeting", "key": "legacy-landlady-rent:", "npc": "landlady", "kind": "dinner"}
-          ]
-        },
-        {
-          "text": "跟她讨价还价", "chance": 0.3, "chanceCharm": 0.01, "chanceNpc": "landlady", "chanceRelation": 0.004,
-          "onHit": [
-            {"type": "relation", "npc": "landlady", "value": 2},
-            {"type": "text", "text": "你说得有理有据，李秀兰笑着摆摆手：\"好好好，这次先不涨。\""}
-          ],
-          "onMiss": [
-            {"type": "relation", "npc": "landlady", "value": -3},
-            {"type": "rentHike"},
-            {"type": "text", "text": "没说服她，店租上涨 10%。交情 -3。"}
-          ]
-        },
-        {
-          "text": "认了，涨就涨吧",
-          "effects": [
-            {"type": "relation", "npc": "landlady", "value": 1},
-            {"type": "rentHike"},
-            {"type": "text", "text": "店租上涨 10%。李秀兰拍拍你肩膀：\"小伙子懂事。\" 交情 +1。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "landlady_help", "title": "李秀兰介绍大客户", "body": "李秀兰上楼送了一盘饺子，顺口说：\"我外甥开了家培训机构，要采购一批机器，我让他来找你。\"", "group": "npc", "minDay": 90, "cooldownDays": 120, "weight": 6,
-      "when": [
-        {"type": "samePlace", "key": "landlady"},
-        {"type": "relationAtLeast", "key": "landlady", "value": 55}
-      ],
-      "choices": [
-        {
-          "text": "谢谢李秀兰，我给最优惠的价",
-          "effects": [
-            {"type": "referral", "key": "landlady_training", "memo": "李秀兰介绍的培训机构", "count": 3, "flag": true}
-          ]
-        },
-        {
-          "text": "按市价来，不欠人情",
-          "effects": [
-            {"type": "referral", "key": "landlady_training", "memo": "李秀兰介绍的培训机构", "count": 3}
-          ]
-        }
-      ]
-    },
+    {"id": "flyer", "code": true, "minDay": 2, "cooldownDays": 10, "weight": 9},
+    {"id": "cold", "code": true, "minDay": 3, "cooldownDays": 12, "weight": 9},
+    {"id": "intro_zhang", "code": true, "minDay": 3, "cooldownDays": 9999, "weight": 30},
+    {"id": "intro_landlady", "code": true, "minDay": 6, "cooldownDays": 9999, "weight": 30},
+    {"id": "intro_lin", "code": true, "minDay": 5, "cooldownDays": 9999, "weight": 30},
+    {"id": "zhang_visit", "code": true, "minDay": 5, "cooldownDays": 12, "weight": 10},
+    {"id": "zhang_family", "code": true, "minDay": 20, "cooldownDays": 40, "weight": 8},
+    {"id": "landlady_rent", "code": true, "minDay": 60, "cooldownDays": 90, "weight": 8},
+    {"id": "landlady_help", "code": true, "minDay": 90, "cooldownDays": 120, "weight": 6},
     {"id": "zhou_deal", "code": true},
-    {
-      "id": "jie_loan", "title": "唐俊杰周转不开", "body": "唐俊杰一脸愁容过来：\"这月进货款差一点，能不能先借我 ¥1,000？十天内还你。\"", "group": "npc", "minDay": 20, "cooldownDays": 40, "weight": 8,
-      "when": [
-        {"type": "samePlace", "key": "jie"},
-        {"type": "met", "key": "jie"},
-        {"type": "relationAtLeast", "key": "jie", "value": 15}
-      ],
-      "choices": [
-        {
-          "text": "借给他（¥1,000）", "disabledReason": "钱不够",
-          "requires": [
-            {"type": "cash", "value": 1000}
-          ],
-          "effects": [
-            {"type": "lend", "memo": "唐俊杰", "yuan": 1000},
-            {"type": "relation", "npc": "jie", "value": 8},
-            {"type": "text", "text": "已借给唐俊杰 ¥1,000，交情 +8。"},
-            {"type": "repay", "memo": "唐俊杰还钱（含谢礼）", "yuan": 1100, "days": 10}
-          ]
-        },
-        {
-          "text": "自己也紧，抱歉",
-          "effects": [
-            {"type": "relation", "npc": "jie", "value": -3},
-            {"type": "text", "text": "唐俊杰笑了笑说没事，但神情有点失落。交情 -3。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "jie_trade", "title": "唐俊杰缺个配件", "body": "唐俊杰急匆匆过来：\"客人等着要货，我这儿刚好缺一件，把你架上的匀一件给我，我按好价格收！\"", "group": "npc", "minDay": 40, "cooldownDays": 30, "weight": 8,
-      "when": [
-        {"type": "samePlace", "key": "jie"},
-        {"type": "relationAtLeast", "key": "jie", "value": 50},
-        {"type": "stock"}
-      ],
-      "choices": [
-        {
-          "text": "没问题，拿去",
-          "effects": [
-            {"type": "loseItem", "alt": "架子上空空的，没帮上忙。", "stopIfNone": true},
-            {"type": "gain", "memo": "转手给唐俊杰", "yuan": 600},
-            {"type": "relation", "npc": "jie", "value": 3},
-            {"type": "text", "text": "把「{item}」匀给了唐俊杰，收了 ¥600。交情 +3。"}
-          ]
-        },
-        {
-          "text": "我也要留着卖",
-          "effects": [
-            {"type": "relation", "npc": "jie", "value": -1},
-            {"type": "text", "text": "唐俊杰摆摆手说没事，去别处问了。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "lin_visit", "title": "林远航来吐槽", "body": "林远航中午溜出来看你，吐槽了一路老板有多难伺候。", "group": "npc", "minDay": 8, "cooldownDays": 15, "weight": 10,
-      "when": [
-        {"type": "samePlace", "key": "lin"},
-        {"type": "met", "key": "lin"},
-        {"type": "relationBelow", "key": "lin", "value": 95}
-      ],
-      "choices": [
-        {
-          "text": "预约一起吃饭（到场后消费）",
-          "effects": [
-            {"type": "meeting", "key": "legacy-lin-meal:", "npc": "lin", "kind": "dinner"}
-          ]
-        },
-        {
-          "text": "寒暄两句",
-          "effects": [
-            {"type": "relation", "npc": "lin", "value": 1},
-            {"type": "text", "text": "林远航挥挥手回去上班了。交情 +1。"}
-          ]
-        },
-        {
-          "text": "说在忙，下次再聊",
-          "effects": [
-            {"type": "relation", "npc": "lin", "value": -2},
-            {"type": "text", "text": "林远航说了声“行”，有点失落。交情 -2。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "lin_loan", "title": "林远航想借钱", "body": "林远航想借 ¥2,000 报培训班，说发了工资就还。交情越高，收回借款的可能性越大。", "group": "npc", "minDay": 40, "cooldownDays": 60, "weight": 6,
-      "when": [
-        {"type": "samePlace", "key": "lin"},
-        {"type": "met", "key": "lin"},
-        {"type": "relationAtLeast", "key": "lin", "value": 30}
-      ],
-      "choices": [
-        {
-          "text": "借给他（¥2,000）", "disabledReason": "钱不够", "chance": 0.75,
-          "requires": [
-            {"type": "cash", "value": 2000}
-          ],
-          "effects": [
-            {"type": "lend", "memo": "林远航", "yuan": 2000},
-            {"type": "relation", "npc": "lin", "value": 10}
-          ],
-          "onHit": [
-            {"type": "text", "text": "已借给林远航 ¥2,000，交情 +10。"},
-            {"type": "repay", "memo": "林远航还钱（含请客）", "yuan": 2200, "days": 25}
-          ],
-          "onMiss": [
-            {"type": "text", "text": "已借给林远航 ¥2,000，交情 +10。后来他一直没还，这笔钱没有收回。"}
-          ],
-          "chanceBonus": [
-            {"when": [{"type": "relationAtLeast", "key": "lin", "value": 70}], "add": 0.2}
-          ]
-        },
-        {
-          "text": "我也不宽裕，抱歉",
-          "effects": [
-            {"type": "relation", "npc": "lin", "value": -4},
-            {"type": "text", "text": "林远航勉强笑了笑：\"没事，我再想别的办法。\" 交情 -4。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "race_xinglan_invite", "title": "星澜约你上赛道", "body": "许星澜在赛道边发来消息：\"下一场正式比赛，我替你占个位置，一起跑一场？\"", "group": "race", "minDay": 4, "cooldownDays": 21, "weight": 9,
-      "when": [
-        {"type": "racingUnlocked"}
-      ],
-      "choices": [
-        {
-          "text": "好，一起参赛",
-          "effects": [
-            {"type": "text", "text": "许星澜笑了：\"这就对了，记得赛前检查轮胎。\""},
-            {"type": "meet", "npc": "racer_0", "value": 18},
-            {"type": "raceInvite", "key": "race_0", "npc": "racer_0"}
-          ]
-        },
-        {
-          "text": "这次不去",
-          "effects": [
-            {"type": "text", "text": "许星澜回了个耸肩的表情：\"下次也行。\""}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "race_zhixia_club", "title": "车友俱乐部的邀请", "body": "沈知夏是本地车友俱乐部的主理人，她说周末赛事缺一个愿意认真跑的新人，问你要不要来。", "group": "race", "minDay": 6, "cooldownDays": 25, "weight": 8,
-      "when": [
-        {"type": "racingUnlocked"}
-      ],
-      "choices": [
-        {
-          "text": "报名，一起跑",
-          "effects": [
-            {"type": "text", "text": "沈知夏记下了你的名字：\"别紧张，先跑稳，再跑快。\""},
-            {"type": "meet", "npc": "racer_1", "value": 16},
-            {"type": "raceInvite", "key": "race_0", "npc": "racer_1"}
-          ]
-        },
-        {
-          "text": "先看看再说",
-          "effects": [
-            {"type": "text", "text": "你说想先看看别人怎么跑，沈知夏点头：\"也好，来看看就行。\""},
-            {"type": "meet", "npc": "racer_1", "value": 10}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "race_jingxing_tuning", "title": "赛前整备", "body": "陆景行蹲在你的车边看了半天：\"轮胎内侧偏磨，刹车也该调了。我给你整备一下，只收材料费。\"", "group": "race", "minDay": 6, "cooldownDays": 25, "weight": 7,
-      "when": [
-        {"type": "racingUnlocked"}
-      ],
-      "choices": [
-        {
-          "text": "好，调一下（¥150）", "disabledReason": "现金不够 ¥150",
-          "requires": [
-            {"type": "cash", "value": 150}
-          ],
-          "effects": [
-            {"type": "pay", "memo": "赛前整备", "yuan": 150},
-            {"type": "relation", "npc": "racer_2", "value": 6},
-            {"type": "intel", "value": 1},
-            {"type": "text", "text": "陆景行调完拧紧最后一颗螺丝：\"这下刹车靠谱了。\"（智力 +1）"},
-            {"type": "raceInvite", "key": "race_0", "npc": "racer_2"}
-          ]
-        },
-        {
-          "text": "我自己看着办",
-          "effects": [
-            {"type": "text", "text": "陆景行耸耸肩：\"跑出去再后悔就晚了。\""}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "race_ruoning_rare", "title": "收藏车的试驾", "body": "顾若宁手上有一台品相很好的收藏车，想找个靠谱的人试跑一圈，顺便看看你的眼光。", "group": "race", "minDay": 8, "cooldownDays": 40, "weight": 5,
-      "when": [
-        {"type": "met", "key": "racer_3", "not": true}
-      ],
-      "choices": [
-        {
-          "text": "试驾一圈",
-          "effects": [
-            {"type": "energy", "value": 8},
-            {"type": "meet", "npc": "racer_3", "value": 14},
-            {"type": "text", "text": "你跑了一圈，顾若宁在旁边记下了你的评价。她说：\"你比大多数只看颜色的人懂行。\"（精力 -8，交情 +）"},
-            {"type": "intel", "value": 1}
-          ]
-        },
-        {
-          "text": "太贵重了，不敢碰",
-          "effects": [
-            {"type": "text", "text": "顾若宁笑：\"也对，不熟的人我也不敢借。\""},
-            {"type": "meet", "npc": "racer_3", "value": 8}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "race_ming_lunch", "title": "待业的朋友约比赛", "body": "许明最近没接到修理活，但还是约你去跑下一场。他有点不好意思：\"赛后能不能借我 ¥200 吃饭？\"", "group": "race", "minDay": 8, "cooldownDays": 35, "weight": 6,
-      "when": [
-        {"type": "racingUnlocked"}
-      ],
-      "choices": [
-        {
-          "text": "借他 ¥200，一起去", "disabledReason": "现金不够 ¥200",
-          "requires": [
-            {"type": "cash", "value": 200}
-          ],
-          "effects": [
-            {"type": "lend", "memo": "许明", "yuan": 200},
-            {"type": "repay", "memo": "许明还钱", "yuan": 200, "days": 5},
-            {"type": "meet", "npc": "life_ming", "value": 16},
-            {"type": "raceInvite", "key": "race_0", "npc": "life_ming"},
-            {"type": "text", "text": "许明松了口气：\"下周一定还你。\""}
-          ]
-        },
-        {
-          "text": "比赛可以，钱不借",
-          "effects": [
-            {"type": "meet", "npc": "life_ming", "value": 12},
-            {"type": "raceInvite", "key": "race_0", "npc": "life_ming"}
-          ]
-        },
-        {
-          "text": "都先算了",
-          "effects": [
-            {"type": "text", "text": "许明低下头：\"没事，我懂。\""}
-          ]
-        }
-      ]
-    },
+    {"id": "jie_loan", "code": true, "minDay": 20, "cooldownDays": 40, "weight": 8},
+    {"id": "jie_trade", "code": true, "minDay": 40, "cooldownDays": 30, "weight": 8},
+    {"id": "lin_visit", "code": true, "minDay": 8, "cooldownDays": 15, "weight": 10},
+    {"id": "lin_loan", "code": true, "minDay": 40, "cooldownDays": 60, "weight": 6},
+    {"id": "race_xinglan_invite", "code": true, "minDay": 4, "cooldownDays": 21, "weight": 9},
+    {"id": "race_zhixia_club", "code": true, "minDay": 6, "cooldownDays": 25, "weight": 8},
+    {"id": "race_jingxing_tuning", "code": true, "minDay": 6, "cooldownDays": 25, "weight": 7},
+    {"id": "race_ruoning_rare", "code": true, "minDay": 8, "cooldownDays": 40, "weight": 5},
+    {"id": "race_ming_lunch", "code": true, "minDay": 8, "cooldownDays": 35, "weight": 6},
     {
       "id": "race_rider_bet", "title": "骑手的小挑战", "body": "吴磊送完单，停在你面前：\"听说你也跑赛道，敢不敢跟我比一圈，输的请吃夜宵，¥200。\"", "group": "race", "minDay": 7, "cooldownDays": 30, "weight": 6,
       "when": [
@@ -531,7 +38,7 @@
       ],
       "choices": [
         {
-          "text": "比一圈", "disabledReason": "现金不够 ¥200", "chance": 0.45, "chanceIntel": 0.004,
+          "text": "比一圈（智力 50、1 胜起）", "disabledReason": "现金不够 ¥200", "chance": 0.45, "chanceIntel": 0.004,
           "requires": [
             {"type": "cash", "value": 200}
           ],
@@ -547,7 +54,7 @@
             {"type": "text", "text": "你输了，转弯还蹭了一下护栏，付了 ¥200（健康 -3）。"}
           ],
           "chanceBonus": [
-            {"when": [{"type": "racingWins", "value": 1}], "add": 0.2}
+            {"when": [{"type": "racingWins", "value": 1}], "add": 0.2, "perPoint": 0.05}
           ]
         },
         {
@@ -830,7 +337,7 @@
       ],
       "choices": [
         {
-          "text": "照常跑", "chance": 0.6,
+          "text": "照常跑（2 胜起）", "chance": 0.6,
           "onHit": [
             {"type": "intel", "value": 1},
             {"type": "rep", "value": 0.5},
@@ -842,7 +349,7 @@
             {"type": "text", "text": "弯道打滑蹭了护栏，车修花了 ¥200，人也擦伤了（健康 -5）。"}
           ],
           "chanceBonus": [
-            {"when": [{"type": "racingWins", "value": 2}], "add": 0.15}
+            {"when": [{"type": "racingWins", "value": 2}], "add": 0.15, "perPoint": 0.05}
           ]
         },
         {
@@ -1969,7 +1476,7 @@
       ],
       "choices": [
         {
-          "text": "试一试", "chance": 0.55, "chanceCharm": 0.003,
+          "text": "试一试（魅力 45 起）", "chance": 0.55, "chanceCharm": 0.003,
           "onHit": [
             {"type": "gain", "memo": "限时抢购", "yuan": 400},
             {"type": "shopRep", "value": 0.5},

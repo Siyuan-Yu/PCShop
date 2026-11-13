@@ -51,7 +51,8 @@ namespace PCShopSell.Core.Session
                 s => s.QuestLessonRead("cashflow"), null, true);
             yield return Step("enterprise", 3, QuestTarget.Enterprise, "完成第一份企业合同", "按时交齐一份企业合同",
                 $"先交 {K("5% 保证金")}，{K("按时交齐")}才退还并有奖励。",
-                s => s.EnterpriseContracts.Any(c => c.Settled && c.Completed == c.Count && c.Failed == 0), EnterpriseProgress);
+                s => s.EnterpriseContracts.Any(c => !c.PersonalReferral && c.Settled && c.Completed == c.Count && c.Failed == 0)
+                    || s.CityReferrals.Any(o => o.Count > 1 && o.Fulfilled), EnterpriseProgress);
             yield return Step("direct", 3, QuestTarget.Direct, "建立稳定直供", $"和{K("周维成")}签直供，进一次货",
                 $"进价只要{K("市场价 84%")}。",
                 s => s.Flags.Contains("tutorial:direct"),
@@ -85,7 +86,7 @@ namespace PCShopSell.Core.Session
         }
         private static string EnterpriseProgress(GameSession s)
         {
-            var active = s.EnterpriseContracts.FirstOrDefault(c => c.Accepted && !c.Settled);
+            var active = s.EnterpriseContracts.FirstOrDefault(c => !c.PersonalReferral && c.Accepted && !c.Settled);
             return active == null ? null : $"已交 {active.Completed}/{active.Count} · 剩余 {Math.Max(0, (active.DueMinute - s.Clock.Now.TotalMinutes) / 60)} 小时";
         }
         private static string ParkProgress(GameSession s) =>

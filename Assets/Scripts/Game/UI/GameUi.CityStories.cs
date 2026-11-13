@@ -93,14 +93,54 @@ namespace PCShopSell.Game.UI
                     if(story.Stage==2)BuildStoryActivityActions(body,story,w,"河岸相处");
                     if(story.Stage>=3)Para(body,S.CityPersonalFeedback("life_creator"),18,Ui.Good);
                 }
-                foreach(var referral in S.CityReferrals.Where(o=>o.ContractId==null))
+                foreach(var referral in S.CityReferrals.Where(o=>!o.Settled && (o.ContractId==null || o.ShopId!=null)))
                 {
                     var offer=referral;
+                    if (offer.ShopId != null)
+                    {
+                        BuildIndustryReferral(body, offer, w.Rebuild, true);
+                        continue;
+                    }
                     Para(body,"转介绍："+offer.Client+" · "+offer.Count+"台 · "+(offer.Discount?"正常报价95%":"正常报价"),17,Ui.Accent);
                     Ui.Size(Ui.Button(body,"核对并确认真实订单…",()=>ConfirmAction("转介绍试单", "按电脑店现行整机报价确认，支付5%保证金；仍需库存、装机和真实交付，不直接领取所谓净收益。", "确认合同",()=>{S.AcceptCityReferral(offer.Id);w.Rebuild();}),17,Ui.ButtonHot),-1,42);
                 }
                 if (!GameSession.FirstChapterTrial) Para(w.Content,S.CityExpoCalendar,15,Ui.Dim);
             });
+        }
+
+        private void BuildIndustryReferralOrders(Transform body, OwnedShop shop)
+        {
+            foreach (var offer in S.CityReferrals.Where(o => o.ShopId == shop.Place.Id && !o.Settled
+                && (o.ContractId == null || o.RetailKind != "computer")))
+                BuildIndustryReferral(body, offer, RebuildDock, false);
+        }
+
+        private void BuildIndustryReferral(Transform body, CityReferralOffer offer, Action refresh, bool showShop)
+        {
+            var shop = S.ShopAt(offer.ShopId);
+            Para(body, $"{offer.Client} · {offer.ProductName} ×{offer.Count} · {offer.Total}"
+                + (showShop && shop != null ? $" · {S.ShopTitle(shop)}" : ""), 17, Ui.Accent);
+            if (offer.ContractId == null)
+            {
+                string blocker = S.IndustryReferralBlocker(offer);
+                if (blocker != null) Para(body, blocker, 15, Ui.Dim);
+                string terms = offer.Count == 1 ? "3 天内交付，交付时收款。"
+                    : $"5 天内交付，保证金 {offer.Deposit}，全数交付后返还并另奖 3%。";
+                Ui.Size(Ui.Button(body, "确认接单…", () => ConfirmAction("确认转介绍订单", terms, "确认接单",
+                    () => { S.AcceptCityReferral(offer.Id); refresh(); }), 17, Ui.ButtonHot, blocker == null), -1, 42);
+                Ui.Size(Ui.Button(body, "婉拒这笔报价", () => { S.DeclineIndustryReferral(offer.Id); refresh(); },
+                    16, Ui.ButtonBg), -1, 36);
+                return;
+            }
+            Para(body, $"交期 {new GameTimestamp(offer.DueMinute)}", 16, Ui.Dim);
+            if (offer.RetailKind == "computer") Para(body, "到该店的订单页装机并交付。", 16, Ui.Dim);
+            else
+            {
+                string blocker = S.IndustryReferralBlocker(offer, true);
+                if (blocker != null) Para(body, blocker, 15, Ui.Dim);
+                Ui.Size(Ui.Button(body, "交付订单", () => { S.DeliverIndustryReferral(offer.Id); refresh(); },
+                    17, Ui.ButtonHot, blocker == null), -1, 42);
+            }
         }
         private void CityStoryPersonActions(Transform content,string personId,Window parent,string role)
         {

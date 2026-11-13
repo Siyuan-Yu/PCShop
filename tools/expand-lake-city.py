@@ -1,4 +1,4 @@
-"""Author V15 from the saved V14 layout: 1.3x linear extent, 22 shops, 35 homes.
+"""Author V15 from the saved V14 layout: 1.3x extent, 22 shops, 35 homes, 4 hospitals.
 
 Only writes authored layout data. Does not open Unity, run gameplay, or touch saves.
 The baseline is immutable, so rebuilding never scales an already expanded city.
@@ -20,6 +20,12 @@ PLAN = {
     "community": {"tier": 1, "homes": {"s_services": 7}, "shops": {"s_market": 3, "s_services": 2}},
     "park": {"tier": 2, "homes": {"s_sports": 11}, "shops": {"s_sports": 1, "s_creative": 2, "s_expo": 2}},
     "garden": {"tier": 3, "homes": {"s_newtown": 10}, "shops": {"s_night": 3, "s_newtown": 3}},
+}
+HOSPITALS = {
+    "outskirts": ("s_start", "城郊医院"),
+    "community": ("s_services", "社区医院"),
+    "park": ("s_sports", "公园医院"),
+    "garden": ("s_night", "花园医院"),
 }
 
 HOUSEHOLDS = {
@@ -196,6 +202,8 @@ def place_unit(region,kind,street,tier,ordinal):
     if kind=="home":
         width,depth=[(9.5,10.5),(17,17),(20,19),(26,29)][tier]
         size="small"
+    elif kind=="hospital":
+        width,depth,size=16,12,"medium"
     else:
         size=("medium" if ordinal%3==1 else "large" if ordinal%5==4 else "small")
         width,depth={"small":(12,11),"medium":(16,13),"large":(20,15)}[size]
@@ -239,6 +247,11 @@ def place_unit(region,kind,street,tier,ordinal):
         d["blocks"].append(dict(street=street,model=model,tier=tier,x=front[0],y=front[1],width=width,depth=depth,
             height=[6,14,22,6][tier],heading=heading,variant=number*7,columns=1,rows=1,
             homeId=f"residence_{street}_{number:02d}",homeNumber=number,entranceNode=node_id,initiallyVacant=True))
+    elif kind=="hospital":
+        d["places"].append(dict(id=f"hospital_{region}",name=HOSPITALS[region][1],kind="other",
+            node=node_id,street=street,business="医院",size=size,explicitEntrance=True,tradable=False,
+            entranceX=front[0]-q[0],entranceY=front[1]-q[1],width=width,depth=depth,heading=heading,
+            model="office",tier=tier,openMinute=0,closeMinute=1440))
     else:
         number=ordinal+1
         d["places"].append(dict(id=f"expansion_shop_{street}_{number:02d}",name=f"{streets[street]} · {number}号招租商铺",kind="shop",
@@ -255,6 +268,8 @@ for region,plan in PLAN.items():
         for street,number in plan["shops" if kind=="shop" else "homes"].items():
             for i in range(number):place_unit(region,kind,street,plan["tier"],i)
             print(region,kind,street,number,flush=True)
+for region,(street,_) in HOSPITALS.items():
+    place_unit(region,"hospital",street,PLAN[region]["tier"],0)
 
 d["edges"]=[]
 for index,e in enumerate(edges):
@@ -267,7 +282,8 @@ for index,e in enumerate(edges):
 # Geometry authoring validation, before replacing the live layout.
 assert sum(n for (r,k),n in counts.items() if k=="home")==35
 assert sum(n for (r,k),n in counts.items() if k=="shop")==22
-assert len(d["places"])==len(base["places"])+22
+assert sum(n for (r,k),n in counts.items() if k=="hospital")==4
+assert len(d["places"])==len(base["places"])+26
 assert len(d["blocks"])==len(base["blocks"])+35
 adj=collections.defaultdict(set)
 for e in d["edges"]:adj[e["a"]].add(e["b"]);adj[e["b"]].add(e["a"])

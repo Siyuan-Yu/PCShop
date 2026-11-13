@@ -25,6 +25,18 @@ namespace PCShopSell.Game.UI
             if(S.VentureAt(p.Id)?.Kind=="cars"){OpenPlaceWindow(p,BuildUsedMotorShop,1160,900);return;}
             if(p.Id=="life_expo"){OpenExpoReception();return;}
             if(p.Business==GameSession.BankBusiness){OpenBank(p);return;}
+            if (p.Business == GameSession.HospitalBusiness)
+            {
+                OpenPlaceWindow(p, (w, hospital) =>
+                {
+                    Para(w.Content, $"健康 {S.Player.Health:0.#}/100。门诊约 1 小时，可恢复最多 20 点健康。", 18);
+                    Ui.Size(Ui.Button(w.Content, $"看诊 · {GameSession.OutpatientFee}", () =>
+                    {
+                        if (S.ReceiveOutpatientCare()) CloseWindowSilently(w);
+                    }, 18, Ui.ButtonHot, S.Player.Health < 100 && S.Ledger.CanAfford(GameSession.OutpatientFee)), -1, 46);
+                }, 560, 330);
+                return;
+            }
             if(p.Id==GameSession.CommunityMcnId){OpenCommunityMcn();return;}
             if(S.IsOwnedVenue(p)){OpenVenueManagement(p);return;}
             if (UsesCityVenuePanel(p)) { OpenCityVenue(p); return; }

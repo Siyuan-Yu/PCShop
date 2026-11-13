@@ -402,21 +402,28 @@ namespace PCShopSell.Core.Session
             TickRestaurantWorkers(shop,state,now,open);
             if(!open||minute<state.NextVisit)return;
             state.NextVisit=minute+(long)Math.Ceiling(SpecialVisitInterval(shop,RestaurantVisitMinutes)/ShopPowerTraffic(shop,now));
+            TrySeatRestaurantGuest(shop, state, now);
+        }
+
+        private bool TrySeatRestaurantGuest(OwnedShop shop, SpecialBusinessState state, GameTimestamp now)
+        {
+            long minute = now.TotalMinutes;
             int tables=Furnished(shop,"restaurant_table");
             int table=0;
             while(table<tables&&state.Orders.Any(o=>!o.TableCleared&&o.Table==table))table++;
-            if(table>=tables)return;
+            if(table>=tables)return false;
             if (state.RestaurantArrivalDay != now.Date.TotalDays)
             {
                 state.RestaurantArrivalDay = now.Date.TotalDays;
                 state.RestaurantArrivalsToday = 0;
             }
             state.RestaurantArrivalsToday++;
-            if (!Random.Chance(shop.Sim.MarkupPurchaseIntent(state.MenuMarkup))) return;
+            if (!Random.Chance(shop.Sim.MarkupPurchaseIntent(state.MenuMarkup))) return true;
             var recipes=Enumerable.Range(0,RecipeNames.Length).Where(i=>(state.RecipeMask&(1<<i))!=0).ToArray();
-            if(recipes.Length==0)return;
+            if(recipes.Length==0)return true;
             int recipe=recipes[Random.Next(0,recipes.Length)];
             state.Orders.Add(new DiningOrder{Id=state.NextId++,Recipe=recipe,Table=table,Stage=DiningStage.Waiting,Arrived=minute,Price=(long)Math.Round(RecipePrices[recipe]*state.MenuMarkup)});
+            return true;
         }
         private void MoveSpecialBusinessState(string from,string to)
         {

@@ -24,11 +24,12 @@ namespace PCShopSell.Core.Session
     }
     [Serializable] public sealed class EnterpriseContract
     {
-        public string Id, Client;
+        public string Id, Client, ReferralOfferId, ShopId;
         public int Tier, Count, Completed, Failed, OfferUntilDay;
-        public long UnitCents, DueMinute, DepositCents;
+        public long UnitCents, DueMinute, DepositCents, QuoteTotalCents;
         public bool Accepted, Settled;
-        public Money Total => Money.FromCents(UnitCents) * Count;
+        public bool PersonalReferral => ReferralOfferId != null && Count == 1 && QuoteTotalCents > 0;
+        public Money Total => QuoteTotalCents > 0 ? Money.FromCents(QuoteTotalCents) : Money.FromCents(UnitCents) * Count;
         public EnterpriseContract Copy() => (EnterpriseContract)MemberwiseClone();
     }
     public sealed class VentureDef

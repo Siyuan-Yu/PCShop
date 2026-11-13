@@ -61,6 +61,36 @@ namespace PCShopSell.Core.Session
             new EventDef { Id = "lend", Title = "亲戚来借钱", When = s => s.CanOfferRelativeLoan },
             new EventDef { Id = "classmate_help", Title = "老同学雪中送炭", Group = "npc",
                 When = s => s.NegativeCashDays >= 3 && s.Ledger.Balance.IsNegative },
+            new EventDef { Id = "flyer", Title = "发传单的上门了", When = s => s.FlyerShop() != null },
+            new EventDef { Id = "cold", Title = "身体不舒服", When = s => s.CanOfferColdEvent },
+            new EventDef { Id = "intro_zhang", Title = "戴眼镜的熟客", Group = "npc", When = s => s.CanOfferShopIntroduction(Npcs.Zhang) },
+            new EventDef { Id = "intro_landlady", Title = "房东上门", Group = "npc", When = s => s.CanOfferShopIntroduction(Npcs.Landlady) },
+            new EventDef { Id = "intro_lin", Title = "发小来看你", Group = "npc", When = s => s.CanOfferShopIntroduction(Npcs.Lin) },
+            new EventDef { Id = "zhang_visit", Title = "张绍文来闲坐", Group = "npc",
+                When = s => s.InPlayerShop && s.CitySamePlace(Npcs.Zhang) && s.IsMet(Npcs.Zhang) && s.Relation(Npcs.Zhang) < 95 },
+            new EventDef { Id = "zhang_family", Title = "张绍文介绍亲戚", Group = "npc",
+                When = s => s.CitySamePlace(Npcs.Zhang) && s.Relation(Npcs.Zhang) >= 40 && s.FindReferralShop(1) != null },
+            new EventDef { Id = "landlady_rent", Title = "房东想涨租", Group = "npc",
+                When = s => s.CitySamePlace(Npcs.Landlady) && s.IsMet(Npcs.Landlady) && s.Relation(Npcs.Landlady) < 70 && s.RentNegotiationShop() != null },
+            new EventDef { Id = "landlady_help", Title = "李秀兰介绍大客户", Group = "npc",
+                When = s => s.CitySamePlace(Npcs.Landlady) && s.Relation(Npcs.Landlady) >= 55 && s.FindReferralShop(3) != null },
+            new EventDef { Id = "jie_loan", Title = "唐俊杰周转不开", Group = "npc",
+                When = s => s.CitySamePlace(Npcs.Jie) && s.IsMet(Npcs.Jie) && s.Relation(Npcs.Jie) >= 15 && !s.HasJieLoan },
+            new EventDef { Id = "jie_trade", Title = "唐俊杰缺个配件", Group = "npc",
+                When = s => s.CitySamePlace(Npcs.Jie) && s.Relation(Npcs.Jie) >= 50 && s.JieTradeShop() != null },
+            new EventDef { Id = "lin_visit", Title = "林远航来吐槽", Group = "npc",
+                When = s => s.CitySamePlace(Npcs.Lin) && s.IsMet(Npcs.Lin) && s.Relation(Npcs.Lin) < 95 },
+            new EventDef { Id = "lin_loan", Title = "林远航想借钱", Group = "npc",
+                When = s => s.CitySamePlace(Npcs.Lin) && s.IsMet(Npcs.Lin) && s.Relation(Npcs.Lin) >= 30 && !s.HasLinLoan },
+            new EventDef { Id = "race_xinglan_invite", Title = "星澜约你上赛道", Group = "race",
+                When = s => s.FindEventRace("racer_0") != null },
+            new EventDef { Id = "race_zhixia_club", Title = "车友俱乐部的邀请", Group = "race",
+                When = s => s.CanArrangeClubGathering },
+            new EventDef { Id = "race_jingxing_tuning", Title = "赛前整备", Group = "race",
+                When = s => s.EventTuningVehicles().Any() },
+            new EventDef { Id = "race_ruoning_rare", Title = "收藏车的试驾", Group = "race", When = s => s.CanOfferCollectorDrive },
+            new EventDef { Id = "race_ming_lunch", Title = "待业的朋友约比赛", Group = "race",
+                When = s => s.CanOfferMingRace },
             new EventDef
             {
                 Id = "review", Title = "网上有人说你家卖翻新货", MinDay = 10, CooldownDays = 14, Weight = 7,
@@ -70,13 +100,13 @@ namespace PCShopSell.Core.Session
                 {
                     new EventChoice
                     {
-                        Text = "公开回应，晒进货单（看魅力和智力）",
+                        Text = "公开回应",
                         Apply = s =>
                         {
-                            if (s.Random.Chance(0.35 + s.EffectiveCharm * 0.008 + s.Player.Intelligence * 0.004))
+                            if (s.Random.Chance(ReviewChance(s)))
                             {
                                 s.PlayerShop.AdjustShopReputation(1.5);
-                                return "你晒出档口的进货单，网友反而夸你实在。口碑 +1.5。";
+                                return "你把店里的情况讲清楚了，质疑渐渐平息。口碑 +1.5。";
                             }
                             s.PlayerShop.AdjustShopReputation(-1);
                             return "回应没说到点子上，被截图嘲了。口碑 -1。";
@@ -84,12 +114,13 @@ namespace PCShopSell.Core.Session
                     },
                     new EventChoice
                     {
-                        Text = "私信发帖人，送他一份小礼物（¥100）",
-                        Enabled = s => CanPay(s, 100), DisabledReason = "钱不够",
+                        Text = "请供货商协助核验来源 · ¥1,000",
+                        Enabled = s => CanPay(s, 1000), DisabledReason = "钱不够",
                         Apply = s =>
                         {
-                            s.EventPay(Y(100), "小礼物");
-                            return "发帖人不好意思地删了帖。花了 ¥100，事情平息了。";
+                            s.Ledger.ForceDebit(s.Clock.Today, "来源核验", Y(1000), "请供货商协助核验来源",
+                                PCShopSell.Core.Finance.LedgerAttribution.ForShop(s.CurrentShop.Place.Id));
+                            return "供货商确认了商品来源，争议平息。";
                         },
                     },
                     new EventChoice
@@ -104,6 +135,10 @@ namespace PCShopSell.Core.Session
                 },
             },
         };
+
+        internal static double ReviewChance(GameSession s) => EventScript.ProgressiveChance(.35,
+            (s.EffectiveCharm, EventScript.CharmThreshold, .008),
+            (s.Player.Intelligence, EventScript.IntelligenceThreshold, .004));
 
         /// <summary>内容写在 C# 里的事件（要绑定具体店铺、检查货架等，json 表达不了）。顺序和数值在 Resources/Data/events.json 里调。</summary>
         public static IReadOnlyList<EventDef> CodeEvents => Base.Concat(new[] { NpcEvents.ZhouDeal }).ToList();

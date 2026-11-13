@@ -154,7 +154,7 @@ namespace PCShopSell.Core.Session
         {
             if (c == null || c.Accepted || Clock.Today.TotalDays >= c.OfferUntilDay) return "本期招标已结束";
             if (!HasShop || !HasSmartphone) return "需要主店和智能手机";
-            if (_contracts.Any(x => x.Accepted && !x.Settled)) return "先完成手上的企业合同";
+            if (_contracts.Any(x => x.Accepted && !x.Settled && !x.PersonalReferral)) return "先完成手上的企业合同";
             if (PlayerShop.Reputation < 8) return "名望达到 8";
             if (Ledger.Balance < c.Total.Scale(.05)) return "需预留合同额 5% 的履约保证金";
             return null;
@@ -177,7 +177,9 @@ namespace PCShopSell.Core.Session
         {
             var c = _contracts.Find(x => x.Id == id && x.Accepted && !x.Settled);
             if (c == null || IsGameOver) return false;
-            foreach (var o in PlayerShop.Orders.Where(x => x.ContractId == id).ToArray()) PlayerShop.CancelBuild(o.Id);
+            var shop = c.ShopId == null ? CurrentShop : ShopAt(c.ShopId);
+            if (shop == null) return false;
+            foreach (var o in shop.Sim.Orders.Where(x => x.ContractId == id).ToArray()) shop.Sim.CancelBuild(o.Id);
             return true;
         }
         private void ContractOrderResult(BuildOrder order, bool completed)
@@ -190,8 +192,20 @@ namespace PCShopSell.Core.Session
             c.Settled = true;
             Money refund = Money.FromCents(c.DepositCents).Scale((double)c.Completed / c.Count);
             if (refund.IsPositive) Ledger.Credit(Clock.Today, "履约保证金", refund, c.Client + "履约返还");
-            if (c.Failed == 0) { Flags.Add("tutorial:enterprise"); Ledger.Credit(Clock.Today, "企业奖励", c.Total.Scale(.03), c.Client); AddRelation(Npcs.Zhang, 2); }
-            Say($"{c.Client}结案：交付 {c.Completed}/{c.Count} 台，保证金返还 {refund}。" + (c.Failed == 0 ? "全额履约奖金已到账。" : "未履约部分保证金已扣除。"));
+            var referral = _cityReferrals.FirstOrDefault(x => x.Id == c.ReferralOfferId);
+            if (referral != null) { referral.Settled = true; referral.Fulfilled = c.Failed == 0; }
+            bool enterprise = !c.PersonalReferral;
+            if (c.Failed == 0)
+            {
+                if (enterprise)
+                {
+                    Flags.Add("tutorial:enterprise");
+                    Ledger.Credit(Clock.Today, "企业奖励", c.Total.Scale(.03), c.Client);
+                }
+                if (enterprise || referral?.Discount == true) AddRelation(referral?.Introducer ?? Npcs.Zhang, 2);
+            }
+            Say($"{c.Client}结案：交付 {c.Completed}/{c.Count} 台。"
+                + (enterprise ? $"保证金返还 {refund}。" + (c.Failed == 0 ? "全额履约奖金已到账。" : "未履约部分保证金已扣除。") : ""));
         }
     }
 }

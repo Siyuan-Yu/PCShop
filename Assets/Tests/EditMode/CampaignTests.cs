@@ -170,14 +170,15 @@ namespace PCShopSell.Tests
         {
             GameSession s = Make();
             s.Meet(Npcs.Landlady, 20);
+            var before = s.CurrentShopRent;
             s.RaiseEvent("landlady_rent");
             Assert.IsTrue(s.ResolveEvent(2));
-            Assert.AreEqual(1, s.RentHikes);
-            Assert.Greater(s.CurrentShopRent.Cents, GameSession.ShopRent.Cents * 0.99);
+            Assert.AreEqual(0, s.RentHikes);
+            Assert.AreEqual(before.Scale(1.1), s.CurrentShopRent);
         }
 
         [Test]
-        public void LandladyRentEvent_DinnerKeepsRent()
+        public void LandladyRentEvent_AppointmentDoesNotSettleRentImmediately()
         {
             GameSession s = Make();
             s.Meet(Npcs.Landlady, 20);
@@ -185,8 +186,8 @@ namespace PCShopSell.Tests
             Money before = s.Ledger.Balance;
             Assert.IsTrue(s.ResolveEvent(0));
             Assert.AreEqual(0, s.RentHikes);
-            Assert.Less(s.Ledger.Balance.Cents, before.Cents);
-            Assert.AreEqual(26, s.Relation(Npcs.Landlady));
+            Assert.AreEqual(before, s.Ledger.Balance);
+            Assert.AreEqual(20, s.Relation(Npcs.Landlady));
         }
 
         [Test]
@@ -199,17 +200,64 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.ResolveEvent(0));
             Assert.AreEqual((before - Money.FromYuan(2000)).Cents, s.Ledger.Balance.Cents);
             Assert.AreEqual(45, s.Relation(Npcs.Lin));
+            var save = s.CreateSave();
+            Assert.AreEqual(s.Clock.Today.TotalDays + 25, save.linEventLoan.DueDay);
+            Assert.IsFalse(save.linEventLoan.Overdue);
+            Assert.That(s.Schedule().Any(entry => entry.Text.Contains("林远航约定还款")), Is.True);
+            s.Clock.Restore(s.Clock.Today.AddDays(24), 1439);
+            s.AdvanceClock(1);
+            Assert.IsTrue(s.CreateSave().linEventLoan.Overdue);
         }
 
         [Test]
-        public void ZhouDeal_AddsStock()
+        public void JieLoanCannotBeRepeatedWhileCreditIsPendingAndLinGreetingHasNoRelationEffect()
+        {
+            using var s = Make();
+            s.RaiseEvent("jie_loan");
+            Assert.IsTrue(s.ResolveEvent(0));
+            Assert.IsTrue(s.Schedule().Any(entry => entry.Text.Contains("唐俊杰还钱")));
+            s.RaiseEvent("jie_loan");
+            Assert.IsNull(s.PendingEvent);
+            int before = s.Relation(Npcs.Lin);
+            s.RaiseEvent("lin_visit");
+            Assert.IsTrue(s.ResolveEvent(1));
+            Assert.AreEqual(before, s.Relation(Npcs.Lin));
+        }
+
+        [Test]
+        public void ZhouDeal_DeliversToShopTheNextDay()
         {
             GameSession s = Make();
             s.Meet(Npcs.Zhou, 30);
             s.RaiseEvent("zhou_deal");
             int gpu = s.PlayerShop.Stock.CountAll(PartCatalog.Get("gpu1"));
             Assert.IsTrue(s.ResolveEvent(0));
+            Assert.AreEqual(gpu, s.PlayerShop.Stock.CountAll(PartCatalog.Get("gpu1")));
+            Assert.AreEqual(2, s.DirectShipments.Count);
+            s.Clock.Restore(s.Clock.Today.AddDays(1), 599);
+            s.AdvanceClock(1);
             Assert.AreEqual(gpu + 1, s.PlayerShop.Stock.CountAll(PartCatalog.Get("gpu1")));
+        }
+
+        [Test]
+        public void JieTradeNamesAndPaysForTheActualShelfPart()
+        {
+            using var s = Make();
+            GameSessionTests.Teleport(s, "pc");
+            s.PlayerShop.Stock.Clear();
+            s.PlayerShop.NotFitted = false;
+            s.PlayerShop.ForcedClosed = false;
+            s.PlayerShop.SetHours(0, 1440);
+            s.PlayerShop.SetShelfCapacity(new Dictionary<string, double> { { "memory", 60 } });
+            var part = PartCatalog.Get("ram0");
+            s.PlayerShop.Stock.ForceAdd(part, true, 2);
+            var cash = s.Ledger.Balance;
+            var price = s.PlayerShop.PriceOf(part, true).Scale(1.10);
+            s.RaiseEvent("jie_trade");
+            Assert.That(s.PendingEvent?.Body, Does.Contain(part.Name));
+            Assert.IsTrue(s.ResolveEvent(0));
+            Assert.AreEqual(1, s.PlayerShop.Stock.Count(part, true));
+            Assert.AreEqual(cash + price, s.Ledger.Balance);
         }
 
         [Test]
@@ -560,16 +608,15 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void RentHikes_AreCappedAtThree()
+        public void EventRentIncreaseCannotRepeatOnTheSameLease()
         {
             GameSession s = Make();
-            for (int i = 0; i < 5; i++) s.RaiseEvent("landlady_rent");
-            for (int i = 0; i < 5; i++)
-            {
-                s.RaiseEvent("landlady_rent");
-                s.ResolveEvent(2);
-            }
-            Assert.AreEqual(3, s.RentHikes);
+            s.RaiseEvent("landlady_rent");
+            Assert.IsTrue(s.ResolveEvent(2));
+            var rent = s.CurrentShopRent;
+            s.RaiseEvent("landlady_rent");
+            Assert.IsNull(s.PendingEvent);
+            Assert.AreEqual(rent, s.CurrentShopRent);
         }
 
         [Test]

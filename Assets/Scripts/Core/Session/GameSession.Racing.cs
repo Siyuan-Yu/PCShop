@@ -164,17 +164,22 @@ namespace PCShopSell.Core.Session
             int fee=practice?RacingSchedule.PracticeFee:RacingSchedule.Fee(meeting);
             if(!Ledger.TryDebit(Clock.Today,practice?"赛车练习":"赛车报名",Money.FromYuan(fee),t.Name+" · "+(practice?"计时练习":RacingSchedule.Name(meeting))))return false;
             var opponents = practice ? Array.Empty<RaceOpponent>() : BuildRaceOpponents(t, MotorCatalog.Get(v.ModelId).Kind);
+            StartDriving(new RaceSimulation(t,MotorCatalog.Performance(v),practice,meeting,opponents), v.Id);
+            return true;
+        }
+        private void StartDriving(RaceSimulation race, string vehicleId)
+        {
             _raceCitySpeed=Time.Speed;_raceCityPaused=Time.IsUserPaused;Time.SetSpeed(1);
-            _raceVehicle=v.Id;ActiveRace=new RaceSimulation(t,MotorCatalog.Performance(v),practice,meeting,opponents);
+            _raceVehicle=vehicleId;ActiveRace=race;
             LastRaceReport = null;
             LastRaceSettlement = null;
-            return true;
         }
         public string FinishRace()
         {
             var r=ActiveRace;if(r==null||!r.Finished)return null;
             var v=_garage.Find(g=>g.Id==_raceVehicle);ActiveRace=null;_raceVehicle=null;
             Time.SetSpeed(_raceCitySpeed);Time.SetPaused(_raceCityPaused);
+            if (_collectorTrialDriving) return FinishCollectorTrial(r);
             v.Condition=Math.Max(0,v.Condition-2-r.Damage);double injury=0;
             if(r.Damage>5&&Random.Chance(Math.Min(.8,r.Damage/60))){injury=Math.Min(30,5+r.Damage*.4);Player.Health=Math.Max(1,Player.Health-injury);}
             Player.SpendEnergy(8);string key=r.Track.Id+":"+MotorCatalog.RaceClass(r.Model.Kind)+(r.Practice?":practice":":race");
@@ -186,6 +191,9 @@ namespace PCShopSell.Core.Session
             long prize = r.PrizeForPosition(position);
             if (position == 1) record.Wins++;
             if (prize > 0) Ledger.Credit(Clock.Today, "赛事奖金", Money.FromYuan(prize), r.Track.Name + " · " + RacingSchedule.Name(r.Meeting));
+            if (position > 0 && !PersonHasWork(Ming) && r.Opponents.Any(o => o.PersonId == Ming)
+                && RaceInviteFor(Ming, Clock.Today.TotalDays) is RaceInvitation invitation && invitation.TrackId == r.Track.Id
+                && Flags.Add("ming-race-meal:" + Clock.Today.TotalDays)) _mingAfterRace = true;
             LastRaceSettlement = new RaceSettlement
             {
                 Track = r.Track.Name, Vehicle = r.Model.Name, Meeting = r.Meeting, Practice = r.Practice, Abandoned = r.Abandoned,

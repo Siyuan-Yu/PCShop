@@ -40,14 +40,14 @@ namespace PCShopSell.Core.Session
         /// <summary>全部满足这个选项才能点；留空 = 总能点。</summary>
         public List<EventCond> requires = new List<EventCond>();
         public List<EventOp> effects = new List<EventOp>();
-        /// <summary>掷骰：-1 = 不掷。掷中走 onHit，没中走 onMiss。概率 = chance + 魅力×chanceCharm + 智力×chanceIntel + 交情×chanceRelation(chanceNpc) + 命中的 chanceBonus。</summary>
+        /// <summary>掷骰：-1 = 不掷。所有参与判定的数值须达到门槛，超过门槛的部分按每点系数加入 chance。</summary>
         public double chance = -1, chanceCharm, chanceIntel, chanceRelation;
         public string chanceNpc;
         public List<EventChanceBonus> chanceBonus = new List<EventChanceBonus>();
         public List<EventOp> onHit = new List<EventOp>(), onMiss = new List<EventOp>();
     }
 
-    public sealed class EventChanceBonus { public List<EventCond> when = new List<EventCond>(); public double add; }
+    public sealed class EventChanceBonus { public List<EventCond> when = new List<EventCond>(); public double add, perPoint; }
 
     /// <summary>条件。type 见 <see cref="EventScriptSchema.Conds"/>。not=true 取反。</summary>
     public sealed class EventCond { public string type, key; public double value; public bool not; }
@@ -162,7 +162,13 @@ namespace PCShopSell.Core.Session
                     if (string.IsNullOrEmpty(c.text)) errors.Add(cw + "：缺 text");
                     if (c.requires.Count > 0 && string.IsNullOrEmpty(c.disabledReason)) errors.Add(cw + "：有 requires 但没写 disabledReason");
                     foreach (var r in c.requires) CheckCond(errors, cw + " requires", r);
-                    foreach (var b in c.chanceBonus) foreach (var r in b.when) CheckCond(errors, cw + " chanceBonus", r);
+                    foreach (var b in c.chanceBonus)
+                    {
+                        foreach (var r in b.when) CheckCond(errors, cw + " chanceBonus", r);
+                        if (b.perPoint < 0 || (b.perPoint > 0 && (b.when.Count != 1 || b.when[0].not
+                            || (b.when[0].type != "racingWins" && b.when[0].type != "relationAtLeast"))))
+                            errors.Add(cw + "：perPoint 须为正数，并且只设一个未取反的胜场或交情门槛");
+                    }
                     foreach (var o in c.effects.Concat(c.onHit).Concat(c.onMiss)) CheckOp(errors, cw, o);
                     if (c.chance < 0 && (c.onHit.Count > 0 || c.onMiss.Count > 0)) errors.Add(cw + "：写了 onHit/onMiss 但没设 chance");
                     if (c.chance > 1) errors.Add(cw + "：chance 要在 0–1 之间");

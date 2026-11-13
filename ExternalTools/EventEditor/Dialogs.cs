@@ -32,7 +32,7 @@ namespace PCShopSell.EventEditor
             n.effects = c.effects.Select(Ui.Shallow).ToList();
             n.onHit = c.onHit.Select(Ui.Shallow).ToList();
             n.onMiss = c.onMiss.Select(Ui.Shallow).ToList();
-            n.chanceBonus = c.chanceBonus.Select(b => new EventChanceBonus { add = b.add, when = b.when.Select(Ui.Shallow).ToList() }).ToList();
+            n.chanceBonus = c.chanceBonus.Select(b => new EventChanceBonus { add = b.add, perPoint = b.perPoint, when = b.when.Select(Ui.Shallow).ToList() }).ToList();
             return n;
         }
 
@@ -46,26 +46,30 @@ namespace PCShopSell.EventEditor
         }
     }
 
-    /// <summary>概率加成：满足 when 时概率 + add。</summary>
+    /// <summary>编辑条件加成或随超出门槛点数增长的概率。</summary>
     public sealed class BonusDialog : Form
     {
         public static bool Edit(IWin32Window owner, EventChanceBonus b)
         {
-            var copy = new EventChanceBonus { add = b.add, when = b.when.Select(Ui.Shallow).ToList() };
+            var copy = new EventChanceBonus { add = b.add, perPoint = b.perPoint, when = b.when.Select(Ui.Shallow).ToList() };
             using (var d = new BonusDialog(copy, owner)) { if (d.ShowDialog(owner) != DialogResult.OK) return false; }
-            b.add = copy.add; b.when = copy.when; return true;
+            b.add = copy.add; b.perPoint = copy.perPoint; b.when = copy.when; return true;
         }
 
         private BonusDialog(EventChanceBonus b, IWin32Window owner)
         {
             Text = "概率加成"; Width = 620; Height = 360; StartPosition = FormStartPosition.CenterParent; MinimizeBox = false; MaximizeBox = false;
             var add = Ui.Num(-1, 1, 2, 0.05m); Ui.SetValue(add, (decimal)b.add);
-            var top = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 38, Padding = new Padding(8, 6, 8, 0) };
-            top.Controls.Add(Ui.Lbl("满足下面全部条件时，概率增加（可负）：")); top.Controls.Add(add);
+            var perPoint = Ui.Num(0, 1, 3, 0.005m); Ui.SetValue(perPoint, (decimal)b.perPoint);
+            var top = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 68, Padding = new Padding(8, 6, 8, 0) };
+            top.Controls.Add(Ui.Lbl("满足条件时增加：")); top.Controls.Add(add);
+            top.Controls.Add(Ui.Lbl("超过门槛每点增加：")); top.Controls.Add(perPoint);
+            var note = Ui.Lbl("每点增幅大于 0 时，只设一个交情或胜场门槛，低于门槛时成功率为 0%。");
+            top.SetFlowBreak(perPoint, true); top.Controls.Add(note);
             var conds = Factory.Conds(this); conds.Bind(b.when);
             Controls.Add(conds); Controls.Add(top);
             Ui.DialogButtons(this, out var ok);
-            ok.Click += (s, e) => b.add = (double)add.Value;
+            ok.Click += (s, e) => { b.add = (double)add.Value; b.perPoint = (double)perPoint.Value; };
         }
     }
 
@@ -133,9 +137,9 @@ namespace PCShopSell.EventEditor
 
             var grid = new TableLayoutPanel { Dock = DockStyle.Top, Height = 150, ColumnCount = 4, Padding = new Padding(4) };
             void Row(string a, Control ca, string b, Control cb) { grid.Controls.Add(Ui.Lbl(a)); grid.Controls.Add(ca); grid.Controls.Add(Ui.Lbl(b)); grid.Controls.Add(cb); }
-            Row("基础概率(0–1)", _chance, "魅力每点加", _charm);
-            Row("智力每点加", _intel, "交情的人物", _npc);
-            Row("交情每点加", _rel, "", new Label());
+            Row("基础概率(0–1)", _chance, "魅力每点加（45 起）", _charm);
+            Row("智力每点加（50 起）", _intel, "交情的人物", _npc);
+            Row("交情每点加（35 起）", _rel, "", new Label());
 
             var bonus = new ListEditor<EventChanceBonus>
             {
@@ -143,7 +147,7 @@ namespace PCShopSell.EventEditor
                 Describe = b => (b.add >= 0 ? "+" : "") + b.add.ToString(System.Globalization.CultureInfo.InvariantCulture) + "  当 " + (b.when.Count == 0 ? "（无条件）" : string.Join(" 且 ", b.when.Select(Describe.Cond))),
                 New = () => { var b = new EventChanceBonus(); return BonusDialog.Edit(this, b) ? b : null; },
                 EditItem = b => BonusDialog.Edit(this, b),
-                Clone = b => new EventChanceBonus { add = b.add, when = b.when.Select(Ui.Shallow).ToList() },
+                Clone = b => new EventChanceBonus { add = b.add, perPoint = b.perPoint, when = b.when.Select(Ui.Shallow).ToList() },
             };
             bonus.Bind(c.chanceBonus);
             var lists = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1 };

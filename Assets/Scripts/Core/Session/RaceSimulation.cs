@@ -17,6 +17,7 @@ namespace PCShopSell.Core.Session
         public readonly double[] RivalFinishTime;
         public IReadOnlyList<RaceOpponent> Opponents { get; }
         public int CompetitorCount=>RivalProgress.Length+1;
+        public int Laps { get; }
         public double Length {get;} public double Progress {get;private set;}
         public int Position
         {
@@ -31,9 +32,10 @@ namespace PCShopSell.Core.Session
         private double _accumulator,_collisionCooldown,_lapStart; private readonly double[] _cumulative, _rivalSpeeds;
         public double DisplayKph=>Math.Abs(Speed)*7.2;
         public RaceSimulation(RaceTrack track,MotorModel model,bool practice,RaceMeeting meeting=RaceMeeting.Small,
-            IReadOnlyList<RaceOpponent> opponents = null)
+            IReadOnlyList<RaceOpponent> opponents = null, int? lapLimit = null)
         {
             Track=track;Model=model;Practice=practice;Meeting=practice?RaceMeeting.None:meeting;_cumulative=new double[track.Points.Length+1];
+            Laps = lapLimit ?? track.Laps;
             Opponents = practice || opponents == null ? Array.Empty<RaceOpponent>() : opponents.ToArray();
             RivalProgress=new double[practice ? 0 : opponents?.Count ?? RivalCount];
             RivalFinishTime=Enumerable.Repeat(double.PositiveInfinity,RivalProgress.Length).ToArray();
@@ -83,12 +85,12 @@ namespace PCShopSell.Core.Session
             if(Distance(new MapPoint(X,Y),goal)<Track.HalfRoad+1)
             {
                 Passed++;Next=(Next+1)%Track.Points.Length;
-                if(Next==1){Lap++;BestLap=Math.Min(BestLap,Elapsed-_lapStart);_lapStart=Elapsed;if(Lap>=Track.Laps)Finished=true;}
+                if(Next==1){Lap++;BestLap=Math.Min(BestLap,Elapsed-_lapStart);_lapStart=Elapsed;if(Lap>=Laps)Finished=true;}
             }
             int prev=(Next+Track.Points.Length-1)%Track.Points.Length;var a=Track.Points[prev];var b=Track.Points[Next];
             double dx=b.X-a.X,dy=b.Y-a.Y;double along=Math.Max(0,Math.Min(1,((X-a.X)*dx+(Y-a.Y)*dy)/Math.Max(.001,dx*dx+dy*dy)));
             Progress=Lap*Length+_cumulative[prev]+Distance(a,b)*along;
-            if(Finished)Progress=Track.Laps*Length;
+            if(Finished)Progress=Laps*Length;
             if(!Practice)AdvanceRivals(dt,Elapsed+Penalty-dt);
             if(!Practice&&Elapsed>1&&_collisionCooldown<=0)
             {
@@ -128,14 +130,14 @@ namespace PCShopSell.Core.Session
         public MotorModel RivalMotor(int i) => i < Opponents.Count ? Opponents[i].Motor : MotorCatalog.Get(Model.Id) ?? Model;
         private double RivalSpeed(int i) => _rivalSpeeds[i];
         public double RivalResultSeconds(int i) => double.IsPositiveInfinity(RivalFinishTime[i])
-            ? Elapsed + Penalty + (Track.Laps * Length - RivalProgress[i]) / RivalSpeed(i) : RivalFinishTime[i];
+            ? Elapsed + Penalty + (Laps * Length - RivalProgress[i]) / RivalSpeed(i) : RivalFinishTime[i];
         private void AdvanceRivals(double seconds,double startTime)
         {
             for(int i=0;i<RivalProgress.Length;i++)
             {
-                double remaining=Track.Laps*Length-RivalProgress[i],speed=RivalSpeed(i);
+                double remaining=Laps*Length-RivalProgress[i],speed=RivalSpeed(i);
                 if(remaining>0&&remaining<=speed*seconds)RivalFinishTime[i]=startTime+remaining/speed;
-                RivalProgress[i]=Math.Min(Track.Laps*Length,RivalProgress[i]+seconds*speed);
+                RivalProgress[i]=Math.Min(Laps*Length,RivalProgress[i]+seconds*speed);
             }
         }
         public void Recover(){if(Finished||Countdown>0)return;ResetPosition();if(!Practice)AdvanceRivals(5,Elapsed+Penalty);Penalty+=5;Recoveries++;}

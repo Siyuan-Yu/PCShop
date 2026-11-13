@@ -136,13 +136,14 @@ namespace PCShopSell.Core.Session
         public double[] PlayerStatsBefore, PlayerStatsAfter;
         public CityActivityPhase State;
         public bool Reminder, EntryPaid, MealApplied, MidApplied, RewardApplied, NoShowNoticeRead, HostPays;
+        public bool PlayerTreat;
         public string[] Choices = Array.Empty<string>();
         public CityActivityParticipant[] Participants = Array.Empty<CityActivityParticipant>();
         public bool Active => State==CityActivityPhase.Scheduled || State==CityActivityPhase.Gathering || State==CityActivityPhase.Running;
         public CityActivity Copy() => new CityActivity {Id=Id,DefinitionId=DefinitionId,SourceId=SourceId,VenueId=VenueId,HostId=HostId,
             EndReason=EndReason,ServiceDefinitionId=ServiceDefinitionId,ServiceConfirmed=ServiceConfirmed,ServiceChoice=ServiceChoice,PlayerIntentId=PlayerIntentId,PlayerVenueRoute=PlayerVenueRoute?.Copy(),OccupiedFrom=OccupiedFrom,OccupiedUntil=OccupiedUntil,EmployeeLeaveApproved=EmployeeLeaveApproved,ScheduledStart=ScheduledStart,ActualStart=ActualStart,ActualEnd=ActualEnd,
             Duration=Duration,Grace=Grace,Stage=Stage,Seat=Seat,State=State,RendezvousReady=RendezvousReady,SettlementSummary=SettlementSummary,CommunityClueMask=CommunityClueMask,CommunityClueShownMask=CommunityClueShownMask,EntryCostCents=EntryCostCents,EntryCostRecorded=EntryCostRecorded,
-            PlayerStatsBefore=PlayerStatsBefore?.ToArray(),PlayerStatsAfter=PlayerStatsAfter?.ToArray(),Reminder=Reminder,EntryPaid=EntryPaid,MealApplied=MealApplied,
+            PlayerStatsBefore=PlayerStatsBefore?.ToArray(),PlayerStatsAfter=PlayerStatsAfter?.ToArray(),Reminder=Reminder,EntryPaid=EntryPaid,MealApplied=MealApplied,PlayerTreat=PlayerTreat,
             MidApplied=MidApplied,RewardApplied=RewardApplied,NoShowNoticeRead=NoShowNoticeRead,HostPays=HostPays,Choices=Choices?.ToArray()??Array.Empty<string>(),
             Participants=(Participants??Array.Empty<CityActivityParticipant>()).Select(p=>p.Copy()).ToArray()};
     }

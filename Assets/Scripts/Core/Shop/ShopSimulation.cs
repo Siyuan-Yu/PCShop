@@ -335,6 +335,7 @@ namespace PCShopSell.Core.Shop
             ShopReputation = ClampStanding(reputation);
         }
         internal void AdjustShopReputation(double delta) => ShopReputation = ClampStanding(ShopReputation + delta);
+        internal void AdjustShopAwareness(double delta) => Awareness = ClampStanding(Awareness + delta);
 
         /// <summary>售价 = 市场价 × 加价倍率（盒装再加溢价）。范围 0.9~3.0。</summary>
         public double Markup
@@ -874,7 +875,7 @@ namespace PCShopSell.Core.Shop
             }
         }
 
-        private void Spawn(GameTimestamp now)
+        internal void Spawn(GameTimestamp now)
         {
             bool build = Random.Chance(BuildChance);
             PartCategory cat = PartCatalog.Categories[Random.Next(0, PartCatalog.Categories.Length)];
@@ -942,9 +943,9 @@ namespace PCShopSell.Core.Shop
             CustomerReadyToPay?.Invoke(customer);
         }
 
-        internal void RecordBulkSale(string itemName, int count, Money total)
+        internal void RecordBulkSale(string itemName, int count, Money total, string orderName = "学生团购")
         {
-            _ledger.Credit(_clock.Today, SalesCategory, total, $"学生团购 · {itemName} ×{count}",
+            _ledger.Credit(_clock.Today, SalesCategory, total, $"{orderName} · {itemName} ×{count}",
                 LedgerAttribution.ForShop(ShopId, transactionKind: "销售"));
             TodaySales += total;
             TodayCustomers++;

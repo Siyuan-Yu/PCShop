@@ -112,10 +112,12 @@ namespace PCShopSell.Core.Session
         public string HomeVisitBlocker(Place home)
         {
             var residents = CityPeople.Where(person => person.HomePlaceId == home.Id).ToArray();
+            bool CanVisit(CityPersonState person) => Relation(person.PersonId) >= HomeVisitMinRelation
+                || Flags.Contains("home-invitation:" + person.PersonId);
             if (residents.Length == 0) return "这是私人住宅，暂时没有可拜访的住户。";
-            if (!residents.Any(person => Relation(person.PersonId) >= HomeVisitMinRelation))
+            if (!residents.Any(CanVisit))
                 return "拜访私人住宅需要与一位住户的好感达到 " + HomeVisitMinRelation + "。可以先在街上或工作地点认识对方。";
-            if (!ResidentsAtHome(home).Any(person => Relation(person.PersonId) >= HomeVisitMinRelation))
+            if (!ResidentsAtHome(home).Any(CanVisit))
                 return "熟悉的住户现在不在家，晚些再来拜访。";
             return null;
         }
@@ -486,6 +488,17 @@ namespace PCShopSell.Core.Session
                 person.LeisureStop++; person.LeisureNextMove = 0;
             }
             // Visits have real routes and short pauses rather than everyone standing at one park all afternoon.
+            if (!working && person.LeisureStop % 3 == 0 && (person.PersonId == Npcs.Zhang
+                || person.PersonId == Npcs.Lin || person.PersonId == Npcs.Landlady))
+            {
+                var shop = ShopAt(CurrentPlace);
+                if (shop != null && shop.Place.Id != person.LocationPlaceId && DistrictAccessBlocker(shop.Place) == null
+                    && (person.PersonId != Npcs.Landlady || LandladyShop() == shop))
+                {
+                    person.LeisureTargetId = shop.Place.Id;
+                    return person.LeisureTargetId;
+                }
+            }
             string[] destinations = CityPerson(person.PersonId)?.LeisurePlaces;
             if(destinations==null||destinations.Length==0)destinations=new[]{ "shop14", "shop07", "life_park", "shop15", "shop01", "metro_a", "shop16", "life_court", "metro_b" };
             for (int i = 0; i < destinations.Length; i++)

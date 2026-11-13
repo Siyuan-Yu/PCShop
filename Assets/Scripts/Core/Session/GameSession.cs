@@ -179,7 +179,7 @@ namespace PCShopSell.Core.Session
             // 开局做饭教学：世界时钟不自己走，玩家可以慢慢看；只有锅在焖饭时才走，否则饭永远焖不好。吃饭、装包这些操作自己会推进相应的分钟。
             if (OpeningClockFrozen) return 0;
             if (!_sleeping && !IsWorking && !CityActivityExclusive && !BrandExpoExclusive && PendingEvent == null && Trip == null
-                && (TryShowRacingIntroduction() || TryShowRelativeOverdue() || TryOfferLeisureInvitation())) return 0;
+                && (TryShowRacingIntroduction() || TryShowRelativeOverdue() || TryShowLinOverdue() || TryShowMingAfterRace() || TryOfferLeisureInvitation())) return 0;
             _activeCheckoutSeconds+=Math.Min(realSeconds,TimeController.MaxTickSeconds);
             double scaled = Math.Min(realSeconds, TimeController.MaxTickSeconds) * Time.Speed * TimeController.WorldRate;
 
@@ -407,7 +407,9 @@ namespace PCShopSell.Core.Session
 
         /// <summary>身家：现金 + 库存九折 + 铺子押金（退租能拿回来）。</summary>
         public Money VehicleValue => Money.FromYuan(Garage.Sum(v => (long)(MotorCatalog.Get(v.ModelId).Price * .6 * v.Condition / 100)));
-        public Money ContractDeposits => Money.FromCents(_contracts.Where(x => x.Accepted && !x.Settled).Sum(x => Money.FromCents(x.DepositCents).Scale((double)(x.Count - x.Failed) / Math.Max(1, x.Count)).Cents));
+        public Money ContractDeposits => Money.FromCents(_contracts.Where(x => x.Accepted && !x.Settled)
+            .Sum(x => Money.FromCents(x.DepositCents).Scale((double)(x.Count - x.Failed) / Math.Max(1, x.Count)).Cents)
+            + _cityReferrals.Where(x => x.ShopId != null && x.ContractId == x.Id && !x.Settled).Sum(x => x.DepositCents));
         public Money TotalDebt => SupplierDebtTotal + MortgageDebt + AppLoanDebt;
         public Money ShopDeposits => Money.FromCents(_shops.Where(s => s.Rented).Sum(s => s.Lease.Deposit.Cents));
 
@@ -521,6 +523,7 @@ namespace PCShopSell.Core.Session
             ApplyEmployeeTransfers(today);
             ProcessScheduledCredits(today);
             CheckRelativeRepayment(today);
+            CheckLinRepayment(today);
             CheckInspectionFollowups(today);
             AccrueBankInterest();
             CollectDueAppLoans();

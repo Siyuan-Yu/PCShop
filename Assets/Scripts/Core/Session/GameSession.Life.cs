@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
@@ -39,6 +40,27 @@ namespace PCShopSell.Core.Session
     {
         public static readonly Money HospitalPerDay = Money.FromYuan(200);
         public const int HospitalDays = 1;
+        public const string HospitalBusiness = "医院";
+        public static readonly Money OutpatientFee = Money.FromYuan(150);
+
+        public Place NearbyHospital()
+        {
+            var position = PlayerPosition;
+            return City.PublicPlaces.Where(p => p.Business == HospitalBusiness && DistrictAccessBlocker(p) == null)
+                .OrderBy(p => DistanceCity(position, StandOf(p))).FirstOrDefault();
+        }
+
+        public bool ReceiveOutpatientCare()
+        {
+            var hospital = CurrentPlace;
+            if (hospital?.Business != HospitalBusiness || IsGameOver) return false;
+            if (Player.Health >= 100) return Fail("健康已满，无需看诊。");
+            if (!Ledger.TryDebit(Clock.Today, "医疗", OutpatientFee, hospital.Name + "门诊")) return Fail("现金不足。");
+            RecoverAt(hospital, 60);
+            Player.Health = Math.Min(100, Player.Health + 20);
+            Show("门诊结束", $"已从{hospital.Name}出来。看诊用时 1 小时，健康恢复至 {Player.Health:0.#}。");
+            return true;
+        }
 
         private int _lastNewsReadDay = -1;
 
@@ -148,7 +170,7 @@ namespace PCShopSell.Core.Session
             p.Health = Math.Max(0, p.Health);
         }
 
-        private void SendHome()
+        private void MoveForCare(Place place)
         {
             InterruptBrandExpoForHealth();
             foreach (var a in _cityActivities.Where(a => a.Active && (a.State == CityActivityPhase.Running || a.Id == CityIntent?.ActivityId)).ToArray())
@@ -158,13 +180,13 @@ namespace PCShopSell.Core.Session
             Trip = null;
             ClearEdge();
             if (InPlayerShop) PlayerShop.PlayerPresent = false;
-            PlayerNodeId = Home.NodeId;
-            CurrentPlace = Home;
+            PlayerNodeId = place.NodeId;
+            CurrentPlace = place;
         }
 
         private void Faint()
         {
-            SendHome();
+            MoveForCare(Home);
             _sleeping = true;
             // The former 04:00 -> noon recovery was eight hours. Keep that duration
             // when exhaustion can happen in daytime, instead of forcing a 23-hour sleep.
@@ -180,18 +202,30 @@ namespace PCShopSell.Core.Session
 
         private void Hospitalize()
         {
-            SendHome();
-            _sleeping = true;
-            AdvanceClock(HospitalDays * GameTimestamp.MinutesPerDay - Clock.MinuteOfDay + WakeUpMinute);
-            _sleeping = false;
-            RefreshDistrictNarrative();
+            var hospital = NearbyHospital();
+            RecoverAt(hospital, HospitalDays * GameTimestamp.MinutesPerDay - Clock.MinuteOfDay + WakeUpMinute);
             Money bill = HospitalPerDay * HospitalDays;
-            Ledger.ForceDebit(Clock.Today, "医疗", bill, "住院");
+            Ledger.ForceDebit(Clock.Today, "医疗", bill, (hospital?.Name ?? "") + "住院");
             Player.Health = 80;
             Player.Hunger = 70;
             Player.Energy = Player.MaxEnergy;
             Player.SleepDebt = 0;
-            Show("住院了", $"长期挨饿、透支，你病倒了。住院 {HospitalDays} 天，医药费 {bill}。");
+            Show("住院了", $"长期挨饿、透支，你病倒了。住院 {HospitalDays} 天，医药费 {bill}。"
+                + (hospital == null ? "" : $"你现在在{hospital.Name}门口。"));
+        }
+
+        private void RecoverAt(Place hospital, int minutes)
+        {
+            MoveForCare(hospital ?? Home);
+            _sleeping = true;
+            try { AdvanceClock(minutes); }
+            finally { _sleeping = false; }
+            if (hospital != null)
+            {
+                CurrentPlace = null;
+                _free = StandOf(hospital);
+            }
+            RefreshDistrictNarrative();
         }
     }
 }

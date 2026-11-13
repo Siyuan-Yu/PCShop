@@ -8,6 +8,21 @@ namespace PCShopSell.Core.Session
     /// <summary>事件脚本的执行：把 events.json 里的条件、效果、掷骰变成游戏里的行为。数据结构见 EventScriptModel.cs。</summary>
     public static partial class EventScript
     {
+        internal const int CharmThreshold = 45;
+        internal const int IntelligenceThreshold = 50;
+        internal const int RelationThreshold = 35;
+
+        internal static double ProgressiveChance(double chance, params (double Score, double Threshold, double PerPoint)[] stats)
+        {
+            foreach (var stat in stats)
+            {
+                if (stat.PerPoint == 0) continue;
+                if (stat.Score < stat.Threshold) return 0;
+                chance += (stat.Score - stat.Threshold) * stat.PerPoint;
+            }
+            return Math.Max(0, Math.Min(1, chance));
+        }
+
         private static Money Y(long yuan) => Money.FromYuan(yuan);
 
         public static bool Test(GameSession s, EventCond c)
@@ -91,16 +106,34 @@ namespace PCShopSell.Core.Session
 
         private static string Fmt(string text, string item) => (text ?? "").Replace("{item}", item ?? "");
 
+        public static double ChoiceChance(GameSession s, EventChoiceEntry c)
+        {
+            if (c.chance < 0) return 0;
+            double chance = c.chance;
+            foreach (var bonus in c.chanceBonus)
+            {
+                if (bonus.perPoint == 0)
+                {
+                    if (All(s, bonus.when)) chance += bonus.add;
+                    continue;
+                }
+                var threshold = bonus.when[0];
+                double score = threshold.type == "racingWins" ? s.RacingWins : s.Relation(threshold.key);
+                if (score < threshold.value) return 0;
+                chance += bonus.add + (score - threshold.value) * bonus.perPoint;
+            }
+            return ProgressiveChance(chance,
+                (s.EffectiveCharm, CharmThreshold, c.chanceCharm),
+                (s.Player.Intelligence, IntelligenceThreshold, c.chanceIntel),
+                (string.IsNullOrEmpty(c.chanceNpc) ? 0 : s.Relation(c.chanceNpc), RelationThreshold, c.chanceRelation));
+        }
+
         private static string Resolve(GameSession s, EventChoiceEntry c)
         {
+            double chance = ChoiceChance(s, c);
             var lines = new List<string>(); string item = null;
             if (Run(s, c.effects, lines, ref item) && c.chance >= 0)
-            {
-                double p = c.chance + s.EffectiveCharm * c.chanceCharm + s.Player.Intelligence * c.chanceIntel
-                    + (string.IsNullOrEmpty(c.chanceNpc) ? 0 : s.Relation(c.chanceNpc) * c.chanceRelation);
-                foreach (var b in c.chanceBonus) if (All(s, b.when)) p += b.add;
-                Run(s, s.Random.Chance(p) ? c.onHit : c.onMiss, lines, ref item);
-            }
+                Run(s, s.Random.Chance(chance) ? c.onHit : c.onMiss, lines, ref item);
             return string.Join("\n", lines);
         }
 

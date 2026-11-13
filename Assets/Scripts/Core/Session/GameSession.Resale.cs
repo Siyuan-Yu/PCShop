@@ -36,9 +36,14 @@ namespace PCShopSell.Core.Session
             var state=SpecialBusiness(shop.Place.Id);
             var item=state.Used.FirstOrDefault(i=>i.Id==customer.ResaleId&&i.Owned&&!i.Sold);
             if(item==null)return;
-            item.Sold=true;item.Listed=false;item.SalePrice=customer.Spend.Yuan;item.SoldAt=Clock.Now.TotalMinutes;
-            state.Paid++;state.Revenue+=item.SalePrice;
+            RecordUsedSale(state, item, customer.Spend.Yuan);
             Say(ShopTitle(shop)+"："+UsedNames[item.Product]+"已售出，收入 ¥"+item.SalePrice+"，收购成本 ¥"+item.Cost+"，毛利 ¥"+(item.SalePrice-item.Cost)+"。");
+        }
+
+        private void RecordUsedSale(SpecialBusinessState state, UsedItem item, long salePrice)
+        {
+            item.Sold=true;item.Listed=false;item.SalePrice=salePrice;item.SoldAt=Clock.Now.TotalMinutes;
+            state.Paid++;state.Revenue+=item.SalePrice;
         }
     }
 }

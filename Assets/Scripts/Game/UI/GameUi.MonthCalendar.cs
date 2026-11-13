@@ -124,6 +124,8 @@ namespace PCShopSell.Game.UI
                 case "parcel": return "快递到货";
                 case "loan": return "贷款到期";
                 case "npc_repayment": return "借款回收";
+                case "race_invite": return "赛车邀约";
+                case "collector_trial": return "收藏车试驾";
                 case "cook": return "饭菜做好";
                 case "kol_live": return "品牌直播";
                 case "expo_order": return "采购单截止";
@@ -253,6 +255,18 @@ namespace PCShopSell.Game.UI
             if (e.Kind == "work" && S.WorkPlace != null)
                 ActionButton("前往打工地点", () => { CloseAllWindows(); _ctrl.GoToPlace(S.WorkPlace); });
             if (e.Kind == "loan") ActionButton("查看贷款", OpenLoansApp);
+            if (!item.Completed && e.DestinationId != null && S.City.HasPlace(e.DestinationId))
+                ActionButton("前往赛场", () =>
+                {
+                    if (e.Kind == "race_invite" && e.Minute / 1440 > S.Clock.Today.TotalDays)
+                    {
+                        Toast("比赛还早，等到比赛当天再出发。");
+                        return;
+                    }
+                    var place = S.City.GetPlace(e.DestinationId);
+                    CloseAllWindows();
+                    _ctrl.GoToPlace(place);
+                });
             if (e.Kind == "repair")
             {
                 string target = S.HomeVisits.FirstOrDefault(v => v.StartMinute == e.Minute)?.TargetId;

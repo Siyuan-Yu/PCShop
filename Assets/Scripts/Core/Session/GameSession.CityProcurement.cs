@@ -267,7 +267,7 @@ namespace PCShopSell.Core.Session
                     var trip = _employeeTrips.FirstOrDefault(t => t.OrderId == record.Id);
                     record.State = trip == null ? "已交付" : trip.Delivered ? "已送达，员工返程中" : "在途";
                 }
-                else if (record.Channel == "直供" && !_directShipments.Any(s => s.OrderId == record.Id)) record.State = "已交付";
+                else if ((record.Channel == "直供" || record.Channel == "清仓") && !_directShipments.Any(s => s.OrderId == record.Id)) record.State = "已交付";
             }
             foreach (var claim in _cityProcurementClaims.Where(c => c.State == ProcurementClaimState.Claimed))
                 if (ShopAt(claim.ShopId) == null || (claim.Method == ProcurementMethod.Employee && FindEmployee(claim.OwnerId)?.Role != EmployeeRole.Buyer))

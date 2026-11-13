@@ -222,7 +222,7 @@ namespace PCShopSell.Game.Runtime
             WindowFace(rear,new Vector3(-w/2-.04f,h*.55f,d/2),d-.7f,h-2.5f,wall,true);
             if(p!=null)
             {
-                Color fascia=p.Kind==PlaceKind.Agency?AgencyColor(p):tier==3?ArtDirection.Ink:SignColors[StableCityHash(p.Id)%SignColors.Length];
+                Color fascia=p.Business==GameSession.HospitalBusiness?ArtDirection.Sage:p.Kind==PlaceKind.Agency?AgencyColor(p):tier==3?ArtDirection.Ink:SignColors[StableCityHash(p.Id)%SignColors.Length];
                 Prims.Box(root,"Fascia",new Vector3(0,3.3f,-.2f),new Vector3(w-.4f,.9f,.16f),Mats.Lit(fascia));
                 Prims.SignText(root,p.Name,new Vector3(0,3.3f,-.31f),w-.8f,.65f,ArtDirection.Cream);
                 if(p.Kind==PlaceKind.Agency)Prims.SignText(root,_city.AgencyCoverageName(p)+" · 租售办理",new Vector3(0,2.25f,-.3f),w-1,.45f,ArtDirection.Cream);

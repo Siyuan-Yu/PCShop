@@ -292,7 +292,12 @@ namespace PCShopSell.Game.UI
                 case ShopTab.Counter: BuildCounter(); break;
                 case ShopTab.Stock: BuildStock(); break;
                 case ShopTab.Pricing: BuildPricing(); break;
-                case ShopTab.Orders: if(S.IsPetShop(S.CurrentShop))BuildPetOrders();else if(S.IsSpecialBusiness(S.CurrentShop))BuildSpecialOrders();else BuildOrders(); break;
+                case ShopTab.Orders:
+                    BuildIndustryReferralOrders(C, S.CurrentShop);
+                    if (S.IsPetShop(S.CurrentShop)) BuildPetOrders();
+                    else if (S.IsSpecialBusiness(S.CurrentShop)) BuildSpecialOrders();
+                    else BuildOrders();
+                    break;
                 case ShopTab.Renovate: BuildRenovate(); break;
                 case ShopTab.Staff: BuildStaff(); break;
             }

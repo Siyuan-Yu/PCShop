@@ -32,6 +32,8 @@ namespace PCShopSell.Core.Session
             if(IsDedicatedVenue(PlayerShopPlace))return Fail("专用场馆只能延续原有服务，不能改为零售店。");
             if(!InPlayerShop || !RetailShopTypes.All.Contains(kind))return Fail("请在自己的店里选择主售品类。");
             if(kind!=PetShopCatalog.ShopKind && PetsStaying(_focus))return Fail("还有宠物在店代养，请先交接结算再转型。");
+            if (kind != RetailKind && _cityReferrals.Any(offer => offer.ShopId == PlayerShopPlace.Id && offer.ContractId != null && !offer.Settled))
+                return Fail("这家店还有已接下的转介绍订单，请先交付再转型。");
             Flags.Add("shop:main-category:"+_focus.Place.Id);
             if(IsSpecialBusiness(_focus)&&SpecialBusinessBusy(_focus))return Fail("请先完成或清理餐馆订单、二手库存及卖家，再转型。");
             if((kind=="restaurant"||kind=="secondhand"||kind==PetShopCatalog.ShopKind)&&(PlayerShop.Orders.Count>0||PlayerShop.Queue.Count>0))return Fail("请先完成装机订单和排队结账，再转型。");

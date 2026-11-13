@@ -169,6 +169,15 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(contact,racerHere?"与 "+npc.Name+" 聊车 · "+npc.Role:"车友此刻不在接待处 · 通常9:00—18:00在场",()=>{if(S.MeetRacer(t.Id))OpenPersonDialogue(t.Npc,parent:w);else Toast("车友此刻不在接待处，请稍后再来。");},18,Ui.ButtonBg,racerHere),-1,60,1);
             if(S.IsMet(t.Npc))Line(w.Content,"已认识 · 交情 "+S.Relation(t.Npc)+" · 每周提供一条二手车源",16,Ui.Good);
             BuildRaceReceptionRoster(w, t);
+            if (t.Id == "race_3" && S.HasCollectorTrial)
+            {
+                string reason = S.CollectorTrialBlocker;
+                Ui.Size(Ui.Button(w.Content, "试驾顾若宁的收藏车 · 1 圈", () =>
+                {
+                    if (S.StartCollectorTrial()) CloseWindowSilently(w);
+                }, 18, Ui.ButtonHot, reason == null), -1, 44);
+                if (reason != null) Line(w.Content, reason, 15, Ui.Dim);
+            }
             BuildMotorClassTabs(w.Content,_raceMotorClass,c=>{_raceMotorClass=c;_raceSelection=null;w.Rebuild();});
             var garage=RegionalGarages.ForTrack(t.Id);
             var motors=S.Garage.Where(v=>!v.Commuter&&v.GarageId==garage.Id&&MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind)==_raceMotorClass).ToArray();
@@ -290,7 +299,7 @@ namespace PCShopSell.Game.UI
         public void UpdateDrivingHud()
         {
             var r=S.ActiveRace;if(r==null||_drivingStats==null)return;
-            _drivingStats.text=(r.Paused?"已暂停 · ":r.Countdown>0?"起跑倒计时 "+Math.Ceiling(r.Countdown)+" · ":"")+r.Track.Name+" · 固定1×　"+(r.Practice?"计时练习":RacingSchedule.Name(r.Meeting)+" · 第"+r.Position+"/"+r.CompetitorCount+"名")+$"　{Math.Min(r.Track.Laps,r.Lap+1)}/{r.Track.Laps}圈　{r.DisplayKph:0} km/h　{r.Elapsed+r.Penalty:0.0}秒　碰撞 {r.Collisions}";
+            _drivingStats.text=(r.Paused?"已暂停 · ":r.Countdown>0?"起跑倒计时 "+Math.Ceiling(r.Countdown)+" · ":"")+r.Track.Name+" · 固定1×　"+(r.Practice?"计时练习":RacingSchedule.Name(r.Meeting)+" · 第"+r.Position+"/"+r.CompetitorCount+"名")+$"　{Math.Min(r.Laps,r.Lap+1)}/{r.Laps}圈　{r.DisplayKph:0} km/h　{r.Elapsed+r.Penalty:0.0}秒　碰撞 {r.Collisions}";
             if (r.Opponents.Count == 0) return;
             int closest = 0;
             for (int i = 1; i < r.Opponents.Count; i++)
@@ -313,6 +322,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildRaceSettlement(Transform content, RaceSettlement result)
         {
+            if (!string.IsNullOrEmpty(result.Extra)) Para(content, result.Extra, 18, Ui.Accent);
             string mode = result.Practice ? "计时练习" : RacingSchedule.Name(result.Meeting);
             Line(content, result.Track + " · " + mode + " · " + result.Vehicle, 22, Ui.Accent);
             var summary = Ui.Row(content, 68, 8);

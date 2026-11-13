@@ -71,14 +71,123 @@ namespace PCShopSell.Tests
                 s.PlayerShop.NotFitted = true;
                 s.Player.Charm += 44 - s.EffectiveCharm;
                 s.RaiseEvent("inspection");
-                Assert.That(s.PendingEvent.Choices[2].Text, Does.Contain("0"));
-                Assert.IsFalse(s.IsChoiceEnabled(s.PendingEvent.Choices[2]));
-                Assert.IsTrue(s.ResolveEvent(1));
+                Assert.AreEqual(2, s.PendingEvent.Choices.Count);
+                Assert.That(s.PendingEvent.Choices[1].Text, Does.Contain("0%"));
+                Assert.IsFalse(s.IsChoiceEnabled(s.PendingEvent.Choices[1]));
+                Assert.IsFalse(s.ResolveEvent(1));
+                s.Ledger.Credit(s.Clock.Today, "测试", Money.FromYuan(300), "整改预算");
+                Assert.IsTrue(s.ResolveEvent(0));
                 s.Player.Charm += 45 - s.EffectiveCharm;
                 s.RaiseEvent("inspection");
-                Assert.That(s.PendingEvent.Choices[2].Text, Does.Contain("35"));
-                Assert.IsTrue(s.IsChoiceEnabled(s.PendingEvent.Choices[2]));
+                Assert.That(s.PendingEvent.Choices[1].Text, Does.Contain("35%"));
+                Assert.IsTrue(s.IsChoiceEnabled(s.PendingEvent.Choices[1]));
             }
+        }
+
+        [Test]
+        public void EventOddsStartAtTheThresholdForEveryParticipatingStat()
+        {
+            using var s = GameSessionTests.Make(8000, 600);
+            void ExpectRentChance(string chance)
+            {
+                s.RaiseEvent("landlady_rent");
+                Assert.That(s.PendingEvent.Choices[1].Text, Does.Contain("成功率 " + chance + "%"));
+            }
+            s.Player.Charm += 44 - s.EffectiveCharm;
+            s.Meet("landlady", 35);
+            s.AddRelation("landlady", 35 - s.Relation("landlady"));
+            ExpectRentChance("0");
+            s.Player.Charm++;
+            s.AddRelation("landlady", -1);
+            ExpectRentChance("0");
+            s.AddRelation("landlady", 1);
+            ExpectRentChance("30");
+            s.Player.Charm += 2;
+            s.AddRelation("landlady", 3);
+            ExpectRentChance("33.2");
+
+            void ExpectLoanChance(string chance)
+            {
+                s.RaiseEvent("lin_loan");
+                Assert.That(s.PendingEvent.Choices[0].Text, Does.Contain(chance + "%"));
+            }
+            s.Meet("lin", 69);
+            s.AddRelation("lin", 69 - s.Relation("lin"));
+            ExpectLoanChance("0");
+            s.AddRelation("lin", 1);
+            ExpectLoanChance("65");
+            s.AddRelation("lin", 1);
+            ExpectLoanChance("66");
+        }
+
+        [Test]
+        public void EachDistrictHasAHospitalAndDischargeUsesItsDoor()
+        {
+            var map = UnityEngine.Resources.Load<UnityEngine.TextAsset>("Data/city_layout");
+            var city = CityLayout.FromData(UnityEngine.JsonUtility.FromJson<CityLayoutData>(map.text));
+            using var s = new GameSession(city, 3, Money.FromYuan(8000), GameTimestamp.From(new GameDate(5), 600));
+            var hospitals = city.PublicPlaces.Where(p => p.Business == GameSession.HospitalBusiness).ToArray();
+            CollectionAssert.AreEquivalent(new[] { 0, 1, 2, 3 }, hospitals.Select(s.DistrictTierOf));
+            Assert.IsTrue(hospitals.All(p => Pathfinder.FindPath(city.Map, city.PlayerShop().NodeId, p.NodeId).Found));
+            var hospital = hospitals.Single(p => s.DistrictTierOf(p) == 0);
+            GameSessionTests.Teleport(s, hospital.Id);
+            s.Player.Health = 60;
+            Assert.AreEqual(hospital, s.NearbyHospital());
+            var balance = s.Ledger.Balance;
+            Assert.IsTrue(s.ReceiveOutpatientCare());
+            Assert.AreEqual(balance - GameSession.OutpatientFee, s.Ledger.Balance);
+            Assert.IsNull(s.CurrentPlace);
+            Assert.AreEqual(s.StandOf(hospital), s.PlayerPosition);
+            s.Player.Health = 10;
+            s.AdvanceClock(1);
+            Assert.AreEqual(80, s.Player.Health);
+            Assert.AreEqual(s.StandOf(hospital), s.PlayerPosition);
+        }
+
+        [Test]
+        public void ZhangInvitationAndLinAddressPersistWithoutRequiring60Familiarity()
+        {
+            var map = UnityEngine.Resources.Load<UnityEngine.TextAsset>("Data/city_layout");
+            var city = CityLayout.FromData(UnityEngine.JsonUtility.FromJson<CityLayoutData>(map.text));
+            using var s = new GameSession(city, 3, Money.FromYuan(8000), GameTimestamp.From(new GameDate(5), 360));
+            s.RaiseEvent("intro_zhang");
+            Assert.IsTrue(s.ResolveEvent(0));
+            s.RaiseEvent("intro_lin");
+            Assert.IsTrue(s.ResolveEvent(1));
+            using var loaded = GameSession.Load(city, s.CreateSave());
+            var zhang = loaded.CityPersonState(Npcs.Zhang);
+            var lin = loaded.CityPersonState(Npcs.Lin);
+            Assert.IsTrue(loaded.IsMet(Npcs.Zhang));
+            Assert.IsTrue(loaded.IsMet(Npcs.Lin));
+            CollectionAssert.Contains(zhang.KnownTopics, "life");
+            CollectionAssert.Contains(lin.KnownTopics, "life");
+            Assert.IsTrue(loaded.Flags.Contains("home-invitation:" + Npcs.Zhang));
+            Assert.Less(loaded.Relation(Npcs.Zhang), GameSession.HomeVisitMinRelation);
+        }
+
+        [Test]
+        public void FlyersCharge200AndSaveRealVisitsForTheNextDay()
+        {
+            using var s = GameSessionTests.Make(8000, 660);
+            s.EventsEnabled = false;
+            GameSessionTests.Teleport(s, "pc");
+            s.PlayerShop.NotFitted = false;
+            s.PlayerShop.SetHours(0, 1440);
+            var balance = s.Ledger.Balance;
+            s.RaiseEvent("flyer");
+            Assert.IsTrue(s.ResolveEvent(0));
+            Assert.AreEqual(balance - Money.FromYuan(200), s.Ledger.Balance);
+            var save = s.CreateSave();
+            var campaign = save.flyerCampaigns.Single();
+            Assert.AreEqual(s.Clock.Today.TotalDays + 1, campaign.StartDay);
+            Assert.That(campaign.Remaining, Is.InRange(2, 4));
+            using var loaded = GameSession.Load(s.City, save);
+            int arrivals = 0;
+            loaded.ShopCustomerArrived += (_, _) => arrivals++;
+            loaded.Clock.Restore(new GameDate(campaign.StartDay), 660);
+            loaded.AdvanceClock(1);
+            Assert.GreaterOrEqual(arrivals, 1);
+            Assert.AreEqual(campaign.Remaining - 1, loaded.CreateSave().flyerCampaigns.Single().Remaining);
         }
 
         [Test]

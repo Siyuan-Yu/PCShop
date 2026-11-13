@@ -5,6 +5,7 @@ using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Finance;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
 
@@ -27,7 +28,19 @@ namespace PCShopSell.Core.Session
         public string Id, Client, ContractId;
         public int Count;
         public bool Discount;
-        public CityReferralOffer Copy() => (CityReferralOffer)MemberwiseClone();
+        public string ShopId, RetailKind, Introducer, ProductId, ProductName;
+        public int SignedDay, Recipe;
+        public int[] UsedIds;
+        public long FullPriceCents, DueMinute, DepositCents;
+        public bool Settled, Fulfilled;
+        public Money Total => Money.FromCents(FullPriceCents).Scale(Discount ? Count == 1 ? .70 : .95 : 1);
+        public Money Deposit => Count == 1 ? Money.Zero : Total.Scale(.05);
+        public CityReferralOffer Copy()
+        {
+            var copy = (CityReferralOffer)MemberwiseClone();
+            copy.UsedIds = UsedIds?.ToArray();
+            return copy;
+        }
     }
     public sealed partial class CityStoryProgress
     {
@@ -293,6 +306,8 @@ namespace PCShopSell.Core.Session
             {Player.Charm=Math.Min(100,Player.Charm+1);Player.Intelligence=Math.Min(100,Player.Intelligence+1);}
             if(activity.SourceId!=null&&activity.SourceId.StartsWith("legacy-regulars-meal:"))PlayerShop.Reputation+=3;
             if(activity.SourceId!=null&&activity.SourceId.StartsWith("legacy-lin-meal:"))Player.Health=Math.Min(100,Player.Health+2);
+            if(activity.SourceId?.StartsWith("legacy-lin-reunion:", StringComparison.Ordinal) == true)
+                Meet(Npcs.Lin, 30);
         }
 
         public bool ChooseCityRomance(bool romantic)
@@ -398,13 +413,14 @@ namespace PCShopSell.Core.Session
             }
         }
 
-        internal string ScheduleLegacyCityMeeting(string personId,string definitionId,string source,bool hostedByPerson=false)
+        internal string ScheduleLegacyCityMeeting(string personId,string definitionId,string source,bool hostedByPerson=false, bool playerTreat=false)
         {
             long start=SuggestCityActivityStart(definitionId,personId);
             var previous=CityActivities.FirstOrDefault(a=>a.SourceId==source);
             if(previous!=null&&!previous.Active&&previous.State!=CityActivityPhase.Completed)source+=":retry:"+_nextCityActivity;
             var a=ScheduleCityActivity(definitionId,new[]{personId},start,false,source);
             if(a!=null&&hostedByPerson)a.HostId=personId;
+            if (a != null && playerTreat) a.PlayerTreat = true;
             return a==null?"预约未成立，请在日程选择可用时段；尚未消费或增加关系。":"已和"+(CityPerson(personId)?.Name??"同行者")+"约在"+new GameTimestamp(start)+"到"+City.GetPlace(a.VenueId).Name+"见面。请从城市日程实际前往，到场后按活动阶段结算。";
         }
         internal string OfferCityReferralContract(string source,string client,int count,bool discount)
@@ -413,14 +429,200 @@ namespace PCShopSell.Core.Session
             if(!_cityReferrals.Any(o=>o.Id==id))_cityReferrals.Add(new CityReferralOffer{Id=id,Client=client,Count=Math.Max(1,Math.Min(3,count)),Discount=discount});
             return "转介绍已记入城市履历："+client+"，"+count+"台。请在城市履历核对报价和5%保证金后确认；正常采购、装机、交付后才产生收入。";
         }
+
+        private CityReferralOffer QuoteIndustryReferral(OwnedShop shop, int count)
+        {
+            var quote = new CityReferralOffer { Count = count, ShopId = shop.Place.Id, RetailKind = shop.RetailKind,
+                SignedDay = shop.Lease?.SignedDay ?? -1, Recipe = -1 };
+            Money price;
+            switch (shop.RetailKind)
+            {
+                case "computer":
+                    quote.ProductName = "入门整机";
+                    price = shop.Sim.QuoteBuild(0) * count;
+                    break;
+                case "restaurant":
+                    var kitchen = SpecialBusiness(shop.Place.Id);
+                    int recipe = Enumerable.Range(0, RecipeNames.Length).Where(i => (kitchen.RecipeMask & (1 << i)) != 0)
+                        .OrderByDescending(i => KitchenIngredientCount(shop, RecipeIngredients[i])).DefaultIfEmpty(-1).First();
+                    if (recipe < 0) return null;
+                    quote.Recipe = recipe;
+                    quote.ProductName = RecipeNames[recipe];
+                    price = Money.FromYuan((long)Math.Round(RecipePrices[recipe] * kitchen.MenuMarkup)) * count;
+                    break;
+                case "secondhand":
+                    var listed = shop.Sim.ShelfFillOf(ShelfKinds.Get("secondhand")).Resale.Take(count).ToArray();
+                    if (listed.Length < count) return null;
+                    quote.UsedIds = listed.Select(item => item.Id).ToArray();
+                    quote.ProductName = string.Join("、", listed.Select(item => UsedNames[item.Product]));
+                    price = Money.FromYuan(listed.Sum(item => item.Price));
+                    break;
+                default:
+                    var product = Gifts.All.Where(gift => RetailShopTypes.Sells(shop.RetailKind, gift.Id))
+                        .OrderByDescending(gift => shop.Sim.Stock.GoodsCount(gift.Id)).ThenBy(gift => gift.Price.Cents).FirstOrDefault();
+                    if (product == null) return null;
+                    quote.ProductId = product.Id;
+                    quote.ProductName = product.Name;
+                    price = shop.Sim.GoodsPriceOf(product.Id) * count;
+                    break;
+            }
+            quote.FullPriceCents = price.Cents;
+            return price.IsPositive ? quote : null;
+        }
+
+        internal OwnedShop FindReferralShop(int count) => MyShops.Where(shop => !IsDedicatedVenue(shop.Place)
+                && !_cityReferrals.Any(offer => offer.ShopId == shop.Place.Id && offer.Count == count && !offer.Settled)
+                && QuoteIndustryReferral(shop, count) != null)
+            .OrderBy(shop => shop.Place == CurrentPlace ? 0 : 1).ThenBy(shop => shop == CurrentShop ? 0 : 1).FirstOrDefault();
+
+        private EventDef BindIndustryReferral(EventDef template, string introducer)
+        {
+            int count = introducer == Npcs.Zhang ? 1 : 3;
+            var shop = FindReferralShop(count);
+            if (shop == null) return null;
+            var quote = QuoteIndustryReferral(shop, count);
+            quote.Introducer = introducer;
+            quote.Id = template.Id + ":" + Clock.Today.TotalDays;
+            quote.Client = count == 1 ? "张绍文介绍的亲戚" : "李秀兰介绍的培训机构";
+            string Record(bool discount)
+            {
+                if (ReferralShopFor(quote) != shop || _cityReferrals.Any(offer => offer.Id == quote.Id)) return "这笔报价已失效。";
+                quote.Discount = discount;
+                _cityReferrals.Add(quote);
+                return $"已记录{quote.ProductName} ×{count}，报价 {quote.Total}。可以在{ShopTitle(shop)}的订单页或城市履历确认接单。";
+            }
+            quote.Discount = true;
+            string discounted = quote.Total.ToString();
+            quote.Discount = false;
+            string terms = count == 1 ? "确认后 3 天内交付。" : "确认后 5 天内交付，保证金 5%，全数交付奖励 3%。";
+            return EventScene(template, $"{quote.Client}想向{ShopTitle(shop)}订购{quote.ProductName} ×{count}。{terms}",
+                Choose($"报{(count == 1 ? "七折熟客价" : "九五折合作价")} · {discounted}", _ => Record(true)),
+                Choose($"按正常价 · {quote.Total}", _ => Record(false)),
+                Choose("这单暂时接不了", _ => "你婉拒了这笔订单。"));
+        }
+
+        private OwnedShop ReferralShopFor(CityReferralOffer offer)
+        {
+            var shop = ShopAt(offer.ShopId);
+            return shop != null && shop.RetailKind == offer.RetailKind && (shop.Lease?.SignedDay ?? -1) == offer.SignedDay ? shop : null;
+        }
+
+        public string IndustryReferralBlocker(CityReferralOffer offer, bool delivery = false)
+        {
+            var shop = ReferralShopFor(offer);
+            if (offer.Settled || shop == null) return "对应门店或经营类型已变化。";
+            if (!delivery)
+            {
+                if (shop.RetailKind == "computer" && offer.Count > 1 && _contracts.Any(c => c.Accepted && !c.Settled && !c.PersonalReferral))
+                    return "请先处理已有企业合同。";
+                if (!Ledger.CanAfford(offer.Deposit)) return "现金不足以支付保证金。";
+                return null;
+            }
+            if (Clock.Now.TotalMinutes >= offer.DueMinute) return "这笔订单已超过交期。";
+            if (CurrentPlace != shop.Place) return "请到订单对应的门店交付。";
+            if (offer.Recipe >= 0)
+            {
+                if (SpecialFitGap(shop) != null) return "请先备齐餐馆设施。";
+                return KitchenRice(shop) >= .25 * offer.Count && KitchenIngredientCount(shop, RecipeIngredients[offer.Recipe]) >= offer.Count
+                    ? null : "店里的大米或食材不足。";
+            }
+            if (offer.UsedIds != null)
+            {
+                var available = shop.Sim.ShelfFillOf(ShelfKinds.Get("secondhand")).Resale.Select(item => item.Id).ToHashSet();
+                return offer.UsedIds.All(available.Contains) ? null : "订单中的旧物已售出、下架或被其他顾客预留。";
+            }
+            return shop.Sim.Stock.GoodsCount(offer.ProductId) >= offer.Count ? null : "请先把足够的商品入库。";
+        }
+
+        public bool DeliverIndustryReferral(string id)
+        {
+            var offer = _cityReferrals.FirstOrDefault(x => x.Id == id && x.ContractId == x.Id && !x.Settled);
+            if (offer == null) return false;
+            if (IndustryReferralBlocker(offer, true) is string reason) return Fail(reason);
+            var shop = ReferralShopFor(offer);
+            if (offer.Recipe >= 0)
+            {
+                for (int i = 0; i < offer.Count; i++) ConsumeRecipe(shop, offer.Recipe);
+                var state = SpecialBusiness(shop.Place.Id);
+                state.Paid++;
+                state.Revenue += offer.Total.Yuan;
+            }
+            else if (offer.UsedIds != null)
+            {
+                var state = SpecialBusiness(shop.Place.Id);
+                var items = offer.UsedIds.Select(itemId => state.Used.Single(item => item.Id == itemId)).ToArray();
+                long total = items.Sum(item => item.Price), running = 0, allocated = 0;
+                foreach (var item in items)
+                {
+                    running += item.Price;
+                    long subtotal = offer.Total.Yuan * running / total;
+                    RecordUsedSale(state, item, subtotal - allocated);
+                    allocated = subtotal;
+                }
+            }
+            else if (!shop.Sim.Stock.TryRemoveGoods(offer.ProductId, offer.Count)) return false;
+            shop.Sim.RecordBulkSale(offer.ProductName, offer.Count, offer.Total, offer.Client + "转介绍");
+            if (offer.DepositCents > 0)
+                Ledger.Credit(Clock.Today, "履约保证金", Money.FromCents(offer.DepositCents), offer.Client);
+            if (offer.Count > 1) Ledger.Credit(Clock.Today, "企业奖励", offer.Total.Scale(.03), offer.Client);
+            if (offer.Count > 1 || offer.Discount) AddRelation(offer.Introducer, 2);
+            offer.Settled = offer.Fulfilled = true;
+            Say($"已交付{offer.ProductName} ×{offer.Count}，实收 {offer.Total}。");
+            return true;
+        }
+
+        public bool DeclineIndustryReferral(string id)
+        {
+            var offer = _cityReferrals.FirstOrDefault(x => x.Id == id && x.ShopId != null && !x.Settled && x.ContractId == null);
+            if (offer == null) return false;
+            offer.Settled = true;
+            Say("已婉拒" + offer.Client + "的报价。");
+            return true;
+        }
+
+        private void ExpireIndustryReferrals(GameTimestamp now)
+        {
+            foreach (var offer in _cityReferrals.Where(x => x.ShopId != null && !x.Settled && (x.ContractId == null || x.ContractId == x.Id)))
+            {
+                if ((offer.ContractId == null || now.TotalMinutes < offer.DueMinute) && ReferralShopFor(offer) != null) continue;
+                offer.Settled = true;
+                Say(offer.Client + "的转介绍订单已失效。" + (offer.DepositCents > 0 ? "履约保证金已扣除。" : ""));
+            }
+        }
+
         public bool AcceptCityReferral(string id)
         {
             var offer=_cityReferrals.FirstOrDefault(o=>o.Id==id);
             if(offer==null||offer.ContractId!=null)return Fail("转介绍已处理或不存在。");
+            if (offer.ShopId != null)
+            {
+                if (IndustryReferralBlocker(offer) is string reason) return Fail(reason);
+                var target = ReferralShopFor(offer);
+                var due = Clock.Now.AddMinutes((offer.Count + 2) * GameTimestamp.MinutesPerDay);
+                offer.DueMinute = due.TotalMinutes;
+                offer.DepositCents = offer.Deposit.Cents;
+                if (offer.DepositCents > 0)
+                    Ledger.ForceDebit(Clock.Today, "履约保证金", offer.Deposit, offer.Client, LedgerAttribution.ForShop(offer.ShopId));
+                offer.ContractId = offer.Id;
+                if (target.RetailKind == "computer")
+                {
+                    var build = new EnterpriseContract { Id = "referral:" + offer.Id, Client = offer.Client, Count = offer.Count,
+                        Tier = 0, UnitCents = offer.Total.Cents / offer.Count, DueMinute = due.TotalMinutes, Accepted = true,
+                        DepositCents = offer.DepositCents, QuoteTotalCents = offer.Total.Cents,
+                        ReferralOfferId = offer.Id, ShopId = offer.ShopId };
+                    offer.ContractId = build.Id;
+                    _contracts.Add(build);
+                    for (int i = 0; i < offer.Count; i++) target.Sim.AddContractOrder(build.Id, build.Tier,
+                        Money.FromCents(build.UnitCents + (i < offer.Total.Cents % offer.Count ? 1 : 0)), due);
+                }
+                Say($"已接受{offer.Client}的订单，交期 {due}。");
+                return true;
+            }
             var shop=MyShops.FirstOrDefault(s=>s.RetailKind=="computer");if(shop==null)return Fail("需要一家电脑店承担订单。");
-            if(_contracts.Any(c=>c.Accepted&&!c.Settled))return Fail("先处理已有企业订单，转介绍信息会保留。");
+            if(_contracts.Any(c=>c.Accepted&&!c.Settled&&!c.PersonalReferral))return Fail("先处理已有企业订单，转介绍信息会保留。");
             var contract=new EnterpriseContract{Id="referral:"+offer.Id,Client=offer.Client,Count=offer.Count,Tier=0,
-                UnitCents=shop.Sim.QuoteBuild(0).Scale(offer.Discount ? .95 : 1.0).Cents,OfferUntilDay=Clock.Today.TotalDays+2};
+                UnitCents=shop.Sim.QuoteBuild(0).Scale(offer.Discount ? .95 : 1.0).Cents,OfferUntilDay=Clock.Today.TotalDays+2,
+                ReferralOfferId = offer.Id, ShopId = shop.Place.Id };
             _contracts.Add(contract);bool success=false;WithShop(shop,()=>success=AcceptEnterprise(contract.Id));
             if(!success){_contracts.Remove(contract);return false;}offer.ContractId=contract.Id;return true;
         }

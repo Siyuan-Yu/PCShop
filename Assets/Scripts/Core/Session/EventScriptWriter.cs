@@ -133,6 +133,7 @@ namespace PCShopSell.Core.Session
             var p = new List<string>();
             Add(p, "when", "[" + string.Join(", ", b.when.Select(Cond)) + "]");
             Add(p, "add", Num(b.add));
+            AddNum(p, "perPoint", b.perPoint);
             return Obj(p);
         }
     }

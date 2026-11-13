@@ -35,6 +35,7 @@ namespace PCShopSell.Core.Session
         public string Text;
         public string Kind;
         public string ActivityId;
+        public string DestinationId;
         public string ExpoId;
         public int Index = -1;
     }
@@ -240,6 +241,13 @@ namespace PCShopSell.Core.Session
             foreach (var credit in _scheduledCredits)
                 l.Add(new ScheduleEntry { Minute = (long)credit.day * GameTimestamp.MinutesPerDay, Day = DescribeDay(credit.day),
                     TimeText = "00:00", Kind = "npc_repayment", Text = $"{credit.memo} · 自动到账 {Money.FromCents(credit.cents)}" });
+            if (_linLoan != null)
+            {
+                int day = Math.Max(_linLoan.DueDay, Clock.Today.TotalDays);
+                l.Add(new ScheduleEntry { Minute = (long)day * 1440, Day = DescribeDay(day), TimeText = "00:00",
+                    Kind = "npc_repayment", Text = _linLoan.Overdue ? "林远航借款逾期 · 待处理" : "林远航约定还款 · ¥2,200" });
+            }
+            AddEventRaceSchedule(l);
             if (_relativeReceivable.Amount > 0 && _relativeReceivable.DueDay > Clock.Today.TotalDays)
                 l.Add(new ScheduleEntry { Minute = (long)_relativeReceivable.DueDay * GameTimestamp.MinutesPerDay,
                     Day = DescribeDay(_relativeReceivable.DueDay), TimeText = "00:00", Kind = "npc_repayment",

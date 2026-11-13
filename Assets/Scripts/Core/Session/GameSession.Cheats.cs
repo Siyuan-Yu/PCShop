@@ -177,6 +177,7 @@ namespace PCShopSell.Core.Session
                 if (IsGameOver) return false;
                 PrepareEventStock(shop);
             }
+            if (number == 13) Player.Health = System.Math.Min(75, Player.Health);
             if (template.Id == "money_parttime_offer" && !CanStartWeekendWork)
             {
                 if (Trip != null) StopTrip();

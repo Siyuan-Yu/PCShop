@@ -71,6 +71,81 @@ namespace PCShopSell.Tests
                 r.Step(1d/60,r.Speed<target?1:-.4,Math.Max(-1,Math.Min(1,angle*3)));
             }
         }
+
+        [Test]
+        public void TuningCharges800AndRepairsActualVehicle()
+        {
+            using var initial = Make();
+            PrepareStarterScooter(initial);
+            var save = initial.CreateSave();
+            save.racing.Garage.Single().Condition = 70;
+            using var s = GameSession.Load(initial.City, save);
+            var cash = s.Ledger.Balance;
+            var time = s.Clock.Now.TotalMinutes;
+            s.RaiseEvent("race_jingxing_tuning");
+            Assert.IsTrue(s.ResolveEvent(0));
+            Assert.AreEqual(cash - Money.FromYuan(800), s.Ledger.Balance);
+            Assert.AreEqual(time + 30, s.Clock.Now.TotalMinutes);
+            Assert.AreEqual(85, s.Garage.Single().Condition);
+        }
+
+        [Test]
+        public void CollectorTrialUsesBorrowedCarForOneActualLap()
+        {
+            using var initial = Make();
+            var save = initial.CreateSave();
+            save.districtProgress.UnlockedTier = 3;
+            using var s = GameSession.Load(initial.City, save);
+            Assert.AreEqual(3, s.DistrictAccessTier);
+            s.RaiseEvent("race_ruoning_rare");
+            Assert.IsTrue(s.ResolveEvent(0));
+            Assert.IsTrue(s.HasCollectorTrial);
+            At(s, "race_3");
+            var owner = s.CityPersonState("racer_3");
+            owner.LocationPlaceId = "race_3";
+            owner.Route = null;
+            Assert.IsTrue(s.StartCollectorTrial());
+            Assert.AreEqual(1, s.ActiveRace.Laps);
+            Assert.AreEqual("c_718", s.ActiveRace.Model.Id);
+            Drive(s.ActiveRace);
+            Assert.IsTrue(s.ActiveRace.Finished);
+            Assert.IsFalse(s.ActiveRace.Abandoned);
+            Assert.IsNotNull(s.FinishRace());
+            Assert.AreEqual(0, s.Garage.Count);
+            Assert.IsFalse(s.HasCollectorTrial);
+            Assert.That(s.Relation("racer_3"), Is.GreaterThan(8));
+        }
+
+        [Test]
+        public void MingRaceBooksBeforeLending3000AndWritesBothToSchedule()
+        {
+            using var s = Make();
+            var cash = s.Ledger.Balance;
+            s.RaiseEvent("race_ming_lunch");
+            Assert.NotNull(s.PendingEvent);
+            Assert.IsTrue(s.ResolveEvent(0));
+            Assert.AreEqual(cash - Money.FromYuan(3000), s.Ledger.Balance);
+            Assert.IsTrue(s.RaceInvitations.Any(i => i.PersonId == "life_ming"));
+            Assert.IsTrue(s.Schedule().Any(entry => entry.Kind == "race_invite"));
+            Assert.IsTrue(s.Schedule().Any(entry => entry.Text.Contains("许明归还周转款")));
+        }
+
+        [Test]
+        public void ClubGatheringBooksARealMealWithoutChargingBeforeArrival()
+        {
+            using var s = Make();
+            var before = s.Ledger.Balance;
+            s.RaiseEvent("race_zhixia_club");
+            Assert.NotNull(s.PendingEvent);
+            int meal = s.PendingEvent.Choices.FindIndex(c => c.Text.Contains("吃饭小聚"));
+            Assert.That(meal, Is.GreaterThanOrEqualTo(0));
+            Assert.IsTrue(s.ResolveEvent(meal));
+            var activity = s.CityActivities.Single();
+            Assert.AreEqual("life_restaurant", activity.VenueId);
+            Assert.AreEqual("racer_1", activity.Participants.Single().PersonId);
+            Assert.AreEqual(before, s.Ledger.Balance);
+            Assert.AreEqual(0, s.RaceInvitations.Count);
+        }
         [Test] public void CatalogDealerSplitAndDistinctScooters()
         {
             Assert.That(MotorCatalog.All.Count(m=>m.Kind==VehicleKind.EBike),Is.GreaterThanOrEqualTo(5));
