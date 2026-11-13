@@ -42,6 +42,12 @@ namespace PCShopSell.Core.Session
                 SaveSpecialBusinesses(d);
                 SavePetBoarding(d);
                 SaveRacing(d);
+                SaveFishing(d);
+                SaveOutdoorBatch(d);
+                SaveCustomerBatch(d);
+                SaveOldMarket(d);
+                SaveShopEventBatch(d);
+                SaveFinanceBatch(d);
                 return d;
             }
             finally
@@ -327,6 +333,12 @@ namespace PCShopSell.Core.Session
             Trip = null;
             ClearEdge();
             LoadCityLife(d);
+            RestoreFishing(d);
+            RestoreOutdoorBatch(d);
+            RestoreCustomerBatch(d);
+            RestoreOldMarket(d);
+            RestoreShopEventBatch(d);
+            RestoreFinanceBatch(d);
             InitializeExpansionResidents();
             LoadVenueBusinesses(d);
             LoadEnergyPayroll(d);

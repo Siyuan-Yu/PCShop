@@ -20,7 +20,7 @@ namespace PCShopSell.Core.Session
         private bool HasFridgeMeal => CanOpenFridge && HasMeal(CurrentFridge.Food.Packed);
 
         public static string MealName(string id) => FastFoodCatalog.Packed(id)?.Name ?? Ingredients.Get(id)?.DishName ?? "白米饭";
-        public static double MealNutrition(string id) => FastFoodCatalog.Packed(id)?.Nutrition ?? (id == "rice" ? -5 : id == "pork" ? 5 : id == "egg" ? 3 : id == "tofu" ? 2 : 0);
+        public static double MealNutrition(string id) => FastFoodCatalog.Packed(id)?.Nutrition ?? (id == "rice" ? -5 : id == "pork" ? 5 : id == "egg" ? 3 : id == "tofu" ? 2 : FishingCatalog.Get(id) != null ? 4 : 0);
         public static string SignedDiet(double value) => value > 0 ? "+" + value.ToString("0.#") : value.ToString("0.#");
         public static double MealMood(string id) => FastFoodCatalog.Packed(id)?.Mood ?? 0;
         public static string MealEffects(string id) => "营养 " + SignedDiet(MealNutrition(id)) + " · 心情 " + SignedDiet(MealMood(id));

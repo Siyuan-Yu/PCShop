@@ -15,6 +15,8 @@ namespace PCShopSell.Core.Session
     {
         public string Id,ModelId,GarageId; public int Motor,Battery,Tyres,Steering; public double Condition=100;
         public bool Commuter,Impounded;
+        public bool EventBatteryWorn;
+        public int SponsorRacesRemaining;
         public GarageVehicle Copy()=>(GarageVehicle)MemberwiseClone();
     }
     public static class MotorCatalog
@@ -64,7 +66,7 @@ namespace PCShopSell.Core.Session
         public static long ResaleValue(GarageVehicle vehicle)=>(long)(Get(vehicle.ModelId).Price*.6*Math.Max(0,Math.Min(100,vehicle.Condition))/100);
         public static MotorModel Performance(GarageVehicle v)
         {
-            var m=Get(v.ModelId);double wear=.75+.25*Math.Max(0,Math.Min(100,v.Condition))/100;
+            var m=Get(v.ModelId);double wear=(.75+.25*Math.Max(0,Math.Min(100,v.Condition))/100)*(v.EventBatteryWorn?.75:1);
             return new MotorModel(m.Id,m.Name,m.Kind,m.Price,m.Speed*(1+.07*v.Battery)*wear,m.Acceleration*(1+.13*v.Motor)*wear,
                 Math.Min(125,m.Grip+8*v.Tyres),Math.Min(125,m.Handling+8*v.Steering),
                 Math.Min(125,m.Braking+6*v.Tyres)*wear,Math.Min(125,m.Stability+6*v.Steering)*wear);

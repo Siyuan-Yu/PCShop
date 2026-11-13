@@ -47,7 +47,7 @@ namespace PCShopSell.Core.Session
             var shop=ShopAt(id);if(shop==null||!IsDedicatedVenue(shop.Place))return null;
             if(!_venueBusinesses.TryGetValue(id,out var state))
             {
-                var def=CityLifeCatalog.Activities.FirstOrDefault(a=>a.VenueId==id);
+                var def=CityLifeCatalog.Activities.FirstOrDefault(a=>!a.EventOnly&&a.VenueId==id);
                 state=new VenueBusiness{PlaceId=id,Open=shop.Place.OpenMinute,Close=shop.Place.CloseMinute,
                     PriceCents=(def?.PriceYuan??30)*100L,Day=Clock.Today.TotalDays,MaintenanceDay=Clock.Today.TotalDays};
                 _venueBusinesses[id]=state;
@@ -122,7 +122,7 @@ namespace PCShopSell.Core.Session
                 state.LastPulse=now/10;
                 int ownerSeats=_cityActivities.Where(a=>a.Active&&a.VenueId==shop.Place.Id&&a.RendezvousReady).Sum(a=>1+a.Participants.Length);
                 if(state.CustomersHere.Length+ownerSeats>=VenueCapacity(shop.Place))continue;
-                double basePrice=(CityLifeCatalog.Activities.FirstOrDefault(a=>a.VenueId==shop.Place.Id)?.PriceYuan??30)*100;
+                double basePrice=(CityLifeCatalog.Activities.FirstOrDefault(a=>!a.EventOnly&&a.VenueId==shop.Place.Id)?.PriceYuan??30)*100;
                 if(!Random.Chance(Math.Min(.8,.45*basePrice/state.PriceCents*FootfallOf(shop.Place).DailyPassers/300.0)
                     * ShopPowerTraffic(shop, Clock.Now)))continue;
                 var people=_cityPeople.Values.Where(p=>p.Route==null&&p.ActivityId==null&&p.VisitId==null&&p.Task!=CityPersonTask.Working
@@ -139,7 +139,7 @@ namespace PCShopSell.Core.Session
                 remaining.Add(new VenueCustomer{PersonId=visitor.PersonId,ReservationId=reservation,PriceCents=state.PriceCents});state.CustomersHere=remaining.ToArray();
             }
         }
-        private int VenueDuration(Place p)=>CityLifeCatalog.Activities.FirstOrDefault(a=>a.VenueId==p.Id)?.Minutes??60;
+        private int VenueDuration(Place p)=>CityLifeCatalog.Activities.FirstOrDefault(a=>!a.EventOnly&&a.VenueId==p.Id)?.Minutes??60;
         public bool RecoverVenueFurniture(string id,int index)
         {
             var shop=ShopAt(id);

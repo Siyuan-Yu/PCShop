@@ -9,6 +9,7 @@ namespace PCShopSell.Game
         private QuarterlyExpoView _expoView;
         private string _expoFocus;
         private bool _expoWasOpen;
+        private bool _monthlyWasOpen;
         private QuarterlyExpoView ExpoView
         {
             get
@@ -22,6 +23,7 @@ namespace PCShopSell.Game
         {
             var view=ExpoView;if(view==null)return;
             view.Sync(Session,dt);
+            if(view.MonthlyOpen!=_monthlyWasOpen){_monthlyWasOpen=view.MonthlyOpen;SnapCamera(true);}
             _avatar.PresentInExpo(view.Open?(Vector3?)view.PlayerPoint(view.FocusZone):null,
                 view.transform.rotation*Quaternion.Euler(0,180,0),dt);
             if(view.Open!=_expoWasOpen||view.Open&&_expoFocus!=view.FocusZone)

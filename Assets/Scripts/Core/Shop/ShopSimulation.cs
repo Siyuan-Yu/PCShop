@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -534,6 +534,7 @@ namespace PCShopSell.Core.Shop
         public event Action<ShopCustomer> CustomerArrived;
         public event Action<ShopCustomer> CustomerReadyToPay;
         public event Action<ShopCustomer> CustomerPaid;
+        public event Action<int, string, Money> BulkSalePaid;
         public event Action<ShopCustomer> CustomerLeft;
 
         /// <summary>每天零点前触发一次：昨天的营业小结（当天有顾客才触发）。</summary>
@@ -600,6 +601,7 @@ namespace PCShopSell.Core.Shop
 
         public bool TradingEnabled = true;
         public Func<GameTimestamp, double> PowerTrafficOf;
+        public Func<ShopCustomer, Money> FinalSalePrice;
         public Func<string, double> TemporaryPriceFactorOf;
         public bool IsOpenAt(GameTimestamp t) => IsOpenAt(t, PlayerPresent);
         public bool IsOpenAt(GameTimestamp t, bool playerPresent) =>
@@ -889,18 +891,26 @@ namespace PCShopSell.Core.Shop
             CustomerArrived?.Invoke(c);
         }
 
-        internal void ArriveReferral(PartDef part, string goodsId, bool boxed, long budgetCents, bool reserved)
+        internal void ArriveReferral(PartDef part, string goodsId, bool boxed, long budgetCents, bool reserved, string personId = null)
         {
             var now = _clock.Now;
             var customer = new ShopCustomer(_nextCustomerId++, goodsId == null ? CustomerIntent.Retail : CustomerIntent.Goods,
                 part?.Category ?? PartCatalog.Categories[0], 0, now, now.AddMinutes(3), true)
             {
+                PersonId = personId,
                 ReferralProductId = part?.Id ?? goodsId, ReferralBoxed = boxed, ReferralReserved = reserved,
                 RetailBudgetCents = budgetCents,
             };
             _active.Add(customer);
             TodayCustomers++;
             CustomerArrived?.Invoke(customer);
+        }
+
+        internal void ArriveReturningCustomer(string personId)
+        {
+            var now = _clock.Now;
+            var c = new ShopCustomer(_nextCustomerId++, IsGoodsShop ? CustomerIntent.Goods : CustomerIntent.Retail, PartCatalog.Categories[Random.Next(0, PartCatalog.Categories.Length)], 0, now, now.AddMinutes(3), true) { PersonId = personId };
+            _active.Add(c); TodayCustomers++; CustomerArrived?.Invoke(c);
         }
 
         private void DecideReferral(ShopCustomer customer, GameTimestamp now)
@@ -953,6 +963,7 @@ namespace PCShopSell.Core.Shop
             _completedVisits.Add(new ShopVisitDetail { CustomerId = _nextCustomerId++,
                 ProductName = itemName + " ×" + count, PaidCents = total.Cents,
                 ArrivalMinute = _clock.Now.TotalMinutes, State = CustomerState.Paid });
+            BulkSalePaid?.Invoke(_nextCustomerId - 1, itemName + " ×" + count, total);
             Reputation += 1;
             AdjustShopReputation(.12);
         }
@@ -1193,6 +1204,7 @@ namespace PCShopSell.Core.Shop
         {
             if (c.GoodsId != null && c.GoodsExpiryDay >= 0 && c.GoodsExpiryDay < _clock.Today.TotalDays)
             { Leave(c, LeaveReason.NoStock, countAsLost: false); return; }
+            c.Spend = FinalSalePrice?.Invoke(c) ?? c.Spend;
             c.PaidWith = selfCheckout ? PayChannel.SelfCheckout : c.CarriesCash && (Accepted & PaymentMethods.Cash) != 0 ? PayChannel.Cash : PayChannel.QrCode;
             _queue.Remove(c);
             _active.Remove(c);

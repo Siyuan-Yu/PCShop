@@ -198,8 +198,11 @@ namespace PCShopSell.Core.Session
             double free = double.PositiveInfinity;
             if (destination != null) WithShop(destination, () => free = PlayerShop.Stock.FreeSpace - IncomingShopSpace);
             if (space > free + 1e-9) return Fail($"店里放不下（需要 {space:0.#} 格，只剩 {Math.Max(0, free):0.#} 格）。");
-            if (!PayUnifiedOnlineOrder(order, total, store)) return Fail($"要 {total}（含运费），钱不够。");
+            Money couponDiscount = ProcurementCouponDiscount(order, total);
+            total -= couponDiscount;
+            if (!PayUnifiedOnlineOrder(order, total, store, couponDiscount)) return Fail($"要 {total}（含运费），钱不够。");
 
+            if (couponDiscount.IsPositive) _eventCoupon.Used = true;
             GameDate next = Clock.Today.AddDays(1);
             order.DeliverAtMinute = GameTimestamp.From(next, Online1788.DeliveryMinuteOfDay).TotalMinutes;
             order.TotalCents = total.Cents;

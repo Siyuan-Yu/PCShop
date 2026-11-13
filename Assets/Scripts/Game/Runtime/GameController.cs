@@ -387,6 +387,7 @@ namespace PCShopSell.Game
             World.SetVenueFocus(Session.CurrentPlace?.Id);
             _avatar.Update(Session, dt, World);
             SyncExpoView(dt);
+            SyncShopEventViews();
             _police.Update(!room);
             _crowdSyncTimer -= dt;
             string crowdPlace=Session.CurrentPlace?.Id, crowdActivity=Session.RunningCityActivity?.Id;
@@ -462,10 +463,13 @@ namespace PCShopSell.Game
                 return center + CameraRig.Rotation * Vector3.right * (size * Cam.aspect * ShopDockFraction);
             }
               var closeView=CityCloseView;
+              if(ExpoView?.MonthlyOpen==true)return ExpoView.MonthlyFocus-CameraRig.Rotation*Vector3.right*(size*Cam.aspect*.16f);
               if(ExpoView?.Open==true)return ExpoCameraFocus(zoom>0?zoom:_rig.Size);
               if(closeView!=null)return CityCloseFocus(closeView);
+            if (Session.CurrentPlace?.Id == GameSession.OldMarketVenueId && World.Places.TryGetValue(GameSession.OldMarketVenueId, out PlaceVisual marketView))
+                return marketView.Root.transform.TransformPoint(new Vector3(0, 1, (float)Session.CurrentPlace.Depth * .46f));
             Vector3 p = World.StreetPosition(Session.PlayerPosition);
-            if (Session.CurrentPlace != null && World.Places.TryGetValue(Session.CurrentPlace.Id, out PlaceVisual pv)) p = pv.Entrance;
+            if (Session.CurrentPlace != null && Session.RunningCityActivity?.DefinitionId != "race_night" && World.Places.TryGetValue(Session.CurrentPlace.Id, out PlaceVisual pv)) p = pv.Entrance;
             return p + new Vector3(0, 1f, 0);
         }
 
@@ -511,7 +515,7 @@ namespace PCShopSell.Game
                 HandleTimeSpeedKeys();
                 return;
             }
-            if (Input.GetKeyDown(KeyCode.Space)) Session.Time.TogglePause();
+            if (Input.GetKeyDown(KeyCode.Space) && !Ui.FishingInputActive) Session.Time.TogglePause();
             HandleTimeSpeedKeys();
             if (!GameUi.PointerOverUi) _rig.Zoom(Input.mouseScrollDelta.y);
             HandleCameraOrbit();
@@ -1100,6 +1104,16 @@ namespace PCShopSell.Game
             {
                 _rig.SetInterior(true);_rig.SetPlaceAngles(ExpoView.transform.eulerAngles.y,52f);
                 _rig.MinSize=7f;_rig.MaxSize=45f;size=ExpoView.CameraSize(Cam.aspect);
+            }
+            else if(ExpoView?.MonthlyOpen==true)
+            {
+                _rig.SetInterior(true);_rig.SetPlaceAngles(ExpoView.transform.eulerAngles.y,52f);
+                _rig.MinSize=4.5f;_rig.MaxSize=20f;size=7.5f;
+            }
+            else if (Session.CurrentPlace?.Id == GameSession.OldMarketVenueId)
+            {
+                _rig.SetInterior(true); _rig.SetPlaceAngles((float)Session.CurrentPlace.Heading, 52f);
+                _rig.MinSize = 7f; _rig.MaxSize = 30f; size = 14f;
             }
             _wasRoomKind = RoomKind;
             if (smooth) _rig.Size = size;

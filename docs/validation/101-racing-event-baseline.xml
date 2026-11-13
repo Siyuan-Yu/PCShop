@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="5" result="Failed(Child)" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-13 06:49:39Z" end-time="2026-11-13 06:49:41Z" duration="1.8913081">
+  <test-suite type="TestSuite" id="2499" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1300" result="Failed" site="Child" start-time="2026-11-13 06:49:39Z" end-time="2026-11-13 06:49:41Z" duration="1.891308" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="3994" name="PCShopSell.Tests.EditMode.dll" fullname="F:/_ci/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1300" result="Failed" site="Child" start-time="2026-11-13 06:49:39Z" end-time="2026-11-13 06:49:41Z" duration="1.867993" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="13020" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="3995" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1300" result="Failed" site="Child" start-time="2026-11-13 06:49:39Z" end-time="2026-11-13 06:49:41Z" duration="1.858903" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="3996" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="1300" result="Failed" site="Child" start-time="2026-11-13 06:49:39Z" end-time="2026-11-13 06:49:41Z" duration="1.842217" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="2684" name="CityActivityTests" fullname="PCShopSell.Tests.CityActivityTests" classname="PCShopSell.Tests.CityActivityTests" runstate="Runnable" testcasecount="14" result="Failed" site="Child" start-time="2026-11-13 06:49:39Z" end-time="2026-11-13 06:49:40Z" duration="0.283799" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="2685" name="AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks" fullname="PCShopSell.Tests.CityActivityTests.AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks" methodname="AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks" classname="PCShopSell.Tests.CityActivityTests" runstate="Runnable" seed="337883842" result="Failed" start-time="2026-11-13 06:49:39Z" end-time="2026-11-13 06:49:40Z" duration="0.268897" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  racer_0 working in closed race_0 at 第1年1月6日 10:00
+  Expected: True
+  But was:  False
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.CityActivityTests+<>c__DisplayClass0_0.<AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks>g__Check|0 () [0x0006e] in F:\_ci\Assets\Tests\EditMode\CityActivityTests.cs:22
+at PCShopSell.Tests.CityActivityTests.AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks () [0x00011] in F:\_ci\Assets\Tests\EditMode\CityActivityTests.cs:24
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.CityActivityTests.AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks
+REGRESSION DONE PCShopSell.Tests.CityActivityTests.AllAuthoredWorkersRespectClosedVenuesOnInitializationAndDailyTicks Failed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3423" name="RacingTests" fullname="PCShopSell.Tests.RacingTests" classname="PCShopSell.Tests.RacingTests" runstate="Runnable" testcasecount="31" result="Failed" site="Child" start-time="2026-11-13 06:49:40Z" end-time="2026-11-13 06:49:41Z" duration="1.452030" total="4" passed="0" failed="4" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="3452" name="AcceptanceFixtureHasRealVehiclesShowroomAndIndependentSave" fullname="PCShopSell.Tests.RacingTests.AcceptanceFixtureHasRealVehiclesShowroomAndIndependentSave" methodname="AcceptanceFixtureHasRealVehiclesShowroomAndIndependentSave" classname="PCShopSell.Tests.RacingTests" runstate="Runnable" seed="1371899417" result="Failed" start-time="2026-11-13 06:49:40Z" end-time="2026-11-13 06:49:40Z" duration="0.487336" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: 6
+  But was:  9
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.RacingTests.AcceptanceFixtureHasRealVehiclesShowroomAndIndependentSave () [0x00026] in F:\_ci\Assets\Tests\EditMode\RacingTests.cs:225
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.RacingTests.AcceptanceFixtureHasRealVehiclesShowroomAndIndependentSave
+REGRESSION DONE PCShopSell.Tests.RacingTests.AcceptanceFixtureHasRealVehiclesShowroomAndIndependentSave Failed
+]]></output>
+            </test-case>
+            <test-case id="3455" name="PersonalVehiclesMoveBetweenGarageAndSizedShowroomWithoutDuplicates" fullname="PCShopSell.Tests.RacingTests.PersonalVehiclesMoveBetweenGarageAndSizedShowroomWithoutDuplicates" methodname="PersonalVehiclesMoveBetweenGarageAndSizedShowroomWithoutDuplicates" classname="PCShopSell.Tests.RacingTests" runstate="Runnable" seed="658471089" result="Failed" label="Error" start-time="2026-11-13 06:49:40Z" end-time="2026-11-13 06:49:40Z" duration="0.288705" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[System.IndexOutOfRangeException : Index was outside the bounds of the array.]]></message>
+                <stack-trace><![CDATA[  at PCShopSell.Tests.RacingTests.PersonalVehiclesMoveBetweenGarageAndSizedShowroomWithoutDuplicates () [0x00128] in F:\_ci\Assets\Tests\EditMode\RacingTests.cs:261
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 ]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.RacingTests.PersonalVehiclesMoveBetweenGarageAndSizedShowroomWithoutDuplicates
+REGRESSION DONE PCShopSell.Tests.RacingTests.PersonalVehiclesMoveBetweenGarageAndSizedShowroomWithoutDuplicates Failed:Error
+]]></output>
+            </test-case>
+            <test-case id="3448" name="RivalsFinishingFirstRemainAheadAfterPlayerCrossesFinish" fullname="PCShopSell.Tests.RacingTests.RivalsFinishingFirstRemainAheadAfterPlayerCrossesFinish" methodname="RivalsFinishingFirstRemainAheadAfterPlayerCrossesFinish" classname="PCShopSell.Tests.RacingTests" runstate="Runnable" seed="1973944177" result="Failed" start-time="2026-11-13 06:49:40Z" end-time="2026-11-13 06:49:40Z" duration="0.059543" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: 3
+  But was:  11
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.RacingTests.RivalsFinishingFirstRemainAheadAfterPlayerCrossesFinish () [0x0007b] in F:\_ci\Assets\Tests\EditMode\RacingTests.cs:207
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.RacingTests.RivalsFinishingFirstRemainAheadAfterPlayerCrossesFinish
+REGRESSION DONE PCShopSell.Tests.RacingTests.RivalsFinishingFirstRemainAheadAfterPlayerCrossesFinish Failed
+]]></output>
+            </test-case>
+            <test-case id="3454" name="UsedCarLoopUsesContactsRealStockCashAndSingleDelivery" fullname="PCShopSell.Tests.RacingTests.UsedCarLoopUsesContactsRealStockCashAndSingleDelivery" methodname="UsedCarLoopUsesContactsRealStockCashAndSingleDelivery" classname="PCShopSell.Tests.RacingTests" runstate="Runnable" seed="2053196889" result="Failed" label="Error" start-time="2026-11-13 06:49:40Z" end-time="2026-11-13 06:49:41Z" duration="0.604897" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[System.Reflection.TargetParameterCountException : Number of parameters specified does not match the expected number.]]></message>
+                <stack-trace><![CDATA[  at System.Reflection.RuntimeMethodInfo.ConvertValues (System.Reflection.Binder binder, System.Object[] args, System.Reflection.ParameterInfo[] pinfo, System.Globalization.CultureInfo culture, System.Reflection.BindingFlags invokeAttr) [0x00016] in <eef08f56e2e042f1b3027eca477293d9>:0
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00040] in <eef08f56e2e042f1b3027eca477293d9>:0
+  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <eef08f56e2e042f1b3027eca477293d9>:0
+  at PCShopSell.Tests.RacingTests.UsedCarLoopUsesContactsRealStockCashAndSingleDelivery () [0x0021a] in F:\_ci\Assets\Tests\EditMode\RacingTests.cs:252
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 ]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.RacingTests.UsedCarLoopUsesContactsRealStockCashAndSingleDelivery
+REGRESSION DONE PCShopSell.Tests.RacingTests.UsedCarLoopUsesContactsRealStockCashAndSingleDelivery Failed:Error
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

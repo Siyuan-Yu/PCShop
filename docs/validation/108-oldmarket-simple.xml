@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="14" result="Passed" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-13 13:09:25Z" end-time="2026-11-13 13:09:30Z" duration="5.2227363">
+  <test-suite type="TestSuite" id="2661" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1439" result="Passed" start-time="2026-11-13 13:09:25Z" end-time="2026-11-13 13:09:30Z" duration="5.222736" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="4318" name="PCShopSell.Tests.EditMode.dll" fullname="F:/_ci/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1439" result="Passed" start-time="2026-11-13 13:09:25Z" end-time="2026-11-13 13:09:30Z" duration="5.196981" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="38544" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="4319" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1439" result="Passed" start-time="2026-11-13 13:09:25Z" end-time="2026-11-13 13:09:30Z" duration="5.185078" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="4320" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="1439" result="Passed" start-time="2026-11-13 13:09:25Z" end-time="2026-11-13 13:09:30Z" duration="5.176087" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="3511" name="OldMarketTests" fullname="PCShopSell.Tests.OldMarketTests" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" testcasecount="14" result="Passed" start-time="2026-11-13 13:09:25Z" end-time="2026-11-13 13:09:30Z" duration="5.155147" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="3525" name="BuybackConsumesActualItemOnceAndCannotGenerateProfitFromImmediateResale" fullname="PCShopSell.Tests.OldMarketTests.BuybackConsumesActualItemOnceAndCannotGenerateProfitFromImmediateResale" methodname="BuybackConsumesActualItemOnceAndCannotGenerateProfitFromImmediateResale" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" seed="536503276" result="Passed" start-time="2026-11-13 13:09:25Z" end-time="2026-11-13 13:09:25Z" duration="0.376223" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OldMarketTests.BuybackConsumesActualItemOnceAndCannotGenerateProfitFromImmediateResale
+REGRESSION DONE PCShopSell.Tests.OldMarketTests.BuybackConsumesActualItemOnceAndCannotGenerateProfitFromImmediateResale Passed
+]]></output>
+            </test-case>
+            <test-case id="3512" name="IndependentMarketHasRouteAndOpeningHoursAndDoesNotRequireOwnedShop" fullname="PCShopSell.Tests.OldMarketTests.IndependentMarketHasRouteAndOpeningHoursAndDoesNotRequireOwnedShop" methodname="IndependentMarketHasRouteAndOpeningHoursAndDoesNotRequireOwnedShop" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" seed="1489985914" result="Passed" start-time="2026-11-13 13:09:25Z" end-time="2026-11-13 13:09:26Z" duration="0.252202" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OldMarketTests.IndependentMarketHasRouteAndOpeningHoursAndDoesNotRequireOwnedShop
+REGRESSION DONE PCShopSell.Tests.OldMarketTests.IndependentMarketHasRouteAndOpeningHoursAndDoesNotRequireOwnedShop Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="3528" name="InvitationsActuallyMeetAtNewMarketAndRewardOnlyAfterWalkAndLearning" fullname="PCShopSell.Tests.OldMarketTests.InvitationsActuallyMeetAtNewMarketAndRewardOnlyAfterWalkAndLearning" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-13 13:09:26Z" end-time="2026-11-13 13:09:27Z" duration="0.874238" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="3526" name="InvitationsActuallyMeetAtNewMarketAndRewardOnlyAfterWalkAndLearning(71,&quot;act_oldmarket_guwen&quot;)" fullname="PCShopSell.Tests.OldMarketTests.InvitationsActuallyMeetAtNewMarketAndRewardOnlyAfterWalkAndLearning(71,&quot;act_oldmarket_guwen&quot;)" methodname="InvitationsActuallyMeetAtNewMarketAndRewardOnlyAfterWalkAndLearning" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" seed="1034540298" result="Passed" start-time="2026-11-13 13:09:26Z" end-time="2026-11-13 13:09:26Z" duration="0.488132" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OldMarketTests.InvitationsActuallyMeetAtNewMarketAndRewardOnlyAfterWalkAndLearning(71,"act_oldmarket_guwen")
+REGRESSION DONE PCShopSell.Tests.OldMarketTests.InvitationsActuallyMeetAtNewMarketAndRewardOnlyAfterWalkAndLearning(71,"act_oldmarket_guwen") Passed
+]]></output>
+              </test-case>
+              <test-case id="3527" name="InvitationsActuallyMeetAtNewMarketAndRewardOnlyAfterWalkAndLearning(72,&quot;act_oldmarket_leiming&quot;)" fullname="PCShopSell.Tests.OldMarketTests.InvitationsActuallyMeetAtNewMarketAndRewardOnlyAfterWalkAndLearning(72,&quot;act_oldmarket_leiming&quot;)" methodname="InvitationsActuallyMeetAtNewMarketAndRewardOnlyAfterWalkAndLearning" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" seed="539009285" result="Passed" start-time="2026-11-13 13:09:26Z" end-time="2026-11-13 13:09:27Z" duration="0.382248" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OldMarketTests.InvitationsActuallyMeetAtNewMarketAndRewardOnlyAfterWalkAndLearning(72,"act_oldmarket_leiming")
+REGRESSION DONE PCShopSell.Tests.OldMarketTests.InvitationsActuallyMeetAtNewMarketAndRewardOnlyAfterWalkAndLearning(72,"act_oldmarket_leiming") Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-suite type="ParameterizedMethod" id="3522" name="MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes" fullname="PCShopSell.Tests.OldMarketTests.MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-13 13:09:27Z" end-time="2026-11-13 13:09:28Z" duration="1.358353" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="3519" name="MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes(&quot;radio&quot;)" fullname="PCShopSell.Tests.OldMarketTests.MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes(&quot;radio&quot;)" methodname="MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" seed="1275128520" result="Passed" start-time="2026-11-13 13:09:27Z" end-time="2026-11-13 13:09:27Z" duration="0.516441" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OldMarketTests.MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes("radio")
+REGRESSION DONE PCShopSell.Tests.OldMarketTests.MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes("radio") Passed
+]]></output>
+              </test-case>
+              <test-case id="3520" name="MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes(&quot;cassette&quot;)" fullname="PCShopSell.Tests.OldMarketTests.MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes(&quot;cassette&quot;)" methodname="MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" seed="868536040" result="Passed" start-time="2026-11-13 13:09:27Z" end-time="2026-11-13 13:09:28Z" duration="0.442128" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OldMarketTests.MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes("cassette")
+REGRESSION DONE PCShopSell.Tests.OldMarketTests.MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes("cassette") Passed
+]]></output>
+              </test-case>
+              <test-case id="3521" name="MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes(&quot;speaker&quot;)" fullname="PCShopSell.Tests.OldMarketTests.MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes(&quot;speaker&quot;)" methodname="MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" seed="851421045" result="Passed" start-time="2026-11-13 13:09:28Z" end-time="2026-11-13 13:09:28Z" duration="0.396671" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OldMarketTests.MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes("speaker")
+REGRESSION DONE PCShopSell.Tests.OldMarketTests.MasterRepairsInOneActionWithoutPriorInspectionAndReturnsOneItemAfter15Minutes("speaker") Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="3513" name="PurchaseUsesActualMoneyPhysicalBackpackWeightAndSavedDailyStock" fullname="PCShopSell.Tests.OldMarketTests.PurchaseUsesActualMoneyPhysicalBackpackWeightAndSavedDailyStock" methodname="PurchaseUsesActualMoneyPhysicalBackpackWeightAndSavedDailyStock" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" seed="1028270084" result="Passed" start-time="2026-11-13 13:09:28Z" end-time="2026-11-13 13:09:28Z" duration="0.363605" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OldMarketTests.PurchaseUsesActualMoneyPhysicalBackpackWeightAndSavedDailyStock
+REGRESSION DONE PCShopSell.Tests.OldMarketTests.PurchaseUsesActualMoneyPhysicalBackpackWeightAndSavedDailyStock Passed
+]]></output>
+            </test-case>
+            <test-case id="3524" name="RepairPausesAwayAndSurvivesSaveWithoutDuplicatingTheWorkbenchItem" fullname="PCShopSell.Tests.OldMarketTests.RepairPausesAwayAndSurvivesSaveWithoutDuplicatingTheWorkbenchItem" methodname="RepairPausesAwayAndSurvivesSaveWithoutDuplicatingTheWorkbenchItem" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" seed="1641304615" result="Passed" start-time="2026-11-13 13:09:28Z" end-time="2026-11-13 13:09:29Z" duration="0.439764" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OldMarketTests.RepairPausesAwayAndSurvivesSaveWithoutDuplicatingTheWorkbenchItem
+REGRESSION DONE PCShopSell.Tests.OldMarketTests.RepairPausesAwayAndSurvivesSaveWithoutDuplicatingTheWorkbenchItem Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="3518" name="RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes" fullname="PCShopSell.Tests.OldMarketTests.RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-13 13:09:29Z" end-time="2026-11-13 13:09:30Z" duration="0.826754" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="3515" name="RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes(&quot;radio&quot;,1)" fullname="PCShopSell.Tests.OldMarketTests.RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes(&quot;radio&quot;,1)" methodname="RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" seed="2027053626" result="Passed" start-time="2026-11-13 13:09:29Z" end-time="2026-11-13 13:09:29Z" duration="0.266717" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OldMarketTests.RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes("radio",1)
+REGRESSION DONE PCShopSell.Tests.OldMarketTests.RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes("radio",1) Passed
+]]></output>
+              </test-case>
+              <test-case id="3516" name="RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes(&quot;cassette&quot;,2)" fullname="PCShopSell.Tests.OldMarketTests.RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes(&quot;cassette&quot;,2)" methodname="RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" seed="746301742" result="Passed" start-time="2026-11-13 13:09:29Z" end-time="2026-11-13 13:09:29Z" duration="0.289539" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OldMarketTests.RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes("cassette",2)
+REGRESSION DONE PCShopSell.Tests.OldMarketTests.RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes("cassette",2) Passed
+]]></output>
+              </test-case>
+              <test-case id="3517" name="RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes(&quot;speaker&quot;,3)" fullname="PCShopSell.Tests.OldMarketTests.RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes(&quot;speaker&quot;,3)" methodname="RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" seed="2132110434" result="Passed" start-time="2026-11-13 13:09:29Z" end-time="2026-11-13 13:09:30Z" duration="0.266583" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OldMarketTests.RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes("speaker",3)
+REGRESSION DONE PCShopSell.Tests.OldMarketTests.RepairRequiresRealFaultyItemDiagnosisCorrectChoiceAndTenMinutes("speaker",3) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="3514" name="ShoppingRequiresPresenceCashAndCapacity" fullname="PCShopSell.Tests.OldMarketTests.ShoppingRequiresPresenceCashAndCapacity" methodname="ShoppingRequiresPresenceCashAndCapacity" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" seed="361979813" result="Passed" start-time="2026-11-13 13:09:30Z" end-time="2026-11-13 13:09:30Z" duration="0.357632" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OldMarketTests.ShoppingRequiresPresenceCashAndCapacity
+REGRESSION DONE PCShopSell.Tests.OldMarketTests.ShoppingRequiresPresenceCashAndCapacity Passed
+]]></output>
+            </test-case>
+            <test-case id="3523" name="WrongRepairReturnsFaultyItemAndCanRetryWithoutGrantingNormalGoods" fullname="PCShopSell.Tests.OldMarketTests.WrongRepairReturnsFaultyItemAndCanRetryWithoutGrantingNormalGoods" methodname="WrongRepairReturnsFaultyItemAndCanRetryWithoutGrantingNormalGoods" classname="PCShopSell.Tests.OldMarketTests" runstate="Runnable" seed="1003858527" result="Passed" start-time="2026-11-13 13:09:30Z" end-time="2026-11-13 13:09:30Z" duration="0.291009" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.OldMarketTests.WrongRepairReturnsFaultyItemAndCanRetryWithoutGrantingNormalGoods
+REGRESSION DONE PCShopSell.Tests.OldMarketTests.WrongRepairReturnsFaultyItemAndCanRetryWithoutGrantingNormalGoods Passed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

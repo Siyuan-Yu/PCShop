@@ -43,7 +43,7 @@ namespace PCShopSell.Core.Session
             .OrderBy(place => DistanceCity(StandOf(shop.Place), StandOf(place))).FirstOrDefault();
 
         private double EventPriceFactor(OwnedShop shop, string productId) =>
-            _matchedPromotions.Contains((shop.Place.Id, shop.RetailKind, productId)) ? .9 : 1;
+            (_matchedPromotions.Contains((shop.Place.Id, shop.RetailKind, productId)) ? .9 : 1) * FinanceFlashFactor(shop, productId);
         public const int PromotionServiceWageRaise = 20;
 
         private EventDef BindPriceWar(EventDef template)

@@ -38,7 +38,7 @@ namespace PCShopSell.Core.Session
 
     public sealed class RaceSettlement
     {
-        public string Track, Vehicle, Extra;
+        public string Track, Vehicle, Extra, EventTitle;
         public RaceMeeting Meeting;
         public bool Practice, Abandoned, PersonalBest;
         public int Position, Competitors, Collisions;
@@ -122,7 +122,11 @@ namespace PCShopSell.Core.Session
         }
 
         public bool CancelRaceInvitation(string personId, string trackId, int day)
-            => !Racing && _raceInvitations.RemoveAll(i => i.PersonId == personId && i.TrackId == trackId && i.Day == day) > 0;
+        {
+            if (Racing) return false;
+            _eventRaceBookings.RemoveAll(b => b.PersonId == personId && b.TrackId == trackId && b.Day == day);
+            return _raceInvitations.RemoveAll(i => i.PersonId == personId && i.TrackId == trackId && i.Day == day) > 0;
+        }
 
         private bool RaceInviteOverlaps(string personId, long from, long until)
             => _raceInvitations.Any(i => i.PersonId == personId

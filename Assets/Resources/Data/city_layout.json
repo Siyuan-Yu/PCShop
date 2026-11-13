@@ -5366,6 +5366,11 @@
       "id": "expansion_1072",
       "x": -151.2435645145428,
       "y": 905.5943163784348
+    },
+    {
+      "id": "oldmarket_entrance",
+      "x": -413.5211277338465,
+      "y": -510.8954590642396
     }
   ],
   "edges": [
@@ -6920,10 +6925,6 @@
     {
       "a": "lake_old_back_47",
       "b": "lake_old_back_48"
-    },
-    {
-      "a": "lake_old_back_48",
-      "b": "lake_old_backjoin1"
     },
     {
       "a": "lake_old_join0",
@@ -9728,6 +9729,14 @@
     {
       "a": "race_0_door",
       "b": "motor_cars_door"
+    },
+    {
+      "a": "lake_old_back_48",
+      "b": "oldmarket_entrance"
+    },
+    {
+      "a": "oldmarket_entrance",
+      "b": "lake_old_backjoin1"
     }
   ],
   "places": [
@@ -10349,7 +10358,7 @@
     },
     {
       "id": "life_hike",
-      "name": "城郊平地散步公园",
+      "name": "城郊公园 · 青湾垂钓场",
       "street": "s_oldhomes",
       "node": "s_market_2",
       "business": "venue_hike",
@@ -12233,6 +12242,26 @@
       "tier": 3,
       "openMinute": 0,
       "closeMinute": 1440
+    },
+    {
+      "id": "life_oldmarket",
+      "name": "青湾旧物市场",
+      "street": "s_oldhomes",
+      "node": "oldmarket_entrance",
+      "business": "venue_oldmarket",
+      "kind": "shop",
+      "size": "small",
+      "explicitEntrance": true,
+      "entranceX": 10.446256278897579,
+      "entranceY": -25.978370421479326,
+      "width": 22,
+      "depth": 18,
+      "heading": 158.09426936894306,
+      "tradable": false,
+      "openMinute": 540,
+      "closeMinute": 1320,
+      "model": "oldmarket",
+      "tier": 0
     }
   ],
   "patrols": [

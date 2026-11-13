@@ -34,7 +34,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content, "人脉经营故事", OpenCityStories, 20), -1, 50);
                 Ui.Size(Ui.Button(w.Content, "资产 · 门店与自有物业", OpenCityFinanceOverview, 20), -1, 50);
                 Ui.Size(Ui.Button(w.Content, "市场变化 / 模型目录", OpenCityRetailPanel, 20), -1, 50);
-                if (S.CurrentPlace != null && CityLifeCatalog.Activities.Any(a => a.VenueId == S.CurrentPlace.Id))
+                if (S.CurrentPlace != null && CityLifeCatalog.Activities.Any(a => !a.EventOnly && a.VenueId == S.CurrentPlace.Id))
                     Ui.Size(Ui.Button(w.Content, "当前场所：" + S.CurrentPlace.Name, () => OpenCityVenue(S.CurrentPlace), 20), -1, 50);
 #if UNITY_EDITOR
                 Ui.Size(Ui.Button(w.Content, "城市生活验收预置（独立测试档）", OpenCityAcceptance, 18, Ui.Warn), -1, 46);
@@ -57,7 +57,7 @@ namespace PCShopSell.Game.UI
         private bool CityMapTypeMatches(Place p) => _cityMapType == null
             || _cityMapType == "my" && S.IsMyShop(p)
             || _cityMapType == "property" && S.PropertyAt(p.Id) != null
-            || _cityMapType == "venue" && CityLifeCatalog.Activities.Any(a => a.VenueId == p.Id)
+            || _cityMapType == "venue" && CityLifeCatalog.Activities.Any(a => !a.EventOnly && a.VenueId == p.Id)
             || _cityMapType == "source" && (p.Kind == PlaceKind.Wholesaler || S.HasRetailWholesale(p))
             || _cityMapType == "home" && p.Kind == PlaceKind.Home;
         private int CityMapPriority(Place p) => S.CityActivities.Any(a => a.Active && a.VenueId == p.Id) ? 0 : S.CityFavorites.Contains(p.Id) ? 1 : S.CityRecent.Contains(p.Id) ? 2 : 3;
@@ -133,7 +133,7 @@ namespace PCShopSell.Game.UI
             {
                 var place = p;var door=S.DoorOf(p);
                 Vector2 at=Point(door.X*S.City.DistanceScale,door.Y*S.City.DistanceScale);
-                var button = Ui.Button(background, S.IsMyShop(p) ? "店" : p.Kind == PlaceKind.Home ? "宅" : CityLifeCatalog.Activities.Any(a => a.VenueId == p.Id) ? "娱" : "·", () => {if(onSelected!=null)onSelected(place);else OpenCityPlaceDetail(place);}, 14,
+                var button = Ui.Button(background, S.IsMyShop(p) ? "店" : p.Kind == PlaceKind.Home ? "宅" : CityLifeCatalog.Activities.Any(a => !a.EventOnly && a.VenueId == p.Id) ? "娱" : "·", () => {if(onSelected!=null)onSelected(place);else OpenCityPlaceDetail(place);}, 14,
                     S.CityActivities.Any(a => a.Active && a.VenueId == p.Id) ? Ui.Warn : S.IsMyShop(p) || S.PropertyAt(p.Id) != null ? Ui.ButtonHot : Ui.ButtonBg);
                 button.name="CityMap_"+p.Id;
                 var rect = (RectTransform)button.transform; rect.anchorMin = rect.anchorMax = at; rect.pivot = new Vector2(.5f, .5f); rect.sizeDelta = new Vector2(25, 23);
@@ -164,7 +164,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(shortcuts, "替换农贸快捷位", () => { S.SetCityShortcut(place.Id, false); Toast("快捷位已保存。"); }, 17), -1, 44, 1);
                 foreach (var a in S.CityActivities.Where(a => a.Active && a.VenueId == place.Id))
                 { string id = a.Id; Ui.Size(Ui.Button(w.Content, "查看此处邀约：" + S.CityActivityService(a)?.Name, () => OpenCityActivityDetail(id), 18), -1, 42); }
-                if (CityLifeCatalog.Activities.Any(a => a.VenueId == place.Id)) Ui.Size(Ui.Button(w.Content, "场所活动详情", () => OpenCityVenue(place), 18), -1, 44);
+                if (CityLifeCatalog.Activities.Any(a => !a.EventOnly && a.VenueId == place.Id)) Ui.Size(Ui.Button(w.Content, "场所活动详情", () => OpenCityVenue(place), 18), -1, 44);
             });
         }
 
@@ -310,6 +310,12 @@ namespace PCShopSell.Game.UI
         public void OpenCityVenue(Place place)
         {
             if (place == null) return;
+            if (place.Id == GameSession.OldMarketVenueId)
+            {
+                if (S.CurrentPlace == place) S.PrepareVenueCompanions(place);
+                OpenWindow(place.Name, 900, 700, w => BuildOldMarket(w, place));
+                return;
+            }
             if (place.Id == "life_expo") { OpenExpoReception(); return; }
             if (place.Id == GameSession.CommunityMcnId) { OpenCommunityMcn(); return; }
             if (S.CurrentPlace != place)
@@ -341,7 +347,7 @@ namespace PCShopSell.Game.UI
                 if (GameSession.LikesRacing(personId))
                     Ui.Size(Ui.Button(w.Content, "一起参赛 · 选择赛场和比赛场次", () =>
                     { choosingRace = true; w.ResetScrollOnRebuild = true; w.Rebuild(); }, 18), -1, 54).name = "CityActivityOffer_racing";
-                foreach (var definition in CityLifeCatalog.Activities.Where(activity => activity.Id != "snack"))
+                foreach (var definition in CityLifeCatalog.Activities.Where(activity => !activity.EventOnly && activity.Id != "snack"))
                 {
                     if (GameSession.FirstChapterTrial && (!S.City.HasPlace(definition.VenueId) || S.DistrictAccessBlocker(S.City.GetPlace(definition.VenueId)) != null)) continue;
                     var def = definition; string location = S.City.HasPlace(def.VenueId) ? S.City.GetPlace(def.VenueId).Name : "场所暂不可用";
@@ -556,6 +562,9 @@ namespace PCShopSell.Game.UI
                     Line(w.Content,"邀请人："+S.CityPerson(a.HostId).Name,18,Ui.Accent);
                 foreach (var p in a.Participants) Line(w.Content, (S.CityPerson(p.PersonId)?.Name ?? "同行者") + " · " + CityParticipantText(p.Phase), 18);
                 string payment = a.HostPays ? "邀请人请客" : a.EntryPaid ? "费用已支付" : a.PlayerTreat ? "你请客 · 到场点单后支付" : "费用尚未支付";
+                if (def?.EventOnly == true && !a.EntryPaid)
+                    payment = a.HostPays ? "邀请人承担，本人免费" : "到场支付 " + S.CityActivityEntryPrice(def, Math.Max(0,a.ServiceChoice), a);
+                if (!string.IsNullOrEmpty(a.EventGiftId)) payment += a.EventGiftDelivered ? " · 伴手礼已送达" : " · 请带上已购买的伴手礼";
                 Para(w.Content, $"阶段 {a.Stage + 1}/3 · {payment} · 完成奖励 {(a.RewardApplied ? "已结算" : "尚未结算")}", 18);
                 if (a.State == CityActivityPhase.Running)
                 {
@@ -564,13 +573,21 @@ namespace PCShopSell.Game.UI
                     if (a.ServiceConfirmed) Line(w.Content, "已选项目 · " + GameSession.VenueServiceName(def, a.ServiceChoice), 18, Ui.Good);
                     Para(w.Content, a.Stage == 0 ? def?.StartText : S.CityActivityMidText(a), 19);
                     BuildPartnerActivityChoices(w, a);
+                    BuildOutdoorBatchStatus(w, a);
+                    if (GameSession.IsInteractiveFishingActivity(a)) Ui.Size(Ui.Button(w.Content, "选钓位、抛竿和收鱼", OpenFishing, 19, Ui.ButtonHot), -1, 44);
                     Ui.Size(Ui.Button(w.Content, "打开场所菜单", () => GoToScheduledCityActivity(activityId), 18, Ui.ButtonHot,
                         CityActivityMenuOrTravelBlocker(activityId) == null), -1, 44);
                     if (def != null) for (int i = a.ServiceConfirmed ? def.ServiceCount : 0; i < def.Choices.Length; i++)
                     {
-                        int index = i; bool done = a.Choices.Contains(index.ToString());
-                        Ui.Size(Ui.Button(w.Content, (done ? "✓ " : "") + def.Choices[i], () => { CloseAllWindows(); S.ChooseCityActivity(activityId, index); }, 18, done ? Ui.ButtonBg : Ui.ButtonHot), -1, 44);
+                        int index = i; bool done = a.Choices.Contains(index.ToString()) && !S.OutdoorRepeatChoice(a, index);
+                        var outdoor = S.OutdoorActivityState(a.Id);
+                        bool available = outdoor?.Pending == null;
+                        if (outdoor?.Number == 69 && index >= 2 && index <= 4)
+                            available &= outdoor.Visited >= 3 && index - 2 < outdoor.QuoteCents.Length;
+                        Ui.Size(Ui.Button(w.Content, (done ? "✓ " : "") + def.Choices[i], () => { CloseAllWindows(); S.ChooseCityActivity(activityId, index); }, 18, done ? Ui.ButtonBg : Ui.ButtonHot, available), -1, 44);
                     }
+                    BuildExhibitionActivity(w, a);
+                    BuildOutdoorBatchProcurement(w, a);
                     Ui.Size(Ui.Button(w.Content, "收起面板 / 继续活动", CloseAllWindows, 19, Ui.ButtonHot), -1, 46);
                 }
                 else if (a.Active)

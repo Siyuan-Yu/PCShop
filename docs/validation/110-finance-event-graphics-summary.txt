@@ -1,0 +1,6 @@
+SMOKE shot 96-membership-offer
+SMOKE shot 91-100-business-tasks
+SMOKE shot 95-real-procurement-offer
+SMOKE shot 99-bank-verification-task
+SMOKE Finance 91-100 live UI, membership, coupon and paid procurement passed.
+SMOKE RESULT code=0 errors=0

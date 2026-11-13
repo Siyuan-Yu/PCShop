@@ -355,6 +355,7 @@ namespace PCShopSell.Game.UI
             _ledgerPage = 0;
             OpenWorkspace("ledger", "ledger", "现金流水", 1040, 880, w =>
             {
+                BuildEventChangeRefunds(w);
                 int today = S.Clock.Today.TotalDays;
                 int span = _ledgerPeriod == 0 ? 1 : _ledgerPeriod == 1 ? 7 : 30;
                 int start = _ledgerDay / span * span;

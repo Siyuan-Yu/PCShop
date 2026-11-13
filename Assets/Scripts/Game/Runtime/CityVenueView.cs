@@ -1,4 +1,5 @@
 using PCShopSell.Core.World;
+using PCShopSell.Core.Session;
 using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
@@ -33,7 +34,8 @@ namespace PCShopSell.Game.Runtime
                 case "court": Court(root, width, depth); break;
                 case "golf": Golf(root, width, depth); break;
                 case "expo": Expo(root, width, depth); break;
-                case "hike": Park(root, width, depth, true); break;
+                case "oldmarket": OldMarket(root, width, depth); break;
+                case "hike": if (p.Id == GameSession.FishingVenueId) FishingPark(root, width, depth); else Park(root, width, depth, true); break;
                 default: Park(root, width, depth, false); break;
             }
             if(kind=="restaurant"||kind=="ktv"||kind=="bar"||kind=="expo")
@@ -45,6 +47,46 @@ namespace PCShopSell.Game.Runtime
             Bench(root, new Vector3(-3.2f, 0, -1.4f), ArtDirection.Sage);
             Bench(root, new Vector3(3.2f, 0, -1.4f), ArtDirection.Clay);
         }
+        private static void OldMarket(Transform root, float width, float depth)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                float x = (i % 2 == 0 ? -.27f : .27f) * width, z = (i < 2 ? .3f : .72f) * depth;
+                var stall = new GameObject("OldMarketStall_" + i).transform; stall.SetParent(root, false); stall.localPosition = new Vector3(x, 0, z);
+                Prims.Box(stall, "OldGoodsTable", new Vector3(0, .65f, 0), new Vector3(4.5f, 1.3f, 1.8f), Mats.Lit(ArtDirection.Wood));
+                Prims.Box(stall, "Canopy", new Vector3(0, 2.8f, .8f), new Vector3(5, .15f, .7f), Mats.Lit(i % 2 == 0 ? ArtDirection.Clay : ArtDirection.Sage));
+                Prims.SignText(stall, OldMarketCatalog.Stalls[i], new Vector3(0, 2.3f, -.9f), 4, .55f, ArtDirection.Cream);
+                for (int j = 0; j < 3; j++)
+                {
+                    var at = new Vector3((j - 1) * 1.25f, i == 1 ? 1.56f : 1.36f, 0);
+                    if (i == 0) { Prims.Shape(PrimitiveType.Cylinder, stall, "ClockFace", at, new Vector3(.6f, .12f, .6f), Mats.Lit(ArtDirection.Brass)); Prims.Box(stall, "ClockHand", at + Vector3.up * .08f, new Vector3(.035f, .025f, .3f), Mats.Lit(ArtDirection.Ink)); }
+                    else if (i == 1) { Prims.Box(stall, "OldRadio", at, new Vector3(.8f, .5f, .45f), Mats.Lit(ArtDirection.Clay)); Prims.Box(stall, "RadioGrille", at + new Vector3(-.15f, .02f, -.24f), new Vector3(.36f, .3f, .025f), Mats.Lit(ArtDirection.Ink)); }
+                    else if (i == 2) Prims.Shape(PrimitiveType.Cylinder, stall, "Vinyl", at, new Vector3(.85f, .055f, .85f), Mats.Lit(ArtDirection.Ink));
+                    else Prims.Box(stall, "OldBook", at, new Vector3(.7f, .1f, .85f), Mats.Lit(ArtDirection.Cream));
+                }
+            }
+            Prims.Box(root, "OldMarketWorkbench", new Vector3(0, .65f, depth - 1.5f), new Vector3(3, 1.3f, 1.1f), Mats.Lit(ArtDirection.Ink));
+            Prims.SignText(root, "公共修理台 · 检测后选择处理方法", new Vector3(0, 2.2f, depth - .25f), width - 1, .6f, ArtDirection.Cream);
+        }
+        private static void FishingPark(Transform root, float width, float depth)
+        {
+            Prims.Box(root,"FishingPondBank",new Vector3(width*.14f,.12f,depth*.63f),new Vector3(width*.63f,.18f,depth*.61f),Mats.Lit(ArtDirection.Cream));
+            Prims.Box(root,"FishingPondWater",new Vector3(width*.14f,.225f,depth*.63f),new Vector3(width*.58f,.025f,depth*.55f),Mats.Lit(new Color(.25f,.56f,.63f)));
+            Prims.Box(root,"ParkWalkingTrail",new Vector3(-width*.36f,.12f,depth*.5f),new Vector3(2,.12f,depth*.88f),Mats.Lit(ArtDirection.Cream));
+            Prims.Box(root,"FishingReception",new Vector3(-width*.32f,.6f,depth*.3f),new Vector3(2,1.2f,1.2f),Mats.Lit(ArtDirection.Wood));
+            Prims.SignText(root,"青湾垂钓场 · 租杆 / 鱼获回收",new Vector3(-width*.29f,2,depth*.28f),width*.38f,.48f,ArtDirection.Cream);
+            for (int i = 0; i < 3; i++)
+            {
+                float x = new[] { -.10f, .12f, .34f }[i] * width;
+                Prims.Box(root,"FishingDeck_"+i,new Vector3(x,.32f,depth*.36f),new Vector3(1.9f,.15f,2.5f),Mats.Lit(ArtDirection.Wood));
+                Prims.Box(root,"FishingSeat_"+i,new Vector3(x,.52f,depth*.25f),new Vector3(.8f,.45f,.65f),Mats.Lit(ArtDirection.Sage));
+                Prims.Shape(PrimitiveType.Cylinder,root,"FishingBucket_"+i,new Vector3(x+.65f,.5f,depth*.27f),new Vector3(.5f,.45f,.5f),Mats.Lit(ArtDirection.Blue));
+                var rod=Prims.Box(root,"FishingRod_"+i,new Vector3(x,1,depth*.36f),new Vector3(.045f,.045f,2.6f),Mats.Lit(ArtDirection.Ink));rod.transform.localRotation=Quaternion.Euler(-12,0,0);
+                Prims.Shape(PrimitiveType.Sphere,root,"FishingFloat_"+i,new Vector3(x,.31f,depth*.49f),new Vector3(.16f,.23f,.16f),Mats.Lit(ArtDirection.Brass));
+                Prims.SignText(root,FishingCatalog.Spots[i],new Vector3(x,1.2f,depth*.23f),2,.35f,ArtDirection.Cream);
+            }
+        }
+
         private static void Clothing(Transform root,float width,float depth)
         {
             for(int side=-1;side<=1;side+=2)

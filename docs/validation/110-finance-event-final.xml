@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="40" result="Passed" total="40" passed="40" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-13 16:29:37Z" end-time="2026-11-13 16:29:50Z" duration="13.1921675">
+  <test-suite type="TestSuite" id="2708" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1478" result="Passed" start-time="2026-11-13 16:29:37Z" end-time="2026-11-13 16:29:50Z" duration="13.192168" total="40" passed="40" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="4412" name="PCShopSell.Tests.EditMode.dll" fullname="F:/_ci/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1478" result="Passed" start-time="2026-11-13 16:29:37Z" end-time="2026-11-13 16:29:50Z" duration="13.171952" total="40" passed="40" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="106176" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="4413" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1478" result="Passed" start-time="2026-11-13 16:29:37Z" end-time="2026-11-13 16:29:50Z" duration="13.164084" total="40" passed="40" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="4414" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="1478" result="Passed" start-time="2026-11-13 16:29:37Z" end-time="2026-11-13 16:29:50Z" duration="13.158354" total="40" passed="40" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="3012" name="CityVisitSaveTests" fullname="PCShopSell.Tests.CityVisitSaveTests" classname="PCShopSell.Tests.CityVisitSaveTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-11-13 16:29:37Z" end-time="2026-11-13 16:29:37Z" duration="0.052119" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="3013" name="RestoreWaitingVisitDoesNotDuplicateGoodsOrReplayArrival" fullname="PCShopSell.Tests.CityVisitSaveTests.RestoreWaitingVisitDoesNotDuplicateGoodsOrReplayArrival" methodname="RestoreWaitingVisitDoesNotDuplicateGoodsOrReplayArrival" classname="PCShopSell.Tests.CityVisitSaveTests" runstate="Runnable" seed="299844456" result="Passed" start-time="2026-11-13 16:29:37Z" end-time="2026-11-13 16:29:37Z" duration="0.040517" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.CityVisitSaveTests.RestoreWaitingVisitDoesNotDuplicateGoodsOrReplayArrival
+REGRESSION DONE PCShopSell.Tests.CityVisitSaveTests.RestoreWaitingVisitDoesNotDuplicateGoodsOrReplayArrival Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3226" name="FinanceEventBatchTests" fullname="PCShopSell.Tests.FinanceEventBatchTests" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" testcasecount="20" result="Passed" start-time="2026-11-13 16:29:37Z" end-time="2026-11-13 16:29:44Z" duration="6.833695" total="20" passed="20" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="3228" name="AnonymousAndAnotherPersonDoNotSpendSomeoneElsesPoints" fullname="PCShopSell.Tests.FinanceEventBatchTests.AnonymousAndAnotherPersonDoNotSpendSomeoneElsesPoints" methodname="AnonymousAndAnotherPersonDoNotSpendSomeoneElsesPoints" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="1226954461" result="Passed" start-time="2026-11-13 16:29:37Z" end-time="2026-11-13 16:29:38Z" duration="0.378208" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.AnonymousAndAnotherPersonDoNotSpendSomeoneElsesPoints
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.AnonymousAndAnotherPersonDoNotSpendSomeoneElsesPoints Passed
+]]></output>
+            </test-case>
+            <test-case id="3246" name="BankAdviceRequiresOpenOnsiteTimeAndGivesOneIntelligenceOnlyOnce" fullname="PCShopSell.Tests.FinanceEventBatchTests.BankAdviceRequiresOpenOnsiteTimeAndGivesOneIntelligenceOnlyOnce" methodname="BankAdviceRequiresOpenOnsiteTimeAndGivesOneIntelligenceOnlyOnce" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="1462399902" result="Passed" start-time="2026-11-13 16:29:38Z" end-time="2026-11-13 16:29:38Z" duration="0.633214" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.BankAdviceRequiresOpenOnsiteTimeAndGivesOneIntelligenceOnlyOnce
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.BankAdviceRequiresOpenOnsiteTimeAndGivesOneIntelligenceOnlyOnce Passed
+]]></output>
+            </test-case>
+            <test-case id="3245" name="ChangedBusinessCannotReceiveTheOldSubsidy" fullname="PCShopSell.Tests.FinanceEventBatchTests.ChangedBusinessCannotReceiveTheOldSubsidy" methodname="ChangedBusinessCannotReceiveTheOldSubsidy" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="2017046748" result="Passed" start-time="2026-11-13 16:29:38Z" end-time="2026-11-13 16:29:39Z" duration="0.278842" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.ChangedBusinessCannotReceiveTheOldSubsidy
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.ChangedBusinessCannotReceiveTheOldSubsidy Passed
+]]></output>
+            </test-case>
+            <test-case id="3230" name="CompensationReversesPointsAndMemberPaymentIsNotASecondReward" fullname="PCShopSell.Tests.FinanceEventBatchTests.CompensationReversesPointsAndMemberPaymentIsNotASecondReward" methodname="CompensationReversesPointsAndMemberPaymentIsNotASecondReward" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="1748449933" result="Passed" start-time="2026-11-13 16:29:39Z" end-time="2026-11-13 16:29:39Z" duration="0.245578" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.CompensationReversesPointsAndMemberPaymentIsNotASecondReward
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.CompensationReversesPointsAndMemberPaymentIsNotASecondReward Passed
+]]></output>
+            </test-case>
+            <test-case id="3231" name="CouponAppliesOnlyToActualStoreProcurementAndCancellationRefundsNet" fullname="PCShopSell.Tests.FinanceEventBatchTests.CouponAppliesOnlyToActualStoreProcurementAndCancellationRefundsNet" methodname="CouponAppliesOnlyToActualStoreProcurementAndCancellationRefundsNet" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="1827952016" result="Passed" start-time="2026-11-13 16:29:39Z" end-time="2026-11-13 16:29:39Z" duration="0.428590" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.CouponAppliesOnlyToActualStoreProcurementAndCancellationRefundsNet
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.CouponAppliesOnlyToActualStoreProcurementAndCancellationRefundsNet Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="3234" name="CouponDoesNotDiscountPersonalOrBelowThresholdPurchases" fullname="PCShopSell.Tests.FinanceEventBatchTests.CouponDoesNotDiscountPersonalOrBelowThresholdPurchases" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-13 16:29:39Z" end-time="2026-11-13 16:29:40Z" duration="0.555253" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="3232" name="CouponDoesNotDiscountPersonalOrBelowThresholdPurchases(True)" fullname="PCShopSell.Tests.FinanceEventBatchTests.CouponDoesNotDiscountPersonalOrBelowThresholdPurchases(True)" methodname="CouponDoesNotDiscountPersonalOrBelowThresholdPurchases" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="399403359" result="Passed" start-time="2026-11-13 16:29:39Z" end-time="2026-11-13 16:29:40Z" duration="0.261695" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.CouponDoesNotDiscountPersonalOrBelowThresholdPurchases(True)
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.CouponDoesNotDiscountPersonalOrBelowThresholdPurchases(True) Passed
+]]></output>
+              </test-case>
+              <test-case id="3233" name="CouponDoesNotDiscountPersonalOrBelowThresholdPurchases(False)" fullname="PCShopSell.Tests.FinanceEventBatchTests.CouponDoesNotDiscountPersonalOrBelowThresholdPurchases(False)" methodname="CouponDoesNotDiscountPersonalOrBelowThresholdPurchases" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="759082404" result="Passed" start-time="2026-11-13 16:29:40Z" end-time="2026-11-13 16:29:40Z" duration="0.290465" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.CouponDoesNotDiscountPersonalOrBelowThresholdPurchases(False)
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.CouponDoesNotDiscountPersonalOrBelowThresholdPurchases(False) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="3235" name="CouponExpiresAtFourteenDaysWithoutCreatingCash" fullname="PCShopSell.Tests.FinanceEventBatchTests.CouponExpiresAtFourteenDaysWithoutCreatingCash" methodname="CouponExpiresAtFourteenDaysWithoutCreatingCash" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="1193524803" result="Passed" start-time="2026-11-13 16:29:40Z" end-time="2026-11-13 16:29:40Z" duration="0.255099" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.CouponExpiresAtFourteenDaysWithoutCreatingCash
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.CouponExpiresAtFourteenDaysWithoutCreatingCash Passed
+]]></output>
+            </test-case>
+            <test-case id="3242" name="FlashQuotaIncludesWaitingCustomersAndSurvivesSaveWithoutADoubleDiscount" fullname="PCShopSell.Tests.FinanceEventBatchTests.FlashQuotaIncludesWaitingCustomersAndSurvivesSaveWithoutADoubleDiscount" methodname="FlashQuotaIncludesWaitingCustomersAndSurvivesSaveWithoutADoubleDiscount" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="165329776" result="Passed" start-time="2026-11-13 16:29:40Z" end-time="2026-11-13 16:29:41Z" duration="0.418934" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.FlashQuotaIncludesWaitingCustomersAndSurvivesSaveWithoutADoubleDiscount
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.FlashQuotaIncludesWaitingCustomersAndSurvivesSaveWithoutADoubleDiscount Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="3240" name="FlashSaleIsActualProductPricingWithNoInstantIncomeAndExpires" fullname="PCShopSell.Tests.FinanceEventBatchTests.FlashSaleIsActualProductPricingWithNoInstantIncomeAndExpires" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-13 16:29:41Z" end-time="2026-11-13 16:29:41Z" duration="0.747562" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="3238" name="FlashSaleIsActualProductPricingWithNoInstantIncomeAndExpires(0)" fullname="PCShopSell.Tests.FinanceEventBatchTests.FlashSaleIsActualProductPricingWithNoInstantIncomeAndExpires(0)" methodname="FlashSaleIsActualProductPricingWithNoInstantIncomeAndExpires" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="1652822865" result="Passed" start-time="2026-11-13 16:29:41Z" end-time="2026-11-13 16:29:41Z" duration="0.383793" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.FlashSaleIsActualProductPricingWithNoInstantIncomeAndExpires(0)
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.FlashSaleIsActualProductPricingWithNoInstantIncomeAndExpires(0) Passed
+]]></output>
+              </test-case>
+              <test-case id="3239" name="FlashSaleIsActualProductPricingWithNoInstantIncomeAndExpires(1)" fullname="PCShopSell.Tests.FinanceEventBatchTests.FlashSaleIsActualProductPricingWithNoInstantIncomeAndExpires(1)" methodname="FlashSaleIsActualProductPricingWithNoInstantIncomeAndExpires" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="1594287602" result="Passed" start-time="2026-11-13 16:29:41Z" end-time="2026-11-13 16:29:41Z" duration="0.361672" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.FlashSaleIsActualProductPricingWithNoInstantIncomeAndExpires(1)
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.FlashSaleIsActualProductPricingWithNoInstantIncomeAndExpires(1) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="3241" name="FollowupRequiresRealPreviousInspectionAndDoesNotSettleTwice" fullname="PCShopSell.Tests.FinanceEventBatchTests.FollowupRequiresRealPreviousInspectionAndDoesNotSettleTwice" methodname="FollowupRequiresRealPreviousInspectionAndDoesNotSettleTwice" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="1214486704" result="Passed" start-time="2026-11-13 16:29:41Z" end-time="2026-11-13 16:29:42Z" duration="0.364154" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.FollowupRequiresRealPreviousInspectionAndDoesNotSettleTwice
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.FollowupRequiresRealPreviousInspectionAndDoesNotSettleTwice Passed
+]]></output>
+            </test-case>
+            <test-case id="3227" name="MembershipChargesOnceAndLaterPurchaseRedeemsUsingActualNetPaid" fullname="PCShopSell.Tests.FinanceEventBatchTests.MembershipChargesOnceAndLaterPurchaseRedeemsUsingActualNetPaid" methodname="MembershipChargesOnceAndLaterPurchaseRedeemsUsingActualNetPaid" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="88821464" result="Passed" start-time="2026-11-13 16:29:42Z" end-time="2026-11-13 16:29:42Z" duration="0.387526" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.MembershipChargesOnceAndLaterPurchaseRedeemsUsingActualNetPaid
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.MembershipChargesOnceAndLaterPurchaseRedeemsUsingActualNetPaid Passed
+]]></output>
+            </test-case>
+            <test-case id="3248" name="ReturnCustomerRequiresARealIdentifiedSaleAndDoesNotPayAtInvitation" fullname="PCShopSell.Tests.FinanceEventBatchTests.ReturnCustomerRequiresARealIdentifiedSaleAndDoesNotPayAtInvitation" methodname="ReturnCustomerRequiresARealIdentifiedSaleAndDoesNotPayAtInvitation" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="669950465" result="Passed" start-time="2026-11-13 16:29:42Z" end-time="2026-11-13 16:29:42Z" duration="0.387101" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.ReturnCustomerRequiresARealIdentifiedSaleAndDoesNotPayAtInvitation
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.ReturnCustomerRequiresARealIdentifiedSaleAndDoesNotPayAtInvitation Passed
+]]></output>
+            </test-case>
+            <test-case id="3247" name="RiderRequiresKnownPersonAndSchedulesTwentyMinuteRealVisit" fullname="PCShopSell.Tests.FinanceEventBatchTests.RiderRequiresKnownPersonAndSchedulesTwentyMinuteRealVisit" methodname="RiderRequiresKnownPersonAndSchedulesTwentyMinuteRealVisit" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="1245146288" result="Passed" start-time="2026-11-13 16:29:42Z" end-time="2026-11-13 16:29:43Z" duration="0.325514" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.RiderRequiresKnownPersonAndSchedulesTwentyMinuteRealVisit
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.RiderRequiresKnownPersonAndSchedulesTwentyMinuteRealVisit Passed
+]]></output>
+            </test-case>
+            <test-case id="3237" name="RumorMakesAnActualPaidOrderWithoutAnyGuaranteedProfit" fullname="PCShopSell.Tests.FinanceEventBatchTests.RumorMakesAnActualPaidOrderWithoutAnyGuaranteedProfit" methodname="RumorMakesAnActualPaidOrderWithoutAnyGuaranteedProfit" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="2072395926" result="Passed" start-time="2026-11-13 16:29:43Z" end-time="2026-11-13 16:29:43Z" duration="0.279076" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.RumorMakesAnActualPaidOrderWithoutAnyGuaranteedProfit
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.RumorMakesAnActualPaidOrderWithoutAnyGuaranteedProfit Passed
+]]></output>
+            </test-case>
+            <test-case id="3244" name="ScamTransferActuallyLosesFiveThousand" fullname="PCShopSell.Tests.FinanceEventBatchTests.ScamTransferActuallyLosesFiveThousand" methodname="ScamTransferActuallyLosesFiveThousand" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="1706471463" result="Passed" start-time="2026-11-13 16:29:43Z" end-time="2026-11-13 16:29:43Z" duration="0.237544" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.ScamTransferActuallyLosesFiveThousand
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.ScamTransferActuallyLosesFiveThousand Passed
+]]></output>
+            </test-case>
+            <test-case id="3243" name="SubsidyRequiresThirtyDaysAndSalesThenPaysOnlyAfterThreeDaysOnce" fullname="PCShopSell.Tests.FinanceEventBatchTests.SubsidyRequiresThirtyDaysAndSalesThenPaysOnlyAfterThreeDaysOnce" methodname="SubsidyRequiresThirtyDaysAndSalesThenPaysOnlyAfterThreeDaysOnce" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="336009648" result="Passed" start-time="2026-11-13 16:29:43Z" end-time="2026-11-13 16:29:44Z" duration="0.413801" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.SubsidyRequiresThirtyDaysAndSalesThenPaysOnlyAfterThreeDaysOnce
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.SubsidyRequiresThirtyDaysAndSalesThenPaysOnlyAfterThreeDaysOnce Passed
+]]></output>
+            </test-case>
+            <test-case id="3236" name="UnaffordableOrderDoesNotConsumeCouponOrCreateDelivery" fullname="PCShopSell.Tests.FinanceEventBatchTests.UnaffordableOrderDoesNotConsumeCouponOrCreateDelivery" methodname="UnaffordableOrderDoesNotConsumeCouponOrCreateDelivery" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="1318920989" result="Passed" start-time="2026-11-13 16:29:44Z" end-time="2026-11-13 16:29:44Z" duration="0.244658" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.UnaffordableOrderDoesNotConsumeCouponOrCreateDelivery
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.UnaffordableOrderDoesNotConsumeCouponOrCreateDelivery Passed
+]]></output>
+            </test-case>
+            <test-case id="3229" name="UnsupportedSpecialBusinessCannotPayForAnInoperativeMembership" fullname="PCShopSell.Tests.FinanceEventBatchTests.UnsupportedSpecialBusinessCannotPayForAnInoperativeMembership" methodname="UnsupportedSpecialBusinessCannotPayForAnInoperativeMembership" classname="PCShopSell.Tests.FinanceEventBatchTests" runstate="Runnable" seed="1587219754" result="Passed" start-time="2026-11-13 16:29:44Z" end-time="2026-11-13 16:29:44Z" duration="0.238013" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FinanceEventBatchTests.UnsupportedSpecialBusinessCannotPayForAnInoperativeMembership
+REGRESSION DONE PCShopSell.Tests.FinanceEventBatchTests.UnsupportedSpecialBusinessCannotPayForAnInoperativeMembership Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="4019" name="ShopEventBatchTests" fullname="PCShopSell.Tests.ShopEventBatchTests" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-11-13 16:29:44Z" end-time="2026-11-13 16:29:50Z" duration="6.212007" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="4040" name="AuditWaitsForActualOnsiteWorkAndNeverInventsA120YuanLoss" fullname="PCShopSell.Tests.ShopEventBatchTests.AuditWaitsForActualOnsiteWorkAndNeverInventsA120YuanLoss" methodname="AuditWaitsForActualOnsiteWorkAndNeverInventsA120YuanLoss" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="1398462878" result="Passed" start-time="2026-11-13 16:29:44Z" end-time="2026-11-13 16:29:45Z" duration="0.435216" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.AuditWaitsForActualOnsiteWorkAndNeverInventsA120YuanLoss
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.AuditWaitsForActualOnsiteWorkAndNeverInventsA120YuanLoss Passed
+]]></output>
+            </test-case>
+            <test-case id="4026" name="CatIsATemporarySavedVisitorWithoutInstantCharmOrReputation" fullname="PCShopSell.Tests.ShopEventBatchTests.CatIsATemporarySavedVisitorWithoutInstantCharmOrReputation" methodname="CatIsATemporarySavedVisitorWithoutInstantCharmOrReputation" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="2122633799" result="Passed" start-time="2026-11-13 16:29:45Z" end-time="2026-11-13 16:29:45Z" duration="0.375342" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.CatIsATemporarySavedVisitorWithoutInstantCharmOrReputation
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.CatIsATemporarySavedVisitorWithoutInstantCharmOrReputation Passed
+]]></output>
+            </test-case>
+            <test-case id="4025" name="ClaimCancelsGoodsAndRefundsActualPaidAmountOnlyAtTheDeadlineAcrossSave" fullname="PCShopSell.Tests.ShopEventBatchTests.ClaimCancelsGoodsAndRefundsActualPaidAmountOnlyAtTheDeadlineAcrossSave" methodname="ClaimCancelsGoodsAndRefundsActualPaidAmountOnlyAtTheDeadlineAcrossSave" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="22348453" result="Passed" start-time="2026-11-13 16:29:45Z" end-time="2026-11-13 16:29:45Z" duration="0.433373" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.ClaimCancelsGoodsAndRefundsActualPaidAmountOnlyAtTheDeadlineAcrossSave
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.ClaimCancelsGoodsAndRefundsActualPaidAmountOnlyAtTheDeadlineAcrossSave Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="4034" name="ComplaintNeedsARealReceiptAndCompensationIsTenPercentCappedAt500" fullname="PCShopSell.Tests.ShopEventBatchTests.ComplaintNeedsARealReceiptAndCompensationIsTenPercentCappedAt500" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-13 16:29:45Z" end-time="2026-11-13 16:29:46Z" duration="0.780737" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="4032" name="ComplaintNeedsARealReceiptAndCompensationIsTenPercentCappedAt500(50000,5000)" fullname="PCShopSell.Tests.ShopEventBatchTests.ComplaintNeedsARealReceiptAndCompensationIsTenPercentCappedAt500(50000,5000)" methodname="ComplaintNeedsARealReceiptAndCompensationIsTenPercentCappedAt500" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="1578262102" result="Passed" start-time="2026-11-13 16:29:45Z" end-time="2026-11-13 16:29:46Z" duration="0.377578" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.ComplaintNeedsARealReceiptAndCompensationIsTenPercentCappedAt500(50000,5000)
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.ComplaintNeedsARealReceiptAndCompensationIsTenPercentCappedAt500(50000,5000) Passed
+]]></output>
+              </test-case>
+              <test-case id="4033" name="ComplaintNeedsARealReceiptAndCompensationIsTenPercentCappedAt500(1000000,50000)" fullname="PCShopSell.Tests.ShopEventBatchTests.ComplaintNeedsARealReceiptAndCompensationIsTenPercentCappedAt500(1000000,50000)" methodname="ComplaintNeedsARealReceiptAndCompensationIsTenPercentCappedAt500" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="1534668230" result="Passed" start-time="2026-11-13 16:29:46Z" end-time="2026-11-13 16:29:46Z" duration="0.400706" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.ComplaintNeedsARealReceiptAndCompensationIsTenPercentCappedAt500(1000000,50000)
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.ComplaintNeedsARealReceiptAndCompensationIsTenPercentCappedAt500(1000000,50000) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="4021" name="DeliveryExceptionRequiresAnActualPendingPaidOrder" fullname="PCShopSell.Tests.ShopEventBatchTests.DeliveryExceptionRequiresAnActualPendingPaidOrder" methodname="DeliveryExceptionRequiresAnActualPendingPaidOrder" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="504190768" result="Passed" start-time="2026-11-13 16:29:46Z" end-time="2026-11-13 16:29:46Z" duration="0.268693" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.DeliveryExceptionRequiresAnActualPendingPaidOrder
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.DeliveryExceptionRequiresAnActualPendingPaidOrder Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="4024" name="DeliverySearchChangesTheRealDueTimeAndDeliversOnlyOnce" fullname="PCShopSell.Tests.ShopEventBatchTests.DeliverySearchChangesTheRealDueTimeAndDeliversOnlyOnce" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-13 16:29:46Z" end-time="2026-11-13 16:29:47Z" duration="0.830195" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="4022" name="DeliverySearchChangesTheRealDueTimeAndDeliversOnlyOnce(0,2880)" fullname="PCShopSell.Tests.ShopEventBatchTests.DeliverySearchChangesTheRealDueTimeAndDeliversOnlyOnce(0,2880)" methodname="DeliverySearchChangesTheRealDueTimeAndDeliversOnlyOnce" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="1152558510" result="Passed" start-time="2026-11-13 16:29:46Z" end-time="2026-11-13 16:29:47Z" duration="0.400478" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.DeliverySearchChangesTheRealDueTimeAndDeliversOnlyOnce(0,2880)
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.DeliverySearchChangesTheRealDueTimeAndDeliversOnlyOnce(0,2880) Passed
+]]></output>
+              </test-case>
+              <test-case id="4023" name="DeliverySearchChangesTheRealDueTimeAndDeliversOnlyOnce(1,180)" fullname="PCShopSell.Tests.ShopEventBatchTests.DeliverySearchChangesTheRealDueTimeAndDeliversOnlyOnce(1,180)" methodname="DeliverySearchChangesTheRealDueTimeAndDeliversOnlyOnce" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="1485600401" result="Passed" start-time="2026-11-13 16:29:47Z" end-time="2026-11-13 16:29:47Z" duration="0.427360" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.DeliverySearchChangesTheRealDueTimeAndDeliversOnlyOnce(1,180)
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.DeliverySearchChangesTheRealDueTimeAndDeliversOnlyOnce(1,180) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="4039" name="DesignerActuallyChangesLayoutAfter30MinutesOrRefundsIfNoSafePosition" fullname="PCShopSell.Tests.ShopEventBatchTests.DesignerActuallyChangesLayoutAfter30MinutesOrRefundsIfNoSafePosition" methodname="DesignerActuallyChangesLayoutAfter30MinutesOrRefundsIfNoSafePosition" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="1952872566" result="Passed" start-time="2026-11-13 16:29:47Z" end-time="2026-11-13 16:29:48Z" duration="0.414282" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.DesignerActuallyChangesLayoutAfter30MinutesOrRefundsIfNoSafePosition
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.DesignerActuallyChangesLayoutAfter30MinutesOrRefundsIfNoSafePosition Passed
+]]></output>
+            </test-case>
+            <test-case id="4042" name="EveningAdvertisingCannotChargeAStoreWithoutEveningHours" fullname="PCShopSell.Tests.ShopEventBatchTests.EveningAdvertisingCannotChargeAStoreWithoutEveningHours" methodname="EveningAdvertisingCannotChargeAStoreWithoutEveningHours" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="394452799" result="Passed" start-time="2026-11-13 16:29:48Z" end-time="2026-11-13 16:29:48Z" duration="0.234795" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.EveningAdvertisingCannotChargeAStoreWithoutEveningHours
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.EveningAdvertisingCannotChargeAStoreWithoutEveningHours Passed
+]]></output>
+            </test-case>
+            <test-case id="4041" name="HeatRequiresRealHotWeatherAndExistingAirconDoesNotChargeAgain" fullname="PCShopSell.Tests.ShopEventBatchTests.HeatRequiresRealHotWeatherAndExistingAirconDoesNotChargeAgain" methodname="HeatRequiresRealHotWeatherAndExistingAirconDoesNotChargeAgain" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="148047829" result="Passed" start-time="2026-11-13 16:29:48Z" end-time="2026-11-13 16:29:48Z" duration="0.266507" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.HeatRequiresRealHotWeatherAndExistingAirconDoesNotChargeAgain
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.HeatRequiresRealHotWeatherAndExistingAirconDoesNotChargeAgain Passed
+]]></output>
+            </test-case>
+            <test-case id="4020" name="LeafletUsesTheSameRealCompetitionAndCannotBeAppliedAgainThroughTheOldEvent" fullname="PCShopSell.Tests.ShopEventBatchTests.LeafletUsesTheSameRealCompetitionAndCannotBeAppliedAgainThroughTheOldEvent" methodname="LeafletUsesTheSameRealCompetitionAndCannotBeAppliedAgainThroughTheOldEvent" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="442975630" result="Passed" start-time="2026-11-13 16:29:48Z" end-time="2026-11-13 16:29:48Z" duration="0.011093" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.LeafletUsesTheSameRealCompetitionAndCannotBeAppliedAgainThroughTheOldEvent
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.LeafletUsesTheSameRealCompetitionAndCannotBeAppliedAgainThroughTheOldEvent Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="4029" name="SampleIsALoanUntilActualBuyoutAndMayOnlyBeReturnedOrPurchasedOnce" fullname="PCShopSell.Tests.ShopEventBatchTests.SampleIsALoanUntilActualBuyoutAndMayOnlyBeReturnedOrPurchasedOnce" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-13 16:29:48Z" end-time="2026-11-13 16:29:49Z" duration="0.797752" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="4027" name="SampleIsALoanUntilActualBuyoutAndMayOnlyBeReturnedOrPurchasedOnce(False)" fullname="PCShopSell.Tests.ShopEventBatchTests.SampleIsALoanUntilActualBuyoutAndMayOnlyBeReturnedOrPurchasedOnce(False)" methodname="SampleIsALoanUntilActualBuyoutAndMayOnlyBeReturnedOrPurchasedOnce" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="688545972" result="Passed" start-time="2026-11-13 16:29:48Z" end-time="2026-11-13 16:29:49Z" duration="0.386081" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.SampleIsALoanUntilActualBuyoutAndMayOnlyBeReturnedOrPurchasedOnce(False)
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.SampleIsALoanUntilActualBuyoutAndMayOnlyBeReturnedOrPurchasedOnce(False) Passed
+]]></output>
+              </test-case>
+              <test-case id="4028" name="SampleIsALoanUntilActualBuyoutAndMayOnlyBeReturnedOrPurchasedOnce(True)" fullname="PCShopSell.Tests.ShopEventBatchTests.SampleIsALoanUntilActualBuyoutAndMayOnlyBeReturnedOrPurchasedOnce(True)" methodname="SampleIsALoanUntilActualBuyoutAndMayOnlyBeReturnedOrPurchasedOnce" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="1025418139" result="Passed" start-time="2026-11-13 16:29:49Z" end-time="2026-11-13 16:29:49Z" duration="0.409218" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.SampleIsALoanUntilActualBuyoutAndMayOnlyBeReturnedOrPurchasedOnce(True)
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.SampleIsALoanUntilActualBuyoutAndMayOnlyBeReturnedOrPurchasedOnce(True) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="4030" name="SampleRequiresAnOpenedComputerShopAndKnownSupplier" fullname="PCShopSell.Tests.ShopEventBatchTests.SampleRequiresAnOpenedComputerShopAndKnownSupplier" methodname="SampleRequiresAnOpenedComputerShopAndKnownSupplier" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="889602718" result="Passed" start-time="2026-11-13 16:29:49Z" end-time="2026-11-13 16:29:49Z" duration="0.257506" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.SampleRequiresAnOpenedComputerShopAndKnownSupplier
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.SampleRequiresAnOpenedComputerShopAndKnownSupplier Passed
+]]></output>
+            </test-case>
+            <test-case id="4031" name="SignHelpUsesAnActualAppointmentWithJieAndWaitsForThirtyMinutes" fullname="PCShopSell.Tests.ShopEventBatchTests.SignHelpUsesAnActualAppointmentWithJieAndWaitsForThirtyMinutes" methodname="SignHelpUsesAnActualAppointmentWithJieAndWaitsForThirtyMinutes" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="1655603791" result="Passed" start-time="2026-11-13 16:29:49Z" end-time="2026-11-13 16:29:50Z" duration="0.304501" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.SignHelpUsesAnActualAppointmentWithJieAndWaitsForThirtyMinutes
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.SignHelpUsesAnActualAppointmentWithJieAndWaitsForThirtyMinutes Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="4038" name="StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery" fullname="PCShopSell.Tests.ShopEventBatchTests.StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-13 16:29:50Z" end-time="2026-11-13 16:29:50Z" duration="0.790807" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="4035" name="StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery(0,1,9500)" fullname="PCShopSell.Tests.ShopEventBatchTests.StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery(0,1,9500)" methodname="StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="621993741" result="Passed" start-time="2026-11-13 16:29:50Z" end-time="2026-11-13 16:29:50Z" duration="0.277189" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery(0,1,9500)
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery(0,1,9500) Passed
+]]></output>
+              </test-case>
+              <test-case id="4036" name="StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery(1,3,9000)" fullname="PCShopSell.Tests.ShopEventBatchTests.StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery(1,3,9000)" methodname="StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="950759090" result="Passed" start-time="2026-11-13 16:29:50Z" end-time="2026-11-13 16:29:50Z" duration="0.267284" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery(1,3,9000)
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery(1,3,9000) Passed
+]]></output>
+              </test-case>
+              <test-case id="4037" name="StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery(2,1,10000)" fullname="PCShopSell.Tests.ShopEventBatchTests.StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery(2,1,10000)" methodname="StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery" classname="PCShopSell.Tests.ShopEventBatchTests" runstate="Runnable" seed="1040870604" result="Passed" start-time="2026-11-13 16:29:50Z" end-time="2026-11-13 16:29:50Z" duration="0.240944" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopEventBatchTests.StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery(2,1,10000)
+REGRESSION DONE PCShopSell.Tests.ShopEventBatchTests.StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery(2,1,10000) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

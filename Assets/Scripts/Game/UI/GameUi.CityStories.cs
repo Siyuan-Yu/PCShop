@@ -124,9 +124,10 @@ namespace PCShopSell.Game.UI
             {
                 string blocker = S.IndustryReferralBlocker(offer);
                 if (blocker != null) Para(body, blocker, 15, Ui.Dim);
-                string terms = offer.Count == 1 ? "3 天内交付，交付时收款。"
+                string terms = offer.CommunityOrder ? $"{offer.Count + 2} 天内完成备货／制作／装机并交付，总货款 {offer.Total}，保证金 ¥0；按实际交付收款。"
+                    : offer.Count == 1 ? "3 天内交付，交付时收款。"
                     : $"5 天内交付，保证金 {offer.Deposit}，全数交付后返还并另奖 3%。";
-                Ui.Size(Ui.Button(body, "确认接单…", () => ConfirmAction("确认转介绍订单", terms, "确认接单",
+                Ui.Size(Ui.Button(body, "确认接单…", () => ConfirmAction(offer.CommunityOrder ? "确认社区团购" : "确认转介绍订单", terms, "确认接单",
                     () => { S.AcceptCityReferral(offer.Id); refresh(); }), 17, Ui.ButtonHot, blocker == null), -1, 42);
                 Ui.Size(Ui.Button(body, "婉拒这笔报价", () => { S.DeclineIndustryReferral(offer.Id); refresh(); },
                     16, Ui.ButtonBg), -1, 36);

@@ -1,6 +1,8 @@
 # 随机事件编号与验收
 
-日常随机池共有 123 项。编号沿用逐项讨论和游戏内验收工具的顺序。01–30 已完成本轮改造，下一批从 31 开始。第 102 项的亲戚借款已合并到第 09 项。第 125、126 项由独立流程触发，也可在同一工具验收。片区主线和许星澜的首次赛车引导使用各自的验收入口。
+**最新进度：91–100已实现，下一批101–110（102空号）。51–58和76仍待补做。** [完整交接](111-current-project-handoff-2026-11-14.md)。下方早期进度为历史记录。
+
+日常随机池共有 123 项。编号沿用逐项讨论和游戏内验收工具的顺序。01–50 已完成本轮改造，下一批从 51 开始。[41–50 当前规则](103-social-events-41-50.md) · [31–40 规则](101-racing-events-31-40.md) · [后续金额审查](102-event-money-audit.md) · [扩容后的消费项目](104-premium-venue-services.md)。第 102 项的亲戚借款已合并到第 09 项。第 125、126 项由独立流程触发，也可在同一工具验收。片区主线和许星澜的首次赛车引导使用各自的验收入口。
 
 [逐批改造进度与换机交接](99-random-event-handoff.md) · [所有事件的触发、选项和结果](100-random-event-details.md)
 
@@ -95,7 +97,7 @@
 | 39 | 夜骑小队 | `race_night_ride` |
 | 40 | 头盔清仓 | `race_helmet_deal` |
 | 41 | 庆功饭 | `race_prize_dinner` |
-| 42 | 雨天的赛道 | `race_track_visit_rain` |
+| 42 | 湿地驾驶体验 | `race_track_visit_rain` |
 | 43 | 夜校同学爱好赛车 | `race_ning_study` |
 | 44 | 罗师傅请你尝新菜 | `act_dinner_cook` |
 | 45 | 同桌家常馆的邀请 | `act_dinner_chef` |
@@ -138,20 +140,20 @@
 | 82 | 对面贴了降价单 | `shop_price_war_leaflet` |
 | 83 | 店里来了只猫 | `shop_cat_visitor` |
 | 84 | 供货商送样品 | `shop_supplier_gift` |
-| 85 | 邻居借梯子 | `shop_neighbor_help` |
+| 85 | 邻居换招牌 | `shop_neighbor_help` |
 | 86 | 差评 | `shop_complaint_online` |
 | 87 | 学生党想要折扣 | `shop_student_discount` |
-| 88 | 橱窗灵感 | `shop_window_dressing` |
-| 89 | 盘点发现差额 | `shop_inventory_audit` |
+| 88 | 门面陈列建议 | `shop_window_dressing` |
+| 89 | 库存变动待复核 | `shop_inventory_audit` |
 | 90 | 热得没人逛 | `shop_summer_heat` |
 | 91 | 老客户回头 | `shop_old_customer_return` |
 | 92 | 朋友圈限时抢 | `shop_flash_sale` |
-| 93 | 骑手想蹭个位置 | `shop_delivery_boy` |
+| 93 | 骑手想歇个脚 | `shop_delivery_boy` |
 | 94 | 上次检查的回头看 | `shop_inspection_followup` |
 | 95 | 爆款传闻 | `shop_hot_item_rumor` |
 | 96 | 会员卡的点子 | `shop_loyalty_card` |
-| 97 | 捡到优惠券 | `money_found_coupon` |
-| 98 | 退税到账 | `money_tax_refund` |
+| 97 | 收到采购优惠券 | `money_found_coupon` |
+| 98 | 经营补贴申请 | `money_tax_refund` |
 | 99 | 诈骗电话 | `money_phone_scam` |
 | 100 | 银行客户经理 | `money_bank_manager` |
 | 101 | 水电多收了 | `money_utility_refund` |

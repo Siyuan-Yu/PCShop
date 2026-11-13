@@ -12,6 +12,16 @@ namespace PCShopSell.Core.Session
         {
             // All purchases use normal shop demand. Identity is optional, never a limit on arrivals.
             customer.VisitId = shop.Place.Id + ":visit:" + _nextCityVisit++;
+            if (customer.PersonId != null)
+            {
+                var returning = CityPersonState(customer.PersonId);
+                if (returning != null)
+                {
+                    var backRoute = PlanCityRoute(returning, shop.Place.Id, Clock.Now.TotalMinutes);
+                    returning.VisitId = customer.VisitId; returning.Task = CityPersonTask.Shopping; returning.Route = backRoute; returning.LocationPlaceId = backRoute == null ? shop.Place.Id : null;
+                }
+                return;
+            }
             if (!Random.Chance(.25)) return;
             InitializeCityPeople();
             var person = _cityPeople.Values.Where(p => p.PersonId != CityLifeCatalog.InvitationTestPersonId && p.Route == null && p.ActivityId == null && p.VisitId == null

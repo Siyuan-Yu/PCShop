@@ -1,0 +1,1 @@
+Production scene/UI: membership purchase, saved coupon, business tasks, actual paid procurement and bank verification task. Canonical event JSON written by production EventScriptWriter.

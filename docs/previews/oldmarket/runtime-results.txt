@@ -1,0 +1,1 @@
+Production world: four physical stalls, simplified five-tab menu; clicked actual buy and master-repair buttons; menu closed automatically; exactly one repaired backpack item after 15 minutes.

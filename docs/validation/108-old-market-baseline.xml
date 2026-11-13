@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="5" result="Failed(Child)" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-13 12:50:31Z" end-time="2026-11-13 12:50:32Z" duration="1.476357">
+  <test-suite type="TestSuite" id="2657" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1436" result="Failed" site="Child" start-time="2026-11-13 12:50:31Z" end-time="2026-11-13 12:50:32Z" duration="1.476357" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="4310" name="PCShopSell.Tests.EditMode.dll" fullname="F:/_ci/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1436" result="Failed" site="Child" start-time="2026-11-13 12:50:31Z" end-time="2026-11-13 12:50:32Z" duration="1.457944" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="103304" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="4311" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1436" result="Failed" site="Child" start-time="2026-11-13 12:50:31Z" end-time="2026-11-13 12:50:32Z" duration="1.455080" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="4312" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="1436" result="Failed" site="Child" start-time="2026-11-13 12:50:31Z" end-time="2026-11-13 12:50:32Z" duration="1.451986" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="2917" name="CityRetailTests" fullname="PCShopSell.Tests.CityRetailTests" classname="PCShopSell.Tests.CityRetailTests" runstate="Runnable" testcasecount="8" result="Failed" site="Child" start-time="2026-11-13 12:50:31Z" end-time="2026-11-13 12:50:31Z" duration="0.157650" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="2926" name="CompetitionExpiresAndDoesNotDirectlyModifyCash" fullname="PCShopSell.Tests.CityRetailTests.CompetitionExpiresAndDoesNotDirectlyModifyCash" methodname="CompetitionExpiresAndDoesNotDirectlyModifyCash" classname="PCShopSell.Tests.CityRetailTests" runstate="Runnable" seed="1858295145" result="Failed" start-time="2026-11-13 12:50:31Z" end-time="2026-11-13 12:50:31Z" duration="0.140602" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: 1
+  But was:  0
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.CityRetailTests.CompetitionExpiresAndDoesNotDirectlyModifyCash () [0x0006f] in F:\_ci\Assets\Tests\EditMode\CityRetailTests.cs:141
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.CityRetailTests.CompetitionExpiresAndDoesNotDirectlyModifyCash
+REGRESSION DONE PCShopSell.Tests.CityRetailTests.CompetitionExpiresAndDoesNotDirectlyModifyCash Failed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3024" name="DistrictProgressionTests" fullname="PCShopSell.Tests.DistrictProgressionTests" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" testcasecount="30" result="Failed" site="Child" start-time="2026-11-13 12:50:31Z" end-time="2026-11-13 12:50:32Z" duration="0.686125" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="3034" name="InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce" fullname="PCShopSell.Tests.DistrictProgressionTests.InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce" methodname="InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1102302858" result="Failed" label="Error" start-time="2026-11-13 12:50:31Z" end-time="2026-11-13 12:50:32Z" duration="0.493404" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[System.NullReferenceException : Object reference not set to an instance of an object]]></message>
+                <stack-trace><![CDATA[  at PCShopSell.Tests.DistrictProgressionTests.InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce () [0x00155] in F:\_ci\Assets\Tests\EditMode\DistrictProgressionTests.cs:331
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <eef08f56e2e042f1b3027eca477293d9>:0 ]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.InvitationWaitsThreeDaysSurvivesReloadAndNotifiesExactlyOnce Failed:Error
+]]></output>
+            </test-case>
+            <test-case id="3051" name="VisibleHomesHaveReachableDoorsAndStableResidentAddresses" fullname="PCShopSell.Tests.DistrictProgressionTests.VisibleHomesHaveReachableDoorsAndStableResidentAddresses" methodname="VisibleHomesHaveReachableDoorsAndStableResidentAddresses" classname="PCShopSell.Tests.DistrictProgressionTests" runstate="Runnable" seed="1040506959" result="Failed" start-time="2026-11-13 12:50:32Z" end-time="2026-11-13 12:50:32Z" duration="0.174882" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  residence_s_oldhomes_21
+  Expected: True
+  But was:  False
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.DistrictProgressionTests.VisibleHomesHaveReachableDoorsAndStableResidentAddresses () [0x000c3] in F:\_ci\Assets\Tests\EditMode\DistrictProgressionTests.cs:545
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.DistrictProgressionTests.VisibleHomesHaveReachableDoorsAndStableResidentAddresses
+REGRESSION DONE PCShopSell.Tests.DistrictProgressionTests.VisibleHomesHaveReachableDoorsAndStableResidentAddresses Failed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3109" name="EventScriptTests" fullname="PCShopSell.Tests.EventScriptTests" classname="PCShopSell.Tests.EventScriptTests" runstate="Runnable" testcasecount="19" result="Failed" site="Child" start-time="2026-11-13 12:50:32Z" end-time="2026-11-13 12:50:32Z" duration="0.025333" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="3122" name="Writer_RoundTrips_AndMatchesTheFileOnDisk" fullname="PCShopSell.Tests.EventScriptTests.Writer_RoundTrips_AndMatchesTheFileOnDisk" methodname="Writer_RoundTrips_AndMatchesTheFileOnDisk" classname="PCShopSell.Tests.EventScriptTests" runstate="Runnable" seed="1068615489" result="Failed" start-time="2026-11-13 12:50:32Z" end-time="2026-11-13 12:50:32Z" duration="0.016581" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  events.json 不是编辑器的标准格式——用外部事件编辑器打开并保存，或运行 EventEditor.exe --reformat
+  Expected string length 60982 but was 42636. Strings differ at index 21.
+  Expected: "{\n  "events": [\n    {\n      "id": "inspection",\n      "code":..."
+  But was:  "{\n  "events": [\n    {"id": "inspection", "code": true, "minDa..."
+  ----------------------------------^
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.EventScriptTests.Writer_RoundTrips_AndMatchesTheFileOnDisk () [0x00025] in F:\_ci\Assets\Tests\EditMode\EventScriptTests.cs:220
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.EventScriptTests.Writer_RoundTrips_AndMatchesTheFileOnDisk
+REGRESSION DONE PCShopSell.Tests.EventScriptTests.Writer_RoundTrips_AndMatchesTheFileOnDisk Failed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="3874" name="ShopCoreGameplayTests" fullname="PCShopSell.Tests.ShopCoreGameplayTests" classname="PCShopSell.Tests.ShopCoreGameplayTests" runstate="Runnable" testcasecount="53" result="Failed" site="Child" start-time="2026-11-13 12:50:32Z" end-time="2026-11-13 12:50:32Z" duration="0.436147" total="1" passed="0" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="3907" name="UsedCounterMovesConfirmedItemsToIllustratedShelfAndShowsSoldReceipt" fullname="PCShopSell.Tests.ShopCoreGameplayTests.UsedCounterMovesConfirmedItemsToIllustratedShelfAndShowsSoldReceipt" methodname="UsedCounterMovesConfirmedItemsToIllustratedShelfAndShowsSoldReceipt" classname="PCShopSell.Tests.ShopCoreGameplayTests" runstate="Runnable" seed="149069150" result="Failed" start-time="2026-11-13 12:50:32Z" end-time="2026-11-13 12:50:32Z" duration="0.417975" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                <stack-trace><![CDATA[at PCShopSell.Tests.ShopCoreGameplayTests.UsedCounterMovesConfirmedItemsToIllustratedShelfAndShowsSoldReceipt () [0x00184] in F:\_ci\Assets\Tests\EditMode\ShopCoreGameplayTests.cs:335
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.ShopCoreGameplayTests.UsedCounterMovesConfirmedItemsToIllustratedShelfAndShowsSoldReceipt
+REGRESSION DONE PCShopSell.Tests.ShopCoreGameplayTests.UsedCounterMovesConfirmedItemsToIllustratedShelfAndShowsSoldReceipt Failed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

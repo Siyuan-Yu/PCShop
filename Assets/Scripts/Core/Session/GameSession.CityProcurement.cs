@@ -201,16 +201,19 @@ namespace PCShopSell.Core.Session
             if (claim == null) return false; claim.State = ProcurementClaimState.Released; claim.BudgetCents = 0; claim.Reason = "已取消，缺口与预算已释放"; return true;
         }
 
-        private bool PayUnifiedOnlineOrder(OnlineOrder order, Money total, OnlineStore store)
+        private bool PayUnifiedOnlineOrder(OnlineOrder order, Money total, OnlineStore store, Money couponDiscount)
         {
             if (!Ledger.CanAfford(total)) return false;
             string orderId = "online-order:" + order.Id;
             foreach (var line in order.Lines)
             {
                 var unit = OnlinePrice(store, PartCatalog.Get(line.PartId));
+                Money lineTotal = unit * line.Count;
+                Money reduction = Money.FromCents(Math.Min(lineTotal.Cents, couponDiscount.Cents));
+                couponDiscount -= reduction;
                 var attribution = order.ToHome ? new LedgerAttribution(LedgerBusinessKind.Personal, sourceEventId: orderId + ":" + line.PartId, transactionKind: "个人采购")
-                    : LedgerAttribution.ForShop(order.ShopId, orderId + ":" + line.PartId, "采购").Product(line.PartId, line.Count, unit.Cents);
-                if (!Ledger.TryDebit(Clock.Today, "进货", unit * line.Count, "网购 " + store.Name, attribution))
+                    : LedgerAttribution.ForShop(order.ShopId, orderId + ":" + line.PartId, "采购").Product(line.PartId, line.Count, (lineTotal - reduction).Cents / line.Count);
+                if (!Ledger.TryDebit(Clock.Today, "进货", lineTotal - reduction, "网购 " + store.Name, attribution))
                     throw new InvalidOperationException("网购总额预检通过后扣款失败，未继续发货。");
             }
             if (Online1788.ShippingFee.IsPositive) Ledger.ForceDebit(Clock.Today, "运费", Online1788.ShippingFee, "网购 " + store.Name,

@@ -124,6 +124,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(row,"现金流水",OpenLedger,17),-1,-1,1);
             Ui.Size(Ui.Button(w.Content,"管理投资持仓",OpenCityInvestments,17),-1,38);
             if(S.SupplierDebts.Count>0) BuildDebtList(w);
+            BuildEventChangeRefunds(w);
         }
         private void BuildDebtList(Window w)
         {
@@ -185,15 +186,16 @@ namespace PCShopSell.Game.UI
 
         private void BuildEnterprise(Window w)
         {
-            Para(w.Content,"名望 8 解锁，每周刷新一份采购邀请。接受后自动进入主店装机队列；可以亲自装，也可以交给受训员工。逐台交付收款，全额完成再奖合同额 3%。",17);
+            Para(w.Content,"常规企业邀请名望 8 解锁，逐台装机交付收款，完整履约另奖 3%。社区团购按已确认的折扣货款结算。",17);
             var contracts = S.EnterpriseContracts.Where(c => !c.PersonalReferral).Reverse().ToArray();
             if(contracts.Length==0) Line(w.Content,"暂时没有采购邀请。提高名望后再来看看。",17,Ui.Dim);
             foreach(var contract in contracts)
             {
                 var c=contract;var card=BusinessCard(w.Content,c.Client+" · "+PartCatalog.TierName(c.Tier)+"整机 ×"+c.Count);
-                Line(card,$"合同额 {c.Total}    单台收款 {Money.FromCents(c.UnitCents)}    履约保证金 {c.Total.Scale(.05)}",17);
+                bool community = S.CityReferrals.Any(o => o.ContractId == c.Id && o.CommunityOrder);
+                Line(card,$"合同额 {c.Total}    单台收款 {Money.FromCents(c.UnitCents)}    履约保证金 {(c.Accepted ? Money.FromCents(c.DepositCents) : c.Total.Scale(.05))}",17);
                 Money reference=Money.Zero;foreach(var p in PartCatalog.BuildList(c.Tier)) reference+=S.Market.PriceOf(p)*c.Count;
-                Para(card,$"当前配件市价合计 {reference}（不是实际采购成本）。交期 {c.Count+2} 天；未交付部分会扣对应保证金，手头零售订单也会占用工时。",15,Ui.Dim);
+                Para(card,$"当前配件市价合计 {reference}（不是实际采购成本）。交期 {c.Count+2} 天；" + (community ? "社区团购按实收货款结算，保证金为零。" : "未交付部分会扣对应保证金。") + "手头零售订单也会占用工时。",15,Ui.Dim);
                 if(c.Accepted)
                 {
                     Line(card,$"交付 {c.Completed}/{c.Count}    失败 {c.Failed}    {(c.Settled ? "已结案" : "截止 "+new GameTimestamp(c.DueMinute))}",17,c.Settled ? Ui.Dim : Ui.Good);

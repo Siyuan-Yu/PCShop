@@ -9,7 +9,7 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         public CityActivityDefinition CityActivityService(CityActivity activity) => activity == null ? null
-            : CityLifeCatalog.Activity(string.IsNullOrEmpty(activity.ServiceDefinitionId) ? activity.DefinitionId : activity.ServiceDefinitionId);
+            : CityLifeCatalog.Activity(string.IsNullOrEmpty(activity.ServiceDefinitionId) ? activity.DefinitionId : activity.ServiceDefinitionId)?.AtVenue(activity.VenueId);
         public static string VenueServiceName(CityActivityDefinition def, int choice = 0)
         {
             if (def == null) return "服务";
@@ -25,6 +25,14 @@ namespace PCShopSell.Core.Session
             Money second = VenuePlayerPrice(def, 1);
             if (first == second) return first.ToString();
             return first < second ? $"{first}–{second}" : $"{second}–{first}";
+        }
+        public Money CityActivityEntryPrice(CityActivityDefinition def, int choice, CityActivity booking = null)
+        {
+            if (booking?.HostPays == true) return Money.Zero;
+            Money price = VenuePlayerPrice(def, choice);
+            int people = (booking?.Participants.Length ?? 0) + 1;
+            if (def.FixedGroupPrice) return booking?.PlayerTreat == true ? price : Money.FromCents((price.Cents + people - 1) / people);
+            return booking?.PlayerTreat == true ? price * people : price;
         }
         public string CityActivityMidText(CityActivity activity)
         {
@@ -103,13 +111,17 @@ namespace PCShopSell.Core.Session
         public string VenueServiceBlocker(string definitionId, int choice)
         {
             var def = CityLifeCatalog.Activity(definitionId);
+            var pending = PendingVenueActivity(CurrentPlace);
+            if (def?.EventOnly == true && pending?.DefinitionId == def.Id) def = def.AtVenue(pending.VenueId);
             if (def == null || CurrentPlace?.Id != def.VenueId) return "到场后才能选择服务";
             if (choice < 0 || choice >= def.ServiceCount) return "请选择菜单或服务项目";
             if (IsGameOver || _sleeping || IsWorking || CityActivityExclusive) return "请先结束正在进行的事情";
             if (!CityVenueFits(CurrentPlace, Clock.Now.TotalMinutes, def.Minutes)) return "该服务无法在闭店前完成";
-            if (def.Id.StartsWith("expo_") && !CityExpoDay(Clock.Now.TotalMinutes, def.Id == "expo_comic")) return "本场展会尚未开放";
+            if (def.Id.StartsWith("expo_") && !CityExpoDay(Clock.Now.TotalMinutes, (def.LogicalId ?? def.Id) == "expo_comic")) return "本场展会尚未开放";
             var booking = PendingVenueActivity(CurrentPlace);
-            Money cost = booking?.HostPays == true ? Money.Zero : VenuePlayerPrice(def, choice);
+            if (CityLifeCatalog.Activity(booking?.DefinitionId)?.EventOnly == true && definitionId != booking.DefinitionId)
+                return "本次为已约定的专属活动，请按原日程参加";
+            Money cost = CityActivityEntryPrice(def, choice, booking);
             if (cost.IsPositive && !Ledger.CanAfford(cost)) return $"现金不足，需要 {cost}";
             if (booking?.ServiceConfirmed == true) return "本次已选好服务";
             if(IsOwnedVenue(CurrentPlace))

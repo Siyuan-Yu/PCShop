@@ -27,14 +27,15 @@ namespace PCShopSell.Core.Session
     {
         public string Id, Client, ContractId;
         public int Count;
-        public bool Discount;
+        public bool Discount, CommunityOrder;
+        public int PriceBasisPoints;
         public string ShopId, RetailKind, Introducer, ProductId, ProductName;
         public int SignedDay, Recipe;
         public int[] UsedIds;
         public long FullPriceCents, DueMinute, DepositCents;
         public bool Settled, Fulfilled;
-        public Money Total => Money.FromCents(FullPriceCents).Scale(Discount ? Count == 1 ? .70 : .95 : 1);
-        public Money Deposit => Count == 1 ? Money.Zero : Total.Scale(.05);
+        public Money Total => Money.FromCents(FullPriceCents).Scale(PriceBasisPoints > 0 ? PriceBasisPoints / 10000.0 : Discount ? Count == 1 ? .70 : .95 : 1);
+        public Money Deposit => CommunityOrder || Count == 1 ? Money.Zero : Total.Scale(.05);
         public CityReferralOffer Copy()
         {
             var copy = (CityReferralOffer)MemberwiseClone();
@@ -564,8 +565,8 @@ namespace PCShopSell.Core.Session
             shop.Sim.RecordBulkSale(offer.ProductName, offer.Count, offer.Total, offer.Client + "转介绍");
             if (offer.DepositCents > 0)
                 Ledger.Credit(Clock.Today, "履约保证金", Money.FromCents(offer.DepositCents), offer.Client);
-            if (offer.Count > 1) Ledger.Credit(Clock.Today, "企业奖励", offer.Total.Scale(.03), offer.Client);
-            if (offer.Count > 1 || offer.Discount) AddRelation(offer.Introducer, 2);
+            if (offer.Count > 1 && !offer.CommunityOrder) Ledger.Credit(Clock.Today, "企业奖励", offer.Total.Scale(.03), offer.Client);
+            if (!string.IsNullOrEmpty(offer.Introducer) && (offer.Count > 1 || offer.Discount)) AddRelation(offer.Introducer, 2);
             offer.Settled = offer.Fulfilled = true;
             Say($"已交付{offer.ProductName} ×{offer.Count}，实收 {offer.Total}。");
             return true;

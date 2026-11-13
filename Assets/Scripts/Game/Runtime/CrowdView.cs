@@ -23,6 +23,7 @@ namespace PCShopSell.Game.Runtime
             public bool Leaving;
             public Transform ActivityName;
             public FigureMotion Motion;
+            public Transform NightBike;
         }
 
         private const float MetroEndX = -97f, VillageEndX = 102f;
@@ -70,7 +71,7 @@ namespace PCShopSell.Game.Runtime
             {
                 var definition = session.CityPerson(state.PersonId); if (definition == null) continue;
                 Vector3 position = CityPresentationPosition(session, state);
-                bool privateInterior = session.CityPersonInside(state) || CityPersonInVehicle(state) || _expoPresented.Contains(state.PersonId);
+                bool privateInterior = !IsNightRider(session, state) && (session.CityPersonInside(state) || CityPersonInVehicle(state) || _expoPresented.Contains(state.PersonId));
                 if (privateInterior) continue;
                 if (camera != null)
                 {
@@ -113,12 +114,16 @@ namespace PCShopSell.Game.Runtime
         private static bool CityPersonInVehicle(CityPersonState person) =>
             person.Route != null && person.Route.Transport != VehicleKind.Walk;
 
+        private static bool IsNightRider(GameSession session, CityPersonState person) => person != null
+            && session.RunningCityActivity?.DefinitionId == "race_night" && session.RunningCityActivity.Id == person.ActivityId;
+
         private Vector3 CityPresentationPosition(GameSession session, CityPersonState person)
         {
             var point = person.Route != null
                 ? person.Route.Position(session.Clock.Now.TotalMinutes + session.Time.FractionalMinute)
                 : new PCShopSell.Core.World.MapPoint(person.X, person.Y);
-            return _streets?.StreetPosition(point) ?? StreetWorldBuilder.ToWorld(point);
+            var result = _streets?.StreetPosition(point) ?? StreetWorldBuilder.ToWorld(point);
+            return result + (IsNightRider(session, person) ? Vector3.up * .35f : Vector3.zero);
         }
 
         private void UpdateCityPresentation(float dt, bool visible)
@@ -129,9 +134,17 @@ namespace PCShopSell.Game.Runtime
                 var view = pair.Value;
                 if (view.Go == null) continue;
                 var state = _citySession.CityPersonState(pair.Key);
-                bool show = visible && state != null && !_citySession.CityPersonInside(state) && !CityPersonInVehicle(state) && !_expoPresented.Contains(state.PersonId);
+                bool nightRide = IsNightRider(_citySession, state);
+                bool show = visible && state != null && (nightRide || !_citySession.CityPersonInside(state) && !CityPersonInVehicle(state) && !_expoPresented.Contains(state.PersonId));
                 if (view.Go.activeSelf != show) view.Go.SetActive(show);
                 if (!show) continue;
+                if (nightRide && view.NightBike == null)
+                {
+                    var bike = MotorCatalog.Get("e_city");
+                    view.NightBike = MotorVisual.Build(view.Go.transform, bike, MotorVisual.Paint(bike.Id), false);
+                    view.NightBike.localPosition = Vector3.down * .35f;
+                }
+                if (view.NightBike != null) view.NightBike.gameObject.SetActive(nightRide);
                 Vector3 position = CityPresentationPosition(_citySession, state);
                 Vector3 direction = position - view.Go.transform.position;
                 view.Go.transform.position = position;
@@ -145,9 +158,10 @@ namespace PCShopSell.Game.Runtime
                         Quaternion.LookRotation(direction.normalized), 540 * dt);
                 if (view.Motion != null)
                 {
-                    view.Motion.ActivityKind = participating ? _citySession.CityActivityService(_citySession.RunningCityActivity)?.Id : null;
+                    var definition = participating ? _citySession.CityActivityService(_citySession.RunningCityActivity) : null;
+                    view.Motion.ActivityKind = definition?.LogicalId ?? definition?.Id;
                     view.Motion.ActivityOption = participating ? _citySession.RunningCityActivity.ServiceChoice : -1;
-                    view.Motion.LocomotionEnabled = state.Route != null;
+                    view.Motion.LocomotionEnabled = state.Route != null && !nightRide;
                     view.Motion.Seated = participating && _citySession.City.GetPlace(_citySession.RunningCityActivity.VenueId).Business == "venue_restaurant";
                 }
             }

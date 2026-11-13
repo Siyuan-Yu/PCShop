@@ -96,6 +96,12 @@ namespace PCShopSell.Game.UI
                     }
                     var actions=Ui.Row(card,36,6);
                     Ui.Size(Ui.Button(actions,"修复车况 · ¥"+S.MotorRepairPrice(v).ToString("N0"),()=>{S.RepairMotor(v.Id);w.Rebuild();},16,Ui.ButtonBg,blocker==null&&v.Condition<100),-1,36,1);
+                    if (v.EventBatteryWorn)
+                    {
+                        string batteryBlocker = S.EventBatteryRepairBlocker(v.Id);
+                        Ui.Size(Ui.Button(card, "更换老化电池 · ¥" + S.EventBatteryReplacementPrice(v).ToString("N0") + " · 30 分钟", () => { S.ReplaceEventBattery(v.Id); w.Rebuild(); }, 16, Ui.ButtonHot, batteryBlocker == null), -1, 38);
+                        if (batteryBlocker != null) Line(card, batteryBlocker, 15, Ui.Dim);
+                    }
                     long sale=(long)(model.Price*.6*v.Condition/100);
                     Ui.Size(Ui.Button(actions,"回收出售 · ¥"+sale.ToString("N0"),()=>ConfirmBusiness("出售车辆",model.Name+"将从车库移除，收到 ¥"+sale.ToString("N0"),()=>{S.SellMotor(v.Id);w.Rebuild();}),16,Ui.Warn,S.CurrentPlace?.Kind==PlaceKind.Dealer&&S.MotorAvailable(v)),-1,36,1);
                 }
@@ -188,6 +194,18 @@ namespace PCShopSell.Game.UI
                 var car=v;MotorChoice(w.Content,car.ModelId,(_raceSelection==car.Id?"● ":"○ ")+MotorCatalog.Get(car.ModelId).Name+$" · 车况 {car.Condition:0}%",()=>{_raceSelection=car.Id;w.Rebuild();},selected:_raceSelection==car.Id);
             }
             var selectedMotor=motors.FirstOrDefault(v=>v.Id==_raceSelection);
+            BuildRacingEventEquipment(w);
+            if (selectedMotor?.EventBatteryWorn == true) Para(w.Content, "电池老化：动力下降 25%，每次驾驶有 40% 概率断电退赛并支付救援 ¥1,500。请去顺丰改车更换。", 17, Ui.Warn);
+            if (selectedMotor?.SponsorRacesRemaining > 0) Line(w.Content, "手机店贴纸赞助 · 正赛完赛 ¥3,000/场 · 剩余 " + selectedMotor.SponsorRacesRemaining + " 场", 17, Ui.Accent);
+            foreach (var booking in S.EventRaceBookings.Where(b => b.Day == S.Clock.Today.TotalDays && b.TrackId == t.Id))
+            {
+                string kind = booking.Kind;
+                string reason = S.EventRaceStartBlocker(kind, _raceSelection);
+                Ui.Size(Ui.Button(w.Content, kind == "wet" ? "开始湿地训练 · ¥1,000 · 抓地 60%" : kind == "rider" ? "吴磊一圈挑战 · 输家请 ¥2,000 夜宵" : "参加慈善赛 · ¥2,000 · 无奖金", () =>
+                { if (S.StartEventRace(kind, _raceSelection)) CloseWindowSilently(w); }, 18, Ui.ButtonHot, reason == null), -1, 44);
+                if (reason != null) Line(w.Content, reason, 15, Ui.Dim);
+                Ui.Size(Ui.Button(w.Content, "取消这项专属预约", () => { S.CancelEventRaceBooking(kind, booking.TrackId, booking.Day); w.Rebuild(); }, 16), -1, 34);
+            }
             if(selectedMotor!=null)BuildMotorPerformance(w.Content,MotorCatalog.Performance(selectedMotor),selectedMotor.Condition);
             if(motors.Length==0)Para(w.Content,S.HasGarage(garage.Id)?"本区车库没有这一类车辆，可以从其他车库付费调入。":"请先到本区车库建筑旁按 F，租用或购买车位，再将通勤车入库或购入赛车。",17,Ui.Warn);
             BuildMotorTransfer(w,garage,_raceMotorClass,"race:"+t.Id);
@@ -202,6 +220,21 @@ namespace PCShopSell.Game.UI
             }
             foreach(var record in S.RacingRecords.Where(r=>r.Key.StartsWith(t.Id+":"+_raceMotorClass+":")))
                 Line(w.Content,MotorCatalog.ClassName(_raceMotorClass)+(record.Key.EndsWith("practice")?"练习":"竞速")+" · 最佳 "+(record.BestSeconds>0?record.BestSeconds.ToString("0.00")+"秒":"尚未完赛")+" · "+record.Wins+"胜",16);
+        }
+
+        private void BuildRacingEventEquipment(Window w)
+        {
+            if (S.Flags.Contains("racing:charity-medal")) Line(w.Content, "已获慈善赛纪念奖牌", 16, Ui.Good);
+            if (S.OwnedRacingGear.Count == 0) return;
+            Line(w.Content, "赛车护具 · 当前防伤 " + (S.RacingInjuryReduction * 100).ToString("0.#") + "%", 18, Ui.Accent);
+            foreach (var item in S.OwnedRacingGear)
+            {
+                var gear = item;
+                Line(w.Content, gear.Name + " · 成色 " + gear.Condition + "% · " + (gear.Equipped ? "已装备" : "未装备"), 16);
+                var row = Ui.Row(w.Content, 36, 6);
+                Ui.Size(Ui.Button(row, gear.Equipped ? "卸下" : "装备", () => { S.EquipRacingGear(gear.Id, !gear.Equipped); w.Rebuild(); }, 16), -1, 36, 1);
+                Ui.Size(Ui.Button(row, "整修 · ¥1,000 / 30 分钟", () => { S.RepairRacingGear(gear.Id); w.Rebuild(); }, 16, Ui.ButtonBg, gear.Condition < 100), -1, 36, 1);
+            }
         }
 
         private void BuildRaceReceptionRoster(Window w, RaceTrack track)
@@ -323,7 +356,7 @@ namespace PCShopSell.Game.UI
         private void BuildRaceSettlement(Transform content, RaceSettlement result)
         {
             if (!string.IsNullOrEmpty(result.Extra)) Para(content, result.Extra, 18, Ui.Accent);
-            string mode = result.Practice ? "计时练习" : RacingSchedule.Name(result.Meeting);
+            string mode = result.EventTitle ?? (result.Practice ? "计时练习" : RacingSchedule.Name(result.Meeting));
             Line(content, result.Track + " · " + mode + " · " + result.Vehicle, 22, Ui.Accent);
             var summary = Ui.Row(content, 68, 8);
             string place = result.Abandoned ? (result.Practice ? "练习已结束" : "已退赛")

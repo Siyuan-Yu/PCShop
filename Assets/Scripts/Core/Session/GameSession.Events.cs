@@ -85,7 +85,7 @@ namespace PCShopSell.Core.Session
             foreach (EventDef def in EventCatalog.All)
             {
                 if (today.TotalDays < def.MinDay) continue;
-                if (def.Group == "race" && !raceEventsAvailable) continue;
+                if (def.Group == "race" && !raceEventsAvailable && def.Id != "race_spectator") continue;
                 if (def.MaxDay >= 0 && today.TotalDays > def.MaxDay) continue;
                 if (_eventLastDay.TryGetValue(def.Id, out int last) && today.TotalDays - last < def.CooldownDays) continue;
                 if (def.When != null && !def.When(this)) continue;
@@ -147,6 +147,53 @@ namespace PCShopSell.Core.Session
                 "race_jingxing_tuning" => BindEventTuning(def),
                 "race_ruoning_rare" => BindCollectorDrive(def),
                 "race_ming_lunch" => BindEventRace(def, "life_ming"),
+                "race_rider_bet" or "race_battery_old" or "race_rematch" or "race_sponsor_sticker"
+                    or "race_crash_help" or "race_spectator" or "race_charity" or "race_maker_gear"
+                    or "race_night_ride" or "race_helmet_deal" => BindRacingBatchEvent(def),
+                "race_prize_dinner" or "race_track_visit_rain" or "race_ning_study" or "act_dinner_cook"
+                    or "act_dinner_chef" or "act_dinner_linhe" or "act_dinner_farm" or "act_ktv_singer"
+                    or "act_ktv_fuzhi" or "act_ktv_luoya" => BindSocialBatchEvent(def),
+                "act_fishing_shaoan" => BindFishingInvitation(def, 59),
+                "act_fishing_qiaosong" => BindFishingInvitation(def, 60),
+                "act_fishing_grandpa" => BindOutdoorBatchEvent(def, 61),
+                "act_hike_luqiao" => BindOutdoorBatchEvent(def, 62),
+                "act_hike_gardener" => BindOutdoorBatchEvent(def, 63),
+                "act_hike_shiyang" => BindOutdoorBatchEvent(def, 64),
+                "act_snack_moxin" => BindOutdoorBatchEvent(def, 65),
+                "act_snack_maoning" => BindOutdoorBatchEvent(def, 66),
+                "act_snack_rider" => BindOutdoorBatchEvent(def, 67),
+                "act_market_zhou" => BindOutdoorBatchEvent(def, 68),
+                "act_market_li" => BindOutdoorBatchEvent(def, 69),
+                "act_market_wang" => BindOutdoorBatchEvent(def, 70),
+                "act_expo_curator" => BindExhibitionEvent(def, 73),
+                "act_oldmarket_guwen" => BindOldMarketEvent(def, 71),
+                "act_oldmarket_leiming" => BindOldMarketEvent(def, 72),
+                "act_expo_hanzheng" => BindExhibitionEvent(def, 74),
+                "act_comic_creator" => BindExhibitionEvent(def, 75),
+                "act_comic_shenxiao" => BindExhibitionEvent(def, 77),
+                "shop_regular_review" => BindCustomerReview(def),
+                "shop_wrong_change" => BindWrongChange(def),
+                "shop_bulk_order" => BindCommunityBulkOrder(def),
+                "shop_lost_delivery" => BindShopBatch(def, 81),
+                "shop_price_war_leaflet" => BindShopBatch(def, 82),
+                "shop_cat_visitor" => BindShopBatch(def, 83),
+                "shop_supplier_gift" => BindShopBatch(def, 84),
+                "shop_neighbor_help" => BindShopBatch(def, 85),
+                "shop_complaint_online" => BindShopBatch(def, 86),
+                "shop_student_discount" => BindShopBatch(def, 87),
+                "shop_window_dressing" => BindShopBatch(def, 88),
+                "shop_inventory_audit" => BindShopBatch(def, 89),
+                "shop_summer_heat" => BindShopBatch(def, 90),
+                "shop_old_customer_return" => BindFinanceBatch(def, 91),
+                "shop_flash_sale" => BindFinanceBatch(def, 92),
+                "shop_delivery_boy" => BindFinanceBatch(def, 93),
+                "shop_inspection_followup" => BindFinanceBatch(def, 94),
+                "shop_hot_item_rumor" => BindFinanceBatch(def, 95),
+                "shop_loyalty_card" => BindFinanceBatch(def, 96),
+                "money_found_coupon" => BindFinanceBatch(def, 97),
+                "money_tax_refund" => BindFinanceBatch(def, 98),
+                "money_phone_scam" => BindFinanceBatch(def, 99),
+                "money_bank_manager" => BindFinanceBatch(def, 100),
                 _ => def,
             };
             if (def == null) return;
@@ -263,7 +310,7 @@ namespace PCShopSell.Core.Session
                     s.Ledger.ForceDebit(s.Clock.Today, "罚款", Money.FromYuan(500), ShopTitle(shop), LedgerAttribution.ForShop(shop.Place.Id));
                     shop.Sim.AdjustShopReputation(-2);
                     return "未争取到宽限，罚款 ¥500，门店口碑 −2。";
-                }, s => Chance(s) > 0, $"有效魅力达到 {charmThreshold} 后从 35% 起算"));
+                }));
         }
 
         private readonly Dictionary<string, int> _inspectionFollowups = new Dictionary<string, int>();
@@ -555,8 +602,7 @@ namespace PCShopSell.Core.Session
             if (canSchedule)
                 choices.Add(Choose("约饭，当面再谈", s => s.ScheduleLegacyCityMeeting(Npcs.Landlady, "dinner",
                     $"legacy-rent-talk:{shop.Place.Id}:{lease.SignedDay}:{s.Clock.Today.TotalDays}")));
-            choices.Add(Choose($"讨价还价 · 成功率 {Chance(this) * 100:0.#}%", s => Resolve(s, true),
-                s => Chance(s) > 0, "需要有效魅力 45、交情 35"));
+            choices.Add(Choose($"讨价还价 · 成功率 {Chance(this) * 100:0.#}%", s => Resolve(s, true)));
             choices.Add(Choose("接受新周租", s => Resolve(s, false)));
             return EventScene(template, $"李秀兰想调整{ShopTitle(shop)}的租金。\n现周租 {before}，拟调整为 {proposed}，从{new GameDate(NextShopRentDay(shop))}起缴。", choices.ToArray());
         }
@@ -948,6 +994,7 @@ namespace PCShopSell.Core.Session
 
         private void TickEventFollowups(GameTimestamp now)
         {
+            TickRacingBatchEvents(now);
             if (_walletDropOff != null && CurrentPlace?.Id == _walletDropOff)
             {
                 _walletDropOff = null;
@@ -996,6 +1043,8 @@ namespace PCShopSell.Core.Session
             }
             ExpireIndustryReferrals(now);
             CheckRentDinner();
+            TickCustomerBatch(now.TotalMinutes);
+            TickShopEventBatch(now.TotalMinutes);
         }
 
         private void CheckInspectionFollowups(GameDate today)
@@ -1173,6 +1222,9 @@ namespace PCShopSell.Core.Session
 
         private void SaveEvents(SaveData d)
         {
+            d.celebrationRaceKey = _celebrationRaceKey;
+            d.celebrationRacePeople = _celebrationRacePeople.ToArray();
+            SaveRacingBatchEvents(d);
             d.randomEventDays = _randomEventDays.ToArray();
             d.eventIds = _eventLastDay.Keys.ToArray();
             d.eventLastDays = d.eventIds.Select(k => _eventLastDay[k]).ToArray();
@@ -1191,6 +1243,9 @@ namespace PCShopSell.Core.Session
 
         private void RestoreEvents(SaveData d)
         {
+            _celebrationRaceKey = d.celebrationRaceKey;
+            _celebrationRacePeople = d.celebrationRacePeople ?? Array.Empty<string>();
+            RestoreRacingBatchEvents(d);
             _weekendWorkEnds = Math.Max(0, d.weekendWorkEnds);
             _relativeReceivable = d.relativeReceivable?.Copy() ?? new RelativeReceivable();
             _linLoan = d.linEventLoan?.Copy();

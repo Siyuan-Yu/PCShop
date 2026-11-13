@@ -1,0 +1,6 @@
+SMOKE shot 83-cat-and-water
+SMOKE shot 84-physical-loan-sample
+SMOKE shot 81-90-schedule-entry
+SMOKE shot 84-sample-actions
+SMOKE Shop 81-90 physical cat, sample, actual trial and audit passed.
+SMOKE RESULT code=0 errors=0

@@ -179,7 +179,7 @@ namespace PCShopSell.Core.Session
             // 开局做饭教学：世界时钟不自己走，玩家可以慢慢看；只有锅在焖饭时才走，否则饭永远焖不好。吃饭、装包这些操作自己会推进相应的分钟。
             if (OpeningClockFrozen) return 0;
             if (!_sleeping && !IsWorking && !CityActivityExclusive && !BrandExpoExclusive && PendingEvent == null && Trip == null
-                && (TryShowRacingIntroduction() || TryShowRelativeOverdue() || TryShowLinOverdue() || TryShowMingAfterRace() || TryOfferLeisureInvitation())) return 0;
+                && (TryShowRacingIntroduction() || TryShowRelativeOverdue() || TryShowLinOverdue() || TryShowMingAfterRace() || TryShowRacingBatchFollowup() || TryOfferLeisureInvitation())) return 0;
             _activeCheckoutSeconds+=Math.Min(realSeconds,TimeController.MaxTickSeconds);
             double scaled = Math.Min(realSeconds, TimeController.MaxTickSeconds) * Time.Speed * TimeController.WorldRate;
 
@@ -410,7 +410,7 @@ namespace PCShopSell.Core.Session
         public Money ContractDeposits => Money.FromCents(_contracts.Where(x => x.Accepted && !x.Settled)
             .Sum(x => Money.FromCents(x.DepositCents).Scale((double)(x.Count - x.Failed) / Math.Max(1, x.Count)).Cents)
             + _cityReferrals.Where(x => x.ShopId != null && x.ContractId == x.Id && !x.Settled).Sum(x => x.DepositCents));
-        public Money TotalDebt => SupplierDebtTotal + MortgageDebt + AppLoanDebt;
+        public Money TotalDebt => SupplierDebtTotal + MortgageDebt + AppLoanDebt + ChangeRefundDebt;
         public Money ShopDeposits => Money.FromCents(_shops.Where(s => s.Rented).Sum(s => s.Lease.Deposit.Cents));
 
         public Money NetWorth() => Ledger.Balance + InventoryValue() + ShopDeposits + (PendingLease?.Deposit ?? Money.Zero) + ContractDeposits
@@ -418,6 +418,7 @@ namespace PCShopSell.Core.Session
 
         public void Dispose()
         {
+            ReleaseFishingDecision();
             Clock.TimeAdvanced -= OnTimeAdvanced;
             Clock.DayAdvanced -= OnDayAdvanced;
             foreach (OwnedShop s in _shops) s.Sim.Dispose();

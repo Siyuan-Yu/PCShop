@@ -35,7 +35,7 @@ Unity 菜单 `PCShop/事件/事件清单与触发` 可以看清单、校验格�
 ## 掷骰
 选项里写 `chance`（0–1）时，先按选择前的数值算概率，再执行 `effects`，最后掷骰进入 `onHit` 或 `onMiss`。
 
-配置了每点系数的属性必须达到门槛。有效魅力 `chanceCharm` 从 45 起，智力 `chanceIntel` 从 50 起，指定人物 `chanceNpc` 的交情 `chanceRelation` 从 35 起。任一参与属性低于门槛时成功率为 0%。全部达标后，在 `chance` 上加各属性超出门槛的点数乘以各自系数。
+有效魅力 `chanceCharm` 从 45 起，智力 `chanceIntel` 从 50 起，指定人物 `chanceNpc` 的交情 `chanceRelation` 从 35 起。任一参与属性低于门槛时成功率为 0%，选项仍可选择，并结算失败分支。全部达标后，在 `chance` 上加各属性超出门槛的点数乘以各自系数。属性成功率门槛不应同时作为选项的 `requires`；现金、库存等实际执行条件仍单独检查。
 
 `chanceBonus` 可以包含固定加成 `{"when": [条件], "add": 0.2}`。如需指定交情或胜场门槛，使用单一未取反的 `relationAtLeast` 或 `racingWins` 条件，并设正数 `perPoint`。未达门槛时成功率为 0%，达标后加 `add`，每超出一点再加 `perPoint`。最终概率限制在 0–100%。
 

@@ -196,18 +196,18 @@ namespace PCShopSell.Tests
             }
         }
 
-        [Test] public void OldMarketOutingCannotBeBookedOnSupplierWeekend()
+        [Test] public void ElectronicsMarketOutingCannotBeBookedOnSupplierWeekend()
         {
             using(var s=Make())
             {
                 s.Meet("zhou",65);StandWithLead(s,2);
                 long weekend=40*1440L+1080;
-                StringAssert.Contains("周末",s.CityActivityBlocker("old_market",new[]{"zhou"},weekend));
-                long suggested=s.SuggestCityActivityStart("old_market","zhou");
+                StringAssert.Contains("周末",s.CityActivityBlocker("market",new[]{"zhou"},weekend));
+                long suggested=s.SuggestCityActivityStart("market","zhou");
                 Assert.False(new GameDate((int)(suggested/1440)).IsWeekend);
                 Assert.GreaterOrEqual(suggested%1440,GameSession.WholesalerOpenMinute);
                 Assert.LessOrEqual(suggested%1440+60,GameSession.WholesalerCloseMinute);
-                Assert.IsNull(s.CityActivityBlocker("old_market",new[]{"zhou"},suggested));
+                Assert.IsNull(s.CityActivityBlocker("market",new[]{"zhou"},suggested));
             }
         }
 

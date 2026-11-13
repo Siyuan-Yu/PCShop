@@ -63,7 +63,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void InspectionRequiresMinimumCharmAndShowsTheActualChance()
+        public void InspectionBelowCharmThresholdRemainsSelectableAndSettlesFailure()
         {
             using (var s = new GameSession(PCShopSell.Core.World.CityLayout.FromData(PCShopSell.Tests.GameSessionTests.Layout()), 3, Money.FromYuan(100), PCShopSell.Core.Time.GameTimestamp.From(new PCShopSell.Core.Time.GameDate(5), 600), true))
             {
@@ -73,15 +73,36 @@ namespace PCShopSell.Tests
                 s.RaiseEvent("inspection");
                 Assert.AreEqual(2, s.PendingEvent.Choices.Count);
                 Assert.That(s.PendingEvent.Choices[1].Text, Does.Contain("0%"));
-                Assert.IsFalse(s.IsChoiceEnabled(s.PendingEvent.Choices[1]));
-                Assert.IsFalse(s.ResolveEvent(1));
-                s.Ledger.Credit(s.Clock.Today, "测试", Money.FromYuan(300), "整改预算");
-                Assert.IsTrue(s.ResolveEvent(0));
+                Assert.IsFalse(s.IsChoiceEnabled(s.PendingEvent.Choices[0]));
+                Assert.IsTrue(s.IsChoiceEnabled(s.PendingEvent.Choices[1]));
+                var balance = s.Ledger.Balance;
+                var reputation = s.PlayerShop.ShopReputation;
+                Assert.IsTrue(s.ResolveEvent(1));
+                Assert.IsNull(s.PendingEvent);
+                Assert.AreEqual(balance - Money.FromYuan(500), s.Ledger.Balance);
+                Assert.AreEqual(reputation - 2, s.PlayerShop.ShopReputation);
                 s.Player.Charm += 45 - s.EffectiveCharm;
                 s.RaiseEvent("inspection");
                 Assert.That(s.PendingEvent.Choices[1].Text, Does.Contain("35%"));
                 Assert.IsTrue(s.IsChoiceEnabled(s.PendingEvent.Choices[1]));
             }
+        }
+
+        [TestCase(44, 35)]
+        [TestCase(45, 34)]
+        public void RentNegotiationBelowEitherThresholdRemainsSelectableAndFails(int charm, int relation)
+        {
+            using var s = GameSessionTests.Make(8000, 600);
+            s.Player.Charm += charm - s.EffectiveCharm;
+            s.Meet("landlady", relation);
+            s.AddRelation("landlady", relation - s.Relation("landlady"));
+            s.RaiseEvent("landlady_rent");
+            var choice = s.PendingEvent.Choices[1];
+            Assert.That(choice.Text, Does.Contain("成功率 0%"));
+            Assert.IsTrue(s.IsChoiceEnabled(choice));
+            Assert.IsTrue(s.ResolveEvent(1));
+            Assert.IsNull(s.PendingEvent);
+            Assert.AreEqual(relation - 3, s.Relation("landlady"));
         }
 
         [Test]
@@ -92,6 +113,7 @@ namespace PCShopSell.Tests
             {
                 s.RaiseEvent("landlady_rent");
                 Assert.That(s.PendingEvent.Choices[1].Text, Does.Contain("成功率 " + chance + "%"));
+                Assert.IsTrue(s.IsChoiceEnabled(s.PendingEvent.Choices[1]));
             }
             s.Player.Charm += 44 - s.EffectiveCharm;
             s.Meet("landlady", 35);

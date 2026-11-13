@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="19" result="Passed" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-13 09:42:24Z" end-time="2026-11-13 09:42:31Z" duration="6.7964968">
+  <test-suite type="TestSuite" id="2573" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1362" result="Passed" start-time="2026-11-13 09:42:24Z" end-time="2026-11-13 09:42:31Z" duration="6.796497" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="4142" name="PCShopSell.Tests.EditMode.dll" fullname="F:/_ci/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1362" result="Passed" start-time="2026-11-13 09:42:24Z" end-time="2026-11-13 09:42:31Z" duration="6.778026" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="105584" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="4143" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1362" result="Passed" start-time="2026-11-13 09:42:24Z" end-time="2026-11-13 09:42:31Z" duration="6.773274" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="4144" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="1362" result="Passed" start-time="2026-11-13 09:42:24Z" end-time="2026-11-13 09:42:31Z" duration="6.767591" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="3073" name="FishingTests" fullname="PCShopSell.Tests.FishingTests" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-11-13 09:42:24Z" end-time="2026-11-13 09:42:31Z" duration="6.746745" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="3074" name="CastingPowerChangesRealDistanceAndBaitPoolWithoutInstantRewards" fullname="PCShopSell.Tests.FishingTests.CastingPowerChangesRealDistanceAndBaitPoolWithoutInstantRewards" methodname="CastingPowerChangesRealDistanceAndBaitPoolWithoutInstantRewards" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1743661895" result="Passed" start-time="2026-11-13 09:42:24Z" end-time="2026-11-13 09:42:25Z" duration="0.500429" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.CastingPowerChangesRealDistanceAndBaitPoolWithoutInstantRewards
+REGRESSION DONE PCShopSell.Tests.FishingTests.CastingPowerChangesRealDistanceAndBaitPoolWithoutInstantRewards Passed
+]]></output>
+            </test-case>
+            <test-case id="3078" name="CastWaitsForGameTimeAndConsumesBaitEvenWhenTheFishEscapes" fullname="PCShopSell.Tests.FishingTests.CastWaitsForGameTimeAndConsumesBaitEvenWhenTheFishEscapes" methodname="CastWaitsForGameTimeAndConsumesBaitEvenWhenTheFishEscapes" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1856842236" result="Passed" start-time="2026-11-13 09:42:25Z" end-time="2026-11-13 09:42:25Z" duration="0.267394" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.CastWaitsForGameTimeAndConsumesBaitEvenWhenTheFishEscapes
+REGRESSION DONE PCShopSell.Tests.FishingTests.CastWaitsForGameTimeAndConsumesBaitEvenWhenTheFishEscapes Passed
+]]></output>
+            </test-case>
+            <test-case id="3076" name="ClosingDuringFightDropsTheHookAndReleasesOnlyItsOwnPause" fullname="PCShopSell.Tests.FishingTests.ClosingDuringFightDropsTheHookAndReleasesOnlyItsOwnPause" methodname="ClosingDuringFightDropsTheHookAndReleasesOnlyItsOwnPause" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1031557457" result="Passed" start-time="2026-11-13 09:42:25Z" end-time="2026-11-13 09:42:25Z" duration="0.268295" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.ClosingDuringFightDropsTheHookAndReleasesOnlyItsOwnPause
+REGRESSION DONE PCShopSell.Tests.FishingTests.ClosingDuringFightDropsTheHookAndReleasesOnlyItsOwnPause Passed
+]]></output>
+            </test-case>
+            <test-case id="3085" name="DecisionPauseOnlyHoldsItsOwnTimeAndClosingTheInterfaceReleasesIt" fullname="PCShopSell.Tests.FishingTests.DecisionPauseOnlyHoldsItsOwnTimeAndClosingTheInterfaceReleasesIt" methodname="DecisionPauseOnlyHoldsItsOwnTimeAndClosingTheInterfaceReleasesIt" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1665726069" result="Passed" start-time="2026-11-13 09:42:25Z" end-time="2026-11-13 09:42:26Z" duration="0.297097" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.DecisionPauseOnlyHoldsItsOwnTimeAndClosingTheInterfaceReleasesIt
+REGRESSION DONE PCShopSell.Tests.FishingTests.DecisionPauseOnlyHoldsItsOwnTimeAndClosingTheInterfaceReleasesIt Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="3082" name="DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem" fullname="PCShopSell.Tests.FishingTests.DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-13 09:42:26Z" end-time="2026-11-13 09:42:26Z" duration="0.830025" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="3079" name="DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem(0,&quot;fish_crucian&quot;,0.6d)" fullname="PCShopSell.Tests.FishingTests.DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem(0,&quot;fish_crucian&quot;,0.6d)" methodname="DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1181047570" result="Passed" start-time="2026-11-13 09:42:26Z" end-time="2026-11-13 09:42:26Z" duration="0.272093" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem(0,"fish_crucian",0.6d)
+REGRESSION DONE PCShopSell.Tests.FishingTests.DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem(0,"fish_crucian",0.6d) Passed
+]]></output>
+              </test-case>
+              <test-case id="3080" name="DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem(1,&quot;fish_carp&quot;,1.2d)" fullname="PCShopSell.Tests.FishingTests.DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem(1,&quot;fish_carp&quot;,1.2d)" methodname="DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="122566968" result="Passed" start-time="2026-11-13 09:42:26Z" end-time="2026-11-13 09:42:26Z" duration="0.264772" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem(1,"fish_carp",1.2d)
+REGRESSION DONE PCShopSell.Tests.FishingTests.DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem(1,"fish_carp",1.2d) Passed
+]]></output>
+              </test-case>
+              <test-case id="3081" name="DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem(2,&quot;fish_bass&quot;,2)" fullname="PCShopSell.Tests.FishingTests.DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem(2,&quot;fish_bass&quot;,2)" methodname="DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1828506390" result="Passed" start-time="2026-11-13 09:42:26Z" end-time="2026-11-13 09:42:26Z" duration="0.288398" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem(2,"fish_bass",2)
+REGRESSION DONE PCShopSell.Tests.FishingTests.DifferentSpotsYieldRealWeightedFishAndKeepingCannotDuplicateThem(2,"fish_bass",2) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="3086" name="EndingASessionReleasesTheBiteAndDoesNotGrantUnclaimedFish" fullname="PCShopSell.Tests.FishingTests.EndingASessionReleasesTheBiteAndDoesNotGrantUnclaimedFish" methodname="EndingASessionReleasesTheBiteAndDoesNotGrantUnclaimedFish" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="2023055408" result="Passed" start-time="2026-11-13 09:42:26Z" end-time="2026-11-13 09:42:27Z" duration="0.300868" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.EndingASessionReleasesTheBiteAndDoesNotGrantUnclaimedFish
+REGRESSION DONE PCShopSell.Tests.FishingTests.EndingASessionReleasesTheBiteAndDoesNotGrantUnclaimedFish Passed
+]]></output>
+            </test-case>
+            <test-case id="3093" name="FishGiftGoesToAnActualCompanionAndCannotAlsoEnterTheBackpack" fullname="PCShopSell.Tests.FishingTests.FishGiftGoesToAnActualCompanionAndCannotAlsoEnterTheBackpack" methodname="FishGiftGoesToAnActualCompanionAndCannotAlsoEnterTheBackpack" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1518723349" result="Passed" start-time="2026-11-13 09:42:27Z" end-time="2026-11-13 09:42:27Z" duration="0.357940" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.FishGiftGoesToAnActualCompanionAndCannotAlsoEnterTheBackpack
+REGRESSION DONE PCShopSell.Tests.FishingTests.FishGiftGoesToAnActualCompanionAndCannotAlsoEnterTheBackpack Passed
+]]></output>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="3092" name="FishingInvitationsUseActualSessionsAndTheConfirmedPayment" fullname="PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-11-13 09:42:27Z" end-time="2026-11-13 09:42:28Z" duration="1.197579" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="3088" name="FishingInvitationsUseActualSessionsAndTheConfirmedPayment(59,0,800)" fullname="PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment(59,0,800)" methodname="FishingInvitationsUseActualSessionsAndTheConfirmedPayment" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1049175708" result="Passed" start-time="2026-11-13 09:42:27Z" end-time="2026-11-13 09:42:27Z" duration="0.322078" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment(59,0,800)
+REGRESSION DONE PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment(59,0,800) Passed
+]]></output>
+              </test-case>
+              <test-case id="3089" name="FishingInvitationsUseActualSessionsAndTheConfirmedPayment(59,1,1600)" fullname="PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment(59,1,1600)" methodname="FishingInvitationsUseActualSessionsAndTheConfirmedPayment" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1361453733" result="Passed" start-time="2026-11-13 09:42:27Z" end-time="2026-11-13 09:42:28Z" duration="0.293039" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment(59,1,1600)
+REGRESSION DONE PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment(59,1,1600) Passed
+]]></output>
+              </test-case>
+              <test-case id="3090" name="FishingInvitationsUseActualSessionsAndTheConfirmedPayment(60,0,1800)" fullname="PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment(60,0,1800)" methodname="FishingInvitationsUseActualSessionsAndTheConfirmedPayment" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="602907850" result="Passed" start-time="2026-11-13 09:42:28Z" end-time="2026-11-13 09:42:28Z" duration="0.285301" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment(60,0,1800)
+REGRESSION DONE PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment(60,0,1800) Passed
+]]></output>
+              </test-case>
+              <test-case id="3091" name="FishingInvitationsUseActualSessionsAndTheConfirmedPayment(60,1,3600)" fullname="PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment(60,1,3600)" methodname="FishingInvitationsUseActualSessionsAndTheConfirmedPayment" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1347813103" result="Passed" start-time="2026-11-13 09:42:28Z" end-time="2026-11-13 09:42:28Z" duration="0.292960" asserts="0">
+                <properties />
+                <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment(60,1,3600)
+REGRESSION DONE PCShopSell.Tests.FishingTests.FishingInvitationsUseActualSessionsAndTheConfirmedPayment(60,1,3600) Passed
+]]></output>
+              </test-case>
+            </test-suite>
+            <test-case id="3075" name="HoldingWithoutTrackingLosesButControlledReelingWinsAndFightStatePersists" fullname="PCShopSell.Tests.FishingTests.HoldingWithoutTrackingLosesButControlledReelingWinsAndFightStatePersists" methodname="HoldingWithoutTrackingLosesButControlledReelingWinsAndFightStatePersists" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="439742420" result="Passed" start-time="2026-11-13 09:42:28Z" end-time="2026-11-13 09:42:29Z" duration="0.513009" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.HoldingWithoutTrackingLosesButControlledReelingWinsAndFightStatePersists
+REGRESSION DONE PCShopSell.Tests.FishingTests.HoldingWithoutTrackingLosesButControlledReelingWinsAndFightStatePersists Passed
+]]></output>
+            </test-case>
+            <test-case id="3087" name="KeptFishIsCompatibleWithCookingStorageAndIngredientNutrition" fullname="PCShopSell.Tests.FishingTests.KeptFishIsCompatibleWithCookingStorageAndIngredientNutrition" methodname="KeptFishIsCompatibleWithCookingStorageAndIngredientNutrition" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="2112790112" result="Passed" start-time="2026-11-13 09:42:29Z" end-time="2026-11-13 09:42:29Z" duration="0.001873" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.KeptFishIsCompatibleWithCookingStorageAndIngredientNutrition
+REGRESSION DONE PCShopSell.Tests.FishingTests.KeptFishIsCompatibleWithCookingStorageAndIngredientNutrition Passed
+]]></output>
+            </test-case>
+            <test-case id="3094" name="QiaosongChoicesGiveDifferentCompletionOutcomesAndRemainSaved" fullname="PCShopSell.Tests.FishingTests.QiaosongChoicesGiveDifferentCompletionOutcomesAndRemainSaved" methodname="QiaosongChoicesGiveDifferentCompletionOutcomesAndRemainSaved" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1239328334" result="Passed" start-time="2026-11-13 09:42:29Z" end-time="2026-11-13 09:42:30Z" duration="0.981347" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.QiaosongChoicesGiveDifferentCompletionOutcomesAndRemainSaved
+REGRESSION DONE PCShopSell.Tests.FishingTests.QiaosongChoicesGiveDifferentCompletionOutcomesAndRemainSaved Passed
+]]></output>
+            </test-case>
+            <test-case id="3083" name="ReleasedFishCannotBeKeptAndSellingConsumesTheActualIngredient" fullname="PCShopSell.Tests.FishingTests.ReleasedFishCannotBeKeptAndSellingConsumesTheActualIngredient" methodname="ReleasedFishCannotBeKeptAndSellingConsumesTheActualIngredient" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1542390269" result="Passed" start-time="2026-11-13 09:42:30Z" end-time="2026-11-13 09:42:30Z" duration="0.268021" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.ReleasedFishCannotBeKeptAndSellingConsumesTheActualIngredient
+REGRESSION DONE PCShopSell.Tests.FishingTests.ReleasedFishCannotBeKeptAndSellingConsumesTheActualIngredient Passed
+]]></output>
+            </test-case>
+            <test-case id="3077" name="VenueIsReachableInTheOutskirtsAndARealPaidSessionStartsAtItsDock" fullname="PCShopSell.Tests.FishingTests.VenueIsReachableInTheOutskirtsAndARealPaidSessionStartsAtItsDock" methodname="VenueIsReachableInTheOutskirtsAndARealPaidSessionStartsAtItsDock" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="1415246210" result="Passed" start-time="2026-11-13 09:42:30Z" end-time="2026-11-13 09:42:30Z" duration="0.278834" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.VenueIsReachableInTheOutskirtsAndARealPaidSessionStartsAtItsDock
+REGRESSION DONE PCShopSell.Tests.FishingTests.VenueIsReachableInTheOutskirtsAndARealPaidSessionStartsAtItsDock Passed
+]]></output>
+            </test-case>
+            <test-case id="3084" name="WaitingAndLandedFishPersistWithoutRerollOrDuplicateGrant" fullname="PCShopSell.Tests.FishingTests.WaitingAndLandedFishPersistWithoutRerollOrDuplicateGrant" methodname="WaitingAndLandedFishPersistWithoutRerollOrDuplicateGrant" classname="PCShopSell.Tests.FishingTests" runstate="Runnable" seed="997947428" result="Passed" start-time="2026-11-13 09:42:30Z" end-time="2026-11-13 09:42:31Z" duration="0.663401" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.FishingTests.WaitingAndLandedFishPersistWithoutRerollOrDuplicateGrant
+REGRESSION DONE PCShopSell.Tests.FishingTests.WaitingAndLandedFishPersistWithoutRerollOrDuplicateGrant Passed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

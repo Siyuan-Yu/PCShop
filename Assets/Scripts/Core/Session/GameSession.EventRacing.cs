@@ -236,7 +236,9 @@ namespace PCShopSell.Core.Session
 
         private void AddEventRaceSchedule(List<ScheduleEntry> entries)
         {
-            foreach (var group in RaceInvitations.Where(i => City.HasPlace(i.TrackId)).GroupBy(i => (i.Day, i.TrackId)))
+            AddRacingBatchSchedule(entries);
+            foreach (var group in RaceInvitations.Where(i => City.HasPlace(i.TrackId)
+                && !_eventRaceBookings.Any(b => b.PersonId == i.PersonId && b.TrackId == i.TrackId && b.Day == i.Day)).GroupBy(i => (i.Day, i.TrackId)))
             {
                 var day = new GameDate(group.Key.Day);
                 if (Clock.Now.TotalMinutes >= (long)day.TotalDays * 1440 + RacingSchedule.MeetCloseMinute) continue;

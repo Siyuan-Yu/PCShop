@@ -96,6 +96,15 @@ namespace PCShopSell.Core.Session
         public string[] LearnedPersonStories(string id)
         {
             var stories = new List<string>();
+            stories.AddRange(SocialBatchLearnedStories(id));
+            if (id == "story_shenxiao" && Flags.Contains("exhibit:shenxiao-details"))
+                stories.Add("你和他的父亲一起看过城市模型。沈晓记得的是窗边的小凳子，普通现货不能冒充他记忆里的旧款。");
+            if (id == "life_creator" && Flags.Contains("exhibit:luzhi-feedback"))
+                stories.Add("你到陆栀的展位认真反馈过模型设计，她记下了实际观察到的细节。");
+            if (id == "res_grandpa" && Flags.Contains("outdoor:grandpa-story"))
+                stories.Add("周国良在钓台边聊起年轻时河边的日子。比起钓到什么，他更喜欢有人愿意坐下来听他说说话。");
+            if (id == "resident_qiaosong" && Flags.Contains("fishing:qiaosong-story"))
+                stories.Add("乔松聊起从忙碌园艺工作退休后的生活。如今他更愿意陪朋友在水边坐坐，不再以钓获多少衡量一天。");
             stories.AddRange(_brandStories.Where(s=>s.Stage==3 && s.PersonId==id && !string.IsNullOrWhiteSpace(s.Conclusion)).Select(s=>s.Conclusion));
             int heard = CityPersonState(id)?.StoryChapter ?? 0;
             var definition = CityPerson(id);

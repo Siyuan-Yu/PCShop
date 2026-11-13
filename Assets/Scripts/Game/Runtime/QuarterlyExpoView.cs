@@ -37,6 +37,7 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(_empty,"EmptyReception",new Vector3(0,.7f,2),new Vector3(5,1.4f,1.3f),Mats.Lit(ArtDirection.Sage));
             Label(_empty,"季度展会 · 非展期",new Vector3(0,2.7f,2),9,.7f,ArtDirection.Ink);
             _live=Child(transform,"QuarterlyExpoHall");_live.gameObject.SetActive(false);
+            BuildMonthlyHall();
         }
         private static Transform Child(Transform parent,string name){var g=new GameObject(name).transform;g.SetParent(parent,false);return g;}
         private static Text Label(Transform parent,string text,Vector3 at,float width,float height,Color color)
@@ -69,8 +70,9 @@ namespace PCShopSell.Game.Runtime
             bool changed=_session!=session;_session=session;
             if(changed){_layoutKey=null;_progressKey=null;}
             bool visible=session!=null&&session.CurrentPlace?.Id=="life_expo";
-            Open=visible&&session.CityExpoOpen(false);
-            _live.gameObject.SetActive(Open);_empty.gameObject.SetActive(!Open);
+            bool monthly = SyncMonthlyHall(session, visible);
+            Open=visible&&!monthly&&session.CityExpoOpen(false);
+            _live.gameObject.SetActive(Open);_empty.gameObject.SetActive(!Open&&!monthly);
             if(!Open)return;
             _syncAt-=dt;
             if(force||changed||_syncAt<=0)

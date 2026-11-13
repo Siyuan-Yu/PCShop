@@ -13,6 +13,9 @@ namespace PCShopSell.Core.Session
         public const int RivalCount=10;
         public double X,Y,Heading,Speed,Elapsed,Penalty,Damage,Countdown=3,BestLap=double.MaxValue;
         public int Next=1,Passed,Lap,Collisions,Recoveries; public bool Finished,Abandoned,Paused;
+        public double EventBatteryFailureAt = -1;
+        public bool EventBatteryFailed, SponsorSticker, ProtectiveHelmet, ProtectiveSuit;
+        public bool WetSurface;
         public readonly double[] RivalProgress;
         public readonly double[] RivalFinishTime;
         public IReadOnlyList<RaceOpponent> Opponents { get; }
@@ -63,6 +66,8 @@ namespace PCShopSell.Core.Session
         {
             if(Finished)return;if(Countdown>0){Countdown=Math.Max(0,Countdown-dt);return;}
             Elapsed+=dt;_collisionCooldown=Math.Max(0,_collisionCooldown-dt);
+            if (EventBatteryFailureAt >= 0 && Elapsed >= EventBatteryFailureAt)
+            { EventBatteryFailed = true; Abandoned = true; Finished = true; Speed = 0; return; }
             double cap=Model.Speed/7.2,accel=Model.Acceleration*.65;
             Speed+=throttle>=0?throttle*accel*dt:throttle*(Speed>0?Model.Braking*.16:accel*.5)*dt;
             Speed*=Math.Max(0,1-(brake?2.8:throttle==0?.28:.025)*dt);Speed=Math.Max(-cap*.18,Math.Min(cap,Speed));

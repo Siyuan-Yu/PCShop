@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
@@ -92,6 +92,7 @@ namespace PCShopSell.Core.Session
             };
             sim.OpenStatusOf=t=>IsSpecialBusiness(shop)?SpecialOpen(shop,t):sim.IsOpenAt(t);
             sim.PowerTrafficOf = t => ShopPowerTraffic(shop, t);
+            sim.FinalSalePrice = c => MemberSalePrice(shop, c);
             sim.TemporaryPriceFactorOf = id => EventPriceFactor(shop, id);
             sim.Settings.BuildOrdersStartDay = BuildOrdersStartDay;
             sim.SalesBonusOf = () => ShopSalesBonus(shop);
@@ -107,9 +108,11 @@ namespace PCShopSell.Core.Session
             sim.RetailTemperature=()=>CityOutdoorTemperature(Clock.Now.TotalMinutes);
             sim.RetailInterestOf=c=>CityRetailSeriesFor(c.PersonId ?? c.VisitId ?? (shop.Place.Id + ":" + c.Id));
             sim.RetailBudgetOf=c=>CityRetailBudgetFor(c.PersonId ?? c.VisitId ?? (shop.Place.Id + ":" + c.Id));
-            sim.CustomerLeft += c => {ReleaseCityCustomer(c);WithShop(shop, () => OnShopCustomerLeft(c));};
+            sim.CustomerReadyToPay += c => ReserveFlashPrice(shop, c);
+            sim.CustomerLeft += c => {ReleaseFlashPrice(shop,c);ReleaseCityCustomer(c);WithShop(shop, () => OnShopCustomerLeft(c));};
             sim.ResaleOffers=()=>UsedOffers(shop);
-            sim.CustomerPaid+=c=>{ReleaseCityCustomer(c);CompleteUsedSale(shop,c);};
+            sim.CustomerPaid+=c=>{ReleaseCityCustomer(c);CompleteUsedSale(shop,c);RecordEventPaidReceipt(shop,c);RecordFinanceSale(shop,c);};
+            sim.BulkSalePaid += (id, name, total) => RecordAggregateReceipt(shop, "bulk:" + id, name, total, Clock.Today.TotalDays);
             sim.OrderCompleted += o => { Flags.Add("tutorial:build"); ContractOrderResult(o, true); };
             sim.OrderCancelled += o => ContractOrderResult(o, false);
             sim.OrderExpired += o => ContractOrderResult(o, false);

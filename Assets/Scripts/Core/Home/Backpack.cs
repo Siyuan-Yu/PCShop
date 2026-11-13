@@ -42,6 +42,7 @@ namespace PCShopSell.Core.Home
         public const string Snack = "snack";
         public const string Baijiu = "baijiu";
         public const string Soda = "soda";
+        public const string VisitHamper = "visit_hamper";
 
         public const string TobaccoBusiness = "烟酒";
         public const string FarmBusiness = "农贸";
@@ -56,9 +57,11 @@ namespace PCShopSell.Core.Home
             new GiftDef(Snack, "一盒点心", "精致的点心盒。", 120, 0.8, TobaccoBusiness),
             new GiftDef(Soda, "可乐（瓶）", "自己喝：饥饿 +2、心情 +8、营养 −3。也能请店员喝。", 5, 0.5, TobaccoBusiness),
             new GiftDef(Fruit, "一箱水果", "农贸市场的时令水果，一箱也不轻。", 120, 3.0, FarmBusiness),
+            new GiftDef(VisitHamper, "家常臻选礼盒", "精选茶点和时令干货的做客伴手礼，可带去家宴或当面赠送。", 1000, 1.5, TobaccoBusiness),
         }.Concat(RetailProducts.All).ToArray();
 
-        public static GiftDef Get(string id) => All.FirstOrDefault(g => g.Id == id);
+        public static GiftDef Get(string id) => All.FirstOrDefault(g => g.Id == id)
+            ?? PCShopSell.Core.Session.OldMarketCatalog.Gifts.FirstOrDefault(g => g.Id == id);
 
         public static bool IsCigarette(string id) => id == Cig || id == CigHi;
 
@@ -143,7 +146,7 @@ public const double LunchboxKg = 0.5;
                 case "egg": return 0.3;
                 case "tofu": return 0.4;
                 case "pork": return 0.5;
-                default: return 0.4;
+                default: return PCShopSell.Core.Session.FishingCatalog.Get(id)?.Kg ?? 0.4;
             }
         }
 

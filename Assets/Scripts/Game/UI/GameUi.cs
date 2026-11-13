@@ -124,6 +124,7 @@ namespace PCShopSell.Game.UI
         public void Update(float dt)
         {
             if (S == null) return;
+            UpdateFishingInteraction(dt);
             UpdateUpcomingScheduleHud();
             EnsureQuarterlyExpoWindow();
             _expoHudGate.interactable=!ExpoHudOpen;

@@ -169,6 +169,10 @@ namespace PCShopSell.Core.Session
         public bool DebugRaiseNumberedEvent(int number)
         {
             if (!DebugEventAcceptanceReady || DebugNumberedEvent(number) is not EventDef template) return false;
+            if (number >= 31 && number <= 40) PrepareRacingBatchAcceptance(number);
+            if (number >= 41 && number <= 50) PrepareSocialBatchAcceptance(number);
+            if (number >= 61 && number <= 70) _district.UnlockedTier = 3;
+            if (number >= 73 && number <= 77) _district.UnlockedTier = 3;
             var shop = MainShop;
             if (number is 2 or 4 or 5 or 6 or 11)
             {

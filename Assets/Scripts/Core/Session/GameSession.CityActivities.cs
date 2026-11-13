@@ -42,7 +42,7 @@ namespace PCShopSell.Core.Session
         public event Action<Place> CityPlaceEntered;
         public CityActivity RunningCityActivity => _cityActivities.FirstOrDefault(a=>a.State==CityActivityPhase.Running);
         public bool CityActivityExclusive => RunningCityActivity!=null||BrandExpoExclusive;
-        public bool IsCityActivityVenue(Place place)=>place!=null&&CityLifeCatalog.Activities.Any(a=>a.VenueId==place.Id);
+        public bool IsCityActivityVenue(Place place)=>place!=null&&CityLifeCatalog.Activities.Any(a=>!a.EventOnly&&a.VenueId==place.Id);
         public static string CityPhaseText(CityActivityPhase phase) => phase==CityActivityPhase.Scheduled?"已预约":phase==CityActivityPhase.Gathering?"赴约集合":phase==CityActivityPhase.Running?"活动中":phase==CityActivityPhase.Completed?"已完成":phase==CityActivityPhase.NoShow?"未赴约":phase==CityActivityPhase.Blocked?"路线阻塞":phase==CityActivityPhase.Interrupted?"已中断":phase==CityActivityPhase.Cancelled?"已取消":"待接受";
 
         public bool CityExpoOpen(bool comic)
@@ -52,8 +52,10 @@ namespace PCShopSell.Core.Session
         }
         public string CityExpoCalendar => "品牌展会：每季度一次，每届4天09:00—17:00；原创漫展：每月22—24日。";
         public long SuggestCityActivityStart(string definitionId,string personId=null,long earliest=0)
+            => SuggestCityActivityStartAt(definitionId, personId, earliest, null);
+        private long SuggestCityActivityStartAt(string definitionId,string personId,long earliest,string venueId)
         {
-            var def=CityLifeCatalog.Activity(definitionId);if(def==null||!City.HasPlace(def.VenueId))return Clock.Now.TotalMinutes;
+            var def=CityLifeCatalog.Activity(definitionId)?.AtVenue(venueId);if(def==null||!City.HasPlace(def.VenueId))return Clock.Now.TotalMinutes;
             if(IsWorking||_sleeping||IsGameOver)return Clock.Now.TotalMinutes;
             var venue=City.GetPlace(def.VenueId);long now=Clock.Now.TotalMinutes;
             int trip=CityTravelMinutes(venue);
@@ -68,7 +70,7 @@ namespace PCShopSell.Core.Session
             {
                 long candidate=start+i;
                 var ids=string.IsNullOrEmpty(personId)?Array.Empty<string>():new[]{personId};
-                if(CityActivityBlocker(definitionId,ids,candidate)==null)return candidate;
+                if(CityActivityBlockerAt(definitionId,ids,candidate,false,venueId)==null)return candidate;
             }
             return start;
         }
@@ -169,15 +171,23 @@ namespace PCShopSell.Core.Session
             return route==null?int.MaxValue/4:Math.Max(1,route.EstimateRemainingMinutes(Time.SecondsPerMinuteAt1x));
         }
         public string CityActivityBlocker(string definitionId,IEnumerable<string> persons,long start,bool approveEmployee=false)
+            => CityActivityBlockerAt(definitionId, persons, start, approveEmployee, null);
+        private string CityActivityBlockerAt(string definitionId,IEnumerable<string> persons,long start,bool approveEmployee,string venueId)
         {
-            var def=CityLifeCatalog.Activity(definitionId);
+            var def=CityLifeCatalog.Activity(definitionId)?.AtVenue(venueId);
             if(def==null||!City.HasPlace(def.VenueId))return "找不到活动或实际场所";
+            if (def.Id == "race_night" && (start % 1440 < 19 * 60 || start % 1440 + def.Minutes > 23 * 60)) return "夜骑集合时间为 19:00–21:30";
+            if ((def.Id == "race_watch" || def.Id == "social_43") && (RacingSchedule.On(new GameDate((int)(start / 1440))) == RaceMeeting.None
+                || start % 1440 < 540 || start % 1440 + def.Minutes > 1080)) return "请在正式比赛日 09:00–17:00 到场观赛";
+            if (def.Id == "social_59" && !new GameDate((int)(start / 1440)).IsWeekend) return "邵安约的是周末钓鱼，请选周六或周日";
+            if (OutdoorScheduleBlocker(def, start) is string outdoorBlocker) return outdoorBlocker;
             if(IsGameOver||IsWorking||_sleeping)return "当前状态不能参加活动";
             if(start<Clock.Now.TotalMinutes)return "预约时间已经过去";
             var venue=City.GetPlace(def.VenueId);
             if(SupplierClosesOnWeekend(venue)&&new GameDate((int)(start/1440)).IsWeekend)return "该场所周末休息，请选择工作日赴约";
             if(!CityVenueFits(venue,start,def.Minutes))return "该时段不能在闭店前完成，请改约其他时间";
-            if(definitionId.StartsWith("expo_")&&!CityExpoDay(start,definitionId=="expo_comic"))return "不在本届展期，下一届按固定月历开放";
+            string logicalId = def.LogicalId ?? definitionId;
+            if(logicalId.StartsWith("expo_")&&!CityExpoDay(start,logicalId=="expo_comic"))return "不在本届展期，下一届按固定月历开放";
             var ids=(persons??Array.Empty<string>()).Where(id=>!string.IsNullOrEmpty(id)).Distinct().ToArray();
             if(CommunitySearchActive)
                 for(int i=0;i<3;i++)
@@ -209,13 +219,20 @@ namespace PCShopSell.Core.Session
                 bool working=row!=null&&EmployeeShiftOverlaps(row.Person,start-personTravel,end+personTravel);
                 if(working&&!approveEmployee)return "该员工届时当班；需要明确批准离岗，页面会说明无人值守影响";
                 var d=CityPerson(id);
-                if(row==null&&!definitionId.StartsWith("expo_")&&p.WorkPlaceId!=null&&d!=null&&AuthoredCityWorkOverlaps(p,start-personTravel,end+personTravel))return d.Name+"届时还在工作，建议下班后再约";
+                bool hostedRaceVisit = definitionId == "race_watch" || definitionId.StartsWith("race_aid_", StringComparison.Ordinal)
+                    || definitionId == "social_43" || definitionId == "social_59" || definitionId == "social_60" || definitionId == "social_61"
+                    || definitionId == "social_70" || definitionId == "social_75"
+                    || definitionId == "social_77" && new GameDate((int)(start / 1440)).IsWeekend
+                    || def.EventOnly && p.WorkPlaceId == venue.Id;
+                if(row==null&&!hostedRaceVisit&&!definitionId.StartsWith("expo_")&&p.WorkPlaceId!=null&&d!=null&&AuthoredCityWorkOverlaps(p,start-personTravel,end+personTravel))return d.Name+"届时还在工作，建议下班后再约";
                 if(route.ArriveMinute>start+15)return "对方按真实路线来不及在宽限内到达，请晚一点预约";
             }
             int seats=_cityActivities.Where(a=>a.Active&&a.VenueId==venue.Id&&start<a.ScheduledStart+a.Duration&&end>a.ScheduledStart).Sum(a=>a.Participants.Length+1);
             return seats+ids.Length+1>18?"这个时段座位不足，请选择下一时段":null;
         }
         public CityActivity ScheduleCityActivity(string definitionId,IEnumerable<string> persons,long start,bool approveEmployee=false,string sourceId=null)
+            => ScheduleCityActivityAt(definitionId, persons, start, approveEmployee, sourceId, null);
+        private CityActivity ScheduleCityActivityAt(string definitionId,IEnumerable<string> persons,long start,bool approveEmployee,string sourceId,string venueId)
         {
             InitializeCityPeople();var ids=(persons??Array.Empty<string>()).Distinct().ToArray();
             if(!string.IsNullOrEmpty(sourceId)) {var old=_cityActivities.FirstOrDefault(a=>a.SourceId==sourceId);if(old!=null)return old;}
@@ -224,9 +241,9 @@ namespace PCShopSell.Core.Session
             if ((sourceId==null || !sourceId.StartsWith("walk-in:",StringComparison.Ordinal))
                 && start<=Clock.Now.TotalMinutes+Time.FractionalMinute)
             { Fail("请选择尚未到达的邀约时间"); return null; }
-            string reason=CityActivityBlocker(definitionId,ids,start,approveEmployee);if(reason!=null){Fail(reason);return null;}
-            var def=CityLifeCatalog.Activity(definitionId);
-            var activity=new CityActivity {Id="activity_"+_nextCityActivity++,DefinitionId=def.Id,VenueId=def.VenueId,SourceId=sourceId,
+            string reason=CityActivityBlockerAt(definitionId,ids,start,approveEmployee,venueId);if(reason!=null){Fail(reason);return null;}
+            var def=CityLifeCatalog.Activity(definitionId).AtVenue(venueId);
+            var activity=new CityActivity {Id="activity_"+_nextCityActivity++,DefinitionId=def.LogicalId??def.Id,ServiceDefinitionId=def.LogicalId==null?null:def.Id,VenueId=def.VenueId,SourceId=sourceId,
                 HostId="player",ScheduledStart=start,Duration=def.Minutes,EmployeeLeaveApproved=approveEmployee,
                 OccupiedFrom=start-CityActivityTravelReserve(City.GetPlace(def.VenueId),ids,start),OccupiedUntil=start+def.Minutes+CityActivityTravelReserve(City.GetPlace(def.VenueId),ids,start),State=CityActivityPhase.Scheduled,Seat=_cityActivities.Count%3,
                   Participants=ids.Select(id=>
@@ -337,6 +354,8 @@ namespace PCShopSell.Core.Session
         }
         private void TickCityActivities(long now)
         {
+            TickOutdoorBatch(now);
+            TickOldMarket(now);
             foreach(var a in _cityActivities.Where(a=>a.Active).ToArray())
             {
                 var def=CityActivityService(a);
@@ -400,7 +419,11 @@ namespace PCShopSell.Core.Session
                         continue;
                     }
                     if(!CityVenueFits(venue,now,a.Duration)){EndCityActivity(a,CityActivityPhase.Interrupted,"闭店前无法完成，未收整场费用，请改约",now);continue;}
-                    Money cost = a.HostPays ? Money.Zero : VenuePlayerPrice(def, a.ServiceChoice) * (a.PlayerTreat ? a.Participants.Length + 1 : 1);
+                    if (!string.IsNullOrEmpty(a.EventGiftId) && !a.EventGiftDelivered && Backpack.GiftCount(a.EventGiftId) == 0)
+                    { EndCityActivity(a,CityActivityPhase.Blocked,"约定的伴手礼不在背包，请取回后重新预约；尚未收餐费。",now);continue; }
+                    if (a.DefinitionId == "social_70" && !HasOpenedComputerShop)
+                    { EndCityActivity(a, CityActivityPhase.Blocked, "\u7535\u8111\u5e97\u5df2\u4e0d\u53ef\u7528", now); continue; }
+                    Money cost = CityActivityEntryPrice(def, a.ServiceChoice, a);
                     string serviceTitle = a.ServiceConfirmed ? VenueServiceName(def, a.ServiceChoice) : def.Name;
                     if(!a.EntryPaid && cost.IsPositive && !Ledger.TryDebit(Clock.Today,"城市活动",cost,serviceTitle,new LedgerAttribution(LedgerBusinessKind.Personal,activityId:a.Id,sourceEventId:a.Id+":entry",transactionKind:"活动消费")))
                     {EndCityActivity(a,CityActivityPhase.Cancelled,"开始时现金不足，未扣活动费",now);continue;}
@@ -414,6 +437,10 @@ namespace PCShopSell.Core.Session
                     }
                     a.EntryPaid=true;a.State=CityActivityPhase.Running;a.ActualStart=now;a.Stage=0;
                     foreach(var participant in a.Participants){participant.Phase=CityParticipantPhase.Participating;var p=CityPersonState(participant.PersonId);p.Task=CityPersonTask.Participating;}
+                    StartRacingBatchActivity(a, now);
+                    StartSocialBatchActivity(a);
+                    StartFishingActivity(a);
+                    StartOutdoorBatch(a);
                     foreach(var shop in _shops)shop.Sim.PlayerPresent=false;
                     if (a.ServiceConfirmed && a.ServiceChoice >= 0) ChooseCityActivity(a.Id, a.ServiceChoice);
                     Say("开始"+serviceTitle+"："+def.StartText+"。世界时间和后台经营正常继续。");
@@ -439,6 +466,7 @@ namespace PCShopSell.Core.Session
                 }
                 if(elapsed>=a.Duration)EndCityActivity(a,CityActivityPhase.Completed,def.EndText,now);
             }
+            TickFishing(now);
             CompleteCityTravel();
         }
         public static string CityActivityChoiceText(CityActivityDefinition definition, string key)
@@ -454,16 +482,24 @@ namespace PCShopSell.Core.Session
             var a=_cityActivities.FirstOrDefault(x=>x.Id==activityId&&x.State==CityActivityPhase.Running);
             var def=CityActivityService(a);
             if(def==null||choice<0||choice>=def.Choices.Length||CurrentPlace?.Id!=a.VenueId)return false;
+            if (a.DefinitionId == "social_60" && choice == 3 && FishingActive && _fishing.Phase != FishingPhase.Ready)
+                return Fail("请先处理当前鱼口或鱼获，再换钓位");
             if (a.ServiceConfirmed && choice < def.ServiceCount && choice != a.ServiceChoice) return false;
-            string key=choice.ToString();if(a.Choices.Contains(key)){Say("已经做过这个互动，可以继续相处等待活动结束。");return true;}
-            a.Choices=a.Choices.Concat(new[]{key}).ToArray();
+            string key=choice.ToString();if(a.Choices.Contains(key) && !OutdoorRepeatChoice(a,choice)){Say("已经做过这个互动，可以继续相处等待活动结束。");return true;}
+            string outdoorReply = null;
+            if (!TryOutdoorChoice(a,choice,out outdoorReply)) return false;
+            a.Choices=a.Choices.Union(new[]{key}).ToArray();
             if(!a.MidApplied)
             {
                 a.MidApplied=true;
-                foreach(var p in a.Participants){AddRelation(p.PersonId,1);RememberSocial(p.PersonId,"活动中："+def.Choices[choice]);}
+                foreach(var p in a.Participants)
+                {
+                    if (!a.DefinitionId.StartsWith("social_", StringComparison.Ordinal)) AddRelation(p.PersonId,1);
+                    RememberSocial(p.PersonId,"活动中："+def.Choices[choice]);
+                }
             }
             OnCityActivityChoice(a,choice);
-            Say(def.Choices[choice]+"："+(choice<def.ServiceCount?CityActivityMidText(a):"聊到各自的兴趣和近况。"));return true;
+            Say(def.Choices[choice]+"："+(outdoorReply ?? FishingInvitationChoiceReply(a,choice) ?? SocialBatchChoiceReply(a,choice) ?? (choice<def.ServiceCount?CityActivityMidText(a):"聊到各自的兴趣和近况。")));return true;
         }
         public bool CancelCityActivity(string id,bool early=false)
         {
@@ -476,6 +512,8 @@ namespace PCShopSell.Core.Session
         private void EndCityActivity(CityActivity a,CityActivityPhase phase,string reason,long now)
         {
             if(!a.Active)return;
+            if (phase == CityActivityPhase.Completed && !OutdoorCompletionReady(a))
+            { phase = CityActivityPhase.Interrupted; reason = "\u672a\u5b8c\u6210\u73b0\u573a\u4efb\u52a1\uff0c\u4e0d\u7ed3\u7b97\u5b8c\u6210\u5956\u52b1"; }
             if(CurrentPlace?.Id==a.VenueId&&a.PlayerVenueRoute!=null)_free=a.PlayerVenueRoute.Position(now);
             a.State=phase;a.ActualEnd=now;a.EndReason=reason;a.Stage=phase==CityActivityPhase.Completed?2:a.Stage;
             if(CityIntent?.ActivityId==a.Id&&CityIntent.Id==a.PlayerIntentId){StopTrip();CancelCityTravel();}
@@ -500,7 +538,12 @@ namespace PCShopSell.Core.Session
                 Player.Intelligence=Math.Min(100,Player.Intelligence+service.Intelligence);
                 RecordCommunityOuting(a);
                 OnCityActivityCompleted(a);
+                CompleteRacingBatchActivity(a);
+                CompleteSocialBatchActivity(a);
+                CompleteFishingInvitation(a);
+                CompleteOutdoorBatch(a);
             }
+            EndFishingActivity(a);
             foreach(var participant in a.Participants)
             {
                 participant.Phase=CityParticipantPhase.Left;
@@ -546,6 +589,7 @@ namespace PCShopSell.Core.Session
                 var lines=new List<string> {attendance+"在"+City.GetPlace(a.VenueId).Name+"参加了"+(def?.Name??"活动")+"。",
                     "本次服务："+VenueServiceName(def,Math.Max(0,a.ServiceChoice))+" · 支出 "+(a.EntryCostRecorded?Money.FromCents(a.EntryCostCents):Money.FromYuan(def?.PriceYuan??0)),
                     "体验时长："+Math.Max(0,now-a.ActualStart)+" 分钟", ""};
+                if (!string.IsNullOrEmpty(a.EventSettlementNote)) lines.Add(a.EventSettlementNote);
                 lines.Add("你的变化（含这段时间的正常消耗）：");
                 for(int i=0;i<CityActivityStatNames.Count;i++)
                 {

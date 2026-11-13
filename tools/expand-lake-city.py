@@ -295,6 +295,11 @@ assert all(not overlap(a,b) for i,a in enumerate(new_shapes) for b in new_shapes
 assert len({p["id"] for p in d["places"]})==len(d["places"])
 assert len({b["homeId"] for b in d["blocks"]})==len(d["blocks"])
 seed_expansion_occupancy(d, base)
+for place in d["places"]:
+    if place["id"] == "life_hike":
+        place["name"] = "城郊公园 · 青湾垂钓场"
 TARGET.write_text(json.dumps(d,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+import runpy
+runpy.run_path(str(ROOT / "tools/add-old-market.py"), run_name="__main__")
 print("V15 written; all new front doors connected; authored footprints clear roads, gardens and buildings.")
 for region in PLAN:print(region,"shops +",counts[(region,"shop")],"homes +",counts[(region,"home")])

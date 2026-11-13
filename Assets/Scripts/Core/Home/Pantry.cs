@@ -43,7 +43,9 @@ namespace PCShopSell.Core.Home
             new IngredientDef("egg", "鸡蛋", "千克", 2, 9, 0.3, "鸡蛋焖饭"),
             new IngredientDef("tofu", "豆腐", "千克", 3, 8, 0.3, "豆腐焖饭"),
             new IngredientDef("pork", "五花肉", "千克", 12, 14, 0.2, "肉末焖饭"),
-        };
+        }.Concat(PCShopSell.Core.Session.FishingCatalog.Fish.Select(f => new IngredientDef(f.Id, f.Name,
+            "条", f.Id == "fish_bass" ? 1200 : (long)(Math.Ceiling(f.SalePrice * 1.65 / 10) * 10),
+            f.Kg < 1 ? 12 : f.Kg < 2 ? 15 : 18, f.Kg < 1 ? .4 : f.Kg < 2 ? .5 : .6, f.Name + "焖饭"))).ToArray();
 
         public static IngredientDef Get(string id) => All.FirstOrDefault(i => i.Id == id);
     }

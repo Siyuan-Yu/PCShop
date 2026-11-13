@@ -194,7 +194,7 @@ namespace PCShopSell.Core.Session
             if (refund.IsPositive) Ledger.Credit(Clock.Today, "履约保证金", refund, c.Client + "履约返还");
             var referral = _cityReferrals.FirstOrDefault(x => x.Id == c.ReferralOfferId);
             if (referral != null) { referral.Settled = true; referral.Fulfilled = c.Failed == 0; }
-            bool enterprise = !c.PersonalReferral;
+            bool enterprise = !c.PersonalReferral && referral?.CommunityOrder != true;
             if (c.Failed == 0)
             {
                 if (enterprise)

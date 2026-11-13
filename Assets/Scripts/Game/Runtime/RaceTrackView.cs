@@ -92,6 +92,26 @@ namespace PCShopSell.Game.Runtime
         {
             foreach(Transform c in _moving)Destroy(c.gameObject);
             _moving.gameObject.SetActive(true);_player=MotorVisual.Build(_moving,race.Model,MotorVisual.Paint(race.Model.Id));
+            if (race.WetSurface)
+                for (int i = 0; i < race.Track.Points.Length; i += 6)
+                {
+                    var point = race.Track.Points[i];
+                    Prims.Box(_moving, "WetPracticePatch", new Vector3((float)point.X, .055f, (float)point.Y),
+                        new Vector3(3.2f, .015f, 2), Mats.Lit(new Color(.18f,.26f,.32f)));
+                }
+            if (race.SponsorSticker)
+            {
+                bool car = MotorCatalog.ClassOf(race.Model.Kind) == 2;
+                Prims.Box(_player, "PhoneShopSponsorSticker", new Vector3(car ? .78f : .24f, car ? .85f : .64f, 0),
+                    new Vector3(.025f, car ? .32f : .20f, car ? .65f : .42f), Mats.Lit(ArtDirection.Brass));
+            }
+            if (MotorCatalog.ClassOf(race.Model.Kind) != 2)
+            {
+                var helmet = _player.Find("Helmet");
+                var jacket = _player.Find("RiderJacket");
+                if (helmet != null && race.ProtectiveHelmet) helmet.GetComponent<Renderer>().sharedMaterial = Mats.Lit(ArtDirection.Blue);
+                if (jacket != null && race.ProtectiveSuit) jacket.GetComponent<Renderer>().sharedMaterial = Mats.Lit(ArtDirection.Clay);
+            }
             _rivals=new Transform[race.RivalProgress.Length];
             for(int i=0;i<_rivals.Length;i++)
             {

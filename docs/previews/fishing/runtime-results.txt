@@ -1,0 +1,2 @@
+Production GameController.Step + uGUI pointer down/up; charge, casting flight, timed hook and real tracking fight; no forced outcome.
+Entry fee cents=30000; casts=1; catches=1; kept=1; fish=fish_topmouth_gudgeon; inventory=1

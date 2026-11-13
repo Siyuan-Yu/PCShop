@@ -363,6 +363,7 @@ namespace PCShopSell.Core.Session
         private void SettleRestaurantCheckout(OwnedShop shop,SpecialBusinessState state,DiningOrder order,GameTimestamp now)
         {
             Ledger.Credit(now.Date,"餐饮",Money.FromYuan(order.Price),RecipeNames[order.Recipe]+"堂食",LedgerAttribution.ForShop(shop.Place.Id,"meal:"+order.Id+":paid","销售"));
+            RecordAggregateReceipt(shop, "meal:" + order.Id, RecipeNames[order.Recipe], Money.FromYuan(order.Price), now.Date.TotalDays);
             state.Revenue+=order.Price;state.Paid++;order.Stage=DiningStage.Completed;
             shop.Sim.Reputation+=ShopSimulation.SaleReputationGain;
             shop.Sim.AdjustShopReputation(.12);
