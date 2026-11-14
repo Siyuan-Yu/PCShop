@@ -29,6 +29,11 @@ namespace PCShopSell.Core.Session
             Add("social_72", "雷鸣的旧电子局", GameSession.OldMarketVenueId, 90, new CityVenueService(0, energy: -6, mood: 10, relation: 6), "在市场会合", "走到下一旧物摊", "学习电路检测", "学习线材检测", "学习接头检测");
             Add("social_85", "帮许文杰换招牌", "stall_cpu", 30, new CityVenueService(0, energy: -5, relation: 4), "一起整理招牌");
             Add("social_93", "骑手歇脚", "stall_cpu", 20, new CityVenueService(0, relation: 4), "歇脚聊会儿");
+            Add("social_113", "邻里交流", "life_service", 10, new CityVenueService(0, relation: 1), "说明情况");
+            Add("social_114", "流浪狗救助交接", "life_service", 20, new CityVenueService(0, relation: 2), "现场交接");
+            Add("social_115", "街头听歌", "life_service", 10, new CityVenueService(0, relation: 3), "听一首歌");
+            Add("social_116", "老友见面", "life_service", 30, new CityVenueService(0, relation: 4), "聊聊近况");
+            Add("social_119", "夜校课堂", "life_service", 60, new CityVenueService(0, relation: 1), "听课与练习");
             return AddExhibitionActivities(all.ToArray());
             void Add(string id, string name, string venue, int minutes, CityVenueService service, params string[] choices)
             {

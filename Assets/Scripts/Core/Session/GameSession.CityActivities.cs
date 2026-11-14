@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -512,7 +512,7 @@ namespace PCShopSell.Core.Session
         private void EndCityActivity(CityActivity a,CityActivityPhase phase,string reason,long now)
         {
             if(!a.Active)return;
-            if (phase == CityActivityPhase.Completed && !OutdoorCompletionReady(a))
+            if (phase == CityActivityPhase.Completed && (!OutdoorCompletionReady(a) || !LifeActivityReady(a)))
             { phase = CityActivityPhase.Interrupted; reason = "\u672a\u5b8c\u6210\u73b0\u573a\u4efb\u52a1\uff0c\u4e0d\u7ed3\u7b97\u5b8c\u6210\u5956\u52b1"; }
             if(CurrentPlace?.Id==a.VenueId&&a.PlayerVenueRoute!=null)_free=a.PlayerVenueRoute.Position(now);
             a.State=phase;a.ActualEnd=now;a.EndReason=reason;a.Stage=phase==CityActivityPhase.Completed?2:a.Stage;
@@ -525,6 +525,7 @@ namespace PCShopSell.Core.Session
                 {
                     AddRelation(participant.PersonId,service.Relation);_cityTrust[participant.PersonId]=CityTrust(participant.PersonId)+1;
                     _outingDay[participant.PersonId]=Clock.Today.TotalDays;
+                    _lifeContact[participant.PersonId]=now;
                     RememberSocial(participant.PersonId,"实际完成"+def.Name+"。"+reason);
                     if(a.DefinitionId=="dinner"&&!IsMet(participant.PersonId))
                     {
@@ -540,6 +541,7 @@ namespace PCShopSell.Core.Session
                 OnCityActivityCompleted(a);
                 CompleteRacingBatchActivity(a);
                 CompleteSocialBatchActivity(a);
+                CompleteLifeActivity(a);
                 CompleteFishingInvitation(a);
                 CompleteOutdoorBatch(a);
             }

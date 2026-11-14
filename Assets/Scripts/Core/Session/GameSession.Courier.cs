@@ -319,6 +319,9 @@ namespace PCShopSell.Core.Session
             {
                 CourierRun run = _couriers[i];
                 if (run.DueMinute > now.TotalMinutes) continue;
+                string noisePlace = run.ToShop ? DeliveryShop(run.ShopId)?.Place.Id : Home.Id;
+                if (noisePlace != null && LifeQuietBlock(noisePlace)) { run.DueMinute = now.TotalMinutes + (420 - Clock.MinuteOfDay + 1440) % 1440; continue; }
+                if (noisePlace != null) RecordLifeNoise(noisePlace);
                 foreach (var kv in _openRuns.Where(kv => kv.Value == run).ToList()) _openRuns.Remove(kv.Key);
                 _couriers.RemoveAt(i--);
                 OwnedShop dest = run.ToShop ? DeliveryShop(run.ShopId) : null;

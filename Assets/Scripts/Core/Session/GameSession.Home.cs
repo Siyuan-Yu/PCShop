@@ -279,6 +279,7 @@ namespace PCShopSell.Core.Session
 
         private bool CanEdit(bool shop)
         {
+            if (LifeQuietBlock(shop ? PlayerShopPlace.Id : Home.Id)) return Fail("已和邻居约定白天处理，请在07:00–22:00调整摆设。");
             if(shop&&IsDedicatedVenue(PlayerShopPlace))return Fail("专用场馆保留原用途，不能按普通商铺装修。");
             if (shop)
             {
@@ -334,6 +335,7 @@ namespace PCShopSell.Core.Session
                 StoreFurnitureHere(true, oldHouse.Id, 1);
             }
             TrackTempClocks();
+            RecordLifeNoise(shop ? PlayerShopPlace.Id : Home.Id);
             LayoutOf(shop).Add(new PlacedFurniture { Id = id, X = at.X, Z = at.Z, Rot = at.Rot });
             if (shop) ApplyUpgrades();
             return true;
@@ -346,10 +348,12 @@ namespace PCShopSell.Core.Session
             FurnitureDef def = FurnitureCatalog.Get(l[index].Id);
             string err = PlacementError(shop, def, at, index, extra);
             if (err != null) return Fail(err);
+            bool changed = l[index].X != at.X || l[index].Z != at.Z || l[index].Rot != at.Rot;
             RememberLayout(shop);
             l[index].X = at.X;
             l[index].Z = at.Z;
             l[index].Rot = at.Rot;
+            if (changed) RecordLifeNoise(shop ? PlayerShopPlace.Id : Home.Id);
             return true;
         }
 

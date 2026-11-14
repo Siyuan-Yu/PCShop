@@ -49,6 +49,7 @@ namespace PCShopSell.Core.Session
                 SaveShopEventBatch(d);
                 SaveFinanceBatch(d);
                 SaveMoneyBatch(d);
+                SaveLifeBatch(d);
                 return d;
             }
             finally
@@ -341,6 +342,7 @@ namespace PCShopSell.Core.Session
             RestoreShopEventBatch(d);
             RestoreFinanceBatch(d);
             RestoreMoneyBatch(d);
+            RestoreLifeBatch(d);
             InitializeExpansionResidents();
             LoadVenueBusinesses(d);
             LoadEnergyPayroll(d);

@@ -1,4 +1,5 @@
 using System;
+using PCShopSell.Core.Session;
 using PCShopSell.Core.World;
 using PCShopSell.Game.Runtime;
 using UnityEngine;
@@ -25,12 +26,14 @@ namespace PCShopSell.Game
                         if(delta.sqrMagnitude<=16 && waiting.Exterior==null)place=target;
                     }
                 }
-                if(place==null || !((place.Business??"").StartsWith("venue_",StringComparison.Ordinal)||place.Business=="服装"||Session.IsCityActivityVenue(place)))return null;
+                if(place==null || !((place.Business??"").StartsWith("venue_",StringComparison.Ordinal)||place.Business=="服装"||Session.IsCityActivityVenue(place)||place.Id==GameSession.LifeServicePlace||place.Id==GameSession.LifeFairPlace))return null;
                 return World.Places.TryGetValue(place.Id,out var visual)?visual:null;
             }
         }
         private Vector3 CityCloseFocus(PlaceVisual visual)
         {
+            if(visual.Place.Id==GameSession.LifeServicePlace||visual.Place.Id==GameSession.LifeFairPlace)
+                return visual.Root.transform.TransformPoint(new Vector3(0,.8f,-2));
             float depth=visual.Place.ExplicitEntrance?Mathf.Max(6,(float)visual.Place.Depth):8;
             // The forecourt holds participants, while tables, rails and counters remain in frame.
             if(!visual.Place.ExplicitEntrance&&Session.IsCityActivityVenue(visual.Place))return StreetWorldBuilder.ToWorld(Session.PlayerPosition)+Vector3.up*.8f;

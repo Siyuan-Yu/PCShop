@@ -12,6 +12,7 @@ namespace PCShopSell.Game.UI
         {
             OpenWindow("经营待办", 850, 700, w =>
             {
+                Ui.Size(Ui.Button(w.Content, "社区生活待办", OpenLifeEventPanel, 18), -1, 40);
                 BuildMoneyEventTasks(w);
                 if (S.MyShops.Any(s => S.HasEventMembership(s)) || S.EventCoupon != null || S.EventFlashSales.Length > 0 || S.AtBank)
                     Line(w.Content, "会员与采购优惠", 20, Ui.Accent);

@@ -129,6 +129,7 @@ namespace PCShopSell.Core.Session
                 if (Relation(id) < 3) AddRelation(id, 3 - Relation(id));
                 RememberSocial(id, "第一次打招呼，互相认识了；尚未交换联系方式。");
             }
+            _lifeContact[id] = Clock.Now.TotalMinutes;
             return true;
         }
 

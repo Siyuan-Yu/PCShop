@@ -61,7 +61,8 @@ namespace PCShopSell.Core.Home
         }.Concat(RetailProducts.All).ToArray();
 
         public static GiftDef Get(string id) => All.FirstOrDefault(g => g.Id == id)
-            ?? PCShopSell.Core.Session.OldMarketCatalog.Gifts.FirstOrDefault(g => g.Id == id);
+            ?? PCShopSell.Core.Session.OldMarketCatalog.Gifts.FirstOrDefault(g => g.Id == id)
+            ?? PCShopSell.Core.Session.LifeEventGoods.Get(id);
 
         public static bool IsCigarette(string id) => id == Cig || id == CigHi;
 

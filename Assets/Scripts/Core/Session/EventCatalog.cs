@@ -141,6 +141,16 @@ namespace PCShopSell.Core.Session
             new EventDef { Id = "money_insurance_agent", Title = "住院保险", Group = "money", When = s => s.CanOfferMoneyBatch(106) },
             new EventDef { Id = "money_invest_tip", Title = "朋友推荐的理财", Group = "money", When = s => s.CanOfferMoneyBatch(107) },
             new EventDef { Id = "money_second_hand", Title = "闲置旧物处理", Group = "money", When = s => s.CanOfferMoneyBatch(109) },
+            new EventDef { Id = "money_charity_box", Title = "社区募书", Group = "social", When = s => s.CanOfferLifeBatch(111) },
+            new EventDef { Id = "life_flu_season", Title = "流感季", Group = "social", When = s => s.CanOfferLifeBatch(112) },
+            new EventDef { Id = "life_neighbor_noise", Title = "邻居嫌吵", Group = "social", When = s => s.CanOfferLifeBatch(113) },
+            new EventDef { Id = "life_pet_adopt", Title = "流浪狗", Group = "social", When = s => s.CanOfferLifeBatch(114) },
+            new EventDef { Id = "life_street_music", Title = "街头音乐", Group = "social", When = s => s.CanOfferLifeBatch(115) },
+            new EventDef { Id = "life_old_friend_text", Title = "老友的消息", Group = "social", When = s => s.CanOfferLifeBatch(116) },
+            new EventDef { Id = "life_gym_trial", Title = "健身场体验", Group = "social", When = s => s.CanOfferLifeBatch(117) },
+            new EventDef { Id = "life_book_swap", Title = "图书漂流", Group = "social", When = s => s.CanOfferLifeBatch(118) },
+            new EventDef { Id = "life_night_class", Title = "夜校开班", Group = "social", When = s => s.CanOfferLifeBatch(119) },
+            new EventDef { Id = "life_street_fair", Title = "社区集市", Group = "social", When = s => s.CanOfferLifeBatch(120) },
             new EventDef
             {
                 Id = "review", Title = "网上有人说你家卖翻新货", MinDay = 10, CooldownDays = 14, Weight = 7,

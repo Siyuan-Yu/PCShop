@@ -201,6 +201,16 @@ namespace PCShopSell.Core.Session
                 "money_insurance_agent" => BindMoneyBatch(def, 106),
                 "money_invest_tip" => BindMoneyBatch(def, 107),
                 "money_second_hand" => BindMoneyBatch(def, 109),
+                "money_charity_box" => BindLifeBatch(def, 111),
+                "life_flu_season" => BindLifeBatch(def, 112),
+                "life_neighbor_noise" => BindLifeBatch(def, 113),
+                "life_pet_adopt" => BindLifeBatch(def, 114),
+                "life_street_music" => BindLifeBatch(def, 115),
+                "life_old_friend_text" => BindLifeBatch(def, 116),
+                "life_gym_trial" => BindLifeBatch(def, 117),
+                "life_book_swap" => BindLifeBatch(def, 118),
+                "life_night_class" => BindLifeBatch(def, 119),
+                "life_street_fair" => BindLifeBatch(def, 120),
                 _ => def,
             };
             if (def == null) return;
@@ -463,6 +473,7 @@ namespace PCShopSell.Core.Session
             {
                 if (!s.Ledger.TryDebit(s.Clock.Today, "医疗", medicine, "感冒药")) return "现金不足。";
                 s.Player.Energy -= 5;
+                s._fluIllUntil = Math.Min(s._fluIllUntil, s.Clock.Now.TotalMinutes + 1440);
                 return "吃过药，身体稳住了。精力 −5。";
             }, s => s.Ledger.CanAfford(medicine), "现金不足"));
             choices.Add(Choose("继续手上的事", s =>

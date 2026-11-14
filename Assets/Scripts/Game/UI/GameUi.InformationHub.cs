@@ -40,6 +40,7 @@ namespace PCShopSell.Game.UI
             OpenWorkspace("calendar", "calendar", monthView ? "日历" : "日程", monthView ? 820 : 1040, monthView ? 850 : 660, w =>
             {
                 Ui.Size(Ui.Button(w.Content, "经营待办 · 样品 / 盘点 / 陈列 / 售后", OpenShopEventTasks, 18), -1, 42);
+                Ui.Size(Ui.Button(w.Content, "社区生活 · 图书 / 养狗 / 夜校 / 集市", OpenLifeEventPanel, 18), -1, 42);
                 if (monthView) BuildMonthCalendar(w);
                 else BuildPersonalSchedule(w);
             });

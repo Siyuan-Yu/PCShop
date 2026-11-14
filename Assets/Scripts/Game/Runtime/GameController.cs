@@ -388,6 +388,7 @@ namespace PCShopSell.Game
             _avatar.Update(Session, dt, World);
             SyncExpoView(dt);
             SyncShopEventViews();
+            SyncLifeEventViews();
             _police.Update(!room);
             _crowdSyncTimer -= dt;
             string crowdPlace=Session.CurrentPlace?.Id, crowdActivity=Session.RunningCityActivity?.Id;

@@ -201,6 +201,7 @@ namespace PCShopSell.Core.Session
         }
         private void TickMoneyBatch(long now)
         {
+            TickLifeBatch(now);
             foreach (var i in _eventInvestments.Where(i => !i.Settled && now >= i.At))
             {
                 i.Settled = true;
