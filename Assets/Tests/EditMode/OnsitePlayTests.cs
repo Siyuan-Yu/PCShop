@@ -97,5 +97,22 @@ namespace PCShopSell.Tests
             s.SetOnsitePhotoFrame(1,35,30,4,0,1);Assert.IsTrue(s.RecordOnsitePhoto("frame-2.png",1600,900));s.SetOnsitePhotoFrame(2,0,75,1,2,0);Assert.IsTrue(s.RecordOnsitePhoto("frame-3.png",1600,900));Assert.AreEqual(2,s.CurrentOnsite.GoodPhotos);Finish(s,a);Assert.AreEqual(CityActivityPhase.Completed,a.State);
             using var loaded=Reload(s);Assert.AreEqual(3,loaded.OnsitePhotos.Length);Assert.AreEqual("frame-2.png",loaded.OnsitePhotos[1].File);
         }
+        [TestCase(0,true)] [TestCase(1,false)] [TestCase(2,false)]
+        public void TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(int choice,bool pleasant)
+        {
+            using var s=Make();var a=Book(s,53);Attend(s,a);s.Player.Intelligence=20;
+            Assert.IsTrue(s.ChooseTastingDialogue(choice));Assert.IsFalse(s.ChooseTastingDialogue(0));Assert.IsFalse(s.TasteOnsiteMix());s.AdvanceClock(5);
+            Assert.IsFalse(s.ChooseTastingDialogue(0));Assert.IsTrue(s.TasteOnsiteMix());Assert.AreEqual(20,s.Player.Intelligence);s.Player.Health=80;s.AdvanceClock(2);
+            string result=s.CurrentOnsite.Message;Assert.That(result,Does.Contain(pleasant?"味道简直完美":"味道有点奇怪"));
+            foreach(string text in new[]{"正确","错误","配方不符","剩余材料","已试喝"})Assert.That(result,Does.Not.Contain(text));
+            Assert.AreEqual(pleasant?21:20,s.Player.Intelligence);if(!pleasant)Assert.Less(s.Player.Health,79);
+            int intelligence=s.Player.Intelligence;Finish(s,a);Assert.AreEqual(CityActivityPhase.Completed,a.State);Assert.AreEqual(intelligence,s.Player.Intelligence);
+            Assert.That(a.EventSettlementNote,Does.Not.Contain("实际回合"));Assert.That(a.EventSettlementNote,Does.Not.Contain("成功"));
+        }
+        [Test] public void PleasantTastingLearningIsNotGrantedTwiceAfterSaveOrRepeat()
+        {
+            using var s=Make();var a=Book(s,53);Attend(s,a);s.Player.Intelligence=20;s.ChooseTastingDialogue(0);s.AdvanceClock(5);s.TasteOnsiteMix();s.AdvanceClock(2);Assert.AreEqual(21,s.Player.Intelligence);
+            using var loaded=Reload(s);Assert.IsTrue(loaded.ChooseTastingDialogue(0));loaded.AdvanceClock(5);loaded.TasteOnsiteMix();loaded.AdvanceClock(2);Assert.AreEqual(21,loaded.Player.Intelligence);
+        }
     }
 }

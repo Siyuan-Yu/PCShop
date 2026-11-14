@@ -6,7 +6,7 @@ namespace PCShopSell.Core.Session
         {
             var all=new System.Collections.Generic.List<CityActivityDefinition>(source);
             Add(51,"夏澄的新饮品品尝","life_bar",60,0,6);Add(52,"陶然的朋友聚会","life_bar",90,600,5);
-            Add(53,"曾玉的配方试饮","life_bar",90,0,6);Add(54,"郑禾的篮球指导","life_court",120,1200,6);
+            Add(53,"曾玉的新饮品","life_bar",90,0,6);Add(54,"郑禾的篮球指导","life_court",120,1200,6);
             Add(55,"董宇的新地板体验","life_court",90,600,5);Add(56,"和张绍文打五回合","life_court",120,1200,6);
             Add(57,"陶川的五杆练习","life_golf",120,2500,6);Add(58,"沈远的商务球叙","life_golf",180,6800,7);
             Add(76,"宁汐的展品摄影","life_expo",90,0,6);

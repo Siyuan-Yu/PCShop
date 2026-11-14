@@ -41,7 +41,7 @@ namespace PCShopSell.Game
                     Prims.Box(root,"Counter",new Vector3(0,.65f,1),new Vector3(8,1.3f,1.6f),sage);
                     for(int i=0;i<9;i++)Prims.Shape(PrimitiveType.Cylinder,root,"IngredientBottle"+i,new Vector3(-3+i*.75f,1.75f,3.9f),new Vector3(.23f,.35f,.23f),i%3==0?cream:i%3==1?sage:wood);
                     _onsiteCup=Prims.Shape(PrimitiveType.Cylinder,root,"ActualDrink",new Vector3(0,1.5f,.8f),new Vector3(.45f,.25f,.45f),Mats.Lit(new Color(.6f,.3f,.35f))).transform;
-                    Prims.SignText(root,"灯塔吧台 · 实际品尝与调配",new Vector3(0,3.5f,4.7f),7,.5f,ArtDirection.Cream);
+                    Prims.SignText(root,"灯塔吧台",new Vector3(0,3.5f,4.7f),7,.5f,ArtDirection.Cream);
                     var a=Session.RunningCityActivity;for(int i=0;i<a.Participants.Length;i++)
                     {
                         var p=a.Participants[i];var figure=Prims.Figure(root,Session.CityPerson(p.PersonId)?.Name,CrowdView.PersonClothing(p.PersonId),ArtDirection.Cream,1);

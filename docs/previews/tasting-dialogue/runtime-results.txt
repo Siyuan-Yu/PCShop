@@ -1,0 +1,3 @@
+Production dialogue: real invitation and meeting; choose a drink in dialogue; wait for preparation and accept the cup; strange taste applies health/energy cost; pleasant taste immediately applies mood/learning; visible UI checked for answer/count labels; full activity settles without counters.
+
+SMOKE RESULT code=0 errors=0

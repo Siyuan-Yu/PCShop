@@ -81,7 +81,7 @@ namespace PCShopSell.Core.Session
             string body=n switch{
                 51=>"夏澄请你实际品尝两款饮品，再选口味评价；店方招待，没有瞬间试喝奖励。",
                 52=>"陶然、顾宁和罗雅的聚会。普通饮品餐食¥600/人，臻享¥1,800/人；可AA、你请四人或接受陶然招待。选择具体的人和话题，按各自兴趣产生不同反馈。",
-                53=>"曾玉请你调一杯带气泡、柠檬香、低甜度的特调。依次选基底、风味和甜度，实际调制后亲自试喝；只有一个配方正确，错误也要试喝并扣属性。本场提供三次材料。",
+                53=>"曾玉想听听你对几种新饮品的感受。到吧台聊一聊，选一杯，等她调好后亲自尝尝。",
                 54=>"郑禾的篮球训练¥1,200/人，选择定点、上篮或防守训练，按住蓄力、松开出手，实际完成三轮。",
                 55=>"董宇的新地板体验¥600/人，实际体验运球、急停和跳投，再根据脚感选择反馈。",
                 56=>"与张绍文打五个回合，¥1,200/人。看防守位置，选择投篮或突破，自己控制方向和力度。输赢都按实际回合结算。",
@@ -94,6 +94,7 @@ namespace PCShopSell.Core.Session
         {
             int n=OnsiteNumber(a.DefinitionId);if(n==0||_onsitePlays.Any(s=>s.ActivityId==a.Id))return;
             var state=new OnsitePlayState{ActivityId=a.Id,Number=n,TalkMasks=new int[a.Participants.Length],Message="打开现场操作界面，按自己的选择完成活动。"};
+            if(n==53)state.Message="曾玉朝你招招手，把几只杯子摆到了吧台上。";
             _onsitePlays.Add(state);SetNextOnsiteTarget(state);
         }
         private void SetNextOnsiteTarget(OnsitePlayState s)
@@ -115,6 +116,14 @@ namespace PCShopSell.Core.Session
         {var s=Play;if(!OnsiteHere||s?.Number!=53||s.Pending!=null||s.Phase=="mixed"||s.Attempts>=3||slot<0||slot>2||option<0||option>2)return false;if(slot==0)s.Base=option;else if(slot==1)s.Flavor=option;else s.Sweet=option;return true;}
         public bool MixOnsiteDrink()
         {var s=Play;if(!OnsiteHere||s?.Number!=53||s.Pending!=null||s.Phase=="mixed"||s.Attempts>=3)return false;s.MixedCorrect=s.Base==1&&s.Flavor==0&&s.Sweet==0;QueueOnsite(s,"mix",5);StartOnsiteTimer(s);return true;}
+        public bool ChooseTastingDialogue(int choice)
+        {
+            var s=Play;if(!OnsiteHere||s?.Number!=53||s.Pending!=null||s.Phase=="mixed"||s.Attempts>=3||choice<0||choice>2)return false;
+            s.Selected=choice;
+            s.Base=new[]{1,2,0}[choice];s.Flavor=new[]{0,1,2}[choice];s.Sweet=new[]{0,1,2}[choice];
+            if(!MixOnsiteDrink())return false;
+            s.Message="曾玉：好，稍等，我来调这杯。";return true;
+        }
         public bool TasteOnsiteMix()
         {var s=Play;if(!OnsiteHere||s?.Number!=53||s.Pending!=null||s.Phase!="mixed")return false;QueueOnsite(s,"taste",2);StartOnsiteTimer(s);return true;}
         public bool SelectOnsiteSportMode(int mode)
@@ -195,11 +204,15 @@ namespace PCShopSell.Core.Session
                 var a=RunningCityActivity;bool preferred=s.Mode==s.Selected%3;s.TalkMasks[s.Selected]=1<<s.Mode;AddRelation(a.Participants[s.Selected].PersonId,preferred?3:1);
                 s.Message=CityPerson(a.Participants[s.Selected].PersonId)?.Name+(preferred?"对这个话题很有兴趣，分享了自己的经验。":"聊了近况，但这不是对方最感兴趣的话题。");
             }
-            if(pending=="mix"){s.Phase="mixed";s.Message="调制完成，必须亲自试饮后才能调下一杯。";}
+            if(pending=="mix"){s.Phase="mixed";s.Message="曾玉：这杯好了。来，尝一口，告诉我你喝起来是什么感觉。";}
             if(pending=="taste")
             {
-                s.Attempts++;s.Phase="ready";s.Round++;if(s.MixedCorrect){s.Success++;Player.Mood=Math.Min(100,Player.Mood+5);s.Message="清爽、有气泡、柠檬香且低甜，配方正确。";}
-                else{Player.Health=Math.Max(0,Player.Health-2);Player.SpendEnergy(3);s.Message="已试喝，配方不符，健康−2、精力消耗3。剩余材料"+(3-s.Attempts)+"份。";}
+                s.Attempts++;s.Phase="ready";s.Round++;if(s.MixedCorrect)
+                {
+                    bool learned=s.Success==0;s.Success++;Player.Mood=Math.Min(100,Player.Mood+5);if(learned)Player.Intelligence=Math.Min(100,Player.Intelligence+1);
+                    s.Message="入口清爽，酸甜和气泡恰到好处，味道简直完美。\n心情+5"+(learned?"，智力+1。":"。")+"\n曾玉：看你的表情，这杯你应该挺喜欢。";
+                }
+                else{Player.Health=Math.Max(0,Player.Health-2);Player.SpendEnergy(3);s.Message="这股味道有点奇怪，酸涩里带着说不出的苦，胃里也不太舒服。\n健康−2，精力消耗3。\n曾玉：你皱眉了？我再琢磨琢磨这杯的味道。";}
             }
         }
         private bool OnsiteCompletionReady(CityActivity a)
@@ -212,11 +225,10 @@ namespace PCShopSell.Core.Session
             var s=_onsitePlays.FirstOrDefault(x=>x.ActivityId==a.Id);if(s==null)return;
             if(s.Number==52&&a.PlayerTreat)foreach(var p in a.Participants)AddRelation(p.PersonId,2);
             if(s.Number==52&&a.HostPays)AddRelation(a.HostId,1);
-            if(s.Number==53&&s.Success>0)Player.Intelligence=Math.Min(100,Player.Intelligence+1);
             if(s.Number>=54&&s.Number<=57&&s.Success>=2)Player.Skill=Math.Min(100,Player.Skill+1);
             if(s.Number>=54&&s.Number<=57)Player.Health=Math.Min(100,Player.Health+1);
             if(s.Number==76&&s.GoodPhotos>=3)Player.Intelligence=Math.Min(100,Player.Intelligence+1);
-            a.EventSettlementNote=(a.EventSettlementNote??"")+"\n实际回合"+s.Round+"，成功"+s.Success+"，照片"+s.PhotoCount+"。";
+            a.EventSettlementNote=(a.EventSettlementNote??"")+(s.Number==53?"\n你和曾玉在吧台尝了新饮品，也聊了各自的感受。":"\n实际回合"+s.Round+"，成功"+s.Success+"，照片"+s.PhotoCount+"。");
         }
         private void SaveOnsitePlay(SaveData d){d.onsitePlays=_onsitePlays.Select(x=>x.Copy()).ToArray();d.onsitePhotos=_onsitePhotos.Select(x=>x.Copy()).ToArray();d.onsitePhotoSequence=_onsitePhotoSequence;}
         private void RestoreOnsitePlay(SaveData d)

@@ -54,10 +54,21 @@ namespace PCShopSell.Game.UI
             }
             else if(s.Number==53)
             {
-                Label("目标：气泡、柠檬香、低甜度");
-                string[][] ingredients={new[]{"乌龙茶","苏打水","咖啡"},new[]{"柠檬","蜂蜜","姜汁"},new[]{"低甜","中甜","高甜"}};
-                for(int i=0;i<3;i++){int slot=i;int selected=i==0?s.Base:i==1?s.Flavor:s.Sweet;Label(new[]{"基底","风味","甜度"}[i]);var row=Ui.Row(list,38,4);for(int j=0;j<3;j++){int option=j;Ui.Size(Ui.Button(row,ingredients[i][j],()=>{S.SetOnsiteRecipe(slot,option);w.RequestRebuild();},16,selected==j?Ui.ButtonHot:Ui.ButtonBg,s.Pending==null&&s.Phase!="mixed"&&s.Attempts<3),-1,36,1);}}
-                Button("调制这杯 · 5分钟",()=>S.MixOnsiteDrink(),s.Pending==null&&s.Phase!="mixed"&&s.Attempts<3);Button("亲自试喝 · 2分钟",()=>S.TasteOnsiteMix(),s.Pending==null&&s.Phase=="mixed");Label("已试喝"+s.Attempts+"/3杯 · 正确"+s.Success);
+                if(s.Pending=="mix")Label("曾玉正在吧台调饮品。");
+                else if(s.Pending=="taste")Label("你接过杯子，慢慢尝了一口。");
+                else if(s.Phase=="mixed")
+                {
+                    Ui.Size(Ui.Label(list,"曾玉：这杯好了，尝尝看？",21,color:Ui.Accent),-1,64);
+                    Button("接过来，尝一口",()=>S.TasteOnsiteMix());
+                }
+                else if(s.Attempts>=3)
+                    Ui.Size(Ui.Label(list,"曾玉：今天先喝到这里吧，下次我再换个搭配。",21,color:Ui.Accent),-1,100);
+                else
+                {
+                    Ui.Size(Ui.Label(list,s.Round==0?"曾玉：我想试试几个搭配，你想先尝哪杯？":"曾玉：要不要再换个口味？",21,color:Ui.Accent),-1,92);
+                    string[] replies={"柠檬苏打吧，清爽一点。","蜂蜜咖啡，浓一些怎么样？","我想尝尝偏甜的姜汁乌龙。"};
+                    for(int i=0;i<replies.Length;i++){int option=i;Button(replies[i],()=>S.ChooseTastingDialogue(option));}
+                }
             }
             else if(s.Number>=54&&s.Number<=58)
             {
@@ -84,7 +95,7 @@ namespace PCShopSell.Game.UI
                 Button("拍照并保存",()=>{if(!_ctrl.CaptureOnsitePhoto())Toast("照片未保存，请检查现场、相机和写入空间。");});Button("查看相册",OpenOnsiteAlbum);
             }
             var rail=Ui.Panel(w.Content,"OnsiteBottom",new Color(.06f,.1f,.16f,.97f));rail.rectTransform.Anchor(0,0,1,.19f);
-            _onsiteStatus=Ui.Label(rail.transform,s.Message,21,color:Ui.Accent);_onsiteStatus.rectTransform.Anchor(.025f,.48f,.70f,.98f);
+            _onsiteStatus=Ui.Label(rail.transform,s.Message,21,color:Ui.Accent);_onsiteStatus.rectTransform.Anchor(.025f,s.Number==53?.18f:.48f,.70f,.98f);
             _onsiteReadout=Ui.Label(rail.transform,"",18);_onsiteReadout.rectTransform.Anchor(.025f,.10f,.70f,.48f);
             if(s.Number>=54&&s.Number<=58)
             {
@@ -104,7 +115,7 @@ namespace PCShopSell.Game.UI
             _onsiteWasHeld=held;s=S.CurrentOnsite;
             if(OnsiteLayoutKey(s)!=_onsiteLayoutKey&&s.Phase!="charging")_onsiteWindow.RequestRebuild();
             _ctrl.RenderOnsiteScene();if(_onsiteStatus!=null)_onsiteStatus.text=s.Message;
-            if(_onsiteReadout!=null)_onsiteReadout.text=s.Pending!=null?"实际操作中 · 剩"+Math.Max(0,s.ReadyAt-S.Clock.Now.TotalMinutes)+"游戏分钟":s.Number>=57&&s.Number<=58?$"力度{s.Power:P0} · 方向{s.Angle:0}° · 已打{s.Round}杆 · 目标({s.TargetX:0}, {s.TargetZ:0})米 · 风偏{s.Wind:+0.0;-0.0;0}米":s.Number>=54&&s.Number<=56?$"力度{s.Power:P0} · 方向{s.Angle:0}° · 完成{s.Round}回合 · 命中{s.Success}"+(s.Number==56?$" · 比分{s.Success*2}:{s.OpponentScore}":""):s.Number==76?$"已保存{s.PhotoCount}张 · 合格{s.GoodPhotos}张 · 当前构图{S.OnsitePhotoScore}分":"完成现场项目后，继续相处至日程结束。";
+            if(_onsiteReadout!=null)_onsiteReadout.text=s.Number==53?"":s.Pending!=null?"实际操作中 · 剩"+Math.Max(0,s.ReadyAt-S.Clock.Now.TotalMinutes)+"游戏分钟":s.Number>=57&&s.Number<=58?$"力度{s.Power:P0} · 方向{s.Angle:0}° · 已打{s.Round}杆 · 目标({s.TargetX:0}, {s.TargetZ:0})米 · 风偏{s.Wind:+0.0;-0.0;0}米":s.Number>=54&&s.Number<=56?$"力度{s.Power:P0} · 方向{s.Angle:0}° · 完成{s.Round}回合 · 命中{s.Success}"+(s.Number==56?$" · 比分{s.Success*2}:{s.OpponentScore}":""):s.Number==76?$"已保存{s.PhotoCount}张 · 合格{s.GoodPhotos}张 · 当前构图{S.OnsitePhotoScore}分":"完成现场项目后，继续相处至日程结束。";
             if(_onsitePower!=null)_onsitePower.rectTransform.Anchor(0,0,(float)s.Power,1);
         }
         public void OpenOnsiteAlbum()
