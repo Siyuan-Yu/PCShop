@@ -277,6 +277,7 @@ namespace PCShopSell.Core.Session
         private void TickLifeBatch(long now)
         {
             TickNeighborhood(now);
+            TickOnsitePlay(now);
             foreach(var t in _lifeTasks.Where(t=>!t.Done).ToArray())
             {
                 if(t.Activity!=null){var a=_cityActivities.FirstOrDefault(a=>a.Id==t.Activity);if(a==null||!a.Active){t.Done=true;if(t.Kind=="lesson"&&_lifeCourse?.Activity==t.Activity)_lifeCourse.Activity=null;}continue;}

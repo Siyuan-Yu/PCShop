@@ -51,6 +51,7 @@ namespace PCShopSell.Core.Session
                 SaveMoneyBatch(d);
                 SaveLifeBatch(d);
                 SaveNeighborhood(d);
+                SaveOnsitePlay(d);
                 return d;
             }
             finally
@@ -345,6 +346,7 @@ namespace PCShopSell.Core.Session
             RestoreMoneyBatch(d);
             RestoreLifeBatch(d);
             RestoreNeighborhood(d);
+            RestoreOnsitePlay(d);
             InitializeExpansionResidents();
             LoadVenueBusinesses(d);
             LoadEnergyPayroll(d);

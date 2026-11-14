@@ -50,11 +50,11 @@ namespace PCShopSell.Game.Runtime
         private bool SyncMonthlyHall(GameSession s, bool visible)
         {
             var a = s?.RunningCityActivity;
-            bool monthly = visible && a != null && (a.DefinitionId == "social_73" || a.DefinitionId == "social_74" || a.DefinitionId == "social_75" || a.DefinitionId == "social_77");
+            bool monthly = visible && a != null && (a.DefinitionId == "social_73" || a.DefinitionId == "social_74" || a.DefinitionId == "social_75" || a.DefinitionId == "social_76" || a.DefinitionId == "social_77");
             _monthlyHall.gameObject.SetActive(monthly); if (!monthly) return false;
             if (_monthlyKind != a.DefinitionId)
             {
-                _monthlyKind = a.DefinitionId; bool comic = a.DefinitionId == "social_75" || a.DefinitionId == "social_77";
+                _monthlyKind = a.DefinitionId; bool comic = a.DefinitionId == "social_75" || a.DefinitionId == "social_76" || a.DefinitionId == "social_77";
                 _monthlyBanner.text = comic ? "原创模型展 · 城市微缩景样件" : a.DefinitionId == "social_74" ? "布展现场 · 供电与信号调试" : "电子展 · 新品与供应商交流";
                 string[] signs = comic ? new[] { "原型与街景", "连接结构与细节", "现货与体验" } : a.DefinitionId == "social_74" ? new[] { "供电支路", "电源开关", "信号接线" } : new[] { "新品体验", "供货交流", "企业需求" };
                 for (int i = 0; i < 3; i++) { _monthlyModels[i].SetActive(comic); _monthlyComputers[i].SetActive(!comic); _monthlySigns[i].text = signs[i]; }

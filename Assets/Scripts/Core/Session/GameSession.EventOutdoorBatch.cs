@@ -29,7 +29,7 @@ namespace PCShopSell.Core.Session
             "resident_moxin", "resident_maoning", "res_rider", "zhou", "li", "wang" };
         private readonly List<OutdoorBatchState> _outdoorBatch = new List<OutdoorBatchState>();
         private static int OutdoorNumber(string id) => id != null && id.StartsWith("social_", StringComparison.Ordinal)
-            && int.TryParse(id.Substring(7), out int n) && n >= 61 && n <= 77 ? n : 0;
+            && int.TryParse(id.Substring(7), out int n) && n >= 61 && n <= 77 && n!=76 ? n : 0;
         public static bool IsOutdoorBatchActivity(CityActivity a) => OutdoorNumber(a?.DefinitionId) != 0;
         private OutdoorBatchState OutdoorState(CityActivity a) => _outdoorBatch.FirstOrDefault(s => s.ActivityId == a?.Id);
         public OutdoorBatchState OutdoorActivityState(string id) => _outdoorBatch.FirstOrDefault(s => s.ActivityId == id)?.Copy();

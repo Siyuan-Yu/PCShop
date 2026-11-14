@@ -30,4 +30,4 @@
 
 核心：`GameSession.Neighborhood.cs`；界面：`GameUi.Neighborhood.cs`；场景：`GameController.Neighborhood.cs`；图形验收：`GameSceneBuilder.NeighborhoodFromBatch`。
 
-随机池仍为120项，其中111项C#，9项旧脚本为51–58及76。121–124本批完成，125／126沿用既有独立触发流程；没有再一批未复核的新编号。后续应回补51–58的真实互动及76拍摄。本次不重新制作Windows安装包。
+本篇交付时111项C#；随后[115](115-onsite-events-51-58-and-76.md)已补齐51–58及76，当前保留的120项随机事件均为C#并完成本轮逐项改造。125／126沿用独立触发流程，编号不重排。后续按实玩反馈优化，并处理已记录旧测试问题。本次不重新制作Windows安装包。

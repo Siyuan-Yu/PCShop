@@ -12,7 +12,7 @@ namespace PCShopSell.Core.Session
             Add("social_74_work", "韩征的布展调试", 90, "领取现场任务", "走到下一展台", "分离过多供电负载", "检查电源开关", "重接信号线");
             Add("social_75", "陆栀的原创模型展位", 120, "到原创展位集合", "走到下一展示台", "观看原型", "体验连接结构", "反馈设计细节");
             Add("social_77", "沈晓和父亲的城市模型之行", 120, "与孩子和父亲会合", "走到下一展示台", "听他讲小凳子的细节", "一起观察街景搭建", "陪着慢慢看");
-            return list.ToArray();
+            return AddOnsiteActivities(list.ToArray());
             void Add(string id, string name, int minutes, params string[] choices)
             {
                 list.Add(new CityActivityDefinition { Id = id, LogicalId = id == "social_74_work" ? "social_74" : null, Name = name,

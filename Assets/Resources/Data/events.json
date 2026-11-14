@@ -50,185 +50,14 @@
     {"id": "act_ktv_singer", "code": true, "minDay": 5, "cooldownDays": 30, "weight": 6},
     {"id": "act_ktv_fuzhi", "code": true, "minDay": 5, "cooldownDays": 35, "weight": 6},
     {"id": "act_ktv_luoya", "code": true, "minDay": 5, "cooldownDays": 40, "weight": 6},
-    {
-      "id": "act_bar_bartender", "title": "灯塔吧台的新饮品", "body": "夏澄做了一款无酒精的新饮品，想请你来给点意见。", "group": "activity", "minDay": 5, "cooldownDays": 30, "weight": 6,
-      "when": [
-        {"type": "met", "key": "life_bartender", "not": true}
-      ],
-      "choices": [
-        {
-          "text": "答应，约个时间",
-          "effects": [
-            {"type": "text", "text": "你答应过去尝尝。"},
-            {"type": "meet", "npc": "life_bartender", "value": 14},
-            {"type": "meeting", "key": "ev-act_bar_bartender:", "npc": "life_bartender", "kind": "bar"}
-          ]
-        },
-        {
-          "text": "今天不太方便",
-          "effects": [
-            {"type": "text", "text": "你说今天不想出门。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "act_bar_taoran", "title": "跑团领队的聚会", "body": "陶然组了一场跑团聚会，想邀请你认识认识大家。", "group": "activity", "minDay": 5, "cooldownDays": 40, "weight": 6,
-      "when": [
-        {"type": "met", "key": "resident_taoran", "not": true}
-      ],
-      "choices": [
-        {
-          "text": "答应，约个时间",
-          "effects": [
-            {"type": "text", "text": "你答应去露个面。"},
-            {"type": "meet", "npc": "resident_taoran", "value": 14},
-            {"type": "meeting", "key": "ev-act_bar_taoran:", "npc": "resident_taoran", "kind": "bar"}
-          ]
-        },
-        {
-          "text": "今天不太方便",
-          "effects": [
-            {"type": "text", "text": "你说下次一定。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "act_bar_zengyu", "title": "饮品研发助理的试饮", "body": "曾玉最近在研发新饮品，想请熟人来试饮。", "group": "activity", "minDay": 5, "cooldownDays": 35, "weight": 6,
-      "when": [
-        {"type": "met", "key": "resident_zengyu", "not": true}
-      ],
-      "choices": [
-        {
-          "text": "答应，约个时间",
-          "effects": [
-            {"type": "text", "text": "你答应了，她松了口气。"},
-            {"type": "meet", "npc": "resident_zengyu", "value": 14},
-            {"type": "meeting", "key": "ev-act_bar_zengyu:", "npc": "resident_zengyu", "kind": "bar"}
-          ]
-        },
-        {
-          "text": "今天不太方便",
-          "effects": [
-            {"type": "text", "text": "你婉拒了。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "act_court_coach", "title": "社区篮球教练的邀请", "body": "郑禾说周末球场有空位，想拉你打一场。", "group": "activity", "minDay": 5, "cooldownDays": 30, "weight": 6,
-      "when": [
-        {"type": "met", "key": "life_coach", "not": true}
-      ],
-      "choices": [
-        {
-          "text": "答应，约个时间",
-          "effects": [
-            {"type": "text", "text": "你答应了，约好球场见。"},
-            {"type": "meet", "npc": "life_coach", "value": 14},
-            {"type": "meeting", "key": "ev-act_court_coach:", "npc": "life_coach", "kind": "court"}
-          ]
-        },
-        {
-          "text": "今天不太方便",
-          "effects": [
-            {"type": "text", "text": "你说今天没精神。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "act_court_dongyu", "title": "球场管理员的邀请", "body": "董宇说球场新换了地面，想让你来试试脚感。", "group": "activity", "minDay": 5, "cooldownDays": 40, "weight": 6,
-      "when": [
-        {"type": "met", "key": "resident_dongyu", "not": true}
-      ],
-      "choices": [
-        {
-          "text": "答应，约个时间",
-          "effects": [
-            {"type": "text", "text": "你答应去看看。"},
-            {"type": "meet", "npc": "resident_dongyu", "value": 14},
-            {"type": "meeting", "key": "ev-act_court_dongyu:", "npc": "resident_dongyu", "kind": "court"}
-          ]
-        },
-        {
-          "text": "今天不太方便",
-          "effects": [
-            {"type": "text", "text": "你说下次。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "act_court_zhang", "title": "张老师约你打球", "body": "张绍文说学生放假，他想打球放松一下，叫上你。", "group": "activity", "minDay": 5, "cooldownDays": 35, "weight": 6,
-      "when": [
-        {"type": "met", "key": "zhang"}
-      ],
-      "choices": [
-        {
-          "text": "答应，约个时间",
-          "effects": [
-            {"type": "text", "text": "你答应了。"},
-            {"type": "relation", "npc": "zhang", "value": 2},
-            {"type": "meeting", "key": "ev-act_court_zhang:", "npc": "zhang", "kind": "court"}
-          ]
-        },
-        {
-          "text": "今天不太方便",
-          "effects": [
-            {"type": "text", "text": "你说店里走不开。"},
-            {"type": "relation", "npc": "zhang", "value": -1}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "act_golf_golfer", "title": "练习场体验", "body": "陶川说练习场新到一批球杆，约你去挥几杆。", "group": "activity", "minDay": 5, "cooldownDays": 35, "weight": 6,
-      "when": [
-        {"type": "met", "key": "life_golfer", "not": true}
-      ],
-      "choices": [
-        {
-          "text": "答应，约个时间",
-          "effects": [
-            {"type": "text", "text": "你答应去体验一下。"},
-            {"type": "meet", "npc": "life_golfer", "value": 14},
-            {"type": "meeting", "key": "ev-act_golf_golfer:", "npc": "life_golfer", "kind": "golf"}
-          ]
-        },
-        {
-          "text": "今天不太方便",
-          "effects": [
-            {"type": "text", "text": "你说下次再约。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "act_golf_enterprise", "title": "企业采购的高尔夫局", "body": "云帆企业的沈远约你去练习场，说想边打球边聊采购。", "group": "activity", "minDay": 10, "cooldownDays": 45, "weight": 6,
-      "when": [
-        {"type": "reputationAtLeast", "value": 1},
-        {"type": "met", "key": "life_enterprise", "not": true}
-      ],
-      "choices": [
-        {
-          "text": "答应，约个时间",
-          "effects": [
-            {"type": "text", "text": "你答应赴约。"},
-            {"type": "meet", "npc": "life_enterprise", "value": 14},
-            {"type": "meeting", "key": "ev-act_golf_enterprise:", "npc": "life_enterprise", "kind": "golf"},
-            {"type": "referral", "key": "ev-golf-enterprise", "memo": "云帆企业（沈远介绍）", "count": 1, "flag": true}
-          ]
-        },
-        {
-          "text": "今天不太方便",
-          "effects": [
-            {"type": "text", "text": "你说最近忙，先不去。"}
-          ]
-        }
-      ]
-    },
+    {"id": "act_bar_bartender", "code": true, "minDay": 5, "cooldownDays": 30, "weight": 6},
+    {"id": "act_bar_taoran", "code": true, "minDay": 5, "cooldownDays": 40, "weight": 6},
+    {"id": "act_bar_zengyu", "code": true, "minDay": 5, "cooldownDays": 35, "weight": 6},
+    {"id": "act_court_coach", "code": true, "minDay": 5, "cooldownDays": 30, "weight": 6},
+    {"id": "act_court_dongyu", "code": true, "minDay": 5, "cooldownDays": 40, "weight": 6},
+    {"id": "act_court_zhang", "code": true, "minDay": 5, "cooldownDays": 35, "weight": 6},
+    {"id": "act_golf_golfer", "code": true, "minDay": 5, "cooldownDays": 35, "weight": 6},
+    {"id": "act_golf_enterprise", "code": true, "minDay": 10, "cooldownDays": 45, "weight": 6},
     {"id": "act_fishing_shaoan", "code": true, "minDay": 5, "cooldownDays": 30, "weight": 6},
     {"id": "act_fishing_qiaosong", "code": true, "minDay": 5, "cooldownDays": 40, "weight": 6},
     {"id": "act_fishing_grandpa", "code": true, "minDay": 5, "cooldownDays": 35, "weight": 6},
@@ -246,28 +75,7 @@
     {"id": "act_expo_curator", "code": true, "minDay": 5, "cooldownDays": 45, "weight": 6},
     {"id": "act_expo_hanzheng", "code": true, "minDay": 5, "cooldownDays": 45, "weight": 6},
     {"id": "act_comic_creator", "code": true, "minDay": 5, "cooldownDays": 40, "weight": 6},
-    {
-      "id": "act_comic_ningxi", "title": "模型摄影师的邀请", "body": "宁汐想拍几张展品，约你一起逛原创潮玩展。", "group": "activity", "minDay": 5, "cooldownDays": 40, "weight": 6,
-      "when": [
-        {"type": "met", "key": "resident_ningxi", "not": true}
-      ],
-      "choices": [
-        {
-          "text": "答应，约个时间",
-          "effects": [
-            {"type": "text", "text": "你答应了。"},
-            {"type": "meet", "npc": "resident_ningxi", "value": 14},
-            {"type": "meeting", "key": "ev-act_comic_ningxi:", "npc": "resident_ningxi", "kind": "expo_comic"}
-          ]
-        },
-        {
-          "text": "今天不太方便",
-          "effects": [
-            {"type": "text", "text": "你说周末再看。"}
-          ]
-        }
-      ]
-    },
+    {"id": "act_comic_ningxi", "code": true, "minDay": 5, "cooldownDays": 40, "weight": 6},
     {"id": "act_comic_shenxiao", "code": true, "minDay": 5, "cooldownDays": 45, "weight": 6},
     {"id": "shop_regular_review", "code": true, "minDay": 4, "cooldownDays": 25, "weight": 7},
     {"id": "shop_wrong_change", "code": true, "minDay": 3, "cooldownDays": 30, "weight": 6},

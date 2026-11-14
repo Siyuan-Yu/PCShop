@@ -225,7 +225,7 @@ namespace PCShopSell.Core.Session
                     || definitionId == "social_70" || definitionId == "social_75"
                     || definitionId == "social_77" && new GameDate((int)(start / 1440)).IsWeekend
                     || def.EventOnly && p.WorkPlaceId == venue.Id;
-                if(row==null&&!hostedRaceVisit&&!definitionId.StartsWith("expo_")&&p.WorkPlaceId!=null&&d!=null&&AuthoredCityWorkOverlaps(p,start-personTravel,end+personTravel))return d.Name+"届时还在工作，建议下班后再约";
+                if(row==null&&!hostedRaceVisit&&!OnsiteWorkingMeeting(def.Id,id)&&!definitionId.StartsWith("expo_")&&p.WorkPlaceId!=null&&d!=null&&AuthoredCityWorkOverlaps(p,start-personTravel,end+personTravel))return d.Name+"届时还在工作，建议下班后再约";
                 if(route.ArriveMinute>start+15)return "对方按真实路线来不及在宽限内到达，请晚一点预约";
             }
             int seats=_cityActivities.Where(a=>a.Active&&a.VenueId==venue.Id&&start<a.ScheduledStart+a.Duration&&end>a.ScheduledStart).Sum(a=>a.Participants.Length+1);
@@ -442,6 +442,7 @@ namespace PCShopSell.Core.Session
                     StartSocialBatchActivity(a);
                     StartFishingActivity(a);
                     StartOutdoorBatch(a);
+                    StartOnsitePlay(a);
                     foreach(var shop in _shops)shop.Sim.PlayerPresent=false;
                     if (a.ServiceConfirmed && a.ServiceChoice >= 0) ChooseCityActivity(a.Id, a.ServiceChoice);
                     Say("开始"+serviceTitle+"："+def.StartText+"。世界时间和后台经营正常继续。");
@@ -513,7 +514,7 @@ namespace PCShopSell.Core.Session
         private void EndCityActivity(CityActivity a,CityActivityPhase phase,string reason,long now)
         {
             if(!a.Active)return;
-            if (phase == CityActivityPhase.Completed && (!OutdoorCompletionReady(a) || !LifeActivityReady(a)))
+            if (phase == CityActivityPhase.Completed && (!OutdoorCompletionReady(a) || !LifeActivityReady(a)||!OnsiteCompletionReady(a)))
             { phase = CityActivityPhase.Interrupted; reason = "\u672a\u5b8c\u6210\u73b0\u573a\u4efb\u52a1\uff0c\u4e0d\u7ed3\u7b97\u5b8c\u6210\u5956\u52b1"; }
             if(CurrentPlace?.Id==a.VenueId&&a.PlayerVenueRoute!=null)_free=a.PlayerVenueRoute.Position(now);
             a.State=phase;a.ActualEnd=now;a.EndReason=reason;a.Stage=phase==CityActivityPhase.Completed?2:a.Stage;
@@ -545,6 +546,7 @@ namespace PCShopSell.Core.Session
                 CompleteLifeActivity(a);
                 CompleteFishingInvitation(a);
                 CompleteOutdoorBatch(a);
+                CompleteOnsitePlay(a);
             }
             EndFishingActivity(a);
             foreach(var participant in a.Participants)

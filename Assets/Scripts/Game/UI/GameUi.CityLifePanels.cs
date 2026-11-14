@@ -574,6 +574,7 @@ namespace PCShopSell.Game.UI
                     Para(w.Content, a.Stage == 0 ? def?.StartText : S.CityActivityMidText(a), 19);
                     BuildPartnerActivityChoices(w, a);
                     BuildOutdoorBatchStatus(w, a);
+                    if(GameSession.IsOnsiteActivity(a))Ui.Size(Ui.Button(w.Content,"进入现场操作",OpenOnsitePlay,20,Ui.ButtonHot),-1,48);
                     if (GameSession.IsInteractiveFishingActivity(a)) Ui.Size(Ui.Button(w.Content, "选钓位、抛竿和收鱼", OpenFishing, 19, Ui.ButtonHot), -1, 44);
                     Ui.Size(Ui.Button(w.Content, "打开场所菜单", () => GoToScheduledCityActivity(activityId), 18, Ui.ButtonHot,
                         CityActivityMenuOrTravelBlocker(activityId) == null), -1, 44);
