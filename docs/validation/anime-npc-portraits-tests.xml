@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="6" result="Passed" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-14 10:33:01Z" end-time="2026-11-14 10:33:02Z" duration="1.1611047">
+  <test-suite type="TestSuite" id="2819" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1575" result="Passed" start-time="2026-11-14 10:33:01Z" end-time="2026-11-14 10:33:02Z" duration="1.161105" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties />
+    <test-suite type="Assembly" id="4634" name="PCShopSell.Tests.EditMode.dll" fullname="F:/_ci/Library/ScriptAssemblies/PCShopSell.Tests.EditMode.dll" runstate="Runnable" testcasecount="1575" result="Passed" start-time="2026-11-14 10:33:01Z" end-time="2026-11-14 10:33:02Z" duration="1.145667" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="94536" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+      </properties>
+      <test-suite type="TestSuite" id="4635" name="PCShopSell" fullname="PCShopSell" runstate="Runnable" testcasecount="1575" result="Passed" start-time="2026-11-14 10:33:01Z" end-time="2026-11-14 10:33:02Z" duration="1.145018" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="4636" name="Tests" fullname="PCShopSell.Tests" runstate="Runnable" testcasecount="1575" result="Passed" start-time="2026-11-14 10:33:01Z" end-time="2026-11-14 10:33:02Z" duration="1.140147" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="2830" name="AnimePortraitTests" fullname="PCShopSell.Tests.AnimePortraitTests" classname="PCShopSell.Tests.AnimePortraitTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-14 10:33:01Z" end-time="2026-11-14 10:33:02Z" duration="0.580971" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="2831" name="EveryNamedNpcLoadsItsOwnAnimeTextureWithBoundedMemorySettings" fullname="PCShopSell.Tests.AnimePortraitTests.EveryNamedNpcLoadsItsOwnAnimeTextureWithBoundedMemorySettings" methodname="EveryNamedNpcLoadsItsOwnAnimeTextureWithBoundedMemorySettings" classname="PCShopSell.Tests.AnimePortraitTests" runstate="Runnable" seed="5017106" result="Passed" start-time="2026-11-14 10:33:01Z" end-time="2026-11-14 10:33:02Z" duration="0.560788" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AnimePortraitTests.EveryNamedNpcLoadsItsOwnAnimeTextureWithBoundedMemorySettings
+REGRESSION DONE PCShopSell.Tests.AnimePortraitTests.EveryNamedNpcLoadsItsOwnAnimeTextureWithBoundedMemorySettings Passed
+]]></output>
+            </test-case>
+            <test-case id="2833" name="RetirementAndStudentAgesAreConsistentWithTheirPortraitBriefs" fullname="PCShopSell.Tests.AnimePortraitTests.RetirementAndStudentAgesAreConsistentWithTheirPortraitBriefs" methodname="RetirementAndStudentAgesAreConsistentWithTheirPortraitBriefs" classname="PCShopSell.Tests.AnimePortraitTests" runstate="Runnable" seed="179397326" result="Passed" start-time="2026-11-14 10:33:02Z" end-time="2026-11-14 10:33:02Z" duration="0.001002" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AnimePortraitTests.RetirementAndStudentAgesAreConsistentWithTheirPortraitBriefs
+REGRESSION DONE PCShopSell.Tests.AnimePortraitTests.RetirementAndStudentAgesAreConsistentWithTheirPortraitBriefs Passed
+]]></output>
+            </test-case>
+            <test-case id="2832" name="UnknownDynamicAndDebugPeopleUseCachedAnimeFallback" fullname="PCShopSell.Tests.AnimePortraitTests.UnknownDynamicAndDebugPeopleUseCachedAnimeFallback" methodname="UnknownDynamicAndDebugPeopleUseCachedAnimeFallback" classname="PCShopSell.Tests.AnimePortraitTests" runstate="Runnable" seed="1651699827" result="Passed" start-time="2026-11-14 10:33:02Z" end-time="2026-11-14 10:33:02Z" duration="0.000861" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.AnimePortraitTests.UnknownDynamicAndDebugPeopleUseCachedAnimeFallback
+REGRESSION DONE PCShopSell.Tests.AnimePortraitTests.UnknownDynamicAndDebugPeopleUseCachedAnimeFallback Passed
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="4073" name="RetroPortraitTests" fullname="PCShopSell.Tests.RetroPortraitTests" classname="PCShopSell.Tests.RetroPortraitTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-14 10:33:02Z" end-time="2026-11-14 10:33:02Z" duration="0.485715" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="4074" name="EveryNamedNpcLoadsItsOwnRetroTextureWithBoundedMemorySettings" fullname="PCShopSell.Tests.RetroPortraitTests.EveryNamedNpcLoadsItsOwnRetroTextureWithBoundedMemorySettings" methodname="EveryNamedNpcLoadsItsOwnRetroTextureWithBoundedMemorySettings" classname="PCShopSell.Tests.RetroPortraitTests" runstate="Runnable" seed="1238239925" result="Passed" start-time="2026-11-14 10:33:02Z" end-time="2026-11-14 10:33:02Z" duration="0.480324" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.RetroPortraitTests.EveryNamedNpcLoadsItsOwnRetroTextureWithBoundedMemorySettings
+REGRESSION DONE PCShopSell.Tests.RetroPortraitTests.EveryNamedNpcLoadsItsOwnRetroTextureWithBoundedMemorySettings Passed
+]]></output>
+            </test-case>
+            <test-case id="4076" name="RetirementAndStudentAgesAreConsistentWithTheirPortraitBriefs" fullname="PCShopSell.Tests.RetroPortraitTests.RetirementAndStudentAgesAreConsistentWithTheirPortraitBriefs" methodname="RetirementAndStudentAgesAreConsistentWithTheirPortraitBriefs" classname="PCShopSell.Tests.RetroPortraitTests" runstate="Runnable" seed="955374681" result="Passed" start-time="2026-11-14 10:33:02Z" end-time="2026-11-14 10:33:02Z" duration="0.000500" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.RetroPortraitTests.RetirementAndStudentAgesAreConsistentWithTheirPortraitBriefs
+REGRESSION DONE PCShopSell.Tests.RetroPortraitTests.RetirementAndStudentAgesAreConsistentWithTheirPortraitBriefs Passed
+]]></output>
+            </test-case>
+            <test-case id="4075" name="UnknownDynamicAndDebugPeopleUseCachedRetroFallback" fullname="PCShopSell.Tests.RetroPortraitTests.UnknownDynamicAndDebugPeopleUseCachedRetroFallback" methodname="UnknownDynamicAndDebugPeopleUseCachedRetroFallback" classname="PCShopSell.Tests.RetroPortraitTests" runstate="Runnable" seed="4824686" result="Passed" start-time="2026-11-14 10:33:02Z" end-time="2026-11-14 10:33:02Z" duration="0.000689" asserts="0">
+              <properties />
+              <output><![CDATA[REGRESSION CASE PCShopSell.Tests.RetroPortraitTests.UnknownDynamicAndDebugPeopleUseCachedRetroFallback
+REGRESSION DONE PCShopSell.Tests.RetroPortraitTests.UnknownDynamicAndDebugPeopleUseCachedRetroFallback Passed
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

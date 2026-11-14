@@ -5,15 +5,18 @@ using UnityEngine;
 public sealed class NpcPortraitImportRules : AssetPostprocessor
 {
     public const string Root = "Assets/Resources/PortraitsRetro/";
+    public const string AnimeRoot = "Assets/Resources/PortraitsAnime/";
+    private static bool IsPortrait(string path) => path.StartsWith(Root, System.StringComparison.Ordinal)
+        || path.StartsWith(AnimeRoot, System.StringComparison.Ordinal);
     private void OnPreprocessTexture()
     {
-        if (!assetPath.StartsWith(Root, System.StringComparison.Ordinal)) return;
+        if (!IsPortrait(assetPath)) return;
         Configure((TextureImporter)assetImporter);
     }
     private static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
     {
         foreach (string path in imported)
-            if (path.StartsWith(Root, System.StringComparison.Ordinal))
+            if (IsPortrait(path))
             { PCShopSell.Game.UI.GameUi.InvalidatePortraitCache(); break; }
     }
     public static void Configure(TextureImporter importer)
