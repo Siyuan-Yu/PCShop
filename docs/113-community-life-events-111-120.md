@@ -29,4 +29,4 @@
 
 源码入口：`GameSession.EventLifeBatch.cs`、`GameSession.LifeFair.cs`、`GameUi.LifeEvents.cs`、`GameController.LifeEvents.cs`。编辑器实景验收：`GameSceneBuilder.LifeBatchFromBatch`。
 
-随机池仍120项，107项转C#，其余13项为51–58、76、121–124。下一批121–124；51–58和76仍待实际互动改造，不能写成前120项全部完成。本次未重新制作Windows安装包。
+本篇交付时107项转C#；随后[114](114-neighborhood-events-121-124.md)完成121–124，当前随机池120项、111项C#，剩余旧脚本为51–58和76。后续回补这九项，不能写成前120项全部完成。本次未重新制作Windows安装包。

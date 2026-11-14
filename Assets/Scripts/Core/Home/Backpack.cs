@@ -62,7 +62,7 @@ namespace PCShopSell.Core.Home
 
         public static GiftDef Get(string id) => All.FirstOrDefault(g => g.Id == id)
             ?? PCShopSell.Core.Session.OldMarketCatalog.Gifts.FirstOrDefault(g => g.Id == id)
-            ?? PCShopSell.Core.Session.LifeEventGoods.Get(id);
+            ?? PCShopSell.Core.Session.LifeEventGoods.Get(id) ?? PCShopSell.Core.Session.NeighborhoodGoods.Get(id);
 
         public static bool IsCigarette(string id) => id == Cig || id == CigHi;
 

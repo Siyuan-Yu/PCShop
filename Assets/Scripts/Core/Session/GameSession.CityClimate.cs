@@ -19,7 +19,7 @@ namespace PCShopSell.Core.Session
         public double CityOutdoorTemperature(long minute) => CityWeather.Temperature(_weatherSeed,minute);
         public double CityAirTemperature => CityOutdoorTemperature(Clock.Now.TotalMinutes);
         public double CityFeltTemperature => SimpleFeltAt(CurrentPlace?.Id,CityAirTemperature);
-        public string WeatherSummary => CityWeather.Season(Clock.Now.TotalMinutes)+" · "+CityAirTemperature.ToString("0")+"℃";
+        public string WeatherSummary => CityWeather.Season(Clock.Now.TotalMinutes)+" · "+(CityIsRaining?"小雨 · ":"晴 · ")+CityAirTemperature.ToString("0")+"℃";
         public string CityComfortSummary => SimpleComfortAt(CurrentPlace?.Id,OutfitComfortMin,OutfitComfortMax);
         public double CitySleepComfortFactor => 1;
         public bool HasSeasonalFan(string placeId) => FacilityFurniture(placeId).Any(p=>p.Id=="fan_fixed"||p.Id=="fan_new");

@@ -151,6 +151,10 @@ namespace PCShopSell.Core.Session
             new EventDef { Id = "life_book_swap", Title = "图书漂流", Group = "social", When = s => s.CanOfferLifeBatch(118) },
             new EventDef { Id = "life_night_class", Title = "夜校开班", Group = "social", When = s => s.CanOfferLifeBatch(119) },
             new EventDef { Id = "life_street_fair", Title = "社区集市", Group = "social", When = s => s.CanOfferLifeBatch(120) },
+            new EventDef { Id = "life_blood_donation", Title = "献血车", Group = "social", When = s => s.CanOfferNeighborhood(121) },
+            new EventDef { Id = "life_lost_child", Title = "走丢的孩子", Group = "social", When = s => s.CanOfferNeighborhood(122) },
+            new EventDef { Id = "life_roof_leak", Title = "屋顶漏水", Group = "social", When = s => s.CanOfferNeighborhood(123) },
+            new EventDef { Id = "life_festival_lantern", Title = "社区花灯会", Group = "social", When = s => s.CanOfferNeighborhood(124) },
             new EventDef
             {
                 Id = "review", Title = "网上有人说你家卖翻新货", MinDay = 10, CooldownDays = 14, Weight = 7,

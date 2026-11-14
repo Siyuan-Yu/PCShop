@@ -14,17 +14,19 @@ namespace PCShopSell.Game.UI
             OpenWindow("社区生活",900,780,w=>
             {
                 var tabs=Ui.Row(w.Content,40,6);
-                for(int i=0;i<6;i++){int tab=i;Ui.Size(Ui.Button(tabs,new[]{"待办","小狗","图书","夜校","集市","健身"}[i],()=>{_lifeEventTab=tab;w.Rebuild();},17,_lifeEventTab==i?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);}
+                for(int i=0;i<7;i++){int tab=i;Ui.Size(Ui.Button(tabs,new[]{"待办","小狗","图书","夜校","集市","健身","街坊"}[i],()=>{_lifeEventTab=tab;w.Rebuild();},17,_lifeEventTab==i?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);}
+                if(_lifeEventTab==6)DrawNeighborhood(w);
                 void Action(string info,string label,System.Action run,bool enabled=true)
                 {var row=Ui.Row(w.Content,42,8);Ui.Size(Ui.Label(row,info,17),-1,40,1);Ui.Size(Ui.Button(row,label,run,17,Ui.ButtonBg,enabled),140,38);}
                 foreach(var task in S.LifeTasks.Where(t=>_lifeEventTab==0))
                 {
-                    var t=task;string name=t.Kind switch{"donation"=>"募书登记","disinfect"=>"到店消毒","rest"=>"在家休息","read"=>"阅读","chat"=>"手机聊天","gym"=>"健身训练","adopt"=>"收养登记","dog-walk"=>"遛狗","book-feedback"=>"募书反馈","lesson"=>"夜校课堂",_=>"朋友邀约"};
+                    var t=task;string name=t.Kind switch{"blood-check"=>"献血检查","blood-donate"=>"献血","blood-observe"=>"献血留观","child-handoff"=>"孩子交接","child-reunion"=>"家人确认","leak-repair"=>"屋顶维修","leak-bucket"=>"放接水桶","lantern-craft"=>"制作花灯","lantern-riddle"=>"观察灯谜","lantern-browse"=>"逛花灯会","festival-visit"=>"花灯会同行","donation"=>"募书登记","disinfect"=>"到店消毒","rest"=>"在家休息","read"=>"阅读","chat"=>"手机聊天","gym"=>"健身训练","adopt"=>"收养登记","dog-walk"=>"遛狗","book-feedback"=>"募书反馈","lesson"=>"夜校课堂",_=>"朋友邀约"};
                     string place=t.Place!=null&&S.City.HasPlace(t.Place)?S.City.GetPlace(t.Place).Name:"随身进行";
                     Line(w.Content,name+" · "+place+" · "+(t.Activity!=null?"见活动日程":t.Kind=="book-feedback"?new GameTimestamp(t.At).ToString():"还需"+t.Remaining+"分钟"),18,Ui.Accent);
                     if(t.Place!=null&&S.City.HasPlace(t.Place)&&S.CurrentPlace?.Id!=t.Place)
                         Action("到场后继续","前往",()=>{CloseAllWindows();_ctrl.GoToPlace(S.City.GetPlace(t.Place));});
                     if(t.Activity!=null)Action("需与人物实际同场","查看预约",()=>OpenCityActivityDetail(t.Activity));
+                    else if(t.Kind=="leak-repair")Line(w.Content,"师傅到场后自动施工，可离店；无需按开始。",17);
                     else if(t.Kind!="book-feedback")
                         Action(t.Fee>0?"开始时支付¥"+t.Fee:t.Kind=="dog-walk"?"需在街上实际走动20米以上":"实际时间推进，离开暂停",t.Started?"暂停":"开始",()=>
                         {if(t.Started){S.PauseLifeTask(t.Id);w.Rebuild();}else if(S.StartLifeTask(t.Id)){CloseWindowSilently(w);S.Time.SetPaused(false);}});

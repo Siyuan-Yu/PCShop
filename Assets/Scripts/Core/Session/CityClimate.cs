@@ -24,6 +24,11 @@ namespace PCShopSell.Core.Session
     }
     public static class CityWeather
     {
+        public static bool IsRaining(int seed,long minute)
+        {
+            long day=minute/1440;int slot=(int)(minute%1440)/180;
+            return Noise(seed^0x37491,day*8+slot)>.85;
+        }
         private static readonly double[] Means = { 12,15,19,24,28,29,25,20,15,10,6,8 };
         private static double Noise(int seed, long day)
         {

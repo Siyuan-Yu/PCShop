@@ -345,6 +345,7 @@ namespace PCShopSell.Core.Session
         public bool IsPlaceOpen(Place p)
         {
             if (p == null) return false;
+            if(NeighborhoodVenueFits(p,Clock.Now.TotalMinutes,1))return true;
             var track=RaceTracks.Get(p.Id);if(track!=null)return RacingUnlocked&&track.IsOpenAt(Clock.MinuteOfDay);
             OwnedShop mine = ShopAt(p);
             if (mine != null) return IsDedicatedVenue(p)?VenueOpen(p):mine.Sim.IsOpen;

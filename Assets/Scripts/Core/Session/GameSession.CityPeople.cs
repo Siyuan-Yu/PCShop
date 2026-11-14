@@ -59,6 +59,7 @@ namespace PCShopSell.Core.Session
         public bool CityPersonInside(CityPersonState p)
         {
             if (p == null || p.Route != null || string.IsNullOrEmpty(p.LocationPlaceId)) return false;
+            if(p.VisitId=="community-child")return false;
             if (StreetServicePlace(p.LocationPlaceId)) return false;
             if(_district.MeetingNodeId==_district.NodeId && _district.MeetingPeople.Contains(p.PersonId) && p.LocationPlaceId==_district.MeetingPlaceId)return false;
             if (!string.IsNullOrEmpty(p.ActivityId) && _cityActivities.Any(a=>a.Id==p.ActivityId && a.Active && a.RendezvousReady)) return false;

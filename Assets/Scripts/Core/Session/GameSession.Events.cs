@@ -211,6 +211,10 @@ namespace PCShopSell.Core.Session
                 "life_book_swap" => BindLifeBatch(def, 118),
                 "life_night_class" => BindLifeBatch(def, 119),
                 "life_street_fair" => BindLifeBatch(def, 120),
+                "life_blood_donation" => BindNeighborhood(def, 121),
+                "life_lost_child" => BindNeighborhood(def, 122),
+                "life_roof_leak" => BindNeighborhood(def, 123),
+                "life_festival_lantern" => BindNeighborhood(def, 124),
                 _ => def,
             };
             if (def == null) return;

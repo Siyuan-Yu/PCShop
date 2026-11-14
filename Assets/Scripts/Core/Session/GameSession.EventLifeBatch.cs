@@ -138,12 +138,13 @@ namespace PCShopSell.Core.Session
         }
         public bool StartLifeTask(string id)
         {
-            var t=_lifeTasks.FirstOrDefault(t=>t.Id==id&&!t.Done&&!t.Started&&t.Activity==null);if(t==null||IsWorking||CityActivityExclusive||_sleeping||IsGameOver)return false;
+            var t=_lifeTasks.FirstOrDefault(t=>t.Id==id&&!t.Done&&!t.Started&&t.Activity==null);if(t==null||IsWorking||CityActivityExclusive&&!FestivalTask(t)||_sleeping||IsGameOver)return false;
+            if(!NeighborhoodTaskReady(t))return Fail("请等待开放时段、现场人物或对应事项就绪。");
             if(t.Kind=="chat"&&!HasSmartphone)return false;
             if(_lifeTasks.Any(x=>x.Started&&!x.Done&&x.Remaining>0))return Fail("先暂停当前生活事项。");
             if(t.Place!=null&&(!LifeHere(t.Place)||!LifeOpen(t.Place)))return Fail("请到对应地点的开放时段开始。");
             if(t.Kind=="read"&&Backpack.GiftCount(t.Item)<1)return false;
-            if(t.Fee>0&&!Ledger.TryDebit(Clock.Today,t.Kind=="donation"?"社区募书捐款":t.Kind=="disinfect"?"防护用品":"收养基础安置",Money.FromYuan(t.Fee),t.Kind))return Fail("现金不足。");
+            if(t.Fee>0&&!Ledger.TryDebit(Clock.Today,t.Kind=="donation"?"社区募书捐款":t.Kind=="disinfect"?"防护用品":t.Kind=="lantern-craft"?"花灯制作":"收养基础安置",Money.FromYuan(t.Fee),t.Kind))return Fail("现金不足。");
             t.Fee=0;t.Started=true;t.LastMinute=Clock.Now.TotalMinutes;t.X=PlayerPosition.X;t.Y=PlayerPosition.Y;return true;
         }
         public void PauseLifeTask(string id){var t=_lifeTasks.FirstOrDefault(t=>t.Id==id);if(t!=null)t.Started=false;}
@@ -248,7 +249,7 @@ namespace PCShopSell.Core.Session
             if(t==null||t.Mode>=0||choice<0||choice>2||a?.State!=CityActivityPhase.Running||!LifeHere(LifeServicePlace)||Clock.Now.TotalMinutes-a.ActualStart<30)return false;
             t.Mode=choice;return true;
         }
-        private bool LifeActivityReady(CityActivity a)=>a.DefinitionId!="social_119"||_lifeTasks.Any(t=>t.Activity==a.Id&&t.Kind=="lesson"&&t.Mode>=0);
+        private bool LifeActivityReady(CityActivity a)=>NeighborhoodActivityReady(a)&&(a.DefinitionId!="social_119"||_lifeTasks.Any(t=>t.Activity==a.Id&&t.Kind=="lesson"&&t.Mode>=0));
         private void CompleteLifeActivity(CityActivity a)
         {
             var t=_lifeTasks.FirstOrDefault(t=>t.Activity==a.Id&&!t.Done);if(t==null)return;t.Done=true;
@@ -275,6 +276,7 @@ namespace PCShopSell.Core.Session
         private bool LifeQuietBlock(string place)=>Flags.Contains("life:quiet:"+place)&&(Clock.MinuteOfDay<420||Clock.MinuteOfDay>=1320);
         private void TickLifeBatch(long now)
         {
+            TickNeighborhood(now);
             foreach(var t in _lifeTasks.Where(t=>!t.Done).ToArray())
             {
                 if(t.Activity!=null){var a=_cityActivities.FirstOrDefault(a=>a.Id==t.Activity);if(a==null||!a.Active){t.Done=true;if(t.Kind=="lesson"&&_lifeCourse?.Activity==t.Activity)_lifeCourse.Activity=null;}continue;}
@@ -284,7 +286,8 @@ namespace PCShopSell.Core.Session
                     t.Done=true;Say("社区已用募书款补充"+bought+"本真实可领阅图书，余款留作下次购书。");continue;
                 }
                 int delta=(int)Math.Max(0,Math.Min(1,now-t.LastMinute));t.LastMinute=now;
-                if(!t.Started||IsWorking||CityActivityExclusive||_sleeping||t.Kind=="chat"&&!HasSmartphone||t.Place!=null&&(!LifeHere(t.Place)||!LifeOpen(t.Place)))continue;
+                if(!t.Started||!NeighborhoodTaskReady(t))continue;
+                if(t.Kind!="leak-repair"&&(IsWorking||CityActivityExclusive&&!FestivalTask(t)||_sleeping||t.Kind=="chat"&&!HasSmartphone||t.Place!=null&&(!LifeHere(t.Place)||!LifeOpen(t.Place))))continue;
                 if(t.Kind=="donation"&&!CitySamePlace("life_teacher"))continue;
                 if(t.Kind=="read"&&Backpack.GiftCount(t.Item)<1)continue;
                 if(t.Kind=="neighbor"&&!CitySamePlace(t.Person))
@@ -303,6 +306,7 @@ namespace PCShopSell.Core.Session
                     case "dog-walk":_lifeDog.WalkDay=Clock.Today.TotalDays;_lifeDog.Bond=Math.Min(100,_lifeDog.Bond+3);break;
                     case "gym":if(t.Mode==3){Player.Energy=Math.Min(Player.MaxEnergy,Player.Energy+3);break;} _gymRounds++;Player.SpendEnergy(t.Mode==1?6:3);Player.Health=Math.Min(100,Player.Health+(t.Mode==1?2:1));if(_gymRounds>=3)_gymReady=false;break;
                     case "neighbor":if(t.Mode==1)Flags.Add("life:quiet:"+t.Place);AddRelation(t.Person,1);break;
+                    default:FinishNeighborhoodTask(t,now);break;
                 }
             }
             int day=Clock.Today.TotalDays;

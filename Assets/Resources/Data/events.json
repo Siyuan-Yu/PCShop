@@ -308,89 +308,9 @@
     {"id": "life_book_swap", "code": true, "minDay": 4, "cooldownDays": 45, "weight": 4},
     {"id": "life_night_class", "code": true, "minDay": 6, "cooldownDays": 60, "weight": 4},
     {"id": "life_street_fair", "code": true, "minDay": 5, "cooldownDays": 40, "weight": 5},
-    {
-      "id": "life_blood_donation", "title": "献血车", "body": "街边停着献血车，工作人员问你要不要献一次。", "group": "social", "minDay": 6, "cooldownDays": 90, "weight": 3,
-      "choices": [
-        {
-          "text": "献血",
-          "effects": [
-            {"type": "health", "value": -3},
-            {"type": "rep", "value": 0.5},
-            {"type": "charm", "value": 1},
-            {"type": "text", "text": "你献了血，工作人员送了份营养包。（魅力 +1，健康 -3）"}
-          ]
-        },
-        {
-          "text": "不了",
-          "effects": [
-            {"type": "text", "text": "你说有点怕。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "life_lost_child", "title": "走丢的孩子", "body": "路边有个小孩在哭，说找不到妈妈。", "group": "social", "minDay": 5, "cooldownDays": 60, "weight": 4,
-      "choices": [
-        {
-          "text": "陪他找",
-          "effects": [
-            {"type": "rest", "value": 60},
-            {"type": "rep", "value": 1},
-            {"type": "charm", "value": 1},
-            {"type": "text", "text": "你陪他等到了家人，家长连连道谢。（名望 +1，魅力 +1）"}
-          ]
-        },
-        {
-          "text": "报警",
-          "effects": [
-            {"type": "rep", "value": 0.3},
-            {"type": "text", "text": "民警很快把孩子接走了。"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "life_roof_leak", "title": "屋顶漏水", "body": "下雨天，店里屋顶漏了一小滩水。", "group": "social", "minDay": 6, "cooldownDays": 60, "weight": 4,
-      "choices": [
-        {
-          "text": "找人修（¥200）", "disabledReason": "现金不够 ¥200",
-          "requires": [
-            {"type": "cash", "value": 200}
-          ],
-          "effects": [
-            {"type": "pay", "memo": "屋顶修补", "yuan": 200},
-            {"type": "text", "text": "师傅一小时就修好了。"}
-          ]
-        },
-        {
-          "text": "自己拿桶接",
-          "effects": [
-            {"type": "rest", "value": 40},
-            {"type": "health", "value": -2},
-            {"type": "text", "text": "你接了一晚的水，没睡好。（健康 -2）"}
-          ]
-        }
-      ]
-    },
-    {
-      "id": "life_festival_lantern", "title": "社区花灯会", "body": "社区办花灯会，邻居们都在放灯。", "group": "social", "minDay": 5, "cooldownDays": 60, "weight": 4,
-      "choices": [
-        {
-          "text": "去放灯",
-          "effects": [
-            {"type": "rest", "value": 60},
-            {"type": "charm", "value": 1},
-            {"type": "relation", "npc": "landlady", "value": 2},
-            {"type": "text", "text": "你和邻居们一起放了灯。（魅力 +1）"}
-          ]
-        },
-        {
-          "text": "在店里看看",
-          "effects": [
-            {"type": "text", "text": "你在店里远远望了一会儿。"}
-          ]
-        }
-      ]
-    }
+    {"id": "life_blood_donation", "code": true, "minDay": 6, "cooldownDays": 90, "weight": 3},
+    {"id": "life_lost_child", "code": true, "minDay": 5, "cooldownDays": 60, "weight": 4},
+    {"id": "life_roof_leak", "code": true, "minDay": 6, "cooldownDays": 60, "weight": 4},
+    {"id": "life_festival_lantern", "code": true, "minDay": 5, "cooldownDays": 60, "weight": 4}
   ]
 }

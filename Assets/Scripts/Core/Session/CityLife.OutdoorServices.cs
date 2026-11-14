@@ -34,6 +34,7 @@ namespace PCShopSell.Core.Session
             Add("social_115", "街头听歌", "life_service", 10, new CityVenueService(0, relation: 3), "听一首歌");
             Add("social_116", "老友见面", "life_service", 30, new CityVenueService(0, relation: 4), "聊聊近况");
             Add("social_119", "夜校课堂", "life_service", 60, new CityVenueService(0, relation: 1), "听课与练习");
+            Add("social_124", "社区花灯会同行", "life_service", 60, new CityVenueService(0, relation: 4, mood: 5), "一起逛花灯");
             return AddExhibitionActivities(all.ToArray());
             void Add(string id, string name, string venue, int minutes, CityVenueService service, params string[] choices)
             {

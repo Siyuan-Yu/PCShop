@@ -114,6 +114,7 @@ namespace PCShopSell.Core.Session
         }
         private bool CityVenueFits(Place venue,long start,int minutes)
         {
+            if(NeighborhoodVenueFits(venue,start,minutes))return true;
             if(IsOwnedVenue(venue))return true;
             if(SupplierClosesOnWeekend(venue))
                 for(long day=start/1440;day<=(start+Math.Max(1,minutes)-1)/1440;day++)
