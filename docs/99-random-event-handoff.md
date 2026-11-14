@@ -2,9 +2,10 @@
 
 ## 目前做到哪里
 
-**当前统一进度：91–100也已实现；下一批101–110，102空号。51–58现场互动、76真实拍摄仍待补做。** [当前工程完整交接](111-current-project-handoff-2026-11-14.md)汇总全部既有内容；[91–100规则](110-shop-finance-events-91-100.md)和[本批验证](validation/110-finance-event-results.md)为最新状态。下方较早批次里“下一批”的文字是历史记录。
+**最新为101–110已完成六项，104／108／110取消，102仍空号；下一批111–120。** 保险按年续费、住院实收80%报销不封顶；投资¥10,000，风险随智力，30天成功总回款¥20,000。[112规则](112-money-events-101-110.md) · [本批验证](validation/112-money-event-results.md)。此前各批的“下一批”是历史进度，51–58和76仍待补做。
 
-这项工作是把已经存在的百余个随机事件逐个改得更真实，让选择和角色成长有实际影响。当前随机池有 **123 项**，批量验收编号为 **01–126**。102 已并入 09，125、126 是独立触发的社交和救急事件。城郊升社区、社区升公园、公园升花园以及许星澜的首次赛车引导属于独立主线。
+
+这项工作是把已经存在的百余个随机事件逐个改得更真实，让选择和角色成长有实际影响。当前随机池有 **120 项**，批量验收编号为 **01–126**。102 已并入 09，125、126 是独立触发的社交和救急事件。城郊升社区、社区升公园、公园升花园以及许星澜的首次赛车引导属于独立主线。
 
 - **01–10 已完成改造**。初版基准提交为 `4994c27`，本轮归档包含后续复核调整。现行规则见[前 10 项](98-random-event-index.md#前-10-项玩法)。
 - **01、04、05、06 的复核调整已实现**。按属性判定的随机事件统一使用达标后随点数增加的成功率，详见[配置说明](events-json.md#掷骰)。
@@ -31,7 +32,7 @@
 
 | 内容 | 当前记录与入口 |
 | --- | --- |
-| 编号、配置和抽取 | [events.json](../Assets/Resources/Data/events.json) 决定目录顺序。加载器合并普通 JSON 条目和 C# 事件，再由 [GameSession.Events.cs](../Assets/Scripts/Core/Session/GameSession.Events.cs) 按 ID 绑定当前店、人物或商品。123 项中有 92 项使用 C#。31–40 见 [GameSession.EventRacingBatch.cs](../Assets/Scripts/Core/Session/GameSession.EventRacingBatch.cs)，41–50 见 [GameSession.EventSocialBatch.cs](../Assets/Scripts/Core/Session/GameSession.EventSocialBatch.cs)。 |
+| 编号、配置和抽取 | [events.json](../Assets/Resources/Data/events.json) 决定目录顺序。加载器合并普通 JSON 条目和 C# 事件，再由 [GameSession.Events.cs](../Assets/Scripts/Core/Session/GameSession.Events.cs) 按 ID 绑定当前店、人物或商品。120 项中有 97 项使用 C#。31–40 见 [GameSession.EventRacingBatch.cs](../Assets/Scripts/Core/Session/GameSession.EventRacingBatch.cs)，41–50 见 [GameSession.EventSocialBatch.cs](../Assets/Scripts/Core/Session/GameSession.EventSocialBatch.cs)。 |
 | 待处理窗口 | 当前事件需要先选完才能存档，赛车驾驶中也不能存档。随机触发日期、次数和冷却随存档恢复。 |
 | 经营后续 | 检查日期、留货、钱包、推广及亲戚借款由事件状态保存。应急灯、店铺人气、日薪、租约和转介绍归对应门店与业务存档。住院和门诊用现有时间与现金账，出院位置使用城市路网。 |
 | 采购与借款 | [GameSession.EventDeals.cs](../Assets/Scripts/Core/Session/GameSession.EventDeals.cs) 处理 21–25。周维成清仓进入实际在途配送与采购流水，固定还款进入延迟入账，林远航借款记录到期日、概率、催款和宽限状态。 |

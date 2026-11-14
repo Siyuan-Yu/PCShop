@@ -12,7 +12,9 @@ namespace PCShopSell.Game.UI
         {
             OpenWindow("经营待办", 850, 700, w =>
             {
-                Line(w.Content, "会员与采购优惠", 20, Ui.Accent);
+                BuildMoneyEventTasks(w);
+                if (S.MyShops.Any(s => S.HasEventMembership(s)) || S.EventCoupon != null || S.EventFlashSales.Length > 0 || S.AtBank)
+                    Line(w.Content, "会员与采购优惠", 20, Ui.Accent);
                 foreach (var shop in S.MyShops.Where(s => S.HasEventMembership(s)))
                 {
                     Line(w.Content, S.ShopTitle(shop) + " · 满¥100积1分，50分抵下次¥100", 17);
@@ -86,7 +88,10 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Label(row, S.ShopTitle(shop) + " · 自选配件采购", 17), -1, 38, 1);
                     Ui.Size(Ui.Button(row, "选购", () => { _onlineTab = 5; OpenOnlinePanel(target); }, 17), 90, 38);
                 }
-                if (S.ShopEventTasks.Length == 0) Line(w.Content, "暂时没有待处理事件。", 18, Ui.Dim);
+                if (S.ShopEventTasks.Length == 0 && !S.PrivateInvestments.Any(i => !i.Settled)
+                    && !(S.ScratchTicket is EventScratchTicket ticket && !ticket.Paid)
+                    && !S.EventBills.Any(b => b.CreditCents > 0 || S.EventBillRefundDue(b.Id) > 0)
+                    && !S.Flags.Contains("event-idle-sale")) Line(w.Content, "暂时没有待处理事件。", 18, Ui.Dim);
             });
         }
     }

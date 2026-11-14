@@ -64,8 +64,7 @@ namespace PCShopSell.Core.Session
         public bool IsWeekendWorking => _weekendWorkEnds > 0;
         public bool IsWorking => IsContractWorking || IsWeekendWorking;
         public GameTimestamp WeekendWorkEnds => new GameTimestamp(_weekendWorkEnds);
-        internal bool CanStartWeekendWork => Clock.Today.IsWeekend && Clock.Now.Hour >= 9 && Clock.Now.Hour <= 15
-            && !IsWorking && !IsGameOver && !_sleeping && !Racing && !CityActivityExclusive && Trip == null;
+        internal bool CanStartWeekendWork => false; // Retired event; existing saved shifts still finish.
         public bool HasWorkContract => WorkContract != null && !WorkContract.Paid;
         public Place WorkPlace => WorkContract == null || !City.HasPlace(WorkContract.PlaceId) ? null : City.GetPlace(WorkContract.PlaceId);
         public static string PlayerWorkHours(int start, int end) => $"{start / 60:00}:{start % 60:00}–" + (end >= 1440 ? "次日 " : "") + $"{end % 1440 / 60:00}:{end % 60:00}";

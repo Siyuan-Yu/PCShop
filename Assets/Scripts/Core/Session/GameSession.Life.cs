@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
@@ -203,14 +203,17 @@ namespace PCShopSell.Core.Session
         private void Hospitalize()
         {
             var hospital = NearbyHospital();
+            bool covered = HasHospitalCoverage;
             RecoverAt(hospital, HospitalDays * GameTimestamp.MinutesPerDay - Clock.MinuteOfDay + WakeUpMinute);
             Money bill = HospitalPerDay * HospitalDays;
-            Ledger.ForceDebit(Clock.Today, "医疗", bill, (hospital?.Name ?? "") + "住院");
+            var medicalCharge = Ledger.ForceDebit(Clock.Today, "医疗", bill, (hospital?.Name ?? "") + "住院");
+            var reimbursed = ReimburseEventHospital(medicalCharge, covered);
             Player.Health = 80;
             Player.Hunger = 70;
             Player.Energy = Player.MaxEnergy;
             Player.SleepDebt = 0;
             Show("住院了", $"长期挨饿、透支，你病倒了。住院 {HospitalDays} 天，医药费 {bill}。"
+                + (reimbursed.IsPositive ? $"保险已报销 {reimbursed}，自付 {bill - reimbursed}。" : "")
                 + (hospital == null ? "" : $"你现在在{hospital.Name}门口。"));
         }
 

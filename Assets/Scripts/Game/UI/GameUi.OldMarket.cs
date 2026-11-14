@@ -38,6 +38,12 @@ namespace PCShopSell.Game.UI
             }
             if (_oldMarketStall == 4)
             {
+                if (S.EventIdleItems.Length > 0)
+                {
+                    var idle = Ui.Row(w.Content, 38, 8);
+                    Ui.Size(Ui.Label(idle, "也可处理带来的闲置物品", 17), -1, 38, 1);
+                    Ui.Size(Ui.Button(idle, "查看闲置", OpenEventIdleSale, 17), 110, 38);
+                }
                 var owned = OldMarketCatalog.Gifts.Where(g => S.Backpack.GiftCount(g.Id) > 0).ToArray();
                 if (owned.Length == 0) { Para(w.Content, "还没买东西，去摊位看看吧。", 18, Ui.Dim); return; }
                 foreach (var item in owned)

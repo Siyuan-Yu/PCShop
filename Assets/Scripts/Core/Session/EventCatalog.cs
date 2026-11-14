@@ -34,23 +34,6 @@ namespace PCShopSell.Core.Session
                 Id = "blackout", Title = "停电了", MinDay = 3, CooldownDays = 25, Weight = 8,
                 When = s => s.NeedsEmergencyLighting,
             },
-            new EventDef
-            {
-                Id = "money_parttime_offer", Title = "周末搬货兼职", Group = "money", MinDay = 4, CooldownDays = 30, Weight = 6,
-                Body = $"朋友今天缺人帮忙搬货。现在开工，干满 {GameSession.WeekendWorkHours} 小时后结算 ¥{GameSession.WeekendWorkPay}。",
-                When = s => s.CanStartWeekendWork,
-                Choices =
-                {
-                    new EventChoice
-                    {
-                        Text = $"开工 · {GameSession.WeekendWorkHours} 小时",
-                        Enabled = s => s.CanStartWeekendWork,
-                        DisabledReason = "周末白天且空闲时可以接班",
-                        Apply = s => { s.StartWeekendWork(); return null; },
-                    },
-                    new EventChoice { Text = "不去", Apply = _ => "你婉拒了这次兼职。" },
-                },
-            },
             new EventDef { Id = "inspection", Title = "市场监管来检查", When = s => s.InspectionShop() != null },
             new EventDef { Id = "regulars", Title = "熟客想带朋友", MinDay = 3, CooldownDays = 6, Weight = 10, When = s => s.ReferralShop() != null },
             new EventDef { Id = "thief", Title = "货少了", When = s => s.DiscrepancyShop() != null },
@@ -152,6 +135,12 @@ namespace PCShopSell.Core.Session
             new EventDef { Id = "money_tax_refund", Group = "money", Title = "经营补贴申请", When = s => s.CanOfferFinanceBatch(98) },
             new EventDef { Id = "money_phone_scam", Group = "money", Title = "诈骗电话", When = s => s.CanOfferFinanceBatch(99) },
             new EventDef { Id = "money_bank_manager", Group = "money", Title = "银行客户经理", When = s => s.CanOfferFinanceBatch(100) },
+            new EventDef { Id = "money_utility_refund", Title = "水电多收了", Group = "money", When = s => s.CanOfferMoneyBatch(101) },
+            new EventDef { Id = "money_win_lottery", Title = "刮刮乐", Group = "money", When = s => s.CanOfferMoneyBatch(103) },
+            new EventDef { Id = "money_overpaid_rent", Title = "多交了房租", Group = "money", When = s => s.CanOfferMoneyBatch(105) },
+            new EventDef { Id = "money_insurance_agent", Title = "住院保险", Group = "money", When = s => s.CanOfferMoneyBatch(106) },
+            new EventDef { Id = "money_invest_tip", Title = "朋友推荐的理财", Group = "money", When = s => s.CanOfferMoneyBatch(107) },
+            new EventDef { Id = "money_second_hand", Title = "闲置旧物处理", Group = "money", When = s => s.CanOfferMoneyBatch(109) },
             new EventDef
             {
                 Id = "review", Title = "网上有人说你家卖翻新货", MinDay = 10, CooldownDays = 14, Weight = 7,

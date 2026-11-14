@@ -111,7 +111,6 @@ namespace PCShopSell.Core.Session
         }
 
 #if UNITY_EDITOR
-        private const int RetiredRelativeEventNumber = 102;
         public const int DebugLastEventNumber = 126;
         public bool DebugEventAcceptanceSession => IsCityLifeTest && Flags.Contains("debug:event-acceptance");
         public bool DebugEventAcceptanceReady => DebugEventAcceptanceSession && PendingEvent == null && !IsGameOver
@@ -120,10 +119,10 @@ namespace PCShopSell.Core.Session
         public static EventDef DebugNumberedEvent(int number)
         {
             if (number < 1 || number > DebugLastEventNumber) return null;
-            if (number == RetiredRelativeEventNumber) return null;
+            if (number is 102 or 104 or 108 or 110) return null;
             if (number == 125) return new EventDef { Id = LeisureInvitationId, Title = "熟人约你出去走走" };
             if (number == 126) return new EventDef { Id = "friend-bailout", Title = "林远航来了" };
-            int index = number - 1 - (number > RetiredRelativeEventNumber ? 1 : 0);
+            int index = number - 1 - new[] { 102, 104, 108, 110 }.Count(n => n < number);
             return EventCatalog.All.ElementAtOrDefault(index);
         }
 
@@ -144,7 +143,7 @@ namespace PCShopSell.Core.Session
             Player.Charm = 55;
             Player.Energy = 100;
             Player.Health = 100;
-            Clock.Restore(new GameDate(19), 11 * 60); // Saturday, so the weekend work event can also be tried.
+            Clock.Restore(new GameDate(19), 11 * 60); // Stable acceptance date; removed event numbers remain empty.
             ArriveAtNode(shop.Place.NodeId);
             CurrentPlace = shop.Place;
             shop.Sim.PlayerPresent = true;
@@ -182,15 +181,6 @@ namespace PCShopSell.Core.Session
                 PrepareEventStock(shop);
             }
             if (number == 13) Player.Health = System.Math.Min(75, Player.Health);
-            if (template.Id == "money_parttime_offer" && !CanStartWeekendWork)
-            {
-                if (Trip != null) StopTrip();
-                int day = Clock.Today.TotalDays;
-                if (Clock.MinuteOfDay > 15 * 60 + 59) day++;
-                while (!new GameDate(day).IsWeekend) day++;
-                long start = GameTimestamp.From(new GameDate(day), 11 * 60).TotalMinutes;
-                if (start > Clock.Now.TotalMinutes) AdvanceClock((int)(start - Clock.Now.TotalMinutes));
-            }
             if (number == 6 && EventPromotion() == null)
             {
                 // A prepared promotion uses a named shop from the real map even if the test shop

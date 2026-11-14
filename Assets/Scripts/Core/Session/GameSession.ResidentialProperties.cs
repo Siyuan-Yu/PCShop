@@ -162,9 +162,9 @@ namespace PCShopSell.Core.Session
                 var attribution = ResidentialRentAttribution(place.Id, today.TotalDays);
                 if (!rent.IsPositive || Ledger.HasSource(attribution.SourceEventId)) continue;
                 string name = place == Home ? HomeTitle : place.Name;
-                Ledger.ForceDebit(today, "房租", rent, name + "周租", attribution);
-                total += rent;
-                charges.Add($"{name} {rent}");
+                var paid = ChargeRecordedBill("rent-home", place.Id, ResidentialLeaseSignedDay(place), attribution.SourceEventId, rent, "房租", name + "周租", attribution);
+                total += paid;
+                charges.Add($"{name} {paid}");
             }
             if (charges.Count > 0) Popup?.Invoke("住宅周租已扣款", string.Join("\n", charges) + $"\n合计 {total}");
         }

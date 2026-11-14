@@ -224,6 +224,7 @@ namespace PCShopSell.Core.Session
         }
         private void TickFinanceBatch(long now)
         {
+            TickMoneyBatch(now);
             _eventFlashSales.RemoveAll(f => Clock.Now.TotalMinutes >= f.Until || ShopAt(f.ShopId) is not OwnedShop s || s.RetailKind != f.RetailKind || (s.Lease?.SignedDay ?? -1) != f.SignedDay);
             foreach (var t in _shopEventTasks.Where(t => !t.Done && t.Kind is "bank" or "subsidy" or "return-customer").ToArray())
             {

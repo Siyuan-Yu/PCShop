@@ -261,18 +261,20 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void WeekendWorkPaysOnlyAfterElapsedShiftEvenAfterReload()
+        public void RetiredWeekendWorkCannotStartButLegacySavedShiftStillSettlesOnce()
         {
             var city = CityLayout.FromData(GameSessionTests.Layout());
             var start = GameTimestamp.From(new GameDate(5), 11 * 60);
             using (var session = new GameSession(city, 3, Money.FromYuan(30000), start, true))
             {
                 session.RaiseEvent("money_parttime_offer");
-                Assert.IsTrue(session.ResolveEvent(0));
+                Assert.IsNull(session.PendingEvent);
                 Assert.AreEqual(start, session.Clock.Now);
-                Assert.IsTrue(session.IsWeekendWorking);
+                Assert.IsFalse(session.IsWeekendWorking);
                 Assert.IsFalse(session.Ledger.Entries.Any(e => e.Memo == "周末搬货兼职"));
-                using (var restored = GameSession.Load(city, session.CreateSave()))
+                var legacy = session.CreateSave();
+                legacy.weekendWorkEnds = start.AddMinutes(GameSession.WeekendWorkHours * 60).TotalMinutes;
+                using (var restored = GameSession.Load(city, legacy))
                 {
                     Assert.IsTrue(restored.IsWeekendWorking);
                     Assert.AreEqual(GameSession.WeekendWorkHours * 60, restored.WorkMinutesLeft);

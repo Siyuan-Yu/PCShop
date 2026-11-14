@@ -1,8 +1,9 @@
 # 随机事件编号与验收
 
-**最新进度：91–100已实现，下一批101–110（102空号）。51–58和76仍待补做。** [完整交接](111-current-project-handoff-2026-11-14.md)。下方早期进度为历史记录。
+**最新：101–110已落实；104、108、110移除，102空号，下一批111–120。** 现有120项随机事件，编号不重排。详见[112现行规则](112-money-events-101-110.md)。
 
-日常随机池共有 123 项。编号沿用逐项讨论和游戏内验收工具的顺序。01–50 已完成本轮改造，下一批从 51 开始。[41–50 当前规则](103-social-events-41-50.md) · [31–40 规则](101-racing-events-31-40.md) · [后续金额审查](102-event-money-audit.md) · [扩容后的消费项目](104-premium-venue-services.md)。第 102 项的亲戚借款已合并到第 09 项。第 125、126 项由独立流程触发，也可在同一工具验收。片区主线和许星澜的首次赛车引导使用各自的验收入口。
+
+日常随机池共有 120 项。编号沿用逐项讨论和游戏内验收工具的顺序。01–50 已完成本轮改造，下一批从 51 开始。[41–50 当前规则](103-social-events-41-50.md) · [31–40 规则](101-racing-events-31-40.md) · [后续金额审查](102-event-money-audit.md) · [扩容后的消费项目](104-premium-venue-services.md)。第 102 项的亲戚借款已合并到第 09 项。第 125、126 项由独立流程触发，也可在同一工具验收。片区主线和许星澜的首次赛车引导使用各自的验收入口。
 
 [逐批改造进度与换机交接](99-random-event-handoff.md) · [所有事件的触发、选项和结果](100-random-event-details.md)
 
@@ -159,13 +160,13 @@
 | 101 | 水电多收了 | `money_utility_refund` |
 | 102 | 已合并到 09 · 亲戚来借钱 | — |
 | 103 | 刮刮乐 | `money_win_lottery` |
-| 104 | 钱包找不到了 | `money_lost_wallet_own` |
+| 104 | 已取消 · 钱包找不到了 | — |
 | 105 | 多交了房租 | `money_overpaid_rent` |
-| 106 | 保险推销 | `money_insurance_agent` |
+| 106 | 年度住院保险 | `money_insurance_agent` |
 | 107 | 朋友推荐的理财 | `money_invest_tip` |
-| 108 | 周末搬货兼职 | `money_parttime_offer` |
-| 109 | 二手货处理 | `money_second_hand` |
-| 110 | 电费涨价 | `money_utilities_hike` |
+| 108 | 已取消 · 周末搬货兼职 | — |
+| 109 | 闲置旧物处理 | `money_second_hand` |
+| 110 | 已取消 · 电费涨价 | — |
 | 111 | 街头募捐 | `money_charity_box` |
 | 112 | 流感季 | `life_flu_season` |
 | 113 | 邻居嫌吵 | `life_neighbor_noise` |

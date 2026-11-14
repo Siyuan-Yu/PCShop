@@ -109,7 +109,8 @@ namespace PCShopSell.Core.Session
         /// <summary>直接触发某个事件（测试和脚本用）。</summary>
         public void RaiseEvent(string id)
         {
-            EventDef def = EventCatalog.All.First(e => e.Id == id);
+            EventDef def = EventCatalog.All.FirstOrDefault(e => e.Id == id);
+            if (def == null) return;
             Raise(def, Clock.Today);
         }
 
@@ -194,6 +195,12 @@ namespace PCShopSell.Core.Session
                 "money_tax_refund" => BindFinanceBatch(def, 98),
                 "money_phone_scam" => BindFinanceBatch(def, 99),
                 "money_bank_manager" => BindFinanceBatch(def, 100),
+                "money_utility_refund" => BindMoneyBatch(def, 101),
+                "money_win_lottery" => BindMoneyBatch(def, 103),
+                "money_overpaid_rent" => BindMoneyBatch(def, 105),
+                "money_insurance_agent" => BindMoneyBatch(def, 106),
+                "money_invest_tip" => BindMoneyBatch(def, 107),
+                "money_second_hand" => BindMoneyBatch(def, 109),
                 _ => def,
             };
             if (def == null) return;

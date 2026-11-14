@@ -33,14 +33,15 @@ namespace PCShopSell.Core.Session
             result.KnownMandatory += CityClimatePaymentsWithin(days);
             // Daily wages are contracted fixed bills, not a second additional safety margin.
             result.KnownMandatory += Money.FromYuan(Employees.Sum(x => (long)x.Person.DailyWageYuan) + McnDailyWages) * days;
+            var billCredits = ForecastBillCredits();
             for (int offset = 1; offset <= days; offset++)
             {
                 var date = today.AddDays(offset);
                 foreach (var shop in _shops)
-                    if (shop.Lease?.RentDue(date.TotalDays) == true) result.KnownMandatory += RentOf(shop);
-                if (PendingLease?.RentDue(date.TotalDays) == true) result.KnownMandatory += PendingLease.Rent;
-                foreach (var place in ResidentialRentsDue(date.TotalDays)) result.KnownMandatory += SignedResidentialRent(place);
-                if (date.IsMonthStart) result.KnownMandatory += HomeUtilitiesAtDay(date.TotalDays);
+                    if (shop.Lease?.RentDue(date.TotalDays) == true) result.KnownMandatory += ForecastBillNet(billCredits, "rent-shop", shop.Place.Id, shop.Lease.SignedDay, RentOf(shop));
+                if (PendingLease?.RentDue(date.TotalDays) == true) result.KnownMandatory += ForecastBillNet(billCredits, "rent-shop", PendingLease.PlaceId, PendingLease.SignedDay, PendingLease.Rent);
+                foreach (var place in ResidentialRentsDue(date.TotalDays)) result.KnownMandatory += ForecastBillNet(billCredits, "rent-home", place.Id, ResidentialLeaseSignedDay(place), SignedResidentialRent(place));
+                if (date.IsMonthStart) result.KnownMandatory += ForecastBillNet(billCredits, "utilities", Home.Id, 0, HomeUtilitiesAtDay(date.TotalDays));
             }
             result.EstimatedDaily = Money.FromYuan(VehicleCount(VehicleKind.Car) * 40L + VehicleCount(VehicleKind.Van) * 60L) * days;
             result.KnownMandatory += Money.FromCents(_employeePayroll.Sum(p=>Math.Max(0,p.OvertimeCents-p.Shops.Sum(x=>x.PaidOvertimeCents))));

@@ -231,14 +231,12 @@ namespace PCShopSell.Core.Session
             {
                 Money rent = RentOf(shop);
                 if (!rent.IsPositive || !shop.Lease.RentDue(day)) continue;
-                paid += rent;
-                Ledger.ForceDebit(today, "房租", rent, ShopTitle(shop) + "周租",
+                paid += ChargeRecordedBill("rent-shop", shop.Place.Id, shop.Lease.SignedDay, "rent:" + shop.Place.Id + ":" + day, rent, "房租", ShopTitle(shop) + "周租",
                     LedgerAttribution.ForShop(shop.Place.Id, "rent:" + shop.Place.Id + ":" + day, "租金"));
             }
             if (PendingLease?.RentDue(day) == true)
             {
-                paid += PendingLease.Rent;
-                Ledger.ForceDebit(today, "房租", PendingLease.Rent, City.GetPlace(PendingLease.PlaceId).Name + "周租（待交房）",
+                paid += ChargeRecordedBill("rent-shop", PendingLease.PlaceId, PendingLease.SignedDay, "rent:" + PendingLease.PlaceId + ":" + day, PendingLease.Rent, "房租", City.GetPlace(PendingLease.PlaceId).Name + "周租（待交房）",
                     LedgerAttribution.ForShop(PendingLease.PlaceId, "rent:" + PendingLease.PlaceId + ":" + day, "租金"));
             }
             if (paid.IsPositive) Say("商铺周租已扣款 " + paid);

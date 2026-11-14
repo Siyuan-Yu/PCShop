@@ -166,7 +166,7 @@ namespace PCShopSell.Game.UI
                     _eventBatchShown++;
                     return;
                 }
-                _eventBatchUnavailable.Add($"#{number:00} " + (entry == null ? "已并入 #09" : entry.Title + " · 当前条件不适用"));
+                _eventBatchUnavailable.Add($"#{number:00} " + (entry == null ? number == 102 ? "已并入 #09" : "已移除，保留空号" : entry.Title + " · 当前条件不适用"));
                 if (AnyModalOpen || !S.DebugEventAcceptanceReady) return;
             }
             _eventBatchNext = 0;

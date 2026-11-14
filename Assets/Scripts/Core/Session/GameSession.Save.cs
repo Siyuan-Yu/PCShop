@@ -48,6 +48,7 @@ namespace PCShopSell.Core.Session
                 SaveOldMarket(d);
                 SaveShopEventBatch(d);
                 SaveFinanceBatch(d);
+                SaveMoneyBatch(d);
                 return d;
             }
             finally
@@ -339,6 +340,7 @@ namespace PCShopSell.Core.Session
             RestoreOldMarket(d);
             RestoreShopEventBatch(d);
             RestoreFinanceBatch(d);
+            RestoreMoneyBatch(d);
             InitializeExpansionResidents();
             LoadVenueBusinesses(d);
             LoadEnergyPayroll(d);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
@@ -414,7 +414,7 @@ namespace PCShopSell.Core.Session
         public Money ShopDeposits => Money.FromCents(_shops.Where(s => s.Rented).Sum(s => s.Lease.Deposit.Cents));
 
         public Money NetWorth() => Ledger.Balance + InventoryValue() + ShopDeposits + (PendingLease?.Deposit ?? Money.Zero) + ContractDeposits
-            + VehicleValue + GaragePropertyValue + UsedMotorAssetValue + VentureValue + PropertyValue + (HomePriceCents > 0 ? HomePurchasePrice : Money.Zero) + FundValue + CityEquityValue + ShortPositionEquity + BankDeposit - TotalDebt;
+            + VehicleValue + GaragePropertyValue + UsedMotorAssetValue + VentureValue + PropertyValue + (HomePriceCents > 0 ? HomePurchasePrice : Money.Zero) + FundValue + CityEquityValue + ShortPositionEquity + BankDeposit + EventMoneyAssets - TotalDebt;
 
         public void Dispose()
         {
@@ -533,7 +533,7 @@ namespace PCShopSell.Core.Session
             ChargeResidentialRent(today);
             if (today.IsMonthStart)
             {
-                if (HomeUtilities.IsPositive) Ledger.ForceDebit(today, "水电", HomeUtilities, "住处固定水电",new LedgerAttribution(LedgerBusinessKind.Personal,sourceEventId:"home:utilities:"+today.TotalDays,transactionKind:"固定水电"));
+                if (HomeUtilities.IsPositive) ChargeRecordedBill("utilities", Home.Id, 0, "home:utilities:" + today.TotalDays, HomeUtilities, "水电", "住处固定水电",new LedgerAttribution(LedgerBusinessKind.Personal,sourceEventId:"home:utilities:"+today.TotalDays,transactionKind:"固定水电"));
             }
             OnRealtyDay(today.TotalDays);
             OnBusinessDay(previous, today);

@@ -1,0 +1,8 @@
+SMOKE shot 103-ticket-covered
+SMOKE shot 103-ticket-scratching
+SMOKE shot 103-ticket-settled
+SMOKE shot 107-investment-offer
+SMOKE shot 106-107-policy-and-investment
+SMOKE shot 109-real-idle-sale
+SMOKE Money 101-110 actual scratching, annual policy, hospitalization, investment and resale passed.
+SMOKE RESULT code=0 errors=0
