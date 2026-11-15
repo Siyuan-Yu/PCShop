@@ -17,7 +17,7 @@ namespace PCShopSell.Core.Shop
         /// <summary>需要的最低知名度。</summary>
         public double MinReputation { get; }
 
-        /// <summary>能不能在店里的升级页直接买。不能的：老存档里买过的照样生效；新玩法里换了拿法（手机去手机店、货架去家具城、自助结账是任务奖励）。</summary>
+        /// <summary>是否在商店上架。已有升级继续生效。</summary>
         public bool Offered { get; }
 
         /// <summary>要先有智能手机（去手机店买）。</summary>
@@ -27,7 +27,7 @@ namespace PCShopSell.Core.Shop
         public string SoldAt { get; }
 
         /// <summary>卖这项的店叫什么（给玩家看）。</summary>
-        public string SoldAtName => SoldAt == ShopUpgrades.PhoneShop ? "手机店" : SoldAt == ShopUpgrades.FurnitureMall ? "宜居家具城" : "";
+        public string SoldAtName => SoldAt == ShopUpgrades.PhoneShop ? ShopUpgrades.PhoneShopName : SoldAt == ShopUpgrades.FurnitureMall ? "宜居家具城" : "";
 
         public ShopUpgradeDef(string id, string name, string description, long priceYuan, string requires = null, double minReputation = 0, bool offered = true, bool needsSmartphone = false, string soldAt = null)
         {
@@ -60,13 +60,14 @@ namespace PCShopSell.Core.Shop
 
         /// <summary>卖升级的店的业态（和地图里 business 一致）。</summary>
         public const string PhoneShop = "手机";
+        public const string PhoneShopName = "米家";
         public const string FurnitureMall = "家具";
 
         public static readonly IReadOnlyList<ShopUpgradeDef> All = new[]
         {
             new ShopUpgradeDef(Phone, "智能手机", "换掉按键机。本身不赚钱，但是开通收款码的前提。", 1200, null, 0, false),
             new ShopUpgradeDef(Qr, "开通收款码", "没带现金的顾客也能买单，结账也更快（1 分钟一单）。需要先有智能手机。", 200, null, 0, true, true, PhoneShop),
-            new ShopUpgradeDef(SelfCheckout, "自助结账平台", "排队的顾客自动结账，不用你一单一单点；仍然要有人在店里营业。", 4500, Qr, 8, true, false, PhoneShop),
+            new ShopUpgradeDef(SelfCheckout, "自助结账平台", "开通收款码后可安装。排队的顾客会自动结账，仍需有人在店营业。", 4500, requires: Qr, soldAt: PhoneShop),
             new ShopUpgradeDef(Shelf1, "货架扩容 I", "库存容量 +20 格。", 1000, null, 0, false),
             new ShopUpgradeDef(Shelf2, "货架扩容 II", "库存容量再 +20 格。", 2000, Shelf1, 0, false),
             new ShopUpgradeDef(Shelf3, "货架扩容 III", "库存容量再 +30 格。", 3500, Shelf2, 0, false),

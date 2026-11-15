@@ -5,7 +5,10 @@ using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
+using PCShopSell.Game;
+using PCShopSell.Game.UI;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace PCShopSell.Tests
 {
@@ -15,7 +18,9 @@ namespace PCShopSell.Tests
         {
             using var fixture = DistrictProgressionTests.Make();
             using var first = new GameSession(fixture.City, 17, Money.FromYuan(10000000), GameTimestamp.From(new GameDate(42), 600), true, false, false);
-            first.Tick(0);
+            At(first, GameSession.StarterRaceGarageId);
+            Assert.IsTrue(first.UnlockRacingAtGarage());
+            At(first, first.Home.Id);
             var data = first.CreateSave(); data.districtProgress = new DistrictProgress { UnlockedTier = 3 };
             return GameSession.Load(first.City, data);
         }
@@ -40,6 +45,57 @@ namespace PCShopSell.Tests
             string body = s.PendingEvent.Body;
             Assert.IsTrue(s.ResolveEvent(choice), body);
             return s.CityActivities.Last(a => a.Active);
+        }
+
+        [TestCase("act_ktv_singer", 0)]
+        [TestCase("act_dinner_linhe", 1000)]
+        [TestCase("act_oldmarket_guwen", 0)]
+        [TestCase("act_expo_curator", 0)]
+        public void ConfirmedAppointmentStartsFromPausedReceptionAndChargesOnlyOnce(string eventId, int fare)
+        {
+            using var s = Make();
+            var appointment = Accept(s, eventId);
+            Assert.That(s.StartVenueAppointment(appointment.Id), Is.False);
+            s.Clock.Restore(new GameTimestamp(appointment.ScheduledStart).Date, (int)(appointment.ScheduledStart % 1440));
+            At(s, appointment.VenueId);
+            s.Time.SetPaused(true);
+            var cash = s.Ledger.Balance;
+            var root = new GameObject("ReservedVenueReceptionTest");
+            root.SetActive(false);
+            var controller = root.AddComponent<GameController>();
+            typeof(GameController).GetProperty("Session").SetValue(controller, s);
+            typeof(GameController).GetProperty("City").SetValue(controller, s.City);
+            var previous = UnityEngine.EventSystems.EventSystem.current;
+            var ui = new GameUi(controller);
+            try
+            {
+                ui.OnEnteredPlace(s.CurrentPlace);
+                var button = ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Button>())
+                    .Single(item => item.name == "StartVenueAppointment");
+                Assert.That(button.interactable, Is.True);
+                Assert.That(button.GetComponentInChildren<Text>().text, Does.Contain(fare == 0 ? "免费" : Money.FromYuan(fare).ToString()));
+                Assert.That(s.Time.IsHeld, Is.True);
+                Assert.That(appointment.State, Is.EqualTo(CityActivityPhase.Gathering));
+                Assert.That(s.Ledger.Balance, Is.EqualTo(cash));
+
+                var start = s.Clock.Now;
+                button.onClick.Invoke();
+                Assert.That(s.RunningCityActivity, Is.SameAs(appointment));
+                Assert.That(s.Clock.Now, Is.EqualTo(start));
+                Assert.That(s.Time.IsRunning, Is.True);
+                Assert.That(ui.AnyModalOpen, Is.False);
+                Assert.That(s.Ledger.Balance, Is.EqualTo(cash - Money.FromYuan(fare)));
+                Assert.That(s.StartVenueAppointment(appointment.Id), Is.False);
+                Assert.That(s.Ledger.Balance, Is.EqualTo(cash - Money.FromYuan(fare)));
+            }
+            finally
+            {
+                ui.CloseAllWindows();
+                foreach (var canvas in ui.Canvases) UnityEngine.Object.DestroyImmediate(canvas.gameObject);
+                UnityEngine.Object.DestroyImmediate(root);
+                if (previous == null && UnityEngine.EventSystems.EventSystem.current != null)
+                    UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);
+            }
         }
 
         [Test]
@@ -89,6 +145,127 @@ namespace PCShopSell.Tests
             var balance = s.Ledger.Balance; Attend(s, a);
             Assert.AreEqual(balance - Money.FromYuan(cost), s.Ledger.Balance);
             s.AdvanceClock(121); Assert.AreEqual(balance - Money.FromYuan(cost), s.Ledger.Balance);
+        }
+
+        [Test]
+        public void KaraokeVenuesAreOpenAllDayAndAcceptAnAppointmentAcrossMidnight()
+        {
+            using var s = Make();
+            var venues = s.City.Places.Where(p => p.Business == "venue_ktv").ToArray();
+            Assert.That(venues, Has.Length.EqualTo(4));
+            foreach (var venue in venues)
+            {
+                Assert.That(s.OpeningHoursText(venue), Is.EqualTo("24小时"), venue.Name);
+                foreach (int minute in new[] { 0, 180, 645, 1439 })
+                {
+                    s.Clock.Restore(new GameDate(26), minute);
+                    Assert.That(s.IsPlaceOpen(venue), Is.True, $"{venue.Name} at {minute}");
+                }
+            }
+            At(s, "life_ktv");
+            s.Clock.Restore(new GameDate(26), 23 * 60);
+            long nearMidnight = GameTimestamp.From(s.Clock.Today, 23 * 60 + 45).TotalMinutes;
+            Assert.That(s.CityActivityBlocker("ktv", Array.Empty<string>(), nearMidnight), Is.Null);
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void WenYinCanBookAndFinishKaraokeInTheMorningBeforeHerShift(bool singerNearby)
+        {
+            using var s = Make();
+            const string singer = "life_singer";
+            s.Meet(singer, 21);
+            At(s, "player_shop");
+            s.Clock.Restore(new GameDate(26), 9 * 60 + 34);
+            Assert.That(s.SetVehicle(VehicleKind.Taxi), Is.True);
+            if (singerNearby)
+            {
+                var venue = s.City.GetPlace("life_ktv");
+                var singerState = s.CityPersonState(singer);
+                var position = s.StandOf(venue);
+                singerState.Route = null;
+                singerState.LocationPlaceId = venue.Id;
+                singerState.X = position.X;
+                singerState.Y = position.Y;
+                long midMorning = GameTimestamp.From(s.Clock.Today, 10 * 60 + 45).TotalMinutes;
+                Assert.That(s.CityActivityInvitationBlocker("ktv", singer, midMorning, false), Is.Null);
+            }
+            long workingTime = GameTimestamp.From(s.Clock.Today, 16 * 60).TotalMinutes;
+            Assert.That(s.CityActivityInvitationBlocker("ktv", singer, workingTime, false), Does.Contain("还在工作"));
+            long start = s.SuggestCityActivityStart("ktv", singer);
+            var time = new GameTimestamp(start);
+            if (singerNearby) Assert.That(time.Date, Is.EqualTo(s.Clock.Today));
+            Assert.That(time.MinuteOfDay + CityLifeCatalog.Activity("ktv").Minutes, Is.LessThanOrEqualTo(14 * 60));
+            Assert.That(s.CityActivityInvitationBlocker("ktv", singer, start, false), Is.Null);
+            var invitation = s.ScheduleCityActivityInvitation("ktv", singer, start, false);
+            Assert.That(invitation, Is.Not.Null);
+
+            At(s, "life_ktv");
+            s.Clock.Restore(time.Date, time.MinuteOfDay);
+            s.Player.Health = s.Player.Hunger = s.Player.Energy = 100;
+            Assert.That(s.PrepareVenueCompanions(s.CurrentPlace), Is.True);
+            Assert.That(s.SelectVenueService("ktv", 0), Is.True);
+            Assert.That(s.RunningCityActivity, Is.SameAs(invitation));
+            s.AdvanceClock(invitation.Duration);
+            Assert.That(invitation.State, Is.EqualTo(CityActivityPhase.Completed));
+        }
+
+        [Test]
+        public void SingerInvitationRegistersContactOnArrivalAndAwardsSevenAfterSinging()
+        {
+            using var s = Make();
+            var a = Accept(s, "act_ktv_singer");
+            const string singer = "life_singer";
+            int before = s.Relation(singer);
+            Attend(s, a);
+            Assert.That(s.IsMet(singer), Is.True);
+            Assert.That(s.Relation(singer), Is.EqualTo(before));
+
+            s.AdvanceClock(a.Duration);
+            Assert.That(a.State, Is.EqualTo(CityActivityPhase.Completed));
+            Assert.That(s.Relation(singer) - before, Is.EqualTo(7));
+            Assert.That(a.Participants.Single().RelationAfter - before, Is.EqualTo(7));
+        }
+
+        [TestCase("ktv_premium1", 8)]
+        [TestCase("ktv_premium2", 10)]
+        public void PremiumKtvScalesTotalByServiceAndKeepsPriorInteractionsAfterReload(string service, int expected)
+        {
+            using var s = Make();
+            const string guest = "life_ning";
+            long start = s.SuggestCityActivityStart(service, guest);
+            var a = s.ScheduleCityActivity(service, new[] { guest }, start);
+            Assert.That(a, Is.Not.Null);
+            a.ServiceConfirmed = true;
+            a.ServiceChoice = 0;
+            int before = s.Relation(guest);
+            Attend(s, a);
+            Assert.That(s.Relation(guest) - before, Is.EqualTo(1));
+
+            using var loaded = Reload(s);
+            var saved = loaded.RunningCityActivity;
+            loaded.AdvanceClock(saved.Duration);
+            Assert.That(saved.State, Is.EqualTo(CityActivityPhase.Completed));
+            Assert.That(loaded.Relation(guest) - before, Is.EqualTo(expected));
+            Assert.That(saved.Participants.Single().RelationAfter - before, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void LegacyInProgressInvitationAlreadyAboveTheLimitGrantsNoMoreRelation()
+        {
+            using var s = Make();
+            var a = Accept(s, "act_ktv_singer");
+            Attend(s, a);
+            const string singer = "life_singer";
+            s.AddRelation(singer, 14);
+            int beforeReload = s.Relation(singer);
+            a.Participants.Single().RelationGainTracked = false;
+
+            using var loaded = Reload(s);
+            var saved = loaded.RunningCityActivity;
+            loaded.AdvanceClock(saved.Duration);
+            Assert.That(saved.State, Is.EqualTo(CityActivityPhase.Completed));
+            Assert.That(loaded.Relation(singer), Is.EqualTo(beforeReload));
         }
 
         [TestCase("race_ning_study", "life_ning", 43, 0)]

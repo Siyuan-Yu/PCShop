@@ -99,29 +99,60 @@ namespace PCShopSell.Core.Session
         /// <summary>本次到访手动选择的送货地址；每次进入地点时重置。</summary>
         public string CourierDest { get; set; }
 
-        /// <summary>购物配送优先使用本次选择。进货优先送到与货源对应的自营店。</summary>
+        /// <summary>购物配送优先使用本次选择，再按家具用途或批发货源匹配门店。</summary>
         public OwnedShop CourierShop(bool defaultToShop)
         {
+            if (CartRequiresHomeDelivery) return null;
             if (CourierDest != null) return ResolveCourierShop(CourierDest, defaultToShop);
 
             var source = PurchaseDestination(CurrentPlace);
-            if (source != null)
+            if (source?.Business == MallBusiness)
             {
-                string kind = source.Business == FarmBusiness ? "restaurant"
+                var furniture = _cart.Where(line => line.ByTruck > 1e-9 && line.Furniture != null
+                    && (line.DeliveryShopKind != null || line.Furniture.ForShop
+                        && FurnitureShops.AllKinds.Any(kind => FurnitureShops.ShopOrder(kind, line.Furniture) >= 0))).ToArray();
+                if (furniture.Length > 0)
+                {
+                    var selected = furniture.Select(line => line.DeliveryShopKind).Where(kind => kind != null).Distinct().ToArray();
+                    bool Fits(string kind) => furniture.All(line => FurnitureShops.ShopOrder(kind, line.Furniture) >= 0);
+                    if (selected.Length == 1 && Fits(selected[0]))
+                    {
+                        var preferred = MatchPurchaseDeliveryShop(kind => kind == selected[0]);
+                        if (preferred != null) return preferred;
+                    }
+                    var compatible = MatchPurchaseDeliveryShop(Fits);
+                    if (compatible != null) return compatible;
+                }
+            }
+            else if (source != null)
+            {
+                string kind = source.Kind == PlaceKind.Wholesaler ? "computer"
+                    : source.Business == FarmBusiness ? "restaurant"
                     : source.Business == ModelProducts.Business ? "models"
                     : RetailShopTypes.All.FirstOrDefault(type => ShopSupplyMarketId(type) == source.Id);
+                if (kind == null)
+                {
+                    var cartKinds = _cart.Where(line => line.ByTruck > 1e-9 && line.DeliveryShopKind != null)
+                        .Select(line => line.DeliveryShopKind).Distinct().ToArray();
+                    if (cartKinds.Length == 1) kind = cartKinds[0];
+                }
                 if (kind != null)
                 {
-                    bool Matches(OwnedShop shop) => shop?.Rented == true && shop.RetailKind == kind && !IsDedicatedVenue(shop.Place);
-                    var last = LastPurchaseDeliveryShop;
-                    if (Matches(last)) return last;
-                    if (Matches(_focus)) return _focus;
-                    var branch = _shops.Find(Matches);
-                    if (branch != null) return branch;
+                    var matched = MatchPurchaseDeliveryShop(type => type == kind);
+                    if (matched != null) return matched;
                 }
             }
 
             return ResolveCourierShop(_lastPurchaseDeliveryDest, defaultToShop);
+        }
+
+        private OwnedShop MatchPurchaseDeliveryShop(Func<string, bool> matchesKind)
+        {
+            bool Matches(OwnedShop shop) => shop?.Rented == true && !IsDedicatedVenue(shop.Place) && matchesKind(shop.RetailKind);
+            var last = LastPurchaseDeliveryShop;
+            if (Matches(last)) return last;
+            if (Matches(_focus)) return _focus;
+            return _shops.Find(Matches);
         }
 
         private OwnedShop ResolveCourierShop(string destination, bool defaultToShop)

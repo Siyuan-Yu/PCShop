@@ -164,6 +164,7 @@ namespace PCShopSell.Core.Session
                 case ParcelKind.Furniture:
                     FurnitureDef f = FurnitureCatalog.Get(id);
                     if (f == null || f.Starter) return false;
+                    if (f.Id == HomeWorkbenchId) return Fail("居家办公台在米家出售。");
                     name = f.Name;
                     break;
                 case ParcelKind.Outfit:
@@ -307,6 +308,8 @@ namespace PCShopSell.Core.Session
 
         public string PlacementError(bool shop, FurnitureDef def, PlacedFurniture cand, int ignore, IReadOnlyList<RectD> extra = null)
         {
+            if (def.Id == HomeWorkbenchId && (shop || HomeTier < HomeWorkbenchMinimumResidenceTier))
+                return "居家办公台只能安装在中型及以上住宅。";
             int capacity = PetShopCatalog.HouseCapacity(def.Id);
             if (capacity > 0 || PetShopCatalog.IsToyFixture(def.Id))
             {

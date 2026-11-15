@@ -37,8 +37,12 @@ namespace PCShopSell.Core.Session
                         Add("商务球叙套餐", 180, 6800, "预留练习区与会客休息席，含器材服务和充分交流时间。", new CityVenueService(6800, energy: -18, mood: 23, charm: 2, relation: 16));
                         break;
                     case "fishing":
+                        // Keep the old IDs for existing sessions and reservations.
                         Add("专业钓具体验", 120, 800, "租用专业钓具并接受技巧指导，适合认真学习。", new CityVenueService(800, energy: 2, mood: 17, intelligence: 2, relation: 9));
+                        all[all.Count - 1].EventOnly = true;
                         Add("湖畔私享钓位", 180, 1800, "预留安静钓位与休憩服务，适合长时间聊天放松。", new CityVenueService(1800, energy: 12, mood: 25, relation: 14));
+                        all[all.Count - 1].EventOnly = true;
+                        all.AddRange(FishingCatalog.Passes.Skip(1).Select(FishingPass));
                         break;
                     case "hike":
                         Add("生态向导路线", 120, 900, "由向导讲解植物与城市生态，路线较长。", new CityVenueService(900, energy: -17, mood: 19, health: 4, intelligence: 2, relation: 10));

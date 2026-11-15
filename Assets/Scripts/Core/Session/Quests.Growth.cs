@@ -10,7 +10,7 @@ namespace PCShopSell.Core.Session
     public enum QuestTarget
     {
         Agency, Renovate, Stock, Market, Counter, Staff, PhoneShop, Upgrades, Mall,
-        Pricing, Orders, Restock, Finance, Enterprise, Direct, Ventures, Park, Creators, Property, Cooker, Bed, ScooterDealer, CommunityGoal
+        Pricing, Orders, Restock, Finance, Enterprise, Direct, Ventures, Park, Creators, Property, Cooker, Bed, ScooterDealer, CommunityGoal, RacingEnrollment
     }
 
     public static partial class Quests
@@ -171,7 +171,7 @@ namespace PCShopSell.Core.Session
                 case "branch_review": return ManagedVentures.Any(v => !IsParkVenture(v) && v.LastSettledDay > v.OpenDay);
                 case "park_plan": return HasPark || (QuestCompleted("branch_review") && Listings.Any(l => ParkPurchaseBlocker(l) == null));
                 case "park": return QuestCompleted("park_plan") && (HasPark || Listings.Any(l => ParkPurchaseBlocker(l) == null));
-                case "creator": return DistrictAccessTier >= 1;
+                case "creator": return KolAmbassadorAccessBlocker == null;
                 case "property_lesson": return HomeTier > 0 || OwnedProperties.Count > 0 || Ledger.Balance >= HomePurchasePrice.Scale(.3);
                 default: return false;
             }

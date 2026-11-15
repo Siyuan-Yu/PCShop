@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
@@ -332,6 +333,7 @@ namespace PCShopSell.Game.UI
         /// </summary>
         public void OpenTruckWindow()
         {
+            string category = null;
             OpenWindow("叫货车 · " + GameSession.TruckDriverName, 1180, 860, w =>
             {
                 Para(w.Content, $"每辆货车最多装 {GameSession.CourierCapacityKg:0} 千克，运费按路程算。先选送到哪，再把左边的东西装车。" +
@@ -349,27 +351,33 @@ namespace PCShopSell.Game.UI
                 RectTransform loadCol = CartColumnBox(cols, out RectTransform loadList);
                 Ui.Size(hereCol, -1, 520, 1);
                 Ui.Size(loadCol, -1, 520, 1);
-                Line(hereList, "这里能搬的", 17, Ui.Accent);
+
+                const float headerHeight = 36;
+                var hereScroll = hereList.GetComponentInParent<ScrollRect>();
+                ((RectTransform)hereScroll.transform).Anchor(0, 0, 1, 1, top: headerHeight + 10);
+                var filterRow = Ui.Row(hereCol, headerHeight, 8)
+                    .Anchor(0, 1, 1, 1, 6, -headerHeight - 6, 6, 6);
+                Ui.Size(Ui.Label(filterRow, "这里能搬的", 17, TextAnchor.MiddleLeft, Ui.Accent), -1, -1, 1);
+                Ui.Size(Ui.Label(filterRow, "物品分类", 15, TextAnchor.MiddleLeft, Ui.Dim), 68);
+
                 var items = S.MovableHere();
-                if (items.Count == 0) Para(hereList, "这里没有能交给司机的东西。", 15, Ui.Dim);
-                foreach (MovableItem m in items)
+                var categories = items.Select(item => item.Category).Distinct().OrderBy(value => value)
+                    .Prepend("全部物品").ToArray();
+                int selected = Array.IndexOf(categories, category);
+                if (selected < 0) category = null;
+                var filter = Ui.Choice(filterRow, categories, Math.Max(0, selected), index =>
                 {
-                    MovableItem it = m;
-                    double left = it.Have - S.TruckAmount(it.Key);
-                    if (left <= 1e-9) continue;
-                    RectTransform card = Ui.Row(hereList, 38, 4);card.name="TruckLoad_"+it.Key;
-                    card.gameObject.AddComponent<Image>().color = CartCard;
-                    string have = it.ByWeight ? $"{left:0.##} 千克" : $"×{left:0}";
-                    Ui.Size(Ui.Label(card, $"  {it.Name} {have}<size=13><color=#A8B0BA>　{it.Where} · 每{(it.ByWeight ? "千克" : "件")} {it.UnitKg:0.##} 千克</color></size>", 15), -1, -1, 1);
-                    HoldButton(w, card, "装车", Ui.ButtonHot, left, it.ByWeight ? "千克" : "件", n => S.AddToTruck(it.Key, n), 90, destWhy == null);
-                    var drag = card.gameObject.AddComponent<CartDragItem>();
-                    drag.Dropped = (pos, cam) =>
-                    {
-                        if (!RectTransformUtility.RectangleContainsScreenPoint(loadCol, pos, cam)) return;
-                        S.AddToTruck(it.Key, left);
-                        w.Rebuild();
-                    };
-                }
+                    category = index == 0 ? null : categories[index];
+                    Ui.Clear(hereList);
+                    BuildTruckAvailableItems(w, hereList, loadCol, items, category, destWhy == null);
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(hereList);
+                    hereScroll.StopMovement();
+                    hereScroll.verticalNormalizedPosition = 1;
+                });
+                filter.name = "TruckItemCategory";
+                filter.interactable = categories.Length > 1;
+                Ui.Size(filter, 200, headerHeight);
+                BuildTruckAvailableItems(w, hereList, loadCol, items, category, destWhy == null);
 
                 int cars = S.TruckCars;
                 Line(loadList, S.TruckLoad.Count == 0 ? "装货单（点左边“装车”，按住装多件；也可以拖过来）"
@@ -393,6 +401,34 @@ namespace PCShopSell.Game.UI
                 Ui.Size(send, -1, -1, 1);
 
             }, true, true, () => S.ClearTruckLoad());
+        }
+
+        private void BuildTruckAvailableItems(Window w, RectTransform list, RectTransform loadCol,
+            List<MovableItem> items, string category, bool canLoad)
+        {
+            bool any = false;
+            foreach (var item in items)
+            {
+                if (category != null && item.Category != category) continue;
+                double left = item.Have - S.TruckAmount(item.Key);
+                if (left <= 1e-9) continue;
+                any = true;
+                RectTransform card = Ui.Row(list, 38, 4);
+                card.name = "TruckLoad_" + item.Key;
+                card.gameObject.AddComponent<Image>().color = CartCard;
+                string have = item.ByWeight ? $"{left:0.##} 千克" : $"×{left:0}";
+                Ui.Size(Ui.Label(card, $"  {item.Name} {have}<size=13><color=#A8B0BA>　{item.Where} · 每{(item.ByWeight ? "千克" : "件")} {item.UnitKg:0.##} 千克</color></size>", 15), -1, -1, 1);
+                HoldButton(w, card, "装车", Ui.ButtonHot, left, item.ByWeight ? "千克" : "件", n => S.AddToTruck(item.Key, n), 90, canLoad);
+                var drag = card.gameObject.AddComponent<CartDragItem>();
+                drag.Dropped = (pos, cam) =>
+                {
+                    if (!RectTransformUtility.RectangleContainsScreenPoint(loadCol, pos, cam)) return;
+                    S.AddToTruck(item.Key, left);
+                    w.Rebuild();
+                };
+            }
+
+            if (!any) Para(list, category == null ? "这里没有剩余可搬的物品。" : "这一类没有剩余可搬的物品。", 15, Ui.Dim);
         }
 
         // ---------- 店内 / 中介退租 ----------

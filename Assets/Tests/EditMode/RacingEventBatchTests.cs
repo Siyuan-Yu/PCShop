@@ -17,7 +17,7 @@ namespace PCShopSell.Tests
             var s = new GameSession(fixture.City, 7, Money.FromYuan(10000000), GameTimestamp.From(new GameDate(42), 600), true, false, false);
             s.Tick(0);
             At(s, "dealer"); Assert.IsTrue(s.BuyMotor("e_range"));
-            At(s, "garage_0"); Assert.IsTrue(s.AcquireGarage("garage_0"));
+            At(s, "garage_0"); Assert.IsTrue(s.UnlockRacingAtGarage()); Assert.IsTrue(s.AcquireGarage("garage_0"));
             Assert.IsTrue(s.ParkCommuteMotor(s.Garage.Single().Id, "garage_0"));
             return s;
         }
@@ -87,8 +87,14 @@ namespace PCShopSell.Tests
         public void CharityCharges2000AtStartAndAwardsMedalOnlyAfterFinish()
         {
             using var s = Make();
+            const string host = "racer_1";
+            int before = s.Relation(host);
             s.RaiseEvent("race_charity"); Assert.IsTrue(s.ResolveEvent(0));
-            var b = s.EventRaceBookings.Single(); ArriveForBooking(s, b);
+            var b = s.EventRaceBookings.Single();
+            Assert.AreEqual(host, b.PersonId);
+            Assert.IsTrue(s.IsMet(host));
+            Assert.AreEqual(before, s.Relation(host));
+            ArriveForBooking(s, b);
             string id = s.Garage.Single().Id; var balance = s.Ledger.Balance;
             Assert.IsTrue(s.StartEventRace("charity", id));
             Assert.AreEqual(balance - Money.FromYuan(2000), s.Ledger.Balance);

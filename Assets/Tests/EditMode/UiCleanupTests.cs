@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
+using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Finance;
 using PCShopSell.Core.Home;
@@ -82,6 +83,133 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void PhoneAppsUseTheSameCenteredFrameFromDesktopAndStore()
+        {
+            using var rig = new Rig();
+            rig.S.SetSmartphone(true);
+
+            void CheckAppFrame(string buttonName)
+            {
+                rig.Button(buttonName).onClick.Invoke();
+                var panel = rig.Components<RectTransform>().Last(rect => rect.name == "Panel"
+                    && (rect.parent.name.StartsWith("Window_") || rect.parent.name.StartsWith("Workspace_")));
+                Assert.That(panel.sizeDelta, Is.EqualTo(new Vector2(1500, 880)), buttonName);
+                Assert.That(panel.anchoredPosition, Is.EqualTo(Vector2.zero), buttonName);
+                Assert.That(rig.S.Time.IsHeld, Is.EqualTo(buttonName != "PhoneApp_live" && buttonName != "PhoneDownload_live"), buttonName);
+            }
+
+            foreach (var app in PhoneApps.All)
+            {
+                rig.Ui.OpenPhone();
+                CheckAppFrame("PhoneApp_" + app.Id);
+                rig.Ui.CloseAllWindows();
+                if (app.Id == PhoneApps.Store) continue;
+                rig.Ui.OpenPhoneStore();
+                CheckAppFrame("PhoneDownload_" + app.Id);
+                rig.Ui.CloseAllWindows();
+            }
+        }
+
+        [Test]
+        public void RacingAndNoticeHudShortcutsOpenTheirPanels()
+        {
+            using (var r = new Rig())
+            {
+                if (GameSession.FirstChapterTrial)
+                    Assert.False(r.Ui.TryHotkey(KeyCode.R));
+                else
+                {
+                    var racing = r.Button("HudRacing");
+                    Assert.AreEqual("赛车 R", racing.GetComponentInChildren<Text>().text);
+                    Assert.NotNull(racing.transform.Find("NavigationIcon").GetComponent<Image>().sprite);
+                    Assert.True(r.Ui.TryHotkey(KeyCode.R));
+                    Assert.True(r.Components<Transform>().Any(t => t.name == "Window_湖区赛车"));
+                    Assert.False(r.Ui.TryHotkey(KeyCode.N));
+                    Assert.True(r.Ui.CloseTopWindow());
+                }
+                Assert.True(r.Ui.TryHotkey(KeyCode.N));
+                Assert.True(r.Components<Transform>().Any(t => t.name == "Window_通知记录（本次会话）"));
+            }
+        }
+
+        [Test]
+        public void FurnitureFilterRoutesSharedCounterToMatchingShopAtCheckout()
+        {
+            using (var r = new Rig(HomeTests.Make(200000, 10 * 60)))
+            {
+                r.S.MainShop.RetailKind = PetShopCatalog.ShopKind;
+                r.S.DebugAddListing("tea", 0, 60, Money.FromYuan(3000));
+                GameSessionTests.Teleport(r.S, "agency");
+                Assert.True(r.S.SignLease("tea", true, "secondhand"));
+                var branch = r.S.ShopAt("tea");
+
+                GameSessionTests.Teleport(r.S, "mall");
+                r.S.SetCourierDest(r.S.MainShop);
+                Assert.True(r.S.CartAddFurniture(FurnitureCatalog.Shelf));
+                Assert.True(r.S.Checkout(false));
+                GameSessionTests.Teleport(r.S, "mall");
+                Assert.AreSame(r.S.MainShop, r.S.LastPurchaseDeliveryShop);
+
+                r.Ui.OnEnteredPlace(r.S.CurrentPlace);
+                r.Button("ShopTab_二手旧物店").onClick.Invoke();
+                r.Button("QuantityPlus_furn:" + FurnitureCatalog.ShopCounter).onClick.Invoke();
+                r.Ui.RebuildWindows();
+                StringAssert.Contains(r.S.ShopTitle(branch) + "  ▼", r.Text);
+
+                r.Button("ShopTab_全部").onClick.Invoke();
+                StringAssert.Contains(r.S.ShopTitle(branch) + "  ▼", r.Text,
+                    "Browsing another tab should not reroute the counter already in the cart.");
+                r.Button("CartCheckout").onClick.Invoke();
+                Assert.AreEqual(branch.Place.Id, r.S.Couriers.Last().ShopId);
+            }
+        }
+
+        [Test]
+        public void TruckItemFilterUsesTheSameTypeForBackpackAndStockAndKeepsTheLoad()
+        {
+            using (var r = new Rig())
+            {
+                const string highFood = "pet:high:catfood";
+                string carried = "bag|gift:" + PetShopCatalog.CatFood;
+                string stocked = "shop|goods:" + PetShopCatalog.CatFood;
+                string premium = "shop|goods:" + highFood;
+                r.S.Backpack.AddGift(PetShopCatalog.CatFood, 1);
+                r.S.PlayerShop.Stock.ForceAddGoods(PetShopCatalog.CatFood, 2);
+                r.S.PlayerShop.Stock.ForceAddGoods(highFood, 1);
+                r.Ui.OpenTruckWindow();
+
+                Dropdown Filter() => r.Components<Dropdown>().Single(dropdown => dropdown.name == "TruckItemCategory");
+                Transform Item(string key) => r.Components<Transform>().SingleOrDefault(t => t.name == "TruckLoad_" + key);
+                void Choose(string label)
+                {
+                    var filter = Filter();
+                    int index = filter.options.FindIndex(option => option.text == label);
+                    Assert.GreaterOrEqual(index, 0);
+                    filter.value = index;
+                }
+
+                Assert.NotNull(Item(premium));
+                Choose("基础宠物用品");
+                Assert.NotNull(Item(carried));
+                Assert.NotNull(Item(stocked));
+                Assert.IsNull(Item(premium));
+                Item(carried).GetComponentInChildren<Button>().onClick.Invoke();
+                r.Ui.RebuildWindows();
+                Assert.AreEqual("基础宠物用品", Filter().captionText.text);
+                Assert.IsNull(Item(carried), "The only carried unit is already on the loading list.");
+
+                Choose("高档宠物用品");
+                Assert.NotNull(Item(premium));
+                Assert.IsNull(Item(stocked));
+                Assert.AreEqual(1, r.S.TruckAmount(carried));
+                Assert.True(r.Components<Transform>().Any(t => t.name.StartsWith("CartLine_" + carried + "_to_")));
+                Choose("全部物品");
+                Assert.NotNull(Item(stocked));
+                Assert.NotNull(Item(premium));
+            }
+        }
+
+        [Test]
         public void BusinessPagesReuseOneWindowAndReleaseTheirSinglePauseHold()
         {
             using (var r = new Rig())
@@ -124,6 +252,36 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void QuickStockBulkOrdersUseAllAffordableLotsAndLiquidateThePosition()
+        {
+            using var r = new Rig();
+            var s = r.S;
+            const string id = "city_chip";
+            s.SetSmartphone(true);
+            var cost = s.CityInvestmentTradeTotal(id, 200, buy: true);
+            var cash = s.CityInvestmentTradeTotal(id, 300, buy: true) - Money.FromCents(1);
+            s.Ledger.ForceDebit(s.Clock.Today, "测试", s.Ledger.Balance - cash);
+            s.RestockReserveYuan = cash.Cents / 100;
+            r.Ui.OpenCityInvestments();
+
+            Assert.That(r.Components<InputField>(), Has.Length.EqualTo(1));
+            Assert.That(r.Components<Transform>().Any(item => item.name == "StockQuote_hardware"), Is.False);
+            Assert.That(r.Button("StockQuickSellAll_" + id).interactable, Is.False);
+            r.Button("StockQuickBuyMax_" + id).onClick.Invoke();
+            Assert.That(s.Ledger.Balance, Is.EqualTo(cash));
+            r.Button("StockReserveConfirm").onClick.Invoke();
+            Assert.That(s.CityInvestmentUnits(id), Is.EqualTo(200));
+            Assert.That(s.Ledger.Balance, Is.EqualTo(cash - cost));
+            Assert.That(r.Button("StockQuickBuyMax_" + id).interactable, Is.False);
+
+            var proceeds = s.CityInvestmentTradeTotal(id, 200, buy: false);
+            r.Button("StockQuickSellAll_" + id).onClick.Invoke();
+            Assert.That(s.CityInvestmentUnits(id), Is.Zero);
+            Assert.That(s.CityInvestmentCost(id), Is.EqualTo(Money.Zero));
+            Assert.That(s.Ledger.Balance, Is.EqualTo(cash - cost + proceeds));
+        }
+
+        [Test]
         public void BrandWindowIsIndependentFromBusinessNavigation()
         {
             using (var r = new Rig())
@@ -148,6 +306,49 @@ namespace PCShopSell.Tests
                 Assert.True(r.Ui.CloseTopWindow());
                 Assert.False(r.S.Time.IsHeld);
             }
+        }
+
+        [Test]
+        public void AmbassadorActionsAppearOnlyAfterUnlockingTheCommunity()
+        {
+            if (GameSession.FirstChapterTrial) Assert.Ignore("需要验证社区解锁前后。");
+            var city = CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text));
+            var session = GameSession.CreateCityLifePreset(city, "brand_ready_two");
+            Assert.True(session.FoundBrand("computer", "测试品牌", "value"));
+            using var r = new Rig(session);
+            const string singer = "life_singer";
+            session.Meet(singer, 21);
+            var district = new DistrictProgress();
+            typeof(GameSession).GetField("_district", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(session, district);
+            bool HasButton(string caption) => r.Components<Button>().Any(b => b.GetComponentInChildren<Text>()?.text == caption);
+
+            r.Ui.OpenKolManagement();
+            Assert.That(r.Ui.AnyModalOpen, Is.False);
+            r.Ui.OpenBrandBusiness();
+            Assert.That(HasButton("代言人（KOL）"), Is.False);
+            Assert.That(HasButton("查看品牌代言人"), Is.False);
+            r.Ui.CloseAllWindows();
+            r.Ui.OpenPersonDialogue(singer, remote: true);
+            Assert.That(r.Ui.AnyModalOpen, Is.True);
+            StringAssert.Contains(">KOL<", r.Text);
+            Assert.That(HasButton("聊聊"), Is.True);
+            Assert.That(HasButton("谈品牌代言与直播"), Is.False);
+            var cash = session.Ledger.Balance;
+            Assert.That(session.KolSigningBlocker(singer, 90, 1, remote: true), Does.Contain("解锁社区片区"));
+            Assert.That(session.SignKolAmbassador(singer, 90, 1, remote: true), Is.False);
+            Assert.That(session.Ledger.Balance, Is.EqualTo(cash));
+            Assert.That(session.ActiveKolAmbassador(singer), Is.Null);
+
+            district.UnlockedTier = 1;
+            r.Ui.RebuildWindows();
+            r.ClickCaption("谈品牌代言与直播");
+            var confirm = r.Button("KolConfirmSign_" + singer);
+            Assert.That(confirm.interactable, Is.True);
+            confirm.onClick.Invoke();
+            Assert.That(session.ActiveKolAmbassador(singer), Is.Not.Null);
+            r.Ui.CloseAllWindows();
+            r.Ui.OpenBrandBusiness();
+            Assert.That(HasButton("代言人（KOL）"), Is.True);
         }
 
         [Test]
@@ -328,6 +529,35 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void UsedDelegationIsAlwaysVisibleAndCanBeEditedOnTheCounter()
+        {
+            using var r = new Rig();
+            Assert.True(r.S.SetShopMainCategory("secondhand"));
+            var state = r.S.SpecialBusiness(r.S.CurrentShop.Place.Id);
+            r.Ui.OpenDock();
+            r.Ui.DebugSelectTab(0);
+
+            var budget = r.Components<InputField>().Single(input => input.name == "UsedDailyBudgetInput");
+            var offer = r.Components<InputField>().Single(input => input.name == "UsedMaxOfferInput");
+            Assert.AreSame(budget.transform.parent.parent.parent, offer.transform.parent.parent.parent);
+            Assert.False(r.Ui.AnyModalOpen);
+            Assert.False(r.Button("UsedDelegationToggle").interactable);
+            Assert.False(r.Components<Button>().Any(button => button.GetComponentInChildren<Text>()?.text == "代管设置"));
+            budget.text = "1200";
+            budget.onEndEdit.Invoke(budget.text);
+            offer.text = "350";
+            offer.onEndEdit.Invoke(offer.text);
+            r.Button("UsedRisk_积极").onClick.Invoke();
+
+            Assert.AreEqual(1200, state.DailyBudget);
+            Assert.AreEqual(350, state.MaxOffer);
+            Assert.AreEqual(.8, state.Risk);
+            Assert.AreEqual(Ui.ButtonHot, r.Button("UsedRisk_积极").image.color);
+            Assert.False(r.Ui.AnyModalOpen);
+            Assert.False(r.S.Time.IsHeld);
+        }
+
+        [Test]
         public void GlobalPriceSliderOnlyCommitsOnExplicitConfirmation()
         {
             using (var r = new Rig())
@@ -337,6 +567,57 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(original, r.S.PlayerShop.Markup);
                 r.Button("Save_GlobalMarkupSlider").onClick.Invoke(); Assert.AreEqual(1.75, r.S.PlayerShop.Markup, 1e-9);
             }
+        }
+
+        [Test]
+        public void PricingKeepsItsButtonsDuringStockUpdatesAndPriceConfirmation()
+        {
+            using var r = new Rig();
+            var shop = r.S.PlayerShop;
+            var part = PartCatalog.Get("cpu0");
+            var other = PartCatalog.Get("cpu1");
+            shop.Stock.Clear();
+            shop.SetShelfCapacity(new System.Collections.Generic.Dictionary<string, double> { { "cpu", 60 } });
+            shop.Stock.ForceAdd(part, true, 2);
+            r.Ui.OpenDock();
+            r.Ui.DebugSelectTab(2);
+            var slider = r.Components<Slider>().Single(s => s.name == "GlobalMarkupSlider");
+            var save = r.Button("Save_GlobalMarkupSlider");
+            var edit = r.Button("EditPrice_cpu0_boxed");
+            double original = shop.Markup;
+            slider.value = 1.75f;
+
+            shop.Stock.ForceAddGoods(Gifts.Soda, 1);
+            r.Call("RefreshDock");
+            Assert.That(r.Button("Save_GlobalMarkupSlider"), Is.SameAs(save));
+            Assert.That(r.Button("EditPrice_cpu0_boxed"), Is.SameAs(edit));
+
+            Assert.That(shop.Stock.TryRemove(part, true, 1), Is.True);
+            shop.Stock.ForceAdd(other, true, 1);
+            r.Call("RefreshDock");
+            Assert.That(r.Components<Slider>().Single(s => s.name == "GlobalMarkupSlider"), Is.SameAs(slider));
+            Assert.That(r.Button("EditPrice_cpu0_boxed"), Is.SameAs(edit));
+            Assert.That(r.Button("EditPrice_cpu1_boxed"), Is.Not.Null);
+            Assert.That(edit.transform.parent.GetComponentsInChildren<Text>().Any(label => label.text.Contains("已陈列 1 件")), Is.True);
+            Assert.That(slider.value, Is.EqualTo(1.75f));
+            Assert.That(shop.Markup, Is.EqualTo(original));
+            Assert.That(save.interactable, Is.True);
+
+            save.onClick.Invoke();
+            Assert.That(shop.Markup, Is.EqualTo(1.75).Within(1e-9));
+            Assert.That(r.Button("Save_GlobalMarkupSlider"), Is.SameAs(save));
+            Assert.That(save.interactable, Is.False);
+            Assert.That(shop.Stock.TryRemove(other, true, 1), Is.True);
+            r.Call("RefreshDock");
+            Assert.That(r.Components<Button>().Any(button => button.name == "EditPrice_cpu1_boxed"), Is.False);
+            Assert.That(r.Button("EditPrice_cpu0_boxed"), Is.SameAs(edit));
+
+            long price = shop.PriceOf(part, true).Yuan;
+            edit.onClick.Invoke();
+            r.Button("PricePlus_cpu0_boxed").onClick.Invoke();
+            r.Button("ConfirmPrice_cpu0_boxed").onClick.Invoke();
+            Assert.That(shop.PriceOf(part, true).Yuan, Is.EqualTo(price + 1));
+            Assert.That(r.Button("EditPrice_cpu0_boxed"), Is.SameAs(edit));
         }
 
         [Test]
@@ -426,11 +707,39 @@ namespace PCShopSell.Tests
         {
             using (var r = new Rig())
             {
-                r.Ui.OpenMyPanel(); StringAssert.Contains("需购买家庭经营大屏", r.Button("MyHomeWorkbench").GetComponentInChildren<Text>().text);
+                r.Ui.OpenMyPanel(); StringAssert.Contains("到米家购买居家办公台", r.Button("MyHomeWorkbench").GetComponentInChildren<Text>().text);
                 r.S.HomeBox.AddFurniture(GameSession.HomeWorkbenchId, 1); r.Ui.RebuildWindows();
+                StringAssert.Contains("需要中型及以上住宅安装", r.Button("MyHomeWorkbench").GetComponentInChildren<Text>().text);
+                HomeWorkbenchTests.MoveAndInstallWorkbench(r.S);
+                GameSessionTests.Teleport(r.S, r.S.MainShop.Place.Id); r.Ui.RebuildWindows();
                 StringAssert.Contains("回家后可用", r.Button("MyHomeWorkbench").GetComponentInChildren<Text>().text);
                 GameSessionTests.Teleport(r.S, r.S.Home.Id); r.Ui.RebuildWindows(); Assert.True(r.Button("MyHomeWorkbench").interactable);
             }
+        }
+
+        [Test]
+        public void MiHomeStoreShowsUpgradeBlockersAndSellsCheckoutEquipmentWithLowReputation()
+        {
+            using var fixture = DistrictProgressionTests.Make();
+            using var r = new Rig(new GameSession(fixture.City, 7, Money.FromYuan(2_000_000), fixture.Clock.Now));
+            r.S.PlayerShop.Reputation = 2;
+            var place = r.S.City.Places.Single(p => p.Business == GameSession.PhoneBusiness);
+            Assert.AreEqual("米家", place.Name);
+            GameSessionTests.Teleport(r.S, place.Id);
+            r.Ui.OnEnteredPlace(place);
+            const string plus = "QuantityPlus_upgrade:selfcheck";
+            Assert.IsFalse(r.Button(plus).interactable);
+            StringAssert.Contains("需要先买：开通收款码", r.Text);
+            Assert.True(r.S.BuyUpgrade(PCShopSell.Core.Shop.ShopUpgrades.Qr));
+            r.Ui.RebuildWindows();
+            Assert.IsTrue(r.Button(plus).interactable);
+            var hold = r.Button(plus).GetComponent<HoldRepeat>();
+            hold.Commit(1);
+            r.Ui.RebuildWindows();
+            r.Button("CartCheckout").onClick.Invoke();
+            Assert.True(r.S.HasUpgrade(PCShopSell.Core.Shop.ShopUpgrades.SelfCheckout));
+            Assert.IsTrue(r.Button("QuantityPlus_furn:" + GameSession.HomeWorkbenchId).interactable);
+            StringAssert.Contains(Money.FromYuan(1_080_000).ToString(), r.Text);
         }
 
         [Test]
@@ -527,6 +836,83 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void RetailQuantityAcceptsWeightAndKeepsTheStepButtonsAndOpeningHours()
+        {
+            using var r = new Rig(HomeTests.Make(5000000, 600));
+            GameSessionTests.Teleport(r.S, "farm");
+            r.Ui.OnEnteredPlace(r.S.CurrentPlace);
+            var field = r.Components<InputField>().Single(f => f.name == "QuantityValue_rice");
+            Assert.That(field.contentType, Is.EqualTo(InputField.ContentType.DecimalNumber));
+            var cash = r.S.Ledger.Balance;
+
+            field.onEndEdit.Invoke("1.38");
+            Assert.That(r.S.CartAmount("rice"), Is.EqualTo(1.5));
+            Assert.That(field.text, Is.EqualTo("1.5"));
+            r.Button("QuantityPlus_rice").onClick.Invoke();
+            Assert.That(r.S.CartAmount("rice"), Is.EqualTo(1.75));
+            r.Button("QuantityMinus_rice").onClick.Invoke();
+            Assert.That(r.S.CartAmount("rice"), Is.EqualTo(1.5));
+            field.onEndEdit.Invoke("");
+            Assert.That(field.text, Is.EqualTo("1.5"));
+
+            r.S.Clock.Restore(r.S.Clock.Today, 23 * 60);
+            r.Ui.RebuildWindows();
+            field = r.Components<InputField>().Single(f => f.name == "QuantityValue_rice");
+            field.onEndEdit.Invoke("12");
+            Assert.That(r.S.CartAmount("rice"), Is.EqualTo(1.5));
+            field.onEndEdit.Invoke("0");
+            Assert.That(r.S.CartAmount("rice"), Is.Zero);
+            Assert.That(r.S.Ledger.Balance, Is.EqualTo(cash));
+        }
+
+        [Test]
+        public void OnlineOrdersUseTypedQuantitiesForPartsAndParcels()
+        {
+            using var r = new Rig();
+            r.S.SetSmartphone(true);
+            r.S.InstallApp(PhoneApps.Shop);
+            r.Ui.OpenWholesaleApp();
+            r.Components<InputField>().Single(f => f.name == "QuantityValue_wholesale_cpu0").onEndEdit.Invoke("8");
+            Assert.That(r.S.Online.Pending, Is.Empty);
+            r.Ui.RebuildWindows();
+            r.Button("OnlineOrder").onClick.Invoke();
+            Assert.That(r.S.Online.Pending.Single().Lines.Single().Count, Is.EqualTo(8));
+
+            r.ClickCaption("大米");
+            var parcel = r.Components<InputField>().Single(f => f.name == "QuantityValue_parcel_rice");
+            parcel.onEndEdit.Invoke("2");
+            r.Ui.RebuildWindows();
+            // Clicking the existing order button after editing must use the new amount.
+            r.Components<InputField>().Single(f => f.name == "QuantityValue_parcel_rice").onEndEdit.Invoke("3");
+            r.Button("OnlineOrder").onClick.Invoke();
+            Assert.That(r.S.Parcels.Single().Count, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void EmployeePurchaseAcceptsTypedCountAndKeepsMaximumMode()
+        {
+            using var r = new Rig();
+            var buyer = new Employee { Name = "进货员", DailyWageYuan = 150 };
+            r.S.MainShop.Buyer = buyer;
+            r.Ui.OpenEmployeePurchase(buyer.Id);
+            var field = r.Components<InputField>().First(f => f.name.StartsWith("QuantityValue_"));
+            string key = field.name.Substring("QuantityValue_".Length);
+            var offer = r.S.EmployeePurchaseCatalog().Single(item => item.Key == key);
+            int count = r.S.PurchaseMinimum(offer) + 1;
+            field.onEndEdit.Invoke(count.ToString());
+            Assert.That(field.text, Is.EqualTo(count.ToString()));
+            Assert.That(buyer.PurchasePlan.Items, Is.Empty);
+            r.Button("PurchaseDone").onClick.Invoke();
+            Assert.That(buyer.PurchasePlan.Items.Single().Count, Is.EqualTo(count));
+            Assert.That(buyer.PurchasePlan.Items.Single().BuyMaximum, Is.False);
+
+            r.Ui.OpenEmployeePurchase(buyer.Id);
+            r.Button("PurchaseMaximum_" + key).onClick.Invoke();
+            r.Button("PurchaseDone").onClick.Invoke();
+            Assert.That(buyer.PurchasePlan.Items.Single().BuyMaximum, Is.True);
+        }
+
+        [Test]
         public void HouseMoveShowsFullCostAndDoesNotChargeBeforeConfirmation()
         {
             using (var r = new Rig())
@@ -538,6 +924,30 @@ namespace PCShopSell.Tests
                 r.ClickCaption("确认搬家"); Assert.AreEqual(1, r.S.HomeTier);
                 Assert.AreEqual(r.S.HomeTierRentQuote(1) + Money.FromYuan(500), before - r.S.Ledger.Balance);
             }
+        }
+
+        [Test]
+        public void WalletStationKeepsTimeRunningAndEnablesHandoffAfterWaiting()
+        {
+            using var r = new Rig();
+            r.S.RaiseEvent("wallet");
+            Assert.That(r.S.ResolveEvent(0), Is.True);
+            var station = r.S.WalletReturnStation;
+            GameSessionTests.Teleport(r.S, station.Id);
+            r.S.Time.SetPaused(true);
+            r.Ui.OnEnteredPlace(station);
+            Assert.That(r.S.Time.IsHeld, Is.False);
+            Assert.That(r.Button("WalletReturnDesk").interactable, Is.False);
+            r.S.Time.SecondsPerMinuteAt1x = .5;
+            r.Button("WalletResumeWait").onClick.Invoke();
+            Assert.That(r.S.Time.IsRunning, Is.True);
+            for (int i = 0; i < 30; i++) r.S.Tick(.25);
+            r.Ui.RebuildWindows();
+            var handoff = r.Button("WalletReturnDesk");
+            Assert.That(handoff.interactable, Is.True);
+            handoff.onClick.Invoke();
+            Assert.That(r.S.WalletReturnStation, Is.Null);
+            Assert.That(r.S.Time.IsHeld, Is.True);
         }
 
         [Test]

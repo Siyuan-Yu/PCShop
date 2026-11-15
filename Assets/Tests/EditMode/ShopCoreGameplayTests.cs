@@ -315,15 +315,27 @@ namespace PCShopSell.Tests
                 UnityEngine.UI.Button Button(string name)=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<UnityEngine.UI.Button>()).SingleOrDefault(b=>b.name==name);
                 try
                 {
-                    var refused=Seller(s);ui.OpenDock();Button("DeclineUsed_"+refused.Id).onClick.Invoke();
+                    var refused=Seller(s);ui.OpenDock();ui.OpenUsedDesk();Button("DeclineUsed_"+refused.Id).onClick.Invoke();
                     Assert.IsEmpty(s.SpecialBusiness("pc").Used);
-                    var item=Seller(s);Assert.True(s.OfferUsedPrice(item.Id,40));Assert.True(s.InspectUsed(item.Id));ui.RebuildDock();
+                    Assert.True(ui.CloseTopWindow());
+                    var item=Seller(s);Assert.True(s.OfferUsedPrice(item.Id,40));Assert.True(s.InspectUsed(item.Id));
+                    Assert.True(s.SetShelfKind(2,"drink"));
+                    ui.OpenUsedDesk();
+                    Button("ListUsed_"+item.Id).onClick.Invoke();
+                    var warning = ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Transform>())
+                        .Single(t=>t.name=="Window_暂时无法上架");
+                    Assert.True(warning.GetComponentsInChildren<UnityEngine.UI.Text>()
+                        .Any(t=>t.text.Contains("二手转售品") && t.text.Contains("按 F")));
+                    Assert.False(item.Listed);
+                    Assert.True(ui.CloseTopWindow());
+                    Assert.True(s.SetShelfKind(2,"secondhand"));
                     Button("ListUsed_"+item.Id).onClick.Invoke();Assert.True(item.Listed);Assert.IsNull(Button("ListUsed_"+item.Id));
-                    ui.DebugSelectTab(1);
+                    Assert.True(ui.CloseTopWindow());
+                    ui.DebugSelectTab(2);
                     Assert.True(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Transform>()).Any(t=>t.name=="UsedStock_"+item.Id));
                     ui.OpenShelfWindow(2);
                     Assert.True(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Transform>()).Any(t=>t.name=="UsedIllustration_"+item.Id));
-                    ui.CloseAllWindows();WaitForUsedBuyer(s);s.PlayerShop.Checkout(s.PlayerShop.Queue.Single().Id);ui.OpenDock();ui.DebugSelectTab(0);
+                    ui.CloseAllWindows();WaitForUsedBuyer(s);s.PlayerShop.Checkout(s.PlayerShop.Queue.Single().Id);ui.OpenShelfWindow(2);
                     Assert.True(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Transform>()).Any(t=>t.name=="UsedSold_"+item.Id));
                     Assert.IsNull(Button("ListUsed_"+item.Id));
                 }
@@ -379,6 +391,43 @@ namespace PCShopSell.Tests
                 }
                 Assert.Greater(GameSession.AppraiserAccuracy(94),GameSession.AppraiserAccuracy(30));Assert.Less(GameSession.AppraiserAccuracy(100),1);
             }
+        }
+
+        [Test]
+        public void AppraiserAndSellerStandOnOppositeSidesOfTheMovedPurchaseDesk()
+        {
+            using var s = Make("secondhand");
+            var worker = new Employee { Name = "收购师", DailyWageYuan = 130 };
+            s.CurrentShop.Employee = worker;
+            Assert.True(s.ArrangeEmployeeWork(worker.Id, "pc", EmployeeRole.Appraiser));
+            CityTestPeople.AtAssignedWork(s, worker);
+            var seller = Seller(s);
+            var desk = s.CurrentShop.Layout.Single(furniture => furniture.Id == "used_buydesk");
+            var root = new GameObject("UsedDeskPositions");
+            try
+            {
+                var view = new PCShopSell.Game.Runtime.ShopInteriorView(root.transform, s.PlayerShop.Size);
+                void CheckPositions(Vector3 back)
+                {
+                    view.Update(s, 0, 0);
+                    var figures = root.GetComponentsInChildren<Transform>();
+                    var appraiser = figures.Single(t => t.name == "ShopEmployee_" + worker.Id);
+                    var visitor = figures.Single(t => t.name == "SpecialCustomer_seller:" + seller.Id);
+                    var center = new Vector3((float)desk.X, 0, (float)desk.Z);
+                    Assert.That(Vector3.Dot(appraiser.localPosition - center, back), Is.InRange(.5f, 1.1f));
+                    Assert.That(Vector3.Dot(visitor.localPosition - center, back), Is.InRange(-1.1f, -.5f));
+                    Assert.Greater(Vector3.Dot(appraiser.localRotation * Vector3.forward,
+                        (center - appraiser.localPosition).normalized), .99f);
+                }
+
+                desk.X = 2.5;
+                desk.Z = 4.2;
+                CheckPositions(Vector3.forward);
+                desk.X = 4;
+                desk.Rot = 1;
+                CheckPositions(Vector3.right);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
         }
         [Test] public void BusySpecialBusinessCannotBeChangedIntoRetailAndLoseOrdersOrUniqueGoods()
         {

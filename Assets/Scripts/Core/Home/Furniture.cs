@@ -128,6 +128,7 @@ namespace PCShopSell.Core.Home
 
     public static class FurnitureCatalog
     {
+        public const string HomeWorkbench = "home_workbench";
         public const string Fridge = "fridge"; // Stable ID of the existing refrigerator.
         public const string FridgeSmall = "fridge_small";
         public const string FridgeFamily = Fridge;
@@ -224,7 +225,7 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef("used_buydesk","收购鉴定台","听说辞、出价收购；买下后才可鉴定。",650,FurnitureSlot.Floor,1.1,.6,true){WeightKg=25});
             Add(new FurnitureDef("used_display","二手销售展示台","每台展示4件已鉴定的旧物，按真实状态标价出售。",450,FurnitureSlot.Floor,1,.65,true){WeightKg=20});
             // ---- 出租屋：开局自带 ----
-            Add(new FurnitureDef("home_workbench", "家庭经营大屏", "大型液晶经营终端。在家集中管理经营、投资、联系人和生活托管。", 28000, FurnitureSlot.Floor, 6.4, 2.4) { WeightKg=160 });
+            Add(new FurnitureDef(HomeWorkbench, "居家办公台", "大型经营终端，需中型及以上住宅安装。摆好后可集中管理门店、投资、联系人和生活托管。", 1_080_000, FurnitureSlot.Floor, 6.4, 1.2) { WeightKg=160 });
             Add(new FurnitureDef(BedBoard, "硬板床", "一块木板加一层薄褥子。", 0, FurnitureSlot.Floor, 2.0, 1.0, false, true) { Role = FurnitureRole.Bed, BedQuality = 1.0 });
             Add(new FurnitureDef(WardrobeCloth, "布衣柜", "拉链布衣柜，塑料骨架。", 0, FurnitureSlot.Floor, 1.1, 0.6, false, true) { Role = FurnitureRole.Wardrobe });
             Add(new FurnitureDef(FittingMirror, "全身镜", "摆在店里使服装购买意愿增加5个百分点；只对服装生效，多面不叠加。也可试衣和更换已拥有的服装。", 230, FurnitureSlot.Floor, .7, .25, true) { Role = FurnitureRole.Wardrobe, WeightKg = 10 });
@@ -343,7 +344,8 @@ namespace PCShopSell.Core.Home
             return null;
         }
 
-        public static IEnumerable<FurnitureDef> Purchasable(bool forShop) => All.Where(d => !d.Starter && (d.ForShop == forShop || d.Role == FurnitureRole.Fridge));
+        public static IEnumerable<FurnitureDef> Purchasable(bool forShop) => All.Where(d =>
+            !d.Starter && d.Id != HomeWorkbench && (d.ForShop == forShop || d.Role == FurnitureRole.Fridge));
 
         /// <summary>开局时出租屋里摆好的家具。</summary>
         public static List<PlacedFurniture> StartHomeLayout() => new List<PlacedFurniture>

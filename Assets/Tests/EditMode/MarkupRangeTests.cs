@@ -89,7 +89,8 @@ namespace PCShopSell.Tests
         {
             using(var s=HomeTests.Make(200000,600))
             {
-                GameSessionTests.Teleport(s,s.Home.Id);s.HomeBox.AddFurniture(GameSession.HomeWorkbenchId,1);
+                s.HomeBox.AddFurniture(GameSession.HomeWorkbenchId,1);
+                HomeWorkbenchTests.MoveAndInstallWorkbench(s);
                 Assert.True(s.SetWorkbenchMarkup(s.MainShop.Place.Id,3));Assert.AreEqual(3,s.MainShop.Sim.Markup);
                 Assert.False(s.SetWorkbenchMarkup(s.MainShop.Place.Id,3.01));Assert.False(s.SetWorkbenchMarkup(s.MainShop.Place.Id,double.NaN));
             }

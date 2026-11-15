@@ -10,9 +10,9 @@ namespace PCShopSell.Game
     {
         private string _cityExitIntent;
         private SaveData _cityRealProgress;
-        private void OnCityPlaceEntered(PCShopSell.Core.World.Place place)
+        private void OnCityPlaceEntered(PCShopSell.Core.World.Place place, string activityId)
         {
-            if(place!=null&&Session.CurrentPlace==place)Ui.OnEnteredPlace(place);
+            if(place!=null&&Session.CurrentPlace==place)Ui.OnEnteredPlace(place, activityId);
         }
         private void OnCityTravelRequested(CityTravelIntent intent)
         {

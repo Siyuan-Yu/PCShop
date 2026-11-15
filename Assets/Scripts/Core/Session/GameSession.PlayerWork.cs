@@ -80,7 +80,7 @@ namespace PCShopSell.Core.Session
                 case "奶茶": return new PlayerWorkOffer("奶茶店晚班", 11, 21, 150, 8, 10);
                 case "服装": return new PlayerWorkOffer("服装导购白班", 10, 18, 135, 5, 6);
                 case "理发": return new PlayerWorkOffer("理发店帮工白班", 10, 20, 150, 7, 9);
-                case "手机": return new PlayerWorkOffer("手机店白班", 9, 18, 150, 6, 8);
+                case PhoneBusiness: return new PlayerWorkOffer("米家白班", 9, 18, 150, 6, 8);
                 case "修鞋": return new PlayerWorkOffer("修鞋铺白班", 9, 17, 130, 5, 6);
                 case "快餐": return new PlayerWorkOffer("快餐后厨长班", 10, 20, 160, 8, 10);
                 case "面包": return new PlayerWorkOffer("面包工坊烘焙夜班", 22, 30, 175, 11, 12);

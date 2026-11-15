@@ -22,6 +22,7 @@ namespace PCShopSell.Core.Session
         public double InBag;
         public bool ByWeight;
         public bool Registered;
+        public bool HomeDeliveryOnly;
         public double UnitKg;
 
         public double ByTruck => Math.Max(0, Amount - InBag);
@@ -35,6 +36,8 @@ namespace PCShopSell.Core.Session
         internal Func<double, bool> Run;
         internal Func<string> Blocker;
         internal bool RawIngredient;
+        internal FurnitureDef Furniture;
+        internal string DeliveryShopKind;
 
         public double Kg => UnitKg * Amount;
         public Money Price => UnitPrice == null ? Money.Zero : UnitPrice().Scale(Amount);
@@ -46,6 +49,7 @@ namespace PCShopSell.Core.Session
     {
         public string Key;
         public string Name;
+        public string Category;
         public string Where;
         public double Have;
         public bool ByWeight;
@@ -85,6 +89,7 @@ namespace PCShopSell.Core.Session
         public double CartKg => _cart.Sum(l => l.Kg);
         public double CartBagKg => _cart.Sum(l => l.BagKg);
         public double CartTruckKg => _cart.Sum(l => l.TruckKg);
+        public bool CartRequiresHomeDelivery => _cart.Any(line => line.HomeDeliveryOnly);
         public double TruckKg => _truck.Sum(l => l.Kg);
         public Money CartGoods => _cart.Aggregate(Money.Zero, (sum, l) => sum + l.Price);
 
@@ -95,7 +100,7 @@ namespace PCShopSell.Core.Session
         public bool CartToBag(string key, double amount)
         {
             CartLine l = _cart.Find(x => x.Key == key);
-            if (l == null || amount <= 0) return false;
+            if (l == null || amount <= 0 || l.HomeDeliveryOnly) return false;
             l.InBag = Math.Min(l.Amount, l.InBag + amount);
             return true;
         }
@@ -114,6 +119,7 @@ namespace PCShopSell.Core.Session
         {
             foreach (CartLine l in _cart)
             {
+                if (l.HomeDeliveryOnly) continue;
                 double n = FitAmount(l.ByWeight, l.UnitKg, CartBagFreeKg, l.ByTruck);
                 if (n > 0) l.InBag += n;
             }
@@ -136,12 +142,14 @@ namespace PCShopSell.Core.Session
 
         private void PutLine(List<CartLine> list, CartLine proto, double amount)
         {
-            double toBag = ReferenceEquals(list, _cart) ? FitAmount(proto.ByWeight, proto.UnitKg, CartBagFreeKg, amount) : 0;
+            double toBag = ReferenceEquals(list, _cart) && !proto.HomeDeliveryOnly
+                ? FitAmount(proto.ByWeight, proto.UnitKg, CartBagFreeKg, amount) : 0;
             CartLine l = list.Find(x => x.Key == proto.Key);
             if (l != null)
             {
                 l.Amount += amount;
                 l.InBag += toBag;
+                l.DeliveryShopKind ??= proto.DeliveryShopKind;
                 return;
             }
             proto.Amount = amount;
@@ -198,6 +206,7 @@ namespace PCShopSell.Core.Session
             if(total>100 || total>CitySupplierRemaining(source.Id,id))return Fail("超过本次可采购数量或本日剩余配额。");
             PutLine(_cart,new CartLine {
                 Key=key,Name=product.Name,UnitKg=product.WeightKg,UnitPrice=()=>CityRetailWholesalePrice(source,product),
+                DeliveryShopKind=RetailShopTypes.GoodsKind(id),
                 RawIngredient=IsRawIngredientProduct(id),
                 Blocker=()=>CurrentPlace!=source || !IsPlaceOpen(source)?"货源已经打烊或不在这里":
                     CartAmount(key)<CitySupplierMinimum(source.Id,id)?product.Name+" · "+WholesaleMinimumText(source.Id,id):
@@ -223,7 +232,7 @@ namespace PCShopSell.Core.Session
             },1);return true;
         }
         public bool CartAddSmartphone() => CartAddRegistered("phone","智能手机",PhonePrice,BuySmartphone,
-            ()=>HasSmartphone?"已经拥有智能手机":CurrentPlace?.Business!=PhoneBusiness?"请到手机店购买":null);
+            ()=>HasSmartphone?"已经拥有智能手机":CurrentPlace?.Business!=PhoneBusiness?"请到米家购买智能手机":null);
         public bool CartAddOutfit(Place place,string id)
         {
             var outfit=Outfits.Get(id);if(outfit==null)return false;
@@ -255,15 +264,29 @@ namespace PCShopSell.Core.Session
         {
             var item=Gifts.Get(id);if(item==null || !CityComicExpoOpen || CartAmount("expo:"+id)>=CityExpoModelRemaining(id))return false;
             PutLine(_cart,new CartLine {Key="expo:"+id,Name=item.Name,UnitKg=item.WeightKg,UnitPrice=()=>item.WholesalePrice,
+                DeliveryShopKind="models",
                 Blocker=()=>!CityComicExpoOpen?"漫展展位尚未营业":CartAmount("expo:"+id)>CityExpoModelRemaining(id)?"超过本届剩余配额":null,
                 Run=n=>{_retailCartBatch=true;try{return BuyCityExpoModel(id,(int)n,CourierShop(true)?.Place.Id,!SendByCourier);}finally{_retailCartBatch=false;}}
             },1);return true;
         }
 
-        public bool CartAddFurniture(string id)
+        public bool CartAddFurniture(string id, string shopKind = null)
         {
             FurnitureDef d = FurnitureCatalog.Get(id);
             if (d == null || d.Starter) return false;
+            if (d.Id == HomeWorkbenchId)
+            {
+                if (HomeWorkbenchPurchaseBlocker is string reason) return Fail(reason);
+                string key = "furn:" + d.Id;
+                if (CartAmount(key) > 0) return Fail("购物车中已有居家办公台。");
+                PutLine(_cart, new CartLine
+                {
+                    Key = key, Name = d.Name, UnitKg = d.WeightKg, UnitPrice = () => d.Price,
+                    Furniture = d, HomeDeliveryOnly = true, Blocker = () => HomeWorkbenchPurchaseBlocker,
+                    Run = _ => BuyHomeWorkbench()
+                }, 1);
+                return true;
+            }
             if (!AtMall) return Fail("要去家具城才能买。");
             PutLine(_cart, new CartLine
             {
@@ -271,6 +294,8 @@ namespace PCShopSell.Core.Session
                 Name = d.Name,
                 UnitKg = d.WeightKg,
                 UnitPrice = () => d.Price,
+                Furniture = d,
+                DeliveryShopKind = FurnitureShops.ShopOrder(shopKind, d) >= 0 ? shopKind : null,
                 Run = n =>
                 {
                     bool all = true;
@@ -615,6 +640,13 @@ namespace PCShopSell.Core.Session
                     return null;
             }
             m.UnitKg = CourierItemKg(unit);
+            m.Category = unit.Kind switch
+            {
+                CourierItemKind.Part => PartCatalog.CategoryName(PartCatalog.Get(unit.Id).Category),
+                CourierItemKind.Furniture => "家具",
+                CourierItemKind.Rice or CourierItemKind.Ingredient => "米与生鲜",
+                _ => ShelfKinds.ForGift(unit.Id)?.Name ?? "其他商品",
+            };
             return m;
         }
 

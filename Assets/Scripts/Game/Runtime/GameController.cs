@@ -520,7 +520,7 @@ namespace PCShopSell.Game
             HandleCameraOrbit();
             // Esc：关最上面一层窗口；没开窗口时打开菜单。右键不关闭界面。
             if (Input.GetKeyDown(KeyCode.Escape) && !Placing && !Ui.CloseTopWindow() && !Ui.AnyModalOpen) Ui.TryHotkey(KeyCode.Escape);
-            if (!Placing) HandleHudPanelKeys();
+            if (!Placing) Ui.HandleHudPanelKeys();
             if (Input.GetKeyDown(KeyCode.F) && !Ui.AnyModalOpen && !Session.IsGameOver && !Placing)
             {
                 if (InVisit) InteractVisitRoom();
@@ -556,17 +556,9 @@ namespace PCShopSell.Game
             if (Input.GetKeyDown(KeyCode.Alpha4)) Session.Time.SetSpeed(8);
         }
 
-        private void HandleHudPanelKeys()
-        {
-            foreach (KeyCode hk in HotkeyPanels)
-                if (Input.GetKeyDown(hk) && Ui.TryHotkey(hk)) break;
-            if (Input.GetKeyDown(KeyCode.B) && !Session.IsGameOver) Ui.ToggleBackpack();
-        }
-
         // ---------- 镜头旋转 ----------
 
         private bool _orbiting;
-        private static readonly KeyCode[] HotkeyPanels = { KeyCode.M, KeyCode.C, KeyCode.P, KeyCode.J, KeyCode.H, KeyCode.T };
 
         /// <summary>街上、家里和店里共用视角操作：右键拖动旋转/俯仰，Q / E 左右转，V 复位。</summary>
         private void HandleCameraOrbit()

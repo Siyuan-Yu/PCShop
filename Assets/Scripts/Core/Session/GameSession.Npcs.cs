@@ -90,7 +90,7 @@ namespace PCShopSell.Core.Session
             else if (!Ledger.TryDebit(Clock.Today, "人情", n.GiftPrice, n.GiftName)) return Fail("钱不够。");
             _giftDays[npcId] = Clock.Today.TotalDays;
             RememberSocial(npcId, $"送给对方{n.GiftName}。\n{n.GiftReply}");
-            AddRelation(npcId, Npcs.GiftGain + EffectiveCharm * 0.02);
+            AddSocialRelation(npcId, Npcs.GiftGain + EffectiveCharm * 0.02);
             Say(n.GiftReply);
             return true;
         }

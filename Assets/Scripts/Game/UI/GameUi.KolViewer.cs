@@ -48,7 +48,8 @@ namespace PCShopSell.Game.UI
         {
             string blocker = S.AppBlocker(PhoneApps.Live);
             if (blocker != null) { Toast(blocker); return; }
-            OpenWindow("手机 · 街坊直播", 1200, 840, BuildKolLobby, holds: false);
+            ClosePhone();
+            OpenPhoneAppWindow("手机 · 街坊直播", BuildKolLobby, holds: false);
         }
 
         private void BuildKolLobby(Window w)
@@ -159,6 +160,7 @@ namespace PCShopSell.Game.UI
 
         public void OpenKolLiveRoom(string contractId)
         {
+            if (S.KolAmbassadorAccessBlocker is string access) { Toast(access); return; }
             var contract = S.KolStreaming.Contracts.FirstOrDefault(c => c.Id == contractId);
             if (contract == null) { Toast("没有这份直播合约。"); return; }
             OpenKolViewer(contract.PersonId, () =>
@@ -173,7 +175,7 @@ namespace PCShopSell.Game.UI
         private void OpenKolViewer(string person, Action back)
         {
             var watch = new KolWatch();
-            OpenWindow("街坊直播 · 直播间", 1200, 775, w => BuildKolViewer(w, person, watch, back), holds: false);
+            OpenPhoneAppWindow("街坊直播 · 直播间", w => BuildKolViewer(w, person, watch, back), holds: false);
         }
 
         private void BuildKolViewer(Window w, string person, KolWatch watch, Action back)
@@ -304,7 +306,7 @@ namespace PCShopSell.Game.UI
             Line(w.Content, "本场品牌结算 · " + sponsor, 22, Ui.Accent);
             Line(w.Content, "本场展示 · " + sponsor + "的" + category, 18);
             BuildKolBrandResult(w.Content, result, result.RivalKind != null);
-            if (brand == null) return;
+            if (brand == null || S.KolAmbassadorAccessBlocker != null) return;
             Ui.Size(Ui.Button(w.Content, "查看品牌专场记录", () =>
             {
                 w.Close();

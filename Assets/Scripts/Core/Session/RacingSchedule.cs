@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using PCShopSell.Core.Time;
 
 namespace PCShopSell.Core.Session
@@ -6,6 +8,10 @@ namespace PCShopSell.Core.Session
     public static class RacingSchedule
     {
         public const int PracticeFee = 100;
+        public static IReadOnlyList<(int Hours, int Price)> PracticePasses { get; } = Array.AsReadOnly(new[]
+        {
+            (Hours: 2, Price: PracticeFee), (Hours: 4, Price: 180), (Hours: 6, Price: 260), (Hours: 8, Price: 330)
+        });
         public const int MeetOpenMinute = 9 * 60;
         public const int MeetCloseMinute = 18 * 60;
         public static string MeetHours => $"{GameSession.ClockText(MeetOpenMinute)}–{GameSession.ClockText(MeetCloseMinute)}";

@@ -51,21 +51,23 @@ namespace PCShopSell.Game.UI
                 BrandMetric(metrics, "口碑", b.Reputation.ToString());
                 BrandMetric(metrics, "知名度", b.Influence.ToString());
                 Line(card, "近7天实际到店 " + S.BrandActualVisits(b.Id) + "人次", 16, Ui.Dim);
-                BuildBrandOverviewEndorsers(card, b.Id, endorsers);
+                bool kolAvailable = S.KolAmbassadorAccessBlocker == null;
+                if (kolAvailable) BuildBrandOverviewEndorsers(card, b.Id, endorsers);
                 var actions = Ui.Row(card, 36, 8);
                 Ui.Size(Ui.Button(actions, _expandedBrands.Contains(b.Id) ? "收起旗下门店" : "展开旗下门店", () =>
                 {
                     if (!_expandedBrands.Remove(b.Id)) _expandedBrands.Add(b.Id);
                     w.Rebuild();
                 }, 17), -1, 36, 1).name = "BrandExpand_" + b.Id;
-                Ui.Size(Ui.Button(actions, "查看品牌代言人", () =>
-                {
-                    _brandId = b.Id;
-                    _brandTab = BrandKolTab;
-                    _kolPage = "我的代言人";
-                    _selectedKolContract = endorsers.FirstOrDefault()?.Id;
-                    w.Rebuild();
-                }, 17), -1, 36, 1);
+                if (kolAvailable)
+                    Ui.Size(Ui.Button(actions, "查看品牌代言人", () =>
+                    {
+                        _brandId = b.Id;
+                        _brandTab = BrandKolTab;
+                        _kolPage = "我的代言人";
+                        _selectedKolContract = endorsers.FirstOrDefault()?.Id;
+                        w.Rebuild();
+                    }, 17), -1, 36, 1);
                 Ui.Size(Ui.Button(actions, "修改品牌名…", () => OpenBrandRename(b, w), 17), 170, 36).name = "BrandRename_" + b.Id;
                 if (!_expandedBrands.Contains(b.Id)) continue;
                 var tableHeader = Ui.Row(card, 28, 6);
@@ -95,6 +97,7 @@ namespace PCShopSell.Game.UI
             string title = brand.Name + " · " + RetailShopTypes.Name(brand.Kind)
                 + (brand.Position == "value" ? " · 实惠定位" : " · 品质定位");
             Ui.Size(Ui.Label(row, title, 20, color: Ui.Accent), 0, 40, 1);
+            if (S.KolAmbassadorAccessBlocker != null) return;
             Ui.Size(Ui.Label(row, $"{S.BrandLevelName(brand.Id)} · 代言名额 {endorsers}/{S.BrandKolCapacity(brand.Id)}",
                 15, color: Ui.Dim), 180, 40);
             if (brand.Level >= 2) return;

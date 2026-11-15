@@ -12,6 +12,46 @@ namespace PCShopSell.Tests
 {
     public sealed class BrandStoryUiTests
     {
+        [Test]
+        public void KolBadgeIdentifiesTheCreatorInContactsDialogueAndProfile()
+        {
+            using var s = DistrictProgressionTests.Make();
+            s.Meet("life_singer", 21);
+            s.Meet("life_bartender", 21);
+            var previous = UnityEngine.EventSystems.EventSystem.current;
+            var root = new GameObject("KolIdentityTest");
+            root.SetActive(false);
+            var controller = root.AddComponent<GameController>();
+            typeof(GameController).GetProperty("Session").SetValue(controller, s);
+            typeof(GameController).GetProperty("City").SetValue(controller, s.City);
+            var ui = new GameUi(controller);
+            Text[] Labels() => ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Text>()).ToArray();
+            try
+            {
+                ui.OpenContactsPanel();
+                var singer = Labels().Single(t => t.text.Contains("<b>温音"));
+                Assert.That(singer.text, Does.Contain(">KOL<").And.Contain(s.CityPersonRole("life_singer")));
+                Assert.That(Labels().Single(t => t.text.Contains("<b>夏澄")).text, Does.Not.Contain("KOL"));
+                singer.transform.parent.GetComponentsInChildren<Button>()
+                    .Single(b => b.GetComponentInChildren<Text>()?.text == "发消息").onClick.Invoke();
+                var identity = Labels().Where(t => t.transform.parent.name == "DialogueIdentity").Select(t => t.text).ToArray();
+                Assert.That(identity.Any(text => text.Contains("温音") && text.Contains(">KOL<")), Is.True);
+                Assert.That(identity.Any(text => text.Contains(s.CityPersonRole("life_singer")) && text.Contains("电话")), Is.True);
+
+                ui.OpenCityPersonProfile("life_singer");
+                Assert.That(Labels().Any(t => t.transform.parent.name == "PersonDetails"
+                    && t.text.Contains("温音") && t.text.Contains(">KOL<")), Is.True);
+            }
+            finally
+            {
+                ui.CloseAllWindows();
+                foreach (var canvas in ui.Canvases) UnityEngine.Object.DestroyImmediate(canvas.gameObject);
+                UnityEngine.Object.DestroyImmediate(root);
+                if (previous == null && UnityEngine.EventSystems.EventSystem.current != null)
+                    UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);
+            }
+        }
+
         [Test] public void FullNameProfileKeepsAliasAndLongDialogueCanScrollToItsEnding()
         {
             using (var s = DistrictProgressionTests.Make())

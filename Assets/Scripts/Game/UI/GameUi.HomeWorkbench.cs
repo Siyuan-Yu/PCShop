@@ -76,17 +76,20 @@ namespace PCShopSell.Game.UI
                 _workbenchLauncher=Ui.Button(_dockCanvas.transform,"居家工作台",OpenHomeWorkbench,17,Ui.ButtonHot);
                 _workbenchLauncher.name="HomeWorkbenchLauncher";
                 ((RectTransform)_workbenchLauncher.transform).Anchor(1,1,1,1,-232,-108,18,68);
+                _workbenchLauncher.Tip(() => WorkbenchAccessReason);
             }
             bool visible=S.CurrentPlace==S.Home&&!_ctrl.Placing&&!S.IsGameOver&&!MainMenuOpen;
             _workbenchLauncher.gameObject.SetActive(visible);
             _workbenchLauncher.interactable=S.CanUseHomeWorkbench;
-            _workbenchLauncher.GetComponentInChildren<Text>().text=S.DebugHomeWorkbenchEnabled?"居家工作台 · 测试":S.OwnsHomeWorkbench?"居家工作台":"居家工作台 · 未购大屏";
+            _workbenchLauncher.GetComponentInChildren<Text>().text = S.DebugHomeWorkbenchEnabled ? "居家工作台 · 测试"
+                : S.HomeWorkbenchInstalled ? "居家工作台" : S.OwnsHomeWorkbench ? "居家工作台 · 待安装"
+                : S.HomeWorkbenchInTransit ? "居家工作台 · 配送中" : "居家工作台 · 米家有售";
             if(_homeWorkbench!=null&&!S.CanUseHomeWorkbench)_homeWorkbench.Close();
             UpdateWorkbenchDayBar();
         }
         public void OpenHomeWorkbench()
         {
-            if(!S.CanUseHomeWorkbench){Toast("在家具城购买家庭经营大屏，送达后可在家打开工作台。");return;}
+            if(!S.CanUseHomeWorkbench){Toast(WorkbenchAccessReason);return;}
             if(_homeWorkbench!=null)return;
             _homeWorkbench=OpenWindow("居家工作台",1780,1000,BuildHomeWorkbench,holds:false,onClosed:()=>_homeWorkbench=null,scrollContent:false);
             // 大屏接近全屏：背后的 HUD 几乎压黑，看起来是一块独立的屏幕。
@@ -240,7 +243,7 @@ namespace PCShopSell.Game.UI
             foreach(var contact in S.SavedConversationContacts())
             {
                 string id=contact.Id;
-                var row=PersonSummary(list,id,contact.Name,contact.Role,54,()=>OpenCityPersonProfile(id),ink:WbInk,muted:WbDim);
+                var row=PersonSummary(list,id,PersonNameWithKolBadge(id, contact.Name),contact.Role,54,()=>OpenCityPersonProfile(id),ink:WbInk,muted:WbDim);
                 Ui.Size(Ui.Label(row,Npcs.LevelName(S.Relation(id))+" "+S.Relation(id),16,TextAnchor.MiddleCenter,Ui.Good),110);
                 var talk=Ui.Size(Ui.Button(row,"打电话",()=>OpenPersonDialogue(id,remote:true),17,Ui.ButtonHot),100,44,0);talk.name="WorkbenchKnownContact_"+id;
             }

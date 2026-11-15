@@ -162,6 +162,8 @@ namespace PCShopSell.Game.UI
             _staffPurchaseAlert = null;
             _counterRefresh.Clear();
             _staffRefresh.Clear();
+            _refreshPricing = null;
+            _pricingShop = null;
             _counterStructure = null;
         }
 
@@ -221,8 +223,14 @@ namespace PCShopSell.Game.UI
             if (ListScrollbar.PressedInside(_dock) || _dock.GetComponentsInChildren<ChoiceDropdown>().Any(choice=>choice.IsChoiceOpen)
                 || _dock.GetComponentsInChildren<InputField>().Any(input=>input.isFocused)) return;
             RefreshShopFitWarning();
-            if((_tab==ShopTab.Stock || _tab==ShopTab.Pricing) && !AnyModalOpen && _stockViewSignature!=StockViewSignature())
+            if((_tab==ShopTab.Stock || _tab==ShopTab.Pricing && _refreshPricing==null) && !AnyModalOpen && _stockViewSignature!=StockViewSignature())
             {RebuildDock();return;}
+            if (_tab == ShopTab.Pricing && !AnyModalOpen && _refreshPricing != null)
+            {
+                if (_pricingShop != S.PlayerShop || S.IsSpecialBusiness(S.CurrentShop)) RebuildDock();
+                else _refreshPricing();
+                return;
+            }
             if(_tab==ShopTab.Renovate&&!AnyModalOpen&&_renovationStockSignature!=RenovationStockSignature())
             {RebuildDock();return;}
             if (_tab == ShopTab.Counter || (_tab==ShopTab.Orders&&(S.IsSpecialBusiness(S.CurrentShop)||S.IsPetShop(S.CurrentShop))))
@@ -294,6 +302,8 @@ namespace PCShopSell.Game.UI
             _scrollTab = _tab;
             _counterRefresh.Clear();
             _staffRefresh.Clear();
+            _refreshPricing = null;
+            _pricingShop = null;
             Ui.Clear(_dockContent);
             foreach (var (button, tab) in _tabButtons)
             {
@@ -318,7 +328,7 @@ namespace PCShopSell.Game.UI
             RefreshShopFitWarning();
             Ui.RestoreScroll(_dock, _dock, scrolled);
             if (scrolled == null) _dockContent.anchoredPosition = Vector2.zero;
-            if(_tab==ShopTab.Stock || _tab==ShopTab.Pricing)_stockViewSignature=StockViewSignature();
+            if(_tab==ShopTab.Stock || _tab==ShopTab.Pricing && _refreshPricing==null)_stockViewSignature=StockViewSignature();
             if(_tab==ShopTab.Counter || (_tab==ShopTab.Orders&&(S.IsSpecialBusiness(S.CurrentShop)||S.IsPetShop(S.CurrentShop))))_counterStructure=CounterStructure();
         }
 
@@ -801,6 +811,16 @@ namespace PCShopSell.Game.UI
 
         // ---------- 定价 ----------
 
+        private sealed class PricingRow
+        {
+            public RectTransform Root;
+            public int Count;
+            public System.Func<double, double> Refresh;
+        }
+
+        private ShopSimulation _pricingShop;
+        private System.Action _refreshPricing;
+
         private void BuildPricing()
         {
             if(S.IsSpecialBusiness(S.CurrentShop))
@@ -809,72 +829,113 @@ namespace PCShopSell.Game.UI
                 return;
             }
             var shop=S.PlayerShop;
-            var fills=ShelfKinds.All.Select(shop.ShelfFillOf).ToArray();
-            var parts=fills.SelectMany(f=>f.Parts).Where(l=>l.Count>0).ToArray();
-            var goods=fills.SelectMany(f=>f.Goods).Where(l=>l.Value>0).ToArray();
+            _pricingShop = shop;
             Line(C,RetailShopTypes.Name(S.RetailKind)+" · 仅列货架上已陈列的商品",17,Ui.Accent);
             Line(C,"可逐件调价，点“确定”生效；未单独定价的商品跟随统一加价。",15,Ui.Dim);
             var global=Line(C,"",19,Ui.Good);
             global.name="PricingPurchaseIntentSummary";
             global.Tip("按已陈列的商品件数汇总购买意愿，计入当前预览价格、销售员和镜子加成。确认后新价格才用于交易。");
-            var refreshers = new List<System.Func<double, double>>();
-            long displayedCount = goods.Sum(g => (long)g.Value) + parts.Sum(p => (long)p.Count);
+            var rows = new Dictionary<string, PricingRow>();
             double draftMarkup = shop.Markup;
             void RefreshAll(double markup)
             {
                 draftMarkup = markup;
-                double total = refreshers.Sum(refresh => refresh(markup));
+                double total = rows.Values.Sum(row => row.Refresh(markup));
+                long displayedCount = rows.Values.Sum(row => (long)row.Count);
                 string label = System.Math.Abs(markup - shop.Markup) > .001 ? "预览购买意愿" : "参考购买意愿";
                 global.text = displayedCount > 0 ? $"{label} {total / displayedCount * 100:0}%" : "购买意愿：暂无商品";
             }
             var editor = Ui.Rect(C, "PricingMarkupEditor");
             Ui.VList(editor, 4, 0);
             var list=Ui.Rect(C,"PricingProducts");Ui.VList(list,4,0);
-            void ProductRow(string key,string name,double kg,int count,System.Func<double, Money> price,System.Func<long, double> intent,
+            var empty = Line(list, "货架上暂无商品，陈列后可在这里调价。", 17, Ui.Dim);
+            PricingRow CreateRow(string key,string name,double kg,System.Func<double, Money> price,System.Func<long, double> intent,
                 System.Action edit,System.Func<bool> own,System.Action follow)
             {
-                var row=Ui.Row(list,86,6);row.name="Pricing_"+key;
-                Ui.Size(ProductText(row,ProductLabel(name,kg,$"已陈列 {count} 件"),16),-1,-1,1);
-                var current=Ui.Size(Ui.Label(row,"",16,TextAnchor.MiddleLeft,Ui.Good),104);
-                var editButton=Ui.Size(Ui.Button(row,"调价",edit,16,Ui.ButtonHot),62,38);editButton.name="EditPrice_"+key;
-                var followButton=Ui.Size(Ui.Button(row,"跟随",()=>{follow();RefreshAll(draftMarkup);},15),56,38);
-                double Refresh(double markup)
+                var view = new PricingRow { Root = Ui.Row(list, 86, 6) };
+                view.Root.name="Pricing_"+key;
+                var caption = Ui.Size(ProductText(view.Root, "", 16), -1, -1, 1);
+                var current=Ui.Size(Ui.Label(view.Root,"",16,TextAnchor.MiddleLeft,Ui.Good),104);
+                var editButton=Ui.Size(Ui.Button(view.Root,"调价",edit,16,Ui.ButtonHot),62,38);editButton.name="EditPrice_"+key;
+                var followButton=Ui.Size(Ui.Button(view.Root,"跟随",()=>{follow();RefreshAll(draftMarkup);},15),56,38);
+                view.Refresh = markup =>
                 {
+                    caption.text = ProductLabel(name, kg, $"已陈列 {view.Count} 件").Replace("<size=13>", "<size=14>");
                     Money shownPrice = price(markup);
                     double chance = intent(shownPrice.Yuan);
                     current.text = shownPrice + $"\n<size=14>购买意愿 {chance * 100:0}%</size>";
                     followButton.interactable = own();
-                    return count * chance;
+                    return view.Count * chance;
+                };
+                return view;
+            }
+
+            void RefreshProducts()
+            {
+                var fills = ShelfKinds.All.Select(shop.ShelfFillOf).ToArray();
+                int index = 0;
+                var visible = new HashSet<string>();
+                void Show(string key, PricingRow row, int count)
+                {
+                    visible.Add(key);
+                    row.Count = count;
+                    if (row.Root.GetSiblingIndex() != index) row.Root.SetSiblingIndex(index);
+                    index++;
                 }
-                refreshers.Add(Refresh);
-            }
-            foreach(var item in goods)
-            {
-                string id=item.Key;var product=Gifts.Get(id);
-                ProductRow("goods_"+id,product.Name,product.WeightKg,item.Value,markup=>shop.GoodsPriceOf(id,markup),
-                    yuan=>shop.GoodsPurchaseIntentAtPrice(id,yuan),
-                    ()=>OpenWindow("调价 · "+product.Name,600,300,w=>
+
+                foreach (var item in fills.SelectMany(fill => fill.Goods).Where(item => item.Value > 0))
+                {
+                    string id = item.Key, key = "goods_" + id;
+                    if (!rows.TryGetValue(key, out var row))
                     {
-                        Para(w.Content,product.Name+" · 调整时预览购买意愿，确定后保存售价。",17);
-                        Ui.Size(ShelfSaleTag(w,w.Content,"goods_"+id,shop.GoodsPriceOf(id).Yuan,shop.GoodsPriceRange(id),
-                            value=>shop.GoodsPurchaseIntentAtPrice(id,value),value=>{S.ConfirmGoodsSalePrice(id,value);RebuildDock();}),-1,100);
-                    }),()=>shop.HasGoodsMarkup(id),()=>shop.SetGoodsMarkup(id,null));
-            }
-            foreach(var item in parts)
-            {
-                var line=item;var part=line.Part;bool boxed=line.Boxed;string key=part.Id+(boxed?"_boxed":"_loose");
-                ProductRow(key,part.Name+(boxed?" · 盒装":" · 散件"),PartUnitKg(part,boxed),line.Count,markup=>shop.PriceOf(part,boxed,markup),
-                    yuan=>shop.PartPurchaseIntentAtPrice(part,boxed,yuan),
-                    ()=>OpenWindow("调价 · "+part.Name,600,300,w=>
+                        var product = Gifts.Get(id);
+                        rows[key] = row = CreateRow(key, product.Name, product.WeightKg, markup => shop.GoodsPriceOf(id, markup),
+                            yuan => shop.GoodsPurchaseIntentAtPrice(id, yuan), () => OpenWindow("调价 · " + product.Name, 600, 300, w =>
+                            {
+                                Para(w.Content, product.Name + " · 调整时预览购买意愿，确定后保存售价。", 17);
+                                Ui.Size(ShelfSaleTag(w, w.Content, key, shop.GoodsPriceOf(id).Yuan, shop.GoodsPriceRange(id),
+                                    value => shop.GoodsPurchaseIntentAtPrice(id, value), value => { S.ConfirmGoodsSalePrice(id, value); RefreshAll(draftMarkup); }), -1, 100);
+                            }), () => shop.HasGoodsMarkup(id), () => shop.SetGoodsMarkup(id, null));
+                    }
+                    Show(key, row, item.Value);
+                }
+                foreach (var item in fills.SelectMany(fill => fill.Parts).Where(item => item.Count > 0))
+                {
+                    var part = item.Part;
+                    bool boxed = item.Boxed;
+                    string key = part.Id + (boxed ? "_boxed" : "_loose");
+                    if (!rows.TryGetValue(key, out var row))
                     {
-                        Para(w.Content,part.Name+" · "+(boxed?"盒装":"散件"),17);
-                        Ui.Size(ShelfSaleTag(w,w.Content,key,shop.PriceOf(part,boxed).Yuan,shop.PartPriceRange(part,boxed),
-                            value=>shop.PartPurchaseIntentAtPrice(part,boxed,value),value=>{S.ConfirmPartSalePrice(part,boxed,value);RebuildDock();}),-1,100);
-                    }),()=>shop.HasPartMarkup(part),()=>shop.SetPartMarkup(part,null));
+                        rows[key] = row = CreateRow(key, part.Name + (boxed ? " · 盒装" : " · 散件"), PartUnitKg(part, boxed),
+                            markup => shop.PriceOf(part, boxed, markup), yuan => shop.PartPurchaseIntentAtPrice(part, boxed, yuan),
+                            () => OpenWindow("调价 · " + part.Name, 600, 300, w =>
+                            {
+                                Para(w.Content, part.Name + " · " + (boxed ? "盒装" : "散件"), 17);
+                                Ui.Size(ShelfSaleTag(w, w.Content, key, shop.PriceOf(part, boxed).Yuan, shop.PartPriceRange(part, boxed),
+                                    value => shop.PartPurchaseIntentAtPrice(part, boxed, value), value => { S.ConfirmPartSalePrice(part, boxed, value); RefreshAll(draftMarkup); }), -1, 100);
+                            }), () => shop.HasPartMarkup(part), () => shop.SetPartMarkup(part, null));
+                    }
+                    Show(key, row, item.Count);
+                }
+                foreach (string key in rows.Keys.Where(key => !visible.Contains(key)).ToArray())
+                {
+                    var removed = rows[key].Root.gameObject;
+                    removed.SetActive(false);
+                    Kill.It(removed);
+                    rows.Remove(key);
+                }
+                empty.gameObject.SetActive(rows.Count == 0);
             }
-            if(goods.Length==0 && parts.Length==0)Line(list,"货架上暂无商品，陈列后可在这里调价。",17,Ui.Dim);
-            PriceMultiplierEditor(editor,"GlobalMarkupSlider","统一加价",shop.Markup,ShopSettings.MinMarkup,ShopSettings.MaxMarkup,.05,
-                S.SetMarkup,RebuildDock,"global:"+S.CurrentShop.Place.Id,RefreshAll);
+
+            RefreshProducts();
+            var syncEditor = PriceMultiplierEditor(editor, "GlobalMarkupSlider", "统一加价", () => shop.Markup,
+                ShopSettings.MinMarkup, ShopSettings.MaxMarkup, .05, S.SetMarkup,
+                draftKey: "global:" + S.CurrentShop.Place.Id, onPreview: RefreshAll);
+            _refreshPricing = () =>
+            {
+                RefreshProducts();
+                syncEditor();
+            };
         }
 
         // ---------- 经营报表 ----------

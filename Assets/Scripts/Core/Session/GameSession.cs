@@ -174,12 +174,11 @@ namespace PCShopSell.Core.Session
         public int Tick(double realSeconds)
         {
             _manualMoving = false;
-            CheckRacingAccess();
-            if (Racing || IsGameOver || !Time.IsRunning || realSeconds <= 0) return 0;
+            if (Racing || IsGameOver || !Time.IsRunning || DrinkTastingInProgress || realSeconds <= 0) return 0;
             // 开局做饭教学：世界时钟不自己走，玩家可以慢慢看；只有锅在焖饭时才走，否则饭永远焖不好。吃饭、装包这些操作自己会推进相应的分钟。
             if (OpeningClockFrozen) return 0;
             if (!_sleeping && !IsWorking && !CityActivityExclusive && !BrandExpoExclusive && PendingEvent == null && Trip == null
-                && (TryShowRacingIntroduction() || TryShowRelativeOverdue() || TryShowLinOverdue() || TryShowMingAfterRace()
+                && (TryShowRelativeOverdue() || TryShowLinOverdue() || TryShowMingAfterRace()
                     || TryShowRacingBatchFollowup() || TryOfferLeisureInvitation() || TryRollDeferredDailyEvent())) return 0;
             _activeCheckoutSeconds+=Math.Min(realSeconds,TimeController.MaxTickSeconds);
             double scaled = Math.Min(realSeconds, TimeController.MaxTickSeconds) * Time.Speed * TimeController.WorldRate;
@@ -189,7 +188,15 @@ namespace PCShopSell.Core.Session
             if (SteerActive && Trip != null) BreakTripToEdge();
             if (Trip != null) arrived = StepTrip(scaled);
             else if (SteerActive) _manualMoving = StepManual(scaled);
-            if (minutes > 0) AdvanceClock(minutes);
+            if (minutes > 0)
+            {
+                // Station waiting uses ordinary world ticks; fast-forward actions such as metro rides bypass it.
+                bool waitingForWallet = AtWalletReturnStation && !_sleeping && !IsWorking;
+                long before = Clock.Now.TotalMinutes;
+                AdvanceClock(minutes);
+                if (waitingForWallet && AtWalletReturnStation)
+                    _walletWaitedMinutes = Math.Min(WalletReturnWaitMinutes, _walletWaitedMinutes + (int)(Clock.Now.TotalMinutes - before));
+            }
             if (arrived != null && !IsGameOver && CurrentPlace == null && PlayerNodeId == arrived) TripArrived?.Invoke(arrived);
 
             if (!IsGameOver) StepPolice(scaled);
@@ -199,7 +206,7 @@ namespace PCShopSell.Core.Session
         /// <summary>推进时钟并处理推进中触发的晕倒、住院。所有改变时间的操作都走这里。</summary>
         public void AdvanceClock(int minutes)
         {
-            if(BrandExpoExclusive&&!ExpoTimeAdvancing)return;
+            if (BrandExpoExclusive && !ExpoTimeAdvancing || DrinkTastingInProgress) return;
             if (minutes <= 0) return;
             int interruption = _bodyInterruptVersion;
             SynchronizeEnergyExhaustion();
@@ -481,7 +488,6 @@ namespace PCShopSell.Core.Session
             DeliverDirect(to);
             if (from.Date == to.Date) TrackCreatorCampaigns(to);
 
-            CheckRacingAccess();
             if (!_sleeping && Player.Health < 15) _pendingHospital = true;
         }
 

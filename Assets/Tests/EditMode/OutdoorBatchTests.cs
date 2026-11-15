@@ -5,21 +5,68 @@ using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
+using PCShopSell.Game;
+using PCShopSell.Game.UI;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace PCShopSell.Tests
 {
     public sealed class OutdoorBatchTests
     {
         private static readonly string[] Ids = { "act_fishing_grandpa", "act_hike_luqiao", "act_hike_gardener", "act_hike_shiyang", "act_snack_moxin", "act_snack_maoning", "act_snack_rider", "act_market_zhou", "act_market_li", "act_market_wang" };
-        private static GameSession Make(bool shop = true)
+        private static GameSession Make(bool shop = true, int? hikeClosingMinute = null)
         {
             using var fixture = DistrictProgressionTests.Make();
-            using var first = new GameSession(fixture.City, 417, Money.FromYuan(1000000), GameTimestamp.From(new GameDate(42), 600),
+            var city = fixture.City;
+            if (hikeClosingMinute.HasValue)
+            {
+                var layout = JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text);
+                layout.places.Single(p => p.id == "life_hike").closeMinute = hikeClosingMinute.Value;
+                city = CityLayout.FromData(layout);
+            }
+            using var first = new GameSession(city, 417, Money.FromYuan(1000000), GameTimestamp.From(new GameDate(42), 600),
                 starterStock: false, smartphone: false, startWithShop: shop);
             first.Tick(0); var data = first.CreateSave(); data.districtProgress = new DistrictProgress { UnlockedTier = 3 };
             var s = GameSession.Load(first.City, data); s.Player.Health = 100; s.Player.Hunger = 100; s.Player.Energy = 100;
             s.Meet("zhou", 60); s.Meet("li", 60); s.Meet("wang", 60); return s;
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void EveningHikeInvitationUsesActualWeekendSlotsOrSkipsThePopup(bool venueClosesTooEarly)
+        {
+            using var s = Make(hikeClosingMinute: venueClosesTooEarly ? 7 * 60 : (int?)null);
+            s.Clock.Restore(new GameDate(15), 20 * 60 + 1);
+            At(s, GameSession.FishingVenueId);
+            Assert.That(s.GoTo(s.City.GetPlace("stall_cpu")), Is.True);
+            var trip = s.Trip;
+            Assert.That(trip, Is.Not.Null);
+
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+            s.RaiseEvent("act_hike_luqiao");
+            TestContext.WriteLine($"Invitation generation took {timer.Elapsed.TotalMilliseconds:0.0} ms.");
+            Assert.That(s.Trip, Is.SameAs(trip));
+            if (venueClosesTooEarly)
+            {
+                Assert.That(s.PendingEvent, Is.Null);
+                return;
+            }
+
+            Assert.That(s.PendingEvent, Is.Not.Null);
+            var choices = s.PendingEvent.Choices.Take(4).ToArray();
+            Assert.That(choices, Has.Length.EqualTo(4));
+            Assert.That(choices.All(s.IsChoiceEnabled), Is.True);
+            Assert.That(choices[0].Text.Split('·').Last(), Is.EqualTo(choices[1].Text.Split('·').Last()));
+            Assert.That(choices[2].Text.Split('·').Last(), Is.EqualTo(choices[3].Text.Split('·').Last()));
+            Assert.That(s.ResolveEvent(3), Is.True);
+            var booking = s.CityActivities.Single(a => a.Active);
+            var time = new GameTimestamp(booking.ScheduledStart);
+            Assert.That(time.Date.IsWeekend, Is.True);
+            Assert.That(time.MinuteOfDay + booking.Duration, Is.LessThanOrEqualTo(20 * 60));
+            Assert.That(booking.Duration, Is.EqualTo(180));
+            Assert.That(booking.PlayerTreat, Is.True);
         }
         private static GameSession Reload(GameSession s) => GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));
         private static void At(GameSession s, string place)
@@ -38,9 +85,142 @@ namespace PCShopSell.Tests
         private static void Attend(GameSession s, CityActivity a)
         {
             s.Clock.Restore(new GameDate((int)(a.ScheduledStart / 1440)), (int)(a.ScheduledStart % 1440)); At(s, a.VenueId);
-            Assert.IsTrue(s.PrepareVenueCompanions(s.CurrentPlace)); s.AdvanceClock(3);
+            Assert.IsTrue(s.PrepareVenueCompanions(s.CurrentPlace));
+            if (GameSession.IsOutdoorMarketVisit(a) || GameSession.IsInteractiveFishingActivity(a))
+                Assert.IsTrue(s.StartVenueAppointment(a.Id), s.VenueAppointmentStartBlocker(a));
+            s.AdvanceClock(3);
             Assert.AreEqual(CityActivityPhase.Running, a.State, a.EndReason);
         }
+
+        [TestCase(65)]
+        [TestCase(67)]
+        public void NightMealPickerShowsOnlyTheSelectedPackagesPaymentOptionsAndBooksOnConfirmation(int number)
+        {
+            using var s = Make();
+            s.RaiseEvent(Ids[number - 61]);
+            var invitation = s.PendingEvent;
+            Assert.That(invitation, Is.Not.Null);
+            var initialTime = s.Clock.Now;
+            var initialCash = s.Ledger.Balance;
+            var root = new GameObject("NightMealPickerTest");
+            root.SetActive(false);
+            var controller = root.AddComponent<GameController>();
+            typeof(GameController).GetProperty("Session").SetValue(controller, s);
+            typeof(GameController).GetProperty("City").SetValue(controller, s.City);
+            var previous = UnityEngine.EventSystems.EventSystem.current;
+            var ui = new GameUi(controller);
+            Button[] Buttons() => ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Button>()).ToArray();
+            Button Find(string name) => Buttons().Single(button => button.name == name);
+            string Summary() => ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Text>())
+                .Single(label => label.name == "EventAppointmentSummary").text;
+            try
+            {
+                ui.ShowEvent(invitation);
+                Assert.That(Summary(), Does.Contain("90 分钟 · 到场付 ¥480"));
+                Find("EventAppointmentPayment_4").onClick.Invoke();
+                Assert.That(Summary(), Does.Contain("对方同意后免费"));
+                Assert.That(Find("EventAppointmentConfirm").GetComponentInChildren<Text>().text, Is.EqualTo("商量请客"));
+
+                Find("EventAppointmentPayment_1").onClick.Invoke();
+                Find("EventAppointmentPackage_1").onClick.Invoke();
+                Assert.That(Buttons().Any(b => b.name == "EventAppointmentPayment_4"), Is.False);
+                Assert.That(Summary(), Does.Contain("120 分钟 · 到场付 ¥2,400"));
+                Assert.That(Buttons().Any(b => b.GetComponentInChildren<Text>()?.text == "改天再约"), Is.True);
+                Assert.That(Buttons().Any(b => b.GetComponentInChildren<Text>()?.text == "这次不参加"), Is.True);
+                Assert.That(s.PendingEvent, Is.SameAs(invitation));
+                Assert.That(s.CityActivities.Any(a => a.Active), Is.False);
+                Assert.That(s.Ledger.Balance, Is.EqualTo(initialCash));
+
+                Find("EventAppointmentConfirm").onClick.Invoke();
+                Assert.That(s.PendingEvent, Is.Null);
+                var booking = s.CityActivities.Single(a => a.Active);
+                Assert.That(s.CityActivityService(booking).Id, Is.EqualTo($"social_{number}_private"));
+                Assert.That(booking.Duration, Is.EqualTo(120));
+                Assert.That(booking.PlayerTreat, Is.True);
+                Assert.That(booking.ScheduledStart, Is.EqualTo(invitation.Choices[3].Appointment.Value.Start));
+                Assert.That(s.Ledger.Balance, Is.EqualTo(initialCash));
+                Assert.That(s.Clock.Now, Is.EqualTo(initialTime));
+            }
+            finally
+            {
+                ui.CloseAllWindows();
+                foreach (var canvas in ui.Canvases) UnityEngine.Object.DestroyImmediate(canvas.gameObject);
+                UnityEngine.Object.DestroyImmediate(root);
+                if (previous == null && UnityEngine.EventSystems.EventSystem.current != null)
+                    UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);
+            }
+        }
+
+        [TestCase(68)]
+        [TestCase(69)]
+        [TestCase(70)]
+        public void FreeMarketVisitStartsAtReceptionAndWalksWithActivityWindowOpen(int number)
+        {
+            using var s = Make();
+            s.EventsEnabled = false;
+            var activity = Accept(s, number);
+            s.Clock.Restore(new GameTimestamp(activity.ScheduledStart).Date, (int)(activity.ScheduledStart % 1440));
+            At(s, activity.VenueId);
+            s.Time.SetPaused(true);
+            var cash = s.Ledger.Balance;
+            var root = new GameObject("MarketVisitReceptionTest");
+            root.SetActive(false);
+            var controller = root.AddComponent<GameController>();
+            typeof(GameController).GetProperty("Session").SetValue(controller, s);
+            typeof(GameController).GetProperty("City").SetValue(controller, s.City);
+            var previous = UnityEngine.EventSystems.EventSystem.current;
+            var ui = new GameUi(controller);
+            Button Find(string name) => ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Button>())
+                .Single(button => button.name == name);
+            try
+            {
+                ui.OnEnteredPlace(s.CurrentPlace);
+                var start = Find("StartVenueAppointment");
+                Assert.That(start.interactable, Is.True);
+                Assert.That(start.GetComponentInChildren<Text>().text, Does.Contain("免费"));
+                Assert.That(ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Text>()).Select(label => label.text),
+                    Has.None.EqualTo("选择这项服务"));
+                Assert.That(s.Time.IsHeld, Is.True);
+                s.AdvanceClock(1);
+                Assert.That(activity.State, Is.EqualTo(CityActivityPhase.Gathering));
+
+                var now = s.Clock.Now;
+                start.onClick.Invoke();
+                Assert.That(s.RunningCityActivity, Is.SameAs(activity));
+                Assert.That(s.Clock.Now, Is.EqualTo(now));
+                Assert.That(s.Time.IsRunning, Is.True);
+                Assert.That(ui.AnyModalOpen, Is.True);
+                Assert.That(Find("CityActivityChoice_1").interactable, Is.False);
+
+                for (int visited = 1; visited <= 3; visited++)
+                {
+                    s.AdvanceClock(4);
+                    Assert.That(s.OutdoorActivityState(activity.Id).Visited, Is.EqualTo(visited));
+                    ui.RebuildWindows();
+                    if (visited == 3) break;
+                    var next = Find("CityActivityChoice_1");
+                    Assert.That(next.interactable, Is.True);
+                    now = s.Clock.Now;
+                    next.onClick.Invoke();
+                    Assert.That(s.Clock.Now, Is.EqualTo(now));
+                    Assert.That(s.Time.IsRunning, Is.True);
+                    Assert.That(ui.AnyModalOpen, Is.True);
+                }
+                s.AdvanceClock(activity.Duration);
+                Assert.That(activity.State, Is.EqualTo(CityActivityPhase.Completed));
+                Assert.That(s.OutdoorActivityState(activity.Id).OrderCount, Is.Zero);
+                Assert.That(s.Ledger.Balance, Is.EqualTo(cash));
+            }
+            finally
+            {
+                ui.CloseAllWindows();
+                foreach (var canvas in ui.Canvases) UnityEngine.Object.DestroyImmediate(canvas.gameObject);
+                UnityEngine.Object.DestroyImmediate(root);
+                if (previous == null && UnityEngine.EventSystems.EventSystem.current != null)
+                    UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);
+            }
+        }
+
         [TestCase(61, 0, 300)] [TestCase(62, 0, 900)] [TestCase(63, 0, 0)] [TestCase(64, 0, 0)]
         [TestCase(65, 0, 480)] [TestCase(66, 1, 0)] [TestCase(67, 0, 480)] [TestCase(68, 0, 0)] [TestCase(69, 0, 0)] [TestCase(70, 0, 0)]
         public void InvitationsDoNotChargeOrGrantContactUntilRealAttendance(int number, int choice, int cost)

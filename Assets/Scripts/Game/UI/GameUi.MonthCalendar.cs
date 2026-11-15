@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -102,7 +103,7 @@ namespace PCShopSell.Game.UI
             var chip = Ui.Panel(button.transform, "CalendarEvent", Color.Lerp(fill, color, .17f));
             chip.raycastTarget = false;
             chip.rectTransform.Anchor(0, 0, 1, 0, 5, 5, 5, -27);
-            string title = item.Label.Length > 6 ? item.Label.Substring(0, 5) + "…" : item.Label;
+            string title = item.Label.Length > 12 ? item.Label.Substring(0, 11) + "…" : item.Label;
             var label = Ui.Label(chip.transform, title, 15, TextAnchor.MiddleLeft, color);
             label.rectTransform.Fill(4);
             label.horizontalOverflow = HorizontalWrapMode.Overflow;
@@ -119,6 +120,7 @@ namespace PCShopSell.Game.UI
                 case "brand_expo": return "品牌展会";
                 case "city_activity": case "appointment": return "朋友邀约";
                 case "work": return "打工班次";
+                case "wallet_return": return "归还钱包";
                 case "repair": case "repairing": return "上门维修";
                 case "parcel": return "快递到货";
                 case "loan": return "贷款到期";
@@ -222,7 +224,7 @@ namespace PCShopSell.Game.UI
             var layout = summary.GetComponent<HorizontalLayoutGroup>();
             layout.childAlignment = TextAnchor.UpperLeft;
             layout.childForceExpandHeight = false;
-            Ui.Size(Ui.Label(summary, e.HasTime ? e.TimeText : "全天", 16, TextAnchor.UpperLeft, CalendarItemColor(item)), 116, 23);
+            Ui.Size(Ui.Label(summary, e.Kind == "wallet_return" ? "待办" : e.HasTime ? e.TimeText : "全天", 16, TextAnchor.UpperLeft, CalendarItemColor(item)), 116, 23);
             Ui.Size(Para(summary, e.Text, 17, item.Completed ? Ui.Dim : Ui.TextColor), 0, -1, 1);
             RectTransform actions = null;
             RectTransform Actions() => actions ??= Ui.Row(card, 40, 8);
@@ -244,10 +246,10 @@ namespace PCShopSell.Game.UI
                 else ActionButton("查看参展安排", () => OpenBookedExpo(id));
                 if (!item.Completed) ExpoTravelButton(Actions());
             }
-            if (item.ContractId != null)
+            if (item.ContractId != null && S.KolAmbassadorAccessBlocker == null)
                 ActionButton("查看代言与直播安排", () =>
                 { _selectedKolContract = item.ContractId; _brandTab = BrandKolTab; _kolPage = "我的代言人"; OpenBrandBusiness(); });
-            if (item.HistoryBrandId != null)
+            if (item.HistoryBrandId != null && S.KolAmbassadorAccessBlocker == null)
                 ActionButton("查看品牌专场记录", () =>
                 { _brandId = item.HistoryBrandId; _brandTab = BrandKolTab; _kolPage = "专场记录"; OpenBrandBusiness(); });
             if (e.Kind == "parcel" || e.Kind == "cook" || e.Kind == "repair" || e.Kind == "repairing")
@@ -255,7 +257,14 @@ namespace PCShopSell.Game.UI
             if (e.Kind == "work" && S.WorkPlace != null)
                 ActionButton("前往打工地点", () => { CloseAllWindows(); _ctrl.GoToPlace(S.WorkPlace); });
             if (e.Kind == "loan") ActionButton("查看贷款", OpenLoansApp);
-            if (!item.Completed && e.DestinationId != null && S.City.HasPlace(e.DestinationId))
+            if (e.Kind == "wallet_return" && S.WalletReturnStation is Place station)
+                ActionButton(S.CurrentPlace == station ? "查看站内交接" : "前往地铁站", () =>
+                {
+                    CloseAllWindows();
+                    if (S.CurrentPlace == station) OnEnteredPlace(station);
+                    else S.BeginCityTravel(station.Id);
+                });
+            else if (!item.Completed && e.DestinationId != null && S.City.HasPlace(e.DestinationId))
                 ActionButton("前往赛场", () =>
                 {
                     if ((e.Kind == "race_invite" || e.Kind == "race_registration") && e.Minute / 1440 > S.Clock.Today.TotalDays)

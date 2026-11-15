@@ -297,6 +297,8 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Mall: return QuestPlaceAction("前往家具城", S.City.Places.FirstOrDefault(p => p.Business == GameSession.MallBusiness));
                 case QuestTarget.PhoneShop: return QuestPlaceAction("前往手机店", S.City.Places.FirstOrDefault(p => p.Business == GameSession.PhoneBusiness));
                 case QuestTarget.ScooterDealer: return QuestPlaceAction("前往顺丰车行", ScooterDealer);
+                case QuestTarget.RacingEnrollment:
+                    return QuestPlaceAction("前往城郊赛场车库", S.City.GetPlace(GameSession.StarterRaceGarageId));
                 case QuestTarget.Market:
                     if (S.ShopSupplyMarketId(S.RetailKind) is string marketId)
                         return QuestPlaceAction("前往批发市场", S.PurchaseDestination(S.City.GetPlace(marketId)));
@@ -390,11 +392,16 @@ namespace PCShopSell.Game.UI
                 return;
             }
             Line(w.Content, q.Title, 23, Ui.Accent);
-            // Guidance explains where/how; it must never move the player or open a destination page.
             Para(w.Content, GuideLocation(q.Target), 17, Ui.Accent);
             Para(w.Content, q.Hint, 18);
             if (q.Reward != null) Para(w.Content, "完成奖励：" + q.RewardText(S), 16, Ui.Good);
             ProgressLine(w.Content, q, 16);
+            if (q.Target == QuestTarget.RacingEnrollment)
+            {
+                var (label, action) = QuestAction(q.Target);
+                Ui.Size(Ui.Button(w.Content, label, () => { w.Close(); action(); }, 18, Ui.ButtonHot), -1, 42);
+                return;
+            }
             if (q.Lesson)
             {
                 bool canComplete = S.CanCompleteQuestLesson(q.Id);
@@ -453,6 +460,7 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Staff: return "位置：自己的店 → 右侧“员工”页";
                 case QuestTarget.PhoneShop: return "地点：商业街 · <color=#FFC966>手机店</color>";
                 case QuestTarget.CommunityGoal: return "片区：城郊";
+                case QuestTarget.RacingEnrollment: return "地点：城郊赛场车库";
                 case QuestTarget.ScooterDealer:
                     return ScooterDealer is Place dealer
                         ? $"地点：{S.City.StreetName(dealer.StreetId)} · <color=#FFC966>{dealer.Name}</color>"

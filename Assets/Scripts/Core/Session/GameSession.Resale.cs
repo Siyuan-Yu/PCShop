@@ -14,14 +14,20 @@ namespace PCShopSell.Core.Session
         private IEnumerable<ResaleOffer> UsedOffers(OwnedShop shop)=>shop.RetailKind!="secondhand"?Enumerable.Empty<ResaleOffer>():
             SpecialBusiness(shop.Place.Id).Used.Where(i=>i.Owned&&i.Inspected&&i.Listed&&!i.Sold&&!UsedReserved(shop,i.Id))
                 .Select(i=>new ResaleOffer{Id=i.Id,Product=i.Product,Name=UsedNames[i.Product]+" · "+ConditionName(i.Condition),Kg=UsedWeight(i),Price=i.Price,ReferencePrice=UsedValue(i)});
-        private bool SetUsedListing(OwnedShop shop,UsedItem item,long price)
+        private string SetUsedListing(OwnedShop shop, UsedItem item, long price)
         {
-            if(item==null||!item.Owned||!item.Inspected||item.Sold||price<1||price>1000000)return false;
-            if(UsedReserved(shop,item.Id))return Fail("这件商品已被顾客拿去结账，暂时不能改价或下架。");
-            var fill=shop.Sim.ShelfFillOf(ShelfKinds.Get("secondhand"));
-            if(fill.CapacityKg<=0)return Fail("请先摆放货架，并将品类设为“二手转售品”。");
-            if(!item.Listed&&(fill.Total>=fill.CapacityItems||fill.UsedKg+UsedWeight(item)>fill.CapacityKg+1e-9))return Fail("二手转售品货架已满，请增加货架或先售出一些商品。");
-            item.Price=price;item.Listed=true;return true;
+            if (item == null || !item.Owned || !item.Inspected || item.Sold)
+                return "这件旧物目前无法上架。请确认已收购、已鉴定且尚未售出。";
+            if (price < 1 || price > 1000000) return "请将标价设在 ¥1 到 ¥1,000,000 之间。";
+            if (UsedReserved(shop, item.Id)) return "这件商品已被顾客拿去结账，暂时不能改价或下架。";
+            var fill = shop.Sim.ShelfFillOf(ShelfKinds.Get("secondhand"));
+            if (fill.CapacityKg <= 0)
+                return "请先摆放货架，并将品类设为“二手转售品”。\n\n在店内走到货架旁按 F，选择“选择摆什么”或“换品类”，再从“零售商品”中选“二手转售品”。设置好后，回到收购鉴定台确认上架。";
+            if (!item.Listed && (fill.Total >= fill.CapacityItems || fill.UsedKg + UsedWeight(item) > fill.CapacityKg + 1e-9))
+                return "二手转售品货架已满，或剩余承重不足。请增加货架或等货架腾出空位。";
+            item.Price = price;
+            item.Listed = true;
+            return null;
         }
         public bool UnlistUsedItem(int id)
         {

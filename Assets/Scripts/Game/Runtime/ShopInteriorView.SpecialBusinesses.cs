@@ -14,6 +14,25 @@ namespace PCShopSell.Game.Runtime
         public Vector3 UsedBuyDeskWorld {get;private set;}
         public Vector3 SpecialFurnitureWorld {get;private set;}
         public string SpecialFurnitureName {get;private set;}
+        private PlacedFurniture _usedBuyDesk;
+        private Vector3 _usedSellerStand;
+
+        private static Vector3 UsedDeskCenter(PlacedFurniture desk) => new Vector3((float)desk.X, 0, (float)desk.Z);
+
+        private static Vector3 UsedDeskStand(PlacedFurniture desk, bool seller)
+        {
+            var front = Quaternion.Euler(0, 90f * desk.Rot, 0) * Vector3.back;
+            float distance = (float)FurnitureCatalog.Get(desk.Id).Depth * .5f + .45f;
+            return UsedDeskCenter(desk) + front * (seller ? distance : -distance);
+        }
+
+        private static void FaceUsedDesk(Transform person, PlacedFurniture desk)
+        {
+            var direction = UsedDeskCenter(desk) - person.localPosition;
+            direction.y = 0;
+            if (direction.sqrMagnitude > .01f) person.localRotation = Quaternion.LookRotation(direction);
+        }
+
         private readonly Dictionary<string,GameObject> _specialFigures=new Dictionary<string,GameObject>();
         private readonly Dictionary<string,GameObject> _specialGoods=new Dictionary<string,GameObject>();
         public int NearbyDiningTable { get; private set; } = -1;
@@ -41,7 +60,7 @@ namespace PCShopSell.Game.Runtime
             }
             var wanted=new HashSet<string>();
             var goods=new HashSet<string>();
-            void Person(string key,Vector3 target)
+            Transform Person(string key,Vector3 target)
             {
                 wanted.Add(key);
                 if(!_specialFigures.TryGetValue(key,out var figure))
@@ -51,6 +70,7 @@ namespace PCShopSell.Game.Runtime
                 }
                 figure.SetActive(true);
                 figure.transform.position = ClampIndoorNpc(_root.TransformPoint(target));
+                return figure.transform;
             }
             void Good(string key,Vector3 target,Color color)
             {
@@ -101,7 +121,7 @@ namespace PCShopSell.Game.Runtime
                 }
                 else
                 {
-                    var desk=shop.Layout.FirstOrDefault(p=>p.Id=="used_buydesk");
+                    var desk = _usedBuyDesk;
                     var seller=state.Used.FirstOrDefault(i=>!i.Owned&&!i.Sold);
                     if(desk!=null)
                     {
@@ -110,8 +130,13 @@ namespace PCShopSell.Game.Runtime
                         var edge = new Vector2(Mathf.Clamp(player.x,(float)bounds.MinX,(float)bounds.MaxX),
                             Mathf.Clamp(player.z,(float)bounds.MinZ,(float)bounds.MaxZ));
                         NearUsedBuyDesk = Vector2.Distance(edge,new Vector2(player.x,player.z))<1.15f;
-                        UsedBuyDeskWorld = _root.TransformPoint(new Vector3((float)desk.X,1.35f,(float)desk.Z));
-                        if(seller!=null){Person("seller:"+seller.Id,new Vector3((float)desk.X,0,(float)desk.Z-.8f));Good("offer:"+seller.Id,new Vector3((float)desk.X,.95f,(float)desk.Z),new Color(.68f,.5f,.32f));}
+                        var center = UsedDeskCenter(desk);
+                        UsedBuyDeskWorld = _root.TransformPoint(center + Vector3.up * 1.35f);
+                        if (seller != null)
+                        {
+                            FaceUsedDesk(Person("seller:" + seller.Id, _usedSellerStand), desk);
+                            Good("offer:" + seller.Id, center + Vector3.up * .95f, new Color(.68f, .5f, .32f));
+                        }
                     }
                     var displays=shop.Layout.Where(p=>p.Id=="used_display").ToArray();int slot=0;
                     foreach(var item in state.Used.Where(i=>i.Owned&&!i.Listed&&!i.Sold))

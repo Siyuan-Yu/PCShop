@@ -31,6 +31,7 @@ namespace PCShopSell.Core.Session
         private static int OutdoorNumber(string id) => id != null && id.StartsWith("social_", StringComparison.Ordinal)
             && int.TryParse(id.Substring(7), out int n) && n >= 61 && n <= 77 && n!=76 ? n : 0;
         public static bool IsOutdoorBatchActivity(CityActivity a) => OutdoorNumber(a?.DefinitionId) != 0;
+        public static bool IsOutdoorMarketVisit(CityActivity activity) => OutdoorNumber(activity?.DefinitionId) is >= 68 and <= 70;
         private OutdoorBatchState OutdoorState(CityActivity a) => _outdoorBatch.FirstOrDefault(s => s.ActivityId == a?.Id);
         public OutdoorBatchState OutdoorActivityState(string id) => _outdoorBatch.FirstOrDefault(s => s.ActivityId == id)?.Copy();
         public bool HasOpenedComputerShop => MyShops.Any(shop => shop.RetailKind == "computer" && shop.Sim != null && !shop.Sim.NotFitted);
@@ -49,14 +50,15 @@ namespace PCShopSell.Core.Session
                 62 => "卢桥带队沿步道郊游。生态向导 ¥900/人、120 分钟；私享野餐 ¥2,200/人、180 分钟。到场后逐站行走，可休息或选择观景支线。",
                 63 => "方林邀请你沿公园步道看花。可以赏花、帮扶倒伏植物或巡查损坏设施；需要实际到现场完成，不收活动费。",
                 64 => "石扬带你在公园认三株植物。走到样株旁观察叶片，再选择香樟、桂花或银杏；答错可以继续，奖励按实际辨认结果结算。",
-                65 => "莫欣约你下班后吃夜宵。海味砂锅 ¥480/人、90 分钟，私厨套餐 ¥1,200/人、120 分钟；付款方式与聊天话题分别选择。",
+                65 => "莫欣约你下班后吃夜宵。",
                 66 => "茅宁要值夜班。可约班前快餐（¥160/人），或买好实际餐食送到他的工作地点；送餐不收额外活动费，交付会消耗背包里的实物。也可改约下班后。",
-                67 => "吴磊完成当天跑单后才来赴约。海味砂锅 ¥480/人或私厨 ¥1,200/人，可聊跑单经历，也可另谈真实配送合作；不会替你自动生成合作订单。",
+                67 => "吴磊想跑完单后一起吃夜宵，聊聊跑单和配送。",
                 68 => "周维成带你实际走访市场档口。看新品、核对供货条件后可自行选择型号和数量，现款采购按真实报价扣钱并运输，不会自动赠送配件。",
                 69 => "李承业陪你实地看货，比较本市场与真实网购报价；已签直供协议时再加入直供报价。走完三个核对节点，再判断哪家合算或暂缓采购。谈价仍可在属性不足时尝试，但会失败。",
                 _ => "王振海请你到显卡档口看货。你已开办电脑店，可以先看样、花时间上机核对参数，再选型号与数量现款采购或谈 30% 首款、14 天尾款的账期。商品、付款、债务与运输都实际发生。" };
             var choices = new List<EventChoice>();
-            void Offer(string label, string definition, bool treat = false, bool hostPays = false, string at = null, bool after = false, bool nextShiftEnd = false)
+            var starts = new Dictionary<(string Definition, string Venue, bool AfterWork, long Earliest), long>();
+            (EventChoice Choice, long Start) Offer(string label, string definition, bool treat = false, bool hostPays = false, string at = null, bool after = false, bool nextShiftEnd = false)
             {
                 string place = at ?? venue; long earliest = 0;
                 if (nextShiftEnd)
@@ -64,8 +66,10 @@ namespace PCShopSell.Core.Session
                     earliest = Clock.Today.TotalDays * 1440L + CityPerson(person).WorkEnd;
                     while (earliest <= Clock.Now.TotalMinutes) earliest += 1440;
                 }
-                long start = FindOutdoorStart(definition, place, person, after, earliest);
-                choices.Add(Choose(label + (start >= 0 ? " · " + new GameTimestamp(start) : " · 暂无合适时段"), s =>
+                var key = (definition, place, after, earliest);
+                if (!starts.TryGetValue(key, out long start))
+                    starts[key] = start = FindOutdoorStart(definition, place, person, after, earliest);
+                var choice = Choose(label + (start >= 0 ? " · " + new GameTimestamp(start) : " · 暂无合适时段"), s =>
                 {
                     if (n == 70 && !s.HasOpenedComputerShop) return "电脑店已不可用，本次未预约。";
                     if (hostPays)
@@ -77,15 +81,37 @@ namespace PCShopSell.Core.Session
                     if (a == null) return "日程或条件变化，未预约、未扣款。";
                     a.HostId = person; a.HostPays = hostPays; a.PlayerTreat = treat; a.ServiceConfirmed = true; a.ServiceChoice = 0;
                     return "已加入日程，到场才认识，开始时按确认的付款方式消费，实际完成后结算。";
-                }, _ => start >= 0, "暂无双方可赴约的时段"));
+                }, _ => start >= 0, "暂无双方可赴约的时段");
+                choices.Add(choice);
+                return (choice, start);
             }
             if (n == 61) { Offer("AA · 我付 ¥300", "social_61"); Offer("我请 · ¥600", "social_61", true); }
             else if (n == 62) { Offer("生态向导 · ¥900", "social_62"); Offer("向导我请 · ¥1,800", "social_62", true); Offer("私享野餐 · ¥2,200", "social_62_picnic"); Offer("野餐我请 · ¥4,400", "social_62_picnic", true); }
             else if (n is 65 or 67)
             {
-                Offer("砂锅 AA · ¥480", "social_" + n, after: true); Offer("砂锅我请 · ¥960", "social_" + n, true, after: true);
-                Offer("私厨 AA · ¥1,200", "social_" + n + "_private", after: true); Offer("私厨我请 · ¥2,400", "social_" + n + "_private", true, after: true);
-                Offer("商量让对方请砂锅 · 魅力45、交情35起有机会", "social_" + n, hostPays: true, after: true);
+                string standard = "social_" + n;
+                string premium = standard + "_private";
+                void Meal(string definition, string package, string payment, bool treat = false, bool hostPays = false)
+                {
+                    var activity = CityLifeCatalog.Activity(definition);
+                    var quote = new CityActivity
+                    {
+                        Participants = new[] { new CityActivityParticipant { PersonId = person } },
+                        PlayerTreat = treat,
+                        HostPays = hostPays
+                    };
+                    Money price = CityActivityEntryPrice(activity, 0, quote);
+                    string note = hostPays ? "魅力 45、交情 35 起有机会。对方同意后才会预约。" : null;
+                    string paymentQuote = hostPays ? "对方同意后免费" : price.ToString();
+                    var (choice, start) = Offer($"{package} · {payment} · {paymentQuote}", definition, treat, hostPays, after: true);
+                    choice.Selection = (definition, package);
+                    choice.Appointment = (payment, start, activity.Minutes, price, hostPays, note);
+                }
+                Meal(standard, "海味砂锅", "AA");
+                Meal(standard, "海味砂锅", "我请", treat: true);
+                Meal(premium, "私厨套餐", "AA");
+                Meal(premium, "私厨套餐", "我请", treat: true);
+                Meal(standard, "海味砂锅", "商量让对方请", hostPays: true);
             }
             else if (n == 66)
             {
@@ -94,27 +120,21 @@ namespace PCShopSell.Core.Session
                 Offer("约下班快餐 · AA ¥160", "social_66", nextShiftEnd: true);
             }
             else Offer("确认赴约 · 活动免费，购物另付", "social_" + n);
+            if (n == 62 && !starts.Values.Any(start => start >= 0)) return null;
             choices.Add(Choose("改天再约", _ => "本次未预约，不扣钱或交情。")); choices.Add(Choose("这次不参加", _ => "你婉拒了，交情不变。"));
-            return EventScene(template, body + "\n同行：" + CityPerson(person).Name + " · " + City.GetPlace(venue).Name, choices.ToArray());
+            string location = City.GetPlace(venue).Name;
+            return EventScene(template, body + (n is 65 or 67 ? "\n地点：" + location : "\n同行：" + CityPerson(person).Name + " · " + location), choices.ToArray());
         }
         private long FindOutdoorStart(string def, string venue, string person, bool afterWork, long earliest)
         {
-            if (!City.HasPlace(venue)) return -1;
-            long first = SuggestCityActivityStartAt(def, person, earliest, venue);
-            for (int i = 0; i < 35 * 1440; i += 15)
-            {
-                long t = first + i;
-                if (afterWork)
-                {
-                    var p = CityPerson(person);
-                    // Overnight workers finish in the morning; don't offer them an evening slot during their next shift.
-                    if (p.WorkEnd < p.WorkStart)
-                    { if (t % 1440 < p.WorkEnd || t % 1440 > p.WorkEnd + 180) continue; }
-                    else if (t % 1440 < 19 * 60 || t % 1440 > 23 * 60) continue;
-                }
-                if (CityActivityBlockerAt(def, new[] { person }, t, false, venue) == null) return t;
-            }
-            return -1;
+            long first = FindCityActivityStartAt(def, person, earliest, venue, out _);
+            if (first < 0 || !afterWork) return first;
+
+            var p = CityPerson(person);
+            // Overnight workers finish in the morning, before their next evening shift.
+            int from = p.WorkEnd < p.WorkStart ? p.WorkEnd : 19 * 60;
+            int until = p.WorkEnd < p.WorkStart ? p.WorkEnd + 180 : 23 * 60;
+            return FindCityActivityStartAt(def, person, first, venue, out _, t => t % 1440 >= from && t % 1440 <= until);
         }
         private string OutdoorScheduleBlocker(CityActivityDefinition def, long start)
         {
@@ -155,10 +175,12 @@ namespace PCShopSell.Core.Session
             state.Pending = "walk"; state.ReadyAt = a.PlayerVenueRoute.ArriveMinute;
             state.Message = "正前往第 " + (node + 1) + " 处现场。";
         }
-        public string OutdoorActivityStatus(string id)
+        public string OutdoorActivityStatus(string id, bool keepOpen = false)
         {
             var state = _outdoorBatch.FirstOrDefault(s => s.ActivityId == id); if (state == null) return null;
-            return state.Message + (state.Pending != null ? "\n还需 " + Math.Max(0, state.ReadyAt - Clock.Now.TotalMinutes) + " 游戏分钟；收起面板让时间继续。" : "");
+            if (state.Pending == null) return state.Message;
+            return state.Message + "\n还需 " + Math.Max(0, state.ReadyAt - Clock.Now.TotalMinutes) + " 游戏分钟"
+                + (keepOpen ? "。" : "；收起面板让时间继续。");
         }
         private void TickOutdoorBatch(long now)
         {
@@ -326,9 +348,9 @@ namespace PCShopSell.Core.Session
             if (s.Number == 64) Player.Intelligence = Math.Min(100, Player.Intelligence + Math.Min(2, s.Correct));
             if (s.Number == 69 && s.Correct == 1) Player.Intelligence = Math.Min(100, Player.Intelligence + 1);
             if (s.Number == 68 || s.Number == 70 && s.Tested) Player.Intelligence = Math.Min(100, Player.Intelligence + 1);
-            if (s.Number == 63 && s.Mode > 1) { Player.Intelligence = Math.Min(100, Player.Intelligence + 1); AddRelation(OutdoorPeople[2], 2); }
-            if (s.Number is 65 or 67 && s.Mode == 1) AddRelation(OutdoorPeople[s.Number - 61], 2);
-            if (s.Number <= 67 && a.PlayerTreat) AddRelation(OutdoorPeople[s.Number - 61], 2);
+            if (s.Number == 63 && s.Mode > 1) { Player.Intelligence = Math.Min(100, Player.Intelligence + 1); AwardCityActivityRelation(a, OutdoorPeople[2], 2); }
+            if (s.Number is 65 or 67 && s.Mode == 1) AwardCityActivityRelation(a, OutdoorPeople[s.Number - 61], 2);
+            if (s.Number <= 67 && a.PlayerTreat) AwardCityActivityRelation(a, OutdoorPeople[s.Number - 61], 2);
             if (s.Number == 61 && a.Choices.Contains("2")) Flags.Add("outdoor:grandpa-story");
             a.EventSettlementNote = (a.EventSettlementNote ?? "") + $"\n现场节点 {s.Visited}；辨认 {s.Correct}/{s.Answers}；实际采购 {s.OrderCount} 件。";
         }

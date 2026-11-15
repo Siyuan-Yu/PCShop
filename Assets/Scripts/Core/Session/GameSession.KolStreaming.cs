@@ -15,6 +15,7 @@ namespace PCShopSell.Core.Session
         public KolStreamingState KolStreaming=>_kol.Copy();
         public const int KolMinimumLiveMinutes = 180;
         public bool BrandManagementUnlocked => !FirstChapterTrial;
+        public string KolAmbassadorAccessBlocker => DistrictAccessTier < 1 ? "解锁社区片区后开放品牌代言" : null;
         public static int KolCapacity(int level)=>level>=2?12:level==1?7:3;
         public string BrandLevelName(string id)=>Brand(id)?.Level>=2?"高级品牌":Brand(id)?.Level==1?"中级品牌":"初级品牌";
         public int BrandKolCapacity(string id)=>KolCapacity(Brand(id)?.Level??0);
@@ -27,6 +28,7 @@ namespace PCShopSell.Core.Session
             KolPersonContract(person, Clock.Now.TotalMinutes)?.Copy();
         public string KolUpgradeBlocker(string brandId)
         {
+            if (KolAmbassadorAccessBlocker is string access) return access;
             var b=Brand(brandId);if(IsGameOver||b==null)return "没有可升级的品牌";
             if(b.Level>=2)return "已达到高级品牌";
             int influence=b.Level==0?100:300;long price=b.Level==0?20000:100000;
@@ -42,6 +44,7 @@ namespace PCShopSell.Core.Session
         public string KolSigningBlocker(string person, int days, int frequency, bool remote = false)
         {
             if (IsGameOver || KolMarket.Get(person) == null) return "无法签约该代言人";
+            if (KolAmbassadorAccessBlocker is string access) return access;
             if (!IsMet(person)) return "先交换联系方式，或请MCN介绍";
             if (remote)
             {
@@ -104,6 +107,7 @@ namespace PCShopSell.Core.Session
 
         public string KolAssignmentBlocker(string contractId, string brandId)
         {
+            if (KolAmbassadorAccessBlocker is string access) return access;
             var c = FindKolContract(contractId);
             if (IsGameOver || c == null || !KolContractCurrent(c, Clock.Now.TotalMinutes)) return "代言合约已结束";
             if (!string.IsNullOrEmpty(c.BrandId)) return "这份合约已分配品牌";
@@ -150,6 +154,7 @@ namespace PCShopSell.Core.Session
 
         public string KolScheduleBlocker(string id, string brandId, int start, int end, bool enabled, int frequencyDays, int firstDay)
         {
+            if (KolAmbassadorAccessBlocker is string access) return access;
             var c = FindKolContract(id);
             if (IsGameOver || c == null || !KolContractCurrent(c, Clock.Now.TotalMinutes)) return "代言合约已结束";
             if (string.IsNullOrEmpty(brandId) && enabled) return "请先选择代言品牌";

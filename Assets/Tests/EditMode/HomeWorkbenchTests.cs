@@ -9,6 +9,7 @@ using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
+using PCShopSell.Core.World;
 using PCShopSell.Game;
 using PCShopSell.Game.UI;
 using UnityEngine;
@@ -20,23 +21,70 @@ namespace PCShopSell.Tests
     {
         private static GameSession Ready(int minute=10*60)
         {
-            var s=HomeTests.Make(200000,minute);s.EventsEnabled=false;GameSessionTests.Teleport(s,s.Home.Id);
-            s.HomeBox.AddFurniture(GameSession.HomeWorkbenchId,1);return s;
+            var s = HomeTests.Make(200000, 600);
+            s.EventsEnabled = false;
+            s.HomeBox.AddFurniture(GameSession.HomeWorkbenchId, 1);
+            MoveAndInstallWorkbench(s);
+            s.Clock.Restore(s.Clock.Today, minute);
+            return s;
         }
-        [Test] public void LargeScreenCanBePurchasedDeliveredAndUnlocksOnlyAtHomeWithoutInstallation()
+
+        private static PlacedFurniture WorkbenchPlacement() => new PlacedFurniture { Id = GameSession.HomeWorkbenchId, X = 4, Z = 5.25 };
+
+        internal static void MoveAndInstallWorkbench(GameSession s)
         {
-            using(var s=HomeTests.Make(200000,10*60))
+            if (s.HomeTier == 0)
             {
-                s.EventsEnabled=false;Assert.False(s.OwnsHomeWorkbench);
-                var def=FurnitureCatalog.Get(GameSession.HomeWorkbenchId);Assert.AreEqual(28000,def.Price.Yuan);Assert.AreEqual(160,def.WeightKg);
-                GameSessionTests.Teleport(s,"mall");var before=s.Ledger.Balance;
-                Assert.True(s.CartAddFurniture(def.Id));Assert.AreEqual(before,s.Ledger.Balance);Assert.AreEqual(160,s.CartTruckKg);
-                Assert.True(s.Checkout(false));Assert.Less(s.Ledger.Balance.Cents,before.Cents);Assert.False(s.OwnsHomeWorkbench);
-                s.AdvanceClock(180);GameSessionTests.Teleport(s,s.Home.Id);
-                Assert.True(s.OwnsHomeWorkbench);Assert.True(s.CanUseHomeWorkbench);Assert.AreEqual(0,s.HomeTier);
-                Assert.False(s.HomeLayout.Any(p=>p.Id==def.Id));
-                GameSessionTests.Teleport(s,"pc");Assert.False(s.CanUseHomeWorkbench);Assert.False(s.SetWorkbenchMarkup("pc",1.3));
+                GameSessionTests.Teleport(s, "agency");
+                Assert.True(s.ChangeHomeTier(1));
             }
+            GameSessionTests.Teleport(s, s.Home.Id);
+            Assert.True(s.PlaceFromStock(false, GameSession.HomeWorkbenchId, WorkbenchPlacement()));
+        }
+
+        [Test] public void MiHomeWorkbenchShipsToHomeAndRequiresInstallationAfterMoving()
+        {
+            var data = GameSessionTests.Layout();
+            data.places = data.places.Concat(new[]
+            {
+                new LayoutPlaceData { id = "phone", name = "米家", kind = "shop", node = "dl", size = "small", business = GameSession.PhoneBusiness },
+                new LayoutPlaceData { id = "mall", name = "家具城", kind = "shop", node = "dl", size = "large", business = GameSession.MallBusiness }
+            }).ToArray();
+            using var s = new GameSession(CityLayout.FromData(data), 7, Money.FromYuan(2_000_000), GameTimestamp.From(new GameDate(0), 600));
+            s.EventsEnabled = false;
+            const string id = GameSession.HomeWorkbenchId;
+            Assert.AreEqual(1_080_000, FurnitureCatalog.Get(id).Price.Yuan);
+            GameSessionTests.Teleport(s, "mall");
+            Assert.False(s.CartAddFurniture(id));
+            Assert.False(s.BuyFurnitureByTruck(id));
+            Assert.False(s.OrderOnline(ParcelKind.Furniture, id));
+            GameSessionTests.Teleport(s, "phone");
+            s.CourierDest = s.MainShop.Place.Id;
+            var before = s.Ledger.Balance;
+            Assert.True(s.CartAddFurniture(id));
+            Assert.False(s.CartAddFurniture(id));
+            Assert.False(s.CartToBag("furn:" + id, 1));
+            Assert.AreEqual(160, s.CartTruckKg);
+            Assert.IsNull(s.CourierShop(true));
+            var due = s.CartGoods + s.CartFreight(true);
+            Assert.True(s.Checkout(true));
+            Assert.AreEqual(before - due, s.Ledger.Balance);
+            Assert.True(s.HomeWorkbenchInTransit);
+            Assert.False(s.CartAddFurniture(id));
+
+            using var loaded = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));
+            Assert.True(loaded.HomeWorkbenchInTransit);
+            loaded.AdvanceClock(180);
+            GameSessionTests.Teleport(loaded, loaded.Home.Id);
+            Assert.True(loaded.OwnsHomeWorkbench);
+            Assert.False(loaded.CanUseHomeWorkbench);
+            Assert.False(loaded.PlaceFromStock(false, id, WorkbenchPlacement()));
+
+            MoveAndInstallWorkbench(loaded);
+            Assert.True(loaded.CanUseHomeWorkbench);
+            GameSessionTests.Teleport(loaded, "phone");
+            Assert.False(loaded.CanUseHomeWorkbench);
+            Assert.False(loaded.CartAddFurniture(id));
         }
         [Test] public void RemotePricingAndHoursUseTheSelectedShopAndOnlyDisplayedGoods()
         {
@@ -132,14 +180,21 @@ namespace PCShopSell.Tests
                 using(var loaded=GameSession.Load(s.City,s.CreateSave()))Assert.AreEqual(2,loaded.WorkbenchPrices("computer").Length);
             }
         }
-        [Test] public void WorkbenchProvidesInvestmentWithoutGrantingAPhone()
+        [Test] public void WorkbenchStockTradingRequiresTheSecuritiesApp()
         {
             using(var s=new GameSession(PCShopSell.Core.World.CityLayout.FromData(GameSessionTests.Layout()),7,Money.FromYuan(200000),GameTimestamp.From(new GameDate(0),600),false,false))
             {
                 s.EventsEnabled=false;s.HomeBox.AddFurniture(GameSession.HomeWorkbenchId,1);
+                MoveAndInstallWorkbench(s);
                 Assert.False(s.HasSmartphone);Assert.True(s.CanUseHomeWorkbench);
-                var cash=s.Ledger.Balance;Assert.True(s.TradeCityInvestment("hardware",1,true));Assert.AreEqual(1,s.CityInvestmentUnits("hardware"));Assert.Less(s.Ledger.Balance.Cents,cash.Cents);
-                GameSessionTests.Teleport(s,"pc");cash=s.Ledger.Balance;Assert.False(s.TradeCityInvestment("hardware",1,true));Assert.AreEqual(cash,s.Ledger.Balance);Assert.False(s.HasSmartphone);
+                const string id = "city_chip";
+                const int lot = GameSession.StockLotSize;
+                var cash = s.Ledger.Balance;
+                Assert.False(s.TradeCityInvestment(id, lot, buy: true, acknowledgeReserve: true));
+                Assert.AreEqual(cash, s.Ledger.Balance);
+                s.SetSmartphone(true);
+                Assert.True(s.TradeCityInvestment(id, lot, buy: true, acknowledgeReserve: true));
+                Assert.AreEqual(lot, s.CityInvestmentUnits(id));
             }
         }
         [Test] public void OwningAnUnconfiguredScreenDoesNotDisableExistingMealDelivery()
@@ -160,7 +215,8 @@ namespace PCShopSell.Tests
                 var unchanged=main.Sim.PriceOf(part,true);long next=second.Sim.PriceOf(part,true).Yuan+1;
                 Assert.True(s.SetWorkbenchPartPrice(second.Place.Id,part.Id,true,next));Assert.AreEqual(next,second.Sim.PriceOf(part,true).Yuan);Assert.AreEqual(unchanged,main.Sim.PriceOf(part,true));
                 Assert.True(s.SetWorkbenchHours(second.Place.Id,10,20,false));Assert.AreEqual(10*60,second.Sim.OpenMinute);Assert.AreEqual(s.Home,s.CurrentPlace);Assert.AreSame(focus,s.CurrentShop);
-                s.HomeBox.TakeFurniture(GameSession.HomeWorkbenchId,1);Assert.False(s.CanUseHomeWorkbench);Assert.False(s.SetWorkbenchPartPrice(second.Place.Id,part.Id,true,next+1));
+                Assert.True(s.StoreFurniture(false, s.HomeLayout.ToList().FindIndex(item => item.Id == GameSession.HomeWorkbenchId)));
+                Assert.False(s.CanUseHomeWorkbench);Assert.False(s.SetWorkbenchPartPrice(second.Place.Id,part.Id,true,next+1));
             }
         }
         [Test] public void CheatButtonOpensAndClosesWorkbenchWithoutBuyingOrRemovingFurniture()
@@ -182,8 +238,9 @@ namespace PCShopSell.Tests
                     Assert.False(s.DebugHomeWorkbenchEnabled);Assert.False(s.CanUseHomeWorkbench);
                     Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Any(b=>b.name=="WorkbenchTab_0"));
                     ui.CloseAllWindows();Assert.False(s.Time.IsHeld);Assert.AreEqual(cash,s.Ledger.Balance);
-                    s.HomeBox.AddFurniture(GameSession.HomeWorkbenchId,1);s.DebugSetHomeWorkbench(true);Cheats();Toggle().onClick.Invoke();
-                    Assert.False(s.DebugHomeWorkbenchEnabled);Assert.True(s.CanUseHomeWorkbench);Assert.AreEqual(1,s.HomeBox.FurnitureCount(GameSession.HomeWorkbenchId));
+                    s.HomeBox.AddFurniture(GameSession.HomeWorkbenchId,1);MoveAndInstallWorkbench(s);
+                    s.DebugSetHomeWorkbench(true);Cheats();Toggle().onClick.Invoke();
+                    Assert.False(s.DebugHomeWorkbenchEnabled);Assert.True(s.CanUseHomeWorkbench);Assert.True(s.HomeWorkbenchInstalled);
                 }
                 finally{ui.CloseAllWindows();foreach(var c in ui.Canvases)UnityEngine.Object.DestroyImmediate(c.gameObject);UnityEngine.Object.DestroyImmediate(root);if(existing==null&&UnityEngine.EventSystems.EventSystem.current!=null)UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);}
             }
@@ -208,12 +265,14 @@ namespace PCShopSell.Tests
                     Button("ConfirmPrice_goods_"+product.Id).onClick.Invoke();Assert.AreEqual(before.Yuan+1,s.PlayerShop.GoodsPriceOf(product.Id).Yuan);
                     ui.CloseTopWindow();s.SetSmartphone(true);Button("WorkbenchTab_2").onClick.Invoke();ui.RebuildWindows();
                     // 投资页直接内嵌手机证券的交易所：不打开新窗口、不暂停时间。
-                    Assert.NotNull(Button("StockQuickBuy_hardware"));Assert.False(s.Time.IsHeld);
-                    if(s.StockTradeBlocker("hardware",1,"buy")==null)
+                    const string stock = "city_chip";
+                    const int lot = GameSession.StockLotSize;
+                    Assert.NotNull(Button("StockQuickBuyMax_" + stock));Assert.False(s.Time.IsHeld);
+                    if(s.StockTradeBlocker(stock,lot,"buy")==null)
                     {
-                        var tradeCash=s.Ledger.Balance;long held=s.CityInvestmentUnits("hardware");
-                        Button("StockQuickBuy_hardware").onClick.Invoke();
-                        Assert.AreEqual(held+1,s.CityInvestmentUnits("hardware"));Assert.Less(s.Ledger.Balance.Cents,tradeCash.Cents);
+                        var tradeCash=s.Ledger.Balance;long held=s.CityInvestmentUnits(stock);
+                        Button("StockQuickBuy_" + stock).onClick.Invoke();
+                        Assert.AreEqual(held+lot,s.CityInvestmentUnits(stock));Assert.Less(s.Ledger.Balance.Cents,tradeCash.Cents);
                     }
                     Button("WorkbenchTab_3").onClick.Invoke();ui.RebuildWindows();Assert.NotNull(Button("WorkbenchContacts"));
                     Button("WorkbenchAutomation").onClick.Invoke();Assert.NotNull(Button("Automation_Sleep"));Button("Automation_Sleep").onClick.Invoke();Assert.True(s.HomeAutomation.Sleep);

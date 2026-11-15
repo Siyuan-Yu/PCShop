@@ -13,7 +13,7 @@ namespace PCShopSell.Core.Session
     {
         public const string PhoneBusiness = "手机";
         public static readonly Money PhonePrice = Money.FromYuan(800);
-        public const string NoPhoneMessage = "你还没有智能手机，上不了网。去街上的手机店买一部。";
+        public const string NoPhoneMessage = "你还没有智能手机，上不了网。去米家买一部。";
         public const string MealDeliveryUnlockedTitle = "现在可以设置自动订餐";
 
         /// <summary>有没有智能手机：没有就用不了网购。新游戏开局没有。</summary>
@@ -73,7 +73,7 @@ namespace PCShopSell.Core.Session
 
         public bool BuySmartphone()
         {
-            if (CurrentPlace == null || CurrentPlace.Business != PhoneBusiness) return Fail("要去手机店才能买。");
+            if (CurrentPlace == null || CurrentPlace.Business != PhoneBusiness) return Fail("请到米家购买智能手机。");
             if (HasSmartphone) return Fail("你已经有智能手机了。");
             if (!Ledger.TryDebit(Clock.Today, "购物", PhonePrice, "智能手机")) return Fail("钱不够。");
             HasSmartphone = true;

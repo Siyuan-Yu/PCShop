@@ -15,7 +15,13 @@ namespace PCShopSell.Game.UI
         private static Material _kolOfflinePortrait;
         private GameSession _kolDraftSession;
         private readonly Dictionary<string,KolLiveContract> _kolScheduleDrafts=new Dictionary<string,KolLiveContract>();
-        public void OpenKolManagement(){_brandTab=BrandKolTab;_kolPage="代言人市场";OpenBrandBusiness();}
+        public void OpenKolManagement()
+        {
+            if (S.KolAmbassadorAccessBlocker is string access) { Toast(access); return; }
+            _brandTab = BrandKolTab;
+            _kolPage = "代言人市场";
+            OpenBrandBusiness();
+        }
         private static string KolTime(int minute)=>$"{minute/60:00}:{minute%60:00}";
         private void KolAvatar(Transform parent,string id,float width,float height, bool dimmed = false, Action onClick = null)
         {

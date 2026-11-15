@@ -104,5 +104,21 @@ namespace PCShopSell.Tests
                 }
             }
         }
+
+        [Test]
+        public void MaximumStockBuyUsesWholeLotsWithinTheCurrentQuote()
+        {
+            using var s = Make();
+            s.SetSmartphone(true);
+            const string id = "city_chip";
+            var state = s.StockState(id);
+            state.AvailableUnits = 275;
+            Assert.That(s.StockMaximumBuyQuantity(id), Is.EqualTo(200));
+            Assert.That(s.TradeCityInvestment(id, 200, buy: true, acknowledgeReserve: true), Is.True);
+            Assert.That(state.AvailableUnits, Is.EqualTo(75));
+            Assert.That(s.StockMaximumBuyQuantity(id), Is.Zero);
+            Assert.That(s.StockTradeBlocker(id, 200, "sell"), Does.Contain("还可成交75"));
+            Assert.That(s.CityInvestmentUnits(id), Is.EqualTo(200));
+        }
     }
 }

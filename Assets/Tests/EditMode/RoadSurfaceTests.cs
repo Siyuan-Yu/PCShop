@@ -4,6 +4,9 @@ using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 using PCShopSell.Game.Runtime;
+using PCShopSell.Core.Common;
+using PCShopSell.Core.Session;
+using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 
 namespace PCShopSell.Tests
@@ -79,6 +82,58 @@ namespace PCShopSell.Tests
             }
             finally{Object.DestroyImmediate(root);}
         }
+
+        [Test]
+        public void AmbientWalkersOnWideRoadUseSidewalksAndKeepSpaceWhenReentering()
+        {
+            var layout = GameSessionTests.Layout();
+            layout.layoutVersion = 7;
+            layout.nodes = layout.nodes.Concat(new[]
+            {
+                new LayoutNodeData { id = "wide_a", x = -27, y = 135 },
+                new LayoutNodeData { id = "wide_b", x = 27, y = 135 },
+            }).ToArray();
+            layout.edges = layout.edges.Append(new LayoutEdgeData { a = "wide_a", b = "wide_b" }).ToArray();
+            using var session = new GameSession(CityLayout.FromData(layout), 7, Money.FromYuan(5000),
+                GameTimestamp.From(new GameDate(0), 480));
+            var root = new GameObject("FootTraffic");
+            try
+            {
+                var camera = root.AddComponent<Camera>();
+                camera.orthographic = true;
+                camera.orthographicSize = 12;
+                camera.aspect = 2;
+                camera.transform.SetPositionAndRotation(new Vector3(0, 30, 135), Quaternion.Euler(90, 0, 0));
+                var actors = new GameObject("Actors").transform;
+                actors.SetParent(root.transform, false);
+                var crowd = new CrowdView(actors, -100, 100, Vector3.zero);
+
+                AmbientPersonMarker[] Sync()
+                {
+                    crowd.SyncCity(session, camera.transform.position, camera);
+                    crowd.Update(0, true);
+                    return actors.GetComponentsInChildren<AmbientPersonMarker>();
+                }
+
+                var initial = Sync();
+                Assert.GreaterOrEqual(initial.Length, 4);
+                foreach (var walker in initial)
+                {
+                    Assert.That(Mathf.Abs(walker.transform.position.z - 135), Is.InRange(4.1f, 5.3f));
+                    walker.transform.position += Vector3.right * 100;
+                }
+
+                // Several recycled figures try to enter on the same frame. Occupied
+                // entrances must wait for room rather than spawning on top of one another.
+                var entering = Sync();
+                Assert.AreEqual(2, entering.Length);
+                Assert.Greater(Vector3.Distance(entering[0].transform.position, entering[1].transform.position), .8f);
+                crowd.Update(.5f, true);
+                Assert.Greater(Sync().Length, entering.Length, "Waiting walkers can enter once the sidewalk clears.");
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
         static bool Covered(Vector3[] v,int[] t,Vector2 p)
         {
             for(int i=0;i<t.Length;i+=3)

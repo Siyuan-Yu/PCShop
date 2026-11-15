@@ -13,12 +13,17 @@ namespace PCShopSell.Tests
 {
     public sealed class RacingTests
     {
-        private static GameSession Make(int day = 40)
+        private static GameSession Make(int day = 40, bool enroll = true)
         {
             using var fixture = DistrictProgressionTests.Make();
             var s = new GameSession(fixture.City, 7, Money.FromYuan(10000000),
                 GameTimestamp.From(new GameDate(day), 600), true, false, false) { EventsEnabled = false };
-            s.Tick(0);
+            if (enroll)
+            {
+                At(s, GameSession.StarterRaceGarageId);
+                Assert.That(s.UnlockRacingAtGarage(), Is.True);
+                At(s, s.Home.Id);
+            }
             return s;
         }
 
@@ -42,25 +47,45 @@ namespace PCShopSell.Tests
         }
         private static void At(GameSession s,string id){s.StopTrip();typeof(GameSession).GetProperty("CurrentPlace").SetValue(s,s.City.GetPlace(id));typeof(GameSession).GetProperty("PlayerNodeId").SetValue(s,s.City.GetPlace(id).NodeId);}
         private static GameSession Reload(GameSession s)=>GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));
-        [Test] public void TrackAccessRequiresCashAboveThresholdAndNoDebtAndPersists()
+        [Test] public void RacingEnrollmentRequiresCashAndNoLoansAndMustBeDoneAtGarage()
         {
             using var fixture = DistrictProgressionTests.Make();
-            using var opening = new GameSession(fixture.City, 7, Money.FromYuan(100000), fixture.Clock.Now);
+            using var opening = new GameSession(fixture.City, 7, Money.FromYuan(99999), fixture.Clock.Now);
+            foreach (var quest in Quests.All.TakeWhile(q => q.Id != "racing_enrollment"))
+                opening.Flags.Add("tutorial:" + quest.Id);
+            Assert.That(opening.CurrentQuest()?.Id, Is.EqualTo("racing_enrollment"));
+            At(opening, GameSession.StarterRaceGarageId);
+            Assert.That(opening.UnlockRacingAtGarage(), Is.False);
+            opening.DebugAddCash(1);
+            At(opening, "dealer");
             opening.Tick(0);
             Assert.That(opening.RacingUnlocked, Is.False);
+            Assert.That(opening.UnlockRacingAtGarage(), Is.False);
             var save = opening.CreateSave();
             save.appLoans = new[] { new AppLoan { Id = 1, StartDay = opening.Clock.Today.TotalDays,
                 PrincipalCents = 100000, Months = 1, NoInterest = true } };
             using var s = GameSession.Load(fixture.City, save);
-            s.DebugAddCash(1001);
-            s.Tick(0);
-            Assert.That(s.ClosedReason(s.City.GetPlace(GameSession.StarterRaceTrackId)), Does.Contain("结清所有欠款"));
+            s.DebugAddCash(1000);
+            At(s, GameSession.StarterRaceGarageId);
+            Assert.That(s.ClosedReason(s.City.GetPlace(GameSession.StarterRaceTrackId)), Does.Contain("结清所有贷款"));
+            Assert.That(s.UnlockRacingAtGarage(), Is.False);
             Assert.That(s.RepayAppLoan(1), Is.True);
             s.Tick(0);
+            Assert.That(s.RacingUnlocked, Is.False);
+            var before = s.Ledger.Balance;
+            var time = s.Clock.Now;
+            Assert.That(before, Is.EqualTo(Money.FromYuan(100000)));
+            Assert.That(s.UnlockRacingAtGarage(), Is.True);
+            Assert.That(s.UnlockRacingAtGarage(), Is.False);
+            Assert.That(s.Ledger.Balance, Is.EqualTo(before));
+            Assert.That(s.Clock.Now, Is.EqualTo(time));
             Assert.That(s.RacingUnlocked, Is.True);
+            Assert.That(s.QuestCompleted("racing_enrollment"), Is.True);
+            Assert.That(s.CurrentQuest()?.Id, Is.EqualTo("community_goal"));
             s.Ledger.ForceDebit(s.Clock.Today, "测试支出", Money.FromYuan(10000));
             using var loaded = Reload(s);
             Assert.That(loaded.RacingUnlocked, Is.True);
+            Assert.That(loaded.QuestCompleted("racing_enrollment"), Is.True);
         }
         private static void Drive(RaceSimulation r)
         {
@@ -70,6 +95,37 @@ namespace PCShopSell.Tests
                 double target=Math.Min(r.Model.Speed/7.2*.75,Math.Abs(angle)>.45?5:12);
                 r.Step(1d/60,r.Speed<target?1:-.4,Math.Max(-1,Math.Min(1,angle*3)));
             }
+        }
+
+        [Test]
+        public void TrackPracticePassChargesOnceAndFollowsPurchasedTimeInsteadOfLapLimit()
+        {
+            using var s = Make();
+            var vehicle = PrepareStarterScooter(s);
+            var trackId = GameSession.StarterRaceTrackId;
+            At(s, trackId);
+            var cash = s.Ledger.Balance;
+            var start = s.Clock.Now.TotalMinutes;
+            Assert.That(s.StartRacePracticePass(trackId, vehicle, 3), Is.False);
+            Assert.That(s.StartRacePracticePass(trackId, vehicle, 4), Is.True);
+            Assert.That(s.Ledger.Balance, Is.EqualTo(cash - Money.FromYuan(180)));
+            Assert.That(s.StartRacePracticePass(trackId, vehicle, 4), Is.False);
+            var race = s.ActiveRace;
+            Assert.That(race.TimedPractice, Is.True);
+            race.Countdown = 0;
+            race.Lap = race.Laps - 1;
+            race.Next = 0;
+            race.X = race.Track.Points[0].X;
+            race.Y = race.Track.Points[0].Y;
+            race.Step(.02, 0, 0);
+            Assert.That(race.Lap, Is.EqualTo(race.Laps));
+            Assert.That(race.Finished, Is.False);
+            for (int i = 0; !race.Finished && i < 24000; i++) race.Step(.1, 0, 0);
+            Assert.That(race.Finished, Is.True);
+            Assert.That(race.Elapsed, Is.EqualTo(race.PracticeSecondsLimit).Within(.02));
+            Assert.That(s.FinishRace(), Is.Not.Null);
+            Assert.That(s.Clock.Now.TotalMinutes, Is.EqualTo(start + 240));
+            Assert.That(s.Ledger.Balance, Is.EqualTo(cash - Money.FromYuan(180)));
         }
 
         [Test]
@@ -181,6 +237,34 @@ namespace PCShopSell.Tests
             var r=new RaceSimulation(RaceTracks.All[tier],MotorCatalog.Get(model),true);Drive(r);
             Assert.That(r.Abandoned,Is.False,$"{model} {tier}: lap {r.Lap}, next {r.Next}, collisions {r.Collisions}");Assert.That(r.Finished,Is.True);Assert.That(r.Lap,Is.EqualTo(r.Track.Laps));
         }
+        [TestCase(0, 10, 279.72)]
+        [TestCase(1, 14, 360.25)]
+        [TestCase(2, 14, 463.68)]
+        [TestCase(3, 14, 557.47)]
+        public void ResizedTrackKeepsItsReceptionClearAndHasTheRequestedDrivingDimensions(
+            int tier, double previousRoadWidth, double previousLapLength)
+        {
+            using var s = DistrictProgressionTests.Make();
+            var track = RaceTracks.Get(RaceTracks.All[tier].Id, s.City);
+            var race = new RaceSimulation(track, MotorCatalog.Get("e_city"), true);
+            Assert.That(track.HalfRoad * 2, Is.EqualTo(previousRoadWidth * 2));
+            Assert.That(race.Length, Is.EqualTo(previousLapLength * 1.5).Within(.01));
+
+            foreach (var point in track.Points)
+            {
+                Assert.That(Math.Abs(point.X) + track.HalfRoad + 4.2, Is.LessThan(track.Width / 2));
+                Assert.That(Math.Abs(point.Y) + track.HalfRoad + 4.2, Is.LessThan(track.Depth / 2));
+            }
+            foreach (var place in new[] { s.City.GetPlace(track.Id), s.City.GetPlace("garage_" + tier) })
+            {
+                var node = s.City.ViewPosition(place.NodeId);
+                double dx = Math.Abs(track.X - (node.X + place.EntranceX));
+                double dy = Math.Abs(track.Y - (node.Y + place.EntranceY));
+                Assert.That(dx > track.Width / 2 + 5 + place.Width / 2
+                    || dy > track.Depth / 2 + 5 + place.Depth, Is.True, place.Id);
+            }
+        }
+
         [Test] public void InputsPauseRecoveryAndCollisionArePhysical()
         {
             var r=new RaceSimulation(RaceTracks.All[0],MotorCatalog.Get("e_city"),false);r.Countdown=0;
@@ -199,6 +283,27 @@ namespace PCShopSell.Tests
         {
             var s=Make(42);var id=PrepareStarterScooter(s);EnterStarterRaceWithOpponent(s);Assert.That(s.StartRace("race_0",id,false),Is.True);Drive(s.ActiveRace);
             Assert.That(s.ActiveRace.Abandoned,Is.False);s.FinishRace();Assert.That(s.IsMet("racer_0"),Is.True);Assert.That(s.Ledger.Entries.Count(e=>e.Category=="赛事奖金"),Is.EqualTo(1));
+        }
+        [Test]
+        public void OldCourseBestDoesNotPreventNewBestOrRemoveCareerWins()
+        {
+            using var initial = Make();
+            var vehicle = PrepareStarterScooter(initial);
+            var save = initial.CreateSave();
+            save.racing.Records = new[] { new RaceRecord { Key = "race_0:0:practice", BestSeconds = 1, Wins = 3, Starts = 4 } };
+            using var s = GameSession.Load(initial.City, save);
+            At(s, GameSession.StarterRaceTrackId);
+            Assert.That(s.RacingRecords.Single().BestOnCurrentCourse, Is.False);
+            Assert.That(s.StartRace(GameSession.StarterRaceTrackId, vehicle, true), Is.True);
+            Drive(s.ActiveRace);
+            Assert.That(s.ActiveRace.Abandoned, Is.False);
+            s.FinishRace();
+            using var loaded = Reload(s);
+            var record = loaded.RacingRecords.Single();
+            Assert.That(record.BestOnCurrentCourse, Is.True);
+            Assert.That(record.BestSeconds, Is.GreaterThan(1));
+            Assert.That(record.Wins, Is.EqualTo(3));
+            Assert.That(record.Starts, Is.EqualTo(5));
         }
         [Test] public void RivalsFinishingFirstRemainAheadAfterPlayerCrossesFinish()
         {
@@ -227,14 +332,32 @@ namespace PCShopSell.Tests
         }
         [Test] public void RealUiCanShowDealerGarageReceptionAndDrivingHud()
         {
-            var s=Make();var root=new GameObject("RacingUiTest");root.SetActive(false);var ctrl=root.AddComponent<PCShopSell.Game.GameController>();
+            var s=Make(enroll: false);var root=new GameObject("RacingUiTest");root.SetActive(false);var ctrl=root.AddComponent<PCShopSell.Game.GameController>();
             typeof(PCShopSell.Game.GameController).GetProperty("Session").SetValue(ctrl,s);typeof(PCShopSell.Game.GameController).GetProperty("City").SetValue(ctrl,s.City);
             var previous=UnityEngine.EventSystems.EventSystem.current;var ui=new PCShopSell.Game.UI.GameUi(ctrl);typeof(PCShopSell.Game.GameController).GetProperty("Ui").SetValue(ctrl,ui);
             try
             {
                 At(s,"dealer");ui.OnEnteredPlace(s.CurrentPlace);Assert.That(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<UnityEngine.UI.Text>()).Any(t=>t.text.Contains("顺风·逐风R")),Is.True);
-                ui.CloseAllWindows();var id=PrepareStarterScooter(s);ui.OpenMotorGarage();ui.CloseAllWindows();At(s,"race_0");ui.OnEnteredPlace(s.CurrentPlace);ui.CloseAllWindows();
-                Assert.That(s.StartRace("race_0",id,true),Is.True);ui.BeginDrivingHud();ui.UpdateDrivingHud();Canvas.ForceUpdateCanvases();
+                ui.CloseAllWindows();
+                At(s, GameSession.StarterRaceGarageId);
+                ui.OnEnteredPlace(s.CurrentPlace);
+                var registration = ui.Canvases.SelectMany(c => c.GetComponentsInChildren<UnityEngine.UI.Button>())
+                    .Single(b => b.GetComponentInChildren<UnityEngine.UI.Text>()?.text == "办理赛车登记");
+                Assert.That(registration.interactable, Is.True);
+                registration.onClick.Invoke();
+                Assert.That(s.RacingUnlocked, Is.True);
+                ui.CloseAllWindows();
+                PrepareStarterScooter(s);
+                At(s, "race_0");
+                ui.OnEnteredPlace(s.CurrentPlace);
+                var passes = ui.Canvases.SelectMany(c => c.GetComponentsInChildren<UnityEngine.UI.Button>())
+                    .Where(button => button.name.StartsWith("RacePracticePass_")).ToArray();
+                Assert.That(passes, Has.Length.EqualTo(4));
+                var pass = passes.Single(button => button.name == "RacePracticePass_2h");
+                Assert.That(pass.interactable, Is.True);
+                pass.onClick.Invoke();
+                Assert.That(s.ActiveRace?.TimedPractice, Is.True);
+                ui.BeginDrivingHud();ui.UpdateDrivingHud();Canvas.ForceUpdateCanvases();
                 var hud=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<RectTransform>()).Single(t=>t.name=="DrivingHud");Assert.That(hud.rect.height,Is.GreaterThan(80));
                 s.ActiveRace.Abandon();ui.EndDrivingHud(s.FinishRace());Assert.That(ui.Canvases.Single(c=>c.name=="UI_Hud").enabled,Is.True);
             }

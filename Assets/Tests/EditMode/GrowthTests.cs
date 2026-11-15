@@ -46,14 +46,21 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void SelfCheckout_CanBePurchasedAfterReputationUnlock()
+        public void SelfCheckout_CanBeBoughtFromTheCartWithQrAndLowReputation()
         {
-            GameSession s = InShop();
-            Buy(s, ShopUpgrades.Qr);
-            Assert.IsFalse(Buy(s, ShopUpgrades.SelfCheckout), "知名度不足时不能购买");
-            s.PlayerShop.Reputation = 10;
-            Assert.IsTrue(Buy(s, ShopUpgrades.SelfCheckout));
-            Assert.IsTrue(s.GrantUpgrade(ShopUpgrades.SelfCheckout));
+            using var s = InShop();
+            s.PlayerShop.Reputation = 2;
+            s.Clock.Restore(s.Clock.Today, 600);
+            GameSessionTests.Teleport(s, "phone");
+            Assert.IsFalse(s.CartAddUpgrade(ShopUpgrades.SelfCheckout));
+            s.SetSmartphone(true);
+            Assert.IsTrue(s.BuyUpgrade(ShopUpgrades.Qr));
+            var before = s.Ledger.Balance;
+            Assert.IsTrue(s.CartAddUpgrade(ShopUpgrades.SelfCheckout));
+            Assert.AreEqual(before, s.Ledger.Balance);
+            Assert.IsTrue(s.Checkout(false));
+            Assert.AreEqual(before - Money.FromYuan(4_500), s.Ledger.Balance);
+            Assert.IsFalse(s.CartAddUpgrade(ShopUpgrades.SelfCheckout));
             Assert.IsTrue((s.PlayerShop.Accepted & PaymentMethods.SelfCheckout) != 0);
         }
 

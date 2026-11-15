@@ -34,17 +34,119 @@ namespace PCShopSell.Tests
         {
             Assert.IsTrue(s.SelectOnsiteSportMode(mode));Assert.IsTrue(s.AimOnsiteSport(angle));Assert.IsTrue(s.BeginOnsiteCharge());for(int i=0;i<(int)Math.Round(power*1000);i++)s.StepOnsiteSport(.001);Assert.IsTrue(s.ReleaseOnsiteShot());for(int i=0;i<3100;i++)s.StepOnsiteSport(.001);Assert.AreEqual("result",s.CurrentOnsite.Phase);
         }
+
+        [TestCase("life_court", 54, 300)]
+        [TestCase("life_court_mid", 54, 300)]
+        [TestCase("life_fitness", 54, 300)]
+        [TestCase("life_golf", 57, 150)]
+        public void VenuePassChargesOnceAndAllowsContinuousManualPractice(string venue, int sport, int price)
+        {
+            using var s = Make();
+            At(s, venue);
+            var passes = CityLifeCatalog.SportPasses(venue);
+            Assert.That(passes.Select(pass => pass.Minutes), Is.EqualTo(new[] { 120, 240, 360, 480 }));
+            var cash = s.Ledger.Balance;
+            Assert.That(s.SelectVenueService(passes[0].Id, 0), Is.True);
+            Assert.That(s.Ledger.Balance, Is.EqualTo(cash - Money.FromYuan(price)));
+            Assert.That(s.CurrentOnsite.Number, Is.EqualTo(sport));
+            Assert.That(s.SelectVenueService(passes[0].Id, 0), Is.False);
+            for (int i = 0; i < 9; i++) Shot(s, 0);
+            using var loaded = Reload(s);
+            Assert.That(loaded.CurrentOnsite.Round, Is.EqualTo(9));
+            Assert.That(loaded.Ledger.Balance, Is.EqualTo(s.Ledger.Balance));
+            var activity = loaded.RunningCityActivity;
+            loaded.AdvanceClock(119);
+            Assert.That(activity.State, Is.EqualTo(CityActivityPhase.Running));
+            loaded.AdvanceClock(1);
+            Assert.That(activity.State, Is.EqualTo(CityActivityPhase.Completed));
+            Assert.That(loaded.CurrentOnsite, Is.Null);
+        }
+
+        [Test]
+        public void LateSportsPurchaseIsBlockedAndEndingPracticeDoesNotAdvanceClock()
+        {
+            using var s = Make();
+            At(s, "life_golf");
+            s.Clock.Restore(s.Clock.Today, 16 * 60);
+            Assert.That(s.VenueServiceBlocker("golf_pass_4h", 0), Does.Contain("闭店"));
+            Assert.That(s.SelectVenueService("golf_pass_2h", 0), Is.True);
+            var end = s.Clock.Now;
+            Assert.That(s.EndTimedVenueSport(), Is.True);
+            Assert.That(s.Clock.Now, Is.EqualTo(end));
+            Assert.That(s.CurrentOnsite, Is.Null);
+        }
         [TestCase(51)] [TestCase(52)] [TestCase(53)] [TestCase(54)] [TestCase(55)] [TestCase(56)] [TestCase(57)] [TestCase(58)] [TestCase(76)]
         public void InvitationsNeedRealMeetingAndDoNotRewardOrOfferOrdersOnBooking(int n)
         {
             using var s=Make();var cash=s.Ledger.Balance;int orders=s.CityReferrals.Count;var a=Book(s,n);Assert.IsNull(s.CurrentOnsite);Assert.AreEqual(cash,s.Ledger.Balance);Assert.AreEqual(orders,s.CityReferrals.Count);Attend(s,a);Assert.AreEqual(n,s.CurrentOnsite.Number);
         }
         [Test] public void StandingStillDoesNotCompleteTheMissingOnsiteTask()
-        {using var s=Make();var a=Book(s,51);Attend(s,a);Finish(s,a);Assert.AreEqual(CityActivityPhase.Interrupted,a.State);Assert.IsFalse(a.RewardApplied);}
-        [Test] public void DrinksTakeRealTimeNeedTwoDifferentTastesAndFeedback()
+        {using var s=Make();var a=Book(s,52);Attend(s,a);Finish(s,a);Assert.AreEqual(CityActivityPhase.Interrupted,a.State);Assert.IsFalse(a.RewardApplied);}
+        [Test] public void TastingFreezesTimeUntilThreeDifferentDrinksThenSettlesNinetyMinutesOnce()
         {
-            using var s=Make();var a=Book(s,51);Attend(s,a);Assert.IsFalse(s.OnsiteDrinkFeedback(0));Assert.IsTrue(s.SipOnsiteDrink());s.AdvanceClock(2);Assert.AreEqual(0,s.CurrentOnsite.Round);s.AdvanceClock(1);Assert.AreEqual(1,s.CurrentOnsite.Round);Assert.IsFalse(s.SipOnsiteDrink());
-            s.SelectOnsiteDrink(1);Assert.IsTrue(s.SipOnsiteDrink());s.AdvanceClock(3);Assert.IsTrue(s.OnsiteDrinkFeedback(1));Finish(s,a);Assert.AreEqual(CityActivityPhase.Completed,a.State);
+            using var s = Make();
+            var activity = Book(s, 51);
+            Attend(s, activity);
+            var start = s.Clock.Now;
+            s.Time.SetPaused(false);
+            Assert.That(s.Tick(10), Is.Zero);
+            Assert.That(s.SipOnsiteDrink(2), Is.True);
+            Assert.That(s.SipOnsiteDrink(2), Is.False);
+            s.AdvanceClock(180);
+            Assert.That(s.Clock.Now, Is.EqualTo(start));
+            Assert.That(activity.State, Is.EqualTo(CityActivityPhase.Running));
+            Assert.That(activity.RewardApplied, Is.False);
+
+            using var loaded = Reload(s);
+            Assert.That(loaded.SipOnsiteDrink(2), Is.False, "重新载入后记得已尝过哪杯");
+            Assert.That(loaded.SipOnsiteDrink(0), Is.True);
+            Assert.That(loaded.Clock.Now, Is.EqualTo(start));
+            Assert.That(loaded.SipOnsiteDrink(1), Is.True);
+            Assert.That(loaded.Clock.Now, Is.EqualTo(start.AddMinutes(90)));
+            var result = loaded.CityActivities.Single(a => a.Id == activity.Id);
+            Assert.That(result.State, Is.EqualTo(CityActivityPhase.Completed));
+            Assert.That(result.RewardApplied, Is.True);
+            Assert.That(result.SettlementSummary, Does.Contain("莓果气泡"));
+            Assert.That(loaded.SipOnsiteDrink(1), Is.False);
+            Assert.That(loaded.Clock.Now, Is.EqualTo(start.AddMinutes(90)));
+        }
+
+        [Test] public void OlderTastingSaveResumesAnUnfinishedSipAndCreditsElapsedTime()
+        {
+            using var s = Make();
+            var activity = Book(s, 51);
+            Attend(s, activity);
+            Assert.That(s.SipOnsiteDrink(0), Is.True);
+            var start = s.Clock.Now;
+            var savedAt = start.AddMinutes(10);
+            s.Clock.Restore(savedAt.Date, savedAt.MinuteOfDay);
+            var data = s.CreateSave();
+            data.cityActivities.Single(a => a.Id == activity.Id).Duration = 60;
+            var state = data.onsitePlays.Single(p => p.ActivityId == activity.Id);
+            state.Pending = "sip";
+            state.Selected = 1;
+            state.ReadyAt = savedAt.TotalMinutes + 2;
+
+            using var loaded = GameSession.Load(s.City, data);
+            Assert.That(loaded.CurrentOnsite.Pending, Is.Null);
+            Assert.That(loaded.SipOnsiteDrink(0), Is.False);
+            Assert.That(loaded.SipOnsiteDrink(1), Is.True);
+            Assert.That(loaded.Clock.Now, Is.EqualTo(savedAt));
+            Assert.That(loaded.SipOnsiteDrink(2), Is.True);
+            Assert.That(loaded.Clock.Now, Is.EqualTo(start.AddMinutes(90)));
+        }
+
+        [Test] public void LeavingTastingEarlyDoesNotChargeTheReservedTime()
+        {
+            using var s = Make();
+            var activity = Book(s, 51);
+            Attend(s, activity);
+            var start = s.Clock.Now;
+            Assert.That(s.SipOnsiteDrink(0), Is.True);
+            Assert.That(s.CancelCityActivity(activity.Id, early: true), Is.True);
+            Assert.That(s.Clock.Now, Is.EqualTo(start));
+            Assert.That(activity.State, Is.EqualTo(CityActivityPhase.Interrupted));
+            Assert.That(activity.RewardApplied, Is.False);
         }
         [TestCase(0,600)] [TestCase(1,2400)] [TestCase(2,0)] [TestCase(3,1800)]
         public void GroupPaymentUsesActualFourPersonBillAndCorrectHost(int choice,int fee)
@@ -55,6 +157,7 @@ namespace PCShopSell.Tests
         {
             using var s=Make();var a=Book(s,52,2);Attend(s,a);string person=a.Participants[0].PersonId;int before=s.Relation(person);Assert.IsTrue(s.TalkOnsiteGuest(0,0));s.AdvanceClock(3);Assert.AreEqual(before+3,s.Relation(person));Assert.IsFalse(s.TalkOnsiteGuest(0,2));
             for(int i=1;i<3;i++){Assert.IsTrue(s.TalkOnsiteGuest(i,i));s.AdvanceClock(3);}Finish(s,a);Assert.AreEqual(CityActivityPhase.Completed,a.State);
+            foreach (var guest in a.Participants) Assert.That(guest.RelationAfter - guest.RelationBefore, Is.EqualTo(7));
         }
         [TestCase(1,0,0,true)] [TestCase(0,0,0,false)] [TestCase(1,1,0,false)] [TestCase(1,0,1,false)]
         public void MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(int basis,int flavor,int sweet,bool correct)

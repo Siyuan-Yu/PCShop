@@ -167,14 +167,14 @@ namespace PCShopSell.Core.Session
             if (offset < -CityArrivalWindowMinutes) return "还没到约定时段";
             if (offset > CityArrivalWindowMinutes) return "已超过约定的到场时间";
             if (!activity.RendezvousReady) return "等唐俊杰到场后开始";
-            return VenueServiceBlocker(SignHelpActivityId, 0);
+            return VenueServiceBlocker(SignHelpActivityId, 0, activity.Id);
         }
 
         public bool StartSignHelp()
         {
             var activity = SignHelpAt(CurrentPlace);
             if (activity == null) return Fail("请在约定时间到手机店帮忙");
-            PrepareVenueCompanions(CurrentPlace);
+            PrepareVenueCompanions(CurrentPlace, activity.Id);
             if (SignHelpStartBlocker() is string reason) return Fail(reason);
             activity.ServiceChoice = 0;
             activity.ServiceConfirmed = true;

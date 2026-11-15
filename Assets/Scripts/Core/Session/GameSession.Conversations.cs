@@ -125,7 +125,8 @@ namespace PCShopSell.Core.Session
             if (!HasGreeted(id))
             {
                 Flags.Add("greeted:" + id);
-                if (Relation(id) < 3) AddRelation(id, 3 - Relation(id));
+                int gain = 3 - Relation(id);
+                if (gain > 0) AddSocialRelation(id, gain);
                 RememberSocial(id, "第一次打招呼，互相认识了；尚未交换联系方式。");
             }
             _lifeContact[id] = Clock.Now.TotalMinutes;
@@ -273,7 +274,7 @@ namespace PCShopSell.Core.Session
             }
             (npc != null ? _giftDays : _staffGiftDay)[id] = Clock.Today.TotalDays;
             double gain = Math.Min(10, Math.Max(1, value / 15) * (preferred ? 1.5 : 1));
-            AddRelation(id, gain);
+            AddSocialRelation(id, gain);
             RememberSocial(id, "当面送给对方「" + name + "」。");
             ApplyCargoLimit();
             Say((CityPerson(id)?.Name ?? npc?.Name ?? "对方") + "收下了「" + name + "」。");

@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
+using PCShopSell.Core.World;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
@@ -18,12 +20,52 @@ namespace PCShopSell.Game.UI
         private bool _fishingPointerHeld, _fishingWasHeld;
         private FishingPhase _fishingRenderedPhase;
         public bool FishingInputActive => _fishingWindow != null && !_fishingWindow.Closed && S.FishingActive;
+
+        private void OpenFishingVenue(Place place, string activityId = null)
+        {
+            bool here = S.CurrentPlace == place;
+            if (here && S.FishingActive) { OpenFishing(); return; }
+            if (here) S.PrepareVenueCompanions(place, activityId);
+
+            OpenWindow(place.Name, 1060, 680, w =>
+            {
+                var booking = here ? S.PendingVenueActivity(place, activityId) : null;
+                if (!GameSession.IsInteractiveFishingActivity(booking)) booking = null;
+                Line(w.Content, booking == null ? "购买垂钓时长" : S.CityActivityService(booking).Name, 24, Ui.Accent);
+                if (booking != null)
+                {
+                    foreach (var companion in booking.Participants)
+                        Line(w.Content, (S.CityPerson(companion.PersonId)?.Name ?? "同行者")
+                            + " · " + CityParticipantText(companion.Phase), 17);
+                }
+                Para(w.Content, "含租杆及 12 份鱼饵，时长按游戏内时间计算。", 17, Ui.Dim);
+                var definitions = booking == null
+                    ? FishingCatalog.Passes.Select(pass => CityLifeCatalog.Activity(pass.Id)).ToArray()
+                    : new[] { S.CityActivityService(booking) };
+
+                BuildVenuePasses(w, definitions, booking, here, "钓鱼", "FishingPass_", OpenFishing);
+
+                var footer = Ui.Row(w.Content, 46, 10);
+                if (!here)
+                {
+                    Ui.Size(Ui.Button(footer, "前往钓场", () => { CloseAllWindows(); _ctrl.GoToPlace(place); },
+                        18, Ui.ButtonHot), 0, 46, 1);
+                    return;
+                }
+
+                int count = FishingCatalog.Fish.Sum(fish => S.Backpack.Food.IngredientCount(fish.Id));
+                Ui.Size(Ui.Button(footer, $"鱼获回收 · 背包 {count} 条", () => OpenFishBuyback(w), 17), 0, 46, 1);
+                Ui.Size(Ui.Button(footer, "返回街上", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 17), 180, 46);
+            }, scrollContent: false);
+        }
+
         public void OpenFishing()
         {
-            if (_fishingWindow != null && !_fishingWindow.Closed) return;
+            if (!S.FishingActive || _fishingWindow != null && !_fishingWindow.Closed) return;
             CloseAllWindows(); S.SetFishingInterfaceOpen(true);
+            S.Time.SetPaused(false);
             _fishingPointerHeld = _fishingWasHeld = false;
-            _fishingWindow = OpenWindow("青湾垂钓", 1920, 1080, BuildFishingWindow, holds: false, onClosed: () =>
+            _fishingWindow = OpenWindow("青湾垂钓", 1920, 1080, BuildFishingWindow, holds: false, closable: false, onClosed: () =>
             { _fishingPointerHeld = _fishingWasHeld = false; S.SetFishingInterfaceOpen(false); _fishingWindow = null; },
                 scrollContent: false, showTitleBar: false);
         }
@@ -48,7 +90,12 @@ namespace PCShopSell.Game.UI
             Ui.Label(header.transform, "青湾垂钓场", 32, color: Ui.Accent).rectTransform.Anchor(0, 0, .33f, 1, 34, 12, 0, 12);
             Ui.Label(header.transform, $"{S.Clock.Today} · 熟练度 {S.FishingLevel} · 本场钓获 {fish?.Catches ?? 0} 条", 18, TextAnchor.MiddleCenter)
                 .rectTransform.Anchor(.32f, 0, .76f, 1, 0, 12, 0, 12);
-            Ui.Button(header.transform, "结束钓鱼", () => { if (S.FishingActive) S.CancelCityActivity(fish.ActivityId, true); w.Close(); }, 19)
+            Ui.Button(header.transform, S.FishingActive ? "收竿返回" : "返回钓场", () =>
+            {
+                if (S.FishingActive) S.CancelCityActivity(fish.ActivityId, true);
+                w.Close();
+                if (S.CurrentPlace?.Id == GameSession.FishingVenueId) OpenFishingVenue(S.CurrentPlace);
+            }, 19)
                 .GetComponent<RectTransform>().Anchor(.83f, 0, 1, 1, 12, 20, 30, 20);
             _fishingStatus = Ui.Label(w.Content, S.FishingHint, 22, color: Ui.TextColor);
             _fishingStatus.rectTransform.Anchor(.08f, .80f, .83f, .87f);
@@ -58,7 +105,7 @@ namespace PCShopSell.Game.UI
             _fishingReadout.rectTransform.Anchor(.025f, .72f, .70f, .99f);
             if (!S.FishingActive)
             {
-                _fishingReadout.text = fish?.Message ?? "本场垂钓已结束，请返回场所菜单购买服务。";
+                _fishingReadout.text = fish?.Message ?? "本场垂钓已结束。";
                 _fishingStatus.text = "收竿休息，下次再来。"; return;
             }
             if (fish.Phase == FishingPhase.Fighting)
@@ -131,7 +178,11 @@ namespace PCShopSell.Game.UI
         }
         private void UpdateFishingInteraction(float dt)
         {
-            if (_fishingWindow == null || _fishingWindow.Closed) return;
+            if (_fishingWindow == null || _fishingWindow.Closed)
+            {
+                if (S.FishingActive && !AnyModalOpen && !MainMenuOpen) OpenFishing();
+                return;
+            }
             if (!S.FishingActive)
             {
                 if (_fishingRenderedPhase != FishingPhase.Ended) _fishingWindow.Rebuild();
@@ -167,7 +218,7 @@ namespace PCShopSell.Game.UI
             if (_fishingReadout != null) _fishingReadout.text = f.Phase == FishingPhase.Charging ? $"力度 {f.CastPower:P0} · 预计落点 {4 + 26 * f.CastPower:0.0} 米"
                 : f.Phase == FishingPhase.Fighting ? (f.LineTension >= .65 ? "松开放线，张力就会下降" : FishingCatalog.Get(f.PendingFishId)?.BehaviorHint)
                 : f.Phase == FishingPhase.Waiting ? $"落点 {f.CastDistance:0.0} 米 · {FishingCatalog.Baits[f.Bait]} · 等待浮漂下沉…"
-                : f.Phase == FishingPhase.Bite ? $"咬钩！剩余 {Math.Max(0, 3 - f.PhaseSeconds):0.0} 秒"
+                : f.Phase == FishingPhase.Bite ? "咬钩了，马上提竿！"
                 : f.Phase == FishingPhase.Ready ? (S.FishingCastBlocker ?? (f.Message?.StartsWith("本次包含") == true
                     ? "选好鱼饵就可以甩竿" : f.Message)) : f.Message;
             if (_fishingAction != null) _fishingAction.interactable = f.Phase != FishingPhase.Waiting && f.Phase != FishingPhase.Casting;

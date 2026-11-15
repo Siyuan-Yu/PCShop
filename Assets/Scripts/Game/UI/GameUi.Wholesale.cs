@@ -56,7 +56,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(head, picked.Count == 0 ? "<b>待下单</b>　还是空的" : $"<b>待下单</b>　{picked.Count} 样 · {space:0.#} 格", 20, TextAnchor.MiddleLeft, Ui.Accent), -1, -1, 1);
             if (picked.Count > 0) Ui.Size(Ui.Button(head, "清空", () => { _cart.Clear(); w.Rebuild(); }, 15, Ui.ButtonBg), 64, 30);
             RectTransform picks = GoodsList(side, 120);
-            if (picked.Count == 0) Para(picks, "在左边商品点“＋”选数量。\n次日 10:00 统一送到收货点。", 16, Ui.Dim);
+            if (picked.Count == 0) Para(picks, "在左边输入或加减数量。\n次日 10:00 统一送到收货点。", 16, Ui.Dim);
             foreach (var item in picked)
             {
                 var part = item.part; var row = Ui.Row(picks, 46, 6);

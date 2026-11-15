@@ -41,7 +41,7 @@ namespace PCShopSell.Core.Session
             return def?.Service(activity.ServiceChoice).Description ?? def?.MidText;
         }
         public const int CityArrivalWindowMinutes = 60;
-        public CityActivity PendingVenueActivity(Place place) => FindPendingVenueActivity(place);
+        public CityActivity PendingVenueActivity(Place place, string activityId = null) => FindPendingVenueActivity(place, activityId);
 
         private CityActivity FindPendingVenueActivity(Place place, string activityId = null, bool onsiteOnly = false)
         {
@@ -55,6 +55,11 @@ namespace PCShopSell.Core.Session
                 .ThenBy(a => Math.Abs(a.ScheduledStart - now)).FirstOrDefault();
         }
 
+        private bool VenueRendezvousReady(CityActivity activity) => activity.RendezvousReady
+            && activity.PlayerVenueRoute?.ArriveMinute <= Clock.Now.TotalMinutes
+            && activity.Participants.All(participant => participant.Phase == CityParticipantPhase.Waiting
+                && CityPersonState(participant.PersonId) is { Route: null } person && person.LocationPlaceId == activity.VenueId);
+
         // Invitations gather at arrival, before a menu hold can stop the world clock.
         public bool PrepareVenueCompanions(Place place, string activityId = null)
         {
@@ -64,7 +69,7 @@ namespace PCShopSell.Core.Session
             // For race aid, each participant keeps their hospital route even if the player arrives first.
             if (IsRaceAidActivity(activity.DefinitionId))
                 return activity.Participants.All(p => p.Phase == CityParticipantPhase.Waiting || p.Phase == CityParticipantPhase.Participating);
-            if (activity.RendezvousReady && (!IsOnsiteActivity(activity) || OnsiteCompanionsPresent(activity))) return true;
+            if (VenueRendezvousReady(activity)) return true;
             foreach (var participant in activity.Participants)
             {
                 var person=CityPersonState(participant.PersonId);
@@ -94,7 +99,7 @@ namespace PCShopSell.Core.Session
                 person.Route=null; person.X=anchor.X; person.Y=anchor.Y; person.LocationPlaceId=place.Id;
                 person.ActivityId=activity.Id; person.Task=CityPersonTask.Waiting;
                 person.TaskLabel=activity.DefinitionId == SignHelpActivityId ? "到场等你开始帮忙"
-                    : IsOnsiteActivity(activity) ? "到场等你开始活动" : "赴约到场，等你选择服务";
+                    : IsOnsiteActivity(activity) || activity.ServiceConfirmed ? "到场等你开始活动" : "赴约到场，等你选择服务";
                 participant.Phase=CityParticipantPhase.Waiting; participant.DepartMinute=now; participant.IntentId=null;
             }
             activity.RendezvousReady=true; activity.State=CityActivityPhase.Gathering;
@@ -126,18 +131,22 @@ namespace PCShopSell.Core.Session
             if (Trip != null || CityIntent != null) return "正在前往目的地，请先完成或取消当前行程";
             return LeaveBlocker ?? (checkDepartureTime ? CityActivityEarlyDepartureHint(a) : null);
         }
-        public string VenueServiceBlocker(string definitionId, int choice)
+        public string VenueServiceBlocker(string definitionId, int choice, string activityId = null)
         {
             var def = CityLifeCatalog.Activity(definitionId);
-            var pending = PendingVenueActivity(CurrentPlace);
-            if (def?.EventOnly == true && pending?.DefinitionId == def.Id) def = def.AtVenue(pending.VenueId);
+            var booking = PendingVenueActivity(CurrentPlace, activityId);
+            bool reservedPass = UsesManualVenuePass(booking);
+            bool matchingPass = reservedPass && CityActivityService(booking)?.Id == definitionId;
+            if (matchingPass || def?.EventOnly == true && booking?.DefinitionId == def.Id) def = def.AtVenue(booking.VenueId);
             if (def == null || CurrentPlace?.Id != def.VenueId) return "到场后才能选择服务";
             if (choice < 0 || choice >= def.ServiceCount) return "请选择菜单或服务项目";
             if (IsGameOver || _sleeping || IsWorking || CityActivityExclusive) return "请先结束正在进行的事情";
-            if (!CityVenueFits(CurrentPlace, Clock.Now.TotalMinutes, def.Minutes)) return "该服务无法在闭店前完成";
+            int duration = matchingPass ? booking.Duration : def.Minutes;
+            if (!CityVenueFits(CurrentPlace, Clock.Now.TotalMinutes, duration)) return "该服务无法在闭店前完成";
             if (def.Id.StartsWith("expo_") && !CityExpoDay(Clock.Now.TotalMinutes, (def.LogicalId ?? def.Id) == "expo_comic")) return "本场展会尚未开放";
-            var booking = PendingVenueActivity(CurrentPlace);
-            if (OnsiteActivityAt(CurrentPlace) != null) return "请从预约卡片进入现场活动";
+            if (OnsiteActivityAt(CurrentPlace, activityId) != null) return "请从预约卡片进入现场活动";
+            if (definitionId.StartsWith("fishing_premium", StringComparison.Ordinal) && !matchingPass)
+                return "请选择钓场的垂钓时长";
             if (CityLifeCatalog.Activity(booking?.DefinitionId)?.EventOnly == true && definitionId != booking.DefinitionId)
                 return "本次为已约定的专属活动，请按原日程参加";
             Money cost = CityActivityEntryPrice(def, choice, booking);
@@ -148,10 +157,44 @@ namespace PCShopSell.Core.Session
                 if(VenueOperation(CurrentPlace.Id).CustomersHere.Length+1+(booking?.Participants.Length??0)>VenueCapacity(CurrentPlace))return "场地容量已满，请等待顾客结束后再使用";
             }
             if (booking == null) return CityActivityBlocker(definitionId, Array.Empty<string>(), Clock.Now.TotalMinutes);
-            if (booking.Duration != def.Minutes) return "请选择与本次日程时长一致的服务";
+            if (reservedPass && !matchingPass) return "请按已预约的时长开始";
+            if (booking.Duration != duration) return "请选择与本次日程时长一致的服务";
             if (booking.Participants.Any(p => p.Phase != CityParticipantPhase.Waiting && p.Phase != CityParticipantPhase.Participating)) return "同行者还未到齐，稍等一下";
             return null;
         }
+
+        public string VenueAppointmentStartBlocker(CityActivity booking)
+        {
+            if (booking == null || !booking.ServiceConfirmed || !booking.Active || booking.State == CityActivityPhase.Running)
+                return "预约当前无法开始";
+            if (CurrentPlace?.Id != booking.VenueId || FindPendingVenueActivity(CurrentPlace, booking.Id) != booking)
+                return "请在约定时间到场";
+            if (IsOnsiteActivity(booking) || IsRaceAidActivity(booking) || booking.DefinitionId == SignHelpActivityId)
+                return "请从该活动的现场入口开始";
+            if (IsGameOver || _sleeping || IsWorking || Racing || CityActivityExclusive) return "请先结束当前活动";
+            if (DistrictAccessBlocker(CurrentPlace) is string access) return access;
+            if (!VenueRendezvousReady(booking)) return "等同行者到齐后开始";
+            if (!CityVenueFits(CurrentPlace, Clock.Now.TotalMinutes, booking.Duration)) return "距离场所打烊太近，无法开始";
+            if (!string.IsNullOrEmpty(booking.EventGiftId) && !booking.EventGiftDelivered && Backpack.GiftCount(booking.EventGiftId) == 0)
+                return "请带上约定的伴手礼";
+            if (booking.DefinitionId == "social_70" && !HasOpenedComputerShop) return "请先开办可交付的电脑店";
+            var definition = CityActivityService(booking);
+            if (definition == null) return "找不到预约的活动";
+            var price = CityActivityEntryPrice(definition, booking.ServiceChoice, booking);
+            return !booking.EntryPaid && price.IsPositive && !Ledger.CanAfford(price) ? $"现金不足，需要 {price}" : null;
+        }
+
+        public bool StartVenueAppointment(string activityId)
+        {
+            if (string.IsNullOrEmpty(activityId)) return Fail("预约当前无法开始");
+            var booking = FindPendingVenueActivity(CurrentPlace, activityId);
+            if (booking == null || !booking.ServiceConfirmed) return Fail("预约当前无法开始");
+            PrepareVenueCompanions(CurrentPlace, activityId);
+            if (VenueAppointmentStartBlocker(booking) is string why) return Fail(why);
+            TickCityActivities(Clock.Now.TotalMinutes, booking.Id);
+            return booking.State == CityActivityPhase.Running;
+        }
+
         public bool SelectVenueService(string definitionId, int choice)
         {
             PrepareVenueCompanions(CurrentPlace);
@@ -165,10 +208,13 @@ namespace PCShopSell.Core.Session
             booking.ServiceChoice = choice;
             booking.ServiceConfirmed = true;
             PrepareVenueCompanions(CurrentPlace);
-            TickCityActivities(Clock.Now.TotalMinutes);
-            Say("已选择" + VenueServiceName(def, choice) + (booking.HostPays ? "，由邀请人请客。"
-                : "，费用 " + VenuePlayerPrice(def, choice) + (IsOwnedVenue(CurrentPlace)?"（老板自用，不计营业收入）":"") + "。"));
+            TickCityActivities(Clock.Now.TotalMinutes, IsInteractiveFishingActivity(booking) ? booking.Id : null);
+            if (!UsesManualVenuePass(booking))
+                Say("已选择" + VenueServiceName(def, choice) + (booking.HostPays ? "，由邀请人请客。"
+                    : "，费用 " + VenuePlayerPrice(def, choice) + (IsOwnedVenue(CurrentPlace)?"（老板自用，不计营业收入）":"") + "。"));
             return true;
         }
+
+        public static bool UsesManualVenuePass(CityActivity activity) => IsInteractiveFishingActivity(activity) || IsTimedVenueSport(activity);
     }
 }

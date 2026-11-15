@@ -6,7 +6,10 @@ using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
+using PCShopSell.Game;
+using PCShopSell.Game.UI;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace PCShopSell.Tests
 {
@@ -62,13 +65,27 @@ namespace PCShopSell.Tests
             Bite(s, s.CurrentFishing.Spot == 0 ? .2 : s.CurrentFishing.Spot == 1 ? .7 : 1);
             PlayFight(s);
         }
+        private static CityActivity BookFishing(GameSession s, int number, int choice)
+        {
+            s.RaiseEvent(number switch
+            {
+                59 => "act_fishing_shaoan",
+                60 => "act_fishing_qiaosong",
+                61 => "act_fishing_grandpa",
+                _ => throw new ArgumentOutOfRangeException(nameof(number))
+            });
+            Assert.NotNull(s.PendingEvent);
+            string body = s.PendingEvent.Body; Assert.IsTrue(s.ResolveEvent(choice), body);
+            return s.CityActivities.Last(x => x.Active);
+        }
+
         private static CityActivity Invite(GameSession s, int number, int choice = 0)
         {
-            s.RaiseEvent(number == 59 ? "act_fishing_shaoan" : "act_fishing_qiaosong"); Assert.NotNull(s.PendingEvent);
-            string body = s.PendingEvent.Body; Assert.IsTrue(s.ResolveEvent(choice), body);
-            var a = s.CityActivities.Last(x => x.Active);
+            var a = BookFishing(s, number, choice);
             s.Clock.Restore(new GameDate((int)(a.ScheduledStart / 1440)), (int)(a.ScheduledStart % 1440));
-            At(s, a.VenueId); Assert.IsTrue(s.PrepareVenueCompanions(s.CurrentPlace)); s.AdvanceClock(3);
+            At(s, a.VenueId);
+            Assert.IsTrue(s.StartVenueAppointment(a.Id), s.VenueAppointmentStartBlocker(a));
+            s.AdvanceClock(3);
             Assert.IsTrue(s.FishingActive); return a;
         }
 
@@ -146,15 +163,85 @@ namespace PCShopSell.Tests
             s.Time.Release(); Assert.IsFalse(s.Time.IsHeld); Assert.AreEqual(0, s.FishCaughtTotal);
         }
 
-        [Test]
-        public void VenueIsReachableInTheOutskirtsAndARealPaidSessionStartsAtItsDock()
+        [TestCase("fishing", 2, 300)]
+        [TestCase("fishing_pass_4h", 4, 500)]
+        [TestCase("fishing_pass_8h", 8, 900)]
+        [TestCase("fishing_pass_16h", 16, 1600)]
+        public void VenueIsReachableInTheOutskirtsAndARealPaidSessionStartsAtItsDock(string passId, int hours, int price)
         {
             using var s = Make(); var p = s.City.GetPlace(GameSession.FishingVenueId);
             Assert.AreEqual(0, s.DistrictTierOf(p)); Assert.IsNull(s.DistrictAccessBlocker(p));
             Assert.That(p.Name, Does.Contain("垂钓场")); var balance = s.Ledger.Balance;
-            var a = Start(s); Assert.AreEqual(balance - Money.FromYuan(300), s.Ledger.Balance);
-            Assert.AreEqual(12, s.CurrentFishing.Baits.Sum()); Assert.AreEqual(90, a.Duration);
+            Assert.True(s.SelectVenueService(passId, 0));
+            var a = s.RunningCityActivity;
+            Assert.True(s.FishingActive);
+            Assert.AreEqual(balance - Money.FromYuan(price), s.Ledger.Balance);
+            Assert.AreEqual(12, s.CurrentFishing.Baits.Sum()); Assert.AreEqual(hours * 60, a.Duration);
             Assert.IsTrue(a.PlayerVenueRoute.HasPath); Assert.IsTrue(s.Backpack.Food.Ingredient.All(b => FishingCatalog.Get(b.Id) == null));
+        }
+
+        [TestCase(0, 0, 480, 900)]
+        [TestCase(60, 0, 180, 1800)]
+        [TestCase(61, 0, 90, 300)]
+        [TestCase(61, 1, 90, 600)]
+        public void PassPickerOpensManualFishingForWalkInsAndConfirmedInvitations(int invitation, int option, int duration, int cost)
+        {
+            using var s = Make();
+            var booking = invitation == 0 ? null : BookFishing(s, invitation, option);
+            var cash = s.Ledger.Balance;
+            if (booking != null)
+            {
+                var time = new GameTimestamp(booking.ScheduledStart);
+                s.Clock.Restore(time.Date, time.MinuteOfDay);
+                var venue = s.CurrentPlace;
+                s.Leave();
+                s.ArriveAtNode(venue.NodeId);
+                Assert.IsTrue(s.Enter(venue, booking.Id));
+                s.AdvanceClock(3);
+                Assert.IsFalse(booking.EntryPaid);
+                Assert.IsFalse(s.FishingActive);
+                Assert.AreEqual(cash, s.Ledger.Balance);
+            }
+            var root = new GameObject("FishingPassPickerTest");
+            root.SetActive(false);
+            var controller = root.AddComponent<GameController>();
+            typeof(GameController).GetProperty("Session").SetValue(controller, s);
+            var previous = UnityEngine.EventSystems.EventSystem.current;
+            var ui = new GameUi(controller);
+            try
+            {
+                ui.OnEnteredPlace(s.CurrentPlace, booking?.Id);
+                var windows = ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Transform>())
+                    .Where(item => item.name.StartsWith("Window_")).ToArray();
+                Assert.That(windows, Has.Length.EqualTo(1));
+                Assert.IsEmpty(windows[0].GetComponentsInChildren<ScrollRect>());
+                var passes = windows[0].GetComponentsInChildren<Button>().Where(button => button.name.StartsWith("FishingPass_")).ToArray();
+                Assert.That(passes, Has.Length.EqualTo(booking == null ? 4 : 1));
+                string passName = booking == null ? "FishingPass_fishing_pass_8h" : "FishingPass_" + booking.DefinitionId;
+                var entry = passes.Single(button => button.name == passName);
+                Assert.IsTrue(entry.interactable);
+                if (booking != null) StringAssert.Contains("付款并开始钓鱼", entry.GetComponentInChildren<Text>().text);
+                entry.onClick.Invoke();
+                Assert.True(ui.FishingInputActive);
+                Assert.AreEqual(duration, s.RunningCityActivity.Duration);
+                Assert.AreEqual(cash - Money.FromYuan(cost), s.Ledger.Balance);
+                if (booking != null)
+                {
+                    Assert.AreEqual(booking.Id, s.RunningCityActivity.Id);
+                    Assert.IsFalse(s.StartVenueAppointment(booking.Id));
+                    Assert.AreEqual(cash - Money.FromYuan(cost), s.Ledger.Balance);
+                }
+                Assert.AreEqual(0, s.FishCaughtTotal);
+                Assert.False(ui.CloseTopWindow(), "Fishing should only exit through its own controls.");
+            }
+            finally
+            {
+                ui.CloseAllWindows();
+                foreach (var canvas in ui.Canvases) UnityEngine.Object.DestroyImmediate(canvas.gameObject);
+                UnityEngine.Object.DestroyImmediate(root);
+                if (previous == null && UnityEngine.EventSystems.EventSystem.current != null)
+                    UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);
+            }
         }
 
         [Test]
@@ -220,7 +307,7 @@ namespace PCShopSell.Tests
         public void EndingASessionReleasesTheBiteAndDoesNotGrantUnclaimedFish()
         {
             using var s = Make(); var a = Start(s); s.SetFishingInterfaceOpen(true); Catch(s);
-            Assert.IsTrue(s.Time.IsHeld); s.AdvanceClock(100);
+            Assert.IsTrue(s.Time.IsHeld); s.AdvanceClock(a.Duration + 1);
             Assert.AreEqual(CityActivityPhase.Completed, a.State); Assert.IsFalse(s.FishingActive); Assert.IsFalse(s.Time.IsHeld);
             Assert.AreEqual(0, s.Backpack.Food.IngredientCount("fish_crucian")); Assert.That(a.SettlementSummary, Does.Contain("本次抛竿"));
         }

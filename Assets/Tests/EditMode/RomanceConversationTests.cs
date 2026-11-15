@@ -130,7 +130,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void LuStoryIncreasesFamiliarityAndOlderConfirmedRelationshipCanBeRestored()
+        public void LuStoryOutingDoesNotGrantExtraFamiliarityAndOlderConfirmedRelationshipCanBeRestored()
         {
             using (var s = DistrictProgressionTests.Make())
             {
@@ -149,9 +149,9 @@ namespace PCShopSell.Tests
                 typeof(GameSession).GetMethod("OnCityActivityCompleted", BindingFlags.Instance | BindingFlags.NonPublic)
                     .Invoke(s, new object[] { completed });
                 Assert.AreEqual(4, story.Stage);
-                Assert.AreEqual(75, s.Relation(Lu));
+                Assert.AreEqual(45, s.Relation(Lu));
                 Assert.IsNull(s.RomanceId);
-                Assert.IsNull(s.ConfessionBlocker(Lu));
+                StringAssert.Contains("70", s.ConfessionBlocker(Lu));
 
                 var old = s.CreateSave();
                 old.cityRomanceStateRecorded = false;
@@ -159,6 +159,7 @@ namespace PCShopSell.Tests
                 using (var loaded = Reload(s, old))
                 {
                     Assert.AreEqual(Lu, loaded.RomanceId);
+                    Assert.AreEqual(45, loaded.Relation(Lu));
                     Assert.IsTrue(loaded.EndRomance());
                     using (var ended = Reload(loaded, loaded.CreateSave()))
                         Assert.IsNull(ended.RomanceId);

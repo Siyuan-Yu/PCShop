@@ -105,14 +105,21 @@ namespace PCShopSell.Core.Session
                 :p.Stage==1?"当面听她讲一段个人经历，尊重她把作品与私人生活分开的想法。"
                 :p.Stage==2?"约她去河岸钓鱼，实际到场并完成活动。"
                 :IsPlayerPartner(LuZhi)?"你们已确认关系，可以继续相约，也会有只属于你们的日常对话。"
-                :"河岸的相处已经完成。以后可以继续做朋友，也可以在日常对话中选择表白。";
+                :"河岸的相处已经完成。可以继续相约，熟悉度超过 70 后可以当面表白。";
         }
 
         private void CityStoryRemember(string person,string text) { if(CityPerson(person)!=null) RememberSocial(person,text); }
-        private void IntroduceCityPerson(string from,string target)
+        private void IntroduceCityPerson(string from,string target, CityActivity activity = null)
         {
             Flags.Add("heard:" + target);
-            if (Relation(target) < 3) AddRelation(target, 3 - Relation(target));
+            int gain = 3 - Relation(target);
+            if (gain > 0)
+            {
+                if (activity != null && activity.Participants.Any(p => p.PersonId == target))
+                    AwardCityActivityRelation(activity, target, gain);
+                else
+                    AddRelation(target, gain);
+            }
             var p=CityPersonState(from);if(p!=null)p.KnownRelations=(p.KnownRelations??Array.Empty<string>()).Union(new[]{target}).ToArray();
             CityStoryRemember(target,"经"+(CityPerson(from)?.Name??"朋友")+"引荐留下联系；尚未代替实际见面与赴约。");
         }
@@ -164,7 +171,7 @@ namespace PCShopSell.Core.Session
         private void RaiseLuStoryFamiliarity(int minimum)
         {
             int relation = Relation(LuZhi);
-            if (relation < minimum) AddRelation(LuZhi, minimum - relation);
+            if (relation < minimum) AddSocialRelation(LuZhi, minimum - relation);
         }
 
         public string CityPersonalFeedback(string personId)
@@ -270,7 +277,7 @@ namespace PCShopSell.Core.Session
                 if(_cityStoryEffects.Add(key))
                 {
                     string person=activity.DefinitionId=="expo_comic"?"life_creator":"life_enterprise";
-                    IntroduceCityPerson("life_curator",person);
+                    IntroduceCityPerson("life_curator",person,activity);
                     Say("在本届展会实际交流并留下联系；复入展馆不会重复授予同一认识事件。");
                 }
             }
@@ -281,9 +288,9 @@ namespace PCShopSell.Core.Session
             if(!_cityStoryEffects.Add("completed:"+activity.Id))return;
             foreach(var story in _cityStories.Where(s=>s.ActivityId==activity.Id))
             {
-                if(story.Id=="supply"&&story.Stage==1){IntroduceCityPerson(story.PersonId,"life_enterprise");story.Stage=2;}
+                if(story.Id=="supply"&&story.Stage==1){IntroduceCityPerson(story.PersonId,"life_enterprise",activity);story.Stage=2;}
                 else if(story.Id=="supply"&&story.Stage==4){story.Stage=5;story.Rewarded=true;Flags.Add("city:trusted-supply");Online.Discover("s_zhou");CityStoryRemember("life_enterprise","完成电子展合作交流，愿意继续以实际订单小批量复订。");}
-                else if(story.Id=="creator"&&story.Stage==3){story.Stage=4;IntroduceCityPerson("life_creator","life_tenant");CityStoryRemember("life_creator","在原创漫展认真交流了作品与推广边界，后续商务报价独立确认。");}
+                else if(story.Id=="creator"&&story.Stage==3){story.Stage=4;IntroduceCityPerson("life_creator","life_tenant",activity);CityStoryRemember("life_creator","在原创漫展认真交流了作品与推广边界，后续商务报价独立确认。");}
                 else if(story.Id=="property"&&story.Stage==4)
                 {
                     story.Stage=5;story.Rewarded=true;Flags.Add("city:tenant-cooperation");
@@ -294,21 +301,18 @@ namespace PCShopSell.Core.Session
                 {
                     story.Stage=4;
                     story.Branch=IsPlayerPartner(LuZhi)?"romance":"story-complete";
-                    RaiseLuStoryFamiliarity(75);
                     CityStoryRemember(LuZhi,"在河岸一起度过了一段时间，约好有空再见。");
                 }
             }
             if(activity.SourceId!=null&&activity.SourceId.StartsWith("legacy-creator-private:"))
             {
                 var person=activity.Participants.FirstOrDefault(p=>Creator(p.PersonId)!=null);var creator=person==null?null:Creator(person.PersonId);
-                if(creator!=null){creator.LastOutingDay=Clock.Today.TotalDays;creator.Affection=Math.Min(100,creator.Affection+8+Math.Min(4,EffectiveCharm/10));creator.Relationship=Math.Min(100,creator.Relationship+2);}
+                if(creator!=null){creator.LastOutingDay=Clock.Today.TotalDays;creator.Affection=Math.Min(100,creator.Affection+8+Math.Min(2,EffectiveCharm/10));creator.Relationship=Math.Min(100,creator.Relationship+2);}
             }
             if(activity.SourceId!=null&&activity.SourceId.StartsWith("legacy-friend-meal:"))
             {Player.Charm=Math.Min(100,Player.Charm+1);Player.Intelligence=Math.Min(100,Player.Intelligence+1);}
             if(activity.SourceId!=null&&activity.SourceId.StartsWith("legacy-regulars-meal:"))PlayerShop.Reputation+=3;
             if(activity.SourceId!=null&&activity.SourceId.StartsWith("legacy-lin-meal:"))Player.Health=Math.Min(100,Player.Health+2);
-            if(activity.SourceId?.StartsWith("legacy-lin-reunion:", StringComparison.Ordinal) == true)
-                Meet(Npcs.Lin, 30);
         }
 
         public bool ChooseCityRomance(bool romantic)
@@ -638,11 +642,7 @@ namespace PCShopSell.Core.Session
             foreach(var old in d.cityStories??Array.Empty<CityStoryProgress>())if(old!=null&&!string.IsNullOrEmpty(old.Id)&&!_cityStories.Any(s=>s.Id==old.Id))_cityStories.Add(old.Copy());
             foreach(var expected in defaults)if(!_cityStories.Any(s=>s.Id==expected.Id))_cityStories.Add(new CityStoryProgress{Id=expected.Id,PersonId=expected.PersonId});
             var romance = CityStory("romance");
-            if (romance.Stage >= 3)
-            {
-                if (!d.cityRomanceStateRecorded && RomanceId == null && romance.Branch == "romance") RomanceId = LuZhi;
-                RaiseLuStoryFamiliarity(75);
-            }
+            if (romance.Stage >= 3 && !d.cityRomanceStateRecorded && RomanceId == null && romance.Branch == "romance") RomanceId = LuZhi;
             _cityPromotions.Clear();foreach(var c in d.cityPromotions??Array.Empty<CityPromotion>())if(c!=null&&!_cityPromotions.Any(p=>p.Id==c.Id))_cityPromotions.Add(c.Copy());
             _cityReferrals.Clear();foreach(var o in d.cityReferrals??Array.Empty<CityReferralOffer>())if(o!=null&&!_cityReferrals.Any(p=>p.Id==o.Id))_cityReferrals.Add(o.Copy());
             _cityStoryEffects.Clear();foreach(string key in d.cityStoryEffects??Array.Empty<string>())if(key!=null)_cityStoryEffects.Add(key);

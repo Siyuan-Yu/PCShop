@@ -38,7 +38,7 @@ namespace PCShopSell.Game.UI
                     var exhibit = S.BrandBusiness.Exhibits.OrderByDescending(e => e.Day).FirstOrDefault();
                     Line(body, "城郊开业 "+S.DistrictOperatingShops(0)+" / 5家 · 社区开业 "+S.DistrictOperatingShops(1)+"家", 18, Ui.Accent);
                     Line(body, "住处："+S.HomeTitle+" · 周租 "+S.CurrentHomeRent, 17);
-                    Line(body, "社区前置："+(S.DistrictPrerequisiteBlocker(1)??"已达成（5家城郊店＋100万元现金）"), 17, Ui.Good);
+                    Line(body, "社区前置："+(S.DistrictPrerequisiteBlocker(1)??"已达成（5家城郊店＋无贷款＋100万元自有现金）"), 17, Ui.Good);
                     if(!S.DebugExpoBusinessBaseReady)
                     {
                         Ui.Size(Ui.Button(body,"补齐当前验收档的门店与社区住处",()=>{S.DebugPrepareExpoBusinessBase();w.Rebuild();},18,Ui.ButtonHot,S.DebugExpoBusinessBaseBlocker==null),-1,46).name="RepairExpoBusinessBase";

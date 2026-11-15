@@ -167,12 +167,24 @@ namespace PCShopSell.Core.Session
             if(item==null||item.Inspected)return false;item.Inspected=true;item.Price=UsedValue(item);
             Say("鉴定结果："+UsedNames[item.Product]+" · "+ConditionName(item.Condition)+"，参考价 ¥"+item.Price+"。");return true;
         }
-        public bool ListUsedItem(int id,long price)
+        public bool ListUsedItem(int id, long price) =>
+            ListUsedItem(id, price, out var blocker) || Fail(blocker);
+
+        public bool ListUsedItem(int id, long price, out string blocker)
         {
-            if(!SpecialPlayer(CurrentShop)||CurrentShop.RetailKind!="secondhand"||price<1||price>1000000)return false;
-            var s=SpecialBusiness(CurrentShop.Place.Id);var item=s.Used.FirstOrDefault(i=>i.Id==id&&i.Owned&&i.Inspected&&!i.Sold);
-            if(!SetUsedListing(CurrentShop,item,price))return false;
-            Say(UsedNames[item.Product]+"已按 ¥"+price+" 上架到二手转售品货架，等待顾客挑选、结账。");return true;
+            var shop = CurrentShop;
+            if (!SpecialPlayer(shop) || shop.RetailKind != "secondhand")
+            {
+                blocker = InPlayerShop && shop.RetailKind == "secondhand" && IsRenovating
+                    ? "本店今日歇业装修。请等明天恢复营业后再上架。"
+                    : "请在自己的二手旧物店内上架。";
+                return false;
+            }
+            var item = SpecialBusiness(shop.Place.Id).Used.FirstOrDefault(i => i.Id == id);
+            blocker = SetUsedListing(shop, item, price);
+            if (blocker != null) return false;
+            Say(UsedNames[item.Product] + "已按 ¥" + price + " 上架到二手转售品货架，等待顾客挑选、结账。");
+            return true;
         }
         public bool DiscardUsed(int id)
         {
@@ -208,8 +220,9 @@ namespace PCShopSell.Core.Session
             foreach(var item in state.Used.Where(i=>i.Owned&&!i.Sold).ToArray())
             {
                 item.Inspected=true;
-                if(!item.Listed&&shop.Sim.ShelfFillOf(PCShopSell.Core.Inventory.ShelfKinds.Get("secondhand")).UsedKg+UsedWeight(item)<=shop.Sim.ShelfCapacityOf(PCShopSell.Core.Inventory.ShelfKinds.Get("secondhand")))
-                    SetUsedListing(shop,item,Math.Max(1,UsedValue(item)));
+                if(!item.Listed&&shop.Sim.ShelfFillOf(PCShopSell.Core.Inventory.ShelfKinds.Get("secondhand")).UsedKg+UsedWeight(item)<=shop.Sim.ShelfCapacityOf(PCShopSell.Core.Inventory.ShelfKinds.Get("secondhand"))
+                    && SetUsedListing(shop, item, Math.Max(1, UsedValue(item))) is string blocker)
+                    Fail(blocker);
             }
             if(state.Used.Count>80)state.Used.RemoveAll(i=>i.Sold);
         }

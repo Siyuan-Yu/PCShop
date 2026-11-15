@@ -37,11 +37,8 @@ namespace PCShopSell.Game.UI
                 _calendarDay = day ?? S.Clock.Today.TotalDays;
                 if (alreadyOpen) state.Window.ResetScrollOnRebuild = true;
             }
-            OpenWorkspace("calendar", "calendar", "日程", 820, monthView ? 850 : 660, w =>
-            {
-                if (monthView) BuildMonthCalendar(w);
-                else BuildPersonalSchedule(w);
-            });
+            if (monthView) OpenPhoneAppWorkspace("calendar", "calendar", "日程", BuildMonthCalendar);
+            else OpenWorkspace("calendar", "calendar", "日程", 820, 660, BuildPersonalSchedule);
         }
 
         private Window _peopleReturnPhone;
@@ -51,11 +48,14 @@ namespace PCShopSell.Game.UI
             if (!_navigation.TryGetValue("people", out var state) || state.Window == null || state.Window.Closed || phone != null)
                 _peopleReturnPhone = phone;
 
-            OpenWorkspace("people", tab, "人物", 1300, 850, w =>
+            void Build(Window w)
             {
                 BuildPeopleNavigation(w, tab);
                 build(w);
-            }, isTab: true);
+            }
+            if (tab == "contacts" || _peopleReturnPhone is { Closed: false })
+                OpenPhoneAppWorkspace("people", tab, "人物", Build, isTab: true);
+            else OpenWorkspace("people", tab, "人物", 1300, 850, Build, isTab: true);
         }
 
         private void BuildPeopleNavigation(Window w, string selected)

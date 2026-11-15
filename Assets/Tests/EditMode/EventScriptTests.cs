@@ -52,6 +52,110 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void WalletReturnNeedsRealTravelAndStationTimeSurvivesSave()
+        {
+            using var s = GameSessionTests.Make(5000, 600);
+            s.EventsEnabled = false;
+            s.RaiseEvent("wallet");
+            var start = s.Clock.Now;
+            Assert.That(s.ResolveEvent(0), Is.True);
+            var station = s.WalletReturnStation;
+            Assert.That(station, Is.Not.Null);
+            Assert.That(s.Clock.Now, Is.EqualTo(start));
+            Assert.That(s.Trip, Is.Null);
+            Assert.That(s.Schedule().Single(e => e.Kind == "wallet_return").DestinationId, Is.EqualTo(station.Id));
+            Assert.That(s.HandOverWallet(false), Is.False);
+
+            Assert.That(s.BeginCityTravel(station.Id), Is.True);
+            Assert.That(s.CurrentPlace, Is.Not.EqualTo(station));
+            for (int frame = 0; frame < 2000 && s.CurrentPlace != station; frame++) s.Tick(.05);
+            Assert.That(s.CurrentPlace, Is.EqualTo(station));
+            Assert.That(s.WalletWaitLeft, Is.EqualTo(30));
+            s.AdvanceClock(30);
+            Assert.That(s.WalletWaitLeft, Is.EqualTo(30), "离开实时循环的跳时操作不算在站内等候");
+            TickWalletMinutes(s, 12);
+            Assert.That(s.WalletWaitLeft, Is.EqualTo(18));
+            Assert.That(s.TakeMetro(), Is.True);
+            TickWalletMinutes(s, 5);
+            Assert.That(s.WalletWaitLeft, Is.EqualTo(18));
+            Assert.That(s.HandOverWallet(false), Is.False);
+
+            var save = UnityEngine.JsonUtility.FromJson<SaveData>(UnityEngine.JsonUtility.ToJson(s.CreateSave()));
+            using var loaded = GameSession.Load(s.City, save);
+            Assert.That(loaded.WalletWaitLeft, Is.EqualTo(18));
+            GameSessionTests.Teleport(loaded, station.Id);
+            TickWalletMinutes(loaded, 17);
+            Assert.That(loaded.HandOverWallet(false), Is.False);
+            TickWalletMinutes(loaded, 1);
+            var readyAt = loaded.Clock.Now;
+            Assert.That(loaded.HandOverWallet(false), Is.True);
+            Assert.That(loaded.Clock.Now, Is.EqualTo(readyAt));
+            Assert.That(loaded.HandOverWallet(false), Is.False);
+            Assert.That(loaded.Schedule().Any(e => e.Kind == "wallet_return"), Is.False);
+        }
+
+        [Test]
+        public void WalletOwnerComesToTheStationBeforeAwardingRelationship()
+        {
+            using var s = GameSessionTests.Make(5000, 390);
+            s.EventsEnabled = false;
+            s.RaiseEvent("wallet");
+            Assert.That(s.IsChoiceEnabled(s.PendingEvent.Choices[1]), Is.True);
+            var start = s.Clock.Now;
+            Assert.That(s.ResolveEvent(1), Is.True);
+            Assert.That(s.Clock.Now, Is.EqualTo(start));
+            var ownerId = s.CreateSave().walletOwnerId;
+            int relation = s.Relation(ownerId);
+            var owner = s.CityPersonState(ownerId);
+            owner.Route = null;
+            owner.LocationPlaceId = s.Home.Id;
+            var home = s.StandOf(s.Home);
+            owner.X = home.X;
+            owner.Y = home.Y;
+            var station = s.WalletReturnStation;
+            GameSessionTests.Teleport(s, station.Id);
+            Assert.That(s.WalletOwnerAtStation, Is.False);
+            TickWalletMinutes(s, 1);
+            Assert.That(owner.Route?.TargetPlaceId, Is.EqualTo(station.Id));
+            long ownerArrival = owner.Route.ArriveMinute;
+            Assert.That(s.HandOverWallet(true), Is.False);
+            Assert.That(s.Relation(ownerId), Is.EqualTo(relation));
+
+            TickWalletMinutes(s, 29);
+            Assert.That(s.WalletWaitLeft, Is.Zero);
+            if (s.Clock.Now.TotalMinutes < ownerArrival)
+            {
+                Assert.That(s.HandOverWallet(true), Is.False);
+                TickWalletMinutes(s, (int)(ownerArrival - s.Clock.Now.TotalMinutes));
+            }
+            Assert.That(s.WalletOwnerAtStation, Is.True, $"失主 {ownerId}，当前在 {owner.LocationPlaceId}，预定到站时刻 {ownerArrival}");
+            Assert.That(s.HandOverWallet(true), Is.True);
+            Assert.That(s.Relation(ownerId), Is.EqualTo(System.Math.Max(relation, 10) + 3));
+            Assert.That(s.HandOverWallet(true), Is.False);
+        }
+
+        [Test]
+        public void LegacyWalletDropOffLoadsAsAnUnfinishedStationReturn()
+        {
+            using var s = GameSessionTests.Make(5000, 600);
+            var save = s.CreateSave();
+            save.walletDropOff = "metro_a";
+            using var loaded = GameSession.Load(s.City, save);
+            Assert.That(loaded.WalletReturnStation.Id, Is.EqualTo("metro_a"));
+            Assert.That(loaded.WalletWaitLeft, Is.EqualTo(30));
+            loaded.RaiseEvent("wallet");
+            Assert.That(loaded.PendingEvent, Is.Null);
+        }
+
+        private static void TickWalletMinutes(GameSession s, int minutes)
+        {
+            s.Time.SecondsPerMinuteAt1x = .5;
+            s.Time.SetSpeed(2);
+            s.Time.RestoreFractionalMinute(0);
+            for (int i = 0; i < minutes; i++) s.Tick(.25);
+        }
+
+        [Test]
         public void Reader_ReportsTypos_AndBadJson()
         {
             var typo = EventScriptReader.Read("{\"events\":[{\"id\":\"x\",\"titel\":\"a\",\"choices\":[{\"text\":\"t\",\"effects\":[{\"type\":\"pay\",\"yaun\":5}]}]}]}");

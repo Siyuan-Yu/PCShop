@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
-using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 using UnityEngine;
 using UnityEngine.UI;
@@ -187,7 +186,7 @@ namespace PCShopSell.Game.UI
             if(!rented&&place.Kind!=PlaceKind.Home&&!GameSession.IsCommercialPremises(place))return new[]{"当前用途："+(string.IsNullOrEmpty(place.Business)?place.Name:place.Business),"该地点不开放普通房产租购。"};
             Money asking=place.Kind==PlaceKind.Home?S.ResidentialRent(place):S.ShopRentQuote(place);
             if(rented)return new[]{"签约周租 "+Money.FromCents(AssetLeasedRent(place))+"（保留签约价）","当前新租参考 "+asking,
-                S.PendingLease?.PlaceId==place.Id?"交房日期 "+new GameDate(S.PendingLease.StartDay):"你持有租用权，产权属于房东。"};
+                S.PendingLease?.PlaceId==place.Id?S.ShopHandoverText(S.PendingLease.StartDay):"你持有租用权，产权属于房东。"};
             Money price=place.Kind==PlaceKind.Home?S.ResidentialPrice(place):S.CityPropertyPrice(place.Id);
             var listing=S.Listings.FirstOrDefault(l=>l.PlaceId==place.Id);
             return new[]{"参考售价 "+price,(listing==null?"新租参考":"挂牌")+"周租 "+(listing?.Rent??asking),

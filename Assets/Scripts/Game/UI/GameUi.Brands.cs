@@ -31,9 +31,12 @@ namespace PCShopSell.Game.UI
         private void BuildBrandBusiness(Window w)
         {
             var state=S.BrandBusiness;
+            bool kolAvailable = S.KolAmbassadorAccessBlocker == null;
+            if (!kolAvailable && _brandTab == BrandKolTab) _brandTab = BrandOverviewTab;
             var tabs=Ui.Row(w.Content,40,6);string[] names={"品牌总览","展会","企业竞标","代言人（KOL）"};
             for (int i = 0; i < names.Length; i++)
             {
+                if (i == BrandKolTab && !kolAvailable) continue;
                 int tab = i;
                 Ui.Size(Ui.Button(tabs, names[i], () =>
                 {

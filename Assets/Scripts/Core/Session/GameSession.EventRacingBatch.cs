@@ -126,7 +126,7 @@ namespace PCShopSell.Core.Session
                 case "race_crash_help":
                     return BindRaceAid(template);
                 case "race_spectator":
-                    return BindRacingActivity(template, "race_watch", Zhixia, "沈知夏邀请你到城郊练习场观赛，尚未开放赛车也可以赴约。实际到场看满一小时后增加见识并认识她。", false);
+                    return BindRacingActivity(template, "race_watch", Zhixia, "沈知夏邀请你到城郊赛车报名点观赛，尚未开放赛车也可以赴约。实际到场看满一小时后增加见识并认识她。", false);
                 case "race_night_ride":
                     return BindRacingActivity(template, "race_night", Zhixia, "沈知夏约你晚上带电动车到城郊赛场集合，沿场内安全路线休闲骑行 90 分钟，不竞速。19:00–21:30 可集合，气温低于 0℃或高于 35℃时取消，可重新约。", true);
                 case "race_maker_gear":
@@ -165,7 +165,7 @@ namespace PCShopSell.Core.Session
                 {
                     if (!s.AcceptEventRace(offer)) return "这场比赛已经约不上了。";
                     s._eventRaceBookings.Add(new EventRaceBooking { Kind = kind, Day = offer.Day, TrackId = offer.TrackId, PersonId = person });
-                    s.Meet(person, 12);
+                    s.Meet(person, 0);
                     return "已记入日程，到场接待处选车后使用专属比赛入口。" + fee;
                 })
             };
@@ -393,7 +393,7 @@ namespace PCShopSell.Core.Session
 
         private void CompleteRacingBatchActivity(CityActivity activity)
         {
-            if (activity.DefinitionId == "race_watch") Meet(Zhixia, Math.Max(14, Relation(Zhixia)));
+            if (activity.DefinitionId == "race_watch") Meet(Zhixia, 0);
         }
 
         private void StartRacingBatchActivity(CityActivity activity, long now)
@@ -468,7 +468,7 @@ namespace PCShopSell.Core.Session
             if (!_garage.Any(v => MotorCatalog.Get(v.ModelId).Kind == VehicleKind.EBike))
             { var v = NewMotor("e_range"); v.GarageId = StarterRaceGarageId; _garage.Add(v); }
             if (!HasGarage(StarterRaceGarageId)) _regionalGarages.Add(new RegionalGarageLease { PlaceId = StarterRaceGarageId, OwnedSpaces = 2 });
-            Flags.Add(RacingAccessFlag); Flags.Add(RacingIntroShownFlag);
+            Flags.Add(RacingAccessFlag);
             if (number == 32) _garage.First(v => MotorCatalog.Get(v.ModelId).Kind == VehicleKind.EBike).EventBatteryWorn = false;
             if (number == 33) _lastEventRaceOpponents = new[] { Jingxing };
             if (number == 34 && RacingWins < 2) _raceRecords.Add(new RaceRecord { Key = "debug:event-wins", Wins = 2 });

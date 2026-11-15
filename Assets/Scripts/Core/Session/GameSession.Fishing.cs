@@ -244,7 +244,7 @@ namespace PCShopSell.Core.Session
                 return Fail("这位同行者最近已收过礼物，换位同行者或自行带走。" );
             days[personId] = Clock.Today.TotalDays;
             _fishing.GiftedPeople = _fishing.GiftedPeople.Concat(new[] { personId }).ToArray();
-            AddRelation(personId, Math.Min(5, 2 + fish.SalePrice / 200));
+            AwardCityActivityRelation(RunningCityActivity, personId, Math.Min(5, 2 + fish.SalePrice / 200));
             RememberSocial(personId, "在青湾垂钓场当面收到你钓到的" + fish.Name + "。" );
             _fishing.Gifts++; FinishFishDisposition("已把" + fish.Name + "送给" + CityPerson(personId)?.Name + "，不会再加入背包。" ); return true;
         }

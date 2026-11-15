@@ -133,7 +133,7 @@ namespace PCShopSell.Core.Session
             if (_staffGiftDay.TryGetValue("story_shenxiao", out int last) && Clock.Today.TotalDays - last < 3) return Fail("沈晓最近已收到礼物，可以继续陪逛。");
             if (!Backpack.TakeGift(productId)) return false;
             _staffGiftDay["story_shenxiao"] = Clock.Today.TotalDays;
-            s.Delivered = true; AddRelation("story_shenxiao", 2); ApplyCargoLimit(); Say("已当着父亲的面把这件现货模型送给沈晓；陪逛不要求购买或送礼。"); return true;
+            s.Delivered = true; AwardCityActivityRelation(a, "story_shenxiao", 2); ApplyCargoLimit(); Say("已当着父亲的面把这件现货模型送给沈晓；陪逛不要求购买或送礼。"); return true;
         }
     }
 }

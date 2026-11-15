@@ -15,10 +15,11 @@ namespace PCShopSell.Game.Runtime
         {
             public GameObject Go;
             public string PreviousNode, NextNode;
-            public Vector3 Target;
-
-            public int Side;
+            public Vector3 LaneStart, LaneEnd;
+            public bool JoiningLane;
+            public Vector3 Target => JoiningLane ? LaneStart : LaneEnd;
         }
+        private const float AmbientSpacing = .85f;
         private readonly List<AmbientWalker> _ambient = new List<AmbientWalker>();
         private readonly List<AmbientEdge> _ambientEdges = new List<AmbientEdge>(), _visibleAmbientEdges = new List<AmbientEdge>(), _ambientEntryEdges = new List<AmbientEdge>();
         private CityLayout _ambientCity;
@@ -29,19 +30,33 @@ namespace PCShopSell.Game.Runtime
             var p = camera.WorldToViewportPoint(point + Vector3.up);
             return p.z > 0 && p.x >= -margin && p.x <= 1 + margin && p.y >= -margin && p.y <= 1 + margin;
         }
-        private static Vector3 AmbientLane(Vector3 from, Vector3 to, bool endpoint, int side)
+        private Vector3 AmbientLaneOffset(Vector3 from, Vector3 to)
         {
-            var point = endpoint ? to : from;
-            if (Mathf.Abs(from.z) < .1f && Mathf.Abs(to.z) < .1f)
-                return point + Vector3.forward * side * (float)(GameSession.FrontYAt(point.x) - GameSession.SidewalkInset);
-            Vector3 normal = Vector3.Cross(Vector3.up, (to - from).normalized);
-            return point + normal * side * 3.2f;
+            var a = new MapPoint(from.x, from.z);
+            var b = new MapPoint(to.x, to.z);
+            double width = _ambientCity.LayoutVersion >= 7 ? GameSession.CityRoadWidth(a, b)
+                : GameSession.IsShoppingStreet(a, b) ? 14 : GameSession.IsMainRoad(a, b) ? 7 : 5;
+            // Opposing directions use opposite sidewalks.
+            return Vector3.Cross(Vector3.up, (to - from).normalized)
+                * (float)((width + GameSession.CityPavingWidth) * .5);
         }
+
+        private void SetAmbientLane(AmbientWalker person, string fromNode, string toNode, Vector3 from, Vector3 to)
+        {
+            var offset = AmbientLaneOffset(from, to);
+            person.PreviousNode = fromNode;
+            person.NextNode = toNode;
+            person.LaneStart = from + offset;
+            person.LaneEnd = to + offset;
+            person.JoiningLane = true;
+        }
+
         private void SyncAmbient(GameSession session, Camera camera)
         {
             if (_ambientCity != session.City)
             {
                 _ambientCity = session.City; _ambientEdges.Clear();
+                foreach (var person in _ambient) person.NextNode = null;
                 foreach (var node in session.City.Map.Nodes)
                 foreach (var edge in session.City.Map.NeighborsOf(node.Id))
                 {
@@ -70,6 +85,8 @@ namespace PCShopSell.Game.Runtime
                     growth += session.StreetTrafficMultiplier(session.TrafficStreetOfSegment(edge.A, edge.B)) - 1;
                 _ambientCount += Mathf.RoundToInt((float)(_ambientCount * growth / _visibleAmbientEdges.Count));
             }
+            for (int i = _ambientCount; i < _ambient.Count; i++)
+                _ambient[i].NextNode = null;
             for (int i = 0; i < _ambientCount; i++)
             {
                 bool added = i >= _ambient.Count;
@@ -79,35 +96,78 @@ namespace PCShopSell.Game.Runtime
                     CityNpcClothing.Apply(model, session, "ambient:" + i);
                     var collider = model.AddComponent<SphereCollider>(); collider.center = Vector3.up * .9f; collider.radius = .5f;
                     model.AddComponent<AmbientPersonMarker>().Status = i % 3 == 0 ? "正在逛街" : "正在路过";
-                    _ambient.Add(new AmbientWalker { Go = model, Side = i % 2 == 0 ? 1 : -1 });
+                    _ambient.Add(new AmbientWalker { Go = model });
                 }
                 var person = _ambient[i];
                 if (added || string.IsNullOrEmpty(person.NextNode) || !session.City.Map.HasNode(person.NextNode) || !AmbientOnScreen(camera, person.Go.transform.position, .3f))
                 {
-                    var entries = !added && _ambientEntryEdges.Count > 0 ? _ambientEntryEdges : _visibleAmbientEdges;
-                    var edge = entries[_rng.Next(entries.Count)];
-                    bool reverse = _rng.Next(2) == 0;
-                    if (!added && _ambientEntryEdges.Count > 0)
-                        reverse = AmbientOnScreen(camera, edge.From, -.02f);
-                    Vector3 from = reverse ? edge.To : edge.From, to = reverse ? edge.From : edge.To;
-                    person.PreviousNode = reverse ? edge.B : edge.A; person.NextNode = reverse ? edge.A : edge.B;
-                    person.Target = AmbientLane(from, to, true, person.Side);
-                    Vector3 start = AmbientLane(from, to, false, person.Side);
-                    // New views can already be on their way. Recycled views enter near a street end.
-                    float progress = added ? (float)_rng.NextDouble() : .02f;
-                    var position = Vector3.Lerp(start, person.Target, progress);
-                    position.y = _streets?.StreetHeightAt(position.x, position.z) ?? 0;
-                    person.Go.transform.position = position;
-                    person.Go.transform.rotation = Quaternion.LookRotation((person.Target - start).normalized);
-                    person.Go.GetComponent<FigureMotion>()?.ResetMotion();
+                    PlaceAmbient(person, camera, added);
                 }
             }
         }
+
+        private void PlaceAmbient(AmbientWalker person, Camera camera, bool added)
+        {
+            person.NextNode = null;
+            bool enterFromStreetEnd = !added && _ambientEntryEdges.Count > 0;
+            var entries = enterFromStreetEnd ? _ambientEntryEdges : _visibleAmbientEdges;
+            for (int attempt = 0; attempt < 12; attempt++)
+            {
+                var edge = entries[_rng.Next(entries.Count)];
+                bool canStartAtA = !enterFromStreetEnd || !AmbientOnScreen(camera, edge.From, -.02f);
+                bool canStartAtB = !enterFromStreetEnd || !AmbientOnScreen(camera, edge.To, -.02f);
+                bool reverse = canStartAtB && (!canStartAtA || _rng.Next(2) == 0);
+                Vector3 from = reverse ? edge.To : edge.From, to = reverse ? edge.From : edge.To;
+                float progress = enterFromStreetEnd ? .02f : (float)_rng.NextDouble();
+                var position = Vector3.Lerp(from, to, progress) + AmbientLaneOffset(from, to);
+                if (!AmbientPositionFree(position)) continue;
+                SetAmbientLane(person, reverse ? edge.B : edge.A, reverse ? edge.A : edge.B, from, to);
+                person.JoiningLane = false;
+                position.y = _streets?.StreetHeightAt(position.x, position.z) ?? 0;
+                person.Go.transform.position = position;
+                person.Go.transform.rotation = Quaternion.LookRotation(to - from);
+                person.Go.GetComponent<FigureMotion>()?.ResetMotion();
+                return;
+            }
+            // Retry on the next sync if the entry is still occupied.
+        }
+
+        private bool AmbientPositionFree(Vector3 position)
+        {
+            for (int i = 0; i < Mathf.Min(_ambient.Count, _ambientCount); i++)
+            {
+                var other = _ambient[i];
+                if (other.NextNode == null) continue;
+                var delta = other.Go.transform.position - position;
+                delta.y = 0;
+                if (delta.sqrMagnitude < AmbientSpacing * AmbientSpacing) return false;
+            }
+            return true;
+        }
+
+        private float LimitAmbientStride(AmbientWalker person, Vector3 at, Vector3 direction, float distance)
+        {
+            for (int i = 0; i < _ambientCount; i++)
+            {
+                var other = _ambient[i];
+                if (other == person || other.NextNode == null) continue;
+                var offset = other.Go.transform.position - at;
+                offset.y = 0;
+                float ahead = Vector3.Dot(offset, direction);
+                if (ahead <= 0 || ahead >= distance + AmbientSpacing) continue;
+                float across = (offset - direction * ahead).sqrMagnitude;
+                if (across >= .35f * .35f) continue;
+                if (Vector3.Dot(other.Target - other.Go.transform.position, direction) < 0) continue;
+                distance = Mathf.Min(distance, Mathf.Max(0, ahead - AmbientSpacing));
+            }
+            return distance;
+        }
+
         private void UpdateAmbient(float dt, bool visible)
         {
             for (int i = 0; i < _ambient.Count; i++)
             {
-                var person = _ambient[i]; bool show = visible && i < _ambientCount;
+                var person = _ambient[i]; bool show = visible && i < _ambientCount && person.NextNode != null;
                 if (person.Go.activeSelf != show) person.Go.SetActive(show);
                 if (!show || dt <= 0 || _citySession == null) continue;
                 double remaining = CityTravelTiming.ScaledSecondsMeters(Vehicles.Walk, dt, _citySession.Time.SecondsPerMinuteAt1x) * CityTravelTiming.NpcWalkSpeedFactor;
@@ -118,29 +178,36 @@ namespace PCShopSell.Game.Runtime
                     float distance = delta.magnitude;
                     if (distance < .02f)
                     {
+                        if (person.JoiningLane)
+                        {
+                            person.JoiningLane = false;
+                            continue;
+                        }
                         var options = _ambientCity.Map.NeighborsOf(person.NextNode);
                         string next = null; int count = 0;
                         foreach (var edge in options)
                         {
-                            if (edge.To == person.PreviousNode) continue;
+                            if (edge.To == person.PreviousNode || edge.To == person.NextNode) continue;
                             if (_rng.Next(++count) == 0) { next = edge.To; }
                         }
                         if (next == null)
-                            foreach (var edge in _ambientCity.Map.NeighborsOf(person.NextNode)) { next = edge.To; break; }
+                            next = person.PreviousNode;
                         if (next == null) break;
                         var from = StreetWorldBuilder.ToWorld(_ambientCity.ViewPosition(person.NextNode));
                         var to = StreetWorldBuilder.ToWorld(_ambientCity.ViewPosition(next));
-                        person.PreviousNode = person.NextNode; person.NextNode = next;
-                        person.Target = AmbientLane(from, to, true, person.Side);
+                        SetAmbientLane(person, person.NextNode, next, from, to);
                         continue;
                     }
                     // Use the player's road calibration at the actual position. A corner's
                     // remaining visual distance must never redefine the walker's speed.
                     var at=person.Go.transform.position;
                     double scale=CityTravelTiming.LocalScale(_ambientCity,new PCShopSell.Core.World.MapPoint(at.x,at.z));
-                    float move = (float)Math.Min(distance, Math.Min(.75,remaining / Math.Max(.01, scale)));
-                    person.Go.transform.position += delta / distance * move;
-                    person.Go.transform.rotation = Quaternion.RotateTowards(person.Go.transform.rotation, Quaternion.LookRotation(delta.normalized), 540 * dt);
+                    Vector3 direction = delta / distance;
+                    float stride = (float)Math.Min(distance, Math.Min(.75, remaining / Math.Max(.01, scale)));
+                    float move = LimitAmbientStride(person, at, direction, stride);
+                    if (move <= .00001f) break;
+                    person.Go.transform.position += direction * move;
+                    person.Go.transform.rotation = Quaternion.RotateTowards(person.Go.transform.rotation, Quaternion.LookRotation(direction), 540 * dt);
                     remaining -= move * scale;
                 }
                 var position = person.Go.transform.position;

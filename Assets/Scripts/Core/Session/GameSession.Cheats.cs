@@ -150,7 +150,6 @@ namespace PCShopSell.Core.Session
             Meet(Npcs.Zhang, 45);
             Meet(ClassmateId, 60);
             Flags.Add(RacingAccessFlag);
-            Flags.Add(RacingIntroShownFlag);
             PrepareEventStock(shop);
         }
 

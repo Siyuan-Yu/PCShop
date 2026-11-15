@@ -356,14 +356,14 @@ namespace PCShopSell.Game.UI
             {
                 var body=Ui.Scroll(w.Content,560);
                 Para(body,"可直接选择任意一段：自动完成此前主线、开放此前区域、补齐本段门店与资金，并立即收到邀请。回复消息后亲自验收本段任务，完成后才开放下一区域。",18);
-                string[] labels={"① 城郊 → 社区：5家店＋现金100万","② 社区 → 公园：品牌展会与订单交付","③ 公园 → 花园：企业竞标与三期交付"};
+                string[] labels={"① 城郊 → 社区：5家店＋自有现金100万","② 社区 → 公园：品牌展会与订单交付","③ 公园 → 花园：企业竞标与三期交付"};
                 for(int stage=1;stage<=3;stage++)
                 {
                     int chapter=stage;string why=S.DebugDistrictAcceptanceBlocker(stage);
                     Ui.Size(Ui.Button(body,labels[stage-1],()=>{S.DebugEnterDistrictAcceptance(chapter);w.Rebuild();},17,Ui.ButtonHot,why==null),-1,58).name="DistrictPrerequisites_"+stage;
                     if(why!=null)Line(body,why,15,Ui.Dim);
                 }
-                Para(body,"第一段准备5家城郊店和100万元；第二段准备6家社区店、3000万元净资产和真实品牌；第三段准备公园供货店、知名度100的品牌和10万元周转金。重复点击只补缺口，不重复创建门店，也不重置当前任务进度。",16);
+                Para(body,"第一段准备5家城郊店和100万元自有现金；第二段准备6家社区店、3000万元净资产和真实品牌；第三段准备公园供货店、知名度100的品牌和10万元周转金。重复点击只补缺口，不重复创建门店，也不重置当前任务进度。",16);
                 Para(body,"后两段验收会准备3种商品各至少150件。第三段仅跳过行业月营收的入场门槛，不生成虚构营业收入；参展、签约代言人、竞标和交付仍由玩家完成。",16,Ui.Warn);
                 BuildCommunityConditionsCheat(body,w.Rebuild);
                 Line(body,"当前通行："+GameSession.DistrictName(S.DistrictAccessTier),18,Ui.Good);

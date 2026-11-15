@@ -28,7 +28,7 @@ namespace PCShopSell.Tests
         public void Quests_AreInOrder_AndHaveText()
         {
             CollectionAssert.AreEqual(new[] { "first_meal", "rent", "mall", "place", "shelf", "stock", "sale", "hire", "phone", "qr" }, Quests.All.Take(10).Select(q => q.Id).ToArray());
-            CollectionAssert.AreEqual(new[] { "scooter", "community_goal", "pricing" }, Quests.All.Skip(10).Take(3).Select(q => q.Id).ToArray());
+            CollectionAssert.AreEqual(new[] { "scooter", "racing_enrollment", "community_goal", "pricing" }, Quests.All.Skip(10).Take(4).Select(q => q.Id).ToArray());
             Assert.AreEqual(Quests.All.Count, Quests.All.Select(q => q.Id).Distinct().Count());
             foreach (QuestDef q in Quests.All)
             {

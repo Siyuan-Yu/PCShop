@@ -442,6 +442,28 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void AdvanceLeaseShowsDaysRemainingUntilHandover()
+        {
+            using var s = NoShop(200000);
+            s.PlayerShop.Reputation = 80;
+            s.Clock.Restore(new GameDate(25), 9 * 60);
+            var listing = s.DebugAddListing("tea", 150, 180, Money.FromYuan(2000));
+            var nextListing = s.DebugAddListing("pc", 0, 180);
+            GameSessionTests.Teleport(s, "agency");
+
+            Assert.AreEqual("还有 125 天交房", s.ShopHandoverText(listing.OpenDay));
+            Assert.IsTrue(s.SignLease("tea"));
+            StringAssert.Contains("还有 125 天交房。交房前不能再签", s.LeaseBlocker(nextListing));
+
+            CrossInto(s, 26);
+            StringAssert.Contains("还有 124 天交房。交房前不能再签", s.LeaseBlocker(nextListing));
+
+            CrossInto(s, 150);
+            Assert.AreEqual("今天交房", s.ShopHandoverText(listing.OpenDay));
+            Assert.IsNull(s.PendingLease);
+        }
+
+        [Test]
         public void BigShop_NeedsReputation()
         {
             GameSession s = GameSessionTests.Make(200000);

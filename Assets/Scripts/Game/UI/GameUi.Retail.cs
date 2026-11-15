@@ -78,12 +78,13 @@ namespace PCShopSell.Game.UI
             public Money Price;
             public Func<bool> Add;
             public Func<double> Remaining;
+            public Func<string> Blocker;
             public Action Preview;
         }
         private static string FurniturePurchaseGroup(FurnitureDef item)
         {
             if(item.Role==FurnitureRole.Fridge || item.Role==FurnitureRole.Climate || item.Role==FurnitureRole.Cooker
-                || item.Id=="shop_dispenser" || item.Id=="shop_led" || item.Id==GameSession.HomeWorkbenchId)return "电器";
+                || item.Id=="shop_dispenser" || item.Id=="shop_led")return "电器";
             switch(item.Id)
             {
                 case FurnitureCatalog.Curtain:
@@ -119,9 +120,10 @@ namespace PCShopSell.Game.UI
         private void BuildCarryCatalogBody(Window w,Place source,string mode,RectTransform cartColumn)
         {
             bool wholesale=mode=="wholesale",expo=mode=="expo",mall=source.Business==GameSession.MallBusiness;
+            string furnitureShopKind = null;
             var offers=new List<CarryOffer>();
-            void Offer(string key,string name,string group,double kg,Money price,string detail,Func<bool> add,Func<double> remaining=null,Action preview=null,string season=null,FurnitureDef furniture=null)
-                =>offers.Add(new CarryOffer {Key=key,Name=name,Group=group,Kg=kg,Price=price,Detail=detail,Add=add,Remaining=remaining,Preview=preview,Season=season,Furniture=furniture});
+            void Offer(string key,string name,string group,double kg,Money price,string detail,Func<bool> add,Func<double> remaining=null,Action preview=null,string season=null,FurnitureDef furniture=null,Func<string> blocker=null)
+                =>offers.Add(new CarryOffer {Key=key,Name=name,Group=group,Kg=kg,Price=price,Detail=detail,Add=add,Remaining=remaining,Preview=preview,Season=season,Furniture=furniture,Blocker=blocker});
             if(expo)
             {
                 foreach(var item in ModelProducts.Limited)
@@ -177,7 +179,8 @@ namespace PCShopSell.Game.UI
                 foreach(var item in FurnitureCatalog.Purchasable(false).Concat(FurnitureCatalog.Purchasable(true)).GroupBy(f=>f.Id).Select(g=>g.First()))
                 {
                     var product=item;
-                    Offer("furn:"+product.Id,product.Name,FurniturePurchaseGroup(product),product.WeightKg,product.Price,product.Description,()=>S.CartAddFurniture(product.Id),furniture:product);
+                    Offer("furn:"+product.Id,product.Name,FurniturePurchaseGroup(product),product.WeightKg,product.Price,product.Description,
+                        ()=>S.CartAddFurniture(product.Id, furnitureShopKind),furniture:product);
                 }
             }
             else if(source.Business==GameSession.FastFoodBusiness)
@@ -190,8 +193,15 @@ namespace PCShopSell.Game.UI
                 }
             }
             else if(source.Business==GameSession.PhoneBusiness)
+            {
                 Offer("phone","智能手机","手机",0,GameSession.PhonePrice,"随身设备，不计背包负重；可安装日历、网购等应用。",S.CartAddSmartphone,
                     ()=>S.HasSmartphone?0:Math.Max(0,1-S.CartAmount("phone")));
+                var workbench = FurnitureCatalog.Get(GameSession.HomeWorkbenchId);
+                string key = "furn:" + workbench.Id;
+                Offer(key, workbench.Name, "居家设备", workbench.WeightKg, workbench.Price, "货车送到家 · " + workbench.Description,
+                    () => S.CartAddFurniture(workbench.Id), () => S.OwnsHomeWorkbench ? 0 : 1 - S.CartAmount(key),
+                    blocker: () => S.HomeWorkbenchPurchaseBlocker);
+            }
             else
             {
                 foreach(var product in Gifts.All.Where(g=>g.SoldAt==source.Business && !g.LimitedEdition && (source.Business!=GameSession.FarmBusiness || !RetailProducts.IsFood(g))))
@@ -214,7 +224,7 @@ namespace PCShopSell.Game.UI
                 {
                     var item=upgrade;
                     Offer("upgrade:"+item.Id,item.Name,source.Business==GameSession.MallBusiness?"电器":"店铺设备",0,item.Price,item.Description+" · 购后安装到门店，不占货运空间",()=>S.CartAddUpgrade(item.Id),
-                        ()=>S.HasUpgrade(item.Id)?0:Math.Max(0,1-S.CartAmount("upgrade:"+item.Id)));
+                        ()=>S.HasUpgrade(item.Id)?0:Math.Max(0,1-S.CartAmount("upgrade:"+item.Id)), blocker: () => S.UpgradeBlocker(item));
                 }
             bool storeOpen = S.IsPlaceOpen(source);
             Line(w.Content,"商品购买 · "+(storeOpen?"营业中 · ":"已打烊 · ")+S.OpeningHoursText(source),19,Ui.Accent);
@@ -239,8 +249,8 @@ namespace PCShopSell.Game.UI
             {
                 if (mall)
                 {
-                    string kind = FurnitureShops.AllKinds.First(k => RetailShopTypes.Name(k) == tab);
-                    selectedOffers = offers.Select(o => (offer: o, order: FurnitureShops.ShopOrder(kind, o.Furniture)))
+                    furnitureShopKind = FurnitureShops.AllKinds.First(k => RetailShopTypes.Name(k) == tab);
+                    selectedOffers = offers.Select(o => (offer: o, order: FurnitureShops.ShopOrder(furnitureShopKind, o.Furniture)))
                         .Where(x => x.order >= 0).OrderBy(x => x.order).ThenBy(x => x.offer.Price.Cents)
                         .Select(x => x.offer).ToList();
                 }
@@ -265,11 +275,13 @@ namespace PCShopSell.Game.UI
                 var item=product;double remaining=item.Remaining?.Invoke()??double.PositiveInfinity;
                 double amount = S.CartAmount(item.Key);
                 bool limited = !double.IsInfinity(remaining);
-                bool canAdd = storeOpen && remaining > 0;
+                string blocker = storeOpen && remaining > 0 ? item.Blocker?.Invoke() : null;
+                bool canAdd = storeOpen && remaining > 0 && blocker == null;
                 var row=Ui.Row(list,68,10);row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight=false;if(amount>0)row.gameObject.AddComponent<Image>().color=Ui.FlatRow;
                 string detail=item.Season==null?item.Detail:item.Season+" · "+item.Detail;
+                if (blocker != null) detail = "<color=#E2AA8A>" + blocker + "</color> · " + detail;
                 CompactProduct(row,item.Name,item.Kg,detail,item.Kg<=0);
-                Ui.Size(Ui.Label(row,item.Price.ToString(),19,TextAnchor.MiddleLeft,Ui.Good),96);
+                Ui.Size(Ui.Label(row,item.Price.ToString(),19,TextAnchor.MiddleLeft,Ui.Good),item.Price.Yuan >= 1000000 ? 120 : 96);
                 if(item.Preview!=null)Ui.Size(Ui.Button(row,"试穿",item.Preview,16),68,38);
                 CartAddButton(w,row,item.Key,item.Add,"+1",58,canAdd,maxAmount:
                     limited ? amount + Math.Max(0, remaining) : 1000);

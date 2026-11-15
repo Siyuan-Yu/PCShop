@@ -33,7 +33,8 @@ namespace PCShopSell.Core.Session
     }
     public sealed partial class GameSession
     {
-        public const string HomeWorkbenchId="home_workbench";
+        public const string HomeWorkbenchId = FurnitureCatalog.HomeWorkbench;
+        public const int HomeWorkbenchMinimumResidenceTier = 1;
         public HomeAutomationSettings HomeAutomation { get; private set; }=new HomeAutomationSettings();
         private readonly List<WorkbenchPriceDay> _workbenchPrices=new List<WorkbenchPriceDay>();
         private readonly Dictionary<string,string> _workbenchAlerts=new Dictionary<string,string>();
@@ -41,9 +42,26 @@ namespace PCShopSell.Core.Session
         private int _workbenchSleepDay=-1,_workbenchSupplyDay=-1,_workbenchMealDay=-1,_workbenchMealSpent;
         private bool _workbenchSleepPending;
         private bool _workbenchAutomationConfigured;
-        public bool OwnsHomeWorkbench=>FurnitureInStock(HomeWorkbenchId)>0 || HomeBox.FurnitureCount(HomeWorkbenchId)>0
-            || HomeTemp.FurnitureCount(HomeWorkbenchId)>0 || Backpack.FurnitureCount(HomeWorkbenchId)>0 || HomeLayout.Any(p=>p.Id==HomeWorkbenchId);
-        public bool CanUseHomeWorkbench=>!IsGameOver && CurrentPlace==Home && (OwnsHomeWorkbench||DebugHomeWorkbenchEnabled) && !IsWorking && !CityActivityExclusive && Trip==null;
+        public bool HomeWorkbenchInstalled => HomeTier >= HomeWorkbenchMinimumResidenceTier && HomeLayout.Any(item => item.Id == HomeWorkbenchId);
+        public bool OwnsHomeWorkbench => HomeLayout.Any(item => item.Id == HomeWorkbenchId) || FurnitureInStock(HomeWorkbenchId) > 0
+            || HomeBox.FurnitureCount(HomeWorkbenchId) > 0 || HomeTemp.FurnitureCount(HomeWorkbenchId) > 0
+            || Backpack.FurnitureCount(HomeWorkbenchId) > 0 || _mallStash.Any(item => item.Id == HomeWorkbenchId)
+            || _shops.Any(shop => shop.Locker.FurnitureCount(HomeWorkbenchId) > 0 || shop.Temp.FurnitureCount(HomeWorkbenchId) > 0
+                || shop.Layout.Any(item => item.Id == HomeWorkbenchId));
+        public bool HomeWorkbenchInTransit => _parcels.Any(item => item.Kind == ParcelKind.Furniture && item.Id == HomeWorkbenchId)
+            || _couriers.Any(run => run.Items.Any(item => item.Kind == CourierItemKind.Furniture && item.Id == HomeWorkbenchId));
+        public string HomeWorkbenchPurchaseBlocker => CurrentPlace?.Business != PhoneBusiness || !IsPlaceOpen(CurrentPlace)
+            ? "请到营业中的米家购买" : OwnsHomeWorkbench ? "已拥有居家办公台" : HomeWorkbenchInTransit ? "居家办公台正在送货" : null;
+        public bool CanUseHomeWorkbench => !IsGameOver && CurrentPlace == Home && (HomeWorkbenchInstalled || DebugHomeWorkbenchEnabled)
+            && !IsWorking && !CityActivityExclusive && Trip == null;
+
+        private bool BuyHomeWorkbench()
+        {
+            if (HomeWorkbenchPurchaseBlocker is string reason) return Fail(reason);
+            var furniture = FurnitureCatalog.Get(HomeWorkbenchId);
+            return Ship(null, "家具", furniture.Price, furniture.Name,
+                new CourierItem { Kind = CourierItemKind.Furniture, Id = HomeWorkbenchId, Count = 1 }, "买了");
+        }
         public IReadOnlyList<WorkbenchAlert> WorkbenchAlerts=>_workbenchAlerts.Select(p=>new WorkbenchAlert{Key=p.Key,Text=p.Value}).ToArray();
         public int WorkbenchMealSpent=>_workbenchMealDay==Clock.Today.TotalDays?_workbenchMealSpent:0;
         public int WorkbenchMealsAvailable=>(HomeHas(FurnitureRole.Cooker)?Pantry.CookedBowls:0)+(HomeHas(FurnitureRole.Fridge)?HomeFridge.Food.Packed.Where(b=>b.Count>0&&FastFoodCatalog.Packed(b.Id)?.Drink!=true).Sum(b=>b.Count):0)
@@ -51,7 +69,7 @@ namespace PCShopSell.Core.Session
             +Backpack.Food.Packed.Where(b=>b.Count>0&&FastFoodCatalog.Packed(b.Id)?.Drink!=true).Sum(b=>b.Count);
         public bool SetHomeAutomation(HomeAutomationSettings settings)
         {
-            if(!CanUseHomeWorkbench || settings==null)return Fail("在家拥有家庭经营大屏后才能设置生活托管。");
+            if(!CanUseHomeWorkbench || settings==null)return Fail("在家安装居家办公台后才能设置生活托管。");
             if(settings.SleepHour<0||settings.SleepHour>23||settings.WakeHour<0||settings.WakeHour>23||settings.SleepHour==settings.WakeHour
                 ||settings.MealTier<0||settings.MealTier>=DeliveryMeals.Count||settings.DailyMealBudget<0||settings.DailyMealBudget>100000
                 ||!IsEdibleGift(settings.SupplyId))return Fail("请检查托管时间、餐档、预算和消耗品。");

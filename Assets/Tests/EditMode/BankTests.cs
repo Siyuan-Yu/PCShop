@@ -4,6 +4,10 @@ using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
+using PCShopSell.Game;
+using PCShopSell.Game.UI;
+using UnityEngine;
+using UnityEngine.UI;
 
 namespace PCShopSell.Tests
 {
@@ -92,6 +96,101 @@ namespace PCShopSell.Tests
             Assert.AreEqual(Money.FromYuan(1000) + Money.FromYuan(200) * 3, loan.TotalDue, "月息 20%，和手机借款一样");
             Assert.True(s.RepayAppLoan(loan.Id));
             Assert.AreEqual(0, s.AppLoans.Count(l => !l.Repaid));
+        }
+
+        [Test]
+        public void ReputationSetsASharedCreditLineAndRepaymentFreesPrincipal()
+        {
+            using var s = Make(true);
+            GoToBank(s);
+            s.PlayerShop.Reputation = 0;
+            Assert.AreEqual(50000, s.AppLoanAvailableYuan);
+            Assert.False(s.BorrowAppLoan(50100, 3, true));
+            Assert.True(s.BorrowAppLoan(40000, 3, true));
+            Assert.False(s.BorrowAppLoan(10100, 3));
+            Assert.True(s.BorrowAppLoan(10000, 3));
+            Assert.AreEqual(0, s.AppLoanAvailableYuan);
+            s.PlayerShop.Reputation = 2.5;
+            Assert.AreEqual(60000, s.AppLoanCreditLimitYuan);
+            Assert.AreEqual(10000, s.AppLoanAvailableYuan);
+            Assert.True(s.RepayAppLoan(s.AppLoans.First().Id));
+            Assert.AreEqual(50000, s.AppLoanAvailableYuan);
+            s.PlayerShop.Reputation = 1000;
+            Assert.AreEqual(500000, s.AppLoanCreditLimitYuan);
+        }
+
+        [TestCase(0, 1)]
+        [TestCase(30, 1)]
+        [TestCase(31, 2)]
+        [TestCase(60, 2)]
+        [TestCase(61, 3)]
+        public void EarlyRepaymentDebitsOnlyTheMonthsUsed(int elapsedDays, int billedMonths)
+        {
+            using var s = Make(false);
+            GoToBank(s);
+            Assert.True(s.BorrowAppLoan(50000, 3, true));
+            var loan = s.AppLoans.Single();
+            s.Clock.Restore(s.Clock.Today.AddDays(elapsedDays), s.Clock.MinuteOfDay);
+            var cash = s.Ledger.Balance;
+            var interest = Money.FromYuan(10000 * billedMonths);
+            Assert.AreEqual(Money.FromYuan(80000), loan.TotalDue);
+            Assert.AreEqual(loan.Principal + interest, s.LoanPayoff(loan));
+            Assert.True(s.RepayAppLoan(loan.Id));
+            Assert.AreEqual(interest.Cents, loan.PaidInterestCents);
+            Assert.AreEqual(loan.Principal + interest, cash - s.Ledger.Balance);
+        }
+
+        [Test]
+        public void ExistingLoanAboveNewCeilingLoadsAndConsumesCredit()
+        {
+            using var s = Make(false);
+            var save = s.CreateSave();
+            save.appLoans = new[] { new AppLoan { Id = 1, PrincipalCents = 60000000, Months = 3 } };
+            using var loaded = GameSession.Load(s.City, save);
+            Assert.AreEqual(Money.FromYuan(600000), loaded.AppLoans.Single().Principal);
+            Assert.AreEqual(0, loaded.AppLoanAvailableYuan);
+        }
+
+        [Test]
+        public void ReminderWithoutPhoneRoutesToBankAndShowsTodaysPayoffOnArrival()
+        {
+            using var s = Make(false);
+            s.EventsEnabled = false;
+            GoToBank(s);
+            Assert.True(s.BorrowAppLoan(50000, 3, true));
+            s.Leave();
+            GameSessionTests.Teleport(s, s.Home.Id);
+            var root = new GameObject("BankReminderTest");
+            root.SetActive(false);
+            var controller = root.AddComponent<GameController>();
+            typeof(GameController).GetProperty("Session").SetValue(controller, s);
+            var previous = UnityEngine.EventSystems.EventSystem.current;
+            var ui = new GameUi(controller);
+            typeof(GameController).GetProperty("Ui").SetValue(controller, ui);
+            s.CityPlaceEntered += ui.OnEnteredPlace;
+            try
+            {
+                var reminder = ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Button>(true))
+                    .Single(button => button.name == "LoanReminderHud");
+                reminder.onClick.Invoke();
+                Assert.AreEqual(GameSession.BankPlaceId, s.CityIntent?.TargetPlaceId);
+                GameSessionTests.RunTrip(s);
+                Assert.IsNull(s.Trip);
+                s.AdvanceClock(1); // Enter-on-arrival is processed on the city clock tick.
+                Assert.True(s.AtBank);
+                var texts = ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Text>()).Select(text => text.text);
+                Assert.True(texts.Any(text => text.Contains("今日结清 ¥60,000")));
+                Assert.True(texts.Any(text => text.Contains("到期应还 ¥80,000")));
+            }
+            finally
+            {
+                s.CityPlaceEntered -= ui.OnEnteredPlace;
+                ui.CloseAllWindows();
+                foreach (var canvas in ui.Canvases) Object.DestroyImmediate(canvas.gameObject);
+                Object.DestroyImmediate(root);
+                if (previous == null && UnityEngine.EventSystems.EventSystem.current != null)
+                    Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);
+            }
         }
 
         [Test]

@@ -4,7 +4,10 @@ using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
+using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
+using PCShopSell.Core.Shop;
+using PCShopSell.Core.Time;
 using PCShopSell.Game;
 using PCShopSell.Game.Runtime;
 using PCShopSell.Game.UI;
@@ -16,11 +19,12 @@ namespace PCShopSell.Tests
     {
         private sealed class MapFixture:IDisposable
         {
-            public readonly GameSession Session=DistrictProgressionTests.Make();
+            public readonly GameSession Session;
             public readonly GameController Controller;
             private readonly GameObject _root=new GameObject("AgencyMapFixture"),_world=new GameObject("AgencyMapWorld");
-            public MapFixture()
+            public MapFixture(GameSession session = null)
             {
+                Session = session ?? DistrictProgressionTests.Make();
                 _root.SetActive(false);Controller=_root.AddComponent<GameController>();
                 var world=new StreetWorldBuilder(Session.City,1);
                 typeof(StreetWorldBuilder).GetField("_root",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(world,_world.transform);
@@ -93,6 +97,87 @@ namespace PCShopSell.Tests
                     ui.CloseAllWindows();foreach(var canvas in ui.Canvases)UnityEngine.Object.DestroyImmediate(canvas.gameObject);
                     if(previous==null&&UnityEngine.EventSystems.EventSystem.current!=null)UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);
                 }
+            }
+        }
+        [Test]
+        public void AgencyShowsBuildActionsOnlyWhenTheLocalBusinessCanBeOpened()
+        {
+            if (GameSession.FirstChapterTrial) Assert.Ignore("需要同时访问城郊和社区中介。");
+            var city = CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text));
+            var time = GameTimestamp.From(new GameDate(42), 600);
+            using var seed = new GameSession(city, 7, Money.FromYuan(1000000), time, startWithShop: true);
+            var save = seed.CreateSave();
+            save.listings = Array.Empty<SaveListing>();
+            save.districtProgress = new DistrictProgress { UnlockedTier = 1 };
+            using var fixture = new MapFixture(GameSession.Load(city, save));
+            var session = fixture.Session;
+            var outskirts = city.GetPlace("agency");
+            var community = city.GetPlace("agency_s_services");
+            var smallShop = city.Places.First(p => !p.IsPlayerShop && p.Size == ShopSize.Small && GameSession.IsCommercialPremises(p)
+                && session.AgencyServes(outskirts, p));
+            session.DebugAddListing(smallShop.Id, 0, 90, Money.FromYuan(1000));
+            session.DebugAddListing("life_unit_s_market_0", 0, 90, Money.FromYuan(1000));
+            const string parkSite = "shop03";
+            session.DebugAddListing(parkSite, 0, 90, Money.FromYuan(30000));
+
+            var previous = UnityEngine.EventSystems.EventSystem.current;
+            var ui = new GameUi(fixture.Controller);
+            typeof(GameController).GetProperty("Ui").SetValue(fixture.Controller, ui);
+            void At(Place agency)
+            {
+                ui.CloseAllWindows();
+                typeof(GameSession).GetProperty("CurrentPlace").SetValue(session, agency);
+                ui.OnEnteredPlace(agency);
+            }
+            Button[] Buttons() => ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Button>()).ToArray();
+            Button Named(string name) => Buttons().SingleOrDefault(b => b.name == name);
+            Button Caption(string caption) => Buttons().Single(b => b.GetComponentInChildren<Text>()?.text == caption);
+            try
+            {
+                session.PlayerShop.Reputation = 7;
+                At(outskirts);
+                Assert.That(Named("AgencyOpenVenture"), Is.Null);
+                Assert.That(Named("AgencyOpenPark"), Is.Null);
+
+                session.PlayerShop.Reputation = 8;
+                At(outskirts);
+                Named("AgencyOpenVenture").onClick.Invoke();
+                Assert.That(Buttons().Any(b => b.interactable && b.GetComponentInChildren<Text>()?.text == "在这里开设花店…"), Is.True);
+                Assert.That(Named("AgencyOpenPark"), Is.Null);
+
+                session.PlayerShop.Reputation = 40;
+                At(outskirts);
+                Assert.That(Named("AgencyOpenPark"), Is.Null, "园区报价高于当前现金");
+                session.DebugAddListing(parkSite, 0, 90, Money.FromYuan(1000));
+                At(community);
+                Assert.That(Named("AgencyOpenVenture"), Is.Not.Null);
+                Assert.That(Named("AgencyOpenPark"), Is.Null);
+                var before = session.Ledger.Balance;
+                Assert.That(session.BuyPark(parkSite), Is.False);
+                Assert.That(session.Ledger.Balance, Is.EqualTo(before));
+
+                At(outskirts);
+                Assert.That(Named("AgencyOpenPark").GetComponentInChildren<Text>().text, Is.EqualTo("园区筹建"));
+                Named("AgencyOpenPark").onClick.Invoke();
+                Caption("购入并开始改造…").onClick.Invoke();
+                Caption("确定办理").onClick.Invoke();
+                Assert.That(session.ParkPlaceId, Is.EqualTo(parkSite));
+                Assert.That(session.ParkReadyDay, Is.EqualTo(time.Date.TotalDays + 7));
+                Assert.That(ui.CloseTopWindow(), Is.True);
+                ui.RebuildWindows();
+                Assert.That(Named("AgencyOpenPark").GetComponentInChildren<Text>().text, Is.EqualTo("园区管理"));
+
+                At(community);
+                Assert.That(Named("AgencyOpenPark"), Is.Null);
+                Named("AgencyResidentialTab").onClick.Invoke();
+                Assert.That(Named("AgencyOpenVenture"), Is.Null);
+            }
+            finally
+            {
+                ui.CloseAllWindows();
+                foreach (var canvas in ui.Canvases) UnityEngine.Object.DestroyImmediate(canvas.gameObject);
+                if (previous == null && UnityEngine.EventSystems.EventSystem.current != null)
+                    UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);
             }
         }
         [Test] public void AdministrativeVenueShopDoesNotExpandTheCommunityPropertyOverview()

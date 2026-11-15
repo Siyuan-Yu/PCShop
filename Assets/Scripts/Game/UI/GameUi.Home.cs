@@ -798,7 +798,20 @@ namespace PCShopSell.Game.UI
         // ---------- “我的” ----------
 
         private int _myPanelTab;
-        private string WorkbenchAccessReason => S.CanUseHomeWorkbench ? null : !S.OwnsHomeWorkbench&&!S.DebugHomeWorkbenchEnabled ? "需购买家庭经营大屏" : !_ctrl.InHome ? "回家后可用" : S.IsWorking ? "下班后可用" : "结束当前活动或行程后可用";
+        private string WorkbenchAccessReason
+        {
+            get
+            {
+                if (S.CanUseHomeWorkbench) return null;
+                if (!S.DebugHomeWorkbenchEnabled && !S.HomeWorkbenchInstalled)
+                {
+                    if (!S.OwnsHomeWorkbench) return S.HomeWorkbenchInTransit ? "居家办公台正在送货" : "到米家购买居家办公台";
+                    if (S.HomeTier < GameSession.HomeWorkbenchMinimumResidenceTier) return "需要中型及以上住宅安装";
+                    return "回家摆放居家办公台";
+                }
+                return !_ctrl.InHome ? "回家后可用" : S.IsWorking ? "下班后可用" : "结束当前活动或行程后可用";
+            }
+        }
         public void OpenMyPanel()
         {
             OpenWorkspace("personal","personal","我的",1000,820,w=>
@@ -944,7 +957,7 @@ namespace PCShopSell.Game.UI
                 return;
             }
             OwnedShop destination = preferredShop ?? S.LastPurchaseDeliveryShop;
-            OpenWindow("网购", 1500, 880, w =>
+            OpenPhoneAppWindow("网购", w =>
             {
                 RectTransform tabs = Ui.Row(w.Content, 46);
                 string[] names = { "家具", "店里摆设", "衣服", "礼品", "大米", "电脑配件" };
@@ -1075,51 +1088,67 @@ namespace PCShopSell.Game.UI
             CartAddButton(w, row, "gift:" + def.Id, () => S.CartAddGift(def.Id), "加入购物车", 150, open);
         }
 
-        private CityActivity PhoneSignHelpHere(Place place)
+        private bool TryOpenSignHelp(Place place, string activityId = null)
         {
-            if (place?.Business != GameSession.PhoneBusiness) return null;
             var activity = S.SignHelpAt(place);
-            return activity != null && (activity.State == CityActivityPhase.Running
-                || System.Math.Abs(S.Clock.Now.TotalMinutes - activity.ScheduledStart) <= GameSession.CityArrivalWindowMinutes)
-                ? activity : null;
+            if (activity == null || S.CurrentPlace != place) return false;
+            bool inArrivalWindow = System.Math.Abs(S.Clock.Now.TotalMinutes - activity.ScheduledStart) <= GameSession.CityArrivalWindowMinutes;
+            if (activityId != null ? activityId != activity.Id : activity.State != CityActivityPhase.Running && !inArrivalWindow)
+                return false;
+
+            S.PrepareVenueCompanions(place, activity.Id);
+            OpenSignHelp(activity);
+            return true;
         }
 
-        private void BuildPhoneShop(Window w, Place p)
+        private void OpenSignHelp(CityActivity activity)
         {
-            var activity = PhoneSignHelpHere(p);
-            if (activity == null)
-            {
-                if (S.SignHelpAt(p) is CityActivity upcoming)
-                    Line(w.Content, "已约好帮唐俊杰换招牌 · " + CityTime(upcoming.ScheduledStart), 17, Ui.Accent);
-                BuildCarryStore(w, p);
-                return;
-            }
-
             var definition = S.CityActivityService(activity);
-            Line(w.Content, definition.Name, 24, Ui.Accent);
-            if (activity.State == CityActivityPhase.Running)
+            bool running = activity.State == CityActivityPhase.Running;
+            string blocker = running ? null : S.SignHelpStartBlocker();
+            var window = OpenWindow(definition.Name, 740, 400, w =>
             {
-                long remaining = System.Math.Max(0, activity.ActualStart + activity.Duration - S.Clock.Now.TotalMinutes);
-                Line(w.Content, $"正在换招牌 · 剩余 {remaining} 分钟", 20, Ui.Good);
-                Para(w.Content, activity.Stage == 0 ? definition.StartText : S.CityActivityMidText(activity), 18);
-                Ui.Size(Ui.Button(w.Content, "继续帮忙", Resume, 19, Ui.ButtonHot), -1, 48);
-                return;
-            }
+                if (!activity.Active || S.CurrentPlace?.Id != activity.VenueId)
+                {
+                    Line(w.Content, activity.EndReason ?? "这次帮忙已经结束。", 18);
+                    return;
+                }
 
-            Line(w.Content, $"约定 {CityTime(activity.ScheduledStart)} · 耗时 {activity.Duration} 分钟", 18, Ui.Dim);
-            Para(w.Content, "一起拆旧招牌、装好新招牌。做完后唐俊杰对你的好感会提升。", 18);
-            string why = S.SignHelpStartBlocker();
-            if (why != null) Ui.Notice(w.Content, why);
-            Ui.Size(Ui.Button(w.Content, "开始帮忙", () =>
-            {
-                if (S.StartSignHelp()) Resume();
-                else w.Rebuild();
-            }, 20, Ui.ButtonHot, why == null), -1, 48).name = "StartSignHelp";
+                Line(w.Content, $"{S.CurrentPlace.Name} · 耗时 {activity.Duration} 分钟", 18, Ui.Dim);
+                if (activity.State == CityActivityPhase.Running)
+                {
+                    var countdown = Line(w.Content, "", 20, Ui.Good);
+                    var progress = Para(w.Content, "", 18);
+                    void Refresh()
+                    {
+                        if (!activity.Active || S.CurrentPlace?.Id != activity.VenueId) { w.Close(); return; }
+                        long remaining = System.Math.Max(0, activity.ActualStart + activity.Duration - S.Clock.Now.TotalMinutes);
+                        countdown.text = $"正在换招牌 · 剩余 {remaining} 分钟";
+                        progress.text = activity.Stage == 0 ? definition.StartText : S.CityActivityMidText(activity);
+                    }
+                    w.RefreshContent = Refresh;
+                    Refresh();
+                    return;
+                }
 
-            void Resume()
+                Line(w.Content, $"约定 {CityTime(activity.ScheduledStart)}", 18, Ui.Dim);
+                Para(w.Content, "和唐俊杰一起拆下旧招牌，再把新招牌装好。", 18);
+                string why = S.SignHelpStartBlocker();
+                if (why != null) Ui.Notice(w.Content, why);
+                Ui.Size(Ui.Button(w.Content, "开始帮忙", () =>
+                {
+                    if (!S.StartSignHelp()) { w.Rebuild(); return; }
+                    CloseAllWindows();
+                    S.Time.SetPaused(false);
+                    OpenSignHelp(activity);
+                }, 20, Ui.ButtonHot, why == null), -1, 48).name = "StartSignHelp";
+            }, holds: !running && blocker == null);
+
+            if (!running && blocker != null)
             {
-                CloseAllWindows();
-                S.Time.SetPaused(false);
+                window.LiveConversation = true;
+                window.LiveKey = () => S.SignHelpStartBlocker();
+                window.LiveStamp = window.LiveKey();
             }
         }
 

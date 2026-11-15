@@ -1,5 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using System;
+using System.Collections.Generic;
 using PCShopSell.Core.World;
 
 namespace PCShopSell.Game.UI
@@ -74,24 +76,42 @@ namespace PCShopSell.Game.UI
             _tipPanel.anchoredPosition = new Vector2(Mathf.Max(area.xMin + 8, x), y);
         }
 
-        /// <summary>顶栏按钮的快捷键（没开窗口、不在摆放模式时有效）。返回是否处理了。</summary>
+        private readonly Dictionary<KeyCode, Button> _hudPanelButtons = new Dictionary<KeyCode, Button>();
+
+        private static string HotkeyLabel(KeyCode key) => key == KeyCode.Escape ? "Esc" : key.ToString();
+
+        private Button HudPanelButton(Transform row, string title, KeyCode key, Action open, string description,
+            int width = 54, Color? bg = null)
+        {
+            string shortcut = HotkeyLabel(key);
+            var button = Ui.Size(Ui.Button(row, title, open, bg: bg), width)
+                .Tip($"<b>{title}</b>　快捷键：{shortcut}\n{description}");
+            button.GetComponentInChildren<Text>().text = $"{title} {shortcut}";
+            _hudPanelButtons.Add(key, button);
+            return button;
+        }
+
+        internal void HandleHudPanelKeys()
+        {
+            // Esc 由控制器优先处理，用于关闭最上层窗口。
+            foreach (KeyCode key in _hudPanelButtons.Keys)
+                if (key != KeyCode.Escape && Input.GetKeyDown(key) && TryHotkey(key)) return;
+            if (Input.GetKeyDown(KeyCode.H)) TryHotkey(KeyCode.H);
+        }
+
+        /// <summary>顶栏快捷键。背包键也可关闭已打开的背包。</summary>
         public bool TryHotkey(KeyCode key)
         {
-            if (AnyModalOpen || S == null || S.IsGameOver || S.IsWorking) return false;
+            if (S == null || S.IsGameOver || S.IsWorking) return false;
+            if (AnyModalOpen && (key != KeyCode.B || _backpackWin == null || _backpackWin.Closed)) return false;
+            _hudPanelButtons.TryGetValue(key, out var button);
+            if (key != KeyCode.H && (button == null || !button.isActiveAndEnabled || !button.IsInteractable())) return false;
             if (S.OpeningAgencyGuidePending && key != KeyCode.Escape) return true;
             if (OpeningMealRestricted && key != KeyCode.Escape)
             { RemindOpeningMeal(); return true; }
-            switch (key)
-            {
-                case KeyCode.M: OpenMyPanel(); return true;
-                case KeyCode.C: OpenSchedulePanel(); return true;
-                case KeyCode.P: OpenPhone(); return true;
-                case KeyCode.J: OpenBusinessPanel(); return true;
-                case KeyCode.H: OpenMarketPanel(); return true;
-                case KeyCode.T: OpenQuests(); return true;
-                case KeyCode.Escape: OpenSystemPanel(); return true;
-            }
-            return false;
+            if (key == KeyCode.H) OpenMarketPanel();
+            else button.onClick.Invoke();
+            return true;
         }
 
         /// <summary>危险操作的二次确认：说清后果，确认按钮写动作本身（不是“确定”）。</summary>

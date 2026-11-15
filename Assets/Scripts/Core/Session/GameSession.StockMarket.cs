@@ -13,6 +13,7 @@ namespace PCShopSell.Core.Session
         private StockMarketState _stockMarket = new StockMarketState();
         private static readonly int[] StockSlots = {0,540,600,780,960};
         public const int StockLotSize = 100;
+        public const int StockOrderLimit = 1_000_000;
         public const double StockBorrowDailyRate = .0003;
         public const double StockMaintenanceRatio = 1.3;
         public bool StockMarketOpen => !Clock.Today.IsWeekend;
@@ -221,8 +222,9 @@ namespace PCShopSell.Core.Session
             if(id!="hardware"&&e==null)return "没有这只股票";
             if(IsGameOver)return "当前不能交易";
             if(!StockMarketOpen)return "周末休市，周一至周五全天可交易";
-            if(units<=0||units>1000000)return "数量须为1—1,000,000的整数";
+            if(units<=0||units>StockOrderLimit)return "数量须为1—1,000,000的整数";
             if(action!="buy"&&action!="sell"&&action!="short"&&action!="cover")return "未知交易类型";
+            if(id=="hardware"&&action=="buy")return "硬件景气指数仅供查看，已有持仓可以卖出";
             // Existing positions can contain odd lots. Allow closing the entire position.
             if (e != null && units % StockLotSize != 0
                 && !(action == "sell" && units == e.Units)
@@ -242,10 +244,26 @@ namespace PCShopSell.Core.Session
             if(action=="sell"&&units>CityInvestmentUnits(id))return "卖出数量超过实际持股";
             return null;
         }
+
+        public long StockMaximumBuyQuantity(string id)
+        {
+            if (StockTradeBlocker(id, StockLotSize, "buy") != null || !CityInvestmentPrice(id).IsPositive) return 0;
+            long affordable = 1;
+            long upper = Math.Min(StockAvailable(id), StockOrderLimit) / StockLotSize;
+            var cash = Ledger.Balance;
+            while (affordable < upper)
+            {
+                long lots = affordable + (upper - affordable + 1) / 2;
+                if (CityInvestmentTradeTotal(id, lots * StockLotSize, buy: true) <= cash) affordable = lots;
+                else upper = lots - 1;
+            }
+            return affordable * StockLotSize;
+        }
+
         private void ConsumeStockLiquidity(string id,long units)
         {if(id=="hardware")_stockMarket.IndexAvailableUnits-=units;else StockState(id).AvailableUnits-=units;}
         public Money StockShortOpeningCost(string id,long units)
-        {if(units<=0||units>1000000)return Money.Zero;var gross=CityInvestmentPrice(id)*units;return gross+CityInvestments.Fee(gross);}
+        {if(units<=0||units>StockOrderLimit)return Money.Zero;var gross=CityInvestmentPrice(id)*units;return gross+CityInvestments.Fee(gross);}
         public Money StockCoverReturn(string id,long units)
         {
             var e=StockState(id);if(e==null||units<=0||units>e.ShortUnits)return Money.Zero;

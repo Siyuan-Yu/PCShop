@@ -10,6 +10,9 @@ using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.Trade;
+using PCShopSell.Game;
+using PCShopSell.Game.UI;
+using UnityEngine.UI;
 
 namespace PCShopSell.Tests
 {
@@ -107,6 +110,75 @@ namespace PCShopSell.Tests
             s.AdvanceClock(1);
             Assert.AreEqual(CityActivityPhase.Completed, a.State, a.EndReason); Assert.GreaterOrEqual(s.Relation("jie"), relation + 4);
         }
+
+        [Test]
+        public void SignHelpArrivalOpensTheTaskBeforeShoppingAndStartsWithoutPurchasing()
+        {
+            using var s = Make();
+            s.Meet("jie", 40);
+            Resolve(s, "shop_neighbor_help", 0);
+            var activity = s.CityActivities.Single(x => x.Active && x.DefinitionId == GameSession.SignHelpActivityId);
+            var place = s.City.GetPlace(activity.VenueId);
+            var root = new GameObject("SignHelpArrivalTest");
+            root.SetActive(false);
+            var controller = root.AddComponent<GameController>();
+            typeof(GameController).GetProperty("Session").SetValue(controller, s);
+            typeof(GameController).GetProperty("City").SetValue(controller, s.City);
+            var previous = UnityEngine.EventSystems.EventSystem.current;
+            var ui = new GameUi(controller);
+            s.CityPlaceEntered += ui.OnEnteredPlace;
+            Text[] Labels() => ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Text>()).ToArray();
+            Button StartButton() => ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Button>())
+                .SingleOrDefault(button => button.name == "StartSignHelp");
+            try
+            {
+                AtTime(s, activity.ScheduledStart - 90);
+                At(s, place.Id);
+                ui.OnEnteredPlace(place);
+                Assert.That(StartButton(), Is.Null);
+                Assert.That(Labels().Any(label => label.text.Contains("购物车")), Is.True);
+                ui.CloseAllWindows();
+
+                At(s, null);
+                s.ArriveAtNode(place.NodeId);
+                Assert.That(s.BeginCityTravel(place.Id, activity.Id), Is.True);
+                GameSessionTests.RunTrip(s);
+                s.AdvanceClock(1);
+                Assert.That(s.CurrentPlace, Is.SameAs(place));
+                Assert.That(StartButton()?.interactable, Is.False);
+                Assert.That(s.Time.IsHeld, Is.False);
+                Assert.That(Labels().Any(label => label.text.Contains("购物车")), Is.False);
+                Assert.That(Labels().Any(label => label.text.Contains("还没到约定时段")), Is.True);
+
+                AtTime(s, activity.ScheduledStart - 1);
+                s.AdvanceClock(1);
+                ui.RebuildWindows();
+                Assert.That(StartButton()?.interactable, Is.True);
+                var cash = s.Ledger.Balance;
+                StartButton().onClick.Invoke();
+                Assert.That(s.RunningCityActivity, Is.SameAs(activity));
+                Assert.That(s.Time.IsRunning, Is.True);
+                Assert.That(Labels().Any(label => label.text.Contains("正在换招牌 · 剩余 30 分钟")), Is.True);
+                Assert.That(s.Ledger.Balance, Is.EqualTo(cash));
+                Assert.That(s.Cart, Is.Empty);
+
+                s.AdvanceClock(30);
+                Assert.That(activity.State, Is.EqualTo(CityActivityPhase.Completed));
+                ui.CloseAllWindows();
+                ui.OnEnteredPlace(place);
+                Assert.That(Labels().Any(label => label.text.Contains("购物车")), Is.True);
+            }
+            finally
+            {
+                s.CityPlaceEntered -= ui.OnEnteredPlace;
+                ui.CloseAllWindows();
+                foreach (var canvas in ui.Canvases) UnityEngine.Object.DestroyImmediate(canvas.gameObject);
+                UnityEngine.Object.DestroyImmediate(root);
+                if (previous == null && UnityEngine.EventSystems.EventSystem.current != null)
+                    UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);
+            }
+        }
+
         private static void Sale(GameSession s, long cents)
         {
             var shop = s.MainShop; shop.Sim.CheckoutClock = () => double.NaN; shop.Sim.Accepted = PaymentMethods.Cash;

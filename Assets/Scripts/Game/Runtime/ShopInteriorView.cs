@@ -948,6 +948,7 @@ namespace PCShopSell.Game.Runtime
             _walkAround.Clear();
             _hasCounter = false;
             _hasBench = false;
+            _usedBuyDesk = null;
             _clerkStand = new Vector3(0.5f, 0, Depth * 0.55f);
             var deskSpots = new List<Vector3>();
             _boxFoots.Clear(); _fridgeFoots.Clear();
@@ -955,6 +956,7 @@ namespace PCShopSell.Game.Runtime
             {
                 if (e.Def.Role == FurnitureRole.Storage && e.HasFoot) _boxFoots.Add(e.Foot);
                 if (e.Def.Role == FurnitureRole.Fridge && e.HasFoot) _fridgeFoots.Add(e.Foot);
+                if (e.Def.Id == "used_buydesk" && _usedBuyDesk == null) _usedBuyDesk = e.Placed;
                 if (!e.Def.IsFixture) continue;
                 var h = e.Go.GetComponent<FixtureHandle>();
                 if (h == null) continue;
@@ -1010,6 +1012,8 @@ namespace PCShopSell.Game.Runtime
             }
             _assemblerStand = FindAssemblerStand();
             _salesStand = FindAssemblerStand(true);
+            if (_usedBuyDesk != null)
+                _usedSellerStand = FindStaffStand(UsedDeskStand(_usedBuyDesk, seller: true), System.Array.Empty<Vector3>());
             _shelfSpots.AddRange(deskSpots);
             _deskFront = _deskFoots.Count > 0 ? new Vector3(_deskFoots[0].center.x, 0, _deskFoots[0].yMin - 0.4f) : Vector3.zero;
             if (deskSpots.Count > 0) _deskFront = deskSpots[0] - Origin;
@@ -1077,7 +1081,10 @@ namespace PCShopSell.Game.Runtime
                     _staffFigures.Remove(id);
                 }
                 var occupied = new List<Vector3>();
-                foreach (var employee in staff)
+                var usedDesk = session.CurrentShop.RetailKind == "secondhand" ? _usedBuyDesk : null;
+                if (usedDesk != null) occupied.Add(_usedSellerStand);
+                foreach (var employee in staff.OrderBy(e => e.Role == EmployeeRole.Cashier ? 0
+                    : usedDesk != null && e.Role == EmployeeRole.Appraiser ? 1 : 2))
                 {
                     string personId = session.PersonIdOf(employee.Person);
                     if (!_staffFigures.TryGetValue(employee.Person.Id, out var figure))
@@ -1088,7 +1095,9 @@ namespace PCShopSell.Game.Runtime
                         CityNpcClothing.Apply(figure, session, personId);
                         _staffFigures.Add(employee.Person.Id, figure);
                     }
-                    var preferred = employee.Role == EmployeeRole.Cashier ? _clerkStand
+                    bool atUsedDesk = employee.Role == EmployeeRole.Appraiser && usedDesk != null;
+                    var preferred = atUsedDesk ? UsedDeskStand(usedDesk, seller: false)
+                        : employee.Role == EmployeeRole.Cashier ? _clerkStand
                         : employee.Role == EmployeeRole.Assembler ? _assemblerStand
                         : employee.Role == EmployeeRole.PetKeeper && PetHousePresent ? new Vector3(_petArea.center.x,0,_petArea.yMin-.42f)
                         : employee.Role == EmployeeRole.Buyer||employee.Role==EmployeeRole.Chef||employee.Role==EmployeeRole.Waiter ? new Vector3(_doorX, 0, .9f) : _salesStand;
@@ -1097,7 +1106,8 @@ namespace PCShopSell.Game.Runtime
                     figure.transform.localPosition = stand;
                     Vector3 facing = employee.Role == EmployeeRole.Cashier ? _counterRot * Vector3.back
                         : employee.Role == EmployeeRole.Assembler && _hasBench ? new Vector3(_benchPos.x, 0, _benchPos.y) - stand : Vector3.back;
-                    if (facing.sqrMagnitude > .01f) figure.transform.localRotation = Quaternion.LookRotation(facing);
+                    if (atUsedDesk) FaceUsedDesk(figure.transform, usedDesk);
+                    else if (facing.sqrMagnitude > .01f) figure.transform.localRotation = Quaternion.LookRotation(facing);
                 }
             }
             foreach (var employee in staff)
@@ -1115,7 +1125,7 @@ namespace PCShopSell.Game.Runtime
             }
         }
 
-        private Vector3 FindStaffStand(Vector3 preferred, List<Vector3> occupied)
+        private Vector3 FindStaffStand(Vector3 preferred, IReadOnlyList<Vector3> occupied)
         {
             Vector3 best = ClampIndoorNpc(Origin+preferred)-Origin;
             float bestScore = float.PositiveInfinity;

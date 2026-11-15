@@ -25,38 +25,57 @@ namespace PCShopSell.Core.Session
         public Money MonthlyInterest => NoInterest ? Money.Zero : Money.FromCents(PrincipalCents * GameSession.AppLoanMonthlyRatePercent / 100);
         public Money TermInterest => MonthlyInterest * Months;
         public Money TotalDue => Principal + TermInterest;
+        public int InterestMonthsAt(int day)
+        {
+            int days = Math.Max(0, day - StartDay);
+            return Math.Min(Months, Math.Max(1, (days + GameDate.DaysPerMonth - 1) / GameDate.DaysPerMonth));
+        }
         public AppLoan Copy() => (AppLoan)MemberwiseClone();
     }
 
     public sealed partial class GameSession
     {
         public const int AppLoanAmountStep = 100;
-        public const int AppLoanMaximumYuan = 10000000;
+        public const int AppLoanBaseCreditYuan = 50000;
+        public const int AppLoanCreditPerReputationYuan = 5000;
+        public const int AppLoanMaximumYuan = 500000;
+        private const int SavedAppLoanMaximumYuan = 10000000;
         public const int AppLoanMaximumMonths = 12;
         public const int AppLoanMonthlyRatePercent = 20;
         private readonly List<AppLoan> _appLoans = new List<AppLoan>();
         private int _nextAppLoanId = 1;
         public IReadOnlyList<AppLoan> AppLoans => _appLoans;
-        public Money LoanPayoff(AppLoan loan)
-        {
-            int months = Math.Min(loan.Months, Math.Max(1, (Clock.Today.TotalDays - loan.StartDay + 29) / 30));
-            return loan.Principal + loan.MonthlyInterest * months;
-        }
+        public long AppLoanCreditLimitYuan => Math.Min(AppLoanMaximumYuan, AppLoanBaseCreditYuan
+            + (long)Math.Floor(Math.Max(0, Math.Min(PlayerShop.Reputation, AppLoanMaximumYuan / AppLoanCreditPerReputationYuan)))
+                * AppLoanCreditPerReputationYuan);
+        public Money AppLoanUsedCredit => Money.FromCents(_appLoans.Where(l => !l.Repaid && !l.NoInterest).Sum(l => l.PrincipalCents));
+        public long AppLoanAvailableYuan => Math.Max(0,
+            (AppLoanCreditLimitYuan * 100 - AppLoanUsedCredit.Cents) / (AppLoanAmountStep * 100)) * AppLoanAmountStep;
+        public Money LoanPayoff(AppLoan loan) => loan.Principal + loan.MonthlyInterest * loan.InterestMonthsAt(Clock.Today.TotalDays);
         public Money AppLoanDebt => Money.FromCents(_appLoans.Where(l => !l.Repaid).Sum(l => LoanPayoff(l).Cents));
+        public bool HasOutstandingLoans => _appLoans.Any(loan => !loan.Repaid) || MortgageDebt.IsPositive;
         public bool BorrowAppLoan(long yuan, int months, bool atBank = false)
         {
-            if (IsGameOver || IsWorking) return Fail("当前不能办理贷款。");
-            string blocker = atBank ? BankBlocker() : AppBlocker(PhoneApps.Loans);
+            string blocker = AppLoanOfferBlocker(yuan, months, atBank);
             if (blocker != null) return Fail(blocker);
-            if (yuan < AppLoanAmountStep || yuan > AppLoanMaximumYuan || yuan % AppLoanAmountStep != 0
-                || months < 1 || months > AppLoanMaximumMonths)
-                return Fail($"金额按 ¥{AppLoanAmountStep} 调整，期限为 1–{AppLoanMaximumMonths} 个月。");
             var loan = new AppLoan { Id = _nextAppLoanId++, StartDay = Clock.Today.TotalDays, Months = months,
                 PrincipalCents = Money.FromYuan(yuan).Cents, AtBank = atBank };
             _appLoans.Add(loan);
             Ledger.Credit(Clock.Today, "贷款到账", loan.Principal, (atBank ? "银行周转借款 #" : "周转借款 #") + loan.Id);
-            Say($"{(atBank ? "银行" : "")}贷款 #{loan.Id} 已到账 {loan.Principal}，{new GameDate(loan.DueDay)} 自动扣款 {loan.TotalDue}（含利息 {loan.TermInterest}）。");
+            Say($"{(atBank ? "银行" : "")}贷款 #{loan.Id} 已到账 {loan.Principal}。今天结清需 {LoanPayoff(loan)}，{new GameDate(loan.DueDay)} 到期自动扣款 {loan.TotalDue}。");
             return true;
+        }
+
+        public string AppLoanOfferBlocker(long yuan, int months, bool atBank)
+        {
+            if (IsGameOver || IsWorking) return "当前不能办理贷款。";
+            string blocker = atBank ? BankBlocker() : AppBlocker(PhoneApps.Loans);
+            if (blocker != null) return blocker;
+            long available = AppLoanAvailableYuan;
+            if (available == 0) return "暂无可借额度。结清已有贷款或提高名望后可再申请。";
+            if (yuan < AppLoanAmountStep || yuan % AppLoanAmountStep != 0 || months < 1 || months > AppLoanMaximumMonths)
+                return $"金额按 ¥{AppLoanAmountStep} 调整，期限为 1–{AppLoanMaximumMonths} 个月。";
+            return yuan > available ? $"超出可借额度，当前最多可借 {Money.FromYuan(available)}。" : null;
         }
         /// <summary>事件里朋友借钱给玩家：到账本金，无息，期限 months 个月（1 个月 = 30 天），到期自动扣款，和手机借款共用还款提醒。</summary>
         internal string AcceptFriendLoan(string personId, long yuan, int months)
@@ -123,7 +142,7 @@ namespace PCShopSell.Core.Session
             foreach (var loan in data.appLoans ?? Array.Empty<AppLoan>())
                 if (loan != null && loan.Id > 0 && loan.StartDay >= 0 && loan.StartDay <= Clock.Today.TotalDays
                     && loan.Months >= 1 && loan.Months <= AppLoanMaximumMonths
-                    && loan.PrincipalCents >= AppLoanAmountStep * 100L && loan.PrincipalCents <= AppLoanMaximumYuan * 100L
+                    && loan.PrincipalCents >= AppLoanAmountStep * 100L && loan.PrincipalCents <= SavedAppLoanMaximumYuan * 100L
                     && !_appLoans.Any(l => l.Id == loan.Id)) _appLoans.Add(loan.Copy());
             _nextAppLoanId = _appLoans.Count == 0 ? 1 : _appLoans.Max(l => l.Id) + 1;
             CollectDueAppLoans();

@@ -6,7 +6,7 @@ namespace PCShopSell.Core.Session
 {
     // Authored content shared by previews and the district runner. Opening this catalogue
     // never grants completion evidence; the runner records actual meetings and actions.
-    public enum NarrativeFact { OpenDistrictShops, Cash, NetAssets, OwnBrandFormed, ClosedSectorMonthlyRevenue }
+    public enum NarrativeFact { OpenDistrictShops, Cash, NetAssets, OwnBrandFormed, ClosedSectorMonthlyRevenue, NoOutstandingLoans }
     [Serializable] public sealed class NarrativeGate
     {
         public NarrativeFact Fact;
@@ -49,7 +49,7 @@ namespace PCShopSell.Core.Session
 
         // Fresh objects on every call keep previews independent.
         public static DistrictNarrativeChapter[] CreatePlan() => new[] {
-            new DistrictNarrativeChapter{Id="district.community",Title="城郊 → 社区",Reward=GameSession.FirstChapterTrial ? "交付三页商铺图，完成试玩主线。" : "交付三页商铺图，开放社区。",Modules=new[]{"community_entry"},Gates=new[]{Gate(NarrativeFact.OpenDistrictShops,CommunityShopMinimum,"suburb",$"城郊{CommunityShopMinimum}家开业门店"),Gate(NarrativeFact.Cash,CommunityCashMinimumYuan,"player",$"现金{CommunityCashMinimumYuan / 10_000}万元")}},
+            new DistrictNarrativeChapter{Id="district.community",Title="城郊 → 社区",Reward=GameSession.FirstChapterTrial ? "交付三页商铺图，完成试玩主线。" : "交付三页商铺图，开放社区。",Modules=new[]{"community_entry"},Gates=new[]{Gate(NarrativeFact.OpenDistrictShops,CommunityShopMinimum,"suburb",$"城郊{CommunityShopMinimum}家开业门店"),Gate(NarrativeFact.Cash,CommunityCashMinimumYuan,"player",$"自有现金{CommunityCashMinimumYuan / 10_000}万元"),Gate(NarrativeFact.NoOutstandingLoans,1,"player","所有贷款均已结清")}},
 #if !PCSHOP_FIRST_CHAPTER_TRIAL
             new DistrictNarrativeChapter{Id="district.park",Title="社区 → 公园",Reward="同一品牌完成展会采购订单、知名度100，实际会面后开放公园。",Modules=new[]{"brand_exhibition"},Gates=new[]{Gate(NarrativeFact.OpenDistrictShops,6,"community","社区6家开业门店"),Gate(NarrativeFact.NetAssets,30000000,"player","净资产3000万元"),Gate(NarrativeFact.OwnBrandFormed,1,"player","已创建行业品牌")}},
             new DistrictNarrativeChapter{Id="district.garden",Title="公园 → 花园",Reward="赢得企业供应商席位，同合同连续三期交付后实际会面，开放花园。",Modules=new[]{"enterprise_tender"},Gates=new[]{Gate(NarrativeFact.ClosedSectorMonthlyRevenue,100000000,"one_owned_sector","品牌所属行业上个完整月营业额1亿元")}}

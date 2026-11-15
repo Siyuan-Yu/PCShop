@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PCShopSell 自定义目的地原型</title>
+</head>
+<body>
+<div class="viz-dotted-background" id="pcshop-destination-preview">
+  <button type="button" class="destination-reopen" hidden>选择目的地</button>
+  <section class="destination-window" aria-label="PCShopSell 目的地选择">
+    <header class="destination-title">
+      <h2>选择目的地</h2>
+      <div><span>时间已暂停</span><button type="button" class="destination-close">关闭</button></div>
+    </header>
+    <div class="destination-filters">
+      <input type="search" placeholder="搜地点名、类型或街区" aria-label="搜地点名、类型或街区">
+      <select aria-label="地点类型">
+        <option value="">全部类型</option>
+        <option value="shop">我的店</option>
+        <option value="source">采购货源</option>
+        <option value="home">住处</option>
+        <option value="leisure">娱乐活动</option>
+        <option value="property">已购物业</option>
+        <option value="public">公共服务</option>
+      </select>
+      <select aria-label="街区">
+        <option value="">全部街区</option>
+        <option value="old">01 城郊旧居街</option>
+        <option value="market">02 城外批发街</option>
+        <option value="startup">03 创业商业街</option>
+      </select>
+    </div>
+    <div class="destination-main">
+      <div class="destination-list" aria-label="地点列表">
+        <div class="destination-results"></div>
+      </div>
+      <aside class="destination-detail" aria-label="所选地点">
+        <div class="destination-detail-content" aria-live="polite">
+          <div class="destination-detail-category" data-detail="category"></div>
+          <h3 data-detail="name"></h3>
+          <div class="destination-address" data-detail="street"></div>
+          <dl class="destination-facts">
+            <div><dt>营业</dt><dd data-detail="hours"></dd></div>
+            <div><dt>出行</dt><dd data-detail="travel"></dd></div>
+          </dl>
+        </div>
+        <div class="destination-actions">
+          <button type="button" class="destination-go">立即前往</button>
+          <button type="button" class="destination-save">保存到底栏</button>
+          <div class="destination-feedback" role="status"></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+</div>
+
+<style>
+  #pcshop-destination-preview {
+    padding: clamp(6px, 2vw, 18px);
+    color-scheme: dark;
+    font: 400 14px/1.45 Inter, "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+    --shop-window: #182136;
+    --shop-header: #21304a;
+    --shop-input: #101c2b;
+    --shop-action: #24354a;
+    --shop-edge: #3c4e66;
+    --shop-text: #e9e6df;
+    --shop-soft: #b2bfce;
+    --shop-gold: #e7bd63;
+    --shop-brass: #a17b34;
+    --shop-green: #bbd783;
+    color: var(--shop-text);
+  }
+  #pcshop-destination-preview *, #pcshop-destination-preview *::before { box-sizing: border-box; }
+  #pcshop-destination-preview h2, #pcshop-destination-preview h3 { margin: 0; }
+  #pcshop-destination-preview button, #pcshop-destination-preview input, #pcshop-destination-preview select {
+    font: inherit;
+    color: inherit;
+    min-width: 0;
+  }
+  #pcshop-destination-preview button:focus-visible, #pcshop-destination-preview input:focus-visible,
+  #pcshop-destination-preview select:focus-visible {
+    outline: 2px solid var(--shop-gold);
+    outline-offset: 2px;
+  }
+  #pcshop-destination-preview button, #pcshop-destination-preview select { cursor: pointer; }
+  #pcshop-destination-preview button:disabled { cursor: default; opacity: .58; }
+  #pcshop-destination-preview [hidden] { display: none; }
+  #pcshop-destination-preview .destination-window {
+    background: var(--shop-window);
+    border: 1px solid var(--shop-brass);
+  }
+  #pcshop-destination-preview .destination-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 14px;
+    gap: 8px;
+    background: var(--shop-header);
+    border-bottom: 1px solid var(--shop-gold);
+  }
+  #pcshop-destination-preview .destination-title h2 { font-size: 20px; font-weight: 700; }
+  #pcshop-destination-preview .destination-title span { color: var(--shop-soft); font-size: 12px; }
+  #pcshop-destination-preview .destination-title div { display: flex; align-items: center; gap: 8px; }
+  #pcshop-destination-preview .destination-close, #pcshop-destination-preview .destination-reopen {
+    min-height: 32px;
+    padding: 3px 9px;
+    background: var(--shop-action);
+    border: 1px solid var(--shop-edge);
+  }
+  #pcshop-destination-preview .destination-close { background: #964c31; border-color: #ca8059; }
+  #pcshop-destination-preview .destination-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(105px, max-content) minmax(135px, max-content);
+    gap: 6px;
+    padding: 12px 14px;
+  }
+  #pcshop-destination-preview .destination-filters input, #pcshop-destination-preview .destination-filters select {
+    min-height: 40px;
+    width: 100%;
+    background: var(--shop-input);
+    border: 1px solid var(--shop-edge);
+    border-radius: 0;
+    padding: 6px 8px;
+  }
+  #pcshop-destination-preview input::placeholder { color: var(--shop-soft); opacity: 1; }
+  #pcshop-destination-preview .destination-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    align-items: stretch;
+    gap: 12px;
+    padding: 0 14px 14px;
+  }
+  #pcshop-destination-preview .destination-group { display: grid; gap: 4px; }
+  #pcshop-destination-preview .destination-group + .destination-group { margin-top: 8px; }
+  #pcshop-destination-preview .destination-group h4 {
+    margin: 0;
+    padding: 1px 1px 3px;
+    color: var(--shop-gold);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  #pcshop-destination-preview .destination-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 46px;
+    padding: 5px 9px;
+    text-align: left;
+    background: var(--shop-action);
+    border: 1px solid var(--shop-edge);
+  }
+  #pcshop-destination-preview .destination-row:hover { background: #2b4059; }
+  #pcshop-destination-preview .destination-row[aria-pressed="true"] {
+    border-color: var(--shop-gold);
+    background: #353c47;
+  }
+  #pcshop-destination-preview .destination-row strong {
+    display: block;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  #pcshop-destination-preview .destination-row small {
+    display: block;
+    color: var(--shop-soft);
+    font-size: 12px;
+  }
+  #pcshop-destination-preview .destination-detail {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+    padding: 13px;
+    background: var(--shop-input);
+    border: 1px solid var(--shop-edge);
+  }
+  #pcshop-destination-preview .destination-detail-category { color: var(--shop-gold); font-size: 12px; }
+  #pcshop-destination-preview .destination-detail h3 { margin-top: 3px; font-size: 19px; font-weight: 700; }
+  #pcshop-destination-preview .destination-address { margin-top: 3px; color: var(--shop-soft); }
+  #pcshop-destination-preview .destination-facts { margin: 12px 0 0; }
+  #pcshop-destination-preview .destination-facts[hidden] { display: none; }
+  #pcshop-destination-preview .destination-facts div {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px;
+    padding: 7px 0;
+    border-top: 1px solid var(--shop-edge);
+  }
+  #pcshop-destination-preview dt { color: var(--shop-soft); }
+  #pcshop-destination-preview dd { margin: 0; }
+  #pcshop-destination-preview .destination-status { display: block; color: var(--shop-green); }
+  #pcshop-destination-preview .destination-hours { display: block; color: var(--shop-soft); font-size: 12px; }
+  #pcshop-destination-preview .destination-actions { display: grid; gap: 6px; }
+  #pcshop-destination-preview .destination-actions button, #pcshop-destination-preview .destination-clear {
+    min-height: 38px;
+    padding: 6px 8px;
+    background: var(--shop-action);
+    border: 1px solid var(--shop-edge);
+  }
+  #pcshop-destination-preview .destination-actions .destination-go {
+    background: var(--shop-brass);
+    border-color: var(--shop-gold);
+    font-weight: 700;
+  }
+  #pcshop-destination-preview .destination-feedback { color: var(--shop-green); font-size: 12px; }
+  #pcshop-destination-preview .destination-feedback:empty { display: none; }
+  #pcshop-destination-preview .destination-empty { color: var(--shop-soft); margin: 5px 0 10px; }
+  @media (max-width: 510px) {
+    #pcshop-destination-preview .destination-main { grid-template-columns: minmax(0, 1fr); }
+    #pcshop-destination-preview .destination-filters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    #pcshop-destination-preview .destination-filters input { grid-column: 1 / -1; }
+    #pcshop-destination-preview .destination-row, #pcshop-destination-preview .destination-filters input,
+    #pcshop-destination-preview .destination-filters select, #pcshop-destination-preview .destination-actions button,
+    #pcshop-destination-preview .destination-close, #pcshop-destination-preview .destination-reopen {
+      min-height: 44px;
+    }
+    #pcshop-destination-preview .destination-filters input { font-size: 16px; }
+  }
+</style>
+
+<script>
+  (() => {
+    const root = document.getElementById("pcshop-destination-preview");
+    const streetNames = {
+      old: "01 城郊旧居街",
+      market: "02 城外批发街",
+      startup: "03 创业商业街"
+    };
+    const places = [
+      { id: "electronics", name: "电子批发市场", street: "market", types: ["source"], label: "采购货源",
+        terms: "电脑 配件 进货", recent: true, hours: "周一至周五 09:00–20:00", minutes: 19 },
+      { id: "home", name: "城郊老破小出租屋", street: "old", types: ["home"], label: "住处",
+        terms: "回家 住宅", recent: true, hours: "全天可进入", minutes: 13 },
+      { id: "pet", name: "我的宠物用品店", street: "old", types: ["shop"], label: "我的店",
+        terms: "宠物用品 猫粮", recent: true, hours: "每日 08:00–22:00", minutes: 15 },
+      { id: "furniture", name: "宜居家具城", street: "startup", types: ["source"], label: "采购货源",
+        terms: "家具 货架 收银台 进货", hours: "每日 09:00–21:00", minutes: 21 },
+      { id: "court", name: "青湾球场", street: "startup", types: ["leisure"], label: "娱乐活动",
+        terms: "篮球 打球", hours: "每日 07:00–22:00", minutes: 16 },
+      { id: "bank", name: "城郊银行", street: "startup", types: ["public"], label: "公共服务",
+        terms: "贷款 还款 存款", hours: "全天营业", minutes: 11 }
+    ];
+    const query = root.querySelector('input[type="search"]');
+    const type = root.querySelector('select[aria-label="地点类型"]');
+    const street = root.querySelector('select[aria-label="街区"]');
+    const results = root.querySelector(".destination-results");
+    const facts = root.querySelector(".destination-facts");
+    const go = root.querySelector(".destination-go");
+    const save = root.querySelector(".destination-save");
+    const feedback = root.querySelector(".destination-feedback");
+    const windowPanel = root.querySelector(".destination-window");
+    const reopen = root.querySelector(".destination-reopen");
+    const fields = Object.fromEntries([...root.querySelectorAll("[data-detail]")].map(field => [field.dataset.detail, field]));
+    let selected = places[0];
+    let saved = null;
+
+    function renderDetail() {
+      fields.category.textContent = selected?.label ?? "";
+      fields.name.textContent = selected?.name ?? "选择一个地点";
+      fields.street.textContent = selected ? streetNames[selected.street] : "";
+      facts.hidden = !selected;
+      fields.hours.replaceChildren();
+      if (selected) {
+        const hours = document.createElement("span");
+        hours.className = "destination-hours";
+        hours.textContent = selected.hours;
+        const status = document.createElement("span");
+        status.className = "destination-status";
+        status.textContent = selected.id === "home" ? "可以进入" : selected.id === "court" ? "开放中" : "营业中";
+        fields.hours.append(status, hours);
+      }
+      fields.travel.textContent = selected ? `小电驴 · 约 ${selected.minutes} 分钟` : "";
+      go.disabled = !selected;
+      save.disabled = !selected || selected === saved;
+      save.textContent = selected && selected === saved ? "已保存到底栏" : "保存到底栏";
+    }
+
+    function appendGroup(title, rows) {
+      if (!rows.length) return;
+      const group = document.createElement("section");
+      group.className = "destination-group";
+      const heading = document.createElement("h4");
+      heading.textContent = title;
+      group.append(heading);
+      for (const place of rows) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "destination-row";
+        button.dataset.place = place.id;
+        button.setAttribute("aria-pressed", String(place === selected));
+        const text = document.createElement("span");
+        const name = document.createElement("strong");
+        const address = document.createElement("small");
+        name.textContent = place.name;
+        address.textContent = `${streetNames[place.street]} · ${place.label}`;
+        text.append(name, address);
+        button.append(text);
+        button.addEventListener("click", () => {
+          selected = place;
+          feedback.textContent = "";
+          for (const row of results.querySelectorAll("[data-place]")) {
+            row.setAttribute("aria-pressed", String(row === button));
+          }
+          renderDetail();
+        });
+        group.append(button);
+      }
+      results.append(group);
+    }
+
+    function renderList() {
+      const keywords = query.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      const filtered = Boolean(keywords.length || type.value || street.value);
+      const visible = places.filter(place => {
+        const searchText = `${place.name} ${place.label} ${streetNames[place.street]} ${place.terms}`.toLowerCase();
+        return (!type.value || place.types.includes(type.value)) && (!street.value || street.value === place.street)
+          && keywords.every(keyword => searchText.includes(keyword));
+      });
+      if (!visible.includes(selected)) selected = visible.length === 1 ? visible[0] : null;
+      results.replaceChildren();
+      if (visible.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "destination-empty";
+        empty.setAttribute("role", "status");
+        empty.textContent = "没有符合当前筛选的地点。";
+        const clear = document.createElement("button");
+        clear.type = "button";
+        clear.className = "destination-clear";
+        clear.textContent = "清空筛选";
+        clear.addEventListener("click", () => {
+          query.value = type.value = street.value = "";
+          renderList();
+          query.focus();
+        });
+        results.append(empty, clear);
+      } else if (filtered) {
+        appendGroup(`匹配地点 · ${visible.length}`, visible);
+      } else {
+        appendGroup("最近前往", visible.filter(place => place.recent));
+        appendGroup("其他地点", visible.filter(place => !place.recent));
+      }
+      feedback.textContent = "";
+      renderDetail();
+    }
+
+    query.addEventListener("input", renderList);
+    type.addEventListener("change", renderList);
+    street.addEventListener("change", renderList);
+    root.querySelector(".destination-close").addEventListener("click", () => {
+      windowPanel.hidden = true;
+      reopen.hidden = false;
+      reopen.focus();
+    });
+    reopen.addEventListener("click", () => {
+      reopen.hidden = true;
+      windowPanel.hidden = false;
+      query.focus();
+    });
+    go.addEventListener("click", () => {
+      if (selected) feedback.textContent = `前往 ${selected.name} · 约 ${selected.minutes} 分钟`;
+    });
+    save.addEventListener("click", () => {
+      if (!selected) return;
+      saved = selected;
+      renderDetail();
+      feedback.textContent = `底栏快捷目的地已设为 ${saved.name}`;
+    });
+    renderList();
+  })();
+</script>
+</body>
+</html>

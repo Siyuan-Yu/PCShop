@@ -297,7 +297,7 @@ namespace PCShopSell.Core.Session
                 person.LastRaceTogetherDayPlusOne = Clock.Today.TotalDays + 1;
                 int before = Relation(id);
                 bool invited = RaceInviteFor(id, Clock.Today.TotalDays) != null;
-                if (id == race.Track.Npc && !IsMet(id)) Meet(id);
+                if (id == race.Track.Npc && !IsMet(id)) Meet(id, 0);
                 AddRelation(id, invited ? 3 : race.Position <= 3 ? 2 : 1);
                 int after = Relation(id);
                 if (after == before) continue;

@@ -416,7 +416,7 @@ namespace PCShopSell.Game.UI
             var quantity=Ui.Row(w.Content,44,8);
             Ui.Size(Ui.Label(quantity,"这张展示台摆放数量",18),230);
             QuantityStepper(w,quantity,"display_"+index,limit,1,6,1,
-                value=>S.SetDisplayLimit(index,(int)value),value=>value+" 件");
+                value=>S.SetDisplayLimit(index,(int)value),unit:"件");
             var fill=S.DisplayFill(index);
             Line(w.Content,kind.Name+" · 可陈列 "+fill.Total+"/"+limit+" 件",21,Ui.Accent);
             var list=Ui.Scroll(w.Content,420);

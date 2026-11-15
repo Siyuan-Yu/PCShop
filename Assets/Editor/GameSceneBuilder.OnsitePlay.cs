@@ -46,8 +46,14 @@ namespace PCShopSell.EditorTools
                 if(a.State!=CityActivityPhase.Completed)throw new InvalidOperationException(a.DefinitionId+" did not complete: "+a.EndReason);
                 Log("onsite completed "+a.DefinitionId);
             }
-            Attend("act_bar_bartender");s.SelectOnsiteDrink(1);s.SipOnsiteDrink();Frame(0);Shot("51-actual-drink-tasting");s.AdvanceClock(3);s.SelectOnsiteDrink(0);s.SipOnsiteDrink();s.AdvanceClock(3);s.OnsiteDrinkFeedback(1);
-            Complete();Attend("act_bar_taoran");s.TalkOnsiteGuest(0,0);s.AdvanceClock(3);s.TalkOnsiteGuest(1,1);Frame(0);Shot("52-real-guests-and-topics");s.AdvanceClock(3);s.TalkOnsiteGuest(2,2);s.AdvanceClock(3);Complete();
+            var tasting = Attend("act_bar_bartender");
+            var tastingStarted = s.Clock.Now;
+            if (!s.SipOnsiteDrink(1) || !s.SipOnsiteDrink(0) || s.Clock.Now != tastingStarted)
+                throw new InvalidOperationException("Tasting advanced time before the third drink");
+            Frame(0);Shot("51-actual-drink-tasting");
+            if (!s.SipOnsiteDrink(2) || tasting.State != CityActivityPhase.Completed || s.Clock.Now != tastingStarted.AddMinutes(90))
+                throw new InvalidOperationException("The third drink did not settle the 90-minute tasting");
+            Attend("act_bar_taoran");s.TalkOnsiteGuest(0,0);s.AdvanceClock(3);s.TalkOnsiteGuest(1,1);Frame(0);Shot("52-real-guests-and-topics");s.AdvanceClock(3);s.TalkOnsiteGuest(2,2);s.AdvanceClock(3);Complete();
             Attend("act_bar_zengyu");s.MixOnsiteDrink();s.AdvanceClock(5);s.TasteOnsiteMix();s.AdvanceClock(2);Frame(0);Shot("53-wrong-mix-actually-tasted");
             s.SetOnsiteRecipe(0,1);s.MixOnsiteDrink();s.AdvanceClock(5);Frame(0);Shot("53-real-recipe-and-tasting");s.TasteOnsiteMix();s.AdvanceClock(2);if(s.CurrentOnsite.Success!=1)throw new InvalidOperationException("Correct mix failed");Complete();
             Attend("act_court_coach");ShotBall(0,finish:false);Shot("54-real-basketball-flight");for(int i=0;i<2400;i++)s.StepOnsiteSport(.001);ShotBall(1,.65);ShotBall(2,.6);Complete();
@@ -63,7 +69,7 @@ namespace PCShopSell.EditorTools
             var photo=s.OnsitePhotos.Last(x=>x.ActivityId==photoActivity.Id);string path=_game.OnsitePhotoPath(photo.File);if(!File.Exists(path)||new FileInfo(path).Length<1000)throw new InvalidOperationException("Photo file missing");
             File.Copy(path,Path.Combine(_outDir,"76-actual-saved-photo.png"),true);_game.Ui.OpenOnsiteAlbum();Shot("76-saved-photo-album");
             Complete();
-            File.WriteAllText(Path.Combine(_outDir,"runtime-results.txt"),"Production GameController/UI: all nine invitations actually scheduled, routed and attended. 51 two real timed sips; 52 specific real guests and timed topics; 53 wrong recipe actually tasted with penalty, followed by correct preparation and taste; 54 actual flight; 55 three different exercises and feedback; 56 five resolved possessions; 57 club/power/direction flight and landing; 58 three shots then one actual procurement offer; 76 three rendered PNG photos of existing catalog models plus album. Fixture opens districts, uses existing fitted shop and smartphone; high IQ/relation only for successful procurement acceptance.\n");
+            File.WriteAllText(Path.Combine(_outDir,"runtime-results.txt"),"Production GameController/UI: all nine invitations actually scheduled, routed and attended. 51 three distinct drinks with a 90-minute settlement after the third; 52 specific real guests and timed topics; 53 wrong recipe actually tasted with penalty, followed by correct preparation and taste; 54 actual flight; 55 three different exercises and feedback; 56 five resolved possessions; 57 club/power/direction flight and landing; 58 three shots then one actual procurement offer; 76 three rendered PNG photos of existing catalog models plus album. Fixture opens districts, uses existing fitted shop and smartphone; high IQ/relation only for successful procurement acceptance.\n");
             Log("Onsite 51-58 and 76 real scene interactions and saved PNG photos passed.");
         });
     }

@@ -9814,7 +9814,7 @@
     },
     {
       "id": "shop04",
-      "name": "米家手机",
+      "name": "米家",
       "kind": "shop",
       "node": "e04",
       "size": "medium",
@@ -10251,8 +10251,8 @@
       "depth": 15.457273946884364,
       "heading": 164.4513264463912,
       "tradable": false,
-      "openMinute": 840,
-      "closeMinute": 120,
+      "openMinute": 0,
+      "closeMinute": 1440,
       "model": "ktv",
       "tier": 0
     },
@@ -11345,8 +11345,8 @@
       "heading": 164.4513264463913,
       "model": "ktv",
       "tier": 1,
-      "openMinute": 840,
-      "closeMinute": 120,
+      "openMinute": 0,
+      "closeMinute": 1440,
       "tradable": false
     },
     {
@@ -11405,8 +11405,8 @@
       "heading": 43.07346819533868,
       "model": "ktv",
       "tier": 2,
-      "openMinute": 840,
-      "closeMinute": 120,
+      "openMinute": 0,
+      "closeMinute": 1440,
       "tradable": false
     },
     {
@@ -11465,8 +11465,8 @@
       "heading": -4.336489974387007,
       "model": "ktv",
       "tier": 3,
-      "openMinute": 840,
-      "closeMinute": 120,
+      "openMinute": 0,
+      "closeMinute": 1440,
       "tradable": false
     },
     {
@@ -11545,7 +11545,7 @@
     },
     {
       "id": "race_0",
-      "name": "城郊练习场",
+      "name": "城郊赛车报名点",
       "kind": "other",
       "node": "race_0_door",
       "street": "s_start",

@@ -44,7 +44,11 @@ namespace PCShopSell.Game.UI
         private void BuildRegionalGarage(Window w, Place p)
         {
             var garage = RegionalGarages.Get(p.Id);
-            if (p.Id == GameSession.StarterRaceGarageId) BuildRacingIntroduction(w, compact: true);
+            if (p.Id == GameSession.StarterRaceGarageId && S.RacingEnrollmentAvailable)
+            {
+                if (S.RacingUnlocked) BuildRacingIntroduction(w, compact: true);
+                else BuildGarageRacingEnrollment(w);
+            }
 
             var columns = Ui.Row(w.Content, -1, 14);
             columns.GetComponent<LayoutElement>().flexibleHeight = 1;
@@ -108,6 +112,19 @@ namespace PCShopSell.Game.UI
             Ui.Size(parking, 0, -1, 1);
             Ui.VList(parking, 8, 0);
             BuildGarageParking(parking, garage, w);
+        }
+
+        private void BuildGarageRacingEnrollment(Window w)
+        {
+            var card = BusinessCard(w.Content, "车库负责人 · 赛车登记");
+            var row = Ui.Row(card, 46, 12);
+            string blocker = S.RacingEnrollmentBlocker;
+            Ui.Size(Ui.Label(row, blocker ?? "资格已满足，免费登记后即可解锁赛车。", 17,
+                TextAnchor.MiddleLeft, blocker == null ? Ui.Good : Ui.Warn), 0, -1, 1);
+            Ui.Size(Ui.Button(row, "办理赛车登记", () =>
+            {
+                if (S.UnlockRacingAtGarage()) w.Rebuild();
+            }, 18, Ui.ButtonHot, blocker == null), 190, 42);
         }
 
         private void BuildGarageCommuter(Transform parent, RegionalGarage garage, GarageVehicle car, Window w)

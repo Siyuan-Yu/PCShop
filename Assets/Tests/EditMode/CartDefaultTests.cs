@@ -1,5 +1,6 @@
 using System.Linq;
 using NUnit.Framework;
+using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
@@ -48,6 +49,35 @@ namespace PCShopSell.Tests
                 Assert.Zero(s.Cart.Single(l => l.Key == "furn:" + FurnitureCatalog.FridgeSmall).InBag);
                 Assert.AreEqual(1, s.Cart.Single(l => l.Key == "furn:" + FurnitureCatalog.FridgeSmall).ByTruck);
                 Assert.LessOrEqual(s.CartBagKg, s.FreeKg);
+            }
+        }
+
+        [Test]
+        public void ElectronicsWholesaleMatchesComputerShopEvenAtAlternateMarket()
+        {
+            using (var s = HomeTests.Make(200000, 10 * 60))
+            {
+                s.MainShop.RetailKind = PetShopCatalog.ShopKind;
+                s.PlayerShop.Reputation = 80;
+                s.DebugAddListing("tea", 0, 60, Money.FromYuan(3000));
+                GameSessionTests.Teleport(s, "agency");
+                Assert.True(s.SignLease("tea", true, "computer"));
+                var computer = s.ShopAt("tea");
+
+                GameSessionTests.Teleport(s, "mall");
+                s.SetCourierDest(s.MainShop);
+                Assert.True(s.CartAddFurniture(FurnitureCatalog.Shelf));
+                Assert.True(s.Checkout(false));
+
+                GameSessionTests.Teleport(s, "stall");
+                Assert.True(s.CartAddStall(s.CurrentPlace, PartCatalog.Get("cpu0"), 1));
+                s.CartAllToTruck();
+                Assert.AreSame(computer, s.CourierShop(true));
+                s.SetCourierDest(s.MainShop);
+                Assert.AreSame(s.MainShop, s.CourierShop(true), "An explicit destination takes priority.");
+                s.CourierDest = null;
+                Assert.True(s.Checkout(true));
+                Assert.AreEqual(computer.Place.Id, s.Couriers.Last().ShopId);
             }
         }
 

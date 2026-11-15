@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Catalog;
+using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Shop;
@@ -66,7 +67,7 @@ namespace PCShopSell.Core.Session
                 Hint = $"签约要付{K("首周租金 + 押金 + 中介费")}，{K("预留开店设备和进货费用")}。",
                 Done = s => s.HasShop,
                 Progress = s => s.PendingLease != null
-                    ? $"已提前签下{s.City.GetPlace(s.PendingLease.PlaceId).Name}，第 {s.PendingLease.StartDay + 1} 天才交房"
+                    ? $"已提前签下{s.City.GetPlace(s.PendingLease.PlaceId).Name}，{s.ShopHandoverText(s.PendingLease.StartDay)}"
                     : null,
             },
             new QuestDef
@@ -138,14 +139,25 @@ namespace PCShopSell.Core.Session
             },
             new QuestDef
             {
+                Id = "racing_enrollment", Title = "办理赛车登记", Target = QuestTarget.RacingEnrollment,
+                Short = "去城郊赛场车库找负责人办理登记",
+                Hint = $"结清所有贷款，攒够 {Money.FromYuan(GameSession.RacingCashMinimumYuan)} 自有现金后，"
+                    + "去城郊赛场车库找负责人。登记免费，办完即可解锁赛车。",
+                Done = s => !s.RacingEnrollmentAvailable || s.RacingUnlocked,
+                Progress = s => $"自有现金 {s.CommunityOwnCash} / {Money.FromYuan(GameSession.RacingCashMinimumYuan)}"
+                    + $" · {(s.HasOutstandingLoans ? "有待还贷款" : "无贷款")}",
+            },
+            new QuestDef
+            {
                 Id = "community_goal", Title = "城郊到社区 · 引荐条件", Target = QuestTarget.CommunityGoal,
-                Short = "扩大城郊经营，达成主线引荐条件",
-                Hint = $"在城郊开业至少 {DistrictNarrativeCatalog.CommunityShopMinimum} 家门店，手头现金达到 "
+                Short = "扩大城郊经营，结清贷款并攒够自有现金",
+                Hint = $"在城郊开业至少 {DistrictNarrativeCatalog.CommunityShopMinimum} 家门店，结清所有贷款，自有现金达到 "
                     + $"{DistrictNarrativeCatalog.CommunityCashMinimumYuan / 10_000} 万元。门店打烊后仍计入，装修当天的门店从次日开始计。\n"
-                    + $"两项同时达标后，李秀兰将在 {DistrictNarrativeCatalog.InvitationDelayDays} 天后主动联系。",
+                    + $"三项同时达标后，李秀兰将在 {DistrictNarrativeCatalog.InvitationDelayDays} 天后主动联系。",
                 Done = s => !s.City.IsLakeCity || s.CommunityInvitationScheduledOrStarted,
                 Progress = s => $"城郊开业 {s.DistrictOperatingShops(0)}/{DistrictNarrativeCatalog.CommunityShopMinimum} 家 · "
-                    + $"现金 {s.Ledger.Balance} / {DistrictNarrativeCatalog.CommunityCashMinimumYuan / 10_000} 万元",
+                    + $"自有现金 {s.CommunityOwnCash} / {DistrictNarrativeCatalog.CommunityCashMinimumYuan / 10_000} 万元\n"
+                    + (s.HasOutstandingLoans ? "贷款：待结清" : "贷款：无"),
             },
         }.Concat(GrowthSteps()).ToArray();
 

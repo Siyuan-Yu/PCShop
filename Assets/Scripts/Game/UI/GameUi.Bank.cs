@@ -13,6 +13,8 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private enum BankPage { Transfers, Borrow, Loans }
+        private Window _bankWindow;
+        private BankDeskDraft _bankDraft;
 
         private sealed class BankDeskDraft
         {
@@ -48,12 +50,21 @@ namespace PCShopSell.Game.UI
 
         private void OpenBank(Place bank, BankPage page = BankPage.Transfers)
         {
+            if (_bankWindow != null && !_bankWindow.Closed && S.CurrentPlace == bank)
+            {
+                _bankDraft.Page = page;
+                _bankWindow.ResetScrollOnRebuild = true;
+                _bankWindow.Rebuild();
+                return;
+            }
             var draft = new BankDeskDraft { Page = page };
             OpenPlaceWindow(bank, (w, _) =>
             {
+                _bankWindow = w;
+                _bankDraft = draft;
                 Line(w.Content, "24 小时营业", 17, Ui.Good);
                 BuildBank(w, draft);
-            }, 1000, 620);
+            }, 1000, 710);
         }
 
         private void BuildBank(Window w, BankDeskDraft draft)
@@ -145,6 +156,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildBankBorrow(Window w, BankDeskDraft draft)
         {
+            BuildLoanCredit(w.Content);
             var inputs = Ui.Row(w.Content, 74, 12);
             var amountField = Ui.Size(Ui.Rect(inputs, "BankLoanAmountField"), 0, 74, 1);
             Ui.VList(amountField, 4, 0);
@@ -156,7 +168,8 @@ namespace PCShopSell.Game.UI
 
             var quoteCard = Ui.FlatPanel(w.Content, "BankLoanQuote").rectTransform;
             Ui.VList(quoteCard, 2, 10);
-            var interest = BankQuoteRow(quoteCard, $"总利息 · 月息 {GameSession.AppLoanMonthlyRatePercent}%", Ui.TextColor);
+            var firstMonth = BankQuoteRow(quoteCard, "首月内结清", Ui.Good);
+            var interest = BankQuoteRow(quoteCard, $"到期利息 · 月息 {GameSession.AppLoanMonthlyRatePercent}%", Ui.TextColor);
             interest.value.name = "BankLoanInterest";
             var due = BankQuoteRow(quoteCard, "", Ui.Accent);
             due.label.name = "BankLoanDueDate";
@@ -177,15 +190,17 @@ namespace PCShopSell.Game.UI
             apply.name = "BankLoanApply";
             void Refresh()
             {
-                bool valid = TryBankAmount(draft.LoanAmount, GameSession.AppLoanMaximumYuan, GameSession.AppLoanAmountStep, out long yuan);
+                long.TryParse(draft.LoanAmount, NumberStyles.None, CultureInfo.InvariantCulture, out long yuan);
+                string blocker = S.AppLoanOfferBlocker(yuan, draft.Months, atBank: true);
+                bool valid = blocker == null;
                 quote = valid ? LoanQuote(yuan, draft.Months) : null;
                 var date = S.Clock.Today.AddDays(draft.Months * GameDate.DaysPerMonth);
+                firstMonth.value.text = valid ? S.LoanPayoff(quote).ToString() : "—";
                 interest.value.text = valid ? quote.TermInterest.ToString() : "—";
                 due.label.text = $"{date} 自动扣款";
                 due.value.text = valid ? quote.TotalDue.ToString() : "—";
-                string blocker = S.BankBlocker() ?? (!valid ? $"借款金额须为 ¥{GameSession.AppLoanAmountStep} 的整数倍，最高 ¥{GameSession.AppLoanMaximumYuan:N0}。" : null);
                 feedback.text = blocker ?? "";
-                feedback.gameObject.SetActive(blocker != null && draft.LoanAmount.Length > 0);
+                feedback.gameObject.SetActive(blocker != null);
                 apply.interactable = blocker == null;
             }
             var months = Ui.Size(Ui.Choice(termField, Enumerable.Range(1, GameSession.AppLoanMaximumMonths).Select(n => n + " 个月"),
@@ -195,32 +210,19 @@ namespace PCShopSell.Game.UI
             Refresh();
 
             BankDisclosure(w, "扣款与提前结清规则", draft.ShowLoanRules, () => draft.ShowLoanRules = !draft.ShowLoanRules,
-                "借款按原本金计单利，每月按 30 天计算。到期自动扣除本息，余额不足可扣为负数。提前整笔结清按已使用月份计息，不足一个月按一个月。");
+                LoanInterestRules + "到期自动扣除本息，现金不足时先划转活期存款，仍不足可扣为负数。");
         }
 
         private void BuildBankLoans(Window w)
         {
+            BuildLoanCredit(w.Content);
             if (S.AppLoans.Count == 0)
             {
                 Line(w.Content, "暂无借款记录", 17, Ui.Dim);
                 return;
             }
             var list = Ui.Scroll(w.Content, 360);
-            foreach (var loan in LoanRecords())
-            {
-                var card = Ui.FlatPanel(list, "BankLoan_" + loan.Id, Ui.FlatBand).rectTransform;
-                Ui.VList(card, 2, 10);
-                var summary = Ui.Row(card, 30);
-                Ui.Size(Ui.Label(summary, loan.Repaid ? "已结清" : "到期应还 " + loan.TotalDue, 19,
-                    color: loan.Repaid ? Ui.Dim : Ui.Accent), 0, -1, 1);
-                if (!loan.Repaid)
-                    Ui.Size(Ui.Button(summary, "提前结清", () => ConfirmLoanRepayment(w, loan, atBank: true),
-                        16, Ui.ButtonBg, S.BankBlocker() == null && S.Ledger.CanAfford(S.LoanPayoff(loan))), 120, 30).name = "BankRepay_" + loan.Id;
-                string lender = loan.NoInterest ? $" · {S.CityPerson(loan.Lender)?.Name ?? "朋友"}的无息借款" : "";
-                string date = loan.Repaid ? $"{new GameDate(loan.RepaidDay)} 结清 · 实付利息 {Money.FromCents(loan.PaidInterestCents)}"
-                    : $"{new GameDate(loan.DueDay)} 到期";
-                Para(card, $"借款 #{loan.Id} · 本金 {loan.Principal} · {date}{lender}", 16, Ui.Dim);
-            }
+            foreach (var loan in LoanRecords()) BuildLoanRecord(list, w, loan, atBank: true);
         }
 
         private static void BankBalance(Transform parent, string caption, Money amount, string name)

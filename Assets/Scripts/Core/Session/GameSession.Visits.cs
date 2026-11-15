@@ -228,6 +228,13 @@ namespace PCShopSell.Core.Session
             var l = new List<ScheduleEntry>();
             AddExpoSchedule(l);
             AddWorkSchedule(l);
+            var station = WalletReturnStation;
+            if (station != null)
+                l.Add(new ScheduleEntry { Minute = Clock.Today.TotalDays * 1440L, HasTime = false, Day = DescribeDay(Clock.Today.TotalDays),
+                    Kind = "wallet_return", DestinationId = station.Id,
+                    Text = "归还钱包 · " + station.Name + (AtWalletReturnStation
+                        ? WalletWaitLeft > 0 ? $" · 站内再等 {WalletWaitLeft} 分钟" : " · 可以交还"
+                        : " · 前往站内等候") });
             foreach (var activity in _cityActivities.Where(a => a.Active))
             {
                 string companions = string.Join("、", activity.Participants.Select(p => CityPerson(p.PersonId)?.Name ?? "朋友"));

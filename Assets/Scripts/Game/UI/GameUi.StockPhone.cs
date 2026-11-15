@@ -19,16 +19,16 @@ namespace PCShopSell.Game.UI
             new Color32(239,180,135,255), new Color32(149,216,151,255), new Color32(215,165,203,255),
             new Color32(142,216,239,255), new Color32(194,203,209,255)
         };
-        private const int StockQuantityLimit = 1000000;
         private const int StockColumnWidth = 124;
         private const int StockBuyWidth = 176;
+        private const int StockSellWidth = 94, StockBulkWidth = 94, StockQuoteGap = 6;
         private GameSession _stockSession;
         private Window _stockWindow;
         private StockPage _stockPage = StockPage.Exchange;
         private string _stockExpanded, _stockChartTarget = "city_chip", _stockTradeFeedback;
         private bool _stockShortMode, _stockCandles, _stockWatchOnly, _stockHelp, _stockTradeFailed;
         private int _stockSort, _stockChartDays = 1;
-        private int _stockOrderQuantity = GameSession.StockLotSize, _indexOrderQuantity = 1;
+        private int _stockOrderQuantity = GameSession.StockLotSize;
 
         // 证券页可以放进别的容器（居家工作台「投资」页）：构建期间 _stockHost 指向容器，_stockEmbedded 为真。
         private Transform _stockHost;
@@ -45,7 +45,7 @@ namespace PCShopSell.Game.UI
             _stockChartTarget = "city_chip";
             _stockShortMode = _stockCandles = _stockWatchOnly = _stockHelp = _stockChartAll = false;
             _stockSort = 0;
-            _stockChartDays = _indexOrderQuantity = 1;
+            _stockChartDays = 1;
             _stockOrderQuantity = GameSession.StockLotSize;
         }
 
@@ -78,7 +78,7 @@ namespace PCShopSell.Game.UI
                 return;
             }
             _stockTradeFeedback = null;
-            _stockWindow = OpenWindow("证券", 1480, 850, BuildStockWorkspace, scrollContent: false);
+            _stockWindow = OpenPhoneAppWindow("证券", BuildStockWorkspace, scrollContent: false);
         }
 
         private static string StockTitle(string id) => id == "hardware" ? "硬件景气指数" : CityInvestments.Get(id)?.Name ?? id;
@@ -143,7 +143,8 @@ namespace PCShopSell.Game.UI
                 else StockText(StockCard(root), _stockTradeFeedback, 17, Ui.Good).name = "StockTradeFeedback";
             }
             else if (_stockPage == StockPage.Exchange)
-                Ui.Size(Ui.Label(root, "手续费 · 股票 0.2% · 指数 0.5%", 14, color: Ui.Dim), -1, 24);
+                Ui.Size(Ui.Label(root, "手续费 · 股票 0.2%" + (S.FundUnits > 0 ? " · 旧指数持仓卖出 0.5%" : ""),
+                    14, color: Ui.Dim), -1, 24);
 
             if (!_stockEmbedded) BuildStockPageTabs(w, root, 40, 18, new[] { StockPage.Charts, StockPage.Exchange, StockPage.News });
         }
@@ -187,14 +188,13 @@ namespace PCShopSell.Game.UI
                 }, 17, shortMode == _stockShortMode ? Ui.ButtonHot : Ui.ButtonBg), 36);
 
             var controls = Ui.Row(StockRoot(w), 36, 6);
-            var stockQuantityInput = BuildStockQuantity(w, controls, index: false);
+            var stockQuantityInput = BuildStockQuantity(w, controls);
             foreach (int lots in new[] { 1, 5, 10 })
             {
                 int count = lots * GameSession.StockLotSize;
                 Ui.Size(Ui.Button(controls, lots + " 手", () => { _stockOrderQuantity = count; w.Rebuild(); }, 15,
                     count == _stockOrderQuantity ? Ui.ButtonHot : Ui.ButtonBg), 61, 34);
             }
-            var indexQuantityInput = _stockShortMode ? null : BuildStockQuantity(w, controls, index: true);
             StockFlex(Ui.Rect(controls, "StockControlsSpace"), 36);
             Ui.Size(Ui.Button(controls, _stockWatchOnly ? "只看自选 ✓" : "只看自选", () =>
             {
@@ -206,11 +206,11 @@ namespace PCShopSell.Game.UI
             { _stockHelp = !_stockHelp; w.Rebuild(); }, 15), 100, 34);
             if (_stockHelp)
             {
-                StockText(StockRoot(w), "股票每手100股，指数按份。周一至周五全天可交易，每次报价有成交额度。做空冻结自有保证金及卖出所得，每日借股费0.03%，担保比例≤130%时自动平仓。", 15, Ui.Dim);
+                StockText(StockRoot(w), "股票每手100股，周一至周五全天可交易。最大买入按可用现金（含手续费）与当前成交额度计算，全部卖出按实际持仓下单。做空冻结自有保证金及卖出所得，每日借股费0.03%，担保比例≤130%时自动平仓。", 15, Ui.Dim);
                 Ui.Size(Ui.Button(StockRoot(w), "账户与费用明细", OpenStockFees, 15), -1, 30);
             }
 
-            var heading = Ui.Row(StockRoot(w), 29, 6);
+            var heading = Ui.Row(StockRoot(w), 29, StockQuoteGap);
             heading.GetComponent<HorizontalLayoutGroup>().padding.right = 20; // Match the scrollbar gutter.
             StockCell(heading, "", 29, 40);
             StockFlex(Ui.Label(heading, "公司", 15, color: Ui.Dim), 29);
@@ -228,49 +228,46 @@ namespace PCShopSell.Game.UI
                 StockCell(heading, "成本价", 29, color: Ui.Accent);
             }
             string buyHeading = _stockShortMode ? "借入做空" : "买入总价（含手续费）";
-            Ui.Size(Ui.Label(heading, buyHeading, 15, TextAnchor.MiddleCenter), _stockShortMode ? 94 : StockBuyWidth, 29);
-            StockCell(heading, _stockShortMode ? "买回归还" : "卖出", 29, 94);
+            Ui.Size(Ui.Label(heading, buyHeading, 15, TextAnchor.MiddleCenter),
+                _stockShortMode ? StockSellWidth : StockBuyWidth + StockQuoteGap + StockBulkWidth, 29);
+            Ui.Size(Ui.Label(heading, _stockShortMode ? "买回归还" : "卖出", 15, TextAnchor.MiddleCenter),
+                _stockShortMode ? StockSellWidth : StockSellWidth + StockQuoteGap + StockBulkWidth, 29);
 
             var list = StockScroll(StockRoot(w), "StockQuoteScroll");
-            var ids = StockIds.Where(id => (!_stockWatchOnly || S.StockWatched(id)) && (!_stockShortMode || id != "hardware"));
+            var ids = StockIds.Where(id => (!_stockWatchOnly || S.StockWatched(id))
+                && (id != "hardware" || !_stockShortMode && S.FundUnits > 0));
             if (_stockSort == 1) ids = ids.OrderByDescending(id => S.CityInvestmentPrice(id).Cents);
             if (_stockSort == 2 && !_stockShortMode) ids = ids.OrderByDescending(S.StockDayChange);
             bool any = false;
             foreach (string id in ids)
             {
-                BuildStockRow(w, list, id, id == "hardware" ? indexQuantityInput : stockQuantityInput);
+                BuildStockRow(w, list, id, stockQuantityInput);
                 any = true;
             }
             if (!any) StockText(list, "暂无自选股票。", 16, Ui.Dim);
         }
 
-        private InputField BuildStockQuantity(Window w, Transform parent, bool index)
+        private InputField BuildStockQuantity(Window w, Transform parent)
         {
-            int step = index ? 1 : GameSession.StockLotSize;
-            int Quantity() => index ? _indexOrderQuantity : _stockOrderQuantity;
-            void SetQuantity(int value)
-            {
-                if (index) _indexOrderQuantity = value;
-                else _stockOrderQuantity = value;
-            }
+            const int step = GameSession.StockLotSize;
             void StepQuantity(int direction)
             {
-                int stepped = (Quantity() / step + direction) * step;
-                SetQuantity(Mathf.Clamp(stepped, step, StockQuantityLimit));
+                int stepped = (_stockOrderQuantity / step + direction) * step;
+                _stockOrderQuantity = Mathf.Clamp(stepped, step, GameSession.StockOrderLimit);
                 w.Rebuild();
             }
-            Ui.Size(Ui.Label(parent, index ? "指数" : "每次交易", 15), index ? 38 : 74, 36);
+            Ui.Size(Ui.Label(parent, "每次交易", 15), 74, 36);
             Ui.Size(Ui.Button(parent, "−", () => StepQuantity(-1), 16), 34, 34);
-            var input = Ui.TextInput(parent, Quantity().ToString(), "", text =>
+            var input = Ui.TextInput(parent, _stockOrderQuantity.ToString(), "", text =>
             {
-                SetQuantity(int.TryParse(text, out int value) ? value : 0);
+                _stockOrderQuantity = int.TryParse(text, out int value) ? value : 0;
                 w.RequestRebuild();
             });
             input.contentType = InputField.ContentType.IntegerNumber;
             input.characterLimit = 7;
             Ui.Size(input, 88, 34);
             Ui.Size(Ui.Button(parent, "+", () => StepQuantity(1), 16), 34, 34);
-            Ui.Size(Ui.Label(parent, index ? "份" : "股", 15), 24, 36);
+            Ui.Size(Ui.Label(parent, "股", 15), 24, 36);
             return input;
         }
 
@@ -286,7 +283,7 @@ namespace PCShopSell.Game.UI
             long units = shortMode ? stock.ShortUnits : held;
             long basis = shortMode ? stock.ShortBasisCents : S.CityInvestmentCost(id).Cents;
             double? cost = units > 0 ? basis / (double)units : (double?)null;
-            var row = Ui.Row(list, 43, 6);
+            var row = Ui.Row(list, 43, StockQuoteGap);
             row.name = "StockQuote_" + id;
             Ui.Size(Ui.Button(row, S.StockWatched(id) ? "★" : "☆", () => { S.ToggleStockWatch(id); w.Rebuild(); }, 17), 40, 36);
             var name = Ui.Button(row, (expanded ? "▾  " : "▸  ") + StockTitle(id), () =>
@@ -314,16 +311,32 @@ namespace PCShopSell.Game.UI
                 StockCell(row, held.ToString("N0"), 39);
                 StockCell(row, costText, 39, color: cost.HasValue ? Ui.Accent : Ui.Dim);
             }
-            bool index = id == "hardware";
-            int Quantity() => index ? _indexOrderQuantity : _stockOrderQuantity;
+            if (id == "hardware")
+                StockCell(row, "旧指数持仓", 39, StockBuyWidth + StockBulkWidth + StockSellWidth + 2 * StockQuoteGap, Ui.Dim);
+            else BuildStockOrderButtons(w, row, id, quantityInput, shortMode);
+
+            if (!shortMode)
+            {
+                string reason = held > 0 ? S.StockTradeBlocker(id, held, "sell") : "当前没有持仓";
+                var sellAll = Ui.Size(Ui.Button(row, "全部卖出", () => TradeStockQuote(w, id, S.CityInvestmentUnits(id), 1),
+                    15, Ui.ButtonBg, held > 0), StockBulkWidth, 36);
+                sellAll.name = "StockQuickSellAll_" + id;
+                sellAll.Tip(reason ?? $"卖出 {held:N0}{(id == "hardware" ? "份" : "股")} · 预计到账 {S.CityInvestmentTradeTotal(id, held, buy: false)}");
+            }
+            if (expanded) BuildStockDetails(w, list, id, units, basis, cost, costText);
+        }
+
+        private void BuildStockOrderButtons(Window w, Transform row, string id, InputField quantityInput, bool shortMode)
+        {
             string BuyText(int quantity)
             {
-                if (!index && quantity % GameSession.StockLotSize != 0) return "买入 —";
+                if (quantity % GameSession.StockLotSize != 0) return "买入 —";
                 var total = S.CityInvestmentTradeTotal(id, quantity, buy: true);
                 return "买入 " + (total.IsPositive ? total.ToString() : "—");
             }
-            var buyButton = Ui.Size(Ui.Button(row, shortMode ? "借入" : BuyText(Quantity()), () => TradeStockQuote(w, id, Quantity(), shortMode ? 2 : 0),
-                16, Ui.ButtonHot), shortMode ? 94 : StockBuyWidth, 36);
+            var buyButton = Ui.Size(Ui.Button(row, shortMode ? "借入" : BuyText(_stockOrderQuantity),
+                () => TradeStockQuote(w, id, _stockOrderQuantity, shortMode ? 2 : 0),
+                16, Ui.ButtonHot), shortMode ? StockSellWidth : StockBuyWidth, 36);
             buyButton.name = (shortMode ? "StockQuickShort_" : "StockQuickBuy_") + id;
             if (!shortMode)
             {
@@ -333,10 +346,15 @@ namespace PCShopSell.Game.UI
                 label.resizeTextMaxSize = 16;
                 label.resizeTextForBestFit = true;
                 quantityInput.onValueChanged.AddListener(value => label.text = BuyText(int.TryParse(value, out int count) ? count : 0));
+                long max = S.StockMaximumBuyQuantity(id);
+                var buyMax = Ui.Size(Ui.Button(row, "最大买入", () => TradeStockQuote(w, id, S.StockMaximumBuyQuantity(id), 0),
+                    15, Ui.ButtonHot, max > 0), StockBulkWidth, 36);
+                buyMax.name = "StockQuickBuyMax_" + id;
+                buyMax.Tip(max > 0 ? $"买入 {max:N0}股 · 含手续费 {S.CityInvestmentTradeTotal(id, max, buy: true)}"
+                    : S.StockTradeBlocker(id, GameSession.StockLotSize, "buy") ?? "当前无法买入");
             }
-            Ui.Size(Ui.Button(row, shortMode ? "归还" : "卖出", () => TradeStockQuote(w, id, Quantity(), shortMode ? 3 : 1),
-                16), 94, 36).name = (shortMode ? "StockQuickCover_" : "StockQuickSell_") + id;
-            if (expanded) BuildStockDetails(w, list, id, units, basis, cost, costText);
+            Ui.Size(Ui.Button(row, shortMode ? "归还" : "卖出", () => TradeStockQuote(w, id, _stockOrderQuantity, shortMode ? 3 : 1),
+                16), StockSellWidth, 36).name = (shortMode ? "StockQuickCover_" : "StockQuickSell_") + id;
         }
 
         private void BuildStockDetails(Window w, Transform parent, string id, long units, long basis, double? cost, string costText)
@@ -378,12 +396,8 @@ namespace PCShopSell.Game.UI
                     16, color: ratio < 1.5 ? Ui.Warn : Ui.Dim), 34);
                 Ui.Size(Ui.Button(margin, "补充保证金", () => OpenStockMargin(w, id), 15), 126, 32);
             }
-            if (id != "hardware" && units % GameSession.StockLotSize != 0)
-            {
-                int action = _stockShortMode ? 3 : 1;
-                Ui.Size(Ui.Button(card, (_stockShortMode ? "全部归还" : "全部卖出") + $" · {units:N0}股",
-                    () => TradeStockQuote(w, id, units, action), 15), -1, 32);
-            }
+            if (_stockShortMode && units % GameSession.StockLotSize != 0)
+                Ui.Size(Ui.Button(card, $"全部归还 · {units:N0}股", () => TradeStockQuote(w, id, units, 3), 15), -1, 32);
         }
 
         private static void RevealStock(Window w, string id)

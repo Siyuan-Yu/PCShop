@@ -186,7 +186,7 @@ namespace PCShopSell.Core.Session
         public long[] CityInvestmentHistory(string id) => id == "hardware" ? _cityFundHistory : _cityEquities.Find(e => e.Id == id)?.History;
         public Money CityInvestmentTradeTotal(string id, long units, bool buy)
         {
-            if (units <= 0 || units > 1000000) return Money.Zero;
+            if (units <= 0 || units > StockOrderLimit) return Money.Zero;
             Money gross = CityInvestmentPrice(id) * units; if (!gross.IsPositive) return Money.Zero;
             Money fee = CityInvestments.Fee(gross, id == "hardware"); return buy ? gross + fee : gross - fee;
         }
@@ -196,7 +196,6 @@ namespace PCShopSell.Core.Session
             string appBlocker=AppBlocker(PhoneApps.Securities);if(appBlocker!=null)return Fail(appBlocker);
             string tradeBlocker=StockTradeBlocker(id,units,buy?"buy":"sell");if(tradeBlocker!=null)return Fail(tradeBlocker+"。");
             var e = _cityEquities.Find(x => x.Id == id);
-            if ((id != "hardware" && e == null) || IsGameOver || units <= 0 || units > 1000000) return Fail("请通过手机证券，按整数份额交易。");
             Money amount = CityInvestmentTradeTotal(id, units, buy); if (!amount.IsPositive) return Fail("交易金额不足以支付手续费。");
             if (buy && !acknowledgeReserve && CityInvestmentUsesReserve(id, units)) return Fail("这笔买入将动用未来必付款及资金保护额，请在投资确认页阅读预警后继续。");
             long held = CityInvestmentUnits(id); if (!buy && held < units) return Fail("不能卖出超过实际持仓的份额。");
@@ -205,8 +204,8 @@ namespace PCShopSell.Core.Session
             if (buy)
             {
                 if (!Ledger.TryDebit(Clock.Today, "证券投资", amount, id + "买入（含交易费）", attribution)) return Fail("现金不足，未产生持仓或借款。");
-                if (id == "hardware") { FundUnits += units; CityFundCostCents += amount.Cents; }
-                else { e.Units += units; e.CostCents += amount.Cents; }
+                e.Units += units;
+                e.CostCents += amount.Cents;
             }
             else
             {

@@ -31,13 +31,23 @@ namespace PCShopSell.Game.UI
             });
         }
 
-        private void OpenExpoReception()
+        private void OpenExpoReception() => OpenExpoReceptionForActivity(null);
+
+        private void OpenExpoReceptionForActivity(string activityId)
         {
             var place = S.CurrentPlace;
-            if (place?.Id == "life_expo" && S.OnsiteActivityAt(place) != null)
+            if (place?.Id == "life_expo" && (S.OnsiteActivityAt(place, activityId) ?? S.OnsiteActivityAt(place)) != null)
             {
-                S.PrepareVenueCompanions(place);
-                OpenWindow("云帆会展中心 · 现场预约", 860, 620, w => BuildOnsiteAppointment(w, place));
+                if (S.RunningCityActivity?.VenueId == place.Id && S.CurrentOnsite != null) { OpenOnsitePlay(); return; }
+                S.PrepareVenueCompanions(place, activityId);
+                OpenWindow("云帆会展中心 · 现场预约", 860, 620, w => BuildOnsiteAppointment(w, place, activityId));
+                return;
+            }
+            if (place?.Id == "life_expo" && S.PendingVenueActivity(place, activityId) is { ServiceConfirmed: true } booking
+                && S.CityActivityService(booking) is CityActivityDefinition reserved)
+            {
+                S.PrepareVenueCompanions(place, booking.Id);
+                OpenWindow("云帆会展中心 · 现场预约", 860, 620, w => BuildConfirmedVenueAppointment(w, booking, reserved, here: true));
                 return;
             }
             if (S.CurrentPlace?.Id == "life_expo" && S.CityExpoOpen(false)

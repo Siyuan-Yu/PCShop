@@ -8,7 +8,7 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         private int _oldMarketStall;
-        private void BuildOldMarket(Window w, Place place)
+        private void BuildOldMarket(Window w, Place place, string activityId = null)
         {
             Line(w.Content, "营业时间 09:00–22:00", 17, Ui.Dim);
             if (!S.AtOldMarket)
@@ -16,7 +16,10 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content, "去市场逛逛", () => { CloseAllWindows(); _ctrl.GoToPlace(place); }, 19, Ui.ButtonHot), -1, 46);
                 return;
             }
-            foreach (var activity in S.CityActivities.Where(a => a.Active && a.VenueId == place.Id))
+            var booking = S.PendingVenueActivity(place, activityId);
+            if (booking?.ServiceConfirmed == true && S.CityActivityService(booking) is CityActivityDefinition reserved)
+                BuildConfirmedVenueAppointment(w, booking, reserved, here: true);
+            foreach (var activity in S.CityActivities.Where(a => a.Active && a.VenueId == place.Id && (a != booking || !a.ServiceConfirmed)))
             {
                 string id = activity.Id;
                 Ui.Size(Ui.Button(w.Content, "和朋友一起逛", () => OpenCityActivityDetail(id), 18), -1, 42);

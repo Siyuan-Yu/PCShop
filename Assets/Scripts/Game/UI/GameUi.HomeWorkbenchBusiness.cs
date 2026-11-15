@@ -261,7 +261,7 @@ namespace PCShopSell.Game.UI
             var close = Ui.Size(Ui.Choice(hours, options, closeHour, i => { S.SetWorkbenchHours(shop.Place.Id, openHour, i, false); w.RequestRebuild(); }), 96, 34, 0); close.name = "WorkbenchCloseHour";
             Ui.Size(WbButton(hours, sim.AllDay ? "不限时 ✓" : "不限时", () => { S.SetWorkbenchHours(shop.Place.Id, defaultOpenHour, defaultCloseHour, !sim.AllDay); w.RequestRebuild(); }, "WorkbenchAllDay"), -1, 34, 1);
             Ui.Size(Ui.Label(left, "统一加价 " + sim.Markup.ToString("0.00") + "×", 15, TextAnchor.MiddleLeft, WbDim), -1, 22);
-            PriceMultiplierEditor(left, "WorkbenchMarkup_" + shop.Place.Id, "统一加价", sim.Markup, PCShopSell.Core.Shop.ShopSettings.MinMarkup, PCShopSell.Core.Shop.ShopSettings.MaxMarkup, .05, value => S.SetWorkbenchMarkup(shop.Place.Id, value), w.RequestRebuild);
+            PriceMultiplierEditor(left, "WorkbenchMarkup_" + shop.Place.Id, "统一加价", () => sim.Markup, PCShopSell.Core.Shop.ShopSettings.MinMarkup, PCShopSell.Core.Shop.ShopSettings.MaxMarkup, .05, value => S.SetWorkbenchMarkup(shop.Place.Id, value), w.RequestRebuild);
             var actions = Ui.Row(left, 32, 6);
             Ui.Size(WbButton(actions, "员工与排班", OpenEmployeesPanel, "WorkbenchShopStaff"), -1, 32, 1);
             Ui.Size(WbButton(actions, "进货员与记录", () => OpenShopBuyers(shop), "WorkbenchShopBuyers"), -1, 32, 1); Ui.Size(WbButton(actions, "本店采购", () => OpenCityProcurementFor(shop), "WorkbenchShopProcurement"), -1, 32, 1);
@@ -331,7 +331,8 @@ namespace PCShopSell.Game.UI
             WbHeading(right, GameSession.FirstChapterTrial ? "直供采购" : "品牌与合作");
             var list = WbScroll(right, "WorkbenchCooperationList");
             if (S.BrandManagementUnlocked)
-                WbLink(list, "品牌 · 代言人 / 展会 / 竞标", OpenBrandOverview, "WorkbenchBrandBusiness");
+                WbLink(list, S.KolAmbassadorAccessBlocker == null ? "品牌 · 代言人 / 展会 / 竞标" : "品牌 · 展会 / 竞标",
+                    OpenBrandOverview, "WorkbenchBrandBusiness");
             if (BusinessUnlocked)
             {
                 WbLink(list, "直供采购", () => { _businessTab = 1; ShowBusinessPanel(false); }, "WorkbenchDirectSupply");

@@ -73,7 +73,8 @@ namespace PCShopSell.Game.UI
             var label = Ui.Label(row, $"{line.Name} <color=#E8BE62>{amountText}</color>\n<size=14><color=#AAB4BB>{kg:0.###} 千克{price}</color></size>", 17, TextAnchor.MiddleLeft);
             label.verticalOverflow = VerticalWrapMode.Truncate;
             Ui.Size(label, -1, -1, 1); { var le = label.GetComponent<LayoutElement>(); le.minWidth = 0; le.preferredWidth = 0; }
-            HoldButton(w, row, moveText, Ui.ButtonBg, moveMax, line.ByWeight ? "千克" : "件", move, 78);
+            if (!line.HomeDeliveryOnly)
+                HoldButton(w, row, moveText, Ui.ButtonBg, moveMax, line.ByWeight ? "千克" : "件", move, 78);
             Ui.Size(Ui.Button(row, "移除", () => { remove(amount); w.Rebuild(); }, 15, Ui.ButtonBg), 58, 34);
         }
 
@@ -89,7 +90,7 @@ namespace PCShopSell.Game.UI
             double truckKg = S.CartTruckKg;
             if (kinds == 0)
             {
-                var hint = Ui.Label(side, "在左边商品点“＋”加入购物车。\n能背的优先放背包，装不下的自动叫车。\n设备、车辆直接登记为已购资产。", 16, TextAnchor.UpperLeft, Ui.Dim);
+                var hint = Ui.Label(side, "在左边输入或加减数量，加入购物车。\n能背的优先放背包，装不下的自动叫车。\n设备、车辆直接登记为已购资产。", 16, TextAnchor.UpperLeft, Ui.Dim);
                 Ui.Size(hint, -1, -1, 0).GetComponent<LayoutElement>().flexibleHeight = 1;
             }
             else
@@ -133,7 +134,9 @@ namespace PCShopSell.Game.UI
                     {
                         var (_, minutes) = S.CourierQuote(dest);
                         Ui.Size(Ui.Label(destRow, "送到", 16, TextAnchor.MiddleLeft, Ui.Dim), 40);
-                        Ui.Size(Ui.Button(destRow, S.CourierDestName(dest) + "  ▼", () => OpenCourierDestMenu(w, dest, false), 15, Ui.ButtonBg), -1, 32, 1);
+                        if (S.CartRequiresHomeDelivery)
+                            Ui.Size(Ui.Label(destRow, "家里 · 居家办公台配送", 15), -1, 32, 1);
+                        else Ui.Size(Ui.Button(destRow, S.CourierDestName(dest) + "  ▼", () => OpenCourierDestMenu(w, dest, false), 15, Ui.ButtonBg), -1, 32, 1);
                         Ui.Size(Ui.Label(destRow, $"约 {minutes} 分钟", 14, TextAnchor.MiddleRight, Ui.Dim), 80);
                     }
                     else Ui.Size(Ui.Label(destRow, "全部自己背走，不叫车。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);

@@ -132,7 +132,7 @@ namespace PCShopSell.Core.Session
             int day = Clock.Today.TotalDays;
             int travel = CityTravelMinutes(City.GetPlace(StarterRaceTrackId));
             if (Clock.MinuteOfDay + travel + 30 >= 1080) day++;
-            return EventScene(template, "城郊练习场开放人工洒水湿地训练。预约当天 09:00–18:00 到场，使用本区实际入库车辆。"
+            return EventScene(template, "城郊赛车报名点开放人工洒水湿地训练。预约当天 09:00–18:00 到场，使用本区实际入库车辆。"
                 + "\n费用 ¥1,000，抓地力降至平常的 60%、制动降至 80%，按实际操作和碰撞结算，不用胜场掷骰。维修按真实车损另算。"
                 + "\n日期：" + new GameDate(day),
                 Choose("预约湿地驾驶", s =>
@@ -154,7 +154,7 @@ namespace PCShopSell.Core.Session
         private void StartSocialBatchActivity(CityActivity activity)
         {
             if (!activity.DefinitionId.StartsWith("social_", StringComparison.Ordinal)) return;
-            foreach (var guest in activity.Participants) Meet(guest.PersonId, Math.Max(14, Relation(guest.PersonId)));
+            foreach (var guest in activity.Participants) Meet(guest.PersonId, 0);
             if (!string.IsNullOrEmpty(activity.EventGiftId) && !activity.EventGiftDelivered && Backpack.TakeGift(activity.EventGiftId))
             {
                 activity.EventGiftDelivered = true;
@@ -183,13 +183,18 @@ namespace PCShopSell.Core.Session
             if (!activity.DefinitionId.StartsWith("social_", StringComparison.Ordinal)) return;
             Flags.Add("social:completed:" + activity.DefinitionId);
             if (activity.DefinitionId == "social_45") Flags.Add("social:chef-story");
-            if (activity.DefinitionId == "social_47" && activity.EventGiftDelivered) AddRelation("keeper_farm", 2);
+            if (activity.DefinitionId == "social_47" && activity.EventGiftDelivered) AwardCityActivityRelation(activity, "keeper_farm", 2);
             if (activity.DefinitionId == "social_49")
             {
                 Ledger.Credit(Clock.Today, "试听劳务", Money.FromYuan(AudioHelpPayment), "傅知的音响调试");
                 activity.EventSettlementNote = "试听劳务报酬已到账 ¥1,500。";
                 if (activity.Choices.Contains("audio-finding"))
-                { AddRelation("resident_fuzhi", 2); Player.Intelligence = Math.Min(100, Player.Intelligence + 1); activity.EventSettlementNote += "定位了专业问题，额外交情 +2、见识 +1。"; }
+                {
+                    int relation = AwardCityActivityRelation(activity, "resident_fuzhi", 2);
+                    Player.Intelligence = Math.Min(100, Player.Intelligence + 1);
+                    string bonus = relation > 0 ? $"额外好感 +{relation}、" : "";
+                    activity.EventSettlementNote += $"定位了专业问题，{bonus}见识 +1。";
+                }
             }
         }
         private IEnumerable<string> SocialBatchLearnedStories(string personId)
@@ -204,7 +209,7 @@ namespace PCShopSell.Core.Session
         private void PrepareSocialBatchAcceptance(int number)
         {
             _district.UnlockedTier = 3;
-            Flags.Add(RacingAccessFlag); Flags.Add(RacingIntroShownFlag);
+            Flags.Add(RacingAccessFlag);
             if (number == 41) { _celebrationRaceKey = "debug:" + _nextCityActivity; _celebrationRacePeople = new[] { "racer_0", "racer_1" }; }
             if (number == 42) PrepareRacingBatchAcceptance(39);
         }

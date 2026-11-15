@@ -94,7 +94,9 @@ namespace PCShopSell.Core.Session
                 if(response=="end")return EndKolLive(c.Id);
                 if(response=="pause"||response=="continue")
                 {
-                    d.Response=response;return SetKolSchedule(c.Id,c.StartMinute,c.EndMinute,response!="pause");
+                    if (!SetKolSchedule(c.Id, c.StartMinute, c.EndMinute, response != "pause")) return false;
+                    d.Response = response;
+                    return true;
                 }
             }
             if(response=="end")

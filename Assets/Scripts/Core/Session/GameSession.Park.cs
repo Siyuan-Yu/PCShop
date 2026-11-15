@@ -23,9 +23,10 @@ namespace PCShopSell.Core.Session
             if(HasPark) return "已拥有园区";
             if(!HasShop || PlayerShop.Reputation<35) return "需要主店和名望 35";
             if(l==null || l.Size!=ShopSize.Large || l.OpenDay>Clock.Today.TotalDays || l.CloseDay<Clock.Today.TotalDays) return "需要一间当前空置的大型铺面";
-            string protection = CommercialPremisesBlocker(City.HasPlace(l.PlaceId) ? City.GetPlace(l.PlaceId) : null);
+            var place = City.HasPlace(l.PlaceId) ? City.GetPlace(l.PlaceId) : null;
+            string protection = CommercialPremisesBlocker(place) ?? DistrictAccessBlocker(place);
             if (protection != null) return protection;
-            if(IsMyShop(City.GetPlace(l.PlaceId)) || VentureAt(l.PlaceId)!=null || PropertyAt(l.PlaceId)!=null) return "这处铺面已在使用";
+            if(IsMyShop(place) || VentureAt(l.PlaceId)!=null || PropertyAt(l.PlaceId)!=null) return "这处铺面已在使用";
             if(Ledger.Balance<ParkLandPrice(l)+Money.FromYuan(50000)) return "需全额地价和 ¥50,000 公共区域改造费";
             return null;
         }
@@ -33,6 +34,7 @@ namespace PCShopSell.Core.Session
         {
             if(IsGameOver || !InAgency) return Fail("在房产中介签园区购置合同。");
             var l=_listings.Find(x=>x.PlaceId==id); string why=ParkPurchaseBlocker(l);if(why!=null)return Fail(why);
+            if (!AgencyServes(CurrentPlace, ListingPlace(l))) return Fail("请到园区房源所属片区的中介签约。");
             Money land=ParkLandPrice(l);
             Ledger.ForceDebit(Clock.Today,"园区投资",land+Money.FromYuan(50000),"购置及公共区域改造");
             _properties.Add(new OwnedProperty{PlaceId=id,PriceCents=land.Cents,BoughtDay=Clock.Today.TotalDays});

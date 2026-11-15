@@ -1385,7 +1385,7 @@ namespace PCShopSell.EditorTools
             Check(contract != null && staffed.AcceptEnterprise(contract.Id), "企业订单进入装机队列");
             staffed.Meet("momo", 0);
             Check(staffed.SignKolAmbassador("momo", 90, 1, remote: true), "签下待分配的代言人");
-            Check(staffed.TradeFund(10, true), "指数投资有持仓");
+            Check(staffed.TradeCityInvestment("city_chip", GameSession.StockLotSize, buy: true, acknowledgeReserve: true), "股票投资有持仓");
             var agency = staffed.City.FirstOfKind(PlaceKind.Agency);
             Teleport(staffed, agency.Id);
             _game.Ui.CloseAllWindows();

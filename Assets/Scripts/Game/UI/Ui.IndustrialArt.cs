@@ -9,7 +9,7 @@ namespace PCShopSell.Game.UI
         private static readonly System.Collections.Generic.Dictionary<string,Sprite> NavigationIcons=new System.Collections.Generic.Dictionary<string,Sprite>();
         private static void NavigationArt(Button button,Text label,string title)
         {
-            if(button.transform.parent?.parent?.name!="TopBar"||!new[]{"我的","背包 B","日程","人物","人脉","员工","手机","任务","经营","资产","采购","品牌","通知","菜单"}.Contains(title))return;
+            if(button.transform.parent?.parent?.name!="TopBar"||!new[]{"我的","背包","日程","人物","人脉","员工","手机","任务","经营","资产","采购","品牌","赛车","通知","菜单"}.Contains(title))return;
             if(!NavigationIcons.TryGetValue(title,out var sprite))
             {
                 const int n=32;var tex=new Texture2D(n,n,TextureFormat.RGBA32,false){name="Navigation / "+title,filterMode=FilterMode.Bilinear};
@@ -25,7 +25,15 @@ namespace PCShopSell.Game.UI
                 {Box(4,5,24,13);Line(4,18,12,23);Line(12,23,12,18);Line(13,18,21,23);Line(21,23,21,18);Box(23,18,4,10);Box(8,8,4,5);Box(18,8,4,5);}
                 else if(title=="手机"){Box(9,3,14,26);Line(12,25,20,25);Line(13,7,19,7);}
                 else if(title=="菜单"){for(int y=8;y<28;y+=8)Line(5,y,26,y);}
-                else if(title=="背包 B"){Box(7,4,18,19);Box(12,23,8,5);Box(10,7,12,6);}
+                else if(title=="背包"){Box(7,4,18,19);Box(12,23,8,5);Box(10,7,12,6);}
+                else if (title == "赛车")
+                {
+                    Line(6, 4, 6, 28);
+                    Box(6, 12, 20, 16);
+                    for (int y = 13; y < 28; y++)
+                        for (int x = 7; x < 26; x++)
+                            if (((x - 7) / 5 + (y - 13) / 4) % 2 == 0) Pixel(x, y);
+                }
                 else if(title=="通知"){Line(6,9,9,23);Line(9,23,16,27);Line(16,27,23,23);Line(23,23,26,9);Line(6,9,26,9);Head(16,5,3);}
                 else {Box(6,4,20,23);Line(10,29,10,24);Line(22,29,22,24);Line(10,18,22,18);Line(10,12,22,12);}
                 tex.SetPixels32(pixels);tex.Apply();sprite=Sprite.Create(tex,new Rect(0,0,n,n),Vector2.one*.5f);NavigationIcons[title]=sprite;

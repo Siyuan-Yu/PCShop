@@ -87,6 +87,8 @@ namespace PCShopSell.Core.Session
         public int DistrictOperatingShops(int tier) => MyShops.Count(s => DistrictTierOf(s.Place)==tier
             && (IsDedicatedVenue(s.Place) ? VenueOperation(s.Place.Id)?.Accepting==true : !s.Sim.NotFitted)
             && s.RenovationDay < Clock.Today.TotalDays && !Flags.Contains(OpeningChoicePrefix+s.Place.Id));
+        public Money CommunityOwnCash => Ledger.Balance - Money.FromCents(_appLoans.Where(loan => !loan.Repaid).Sum(loan => loan.PrincipalCents));
+
         public string DistrictPrerequisiteBlocker(int chapter)
         {
             if (chapter < 1 || chapter > 3) return "未知阶段";
@@ -98,8 +100,9 @@ namespace PCShopSell.Core.Session
                 int shops = DistrictOperatingShops(0);
                 if (shops < DistrictNarrativeCatalog.CommunityShopMinimum)
                     return $"城郊已布置并开业的门店 {shops}/{DistrictNarrativeCatalog.CommunityShopMinimum}";
-                if (Ledger.Balance < Money.FromYuan(DistrictNarrativeCatalog.CommunityCashMinimumYuan))
-                    return $"现金尚未达到 {DistrictNarrativeCatalog.CommunityCashMinimumYuan / 10_000} 万元";
+                if (CommunityOwnCash < Money.FromYuan(DistrictNarrativeCatalog.CommunityCashMinimumYuan))
+                    return $"自有现金尚未达到 {DistrictNarrativeCatalog.CommunityCashMinimumYuan / 10_000} 万元";
+                if (HasOutstandingLoans) return "请先结清所有贷款";
             }
             if (chapter==2)
             {
@@ -526,7 +529,11 @@ namespace PCShopSell.Core.Session
                 }
             }
             finally{SetFocus(previous);}
-            if(chapter==1 && Ledger.Balance<Money.FromYuan(1000000))DebugAddCash((100000000-Ledger.Balance.Cents+99)/100);
+            if (chapter == 1)
+            {
+                long gap = Money.FromYuan(DistrictNarrativeCatalog.CommunityCashMinimumYuan).Cents - CommunityOwnCash.Cents;
+                if (gap > 0) DebugAddCash((gap + 99) / 100);
+            }
             if(chapter==2)
             {
                 long gap=3000000000L-NetWorth().Cents;if(gap>0)DebugAddCash((gap+99)/100);

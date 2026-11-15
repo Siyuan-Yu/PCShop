@@ -112,6 +112,10 @@ namespace PCShopSell.Game.UI
             return frame.rectTransform;
         }
 
+        private static string PersonNameWithKolBadge(string personId, string name) =>
+            KolMarket.Get(personId) == null ? name
+                : $"{name}  <size=14><color=#{ColorUtility.ToHtmlStringRGB(Ui.Accent)}>KOL</color></size>";
+
         private RectTransform PersonSummary(Transform parent, string personId, string name, string detail, int height = 54,
             System.Action onClick = null, Color? ink = null, Color? muted = null)
         {
@@ -311,7 +315,7 @@ namespace PCShopSell.Game.UI
                     () => OpenCityPersonProfile(portraitId, fromConversation: true), tagText: null);
                 portrait.Find("Caption").gameObject.SetActive(false);
                 portrait.GetComponentInChildren<Button>().Tip("查看人物资料");
-                Ui.Label(identity.transform, name, 22, TextAnchor.MiddleCenter, Ui.Accent).fontStyle = FontStyle.Bold;
+                Ui.Label(identity.transform, PersonNameWithKolBadge(portraitId, name), 22, TextAnchor.MiddleCenter, Ui.Accent).fontStyle = FontStyle.Bold;
                 Ui.Label(identity.transform, role, 15, TextAnchor.MiddleCenter, Ui.Dim);
                 if (!replyOnly)
                 {
@@ -447,7 +451,7 @@ namespace PCShopSell.Game.UI
                 }
                 if (!creatorChoice && !discussingPeople)
                 {
-                    if (KolMarket.Get(personId) != null && S.IsMet(personId))
+                    if (S.KolAmbassadorAccessBlocker == null && KolMarket.Get(personId) != null && S.IsMet(personId))
                         options.Add(new TalkOpt { Label = "谈品牌代言与直播", Blocker = canTalk ? null : "对方已离开",
                             Act = () => OpenKolNegotiation(personId, ctx.W, remote) });
                     if (Creators.Get(personId) != null && S.IsMet(personId) && S.HasMcn)
@@ -555,7 +559,8 @@ namespace PCShopSell.Game.UI
         }
 
         private string ConversationViewKey(string id) => S.Clock.Today.TotalDays + "|" + S.CitySamePlace(id) + "|" + S.Relation(id)
-            + "|" + S.HasGreeted(id) + "|" + S.IsMet(id) + "|" + S.RomanceId + "|" + S.CarriedKg.ToString("R");
+            + "|" + S.HasGreeted(id) + "|" + S.IsMet(id) + "|" + S.RomanceId + "|" + S.CarriedKg.ToString("R")
+            + "|" + S.DistrictAccessTier;
 
         private void OpenPersonGiftGrid(string personId, string name, TalkCtx ctx)
         {

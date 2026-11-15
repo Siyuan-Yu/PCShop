@@ -65,11 +65,25 @@ namespace PCShopSell.Game.UI
             string detail = _agencyResidential ? "当前住处：" + S.HomeTitle
                 : $"与{Rosters.AgentChen.Name}的熟悉度 {S.AgentRapport} · 中介费减免 {AgencyDiscountPercent}";
             Ui.Size(Ui.Label(header, $"<b>{S.City.AgencyCoverageName(agency)} · 本片区房源</b>　现金 {S.Ledger.Balance}\n<size=16>负责：{coverage}\n<color=#ABB5A8>{detail}</color></size>", 20), -1, 62, 1);
-            if(BusinessUnlocked && !_agencyResidential)
+            if (_agencyResidential || !BusinessUnlocked || S.DistrictAccessBlocker(agency) != null) return;
+            void OpenSection(int section)
             {
-                Ui.Size(Ui.Button(header,"委托店长开店",()=>OpenBusinessSection(3),16),155);
-                Ui.Size(Ui.Button(header,S.HasPark?"园区管理":"园区筹建",()=>OpenBusinessSection(6),16),135);
+                var business = OpenBusinessSection(section);
+                business.OnClosed += w.RequestRebuild;
             }
+            var localListings = S.Listings.Where(l => S.City.HasPlace(l.PlaceId) && S.AgencyServes(agency, S.ListingPlace(l))).ToArray();
+            bool CanOpen(VentureDef kind) => localListings.Any(l => S.VentureBlocker(l.PlaceId, kind.Id) == null);
+            int openableKind = CanOpen(Ventures.All[_ventureKind]) ? _ventureKind : System.Array.FindIndex(Ventures.All, CanOpen);
+            if (openableKind >= 0)
+            {
+                Ui.Size(Ui.Button(header, "委托店长开店", () => { _ventureKind = openableKind; OpenSection(3); }, 16), 155)
+                    .name = "AgencyOpenVenture";
+            }
+            bool canUsePark = S.HasPark ? S.AgencyServes(agency, S.City.GetPlace(S.ParkPlaceId))
+                : localListings.Any(l => S.ParkPurchaseBlocker(l) == null);
+            if (canUsePark)
+                Ui.Size(Ui.Button(header, S.HasPark ? "园区管理" : "园区筹建", () => OpenSection(6), 16), 135)
+                    .name = "AgencyOpenPark";
         }
 
         private static (RectTransform map, RectTransform detail) AgencyPropertyColumns(Transform parent, string mapName, string detailName)
@@ -146,11 +160,10 @@ namespace PCShopSell.Game.UI
         {
             if (p.Kind == PlaceKind.Agency) return "房产中介 · 你在这里";
             if (S.IsMyShop(p)) return S.ShopAt(p) == S.MainShop ? "我的主店" : S.PlaceTitle(p);
-            if (S.IsPendingShop(p)) return $"已提前签下 · {S.PendingLease.StartDay - S.Clock.Today.TotalDays} 天后交房";
+            if (S.IsPendingShop(p)) return $"已提前签下 · {S.ShopHandoverText(S.PendingLease.StartDay)}";
             if (S.VentureAt(p.Id) != null || S.PropertyAt(p.Id) != null) return "我的经营资产";
             if (listing == null) return S.IsVacant(p) ? "空置 · 暂未挂牌" : "营业中 · 暂未挂牌";
-            int wait = listing.OpenDay - S.Clock.Today.TotalDays;
-            return wait > 0 ? $"{wait} 天后可租" : "正在出租";
+            return S.IsAdvance(listing) ? S.ShopHandoverText(listing.OpenDay) : "正在出租";
         }
 
         private Color AgencyColor(Place p, ShopListing listing)
@@ -234,7 +247,7 @@ namespace PCShopSell.Game.UI
                 bool advance = S.IsAdvance(l);
                 AgencyQuote(settlement, l, newShop);
                 if (advance)
-                    Line(settlement, $"第 {l.OpenDay + 1} 天交房 · 签约起计租", 16, Ui.Warn).name = "AgencyEntryCountdown";
+                    Line(settlement, $"{S.ShopHandoverText(l.OpenDay)} · 签约起计租", 16, Ui.Warn).name = "AgencyEntryCountdown";
                 AgencyPaymentSummary(settlement, S.LeaseCost(l, newShop), advance ? "确认提前租赁" : "确认租赁",
                     () => ConfirmAgencyLease(w, p.Id, newShop), "AgencyReviewLease", S.LeaseBlocker(l, newShop));
                 return;
@@ -256,7 +269,7 @@ namespace PCShopSell.Game.UI
             {
                 AgencyFeeLine(settlement, "签约周租", S.PendingLease.Rent.ToString());
                 AgencyFeeLine(settlement, "已交押金", S.PendingLease.Deposit.ToString());
-                Line(settlement, $"第 {S.PendingLease.StartDay + 1} 天交房 · 等待期间照常计租", 16, Ui.Warn).name = "AgencyEntryCountdown";
+                Line(settlement, $"{S.ShopHandoverText(S.PendingLease.StartDay)} · 等待期间照常计租", 16, Ui.Warn).name = "AgencyEntryCountdown";
             }
             else if (property == null)
                 Para(settlement, S.VentureAt(p.Id) != null ? "这间铺面已纳入你的资产。" : "这间铺面目前没有租购报价。", 17, Ui.Dim);
@@ -281,15 +294,14 @@ namespace PCShopSell.Game.UI
 
         private void AgencyEntryWarning(Transform parent, int openDay)
         {
-            int days = System.Math.Max(0, openDay - S.Clock.Today.TotalDays);
             var warning = Ui.Panel(parent, "AgencyEntryWarning", new Color32(79, 43, 27, 255));
             Ui.Size(warning, -1, 82);
             var accent = new Color32(255, 184, 104, 255);
             Ui.Panel(warning.transform, "WarningStripe", accent).rectTransform.Anchor(0, 0, 0, 1, 0, 0, -5, 0);
-            var heading = Ui.Label(warning.transform, $"<b>还需等待 {days} 天才能进入</b>", 25, TextAnchor.MiddleLeft, accent);
+            var heading = Ui.Label(warning.transform, $"<b>{S.ShopHandoverText(openDay)}</b>", 25, TextAnchor.MiddleLeft, accent);
             heading.name = "AgencyEntryCountdown";
             heading.rectTransform.Anchor(0, .48f, 1, 1, 14, 0, 8, 2);
-            var detail = Ui.Label(warning.transform, $"<b>不能立即入驻 / 营业</b> · 第 {openDay + 1} 天交房\n提前签约，房租从签约当天开始计算", 14, TextAnchor.UpperLeft, new Color32(255, 222, 181, 255));
+            var detail = Ui.Label(warning.transform, "交房后可入驻，房租从签约当天开始计算。", 14, TextAnchor.UpperLeft, new Color32(255, 222, 181, 255));
             detail.rectTransform.Anchor(0, 0, 1, .48f, 14, 5, 8, 0);
         }
 
@@ -337,7 +349,6 @@ namespace PCShopSell.Game.UI
                 if (dedicatedVenue)
                     Para(confirm.Content, "接手后进入场馆管理，设置营业时间、价格并开启接客。顾客按场地容量付费使用；不提供普通店铺柜台或货架经营。", 17);
                 string fine = "签约后每七天交一次周租。主动退租，已交押金不退。";
-                if (advance) fine += $"现租户第 {listing.OpenDay + 1} 天才搬走，到那天才能搬进去，房租从签约当天算起。";
                 Para(confirm.Content, fine, 14, Ui.Dim);
                 var row = Ui.Row(confirm.Content, 46, 10);
                 Ui.Size(Ui.Button(row, "再看看", confirm.Close, 18), -1, 46, 1);
@@ -353,7 +364,7 @@ namespace PCShopSell.Game.UI
                     }
                     if (S.SignLeaseThenChooseKind(placeId, newShop))
                     {
-                        if (S.PendingLease != null) Toast($"已提前签约，还需等待 {S.PendingLease.StartDay - S.Clock.Today.TotalDays} 天才能进入，期间房租照常计算。");
+                        if (S.PendingLease != null) Toast($"已提前签约，{S.ShopHandoverText(S.PendingLease.StartDay)}，期间房租照常计算。");
                         else Toast(S.IsDedicatedVenue(p)?"接手完成，请到场馆设置营业与值守。":"签约完成，可以自行到新店装修了。");
                         if(S.PendingShopKindPlaceId!=null){parent.Close();return;}
                     }

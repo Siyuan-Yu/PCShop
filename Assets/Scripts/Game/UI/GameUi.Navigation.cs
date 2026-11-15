@@ -25,32 +25,53 @@ namespace PCShopSell.Game.UI
         private readonly Dictionary<string, NavigationWindow> _navigation = new Dictionary<string, NavigationWindow>();
         private readonly Dictionary<string, double> _multiplierDrafts = new Dictionary<string, double>();
 
-        private void PriceMultiplierEditor(Transform parent, string key, string title, double current, double minimum, double maximum, double step, Action<double> apply, Action refresh, string draftKey = null, Action<double> onPreview = null)
+        private Action PriceMultiplierEditor(Transform parent, string key, string title, Func<double> savedValue, double minimum, double maximum, double step, Action<double> apply, Action refresh = null, string draftKey = null, Action<double> onPreview = null)
         {
             draftKey = draftKey ?? key;
-            double draft = _multiplierDrafts.TryGetValue(draftKey, out var previous) ? previous : current;
-            draft = Math.Max(minimum, Math.Min(maximum, draft));
-            var label = Line(parent, "", 17, Ui.Good); Button save = null;
-            void Preview()
-            {
-                bool changed = Math.Abs(draft - current) > .001;
-                label.text = title + $" {draft:0.00}×" + (changed ? " · 待确认" : " · 已保存");
-                if (save != null) save.interactable = changed;
-                onPreview?.Invoke(draft);
-            }
-            Ui.Slider(parent, (float)minimum, (float)maximum, (float)draft, value =>
+            double saved = savedValue();
+            double Draft() => _multiplierDrafts.TryGetValue(draftKey, out double value) ? Math.Max(minimum, Math.Min(maximum, value)) : saved;
+            double draft = Draft();
+            var label = Line(parent, "", 17, Ui.Good);
+            Button save = null;
+            Text saveLabel = null;
+            var slider = Ui.Slider(parent, (float)minimum, (float)maximum, (float)draft, value =>
             {
                 double next = Math.Max(minimum, Math.Min(maximum, Math.Round(value / step) * step));
                 if (next == draft) return;
                 draft = next;
                 _multiplierDrafts[draftKey] = draft;
                 Preview();
-            }).name = key;
+            });
+            slider.name = key;
             var row = Ui.Row(parent, 36, 6);
-            save = Ui.Size(Ui.Button(row, "确认" + title, () => { apply(draft); _multiplierDrafts.Remove(draftKey); refresh(); }, 17, Ui.ButtonHot, false), -1, 36, 1);
+            save = Ui.Size(Ui.Button(row, "确认" + title, () => { apply(draft); ClearDraft(); }, 17, Ui.ButtonHot, false), -1, 36, 1);
             save.name = "Save_" + key;
-            Ui.Size(Ui.Button(row, "还原", () => { _multiplierDrafts.Remove(draftKey); refresh(); }, 16), 90, 36);
+            saveLabel = save.GetComponentInChildren<Text>();
+            Ui.Size(Ui.Button(row, "还原", ClearDraft, 16), 90, 36);
             Preview();
+            return Sync;
+
+            void Preview()
+            {
+                bool changed = Math.Abs(draft - saved) > .001;
+                label.text = title + $" {draft:0.00}×" + (changed ? " · 待确认" : " · 已保存");
+                if (save != null) save.interactable = changed;
+                if (saveLabel != null) saveLabel.color = changed ? Ui.TextColor : Ui.Dim;
+                onPreview?.Invoke(draft);
+            }
+            void Sync()
+            {
+                saved = savedValue();
+                draft = Draft();
+                slider.SetValueWithoutNotify((float)draft);
+                Preview();
+            }
+            void ClearDraft()
+            {
+                _multiplierDrafts.Remove(draftKey);
+                Sync();
+                refresh?.Invoke();
+            }
         }
 
         // Primary screens reuse one window. Detail dialogs keep their parent and its draft.

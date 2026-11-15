@@ -16,15 +16,20 @@ namespace PCShopSell.Game.UI
     public sealed partial class GameUi
     {
         /// <summary>进入地点后打开对应面板。离开面板 = 回到街上。</summary>
-        public void OnEnteredPlace(Place p)
+        public void OnEnteredPlace(Place p, string activityId = null)
         {
             if (S.IsWorking) { UpdateWorkScreen(); return; }
+            if (TryOpenSignHelp(p, activityId)) return;
             if(p.Kind==PlaceKind.Garage){OpenMotorGarage();return;}
             if(RaceTracks.Get(p.Id)!=null){OpenRaceReception(p);return;}
             if(p.Kind==PlaceKind.Dealer||p.Id=="motor_scooter_mod"){OpenPlaceWindow(p,BuildMotorDealer,1160,900);return;}
             if(S.VentureAt(p.Id)?.Kind=="cars"){OpenPlaceWindow(p,BuildUsedMotorShop,1160,900);return;}
             if(p.Id=="life_expo"){OpenExpoReception();return;}
-            if(p.Business==GameSession.BankBusiness){OpenBank(p);return;}
+            if (p.Business == GameSession.BankBusiness)
+            {
+                OpenBank(p, S.AppLoans.Any(loan => !loan.Repaid) ? BankPage.Loans : BankPage.Transfers);
+                return;
+            }
             if (p.Business == GameSession.HospitalBusiness)
             {
                 if (S.RaceAidAt(p) != null) return;
@@ -33,7 +38,7 @@ namespace PCShopSell.Game.UI
             }
             if(p.Id==GameSession.CommunityMcnId){OpenCommunityMcn();return;}
             if(S.IsOwnedVenue(p)){OpenVenueManagement(p);return;}
-            if (UsesCityVenuePanel(p)) { OpenCityVenue(p); return; }
+            if (UsesCityVenuePanel(p)) { OpenCityVenue(p, activityId); return; }
             if (IsCarryStore(p))
             {
                 if (p.Business == GameSession.MallBusiness) OpenMall(p);
@@ -66,7 +71,7 @@ namespace PCShopSell.Game.UI
                     OpenPlaceWindow(p, BuildTobacco, StoreWindowWidth, 900);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.PhoneBusiness:
-                    OpenPlaceWindow(p, BuildPhoneShop, StoreWindowWidth, 900);
+                    OpenPlaceWindow(p, BuildCarryStore, StoreWindowWidth, 900);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.FarmBusiness:
                     OpenPlaceWindow(p, BuildFarm, StoreWindowWidth, 960);
@@ -78,7 +83,7 @@ namespace PCShopSell.Game.UI
                     OpenPlaceWindow(p, BuildDealer, 1180, 760);
                     break;
                 case PlaceKind.Station:
-                    OpenPlaceWindow(p, BuildStation);
+                    OpenPlaceWindow(p, BuildStation, holds: S.WalletReturnStation != p);
                     break;
                 default:
                     if(S.HasRetailWholesale(p))OpenPlaceWindow(p,BuildRetailWholesale,StoreWindowWidth,940);
@@ -105,7 +110,9 @@ namespace PCShopSell.Game.UI
         }
 
         private bool UsesCityVenuePanel(Place place) => place.Business?.StartsWith("venue_") == true
-            || (S.IsCityActivityVenue(place) && S.CityActivities.Any(activity => activity.Active && activity.VenueId == place.Id));
+            || S.CityActivities.Any(activity => activity.Active && activity.VenueId == place.Id
+                && (S.IsCityActivityVenue(place) || GameSession.IsOutdoorMarketVisit(activity)
+                    && (activity.State == CityActivityPhase.Running || S.PendingVenueActivity(place, activity.Id) != null)));
 
         public void OpenResidence(Place residence)
         {
@@ -175,7 +182,7 @@ namespace PCShopSell.Game.UI
                 }
                 int contentBefore = win.Content.childCount;
                 if (p.Id != "life_expo"&&p.Kind!=PlaceKind.Garage&&p.Business!=GameSession.BankBusiness
-                    && PhoneSignHelpHere(p) == null && S.OnsiteActivityAt(p) == null)
+                    && S.OnsiteActivityAt(p) == null)
                     BuildPlayerWorkEntry(win.Content, p, win);
                 if (S.HasRetailWholesale(p) && build!=BuildRetailWholesale && (p.Business==GameSession.FarmBusiness || p.Business==Gifts.TobaccoBusiness)) Ui.Size(Ui.Button(win.Content, "批发进货（可供自己店铺销售）", () => OpenRetailWholesale(p), 18, Ui.ButtonHot), -1, 40);
                 RectTransform frame = fixedLayout || S.VentureAt(p.Id) != null || S.IsPlayerPropertyOccupied(p.Id) ? null : BuildRosterFrame(win, p, h - 170 - (win.Content.childCount - contentBefore) * 52, p.Kind==PlaceKind.Dealer || p.Kind==PlaceKind.Station || p.Id=="motor_scooter_mod", w >= StoreWindowWidth ? 150 : 210);
@@ -233,6 +240,7 @@ namespace PCShopSell.Game.UI
 
         private void BuildStation(Window w, Place p)
         {
+            if (S.WalletReturnStation == p) BuildWalletHandoff(w);
             Line(w.Content, GameSession.FirstChapterTrial ? "城郊地铁" : "城市地铁 · 全站互通");
             Line(w.Content,$"票价 {GameSession.MetroFare}，约 {GameSession.MetroMinutes} 分钟。运营 6:00–23:00。",18,Ui.Dim);
             foreach(var destination in S.City.OfKind(PlaceKind.Station).Where(x=>x!=p))
@@ -244,6 +252,55 @@ namespace PCShopSell.Game.UI
                 {
                     if(S.TakeMetro(target.Id)){CloseWindowSilently(w);if(S.CurrentPlace!=null)OnEnteredPlace(S.CurrentPlace);}
                 },19,locked==null?Ui.ButtonHot:Ui.ButtonBg,locked==null),-1,44).Tip(locked??"乘地铁前往此站");
+            }
+        }
+
+        private void BuildWalletHandoff(Window w)
+        {
+            Line(w.Content, "归还钱包", 20, Ui.Accent);
+            var status = Line(w.Content, "", 16, Ui.Good);
+            status.name = "WalletWaitStatus";
+            var actions = Ui.Row(w.Content, 38, 6);
+            string owner = S.WalletReturnOwnerName;
+            var resume = Ui.Size(Ui.Button(w.Content, "继续等候", () => S.Time.SetPaused(false), 16), -1, 34);
+            resume.name = "WalletResumeWait";
+            Button toOwner = null;
+            if (owner != null)
+            {
+                toOwner = Ui.Size(Ui.Button(actions, "还给" + owner, () => Complete(true), 16, Ui.ButtonHot), -1, 38, 1);
+                toOwner.name = "WalletReturnOwner";
+            }
+            var toDesk = Ui.Size(Ui.Button(actions, "交给服务台", () => Complete(false), 16, owner == null ? Ui.ButtonHot : Ui.ButtonBg), -1, 38, 1);
+            toDesk.name = "WalletReturnDesk";
+            w.RefreshContent = Refresh;
+            Refresh();
+
+            void Refresh()
+            {
+                if (S.CurrentPlace != S.WalletReturnStation)
+                {
+                    w.RequestRebuild();
+                    return;
+                }
+                int left = S.WalletWaitLeft;
+                bool ownerHere = S.WalletOwnerAtStation;
+                status.text = left > 0 ? $"在站内等候 · 还需 {left} 分钟"
+                    : owner == null ? "站务员可以登记失物。"
+                    : ownerHere ? owner + "已到站，可以当面归还。" : "失主还没到站，可以继续等或交给服务台。";
+                resume.gameObject.SetActive(S.Time.IsUserPaused && (left > 0 || owner != null && !ownerHere));
+                toDesk.interactable = left == 0;
+                if (toOwner != null) toOwner.interactable = left == 0 && ownerHere;
+            }
+
+            void Complete(bool giveToOwner)
+            {
+                if (!S.HandOverWallet(giveToOwner)) return;
+                if (!w.Holds)
+                {
+                    S.Time.Hold();
+                    w.Holds = true;
+                }
+                w.Rebuild();
             }
         }
 

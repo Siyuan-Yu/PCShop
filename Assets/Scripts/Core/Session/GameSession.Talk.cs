@@ -32,7 +32,7 @@ namespace PCShopSell.Core.Session
             NpcDef n = Npcs.Get(npcId);
             _talkDays[npcId] = Clock.Today.TotalDays;
             string line = NpcTalk.SmallTalkLine(npcId, Clock.Today.TotalDays);
-            if (Relation(npcId) < NpcTalk.SmallTalkMaxRelation) AddRelation(npcId, NpcTalk.SmallTalkGain);
+            if (Relation(npcId) < NpcTalk.SmallTalkMaxRelation) AddSocialRelation(npcId, NpcTalk.SmallTalkGain);
             else line += $"\n（和{n.Name}聊得很开心，不过交情到这儿，光闲聊不涨了。送礼、约出去、听他讲讲过去会更有用。）";
             RememberSocial(npcId, "当面闲聊。\n" + line);
             return line;
@@ -64,7 +64,7 @@ namespace PCShopSell.Core.Session
             string story = NpcTalk.LifeStory(npcId, heard) ?? "他讲了很久，你听得很认真。";
             _lifeCount[npcId] = heard + 1;
             _lifeDays[npcId] = Clock.Today.TotalDays;
-            AddRelation(npcId, NpcTalk.LifeGain);
+            AddSocialRelation(npcId, NpcTalk.LifeGain);
             RememberSocial(npcId, $"听对方讲过去的事（第 {heard + 1} 段）。\n{story}");
             return story;
         }

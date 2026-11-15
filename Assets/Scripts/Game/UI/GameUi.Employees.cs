@@ -324,11 +324,13 @@ namespace PCShopSell.Game.UI
                         int count = selected.TryGetValue(offerKey, out var lineItem) ? lineItem.Count : 0;
                         var capacity = S.SupplierAllocationPreview(employeeId, draft, offer);
                         int minimum = S.PurchaseMinimum(offer);
+                        int SelectedCount() => selected.TryGetValue(offerKey, out var item) ? item.Count : 0;
                         void Set(int value, bool maximumSelection = false)
                         {
-                            int room = maximumSelection ? capacity.Maximum : capacity.FixedMaximum;
+                            var currentCapacity = S.SupplierAllocationPreview(employeeId, draft, offer);
+                            int room = maximumSelection ? currentCapacity.Maximum : currentCapacity.FixedMaximum;
                             value = Math.Min(value, room);
-                            if (value > 0 && value < minimum) value = room < minimum ? 0 : value < count ? 0 : minimum;
+                            if (value > 0 && value < minimum) value = room < minimum || value < SelectedCount() ? 0 : minimum;
                             if (value <= 0) selected.Remove(offerKey);
                             else
                             {
@@ -349,8 +351,9 @@ namespace PCShopSell.Game.UI
                         var label = CompactProduct(line, offer.Name, offer.UnitKg, details, false);
                         label.Tip("该货源本型号日上限 " + S.PurchaseLimit(offer) + " · 今日实货剩余 " + S.PurchaseRemaining(offer) + "\n" + capacity.Allocation);
                         Ui.Size(Ui.Label(line, offer.Price + (offer.Kind == PurchaseGoodsKind.Rice ? "/袋" : offer.Kind == PurchaseGoodsKind.Ingredient ? "/份" : "/件"), 16, TextAnchor.MiddleLeft, Ui.Good), 110);
-                        QuantityStepper(w, line, offerKey, count, 0, Math.Max(count, capacity.FixedMaximum), 1, value => Set((int)value));
-                        Ui.Size(Ui.Button(line, lineItem?.BuyMaximum == true ? "最大 ✓" : "最大", () => Set(capacity.Maximum, true),
+                        QuantityStepper(w, line, offerKey, count, 0, Math.Max(count, capacity.FixedMaximum), 1,
+                            value => Set((int)value), readValue: () => SelectedCount());
+                        Ui.Size(Ui.Button(line, lineItem?.BuyMaximum == true ? "最大 ✓" : "最大", () => Set(100, true),
                             15, Ui.ButtonBg, capacity.Maximum >= minimum), 62, 34).name = "PurchaseMaximum_" + offerKey;
                     });
                 }

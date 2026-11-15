@@ -10,6 +10,7 @@ namespace PCShopSell.Game.UI
         private string _mcnAgencyId = "chengguang";
         public void OpenCommunityMcn()
         {
+            if (S.KolAmbassadorAccessBlocker is string access) { Toast(access); return; }
             if (!S.City.HasPlace(GameSession.CommunityMcnId)) { Toast("这张旧地图没有社区MCN"); return; }
             var place = S.City.GetPlace(GameSession.CommunityMcnId);
             bool here = S.CurrentPlace == place;

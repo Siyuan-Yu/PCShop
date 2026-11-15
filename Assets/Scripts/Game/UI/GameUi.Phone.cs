@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using PCShopSell.Core.Session;
 using UnityEngine;
@@ -10,14 +11,26 @@ namespace PCShopSell.Game.UI
     /// </summary>
     public sealed partial class GameUi
     {
-        private string _phoneScreen = "home";
+        private const float PhoneAppWidth = 1500, PhoneAppHeight = 880;
         private Window _phoneWindow;
+        private Window _phoneStoreWindow;
+
+        private static Window CenterPhoneApp(Window window)
+        {
+            ((RectTransform)window.Root.Find("Panel")).anchoredPosition = Vector2.zero;
+            return window;
+        }
+
+        private Window OpenPhoneAppWindow(string title, Action<Window> build, bool holds = true, bool scrollContent = true) =>
+            CenterPhoneApp(OpenWindow(title, PhoneAppWidth, PhoneAppHeight, build, holds: holds, scrollContent: scrollContent));
+
+        private Window OpenPhoneAppWorkspace(string group, string page, string title, Action<Window> build, bool isTab = false) =>
+            CenterPhoneApp(OpenWorkspace(group, page, title, PhoneAppWidth, PhoneAppHeight, build, isTab));
 
         public void OpenPhone()
         {
             if (S == null) return;
             if (_phoneWindow != null && !_phoneWindow.Closed) return;
-            _phoneScreen = "home";
             _phoneWindow = S.HasSmartphone
                 ? OpenWindow("手机", 440, 850, BuildSmartphone, scrollContent:false)
                 : OpenWindow("按键手机", 380, 620, BuildFeaturePhone);
@@ -30,6 +43,7 @@ namespace PCShopSell.Game.UI
 
         public void ClosePhone()
         {
+            if (_phoneStoreWindow != null && !_phoneStoreWindow.Closed) _phoneStoreWindow.Close();
             if (_phoneWindow != null && !_phoneWindow.Closed) _phoneWindow.Close();
         }
 
@@ -37,8 +51,8 @@ namespace PCShopSell.Game.UI
         {
             OpenPhone();
             if (_phoneWindow == null || _phoneWindow.Closed || !S.HasSmartphone) return;
-            _phoneScreen = "store";
-            _phoneWindow.Rebuild();
+            if (_phoneStoreWindow != null && !_phoneStoreWindow.Closed) return;
+            _phoneStoreWindow = OpenPhoneAppWindow("应用商店", BuildPhoneStore, scrollContent: false);
         }
 
         // ---------- 按键机 ----------
@@ -110,9 +124,8 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(bar, GameSession.ClockText(S.Clock.MinuteOfDay), 19, TextAnchor.MiddleLeft), 120);
             Ui.Size(Ui.Label(bar, "5G　电量 100%", 16, TextAnchor.MiddleRight, Ui.Dim), -1, -1, 1);
 
-            if (_phoneScreen == "store")BuildPhoneStore(w);
-            else BuildPhoneDesktop(w);
-            BuildPhoneSystemNavigation(w);
+            BuildPhoneDesktop(w);
+            Ui.Size(Ui.Button(w.Content, "收起", w.Close, 15), -1, 36);
         }
 
         private void BuildPhoneDesktop(Window w)
@@ -142,8 +155,7 @@ namespace PCShopSell.Game.UI
         {
             if (id == PhoneApps.Store)
             {
-                _phoneScreen = "store";
-                w.Rebuild();
+                OpenPhoneStore();
                 return;
             }
             string blocker = S.AppBlocker(id);
@@ -158,36 +170,41 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Schedule: OpenSchedulePanel(); break;
                 case PhoneApps.Shop: OpenOnlinePanel(); break;
                 case PhoneApps.Loans: OpenLoansApp(); break;
-                case PhoneApps.Live: w.Close(); OpenKolLobby(); break;
-                case PhoneApps.Securities: w.Close(); OpenCityInvestments(); break;
+                case PhoneApps.Live: OpenKolLobby(); break;
+                case PhoneApps.Securities: OpenCityInvestments(); break;
             }
         }
 
         private void BuildPhoneStore(Window w)
         {
-            RectTransform top = Ui.Row(w.Content, 44);
-            Ui.Size(Ui.Button(top, "‹ 返回", () =>
-            {
-                _phoneScreen = "home";
-                w.Rebuild();
-            }, 17, Ui.ButtonBg), 96);
-            Ui.Size(Ui.Label(top, "应用商店", 22, TextAnchor.MiddleCenter), -1, -1, 1);
+            var top = Ui.Row(w.Content, 42, 10);
+            Ui.Size(Ui.Label(top, "免费下载", 17, TextAnchor.MiddleLeft, Ui.Dim), 0, 42, 1);
+            Ui.Size(Ui.Button(top, "‹ 返回手机", w.Close, 17), 130, 40);
 
-            Ui.Size(Ui.Label(w.Content, "免费下载", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 26);
-            RectTransform list = PhoneFlexibleScroll(w.Content,"PhoneStoreList");
-            foreach (PhoneAppDef def in PhoneApps.All.Where(a => a.Id != PhoneApps.Store))
+            var list = PhoneFlexibleScroll(w.Content, "PhoneStoreList");
+            var apps = PhoneApps.All.Where(app => app.Id != PhoneApps.Store).ToArray();
+            for (int i = 0; i < apps.Length; i += 2)
             {
-                PhoneAppDef a = def;
-                bool have = S.HasApp(a.Id);
-                RectTransform row = Ui.Row(list, 84, 8);
-                var icon=Ui.Size(Ui.Button(row, $"<size=28><b>{AppGlyph(a.Id)}</b></size>", null, 22, AppColor(a.Id), false), 64, 64);
-                if(a.Id==PhoneApps.Securities)BuildStockAppIcon(icon,false);
-                Ui.Size(Ui.Label(row, $"<b>{a.Name}</b>\n<size=14><color=#ABB5A8>{a.Description}</color></size>", 18), 200, -1, 1);
-                Ui.Size(Ui.Button(row, have ? "打开" : "下载", () =>
+                var row = Ui.Row(list, 100, 12);
+                for (int j = i; j < Math.Min(i + 2, apps.Length); j++)
                 {
-                    if(have)LaunchApp(w,a.Id);
-                    else if(S.InstallApp(a.Id))w.Rebuild();
-                }, 16, have ? Ui.ButtonBg : Ui.ButtonHot), 70).name = "PhoneDownload_" + a.Id;
+                    var app = apps[j];
+                    bool installed = S.HasApp(app.Id);
+                    var card = Ui.Size(Ui.Row(row, 100, 10), 0, 100, 1);
+                    var icon = Ui.Size(Ui.Button(card, AppGlyph(app.Id), null, 28, AppColor(app.Id), false), 64, 64);
+                    if (app.Id == PhoneApps.Securities) BuildStockAppIcon(icon, false);
+                    Ui.Size(Ui.Label(card, $"<b>{app.Name}</b>\n<size=15><color=#ABB5A8>{app.Description}</color></size>", 18), 0, 84, 1);
+                    Ui.Size(Ui.Button(card, installed ? "打开" : "下载", () =>
+                    {
+                        if (installed) LaunchApp(w, app.Id);
+                        else if (S.InstallApp(app.Id))
+                        {
+                            _phoneWindow.Rebuild();
+                            w.Rebuild();
+                        }
+                    }, 16, installed ? Ui.ButtonBg : Ui.ButtonHot), 84, 40).name = "PhoneDownload_" + app.Id;
+                }
+                if (i + 1 == apps.Length) Ui.Size(Ui.Rect(row, "EmptyAppCell"), 0, 100, 1);
             }
         }
 
@@ -209,16 +226,6 @@ namespace PCShopSell.Game.UI
                 var bar=Ui.Panel(icon,"StockAppBar",Ui.TextColor);bar.raycastTarget=false;
                 bar.rectTransform.Anchor(i*.34f,.03f,i*.34f+.24f,heights[i]);
             }
-        }
-        private void BuildPhoneSystemNavigation(Window w)
-        {
-            var row=Ui.Row(w.Content,36,6);row.name="PhoneSystemNavigation";
-            Ui.Size(Ui.Button(row,"‹ 返回",()=>
-            {
-                _phoneScreen="home";w.ResetScrollOnRebuild=true;w.Rebuild();
-            },15),-1,36,1);
-            Ui.Size(Ui.Button(row,"桌面",()=>{_phoneScreen="home";w.ResetScrollOnRebuild=true;w.Rebuild();},15),-1,36,1);
-            Ui.Size(Ui.Button(row,"收起",w.Close,15),-1,36,1);
         }
 
         // ---------- 通讯录 ----------
@@ -253,7 +260,7 @@ namespace PCShopSell.Game.UI
                     int rel = S.Relation(n.Id);
                     RectTransform row = Ui.Row(list, 48);
                     PortraitThumb(row, n.Id, 44, () => OpenCityPersonProfile(n.Id));
-                    Ui.Size(Ui.Label(row, $"<b>{n.Name}</b>  {n.Role}", 17), 260);
+                    Ui.Size(Ui.Label(row, $"<b>{PersonNameWithKolBadge(n.Id, n.Name)}</b>  {n.Role}", 17), 260);
                     Ui.Size(Ui.Label(row, $"{Npcs.LevelName(rel)} {rel}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
                     Ui.Size(Ui.Button(row,"人物资料",()=>OpenCityPersonProfile(n.Id),15),100);
                     Ui.Size(Ui.Button(row, "发消息", () =>

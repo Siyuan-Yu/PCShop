@@ -267,7 +267,7 @@ namespace PCShopSell.Core.Session
         {
             var t=_lifeTasks.FirstOrDefault(t=>t.Activity==a.Id&&!t.Done);if(t==null)return;t.Done=true;
             if(t.Kind=="dog-rescue"&&_lifeDog?.Stage=="stray")_lifeDog.Stage="rescued";
-            if(t.Kind=="music"){Player.Mood=Math.Min(100,Player.Mood+5);if(t.Count==2)AddRelation(t.Person,2);}
+            if(t.Kind=="music"){Player.Mood=Math.Min(100,Player.Mood+5);if(t.Count==2)AwardCityActivityRelation(a, t.Person, 2);}
             if(t.Kind=="neighbor"&&t.Mode==1)Flags.Add("life:quiet:"+t.Place);
             if(t.Kind=="friend")_lifeContact[t.Person]=Clock.Now.TotalMinutes;
             if(t.Kind=="lesson"&&_lifeCourse?.Activity==a.Id)

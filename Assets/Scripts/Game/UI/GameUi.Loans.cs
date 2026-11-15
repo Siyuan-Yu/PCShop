@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
@@ -13,15 +14,16 @@ namespace PCShopSell.Game.UI
     {
         private long _loanAmountYuan = 1000;
         private int _loanMonths = 1;
+        private const string LoanInterestRules = "月息按原本金算单利。每 30 天为一个计息月，不足一个月按一个月。提前结清只付已用月份的利息。";
         private const float LoanReminderHeight = 96f;
         private RectTransform _loanReminderHud;
         private Text _loanReminderTitle, _loanReminderDue, _loanReminderCash;
-        private (GameSession Session, int Day, int LedgerRevision) _loanReminderStamp;
+        private (GameSession Session, int Day, int LedgerRevision, bool AtBank) _loanReminderStamp;
         private bool _loanReminderHasPending;
 
         private void BuildLoanReminderHud(Transform parent)
         {
-            var button = Ui.Button(parent, "", OpenLoansApp, 18, Ui.PanelBg);
+            var button = Ui.Button(parent, "", OpenLoanReminder, 18, Ui.PanelBg);
             button.name = "LoanReminderHud";
             _loanReminderHud = (RectTransform)button.transform;
             _loanReminderHud.anchorMin = _loanReminderHud.anchorMax = _loanReminderHud.pivot = Vector2.one;
@@ -40,7 +42,7 @@ namespace PCShopSell.Game.UI
         private void UpdateLoanReminderHud()
         {
             int today = S.Clock.Today.TotalDays;
-            var stamp = (S, today, S.Ledger.Revision);
+            var stamp = (S, today, S.Ledger.Revision, S.AtBank);
             if (!_loanReminderStamp.Equals(stamp))
             {
                 _loanReminderStamp = stamp;
@@ -69,6 +71,7 @@ namespace PCShopSell.Game.UI
             int count = 0;
             int dueDay = int.MaxValue;
             Money due = Money.Zero;
+            Money payoff = Money.Zero;
             foreach (var loan in S.AppLoans)
             {
                 if (loan.Repaid) continue;
@@ -77,20 +80,39 @@ namespace PCShopSell.Game.UI
                 {
                     dueDay = loan.DueDay;
                     due = loan.TotalDue;
+                    payoff = S.LoanPayoff(loan);
                 }
-                else if (loan.DueDay == dueDay) due += loan.TotalDue;
+                else if (loan.DueDay == dueDay)
+                {
+                    due += loan.TotalDue;
+                    payoff += S.LoanPayoff(loan);
+                }
             }
             _loanReminderHasPending = count > 0;
             if (!_loanReminderHasPending) return;
 
-            Money shortfall = Money.Max(Money.Zero, due - S.Ledger.Balance);
-            _loanReminderTitle.text = count == 1 ? "还款提醒" : $"还款提醒 · {count} 笔待还";
-            _loanReminderDue.text = $"最近应还 {due} · {LoanCountdown(dueDay - today)}";
-            _loanReminderCash.text = shortfall.IsPositive ? $"当前现金还差 {shortfall}" : "当前现金足够还款";
+            Money shortfall = payoff - S.Ledger.Balance;
+            string action = S.AtBank || S.BankPlace == null ? "查看贷款" : "前往银行";
+            _loanReminderTitle.text = count == 1 ? $"还款提醒 · {action}" : $"{count} 笔待还 · {action}";
+            _loanReminderDue.text = $"最近到期 {due} · {LoanCountdown(dueDay - today)}";
+            _loanReminderCash.text = $"今日结清 {payoff}" + (shortfall.IsPositive ? $" · 差 {shortfall}" : "");
             _loanReminderCash.color = shortfall.IsPositive ? Ui.Warn : Ui.Good;
         }
 
         private static string LoanCountdown(int days) => days <= 0 ? "今天还款" : $"还剩 {days} 天";
+
+        private void OpenLoanReminder()
+        {
+            if (S.AtBank)
+            {
+                if (!AnyModalOpen || _windows.LastOrDefault() == _bankWindow)
+                    OpenBank(S.CurrentPlace, BankPage.Loans);
+                return;
+            }
+            if (AnyModalOpen) return;
+            if (S.BankPlace != null) _ctrl.GoToPlace(S.BankPlace);
+            else OpenLoansApp();
+        }
 
         private void OpenLoansApp()
         {
@@ -101,7 +123,7 @@ namespace PCShopSell.Game.UI
                 return;
             }
             string amountDraft = _loanAmountYuan.ToString();
-            OpenWindow("周转借款", 860, 860, w => BuildLoanDesk(w, amountDraft, text => amountDraft = text));
+            OpenPhoneAppWindow("周转借款", w => BuildLoanDesk(w, amountDraft, text => amountDraft = text));
         }
 
         private AppLoan LoanQuote(long yuan, int months) => new AppLoan
@@ -117,8 +139,8 @@ namespace PCShopSell.Game.UI
         private void ConfirmLoanApplication(AppLoan quote, bool atBank, Action completed)
         {
             ConfirmBusiness("确认借款",
-                $"到账 {quote.Principal}，期限 {quote.Months} 个月。每月利息 {quote.MonthlyInterest}，总利息 {quote.TermInterest}。\n"
-                + $"{new GameDate(quote.DueDay)} 自动扣除本息 {quote.TotalDue}，余额不足也会扣到负数。", () =>
+                $"到账 {quote.Principal}，期限 {quote.Months} 个月。每月利息 {quote.MonthlyInterest}。\n"
+                + $"首月内结清 {S.LoanPayoff(quote)}。{new GameDate(quote.DueDay)} 到期自动扣除本息 {quote.TotalDue}，总余额不足可扣为负数。", () =>
                 {
                     if (S.BorrowAppLoan(quote.Principal.Yuan, quote.Months, atBank)) completed();
                 });
@@ -127,18 +149,54 @@ namespace PCShopSell.Game.UI
         private void ConfirmLoanRepayment(Window w, AppLoan loan, bool atBank = false)
         {
             Money payoff = S.LoanPayoff(loan);
+            string interest = loan.NoInterest ? "无息" : $"按 {loan.InterestMonthsAt(S.Clock.Today.TotalDays)} 个月计息";
             ConfirmBusiness("提前结清贷款 #" + loan.Id,
-                $"本次支付 {payoff}，其中本金 {loan.Principal}、利息 {payoff - loan.Principal}。", () =>
+                $"本次支付 {payoff}，其中本金 {loan.Principal}、利息 {payoff - loan.Principal}（{interest}）。\n"
+                + $"到期应还 {loan.TotalDue}。现在结清可少付利息 {loan.TotalDue - payoff}。", () =>
                 {
                     if (atBank && S.BankBlocker() is string blocker) { Toast(blocker); return; }
                     if (S.RepayAppLoan(loan.Id)) w.Rebuild();
                 });
         }
 
+        private void BuildLoanCredit(Transform parent)
+        {
+            Line(parent, $"可借 {Money.FromYuan(S.AppLoanAvailableYuan)} · 总额度 {Money.FromYuan(S.AppLoanCreditLimitYuan)}", 20, Ui.Accent);
+            Para(parent, $"名望 {S.PlayerShop.Reputation:0.0} · 未还本金占用 {S.AppLoanUsedCredit}\n"
+                + $"基础额度 {Money.FromYuan(GameSession.AppLoanBaseCreditYuan)}，名望每满 1 点加 {Money.FromYuan(GameSession.AppLoanCreditPerReputationYuan)}，封顶 {Money.FromYuan(GameSession.AppLoanMaximumYuan)}。柜台和手机共用额度。", 15, Ui.Dim);
+        }
+
+        private void BuildLoanRecord(Transform parent, Window w, AppLoan loan, bool atBank)
+        {
+            var card = Ui.FlatPanel(parent, (atBank ? "BankLoan_" : "AppLoan_") + loan.Id, Ui.FlatBand).rectTransform;
+            Ui.VList(card, 4, 10);
+            string lender = loan.NoInterest ? $" · {S.CityPerson(loan.Lender)?.Name ?? "朋友"}的无息借款" : "";
+            Line(card, $"借款 #{loan.Id} · 本金 {loan.Principal} · {new GameDate(loan.StartDay)} 借入{lender}", 16, Ui.Dim);
+            if (loan.Repaid)
+            {
+                Line(card, $"{new GameDate(loan.RepaidDay)} 已结清 · 实付利息 {Money.FromCents(loan.PaidInterestCents)}", 17, Ui.Dim);
+                return;
+            }
+
+            Money payoff = S.LoanPayoff(loan);
+            Money shortfall = payoff - S.Ledger.Balance;
+            var row = Ui.Row(card, 38);
+            Ui.Size(Ui.Label(row, "今日结清 " + payoff, 21, color: Ui.Accent), 0, -1, 1);
+            var repay = Ui.Size(Ui.Button(row, "提前结清", () => ConfirmLoanRepayment(w, loan, atBank), 16,
+                Ui.ButtonHot, !shortfall.IsPositive && (!atBank || S.BankBlocker() == null)), 120, 36);
+            repay.name = (atBank ? "BankRepay_" : "AppLoanRepay_") + loan.Id;
+            string accrued = loan.NoInterest ? "无息" : $"按 {loan.InterestMonthsAt(S.Clock.Today.TotalDays)} 个月计息 {payoff - loan.Principal}";
+            Para(card, $"{accrued} · {new GameDate(loan.DueDay)} 到期应还 {loan.TotalDue}（含利息 {loan.TermInterest}）", 16, Ui.Dim);
+            if (shortfall.IsPositive) Line(card, $"今天结清还差 {shortfall}", 15, Ui.Warn);
+            else if (loan.TotalDue > payoff) Line(card, $"现在结清可少付利息 {loan.TotalDue - payoff}", 15, Ui.Good);
+        }
+
         private void BuildLoanDesk(Window w, string amountDraft, Action<string> saveDraft)
         {
             Line(w.Content, $"当前现金 {S.Ledger.Balance}    贷款待还 {S.AppLoanDebt}", 21, Ui.Accent);
-            Para(w.Content, "月息 20%，按最初本金算单利，不复利；每月按游戏日历 30 天，最长 12 个月。到期一次性自动扣除本金和总利息，现金不足会强制扣成负数。", 18, Ui.Warn);
+            BuildLoanCredit(w.Content);
+            Para(w.Content, $"月息 {GameSession.AppLoanMonthlyRatePercent}%。" + LoanInterestRules
+                + "到期自动扣款，现金不足时先划转活期存款。", 15, Ui.Dim);
             var amountRow = Ui.Row(w.Content, 40);
             Ui.Size(Ui.Label(amountRow, "借款金额", 18), 120);
             var amountControls = Ui.Row(amountRow, 36, 4);
@@ -150,7 +208,7 @@ namespace PCShopSell.Game.UI
             var more = AmountButton("+", 1, "QuantityPlus_appLoanAmount");
             Line(amountRow, $"元 · 每 ¥{GameSession.AppLoanAmountStep:N0} 一档", 15, Ui.Dim);
             var presets = Ui.Row(w.Content, 34);
-            foreach (long amount in new long[] { 1000, 5000, 10000, 50000 })
+            foreach (long amount in new long[] { 1000, 5000, 10000, 50000 }.Where(yuan => yuan <= S.AppLoanAvailableYuan))
             {
                 long selectedAmount = amount;
                 Ui.Size(Ui.Button(presets, "¥" + amount.ToString("N0"), () => input.text = selectedAmount.ToString(), 17), -1, -1, 1);
@@ -158,35 +216,27 @@ namespace PCShopSell.Game.UI
             var monthsRow = Ui.Row(w.Content, 40);
             Ui.Size(Ui.Label(monthsRow, "借款期限", 18), 120);
             QuantityStepper(w, monthsRow, "appLoanMonths", _loanMonths, 1, GameSession.AppLoanMaximumMonths, 1,
-                v => _loanMonths = (int)v, v => v.ToString("0") + " 个月");
+                v => _loanMonths = (int)v, unit: "个月");
             var principal = Line(w.Content, "", 19);
             var interest = Line(w.Content, "", 19);
             var due = Line(w.Content, "", 21, Ui.Warn);
             AppLoan quote = null;
-            var apply = Ui.Size(Ui.Button(w.Content, "申请借款", () =>
-            {
-                if (quote != null) ConfirmLoanApplication(quote, false, w.Rebuild);
-            }, 19, Ui.ButtonHot), -1, 46);
+            var apply = Ui.Size(Ui.Button(w.Content, "申请借款", null, 19, Ui.ButtonHot), -1, 46);
             var applyText = apply.GetComponentInChildren<Text>();
+            apply.onClick.AddListener(() =>
+            {
+                RefreshQuote(input.text);
+                if (quote != null) ConfirmLoanApplication(quote, false, w.Rebuild);
+            });
             input.onValueChanged.AddListener(RefreshQuote);
             RefreshQuote(input.text);
-            Para(w.Content, "可提前整笔结清：按实际使用月份计息，不足一个月按一个月。待还负债包含本金和已计利息，未来月份利息不计入当前负债。", 15, Ui.Dim);
             Line(w.Content, "我的贷款", 20, Ui.Accent);
             var list = Ui.Scroll(w.Content, 260);
             if (S.AppLoans.Count == 0) Line(list, "暂无借款记录。", 17, Ui.Dim);
             foreach (var loan in LoanRecords())
             {
-                Line(list, $"#{loan.Id} · 本金 {loan.Principal} · {loan.Months} 个月 · " + (loan.NoInterest ? $"无息（{S.CityPerson(loan.Lender)?.Name ?? "朋友"}借的）· " : "") + (loan.Repaid ? "已结清" : "待还"), 18, loan.Repaid ? Ui.Dim : Ui.Accent);
-                if (loan.Repaid)
-                {
-                    Para(list, $"{new GameDate(loan.RepaidDay)} 结清；实付利息 {Money.FromCents(loan.PaidInterestCents)}。", 16, Ui.Dim);
-                    continue;
-                }
-                Para(list, $"{new GameDate(loan.StartDay)} 借入，{new GameDate(loan.DueDay)} 到期（{LoanCountdown(loan.DueDay - S.Clock.Today.TotalDays)}）。\n到期本金 {loan.Principal} + 利息 {loan.TermInterest} = {loan.TotalDue}。", 16);
-                Money payoff = S.LoanPayoff(loan);
-                Ui.Size(Ui.Button(list, "提前结清 · " + payoff, () => ConfirmLoanRepayment(w, loan),
-                    17, Ui.ButtonBg, S.Ledger.CanAfford(payoff)), -1, 38);
-                if (S.IsClassmateLoan(loan) && loan.ExtensionDays == 0)
+                BuildLoanRecord(list, w, loan, atBank: false);
+                if (!loan.Repaid && S.IsClassmateLoan(loan) && loan.ExtensionDays == 0)
                 {
                     string reason = S.FriendLoanExtensionBlocker(loan);
                     Ui.Size(Ui.Button(list, "和陈志衡商量延期 30 天", () => { if (S.ExtendFriendLoan(loan.Id)) w.Rebuild(); },
@@ -205,7 +255,7 @@ namespace PCShopSell.Game.UI
                 repeat.Commit = n =>
                 {
                     long amount = _loanAmountYuan + direction * n * (long)GameSession.AppLoanAmountStep;
-                    input.text = Math.Max(GameSession.AppLoanAmountStep, Math.Min(GameSession.AppLoanMaximumYuan, amount)).ToString();
+                    input.text = Math.Min(S.AppLoanAvailableYuan, Math.Max(GameSession.AppLoanAmountStep, amount)).ToString();
                 };
                 button.onClick.AddListener(repeat.ClickOnce);
                 return button;
@@ -214,14 +264,16 @@ namespace PCShopSell.Game.UI
             void RefreshQuote(string amount)
             {
                 saveDraft(amount);
-                bool valid = TryBankAmount(amount, GameSession.AppLoanMaximumYuan, GameSession.AppLoanAmountStep, out long yuan);
+                long.TryParse(amount, NumberStyles.None, CultureInfo.InvariantCulture, out long yuan);
+                string blocker = S.AppLoanOfferBlocker(yuan, _loanMonths, atBank: false);
+                bool valid = blocker == null;
                 if (valid) _loanAmountYuan = yuan;
                 quote = valid ? LoanQuote(yuan, _loanMonths) : null;
-                less.interactable = !valid || yuan > GameSession.AppLoanAmountStep;
-                more.interactable = !valid || yuan < GameSession.AppLoanMaximumYuan;
-                principal.text = valid ? $"到账本金 {quote.Principal} · 每月利息 {quote.MonthlyInterest}"
-                    : $"请输入 ¥{GameSession.AppLoanAmountStep:N0} 的整数倍，最高 ¥{GameSession.AppLoanMaximumYuan:N0}";
-                interest.text = valid ? $"期限利息 {quote.TermInterest}（本金的 {quote.Months * GameSession.AppLoanMonthlyRatePercent}%）" : "";
+                long available = S.AppLoanAvailableYuan;
+                less.interactable = available > 0 && (!valid || yuan > GameSession.AppLoanAmountStep);
+                more.interactable = available > 0 && (!valid || yuan < available);
+                principal.text = valid ? $"到账本金 {quote.Principal} · 每月利息 {quote.MonthlyInterest}" : blocker;
+                interest.text = valid ? $"首月内结清 {S.LoanPayoff(quote)} · 到期利息 {quote.TermInterest}" : "";
                 due.text = valid ? $"到期日 {new GameDate(quote.DueDay)} · 自动扣款 {quote.TotalDue}" : "";
                 apply.interactable = valid;
                 applyText.text = valid ? "申请借款 · 到账 " + quote.Principal : "申请借款";

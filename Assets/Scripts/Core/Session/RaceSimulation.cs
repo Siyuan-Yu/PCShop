@@ -22,6 +22,8 @@ namespace PCShopSell.Core.Session
         public IReadOnlyList<RaceOpponent> Opponents { get; }
         public int CompetitorCount=>RivalProgress.Length+1;
         public int Laps { get; }
+        public double PracticeSecondsLimit { get; }
+        public bool TimedPractice => PracticeSecondsLimit > 0;
         public double Length {get;} public double Progress {get;private set;}
         public int Position
         {
@@ -33,7 +35,7 @@ namespace PCShopSell.Core.Session
                 return position;
             }
         }
-        private double _accumulator,_collisionCooldown,_lapStart;
+        private double _accumulator,_collisionCooldown,_lapStart,_lapStartPenalty;
         private double _driftAngle;
         private readonly double[] _cumulative, _rivalSpeeds, _rivalSpeedLimits, _rivalAccelerations;
         public double DisplayKph=>Math.Abs(Speed)*7.2;
@@ -45,10 +47,11 @@ namespace PCShopSell.Core.Session
         public bool HandbrakeHeld { get; private set; }
         public bool Drifting => Math.Abs(_driftAngle) > .10 && Speed > 1.5;
         public RaceSimulation(RaceTrack track,MotorModel model,bool practice,RaceMeeting meeting=RaceMeeting.Small,
-            IReadOnlyList<RaceOpponent> opponents = null, int? lapLimit = null)
+            IReadOnlyList<RaceOpponent> opponents = null, int? lapLimit = null, double practiceSecondsLimit = 0)
         {
             Track=track;Model=model;Practice=practice;Meeting=practice?RaceMeeting.None:meeting;_cumulative=new double[track.Points.Length+1];
             Laps = lapLimit ?? track.Laps;
+            PracticeSecondsLimit = practice ? practiceSecondsLimit : 0;
             Opponents = practice || opponents == null ? Array.Empty<RaceOpponent>() : opponents.ToArray();
             RivalProgress=new double[practice ? 0 : opponents?.Count ?? RivalCount];
             RivalFinishTime=Enumerable.Repeat(double.PositiveInfinity,RivalProgress.Length).ToArray();
@@ -113,7 +116,14 @@ namespace PCShopSell.Core.Session
             if(Distance(new MapPoint(X,Y),goal)<Track.HalfRoad+1)
             {
                 Passed++;Next=(Next+1)%Track.Points.Length;
-                if(Next==1){Lap++;BestLap=Math.Min(BestLap,Elapsed-_lapStart);_lapStart=Elapsed;if(Lap>=Laps)Finished=true;}
+                if (Next == 1)
+                {
+                    Lap++;
+                    BestLap = Math.Min(BestLap, Elapsed - _lapStart + Penalty - _lapStartPenalty);
+                    _lapStart = Elapsed;
+                    _lapStartPenalty = Penalty;
+                    if (!TimedPractice && Lap >= Laps) Finished = true;
+                }
             }
             int prev=(Next+Track.Points.Length-1)%Track.Points.Length;var a=Track.Points[prev];var b=Track.Points[Next];
             double dx=b.X-a.X,dy=b.Y-a.Y;
@@ -121,7 +131,7 @@ namespace PCShopSell.Core.Session
             double along = ((X-a.X)*dx+(Y-a.Y)*dy)/Math.Max(.001,segmentLength*segmentLength);
             double firstGridProgress = Passed == 0 ? -StartingGridOffset : 0;
             Progress = Lap * Length + _cumulative[prev] + Math.Max(firstGridProgress, Math.Min(segmentLength, segmentLength * along));
-            if(Finished)Progress=Laps*Length;
+            if(Finished&&!TimedPractice)Progress=Laps*Length;
             if(!Practice)AdvanceRivals(dt,Elapsed+Penalty-dt);
             if(!Practice&&Elapsed>1&&_collisionCooldown<=0)
             {
@@ -134,7 +144,11 @@ namespace PCShopSell.Core.Session
                     {Speed*=.72;Damage+=closing*.15;Collisions++;_collisionCooldown=1;break;}
                 }
             }
-            if(Elapsed>=600){Abandoned=true;Finished=true;}
+            if (TimedPractice)
+            {
+                if (Elapsed + 1e-8 >= PracticeSecondsLimit) Finished = true;
+            }
+            else if(Elapsed>=600){Abandoned=true;Finished=true;}
         }
         private void Drive(double dt, double throttle, double steer, bool handbrake)
         {

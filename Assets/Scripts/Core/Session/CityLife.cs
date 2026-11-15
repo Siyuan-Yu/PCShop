@@ -84,6 +84,8 @@ namespace PCShopSell.Core.Session
         public CityVenueService[] Services;
         public int PriceYuan => DefaultService.PriceYuan * PriceMultiplier;
         public int ServiceCount => Math.Min(ServiceOptionCount, Choices?.Length ?? 0);
+        public bool IsSportPass => Id.StartsWith("court_pass_", StringComparison.Ordinal)
+            || Id.StartsWith("golf_pass_", StringComparison.Ordinal);
         public CityActivityDefinition AtVenue(string venueId)
         {
             if (string.IsNullOrEmpty(venueId) || venueId == VenueId) return this;
@@ -122,6 +124,8 @@ namespace PCShopSell.Core.Session
         public bool WorkForEmployer;
         public bool ResultCaptured;
         public int RelationBefore, RelationAfter, TrustBefore, TrustAfter;
+        public bool RelationGainTracked;
+        public double RelationGained;
         public VehicleKind TravelTransport;
         public CityActivityParticipant Copy() => (CityActivityParticipant)MemberwiseClone();
     }
@@ -209,9 +213,7 @@ namespace PCShopSell.Core.Session
             WithServices(A("golf","练习场体验","life_golf",90,150,0,-5,7,"挑选练习位置","轮流挥杆，留一点时间交流。","归还器材，留下新的合作话题。","基础挥杆","轮流击球","聊生意","聊日常"),
                 new CityVenueService(150, "先练站姿和挥杆节奏，熟悉球杆。", energy: -5, mood: 6, health: 1, intelligence: 1, relation: 5),
                 new CityVenueService(220, "轮流击球，观察对方的落点和节奏。", energy: -8, mood: 8, health: 2, charm: 1, relation: 9)),
-            WithServices(A("fishing","青湾垂钓",GameSession.FishingVenueId,90,300,0,5,6,"租杆、选钓位和鱼饵","看浮漂选择提竿方式，鱼获可以留、送或放生。","收竿后可在钓场回收鱼获。","安静垂钓","技巧练习","听往事","看水面"),
-                new CityVenueService(300, "含租杆和本场鱼饵，实际选位、抛竿与收鱼，偏重放松。", energy: 7, mood: 12, relation: 5),
-                new CityVenueService(400, "含租杆和本场鱼饵，实际观察鱼口与提竿，偏重技巧交流。", energy: 3, mood: 8, intelligence: 1, relation: 8)),
+            FishingPass(FishingCatalog.Passes[0]),
             WithServices(A("hike","青湾郊游","life_hike",90,35,0,-8,7,"选择步道","走到观景平台，交流沿途见闻。","从步道回到入口，自己选择下一站。","轻松路线","观景平台","聊生活","分享经历"),
                 new CityVenueService(35, "沿平缓步道散步，边走边聊，体力消耗较低。", energy: -5, mood: 9, health: 2, relation: 8),
                 new CityVenueService(35, "走得更远，到观景平台看湖，运动量更大。", energy: -12, mood: 14, health: 4, relation: 6)),
@@ -260,6 +262,14 @@ namespace PCShopSell.Core.Session
             activity.Services = services;
             return activity;
         }
+        private static CityActivityDefinition FishingPass((string Id, int Hours, int Price) pass) => new CityActivityDefinition
+        {
+            Id = pass.Id, LogicalId = pass.Id == "fishing" ? null : "fishing",
+            Name = $"青湾垂钓 · {pass.Hours} 小时", VenueId = GameSession.FishingVenueId, Minutes = pass.Hours * 60,
+            Choices = new[] { $"垂钓 {pass.Hours} 小时" }, ServiceOptionCount = 1,
+            DefaultService = new CityVenueService(pass.Price, relation: 5),
+            StartText = "选钓位和鱼饵，手动抛竿", MidText = "手动抛竿和收鱼", EndText = "本场垂钓时间已用完"
+        };
         public static CityActivityDefinition Activity(string id) => Activities.FirstOrDefault(a=>a.Id==id);
         private static List<CityPersonDefinition> BuildPeople()
         {

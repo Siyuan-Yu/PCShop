@@ -46,6 +46,7 @@ namespace PCShopSell.Core.Session
     {
         public string Text;
         public (string Key, string Label)? Selection;
+        public (string Payment, long Start, int Minutes, Money Price, bool AskHost, string Note)? Appointment;
 
         /// <summary>这个选项现在能不能选（比如钱够不够）。为 null 表示总能选。</summary>
         public Func<GameSession, bool> Enabled;
@@ -973,14 +974,22 @@ namespace PCShopSell.Core.Session
             return item.Part is PartDef part ? Market.PriceOf(part).Scale(.84) : Gifts.Get(item.Id).WholesalePrice;
         }
 
-        private string _walletDropOff;
+        public const int WalletReturnWaitMinutes = 30;
+        private string _walletDropOff, _walletOwnerId;
+        private int _walletWaitedMinutes;
+        public Place WalletReturnStation => City.HasPlace(_walletDropOff) ? City.GetPlace(_walletDropOff) : null;
+        public string WalletReturnOwnerName => CityPerson(_walletOwnerId)?.Name;
+        public int WalletWaitLeft => _walletDropOff == null ? 0 : WalletReturnWaitMinutes - _walletWaitedMinutes;
+        private bool AtWalletReturnStation => _walletDropOff != null && CurrentPlace?.Id == _walletDropOff && Trip == null;
+        public bool WalletOwnerAtStation => AtWalletReturnStation && _walletOwnerId != null && CitySamePlace(_walletOwnerId);
         internal bool CanFindWallet => _walletDropOff == null && City.Places.Any(p => p.Kind == PlaceKind.Station && DistrictAccessBlocker(p) == null);
 
         private EventDef BindWallet(EventDef template)
         {
             if (!CanFindWallet) return null;
             var station = City.Places.Where(p => p.Kind == PlaceKind.Station && DistrictAccessBlocker(p) == null)
-                .OrderBy(p => DistanceCity(PlayerPosition, StandOf(p))).First();
+                .OrderBy(p => DistanceCity(PlayerPosition, StandOf(p))).FirstOrDefault(p => CityActivityVenueAccessBlocker(p) == null);
+            if (station == null) return null;
             var owner = CityPeople
                 .Where(person => City.HasPlace(person.HomePlaceId) && CityPerson(person.PersonId) != null
                     && DistrictAccessBlocker(City.GetPlace(person.HomePlaceId)) == null)
@@ -993,26 +1002,9 @@ namespace PCShopSell.Core.Session
                     : person.LocationPlaceId == null && DistanceCity(PlayerPosition, new MapPoint(person.X, person.Y)) <= 6));
             return IllustratedEvent(template, $"路边有个钱包，里面有 ¥300 和一张留有联系方式的卡片。最近的失物代收点在{station.Name}。",
                 new EventCgFrame("wallet"),
-                ChooseCg("交给地铁站服务台", s =>
-                {
-                    s._walletDropOff = station.Id;
-                    if (s.CurrentPlace?.Id != station.Id) s.BeginCityTravel(station.Id);
-                    return VisualResult($"请到{station.Name}，进站后交给服务台。", "wallet", EventCgProp.Wallet, caption: $"前往{station.Name}");
-                }),
-                ChooseCg("联系失主，等对方来取 · 20 分钟", s =>
-                {
-                    double rewardChance = EventScript.ProgressiveChance(.35,
-                        (s.Relation(owner.Id), EventScript.RelationThreshold, .004));
-                    s.EventRest(20);
-                    s.Meet(owner.Id, 10);
-                    s.AddRelation(owner.Id, 3);
-                    s.RememberSocial(owner.Id, "拾到钱包后联系本人归还。");
-                    bool rewarded = s.Random.Chance(rewardChance);
-                    if (rewarded) s.EventGain(Money.FromYuan(50), owner.Name + "酬谢");
-                    return VisualResult($"{owner.Name}来取回钱包。交情增加。" + (rewarded ? "对方留下 ¥50 表示感谢。" : ""),
-                        "wallet", rewarded ? EventCgProp.Banknotes : EventCgProp.Wallet, owner.Id,
-                        rewarded ? "钱包归还 · 酬谢 ¥50" : "钱包已归还 · 交情 +3");
-                }, _ => owner != null, "暂时找不到可联系的失主"),
+                ChooseCg("送到地铁站服务台", s => s.AcceptWalletReturn(station, null)),
+                ChooseCg("联系失主，约在地铁站归还", s => s.AcceptWalletReturn(station, owner.Id),
+                    _ => owner != null, "暂时找不到可联系的失主"),
                 ChooseCg("留下现金", s =>
                 {
                     s.EventGain(Money.FromYuan(300), "钱包里的现金");
@@ -1025,6 +1017,64 @@ namespace PCShopSell.Core.Session
                     }
                     return VisualResult("获得 ¥300。周围没有人认领钱包。", "wallet", EventCgProp.Banknotes, caption: "获得 ¥300");
                 }));
+        }
+
+        private EventCgResult AcceptWalletReturn(Place station, string ownerId)
+        {
+            _walletDropOff = station.Id;
+            _walletOwnerId = ownerId;
+            _walletWaitedMinutes = 0;
+            string recipient = ownerId == null ? "交给站务员" : "当面交给失主";
+            return VisualResult($"归还钱包已加入日程。请前往{station.Name}，在站内等候 {WalletReturnWaitMinutes} 个游戏分钟，再{recipient}。",
+                "wallet", EventCgProp.Wallet, caption: $"归还钱包 · {station.Name}");
+        }
+
+        private bool TickWalletOwner(CityPersonState person, long now)
+        {
+            if (!AtWalletReturnStation || person.PersonId != _walletOwnerId) return false;
+            if (person.LocationPlaceId == _walletDropOff)
+            {
+                person.Task = CityPersonTask.Waiting;
+                person.TaskLabel = "在地铁站等候领取钱包";
+                return true;
+            }
+            var route = PlanCityRoute(person, _walletDropOff, now);
+            if (route == null) return false;
+            person.Route = route;
+            person.LocationPlaceId = null;
+            person.Task = CityPersonTask.Travelling;
+            person.TaskLabel = "前往地铁站领取钱包";
+            return true;
+        }
+
+        public bool HandOverWallet(bool toOwner)
+        {
+            if (_walletDropOff == null) return false;
+            if (!AtWalletReturnStation) return Fail("请到日程标记的地铁站内交还钱包。");
+            if (WalletWaitLeft > 0) return Fail($"请在站内再等 {WalletWaitLeft} 分钟。");
+            if (toOwner && !WalletOwnerAtStation) return Fail("失主还没到站，可以继续等候或交给服务台。");
+
+            var owner = toOwner ? CityPerson(_walletOwnerId) : null;
+            string station = CurrentPlace.Name;
+            _walletDropOff = null;
+            _walletOwnerId = null;
+            _walletWaitedMinutes = 0;
+            if (owner == null)
+            {
+                ShowEventCg("钱包已交到服务台", VisualResult("站务员已登记失物，等失主来认领。",
+                    "event_wallet_station", EventCgProp.Wallet, caption: station));
+                return true;
+            }
+
+            double rewardChance = EventScript.ProgressiveChance(.35, (Relation(owner.Id), EventScript.RelationThreshold, .004));
+            Meet(owner.Id, 10);
+            AddRelation(owner.Id, 3);
+            RememberSocial(owner.Id, "拾到钱包后在地铁站当面归还。");
+            bool rewarded = Random.Chance(rewardChance);
+            if (rewarded) EventGain(Money.FromYuan(50), owner.Name + "酬谢");
+            ShowEventCg("钱包已归还", VisualResult($"{owner.Name}在{station}取回了钱包。交情增加。" + (rewarded ? "对方留下 ¥50 表示感谢。" : ""),
+                "wallet", rewarded ? EventCgProp.Banknotes : EventCgProp.Wallet, owner.Id, rewarded ? "酬谢 ¥50" : "钱包已归还"));
+            return true;
         }
 
         private const string ClassmateId = "res_coder";
@@ -1176,12 +1226,6 @@ namespace PCShopSell.Core.Session
         private void TickEventFollowups(GameTimestamp now)
         {
             TickRacingBatchEvents(now);
-            if (_walletDropOff != null && CurrentPlace?.Id == _walletDropOff)
-            {
-                _walletDropOff = null;
-                ShowEventCg("钱包已交到服务台", VisualResult("站务员已登记失物，等失主来认领。",
-                    "event_wallet_station", EventCgProp.Wallet, caption: CurrentPlace.Name));
-            }
             for (int i = _eventReferrals.Count - 1; i >= 0; i--)
             {
                 var visit = _eventReferrals[i];
@@ -1415,6 +1459,8 @@ namespace PCShopSell.Core.Session
             d.eventReferrals = _eventReferrals.Select(visit => visit.Copy()).ToArray();
             d.flyerCampaigns = _flyerCampaigns.Select(campaign => campaign.Copy()).ToArray();
             d.walletDropOff = _walletDropOff;
+            d.walletOwnerId = _walletOwnerId;
+            d.walletWaitedMinutes = _walletWaitedMinutes;
             d.inspectionShops = _inspectionFollowups.Keys.ToArray();
             d.inspectionDays = d.inspectionShops.Select(id => _inspectionFollowups[id]).ToArray();
         }
@@ -1436,6 +1482,9 @@ namespace PCShopSell.Core.Session
             _flyerCampaigns.AddRange((d.flyerCampaigns ?? Array.Empty<FlyerCampaign>()).Where(campaign => campaign != null && campaign.Remaining > 0)
                 .Select(campaign => campaign.Copy()));
             _walletDropOff = d.walletDropOff;
+            if (WalletReturnStation?.Kind != PlaceKind.Station) _walletDropOff = null;
+            _walletOwnerId = _walletDropOff != null ? d.walletOwnerId : null;
+            _walletWaitedMinutes = _walletDropOff != null ? Math.Max(0, Math.Min(WalletReturnWaitMinutes, d.walletWaitedMinutes)) : 0;
             _inspectionFollowups.Clear();
             for (int i = 0; i < Math.Min(d.inspectionShops?.Length ?? 0, d.inspectionDays?.Length ?? 0); i++)
                 _inspectionFollowups[d.inspectionShops[i]] = d.inspectionDays[i];
@@ -1463,6 +1512,8 @@ namespace PCShopSell.Core.Session
         public GameSession.EventReferral[] eventReferrals;
         public GameSession.FlyerCampaign[] flyerCampaigns;
         public string walletDropOff;
+        public string walletOwnerId;
+        public int walletWaitedMinutes;
         public string[] inspectionShops;
         public int[] inspectionDays;
     }

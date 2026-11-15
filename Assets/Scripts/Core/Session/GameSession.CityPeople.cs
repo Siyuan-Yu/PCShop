@@ -427,6 +427,7 @@ namespace PCShopSell.Core.Session
                 if(employee==null&&shift&&p.WorkPlaceId!=p.HomePlaceId&&!IsPlaceOpen(City.GetPlace(p.WorkPlaceId)))shift=false;
                 if (!CandidateAvailable(candidate) && TickRaceAttendee(p, now, employee != null && shift)) continue;
                 if (!CandidateAvailable(candidate) && TickPetOwnerVisit(p, now, shift)) continue;
+                if (!shift && candidate == null && TickWalletOwner(p, now)) continue;
                 string target=shift?p.WorkPlaceId:p.HomePlaceId;
                 var desiredTask=shift?CityPersonTask.Working:CityPersonTask.Home;
                 if(candidate!=null && CandidateAvailable(candidate)) {target=PlayerShopPlace.Id;desiredTask=CityPersonTask.Waiting;p.TaskLabel="等待面试";}
@@ -617,7 +618,12 @@ namespace PCShopSell.Core.Session
             if (topic == "friends" && Relation(id) < AskAboutOthersMinRelation) return "咱们再熟悉一些，再慢慢聊我的朋友吧。";
             GreetPerson(id,remote); int index=topic=="work"?0:topic=="interest"?1:topic=="life"?2:3;
             string key=id+":"+topic;bool fresh=!_cityTopicDay.TryGetValue(key,out int day)||day!=Clock.Today.TotalDays;
-            if(fresh){_cityTopicDay[key]=Clock.Today.TotalDays;AddRelation(id,1);p.KnownTopics=p.KnownTopics.Union(new[]{topic}).ToArray();}
+            if(fresh)
+            {
+                _cityTopicDay[key]=Clock.Today.TotalDays;
+                AddSocialRelation(id, 1);
+                p.KnownTopics=p.KnownTopics.Union(new[]{topic}).ToArray();
+            }
             if (topic == "friends")
             {
                 var circle = PersonCircle(id).ToArray();
@@ -642,7 +648,8 @@ namespace PCShopSell.Core.Session
             if(d.Stories==null||p.StoryChapter>=d.Stories.Length)return d.Goal;
             if(Relation(id)<5+p.StoryChapter*5)return "再熟悉一点，对方愿意慢慢讲自己的经历。";
             string line=d.Stories[p.StoryChapter++];p.LastStoryDay=Clock.Today.TotalDays;
-            AddRelation(id,2);RememberSocial(id,line);return line;
+            AddSocialRelation(id, 2);
+            RememberSocial(id,line);return line;
         }
     }
 }

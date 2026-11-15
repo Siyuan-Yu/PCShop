@@ -95,7 +95,7 @@ namespace PCShopSell.Core.Session
             "电源别选太小的，装上显卡带不动。",
         });
 
-        public static readonly StaffDef PhoneClerk = new StaffDef("keeper_phone", "唐晓芸", "手机店店员", new[]
+        public static readonly StaffDef PhoneClerk = new StaffDef("keeper_phone", "唐晓芸", "米家店员", new[]
         {
             "智能手机了解一下？能装好多 app！",
             "按键机也不错，打电话够用了。",
@@ -146,7 +146,7 @@ namespace PCShopSell.Core.Session
             "新卡到货那天最累，要拆一整天箱。",
         });
 
-        public static readonly StaffDef PhoneApprentice = new StaffDef("keeper_phone2", "陈乐", "手机店学徒", new[]
+        public static readonly StaffDef PhoneApprentice = new StaffDef("keeper_phone2", "陈乐", "米家学徒", new[]
         {
             "我还在学，贴膜是我的拿手活！",
             "杰哥说我再练练就能自己接待了。",

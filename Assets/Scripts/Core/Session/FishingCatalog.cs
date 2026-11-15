@@ -36,6 +36,11 @@ namespace PCShopSell.Core.Session
     }
     public static class FishingCatalog
     {
+        public static readonly (string Id, int Hours, int Price)[] Passes =
+        {
+            ("fishing", 2, 300), ("fishing_pass_4h", 4, 500),
+            ("fishing_pass_8h", 8, 900), ("fishing_pass_16h", 16, 1600)
+        };
         public static readonly string[] Spots = { "浅滩", "芦苇边", "深水区" };
         public static readonly string[] Baits = { "面饵", "蚯蚓饵", "小鱼饵" };
         // Gameplay values for the managed fishing pond; weights are relative, not catch guarantees.

@@ -93,10 +93,10 @@ namespace PCShopSell.Core.Session
         { Laps=laps; RequiredWins=wins; HalfRoad=halfRoad; OpenMinute=open; CloseMinute=close;
             ParkingRent=rent; ParkingPrice=price; UsedVehicleCeiling=ceiling; }
         private static readonly RacingTierRules[] All = {
-            new RacingTierRules(2,0,5,0,1440,500,10000,100000),
-            new RacingTierRules(2,1,7,540,1080,500,10000,600000),
-            new RacingTierRules(3,3,7,540,1080,500,10000,1500000),
-            new RacingTierRules(3,6,7,540,1080,500,10000,4000000)
+            new RacingTierRules(2,0,10,0,1440,500,10000,100000),
+            new RacingTierRules(2,1,14,540,1080,500,10000,600000),
+            new RacingTierRules(3,3,14,540,1080,500,10000,1500000),
+            new RacingTierRules(3,6,14,540,1080,500,10000,4000000)
         };
         public static RacingTierRules For(int tier)
         {
@@ -117,25 +117,29 @@ namespace PCShopSell.Core.Session
     }
     public static class RaceTracks
     {
+        public const int CourseRevision = 1;
+        private const double CourseScale = 1.5;
         public static readonly RaceTrack[] All={
-            Make(0,"城郊练习场","s_start",-470,-120,130,90,new[]{-50d,-20, -25,-32, 32,-32, 52,-12, 52,22, 25,34, -35,30, -52,10}),
-            Make(1,"社区俱乐部","s_market",120,-150,170,115,new[]{-68d,-35, -15,-40, 12,-10, 60,-35, 68,10, 36,42, -10,20, -60,40}),
-            Make(2,"公园竞速场","s_sports",390,90,220,145,new[]{-88d,-45, -10,-52, 75,-40, 88,0, 60,50, 10,48, -15,10, -80,48}),
-            Make(3,"花园大奖赛","s_night",70,450,270,165,new[]{-110d,-50, 50,-55, 110,-30, 110,28, 58,55, 10,25, -45,58, -110,25})
+            Make(0,"城郊赛车报名点","s_start",-437,-120,130,90,new[]{-50d,-20, -25,-32, 32,-32, 52,-12, 52,22, 25,34, -35,30, -52,10}),
+            Make(1,"社区俱乐部","s_market",120,-128,170,115,new[]{-68d,-35, -15,-40, 12,-10, 60,-35, 68,10, 36,42, -10,20, -60,40}),
+            Make(2,"公园竞速场","s_sports",348,90,220,145,new[]{-88d,-45, -10,-52, 75,-40, 88,0, 60,50, 10,48, -15,10, -80,48}),
+            Make(3,"花园大奖赛","s_night",70,418,270,165,new[]{-110d,-50, 50,-55, 110,-30, 110,28, 58,55, 10,25, -45,58, -110,25})
         };
         private static RaceTrack Make(int tier,string name,string street,double x,double y,double width,double depth,double[] points)
         {
-            var p=Enumerable.Range(0,points.Length/2).Select(i=>new MapPoint(points[i*2],points[i*2+1])).ToArray();
+            var p=Enumerable.Range(0,points.Length/2)
+                .Select(i=>new MapPoint(points[i*2]*CourseScale,points[i*2+1]*CourseScale)).ToArray();
             // Rounded corners: identical geometry for physics, gates, opponents and the rendered road.
             for(int pass=0;pass<2;pass++)p=Enumerable.Range(0,p.Length).SelectMany(i=>new[]{new MapPoint(p[i].X*.75+p[(i+1)%p.Length].X*.25,p[i].Y*.75+p[(i+1)%p.Length].Y*.25),new MapPoint(p[i].X*.25+p[(i+1)%p.Length].X*.75,p[i].Y*.25+p[(i+1)%p.Length].Y*.75)}).ToArray();
-            return new RaceTrack{Id="race_"+tier,Name=name,Street=street,Npc="racer_"+tier,Tier=tier,X=x,Y=y,Width=width,Depth=depth,Points=p};
+            return new RaceTrack{Id="race_"+tier,Name=name,Street=street,Npc="racer_"+tier,Tier=tier,X=x,Y=y,
+                Width=width*CourseScale,Depth=depth*CourseScale,Points=p};
         }
         public static RaceTrack Get(string id)=>All.FirstOrDefault(t=>t.Id==id);
         public static RaceTrack Get(string id,CityLayout city)
         {
             var track=Get(id);double scale=city?.ExpansionScale??1;
             if(track==null||Math.Abs(scale-1)<1e-9)return track;
-            // Driving dimensions, steering and lap times remain those of the existing circuit.
+            // The city expansion scale moves each circuit without changing its driving dimensions.
             return new RaceTrack {Id=track.Id,Name=track.Name,Street=track.Street,Npc=track.Npc,Tier=track.Tier,
                 X=track.X*scale,Y=track.Y*scale,Width=track.Width,Depth=track.Depth,Points=track.Points};
         }

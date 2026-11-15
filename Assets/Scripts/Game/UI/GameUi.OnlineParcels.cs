@@ -106,7 +106,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(head, picked.Length == 0 ? "<b>待下单</b>　还是空的" : $"<b>待下单</b>　{picked.Length} 样", 20, TextAnchor.MiddleLeft, Ui.Accent), -1, -1, 1);
             if (picked.Length > 0) Ui.Size(Ui.Button(head, "清空", () => { foreach (var e in entries) _parcelCart.Remove(e.Key); w.Rebuild(); }, 15, Ui.ButtonBg), 64, 30);
             var picks = GoodsList(side, 120);
-            if (picked.Length == 0) Para(picks, "在左边商品点“＋”选数量。\n下单后几天送到所选地点。", 16, Ui.Dim);
+            if (picked.Length == 0) Para(picks, "在左边输入或加减数量。\n下单后几天送到所选地点。", 16, Ui.Dim);
             foreach (var item in picked)
             {
                 var e = item; int count = NumberOf(e);
@@ -121,7 +121,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(side, $"合计 <b><color=#E8C77A>{total}</color></b>", 28, TextAnchor.MiddleRight), -1, 40);
             var order = Ui.Button(side, "下单", () =>
             {
-                foreach (var e in picked)
+                foreach (var e in entries.Where(e => NumberOf(e) > 0))
                 {
                     if (!S.OrderOnline(e.Kind, e.Id, e.Single ? 1 : NumberOf(e), destination)) break;
                     _parcelCart.Remove(e.Key);

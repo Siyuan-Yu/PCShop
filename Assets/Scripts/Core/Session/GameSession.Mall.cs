@@ -79,11 +79,17 @@ namespace PCShopSell.Core.Session
 
         private static double TotalKg(IEnumerable<MallCartLine> lines) => lines.Sum(l => FurnitureCatalog.Get(l.Id).WeightKg * l.Count);
 
+        private bool CanBuyMallFurniture(FurnitureDef furniture)
+        {
+            if (furniture == null || furniture.Starter) return false;
+            if (furniture.Id == HomeWorkbenchId) return Fail("居家办公台在米家出售。");
+            return AtMall || Fail("要去家具城才能买。");
+        }
+
         public bool MallCartAdd(string id, int count = 1)
         {
             FurnitureDef d = FurnitureCatalog.Get(id);
-            if (d == null || d.Starter || count <= 0) return false;
-            if (!AtMall) return Fail("要去家具城才能买。");
+            if (count <= 0 || !CanBuyMallFurniture(d)) return false;
             MallCartLine line = _mallCart.FirstOrDefault(l => l.Id == id);
             if (line == null) _mallCart.Add(new MallCartLine { Id = id, Count = count });
             else line.Count += count;
@@ -314,8 +320,7 @@ namespace PCShopSell.Core.Session
         public bool BuyFurniture(string id)
         {
             FurnitureDef d = FurnitureCatalog.Get(id);
-            if (d == null || d.Starter) return false;
-            if (!AtMall) return Fail("要去家具城才能买。");
+            if (!CanBuyMallFurniture(d)) return false;
             if (SendByCourier)
                 return MarkMallBought(PayAndSend("家具", d.Price, "「" + d.Name + "」", false, new CourierItem { Kind = CourierItemKind.Furniture, Id = id, Count = 1 }));
             if (d.WeightKg > FreeKg + 1e-9)
@@ -333,8 +338,7 @@ namespace PCShopSell.Core.Session
         public bool BuyFurnitureAtMall(string id)
         {
             FurnitureDef d = FurnitureCatalog.Get(id);
-            if (d == null || d.Starter) return false;
-            if (!AtMall) return Fail("要去家具城才能买。");
+            if (!CanBuyMallFurniture(d)) return false;
             return MarkMallBought(CheckoutLines(new List<MallCartLine> { new MallCartLine { Id = id, Count = 1 } }, MallCarry.Self, false));
         }
 
@@ -342,8 +346,7 @@ namespace PCShopSell.Core.Session
         public bool BuyFurnitureByTruck(string id)
         {
             FurnitureDef d = FurnitureCatalog.Get(id);
-            if (d == null || d.Starter) return false;
-            if (!AtMall) return Fail("要去家具城才能买。");
+            if (!CanBuyMallFurniture(d)) return false;
             return MarkMallBought(CheckoutLines(new List<MallCartLine> { new MallCartLine { Id = id, Count = 1 } }, MallCarry.Truck, false));
         }
     }

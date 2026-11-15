@@ -40,19 +40,20 @@ namespace PCShopSell.Game.UI
         }
 
         private string _businessAssetId;
-        private void OpenBusinessSection(int tab, string assetId = null)
+        private Window OpenBusinessSection(int tab, string assetId = null)
         {
-            _businessTab = tab; _businessAssetId = assetId; ShowBusinessPanel(false);
+            _businessTab = tab; _businessAssetId = assetId;
+            return ShowBusinessPanel(false);
         }
-        private void ShowBusinessPanel(bool agencyOnly)
+        private Window ShowBusinessPanel(bool agencyOnly)
         {
-            if (_businessTab == 0) { OpenAssetWorkspace(); return; }
-            if (_businessTab == 1) { OpenProcurementAgreement(); return; }
-            if (_businessTab == 5) { OpenCityResidence(); return; }
+            if (_businessTab == 0) { OpenAssetWorkspace(); return null; }
+            if (_businessTab == 1) { OpenProcurementAgreement(); return null; }
+            if (_businessTab == 5) { OpenCityResidence(); return null; }
             S.RefreshEnterpriseOffer();
             int section=_businessTab;string assetId=_businessAssetId;
             string title = section == 2 ? "企业采购订单" : section == 3 ? "托管门店管理" : section == 4 ? "MCN工作室" : "园区管理";
-            OpenWorkspace("business-module-" + section, "main", title, 1100, 800, w =>
+            return OpenWorkspace("business-module-" + section, "main", title, 1100, 800, w =>
             {
                 _businessAssetId=assetId;
                 if (section==3 && assetId != null)
@@ -250,7 +251,8 @@ namespace PCShopSell.Game.UI
         private void BuildCreators(Window w)
         {
             BuildMcnHeader(w);
-            Ui.Size(Ui.Button(w.Content, "社区MCN · 介绍创作者", OpenCommunityMcn, 18), -1, 40);
+            if (S.KolAmbassadorAccessBlocker == null)
+                Ui.Size(Ui.Button(w.Content, "社区MCN · 介绍创作者", OpenCommunityMcn, 18), -1, 40);
             if (!S.HasMcn) return;
             Para(w.Content, "和创作者本人交谈，选择“谈MCN合作”即可洽谈工作室合约。", 17);
             foreach (var c in S.CreatorPartners.Where(c => c.McnUntilDay > S.Clock.Today.TotalDays))

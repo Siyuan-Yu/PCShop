@@ -305,6 +305,11 @@ d["places"].insert(d["places"].index(park) + 1, dict(park,
     id="life_fishing", name="青湾垂钓场", street="s_start", node="lake_old_38",
     entranceX=-dx / 2 + nx * 11, entranceY=-dy / 2 + ny * 11,
     heading=math.degrees(math.atan2(nx, ny)), openMinute=0, closeMinute=1440))
+for place in d["places"]:
+    if place.get("business") == "venue_ktv":
+        place.update(openMinute=0, closeMinute=1440)
+    if place["id"] == "race_0":
+        place["name"] = "城郊赛车报名点"
 TARGET.write_text(json.dumps(d,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
 import runpy
 runpy.run_path(str(ROOT / "tools/add-old-market.py"), run_name="__main__")

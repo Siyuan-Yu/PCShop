@@ -117,7 +117,7 @@ namespace PCShopSell.Game
             if (Input.GetKeyDown(KeyCode.Escape)) { ExitPetFocus(); return; }
             if (Input.GetKeyDown(KeyCode.Space)) Session.Time.TogglePause();
             HandleTimeSpeedKeys();
-            HandleHudPanelKeys();
+            Ui.HandleHudPanelKeys();
             if (Ui.AnyModalOpen) return;
             if (Input.GetKeyDown(KeyCode.F)) InteractWithPet(_petToy != null);
             if (!Input.GetMouseButtonDown(0) || GameUi.PointerOverUi) return;

@@ -193,14 +193,23 @@ namespace PCShopSell.Tests
                 using(var l=Reload(s)){Assert.AreEqual(1,l.HomeTier);Assert.AreEqual(furniture,l.HomeLayout.Count);Assert.True(l.SellHome());Assert.Zero(l.HomeMortgageCents);Assert.AreEqual(Money.FromYuan(280),l.CurrentHomeRent);}
             }
         }
-        [Test] public void FundRoundtripChargesBothFees_AndNeverSellsUnownedUnits()
+        [Test] public void ExistingIndexHoldingsCanBeSoldButCannotBeIncreased()
         {
-            using(var s=Make())
-            {
-                var before=s.NetWorth();var amount=s.FundUnitPrice*10;Assert.True(s.TradeFund(10,true));
-                Assert.AreEqual(before-(amount.Scale(1.005)-amount),s.NetWorth());
-                using(var l=Reload(s)){Assert.AreEqual(10,l.FundUnits);Assert.True(l.TradeFund(10,false));Assert.False(l.TradeFund(10,false));Assert.AreEqual(before-amount.Scale(1.005)+amount.Scale(.995),l.NetWorth());}
-            }
+            using var s = Make();
+            s.SetSmartphone(true);
+            var save = s.CreateSave();
+            save.business.FundUnits = 10;
+            save.cityFundCostCents = s.CityInvestmentTradeTotal("hardware", 10, buy: true).Cents;
+            using var loaded = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(save)));
+            var cash = loaded.Ledger.Balance;
+            Assert.That(loaded.FundUnits, Is.EqualTo(10));
+            Assert.That(loaded.TradeFund(10, buy: true), Is.False);
+            Assert.That(loaded.Ledger.Balance, Is.EqualTo(cash));
+            var proceeds = loaded.CityInvestmentTradeTotal("hardware", 10, buy: false);
+            Assert.That(loaded.TradeFund(10, buy: false), Is.True);
+            Assert.That(loaded.TradeFund(10, buy: false), Is.False);
+            Assert.That(loaded.FundUnits, Is.Zero);
+            Assert.That(loaded.Ledger.Balance, Is.EqualTo(cash + proceeds));
         }
         [Test] public void PreviouslyPaidStoreCampaignContinuesUntilItsSavedExpiry()
         {

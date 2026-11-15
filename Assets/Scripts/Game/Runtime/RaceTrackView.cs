@@ -26,7 +26,7 @@ namespace PCShopSell.Game.Runtime
             Ribbon(scenery,track,(float)track.HalfRoad,.18f,Mats.Lit(ArtDirection.Hex("39434A")),resources);
             BuildBarriers(scenery, resources);
             BuildStartingGantry(scenery);
-            for(int i=0;i<4;i++)Prims.Box(scenery,"Grandstand",new Vector3(-10,.6f+i*.6f,5+i*2),new Vector3(24,.7f,2),Mats.Lit(i%2==0?ArtDirection.Wood:ArtDirection.Cream));
+            for(int i=0;i<4;i++)Prims.Box(scenery,"Grandstand",new Vector3(-10,.6f+i*.6f,i*2),new Vector3(24,.7f,2),Mats.Lit(i%2==0?ArtDirection.Wood:ArtDirection.Cream));
             Prims.Box(scenery,"PitOffice",new Vector3(15,2.2f,8),new Vector3(12,4.3f,6),Mats.Lit(ArtDirection.Cream));
             Prims.Box(scenery,"PitRoof",new Vector3(15,4.5f,8),new Vector3(14,.5f,8),Mats.Lit(ArtDirection.Blue));
             for(int i=0;i<4;i++){Prims.Box(scenery,"FloodlightPole",new Vector3((i%2==0?-1:1)*(float)track.Width*.43f,4,(i<2?-1:1)*(float)track.Depth*.43f),new Vector3(.3f,8,.3f),Mats.Lit(ArtDirection.Ink));}

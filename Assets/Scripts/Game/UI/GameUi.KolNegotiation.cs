@@ -9,6 +9,7 @@ namespace PCShopSell.Game.UI
     {
         private void OpenKolNegotiation(string person, Window dialogue, bool remote)
         {
+            if (S.KolAmbassadorAccessBlocker is string access) { Toast(access); return; }
             int days = 90;
             int frequency = 1;
             dialogue.Root.gameObject.SetActive(false);

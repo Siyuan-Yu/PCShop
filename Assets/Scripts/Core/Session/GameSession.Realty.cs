@@ -80,6 +80,12 @@ namespace PCShopSell.Core.Session
         /// <summary>现租户还没搬走：签了也要等到 OpenDay 才能搬进去。</summary>
         public bool IsAdvance(ShopListing l) => l.OpenDay > Clock.Today.TotalDays;
 
+        public string ShopHandoverText(int handoverDay)
+        {
+            int days = handoverDay - Clock.Today.TotalDays;
+            return days > 0 ? $"还有 {days} 天交房" : "今天交房";
+        }
+
         /// <summary>为什么现在签不了这一间；能签返回 null。newShop 见 <see cref="LeaseCost"/>。</summary>
         public string LeaseBlocker(ShopListing l, bool newShop = false)
         {
@@ -90,7 +96,7 @@ namespace PCShopSell.Core.Session
             if (InAgency && !AgencyServes(CurrentPlace, ListingPlace(l)))
                 return "这家中介只办理" + City.AgencyCoverageName(CurrentPlace) + "的房源，请到房源所属片区的中介";
             if (VentureAt(l.PlaceId) != null || PropertyAt(l.PlaceId) != null) return "这间铺子已纳入你的经营资产";
-            if (PendingLease != null) return $"你已经提前签了{City.GetPlace(PendingLease.PlaceId).Name}，第 {PendingLease.StartDay + 1} 天交房前不能再签";
+            if (PendingLease != null) return $"你已提前签下{City.GetPlace(PendingLease.PlaceId).Name}，{ShopHandoverText(PendingLease.StartDay)}。交房前不能再签";
             if (ShopAt(l.PlaceId) != null) return "这已经是你的店了";
             double rep = RealEstate.MinReputation(l.Size);
             if (PlayerShop.Reputation < rep) return $"房东要看名望：名望要到 {rep:0}";
@@ -129,10 +135,9 @@ namespace PCShopSell.Core.Session
                 PendingLease = new ShopLease { PlaceId = place.Id, Rent = l.Rent, Deposit = deposit, StartDay = l.OpenDay, SignedDay = Clock.Today.TotalDays };
                 PendingIsNewShop = newShop;
                 _listings.Remove(l);
-                int wait = l.OpenDay - Clock.Today.TotalDays;
                 Show("提前签约",
                     $"{place.Name}那间{SizeName(place.Size)}（{RealEstate.SizeArea(place.Size)}）签下来了，周租 {l.Rent}，押金 {deposit}。\n" +
-                    $"不过现租户的租约还没到期，要到第 {l.OpenDay + 1} 天（还有 {wait} 天）才搬走，到那天你才能搬进去。\n" +
+                    $"{ShopHandoverText(l.OpenDay)}，交房后可以入驻。\n" +
                     "房租从今天就开始算，这段时间每七天照样要交。" +
                     (newShop ? "\n交房那天就多了一家新店（毛坯，要自己摆收银台和货架），现在的店照常营业。"
                         : Lease != null ? "\n交房那天自动搬店：退旧铺押金、收搬家费，旧铺之前照常营业。" : "\n在那之前你还是没有店铺。"));
