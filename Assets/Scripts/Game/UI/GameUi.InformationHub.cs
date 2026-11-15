@@ -24,7 +24,7 @@ namespace PCShopSell.Game.UI
                     case 3: BuildModelCatalog(w); break;
                     default: BuildPriceMarket(w); break;
                 }
-            });
+            }, isTab: true);
         }
 
         private void OpenCalendar(int? day = null)
@@ -37,24 +37,38 @@ namespace PCShopSell.Game.UI
                 _calendarDay = day ?? S.Clock.Today.TotalDays;
                 if (alreadyOpen) state.Window.ResetScrollOnRebuild = true;
             }
-            OpenWorkspace("calendar", "calendar", monthView ? "日历" : "日程", monthView ? 820 : 1040, monthView ? 850 : 660, w =>
+            OpenWorkspace("calendar", "calendar", "日程", 820, monthView ? 850 : 660, w =>
             {
-                Ui.Size(Ui.Button(w.Content, "经营待办 · 样品 / 盘点 / 陈列 / 售后", OpenShopEventTasks, 18), -1, 42);
-                Ui.Size(Ui.Button(w.Content, "社区生活 · 图书 / 养狗 / 夜校 / 集市", OpenLifeEventPanel, 18), -1, 42);
                 if (monthView) BuildMonthCalendar(w);
                 else BuildPersonalSchedule(w);
             });
         }
 
+        private Window _peopleReturnPhone;
+
+        private void OpenPeopleWorkspace(string tab, Action<Window> build, Window phone = null)
+        {
+            if (!_navigation.TryGetValue("people", out var state) || state.Window == null || state.Window.Closed || phone != null)
+                _peopleReturnPhone = phone;
+
+            OpenWorkspace("people", tab, "人物", 1300, 850, w =>
+            {
+                BuildPeopleNavigation(w, tab);
+                build(w);
+            }, isTab: true);
+        }
+
         private void BuildPeopleNavigation(Window w, string selected)
         {
-            var tabs = Ui.Row(w.Content, 38, 6);
+            var header = Ui.Row(w.Content, 38, 12);
+            var tabs = Ui.Size(Ui.Row(header, 38, 6), -1, 38, 1);
             void Tab(string id, string title, Action open)
             { Ui.Size(Ui.Button(tabs, title, open, 17, selected == id ? Ui.ButtonHot : Ui.ButtonBg), -1, 38, 1).name = "PeopleTab_" + id; }
             Tab("people", "已认识的人", OpenCityPeople);
             Tab("relations", "关系图", OpenRelationsPanel);
             Tab("contacts", "通讯录", OpenContactsPanel);
-            Tab("messages", "消息", OpenChatPanel);
+            if (_peopleReturnPhone != null && !_peopleReturnPhone.Closed)
+                Ui.Size(Ui.Button(header, "‹ 返回手机", w.Close, 16), 132, 38).name = "PeopleReturnPhone";
         }
     }
 }

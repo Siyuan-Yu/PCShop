@@ -219,9 +219,13 @@ namespace PCShopSell.Core.Session
                 if (string.IsNullOrEmpty(e.TransferShopId) || e.TransferDay > today.TotalDays) continue;
                 var dest = ShopAt(e.TransferShopId);
                 var role = PlannedEmployeeRole(row);
-                if (dest == null || StaffCapacityBlocker(dest,e.Id)!=null || _employeeTrips.Any(t => t.EmployeeId == e.Id))
+                string blocker = dest == null ? "门店已退租"
+                    : EmployeeRoleShopBlocker(dest, role) ?? StaffCapacityBlocker(dest, e.Id);
+                if (blocker == null && _employeeTrips.Any(t => t.EmployeeId == e.Id))
+                    blocker = "本趟进货还没结束";
+                if (blocker != null)
                 {
-                    Say($"{e.Name}明日工作安排未生效：人数已满、店铺已退租或本趟进货未结束。已取消，请重新安排。");
+                    Say($"{e.Name}的调岗未生效：{blocker}。请重新安排。");
                     CancelEmployeeTransfer(e.Id);
                     continue;
                 }
@@ -334,7 +338,7 @@ namespace PCShopSell.Core.Session
             if (!truck && FreeVehicleCount(plan.Transport) <= 0) blocker = blocker ?? "没有空闲的" + Vehicles.Get(plan.Transport).Name + "，到车行再买一台或换运输方式";
             var shopStand=StandOf(row.Shop.Place);
             var probe=new CityPersonState {PersonId=PersonIdOf(row.Person),X=shopStand.X,Y=shopStand.Y,LocationPlaceId=row.Shop.Place.Id};
-            double route = 0, homeLeg = 0, space = 0;
+            double route = 0, homeLeg = 0, space = 0, ingredientKg = 0;
             int buyMinutes = 0, travelMinutes=0;
             var selected = new List<(PurchaseOffer offer, PurchaseLine item)>();
             foreach (var item in plan.Items)
@@ -350,8 +354,12 @@ namespace PCShopSell.Core.Session
                     if (item.Count > EmployeeSupplyAvailable(id,offer,Clock.Today.TotalDays)) blocker=blocker??offer.Name+"超过今日剩余库存";
                     if (item.Count < PurchaseMinimum(offer)) blocker = blocker ?? offer.Source.Name + "的"+offer.Name+"当前起订量为" + PurchaseMinimum(offer) + "件";
                 }
+                if (offer.Kind is PurchaseGoodsKind.Rice or PurchaseGoodsKind.Ingredient
+                    || (offer.Kind == PurchaseGoodsKind.Gift && IsRawIngredientProduct(offer.Id)))
+                    ingredientKg += offer.UnitKg * item.Count;
                 selected.Add((offer, item));
             }
+            if (!planningOnly) blocker ??= RestaurantIngredientDeliveryBlocker(row.Shop, ingredientKg);
             if (!planningOnly)
                 foreach(var sameStock in selected.GroupBy(x=>PhysicalSupplyKey(x.offer)))
                     if(sameStock.Sum(x=>x.item.Count)>EmployeeSupplyAvailable(id,sameStock.First().offer,Clock.Today.TotalDays))blocker=blocker??sameStock.First().offer.Name+"的不同包装/清单行合计超过剩余供货";
@@ -596,11 +604,21 @@ namespace PCShopSell.Core.Session
                 if (!trip.Delivered && to.TotalMinutes >= trip.DeliveryAt)
                 {
                     var dest = DeliveryShop(trip.ShopId);
-                    WithShop(dest, () => { foreach (var line in trip.Items) Unpack(PurchaseCourierItem(line), true); });
+                    var received = new List<string>();
+                    WithShop(dest, () =>
+                    {
+                        foreach (var line in trip.Items)
+                        {
+                            var item = PurchaseCourierItem(line);
+                            string destination = Unpack(item, dest?.Rented == true);
+                            received.Add(RestaurantIngredientsOnly(dest) && IsRawIngredientDelivery(item)
+                                ? destination : PurchaseItemName(line) + "×" + line.Count);
+                        }
+                    });
                     TrackTempClocks();
                     trip.Delivered = true;
                     var person = FindEmployee(trip.EmployeeId)?.Person;
-                    string note = $"{trip.EmployeeName}采购的货已送到{ShopTitle(dest)}：" + string.Join("、", trip.Items.Select(x => PurchaseItemName(x) + "×" + x.Count)) + "。";
+                    string note = $"{trip.EmployeeName}采购到货（{CourierDestName(dest)}）：" + string.Join("、", received) + "。";
                     bool more = trip.RemainingItems?.Length > 0;
                     if (more) note += $" 还有 {trip.RemainingItems.Sum(item => item.Count)} 件待采购。";
                     if (!string.IsNullOrEmpty(trip.SkippedNote)) note += "\n\n部分未购\n" + trip.SkippedNote;

@@ -121,6 +121,13 @@ namespace PCShopSell.Core.Session
                 }
             }
             _cityActivities.Clear();foreach(var a in d.cityActivities??Array.Empty<CityActivity>())if(a!=null&&!_cityActivities.Any(x=>x.Id==a.Id))_cityActivities.Add(a.Copy());
+            foreach (var activity in _cityActivities.Where(a => a.Active && a.DefinitionId == SignHelpActivityId))
+            {
+                activity.HostId = Npcs.Jie;
+                if (activity.State != CityActivityPhase.Running) activity.ServiceConfirmed = false;
+            }
+            foreach (var activity in _cityActivities.Where(a => a.Active && a.State != CityActivityPhase.Running && IsOnsiteActivity(a)))
+                activity.ServiceConfirmed = false;
             _nextCityActivity=Math.Max(1,d.cityNextActivity);_nextCityIntent=Math.Max(1,d.cityNextIntent);
             _cityTopicDay.Clear();for(int i=0;i<Math.Min(d.cityTopicKeys?.Length??0,d.cityTopicDays?.Length??0);i++)_cityTopicDay[d.cityTopicKeys[i]]=d.cityTopicDays[i];
             _cityTrust.Clear();for(int i=0;i<Math.Min(d.cityTrustIds?.Length??0,d.cityTrustValues?.Length??0);i++)_cityTrust[d.cityTrustIds[i]]=Math.Max(0,d.cityTrustValues[i]);

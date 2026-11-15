@@ -74,7 +74,7 @@ namespace PCShopSell.Tests
 
         private static System.Collections.Generic.IEnumerable<TestCaseData> EveryFish => FishingCatalog.Fish.Select(f => new TestCaseData(f.Id));
         [TestCaseSource(nameof(EveryFish))]
-        public void EverySpeciesCanActuallyBeCaughtKeptReloadedCookedAndSold(string fishId)
+        public void EverySpeciesCanBeCaughtKeptReloadedAndSold(string fishId)
         {
             var fish = FishingCatalog.Get(fishId);
             using var s = Make(); Start(s); s.SelectFishingSpot(fish.Habitat); s.AdvanceClock(2); s.SelectFishingBait(fish.Bait);
@@ -84,9 +84,7 @@ namespace PCShopSell.Tests
             using var loaded = Reload(s);
             Assert.AreEqual(1, loaded.Backpack.Food.IngredientCount(fishId)); Assert.AreEqual(startingWeight + fish.Kg, loaded.Backpack.WeightKg, .001);
             Assert.IsNotNull(Ingredients.Get(fishId)); Assert.Greater(Ingredients.Get(fishId).Price.Yuan, fish.SalePrice);
-            var food = new Pantry { RiceKg = 1 }; food.AddIngredient(fishId, 1);
-            Assert.IsTrue(food.StartCook(.25, fishId, 0, out string reason), reason);
-            Assert.AreEqual(fishId, food.Cooking.Batch.Id);
+            Assert.IsNull(Ingredients.GetRiceCookerRecipe(fishId));
             var cash = loaded.Ledger.Balance; Assert.IsTrue(loaded.SellFishingCatch(fishId, 1));
             Assert.AreEqual(cash + Money.FromYuan(fish.SalePrice), loaded.Ledger.Balance);
             Assert.IsFalse(loaded.SellFishingCatch(fishId, 1));
@@ -228,13 +226,14 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void KeptFishIsCompatibleWithCookingStorageAndIngredientNutrition()
+        public void TryingToCookFishLeavesRiceAndCatchInStorage()
         {
             var food = new Pantry(); food.RiceKg = 1; food.AddIngredient("fish_bass", 1);
             Assert.AreEqual(FoodBatch.NoExpiry, food.Ingredient.Single().ExpireDay);
-            Assert.IsTrue(food.StartCook(.25, "fish_bass", 0, out string reason), reason);
-            Assert.AreEqual(0, food.IngredientCount("fish_bass")); Assert.AreEqual("fish_bass", food.Cooking.Batch.Id);
-            Assert.Greater(GameSession.MealNutrition("fish_bass"), 0);
+            Assert.IsFalse(food.StartCook(.25, "fish_bass", 0, out _));
+            Assert.AreEqual(1, food.IngredientCount("fish_bass"));
+            Assert.AreEqual(1, food.RiceKg);
+            Assert.IsNull(food.Cooking);
             var bag = new Backpack(); bag.Food.AddIngredient("fish_carp", 1); Assert.AreEqual(1.2, bag.WeightKg, .001);
         }
 

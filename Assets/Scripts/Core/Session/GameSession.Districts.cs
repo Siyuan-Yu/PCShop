@@ -38,7 +38,7 @@ namespace PCShopSell.Core.Session
         }
         public bool DistrictRoadOpen(int tier) => !City.IsLakeCity || tier <= DistrictAccessTier;
         public string DistrictAccessBlocker(Place place) => place != null && !DistrictRoadOpen(DistrictTierOf(place))
-            ? FirstChapterTrial ? "试玩版开放城郊片区。" : "前方" + DistrictName(DistrictTierOf(place)) + "片区暂未开放，请先完成对应的主线引荐。手机聊天中可查看进度。" : null;
+            ? FirstChapterTrial ? "试玩版开放城郊片区。" : "前方" + DistrictName(DistrictTierOf(place)) + "片区暂未开放，请先完成对应的主线引荐。可在任务界面查看进度。" : null;
         public bool TryDistrictRoadStop(MapPoint from, MapPoint to, out MapPoint stop, out int tier)
         {
             stop = to; tier = 0;
@@ -51,7 +51,7 @@ namespace PCShopSell.Core.Session
             if (_lastDistrictGate == tier && Clock.Now.TotalMinutes-_lastDistrictGateMinute < 10) return;
             _lastDistrictGate = tier; _lastDistrictGateMinute = Clock.Now.TotalMinutes;
             if (FirstChapterTrial) { Show("试玩区域边界", "试玩版开放城郊片区。你可以返回城郊继续经营。"); return; }
-            Show("前方暂不通行", "通往" + DistrictName(tier) + "的道路尚未开放。\n完成“" + DistrictName(tier-1) + " → " + DistrictName(tier) + "”主线引荐后放行。\n请到手机聊天查看主线消息；满足资金条件不会直接开路。");
+            Show("前方暂不通行", "通往" + DistrictName(tier) + "的道路尚未开放。\n完成“" + DistrictName(tier-1) + " → " + DistrictName(tier) + "”主线引荐后放行。\n请在任务界面查看主线；满足资金条件不会直接开路。");
         }
         private int BlockedDistrictOnTrip(Trip trip)
         {
@@ -81,6 +81,8 @@ namespace PCShopSell.Core.Session
             }
         }
         private string[] ActiveDistrictChain(int chapter) => DistrictNodeChains[chapter-1];
+        internal bool CommunityInvitationScheduledOrStarted =>
+            _district.PendingChapter == 1 || _district.Chapter >= 1 || DistrictAccessTier >= 1;
         public bool DistrictNodeCompleted(string id) => _district.Completed.Contains(id);
         public int DistrictOperatingShops(int tier) => MyShops.Count(s => DistrictTierOf(s.Place)==tier
             && (IsDedicatedVenue(s.Place) ? VenueOperation(s.Place.Id)?.Accepting==true : !s.Sim.NotFitted)
@@ -93,8 +95,11 @@ namespace PCShopSell.Core.Session
             if (DistrictAccessTier < chapter-1) return "请先完成上一段主线，开放"+DistrictName(chapter-1)+"道路";
             if (chapter==1)
             {
-                if (DistrictOperatingShops(0)<5) return "城郊已布置并开业的门店 "+DistrictOperatingShops(0)+"/5";
-                if (Ledger.Balance<Money.FromYuan(1000000)) return "现金尚未达到100万元";
+                int shops = DistrictOperatingShops(0);
+                if (shops < DistrictNarrativeCatalog.CommunityShopMinimum)
+                    return $"城郊已布置并开业的门店 {shops}/{DistrictNarrativeCatalog.CommunityShopMinimum}";
+                if (Ledger.Balance < Money.FromYuan(DistrictNarrativeCatalog.CommunityCashMinimumYuan))
+                    return $"现金尚未达到 {DistrictNarrativeCatalog.CommunityCashMinimumYuan / 10_000} 万元";
             }
             if (chapter==2)
             {
@@ -123,7 +128,7 @@ namespace PCShopSell.Core.Session
                 if (DistrictPrerequisiteBlocker(chapter)!=null) return;
                 _district.CommerceBrandId=_brands.Brands.Where(b=>chapter!=3||DistrictBrandRevenueQualified(b)).OrderByDescending(b=>b.Influence).FirstOrDefault()?.Id;
                 _district.PendingChapter=chapter;
-                _district.InvitationDueAt=Clock.Now.TotalMinutes+3*1440;
+                _district.InvitationDueAt=Clock.Now.TotalMinutes+DistrictNarrativeCatalog.InvitationDelayDays*1440;
             }
             if (Clock.Now.TotalMinutes<_district.InvitationDueAt) return;
             if (_sleeping) { _district.InvitationWaitingForWake=true; return; }
@@ -140,7 +145,7 @@ namespace PCShopSell.Core.Session
             _district.NodeId = ActiveDistrictChain(chapter)[0];
             string sender=chapter==1?"李秀兰":chapter==2?"任帆":"沈远";
             Say(sender+"主动联系了你：“"+CurrentDistrictNode.Title+"”。");
-            Show(sender+"发来主线邀请",CurrentDistrictNode.Dialogue+"\n\n打开手机聊天顶部的“主线消息”回复邀请；现在不用立刻赴约。");
+            Show(sender+"发来主线邀请",CurrentDistrictNode.Dialogue+"\n\n打开任务界面的「主线消息」回复邀请；现在不用立刻赴约。");
         }
         public string DistrictMeetingContact
         {
@@ -305,7 +310,7 @@ namespace PCShopSell.Core.Session
                 if(IsGameOver||IsWorking||CityActivityExclusive)return "请先结束当前工作或活动";
                 if(CurrentDistrictNode==null)return "暂无主线";
                 if(DistrictCommerceGameplay)return DistrictCommerceBlocker;
-                if(_district.MeetingNodeId!=_district.NodeId)return "请先在聊天消息中确认约见";
+                if(_district.MeetingNodeId!=_district.NodeId)return "请先在任务界面确认约见";
                 if(!AtDistrictMeeting())return "请自行前往"+City.GetPlace(_district.MeetingPlaceId).Name+(DistrictMeetingOutdoors?"附近的街边会面点":"门前");
                 if(Clock.Now.TotalMinutes<_district.MeetingAt)return "约定 "+DistrictMeetingTime+"，还需等待"+DistrictMeetingWait+"。关闭窗口后时间才会继续。";
                 if(_district.MeetingPeople.Any(id=>CityPersonState(id)?.Route!=null || CityPersonState(id)?.LocationPlaceId!=_district.MeetingPlaceId))return "同行人物仍在赴约，请关闭窗口等待";
@@ -480,7 +485,7 @@ namespace PCShopSell.Core.Session
                 _district.InvitationWaitingForWake=false;
                 RefreshDistrictNarrative();
             }
-            Say("已进入“"+DistrictName(tier)+" → "+DistrictName(chapter)+"”验收。此前主线与道路已开放，请到手机聊天回复当前主线邀请；重复进入保留本段进度。");
+            Say("已进入“"+DistrictName(tier)+" → "+DistrictName(chapter)+"”验收。此前主线与道路已开放，请在任务界面回复当前主线邀请；重复进入保留本段进度。");
             return true;
 #else
             return false;
@@ -549,7 +554,7 @@ namespace PCShopSell.Core.Session
                 {
                     _district.CommerceBrandId=brand.Id;
                     // Explicit editor fixture skips only the entry gate; no invented sales or fulfilled orders.
-                    if(_district.PendingChapter!=chapter){_district.PendingChapter=chapter;_district.InvitationDueAt=Clock.Now.TotalMinutes+3*1440;}
+                    if(_district.PendingChapter!=chapter){_district.PendingChapter=chapter;_district.InvitationDueAt=Clock.Now.TotalMinutes+DistrictNarrativeCatalog.InvitationDelayDays*1440;}
                 }
                 RefreshBrandTraffic();
             }

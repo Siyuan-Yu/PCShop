@@ -38,6 +38,8 @@ namespace PCShopSell.Core.Session
             if(IsSpecialBusiness(_focus)&&SpecialBusinessBusy(_focus))return Fail("请先完成或清理餐馆订单、二手库存及卖家，再转型。");
             if((kind=="restaurant"||kind=="secondhand"||kind==PetShopCatalog.ShopKind)&&(PlayerShop.Orders.Count>0||PlayerShop.Queue.Count>0))return Fail("请先完成装机订单和排队结账，再转型。");
             _focus.RetailKind=kind;PlayerShop.RetailKind=kind;
+            RefrigerateExistingRestaurantIngredients(_focus);
+            MoveIncompatibleAssemblersToStandby(_focus, notify: true);
             if(kind!=PetShopCatalog.ShopKind)_petBoarding.Remove(_focus.Place.Id);
             PlayerShop.TradingEnabled=kind!="restaurant";
             if(IsSpecialBusiness(_focus))PlayerShop.ClearCustomers();

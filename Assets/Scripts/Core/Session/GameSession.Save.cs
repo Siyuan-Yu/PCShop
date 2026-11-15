@@ -132,11 +132,7 @@ namespace PCShopSell.Core.Session
                 shopAwareness = PlayerShop.Awareness,
                 shopReputation = PlayerShop.ShopReputation,
                 accepted = (int)PlayerShop.Accepted,
-                orders = PlayerShop.Orders.Select(o => new SaveOrder
-                {
-                    id = o.Id, contractId = o.ContractId, tier = o.Tier, priceCents = o.Price.Cents, placedAt = o.PlacedAt.TotalMinutes,
-                    dueAt = o.DueAt.TotalMinutes, partsReserved = o.PartsReserved, mistakes = o.Mistakes, employeeMinutesLeft = o.EmployeeMinutesLeft,
-                }).ToArray(),
+                orders = PlayerShop.Orders.Select(ToSave).ToArray(),
                 nextOrderId = PlayerShop.NextOrderId,
                 displayPcs = PlayerShop.DisplayPcs.ToArray(),
 
@@ -207,7 +203,7 @@ namespace PCShopSell.Core.Session
             var history = new Dictionary<PartCategory, List<double>>();
             foreach (SaveHistory h in d.history ?? Array.Empty<SaveHistory>())
                 history[(PartCategory)h.category] = new List<double>(h.values ?? Array.Empty<double>());
-            Market.Restore(d.marketFactors ?? new double[3],
+            Market.Restore(d.marketFactors ?? Array.Empty<double>(),
                 (d.news ?? Array.Empty<SaveNews>()).Select(n => new NewsItem(new GameDate(n.day), n.headline, (MacroFactor)n.factor, n.shock)),
                 history);
 
@@ -244,6 +240,7 @@ namespace PCShopSell.Core.Session
             PlayerShop.RetailKind = _focus.RetailKind;
             PendingRetailKind = PCShopSell.Core.Home.RetailShopTypes.Valid(d.pendingRetailKind);
             CancelProtectedPendingLease();
+            PlayerShop.RestoreOrders(Array.Empty<BuildOrder>(), d.nextOrderId);
             PlayerShop.Stock.Clear();
             Fill(PlayerShop.Stock, d.shopStock);
             string[] goodsIds = d.shopGoodsIds ?? Array.Empty<string>();
@@ -256,8 +253,7 @@ namespace PCShopSell.Core.Session
             PlayerShop.RestoreShopStanding(d.hasShopStanding ? d.shopAwareness : d.reputation,
                 d.hasShopStanding ? d.shopReputation : ShopSimulation.NeutralShopReputation);
             PlayerShop.Accepted = (PaymentMethods)d.accepted;
-            PlayerShop.RestoreOrders((d.orders ?? Array.Empty<SaveOrder>()).Select(o =>
-                new BuildOrder(o.id, o.tier, Money.FromCents(o.priceCents), new GameTimestamp(o.placedAt), new GameTimestamp(o.dueAt)) { ContractId = o.contractId, PartsReserved = o.partsReserved, Mistakes = Math.Max(0, o.mistakes), EmployeeMinutesLeft = Math.Max(0, o.employeeMinutesLeft) }),
+            PlayerShop.RestoreOrders((d.orders ?? Array.Empty<SaveOrder>()).Select(FromSave),
                 d.nextOrderId);
             PlayerShop.RestoreDisplay(d.displayPcs);
             PlayerShop.PlayerPresent = InPlayerShop;
@@ -351,6 +347,10 @@ namespace PCShopSell.Core.Session
             LoadVenueBusinesses(d);
             LoadEnergyPayroll(d);
             MigrateStoreMainCategories();
+            foreach (var restaurant in _shops.Where(shop => shop.Rented && RestaurantIngredientsOnly(shop)))
+                RefrigerateExistingRestaurantIngredients(restaurant);
+            foreach (var shop in _shops.Where(shop => shop.Rented))
+                MoveIncompatibleAssemblersToStandby(shop, notify: false);
             MigrateCityGeometry(d);
             NormalizeCityWalkingRoutes();
             NormalizeWarehouses();
@@ -360,6 +360,7 @@ namespace PCShopSell.Core.Session
             LoadWeeklySupplierPlans();
             LoadHomeWorkbench(d);
             LoadDistrictProgress(d);
+            CancelLockedCityAppointmentsOnLoad();
             RestoreMcnIntroductions(d);
             RestoreKolStreaming(d);
             RefreshBrandTraffic();

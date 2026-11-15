@@ -28,7 +28,7 @@ namespace PCShopSell.Tests
             Assert.That(s.BuyMotor("e_city"), Is.True);
             string id = s.Garage.Single().Id;
             At(s, GameSession.StarterRaceGarageId);
-            Assert.That(s.AcquireGarage(GameSession.StarterRaceGarageId, false), Is.True);
+            Assert.That(s.AcquireGarage(GameSession.StarterRaceGarageId), Is.True);
             Assert.That(s.ParkCommuteMotor(id, GameSession.StarterRaceGarageId), Is.True);
             return id;
         }

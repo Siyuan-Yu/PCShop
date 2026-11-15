@@ -12,51 +12,6 @@ namespace PCShopSell.Core.Session
 
         private readonly Dictionary<string, double> _relations = new Dictionary<string, double>();
         private readonly Dictionary<string, int> _giftDays = new Dictionary<string, int>();
-        private readonly Dictionary<string, int> _chatDays = new Dictionary<string, int>();
-
-        /// <summary>每天能给每个人发一次消息，回了就涨一点交情；聊到这个数就不再涨了（再往上得当面送礼、约出去）。</summary>
-        public const int ChatMaxRelation = 40;
-        public const double ChatGain = 0.5;
-        /// <summary>没装聊天 app，只能发短信：现在大家都不看短信了，常常没人回。</summary>
-        public const double SmsReplyChance = 0.4;
-
-        /// <summary>手机上装了聊天 app：发消息一定有人回；否则只能发短信。</summary>
-        public bool HasChatApp => HasApp(PhoneApps.Chat)||CanUseHomeWorkbench;
-
-        /// <summary>刚发的那条消息有没有人回。</summary>
-        public bool LastChatReplied { get; private set; }
-
-        public string ChatBlocker(string npcId)
-        {
-            if (Npcs.Get(npcId) == null && CityPerson(npcId) == null && Rosters.Get(npcId) == null && Residents.Get(npcId) == null) return "没这个人";
-            if (!IsMet(npcId)) return "还没认识";
-            if (_chatDays.TryGetValue(npcId, out int last) && last == Clock.Today.TotalDays) return HasChatApp ? "今天聊过了" : "今天发过了";
-            return null;
-        }
-
-        /// <summary>发消息 / 短信：每天一次。聊天 app 一定有回复；短信只有 SmsReplyChance 的把握有人回。回了且交情不到 40 时 +0.5。</summary>
-        public bool Chat(string npcId)
-        {
-            string blocker = ChatBlocker(npcId);
-            if (blocker != null) return Fail(blocker);
-            _chatDays[npcId] = Clock.Today.TotalDays;
-            string contactName = CityPerson(npcId)?.Name ?? Npcs.Get(npcId)?.Name ?? Rosters.Get(npcId)?.Name ?? npcId;
-            LastChatReplied = HasChatApp || Random.Chance(SmsReplyChance);
-            if (!LastChatReplied)
-            {
-                RememberSocial(npcId, "发了条短信，对方没有回复。");
-                Say($"给{contactName}发了条短信，一直没回。现在大家都不习惯看短信了。");
-                return true;
-            }
-            RememberSocial(npcId, HasChatApp ? "通过聊天软件聊了几句。" : "通过短信聊了几句。");
-            if (Relation(npcId) < ChatMaxRelation)
-            {
-                AddRelation(npcId, ChatGain);
-                Say($"和{contactName}聊了几句，交情涨了一点。");
-            }
-            else Say($"和{contactName}闲聊了几句。交情已经到头了，再往上得当面送礼、约出去。");
-            return true;
-        }
 
         /// <summary>签下（搬到）一间新铺子（界面据此重建店内场景、改街上顾客去的店门）。</summary>
         public event Action<ShopSize> ShopExpanded;
@@ -168,8 +123,6 @@ namespace PCShopSell.Core.Session
             d.relationValues = d.relationIds.Select(k => _relations[k]).ToArray();
             d.giftIds = _giftDays.Keys.ToArray();
             d.giftDays = d.giftIds.Select(k => _giftDays[k]).ToArray();
-            d.chatIds = _chatDays.Keys.ToArray();
-            d.chatDays = d.chatIds.Select(k => _chatDays[k]).ToArray();
             SaveTalk(d);
         }
 
@@ -182,9 +135,6 @@ namespace PCShopSell.Core.Session
             _giftDays.Clear();
             n = Math.Min(d.giftIds?.Length ?? 0, d.giftDays?.Length ?? 0);
             for (int i = 0; i < n; i++) _giftDays[d.giftIds[i]] = d.giftDays[i];
-            _chatDays.Clear();
-            n = Math.Min(d.chatIds?.Length ?? 0, d.chatDays?.Length ?? 0);
-            for (int i = 0; i < n; i++) _chatDays[d.chatIds[i]] = d.chatDays[i];
             RestoreTalk(d);
         }
     }

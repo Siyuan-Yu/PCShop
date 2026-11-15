@@ -38,7 +38,9 @@ namespace PCShopSell.Game.UI
         {
             if (S.IsDedicatedVenue(S.PlayerShopPlace)) return;
             var place = S.PlayerShopPlace;
-            Ui.Size(Ui.Button(parent, "商圈 · " + S.ShopCompetitionCount(place) + " 家同类店", () => OpenShopCompetition(place), 16), -1, 34).name = "ShopCompetitionEntry";
+            var button = Ui.Size(Ui.Button(parent, $"同类店 {S.ShopCompetitionCount(place)}", () => OpenShopCompetition(place), 16), 108, 38);
+            button.name = "ShopCompetitionEntry";
+            button.Tip("查看附近同类店和客流分流");
         }
 
         private void AddCompetitionRing(RectTransform overlay, AgencyStreetMap view, Place place)

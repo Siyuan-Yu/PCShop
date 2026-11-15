@@ -37,9 +37,8 @@ namespace PCShopSell.EditorTools
             Shot("restaurant_waiting");Shot("restaurant_waiting_720",1280,720);
             Check(s.StartRestaurantCooking(1),"实际食材投入炒锅");s.AdvanceClock(8);_game.Ui.RebuildDock();Frame(0);Shot("restaurant_ready_to_plate");
             Check(s.ServeRestaurantOrder(1),"实际出锅并上菜");s.AdvanceClock(15);
-            s.AdvanceClock((int)(state.Orders[0].CheckoutAt-s.Clock.Now.TotalMinutes));
-            Check(s.CheckoutRestaurantCustomer(1),"堂食顾客到收银台后结账");
-            Check(state.Paid==1&&state.Revenue==18,"吃完实际收款且无重复收费");s.ClearRestaurantOrder(1);
+            Check(s.ClearRestaurantOrder(1),"桌边收款并收桌");
+            Check(state.Paid==1&&state.Revenue==18,"吃完实际收款且无重复收费");
             Check(s.SetShopMainCategory("secondhand"),"清理餐馆订单后可转型二手店");
             shop.Layout.Clear();shop.Layout.Add(new PlacedFurniture{Id="used_buydesk",X=2,Z=4.2});shop.Layout.Add(new PlacedFurniture{Id="used_display",X=4,Z=3});
             var seller=new UsedItem{Id=state.NextId++,Product=1,Personality=1,Statement=2,Claim=UsedCondition.Good,Condition=UsedCondition.Replica,Asking=130,Minimum=70,ExpiresAt=s.Clock.Now.TotalMinutes+90};state.Used.Add(seller);

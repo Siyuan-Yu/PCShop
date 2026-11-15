@@ -17,7 +17,7 @@ namespace PCShopSell.Core.Shop
         public bool cash, boxed, chilled, preferenceAssigned;
         public bool countedBrandVisit;
         public string referralProductId;
-        public bool referralBoxed, referralReserved;
+        public bool referralBoxed, referralReserved, storyReferral;
         public int resaleId;
         public string resaleName;
         public CitySavedCustomer Copy() => (CitySavedCustomer)MemberwiseClone();
@@ -26,7 +26,7 @@ namespace PCShopSell.Core.Shop
     public struct ShopVisitDetail
     {
         public int CustomerId;
-        public string PersonId, ProductName;
+        public string PersonId, ProductName, StatusText;
         public long ArrivalMinute, PaidCents;
         public CustomerState State;
         public LeaveReason Reason;
@@ -69,7 +69,8 @@ namespace PCShopSell.Core.Shop
                 spendCents = c.Spend.Cents, budgetCents = c.RetailBudgetCents, cash = c.CarriesCash,
                 boxed = c.ItemBoxed, chilled = c.GoodsChilled, goodsExpiry = c.GoodsExpiryDay, displayTier = c.DisplayTier,
                 resaleId=c.ResaleId,resaleName=c.ResaleName,preferenceAssigned = c.RetailPreferenceAssigned,
-                referralProductId = c.ReferralProductId, referralBoxed = c.ReferralBoxed, referralReserved = c.ReferralReserved }).ToArray()
+                referralProductId = c.ReferralProductId, referralBoxed = c.ReferralBoxed, referralReserved = c.ReferralReserved,
+                storyReferral = c.StoryReferral }).ToArray()
         };
 
         /// <summary>Inventory already excludes goods held by these visitors. Restore references only: no arrival events, purchases or stock removal.</summary>
@@ -100,7 +101,8 @@ namespace PCShopSell.Core.Shop
                     DisplayTier = x.displayTier >= 0 && x.displayTier < PartCatalog.TierCount ? x.displayTier : -1,
                     Spend = Money.FromCents(x.spendCents), RetailInterestSeries = x.interest,
                     RetailBudgetCents = Math.Max(0, x.budgetCents), RetailPreferenceAssigned = x.preferenceAssigned,
-                    ReferralProductId = x.referralProductId, ReferralBoxed = x.referralBoxed, ReferralReserved = x.referralReserved };
+                    ReferralProductId = x.referralProductId, ReferralBoxed = x.referralBoxed, ReferralReserved = x.referralReserved,
+                    StoryReferral = x.storyReferral };
                 _active.Add(c); byId[c.Id] = c;
             }
             foreach (int id in data.queue ?? Array.Empty<int>())

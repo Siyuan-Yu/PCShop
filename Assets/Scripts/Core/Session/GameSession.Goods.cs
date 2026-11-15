@@ -142,6 +142,21 @@ namespace PCShopSell.Core.Session
             if (!InPlayerShop) return Fail("要在自己的店里才能上架。");
             int have = GoodsAvailableToList(giftId);
             if (have < count) return Fail($"手边只有 {have} 件「{g.Name}」。");
+            if (RestaurantIngredientsOnly(_focus) && IsRawIngredientProduct(giftId))
+            {
+                string blocker = RestaurantFridgeRequired(_focus);
+                if (blocker != null) return Fail(blocker + "。");
+                if (g.WeightKg * count > RestaurantFridgeRoom(_focus) + 1e-9) return Fail("冰箱放不下这些食材。");
+                for (int i = 0; i < count; i++)
+                {
+                    var source = RetailCount(ShopLocker, g) > 0 ? ShopLocker : Backpack;
+                    var batch = TakeRetailFromBag(source, g);
+                    AddRetailToBag(_focus.Fridge, g, 1, batch.ExpireDay, chilled: true);
+                }
+                ApplyCargoLimit();
+                if (notify) Say($"把「{g.Name}」×{count} 放进了冰箱。");
+                return true;
+            }
             if (!PlayerShop.Stock.CanAddGoods(giftId, count)) return Fail("店里放不下了（仓位不够）。");
             for (int i = 0; i < count; i++)
             {

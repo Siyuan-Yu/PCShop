@@ -6,15 +6,6 @@ namespace PCShopSell.Core.Home
     // Calendar-derived rules are reproducible without rolling new outcomes on load.
     public static class IndustryCycles
     {
-        public static int Generation(string id) => id != null && id.StartsWith("g2:") ? 2 : id != null && id.StartsWith("g1:") ? 1 : 0;
-        public static int ReleaseDay(int generation) => generation == 0 ? 0 : generation == 1 ? 30 : 90;
-        public static int CurrentGeneration(int day) => day >= 90 ? 2 : day >= 30 ? 1 : 0;
-        public static bool Available(PartDef part, int day) => day >= ReleaseDay(Generation(part.Id));
-        public static double HardwareFactor(PartDef part, int day)
-        {
-            int age = CurrentGeneration(day) - Generation(part.Id);
-            return age <= 0 ? 1 : age == 1 ? .78 : .55;
-        }
         public static int ModelPhase(string series, int day)
         {
             int index = Array.IndexOf(ModelProducts.SeriesIds, series);

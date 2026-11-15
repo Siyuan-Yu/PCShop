@@ -59,6 +59,8 @@ namespace PCShopSell.Core.Shop
         NoStock,
         TooExpensive,
         OrderPlaced,
+        MealWaitTimeout,
+        MenuUnavailable,
     }
 
     /// <summary>一天营业结束时的小结（给“昨日营业”提示用）。</summary>
@@ -113,6 +115,7 @@ namespace PCShopSell.Core.Shop
         internal bool RetailPreferenceAssigned;
         internal string ReferralProductId;
         internal bool ReferralBoxed, ReferralReserved;
+        internal bool StoryReferral, ReferralStockReturned;
         public int GoodsExpiryDay = -1;
         public bool GoodsChilled;
 
@@ -149,6 +152,8 @@ namespace PCShopSell.Core.Shop
         public GameTimestamp DueAt { get; }
         public string ContractId;
         public bool PartsReserved;
+        internal int ReservedPartMask, BoxedPartMask;
+        private static readonly int FullKitMask = PartCatalog.Categories.Aggregate(0, (mask, category) => mask | (1 << (int)category));
         public int Mistakes;
         public int EmployeeMinutesLeft;
 
@@ -162,6 +167,20 @@ namespace PCShopSell.Core.Shop
         }
 
         public static Money LaborFee(int tier) => Money.FromYuan(tier == 0 ? 150 : tier == 1 ? 220 : 320);
+
+        public bool HasReservedPart(PartDef part) =>
+            part.Tier == Tier && PartCatalog.Find(part.Category, Tier).Id == part.Id &&
+            (PartsReserved || (ReservedPartMask & (1 << (int)part.Category)) != 0);
+
+        public IEnumerable<PartDef> ReservedParts => PartCatalog.BuildList(Tier).Where(HasReservedPart);
+
+        internal void HoldPart(PartDef part, bool boxed)
+        {
+            int bit = 1 << (int)part.Category;
+            ReservedPartMask |= bit;
+            if (boxed) BoxedPartMask |= bit;
+            PartsReserved = ReservedPartMask == FullKitMask;
+        }
     }
 
     /// <summary>营业参数。数值均为占位，等原型试玩后平衡。</summary>
@@ -463,13 +482,16 @@ namespace PCShopSell.Core.Shop
         }
 
         /// <summary>杂货现在的售价 = 进价（礼品标价）× 加价倍率。</summary>
-        public Money GoodsPriceOf(string id)
+        public Money GoodsPriceOf(string id) => GoodsPriceOf(id, _markup);
+
+        public Money GoodsPriceOf(string id, double globalMarkup)
         {
             GiftDef g = Gifts.Get(id);
             if (g == null) return Money.Zero;
             double promotion = TemporaryPriceFactorOf?.Invoke(id) ?? 1;
             if(_fixedSalePrices.TryGetValue("g:"+id,out var fixedPrice))return Money.FromYuan(fixedPrice).Scale(promotion);
-            return Money.FromYuan(Math.Max(1, (long)Math.Round(g.Price.Yuan * IndustryCycles.GoodsFactor(g,_clock.Today.TotalDays) * MarkupOfGoods(id)))).Scale(promotion);
+            double markup = _partMarkups.TryGetValue(GoodsKey(id), out double individual) ? individual : globalMarkup;
+            return Money.FromYuan(Math.Max(1, (long)Math.Round(g.Price.Yuan * IndustryCycles.GoodsFactor(g,_clock.Today.TotalDays) * markup))).Scale(promotion);
         }
 
         public void RestorePartMarkups(IEnumerable<KeyValuePair<string, double>> items)
@@ -549,7 +571,7 @@ namespace PCShopSell.Core.Shop
         {
             if (tier < 0 || tier >= PartCatalog.TierCount || !price.IsPositive || due <= _clock.Now) throw new ArgumentException("合同订单参数无效");
             var order = new BuildOrder(NextOrderId++, tier, price, _clock.Now, due) { ContractId = contractId };
-            _orders.Add(order);
+            AddBuildOrder(order);
             return order;
         }
 
@@ -564,6 +586,7 @@ namespace PCShopSell.Core.Shop
             Random = random ?? throw new ArgumentNullException(nameof(random));
             Settings = settings ?? new ShopSettings();
             Stock = new Stock(ShopSettings.Capacity(size));
+            Stock.PartAdded += ReserveIncomingBuildPart;
             _clock.TimeAdvanced += OnTimeAdvanced;
             _clock.DayAdvanced += OnDayAdvanced;
         }
@@ -612,11 +635,14 @@ namespace PCShopSell.Core.Shop
         public bool IsOpen => OpenStatusOf?.Invoke(_clock.Now)??IsOpenAt(_clock.Now);
 
         /// <summary>当前售价。</summary>
-        public Money PriceOf(PartDef part, bool boxed)
+        public Money PriceOf(PartDef part, bool boxed) => PriceOf(part, boxed, _markup);
+
+        public Money PriceOf(PartDef part, bool boxed, double globalMarkup)
         {
             double promotion = TemporaryPriceFactorOf?.Invoke(part.Id) ?? 1;
             if(_fixedSalePrices.TryGetValue(FixedPartKey(part,boxed),out var fixedPrice))return Money.FromYuan(fixedPrice).Scale(promotion);
-            double k = MarkupOf(part) * (boxed ? 1.0 + Settings.BoxedPremium : 1.0);
+            double markup = _partMarkups.TryGetValue(part.Id, out double individual) ? individual : globalMarkup;
+            double k = markup * (boxed ? 1.0 + Settings.BoxedPremium : 1.0);
             return Money.FromYuan((long)Math.Round(_market.PriceOf(part).Yuan * k)).Scale(promotion);
         }
 
@@ -668,24 +694,34 @@ namespace PCShopSell.Core.Shop
         }
 
         /// <summary>装这单还缺哪些配件（空列表表示配件齐了）。</summary>
-        public List<PartDef> MissingParts(BuildOrder order)
+        private void AddBuildOrder(BuildOrder order)
         {
-            var missing = new List<PartDef>();
-            if (order.PartsReserved) return missing;
-            foreach (PartDef p in PartCatalog.BuildList(order.Tier))
-            {
-                if (Stock.CountAll(p) == 0) missing.Add(p);
-            }
-            return missing;
+            _orders.Add(order);
+            foreach (var part in PartCatalog.BuildList(order.Tier)) ReserveIncomingBuildPart(part);
         }
 
-        /// <summary>交付装好的整机：扣配件、收款、涨知名度。配件不齐返回 false。</summary>
+        private void ReserveIncomingBuildPart(PartDef part)
+        {
+            if (_orders.Count == 0 || Stock.CountAll(part) == 0 ||
+                PartCatalog.Find(part.Category, part.Tier).Id != part.Id) return;
+            foreach (var order in _orders.Where(o => o.Tier == part.Tier && !o.HasReservedPart(part))
+                         .OrderBy(o => o.DueAt.TotalMinutes).ThenBy(o => o.Id))
+            {
+                bool? boxed = Stock.TakeOne(part);
+                if (!boxed.HasValue) break;
+                order.HoldPart(part, boxed.Value);
+            }
+        }
+
+        public List<PartDef> MissingParts(BuildOrder order) =>
+            PartCatalog.BuildList(order.Tier).Where(p => !order.HasReservedPart(p)).ToList();
+
+        /// <summary>交付装好的整机并收款。配件不齐返回 false。</summary>
         public bool CompleteBuild(int orderId, GameTimestamp? completedAt = null)
         {
             BuildOrder o = _orders.Find(x => x.Id == orderId);
             GameTimestamp at = completedAt ?? _clock.Now;
-            if (o == null || at >= o.DueAt || MissingParts(o).Count > 0) return false;
-            if (!o.PartsReserved) foreach (PartDef p in PartCatalog.BuildList(o.Tier)) Stock.TakeOne(p);
+            if (o == null || at >= o.DueAt || !o.PartsReserved) return false;
             _orders.Remove(o);
             _ledger.Credit(at.Date, BuildCategory, o.Price, $"{PartCatalog.TierName(o.Tier)}整机", LedgerAttribution.ForShop(ShopId, "build:" + ShopId + ":" + o.Id, "销售"));
             TodaySales += o.Price;
@@ -698,10 +734,8 @@ namespace PCShopSell.Core.Shop
         public bool ReserveBuild(int id)
         {
             BuildOrder o = _orders.Find(x => x.Id == id);
-            if (o == null || MissingParts(o).Count > 0) return false;
-            if (o.PartsReserved) return true;
-            foreach (PartDef p in PartCatalog.BuildList(o.Tier)) Stock.TakeOne(p);
-            o.PartsReserved = true;
+            if (o == null || !o.PartsReserved) return false;
+            o.BoxedPartMask = 0;
             return true;
         }
 
@@ -709,8 +743,8 @@ namespace PCShopSell.Core.Shop
         {
             BuildOrder o = _orders.Find(x => x.Id == id);
             if (o == null) return false;
-            ReturnReservedParts(o);
             _orders.Remove(o);
+            ReturnReservedParts(o);
             Reputation = Math.Max(0, Reputation - 1);
             AdjustShopReputation(-1);
             OrderCancelled?.Invoke(o);
@@ -719,9 +753,11 @@ namespace PCShopSell.Core.Shop
 
         private void ReturnReservedParts(BuildOrder order)
         {
-            if (!order.PartsReserved) return;
-            foreach (PartDef p in PartCatalog.BuildList(order.Tier)) Stock.ForceAdd(p, false, 1);
+            foreach (PartDef part in order.ReservedParts)
+                Stock.ForceAdd(part, (order.BoxedPartMask & (1 << (int)part.Category)) != 0, 1);
             order.PartsReserved = false;
+            order.ReservedPartMask = 0;
+            order.BoxedPartMask = 0;
         }
 
         public Action<GameTimestamp> WorkMinute;
@@ -773,6 +809,7 @@ namespace PCShopSell.Core.Shop
 
         public void Dispose()
         {
+            Stock.PartAdded -= ReserveIncomingBuildPart;
             _clock.TimeAdvanced -= OnTimeAdvanced;
             _clock.DayAdvanced -= OnDayAdvanced;
         }
@@ -787,9 +824,11 @@ namespace PCShopSell.Core.Shop
                 {
                     var order = _orders[i];
                     if (!string.IsNullOrEmpty(order.ContractId)) continue;
-                    ReturnReservedParts(order);
                     _orders.RemoveAt(i);
+                    ReturnReservedParts(order);
                 }
+            foreach (var part in _orders.Select(o => o.Tier).Distinct().ToArray().SelectMany(PartCatalog.BuildList))
+                ReserveIncomingBuildPart(part);
             NextOrderId = nextOrderId;
         }
 
@@ -891,13 +930,15 @@ namespace PCShopSell.Core.Shop
             CustomerArrived?.Invoke(c);
         }
 
-        internal void ArriveReferral(PartDef part, string goodsId, bool boxed, long budgetCents, bool reserved, string personId = null)
+        internal void ArriveReferral(PartDef part, string goodsId, bool boxed, long budgetCents, bool reserved,
+            string personId = null, bool storyReferral = false)
         {
             var now = _clock.Now;
             var customer = new ShopCustomer(_nextCustomerId++, goodsId == null ? CustomerIntent.Retail : CustomerIntent.Goods,
                 part?.Category ?? PartCatalog.Categories[0], 0, now, now.AddMinutes(3), true)
             {
                 PersonId = personId,
+                StoryReferral = storyReferral,
                 ReferralProductId = part?.Id ?? goodsId, ReferralBoxed = boxed, ReferralReserved = reserved,
                 RetailBudgetCents = budgetCents,
             };
@@ -1011,7 +1052,7 @@ namespace PCShopSell.Core.Shop
                 {
                     Money price = BuildPrice(c.BuildTier);
                     var order = new BuildOrder(NextOrderId++, c.BuildTier, price, now, now.AddMinutes(Settings.BuildOrderDueDays * GameTimestamp.MinutesPerDay));
-                    _orders.Add(order);
+                    AddBuildOrder(order);
                     OrderPlaced?.Invoke(order);
                     Leave(c, LeaveReason.OrderPlaced, countAsLost: false);
                     return;
@@ -1179,8 +1220,7 @@ namespace PCShopSell.Core.Shop
             int bestDiff = int.MaxValue;
             foreach (var cand in candidates)
             {
-                int age=Math.Max(0,IndustryCycles.CurrentGeneration(_clock.Today.TotalDays)-IndustryCycles.Generation(cand.part.Id));
-                int diff = Math.Abs(cand.part.Tier - c.BuildTier) * 8 + age*2 + Random.Next(0, 4);
+                int diff = Math.Abs(cand.part.Tier - c.BuildTier) * 8 + Random.Next(0, 4);
                 if (diff < bestDiff)
                 {
                     bestDiff = diff;
@@ -1238,6 +1278,9 @@ namespace PCShopSell.Core.Shop
 
         private void Leave(ShopCustomer c, LeaveReason reason, bool countAsLost = true)
         {
+            c.ReferralStockReturned = c.StoryReferral && (c.ReferralReserved
+                || c.State == CustomerState.WaitingCheckout && (c.Item != null
+                    || c.GoodsId != null && (c.GoodsExpiryDay < 0 || c.GoodsExpiryDay >= _clock.Today.TotalDays)));
             if (c.ReferralReserved)
             {
                 if (PartCatalog.Exists(c.ReferralProductId)) Stock.ForceAdd(PartCatalog.Get(c.ReferralProductId), c.ReferralBoxed, 1);
@@ -1289,8 +1332,8 @@ namespace PCShopSell.Core.Shop
             {
                 BuildOrder o = _orders[i];
                 if (now < o.DueAt) continue;
-                ReturnReservedParts(o);
                 _orders.RemoveAt(i);
+                ReturnReservedParts(o);
                 Reputation -= 3;
                 AdjustShopReputation(-2);
                 OrderExpired?.Invoke(o);

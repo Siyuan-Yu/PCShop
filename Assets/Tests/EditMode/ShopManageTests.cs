@@ -64,18 +64,22 @@ namespace PCShopSell.Tests
                     Assert.AreEqual(1,Named("Pricing_goods_"+product.Id).Length);
                     Assert.AreEqual(1,Named("Pricing_cpu0").Length);
                     string IntentSummary()=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<UnityEngine.UI.Text>()).Single(t=>t.name=="PricingPurchaseIntentSummary").text;
-                    string ExpectedIntent()=>((shop.GoodsPurchaseIntentAtPrice(product.Id,shop.GoodsPriceOf(product.Id).Yuan)*3
-                        +shop.PartPurchaseIntentAtPrice(part,true,shop.PriceOf(part,true).Yuan)*2)/5*100).ToString("0")+"%";
-                    StringAssert.Contains("购买意愿",IntentSummary());StringAssert.Contains(ExpectedIntent(),IntentSummary());
+                    string ExpectedIntent(double markup)=>((shop.GoodsPurchaseIntentAtPrice(product.Id,shop.GoodsPriceOf(product.Id,markup).Yuan)*3
+                        +shop.PartPurchaseIntentAtPrice(part,true,shop.PriceOf(part,true,markup).Yuan)*2)/5*100).ToString("0")+"%";
+                    StringAssert.Contains("购买意愿",IntentSummary());StringAssert.Contains(ExpectedIntent(shop.Markup),IntentSummary());
                     var slider=ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<UnityEngine.UI.Slider>()).Single(t=>t.name=="GlobalMarkupSlider");
-                    slider.value=1.4f;StringAssert.Contains(ExpectedIntent(),IntentSummary());
+                    double savedMarkup=shop.Markup;
                     var before=shop.GoodsPriceOf(product.Id);
+                    slider.value=1.4f;
+                    StringAssert.Contains("预览购买意愿 "+ExpectedIntent(1.4),IntentSummary());
+                    Assert.AreEqual(savedMarkup,shop.Markup);
+                    Assert.AreEqual(before,shop.GoodsPriceOf(product.Id),"拖动统一加价不能提前修改售价");
                     Button("EditPrice_goods_"+product.Id).onClick.Invoke();
                     Button("PricePlus_goods_"+product.Id).onClick.Invoke();
                     Assert.AreEqual(before,shop.GoodsPriceOf(product.Id),"预览不能提前修改售价");
                     Button("ConfirmPrice_goods_"+product.Id).onClick.Invoke();
                     Assert.AreEqual(before.Yuan+1,shop.GoodsPriceOf(product.Id).Yuan);
-                    StringAssert.Contains(ExpectedIntent(),IntentSummary(),"单独改价后顶部参考值也必须更新");
+                    StringAssert.Contains(ExpectedIntent(1.4),IntentSummary(),"单独改价后顶部预览值也必须更新");
                     ui.CloseAllWindows();ui.OpenDock();ui.DebugSelectTab(1);
                     Button("ToggleShelfItems_0").onClick.Invoke();
                     Button("ToggleShelfItems_1").onClick.Invoke();

@@ -13,14 +13,16 @@ namespace PCShopSell.Game.UI
         {
             Line(parent, $"补货参考成本 {S.BuildReplacementCost(order)} · 报价差额 {order.Price - S.BuildReplacementCost(order)}（未扣运费与工资）", 14, Ui.Dim);
             if (order.EmployeeMinutesLeft > 0)
-                Line(parent, $"店员装机还需 {order.EmployeeMinutesLeft} 个空闲工作分钟；材料已预留。", 15, Ui.Accent);
-            else if (order.PartsReserved) Line(parent, "材料已预留，不参与零售。", 15, Ui.Accent);
+            {
+                string Remaining() => $"装机剩余 {order.EmployeeMinutesLeft} 个工作分钟";
+                if (parent == C) CounterText(Remaining, 15, Ui.Accent);
+                else Line(parent, Remaining(), 15, Ui.Accent);
+            }
             var row = Ui.Row(parent, 36, 4);
-            Ui.Size(Ui.Button(row, "预留配件", () => { if (!S.PlayerShop.ReserveBuild(order.Id)) Toast("配件不足，先生成采购清单。"); refresh(); }, 15, Ui.ButtonBg, !order.PartsReserved), 125);
-            Ui.Size(Ui.Button(row, "缺件采购清单", () => OpenOrderShopping(order), 15), 160);
+            Ui.Size(Ui.Button(row, "缺件采购清单", () => OpenOrderShopping(order), 15, Ui.ButtonBg, !order.PartsReserved), 160);
             Ui.Size(Ui.Button(row, "取消订单…", () => OpenWindow("取消订单", 520, 250, w =>
             {
-                Para(w.Content, "取消后预留配件退回为散件，名望降低 1。确定取消这笔订单？");
+                Para(w.Content, "取消后释放预留配件，名望降低 1。确定取消这笔订单？");
                 Ui.Size(Ui.Button(w.Content, "确认取消", () => { S.PlayerShop.CancelBuild(order.Id); w.Close(); refresh(); }, 17, Ui.Warn), -1, 40);
             }), 15), 140);
         }
@@ -33,7 +35,7 @@ namespace PCShopSell.Game.UI
             {
                 Line(w.Content, $"订单 #{order.Id} · 剩余 {S.Clock.Now.MinutesUntil(order.DueAt) / 60} 小时", 18);
                 foreach (var p in missing) Line(w.Content, $"{p.Name} ×1　送店在途 {S.PendingOnlineCount(p.Id)} 件", 16);
-                if (missing.Count == 0) Line(w.Content, "配件已齐全，可预留后开始装机。", 18, Ui.Good);
+                if (missing.Count == 0) Line(w.Content, order.PartsReserved ? "配件已备齐，可以开始装机。" : "缺件已有采购安排。", 18, Ui.Good);
                 Ui.Size(Ui.Button(w.Content, "加入采购员定期清单", () => ChooseOrderBuyer(order, shop, w), 18, Ui.ButtonHot, missing.Count > 0), -1, 44);
                 Para(w.Content, "加入后按采购员原有频率重复采购，点“完成”才保存；从明天开始，请留意订单时限。", 15, Ui.Dim);
                 Para(w.Content, "线上次日 10:00 送达，另需装机时间；急单请去档口现买。清单补入网购购物车；请核对全部数量和报价，不会自动花钱。", 15, Ui.Dim);

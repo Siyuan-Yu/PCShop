@@ -43,7 +43,7 @@ namespace PCShopSell.Game.UI
             BuildWorkbenchTodos(WbScroll(todo, "WorkbenchDecisionsList"), w);
             var links = Ui.Row(todo, 32, 8);
             WbAction(links, "日程与邀约", OpenSchedulePanel, "WorkbenchCalendar");
-            WbAction(links, "手机消息", OpenChatPanel, "WorkbenchMessages"); WbFlex(links);
+            WbFlex(links);
 
             var finance = WbColumn(row, "WorkbenchPersonalFinance", 1.1f);
             WbHeading(finance, "我的财务");
@@ -352,9 +352,10 @@ namespace PCShopSell.Game.UI
             foreach (var order in shop.Sim.Orders)
             {
                 WbText(body, PartCatalog.TierName(order.Tier) + "整机 · " + order.Price + " · 截止 " + order.DueAt, 18);
-                WbText(body, order.PartsReserved ? "配件已领用 · 员工剩余 " + order.EmployeeMinutesLeft + " 分钟" : "等待配件与员工处理", 15, WbDim);
+                WbText(body, order.EmployeeMinutesLeft > 0 ? $"员工装机剩余 {order.EmployeeMinutesLeft} 分钟" :
+                    order.PartsReserved ? "配件已备齐 · 等待装机" : "等待配件", 15, WbDim);
                 foreach (var part in PartCatalog.BuildList(order.Tier))
-                    WbText(body, part.Name + " · " + (order.PartsReserved || shop.Sim.Stock.CountAll(part) > 0 ? "已备" : "缺货"), 14, WbDim);
+                    WbText(body, part.Name + " · " + (order.HasReservedPart(part) ? "已预留" : "缺货"), 14, WbDim);
             }
             if (shop.Sim.Orders.Count == 0) WbText(body, "当前没有装机订单。", 17, WbDim);
             WbText(body, "员工按真实岗位、在岗位置和配件处理订单。手工装机需本人到店。", 15, WbDim);

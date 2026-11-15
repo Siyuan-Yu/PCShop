@@ -33,6 +33,13 @@ namespace PCShopSell.Game.UI
 
         private void OpenExpoReception()
         {
+            var place = S.CurrentPlace;
+            if (place?.Id == "life_expo" && S.OnsiteActivityAt(place) != null)
+            {
+                S.PrepareVenueCompanions(place);
+                OpenWindow("云帆会展中心 · 现场预约", 860, 620, w => BuildOnsiteAppointment(w, place));
+                return;
+            }
             if (S.CurrentPlace?.Id == "life_expo" && S.CityExpoOpen(false)
                 && S.Clock.MinuteOfDay >= 540 && S.Clock.MinuteOfDay <= 1020)
             { CloseAllWindows(); OpenQuarterlyExpo(); return; }

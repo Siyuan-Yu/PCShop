@@ -104,14 +104,32 @@ namespace PCShopSell.Core.Session
                 if (shop.Rented) Notice?.Invoke((MyShopCount > 1 ? ShopTitle(shop) + " " : "") + DayReportText(r));
             };
             sim.CustomerArrived += c => {BindCityCustomer(shop,c);RecordBrandShopVisit(shop,c);ShopCustomerArrived?.Invoke(shop.Place, c);};
-            sim.CustomerCanBrowse=c=>RecordBrandShopVisit(shop,c);
+            sim.CustomerCanBrowse = c =>
+            {
+                bool inside = RecordBrandShopVisit(shop, c);
+                if (inside) ShowReferralVisit(shop, c);
+                return inside;
+            };
             sim.RetailTemperature=()=>CityOutdoorTemperature(Clock.Now.TotalMinutes);
             sim.RetailInterestOf=c=>CityRetailSeriesFor(c.PersonId ?? c.VisitId ?? (shop.Place.Id + ":" + c.Id));
             sim.RetailBudgetOf=c=>CityRetailBudgetFor(c.PersonId ?? c.VisitId ?? (shop.Place.Id + ":" + c.Id));
             sim.CustomerReadyToPay += c => ReserveFlashPrice(shop, c);
-            sim.CustomerLeft += c => {ReleaseFlashPrice(shop,c);ReleaseCityCustomer(c);WithShop(shop, () => OnShopCustomerLeft(c));};
+            sim.CustomerLeft += c =>
+            {
+                ReleaseFlashPrice(shop, c);
+                ShowReferralOutcome(shop, c, false);
+                ReleaseCityCustomer(c);
+                WithShop(shop, () => OnShopCustomerLeft(c));
+            };
             sim.ResaleOffers=()=>UsedOffers(shop);
-            sim.CustomerPaid+=c=>{ReleaseCityCustomer(c);CompleteUsedSale(shop,c);RecordEventPaidReceipt(shop,c);RecordFinanceSale(shop,c);};
+            sim.CustomerPaid += c =>
+            {
+                ShowReferralOutcome(shop, c, true);
+                ReleaseCityCustomer(c);
+                CompleteUsedSale(shop, c);
+                RecordEventPaidReceipt(shop, c);
+                RecordFinanceSale(shop, c);
+            };
             sim.BulkSalePaid += (id, name, total) => RecordAggregateReceipt(shop, "bulk:" + id, name, total, Clock.Today.TotalDays);
             sim.OrderCompleted += o => { Flags.Add("tutorial:build"); ContractOrderResult(o, true); };
             sim.OrderCancelled += o => ContractOrderResult(o, false);
@@ -347,12 +365,14 @@ namespace PCShopSell.Core.Session
         {
             id = o.Id, contractId = o.ContractId, tier = o.Tier, priceCents = o.Price.Cents, placedAt = o.PlacedAt.TotalMinutes,
             dueAt = o.DueAt.TotalMinutes, partsReserved = o.PartsReserved, mistakes = o.Mistakes, employeeMinutesLeft = o.EmployeeMinutesLeft,
+            reservedPartMask = o.ReservedPartMask, boxedPartMask = o.BoxedPartMask,
         };
 
         private static BuildOrder FromSave(SaveOrder o) =>
             new BuildOrder(o.id, o.tier, Money.FromCents(o.priceCents), new GameTimestamp(o.placedAt), new GameTimestamp(o.dueAt))
             {
                 ContractId = o.contractId, PartsReserved = o.partsReserved, Mistakes = Math.Max(0, o.mistakes), EmployeeMinutesLeft = Math.Max(0, o.employeeMinutesLeft),
+                ReservedPartMask = o.reservedPartMask, BoxedPartMask = o.boxedPartMask,
             };
     }
 }

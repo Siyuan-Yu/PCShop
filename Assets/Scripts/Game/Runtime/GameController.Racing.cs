@@ -47,7 +47,9 @@ namespace PCShopSell.Game
             if(!GameUi.PointerOverUi)
                 _raceZoom=Mathf.Clamp(_raceZoom*(1-Input.mouseScrollDelta.y*.1f),.65f,2f);
             if(Input.GetKeyDown(KeyCode.V)){_raceCameraOffset=0;_raceCameraPitch=RaceDefaultPitch;_raceZoom=1;}
-            float gas=(Input.GetKey(KeyCode.W)||Input.GetKey(KeyCode.UpArrow)?1:0)-(Input.GetKey(KeyCode.S)||Input.GetKey(KeyCode.DownArrow)?1:0);
+            bool accelerating = Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow);
+            bool braking = Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow);
+            float gas = braking ? -1 : accelerating ? 1 : 0;
             float turn=(Input.GetKey(KeyCode.D)||Input.GetKey(KeyCode.RightArrow)?1:0)-(Input.GetKey(KeyCode.A)||Input.GetKey(KeyCode.LeftArrow)?1:0);
             race.Step(dt,gas,turn,Input.GetKey(KeyCode.LeftShift)||Input.GetKey(KeyCode.RightShift));
             _raceView.Sync(race);

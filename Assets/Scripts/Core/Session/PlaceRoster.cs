@@ -98,7 +98,7 @@ namespace PCShopSell.Core.Session
         public static readonly StaffDef PhoneClerk = new StaffDef("keeper_phone", "唐晓芸", "手机店店员", new[]
         {
             "智能手机了解一下？能装好多 app！",
-            "按键机也不错，就是只能打电话、发短信。",
+            "按键机也不错，打电话够用了。",
             "买了手机去应用商店下载，别忘了哦。",
         });
 

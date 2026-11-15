@@ -21,6 +21,7 @@ namespace PCShopSell.Core.Finance
         public Money Income, Expense, ClosingBalance, InternalNet;
         public Money Net => Income - Expense;
         public Money OpeningBalance => ClosingBalance - Net - InternalNet;
+        public long[] IncomeDays, ExpenseDays;
         public readonly Dictionary<string, long> IncomeSources = new Dictionary<string, long>();
         public readonly Dictionary<string, long> ExpenseSources = new Dictionary<string, long>();
     }
@@ -31,7 +32,11 @@ namespace PCShopSell.Core.Finance
         /// <summary>按入账日期汇总所有实际现金收付，内部调拨单列以便核对余额。</summary>
         public static CashPeriodSummary CashSummary(Ledger ledger, GameDate from, GameDate to)
         {
-            var result = new CashPeriodSummary { ClosingBalance = ledger.Balance };
+            int days = System.Math.Max(0, to.TotalDays - from.TotalDays + 1);
+            var result = new CashPeriodSummary
+            {
+                ClosingBalance = ledger.Balance, IncomeDays = new long[days], ExpenseDays = new long[days]
+            };
             foreach (var entry in ledger.Entries)
             {
                 if (entry.Date > to) { result.ClosingBalance -= entry.Amount; continue; }
@@ -44,7 +49,17 @@ namespace PCShopSell.Core.Finance
 
                 bool income = entry.Amount.IsPositive;
                 var amount = entry.Amount.Abs();
-                if (income) result.Income += amount; else result.Expense += amount;
+                int day = entry.Date.TotalDays - from.TotalDays;
+                if (income)
+                {
+                    result.Income += amount;
+                    result.IncomeDays[day] += amount.Cents;
+                }
+                else
+                {
+                    result.Expense += amount;
+                    result.ExpenseDays[day] += amount.Cents;
+                }
                 var sources = income ? result.IncomeSources : result.ExpenseSources;
                 sources.TryGetValue(entry.Category, out long previous);
                 sources[entry.Category] = previous + amount.Cents;
@@ -63,7 +78,7 @@ namespace PCShopSell.Core.Finance
                 {
                     case LedgerBusinessKind.Operating:
                         if (e.Amount.IsPositive) result.OperatingIn += e.Amount; else result.OperatingOut -= e.Amount;
-                        if (e.Category == RetailCategory || e.Category == BuildCategory || e.Attribution?.TransactionKind == "销售") result.Sales += e.Amount;
+                        if (IsOperatingSale(e)) result.Sales += e.Amount;
                         if (e.ShopId == null) { if (e.Amount.IsPositive) result.UnassignedOperatingIn += e.Amount; else result.UnassignedOperatingOut -= e.Amount; }
                         break;
                     case LedgerBusinessKind.Personal: result.PersonalNet += e.Amount; break;
@@ -77,6 +92,10 @@ namespace PCShopSell.Core.Finance
         }
         public const string RetailCategory = "零售";
         public const string BuildCategory = "装机";
+
+        public static bool IsOperatingSale(LedgerEntry entry) =>
+            entry.BusinessKind == LedgerBusinessKind.Operating
+            && (entry.Category == RetailCategory || entry.Category == BuildCategory || entry.Attribution?.TransactionKind == "销售");
 
         public static List<DayFinance> OperatingDaily(Ledger ledger, GameDate today, int days, string shopId = null)
         {

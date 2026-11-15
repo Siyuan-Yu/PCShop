@@ -113,6 +113,8 @@ namespace PCShopSell.Game.UI
                 var expo = S.BrandBusiness.Exhibits.FirstOrDefault(x => x.Id == e.ExpoId);
                 return expo != null && !expo.Attending && now <= expo.Day * 1440L + 600 && e.Minute <= limit;
             }
+            if (e.Kind == "race_registration" || e.Kind == "race_invite")
+                return now < e.Minute - RacingSchedule.MeetOpenMinute + RacingSchedule.MeetCloseMinute;
             if (!e.HasTime) return e.Minute / 1440 >= now / 1440;
             return e.Minute >= now || e.ActivityId != null && e.Minute >= now - 60;
         }

@@ -145,20 +145,26 @@ namespace PCShopSell.Core.Session
         {
             var shop = EventRetailShops().First(s => EventShelfProducts(s).Any() && !_eventFlashSales.Any(f => f.ShopId == s.Place.Id && FlashScheduled(f)));
             var choices = new List<EventChoice>();
-            foreach (var item in EventShelfProducts(shop))
+            var promotionFee = Money.FromYuan(1000);
+            foreach (var product in EventShelfProducts(shop).GroupBy(item => item.Id).Select(group => group.First()))
             {
-                var product = item;
                 foreach (bool paid in new[] { false, true })
-                    choices.Add(Choose(product.Name + (paid ? " · 推广¥1,000" : " · 免费分享"), _ => {
+                {
+                    var choice = Choose(paid ? $"付费推广 · {promotionFee}" : "免费分享", _ => {
                         if (ShopAt(shop.Place.Id) != shop || !EventShelfProducts(shop).Any(p => p.Id == product.Id) || _eventFlashSales.Any(f => f.ShopId == shop.Place.Id && FlashScheduled(f))) return "商品已售罄或促销已开始。";
-                        if (paid && !Ledger.TryDebit(Clock.Today, "限时推广", Money.FromYuan(1000), product.Name, LedgerAttribution.ForShop(shop.Place.Id))) return "现金不足，未投放。";
+                        if (paid && !Ledger.TryDebit(Clock.Today, "限时推广", promotionFee, product.Name, LedgerAttribution.ForShop(shop.Place.Id))) return "现金不足，未投放。";
                         _eventFlashSales.Add(new EventFlashSale { ShopId = shop.Place.Id, RetailKind = shop.RetailKind, ProductId = product.Id, SignedDay = shop.Lease?.SignedDay ?? -1, Until = Clock.Now.TotalMinutes + 120, Remaining = 5 });
                         _flyerCampaigns.Add(new FlyerCampaign { ShopId = shop.Place.Id, RetailKind = shop.RetailKind, StartDay = Clock.Today.TotalDays, Remaining = paid ? 8 : 2, NextVisit = Clock.Now.TotalMinutes + 1 });
-                        return "该商品九折2小时、最多5笔成交，到期恢复价格；推广带来潜在顾客，不保证成交。";
-                    }));
+                        return $"{product.Name}九折 2 小时、最多 5 笔成交，到期恢复价格。推广带来潜在顾客。";
+                    }, paid ? s => s.Ledger.CanAfford(promotionFee) : null, "现金不足");
+                    choice.Selection = (product.Id, product.Name);
+                    choices.Add(choice);
+                }
             }
             choices.Add(Choose("暂不促销", _ => "未调整价格。"));
-            return EventScene(template, ShopTitle(shop) + "：选一种在售商品，九折2小时、限5笔成交。", choices.ToArray());
+            var scene = EventScene(template, ShopTitle(shop) + " · 所选商品九折 2 小时，限 5 笔成交。", choices.ToArray());
+            scene.SelectionPrompt = "促销商品";
+            return scene;
         }
         private bool FlashScheduled(EventFlashSale f) => Clock.Now.TotalMinutes < f.Until && ShopAt(f.ShopId) is OwnedShop s && s.RetailKind == f.RetailKind && (s.Lease?.SignedDay ?? -1) == f.SignedDay;
         private bool ValidFlash(EventFlashSale f) => f.Remaining > 0 && FlashScheduled(f);

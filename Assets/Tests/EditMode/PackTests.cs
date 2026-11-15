@@ -195,15 +195,15 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.HasApp(PhoneApps.Store));
             Assert.IsTrue(s.HasApp(PhoneApps.Contacts));
             Assert.IsTrue(s.HasApp(PhoneApps.Schedule), "日历是自带的");
-            foreach (string id in new[] { PhoneApps.Shop, PhoneApps.Chat, PhoneApps.Wholesale })
+            foreach (string id in new[] { PhoneApps.Shop, PhoneApps.Wholesale })
                 Assert.IsFalse(s.HasApp(id), id);
             Money before = s.Ledger.Balance;
-            Assert.IsTrue(s.InstallApp(PhoneApps.Chat));
-            Assert.IsFalse(s.InstallApp(PhoneApps.Chat), "不能重复装");
+            Assert.IsTrue(s.InstallApp(PhoneApps.Shop));
+            Assert.IsFalse(s.InstallApp(PhoneApps.Shop), "不能重复装");
             Assert.AreEqual(before.Cents, s.Ledger.Balance.Cents, "下载免费");
             Assert.IsFalse(s.UninstallApp(PhoneApps.Store));
-            Assert.IsTrue(s.UninstallApp(PhoneApps.Chat));
-            Assert.IsFalse(s.HasApp(PhoneApps.Chat));
+            Assert.IsTrue(s.UninstallApp(PhoneApps.Shop));
+            Assert.IsFalse(s.HasApp(PhoneApps.Shop));
         }
 
         [Test]
@@ -273,62 +273,6 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void Chat_OncePerDay_RaisesRelationUpToCap()
-        {
-            GameSession s = Make();
-            s.Meet(Npcs.Zhang, 20);
-            Assert.IsNull(s.ChatBlocker(Npcs.Zhang));
-            Assert.IsTrue(s.Chat(Npcs.Zhang));
-            Assert.AreEqual(20, s.Relation(Npcs.Zhang));
-            Assert.IsFalse(s.Chat(Npcs.Zhang), "今天聊过了");
-            s.Clock.Restore(s.Clock.Today.AddDays(1), 10 * 60);
-            Assert.IsTrue(s.Chat(Npcs.Zhang));
-            Assert.AreEqual(21, s.Relation(Npcs.Zhang));
-            s.AddRelation(Npcs.Zhang, 60);
-            s.Clock.Restore(s.Clock.Today.AddDays(1), 10 * 60);
-            int rel = s.Relation(Npcs.Zhang);
-            Assert.IsTrue(s.Chat(Npcs.Zhang));
-            Assert.AreEqual(rel, s.Relation(Npcs.Zhang), "到 40 以后聊天不再涨");
-        }
-
-        [Test]
-        public void Chat_NeedsTheApp_AndAcquaintance()
-        {
-            GameSession s = Make(false);
-            s.Meet(Npcs.Zhang, 20);
-            Assert.IsNull(s.ChatBlocker(Npcs.Zhang), "按键机也能发短信");
-            Assert.IsFalse(s.HasChatApp);
-            Assert.IsNotNull(s.ChatBlocker(Npcs.Lin), "还没认识");
-            s.SetSmartphone(true);
-            Assert.IsTrue(s.HasChatApp);
-        }
-
-        [Test]
-        public void Sms_OftenNoReply_ChatAppAlwaysReplies()
-        {
-            GameSession s = Make(false);
-            s.Meet(Npcs.Zhang, 10);
-            int replied = 0, days = 80;
-            for (int i = 0; i < days; i++)
-            {
-                s.Clock.Restore(s.Clock.Today.AddDays(1), 10 * 60);
-                Assert.IsTrue(s.Chat(Npcs.Zhang));
-                if (s.LastChatReplied) replied++;
-            }
-            Assert.Greater(replied, 5, "偶尔有人回");
-            Assert.Less(replied, days - 20, "常常没人回");
-            Assert.IsFalse(s.Chat(Npcs.Zhang), "一天一条");
-
-            s.SetSmartphone(true);
-            for (int i = 0; i < 10; i++)
-            {
-                s.Clock.Restore(s.Clock.Today.AddDays(1), 10 * 60);
-                Assert.IsTrue(s.Chat(Npcs.Zhang));
-                Assert.IsTrue(s.LastChatReplied);
-            }
-        }
-
-        [Test]
         public void SaveLoad_KeepsInstalledApps_OldSaveHasAll()
         {
             GameSession s = Make(false);
@@ -336,13 +280,12 @@ namespace PCShopSell.Tests
             s.BuySmartphone();
             s.InstallApp(PhoneApps.Wholesale);
             s.Meet(Npcs.Zhang, 20);
-            s.Chat(Npcs.Zhang);
             SaveData d = JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()));
             GameSession l = GameSession.Load(s.City, d);
             Assert.IsTrue(l.HasApp(PhoneApps.Wholesale));
             Assert.IsTrue(l.HasApp(PhoneApps.Shop), "旧批发应用合并为网购");
             Assert.IsFalse(l.InstalledApps.Contains(PhoneApps.Wholesale), "不保存独立批发入口");
-            Assert.IsNotNull(l.ChatBlocker(Npcs.Zhang));
+            Assert.IsNull(l.RemoteConversationBlocker(Npcs.Zhang));
             d.apps = null;
             GameSession old = GameSession.Load(s.City, d);
             Assert.IsTrue(old.HasApp(PhoneApps.Shop) && old.HasApp(PhoneApps.Wholesale), "旧存档视为全装了");

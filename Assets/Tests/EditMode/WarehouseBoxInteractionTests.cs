@@ -74,6 +74,7 @@ namespace PCShopSell.Tests
         {
             using(var s=Make())
             {
+                double riceBefore = s.HomeBox.Food.RiceKg;
                 s.Backpack.Food.Packed.Add(new FoodBatch{Id="rice",Name="白米饭",Count=2,ExpireDay=80,Chilled=true,ChilledDays=4});
                 s.Backpack.Food.RiceKg = 1;
                 s.Backpack.Food.Ingredient.Add(new FoodBatch { Id = "veg", Count = 1, ExpireDay = FoodBatch.NoExpiry });
@@ -83,8 +84,10 @@ namespace PCShopSell.Tests
                 Assert.False(s.CanStoreBackpackInWarehouse, "只有食物时禁用批量入库");
                 Assert.False(s.StoreBackpackInWarehouse());
                 Assert.AreEqual(2,s.HomeBoxParts.CountAll(PartCatalog.Get("cpu0")));
-                Assert.AreEqual(1, s.Backpack.Food.RiceKg);
-                Assert.AreEqual(1, s.Backpack.Food.IngredientCount("veg"));
+                Assert.Zero(s.Backpack.Food.RiceKg);
+                Assert.Zero(s.Backpack.Food.IngredientCount("veg"));
+                Assert.AreEqual(riceBefore + 1, s.HomeBox.Food.RiceKg);
+                Assert.AreEqual(1, s.HomeBox.Food.IngredientCount("veg"));
                 Assert.AreEqual(1, s.Backpack.GiftCount(Gifts.Soda));
                 Assert.IsEmpty(s.HomeBox.Food.Packed);
                 Assert.True(s.StoreInBox("lunch:rice", 2), "仍可手动存放食物");

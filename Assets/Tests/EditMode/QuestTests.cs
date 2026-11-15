@@ -28,7 +28,7 @@ namespace PCShopSell.Tests
         public void Quests_AreInOrder_AndHaveText()
         {
             CollectionAssert.AreEqual(new[] { "first_meal", "rent", "mall", "place", "shelf", "stock", "sale", "hire", "phone", "qr" }, Quests.All.Take(10).Select(q => q.Id).ToArray());
-            Assert.AreEqual(24, Quests.All.Count);
+            CollectionAssert.AreEqual(new[] { "scooter", "community_goal", "pricing" }, Quests.All.Skip(10).Take(3).Select(q => q.Id).ToArray());
             Assert.AreEqual(Quests.All.Count, Quests.All.Select(q => q.Id).Distinct().Count());
             foreach (QuestDef q in Quests.All)
             {
@@ -354,7 +354,7 @@ namespace PCShopSell.Tests
             Assert.IsFalse(s.BuyUpgrade(ShopUpgrades.Qr), "店里不能直接买收款码");
             GameSessionTests.Teleport(s, "phone");
             Assert.IsTrue(s.BuyUpgrade(ShopUpgrades.Qr));
-            Assert.AreEqual("pricing", s.CurrentQuest().Id);
+            Assert.AreEqual("scooter", s.CurrentQuest().Id);
         }
 
         private static GameSession Reload(GameSession s) => GameSession.Load(s.City,
@@ -367,16 +367,18 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void LessonNeedsDestinationAndExplicitAcknowledgement_AndCostsNothing()
+        public void PricingGuideCompletesWhenAChangedPriceIsSaved()
         {
             using (var s = Make(true))
             {
                 FinishBefore(s, "pricing");
+                GameSessionTests.Teleport(s, "pc");
                 var cash = s.Ledger.Balance;
-                Assert.False(s.CompleteQuestLesson("pricing"));
                 s.VisitQuestTarget(QuestTarget.Pricing);
-                Assert.False(s.QuestCompleted("pricing"), "打开页面不等于理解教学");
-                Assert.True(s.CompleteQuestLesson("pricing"));
+                s.SetMarkup(s.PlayerShop.Markup);
+                Assert.False(s.QuestCompleted("pricing"));
+                Assert.False(s.CompleteQuestLesson("pricing"));
+                s.SetMarkup(s.PlayerShop.Markup + .05);
                 Assert.True(s.QuestCompleted("pricing"));
                 Assert.AreEqual(cash, s.Ledger.Balance);
                 Assert.False(s.CompleteQuestLesson("enterprise"), "不能用阅读确认冒充实际履约");

@@ -164,7 +164,7 @@ namespace PCShopSell.Core.Session
                 case Npcs.Zhang: return "常来你店里";
                 case Npcs.Landlady: return "房东，住楼上";
                 case Npcs.Zhou: return "经营电子配件供货";
-                default: return "打电话、发消息联系";
+                default: return "打电话联系";
             }
         }
     }

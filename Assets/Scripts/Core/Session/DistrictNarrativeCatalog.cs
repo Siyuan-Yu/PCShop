@@ -38,6 +38,10 @@ namespace PCShopSell.Core.Session
 
     public static class DistrictNarrativeCatalog
     {
+        public const int CommunityShopMinimum = 5;
+        public const int CommunityCashMinimumYuan = 1_000_000;
+        public const int InvitationDelayDays = 3;
+
         public const string ContentVersion="2026-11-07.2";
         public const string IntegrationStatus="正式主线只保留：三页寻图、品牌展会与订单交付、企业竞标与三期履约。旧活动、模型委托、门店试点及上市股价门槛已删除。";
         public const string RetryRule="可稍后再谈或重新约时间；保留已完成事实、实际费用和关系变化，不因错过一天清空整条线。";
@@ -45,7 +49,7 @@ namespace PCShopSell.Core.Session
 
         // Fresh objects on every call keep previews independent.
         public static DistrictNarrativeChapter[] CreatePlan() => new[] {
-            new DistrictNarrativeChapter{Id="district.community",Title="城郊 → 社区",Reward=GameSession.FirstChapterTrial ? "交付三页商铺图，完成试玩主线。" : "交付三页商铺图，开放社区。",Modules=new[]{"community_entry"},Gates=new[]{Gate(NarrativeFact.OpenDistrictShops,5,"suburb","城郊5家开业门店"),Gate(NarrativeFact.Cash,1000000,"player","现金100万元")}},
+            new DistrictNarrativeChapter{Id="district.community",Title="城郊 → 社区",Reward=GameSession.FirstChapterTrial ? "交付三页商铺图，完成试玩主线。" : "交付三页商铺图，开放社区。",Modules=new[]{"community_entry"},Gates=new[]{Gate(NarrativeFact.OpenDistrictShops,CommunityShopMinimum,"suburb",$"城郊{CommunityShopMinimum}家开业门店"),Gate(NarrativeFact.Cash,CommunityCashMinimumYuan,"player",$"现金{CommunityCashMinimumYuan / 10_000}万元")}},
 #if !PCSHOP_FIRST_CHAPTER_TRIAL
             new DistrictNarrativeChapter{Id="district.park",Title="社区 → 公园",Reward="同一品牌完成展会采购订单、知名度100，实际会面后开放公园。",Modules=new[]{"brand_exhibition"},Gates=new[]{Gate(NarrativeFact.OpenDistrictShops,6,"community","社区6家开业门店"),Gate(NarrativeFact.NetAssets,30000000,"player","净资产3000万元"),Gate(NarrativeFact.OwnBrandFormed,1,"player","已创建行业品牌")}},
             new DistrictNarrativeChapter{Id="district.garden",Title="公园 → 花园",Reward="赢得企业供应商席位，同合同连续三期交付后实际会面，开放花园。",Modules=new[]{"enterprise_tender"},Gates=new[]{Gate(NarrativeFact.ClosedSectorMonthlyRevenue,100000000,"one_owned_sector","品牌所属行业上个完整月营业额1亿元")}}

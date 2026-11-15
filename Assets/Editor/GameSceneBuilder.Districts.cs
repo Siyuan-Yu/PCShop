@@ -220,7 +220,7 @@ namespace PCShopSell.EditorTools
             Check(s.DebugPrepareDistrictPrerequisites(1),"一键准备真实五家店与100万元");
             Check(s.DistrictOperatingShops(0)==5&&s.DistrictAccessTier==0,"只准备条件，不提前开路");
             for(int i=0;s.CurrentDistrictNode==null&&i<100;i++)s.AdvanceClock((int)(s.DistrictStoryState.InvitationDueAt-s.Clock.Now.TotalMinutes));
-            _game.Ui.CloseAllWindows();_game.Ui.OpenChatPanel();Frame(0);_game.SnapCamera();Shot("chat-main-story",1280,720);
+            _game.Ui.CloseAllWindows();_game.Ui.OpenQuests();Frame(0);_game.SnapCamera();Shot("quest-main-story",1280,720);
             _game.Ui.OpenDistrictStory();Frame(0);_game.SnapCamera();Shot("first-invitation",1280,720);
             Check(s.BeginDistrictMeeting("community.intro","accept"),"接受引荐后安排真实人物赴约");
             _game.Ui.CloseAllWindows();

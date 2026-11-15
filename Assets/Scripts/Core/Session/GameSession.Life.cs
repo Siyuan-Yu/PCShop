@@ -42,6 +42,8 @@ namespace PCShopSell.Core.Session
         public const int HospitalDays = 1;
         public const string HospitalBusiness = "医院";
         public static readonly Money OutpatientFee = Money.FromYuan(150);
+        public const int OutpatientMinutes = 60;
+        public const int OutpatientHealthRecovery = 20;
 
         public Place NearbyHospital()
         {
@@ -54,12 +56,11 @@ namespace PCShopSell.Core.Session
         {
             var hospital = CurrentPlace;
             if (hospital?.Business != HospitalBusiness || IsGameOver) return false;
-            if (Player.Health >= 100 && _fluIllUntil <= Clock.Now.TotalMinutes) return Fail("健康已满，无需看诊。");
-            if (!Ledger.TryDebit(Clock.Today, "医疗", OutpatientFee, hospital.Name + "门诊")) return Fail("现金不足。");
-            RecoverAt(hospital, 60);
+            if (!Ledger.TryDebit(Clock.Today, "医疗", OutpatientFee, hospital.Name + "门诊")) return Fail($"现金不足，门诊需 {OutpatientFee}。");
+            RecoverAt(hospital, OutpatientMinutes);
             _fluIllUntil = 0;
-            Player.Health = Math.Min(100, Player.Health + 20);
-            Show("门诊结束", $"已从{hospital.Name}出来。看诊用时 1 小时，健康恢复至 {Player.Health:0.#}。");
+            Player.Health = Math.Min(100, Player.Health + OutpatientHealthRecovery);
+            Show("门诊结束", $"已支付门诊费 {OutpatientFee}，用时 {OutpatientMinutes} 分钟。当前健康 {Player.Health:0.#}/100。");
             return true;
         }
 

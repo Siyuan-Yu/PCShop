@@ -117,6 +117,7 @@ namespace PCShopSell.Core.Session
         public string[] eventIds;
         public int[] eventLastDays;
         public int[] randomEventDays;
+        public int deferredRandomEventDay;
         public long bankDepositCents, bankInterestCents;
         public double bankFraction;
         public int[] eventCounts;
@@ -156,8 +157,6 @@ namespace PCShopSell.Core.Session
         public double[] relationValues;
         public string[] giftIds;
         public int[] giftDays;
-        public string[] chatIds;
-        public int[] chatDays;
         public string[] talkIds;
         public int[] talkDays;
         public string[] lifeIds;
@@ -261,6 +260,7 @@ namespace PCShopSell.Core.Session
         public long placedAt;
         public long dueAt;
         public bool partsReserved;
+        public int reservedPartMask, boxedPartMask;
         public int mistakes, employeeMinutesLeft;
     }
 

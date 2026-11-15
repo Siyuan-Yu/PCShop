@@ -8,6 +8,7 @@ using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.Trade;
+using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
@@ -26,6 +27,8 @@ namespace PCShopSell.Core.Session
     }
     public sealed partial class GameSession
     {
+        public const string SignHelpActivityId = "social_85";
+
         private readonly List<ShopEventTask> _shopEventTasks = new List<ShopEventTask>();
         private readonly HashSet<int> _eventDelayedOrders = new HashSet<int>();
         private ShopCatVisit _shopCat;
@@ -51,7 +54,9 @@ namespace PCShopSell.Core.Session
             82 => EventPromotion() != null,
             83 => ShopBatchShop() is OwnedShop catShop && CurrentPlace == catShop.Place && EventCat == null,
             84 => IsMet("zhou") && MyShops.Any(s => s.RetailKind == "computer" && !s.Sim.NotFitted && !HasShopTask("sample", s)),
-            85 => IsMet("jie") && CityPersonState("jie")?.WorkPlaceId != null && !_cityActivities.Any(a => a.Active && a.DefinitionId == "social_85"),
+            85 => IsMet(Npcs.Jie) && CityPersonState(Npcs.Jie)?.WorkPlaceId is string phoneStore
+                && City.HasPlace(phoneStore) && City.GetPlace(phoneStore).Business == PhoneBusiness
+                && !_cityActivities.Any(a => a.Active && a.DefinitionId == SignHelpActivityId),
             86 => ComplaintReceipt() != null,
             87 => FindReferralShop(1) != null,
             88 => ShopBatchShop() is OwnedShop display && !HasShopTask("design", display) && !HasShopTask("self-display", display) && display.Layout.Any(p => IsDisplayDecoration(p.Id)),
@@ -135,15 +140,46 @@ namespace PCShopSell.Core.Session
         }
         private EventDef BindSignHelp(EventDef template)
         {
-            string venue = CityPersonState("jie").WorkPlaceId;
-            long now = SuggestCityActivityStartAt("social_85", "jie", 0, venue);
-            long next = SuggestCityActivityStartAt("social_85", "jie", Clock.Today.AddDays(1).TotalDays * 1440L + 540, venue);
+            string venue = CityPersonState(Npcs.Jie).WorkPlaceId;
+            string person = CityPerson(Npcs.Jie)?.Name ?? Npcs.Get(Npcs.Jie).Name;
+            string store = City.GetPlace(venue).Name;
+            long now = SuggestCityActivityStartAt(SignHelpActivityId, Npcs.Jie, 0, venue);
+            long next = SuggestCityActivityStartAt(SignHelpActivityId, Npcs.Jie, Clock.Today.AddDays(1).TotalDays * 1440L + 540, venue);
             EventChoice Offer(string text, long start) => Choose(text + " · " + new GameTimestamp(start), s => {
-                var a = s.ScheduleCityActivityAt("social_85", new[] { "jie" }, start, false, "sign-help:" + _nextCityActivity, venue);
+                var a = s.ScheduleCityActivityAt(SignHelpActivityId, new[] { Npcs.Jie }, start, false, "sign-help:" + s._nextCityActivity, venue);
                 if (a == null) return "日程有变，未预约。";
-                a.ServiceConfirmed = true; a.ServiceChoice = 0; return "已约好到店帮忙，实际一起忙完30分钟后增加交情。";
-            }, _ => CityActivityBlockerAt("social_85", new[] { "jie" }, start, false, venue) == null, "暂无合适时段");
-            return EventScene(template, "许文杰想换店门口的招牌，请你过去搭把手。", Offer("这次去帮忙", now), Offer("约明天帮忙", next), Choose("这次不方便", _ => "你婉拒了，不扣交情。"));
+                a.HostId = Npcs.Jie;
+                return $"已加入日程。到{store}后点「开始帮忙」，一起换招牌，耗时 {a.Duration} 分钟。";
+            }, s => start > s.Clock.Now.TotalMinutes && s.CityActivityBlockerAt(SignHelpActivityId, new[] { Npcs.Jie }, start, false, venue) == null, "暂无合适时段");
+            return EventScene(template, $"{person}想换{store}门口的招牌，请你过去搭把手。",
+                Offer("约最近时段", now), Offer("约明天帮忙", next), Choose("这次不方便", _ => "你婉拒了，不扣交情。"));
+        }
+
+        public CityActivity SignHelpAt(Place place) => place == null ? null :
+            _cityActivities.FirstOrDefault(a => a.Active && a.DefinitionId == SignHelpActivityId && a.VenueId == place.Id);
+
+        public string SignHelpStartBlocker()
+        {
+            var activity = SignHelpAt(CurrentPlace);
+            if (activity == null) return "请在约定时间到手机店帮忙";
+            if (activity.State == CityActivityPhase.Running) return "正在一起换招牌";
+            long offset = Clock.Now.TotalMinutes - activity.ScheduledStart;
+            if (offset < -CityArrivalWindowMinutes) return "还没到约定时段";
+            if (offset > CityArrivalWindowMinutes) return "已超过约定的到场时间";
+            if (!activity.RendezvousReady) return "等唐俊杰到场后开始";
+            return VenueServiceBlocker(SignHelpActivityId, 0);
+        }
+
+        public bool StartSignHelp()
+        {
+            var activity = SignHelpAt(CurrentPlace);
+            if (activity == null) return Fail("请在约定时间到手机店帮忙");
+            PrepareVenueCompanions(CurrentPlace);
+            if (SignHelpStartBlocker() is string reason) return Fail(reason);
+            activity.ServiceChoice = 0;
+            activity.ServiceConfirmed = true;
+            TickCityActivities(Clock.Now.TotalMinutes);
+            return activity.State == CityActivityPhase.Running;
         }
         private EventPaidReceipt ComplaintReceipt() => _eventPaidReceipts.FirstOrDefault(r => !r.BadReview && r.Day >= Clock.Today.TotalDays - 7 && ReceiptShop(r) != null);
         private EventDef BindReceiptComplaint(EventDef template)

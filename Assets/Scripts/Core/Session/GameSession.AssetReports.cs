@@ -25,6 +25,10 @@ namespace PCShopSell.Core.Session
         public readonly Dictionary<string, long> ExpenseSources = new Dictionary<string, long>();
         public long IncomeCents => IncomeDays.Sum();
         public long ExpenseCents => ExpenseDays.Sum();
+        public long ProcurementCents => ExpenseFor("商品进货付款") + ExpenseFor("商品与食材成本");
+        public long WageCents => ExpenseFor("员工工资");
+        public long RentCents => ExpenseFor("店铺租金");
+        private long ExpenseFor(string source) => ExpenseSources.TryGetValue(source, out var cents) ? cents : 0;
         public void Add(int day, string source, long cents)
         {
             int index = day - FirstDay;
@@ -48,7 +52,12 @@ namespace PCShopSell.Core.Session
         public AssetStoreReport[] AssetStoreReports(int days = 7)
         {
             days = Math.Max(1, Math.Min(30, days));
-            int first = Math.Max(0, Clock.Today.TotalDays - days + 1), count = Clock.Today.TotalDays - first + 1;
+            return AssetStoreReports(new GameDate(Math.Max(0, Clock.Today.TotalDays - days + 1)), Clock.Today, false);
+        }
+
+        public AssetStoreReport[] AssetStoreReports(GameDate from, GameDate to, bool includeFormerStores = true)
+        {
+            int first = from.TotalDays, count = to.TotalDays - first + 1;
             var reports = new Dictionary<string, AssetStoreReport>();
             AssetStoreReport Create(string id, string name, string street, string kind, string state, bool managed) =>
                 new AssetStoreReport { Id = id, Name = name, StreetId = street, Kind = kind, State = state, Managed = managed,
@@ -71,12 +80,20 @@ namespace PCShopSell.Core.Session
             }
             foreach (var entry in Ledger.Entries)
             {
-                if (entry.Date.TotalDays < first || entry.Date > Clock.Today) continue;
+                if (entry.Date < from || entry.Date > to) continue;
                 string id = entry.ShopId;
                 if (id == null && entry.Category == "物业维护") id = entry.Attribution?.PropertyId;
-                if (id == null || !reports.TryGetValue(id, out var report)) continue;
-                bool ownedMaintenance = entry.Category == "物业维护" && report.Id == entry.Attribution?.PropertyId;
+                if (id == null) continue;
+                bool ownedMaintenance = entry.Category == "物业维护" && id == entry.Attribution?.PropertyId;
                 if (entry.BusinessKind != LedgerBusinessKind.Operating && !ownedMaintenance) continue;
+                if (!reports.TryGetValue(id, out var report))
+                {
+                    if (!includeFormerStores || !City.HasPlace(id)) continue;
+                    var place = City.GetPlace(id);
+                    var former = _shops.FirstOrDefault(s => s.Place.Id == id);
+                    reports[id] = report = Create(id, former == null ? place.Name : ShopTitle(former), place.StreetId,
+                        former == null ? "" : RetailShopTypes.Name(former.RetailKind), "已停止经营", false);
+                }
                 // A headquarters top-up is already included in the managed store's full daily costs.
                 if (report.Managed && (entry.Category == "企业固定费" || entry.Category == "车行固定费")) continue;
                 report.Add(entry.Date.TotalDays, AssetIncomeSource(entry.Category), entry.Amount.Cents);

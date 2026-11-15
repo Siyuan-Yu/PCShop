@@ -159,7 +159,7 @@ namespace PCShopSell.Tests
                     ui.OpenQuests();Find("DistrictStoryMessage").onClick.Invoke();
                     Assert.True(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Text>()).Any(t=>t.text.Contains("72小时")));
                     ui.CloseAllWindows();
-                    DistrictProgressionTests.AwaitInvitation(s);ui.CloseAllWindows();ui.OpenChatPanel();Find("DistrictStoryMessage").onClick.Invoke();
+                    DistrictProgressionTests.AwaitInvitation(s);ui.CloseAllWindows();ui.OpenQuests();Find("DistrictStoryMessage").onClick.Invoke();
                     ui.DebugRefreshQuests();StringAssert.Contains(s.CurrentDistrictNode.Title,ui.QuestTrackerText);
                     Assert.False(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Button>()).Any(b=>b.name=="DistrictGoToMeeting"));
                     StringAssert.Contains("回复李秀兰",Find("DistrictChoice_accept").GetComponentInChildren<Text>().text);

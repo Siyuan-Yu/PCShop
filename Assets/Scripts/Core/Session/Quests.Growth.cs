@@ -10,7 +10,7 @@ namespace PCShopSell.Core.Session
     public enum QuestTarget
     {
         Agency, Renovate, Stock, Market, Counter, Staff, PhoneShop, Upgrades, Mall,
-        Pricing, Orders, Restock, Finance, Enterprise, Direct, Ventures, Park, Creators, Property, Cooker, Bed
+        Pricing, Orders, Restock, Finance, Enterprise, Direct, Ventures, Park, Creators, Property, Cooker, Bed, ScooterDealer, CommunityGoal
     }
 
     public static partial class Quests
@@ -27,9 +27,9 @@ namespace PCShopSell.Core.Session
 
         private static IEnumerable<QuestDef> GrowthSteps()
         {
-            yield return Step("pricing", 1, QuestTarget.Pricing, "先看懂售价与收入", "看懂定价页",
-                $"营业额{K("不是利润")}，还要扣进价和工资。",
-                s => s.QuestLessonRead("pricing"), null, true);
+            yield return Step("pricing", 1, QuestTarget.Pricing, "试着调一次价", "在「定价」里改一个价格，再点确认",
+                $"拖动统一加价滑杆，点{K("确认统一加价")}。也可以选任意商品调价，改完点「确定」。两种方法任选其一。",
+                s => s.Flags.Contains("tutorial:pricing-confirmed") || s.QuestLessonRead("pricing"), null);
             yield return Step("workbench", 1, QuestTarget.Renovate, "准备整机工作区", $"摆好{K("装机台")}和{K("展示桌")}",
                 $"有了它们才能{K("接整机单")}。",
                 s => s.PlacedFixtures(FixtureKind.Bench) > 0 && s.PlacedFixtures(FixtureKind.Display) > 0,
@@ -97,6 +97,12 @@ namespace PCShopSell.Core.Session
     {
         public bool QuestCompleted(string id) => Flags.Contains("tutorial:" + id);
         public bool QuestLessonRead(string id) => Flags.Contains("tutorial:read:" + id);
+
+        private void RecordConfirmedShopPricing()
+        {
+            if (InPlayerShop && !QuestCompleted("pricing") && Flags.Add("tutorial:pricing-confirmed"))
+                RefreshQuestProgress();
+        }
         public void RefreshQuestProgress()
         {
             if(PendingShopKindPlaceId!=null)return;
@@ -140,7 +146,8 @@ namespace PCShopSell.Core.Session
             if (q.Chapter == 0)
             {
                 // Basic instructions follow actual opening progress, never an old manually pinned task.
-                if (q.Id != "rent" && q.Target != QuestTarget.Cooker && !HasShop) return false;
+                if (q.Id != "rent" && q.Target != QuestTarget.Cooker && q.Target != QuestTarget.CommunityGoal && !HasShop)
+                    return false;
                 return Quests.All.TakeWhile(x => x.Id != q.Id).All(x => QuestCompleted(x.Id));
             }
             if (!HasShop || Quests.All.Any(x => x.Chapter == 0 && !QuestCompleted(x.Id))) return false;

@@ -10,6 +10,8 @@ namespace PCShopSell.Core.Session
     {
         public const double WarehouseCapacity = double.MaxValue;
         public static int ShelfLimit(ShopSize size)=>size==ShopSize.Large?20:size==ShopSize.Medium?12:8;
+        public static int RestaurantTableLimit(ShopSize size) => size == ShopSize.Large ? 20 : size == ShopSize.Medium ? 14 : 8;
+        public static int RestaurantTablesPlaced(OwnedShop shop) => Furnished(shop, "restaurant_table");
         public static int StaffLimit(ShopSize size)=>size==ShopSize.Large?10:size==ShopSize.Medium?6:4;
         public int ShopShelfLimit=>ShelfLimit(PlayerShop.Size);
         public int ShopStaffLimit=>StaffLimit(PlayerShop.Size);
@@ -48,9 +50,16 @@ namespace PCShopSell.Core.Session
             foreach(var item in from.FurnitureLines.ToArray())to.AddFurniture(item.Key,item.Value);
             from.ClearFurniture();
             if (!includeFood) return;
-            to.Food.RiceKg+=from.Food.RiceKg;from.Food.RiceKg=0;
-            to.Food.Ingredient.AddRange(from.Food.Ingredient);from.Food.Ingredient.Clear();
+            MergePantryIngredients(from.Food, to.Food);
             to.Food.Packed.AddRange(from.Food.Packed);from.Food.Packed.Clear();
+        }
+
+        private static void MergePantryIngredients(Pantry from, Pantry to)
+        {
+            to.RiceKg += from.RiceKg;
+            from.RiceKg = 0;
+            to.Ingredient.AddRange(from.Ingredient);
+            from.Ingredient.Clear();
         }
         private void NormalizeWarehouses()
         {
@@ -63,12 +72,20 @@ namespace PCShopSell.Core.Session
                 MergeStorage(shop.Temp,shop.Locker);shop.TempSince=0;
             }
         }
-        private string ShelfPlacementBlocker(bool shop,FurnitureDef furniture,int ignore=-1)
+        private string ShopFixturePlacementBlocker(bool shop,FurnitureDef furniture,int ignore=-1)
         {
-            if(!shop||furniture?.Fixture!=FixtureKind.Shelf)return null;
+            if (!shop || furniture == null) return null;
+            if (furniture.Id == "restaurant_table")
+            {
+                if (ignore >= 0 && ignore < _shopLayout.Count && _shopLayout[ignore].Id == furniture.Id) return null;
+                int limit = RestaurantTableLimit(PlayerShop.Size);
+                return RestaurantTablesPlaced(CurrentShop) >= limit
+                    ? $"这间{SizeName(PlayerShop.Size)}最多摆 {limit} 张餐桌。" : null;
+            }
+            if (furniture.Fixture != FixtureKind.Shelf) return null;
             if(ignore>=0&&ignore<_shopLayout.Count&&FurnitureCatalog.Get(_shopLayout[ignore].Id)?.Fixture==FixtureKind.Shelf)return null;
             int count=_shopLayout.Where((f,index)=>index!=ignore).Count(f=>FurnitureCatalog.Get(f.Id)?.Fixture==FixtureKind.Shelf);
-            return count>=ShopShelfLimit?"这间"+SizeName(PlayerShop.Size)+"最多摆 "+ShopShelfLimit+" 个货架，其他家具不限数量。":null;
+            return count>=ShopShelfLimit?"这间"+SizeName(PlayerShop.Size)+"最多摆 "+ShopShelfLimit+" 个货架。":null;
         }
     }
 }

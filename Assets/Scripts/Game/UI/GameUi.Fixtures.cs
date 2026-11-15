@@ -62,12 +62,12 @@ namespace PCShopSell.Game.UI
             Ui.Panel(_shopFitWarning, "Accent", highlight).rectTransform.Anchor(0, 0, 0, 1, 0, 0, -4, 0);
             _shopFitTitle = Ui.Label(_shopFitWarning, "", 21, color: highlight);
             _shopFitTitle.fontStyle = FontStyle.Bold;
-            _shopFitTitle.rectTransform.Anchor(0, 1, 1, 1, 14, -31, 124, 6);
+            _shopFitTitle.rectTransform.Anchor(0, 1, 1, 1, 14, -31, 148, 6);
             _shopFitDetail = Ui.Label(_shopFitWarning, "", 17, TextAnchor.UpperLeft, Color.white);
-            _shopFitDetail.rectTransform.Anchor(0, 0, 1, 1, 14, ShopFitDetailBottom, 124, ShopFitDetailTop);
+            _shopFitDetail.rectTransform.Anchor(0, 0, 1, 1, 14, ShopFitDetailBottom, 148, ShopFitDetailTop);
             var action = Ui.Button(_shopFitWarning, "去装修", GoToShopFitAction, 17, Ui.ButtonHot);
             action.name = "ShopFitWarningAction";
-            ((RectTransform)action.transform).Anchor(1, .5f, 1, .5f, -110, -20, 10, -20);
+            ((RectTransform)action.transform).Anchor(1, .5f, 1, .5f, -134, -20, 10, -20);
             _shopFitActionLabel = action.GetComponentInChildren<Text>();
             _shopFitWarning.gameObject.SetActive(false);
         }
@@ -83,9 +83,10 @@ namespace PCShopSell.Game.UI
             if (visible)
             {
                 string missing = fitted ? null : S.ShopFitGap();
-                string detail = fitted ? "今天可以继续摆放设施。" : missing == null ? "请先确认经营类型。" : $"缺少：{missing}";
+                var action = ShopFitAction(fitted, missing);
+                string detail = fitted ? "今天可以继续摆放设施。" : missing == null ? "请先确认经营类型。" : $"缺少：{missing}" + action.hint;
                 _shopFitTitle.text = fitted ? "今日歇业装修 · 明天恢复营业" : "暂不能开业";
-                _shopFitActionLabel.text = !fitted && missing == null ? "选店型" : _tab == ShopTab.Renovate ? "摆放设施" : "去装修";
+                _shopFitActionLabel.text = action.label;
                 if (visibilityChanged || _shopFitDetail.text != detail)
                 {
                     _shopFitDetail.text = detail;
@@ -103,9 +104,41 @@ namespace PCShopSell.Game.UI
 
         private void GoToShopFitAction()
         {
-            if (!S.ShopFitted && S.ShopFitGap() == null) RefreshOpeningKindChoice();
-            else if (_tab == ShopTab.Renovate) StartPlacement(true);
-            else SelectTab(ShopTab.Renovate);
+            ShopFitAction(S.ShopFitted, S.ShopFitGap()).run();
+        }
+
+        private (string label, string hint, System.Action run) ShopFitAction(bool fitted, string missing)
+        {
+            if (fitted)
+                return (_tab == ShopTab.Renovate ? "摆放设施" : "去装修", "",
+                    () => { if (_tab == ShopTab.Renovate) StartPlacement(true); else SelectTab(ShopTab.Renovate); });
+            if (missing == null) return ("选店型", "", RefreshOpeningKindChoice);
+
+            var requirements = GameSession.OpeningFurniture(S.RetailKind)
+                .Where(id => id != PetShopCatalog.SmallHouse && !GameSession.OpeningFurniturePlaced(S.CurrentShop, id)).ToArray();
+            if (requirements.Length == 0) return ("去装修", "", () => SelectTab(ShopTab.Renovate));
+
+            var options = requirements.Select(id => FurnitureCatalog.All
+                .Where(item => GameSession.MatchesOpeningFurniture(id, item)).ToArray()).ToArray();
+            if (options.Any(group => !group.Any(item => S.FurnitureOwnedUnplaced(item.Id) > 0)))
+            {
+                var mall = QuestAction(QuestTarget.Mall);
+                return ("前往家具城", "\n送货时请选择这家店。", mall.action);
+            }
+
+            foreach (var item in options.SelectMany(group => group))
+            {
+                if (S.FurnitureToPlace(true, item.Id) > 0)
+                    return ("摆放设施", "", () => StartPlacement(true, item.Id));
+                if (S.Backpack.FurnitureCount(item.Id) > 0 && S.HasWarehouseHere)
+                    return ("摆放设施", "", () => { if (S.StoreInBox("furn:" + item.Id)) StartPlacement(true, item.Id); });
+            }
+            if (options.SelectMany(group => group).Any(item =>
+                S.HomeBox.FurnitureCount(item.Id) > 0 || S.HomeTemp.FurnitureCount(item.Id) > 0))
+                return ("回家取设施", "\n设施在家里，取回后可摆放。", () => S.BeginCityTravel(S.Home.Id));
+
+            return ("查看说明", "\n设施已购，请确认送达本店。", () => Popup("设施未到本店",
+                "请查看在途配送，或把存在其他地方的设施运到本店。到店后可从这里直接摆放。"));
         }
 
         /// <summary>“装修”页：这间店现在是什么状态、开店清单，以及进入编辑模式（俯视图）摆货架、柜台的入口。</summary>
@@ -113,6 +146,8 @@ namespace PCShopSell.Game.UI
         {
             _renovationStockSignature=RenovationStockSignature();
             Line(C,GameSession.SizeName(S.PlayerShop.Size)+" · 最多 "+S.ShopShelfLimit+" 个货架 · 已摆 "+S.ShelvesPlaced+" 个",18,Ui.Accent).name="RenovationShopCapacity";
+            if (S.CurrentShop.RetailKind == "restaurant")
+                Line(C, $"餐桌 {GameSession.RestaurantTablesPlaced(S.CurrentShop)} / {GameSession.RestaurantTableLimit(S.PlayerShop.Size)} 张", 17, Ui.Accent);
             Line(C, "开业设施清单", 18, Ui.Accent);
             Para(C, FitChecklistText(), 15);
             if (S.IsPetShop(S.CurrentShop)) BuildPetRenovation();

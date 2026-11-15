@@ -35,7 +35,7 @@ namespace PCShopSell.Game.UI
             Money total = Online1788.ShippingFee;
             double space = 0;
             var picked = new List<(PartDef part, int count, Money price)>();
-            foreach (PartDef p in PartCatalog.All.Where(p=>PCShopSell.Core.Home.IndustryCycles.Available(p,S.Clock.Today.TotalDays)))
+            foreach (PartDef p in PartCatalog.All)
             {
                 PartDef part = p;
                 Money price = S.OnlinePrice(s, p);

@@ -30,7 +30,7 @@ namespace PCShopSell.Tests
                 var c=s.KolStreaming.Contracts.Single();var d=s.BrandBusiness.Deals.Single();
                 Assert.AreEqual(c.Id,d.KolContractId);
                 Assert.Contains("momo",s.ExpoAvailableKols(Brand,s.NextBrandExpoDay));
-                Assert.False(s.SignKolAmbassador("momo",90,1,remote:true,phoneCall:true));
+                Assert.False(s.SignKolAmbassador("momo",90,1,remote:true));
                 Assert.AreEqual(cash-fee,s.Ledger.Balance.Cents);
                 Assert.Zero(s.BrandDealTraffic(d),"No second always-on endorsement bonus");
                 Assert.True(s.EndKolLive(c.Id));
@@ -82,7 +82,7 @@ namespace PCShopSell.Tests
             {
                 Assert.True(McnSigningTest.Sign(s,Brand,"momo"));Assert.True(McnSigningTest.Sign(s,Brand,"ake"));
                 s.Meet("qiao", 0);
-                Assert.True(s.SignKolAmbassador("qiao", 90, 1, remote: true, phoneCall: true));
+                Assert.True(s.SignKolAmbassador("qiao", 90, 1, remote: true));
                 CollectionAssert.DoesNotContain(s.ExpoAvailableKols(Brand,s.NextBrandExpoDay),"qiao");
                 Assert.True(s.BookQuarterlyExpo(Brand,s.MainShop.Place.Id,0,new[]{PartCatalog.All.First().Id},new[]{"momo"}));
                 CollectionAssert.AreEqual(new[]{"momo"},s.ExpoEndorsers(s.BrandBusiness.Exhibits.Single()));

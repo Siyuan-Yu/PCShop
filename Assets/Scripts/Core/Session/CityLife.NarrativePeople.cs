@@ -7,7 +7,7 @@ namespace PCShopSell.Core.Session
     public static partial class CityLifeCatalog
     {
         public const string TangWei="story_tangwei", LiangJing="story_liangjing", ShenXiao="story_shenxiao";
-        public const int NarrativePopulation=120;
+        public const int NarrativePopulation=128;
         private static readonly string[] KeyPeople={"landlady","keeper_agent","lin","zhou","jie","li","life_curator","life_tenant","life_enterprise","life_creator","life_maker","life_clothier","life_designer","life_clothsupplier","life_model_supplier","life_chef","life_ming","momo",TangWei,LiangJing};
 
         // Each row is a stable authored identity, not a name regenerated on scene changes.
@@ -68,7 +68,7 @@ namespace PCShopSell.Core.Session
             new[]{"qiaosong","乔松","退休园艺爱好者","64","leisure","life_park","嫁接植物","养活一株从旧院子带来的树苗","搬家时我只带走一盆树苗，别人都说重新买一盆更方便。","方林帮我看了根，没有保证一定能活，只说先别急着换盆。","今年发了两片新叶，我每天看看，不再老想着它以前多大。","life_gardener","照看树苗时认识的朋友"},
             new[]{"fuzhi","傅知","练歌房音响助理","22","leisure","life_ktv","原创伴奏","把一首自己的曲子完整录下来","第一次调音把所有旋钮都拧大，以为响就是好听。","温音让我先听人声，才知道有些时候要学会留空。","我的曲子只写了一分钟，但这次想先完整录完，不急着发出去。","life_singer","同班工作的音响伙伴"},
             new[]{"shaoan","邵安","周末钓友","57","leisure","shop17","河岸钓鱼","学会放下已经过时的比赛心态","刚退休时每次钓鱼都比谁钓得多，空手回家就不高兴。","李承业陪我坐过一个没口的下午，聊完觉得这趟也没白来。","如今带个保温杯，能坐一会就行，鱼不是每次都得证明什么。","li","河岸一起钓鱼的朋友"},
-            new[]{"luqiao","卢桥","户外活动领队","38","leisure","life_hike","认路和野餐","整理一条适合慢走的线路","以前我按自己脚程排活动，队尾的人一路只顾追赶。","陶川提醒我把停下来的时间也算进去，走路才不只是赶路。","现在有一条很短的路线，带孩子或想聊天的人也能从容走完。","life_golfer","交流户外活动安排"},
+            new[]{"luqiao","卢桥","钓场管理员兼户外领队","38","leisure",GameSession.FishingVenueId,"认路和野餐","整理一条适合慢走的线路","以前我按自己脚程排活动，队尾的人一路只顾追赶。","陶川提醒我把停下来的时间也算进去，走路才不只是赶路。","现在有一条很短的路线，带孩子或想聊天的人也能从容走完。","life_golfer","交流户外活动安排"},
             new[]{"yinhe","尹禾","社区维修接线员","35","community","life_service","拼图和听故事","把每一次报修的后续问清楚","刚接电话时，我总急着把工单转出去，觉得这样就算处理完了。","周然回访时发现有户人家一直没等到维修，我们一起补问了原因。","现在每天留十分钟看没结清的单，有些问题只是差一次有人再问。","resident_zhouran","共同跟进社区报修"}
         };
 
@@ -88,8 +88,38 @@ namespace PCShopSell.Core.Session
                 var p=people.Last();p.Circle=CircleName(r[4]);p.LeisurePlaces=CohortLeisure(r[4]);
                 p.WorkStart=r[0]=="moxin"||r[0]=="maoning"||r[0]=="sujun"?1200:480+(people.Count%4)*30;
                 p.WorkEnd=p.WorkStart==1200?360:p.WorkStart+480;
+                if (p.Id == GameSession.FishingAttendantId)
+                {
+                    p.WorkStart = 6 * 60;
+                    p.WorkEnd = 18 * 60;
+                }
                 p.StoryTitle=r[7];p.FirstEncounter="在工作地点初次见面；下班后也可能在附近的公共场所遇见。";
             }
+            void AddHospitalStaff(string hospital, string home, string dayDoctor, string nightDoctor)
+            {
+                AddDoctor("day", dayDoctor, 8 * 60, 20 * 60, 42, "养花",
+                    "我在这里看白班门诊，平时也会跟进附近居民的复诊。",
+                    "以前我在大医院轮转，后来回到这边，想把常见病的门诊做得离家近一点。",
+                    "下班会给窗台上的花浇水，顺便看看街坊送来的种子长没长。");
+                AddDoctor("night", nightDoctor, 20 * 60, 8 * 60, 36, "听广播",
+                    "我负责夜间门诊。街上的店关了，医院这边还有人接诊。",
+                    "刚开始值夜班时，我得写一张交班单才能安心。现在我们换班时，都会把还要跟进的情况当面说清楚。",
+                    "我通常下班后听一会儿早间广播，再回家休息。");
+
+                void AddDoctor(string shift, string name, int start, int end, int age, string interest, string intro, string experience, string afterWork)
+                {
+                    Add(hospital + "_doctor_" + shift, name, "值班医生", age, home, hospital, interest,
+                        "把门诊和复诊的安排交代清楚。", intro, experience, afterWork);
+                    var doctor = people.Last();
+                    doctor.WorkStart = start;
+                    doctor.WorkEnd = end;
+                }
+            }
+            AddHospitalStaff("hospital_outskirts", "life_home_s_oldhomes", "罗静怡", "周明川");
+            AddHospitalStaff("hospital_community", "life_home_s_services", "许婉清", "陈嘉树");
+            AddHospitalStaff("hospital_park", "life_home_s_sports", "梁舒宁", "顾言礼");
+            AddHospitalStaff("hospital_garden", "life_home_s_newtown", "沈若怡", "徐景和");
+
             foreach(var p in people.Where(p=>p.Id!=InvitationTestPersonId))
             {
                 p.KeyCharacter=KeyPeople.Contains(p.Id);
@@ -99,7 +129,7 @@ namespace PCShopSell.Core.Session
                 if(p.LeisurePlaces==null)p.LeisurePlaces=CohortLeisure(p.KeyCharacter?"community":"old");
             }
             ConfigureExistingNarrativePeople(people);
-            if(people.Count(p=>p.Id!=InvitationTestPersonId)!=NarrativePopulation)throw new InvalidOperationException("Narrative population must contain 120 distinct production identities.");
+            if(people.Count(p=>p.Id!=InvitationTestPersonId)!=NarrativePopulation)throw new InvalidOperationException($"Narrative population must contain {NarrativePopulation} distinct production identities.");
         }
 
         private static IEnumerable<CityRelationEdge> Pair(string a,string b,string ab,string ba=null)

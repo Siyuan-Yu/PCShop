@@ -10358,7 +10358,7 @@
     },
     {
       "id": "life_hike",
-      "name": "城郊公园 · 青湾垂钓场",
+      "name": "城郊平地散步公园",
       "street": "s_oldhomes",
       "node": "s_market_2",
       "business": "venue_hike",
@@ -10373,6 +10373,26 @@
       "tradable": false,
       "openMinute": 360,
       "closeMinute": 1200,
+      "model": "park",
+      "tier": 0
+    },
+    {
+      "id": "life_fishing",
+      "name": "青湾垂钓场",
+      "street": "s_start",
+      "node": "lake_old_38",
+      "business": "venue_hike",
+      "kind": "shop",
+      "size": "small",
+      "explicitEntrance": true,
+      "entranceX": -1.2865401612099872,
+      "entranceY": -12.299796090810524,
+      "width": 27.050229407047638,
+      "depth": 15.457273946884364,
+      "heading": 158.7782142825916,
+      "tradable": false,
+      "openMinute": 0,
+      "closeMinute": 1440,
       "model": "park",
       "tier": 0
     },
@@ -11800,8 +11820,8 @@
       "heading": 171.11631865673118,
       "model": "shop",
       "tier": 2,
-      "openMinute": 540,
-      "closeMinute": 1020
+      "openMinute": 0,
+      "closeMinute": 1440
     },
     {
       "id": "expansion_shop_s_oldhomes_01",

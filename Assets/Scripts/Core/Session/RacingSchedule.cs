@@ -8,6 +8,7 @@ namespace PCShopSell.Core.Session
         public const int PracticeFee = 100;
         public const int MeetOpenMinute = 9 * 60;
         public const int MeetCloseMinute = 18 * 60;
+        public static string MeetHours => $"{GameSession.ClockText(MeetOpenMinute)}–{GameSession.ClockText(MeetCloseMinute)}";
         public const int DriverDepartureMinute = 6 * 60;
         public static RaceMeeting On(GameDate date) => date.Weekday == GameWeekday.Monday ? RaceMeeting.Major
             : date.TotalDays % 3 == 2 ? RaceMeeting.Small : RaceMeeting.None;

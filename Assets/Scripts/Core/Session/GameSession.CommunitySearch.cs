@@ -93,7 +93,7 @@ namespace PCShopSell.Core.Session
         {
             if(index<0||index>2||!CommunitySearchActive)return "请先接受委托，向李秀兰问清三位保管人。";
             string id=CommunityLeadPerson(index);
-            string blocker=remote||!CitySamePlace(id)?"请走到本人身边，当面打听图页；聊天消息不能取得线索。":null;
+            string blocker=remote||!CitySamePlace(id)?"请走到本人身边，当面打听图页；电话不能取得线索。":null;
             if(blocker!=null)return blocker;
             if(CommunityHasClue(index))return CommunityLeadHint(index);
             if(Relation(id)<CommunityLeadRelation||!CommunityHasOuting(index))

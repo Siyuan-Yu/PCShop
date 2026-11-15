@@ -25,7 +25,9 @@ namespace PCShopSell.Tests
         }
         private static void Attend(GameSession s,CityActivity a)
         {
-            s.Clock.Restore(new GameDate((int)(a.ScheduledStart/1440)),(int)(a.ScheduledStart%1440));s.Player.Health=s.Player.Hunger=s.Player.Energy=100;At(s,a.VenueId);Assert.IsTrue(s.PrepareVenueCompanions(s.CurrentPlace));s.AdvanceClock(3);Assert.AreEqual(CityActivityPhase.Running,a.State,a.EndReason);Assert.NotNull(s.CurrentOnsite);
+            s.Clock.Restore(new GameDate((int)(a.ScheduledStart/1440)),(int)(a.ScheduledStart%1440));s.Player.Health=s.Player.Hunger=s.Player.Energy=100;At(s,a.VenueId);Assert.IsTrue(s.PrepareVenueCompanions(s.CurrentPlace));
+            Assert.AreEqual(CityActivityPhase.Gathering,a.State,a.EndReason);Assert.IsTrue(s.StartOnsiteActivity(a.Id, GameSession.OnsiteNumber(a.DefinitionId) == 56 ? false : (bool?)null),a.EndReason);
+            Assert.AreEqual(CityActivityPhase.Running,a.State,a.EndReason);Assert.NotNull(s.CurrentOnsite);
         }
         private static void Finish(GameSession s,CityActivity a)=>s.AdvanceClock((int)Math.Max(1,a.ActualStart+a.Duration-s.Clock.Now.TotalMinutes));
         private static void Shot(GameSession s,int mode,double power=.615,double angle=0)

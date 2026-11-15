@@ -123,21 +123,12 @@ namespace PCShopSell.Game.UI
                 BuildEmployeeRoleChoices(w.Content, role, choice => { role = choice; w.Rebuild(); },
                     venue: S.IsDedicatedVenue(S.ShopAt(destination)?.Place));
                 BuildRecruitRolePreview(w.Content, row.Person, role, S.ShopAt(destination));
-                if (role != EmployeeRole.Unassigned)
-                {
-                    Line(w.Content, "2. 在哪家店工作", 20);
-                    var shops = Ui.Scroll(w.Content, 210);
-                    foreach (var shop in S.MyShops)
-                    {
-                        string target = shop.Place.Id;
-                        Ui.Size(Ui.Button(shops, $"{S.ShopTitle(shop)} · {S.City.StreetName(shop.Place.StreetId)}", () => { destination = target; w.Rebuild(); }, 18, destination == target ? Ui.ButtonHot : Ui.ButtonBg), -1, 44);
-                    }
-                }
+                BuildEmployeeDestinationChoices(w.Content, role, destination, target => { destination = target; w.Rebuild(); });
                 bool tomorrow = role != EmployeeRole.Unassigned && row.Shop != null && row.Shop.Place.Id != destination;
-                Para(w.Content, role == EmployeeRole.Unassigned ? "暂不分配工作，仍按原日薪发工资；以后可重新安排。"
+                string blocker = S.EmployeeAssignmentBlocker(employeeId, destination, role);
+                if (blocker == null) Para(w.Content, role == EmployeeRole.Unassigned ? "暂不分配工作，仍按原日薪发工资；以后可重新安排。"
                     : tomorrow ? $"跨店安排明天生效。今天仍在{S.ShopTitle(row.Shop)}做{GameSession.RoleName(row.Role)}，明天到新店做{GameSession.RoleName(role)}。"
                     : "本次是首次安排或同店换岗，确认后今天起按新岗位工作。", 18, Ui.Accent);
-                string blocker = S.EmployeeAssignmentBlocker(employeeId, destination, role);
                 if (blocker != null) Para(w.Content, blocker, 16, Ui.Warn);
                 var occupant = S.EmployeeInPosition(destination, role);
                 if (blocker!=null&&occupant != null && occupant.Person.Id != employeeId && S.EmployeeAssignmentBlocker(employeeId, destination, role, true) == null)
@@ -187,7 +178,7 @@ namespace PCShopSell.Game.UI
                 if (defaultSource != null && offersByDestination.Contains(S.City.GetPlace(defaultSource)))
                     browseSource = defaultSource;
             }
-            string category = "全部", search = "";
+            string category = PurchaseFacets.All, search = "";
             // 筛选维度选择保留在窗口外，重建界面时不会丢掉。
             var facets = new Dictionary<string, string>();
             void BrowseSource(string sourceId)
@@ -209,8 +200,8 @@ namespace PCShopSell.Game.UI
             OpenWindow("定期采购清单 · " + worker.Person.Name + " · " + S.ShopTitle(worker.Shop), 1560, 880, w =>
             {
                 var sourceOffers = browseSource == null ? catalog : offersByDestination[S.City.GetPlace(browseSource)];
-                var categories = new[]{"全部"}.Concat(sourceOffers.Select(o => o.Category)).Distinct().ToArray();
-                if (!categories.Contains(category)) category = "全部";
+                var categories = new[] { PurchaseFacets.All }.Concat(sourceOffers.Select(o => o.Category)).Distinct().ToArray();
+                if (!categories.Contains(category)) category = PurchaseFacets.All;
                 var savedPlan = worker.Person.PurchasePlan;
                 bool threshold = draft.InventoryThreshold;
                 var quote = S.EstimateEmployeePurchase(employeeId, draft, catalog);
@@ -265,33 +256,57 @@ namespace PCShopSell.Game.UI
                     }), 16), 175, 36);
                     Ui.Size(Ui.TextInput(filters, search, "搜索商品", v => { search = v; w.RequestRebuild(); }), -1, 36, 1);
                     Ui.Size(Ui.Button(filters, selectedOnly ? "只看已选 ✓" : "只看已选", () => { selectedOnly = !selectedOnly; w.Rebuild(); }, 15), 130, 36);
-                    // 按商品自带的筛选维度逐层生成筛选条：季节、适用店铺…有几种维度就有几层，每层只有一种取值时自动隐藏。
+                    var facetOffers = sourceOffers.Where(o => category == PurchaseFacets.All || o.Category == category).ToArray();
+                    // 维度选项只取上一级筛选后仍可见的商品。
                     void FacetBar(string key)
                     {
-                        var values = sourceOffers.Select(o => o.Facet(key)).Where(v => !string.IsNullOrEmpty(v))
-                            .SelectMany(v => v.Split(PurchaseOffer.FacetSeparator)).Distinct().ToList();
-                        if (values.Count <= 1) return;
-                        facets.TryGetValue(key, out string picked);
-                        if (picked != null && !values.Contains(picked)) picked = null;
+                        var values = facetOffers.Select(o => o.Facet(key)).Where(v => !string.IsNullOrEmpty(v))
+                            .SelectMany(v => v.Split(PurchaseOffer.FacetSeparator)).Distinct().ToArray();
+                        if (values.Length == 0 || (values.Length == 1 && facetOffers.All(o => o.Facet(key) != null)))
+                        {
+                            facets.Remove(key);
+                            return;
+                        }
+                        if (!facets.TryGetValue(key, out string picked) || !values.Contains(picked))
+                        {
+                            facets.Remove(key);
+                            picked = PurchaseFacets.All;
+                        }
                         var bar = Ui.Row(left, 36, 6);
                         bar.name = "BuyerFacetBar_" + key;
-                        Ui.Size(Ui.Label(bar, PurchaseFacets.Label(key), 15, TextAnchor.MiddleLeft, Ui.Dim), 68);
-                        foreach (string name in new[] { PurchaseFacets.All }.Concat(values))
+                        string label = PurchaseFacets.Label(key);
+                        Ui.Size(Ui.Label(bar, label, 15, TextAnchor.MiddleLeft, Ui.Dim), 68);
+                        void Select(string choice)
                         {
-                            string choice = name;
-                            bool on = picked == null ? choice == PurchaseFacets.All : choice == picked;
-                            var chip = Ui.Button(bar, choice,
-                                () => { facets[key] = choice == PurchaseFacets.All ? null : choice; w.Rebuild(); }, 15,
-                                on ? Ui.ButtonHot : new Color(0.2f, 0.24f, 0.3f));
-                            chip.name = "BuyerFacet_" + key + "_" + choice;
-                            Ui.Size(chip, Mathf.Max(78, choice.Length * 17 + 30));
+                            if (choice == PurchaseFacets.All) facets.Remove(key);
+                            else facets[key] = choice;
+                            w.Rebuild();
                         }
+                        var choices = new[] { PurchaseFacets.All }.Concat(values).ToArray();
+                        if (values.Length > 5 || values.Any(value => value.Length > 8))
+                        {
+                            Ui.Size(Ui.Button(bar, picked + " ▾", () => OpenWindow("筛选 · " + label, 620, 580, picker =>
+                            {
+                                var options = Ui.Scroll(picker.Content, 440);
+                                foreach (string choice in choices)
+                                    Ui.Size(Ui.Button(options, choice, () => { picker.Close(); Select(choice); }, 17,
+                                        choice == picked ? Ui.ButtonHot : Ui.ButtonBg), -1, 40);
+                            }), 16), 252, 36);
+                        }
+                        else
+                            foreach (string choice in choices)
+                            {
+                                var chip = Ui.Button(bar, choice, () => Select(choice), 15,
+                                    choice == picked ? Ui.ButtonHot : Ui.ButtonBg);
+                                chip.name = "BuyerFacet_" + key + "_" + choice;
+                                Ui.Size(chip, Mathf.Max(78, choice.Length * 17 + 30));
+                            }
+                        if (picked != PurchaseFacets.All)
+                            facetOffers = facetOffers.Where(o => o.HasFacet(key, picked)).ToArray();
                     }
-                    if (category == PurchaseFacets.All) FacetBar(PurchaseFacets.Season);
-                    if (category == PurchaseFacets.All) FacetBar(PurchaseFacets.Shop);
-                    var filtered = sourceOffers.Where(o => (category == PurchaseFacets.All || o.Category == category)
-                        && o.Matches(facets)
-                        && (!selectedOnly || selected.TryGetValue(o.Key, out var selectedLine) && selectedLine.Count > 0)
+                    foreach (string key in PurchaseFacets.Order)
+                        if (key != PurchaseFacets.Category) FacetBar(key);
+                    var filtered = facetOffers.Where(o => (!selectedOnly || selected.TryGetValue(o.Key, out var selectedLine) && selectedLine.Count > 0)
                         && (string.IsNullOrWhiteSpace(search) || o.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
                             || o.SupplierName.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
                             || S.PurchaseDestination(o.Source).Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)).ToArray();

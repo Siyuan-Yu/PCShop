@@ -99,9 +99,30 @@ namespace PCShopSell.Core.Session
         /// <summary>本次到访手动选择的送货地址；每次进入地点时重置。</summary>
         public string CourierDest { get; set; }
 
-        /// <summary>购物配送优先使用本次选择，其次使用上一次实际送货的地址。</summary>
-        public OwnedShop CourierShop(bool defaultToShop) =>
-            ResolveCourierShop(CourierDest ?? _lastPurchaseDeliveryDest, defaultToShop);
+        /// <summary>购物配送优先使用本次选择。进货优先送到与货源对应的自营店。</summary>
+        public OwnedShop CourierShop(bool defaultToShop)
+        {
+            if (CourierDest != null) return ResolveCourierShop(CourierDest, defaultToShop);
+
+            var source = PurchaseDestination(CurrentPlace);
+            if (source != null)
+            {
+                string kind = source.Business == FarmBusiness ? "restaurant"
+                    : source.Business == ModelProducts.Business ? "models"
+                    : RetailShopTypes.All.FirstOrDefault(type => ShopSupplyMarketId(type) == source.Id);
+                if (kind != null)
+                {
+                    bool Matches(OwnedShop shop) => shop?.Rented == true && shop.RetailKind == kind && !IsDedicatedVenue(shop.Place);
+                    var last = LastPurchaseDeliveryShop;
+                    if (Matches(last)) return last;
+                    if (Matches(_focus)) return _focus;
+                    var branch = _shops.Find(Matches);
+                    if (branch != null) return branch;
+                }
+            }
+
+            return ResolveCourierShop(_lastPurchaseDeliveryDest, defaultToShop);
+        }
 
         private OwnedShop ResolveCourierShop(string destination, bool defaultToShop)
         {
@@ -256,6 +277,8 @@ namespace PCShopSell.Core.Session
         /// </summary>
         private bool Ship(OwnedShop dest, string category, Money goods, string what, CourierItem item, string verb)
         {
+            if (IsRawIngredientDelivery(item) && RestaurantIngredientDeliveryBlocker(dest, CourierItemKg(item)) is string coldStorageBlocker)
+                return Fail(coldStorageBlocker + "。");
             var plan = PlanLoad(item, dest);
             if (plan == null) return Fail($"单件就超过一辆面包车能装的 {CourierCapacityKg:0} 千克。");
             int newCars = plan.Count(p => p.run == null);
@@ -369,6 +392,8 @@ namespace PCShopSell.Core.Session
         /// </summary>
         private string Unpack(CourierItem it, bool toShop)
         {
+            if (toShop && RestaurantIngredientsOnly(_focus) && IsRawIngredientDelivery(it))
+                return UnpackRestaurantIngredient(_focus, it);
             Backpack box = toShop ? ShopLocker : HomeBox;
             Backpack temp = toShop ? ShopTemp : HomeTemp;
             string boxPlace = toShop ? "放进店里纸箱" : "放进家中后仓";

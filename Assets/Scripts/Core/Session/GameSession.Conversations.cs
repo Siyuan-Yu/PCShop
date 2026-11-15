@@ -40,10 +40,9 @@ namespace PCShopSell.Core.Session
                     Relationship = string.Join("；", group.Select(link => link.Relationship).Distinct())
                 }).OrderBy(link => link.Name).ToArray();
         }
-        public string RemoteConversationBlocker(string id, bool phoneCall = false)
+        public string RemoteConversationBlocker(string id)
         {
             if(IsGameOver)return "现在不能交谈";
-            if(!phoneCall && !HasChatApp)return "需要安装聊天软件";
             if(!IsMet(id))return "尚未交换联系方式";
             if(CityPerson(id)==null&&Npcs.Get(id)==null&&Rosters.Get(id)==null&&Residents.Get(id)==null)return "找不到这个联系人";
             return null;
@@ -71,9 +70,9 @@ namespace PCShopSell.Core.Session
             if (speaker != null) speaker.KnownRelations = (speaker.KnownRelations ?? Array.Empty<string>()).Union(new[] { targetId }).ToArray();
             Flags.Add("heard:" + targetId);
             if (target != null) target.KnownTopics = (target.KnownTopics ?? Array.Empty<string>()).Union(new[] { "work" }).ToArray();
-            if (Relation(speakerId) >= 50)
+            if (Relation(speakerId) >= 50 && ConversationTraits(targetId)[0].Name is string interest)
             {
-                text += "\n对方平时喜欢" + ConversationTraits(targetId)[0].Name + "，有机会你们可以自己聊聊。";
+                text += $"\n对方平时喜欢{interest}，有机会你们可以自己聊聊。";
                 if (target != null) target.KnownTopics = target.KnownTopics.Union(new[] { "trait:0" }).ToArray();
             }
             string key = speakerId + ":about:" + targetId;
@@ -153,22 +152,23 @@ namespace PCShopSell.Core.Session
                 case "hike": interest = "徒步"; break;
             }
             string[] names = id == "res_cook" ? new[] { "抽烟", "骑车" }
-                : new[] { string.IsNullOrEmpty(interest) ? "日常爱好" : interest, "喜欢的小礼物" };
+                : new[] { string.IsNullOrWhiteSpace(interest) ? null : interest,
+                    Npcs.All.Any(n => n.Id == id && !string.IsNullOrWhiteSpace(n.GiftName)) ? "喜欢的小礼物" : null };
             int first = id == "res_cook" || ConversationSeed(id) % 2 == 0 ? 0 : 15;
             var state = CityPersonState(id);
             return names.Select((name, i) => new ConversationTrait {
                 Name = name, Unlock = i == 0 ? first : 30,
-                Known = Relation(id) >= (i == 0 ? first : 30) || (state?.KnownTopics ?? Array.Empty<string>()).Contains("trait:" + i)
+                Known = name != null && (Relation(id) >= (i == 0 ? first : 30)
+                    || (state?.KnownTopics ?? Array.Empty<string>()).Contains("trait:" + i))
             }).ToArray();
         }
         public string ConversationTraitText(string id, int index)
         {
             var traits = ConversationTraits(id);
-            if (index < 0 || index >= traits.Length) return "";
+            if (index < 0 || index >= traits.Length || traits[index].Name == null) return "";
             if (!traits[index].Known) return "还不知道这一点。熟悉度达到 " + traits[index].Unlock + " 后逐渐了解。";
             if (id == "res_cook") return index == 0 ? "罗志勇闲下来时会抽烟。" : "罗志勇喜欢骑车，闲聊时常会提到路上的见闻。";
-            if (index == 0) return (CityPerson(id)?.Name ?? Npcs.Get(id)?.Name ?? "对方") + "平时喜欢" + traits[index].Name + "。";
-            return Npcs.Get(id) is NpcDef npc ? "喜欢收到：" + npc.GiftName + "。也可以从背包挑其他小礼物。" : "饮料、水果、点心、鲜花或一份做好的饭，都可以从背包里挑选。";
+            return index == 0 ? traits[index].Name : "喜欢收到：" + Npcs.Get(id).GiftName + "。";
         }
         public string CasualConversation(string id, bool remote = false)
         {

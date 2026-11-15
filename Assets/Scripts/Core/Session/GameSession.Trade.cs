@@ -44,8 +44,8 @@ namespace PCShopSell.Core.Session
         private static bool SharesWholesaleMarket(Place a, Place b) =>
             a?.Kind == PlaceKind.Wholesaler && b?.Kind == PlaceKind.Wholesaler && a.NodeId == b.NodeId;
 
-        public bool StallSells(Place stall, PartDef part) => IndustryCycles.Available(part, Clock.Today.TotalDays)
-            && WholesaleStallsAt(stall).Any(source => StallCarries(source, part.Category));
+        public bool StallSells(Place stall, PartDef part) =>
+            WholesaleStallsAt(stall).Any(source => StallCarries(source, part.Category));
 
         private static bool StallCarries(Place stall, PartCategory category)
         {
@@ -188,7 +188,6 @@ namespace PCShopSell.Core.Session
             foreach (var group in lines.Where(l => l.part != null && l.count > 0).GroupBy(l => l.part.Id))
             {
                 var part = group.First().part; int count = group.Sum(l => l.count);
-                if(!IndustryCycles.Available(part,Clock.Today.TotalDays))return Fail("该代配件尚未发布。");
                 if (count > 1000) return Fail("同一商品每单最多1000件。");
                 total += OnlinePrice(store, part) * count;
                 space += Stock.SpaceOf(part, true, count);

@@ -14,23 +14,24 @@ namespace PCShopSell.Game.UI
     {
         private int _garageMotorClass, _raceMotorClass, _workshopMotorClass, _assetMotorClass, _assetMotorRegion;
         private int _garageSpaceQuantity=1;
-        private readonly HashSet<string> _motorTransfersExpanded = new HashSet<string>();
+        private string _garagePerformanceMotorId;
         private readonly Dictionary<string, string> _motorTransferSources = new Dictionary<string, string>();
 
         public void OpenMotorGarage()
         {
             // Physical interaction only; this is not a global garage shortcut.
             if(S.CurrentPlace?.Kind!=PlaceKind.Garage){Toast("请到车库建筑旁按 F 打开管理。");return;}
-            OpenPlaceWindow(S.CurrentPlace,BuildRegionalGarage,1160,900);
+            OpenPlaceWindow(S.CurrentPlace,BuildRegionalGarage,1340,690);
         }
 
-        private void BuildMotorClassTabs(Transform parent, int category, Action<int> choose)
+        private void BuildMotorClassTabs(Transform parent, int category, Action<int> choose, int[] counts = null)
         {
             var row = Ui.Row(parent, 40, 8);
             for (int i = 0; i < 3; i++)
             {
                 int selected = i;
-                Ui.Size(Ui.Button(row, MotorCatalog.ClassName(i), () => choose(selected), 19,
+                string label = MotorCatalog.ClassName(i) + (counts == null ? "" : $" · {counts[i]}");
+                Ui.Size(Ui.Button(row, label, () => choose(selected), 19,
                     category == i ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1).name = "MotorClass_" + i;
             }
         }
@@ -42,82 +43,168 @@ namespace PCShopSell.Game.UI
 
         private void BuildRegionalGarage(Window w, Place p)
         {
-            var garage = RegionalGarages.Get(p.Id); var lease = S.GarageLease(p.Id);
-            var motors = S.Garage;
-            Line(w.Content, garage.Name + " · 已停车 " + S.ParkedMotorCount(p.Id) + " / " + S.GarageCapacity(p.Id)+"位", 23, Ui.Accent);
-            if (p.Id == GameSession.StarterRaceGarageId) BuildRacingIntroduction(w);
-            Line(w.Content,"已购车位 "+(lease?.OwnedSpaces??0)+" · 租用车位 "+(lease?.RentedSpaces??0)+" · 空位 "+S.GarageFreeSpaces(p.Id),18);
-            Para(w.Content,"公共车库建筑不出售、不出租。车位按需增加，供应不限；每辆入库车占1位，通勤车不占位。",16,Ui.Dim);
-            var quantityRow=Ui.Row(w.Content,38,6);
-            Ui.Size(Ui.Label(quantityRow,"增加车位数量",17),142,38);
-            var quantity=Ui.TextInput(quantityRow,_garageSpaceQuantity.ToString(),"数量",value=>
-            {_garageSpaceQuantity=int.TryParse(value,out int n)&&n>0?n:1;w.RequestRebuild();});
-            quantity.contentType=InputField.ContentType.IntegerNumber;Ui.Size(quantity,110,38);
-            foreach(int amount in new[]{1,5,10}){int n=amount;Ui.Size(Ui.Button(quantityRow,n+"个",()=>{_garageSpaceQuantity=n;w.Rebuild();},17),70,38);}
-            void AddSpaces(bool buy)
+            var garage = RegionalGarages.Get(p.Id);
+            if (p.Id == GameSession.StarterRaceGarageId) BuildRacingIntroduction(w, compact: true);
+
+            var columns = Ui.Row(w.Content, -1, 14);
+            columns.GetComponent<LayoutElement>().flexibleHeight = 1;
+
+            var vehicles = Ui.Rect(columns, "GarageVehicles");
+            Ui.Size(vehicles, 0, -1, 2);
+            Ui.VList(vehicles, 8, 0);
+            var motors = S.Garage.Where(v => v.Commuter || v.GarageId == garage.Id).ToLookup(
+                v => MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind));
+            BuildMotorClassTabs(vehicles, _garageMotorClass, category =>
+                { _garageMotorClass = category; _garagePerformanceMotorId = null; w.Rebuild(); },
+                Enumerable.Range(0, 3).Select(category => motors[category].Count()).ToArray());
+
+            var categoryMotors = motors[_garageMotorClass];
+            BuildGarageCommuter(vehicles, garage, categoryMotors.FirstOrDefault(v => v.Commuter), w);
+            Ui.Size(Ui.Panel(vehicles, "VehicleSectionDivider", Ui.Accent), -1, 2);
+
+            var parked = categoryMotors.Where(v => !v.Commuter).ToArray();
+            var heading = Ui.Row(vehicles, 36);
+            Ui.Size(Ui.Label(heading, $"已停入本区车库 · {parked.Length} 辆", 20, TextAnchor.MiddleLeft, Ui.Accent), 0, 36, 1);
+            Ui.Size(Ui.Button(heading, "从其他车库调入", () =>
+                OpenWindow("调入" + MotorCatalog.ClassName(_garageMotorClass), 680, 575, transfer =>
+                    BuildMotorTransferPanel(transfer, garage, _garageMotorClass, "garage:" + p.Id,
+                        () => { transfer.Close(); w.Rebuild(); })), 17), 168, 36);
+
+            var list = Ui.Scroll(vehicles);
+            Ui.Size((RectTransform)list.parent.parent, -1, 0).GetComponent<LayoutElement>().flexibleHeight = 1;
+            foreach (var car in parked)
             {
-                int count=_garageSpaceQuantity;var price=S.GarageSpaceQuote(p.Id,buy,count);
-                string detail=buy?"全款购买后不收该车位租金。":"后续每30天按租用数量自动续租；本期新租车位按剩余天数计费，与现有租用车位同日续租。";
-                ConfirmBusiness(buy?"购买车位":"租用车位",garage.Name+" · "+count+"个车位，支付 "+price+"。"+detail,
-                    ()=>{S.AcquireGarage(p.Id,buy,count);w.Rebuild();});
+                var model = MotorCatalog.Get(car.ModelId);
+                var performance = MotorCatalog.Performance(car);
+                var card = Ui.Panel(list, "GarageVehicle", Ui.PanelBg2).rectTransform;
+                Ui.VList(card, 6, 10);
+                var row = Ui.Row(card, 58, 10);
+                MotorThumbnail(row, model.Id, 58);
+                var summary = Ui.Rect(row, "VehicleSummary");
+                Ui.Size(summary, 0, -1, 1);
+                Ui.VList(summary, 2, 0).childAlignment = TextAnchor.MiddleLeft;
+                Line(summary, model.Name, 19);
+                Line(summary, $"极速 {performance.Speed:0} km/h · 加速 {performance.Acceleration:0.0} · 车况 {car.Condition:0}%", 15, Ui.Dim);
+                bool expanded = _garagePerformanceMotorId == car.Id;
+                var actions = Ui.Row(row, 36);
+                Ui.Size(actions, 236);
+                actions.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+                Ui.Size(Ui.Button(actions, expanded ? "性能 ▴" : "性能 ▾", () =>
+                {
+                    _garagePerformanceMotorId = expanded ? null : car.Id;
+                    w.Rebuild();
+                }, 16), 92, 36);
+                Ui.Size(Ui.Button(actions, "设为通勤车", () =>
+                {
+                    void SetCommuter() { S.SetMotorCommuter(car.Id); w.Rebuild(); }
+                    if (S.CommuteMotor(model.Kind) == null) SetCommuter();
+                    else ConfirmBusiness("更换通勤车", "原通勤车将停入本区车库。", SetCommuter);
+                }, 17, Ui.ButtonBg, S.MotorAvailable(car)), 138, 36);
+                if (expanded) BuildMotorRadar(card, performance, car.Condition);
             }
-            var contract = Ui.Row(w.Content, 42, 8);
-            Ui.Size(Ui.Button(contract,"租用车位 · ¥"+garage.RentYuan+" / 位 / 30天",()=>AddSpaces(false),17,Ui.ButtonBg),-1,42,1);
-            Ui.Size(Ui.Button(contract,"全款购买车位 · ¥"+garage.PriceYuan.ToString("N0")+" / 位",()=>AddSpaces(true),17,Ui.ButtonHot),-1,42,1);
-            if (lease?.RentedSpaces>0)
-            {
-                Line(w.Content,"下次车位租金："+new GameDate(lease.NextRentDay)+" · ¥"+(garage.RentYuan*lease.RentedSpaces).ToString("N0"),16,Ui.Dim);
-                int count=S.ReturnableGarageSpaces(p.Id);
-                Ui.Size(Ui.Button(w.Content,"退租空闲租用车位 · "+count+"个",()=>ConfirmBusiness("退租空闲车位","退租"+count+"个空位，已付租金不退。",
-                    ()=>{S.EndGarageLease(p.Id,count);w.Rebuild();}),16,Ui.ButtonBg,count>0),-1,34);
-            }
-            BuildMotorClassTabs(w.Content, _garageMotorClass, c => { _garageMotorClass = c; w.Rebuild(); });
-            var commute = motors.Where(v => v.Commuter && MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind) == _garageMotorClass).ToArray();
-            foreach (var v in commute)
-            {
-                var car = v; var model = MotorCatalog.Get(car.ModelId);
-                var card = MotorCard(w.Content, model, $"{model.Name} · {Vehicles.Get(model.Kind).Name}");
-                var badgeRow = Ui.Row(card, 38);
-                badgeRow.SetAsFirstSibling();
-                var badge = Ui.Size(Ui.Panel(badgeRow, "CommuteVehicleBadge", Ui.Accent), 112, 38);
-                badge.raycastTarget = false;
-                var badgeText = Ui.Label(badge.transform, "通勤车", 24, TextAnchor.MiddleCenter, Ui.FlatWell);
-                badgeText.fontStyle = FontStyle.Bold;
-                badgeText.rectTransform.Fill();
-                Line(card, S.MotorLocationText(car) + " · 不可用于比赛或练习", 16, Ui.Dim);
-                Ui.Size(Ui.Button(card, "停入车库", () => ConfirmBusiness("取消通勤并停入车库？",
-                    model.Name + "目前是你的" + Vehicles.Get(model.Kind).Name + "通勤车。是否取消通勤用途，并停入" + garage.Name + "？入库后将占用1个车位，这种通勤方式暂不可用；可再指定另一辆同类型车辆通勤。",
-                    () => { S.ParkCommuteMotor(car.Id, p.Id); w.Rebuild(); }), 17, Ui.ButtonBg,
-                    lease != null && S.GarageFreeSpaces(p.Id) > 0 && S.MotorAvailable(car)), -1, 38);
-            }
-            if (commute.Length == 0) Line(w.Content, "这一分类尚未指定通勤车", 16, Ui.Dim);
-            Line(w.Content, "本区入库车辆 · " + MotorCatalog.ClassName(_garageMotorClass), 20, Ui.Accent);
-            var parked = motors.Where(v => !v.Commuter && v.GarageId == p.Id && MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind) == _garageMotorClass).ToArray();
-            foreach (var v in parked)
-            {
-                var car = v; var model = MotorCatalog.Get(car.ModelId); var card = MotorCard(w.Content, model);
-                BuildMotorPerformance(card, MotorCatalog.Performance(car), car.Condition); Line(card, S.MotorLocationText(car), 15, Ui.Dim);
-                var old = S.CommuteMotor(model.Kind);
-                Ui.Size(Ui.Button(card, "设为" + Vehicles.Get(model.Kind).Name + "通勤车" + (old != null ? "（原通勤车留在本库）" : ""),
-                    () => { S.SetMotorCommuter(car.Id); w.Rebuild(); }, 17, Ui.ButtonBg, S.MotorAvailable(car)), -1, 38);
-            }
-            if (parked.Length == 0) Para(w.Content, lease == null ? "先租用或购买车位，再将车辆停入；入库车辆可用于本区赛场的比赛和练习。" : "本区车库还没有这一类车辆。", 17, Ui.Dim);
-            BuildMotorTransfer(w, garage, _garageMotorClass, "garage:" + p.Id);
-            Para(w.Content, "小电驴、三轮车、轿车各可指定1辆通勤车，通勤车不占车位。货车仅供员工采购，不使用本区车位。", 15, Ui.Dim);
+            if (parked.Length == 0) Line(list, "本区没有这类入库车辆", 17, Ui.Dim);
+
+            var parking = Ui.Rect(columns, "GarageParking");
+            Ui.Size(parking, 0, -1, 1);
+            Ui.VList(parking, 8, 0);
+            BuildGarageParking(parking, garage, w);
         }
 
-        private void BuildMotorTransfer(Window w, RegionalGarage target, int category, string context)
+        private void BuildGarageCommuter(Transform parent, RegionalGarage garage, GarageVehicle car, Window w)
         {
-            bool expanded = _motorTransfersExpanded.Contains(context);
-            Ui.Size(Ui.Button(w.Content, (expanded ? "收起" : "从其他车库调入") + " · " + MotorCatalog.ClassName(category),
-                () => { if (!_motorTransfersExpanded.Add(context)) _motorTransfersExpanded.Remove(context); w.Rebuild(); }, 18), -1, 40).name = "MotorTransfer_" + context;
-            if (!expanded) return;
+            var frame = Ui.Panel(parent, "GarageCommuter", Ui.Accent).rectTransform;
+            Ui.VList(frame, 0, 1);
+            var card = Ui.Panel(frame, "CommuterContent", Ui.PanelBg2).rectTransform;
+            Ui.VList(card, 3, 10);
+            Line(card, "当前通勤车", 22, Ui.Accent);
+            if (car == null)
+            {
+                Line(card, "这类车辆还没有指定通勤车", 16, Ui.Dim);
+                return;
+            }
+
+            var model = MotorCatalog.Get(car.ModelId);
+            var row = Ui.Row(card, 68, 10);
+            MotorThumbnail(row, model.Id, 68);
+            var summary = Ui.Rect(row, "CommuterSummary");
+            Ui.Size(summary, 0, -1, 1);
+            Ui.VList(summary, 3, 0).childAlignment = TextAnchor.MiddleLeft;
+            Line(summary, model.Name, 22);
+            Line(summary, "不占车位 · 通勤中不可参赛或练习", 16, Ui.Dim);
+            bool hasSpace = S.GarageFreeSpaces(garage.Id) > 0;
+            var park = Ui.Button(row, "停入车库", () => ConfirmBusiness("将通勤车停入车库？",
+                model.Name + "入库后将取消通勤用途，占用本区 1 个车位。",
+                () => { S.ParkCommuteMotor(car.Id, garage.Id); w.Rebuild(); }), 17, Ui.ButtonHot,
+                hasSpace && S.MotorAvailable(car));
+            Ui.Size(park, 138, 40);
+            if (!hasSpace) park.Tip("本区没有空余车位，可以在右侧购买。");
+        }
+
+        private void BuildGarageParking(Transform parent, RegionalGarage garage, Window w)
+        {
+            var overview = BusinessCard(parent, "本区车位 · 全部车型");
+            int used = S.ParkedMotorCount(garage.Id), total = S.GarageCapacity(garage.Id);
+            var lease = S.GarageLease(garage.Id);
+            Line(overview, $"空余 {S.GarageFreeSpaces(garage.Id)} 位", 28, Ui.Accent);
+            Line(overview, $"已使用 {used} / {total} 位", 18);
+            var track = Ui.Panel(overview, "ParkingOccupancy", Ui.FlatWell);
+            Ui.Size(track, -1, 6);
+            if (total > 0 && used > 0)
+                Ui.Panel(track.transform, "Occupied", Ui.Accent).rectTransform.Anchor(0, 0, Mathf.Clamp01((float)used / total), 1, 0, 0, 0, 0);
+            Line(overview, $"已购 {lease?.OwnedSpaces ?? 0} 位", 16, Ui.Dim);
+            Ui.Size(Ui.Panel(overview, "ParkingPurchaseDivider", Ui.ButtonBg), -1, 1);
+            Line(overview, "购买车位", 20, Ui.Accent);
+            var quantityRow = Ui.Row(overview, 38, 6);
+            Ui.Size(Ui.Label(quantityRow, "购买数量", 16, TextAnchor.MiddleLeft), 0, 38, 1);
+            int count = _garageSpaceQuantity;
+            var quantity = Ui.TextInput(quantityRow, count.ToString(), "数量", null);
+            quantity.contentType = InputField.ContentType.IntegerNumber;
+            Ui.Size(quantity, 82, 38);
+            var minus = Ui.Size(Ui.Button(quantityRow, "−", () => StepQuantity(-1), 18), 36, 38);
+            minus.transform.SetSiblingIndex(quantity.transform.GetSiblingIndex());
+            Ui.Size(Ui.Button(quantityRow, "+", () => StepQuantity(1), 18), 36, 38);
+            Ui.Size(Ui.Label(quantityRow, "位", 16), 24, 38);
+            Line(overview, $"单价 ¥{garage.PriceYuan:N0} / 位", 16, Ui.Dim);
+            var quote = Line(overview, "", 22, Ui.Accent);
+            var buy = Ui.Size(Ui.Button(overview, "全款购买", () => ConfirmBusiness("购买车位",
+                $"{garage.Name} · {count} 位 · 本次支付 {S.GarageSpaceQuote(garage.Id, count)}",
+                () => { S.AcquireGarage(garage.Id, count); w.Rebuild(); }), 18, Ui.ButtonHot), -1, 44);
+            var buyText = buy.GetComponentInChildren<Text>();
+            quantity.onValueChanged.AddListener(value =>
+            {
+                count = int.TryParse(value, out int parsed) ? Math.Max(1, parsed) : 1;
+                _garageSpaceQuantity = count;
+                UpdateQuote();
+            });
+            quantity.onEndEdit.AddListener(_ => quantity.SetTextWithoutNotify(count.ToString()));
+            UpdateQuote();
+
+            if (lease?.RentedSpaces > 0)
+            {
+                Line(overview, $"现有租用车位 {lease.RentedSpaces} 位 · 下次续租 {new GameDate(lease.NextRentDay)}", 15, Ui.Dim);
+                int returnable = S.ReturnableGarageSpaces(garage.Id);
+                if (returnable > 0)
+                    Ui.Size(Ui.Button(overview, $"退租空闲车位 · {returnable} 位", () => ConfirmBusiness("退租空闲车位",
+                        $"退租 {returnable} 个车位，已付租金不退。",
+                        () => { S.EndGarageLease(garage.Id, returnable); w.Rebuild(); }), 16), -1, 36);
+            }
+
+            void StepQuantity(int step) => quantity.text = Math.Min(int.MaxValue, Math.Max(1L, (long)count + step)).ToString();
+            void UpdateQuote()
+            {
+                quote.text = $"本次合计 {S.GarageSpaceQuote(garage.Id, count)}";
+                buyText.text = $"全款购买 {count} 个车位";
+            }
+        }
+
+        private void BuildMotorTransferPanel(Window w, RegionalGarage target, int category, string context, Action onTransferred)
+        {
             var card = BusinessCard(w.Content, "调入" + target.Name);
-            if (!S.HasGarage(target.Id)) { Para(card, "请先到本区车库建筑旁按 F，租用或购买车位后再调入。", 17, Ui.Warn); return; }
+            if (!S.HasGarage(target.Id)) { Para(card, "请先到本区车库建筑旁按 F，购买车位后再调入。", 17, Ui.Warn); return; }
             Line(card, "已持有车位的空位 " + S.GarageFreeSpaces(target.Id) + " / " + S.GarageCapacity(target.Id) + " · 调运后可在当前页面选用", 16, Ui.Dim);
             var all = S.Garage;
             var sources = RegionalGarages.All.Where(g => g.Id != target.Id && S.HasGarage(g.Id)).ToArray();
-            if (sources.Length == 0) { Line(card, "其他车库暂无已租购车位", 17, Ui.Dim); return; }
+            if (sources.Length == 0) { Line(card, "其他车库暂无可用车位", 17, Ui.Dim); return; }
             _motorTransferSources.TryGetValue(context, out string sourceId);
             if (!sources.Any(g => g.Id == sourceId)) sourceId = sources.FirstOrDefault(g => all.Any(v => !v.Commuter && v.GarageId == g.Id && MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind) == category))?.Id ?? sources[0].Id;
             _motorTransferSources[context] = sourceId;
@@ -135,7 +222,12 @@ namespace PCShopSell.Game.UI
                 MotorIdentity(card, car.ModelId, MotorCatalog.Get(car.ModelId).Name, S.MotorLocationText(car));
                 Ui.Size(Ui.Button(card, "支付 " + fee + " 并调入", () => ConfirmBusiness("确认车辆调运",
                     MotorCatalog.Get(car.ModelId).Name + "：" + RegionalGarages.Get(car.GarageId).Name + " → " + target.Name + "，调运费 " + fee + "。",
-                    () => { if (S.TransferMotor(car.Id, target.Id)) { _raceSelection = car.Id; _motorTransfersExpanded.Remove(context); } w.Rebuild(); }),
+                    () =>
+                    {
+                        if (!S.TransferMotor(car.Id, target.Id)) { w.Rebuild(); return; }
+                        _raceSelection = car.Id;
+                        onTransferred();
+                    }),
                     17, Ui.ButtonHot, why == null), -1, 38);
                 if (why != null) Line(card, why, 15, Ui.Warn);
             }
@@ -213,9 +305,9 @@ namespace PCShopSell.Game.UI
             foreach (var v in commuters) MotorIdentity(commute, v.ModelId, MotorCatalog.Get(v.ModelId).Name, S.MotorLocationText(v));
             if (commuters.Length == 0) Line(commute, "这一分类尚未指定通勤车", 17, Ui.Dim);
             var info = BusinessCard(w.Content, garage.Name + " · 车位资产");
-            Line(info,"已购 "+(lease?.OwnedSpaces??0)+"位 · 租用 "+(lease?.RentedSpaces??0)+"位 · 停车 "+S.ParkedMotorCount(garage.Id)+"辆 · 空余 "+S.GarageFreeSpaces(garage.Id)+"位",18,Ui.Accent);
-            Line(info,"自有车位参考价值 ¥"+(garage.PriceYuan*(lease?.OwnedSpaces??0)).ToString("N0")+" · 每30天租金 ¥"+(garage.RentYuan*(lease?.RentedSpaces??0)).ToString("N0"),17);
-            if (lease?.RentedSpaces>0) Line(info, "下次续租 " + new GameDate(lease.NextRentDay), 16, Ui.Dim);
+            Line(info,"已购 "+(lease?.OwnedSpaces??0)+"位 · 停车 "+S.ParkedMotorCount(garage.Id)+"辆 · 空余 "+S.GarageFreeSpaces(garage.Id)+"位",18,Ui.Accent);
+            Line(info,"自有车位参考价值 ¥"+(garage.PriceYuan*(lease?.OwnedSpaces??0)).ToString("N0"),17);
+            if (lease?.RentedSpaces>0) Line(info, $"现有租用 {lease.RentedSpaces} 位 · 下次续租 {new GameDate(lease.NextRentDay)} · ¥{garage.RentYuan * lease.RentedSpaces:N0}", 16, Ui.Dim);
             Ui.Size(Ui.Button(info, "地图定位车库", () => OpenGarageLocation(garage.Id), 17), -1, 36);
             var parked = all.Where(v => !v.Commuter && v.GarageId == garage.Id && MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind) == _assetMotorClass).ToArray();
             Line(w.Content, GameSession.DistrictName(garage.Tier) + " · " + MotorCatalog.ClassName(_assetMotorClass) + " · " + parked.Length + "辆", 21, Ui.Accent);
@@ -226,7 +318,7 @@ namespace PCShopSell.Game.UI
                 BuildMotorPerformance(card, MotorCatalog.Performance(v), v.Condition);
             }
             if (parked.Length == 0) Line(w.Content, "本区车库暂无这一类车辆", 18, Ui.Dim);
-            Para(w.Content, "管理车辆与增租、购买车位请前往车库建筑旁按 F。公共车库建筑本身不属于玩家。", 16, Ui.Dim);
+            Para(w.Content, "管理车辆或购买车位，请到车库建筑旁按 F。", 16, Ui.Dim);
         }
 
         private void OpenGarageLocation(string id)

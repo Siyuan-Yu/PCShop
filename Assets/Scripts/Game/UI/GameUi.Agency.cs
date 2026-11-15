@@ -377,11 +377,17 @@ namespace PCShopSell.Game.UI
                 Para(w.Content,"确认店型后即可准备开业。租金已经支付。",17);
                 foreach(string kind in RetailShopTypes.All)
                 {
-                    var button=Ui.Size(Ui.Button(w.Content,(selected==kind?"✓ ":"")+RetailShopTypes.Name(kind),
-                        ()=>{selected=kind;w.Rebuild();},18,selected==kind?Ui.ButtonHot:Ui.ButtonBg),-1,42);
+                    string blocker = S.RetailTypeBlocker(kind);
+                    bool enabled = blocker == null;
+                    string label = (enabled && selected == kind ? "✓ " : "") + RetailShopTypes.Name(kind);
+                    if (!enabled) label += " · " + blocker;
+                    var button = Ui.Size(Ui.Button(w.Content, label, () => { selected = kind; w.Rebuild(); },
+                        18, enabled && selected == kind ? Ui.ButtonHot : Ui.ButtonBg, enabled), -1, 42);
                     button.name="OpeningKind_"+kind;
                 }
-                Ui.Size(Ui.Button(w.Content, "二手车行（分店）", ShowUsedCarShopRequirements, 18), -1, 42).name = "OpeningKind_cars";
+                string carShopHint = S.DistrictAccessTier < 1 ? "解锁社区后可到中介签分店合同" : "请在中介的「委托店长开店」办理";
+                Ui.Size(Ui.Button(w.Content, "二手车行 · " + carShopHint, null, 17, interactable: false), -1, 42)
+                    .name = "OpeningKind_cars";
                 var place = S.City.GetPlace(placeId);
                 Line(w.Content,$"新店 {NewShopHours} · 预计每日入店约 {S.ExpectedDailyShopEntrants(place,selected,asNewShop:true):N0} 人",17,Ui.Good);
                 Para(w.Content,RetailShopTypes.Description(selected),16,Ui.Dim);
@@ -389,27 +395,9 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content,"确认开一家"+RetailShopTypes.Name(selected),()=>
                 {
                     if(S.ConfirmOpeningKind(placeId,selected)){w.Close();RebuildDock();}
-                },19,Ui.ButtonHot),-1,46).name="ConfirmOpeningKind";
+                },19,Ui.ButtonHot,S.RetailTypeBlocker(selected) == null),-1,46).name="ConfirmOpeningKind";
             },closable:false);
         }
 
-        private void ShowUsedCarShopRequirements()
-        {
-            var cars = Ventures.Get("cars");
-            Money funds = GameSession.VentureOpeningFunds(cars);
-            OpenWindow("二手车行", 560, 320, w =>
-            {
-                if (!S.MainShop.Rented || S.PendingShopKindPlaceId == S.MainShop.Place.Id)
-                    Line(w.Content, "请先确认主店店型。", 18, Ui.Warn);
-                if (S.DistrictAccessTier < 1)
-                    Line(w.Content, "需先解锁社区片区。", 18, Ui.Warn);
-                if (S.PlayerShop.Reputation < cars.MinReputation)
-                    Line(w.Content, $"名望需达到 {cars.MinReputation:0}，当前 {S.PlayerShop.Reputation:0.#}。", 18, Ui.Warn);
-                if (S.Ledger.Balance < funds)
-                    Line(w.Content, $"开办和周转资金还差 {funds - S.Ledger.Balance}，租赁费用另计。", 18, Ui.Warn);
-                Para(w.Content, "二手车行需在房产中介签分店合同。", 17, Ui.Dim);
-                Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
-            });
-        }
     }
 }

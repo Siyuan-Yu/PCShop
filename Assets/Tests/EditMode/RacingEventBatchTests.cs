@@ -17,7 +17,7 @@ namespace PCShopSell.Tests
             var s = new GameSession(fixture.City, 7, Money.FromYuan(10000000), GameTimestamp.From(new GameDate(42), 600), true, false, false);
             s.Tick(0);
             At(s, "dealer"); Assert.IsTrue(s.BuyMotor("e_range"));
-            At(s, "garage_0"); Assert.IsTrue(s.AcquireGarage("garage_0", false));
+            At(s, "garage_0"); Assert.IsTrue(s.AcquireGarage("garage_0"));
             Assert.IsTrue(s.ParkCommuteMotor(s.Garage.Single().Id, "garage_0"));
             return s;
         }

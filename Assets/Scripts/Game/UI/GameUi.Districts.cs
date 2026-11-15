@@ -80,7 +80,7 @@ namespace PCShopSell.Game.UI
                         Para(w.Content,S.DistrictInvitationStatus+"\n从首次达标起等待满72小时；到期时若正在睡觉，会改为醒来2小时后主动联系。资金随后减少不会取消邀请。关闭窗口后时间才会继续。",18);
                         return;
                     }
-                    Para(w.Content,S.DistrictAccessTier==3?"三段引荐已完成，可以继续经营和人物探索。":S.DistrictPrerequisiteBlocker(state.Chapter+1)??"继续经营，留意新的聊天消息。",18);
+                    Para(w.Content,S.DistrictAccessTier==3?"三段引荐已完成，可以继续经营和人物探索。":S.DistrictPrerequisiteBlocker(state.Chapter+1)??"继续经营，留意新的主线邀请。",18);
                     return;
                 }
                 Line(w.Content,node.Title,25,Ui.Accent);
@@ -367,7 +367,7 @@ namespace PCShopSell.Game.UI
                 Para(body,"后两段验收会准备3种商品各至少150件。第三段仅跳过行业月营收的入场门槛，不生成虚构营业收入；参展、签约代言人、竞标和交付仍由玩家完成。",16,Ui.Warn);
                 BuildCommunityConditionsCheat(body,w.Rebuild);
                 Line(body,"当前通行："+GameSession.DistrictName(S.DistrictAccessTier),18,Ui.Good);
-                Ui.Size(Ui.Button(body,"打开聊天，查看主线消息",()=>{w.Close();OpenChatPanel();},18),-1,44);
+                Ui.Size(Ui.Button(body,"查看主线邀请",()=>{w.Close();OpenDistrictStory();},18),-1,44);
                 Para(body,"在当前档准备验收场景：保留已有资产与关系，跳过此前任务；不会替你完成选中的这一段。",15,Ui.Dim);
             });
         }

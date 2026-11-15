@@ -67,7 +67,7 @@ namespace PCShopSell.Core.Session
             if(scenario=="assets")
             {
                 s.PreparePropertyMarketAcceptance();
-                s._regionalGarages.Add(new RegionalGarageLease{PlaceId="garage_0",RentedSpaces=6,NextRentDay=s.Clock.Today.TotalDays+30});
+                s._regionalGarages.Add(new RegionalGarageLease{PlaceId="garage_0",OwnedSpaces=6,NextRentDay=-1});
                 s._regionalGarages.Add(new RegionalGarageLease{PlaceId="garage_1",OwnedSpaces=6,NextRentDay=-1});
                 s.PlaceAcquiredMotor(s.NewMotor("e_city"),true,null);
                 s.PlaceAcquiredMotor(s.NewMotor("c_su7"),true,null);

@@ -14,6 +14,24 @@ namespace PCShopSell.Core.Session
         public RaceInvitation Copy() => (RaceInvitation)MemberwiseClone();
     }
 
+    [Serializable]
+    public sealed class RaceRegistration
+    {
+        public string TrackId;
+        public int Day;
+        public bool Started;
+        public RaceRegistration Copy() => (RaceRegistration)MemberwiseClone();
+    }
+
+    [Serializable]
+    public sealed class RaceOpponentResult
+    {
+        public string PersonId, TrackId, Vehicle;
+        public int Day, Place, Competitors;
+        public double Seconds;
+        public RaceOpponentResult Copy() => (RaceOpponentResult)MemberwiseClone();
+    }
+
     public sealed class RaceOpponent
     {
         public string PersonId;
@@ -51,6 +69,8 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         private readonly List<RaceInvitation> _raceInvitations = new List<RaceInvitation>();
+        private readonly List<RaceRegistration> _raceRegistrations = new List<RaceRegistration>();
+        private readonly Dictionary<string, RaceOpponentResult> _lastRaceOpponentResults = new Dictionary<string, RaceOpponentResult>();
         public RaceSettlement LastRaceSettlement { get; private set; }
 
         public static bool LikesRacing(string personId) => Array.IndexOf(CityLifeCatalog.RacingEnthusiasts, personId) >= 0;
@@ -59,6 +79,67 @@ namespace PCShopSell.Core.Session
 
         private static long RaceDayStart(int day) => day * 1440L;
         private RaceInvitation RaceInviteFor(string personId, int day) => _raceInvitations.Find(i => i.Day == day && i.PersonId == personId);
+
+        private RaceRegistration FindRaceRegistration(string trackId, int day)
+            => _raceRegistrations.Find(r => r.TrackId == trackId && r.Day == day);
+
+        public RaceRegistration RaceRegistrationAt(string trackId, GameDate day)
+            => FindRaceRegistration(trackId, day.TotalDays)?.Copy();
+
+        public RaceOpponentResult LastRaceOpponentResult(string personId)
+            => _lastRaceOpponentResults.TryGetValue(personId, out var result) ? result.Copy() : null;
+
+        public string RaceRegistrationBlocker(string trackId, GameDate day)
+        {
+            if (RacingAccessBlocker is string accessBlocker) return accessBlocker;
+            if (IsGameOver || Racing) return "请先结束当前比赛";
+            var track = RaceTracks.Get(trackId);
+            if (track == null || !City.HasPlace(trackId) || DistrictAccessTier < track.Tier) return "赛场还未开放";
+            if (RacingWins < track.RequiredWins) return $"需要累计赢得 {track.RequiredWins} 场低级别比赛";
+            if (RacingSchedule.On(day) == RaceMeeting.None || RaceDayStart(day.TotalDays) + RacingSchedule.MeetCloseMinute <= Clock.Now.TotalMinutes)
+                return "请选择尚未结束的正式场次";
+            var existing = FindRaceRegistration(trackId, day.TotalDays);
+            return existing == null ? null : existing.Started ? "已经参加本场比赛" : "已经报名本场比赛";
+        }
+
+        public bool RegisterForRace(string trackId, GameDate day)
+        {
+            string reason = RaceRegistrationBlocker(trackId, day);
+            if (reason != null) return Fail(reason);
+            _raceRegistrations.RemoveAll(r => r.Day < Clock.Today.TotalDays);
+            _raceRegistrations.Add(new RaceRegistration { TrackId = trackId, Day = day.TotalDays });
+            Say($"已报名{RaceTracks.Get(trackId).Name}的{RacingSchedule.Name(RacingSchedule.On(day))}，已加入日程。");
+            return true;
+        }
+
+        public bool CancelRaceRegistration(string trackId, GameDate day)
+        {
+            if (Racing || RaceDayStart(day.TotalDays) + RacingSchedule.MeetCloseMinute <= Clock.Now.TotalMinutes) return false;
+            return _raceRegistrations.RemoveAll(r => r.TrackId == trackId && r.Day == day.TotalDays && !r.Started) > 0;
+        }
+
+        private void RecordRaceRegistrationStart(string trackId)
+        {
+            int day = Clock.Today.TotalDays;
+            var registration = FindRaceRegistration(trackId, day);
+            if (registration == null)
+            {
+                _raceRegistrations.RemoveAll(r => r.Day < day);
+                registration = new RaceRegistration { TrackId = trackId, Day = day };
+                _raceRegistrations.Add(registration);
+            }
+            registration.Started = true;
+        }
+
+        private void RecordRaceOpponentResults(RaceTrack track, RaceStanding[] standings)
+        {
+            foreach (var entry in standings.Where(e => !e.Player))
+                _lastRaceOpponentResults[entry.PersonId] = new RaceOpponentResult
+                {
+                    PersonId = entry.PersonId, TrackId = track.Id, Day = Clock.Today.TotalDays, Vehicle = entry.Vehicle,
+                    Place = entry.Place, Competitors = standings.Length, Seconds = entry.Seconds
+                };
+        }
 
         public string RaceInviteBlocker(string personId, string trackId, GameDate day)
             => RaceInviteBlocker(personId, trackId, day, false);
@@ -70,7 +151,7 @@ namespace PCShopSell.Core.Session
             var person = CityPersonState(personId);
             if (IsGameOver || Racing) return "请先结束当前比赛";
             if (person == null || !LikesRacing(personId)) return "对方平时不参加赛车";
-            if (!invitedByNpc && !IsMet(personId) && !CitySamePlace(personId)) return "请先当面交谈或交换联系方式";
+            if (!invitedByNpc && CityInviteBlocker(personId) is string inviteBlocker) return inviteBlocker;
             if (track == null || !City.HasPlace(trackId) || DistrictAccessTier < track.Tier) return "赛场还未开放";
             if (RacingWins < track.RequiredWins) return "这座赛场的正赛需要累计 " + track.RequiredWins + " 胜";
             int date = day.TotalDays;
@@ -187,15 +268,21 @@ namespace PCShopSell.Core.Session
                 .Take(RaceSimulation.RivalCount).ToArray();
         }
 
-        private RaceOpponent[] BuildRaceOpponents(RaceTrack track, VehicleKind kind)
+        private RaceOpponent[] BuildRaceOpponents(RaceTrack track, MotorModel playerModel)
         {
-            var models = MotorCatalog.All.Where(model => model.Kind == kind).OrderBy(model => model.Price).ToArray();
-            // Low-tier events favor modest cars. Driving pace differs by rider, not grid position.
-            int modelCount = Math.Min(models.Length, track.Tier + 2);
-            return RaceParticipantIds(track.Id).Select(id =>
+            // Use the factory model to choose the field. Tuning and wear still affect the race itself.
+            var models = MotorCatalog.All.Where(model => model.Kind == playerModel.Kind
+                && model.Speed >= playerModel.Speed * .74 && model.Speed <= playerModel.Speed * 1.32)
+                .OrderBy(model => model.Speed).ToArray();
+            return RaceParticipantIds(track.Id).Select((id, index) =>
             {
                 int seed = ConversationSeed(id);
-                return new RaceOpponent { PersonId = id, Motor = models[(seed / 11) % modelCount], Pace = .54 + .025 * (seed % 9) };
+                return new RaceOpponent
+                {
+                    PersonId = id,
+                    Motor = index == 0 ? models[models.Length - 1] : models[(seed / 11) % models.Length],
+                    Pace = index == 0 ? .89 : .79 + .011 * (seed % 9)
+                };
             }).ToArray();
         }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
@@ -11,7 +12,17 @@ namespace PCShopSell.Core.Session
     [Serializable] public sealed class RaceRecord
     {public string Key;public double BestSeconds;public int Wins,Starts;public RaceRecord Copy()=>(RaceRecord)MemberwiseClone();}
     [Serializable] public sealed class RacingSave
-    {public GarageVehicle[] Garage;public RegionalGarageLease[] RegionalGarages;public RaceRecord[] Records;public RaceInvitation[] Invitations;public UsedMotor[] Stock;public string[] BoughtLeads;public int Serial;}
+    {
+        public GarageVehicle[] Garage;
+        public RegionalGarageLease[] RegionalGarages;
+        public RaceRecord[] Records;
+        public RaceInvitation[] Invitations;
+        public RaceRegistration[] Registrations;
+        public RaceOpponentResult[] OpponentResults;
+        public UsedMotor[] Stock;
+        public string[] BoughtLeads;
+        public int Serial;
+    }
     public sealed partial class SaveData {public RacingSave racing;}
     public sealed partial class GameSession
     {
@@ -67,7 +78,7 @@ namespace PCShopSell.Core.Session
         {
             if (!RacingUnlocked || Popup == null || !Flags.Add(RacingIntroShownFlag)) return false;
             Popup.Invoke(RacingIntroTitle,
-                "「等你有空，来城郊跑两圈吧。小电驴、三轮车都行。先去旁边的车库租或买个车位，把车停进去，再到练习场选车。我白天常在那儿。」");
+                "「等你有空，来城郊跑两圈吧。小电驴、三轮车都行。先去旁边的车库买个车位，把车停进去，再到练习场选车。我白天常在那儿。」");
             return true;
         }
         private GarageVehicle NewMotor(string model)=>new GarageVehicle{Id="motor_"+(++_motorSerial),ModelId=model};
@@ -151,6 +162,7 @@ namespace PCShopSell.Core.Session
             if(Ledger.Balance<Money.FromYuan(entryFee ?? (practice?RacingSchedule.PracticeFee:RacingSchedule.Fee(CurrentRaceMeeting))))return practice?"练习费不足，需要 ¥"+RacingSchedule.PracticeFee:"参赛费不足";
             if (!practice)
             {
+                if (FindRaceRegistration(trackId, Clock.Today.TotalDays)?.Started == true) return "已经参加本场比赛";
                 var absent = _raceInvitations.FirstOrDefault(i => i.Day == Clock.Today.TotalDays && i.TrackId == trackId
                     && !RaceAttendeeHere(i.PersonId, trackId));
                 if (absent != null) return "受邀车友" + CityPerson(absent.PersonId)?.Name + "尚未到场。关闭接待窗口等待，或取消邀请后参赛。";
@@ -165,7 +177,8 @@ namespace PCShopSell.Core.Session
             var meeting=CurrentRaceMeeting;
             int fee=practice?RacingSchedule.PracticeFee:RacingSchedule.Fee(meeting);
             if(!Ledger.TryDebit(Clock.Today,practice?"赛车练习":"赛车报名",Money.FromYuan(fee),t.Name+" · "+(practice?"计时练习":RacingSchedule.Name(meeting))))return false;
-            var opponents = practice ? Array.Empty<RaceOpponent>() : BuildRaceOpponents(t, MotorCatalog.Get(v.ModelId).Kind);
+            var opponents = practice ? Array.Empty<RaceOpponent>() : BuildRaceOpponents(t, MotorCatalog.Get(v.ModelId));
+            if (!practice) RecordRaceRegistrationStart(trackId);
             StartDriving(new RaceSimulation(t,MotorCatalog.Performance(v),practice,meeting,opponents), v.Id);
             ApplyEventBatteryFailure(v);
             return true;
@@ -210,6 +223,8 @@ namespace PCShopSell.Core.Session
             };
             string raceTitle = _drivingEventBooking?.Kind == "wet" ? "人工洒水湿地训练" : _drivingEventBooking?.Kind == "rider" ? "吴磊单圈挑战" : _drivingEventBooking?.Kind == "charity" ? "慈善赛" : null;
             LastRaceSettlement.EventTitle = raceTitle;
+            if (position > 0 && r.Meeting != RaceMeeting.None && _drivingEventBooking == null)
+                RecordRaceOpponentResults(r.Track, LastRaceSettlement.Standings);
             LastRaceReport=(r.Abandoned?"已退赛":r.Practice?"练习完成":(raceTitle ?? RacingSchedule.Name(r.Meeting))+" · 第 "+r.Position+" / "+r.CompetitorCount+" 名")+" · 用时 "+(r.Elapsed+r.Penalty).ToString("0.00")+"秒（罚时 "+r.Penalty.ToString("0")+"秒）\n奖金 ¥"+prize.ToString("N0")+" · 车况 "+v.Condition.ToString("0")+"% · "+(injury>0?"碰撞受伤，健康 -"+injury.ToString("0"):"未受伤");
             LastRaceSettlement.Extra = SettleRacingBatchRace(r, v);
             if (!string.IsNullOrEmpty(LastRaceSettlement.Extra)) LastRaceReport += "\n" + LastRaceSettlement.Extra;
@@ -221,7 +236,16 @@ namespace PCShopSell.Core.Session
             Meet(t.Npc);string flag="race_chat:"+t.Id+":"+Clock.Today.TotalDays;if(Flags.Add(flag))AddRelation(t.Npc,2);return true;
         }
         private void SaveRacing(SaveData d)
-        {d.racing=new RacingSave{Garage=_garage.Select(v=>v.Copy()).ToArray(),RegionalGarages=_regionalGarages.Select(g=>g.Copy()).ToArray(),Records=_raceRecords.Select(r=>r.Copy()).ToArray(),Invitations=RaceInvitations.ToArray(),Serial=_motorSerial,Stock=_usedMotors.Select(s=>s.Copy()).ToArray(),BoughtLeads=_boughtMotorLeads.ToArray()};}
+        {
+            d.racing = new RacingSave
+            {
+                Garage = _garage.Select(v => v.Copy()).ToArray(), RegionalGarages = _regionalGarages.Select(g => g.Copy()).ToArray(),
+                Records = _raceRecords.Select(r => r.Copy()).ToArray(), Invitations = RaceInvitations.ToArray(),
+                Registrations = _raceRegistrations.Where(r => r.Day >= Clock.Today.TotalDays).Select(r => r.Copy()).ToArray(),
+                OpponentResults = _lastRaceOpponentResults.Values.Select(r => r.Copy()).ToArray(),
+                Serial = _motorSerial, Stock = _usedMotors.Select(s => s.Copy()).ToArray(), BoughtLeads = _boughtMotorLeads.ToArray()
+            };
+        }
         private void LoadRacing(SaveData d)
         {
             _garage.Clear();_regionalGarages.Clear();_raceRecords.Clear();_usedMotors.Clear();_boughtMotorLeads.Clear();_motorSerial=d.racing?.Serial??0;
@@ -229,6 +253,16 @@ namespace PCShopSell.Core.Session
             _raceInvitations.AddRange((d.racing?.Invitations ?? Array.Empty<RaceInvitation>())
                 .Where(i => i != null && i.Day >= Clock.Today.TotalDays && LikesRacing(i.PersonId) && RaceTracks.Get(i.TrackId) != null && City.HasPlace(i.TrackId))
                 .GroupBy(i => (i.PersonId, i.Day)).Select(group => group.First().Copy()));
+            _raceRegistrations.Clear();
+            _raceRegistrations.AddRange((d.racing?.Registrations ?? Array.Empty<RaceRegistration>())
+                .Where(r => r != null && r.Day >= Clock.Today.TotalDays && RaceTracks.Get(r.TrackId) != null
+                    && City.HasPlace(r.TrackId) && RacingSchedule.On(new GameDate(r.Day)) != RaceMeeting.None)
+                .GroupBy(r => (r.TrackId, r.Day)).Select(group => group.OrderByDescending(r => r.Started).First().Copy()));
+            _lastRaceOpponentResults.Clear();
+            foreach (var result in d.racing?.OpponentResults ?? Array.Empty<RaceOpponentResult>())
+                if (result != null && LikesRacing(result.PersonId) && RaceTracks.Get(result.TrackId) != null
+                    && result.Day >= 0 && result.Place > 0 && result.Place <= result.Competitors && result.Seconds > 0)
+                    _lastRaceOpponentResults[result.PersonId] = result.Copy();
             _regionalGarages.AddRange((d.racing?.RegionalGarages??Array.Empty<RegionalGarageLease>()).Where(g=>RegionalGarages.Get(g.PlaceId)!=null).Select(g=>g.Copy()));
             foreach(var v in d.racing?.Garage??Array.Empty<GarageVehicle>())if(MotorCatalog.Get(v.ModelId)!=null)_garage.Add(v.Copy());
             _raceRecords.AddRange((d.racing?.Records??Array.Empty<RaceRecord>()).Select(r=>r.Copy()));

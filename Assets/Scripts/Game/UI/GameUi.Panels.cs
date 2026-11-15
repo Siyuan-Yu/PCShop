@@ -19,22 +19,16 @@ namespace PCShopSell.Game.UI
         public void OnEnteredPlace(Place p)
         {
             if (S.IsWorking) { UpdateWorkScreen(); return; }
-            if(p.Kind==PlaceKind.Garage){OpenPlaceWindow(p,BuildRegionalGarage,1160,900);return;}
-            if(RaceTracks.Get(p.Id)!=null){OpenPlaceWindow(p,BuildRaceReception,1160,900);return;}
+            if(p.Kind==PlaceKind.Garage){OpenMotorGarage();return;}
+            if(RaceTracks.Get(p.Id)!=null){OpenRaceReception(p);return;}
             if(p.Kind==PlaceKind.Dealer||p.Id=="motor_scooter_mod"){OpenPlaceWindow(p,BuildMotorDealer,1160,900);return;}
             if(S.VentureAt(p.Id)?.Kind=="cars"){OpenPlaceWindow(p,BuildUsedMotorShop,1160,900);return;}
             if(p.Id=="life_expo"){OpenExpoReception();return;}
             if(p.Business==GameSession.BankBusiness){OpenBank(p);return;}
             if (p.Business == GameSession.HospitalBusiness)
             {
-                OpenPlaceWindow(p, (w, hospital) =>
-                {
-                    Para(w.Content, $"健康 {S.Player.Health:0.#}/100。门诊约 1 小时，可恢复最多 20 点健康。", 18);
-                    Ui.Size(Ui.Button(w.Content, $"看诊 · {GameSession.OutpatientFee}", () =>
-                    {
-                        if (S.ReceiveOutpatientCare()) CloseWindowSilently(w);
-                    }, 18, Ui.ButtonHot, S.Player.Health < 100 && S.Ledger.CanAfford(GameSession.OutpatientFee)), -1, 46);
-                }, 560, 330);
+                if (S.RaceAidAt(p) != null) return;
+                OpenPlaceWindow(p, BuildHospital, 640, 450);
                 return;
             }
             if(p.Id==GameSession.CommunityMcnId){OpenCommunityMcn();return;}
@@ -91,6 +85,23 @@ namespace PCShopSell.Game.UI
                     else OpenPlaceWindow(p, BuildNeighbour);
                     break;
             }
+        }
+
+        private void BuildHospital(Window w, Place hospital)
+        {
+            bool hasFlu = S.FluIllUntil > S.Clock.Now.TotalMinutes;
+            bool canPay = S.Ledger.CanAfford(GameSession.OutpatientFee);
+            Line(w.Content, "门诊", 22, Ui.Accent);
+            Line(w.Content, $"健康 {S.Player.Health:0.#}/100" + (hasFlu ? " · 流感中" : ""), 18);
+            Para(w.Content, $"看诊耗时 {GameSession.OutpatientMinutes} 分钟，可恢复最多 {GameSession.OutpatientHealthRecovery} 点健康并处理流感。", 18);
+            if (S.Player.Health >= 100 && !hasFlu)
+                Para(w.Content, "健康已满，仍可付费看诊。", 16, Ui.Dim);
+            Ui.Size(Ui.Button(w.Content, $"支付 {GameSession.OutpatientFee} 看诊", () =>
+            {
+                if (S.ReceiveOutpatientCare()) CloseWindowSilently(w);
+            }, 18, Ui.ButtonHot, canPay), -1, 46);
+            if (!canPay)
+                Para(w.Content, $"现金不足，还差 {GameSession.OutpatientFee - S.Ledger.Balance}。", 17, Ui.Warn);
         }
 
         private bool UsesCityVenuePanel(Place place) => place.Business?.StartsWith("venue_") == true
@@ -153,7 +164,8 @@ namespace PCShopSell.Game.UI
 
         private void OpenPlaceWindow(Place p, System.Action<Window, Place> build, float w = 640, float h = 520, bool holds = true, bool leaveOnClose = true)
         {
-            bool fixedLayout = p.Kind == PlaceKind.Agency;
+            bool isRaceTrack = RaceTracks.Get(p.Id) != null;
+            bool fixedLayout = p.Kind == PlaceKind.Agency || p.Kind == PlaceKind.Garage || isRaceTrack;
             OpenWindow(S.PlaceTitle(p), w, h, win =>
             {
                 if (S.CurrentPlace != p)
@@ -162,9 +174,11 @@ namespace PCShopSell.Game.UI
                     return;
                 }
                 int contentBefore = win.Content.childCount;
-                if (p.Id != "life_expo"&&p.Kind!=PlaceKind.Garage&&p.Business!=GameSession.BankBusiness) BuildPlayerWorkEntry(win.Content, p, win);
+                if (p.Id != "life_expo"&&p.Kind!=PlaceKind.Garage&&p.Business!=GameSession.BankBusiness
+                    && PhoneSignHelpHere(p) == null && S.OnsiteActivityAt(p) == null)
+                    BuildPlayerWorkEntry(win.Content, p, win);
                 if (S.HasRetailWholesale(p) && build!=BuildRetailWholesale && (p.Business==GameSession.FarmBusiness || p.Business==Gifts.TobaccoBusiness)) Ui.Size(Ui.Button(win.Content, "批发进货（可供自己店铺销售）", () => OpenRetailWholesale(p), 18, Ui.ButtonHot), -1, 40);
-                RectTransform frame = p.Kind == PlaceKind.Agency || p.Kind==PlaceKind.Garage || RaceTracks.Get(p.Id)!=null || S.VentureAt(p.Id) != null || S.IsPlayerPropertyOccupied(p.Id) ? null : BuildRosterFrame(win, p, h - 170 - (win.Content.childCount - contentBefore) * 52, p.Kind==PlaceKind.Dealer || p.Kind==PlaceKind.Station || p.Id=="motor_scooter_mod", w >= StoreWindowWidth ? 150 : 210);
+                RectTransform frame = fixedLayout || S.VentureAt(p.Id) != null || S.IsPlayerPropertyOccupied(p.Id) ? null : BuildRosterFrame(win, p, h - 170 - (win.Content.childCount - contentBefore) * 52, p.Kind==PlaceKind.Dealer || p.Kind==PlaceKind.Station || p.Id=="motor_scooter_mod", w >= StoreWindowWidth ? 150 : 210);
                 if (frame != null)
                 {
                     RectTransform original = win.Content;
@@ -283,7 +297,7 @@ namespace PCShopSell.Game.UI
         {
                 Ui.Size(Ui.Button(w.Content, "经济简报 · 收支与物价", OpenEconomicReport, 17), -1, 34);
 
-                foreach (MacroFactor f in new[] { MacroFactor.Crypto, MacroFactor.AiDemand, MacroFactor.NewGeneration })
+                foreach (MacroFactor f in new[] { MacroFactor.Crypto, MacroFactor.AiDemand })
                 {
                     RectTransform row = Ui.Row(w.Content, 28);
                     double v = S.Market.FactorValue(f);

@@ -20,7 +20,7 @@ namespace PCShopSell.Game.UI
                 {var row=Ui.Row(w.Content,42,8);Ui.Size(Ui.Label(row,info,17),-1,40,1);Ui.Size(Ui.Button(row,label,run,17,Ui.ButtonBg,enabled),140,38);}
                 foreach(var task in S.LifeTasks.Where(t=>_lifeEventTab==0))
                 {
-                    var t=task;string name=t.Kind switch{"blood-check"=>"献血检查","blood-donate"=>"献血","blood-observe"=>"献血留观","child-handoff"=>"孩子交接","child-reunion"=>"家人确认","leak-repair"=>"屋顶维修","leak-bucket"=>"放接水桶","lantern-craft"=>"制作花灯","lantern-riddle"=>"观察灯谜","lantern-browse"=>"逛花灯会","festival-visit"=>"花灯会同行","donation"=>"募书登记","disinfect"=>"到店消毒","rest"=>"在家休息","read"=>"阅读","chat"=>"手机聊天","gym"=>"健身训练","adopt"=>"收养登记","dog-walk"=>"遛狗","book-feedback"=>"募书反馈","lesson"=>"夜校课堂",_=>"朋友邀约"};
+                    var t=task;string name=t.Kind switch{"blood-check"=>"献血检查","blood-donate"=>"献血","blood-observe"=>"献血留观","child-handoff"=>"孩子交接","child-reunion"=>"家人确认","leak-repair"=>"屋顶维修","leak-bucket"=>"放接水桶","lantern-craft"=>"制作花灯","lantern-riddle"=>"观察灯谜","lantern-browse"=>"逛花灯会","festival-visit"=>"花灯会同行","donation"=>"募书登记","disinfect"=>"到店消毒","rest"=>"在家休息","read"=>"阅读","chat"=>"电话聊天","gym"=>"健身训练","adopt"=>"收养登记","dog-walk"=>"遛狗","book-feedback"=>"募书反馈","lesson"=>"夜校课堂",_=>"朋友邀约"};
                     string place=t.Place!=null&&S.City.HasPlace(t.Place)?S.City.GetPlace(t.Place).Name:"随身进行";
                     Line(w.Content,name+" · "+place+" · "+(t.Activity!=null?"见活动日程":t.Kind=="book-feedback"?new GameTimestamp(t.At).ToString():"还需"+t.Remaining+"分钟"),18,Ui.Accent);
                     if(t.Place!=null&&S.City.HasPlace(t.Place)&&S.CurrentPlace?.Id!=t.Place)

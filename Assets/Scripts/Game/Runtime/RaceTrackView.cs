@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Session;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace PCShopSell.Game.Runtime
 {
@@ -9,6 +10,11 @@ namespace PCShopSell.Game.Runtime
     {
         public RaceTrack Track {get;private set;}
         private Transform _moving,_player,_gate;private Transform[] _rivals=Array.Empty<Transform>();
+        private readonly Renderer[] _startLamps = new Renderer[3];
+        private TrailRenderer[] _skidMarks = Array.Empty<TrailRenderer>();
+        private ParticleSystem _tyreSmoke;
+        private int _visibleStartLights = -1, _previousRecoveries;
+        private bool _wasDrifting;
         public void Build(RaceTrack track)
         {
             Track=track;transform.position=new Vector3((float)track.X,.65f,(float)track.Y);
@@ -19,8 +25,7 @@ namespace PCShopSell.Game.Runtime
             Ribbon(scenery,track,(float)track.HalfRoad+1.3f,.14f,Mats.Lit(ArtDirection.Cream),resources);
             Ribbon(scenery,track,(float)track.HalfRoad,.18f,Mats.Lit(ArtDirection.Hex("39434A")),resources);
             BuildBarriers(scenery, resources);
-            var sim=new RaceSimulation(track,MotorCatalog.All[0],true);double heading;var start=sim.AtDistance(0,out heading);
-            var line=Prims.Box(scenery,"StartFinish",new Vector3((float)start.X,.22f,(float)start.Y),new Vector3((float)track.HalfRoad*2,.04f,1.2f),Mats.Lit(ArtDirection.Cream));line.transform.rotation=Quaternion.Euler(0,(float)heading*Mathf.Rad2Deg,0);
+            BuildStartingGantry(scenery);
             for(int i=0;i<4;i++)Prims.Box(scenery,"Grandstand",new Vector3(-10,.6f+i*.6f,5+i*2),new Vector3(24,.7f,2),Mats.Lit(i%2==0?ArtDirection.Wood:ArtDirection.Cream));
             Prims.Box(scenery,"PitOffice",new Vector3(15,2.2f,8),new Vector3(12,4.3f,6),Mats.Lit(ArtDirection.Cream));
             Prims.Box(scenery,"PitRoof",new Vector3(15,4.5f,8),new Vector3(14,.5f,8),Mats.Lit(ArtDirection.Blue));
@@ -29,6 +34,128 @@ namespace PCShopSell.Game.Runtime
             _moving=new GameObject("RaceVehicles").transform;_moving.SetParent(transform,false);_moving.gameObject.SetActive(false);
         }
         private Vector3 Point(int i){var p=Track.Points[i%Track.Points.Length];return new Vector3((float)p.X,0,(float)p.Y);}
+
+        private void BuildStartingGantry(Transform scenery)
+        {
+            var gantry = new GameObject("StartingGantry").transform;
+            gantry.SetParent(scenery, false);
+            gantry.localPosition = Point(0);
+            gantry.localRotation = Quaternion.LookRotation(Point(1) - Point(0));
+            float halfRoad = (float)Track.HalfRoad;
+            float postOffset = halfRoad + 1.65f;
+            var metal = Mats.Lit(ArtDirection.Ink);
+            Prims.Box(gantry, "StartFinish", Vector3.up * .22f, new Vector3(2 * halfRoad, .04f, 1.2f), Mats.Lit(ArtDirection.Cream));
+            foreach (int side in new[] { -1, 1 })
+            {
+                float x = side * postOffset;
+                Prims.Box(gantry, "GantryFoot", new Vector3(x, .21f, 0), new Vector3(.9f, .24f, 1.05f), metal);
+                Prims.Box(gantry, "GantryPost", new Vector3(x, 2.75f, 0), new Vector3(.37f, 5.4f, .45f), metal);
+            }
+            Prims.Box(gantry, "GantryBeam", Vector3.up * 5.45f, new Vector3(2 * postOffset + .5f, .42f, .5f), metal);
+            Prims.Box(gantry, "SignalHousing", new Vector3(0, 5.12f, -.33f), new Vector3(3.35f, 1.04f, .42f), metal);
+            // Keep the changing signal materials outside the static circuit batch.
+            var signals = new GameObject("StartSignals").transform;
+            signals.SetParent(transform, false);
+            signals.SetPositionAndRotation(gantry.position, gantry.rotation);
+            for (int i = 0; i < _startLamps.Length; i++)
+            {
+                var lamp = Prims.Shape(PrimitiveType.Sphere, signals, $"StartSignal{i + 1}",
+                    new Vector3((i - 1) * 1.02f, 5.12f, -.58f), new Vector3(.74f, .74f, .28f), Mats.Lit(ArtDirection.Ink));
+                _startLamps[i] = lamp.GetComponent<Renderer>();
+            }
+        }
+
+        private void SyncStartingLights(int count)
+        {
+            if (_visibleStartLights == count) return;
+            _visibleStartLights = count;
+            var red = Mats.Glow(new Color(1f, .21f, .08f), new Color(3f, .43f, .16f), nightOnly: false);
+            var green = Mats.Glow(new Color(.24f, 1f, .32f), new Color(.38f, 2.8f, .52f), nightOnly: false);
+            var dark = Mats.Lit(new Color(.19f, .055f, .05f));
+            for (int i = 0; i < _startLamps.Length; i++)
+                _startLamps[i].sharedMaterial = count == 0 ? green : i < count ? red : dark;
+        }
+
+        private void BuildDriftEffects(MotorModel model)
+        {
+            bool scooter = model.Kind == VehicleKind.EBike;
+            bool car = model.Kind == VehicleKind.Car;
+            float axle = car ? -1.02f : -.7f;
+            float trackWidth = car ? .78f : .65f;
+            _skidMarks = new TrailRenderer[scooter ? 1 : 2];
+            for (int i = 0; i < _skidMarks.Length; i++)
+            {
+                var contact = new GameObject("RearTyreMark").transform;
+                contact.SetParent(_player, false);
+                contact.localPosition = new Vector3(scooter ? 0 : (i == 0 ? -trackWidth : trackWidth), -.02f, axle);
+                contact.localRotation = Quaternion.Euler(-90, 0, 0);
+                var mark = contact.gameObject.AddComponent<TrailRenderer>();
+                mark.sharedMaterial = Mats.Unlit(new Color(.055f, .065f, .08f, .68f));
+                mark.alignment = LineAlignment.TransformZ;
+                mark.shadowCastingMode = ShadowCastingMode.Off;
+                mark.receiveShadows = false;
+                mark.time = 4;
+                mark.minVertexDistance = .18f;
+                mark.startWidth = car ? .18f : .10f;
+                mark.endWidth = .025f;
+                mark.emitting = false;
+                _skidMarks[i] = mark;
+            }
+
+            var smoke = new GameObject("TyreSmoke").transform;
+            smoke.SetParent(_player, false);
+            smoke.localPosition = new Vector3(0, .10f, axle);
+            _tyreSmoke = smoke.gameObject.AddComponent<ParticleSystem>();
+            _tyreSmoke.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = _tyreSmoke.main;
+            main.playOnAwake = false;
+            main.useUnscaledTime = true;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(.32f, .6f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(.5f, 1.6f);
+            main.startSize = new ParticleSystem.MinMaxCurve(.20f, .38f);
+            main.maxParticles = 14;
+            var emission = _tyreSmoke.emission;
+            emission.rateOverTime = car ? 20 : 13;
+            emission.enabled = false;
+            var shape = _tyreSmoke.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = car ? .30f : .15f;
+            var size = _tyreSmoke.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0, .55f, 1, 1.6f));
+            var renderer = smoke.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Mesh;
+            renderer.mesh = _startLamps[0].GetComponent<MeshFilter>().sharedMesh;
+            renderer.sharedMaterial = Mats.Unlit(new Color(.76f, .79f, .82f, .18f));
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+        }
+
+        private void SyncDriftEffects(RaceSimulation race)
+        {
+            bool showing = race.Drifting && !race.Paused && !race.Finished;
+            bool recovered = _previousRecoveries != race.Recoveries;
+            bool newDrift = showing && !_wasDrifting;
+            _previousRecoveries = race.Recoveries;
+            _wasDrifting = race.Drifting;
+            foreach (var mark in _skidMarks)
+            {
+                // A fresh slide must not draw a line back to the last corner.
+                if (recovered || newDrift) mark.Clear();
+                mark.emitting = showing;
+            }
+            if (race.Paused)
+            {
+                if (_tyreSmoke.isPlaying) _tyreSmoke.Pause();
+                return;
+            }
+            if (recovered) _tyreSmoke.Clear();
+            var emission = _tyreSmoke.emission;
+            emission.enabled = showing;
+            if ((showing || _tyreSmoke.isPaused) && !_tyreSmoke.isPlaying) _tyreSmoke.Play();
+        }
+
         private void BuildBarriers(Transform parent, CityLandscapeResources resources)
         {
             int count = Track.Points.Length;
@@ -92,6 +219,9 @@ namespace PCShopSell.Game.Runtime
         {
             foreach(Transform c in _moving)Destroy(c.gameObject);
             _moving.gameObject.SetActive(true);_player=MotorVisual.Build(_moving,race.Model,MotorVisual.Paint(race.Model.Id));
+            BuildDriftEffects(race.Model);
+            _previousRecoveries = race.Recoveries;
+            _wasDrifting = false;
             if (race.WetSurface)
                 for (int i = 0; i < race.Track.Points.Length; i += 6)
                 {
@@ -126,11 +256,18 @@ namespace PCShopSell.Game.Runtime
         public void Sync(RaceSimulation r)
         {
             PlaceMotor(_player,r.X,r.Y,r.Heading);
+            SyncStartingLights(r.StartLights);
+            SyncDriftEffects(r);
             for(int i=0;i<_rivals.Length;i++){double h;var p=r.RivalPosition(i,out h);PlaceMotor(_rivals[i],p.X,p.Y,h);}
             var next=Point(r.Next);_gate.localPosition=next+Vector3.up*.27f;_gate.localRotation=Quaternion.LookRotation(Point(r.Next+1)-Point(r.Next));
+            _gate.gameObject.SetActive(r.StartLights == 0 && !r.ShowGo);
         }
         private static void PlaceMotor(Transform t,double x,double y,double h){t.localPosition=new Vector3((float)x,.23f,(float)y);t.localRotation=Quaternion.Euler(0,(float)h*Mathf.Rad2Deg,0);}
-        public void End()=>_moving.gameObject.SetActive(false);
+        public void End()
+        {
+            SyncStartingLights(-1);
+            _moving.gameObject.SetActive(false);
+        }
     }
     public static class MotorVisual
     {

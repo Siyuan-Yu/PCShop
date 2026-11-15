@@ -40,9 +40,8 @@ namespace PCShopSell.Game.UI
                     Ui.Size(head, -1, 30);
                     foreach (PartDef p in PartCatalog.BuildList(order.Tier))
                     {
-                        int have = order.PartsReserved ? 1 : shop.Stock.CountAll(p);
-                        string mark = have > 0 ? "<color=#1E8E3E>有</color>" : "<color=#C62828>缺</color>";
-                        Ui.Size(Ui.Label(card.transform, $"{mark}　<b>{PartCatalog.CategoryName(p.Category)}</b>　{p.Name}　<size=14>库存 {have}</size>", 16, TextAnchor.MiddleLeft, ink), -1, 24);
+                        string mark = order.HasReservedPart(p) ? "<color=#1E8E3E>已预留</color>" : "<color=#C62828>缺货</color>";
+                        Ui.Size(Ui.Label(card.transform, $"<b>{PartCatalog.CategoryName(p.Category)}</b>　{p.Name}　{mark}", 16, TextAnchor.MiddleLeft, ink), -1, 24);
                     }
                     Button go = Ui.Button(card.transform, missing.Count == 0 ? "开始装机" : $"还缺 {missing.Count} 样配件，先去补货",
                         () =>

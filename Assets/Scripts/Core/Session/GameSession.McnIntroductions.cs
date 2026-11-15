@@ -86,7 +86,7 @@ namespace PCShopSell.Core.Session
                 if (creator != null) creator.Relationship = Math.Max(creator.Relationship, 5);
                 RememberSocial(person, "经" + BrandAgency.ForPerson(person).Name + "介绍，收到了业务名片。");
             }
-            Say("已保存" + CityPerson(person).Name + "的业务名片，可从手机通讯录打电话或发消息。");
+            Say("已保存" + CityPerson(person).Name + "的业务名片，可从手机通讯录打电话联系。");
         }
         private bool TickMcnIntroduction(CityPersonState p,long now)
         {

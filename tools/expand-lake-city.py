@@ -295,9 +295,16 @@ assert all(not overlap(a,b) for i,a in enumerate(new_shapes) for b in new_shapes
 assert len({p["id"] for p in d["places"]})==len(d["places"])
 assert len({b["homeId"] for b in d["blocks"]})==len(d["blocks"])
 seed_expansion_occupancy(d, base)
-for place in d["places"]:
-    if place["id"] == "life_hike":
-        place["name"] = "城郊公园 · 青湾垂钓场"
+# The fishing entrance branches off the lakeside road beside the suburban commercial area.
+park = next(p for p in d["places"] if p["id"] == "life_hike")
+a, b = nodes["lake_old_37"], nodes["lake_old_38"]
+dx, dy = b[0] - a[0], b[1] - a[1]
+length = math.hypot(dx, dy)
+nx, ny = dy / length, -dx / length
+d["places"].insert(d["places"].index(park) + 1, dict(park,
+    id="life_fishing", name="青湾垂钓场", street="s_start", node="lake_old_38",
+    entranceX=-dx / 2 + nx * 11, entranceY=-dy / 2 + ny * 11,
+    heading=math.degrees(math.atan2(nx, ny)), openMinute=0, closeMinute=1440))
 TARGET.write_text(json.dumps(d,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
 import runpy
 runpy.run_path(str(ROOT / "tools/add-old-market.py"), run_name="__main__")

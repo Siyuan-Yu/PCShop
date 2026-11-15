@@ -23,7 +23,7 @@ namespace PCShopSell.EditorTools
             var shop=s.MyShops.First();shop.RetailKind="clothing";shop.Sim.Stock.ForceAddGoods(ClothingProducts.All.First().Id,100);
             typeof(GameSession).GetField("_brands",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(s,new BrandBusinessState{Brands=new[]{new BrandRecord{Id="demo",Name="棉风衣坊",Kind="clothing",Position="quality",Influence=105,ShopIds=new[]{shop.Place.Id}}}});
             s.Meet("life_designer", 0);
-            s.SignKolAmbassador("life_designer", 90, 1, remote: true, phoneCall: true);
+            s.SignKolAmbassador("life_designer", 90, 1, remote: true);
             s.AssignKolBrand(s.ActiveKolAmbassador("life_designer").Id, "demo");
             s.RegisterBrandExpo("demo",shop.Place.Id,ClothingProducts.All.First().Id,"design");
             s.EnterBrandTender("demo",shop.Place.Id,ClothingProducts.All.First().Id);

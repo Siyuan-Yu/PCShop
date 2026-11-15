@@ -936,20 +936,11 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Shot("vs1_41_phone_store");
             _game.Ui.CloseAllWindows();
-            s.Meet(Npcs.Zhang, 20);
-            _game.Ui.OpenChatPanel();
-            Frame(0.05f);
-            Shot("vs1_44_sms");
-            _game.Ui.CloseAllWindows();
-            Check(s.InstallApp(PhoneApps.Shop) && s.InstallApp(PhoneApps.Chat) && s.InstallApp(PhoneApps.Wholesale), "下载 app");
+            Check(s.InstallApp(PhoneApps.Shop), "下载网购应用");
             s.Meet(Npcs.Zhang, 20);
             _game.Ui.OpenPhone();
             Frame(0.05f);
             Shot("vs1_42_phone_apps");
-            _game.Ui.CloseAllWindows();
-            _game.Ui.OpenChatPanel();
-            Frame(0.05f);
-            Shot("vs1_43_chat");
             _game.Ui.CloseAllWindows();
             _game.Ui.OpenMyPanel();
             Frame(0.05f);
@@ -1393,7 +1384,7 @@ namespace PCShopSell.EditorTools
             var contract = staffed.EnterpriseContracts.FirstOrDefault(x => !x.Accepted);
             Check(contract != null && staffed.AcceptEnterprise(contract.Id), "企业订单进入装机队列");
             staffed.Meet("momo", 0);
-            Check(staffed.SignKolAmbassador("momo", 90, 1, remote: true, phoneCall: true), "签下待分配的代言人");
+            Check(staffed.SignKolAmbassador("momo", 90, 1, remote: true), "签下待分配的代言人");
             Check(staffed.TradeFund(10, true), "指数投资有持仓");
             var agency = staffed.City.FirstOfKind(PlaceKind.Agency);
             Teleport(staffed, agency.Id);
@@ -1443,7 +1434,7 @@ namespace PCShopSell.EditorTools
             Frame(0.05f);
             Frame(0.4f);
             Shot("vs1_business_van");
-            _game.Ui.OpenPersonDialogue("momo", remote: true, phoneCall: true);
+            _game.Ui.OpenPersonDialogue("momo", remote: true);
             var mcnTalk = _game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<UnityEngine.UI.Button>())
                 .Single(b => b.GetComponentInChildren<UnityEngine.UI.Text>()?.text == "谈MCN合作");
             mcnTalk.onClick.Invoke();

@@ -27,7 +27,9 @@ namespace PCShopSell.EditorTools
                 _game.Ui.CloseAllWindows();if(s.RunningCityActivity!=null)s.CancelCityActivity(s.RunningCityActivity.Id,true);
                 s.Player.Health=s.Player.Hunger=s.Player.Energy=100;s.RaiseEvent(id);if(s.PendingEvent==null)throw new InvalidOperationException(id+" unavailable");
                 if(!s.ResolveEvent(0))throw new InvalidOperationException(id+" could not book");_game.Ui.CloseAllWindows();var a=s.CityActivities.Last(x=>x.Active);
-                s.Clock.Restore(new GameDate((int)(a.ScheduledStart/1440)),(int)(a.ScheduledStart%1440));Teleport(s,a.VenueId);s.PrepareVenueCompanions(s.CurrentPlace);s.AdvanceClock(3);
+                s.Clock.Restore(new GameDate((int)(a.ScheduledStart/1440)),(int)(a.ScheduledStart%1440));Teleport(s,a.VenueId);s.PrepareVenueCompanions(s.CurrentPlace);
+                if (!s.StartOnsiteActivity(a.Id, GameSession.OnsiteNumber(a.DefinitionId) == 56 ? false : (bool?)null))
+                    throw new InvalidOperationException(id + " could not start at venue");
                 if(a.State!=CityActivityPhase.Running)throw new InvalidOperationException(id+" did not start: "+a.EndReason);
                 _game.Ui.CloseAllWindows();_game.Ui.OpenOnsitePlay();Frame(0);return a;
             }

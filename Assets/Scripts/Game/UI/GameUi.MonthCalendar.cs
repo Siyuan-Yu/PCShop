@@ -40,7 +40,6 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(navigation, "今天", () => Select(today), 17), 76, 38).name = "CalendarToday";
             Ui.Size(Ui.Button(navigation, "›", () => Select(first + GameDate.DaysPerMonth), 24), 40, 38)
                 .Tip("下个月").name = "CalendarNextMonth";
-            Ui.Size(Ui.Button(navigation, "天气", OpenCityClimate, 16), 76, 38).name = "CalendarWeather";
 
             const int gap = 4, cellHeight = 62, weekdayHeight = 26;
             int offset = (int)monthStart.Weekday;
@@ -125,6 +124,7 @@ namespace PCShopSell.Game.UI
                 case "loan": return "贷款到期";
                 case "npc_repayment": return "借款回收";
                 case "race_invite": return "赛车邀约";
+                case "race_registration": return "赛车比赛";
                 case "collector_trial": return "收藏车试驾";
                 case "cook": return "饭菜做好";
                 case "kol_live": return "品牌直播";
@@ -258,7 +258,7 @@ namespace PCShopSell.Game.UI
             if (!item.Completed && e.DestinationId != null && S.City.HasPlace(e.DestinationId))
                 ActionButton("前往赛场", () =>
                 {
-                    if (e.Kind == "race_invite" && e.Minute / 1440 > S.Clock.Today.TotalDays)
+                    if ((e.Kind == "race_invite" || e.Kind == "race_registration") && e.Minute / 1440 > S.Clock.Today.TotalDays)
                     {
                         Toast("比赛还早，等到比赛当天再出发。");
                         return;

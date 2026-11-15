@@ -23,7 +23,7 @@ namespace PCShopSell.Game.UI
             S.DismissEconomicReport();
             int period = -1, selected = -1;
             bool showPrices = false;
-            var window = OpenWindow("经济简报", 960, 900, w =>
+            var window = OpenWindow("经济简报", 1260, 920, w =>
             {
                 int today = S.Clock.Today.TotalDays;
                 int span = S.EconomicReportPeriodDays;
@@ -45,37 +45,13 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(tabs, "收支结算", () => { showPrices = false; w.Rebuild(); }, 19, !showPrices ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
                 Ui.Size(Ui.Button(tabs, "物价涨跌", () => { showPrices = true; w.Rebuild(); }, 19, showPrices ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
 
-                if (!showPrices)
+                if (showPrices) BuildEconomicPriceSummary(w, start, end, selected, group =>
                 {
-                    BuildEconomicCashSummary(w.Content, new GameDate(start), new GameDate(end));
-                    return;
-                }
-
-                var days = S.PriceDays.Where(p => p.Day >= start && p.Day <= Math.Min(today, start + span)).ToArray();
-                if (days.Length == 0) { Line(w.Content, "尚无价格记录。", 18); return; }
-                var baseline = days[0].Prices;
-                double Value(PriceDay day) => selected < 0
-                    ? day.Prices.Select((v, i) => v / baseline[i] * 100).Average()
-                    : day.Prices[selected] / baseline[selected] * 100;
-                string name = selected < 0 ? "综合物价" : GameSession.PriceGroups[selected];
-                double[] values = days.Select(Value).ToArray();
-                double change = values[values.Length - 1] - 100;
-                Line(w.Content, $"{name} · 本期涨跌 {change:+0.00;-0.00;0.00}%", 21, change > 0 ? Ui.Warn : change < 0 ? Ui.Good : Ui.Accent);
-                Line(w.Content, $"报价对比　{new GameDate(days[0].Day)} → {new GameDate(days[days.Length - 1].Day)}", 15, Ui.Dim);
-                DrawPriceTrend(w.Content, days, values);
-                Para(w.Content, "期初价格为 100，综合走势按品类等权计算。房产按当期报价，已签租约沿用签约价。", 15, Ui.Dim);
-                Ui.Size(Ui.Button(w.Content, "查看综合走势", () => { selected = -1; w.Rebuild(); }, 17, selected < 0 ? Ui.ButtonHot : Ui.ButtonBg), -1, 34);
-                var order = Enumerable.Range(GameSession.PropertyPriceGroupStart, 4).Concat(Enumerable.Range(0, GameSession.PropertyPriceGroupStart));
-                foreach (int i in order)
-                {
-                    int group = i;
-                    if (i == GameSession.PropertyPriceGroupStart) Line(w.Content, "住宅与商铺", 18, Ui.Accent);
-                    else if (i == 0) Line(w.Content, "商品与生活物价", 18, Ui.Accent);
-                    double pct = (days[days.Length - 1].Prices[i] / baseline[i] - 1) * 100;
-                    string movement = days.Length == 1 ? "开始记录" : Math.Abs(pct) < 0.005 ? "持平" : pct.ToString("+0.00;-0.00") + "%";
-                    Ui.Size(Ui.Button(w.Content, GameSession.PriceGroups[i] + "    " + movement + "    查看走势", () =>
-                    { selected = group; w.ResetScrollOnRebuild = true; w.Rebuild(); }, 17, selected == i ? Ui.ButtonHot : Ui.ButtonBg), -1, 36);
-                }
+                    selected = group;
+                    w.ResetScrollOnRebuild = true;
+                    w.Rebuild();
+                });
+                else BuildEconomicCashSummary(w.Content, new GameDate(start), new GameDate(end));
             });
 
             var scroll = (RectTransform)window.Content.parent.parent;
@@ -105,7 +81,7 @@ namespace PCShopSell.Game.UI
             var cash = FinanceReport.CashSummary(S.Ledger, from, to);
             var cards = Ui.Row(parent, 160, 8);
             BuildAssetMoneyCard(cards, "总收入", cash.Income.Cents, Ui.Good, cash.IncomeSources);
-            BuildAssetMoneyCard(cards, "总支出", cash.Expense.Cents, new Color32(233, 178, 150, 255), cash.ExpenseSources);
+            BuildAssetMoneyCard(cards, "总支出", cash.Expense.Cents, AssetTrendGraphic.ExpenseColor, cash.ExpenseSources);
             var balance = Ui.Size(Ui.Panel(cards, "EconomicCashNet", Ui.PanelBg2), -1, 160, 1).rectTransform;
             Ui.VList(balance, 2, 8);
             Line(balance, "净收支", 16, Ui.Dim);
@@ -114,16 +90,151 @@ namespace PCShopSell.Game.UI
             Line(balance, "期末现金 " + cash.ClosingBalance, 16);
             if (cash.InternalNet != Money.Zero)
                 Line(parent, "内部调拨净额 " + SignedReportCash(cash.InternalNet), 16, Ui.Dim);
-            Para(parent, "汇总所有实际到账和付出的现金，含经营、生活和资产交易。内部调拨单列，净收支与经营利润口径不同。", 15, Ui.Dim);
+
+            var legend = Ui.Row(parent, 26);
+            Ui.Size(Ui.Label(legend, "每日现金收支", 18), -1, 26, 1);
+            Ui.Size(Ui.Label(legend, "● 收入", 15, TextAnchor.MiddleRight, Ui.Good), 74);
+            Ui.Size(Ui.Label(legend, "● 支出 · 元", 15, TextAnchor.MiddleRight, AssetTrendGraphic.ExpenseColor), 98);
+            var chart = Ui.Size(Ui.Rect(parent, "EconomicCashTrend"), -1, 154);
+            chart.gameObject.AddComponent<AssetTrendGraphic>().Initialize(cash.IncomeDays, cash.ExpenseDays, from.TotalDays,
+                compact: false, groupedBars: true);
+
+            var reports = S.AssetStoreReports(from, to);
+            var storeHeader = Ui.Row(parent, 34);
+            Ui.Size(Ui.Label(storeHeader, "门店收支", 21, color: Ui.Accent), -1, 34, 1);
+            Ui.Size(Ui.Button(storeHeader, "总账分类明细", () => OpenEconomicCashSources(cash, from, to), 16), 150, 32);
+            if (reports.Length == 0) Line(parent, "本期暂无门店记录。", 17, Ui.Dim);
+            else
+            {
+                var headers = new[] { "收入", "总支出", "进货", "工资", "租金", "其他支出", "收支差额" };
+                var header = Ui.Row(parent, 30);
+                Ui.Size(Ui.Label(header, "门店 · 点名称查看明细", 15, color: Ui.Dim), -1, 30, 1);
+                foreach (string title in headers) EconomicStoreCell(header, title, Ui.Dim);
+                foreach (var report in reports.OrderByDescending(r => r.IncomeCents + r.ExpenseCents))
+                {
+                    var row = Ui.Row(parent, 38);
+                    Ui.Size(Ui.Button(row, report.Name + (report.Managed ? " · 托管" : ""), () => OpenAssetSources(new[] { report }, from, to), 16),
+                        -1, 34, 1);
+                    long other = report.ExpenseCents - report.ProcurementCents - report.WageCents - report.RentCents;
+                    var net = Money.FromCents(report.IncomeCents - report.ExpenseCents);
+                    EconomicStoreCell(row, Money.FromCents(report.IncomeCents).ToString(), Ui.Good);
+                    EconomicStoreCell(row, Money.FromCents(report.ExpenseCents).ToString(), AssetTrendGraphic.ExpenseColor);
+                    foreach (long cents in new[] { report.ProcurementCents, report.WageCents, report.RentCents, other })
+                        EconomicStoreCell(row, Money.FromCents(cents).ToString(), Ui.TextColor);
+                    EconomicStoreCell(row, SignedReportCash(net), net.IsNegative ? Ui.Warn : Ui.Good);
+                }
+            }
+            Para(parent, "总账含经营、生活、借还款和资产交易。托管店的进货列为商品与食材成本，门店收支差额按本期统计。", 15, Ui.Dim);
+        }
+
+        private static void EconomicStoreCell(Transform row, string text, Color color) =>
+            Ui.Size(Ui.Label(row, text, 16, TextAnchor.MiddleRight, color), 118, 30);
+
+        private void OpenEconomicCashSources(CashPeriodSummary cash, GameDate from, GameDate to)
+        {
+            OpenWindow("总账分类明细", 780, 680, w =>
+            {
+                Line(w.Content, $"{from} — {to}", 18, Ui.Dim);
+                foreach (bool income in new[] { true, false })
+                {
+                    var sources = income ? cash.IncomeSources : cash.ExpenseSources;
+                    Line(w.Content, (income ? "总收入 " + cash.Income : "总支出 " + cash.Expense),
+                        21, income ? Ui.Good : AssetTrendGraphic.ExpenseColor);
+                    if (sources.Count == 0) Line(w.Content, "本期暂无记录。", 17, Ui.Dim);
+                    foreach (var source in sources.OrderByDescending(s => s.Value))
+                    {
+                        var row = Ui.Row(w.Content, 30);
+                        Ui.Size(Ui.Label(row, source.Key, 17), -1, 30, 1);
+                        Ui.Size(Ui.Label(row, Money.FromCents(source.Value).ToString(), 17, TextAnchor.MiddleRight), 160, 30);
+                    }
+                }
+            });
         }
 
         private static string SignedReportCash(Money amount) => (amount.IsPositive ? "+" : "") + amount;
 
+        private void BuildEconomicPriceSummary(Window window, int start, int end, int selected, Action<int> select)
+        {
+            var records = S.PriceDays;
+            var days = records.Where(day => day.Day >= start && day.Day <= end).ToArray();
+            var parent = window.Content;
+            if (days.Length == 0)
+            {
+                Line(parent, "本期暂无价格记录。", 18, Ui.Dim);
+                return;
+            }
+
+            // Compare against the previous close so a price change on the first day counts in this period.
+            var opening = records.LastOrDefault(day => day.Day < start);
+            if (opening != null) days = new[] { opening }.Concat(days).ToArray();
+            var baseline = days[0].Prices;
+            var closing = days[days.Length - 1].Prices;
+            double GroupIndex(double[] prices, int group) => prices[group] / baseline[group] * 100;
+            double[] values = days.Select(day => selected < 0
+                ? Enumerable.Range(0, baseline.Length).Average(group => GroupIndex(day.Prices, group))
+                : GroupIndex(day.Prices, selected)).ToArray();
+            var changes = baseline.Select((_, group) => GroupIndex(closing, group) - 100).ToArray();
+            int biggestRise = Array.IndexOf(changes, changes.Max());
+            int biggestFall = Array.IndexOf(changes, changes.Min());
+            const double movementThreshold = 0.005;
+
+            var cards = Ui.Row(parent, 84, 8);
+            AddPriceCard(cards, selected < 0 ? "综合物价" : GameSession.PriceGroups[selected], values[values.Length - 1] - 100);
+            AddPriceCard(cards, "涨幅最大", changes[biggestRise] >= movementThreshold ? changes[biggestRise] : (double?)null, GameSession.PriceGroups[biggestRise]);
+            AddPriceCard(cards, "跌幅最大", changes[biggestFall] <= -movementThreshold ? changes[biggestFall] : (double?)null, GameSession.PriceGroups[biggestFall]);
+
+            var heading = Ui.Row(parent, 34);
+            Ui.Size(Ui.Label(heading, $"报价走势 · {new GameDate(days[0].Day)} — {new GameDate(days[days.Length - 1].Day)}", 17), -1, 34, 1);
+            if (selected >= 0) Ui.Size(Ui.Button(heading, "返回综合走势", () => select(-1), 16), 140, 32);
+            DrawPriceTrend(parent, days, values);
+            Para(parent, "基准报价为 100，综合物价按品类等权计算。房产一栏为挂牌报价指数，已签租约沿用签约价。", 15, Ui.Dim);
+
+            int propertyStart = GameSession.PropertyPriceGroupStart;
+            DrawPriceGroupRows("住宅与商铺", propertyStart, changes.Length);
+            DrawPriceGroupRows("电脑配件", 0, PCShopSell.Core.Catalog.PartCatalog.Categories.Length);
+            DrawPriceGroupRows("商品与生活", PCShopSell.Core.Catalog.PartCatalog.Categories.Length, propertyStart);
+
+            void DrawPriceGroupRows(string title, int first, int last)
+            {
+                var header = Ui.Row(parent, 28);
+                Ui.Size(Ui.Label(header, title, 18, color: Ui.Accent), -1, 28, 1);
+                foreach (string label in new[] { "基准报价", "期末报价", "本期涨跌" })
+                    EconomicStoreCell(header, label, Ui.Dim);
+                for (int group = first; group < last; group++)
+                {
+                    int index = group;
+                    bool property = index >= propertyStart;
+                    string Quote(double[] prices) => property
+                        ? (prices[index] / 100).ToString("0.00")
+                        : "¥" + (prices[index] / 100).ToString("#,0.##");
+                    var row = Ui.Row(parent, 32);
+                    Ui.Size(Ui.Button(row, GameSession.PriceGroups[index] + "  ›", () => select(index), 16,
+                        selected == index ? Ui.ButtonHot : Ui.ButtonBg), -1, 30, 1);
+                    EconomicStoreCell(row, Quote(baseline), Ui.TextColor);
+                    EconomicStoreCell(row, Quote(closing), Ui.TextColor);
+                    EconomicStoreCell(row, days.Length == 1 ? "—" : PriceMovement(changes[index]), PriceMovementColor(changes[index]));
+                }
+            }
+        }
+
+        private void AddPriceCard(Transform row, string title, double? change, string groupName = null)
+        {
+            var card = Ui.Size(Ui.Panel(row, "PriceSummary", Ui.PanelBg2), -1, 84, 1).rectTransform;
+            Ui.VList(card, 1, 8);
+            Line(card, title, 15, Ui.Dim);
+            Line(card, change.HasValue ? PriceMovement(change.Value) : "—", 23,
+                change.HasValue ? PriceMovementColor(change.Value) : Ui.Dim);
+            if (change.HasValue && groupName != null) Line(card, groupName, 15);
+        }
+
+        private static string PriceMovement(double change) => Math.Abs(change) < 0.005 ? "持平" : change.ToString("+0.00;-0.00") + "%";
+        private static Color PriceMovementColor(double change) => change >= 0.005 ? Ui.Warn : change <= -0.005 ? Ui.Good : Ui.Dim;
+
         private void DrawPriceTrend(Transform parent, PriceDay[] days, double[] values)
         {
-            const float width = 820, height = 200;
+            const float width = 1110, height = 158;
             var chart = Ui.Panel(parent, "PriceTrend", new Color(0, 0, 0, 0.22f));
-            Ui.Size(chart, width + 40, height + 36);
+            Ui.Size(chart, -1, height + 36);
             var area = Ui.Rect(chart.transform, "Plot");
             area.anchorMin = area.anchorMax = new Vector2(0, 0);
             area.pivot = Vector2.zero; area.anchoredPosition = new Vector2(24, 26); area.sizeDelta = new Vector2(width, height);

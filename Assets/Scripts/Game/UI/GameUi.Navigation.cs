@@ -25,7 +25,7 @@ namespace PCShopSell.Game.UI
         private readonly Dictionary<string, NavigationWindow> _navigation = new Dictionary<string, NavigationWindow>();
         private readonly Dictionary<string, double> _multiplierDrafts = new Dictionary<string, double>();
 
-        private void PriceMultiplierEditor(Transform parent, string key, string title, double current, double minimum, double maximum, double step, Action<double> apply, Action refresh, string draftKey = null)
+        private void PriceMultiplierEditor(Transform parent, string key, string title, double current, double minimum, double maximum, double step, Action<double> apply, Action refresh, string draftKey = null, Action<double> onPreview = null)
         {
             draftKey = draftKey ?? key;
             double draft = _multiplierDrafts.TryGetValue(draftKey, out var previous) ? previous : current;
@@ -36,9 +36,16 @@ namespace PCShopSell.Game.UI
                 bool changed = Math.Abs(draft - current) > .001;
                 label.text = title + $" {draft:0.00}×" + (changed ? " · 待确认" : " · 已保存");
                 if (save != null) save.interactable = changed;
+                onPreview?.Invoke(draft);
             }
             Ui.Slider(parent, (float)minimum, (float)maximum, (float)draft, value =>
-            { draft = Math.Max(minimum, Math.Min(maximum, Math.Round(value / step) * step)); _multiplierDrafts[draftKey] = draft; Preview(); }).name = key;
+            {
+                double next = Math.Max(minimum, Math.Min(maximum, Math.Round(value / step) * step));
+                if (next == draft) return;
+                draft = next;
+                _multiplierDrafts[draftKey] = draft;
+                Preview();
+            }).name = key;
             var row = Ui.Row(parent, 36, 6);
             save = Ui.Size(Ui.Button(row, "确认" + title, () => { apply(draft); _multiplierDrafts.Remove(draftKey); refresh(); }, 17, Ui.ButtonHot, false), -1, 36, 1);
             save.name = "Save_" + key;
@@ -47,14 +54,14 @@ namespace PCShopSell.Game.UI
         }
 
         // Primary screens reuse one window. Detail dialogs keep their parent and its draft.
-        private Window OpenWorkspace(string group, string page, string title, float width, float height, Action<Window> build)
+        private Window OpenWorkspace(string group, string page, string title, float width, float height, Action<Window> build, bool isTab = false)
         {
             if (!_navigation.TryGetValue(group, out var state) || state.Window == null || state.Window.Closed)
             {
                 state = new NavigationWindow(); _navigation[group] = state;
             }
             bool changing = state.Page != null && state.Page.Id != page;
-            if (changing)
+            if (changing && !isTab)
             {
                 state.Page.Scroll = Ui.SaveScroll(state.Window.Root);
                 int previous = state.Back.FindIndex(p => p.Id == page);
@@ -74,8 +81,8 @@ namespace PCShopSell.Game.UI
             {
                 var w = state.Window; w.TitleText.text = title;
                 ((RectTransform)w.Root.Find("Panel")).sizeDelta = new Vector2(width, height);
+                w.ResetScrollOnRebuild |= changing;
                 w.Builder = Render; w.Root.SetAsLastSibling(); w.Rebuild(); w.Fitter.Fit();
-                if (changing) { Canvas.ForceUpdateCanvases(); foreach (var scroll in w.Root.GetComponentsInChildren<ScrollRect>()) scroll.verticalNormalizedPosition = 1; }
             }
             state.Window.Root.name = "Workspace_" + group;
             return state.Window;

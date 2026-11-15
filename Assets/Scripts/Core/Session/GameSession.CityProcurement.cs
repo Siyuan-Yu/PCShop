@@ -143,11 +143,14 @@ namespace PCShopSell.Core.Session
         {
             var shop = ShopAt(shopId); var policy = ProcurementPolicyFor(shopId, kind, productId);
             int stock = shop == null ? 0 : kind == PurchaseGoodsKind.Part && PartCatalog.Exists(productId) ? shop.Sim.Stock.CountAll(PartCatalog.Get(productId))
+                : RestaurantIngredientsOnly(shop) && kind == PurchaseGoodsKind.Rice ? (int)Math.Floor(KitchenRice(shop) / .5 + 1e-9)
+                : RestaurantIngredientsOnly(shop) && kind == PurchaseGoodsKind.Ingredient ? KitchenIngredientCount(shop, productId)
+                : RestaurantIngredientsOnly(shop) && kind == PurchaseGoodsKind.Gift && IsRawIngredientProduct(productId) ? RetailCount(shop.Fridge, Gifts.Get(productId))
                 : kind == PurchaseGoodsKind.Gift ? shop.Sim.Stock.GoodsCount(productId) : 0;
             // Materials for already reserved builds have left Stock. For other committed orders,
             // allocate remaining stock and supply to their deadline order before retail targets.
-            int required = kind == PurchaseGoodsKind.Part && shop != null ? shop.Sim.Orders.Where(o => !o.PartsReserved)
-                .Count(o => PartCatalog.BuildList(o.Tier).Any(p => p.Id == productId)) : 0;
+            int required = kind == PurchaseGoodsKind.Part && shop != null
+                ? shop.Sim.Orders.Count(o => PartCatalog.BuildList(o.Tier).Any(p => p.Id == productId && !o.HasReservedPart(p))) : 0;
             int inTransit = PendingProcurementCount(shop, kind, productId), claims = ClaimedProcurementCount(shopId, kind, productId, excludingOwner);
             int awaiting = Math.Max(0, required - stock), retailTransit = Math.Max(0, inTransit - awaiting);
             return new ProcurementCoverage { FreeStock = Math.Max(0, stock - required), InTransit = retailTransit,
@@ -163,9 +166,11 @@ namespace PCShopSell.Core.Session
         public int UncoveredBuildPartCount(OwnedShop shop, PCShopSell.Core.Shop.BuildOrder order, string partId)
         {
             if (shop == null || order == null || order.PartsReserved || !PartCatalog.Exists(partId) || !shop.Sim.Orders.Contains(order)) return 0;
-            int required = shop.Sim.Orders.Where(o => !o.PartsReserved && (o.DueAt < order.DueAt || (o.DueAt == order.DueAt && o.Id <= order.Id)))
-                .Count(o => PartCatalog.BuildList(o.Tier).Any(p => p.Id == partId));
-            return Math.Max(0, required - shop.Sim.Stock.CountAll(PartCatalog.Get(partId)) - PendingProcurementCount(shop, PurchaseGoodsKind.Part, partId)
+            var part = PartCatalog.Get(partId);
+            if (order.HasReservedPart(part)) return 0;
+            int required = shop.Sim.Orders.Where(o => o.DueAt < order.DueAt || (o.DueAt == order.DueAt && o.Id <= order.Id))
+                .Count(o => PartCatalog.BuildList(o.Tier).Any(p => p.Id == partId && !o.HasReservedPart(p)));
+            return Math.Max(0, required - shop.Sim.Stock.CountAll(part) - PendingProcurementCount(shop, PurchaseGoodsKind.Part, partId)
                 - ClaimedProcurementCount(shop.Place.Id, PurchaseGoodsKind.Part, partId));
         }
 

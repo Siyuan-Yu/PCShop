@@ -129,6 +129,24 @@ namespace PCShopSell.Core.Session
                 Hint = $"不带现金的顾客{K("也能买单")}。",
                 Done = s => s.HasUpgrade(ShopUpgrades.Qr),
             },
+            new QuestDef
+            {
+                Id = "scooter", Title = "买一辆小电驴", Target = QuestTarget.ScooterDealer,
+                Short = $"去{K("顺丰车行")}买一辆小电驴",
+                Hint = $"在顺丰车行的「小电驴」页选购。设为通勤车后，可以在底栏切换到{K("小电驴")}，更快往返家和店铺。",
+                Done = s => s.Owns(VehicleKind.EBike),
+            },
+            new QuestDef
+            {
+                Id = "community_goal", Title = "城郊到社区 · 引荐条件", Target = QuestTarget.CommunityGoal,
+                Short = "扩大城郊经营，达成主线引荐条件",
+                Hint = $"在城郊开业至少 {DistrictNarrativeCatalog.CommunityShopMinimum} 家门店，手头现金达到 "
+                    + $"{DistrictNarrativeCatalog.CommunityCashMinimumYuan / 10_000} 万元。门店打烊后仍计入，装修当天的门店从次日开始计。\n"
+                    + $"两项同时达标后，李秀兰将在 {DistrictNarrativeCatalog.InvitationDelayDays} 天后主动联系。",
+                Done = s => !s.City.IsLakeCity || s.CommunityInvitationScheduledOrStarted,
+                Progress = s => $"城郊开业 {s.DistrictOperatingShops(0)}/{DistrictNarrativeCatalog.CommunityShopMinimum} 家 · "
+                    + $"现金 {s.Ledger.Balance} / {DistrictNarrativeCatalog.CommunityCashMinimumYuan / 10_000} 万元",
+            },
         }.Concat(GrowthSteps()).ToArray();
 
         public static QuestDef Get(string id) => All.FirstOrDefault(q => q.Id == id);
@@ -189,8 +207,8 @@ namespace PCShopSell.Core.Session
             {
                 var rest = source.Copy();
                 rest.Target = QuestTarget.Bed;
-                rest.Short = "店铺今天歇业，回家睡到明早";
-                rest.Hint = "装修当天不能营业。回家睡到明早，第二天营业时再回店接待顾客，完成第一单。";
+                rest.Short = "店铺今天歇业，先回家睡觉";
+                rest.Hint = "装修当天不能营业。回家到床边选择起床时间，第二天营业时再回店接待顾客，完成第一单。";
                 return rest;
             }
             if (source?.Id == "stock" && s.OpeningSupplyMarket is Place market)

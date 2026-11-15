@@ -11,9 +11,12 @@ namespace PCShopSell.Core.Session
     /// </summary>
     public sealed partial class GameSession
     {
-        /// <summary>走到离某地点入口这么近（画面米）就能按 F 进去。</summary>
         /// <summary>离门口这么近才能按 F 进门（站到店门前的人行道上）。</summary>
         public const double EnterRadius = 3.0;
+
+        // Motorsport entrances open onto wider roads and are commonly approached by vehicle.
+        private static double DoorEnterRadius(Place place) =>
+            place.Kind == PlaceKind.Garage || place.Business == "racing" || place.Business == "motor" ? 9.0 : EnterRadius;
 
         /// <summary>y=0 那条路边上的门面离路中线多远：商业街路宽，门面更靠外。</summary>
         public const double LinkFrontY = 4.5, ShoppingFrontY = 8.0;
@@ -271,11 +274,11 @@ namespace PCShopSell.Core.Session
                 if (CurrentPlace != null || Trip != null || IsGameOver) return null;
                 MapPoint p = PlayerPosition;
                 Place best = null;
-                double bestDist = EnterRadius;
+                double bestDist = double.PositiveInfinity;
                 foreach (Place pl in City.PublicPlaces)
                 {
                     double d = Dist(p, DoorOf(pl));
-                    if (d < bestDist)
+                    if (d < bestDist && d <= DoorEnterRadius(pl))
                     {
                         bestDist = d;
                         best = pl;

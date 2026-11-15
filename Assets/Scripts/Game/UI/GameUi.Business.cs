@@ -155,8 +155,7 @@ namespace PCShopSell.Game.UI
 
         private void OpenDirectSupplyOrder(Window parent)
         {
-            var parts = PartCatalog.All.Where(part => IndustryCycles.Available(part, S.Clock.Today.TotalDays)).ToArray();
-            if (parts.Length == 0) return;
+            var parts = PartCatalog.All;
             int selected = 0, quantity = 3;
             bool credit = false;
             var shop = S.MainShop;

@@ -127,7 +127,24 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
-        public void SetMarkup(double markup) => PlayerShop.Markup = markup;
+        public void SetMarkup(double markup)
+        {
+            double previous = PlayerShop.Markup;
+            PlayerShop.Markup = markup;
+            if (PlayerShop.Markup != previous) RecordConfirmedShopPricing();
+        }
+
+        public void ConfirmGoodsSalePrice(string id, long yuan)
+        {
+            if (PlayerShop.GoodsPriceOf(id).Yuan != yuan && PlayerShop.SetGoodsSalePrice(id, yuan))
+                RecordConfirmedShopPricing();
+        }
+
+        public void ConfirmPartSalePrice(PartDef part, bool boxed, long yuan)
+        {
+            if (part != null && PlayerShop.PriceOf(part, boxed).Yuan != yuan && PlayerShop.SetPartSalePrice(part, boxed, yuan))
+                RecordConfirmedShopPricing();
+        }
 
         /// <summary>装机小游戏完成后交付：耗时随失误增加，技术 +2。</summary>
         public bool CompleteBuild(int orderId, int mistakes)
@@ -243,13 +260,20 @@ namespace PCShopSell.Core.Session
             bool special = IsSpecialBusiness(shop);
             bool staysOpen = venue ? VenueOpen(shop.Place, false)
                 : special ? SpecialOpen(shop, now, false) : shop.Sim.IsOpenAt(now, false);
+            if (shop.RetailKind == "restaurant")
+            {
+                if (!staysOpen) return (true, "没有在岗的餐馆员工，离开后关门");
+                return SpecialWorkers(shop, EmployeeRole.Waiter, now).Length > 0
+                    ? (false, "服务员在岗，离开后会继续上菜、收桌和收款")
+                    : (false, "餐馆继续营业，暂无在岗服务员上菜和收款");
+            }
             if (!staysOpen)
                 return (true, venue ? "当前没有在岗值守员，离开后关门" : "当前没有在岗收银员，离开后关门");
 
             if (ShopStaff(shop, EmployeeRole.Cashier).Any(e => CityEmployeeAvailable(e, shop)))
                 return (false, venue ? "有值守员在岗，离开后继续营业" : "有收银员在岗，离开后继续营业");
             if (special)
-                return (false, shop.RetailKind == "restaurant" ? "餐馆继续营业，暂无收银员，顾客会等候结账" : "无在岗收银员，收购师继续收购");
+                return (false, "无在岗收银员，收购师继续收购");
             return (false, "无在岗收银员，装机员代收银，离开后继续营业");
         }
 

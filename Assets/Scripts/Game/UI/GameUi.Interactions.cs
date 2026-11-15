@@ -89,7 +89,7 @@ namespace PCShopSell.Game.UI
                     : (active ? Ui.ButtonHot : Ui.ButtonBg);
                 bool cashier = role == EmployeeRole.Cashier;
                 string label = venue && cashier ? "场馆值守" : GameSession.RoleName(role);
-                Ui.Size(Ui.Button(roles, label, () => select(role), 18, background, !venue || cashier || unassigned), -1, -1, 1);
+                Ui.Size(Ui.Button(roles, label, () => select(role), 18, background), -1, -1, 1);
             }
         }
 
@@ -103,16 +103,7 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, S.CandidateWaitText(candidate), 17, Ui.Warn);
                 BuildEmployeeRoleChoices(w.Content, role, choice => { role = choice; w.Rebuild(); });
                 BuildRecruitRolePreview(w.Content, candidate, role, S.ShopAt(shopId));
-                if (role != EmployeeRole.Unassigned)
-                {
-                    var shops = Ui.Scroll(w.Content, 220);
-                    foreach (var shop in S.MyShops)
-                    {
-                        string target = shop.Place.Id;
-                        Ui.Size(Ui.Button(shops, S.ShopTitle(shop) + " · " + S.City.StreetName(shop.Place.StreetId), () => { shopId = target; w.Rebuild(); }, 18,
-                            shopId == target ? Ui.ButtonHot : Ui.ButtonBg), -1, 44);
-                    }
-                }
+                BuildEmployeeDestinationChoices(w.Content, role, shopId, target => { shopId = target; w.Rebuild(); });
                 string why = S.RecruitAssignmentBlocker(candidate.Id, shopId, role);
                 if (why != null) Ui.Notice(w.Content, why);
                 Ui.Size(Ui.Button(w.Content, "确认聘用并安排工作", () =>
@@ -122,12 +113,31 @@ namespace PCShopSell.Game.UI
             });
         }
 
+        private void BuildEmployeeDestinationChoices(Transform parent, EmployeeRole role, string selected, Action<string> select)
+        {
+            if (role == EmployeeRole.Unassigned) return;
+            var shops = S.MyShops.Select(shop => (shop, reason: S.EmployeeRoleShopBlocker(shop, role)))
+                .OrderBy(row => row.reason != null).ToArray();
+            Line(parent, "工作门店", 18);
+            var list = Ui.Scroll(parent, 155);
+            if (!shops.Any(row => row.reason == null)) Para(list, "目前没有适合该岗位的门店。", 17, Ui.Warn);
+            foreach (var (shop, reason) in shops)
+            {
+                string target = shop.Place.Id;
+                string label = S.ShopTitle(shop) + " · " + S.City.StreetName(shop.Place.StreetId);
+                if (reason != null) label += " · " + reason;
+                Ui.Size(Ui.Button(list, label, () => select(target), 17,
+                    target == selected && reason == null ? Ui.ButtonHot : Ui.ButtonBg, reason == null), -1, 44);
+            }
+        }
+
         private void BuildRecruitRolePreview(Transform parent, Employee candidate, EmployeeRole role, OwnedShop shop)
         {
             var (duties, metric, detail) = EmployeeRolePreview(candidate, role, shop);
             var panel = Ui.Panel(parent, "RecruitRolePreview", Ui.PanelBg2).rectTransform;
             Ui.VList(panel, 3, 10);
             Line(panel, metric, 20, Ui.Accent);
+            Line(panel, GameSession.EmployeeRoleShopHint(role), 17, Ui.Accent);
             Para(panel, $"{duties}。{detail}", 16, Ui.Dim);
         }
 
@@ -155,7 +165,7 @@ namespace PCShopSell.Game.UI
                     ("备料、下锅、出锅和清锅", $"厨师 · 每步操作 {GameSession.RestaurantEmployeeOperationMinutes(employee, role)} 分钟",
                         WorkDurationDetail("动手能力", employee.Dexterity, GameSession.RestaurantEmployeeOperationMinutes(employee, role), GameSession.RestaurantOperationMinutes) + " 走动和等菜另计。"),
                 EmployeeRole.Waiter =>
-                    ("上菜和收桌", $"服务员 · 每步操作 {GameSession.RestaurantEmployeeOperationMinutes(employee, role)} 分钟",
+                    ("上菜、桌边收款和收桌", $"服务员 · 每步操作 {GameSession.RestaurantEmployeeOperationMinutes(employee, role)} 分钟",
                         WorkDurationDetail("体能", employee.Stamina, GameSession.RestaurantEmployeeOperationMinutes(employee, role), GameSession.RestaurantOperationMinutes) + " 走动用时另计。"),
                 EmployeeRole.Appraiser =>
                     ("判断成色并收购旧物", $"识别真实成色 {GameSession.AppraiserAccuracy(employee.Intelligence) * 100:0.#}%", $"智力 {employee.Intelligence} · 未能识别时按卖家说法估价。"),

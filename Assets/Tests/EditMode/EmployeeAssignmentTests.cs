@@ -12,7 +12,7 @@ namespace PCShopSell.Tests
 {
     public class EmployeeAssignmentTests
     {
-        private static GameSession Make(bool two = false)
+        private static GameSession Make(bool two = false, string branchKind = null)
         {
             var s = GameSessionTests.Make(500000, 9 * 60);
             s.EventsEnabled = false;
@@ -21,7 +21,7 @@ namespace PCShopSell.Tests
                 s.PlayerShop.Reputation = 80;
                 s.DebugAddListing("tea", 0, 60, Money.FromYuan(3000));
                 GameSessionTests.Teleport(s, "agency");
-                Assert.True(s.SignLease("tea", true));
+                Assert.True(s.SignLease("tea", true, branchKind));
             }
             foreach (var shop in s.MyShops) shop.Sim.Settings.BaseCustomersPerHour = 0;
             GameSessionTests.Teleport(s, "pc");
@@ -126,7 +126,7 @@ namespace PCShopSell.Tests
         [Test]
         public void MultiplePeopleCanShareAJobWithoutOverwritingExistingEmployees()
         {
-            using (var s = Make(true))
+            using (var s = Make(true, "computer"))
             {
                 var a = Person(); var b = Person(); b.Name = "小李";
                 s.MainShop.Employee = a; s.ShopAt("tea").Assembler = b;
@@ -143,7 +143,7 @@ namespace PCShopSell.Tests
         [Test]
         public void CancelWorkPlan_DoesNotChangeTodaysJobOrTomorrow()
         {
-            using (var s = Make(true))
+            using (var s = Make(true, "computer"))
             {
                 var e = Person(); s.MainShop.Employee = e;
                 Assert.True(s.ArrangeEmployeeWork(e.Id, "tea", EmployeeRole.Assembler));

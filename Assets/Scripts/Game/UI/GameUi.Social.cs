@@ -16,19 +16,7 @@ namespace PCShopSell.Game.UI
             return right + wrong == 0 ? "消息：还没验证过" : $"消息：{right + wrong} 条里应验 {right} 条";
         }
 
-        public void OpenInvitePanel(string npcId)
-        {
-            if(S.Relation(npcId)>=GameSession.MinInviteRelation){OpenCityActivityChooser(npcId);return;}
-            OpenWindow("邀约",620,360,w=>
-            {
-                Para(w.Content,"熟悉达到"+GameSession.MinInviteRelation+"后可从这里安排同行。先实际见面聊聊，预约与到场都使用同一份城市日程。",18);
-                Ui.Size(Ui.Button(w.Content,"查看人物",()=>OpenCityPerson(npcId),18),-1,44);
-            });
-        }
-        private void OpenInviteWindow(NpcDef n, Window parent)
-        {
-            if(n!=null)OpenInvitePanel(n.Id);
-        }
+        public void OpenInvitePanel(string npcId) => OpenCityActivityChooser(npcId);
 
         /// <summary>行情面板里的小道消息：听来的话，几天后能看到真假。</summary>
         private void BuildTipsSection(Window w)

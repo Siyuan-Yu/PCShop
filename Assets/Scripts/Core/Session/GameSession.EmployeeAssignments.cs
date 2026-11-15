@@ -47,6 +47,46 @@ namespace PCShopSell.Core.Session
             row.Person.TransferRole >= 0 && Enum.IsDefined(typeof(EmployeeRole),row.Person.TransferRole) && row.Person.TransferRole != (int)EmployeeRole.Unassigned
                 ? (EmployeeRole)row.Person.TransferRole : row.Role;
 
+        private static (string kind, string name) EmployeeRequiredShopType(EmployeeRole role) => role switch
+        {
+            EmployeeRole.Assembler => ("computer", "电脑店"),
+            EmployeeRole.Chef or EmployeeRole.Waiter => ("restaurant", "餐馆"),
+            EmployeeRole.Appraiser => ("secondhand", "二手旧物店"),
+            EmployeeRole.PetKeeper => (PCShopSell.Core.Home.PetShopCatalog.ShopKind, "宠物用品店"),
+            _ => (null, null)
+        };
+
+        public static string EmployeeRoleShopHint(EmployeeRole role) => role switch
+        {
+            EmployeeRole.Cashier => "适用门店 · 餐馆以外的店铺，场馆为值守岗位",
+            EmployeeRole.Buyer or EmployeeRole.Salesperson => "适用门店 · 各类自营店铺",
+            EmployeeRole.Unassigned => "暂不安排门店",
+            _ => "适用门店 · " + EmployeeRequiredShopType(role).name
+        };
+
+        public string EmployeeRoleShopBlocker(OwnedShop shop, EmployeeRole role)
+        {
+            var (kind, name) = EmployeeRequiredShopType(role);
+            if (role == EmployeeRole.Cashier && shop.RetailKind == "restaurant")
+                return "餐馆由服务员上菜、收桌和收款";
+            if (kind != null && shop.RetailKind != kind) return $"请安排到{name}";
+            if (IsDedicatedVenue(shop.Place) && role != EmployeeRole.Cashier && role != EmployeeRole.Unassigned)
+                return "场馆仅可安排值守岗位";
+            return null;
+        }
+
+        private void MoveIncompatibleAssemblersToStandby(OwnedShop shop, bool notify)
+        {
+            if (EmployeeRoleShopBlocker(shop, EmployeeRole.Assembler) == null) return;
+            foreach (var assembler in ShopStaff(shop, EmployeeRole.Assembler).ToArray())
+            {
+                var row = new EmployeeAssignment { Shop = shop, Person = assembler, Role = EmployeeRole.Assembler };
+                _employeeHireShops[assembler.Id] = shop.Place.Id;
+                MoveEmployeeWork(row, null, EmployeeRole.Unassigned);
+                if (notify) Say($"{assembler.Name}已转为待安排。装机员只能安排到电脑店。");
+            }
+        }
+
         public string EmployeeAssignmentBlocker(string id, string destination, EmployeeRole role, bool replace = false)
         {
             var row = FindEmployee(id);
@@ -59,10 +99,8 @@ namespace PCShopSell.Core.Session
             }
             var dest = ShopAt(destination);
             if (dest == null) return "请选择自己的店铺";
-            if ((role==EmployeeRole.Chef||role==EmployeeRole.Waiter)&&dest.RetailKind!="restaurant")return "厨师与服务员请安排到餐馆";
-            if(role==EmployeeRole.Appraiser&&dest.RetailKind!="secondhand")return "收购师请安排到二手店";
-            if(role==EmployeeRole.PetKeeper&&!IsPetShop(dest))return "饲养员请安排到宠物用品店";
-            if(IsDedicatedVenue(dest.Place)&&role!=EmployeeRole.Cashier)return "场馆本轮只设值守岗位，请选择场馆值守（收银位）";
+            string roleBlocker = EmployeeRoleShopBlocker(dest, role);
+            if (roleBlocker != null) return roleBlocker;
             string capacity=dest==row.Shop?null:StaffCapacityBlocker(dest,id,replace,role);if(capacity!=null)return capacity;
             if (dest == row.Shop && role == row.Role) return "已经在这家店做这项工作";
             var occupant = EmployeeAt(dest, role);

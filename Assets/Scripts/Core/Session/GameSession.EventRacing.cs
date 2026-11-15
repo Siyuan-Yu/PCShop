@@ -237,14 +237,31 @@ namespace PCShopSell.Core.Session
         private void AddEventRaceSchedule(List<ScheduleEntry> entries)
         {
             AddRacingBatchSchedule(entries);
+            foreach (var registration in _raceRegistrations)
+            {
+                if (registration.Started || Clock.Now.TotalMinutes >= RaceDayStart(registration.Day) + RacingSchedule.MeetCloseMinute) continue;
+                var day = new GameDate(registration.Day);
+                var meeting = RacingSchedule.On(day);
+                var companions = _raceInvitations.Where(i => i.Day == registration.Day && i.TrackId == registration.TrackId)
+                    .Select(i => CityPerson(i.PersonId)?.Name ?? i.PersonId).ToArray();
+                entries.Add(new ScheduleEntry
+                {
+                    Minute = RaceDayStart(registration.Day) + RacingSchedule.MeetOpenMinute,
+                    Day = DescribeDay(registration.Day), TimeText = RacingSchedule.MeetHours, Kind = "race_registration",
+                    DestinationId = registration.TrackId,
+                    Text = $"{RacingSchedule.Name(meeting)} · {City.GetPlace(registration.TrackId).Name} · 已报名 · 开赛支付 ¥{RacingSchedule.Fee(meeting):N0}"
+                        + (companions.Length > 0 ? " · 同行 " + string.Join("、", companions) : "")
+                });
+            }
             foreach (var group in RaceInvitations.Where(i => City.HasPlace(i.TrackId)
+                && FindRaceRegistration(i.TrackId, i.Day) == null
                 && !_eventRaceBookings.Any(b => b.PersonId == i.PersonId && b.TrackId == i.TrackId && b.Day == i.Day)).GroupBy(i => (i.Day, i.TrackId)))
             {
                 var day = new GameDate(group.Key.Day);
                 if (Clock.Now.TotalMinutes >= (long)day.TotalDays * 1440 + RacingSchedule.MeetCloseMinute) continue;
                 string companions = string.Join("、", group.Select(i => CityPerson(i.PersonId)?.Name ?? i.PersonId));
                 entries.Add(new ScheduleEntry { Minute = (long)day.TotalDays * 1440 + RacingSchedule.MeetOpenMinute,
-                    Day = DescribeDay(day.TotalDays), TimeText = "09:00–18:00", Kind = "race_invite", DestinationId = group.Key.TrackId,
+                    Day = DescribeDay(day.TotalDays), TimeText = RacingSchedule.MeetHours, Kind = "race_invite", DestinationId = group.Key.TrackId,
                     Text = $"{RacingSchedule.Name(RacingSchedule.On(day))} · {City.GetPlace(group.Key.TrackId).Name} · 和{companions}参赛 · 报名 ¥{RacingSchedule.Fee(RacingSchedule.On(day)):N0}" });
             }
             if (HasCollectorTrial && City.HasPlace(CollectorTrack))

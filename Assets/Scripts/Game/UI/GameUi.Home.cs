@@ -162,7 +162,7 @@ namespace PCShopSell.Game.UI
             var side = _boxSide == "temp" ? tempStacks : _boxSide == "box" ? boxStacks : bagStacks;
             BagStack pick = side.FirstOrDefault(s => s.Key == _boxSel);
             var tools=Ui.Row(w.Content,40);
-            Ui.Size(Ui.Button(tools,"全部放进后仓（保留食物）",()=>{S.StoreBackpackInWarehouse();_boxSel=null;w.Rebuild();if(shop)RebuildDock();},17,Ui.ButtonHot,S.CanStoreBackpackInWarehouse),-1,-1,1);
+            Ui.Size(Ui.Button(tools,"全部入库（保留即食食物）",()=>{S.StoreBackpackInWarehouse();_boxSel=null;w.Rebuild();if(shop)RebuildDock();},17,Ui.ButtonHot,S.CanStoreBackpackInWarehouse),-1,-1,1);
             if(S.CanOpenFridge)Ui.Size(Ui.Button(tools,"打开冰箱",()=>OpenFridgeWindow(),17),140);
             if(_boxSide=="bag"&&pick!=null)
             {
@@ -223,8 +223,9 @@ namespace PCShopSell.Game.UI
             else
             {
                 bool toShelf = shop && key.StartsWith("part:");
-                Ui.Size(Ui.Button(bottom, toShelf ? "上货架一件" : "放" + one, () => { S.StoreInBox(key); w.Rebuild(); }, 16, Ui.ButtonHot), 100);
-                Ui.Size(Ui.Button(bottom, toShelf ? "全上货架" : "全放进去", () => { S.StoreInBox(key, n); w.Rebuild(); }, 16, Ui.ButtonBg), 110);
+                bool toFridge = shop && S.RetailKind == "restaurant" && (key == "rice" || key.StartsWith("ing:"));
+                Ui.Size(Ui.Button(bottom, toFridge ? "存入冰箱" : toShelf ? "上货架一件" : "放" + one, () => { S.StoreInBox(key); w.Rebuild(); }, 16, Ui.ButtonHot), 100);
+                Ui.Size(Ui.Button(bottom, toFridge ? "全部存入冰箱" : toShelf ? "全上货架" : "全放进去", () => { S.StoreInBox(key, n); w.Rebuild(); }, 16, Ui.ButtonBg), 120);
                 if (shop && key.StartsWith("gift:"))
                 {
                     string gid = key.Substring(5);
@@ -504,23 +505,17 @@ namespace PCShopSell.Game.UI
         private void BuildPersonalSchedule(Window w)
         {
             w.LiveConversation = false;
-            var header = Ui.Row(w.Content, 38);
-            Ui.Size(Ui.Label(header, "笔记本 · 最近5天（购买智能手机后可查看月历）", 17, color: Ui.Accent), 0, -1, 1);
-            Ui.Size(Ui.Button(header, "天气", OpenCityClimate, 16), 76, 38).name = "CalendarWeather";
-            int limit = S.Clock.Today.TotalDays + NotebookDays;
-            var entries = S.Schedule().Where(e => e.Minute / GameTimestamp.MinutesPerDay < limit).ToArray();
-            if (entries.Length == 0)
+            int today = S.Clock.Today.TotalDays;
+            var entries = S.Schedule().ToLookup(e => (int)(e.Minute / GameTimestamp.MinutesPerDay));
+            Line(w.Content, $"笔记本 · 接下来 {NotebookDays} 天", 17, Ui.Accent);
+            for (int day = today; day < today + NotebookDays; day++)
             {
-                Line(w.Content, "最近没有安排。", 17, Ui.Dim);
-                return;
-            }
-            RectTransform list = Ui.Scroll(w.Content, 520);
-            foreach (var day in entries.GroupBy(e => (int)(e.Minute / GameTimestamp.MinutesPerDay)))
-            {
-                Line(list, DateLabel(day.Key), 18, Ui.Accent);
-                foreach (var e in day)
+                var card = BrandCard(w.Content, "");
+                Line(card, DateLabel(day), 18, Ui.Accent);
+                if (!entries.Contains(day)) Line(card, "暂无安排", 16, Ui.Dim);
+                foreach (var e in entries[day])
                 {
-                    RectTransform row = Ui.Row(list, 44);
+                    RectTransform row = Ui.Row(card, 44);
                     string color = e.Kind == "appointment" ? "#DDC18B" : (e.Kind == "repair" || e.Kind == "repairing") ? "#A9C9A9" : "#C8D0DA";
                     Ui.Size(Ui.Label(row, e.HasTime ? e.TimeText : "全天", 18, TextAnchor.MiddleLeft, Ui.Dim), 80);
                     Ui.Size(ProductText(row, $"<color={color}>{e.Text}</color>", 17), -1, -1, 1);
@@ -755,7 +750,10 @@ namespace PCShopSell.Game.UI
                 }, 17, System.Math.Abs(_cookKg - a) < 1e-6 ? Ui.ButtonHot : Ui.ButtonBg, rice >= a), 90);
             }
 
-            Line(w.Content, "选择配菜（按食材的实际千克数消耗）：", 17);
+            var ingredient = Ingredients.GetRiceCookerRecipe(_cookIngredient);
+            _cookIngredient = ingredient?.Id;
+            int need = Pantry.IngredientUnitsForRice(_cookKg);
+            Line(w.Content, "选择做法", 17);
             RectTransform irow = Ui.Row(w.Content, 44);
             irow.name = "OpeningMealRecipe";
             Ui.Size(Ui.Button(irow, "白饭", () =>
@@ -763,26 +761,25 @@ namespace PCShopSell.Game.UI
                 _cookIngredient = null;
                 if (S.OpeningMealTutorialPending) _openingMealCookStage = 2;
                 w.Rebuild();
-            }, 17, _cookIngredient == null ? Ui.ButtonHot : Ui.ButtonBg), 100);
+            }, 17, _cookIngredient == null ? Ui.ButtonHot : Ui.ButtonBg), -1, 44, 1);
 
-            foreach (IngredientDef def in Ingredients.All)
+            foreach (IngredientDef recipe in Ingredients.RiceCookerRecipes)
             {
-                IngredientDef d = def;
-                int have = S.HomeCookingIngredientCount(d.Id);
-                Ui.Size(Ui.Button(irow, $"{d.DishName}（{have * d.WeightKg:0.##}千克）", () =>
+                int have = S.HomeCookingIngredientCount(recipe.Id);
+                Ui.Size(Ui.Button(irow, recipe.DishName, () =>
                 {
-                    _cookIngredient = d.Id;
+                    _cookIngredient = recipe.Id;
                     if (S.OpeningMealTutorialPending) _openingMealCookStage = 2;
                     w.Rebuild();
-                }, 15, _cookIngredient == d.Id ? Ui.ButtonHot : Ui.ButtonBg, have > 0), 138);
+                }, 17, _cookIngredient == recipe.Id ? Ui.ButtonHot : Ui.ButtonBg, have >= need), -1, 44, 1);
             }
 
             Line(w.Content, GameSession.MealName(_cookIngredient ?? "rice") + "：" + GameSession.MealEffects(_cookIngredient ?? "rice") + "（每顿；暂只记录）", 16, Ui.Accent);
-            var ingredient = Ingredients.Get(_cookIngredient);
-            int need = Pantry.IngredientUnitsForRice(_cookKg);
-            bool enoughIngredient = ingredient == null || S.HomeCookingIngredientCount(ingredient.Id) >= need;
+            int available = ingredient == null ? 0 : S.HomeCookingIngredientCount(ingredient.Id);
+            bool enoughIngredient = ingredient == null || available >= need;
             if (ingredient != null)
-                Line(w.Content, $"本锅配菜：{ingredient.Name} {need * ingredient.WeightKg:0.##} 千克" + (enoughIngredient ? "" : " · 库存不足，可少放米或换配菜"), 16, enoughIngredient ? Ui.Dim : Ui.Warn);
+                Line(w.Content, $"本锅用 {ingredient.Name} {need * ingredient.WeightKg:0.##} 千克 · 库存 {available * ingredient.WeightKg:0.##} 千克"
+                    + (enoughIngredient ? "" : " · 可少放米或换做法"), 16, enoughIngredient ? Ui.Dim : Ui.Warn);
             bool enoughRice = rice >= Pantry.MinCookRiceKg;
             if (!enoughRice) Line(w.Content, "可用大米不足 0.25 千克。", 16, Ui.Warn);
             int bowls = Mathf.RoundToInt((float)(_cookKg * Pantry.BowlsPerKg));
@@ -806,8 +803,15 @@ namespace PCShopSell.Game.UI
         {
             OpenWorkspace("personal","personal","我的",1000,820,w=>
             {
-                var nav=Ui.Row(w.Content,38,6);string[] names={"状态","饮食","住处","物品与包裹"};
+                var nav=Ui.Row(w.Content,38,6);string[] names={"状态","饮食","住处","物品与包裹","人物"};
                 for(int i=0;i<names.Length;i++){int tab=i;Ui.Size(Ui.Button(nav,names[i],()=>{_myPanelTab=tab;w.Rebuild();},17,_myPanelTab==i?Ui.ButtonHot:Ui.ButtonBg),-1,38,1).name="MyTab_"+i;}
+                if (_myPanelTab == 4)
+                {
+                    Ui.Size(Ui.Button(w.Content, "已认识的人", OpenCityPeople, 18), -1, 44);
+                    Ui.Size(Ui.Button(w.Content, "人际关系图", OpenRelationsPanel, 18), -1, 44);
+                    Ui.Size(Ui.Button(w.Content, "通讯录", OpenContactsPanel, 18), -1, 44);
+                    return;
+                }
                 var stats=S.Player;
                 Line(w.Content,$"饱腹 {stats.Hunger:0} · 精力 {stats.Energy:0}/{stats.MaxEnergy:0} · 健康 {stats.Health:0} · 压力 {stats.Stress:0}/100",21,
                     stats.Stress >= PlayerStats.HighStressThreshold ? Ui.Warn : Ui.Good);
@@ -818,7 +822,6 @@ namespace PCShopSell.Game.UI
                     Line(w.Content,$"智力 {stats.Intelligence} · 魅力 {S.EffectiveCharm} · 动手能力 {stats.Skill} · 体能 {stats.Stamina}",17);
                     Line(w.Content,StandingText(S.HasShop?S.PlayerShop.Reputation:0,false),17,Ui.Accent).name="MyStanding";
                     var links=Ui.Row(w.Content,38,6);
-                    Ui.Size(Ui.Button(links,"日程",OpenSchedulePanel,17),-1,38,1);
                     Ui.Size(Ui.Button(links,"天气与穿衣",OpenCityClimate,17),-1,38,1);
                     Ui.Size(Ui.Button(links,"行情",OpenMarketPanel,17),-1,38,1);
                     string blocker=WorkbenchAccessReason;
@@ -1072,9 +1075,52 @@ namespace PCShopSell.Game.UI
             CartAddButton(w, row, "gift:" + def.Id, () => S.CartAddGift(def.Id), "加入购物车", 150, open);
         }
 
+        private CityActivity PhoneSignHelpHere(Place place)
+        {
+            if (place?.Business != GameSession.PhoneBusiness) return null;
+            var activity = S.SignHelpAt(place);
+            return activity != null && (activity.State == CityActivityPhase.Running
+                || System.Math.Abs(S.Clock.Now.TotalMinutes - activity.ScheduledStart) <= GameSession.CityArrivalWindowMinutes)
+                ? activity : null;
+        }
+
         private void BuildPhoneShop(Window w, Place p)
         {
-            BuildCarryStore(w,p);
+            var activity = PhoneSignHelpHere(p);
+            if (activity == null)
+            {
+                if (S.SignHelpAt(p) is CityActivity upcoming)
+                    Line(w.Content, "已约好帮唐俊杰换招牌 · " + CityTime(upcoming.ScheduledStart), 17, Ui.Accent);
+                BuildCarryStore(w, p);
+                return;
+            }
+
+            var definition = S.CityActivityService(activity);
+            Line(w.Content, definition.Name, 24, Ui.Accent);
+            if (activity.State == CityActivityPhase.Running)
+            {
+                long remaining = System.Math.Max(0, activity.ActualStart + activity.Duration - S.Clock.Now.TotalMinutes);
+                Line(w.Content, $"正在换招牌 · 剩余 {remaining} 分钟", 20, Ui.Good);
+                Para(w.Content, activity.Stage == 0 ? definition.StartText : S.CityActivityMidText(activity), 18);
+                Ui.Size(Ui.Button(w.Content, "继续帮忙", Resume, 19, Ui.ButtonHot), -1, 48);
+                return;
+            }
+
+            Line(w.Content, $"约定 {CityTime(activity.ScheduledStart)} · 耗时 {activity.Duration} 分钟", 18, Ui.Dim);
+            Para(w.Content, "一起拆旧招牌、装好新招牌。做完后唐俊杰对你的好感会提升。", 18);
+            string why = S.SignHelpStartBlocker();
+            if (why != null) Ui.Notice(w.Content, why);
+            Ui.Size(Ui.Button(w.Content, "开始帮忙", () =>
+            {
+                if (S.StartSignHelp()) Resume();
+                else w.Rebuild();
+            }, 20, Ui.ButtonHot, why == null), -1, 48).name = "StartSignHelp";
+
+            void Resume()
+            {
+                CloseAllWindows();
+                S.Time.SetPaused(false);
+            }
         }
 
         /// <summary>这家店卖的店铺设备（收款码、空调……）：买了当场装到自己店里。</summary>
@@ -1172,7 +1218,13 @@ namespace PCShopSell.Game.UI
             Ui.Size(_placeStatus, -1, 56);
 
             Line(_placePanel, shop ? "待摆放的家具（店里后仓、临时存放里的）：" : "待摆放的家具（后仓、临时存放里的）：", 17);
-            if(shop)Line(_placePanel,"货架 "+S.PlacedFixtures(FixtureKind.Shelf)+" / "+S.ShopShelfLimit+"；其他家具不限数量。",17,Ui.Accent);
+            if (shop)
+            {
+                string limit = S.CurrentShop.RetailKind == "restaurant"
+                    ? $"餐桌 {GameSession.RestaurantTablesPlaced(S.CurrentShop)} / {GameSession.RestaurantTableLimit(S.PlayerShop.Size)}"
+                    : $"货架 {S.PlacedFixtures(FixtureKind.Shelf)} / {S.ShopShelfLimit}";
+                Line(_placePanel, limit, 17, Ui.Accent);
+            }
             bool any = false;
             foreach (var kv in S.FurnitureToPlaceList(shop))
             {

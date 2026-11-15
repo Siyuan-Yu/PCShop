@@ -27,7 +27,15 @@ namespace PCShopSell.Core.Session
             Add("social_70", "王振海的显卡看货", "stall_gpu", 90, new CityVenueService(0, energy: -6, mood: 8, relation: 7), "看显卡样品", "走访下一展台", "上机核对所选显卡 · 五分钟", "谈账期 · 智力50交情35起", "选择实际采购");
             Add("social_71", "顾文的钟表旧物局", GameSession.OldMarketVenueId, 90, new CityVenueService(0, energy: -6, mood: 10, relation: 6), "在市场会合", "走到下一旧物摊", "观察机芯", "核对走时", "询问流转记录");
             Add("social_72", "雷鸣的旧电子局", GameSession.OldMarketVenueId, 90, new CityVenueService(0, energy: -6, mood: 10, relation: 6), "在市场会合", "走到下一旧物摊", "学习电路检测", "学习线材检测", "学习接头检测");
-            Add("social_85", "帮许文杰换招牌", "stall_cpu", 30, new CityVenueService(0, energy: -5, relation: 4), "一起整理招牌");
+            all.Add(new CityActivityDefinition
+            {
+                Id = GameSession.SignHelpActivityId, Name = "帮唐俊杰换招牌", VenueId = "shop04", EventOnly = true,
+                Minutes = 30, ServiceOptionCount = 1, DefaultService = new CityVenueService(0, energy: -5, relation: 4),
+                Choices = new[] { "一起换招牌" },
+                StartText = "你和唐俊杰把旧招牌卸下来",
+                MidText = "你扶稳新招牌，唐俊杰把它固定在门口",
+                EndText = "新招牌装好了，唐俊杰向你道谢"
+            });
             Add("social_93", "骑手歇脚", "stall_cpu", 20, new CityVenueService(0, relation: 4), "歇脚聊会儿");
             Add("social_113", "邻里交流", "life_service", 10, new CityVenueService(0, relation: 1), "说明情况");
             Add("social_114", "流浪狗救助交接", "life_service", 20, new CityVenueService(0, relation: 2), "现场交接");

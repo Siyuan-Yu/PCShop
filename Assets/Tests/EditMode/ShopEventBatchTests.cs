@@ -94,9 +94,17 @@ namespace PCShopSell.Tests
         [Test] public void SignHelpUsesAnActualAppointmentWithJieAndWaitsForThirtyMinutes()
         {
             using var s = Make(); s.Meet("jie", 40); int relation = s.Relation("jie"); Resolve(s, "shop_neighbor_help", 0);
-            var a = s.CityActivities.Single(x => x.Active && x.DefinitionId == "social_85"); Assert.AreEqual(relation, s.Relation("jie"));
+            var a = s.CityActivities.Single(x => x.Active && x.DefinitionId == GameSession.SignHelpActivityId);
+            Assert.AreEqual(relation, s.Relation("jie"));
+            Assert.IsFalse(s.StartSignHelp());
             AtTime(s, a.ScheduledStart); At(s, a.VenueId); s.PrepareVenueCompanions(s.CurrentPlace); s.AdvanceClock(3);
-            Assert.AreEqual(CityActivityPhase.Running, a.State, a.EndReason); s.AdvanceClock(31);
+            Assert.AreEqual(CityActivityPhase.Gathering, a.State, a.EndReason);
+            Assert.IsTrue(s.StartSignHelp(), a.EndReason);
+            Assert.AreEqual(0, a.EntryCostCents);
+            s.AdvanceClock(29);
+            Assert.AreEqual(CityActivityPhase.Running, a.State, a.EndReason);
+            Assert.AreEqual(relation, s.Relation("jie"));
+            s.AdvanceClock(1);
             Assert.AreEqual(CityActivityPhase.Completed, a.State, a.EndReason); Assert.GreaterOrEqual(s.Relation("jie"), relation + 4);
         }
         private static void Sale(GameSession s, long cents)

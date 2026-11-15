@@ -31,7 +31,7 @@ namespace PCShopSell.Tests
                 s.CityPersonState("momo").LocationPlaceId = GameSession.CommunityMcnId;
                 long cash = s.Ledger.Balance.Cents;
                 Assert.False(s.SignKolAmbassador("momo", 60, 7));
-                Assert.True(s.SignKolAmbassador("momo", 60, 7, remote: true, phoneCall: true));
+                Assert.True(s.SignKolAmbassador("momo", 60, 7, remote: true));
                 var pending = s.ActiveKolAmbassador("momo");
                 Assert.IsNull(pending.BrandId);
                 Assert.AreEqual(60 * 1440L, pending.EndAt - pending.SignedAt);

@@ -58,6 +58,7 @@ namespace PCShopSell.Core.Session
             var def=CityLifeCatalog.Activity(definitionId)?.AtVenue(venueId);if(def==null||!City.HasPlace(def.VenueId))return Clock.Now.TotalMinutes;
             if(IsWorking||_sleeping||IsGameOver)return Clock.Now.TotalMinutes;
             var venue=City.GetPlace(def.VenueId);long now=Clock.Now.TotalMinutes;
+            if (CityActivityVenueAccessBlocker(venue) != null) return now;
             int trip=CityTravelMinutes(venue);
             var person=CityPersonState(personId);var npcRoute=person!=null?PlanCityRoute(person,venue.Id,now):null;
             if(npcRoute!=null)trip=Math.Max(trip,(int)(npcRoute.ArriveMinute-now));
@@ -171,6 +172,15 @@ namespace PCShopSell.Core.Session
             var route=PlanTrip(target.NodeId,StandOf(target),out double meters);
             return route==null?int.MaxValue/4:Math.Max(1,route.EstimateRemainingMinutes(Time.SecondsPerMinuteAt1x));
         }
+        private string CityActivityVenueAccessBlocker(Place venue)
+        {
+            if (DistrictAccessBlocker(venue) is string reason) return reason;
+            if (CurrentPlace == venue || !City.IsLakeCity) return null;
+            var route = PlanTrip(venue.NodeId, StandOf(venue), out _);
+            if (route == null) return "目的地路线不可达";
+            int blockedTier = BlockedDistrictOnTrip(route);
+            return blockedTier > 0 ? $"赴约路线经过尚未开放的{DistrictName(blockedTier)}片区" : null;
+        }
         public string CityActivityBlocker(string definitionId,IEnumerable<string> persons,long start,bool approveEmployee=false)
             => CityActivityBlockerAt(definitionId, persons, start, approveEmployee, null);
         private string CityActivityBlockerAt(string definitionId,IEnumerable<string> persons,long start,bool approveEmployee,string venueId)
@@ -185,6 +195,7 @@ namespace PCShopSell.Core.Session
             if(IsGameOver||IsWorking||_sleeping)return "当前状态不能参加活动";
             if(start<Clock.Now.TotalMinutes)return "预约时间已经过去";
             var venue=City.GetPlace(def.VenueId);
+            if (CityActivityVenueAccessBlocker(venue) is string accessBlocker) return accessBlocker;
             if(SupplierClosesOnWeekend(venue)&&new GameDate((int)(start/1440)).IsWeekend)return "该场所周末休息，请选择工作日赴约";
             if(!CityVenueFits(venue,start,def.Minutes))return "该时段不能在闭店前完成，请改约其他时间";
             string logicalId = def.LogicalId ?? definitionId;
@@ -220,7 +231,7 @@ namespace PCShopSell.Core.Session
                 bool working=row!=null&&EmployeeShiftOverlaps(row.Person,start-personTravel,end+personTravel);
                 if(working&&!approveEmployee)return "该员工届时当班；需要明确批准离岗，页面会说明无人值守影响";
                 var d=CityPerson(id);
-                bool hostedRaceVisit = definitionId == "race_watch" || definitionId.StartsWith("race_aid_", StringComparison.Ordinal)
+                bool hostedRaceVisit = definitionId == "race_watch" || IsRaceAidActivity(definitionId)
                     || definitionId == "social_43" || definitionId == "social_59" || definitionId == "social_60" || definitionId == "social_61"
                     || definitionId == "social_70" || definitionId == "social_75"
                     || definitionId == "social_77" && new GameDate((int)(start / 1440)).IsWeekend
@@ -231,6 +242,15 @@ namespace PCShopSell.Core.Session
             int seats=_cityActivities.Where(a=>a.Active&&a.VenueId==venue.Id&&start<a.ScheduledStart+a.Duration&&end>a.ScheduledStart).Sum(a=>a.Participants.Length+1);
             return seats+ids.Length+1>18?"这个时段座位不足，请选择下一时段":null;
         }
+        public string CityActivityInvitationBlocker(string definitionId, string personId, long start, bool approveEmployee) =>
+            CityInviteBlocker(personId) ?? CityActivityBlocker(definitionId, new[] { personId }, start, approveEmployee);
+
+        public CityActivity ScheduleCityActivityInvitation(string definitionId, string personId, long start, bool approveEmployee)
+        {
+            if (CityInviteBlocker(personId) is string reason) { Fail(reason); return null; }
+            return ScheduleCityActivity(definitionId, new[] { personId }, start, approveEmployee);
+        }
+
         public CityActivity ScheduleCityActivity(string definitionId,IEnumerable<string> persons,long start,bool approveEmployee=false,string sourceId=null)
             => ScheduleCityActivityAt(definitionId, persons, start, approveEmployee, sourceId, null);
         private CityActivity ScheduleCityActivityAt(string definitionId,IEnumerable<string> persons,long start,bool approveEmployee,string sourceId,string venueId)
@@ -249,13 +269,18 @@ namespace PCShopSell.Core.Session
                 OccupiedFrom=start-CityActivityTravelReserve(City.GetPlace(def.VenueId),ids,start),OccupiedUntil=start+def.Minutes+CityActivityTravelReserve(City.GetPlace(def.VenueId),ids,start),State=CityActivityPhase.Scheduled,Seat=_cityActivities.Count%3,
                   Participants=ids.Select(id=>
                   {
-                      var route=PlanCityRoute(CityPersonState(id),def.VenueId,Clock.Now.TotalMinutes,start-3);
+                      var route=PlanCityRoute(CityPersonState(id),def.VenueId,Clock.Now.TotalMinutes,start-3,
+                          IsRaceAidActivity(definitionId) ? VehicleKind.Taxi : (VehicleKind?)null);
                       return new CityActivityParticipant {PersonId=id,Phase=CityParticipantPhase.NotDeparted,
                           TravelTransportChosen=route!=null,TravelTransport=route?.Transport??VehicleKind.Walk};
                   }).ToArray()};
             _cityActivities.Add(activity);
-            foreach(string id in ids)RememberSocial(id,"约好到"+City.GetPlace(def.VenueId).Name+"参加"+def.Name+"；此时仅预约，尚未消费或完成活动。");
-            if (sourceId == null || !sourceId.StartsWith("walk-in:", StringComparison.Ordinal)) Say("预约成立："+def.Name+"，请按日程实际前往。预计费用 "+VenuePriceRange(def)+(IsOwnedVenue(City.GetPlace(def.VenueId))?"（老板自用免费）。":"，到场开始时支付。"));
+            bool raceAid = IsRaceAidActivity(definitionId);
+            foreach (string id in ids)
+                RememberSocial(id, raceAid ? "答应陪同前往" + City.GetPlace(def.VenueId).Name
+                    : "约好到" + City.GetPlace(def.VenueId).Name + "参加" + def.Name + "；此时仅预约，尚未消费或完成活动。");
+            if (!raceAid && (sourceId == null || !sourceId.StartsWith("walk-in:", StringComparison.Ordinal)))
+                Say("预约成立："+def.Name+"，请按日程实际前往。预计费用 "+VenuePriceRange(def)+(IsOwnedVenue(City.GetPlace(def.VenueId))?"（老板自用免费）。":"，到场开始时支付。"));
             return activity;
         }
         public bool GoToCityActivity(string id)
@@ -308,7 +333,7 @@ namespace PCShopSell.Core.Session
                 return;
             }
             CityIntent=null;
-            if(intent.EnterOnArrival&&Enter(p))CityPlaceEntered?.Invoke(p);
+            if (intent.EnterOnArrival && Enter(p, intent.ActivityId)) CityPlaceEntered?.Invoke(p);
         }
         public bool SetCityFavorite(string placeId,bool favorite)
         {
@@ -362,11 +387,17 @@ namespace PCShopSell.Core.Session
                 var def=CityActivityService(a);
                 if(def==null||!City.HasPlace(a.VenueId)){EndCityActivity(a,CityActivityPhase.Blocked,"场所配置失效；保留记录，不惩罚履约",now);continue;}
                 var venue=City.GetPlace(a.VenueId);
+                if (DistrictAccessBlocker(venue) != null && a.State != CityActivityPhase.Running)
+                {
+                    CancelLockedCityAppointment(a, now);
+                    continue;
+                }
                 if(!a.Reminder && now>=a.ScheduledStart-Math.Max(30,CityTravelMinutes(venue))) {a.Reminder=true;Say("日程提醒："+def.Name+"，请实际前往"+venue.Name+"。");}
                 if (a.State!=CityActivityPhase.Running && CurrentPlace==venue) PrepareVenueCompanions(venue);
                 bool participantsReady=true;
                 if(CurrentPlace==venue&&a.PlayerVenueRoute==null&&now>=a.ScheduledStart-CityArrivalWindowMinutes)a.PlayerVenueRoute=CityActivityLocalRoute(a,PlayerPosition,0,now);
                 bool playerReady=CurrentPlace==venue&&a.PlayerVenueRoute!=null&&now>=a.PlayerVenueRoute.ArriveMinute;
+                bool immediateDeparture = IsRaceAidActivity(a.DefinitionId);
                 foreach(var participant in a.Participants)
                 {
                     var person=CityPersonState(participant.PersonId);
@@ -378,7 +409,7 @@ namespace PCShopSell.Core.Session
                             participant.TravelTransportChosen?participant.TravelTransport:(VehicleKind?)null);
                         if(route==null){EndCityActivity(a,CityActivityPhase.Blocked,"参与者路线不可达；不按玩家爽约处理",now);break;}
                         participant.TravelTransportChosen=true;participant.TravelTransport=route.Transport;
-                        if(now>=a.ScheduledStart-(route.ArriveMinute-now)-3)
+                        if(immediateDeparture || now>=a.ScheduledStart-(route.ArriveMinute-now)-3)
                         {
                             var worker=Employees.FirstOrDefault(e=>PersonIdOf(e.Person)==participant.PersonId);
                             if(worker!=null&&EmployeeTrip(worker.Person.Id)!=null)
@@ -410,13 +441,20 @@ namespace PCShopSell.Core.Session
                     {EndCityActivity(a,participantsReady?CityActivityPhase.NoShow:CityActivityPhase.Blocked,participantsReady?"未在宽限时间内到场":"参与者未能准时到达，请改约；不扣关系",now);continue;}
                     if (now > a.ScheduledStart + CityArrivalWindowMinutes && !participantsReady)
                     { EndCityActivity(a, CityActivityPhase.Blocked, "同行者未能到齐，请改约；不扣消费与关系", now); continue; }
-                    if((now<a.ScheduledStart && !a.RendezvousReady)||!playerReady||!participantsReady)continue;
+                    if((now<a.ScheduledStart && !a.RendezvousReady && !immediateDeparture)||!playerReady||!participantsReady)continue;
                     if (!CityVenueFits(venue, now, 1))
                     { EndCityActivity(a, CityActivityPhase.Cancelled, "场所已经打烊，尚未消费", now); continue; }
+                    if (immediateDeparture && !a.ServiceConfirmed)
+                    {
+                        a.ServiceConfirmed = true;
+                        a.ServiceChoice = 0;
+                    }
                     // Arriving with friends is not a purchase. Choose a service/menu at the venue first.
                     if (!a.ServiceConfirmed && !a.EntryPaid)
                     {
-                        if (now > a.ScheduledStart + CityArrivalWindowMinutes && !a.RendezvousReady) EndCityActivity(a, CityActivityPhase.Cancelled, "本次等候结束，尚未选择服务，不扣消费", now);
+                        if (now > a.ScheduledStart + CityArrivalWindowMinutes && (!a.RendezvousReady || a.DefinitionId == SignHelpActivityId || IsOnsiteActivity(a)))
+                            EndCityActivity(a, CityActivityPhase.Cancelled, IsOnsiteActivity(a) ? "等候时间已过，现场活动未开始，未扣费用"
+                                : a.DefinitionId == SignHelpActivityId ? "等候时间已过，没能开始换招牌" : "本次等候结束，尚未选择服务，不扣消费", now);
                         continue;
                     }
                     if(!CityVenueFits(venue,now,a.Duration)){EndCityActivity(a,CityActivityPhase.Interrupted,"闭店前无法完成，未收整场费用，请改约",now);continue;}
@@ -471,6 +509,20 @@ namespace PCShopSell.Core.Session
             TickFishing(now);
             CompleteCityTravel();
         }
+        private void CancelLockedCityAppointment(CityActivity activity, long now)
+        {
+            const string reason = "会面地点所在片区尚未开放，预约已取消。没有扣费，也不会影响关系";
+            EndCityActivity(activity, CityActivityPhase.Blocked, reason, now);
+            var task = _lifeTasks.FirstOrDefault(t => t.Activity == activity.Id);
+            if (task != null) task.Done = true;
+        }
+
+        private void CancelLockedCityAppointmentsOnLoad()
+        {
+            foreach (var activity in _cityActivities.Where(a => a.Active && a.State != CityActivityPhase.Running
+                && City.HasPlace(a.VenueId) && DistrictAccessBlocker(City.GetPlace(a.VenueId)) != null).ToArray())
+                CancelLockedCityAppointment(activity, Clock.Now.TotalMinutes);
+        }
         public static string CityActivityChoiceText(CityActivityDefinition definition, string key)
         {
             if (key == HoldHandsChoice) return "牵手";
@@ -483,7 +535,7 @@ namespace PCShopSell.Core.Session
         {
             var a=_cityActivities.FirstOrDefault(x=>x.Id==activityId&&x.State==CityActivityPhase.Running);
             var def=CityActivityService(a);
-            if(def==null||choice<0||choice>=def.Choices.Length||CurrentPlace?.Id!=a.VenueId)return false;
+            if(def==null||IsOnsiteBasketball(a)||choice<0||choice>=def.Choices.Length||CurrentPlace?.Id!=a.VenueId)return false;
             if (a.DefinitionId == "social_60" && choice == 3 && FishingActive && _fishing.Phase != FishingPhase.Ready)
                 return Fail("请先处理当前鱼口或鱼获，再换钓位");
             if (a.ServiceConfirmed && choice < def.ServiceCount && choice != a.ServiceChoice) return false;

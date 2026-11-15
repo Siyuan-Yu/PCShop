@@ -34,6 +34,7 @@ namespace PCShopSell.Core.Session
         /// <summary>结账时真正去做：买下 / 从原处拿出来装车。</summary>
         internal Func<double, bool> Run;
         internal Func<string> Blocker;
+        internal bool RawIngredient;
 
         public double Kg => UnitKg * Amount;
         public Money Price => UnitPrice == null ? Money.Zero : UnitPrice().Scale(Amount);
@@ -197,6 +198,7 @@ namespace PCShopSell.Core.Session
             if(total>100 || total>CitySupplierRemaining(source.Id,id))return Fail("超过本次可采购数量或本日剩余配额。");
             PutLine(_cart,new CartLine {
                 Key=key,Name=product.Name,UnitKg=product.WeightKg,UnitPrice=()=>CityRetailWholesalePrice(source,product),
+                RawIngredient=IsRawIngredientProduct(id),
                 Blocker=()=>CurrentPlace!=source || !IsPlaceOpen(source)?"货源已经打烊或不在这里":
                     CartAmount(key)<CitySupplierMinimum(source.Id,id)?product.Name+" · "+WholesaleMinimumText(source.Id,id):
                     CartAmount(key)>CitySupplierRemaining(source.Id,id)?product.Name+"超过本日剩余配额":null,
@@ -303,6 +305,7 @@ namespace PCShopSell.Core.Session
             {
                 Key = "rice",
                 Name = "大米",
+                RawIngredient = true,
                 ByWeight = true,
                 UnitKg = 1.0,
                 UnitPrice = () => Pantry.RicePricePerKg,
@@ -320,6 +323,7 @@ namespace PCShopSell.Core.Session
             {
                 Key = "ing:" + id,
                 Name = d.Name,
+                RawIngredient = true,
                 UnitKg = Backpack.IngredientKg(id),
                 UnitPrice = () => d.Price,
                 Run = n => BuyIngredient(id, (int)Math.Round(n)),
@@ -339,6 +343,9 @@ namespace PCShopSell.Core.Session
             Money due = CartGoods;
             if (CartTruckKg > 1e-9)
             {
+                if (RestaurantIngredientDeliveryBlocker(CourierShop(defaultToShop),
+                    _cart.Where(line => line.RawIngredient).Sum(line => line.TruckKg)) is string coldStorageBlocker)
+                    return coldStorageBlocker;
                 if (CartCars(defaultToShop) < 0) return $"有一件超过一辆面包车能装的 {CourierCapacityKg:0} 千克";
                 due += CartFreight(defaultToShop);
             }

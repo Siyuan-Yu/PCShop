@@ -108,7 +108,7 @@ namespace PCShopSell.Core.Session
             Player.EnergyChanged = SynchronizeEnergyExhaustion;
             Ledger = new Ledger(openingCash);
             Time = new TimeController();
-            Market = new HardwareMarket(Random) {DayProvider=()=>Clock.Today.TotalDays};
+            Market = new HardwareMarket(Random);
             Market.EnsureOutlook(start.Date);
             Online = new Online1788();
             Police = new PoliceSystem(city);
@@ -179,7 +179,8 @@ namespace PCShopSell.Core.Session
             // 开局做饭教学：世界时钟不自己走，玩家可以慢慢看；只有锅在焖饭时才走，否则饭永远焖不好。吃饭、装包这些操作自己会推进相应的分钟。
             if (OpeningClockFrozen) return 0;
             if (!_sleeping && !IsWorking && !CityActivityExclusive && !BrandExpoExclusive && PendingEvent == null && Trip == null
-                && (TryShowRacingIntroduction() || TryShowRelativeOverdue() || TryShowLinOverdue() || TryShowMingAfterRace() || TryShowRacingBatchFollowup() || TryOfferLeisureInvitation())) return 0;
+                && (TryShowRacingIntroduction() || TryShowRelativeOverdue() || TryShowLinOverdue() || TryShowMingAfterRace()
+                    || TryShowRacingBatchFollowup() || TryOfferLeisureInvitation() || TryRollDeferredDailyEvent())) return 0;
             _activeCheckoutSeconds+=Math.Min(realSeconds,TimeController.MaxTickSeconds);
             double scaled = Math.Min(realSeconds, TimeController.MaxTickSeconds) * Time.Speed * TimeController.WorldRate;
 
@@ -221,7 +222,7 @@ namespace PCShopSell.Core.Session
         public const int StartLunchboxes = 2;
 
         /// <summary>进入地点（玩家必须站在它的入口节点上、没在路上）。进入自己的店即开门营业。背包里的东西不会自动放下，要打开背包一键放。</summary>
-        public bool Enter(Place place)
+        public bool Enter(Place place, string activityId = null)
         {
             if (place == null) throw new ArgumentNullException(nameof(place));
             if(Racing)return Fail("请先完成或退出当前比赛。");
@@ -230,7 +231,7 @@ namespace PCShopSell.Core.Session
             if (Trip != null) return Fail("还在路上。");
             if (OffNode)
             {
-                if (place.NodeId != PlayerNodeId || Dist(PlayerPosition, DoorOf(place)) >= EnterRadius) return Fail("还没走到门口。");
+                if (place.NodeId != PlayerNodeId || Dist(PlayerPosition, DoorOf(place)) > DoorEnterRadius(place)) return Fail("还没走到门口。");
                 ClearEdge();
             }
             if (place.NodeId != PlayerNodeId)
@@ -252,7 +253,7 @@ namespace PCShopSell.Core.Session
             }
             UpdatePlayerWork(Clock.Now);
             if (HasWorkContract && place == WorkPlace) StartPlayerWork();
-            PrepareVenueCompanions(place);
+            PrepareVenueCompanions(place, activityId);
             if (HasUnloadable) Say($"背包里带着东西，按 B 打开背包，一键全放到{UnloadTarget}。");
             return true;
         }
@@ -383,8 +384,8 @@ namespace PCShopSell.Core.Session
                 ShopSimulation sim = shop.Sim;
                 foreach (StockLine l in sim.Stock.Lines()) sum += Market.PriceOf(l.Part).Yuan * l.Count;
                 foreach (var kv in sim.Stock.GoodsLines()) sum += (Gifts.Get(kv.Key)?.Price.Yuan ?? 0) * kv.Value;
-                foreach (var order in sim.Orders) if (order.PartsReserved)
-                    foreach (var p in PartCatalog.BuildList(order.Tier)) sum += Market.PriceOf(p).Yuan;
+                foreach (var order in sim.Orders)
+                    foreach (var p in order.ReservedParts) sum += Market.PriceOf(p).Yuan;
                 foreach (int tier in sim.DisplayPcs)
                     foreach (var p in PartCatalog.BuildList(tier)) sum += Market.PriceOf(p).Yuan;
                 if(shop.PendingDisplayTier>=0)foreach(var p in PartCatalog.BuildList(shop.PendingDisplayTier))sum+=Market.PriceOf(p).Yuan;
@@ -429,6 +430,10 @@ namespace PCShopSell.Core.Session
 
         private void OnTimeAdvanced(GameTimestamp from, GameTimestamp to)
         {
+            bool dailyEventDue = false;
+            foreach (int eventMinute in EventMinutes)
+                if (Crosses(from, to, eventMinute)) { dailyEventDue = true; break; }
+            bool activityAtEventTime = dailyEventDue && CityActivityExclusive;
             TickCityAssets();
             TickKolStreams(from.TotalMinutes,to.TotalMinutes);
             TickEmployeePayroll(from.TotalMinutes, to.TotalMinutes);
@@ -467,7 +472,7 @@ namespace PCShopSell.Core.Session
             if (!_pendingFaint) UpdatePlayerWork(to);
             if (Crosses(from, to, CandidateMinute)) OnCandidateHour(to.Date);
             ExpireCandidates();
-            foreach (int eventMinute in EventMinutes) if (Crosses(from, to, eventMinute)) RollDailyEvent(to.Date);
+            if (dailyEventDue) RollDailyEvent(to.Date, activityAtEventTime);
             CheckAppointments(to);
             DeliverOnlineOrders(to);
             DeliverCouriers(to);
@@ -558,7 +563,8 @@ namespace PCShopSell.Core.Session
                     return;
                 }
                 if (WorkPayGrace) { Say("现金为负，请按时打工，工资每天收工后到账；也可以处置持仓和合格资产。"); return; }
-                if(NegativeCashDays==1 || NegativeCashDays%3==0)Popup?.Invoke("资金告急", $"账上是负数（{Ledger.Balance}），已持续 {NegativeCashDays} 天。请暂停非必要采购、卖出持仓、处置可售资产或打工恢复现金。关系与经营经历会保留，真实到期账单仍需支付。");
+                if ((NegativeCashDays == 1 && BankPlace == null) || NegativeCashDays % 3 == 0)
+                    Popup?.Invoke("资金告急", $"账上是负数（{Ledger.Balance}），已持续 {NegativeCashDays} 天。请暂停非必要采购、卖出持仓、处置可售资产或打工恢复现金。关系与经营经历会保留，真实到期账单仍需支付。");
             }
             else
             {

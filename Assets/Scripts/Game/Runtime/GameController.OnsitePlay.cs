@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using PCShopSell.Core.Session;
 using PCShopSell.Game.Runtime;
 using UnityEngine;
@@ -58,7 +59,13 @@ namespace PCShopSell.Game
                     Prims.Box(root,"HoopPost",new Vector3(0,1.6f,9),new Vector3(.2f,3.2f,.2f),sage);
                     for(int i=0;i<12;i++){float a=i*Mathf.PI*2/12;Prims.Box(root,"Rim",new Vector3(Mathf.Cos(a)*.3f,3.05f,8+Mathf.Sin(a)*.3f),new Vector3(.14f,.07f,.14f),Mats.Lit(ArtDirection.Clay));}
                     _onsiteBall=Prims.Shape(PrimitiveType.Sphere,root,"LiveBasketball",new Vector3(0,1.7f,0),Vector3.one*.35f,Mats.Lit(ArtDirection.Clay)).transform;
-                    _onsiteDefender=Prims.Figure(root,"DefendingPartner",ArtDirection.Sage,ArtDirection.Cream,1).transform;_onsiteDefender.GetComponent<FigureMotion>().LocomotionEnabled=false;
+                    string opponentId = Session.RunningCityActivity.Participants.FirstOrDefault()?.PersonId;
+                    string opponentName = Session.CityPerson(opponentId)?.Name ?? "同行者";
+                    var opponent = Prims.Figure(root, opponentName, opponentId == null ? ArtDirection.Sage : CrowdView.PersonClothing(opponentId), ArtDirection.Cream, 1);
+                    if (opponentId != null) CityNpcClothing.Apply(opponent, Session, opponentId);
+                    _onsiteDefender = opponent.transform;
+                    opponent.GetComponent<FigureMotion>().LocomotionEnabled = false;
+                    Prims.SignText(_onsiteDefender, opponentName, new Vector3(0, 2.2f, 0), 2.6f, .26f, ArtDirection.Cream);
                     _onsitePlayer=Prims.Figure(root,"PlayerShooting",ArtDirection.Clay,ArtDirection.Cream,1).transform;_onsitePlayer.GetComponent<FigureMotion>().LocomotionEnabled=false;
                     _onsiteCamera.orthographic=true;_onsiteCamera.orthographicSize=9;_onsiteCamera.transform.localPosition=new Vector3(14,17,-10);_onsiteCamera.transform.LookAt(root.TransformPoint(new Vector3(0,1,4)));
                 }

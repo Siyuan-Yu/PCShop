@@ -39,13 +39,13 @@ namespace PCShopSell.Core.Session
             var b=Brand(brandId);if(!BrandPay((b.Level==0?20000L:100000L)*100,"品牌升级 · "+b.Name,b.Id))return false;
             b.Level++;return true;
         }
-        public string KolSigningBlocker(string person, int days, int frequency, bool remote = false, bool phoneCall = false)
+        public string KolSigningBlocker(string person, int days, int frequency, bool remote = false)
         {
             if (IsGameOver || KolMarket.Get(person) == null) return "无法签约该代言人";
             if (!IsMet(person)) return "先交换联系方式，或请MCN介绍";
             if (remote)
             {
-                string contact = RemoteConversationBlocker(person, phoneCall);
+                string contact = RemoteConversationBlocker(person);
                 if (contact != null) return contact;
             }
             else if (!CitySamePlace(person)) return "请与本人当面交谈，或通过手机联系";
@@ -55,9 +55,9 @@ namespace PCShopSell.Core.Session
             return Ledger.Balance < Money.FromYuan(KolSigningFee(person, days)) ? "签约资金不足" : null;
         }
 
-        public bool SignKolAmbassador(string person, int days, int frequency, bool remote = false, bool phoneCall = false)
+        public bool SignKolAmbassador(string person, int days, int frequency, bool remote = false)
         {
-            string why = KolSigningBlocker(person, days, frequency, remote, phoneCall);
+            string why = KolSigningBlocker(person, days, frequency, remote);
             if (why != null) return Fail(why);
             long fee = KolSigningFee(person, days) * 100;
             if (!BrandPay(fee, days + "天代言签约 · " + CityPerson(person).Name)) return false;

@@ -143,11 +143,13 @@ namespace PCShopSell.Game.UI
             _questPanel.gameObject.SetActive(visible);
             if (!visible) return;
             if (district != null) UpdateDistrictQuestCard(district);
-            else if (invitation != null) SetQuestCard("主线 · 等待联系", "等待街区引荐", invitation);
+            else if (invitation != null) SetQuestCard("主线 · 等待联系", "等待街区引荐", invitation,
+                "引荐条件已达成");
             else
             {
                 var (label, action) = QuestAction(q.Target);
-                SetQuestCard("当前任务", q.Title, q.Short, GuideLocation(q.Target), ProgressOf(q)?.Split('\n')[0], label, action);
+                string heading = q.Target == QuestTarget.CommunityGoal ? "主线目标" : "当前任务";
+                SetQuestCard(heading, q.Title, q.Short, GuideLocation(q.Target), ProgressOf(q)?.Split('\n')[0], label, action);
             }
         }
 
@@ -279,6 +281,8 @@ namespace PCShopSell.Game.UI
             S.GoTo(S.City.NearestNode(position.X, position.Y));
         }
 
+        private Place ScooterDealer => S.City.Places.FirstOrDefault(p => MotorCatalog.SoldBy(p.Id, VehicleKind.EBike));
+
         private (string label, Action action) QuestAction(QuestTarget target)
         {
             switch (target)
@@ -287,15 +291,12 @@ namespace PCShopSell.Game.UI
                     if (_ctrl.InHome) return ("打开电饭锅", OpenCookerWindow);
                     return QuestPlaceAction("回家做饭", S.Home);
                 case QuestTarget.Bed:
-                    if (S.CanSleepAt(S.CurrentPlace)) return ("睡到明早 08:00", () =>
-                    {
-                        if (S.SleepUntilTomorrowMorning()) UpdateQuestTracker();
-                    });
-                    return QuestPlaceAction("回家休息", S.Home);
+                    return ("回家睡觉", _ctrl.GoHomeToSleep);
                 case QuestTarget.Agency:
                 case QuestTarget.Ventures: return QuestPlaceAction("前往中介", S.City.HasPlace("agency") ? S.City.GetPlace("agency") : null);
                 case QuestTarget.Mall: return QuestPlaceAction("前往家具城", S.City.Places.FirstOrDefault(p => p.Business == GameSession.MallBusiness));
                 case QuestTarget.PhoneShop: return QuestPlaceAction("前往手机店", S.City.Places.FirstOrDefault(p => p.Business == GameSession.PhoneBusiness));
+                case QuestTarget.ScooterDealer: return QuestPlaceAction("前往顺丰车行", ScooterDealer);
                 case QuestTarget.Market:
                     if (S.ShopSupplyMarketId(S.RetailKind) is string marketId)
                         return QuestPlaceAction("前往批发市场", S.PurchaseDestination(S.City.GetPlace(marketId)));
@@ -377,6 +378,9 @@ namespace PCShopSell.Game.UI
         private void BuildGuideWindow(Window w)
         {
             BuildDistrictMessage(w.Content);
+            var links = Ui.Row(w.Content, 38, 6);
+            Ui.Size(Ui.Button(links, "经营待办", OpenShopEventTasks, 17), -1, 38, 1);
+            Ui.Size(Ui.Button(links, "社区生活", OpenLifeEventPanel, 17), -1, 38, 1);
             var q = S.CurrentQuest();
             if (q == null)
             {
@@ -440,7 +444,7 @@ namespace PCShopSell.Game.UI
             switch (target)
             {
                 case QuestTarget.Cooker: return "位置：家里 · 电饭锅";
-                case QuestTarget.Bed: return "位置：家里 · 明早 08:00 起床";
+                case QuestTarget.Bed: return "位置：家里 · 床边";
                 case QuestTarget.Agency: return "地点：商业街 · <color=#FFC966>安居房产中介</color>";
                 case QuestTarget.Renovate: return "位置：自己的店 → 右侧“装修”页";
                 case QuestTarget.Stock: return "位置：自己的店 · 货架";
@@ -448,6 +452,11 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.Counter: return "位置：自己的店 · 收银台";
                 case QuestTarget.Staff: return "位置：自己的店 → 右侧“员工”页";
                 case QuestTarget.PhoneShop: return "地点：商业街 · <color=#FFC966>手机店</color>";
+                case QuestTarget.CommunityGoal: return "片区：城郊";
+                case QuestTarget.ScooterDealer:
+                    return ScooterDealer is Place dealer
+                        ? $"地点：{S.City.StreetName(dealer.StreetId)} · <color=#FFC966>{dealer.Name}</color>"
+                        : "";
                 case QuestTarget.Mall: return "地点：商业街 · <color=#FFC966>宜居家具城</color>";
                 case QuestTarget.Upgrades: return "设备在街上的对应商店购买，家具在店铺“装修”页摆放。";
                 case QuestTarget.Pricing: return "位置：自己的店 → 右侧“定价”页";

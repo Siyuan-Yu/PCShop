@@ -100,7 +100,8 @@ namespace PCShopSell.Game.UI
                 Toast(S.HasSmartphone ? blocker : "没有智能手机，借款和还款请到「城郊银行」柜台办理。");
                 return;
             }
-            OpenWindow("周转借款", 860, 860, BuildLoanDesk);
+            string amountDraft = _loanAmountYuan.ToString();
+            OpenWindow("周转借款", 860, 860, w => BuildLoanDesk(w, amountDraft, text => amountDraft = text));
         }
 
         private AppLoan LoanQuote(long yuan, int months) => new AppLoan
@@ -134,30 +135,41 @@ namespace PCShopSell.Game.UI
                 });
         }
 
-        private void BuildLoanDesk(Window w)
+        private void BuildLoanDesk(Window w, string amountDraft, Action<string> saveDraft)
         {
             Line(w.Content, $"当前现金 {S.Ledger.Balance}    贷款待还 {S.AppLoanDebt}", 21, Ui.Accent);
             Para(w.Content, "月息 20%，按最初本金算单利，不复利；每月按游戏日历 30 天，最长 12 个月。到期一次性自动扣除本金和总利息，现金不足会强制扣成负数。", 18, Ui.Warn);
             var amountRow = Ui.Row(w.Content, 40);
             Ui.Size(Ui.Label(amountRow, "借款金额", 18), 120);
-            QuantityStepper(w, amountRow, "appLoanAmount", _loanAmountYuan, GameSession.AppLoanAmountStep,
-                GameSession.AppLoanMaximumYuan, GameSession.AppLoanAmountStep, v => _loanAmountYuan = (long)v, v => "¥" + v.ToString("N0"));
+            var amountControls = Ui.Row(amountRow, 36, 4);
+            Ui.Size(amountControls, 222, 36);
+            var input = Ui.Size(BankAmountInput(amountControls, "QuantityValue_appLoanAmount", amountDraft, 8), 138, 36, 0);
+            input.textComponent.alignment = TextAnchor.MiddleCenter;
+            var less = AmountButton("−", -1, "QuantityMinus_appLoanAmount");
+            less.transform.SetAsFirstSibling();
+            var more = AmountButton("+", 1, "QuantityPlus_appLoanAmount");
+            Line(amountRow, $"元 · 每 ¥{GameSession.AppLoanAmountStep:N0} 一档", 15, Ui.Dim);
             var presets = Ui.Row(w.Content, 34);
             foreach (long amount in new long[] { 1000, 5000, 10000, 50000 })
             {
                 long selectedAmount = amount;
-                Ui.Size(Ui.Button(presets, "¥" + amount.ToString("N0"), () => { _loanAmountYuan = selectedAmount; w.Rebuild(); }, 17), -1, -1, 1);
+                Ui.Size(Ui.Button(presets, "¥" + amount.ToString("N0"), () => input.text = selectedAmount.ToString(), 17), -1, -1, 1);
             }
             var monthsRow = Ui.Row(w.Content, 40);
             Ui.Size(Ui.Label(monthsRow, "借款期限", 18), 120);
             QuantityStepper(w, monthsRow, "appLoanMonths", _loanMonths, 1, GameSession.AppLoanMaximumMonths, 1,
                 v => _loanMonths = (int)v, v => v.ToString("0") + " 个月");
-            var quote = LoanQuote(_loanAmountYuan, _loanMonths);
-            Line(w.Content, $"到账本金 {quote.Principal} · 每月利息 {quote.MonthlyInterest}", 19);
-            Line(w.Content, $"期限利息 {quote.TermInterest}（本金的 {quote.Months * GameSession.AppLoanMonthlyRatePercent}%）", 19);
-            Line(w.Content, $"到期日 {new GameDate(quote.DueDay)} · 自动扣款 {quote.TotalDue}", 21, Ui.Warn);
-            Ui.Size(Ui.Button(w.Content, "申请借款 · 到账 " + quote.Principal,
-                () => ConfirmLoanApplication(quote, false, w.Rebuild), 19, Ui.ButtonHot), -1, 46);
+            var principal = Line(w.Content, "", 19);
+            var interest = Line(w.Content, "", 19);
+            var due = Line(w.Content, "", 21, Ui.Warn);
+            AppLoan quote = null;
+            var apply = Ui.Size(Ui.Button(w.Content, "申请借款", () =>
+            {
+                if (quote != null) ConfirmLoanApplication(quote, false, w.Rebuild);
+            }, 19, Ui.ButtonHot), -1, 46);
+            var applyText = apply.GetComponentInChildren<Text>();
+            input.onValueChanged.AddListener(RefreshQuote);
+            RefreshQuote(input.text);
             Para(w.Content, "可提前整笔结清：按实际使用月份计息，不足一个月按一个月。待还负债包含本金和已计利息，未来月份利息不计入当前负债。", 15, Ui.Dim);
             Line(w.Content, "我的贷款", 20, Ui.Accent);
             var list = Ui.Scroll(w.Content, 260);
@@ -181,6 +193,38 @@ namespace PCShopSell.Game.UI
                         17, Ui.ButtonBg, reason == null), -1, 38);
                     if (reason != null) Line(list, reason, 15, Ui.Dim);
                 }
+            }
+
+            Button AmountButton(string label, int direction, string key)
+            {
+                var button = Ui.Size(Ui.Button(amountControls, label, null, 21), 38, 36);
+                button.name = key;
+                var repeat = button.gameObject.AddComponent<HoldRepeat>();
+                repeat.Owner = w;
+                repeat.Key = key;
+                repeat.Commit = n =>
+                {
+                    long amount = _loanAmountYuan + direction * n * (long)GameSession.AppLoanAmountStep;
+                    input.text = Math.Max(GameSession.AppLoanAmountStep, Math.Min(GameSession.AppLoanMaximumYuan, amount)).ToString();
+                };
+                button.onClick.AddListener(repeat.ClickOnce);
+                return button;
+            }
+
+            void RefreshQuote(string amount)
+            {
+                saveDraft(amount);
+                bool valid = TryBankAmount(amount, GameSession.AppLoanMaximumYuan, GameSession.AppLoanAmountStep, out long yuan);
+                if (valid) _loanAmountYuan = yuan;
+                quote = valid ? LoanQuote(yuan, _loanMonths) : null;
+                less.interactable = !valid || yuan > GameSession.AppLoanAmountStep;
+                more.interactable = !valid || yuan < GameSession.AppLoanMaximumYuan;
+                principal.text = valid ? $"到账本金 {quote.Principal} · 每月利息 {quote.MonthlyInterest}"
+                    : $"请输入 ¥{GameSession.AppLoanAmountStep:N0} 的整数倍，最高 ¥{GameSession.AppLoanMaximumYuan:N0}";
+                interest.text = valid ? $"期限利息 {quote.TermInterest}（本金的 {quote.Months * GameSession.AppLoanMonthlyRatePercent}%）" : "";
+                due.text = valid ? $"到期日 {new GameDate(quote.DueDay)} · 自动扣款 {quote.TotalDue}" : "";
+                apply.interactable = valid;
+                applyText.text = valid ? "申请借款 · 到账 " + quote.Principal : "申请借款";
             }
         }
     }

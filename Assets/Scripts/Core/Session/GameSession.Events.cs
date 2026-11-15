@@ -12,9 +12,40 @@ using PCShopSell.Core.Shop;
 
 namespace PCShopSell.Core.Session
 {
+    public enum EventCgProp
+    {
+        None, Passed, Notice, Fine, Boxes, Camera, Sale, Wallet, Banknotes, Calendar, Takeout, Envelope, Meal, Stew
+    }
+
+    public sealed class EventCgFrame
+    {
+        public readonly string Background, PersonId, Caption;
+        public readonly EventCgProp Prop;
+        public readonly bool Seated;
+
+        public EventCgFrame(string background, EventCgProp prop = EventCgProp.None, string personId = null,
+            string caption = null, bool seated = false)
+        {
+            Background = background;
+            Prop = prop;
+            PersonId = personId;
+            Caption = caption;
+            Seated = seated;
+        }
+    }
+
+    internal sealed class EventCgResult
+    {
+        public readonly string Body;
+        public readonly EventCgFrame Frame;
+
+        public EventCgResult(string body, EventCgFrame frame) { Body = body; Frame = frame; }
+    }
+
     public sealed class EventChoice
     {
         public string Text;
+        public (string Key, string Label)? Selection;
 
         /// <summary>这个选项现在能不能选（比如钱够不够）。为 null 表示总能选。</summary>
         public Func<GameSession, bool> Enabled;
@@ -24,6 +55,7 @@ namespace PCShopSell.Core.Session
 
         /// <summary>执行选择，返回结果文字。</summary>
         public Func<GameSession, string> Apply;
+        internal Func<GameSession, EventCgResult> ApplyCg;
     }
 
     public sealed class EventDef
@@ -33,6 +65,8 @@ namespace PCShopSell.Core.Session
         public string Group;
         public string Title;
         public string Body;
+        public string SelectionPrompt;
+        public EventCgFrame Cg;
         public int MinDay;
         /// <summary>最晚触发的游戏天数；-1 = 没有上限。</summary>
         public int MaxDay = -1;
@@ -69,14 +103,32 @@ namespace PCShopSell.Core.Session
 
         public int EventCountOf(string id) => _eventCount.TryGetValue(id, out int n) ? n : 0;
 
-        private void RollDailyEvent(GameDate today)
+        private int _deferredRandomEventDay;
+
+        private bool TryRollDeferredDailyEvent()
         {
-            if (!EventsEnabled || IsGameOver || PendingEvent != null || _sleeping || !HasShop || BrandExpoExclusive) return;
+            if (_deferredRandomEventDay == 0) return false;
+            int day = _deferredRandomEventDay;
+            _deferredRandomEventDay = 0;
+            if (day != Clock.Today.TotalDays) return false;
+            RollDailyEvent(Clock.Today);
+            return PendingEvent != null;
+        }
+
+        private void RollDailyEvent(GameDate today, bool activityWasInProgress = false)
+        {
+            if (!EventsEnabled || IsGameOver || PendingEvent != null || _sleeping || !HasShop) return;
             if (today.TotalDays < 2) return;
             int day = today.TotalDays;
             _randomEventDays.RemoveAll(d => day - d >= 7);
             if (_randomEventDays.Count(d => d == day) >= EventDayCap) return;
             if (_randomEventDays.Count >= EventWeekCap) return;
+            if (activityWasInProgress || CityActivityExclusive)
+            {
+                _deferredRandomEventDay = day;
+                return;
+            }
+            _deferredRandomEventDay = 0;
             double chance = day < EventEarlyDays ? EventSlotChance * EventEarlyFactor : EventSlotChance;
             if (!Random.Chance(chance)) return;
 
@@ -116,6 +168,7 @@ namespace PCShopSell.Core.Session
 
         private void Raise(EventDef def, GameDate today)
         {
+            if (CityActivityExclusive) return;
             def = def.Id switch
             {
                 "inspection" => BindInspection(def),
@@ -296,6 +349,40 @@ namespace PCShopSell.Core.Session
             Func<GameSession, bool> enabled = null, string reason = null) =>
             new EventChoice { Text = text, Apply = apply, Enabled = enabled, DisabledReason = reason };
 
+        public event Action<string, string, EventCgFrame> EventCgPopup;
+        public event Action<string, EventCgFrame> EventCgNotice;
+
+        private void ShowEventCg(string title, EventCgResult result)
+        {
+            if (string.IsNullOrEmpty(result?.Body)) return;
+            if (result.Frame != null && EventCgPopup != null) EventCgPopup(title, result.Body, result.Frame);
+            else Show(title, result.Body);
+        }
+
+        private static EventCgResult VisualResult(string body, string background, EventCgProp prop = EventCgProp.None,
+            string personId = null, string caption = null) => new EventCgResult(body, new EventCgFrame(background, prop, personId, caption));
+
+        private void SayEventCg(string body, EventCgFrame frame)
+        {
+            if (EventCgNotice == null) Say(body);
+            else EventCgNotice(body, frame);
+        }
+
+        private static EventChoice ChooseCg(string text, Func<GameSession, EventCgResult> apply,
+            Func<GameSession, bool> enabled = null, string reason = null)
+        {
+            var choice = Choose(text, s => apply(s)?.Body, enabled, reason);
+            choice.ApplyCg = apply;
+            return choice;
+        }
+
+        private static EventDef IllustratedEvent(EventDef template, string body, EventCgFrame frame, params EventChoice[] choices)
+        {
+            var scene = EventScene(template, body, choices);
+            scene.Cg = frame;
+            return scene;
+        }
+
         private static EventDef EventScene(EventDef template, string body, params EventChoice[] choices) =>
             new EventDef { Id = template.Id, Title = template.Title, Group = template.Group,
                 Body = body, Choices = choices.ToList() };
@@ -313,8 +400,9 @@ namespace PCShopSell.Core.Session
             bool receipts = shop.Sim.Stock.IsEmpty || HasPurchaseReceipt(shop);
             string checks = $"开业设施：{(equipment ? "齐全" : "未齐")} · 进货记录：{(receipts ? "可核验" : "待补")}";
             if (equipment && receipts)
-                return EventScene(template, $"{ShopTitle(shop)}\n{checks}。本次检查通过。",
-                    Choose("确认检查结果", s => { shop.Sim.AdjustShopReputation(1); return "检查通过，门店口碑 +1。"; }));
+                return IllustratedEvent(template, $"{ShopTitle(shop)}\n{checks}。本次检查通过。",
+                    new EventCgFrame("inspection", EventCgProp.Passed, caption: ShopTitle(shop)),
+                    ChooseCg("确认检查结果", s => { shop.Sim.AdjustShopReputation(1); return VisualResult("检查通过，门店口碑 +1。", "inspection", EventCgProp.Passed, caption: "口碑 +1"); }));
 
             const int charmThreshold = EventScript.CharmThreshold;
             double Chance(GameSession s) => EventScript.ProgressiveChance(.35, (s.EffectiveCharm, charmThreshold, .01));
@@ -325,21 +413,24 @@ namespace PCShopSell.Core.Session
                 session._inspectionFollowups[shop.Place.Id] = due;
                 return $"请在 {new GameDate(due)} 前备齐开业设施和采购记录，届时复查。";
             }
-            return EventScene(template, $"{ShopTitle(shop)}\n{checks}。你可以付费整改，或争取 7 天整改宽限。",
-                Choose("现场整改 · ¥300", s =>
+            return IllustratedEvent(template, $"{ShopTitle(shop)}\n{checks}。你可以付费整改，或争取 7 天整改宽限。",
+                new EventCgFrame("inspection", EventCgProp.Notice, caption: ShopTitle(shop)),
+                ChooseCg("现场整改 · ¥300", s =>
                 {
                     s.Ledger.ForceDebit(s.Clock.Today, "整改", remediation, ShopTitle(shop), LedgerAttribution.ForShop(shop.Place.Id));
                     s.Flags.Add("inspection:receipts:" + shop.Place.Id);
-                    if (!equipment) return "消防和单据现场处理完毕。开业设施仍需补齐。" + ScheduleInspection(s, 3);
+                    if (!equipment) return VisualResult("消防和单据现场处理完毕。开业设施仍需补齐。" + ScheduleInspection(s, 3),
+                        "inspection", EventCgProp.Notice, caption: "已付 ¥300 · 3 天后复查");
                     shop.Sim.AdjustShopReputation(1);
-                    return "已补办并通过检查，门店口碑 +1。";
+                    return VisualResult("已补办并通过检查，门店口碑 +1。", "inspection", EventCgProp.Passed, caption: "已付 ¥300 · 口碑 +1");
                 }, s => s.Ledger.CanAfford(remediation), "现金不足"),
-                Choose($"争取 7 天宽限 · 成功率 {Chance(this) * 100:0}%", s =>
+                ChooseCg($"争取 7 天宽限 · 成功率 {Chance(this) * 100:0}%", s =>
                 {
-                    if (s.Random.Chance(Chance(s))) return ScheduleInspection(s, 7);
+                    if (s.Random.Chance(Chance(s))) return VisualResult(ScheduleInspection(s, 7),
+                        "inspection", EventCgProp.Calendar, caption: "争取到 7 天宽限");
                     s.Ledger.ForceDebit(s.Clock.Today, "罚款", Money.FromYuan(500), ShopTitle(shop), LedgerAttribution.ForShop(shop.Place.Id));
                     shop.Sim.AdjustShopReputation(-2);
-                    return "未争取到宽限，罚款 ¥500，门店口碑 −2。";
+                    return VisualResult("未争取到宽限，罚款 ¥500，门店口碑 −2。", "inspection", EventCgProp.Fine, caption: "罚款 ¥500 · 口碑 −2");
                 }));
         }
 
@@ -355,28 +446,40 @@ namespace PCShopSell.Core.Session
             string kind = shop.RetailKind;
             int missing = Random.Next(1, Math.Min(3, product.Count) + 1);
             bool countingError = Random.Chance(.3);
-            string Investigate(GameSession session, bool camera, bool report)
+            EventCgResult Investigate(GameSession session, bool camera, bool report)
             {
-                if (session.ShopAt(shop.Place.Id) != shop || shop.RetailKind != kind) return "门店状态已变化，本次未扣货。";
+                if (session.ShopAt(shop.Place.Id) != shop || shop.RetailKind != kind)
+                    return VisualResult("门店状态已变化，本次未扣货。", "thief");
                 string result;
-                if (report && countingError) result = $"{ShopTitle(shop)} · {product.Name} ×{missing} 是盘点差错，实际库存完整。";
+                EventCgProp prop;
+                if (report && countingError)
+                {
+                    result = $"{ShopTitle(shop)} · {product.Name} ×{missing} 是盘点差错，实际库存完整。";
+                    prop = EventCgProp.Passed;
+                }
                 else if (report && session.Random.Chance(camera ? .8 : .35))
+                {
                     result = $"{ShopTitle(shop)} · 找回了{product.Name} ×{missing}，库存已核对。";
+                    prop = camera ? EventCgProp.Camera : EventCgProp.Boxes;
+                }
                 else
                 {
                     int available = product.Part is PartDef part ? shop.Sim.Stock.Count(part, product.Boxed) : shop.Sim.Stock.GoodsCount(product.Id);
                     int loss = Math.Min(available, missing);
-                    result = loss > 0 && RemoveEventProduct(shop, product, loss)
+                    bool deducted = loss > 0 && RemoveEventProduct(shop, product, loss);
+                    result = deducted
                         ? $"{ShopTitle(shop)} · {product.Name} ×{loss} 已登记损耗。" : "该商品已不在库存，本次无需再扣。";
+                    prop = deducted ? EventCgProp.Fine : EventCgProp.None;
                 }
                 if (camera) session.EventRest(15);
-                return result;
+                return VisualResult(result, "thief", prop, caption: product.Name);
             }
-            return EventScene(template, $"{ShopTitle(shop)}盘点发现{product.Name}少了 {missing} 件。可能是记错，也可能真的丢了。",
-                Choose("复盘并核查", s => Investigate(s, false, true)),
-                Choose("查看监控，找到线索就报警 · 15 分钟", s => Investigate(s, true, true),
+            return IllustratedEvent(template, $"{ShopTitle(shop)}盘点发现{product.Name}少了 {missing} 件。可能是记错，也可能真的丢了。",
+                new EventCgFrame("thief", caption: $"{product.Name} · 少 {missing} 件"),
+                ChooseCg("复盘并核查", s => Investigate(s, false, true)),
+                ChooseCg("查看监控，找到线索就报警 · 15 分钟", s => Investigate(s, true, true),
                     _ => shop.Upgrades.Contains(ShopUpgrades.Cctv), "需要安装监控"),
-                Choose("直接登记损耗", s => Investigate(s, false, false)));
+                ChooseCg("直接登记损耗", s => Investigate(s, false, false)));
         }
 
         [Serializable]
@@ -661,23 +764,47 @@ namespace PCShopSell.Core.Session
             var product = EventShelfProducts(shop).OrderByDescending(item => item.Count).First();
             int visitors = Random.Next(2, 4);
             Money budget = EventPrice(shop, product).Scale(Random.Range(.95, 1.20));
-            string Visit(GameSession session, bool reserve)
+            EventCgResult Visit(GameSession session, bool reserve)
             {
                 int reserved = reserve && RemoveEventProduct(shop, product, visitors) ? visitors : 0;
-                if (reserve && reserved == 0) return "这款货已经不足，请等熟客下次介绍。";
+                if (reserve && reserved == 0)
+                    return VisualResult("这款货已经不足，请等熟客下次介绍。", "regulars", EventCgProp.Notice, Npcs.Zhang);
                 session._eventReferrals.Add(new EventReferral { ShopId = shop.Place.Id, RetailKind = shop.RetailKind,
                     Product = product, Remaining = visitors, Reserved = reserved, BudgetCents = budget.Cents,
                     Earliest = Clock.Now.TotalMinutes + 45, Expires = Clock.Now.TotalMinutes + 2 * 1440 });
-                return $"张绍文会带 {visitors} 人在未来两天营业时到{ShopTitle(shop)}。"
+                string message = $"张绍文会带 {visitors} 人在未来两天营业时到{ShopTitle(shop)}。"
                     + (reserved > 0 ? $"已从可售库存留出{product.Name} ×{reserved}。" : "他们会按现货和价格挑选。");
+                return VisualResult(message, "regulars", reserved > 0 ? EventCgProp.Boxes : EventCgProp.Calendar,
+                    Npcs.Zhang, reserved > 0 ? $"已留货 · {product.Name} ×{reserved}" : $"预计到访 · {visitors} 人");
             }
             bool familiar = Relation(Npcs.Zhang) >= 35;
-            return EventScene(template, $"张绍文想带 {visitors} 位朋友到{ShopTitle(shop)}看看。"
+            return IllustratedEvent(template, $"张绍文想带 {visitors} 位朋友到{ShopTitle(shop)}看看。"
                 + (familiar ? $"他们想看{product.Name}，每人预算约 {budget}。" : "你可以先留出一款货让他们看。"),
-                Choose($"留货 · {product.Name} ×{visitors}", s => Visit(s, true),
+                new EventCgFrame("regulars", personId: Npcs.Zhang, caption: ShopTitle(shop)),
+                ChooseCg($"留货 · {product.Name} ×{visitors}", s => Visit(s, true),
                     _ => product.Count >= visitors && product.ExpiryDay < 0, "陈列数量不足或该商品需要保鲜"),
-                Choose("欢迎来看看", s => Visit(s, false)),
-                Choose("这两天不方便", _ => "张绍文说下次再带朋友来。"));
+                ChooseCg("欢迎来看看", s => Visit(s, false)),
+                ChooseCg("这两天不方便", _ => VisualResult("张绍文说下次再带朋友来。", "regulars", personId: Npcs.Zhang, caption: "本次未安排到访")));
+        }
+
+        private void ShowReferralVisit(OwnedShop shop, ShopCustomer customer)
+        {
+            if (!customer.StoryReferral || CurrentPlace != shop.Place) return;
+            bool zhangPresent = CitySamePlace(Npcs.Zhang);
+            string personId = zhangPresent ? Npcs.Zhang : customer.PersonId;
+            string background = zhangPresent || string.IsNullOrEmpty(customer.PersonId) ? "regulars_visit" : "regulars";
+            SayEventCg($"{ShopTitle(shop)} · 熟客介绍的客人已进店。", new EventCgFrame(background, personId: personId));
+        }
+
+        private void ShowReferralOutcome(OwnedShop shop, ShopCustomer customer, bool paid)
+        {
+            if (!customer.StoryReferral) return;
+            string name = new EventStock { Id = customer.ReferralProductId }.Name;
+            string outcome = paid ? $"熟客介绍成交 · {name} ×1 · 实收 {customer.Spend}"
+                : customer.ReferralStockReturned ? $"客人未成交 · {name} ×1 已退回库存" : $"客人未成交 · {name}";
+            var prop = paid ? EventCgProp.Banknotes : customer.ReferralStockReturned ? EventCgProp.Boxes : EventCgProp.None;
+            string personId = CurrentPlace == shop.Place && CityCustomerIsInside(customer, shop.Place.Id) ? customer.PersonId : null;
+            SayEventCg($"{ShopTitle(shop)} · {outcome}", new EventCgFrame("regulars", prop, personId));
         }
 
         private const int StudentOrderQuantity = 5;
@@ -759,13 +886,13 @@ namespace PCShopSell.Core.Session
             Money Cost((StudentOrderLine Item, int Count)[] packed) =>
                 Money.FromCents(packed.Sum(line => (line.Item.Stock == null ? line.Item.Cost
                     : EstimatedEventUnitCost(shop, line.Item.Stock)).Cents * line.Count));
-            string Sell((StudentOrderLine Item, int Count)[] packed, Money total, bool discounted = false)
+            EventCgResult Sell((StudentOrderLine Item, int Count)[] packed, Money total, bool discounted = false)
             {
                 if (packed.Length == 0 || ShopAt(shop.Place.Id) != shop || shop.RetailKind != kind)
-                    return "店铺或库存状态已变化，本次未成交。";
+                    return VisualResult("店铺或库存状态已变化，本次未成交。", "students", EventCgProp.Notice);
                 var available = StudentOrderStock(shop).ToDictionary(line => line.Key);
                 if (packed.Any(line => !available.TryGetValue(line.Item.Key, out var current) || current.Count < line.Count))
-                    return "店铺或库存状态已变化，本次未成交。";
+                    return VisualResult("店铺或库存状态已变化，本次未成交。", "students", EventCgProp.Notice);
 
                 int count = packed.Sum(line => line.Count);
                 string name = packed[0].Item.Name;
@@ -794,7 +921,9 @@ namespace PCShopSell.Core.Session
                 }
                 shop.Sim.RecordBulkSale(name, count, total);
                 if (discounted) shop.Sim.AdjustShopAwareness(1);
-                return $"{ShopTitle(shop)} · 售出{name} ×{count}，实收 {total}。" + (discounted ? "团购折扣额外带来门店人气 +1。" : "");
+                return VisualResult($"{ShopTitle(shop)} · 售出{name} ×{count}，实收 {total}。" + (discounted ? "团购折扣额外带来门店人气 +1。" : ""),
+                    "students", kind == "restaurant" ? EventCgProp.Takeout : discounted ? EventCgProp.Sale : EventCgProp.Boxes,
+                    caption: $"{name} ×{count} · 实收 {total}");
             }
 
             var groups = lines.GroupBy(item => item.Group).Where(group => group.Sum(item => item.Count) >= StudentOrderQuantity).ToArray();
@@ -808,9 +937,9 @@ namespace PCShopSell.Core.Session
             int partialCount = partial.Sum(line => line.Count);
             var choices = new List<EventChoice>
             {
-                Choose($"整单九五折 · 实收 {budget} · 估算毛利 {budget - Cost(full)}",
+                ChooseCg($"整单九五折 · 实收 {budget} · 估算毛利 {budget - Cost(full)}",
                     _ => Sell(full, budget, true)),
-                Choose($"现价卖 {partialCount} 件 · 实收 {partialTotal} · 估算毛利 {partialTotal - Cost(partial)}",
+                ChooseCg($"现价卖 {partialCount} 件 · 实收 {partialTotal} · 估算毛利 {partialTotal - Cost(partial)}",
                     _ => Sell(partial, partialTotal), _ => partialCount > 0, "预算不足"),
             };
             var requestedPart = requested.First().Stock?.Part;
@@ -821,11 +950,12 @@ namespace PCShopSell.Core.Session
             if (alternative != null)
             {
                 var total = Total(alternative);
-                choices.Add(Choose($"推荐{alternative[0].Item.Name} ×5 · 实收 {total} · 估算毛利 {total - Cost(alternative)}",
+                choices.Add(ChooseCg($"推荐{alternative[0].Item.Name} ×5 · 实收 {total} · 估算毛利 {total - Cost(alternative)}",
                     _ => Sell(alternative, total), s => s.ShopSalesBonus(shop) >= .1, "需在岗销售员且购买意愿加成至少 10 个百分点"));
             }
-            choices.Add(Choose("留给零售顾客", _ => "这批货继续留在店里。"));
-            return EventScene(template, $"{ShopTitle(shop)} · 有学生想团购{requested.First().Name}，共 {StudentOrderQuantity} 份，总预算 {budget}。", choices.ToArray());
+            choices.Add(ChooseCg("留给零售顾客", _ => VisualResult("这批货继续留在店里。", "students", caption: "未接团购")));
+            return IllustratedEvent(template, $"{ShopTitle(shop)} · 有学生想团购{requested.First().Name}，共 {StudentOrderQuantity} 份，总预算 {budget}。",
+                new EventCgFrame("students", caption: $"团购预算 · {budget}"), choices.ToArray());
         }
 
         private Money EstimatedEventUnitCost(OwnedShop shop, EventStock item)
@@ -861,14 +991,15 @@ namespace PCShopSell.Core.Session
             bool witnessed = CityPeople.Any(person => person.PersonId != owner?.Id && person.Route == null
                 && (CurrentPlace != null ? person.LocationPlaceId == CurrentPlace.Id
                     : person.LocationPlaceId == null && DistanceCity(PlayerPosition, new MapPoint(person.X, person.Y)) <= 6));
-            return EventScene(template, $"路边有个钱包，里面有 ¥300 和一张留有联系方式的卡片。最近的失物代收点在{station.Name}。",
-                Choose("交给地铁站服务台", s =>
+            return IllustratedEvent(template, $"路边有个钱包，里面有 ¥300 和一张留有联系方式的卡片。最近的失物代收点在{station.Name}。",
+                new EventCgFrame("wallet"),
+                ChooseCg("交给地铁站服务台", s =>
                 {
                     s._walletDropOff = station.Id;
                     if (s.CurrentPlace?.Id != station.Id) s.BeginCityTravel(station.Id);
-                    return $"请到{station.Name}，进站后交给服务台。";
+                    return VisualResult($"请到{station.Name}，进站后交给服务台。", "wallet", EventCgProp.Wallet, caption: $"前往{station.Name}");
                 }),
-                Choose("联系失主，等对方来取 · 20 分钟", s =>
+                ChooseCg("联系失主，等对方来取 · 20 分钟", s =>
                 {
                     double rewardChance = EventScript.ProgressiveChance(.35,
                         (s.Relation(owner.Id), EventScript.RelationThreshold, .004));
@@ -878,18 +1009,21 @@ namespace PCShopSell.Core.Session
                     s.RememberSocial(owner.Id, "拾到钱包后联系本人归还。");
                     bool rewarded = s.Random.Chance(rewardChance);
                     if (rewarded) s.EventGain(Money.FromYuan(50), owner.Name + "酬谢");
-                    return $"{owner.Name}来取回钱包。交情增加。" + (rewarded ? "对方留下 ¥50 表示感谢。" : "");
+                    return VisualResult($"{owner.Name}来取回钱包。交情增加。" + (rewarded ? "对方留下 ¥50 表示感谢。" : ""),
+                        "wallet", rewarded ? EventCgProp.Banknotes : EventCgProp.Wallet, owner.Id,
+                        rewarded ? "钱包归还 · 酬谢 ¥50" : "钱包已归还 · 交情 +3");
                 }, _ => owner != null, "暂时找不到可联系的失主"),
-                Choose("留下现金", s =>
+                ChooseCg("留下现金", s =>
                 {
                     s.EventGain(Money.FromYuan(300), "钱包里的现金");
                     if (witnessed && owner != null)
                     {
                         s.AddRelation(owner.Id, -5);
                         s.InspectionShop()?.Sim.AdjustShopReputation(-2);
-                        return "获得 ¥300。有在场的人认出了钱包，失主得知后降低了对你的评价，门店口碑 −2。";
+                        return VisualResult("获得 ¥300。有在场的人认出了钱包，失主得知后降低了对你的评价，门店口碑 −2。",
+                            "wallet", EventCgProp.Banknotes, caption: "获得 ¥300 · 失主得知此事");
                     }
-                    return "获得 ¥300。周围没有人认领钱包。";
+                    return VisualResult("获得 ¥300。周围没有人认领钱包。", "wallet", EventCgProp.Banknotes, caption: "获得 ¥300");
                 }));
         }
 
@@ -902,36 +1036,44 @@ namespace PCShopSell.Core.Session
             var meal = CityLifeCatalog.Activity("dinner");
             bool canMeet = CanOfferClassmateDinner && meal != null;
             if (!help && !canMeet) return null;
+            string background = help ? "classmate_help" : "friend_meal";
             long start = canMeet ? SuggestCityActivityStart(meal.Id, ClassmateId) : 0;
             long later = canMeet ? SuggestCityActivityStart(meal.Id, ClassmateId, start + 1440) : 0;
-            string ReserveMeal(GameSession s, long when)
+            EventCgResult ReserveMeal(GameSession s, long when)
             {
                 var booking = s.ScheduleCityActivity(meal.Id, new[] { ClassmateId }, when,
                     sourceId: template.Id + ":" + s.Clock.Today.TotalDays);
-                if (booking == null) return "时段约不上，可以在人物对话中另约。";
+                if (booking == null) return VisualResult("时段约不上，可以在人物对话中另约。", background, personId: ClassmateId, caption: "未能约上");
                 booking.HostId = ClassmateId;
                 booking.HostPays = true;
-                return $"已加入日程 · {new GameTimestamp(when)} · {s.City.GetPlace(meal.VenueId).Name}。这顿由陈志衡请客。";
+                return VisualResult($"已加入日程 · {new GameTimestamp(when)} · {s.City.GetPlace(meal.VenueId).Name}。这顿由陈志衡请客。",
+                    background, EventCgProp.Calendar, ClassmateId, $"已约好 · {new GameTimestamp(when)}");
             }
             string where = canMeet ? $"\n{City.GetPlace(meal.VenueId).Name} · {new GameTimestamp(start)} · 陈志衡请客。" : "";
             var choices = new List<EventChoice>();
             if (canMeet)
             {
-                choices.Add(Choose("接受饭局", s => ReserveMeal(s, start),
+                choices.Add(ChooseCg("接受饭局", s => ReserveMeal(s, start),
                     s => s.CityActivityBlocker(meal.Id, new[] { ClassmateId }, start) == null, "这个时段暂不可用"));
-                choices.Add(Choose($"改约 · {new GameTimestamp(later)}", s => ReserveMeal(s, later),
+                choices.Add(ChooseCg($"改约 · {new GameTimestamp(later)}", s => ReserveMeal(s, later),
                     s => s.CityActivityBlocker(meal.Id, new[] { ClassmateId }, later) == null, "没有合适的备选时段"));
             }
             if (help)
             {
-                choices.Add(Choose("仅接受 ¥5,000 无息借款", s => s.AcceptFriendLoan(ClassmateId, 5000, 3)));
+                choices.Add(ChooseCg("仅接受 ¥5,000 无息借款", s => VisualResult(s.AcceptFriendLoan(ClassmateId, 5000, 3),
+                    background, EventCgProp.Envelope, ClassmateId, "无息借款已到账 · ¥5,000")));
                 if (canMeet)
-                    choices.Add(Choose("接受饭局和 ¥5,000 无息借款", s => ReserveMeal(s, start) + "\n" + s.AcceptFriendLoan(ClassmateId, 5000, 3),
+                    choices.Add(ChooseCg("接受饭局和 ¥5,000 无息借款", s => {
+                        var reservation = ReserveMeal(s, start);
+                        string loan = s.AcceptFriendLoan(ClassmateId, 5000, 3);
+                        return VisualResult(reservation.Body + "\n" + loan, background, EventCgProp.Envelope, ClassmateId, "无息借款已到账 · ¥5,000");
+                    },
                         s => s.CityActivityBlocker(meal.Id, new[] { ClassmateId }, start) == null, "这个饭局时段暂不可用"));
             }
-            choices.Add(Choose("这次先婉拒", _ => "陈志衡说有空再聊。"));
+            choices.Add(ChooseCg("这次先婉拒", _ => VisualResult("陈志衡说有空再聊。", background, personId: ClassmateId, caption: "本次未约")));
             string offer = help ? "\n他另外提出借你 ¥5,000 应急。无息，90 天到期自动扣款，可提前还。接受饭局本身不会借款。" : "";
-            return EventScene(template, "陈志衡想和你见面聊聊近况。" + where + offer, choices.ToArray());
+            return IllustratedEvent(template, "陈志衡想和你见面聊聊近况。" + where + offer,
+                new EventCgFrame(background, personId: ClassmateId), choices.ToArray());
         }
 
         [Serializable]
@@ -949,19 +1091,22 @@ namespace PCShopSell.Core.Session
         {
             if (!CanOfferRelativeLoan) return null;
             int due = Clock.Today.TotalDays + 3;
-            string Lend(GameSession s, int amount)
+            EventCgResult Lend(GameSession s, int amount)
             {
-                if (!s.Ledger.TryDebit(s.Clock.Today, "借款借出", Money.FromYuan(amount), "借给表哥")) return "现金不足。";
+                if (!s.Ledger.TryDebit(s.Clock.Today, "借款借出", Money.FromYuan(amount), "借给表哥"))
+                    return VisualResult("现金不足。", "lend", caption: "未借出");
                 s._relativeReceivable.Amount = amount;
                 s._relativeReceivable.DueDay = due;
                 s._relativeReceivable.Extended = false;
-                return $"已借出 ¥{amount}，约定 {new GameDate(due)} 归还。";
+                return VisualResult($"已借出 ¥{amount}，约定 {new GameDate(due)} 归还。", "lend", EventCgProp.Envelope,
+                    caption: $"借出 ¥{amount} · {new GameDate(due)} 归还");
             }
-            return EventScene(template, $"表哥要先垫一笔维修费，想借 ¥800，约定 {new GameDate(due)} 还款。"
+            return IllustratedEvent(template, $"表哥要先垫一笔维修费，想借 ¥800，约定 {new GameDate(due)} 还款。"
                 + $"\n过往按时还清 {_relativeReceivable.Repaid} 笔，逾期后还清 {_relativeReceivable.LateRepaid} 笔，认亏 {_relativeReceivable.Defaults} 笔。",
-                Choose("借 ¥800", s => Lend(s, 800)),
-                Choose("只借 ¥400", s => Lend(s, 400)),
-                Choose("婉拒", _ => "你说明手头也需要留周转金。"));
+                new EventCgFrame("lend", caption: "借款请求 · ¥800"),
+                ChooseCg("借 ¥800", s => Lend(s, 800)),
+                ChooseCg("只借 ¥400", s => Lend(s, 400)),
+                ChooseCg("婉拒", _ => VisualResult("你说明手头也需要留周转金。", "lend", caption: "未借出")));
         }
 
         private void ReceiveRelativeRepayment(bool late)
@@ -971,7 +1116,8 @@ namespace PCShopSell.Core.Session
             _relativeReceivable.Amount = 0;
             if (late) _relativeReceivable.LateRepaid++;
             else _relativeReceivable.Repaid++;
-            Show(NpcRepaymentTitle, $"表哥已还款 {amount}，当前现金 {Ledger.Balance}。");
+            ShowEventCg(NpcRepaymentTitle, VisualResult($"表哥已还款 {amount}，当前现金 {Ledger.Balance}。",
+                "lend", EventCgProp.Banknotes, caption: $"已收回 {amount}"));
         }
 
         private void CheckRelativeRepayment(GameDate today)
@@ -980,39 +1126,43 @@ namespace PCShopSell.Core.Session
             if (debt.Amount == 0 || debt.DueDay != today.TotalDays) return;
             double chance = debt.Extended ? .5 : debt.Amount <= 400 ? .85 : .75;
             if (Random.Chance(chance)) ReceiveRelativeRepayment(debt.Extended);
-            else Show("表哥的借款已逾期", $"还有 ¥{debt.Amount} 没还。空下来可以决定催款、延期或认亏。");
+            else ShowEventCg("表哥的借款已逾期", VisualResult($"还有 ¥{debt.Amount} 没还。空下来可以决定催款、延期或认亏。",
+                "lend", EventCgProp.Notice, caption: $"逾期未还 · ¥{debt.Amount}"));
         }
 
         private bool TryShowRelativeOverdue()
         {
             var debt = _relativeReceivable;
             if (debt.Amount == 0 || debt.DueDay > Clock.Today.TotalDays || EventRaised == null) return false;
-            string WriteOff()
+            EventCgResult WriteOff(string prefix = "")
             {
                 int amount = debt.Amount;
                 debt.Amount = 0;
                 debt.Defaults++;
-                return $"已记下这次未收回的 ¥{amount}。";
+                return VisualResult(prefix + $"已记下这次未收回的 ¥{amount}。", "lend", EventCgProp.Notice,
+                    caption: $"未收回 · ¥{amount}");
             }
             var choices = new List<EventChoice>
             {
-                Choose("联系表哥催款", s =>
+                ChooseCg("联系表哥催款", s =>
                 {
-                    if (!s.Random.Chance(.5)) return "表哥目前仍拿不出钱。" + WriteOff();
+                    if (!s.Random.Chance(.5)) return WriteOff("表哥目前仍拿不出钱。");
                     s.ReceiveRelativeRepayment(true);
                     return null;
                 }),
-                Choose("记为收不回", _ => WriteOff())
+                ChooseCg("记为收不回", _ => WriteOff())
             };
             if (!debt.Extended)
-                choices.Insert(1, Choose("同意延期 3 天", s =>
+                choices.Insert(1, ChooseCg("同意延期 3 天", s =>
                 {
                     debt.DueDay = s.Clock.Today.TotalDays + 3;
                     debt.Extended = true;
-                    return $"新的还款日是 {new GameDate(debt.DueDay)}。";
+                    return VisualResult($"新的还款日是 {new GameDate(debt.DueDay)}。", "lend", EventCgProp.Calendar,
+                        caption: "已延期 3 天");
                 }));
-            Raise(EventScene(new EventDef { Id = "relative-loan-overdue", Title = "表哥的借款逾期" },
-                $"表哥还欠你 ¥{debt.Amount}。这笔款原定 {new GameDate(debt.DueDay)} 归还。", choices.ToArray()), Clock.Today);
+            Raise(IllustratedEvent(new EventDef { Id = "relative-loan-overdue", Title = "表哥的借款逾期" },
+                $"表哥还欠你 ¥{debt.Amount}。这笔款原定 {new GameDate(debt.DueDay)} 归还。",
+                new EventCgFrame("lend", EventCgProp.Notice), choices.ToArray()), Clock.Today);
             return true;
         }
 
@@ -1029,7 +1179,8 @@ namespace PCShopSell.Core.Session
             if (_walletDropOff != null && CurrentPlace?.Id == _walletDropOff)
             {
                 _walletDropOff = null;
-                Show("钱包已交到服务台", "站务员已登记失物，等失主来认领。");
+                ShowEventCg("钱包已交到服务台", VisualResult("站务员已登记失物，等失主来认领。",
+                    "event_wallet_station", EventCgProp.Wallet, caption: CurrentPlace.Name));
             }
             for (int i = _eventReferrals.Count - 1; i >= 0; i--)
             {
@@ -1037,16 +1188,21 @@ namespace PCShopSell.Core.Session
                 var shop = ShopAt(visit.ShopId);
                 if (shop == null || shop.RetailKind != visit.RetailKind || now.TotalMinutes >= visit.Expires)
                 {
-                    if (shop != null && visit.Reserved > 0) RestoreEventProduct(shop, visit.Product, visit.Reserved);
+                    if (shop != null && visit.Reserved > 0)
+                    {
+                        RestoreEventProduct(shop, visit.Product, visit.Reserved);
+                        SayEventCg($"{ShopTitle(shop)} · 到访结束，{visit.Product.Name} ×{visit.Reserved} 已退回库存。",
+                            new EventCgFrame("regulars", EventCgProp.Boxes));
+                    }
+                    else if (shop != null) Say($"{ShopTitle(shop)}的介绍到访已结束。");
                     _eventReferrals.RemoveAt(i);
-                    if (shop != null) Say($"{ShopTitle(shop)}的介绍到访已取消，剩余留货已恢复销售。");
                     continue;
                 }
                 if (now.TotalMinutes < visit.Earliest || !shop.Sim.IsOpenAt(now, CityPlayerCanWork(shop))) continue;
                 bool reserved = visit.Reserved > 0;
                 if (reserved) visit.Reserved--;
                 shop.Sim.ArriveReferral(visit.Product.Part, visit.Product.Part == null ? visit.Product.Id : null,
-                    visit.Product.Boxed, visit.BudgetCents, reserved);
+                    visit.Product.Boxed, visit.BudgetCents, reserved, storyReferral: true);
                 if (--visit.Remaining <= 0) _eventReferrals.RemoveAt(i);
                 else visit.Earliest = now.TotalMinutes + 3;
             }
@@ -1090,12 +1246,14 @@ namespace PCShopSell.Core.Session
                 if (fitted && (shop.Sim.Stock.IsEmpty || HasPurchaseReceipt(shop)))
                 {
                     shop.Sim.AdjustShopReputation(1);
-                    Show("门店复查通过", $"{ShopTitle(shop)}的设施和采购记录已复查通过，口碑 +1。");
+                    ShowEventCg("门店复查通过", VisualResult($"{ShopTitle(shop)}的设施和采购记录已复查通过，口碑 +1。",
+                        "inspection", EventCgProp.Passed, caption: "复查通过 · 口碑 +1"));
                     continue;
                 }
                 Ledger.ForceDebit(today, "罚款", Money.FromYuan(500), "复查未通过 · " + ShopTitle(shop), LedgerAttribution.ForShop(shop.Place.Id));
                 shop.Sim.AdjustShopReputation(-2);
-                Show("门店复查未通过", $"{ShopTitle(shop)}的设施或单据仍有缺项。罚款 ¥500，口碑 −2。");
+                ShowEventCg("门店复查未通过", VisualResult($"{ShopTitle(shop)}的设施或单据仍有缺项。罚款 ¥500，口碑 −2。",
+                    "inspection", EventCgProp.Fine, caption: "罚款 ¥500 · 口碑 −2"));
             }
         }
 
@@ -1119,53 +1277,37 @@ namespace PCShopSell.Core.Session
             var total = price * affected.Length;
             int broken = affected.Count(shop => shop.EmergencyLighting.Installed);
             string details = broken > 0 ? $"其中 {broken} 家的应急灯已损坏。" : "";
-            return new EventDef
-            {
-                Id = "blackout",
-                Title = "停电了",
-                Body = $"电力预计两小时后恢复。你经营的 {shops.Count} 家店里，有 {affected.Length} 家没有可用的应急灯。{details}\n每家安装或更换一盏，单价 {price}，合计 {total}。",
-                Choices =
+            return IllustratedEvent(new EventDef { Id = "blackout", Title = "停电了" },
+                $"电力预计两小时后恢复。你经营的 {shops.Count} 家店里，有 {affected.Length} 家没有可用的应急灯。{details}\n每家安装或更换一盏，单价 {price}，合计 {total}。",
+                new EventCgFrame("blackout", caption: $"{affected.Length} 家店缺少可用应急灯"),
+                ChooseCg($"为 {affected.Length} 家店安装应急灯 · {total}", s =>
                 {
-                    new EventChoice
+                    foreach (var shop in affected)
                     {
-                        Text = $"为 {affected.Length} 家店安装应急灯 · {total}",
-                        Enabled = s => s.Ledger.CanAfford(total),
-                        DisabledReason = $"现金不足，需要 {total}",
-                        Apply = s =>
-                        {
-                            foreach (var shop in affected)
-                            {
-                                s.Ledger.ForceDebit(s.Clock.Today, "装修", price, "应急灯安装", LedgerAttribution.ForShop(shop.Place.Id));
-                                shop.EmergencyLighting.FailureDay = s.Clock.Today.TotalDays + s.Random.Next(45, 91);
-                            }
-                            return $"{affected.Length} 家店的应急灯已安装在后墙。停电期间会自动亮起。";
-                        },
-                    },
-                    new EventChoice
+                        s.Ledger.ForceDebit(s.Clock.Today, "装修", price, "应急灯安装", LedgerAttribution.ForShop(shop.Place.Id));
+                        shop.EmergencyLighting.FailureDay = s.Clock.Today.TotalDays + s.Random.Next(45, 91);
+                    }
+                    return VisualResult($"{affected.Length} 家店的应急灯已安装在后墙。停电期间会自动亮起。",
+                        "blackout_light", caption: $"已安装 {affected.Length} 盏 · 支出 {total}");
+                }, s => s.Ledger.CanAfford(total), $"现金不足，需要 {total}"),
+                ChooseCg("暂停营业，等两小时", s =>
+                {
+                    s.EventRest(PowerCutMinutes);
+                    return VisualResult("缺少应急灯的门店暂停接待。供电恢复后，门店按原营业安排恢复。",
+                        "blackout_wait", caption: "两小时后 · 供电恢复");
+                }),
+                ChooseCg("点蜡烛，维持有限接待", s =>
+                {
+                    if (s.Random.Chance(.3))
                     {
-                        Text = "暂停营业，等两小时",
-                        Apply = s =>
-                        {
-                            s.EventRest(PowerCutMinutes);
-                            return "缺少应急灯的门店暂停接待。供电恢复后，门店按原营业安排恢复。";
-                        },
-                    },
-                    new EventChoice
-                    {
-                        Text = "点蜡烛，维持有限接待",
-                        Apply = s =>
-                        {
-                            if (s.Random.Chance(.3))
-                            {
-                                s.EventPay(Money.FromYuan(200), "小火警");
-                                return "蜡烛烧着了纸箱。火已经扑灭，损失 ¥200。";
-                            }
-                            foreach (var shop in affected) shop.EmergencyLighting.UsingCandles = true;
-                            return "已点蜡烛。缺灯门店的到店客流暂为平时的40%，直到供电恢复。";
-                        },
-                    },
-                },
-            };
+                        s.EventPay(Money.FromYuan(200), "小火警");
+                        return VisualResult("蜡烛烧着了纸箱。火已经扑灭，损失 ¥200。",
+                            "blackout_fire", caption: "火已扑灭 · 损失 ¥200");
+                    }
+                    foreach (var shop in affected) shop.EmergencyLighting.UsingCandles = true;
+                    return VisualResult("已点蜡烛。缺灯门店的到店客流暂为平时的40%，直到供电恢复。",
+                        "blackout_candle", caption: "烛光营业 · 暂留 40% 客流");
+                }));
         }
 
         private bool HasRetailStoryGoods(OwnedShop shop,string eventId)
@@ -1223,8 +1365,12 @@ namespace PCShopSell.Core.Session
             EventChoice choice = def.Choices[choiceIndex];
             if (!IsChoiceEnabled(choice)) return false;
             PendingEvent = null;
-            string result = choice.Apply(this);
-            if (!string.IsNullOrEmpty(result)) Popup?.Invoke(def.Title, result);
+            if (choice.ApplyCg != null) ShowEventCg(def.Title, choice.ApplyCg(this));
+            else
+            {
+                string result = choice.Apply(this);
+                if (!string.IsNullOrEmpty(result)) Show(def.Title, result);
+            }
             return true;
         }
 
@@ -1257,6 +1403,7 @@ namespace PCShopSell.Core.Session
             d.celebrationRacePeople = _celebrationRacePeople.ToArray();
             SaveRacingBatchEvents(d);
             d.randomEventDays = _randomEventDays.ToArray();
+            d.deferredRandomEventDay = _deferredRandomEventDay;
             d.eventIds = _eventLastDay.Keys.ToArray();
             d.eventLastDays = d.eventIds.Select(k => _eventLastDay[k]).ToArray();
             d.eventCounts = d.eventIds.Select(EventCountOf).ToArray();
@@ -1294,6 +1441,7 @@ namespace PCShopSell.Core.Session
                 _inspectionFollowups[d.inspectionShops[i]] = d.inspectionDays[i];
             _randomEventDays.Clear();
             if (d.randomEventDays != null) _randomEventDays.AddRange(d.randomEventDays);
+            _deferredRandomEventDay = d.deferredRandomEventDay;
             _eventLastDay.Clear();
             _eventCount.Clear();
             int n = d.eventIds?.Length ?? 0;

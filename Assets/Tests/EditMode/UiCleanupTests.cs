@@ -314,7 +314,7 @@ namespace PCShopSell.Tests
             using (var r = new Rig())
             {
                 Assert.True(r.S.SetShopMainCategory(kind)); r.Ui.OpenDock(); r.Ui.DebugSelectTab(0);
-                if (kind == "restaurant") Assert.True(r.Components<Button>().Any(b => b.name == "ChillKitchenIngredients"));
+                if (kind == "restaurant") Assert.False(r.Components<Button>().Any(b => b.name == "ChillKitchenIngredients"));
                 else StringAssert.Contains("每日收购预算", r.Text);
                 r.Ui.DebugSelectTab(2);
                 Assert.False(r.Components<Button>().Any(b => b.name == "ChillKitchenIngredients"));
@@ -365,7 +365,7 @@ namespace PCShopSell.Tests
                 }
                 r.Ui.OpenSchedulePanel(); var window = r.Workspace("calendar");
                 Assert.False(window.GetComponentsInChildren<Button>().Any(b => b.GetComponentInChildren<Text>().text == "城市活动"));
-                Assert.NotNull(r.Button("CalendarWeather"));
+                Assert.False(window.GetComponentsInChildren<Button>().Any(b => b.name == "CalendarWeather"));
                 if (smartphone)
                 {
                     int today = r.S.Clock.Today.TotalDays;

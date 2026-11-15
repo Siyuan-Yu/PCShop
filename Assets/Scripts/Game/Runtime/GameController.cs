@@ -113,6 +113,8 @@ namespace PCShopSell.Game
                 Session.Notice -= OnNotice;
                 Session.Failed -= OnFailed;
                 Session.Popup -= OnPopup;
+                Session.EventCgPopup -= OnEventCgPopup;
+                Session.EventCgNotice -= OnEventCgNotice;
                 Session.EventRaised -= OnEventRaised;
                 Session.ShopExpanded -= OnShopExpanded;
                 Session.TripArrived -= OnTripArrived;
@@ -131,6 +133,8 @@ namespace PCShopSell.Game
             s.Notice += OnNotice;
             s.Failed += OnFailed;
             s.Popup += OnPopup;
+            s.EventCgPopup += OnEventCgPopup;
+            s.EventCgNotice += OnEventCgNotice;
             s.EventRaised += OnEventRaised;
             s.ShopExpanded += OnShopExpanded;
             s.EventsEnabled = !s.IsCityLifeTest && _eventsOn;
@@ -271,23 +275,16 @@ namespace PCShopSell.Game
         private void CounterInteract()
         {
             if (Session.PlayerShop.Queue.Count > 0) Checkout(Session.PlayerShop.Queue[0].Id);
-            else if (Session.CurrentShop.RetailKind=="restaurant")
-            {
-                if (Session.RestaurantCheckoutCustomer is DiningOrder order) CheckoutRestaurant(order.Id);
-                else Ui.Toast("现在没有堂食顾客在收银台等候结账。");
-            }
+            else if (Session.CurrentShop.RetailKind == "restaurant") Ui.OpenSpecialBusinessPanel();
             else if (Session.IsPetShop(Session.CurrentShop)) Ui.OpenPetOrders();
             else Ui.Toast("现在没人排队。顾客挑好货会拿到收银台前排队，你站在这里按 F 交货收钱。");
         }
 
-        public void CheckoutRestaurant(int orderId)
+        private DiningOrder NearbyRestaurantTableToClear()
         {
-            if (!InInterior || !Interior.NearCounter)
-            {
-                Ui.Toast("先走到收银台，再给堂食顾客结账。");
-                return;
-            }
-            if (Session.CheckoutRestaurantCustomer(orderId)) Ui.RebuildDock();
+            if (Interior.NearbyDiningTable < 0 || Session.CurrentShop.RetailKind != "restaurant") return null;
+            return Session.SpecialBusiness(Session.CurrentShop.Place.Id).Orders.FirstOrDefault(order =>
+                order.Table == Interior.NearbyDiningTable && order.NeedsClearing && order.Stage != DiningStage.Burnt);
         }
 
         private void EnterPlace(Place p)
@@ -533,7 +530,11 @@ namespace PCShopSell.Game
                 {
                     if (Interior.NearbyPetOwner(out _) is PetStay pet) Ui.OpenPetOwnerVisit(pet.Id);
                     else if (Interior.NearUsedBuyDesk) Ui.OpenUsedDesk();
-                    else if(Interior.NearCounter&&(Session.PlayerShop.Queue.Count>0||Session.RestaurantCheckoutCustomer!=null))CounterInteract();
+                    else if (NearbyRestaurantTableToClear() is DiningOrder meal)
+                    {
+                        if (RequestRestaurantWork(meal.Id, RestaurantJob.Clear)) Ui.RebuildDock();
+                    }
+                    else if (Interior.NearCounter && Session.PlayerShop.Queue.Count > 0) CounterInteract();
                     else if (Interior.NearPetHouse && Session.IsPetShop(Session.CurrentShop)) EnterPetFocus();
                     else if(Session.IsSpecialBusiness(Session.CurrentShop)&&Interior.NearSpecialFurniture)Ui.OpenSpecialBusinessPanel();
                     else if (Interior.NearCounter) CounterInteract();
@@ -772,8 +773,13 @@ namespace PCShopSell.Game
                 {
                     world = Interior.UsedBuyDeskWorld; label = "收购鉴定台 · 按 F 办理收购或鉴定"; return true;
                 }
-                var diningCheckout=Session.RestaurantCheckoutCustomer;
-                if(Session.IsSpecialBusiness(Session.CurrentShop)&&Interior.NearSpecialFurniture&&!(Interior.NearCounter&&(Session.PlayerShop.Queue.Count>0||diningCheckout!=null)))
+                if (NearbyRestaurantTableToClear() is DiningOrder meal)
+                {
+                    world = Interior.SpecialFurnitureWorld;
+                    label = meal.Stage == DiningStage.Checkout ? "收桌并收款（按 F）" : "收桌（按 F）";
+                    return true;
+                }
+                if(Session.IsSpecialBusiness(Session.CurrentShop)&&Interior.NearSpecialFurniture&&!(Interior.NearCounter&&(Session.PlayerShop.Queue.Count>0)))
                 {
                     world=Interior.SpecialFurnitureWorld;label=Interior.SpecialFurnitureName+"：经营操作（按 F 打开）";return true;
                 }
@@ -785,9 +791,9 @@ namespace PCShopSell.Game
                 {
                     var queue = Session.PlayerShop.Queue;
                     world = Interior.CounterWorld;
-                    label = diningCheckout != null ? $"堂食结账 · ¥{diningCheckout.Price}（按 F）" : queue.Count > 0
+                    label = queue.Count > 0
                         ? $"收银：给顾客结账 {queue[0].ItemName} {queue[0].Spend}（{queue.Count} 人排队）"
-                        : "收银台（现在没人排队）";
+                        : Session.CurrentShop.RetailKind == "restaurant" ? "餐馆经营（按 F）" : "收银台（现在没人排队）";
                     return true;
                 }
                 if (Interior.NearDoor)
@@ -1034,6 +1040,8 @@ namespace PCShopSell.Game
         // ---------- 会话事件 ----------
 
         private void OnNotice(string m) => Ui.Toast(m);
+        private void OnEventCgNotice(string message, EventCgFrame cg) =>
+            Ui.Toast(message, Session.IsWorking || Session.BrandExpoExclusive ? null : cg);
 
         private void OnFailed(string m) => SoundFx.Play(Sfx.Error);
 
@@ -1125,7 +1133,9 @@ namespace PCShopSell.Game
 
         private void OnCityActivitySettled(string activityId) => Ui.OpenCityActivitySettlement(activityId);
 
-        private void OnPopup(string title, string body)
+        private void OnPopup(string title, string body) => OnEventCgPopup(title, body, null);
+
+        private void OnEventCgPopup(string title, string body, EventCgFrame cg)
         {
             if(Session?.BrandExpoExclusive==true&&title!="你晕倒了"&&title!="住院了"){Ui.Toast(title+"："+body);return;}
 #if UNITY_EDITOR
@@ -1143,7 +1153,7 @@ namespace PCShopSell.Game
                 if (Session.CurrentPlace != null) Ui.OnEnteredPlace(Session.CurrentPlace);
                 return;
             }
-            Ui.Popup(title, body);
+            Ui.Popup(title, body, cg);
         }
 
         private void OnTripArrived(string nodeId)

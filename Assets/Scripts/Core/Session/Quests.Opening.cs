@@ -90,7 +90,7 @@ namespace PCShopSell.Core.Session
             :kind==PetShopCatalog.ShopKind?new[]{FurnitureCatalog.Shelf,FurnitureCatalog.ShopCounter,PetShopCatalog.SmallHouse}
             :new[]{FurnitureCatalog.Shelf,FurnitureCatalog.ShopCounter};
 
-        internal static bool MatchesOpeningFurniture(string id, FurnitureDef item) => item != null && (item.Id == id
+        public static bool MatchesOpeningFurniture(string id, FurnitureDef item) => item != null && (item.Id == id
             || id == FurnitureCatalog.Shelf && item.Fixture == FixtureKind.Shelf
             || id == FurnitureCatalog.FridgeSmall && item.Role == FurnitureRole.Fridge
             || id == PetShopCatalog.SmallHouse && PetShopCatalog.HouseCapacity(item.Id) > 0);

@@ -27,6 +27,9 @@ namespace PCShopSell.Core.Session
         public bool AtBank => CurrentPlace != null && CurrentPlace.Business == BankBusiness;
         public Place BankPlace => City.HasPlace(BankPlaceId) ? City.GetPlace(BankPlaceId) : null;
 
+        public bool TryTakeNegativeCashBankReminder() =>
+            Ledger.Balance.IsNegative && BankPlace != null && Flags.Add("bank:negative-cash-reminder");
+
         /// <summary>为什么现在办不了银行业务；能办返回 null。</summary>
         public string BankBlocker()
         {

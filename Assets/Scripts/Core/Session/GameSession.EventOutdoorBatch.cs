@@ -38,7 +38,7 @@ namespace PCShopSell.Core.Session
             && CityPersonState(OutdoorPeople[n - 61]) != null && City.HasPlace(OutdoorVenue(n))
             && DistrictAccessBlocker(City.GetPlace(OutdoorVenue(n))) == null
             && !_cityActivities.Any(a => a.Active && a.DefinitionId == "social_" + n);
-        private string OutdoorVenue(int n) => n <= 62 ? FishingVenueId : n <= 64 ? CityPersonState(OutdoorPeople[n - 61])?.WorkPlaceId
+        private string OutdoorVenue(int n) => n == 61 ? FishingVenueId : n == 62 ? "life_hike" : n <= 64 ? CityPersonState(OutdoorPeople[n - 61])?.WorkPlaceId
             : n <= 67 ? "life_restaurant" : n == 70 ? "stall_gpu" : CityPersonState(OutdoorPeople[n - 61])?.WorkPlaceId;
         private EventDef BindOutdoorBatchEvent(EventDef template, int n)
         {
@@ -189,7 +189,7 @@ namespace PCShopSell.Core.Session
                 }
                 else if (task == "oldmarket_talk") { state.Tested = true; state.Message = "已完成本场现场观察和学习，可以继续走访、挑选实物。"; }
                 else if (task == "expo_talk") { state.Tested = true; state.Message = "这段现场体验与交流已完成，可以继续看展。"; }
-                else if (task == "test") { state.Tested = true; var part = PartCatalog.Get(state.PartId); state.Message = $"核对完成：{part.Name}，代际 {part.Tier}，标称功率 {part.Watts}W。"; }
+                else if (task == "test") { state.Tested = true; var part = PartCatalog.Get(state.PartId); state.Message = $"核对完成：{part.Name}，档次 {PartCatalog.TierName(part.Tier)}，标称功率 {part.Watts}W。"; }
                 else if (task == "work") { a.Choices = a.Choices.Union(new[] { "outdoor-work" }).ToArray(); state.Message = state.Mode == 2 ? "已在现场扶正并固定倒伏植物。" : "已检查损坏设施并提交位置记录。"; }
                 else state.Message = "这次休息／交流已实际完成，可以继续活动。";
                 Say(state.Message);

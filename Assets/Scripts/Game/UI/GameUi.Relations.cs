@@ -31,9 +31,8 @@ namespace PCShopSell.Game.UI
 
         public void OpenRelationsPanel()
         {
-            OpenWorkspace("people", "relations", "人物 · 关系图", 1300, 850, w =>
+            OpenPeopleWorkspace("relations", w =>
             {
-                BuildPeopleNavigation(w,"relations");
                 List<ContactInfo> people = S.Contacts();
                 if (_contactSel != null && people.All(c => c.Id != _contactSel)) _contactSel = null;
 

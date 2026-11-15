@@ -219,8 +219,8 @@ namespace PCShopSell.Core.Session
             }
             if (kind == "charity" && !Ledger.TryDebit(Clock.Today, "慈善赛报名", Money.FromYuan(CharityRaceFee), "车友慈善赛")) return false;
             var track = RaceTracks.Get(booking.TrackId, City);
-            var opponent = new RaceOpponent { PersonId = booking.PersonId, Motor = MotorCatalog.Performance(vehicle), Pace = .67 };
-            var opponents = kind == "rider" ? new[] { opponent } : BuildRaceOpponents(track, MotorCatalog.Get(vehicle.ModelId).Kind);
+            var opponent = new RaceOpponent { PersonId = booking.PersonId, Motor = MotorCatalog.Performance(vehicle), Pace = .88 };
+            var opponents = kind == "rider" ? new[] { opponent } : BuildRaceOpponents(track, MotorCatalog.Get(vehicle.ModelId));
             _drivingEventBooking = booking;
             StartDriving(new RaceSimulation(track, MotorCatalog.Performance(vehicle), false, RaceMeeting.None, opponents, kind == "rider" ? 1 : (int?)null), vehicle.Id);
             ApplyEventBatteryFailure(vehicle);
@@ -301,22 +301,45 @@ namespace PCShopSell.Core.Session
                 Choose("改天再约", _ => "本次未预约，交情不变。"), Choose("不参加", _ => "你婉拒了，交情不变。"));
         }
 
+        private static bool IsRaceAidActivity(string id) => id?.StartsWith("race_aid_", StringComparison.Ordinal) == true;
+
+        public static bool IsRaceAidActivity(CityActivity activity) => IsRaceAidActivity(activity?.DefinitionId);
+
+        public CityActivity RaceAidAt(Place hospital) => hospital == null ? null : _cityActivities.FirstOrDefault(a =>
+            a.VenueId == hospital.Id && IsRaceAidActivity(a) && a.Active
+                && (a.State == CityActivityPhase.Running || Clock.Now.TotalMinutes >= a.ScheduledStart - CityArrivalWindowMinutes));
+
         private EventDef BindRaceAid(EventDef template)
         {
             string person = _raceAidPerson;
-            var hospital = City.PublicPlaces.Where(p => p.Business == HospitalBusiness && DistrictAccessBlocker(p) == null)
+            var hospital = City.PublicPlaces.Where(p => p.Business == HospitalBusiness && CityActivityVenueAccessBlocker(p) == null)
                 .OrderBy(p => CityTravelMinutes(p)).FirstOrDefault();
             string activityId = hospital == null ? null : "race_aid_" + hospital.Id;
-            long start = activityId == null ? 0 : SuggestCityActivityStart(activityId, person);
+            long now = Clock.Now.TotalMinutes;
+            long start = now;
+            string blocker = "附近没有可到达的医院";
+            if (activityId != null && CityPersonState(person) is CityPersonState patient)
+            {
+                var patientRoute = PlanCityRoute(patient, hospital.Id, now, now, VehicleKind.Taxi);
+                if (patientRoute != null)
+                {
+                    start = Math.Max(now + CityTravelMinutes(hospital), patientRoute.ArriveMinute);
+                    blocker = CityActivityBlocker(activityId, new[] { person }, start);
+                    if (blocker == null && CurrentPlace != hospital) blocker = LeaveBlocker;
+                }
+            }
             return EventScene(template, $"赛后，刚才同场的{CityPerson(person)?.Name}在弯道边摔倒，工作人员正在处理。你可以陪同去医院，或交给工作人员。",
-                Choose("陪同去医院 · 到院后支付照护 ¥1,500", s =>
+                Choose("现在去医院 · 到场支付 ¥1,500", s =>
                 {
                     var a = s.ScheduleCityActivity(activityId, new[] { person }, start, sourceId: "race-aid:" + s._nextCityActivity);
                     if (a == null) return "陪诊未约成，请交给工作人员处理。";
                     a.ServiceConfirmed = true; a.ServiceChoice = 0;
                     s._raceAidPerson = null;
-                    return "陪诊已记入日程，请实际前往医院；照护完成后增加交情，不扣你的健康。";
-                }, _ => activityId != null && CityActivityBlocker(activityId, new[] { person }, start) == null, "暂无可陪诊的时段"),
+                    if (!s.BeginCityTravel(hospital.Id, a.Id))
+                        return $"陪诊已安排，请尽快前往{hospital.Name}。";
+                    s.Say($"现在前往{hospital.Name}，会合后开始陪诊。");
+                    return null;
+                }, _ => blocker == null, blocker),
                 Choose("联系赛场工作人员", s => { s._raceAidPerson = null; return "工作人员接手救助，你没有额外支出或健康损失。"; }),
                 Choose("先离开", s => { s._raceAidPerson = null; return "你确认工作人员已在处理后离开。"; }));
         }

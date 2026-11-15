@@ -26,13 +26,14 @@ namespace PCShopSell.Core.Session
             if (first == second) return first.ToString();
             return first < second ? $"{first}–{second}" : $"{second}–{first}";
         }
-        public Money CityActivityEntryPrice(CityActivityDefinition def, int choice, CityActivity booking = null)
+        public Money CityActivityEntryPrice(CityActivityDefinition def, int choice, CityActivity booking = null, bool? playerTreat = null)
         {
             if (booking?.HostPays == true) return Money.Zero;
             Money price = VenuePlayerPrice(def, choice);
             int people = (booking?.Participants.Length ?? 0) + 1;
-            if (def.FixedGroupPrice) return booking?.PlayerTreat == true ? price : Money.FromCents((price.Cents + people - 1) / people);
-            return booking?.PlayerTreat == true ? price * people : price;
+            bool treat = playerTreat ?? (booking?.PlayerTreat == true);
+            if (def.FixedGroupPrice) return treat ? price : Money.FromCents((price.Cents + people - 1) / people);
+            return treat ? price * people : price;
         }
         public string CityActivityMidText(CityActivity activity)
         {
@@ -40,18 +41,30 @@ namespace PCShopSell.Core.Session
             return def?.Service(activity.ServiceChoice).Description ?? def?.MidText;
         }
         public const int CityArrivalWindowMinutes = 60;
-        public CityActivity PendingVenueActivity(Place place) => place == null ? null : _cityActivities
-            .Where(a => a.Active && a.State != CityActivityPhase.Running && a.VenueId == place.Id
-                && (Math.Abs(Clock.Now.TotalMinutes-a.ScheduledStart)<=CityArrivalWindowMinutes
-                    || a.RendezvousReady && CurrentPlace==place))
-            .OrderBy(a => Math.Abs(a.ScheduledStart-Clock.Now.TotalMinutes)).FirstOrDefault();
+        public CityActivity PendingVenueActivity(Place place) => FindPendingVenueActivity(place);
+
+        private CityActivity FindPendingVenueActivity(Place place, string activityId = null, bool onsiteOnly = false)
+        {
+            if (place == null) return null;
+            long now = Clock.Now.TotalMinutes;
+            return _cityActivities.Where(a => a.Active && a.State != CityActivityPhase.Running && a.VenueId == place.Id
+                    && (activityId == null || a.Id == activityId) && (!onsiteOnly || IsOnsiteActivity(a))
+                    && (Math.Abs(now - a.ScheduledStart) <= CityArrivalWindowMinutes
+                        || !IsOnsiteActivity(a) && a.RendezvousReady && CurrentPlace?.Id == place.Id))
+                .OrderByDescending(a => onsiteOnly && a.RendezvousReady)
+                .ThenBy(a => Math.Abs(a.ScheduledStart - now)).FirstOrDefault();
+        }
 
         // Invitations gather at arrival, before a menu hold can stop the world clock.
-        public bool PrepareVenueCompanions(Place place)
+        public bool PrepareVenueCompanions(Place place, string activityId = null)
         {
             if (place==null || CurrentPlace!=place || IsWorking || _sleeping || CityActivityExclusive) return false;
-            var activity=PendingVenueActivity(place);
-            if (activity==null || activity.RendezvousReady) return activity?.RendezvousReady ?? false;
+            var activity = activityId == null ? OnsiteActivityAt(place) ?? PendingVenueActivity(place) : FindPendingVenueActivity(place, activityId);
+            if (activity == null) return false;
+            // For race aid, each participant keeps their hospital route even if the player arrives first.
+            if (IsRaceAidActivity(activity.DefinitionId))
+                return activity.Participants.All(p => p.Phase == CityParticipantPhase.Waiting || p.Phase == CityParticipantPhase.Participating);
+            if (activity.RendezvousReady && (!IsOnsiteActivity(activity) || OnsiteCompanionsPresent(activity))) return true;
             foreach (var participant in activity.Participants)
             {
                 var person=CityPersonState(participant.PersonId);
@@ -79,7 +92,9 @@ namespace PCShopSell.Core.Session
                     person.VisitId=null;
                 }
                 person.Route=null; person.X=anchor.X; person.Y=anchor.Y; person.LocationPlaceId=place.Id;
-                person.ActivityId=activity.Id; person.Task=CityPersonTask.Waiting; person.TaskLabel="赴约到场，等你选择服务";
+                person.ActivityId=activity.Id; person.Task=CityPersonTask.Waiting;
+                person.TaskLabel=activity.DefinitionId == SignHelpActivityId ? "到场等你开始帮忙"
+                    : IsOnsiteActivity(activity) ? "到场等你开始活动" : "赴约到场，等你选择服务";
                 participant.Phase=CityParticipantPhase.Waiting; participant.DepartMinute=now; participant.IntentId=null;
             }
             activity.RendezvousReady=true; activity.State=CityActivityPhase.Gathering;
@@ -87,6 +102,7 @@ namespace PCShopSell.Core.Session
         }
         public string CityActivityEarlyDepartureHint(CityActivity activity)
         {
+            if (IsRaceAidActivity(activity.DefinitionId)) return null;
             long remaining = activity.ScheduledStart - Clock.Now.TotalMinutes;
             if (remaining <= CityArrivalWindowMinutes || !City.HasPlace(activity.VenueId)) return null;
             var venue = City.GetPlace(activity.VenueId);
@@ -103,6 +119,8 @@ namespace PCShopSell.Core.Session
         {
             var a = _cityActivities.FirstOrDefault(x => x.Id == id && x.Active);
             if (a == null) return "日程已经结束";
+            if (!City.HasPlace(a.VenueId)) return "找不到活动地点";
+            if (CityActivityVenueAccessBlocker(City.GetPlace(a.VenueId)) is string access) return access;
             if (IsGameOver || _sleeping || IsWorking) return "正在休息或工作，当前不能出发";
             if (CityActivityExclusive) return "正在参加活动，请先结束当前活动";
             if (Trip != null || CityIntent != null) return "正在前往目的地，请先完成或取消当前行程";
@@ -119,6 +137,7 @@ namespace PCShopSell.Core.Session
             if (!CityVenueFits(CurrentPlace, Clock.Now.TotalMinutes, def.Minutes)) return "该服务无法在闭店前完成";
             if (def.Id.StartsWith("expo_") && !CityExpoDay(Clock.Now.TotalMinutes, (def.LogicalId ?? def.Id) == "expo_comic")) return "本场展会尚未开放";
             var booking = PendingVenueActivity(CurrentPlace);
+            if (OnsiteActivityAt(CurrentPlace) != null) return "请从预约卡片进入现场活动";
             if (CityLifeCatalog.Activity(booking?.DefinitionId)?.EventOnly == true && definitionId != booking.DefinitionId)
                 return "本次为已约定的专属活动，请按原日程参加";
             Money cost = CityActivityEntryPrice(def, choice, booking);

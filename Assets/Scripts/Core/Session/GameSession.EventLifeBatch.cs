@@ -116,9 +116,22 @@ namespace PCShopSell.Core.Session
             }
             if(n==116)
             {
-                string friend=LifeOldFriend();return EventScene(template,(CityPerson(friend)?.Name??friend)+"发来消息，问你最近过得怎样。",
-                    Choose("聊近况 · 15分钟",_=>{var t=NewLifeTask("chat",null,15);t.Person=friend;return "手机聊天已记入待办，实际聊完才增加这位朋友的交情。";}),
-                    Choose("约见面",_=>QueueLifeVisit("friend","social_116",friend,LifeServicePlace)),Choose("稍后回复",_=>"没有强制推进时间，也不加魅力。"));
+                string friend = LifeOldFriend();
+                const string definition = "social_116";
+                string meetingPlace = new[] { LifeServicePlace, "life_restaurant" }.Where(LifeAccessible)
+                    .FirstOrDefault(place =>
+                    {
+                        long at = SuggestCityActivityStartAt(definition, friend, 0, place);
+                        return at > Clock.Now.TotalMinutes && CityActivityBlockerAt(definition, new[] { friend }, at, false, place) == null;
+                    });
+                var choices = new List<EventChoice>
+                {
+                    Choose("聊近况 · 15分钟", _ => { var task = NewLifeTask("chat", null, 15); task.Person = friend; return "电话聊天已记入待办，实际聊完才增加这位朋友的交情。"; })
+                };
+                if (meetingPlace != null)
+                    choices.Add(Choose("约见面 · " + City.GetPlace(meetingPlace).Name, _ => QueueLifeVisit("friend", definition, friend, meetingPlace)));
+                choices.Add(Choose("稍后回复", _ => "没有强制推进时间，也不加魅力。"));
+                return EventScene(template, (CityPerson(friend)?.Name ?? friend) + "发来消息，问你最近过得怎样。", choices.ToArray());
             }
             if(n==117)return EventScene(template,"公园健身场欢迎体验，按实际完成的训练量结算。",
                 Choose("去体验",_=>{_gymReady=true;_gymRounds=0;return "到公园健身场选择快走、器械或拉伸，完成三轮约30分钟。";}),Choose("暂时不去",_=>"没有即时健康奖励。"));

@@ -292,7 +292,7 @@ namespace PCShopSell.Game.UI
                 _openingMealFocus = "CookerWorld";
                 Vector3 sp = _ctrl.HomeRoom.CookerWorld is Vector3 cooker ? _ctrl.Cam.WorldToScreenPoint(cooker + Vector3.down * .45f) : new Vector3(0, 0, -1);
                 if (sp.z > 0) { Vector2 c = GuidePoint(canvasRt, sp, size); hole = new Rect(c - GuideHoleSize * .5f, GuideHoleSize); hasHole = true; }
-                GuideRect(_guideCard, (size.x - 880) * .5f, 150, 880, 220);
+                GuideRect(_guideCard, (size.x - 880) * .5f, 150, 880, string.IsNullOrEmpty(text.body) ? 96 : 220);
                 _guideFoot.text = "先做饭再做其他事 · WASD / 方向键走路，F 交互；Esc 打开系统菜单。";
             }
             DrawGuideSpotlight(size, hasHole ? (Rect?)hole : null);
@@ -403,8 +403,7 @@ namespace PCShopSell.Game.UI
             switch (step)
             {
                 case 0:
-                    return ("第 1 步 · 认识电饭锅，选米与做法",
-                        "用 <b>WASD / 方向键</b> 走到高亮处，出现电饭锅提示后按 <b>F</b>。\n在锅里依次点 <b>米量（推荐 0.5 千克）→ 白饭或有食材的做法 → 开始焖饭</b>。\n食材自动从背包和家中后仓取用，不用先搬东西。");
+                    return ("第 1 步 · 认识电饭锅，选米与做法", "");
                 case 1:
                     long left = S.Pantry.Cooking != null ? S.Pantry.CookMinutesLeft(S.Clock.Now.TotalMinutes) : 0;
                     return ("第 2 步 · 等饭焖好",

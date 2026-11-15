@@ -65,7 +65,7 @@ namespace PCShopSell.Game.UI
                 if(S.IsMet(id))
                 {
                     Ui.Size(Ui.Button(card, S.CitySamePlace(id) ? "已存名片 · 当面交谈" : "已存名片 · 打电话",
-                        () => OpenPersonDialogue(id, parent: w, remote: !S.CitySamePlace(id), phoneCall: !S.CitySamePlace(id)),
+                        () => OpenPersonDialogue(id, parent: w, remote: !S.CitySamePlace(id)),
                         17), -1, 38).name = "McnContact_" + id;
                     continue;
                 }

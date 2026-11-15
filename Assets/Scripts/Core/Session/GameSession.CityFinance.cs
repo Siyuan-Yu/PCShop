@@ -93,12 +93,12 @@ namespace PCShopSell.Core.Session
                 }
             }
             // Reserved components and assembled display units still tie up capital.
-            foreach (int tier in shop.Sim.DisplayPcs.Concat(shop.Sim.Orders.Where(o => o.PartsReserved).Select(o => o.Tier)).Concat(shop.PendingDisplayTier>=0?new[]{shop.PendingDisplayTier}:Array.Empty<int>()))
-                foreach (var part in PartCatalog.BuildList(tier))
-                {
-                    if (known.TryGetValue(part.Id, out var actual) && actual.count > 0) total += actual.cents / actual.count;
-                    else { estimated = true; total += Market.PriceOf(part).Scale(.84).Cents; }
-                }
+            var displayTiers = shop.PendingDisplayTier >= 0 ? shop.Sim.DisplayPcs.Append(shop.PendingDisplayTier) : shop.Sim.DisplayPcs;
+            foreach (var part in displayTiers.SelectMany(PartCatalog.BuildList).Concat(shop.Sim.Orders.SelectMany(o => o.ReservedParts)))
+            {
+                if (known.TryGetValue(part.Id, out var actual) && actual.count > 0) total += actual.cents / actual.count;
+                else { estimated = true; total += Market.PriceOf(part).Scale(.84).Cents; }
+            }
             return Money.FromCents(total);
         }
 

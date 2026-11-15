@@ -133,7 +133,7 @@ namespace PCShopSell.Tests
         private static void AssertFull(GameSession s, string person)
         {
             if (s.ActiveKolAmbassador(person) == null)
-                Assert.True(s.SignKolAmbassador(person, 90, 1, remote: true, phoneCall: true));
+                Assert.True(s.SignKolAmbassador(person, 90, 1, remote: true));
             string id = s.ActiveKolAmbassador(person).Id;
             long before = s.Ledger.Balance.Cents;
             Assert.False(s.AssignKolBrand(id, "acceptance-expo"));
@@ -144,15 +144,15 @@ namespace PCShopSell.Tests
         {
             using(var s=Make())
             {
-                long before=s.Ledger.Balance.Cents;Assert.False(s.SignKolAmbassador("momo",31,1,remote:true,phoneCall:true));Assert.AreEqual(before,s.Ledger.Balance.Cents);
-                var c=Sign(s);before=s.Ledger.Balance.Cents;Assert.False(s.SignKolAmbassador(c.PersonId,90,1,remote:true,phoneCall:true));Assert.AreEqual(before,s.Ledger.Balance.Cents);
+                long before=s.Ledger.Balance.Cents;Assert.False(s.SignKolAmbassador("momo",31,1,remote:true));Assert.AreEqual(before,s.Ledger.Balance.Cents);
+                var c=Sign(s);before=s.Ledger.Balance.Cents;Assert.False(s.SignKolAmbassador(c.PersonId,90,1,remote:true));Assert.AreEqual(before,s.Ledger.Balance.Cents);
                 Assert.False(s.SetKolSchedule(c.Id,1080,1080,true));Assert.False(s.SetKolSchedule(c.Id,0,900,true));Assert.False(s.SetKolSchedule(c.Id,1081,120,true));
                 Assert.AreEqual(1080,s.KolStreaming.Contracts.Single().StartMinute);
             }
             using(var s=DistrictProgressionTests.Make())
             {
                 typeof(GameSession).GetField("_brands",BindingFlags.NonPublic|BindingFlags.Instance).SetValue(s,new BrandBusinessState{Brands=new[]{new BrandRecord{Id="b",Kind="computer"}}});
-                long before=s.Ledger.Balance.Cents;Assert.False(s.SignKolAmbassador("qiao",90,1,remote:true,phoneCall:true));Assert.AreEqual(before,s.Ledger.Balance.Cents);
+                long before=s.Ledger.Balance.Cents;Assert.False(s.SignKolAmbassador("qiao",90,1,remote:true));Assert.AreEqual(before,s.Ledger.Balance.Cents);
             }
         }
         [Test] public void OvernightScheduleUsesOneSessionAcrossMidnightAndNoOfflineBackfill()

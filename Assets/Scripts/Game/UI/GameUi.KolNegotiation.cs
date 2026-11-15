@@ -7,7 +7,7 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
-        private void OpenKolNegotiation(string person, Window dialogue, bool remote, bool phoneCall)
+        private void OpenKolNegotiation(string person, Window dialogue, bool remote)
         {
             int days = 90;
             int frequency = 1;
@@ -51,13 +51,13 @@ namespace PCShopSell.Game.UI
                 string defaultBrand = S.DefaultKolBrandName(person);
                 Para(w.Content, defaultBrand == null ? "暂无有空位的品牌，签约后可在「我的代言人」分配。"
                     : "签约后自动分配给" + defaultBrand + "，按所选频率在 18:00 开播。可在「我的代言人」调整。", 16, Ui.Dim);
-                string why = S.KolSigningBlocker(person, days, frequency, remote, phoneCall);
+                string why = S.KolSigningBlocker(person, days, frequency, remote);
                 if (why != null) Line(w.Content, why, 16, Ui.Warn);
                 var actions = Ui.Row(w.Content, 42, 8);
                 Ui.Size(Ui.Button(actions, "返回交谈", w.Close, 17), -1, 42, 1);
                 Ui.Size(Ui.Button(actions, "确认签约 · ¥" + fee.ToString("N0"), () =>
                 {
-                    if (!S.SignKolAmbassador(person, days, frequency, remote, phoneCall)) { w.Rebuild(); return; }
+                    if (!S.SignKolAmbassador(person, days, frequency, remote)) { w.Rebuild(); return; }
                     w.Rebuild();
                 }, 18, Ui.ButtonHot, why == null), -1, 42, 1).name = "KolConfirmSign_" + person;
             }, onClosed: () =>

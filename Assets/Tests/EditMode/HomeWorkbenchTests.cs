@@ -132,14 +132,14 @@ namespace PCShopSell.Tests
                 using(var loaded=GameSession.Load(s.City,s.CreateSave()))Assert.AreEqual(2,loaded.WorkbenchPrices("computer").Length);
             }
         }
-        [Test] public void WorkbenchProvidesInvestmentAndChatConnectionWithoutGrantingAPhone()
+        [Test] public void WorkbenchProvidesInvestmentWithoutGrantingAPhone()
         {
             using(var s=new GameSession(PCShopSell.Core.World.CityLayout.FromData(GameSessionTests.Layout()),7,Money.FromYuan(200000),GameTimestamp.From(new GameDate(0),600),false,false))
             {
                 s.EventsEnabled=false;s.HomeBox.AddFurniture(GameSession.HomeWorkbenchId,1);
-                Assert.False(s.HasSmartphone);Assert.True(s.CanUseHomeWorkbench);Assert.True(s.HasChatApp);
+                Assert.False(s.HasSmartphone);Assert.True(s.CanUseHomeWorkbench);
                 var cash=s.Ledger.Balance;Assert.True(s.TradeCityInvestment("hardware",1,true));Assert.AreEqual(1,s.CityInvestmentUnits("hardware"));Assert.Less(s.Ledger.Balance.Cents,cash.Cents);
-                GameSessionTests.Teleport(s,"pc");cash=s.Ledger.Balance;Assert.False(s.TradeCityInvestment("hardware",1,true));Assert.AreEqual(cash,s.Ledger.Balance);Assert.False(s.HasSmartphone);Assert.False(s.HasChatApp);
+                GameSessionTests.Teleport(s,"pc");cash=s.Ledger.Balance;Assert.False(s.TradeCityInvestment("hardware",1,true));Assert.AreEqual(cash,s.Ledger.Balance);Assert.False(s.HasSmartphone);
             }
         }
         [Test] public void OwningAnUnconfiguredScreenDoesNotDisableExistingMealDelivery()

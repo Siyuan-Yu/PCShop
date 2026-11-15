@@ -10,7 +10,6 @@ namespace PCShopSell.Core.Market
     {
         Crypto,
         AiDemand,
-        NewGeneration,
     }
 
     public sealed class NewsItem
@@ -30,43 +29,40 @@ namespace PCShopSell.Core.Market
     }
 
     /// <summary>
-    /// 硬件行情：新闻（原因）→ 宏观指标（币圈热度、AI 需求、新品周期，-1~1）→ 品类价格指数。
+    /// 硬件行情：新闻（原因）→ 宏观指标（币圈热度、AI 需求，-1~1）→ 品类价格指数。
     /// 每天开盘前更新一次。
     /// </summary>
     public sealed class HardwareMarket
     {
         public const int HistoryDays = 30;
 
-        private static readonly MacroFactor[] Factors = { MacroFactor.Crypto, MacroFactor.AiDemand, MacroFactor.NewGeneration };
+        private static readonly MacroFactor[] Factors = { MacroFactor.Crypto, MacroFactor.AiDemand };
 
         /// <summary>品类对各宏观指标的敏感度（指数 = 1 + Σ 敏感度 × 指标）。</summary>
         private static readonly Dictionary<PartCategory, double[]> Sensitivity = new Dictionary<PartCategory, double[]>
         {
-            [PartCategory.Gpu] = new[] { 0.35, 0.15, -0.05 },
-            [PartCategory.Memory] = new[] { 0.05, 0.22, -0.03 },
-            [PartCategory.Storage] = new[] { 0.14, 0.06, -0.02 },
-            [PartCategory.Cpu] = new[] { 0.02, 0.06, -0.14 },
-            [PartCategory.Motherboard] = new[] { 0.0, 0.02, -0.10 },
-            [PartCategory.PowerCase] = new[] { 0.08, 0.02, 0.0 },
+            [PartCategory.Gpu] = new[] { 0.35, 0.15 },
+            [PartCategory.Memory] = new[] { 0.05, 0.22 },
+            [PartCategory.Storage] = new[] { 0.14, 0.06 },
+            [PartCategory.Cpu] = new[] { 0.02, 0.06 },
+            [PartCategory.Motherboard] = new[] { 0.0, 0.02 },
+            [PartCategory.PowerCase] = new[] { 0.08, 0.02 },
         };
 
         private static readonly Dictionary<MacroFactor, string[]> UpNews = new Dictionary<MacroFactor, string[]>
         {
             [MacroFactor.Crypto] = new[] { "某虚拟币一周涨了 40%，矿老板又开始扫货显卡", "海外矿场扩产，显卡、硬盘出货紧张" },
             [MacroFactor.AiDemand] = new[] { "大模型创业潮，公司抢购内存和显卡", "高校开设 AI 专业，学生装机需求上升" },
-            [MacroFactor.NewGeneration] = new[] { "锐芯发布新一代处理器，老款 CPU、主板准备降价清库存", "英擎新品下月上市，经销商提前甩货" },
         };
 
         private static readonly Dictionary<MacroFactor, string[]> DownNews = new Dictionary<MacroFactor, string[]>
         {
             [MacroFactor.Crypto] = new[] { "虚拟币暴跌，矿机二手显卡大量流入市场", "多地清理矿场，显卡需求骤降" },
             [MacroFactor.AiDemand] = new[] { "AI 公司融资遇冷，服务器内存订单减少", "大厂暂停算力采购，内存价格松动" },
-            [MacroFactor.NewGeneration] = new[] { "新品延期上市，老款 CPU 价格回稳", "新一代处理器缺货，旧款反而抢手" },
         };
 
-        public Func<int> DayProvider;
         private readonly GameRandom _rng;
-        private readonly double[] _factor = new double[3];
+        private readonly double[] _factor = new double[Factors.Length];
         private readonly Dictionary<PartCategory, double> _index = new Dictionary<PartCategory, double>();
         private readonly Dictionary<PartCategory, List<double>> _history = new Dictionary<PartCategory, List<double>>();
         private readonly List<NewsItem> _news = new List<NewsItem>();
@@ -102,14 +98,14 @@ namespace PCShopSell.Core.Market
             {
                 case MacroFactor.Crypto: return "币圈热度";
                 case MacroFactor.AiDemand: return "AI 需求";
-                default: return "新品周期";
+                default: return f.ToString();
             }
         }
 
         /// <summary>今天的市场价（零售参考价），取整到元。</summary>
         public Money PriceOf(PartDef part)
         {
-            return Money.FromYuan((long)Math.Round(part.BasePrice.Yuan * _index[part.Category] * PCShopSell.Core.Home.IndustryCycles.HardwareFactor(part,DayProvider?.Invoke()??0)));
+            return Money.FromYuan((long)Math.Round(part.BasePrice.Yuan * _index[part.Category]));
         }
 
         /// <summary>新的一天：指标回归 + 随机波动 + 新闻冲击，然后更新价格指数。</summary>
@@ -133,7 +129,8 @@ namespace PCShopSell.Core.Market
         {
             for (int i = 0; i < _factor.Length && i < factors.Length; i++) _factor[i] = factors[i];
             _news.Clear();
-            _news.AddRange(news);
+            foreach (var item in news)
+                if ((uint)item.Factor < (uint)_factor.Length) _news.Add(item);
             foreach (var kv in history)
             {
                 _history[kv.Key].Clear();
@@ -197,13 +194,11 @@ namespace PCShopSell.Core.Market
             }
         }
 
-        /// <summary>第一个月固定的一次行情波动：第 10 天矿潮，第 20 天新品发布。</summary>
+        /// <summary>第 10 天的固定矿潮新闻。</summary>
         private static NewsItem ScriptedNews(GameDate today)
         {
             if (today.TotalDays == 9)
                 return new NewsItem(today, "【头条】某虚拟币一夜翻倍，全国矿潮来袭，显卡被抢购一空", MacroFactor.Crypto, 0.9);
-            if (today.TotalDays == 19)
-                return new NewsItem(today, "【头条】锐芯新一代处理器正式发布，老款 CPU、主板集体降价", MacroFactor.NewGeneration, 0.8);
             return null;
         }
 

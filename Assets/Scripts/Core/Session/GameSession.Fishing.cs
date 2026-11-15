@@ -30,8 +30,8 @@ namespace PCShopSell.Core.Session
     }
     public sealed partial class GameSession
     {
-        // A distinct facility inside the existing, reachable outskirts park keeps its route and old place ID.
-        public const string FishingVenueId = "life_hike";
+        public const string FishingVenueId = "life_fishing";
+        public const string FishingAttendantId = "resident_luqiao";
         private FishingState _fishing;
         private bool _fishingInterfaceOpen, _fishingDecisionHeld;
         private int _fishingExperience, _fishCaughtTotal;

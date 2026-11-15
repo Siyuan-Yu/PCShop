@@ -31,7 +31,7 @@ namespace PCShopSell.Tests
         [Test] public void UnmetCreatorCannotBePaidToBypassIntroduction()
         {
             using(var s=Make())
-            {Assert.False(s.IsMet("momo"));long cash=s.Ledger.Balance.Cents;Assert.False(s.SignKolAmbassador("momo", 90, 1, remote: true, phoneCall: true));Assert.False(s.SupportCreator("momo"));Assert.AreEqual(cash,s.Ledger.Balance.Cents);}
+            {Assert.False(s.IsMet("momo"));long cash=s.Ledger.Balance.Cents;Assert.False(s.SignKolAmbassador("momo", 90, 1, remote: true));Assert.False(s.SupportCreator("momo"));Assert.AreEqual(cash,s.Ledger.Balance.Cents);}
         }
         [Test] public void RemoteAndClosedOfficeCannotArrangeIntroduction()
         {
@@ -49,7 +49,7 @@ namespace PCShopSell.Tests
                 Assert.True(s.RequestMcnIntroduction("momo"));
                 Assert.True(s.IsMet("momo"));
                 Assert.Contains("momo", s.SavedConversationContacts().Select(c => c.Id).ToArray());
-                Assert.IsNull(s.RemoteConversationBlocker("momo", phoneCall: true));
+                Assert.IsNull(s.RemoteConversationBlocker("momo"));
                 Assert.AreEqual(cash - s.McnIntroductionFee("momo") * 100, s.Ledger.Balance.Cents);
                 Assert.False(s.RequestMcnIntroduction("momo"));
                 Assert.AreEqual(cash - s.McnIntroductionFee("momo") * 100, s.Ledger.Balance.Cents);

@@ -1,53 +1,36 @@
-using System;
 using System.Collections.Generic;
-using PCShopSell.Core.Session;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
 {
-    /// <summary>
-    /// 常驻 HUD 瘦身：顶栏次要入口收进“更多”；窗口里的页签条统一成轻量二级页签样式。
-    /// </summary>
     public sealed partial class GameUi
     {
-        private GameObject _hudMore;
+        private RectTransform _hudTopRow;
+        private float _fittedHudWidth;
+        private bool _fittedHudHasBrand;
 
-        private void BuildHudMoreMenu(Transform row)
+        private void FitHudTopRow()
         {
-            var panel = Ui.FlatPanel(_dockCanvas.transform, "HudMorePanel", Ui.FlatBand, Ui.FlatHotEdge);
-            _hudMore = panel.gameObject;
-            int entries = GameSession.FirstChapterTrial ? 4 : 5;
-            panel.rectTransform.Anchor(1, 1, 1, 1, -166, -(68 + entries * 42 + 20), 8, 68);
-            Ui.VList(panel.rectTransform, 4, 8);
+            float availableWidth = ((RectTransform)_hudTopRow.parent).rect.width;
+            bool hasBrand = _brandButton.gameObject.activeSelf;
+            if (availableWidth <= 0 || (Mathf.Approximately(availableWidth, _fittedHudWidth) && hasBrand == _fittedHudHasBrand)) return;
+            _fittedHudWidth = availableWidth;
+            _fittedHudHasBrand = hasBrand;
 
-            void Entry(string label, Action action, string name, string tip)
+            var layout = _hudTopRow.GetComponent<HorizontalLayoutGroup>();
+            float preferredWidth = layout.padding.horizontal;
+            int visible = 0;
+            foreach (RectTransform child in _hudTopRow)
             {
-                var b = Ui.Button(panel.transform, label, () => { _hudMore.SetActive(false); action(); }, 17);
-                b.name = name; Ui.Size(b, -1, 38); b.Tip(tip);
+                if (!child.gameObject.activeSelf) continue;
+                preferredWidth += LayoutUtility.GetPreferredWidth(child);
+                visible++;
             }
-            Entry("人物", OpenRelationsPanel, "HudRelations", "<b>人脉</b>\n认识的人和你有多熟、他们彼此之间的关系（网状图）。");
-            Entry("员工", OpenEmployeesPanel, "HudEmployees", "所有店的员工列表、明天调店安排、进货清单和车辆占用。");
-            Entry("日程", OpenSchedulePanel, "HudCalendar", "日程、邀约与已安排的活动。");
-            Entry("品牌", OpenBrandOverview, "HudBrand", "品牌管理、KOL签约、直播排班与直播间。");
-            if (!GameSession.FirstChapterTrial)
-                Entry("赛车", OpenRacingDestinations, "HudRacing", "查看赛场开放条件、入门路线和比赛安排。");
-            _brandButton = panel.transform.Find("HudBrand")?.GetComponent<Button>();
-            _hudMore.SetActive(false);
-
-            var more = Ui.Size(Ui.Button(row, "更多 ▾", () =>
-            {
-                bool open = !_hudMore.activeSelf;
-                _hudMore.SetActive(open);
-                if (open) _hudMore.transform.SetAsLastSibling();
-            }, 17), 76);
-            more.name = "HudMore";
-            more.Tip(GameSession.FirstChapterTrial ? "人物、员工、日程、品牌" : "人物、员工、日程、品牌、赛车");
-        }
-
-        private void UpdateHudMore()
-        {
-            if (_hudMore != null && _hudMore.activeSelf && AnyModalOpen) _hudMore.SetActive(false);
+            preferredWidth += Mathf.Max(0, visible - 1) * layout.spacing;
+            float rowWidth = Mathf.Max(availableWidth, preferredWidth);
+            _hudTopRow.sizeDelta = new Vector2(rowWidth - availableWidth, 0);
+            _hudTopRow.localScale = Vector3.one * (availableWidth / rowWidth);
         }
 
         /// <summary>弹出 / 窗口里的页签条：整行撑满的金色大按钮 → 固定宽度的二级页签（选中浅蓝底加金字）。</summary>

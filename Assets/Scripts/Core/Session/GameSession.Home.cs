@@ -185,6 +185,10 @@ namespace PCShopSell.Core.Session
                     id = "rice";
                     break;
             }
+            double ingredientKg = kind == ParcelKind.Rice ? RiceBagKg * count
+                : kind == ParcelKind.Gift && IsRawIngredientProduct(id) ? Gifts.Get(id).WeightKg * count : 0;
+            if (RestaurantIngredientDeliveryBlocker(destination, ingredientKg) is string coldStorageBlocker)
+                return Fail(coldStorageBlocker + "。");
             Money total = OnlinePrice(kind, id) * count;
             var attribution = destination == null || kind == ParcelKind.Outfit ? null
                 : kind == ParcelKind.Furniture
@@ -234,6 +238,11 @@ namespace PCShopSell.Core.Session
                         break;
                     case ParcelKind.Gift:
                         var gift = Gifts.Get(p.Id);
+                        if (RestaurantIngredientsOnly(destination) && IsRawIngredientProduct(p.Id))
+                        {
+                            what = UnpackRestaurantIngredient(destination, new CourierItem { Kind = CourierItemKind.Gift, Id = p.Id, Count = p.Count });
+                            break;
+                        }
                         what = gift.Name + (p.Count > 1 ? "×" + p.Count : "");
                         if (toShop)
                         {
@@ -250,6 +259,11 @@ namespace PCShopSell.Core.Session
                         break;
                     default:
                         double kg = RiceBagKg * p.Count;
+                        if (RestaurantIngredientsOnly(destination))
+                        {
+                            what = UnpackRestaurantIngredient(destination, new CourierItem { Kind = CourierItemKind.Rice, Kg = kg });
+                            break;
+                        }
                         if (toShop) WithShop(destination, () => StoreRiceOrTemp(true, kg));
                         else HomeBox.Food.RiceKg += kg;
                         what = $"大米 {kg:0} 千克" + (toShop ? "（已放进门店后仓）" : "（已放进家中后仓）");
@@ -312,7 +326,7 @@ namespace PCShopSell.Core.Session
                     if (ignore < 0) ignore = _shopLayout.IndexOf(PetHouse(_focus));
                 }
             }
-            string limit=ShelfPlacementBlocker(shop,def,ignore);if(limit!=null)return limit;
+            string limit=ShopFixturePlacementBlocker(shop,def,ignore);if(limit!=null)return limit;
             RoomSpec room = shop ? ShopRoom : ResidenceRoom;
             return RoomPlanner.Check(room, LayoutOf(shop), def, cand, ignore, extra);
         }

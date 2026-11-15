@@ -1,4 +1,5 @@
 using System;
+using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using UnityEngine;
 using UnityEngine.UI;
@@ -174,16 +175,39 @@ namespace PCShopSell.Game.UI
                 : f.Phase == FishingPhase.Charging ? "松手甩出" : f.Phase == FishingPhase.Bite ? "提竿！"
                 : f.Phase == FishingPhase.Fighting ? "按住收线 · 松开放线" : "等鱼咬钩…";
         }
-        private void BuildFishBuyback(Window w)
+        private void OpenFishBuyback(Window venue)
         {
-            Line(w.Content, "钓场回收 · 只出售背包里的真实鱼获", 19, Ui.Accent);
-            Line(w.Content, "共 20 种 · 近岸、中水、远水各有鱼群 · 换饵会改变遇鱼机会", 16, Ui.Dim);
-            foreach (var item in FishingCatalog.Fish)
+            bool showAll = false;
+            OpenWindow("鱼获回收", 760, 560, w =>
             {
-                var fish = item; int count = S.Backpack.Food.IngredientCount(fish.Id);
-                Ui.Size(Ui.Button(w.Content, $"{fish.Name} · {fish.Kg:0.##} 千克/条 · 持有 {count} · 售出 1 条 ¥{fish.SalePrice}", () => { S.SellFishingCatch(fish.Id, 1); w.Rebuild(); }, 17, Ui.ButtonBg, count > 0), -1, 38);
-                Line(w.Content, $"{fish.Rarity} · {new[] { "近岸", "中水", "远水" }[fish.Habitat]} · 偏好{FishingCatalog.Baits[fish.Bait]} · {fish.MovementName}", 15, Ui.Dim);
-            }
+                var tabs = Ui.Row(w.Content, 40);
+                void Select(bool all) { showAll = all; w.ResetScrollOnRebuild = true; w.Rebuild(); }
+                Ui.Size(Ui.Button(tabs, "背包鱼获", () => Select(false), 17, showAll ? Ui.ButtonBg : Ui.ButtonHot), -1, 40, 1);
+                Ui.Size(Ui.Button(tabs, "全部鱼种", () => Select(true), 17, showAll ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1);
+                var list = Ui.Scroll(w.Content, 410);
+                bool hasFish = false;
+                foreach (var fish in FishingCatalog.Fish)
+                {
+                    int count = S.Backpack.Food.IngredientCount(fish.Id);
+                    if (!showAll && count == 0) continue;
+                    hasFish = true;
+                    var row = Ui.Row(list, 60, 10);
+                    string info = showAll
+                        ? $"{fish.Rarity} · {new[] { "近岸", "中水", "远水" }[fish.Habitat]} · 偏好{FishingCatalog.Baits[fish.Bait]} · {fish.MovementName}"
+                        : $"{fish.Kg:0.##} 千克/条 · 背包 {count} 条";
+                    Ui.Size(ProductText(row, $"<b>{fish.Name}</b>\n<size=15>{info}</size>", 18), -1, -1, 1);
+                    string price = Money.FromYuan(fish.SalePrice) + "／条";
+                    Ui.Size(Ui.Label(row, price, 17, TextAnchor.MiddleRight, Ui.Good), 118);
+                    if (count > 0)
+                        Ui.Size(Ui.Button(row, "卖出 1 条", () =>
+                        {
+                            if (!S.SellFishingCatch(fish.Id, 1)) return;
+                            venue.RequestRebuild();
+                            w.Rebuild();
+                        }, 16, Ui.ButtonHot), 108, 36);
+                }
+                if (!hasFish) Line(list, "背包里还没有鱼获。", 17, Ui.Dim);
+            }, scrollContent: false);
         }
     }
     public sealed class FishingHoldInput : MonoBehaviour, IPointerDownHandler, IPointerUpHandler

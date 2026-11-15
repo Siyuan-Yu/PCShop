@@ -38,13 +38,41 @@ namespace PCShopSell.Core.Session
         public CityPersonDefinition CityPerson(string id) => CityLifeCatalog.Person(id) ?? (_cityExtraDefinitions.TryGetValue(id??"",out var p)?p:null);
         public CityPersonState CityPersonState(string id) => _cityPeople.TryGetValue(id??"",out var p)?p:null;
         public int CityTrust(string id) => _cityTrust.TryGetValue(id??"",out int trust)?trust:0;
+
+        public (int Intelligence, int Charm, int Dexterity, int Stamina) CityPersonAttributes(string id)
+        {
+            var employee = CityEmploymentOf(id)?.Person
+                ?? _candidates.Find(candidate => candidate.PersonId == id);
+            return employee != null
+                ? (employee.Intelligence, EmployeeCharm(employee), employee.Dexterity, employee.Stamina)
+                : BaseCityPersonAttributes(id);
+        }
+
+        private static (int Intelligence, int Charm, int Dexterity, int Stamina) BaseCityPersonAttributes(string id)
+        {
+            // Named residents need repeatable attributes without advancing the simulation RNG.
+            int Score(string attribute, int min, uint range)
+            {
+                uint hash = 2166136261;
+                foreach (char c in id + ":" + attribute)
+                    hash = unchecked((hash ^ c) * 16777619);
+                return min + (int)(hash % range);
+            }
+            var talent = KolMarket.Get(id);
+            return (talent?.Intelligence ?? Score("intelligence", 20, 76),
+                talent?.Charm ?? Score("charm", 20, 71),
+                Score("dexterity", 15, 81), Score("stamina", 15, 81));
+        }
+
         public string CityPersonRole(string id)
         {
             if(string.IsNullOrEmpty(id))return "居民";
-            var job=Employees.FirstOrDefault(e=>e.Person.PersonId==id||
-                (_cityEmployeeAliases.TryGetValue(e.Person.Id,out var known)&&known==id));
+            var job=CityEmploymentOf(id);
             return job!=null?(job.Role==EmployeeRole.Cashier&&IsDedicatedVenue(job.Shop?.Place)?"场馆值守员":RoleName(job.Role))+"（受聘）":CityPerson(id)?.Role??"居民";
         }
+        private EmployeeAssignment CityEmploymentOf(string id) =>
+            Employees.FirstOrDefault(row => row.Person.PersonId == id ||
+                (_cityEmployeeAliases.TryGetValue(row.Person.Id, out var known) && known == id));
         /// <summary>这个人的名望：玩家是经营出来的共用值，NPC 按身份推算。见 <see cref="PersonStanding"/>。</summary>
         public double PersonStandingOf(string personId)
         {
@@ -318,7 +346,7 @@ namespace PCShopSell.Core.Session
                 if(_cityExtraDefinitions.TryGetValue(id,out var extra))extra.Name=e.Name;
             }
             if(CityPerson(id)==null) _cityExtraDefinitions[id]=new CityPersonDefinition {Id=id,Name=e.Name,Role="受聘员工",Age=28,
-                HomeId="life_home_s_oldhomes",Interest="稳定的工作和业余生活",Goal=e.Description??"攒下生活费，找一份可靠工作。",
+                HomeId="life_home_s_oldhomes",Goal=e.Description??"攒下生活费，找一份可靠工作。",
                 Experience="我做过零售和仓储，普通的工作会按规矩可靠完成。",Recruitable=true,
                 Topics=new[]{"基本工作按岗位规则做，有问题会明确告诉你。","下班后也想保留一点自己的时间。",e.Description??"我在攒一笔应急钱。","我也认识社区里的街坊。"},
                 Stories=new[]{"最初来这座城时，我也从临时工作开始。",e.Description??"现在希望工作和生活都稳定一点。","以后想学一门更熟练的手艺。"}};
@@ -333,7 +361,13 @@ namespace PCShopSell.Core.Session
             InitializeCityPeople();
             var used=new HashSet<string>(Employees.Select(a=>PersonIdOf(a.Person)).Concat(_candidates.Select(PersonIdOf)));
             var def=CityLifeCatalog.People.FirstOrDefault(p=>p.Recruitable&&!used.Contains(p.Id));
-            if(def!=null){e.PersonId=def.Id;e.Name=def.Name;e.Description=def.Goal;}
+            if (def != null)
+            {
+                e.PersonId = def.Id;
+                e.Name = def.Name;
+                e.Description = def.Goal;
+                (e.Intelligence, e.Charm, e.Dexterity, e.Stamina) = BaseCityPersonAttributes(def.Id);
+            }
             EnsureCityEmployee(e);
         }
         private void TickCityPeople(long now)
@@ -579,7 +613,7 @@ namespace PCShopSell.Core.Session
             var p=CityPersonState(id);var d=CityPerson(id);
             if(p==null||d==null)return null;
             if(remote){string why=RemoteConversationBlocker(id);if(why!=null)return why;}
-            else if(!CitySamePlace(id))return "对方不在这里。通讯录可查看已知资料，聊天软件可远程交谈。";
+            else if(!CitySamePlace(id))return "对方不在这里。可在通讯录查看资料或打电话。";
             if (topic == "friends" && Relation(id) < AskAboutOthersMinRelation) return "咱们再熟悉一些，再慢慢聊我的朋友吧。";
             GreetPerson(id,remote); int index=topic=="work"?0:topic=="interest"?1:topic=="life"?2:3;
             string key=id+":"+topic;bool fresh=!_cityTopicDay.TryGetValue(key,out int day)||day!=Clock.Today.TotalDays;
@@ -591,8 +625,9 @@ namespace PCShopSell.Core.Session
             }
             string text=d.Topics!=null&&d.Topics.Length>index?d.Topics[index]:d.Goal;
             if(topic=="work")text=(p.WorkPlaceId!=null&&City.HasPlace(p.WorkPlaceId)?"我现在的工作在"+City.GetPlace(p.WorkPlaceId).Name+"。":"我现在没有固定岗位。")+"\n"+text;
-            if (topic == "interest") text = "我平时喜欢" + ConversationTraits(id)[0].Name + "。有空的时候，也想给自己放个假。";
-            RememberSocial(id,(remote?"通过聊天软件，":"")+(fresh?"聊了新话题：":"再次聊起：")+text);
+            if (topic == "interest" && ConversationTraits(id)[0].Name is string interest)
+                text = $"我平时喜欢{interest}。有空的时候，也想给自己放个假。";
+            RememberSocial(id,(remote?"通过电话，":"")+(fresh?"聊了新话题：":"再次聊起：")+text);
             OnCityStoryTalk(id,topic);
             return text;
         }

@@ -16,12 +16,13 @@ namespace PCShopSell.Game.Runtime
         public string SpecialFurnitureName {get;private set;}
         private readonly Dictionary<string,GameObject> _specialFigures=new Dictionary<string,GameObject>();
         private readonly Dictionary<string,GameObject> _specialGoods=new Dictionary<string,GameObject>();
-        private readonly Dictionary<string,NpcRoute> _diningCheckoutRoutes=new Dictionary<string,NpcRoute>();
-        private void UpdateSpecialBusinessVisuals(GameSession session,float realDt)
+        public int NearbyDiningTable { get; private set; } = -1;
+        private void UpdateSpecialBusinessVisuals(GameSession session)
         {
             var shop=session.CurrentShop;
             NearSpecialFurniture=false;
             NearUsedBuyDesk=false;
+            NearbyDiningTable = -1;
             if(!session.IsSpecialBusiness(shop)&&_specialFigures.Count==0&&_specialGoods.Count==0)return;
             if(session.IsSpecialBusiness(shop))
             {
@@ -32,24 +33,24 @@ namespace PCShopSell.Game.Runtime
                 {
                     var position=new Vector3((float)nearest.X,0,(float)nearest.Z);
                     NearSpecialFurniture=Vector3.Distance(owner,position)<1.6f;
+                    if (NearSpecialFurniture && nearest.Id == "restaurant_table")
+                        NearbyDiningTable = shop.Layout.TakeWhile(p => p != nearest).Count(p => p.Id == "restaurant_table");
                     SpecialFurnitureWorld=_root.TransformPoint(position+Vector3.up);
                     SpecialFurnitureName=PCShopSell.Core.Home.FurnitureCatalog.Get(nearest.Id).Name;
                 }
             }
             var wanted=new HashSet<string>();
             var goods=new HashSet<string>();
-            GameObject Person(string key,Vector3 target,bool keepPosition=false)
+            void Person(string key,Vector3 target)
             {
                 wanted.Add(key);
                 if(!_specialFigures.TryGetValue(key,out var figure))
                 {
                     figure=Prims.Figure(_root,"SpecialCustomer_"+key,new Color(.36f,.62f,.72f),new Color(.95f,.8f,.65f),.95f);
                     _specialFigures[key]=figure;
-                    figure.transform.position = ClampIndoorNpc(_root.TransformPoint(target));
                 }
                 figure.SetActive(true);
-                if(!keepPosition)figure.transform.position = ClampIndoorNpc(_root.TransformPoint(target));
-                return figure;
+                figure.transform.position = ClampIndoorNpc(_root.TransformPoint(target));
             }
             void Good(string key,Vector3 target,Color color)
             {
@@ -71,29 +72,12 @@ namespace PCShopSell.Game.Runtime
                         if(order.Table>=0&&order.Table<tables.Length)
                         {
                             var table=tables[order.Table];var position=new Vector3((float)table.X,0,(float)table.Z);
-                            if(order.Stage!=DiningStage.Checkout&&order.Stage!=DiningStage.Completed&&order.Stage!=DiningStage.Left)
+                            if(order.Stage!=DiningStage.Completed&&order.Stage!=DiningStage.Left)
                                 Person("dining:"+order.Id,position+new Vector3(0,0,-.7f));
                             if(order.Stage==DiningStage.Eating||order.Stage==DiningStage.Checkout||order.Stage==DiningStage.Completed
                                 ||(order.Stage==DiningStage.Left&&order.EatUntil>0))
                                 Good("meal:"+order.Id,position+Vector3.up*.95f,new Color(.9f,.7f,.25f));
                         }
-                    if(_hasCounter)
-                    {
-                        float step=session.Time.IsRunning
-                            ? OwnerWalkSpeed*(float)CityTravelTiming.NpcWalkSpeedFactor*realDt*session.Time.Speed : 0f;
-                        int index=0;
-                        foreach(var order in state.Orders.Where(o=>o.Stage==DiningStage.Checkout).OrderBy(o=>o.CheckoutAt).ThenBy(o=>o.Id))
-                        {
-                            string key="dining:"+order.Id;
-                            Vector3 spot=QueueSpot(index++);
-                            bool approaching=session.Clock.Now.TotalMinutes<order.CheckoutAt;
-                            var table=order.Table>=0&&order.Table<tables.Length?tables[order.Table]:null;
-                            Vector3 start=approaching&&table!=null?new Vector3((float)table.X,0,(float)table.Z-.7f):_root.InverseTransformPoint(spot);
-                            var figure=Person(key,start,keepPosition:true);
-                            if(!_diningCheckoutRoutes.TryGetValue(key,out var route))_diningCheckoutRoutes[key]=route=new NpcRoute();
-                            if(step>0)MoveNpc(figure.transform,route,spot,step,true);
-                        }
-                    }
                     var stoves=shop.Layout.Where(p=>p.Id=="restaurant_stove").ToArray();
                     if (stoves.Length > 0)
                     {
@@ -137,7 +121,7 @@ namespace PCShopSell.Game.Runtime
                     }
                 }
             }
-            foreach(var key in _specialFigures.Keys.Where(k=>!wanted.Contains(k)).ToArray()){if(Application.isPlaying)Object.Destroy(_specialFigures[key]);else Object.DestroyImmediate(_specialFigures[key]);_specialFigures.Remove(key);_diningCheckoutRoutes.Remove(key);}
+            foreach(var key in _specialFigures.Keys.Where(k=>!wanted.Contains(k)).ToArray()){if(Application.isPlaying)Object.Destroy(_specialFigures[key]);else Object.DestroyImmediate(_specialFigures[key]);_specialFigures.Remove(key);}
             foreach(var key in _specialGoods.Keys.Where(k=>!goods.Contains(k)).ToArray()){if(Application.isPlaying)Object.Destroy(_specialGoods[key]);else Object.DestroyImmediate(_specialGoods[key]);_specialGoods.Remove(key);}
         }
     }

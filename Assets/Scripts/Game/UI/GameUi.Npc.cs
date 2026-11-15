@@ -159,7 +159,7 @@ namespace PCShopSell.Game.UI
 
         /// <summary>
         /// 有人接待的店（档口、手机店、家具城、烟酒茶行、农贸市场、车行）：左边是“店内人员图”，
-        /// 像宗门图一样自上而下——老板在最上面（金框），下面一级是店员（灰框），上下之间有连线；头像很小，人多了也排得下。
+        /// 像宗门图一样自上而下——老板在最上面（金框），下面一级是店员（灰框），上下之间有连线；人物多时可滚动。
         /// 老板交情够了才见得到，没到时是灰色“？？？”，原因写在图下面。右边是原来的商品内容。
         /// 返回放商品内容的容器；没有人返回 null。
         /// </summary>
@@ -175,13 +175,19 @@ namespace PCShopSell.Game.UI
             // spare horizontal space with the goods column, especially with a ScrollRect.
             var peopleSize=Ui.Size(people,rosterWidth,-1,0).GetComponent<LayoutElement>();
             peopleSize.minWidth=rosterWidth;
-            Ui.Size(Ui.Label(people,"店内在场人物",17),-1,30);
+            bool fishing = p.Id == GameSession.FishingVenueId;
+            bool hospital = p.Business == GameSession.HospitalBusiness;
+            Ui.Size(Ui.Label(people, fishing ? "钓场在场人物" : hospital ? "医院在场人物" : "店内在场人物", 17), -1, 30);
             var portraits = Ui.Scroll(people, Mathf.Max(140, bodyHeight - 40));
-            if(present.Length==0)Para(portraits,"此刻没有可交谈的店员在场。",16,Ui.Dim);
+            if (fishing && S.CityPerson(GameSession.FishingAttendantId) is CityPersonDefinition attendant
+                && !present.Any(person => person.PersonId == attendant.Id))
+                Para(portraits, $"{attendant.Name} · 钓场管理员\n值班 {attendant.WorkStart / 60:00}:{attendant.WorkStart % 60:00}–{attendant.WorkEnd / 60:00}:{attendant.WorkEnd % 60:00}\n当前不在场，可自助办理。", 16, Ui.Dim);
+            else if (present.Length == 0) Para(portraits, hospital ? "此刻没有可交谈的医生在场。" : "此刻没有可交谈的店员在场。", 16, Ui.Dim);
             foreach(var state in present)
             {
                 string id=state.PersonId;var def=S.CityPerson(id);
-                OrgNode(portraits, id, def.Name, S.CityPersonRole(id), state.WorkPlaceId == state.LocationPlaceId, false, () => OpenCityPerson(id));
+                OrgNode(portraits, id, def.Name, S.CityPersonRole(id), state.WorkPlaceId == state.LocationPlaceId, false,
+                    () => OpenCityPerson(id), portraitWidth: rosterWidth >= 190 ? 100 : 82, columnWidth: rosterWidth - 26);
             }
             var center=Ui.Rect(body,"Goods");Ui.VList(center,6,0);
             var goodsSize=Ui.Size(center,0,-1,1).GetComponent<LayoutElement>();
@@ -197,22 +203,16 @@ namespace PCShopSell.Game.UI
             return goods;
         }
 
-        private const float OrgCardWidth = 44;
-
-        /// <summary>人员图里的一个人：小头像卡（老板金框、店员灰框），下面是名字和职务；locked 时是暗色剪影。</summary>
-        private void OrgNode(Transform parent, string portraitId, string name, string title, bool top, bool locked, System.Action onClick)
+        private void OrgNode(Transform parent, string portraitId, string name, string title, bool top, bool locked,
+            System.Action onClick, float portraitWidth = 44, float columnWidth = 72)
         {
-            RectTransform row = Ui.Row(parent, 104, 0);
+            float portraitHeight = portraitWidth * 4f / 3f;
+            RectTransform row = Ui.Row(parent, portraitHeight + 64, 0);
             row.GetComponent<HorizontalLayoutGroup>().childAlignment = TextAnchor.MiddleCenter;
-            OrgNodeIn(row, portraitId, name, title, top, locked, onClick);
-        }
-
-        private void OrgNodeIn(Transform row, string portraitId, string name, string title, bool top, bool locked, System.Action onClick)
-        {
             RectTransform col = Ui.Rect(row, "Node");
             Ui.VList(col, 1, 0);
-            Ui.Size(col, 72, -1, 0);
-            col.GetComponent<LayoutElement>().minWidth = 72;
+            Ui.Size(col, columnWidth, -1, 0);
+            col.GetComponent<LayoutElement>().minWidth = columnWidth;
 
             RectTransform holder = Ui.Rect(col, "Holder");
             var holderRow = holder.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -221,12 +221,12 @@ namespace PCShopSell.Game.UI
             holderRow.childControlHeight = true;
             holderRow.childForceExpandWidth = false;
             holderRow.childForceExpandHeight = false;
-            Ui.Size(holder, -1, OrgCardWidth * 4f / 3f + 2);
+            Ui.Size(holder, -1, portraitHeight + 2);
 
             Color frameColor = locked ? new Color(0.3f, 0.32f, 0.36f) : top ? new Color(0.88f, 0.70f, 0.28f) : new Color(0.42f, 0.5f, 0.6f);
             Image frame = Ui.Panel(holder, "Frame", frameColor);
-            Ui.Size(frame, OrgCardWidth, OrgCardWidth * 4f / 3f);
-            frame.GetComponent<LayoutElement>().minWidth = OrgCardWidth;
+            Ui.Size(frame, portraitWidth, portraitHeight);
+            frame.GetComponent<LayoutElement>().minWidth = portraitWidth;
             var raw = FitPortrait(frame.rectTransform, portraitId, 2);
             var imgRt = raw.rectTransform;
             raw.color = locked ? new Color(0.1f, 0.1f, 0.12f) : Color.white;
@@ -250,7 +250,7 @@ namespace PCShopSell.Game.UI
             }
 
             Ui.Size(Ui.Label(col, $"<b>{name}</b>", 14, TextAnchor.MiddleCenter), -1, 20);
-            Ui.Size(Ui.Label(col, title, 13, TextAnchor.MiddleCenter, top ? Ui.Accent : Ui.Dim), -1, 17);
+            Ui.Size(Ui.Label(col, title, 13, TextAnchor.UpperCenter, top ? Ui.Accent : Ui.Dim), -1, 32);
         }
 
         /// <summary>上下级之间的连线。</summary>
@@ -399,7 +399,7 @@ namespace PCShopSell.Game.UI
             }
         }
 
-        public void OpenPersonDialogue(string personId,Place place=null,Window parent=null,string firstReply=null,StaffDef staff=null,PlaceRoster roster=null,System.Action onClosed=null,int initialPage=0,bool remote=false,bool phoneCall=false)
+        public void OpenPersonDialogue(string personId,Place place=null,Window parent=null,string firstReply=null,StaffDef staff=null,PlaceRoster roster=null,System.Action onClosed=null,int initialPage=0,bool remote=false)
         {
             var definition=S.CityPerson(personId);var npc=Npcs.All.FirstOrDefault(n=>n.Id==personId);
             staff=staff??Rosters.Get(personId)??Residents.Get(personId)?.Person;
@@ -410,7 +410,7 @@ namespace PCShopSell.Game.UI
                 Toast("请走到住户身边再交谈。");
                 return;
             }
-            if(remote){string why=S.RemoteConversationBlocker(personId,phoneCall);if(why!=null){Toast(why);return;}}
+            if(remote){string why=S.RemoteConversationBlocker(personId);if(why!=null){Toast(why);return;}}
             else if(definition!=null&&!S.CitySamePlace(personId)){OpenCityPersonProfile(personId,onClosed);return;}
             string name=definition?.Name??npc?.Name??staff.Name;
             string role=definition!=null?S.CityPersonRole(personId):npc?.Role??staff.Role;
@@ -423,7 +423,7 @@ namespace PCShopSell.Game.UI
             bool creatorChoice = initialPage == 3;
             bool discussingPeople = false;
             bool confirmingBreakup = false;
-            OpenDialogue(personId, name, role+(phoneCall?" · 电话":remote?" · 手机聊天":""), greeting, ctx =>
+            OpenDialogue(personId, name, role + (remote ? " · 电话" : ""), greeting, ctx =>
             {
                 var options = new List<TalkOpt>();
                 bool near = !remote && (definition == null || S.CitySamePlace(personId));
@@ -449,15 +449,10 @@ namespace PCShopSell.Game.UI
                 {
                     if (KolMarket.Get(personId) != null && S.IsMet(personId))
                         options.Add(new TalkOpt { Label = "谈品牌代言与直播", Blocker = canTalk ? null : "对方已离开",
-                            Act = () => OpenKolNegotiation(personId, ctx.W, remote, phoneCall) });
+                            Act = () => OpenKolNegotiation(personId, ctx.W, remote) });
                     if (Creators.Get(personId) != null && S.IsMet(personId) && S.HasMcn)
                         options.Add(new TalkOpt { Label = "谈MCN合作", Blocker = canTalk ? null : "对方已离开",
                             Act = () => OpenCreatorRelations(personId, ctx.W) });
-                }
-                if (phoneCall && !S.HasChatApp)
-                {
-                    options.Add(new TalkOpt { Label = "电话邀约", Act = () => OpenCityActivityChooser(personId) });
-                    return options;
                 }
                 AddDistrictDialogue(options,personId,remote,near,Reply);
                 if(personId=="life_enterprise"||personId=="life_tenant")
@@ -518,8 +513,8 @@ namespace PCShopSell.Game.UI
                     Act = () => Reply(S.AskContact(personId) ? name + "：“好，咱们留个联系方式，以后可以联系。”\n已存入通讯录。" : S.ContactBlocker(personId) ?? "暂时没有交换成功。")
                 });
                 options.Add(new TalkOpt { Label = "送礼", Blocker = !near ? "需要当面送礼" : S.PersonGiftBlocker(personId), Act = () => OpenPersonGiftGrid(personId, name, ctx) });
-                if (S.IsMet(personId) && definition != null)
-                    options.Add(new TalkOpt { Label = "邀请活动", Blocker = canTalk ? null : "对方已离开", Act = () => OpenCityActivityChooser(personId) });
+                if (definition != null)
+                    options.Add(new TalkOpt { Label = "邀请活动", Blocker = canTalk ? S.CityInviteBlocker(personId) : "对方已离开", Act = () => OpenCityActivityChooser(personId) });
                 if (S.IsPlayerPartner(personId))
                 {
                     options.Add(new TalkOpt { Label = "聊聊心事", Blocker = canTalk ? null : "对方已离开", Act = () => Reply(S.PartnerConversation(personId)) });
@@ -739,7 +734,7 @@ namespace PCShopSell.Game.UI
                         },
                     });
                 }
-                o.Add(new TalkOpt { Label = "发出邀约（约出去玩）", Act = () => OpenInviteWindow(n, ctx.W) });
+                o.Add(new TalkOpt { Label = "发出邀约（约出去玩）", Blocker = S.CityInviteBlocker(n.Id), Act = () => OpenInvitePanel(n.Id) });
                 if (stall != null)
                 {
                     bool open = S.IsWholesalerOpen;

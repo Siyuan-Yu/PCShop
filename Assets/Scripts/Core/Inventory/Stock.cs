@@ -78,6 +78,7 @@ namespace PCShopSell.Core.Inventory
         }
 
         public double Capacity { get; set; }
+        internal event Action<PartDef> PartAdded;
 
         public Stock(double capacity)
         {
@@ -194,6 +195,7 @@ namespace PCShopSell.Core.Inventory
             if (!CanAdd(part, boxed, count)) return false;
             Dictionary<string, int> d = boxed ? _boxed : _loose;
             d[part.Id] = Count(part, boxed) + count;
+            PartAdded?.Invoke(part);
             return true;
         }
 
@@ -203,6 +205,7 @@ namespace PCShopSell.Core.Inventory
             if (count <= 0) return;
             Dictionary<string, int> d = boxed ? _boxed : _loose;
             d[part.Id] = Count(part, boxed) + count;
+            PartAdded?.Invoke(part);
         }
 
         public bool TryRemove(PartDef part, bool boxed, int count)

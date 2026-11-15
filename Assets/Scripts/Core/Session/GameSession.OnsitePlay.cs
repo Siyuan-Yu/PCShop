@@ -32,6 +32,26 @@ namespace PCShopSell.Core.Session
         private int _onsitePhotoSequence;
         public static int OnsiteNumber(string id)
         {var bits=(id??"").Split('_');return bits.Length>=2&&bits[0]=="social"&&int.TryParse(bits[1],out int n)&&(n>=51&&n<=58||n==76)?n:0;}
+        public static bool IsVenueBasketball(CityActivity activity)
+        {
+            if (activity == null) return false;
+            var definition = CityLifeCatalog.Activity(string.IsNullOrEmpty(activity.ServiceDefinitionId)
+                ? activity.DefinitionId : activity.ServiceDefinitionId);
+            return (definition?.LogicalId ?? definition?.Id) == "court";
+        }
+        public static bool IsOnsiteBasketball(CityActivity activity) =>
+            OnsiteNumber(activity?.DefinitionId) is >= 54 and <= 56 || IsVenueBasketball(activity);
+        public bool CanFinishOnsiteBasketball => IsOnsiteBasketball(RunningCityActivity) && OnsiteHere
+            && OnsiteCompletionReady(RunningCityActivity);
+
+        public bool FinishOnsiteBasketball()
+        {
+            if (!CanFinishOnsiteBasketball) return false;
+            var activity = RunningCityActivity;
+            AdvanceClock((int)Math.Max(1, activity.ActualStart + activity.Duration - Clock.Now.TotalMinutes));
+            return !activity.Active;
+        }
+
         public static bool IsOnsiteActivity(CityActivity a)=>OnsiteNumber(a?.DefinitionId)!=0;
         private static bool OnsiteWorkingMeeting(string definition,string person)=>OnsiteNumber(definition)==58&&person=="life_enterprise"||OnsiteNumber(definition)==76&&person=="resident_ningxi";
         public OnsitePlayState OnsiteState(string id)=>_onsitePlays.FirstOrDefault(s=>s.ActivityId==id)?.Copy();
@@ -66,11 +86,14 @@ namespace PCShopSell.Core.Session
                 long at=Start(def);choices.Add(Choose(label,s=>
                 {
                     var a=ScheduleCityActivityAt(def,guests,at,false,"onsite:"+n+":"+_nextCityActivity,place);if(a==null)return "暂无共同空闲时段，未扣款。";
-                    a.HostId=host?person:treat?"player":person;a.HostPays=host;a.PlayerTreat=treat;a.ServiceConfirmed=true;a.ServiceChoice=0;
-                    return "已预约"+new PCShopSell.Core.Time.GameTimestamp(at)+"，到场付款并实际操作，未完成现场任务不结算完成奖励。";
+                    a.HostId=host?person:treat?"player":person;a.HostPays=host;a.PlayerTreat=treat;a.ServiceChoice=0;
+                    var time = new PCShopSell.Core.Time.GameTimestamp(at);
+                    return n == 56 ? $"已约好 {time} 在青湾球场会合。到场后再和张绍文商量费用。"
+                        : $"已预约{time}，到场付款并实际操作，未完成现场任务不结算完成奖励。";
                 },s=>at>=0,"暂无共同空闲时段"));
             }
             if(n is 51 or 53 or 76)Offer("确认赴约 · 邀请人招待",definition,host:true);
+            else if (n == 56) Offer("约好去青湾球场", definition);
             else
             {
                 Offer("各付自己的费用",definition);Offer("这场我请",definition,treat:true);
@@ -84,16 +107,76 @@ namespace PCShopSell.Core.Session
                 53=>"曾玉想听听你对几种新饮品的感受。到吧台聊一聊，选一杯，等她调好后亲自尝尝。",
                 54=>"郑禾的篮球训练¥1,200/人，选择定点、上篮或防守训练，按住蓄力、松开出手，实际完成三轮。",
                 55=>"董宇的新地板体验¥600/人，实际体验运球、急停和跳投，再根据脚感选择反馈。",
-                56=>"与张绍文打五个回合，¥1,200/人。看防守位置，选择投篮或突破，自己控制方向和力度。输赢都按实际回合结算。",
+                56=>"张绍文想约你去青湾球场打一场。答应后会记到日程里，到球场碰面再商量怎么付。",
                 57=>"陶川的高尔夫练习¥2,500/人。选择铁杆、木杆或挖起杆，调整方向，按住蓄力松开击球，观察真实飞行和落点，完成五杆。",
                 58=>"商务球叙¥6,800/人，也可选¥2,500/人指导。至少打三杆后选择采购话题；可明确不承诺，谈成才形成真实订单，不在答应邀约时发订单。",
                 _=>"与宁汐到每月22–24日原创模型展摄影。选择展品、角度、远近和曝光，保存真实照片。至少三张照片、两种展品且两张构图合格才完成。"};
             return EventScene(template,body,choices.ToArray());
         }
+
+        public CityActivity OnsiteActivityAt(Place place, string activityId = null)
+        {
+            if (place == null || place.Id != CurrentPlace?.Id) return null;
+            var running = RunningCityActivity;
+            if (IsOnsiteActivity(running) && running.VenueId == place.Id && (activityId == null || running.Id == activityId))
+                return running;
+            return FindPendingVenueActivity(place, activityId, onsiteOnly: true);
+        }
+
+        public bool OnsiteCompanionsPresent(CityActivity activity) => activity != null && activity.RendezvousReady
+            && activity.VenueId == CurrentPlace?.Id
+            && activity.Participants.All(p => p.Phase == CityParticipantPhase.Waiting && CitySamePlace(p.PersonId));
+
+        public string OnsiteStartBlocker(CityActivity activity, bool? playerTreat = null)
+        {
+            if (activity == null || activity != OnsiteActivityAt(CurrentPlace, activity.Id)) return "请在约定时间到活动地点";
+            if (IsGameOver || _sleeping || IsWorking || CityActivityExclusive) return "请先结束当前活动";
+            long now = Clock.Now.TotalMinutes;
+            if (now > activity.ScheduledStart + CityArrivalWindowMinutes) return "已超过约定的到场时间";
+            if (OnsiteNumber(activity.DefinitionId) == 56 && activity.Participants.Length == 0) return "这场球缺少同行者";
+            if (!OnsiteCompanionsPresent(activity))
+                return "等同行者到齐后开始";
+            if (!CityVenueFits(CurrentPlace, now, activity.Duration)) return "距离场所打烊太近，无法开始";
+            if (OnsiteNumber(activity.DefinitionId) == 76 && !CityExpoDay(now, true)) return "原创模型漫展尚未开放";
+            Money cost = CityActivityEntryPrice(CityActivityService(activity), 0, activity, playerTreat);
+            return cost.IsPositive && !Ledger.CanAfford(cost) ? $"现金不足，需要 {cost}" : null;
+        }
+
+        public bool StartOnsiteActivity(string id, bool? playerTreat = null)
+        {
+            var activity = OnsiteActivityAt(CurrentPlace, id);
+            if (activity == null || activity.Id != id) return Fail("请在约定时间到活动地点");
+            PrepareVenueCompanions(CurrentPlace, id);
+            bool chooseAtCourt = OnsiteNumber(activity.DefinitionId) == 56;
+            if (OnsiteStartBlocker(activity, chooseAtCourt ? playerTreat : null) is string reason) return Fail(reason);
+            if (chooseAtCourt && !playerTreat.HasValue) return Fail("请先在球场选择怎么付场地费");
+            bool previousTreat = activity.PlayerTreat;
+            string previousHost = activity.HostId;
+            if (chooseAtCourt)
+            {
+                activity.PlayerTreat = playerTreat.Value;
+                activity.HostId = playerTreat.Value ? "player" : activity.Participants.First().PersonId;
+            }
+            activity.ServiceConfirmed = true;
+            TickCityActivities(Clock.Now.TotalMinutes);
+            if (activity.State == CityActivityPhase.Running) return true;
+            if (activity.Active)
+            {
+                activity.ServiceConfirmed = false;
+                activity.PlayerTreat = previousTreat;
+                activity.HostId = previousHost;
+            }
+            return false;
+        }
+
         private void StartOnsitePlay(CityActivity a)
         {
-            int n=OnsiteNumber(a.DefinitionId);if(n==0||_onsitePlays.Any(s=>s.ActivityId==a.Id))return;
+            bool venueBasketball = IsVenueBasketball(a);
+            int n = venueBasketball ? 54 : OnsiteNumber(a.DefinitionId);
+            if(n==0||_onsitePlays.Any(s=>s.ActivityId==a.Id))return;
             var state=new OnsitePlayState{ActivityId=a.Id,Number=n,TalkMasks=new int[a.Participants.Length],Message="打开现场操作界面，按自己的选择完成活动。"};
+            if (venueBasketball) state.Message = "对准篮筐，按住蓄力再松手投篮。完成三回合即可结算。";
+            if (n == 56) state.Message = "张绍文站到防守位置。选投篮或突破，按住蓄力再松手出球。";
             if(n==53)state.Message="曾玉朝你招招手，把几只杯子摆到了吧台上。";
             _onsitePlays.Add(state);SetNextOnsiteTarget(state);
         }
@@ -132,7 +215,8 @@ namespace PCShopSell.Core.Session
         {var s=Play;if(!OnsiteHere||s==null||s.Number<54||s.Number>58||s.Phase is "flight" or "charging")return false;s.Angle=Math.Max(-50,Math.Min(50,degrees));return true;}
         public bool BeginOnsiteCharge()
         {
-            var s=Play;if(!OnsiteHere||s==null||s.Number<54||s.Number>58||s.Phase is "flight" or "charging"||s.Round>=8)return false;
+            var s=Play;if(!OnsiteHere||s==null||s.Number<54||s.Number>58||s.Phase is "flight" or "charging"||s.Round>=(s.Number==56?5:8))return false;
+            if (s.Round >= 3 && IsVenueBasketball(RunningCityActivity)) return false;
             SetNextOnsiteTarget(s);s.Phase="charging";s.Power=0;s.Flight=0;s.BallX=s.BallZ=0;s.BallY=1.7;return true;
         }
         public bool ReleaseOnsiteShot()
@@ -163,6 +247,11 @@ namespace PCShopSell.Core.Session
                 s.Round++;if(good)s.Success++;s.Mask|=1<<s.Mode;s.Phase="result";
                 Player.SpendEnergy(s.Number<=56?3:2);
                 if(s.Number==56&&(!good||Math.Sin(s.Time*1.3)>.6))s.OpponentScore+=2;
+                if (s.Number == 56 && s.Round == 5)
+                {
+                    s.Message = $"五回合打完。你 {s.Success * 2} : {s.OpponentScore} 张绍文。";
+                    return;
+                }
                 s.Message=s.Number<=56?(blocked?"张老师封住了出手路线。":good?"命中！":"没有命中，看看方向和力度再试。"):$"落点距目标 {miss:0.0}米 · 实际飞行{s.Distance:0.0}米";
             }
         }
@@ -217,23 +306,37 @@ namespace PCShopSell.Core.Session
         }
         private bool OnsiteCompletionReady(CityActivity a)
         {
-            int n=OnsiteNumber(a.DefinitionId);if(n==0)return true;var s=_onsitePlays.FirstOrDefault(x=>x.ActivityId==a.Id);if(s==null||s.Pending!=null||s.Phase is "charging" or "flight")return false;
+            bool venueBasketball = IsVenueBasketball(a);
+            int n=OnsiteNumber(a.DefinitionId);if(n==0&&!venueBasketball)return true;var s=_onsitePlays.FirstOrDefault(x=>x.ActivityId==a.Id);if(s==null||s.Pending!=null||s.Phase is "charging" or "flight")return false;
+            if (venueBasketball) return s.Round >= 3;
             return n switch{51=>s.Round>=2&&s.Feedback>=0,52=>s.TalkMasks.Length==a.Participants.Length&&s.TalkMasks.All(x=>x!=0),53=>s.Round>=1&&s.Phase!="mixed",54=>s.Round>=3&&(s.Mask&(s.Mask-1))!=0,55=>s.Round>=3&&s.Mask==7&&s.Feedback>=0,56=>s.Round>=5,57=>s.Round>=5,58=>s.Round>=3&&s.ProcurementDecided,76=>s.PhotoCount>=3&&s.GoodPhotos>=2&&(s.PhotoSubjects&(s.PhotoSubjects-1))!=0,_=>false};
         }
         private void CompleteOnsitePlay(CityActivity a)
         {
             var s=_onsitePlays.FirstOrDefault(x=>x.ActivityId==a.Id);if(s==null)return;
+            if (IsVenueBasketball(a))
+            {
+                a.EventSettlementNote = (a.EventSettlementNote ?? "") + $"\n打完 {s.Round} 回合 · 投篮命中 {s.Success} 次";
+                return;
+            }
             if(s.Number==52&&a.PlayerTreat)foreach(var p in a.Participants)AddRelation(p.PersonId,2);
             if(s.Number==52&&a.HostPays)AddRelation(a.HostId,1);
             if(s.Number>=54&&s.Number<=57&&s.Success>=2)Player.Skill=Math.Min(100,Player.Skill+1);
             if(s.Number>=54&&s.Number<=57)Player.Health=Math.Min(100,Player.Health+1);
             if(s.Number==76&&s.GoodPhotos>=3)Player.Intelligence=Math.Min(100,Player.Intelligence+1);
+            if (s.Number == 56)
+            {
+                a.EventSettlementNote = (a.EventSettlementNote ?? "") + $"\n打完五回合 · 你 {s.Success * 2} : {s.OpponentScore} 张绍文";
+                return;
+            }
             a.EventSettlementNote=(a.EventSettlementNote??"")+(s.Number==53?"\n你和曾玉在吧台尝了新饮品，也聊了各自的感受。":"\n实际回合"+s.Round+"，成功"+s.Success+"，照片"+s.PhotoCount+"。");
         }
         private void SaveOnsitePlay(SaveData d){d.onsitePlays=_onsitePlays.Select(x=>x.Copy()).ToArray();d.onsitePhotos=_onsitePhotos.Select(x=>x.Copy()).ToArray();d.onsitePhotoSequence=_onsitePhotoSequence;}
         private void RestoreOnsitePlay(SaveData d)
         {
             _onsitePlays.Clear();foreach(var x in d.onsitePlays??Array.Empty<OnsitePlayState>()){var s=x.Copy();if(string.IsNullOrEmpty(s.Pending))s.Pending=null;_onsitePlays.Add(s);}
+            var running = RunningCityActivity;
+            if (IsVenueBasketball(running)) StartOnsitePlay(running);
             _onsitePhotos.Clear();_onsitePhotos.AddRange((d.onsitePhotos??Array.Empty<OnsitePhoto>()).Select(x=>x.Copy()));_onsitePhotoSequence=d.onsitePhotoSequence;
         }
     }

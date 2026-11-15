@@ -41,9 +41,9 @@ namespace PCShopSell.Tests
             s.AdvanceClock(2);
             for(int i=0;i<count;i++)
             {
-                var next=s.RestaurantCheckoutCustomer;
+                var next=s.SpecialBusiness("pc").Orders.FirstOrDefault(order => order.Stage == DiningStage.Checkout);
                 Assert.NotNull(next);
-                Assert.True(s.CheckoutRestaurantCustomer(next.Id));
+                Assert.True(s.ClearRestaurantOrder(next.Id));
             }
         }
 
@@ -75,7 +75,7 @@ namespace PCShopSell.Tests
                 {
                     PayMeals(loaded,1);
                     Assert.AreEqual(2,loaded.PlayerShop.Stock.GoodsCount(id));
-                    var sale=loaded.Ledger.Entries.Single(e=>e.SourceEventId=="meal:1:drink");
+                    var sale=loaded.Ledger.Entries.Single(e=>e.SourceEventId?.EndsWith(":1:drink", System.StringComparison.Ordinal)==true);
                     Assert.AreEqual(price,sale.Amount.Yuan);Assert.AreEqual("pc",sale.ShopId);
                     Assert.AreEqual(id,sale.Attribution.ProductId);Assert.AreEqual(1,sale.Attribution.Quantity);
                     Assert.AreEqual(18+price,loaded.SpecialBusiness("pc").Revenue);
@@ -84,8 +84,11 @@ namespace PCShopSell.Tests
                     {
                         again.AdvanceClock(5);
                         Assert.AreEqual(2,again.PlayerShop.Stock.GoodsCount(id));
-                        Assert.AreEqual(1,again.Ledger.Entries.Count(e=>e.SourceEventId=="meal:1:drink"));
+                        Assert.AreEqual(1,again.Ledger.Entries.Count(e=>e.SourceEventId?.EndsWith(":1:drink", System.StringComparison.Ordinal)==true));
                         Assert.AreEqual(18+price,again.SpecialBusiness("pc").Revenue);
+                        var visit = again.RestaurantVisitsToday(again.CurrentShop, false).Single();
+                        Assert.AreEqual((18+price)*100, visit.PaidCents);
+                        Assert.That(visit.ProductName, Does.Contain(Gifts.Get(id).Name));
                     }
                 }
             }
@@ -98,7 +101,7 @@ namespace PCShopSell.Tests
                 s.PlayerShop.Stock.ForceAddGoods(id,2);Eating(s);PayMeals(s,1);
                 Assert.AreEqual(2,s.PlayerShop.Stock.GoodsCount(id));
                 Assert.AreEqual(18,s.SpecialBusiness("pc").Revenue);
-                Assert.False(s.Ledger.Entries.Any(e=>e.SourceEventId=="meal:1:drink"));
+                Assert.False(s.Ledger.Entries.Any(e=>e.SourceEventId?.EndsWith(":1:drink", System.StringComparison.Ordinal)==true));
             }
         }
         [Test] public void MultipleDinersCannotOversellLastDrink_AndUnfinishedOrdersDoNotBuy()

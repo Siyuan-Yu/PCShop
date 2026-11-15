@@ -37,17 +37,21 @@ namespace PCShopSell.Core.Home
 
     public static class Ingredients
     {
-        public static readonly IReadOnlyList<IngredientDef> All = new[]
+        public static readonly IReadOnlyList<IngredientDef> RiceCookerRecipes = new[]
         {
             new IngredientDef("veg", "青菜", "千克", 3, 6, 0.4, "青菜焖饭"),
             new IngredientDef("egg", "鸡蛋", "千克", 2, 9, 0.3, "鸡蛋焖饭"),
             new IngredientDef("tofu", "豆腐", "千克", 3, 8, 0.3, "豆腐焖饭"),
             new IngredientDef("pork", "五花肉", "千克", 12, 14, 0.2, "肉末焖饭"),
-        }.Concat(PCShopSell.Core.Session.FishingCatalog.Fish.Select(f => new IngredientDef(f.Id, f.Name,
+        };
+
+        public static readonly IReadOnlyList<IngredientDef> All = RiceCookerRecipes
+            .Concat(PCShopSell.Core.Session.FishingCatalog.Fish.Select(f => new IngredientDef(f.Id, f.Name,
             "条", f.Id == "fish_bass" ? 1200 : (long)(Math.Ceiling(f.SalePrice * 1.65 / 10) * 10),
             f.Kg < 1 ? 12 : f.Kg < 2 ? 15 : 18, f.Kg < 1 ? .4 : f.Kg < 2 ? .5 : .6, f.Name + "焖饭"))).ToArray();
 
         public static IngredientDef Get(string id) => All.FirstOrDefault(i => i.Id == id);
+        public static IngredientDef GetRiceCookerRecipe(string id) => RiceCookerRecipes.FirstOrDefault(i => i.Id == id);
     }
 
     /// <summary>一批食材或成品。只有成品有过期日。</summary>
@@ -127,7 +131,7 @@ namespace PCShopSell.Core.Home
             if (CookedBowls > 0) { error = "锅里还有焖好的饭，先吃掉或者装进饭盒。"; return false; }
             if (double.IsNaN(kg) || double.IsInfinity(kg) || kg < MinCookRiceKg - 1e-9) { error = "至少放 0.25 千克米。"; return false; }
             if (supplies.Sum(source => source.RiceKg) + 1e-9 < kg) { error = "可用大米不够。"; return false; }
-            IngredientDef ing = ingredientId == null ? null : Ingredients.Get(ingredientId);
+            IngredientDef ing = Ingredients.GetRiceCookerRecipe(ingredientId);
             if (ingredientId != null && ing == null) { error = "电饭锅不能用这种配菜。"; return false; }
             int need = ing == null ? 0 : IngredientUnitsForRice(kg);
             if (ing != null && supplies.Sum(source => source.IngredientCount(ingredientId)) < need)

@@ -44,11 +44,10 @@ namespace PCShopSell.Core.Session
         public int ReturnableGarageSpaces(string id) => Math.Min(GarageLease(id)?.RentedSpaces??0,GarageFreeSpaces(id));
         public Money GaragePropertyValue => Money.FromYuan(_regionalGarages.Sum(g => RegionalGarages.Get(g.PlaceId).PriceYuan*g.OwnedSpaces));
         public Money MonthlyGarageRent => Money.FromYuan(_regionalGarages.Sum(g => RegionalGarages.Get(g.PlaceId).RentYuan*g.RentedSpaces));
-        public Money GarageSpaceQuote(string id,bool buy,int count)
+        public Money GarageSpaceQuote(string id, int count)
         {
-            var g=RegionalGarages.Get(id);if(g==null||count<=0)return Money.Zero;
-            var price=Money.FromYuan((buy?g.PriceYuan:g.RentYuan)*(long)count);var lease=GarageLease(id);
-            return buy||lease==null||lease.RentedSpaces==0?price:price.Scale(Math.Max(1,lease.NextRentDay-Clock.Today.TotalDays)/30.0);
+            var garage = RegionalGarages.Get(id);
+            return garage == null || count <= 0 ? Money.Zero : Money.FromYuan(garage.PriceYuan * count);
         }
 
         public string GarageContractBlocker(string id)
@@ -61,19 +60,18 @@ namespace PCShopSell.Core.Session
             return null;
         }
 
-        public bool AcquireGarage(string id, bool buy,int count=1)
+        public bool AcquireGarage(string id, int count = 1)
         {
             string why = GarageContractBlocker(id); if (why != null) return Fail(why);
             var g = RegionalGarages.Get(id); var lease = _regionalGarages.FirstOrDefault(x => x.PlaceId == id);
             if(count<=0||(long)count+(lease?.Capacity??0)>int.MaxValue)return Fail("请输入有效的车位数量");
-            var price = GarageSpaceQuote(id,buy,count);
-            var attribution = buy ? LedgerAttribution.ForAsset(id, transactionKind: "车位购置")
-                : new LedgerAttribution(LedgerBusinessKind.Personal, propertyId: id, transactionKind: "车位租金");
-            if (!Ledger.TryDebit(Clock.Today, buy ? "购买车位" : "车位租金", price, g.Name + " · "+count+"个车位"+(buy ? "全款购买" : "本期租金"), attribution)) return Fail("现金不足");
+            var price = GarageSpaceQuote(id, count);
+            var attribution = LedgerAttribution.ForAsset(id, transactionKind: "车位购置");
+            if (!Ledger.TryDebit(Clock.Today, "购买车位", price, $"{g.Name} · 全款购买 {count} 个车位", attribution)) return Fail("现金不足");
             if (lease == null) { lease = new RegionalGarageLease { PlaceId = id }; _regionalGarages.Add(lease); }
-            if(buy)lease.OwnedSpaces+=count;
-            else {if(lease.RentedSpaces==0)lease.NextRentDay=Clock.Today.TotalDays+30;lease.RentedSpaces+=count;}
-            Say(g.Name+"已"+(buy?"购买":"租用")+count+"个车位；现有"+lease.Capacity+"位，需要时可继续增加。"); return true;
+            lease.OwnedSpaces += count;
+            Say($"{g.Name}已购买 {count} 个车位，现有 {lease.Capacity} 位。");
+            return true;
         }
 
         public bool EndGarageLease(string id,int count=0)
@@ -127,7 +125,7 @@ namespace PCShopSell.Core.Session
         private string MotorSpaceBlocker(string garageId)
         {
             var g = RegionalGarages.Get(garageId);
-            if (g == null || !HasGarage(garageId)) return "请先在目标片区车库租用或购买车位";
+            if (g == null || !HasGarage(garageId)) return "请先在目标片区车库购买车位";
             if (DistrictAccessTier < g.Tier) return "先解锁" + DistrictName(g.Tier) + "片区";
             return GarageFreeSpaces(garageId) <= 0 ? "已持有车位已满，请到车库增加车位或先移走车辆" : null;
         }

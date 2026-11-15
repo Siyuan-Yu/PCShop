@@ -209,8 +209,10 @@ namespace PCShopSell.Game.UI
                 foreach(var order in shop.Sim.Orders)
                 {
                     Line(w.Content,PartCatalog.TierName(order.Tier)+"整机 · "+order.Price+" · 截止 "+order.DueAt,20);
-                    Line(w.Content,order.PartsReserved?"配件已领用 · 员工剩余 "+order.EmployeeMinutesLeft+" 分钟":"等待配件与员工处理",17);
-                    foreach(var part in PartCatalog.BuildList(order.Tier))Line(w.Content,part.Name+" · "+(order.PartsReserved||shop.Sim.Stock.CountAll(part)>0?"已备":"缺货"),16,Ui.Dim);
+                    Line(w.Content, order.EmployeeMinutesLeft > 0 ? $"员工装机剩余 {order.EmployeeMinutesLeft} 分钟" :
+                        order.PartsReserved ? "配件已备齐 · 等待装机" : "等待配件", 17);
+                    foreach (var part in PartCatalog.BuildList(order.Tier))
+                        Line(w.Content, part.Name + " · " + (order.HasReservedPart(part) ? "已预留" : "缺货"), 16, Ui.Dim);
                 }
                 if(shop.Sim.Orders.Count==0)Line(w.Content,"当前没有装机订单。",18,Ui.Dim);
                 Para(w.Content,"员工按真实岗位、在岗位置和配件处理订单。手工装机需本人到店。",16,Ui.Dim);
@@ -232,7 +234,7 @@ namespace PCShopSell.Game.UI
         }
         private void BuildWorkbenchContacts(Transform parent)
         {
-            // 只有「通讯录」和「日程」：通讯录就是下面这份名单，点头像看资料/邀约，右侧固定大小的按钮直接交谈。
+            // 只有「通讯录」和「日程」：通讯录就是下面这份名单，点头像看资料/邀约，右侧固定大小的按钮可打电话。
             var actions=Ui.Row(parent,32,6);WbSubTab(actions,"通讯录",()=>{},"WorkbenchContacts",true,128);WbSubTab(actions,"日程",OpenSchedulePanel,"WorkbenchContactCalendar",false,128);WbFlex(actions);
             var list=WbScroll(parent,"WorkbenchContactsBody");
             foreach(var contact in S.SavedConversationContacts())
@@ -240,14 +242,14 @@ namespace PCShopSell.Game.UI
                 string id=contact.Id;
                 var row=PersonSummary(list,id,contact.Name,contact.Role,54,()=>OpenCityPersonProfile(id),ink:WbInk,muted:WbDim);
                 Ui.Size(Ui.Label(row,Npcs.LevelName(S.Relation(id))+" "+S.Relation(id),16,TextAnchor.MiddleCenter,Ui.Good),110);
-                var talk=Ui.Size(Ui.Button(row,"交谈",()=>OpenPersonDialogue(id,remote:true),17,Ui.ButtonHot),100,44,0);talk.name="WorkbenchKnownContact_"+id;
+                var talk=Ui.Size(Ui.Button(row,"打电话",()=>OpenPersonDialogue(id,remote:true),17,Ui.ButtonHot),100,44,0);talk.name="WorkbenchKnownContact_"+id;
             }
             foreach(var worker in S.Employees)
             {
                 string personId=S.PersonIdOf(worker.Person);var employee=worker;
                 var row=PersonSummary(list,personId,employee.Person.Name,GameSession.RoleName(employee.Role)+" · "+S.EmployeeStatus(employee),54,ink:WbInk,muted:WbDim);
                 Ui.Size(Ui.Label(row,"员工",16,TextAnchor.MiddleCenter,WbDim),110);
-                var talk=Ui.Size(Ui.Button(row,"交谈",()=>OpenPersonDialogue(personId,remote:true),17,Ui.ButtonHot,S.RemoteConversationBlocker(personId)==null),100,44,0);talk.name="WorkbenchContact_"+employee.Person.Id;
+                var talk=Ui.Size(Ui.Button(row,"打电话",()=>OpenPersonDialogue(personId,remote:true),17,Ui.ButtonHot,S.RemoteConversationBlocker(personId)==null),100,44,0);talk.name="WorkbenchContact_"+employee.Person.Id;
             }
         }        private void OpenHomeAutomation()
         {

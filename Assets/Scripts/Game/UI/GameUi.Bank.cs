@@ -22,10 +22,38 @@ namespace PCShopSell.Game.UI
             public int Months = 1;
         }
 
-        private void OpenBank(Place bank)
+        private void CheckNegativeCashBankReminder()
         {
-            var draft = new BankDeskDraft();
-            OpenPlaceWindow(bank, (w, _) => BuildBank(w, draft), 1000, 620);
+            if (AnyModalOpen || S.IsGameOver || S.Racing || S.CityActivityExclusive || S.BrandExpoExclusive
+                || _ctrl.Placing || _ctrl.PetFocusActive || OpeningMealRestricted || S.OpeningAgencyGuidePending || S.PendingEvent != null)
+                return;
+            if (!S.TryTakeNegativeCashBankReminder()) return;
+
+            Place bank = S.BankPlace;
+            bool atBank = S.AtBank;
+            OpenWindow("现金不足", 630, 300, w =>
+            {
+                Line(w.Content, $"当前现金 {S.Ledger.Balance}", 23, Ui.Warn);
+                Para(w.Content, $"需要周转时，可以到{bank.Name}柜台借款。银行 24 小时营业，柜台借款无需智能手机。", 18);
+                var actions = Ui.Row(w.Content, 42, 8);
+                Ui.Size(Ui.Button(actions, atBank ? "查看借款" : "前往" + bank.Name, () =>
+                {
+                    w.Close();
+                    if (S.AtBank) OpenBank(S.CurrentPlace, BankPage.Borrow);
+                    else _ctrl.GoToPlace(bank);
+                }, 18, Ui.ButtonHot), -1, 42, 1);
+                Ui.Size(Ui.Button(actions, "知道了", w.Close, 17), 112, 42);
+            });
+        }
+
+        private void OpenBank(Place bank, BankPage page = BankPage.Transfers)
+        {
+            var draft = new BankDeskDraft { Page = page };
+            OpenPlaceWindow(bank, (w, _) =>
+            {
+                Line(w.Content, "24 小时营业", 17, Ui.Good);
+                BuildBank(w, draft);
+            }, 1000, 620);
         }
 
         private void BuildBank(Window w, BankDeskDraft draft)

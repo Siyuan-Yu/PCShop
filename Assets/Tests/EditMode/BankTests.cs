@@ -16,7 +16,7 @@ namespace PCShopSell.Tests
             data.places = data.places.Concat(new[]
             {
                 new LayoutPlaceData { id = GameSession.BankPlaceId, name = "城郊银行", kind = "shop", node = "dl", size = "small", business = GameSession.BankBusiness,
-                    explicitEntrance = true, openMinute = 540, closeMinute = 1020 },
+                    explicitEntrance = true, openMinute = 0, closeMinute = 1440 },
             }).ToArray();
             var s = new GameSession(CityLayout.FromData(data), 7, Money.FromYuan(30000), GameTimestamp.From(new GameDate(0), 10 * 60), true, true, false, false);
             s.SetSmartphone(phone);
@@ -117,13 +117,13 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void BankLoan_ClosedOutsideHours()
+        public void BankLoan_AvailableAtNightOnWeekends()
         {
             using var s = Make(false);
+            s.Clock.Restore(new GameDate(6), 23 * 60);
             GoToBank(s);
-            s.Clock.Restore(new GameDate(0), 20 * 60);
-            Assert.False(s.IsPlaceOpen(s.CurrentPlace));
-            Assert.False(s.BorrowAppLoan(1000, 1, true));
+            Assert.True(s.IsPlaceOpen(s.CurrentPlace));
+            Assert.True(s.BorrowAppLoan(1000, 1, true));
         }
 
         [Test]

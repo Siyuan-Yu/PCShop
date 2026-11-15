@@ -189,7 +189,7 @@ namespace PCShopSell.Tests
         public void WetPracticeUsesRealReducedGripCosts1000AndKeepsOrdinaryRecordsSeparate(bool abandon)
         {
             using var s = Make(); At(s, "dealer"); Assert.IsTrue(s.BuyMotor("e_range")); var id = s.Garage.Single().Id;
-            At(s, "garage_0"); Assert.IsTrue(s.AcquireGarage("garage_0", false)); Assert.IsTrue(s.ParkCommuteMotor(id, "garage_0"));
+            At(s, "garage_0"); Assert.IsTrue(s.AcquireGarage("garage_0")); Assert.IsTrue(s.ParkCommuteMotor(id, "garage_0"));
             s.RaiseEvent("race_track_visit_rain"); Assert.IsTrue(s.ResolveEvent(0));
             using var loaded = Reload(s); var b = loaded.EventRaceBookings.Single();
             loaded.Clock.Restore(new GameDate(b.Day), 600); At(loaded, "race_0"); var balance = loaded.Ledger.Balance;
@@ -255,7 +255,7 @@ namespace PCShopSell.Tests
         public void ActualFormalVictoryCreatesTheCelebrationInvitationAndPersistsItsParticipants()
         {
             using var s = Make(); At(s, "dealer"); Assert.IsTrue(s.BuyMotor("e_range")); var id = s.Garage.Single().Id;
-            At(s, "garage_0"); Assert.IsTrue(s.AcquireGarage("garage_0", false)); Assert.IsTrue(s.ParkCommuteMotor(id, "garage_0"));
+            At(s, "garage_0"); Assert.IsTrue(s.AcquireGarage("garage_0")); Assert.IsTrue(s.ParkCommuteMotor(id, "garage_0"));
             At(s, "race_0"); var coach = s.CityPersonState("racer_0"); coach.Route = null; coach.LocationPlaceId = "race_0";
             Assert.IsTrue(s.StartRace("race_0", id, false));
             var race = s.ActiveRace; Assert.Greater(race.Opponents.Count, 0);

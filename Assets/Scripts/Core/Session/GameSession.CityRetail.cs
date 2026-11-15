@@ -52,22 +52,30 @@ namespace PCShopSell.Core.Session
             if (promotion == null) return null;
             var shop = ShopAt(promotion.ShopId);
             string product = new EventStock { Id = promotion.ProductId }.Name;
-            string Respond(string response)
+            EventCgResult Respond(string response)
             {
                 if (!PromotionRivalStillTrading(promotion) || !IsCompetingRetailShop(shop))
-                    return "促销门店或经营状态已变化，本次没有调整售价。";
+                    return VisualResult("促销门店或经营状态已变化，本次没有调整售价。", "rival");
                 double awarenessBefore = shop.Sim.Awareness;
-                if (!RespondCityCompetition(promotion.Id, response)) return "这轮促销已处理，或门店已无法采取这个方案。";
-                return response == "match" ? $"{product}临时九折，促销结束后恢复原价。"
-                    : response == "position" ? $"已加强服务，员工基础日薪每人增加 ¥{PromotionServiceWageRaise}。本轮预计保留 {promotion.RetainedDemand:P0} 客流。"
-                    : $"维持原价，门店人气减少 {awarenessBefore - shop.Sim.Awareness:0.##}。促销结束后解除临时客流影响。";
+                if (!RespondCityCompetition(promotion.Id, response))
+                    return VisualResult("这轮促销已处理，或门店已无法采取这个方案。", "rival");
+                if (response == "match")
+                    return VisualResult($"{product}临时九折，促销结束后恢复原价。", "rival", EventCgProp.Sale,
+                        caption: $"{product} · 临时九折");
+                if (response == "position")
+                    return VisualResult($"已加强服务，员工基础日薪每人增加 ¥{PromotionServiceWageRaise}。本轮预计保留 {promotion.RetainedDemand:P0} 客流。",
+                        "rival", EventCgProp.Banknotes, caption: $"加强服务 · 预计保留 {promotion.RetainedDemand:P0} 客流");
+                double lostAwareness = awarenessBefore - shop.Sim.Awareness;
+                return VisualResult($"维持原价，门店人气减少 {lostAwareness:0.##}。促销结束后解除临时客流影响。",
+                    "rival", caption: $"维持原价 · 人气 −{lostAwareness:0.##}");
             }
-            return EventScene(template, $"{promotion.RivalName}正在给{product}做九折促销，持续至 {new GameDate(promotion.EndDay)} 00:00。"
+            return IllustratedEvent(template, $"{promotion.RivalName}正在给{product}做九折促销，持续至 {new GameDate(promotion.EndDay)} 00:00。"
                 + $"\n受影响门店：{ShopTitle(shop)}。",
-                Choose($"只对{product}限时跟价", _ => Respond("match")),
-                Choose($"加强服务 · 基础日薪每人 +¥{PromotionServiceWageRaise}", _ => Respond("position"),
+                new EventCgFrame("rival", EventCgProp.Sale, caption: promotion.RivalName),
+                ChooseCg($"只对{product}限时跟价", _ => Respond("match")),
+                ChooseCg($"加强服务 · 基础日薪每人 +¥{PromotionServiceWageRaise}", _ => Respond("position"),
                     s => s.Employees.Any(e => e.Shop == shop), "这家店目前没有员工"),
-                Choose("维持原价 · 门店人气 −1", _ => Respond("maintain")));
+                ChooseCg("维持原价 · 门店人气 −1", _ => Respond("maintain")));
         }
         private bool CompetitionMatchesShop(CityCompetition competition)
         {

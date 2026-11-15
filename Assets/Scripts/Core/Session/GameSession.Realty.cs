@@ -216,11 +216,13 @@ namespace PCShopSell.Core.Session
         {
             GameDate today = Clock.Today;
             string street = City.StreetName(place.StreetId);
-            Ledger.ForceDebit(today, "房租", rent, $"{street} · 商铺首周租金");
+            Ledger.ForceDebit(today, "房租", rent, $"{street} · 商铺首周租金",
+                LedgerAttribution.ForShop(place.Id, transactionKind: "租金"));
             Ledger.ForceDebit(today, "押金", RealEstate.Deposit(rent), $"{street} · 商铺押金");
             Money fee = AgentFeeFor(rent);
             double off = AgentDiscount;
-            Ledger.ForceDebit(today, "中介费", fee, off > 0 ? $"安居房产中介（熟人价 {off * 100:0.#}% 折扣）" : "安居房产中介");
+            Ledger.ForceDebit(today, "中介费", fee, off > 0 ? $"安居房产中介（熟人价 {off * 100:0.#}% 折扣）" : "安居房产中介",
+                LedgerAttribution.ForShop(place.Id, transactionKind: "中介费"));
         }
 
         private void CollectWeeklyShopRent(GameDate today)

@@ -51,8 +51,7 @@ namespace PCShopSell.Core.Session
     }
 
     /// <summary>
-    /// 采购商品的筛选维度登记处。新增一个维度只要在这里加一行常量与 <see cref="Order"/> 条目，
-    /// 线下进货与进货员两套界面就会自动多出一层筛选，无需再改界面代码。
+    /// 进货员采购目录的筛选维度。为商品填充该维度的取值后，采购界面会按登记顺序生成筛选。
     /// </summary>
     public static class PurchaseFacets
     {

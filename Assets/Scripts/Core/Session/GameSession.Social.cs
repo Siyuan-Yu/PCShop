@@ -37,7 +37,7 @@ namespace PCShopSell.Core.Session
         public const int WeekendBookDeadlineMinute = 9 * 60;
         public const int OutingGraceMinutes = 240;
         public const int OutingCooldownDays = 4;
-        public const int MinInviteRelation = 15;
+        public const int MinInviteRelation = 10;
         public const int MinTipRelation = 12;
         public const int TipCooldownDays = 3;
         public const int TipResolveDays = 5;
@@ -48,7 +48,6 @@ namespace PCShopSell.Core.Session
         private readonly List<Appointment> _appointments = new List<Appointment>();
         private readonly List<MarketTip> _tips = new List<MarketTip>();
         private readonly Dictionary<string, int> _outingDay = new Dictionary<string, int>();
-        private readonly Dictionary<string, int> _inviteTryDay = new Dictionary<string, int>();
         private readonly Dictionary<string, int> _tipDay = new Dictionary<string, int>();
         private readonly Dictionary<string, int> _tipRight = new Dictionary<string, int>();
         private readonly Dictionary<string, int> _tipWrong = new Dictionary<string, int>();
@@ -131,38 +130,37 @@ namespace PCShopSell.Core.Session
             return $"第 {day + 1} 天";
         }
 
+        private string InviteFamiliarityBlocker(string personId) =>
+            Relation(personId) < MinInviteRelation ? $"熟悉度 {MinInviteRelation} 解锁" : null;
+
+        public string CityInviteBlocker(string personId)
+        {
+            if (IsGameOver) return "游戏已经结束";
+            if (string.IsNullOrEmpty(personId) || CityPersonState(personId) == null) return "找不到这位人物";
+            return InviteFamiliarityBlocker(personId)
+                ?? (IsMet(personId) || CitySamePlace(personId) ? null : "请当面邀请或先交换联系方式");
+        }
+
         public string InviteBlocker(string npcId, OutingSlot slot)
         {
             NpcDef n = Npcs.Get(npcId);
             if (n == null) return "没这个人";
             if (IsGameOver) return "游戏已经结束";
             if (!IsMet(npcId)) return "还没认识";
-            if (Relation(npcId) < MinInviteRelation) return $"交情不够（要 {MinInviteRelation}）";
+            if (InviteFamiliarityBlocker(npcId) is string familiarity) return familiarity;
             if (_appointments.Any(a => a.NpcId == npcId)) return "已经约好了";
             if (_outingDay.TryGetValue(npcId, out int last) && Clock.Today.TotalDays - last < OutingCooldownDays)
                 return $"刚见过面，{OutingCooldownDays - (Clock.Today.TotalDays - last)} 天后再约";
-            if (_inviteTryDay.TryGetValue(npcId, out int tried) && tried == Clock.Today.TotalDays) return "今天被拒过了，明天再约";
             int day = NextSlotDate(slot).TotalDays;
             if (_appointments.Any(a => a.Day == day && a.Slot == slot)) return "那个时段已经有安排";
             return null;
         }
-
-        /// <summary>对方答应的概率：交情越高、魅力越高越容易。</summary>
-        public double InviteAcceptChance(string npcId) =>
-            Math.Min(0.95, 0.40 + Relation(npcId) * 0.006 + EffectiveCharm * 0.005);
 
         public bool Invite(string npcId, OutingSlot slot)
         {
             string blocker = InviteBlocker(npcId, slot);
             if (blocker != null) return Fail(blocker);
             NpcDef n = Npcs.Get(npcId);
-            if (!Random.Chance(InviteAcceptChance(npcId)))
-            {
-                _inviteTryDay[npcId] = Clock.Today.TotalDays;
-                RememberSocial(npcId, "提出邀约，对方有事未能答应。");
-                Say($"{n.Name}说：\"那天正好有事，下次吧。\"");
-                return false;
-            }
             int day = NextSlotDate(slot).TotalDays;
             _appointments.Add(new Appointment { NpcId = npcId, Slot = slot, Day = day });
             RememberSocial(npcId, $"约好在{new GameDate(day)} {SlotName(slot)}一起出去。");
@@ -346,8 +344,6 @@ namespace PCShopSell.Core.Session
 
                 outingIds = _outingDay.Keys.ToArray(),
                 outingDays = _outingDay.Values.ToArray(),
-                inviteTryIds = _inviteTryDay.Keys.ToArray(),
-                inviteTryDays = _inviteTryDay.Values.ToArray(),
                 tipDayIds = _tipDay.Keys.ToArray(),
                 tipDays = _tipDay.Values.ToArray(),
                 scoreIds = _tipRight.Keys.Union(_tipWrong.Keys).ToArray(),
@@ -395,7 +391,6 @@ namespace PCShopSell.Core.Session
             }
 
             ReadDict(_outingDay, s.outingIds, s.outingDays);
-            ReadDict(_inviteTryDay, s.inviteTryIds, s.inviteTryDays);
             ReadDict(_tipDay, s.tipDayIds, s.tipDays);
             ReadDict(_tipRight, s.scoreIds, s.scoreRight);
             ReadDict(_tipWrong, s.scoreIds, s.scoreWrong);
