@@ -6,6 +6,32 @@ namespace PCShopSell.Game.Runtime
 {
     public static class CityRoomRoute
     {
+        internal static bool Advance(List<Vector3> path, ref int index, Transform owner, float dt, float speed,
+            Action<Vector3, float> moveOwner)
+        {
+            const float waypointTolerance = .001f;
+            while (dt > 0f && index < path.Count)
+            {
+                Vector3 start = owner.localPosition;
+                Vector3 delta = path[index] - start;
+                float distance = delta.magnitude;
+                if (distance <= waypointTolerance)
+                {
+                    index++;
+                    continue;
+                }
+
+                float step = Mathf.Min(dt, distance / speed);
+                if (step * speed < .00001f) break; // A fractional remainder can round to zero movement.
+                moveOwner(delta / distance, step);
+                Vector3 end = owner.localPosition;
+                if ((end - start).sqrMagnitude < 1e-10f) return false;
+                if ((path[index] - end).sqrMagnitude <= waypointTolerance * waypointTolerance) index++;
+                dt -= step;
+            }
+            return true;
+        }
+
         public static List<Vector3> Find(Vector3 from,Vector3 to,float width,float depth,Func<Vector3,bool> blocked)
         {
             const float cell=.25f;

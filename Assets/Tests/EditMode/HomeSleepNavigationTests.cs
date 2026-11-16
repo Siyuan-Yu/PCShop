@@ -118,6 +118,58 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void WalkingToBedCoversTheSameDistanceWithCoarseAndFineFrames()
+        {
+            WithHome((s, c, room, ui) =>
+            {
+                room.SetActive(true);
+                room.Update(s, 0, s.Clock.MinuteOfDay);
+                Vector3 start = room.OwnerWorld;
+                Vector3 Advance(int frames)
+                {
+                    room.ResetOwner();
+                    for (int i = 0; i < frames; i++)
+                        Assert.AreEqual(0, room.WalkToBed(.8f / frames), $"Frame {i + 1}/{frames}, position {room.OwnerWorld}");
+                    return room.OwnerWorld;
+                }
+
+                Vector3 fine = Advance(48);
+                Vector3 coarse = Advance(5);
+                Assert.Greater(Vector3.Distance(start, fine), 1f);
+                Assert.That(Vector3.Distance(fine, coarse), Is.LessThan(.01f));
+            });
+        }
+
+        [Test]
+        public void WalkingToShopDoorCoversTheSameDistanceWithCoarseAndFineFrames()
+        {
+            var host = new GameObject("ShopDoorRegression");
+            try
+            {
+                var shop = new ShopInteriorView(host.transform, PCShopSell.Core.Shop.ShopSize.Small);
+                Vector3 Advance(int frames)
+                {
+                    shop.SetActive(false);
+                    shop.SetActive(true);
+                    shop.CancelCityDoorWalk();
+                    shop.MoveOwner(Vector3.forward, .6f);
+                    Assert.False(shop.NearDoor);
+                    for (int i = 0; i < frames; i++) Assert.AreEqual(0, shop.WalkToDoor(.4f / frames));
+                    return shop.OwnerWorld;
+                }
+
+                Vector3 fine = Advance(24);
+                Vector3 coarse = Advance(4);
+                Assert.That(Vector3.Distance(fine, coarse), Is.LessThan(.01f));
+                int result = 0;
+                for (int i = 0; i < 20 && result == 0; i++) result = shop.WalkToDoor(.15f);
+                Assert.AreEqual(1, result);
+                Assert.True(shop.NearDoor);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(host); }
+        }
+
+        [Test]
         public void NewDirectionResumesPauseButAHeldDirectionOrModalDoesNot()
         {
             WithHome((s, c, room, ui) =>

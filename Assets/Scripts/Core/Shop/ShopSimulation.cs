@@ -157,6 +157,8 @@ namespace PCShopSell.Core.Shop
         public int Mistakes;
         public int EmployeeMinutesLeft;
 
+        public double ReputationReward => ContractId == null ? ShopSimulation.BuildOrderReputation : 0;
+
         public BuildOrder(int id, int tier, Money price, GameTimestamp placedAt, GameTimestamp dueAt)
         {
             Id = id;
@@ -210,7 +212,8 @@ namespace PCShopSell.Core.Shop
         /// <summary>展示台上每摆一台整机，想装整机的顾客比例多这么多倍（曝光度）。</summary>
         public double DisplayExposurePerPc = 0.5;
 
-        public int BuildOrderDueDays = 2;
+        public const int DefaultBuildOrderDueDays = 4;
+        public int BuildOrderDueDays = DefaultBuildOrderDueDays;
 
         public int CheckoutMinutesCash = 2;
         public int CheckoutMinutesQr = 1;
@@ -290,8 +293,9 @@ namespace PCShopSell.Core.Shop
     public sealed partial class ShopSimulation : IDisposable
     {
         /// <summary>知名度涨幅：每笔散件成交、每单整机交付。数值偏小，让知名度要经营大半年才满。</summary>
-        public const double SaleReputationGain = 0.012;
-        public const double BuildReputationGain = 0.4;
+        public const double SaleAwarenessGain = 0.012;
+        public const double BuildAwarenessGain = 0.4;
+        public const double BuildOrderReputation = 0.2;
 
         /// <summary>知名度每天自然衰减，不经营就会掉。</summary>
         public const double DailyReputationRetention = 0.998;
@@ -308,7 +312,6 @@ namespace PCShopSell.Core.Shop
         private readonly List<BuildOrder> _orders = new List<BuildOrder>();
         private int _nextCustomerId = 1;
         private int _employeeBusyMinutes;
-        private bool _wasOpen;
         private double _reputation;
         private double _markup = 1.15;
 
@@ -355,6 +358,8 @@ namespace PCShopSell.Core.Shop
         }
         internal void AdjustShopReputation(double delta) => ShopReputation = ClampStanding(ShopReputation + delta);
         internal void AdjustShopAwareness(double delta) => Awareness = ClampStanding(Awareness + delta);
+        internal void AdjustPersonalReputation(double delta) =>
+            (_reputationOwner ?? this).RestoreBusinessAwareness(Reputation + delta);
 
         /// <summary>售价 = 市场价 × 加价倍率（盒装再加溢价）。范围 0.9~3.0。</summary>
         public double Markup
@@ -521,6 +526,10 @@ namespace PCShopSell.Core.Shop
         public string RetailKind = "computer";
         public bool IsGoodsShop => RetailKind != "computer";
         public IReadOnlyList<BuildOrder> Orders => _orders;
+        public const int CustomerBuildOrderLimit = 5;
+        public const int BuildOrderLimit = 12;
+        public int CustomerBuildOrders => _orders.Count(order => order.ContractId == null);
+        public bool CanTakeBuildOrders(int count) => count > 0 && count <= BuildOrderLimit - _orders.Count;
         public int NextOrderId { get; private set; } = 1;
 
         public int TodayCustomers { get; private set; }
@@ -570,6 +579,7 @@ namespace PCShopSell.Core.Shop
         public BuildOrder AddContractOrder(string contractId, int tier, Money price, GameTimestamp due)
         {
             if (tier < 0 || tier >= PartCatalog.TierCount || !price.IsPositive || due <= _clock.Now) throw new ArgumentException("合同订单参数无效");
+            if (!CanTakeBuildOrders(1)) throw new InvalidOperationException("该门店的待交付装机订单已满。");
             var order = new BuildOrder(NextOrderId++, tier, price, _clock.Now, due) { ContractId = contractId };
             AddBuildOrder(order);
             return order;
@@ -627,9 +637,10 @@ namespace PCShopSell.Core.Shop
         public Func<ShopCustomer, Money> FinalSalePrice;
         public Func<string, double> TemporaryPriceFactorOf;
         public bool IsOpenAt(GameTimestamp t) => IsOpenAt(t, PlayerPresent);
-        public bool IsOpenAt(GameTimestamp t, bool playerPresent) =>
-            TradingEnabled && !ForcedClosed && !NotFitted && (PowerTrafficOf?.Invoke(t) ?? 1) > 0
-            && InHours(t) && (playerPresent || EmployeeOnDuty(t));
+        public bool IsOpenAt(GameTimestamp t, bool playerPresent) => InHours(t) && CanServeAt(t, playerPresent);
+        internal bool CanServeAt(GameTimestamp t, bool playerPresent) =>
+            TradingEnabled && !ForcedClosed && !NotFitted && (playerPresent || EmployeeOnDuty(t))
+            && (PowerTrafficOf?.Invoke(t) ?? 1) > 0;
 
         public Func<GameTimestamp,bool> OpenStatusOf;
         public bool IsOpen => OpenStatusOf?.Invoke(_clock.Now)??IsOpenAt(_clock.Now);
@@ -725,7 +736,8 @@ namespace PCShopSell.Core.Shop
             _orders.Remove(o);
             _ledger.Credit(at.Date, BuildCategory, o.Price, $"{PartCatalog.TierName(o.Tier)}整机", LedgerAttribution.ForShop(ShopId, "build:" + ShopId + ":" + o.Id, "销售"));
             TodaySales += o.Price;
-            Reputation += BuildReputationGain;
+            AdjustShopAwareness(BuildAwarenessGain);
+            AdjustPersonalReputation(o.ReputationReward);
             AdjustShopReputation(.5);
             OrderCompleted?.Invoke(o);
             return true;
@@ -863,17 +875,17 @@ namespace PCShopSell.Core.Shop
         {
             ExpireOrders(now);
 
-            bool open = IsOpenAt(now);
-            if (!open)
+            bool inHours = InHours(now);
+            if (!inHours && _active.Count == 0) return;
+            if (!CanServeAt(now, PlayerPresent))
             {
-                if (_wasOpen) CloseAll();
-                _wasOpen = false;
+                if (_active.Count > 0) CloseAll();
                 return;
             }
-            _wasOpen = true;
+
             WorkMinute?.Invoke(now);
 
-            double arrivalRate = ArrivalRatePerMinute(now);
+            double arrivalRate = inHours ? ArrivalRatePerMinute(now) : 0;
             if (arrivalRate > 0)
             {
                 _arrivalCredit += arrivalRate;
@@ -889,8 +901,14 @@ namespace PCShopSell.Core.Shop
             for (int i = _active.Count - 1; i >= 0; i--)
             {
                 ShopCustomer c = _active[i];
-                if (c.State == CustomerState.Browsing && now >= c.ReadyAt && (CustomerCanBrowse==null||CustomerCanBrowse(c)))
-                    Decide(c, now);
+                if (c.State == CustomerState.Browsing && (!inHours || now >= c.ReadyAt))
+                {
+                    if (CustomerCanBrowse?.Invoke(c) == false)
+                    {
+                        if (!inHours) Leave(c, LeaveReason.ShopClosed);
+                    }
+                    else if (now >= c.ReadyAt) Decide(c, now);
+                }
                 else if (c.State == CustomerState.WaitingCheckout &&
                          c.WaitingSince.MinutesUntil(now) >= Settings.PatienceMinutes && CheckoutPatienceElapsed(c))
                     Leave(c, LeaveReason.Impatient);
@@ -1005,7 +1023,7 @@ namespace PCShopSell.Core.Shop
                 ProductName = itemName + " ×" + count, PaidCents = total.Cents,
                 ArrivalMinute = _clock.Now.TotalMinutes, State = CustomerState.Paid });
             BulkSalePaid?.Invoke(_nextCustomerId - 1, itemName + " ×" + count, total);
-            Reputation += 1;
+            AdjustShopAwareness(1);
             AdjustShopReputation(.12);
         }
         private bool CheckoutPatienceElapsed(ShopCustomer customer)
@@ -1048,7 +1066,7 @@ namespace PCShopSell.Core.Shop
                     return;
                 }
                 if (TryTakeDisplay(c, now)) return;
-                if (BuildOrdersUnlocked)
+                if (BuildOrdersUnlocked && CanTakeBuildOrders(1) && CustomerBuildOrders < CustomerBuildOrderLimit)
                 {
                     Money price = BuildPrice(c.BuildTier);
                     var order = new BuildOrder(NextOrderId++, c.BuildTier, price, now, now.AddMinutes(Settings.BuildOrderDueDays * GameTimestamp.MinutesPerDay));
@@ -1067,7 +1085,7 @@ namespace PCShopSell.Core.Shop
             {
                 // 想要的配件没货：偶尔有人看看杂货架，买点别的
                 if (GoodsOnSale && Random.Chance(Settings.GoodsFallbackChance) && TryTakeGoods(c, now)) return;
-                Reputation -= 0.1;
+                AdjustShopAwareness(-.1);
                 Leave(c, LeaveReason.NoStock);
                 return;
             }
@@ -1252,22 +1270,22 @@ namespace PCShopSell.Core.Shop
             if(c.ResaleId>0)
             {
                 _ledger.Credit(_clock.Today,SalesCategory,c.Spend,c.ItemName+"（二手转售）",LedgerAttribution.ForShop(ShopId,"used:"+c.ResaleId+":sale","销售"));
-                Reputation+=SaleReputationGain;
+                AdjustShopAwareness(SaleAwarenessGain);
             }
             else if (c.DisplayTier >= 0)
             {
                 _ledger.Credit(_clock.Today, BuildCategory, c.Spend, $"{c.ItemName}（展示机）", LedgerAttribution.ForShop(ShopId, transactionKind: "销售"));
-                Reputation += BuildReputationGain;
+                AdjustShopAwareness(BuildAwarenessGain);
             }
             else if (c.GoodsId != null)
             {
                 _ledger.Credit(_clock.Today, SalesCategory, c.Spend, c.ItemName + "（杂货）", LedgerAttribution.ForShop(ShopId, transactionKind: "销售"));
-                Reputation += SaleReputationGain * 0.5;
+                AdjustShopAwareness(SaleAwarenessGain * .5);
             }
             else
             {
                 _ledger.Credit(_clock.Today, SalesCategory, c.Spend, c.Item.Name + (c.ItemBoxed ? "（盒装）" : "（散件）"), LedgerAttribution.ForShop(ShopId, transactionKind: "销售"));
-                Reputation += SaleReputationGain;
+                AdjustShopAwareness(SaleAwarenessGain);
             }
             TodaySales += c.Spend;
             _day.Paid++;
@@ -1305,7 +1323,7 @@ namespace PCShopSell.Core.Shop
             }
             if (reason == LeaveReason.Impatient)
             {
-                Reputation -= .3;
+                AdjustShopAwareness(-.3);
                 AdjustShopReputation(-.3);
             }
             _active.Remove(c);

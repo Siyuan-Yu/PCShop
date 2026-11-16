@@ -187,12 +187,12 @@ namespace PCShopSell.Game.UI
             if (_boxSide != "bag" && key.StartsWith("furn:"))
             {
                 string fid = key.Substring(5);
-                Ui.Size(Ui.Button(bottom, "摆出来", () => PlaceFromStorage(shop, fid), 16, Ui.ButtonHot), 90);
+                Ui.Size(Ui.Button(bottom, "摆出来", () => PlaceFromStorage(shop, fid), 16, Ui.ButtonBg), 90);
             }
             if (_boxSide == "temp")
             {
                 bool toShelf = shop && key.StartsWith("part:");
-                HoldButton(w, bottom, "放进后仓", Ui.ButtonHot, n, unit, c => S.MoveTemp(key, (int)c, "box"), 110);
+                HoldButton(w, bottom, "放进后仓", Ui.ButtonBg, n, unit, c => S.MoveTemp(key, (int)c, "box"), 110);
                 HoldButton(w, bottom, "拿进背包", Ui.ButtonBg, n, unit, c => S.MoveTemp(key, (int)c, "bag"), 110);
                 HoldButton(w, bottom, "扔掉", Ui.Warn, n, unit, c => S.MoveTemp(key, (int)c, "trash"), 80);
             }
@@ -201,11 +201,11 @@ namespace PCShopSell.Game.UI
                 if(key.StartsWith("stockgift:"))
                 {
                     string id=key.Substring(10);
-                    Ui.Size(Ui.Button(bottom,"拿一件",()=>{S.TakeShopGoodsIntoBag(id,1);w.Rebuild();RebuildDock();},16,Ui.ButtonHot),100);
+                    Ui.Size(Ui.Button(bottom,"拿一件",()=>{S.TakeShopGoodsIntoBag(id,1);w.Rebuild();RebuildDock();},16,Ui.ButtonBg),100);
                     Ui.Size(Ui.Button(bottom,"全拿出来",()=>{S.TakeShopGoodsIntoBag(id,n);w.Rebuild();RebuildDock();},16),110);
                     return;
                 }
-                Ui.Size(Ui.Button(bottom, "拿" + one, () => { S.TakeFromBox(key); w.Rebuild(); }, 16, Ui.ButtonHot), 100);
+                Ui.Size(Ui.Button(bottom, "拿" + one, () => { S.TakeFromBox(key); w.Rebuild(); }, 16, Ui.ButtonBg), 100);
                 Ui.Size(Ui.Button(bottom, "全拿出来", () => { S.TakeFromBox(key, n); w.Rebuild(); }, 16, Ui.ButtonBg), 110);
                 if (shop && key.StartsWith("part:") && key.EndsWith(":b"))
                 {
@@ -216,7 +216,7 @@ namespace PCShopSell.Game.UI
                 if (shop && key.StartsWith("gift:"))
                 {
                     string gid = key.Substring(5);
-                    Ui.Size(Ui.Button(bottom, "上架卖", () => { S.ListGoods(gid, 1); w.Rebuild(); }, 16, Ui.ButtonHot), 80);
+                    Ui.Size(Ui.Button(bottom, "上架卖", () => { S.ListGoods(gid, 1); w.Rebuild(); }, 16, Ui.ButtonBg), 80);
                     Ui.Size(Ui.Button(bottom, "全上架", () => { S.ListGoods(gid, n); w.Rebuild(); }, 16, Ui.ButtonBg), 80);
                 }
             }
@@ -224,12 +224,12 @@ namespace PCShopSell.Game.UI
             {
                 bool toShelf = shop && key.StartsWith("part:");
                 bool toFridge = shop && S.RetailKind == "restaurant" && (key == "rice" || key.StartsWith("ing:"));
-                Ui.Size(Ui.Button(bottom, toFridge ? "存入冰箱" : toShelf ? "上货架一件" : "放" + one, () => { S.StoreInBox(key); w.Rebuild(); }, 16, Ui.ButtonHot), 100);
+                Ui.Size(Ui.Button(bottom, toFridge ? "存入冰箱" : toShelf ? "上货架一件" : "放" + one, () => { S.StoreInBox(key); w.Rebuild(); }, 16, Ui.ButtonBg), 100);
                 Ui.Size(Ui.Button(bottom, toFridge ? "全部存入冰箱" : toShelf ? "全上货架" : "全放进去", () => { S.StoreInBox(key, n); w.Rebuild(); }, 16, Ui.ButtonBg), 120);
                 if (shop && key.StartsWith("gift:"))
                 {
                     string gid = key.Substring(5);
-                    Ui.Size(Ui.Button(bottom, "上架卖", () => { S.ListGoods(gid, 1); w.Rebuild(); }, 16, Ui.ButtonHot), 80);
+                    Ui.Size(Ui.Button(bottom, "上架卖", () => { S.ListGoods(gid, 1); w.Rebuild(); }, 16, Ui.ButtonBg), 80);
                     Ui.Size(Ui.Button(bottom, "全上架", () => { S.ListGoods(gid, n); w.Rebuild(); }, 16, Ui.ButtonBg), 80);
                 }
             }
@@ -478,7 +478,7 @@ namespace PCShopSell.Game.UI
                     {
                         _repairDay = o;
                         w.Rebuild();
-                    }, 17, _repairDay == o ? Ui.ButtonHot : Ui.ButtonBg), 110);
+                    }, 17, Ui.SelectedButton(_repairDay == o)), 110);
                 }
                 RectTransform hrow = null;
                 int col = 0;
@@ -530,6 +530,9 @@ namespace PCShopSell.Game.UI
                         string expoId = e.ExpoId;
                         Ui.Size(Ui.Button(row, "参展安排", () => OpenBookedExpo(expoId), 16), 94, 40);
                     }
+                    if (e.Kind == "wallet_return" && S.WalletReturnStation is Place station)
+                        Ui.Size(Ui.Button(row, S.CurrentPlace == station ? "查看站内交接" : "前往地铁站",
+                            OpenWalletReturnDestination, 16), 114, 40);
                     if (e.Kind == "repair")
                     {
                         string target = S.HomeVisits.FirstOrDefault(v => v.StartMinute == e.Minute)?.TargetId;
@@ -540,6 +543,7 @@ namespace PCShopSell.Game.UI
                         }, 16, Ui.Warn), 100);
                     }
                 }
+                if (day == today) BuildScheduledEventFollowUps(w);
             }
         }
 
@@ -549,9 +553,12 @@ namespace PCShopSell.Game.UI
             bool here=activity!=null && S.CurrentPlace?.Id==activity.VenueId;
             string blocker=_ctrl.Placing?"请先结束摆放家具。":CityActivityMenuOrTravelBlocker(activityId);
             string early = activity != null && !here && blocker == null ? S.CityActivityEarlyDepartureHint(activity) : null;
-            Ui.Size(Ui.Button(row,here?"打开菜单":"一键前往",()=>GoToScheduledCityActivity(activityId),16,
+            bool walk = S.CityActivityService(activity)?.Id == "hike";
+            string action = !here ? "一键前往" : walk ? activity.State == CityActivityPhase.Running ? "散步详情" : "选择路线" : "打开菜单";
+            Ui.Size(Ui.Button(row,action,()=>GoToScheduledCityActivity(activityId),16,
                 early == null ? Ui.ButtonHot : Ui.ButtonBg,blocker==null),94,40)
-                .Tip(blocker ?? early ?? (here?"已到达约定场所，打开菜单或服务。":"沿实际路线前往约定场所；按 WASD 可随时接管。"));
+                .Tip(blocker ?? early ?? (here ? walk ? "查看散步详情或选择步道。" : "已到达约定场所，打开菜单或服务。"
+                    : "沿实际路线前往约定场所；按 WASD 可随时接管。"));
         }
 
         // ---------- 笔记本（没智能手机时的日程）----------
@@ -665,6 +672,7 @@ namespace PCShopSell.Game.UI
 
         private double _cookKg = 0.5;
         private string _cookIngredient;
+        private string _cookFish;
 
         private void BuildCooker(Window w)
         {
@@ -747,7 +755,7 @@ namespace PCShopSell.Game.UI
                     _cookKg = a;
                     if (S.OpeningMealTutorialPending) _openingMealCookStage = 1;
                     w.Rebuild();
-                }, 17, System.Math.Abs(_cookKg - a) < 1e-6 ? Ui.ButtonHot : Ui.ButtonBg, rice >= a), 90);
+                }, 17, Ui.SelectedButton(System.Math.Abs(_cookKg - a) < 1e-6), rice >= a), 90);
             }
 
             var ingredient = Ingredients.GetRiceCookerRecipe(_cookIngredient);
@@ -761,7 +769,7 @@ namespace PCShopSell.Game.UI
                 _cookIngredient = null;
                 if (S.OpeningMealTutorialPending) _openingMealCookStage = 2;
                 w.Rebuild();
-            }, 17, _cookIngredient == null ? Ui.ButtonHot : Ui.ButtonBg), -1, 44, 1);
+            }, 17, Ui.SelectedButton(_cookIngredient == null)), -1, 44, 1);
 
             foreach (IngredientDef recipe in Ingredients.RiceCookerRecipes)
             {
@@ -771,10 +779,38 @@ namespace PCShopSell.Game.UI
                     _cookIngredient = recipe.Id;
                     if (S.OpeningMealTutorialPending) _openingMealCookStage = 2;
                     w.Rebuild();
-                }, 17, _cookIngredient == recipe.Id ? Ui.ButtonHot : Ui.ButtonBg, have >= need), -1, 44, 1);
+                }, 17, Ui.SelectedButton(_cookIngredient == recipe.Id), have >= need), -1, 44, 1);
             }
 
-            Line(w.Content, GameSession.MealName(_cookIngredient ?? "rice") + "：" + GameSession.MealEffects(_cookIngredient ?? "rice") + "（每顿；暂只记录）", 16, Ui.Accent);
+            var fishOptions = FishingCatalog.Fish.Select(f => (fish: f, count: S.HomeCookingIngredientCount(f.Id)))
+                .Where(option => option.count > 0).ToArray();
+            int fishIndex = Array.FindIndex(fishOptions, option => option.fish.Id == _cookFish);
+            var fish = fishIndex < 0 ? null : fishOptions[fishIndex].fish;
+            _cookFish = fish?.Id;
+            bool enoughFish = fish == null || fishOptions[fishIndex].count >= need;
+            if (!S.OpeningMealTutorialPending || fishOptions.Length > 0)
+            {
+                var fishRow = Ui.Row(w.Content, 36, 8);
+                Ui.Size(Ui.Label(fishRow, "加鱼", 17), 72, 36);
+                if (fishOptions.Length == 0)
+                    Ui.Size(Ui.Label(fishRow, "背包和家中后仓暂无鱼", 16, color: Ui.Dim), -1, 36, 1);
+                else
+                    Ui.Size(Ui.Choice(fishRow, fishOptions.Select(option => $"{option.fish.Name} · {option.fish.Rarity} · {option.count} 条").Prepend("不加鱼"),
+                        fishIndex + 1, index => { _cookFish = index == 0 ? null : fishOptions[index - 1].fish.Id; w.Rebuild(); }), -1, 36, 1)
+                        .name = "CookFishChoice";
+            }
+            if (fish != null)
+                Line(w.Content, $"本锅用 {fish.Name} {need} 条" + (enoughFish ? "" : " · 库存不足，可少放米或换鱼"),
+                    16, enoughFish ? Ui.Dim : Ui.Warn);
+            string meal = Pantry.MealId(_cookIngredient, _cookFish);
+            string effects = GameSession.MealEffects(meal);
+            if (fish != null)
+            {
+                double hunger = Pantry.BaseBowlHunger + (ingredient?.HungerBonus ?? 0) + fish.MealHungerBonus;
+                double health = (ingredient?.HealthBonus ?? 0) + fish.MealHealthBonus;
+                effects = $"饱腹 +{hunger:0.#} · 健康 +{health:0.##} · " + effects;
+            }
+            Line(w.Content, $"{GameSession.MealName(meal)} · {effects}（每份）", 16, Ui.Accent);
             int available = ingredient == null ? 0 : S.HomeCookingIngredientCount(ingredient.Id);
             bool enoughIngredient = ingredient == null || available >= need;
             if (ingredient != null)
@@ -785,9 +821,13 @@ namespace PCShopSell.Game.UI
             int bowls = Mathf.RoundToInt((float)(_cookKg * Pantry.BowlsPerKg));
             var start = Ui.Button(w.Content, $"开始焖饭：{_cookKg:0.##} 千克，约 {bowls} 碗，{Pantry.CookMinutes} 分钟后好", () =>
             {
-                if (S.CookRice(_cookKg, _cookIngredient)) Toast($"开始焖饭，{Pantry.CookMinutes} 分钟后好。");
+                if (S.CookRice(_cookKg, _cookIngredient, _cookFish))
+                {
+                    _cookFish = null;
+                    Toast($"开始焖饭，{Pantry.CookMinutes} 分钟后好。");
+                }
                 w.Rebuild();
-            }, 19, Ui.ButtonHot, enoughRice && enoughIngredient);
+            }, 19, Ui.ButtonHot, enoughRice && enoughIngredient && enoughFish);
             Ui.Size(start, -1, 48);
             start.name = "OpeningMealStart";
 
@@ -797,7 +837,6 @@ namespace PCShopSell.Game.UI
 
         // ---------- “我的” ----------
 
-        private int _myPanelTab;
         private string WorkbenchAccessReason
         {
             get
@@ -812,71 +851,222 @@ namespace PCShopSell.Game.UI
                 return !_ctrl.InHome ? "回家后可用" : S.IsWorking ? "下班后可用" : "结束当前活动或行程后可用";
             }
         }
-        public void OpenMyPanel()
+        private enum MyPage { Profile, Food, Residence, Contacts, Relations }
+        private MyPage _myPage;
+        private Window _myWindow;
+        private bool _myLeaseExpanded;
+        private AvatarPreview _myPortrait;
+        private string _myPortraitOutfit;
+
+        public void OpenMyPanel() => OpenMyPanel(_myPage);
+
+        private void OpenMyPanel(MyPage page)
         {
-            OpenWorkspace("personal","personal","我的",1000,820,w=>
+            bool changed = _myPage != page;
+            _myPage = page;
+            if (_myWindow != null && !_myWindow.Closed)
             {
-                var nav=Ui.Row(w.Content,38,6);string[] names={"状态","饮食","住处","物品与包裹","人物"};
-                for(int i=0;i<names.Length;i++){int tab=i;Ui.Size(Ui.Button(nav,names[i],()=>{_myPanelTab=tab;w.Rebuild();},17,_myPanelTab==i?Ui.ButtonHot:Ui.ButtonBg),-1,38,1).name="MyTab_"+i;}
-                if (_myPanelTab == 4)
-                {
-                    Ui.Size(Ui.Button(w.Content, "已认识的人", OpenCityPeople, 18), -1, 44);
-                    Ui.Size(Ui.Button(w.Content, "人际关系图", OpenRelationsPanel, 18), -1, 44);
-                    Ui.Size(Ui.Button(w.Content, "通讯录", OpenContactsPanel, 18), -1, 44);
-                    return;
-                }
-                var stats=S.Player;
-                Line(w.Content,$"饱腹 {stats.Hunger:0} · 精力 {stats.Energy:0}/{stats.MaxEnergy:0} · 健康 {stats.Health:0} · 压力 {stats.Stress:0}/100",21,
-                    stats.Stress >= PlayerStats.HighStressThreshold ? Ui.Warn : Ui.Good);
-                if(S.EnergyExhausted)Para(w.Content,S.EnergyExhaustionText,16,Ui.Warn);
-                if(_myPanelTab==0)
-                {
-                    BuildPlayerWorkSummary(w.Content,w);
-                    Line(w.Content,$"智力 {stats.Intelligence} · 魅力 {S.EffectiveCharm} · 动手能力 {stats.Skill} · 体能 {stats.Stamina}",17);
-                    Line(w.Content,StandingText(S.HasShop?S.PlayerShop.Reputation:0,false),17,Ui.Accent).name="MyStanding";
-                    var links=Ui.Row(w.Content,38,6);
-                    Ui.Size(Ui.Button(links,"天气与穿衣",OpenCityClimate,17),-1,38,1);
-                    Ui.Size(Ui.Button(links,"行情",OpenMarketPanel,17),-1,38,1);
-                    string blocker=WorkbenchAccessReason;
-                    Ui.Size(Ui.Button(w.Content,"居家工作台"+(blocker==null?"":" · "+blocker),OpenHomeWorkbench,18,blocker==null?Ui.ButtonHot:Ui.ButtonBg,blocker==null),-1,40).name="MyHomeWorkbench";
-                    if(blocker=="回家后可用")Ui.Size(Ui.Button(w.Content,"回家",()=>{CloseModalWindows();_ctrl.GoToPlace(S.Home);},17),-1,36);
-                    HelpLink(w.Content,"身体详细资料",$"欠觉 {stats.SleepDebt:0.#} 小时 · 营养 {stats.Nutrition:0.#}/100 · 心情 {stats.Mood:0.#}/100\n衣着魅力 +{S.Outfit.CharmBonus} · 现金 {S.Ledger.Balance}\n打工、疲劳会累积压力，睡觉和令人愉快的活动能减压。压力达到 {PlayerStats.HighStressThreshold:0} 时，到岗表现奖金减少 {GameSession.HighStressWorkPenalty}%。");
-                    return;
-                }
-                if(_myPanelTab==1)
-                {
-                    var pan=S.Pantry;Line(w.Content,$"电饭锅 · 熟饭 {pan.CookedBowls} 碗",18,Ui.Accent);
-                    if(pan.Cooking!=null)Line(w.Content,$"焖饭剩余 {pan.CookMinutesLeft(S.Clock.Now.TotalMinutes)} 分钟",17,Ui.Good);
-                    var ingredients = Ingredients.All.Select(def => (def, count: S.HomeCookingIngredientCount(def.Id)))
-                        .Where(item => item.count > 0).Select(item => $"{item.def.Name} {item.count * item.def.WeightKg:0.##} 千克");
-                    Para(w.Content, $"背包和家中后仓 · 大米 {S.HomeCookingRiceKg:0.##} 千克" +
-                        string.Concat(ingredients.Select(label => " · " + label)), 17);
-                    if(S.CanOpenFridge)Ui.Size(Ui.Button(w.Content,"打开当前冰箱",OpenFridgeWindow,17),-1,38);
-                    Ui.Size(Ui.Button(w.Content,"自动订餐 · "+(S.MealDeliveryEnabled?S.SelectedDeliveryMeal.Name+" ¥"+S.SelectedDeliveryMeal.Price+"/餐":"关闭"),()=>OpenMealDeliverySettings(w),17),-1,38);
-                    HelpLink(w.Content,"用餐与保存说明","到饭点或饥饿时优先吃现有食物，缺餐时按订餐设置处理。冰箱内永久保存，取出后继续消耗剩余保质期。餐馆可用厨房现有大米和配菜做自己的餐食。");
-                    return;
-                }
-                if(_myPanelTab==2)
-                {
-                    Line(w.Content,S.HomeTitle,20,Ui.Accent);
-                    Line(w.Content,$"周租 {S.CurrentHomeRent} · 水电 {S.HomeUtilities}/月 · 睡眠恢复 {S.HomeSleepQuality:0.##}×",17);
-                    Ui.Size(Ui.Button(w.Content,"摆放家中家具",()=>StartPlacement(false),18,Ui.ButtonHot,_ctrl.InHome),-1,40);
-                    if(!_ctrl.InHome)Line(w.Content,"回家后可摆放家具。",15,Ui.Dim);
-                    Ui.Size(Ui.Button(w.Content,"管理住处租约与产权",OpenCityResidence,17),-1,38);
-                    if(S.HomeVisits.Any(v=>v.Working))Ui.Size(Ui.Button(w.Content,"在家等维修完成",()=>{S.WaitForRepair();w.Rebuild();},17,Ui.ButtonHot,_ctrl.InHome),-1,38);
-                    string furniture=string.Join("、",S.HomeLayout.GroupBy(x=>x.Id).Select(g=>FurnitureLabel(g.Key,g.Count())));
-                    HelpLink(w.Content,"家中家具",furniture.Length==0?"暂无已摆家具。":furniture);
-                    return;
-                }
-                Line(w.Content,$"背包负重 {S.CarriedKg:0.##}/{S.CarryLimitKg:0.##} 千克 · {S.CurrentVehicle.Name}",18,Ui.Accent);
-                Ui.Size(Ui.Button(w.Content,"背包与当前后仓",OpenBackpackPanel,18,Ui.ButtonHot),-1,40);
-                Line(w.Content,"在途包裹",19,Ui.Accent);
-                foreach(var parcel in S.Parcels)Line(w.Content,ParcelName(parcel)+$" · {Mathf.Max(0,parcel.DueDay-S.Clock.Today.TotalDays)} 天后送到{S.ParcelDestinationName(parcel)}",17);
-                foreach(var run in S.Couriers)Line(w.Content,run.FromName+" → "+S.CourierRunDestName(run)+$" · 约 {Math.Max(0,run.DueMinute-S.Clock.Now.TotalMinutes)} 分钟",17);
-                if(S.Parcels.Count==0&&S.Couriers.Count==0)Line(w.Content,"暂无在途包裹。",16,Ui.Dim);
-                string stored=string.Join("、",S.FurnitureStock.Select(x=>FurnitureLabel(x.Key,x.Value)));
-                HelpLink(w.Content,"未摆放的家具",stored.Length==0?"暂无未摆家具。":stored);
+                _myWindow.Root.SetAsLastSibling();
+                _myWindow.ResetScrollOnRebuild |= changed;
+                _myWindow.Rebuild();
+                return;
+            }
+            if (OpeningMealRestricted) { RemindOpeningMeal(); return; }
+            _myWindow = OpenWindow("我的", 1240, 760, BuildMyPanel, scrollContent: false, onClosed: () =>
+            {
+                _myWindow = null;
+                _myPortrait?.Destroy();
+                _myPortrait = null;
+                _myPortraitOutfit = null;
             });
+            _myWindow.Root.name = "Workspace_personal";
+        }
+
+        private void BuildMyPanel(Window w)
+        {
+            var nav = Ui.Row(w.Content, 42, 6);
+            string[] names = { "个人资料", "饮食", "住处", "通讯录", "人际关系图" };
+            for (int i = 0; i < names.Length; i++)
+            {
+                MyPage tab = (MyPage)i;
+                var button = Ui.Size(Ui.Button(nav, names[i], () =>
+                {
+                    if (_myPage != tab) OpenMyPanel(tab);
+                }, 18, Ui.SelectedButton(_myPage == tab)), 0, 42, 1);
+                button.name = "MyTab_" + i;
+            }
+
+            if (_myPage == MyPage.Contacts)
+            {
+                BuildContactsContent(w, flexible: true);
+                return;
+            }
+            if (_myPage == MyPage.Relations)
+            {
+                BuildRelationsContent(w, 770, 535, showPlayerPortrait: true);
+                return;
+            }
+
+            var body = PhoneFlexibleScroll(w.Content, "MyPageContent");
+            body.parent.parent.GetComponent<Image>().color = Color.clear;
+            switch (_myPage)
+            {
+                case MyPage.Food: BuildMyFood(w, body); break;
+                case MyPage.Residence: BuildMyResidence(w, body); break;
+                default: BuildMyProfile(w, body); break;
+            }
+        }
+
+        private Texture MyPortraitTexture()
+        {
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) return null;
+            _myPortrait ??= new AvatarPreview(portrait: true);
+            string outfit = S.Outfit.Id;
+            if (_myPortraitOutfit != outfit)
+            {
+                _myPortrait.Render(outfit);
+                _myPortraitOutfit = outfit;
+            }
+            return _myPortrait.Texture;
+        }
+
+        private static RectTransform MyCard(Transform parent, string name, float width, float height, float flex = 0)
+        {
+            var card = Ui.Panel(parent, name, Ui.PanelBg2).rectTransform;
+            Ui.Size(card, width, height, flex);
+            Ui.VList(card, 7, 12);
+            return card;
+        }
+
+        private static void MyFact(Transform parent, string title, string value)
+        {
+            var fact = MyCard(parent, title, 0, 70, 1);
+            var layout = fact.GetComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(12, 12, 8, 6);
+            layout.spacing = 0;
+            Ui.Size(Ui.Label(fact, title, 15, color: Ui.Dim), -1, 20);
+            Ui.Size(Ui.Label(fact, "<b>" + value + "</b>", 23), -1, 33);
+        }
+
+        private void BuildMyProfile(Window w, Transform body)
+        {
+            var stats = S.Player;
+            var top = Ui.Row(body, 194, 10);
+
+            var identity = MyCard(top, "MyIdentity", 397, 194);
+            var intro = Ui.Row(identity, 170, 14);
+            var portrait = Ui.Size(Ui.Panel(intro, "MyPortraitFrame", Ui.Accent), 126, 162).rectTransform;
+            var face = Ui.Rect(portrait, "MyPortrait").Fill(2).gameObject.AddComponent<RawImage>();
+            face.texture = MyPortraitTexture();
+            face.raycastTarget = false;
+            if (face.texture == null) face.color = Ui.PanelBg;
+            var info = Ui.Rect(intro, "MyIdentityText");
+            Ui.Size(info, 0, 162, 1);
+            var layout = Ui.VList(info, 8, 5);
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            Line(info, "玩家", 30);
+            double fame = S.HasShop ? S.PlayerShop.Reputation : 0;
+            Line(info, $"名望 {fame:0.#} · {PersonStanding.Label(fame)}", 19, Ui.Accent).name = "MyStanding";
+
+            var condition = MyCard(top, "MyCondition", 0, 194, 1);
+            Line(condition, "身体状态", 22, Ui.Accent);
+            void Meter(Transform row, string label, double value, double max, bool warn = false)
+            {
+                var cell = Ui.Size(Ui.Rect(row, "MyStat_" + label), 0, 43, 1);
+                var heading = Ui.Row(cell, 26);
+                heading.Anchor(0, 1, 1, 1, 0, -26, 0, 0);
+                Ui.Size(Ui.Label(heading, label, 16, color: Ui.Dim), 0, 26, 1);
+                Ui.Size(Ui.Label(heading, $"{value:0} / {max:0}", 17, TextAnchor.MiddleRight, warn ? Ui.Warn : Ui.TextColor), 110, 26);
+                var rail = Ui.Panel(cell, "StatRail", Ui.PanelBg).rectTransform.Anchor(0, 0, 1, 0, 0, 4, 0, -12);
+                Ui.Panel(rail, "StatFill", warn ? Ui.Warn : Ui.Good).rectTransform.Anchor(0, 0, Mathf.Clamp01((float)(value / max)), 1);
+            }
+            var first = Ui.Row(condition, 43, 16);
+            Meter(first, "饱腹", stats.Hunger, 100, stats.Hunger <= 20);
+            Meter(first, "精力", stats.Energy, Math.Max(1, stats.MaxEnergy), S.EnergyExhausted);
+            var second = Ui.Row(condition, 43, 16);
+            Meter(second, "健康", stats.Health, 100, stats.Health <= 25);
+            Meter(second, "压力", stats.Stress, 100, stats.Stress >= PlayerStats.HighStressThreshold);
+            if (S.EnergyExhausted) Line(condition, S.EnergyExhaustionText, 15, Ui.Warn);
+
+            Line(body, "个人能力", 20, Ui.Accent);
+            var skills = Ui.Row(body, 70, 5);
+            MyFact(skills, "智力", stats.Intelligence.ToString());
+            MyFact(skills, "魅力", S.EffectiveCharm.ToString());
+            MyFact(skills, "动手能力", stats.Skill.ToString());
+            MyFact(skills, "体能", stats.Stamina.ToString());
+            Ui.Size(Ui.Button(body, "天气与穿衣", OpenCityClimate, 17), -1, 38);
+            HelpLink(body, "身体详细资料", $"欠觉 {stats.SleepDebt:0.#} 小时 · 营养 {stats.Nutrition:0.#}/100 · 心情 {stats.Mood:0.#}/100\n衣着魅力 +{S.Outfit.CharmBonus} · 现金 {S.Ledger.Balance}\n压力达到 {PlayerStats.HighStressThreshold:0} 时，到岗表现奖金减少 {GameSession.HighStressWorkPenalty}%。");
+            BuildPlayerWorkSummary(body, w);
+
+            string blocker = WorkbenchAccessReason;
+            Ui.Size(Ui.Button(body, "居家工作台" + (blocker == null ? "" : " · " + blocker), OpenHomeWorkbench,
+                17, blocker == null ? Ui.ButtonHot : Ui.ButtonBg, blocker == null), -1, 38).name = "MyHomeWorkbench";
+            if (blocker == "回家后可用")
+                Ui.Size(Ui.Button(body, "回家", () => { CloseModalWindows(); _ctrl.GoToPlace(S.Home); }, 17), -1, 36);
+        }
+
+        private void BuildMyFood(Window w, Transform body)
+        {
+            var pantry = S.Pantry;
+            Line(body, "饮食", 22, Ui.Accent);
+            var stats = Ui.Row(body, 70, 6);
+            MyFact(stats, "当前饱腹", $"{S.Player.Hunger:0} / 100");
+            MyFact(stats, "电饭锅熟饭", $"{pantry.CookedBowls} 碗");
+            if (pantry.Cooking != null) Line(body, $"焖饭剩余 {pantry.CookMinutesLeft(S.Clock.Now.TotalMinutes)} 分钟", 17, Ui.Good);
+            var ingredients = Ingredients.All.Select(def => (def, count: S.HomeCookingIngredientCount(def.Id)))
+                .Where(item => item.count > 0).Select(item => $"{item.def.Name} {item.count * item.def.WeightKg:0.##} 千克");
+            Para(body, $"背包和家中后仓 · 大米 {S.HomeCookingRiceKg:0.##} 千克" + string.Concat(ingredients.Select(label => " · " + label)), 17);
+            if (S.CanOpenFridge) Ui.Size(Ui.Button(body, "打开当前冰箱", OpenFridgeWindow, 17), -1, 38);
+            Ui.Size(Ui.Button(body, "自动订餐 · " + (S.MealDeliveryEnabled ? S.SelectedDeliveryMeal.Name + " ¥" + S.SelectedDeliveryMeal.Price + "/餐" : "关闭"),
+                () => OpenMealDeliverySettings(w), 17), -1, 38);
+            HelpLink(body, "用餐与保存说明", "到饭点或饥饿时优先吃现有食物，缺餐时按订餐设置处理。冰箱内永久保存，取出后继续消耗剩余保质期。餐馆可用厨房现有大米和配菜做自己的餐食。");
+        }
+
+        private void BuildMyResidence(Window w, Transform body)
+        {
+            Line(body, "我的租约与产权", 22, Ui.Accent);
+            bool rented = S.HasResidentialLease(S.Home);
+            var residence = MyCard(body, "MyCurrentResidence", -1, 161);
+            Line(residence, "当前住处", 15, Ui.Dim);
+            Line(residence, S.HomeTitle + (rented ? " · 租住中" : " · 自有"), 23);
+            var facts = Ui.Row(residence, 70, 6);
+            MyFact(facts, rented ? "周租" : "购入价", rented ? S.CurrentHomeRent.ToString() : Money.FromCents(S.HomePriceCents).ToString());
+            MyFact(facts, "水电", S.HomeUtilities + "/月");
+            MyFact(facts, "睡眠恢复", $"{S.PrimaryHomeSleepQuality:0.##}×");
+
+            if (rented)
+            {
+                var expand = Ui.Size(Ui.Button(body, _myLeaseExpanded ? "收起当前租约 ▴" : "查看当前租约 ▾",
+                    () => { _myLeaseExpanded = !_myLeaseExpanded; w.Rebuild(); }, 17), -1, 38);
+                expand.name = "MyLeaseDetails";
+                if (_myLeaseExpanded)
+                {
+                    Line(body, $"签约周租 {S.CurrentHomeRent} · 每周扣款", 17);
+                    if (S.NextResidentialRentDay(S.Home) is int day)
+                        Line(body, "下次扣租 · " + new GameDate(day), 16, Ui.Dim);
+                }
+            }
+
+            var otherLeases = S.RentedResidences.Where(place => place != S.Home).ToArray();
+            if (otherLeases.Length > 0)
+            {
+                Line(body, "其他租约", 19, Ui.Accent);
+                foreach (var place in otherLeases)
+                {
+                    string due = S.NextResidentialRentDay(place) is int day ? $" · 下次扣租 {new GameDate(day)}" : "";
+                    Line(body, $"{place.Name} · 周租 {S.SignedResidentialRent(place)}{due}", 17);
+                }
+            }
+
+            Line(body, "自有住宅", 19, Ui.Accent);
+            var owned = S.ResidentialPlaces.Where(place => place != S.Home)
+                .Select(place => (place, property: S.PropertyAt(place.Id))).Where(entry => entry.property != null).ToArray();
+            if (!rented) Line(body, S.HomeTitle + " · 自住", 17);
+            foreach (var (place, property) in owned)
+                Line(body, place.Name + (property.UseMode == "vacant" ? " · 空置" : $" · 出租 · 周租 {Money.FromCents(property.WeeklyRentCents)}"), 17);
+            if (rented && owned.Length == 0) Line(body, "暂无", 16, Ui.Dim);
+            if (S.HomeVisits.Any(visit => visit.Working))
+                Ui.Size(Ui.Button(body, "在家等维修完成", () => { S.WaitForRepair(); w.Rebuild(); }, 17, Ui.ButtonHot, _ctrl.InHome), -1, 38);
         }
 
         private static string FurnitureLabel(string id, int count)
@@ -968,7 +1158,7 @@ namespace PCShopSell.Game.UI
                     {
                         _onlineTab = tab;
                         w.Rebuild();
-                    }, 18, _onlineTab == tab ? Ui.ButtonHot : Ui.ButtonBg), 130);
+                    }, 18, Ui.SelectedButton(_onlineTab == tab)), 130);
                 }
                 var destinations = new OwnedShop[] { null }.Concat(S.MyShops).ToArray();
                 int selected = Array.IndexOf(destinations, destination);
@@ -1012,7 +1202,7 @@ namespace PCShopSell.Game.UI
                 {
                     _shopTabs[key] = tab;
                     w.Rebuild();
-                }, 17, on ? Ui.ButtonHot : new Color(0.2f, 0.24f, 0.3f));
+                }, 17, Ui.SelectedButton(on));
                 b.name = "ShopTab_" + (filterKey==null?"":filterKey+"_") + tab;
                 Ui.Size(b, Mathf.Max(96, tab.Length * 19 + 36));
             }
@@ -1043,7 +1233,7 @@ namespace PCShopSell.Game.UI
                 {
                     S.TakeFromStash(l.Id);
                     w.Rebuild();
-                }, 16, Ui.ButtonHot, fits), 110);
+                }, 16, Ui.ButtonBg, fits), 110);
             }
             RectTransform bar = Ui.Row(stash, 44, 8);
             Ui.Size(Ui.Button(bar, "能搬的全搬走", () =>
@@ -1177,43 +1367,188 @@ namespace PCShopSell.Game.UI
             return n.GiftItemId == null ? $"请{n.GiftName} {n.GiftPrice}" : $"送{n.GiftName}";
         }
 
-        private void BuildFarm(Window w, Place p)
-        {
-            BuildCarryStore(w,p);
-        }
-
-        private void FarmRiceRow(Window w, RectTransform list, bool open)
-        {
-            RectTransform rrow = Ui.Row(list, 76);
-            Ui.Size(ProductText(rrow, ProductLabel("大米", .25, $"{Pantry.RicePricePerKg}/千克 · 按千克购买", "每次加购"), 19), 200);
-            ShopQuantity(w, rrow, "rice", () => S.CartAddRice(.25), open);
-        }
-
-        private void FarmIngredientRows(Window w, RectTransform list, bool open)
-        {
-            foreach (IngredientDef def in Ingredients.All)
-            {
-                IngredientDef d = def;
-                RectTransform row = Ui.Row(list, 80);
-                Ui.Size(ProductText(row, ProductLabel(d.Name + "（" + d.Unit + "）", d.WeightKg, $"可焖「{d.DishName}」", "每份"), 18), 380);
-                Ui.Size(Ui.Label(row, d.PricePerKg + "/千克", 17, TextAnchor.MiddleLeft, Ui.Good), 80);
-                Ui.Size(Ui.Label(row, $"背包 {S.Backpack.Food.IngredientCount(d.Id) * d.WeightKg:0.##}千克\n家中后仓 {S.HomeBox.Food.IngredientCount(d.Id) * d.WeightKg:0.##}千克", 14, TextAnchor.MiddleLeft, Ui.Dim), 120);
-                foreach (int n in new[] { 1 })
-                {
-                    int count = n;
-                    CartAddButton(w, row, "ing:" + d.Id, () => S.CartAddIngredient(d.Id, count), "+" + (count * d.WeightKg).ToString("0.##") + "千克", 90, open, n == 1);
-                }
-            }
-        }
-
         // ---------- 摆放模式面板 ----------
 
+        internal const float HomeDockWidth = 430f;
+        private Button _homeDockToggle, _homePlacementConfirm;
+        private RectTransform _homeDock, _homeDockContent;
+        private Text _homeDockToggleLabel, _homeDockTitle, _homeDockTenure, _homePlacementStatus;
+        private bool _homeDockCollapsed;
+        private GameSession _homeDockSession;
+        private string _homeDockResidence;
+        private string[] _homeDockPlaced = Array.Empty<string>();
+        private KeyValuePair<string, int>[] _homeDockStored = Array.Empty<KeyValuePair<string, int>>();
+        private bool HomeDockOpen => _homeDock != null && _homeDock.gameObject.activeSelf;
+
+        private void BuildHomeDockToggle(Transform parent)
+        {
+            _homeDockToggle = Ui.Button(parent, "收起住处面板 ▴", () =>
+            {
+                _homeDockCollapsed = HomeDockOpen;
+                if (_homeDockCollapsed && _ctrl.Placing && !_ctrl.PlacingShop) _ctrl.EndPlacement();
+                RefreshHomeDockVisibility();
+            }, 17);
+            _homeDockToggle.name = "HomeDockToggle";
+            _homeDockToggleLabel = _homeDockToggle.GetComponentInChildren<Text>();
+            ((RectTransform)_homeDockToggle.transform).Anchor(1, 1, 1, 1, -200, -112, 12, 74);
+            _homeDockToggle.gameObject.SetActive(false);
+        }
+
+        private void RefreshHomeDockVisibility(bool force = false)
+        {
+            string residence = _ctrl.InHome ? S.Home.Id : null;
+            if (_homeDockSession != S || _homeDockResidence != residence)
+            {
+                _homeDockSession = S;
+                _homeDockResidence = residence;
+                _homeDockCollapsed = false;
+                force = true;
+            }
+            bool visible = _ctrl.InHome && !MainMenuOpen && !S.IsGameOver && !S.IsWorking
+                && !OpeningMealRestricted && !ExpoHudOpen && !_ctrl.PlacingShop;
+            if (_homeDockToggle.gameObject.activeSelf != visible) _homeDockToggle.gameObject.SetActive(visible);
+            bool showDock = visible && !_homeDockCollapsed;
+            if (showDock && _homeDock == null) BuildHomeDock();
+            bool changed = _homeDock != null && _homeDock.gameObject.activeSelf != showDock;
+            if (changed) _homeDock.gameObject.SetActive(showDock);
+            if (visible) _homeDockToggleLabel.text = showDock ? "收起住处面板 ▴" : "展开住处面板 ▾";
+            if (showDock && (changed || force)) RefreshHomeDock(force: true);
+        }
+
+        private void BuildHomeDock()
+        {
+            _homeDock = Ui.Panel(_dockCanvas.transform, "HomeDock", Ui.PanelBg).rectTransform
+                .Anchor(1, 0, 1, 1, -HomeDockWidth, 70, 10, 120);
+            var header = Ui.Panel(_homeDock, "HomeDockHeader", Ui.PanelBg2).rectTransform.Anchor(0, 1, 1, 1, 0, -76, 0, 0);
+            Ui.Label(header, "<b>我的住处</b>", 24).rectTransform.Anchor(0, 1, 1, 1, 13, -40, 102, 7);
+            _homeDockTitle = Ui.Label(header, "", 17, color: Ui.Dim);
+            _homeDockTitle.rectTransform.Anchor(0, 1, 1, 1, 13, -67, 102, 37);
+            _homeDockTitle.resizeTextForBestFit = true;
+            _homeDockTitle.resizeTextMinSize = 13;
+            _homeDockTitle.resizeTextMaxSize = 17;
+            _homeDockTenure = Ui.Label(header, "", 15, TextAnchor.MiddleRight, Ui.Good);
+            _homeDockTenure.rectTransform.Anchor(1, 1, 1, 1, -98, -43, 13, 8);
+            _homeDockContent = Ui.Scroll(_homeDock);
+            ((RectTransform)_homeDockContent.parent.parent).Anchor(0, 0, 1, 1, 5, 53, 5, 78);
+            var details = Ui.Button(_homeDock, "查看我的住处资料 ›", () => OpenMyPanel(MyPage.Residence), 17);
+            details.name = "HomeDockResidence";
+            ((RectTransform)details.transform).Anchor(0, 0, 1, 0, 10, 8, 10, -45);
+            RefreshHomeDock(force: true);
+        }
+
+        private void RefreshHomeDock(bool force = false)
+        {
+            if (!HomeDockOpen) return;
+            var stored = S.FurnitureToPlaceList(false).Where(entry => entry.Value > 0 && FurnitureCatalog.Get(entry.Key) != null).ToArray();
+            var placed = S.HomeLayout.Select(furniture => furniture.Id).ToArray();
+            string tenure = S.HasResidentialLease(S.Home) ? "租住中" : "自有";
+            if (!force && _homeDockStored.SequenceEqual(stored) && _homeDockPlaced.SequenceEqual(placed)
+                && _homeDockTitle.text == S.HomeTitle && _homeDockTenure.text == tenure) return;
+            _homeDockStored = stored;
+            _homeDockPlaced = placed;
+            _homeDockTitle.text = S.HomeTitle;
+            _homeDockTenure.text = tenure;
+            var scroll = _homeDockContent.parent.parent.GetComponent<ScrollRect>();
+            float previousScroll = scroll.verticalNormalizedPosition;
+            Ui.Clear(_homeDockContent);
+            Line(_homeDockContent, "装修", 21, Ui.Accent);
+
+            _homePlacementStatus = null;
+            _homePlacementConfirm = null;
+            bool editing = _ctrl.Placing && !_ctrl.PlacingShop;
+            if (editing && _ctrl.PlaceId != null)
+            {
+                Line(_homeDockContent, (_ctrl.PlaceHoldsPlaced ? "移动 · " : "摆放 · ") + FurnitureLabel(_ctrl.PlaceId, 1), 18, Ui.Accent);
+                _homePlacementStatus = Line(_homeDockContent, "", 16, Ui.Dim);
+                Ui.Size(_homePlacementStatus, -1, 32);
+                var actions = Ui.Row(_homeDockContent, 36, 4);
+                Ui.Size(Ui.Button(actions, "旋转（R）", _ctrl.RotateGhost, 15), 86, 36);
+                _homePlacementConfirm = Ui.Size(Ui.Button(actions, _ctrl.PlaceHoldsPlaced ? "确认移动" : "确认摆放",
+                    _ctrl.ConfirmHomeFurniturePlacement, 16, Ui.ButtonHot), 0, 36, 1);
+                _homePlacementConfirm.name = "HomeDockConfirmPlacement";
+                Ui.Size(Ui.Button(actions, "取消", _ctrl.CancelPlacementSelection, 15), 60, 36).name = "HomeDockCancelPlacement";
+                UpdateHomePlacementStatus();
+            }
+
+            Line(_homeDockContent, $"可摆放家具  ·  {stored.Sum(entry => entry.Value)} 件", 17, Ui.Dim);
+            foreach (var entry in stored)
+            {
+                string id = entry.Key;
+                var row = HomeDockFurnitureRow(FurnitureLabel(id, entry.Value), _ctrl.PlaceId == id && !_ctrl.PlaceHoldsPlaced);
+                Ui.Size(Ui.Button(row, "摆放", () =>
+                {
+                    if (_ctrl.Placing && !_ctrl.PlacingShop) _ctrl.SelectStock(id);
+                    else StartPlacement(false, id);
+                }, 16, Ui.ButtonBg), 74, 34).name = "HomeDockPlace_" + id;
+            }
+            if (stored.Length == 0) Line(_homeDockContent, "暂无可摆放家具", 15, Ui.Dim);
+            Line(_homeDockContent, $"已摆放  ·  {placed.Length} 件", 17, Ui.Dim);
+            for (int i = 0; i < placed.Length; i++)
+            {
+                int index = i;
+                string id = placed[index];
+                var row = HomeDockFurnitureRow(FurnitureLabel(id, 1), _ctrl.PlaceHoldsPlaced && _ctrl.PlacedFurnitureSelection == index);
+                bool StillHere() => _ctrl.InHome && index < S.HomeLayout.Count && S.HomeLayout[index].Id == id;
+                Ui.Size(Ui.Button(row, "移动", () =>
+                {
+                    if (!StillHere()) { RefreshHomeDock(force: true); return; }
+                    if ((_ctrl.Placing && !_ctrl.PlacingShop) || _ctrl.BeginPlacement(false))
+                        _ctrl.SelectPlacedFurniture(index);
+                }, 16), 62, 34).name = "HomeDockMove_" + index;
+                Ui.Size(Ui.Button(row, "收回", () =>
+                {
+                    if (!StillHere()) { RefreshHomeDock(force: true); return; }
+                    if (_ctrl.Placing && !_ctrl.PlacingShop) _ctrl.CancelPlacementSelection();
+                    S.StoreFurniture(false, index);
+                    RefreshHomeDock(force: true);
+                }, 16), 62, 34).name = "HomeDockStore_" + index;
+            }
+            if (placed.Length == 0) Line(_homeDockContent, "暂无已摆放家具", 15, Ui.Dim);
+            if (editing)
+            {
+                var history = Ui.Row(_homeDockContent, 36, 5);
+                Ui.Size(Ui.Button(history, "撤销 Ctrl+Z", () => _ctrl.UndoPlacement(), 14, Ui.ButtonBg, S.CanUndoLayout), 0, 36, 1);
+                Ui.Size(Ui.Button(history, "重做 Ctrl+Y", () => _ctrl.UndoPlacement(true), 14, Ui.ButtonBg, S.CanRedoLayout), 0, 36, 1);
+                Ui.Size(Ui.Button(_homeDockContent, "完成装修", _ctrl.EndPlacement, 17, Ui.ButtonHot), -1, 38).name = "HomeDockFinishPlacement";
+            }
+            scroll.StopMovement();
+            scroll.verticalNormalizedPosition = editing && _ctrl.PlaceId != null ? 1 : previousScroll;
+        }
+
+        private RectTransform HomeDockFurnitureRow(string label, bool selected)
+        {
+            var row = Ui.Row(_homeDockContent, 40, 5);
+            var background = row.gameObject.AddComponent<Image>();
+            background.color = selected ? Ui.ButtonBg : Ui.PanelBg2;
+            background.raycastTarget = false;
+            var layout = row.GetComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(8, 5, 0, 0);
+            layout.childForceExpandHeight = false;
+            Ui.Size(Ui.Label(row, label, 16), 0, 34, 1);
+            return row;
+        }
+
+        private void UpdateHomePlacementStatus()
+        {
+            if (!HomeDockOpen || _homePlacementStatus == null || _homePlacementConfirm == null) return;
+            bool picked = _ctrl.HasHomePlacementTarget;
+            string issue = _ctrl.PlaceError;
+            _homePlacementStatus.text = !picked ? "点击房间选择位置" : issue ?? "可以放在这里 · 点确认完成";
+            _homePlacementStatus.color = !picked ? Ui.Dim : issue == null ? Ui.Good : Ui.Warn;
+            _homePlacementConfirm.interactable = picked && issue == null;
+        }
+
         private RectTransform _placePanel;
-        private RectTransform _placeList;
         private Text _placeStatus;
 
         public void ShowPlacementPanel()
         {
+            if (!_ctrl.PlacingShop)
+            {
+                _homeDockCollapsed = false;
+                RefreshHomeDockVisibility(force: true);
+                return;
+            }
             if (_placePanel == null)
             {
                 Image bg = Ui.Panel(_hudCanvas.transform, "PlacePanel", Ui.PanelBg);
@@ -1230,10 +1565,12 @@ namespace PCShopSell.Game.UI
         {
             if (_placePanel != null) _placePanel.gameObject.SetActive(false);
             if (_ctrl.InInterior && S != null&&!_dockCollapsed) OpenDock();
+            if (S != null) RefreshHomeDockVisibility(force: true);
         }
 
         public void RefreshPlacementPanel()
         {
+            if (_ctrl.Placing && !_ctrl.PlacingShop) { RefreshHomeDock(force: true); return; }
             if (_placePanel == null || !_placePanel.gameObject.activeSelf) return;
             Ui.Clear(_placePanel);
             bool shop = _ctrl.PlacingShop;
@@ -1261,7 +1598,7 @@ namespace PCShopSell.Game.UI
                 if (def == null) continue;
                 any = true;
                 string id = def.Id;
-                Ui.Size(Ui.Button(_placePanel, $"{def.Name} ×{kv.Value}", () => _ctrl.SelectStock(id), 17, _ctrl.PlaceId == id && !_ctrl.PlaceHoldsPlaced ? Ui.ButtonHot : Ui.ButtonBg), -1, 40);
+                Ui.Size(Ui.Button(_placePanel, $"{def.Name} ×{kv.Value}", () => _ctrl.SelectStock(id), 17, Ui.SelectedButton(_ctrl.PlaceId == id && !_ctrl.PlaceHoldsPlaced)), -1, 40);
             }
             if (!any) Ui.Size(Ui.Label(_placePanel, "空的。去家具城买，或者网购。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
 
@@ -1278,6 +1615,7 @@ namespace PCShopSell.Game.UI
 
         private void UpdatePlacementStatus()
         {
+            UpdateHomePlacementStatus();
             if (_placePanel == null || !_placePanel.gameObject.activeSelf || _placeStatus == null) return;
             if (!_ctrl.Placing) return;
             if (_ctrl.PlaceId == null) _placeStatus.text = "选一件背包里的家具，或者点屋里的家具拿起来挪。";

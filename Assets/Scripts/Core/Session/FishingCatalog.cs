@@ -11,6 +11,14 @@ namespace PCShopSell.Core.Session
         public readonly int SalePrice, Habitat, Bait, Weight;
         public readonly FishMovement Movement;
         public string Rarity => Weight <= 5 ? "珍稀" : Weight <= 10 ? "少见" : "常见";
+        private int MealTier => Weight <= 5 ? 5 : Weight <= 10 ? 4
+            : Weight <= 16 || Difficulty >= 1.25 ? 3 : Weight <= 23 || Difficulty >= .9 ? 2 : 1;
+        public double MealHungerBonus => 4 + 2 * MealTier + (Habitat == 2 ? 2 : 0);
+        public double MealHealthBonus => .5 * MealTier + (Movement == FishMovement.Bottom ? .25 : 0);
+        public double MealNutritionBonus => 4 + 2 * MealTier + (Habitat == 0 ? 1 : 0);
+        public double MealMoodBonus => 1 + 2 * MealTier + (Movement is FishMovement.Dart or FishMovement.Ambush ? 1 : 0);
+        public double DinnerReputation => MealTier switch { 5 => 1, 4 => .65, 3 => .45, 2 => .3, _ => .2 };
+        public long DinnerSurcharge => (long)Math.Ceiling(SalePrice * 1.25 / 5) * 5;
         public string MovementName => new[] { "平稳游动", "间歇冲刺", "快速变向", "贴底挣扎", "上层游弋", "停顿突袭" }[(int)Movement];
         public string BehaviorHint => new[] { "平稳跟随，轻收轻放", "冲刺后会缓下来，别一直猛拉", "变向频繁，小幅点按跟鱼", "喜欢贴底，别把绿区拉得太高", "偏爱上层，适当收线保持高度", "先停顿再猛冲，留意突然变向" }[(int)Movement];
         public FishDefinition(string id, string name, double kg, int sale, int habitat, int bait, int weight, double difficulty, FishMovement movement)
@@ -39,7 +47,7 @@ namespace PCShopSell.Core.Session
         public static readonly (string Id, int Hours, int Price)[] Passes =
         {
             ("fishing", 2, 300), ("fishing_pass_4h", 4, 500),
-            ("fishing_pass_8h", 8, 900), ("fishing_pass_16h", 16, 1600)
+            ("fishing_pass_6h", 6, 700), ("fishing_pass_8h", 8, 900), ("fishing_pass_16h", 16, 1600)
         };
         public static readonly string[] Spots = { "浅滩", "芦苇边", "深水区" };
         public static readonly string[] Baits = { "面饵", "蚯蚓饵", "小鱼饵" };
@@ -66,7 +74,10 @@ namespace PCShopSell.Core.Session
             new FishDefinition("fish_swamp_eel", "黄鳝", .4, 680, 0, 1, 9, 1.1, FishMovement.Bottom),
             new FishDefinition("fish_farmed_sturgeon", "养殖鲟鱼", 6, 3200, 2, 1, 3, 1.7, FishMovement.Surge)
         };
-        public static FishDefinition Get(string id) => Fish.FirstOrDefault(f => f.Id == id);
+        private static readonly FishDefinition[] FarmFish = Fish.OrderByDescending(f => f.Weight).ThenBy(f => f.Difficulty).Take(5).ToArray();
+        public static FishDefinition Get(string id) => id == null ? null : Fish.FirstOrDefault(f => f.Id == id);
+        public static bool RequiresCatch(string ingredientId) =>
+            Get(ingredientId) is FishDefinition fish && !FarmFish.Contains(fish);
         public static double PoolWeight(FishDefinition fish, double distance, int spot, int bait)
         {
             int band = distance < 12 ? 0 : distance < 22 ? 1 : 2;

@@ -343,6 +343,7 @@ namespace PCShopSell.Tests
             r.Clock.Advance(20);
             Assert.Greater(r.Shop.Orders.Count, 0);
             BuildOrder o = r.Shop.Orders[0];
+            Assert.AreEqual(4 * GameTimestamp.MinutesPerDay, o.PlacedAt.MinutesUntil(o.DueAt));
             Assert.AreEqual(0, r.Shop.MissingParts(o).Count);
             Assert.IsTrue(r.Shop.CompleteBuild(o.Id));
             Assert.AreEqual(o.Price, r.Ledger.Balance);
@@ -361,8 +362,31 @@ namespace PCShopSell.Tests
             r.Shop.PlayerPresent = false;
             Assert.Greater(r.Shop.Orders.Count, 0);
             r.Clock.Advance(3 * 1440);
+            Assert.Greater(r.Shop.Orders.Count, 0);
+            r.Clock.Advance(1440);
             Assert.AreEqual(0, r.Shop.Orders.Count);
             Assert.Greater(expired, 0);
+        }
+
+        [Test]
+        public void ShopLimitsCustomerOrdersSeparatelyFromTotalBuildUnits()
+        {
+            var settings = BusySettings();
+            settings.BuildOrderChance = 1;
+            var r = Make(settings);
+            r.Shop.Settings.BaseCustomersPerHour = 60;
+            r.Shop.PlayerPresent = true;
+            r.Clock.Advance(120);
+            Assert.AreEqual(5, r.Shop.CustomerBuildOrders);
+            for (int i = 0; i < 7; i++)
+                r.Shop.AddContractOrder("test-batch", 0, Money.FromYuan(5000), r.Clock.Now.AddMinutes(1440));
+            Assert.AreEqual(12, r.Shop.Orders.Count);
+            Assert.False(r.Shop.CanTakeBuildOrders(1));
+            Assert.True(r.Shop.CompleteBuild(r.Shop.Orders.First().Id));
+            Assert.True(r.Shop.CanTakeBuildOrders(1));
+            r.Clock.Advance(30);
+            Assert.AreEqual(12, r.Shop.Orders.Count);
+            Assert.AreEqual(5, r.Shop.CustomerBuildOrders);
         }
 
         [Test]

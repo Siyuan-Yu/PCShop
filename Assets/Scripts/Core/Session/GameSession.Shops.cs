@@ -131,10 +131,10 @@ namespace PCShopSell.Core.Session
                 RecordFinanceSale(shop, c);
             };
             sim.BulkSalePaid += (id, name, total) => RecordAggregateReceipt(shop, "bulk:" + id, name, total, Clock.Today.TotalDays);
-            sim.OrderCompleted += o => { Flags.Add("tutorial:build"); ContractOrderResult(o, true); };
-            sim.OrderCancelled += o => ContractOrderResult(o, false);
-            sim.OrderExpired += o => ContractOrderResult(o, false);
-            sim.OrderPlaced += o => Notice?.Invoke($"{(MyShopCount > 1 ? ShopTitle(shop) : "")}新装机订单：{PartCatalog.TierName(o.Tier)}整机 {o.Price}，两天内交付。");
+            sim.OrderCompleted += o => { Flags.Add("tutorial:build"); ContractOrderResult(shop, o, true); };
+            sim.OrderCancelled += o => ContractOrderResult(shop, o, false);
+            sim.OrderExpired += o => ContractOrderResult(shop, o, false);
+            sim.OrderPlaced += o => Notice?.Invoke($"{(MyShopCount > 1 ? ShopTitle(shop) : "")}新装机订单：{PartCatalog.TierName(o.Tier)}整机 {o.Price}，{sim.Settings.BuildOrderDueDays} 天内交付。");
             sim.OrderExpired += o => Popup?.Invoke("订单取消", $"{(MyShopCount > 1 ? ShopTitle(shop) : "")}{PartCatalog.TierName(o.Tier)}整机订单超时，顾客取消了订单，名望下降。");
             if (_shops.Count > 0 && _shops[0] != shop && _shops[0].Sim != null) sim.ShareReputationWith(_shops[0].Sim);
             return sim;

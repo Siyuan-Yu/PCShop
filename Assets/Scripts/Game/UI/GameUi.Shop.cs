@@ -179,7 +179,7 @@ namespace PCShopSell.Game.UI
         {
             _tab = tab;
             // 店铺侧栏不锁住时间；所有页签都服从顶部的暂停 / 继续与倍速。
-            foreach (var (b, t) in _tabButtons) b.image.color = t == tab ? Ui.ButtonHot : Ui.ButtonBg;
+            foreach (var (b, t) in _tabButtons) Ui.SetButtonFill(b, Ui.SelectedButton(t == tab));
             RefreshDockHeader();
             RebuildDock();
         }
@@ -188,8 +188,9 @@ namespace PCShopSell.Game.UI
         {
             _dockTitle.text = S.ShopTitle(S.CurrentShop);
             bool open = S.IsPlaceOpen(S.CurrentShop.Place);
-            _dockStatus.text = open ? "● 营业中" : "● 已关门";
-            _dockStatus.color = open ? Ui.Good : Ui.Warn;
+            bool finishing = !open && S.ShopFinishingService(S.CurrentShop);
+            _dockStatus.text = open ? "● 营业中" : finishing ? "● 打烊收尾" : "● 已关门";
+            _dockStatus.color = open ? Ui.Good : finishing ? Ui.Accent : Ui.Warn;
             RefreshStaffPurchaseAlert();
         }
 
@@ -263,6 +264,7 @@ namespace PCShopSell.Game.UI
                 + "|" + S.ShopFitGap() + "|" + S.IsRenovating + "|" + S.CurrentShop.OwnsProperty
                 + (S.IsPetShop(S.CurrentShop) ? "|" + S.PetCapacity(S.CurrentShop) : "")
                 + "|" + shop.OpenMinute + ":" + shop.CloseMinute + ":" + shop.InHours(S.Clock.Now) + ":" + shop.Accepted
+                + "|" + S.ShopFinishingService(S.CurrentShop)
                 + "|" + S.Employee?.Id + ":" + (S.Employee != null && S.CityEmployeeAvailable(S.Employee, S.CurrentShop))
                 + "|" + S.Salesperson?.Id + ":" + (S.Salesperson != null ? GameSession.EmployeeCharm(S.Salesperson) : 0) + ":" + shop.SalesPurchaseIntentBonus
                 + "|" + shop.ClothingMirrorPurchaseIntentBonus + "|" + shop.Orders.Count
@@ -374,11 +376,12 @@ namespace PCShopSell.Game.UI
                 if(shop.AllDay)shop.SetHours(ShopSimulation.DefaultOpenMinute,ShopSimulation.DefaultCloseMinute);
                 else shop.SetHours(0,day);
                 RebuildDock();
-            },15,allDay?Ui.ButtonHot:Ui.ButtonBg);
+            },15,Ui.SelectedButton(allDay));
             unlimited.name="ShopUnlimitedHours";Ui.Size(unlimited,90,36);
             if(!allDay&&close<open&&close!=0)Line(C,"跨午夜营业，次日 "+Ui.Hm(close)+" 关门。",14,Ui.Dim);
             if(!allDay&&!shop.InHours(S.Clock.Now))
-                Ui.Notice(C,$"已关门 · {Ui.Hm(shop.OpenMinute)} 开门");
+                Ui.Notice(C, S.ShopFinishingService(S.CurrentShop) ? "打烊收尾 · 暂停接待新客，继续服务店内顾客"
+                    : $"已关门 · {Ui.Hm(shop.OpenMinute)} 开门");
         }
 
         private void BuildCounter()
@@ -856,7 +859,7 @@ namespace PCShopSell.Game.UI
                 view.Root.name="Pricing_"+key;
                 var caption = Ui.Size(ProductText(view.Root, "", 16), -1, -1, 1);
                 var current=Ui.Size(Ui.Label(view.Root,"",16,TextAnchor.MiddleLeft,Ui.Good),104);
-                var editButton=Ui.Size(Ui.Button(view.Root,"调价",edit,16,Ui.ButtonHot),62,38);editButton.name="EditPrice_"+key;
+                var editButton=Ui.Size(Ui.Button(view.Root,"调价",edit,16,Ui.ButtonBg),62,38);editButton.name="EditPrice_"+key;
                 var followButton=Ui.Size(Ui.Button(view.Root,"跟随",()=>{follow();RefreshAll(draftMarkup);},15),56,38);
                 view.Refresh = markup =>
                 {
@@ -999,7 +1002,8 @@ namespace PCShopSell.Game.UI
             ShopSimulation shop = S.PlayerShop;
             if (shop.IsGoodsShop) { Line(C, "这家店经营零售商品，不接电脑装机订单。", 18, Ui.Dim); return; }
             if (!shop.BuildOrdersUnlocked) Line(C, "开局前 14 天不接顾客装机订单，第 15 天开始开放。", 17, Ui.Accent);
-            Line(C, "接单后自动预留配件，缺件到货即补。两天内交付收款。", 15, Ui.Dim);
+            Line(C, $"散客 {shop.CustomerBuildOrders}/{ShopSimulation.CustomerBuildOrderLimit} 单 · 待交付 {shop.Orders.Count}/{ShopSimulation.BuildOrderLimit} 台", 17, Ui.Accent);
+            Line(C, $"散客订单 {shop.Settings.BuildOrderDueDays} 天内交付。接单后自动预留配件，缺件到货即补。", 15, Ui.Dim);
             _buildOrdersSignature = BuildOrdersSignature();
             Transform list = C;
             foreach (BuildOrder o in shop.Orders)

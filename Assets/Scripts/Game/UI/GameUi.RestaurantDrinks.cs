@@ -20,7 +20,7 @@ namespace PCShopSell.Game.UI
                     Para(w.Content,"堂食顾客结账时可加购一份，按确认后的售价成交。",17);
                     Ui.Size(ShelfSaleTag(w,w.Content,"goods_"+id,shop.GoodsPriceOf(id).Yuan,shop.GoodsPriceRange(id),
                         value=>shop.GoodsPurchaseIntentAtPrice(id,value),value=>{shop.SetGoodsSalePrice(id,value);RebuildDock();}),-1,100);
-                }),16,Ui.ButtonHot),-1,36).name="EditPrice_goods_"+id;
+                }),16,Ui.ButtonBg),-1,36).name="EditPrice_goods_"+id;
             }
         }
     }

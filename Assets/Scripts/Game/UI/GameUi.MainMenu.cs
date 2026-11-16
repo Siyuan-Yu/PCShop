@@ -68,7 +68,7 @@ namespace PCShopSell.Game.UI
             {
                 if (_canResumeMainMenu) ConfirmMenuAction("new_game", "new_confirm", "start", _ctrl.NewGame);
                 else _ctrl.NewGame();
-            }, 22, Ui.ButtonHot), -1, 54);
+            }, 22, _canResumeMainMenu ? Ui.ButtonBg : Ui.ButtonHot), -1, 54);
             Ui.Size(Ui.Button(actions, L("load"), () => OpenLoadMenu(false), 22, Ui.ButtonBg, SaveStore.Exists), -1, 54);
             Ui.Size(Ui.Button(actions, L("settings"), OpenSettingsMenu, 22), -1, 54);
             Ui.Size(Ui.Button(actions, L("about"), OpenAboutMenu, 22), -1, 54);
@@ -97,7 +97,7 @@ namespace PCShopSell.Game.UI
                         MenuLocalization.Current = chosen;
                         Ui.InvalidateFont();
                         foreach (var window in _windows.ToArray()) window.RequestRebuild();
-                    }, 21, MenuLocalization.Current == chosen ? Ui.ButtonHot : Ui.ButtonBg), -1, -1, 1);
+                    }, 21, Ui.SelectedButton(MenuLocalization.Current == chosen)), -1, -1, 1);
                 }
                 Line(w.Content, L("audio"), 23, Ui.Accent);
                 Ui.Size(Ui.Button(w.Content, SoundFx.Muted ? L("sound_off") : L("sound_on"), () =>
@@ -136,7 +136,7 @@ namespace PCShopSell.Game.UI
                         }
                         if (confirmProgress) ConfirmMenuAction("load", "load_confirm", "load", Load);
                         else Load();
-                    }, 20, Ui.ButtonHot, info.Exists), -1, 48);
+                    }, 20, Ui.ButtonBg, info.Exists), -1, 48);
                 }
             });
         }

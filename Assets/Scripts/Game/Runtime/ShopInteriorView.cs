@@ -570,6 +570,7 @@ namespace PCShopSell.Game.Runtime
 
         public ShopInteriorView(Transform parent, ShopSize size)
         {
+            _moveAlongRoute = MoveOwner;
             Size = size;
             _root = new GameObject("ShopInterior").transform;
             _root.SetParent(parent, false);
@@ -698,6 +699,7 @@ namespace PCShopSell.Game.Runtime
 
         private List<Vector3> _cityExitPath;
         private int _cityExitIndex;
+        private readonly System.Action<Vector3, float> _moveAlongRoute;
         public void CancelCityDoorWalk(){_cityExitPath=null;_cityExitIndex=0;}
         public int WalkToDoor(float dt)
         {
@@ -708,11 +710,9 @@ namespace PCShopSell.Game.Runtime
                 _cityExitPath=CityRoomRoute.Find(at,new Vector3(_doorX,0,.6f),Width,Depth,Blocked);
                 _cityExitIndex=0;if(_cityExitPath==null)return -1;
             }
-            if(_cityExitIndex>=_cityExitPath.Count)return NearDoor?1:-1;
-            var delta=_cityExitPath[_cityExitIndex]-at;
-            if(delta.magnitude<.035f){_cityExitIndex++;return 0;}
-            MoveOwner(delta,Mathf.Min(dt,delta.magnitude/4.8f));
-            return (_owner.transform.localPosition-at).sqrMagnitude<1e-10f&&dt>0?-1:0;
+            if (_cityExitIndex >= _cityExitPath.Count) return -1;
+            return CityRoomRoute.Advance(_cityExitPath, ref _cityExitIndex, _owner.transform, dt,
+                OwnerWalkSpeed, _moveAlongRoute) ? 0 : -1;
         }
 
         private bool CanStand(Vector3 to, Vector3 from)

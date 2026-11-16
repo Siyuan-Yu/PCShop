@@ -9,11 +9,11 @@ namespace PCShopSell.Core.Session
 {
     public sealed partial class GameSession
     {
-        public static double UsedWeight(UsedItem item)=>new[]{1.2,3,.2,1}[Math.Max(0,Math.Min(3,item.Product))];
+        public static double UsedWeight(UsedItem item)=>item.Product == ArtifactProduct ? 1.5 : new[]{1.2,3,.2,1}[Math.Max(0,Math.Min(3,item.Product))];
         public bool UsedReserved(OwnedShop shop,int id)=>shop.Sim.Queue.Any(c=>c.ResaleId==id);
         private IEnumerable<ResaleOffer> UsedOffers(OwnedShop shop)=>shop.RetailKind!="secondhand"?Enumerable.Empty<ResaleOffer>():
             SpecialBusiness(shop.Place.Id).Used.Where(i=>i.Owned&&i.Inspected&&i.Listed&&!i.Sold&&!UsedReserved(shop,i.Id))
-                .Select(i=>new ResaleOffer{Id=i.Id,Product=i.Product,Name=UsedNames[i.Product]+" · "+ConditionName(i.Condition),Kg=UsedWeight(i),Price=i.Price,ReferencePrice=UsedValue(i)});
+                .Select(i=>new ResaleOffer{Id=i.Id,Product=i.Product,Name=UsedNames[i.Product]+" · "+UsedConditionName(i),Kg=UsedWeight(i),Price=i.Price,ReferencePrice=UsedValue(i)});
         private string SetUsedListing(OwnedShop shop, UsedItem item, long price)
         {
             if (item == null || !item.Owned || !item.Inspected || item.Sold)
@@ -43,7 +43,10 @@ namespace PCShopSell.Core.Session
             var item=state.Used.FirstOrDefault(i=>i.Id==customer.ResaleId&&i.Owned&&!i.Sold);
             if(item==null)return;
             RecordUsedSale(state, item, customer.Spend.Yuan);
-            Say(ShopTitle(shop)+"："+UsedNames[item.Product]+"已售出，收入 ¥"+item.SalePrice+"，收购成本 ¥"+item.Cost+"，毛利 ¥"+(item.SalePrice-item.Cost)+"。");
+            double reputation = UsedSaleReputation(item);
+            if (reputation > 0) shop.Sim.AdjustPersonalReputation(reputation);
+            string reward = reputation > 0 ? $" · 名望 +{reputation:0.#}" : "";
+            Say($"{ShopTitle(shop)}：{UsedNames[item.Product]}已售出，收入 ¥{item.SalePrice}，收购成本 ¥{item.Cost}，毛利 ¥{item.SalePrice - item.Cost}{reward}。");
         }
 
         private void RecordUsedSale(SpecialBusinessState state, UsedItem item, long salePrice)

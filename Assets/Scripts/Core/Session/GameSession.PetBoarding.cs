@@ -50,6 +50,10 @@ namespace PCShopSell.Core.Session
     {
         private const string PetOwnerVisitLabel = "到店办理宠物代养";
         public const int PetsPerKeeper = 2;
+        public const int PetReputationConditionThreshold = 95;
+        public const double PetReputationReward = .2;
+        public static double PetWeeklyReputation(PetStay stay) =>
+            stay.Condition > PetReputationConditionThreshold ? PetReputationReward : 0;
         private const int WeekMinutes = GameDate.DaysPerWeek * GameTimestamp.MinutesPerDay;
         private static readonly string[] PetNames = { "团子", "豆豆", "栗子", "阿福", "芝麻", "奶盖", "糯米", "布丁", "点点", "桃子", "雪球", "花卷" };
         private readonly Dictionary<string, PetBoardingState> _petBoarding = new Dictionary<string, PetBoardingState>();
@@ -204,17 +208,20 @@ namespace PCShopSell.Core.Session
         {
             var amount = PetWeeklyPayment(stay);
             bool satisfied = stay.Condition >= 80;
+            double reputation = PetWeeklyReputation(stay);
             stay.PaidWeeks++;
             bool finished = stay.PaidWeeks >= stay.Weeks;
             if (finished) state.Stays = state.Stays.Where(p => p != stay).ToArray();
             else stay.NextVisitAt = Clock.Now.AddMinutes(WeekMinutes).TotalMinutes;
             Ledger.Credit(Clock.Today, "宠物代养", amount, stay.Name + " · 第 " + stay.PaidWeeks + " 周",
                 LedgerAttribution.ForShop(shop.Place.Id, "pet:" + shop.Place.Id + ":" + stay.Id + ":" + stay.PaidWeeks, "代养服务"));
+            if (reputation > 0) shop.Sim.AdjustPersonalReputation(reputation);
             if (satisfied) AddRelation(stay.OwnerId, 2);
             if (satisfied) shop.Sim.AdjustShopReputation(.6);
             else if (stay.Condition < 50) shop.Sim.AdjustShopReputation(-.6);
             state.LastPickup = stay.Name + (finished ? " · 主人已接回" : " · 主人已探望，继续代养") + " · 本周实收 " + amount
                 + " · 状态 " + stay.Condition + "/100"
+                + (reputation > 0 ? $" · 名望 +{reputation:0.#}" : " · 名望 +0（状态未高于 95%）")
                 + (satisfied ? " · 主人满意，交情 +2" : "");
             Say(ShopTitle(shop) + " · " + state.LastPickup);
         }

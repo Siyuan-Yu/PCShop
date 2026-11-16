@@ -181,7 +181,8 @@ namespace PCShopSell.Game.UI
             peopleSize.minWidth=rosterWidth;
             bool fishing = p.Id == GameSession.FishingVenueId;
             bool hospital = p.Business == GameSession.HospitalBusiness;
-            Ui.Size(Ui.Label(people, fishing ? "钓场在场人物" : hospital ? "医院在场人物" : "店内在场人物", 17), -1, 30);
+            bool sport = p.Business is "venue_court" or "venue_golf";
+            Ui.Size(Ui.Label(people, fishing ? "钓场在场人物" : sport ? "球场在场人物" : hospital ? "医院在场人物" : "店内在场人物", 17), -1, 30);
             var portraits = Ui.Scroll(people, Mathf.Max(140, bodyHeight - 40));
             if (fishing && S.CityPerson(GameSession.FishingAttendantId) is CityPersonDefinition attendant
                 && !present.Any(person => person.PersonId == attendant.Id))
@@ -391,7 +392,7 @@ namespace PCShopSell.Game.UI
                         ? opt.Label : opt.Label.Split('（')[0] + "\n<size=13>" + opt.Blocker + "</size>";
                     bool close = opt.Label == "结束对话";
                     var button = Ui.Size(Ui.Button(row, label, opt.Act, 16,
-                        close ? new Color32(73, 49, 51, 255) : opt.Hot ? Ui.ButtonHot : Ui.ButtonBg, opt.Blocker == null), 0, -1, 1);
+                        Ui.SelectedButton(!close && opt.Hot), opt.Blocker == null), 0, -1, 1);
                     var caption = button.GetComponentInChildren<Text>();
                     caption.rectTransform.Fill(4);
                     caption.resizeTextForBestFit = true;

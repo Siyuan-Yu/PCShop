@@ -80,7 +80,7 @@ namespace PCShopSell.Game.UI
                 {
                     S.ChooseCityActivity(activity.Id, index);
                     w.RequestRebuild();
-                }, 18, Ui.ButtonHot, available), -1, 44).name = "CityActivityChoice_" + index;
+                }, 18, Ui.ButtonBg, available), -1, 44).name = "CityActivityChoice_" + index;
             }
         }
 

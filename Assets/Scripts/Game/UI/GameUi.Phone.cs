@@ -96,8 +96,8 @@ namespace PCShopSell.Game.UI
                 case PhoneApps.Shop: return new Color(0.88f, 0.28f, 0.35f);
                 case PhoneApps.Loans: return new Color(0.82f, 0.59f, 0.19f);
                 case PhoneApps.Live: return new Color(0.72f, 0.46f, 0.19f);
-                case PhoneApps.Securities: return new Color(.58f,.34f,.28f);
-                default: return Ui.ButtonBg;
+                case PhoneApps.Securities: return Ui.Accent;
+                default: return Ui.TextColor;
             }
         }
 
@@ -141,7 +141,8 @@ namespace PCShopSell.Game.UI
                 for (int j = i; j < apps.Count && j < i + 4; j++)
                 {
                     PhoneAppDef a = apps[j];
-                    Button b = Ui.Button(row, $"<size=34><b>{AppGlyph(a.Id)}</b></size>\n<size=13>{a.Name}</size>", () => LaunchApp(w, a.Id), 13, AppColor(a.Id));
+                    string glyphColor = ColorUtility.ToHtmlStringRGB(AppColor(a.Id));
+                    Button b = Ui.Button(row, $"<size=34><color=#{glyphColor}><b>{AppGlyph(a.Id)}</b></color></size>\n<size=13>{a.Name}</size>", () => LaunchApp(w, a.Id), 13);
                     b.name = "PhoneApp_" + a.Id;
                     Ui.Size(b, 84, 100);
                     if(a.Id==PhoneApps.Securities)BuildStockAppIcon(b,true);
@@ -191,8 +192,10 @@ namespace PCShopSell.Game.UI
                     var app = apps[j];
                     bool installed = S.HasApp(app.Id);
                     var card = Ui.Size(Ui.Row(row, 100, 10), 0, 100, 1);
-                    var icon = Ui.Size(Ui.Button(card, AppGlyph(app.Id), null, 28, AppColor(app.Id), false), 64, 64);
-                    if (app.Id == PhoneApps.Securities) BuildStockAppIcon(icon, false);
+                    var icon = Ui.Size(Ui.FlatPanel(card, "PhoneAppIcon", Ui.FlatBand), 64, 64);
+                    icon.raycastTarget = false;
+                    if (app.Id == PhoneApps.Securities) BuildStockAppBars(icon.transform, false);
+                    else Ui.Label(icon.transform, AppGlyph(app.Id), 28, TextAnchor.MiddleCenter, AppColor(app.Id)).rectTransform.Fill();
                     Ui.Size(Ui.Label(card, $"<b>{app.Name}</b>\n<size=15><color=#ABB5A8>{app.Description}</color></size>", 18), 0, 84, 1);
                     Ui.Size(Ui.Button(card, installed ? "打开" : "下载", () =>
                     {
@@ -202,7 +205,7 @@ namespace PCShopSell.Game.UI
                             _phoneWindow.Rebuild();
                             w.Rebuild();
                         }
-                    }, 16, installed ? Ui.ButtonBg : Ui.ButtonHot), 84, 40).name = "PhoneDownload_" + app.Id;
+                    }, 16), 84, 40).name = "PhoneDownload_" + app.Id;
                 }
                 if (i + 1 == apps.Length) Ui.Size(Ui.Rect(row, "EmptyAppCell"), 0, 100, 1);
             }
@@ -219,11 +222,16 @@ namespace PCShopSell.Game.UI
         private static void BuildStockAppIcon(Button button,bool desktop)
         {
             var text=button.GetComponentInChildren<Text>();text.text=desktop?"证券":"";text.fontSize=13;text.alignment=TextAnchor.LowerCenter;
-            var icon=Ui.Rect(button.transform,"SecuritiesChartIcon").Anchor(.2f,desktop?.36f:.2f,.8f,desktop?.84f:.8f);
+            BuildStockAppBars(button.transform, desktop);
+        }
+
+        private static void BuildStockAppBars(Transform parent, bool desktop)
+        {
+            var icon=Ui.Rect(parent,"SecuritiesChartIcon").Anchor(.2f,desktop?.36f:.2f,.8f,desktop?.84f:.8f);
             float[] heights={.32f,.56f,.85f};
             for(int i=0;i<heights.Length;i++)
             {
-                var bar=Ui.Panel(icon,"StockAppBar",Ui.TextColor);bar.raycastTarget=false;
+                var bar=Ui.Panel(icon,"StockAppBar",AppColor(PhoneApps.Securities));bar.raycastTarget=false;
                 bar.rectTransform.Anchor(i*.34f,.03f,i*.34f+.24f,heights[i]);
             }
         }
@@ -235,38 +243,50 @@ namespace PCShopSell.Game.UI
 
         private void OpenContactsPanel(Window phone)
         {
-            OpenPeopleWorkspace("contacts", w =>
+            OpenPeopleWorkspace("contacts", w => BuildContactsContent(w), phone);
+        }
+
+        private void BuildContactsContent(Window w, bool flexible = false)
+        {
+            RectTransform driver = ContactListRow(w.Content, 52);
+            PortraitThumb(driver, "truck_driver", 44, null);
+            Ui.Size(Ui.Label(driver, $"<b>{GameSession.TruckDriverName}</b> · 同城送货", 17), -1, -1, 1);
+            var call = Ui.Button(driver, "联系司机", () =>
             {
-                RectTransform driver = Ui.Row(w.Content, 52);
-                PortraitThumb(driver, "truck_driver", 44, null);
-                Ui.Size(Ui.Label(driver, $"<b>{GameSession.TruckDriverName}</b> · 同城送货", 17), -1, -1, 1);
-                var call = Ui.Button(driver, "联系司机", () =>
-                {
-                    w.Close();
-                    OpenTruckWindow();
-                }, 15, Ui.ButtonHot);
-                call.name = "CallTruck";
-                Ui.Size(call, 150);
-                var met = S.SavedConversationContacts().ToList();
-                if (met.Count == 0)
-                {
-                    Line(w.Content, "还没有联系人 · 熟悉度达到 30 后可当面交换号码", 17, Ui.Dim);
-                    return;
-                }
-                RectTransform list = Ui.Scroll(w.Content, 440);
-                foreach (ContactInfo def in met)
-                {
-                    ContactInfo n = def;
-                    int rel = S.Relation(n.Id);
-                    RectTransform row = Ui.Row(list, 48);
-                    PortraitThumb(row, n.Id, 44, () => OpenCityPersonProfile(n.Id));
-                    Ui.Size(Ui.Label(row, $"<b>{PersonNameWithKolBadge(n.Id, n.Name)}</b>  {n.Role}", 17), 260);
-                    Ui.Size(Ui.Label(row, $"{Npcs.LevelName(rel)} {rel}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
-                    Ui.Size(Ui.Button(row,"人物资料",()=>OpenCityPersonProfile(n.Id),15),100);
-                    Ui.Size(Ui.Button(row, "发消息", () =>
-                        OpenPersonDialogue(n.Id, parent: w, remote: true), 15, Ui.ButtonHot), 100);
-                }
-            }, phone);
+                if (!flexible) w.Close();
+                OpenTruckWindow();
+            }, 15, Ui.ButtonBg);
+            call.name = "CallTruck";
+            Ui.Size(call, 150);
+            var met = S.SavedConversationContacts().ToList();
+            if (met.Count == 0)
+            {
+                Line(w.Content, "还没有联系人 · 熟悉度达到 30 后可当面交换号码", 17, Ui.Dim);
+                return;
+            }
+            RectTransform list = flexible ? PhoneFlexibleScroll(w.Content, "MyContactsList") : Ui.Scroll(w.Content, 440);
+            foreach (ContactInfo def in met)
+            {
+                ContactInfo n = def;
+                int rel = S.Relation(n.Id);
+                RectTransform row = ContactListRow(list, 48);
+                PortraitThumb(row, n.Id, 44, () => OpenCityPersonProfile(n.Id));
+                Ui.Size(Ui.Label(row, $"<b>{PersonNameWithKolBadge(n.Id, n.Name)}</b>  {n.Role}", 17), 0, 44, 1);
+                Ui.Size(Ui.Label(row, $"{Npcs.LevelName(rel)} {rel}", 16, TextAnchor.MiddleLeft, Ui.Good), 100);
+                Ui.Size(Ui.Button(row,"人物资料",()=>OpenCityPersonProfile(n.Id),15),100);
+                Ui.Size(Ui.Button(row, "发消息", () =>
+                    OpenPersonDialogue(n.Id, parent: w, remote: true), 15, Ui.ButtonBg), 100);
+            }
+        }
+
+        private static RectTransform ContactListRow(Transform parent, float height)
+        {
+            var row = Ui.Row(parent, height, 6);
+            row.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(6, 6, 1, 1);
+            var backing = row.gameObject.AddComponent<Image>();
+            backing.color = Ui.PanelBg2;
+            backing.raycastTarget = false;
+            return row;
         }
 
     }

@@ -67,6 +67,10 @@ namespace PCShopSell.Game.UI
             SelectTab(ShopTab.Orders);
         }
 
+        private static string PetReputationText(PetStay pet = null) =>
+            $"结算时状态高于 {GameSession.PetReputationConditionThreshold}% · 名望 +{GameSession.PetReputationReward:0.#}/周"
+            + (pet == null ? "" : $" · 按当前状态 +{GameSession.PetWeeklyReputation(pet):0.#}");
+
         public void OpenPetOwnerVisit(long id)
         {
             var shop = S.CurrentShop;
@@ -75,13 +79,14 @@ namespace PCShopSell.Game.UI
             var pet = dropOff ? state.Offer : S.PetGuests(shop).FirstOrDefault(p=>p.Id==id);
             if (!S.PetOwnerHere(shop,pet)) return;
             string owner = S.CityPerson(pet.OwnerId)?.Name ?? "宠物主人";
-            OpenWindow(owner+" · "+(dropOff?"送养":"探望"),620,385,w=>
+            OpenWindow(owner+" · "+(dropOff?"送养":"探望"),670,430,w=>
             {
                 PersonSummary(w.Content, pet.OwnerId, owner, pet.Name + (pet.Dog ? " · 狗" : " · 猫"));
                 string reason = dropOff ? S.PetAcceptBlocker(shop) : S.PetVisitBlocker(shop,pet);
                 string action = dropOff ? "接单并入住" : pet.PaidWeeks+1 >= pet.Weeks ? "结算并接回" : "结算本周代养";
                 Para(w.Content,dropOff ? $"代养 {pet.Weeks} 周 · 基础价 ¥{pet.WeeklyPrice}/周\n每周探望时按宠物状态结算。"
                     : $"状态 {pet.Condition}/100 · 快乐 {pet.Happiness}/100\n第 {pet.PaidWeeks+1}/{pet.Weeks} 周实收 {GameSession.PetWeeklyPayment(pet)}",18);
+                Line(w.Content, PetReputationText(dropOff ? null : pet), 16, Ui.Good);
                 Ui.Size(Ui.Button(w.Content,reason??action,()=>
                 {
                     if (!(dropOff ? S.AcceptPetStay() : S.SettlePetStay(id))) return;
@@ -127,6 +132,7 @@ namespace PCShopSell.Game.UI
             {
                 PersonSummary(C, offer.OwnerId, "送养 · " + offer.Name + (offer.Dog ? " · 狗" : " · 猫"),
                     (S.CityPerson(offer.OwnerId)?.Name ?? "主人") + $" · {offer.Weeks} 周 · 基础价 ¥{offer.WeeklyPrice}/周");
+                Line(C, PetReputationText(), 16, Ui.Good);
                 string blocker = S.PetAcceptBlocker(shop);
                 var accept = Ui.Button(C,blocker ?? "接单并入住",() => { if (S.AcceptPetStay()) RebuildDock(); },18,Ui.ButtonHot);
                 accept.interactable = blocker == null;
@@ -140,6 +146,7 @@ namespace PCShopSell.Game.UI
                 PersonSummary(C, pet.OwnerId, pet.Name + (pet.Dog ? " · 狗" : " · 猫"),
                     (S.CityPerson(pet.OwnerId)?.Name ?? "主人") + $" · {pet.PaidWeeks+1}/{pet.Weeks} 周 · {visit.Date.Month}/{visit.Date.Day} {Ui.Hm(visit.MinuteOfDay)} 探望");
                 Line(C,"状态 " + pet.Condition + "/100 · 快乐 "+pet.Happiness+"/100 · 预计收 " + GameSession.PetWeeklyPayment(pet),16);
+                Line(C, PetReputationText(pet), 16, Ui.Good);
                 var care = PetCareStatus(shop,pet);
                 Line(C,care.text,16,care.covered ? Ui.Good : PetUnattended);
                 if (S.Clock.Now.TotalMinutes < pet.NextVisitAt) continue;
@@ -264,7 +271,7 @@ namespace PCShopSell.Game.UI
                 }
             }
             foreach (var (id,button) in _petFocusButtons)
-                button.image.color = id == _ctrl.SelectedPet ? Ui.ButtonHot : Ui.ButtonBg;
+                Ui.SetButtonFill(button, Ui.SelectedButton(id == _ctrl.SelectedPet));
             RefreshSharedPetCare(shop);
             RefreshPetFocusDetails(shop,pets.FirstOrDefault(p=>p.Id==_ctrl.SelectedPet));
         }
@@ -286,7 +293,7 @@ namespace PCShopSell.Game.UI
                 {
                     S.CareForBoardedPets(action);
                     RefreshPetFocusHud();
-                },16,Ui.ButtonHot),-1,32);
+                },16,Ui.ButtonBg),-1,32);
                 _sharedPetCare.Add(action,(status,button));
             }
         }
@@ -319,7 +326,7 @@ namespace PCShopSell.Game.UI
             _petCareStatus = Ui.Size(Ui.Label(metrics,"",17),-1,24,1);
             _petDetailInfo = Ui.Size(Ui.Label(details,"",15,color:Ui.Dim),-1,21);
             var controls = Ui.Row(details,32,8);
-            _petPatButton = Ui.Size(Ui.Button(controls,"摸摸",()=>_ctrl.InteractWithPet(false),17,Ui.ButtonHot),100,32);
+            _petPatButton = Ui.Size(Ui.Button(controls,"摸摸",()=>_ctrl.InteractWithPet(false),17,Ui.ButtonBg),100,32);
             _petToyButton = Ui.Size(Ui.Button(controls,"",UseSelectedPetToy,17),168,32);
             _petToyLabel = _petToyButton.GetComponentInChildren<Text>();
         }

@@ -8,9 +8,9 @@ namespace PCShopSell.Core.Session
     public static class RacingSchedule
     {
         public const int PracticeFee = 100;
-        public static IReadOnlyList<(int Hours, int Price)> PracticePasses { get; } = Array.AsReadOnly(new[]
+        public static IReadOnlyList<(int Laps, int Price)> PracticePasses { get; } = Array.AsReadOnly(new[]
         {
-            (Hours: 2, Price: PracticeFee), (Hours: 4, Price: 180), (Hours: 6, Price: 260), (Hours: 8, Price: 330)
+            (Laps: 3, Price: PracticeFee), (Laps: 6, Price: 180), (Laps: 9, Price: 260), (Laps: 12, Price: 330)
         });
         public const int MeetOpenMinute = 9 * 60;
         public const int MeetCloseMinute = 18 * 60;

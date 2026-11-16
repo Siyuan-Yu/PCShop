@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Session;
 
 namespace PCShopSell.Core.Home
 {
@@ -119,12 +120,14 @@ namespace PCShopSell.Core.Home
         }
 
         public static int IngredientUnitsForRice(double kg) => (int)Math.Ceiling(kg * 2 - 1e-9);
+        public static string MealId(string ingredientId, string fishId = null) =>
+            (ingredientId ?? "rice") + (fishId == null ? "" : "+" + fishId);
 
-        public bool StartCook(double kg, string ingredientId, long nowMinute, out string error) =>
-            StartCook(kg, ingredientId, nowMinute, new[] { this }, out error);
+        public bool StartCook(double kg, string ingredientId, long nowMinute, out string error, string fishId = null) =>
+            StartCook(kg, ingredientId, nowMinute, new[] { this }, out error, fishId);
 
         /// <summary>检查整锅用量后，按给定来源的顺序扣除原料并开始焖饭。</summary>
-        internal bool StartCook(double kg, string ingredientId, long nowMinute, IEnumerable<Pantry> supplies, out string error)
+        internal bool StartCook(double kg, string ingredientId, long nowMinute, IEnumerable<Pantry> supplies, out string error, string fishId = null)
         {
             error = null;
             if (Cooking != null) { error = "锅里正在焖饭。"; return false; }
@@ -136,6 +139,11 @@ namespace PCShopSell.Core.Home
             int need = ing == null ? 0 : IngredientUnitsForRice(kg);
             if (ing != null && supplies.Sum(source => source.IngredientCount(ingredientId)) < need)
             { error = $"{ing.Name}不够（要 {need * ing.WeightKg:0.##} 千克）。"; return false; }
+            var fish = FishingCatalog.Get(fishId);
+            if (fishId != null && fish == null) { error = "请选择一种鱼。"; return false; }
+            int fishNeeded = fish == null ? 0 : IngredientUnitsForRice(kg);
+            if (fishNeeded > 0 && supplies.Sum(source => source.IngredientCount(fishId)) < fishNeeded)
+            { error = $"{fish.Name}不够（需要 {fishNeeded} 条）。"; return false; }
 
             double riceLeft = kg;
             foreach (Pantry source in supplies)
@@ -144,7 +152,8 @@ namespace PCShopSell.Core.Home
                 source.RiceKg -= take;
                 riceLeft -= take;
                 if (need > 0) need = Remove(source.Ingredient, ingredientId, need);
-                if (riceLeft <= 0 && need == 0) break;
+                if (fishNeeded > 0) fishNeeded = Remove(source.Ingredient, fishId, fishNeeded);
+                if (riceLeft <= 0 && need == 0 && fishNeeded == 0) break;
             }
             int bowls = Math.Max(1, (int)Math.Round(kg * BowlsPerKg));
             Cooking = new CookJob
@@ -152,10 +161,10 @@ namespace PCShopSell.Core.Home
                 ReadyMinute = nowMinute + CookMinutes,
                 Batch = new FoodBatch
                 {
-                    Id = ing?.Id ?? "rice",
-                    Name = ing?.DishName ?? "白米饭",
-                    Hunger = BaseBowlHunger + (ing?.HungerBonus ?? 0),
-                    Health = ing?.HealthBonus ?? 0,
+                    Id = MealId(ing?.Id, fish?.Id),
+                    Name = (ing?.DishName ?? "白米饭") + (fish == null ? "" : " + " + fish.Name),
+                    Hunger = BaseBowlHunger + (ing?.HungerBonus ?? 0) + (fish?.MealHungerBonus ?? 0),
+                    Health = (ing?.HealthBonus ?? 0) + (fish?.MealHealthBonus ?? 0),
                     Count = bowls,
                 },
             };

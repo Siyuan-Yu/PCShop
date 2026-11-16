@@ -31,7 +31,7 @@ namespace PCShopSell.Game.UI
             }
             var sizes=Ui.Row(body,40,6);
             for(int n=0;n<3;n++)
-            {int size=n;Ui.Size(Ui.Button(sizes,GameSession.ExpoBoothName(size)+" · ¥"+GameSession.ExpoBoothFee(size).ToString("N0"),()=>{_expoBooth=size;_expoProducts.Clear();w.Rebuild();},17,_expoBooth==size?Ui.ButtonHot:Ui.ButtonBg),-1,40,1);}
+            {int size=n;Ui.Size(Ui.Button(sizes,GameSession.ExpoBoothName(size)+" · ¥"+GameSession.ExpoBoothFee(size).ToString("N0"),()=>{_expoBooth=size;_expoProducts.Clear();w.Rebuild();},17,Ui.SelectedButton(_expoBooth==size)),-1,40,1);}
             Line(body,"需 "+GameSession.ExpoMinProducts(_expoBooth)+"—"+GameSession.ExpoMaxProducts(_expoBooth)+"种展品，每种100件；至少 "+GameSession.ExpoMinKols(_expoBooth)+"位签约代言人"+(_expoBooth>0?"，另需海报":""),18,Ui.Accent);
             BuildExpoBookingEndorsers(body, w, brand, state, day);
             BuildExpoBookingStock(body, w, brand);
@@ -80,7 +80,7 @@ namespace PCShopSell.Game.UI
                 {
                     if (!_expoProducts.Remove(product)) _expoProducts.Add(product);
                     w.Rebuild();
-                }, 17, picked ? Ui.ButtonHot : Ui.ButtonBg, count >= 100), -1, 34);
+                }, 17, Ui.SelectedButton(picked), count >= 100), -1, 34);
             }
         }
 
@@ -129,7 +129,7 @@ namespace PCShopSell.Game.UI
                     {
                         if (!_expoKols.Remove(person)) _expoKols.Add(person);
                         w.Rebuild();
-                    }, 16, picked ? Ui.ButtonHot : Ui.ButtonBg), -1, 36);
+                    }, 16, Ui.SelectedButton(picked)), -1, 36);
                 }
                 if (n + 1 == talents.Length) Ui.Size(Ui.Rect(row, "EmptyExpoKolCell"), 0, 156, 1);
             }
@@ -199,7 +199,7 @@ namespace PCShopSell.Game.UI
                     Line(body,"第"+Math.Min(4,e.Decision/6+1)+" / 4天 · "+S.Clock.Now,20,Ui.Accent);
                     Line(body,"热度 "+e.Heat+" · 信任 "+e.Trust+" · 已售 "+e.Products.Sum(p=>p.Sold)+"件",19,Ui.Good);
                     var moment=S.CurrentExpoMoment(e.Id);Line(body,moment.Title,24,Ui.Accent);Para(body,moment.Prompt,22);
-                    for(int n=0;n<3;n++){int choice=n;Ui.Size(Ui.Button(body,moment.Options[n],()=>{_autoExpoChoosing=false;PerformExpoChoice(e.Id,choice,w);},20,Ui.ButtonHot),-1,68).name="ExpoChoice_"+n;}
+                    for(int n=0;n<3;n++){int choice=n;Ui.Size(Ui.Button(body,moment.Options[n],()=>{_autoExpoChoosing=false;PerformExpoChoice(e.Id,choice,w);},20,Ui.ButtonBg),-1,68).name="ExpoChoice_"+n;}
                     if(e.LastFeedback!=null)Para(body,e.LastFeedback,17,Ui.Good);
                     Line(body,"现场营收 "+Money.FromCents(e.RevenueCents)+" · 今日第"+(e.Decision%6+1)+" / 6段",17);
                     Line(body,S.ExpoJointBrandCount(e.Day)>1?"各品牌分别选择，全部处理完本段后统一推进时间。":"选定后推进现场；夜间自动休息，可随时保存。",15,Ui.Dim);

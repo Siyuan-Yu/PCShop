@@ -16,7 +16,7 @@ namespace PCShopSell.Game.UI
                 string[] names={"人物 120","成长节点","关键支线","阶段条件"};
                 for(int i=0;i<names.Length;i++)
                 {
-                    int t=i;Ui.Size(Ui.Button(tabs,names[i],()=>{tab=t;page=0;w.Rebuild();},18,tab==i?Ui.ButtonHot:Ui.ButtonBg),-1,42,1);
+                    int t=i;Ui.Size(Ui.Button(tabs,names[i],()=>{tab=t;page=0;w.Rebuild();},18,Ui.SelectedButton(tab==i)),-1,42,1);
                 }
                 Para(w.Content,"此处包含尚未遇见的人物和剧情资料，只用于检查配置。查看不会认识人物、推进任务或改变存档。",15,Ui.Dim);
                 if(tab==0)

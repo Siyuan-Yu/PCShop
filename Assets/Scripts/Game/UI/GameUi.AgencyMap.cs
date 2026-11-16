@@ -16,7 +16,7 @@ namespace PCShopSell.Game.UI
             new Dictionary<string, (Vector2, Vector2, float, float, double, string)[]>();
         private bool _showAgencyFlow = true;
 
-        private void BuildAgencyMap(RectTransform map, Place[] units, Window w, Place agency)
+        private void BuildAgencyMap(RectTransform map, Place[] units, Window w, Place agency, System.Action refreshProperty)
         {
             AgencyMapText(map, S.City.AgencyCoverageName(agency) + " · 商铺集中区", 23, 16, 6, 280, 34, Ui.TextColor);
             AgencyMapControl(map,_showAgencyFlow?"✓ 街道人流":"街道人流","AgencyTrafficToggle",300,118,()=>
@@ -45,14 +45,15 @@ namespace PCShopSell.Game.UI
             AgencyAt(zoom.rectTransform, 664, 8, 62, 30);
             view.Selected = id =>
             {
-                if (!view.CanSelect(id)) return;
+                if (!view.CanSelect(id) || _agencySelectedId == id) return;
                 _agencySelectedId = id;
-                w.Rebuild();
+                refreshProperty();
+                view.Changed?.Invoke();
             };
             view.Changed = () =>
             {
                 zoom.text = $"{view.Zoom:0.0}×";
-                BuildAgencyMapAnnotations(overlay, view, units, w, agency);
+                BuildAgencyMapAnnotations(overlay, view, units, agency);
             };
             AgencyMapControl(map,"定位中介","AgencyFocusCurrent",548,108,()=>view.Focus(agency));
             AgencyMapControl(map, "−", "AgencyZoomOut", 738, 44, () => view.ZoomBy(1 / 1.35f));
@@ -81,7 +82,7 @@ namespace PCShopSell.Game.UI
             AgencyMapText(parent, text, 14, x + 19, 702, 210, 26, Ui.TextColor);
         }
 
-        private void BuildAgencyMapAnnotations(RectTransform overlay, AgencyStreetMap view, Place[] units, Window w, Place agency)
+        private void BuildAgencyMapAnnotations(RectTransform overlay, AgencyStreetMap view, Place[] units, Place agency)
         {
             Ui.Clear(overlay);
             if (_agencySelectedId != null && S.City.HasPlace(_agencySelectedId))
@@ -91,7 +92,7 @@ namespace PCShopSell.Game.UI
                 var rect=Ui.Rect(overlay,id);AgencyAt(rect,0,0,view.Width,view.Height);
                 rect.gameObject.AddComponent<CanvasRenderer>();
                 rect.gameObject.AddComponent<AgencyBuildingGlow>().Initialize(
-                    AgencyStreetMap.Corners(AgencyStreetMap.BuildingBounds(building)).Select(view.Project).ToArray(),color,emphasized);
+                    AgencyStreetMap.Corners(view.BoundsOf(building)).Select(view.Project).ToArray(),color,emphasized);
             }
             foreach(var place in units)
             {
@@ -107,7 +108,7 @@ namespace PCShopSell.Game.UI
             var occupied=new List<Rect>();
             void Badge(PlaceVisual building,string name,string text,Color color,Color ink,float width)
             {
-                var bounds=AgencyStreetMap.BuildingBounds(building);
+                var bounds=view.BoundsOf(building);
                 var roof=view.Project(new Vector3(bounds.center.x,bounds.max.y+1,bounds.center.z));
                 bool outside=roof.x<0||roof.x>view.Width||roof.y<0||roof.y>view.Height;
                 var box=AgencyNameBox(roof,width,occupied,view.Width,view.Height,50);occupied.Add(box);
@@ -122,18 +123,18 @@ namespace PCShopSell.Game.UI
                 Badge(agentBuilding,"CurrentAgencyMarker","<b>● 当前中介 · 你在这里</b>\n"+agency.Name,blue,Color.white,286);
             if(_agencySelectedId!=null&&_ctrl.World.Places.TryGetValue(_agencySelectedId,out var chosen)&&chosen.Place.Kind!=PlaceKind.Agency)
                 Badge(chosen,"SelectedPropertyMarker","<b>✓ 已选中房源</b>\n"+(S.IsMyShop(chosen.Place)?S.PlaceTitle(chosen.Place):chosen.Place.Name),Ui.Accent,AgencyInk,300);
-            foreach(var place in units.OrderBy(p=>S.City.ViewPosition(p.NodeId).X))
+            foreach(var place in units)
             {
                 if (!view.CanSelect(place.Id) || place.Id == agency.Id || place.Id == _agencySelectedId) continue;
                 if(view.Zoom<1.6f&&!S.IsMyShop(place)&&AgencyListing(place)==null)continue;
                 if(!_ctrl.World.Places.TryGetValue(place.Id,out var building))continue;
-                var bounds=AgencyStreetMap.BuildingBounds(building);
+                var bounds=view.BoundsOf(building);
                 Vector2 roof=view.Project(new Vector3(bounds.center.x,bounds.max.y+.6f,bounds.center.z));
                 if(roof.x<0||roof.x>view.Width||roof.y<0||roof.y>view.Height)continue;
                 string name=S.IsMyShop(place)?S.PlaceTitle(place):place.Name;
                 float width=Mathf.Clamp(name.Length*13+18,70,170);
                 Rect box=AgencyNameBox(roof,width,occupied,view.Width,view.Height);occupied.Add(box);
-                var button=Ui.Button(overlay,name,()=>{_agencySelectedId=place.Id;w.Rebuild();},13,new Color(.1f,.18f,.14f,.94f));
+                var button=Ui.Button(overlay,name,()=>view.Selected?.Invoke(place.Id),13,new Color(.1f,.18f,.14f,.94f));
                 button.name="AgencyName_"+place.Id;
                 AgencyAt((RectTransform)button.transform,box.x,box.y,box.width,box.height);
                 button.GetComponentInChildren<Text>().rectTransform.Fill(2);

@@ -43,7 +43,7 @@ namespace PCShopSell.Game.UI
         {var t=Ui.Label(parent,text,size,TextAnchor.MiddleLeft,color??WbInk);Ui.Size(t,-1,size*1.6f);return t;}
         private static Button WbButton(Transform parent,string label,Action action,string name=null,bool selected=false,bool enabled=true)
         {
-            var b=Ui.Size(Ui.Button(parent,label,action,17,selected?Ui.ButtonHot:Ui.ButtonBg,enabled),-1,40,1);
+            var b=Ui.Size(Ui.Button(parent,label,action,17,Ui.SelectedButton(selected),enabled),-1,40,1);
             if(name!=null)b.name=name;return b;
         }
         private static RectTransform WbScroll(Transform parent,string name)
@@ -78,6 +78,11 @@ namespace PCShopSell.Game.UI
                 ((RectTransform)_workbenchLauncher.transform).Anchor(1,1,1,1,-232,-108,18,68);
                 _workbenchLauncher.Tip(() => WorkbenchAccessReason);
             }
+            var launcherRect = (RectTransform)_workbenchLauncher.transform;
+            bool besideHomeToggle = _homeDockToggle.gameObject.activeSelf;
+            float launcherLeft = besideHomeToggle ? -427 : -232;
+            if (launcherRect.offsetMin.x != launcherLeft)
+                launcherRect.Anchor(1, 1, 1, 1, launcherLeft, -112, besideHomeToggle ? 208 : 18, besideHomeToggle ? 74 : 68);
             bool visible=S.CurrentPlace==S.Home&&!_ctrl.Placing&&!S.IsGameOver&&!MainMenuOpen;
             _workbenchLauncher.gameObject.SetActive(visible);
             _workbenchLauncher.interactable=S.CanUseHomeWorkbench;
@@ -129,23 +134,19 @@ namespace PCShopSell.Game.UI
                 case 3:BuildWorkbenchContacts(body);break;
             }
         }
-        /// <summary>一级页签：选中是金色实心，未选中是压暗的底色，一眼能看出当前在哪。</summary>
         private static Button WbMainTab(Transform parent,string label,Action action,string name,bool selected)
         {
-            var b=Ui.Button(parent,label,action,18,selected?Ui.ButtonHot:Ui.FlatBand);
-            var text=b.GetComponentInChildren<Text>();if(text!=null){text.color=selected?Ui.TextColor:WbDim;text.fontStyle=selected?FontStyle.Bold:FontStyle.Normal;}
+            var b=Ui.Button(parent,label,action,18,Ui.SelectedButton(selected));
             b.name=name;Ui.Size(b,136,38,0);return b;
         }
-        /// <summary>二级页签 / 周期切换：选中只是浅蓝底加金字，比一级页签轻。</summary>
         private static Button WbSubTab(Transform parent,string label,Action action,string name,bool selected,float width=120,float height=32)
         {
-            var b=Ui.Button(parent,label,action,16,selected?Ui.FlatRow:Ui.FlatBand);
-            var text=b.GetComponentInChildren<Text>();if(text!=null)text.color=selected?Ui.Accent:WbDim;
+            var b=Ui.Button(parent,label,action,16,Ui.SelectedButton(selected));
             b.name=name;Ui.Size(b,width,height,0);return b;
         }
         private static Button WbControl(Transform parent,string label,Action action,string name,bool selected)
         {
-            var b=Ui.Button(parent,label,action,16,selected?Ui.ButtonHot:Ui.ButtonBg);b.name=name;return b;
+            var b=Ui.Button(parent,label,action,16,Ui.SelectedButton(selected));b.name=name;return b;
         }
         /// <summary>今日进度条：金色为已过去的时间，白线为现在；夜间（0–6 点、22–24 点）底色更暗。每帧由 UpdateWorkbenchDayBar 推进，不触发重建。</summary>
         private void BuildWorkbenchDayBar(Transform parent)
@@ -264,7 +265,7 @@ namespace PCShopSell.Game.UI
                 HomeAutomationSettings Copy(){var a=S.HomeAutomation;return new HomeAutomationSettings{Meals=a.Meals,Takeaway=a.Takeaway,Sleep=a.Sleep,Clothing=a.Clothing,Supplies=a.Supplies,SleepHour=a.SleepHour,WakeHour=a.WakeHour,MealTier=a.MealTier,DailyMealBudget=a.DailyMealBudget,SupplyId=a.SupplyId};}
                 void Apply(Action<HomeAutomationSettings> edit){var next=Copy();edit(next);if(S.SetHomeAutomation(next)){w.RequestRebuild();_homeWorkbench?.RequestRebuild();}}
                 void Toggle(string key,string title,bool enabled,Action<HomeAutomationSettings> edit)
-                {Ui.Size(Ui.Button(w.Content,title+" · "+(enabled?"开 ✓":"关"),()=>Apply(edit),18,enabled?Ui.ButtonHot:Ui.ButtonBg),-1,40).name="Automation_"+key;}
+                {Ui.Size(Ui.Button(w.Content,title+" · "+(enabled?"开 ✓":"关"),()=>Apply(edit),18,Ui.SelectedButton(enabled)),-1,40).name="Automation_"+key;}
                 Toggle("Meals","自动吃饭 · 先用已有饭食",current.Meals,a=>a.Meals=!a.Meals);
                 Toggle("Takeaway","自动点饭 · 食物不足时",current.Takeaway,a=>a.Takeaway=!a.Takeaway);
                 var meal=Ui.Row(w.Content,38,7);Line(meal,"外卖餐档",17);

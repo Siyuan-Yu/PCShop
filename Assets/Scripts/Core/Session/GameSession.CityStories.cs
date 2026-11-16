@@ -456,7 +456,7 @@ namespace PCShopSell.Core.Session
                     price = Money.FromYuan((long)Math.Round(RecipePrices[recipe] * kitchen.MenuMarkup)) * count;
                     break;
                 case "secondhand":
-                    var listed = shop.Sim.ShelfFillOf(ShelfKinds.Get("secondhand")).Resale.Take(count).ToArray();
+                    var listed = shop.Sim.ShelfFillOf(ShelfKinds.Get("secondhand")).Resale.Where(item => item.Product != ArtifactProduct).Take(count).ToArray();
                     if (listed.Length < count) return null;
                     quote.UsedIds = listed.Select(item => item.Id).ToArray();
                     quote.ProductName = string.Join("、", listed.Select(item => UsedNames[item.Product]));
@@ -499,7 +499,8 @@ namespace PCShopSell.Core.Session
             quote.Discount = true;
             string discounted = quote.Total.ToString();
             quote.Discount = false;
-            string terms = count == 1 ? "确认后 3 天内交付。" : "确认后 5 天内交付，保证金 5%，全数交付奖励 3%。";
+            string terms = $"确认后 {IndustryReferralDays(shop, count)} 天内交付"
+                + (count == 1 ? "。" : "，保证金 5%，全数交付奖励 3%。");
             return EventScene(template, $"{quote.Client}想向{ShopTitle(shop)}订购{quote.ProductName} ×{count}。{terms}",
                 Choose($"报{(count == 1 ? "七折熟客价" : "九五折合作价")} · {discounted}", _ => Record(true)),
                 Choose($"按正常价 · {quote.Total}", _ => Record(false)),
@@ -512,6 +513,9 @@ namespace PCShopSell.Core.Session
             return shop != null && shop.RetailKind == offer.RetailKind && (shop.Lease?.SignedDay ?? -1) == offer.SignedDay ? shop : null;
         }
 
+        private static int IndustryReferralDays(OwnedShop shop, int count) =>
+            count + (shop.RetailKind == "computer" ? ShopSettings.DefaultBuildOrderDueDays : 2);
+
         public string IndustryReferralBlocker(CityReferralOffer offer, bool delivery = false)
         {
             var shop = ReferralShopFor(offer);
@@ -520,6 +524,8 @@ namespace PCShopSell.Core.Session
             {
                 if (shop.RetailKind == "computer" && offer.Count > 1 && _contracts.Any(c => c.Accepted && !c.Settled && !c.PersonalReferral))
                     return "请先处理已有企业合同。";
+                if (shop.RetailKind == "computer" && !shop.Sim.CanTakeBuildOrders(offer.Count))
+                    return $"本店待交付装机上限为 {ShopSimulation.BuildOrderLimit} 台，请先交付部分订单。";
                 if (!Ledger.CanAfford(offer.Deposit)) return "现金不足以支付保证金。";
                 return null;
             }
@@ -603,7 +609,8 @@ namespace PCShopSell.Core.Session
             {
                 if (IndustryReferralBlocker(offer) is string reason) return Fail(reason);
                 var target = ReferralShopFor(offer);
-                var due = Clock.Now.AddMinutes((offer.Count + 2) * GameTimestamp.MinutesPerDay);
+                int days = IndustryReferralDays(target, offer.Count);
+                var due = Clock.Now.AddMinutes(days * GameTimestamp.MinutesPerDay);
                 offer.DueMinute = due.TotalMinutes;
                 offer.DepositCents = offer.Deposit.Cents;
                 if (offer.DepositCents > 0)

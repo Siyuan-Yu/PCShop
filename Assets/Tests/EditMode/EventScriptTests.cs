@@ -62,14 +62,12 @@ namespace PCShopSell.Tests
             var station = s.WalletReturnStation;
             Assert.That(station, Is.Not.Null);
             Assert.That(s.Clock.Now, Is.EqualTo(start));
-            Assert.That(s.Trip, Is.Null);
+            Assert.That(s.Trip?.TargetNode, Is.EqualTo(station.NodeId));
+            Assert.That(s.CityIntent?.TargetPlaceId, Is.EqualTo(station.Id));
             Assert.That(s.Schedule().Single(e => e.Kind == "wallet_return").DestinationId, Is.EqualTo(station.Id));
             Assert.That(s.HandOverWallet(false), Is.False);
 
-            Assert.That(s.BeginCityTravel(station.Id), Is.True);
-            Assert.That(s.CurrentPlace, Is.Not.EqualTo(station));
-            for (int frame = 0; frame < 2000 && s.CurrentPlace != station; frame++) s.Tick(.05);
-            Assert.That(s.CurrentPlace, Is.EqualTo(station));
+            TravelToWalletStation(s, station);
             Assert.That(s.WalletWaitLeft, Is.EqualTo(30));
             s.AdvanceClock(30);
             Assert.That(s.WalletWaitLeft, Is.EqualTo(30), "离开实时循环的跳时操作不算在站内等候");
@@ -104,6 +102,11 @@ namespace PCShopSell.Tests
             var start = s.Clock.Now;
             Assert.That(s.ResolveEvent(1), Is.True);
             Assert.That(s.Clock.Now, Is.EqualTo(start));
+            var station = s.WalletReturnStation;
+            Assert.That(s.Trip?.TargetNode, Is.EqualTo(station.NodeId));
+            Assert.That(s.HandOverWallet(true), Is.False);
+            TravelToWalletStation(s, station);
+            Assert.That(s.WalletWaitLeft, Is.EqualTo(30));
             var ownerId = s.CreateSave().walletOwnerId;
             int relation = s.Relation(ownerId);
             var owner = s.CityPersonState(ownerId);
@@ -112,8 +115,6 @@ namespace PCShopSell.Tests
             var home = s.StandOf(s.Home);
             owner.X = home.X;
             owner.Y = home.Y;
-            var station = s.WalletReturnStation;
-            GameSessionTests.Teleport(s, station.Id);
             Assert.That(s.WalletOwnerAtStation, Is.False);
             TickWalletMinutes(s, 1);
             Assert.That(owner.Route?.TargetPlaceId, Is.EqualTo(station.Id));
@@ -145,6 +146,13 @@ namespace PCShopSell.Tests
             Assert.That(loaded.WalletWaitLeft, Is.EqualTo(30));
             loaded.RaiseEvent("wallet");
             Assert.That(loaded.PendingEvent, Is.Null);
+        }
+
+        private static void TravelToWalletStation(GameSession s, Place station)
+        {
+            Assert.That(s.CurrentPlace, Is.Not.EqualTo(station));
+            for (int frame = 0; frame < 2000 && s.CurrentPlace != station; frame++) s.Tick(.05);
+            Assert.That(s.CurrentPlace, Is.EqualTo(station));
         }
 
         private static void TickWalletMinutes(GameSession s, int minutes)

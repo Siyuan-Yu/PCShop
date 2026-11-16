@@ -133,7 +133,12 @@ namespace PCShopSell.Core.Session
             if (n == 106)
                 return EventScene(template, "住院保障¥3,000/年。保障期内入院，报销实际住院费用80%；不限次数，没有单次或累计上限。门诊不在保障内。",
                     Choose(HasHospitalCoverage ? "续保一年 · ¥3,000" : "投保一年 · ¥3,000", _ => BuyHospitalPolicy() ? "保障已生效，有效至" + new GameTimestamp(_hospitalPolicyUntil) + "，到期需自行续费。" : "现金不足，未投保。"),
-                    Choose("查看条款", _ => "一次投保保障360天；有效期内入院按住院实收费用报销80%，不封顶。到期不自动扣款、不继续承保；提前续保从原到期日接续。"), Choose("暂不购买", _ => "没有扣款。"));
+                    new EventChoice
+                    {
+                        Text = "查看条款",
+                        Details = "一次投保保障360天。有效期内入院按实际住院费用报销80%，不封顶，门诊费用不报销。到期后保障结束，不会自动扣款。提前续保从原到期日接续。"
+                    },
+                    Choose("暂不购买", _ => "没有扣款。"));
             if (n == 107)
             {
                 double chance = PrivateInvestmentChance(Player.Intelligence);

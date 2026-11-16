@@ -166,8 +166,7 @@ namespace PCShopSell.EditorTools
                 "确认摆放后家具正常落地、轮廓立即清除");
             int counter = s.ShopLayout.ToList().FindIndex(p => p.Id == FurnitureCatalog.ShopCounter);
             var counterVisual = _game.Interior.Furniture.Entries.First(e => e.Def.Id == FurnitureCatalog.ShopCounter).Go;
-            typeof(GameController).GetMethod("PickUpFurniture", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                .Invoke(_game, new object[] { counter });
+            _game.SelectPlacedFurniture(counter);
             _game.DebugCursorLocal = new Vector3(2.5f, 0, 4.0f);
             Frame(.05f);
             outline = UnityEngine.Object.FindObjectOfType<PlacementOutline>();
@@ -879,9 +878,8 @@ namespace PCShopSell.EditorTools
             _game.Ui.OnEnteredPlace(s.CurrentPlace);
             Frame(0.05f);
             Shot("vs1_29_farm");
-            Check(s.BuyIngredient("egg", 2), "农贸市场买鸡蛋");
-            Check(s.BuyGift("fruit"), "农贸市场买水果");
-            Check(s.Backpack.Food.IngredientCount("egg") == 2, "买的鸡蛋装进背包");
+            Check(s.BuyIngredient("egg", 10), "农贸市场批发鸡蛋");
+            Check(s.Backpack.Food.IngredientCount("egg") == 10, "买的鸡蛋装进背包");
             s.SendByCourier = true;
             double homeRice = s.HomeBox.Food.RiceKg;
             Check(s.BuyRice(10), "叫车送 10 千克米回家");

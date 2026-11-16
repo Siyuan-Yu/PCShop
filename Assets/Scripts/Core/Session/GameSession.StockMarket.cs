@@ -8,6 +8,23 @@ using PCShopSell.Core.Time;
 
 namespace PCShopSell.Core.Session
 {
+    public readonly struct StockBatchQuote
+    {
+        public readonly Money Net, Fees, CashAfter, Reserve;
+        public readonly string Blocker;
+        public readonly bool UsesReserve;
+
+        public StockBatchQuote(Money net, Money fees, Money cashAfter, Money reserve, string blocker, bool usesReserve)
+        {
+            Net = net;
+            Fees = fees;
+            CashAfter = cashAfter;
+            Reserve = reserve;
+            Blocker = blocker;
+            UsesReserve = usesReserve;
+        }
+    }
+
     public sealed partial class GameSession
     {
         private StockMarketState _stockMarket = new StockMarketState();
@@ -215,7 +232,10 @@ namespace PCShopSell.Core.Session
             if(e.ShortUnits<=0)return;
             if(StockMarginRatio(e.Id)<=StockMaintenanceRatio)CloseStockShort(e,e.ShortUnits,true,minute);
         }
-        public string StockTradeBlocker(string id,long units,string action)
+        public string StockTradeBlocker(string id,long units,string action) =>
+            StockTradeBlocker(id,units,action,checkCash:true);
+
+        private string StockTradeBlocker(string id,long units,string action,bool checkCash)
         {
             string app=AppBlocker(PhoneApps.Securities);if(app!=null)return app;
             var e=StockState(id);
@@ -237,27 +257,98 @@ namespace PCShopSell.Core.Session
                 if(action=="short"&&e.Units>0)return "请先卖出这只股票的普通持仓";
                 if(action=="short"&&units>StockBorrowAvailable(id))return "可借股票不足，当前可借"+StockBorrowAvailable(id)+"股";
                 if(action=="cover"&&units>e.ShortUnits)return "平仓数量超过实际做空股数";
-                if(action=="short"&&Ledger.Balance<StockShortOpeningCost(id,units))return "现金不足以支付100%保证金及手续费";
+                if(checkCash&&action=="short"&&Ledger.Balance<StockShortOpeningCost(id,units))return "现金不足以支付100%保证金及手续费";
             }
             if(action=="buy"&&e?.ShortUnits>0)return "请先买回平掉这只股票的做空持仓";
-            if(action=="buy"&&Ledger.Balance<CityInvestmentTradeTotal(id,units,true))return "买入现金不足";
+            if(checkCash&&action=="buy"&&Ledger.Balance<CityInvestmentTradeTotal(id,units,true))return "买入现金不足";
             if(action=="sell"&&units>CityInvestmentUnits(id))return "卖出数量超过实际持股";
             return null;
         }
 
-        public long StockMaximumBuyQuantity(string id)
+        public long StockMaximumBuyQuantity(string id) => StockMaximumOpeningQuantity(id,false,Ledger.Balance);
+
+        public long StockMaximumOpeningQuantity(string id,bool shortMode,Money cash)
         {
-            if (StockTradeBlocker(id, StockLotSize, "buy") != null || !CityInvestmentPrice(id).IsPositive) return 0;
-            long affordable = 1;
-            long upper = Math.Min(StockAvailable(id), StockOrderLimit) / StockLotSize;
-            var cash = Ledger.Balance;
+            string action = shortMode ? "short" : "buy";
+            if (StockTradeBlocker(id, StockLotSize, action, checkCash:false) != null || !CityInvestmentPrice(id).IsPositive) return 0;
+            long limit = Math.Min(StockAvailable(id), StockOrderLimit);
+            if (shortMode) limit = Math.Min(limit, StockBorrowAvailable(id));
+            long upper = limit / StockLotSize;
+            long affordable = 0;
             while (affordable < upper)
             {
                 long lots = affordable + (upper - affordable + 1) / 2;
-                if (CityInvestmentTradeTotal(id, lots * StockLotSize, buy: true) <= cash) affordable = lots;
+                long units = lots * StockLotSize;
+                var cost = shortMode ? StockShortOpeningCost(id,units) : CityInvestmentTradeTotal(id,units,buy:true);
+                if (cost <= cash) affordable = lots;
                 else upper = lots - 1;
             }
             return affordable * StockLotSize;
+        }
+
+        public Money StockOrderCashChange(string id,long signedUnits,bool shortMode)
+        {
+            if (signedUnits > 0)
+                return -(shortMode ? StockShortOpeningCost(id,signedUnits) : CityInvestmentTradeTotal(id,signedUnits,buy:true));
+            if (signedUnits == 0 || signedUnits < -StockOrderLimit) return Money.Zero;
+            return shortMode ? StockCoverReturn(id,-signedUnits) : CityInvestmentTradeTotal(id,-signedUnits,buy:false);
+        }
+
+        public StockBatchQuote PreviewStockBatch(IReadOnlyDictionary<string,long> orders,bool shortMode,bool calculateReserve=true)
+        {
+            var net = Money.Zero;
+            var fees = Money.Zero;
+            string blocker = orders.Count == 0 ? "暂无待成交" : null;
+            bool opensPosition = false;
+            foreach (var order in orders)
+            {
+                string id = order.Key;
+                long signedUnits = order.Value;
+                bool opening = signedUnits > 0;
+                opensPosition |= opening;
+                string action = shortMode ? (opening ? "short" : "cover") : (opening ? "buy" : "sell");
+                long units = signedUnits < -StockOrderLimit ? StockOrderLimit + 1L : Math.Abs(signedUnits);
+                string issue = StockTradeBlocker(id,units,action,checkCash:false);
+                if (issue != null && blocker == null) blocker = StockName(id) + " · " + issue;
+                if (units <= 0 || units > StockOrderLimit) continue;
+                var gross = CityInvestmentPrice(id) * units;
+                var change = StockOrderCashChange(id,signedUnits,shortMode);
+                if (blocker == null && (!gross.IsPositive || (!shortMode && !opening && !change.IsPositive)))
+                    blocker = StockName(id) + " · 交易金额不足以支付手续费";
+                fees += CityInvestments.Fee(gross,id=="hardware");
+                net += change;
+            }
+            var remaining = Ledger.Balance + net;
+            if (blocker == null && opensPosition && remaining.IsNegative)
+                blocker = $"可用现金还差 {-remaining}";
+            bool needsReserve = calculateReserve && blocker == null && opensPosition;
+            var reserve = needsReserve ? GetCityCashReserve().Total : Money.Zero;
+            return new StockBatchQuote(net,fees,remaining,reserve,blocker,needsReserve && remaining < reserve);
+        }
+
+        public bool TradeStockBatch(IReadOnlyDictionary<string,long> orders,bool shortMode,bool acknowledgeReserve=false)
+        {
+            var quote = PreviewStockBatch(orders,shortMode);
+            if (quote.Blocker != null) return Fail(quote.Blocker + "。");
+            if (quote.UsesReserve && !acknowledgeReserve) return Fail("本次交易将动用预留资金，请在确认页核对后继续。");
+
+            // 每个标的只出现一次。先平仓再开仓，卖出所得可用于本次买入。
+            // 屏蔽逐单通知，避免在批次结算中间调用外部监听器。
+            _quiet++;
+            try
+            {
+                foreach (var order in orders.OrderBy(line => line.Value > 0).ToArray())
+                {
+                    bool opening = order.Value > 0;
+                    long units = Math.Abs(order.Value);
+                    bool traded = !shortMode ? TradeCityInvestment(order.Key,units,opening,acknowledgeReserve:true)
+                        : opening ? OpenStockShort(order.Key,units,acknowledgeReserve:true) : CoverStockShort(order.Key,units);
+                    if (!traded) return false;
+                }
+            }
+            finally { _quiet--; }
+            Say($"证券成交 {orders.Count} 笔 · 现金变动 {quote.Net} · 手续费 {quote.Fees}。");
+            return true;
         }
 
         private void ConsumeStockLiquidity(string id,long units)

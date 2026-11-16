@@ -267,13 +267,14 @@ namespace PCShopSell.Tests
                     // 投资页直接内嵌手机证券的交易所：不打开新窗口、不暂停时间。
                     const string stock = "city_chip";
                     const int lot = GameSession.StockLotSize;
-                    Assert.NotNull(Button("StockQuickBuyMax_" + stock));Assert.False(s.Time.IsHeld);
-                    if(s.StockTradeBlocker(stock,lot,"buy")==null)
-                    {
-                        var tradeCash=s.Ledger.Balance;long held=s.CityInvestmentUnits(stock);
-                        Button("StockQuickBuy_" + stock).onClick.Invoke();
-                        Assert.AreEqual(held+lot,s.CityInvestmentUnits(stock));Assert.Less(s.Ledger.Balance.Cents,tradeCash.Cents);
-                    }
+                    Assert.True(Button("StockLotCycle").interactable);Assert.False(s.Time.IsHeld);
+                    var tradeCash=s.Ledger.Balance;long held=s.CityInvestmentUnits(stock);
+                    Button("StockDraftPlus_" + stock).onClick.Invoke();
+                    Assert.AreEqual(held,s.CityInvestmentUnits(stock));Assert.AreEqual(tradeCash,s.Ledger.Balance);
+                    Assert.True(Button("StockBatchExecute").interactable);
+                    Button("StockBatchExecute").onClick.Invoke();
+                    Assert.AreEqual(held+lot,s.CityInvestmentUnits(stock));Assert.Less(s.Ledger.Balance.Cents,tradeCash.Cents);
+                    Assert.False(s.Time.IsHeld);
                     Button("WorkbenchTab_3").onClick.Invoke();ui.RebuildWindows();Assert.NotNull(Button("WorkbenchContacts"));
                     Button("WorkbenchAutomation").onClick.Invoke();Assert.NotNull(Button("Automation_Sleep"));Button("Automation_Sleep").onClick.Invoke();Assert.True(s.HomeAutomation.Sleep);
                     Assert.AreEqual(s.Home,s.CurrentPlace);

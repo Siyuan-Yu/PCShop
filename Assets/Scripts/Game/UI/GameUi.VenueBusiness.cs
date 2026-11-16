@@ -24,7 +24,7 @@ namespace PCShopSell.Game.UI
                 var options=Enumerable.Range(0,24).Select(h=>h.ToString("00")+":00").ToArray();
                 Ui.Size(Ui.Choice(hours,options,state.Open/60,i=>{S.ConfigureVenue(place.Id,state.Accepting,i*60,state.Close,state.PriceCents);w.Rebuild();}),150,42).name="VenueOpeningTime";
                 Ui.Size(Ui.Choice(hours,options,state.Close/60%24,i=>{S.ConfigureVenue(place.Id,state.Accepting,state.Open,i*60,state.PriceCents);w.Rebuild();}),150,42).name="VenueClosingTime";
-                Ui.Size(Ui.Button(hours,state.Accepting?"暂停接客":"开启接客",()=>{S.ConfigureVenue(place.Id,!state.Accepting,state.Open,state.Close,state.PriceCents);w.Rebuild();},18,Ui.ButtonHot),160,42).name="VenueToggleOpen";
+                Ui.Size(Ui.Button(hours,state.Accepting?"暂停接客":"开启接客",()=>{S.ConfigureVenue(place.Id,!state.Accepting,state.Open,state.Close,state.PriceCents);w.Rebuild();},18,Ui.SelectedButton(state.Accepting)),160,42).name="VenueToggleOpen";
                 var prices=Ui.Row(w.Content,42,8);
                 Ui.Size(Ui.Label(prices,"单次价格（按当前价预约）",18),250);
                 Ui.Size(Ui.Button(prices,"− ¥5",()=>{S.ConfigureVenue(place.Id,state.Accepting,state.Open,state.Close,System.Math.Max(100,state.PriceCents-500));w.Rebuild();},18),90,42);

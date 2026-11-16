@@ -24,6 +24,17 @@ namespace PCShopSell.Game.UI
         public static readonly Color FlatUp = Tone("6FCF8E");
         public static readonly Color FlatDown = Tone("E0705A");
 
+        public static Color SelectedButton(bool selected) => selected ? FlatRow : ButtonBg;
+
+        public static Button Tab(Transform parent, string title, System.Action select, bool selected, float width = 124)
+            => Size(Button(parent, title, select, 17, SelectedButton(selected)), width, 34, 0);
+
+        public static void SetButtonFill(Button button, Color fill)
+        {
+            if (button is FlatStyledButton styled && styled.image.color != fill)
+                styled.ApplyFill(fill);
+        }
+
         private static bool Same(Color a, Color b) =>
             Mathf.Abs(a.r - b.r) < .004f && Mathf.Abs(a.g - b.g) < .004f && Mathf.Abs(a.b - b.b) < .004f && Mathf.Abs(a.a - b.a) < .004f;
 
@@ -41,9 +52,9 @@ namespace PCShopSell.Game.UI
 
         private static Color FlatEdge(Color color, string name)
         {
-            if (name == "Choice" || name == "Input") return FlatWellEdge;
+            if (name == "Choice" || name == "Input" || (name == "Button" && Same(color, FlatWell))) return FlatWellEdge;
             if (name != "Button" && name != "Panel") return FlatCardEdge;
-            if (Same(color, ButtonHot) || Same(color, Accent)) return FlatHotEdge;
+            if (Same(color, ButtonHot) || Same(color, Accent) || (name == "Button" && Same(color, FlatRow))) return FlatHotEdge;
             if (Same(color, Warn)) return Tone("D9775A");
             if (Same(color, PanelBg)) return ButtonHot;
             if (Same(color, PanelBg2)) return FlatCardEdge;
@@ -65,6 +76,48 @@ namespace PCShopSell.Game.UI
             var image = Panel(parent, name, fill ?? FlatCard);
             FlatBorder(image, edge ?? FlatCardEdge);
             return image;
+        }
+
+        private sealed class FlatStyledButton : Button
+        {
+            private Text _caption;
+            private Outline _edge;
+            private bool _captionDimmed;
+            private Color _enabledInk;
+
+            public void SetCaption(Text caption)
+            {
+                _caption = caption;
+                _edge = GetComponent<Outline>();
+                _edge.useGraphicAlpha = true;
+                ApplyFill(image.color);
+            }
+
+            public void ApplyFill(Color fill)
+            {
+                image.color = fill;
+                _edge.effectColor = FlatEdge(fill, "Button");
+                bool selected = Same(fill, FlatRow);
+                _enabledInk = selected ? Accent : TextColor;
+                _caption.color = _captionDimmed ? Dim : _enabledInk;
+                _caption.fontStyle = selected || Same(fill, ButtonHot) || Same(fill, Accent)
+                    ? FontStyle.Bold : FontStyle.Normal;
+            }
+
+            protected override void DoStateTransition(SelectionState state, bool instant)
+            {
+                base.DoStateTransition(state, instant);
+                if (_caption == null) return;
+                bool dimmed = state == SelectionState.Disabled;
+                if (dimmed == _captionDimmed) return;
+                if (dimmed)
+                {
+                    _enabledInk = _caption.color;
+                    _caption.color = Dim;
+                }
+                else _caption.color = _enabledInk;
+                _captionDimmed = dimmed;
+            }
         }
     }
 }

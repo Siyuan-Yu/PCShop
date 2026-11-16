@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
@@ -104,6 +105,7 @@ namespace PCShopSell.Game.Runtime
 
         public HomeRoomView(Transform parent, RoomSpec room = null)
         {
+            _moveAlongRoute = MoveOwner;
             Room = room ?? RoomSpec.Home;
             _doorArea = new Rect(Width - 0.2f, 0.5f, 0.2f, 1.0f);
             _root = new GameObject("HomeRoom").transform;
@@ -305,6 +307,7 @@ namespace PCShopSell.Game.Runtime
         private List<Vector3> _bedWalkPath;
         private int _bedWalkIndex;
         private string _homeWalkTarget;
+        private readonly Action<Vector3, float> _moveAlongRoute;
         public void CancelBedWalk() { _bedWalkPath = null; _bedWalkIndex = 0; _homeWalkTarget = null; }
 
         /// <summary>Walk around furniture to a reachable bedside (or the fallback floor bedding).</summary>
@@ -359,11 +362,8 @@ namespace PCShopSell.Game.Runtime
             // Exhausting a cached path is not proof of arrival: the owner or furniture may have moved.
             // Only the actual target-distance check above may report success.
             if (_bedWalkIndex >= _bedWalkPath.Count) { CancelBedWalk(); return 0; }
-            Vector3 delta = _bedWalkPath[_bedWalkIndex] - at;
-            if (delta.magnitude < 0.025f) { _bedWalkIndex++; return 0; }
-            MoveOwner(delta, Mathf.Min(dt, delta.magnitude / OwnerWalkSpeed));
-            if ((_owner.transform.localPosition - at).sqrMagnitude < 1e-10f && dt > 0) return -1;
-            return 0;
+            return CityRoomRoute.Advance(_bedWalkPath, ref _bedWalkIndex, _owner.transform, dt,
+                OwnerWalkSpeed, _moveAlongRoute) ? 0 : -1;
         }
 
         private bool CanStand(Vector3 to, Vector3 from)

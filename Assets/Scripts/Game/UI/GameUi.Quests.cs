@@ -149,7 +149,8 @@ namespace PCShopSell.Game.UI
             {
                 var (label, action) = QuestAction(q.Target);
                 string heading = q.Target == QuestTarget.CommunityGoal ? "主线目标" : "当前任务";
-                SetQuestCard(heading, q.Title, q.Short, GuideLocation(q.Target), ProgressOf(q)?.Split('\n')[0], label, action);
+                string next = q.Target == QuestTarget.RacingEnrollment ? S.RacingQualificationBlocker ?? q.Short : q.Short;
+                SetQuestCard(heading, q.Title, next, GuideLocation(q.Target), ProgressOf(q)?.Split('\n')[0], label, action);
             }
         }
 
@@ -298,7 +299,10 @@ namespace PCShopSell.Game.UI
                 case QuestTarget.PhoneShop: return QuestPlaceAction("前往手机店", S.City.Places.FirstOrDefault(p => p.Business == GameSession.PhoneBusiness));
                 case QuestTarget.ScooterDealer: return QuestPlaceAction("前往顺丰车行", ScooterDealer);
                 case QuestTarget.RacingEnrollment:
-                    return QuestPlaceAction("前往城郊赛场车库", S.City.GetPlace(GameSession.StarterRaceGarageId));
+                    if (S.RacingUnlocked || S.RacingQualificationBlocker != null) return (null, null);
+                    if (S.CurrentPlace?.Id == GameSession.StarterRaceGarageId)
+                        return ("找负责人办理登记", OpenMotorGarage);
+                    return ("前往城郊赛场车库", () => S.BeginCityTravel(GameSession.StarterRaceGarageId, enter: false));
                 case QuestTarget.Market:
                     if (S.ShopSupplyMarketId(S.RetailKind) is string marketId)
                         return QuestPlaceAction("前往批发市场", S.PurchaseDestination(S.City.GetPlace(marketId)));
@@ -380,9 +384,6 @@ namespace PCShopSell.Game.UI
         private void BuildGuideWindow(Window w)
         {
             BuildDistrictMessage(w.Content);
-            var links = Ui.Row(w.Content, 38, 6);
-            Ui.Size(Ui.Button(links, "经营待办", OpenShopEventTasks, 17), -1, 38, 1);
-            Ui.Size(Ui.Button(links, "社区生活", OpenLifeEventPanel, 17), -1, 38, 1);
             var q = S.CurrentQuest();
             if (q == null)
             {
@@ -399,7 +400,10 @@ namespace PCShopSell.Game.UI
             if (q.Target == QuestTarget.RacingEnrollment)
             {
                 var (label, action) = QuestAction(q.Target);
-                Ui.Size(Ui.Button(w.Content, label, () => { w.Close(); action(); }, 18, Ui.ButtonHot), -1, 42);
+                if (action != null)
+                    Ui.Size(Ui.Button(w.Content, label, () => { w.Close(); action(); }, 18, Ui.ButtonHot), -1, 42);
+                else
+                    Para(w.Content, S.RacingQualificationBlocker, 16, Ui.Warn);
                 return;
             }
             if (q.Lesson)

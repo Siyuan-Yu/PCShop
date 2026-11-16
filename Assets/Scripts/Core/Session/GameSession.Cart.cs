@@ -35,7 +35,7 @@ namespace PCShopSell.Core.Session
         /// <summary>结账时真正去做：买下 / 从原处拿出来装车。</summary>
         internal Func<double, bool> Run;
         internal Func<string> Blocker;
-        internal bool RawIngredient;
+        internal bool NeedsColdStorage;
         internal FurnitureDef Furniture;
         internal string DeliveryShopKind;
 
@@ -207,7 +207,7 @@ namespace PCShopSell.Core.Session
             PutLine(_cart,new CartLine {
                 Key=key,Name=product.Name,UnitKg=product.WeightKg,UnitPrice=()=>CityRetailWholesalePrice(source,product),
                 DeliveryShopKind=RetailShopTypes.GoodsKind(id),
-                RawIngredient=IsRawIngredientProduct(id),
+                NeedsColdStorage=IsColdIngredientProduct(id),
                 Blocker=()=>CurrentPlace!=source || !IsPlaceOpen(source)?"货源已经打烊或不在这里":
                     CartAmount(key)<CitySupplierMinimum(source.Id,id)?product.Name+" · "+WholesaleMinimumText(source.Id,id):
                     CartAmount(key)>CitySupplierRemaining(source.Id,id)?product.Name+"超过本日剩余配额":null,
@@ -310,7 +310,8 @@ namespace PCShopSell.Core.Session
         {
             GiftDef g = Gifts.Get(id);
             if (g == null || count <= 0) return false;
-            if (!AtBusiness(g.SoldAt)) return Fail(g.SoldAt == FarmBusiness ? "水果要去农贸市场买。" : "要去烟酒茶行买。");
+            if (!AtBusiness(g.SoldAt)) return Fail(g.SoldAt == FarmBusiness ? "请到农贸市场批发采购。" : "要去烟酒茶行买。");
+            if (g.SoldAt == FarmBusiness) return CartAddRetailWholesale(CurrentPlace, id, count);
             PutLine(_cart, new CartLine
             {
                 Key = "gift:" + id,
@@ -324,73 +325,54 @@ namespace PCShopSell.Core.Session
 
         public bool CartAddRice(double kg)
         {
-            if (kg <= 0) return false;
-            if (!AtFarmMarket) return Fail("要去农贸市场买。");
-            PutLine(_cart, new CartLine
-            {
-                Key = "rice",
-                Name = "大米",
-                RawIngredient = true,
-                ByWeight = true,
-                UnitKg = 1.0,
-                UnitPrice = () => Pantry.RicePricePerKg,
-                Run = n => BuyRice(n),
-            }, kg);
-            return true;
+            int bags = FarmRiceBags(kg);
+            return bags > 0 ? CartAddRetailWholesale(CurrentPlace, "produce:rice", bags) : Fail("大米按每袋 0.5 千克采购。");
         }
 
-        public bool CartAddIngredient(string id, int count)
-        {
-            IngredientDef d = Ingredients.Get(id);
-            if (d == null || count <= 0) return false;
-            if (!AtFarmMarket) return Fail("要去农贸市场买。");
-            PutLine(_cart, new CartLine
-            {
-                Key = "ing:" + id,
-                Name = d.Name,
-                RawIngredient = true,
-                UnitKg = Backpack.IngredientKg(id),
-                UnitPrice = () => d.Price,
-                Run = n => BuyIngredient(id, (int)Math.Round(n)),
-            }, count);
-            return true;
-        }
+        public bool CartAddIngredient(string id, int count) => CartAddRetailWholesale(CurrentPlace, "produce:" + id, count);
 
         // ---------- 结账 ----------
 
-        /// <summary>现在能不能结账；能返回 null。</summary>
-        public string CheckoutBlocker(bool defaultToShop)
+        public (OwnedShop destination, int cars, Money goods, Money fee, int minutes, string blocker) QuoteCart(bool defaultToShop)
         {
-            if (_cart.Count == 0) return "购物车是空的";
-            foreach(var line in _cart){string blocker=line.Blocker?.Invoke();if(blocker!=null)return blocker;}
-            if (CartBagKg > FreeKg + 1e-9)
-                return $"背包放不下：拖进背包的有 {CartBagKg:0.##} 千克，{CurrentVehicle.Name}还能背 {FreeKg:0.##} 千克。拖一些回去叫车";
-            Money due = CartGoods;
-            if (CartTruckKg > 1e-9)
+            var dest = CourierShop(defaultToShop);
+            bool needsTruck = CartTruckKg > 1e-9;
+            int cars = needsTruck ? CarsFor(_cart, dest) : 0;
+            (Money fee, int minutes) = needsTruck ? CourierQuote(dest) : (Money.Zero, 0);
+            Money goods = CartGoods;
+            return (dest, cars, goods, fee, minutes, Blocker());
+
+            string Blocker()
             {
-                if (RestaurantIngredientDeliveryBlocker(CourierShop(defaultToShop),
-                    _cart.Where(line => line.RawIngredient).Sum(line => line.TruckKg)) is string coldStorageBlocker)
-                    return coldStorageBlocker;
-                if (CartCars(defaultToShop) < 0) return $"有一件超过一辆面包车能装的 {CourierCapacityKg:0} 千克";
-                due += CartFreight(defaultToShop);
+                if (_cart.Count == 0) return "购物车是空的";
+                foreach (var line in _cart)
+                    if (line.Blocker?.Invoke() is string reason) return reason;
+                double bagKg = CartBagKg, free = FreeKg;
+                if (bagKg > free + 1e-9)
+                    return $"背包放不下：拖进背包的有 {bagKg:0.##} 千克，{CurrentVehicle.Name}还能背 {free:0.##} 千克。拖一些回去叫车";
+                if (needsTruck && RestaurantColdStorageBlocker(dest,
+                    _cart.Where(line => line.NeedsColdStorage).Sum(line => line.TruckKg)) is string storageBlocker)
+                    return storageBlocker;
+                if (cars < 0) return $"有一件超过一辆面包车能装的 {CourierCapacityKg:0} 千克";
+                Money due = goods + fee * cars;
+                return Ledger.Balance < due ? $"一共要 {due}，钱不够" : null;
             }
-            if (Ledger.Balance < due) return $"一共要 {due}，钱不够";
-            return null;
         }
+
+        public string CheckoutBlocker(bool defaultToShop) => QuoteCart(defaultToShop).blocker;
 
         /// <summary>结账：付货款；背包栏里的装进背包，其余一起叫车（按总重算几辆，运费一次付清），送到选好的地方。</summary>
         public bool Checkout(bool defaultToShop)
         {
-            string why = CheckoutBlocker(defaultToShop);
-            if (why != null) return Fail(why + "。");
+            var quote = QuoteCart(defaultToShop);
+            if (quote.blocker != null) return Fail(quote.blocker + "。");
             bool truck = CartTruckKg > 1e-9;
-            OwnedShop dest = CourierShop(defaultToShop);
-            int cars = truck ? CartCars(defaultToShop) : 0;
+            OwnedShop dest = quote.destination;
             string chosenDest = CourierDest;
             if (truck) SetCourierDest(dest);
             bool keep = SendByCourier;
             if (CurrentPlace?.Kind == PlaceKind.Wholesaler) _stallCheckoutMinutes = 0;
-            try { return RunLines(_cart, dest, cars, "结账"); }
+            try { return RunLines(_cart, dest, quote.cars, "结账", (quote.fee, quote.minutes)); }
             finally
             {
                 SendByCourier = keep;
@@ -402,9 +384,9 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>一行行去做（背包栏的部分和叫车的部分分开）；先一起付好车钱，没用上的车退钱；最后只报一次总账。</summary>
-        private bool RunLines(List<CartLine> lines, OwnedShop dest, int cars, string title)
+        private bool RunLines(List<CartLine> lines, OwnedShop dest, int cars, string title, (Money fee, int minutes)? quote = null)
         {
-            (Money fee, int minutes) = CourierQuote(dest);
+            (Money fee, int minutes) = quote ?? CourierQuote(dest);
             string destName = CourierDestName(dest);
             if (cars > 0) Ledger.TryDebit(Clock.Today, "运费", fee * cars, $"叫 {cars} 辆车从{CurrentPlace?.Name ?? "街上"}送到{destName}");
             Money before = Ledger.Balance;

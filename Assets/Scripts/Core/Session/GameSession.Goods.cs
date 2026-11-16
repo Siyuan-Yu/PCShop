@@ -125,8 +125,14 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>现在在店里、能拿来放进后仓的某种杂货有几件（储物柜里的 + 背包里的）。</summary>
-        public int GoodsAvailableToList(string giftId) =>
-            InPlayerShop ? RetailCount(ShopLocker, Gifts.Get(giftId)) + RetailCount(Backpack, Gifts.Get(giftId)) : 0;
+        public int GoodsAvailableToList(string giftId)
+        {
+            if (!InPlayerShop) return 0;
+            var definition = Gifts.Get(giftId);
+            int carried = RetailCount(Backpack, definition);
+            return RestaurantIngredientsOnly(_focus) && giftId == "produce:rice"
+                ? carried : carried + RetailCount(ShopLocker, definition);
+        }
 
         /// <summary>店里能放进后仓的杂货一共有几件。</summary>
         public int GoodsListableTotal => InPlayerShop ? Gifts.All.Sum(g => GoodsAvailableToList(g.Id)) : 0;
@@ -144,6 +150,14 @@ namespace PCShopSell.Core.Session
             if (have < count) return Fail($"手边只有 {have} 件「{g.Name}」。");
             if (RestaurantIngredientsOnly(_focus) && IsRawIngredientProduct(giftId))
             {
+                if (giftId == "produce:rice")
+                {
+                    Backpack.Food.RiceKg = Math.Max(0, Backpack.Food.RiceKg - count * g.WeightKg);
+                    AddRetailToBag(ShopLocker, g, count, FoodBatch.NoExpiry);
+                    ApplyCargoLimit();
+                    if (notify) Say("大米已存放在门店后仓。");
+                    return true;
+                }
                 string blocker = RestaurantFridgeRequired(_focus);
                 if (blocker != null) return Fail(blocker + "。");
                 if (g.WeightKg * count > RestaurantFridgeRoom(_focus) + 1e-9) return Fail("冰箱放不下这些食材。");

@@ -31,7 +31,8 @@ namespace PCShopSell.Game.UI
         public bool Closed;
         public bool Closable = true;
         internal bool RebuildPending;
-        private bool _rebuildAfterQuantityEdit;
+        private bool _rebuildAfterQuantityEdit, _quantityOnly;
+        internal Action RefreshQuantityContent;
         internal bool ResetScrollOnRebuild;
         internal WindowFit Fitter;
         internal GameUi Owner;
@@ -42,11 +43,12 @@ namespace PCShopSell.Game.UI
             if (Closed) return;
             _rebuildAfterQuantityEdit = false;
             RebuildPending = false;
+            _quantityOnly = false;
+            RefreshQuantityContent = null;
             RefreshContent = null;
             var scrolled = Ui.SaveScroll(Root);
             Ui.Clear(Content);
             Builder?.Invoke(this);
-            GameUi.TabStrips.Restyle(Content);
             Ui.RestoreScroll(Root, Root, scrolled);
             if (ResetScrollOnRebuild)
             {
@@ -63,12 +65,26 @@ namespace PCShopSell.Game.UI
         public void Close() => Owner.CloseWindow(this);
         // InputField ends editing during pointer selection. Defer reconstruction so
         // the same click can still reach its original action button.
-        public void RequestRebuild() => RebuildPending = true;
+        public void RequestRebuild()
+        {
+            _quantityOnly = false;
+            RebuildPending = true;
+        }
+
+        internal void ApplyPendingRebuild()
+        {
+            if (!_quantityOnly || RefreshQuantityContent == null) { Rebuild(); return; }
+            RebuildPending = false;
+            _quantityOnly = false;
+            _rebuildAfterQuantityEdit = false;
+            RefreshQuantityContent();
+        }
 
         internal void RequestQuantityRebuild(bool fromInput)
         {
-            _rebuildAfterQuantityEdit = fromInput;
-            RequestRebuild();
+            _rebuildAfterQuantityEdit |= fromInput;
+            if (!RebuildPending) _quantityOnly = RefreshQuantityContent != null;
+            RebuildPending = true;
         }
 
         internal bool CanRebuildAfterQuantityEdit()
@@ -158,6 +174,7 @@ namespace PCShopSell.Game.UI
             _expoHudGate.interactable=!ExpoHudOpen;
             _labelCanvas.enabled=!ExpoHudOpen&&!_ctrl.PetFocusActive;
             RefreshShopDockVisibility();
+            RefreshHomeDockVisibility();
             UpdateLoanReminderHud();
             RefreshWorkbenchAccess();
             HoldRepeat.AdvanceActiveHold(Time.unscaledDeltaTime);
@@ -173,7 +190,7 @@ namespace PCShopSell.Game.UI
                     if (stamp != window.LiveStamp) { window.LiveStamp = stamp; window.RequestRebuild(); }
                 }
                 if (window.RebuildPending && window.CanRebuildAfterQuantityEdit() && !ListScrollbar.PressedInside(window.Root))
-                { window.RebuildPending = false; window.Rebuild(); }
+                    window.ApplyPendingRebuild();
             }
             UpdateAutoExpoChoices();
             UpdateDisplayPreview();
@@ -206,7 +223,7 @@ namespace PCShopSell.Game.UI
                 RefreshShortcutMenus();
                 UpdateVehicleButtons();
                 UpdateQuestTracker();
-                if (!Input.GetMouseButton(0)) RefreshDock();
+                if (!Input.GetMouseButton(0)) { RefreshDock(); RefreshHomeDock(); }
             }
         }
 
@@ -264,20 +281,7 @@ namespace PCShopSell.Game.UI
             _placeText.resizeTextMaxSize = 17;
             _statsText = Ui.Size(Ui.Label(row, "", 15, TextAnchor.MiddleLeft, Ui.Dim), 215);
             _statsText.Tip(StatsTip);
-            HudPanelButton(row, "我的", KeyCode.M, OpenMyPanel, "身体状况、住处、饮食与人物关系。", bg: Ui.ButtonHot);
-            HudPanelButton(row, "背包", KeyCode.B, ToggleBackpack, "身上带的货和负重；在家或店里一键全放下。", 64);
-            HudPanelButton(row, "手机", KeyCode.P, OpenPhone, "通讯录与智能手机应用。");
-            HudPanelButton(row, "任务", KeyCode.T, OpenQuests, "当前任务与待办；左上角的任务条收起后可从这里再打开。");
-            HudPanelButton(row, "员工", KeyCode.U, OpenEmployeesPanel, "各门店的员工、岗位与排班。").name = "HudEmployees";
-            HudPanelButton(row, "日程", KeyCode.C, OpenSchedulePanel, "按天查看已经安排的事项。").name = "HudCalendar";
-            HudPanelButton(row, "资产", KeyCode.J, OpenBusinessPanel, "门店收支、物业与车辆。").name = "HudAssets";
-            HudPanelButton(row, "采购", KeyCode.G, OpenCityProcurement, "商铺采购、补货目标、在途订单与直供协议。").name = "HudProcurement";
-            _brandButton = HudPanelButton(row, "品牌", KeyCode.L, OpenBrandOverview, "品牌、展会、代言人与直播。");
-            _brandButton.name = "HudBrand";
-            if (!GameSession.FirstChapterTrial)
-                HudPanelButton(row, "赛车", KeyCode.R, OpenRacingDestinations, "赛场开放条件、入门路线与比赛安排。").name = "HudRacing";
-            _noticeButtonText = HudPanelButton(row, "通知", NoticeHotkey, OpenNoticeHistory, "查看本次会话的通知记录。", 68).GetComponentInChildren<Text>();
-            HudPanelButton(row, "菜单", KeyCode.Escape, OpenSystemPanel, "存档、读档、重新开始和音效设置。");
+            BuildHudShortcuts(row);
 
             Image bottom = Ui.Panel(root, "BottomBar", Ui.PanelBg);
             _travelBar = bottom.gameObject;
@@ -306,9 +310,10 @@ namespace PCShopSell.Game.UI
             BuildShortcutButton(brow,"自定目的地",3,116);
             RefreshShortcutMenus();
 
-            Ui.Size(Ui.Button(brow, "叫货车", OpenTruckWindow, 17, Ui.ButtonHot), 100).Tip("打开货车装货单，选货物和目的地；手机通讯录里的入口也保留。");
+            Ui.Size(Ui.Button(brow, "叫货车", OpenTruckWindow, 17), 100).Tip("打开货车装货单，选货物和目的地；手机通讯录里的入口也保留。");
             BuildCityLifeHud(root);
             BuildShopDockToggle(root);
+            BuildHomeDockToggle(root);
 
             Image hint = Ui.Panel(root, "HintStrip", new Color(.13f,.17f,.22f,.95f));
             _worldHintStrip = hint.gameObject;
@@ -332,16 +337,16 @@ namespace PCShopSell.Game.UI
             _chaseText.transform.parent.gameObject.SetActive(false);
         }
 
-        private Button _brandButton;
-
         /// <summary>编辑器里才有的作弊工具按钮（打包时整段不编译）。</summary>
         partial void AddCheatButton(Transform row);
 
         private void UpdateHud()
         {
             GameTimestamp now = S.Clock.Now;
-            string noticeTitle = _unreadNotices > 0 ? "通知 " + Math.Min(99, _unreadNotices) : "通知";
-            _noticeButtonText.text = $"{noticeTitle} {HotkeyLabel(NoticeHotkey)}";
+            string noticeTitle = $"通知 {HotkeyLabel(NoticeHotkey)}";
+            _noticeButtonText.text = _unreadNotices > 0
+                ? $"{noticeTitle} <color=#F0C979>{Math.Min(99, _unreadNotices)}</color>"
+                : noticeTitle;
             UpdateSleepBanner();
             _brandButton.gameObject.SetActive(S.BrandManagementUnlocked);
             FitHudTopRow();
@@ -349,11 +354,11 @@ namespace PCShopSell.Game.UI
             _cashText.text = S.Ledger.Balance.ToString();
             _cashText.color = S.Ledger.Balance.IsNegative ? Ui.Warn : Ui.Good;
 
-            bool paused = !S.Time.IsRunning || S.OpeningClockFrozen;
-            _pauseButton.image.color = paused ? Ui.Warn : Ui.ButtonBg;
-            _pauseButton.GetComponentInChildren<Text>().text = S.Time.IsHeld ? "窗口暂停" : (S.Time.IsUserPaused ? "继续" : S.OpeningClockFrozen ? "教学暂停" : "暂停");
+            bool paused = !S.Time.IsRunning || S.OpeningClockFrozen || S.ManualActivityClockPaused;
+            Ui.SetButtonFill(_pauseButton, paused ? Ui.Warn : Ui.ButtonBg);
+            _pauseButton.GetComponentInChildren<Text>().text = S.ManualActivityClockPaused ? "活动暂停" : S.Time.IsHeld ? "窗口暂停" : (S.Time.IsUserPaused ? "继续" : S.OpeningClockFrozen ? "教学暂停" : "暂停");
             foreach (var (b, speed) in _speedButtons)
-                b.image.color = !paused && S.Time.Speed == speed ? Ui.ButtonHot : Ui.ButtonBg;
+                Ui.SetButtonFill(b, Ui.SelectedButton(!paused && S.Time.Speed == speed));
 
             PlayerStats p = S.Player;
             UpdateHungerBanner(p.Hunger);
@@ -372,7 +377,10 @@ namespace PCShopSell.Game.UI
             else if (S.CurrentPlace != null) where = "在 " + S.PlaceTitle(S.CurrentPlace);
             else where = "在街上";
             string shopName = S.MyShopCount > 1 ? S.ShopTitle(S.CurrentShop) : "店";
-            string shopState = !S.HasShop ? "<color=#DDC18B>还没有店铺</color>" : S.IsPlaceOpen(S.PlayerShopPlace) ? $"<color=#A9C9A9>{shopName}：营业中</color>" : $"<color=#D79780>{shopName}：关门</color>";
+            string shopState = !S.HasShop ? "<color=#DDC18B>还没有店铺</color>"
+                : S.IsPlaceOpen(S.PlayerShopPlace) ? $"<color=#A9C9A9>{shopName}：营业中</color>"
+                : S.ShopFinishingService(S.CurrentShop) ? $"<color=#DDC18B>{shopName}：打烊收尾</color>"
+                : $"<color=#D79780>{shopName}：关门</color>";
             _placeText.text = "<b>" + where + "</b>\n" + shopState;
 
             bool warnStorage = S.HasTempHere && S.TempMinutesLeftHere <= 1440 && !S.IsGameOver && !AnyModalOpen && !_ctrl.Placing;
@@ -383,7 +391,9 @@ namespace PCShopSell.Game.UI
             if (_hintBaseDay < -1000000) _hintBaseDay = S.Clock.Today.TotalDays;
             bool early = S.Clock.Today.TotalDays - _hintBaseDay < 2;
             if (S.IsGameOver) _hintText.text = "游戏结束：" + S.GameOverReason;
-            else if (_ctrl.Placing) _hintText.text = "左键放置 · R 旋转 · X 收纳 · Esc 取消 · Q/E 转视角 · V 复位";
+            else if (_ctrl.Placing) _hintText.text = _ctrl.PlacingShop
+                ? "左键放置 · R 旋转 · X 收纳 · Esc 取消 · Q/E 转视角 · V 复位"
+                : "左键选位置 · 侧栏确认 · R 旋转 · X 收回 · Esc 取消 · Q/E 转视角 · V 复位";
             else if (_ctrl.InInterior) _hintText.text = early ? "WASD 移动 · 靠近人物或设施按 F 交互 · 门口按 F 离店" : "";
             else if (S.Trip != null) _hintText.text = $"快捷前往中，约 {S.Trip.EstimateRemainingMinutes(S.Time.SecondsPerMinuteAt1x)} 分钟 · 按 WASD 随时接管";
             else if (S.NearbyCommunityBox>=0)
@@ -398,7 +408,7 @@ namespace PCShopSell.Game.UI
                 _hintText.text = _ctrl.VisitRoom?.NearbyLabel is string visitHint
                     ? "按 F：" + visitHint
                     : !early ? "" : S.CanSleepAt(S.CurrentPlace) ? "WASD 在屋里走动 · 走近床或房门按 F" : "WASD 在屋里走动 · 走近住户或房门按 F";
-            else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#DDC18B>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : early ? "WASD 在屋里走动 · 走近床、衣柜、电饭锅、纸箱、凳子（头顶出现提示按 F）· 房间信息、摆放家具看右上角“我的”" : "";
+            else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#DDC18B>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : early ? "WASD 在屋里走动 · 靠近家具按 F 交互 · 摆放家具请打开右侧住处面板" : "";
             else if (S.CurrentPlace != null) _hintText.text = early ? "按 WASD 离开 · 空格暂停" : "";
             else _hintText.text = early ? "WASD 移动 · F 进入 · 空格暂停 · 右键拖动 / 滚轮缩放" : "";
             _hintStrip.enabled = !string.IsNullOrEmpty(_hintText.text);
@@ -415,7 +425,7 @@ namespace PCShopSell.Game.UI
                 bool can = S.CanUse(kind);
                 b.interactable = can;
                 b.gameObject.SetActive(can || S.Vehicle == kind || kind <= VehicleKind.Taxi || S.ImpoundedVehicleCount(kind) > 0);
-                b.image.color = S.Vehicle == kind ? Ui.ButtonHot : Ui.ButtonBg;
+                Ui.SetButtonFill(b, Ui.SelectedButton(S.Vehicle == kind));
                 Text t = b.GetComponentInChildren<Text>();
                 t.color = can ? Ui.TextColor : Ui.Dim;
                 string name = Vehicles.Get(kind).Name;
@@ -886,7 +896,7 @@ namespace PCShopSell.Game.UI
                 Ui.Panel(prt, "BrassRule", Ui.Accent).rectTransform.Anchor(0, 1, 1, 1, 20, -51, 20, 49);
                 if (closable)
                 {
-                    Button close = Ui.Button(bar.transform, MenuLocalization.Get("close"), w.Close, 18, Ui.Warn);
+                    Button close = Ui.Button(bar.transform, MenuLocalization.Get("close"), w.Close, 18);
                     ((RectTransform)close.transform).Anchor(1, 0, 1, 1, -96, 8, 10, 8);
                 }
             }
@@ -916,7 +926,7 @@ namespace PCShopSell.Game.UI
         {
             if (w.TimeStatusText == null) return;
             w.TimeStatusText.text = w.TimeStatusOverride
-                ?? (S?.Time.IsRunning == true && !S.OpeningClockFrozen ? "时间在推进" : "时间已暂停");
+                ?? (S?.Time.IsRunning == true && !S.OpeningClockFrozen && !S.ManualActivityClockPaused ? "时间在推进" : "时间已暂停");
         }
 
         public void CloseWindow(Window w)
@@ -997,6 +1007,7 @@ namespace PCShopSell.Game.UI
                 && selections.All(group => group.All(entry => entry.Choice.Appointment.HasValue));
             int selected = 0;
             string selectedPayment = null;
+            string choiceDetails = null;
             float h = appointment ? 460 : selections.Length > 0 ? 205 + (selections.Max(group => group.Count()) + choices[null].Count()) * 62
                 : 250 + def.Choices.Count * 62;
             string title = def.Title;
@@ -1009,6 +1020,17 @@ namespace PCShopSell.Game.UI
                 if (S == null || S.PendingEvent != def)
                 {
                     w.Close();
+                    return;
+                }
+                if (choiceDetails != null)
+                {
+                    Para(w.Content, choiceDetails, 20);
+                    Ui.Size(Ui.Button(w.Content, "返回上一页", () =>
+                    {
+                        choiceDetails = null;
+                        w.ResetScrollOnRebuild = true;
+                        w.Rebuild();
+                    }, 18, Ui.ButtonHot), -1, 42);
                     return;
                 }
                 if (def.Cg != null) BuildEventCg(w.Content, def.Cg, 350);
@@ -1034,12 +1056,26 @@ namespace PCShopSell.Game.UI
                 {
                     bool ok = S.IsChoiceEnabled(c);
                     string label = ok ? c.Text : $"{c.Text}\n<size=14><color=#D79780>{c.DisabledReason}</color></size>";
-                    Ui.Size(Ui.Button(w.Content, label, () =>
-                    {
-                        if (S.ResolveEvent(idx)) w.Close();
-                    }, 19, ok && (selections.Length == 0 || c.Selection.HasValue) ? Ui.ButtonHot : Ui.ButtonBg, ok), -1, ok ? 52 : 58);
+                    Ui.Size(Ui.Button(w.Content, label, () => SelectChoice(w, idx), 19,
+                        interactable: ok), -1, ok ? 46 : 58);
                 }
             }, true, false, scrollContent: !appointment);
+
+            void SelectChoice(Window w, int index)
+            {
+                if (S?.PendingEvent != def) return;
+                var choice = def.Choices[index];
+                if (choice.Details == null)
+                {
+                    if (S.ResolveEvent(index)) w.Close();
+                }
+                else if (S.IsChoiceEnabled(choice))
+                {
+                    choiceDetails = choice.Details;
+                    w.ResetScrollOnRebuild = true;
+                    w.Rebuild();
+                }
+            }
 
             void BuildAppointment(Window w)
             {
@@ -1055,7 +1091,7 @@ namespace PCShopSell.Game.UI
                         if (selected == index) return;
                         selected = index;
                         w.Rebuild();
-                    }, 18, selected == i ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1).name = "EventAppointmentPackage_" + i;
+                    }, 18, Ui.SelectedButton(selected == i)), -1, 42, 1).name = "EventAppointmentPackage_" + i;
                 }
 
                 var options = selections[selected].ToArray();
@@ -1072,7 +1108,7 @@ namespace PCShopSell.Game.UI
                         if (selectedPayment == label) return;
                         selectedPayment = label;
                         w.Rebuild();
-                    }, 17, selectedPayment == label ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1).name = "EventAppointmentPayment_" + item.Index;
+                    }, 17, Ui.SelectedButton(selectedPayment == label)), -1, 42, 1).name = "EventAppointmentPayment_" + item.Index;
                 }
 
                 var details = chosen.Choice.Appointment.Value;
@@ -1082,17 +1118,13 @@ namespace PCShopSell.Game.UI
                     : $"{details.Minutes} 分钟 · {fare} · {chosen.Choice.DisabledReason}";
                 Line(w.Content, summary, 19, available ? Ui.Accent : Ui.Warn).name = "EventAppointmentSummary";
                 if (details.Note != null) Para(w.Content, details.Note, 16, Ui.Dim);
-                Ui.Size(Ui.Button(w.Content, details.AskHost ? "商量请客" : "确认预约", () =>
-                {
-                    if (S.ResolveEvent(chosen.Index)) w.Close();
-                }, 20, Ui.ButtonHot, available), -1, 46).name = "EventAppointmentConfirm";
+                Ui.Size(Ui.Button(w.Content, details.AskHost ? "商量请客" : "确认预约", () => SelectChoice(w, chosen.Index),
+                    20, Ui.ButtonHot, available), -1, 46).name = "EventAppointmentConfirm";
 
                 var secondary = Ui.Row(w.Content, 36, 6);
                 foreach (var entry in choices[null])
-                    Ui.Size(Ui.Button(secondary, entry.Choice.Text, () =>
-                    {
-                        if (S.ResolveEvent(entry.Index)) w.Close();
-                    }, 16, Ui.ButtonBg, S.IsChoiceEnabled(entry.Choice)), -1, 36, 1);
+                    Ui.Size(Ui.Button(secondary, entry.Choice.Text, () => SelectChoice(w, entry.Index),
+                        16, Ui.ButtonBg, S.IsChoiceEnabled(entry.Choice)), -1, 36, 1);
             }
         }
 

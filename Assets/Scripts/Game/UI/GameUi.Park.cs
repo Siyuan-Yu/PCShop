@@ -42,7 +42,7 @@ namespace PCShopSell.Game.UI
                     var card=BusinessCard(row,(slot+1)+" 号铺"+(_parkSlot==slot ? " · 已选择" : ""));Ui.Size(card,342,-1);
                     Line(card,v==null ? "空铺位" : Ventures.Get(v.Kind).Name+(v.Paused ? " · 停业" : ""),17);
                     Line(card,v==null ? "等待招商" : $"邻铺导流 +{(S.ParkTrafficBonus(v)-1)*100:0}%",15,Ui.Good);
-                    Ui.Size(Ui.Button(card,"选择铺位",()=>{_parkSlot=slot;w.Rebuild();},16,slot==_parkSlot ? Ui.ButtonHot : Ui.ButtonBg),-1,32);
+                    Ui.Size(Ui.Button(card,"选择铺位",()=>{_parkSlot=slot;w.Rebuild();},16,Ui.SelectedButton(slot==_parkSlot)),-1,32);
                 }
             }
             var selected=S.ParkUnit(_parkSlot);

@@ -81,7 +81,15 @@ namespace PCShopSell.Tests
                 AgencyStreetMap Map()=>ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<AgencyStreetMap>()).Single();
                 try
                 {
-                    At("agency");Map().Focus(f.Session.City.GetPlace("player_shop"));
+                    At("agency");
+                    var activeMap = Map();
+                    var camera = Preview(activeMap);
+                    var target = AgencyStreetMap.DistrictPlaces(f.Session, f.Session.CurrentPlace)
+                        .Last(p => p.Kind == PlaceKind.Shop && p.Id != "player_shop" && activeMap.CanSelect(p.Id));
+                    activeMap.Selected(target.Id);
+                    Assert.AreSame(activeMap, Map());
+                    Assert.AreSame(camera, Preview(Map()), "选择房源不应重建街景相机");
+                    Map().Focus(f.Session.City.GetPlace("player_shop"));
                     var position=Preview(Map()).transform.position;float zoom=Map().Zoom,size=Preview(Map()).orthographicSize;
                     Button("AgencyResidentialTab").onClick.Invoke();
                     Assert.AreEqual(zoom,Map().Zoom);Assert.AreEqual(size,Preview(Map()).orthographicSize,.001f);Assert.AreEqual(position,Preview(Map()).transform.position);

@@ -1,4 +1,6 @@
 ﻿using System.Linq;
+using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
@@ -25,6 +27,99 @@ namespace PCShopSell.Tests
 
         private const string MallBiz = GameSession.MallBusiness;
         private const string FarmBiz = GameSession.FarmBusiness;
+
+        [Test]
+        public void FurnitureBuyback_ChargesFreightAndPaysOnceAfterSavedTrucksArrive()
+        {
+            using var s = Make(minute: 600);
+            s.EventsEnabled = false;
+            GameSessionTests.Teleport(s, "mall");
+            var shop = s.MainShop;
+            string id = FurnitureCatalog.FridgePremium;
+            shop.Locker.AddFurniture(id, 4);
+            var selection = new Dictionary<string, int> { [id] = 3 };
+            var route = Pathfinder.FindPath(s.City.Map, shop.Place.NodeId, s.CurrentPlace.NodeId);
+            Assert.That(route.Found, Is.True);
+            Money fee = (Vehicles.TaxiFare(route.Distance) + GameSession.CourierHandling) * 3;
+            long due = s.Clock.Now.TotalMinutes + GameSession.CourierBaseMinutes
+                + (int)Math.Ceiling(route.Distance / GameSession.CourierMetersPerMinute);
+            Money payout = FurnitureCatalog.Get(id).Price.Scale(.4) * 3;
+            Money cash = s.Ledger.Balance;
+            var quote = s.QuoteFurnitureBuyback(shop.Place.Id, selection, out string blocker);
+            Assert.That(blocker, Is.Null);
+            Assert.That(quote.Trucks, Is.EqualTo(3), "单件 120 千克，不能把一件家具拆到两辆车里");
+            Assert.That(quote.Freight, Is.EqualTo(fee));
+            Assert.That(quote.Payout, Is.EqualTo(payout));
+            Assert.That(quote.DueMinute, Is.EqualTo(due));
+            Assert.That(shop.Locker.FurnitureCount(id), Is.EqualTo(4));
+            Assert.That(s.Ledger.Balance, Is.EqualTo(cash));
+
+            var order = s.DispatchFurnitureBuyback(shop.Place.Id, selection);
+            Assert.That(order, Is.Not.Null);
+            Assert.That(shop.Locker.FurnitureCount(id), Is.EqualTo(1));
+            Assert.That(s.Ledger.Balance, Is.EqualTo(cash - fee));
+            Assert.That(s.DispatchFurnitureBuyback(shop.Place.Id, selection), Is.Null);
+            Assert.That(s.Ledger.Balance, Is.EqualTo(cash - fee));
+
+            SaveData RoundTrip(GameSession session) => UnityEngine.JsonUtility.FromJson<SaveData>(
+                UnityEngine.JsonUtility.ToJson(session.CreateSave()));
+            using var loaded = GameSession.Load(s.City, RoundTrip(s));
+            loaded.EventsEnabled = false;
+            var pending = loaded.FurnitureBuybacks.Single();
+            Assert.That(pending.Id, Is.EqualTo(order.Id));
+            Assert.That(pending.Lines.Single().Count, Is.EqualTo(3));
+            Assert.That(loaded.MainShop.Locker.FurnitureCount(id), Is.EqualTo(1));
+            loaded.Clock.Advance((int)(due - loaded.Clock.Now.TotalMinutes - 1));
+            Assert.That(loaded.Ledger.Entries.Count(entry => entry.Category == "家具回收"), Is.Zero);
+            loaded.Clock.Advance(1);
+            Assert.That(pending.Delivered, Is.True);
+            Assert.That(loaded.FurnitureBuybacks, Is.Empty);
+            var settlement = loaded.Ledger.Entries.Single(entry => entry.Category == "家具回收");
+            Assert.That(settlement.Amount, Is.EqualTo(payout));
+            Assert.That(settlement.ShopId, Is.EqualTo(shop.Place.Id));
+            Assert.That(loaded.MainShop.Locker.FurnitureCount(id), Is.EqualTo(1));
+            Assert.That(loaded.HomeBox.FurnitureCount(id), Is.Zero);
+
+            using var delivered = GameSession.Load(loaded.City, RoundTrip(loaded));
+            delivered.EventsEnabled = false;
+            delivered.Clock.Advance(30);
+            Assert.That(delivered.FurnitureBuybacks, Is.Empty);
+            Assert.That(delivered.Ledger.Entries.Count(entry => entry.Category == "家具回收"), Is.EqualTo(1));
+            GameSessionTests.Teleport(delivered, "mall");
+            var next = delivered.DispatchFurnitureBuyback(shop.Place.Id, new Dictionary<string, int> { [id] = 1 });
+            Assert.That(next, Is.Not.Null);
+            Assert.That(next.Id, Is.GreaterThan(order.Id));
+        }
+
+        [Test]
+        public void FurnitureBuyback_RejectsFurnitureOutsideLockerAndUnfundedFreight()
+        {
+            using var s = Make(minute: 600);
+            s.EventsEnabled = false;
+            GameSessionTests.Teleport(s, "mall");
+            var shop = s.MainShop;
+            string id = FurnitureCatalog.FridgePremium;
+            var selection = new Dictionary<string, int> { [id] = 1 };
+            s.Backpack.AddFurniture(id, 1);
+            s.HomeBox.AddFurniture(id, 1);
+            shop.Temp.AddFurniture(id, 1);
+            Assert.That(s.DispatchFurnitureBuyback(shop.Place.Id, selection), Is.Null);
+            Assert.That(s.FurnitureBuybacks, Is.Empty);
+            Assert.That(s.Backpack.FurnitureCount(id), Is.EqualTo(1));
+            Assert.That(s.HomeBox.FurnitureCount(id), Is.EqualTo(1));
+            Assert.That(shop.Temp.FurnitureCount(id), Is.EqualTo(1));
+
+            shop.Locker.AddFurniture(id, 1);
+            s.Ledger.ForceDebit(s.Clock.Today, "测试取现", s.Ledger.Balance);
+            int entries = s.Ledger.Entries.Count;
+            var quote = s.QuoteFurnitureBuyback(shop.Place.Id, selection, out string blocker);
+            Assert.That(quote.Payout, Is.GreaterThan(quote.Freight));
+            StringAssert.Contains("现金不足", blocker);
+            Assert.That(s.DispatchFurnitureBuyback(shop.Place.Id, selection), Is.Null);
+            Assert.That(shop.Locker.FurnitureCount(id), Is.EqualTo(1));
+            Assert.That(s.FurnitureBuybacks, Is.Empty);
+            Assert.That(s.Ledger.Entries.Count, Is.EqualTo(entries));
+        }
 
         private static void WaitDays(GameSession s, int day)
         {
@@ -593,14 +688,63 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void FarmMarket_UsesItsOwnHours()
+        public void FishRiceUsesActualStockAndPreservesBonusesAcrossCookingAndPacking()
         {
-            GameSession s = Make(minute: 7 * 60);
-            Place farm = s.City.GetPlace("farm");
-            Assert.IsTrue(s.IsPlaceOpen(farm), "农贸市场 6 点就开门");
-            s.Clock.Restore(s.Clock.Today, 19 * 60);
-            Assert.IsFalse(s.IsPlaceOpen(farm), "18 点收摊");
-            StringAssert.Contains("6:00–18:00", s.ClosedReason(farm));
+            using var s = Make();
+            GameSessionTests.Teleport(s, "flat");
+            s.EventsEnabled = false;
+            var fish = FishingCatalog.Get("fish_farmed_sturgeon");
+            s.Backpack.Food.AddIngredient("veg", 2);
+            s.HomeBox.Food.AddIngredient(fish.Id, 1);
+            double rice = s.HomeCookingRiceKg;
+            Assert.False(s.CookRice(1, "veg", fish.Id));
+            Assert.AreEqual(rice, s.HomeCookingRiceKg);
+            Assert.AreEqual(2, s.HomeCookingIngredientCount("veg"));
+            Assert.AreEqual(1, s.HomeCookingIngredientCount(fish.Id));
+            Assert.True(s.CookRice(.5, "veg", fish.Id));
+            Assert.Zero(s.HomeCookingIngredientCount(fish.Id));
+            using var loaded = GameSession.Load(s.City, UnityEngine.JsonUtility.FromJson<SaveData>(UnityEngine.JsonUtility.ToJson(s.CreateSave())));
+            loaded.EventsEnabled = false;
+            WaitMinutes(loaded, Pantry.CookMinutes);
+            var batch = loaded.Pantry.Cooked.Single();
+            StringAssert.Contains("养殖鲟鱼", batch.Name);
+            Assert.AreEqual(28 + fish.MealHungerBonus, batch.Hunger);
+            Assert.AreEqual(.4 + fish.MealHealthBonus, batch.Health);
+            loaded.Player.Hunger = loaded.Player.Health = loaded.Player.Nutrition = loaded.Player.Mood = 30;
+            Assert.True(loaded.EatBowlAtHome());
+            Assert.AreEqual(30 + fish.MealNutritionBonus, loaded.Player.Nutrition);
+            Assert.AreEqual(30 + fish.MealMoodBonus, loaded.Player.Mood);
+            Assert.True(loaded.PackLunch(1));
+            Assert.True(loaded.EatLunchboxNow(batch.Id));
+            Assert.AreEqual(30 + 2 * fish.MealNutritionBonus, loaded.Player.Nutrition);
+            Assert.AreEqual(30 + 2 * fish.MealMoodBonus, loaded.Player.Mood);
+            Assert.Greater(fish.MealNutritionBonus, FishingCatalog.Get("fish_crucian").MealNutritionBonus);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void FarmMarket_UsesItsOwnHours(bool fullCity)
+        {
+            using var s = fullCity ? DistrictProgressionTests.Make() : Make();
+            PackTests.EmptyBag(s);
+            var farm = s.City.GetPlace(fullCity ? "shop14" : "farm");
+            s.Leave();
+            s.ArriveAtNode(farm.NodeId);
+            s.Clock.Restore(s.Clock.Today, 119);
+            Assert.IsFalse(s.Enter(farm));
+            StringAssert.Contains("2:00–18:00", s.ClosedReason(farm));
+
+            s.Clock.Restore(s.Clock.Today, 120);
+            Assert.IsTrue(s.Enter(farm));
+            Assert.IsTrue(s.BuyRice(2.5));
+            s.Clock.Restore(s.Clock.Today, 4 * 60 + 57);
+            Assert.IsTrue(s.IsPlaceOpen(farm));
+            s.Clock.Restore(s.Clock.Today, 18 * 60 - 1);
+            Assert.IsTrue(s.IsPlaceOpen(farm));
+            s.Clock.Restore(s.Clock.Today, 18 * 60);
+            Assert.IsFalse(s.IsPlaceOpen(farm));
+            Assert.IsFalse(s.BuyRice(2.5));
+            StringAssert.Contains("2:00–18:00", s.ClosedReason(farm));
         }
 
         [Test]
@@ -609,18 +753,19 @@ namespace PCShopSell.Tests
             GameSession s = Make(2000);
             Assert.IsFalse(s.BuyIngredient("egg", 2));
             GameSessionTests.Teleport(s, "farm");
-            Assert.IsTrue(s.BuyIngredient("egg", 2));
-            Assert.IsTrue(s.BuyRice(2));
+            Assert.IsFalse(s.BuyIngredient("egg", 2));
+            Assert.IsTrue(s.BuyIngredient("egg", 10));
+            Assert.IsTrue(s.BuyRice(2.5));
             Assert.AreEqual(Pantry.StartRiceKg, s.HomeBox.Food.RiceKg, 1e-9, "新买的大米还在背包里");
-            Assert.AreEqual(2.0, s.Backpack.Food.RiceKg, 1e-9);
+            Assert.AreEqual(2.5, s.Backpack.Food.RiceKg, 1e-9);
             GameSessionTests.Teleport(s, "flat");
-            Assert.AreEqual(2.0, s.Backpack.Food.RiceKg, 1e-9, "回家也不会自己消失");
+            Assert.AreEqual(2.5, s.Backpack.Food.RiceKg, 1e-9, "回家也不会自己消失");
             Assert.IsTrue(s.UnloadBackpack());
-            Assert.AreEqual(Pantry.StartRiceKg + 2, s.HomeBox.Food.RiceKg, 1e-9, "打开背包一键放进家中后仓");
+            Assert.AreEqual(Pantry.StartRiceKg + 2.5, s.HomeBox.Food.RiceKg, 1e-9, "打开背包一键放进家中后仓");
             Assert.AreEqual(0.0, s.Backpack.Food.RiceKg, 1e-9);
             Assert.IsTrue(s.CookRice(0.5, "egg"));
             WaitMinutes(s, Pantry.CookMinutes);
-            Assert.AreEqual(1, s.HomeBox.Food.IngredientCount("egg"));
+            Assert.AreEqual(9, s.HomeBox.Food.IngredientCount("egg"));
             Assert.Greater(s.Pantry.Cooked.Last().Hunger, Pantry.BaseBowlHunger);
             Assert.AreEqual("鸡蛋焖饭", s.Pantry.Cooked.Last().Name);
         }
@@ -635,10 +780,10 @@ namespace PCShopSell.Tests
             (Money fee, int minutes) = s.CourierQuote(false);
             Money before = s.Ledger.Balance;
             Assert.IsTrue(s.BuyRice(20));
-            Money rice = Pantry.RicePricePerKg.Scale(20);
+            Money rice = s.CityRetailWholesalePrice(s.CurrentPlace, Gifts.Get("produce:rice")) * 40;
             Assert.AreEqual(rice + fee, before - s.Ledger.Balance, "第一样连运费");
-            Assert.IsTrue(s.BuyIngredient("egg", 3));
-            Assert.AreEqual(rice + fee + Ingredients.Get("egg").Price * 3, before - s.Ledger.Balance, "同一车不再收运费");
+            Assert.IsTrue(s.BuyIngredient("egg", 10));
+            Assert.AreEqual(rice + fee + s.CityRetailWholesalePrice(s.CurrentPlace, Gifts.Get("produce:egg")) * 10, before - s.Ledger.Balance, "同一车不再收运费");
             Assert.AreEqual(0.0, s.Backpack.Food.RiceKg, 1e-9, "叫车的不进背包");
             Assert.AreEqual(1, s.Couriers.Count);
             double rice0 = s.HomeBox.Food.RiceKg;
@@ -646,7 +791,7 @@ namespace PCShopSell.Tests
             WaitMinutes(s, minutes + 1);
             Assert.AreEqual(0, s.Couriers.Count);
             Assert.AreEqual(rice0 + 20, s.HomeBox.Food.RiceKg, 1e-9, "送进家中后仓");
-            Assert.AreEqual(3, s.HomeBox.Food.IngredientCount("egg"));
+            Assert.AreEqual(10, s.HomeBox.Food.IngredientCount("egg"));
         }
 
         [Test]
@@ -687,11 +832,16 @@ namespace PCShopSell.Tests
             s.SendByCourier = true;
             Money fee = s.CourierQuote(false).fee;
             Money before = s.Ledger.Balance;
-            double kg = GameSession.CourierCapacityKg / 1.0 + 40;
-            Assert.IsTrue(s.BuyRice(kg));
-            Assert.AreEqual(2, s.Couriers.Count, "一车装不下的米分两车");
-            Assert.AreEqual(GameSession.CourierCapacityKg, s.Couriers[0].LoadKg, 1e-6);
-            Assert.AreEqual(Pantry.RicePricePerKg.Scale(kg) + fee * 2, before - s.Ledger.Balance);
+            var source = s.CurrentPlace;
+            foreach (string id in new[] { Gifts.Fruit, "produce:rice", "produce:veg", "produce:egg" })
+                Assert.True(s.CartAddRetailWholesale(source, id, s.CitySupplierRemaining(source.Id, id)));
+            s.CartAllToTruck();
+            double kg = s.CartTruckKg;
+            Money goods = s.CartGoods;
+            Assert.True(s.Checkout(false));
+            Assert.AreEqual(2, s.Couriers.Count, "一车装不下的批发进货分两车");
+            Assert.AreEqual(kg, s.Couriers.Sum(run => run.LoadKg), 1e-6);
+            Assert.AreEqual(goods + fee * 2, before - s.Ledger.Balance);
         }
 
         [Test]
@@ -728,7 +878,7 @@ namespace PCShopSell.Tests
         {
             GameSession s = Make(2000, 20 * 60);
             GameSessionTests.Teleport(s, "farm");
-            Assert.IsFalse(s.BuyRice(1));
+            Assert.IsFalse(s.BuyRice(2.5));
         }
 
         [Test]

@@ -73,7 +73,7 @@ namespace PCShopSell.Game.UI
             {
                 int filter = i;
                 Ui.Size(Ui.Button(tabs, labels[i], () => { _kolLobbyFilter = filter; w.Rebuild(); }, 18,
-                    _kolLobbyFilter == i ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1);
+                    Ui.SelectedButton(_kolLobbyFilter == i)), -1, 40, 1);
             }
             if (_kolLobbyFilter == 1)
             {
@@ -125,7 +125,7 @@ namespace PCShopSell.Game.UI
             {
                 w.Close();
                 OpenKolViewer(room.PersonId, OpenKolLobby);
-            }, 17, Ui.ButtonHot, room.IsLive), -1, 36, 1).name = "KolRoom_" + room.PersonId;
+            }, 17, Ui.ButtonBg, room.IsLive), -1, 36, 1).name = "KolRoom_" + room.PersonId;
             Ui.Size(Ui.Button(actions, S.IsFollowingKol(room.PersonId) ? "已关注" : "关注", () =>
             {
                 S.ToggleKolFollow(room.PersonId);
@@ -416,7 +416,7 @@ namespace PCShopSell.Game.UI
                     {
                         selection = yuan;
                         w.Rebuild();
-                    }, 18, selection == yuan ? Ui.ButtonHot : Ui.ButtonBg), -1, 78, 1).name = "KolGift_" + yuan;
+                    }, 18, Ui.SelectedButton(selection == yuan)), -1, 78, 1).name = "KolGift_" + yuan;
                 int heat = selection == 10 ? 1 : selection == 100 ? 3 : 8;
                 int followers = selection == 10 ? 5 : selection == 100 ? 20 : 80;
                 int audience = selection == 10 ? 25 : selection == 100 ? 60 : 120;

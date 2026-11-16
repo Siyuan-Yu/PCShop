@@ -77,6 +77,7 @@ namespace PCShopSell.Game.UI
                 list.parent.parent.GetComponent<Image>().color = Color.clear;
                 foreach (var item in selected) BuildCalendarDayItem(list, item, w);
             }
+            if (_calendarDay == today) BuildScheduledEventFollowUps(w);
             w.LiveConversation = true;
             w.LiveKey = () => S.Clock.Now.TotalMinutes.ToString();
             w.LiveStamp = w.LiveKey();
@@ -85,10 +86,10 @@ namespace PCShopSell.Game.UI
         private void BuildCalendarDateCell(Transform row, GameDate date, bool today, CalendarItem[] items, int height, Action select)
         {
             bool selected = date.TotalDays == _calendarDay;
-            var fill = selected ? Color.Lerp(Ui.FlatRow, Ui.ButtonHot, .3f) : Ui.FlatBand;
+            var fill = selected ? Ui.SelectedButton(true) : Ui.FlatBand;
             var button = Ui.Size(Ui.Button(row, "", select, 17, fill), 0, height, 1);
             button.name = "CalendarDay_" + date.TotalDays;
-            Ui.FlatBorder(button.image, selected ? Ui.Accent : Ui.FlatCardEdge);
+            if (!selected) Ui.FlatBorder(button.image, Ui.FlatCardEdge);
             button.gameObject.AddComponent<RectMask2D>();
             var caption = button.GetComponentInChildren<Text>();
             caption.text = date.Day + (today ? "  今" : "");
@@ -258,12 +259,7 @@ namespace PCShopSell.Game.UI
                 ActionButton("前往打工地点", () => { CloseAllWindows(); _ctrl.GoToPlace(S.WorkPlace); });
             if (e.Kind == "loan") ActionButton("查看贷款", OpenLoansApp);
             if (e.Kind == "wallet_return" && S.WalletReturnStation is Place station)
-                ActionButton(S.CurrentPlace == station ? "查看站内交接" : "前往地铁站", () =>
-                {
-                    CloseAllWindows();
-                    if (S.CurrentPlace == station) OnEnteredPlace(station);
-                    else S.BeginCityTravel(station.Id);
-                });
+                ActionButton(S.CurrentPlace == station ? "查看站内交接" : "前往地铁站", OpenWalletReturnDestination);
             else if (!item.Completed && e.DestinationId != null && S.City.HasPlace(e.DestinationId))
                 ActionButton("前往赛场", () =>
                 {

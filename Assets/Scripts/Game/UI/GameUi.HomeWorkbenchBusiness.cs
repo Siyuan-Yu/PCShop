@@ -176,7 +176,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(row, "街区", 14, TextAnchor.MiddleLeft, WbDim), 40, 28, 0);
             void Chip(string label, string id)
             {
-                Ui.Size(Ui.Button(row, label, () => { _workbenchStreet = id; w.RequestRebuild(); }, 14, _workbenchStreet == id ? Ui.ButtonHot : Ui.ButtonBg), 118, 28, 0)
+                Ui.Size(Ui.Button(row, label, () => { _workbenchStreet = id; w.RequestRebuild(); }, 14, Ui.SelectedButton(_workbenchStreet == id)), 118, 28, 0)
                     .name = "WorkbenchStreet_" + (id ?? "all");
             }
             Chip("全部", null);
@@ -280,14 +280,14 @@ namespace PCShopSell.Game.UI
                     string id = line.Key; var price = sim.GoodsPriceOf(id);
                     int intent = (int)Math.Round(sim.GoodsPurchaseIntentAtPrice(id, price.Yuan) * 100);
                     var row = WbTable(right, new[] { Gifts.Get(id).Name, line.Value + " / " + (shelfStock.TryGetValue(id, out int back) ? back : line.Value), price.ToString(), intent + "%" }, widths);
-                    Ui.Size(Ui.Button(row, "调价", () => OpenWorkbenchGoodsPrice(shop, id), 14, Ui.ButtonHot), 54, 28, 0).name = "WorkbenchGoods_" + id;
+                    Ui.Size(Ui.Button(row, "调价", () => OpenWorkbenchGoodsPrice(shop, id), 14, Ui.ButtonBg), 54, 28, 0).name = "WorkbenchGoods_" + id;
                 }
                 foreach (var line in fill.Parts)
                 {
                     var part = line.Part; bool boxed = line.Boxed; var price = sim.PriceOf(part, boxed);
                     int intent = (int)Math.Round(sim.PartPurchaseIntentAtPrice(part, boxed, price.Yuan) * 100);
                     var row = WbTable(right, new[] { part.Name + (boxed ? "·盒装" : "·散件"), line.Count + " / " + sim.Stock.CountAll(part), price.ToString(), intent + "%" }, widths);
-                    Ui.Size(Ui.Button(row, "调价", () => OpenWorkbenchPartPrice(shop, part, boxed), 14, Ui.ButtonHot), 54, 28, 0).name = "WorkbenchPart_" + part.Id + (boxed ? "_b" : "_l");
+                    Ui.Size(Ui.Button(row, "调价", () => OpenWorkbenchPartPrice(shop, part, boxed), 14, Ui.ButtonBg), 54, 28, 0).name = "WorkbenchPart_" + part.Id + (boxed ? "_b" : "_l");
                 }
             }
             var back2 = sim.Stock.GoodsLines().Select(l => Gifts.Get(l.Key).Name + " " + l.Value).Concat(sim.Stock.Lines().Select(l => l.Part.Name + (l.Boxed ? "·盒" : "·散") + " " + l.Count)).ToArray();

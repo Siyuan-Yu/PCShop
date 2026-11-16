@@ -88,6 +88,7 @@ namespace PCShopSell.Game.UI
 
             bool physical = S.Cart.Any(l => !l.Registered);
             double truckKg = S.CartTruckKg;
+            var quote = S.QuoteCart(defaultToShop);
             if (kinds == 0)
             {
                 var hint = Ui.Label(side, "在左边输入或加减数量，加入购物车。\n能背的优先放背包，装不下的自动叫车。\n设备、车辆直接登记为已购资产。", 16, TextAnchor.UpperLeft, Ui.Dim);
@@ -115,8 +116,8 @@ namespace PCShopSell.Game.UI
                     bool over = bagKg > free + 1e-9;
                     var bag = CartGroup(side, "CartBag", "装进背包", $"{bagKg:0.##} / {free:0.##} 千克", Ui.FlatCardEdge,
                         free <= 0 ? (bagKg > 0 ? 1 : 0) : (float)(bagKg / free), over, out var bagList);
-                    var dest = S.CourierShop(defaultToShop);
-                    int cars = S.CartCars(defaultToShop);
+                    var dest = quote.destination;
+                    int cars = quote.cars;
                     var truck = CartGroup(side, "CartTruck", "叫车送",
                         truckKg > 1e-9 ? $"{truckKg:0.##} 千克 → {(cars < 0 ? "一车装不下" : cars == 0 ? "装上刚叫的车" : cars + " 辆面包车")}" : "（没有）",
                         Ui.FlatHotEdge, null, false, out var truckList);
@@ -132,12 +133,11 @@ namespace PCShopSell.Game.UI
                     var destRow = Ui.Row(side, 34, 8);
                     if (truckKg > 1e-9)
                     {
-                        var (_, minutes) = S.CourierQuote(dest);
                         Ui.Size(Ui.Label(destRow, "送到", 16, TextAnchor.MiddleLeft, Ui.Dim), 40);
                         if (S.CartRequiresHomeDelivery)
                             Ui.Size(Ui.Label(destRow, "家里 · 居家办公台配送", 15), -1, 32, 1);
                         else Ui.Size(Ui.Button(destRow, S.CourierDestName(dest) + "  ▼", () => OpenCourierDestMenu(w, dest, false), 15, Ui.ButtonBg), -1, 32, 1);
-                        Ui.Size(Ui.Label(destRow, $"约 {minutes} 分钟", 14, TextAnchor.MiddleRight, Ui.Dim), 80);
+                        Ui.Size(Ui.Label(destRow, $"约 {quote.minutes} 分钟", 14, TextAnchor.MiddleRight, Ui.Dim), 80);
                     }
                     else Ui.Size(Ui.Label(destRow, "全部自己背走，不叫车。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
                     var quick = Ui.Row(side, 32, 8);
@@ -146,17 +146,17 @@ namespace PCShopSell.Game.UI
                 }
             }
 
-            Money goods = S.CartGoods;
-            Money freight = physical && truckKg > 1e-9 ? S.CartFreight(defaultToShop) : Money.Zero;
+            Money goods = quote.goods;
+            Money freight = quote.cars > 0 ? quote.fee * quote.cars : Money.Zero;
             string freightText = !physical || truckKg <= 1e-9 ? "运费 ¥0"
-                : S.CartCars(defaultToShop) > 0 ? $"运费 {freight}（{S.CartCars(defaultToShop)} 辆 × {S.CourierQuote(S.CourierShop(defaultToShop)).fee}）"
-                : S.CartCars(defaultToShop) == 0 ? "运费 ¥0（装上刚叫的车）" : "运费：有一件一车装不下";
+                : quote.cars > 0 ? $"运费 {freight}（{quote.cars} 辆 × {quote.fee}）"
+                : quote.cars == 0 ? "运费 ¥0（装上刚叫的车）" : "运费：有一件一车装不下";
             var bill = Ui.Row(side, 40, 8);
             bill.name = "CartBill";
             Ui.Size(Ui.Label(bill, $"货款 {goods}　{freightText}", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 40, 1);
             Ui.Size(Ui.Label(bill, $"<b><color=#E8C77A>{goods + freight}</color></b>", 28, TextAnchor.MiddleRight), 190, 40);
 
-            string why = kinds == 0 ? "购物车是空的" : S.CheckoutBlocker(defaultToShop);
+            string why = quote.blocker;
             var checkout = Ui.Button(side, why ?? "结账（付合计）", () => { S.Checkout(defaultToShop); w.Rebuild(); },
                 why == null ? 22 : 15, why == null ? Ui.ButtonHot : Ui.ButtonBg, why == null);
             checkout.name = "CartCheckout";

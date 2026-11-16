@@ -354,12 +354,12 @@ namespace PCShopSell.Core.Session
                     if (item.Count > EmployeeSupplyAvailable(id,offer,Clock.Today.TotalDays)) blocker=blocker??offer.Name+"超过今日剩余库存";
                     if (item.Count < PurchaseMinimum(offer)) blocker = blocker ?? offer.Source.Name + "的"+offer.Name+"当前起订量为" + PurchaseMinimum(offer) + "件";
                 }
-                if (offer.Kind is PurchaseGoodsKind.Rice or PurchaseGoodsKind.Ingredient
-                    || (offer.Kind == PurchaseGoodsKind.Gift && IsRawIngredientProduct(offer.Id)))
+                if (offer.Kind == PurchaseGoodsKind.Ingredient
+                    || (offer.Kind == PurchaseGoodsKind.Gift && IsColdIngredientProduct(offer.Id)))
                     ingredientKg += offer.UnitKg * item.Count;
                 selected.Add((offer, item));
             }
-            if (!planningOnly) blocker ??= RestaurantIngredientDeliveryBlocker(row.Shop, ingredientKg);
+            if (!planningOnly) blocker ??= RestaurantColdStorageBlocker(row.Shop, ingredientKg);
             if (!planningOnly)
                 foreach(var sameStock in selected.GroupBy(x=>PhysicalSupplyKey(x.offer)))
                     if(sameStock.Sum(x=>x.item.Count)>EmployeeSupplyAvailable(id,sameStock.First().offer,Clock.Today.TotalDays))blocker=blocker??sameStock.First().offer.Name+"的不同包装/清单行合计超过剩余供货";

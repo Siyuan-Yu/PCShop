@@ -32,6 +32,7 @@ namespace PCShopSell.Core.Session
         private readonly List<OnsitePlayState> _onsitePlays=new List<OnsitePlayState>();
         private readonly List<OnsitePhoto> _onsitePhotos=new List<OnsitePhoto>();
         private int _onsitePhotoSequence;
+        private bool _settlingManualActivity;
         public static int OnsiteNumber(string id)
         {var bits=(id??"").Split('_');return bits.Length>=2&&bits[0]=="social"&&int.TryParse(bits[1],out int n)&&(n>=51&&n<=58||n==76)?n:0;}
         private static string VenueSport(CityActivity activity)
@@ -43,33 +44,65 @@ namespace PCShopSell.Core.Session
         }
         public static bool IsVenueBasketball(CityActivity activity) => VenueSport(activity) == "court";
         public static bool IsDrinkTasting(CityActivity activity) => activity?.DefinitionId == "social_51";
-        public static bool IsTimedVenueSport(CityActivity activity) => VenueSport(activity) is "court" or "golf";
+        public static bool IsVenueSport(CityActivity activity) => VenueSport(activity) is "court" or "golf";
         public static bool IsOnsiteBasketball(CityActivity activity) =>
             OnsiteNumber(activity?.DefinitionId) is >= 54 and <= 56 || IsVenueBasketball(activity);
         public static bool IsOnsiteSport(CityActivity activity) =>
-            OnsiteNumber(activity?.DefinitionId) is >= 54 and <= 58 || IsTimedVenueSport(activity);
-        public bool CanFinishOnsiteBasketball => IsOnsiteBasketball(RunningCityActivity)
-            && (IsTimedVenueSport(RunningCityActivity) ? OnsiteHere : CanFinishOnsiteSport);
+            OnsiteNumber(activity?.DefinitionId) is >= 54 and <= 58 || IsVenueSport(activity);
+        private static bool IsManualPlayActivity(CityActivity activity) =>
+            activity != null && (IsInteractiveFishingActivity(activity) || IsOnsiteSport(activity));
+        public bool ManualActivityClockPaused => IsManualPlayActivity(RunningCityActivity);
+        public int ManualAttemptsLeft
+        {
+            get
+            {
+                var activity = RunningCityActivity;
+                if (!UsesManualVenuePass(activity)) return 0;
+                int used = IsInteractiveFishingActivity(activity) ? _fishing?.Casts ?? 0 : Play?.Round ?? 0;
+                return Math.Max(0, CityLifeCatalog.ManualPlayAttempts(activity.Duration) - used);
+            }
+        }
+        public bool CanFinishOnsiteBasketball => IsOnsiteBasketball(RunningCityActivity) && CanFinishOnsiteSport;
         public bool CanFinishOnsiteSport => IsOnsiteSport(RunningCityActivity) && OnsiteHere
-            && !IsTimedVenueSport(RunningCityActivity) && OnsiteCompletionReady(RunningCityActivity);
+            && Play is { Phase: not ("charging" or "flight") }
+            && (IsVenueSport(RunningCityActivity) || OnsiteCompletionReady(RunningCityActivity));
 
-        public bool FinishOnsiteBasketball() => CanFinishOnsiteBasketball
-            && (IsTimedVenueSport(RunningCityActivity) ? EndTimedVenueSport() : FinishOnsiteSport());
+        public bool FinishOnsiteBasketball() => CanFinishOnsiteBasketball && FinishOnsiteSport();
 
         public bool FinishOnsiteSport()
         {
             if (!CanFinishOnsiteSport) return false;
             var activity = RunningCityActivity;
-            AdvanceClock((int)Math.Max(1, activity.ActualStart + activity.Duration - Clock.Now.TotalMinutes));
+            if (IsVenueSport(activity)) return SettleManualAttempts(activity, Play.Round);
+            AdvanceManualActivityTime(activity, activity.Duration);
+            if (activity.Active && Clock.Now.TotalMinutes >= activity.ActualStart + activity.Duration)
+                EndCityActivity(activity, CityActivityPhase.Completed, CityActivityService(activity).EndText, Clock.Now.TotalMinutes);
             return !activity.Active;
         }
 
-        public bool EndTimedVenueSport()
+        private bool SettleManualAttempts(CityActivity activity, int attempts)
         {
-            var activity = RunningCityActivity;
-            if (!IsTimedVenueSport(activity) || !OnsiteHere) return false;
-            EndCityActivity(activity, CityActivityPhase.Completed, "已结束练习", Clock.Now.TotalMinutes);
+            int total = CityLifeCatalog.ManualPlayAttempts(activity.Duration);
+            int minutes = activity.Duration * Math.Max(0, Math.Min(attempts, total)) / total;
+            AdvanceManualActivityTime(activity, minutes);
+            if (activity.Active)
+            {
+                bool completed = attempts >= total || attempts > 0
+                    && (IsVenueSport(activity) || activity.DefinitionId == "fishing");
+                EndCityActivity(activity, completed ? CityActivityPhase.Completed : CityActivityPhase.Interrupted,
+                    attempts >= total ? CityActivityService(activity)?.EndText ?? "本场已完成" : "已提前结束，按已用次数结算时间",
+                    Clock.Now.TotalMinutes);
+            }
             return true;
+        }
+
+        private void AdvanceManualActivityTime(CityActivity activity, int minutes)
+        {
+            long remaining = activity.ActualStart + minutes - Clock.Now.TotalMinutes;
+            if (remaining <= 0) return;
+            _settlingManualActivity = true;
+            try { AdvanceClock((int)remaining); }
+            finally { _settlingManualActivity = false; }
         }
 
         public static bool IsOnsiteActivity(CityActivity a)=>OnsiteNumber(a?.DefinitionId)!=0;
@@ -253,7 +286,7 @@ namespace PCShopSell.Core.Session
         public bool BeginOnsiteCharge()
         {
             var s=Play;if(!OnsiteHere||s==null||s.Number<54||s.Number>58||s.Phase is "flight" or "charging")return false;
-            if (!IsTimedVenueSport(RunningCityActivity) && s.Round >= (s.Number == 56 ? 5 : 8)) return false;
+            if (IsVenueSport(RunningCityActivity) ? ManualAttemptsLeft == 0 : s.Round >= (s.Number == 56 ? 5 : 8)) return false;
             SetNextOnsiteTarget(s);s.Phase="charging";s.Power=0;s.Flight=0;s.BallX=s.BallZ=0;s.BallY=1.7;return true;
         }
         public bool ReleaseOnsiteShot()
@@ -342,7 +375,7 @@ namespace PCShopSell.Core.Session
         }
         private bool OnsiteCompletionReady(CityActivity a)
         {
-            if (IsTimedVenueSport(a) && a.Participants.Length > 0)
+            if (IsVenueSport(a) && a.Participants.Length > 0)
                 return _onsitePlays.Any(s => s.ActivityId == a.Id && s.Round > 0);
             int n=OnsiteNumber(a.DefinitionId);if(n==0)return true;var s=_onsitePlays.FirstOrDefault(x=>x.ActivityId==a.Id);if(s==null||s.Pending!=null||s.Phase is "charging" or "flight")return false;
             return n switch{51=>s.Round==TastingDrinks.Length,52=>s.TalkMasks.Length==a.Participants.Length&&s.TalkMasks.All(x=>x!=0),53=>s.Round>=1&&s.Phase!="mixed",54=>s.Round>=3&&(s.Mask&(s.Mask-1))!=0,55=>s.Round>=3&&s.Mask==7&&s.Feedback>=0,56=>s.Round>=5,57=>s.Round>=5,58=>s.Round>=3&&s.ProcurementDecided,76=>s.PhotoCount>=3&&s.GoodPhotos>=2&&(s.PhotoSubjects&(s.PhotoSubjects-1))!=0,_=>false};
@@ -350,7 +383,7 @@ namespace PCShopSell.Core.Session
         private void CompleteOnsitePlay(CityActivity a)
         {
             var s=_onsitePlays.FirstOrDefault(x=>x.ActivityId==a.Id);if(s==null)return;
-            if (IsTimedVenueSport(a))
+            if (IsVenueSport(a))
             {
                 a.EventSettlementNote = (a.EventSettlementNote ?? "") + (s.Number == 54
                     ? $"\n投篮 {s.Round} 次 · 命中 {s.Success} 次" : $"\n击球 {s.Round} 杆 · 命中目标 {s.Success} 次");
@@ -380,7 +413,7 @@ namespace PCShopSell.Core.Session
             foreach (var activity in _cityActivities.Where(a => a.Active && IsDrinkTasting(a)))
                 activity.Duration = CityLifeCatalog.DrinkTastingMinutes;
             var running = RunningCityActivity;
-            if (IsTimedVenueSport(running) || IsDrinkTasting(running)) StartOnsitePlay(running);
+            if (IsVenueSport(running) || IsDrinkTasting(running)) StartOnsitePlay(running);
             if (IsDrinkTasting(running) && Play is { Pending: "sip" } tasting)
             {
                 // A timed sip in an older save was not yet recorded as tasted.

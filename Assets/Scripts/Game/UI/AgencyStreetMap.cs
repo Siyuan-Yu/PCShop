@@ -41,6 +41,9 @@ namespace PCShopSell.Game.UI
         private RenderTexture _texture;
         private GameController _game;
         private RectTransform _rect;
+        private readonly Dictionary<PlaceVisual, Bounds> _buildingBounds = new Dictionary<PlaceVisual, Bounds>();
+        private int _renderFrame = -1;
+        private bool _notifyAfterRender;
         private ViewState _state;
         private Vector3 _overview;
         private float _overviewSize;
@@ -64,7 +67,7 @@ namespace PCShopSell.Game.UI
             _overviewSize = radius * 1.15f;
             _cityBounds = new Bounds(center, new Vector3(radius * 3, 20, radius * 3));
             _state.Zoom = 1; _state.Offset = Vector2.zero;
-            RenderMap();
+            RequestMapRender();
         }
 
         public void Initialize(GameController game, ViewState state, Place[] units, float width, float height,
@@ -79,7 +82,7 @@ namespace PCShopSell.Game.UI
             _camera.aspect = width / height;
             _camera.clearFlags = CameraClearFlags.SolidColor;
             _camera.backgroundColor = new Color32(159, 179, 156, 255);
-            _camera.allowHDR = true;
+            _camera.allowHDR = false;
             var extra = _camera.GetUniversalAdditionalCameraData();
             extra.renderPostProcessing = false;
             extra.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
@@ -94,7 +97,7 @@ namespace PCShopSell.Game.UI
             foreach (var unit in units)
             {
                 if (!game.World.Places.TryGetValue(unit.Id, out var visual)) continue;
-                var buildingBounds = BuildingBounds(visual);
+                var buildingBounds = BoundsOf(visual);
                 if (!hasBounds) { bounds = buildingBounds; hasBounds = true; }
                 else bounds.Encapsulate(buildingBounds);
                 bounds.Encapsulate(game.World.NodeWorld(unit.NodeId));
@@ -112,13 +115,13 @@ namespace PCShopSell.Game.UI
             var projected = ProjectedBuildingBounds(shopBounds, _camera.transform.rotation);
             _overview = _camera.transform.rotation * projected.center;
             _overviewSize = Mathf.Max(12, Mathf.Max(projected.extents.y, projected.extents.x / _camera.aspect) * 1.12f + 2);
-            _texture = new RenderTexture(Mathf.RoundToInt(width * 1.5f), Mathf.RoundToInt(height * 1.5f), 24)
+            _texture = new RenderTexture(Mathf.RoundToInt(width), Mathf.RoundToInt(height), 24)
             { name = "AgencyStreetOverview", filterMode = FilterMode.Bilinear };
             _camera.targetTexture = _texture;
             GetComponent<RawImage>().texture = _texture;
             if (pedestrianBands?.Count>0 && SystemInfo.graphicsDeviceType!=GraphicsDeviceType.Null)
                 BuildPedestrianOverlay(pedestrianBands);
-            RenderMap();
+            RequestMapRender(notify: false);
         }
 
         private void BuildPedestrianOverlay(IReadOnlyList<PedestrianBand> bands)
@@ -209,10 +212,36 @@ namespace PCShopSell.Game.UI
             _camera.transform.position = _overview + new Vector3(_state.Offset.x, 0, _state.Offset.y) - _camera.transform.forward * 240;
         }
 
-        public void RenderMap()
+        private void RequestMapRender(bool notify = true)
         {
             ApplyCamera();
-            if(SystemInfo.graphicsDeviceType==GraphicsDeviceType.Null){Changed?.Invoke();return;}
+            if (!Application.isPlaying || SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
+            {
+                if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null) CaptureMap();
+                if (notify) Changed?.Invoke();
+                return;
+            }
+            if (_renderFrame < 0) _renderFrame = Time.frameCount + 1;
+            _notifyAfterRender |= notify;
+        }
+
+        private void LateUpdate()
+        {
+            if (_renderFrame >= 0 && Time.frameCount >= _renderFrame) RenderMap();
+        }
+
+        public void RenderMap()
+        {
+            _renderFrame = -1;
+            bool notify = _notifyAfterRender;
+            _notifyAfterRender = false;
+            ApplyCamera();
+            if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null) CaptureMap();
+            if (notify || !Application.isPlaying) Changed?.Invoke();
+        }
+
+        private void CaptureMap()
+        {
             // Keep the map legible at night, without modifying the scene's lighting after the capture.
             bool fog = RenderSettings.fog;
             AmbientMode ambientMode = RenderSettings.ambientMode;
@@ -250,7 +279,13 @@ namespace PCShopSell.Game.UI
                 foreach (var place in outside) if (place.Root != null) place.Root.SetActive(true);
                 _game.World.Root.SetActive(worldWasActive);
             }
-            Changed?.Invoke();
+        }
+
+        internal Bounds BoundsOf(PlaceVisual building)
+        {
+            if (!_buildingBounds.TryGetValue(building, out var bounds))
+                _buildingBounds.Add(building, bounds = BuildingBounds(building));
+            return bounds;
         }
 
         public Vector2 Project(Vector3 world)
@@ -259,16 +294,22 @@ namespace PCShopSell.Game.UI
             return new Vector2(v.x * Width, (1 - v.y) * Height);
         }
 
-        public void ZoomBy(float factor) { _state.Zoom = Mathf.Clamp(_state.Zoom * factor, 1, 8f); RenderMap(); }
-        public void ResetView() { _state.Zoom = 1; _state.Offset = Vector2.zero; RenderMap(); }
+        public void ZoomBy(float factor)
+        {
+            float zoom = Mathf.Clamp(_state.Zoom * factor, 1, 8f);
+            if (Mathf.Approximately(_state.Zoom, zoom)) return;
+            _state.Zoom = zoom;
+            RequestMapRender();
+        }
+        public void ResetView() { _state.Zoom = 1; _state.Offset = Vector2.zero; RequestMapRender(); }
         public void Focus(Place p)
         {
             Vector3 at = _game.World.Places.TryGetValue(p.Id, out var place) ? place.Entrance : _game.World.NodeWorld(p.NodeId);
             float size = _game.World.Places.TryGetValue(p.Id, out var visual)
-                ? Mathf.Max(14, Mathf.Max(BuildingBounds(visual).size.x, BuildingBounds(visual).size.z) * 1.3f) : 18;
+                ? Mathf.Max(14, Mathf.Max(BoundsOf(visual).size.x, BoundsOf(visual).size.z) * 1.3f) : 18;
             _state.Zoom = Mathf.Clamp(_overviewSize / size, 1, 8);
             _state.Offset = new Vector2(at.x - _overview.x, at.z - _overview.z);
-            RenderMap();
+            RequestMapRender();
         }
 
         private Vector2 ViewportPoint(Vector2 screen, Camera eventCamera)
@@ -306,7 +347,7 @@ namespace PCShopSell.Game.UI
             Vector3 delta = GroundPoint(_previousPointer, e.pressEventCamera) - GroundPoint(e.position, e.pressEventCamera);
             _state.Offset += new Vector2(delta.x, delta.z);
             _previousPointer = e.position;
-            RenderMap();
+            RequestMapRender();
         }
         public void OnEndDrag(PointerEventData e) { }
         public void OnScroll(PointerEventData e) => ZoomBy(Mathf.Pow(1.18f, e.scrollDelta.y));
@@ -317,6 +358,9 @@ namespace PCShopSell.Game.UI
 
         private void ReleasePreview()
         {
+            _renderFrame = -1;
+            _notifyAfterRender = false;
+            _buildingBounds.Clear();
             if (_pedestrianOverlay != null)
             {
                 _pedestrianOverlay.SetActive(false);

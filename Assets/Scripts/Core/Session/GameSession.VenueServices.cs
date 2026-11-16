@@ -146,7 +146,8 @@ namespace PCShopSell.Core.Session
             if (def.Id.StartsWith("expo_") && !CityExpoDay(Clock.Now.TotalMinutes, (def.LogicalId ?? def.Id) == "expo_comic")) return "本场展会尚未开放";
             if (OnsiteActivityAt(CurrentPlace, activityId) != null) return "请从预约卡片进入现场活动";
             if (definitionId.StartsWith("fishing_premium", StringComparison.Ordinal) && !matchingPass)
-                return "请选择钓场的垂钓时长";
+                return "请选择钓场的抛竿次数";
+            if (definitionId == "fishing_pass_16h" && !matchingPass) return "请选择钓场在售的抛竿次数";
             if (CityLifeCatalog.Activity(booking?.DefinitionId)?.EventOnly == true && definitionId != booking.DefinitionId)
                 return "本次为已约定的专属活动，请按原日程参加";
             Money cost = CityActivityEntryPrice(def, choice, booking);
@@ -157,7 +158,7 @@ namespace PCShopSell.Core.Session
                 if(VenueOperation(CurrentPlace.Id).CustomersHere.Length+1+(booking?.Participants.Length??0)>VenueCapacity(CurrentPlace))return "场地容量已满，请等待顾客结束后再使用";
             }
             if (booking == null) return CityActivityBlocker(definitionId, Array.Empty<string>(), Clock.Now.TotalMinutes);
-            if (reservedPass && !matchingPass) return "请按已预约的时长开始";
+            if (reservedPass && !matchingPass) return "请按已预约的项目开始";
             if (booking.Duration != duration) return "请选择与本次日程时长一致的服务";
             if (booking.Participants.Any(p => p.Phase != CityParticipantPhase.Waiting && p.Phase != CityParticipantPhase.Participating)) return "同行者还未到齐，稍等一下";
             return null;
@@ -209,12 +210,14 @@ namespace PCShopSell.Core.Session
             booking.ServiceConfirmed = true;
             PrepareVenueCompanions(CurrentPlace);
             TickCityActivities(Clock.Now.TotalMinutes, IsInteractiveFishingActivity(booking) ? booking.Id : null);
-            if (!UsesManualVenuePass(booking))
+            if (def.Id == "hike")
+                Say("已选择" + VenueServiceName(def, choice) + "，免费散步。");
+            else if (!UsesManualVenuePass(booking))
                 Say("已选择" + VenueServiceName(def, choice) + (booking.HostPays ? "，由邀请人请客。"
                     : "，费用 " + VenuePlayerPrice(def, choice) + (IsOwnedVenue(CurrentPlace)?"（老板自用，不计营业收入）":"") + "。"));
             return true;
         }
 
-        public static bool UsesManualVenuePass(CityActivity activity) => IsInteractiveFishingActivity(activity) || IsTimedVenueSport(activity);
+        public static bool UsesManualVenuePass(CityActivity activity) => IsInteractiveFishingActivity(activity) || IsVenueSport(activity);
     }
 }

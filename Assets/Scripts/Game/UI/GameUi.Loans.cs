@@ -54,6 +54,8 @@ namespace PCShopSell.Game.UI
                 _loanReminderHud.gameObject.SetActive(visible);
 
             Vector2 schedulePosition = UpcomingScheduleRestPosition;
+            if (_homeDockToggle.gameObject.activeSelf)
+                schedulePosition = new Vector2(HomeDockOpen ? -(HomeDockWidth + 10) : schedulePosition.x, -120);
             if (visible)
             {
                 Vector2 position = schedulePosition;

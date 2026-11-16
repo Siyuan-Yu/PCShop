@@ -372,6 +372,8 @@ namespace PCShopSell.Core.Session
         public SaveBatch[] packed;
         public SaveBatch[] packLunch;
         public SaveCourier[] couriers;
+        public FurnitureBuybackOrder[] furnitureBuybacks;
+        public long nextFurnitureBuybackId;
         public bool sendByCourier;
         public int renovationDay;
         public SaveBatch[] cooking;

@@ -19,7 +19,7 @@ namespace PCShopSell.Game.UI
                 {
                     string id=key;var progress=S.CityStory(id);
                     string label=id=="supply"?"供应与履约":id=="creator"?"员工与创作":id=="property"?"商铺与街坊":"个人相处（可选）";
-                    Ui.Size(Ui.Button(tabs,label,()=>{selected=id;w.Rebuild();},17,selected==id?Ui.ButtonHot:Ui.ButtonBg),-1,42,1);
+                    Ui.Size(Ui.Button(tabs,label,()=>{selected=id;w.Rebuild();},17,Ui.SelectedButton(selected==id)),-1,42,1);
                 }
                 var story=S.CityStory(selected);if(story==null)return;
                 Line(w.Content,GameSession.CityStoryTitle(selected),25,Ui.Accent);

@@ -88,8 +88,15 @@ namespace PCShopSell.Tests
             {
                 s.RefreshEnterpriseOffer();var c=s.EnterpriseContracts.Single();var before=s.Ledger.Balance;
                 Assert.True(s.AcceptEnterprise(c.Id)); Assert.False(s.AcceptEnterprise(c.Id));
+                Assert.AreEqual(s.Clock.Now.TotalMinutes + (c.Count + 4) * GameTimestamp.MinutesPerDay, c.DueMinute);
                 foreach(var p in PartCatalog.BuildList(c.Tier)) s.PlayerShop.Stock.ForceAdd(p,true,c.Count);
-                foreach(var o in s.PlayerShop.Orders.ToArray()) Assert.True(s.PlayerShop.CompleteBuild(o.Id));
+                double reputation = s.PlayerShop.Reputation;
+                var orders = s.PlayerShop.Orders.ToArray();
+                Assert.True(orders.All(order => order.DueAt.TotalMinutes == c.DueMinute));
+                foreach (var order in orders.Take(orders.Length - 1)) Assert.True(s.PlayerShop.CompleteBuild(order.Id));
+                Assert.AreEqual(reputation, s.PlayerShop.Reputation);
+                Assert.True(s.PlayerShop.CompleteBuild(orders.Last().Id));
+                Assert.AreEqual(reputation + .4, s.PlayerShop.Reputation, 1e-9);
                 Assert.True(c.Settled);Assert.AreEqual(c.Count,c.Completed);
                 Assert.AreEqual(before+c.Total+c.Total.Scale(.03),s.Ledger.Balance);
                 Assert.Zero(s.ContractDeposits.Cents);

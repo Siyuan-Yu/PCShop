@@ -38,7 +38,7 @@ namespace PCShopSell.Game.UI
             if (exhibit == null)
             {
                 bool bookingOpen = S.Clock.Today.TotalDays <= day - 7;
-                Ui.Size(Ui.Button(body, "报名参展 · 选择摊位、展品与KOL", () => { _expoPage = "booking"; w.Rebuild(); }, 18, Ui.ButtonHot, bookingOpen), -1, 44);
+                Ui.Size(Ui.Button(body, "报名参展 · 选择摊位、展品与KOL", () => { _expoPage = "booking"; w.Rebuild(); }, 18, Ui.ButtonBg, bookingOpen), -1, 44);
                 if (!bookingOpen) Para(body, "本届报名已截止，可以到会展中心参观，下一季度再报名。", 17);
                 var latest = state.Exhibits.Where(e => e.BrandId == brand.Id).OrderByDescending(e => e.Day).FirstOrDefault();
                 if (latest != null) BuildExpoResult(body, latest);
@@ -89,7 +89,7 @@ namespace PCShopSell.Game.UI
                 Line(body, "摊位已付 ¥" + GameSession.ExpoBoothFee(e.Booth).ToString("N0")
                     + " · 4天KOL总日酬约 ¥" + (e.KolDayQuotes.Sum() * 4).ToString("N0"), 16, Ui.Dim);
                 if (e.Attending)
-                    Ui.Size(Ui.Button(body, "继续展会现场", () => { CloseAllWindows(); OpenQuarterlyExpo(e.Id); }, 18, Ui.ButtonHot), -1, 42);
+                    Ui.Size(Ui.Button(body, "继续展会现场", () => { CloseAllWindows(); OpenQuarterlyExpo(e.Id); }, 18, Ui.ButtonBg), -1, 42);
                 else
                 {
                     string blocker = S.ExpoStartBlocker(e.Id);
@@ -157,7 +157,7 @@ namespace PCShopSell.Game.UI
                     if (why != null) Line(info, why, 15, Ui.Dim);
                     Ui.Size(Ui.Button(info, "委托制作…", () => ConfirmBusiness("委托海报",
                         S.CityPerson(id).Name + "制作24小时，支付¥" + GameSession.ExpoPosterFee(e.Booth) + "。", () =>
-                        { if (S.CommissionExpoPoster(e.Id, id)) _expoPage = "overview"; w.Rebuild(); }), 17, Ui.ButtonHot, why == null), -1, 34);
+                        { if (S.CommissionExpoPoster(e.Id, id)) _expoPage = "overview"; w.Rebuild(); }), 17, Ui.ButtonBg, why == null), -1, 34);
                 }
             }
             else if (_expoPage == "people")

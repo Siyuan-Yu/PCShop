@@ -51,7 +51,7 @@ namespace PCShopSell.Core.Session
             if (_priceDays.Any(p => p.Day == day)) return;
             var prices = PartCatalog.Categories.Select(c => PartCatalog.All.Where(p => p.Category == c)
                 .Average(p => (double)Market.PriceOf(p).Cents)).ToList();
-            prices.Add(Ingredients.All.Select(i => (double)i.Price.Cents).Concat(new[] { (double)Pantry.RicePricePerKg.Cents }).Average());
+            prices.Add(Ingredients.All.Where(i => !FishingCatalog.RequiresCatch(i.Id)).Select(i => (double)i.Price.Cents).Append(Pantry.RicePricePerKg.Cents).Average());
             prices.Add(Gifts.All.Average(g => (double)g.Price.Cents));
             prices.Add(FurnitureCatalog.All.Where(f => !f.Starter).Average(f => (double)f.Price.Cents));
             prices.Add(FastFoodCatalog.All.Average(f => (double)f.Price.Cents));
@@ -64,7 +64,7 @@ namespace PCShopSell.Core.Session
             if (EconomicReportAutomatic && _priceDays.Count > 1 && elapsed > 0 && elapsed % EconomicReportPeriodDays == 0)
             {
                 EconomicReportPending = true;
-                Notice?.Invoke("新一期经济简报已出，可在“行情 → 经济简报”查看收支结算与物价涨跌。");
+                Notice?.Invoke("新一期经济简报已出，可在“物价 → 经济简报”查看收支结算与物价涨跌。");
             }
         }
 

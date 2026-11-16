@@ -214,9 +214,9 @@ namespace PCShopSell.Core.Session
                 new CityVenueService(150, "先练站姿和挥杆节奏，熟悉球杆。", energy: -5, mood: 6, health: 1, intelligence: 1, relation: 5),
                 new CityVenueService(220, "轮流击球，观察对方的落点和节奏。", energy: -8, mood: 8, health: 2, charm: 1, relation: 9)),
             FishingPass(FishingCatalog.Passes[0]),
-            WithServices(A("hike","青湾郊游","life_hike",90,35,0,-8,7,"选择步道","走到观景平台，交流沿途见闻。","从步道回到入口，自己选择下一站。","轻松路线","观景平台","聊生活","分享经历"),
-                new CityVenueService(35, "沿平缓步道散步，边走边聊，体力消耗较低。", energy: -5, mood: 9, health: 2, relation: 8),
-                new CityVenueService(35, "走得更远，到观景平台看湖，运动量更大。", energy: -12, mood: 14, health: 4, relation: 6)),
+            WithServices(A("hike","青湾郊游","life_hike",90,0,0,-8,7,"选择步道","走到观景平台，看看沿途风景。","从步道回到入口，自己选择下一站。","轻松路线","观景平台","聊生活","分享经历"),
+                new CityVenueService(0, "沿平缓步道散步，体力消耗较低。", energy: -5, mood: 9, health: 2, relation: 8),
+                new CityVenueService(0, "走得更远，到观景平台看湖，运动量更大。", energy: -12, mood: 14, health: 4, relation: 6)),
             A("market","市场走访","stall_cpu",60,0,0,-3,5,"约在电子市场门口","实际走访档口，交换供货信息。","结束走访，不自动购买商品。","看新品","比较供货条件","聊经营","聊行业消息"),
             A("old_market","旧物闲逛","stall_cpu",60,0,0,-3,5,"相约旧电子档口","慢慢看旧收音机和老唱片，听彼此讲旧事。","结束闲逛，各自选择下一站。","看旧收音机","聊评书","找老唱片","听旧设备故事"),
             A("oldmarket_visit","青湾旧物市场闲逛",GameSession.OldMarketVenueId,60,0,0,-3,5,"相约青湾旧物市场","看钟表、旧电子、唱片和收藏杂货；实物购买与修理另行选择。","结束闲逛，各自选择下一站。","看钟表","聊老物件","找唱片","听旧设备故事"),
@@ -265,10 +265,11 @@ namespace PCShopSell.Core.Session
         private static CityActivityDefinition FishingPass((string Id, int Hours, int Price) pass) => new CityActivityDefinition
         {
             Id = pass.Id, LogicalId = pass.Id == "fishing" ? null : "fishing",
-            Name = $"青湾垂钓 · {pass.Hours} 小时", VenueId = GameSession.FishingVenueId, Minutes = pass.Hours * 60,
-            Choices = new[] { $"垂钓 {pass.Hours} 小时" }, ServiceOptionCount = 1,
+            Name = $"青湾垂钓 · {ManualPlayAttempts(pass.Hours * 60)} 次", VenueId = GameSession.FishingVenueId, Minutes = pass.Hours * 60,
+            EventOnly = pass.Hours > 8,
+            Choices = new[] { $"抛竿 {ManualPlayAttempts(pass.Hours * 60)} 次" }, ServiceOptionCount = 1,
             DefaultService = new CityVenueService(pass.Price, relation: 5),
-            StartText = "选钓位和鱼饵，手动抛竿", MidText = "手动抛竿和收鱼", EndText = "本场垂钓时间已用完"
+            StartText = "选钓位和鱼饵，手动抛竿", MidText = "手动抛竿和收鱼", EndText = "本场垂钓已完成"
         };
         public static CityActivityDefinition Activity(string id) => Activities.FirstOrDefault(a=>a.Id==id);
         private static List<CityPersonDefinition> BuildPeople()

@@ -32,23 +32,25 @@ namespace PCShopSell.Game.UI
                 int selected = i;
                 string label = MotorCatalog.ClassName(i) + (counts == null ? "" : $" · {counts[i]}");
                 Ui.Size(Ui.Button(row, label, () => choose(selected), 19,
-                    category == i ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1).name = "MotorClass_" + i;
+                    Ui.SelectedButton(category == i)), -1, 40, 1).name = "MotorClass_" + i;
             }
         }
         private void BuildDealerMotorTabs(Transform parent,int category,Action<int> choose)
         {
             var row=Ui.Row(parent,40,8);
-            for(int i=0;i<4;i++){int choice=i;Ui.Size(Ui.Button(row,MotorCatalog.DealerClassName(i),()=>choose(choice),19,category==i?Ui.ButtonHot:Ui.ButtonBg),-1,40,1);}
+            for(int i=0;i<4;i++){int choice=i;Ui.Size(Ui.Button(row,MotorCatalog.DealerClassName(i),()=>choose(choice),19,Ui.SelectedButton(category==i)),-1,40,1);}
         }
 
         private void BuildRegionalGarage(Window w, Place p)
         {
             var garage = RegionalGarages.Get(p.Id);
-            if (p.Id == GameSession.StarterRaceGarageId && S.RacingEnrollmentAvailable)
+            if (S.RacingGarageRegistrationOnly(p.Id))
             {
-                if (S.RacingUnlocked) BuildRacingIntroduction(w, compact: true);
-                else BuildGarageRacingEnrollment(w);
+                BuildGarageRacingEnrollment(w);
+                return;
             }
+            if (p.Id == GameSession.StarterRaceGarageId && S.RacingEnrollmentAvailable)
+                BuildRacingIntroduction(w, compact: true);
 
             var columns = Ui.Row(w.Content, -1, 14);
             columns.GetComponent<LayoutElement>().flexibleHeight = 1;
@@ -230,7 +232,7 @@ namespace PCShopSell.Game.UI
             {
                 var source = g; int count = all.Count(v => !v.Commuter && v.GarageId == source.Id && MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind) == category);
                 Ui.Size(Ui.Button(row, GameSession.DistrictName(source.Tier) + " · " + count + "辆",
-                    () => { _motorTransferSources[context] = source.Id; w.Rebuild(); }, 17, source.Id == sourceId ? Ui.ButtonHot : Ui.ButtonBg), -1, 38, 1);
+                    () => { _motorTransferSources[context] = source.Id; w.Rebuild(); }, 17, Ui.SelectedButton(source.Id == sourceId)), -1, 38, 1);
             }
             var vehicles = all.Where(v => !v.Commuter && v.GarageId == sourceId && MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind) == category).ToArray();
             foreach (var v in vehicles)
@@ -272,8 +274,8 @@ namespace PCShopSell.Game.UI
                 MotorIdentity(w.Content, model.Id, model.Name, withdraw ? "从二手车行展位转出" : "¥" + model.Price.ToString("N0"));
                 var current = S.CommuteMotor(model.Kind);
                 var purpose = Ui.Row(w.Content, 42, 8);
-                Ui.Size(Ui.Button(purpose, "用于通勤", () => { forCommute = true; w.Rebuild(); }, 18, forCommute ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
-                Ui.Size(Ui.Button(purpose, "停入车库", () => { forCommute = false; w.Rebuild(); }, 18, !forCommute ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
+                Ui.Size(Ui.Button(purpose, "用于通勤", () => { forCommute = true; w.Rebuild(); }, 18, Ui.SelectedButton(forCommute)), -1, 42, 1);
+                Ui.Size(Ui.Button(purpose, "停入车库", () => { forCommute = false; w.Rebuild(); }, 18, Ui.SelectedButton(!forCommute)), -1, 42, 1);
                 bool needsSpace = !forCommute || current != null;
                 if (forCommute)
                     Para(w.Content, current == null ? "设为" + Vehicles.Get(model.Kind).Name + "通勤车，免车库车位。通勤车不能比赛或练习。"
@@ -286,7 +288,7 @@ namespace PCShopSell.Game.UI
                     {
                         var target = g; var lease = S.GarageLease(g.Id); bool accessible = S.DistrictAccessTier >= g.Tier;
                         Ui.Size(Ui.Button(w.Content, g.Name + (lease == null ? " · 未持有车位" : " · 空余 " + S.GarageFreeSpaces(g.Id) + " / "+lease.Capacity+"位"),
-                            () => { garageId = target.Id; w.Rebuild(); }, 17, garageId == g.Id ? Ui.ButtonHot : Ui.ButtonBg,
+                            () => { garageId = target.Id; w.Rebuild(); }, 17, Ui.SelectedButton(garageId == g.Id),
                             lease != null && accessible), -1, 39);
                     }
                 }
@@ -313,7 +315,7 @@ namespace PCShopSell.Game.UI
             {
                 var target = g;
                 Ui.Size(Ui.Button(region, GameSession.DistrictName(g.Tier), () => { _assetMotorRegion = target.Tier; w.Rebuild(); }, 19,
-                    _assetMotorRegion == g.Tier ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1);
+                    Ui.SelectedButton(_assetMotorRegion == g.Tier)), -1, 40, 1);
             }
             BuildMotorClassTabs(w.Content, _assetMotorClass, c => { _assetMotorClass = c; w.Rebuild(); });
             var garage = RegionalGarages.All[_assetMotorRegion]; var lease = S.GarageLease(garage.Id); var all = S.Garage;

@@ -74,7 +74,7 @@ namespace PCShopSell.Game.UI
         private void BuildShortcutButton(Transform parent,string label,int kind,float width)
         {
             var group=Ui.Row(parent,42,1);group.name="Shortcut_"+kind;Ui.Size(group,width+27,42);
-            var main=Ui.Button(group,label,()=>TravelShortcut(kind),17,kind==0?Ui.ButtonHot:Ui.ButtonBg);
+            var main=Ui.Button(group,label,()=>TravelShortcut(kind),17);
             main.name="ShortcutGo_"+kind;Ui.Size(main,width,42);
             var caption=main.GetComponentInChildren<Text>();
             caption.horizontalOverflow=HorizontalWrapMode.Wrap;

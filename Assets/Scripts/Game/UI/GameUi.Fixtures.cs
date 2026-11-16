@@ -162,7 +162,7 @@ namespace PCShopSell.Game.UI
                 string id=item.Key;var def=FurnitureCatalog.Get(id);
                 var row=Ui.Row(C,56,8);row.name="RenovationItem_"+id;
                 Ui.Size(Ui.Label(row,def.Name+" ×"+item.Value,18),-1,-1,1);
-                Ui.Size(Ui.Button(row,"摆放",()=>StartPlacement(true,id),18,Ui.ButtonHot),88,-1);
+                Ui.Size(Ui.Button(row,"摆放",()=>StartPlacement(true,id),18,Ui.ButtonBg),88,-1);
             }
         }
 

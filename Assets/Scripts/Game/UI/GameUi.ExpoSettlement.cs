@@ -66,12 +66,12 @@ namespace PCShopSell.Game.UI
                     Line(body, "获得采购订单 · 需另备货交付", 20, Ui.Good);
                     foreach (var order in orders)
                         Line(body, S.BrandProductName(order.ProductId) + " ×" + order.Count + " · 截止 " + new GameDate(order.Due), 17);
-                    Ui.Size(Ui.Button(body, "查看本届采购订单", () => { w.Close(); OpenExpoOrders(id); }, 18, Ui.ButtonHot), -1, 42);
+                    Ui.Size(Ui.Button(body, "查看本届采购订单", () => { w.Close(); OpenExpoOrders(id); }, 18, Ui.ButtonBg), -1, 42);
                 }
                 var actions = Ui.Row(w.Content, 44, 10);
                 Ui.Size(Ui.Button(actions, "关闭结算", w.Close, 18), -1, 44, 1);
                 if (S.CurrentPlace?.Id == "life_expo")
-                    Ui.Size(Ui.Button(actions, "离开展馆", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18, Ui.ButtonHot), -1, 44, 1);
+                    Ui.Size(Ui.Button(actions, "离开展馆", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18, Ui.ButtonBg), -1, 44, 1);
             });
         }
 

@@ -1,22 +1,55 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using PCShopSell.Core.Session;
 
 namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
         private RectTransform _hudTopRow;
+        private LayoutElement _hudShortcutsSize;
+        private Button _brandButton;
         private float _fittedHudWidth;
-        private bool _fittedHudHasBrand;
+
+        private void BuildHudShortcuts(Transform parent)
+        {
+            const float gap = 3;
+            var shortcuts = Ui.Size(Ui.Row(parent, 48, gap), 700, -1, 0);
+            shortcuts.name = "HudShortcuts";
+            _hudShortcutsSize = shortcuts.GetComponent<LayoutElement>();
+
+            var rows = Ui.Size(Ui.Rect(shortcuts, "HudShortcutRows"), 0, -1, 1);
+            Ui.VList(rows, gap, 0, expandHeight: true);
+            var daily = Ui.Row(rows, 0, gap);
+            daily.name = "HudDailyShortcuts";
+            var business = Ui.Row(rows, 0, gap);
+            business.name = "HudBusinessShortcuts";
+
+            HudPanelButton(daily, "我的", KeyCode.M, OpenMyPanel, "身体状况、住处、饮食与人物关系。", bg: Ui.SelectedButton(true));
+            HudPanelButton(daily, "背包", KeyCode.B, ToggleBackpack, "身上带的货和负重；在家或店里一键全放下。");
+            HudPanelButton(daily, "手机", KeyCode.P, OpenPhone, "通讯录与智能手机应用。");
+            HudPanelButton(daily, "任务", KeyCode.T, OpenQuests, "当前任务与待办；左上角的任务条收起后可从这里再打开。");
+            HudPanelButton(daily, "日程", KeyCode.C, OpenSchedulePanel, "按天查看已经安排的事项。").name = "HudCalendar";
+            _noticeButtonText = HudPanelButton(daily, "通知", NoticeHotkey, OpenNoticeHistory, "查看本次会话的通知记录。").GetComponentInChildren<Text>();
+
+            HudPanelButton(business, "员工", KeyCode.U, OpenEmployeesPanel, "各门店的员工、岗位与排班。").name = "HudEmployees";
+            HudPanelButton(business, "资产", KeyCode.J, OpenBusinessPanel, "门店收支、物业与车辆。").name = "HudAssets";
+            HudPanelButton(business, "采购", KeyCode.G, OpenCityProcurement, "商铺采购、补货目标、在途订单与直供协议。").name = "HudProcurement";
+            HudPanelButton(business, "物价", KeyCode.H, OpenMarketPanel, "查看品类价格指数、近期走势和经济简报。").name = "HudPrices";
+            _brandButton = HudPanelButton(business, "品牌", KeyCode.L, OpenBrandOverview, "品牌、展会、代言人与直播。");
+            _brandButton.name = "HudBrand";
+            if (!GameSession.FirstChapterTrial)
+                HudPanelButton(business, "赛车", KeyCode.R, OpenRacingDestinations, "赛场开放条件、入门路线与比赛安排。").name = "HudRacing";
+
+            Ui.Size(HudPanelButton(shortcuts, "菜单", KeyCode.Escape, OpenSystemPanel, "存档、读档、重新开始和音效设置。"), 54, -1, 0).name = "HudMenu";
+        }
 
         private void FitHudTopRow()
         {
             float availableWidth = ((RectTransform)_hudTopRow.parent).rect.width;
-            bool hasBrand = _brandButton.gameObject.activeSelf;
-            if (availableWidth <= 0 || (Mathf.Approximately(availableWidth, _fittedHudWidth) && hasBrand == _fittedHudHasBrand)) return;
+            if (availableWidth <= 0 || Mathf.Approximately(availableWidth, _fittedHudWidth)) return;
             _fittedHudWidth = availableWidth;
-            _fittedHudHasBrand = hasBrand;
+            _hudShortcutsSize.preferredWidth = Mathf.Max(700, availableWidth * .364f);
 
             var layout = _hudTopRow.GetComponent<HorizontalLayoutGroup>();
             float preferredWidth = layout.padding.horizontal;
@@ -33,61 +66,5 @@ namespace PCShopSell.Game.UI
             _hudTopRow.localScale = Vector3.one * (availableWidth / rowWidth);
         }
 
-        /// <summary>弹出 / 窗口里的页签条：整行撑满的金色大按钮 → 固定宽度的二级页签（选中浅蓝底加金字）。</summary>
-        internal static class TabStrips
-        {
-            private sealed class Done : MonoBehaviour { }
-
-            private static bool IsHot(Color c) =>
-                Mathf.Abs(c.r - Ui.ButtonHot.r) + Mathf.Abs(c.g - Ui.ButtonHot.g) + Mathf.Abs(c.b - Ui.ButtonHot.b) < .03f;
-
-            public static void Restyle(Transform content)
-            {
-                if (content == null) return;
-                foreach (var row in content.GetComponentsInChildren<HorizontalLayoutGroup>(true))
-                {
-                    if (row.GetComponent<Done>() != null || row.name == "DialogueOptionRow") continue;
-                    var buttons = new List<Button>();
-                    bool onlyButtons = true;
-                    foreach (Transform child in row.transform)
-                    {
-                        var button = child.GetComponent<Button>();
-                        if (button == null) { onlyButtons = false; break; }
-                        buttons.Add(button);
-                    }
-                    if (!onlyButtons || buttons.Count < 3 || buttons.Count > 6) continue;
-                    var rowSize = row.GetComponent<LayoutElement>();
-                    if (rowSize != null && rowSize.preferredHeight > 48) continue;
-
-                    int selected = -1, hot = 0; bool ok = true;
-                    for (int i = 0; i < buttons.Count && ok; i++)
-                    {
-                        var b = buttons[i]; var text = b.GetComponentInChildren<Text>();
-                        var size = b.GetComponent<LayoutElement>();
-                        if (b.image == null || text == null || size == null || size.flexibleWidth <= 0 || text.text.Length > 8 || text.text.Length == 0) { ok = false; break; }
-                        if (b.name.StartsWith("Shortcut")) { ok = false; break; }
-                        if (IsHot(b.image.color)) { hot++; selected = i; }
-                    }
-                    if (!ok || hot != 1) continue;
-
-                    row.gameObject.AddComponent<Done>();
-                    row.childForceExpandWidth = false;
-                    for (int i = 0; i < buttons.Count; i++)
-                    {
-                        var b = buttons[i]; var text = b.GetComponentInChildren<Text>(); var size = b.GetComponent<LayoutElement>();
-                        bool on = i == selected;
-                        size.flexibleWidth = 0; size.minWidth = 0;
-                        size.preferredWidth = text.text.Length > 5 ? 150 : 124;
-                        size.preferredHeight = size.minHeight = 34;
-                        b.image.color = on ? Ui.FlatRow : Ui.FlatBand;
-                        text.color = on ? Ui.Accent : Ui.Dim;
-                        text.fontSize = Mathf.Min(text.fontSize, 17);
-                    }
-                    if (rowSize != null) rowSize.preferredHeight = rowSize.minHeight = 36;
-                    var spacer = Ui.Rect(row.transform, "TabStripSpacer");
-                    var spacerSize = spacer.gameObject.AddComponent<LayoutElement>(); spacerSize.flexibleWidth = 1; spacerSize.minWidth = 0;
-                }
-            }
-        }
     }
 }

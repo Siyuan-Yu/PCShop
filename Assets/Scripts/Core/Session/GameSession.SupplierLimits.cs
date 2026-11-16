@@ -151,22 +151,22 @@ namespace PCShopSell.Core.Session
         private int EmployeeSupplyAvailable(string employeeId,PurchaseOffer offer,int day)=>Math.Max(0,PurchaseRemaining(offer)-OtherSupplierReservations(employeeId,offer,day%7,day));
         private void LoadWeeklySupplierPlans()
         {
-            bool UsesFormerCounter(PurchaseLine line, EmployeePurchasePlan plan)
+            bool NeedsPurchaseMigration(PurchaseLine line, EmployeePurchasePlan plan)
             {
                 string source = line.SourceId ?? plan.SourceId;
-                return line.Kind == PurchaseGoodsKind.Part && City.HasPlace(source)
-                    && PurchaseDestinationId(source) != source;
+                return IsFormerFarmRetailLine(line, source) || (line.Kind == PurchaseGoodsKind.Part && City.HasPlace(source)
+                    && PurchaseDestinationId(source) != source);
             }
             var buyers=Employees.Where(e=>e.Role==EmployeeRole.Buyer&&e.Person.PurchasePlan!=null).ToArray();
             foreach(var buyer in buyers.Where(e=>!e.Person.PurchasePlan.Daily))
             {
                 var plan=buyer.Person.PurchasePlan;
-                if((plan.Items??Array.Empty<PurchaseLine>()).Any(i=>i!=null&&UsesFormerCounter(i,plan)))
+                if((plan.Items??Array.Empty<PurchaseLine>()).Any(i=>i!=null&&NeedsPurchaseMigration(i,plan)))
                     PrepareEmployeePurchaseDraft(plan);
             }
             var legacy=buyers.Where(e=>e.Person.PurchasePlan.Daily&&
                 (e.Person.PurchasePlan.Items??Array.Empty<PurchaseLine>()).Any(i=>i!=null&&
-                    (i.ReservedByWeekday==null||i.ReservedByWeekday.Length!=7||UsesFormerCounter(i,e.Person.PurchasePlan))))
+                    (i.ReservedByWeekday==null||i.ReservedByWeekday.Length!=7||NeedsPurchaseMigration(i,e.Person.PurchasePlan))))
                 .OrderBy(e=>e.Shop.Place.Id,StringComparer.Ordinal).ThenBy(e=>e.Person.Id,StringComparer.Ordinal).ToArray();
             foreach(var worker in legacy)worker.Person.PurchasePlan.Daily=false;
             foreach(var worker in legacy)

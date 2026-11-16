@@ -19,10 +19,31 @@ namespace PCShopSell.Core.Session
             food.Any(b => b.Count > 0 && FastFoodCatalog.Packed(b.Id)?.Drink != true);
         private bool HasFridgeMeal => CanOpenFridge && HasMeal(CurrentFridge.Food.Packed);
 
-        public static string MealName(string id) => FastFoodCatalog.Packed(id)?.Name ?? Ingredients.Get(id)?.DishName ?? "白米饭";
-        public static double MealNutrition(string id) => FastFoodCatalog.Packed(id)?.Nutrition ?? (id == "rice" ? -5 : id == "pork" ? 5 : id == "egg" ? 3 : id == "tofu" ? 2 : FishingCatalog.Get(id) != null ? 4 : 0);
+        private static string MealBaseId(string id, out FishDefinition fish)
+        {
+            int split = id?.IndexOf('+') ?? -1;
+            fish = split < 0 ? null : FishingCatalog.Get(id.Substring(split + 1));
+            return fish == null ? id : id.Substring(0, split);
+        }
+        public static string MealName(string id)
+        {
+            string baseId = MealBaseId(id, out var fish);
+            string name = FastFoodCatalog.Packed(baseId)?.Name ?? Ingredients.Get(baseId)?.DishName ?? "白米饭";
+            return fish == null ? name : name + " + " + fish.Name;
+        }
+        public static double MealNutrition(string id)
+        {
+            string baseId = MealBaseId(id, out var fish);
+            double nutrition = FastFoodCatalog.Packed(baseId)?.Nutrition ?? (baseId == "rice" ? -5
+                : baseId == "pork" ? 5 : baseId == "egg" ? 3 : baseId == "tofu" ? 2 : FishingCatalog.Get(baseId) != null ? 4 : 0);
+            return nutrition + (fish?.MealNutritionBonus ?? 0);
+        }
         public static string SignedDiet(double value) => value > 0 ? "+" + value.ToString("0.#") : value.ToString("0.#");
-        public static double MealMood(string id) => FastFoodCatalog.Packed(id)?.Mood ?? 0;
+        public static double MealMood(string id)
+        {
+            string baseId = MealBaseId(id, out var fish);
+            return (FastFoodCatalog.Packed(baseId)?.Mood ?? 0) + (fish?.MealMoodBonus ?? 0);
+        }
         public static string MealEffects(string id) => "营养 " + SignedDiet(MealNutrition(id)) + " · 心情 " + SignedDiet(MealMood(id));
         private void ApplyDiet(double nutrition, double mood)
         {
@@ -48,6 +69,9 @@ namespace PCShopSell.Core.Session
         private static bool FridgeKey(string key) => key == "rice" || key == "lunch" || key.StartsWith("lunch:") || key.StartsWith("ing:")
             || (key.StartsWith("gift:") && Gifts.Get(key.Substring(5)) != null && !Gifts.IsCigarette(key.Substring(5)));
 
+        public bool FridgeAcceptsFood(string key) => !string.IsNullOrEmpty(key) && FridgeKey(key)
+            && !(InPlayerShop && RestaurantIngredientsOnly(_focus) && (key == "rice" || key == "gift:produce:rice"));
+
         // Keep legacy chilled metadata, but refrigeration no longer grants a one-time expiry bonus.
         private static void Chill(Backpack bag)
         {
@@ -59,6 +83,7 @@ namespace PCShopSell.Core.Session
         {
             if (!CanOpenFridge) return Fail("要在摆有冰箱的家或自己的店里存取食物。");
             if (string.IsNullOrEmpty(key) || !FridgeKey(key) || count <= 0) return Fail("冰箱只放食物和饮料。");
+            if (intoFridge && !FridgeAcceptsFood(key)) return Fail("餐馆的大米存放在门店后仓。");
             var sk = ParseStored(key);
             if (sk == null) return false;
             var from = intoFridge ? Backpack : CurrentFridge;

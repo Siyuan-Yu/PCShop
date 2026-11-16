@@ -42,8 +42,8 @@ namespace PCShopSell.Game.UI
                 for (int i = 0; i < 3; i++)
                 {
                     int choice = i;
-                    Ui.Size(Ui.Button(tabs, new[]{"门店","物业","车产"}[i], () => { _assetPage = choice; w.Rebuild(); }, 20,
-                        _assetPage == i ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1).name = "AssetPage_" + i;
+                    Ui.Tab(tabs, new[]{"门店","物业","车产"}[i], () => { _assetPage = choice; w.Rebuild(); },
+                        _assetPage == i).name = "AssetPage_" + i;
                 }
                 if (_assetPage == 0) BuildAssetStores(w); else if(_assetPage==1) BuildAssetProperties(w);else BuildAssetVehicles(w);
             });
@@ -74,7 +74,7 @@ namespace PCShopSell.Game.UI
                     parent = row;
                 }
                 var button = Ui.Size(Ui.Button(parent, (toggle == null ? new string(' ', indent) : "") + title, () =>
-                    { _assetStreet = street; _assetKind = kind; _assetStoreId = id; w.Rebuild(); }, 16, active ? Ui.ButtonHot : Ui.PanelBg2), -1, id == null ? 35 : 43);
+                    { _assetStreet = street; _assetKind = kind; _assetStoreId = id; w.Rebuild(); }, 16, Ui.SelectedButton(active)), -1, id == null ? 35 : 43);
                 if(toggle!=null)Ui.Size(button,-1,-1,1);
                 var text = button.GetComponentInChildren<Text>(); text.alignment = TextAnchor.MiddleLeft; text.rectTransform.Fill(5);
                 button.name = "AssetFilter_" + (id ?? kind ?? street ?? "all");
@@ -129,7 +129,7 @@ namespace PCShopSell.Game.UI
                 var row = Ui.Row(rows, 59, 4);
                 var select = Ui.Size(Ui.Button(row, report.Name + "\n<size=13>" + report.State + "</size>", () =>
                     { _assetStoreId = report.Id; _assetStreet = report.StreetId; _assetKind = report.Kind; w.Rebuild(); }, 17,
-                    _assetStoreId == report.Id ? Ui.ButtonHot : Ui.ButtonBg), -1, 57, 1);
+                    Ui.SelectedButton(_assetStoreId == report.Id)), -1, 57, 1);
                 select.name = "AssetStore_" + report.Id;
                 foreach (var pair in new[] { (report.IncomeCents, Ui.Good), (report.ExpenseCents, (Color)new Color32(233,178,150,255)), (report.IncomeCents-report.ExpenseCents, Ui.Accent) })
                     Ui.Size(Ui.Label(row, Money.FromCents(pair.Item1).ToString(), 17, TextAnchor.MiddleRight, pair.Item2), 127, 55);

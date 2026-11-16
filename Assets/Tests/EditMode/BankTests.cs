@@ -103,7 +103,7 @@ namespace PCShopSell.Tests
         {
             using var s = Make(true);
             GoToBank(s);
-            s.PlayerShop.Reputation = 0;
+            s.PlayerShop.Reputation = 0.9;
             Assert.AreEqual(50000, s.AppLoanAvailableYuan);
             Assert.False(s.BorrowAppLoan(50100, 3, true));
             Assert.True(s.BorrowAppLoan(40000, 3, true));
@@ -111,10 +111,14 @@ namespace PCShopSell.Tests
             Assert.True(s.BorrowAppLoan(10000, 3));
             Assert.AreEqual(0, s.AppLoanAvailableYuan);
             s.PlayerShop.Reputation = 2.5;
-            Assert.AreEqual(60000, s.AppLoanCreditLimitYuan);
-            Assert.AreEqual(10000, s.AppLoanAvailableYuan);
+            Assert.AreEqual(70000, s.AppLoanCreditLimitYuan);
+            Assert.AreEqual(20000, s.AppLoanAvailableYuan);
             Assert.True(s.RepayAppLoan(s.AppLoans.First().Id));
-            Assert.AreEqual(50000, s.AppLoanAvailableYuan);
+            Assert.AreEqual(60000, s.AppLoanAvailableYuan);
+            s.PlayerShop.Reputation = 44.9;
+            Assert.AreEqual(490000, s.AppLoanCreditLimitYuan);
+            s.PlayerShop.Reputation = 45;
+            Assert.AreEqual(500000, s.AppLoanCreditLimitYuan);
             s.PlayerShop.Reputation = 1000;
             Assert.AreEqual(500000, s.AppLoanCreditLimitYuan);
         }

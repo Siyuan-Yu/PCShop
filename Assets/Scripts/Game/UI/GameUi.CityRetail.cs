@@ -42,10 +42,10 @@ namespace PCShopSell.Game.UI
         private void BuildModelCatalog(Window w)
         {
             var filters=Ui.Row(w.Content,36,5);
-            Ui.Size(Ui.Button(filters,"全部系列",()=>{_modelSeries=null;w.Rebuild();},16,_modelSeries==null?Ui.ButtonHot:Ui.ButtonBg),-1,36,1);
+            Ui.Size(Ui.Button(filters,"全部系列",()=>{_modelSeries=null;w.Rebuild();},16,Ui.SelectedButton(_modelSeries==null)),-1,36,1);
             foreach(string value in ModelProducts.SeriesIds)
             {
-                string series=value;Ui.Size(Ui.Button(filters,ModelProducts.SeriesName(series),()=>{_modelSeries=series;w.Rebuild();},16,_modelSeries==series?Ui.ButtonHot:Ui.ButtonBg),-1,36,1);
+                string series=value;Ui.Size(Ui.Button(filters,ModelProducts.SeriesName(series),()=>{_modelSeries=series;w.Rebuild();},16,Ui.SelectedButton(_modelSeries==series)),-1,36,1);
             }
             foreach(var product in ModelProducts.All.Where(p=>_modelSeries==null||p.ModelSeries==_modelSeries))
             {

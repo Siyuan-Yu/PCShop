@@ -80,13 +80,12 @@ namespace PCShopSell.Game.UI
 
         private static string HotkeyLabel(KeyCode key) => key == KeyCode.Escape ? "Esc" : key.ToString();
 
-        private Button HudPanelButton(Transform row, string title, KeyCode key, Action open, string description,
-            int width = 54, Color? bg = null)
+        private Button HudPanelButton(Transform row, string title, KeyCode key, Action open, string description, Color? bg = null)
         {
             string shortcut = HotkeyLabel(key);
-            var button = Ui.Size(Ui.Button(row, title, open, bg: bg), width)
+            var button = Ui.Size(Ui.Button(row, $"{title} {shortcut}", open, 13, bg), 0, -1, 1)
                 .Tip($"<b>{title}</b>　快捷键：{shortcut}\n{description}");
-            button.GetComponentInChildren<Text>().text = $"{title} {shortcut}";
+            Ui.HudNavigationArt(button, title, key == KeyCode.Escape);
             _hudPanelButtons.Add(key, button);
             return button;
         }
@@ -96,7 +95,6 @@ namespace PCShopSell.Game.UI
             // Esc 由控制器优先处理，用于关闭最上层窗口。
             foreach (KeyCode key in _hudPanelButtons.Keys)
                 if (key != KeyCode.Escape && Input.GetKeyDown(key) && TryHotkey(key)) return;
-            if (Input.GetKeyDown(KeyCode.H)) TryHotkey(KeyCode.H);
         }
 
         /// <summary>顶栏快捷键。背包键也可关闭已打开的背包。</summary>
@@ -105,12 +103,11 @@ namespace PCShopSell.Game.UI
             if (S == null || S.IsGameOver || S.IsWorking) return false;
             if (AnyModalOpen && (key != KeyCode.B || _backpackWin == null || _backpackWin.Closed)) return false;
             _hudPanelButtons.TryGetValue(key, out var button);
-            if (key != KeyCode.H && (button == null || !button.isActiveAndEnabled || !button.IsInteractable())) return false;
+            if (button == null || !button.isActiveAndEnabled || !button.IsInteractable()) return false;
             if (S.OpeningAgencyGuidePending && key != KeyCode.Escape) return true;
             if (OpeningMealRestricted && key != KeyCode.Escape)
             { RemindOpeningMeal(); return true; }
-            if (key == KeyCode.H) OpenMarketPanel();
-            else button.onClick.Invoke();
+            button.onClick.Invoke();
             return true;
         }
 
@@ -131,7 +128,7 @@ namespace PCShopSell.Game.UI
             "<b>精力</b>：干活、走路消耗，回家睡觉恢复；/ 后面是今天的精力上限，缺觉会变低。\n" +
             "<b>健康</b>：饥饿、精力过低或居住环境差会下降，太低要去医院。\n" +
             $"<b>压力</b>：打工和疲劳会累积，睡觉和休闲能缓解。到岗时压力达到 {Core.Session.PlayerStats.HighStressThreshold:0}，当班表现奖金少 {Core.Session.GameSession.HighStressWorkPenalty}%。\n" +
-            "<b>名望</b>：你本人在行业里的名气，所有店共用。租大铺、开分店、直供、企业订单、公园这些都看它；经营得好涨，出岔子会掉。\n" +
+            "<b>名望</b>：你本人在行业里的名气，所有店共用。租大铺、开分店、直供和企业订单会用到名望。按时交付装机、优质代养结算和卖出真品文物可提高名望。\n" +
             "<b>本店知名度</b>：每家店各自一个，越高路过的顾客越愿意进店（在店铺页里看）。";
 
         private string VehicleTip(Core.Session.VehicleSpec v)

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using PCShopSell.Core.Catalog;
-using PCShopSell.Core.Home;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,8 +11,8 @@ namespace PCShopSell.Game.UI
     {
         private readonly Dictionary<string, int> _onlineQuantities = new Dictionary<string, int>();
 
-        private void QuantityStepper(Window w, Transform parent, string key, double value, double min, double max, double step,
-            Action<double> set, bool canAdd = true, string unit = null, double displayScale = 1, Func<double> readValue = null)
+        private Action<double> QuantityStepper(Window w, Transform parent, string key, double value, double min, double max, double step,
+            Action<double> set, bool canAdd = true, string unit = null, double displayScale = 1, Func<double> readValue = null, Action<double> changed = null)
         {
             double current = value;
             double limit = canAdd ? Math.Max(value, max) : value;
@@ -45,6 +44,7 @@ namespace PCShopSell.Game.UI
                 else quantity.SetTextWithoutNotify(Format());
             });
             RefreshButtons();
+            return value => Apply(value, false);
 
             (Button button, HoldRepeat repeat) AddButton(string label, int direction)
             {
@@ -73,6 +73,7 @@ namespace PCShopSell.Game.UI
                 {
                     set(next);
                     current = readValue?.Invoke() ?? next;
+                    changed?.Invoke(current);
                     w.RequestQuantityRebuild(fromInput);
                 }
                 quantity.SetTextWithoutNotify(Format());
@@ -80,10 +81,11 @@ namespace PCShopSell.Game.UI
             }
         }
 
-        private void ShopQuantity(Window w, Transform row, string key, Func<bool> add, bool enabled,double? maxAmount=null)
+        private Action<double> ShopQuantity(Window w, Transform row, string key, Func<bool> add, bool enabled,
+            double? maxAmount = null, Func<int, bool> addCount = null, Action<double> changed = null)
         {
-            if (row.Find("Quantity_" + key) != null) return;
-            double amount = S.CartAmount(key), step = key == "rice" ? .25 : 1;
+            if (row.Find("Quantity_" + key) != null) return null;
+            double amount = S.CartAmount(key);
             double max = maxAmount??1000;
             if (maxAmount == null && key.StartsWith("part:"))
             {
@@ -91,16 +93,17 @@ namespace PCShopSell.Game.UI
                 var part = PartCatalog.Get(key.Substring(5));
                 if (stall != null && part != null) max = Math.Min(1000, S.StallRemaining(stall, part));
             }
-            bool ingredient = key.StartsWith("ing:");
-            QuantityStepper(w, row, key, amount, 0, max, step, value =>
+            return QuantityStepper(w, row, key, amount, 0, max, 1, value =>
             {
                 double delta = value - S.CartAmount(key);
                 if (delta < 0) S.RemoveFromCart(key, -delta);
-                else if (key == "rice") S.CartAddRice(delta);
-                else for (int i = 0; i < (int)Math.Round(delta); i++) if (!add()) break;
-            }, canAdd: enabled, unit: key == "rice" || ingredient ? "千克" : null,
-                displayScale: ingredient ? Backpack.IngredientKg(key.Substring(4)) : 1,
-                readValue: () => S.CartAmount(key));
+                else if (addCount != null) addCount((int)Math.Round(delta));
+                else while (S.CartAmount(key) < value)
+                {
+                    double before = S.CartAmount(key);
+                    if (!add() || S.CartAmount(key) <= before) break;
+                }
+            }, canAdd: enabled, readValue: () => S.CartAmount(key), changed: changed);
         }
 
         private int OnlineQuantity(Window w, Transform row, string key)

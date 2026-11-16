@@ -273,7 +273,7 @@ namespace PCShopSell.Game.UI
                 {
                     if (S.CompleteBuild(order.Id, mistakes))
                     {
-                        Toast($"交付成功，收款 {order.Price}！技术 +2");
+                        Toast($"交付成功，收款 {order.Price} · 技术 +2" + (order.ReputationReward > 0 ? $" · 名望 +{order.ReputationReward:0.#}" : ""));
                         w.Close();
                         RebuildDock();
                     }

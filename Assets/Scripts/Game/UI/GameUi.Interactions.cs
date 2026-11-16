@@ -127,7 +127,7 @@ namespace PCShopSell.Game.UI
                 string label = S.ShopTitle(shop) + " · " + S.City.StreetName(shop.Place.StreetId);
                 if (reason != null) label += " · " + reason;
                 Ui.Size(Ui.Button(list, label, () => select(target), 17,
-                    target == selected && reason == null ? Ui.ButtonHot : Ui.ButtonBg, reason == null), -1, 44);
+                    Ui.SelectedButton(target == selected && reason == null), reason == null), -1, 44);
             }
         }
 

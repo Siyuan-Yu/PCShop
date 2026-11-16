@@ -16,11 +16,11 @@ namespace PCShopSell.Game.Runtime
 
         public RenderTexture Texture { get; }
 
-        public AvatarPreview()
+        public AvatarPreview(bool portrait = false)
         {
             Texture = new RenderTexture(300, 380, 16) { name = "AvatarPreview" };
             _root = new GameObject("AvatarPreview");
-            _root.transform.position = Origin;
+            _root.transform.position = portrait ? Origin + Vector3.right * 40 : Origin;
 
             _figure = Prims.Figure(_root.transform, "Figure", new Color(0.95f, 0.55f, 0.15f), new Color(0.95f, 0.8f, 0.65f), 1.1f);
             _figure.transform.localRotation = Quaternion.Euler(0, -22f, 0);
@@ -36,6 +36,14 @@ namespace PCShopSell.Game.Runtime
             _cam.fieldOfView = 28f;
             _cam.nearClipPlane = 0.3f;
             _cam.farClipPlane = 20f;
+            if (portrait)
+            {
+                camGo.transform.localPosition = new Vector3(0, 1.31f, 4.4f);
+                camGo.transform.localRotation = Quaternion.Euler(0, 180, 0);
+                _cam.orthographic = true;
+                _cam.orthographicSize = .47f;
+                _cam.backgroundColor = new Color(.27f, .24f, .19f);
+            }
             _cam.targetTexture = Texture;
             _cam.enabled = false;
 
@@ -59,7 +67,11 @@ namespace PCShopSell.Game.Runtime
         public void Destroy()
         {
             Kill.It(_root);
-            if (Texture != null) Texture.Release();
+            if (Texture != null)
+            {
+                Texture.Release();
+                Kill.It(Texture);
+            }
         }
     }
 }

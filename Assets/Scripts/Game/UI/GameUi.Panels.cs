@@ -74,7 +74,7 @@ namespace PCShopSell.Game.UI
                     OpenPlaceWindow(p, BuildCarryStore, StoreWindowWidth, 900);
                     break;
                 case PlaceKind.Shop when p.Business == GameSession.FarmBusiness:
-                    OpenPlaceWindow(p, BuildFarm, StoreWindowWidth, 960);
+                    OpenPlaceWindow(p, BuildRetailWholesale, StoreWindowWidth, 960);
                     break;
                 case PlaceKind.Wholesaler:
                     OpenPlaceWindow(p, BuildStall, StoreWindowWidth, 940);
@@ -184,7 +184,7 @@ namespace PCShopSell.Game.UI
                 if (p.Id != "life_expo"&&p.Kind!=PlaceKind.Garage&&p.Business!=GameSession.BankBusiness
                     && S.OnsiteActivityAt(p) == null)
                     BuildPlayerWorkEntry(win.Content, p, win);
-                if (S.HasRetailWholesale(p) && build!=BuildRetailWholesale && (p.Business==GameSession.FarmBusiness || p.Business==Gifts.TobaccoBusiness)) Ui.Size(Ui.Button(win.Content, "批发进货（可供自己店铺销售）", () => OpenRetailWholesale(p), 18, Ui.ButtonHot), -1, 40);
+                if (S.HasRetailWholesale(p) && build!=BuildRetailWholesale && p.Business == Gifts.TobaccoBusiness) Ui.Size(Ui.Button(win.Content, "批发进货（可供自己店铺销售）", () => OpenRetailWholesale(p), 18, Ui.ButtonHot), -1, 40);
                 RectTransform frame = fixedLayout || S.VentureAt(p.Id) != null || S.IsPlayerPropertyOccupied(p.Id) ? null : BuildRosterFrame(win, p, h - 170 - (win.Content.childCount - contentBefore) * 52, p.Kind==PlaceKind.Dealer || p.Kind==PlaceKind.Station || p.Id=="motor_scooter_mod", w >= StoreWindowWidth ? 150 : 210);
                 if (frame != null)
                 {
@@ -240,7 +240,19 @@ namespace PCShopSell.Game.UI
 
         private void BuildStation(Window w, Place p)
         {
-            if (S.WalletReturnStation == p) BuildWalletHandoff(w);
+            if (S.WalletReturnStation == p)
+            {
+                if (w.Holds)
+                {
+                    S.Time.Release();
+                    w.Holds = false;
+                }
+                BuildWalletHandoff(w);
+            }
+            else w.RefreshContent = () =>
+            {
+                if (S.WalletReturnStation == p) w.RequestRebuild();
+            };
             Line(w.Content, GameSession.FirstChapterTrial ? "城郊地铁" : "城市地铁 · 全站互通");
             Line(w.Content,$"票价 {GameSession.MetroFare}，约 {GameSession.MetroMinutes} 分钟。运营 6:00–23:00。",18,Ui.Dim);
             foreach(var destination in S.City.OfKind(PlaceKind.Station).Where(x=>x!=p))
@@ -253,6 +265,15 @@ namespace PCShopSell.Game.UI
                     if(S.TakeMetro(target.Id)){CloseWindowSilently(w);if(S.CurrentPlace!=null)OnEnteredPlace(S.CurrentPlace);}
                 },19,locked==null?Ui.ButtonHot:Ui.ButtonBg,locked==null),-1,44).Tip(locked??"乘地铁前往此站");
             }
+        }
+
+        private void OpenWalletReturnDestination()
+        {
+            var station = S.WalletReturnStation;
+            if (station == null) return;
+            CloseAllWindows();
+            if (S.CurrentPlace == station) OnEnteredPlace(station);
+            else S.BeginCityTravel(station.Id);
         }
 
         private void BuildWalletHandoff(Window w)
@@ -438,8 +459,7 @@ namespace PCShopSell.Game.UI
                 for (int i = 0; i < names.Length; i++)
                 {
                     int period = i;
-                    Ui.Size(Ui.Button(periods, names[i], () => { _ledgerPeriod = period; _ledgerPage = 0; w.Rebuild(); }, 18,
-                        i == _ledgerPeriod ? Ui.ButtonHot : Ui.ButtonBg), -1, -1, 1);
+                    Ui.Tab(periods, names[i], () => { _ledgerPeriod = period; _ledgerPage = 0; w.Rebuild(); }, i == _ledgerPeriod);
                 }
                 var dates = Ui.Row(w.Content, 42);
                 Ui.Size(Ui.Button(dates, "上一" + (_ledgerPeriod == 0 ? "天" : _ledgerPeriod == 1 ? "周" : "月"), () =>
@@ -474,8 +494,7 @@ namespace PCShopSell.Game.UI
                 for (int i = 0; i < filterNames.Length; i++)
                 {
                     int filter = i;
-                    Ui.Size(Ui.Button(filters, filterNames[i], () => { _ledgerFilter = filter; _ledgerPage = 0; w.Rebuild(); }, 17,
-                        i == _ledgerFilter ? Ui.ButtonHot : Ui.ButtonBg), -1, -1, 1);
+                    Ui.Tab(filters, filterNames[i], () => { _ledgerFilter = filter; _ledgerPage = 0; w.Rebuild(); }, i == _ledgerFilter);
                 }
                 var filtered = entries.Where(e => _ledgerFilter == 0 || (_ledgerFilter == 1 ? e.Amount.IsPositive : e.Amount.IsNegative)).Reverse().ToList();
                 const int pageSize = 40;

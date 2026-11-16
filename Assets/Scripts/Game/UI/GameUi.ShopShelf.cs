@@ -249,7 +249,7 @@ namespace PCShopSell.Game.UI
                 foreach(string name in new[]{"全部","服装","电脑配件","模型手办","宠物用品","零售商品"})
                 {
                     string choice=name;
-                    var button=Ui.Size(Ui.Button(groups,choice,()=>{group=choice;w.Rebuild();},16,group==choice?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);
+                    var button=Ui.Size(Ui.Button(groups,choice,()=>{group=choice;w.Rebuild();},16,Ui.SelectedButton(group==choice)),-1,38,1);
                     button.name="ShelfGroup_"+choice;
                 }
                 var choices=Ui.Scroll(w.Content);
@@ -345,12 +345,12 @@ namespace PCShopSell.Game.UI
                             selected==index?Ui.ButtonHot:Ui.ButtonBg),-1,40,1);
                     }
                 }
-                Ui.Size(Ui.Button(w.Content,"更换这张展示台的品类",()=>OpenDisplayKindPicker(selected,w),18,Ui.ButtonHot),-1,42);
+                Ui.Size(Ui.Button(w.Content,"更换这张展示台的品类",()=>OpenDisplayKindPicker(selected,w),18,Ui.ButtonBg),-1,42);
                 if(!S.IsComputerDisplay(selected)){BuildGoodsDisplay(w,selected);return;}
                 ShopSimulation shop = S.PlayerShop;
                 int shown = shop.DisplayPcs.Count;
                 Para(w.Content, "用库存配件装好整机摆上展示台（店正中间）：想买整机的顾客看到就直接抱去收银台结账，不用等你装。" +
-                                "展台上的机器越多越显眼，进店的人里想买整机的也越多；展台没有合适的，顾客才下装机单（两天内装好交付）。", 15, Ui.Dim);
+                                $"展台上的机器越多越显眼，想买整机的顾客也越多。展台没有合适的机器且订单未满时，顾客会下装机单（{shop.Settings.BuildOrderDueDays} 天内交付）。", 15, Ui.Dim);
                 Para(w.Content, "整机售价 = 同套配件盒装分卖总价 × 1.20 + 装机手工费。配件调价会同步影响新整机报价。", 15, Ui.Accent);
                 Line(w.Content, $"展台上 <b>{shown}/{shop.DisplaySlots}</b> 台　·　想买整机的顾客占 <b>{shop.BuildChance:P0}</b>（展台空着时 {shop.Settings.BuildOrderChance:P0}）", 17);
 
@@ -390,7 +390,7 @@ namespace PCShopSell.Game.UI
                         w.Close();
                         OpenDock();
                         SelectTab(ShopTab.Orders);
-                    }, 19, Ui.ButtonHot), 300);
+                    }, 19, Ui.ButtonBg), 300);
                 Ui.Size(Ui.Button(bar, "关闭", w.Close, 19), 200);
             });
         }

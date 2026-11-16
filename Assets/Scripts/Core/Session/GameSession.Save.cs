@@ -348,7 +348,7 @@ namespace PCShopSell.Core.Session
             LoadEnergyPayroll(d);
             MigrateStoreMainCategories();
             foreach (var restaurant in _shops.Where(shop => shop.Rented && RestaurantIngredientsOnly(shop)))
-                RefrigerateExistingRestaurantIngredients(restaurant);
+                NormalizeRestaurantIngredientStorage(restaurant);
             foreach (var shop in _shops.Where(shop => shop.Rented))
                 MoveIncompatibleAssemblersToStandby(shop, notify: false);
             MigrateCityGeometry(d);
@@ -360,6 +360,11 @@ namespace PCShopSell.Core.Session
             LoadWeeklySupplierPlans();
             LoadHomeWorkbench(d);
             LoadDistrictProgress(d);
+            if (RacingGarageEntryBlocker(CurrentPlace?.Id) != null)
+            {
+                _free = StandOf(CurrentPlace);
+                CurrentPlace = null;
+            }
             CancelLockedCityAppointmentsOnLoad();
             RestoreMcnIntroductions(d);
             RestoreKolStreaming(d);

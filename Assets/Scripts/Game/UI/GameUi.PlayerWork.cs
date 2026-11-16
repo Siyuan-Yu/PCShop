@@ -13,6 +13,7 @@ namespace PCShopSell.Game.UI
         private Image _workScreen;
         private Text _workStatus;
         private bool _workScreenForWeekend;
+        private readonly List<(Button button, int speed)> _workSpeedButtons = new List<(Button, int)>();
         private readonly List<string> _workMessages = new List<string>();
         private EventDef _workEvent;
         public bool WorkScreenVisible => _workScreen != null && _workScreen.gameObject.activeSelf;
@@ -23,12 +24,12 @@ namespace PCShopSell.Game.UI
             if (S.HasWorkContract && S.WorkPlace == p)
             {
                 Ui.Size(Ui.Button(parent, "我的打工合同 · " + S.WorkHours,
-                    () => OpenPlayerWork(p, placeWindow), 17, Ui.ButtonHot), -1, 40);
+                    () => OpenPlayerWork(p, placeWindow), 17, Ui.ButtonBg), -1, 40);
             }
             else if (!S.HasWorkContract && S.OffersPlayerWork(p))
             {
                 var offer = S.PlayerWorkFor(p);
-                Ui.Size(Ui.Button(parent, "在这里打工 · " + offer.Title + " · ¥" + offer.Wage + "/天", () => OpenPlayerWork(p, placeWindow), 17, Ui.ButtonHot), -1, 40);
+                Ui.Size(Ui.Button(parent, "在这里打工 · " + offer.Title + " · ¥" + offer.Wage + "/天", () => OpenPlayerWork(p, placeWindow), 17, Ui.ButtonBg), -1, 40);
             }
         }
 
@@ -105,11 +106,14 @@ namespace PCShopSell.Game.UI
                     foreach (int speed in TimeController.Speeds)
                     {
                         int mode = speed;
-                        Ui.Size(Ui.Button(row, TimeController.SpeedLabel(mode), () => S.Time.SetSpeed(mode), 21, Ui.ButtonHot), -1, -1, 1);
+                        var button = Ui.Size(Ui.Button(row, TimeController.SpeedLabel(mode), () => S.Time.SetSpeed(mode), 21), -1, -1, 1);
+                        _workSpeedButtons.Add((button, mode));
                     }
                     Para(content, "打工中暂不能进行其他操作。可点击倍速，或按数字键 1/2/3/4；下班后自动恢复操作。", 17, Ui.Dim);
                 }
                 _workScreen.transform.SetAsLastSibling();
+                foreach (var (button, speed) in _workSpeedButtons)
+                    Ui.SetButtonFill(button, Ui.SelectedButton(S.Time.Speed == speed));
                 _workScreenForWeekend = S.IsWeekendWorking;
                 if (_workScreenForWeekend)
                 {
@@ -127,6 +131,7 @@ namespace PCShopSell.Game.UI
             if (_workScreen != null)
             {
                 Kill.It(_workScreen.gameObject); _workScreen = null;
+                _workSpeedButtons.Clear();
                 if (!_workScreenForWeekend) Toast(S.WorkContract?.LastNote ?? "今天收工了。");
             }
             if (_workEvent != null) { var e = _workEvent; _workEvent = null; ShowEvent(e); }

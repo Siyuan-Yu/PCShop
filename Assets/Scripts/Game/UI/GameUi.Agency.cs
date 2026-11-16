@@ -29,8 +29,8 @@ namespace PCShopSell.Game.UI
         {
             if(_agencyMapDistrictId!=agency.Id){_agencyMapDistrictId=agency.Id;_agencyViewState=new AgencyStreetMap.ViewState();}
             var versions = Ui.Row(w.Content, 42, 8);
-            Ui.Size(Ui.Button(versions,"商铺",()=>{_agencyResidential=false;w.Rebuild();},21,!_agencyResidential?Ui.ButtonHot:Ui.ButtonBg),-1,42,1).name="AgencyCommercialTab";
-            Ui.Size(Ui.Button(versions,"住宅",()=>{_agencyResidential=true;w.Rebuild();},21,_agencyResidential?Ui.ButtonHot:Ui.ButtonBg),-1,42,1).name="AgencyResidentialTab";
+            Ui.Size(Ui.Button(versions,"商铺",()=>{_agencyResidential=false;w.Rebuild();},21,Ui.SelectedButton(!_agencyResidential)),-1,42,1).name="AgencyCommercialTab";
+            Ui.Size(Ui.Button(versions,"住宅",()=>{_agencyResidential=true;w.Rebuild();},21,Ui.SelectedButton(_agencyResidential)),-1,42,1).name="AgencyResidentialTab";
             BuildAgencyHeader(w, agency);
             if(_agencyResidential){BuildResidentialAgency(w,agency);return;}
             var units = AgencyStreetMap.DistrictPlaces(S,agency);
@@ -42,9 +42,14 @@ namespace PCShopSell.Game.UI
                     ?? agency.Id;
 
             var (map, detail) = AgencyPropertyColumns(w.Content, "AgencyMap", "AgencyDetail");
-            BuildAgencyMap(map, units, w, agency);
-            Place selected = units.FirstOrDefault(p => p.Id == _agencySelectedId);
-            if (selected != null) BuildAgencyDetail(detail, selected, System.Array.IndexOf(units, selected) + 1, w);
+            void RefreshProperty()
+            {
+                Ui.Clear(detail);
+                Place selected = units.FirstOrDefault(p => p.Id == _agencySelectedId);
+                if (selected != null) BuildAgencyDetail(detail, selected, System.Array.IndexOf(units, selected) + 1, w);
+            }
+            BuildAgencyMap(map, units, w, agency, RefreshProperty);
+            RefreshProperty();
         }
 
         private void BuildAgencyHeader(Window w, Place agency)
@@ -131,9 +136,9 @@ namespace PCShopSell.Game.UI
 
             var modes = Ui.Row(card, 40, 6);
             Ui.Size(Ui.Button(modes, "租赁", () => { _agencyPurchaseSelected = false; rebuild(); },
-                17, _agencyPurchaseSelected ? Ui.ButtonBg : Ui.ButtonHot), 0, 40, 1).name = "AgencyRentMode";
+                17, Ui.SelectedButton(!(_agencyPurchaseSelected))), 0, 40, 1).name = "AgencyRentMode";
             Ui.Size(Ui.Button(modes, "全款购买", () => { _agencyPurchaseSelected = true; rebuild(); },
-                17, _agencyPurchaseSelected ? Ui.ButtonHot : Ui.ButtonBg), 0, 40, 1).name = "AgencyPurchaseMode";
+                17, Ui.SelectedButton(_agencyPurchaseSelected)), 0, 40, 1).name = "AgencyPurchaseMode";
             return _agencyPurchaseSelected;
         }
 
@@ -393,7 +398,7 @@ namespace PCShopSell.Game.UI
                     string label = (enabled && selected == kind ? "✓ " : "") + RetailShopTypes.Name(kind);
                     if (!enabled) label += " · " + blocker;
                     var button = Ui.Size(Ui.Button(w.Content, label, () => { selected = kind; w.Rebuild(); },
-                        18, enabled && selected == kind ? Ui.ButtonHot : Ui.ButtonBg, enabled), -1, 42);
+                        18, Ui.SelectedButton(enabled && selected == kind), enabled), -1, 42);
                     button.name="OpeningKind_"+kind;
                 }
                 string carShopHint = S.DistrictAccessTier < 1 ? "解锁社区后可到中介签分店合同" : "请在中介的「委托店长开店」办理";

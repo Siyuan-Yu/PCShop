@@ -55,8 +55,8 @@ namespace PCShopSell.Game.UI
         private void ProcurementTabs(Window w, bool agreement)
         {
             var tabs = Ui.Row(w.Content, 40, 6);
-            Ui.Size(Ui.Button(tabs, "补货清单", () => { _procurementAgreement = false; w.Rebuild(); }, 17, agreement ? Ui.FlatBand : Ui.FlatRow, true), 150, 36);
-            Ui.Size(Ui.Button(tabs, "直供协议与账款", () => { _procurementAgreement = true; w.Rebuild(); }, 17, agreement ? Ui.FlatRow : Ui.FlatBand, true), 170, 36);
+            Ui.Size(Ui.Button(tabs, "补货清单", () => { _procurementAgreement = false; w.Rebuild(); }, 17, Ui.SelectedButton(!(agreement)), true), 150, 36);
+            Ui.Size(Ui.Button(tabs, "直供协议与账款", () => { _procurementAgreement = true; w.Rebuild(); }, 17, Ui.SelectedButton(agreement), true), 170, 36);
             Ui.Size(Ui.Label(tabs, "", 14), -1, 36, 1);
             Ui.Size(Ui.Label(tabs, $"现金 {S.Ledger.Balance} · 共同保护额 {S.EffectiveRestockReserve}", 15, TextAnchor.MiddleRight, Ui.Dim), -1, 36, 1);
             Ui.Size(Ui.Button(tabs, "全店补货预算", OpenProcurementBudget, 15), 130, 34).name = "ProcurementBudget";
@@ -84,7 +84,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(card, -1, 124);
                 var head = Ui.Row(card, 38, 8);
                 Ui.Size(Ui.Label(head, "<b>" + S.ShopTitle(shop) + "</b>", 22, TextAnchor.MiddleLeft), -1, 38, 1);
-                Ui.Size(Ui.Button(head, "进入 ›", () => { _procurementShopId = target.Place.Id; _procurementDetail = true; _procurementFilter = 0; w.Rebuild(); }, 18, Ui.ButtonHot), 120, 36)
+                Ui.Size(Ui.Button(head, "进入 ›", () => { _procurementShopId = target.Place.Id; _procurementDetail = true; _procurementFilter = 0; w.Rebuild(); }, 18, Ui.ButtonBg), 120, 36)
                     .name = "ProcurementEnter_" + shop.Place.Id;
                 var chips = Ui.Row(card, 30, 8);
                 Chip(chips, $"补货 {listed.Length} 种", Ui.Accent);
@@ -135,18 +135,18 @@ namespace PCShopSell.Game.UI
                 Ui.Size(bar, -1, 50); Ui.VList(bar, 0, 6);
                 var row = Ui.Row(bar, 36, 8);
                 Ui.Size(Ui.Label(row, "进货员 <b>" + buyer.Person.Name + "</b> · " + BuyerScheduleText(buyer), 16, TextAnchor.MiddleLeft), -1, 40, 1);
-                Ui.Size(Ui.Button(row, "安排进货 ›", () => OpenEmployeePurchase(worker.Person.Id, w), 16, Ui.ButtonHot), 140, 34).name = "ProcurementArrange_" + buyer.Person.Id;
+                Ui.Size(Ui.Button(row, "安排进货 ›", () => OpenEmployeePurchase(worker.Person.Id, w), 16, Ui.ButtonBg), 140, 34).name = "ProcurementArrange_" + buyer.Person.Id;
             }
 
             // 筛选 + 搜索 + 添加
             var filters = Ui.Row(w.Content, 40, 6);
             void Tab(string label, int index)
             {
-                Ui.Size(Ui.Button(filters, label, () => { _procurementFilter = index; w.Rebuild(); }, 16, _procurementFilter == index ? Ui.FlatRow : Ui.FlatBand), 118, 36);
+                Ui.Size(Ui.Button(filters, label, () => { _procurementFilter = index; w.Rebuild(); }, 16, Ui.SelectedButton(_procurementFilter == index)), 118, 36);
             }
             Tab("全部 " + listed.Length, 0); Tab("缺货 " + shortCount, 1); Tab("在途 " + transitCount, 2);
             Ui.Size(Ui.TextInput(filters, _procurementSearch, "搜索已设补货的商品", value => { _procurementSearch = value; w.RequestRebuild(); }), -1, 36, 1);
-            Ui.Size(Ui.Button(filters, "＋ 添加商品", () => OpenProcurementAdd(w, shop, items, buyers), 17, Ui.ButtonHot), 150, 36).name = "ProcurementAdd";
+            Ui.Size(Ui.Button(filters, "＋ 添加商品", () => OpenProcurementAdd(w, shop, items, buyers), 17, Ui.ButtonBg), 150, 36).name = "ProcurementAdd";
 
             var visible = listed.Where(i => _procurementFilter == 0 || (_procurementFilter == 1 ? i.Short : i.Transit))
                 .Where(i => string.IsNullOrWhiteSpace(_procurementSearch) || (i.Offer.Name + i.Offer.Category).IndexOf(_procurementSearch, StringComparison.OrdinalIgnoreCase) >= 0).ToArray();

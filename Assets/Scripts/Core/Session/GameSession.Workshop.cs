@@ -54,7 +54,7 @@ namespace PCShopSell.Core.Session
                 {
                     if (!PlayerShop.CompleteBuild(order.Id, now)) continue;
                     worker.BuildsCompleted++;
-                    Say($"{worker.Name}完成订单 #{order.Id}，收款 {order.Price}。");
+                    Say($"{worker.Name}完成订单 #{order.Id}，收款 {order.Price}。" + (order.ReputationReward > 0 ? $"名望 +{order.ReputationReward:0.#}。" : ""));
                 }
             }
         }

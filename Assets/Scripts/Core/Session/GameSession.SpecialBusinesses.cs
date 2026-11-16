@@ -18,6 +18,7 @@ namespace PCShopSell.Core.Session
         public long Asking, Minimum, Cost, Price, ExpiresAt;
         public long SalePrice,SoldAt;
         public bool Owned, Inspected, Listed, Sold;
+        public bool ArtifactAssessmentMade, ArtifactIdentified;
         public UsedItem Copy() => (UsedItem)MemberwiseClone();
     }
     [Serializable] public sealed class DiningOrder
@@ -26,6 +27,12 @@ namespace PCShopSell.Core.Session
         public int Stove=-1;
         public DiningStage Stage;
         public bool TableCleared;
+        public string FishId;
+        public long DueAt;
+        public FishDefinition Fish => FishingCatalog.Get(FishId);
+        public bool IsFishOrder => !string.IsNullOrEmpty(FishId);
+        public double ReputationReward => Fish?.DinnerReputation ?? 0;
+        public string DishName => GameSession.RecipeNames[Recipe] + (Fish is FishDefinition fish ? " + " + fish.Name : "");
         public bool NeedsClearing => !TableCleared && (Stage == DiningStage.Checkout || Stage == DiningStage.Completed
             || Stage == DiningStage.Left || Stage == DiningStage.Burnt);
         public long Arrived, Started, ReadyAt, BurnAt, EatUntil, CheckoutAt, Price;
@@ -36,6 +43,7 @@ namespace PCShopSell.Core.Session
         public string ShopId;
         public int NextId=1, BudgetDay=-1;
         public long NextVisit, Revenue, SpentToday;
+        public long NextFishOrder;
         public int Paid, Lost;
         public int RestaurantArrivalDay = -1, RestaurantArrivalsToday;
         public int RestaurantVisitDay = -1;
@@ -58,17 +66,32 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         private readonly Dictionary<string,SpecialBusinessState> _specialBusinesses=new Dictionary<string,SpecialBusinessState>();
-        public static readonly string[] UsedNames={"旧台灯","旧音箱","旧腕表","旧装饰摆件"};
+        public const int ArtifactProduct = 4;
+        public const double ArtifactSaleReputation = 1;
+        public const int GenuineArtifactValue = 10000;
+        private const int ReplicaArtifactValue = 150;
+        public static readonly string[] UsedNames={"旧台灯","旧音箱","旧腕表","旧装饰摆件","疑似古文物"};
         private static readonly long[] UsedValues={120,260,450,180};
         public static readonly string[] SellerNames={"王先生","陈先生","张女士","李女士","赵先生","周女士","刘先生","孙女士","许先生","林女士","吴先生","黄女士"};
         public static readonly string[] SellerPersonalities={"说话直来直去","很会推销","态度谨慎"};
         private static readonly string[] SellerStatements={"一直是自己用的，情况我跟你说清楚。","朋友送的，我也不太懂这些。","搬家急着出，你看着给个价。","闲置好一阵了，平时保管得挺好。"};
         public static readonly string[] RecipeNames={"青菜炒饭","鸡蛋炒饭","肉末炒饭"};
         public static readonly string[] RecipeIngredients={"veg","egg","pork"};
-        public static readonly long[] RecipePrices={18,22,28};
+        public static readonly long[] RecipePrices={36,44,56};
+        public const int RestaurantFishOrderLimit = 2;
+        public const int RestaurantFishOrderDays = 7;
+        private const int RestaurantFishOfferIntervalDays = 2;
         public static string ConditionName(UsedCondition c)=>c==UsedCondition.Good?"好货":c==UsedCondition.Flawed?"瑕疵品":c==UsedCondition.Replica?"仿造品":"完全损坏";
-        public static long UsedValue(UsedItem i)=>(long)Math.Round(UsedValues[Math.Max(0,Math.Min(3,i.Product))]*(i.Condition==UsedCondition.Good?1:i.Condition==UsedCondition.Flawed?.55:i.Condition==UsedCondition.Replica?.22:.03));
-        public static string SellerSpeech(UsedItem i)=>SellerStatements[Math.Max(0,Math.Min(3,i.Statement))]+" 我说的状态是："+ConditionName(i.Claim)+"。";
+        public static string UsedConditionName(UsedItem item) => item.Product == ArtifactProduct
+            ? (item.Condition == UsedCondition.Good ? "真品文物" : "仿制文物") : ConditionName(item.Condition);
+        public static long UsedValue(UsedItem i) => i.Product == ArtifactProduct
+            ? (i.Condition == UsedCondition.Good ? GenuineArtifactValue : ReplicaArtifactValue)
+            : (long)Math.Round(UsedValues[Math.Max(0,Math.Min(3,i.Product))]*(i.Condition==UsedCondition.Good?1:i.Condition==UsedCondition.Flawed?.55:i.Condition==UsedCondition.Replica?.22:.03));
+        public static double UsedSaleReputation(UsedItem item) =>
+            item.Inspected && item.Product == ArtifactProduct && item.Condition == UsedCondition.Good ? ArtifactSaleReputation : 0;
+        public static string SellerSpeech(UsedItem i) => SellerStatements[Math.Max(0,Math.Min(3,i.Statement))]
+            + (i.Product == ArtifactProduct ? " 我觉得这件是老物件，你仔细看看。"
+                : " 我说的状态是：" + ConditionName(i.Claim) + "。");
         public bool IsSpecialBusiness(OwnedShop shop)=>shop!=null&&(shop.RetailKind=="restaurant"||shop.RetailKind=="secondhand");
         public SpecialBusinessState SpecialBusiness(string shopId)
         {
@@ -105,12 +128,25 @@ namespace PCShopSell.Core.Session
         private Employee[] SpecialWorkers(OwnedShop shop,EmployeeRole role,GameTimestamp now)=>ShopStaff(shop,role).Where(e=>e.OnDuty(now)&&CityEmployeeAvailable(e,shop)).ToArray();
         public bool SpecialOpen(OwnedShop shop, GameTimestamp now) => SpecialOpen(shop, now, SpecialPlayer(shop));
         private bool SpecialOpen(OwnedShop shop, GameTimestamp now, bool playerPresent) =>
+            shop.Sim.InHours(now) && CanServeSpecialShop(shop, now, playerPresent);
+        private bool CanServeSpecialShop(OwnedShop shop, GameTimestamp now, bool playerPresent) =>
             shop.Rented && !IsGameOver && !shop.Sim.ForcedClosed && ShopPowerTraffic(shop, now) > 0
-            && shop.Sim.InHours(now) && SpecialFitGap(shop) == null
+            && SpecialFitGap(shop) == null
             && (playerPresent || SpecialWorkers(shop, EmployeeRole.Chef, now).Length > 0
                 || SpecialWorkers(shop, EmployeeRole.Waiter, now).Length > 0
                 || shop.RetailKind == "secondhand" && (SpecialWorkers(shop, EmployeeRole.Appraiser, now).Length > 0
                     || SpecialWorkers(shop, EmployeeRole.Cashier, now).Length > 0));
+        public bool ShopFinishingService(OwnedShop shop)
+        {
+            if (shop == null || shop.Sim.InHours(Clock.Now)) return false;
+            if (shop.RetailKind == "restaurant")
+                return _specialBusinesses.TryGetValue(shop.Place.Id, out var state)
+                    && state.Orders.Any(order => !order.IsFishOrder && GuestStillHere(order)) && CanServeSpecialShop(shop, Clock.Now, SpecialPlayer(shop));
+            return shop.Sim.ActiveCustomers.Count > 0 && shop.Sim.CanServeAt(Clock.Now, shop.Sim.PlayerPresent);
+        }
+
+        private static bool GuestStillHere(DiningOrder order) => order.Stage != DiningStage.Left && order.Stage != DiningStage.Completed;
+
         private void TickSpecialBusinesses(GameTimestamp from,GameTimestamp to)
         {
             foreach(var shop in MyShops.Where(IsSpecialBusiness))
@@ -121,16 +157,32 @@ namespace PCShopSell.Core.Session
                 for(long minute=from.TotalMinutes+1;minute<=to.TotalMinutes;minute++)
                 {
                     var now=GameTimestamp.From(new GameDate((int)(minute/1440)),(int)(minute%1440));
-                    bool open=SpecialOpen(shop,now);
-                    if(shop.RetailKind=="restaurant")TickRestaurant(shop,state,now,open);
-                    else TickUsedShop(shop,state,now,open);
+                    if (shop.RetailKind == "restaurant")
+                    {
+                        bool inHours = shop.Sim.InHours(now);
+                        if (!inHours && state.Orders.Count == 0) continue;
+                        bool canServe = CanServeSpecialShop(shop, now, SpecialPlayer(shop));
+                        TickRestaurant(shop, state, now, inHours && canServe, canServe);
+                    }
+                    else TickUsedShop(shop, state, now, SpecialOpen(shop, now));
                 }
             }
         }
         private UsedItem CreateSeller(SpecialBusinessState state,long now)
         {
-            var item=new UsedItem{Id=state.NextId++,Product=Random.Next(0,4),Personality=Random.Next(0,3),Statement=Random.Next(0,4),ExpiresAt=now+90};
-            item.SellerId=Random.Next(0,SellerNames.Length);item.Personality=item.SellerId%SellerPersonalities.Length;
+            var item = new UsedItem { Id = state.NextId++, Statement = Random.Next(0, 4), ExpiresAt = now + 90 };
+            item.SellerId = Random.Next(0, SellerNames.Length);
+            item.Personality = item.SellerId % SellerPersonalities.Length;
+            if (Random.Chance(.02))
+            {
+                item.Product = ArtifactProduct;
+                item.Condition = Random.Chance(.10) ? UsedCondition.Good : UsedCondition.Replica;
+                item.Claim = UsedCondition.Good;
+                item.Minimum = Random.Next(2100, 2801);
+                item.Asking = item.Minimum + Random.Next(200, 801);
+                return item;
+            }
+            item.Product = Random.Next(0, UsedValues.Length);
             int roll=Random.Next(0,100);item.Condition=roll<45?UsedCondition.Good:roll<73?UsedCondition.Flawed:roll<90?UsedCondition.Replica:UsedCondition.Broken;
             bool truthful=Random.Chance(item.Personality==0?.8:item.Personality==1?.35:.65);
             item.Claim=truthful?item.Condition:(UsedCondition)(((int)item.Condition+Random.Next(1,4))%4);
@@ -165,7 +217,7 @@ namespace PCShopSell.Core.Session
             if(!SpecialPlayer(CurrentShop)||CurrentShop.RetailKind!="secondhand")return false;
             var item=SpecialBusiness(CurrentShop.Place.Id).Used.FirstOrDefault(i=>i.Id==id&&i.Owned&&!i.Sold);
             if(item==null||item.Inspected)return false;item.Inspected=true;item.Price=UsedValue(item);
-            Say("鉴定结果："+UsedNames[item.Product]+" · "+ConditionName(item.Condition)+"，参考价 ¥"+item.Price+"。");return true;
+            Say("鉴定结果："+UsedNames[item.Product]+" · "+UsedConditionName(item)+"，参考价 ¥"+item.Price+"。");return true;
         }
         public bool ListUsedItem(int id, long price) =>
             ListUsedItem(id, price, out var blocker) || Fail(blocker);
@@ -204,18 +256,26 @@ namespace PCShopSell.Core.Session
                 state.NextVisit=minute+(long)Math.Ceiling(SpecialVisitInterval(shop,45)/ShopPowerTraffic(shop,now));
                 if(!state.Used.Any(i=>!i.Owned)&&state.Used.Count(i=>i.Owned&&!i.Sold)<20)state.Used.Add(CreateSeller(state,minute));
             }
-            if(state.AutoPurchasePaused)return;
             var worker=SpecialWorkers(shop,EmployeeRole.Appraiser,now).OrderByDescending(e=>e.Intelligence).FirstOrDefault();
             if(worker==null)return;
-            // Each seller is considered once: staff cannot reroll a judgement every minute.
             var seller=state.Used.FirstOrDefault(i=>!i.Owned&&i.ExpiresAt>minute);
+            if (seller?.Product == ArtifactProduct && !seller.ArtifactAssessmentMade)
+            {
+                seller.ArtifactAssessmentMade = true;
+                seller.ArtifactIdentified = Random.Chance(AppraiserAccuracy(worker.Intelligence));
+            }
+            if(state.AutoPurchasePaused)return;
             if(seller!=null)
             {
-                UsedCondition guess=Random.Chance(AppraiserAccuracy(worker.Intelligence))?seller.Condition:seller.Claim;
-                var estimate=seller.Copy();estimate.Condition=guess;
-                long bid=Math.Min(state.MaxOffer,(long)(UsedValue(estimate)*(.35+.35*state.Risk)));
-                bid=Math.Min(bid,Math.Max(0,state.DailyBudget-state.SpentToday));
-                if(bid<seller.Minimum||!BuyUsed(shop,state,seller,bid,minute))state.Used.Remove(seller);
+                bool artifact = seller.Product == ArtifactProduct;
+                bool identified = artifact ? seller.ArtifactIdentified : Random.Chance(AppraiserAccuracy(worker.Intelligence));
+                var estimate = seller.Copy();
+                estimate.Condition = identified ? seller.Condition : seller.Claim;
+                long bid = Math.Min(state.MaxOffer, (long)(UsedValue(estimate) * (.35 + .35 * state.Risk)));
+                bid = Math.Min(bid, Math.Max(0, state.DailyBudget - state.SpentToday));
+                // A worker only commits the high acquisition price after identifying an artifact.
+                if ((artifact && !identified) || bid < seller.Minimum || !BuyUsed(shop,state,seller,bid,minute))
+                    state.Used.Remove(seller);
             }
             foreach(var item in state.Used.Where(i=>i.Owned&&!i.Sold).ToArray())
             {
@@ -227,46 +287,49 @@ namespace PCShopSell.Core.Session
             if(state.Used.Count>80)state.Used.RemoveAll(i=>i.Sold);
         }
         private static bool RestaurantIngredientsOnly(OwnedShop shop) => shop?.RetailKind == "restaurant";
-        private static bool IsRawIngredientProduct(string id) => id == "produce:rice" || Gifts.Get(id)?.IngredientId != null;
+        private static bool IsColdIngredientProduct(string id) => Gifts.Get(id)?.IngredientId != null;
+        private static bool IsRawIngredientProduct(string id) => id == "produce:rice" || IsColdIngredientProduct(id);
+        private static bool IsRiceDelivery(CourierItem item) => item.Kind == CourierItemKind.Rice
+            || (item.Kind is CourierItemKind.Goods or CourierItemKind.Gift && item.Id == "produce:rice");
+        private static bool IsColdIngredientDelivery(CourierItem item) => item.Kind == CourierItemKind.Ingredient
+            || (item.Kind is CourierItemKind.Goods or CourierItemKind.Gift && IsColdIngredientProduct(item.Id));
         private static bool IsRawIngredientDelivery(CourierItem item) =>
-            item.Kind is CourierItemKind.Rice or CourierItemKind.Ingredient
-            || (item.Kind is CourierItemKind.Goods or CourierItemKind.Gift && IsRawIngredientProduct(item.Id));
+            IsRiceDelivery(item) || IsColdIngredientDelivery(item);
 
         private static string RestaurantFridgeRequired(OwnedShop shop) =>
             RestaurantIngredientsOnly(shop) && FridgeCapacityOf(shop.Layout) <= 0
-                ? "餐馆要先摆放冰箱才能收食材" : null;
+                ? "餐馆要先摆放冰箱才能收需冷藏的食材" : null;
 
         private static double RestaurantFridgeRoom(OwnedShop shop) =>
             Math.Max(0, FridgeCapacityOf(shop.Layout) - shop.Fridge.WeightKg);
 
-        private string RestaurantIngredientDeliveryBlocker(OwnedShop shop, double kg)
+        private string RestaurantColdStorageBlocker(OwnedShop shop, double kg)
         {
             if (kg <= 1e-9 || !RestaurantIngredientsOnly(shop)) return null;
             if (RestaurantFridgeRequired(shop) is string missing) return missing;
             string shopId = shop.Place.Id;
             double incoming = _couriers.Where(run => run.ToShop && DeliveryShop(run.ShopId) == shop)
-                .Sum(run => run.Items.Where(IsRawIngredientDelivery).Sum(CourierItemKg))
+                .Sum(run => run.Items.Where(IsColdIngredientDelivery).Sum(CourierItemKg))
                 + _employeeTrips.Where(trip => !trip.Delivered && DeliveryShop(trip.ShopId) == shop)
-                    .Sum(trip => trip.Items.Select(PurchaseCourierItem).Where(IsRawIngredientDelivery).Sum(CourierItemKg))
-                + _parcels.Where(parcel => parcel.ToShop && parcel.ShopId == shopId).Sum(parcel => parcel.Kind == ParcelKind.Rice
-                    ? RiceBagKg * parcel.Count : parcel.Kind == ParcelKind.Gift && IsRawIngredientProduct(parcel.Id)
-                        ? Gifts.Get(parcel.Id).WeightKg * parcel.Count : 0);
+                    .Sum(trip => trip.Items.Select(PurchaseCourierItem).Where(IsColdIngredientDelivery).Sum(CourierItemKg))
+                + _parcels.Where(parcel => parcel.ToShop && parcel.ShopId == shopId
+                    && parcel.Kind == ParcelKind.Gift && IsColdIngredientProduct(parcel.Id))
+                    .Sum(parcel => Gifts.Get(parcel.Id).WeightKg * parcel.Count);
             double room = Math.Max(0, RestaurantFridgeRoom(shop) - incoming);
             return kg <= room + 1e-9 ? null : $"冰箱扣除在途食材后还能放 {room:0.##} 千克，本次需要 {kg:0.##} 千克";
         }
 
         private string UnpackRestaurantIngredient(OwnedShop shop, CourierItem item)
         {
+            if (IsRiceDelivery(item))
+            {
+                double kg = CourierItemKg(item);
+                shop.Locker.Food.RiceKg += kg;
+                return $"大米 {kg:0.##} 千克（已放进门店后仓）";
+            }
             double room = RestaurantFridgeRoom(shop);
             string Destination(double overflow) => overflow <= 1e-9 ? "已放入冰箱"
                 : room <= 1e-9 ? "冰箱未摆放或已满，已送回家中后仓" : "冰箱装不下的部分已送回家中后仓";
-            if (item.Kind == CourierItemKind.Rice)
-            {
-                double fit = Math.Min(room, item.Kg);
-                shop.Fridge.Food.RiceKg += fit;
-                HomeBox.Food.RiceKg += item.Kg - fit;
-                return $"大米 {item.Kg:0.##} 千克（{Destination(item.Kg - fit)}）";
-            }
             var product = Gifts.Get(item.Id);
             int count = item.Count;
             int fits = count <= 0 ? 0 : Math.Min(count, (int)Math.Floor(room / (CourierItemKg(item) / count) + 1e-9));
@@ -283,16 +346,28 @@ namespace PCShopSell.Core.Session
             return $"{name}×{count}（{Destination(count - fits)}）";
         }
 
-        private void RefrigerateExistingRestaurantIngredients(OwnedShop shop)
+        private void NormalizeRestaurantIngredientStorage(OwnedShop shop)
         {
             if (!RestaurantIngredientsOnly(shop)) return;
             var fridge = shop.Fridge;
+            MoveStoredRice(fridge.Food, shop.Locker.Food);
+            MoveStoredRice(shop.Temp.Food, shop.Locker.Food);
+            const string packagedRice = "produce:rice";
+            var rice = Gifts.Get(packagedRice);
+            foreach (var bag in new[] { shop.Locker, shop.Temp, fridge })
+            {
+                int count = bag.GiftCount(packagedRice);
+                if (count > 0 && bag.TakeGift(packagedRice, count))
+                    AddRetailToBag(shop.Locker, rice, count, FoodBatch.NoExpiry);
+            }
+            int packagedStock = shop.Sim.Stock.GoodsCount(packagedRice);
+            if (packagedStock > 0 && shop.Sim.Stock.TryRemoveGoods(packagedRice, packagedStock))
+                AddRetailToBag(shop.Locker, rice, packagedStock, FoodBatch.NoExpiry);
+
             double capacity = FridgeCapacityOf(shop.Layout);
             if (capacity <= 0) return;
             foreach(var bag in new[]{shop.Locker,shop.Temp})
             {
-                double rice=Math.Min(bag.Food.RiceKg,Math.Max(0,capacity-fridge.WeightKg));
-                if(rice>1e-9){bag.Food.RiceKg-=rice;fridge.Food.RiceKg+=rice;}
                 foreach(var batch in bag.Food.Ingredient.ToArray())
                 {
                     double unit=Backpack.IngredientKg(batch.Id);int fit=Math.Min(batch.Count,(int)Math.Floor(Math.Max(0,capacity-fridge.WeightKg)/unit+1e-9));
@@ -301,7 +376,7 @@ namespace PCShopSell.Core.Session
             }
             foreach(var line in shop.Sim.Stock.GoodsLines().ToArray())
             {
-                if (!IsRawIngredientProduct(line.Key)) continue;
+                if (!IsColdIngredientProduct(line.Key)) continue;
                 var product=Gifts.Get(line.Key);
                 int fit=Math.Min(line.Value,(int)Math.Floor(Math.Max(0,capacity-fridge.WeightKg)/product.WeightKg+1e-9));
                 for(int n=0;n<fit;n++)
@@ -314,7 +389,7 @@ namespace PCShopSell.Core.Session
             Chill(fridge);
         }
         public int KitchenIngredientCount(OwnedShop shop,string id) => shop.Fridge.Food.IngredientCount(id);
-        public double KitchenRice(OwnedShop shop) => shop.Fridge.Food.RiceKg;
+        public double KitchenRice(OwnedShop shop) => shop.Locker.Food.RiceKg;
         private int[] RestaurantMealChoices()
         {
             var shop=CurrentShop;
@@ -336,27 +411,43 @@ namespace PCShopSell.Core.Session
             Say($"{meal}在自己的餐厅吃了{RecipeNames[recipe]}，消耗本店大米 0.25 千克和{Ingredients.Get(RecipeIngredients[recipe]).Name} 1 份，饱腹 +{gain:0.#}。");
             return true;
         }
-        private bool ConsumeRecipe(OwnedShop shop,int recipe)
+        public string RestaurantIngredientBlocker(OwnedShop shop, DiningOrder order) =>
+            RestaurantIngredientBlocker(shop, order.Recipe, order.Fish);
+
+        private string RestaurantIngredientBlocker(OwnedShop shop, int recipe, FishDefinition fish)
+        {
+            string id = RecipeIngredients[recipe];
+            if (KitchenRice(shop) < .25 - 1e-9) return "后仓需要大米 0.25 千克。";
+            if (KitchenIngredientCount(shop, id) < 1) return "冰箱需要" + Ingredients.Get(id).Name + " 1 份。";
+            return fish != null && KitchenIngredientCount(shop, fish.Id) < 1
+                ? "冰箱需要" + fish.Name + " 1 条。" : null;
+        }
+
+        private bool ConsumeRecipe(OwnedShop shop,int recipe, FishDefinition fish = null)
         {
             string id=RecipeIngredients[recipe];
-            if(KitchenRice(shop)<.25-1e-9||KitchenIngredientCount(shop,id)<1)return false;
-            shop.Fridge.Food.RiceKg = Math.Max(0, shop.Fridge.Food.RiceKg - .25);
+            if (RestaurantIngredientBlocker(shop, recipe, fish) != null) return false;
+            shop.Locker.Food.RiceKg = Math.Max(0, KitchenRice(shop) - .25);
             Pantry.TakeBowl(shop.Fridge.Food.Ingredient, id);
+            if (fish != null) Pantry.TakeBowl(shop.Fridge.Food.Ingredient, fish.Id);
             return true;
         }
         private bool StartRestaurantOrder(OwnedShop shop,SpecialBusinessState state,DiningOrder order,long minute,bool automatic=false,int stove=-1)
         {
             if(order==null||order.Stage!=DiningStage.Waiting||SpecialFitGap(shop)!=null)return false;
+            if (order.IsFishOrder && minute >= order.DueAt) return false;
             if(state.Orders.Count(o=>o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Burnt)>=Furnished(shop,"restaurant_stove"))return automatic?false:Fail("锅位正在使用。");
             var used=state.Orders.Where(o=>o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Burnt).Select(o=>o.Stove).ToArray();
             if(stove<0)stove=Enumerable.Range(0,Furnished(shop,"restaurant_stove")).First(i=>!used.Contains(i));
             if(used.Contains(stove))return false;
-            if(!ConsumeRecipe(shop,order.Recipe))return automatic?false:Fail("冰箱缺少食材：需要0.25千克大米和1份"+Ingredients.Get(RecipeIngredients[order.Recipe]).Name+"。");
+            if (!ConsumeRecipe(shop, order.Recipe, order.Fish))
+                return automatic ? false : Fail(RestaurantIngredientBlocker(shop, order));
             order.Stove=stove;order.Stage=DiningStage.Cooking;order.Started=minute;order.ReadyAt=minute+8;order.BurnAt=minute+38;return true;
         }
         public bool StartRestaurantCooking(int id)
         {
-            if(!SpecialPlayer(CurrentShop)||CurrentShop.RetailKind!="restaurant"||!SpecialOpen(CurrentShop,Clock.Now))return false;
+            if (!SpecialPlayer(CurrentShop) || CurrentShop.RetailKind != "restaurant"
+                || !CanServeSpecialShop(CurrentShop, Clock.Now, true)) return false;
             var s=SpecialBusiness(CurrentShop.Place.Id);return StartRestaurantOrder(CurrentShop,s,s.Orders.FirstOrDefault(o=>o.Id==id),Clock.Now.TotalMinutes);
         }
         public bool PlateRestaurantOrder(int id)
@@ -373,6 +464,30 @@ namespace PCShopSell.Core.Session
             if(!JobMatches(RestaurantJob.Serve,o,Clock.Now.TotalMinutes))return false;
             o.Stage=DiningStage.Eating;o.EatUntil=Clock.Now.TotalMinutes+15;return true;
         }
+        public bool HandInRestaurantFishOrder(int id)
+        {
+            var shop = CurrentShop;
+            if (!SpecialPlayer(shop) || shop.RetailKind != "restaurant") return false;
+            var state = SpecialBusiness(shop.Place.Id);
+            var order = state.Orders.FirstOrDefault(o => o.Id == id);
+            if (order?.IsFishOrder != true || order.Stage != DiningStage.Ready || Clock.Now.TotalMinutes >= order.DueAt)
+                return Fail("请先做好鱼餐，并在交期前交付。");
+            if (Furnished(shop, FurnitureCatalog.ShopCounter) == 0) return Fail("请先摆放收银台。");
+            SettleRestaurantTable(shop, state, order, Clock.Now);
+            state.Orders.Remove(order);
+            return true;
+        }
+
+        public bool DeclineRestaurantFishOrder(int id)
+        {
+            var shop = CurrentShop;
+            if (!SpecialPlayer(shop) || shop.RetailKind != "restaurant") return false;
+            var state = SpecialBusiness(shop.Place.Id);
+            var order = state.Orders.FirstOrDefault(o => o.Id == id && o.IsFishOrder && o.Stage == DiningStage.Waiting);
+            if (order == null || state.Workers.Any(w => w.Busy && w.OrderId == id)) return false;
+            return state.Orders.Remove(order);
+        }
+
         public bool ClearRestaurantOrder(int id)
         {
             var shop = CurrentShop;
@@ -384,7 +499,9 @@ namespace PCShopSell.Core.Session
         private bool ClearRestaurantOrder(OwnedShop shop,SpecialBusinessState state,DiningOrder order,GameTimestamp now)
         {
             if(order?.NeedsClearing!=true)return false;
-            if(order.Stage==DiningStage.Burnt&&now.TotalMinutes-order.Arrived<100){order.Stage=DiningStage.Waiting;order.Stove=-1;return true;}
+            if (order.Stage == DiningStage.Burnt
+                && (order.IsFishOrder ? now.TotalMinutes < order.DueAt : now.TotalMinutes - order.Arrived < 100))
+            { order.Stage = DiningStage.Waiting; order.Stove = -1; return true; }
             if (order.Stage == DiningStage.Checkout)
             {
                 if (Furnished(shop, FurnitureCatalog.ShopCounter) == 0) return false;
@@ -419,7 +536,7 @@ namespace PCShopSell.Core.Session
             if (lossesOnly) yield break;
             foreach (var order in state.Orders)
             {
-                if (order.Arrived < dayStart || order.Stage == DiningStage.Left || order.Stage == DiningStage.Completed) continue;
+                if (order.IsFishOrder || order.Arrived < dayStart || order.Stage == DiningStage.Left || order.Stage == DiningStage.Completed) continue;
                 yield return new ShopVisitDetail
                 {
                     CustomerId = order.Id,
@@ -461,24 +578,48 @@ namespace PCShopSell.Core.Session
 
         private void SettleRestaurantTable(OwnedShop shop,SpecialBusinessState state,DiningOrder order,GameTimestamp now)
         {
-            Ledger.Credit(now.Date,"餐饮",Money.FromYuan(order.Price),RecipeNames[order.Recipe]+"堂食",LedgerAttribution.ForShop(shop.Place.Id, RestaurantSaleId(shop, order) + ":paid", "销售"));
-            RecordAggregateReceipt(shop, "meal:" + order.Id, RecipeNames[order.Recipe], Money.FromYuan(order.Price), now.Date.TotalDays);
+            string name = order.DishName;
+            Ledger.Credit(now.Date,"餐饮",Money.FromYuan(order.Price),name+(order.IsFishOrder?"预订":"堂食"),LedgerAttribution.ForShop(shop.Place.Id, RestaurantSaleId(shop, order) + ":paid", "销售"));
+            RecordAggregateReceipt(shop, "meal:" + order.Id, name, Money.FromYuan(order.Price), now.Date.TotalDays);
             state.Revenue+=order.Price;state.Paid++;order.Stage=DiningStage.Completed;
-            shop.Sim.Reputation+=ShopSimulation.SaleReputationGain;
+            shop.Sim.AdjustShopAwareness(ShopSimulation.SaleAwarenessGain);
             shop.Sim.AdjustShopReputation(.12);
+            if (order.IsFishOrder)
+            {
+                shop.Sim.AdjustPersonalReputation(order.ReputationReward);
+                Say($"已交付鱼餐「{name}」，收款 ¥{order.Price:N0}，名望 +{order.ReputationReward:0.##}。");
+                return;
+            }
             var drink = SellRestaurantDrink(shop, state, order, now);
             RecordRestaurantVisit(state, now, new ShopVisitDetail
             {
                 CustomerId = order.Id, ArrivalMinute = order.Arrived, State = CustomerState.Paid,
-                ProductName = drink.Name == null ? RecipeNames[order.Recipe] : RecipeNames[order.Recipe] + "、" + drink.Name,
+                ProductName = drink.Name == null ? name : name + "、" + drink.Name,
                 PaidCents = Money.FromYuan(order.Price).Cents + drink.Price.Cents
             });
         }
-        private void TickRestaurant(OwnedShop shop,SpecialBusinessState state,GameTimestamp now,bool open)
+        private void TickRestaurant(OwnedShop shop,SpecialBusinessState state,GameTimestamp now,bool open,bool canServe)
         {
             long minute=now.TotalMinutes;
             foreach(var o in state.Orders.ToArray())
             {
+                if (o.IsFishOrder)
+                {
+                    if (minute >= o.DueAt)
+                    {
+                        state.Orders.Remove(o);
+                        Say($"鱼餐预订「{o.DishName}」已超过交期。");
+                    }
+                    else if (o.Stage == DiningStage.Cooking && minute >= o.BurnAt) o.Stage = DiningStage.Burnt;
+                    continue;
+                }
+                if (!shop.Sim.InHours(now) && !canServe && GuestStillHere(o))
+                {
+                    o.Stage = DiningStage.Left;
+                    RecordRestaurantLoss(state, now, o.Id, o.Arrived, LeaveReason.ShopClosed);
+                    if (o.TableCleared) state.Orders.Remove(o);
+                    continue;
+                }
                 if(o.Stage==DiningStage.Cooking&&minute>=o.BurnAt)o.Stage=DiningStage.Burnt;
                 if((o.Stage==DiningStage.Waiting||o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Ready||o.Stage==DiningStage.Burnt)&&minute-o.Arrived>=100)
                 {
@@ -499,10 +640,35 @@ namespace PCShopSell.Core.Session
                     if(o.TableCleared)state.Orders.Remove(o);
                 }
             }
-            TickRestaurantWorkers(shop,state,now,open);
+            TickRestaurantWorkers(shop,state,now,canServe);
             if(!open||minute<state.NextVisit)return;
             state.NextVisit=minute+(long)Math.Ceiling(SpecialVisitInterval(shop,RestaurantVisitMinutes)/ShopPowerTraffic(shop,now));
             TrySeatRestaurantGuest(shop, state, now);
+            OfferRestaurantFishOrder(state, minute);
+        }
+
+        private void OfferRestaurantFishOrder(SpecialBusinessState state, long minute)
+        {
+            if (minute < state.NextFishOrder || state.Orders.Count(o => o.IsFishOrder) >= RestaurantFishOrderLimit) return;
+            var recipes = Enumerable.Range(0, RecipeNames.Length).Where(recipe => (state.RecipeMask & (1 << recipe)) != 0).ToArray();
+            if (recipes.Length == 0) return;
+            var fishOptions = state.NextFishOrder == 0
+                ? FishingCatalog.Fish.Where(f => !FishingCatalog.RequiresCatch(f.Id)).ToArray() : FishingCatalog.Fish;
+            int ticket = Random.Next(0, fishOptions.Sum(f => f.Weight));
+            var fish = fishOptions[0];
+            foreach (var option in fishOptions)
+            {
+                ticket -= option.Weight;
+                if (ticket < 0) { fish = option; break; }
+            }
+            int recipe = recipes[Random.Next(0, recipes.Length)];
+            state.Orders.Add(new DiningOrder
+            {
+                Id = state.NextId++, Recipe = recipe, Table = -1, Stage = DiningStage.Waiting, Arrived = minute,
+                FishId = fish.Id, DueAt = minute + RestaurantFishOrderDays * GameTimestamp.MinutesPerDay,
+                Price = (long)Math.Round(RecipePrices[recipe] * state.MenuMarkup) + fish.DinnerSurcharge
+            });
+            state.NextFishOrder = minute + RestaurantFishOfferIntervalDays * GameTimestamp.MinutesPerDay;
         }
 
         private bool TrySeatRestaurantGuest(OwnedShop shop, SpecialBusinessState state, GameTimestamp now)
@@ -510,7 +676,7 @@ namespace PCShopSell.Core.Session
             long minute = now.TotalMinutes;
             int tables=Math.Min(RestaurantTableLimit(shop.Sim.Size), RestaurantTablesPlaced(shop));
             int table=0;
-            while(table<tables&&state.Orders.Any(o=>!o.TableCleared&&o.Table==table))table++;
+            while(table<tables&&state.Orders.Any(o=>!o.IsFishOrder&&!o.TableCleared&&o.Table==table))table++;
             if(table>=tables)return false;
             if (state.RestaurantArrivalDay != now.Date.TotalDays)
             {

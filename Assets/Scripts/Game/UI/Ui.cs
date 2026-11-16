@@ -136,14 +136,14 @@ namespace PCShopSell.Game.UI
         public static Button Button(Transform parent, string text, Action onClick, int size = 18, Color? bg = null, bool interactable = true)
         {
             Image img = Panel(parent, "Button", bg ?? ButtonBg);
-            var b = img.gameObject.AddComponent<Button>();
+            var b = img.gameObject.AddComponent<FlatStyledButton>();
+            b.targetGraphic = img;
             ColorBlock cb = b.colors;
             cb.highlightedColor = new Color(1.15f, 1.13f, 1.08f);
             cb.fadeDuration = 0.12f;
             cb.pressedColor = new Color(0.8f, 0.8f, 0.8f);
             cb.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.6f);
             b.colors = cb;
-            b.interactable = interactable;
             if (onClick != null)
             {
                 if(text=="+"||text=="−"||text=="-")
@@ -155,10 +155,9 @@ namespace PCShopSell.Game.UI
                 else b.onClick.AddListener(() => onClick());
             }
             Text t = Label(img.transform, text, size, TextAnchor.MiddleCenter);
-            if(bg.HasValue&&(bg.Value==ButtonHot||bg.Value==Accent))t.fontStyle=FontStyle.Bold;
             t.rectTransform.Fill(6);
-            if (!interactable) t.color = Dim;
-            NavigationArt(b,t,text);
+            b.SetCaption(t);
+            b.interactable = interactable;
             return b;
         }
 
@@ -201,13 +200,13 @@ namespace PCShopSell.Game.UI
             var caption=Label(face.transform,"",18,TextAnchor.MiddleLeft);caption.rectTransform.Fill(8);caption.raycastTarget=false;
             caption.rectTransform.offsetMax=new Vector2(-25,-4);
             var arrow=Label(face.transform,opensUp ? "▴" : "▾",18,TextAnchor.MiddleRight);arrow.rectTransform.Fill(6);arrow.raycastTarget=false;
-            var template=Panel(face.transform,"Template",PanelBg2).rectTransform;
+            var template=FlatPanel(face.transform,"Template",PanelBg2,FlatWellEdge).rectTransform;
             float anchorY = opensUp ? 1 : 0;
             template.anchorMin=new Vector2(0,anchorY);template.anchorMax=new Vector2(1,anchorY);template.pivot=new Vector2(.5f,1-anchorY);
             template.anchoredPosition=Vector2.zero;template.sizeDelta=new Vector2(0,220);
             var viewport=Panel(template,"Viewport",PanelBg2).rectTransform;viewport.Fill();viewport.gameObject.AddComponent<RectMask2D>();
             var content=Rect(viewport,"Content");content.anchorMin=new Vector2(0,1);content.anchorMax=Vector2.one;content.pivot=new Vector2(.5f,1);content.sizeDelta=new Vector2(0,38);
-            var item=Panel(content,"Item",ButtonBg);item.rectTransform.anchorMin=new Vector2(0,.5f);item.rectTransform.anchorMax=new Vector2(1,.5f);item.rectTransform.sizeDelta=new Vector2(0,38);
+            var item=FlatPanel(content,"Item",ButtonBg,FlatButtonEdge);item.rectTransform.anchorMin=new Vector2(0,.5f);item.rectTransform.anchorMax=new Vector2(1,.5f);item.rectTransform.sizeDelta=new Vector2(0,38);
             var toggle=item.gameObject.AddComponent<Toggle>();toggle.targetGraphic=item;
             var mark=Panel(item.transform,"Selected",Accent);mark.raycastTarget=false;mark.rectTransform.Anchor(0,0,0,1,2,2,-6,2);toggle.graphic=mark;
             var itemText=Label(item.transform,"",18,TextAnchor.MiddleLeft);itemText.rectTransform.Fill(10);itemText.raycastTarget=false;

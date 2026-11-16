@@ -16,6 +16,7 @@ namespace PCShopSell.Core.Session
         private Dictionary<int,(double min,double max)> _districtDemandRange;
         private readonly Dictionary<string,double> _streetTraffic = new Dictionary<string,double>();
         private readonly Dictionary<(string from,string to),string> _trafficStreetByEdge = new Dictionary<(string,string),string>();
+        private (MapPoint point, string street)[] _trafficStreetCandidates;
         private long _streetTrafficAt = -1;
         private double _streetTrafficReputation;
         private const int RestaurantVisitMinutes = 12;
@@ -72,14 +73,15 @@ namespace PCShopSell.Core.Session
             var b = City.ViewPosition(to);
             double x = (a.X + b.X)*.5, y = (a.Y + b.Y)*.5;
             double nearest = double.MaxValue;
-            foreach (var place in City.Places)
+            _trafficStreetCandidates ??= City.Places.Where(place => place.Kind == PlaceKind.Home
+                || place.Kind == PlaceKind.Shop || place.Kind == PlaceKind.Station)
+                .Select(place => (City.ViewPosition(place.NodeId), place.StreetId)).ToArray();
+            foreach (var (point, candidateStreet) in _trafficStreetCandidates)
             {
-                if (place.Kind != PlaceKind.Home && place.Kind != PlaceKind.Shop && place.Kind != PlaceKind.Station) continue;
-                var point = City.ViewPosition(place.NodeId);
                 double dx = point.X-x, dy = point.Y-y, distance = dx*dx+dy*dy;
                 if (distance >= nearest) continue;
                 nearest = distance;
-                street = place.StreetId;
+                street = candidateStreet;
             }
             _trafficStreetByEdge.Add(key,street);
             return street;

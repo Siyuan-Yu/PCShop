@@ -160,7 +160,7 @@ namespace PCShopSell.Core.Session
             try { AdvanceClock(minutes); } finally { _manualBuildId = -1; }
             if (IsGameOver || !InPlayerShop || !PlayerShop.CompleteBuild(orderId)) return Fail("装机未交付，请检查订单状态。");
             Player.Skill = Math.Min(100, Player.Skill + 2);
-            Say($"整机交付！用时 {minutes} 分钟。");
+            Say($"整机交付！用时 {minutes} 分钟。" + (order.ReputationReward > 0 ? $"名望 +{order.ReputationReward:0.#}。" : ""));
             return true;
         }
 

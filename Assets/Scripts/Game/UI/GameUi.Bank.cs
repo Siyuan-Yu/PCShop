@@ -69,15 +69,15 @@ namespace PCShopSell.Game.UI
 
         private void BuildBank(Window w, BankDeskDraft draft)
         {
-            var tabs = Ui.Row(w.Content, 50, 6);
+            var tabs = Ui.Row(w.Content, 38, 6);
             void Tab(BankPage page, string label, string name)
             {
-                Ui.Size(Ui.Button(tabs, label, () =>
+                Ui.Tab(tabs, label, () =>
                 {
                     draft.Page = page;
                     w.ResetScrollOnRebuild = true;
                     w.Rebuild();
-                }, 19, draft.Page == page ? Ui.ButtonHot : Ui.ButtonBg), 0, 46, 1).name = name;
+                }, draft.Page == page).name = name;
             }
             Tab(BankPage.Transfers, "存取款", "BankTransfersTab");
             Tab(BankPage.Borrow, "借款", "BankBorrowTab");
@@ -100,17 +100,11 @@ namespace PCShopSell.Game.UI
             var modes = Ui.Row(w.Content, 38, 6);
             void Mode(string caption, bool take, string name)
             {
-                var button = Ui.Size(Ui.Button(modes, caption, () =>
+                Ui.Tab(modes, caption, () =>
                 {
                     draft.Withdrawing = take;
                     w.Rebuild();
-                }, 17, take == withdraw ? Ui.FlatRow : Ui.ButtonBg), 0, 38, 1);
-                button.name = name;
-                if (take == withdraw)
-                {
-                    Ui.FlatBorder(button.image, Ui.FlatHotEdge);
-                    button.GetComponentInChildren<Text>().color = Ui.Accent;
-                }
+                }, take == withdraw).name = name;
             }
             Mode("存入", false, "BankDepositMode");
             Mode("取出", true, "BankWithdrawMode");

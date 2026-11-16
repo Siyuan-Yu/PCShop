@@ -37,7 +37,7 @@ namespace PCShopSell.Core.Session
     {
         public const int AppLoanAmountStep = 100;
         public const int AppLoanBaseCreditYuan = 50000;
-        public const int AppLoanCreditPerReputationYuan = 5000;
+        public const int AppLoanCreditPerReputationYuan = 10000;
         public const int AppLoanMaximumYuan = 500000;
         private const int SavedAppLoanMaximumYuan = 10000000;
         public const int AppLoanMaximumMonths = 12;

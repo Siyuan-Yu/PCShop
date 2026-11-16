@@ -174,7 +174,7 @@ namespace PCShopSell.Core.Session
         public int Tick(double realSeconds)
         {
             _manualMoving = false;
-            if (Racing || IsGameOver || !Time.IsRunning || DrinkTastingInProgress || realSeconds <= 0) return 0;
+            if (Racing || IsGameOver || !Time.IsRunning || DrinkTastingInProgress || ManualActivityClockPaused || realSeconds <= 0) return 0;
             // 开局做饭教学：世界时钟不自己走，玩家可以慢慢看；只有锅在焖饭时才走，否则饭永远焖不好。吃饭、装包这些操作自己会推进相应的分钟。
             if (OpeningClockFrozen) return 0;
             if (!_sleeping && !IsWorking && !CityActivityExclusive && !BrandExpoExclusive && PendingEvent == null && Trip == null
@@ -184,14 +184,14 @@ namespace PCShopSell.Core.Session
             double scaled = Math.Min(realSeconds, TimeController.MaxTickSeconds) * Time.Speed * TimeController.WorldRate;
 
             int minutes = Time.Tick(realSeconds);
+            bool waitingForWallet = minutes > 0 && AtWalletReturnStation && !_sleeping && !IsWorking;
             string arrived = null;
             if (SteerActive && Trip != null) BreakTripToEdge();
             if (Trip != null) arrived = StepTrip(scaled);
             else if (SteerActive) _manualMoving = StepManual(scaled);
             if (minutes > 0)
             {
-                // Station waiting uses ordinary world ticks; fast-forward actions such as metro rides bypass it.
-                bool waitingForWallet = AtWalletReturnStation && !_sleeping && !IsWorking;
+                // Only count time ticks that started inside the station.
                 long before = Clock.Now.TotalMinutes;
                 AdvanceClock(minutes);
                 if (waitingForWallet && AtWalletReturnStation)
@@ -206,7 +206,8 @@ namespace PCShopSell.Core.Session
         /// <summary>推进时钟并处理推进中触发的晕倒、住院。所有改变时间的操作都走这里。</summary>
         public void AdvanceClock(int minutes)
         {
-            if (BrandExpoExclusive && !ExpoTimeAdvancing || DrinkTastingInProgress) return;
+            if (BrandExpoExclusive && !ExpoTimeAdvancing || ActiveRace?.PaidPractice == true || DrinkTastingInProgress
+                || ManualActivityClockPaused && !_settlingManualActivity) return;
             if (minutes <= 0) return;
             int interruption = _bodyInterruptVersion;
             SynchronizeEnergyExhaustion();
@@ -218,7 +219,7 @@ namespace PCShopSell.Core.Session
                     step = (int)Math.Min(step, Math.Max(1, WorkMealAt - Clock.Now.TotalMinutes));
                 Clock.Advance(step); minutes -= step;
                 ProcessPending();
-                if (_bodyInterruptVersion != interruption) break;
+                if (_bodyInterruptVersion != interruption || ManualActivityClockPaused && !_settlingManualActivity) break;
             }
             TrackTempClocks();
         }
@@ -317,6 +318,7 @@ namespace PCShopSell.Core.Session
             string districtBlock = DistrictAccessBlocker(p);
             if (districtBlock != null) return districtBlock;
             if (p != null && RaceTracks.Get(p.Id) != null && RacingAccessBlocker is string racingBlock) return racingBlock;
+            if (RacingGarageEntryBlocker(p?.Id) is string garageBlock) return garageBlock;
             if (p?.Kind == PlaceKind.Home && CanSleepAt(p)) return null;
             if(City.LayoutVersion>=7 && p?.Kind==PlaceKind.Home && p!=Home)return HomeVisitBlocker(p);
             if (WorkStaffEntry(p)) return null;
@@ -355,6 +357,7 @@ namespace PCShopSell.Core.Session
             if (p == null) return false;
             if(NeighborhoodVenueFits(p,Clock.Now.TotalMinutes,1))return true;
             var track=RaceTracks.Get(p.Id);if(track!=null)return RacingUnlocked&&track.IsOpenAt(Clock.MinuteOfDay);
+            if (RacingGarageEntryBlocker(p.Id) != null) return false;
             OwnedShop mine = ShopAt(p);
             if (mine != null) return IsDedicatedVenue(p)?VenueOpen(p):mine.Sim.IsOpen;
             if (SupplierClosesOnWeekend(p)) return IsWholesalerOpen;
@@ -427,7 +430,6 @@ namespace PCShopSell.Core.Session
 
         public void Dispose()
         {
-            ReleaseFishingDecision();
             Clock.TimeAdvanced -= OnTimeAdvanced;
             Clock.DayAdvanced -= OnDayAdvanced;
             foreach (OwnedShop s in _shops) s.Sim.Dispose();

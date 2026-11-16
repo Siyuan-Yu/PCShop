@@ -354,7 +354,7 @@ namespace PCShopSell.Tests
         {
             GameSession s = Make();
             GameSessionTests.Teleport(s, "tobacco");
-            Assert.IsFalse(s.BuyRice(60), "60 千克米太重");
+            Assert.IsFalse(s.BuyRice(20), "20 千克米太重");
         }
 
         [Test]

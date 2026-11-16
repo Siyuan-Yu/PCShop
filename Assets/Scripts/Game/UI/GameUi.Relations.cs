@@ -29,34 +29,35 @@ namespace PCShopSell.Game.UI
         private static Color ClosenessColor(int level) =>
             level >= 60 ? new Color(0.95f, 0.78f, 0.3f) : level >= 30 ? new Color(0.45f, 0.82f, 0.72f) : new Color(0.55f, 0.6f, 0.66f);
 
-        public void OpenRelationsPanel()
+        public void OpenRelationsPanel() => OpenPeopleWorkspace("relations", w => BuildRelationsContent(w));
+
+        private void BuildRelationsContent(Window w, float width = GraphWidth, float height = GraphHeight, bool showPlayerPortrait = false)
         {
-            OpenPeopleWorkspace("relations", w =>
-            {
-                List<ContactInfo> people = S.Contacts();
-                if (_contactSel != null && people.All(c => c.Id != _contactSel)) _contactSel = null;
+            List<ContactInfo> people = S.Contacts();
+            if (_contactSel != null && people.All(c => c.Id != _contactSel)) _contactSel = null;
 
-                RectTransform body = Ui.Row(w.Content, GraphHeight, 12);
-                Image graph = Ui.Panel(body, "Graph", new Color(0.08f, 0.1f, 0.13f, 1f));
-                Ui.Size(graph, GraphWidth, GraphHeight);
-                graph.GetComponent<LayoutElement>().minWidth = GraphWidth;
-                BuildContactGraph(graph.rectTransform, people, w);
+            RectTransform body = Ui.Row(w.Content, height, 12);
+            Image graph = Ui.Panel(body, "Graph", new Color(0.08f, 0.1f, 0.13f, 1f));
+            Ui.Size(graph, width, height, 0);
+            graph.GetComponent<LayoutElement>().minWidth = width;
+            BuildContactGraph(graph.rectTransform, people, w, new Vector2(width / GraphWidth, height / GraphHeight),
+                showPlayerPortrait ? MyPortraitTexture() : null);
 
-                RectTransform side = Ui.Rect(body, "Detail");
-                Ui.VList(side, 6, 0);
-                Ui.Size(side, -1, -1, 1);
-                ContactInfo sel = people.FirstOrDefault(c => c.Id == _contactSel);
-                if (sel != null) BuildContactDetail(Ui.Scroll(side, GraphHeight - 8), sel, people, w);
-                else BuildContactSummary(Ui.Scroll(side, GraphHeight - 8), people, w);
+            RectTransform side = Ui.Rect(body, "Detail");
+            Ui.VList(side, 6, 0);
+            Ui.Size(side, -1, -1, 1);
+            ContactInfo sel = people.FirstOrDefault(c => c.Id == _contactSel);
+            var detail = Ui.Scroll(side, height - 8);
+            if (sel != null) BuildContactDetail(detail, sel, people, w);
+            else BuildContactSummary(detail, people, w);
 
-                RectTransform legend = Ui.Row(w.Content, 26, 14);
-                for (int i = 0; i < GroupNames.Length; i++)
-                    Ui.Size(Ui.Label(legend, $"<color=#{ColorUtility.ToHtmlStringRGB(GroupColors[i])}>■</color> {GroupNames[i]}", 15, TextAnchor.MiddleLeft, Ui.Dim), 130);
-                Ui.Size(Ui.Label(legend, "越熟越靠近「我」 · 细线表示彼此认识", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
-            });
+            RectTransform legend = Ui.Row(w.Content, 26, 14);
+            for (int i = 0; i < GroupNames.Length; i++)
+                Ui.Size(Ui.Label(legend, $"<color=#{ColorUtility.ToHtmlStringRGB(GroupColors[i])}>■</color> {GroupNames[i]}", 15, TextAnchor.MiddleLeft, Ui.Dim), 130);
+            Ui.Size(Ui.Label(legend, "越熟越靠近「我」 · 细线表示彼此认识", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
         }
 
-        private void BuildContactGraph(RectTransform graph, List<ContactInfo> people, Window w)
+        private void BuildContactGraph(RectTransform graph, List<ContactInfo> people, Window w, Vector2 scale, Texture playerPortrait)
         {
             if (people.Count == 0)
             {
@@ -79,7 +80,7 @@ namespace PCShopSell.Game.UI
                     float a = angle + span * (i + 0.5f) / members.Count;
                     float r = Mathf.Lerp(300f, 110f, Mathf.Clamp01(members[i].Level / 100f));
                     if (members.Count > 3) r += (i % 2 == 0 ? -1f : 1f) * 14f;
-                    pos[members[i].Id] = new Vector2(Mathf.Cos(a) * r * 1.42f, Mathf.Sin(a) * r * 0.95f);
+                    pos[members[i].Id] = new Vector2(Mathf.Cos(a) * r * 1.42f * scale.x, Mathf.Sin(a) * r * 0.95f * scale.y);
                 }
                 angle += span;
             }
@@ -97,7 +98,16 @@ namespace PCShopSell.Game.UI
             Image me = Ui.Panel(graph, "Me", new Color(0.88f, 0.70f, 0.28f));
             PlaceAt(me.rectTransform, Vector2.zero, new Vector2(62, 62));
             Text meText = Ui.Label(me.transform, "<b>我</b>", 24, TextAnchor.MiddleCenter, new Color(0.1f, 0.1f, 0.12f));
-            meText.rectTransform.Fill();
+            if (playerPortrait == null) meText.rectTransform.Fill();
+            else
+            {
+                var avatar = Ui.Rect(me.transform, "PlayerPortrait").Anchor(0, 0, 1, 1, 3, 18, 3, 3).gameObject.AddComponent<RawImage>();
+                avatar.texture = playerPortrait;
+                avatar.uvRect = new Rect(0, .15f, 1, .7f);
+                avatar.raycastTarget = false;
+                meText.fontSize = 13;
+                meText.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -18);
+            }
 
             foreach (ContactInfo c in people) GraphNode(graph, c, pos[c.Id], w);
         }

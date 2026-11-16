@@ -18,6 +18,37 @@ namespace PCShopSell.Tests
 {
     public class UiCleanupTests
     {
+        [Test]
+        public void SharedButtonSkinKeepsFillBorderAndCaptionInSync()
+        {
+            var root = new GameObject("ButtonSkinTest");
+            try
+            {
+                var button = Ui.Button(root.transform, "测试", () => { });
+                var caption = button.GetComponentInChildren<Text>();
+                var border = button.GetComponent<Outline>();
+                Assert.AreEqual(Ui.ButtonBg, button.image.color);
+                Assert.AreEqual(Ui.FlatButtonEdge, border.effectColor);
+                Assert.AreEqual(Ui.TextColor, caption.color);
+
+                Ui.SetButtonFill(button, Ui.SelectedButton(true));
+                Assert.AreEqual(Ui.FlatRow, button.image.color);
+                Assert.AreEqual(Ui.FlatHotEdge, border.effectColor);
+                Assert.AreEqual(Ui.Accent, caption.color);
+
+                button.interactable = false;
+                Assert.AreEqual(Ui.Dim, caption.color);
+                button.interactable = true;
+                Assert.AreEqual(Ui.Accent, caption.color);
+
+                Ui.SetButtonFill(button, Ui.SelectedButton(false));
+                Assert.AreEqual(Ui.ButtonBg, button.image.color);
+                Assert.AreEqual(Ui.FlatButtonEdge, border.effectColor);
+                Assert.AreEqual(Ui.TextColor, caption.color);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
+        }
+
         [Test] public void HudCanBeConstructedBeforeSessionStarts()
         {
             var root = new GameObject("HudStartupTest");
@@ -83,6 +114,243 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void CompactHudFitsTwoRowsAndPriceButtonSharesItsHotkey()
+        {
+            using var rig = new Rig();
+            var top = (RectTransform)rig.Components<Transform>().Single(t => t.name == "TopBar");
+            var canvas = top.GetComponentInParent<Canvas>();
+            canvas.GetComponent<CanvasScaler>().enabled = false;
+            canvas.renderMode = RenderMode.WorldSpace;
+            var viewport = (RectTransform)canvas.transform;
+            var row = (RectTransform)top.Find("Row");
+            var shortcuts = (RectTransform)row.Find("HudShortcuts");
+            var daily = (RectTransform)shortcuts.Find("HudShortcutRows/HudDailyShortcuts");
+            var business = (RectTransform)shortcuts.Find("HudShortcutRows/HudBusinessShortcuts");
+            var purchase = (RectTransform)rig.Button("HudProcurement").transform;
+            var price = (RectTransform)rig.Button("HudPrices").transform;
+            var menu = (RectTransform)rig.Button("HudMenu").transform;
+            Assert.AreSame(business, price.parent);
+            Assert.AreEqual(purchase.GetSiblingIndex() + 1, price.GetSiblingIndex());
+            Assert.AreEqual("物价 H", price.GetComponentInChildren<Text>().text);
+
+            Rect Bounds(RectTransform target)
+            {
+                var corners = new Vector3[4];
+                target.GetWorldCorners(corners);
+                Vector3 min = top.InverseTransformPoint(corners[0]);
+                Vector3 max = top.InverseTransformPoint(corners[2]);
+                return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+            }
+
+            foreach (int width in new[] { 1920, 1280, 1024 })
+            {
+                viewport.sizeDelta = new Vector2(width, 1080);
+                rig.Call("FitHudTopRow");
+                LayoutRebuilder.ForceRebuildLayoutImmediate(row);
+                Assert.AreEqual(64, top.rect.height, .1);
+                Rect upper = Bounds(daily), lower = Bounds(business), menuRect = Bounds(menu);
+                Assert.Greater(upper.yMin, lower.yMax);
+                Assert.AreEqual(upper.yMax, menuRect.yMax, .1);
+                Assert.AreEqual(lower.yMin, menuRect.yMin, .1);
+                Assert.LessOrEqual(menuRect.xMax, top.rect.xMax);
+                Assert.That(menuRect.yMin, Is.GreaterThanOrEqualTo(top.rect.yMin));
+                Assert.That(menuRect.yMax, Is.LessThanOrEqualTo(top.rect.yMax));
+                Assert.That(Bounds(price).width, Is.GreaterThan(0));
+                if (width == 1920) Assert.AreEqual(.365, Bounds(shortcuts).width / width, .005);
+            }
+
+            rig.Button("HudPrices").onClick.Invoke();
+            Assert.That(rig.Workspace("market").GetComponentsInChildren<Text>().Select(label => label.text), Does.Contain("价格走势"));
+            rig.Ui.CloseAllWindows();
+            Assert.True(rig.Ui.TryHotkey(KeyCode.H));
+            Assert.NotNull(rig.Workspace("market"));
+        }
+
+        [TestCase(0)]
+        [TestCase(1)]
+        public void SoloParkWalkHasFreeRoutesAndNoPurchaseOrConversationControls(int route)
+        {
+            using var rig = new Rig(DistrictProgressionTests.Make());
+            var park = rig.S.City.GetPlace("life_hike");
+            GameSessionTests.Teleport(rig.S, park.Id);
+            rig.Ui.OpenCityVenue(park);
+            var routes = rig.Components<Button>().Where(b => b.GetComponentInChildren<Text>()?.text == "选这条路线").ToArray();
+            Assert.AreEqual(2, routes.Length);
+            StringAssert.Contains("公园步道", rig.Text);
+            Money before = rig.S.Ledger.Balance;
+
+            routes[route].onClick.Invoke();
+            var walk = rig.S.RunningCityActivity;
+            Assert.NotNull(walk, rig.S.VenueServiceBlocker("hike", route));
+            Assert.AreEqual(route, walk.ServiceChoice);
+            Assert.AreEqual(0, walk.EntryCostCents);
+            Assert.AreEqual(before, rig.S.Ledger.Balance);
+            rig.Ui.UpdateCityLifeHud(1);
+            StringAssert.Contains("散步详情", rig.Text);
+            rig.Ui.OpenCityVenue(park);
+            StringAssert.Contains("散步路线", rig.Text);
+            Assert.That(rig.Text, Does.Not.Contain("本次消费").And.Not.Contain("打开场所菜单")
+                .And.Not.Contain("打开菜单 / 服务").And.Not.Contain("聊生活").And.Not.Contain("分享经历"));
+            rig.Ui.CloseAllWindows();
+            rig.S.AdvanceClock(walk.Duration);
+            Assert.AreEqual(CityActivityPhase.Completed, walk.State, walk.EndReason);
+            rig.Ui.OpenCityActivitySettlement(walk.Id);
+            Assert.That(rig.Text, Does.Not.Contain("本次支出").And.Not.Contain("参考费用"));
+        }
+
+        [TestCase("life_court")]
+        [TestCase("life_court_mid")]
+        [TestCase("life_fitness")]
+        [TestCase("life_golf")]
+        public void SportVenueKeepsRosterBesideCompactPassOptions(string venueId)
+        {
+            using var rig = new Rig(DistrictProgressionTests.Make());
+            var venue = rig.S.City.GetPlace(venueId);
+            GameSessionTests.Teleport(rig.S, venueId);
+            rig.Ui.OpenCityVenue(venue);
+            var roster = rig.Components<Transform>().Single(t => t.name == "People");
+            var goods = roster.parent.Find("Goods");
+            Assert.NotNull(goods);
+            var passes = goods.GetComponentsInChildren<Button>().Where(button => button.name.StartsWith("SportPass_")).ToArray();
+            Assert.AreEqual(4, passes.Length);
+            Assert.That(passes.All(button => button.GetComponent<LayoutElement>().preferredHeight == 36));
+            string text = string.Join("\n", goods.GetComponentsInChildren<Text>().Select(label => label.text));
+            StringAssert.Contains("全部用完结算 2 小时", text);
+            StringAssert.Contains("全部用完结算 6 小时", text);
+        }
+
+        [Test]
+        public void RacingQuestAndMenuOnlyOfferTravelWhenEligibleAndGarageShowsRegistrationFirst()
+        {
+            using var world = DistrictProgressionTests.Make();
+            using var rig = new Rig(new GameSession(world.City, 7, Money.FromYuan(99999), world.Clock.Now));
+            foreach (var quest in Quests.All.TakeWhile(q => q.Id != "racing_enrollment"))
+                rig.S.Flags.Add("tutorial:" + quest.Id);
+            Assert.That(rig.S.CurrentQuest()?.Id, Is.EqualTo("racing_enrollment"));
+            Assert.That(rig.S.BuyEventScratchTicket(), Is.True);
+            rig.S.Flags.Add("life:library-invited");
+
+            Transform CheckQuest()
+            {
+                var window = rig.Components<Transform>().Single(t => t.name == "Window_当前任务");
+                string text = string.Join("\n", window.GetComponentsInChildren<Text>().Select(label => label.text));
+                StringAssert.Contains("当前任务", text);
+                StringAssert.Contains("办理赛车登记", text);
+                Assert.That(text, Does.Not.Contain("经营待办").And.Not.Contain("社区生活"));
+                return window;
+            }
+
+            rig.Ui.OpenQuests();
+            var blocked = CheckQuest();
+            StringAssert.Contains("现金需达到", rig.Ui.QuestTrackerText);
+            Assert.That(blocked.GetComponentsInChildren<Button>().Any(button =>
+                button.GetComponentInChildren<Text>()?.text == "前往城郊赛场车库"), Is.False);
+            rig.Ui.CloseAllWindows();
+            rig.Ui.OpenRacingDestinations();
+            StringAssert.Contains("现金需达到", rig.Text);
+            Assert.That(rig.Components<Button>().Any(button =>
+                button.GetComponentInChildren<Text>()?.text == "前往城郊赛场车库"), Is.False);
+            rig.Ui.CloseAllWindows();
+
+            rig.S.DebugAddCash(1000);
+            rig.Ui.OpenQuestWindow();
+            CheckQuest().GetComponentsInChildren<Button>()
+                .Single(button => button.GetComponentInChildren<Text>()?.text == "前往城郊赛场车库").onClick.Invoke();
+            var garage = rig.S.City.GetPlace(GameSession.StarterRaceGarageId);
+            Assert.That(rig.S.Trip?.TargetNode, Is.EqualTo(garage.NodeId));
+            Assert.That(rig.S.CityIntent.EnterOnArrival, Is.False);
+
+            rig.S.StopTrip();
+            rig.S.ArriveAtNode(garage.NodeId);
+            Assert.That(rig.S.Enter(garage), Is.True);
+            rig.Ui.OnEnteredPlace(garage);
+            StringAssert.Contains("车库负责人 · 赛车登记", rig.Text);
+            Assert.That(rig.S.RacingUnlocked, Is.False);
+            Assert.That(rig.Components<RectTransform>().Any(rect => rect.name == "GarageParking"), Is.False);
+            rig.ClickCaption("办理赛车登记");
+            Assert.That(rig.S.RacingUnlocked, Is.True);
+            Assert.That(rig.Components<RectTransform>().Any(rect => rect.name == "GarageParking"), Is.True);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ScheduleShowsEventActionsWithoutTheRemovedShortcuts(bool smartphone)
+        {
+            using var rig = new Rig(DistrictProgressionTests.Make());
+            rig.S.SetSmartphone(smartphone);
+            rig.Ui.OpenSchedulePanel();
+            Assert.That(rig.Text, Does.Not.Contain("经营待办").And.Not.Contain("社区生活"));
+            rig.Ui.CloseAllWindows();
+
+            Assert.That(rig.S.BuyEventScratchTicket(), Is.True);
+            rig.S.Flags.Add("life:library-invited");
+            rig.Ui.OpenSchedulePanel();
+            var calendar = rig.Workspace("calendar");
+            var captions = calendar.GetComponentsInChildren<Button>()
+                .Select(button => button.GetComponentInChildren<Text>()?.text).ToArray();
+            Assert.That(captions, Has.None.EqualTo("经营待办").And.None.EqualTo("社区生活").And.None.EqualTo("社区生活待办"));
+            rig.ClickCaption("图书");
+            StringAssert.Contains("社区图书角", rig.Text);
+            rig.ClickCaption("刮开");
+            Assert.That(rig.Components<RectTransform>().Any(rect => rect.name == "ScratchTicketSurface"), Is.True);
+        }
+
+        [Test]
+        public void FurnitureBuyback_UsesSelectedShopAndShowsArrivalWithoutClosingWindow()
+        {
+            using var rig = new Rig(HomeTests.Make(500000, 600));
+            rig.RentSecond();
+            var second = rig.S.CurrentShop;
+            string id = FurnitureCatalog.FridgeSmall;
+            second.Locker.AddFurniture(id, 2);
+            rig.S.MainShop.Locker.AddFurniture(FurnitureCatalog.RackHeavy, 1);
+            GameSessionTests.Teleport(rig.S, "mall");
+            rig.Ui.OnEnteredPlace(rig.S.CurrentPlace);
+            rig.Button("OpenFurnitureBuyback").onClick.Invoke();
+            Assert.That(rig.S.Time.IsHeld, Is.True);
+            var windows = (System.Collections.Generic.List<Window>)typeof(GameUi)
+                .GetField("_windows", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(rig.Ui);
+            var buyback = windows.Last();
+            void UpdateBuybackWindow()
+            {
+                const BindingFlags state = BindingFlags.Instance | BindingFlags.NonPublic;
+                ((Action)typeof(Window).GetField("RefreshContent", state).GetValue(buyback))?.Invoke();
+                if ((bool)typeof(Window).GetField("RebuildPending", state).GetValue(buyback))
+                    typeof(Window).GetMethod("ApplyPendingRebuild", state).Invoke(buyback, null);
+            }
+            Assert.That(rig.Button("ConfirmFurnitureBuyback").interactable, Is.False);
+            var picker = rig.Components<Dropdown>().Single(control => control.name == "FurnitureBuybackShop");
+            picker.value = rig.S.MyShops.ToList().IndexOf(second);
+            UpdateBuybackWindow();
+            Assert.That(rig.Components<InputField>().Any(control => control.name == "QuantityValue_Buyback_" + FurnitureCatalog.RackHeavy), Is.False);
+            rig.Components<InputField>().Single(control => control.name == "QuantityValue_Buyback_" + id).onEndEdit.Invoke("2");
+            UpdateBuybackWindow();
+            var confirm = rig.Button("ConfirmFurnitureBuyback");
+            Assert.That(confirm.interactable, Is.True);
+            confirm.onClick.Invoke();
+            confirm.onClick.Invoke();
+            UpdateBuybackWindow();
+            var order = rig.S.FurnitureBuybacks.Single();
+            Assert.That(order.ShopId, Is.EqualTo(second.Place.Id));
+            Assert.That(order.Count, Is.EqualTo(2));
+            Assert.That(second.Locker.FurnitureCount(id), Is.Zero);
+            Assert.That(rig.S.MainShop.Locker.FurnitureCount(FurnitureCatalog.RackHeavy), Is.EqualTo(1));
+            Assert.That(rig.S.Time.IsHeld, Is.False);
+            StringAssert.Contains("货车在途", rig.Text);
+            StringAssert.Contains("1 辆面包车 · 56 千克", rig.Text);
+
+            rig.S.Clock.Advance((int)(order.DueMinute - rig.S.Clock.Now.TotalMinutes));
+            UpdateBuybackWindow();
+            StringAssert.Contains("回收已完成", rig.Text);
+            StringAssert.Contains("回收款 · 已到账", rig.Text);
+            rig.Button("ConfirmFurnitureBuyback").onClick.Invoke();
+            UpdateBuybackWindow();
+            Assert.That(rig.S.Time.IsHeld, Is.True);
+            buyback.Close();
+            Assert.That(rig.S.Time.IsHeld, Is.True);
+        }
+
+        [Test]
         public void PhoneAppsUseTheSameCenteredFrameFromDesktopAndStore()
         {
             using var rig = new Rig();
@@ -121,7 +389,7 @@ namespace PCShopSell.Tests
                 {
                     var racing = r.Button("HudRacing");
                     Assert.AreEqual("赛车 R", racing.GetComponentInChildren<Text>().text);
-                    Assert.NotNull(racing.transform.Find("NavigationIcon").GetComponent<Image>().sprite);
+                    Assert.NotNull(racing.GetComponentInChildren<HorizontalLayoutGroup>().transform.Find("NavigationIcon").GetComponent<Image>().sprite);
                     Assert.True(r.Ui.TryHotkey(KeyCode.R));
                     Assert.True(r.Components<Transform>().Any(t => t.name == "Window_湖区赛车"));
                     Assert.False(r.Ui.TryHotkey(KeyCode.N));
@@ -226,7 +494,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void QuickStockTradeShowsFailuresAndConfirmsBeforeUsingReserve()
+        public void StockDraftCyclesLotsAndConfirmsBeforeUsingReserve()
         {
             using (var r = new Rig())
             {
@@ -235,13 +503,27 @@ namespace PCShopSell.Tests
                 r.Ui.OpenCityInvestments();
                 var cash = r.S.Ledger.Balance;
 
-                r.Button("StockQuickSell_city_chip").onClick.Invoke();
-                var feedback = r.Components<Text>().Single(t => t.name == "StockTradeFeedback");
-                StringAssert.Contains("卖出数量超过实际持股", feedback.text);
+                Assert.False(r.Button("StockDraftMinus_city_chip").interactable);
+                foreach (var lots in new[] { 5, 25, 100, 1 })
+                {
+                    var cycle = r.Button("StockLotCycle");
+                    cycle.onClick.Invoke();
+                    Assert.AreEqual($"×{lots} 手", cycle.GetComponentInChildren<Text>().text);
+                    r.Button("StockDraftPlus_city_chip").onClick.Invoke();
+                    var draft = r.Components<Text>().Single(t => t.name == "StockDraft_city_chip");
+                    Assert.AreEqual($"+{lots * GameSession.StockLotSize:N0} 股", draft.text);
+                    r.Button("StockDraftMinus_city_chip").onClick.Invoke();
+                    Assert.AreEqual("—", draft.text);
+                }
+                r.Button("StockDraftPlus_city_chip").onClick.Invoke();
+                r.Button("StockPage_Charts").onClick.Invoke();
+                r.Button("StockChartSeries_city_chip").onClick.Invoke();
+                Assert.That(r.Button("StockChartSeries_city_chip").transform.Find("SeriesHidden"), Is.Not.Null);
+                r.Button("StockPage_Exchange").onClick.Invoke();
+                Assert.That(r.Components<Text>().Single(t => t.name == "StockDraft_city_chip").text, Is.EqualTo("+100 股"));
                 Assert.AreEqual(cash, r.S.Ledger.Balance);
-
-                r.Button("StockQuickBuy_city_chip").onClick.Invoke();
-                StringAssert.Contains("买入会动用预留资金", r.Text);
+                r.Button("StockBatchExecute").onClick.Invoke();
+                StringAssert.Contains("成交会动用预留资金", r.Text);
                 Assert.AreEqual(cash, r.S.Ledger.Balance);
                 Assert.Zero(r.S.CityInvestmentUnits("city_chip"));
 
@@ -264,18 +546,23 @@ namespace PCShopSell.Tests
             s.RestockReserveYuan = cash.Cents / 100;
             r.Ui.OpenCityInvestments();
 
-            Assert.That(r.Components<InputField>(), Has.Length.EqualTo(1));
+            Assert.IsEmpty(r.Components<InputField>());
             Assert.That(r.Components<Transform>().Any(item => item.name == "StockQuote_hardware"), Is.False);
+            r.Button("StockDraftMore_" + id).onClick.Invoke();
+            Assert.That(r.Components<InputField>(), Has.Length.EqualTo(1));
             Assert.That(r.Button("StockQuickSellAll_" + id).interactable, Is.False);
             r.Button("StockQuickBuyMax_" + id).onClick.Invoke();
             Assert.That(s.Ledger.Balance, Is.EqualTo(cash));
+            r.Button("StockBatchExecute").onClick.Invoke();
             r.Button("StockReserveConfirm").onClick.Invoke();
             Assert.That(s.CityInvestmentUnits(id), Is.EqualTo(200));
             Assert.That(s.Ledger.Balance, Is.EqualTo(cash - cost));
-            Assert.That(r.Button("StockQuickBuyMax_" + id).interactable, Is.False);
-
             var proceeds = s.CityInvestmentTradeTotal(id, 200, buy: false);
+            r.Button("StockDraftMore_" + id).onClick.Invoke();
+            Assert.That(r.Button("StockQuickBuyMax_" + id).interactable, Is.False);
             r.Button("StockQuickSellAll_" + id).onClick.Invoke();
+            Assert.That(s.CityInvestmentUnits(id), Is.EqualTo(200));
+            r.Button("StockBatchExecute").onClick.Invoke();
             Assert.That(s.CityInvestmentUnits(id), Is.Zero);
             Assert.That(s.CityInvestmentCost(id), Is.EqualTo(Money.Zero));
             Assert.That(s.Ledger.Balance, Is.EqualTo(cash - cost + proceeds));
@@ -552,7 +839,7 @@ namespace PCShopSell.Tests
             Assert.AreEqual(1200, state.DailyBudget);
             Assert.AreEqual(350, state.MaxOffer);
             Assert.AreEqual(.8, state.Risk);
-            Assert.AreEqual(Ui.ButtonHot, r.Button("UsedRisk_积极").image.color);
+            Assert.AreEqual(Ui.FlatRow, r.Button("UsedRisk_积极").image.color);
             Assert.False(r.Ui.AnyModalOpen);
             Assert.False(r.S.Time.IsHeld);
         }
@@ -621,15 +908,51 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void FishChoicesAndPreordersShowTheirEffectsAndDeadline()
+        {
+            using var r = new Rig(HomeTests.Make());
+            GameSessionTests.Teleport(r.S, r.S.Home.Id);
+            var fish = FishingCatalog.Get("fish_mandarin");
+            r.S.Backpack.Food.AddIngredient(fish.Id, 1);
+            r.Ui.OpenCookerWindow();
+            var choice = r.Components<Dropdown>().Single(d => d.name == "CookFishChoice");
+            StringAssert.Contains("鳜鱼", choice.options[1].text);
+            choice.value = 1;
+            StringAssert.Contains("白米饭 + 鳜鱼", r.Text);
+            StringAssert.Contains("本锅用 鳜鱼 1 条", r.Text);
+            Assert.AreEqual(1, r.S.Backpack.Food.IngredientCount(fish.Id));
+            r.Ui.CloseAllWindows();
+
+            GameSessionTests.Teleport(r.S, "pc");
+            Assert.True(r.S.SetShopMainCategory("restaurant"));
+            var due = r.S.Clock.Now.AddMinutes(7 * GameTimestamp.MinutesPerDay);
+            r.S.SpecialBusiness("pc").Orders.Add(new DiningOrder
+            {
+                Id = 1, Recipe = 0, Table = -1, FishId = fish.Id, DueAt = due.TotalMinutes,
+                Stage = DiningStage.Waiting, Price = 36 + fish.DinnerSurcharge
+            });
+            r.Ui.OpenDock();
+            r.Ui.DebugSelectTab(3);
+            StringAssert.Contains("鱼餐预订 1 / 2", r.Text);
+            StringAssert.Contains("青菜炒饭 + 鳜鱼", r.Text);
+            StringAssert.Contains("交付名望 +0.65", r.Text);
+            StringAssert.Contains("交期 " + due, r.Text);
+        }
+
+        [Test]
         public void MenuPriceSliderOnlyCommitsOnExplicitConfirmation()
         {
             using (var r = new Rig())
             {
                 Assert.True(r.S.SetShopMainCategory("restaurant")); var state = r.S.SpecialBusiness("pc");
                 r.Ui.OpenDock(); r.Ui.DebugSelectTab(2); double original = state.MenuMarkup;
+                StringAssert.Contains("青菜炒饭 · ¥36", r.Text);
+                StringAssert.Contains("鸡蛋炒饭 · ¥44", r.Text);
+                StringAssert.Contains("肉末炒饭 · ¥56", r.Text);
                 r.Components<Slider>().Single(s => s.name == "MenuMarkupSlider").value = 1.7f;
                 Assert.AreEqual(original, state.MenuMarkup);
                 r.Button("SaveMenuMarkup").onClick.Invoke(); Assert.AreEqual(1.7, state.MenuMarkup, 1e-9);
+                StringAssert.Contains("青菜炒饭 · ¥61", r.Text);
             }
         }
 
@@ -743,14 +1066,99 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void PersonalPageStartsWithEssentialStatsAndMovesInventoryIntoItsOwnTab()
+        public void PersonalPanelKeepsTheSameWindowAndSharesPhoneContacts()
         {
             using (var r = new Rig())
             {
+                r.S.Meet(Npcs.Zhou, 40);
                 r.Ui.OpenMyPanel(); StringAssert.Contains("饱腹", r.Text);
-                StringAssert.DoesNotContain("未摆放的家具", r.Text); StringAssert.DoesNotContain("没有冰箱，放不久", r.Text);
-                r.Button("MyTab_3").onClick.Invoke(); StringAssert.Contains("在途包裹", r.Text);
+                Assert.That(r.Components<RawImage>().Any(image => image.name == "MyPortrait"), Is.True);
+                var window = r.Workspace("personal");
+                var size = ((RectTransform)window.Find("Panel")).sizeDelta;
+                var currentPlace = r.S.CurrentPlace;
+                for (int i = 0; i < 5; i++)
+                {
+                    r.Button("MyTab_" + i).onClick.Invoke();
+                    Assert.AreSame(window, r.Workspace("personal"));
+                    Assert.AreEqual(size, ((RectTransform)window.Find("Panel")).sizeDelta);
+                    Assert.IsFalse(r.Components<Transform>().Any(item => item.name == "Workspace_people"));
+                    StringAssert.DoesNotContain("物品与包裹", r.Text);
+                    StringAssert.DoesNotContain("摆放家中家具", r.Text);
+                    StringAssert.DoesNotContain("去中介管理", r.Text);
+                }
+                r.Button("MyTab_2").onClick.Invoke();
+                r.Button("MyLeaseDetails").onClick.Invoke();
+                StringAssert.Contains("下次扣租", r.Text);
+                Assert.AreSame(currentPlace, r.S.CurrentPlace);
+                Assert.IsNull(r.S.Trip);
+
+                string[] ContactActions() => r.Components<Button>().Select(button => button.GetComponentInChildren<Text>()?.text)
+                    .Where(text => text == "人物资料" || text == "发消息" || text == "联系司机").ToArray();
+                r.Button("MyTab_3").onClick.Invoke();
+                var personalActions = ContactActions();
+                CollectionAssert.AreEqual(new[] { "联系司机", "人物资料", "发消息" }, personalActions);
+                r.Ui.CloseTopWindow();
+                r.Ui.OpenContactsPanel();
+                CollectionAssert.AreEqual(personalActions, ContactActions());
             }
+        }
+
+        [Test]
+        public void HomeDockCanCollapseStoreFurnitureAndOpenItsOwnResidenceTab()
+        {
+            using var r = new Rig();
+            void Refresh() => r.Call("RefreshHomeDockVisibility", false);
+            bool Visible(string name) => r.Components<RectTransform>().Any(item => item.name == name);
+            Refresh();
+            Assert.False(Visible("HomeDockToggle"));
+            GameSessionTests.Teleport(r.S, r.S.Home.Id);
+            Refresh();
+            Assert.True(Visible("HomeDock"));
+            r.Button("HomeDockToggle").onClick.Invoke();
+            Assert.False(Visible("HomeDock"));
+            r.Button("HomeDockToggle").onClick.Invoke();
+            Assert.True(Visible("HomeDock"));
+
+            string id = r.S.HomeLayout[0].Id;
+            int count = r.S.HomeLayout.Count;
+            int stored = r.S.FurnitureToPlace(false, id);
+            r.Button("HomeDockStore_0").onClick.Invoke();
+            Assert.AreEqual(count - 1, r.S.HomeLayout.Count);
+            Assert.AreEqual(stored + 1, r.S.FurnitureToPlace(false, id));
+            Assert.NotNull(r.Button("HomeDockPlace_" + id));
+            Assert.False(r.S.Time.IsHeld);
+            r.Button("HomeDockResidence").onClick.Invoke();
+            StringAssert.Contains("我的租约与产权", r.Text);
+            Assert.AreSame(r.S.Home, r.S.CurrentPlace);
+            r.Ui.CloseTopWindow();
+            GameSessionTests.Teleport(r.S, r.S.MainShop.Place.Id);
+            Refresh();
+            Assert.False(Visible("HomeDock"));
+            Assert.False(Visible("HomeDockToggle"));
+        }
+
+        [Test]
+        public void RestaurantStockShowsRiceInWarehouseAndFridgeDoesNotOfferToStoreIt()
+        {
+            using var r = new Rig();
+            Assert.True(r.S.SetShopMainCategory("restaurant"));
+            var shop = r.S.CurrentShop;
+            if (!r.S.HasWarehouseHere) shop.Layout.Add(new PlacedFurniture { Id = FurnitureCatalog.ShopBox });
+            if (!r.S.CanOpenFridge) shop.Layout.Add(new PlacedFurniture { Id = FurnitureCatalog.FridgeSmall });
+            PackTests.EmptyBag(r.S);
+            r.S.Backpack.Food.RiceKg = 1;
+            shop.Locker.Food.RiceKg = 121.5;
+            shop.Fridge.Food.Ingredient.Add(new FoodBatch { Id = "tofu", Count = 1, ExpireDay = FoodBatch.NoExpiry });
+            r.Ui.OpenDock();
+            r.Ui.DebugSelectTab(1);
+            var warehouseRice = r.Components<RectTransform>().Single(row => row.name == "WarehouseItem_rice");
+            Assert.That(warehouseRice.GetComponentsInChildren<Text>().Any(label => label.text.Contains("121.5")), Is.True);
+            Assert.That(r.Components<RectTransform>().Any(row => row.name == "FridgeItem_rice"), Is.False);
+
+            r.Ui.OpenFridgeWindow();
+            var fridge = r.Components<RectTransform>().Single(panel => panel.name.StartsWith("Window_冰箱 ·"));
+            Assert.That(fridge.GetComponentsInChildren<Button>().Any(button =>
+                button.GetComponentInChildren<Text>()?.text == "全部存入"), Is.False);
         }
 
         [Test]
@@ -836,33 +1244,45 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void RetailQuantityAcceptsWeightAndKeepsTheStepButtonsAndOpeningHours()
+        public void FarmMarketOpensWholesaleAndAcceptsExactBagCounts()
         {
             using var r = new Rig(HomeTests.Make(5000000, 600));
             GameSessionTests.Teleport(r.S, "farm");
             r.Ui.OnEnteredPlace(r.S.CurrentPlace);
-            var field = r.Components<InputField>().Single(f => f.name == "QuantityValue_rice");
-            Assert.That(field.contentType, Is.EqualTo(InputField.ContentType.DecimalNumber));
+            const string key = "wholesale:produce:rice";
+            var field = r.Components<InputField>().Single(f => f.name == "QuantityValue_" + key);
+            Assert.That(field.contentType, Is.EqualTo(InputField.ContentType.IntegerNumber));
+            var captions = r.Components<Text>().Select(text => text.text).ToArray();
+            Assert.That(captions.Any(text => text.Contains("批发采购")), Is.True);
+            Assert.That(captions.Any(text => text.Contains("切回零售")), Is.False);
             var cash = r.S.Ledger.Balance;
 
-            field.onEndEdit.Invoke("1.38");
-            Assert.That(r.S.CartAmount("rice"), Is.EqualTo(1.5));
-            Assert.That(field.text, Is.EqualTo("1.5"));
-            r.Button("QuantityPlus_rice").onClick.Invoke();
-            Assert.That(r.S.CartAmount("rice"), Is.EqualTo(1.75));
-            r.Button("QuantityMinus_rice").onClick.Invoke();
-            Assert.That(r.S.CartAmount("rice"), Is.EqualTo(1.5));
-            field.onEndEdit.Invoke("");
-            Assert.That(field.text, Is.EqualTo("1.5"));
+            field.onEndEdit.Invoke("5");
+            Assert.That(r.S.CartAmount(key), Is.EqualTo(5));
+            Assert.That(r.S.CartGoods, Is.EqualTo(Money.FromCents(975)));
+            r.Button("QuantityPlus_" + key).onClick.Invoke();
+            Assert.That(r.S.CartAmount(key), Is.EqualTo(6));
+            r.Button("QuantityMinus_" + key).onClick.Invoke();
+            Assert.That(r.S.CartAmount(key), Is.EqualTo(5));
+            Assert.That(r.S.Ledger.Balance, Is.EqualTo(cash));
+
+            var windows = (System.Collections.Generic.List<Window>)typeof(GameUi)
+                .GetField("_windows", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(r.Ui);
+            var apply = typeof(Window).GetMethod("ApplyPendingRebuild", BindingFlags.Instance | BindingFlags.NonPublic);
+            apply.Invoke(windows.Last(), null);
+            Assert.AreSame(field, r.Components<InputField>().Single(f => f.name == "QuantityValue_" + key),
+                "更新购物车时保留左侧商品输入框");
+            Assert.That(r.Text, Does.Contain("货款 ¥9.75"));
+            r.Button("QuantityMax_" + key).onClick.Invoke();
+            Assert.AreEqual(r.S.CitySupplierRemaining("farm", "produce:rice"), r.S.CartAmount(key));
+            field.onEndEdit.Invoke("5");
 
             r.S.Clock.Restore(r.S.Clock.Today, 23 * 60);
             r.Ui.RebuildWindows();
-            field = r.Components<InputField>().Single(f => f.name == "QuantityValue_rice");
+            field = r.Components<InputField>().Single(f => f.name == "QuantityValue_" + key);
             field.onEndEdit.Invoke("12");
-            Assert.That(r.S.CartAmount("rice"), Is.EqualTo(1.5));
-            field.onEndEdit.Invoke("0");
-            Assert.That(r.S.CartAmount("rice"), Is.Zero);
-            Assert.That(r.S.Ledger.Balance, Is.EqualTo(cash));
+            Assert.That(r.S.CartAmount(key), Is.EqualTo(5));
+            Assert.NotNull(r.S.CheckoutBlocker(false));
         }
 
         [Test]
@@ -926,16 +1346,70 @@ namespace PCShopSell.Tests
             }
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void InsuranceTermsReturnToTheSameOfferAndPurchaseOnlyChargesOnce(bool renew)
+        {
+            using var r = new Rig();
+            if (renew)
+            {
+                Assert.That(r.S.BuyHospitalPolicy(), Is.True);
+                var nearExpiry = new GameTimestamp(r.S.HospitalPolicyUntil - 10 * 1440);
+                r.S.Clock.Restore(nearExpiry.Date, nearExpiry.MinuteOfDay);
+            }
+            long oldExpiry = r.S.HospitalPolicyUntil;
+            long now = r.S.Clock.Now.TotalMinutes;
+            Money cash = r.S.Ledger.Balance;
+            int premiums = r.S.Ledger.Entries.Count(entry => entry.Category == "住院保险");
+            r.S.RaiseEvent("money_insurance_agent");
+            var offer = r.S.PendingEvent;
+            Assert.That(offer, Is.Not.Null);
+            int terms = offer.Choices.FindIndex(choice => choice.Text == "查看条款");
+            Assert.That(terms, Is.GreaterThanOrEqualTo(0));
+            Assert.That(r.S.ResolveEvent(terms), Is.False, "查看条款不能结算事件");
+            r.Ui.ShowEvent(offer);
+
+            string purchase = renew ? "续保一年 · ¥3,000" : "投保一年 · ¥3,000";
+            for (int i = 0; i < 2; i++)
+            {
+                r.ClickCaption("查看条款");
+                StringAssert.Contains("报销80%", r.Text);
+                StringAssert.DoesNotContain(purchase, r.Text);
+                Assert.That(r.S.PendingEvent, Is.SameAs(offer));
+                Assert.That(r.S.Ledger.Balance, Is.EqualTo(cash));
+                Assert.That(r.S.HospitalPolicyUntil, Is.EqualTo(oldExpiry));
+                Assert.That(r.S.Time.IsHeld, Is.True);
+                r.ClickCaption("返回上一页");
+                StringAssert.Contains(purchase, r.Text);
+                StringAssert.Contains("暂不购买", r.Text);
+                Assert.That(r.S.PendingEvent, Is.SameAs(offer));
+            }
+
+            r.ClickCaption(purchase);
+            Assert.That(r.S.PendingEvent, Is.Null);
+            Assert.That(r.S.Ledger.Balance, Is.EqualTo(cash - Money.FromYuan(3000)));
+            Assert.That(r.S.Ledger.Entries.Count(entry => entry.Category == "住院保险"), Is.EqualTo(premiums + 1));
+            Assert.That(r.S.HospitalPolicyUntil, Is.EqualTo(Math.Max(now, oldExpiry) + GameDate.DaysPerYear * 1440L));
+            Assert.That(r.Ui.AnyModalOpen, Is.False);
+        }
+
         [Test]
         public void WalletStationKeepsTimeRunningAndEnablesHandoffAfterWaiting()
         {
             using var r = new Rig();
+            r.S.EventRaised += r.Ui.ShowEvent;
+            r.S.CityPlaceEntered += r.Ui.OnEnteredPlace;
             r.S.RaiseEvent("wallet");
-            Assert.That(r.S.ResolveEvent(0), Is.True);
+            r.ClickCaption("送到地铁站服务台");
             var station = r.S.WalletReturnStation;
-            GameSessionTests.Teleport(r.S, station.Id);
+            Assert.That(r.Ui.AnyModalOpen, Is.False);
+            Assert.That(r.S.Trip?.TargetNode, Is.EqualTo(station.NodeId));
+            Assert.That(r.S.CurrentPlace, Is.Not.EqualTo(station));
+            for (int frame = 0; frame < 2000 && r.S.CurrentPlace != station; frame++) r.S.Tick(.05);
+            Assert.That(r.S.CurrentPlace, Is.EqualTo(station));
+            Assert.That(r.S.WalletWaitLeft, Is.EqualTo(30));
             r.S.Time.SetPaused(true);
-            r.Ui.OnEnteredPlace(station);
+            r.Ui.RebuildWindows();
             Assert.That(r.S.Time.IsHeld, Is.False);
             Assert.That(r.Button("WalletReturnDesk").interactable, Is.False);
             r.S.Time.SecondsPerMinuteAt1x = .5;
@@ -948,6 +1422,25 @@ namespace PCShopSell.Tests
             handoff.onClick.Invoke();
             Assert.That(r.S.WalletReturnStation, Is.Null);
             Assert.That(r.S.Time.IsHeld, Is.True);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void WalletTravelCanResumeFromEitherScheduleView(bool smartphone)
+        {
+            using var r = new Rig();
+            r.S.SetSmartphone(smartphone);
+            r.S.RaiseEvent("wallet");
+            Assert.That(r.S.ResolveEvent(0), Is.True);
+            var station = r.S.WalletReturnStation;
+            r.S.StopTrip();
+            Assert.That(r.S.CityIntent, Is.Null);
+            r.Ui.OpenSchedulePanel();
+            r.ClickCaption("前往地铁站");
+            Assert.That(r.S.CityIntent?.TargetPlaceId, Is.EqualTo(station.Id));
+            Assert.That(r.S.Trip?.TargetNode, Is.EqualTo(station.NodeId));
+            Assert.That(r.S.CurrentPlace, Is.Not.EqualTo(station));
+            Assert.That(r.S.WalletWaitLeft, Is.EqualTo(30));
         }
 
         [Test]

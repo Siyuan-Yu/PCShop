@@ -198,11 +198,10 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>从这里叫一车送到某家店（null = 家里）：每辆运费和大概多久到。</summary>
-        public (Money fee, int minutes) CourierQuote(OwnedShop dest)
-        {
-            double d = CourierDistance(dest);
-            return (Vehicles.TaxiFare(d) + CourierHandling, CourierBaseMinutes + (int)Math.Ceiling(d / CourierMetersPerMinute));
-        }
+        public (Money fee, int minutes) CourierQuote(OwnedShop dest) => CourierQuoteForDistance(CourierDistance(dest));
+
+        private static (Money fee, int minutes) CourierQuoteForDistance(double distance) =>
+            (Vehicles.TaxiFare(distance) + CourierHandling, CourierBaseMinutes + (int)Math.Ceiling(distance / CourierMetersPerMinute));
 
         public (Money fee, int minutes) CourierQuote(bool toShop) => CourierQuote(AsDest(toShop));
 
@@ -271,9 +270,11 @@ namespace PCShopSell.Core.Session
         }
 
         /// <summary>这一批（按顺序装）一共要再叫几辆新车；有单件超过一辆车的返回 -1。</summary>
-        private int CarsFor(IEnumerable<(bool rice, double unitKg, double amount)> lines, OwnedShop dest)
+        private int CarsFor(IEnumerable<(bool rice, double unitKg, double amount)> lines, OwnedShop dest) =>
+            CarsFor(lines, OpenCourierRun(dest)?.FreeKg ?? 0);
+
+        private static int CarsFor(IEnumerable<(bool rice, double unitKg, double amount)> lines, double free)
         {
-            double free = OpenCourierRun(dest)?.FreeKg ?? 0;
             int cars = 0;
             foreach (var (rice, unitKg, amount) in lines)
             {
@@ -308,7 +309,7 @@ namespace PCShopSell.Core.Session
         /// </summary>
         private bool Ship(OwnedShop dest, string category, Money goods, string what, CourierItem item, string verb)
         {
-            if (IsRawIngredientDelivery(item) && RestaurantIngredientDeliveryBlocker(dest, CourierItemKg(item)) is string coldStorageBlocker)
+            if (IsColdIngredientDelivery(item) && RestaurantColdStorageBlocker(dest, CourierItemKg(item)) is string coldStorageBlocker)
                 return Fail(coldStorageBlocker + "。");
             var plan = PlanLoad(item, dest);
             if (plan == null) return Fail($"单件就超过一辆面包车能装的 {CourierCapacityKg:0} 千克。");
@@ -368,6 +369,7 @@ namespace PCShopSell.Core.Session
 
         private void DeliverCouriers(GameTimestamp now)
         {
+            DeliverFurnitureBuybacks(now);
             var arrived = new List<(OwnedShop Dest, bool ToShop, string Where, string From, List<CourierItem> Items)>();
             for (int i = 0; i < _couriers.Count; i++)
             {

@@ -65,6 +65,7 @@ namespace PCShopSell.Core.Session
             if (CityActivityExclusive) return "请先结束当前活动";
             if (LeaveBlocker is string leave) return leave;
             if (DistrictAccessBlocker(target) is string district) return district;
+            if (RacingGarageEntryBlocker(target.Id) is string garageBlock) return garageBlock;
 
             var route = PlanTrip(target.NodeId, StandOf(target), out double meters);
             if (route == null) return "当前路线不可达";
@@ -148,7 +149,7 @@ namespace PCShopSell.Core.Session
             else if (OffNode)
             {
                 start = PlayerPosition;
-                Constrain(start, out scale);
+                scale = NearestCorridorScale(start);
                 from = PlayerNodeId;
             }
             else

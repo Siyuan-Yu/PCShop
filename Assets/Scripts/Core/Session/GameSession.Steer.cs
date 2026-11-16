@@ -175,33 +175,43 @@ namespace PCShopSell.Core.Session
             return new MapPoint(a.X + dx * t, a.Y + dy * t);
         }
 
-        /// <summary>把想去的点限制进走廊里：在走廊内就原样，否则贴着最近走廊的边。scale 是那里的"游戏米/画面米"。</summary>
-        private MapPoint Constrain(MapPoint want, out double scale)
+        private double NearestCorridorScale(MapPoint point)
         {
-            scale = 1;
+            double scale = 1;
             double nearestDist = double.MaxValue;
+            foreach (Corridor c in Corridors())
+            {
+                MapPoint q = ClosestOnSegment(c.A, c.B, point);
+                double dx = point.X - q.X, dy = point.Y - q.Y;
+                double distance = dx * dx + dy * dy;
+                if (distance >= nearestDist) continue;
+                nearestDist = distance;
+                scale = c.Scale;
+            }
+            return scale;
+        }
+
+        /// <summary>把想去的点限制进走廊里：在走廊内就原样，否则贴着最近走廊的边。</summary>
+        private MapPoint Constrain(MapPoint want)
+        {
             double bestOver = double.MaxValue;
             MapPoint clamped = want;
-            bool inside = false;
             foreach (Corridor c in Corridors())
             {
                 MapPoint q = ClosestOnSegment(c.A, c.B, want);
-                double d = Dist(q, want);
-                if (d < nearestDist)
-                {
-                    nearestDist = d;
-                    scale = c.Scale;
-                }
+                double dx = want.X - q.X, dy = want.Y - q.Y;
+                double distanceSquared = dx * dx + dy * dy;
+                if (distanceSquared <= c.HalfWidth * c.HalfWidth) return want;
+                double d = Math.Sqrt(distanceSquared);
                 double over = d - c.HalfWidth;
-                if (over <= 0) inside = true;
-                else if (over < bestOver)
+                if (over < bestOver)
                 {
                     bestOver = over;
                     double k = c.HalfWidth / d;
-                    clamped = new MapPoint(q.X + (want.X - q.X) * k, q.Y + (want.Y - q.Y) * k);
+                    clamped = new MapPoint(q.X + dx * k, q.Y + dy * k);
                 }
             }
-            return inside ? want : clamped;
+            return clamped;
         }
 
         private string NearestNodeTo(MapPoint p)
@@ -210,7 +220,8 @@ namespace PCShopSell.Core.Session
             double bd = double.MaxValue;
             foreach (WorldNode n in City.Map.Nodes)
             {
-                double d = Dist(p, City.ViewPosition(n.Id));
+                double dx = p.X - n.X / City.DistanceScale, dy = p.Y - n.Y / City.DistanceScale;
+                double d = dx * dx + dy * dy;
                 if (d < bd)
                 {
                     bd = d;
@@ -239,10 +250,9 @@ namespace PCShopSell.Core.Session
             // Small spatial steps prevent 8x movement from crossing a wall or skipping an entire short road.
             for (int step = 0; budget > 1e-8 && step < 4096; step++)
             {
-                Constrain(new MapPoint(res.X + _steerX * .01, res.Y + _steerY * .01), out double scale);
-                scale = Math.Max(1e-6, scale);
+                double scale = Math.Max(1e-6, NearestCorridorScale(new MapPoint(res.X + _steerX * .01, res.Y + _steerY * .01)));
                 double view = Math.Min(.75, budget / scale);
-                MapPoint next = Constrain(new MapPoint(res.X + _steerX * view, res.Y + _steerY * view), out _);
+                MapPoint next = Constrain(new MapPoint(res.X + _steerX * view, res.Y + _steerY * view));
                 if (TryDistrictRoadStop(res, next, out MapPoint gateStop, out int gateTier))
                 {
                     res = gateStop; _steering = false; NotifyDistrictRoadStop(gateTier); break;

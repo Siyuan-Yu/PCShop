@@ -112,8 +112,10 @@ namespace PCShopSell.Game.UI
             if(_owner!=null)
             {
                 if(_owner.RebuildPending)return;
-                foreach(var hold in _owner.Root.GetComponentsInChildren<HoldRepeat>())
-                    if(hold.Owner==_owner&&hold.Key==_key){target=hold;break;}
+                if (_source != null && _source.isActiveAndEnabled) target = _source;
+                else
+                    foreach(var hold in _owner.Root.GetComponentsInChildren<HoldRepeat>())
+                        if(hold.Owner==_owner&&hold.Key==_key){target=hold;break;}
             }
             else target=_source;
             if(target==null){Stop();return;}
@@ -209,11 +211,11 @@ namespace PCShopSell.Game.UI
                 CartLine line = l;
                 if (line.ByTruck > 1e-9)
                     CartLineCard(w, truckList, line, line.ByTruck, line.TruckKg, bagCol, () => S.CartWholeRowToBag(line.Key),
-                        new HoldAction("放进背包", Ui.ButtonHot, line.ByTruck, n => S.CartToBag(line.Key, n)),
+                        new HoldAction("放进背包", Ui.ButtonBg, line.ByTruck, n => S.CartToBag(line.Key, n)),
                         new HoldAction("少拿一件", Ui.ButtonBg, line.ByTruck, n => S.RemoveFromCart(line.Key, n)));
                 if (line.InBag > 1e-9)
                     CartLineCard(w, bagList, line, line.InBag, line.BagKg, truckCol, () => S.CartToTruck(line.Key, line.InBag),
-                        new HoldAction("改叫车", Ui.ButtonHot, line.InBag, n => S.CartToTruck(line.Key, n)),
+                        new HoldAction("改叫车", Ui.ButtonBg, line.InBag, n => S.CartToTruck(line.Key, n)),
                         new HoldAction("少拿一件", Ui.ButtonBg, line.InBag, n => S.CartToTruck(line.Key, n) && S.RemoveFromCart(line.Key, n)));
             }
             if (bagKg <= 1e-9) Para(bagList, "新购商品默认优先放背包；装不下的自动放到右侧叫车。两边可按需调整。", 14, Ui.Dim);
@@ -222,7 +224,7 @@ namespace PCShopSell.Game.UI
             if (truckKg > 1e-9)
             {
                 Ui.Size(Ui.Label(destRow, "送到", 16, TextAnchor.MiddleLeft, Ui.Dim), 40);
-                Ui.Size(Ui.Button(destRow, S.CourierDestName(dest) + "  ▼", () => OpenCourierDestMenu(w, dest, false), 15, new Color(0.2f, 0.24f, 0.3f)), 300);
+                Ui.Size(Ui.Button(destRow, S.CourierDestName(dest) + "  ▼", () => OpenCourierDestMenu(w, dest, false), 15, Ui.FlatWell), 300);
                 Ui.Size(Ui.Label(destRow, $"约 {minutes} 分钟到，每辆面包车最多装 {GameSession.CourierCapacityKg:0} 千克", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
             }
             else Ui.Size(Ui.Label(destRow, "全部自己背走，不叫车。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
@@ -317,7 +319,7 @@ namespace PCShopSell.Game.UI
                         S.SetCourierDest(shop);
                         w.Close();
                         owner?.Rebuild();
-                    }, 18, chosen ? Ui.ButtonHot : Ui.ButtonBg, !here), -1, 64);
+                    }, 18, Ui.SelectedButton(chosen), !here), -1, 64);
                 }
                 Option(null);
                 foreach (OwnedShop s in S.MyShops) Option(s);
@@ -341,7 +343,7 @@ namespace PCShopSell.Game.UI
                 OwnedShop dest = S.TruckDest;
                 RectTransform destRow = Ui.Row(w.Content, 42, 8);
                 Ui.Size(Ui.Label(destRow, "送到", 17, TextAnchor.MiddleLeft, Ui.Dim), 44);
-                Ui.Size(Ui.Button(destRow, S.CourierDestName(dest) + "  ▼", () => OpenCourierDestMenu(w, dest, true), 16, new Color(0.2f, 0.24f, 0.3f)), 320);
+                Ui.Size(Ui.Button(destRow, S.CourierDestName(dest) + "  ▼", () => OpenCourierDestMenu(w, dest, true), 16, Ui.FlatWell), 320);
                 string destWhy = S.TruckDestBlocker;
                 (Money fee, int minutes) = S.CourierQuote(dest);
                 Ui.Size(Ui.Label(destRow, destWhy ?? $"每辆 {fee}，约 {minutes} 分钟到", 15, TextAnchor.MiddleLeft, destWhy != null ? Ui.Warn : Ui.Dim), -1, -1, 1);
@@ -418,7 +420,7 @@ namespace PCShopSell.Game.UI
                 card.gameObject.AddComponent<Image>().color = CartCard;
                 string have = item.ByWeight ? $"{left:0.##} 千克" : $"×{left:0}";
                 Ui.Size(Ui.Label(card, $"  {item.Name} {have}<size=13><color=#A8B0BA>　{item.Where} · 每{(item.ByWeight ? "千克" : "件")} {item.UnitKg:0.##} 千克</color></size>", 15), -1, -1, 1);
-                HoldButton(w, card, "装车", Ui.ButtonHot, left, item.ByWeight ? "千克" : "件", n => S.AddToTruck(item.Key, n), 90, canLoad);
+                HoldButton(w, card, "装车", Ui.ButtonBg, left, item.ByWeight ? "千克" : "件", n => S.AddToTruck(item.Key, n), 90, canLoad);
                 var drag = card.gameObject.AddComponent<CartDragItem>();
                 drag.Dropped = (pos, cam) =>
                 {

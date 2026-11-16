@@ -29,7 +29,11 @@ namespace PCShopSell.Tests
             Assert.AreEqual(CityActivityPhase.Gathering,a.State,a.EndReason);Assert.IsTrue(s.StartOnsiteActivity(a.Id, GameSession.OnsiteNumber(a.DefinitionId) == 56 ? false : (bool?)null),a.EndReason);
             Assert.AreEqual(CityActivityPhase.Running,a.State,a.EndReason);Assert.NotNull(s.CurrentOnsite);
         }
-        private static void Finish(GameSession s,CityActivity a)=>s.AdvanceClock((int)Math.Max(1,a.ActualStart+a.Duration-s.Clock.Now.TotalMinutes));
+        private static void Finish(GameSession s,CityActivity a)
+        {
+            if (GameSession.IsOnsiteSport(a)) Assert.True(s.FinishOnsiteSport());
+            else s.AdvanceClock((int)Math.Max(1,a.ActualStart+a.Duration-s.Clock.Now.TotalMinutes));
+        }
         private static void Shot(GameSession s,int mode,double power=.615,double angle=0)
         {
             Assert.IsTrue(s.SelectOnsiteSportMode(mode));Assert.IsTrue(s.AimOnsiteSport(angle));Assert.IsTrue(s.BeginOnsiteCharge());for(int i=0;i<(int)Math.Round(power*1000);i++)s.StepOnsiteSport(.001);Assert.IsTrue(s.ReleaseOnsiteShot());for(int i=0;i<3100;i++)s.StepOnsiteSport(.001);Assert.AreEqual("result",s.CurrentOnsite.Phase);
@@ -39,40 +43,53 @@ namespace PCShopSell.Tests
         [TestCase("life_court_mid", 54, 300)]
         [TestCase("life_fitness", 54, 300)]
         [TestCase("life_golf", 57, 150)]
-        public void VenuePassChargesOnceAndAllowsContinuousManualPractice(string venue, int sport, int price)
+        public void VenuePassChargesOnceAndSettlesTimeAfterTheLastAttempt(string venue, int sport, int price)
         {
             using var s = Make();
             At(s, venue);
             var passes = CityLifeCatalog.SportPasses(venue);
             Assert.That(passes.Select(pass => pass.Minutes), Is.EqualTo(new[] { 120, 240, 360, 480 }));
+            Assert.That(passes.Select(pass => CityLifeCatalog.ManualPlayAttempts(pass.Minutes)), Is.EqualTo(new[] { 3, 6, 9, 12 }));
             var cash = s.Ledger.Balance;
             Assert.That(s.SelectVenueService(passes[0].Id, 0), Is.True);
             Assert.That(s.Ledger.Balance, Is.EqualTo(cash - Money.FromYuan(price)));
             Assert.That(s.CurrentOnsite.Number, Is.EqualTo(sport));
             Assert.That(s.SelectVenueService(passes[0].Id, 0), Is.False);
-            for (int i = 0; i < 9; i++) Shot(s, 0);
+            var start = s.Clock.Now;
+            Shot(s, 0);
+            s.Time.SetSpeed(8);
+            Assert.Zero(s.Tick(600));
+            s.AdvanceClock(600);
+            Assert.AreEqual(start, s.Clock.Now);
             using var loaded = Reload(s);
-            Assert.That(loaded.CurrentOnsite.Round, Is.EqualTo(9));
+            Assert.That(loaded.CurrentOnsite.Round, Is.EqualTo(1));
+            Assert.That(loaded.ManualAttemptsLeft, Is.EqualTo(2));
             Assert.That(loaded.Ledger.Balance, Is.EqualTo(s.Ledger.Balance));
             var activity = loaded.RunningCityActivity;
-            loaded.AdvanceClock(119);
+            Shot(loaded, 0);
+            Shot(loaded, 0);
+            Assert.That(loaded.BeginOnsiteCharge(), Is.False);
             Assert.That(activity.State, Is.EqualTo(CityActivityPhase.Running));
-            loaded.AdvanceClock(1);
+            Assert.AreEqual(start, loaded.Clock.Now);
+            Assert.That(loaded.FinishOnsiteSport(), Is.True);
             Assert.That(activity.State, Is.EqualTo(CityActivityPhase.Completed));
             Assert.That(loaded.CurrentOnsite, Is.Null);
+            Assert.That(loaded.Clock.Now.TotalMinutes, Is.EqualTo(start.TotalMinutes + 120));
+            Assert.That(loaded.FinishOnsiteSport(), Is.False);
         }
 
         [Test]
-        public void LateSportsPurchaseIsBlockedAndEndingPracticeDoesNotAdvanceClock()
+        public void LateSportsPurchaseIsBlockedAndEarlySettlementChargesOnlyUsedTime()
         {
             using var s = Make();
             At(s, "life_golf");
             s.Clock.Restore(s.Clock.Today, 16 * 60);
             Assert.That(s.VenueServiceBlocker("golf_pass_4h", 0), Does.Contain("闭店"));
             Assert.That(s.SelectVenueService("golf_pass_2h", 0), Is.True);
-            var end = s.Clock.Now;
-            Assert.That(s.EndTimedVenueSport(), Is.True);
-            Assert.That(s.Clock.Now, Is.EqualTo(end));
+            var start = s.Clock.Now;
+            Shot(s, 0);
+            Assert.That(s.FinishOnsiteSport(), Is.True);
+            Assert.That(s.Clock.Now.TotalMinutes, Is.EqualTo(start.TotalMinutes + 40));
             Assert.That(s.CurrentOnsite, Is.Null);
         }
         [TestCase(51)] [TestCase(52)] [TestCase(53)] [TestCase(54)] [TestCase(55)] [TestCase(56)] [TestCase(57)] [TestCase(58)] [TestCase(76)]

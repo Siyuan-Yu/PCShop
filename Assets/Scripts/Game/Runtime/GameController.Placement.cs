@@ -31,6 +31,9 @@ namespace PCShopSell.Game
 
         /// <summary>手里这件是屋里原来就有的（可以收进纸箱）。</summary>
         public bool PlaceHoldsPlaced => _placeId != null && _placeIndex >= 0;
+        public int PlacedFurnitureSelection => _placeIndex;
+        private Vector3? _homePlacementPoint;
+        public bool HasHomePlacementTarget => Placing && !_placeShop && _homePlacementPoint.HasValue;
 
         /// <summary>当前这个位置摆不了的原因；能摆则为空。</summary>
         public string PlaceError { get; private set; }
@@ -106,6 +109,23 @@ namespace PCShopSell.Game
             if (!Placing || _placeId == null) return;
             FurnitureDef def = FurnitureCatalog.Get(_placeId);
             _placeRot = def.Slot == FurnitureSlot.Wall ? (_placeRot == 0 ? 1 : 0) : (_placeRot + 1) & 3;
+            if (HasHomePlacementTarget) UpdatePlacementGhost(def, _homePlacementPoint.Value);
+        }
+
+        public void CancelPlacementSelection()
+        {
+            if (!Placing) return;
+            CancelGhost();
+            Ui.RefreshPlacementPanel();
+        }
+
+        public void ConfirmHomeFurniturePlacement()
+        {
+            if (!InHome || !HasHomePlacementTarget || _placeId == null) return;
+            var def = FurnitureCatalog.Get(_placeId);
+            UpdatePlacementGhost(def, _homePlacementPoint.Value);
+            if (_ghostValid) ConfirmPlace(def, _ghostAt);
+            else Ui.RefreshPlacementPanel();
         }
 
         /// <summary>把手里这件（屋里原有的）收进纸箱。</summary>
@@ -151,6 +171,7 @@ namespace PCShopSell.Game
             if (_placeIndex >= 0 && Placing) PlaceVisuals?.ShowAll();
             _placeId = null;
             _placeIndex = -1;
+            _homePlacementPoint = null;
             PlaceError = null;
         }
 
@@ -180,8 +201,7 @@ namespace PCShopSell.Game
             _lighting?.SetEditView(true);
             RoomSpec room = PlaceRoom;
             float w = (float)room.Width, d = (float)room.Depth;
-            // 右边有 390 像素宽的摆放面板，房间要整个放进剩下的地方里
-            float usable = Mathf.Max(0.5f, 1f - 390f / Mathf.Max(1f, Ui.CanvasWidth));
+            float usable = Mathf.Max(0.5f, 1f - PlacementPanelWidth / Mathf.Max(1f, Ui.CanvasWidth));
             // 斜着看时进深在屏幕上缩成 sin(俯角)，再加上后墙（3 米高）露出来的那一截
             float pitch = CameraRig.EditPitch * Mathf.Deg2Rad;
             float vert = d * Mathf.Sin(pitch) + 3f * Mathf.Cos(pitch) + 2.2f;
@@ -210,11 +230,12 @@ namespace PCShopSell.Game
         {
             RoomSpec room = PlaceRoom;
             Vector3 center = PlaceOrigin + new Vector3((float)room.Width / 2f, 0, (float)room.Depth / 2f);
-            // 摆放面板（约 390 个界面单位宽）占了右边，房间整体往左挪半个面板宽
-            center.x += 2f * size * Cam.aspect * (195f / Mathf.Max(1f, Ui.CanvasWidth));
+            center.x += size * Cam.aspect * (PlacementPanelWidth / Mathf.Max(1f, Ui.CanvasWidth));
             center.y = 0.8f;
             return center;
         }
+
+        private float PlacementPanelWidth => _placeShop ? 390f : GameUi.HomeDockWidth + 10;
 
         /// <summary>鼠标指到地面上的哪一点（房间局部坐标）。</summary>
         private bool TryFloorPoint(out Vector3 local)
@@ -297,8 +318,7 @@ namespace PCShopSell.Game
             {
                 if (_placeId != null)
                 {
-                    CancelGhost();
-                    Ui.RefreshPlacementPanel();
+                    CancelPlacementSelection();
                 }
                 else
                 {
@@ -318,30 +338,43 @@ namespace PCShopSell.Game
             FurnitureDef def = FurnitureCatalog.Get(_placeId);
             if (Input.GetMouseButtonDown(1) && !GameUi.PointerOverUi)
             {
-                CancelGhost();
-                Ui.RefreshPlacementPanel();
+                CancelPlacementSelection();
                 return;
             }
 
             bool over = GameUi.PointerOverUi && !DebugCursorLocal.HasValue;
+            bool clicked = !over && Input.GetMouseButtonDown(0);
+            if (HasHomePlacementTarget && !clicked) return;
             if (!over && TryPointerOnRoom(def, out Vector3 local))
             {
-                PlacedFurniture at = RoomPlanner.Snap(PlaceRoom, def, local.x, local.z, _placeRot);
-                _ghostAt = at;
-                FurnitureVisuals.Place(_ghost, def, at, PlaceRoom);
-                _ghost.SetActive(true);
-                PlaceError = Session.PlacementError(_placeShop, def, at, _placeIndex, _placeShop ? Interior.FixedBlockers() : null);
-                _ghostValid = PlaceError == null;
-                _ghostOutline.SetValid(_ghostValid);
-
-                if (Input.GetMouseButtonDown(0) && _ghostValid) ConfirmPlace(def, at);
+                UpdatePlacementGhost(def, local);
+                if (!clicked) return;
+                if (_placeShop)
+                {
+                    if (_ghostValid) ConfirmPlace(def, _ghostAt);
+                }
+                else
+                {
+                    _homePlacementPoint = local;
+                    Ui.RefreshPlacementPanel();
+                }
             }
-            else if (_ghost != null)
+            else if (!HasHomePlacementTarget && _ghost != null)
             {
                 _ghost.SetActive(false);
                 _ghostAt = null;
                 PlaceError = null;
             }
+        }
+
+        private void UpdatePlacementGhost(FurnitureDef def, Vector3 local)
+        {
+            _ghostAt = RoomPlanner.Snap(PlaceRoom, def, local.x, local.z, _placeRot);
+            FurnitureVisuals.Place(_ghost, def, _ghostAt, PlaceRoom);
+            _ghost.SetActive(true);
+            PlaceError = Session.PlacementError(_placeShop, def, _ghostAt, _placeIndex, _placeShop ? Interior.FixedBlockers() : null);
+            _ghostValid = PlaceError == null;
+            _ghostOutline.SetValid(_ghostValid);
         }
 
         private void ConfirmPlace(FurnitureDef def, PlacedFurniture at)
@@ -356,7 +389,7 @@ namespace PCShopSell.Game
             else
             {
                 ok = Session.PlaceFromStock(_placeShop, def.Id, at, extra);
-                keep = ok && Session.FurnitureToPlace(_placeShop, def.Id) > 0;
+                keep = ok && _placeShop && Session.FurnitureToPlace(_placeShop, def.Id) > 0;
             }
             if (!ok) return;
             if (keep)
@@ -365,11 +398,7 @@ namespace PCShopSell.Game
             }
             else
             {
-                if (_placeIndex >= 0) PlaceVisuals.ShowAll();
-                DestroyGhost();
-                _placeId = null;
-                _placeIndex = -1;
-                PlaceError = null;
+                CancelGhost();
             }
             Ui.RefreshPlacementPanel();
         }
@@ -460,11 +489,13 @@ namespace PCShopSell.Game
                 }
             }
             if (index < 0) return;
-            PickUpFurniture(index);
+            SelectPlacedFurniture(index);
         }
 
-        private void PickUpFurniture(int index)
+        public void SelectPlacedFurniture(int index)
         {
+            if (!Placing || index < 0 || index >= PlaceLayout.Count || FurnitureCatalog.Get(PlaceLayout[index].Id) == null) return;
+            CancelGhost();
             PlacedFurniture p = PlaceLayout[index];
             _placeId = p.Id;
             _placeIndex = index;

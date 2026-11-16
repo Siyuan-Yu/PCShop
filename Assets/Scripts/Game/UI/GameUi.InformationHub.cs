@@ -8,14 +8,14 @@ namespace PCShopSell.Game.UI
         private void OpenMarketView(int tab)
         {
             S.ReadNews();
-            OpenWorkspace("market", "market:" + tab, "行情", 1120, 850, w =>
+            OpenWorkspace("market", "market:" + tab, "物价", 1120, 850, w =>
             {
                 var tabs = Ui.Row(w.Content, 38, 6);
                 string[] names = { "价格走势", "行业动态", "竞争事件", "模型目录" };
                 for (int i = 0; i < names.Length; i++)
                 {
                     int target = i;
-                    Ui.Size(Ui.Button(tabs, names[i], () => OpenMarketView(target), 17, tab == i ? Ui.ButtonHot : Ui.ButtonBg), -1, 38, 1).name = "MarketTab_" + i;
+                    Ui.Tab(tabs, names[i], () => OpenMarketView(target), tab == i).name = "MarketTab_" + i;
                 }
                 switch (tab)
                 {
@@ -61,9 +61,9 @@ namespace PCShopSell.Game.UI
         private void BuildPeopleNavigation(Window w, string selected)
         {
             var header = Ui.Row(w.Content, 38, 12);
-            var tabs = Ui.Size(Ui.Row(header, 38, 6), -1, 38, 1);
+            var tabs = Ui.Size(Ui.Row(header, 38, 6), 0, 38, 1);
             void Tab(string id, string title, Action open)
-            { Ui.Size(Ui.Button(tabs, title, open, 17, selected == id ? Ui.ButtonHot : Ui.ButtonBg), -1, 38, 1).name = "PeopleTab_" + id; }
+            { Ui.Tab(tabs, title, open, selected == id, 108).name = "PeopleTab_" + id; }
             Tab("people", "已认识的人", OpenCityPeople);
             Tab("relations", "关系图", OpenRelationsPanel);
             Tab("contacts", "通讯录", OpenContactsPanel);

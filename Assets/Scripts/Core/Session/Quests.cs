@@ -140,9 +140,9 @@ namespace PCShopSell.Core.Session
             new QuestDef
             {
                 Id = "racing_enrollment", Title = "办理赛车登记", Target = QuestTarget.RacingEnrollment,
-                Short = "去城郊赛场车库找负责人办理登记",
+                Short = "到城郊赛场车库门口按 F，找负责人办理登记",
                 Hint = $"结清所有贷款，攒够 {Money.FromYuan(GameSession.RacingCashMinimumYuan)} 自有现金后，"
-                    + "去城郊赛场车库找负责人。登记免费，办完即可解锁赛车。",
+                    + "到城郊赛场车库门口按 F，再找负责人免费办理登记。办完即可解锁赛车。",
                 Done = s => !s.RacingEnrollmentAvailable || s.RacingUnlocked,
                 Progress = s => $"自有现金 {s.CommunityOwnCash} / {Money.FromYuan(GameSession.RacingCashMinimumYuan)}"
                     + $" · {(s.HasOutstandingLoans ? "有待还贷款" : "无贷款")}",
@@ -228,7 +228,7 @@ namespace PCShopSell.Core.Session
                 var purchase = source.Copy();
                 purchase.Short = $"去{K(market.Name)}买第一批货";
                 purchase.Hint = s.RetailKind == "restaurant"
-                    ? "买些大米或配菜，带回店里做开业准备。"
+                    ? "按起订量批发大米或配菜，可自提或叫车送到餐馆。大米进后仓，配菜进冰箱。"
                     : "挑选本店能卖的商品并结账。可以自己带回店入库，也可以叫货车送到店。";
                 return purchase;
             }

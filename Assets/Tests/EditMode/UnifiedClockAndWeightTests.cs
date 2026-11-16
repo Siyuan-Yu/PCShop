@@ -82,13 +82,14 @@ namespace PCShopSell.Tests
             {
                 Assert.AreEqual(20, s.HomeBox.Food.RiceKg); Assert.AreEqual(8, Pantry.BowlsPerKg);
                 GameSessionTests.Teleport(s, "farm"); var before = s.Ledger.Balance;
-                Assert.True(s.BuyRice(1.25));
-                Assert.AreEqual(1.25, s.Backpack.Food.RiceKg); Assert.AreEqual(1.25, s.Backpack.WeightKg);
-                Assert.AreEqual(Money.FromCents(750), before - s.Ledger.Balance);
+                Assert.False(s.BuyRice(1.25));
+                Assert.True(s.BuyRice(2.5));
+                Assert.AreEqual(2.5, s.Backpack.Food.RiceKg); Assert.AreEqual(2.5, s.Backpack.WeightKg);
+                Assert.AreEqual(Money.FromCents(975), before - s.Ledger.Balance);
                 Assert.False(s.BuyRice(12));
                 GameSessionTests.Teleport(s, "flat");
                 Assert.True(s.CookRice(.25, null));
-                Assert.AreEqual(1, s.Backpack.Food.RiceKg); Assert.AreEqual(20, s.HomeBox.Food.RiceKg);
+                Assert.AreEqual(2.25, s.Backpack.Food.RiceKg); Assert.AreEqual(20, s.HomeBox.Food.RiceKg);
                 s.AdvanceClock(Pantry.CookMinutes);
                 Assert.AreEqual(2, s.Pantry.CookedBowls);
             }
@@ -128,31 +129,32 @@ namespace PCShopSell.Tests
         [Test]
         public void IngredientWeightsAndPerKilogramPricesAgree_AndRiceProcurementKeepsHalfKgPacks()
         {
-            foreach (var ingredient in Ingredients.All)
+            foreach (var ingredient in Ingredients.RiceCookerRecipes)
             {
                 Assert.AreEqual("千克", ingredient.Unit);
                 Assert.AreEqual(ingredient.Price, ingredient.PricePerKg.Scale(ingredient.WeightKg));
             }
             using (var s = HomeTests.Make())
             {
-                var rice = s.EmployeePurchaseCatalog().First(o => o.Kind == PurchaseGoodsKind.Rice);
-                Assert.AreEqual(.5, rice.UnitKg); Assert.AreEqual(Money.FromYuan(3), rice.Price);
+                var rice = s.EmployeePurchaseCatalog().First(o => o.Kind == PurchaseGoodsKind.Gift && o.Id == "produce:rice");
+                Assert.AreEqual(.5, rice.UnitKg); Assert.AreEqual(Money.FromCents(195), rice.Price);
             }
         }
 
         [Test]
-        public void RiceQuarterKilogramFitsTheLastBackpackSpace_AndRemainderShipsWithoutLoss()
+        public void WholesaleRiceBagsStayWholeWhenBackpackHasOnlyAQuarterKilogramFree()
         {
             using (var s = HomeTests.Make())
             {
                 GameSessionTests.Teleport(s, "farm");
                 s.Backpack.Food.RiceKg = 11.75;
-                Assert.True(s.CartAddRice(1)); s.CartFillBag();
-                Assert.AreEqual(.25, s.Cart.Single().InBag);
-                Assert.AreEqual(.75, s.Cart.Single().ByTruck);
+                Assert.False(s.CartAddRice(.25));
+                Assert.True(s.CartAddRice(2.5)); s.CartFillBag();
+                Assert.Zero(s.Cart.Single().InBag);
+                Assert.AreEqual(5, s.Cart.Single().ByTruck);
                 Assert.True(s.Checkout(false));
-                Assert.AreEqual(12, s.Backpack.Food.RiceKg);
-                Assert.AreEqual(.75, s.Couriers.Single().LoadKg);
+                Assert.AreEqual(11.75, s.Backpack.Food.RiceKg);
+                Assert.AreEqual(2.5, s.Couriers.Single().LoadKg);
             }
         }
     }

@@ -38,7 +38,7 @@ namespace PCShopSell.Core.Session
             if(IsSpecialBusiness(_focus)&&SpecialBusinessBusy(_focus))return Fail("请先完成或清理餐馆订单、二手库存及卖家，再转型。");
             if((kind=="restaurant"||kind=="secondhand"||kind==PetShopCatalog.ShopKind)&&(PlayerShop.Orders.Count>0||PlayerShop.Queue.Count>0))return Fail("请先完成装机订单和排队结账，再转型。");
             _focus.RetailKind=kind;PlayerShop.RetailKind=kind;
-            RefrigerateExistingRestaurantIngredients(_focus);
+            NormalizeRestaurantIngredientStorage(_focus);
             MoveIncompatibleAssemblersToStandby(_focus, notify: true);
             if(kind!=PetShopCatalog.ShopKind)_petBoarding.Remove(_focus.Place.Id);
             PlayerShop.TradingEnabled=kind!="restaurant";
@@ -108,10 +108,11 @@ namespace PCShopSell.Core.Session
                     LedgerAttribution.ForShop(null, transactionKind: "采购").Product(id, count, CityRetailWholesalePrice(source, def).Cents))) return Fail("现金不足。");
                 AddRetailToBag(Backpack, def, count, expiry); ApplyCargoLimit();
                 RecordCitySupplierPurchase(source.Id, id, count);
-                Say(def.Name + "×" + count + "已放入背包，可带到自己的店里上架。"); return true;
+                Say(def.Name + "×" + count + "已放入背包。"); return true;
             }
             var dest = ShopAt(shopId);
-            if (dest == null && !_retailCartBatch) return Fail("请选择收货店铺。");
+            if (dest == null && !_retailCartBatch && (source.Business != FarmBusiness || shopId != null))
+                return Fail("请选择收货店铺。");
             double free = double.PositiveInfinity;
             if(dest!=null)WithShop(dest, () => free = Math.Max(0, PlayerShop.Stock.FreeSpace - IncomingShopSpace));
             if (Stock.GoodsSpace(id, count) > free + 1e-9) return Fail("收货店的仓储空间不足，请减少数量。");

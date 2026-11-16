@@ -73,7 +73,7 @@ namespace PCShopSell.Game.UI
             var actions=Ui.Rect(rt,"GoodsActions_"+id).Anchor(.02f,.015f,.98f,.13f);
             var row=Ui.Row(actions,34,3);row.Fill();
             row.name="ShelfGoodsActions_"+id;
-            HoldButton(w,row,"放进",Ui.ButtonHot,handy,"件",n=>S.ListGoods(id,(int)n),66,handy>0);
+            HoldButton(w,row,"放进",Ui.ButtonBg,handy,"件",n=>S.ListGoods(id,(int)n),66,handy>0);
             Ui.Size(Ui.Button(row,"全放进",()=>{S.ListGoods(id,handy);w.RequestRebuild();},14,Ui.ButtonBg,handy>0),76,34);
             HoldButton(w,row,"收回",Ui.ButtonBg,stock,"件",n=>S.UnlistGoods(id,(int)n),66,stock>0);
             if(goods.ShelfDays>0&&stock>0)

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Common;
@@ -119,6 +120,65 @@ namespace PCShopSell.Tests
             Assert.That(s.StockMaximumBuyQuantity(id), Is.Zero);
             Assert.That(s.StockTradeBlocker(id, 200, "sell"), Does.Contain("还可成交75"));
             Assert.That(s.CityInvestmentUnits(id), Is.EqualTo(200));
+        }
+
+        [Test]
+        public void StockBatchValidatesEveryOrderBeforeSellingAndUsesSaleProceedsForPurchase()
+        {
+            using var s = Make();
+            s.SetSmartphone(true);
+            const string sell = "city_motor", buy = "city_chip";
+            const int lot = GameSession.StockLotSize;
+            Assert.True(s.TradeCityInvestment(sell, lot, true, acknowledgeReserve: true));
+            s.Ledger.ForceDebit(s.Clock.Today, "测试", s.Ledger.Balance - Money.FromYuan(10));
+            var cash = s.Ledger.Balance;
+            var orders = new Dictionary<string, long> { [buy] = lot, [sell] = -lot };
+            var net = s.CityInvestmentTradeTotal(sell, lot, false) - s.CityInvestmentTradeTotal(buy, lot, true);
+            Assert.NotNull(s.StockTradeBlocker(buy, lot, "buy"));
+
+            var quote = s.PreviewStockBatch(orders, shortMode: false);
+            Assert.IsNull(quote.Blocker);
+            Assert.AreEqual(net, quote.Net);
+            Assert.AreEqual(cash + net, quote.CashAfter);
+            var buyer = s.StockState(buy);
+            long available = buyer.AvailableUnits;
+            buyer.AvailableUnits = lot - 1;
+            Assert.False(s.TradeStockBatch(orders, shortMode: false, acknowledgeReserve: true));
+            Assert.AreEqual(cash, s.Ledger.Balance);
+            Assert.AreEqual(lot, s.CityInvestmentUnits(sell));
+            Assert.Zero(s.CityInvestmentUnits(buy));
+
+            buyer.AvailableUnits = available;
+            Assert.True(s.TradeStockBatch(orders, shortMode: false, acknowledgeReserve: true));
+            Assert.AreEqual(cash + net, s.Ledger.Balance);
+            Assert.Zero(s.CityInvestmentUnits(sell));
+            Assert.AreEqual(lot, s.CityInvestmentUnits(buy));
+        }
+
+        [Test]
+        public void StockBatchUsesReleasedShortMarginAndAccountsForBothFees()
+        {
+            using var s = Make();
+            s.SetSmartphone(true);
+            const string cover = "city_motor", open = "city_chip";
+            const int lot = GameSession.StockLotSize;
+            Assert.True(s.OpenStockShort(cover, lot, acknowledgeReserve: true));
+            s.Ledger.ForceDebit(s.Clock.Today, "测试", s.Ledger.Balance - Money.FromYuan(10));
+            var cash = s.Ledger.Balance;
+            var orders = new Dictionary<string, long> { [open] = lot, [cover] = -lot };
+            var net = s.StockCoverReturn(cover, lot) - s.StockShortOpeningCost(open, lot);
+            var fees = CityInvestments.Fee(s.CityInvestmentPrice(cover) * lot) + CityInvestments.Fee(s.CityInvestmentPrice(open) * lot);
+            var quote = s.PreviewStockBatch(orders, shortMode: true);
+            Assert.IsNull(quote.Blocker);
+            Assert.AreEqual(net, quote.Net);
+            Assert.AreEqual(fees, quote.Fees);
+            Assert.AreEqual(cash, s.Ledger.Balance);
+
+            Assert.True(s.TradeStockBatch(orders, shortMode: true, acknowledgeReserve: true));
+            Assert.AreEqual(cash + net, s.Ledger.Balance);
+            Assert.Zero(s.StockState(cover).ShortUnits);
+            Assert.AreEqual(lot, s.StockState(open).ShortUnits);
+            Assert.AreEqual(s.CityInvestmentPrice(open) * lot, s.StockFrozenMargin);
         }
     }
 }

@@ -31,14 +31,18 @@ namespace PCShopSell.EditorTools
             var rig = (CameraRig)typeof(GameController).GetField("_rig", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_game);
             var venue = _game.World.Places[GameSession.FishingVenueId];
             rig.Snap(venue.Root.transform.TransformPoint(new Vector3(0, .5f, (float)venue.Place.Depth * .42f)), 13);
+            _game.Ui.OpenCityVenue(session.CurrentPlace);
             Shot("01-fishing-venue");
             long before = session.Ledger.Balance.Cents;
-            if (!session.SelectVenueService("fishing", 0)) throw new InvalidOperationException(session.VenueServiceBlocker("fishing", 0));
-            session.AdvanceClock(2); Frame(0); _game.SnapCamera(); _game.Ui.OpenFishing();
+            _game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Button>())
+                .Single(button => button.name == "FishingPass_fishing_pass_4h" && button.interactable).onClick.Invoke();
+            if (!session.FishingActive) throw new InvalidOperationException("The venue's pass button did not start fishing");
+            long started = session.Clock.Now.TotalMinutes;
+            Frame(0); _game.SnapCamera(); _game.Ui.OpenFishing();
             // Select the actual dock hit areas rather than a separate location menu.
-            ClickFishingDock(1); session.AdvanceClock(2); Frame(0);
+            ClickFishingDock(1); Frame(0);
             if (session.CurrentFishing.Spot != 1 || session.CurrentFishing.Casts != 0) throw new InvalidOperationException("Dock selection cast a line or failed to move");
-            ClickFishingDock(0); session.AdvanceClock(2); Frame(0);
+            ClickFishingDock(0); Frame(0);
             Shot("02-choose-spot-and-bait");
             session.Time.SetPaused(false);
             FishingPointer(true); for (int i = 0; i < 12; i++) Frame(.05f);
@@ -57,9 +61,17 @@ namespace PCShopSell.EditorTools
             if (session.CurrentFishing.Phase != FishingPhase.Landed) throw new InvalidOperationException("No real catch after five casts");
             _game.Ui.OpenFishing(); Shot("05-caught-fish-options");
             string caught = session.CurrentFishing.PendingFishId; int stock = session.Backpack.Food.IngredientCount(caught);
-            ClickFishing("带走 · 放入背包食材");
+            ClickFishing("带走 · 放入背包");
             if (session.Backpack.Food.IngredientCount(caught) != stock + 1) throw new InvalidOperationException("Catch did not enter the actual backpack");
             Shot("06-fish-kept-in-backpack");
+            var fishing = session.CurrentFishing;
+            if (session.Clock.Now.TotalMinutes != started) throw new InvalidOperationException("World advanced while fishing");
+            ClickFishing("收竿并结算");
+            if (session.Clock.Now.TotalMinutes != started + fishing.Casts * CityLifeCatalog.ManualAttemptMinutes)
+                throw new InvalidOperationException("Fishing time was not settled according to used casts");
+            if (!_game.Ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Text>()).Any(label => label.text.Contains("本次抛竿")))
+                throw new InvalidOperationException("The session settlement did not display the catch totals");
+            Shot("07-fishing-session-settlement");
             File.WriteAllText(Path.Combine(_outDir, "runtime-results.txt"),
                 $"Production GameController.Step + uGUI pointer down/up; charge, casting flight, timed hook and real tracking fight; no forced outcome.\n"
                 + $"Entry fee cents={before - session.Ledger.Balance.Cents}; casts={session.CurrentFishing.Casts}; catches={session.CurrentFishing.Catches}; kept={session.CurrentFishing.Kept}; fish={caught}; inventory={session.Backpack.Food.IngredientCount(caught)}\n");

@@ -32,7 +32,7 @@ namespace PCShopSell.Tests
         private static CityActivity Start(GameSession s)
         {
             Assert.IsTrue(s.SelectVenueService("fishing", 0), s.VenueServiceBlocker("fishing", 0));
-            s.AdvanceClock(2); Assert.IsTrue(s.FishingActive); return s.RunningCityActivity;
+            Assert.IsTrue(s.FishingActive); return s.RunningCityActivity;
         }
         private static void Cast(GameSession s, double charge = .2)
         {
@@ -46,8 +46,23 @@ namespace PCShopSell.Tests
             var state = Mutable(s);
             string target = fishId ?? new[] { "fish_crucian", "fish_carp", "fish_bass" }[state.Spot];
             state.SpeciesRoll = Enumerable.Range(0, 10000).First(roll => FishingCatalog.Pick(state.CastDistance, state.Spot, state.Bait, roll).Id == target);
-            s.AdvanceClock((int)(s.CurrentFishing.BiteAt - s.Clock.Now.TotalMinutes));
+            WaitForBite(s);
+        }
+        private static void WaitForBite(GameSession s)
+        {
+            for (int i = 0; i < 8 && s.CurrentFishing.Phase == FishingPhase.Waiting; i++)
+                s.AdvanceFishingInteraction(.9, false);
             Assert.AreEqual(FishingPhase.Bite, s.CurrentFishing.Phase);
+        }
+        private static void UseRemainingCasts(GameSession s)
+        {
+            while (s.ManualAttemptsLeft > 0)
+            {
+                Cast(s);
+                WaitForBite(s);
+                for (int i = 0; i < 4; i++) s.AdvanceFishingInteraction(1, false);
+                Assert.AreEqual(FishingPhase.Ready, s.CurrentFishing.Phase);
+            }
         }
         private static void PlayFight(GameSession s)
         {
@@ -127,7 +142,7 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.BeginFishingCast()); s.AdvanceFishingInteraction(.2, true);
             Assert.AreEqual(6, s.CurrentFishing.Baits[0]);
             Assert.IsTrue(s.ReleaseFishingCast()); double near = s.CurrentFishing.CastDistance;
-            s.AdvanceFishingInteraction(.81, false); s.AdvanceClock((int)(s.CurrentFishing.BiteAt - s.Clock.Now.TotalMinutes));
+            s.AdvanceFishingInteraction(.81, false); WaitForBite(s);
             for (int i = 0; i < 4; i++) s.AdvanceFishingInteraction(1, false);
             Assert.IsTrue(s.SelectFishingBait(2)); Cast(s, 1);
             Assert.Greater(s.CurrentFishing.CastDistance, near + 10);
@@ -155,18 +170,18 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void ClosingDuringFightDropsTheHookAndReleasesOnlyItsOwnPause()
+        public void ClosingDuringFightDropsTheHookWithoutResumingTimeOrReleasingAnotherHold()
         {
-            using var s = Make(); Start(s); s.SetFishingInterfaceOpen(true); Bite(s); s.HookFishingFish();
-            s.Time.Hold(); s.SetFishingInterfaceOpen(false);
+            using var s = Make(); Start(s); Bite(s); s.HookFishingFish();
+            s.Time.Hold(); s.CloseFishingInterface();
             Assert.AreEqual(FishingPhase.Ready, s.CurrentFishing.Phase); Assert.IsTrue(s.Time.IsHeld);
-            s.Time.Release(); Assert.IsFalse(s.Time.IsHeld); Assert.AreEqual(0, s.FishCaughtTotal);
+            s.Time.Release(); Assert.IsFalse(s.Time.IsHeld); Assert.IsTrue(s.ManualActivityClockPaused); Assert.AreEqual(0, s.FishCaughtTotal);
         }
 
         [TestCase("fishing", 2, 300)]
         [TestCase("fishing_pass_4h", 4, 500)]
+        [TestCase("fishing_pass_6h", 6, 700)]
         [TestCase("fishing_pass_8h", 8, 900)]
-        [TestCase("fishing_pass_16h", 16, 1600)]
         public void VenueIsReachableInTheOutskirtsAndARealPaidSessionStartsAtItsDock(string passId, int hours, int price)
         {
             using var s = Make(); var p = s.City.GetPlace(GameSession.FishingVenueId);
@@ -177,6 +192,7 @@ namespace PCShopSell.Tests
             Assert.True(s.FishingActive);
             Assert.AreEqual(balance - Money.FromYuan(price), s.Ledger.Balance);
             Assert.AreEqual(12, s.CurrentFishing.Baits.Sum()); Assert.AreEqual(hours * 60, a.Duration);
+            Assert.AreEqual(hours / 2 * 3, s.ManualAttemptsLeft);
             Assert.IsTrue(a.PlayerVenueRoute.HasPath); Assert.IsTrue(s.Backpack.Food.Ingredient.All(b => FishingCatalog.Get(b.Id) == null));
         }
 
@@ -214,12 +230,16 @@ namespace PCShopSell.Tests
                 var windows = ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Transform>())
                     .Where(item => item.name.StartsWith("Window_")).ToArray();
                 Assert.That(windows, Has.Length.EqualTo(1));
-                Assert.IsEmpty(windows[0].GetComponentsInChildren<ScrollRect>());
+                Assert.That(windows[0].GetComponentsInChildren<RectTransform>().Any(item => item.name == "People"));
+                Assert.That(windows[0].GetComponentsInChildren<RectTransform>().Any(item => item.name == "PlaceGoodsScroll"));
                 var passes = windows[0].GetComponentsInChildren<Button>().Where(button => button.name.StartsWith("FishingPass_")).ToArray();
                 Assert.That(passes, Has.Length.EqualTo(booking == null ? 4 : 1));
                 string passName = booking == null ? "FishingPass_fishing_pass_8h" : "FishingPass_" + booking.DefinitionId;
                 var entry = passes.Single(button => button.name == passName);
                 Assert.IsTrue(entry.interactable);
+                StringAssert.Contains($"{CityLifeCatalog.ManualPlayAttempts(duration)} 次", entry.transform.parent.GetComponentsInChildren<Text>()
+                    .Single(label => label.text.Contains("全部用完")).text);
+                Assert.AreEqual(36, entry.GetComponent<LayoutElement>().preferredHeight);
                 if (booking != null) StringAssert.Contains("付款并开始钓鱼", entry.GetComponentInChildren<Text>().text);
                 entry.onClick.Invoke();
                 Assert.True(ui.FishingInputActive);
@@ -233,6 +253,27 @@ namespace PCShopSell.Tests
                 }
                 Assert.AreEqual(0, s.FishCaughtTotal);
                 Assert.False(ui.CloseTopWindow(), "Fishing should only exit through its own controls.");
+                if (booking == null)
+                {
+                    Catch(s);
+                    var caught = FishingCatalog.Get(s.CurrentFishing.PendingFishId);
+                    typeof(GameUi).GetMethod("UpdateFishingInteraction", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(ui, new object[] { 0f });
+                    var result = ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<RectTransform>())
+                        .Single(rect => rect.name == "FishingCatchResult");
+                    Assert.That(result.GetComponentsInChildren<Text>().Select(label => label.text), Does.Contain(caught.Name));
+                    var keep = result.GetComponentsInChildren<Button>().Single(button => button.GetComponentInChildren<Text>().text == "带走 · 放入背包");
+                    Assert.IsTrue(keep.interactable);
+                    keep.onClick.Invoke();
+                    Assert.AreEqual(FishingPhase.Ready, s.CurrentFishing.Phase);
+                    Assert.AreEqual(1, s.Backpack.Food.IngredientCount(caught.Id));
+
+                    var finish = ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Button>())
+                        .Single(button => button.GetComponentInChildren<Text>()?.text == "收竿并结算");
+                    finish.onClick.Invoke();
+                    Assert.IsFalse(ui.FishingInputActive);
+                    Assert.That(ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Text>())
+                        .Any(label => label.text.Contains("钓获 1 条") && label.text.Contains("带走 1")));
+                }
             }
             finally
             {
@@ -245,12 +286,16 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void CastWaitsForGameTimeAndConsumesBaitEvenWhenTheFishEscapes()
+        public void CastUsesRealSecondsAndConsumesAnAttemptEvenWhenTheFishEscapes()
         {
             using var s = Make(); Start(s); int count = s.CurrentFishing.Baits[0]; long now = s.Clock.Now.TotalMinutes;
-            Cast(s); Assert.Greater(s.CurrentFishing.BiteAt, now); Assert.AreEqual(count - 1, s.CurrentFishing.Baits[0]);
-            Assert.IsFalse(s.HookFishingFish()); s.AdvanceClock((int)(s.CurrentFishing.BiteAt - s.Clock.Now.TotalMinutes));
-            s.AdvanceFishingInteraction(1, false); s.AdvanceFishingInteraction(1, false); s.AdvanceFishingInteraction(1, false);
+            Cast(s); Assert.Greater(s.CurrentFishing.WaitSeconds, 0); Assert.AreEqual(count - 1, s.CurrentFishing.Baits[0]);
+            Assert.AreEqual(2, s.ManualAttemptsLeft); Assert.IsFalse(s.HookFishingFish());
+            s.Time.SetSpeed(8); Assert.Zero(s.Tick(300)); s.AdvanceClock(300);
+            Assert.AreEqual(FishingPhase.Waiting, s.CurrentFishing.Phase);
+            WaitForBite(s);
+            for (int i = 0; i < 4; i++) s.AdvanceFishingInteraction(1, false);
+            Assert.AreEqual(now, s.Clock.Now.TotalMinutes);
             Assert.AreEqual(FishingPhase.Ready, s.CurrentFishing.Phase);
             Assert.AreEqual(0, s.CurrentFishing.Catches); Assert.AreEqual(0, s.Backpack.Food.IngredientCount("fish_crucian"));
         }
@@ -283,9 +328,12 @@ namespace PCShopSell.Tests
         public void WaitingAndLandedFishPersistWithoutRerollOrDuplicateGrant()
         {
             using var s = Make(); Start(s); Cast(s); Mutable(s).SpeciesRoll = 50;
+            s.AdvanceFishingInteraction(1, false);
             var waiting = s.CurrentFishing; using var loaded = Reload(s);
-            Assert.AreEqual(waiting.BiteAt, loaded.CurrentFishing.BiteAt); Assert.AreEqual(waiting.SpeciesRoll, loaded.CurrentFishing.SpeciesRoll);
-            loaded.AdvanceClock((int)(waiting.BiteAt - loaded.Clock.Now.TotalMinutes));
+            Assert.AreEqual(waiting.WaitSeconds, loaded.CurrentFishing.WaitSeconds); Assert.AreEqual(waiting.SpeciesRoll, loaded.CurrentFishing.SpeciesRoll);
+            Assert.AreEqual(waiting.PhaseSeconds, loaded.CurrentFishing.PhaseSeconds);
+            Assert.AreEqual(2, loaded.ManualAttemptsLeft);
+            WaitForBite(loaded);
             PlayFight(loaded);
             using var landed = Reload(loaded); Assert.AreEqual(FishingPhase.Landed, landed.CurrentFishing.Phase);
             Assert.AreEqual(0, landed.Backpack.Food.IngredientCount("fish_crucian")); Assert.IsTrue(landed.KeepCaughtFish());
@@ -293,23 +341,42 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void DecisionPauseOnlyHoldsItsOwnTimeAndClosingTheInterfaceReleasesIt()
+        public void EarlySettlementChargesUsedTimeOnceAndPreservesOtherPauses()
         {
-            using var s = Make(); Start(s); s.SetFishingInterfaceOpen(true); Bite(s);
-            Assert.IsTrue(s.Time.IsHeld); s.Time.Hold(); s.Time.SetPaused(true);
-            s.SetFishingInterfaceOpen(false); Assert.IsTrue(s.Time.IsHeld); Assert.IsTrue(s.Time.IsUserPaused);
-            s.Time.Release(); Assert.IsFalse(s.Time.IsHeld); Assert.IsTrue(s.Time.IsUserPaused);
-            s.SetFishingInterfaceOpen(true); Assert.IsTrue(s.Time.IsHeld);
-            s.CancelCityActivity(s.RunningCityActivity.Id); Assert.IsFalse(s.Time.IsHeld); Assert.IsTrue(s.Time.IsUserPaused);
+            using var s = Make(); var a = Start(s); Bite(s);
+            s.Time.Hold(); s.Time.SetPaused(true);
+            s.CloseFishingInterface();
+            Assert.IsTrue(s.CancelCityActivity(a.Id, true));
+            Assert.IsFalse(s.CancelCityActivity(a.Id, true));
+            Assert.AreEqual(a.ActualStart + 40, s.Clock.Now.TotalMinutes);
+            Assert.IsFalse(s.ManualActivityClockPaused); Assert.IsTrue(s.Time.IsHeld); Assert.IsTrue(s.Time.IsUserPaused);
+            s.Time.Release(); Assert.IsFalse(s.Time.IsHeld);
         }
 
         [Test]
         public void EndingASessionReleasesTheBiteAndDoesNotGrantUnclaimedFish()
         {
-            using var s = Make(); var a = Start(s); s.SetFishingInterfaceOpen(true); Catch(s);
-            Assert.IsTrue(s.Time.IsHeld); s.AdvanceClock(a.Duration + 1);
-            Assert.AreEqual(CityActivityPhase.Completed, a.State); Assert.IsFalse(s.FishingActive); Assert.IsFalse(s.Time.IsHeld);
+            using var s = Make(); var a = Start(s); Catch(s);
+            Assert.IsTrue(s.ManualActivityClockPaused); s.AdvanceClock(a.Duration + 1);
+            Assert.AreEqual(FishingPhase.Landed, s.CurrentFishing.Phase);
+            Assert.IsTrue(s.CancelCityActivity(a.Id, true));
+            Assert.AreEqual(CityActivityPhase.Completed, a.State); Assert.IsFalse(s.FishingActive);
             Assert.AreEqual(0, s.Backpack.Food.IngredientCount("fish_crucian")); Assert.That(a.SettlementSummary, Does.Contain("本次抛竿"));
+        }
+
+        [Test]
+        public void FinalCatchCanBeKeptBeforeSettlingTheFullPass()
+        {
+            using var s = Make(); var a = Start(s);
+            for (int i = 0; i < 2; i++) { Bite(s); for (int j = 0; j < 4; j++) s.AdvanceFishingInteraction(1, false); }
+            Catch(s);
+            Assert.AreEqual(0, s.ManualAttemptsLeft);
+            Assert.AreEqual(a.ActualStart, s.Clock.Now.TotalMinutes);
+            Assert.IsTrue(s.KeepCaughtFish());
+            Assert.IsFalse(s.BeginFishingCast());
+            Assert.IsTrue(s.CancelCityActivity(a.Id, true));
+            Assert.AreEqual(a.ActualStart + 120, s.Clock.Now.TotalMinutes);
+            Assert.AreEqual(1, s.Backpack.Food.IngredientCount("fish_crucian"));
         }
 
         [Test]
@@ -352,10 +419,10 @@ namespace PCShopSell.Tests
             using var s = Make(); var a = Invite(s, 60); s.Player.Intelligence = 50;
             Assert.IsTrue(s.ChooseCityActivity(a.Id, 1)); Assert.AreEqual(1, s.CurrentFishing.Style);
             Assert.IsTrue(s.ChooseCityActivity(a.Id, 2)); Assert.AreEqual(1, s.CurrentFishing.Style);
-            using var loaded = Reload(s); loaded.AdvanceClock(181);
+            using var loaded = Reload(s); UseRemainingCasts(loaded); Assert.True(loaded.CancelCityActivity(a.Id, true));
             Assert.AreEqual(52, loaded.Player.Intelligence); Assert.IsFalse(loaded.Flags.Contains("fishing:qiaosong-story"));
             using var other = Make(); var story = Invite(other, 60); Assert.IsTrue(other.ChooseCityActivity(story.Id, 2));
-            Assert.IsFalse(other.Flags.Contains("fishing:qiaosong-story")); other.AdvanceClock(181);
+            Assert.IsFalse(other.Flags.Contains("fishing:qiaosong-story")); UseRemainingCasts(other); Assert.True(other.CancelCityActivity(story.Id, true));
             Assert.IsTrue(other.Flags.Contains("fishing:qiaosong-story"));
         }
     }

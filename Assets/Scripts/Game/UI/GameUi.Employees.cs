@@ -80,7 +80,7 @@ namespace PCShopSell.Game.UI
             string status = row.Role == EmployeeRole.Unassigned ? duties : $"{duties} · {S.EmployeeStatus(row)}";
             Ui.Size(Ui.Label(summary, $"{status} · 日薪 {e.DailyWage}", 16, TextAnchor.MiddleLeft, Ui.Dim), -1, 24);
             Ui.Size(Ui.Button(header, expanded ? "收起详情 ▴" : "展开详情 ▾", ToggleDetails, 16,
-                expanded ? Ui.ButtonHot : Ui.ButtonBg), 130, 34).name = "EmployeeDetails_" + e.Id;
+                Ui.SelectedButton(expanded)), 130, 34).name = "EmployeeDetails_" + e.Id;
             if (expanded) BuildEmployeeDetails(card, row, w);
         }
 
@@ -96,11 +96,11 @@ namespace PCShopSell.Game.UI
             if (destination != null)
                 Line(card, $"明天调往 {S.ShopTitle(destination)} · {EmployeeRoleLabel(S.PlannedEmployeeRole(row), destination)}", 17, Ui.Good);
             var actions = Ui.Row(card, 40);
-            Ui.Size(Ui.Button(actions, "安排工作", () => OpenEmployeeWork(e.Id, w), 17, Ui.ButtonHot), 150);
+            Ui.Size(Ui.Button(actions, "安排工作", () => OpenEmployeeWork(e.Id, w), 17, Ui.ButtonBg), 150);
             if (destination != null) Ui.Size(Ui.Button(actions, "取消明日安排", () => { S.CancelEmployeeTransfer(e.Id); w.Rebuild(); }, 16), 150);
             Ui.Size(Ui.Button(actions, "调整班次", () => OpenEmployeeShift(e.Id, w), 16), 140);
             if (row.Role == EmployeeRole.Buyer)
-                Ui.Size(Ui.Button(actions, "安排进货", () => OpenEmployeePurchase(e.Id, w), 17, Ui.ButtonHot), 150);
+                Ui.Size(Ui.Button(actions, "安排进货", () => OpenEmployeePurchase(e.Id, w), 17, Ui.ButtonBg), 150);
             Ui.Size(Ui.Button(actions, "辞退…", () => ConfirmAction("辞退员工", $"辞退{e.Name}，同时取消未生效的安排。正在进货时需要先等人和货回店。", "确认辞退", () => { S.DismissEmployee(e.Id); w.Rebuild(); }), 16, Ui.Warn), 110);
             Ui.Size(Ui.Button(actions, "交谈", () => OpenPersonDialogue(S.PersonIdOf(e)), 16), 140);
             if (row.Role != EmployeeRole.Buyer) return;
@@ -231,7 +231,7 @@ namespace PCShopSell.Game.UI
                     Ui.VList(note, 8, 16); Ui.Size(note, -1, 170);
                     Ui.Size(Ui.Label(note, "<b>现在是「按补货清单自动补」</b>", 20, TextAnchor.MiddleLeft, Ui.Accent), -1, 30);
                     Ui.Size(Ui.Label(note, "进货员不看这里的商品，而是按店里补货清单的目标 / 下限：库存低于下限，就补到目标。右边是按现在库存算出的下一趟。\n想自己挑店家和数量，点右边的「固定清单」。", 16, TextAnchor.UpperLeft, Ui.Dim), -1, 80);
-                    Ui.Size(Ui.Button(note, "去调整补货清单 ›", () => { w.Close(); OpenCityProcurementFor(worker.Shop); }, 17, Ui.ButtonHot), 200, 38).name = "BuyerOpenRestock";
+                    Ui.Size(Ui.Button(note, "去调整补货清单 ›", () => { w.Close(); OpenCityProcurementFor(worker.Shop); }, 17, Ui.ButtonBg), 200, 38).name = "BuyerOpenRestock";
                 }
                 else
                 {
@@ -245,7 +245,7 @@ namespace PCShopSell.Game.UI
                             var source = destination.Key;
                             Ui.Size(Ui.Button(picker.Content, source.Name, () => { BrowseSource(source.Id); picker.Close(); w.Rebuild(); }, 18), -1, 42);
                         }
-                    }), 16, Ui.ButtonHot), 255, 36);
+                    }), 16, Ui.ButtonBg), 255, 36);
                     Ui.Size(Ui.Button(filters, category + " ▾", () => OpenWindow("商品分类", 620, 620, picker =>
                     {
                         foreach (string name in categories)
@@ -290,14 +290,14 @@ namespace PCShopSell.Game.UI
                                 var options = Ui.Scroll(picker.Content, 440);
                                 foreach (string choice in choices)
                                     Ui.Size(Ui.Button(options, choice, () => { picker.Close(); Select(choice); }, 17,
-                                        choice == picked ? Ui.ButtonHot : Ui.ButtonBg), -1, 40);
+                                        Ui.SelectedButton(choice == picked)), -1, 40);
                             }), 16), 252, 36);
                         }
                         else
                             foreach (string choice in choices)
                             {
                                 var chip = Ui.Button(bar, choice, () => Select(choice), 15,
-                                    choice == picked ? Ui.ButtonHot : Ui.ButtonBg);
+                                    Ui.SelectedButton(choice == picked));
                                 chip.name = "BuyerFacet_" + key + "_" + choice;
                                 Ui.Size(chip, Mathf.Max(78, choice.Length * 17 + 30));
                             }
@@ -363,8 +363,8 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Label(head, "<b>采购了什么</b>", 20, TextAnchor.MiddleLeft, Ui.Accent), -1, 32, 1);
                 if (!threshold) Ui.Size(Ui.Button(head, "清空", () => { selected.Clear(); Sync(); w.Rebuild(); }, 14), 64, 30);
                 var modes = Ui.Row(right, 36, 6);
-                Ui.Size(Ui.Button(modes, "固定清单", () => { draft.InventoryThreshold = false; w.Rebuild(); }, 15, !threshold ? Ui.ButtonHot : Ui.ButtonBg), -1, 34, 1).name = "BuyerModeFixed";
-                Ui.Size(Ui.Button(modes, "按补货清单自动补", () => { draft.InventoryThreshold = true; w.Rebuild(); }, 15, threshold ? Ui.ButtonHot : Ui.ButtonBg), -1, 34, 1).name = "BuyerModeThreshold";
+                Ui.Size(Ui.Button(modes, "固定清单", () => { draft.InventoryThreshold = false; w.Rebuild(); }, 15, Ui.SelectedButton(!threshold)), -1, 34, 1).name = "BuyerModeFixed";
+                Ui.Size(Ui.Button(modes, "按补货清单自动补", () => { draft.InventoryThreshold = true; w.Rebuild(); }, 15, Ui.SelectedButton(threshold)), -1, 34, 1).name = "BuyerModeThreshold";
 
                 var chosenList = GoodsList(right, 140);
                 ((RectTransform)chosenList.parent.parent).name = "PurchaseSelected";
@@ -417,7 +417,7 @@ namespace PCShopSell.Game.UI
                     var picked = choice;
                     string label = choice == PurchaseFrequency.Daily ? "每天" : choice == PurchaseFrequency.MondayWednesdayFriday ? "周一三五" : "每周三";
                     var button = Ui.Button(frequency, label, () => { draft.HasWeeklySchedule = true; draft.Frequency = picked; w.Rebuild(); }, 15,
-                        draft.Schedule == choice ? Ui.ButtonHot : Ui.ButtonBg);
+                        Ui.SelectedButton(draft.Schedule == choice));
                     button.name = "PurchaseFrequency_" + choice;
                     Ui.Size(button, -1, 34, 1);
                 }
@@ -430,7 +430,7 @@ namespace PCShopSell.Game.UI
                     bool hired = mode == VehicleKind.Walk || mode == VehicleKind.Taxi;
                     string label = mode == VehicleKind.Walk ? "步行" : mode == VehicleKind.Taxi ? "打车" : Vehicles.Get(mode).Name;
                     var button = Ui.Button(transport, label, () => { draft.Transport = mode; w.Rebuild(); }, 14,
-                        draft.Transport == mode ? Ui.ButtonHot : Ui.ButtonBg, hired || S.VehicleCount(mode) > 0);
+                        Ui.SelectedButton(draft.Transport == mode), hired || S.VehicleCount(mode) > 0);
                     button.Tip(hired ? "步行 / 打车：由货车把货送回店。" : "自有车辆，当前空闲 " + S.FreeVehicleCount(mode) + " 台。");
                     Ui.Size(button, -1, 34, 1);
                 }

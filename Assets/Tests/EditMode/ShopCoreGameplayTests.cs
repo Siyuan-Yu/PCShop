@@ -33,24 +33,17 @@ namespace PCShopSell.Tests
         }
         private static void IngredientsFor(GameSession s,int portions=1)
         {
-            s.CurrentShop.Fridge.Food.RiceKg=portions*.25;
+            s.CurrentShop.Locker.Food.RiceKg=portions*.25;
             s.CurrentShop.Fridge.Food.Ingredient.Add(new FoodBatch{Id="veg",Name="青菜",Count=portions,ExpireDay=s.Clock.Today.TotalDays+2});
         }
-        [TestCase("fridge")]
-        [TestCase("warehouse")]
-        [TestCase("stock")]
-        public void HungryRestaurantOwnerEatsLocalIngredientsWithoutSaleOrCashCharge(string source)
+        [Test]
+        public void HungryRestaurantOwnerEatsLocalIngredientsWithoutSaleOrCashCharge()
         {
             using(var s=Make("restaurant"))
             {
                 var shop=s.CurrentShop;var state=s.SpecialBusiness(shop.Place.Id);state.NextVisit=long.MaxValue;
-                if(source=="stock")
-                {shop.Sim.Stock.ForceAddGoods("produce:rice",1);shop.Sim.Stock.ForceAddGoods("produce:egg",2);}
-                else
-                {
-                    var bag=source=="fridge"?shop.Fridge:shop.Locker;
-                    bag.Food.RiceKg=.5;bag.Food.Ingredient.Add(new FoodBatch{Id="egg",Name="鸡蛋",Count=2,ExpireDay=30});
-                }
+                shop.Locker.Food.RiceKg=.5;
+                shop.Fridge.Food.Ingredient.Add(new FoodBatch{Id="egg",Name="鸡蛋",Count=2,ExpireDay=30});
                 var cash=s.Ledger.Balance;s.Player.Hunger=20;
                 s.AdvanceClock(1);
                 Assert.Greater(s.Player.Hunger,79);Assert.AreEqual(.25,s.KitchenRice(shop),1e-6);
@@ -76,7 +69,7 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(100,s.Player.Hunger,1e-6);
                 Assert.AreEqual(.25,s.KitchenRice(shop),1e-6);
                 Assert.AreEqual(3,s.KitchenIngredientCount(shop,"veg")+s.KitchenIngredientCount(shop,"egg"));
-                shop.Fridge.Food.RiceKg=.1;s.Backpack.Food.Packed.Clear();s.Player.Hunger=20;s.AdvanceClock(31);
+                shop.Locker.Food.RiceKg=.1;s.Backpack.Food.Packed.Clear();s.Player.Hunger=20;s.AdvanceClock(31);
                 Assert.Less(s.Player.Hunger,20);Assert.AreEqual(.1,s.KitchenRice(shop),1e-6);
                 Assert.AreEqual(3,s.KitchenIngredientCount(shop,"veg")+s.KitchenIngredientCount(shop,"egg"));
             }
@@ -164,7 +157,17 @@ namespace PCShopSell.Tests
         {
             using(var s=Make("restaurant"))
             {
-                IngredientsFor(s);var order=Order(s);var balance=s.Ledger.Balance;
+                IngredientsFor(s);
+                var state = s.SpecialBusiness("pc");
+                state.RecipeMask = 1;
+                state.NextFishOrder = long.MaxValue;
+                Until(s, () => state.Orders.Count > 0);
+                var order = state.Orders.Single();
+                Assert.AreEqual(36, order.Price);
+                double standing = s.PlayerShop.Reputation;
+                state.NextVisit = long.MaxValue;
+                state.MenuMarkup = 1.7;
+                var balance = s.Ledger.Balance;
                 Assert.True(s.StartRestaurantCooking(order.Id));s.Clock.Advance(8);
                 Assert.True(s.PlateRestaurantOrder(order.Id));Assert.True(s.ServeRestaurantOrder(order.Id));Assert.False(s.ServeRestaurantOrder(order.Id));
                 Assert.AreEqual(balance,s.Ledger.Balance);s.Clock.Advance(15);
@@ -175,8 +178,71 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(balance,s.Ledger.Balance);
                 s.CurrentShop.Layout.Add(counter);
                 Assert.True(s.ClearRestaurantOrder(order.Id));Assert.False(s.ClearRestaurantOrder(order.Id));
-                Assert.AreEqual(balance+Money.FromYuan(18),s.Ledger.Balance);Assert.IsEmpty(s.SpecialBusiness("pc").Orders);
+                Assert.AreEqual(balance+Money.FromYuan(36),s.Ledger.Balance);Assert.IsEmpty(state.Orders);
+                Assert.AreEqual(standing, s.PlayerShop.Reputation);
             }
+        }
+        [Test]
+        public void FishPreorderUsesRealIngredientsAndAwardsStandingOnceWhenDelivered()
+        {
+            using var s = Make("restaurant");
+            var state = s.SpecialBusiness("pc");
+            state.RecipeMask = 1;
+            s.AdvanceClock(20);
+            var order = state.Orders.Single(o => o.IsFishOrder);
+            Assert.AreEqual(-1, order.Table);
+            Assert.AreEqual(7 * GameTimestamp.MinutesPerDay, order.DueAt - order.Arrived);
+            Assert.AreEqual(36 + order.Fish.DinnerSurcharge, order.Price);
+            IngredientsFor(s);
+            Assert.False(s.StartRestaurantCooking(order.Id));
+            Assert.AreEqual(.25, s.KitchenRice(s.CurrentShop));
+            Assert.AreEqual(1, s.KitchenIngredientCount(s.CurrentShop, "veg"));
+            s.Backpack.Food.AddIngredient(order.FishId, 1);
+            Assert.True(s.MoveFridgeFood("ing:" + order.FishId, 1, true));
+            Assert.True(s.StartRestaurantCooking(order.Id));
+            Assert.Zero(s.KitchenIngredientCount(s.CurrentShop, order.FishId));
+            Assert.False(s.HandInRestaurantFishOrder(order.Id));
+            s.AdvanceClock(8);
+            Assert.True(s.PlateRestaurantOrder(order.Id));
+            Assert.False(s.ServeRestaurantOrder(order.Id));
+            using var loaded = Reload(s);
+            var restored = loaded.SpecialBusiness("pc").Orders.Single(o => o.IsFishOrder);
+            Assert.AreEqual(order.FishId, restored.FishId);
+            Assert.AreEqual(order.DueAt, restored.DueAt);
+            loaded.Clock.Restore(loaded.Clock.Today, 22 * 60 + 10);
+            loaded.AdvanceClock(1);
+            Assert.AreEqual(DiningStage.Ready, restored.Stage);
+            var cash = loaded.Ledger.Balance;
+            double reputation = loaded.PlayerShop.Reputation;
+            Assert.True(loaded.HandInRestaurantFishOrder(order.Id));
+            Assert.False(loaded.HandInRestaurantFishOrder(order.Id));
+            Assert.AreEqual(cash + Money.FromYuan(order.Price), loaded.Ledger.Balance);
+            Assert.AreEqual(reputation + order.ReputationReward, loaded.PlayerShop.Reputation, .000001);
+        }
+
+        [Test]
+        public void FishPreordersStopAtTwoAndFreeASlotAtTheDeadline()
+        {
+            using var s = Make("restaurant");
+            var state = s.SpecialBusiness("pc");
+            void CheckMorning(GameDate day)
+            {
+                s.Clock.Restore(day, 600);
+                state.NextVisit = s.Clock.Now.TotalMinutes + 1;
+                s.AdvanceClock(1);
+            }
+            var day = s.Clock.Today;
+            CheckMorning(day);
+            var first = state.Orders.Single(o => o.IsFishOrder);
+            CheckMorning(day.AddDays(2));
+            CheckMorning(day.AddDays(4));
+            Assert.AreEqual(2, state.Orders.Count(o => o.IsFishOrder));
+            Assert.Contains(first, state.Orders);
+            CheckMorning(day.AddDays(7));
+            Assert.False(state.Orders.Contains(first));
+            Assert.AreEqual(2, state.Orders.Count(o => o.IsFishOrder));
+            Assert.False(s.HandInRestaurantFishOrder(first.Id));
+            Assert.AreEqual(0, s.PlayerShop.Reputation);
         }
         [Test] public void FoodBurnsIfIgnoredAndRemakingNeedsAnotherPortion()
         {
@@ -275,6 +341,7 @@ namespace PCShopSell.Tests
                     Assert.True(held.Sold);Assert.False(held.Listed);Assert.AreEqual(100,held.SalePrice);
                     Assert.AreEqual(cash+Money.FromYuan(100),s.Ledger.Balance);Assert.AreEqual(1,state.Paid);
                     Assert.AreEqual(100,state.Revenue);Assert.AreEqual(-1,sim.Checkout(customer.Id));
+                    Assert.AreEqual(0, sim.Reputation, "普通旧物成交只改变门店指标");
                     Assert.AreEqual(cash+Money.FromYuan(100),s.Ledger.Balance);
                 }
             }
@@ -290,6 +357,78 @@ namespace PCShopSell.Tests
                 Assert.True(s.UnlistUsedItem(item.Id));Assert.Zero(s.PlayerShop.ShelfFillOf(PCShopSell.Core.Inventory.ShelfKinds.Get("secondhand")).Total);
             }
         }
+        [TestCase(UsedCondition.Good, 10000, 1)]
+        [TestCase(UsedCondition.Replica, 150, 0)]
+        public void ArtifactReputationIsGrantedOnceAtPaidCheckoutAfterReload(UsedCondition condition, long expectedPrice, double expectedReputation)
+        {
+            using var first = Make("secondhand");
+            var item = Seller(first, condition);
+            item.Product = GameSession.ArtifactProduct;
+            item.Minimum = 2300;
+            item.Asking = 2700;
+            Assert.False(first.OfferUsedPrice(item.Id, 2000));
+            Assert.True(first.OfferUsedPrice(item.Id, 2700));
+            Assert.True(first.InspectUsed(item.Id));
+            Assert.AreEqual(expectedPrice, item.Price);
+            Assert.AreEqual(expectedReputation, GameSession.UsedSaleReputation(item));
+            Assert.True(first.ListUsedItem(item.Id, item.Price));
+            WaitForUsedBuyer(first);
+            Assert.Zero(first.PlayerShop.Reputation);
+
+            using var loaded = Reload(first);
+            var customer = loaded.PlayerShop.Queue.Single();
+            Assert.AreEqual(item.Id, customer.ResaleId);
+            var cash = loaded.Ledger.Balance;
+            Assert.GreaterOrEqual(loaded.PlayerShop.Checkout(customer.Id), 0);
+            Assert.AreEqual(cash + Money.FromYuan(expectedPrice), loaded.Ledger.Balance);
+            Assert.AreEqual(expectedReputation, loaded.PlayerShop.Reputation, 1e-9);
+            Assert.Less(loaded.PlayerShop.Checkout(customer.Id), 0);
+            using var sold = Reload(loaded);
+            Assert.AreEqual(expectedReputation, sold.PlayerShop.Reputation, 1e-9);
+            Assert.True(sold.SpecialBusiness("pc").Used.Single(i => i.Id == item.Id).Sold);
+        }
+
+        [Test]
+        public void ArtifactSellersAreRareAndBothAuthenticityOutcomesRequireHighOffers()
+        {
+            using var s = Make("secondhand");
+            var state = s.SpecialBusiness("pc");
+            var createSeller = typeof(GameSession).GetMethod("CreateSeller", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var arguments = new object[] { state, s.Clock.Now.TotalMinutes };
+            var artifacts = Enumerable.Range(0, 20000).Select(_ => (UsedItem)createSeller.Invoke(s, arguments))
+                .Where(item => item.Product == GameSession.ArtifactProduct).ToArray();
+            Assert.That(artifacts.Length / 20000.0, Is.InRange(.016, .024));
+            Assert.That(artifacts.Count(item => item.Condition == UsedCondition.Good) / (double)artifacts.Length,
+                Is.InRange(.06, .14));
+            Assert.True(artifacts.All(item => item.Minimum > 2000 && item.Asking > item.Minimum));
+        }
+
+        [TestCase(95, 0)]
+        [TestCase(96, .2)]
+        public void PetWeeklyPaymentAwardsReputationOnlyAboveNinetyFiveAndCannotRepeat(int condition, double expected)
+        {
+            using var original = Make(PetShopCatalog.ShopKind);
+            var ownerId = original.CityPeople.First().PersonId;
+            var save = original.CreateSave();
+            save.petBoarding = new[] { new PetBoardingState { ShopId = "pc", Stays = new[] {
+                new PetStay { Id = 1, OwnerId = ownerId, Name = "团子", Weeks = 2, Condition = condition,
+                    NextVisitAt = original.Clock.Now.TotalMinutes, LastConditionDay = original.Clock.Today.TotalDays }
+            } } };
+            using var loaded = GameSession.Load(original.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(save)));
+            GameSessionTests.Teleport(loaded, "pc");
+            var owner = loaded.CityPersonState(ownerId);
+            owner.Route = null;
+            owner.LocationPlaceId = "pc";
+            owner.Task = CityPersonTask.Shopping;
+            owner.TaskLabel = "到店办理宠物代养";
+            Assert.True(loaded.SettlePetStay(1));
+            Assert.AreEqual(expected, loaded.PlayerShop.Reputation, 1e-9);
+            Assert.False(loaded.SettlePetStay(1));
+            using var reloaded = Reload(loaded);
+            Assert.AreEqual(expected, reloaded.PlayerShop.Reputation, 1e-9);
+            Assert.AreEqual(1, reloaded.PetGuests(reloaded.MainShop).Single().PaidWeeks);
+        }
+
         [Test] public void UsedShopNeedsRegularShelfAndCounterAndCanRejectSellerWithoutCharge()
         {
             using(var s=Make("secondhand"))
@@ -604,15 +743,67 @@ namespace PCShopSell.Tests
                 finally{UnityEngine.Object.DestroyImmediate(root);}
             }
         }
-        [Test] public void PlayerCanFinishServingAndClearingAfterRestaurantCloses()
+        [TestCase(true)]
+        [TestCase(false)]
+        public void RestaurantAtClosingFinishesSeatedCustomersOnlyWhileAttended(bool ownerStays)
         {
-            using(var s=Make("restaurant"))
+            using var s = Make("restaurant");
+            s.Clock.Restore(s.Clock.Today, 21 * 60 + 59);
+            IngredientsFor(s);
+            var order = Order(s);
+            var state = s.SpecialBusiness("pc");
+            state.NextVisit = s.Clock.Now.TotalMinutes + 1;
+            var cash = s.Ledger.Balance;
+            if (!ownerStays) s.Leave();
+
+            s.AdvanceClock(2);
+            Assert.False(s.SpecialOpen(s.MainShop, s.Clock.Now));
+            Assert.AreEqual(ownerStays, s.ShopFinishingService(s.MainShop));
+            Assert.AreEqual(1, state.Orders.Count, "打烊后不能接新客");
+            if (!ownerStays)
             {
-                var order=Order(s);order.Stage=DiningStage.Ready;s.PlayerShop.ForcedClosed=true;
-                Assert.True(s.RequestRestaurantWork(order.Id,RestaurantJob.Serve,7,.9));Until(s,()=>order.Stage==DiningStage.Eating);
-                Until(s,()=>order.Stage==DiningStage.Checkout);Assert.True(s.ClearRestaurantOrder(order.Id));
-                Assert.True(s.RequestRestaurantWork(order.Id,RestaurantJob.Clear,7,.9));Until(s,()=>!s.SpecialBusiness("pc").Orders.Contains(order));
-                Assert.True(s.PlayerShop.ForcedClosed);
+                Assert.AreEqual(DiningStage.Left, order.Stage);
+                Assert.AreEqual(cash, s.Ledger.Balance);
+                return;
+            }
+
+            Assert.True(s.StartRestaurantCooking(order.Id));
+            Until(s, () => s.Clock.Now.TotalMinutes >= order.ReadyAt);
+            Assert.True(s.PlateRestaurantOrder(order.Id));
+            Assert.True(s.ServeRestaurantOrder(order.Id));
+            Until(s, () => order.Stage == DiningStage.Checkout);
+            Assert.True(s.ClearRestaurantOrder(order.Id));
+            Assert.AreEqual(cash + Money.FromYuan(18), s.Ledger.Balance);
+            Assert.IsEmpty(state.Orders);
+            Assert.False(s.ShopFinishingService(s.MainShop));
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void QueuedRetailCustomerCanPayAfterClosingOnlyWhileAttended(bool ownerStays)
+        {
+            using var s = Make("secondhand");
+            ListedUsed(s);
+            WaitForUsedBuyer(s);
+            var customer = s.PlayerShop.Queue.Single();
+            var cash = s.Ledger.Balance;
+            int arrivals = s.PlayerShop.TodayCustomers;
+            s.PlayerShop.SetHours(8 * 60, s.Clock.MinuteOfDay);
+            if (!ownerStays) s.Leave();
+
+            s.AdvanceClock(2);
+            Assert.AreEqual(arrivals, s.PlayerShop.TodayCustomers);
+            Assert.AreEqual(ownerStays, s.ShopFinishingService(s.MainShop));
+            if (ownerStays)
+            {
+                Assert.True(s.Checkout(customer.Id));
+                Assert.AreEqual(cash + Money.FromYuan(100), s.Ledger.Balance);
+            }
+            else
+            {
+                Assert.IsEmpty(s.PlayerShop.Queue);
+                Assert.AreEqual(PCShopSell.Core.Shop.LeaveReason.ShopClosed, customer.Reason);
+                Assert.AreEqual(cash, s.Ledger.Balance);
             }
         }
         [Test] public void PlayerConfirmedPricesDoNotChangeWhenSeriesHeatOrTechnologyChanges()
@@ -661,7 +852,8 @@ namespace PCShopSell.Tests
                 s.Backpack.Food.Ingredient.Add(new FoodBatch{Id="veg",Name="青菜",Count=1,ExpireDay=16});
                 s.Backpack.AddGift("produce:veg",2);
                 Assert.True(s.StoreBackpackInWarehouse());
-                Assert.AreEqual(1,s.CurrentShop.Fridge.Food.RiceKg);Assert.AreEqual(3,s.CurrentShop.Fridge.Food.Ingredient.Sum(b=>b.Count));
+                Assert.AreEqual(1,s.KitchenRice(s.CurrentShop));Assert.AreEqual(0,s.CurrentShop.Fridge.Food.RiceKg);
+                Assert.AreEqual(3,s.CurrentShop.Fridge.Food.Ingredient.Sum(b=>b.Count));
                 Assert.IsEmpty(s.Backpack.Food.Ingredient);Assert.Zero(s.Backpack.GiftCount("produce:veg"));
                 Assert.True(s.CurrentShop.Fridge.Food.Ingredient.All(b=>b.Chilled));Assert.False(s.StoreBackpackInWarehouse());
             }
@@ -675,25 +867,96 @@ namespace PCShopSell.Tests
                 s.Backpack.Food.RiceKg=1;
                 s.Backpack.Food.Ingredient.Add(new FoodBatch{Id="veg",Name="青菜",Count=2,ExpireDay=16});
                 Assert.True(s.StoreBackpackInWarehouse(),"装修歇业不应该阻止使用已摆放的冰箱整理食材");
-                Assert.AreEqual(1,s.CurrentShop.Fridge.Food.RiceKg);Assert.AreEqual(2,s.CurrentShop.Fridge.Food.Ingredient.Sum(b=>b.Count));
+                Assert.AreEqual(1,s.KitchenRice(s.CurrentShop));Assert.AreEqual(0,s.CurrentShop.Fridge.Food.RiceKg);
+                Assert.AreEqual(2,s.CurrentShop.Fridge.Food.Ingredient.Sum(b=>b.Count));
                 Assert.True(s.CurrentShop.Fridge.Food.Ingredient.All(b=>b.Chilled));
                 Assert.True(s.IsRenovating);Assert.True(s.PlayerShop.ForcedClosed);Assert.False(s.SpecialOpen(s.CurrentShop,s.Clock.Now));
             }
         }
-        [Test] public void KitchenColdStorageKeepsIngredientsInBackpackWithoutFridge()
+        [Test] public void KitchenCanStoreRiceWhileOtherIngredientsWaitForAFridge()
         {
             using(var s=Make("restaurant"))
             {
                 s.CurrentShop.Layout.Add(new PlacedFurniture { Id = FurnitureCatalog.ShopBox, X = 1, Z = 3 });
                 s.Backpack.Food.RiceKg=1;
+                s.Backpack.Food.Ingredient.Add(new FoodBatch { Id = "veg", Count = 2 });
                 s.CurrentShop.Layout.RemoveAll(p=>FurnitureCatalog.Get(p.Id)?.Role==FurnitureRole.Fridge);
+                Assert.True(s.StoreBackpackInWarehouse());
+                Assert.AreEqual(1,s.KitchenRice(s.CurrentShop));
+                Assert.Zero(s.Backpack.Food.RiceKg);
+                Assert.AreEqual(2,s.Backpack.Food.IngredientCount("veg"));
                 Assert.False(s.StoreBackpackInWarehouse());
-                Assert.AreEqual(1,s.Backpack.Food.RiceKg);
                 s.CurrentShop.Layout.Add(new PlacedFurniture{Id=FurnitureCatalog.Fridge,X=1,Z=2});
                 Assert.True(s.StoreBackpackInWarehouse());
-                Assert.AreEqual(1,s.CurrentShop.Fridge.Food.RiceKg);
-                Assert.Zero(s.Backpack.Food.RiceKg);
+                Assert.Zero(s.CurrentShop.Fridge.Food.RiceKg);
+                Assert.AreEqual(2,s.KitchenIngredientCount(s.CurrentShop,"veg"));
+                Assert.Zero(s.Backpack.Food.IngredientCount("veg"));
             }
+        }
+
+        [Test]
+        public void RestaurantRiceMovesByHandWithoutUsingFridgeSpace()
+        {
+            using var s = Make("restaurant");
+            var shop = s.CurrentShop;
+            shop.Layout.Add(new PlacedFurniture { Id = FurnitureCatalog.ShopBox, X = 1, Z = 3 });
+            s.Backpack.Food.RiceKg = 2.5;
+            Assert.False(s.MoveFridgeFood("rice", 1, true));
+            Assert.True(s.StoreInBox("rice"));
+            Assert.AreEqual(1, s.KitchenRice(shop));
+            Assert.True(s.UnloadBackpack());
+            Assert.AreEqual(2.5, s.KitchenRice(shop));
+            shop.Temp.Food.RiceKg = .5;
+            Assert.True(s.MoveTemp("rice", 1, "box"));
+            Assert.AreEqual(3, s.KitchenRice(shop));
+            Assert.True(s.TakeFromBox("rice"));
+            Assert.AreEqual(2, s.KitchenRice(shop));
+            Assert.AreEqual(1, s.Backpack.Food.RiceKg);
+            Assert.AreEqual(2, s.GoodsAvailableToList("produce:rice"));
+            Assert.True(s.ListGoods("produce:rice", 2));
+            Assert.AreEqual(3, s.KitchenRice(shop));
+            Assert.Zero(s.GoodsAvailableToList("produce:rice"));
+            Assert.Zero(shop.Sim.Stock.GoodsCount("produce:rice"));
+            Assert.Zero(shop.Fridge.WeightKg);
+        }
+
+        [Test]
+        public void LegacyRestaurantRiceMovesIntoItsOwnWarehouseOnlyOnce()
+        {
+            using var s = Make("restaurant");
+            var shop = s.CurrentShop;
+            shop.Locker.Food.RiceKg = 9;
+            shop.Fridge.Food.RiceKg = 121.5;
+            shop.Temp.Food.RiceKg = .25;
+            shop.Sim.Stock.ForceAddGoods("produce:rice", 5);
+            shop.Fridge.Food.Ingredient.Add(new FoodBatch { Id = "veg", Count = 2, ExpireDay = FoodBatch.NoExpiry });
+            s.HomeFridge.Food.RiceKg = 2;
+            using var loaded = Reload(s);
+            using var reloaded = Reload(loaded);
+            foreach (var session in new[] { loaded, reloaded })
+            {
+                Assert.AreEqual(133.25, session.KitchenRice(session.MainShop));
+                Assert.Zero(session.MainShop.Fridge.Food.RiceKg);
+                Assert.Zero(session.MainShop.Temp.Food.RiceKg);
+                Assert.Zero(session.MainShop.Sim.Stock.GoodsCount("produce:rice"));
+                Assert.AreEqual(2, session.KitchenIngredientCount(session.MainShop, "veg"));
+                Assert.AreEqual(2, session.HomeFridge.Food.RiceKg);
+            }
+        }
+
+        [Test]
+        public void OnlineRiceReachesRestaurantWithoutAFridge()
+        {
+            using var s = Make("restaurant");
+            var shop = s.CurrentShop;
+            shop.Layout.RemoveAll(p => FurnitureCatalog.Get(p.Id)?.Role == FurnitureRole.Fridge);
+            Assert.That(s.CanOpenFridge, Is.False);
+            Assert.True(s.OrderOnline(ParcelKind.Rice, "rice", 2, shop));
+            Assert.True(s.OrderOnline(ParcelKind.Gift, "produce:rice", 3, shop));
+            Assert.False(s.OrderOnline(ParcelKind.Gift, "produce:veg", 1, shop));
+            s.Clock.Advance(GameSession.DeliveryDays * 1440);
+            Assert.AreEqual(11.5, s.KitchenRice(shop));
+            Assert.Zero(shop.Fridge.Food.RiceKg);
         }
         [Test] public void PausingAllRecipesStopsNewOrdersAndOpenStatusDoesNotEnableRetailSimulation()
         {
@@ -705,17 +968,25 @@ namespace PCShopSell.Tests
             }
         }
 
-        [Test] public void IngredientAndWholesalePackagingCannotDoubleSpendTheSameSupplyInOneEmployeeTrip()
+        [Test] public void FormerFarmOrderMergesWithWholesaleEntryWhenLoading()
         {
-            using(var s=HomeTests.Make(500000,600))
+            using var s = HomeTests.Make(500000, 600);
+            s.EventsEnabled = false;
+            var buyer = new Employee { Name = "采购员", DailyWageYuan = 150, CheckoutMinutes = 3 };
+            s.MainShop.Buyer = buyer;
+            buyer.PurchasePlan = new EmployeePurchasePlan
             {
-                s.EventsEnabled=false;var buyer=new Employee{Name="采购员",DailyWageYuan=150,CheckoutMinutes=3};s.MainShop.Buyer=buyer;CityTestPeople.AtAssignedWork(s,buyer);
-                var offers=s.EmployeePurchaseCatalog();var retail=offers.First(o=>o.Source.Id=="farm"&&o.Kind==PurchaseGoodsKind.Ingredient&&o.Id=="veg");
-                var wholesale=offers.First(o=>o.Source.Id=="farm"&&o.Kind==PurchaseGoodsKind.Gift&&o.Id=="produce:veg");
-                int limit=s.PurchaseLimit(retail);var plan=new EmployeePurchasePlan{Transport=VehicleKind.Taxi,Items=new[]{retail.Line(limit),wholesale.Line(limit)}};
-                Assert.True(s.ConfigureEmployeePurchase(buyer.Id,plan));Assert.True(s.DispatchEmployeePurchase(buyer.Id));
-                Assert.AreEqual(limit,s.EmployeePurchaseTrips.Single().Items.Sum(i=>i.Count));Assert.Zero(s.CitySupplierRemaining("farm","produce:veg"));
-            }
+                Items = new[] {
+                    new PurchaseLine { SourceId = "farm", Kind = PurchaseGoodsKind.Ingredient, PartId = "veg", Count = 7 },
+                    new PurchaseLine { SourceId = "farm", Kind = PurchaseGoodsKind.Gift, PartId = "produce:veg", Count = 10 },
+                }
+            };
+            using var loaded = Reload(s);
+            var item = loaded.MainShop.Buyer.PurchasePlan.Items.Single();
+            Assert.AreEqual(PurchaseGoodsKind.Gift, item.Kind);
+            Assert.AreEqual("farm", item.SourceId);
+            Assert.AreEqual("produce:veg", item.PartId);
+            Assert.AreEqual(17, item.Count);
         }
 
         [Test] public void MaximumSelectionIsStoredAsIntentRatherThanTodaysSnapshot()

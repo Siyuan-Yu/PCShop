@@ -8,6 +8,8 @@ namespace PCShopSell.Core.Session
         public const string BasketballVenueId = "life_court";
         public const string GolfVenueId = "life_golf";
         public const int DrinkTastingMinutes = 90;
+        public const int ManualAttemptMinutes = 40;
+        public static int ManualPlayAttempts(int minutes) => System.Math.Max(1, (minutes + ManualAttemptMinutes - 1) / ManualAttemptMinutes);
 
         public static CityActivityDefinition[] SportPasses(string venueId) => Activities
             .Where(activity => activity.VenueId == venueId && activity.IsSportPass)
@@ -34,14 +36,14 @@ namespace PCShopSell.Core.Session
                 for (int i = 0; i < prices.Length; i++)
                 {
                     int hours = (i + 1) * 2;
-                    string title = $"{name} · {hours} 小时";
+                    string title = $"{name} · {ManualPlayAttempts(hours * 60)} 次";
                     string suffix = venue == BasketballVenueId || venue == GolfVenueId ? "" : "_" + venue;
                     all.Add(new CityActivityDefinition
                     {
                         Id = $"{kind}_pass_{hours}h{suffix}", LogicalId = kind, Name = title, VenueId = venue,
                         Minutes = hours * 60, Choices = new[] { title }, ServiceOptionCount = 1,
                         DefaultService = new CityVenueService(prices[i], relation: 5),
-                        StartText = "开始" + name, MidText = "在场上自由练习", EndText = "本场租用时间已用完"
+                        StartText = "开始" + name, MidText = "在场上自由练习", EndText = "本场练习已完成"
                     });
                 }
             }

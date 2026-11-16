@@ -16,8 +16,7 @@ namespace PCShopSell.Core.Session
         public FishingPhase Phase;
         public int Spot, Bait, SpeciesRoll, Casts, Catches, Kept, Released, Gifts, Style;
         public int[] Baits = { 6, 4, 2 };
-        public long BiteAt;
-        public double CastPower, CastDistance, PhaseSeconds, FightSeconds, FishPosition = .5, ControlPosition = .5,
+        public double CastPower, CastDistance, PhaseSeconds, WaitSeconds, FightSeconds, FishPosition = .5, ControlPosition = .5,
             ControlVelocity, CatchProgress, LineTension, MotionSeed;
         public int MechanicsVersion = 3;
         public string[] GiftedPeople = Array.Empty<string>();
@@ -33,7 +32,6 @@ namespace PCShopSell.Core.Session
         public const string FishingVenueId = "life_fishing";
         public const string FishingAttendantId = "resident_luqiao";
         private FishingState _fishing;
-        private bool _fishingInterfaceOpen, _fishingDecisionHeld;
         private int _fishingExperience, _fishCaughtTotal;
         public FishingState CurrentFishing => _fishing?.Copy();
         public int FishingLevel => Math.Min(10, _fishingExperience / 5);
@@ -59,7 +57,6 @@ namespace PCShopSell.Core.Session
         private void StartFishingActivity(CityActivity activity)
         {
             if (!IsInteractiveFishingActivity(activity)) return;
-            ReleaseFishingDecision();
             _fishing = new FishingState { ActivityId = activity.Id, Phase = FishingPhase.Ready,
                 Message = "本次包含租杆及 12 份鱼饵：面饵 6、蚯蚓 4、小鱼饵 2。" };
             MoveToFishingSpot(activity, 0);
@@ -67,47 +64,15 @@ namespace PCShopSell.Core.Session
         private void EndFishingActivity(CityActivity activity)
         {
             if (_fishing?.ActivityId != activity.Id) return;
-            ReleaseFishingDecision();
             _fishing.Phase = FishingPhase.Ended; _fishing.PendingFishId = null;
             _fishing.Message = $"本场结束，共钓获 {_fishing.Catches} 条；已带走的鱼保留在背包。";
             activity.EventSettlementNote = (activity.EventSettlementNote ?? "")
                 + $"\n本次抛竿 {_fishing.Casts} 次，钓获 {_fishing.Catches} 条；带走 {_fishing.Kept}、放生 {_fishing.Released}、赠送 {_fishing.Gifts}。未收起的鱼已放回水中。";
         }
-        private void TickFishing(long now)
+        public void CloseFishingInterface()
         {
-            if (!FishingActive) { ReleaseFishingDecision(); return; }
-            if (_fishing.Phase == FishingPhase.Casting && !_fishingInterfaceOpen) _fishing.Phase = FishingPhase.Waiting;
-            if (_fishing.Phase == FishingPhase.Waiting && now >= _fishing.BiteAt)
-            {
-                _fishing.Phase = FishingPhase.Bite; _fishing.PhaseSeconds = 0;
-                _fishing.Message = FishingHint;
-                FocusFishingDecision();
-            }
-            if (_fishing.Phase == FishingPhase.Bite && !_fishingInterfaceOpen && now > _fishing.BiteAt + 2)
-                LoseFishingFish("没有及时提竿，鱼已经离开。");
-        }
-        public void SetFishingInterfaceOpen(bool open)
-        {
-            _fishingInterfaceOpen = open;
-            if (open) FocusFishingDecision();
-            else
-            {
-                if (_fishing?.Phase == FishingPhase.Charging) { _fishing.Phase = FishingPhase.Ready; _fishing.CastPower = 0; }
-                if (_fishing?.Phase == FishingPhase.Fighting) LoseFishingFish("中断控线，鱼脱钩了；可以换饵重新抛竿。");
-                ReleaseFishingDecision();
-            }
-        }
-        private void FocusFishingDecision()
-        {
-            if (!_fishingInterfaceOpen || !FishingActive || _fishingDecisionHeld
-                || _fishing.Phase != FishingPhase.Bite && _fishing.Phase != FishingPhase.Landed
-                    && _fishing.Phase != FishingPhase.Charging && _fishing.Phase != FishingPhase.Casting && _fishing.Phase != FishingPhase.Fighting) return;
-            Time.Hold(); _fishingDecisionHeld = true;
-        }
-        private void ReleaseFishingDecision()
-        {
-            if (!_fishingDecisionHeld) return;
-            Time.Release(); _fishingDecisionHeld = false;
+            if (_fishing?.Phase == FishingPhase.Charging) { _fishing.Phase = FishingPhase.Ready; _fishing.CastPower = 0; }
+            if (_fishing?.Phase == FishingPhase.Fighting) LoseFishingFish("中断控线，鱼脱钩了。");
         }
         private void MoveToFishingSpot(CityActivity activity, int spot)
         {
@@ -117,15 +82,23 @@ namespace PCShopSell.Core.Session
             double localZ = venue.Depth * .29;
             MapPoint Anchor(int seat) => new MapPoint(door.X + (localX + seat * .7) * Math.Cos(yaw) + localZ * Math.Sin(yaw),
                 door.Y - (localX + seat * .7) * Math.Sin(yaw) + localZ * Math.Cos(yaw));
-            CityRoute Route(MapPoint start, int seat) => new CityRoute { IntentId = activity.Id + ":fish:" + seat, TargetPlaceId = venue.Id,
-                Transport = VehicleKind.Walk, Nodes = Array.Empty<string>(), DepartMinute = Clock.Now.TotalMinutes, ArriveMinute = Clock.Now.TotalMinutes + 2,
-                X = new[] { start.X, Anchor(seat).X }, Y = new[] { start.Y, Anchor(seat).Y }, Meters = new[] { DistanceCity(start, Anchor(seat)) } };
-            activity.PlayerVenueRoute = Route(PlayerPosition, 0);
+            var anchor = Anchor(0);
+            long now = Clock.Now.TotalMinutes;
+            activity.PlayerVenueRoute = new CityRoute
+            {
+                IntentId = activity.Id + ":fish:0", TargetPlaceId = venue.Id, Transport = VehicleKind.Walk, Nodes = Array.Empty<string>(),
+                DepartMinute = now, ArriveMinute = now, X = new[] { anchor.X, anchor.X }, Y = new[] { anchor.Y, anchor.Y }, Meters = new[] { 0d }
+            };
             for (int i = 0; i < activity.Participants.Length; i++)
             {
                 var participant = activity.Participants[i]; var person = CityPersonState(participant.PersonId);
-                person.Route = Route(new MapPoint(person.X, person.Y), i + 1); participant.IntentId = person.Route.IntentId;
-                person.TaskLabel = "到钓位一起垂钓";
+                if (person == null) continue;
+                var seat = Anchor(i + 1);
+                person.Route = null;
+                person.LocationPlaceId = venue.Id;
+                person.X = seat.X; person.Y = seat.Y;
+                participant.IntentId = null;
+                person.TaskLabel = "在钓位一起垂钓";
             }
         }
         public bool SelectFishingSpot(int spot)
@@ -133,7 +106,7 @@ namespace PCShopSell.Core.Session
             if (!FishingActive || _fishing.Phase != FishingPhase.Ready || spot < 0 || spot >= 3) return false;
             if (_fishing.Spot == spot) return true;
             _fishing.Spot = spot; MoveToFishingSpot(RunningCityActivity, spot);
-            _fishing.Message = "正在前往" + FishingCatalog.Spots[spot] + "，到位后可以抛竿。"; return true;
+            _fishing.Message = "已换到" + FishingCatalog.Spots[spot] + "。"; return true;
         }
         public bool SelectFishingBait(int bait)
         {
@@ -142,15 +115,14 @@ namespace PCShopSell.Core.Session
         }
         public string FishingCastBlocker => !FishingActive ? "请先到场开始垂钓服务"
             : _fishing.Phase != FishingPhase.Ready ? "请先处理当前鱼口或鱼获"
-            : RunningCityActivity.PlayerVenueRoute?.ArriveMinute > Clock.Now.TotalMinutes ? "正在走向钓位"
-            : RunningCityActivity.ActualStart + RunningCityActivity.Duration - Clock.Now.TotalMinutes < 15 ? "本场时间不足 15 分钟，请收竿或另约一场"
+            : ManualAttemptsLeft == 0 ? "本场抛竿次数已用完，请结算"
             : _fishing.Baits[_fishing.Bait] <= 0 ? "这种鱼饵已经用完，可换饵或购买补充"
             : Player.Energy < 5 ? "精力不足，请先休息" : null;
         public bool BeginFishingCast()
         {
             if (FishingCastBlocker is string reason) return Fail(reason);
             _fishing.Phase = FishingPhase.Charging; _fishing.PhaseSeconds = 0; _fishing.CastPower = 0;
-            FocusFishingDecision(); return true;
+            return true;
         }
         public bool ReleaseFishingCast()
         {
@@ -158,7 +130,7 @@ namespace PCShopSell.Core.Session
             _fishing.CastDistance = 4 + 26 * _fishing.CastPower;
             _fishing.Baits[_fishing.Bait]--; _fishing.Casts++; Player.SpendEnergy(2);
             int wait = Random.Next(8, 13) - (_fishing.Spot == _fishing.Bait ? 2 : 0);
-            _fishing.BiteAt = Clock.Now.TotalMinutes + wait;
+            _fishing.WaitSeconds = wait * .5;
             _fishing.SpeciesRoll = Random.Next(0, 10000); _fishing.MotionSeed = Random.Next(0, 10000) / 100.0;
             _fishing.Phase = FishingPhase.Casting; _fishing.PhaseSeconds = 0;
             _fishing.Message = $"甩出 {_fishing.CastDistance:0.0} 米，消耗一份{FishingCatalog.Baits[_fishing.Bait]}。";
@@ -171,7 +143,7 @@ namespace PCShopSell.Core.Session
             _fishing.Phase = FishingPhase.Fighting; _fishing.PhaseSeconds = 0; _fishing.FightSeconds = 0;
             _fishing.ControlPosition = .5; _fishing.ControlVelocity = 0; _fishing.FishPosition = .5;
             _fishing.CatchProgress = .3; _fishing.LineTension = .15;
-            _fishing.Message = "鱼在挣扎！让绿区跟住鱼，张力太高就松手放线。"; FocusFishingDecision(); return true;
+            _fishing.Message = "鱼在挣扎！让绿区跟住鱼，张力太高就松手放线。"; return true;
         }
         // Real seconds, independent of the world's clock speed. No random success roll.
         public void AdvanceFishingInteraction(double seconds, bool reelHeld)
@@ -188,7 +160,13 @@ namespace PCShopSell.Core.Session
                     _fishing.CastPower = cycle <= 1 ? cycle : 2 - cycle;
                 }
                 else if (_fishing.Phase == FishingPhase.Casting && _fishing.PhaseSeconds >= .8)
-                { _fishing.Phase = FishingPhase.Waiting; _fishing.PhaseSeconds = 0; ReleaseFishingDecision(); }
+                { _fishing.Phase = FishingPhase.Waiting; _fishing.PhaseSeconds = 0; }
+                else if (_fishing.Phase == FishingPhase.Waiting && _fishing.PhaseSeconds >= _fishing.WaitSeconds)
+                {
+                    _fishing.Phase = FishingPhase.Bite;
+                    _fishing.PhaseSeconds = 0;
+                    _fishing.Message = FishingHint;
+                }
                 else if (_fishing.Phase == FishingPhase.Bite && _fishing.PhaseSeconds >= 3)
                     LoseFishingFish("提竿太迟，鱼吐出了钩；这一份鱼饵已经用掉。");
                 else if (_fishing.Phase == FishingPhase.Fighting)
@@ -203,7 +181,7 @@ namespace PCShopSell.Core.Session
                     _fishing.ControlPosition = Math.Max(half, Math.Min(1 - half, _fishing.ControlPosition + _fishing.ControlVelocity * dt));
                     if (_fishing.ControlPosition <= half || _fishing.ControlPosition >= 1 - half) _fishing.ControlVelocity = 0;
                     bool inside = Math.Abs(_fishing.FishPosition - _fishing.ControlPosition) <= half;
-                    _fishing.CatchProgress = Math.Max(0, Math.Min(1, _fishing.CatchProgress + dt * (inside ? .115 : -.095)));
+                    _fishing.CatchProgress = Math.Max(0, Math.Min(1, _fishing.CatchProgress + dt * (inside ? .115 * 1.3 : -.095)));
                     _fishing.LineTension = Math.Max(0, Math.Min(1, _fishing.LineTension + dt * (reelHeld ? (inside ? .045 : .17) : -.22)));
                     if (_fishing.LineTension >= 1) LoseFishingFish("收线太猛，鱼线拉断了；适时松开放线再试。");
                     else if (_fishing.CatchProgress <= 0 || _fishing.FightSeconds >= 60) LoseFishingFish("没有跟住鱼的挣扎，鱼脱钩了。");
@@ -215,11 +193,11 @@ namespace PCShopSell.Core.Session
         {
             var fish = FishingCatalog.Get(_fishing.PendingFishId);
             _fishing.Phase = FishingPhase.Landed; _fishing.Catches++; _fishCaughtTotal++; _fishingExperience += 2;
-            _fishing.Message = $"钓到{fish.Name} · {fish.Rarity} · {fish.Kg:0.##} 千克 · 回收 ¥{fish.SalePrice}"; FocusFishingDecision();
+            _fishing.Message = $"钓到{fish.Name} · {fish.Rarity} · {fish.Kg:0.##} 千克 · 回收 ¥{fish.SalePrice}";
         }
         private void LoseFishingFish(string reason)
         {
-            _fishing.Phase = FishingPhase.Ready; _fishing.PendingFishId = null; _fishing.Message = reason; ReleaseFishingDecision();
+            _fishing.Phase = FishingPhase.Ready; _fishing.PendingFishId = null; _fishing.Message = reason;
         }
         public bool KeepCaughtFish()
         {
@@ -250,7 +228,7 @@ namespace PCShopSell.Core.Session
         }
         private void FinishFishDisposition(string message)
         {
-            _fishing.PendingFishId = null; _fishing.Phase = FishingPhase.Ready; _fishing.Message = message; ReleaseFishingDecision();
+            _fishing.PendingFishId = null; _fishing.Phase = FishingPhase.Ready; _fishing.Message = message;
         }
         public bool BuyFishingBait(int bait)
         {
@@ -281,7 +259,6 @@ namespace PCShopSell.Core.Session
             _fishingExperience = Math.Max(0, data.fishingExperience); _fishCaughtTotal = Math.Max(0, data.fishCaughtTotal);
             if (_fishing != null && (_fishing.Baits.Length != 3 || !_cityActivities.Any(a => a.Id == _fishing.ActivityId && a.Active && IsInteractiveFishingActivity(a))))
                 _fishing = null;
-            _fishingInterfaceOpen = false; _fishingDecisionHeld = false;
             if (_fishing != null)
             {
                 _fishing.Spot = Math.Max(0, Math.Min(2, _fishing.Spot)); _fishing.Bait = Math.Max(0, Math.Min(2, _fishing.Bait));
@@ -289,9 +266,18 @@ namespace PCShopSell.Core.Session
                 if (_fishing.MechanicsVersion < 2 && _fishing.Phase != FishingPhase.Landed) _fishing.Phase = FishingPhase.Ready;
                 if (_fishing.MechanicsVersion < 3 && (_fishing.Phase == FishingPhase.Waiting || _fishing.Phase == FishingPhase.Bite)) _fishing.SpeciesRoll *= 100;
                 _fishing.MechanicsVersion = 3;
+                if (_fishing.WaitSeconds <= 0 && _fishing.Phase is FishingPhase.Casting or FishingPhase.Waiting)
+                {
+                    _fishing.WaitSeconds = 3;
+                    if (_fishing.Phase == FishingPhase.Waiting) _fishing.PhaseSeconds = 0;
+                }
                 if (_fishing.Phase == FishingPhase.Charging) _fishing.Phase = FishingPhase.Ready;
                 if ((_fishing.Phase == FishingPhase.Landed || _fishing.Phase == FishingPhase.Fighting) && FishingCatalog.Get(_fishing.PendingFishId) == null) _fishing.Phase = FishingPhase.Ready;
             }
+            var running = RunningCityActivity;
+            if (!IsInteractiveFishingActivity(running)) return;
+            if (_fishing == null) StartFishingActivity(running);
+            else if (running.PlayerVenueRoute?.ArriveMinute > Clock.Now.TotalMinutes) MoveToFishingSpot(running, _fishing.Spot);
         }
     }
     public sealed partial class SaveData

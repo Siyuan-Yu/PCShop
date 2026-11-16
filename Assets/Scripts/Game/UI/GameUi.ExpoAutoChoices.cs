@@ -19,7 +19,7 @@ namespace PCShopSell.Game.UI
                 _autoExpoSession = S; _autoExpoDay = day;
                 _autoExpoChoiceAt = Time.unscaledTime + 1.2f;
                 w.Rebuild();
-            }, 17, _autoExpoChoosing ? Ui.ButtonHot : Ui.ButtonBg), -1, 38, 1)
+            }, 17, Ui.SelectedButton(_autoExpoChoosing)), -1, 38, 1)
                 .Tip("自动选择现场评价更高的应对，每次间隔约1秒。多品牌依次处理，可随时暂停或手动接管。")
                 .name = "ExpoAutoChoice";
         }

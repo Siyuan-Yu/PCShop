@@ -37,7 +37,7 @@ namespace PCShopSell.Game.UI
             {
                 int tab = i;
                 Ui.Size(Ui.Button(tabs, i == 4 ? "我买的" : new[] { "钟表", "旧电子", "唱片", "杂货" }[i], () => { _oldMarketStall = tab; w.Rebuild(); }, 18,
-                    _oldMarketStall == i ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
+                    Ui.SelectedButton(_oldMarketStall == i)), -1, 42, 1);
             }
             if (_oldMarketStall == 4)
             {

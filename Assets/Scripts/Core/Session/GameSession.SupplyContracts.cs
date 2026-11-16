@@ -149,12 +149,18 @@ namespace PCShopSell.Core.Session
             _contracts.Add(new EnterpriseContract { Id = "enterprise:" + week, Client = new[] { "社区培训中心", "北街设计工作室", "青禾电商公司" }[tier], Tier = tier, Count = count, UnitCents = price.Cents, OfferUntilDay = week * 7 + 7 });
             while (_contracts.Count(x => x.Settled) > 12) _contracts.Remove(_contracts.First(x => x.Settled));
         }
+        public double EnterpriseReputationReward(EnterpriseContract contract) =>
+            contract != null && !contract.PersonalReferral
+                && !_cityReferrals.Any(offer => offer.ContractId == contract.Id && offer.CommunityOrder) ? .4 : 0;
+
         public string EnterpriseBlocker(EnterpriseContract c)
         {
             if (c == null || c.Accepted || Clock.Today.TotalDays >= c.OfferUntilDay) return "本期招标已结束";
             if (!HasShop || !HasSmartphone) return "需要主店和智能手机";
+            if (RetailKind != "computer") return "请切换到电脑店接装机合同。";
             if (_contracts.Any(x => x.Accepted && !x.Settled && !x.PersonalReferral)) return "先完成手上的企业合同";
             if (PlayerShop.Reputation < 8) return "名望达到 8";
+            if (!PlayerShop.CanTakeBuildOrders(c.Count)) return $"本店待交付装机上限为 {ShopSimulation.BuildOrderLimit} 台，请先交付部分订单。";
             if (Ledger.Balance < c.Total.Scale(.05)) return "需预留合同额 5% 的履约保证金";
             return null;
         }
@@ -167,9 +173,11 @@ namespace PCShopSell.Core.Session
             c.DepositCents = c.Total.Scale(.05).Cents;
             Ledger.ForceDebit(Clock.Today, "履约保证金", Money.FromCents(c.DepositCents), c.Client);
             c.Accepted = true;
-            c.DueMinute = Clock.Now.AddMinutes((c.Count + 2) * GameTimestamp.MinutesPerDay).TotalMinutes;
+            c.ShopId = CurrentShop.Place.Id;
+            int days = c.Count + ShopSettings.DefaultBuildOrderDueDays;
+            c.DueMinute = Clock.Now.AddMinutes(days * GameTimestamp.MinutesPerDay).TotalMinutes;
             for (int i=0; i<c.Count; i++) PlayerShop.AddContractOrder(c.Id, c.Tier, Money.FromCents(c.UnitCents), new GameTimestamp(c.DueMinute));
-            Say($"签下{c.Client} {c.Count} 台订单：{c.Count + 2} 天交期，逐台收款。全数履约另奖 3%；未交付部分扣对应保证金。");
+            Say($"签下{c.Client} {c.Count} 台订单：{days} 天交期，逐台收款。全数履约另奖 3%；未交付部分扣对应保证金。");
             return true;
         }
         public bool CancelEnterprise(string id)
@@ -181,7 +189,7 @@ namespace PCShopSell.Core.Session
             foreach (var o in shop.Sim.Orders.Where(x => x.ContractId == id).ToArray()) shop.Sim.CancelBuild(o.Id);
             return true;
         }
-        private void ContractOrderResult(BuildOrder order, bool completed)
+        private void ContractOrderResult(OwnedShop shop, BuildOrder order, bool completed)
         {
             if (order.ContractId == null) return;
             var c = _contracts.Find(x => x.Id == order.ContractId && !x.Settled);
@@ -193,18 +201,20 @@ namespace PCShopSell.Core.Session
             if (refund.IsPositive) Ledger.Credit(Clock.Today, "履约保证金", refund, c.Client + "履约返还");
             var referral = _cityReferrals.FirstOrDefault(x => x.Id == c.ReferralOfferId);
             if (referral != null) { referral.Settled = true; referral.Fulfilled = c.Failed == 0; }
-            bool enterprise = !c.PersonalReferral && referral?.CommunityOrder != true;
+            double reputation = EnterpriseReputationReward(c);
+            bool enterprise = reputation > 0;
             if (c.Failed == 0)
             {
                 if (enterprise)
                 {
+                    shop.Sim.AdjustPersonalReputation(reputation);
                     Flags.Add("tutorial:enterprise");
                     Ledger.Credit(Clock.Today, "企业奖励", c.Total.Scale(.03), c.Client);
                 }
                 if (enterprise || referral?.Discount == true) AddRelation(referral?.Introducer ?? Npcs.Zhang, 2);
             }
             Say($"{c.Client}结案：交付 {c.Completed}/{c.Count} 台。"
-                + (enterprise ? $"保证金返还 {refund}。" + (c.Failed == 0 ? "全额履约奖金已到账。" : "未履约部分保证金已扣除。") : ""));
+                + (enterprise ? $"保证金返还 {refund}。" + (c.Failed == 0 ? $"全额履约奖金已到账，名望 +{reputation:0.#}。" : "未履约部分保证金已扣除。") : ""));
         }
     }
 }

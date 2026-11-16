@@ -38,7 +38,7 @@ namespace PCShopSell.Game.UI
         private void MotorChoice(Transform parent, string modelId, string title, Action choose,
             bool selected = false, bool enabled = true)
         {
-            var button = Ui.Button(parent, title, choose, 17, selected ? Ui.ButtonHot : Ui.ButtonBg, enabled);
+            var button = Ui.Button(parent, title, choose, 17, Ui.SelectedButton(selected), enabled);
             Ui.Size(button, -1, 72);
             var portrait = MotorThumbnail(button.transform, modelId, 60);
             portrait.anchorMin = portrait.anchorMax = new Vector2(0, .5f);

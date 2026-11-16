@@ -43,7 +43,7 @@ namespace PCShopSell.Core.Session
         public const int DeliveryDays = 2;
         public const string MallBusiness = "家具";
         public const string FarmBusiness = "农贸";
-        public const int FarmOpenMinute = 6 * 60;
+        public const int FarmOpenMinute = 2 * 60;
         public const int FarmCloseMinute = 18 * 60;
         public const double RiceBagKg = 5;
         public static readonly Money RiceBagPrice = Money.FromYuan(25);
@@ -95,12 +95,14 @@ namespace PCShopSell.Core.Session
             layout.Select(p => FurnitureCatalog.Get(p.Id)).Where(d => d != null);
 
         /// <summary>睡眠质量倍数：摆出来的最好的床 + 空调/风扇/窗帘 + 装饰分（上限 +0.08）。没有床只能睡地上。</summary>
-        public double HomeSleepQuality
+        public double HomeSleepQuality => CurrentPlace != Home && CanSleepAt(CurrentPlace)
+            ? FurnitureCatalog.Get(SecondaryResidenceBed(CurrentPlace)).BedQuality + ResidentialTier(CurrentPlace) * .08
+            : PrimaryHomeSleepQuality;
+
+        public double PrimaryHomeSleepQuality
         {
             get
             {
-                if (CurrentPlace != Home && CanSleepAt(CurrentPlace))
-                    return FurnitureCatalog.Get(SecondaryResidenceBed(CurrentPlace)).BedQuality + ResidentialTier(CurrentPlace) * .08;
                 var defs = PlacedDefs(_homeLayout).ToList();
                 double bed = defs.Where(d => d.Role == FurnitureRole.Bed).Select(d => d.BedQuality).DefaultIfEmpty(NoBedSleepQuality).Max();
                 double bonus = defs.Where(d => !CityWeather.IsDevice(d.Id)).Sum(d => d.SleepBonus);
@@ -179,6 +181,7 @@ namespace PCShopSell.Core.Session
                     if (gd == null) return false;
                     if (ClothingProducts.IsClothing(id)) return Fail("个人衣服请在网购衣服分类下单；经营服装请从线下服装货源进货。");
                     if (gd.LimitedEdition) return Fail("限定模型需在漫展现场采购，普通网购不出售。 ");
+                    if (FishingCatalog.RequiresCatch(gd.IngredientId)) return Fail("这种鱼不在售，可以自己钓到。");
                     name = gd.Name;
                     break;
                 default:
@@ -186,9 +189,8 @@ namespace PCShopSell.Core.Session
                     id = "rice";
                     break;
             }
-            double ingredientKg = kind == ParcelKind.Rice ? RiceBagKg * count
-                : kind == ParcelKind.Gift && IsRawIngredientProduct(id) ? Gifts.Get(id).WeightKg * count : 0;
-            if (RestaurantIngredientDeliveryBlocker(destination, ingredientKg) is string coldStorageBlocker)
+            double coldKg = kind == ParcelKind.Gift && IsColdIngredientProduct(id) ? Gifts.Get(id).WeightKg * count : 0;
+            if (RestaurantColdStorageBlocker(destination, coldKg) is string coldStorageBlocker)
                 return Fail(coldStorageBlocker + "。");
             Money total = OnlinePrice(kind, id) * count;
             var attribution = destination == null || kind == ParcelKind.Outfit ? null
@@ -398,49 +400,26 @@ namespace PCShopSell.Core.Session
 
         private bool AtFarmMarket => CurrentPlace != null && CurrentPlace.Business == FarmBusiness;
 
-        public bool BuyRice(double kg)
+        private static int FarmRiceBags(double kg)
         {
-            if (!AtFarmMarket) return Fail("要去农贸市场买。");
-            if (!IsFarmMarketOpen) return Fail("农贸市场收摊了（6:00–18:00）。");
-            if(kg<=0||double.IsNaN(kg)||double.IsInfinity(kg)||Math.Abs(kg*4-Math.Round(kg*4))>1e-8)return false;
-            string key=SupplierCounterKey(CurrentPlace.Id,"produce:rice");
-            _citySupplierPurchases.TryGetValue(key,out int used);
-            int quarters=(int)Math.Round(kg*4);
-            if(quarters>SupplierCapacity(CurrentPlace.Id,"produce:rice")*2-used)return Fail("大米超过今日剩余供货量。");
-            Money cost=Pantry.RicePricePerKg.Scale(kg);
-            if(SendByCourier)
-            {
-                if(!PayAndSend("买菜",cost,$"大米 {kg:0.##} 千克",false,new CourierItem{Kind=CourierItemKind.Rice,Id="rice",Kg=kg}))return false;
-            }
-            else
-            {
-                if(!CanCarry(kg))return false;
-                if(!Ledger.TryDebit(Clock.Today,"买菜",cost,$"大米 {kg:0.##} 千克"))return Fail("钱不够。");
-                Backpack.Food.RiceKg+=kg;ApplyCargoLimit();
-            }
-            _citySupplierPurchases[key]=used+quarters;return true;
+            double bags = kg / Gifts.Get("produce:rice").WeightKg;
+            return bags > 0 && bags <= 100 && Math.Abs(bags - Math.Round(bags)) < 1e-8
+                ? (int)Math.Round(bags) : 0;
         }
 
-        public bool BuyIngredient(string id, int count)
+        private bool BuyFarmWholesale(string id, int count)
         {
-            IngredientDef d = Ingredients.Get(id);
-            if (d == null || count <= 0) return false;
-            if(count>CitySupplierRemaining(CurrentPlace.Id,"produce:"+id))return Fail("该食材超过今日剩余供货数量。");
-            if (!AtFarmMarket) return Fail("要去农贸市场买。");
-            if (!IsFarmMarketOpen) return Fail("农贸市场收摊了（6:00–18:00）。");
-            if (SendByCourier)
-            {
-                bool sent=PayAndSend("买菜",d.Price*count,$"{d.Name} {d.WeightKg*count:0.##} 千克",false,
-                    new CourierItem{Kind=CourierItemKind.Ingredient,Id=id,Count=count,ExpireDay=FoodBatch.NoExpiry});
-                if(sent)RecordCitySupplierPurchase(CurrentPlace.Id,"produce:"+id,count);return sent;
-            }
-            if (!CanCarry(Backpack.IngredientKg(id) * count)) return false;
-            if (!Ledger.TryDebit(Clock.Today, "买菜", d.Price * count, $"{d.Name} {d.WeightKg * count:0.##} 千克")) return Fail("钱不够。");
-            Backpack.Food.AddIngredient(id, count);
-            RecordCitySupplierPurchase(CurrentPlace.Id,"produce:"+id,count);
-            ApplyCargoLimit();
-            return true;
+            if (!AtFarmMarket) return Fail("请到农贸市场批发采购。");
+            return BuyRetailWholesale(CurrentPlace.Id, id, count, !SendByCourier, CourierShop(false)?.Place.Id);
         }
+
+        public bool BuyRice(double kg)
+        {
+            int bags = FarmRiceBags(kg);
+            return bags > 0 ? BuyFarmWholesale("produce:rice", bags) : Fail("大米按每袋 0.5 千克采购。");
+        }
+
+        public bool BuyIngredient(string id, int count) => BuyFarmWholesale("produce:" + id, count);
 
         // ---------- 做饭、吃饭 ----------
 
@@ -456,11 +435,11 @@ namespace PCShopSell.Core.Session
             HomeCookingSupplies().Sum(source => source.IngredientCount(id));
 
         /// <summary>用电饭锅开始焖一锅饭（要有小桌上的电饭锅）。点了就开始，40 分钟后才好，期间锅里不能动；人可以去干别的。</summary>
-        public bool CookRice(double kg, string ingredientId)
+        public bool CookRice(double kg, string ingredientId, string fishId = null)
         {
             if (CurrentPlace != Home) return Fail("要在家里做饭。");
             if (!HomeHas(FurnitureRole.Cooker)) return Fail("屋里没摆电饭锅。");
-            if (!Pantry.StartCook(kg, ingredientId, Clock.Now.TotalMinutes, HomeCookingSupplies(), out string err)) return Fail(err);
+            if (!Pantry.StartCook(kg, ingredientId, Clock.Now.TotalMinutes, HomeCookingSupplies(), out string err, fishId)) return Fail(err);
             ApplyCargoLimit();
             Say($"开始焖饭了，大约 {Pantry.CookMinutes} 分钟后好。");
             return true;
@@ -527,7 +506,7 @@ namespace PCShopSell.Core.Session
 
         private double EatFrom(System.Collections.Generic.List<FoodBatch> list)
         {
-            double gain = 0, nutrition = 0, fastNutrition = 0, mood = 0;
+            double gain = 0, nutrition = 0, mealMood = 0, fastNutrition = 0, mood = 0;
             int bowls = 0;
             while (gain < MealGain && Player.Hunger + gain < 100)
             {
@@ -535,12 +514,13 @@ namespace PCShopSell.Core.Session
                 if (b == null) break;
                 gain += b.Hunger;
                 var fast = FastFoodCatalog.Packed(b.Id);
-                if (fast == null) { nutrition += MealNutrition(b.Id); bowls++; }
+                if (fast == null) { nutrition += MealNutrition(b.Id); mealMood += MealMood(b.Id); bowls++; }
                 else { fastNutrition += fast.Nutrition; mood += fast.Mood; }
                 if (fast?.Drink == true) break;
                 Player.Health = Math.Min(100, Player.Health + b.Health);
             }
-            ApplyDiet((bowls > 0 ? nutrition / bowls : 0) + fastNutrition, mood); // One meal, regardless of bowl count.
+            ApplyDiet((bowls > 0 ? nutrition / bowls : 0) + fastNutrition,
+                (bowls > 0 ? mealMood / bowls : 0) + mood); // One meal, regardless of bowl count.
             return gain;
         }
 
@@ -763,6 +743,8 @@ namespace PCShopSell.Core.Session
                 cookReadyMinute = Pantry.Cooking == null ? 0 : Pantry.Cooking.ReadyMinute,
                 packLunch = ToSave(Backpack.Food.Packed),
                 couriers = SaveCouriers(),
+                furnitureBuybacks = _furnitureBuybacks.Select(order => order.Copy()).ToArray(),
+                nextFurnitureBuybackId = _nextFurnitureBuybackId,
                 sendByCourier = SendByCourier,
                 renovationDay = _renovationDay,
                 visitTargets = _visits.Select(v => v.TargetId).ToArray(),
@@ -828,6 +810,7 @@ namespace PCShopSell.Core.Session
             _mallStash.Clear();
             SaveHome h = d.home;
             RestoreCouriers(h?.couriers);
+            RestoreFurnitureBuybacks(h);
             SendByCourier = h != null && h.sendByCourier;
             FromSaveStorage(h?.homeFridge, HomeFridge);
             FromSaveStorage(h?.mainShopFridge, MainShop.Fridge);

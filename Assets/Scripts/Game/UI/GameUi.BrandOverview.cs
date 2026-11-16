@@ -157,7 +157,7 @@ namespace PCShopSell.Game.UI
                 Para(card, S.BrandQualificationText(kind), 17);
                 if (blocker != null) Para(card, blocker, 16, Ui.Warn);
                 Ui.Size(Ui.Button(card, "创建" + industry + "品牌", () => OpenBrandCreation(kind, overview),
-                    17, Ui.ButtonHot, blocker == null), -1, 38).name = "BrandCreate_" + kind;
+                    17, Ui.ButtonBg, blocker == null), -1, 38).name = "BrandCreate_" + kind;
             }
         }
 
@@ -176,7 +176,7 @@ namespace PCShopSell.Game.UI
                 {
                     string label = option == "value" ? "实惠定位" : "品质定位";
                     Ui.Size(Ui.Button(positions, label, () => { brandName = input.text; position = option; w.Rebuild(); }, 18,
-                        position == option ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
+                        Ui.SelectedButton(position == option)), -1, 42, 1);
                 }
                 string blocker = S.BrandFoundBlocker(kind);
                 if (blocker != null) Para(w.Content, blocker, 17, Ui.Warn);

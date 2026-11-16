@@ -56,10 +56,15 @@ namespace PCShopSell.Core.Session
 
         private static void MergePantryIngredients(Pantry from, Pantry to)
         {
-            to.RiceKg += from.RiceKg;
-            from.RiceKg = 0;
+            MoveStoredRice(from, to);
             to.Ingredient.AddRange(from.Ingredient);
             from.Ingredient.Clear();
+        }
+
+        private static void MoveStoredRice(Pantry from, Pantry to)
+        {
+            to.RiceKg += from.RiceKg;
+            from.RiceKg = 0;
         }
         private void NormalizeWarehouses()
         {

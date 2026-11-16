@@ -193,6 +193,10 @@ namespace PCShopSell.Game.UI
             {
                 var c=contract;var card=BusinessCard(w.Content,c.Client+" · "+PartCatalog.TierName(c.Tier)+"整机 ×"+c.Count);
                 bool community = S.CityReferrals.Any(o => o.ContractId == c.Id && o.CommunityOrder);
+                double reputation = S.EnterpriseReputationReward(c);
+                if (reputation > 0)
+                    Line(card, c.Settled ? $"本单名望 +{(c.Failed == 0 ? reputation : 0):0.#}"
+                        : $"整份合同按时交齐 · 名望 +{reputation:0.#}", 16, Ui.Good);
                 Line(card,$"合同额 {c.Total}    单台收款 {Money.FromCents(c.UnitCents)}    履约保证金 {(c.Accepted ? Money.FromCents(c.DepositCents) : c.Total.Scale(.05))}",17);
                 Money reference=Money.Zero;foreach(var p in PartCatalog.BuildList(c.Tier)) reference+=S.Market.PriceOf(p)*c.Count;
                 Para(card,$"当前配件市价合计 {reference}（不是实际采购成本）。交期 {c.Count+2} 天；" + (community ? "社区团购按实收货款结算，保证金为零。" : "未交付部分会扣对应保证金。") + "手头零售订单也会占用工时。",15,Ui.Dim);

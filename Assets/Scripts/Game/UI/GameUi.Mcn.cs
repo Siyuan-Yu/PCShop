@@ -44,7 +44,7 @@ namespace PCShopSell.Game.UI
             {
                 var agency = company;
                 Ui.Size(Ui.Button(agencies, agency.Name, () => { _mcnAgencyId = agency.Id; w.Rebuild(); },
-                    17, _mcnAgencyId == agency.Id ? Ui.ButtonHot : Ui.ButtonBg), -1, 36, 1);
+                    17, Ui.SelectedButton(_mcnAgencyId == agency.Id)), -1, 36, 1);
             }
             var selected = BrandAgency.Get(_mcnAgencyId) ?? BrandAgency.All[0];
             Line(w.Content, selected.Specialty + " · " + selected.Description, 16, Ui.Dim);
@@ -76,7 +76,7 @@ namespace PCShopSell.Game.UI
                     string why=S.McnExchangeBlocker(id);
                     Para(card, why ?? "对方已到场，可以完成此前约好的介绍。", 17, Ui.Good);
                     if (why != null) Para(card, "预计到场还需 " + Math.Max(0, appointment.Arrival - S.Clock.Now.TotalMinutes) + " 分钟。", 15, Ui.Dim);
-                    Ui.Size(Ui.Button(card, "见面介绍 · 交换业务名片", () => { S.ExchangeMcnContact(id); w.Rebuild(); }, 17, Ui.ButtonHot, why == null), -1, 38);
+                    Ui.Size(Ui.Button(card, "见面介绍 · 交换业务名片", () => { S.ExchangeMcnContact(id); w.Rebuild(); }, 17, Ui.ButtonBg, why == null), -1, 38);
                 }
                 else
                 {
@@ -85,7 +85,7 @@ namespace PCShopSell.Game.UI
                     string fee = S.McnIntroductionFee(id).ToString("N0");
                     Ui.Size(Ui.Button(card, "安排介绍 · ¥" + fee, () =>
                         ConfirmBusiness("安排介绍", "支付 ¥" + fee + " 取得" + name + "的业务名片。",
-                            () => { S.RequestMcnIntroduction(id); w.Rebuild(); }), 17, Ui.ButtonHot, why == null), -1, 38)
+                            () => { S.RequestMcnIntroduction(id); w.Rebuild(); }), 17, Ui.ButtonBg, why == null), -1, 38)
                         .name = "McnIntroduce_" + id;
                 }
             }

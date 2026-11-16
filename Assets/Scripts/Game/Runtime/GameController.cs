@@ -302,6 +302,8 @@ namespace PCShopSell.Game
             SoundFx.Play(Sfx.Error);
             if (RaceTracks.Get(p.Id) != null && closed == Session.RacingAccessBlocker)
                 Ui.Popup("赛车场暂未开放", closed);
+            else if (Session.RacingGarageEntryBlocker(p.Id) != null)
+                Ui.Popup("赛车登记条件未达成", closed);
             else Ui.Popup("打烊了", closed + "\n营业时间再来吧。");
             return true;
         }
@@ -375,7 +377,8 @@ namespace PCShopSell.Game
         {
             bool interior = InInterior;
             bool room = InRoom;
-            float worldDt = Session.Time.IsRunning ? Mathf.Min(dt,(float)TimeController.MaxTickSeconds) * Session.Time.Speed * (float)TimeController.WorldRate : 0f;
+            bool worldRunning = Session.Time.IsRunning && !Session.ManualActivityClockPaused;
+            float worldDt = worldRunning ? Mathf.Min(dt,(float)TimeController.MaxTickSeconds) * Session.Time.Speed * (float)TimeController.WorldRate : 0f;
             Interior.SetActive(interior);
             bool residenceChanged = EnsureResidenceView();
             HomeRoom.SetActive(InHome);
@@ -415,7 +418,7 @@ namespace PCShopSell.Game
             if (InVisit) VisitRoom.UpdateVisit(Session);
             UpdateHomeBedTrip(dt);
             UpdateCityTravel(dt);
-            FigureMotion.AdvanceAll(dt, Session.Time.IsRunning);
+            FigureMotion.AdvanceAll(dt, worldRunning);
 
             if (RoomKind != _wasRoomKind || residenceChanged)
             {

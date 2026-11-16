@@ -56,6 +56,7 @@ namespace PCShopSell.Core.Session
             if (g == null || !City.HasPlace(id)) return "车库不存在";
             if (IsGameOver || Racing || IsWorking || Trip != null) return "请先结束当前活动";
             if (DistrictAccessTier < g.Tier) return "先解锁" + DistrictName(g.Tier) + "片区";
+            if (RacingGarageRegistrationOnly(id)) return RacingQualificationBlocker ?? "请先办理赛车登记。";
             if (CurrentPlace?.Id != id) return "请到车库建筑旁按 F 办理";
             return null;
         }

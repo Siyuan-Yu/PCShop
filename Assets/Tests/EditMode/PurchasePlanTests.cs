@@ -305,19 +305,20 @@ namespace PCShopSell.Tests
             using (var s = Make())
             {
                 var offers = s.EmployeePurchaseCatalog();
-                foreach (PurchaseGoodsKind kind in Enum.GetValues(typeof(PurchaseGoodsKind))) Assert.True(offers.Any(o => o.Kind == kind), kind.ToString());
-                var food = offers.First(o => o.Kind == PurchaseGoodsKind.Ingredient);
-                var rice = offers.First(o => o.Kind == PurchaseGoodsKind.Rice);
+                foreach (var kind in new[] { PurchaseGoodsKind.Part, PurchaseGoodsKind.Gift, PurchaseGoodsKind.Furniture })
+                    Assert.True(offers.Any(o => o.Kind == kind), kind.ToString());
+                var food = offers.First(o => o.Id == "produce:veg");
+                var rice = offers.First(o => o.Id == "produce:rice");
                 var furniture = offers.First(o => o.Kind == PurchaseGoodsKind.Furniture && o.Id == FurnitureCatalog.HomeBox);
-                var plan = new EmployeePurchasePlan { Transport = VehicleKind.Taxi, Items = new[] { food.Line(2), rice.Line(3), furniture.Line(1) } };
+                var plan = new EmployeePurchasePlan { Transport = VehicleKind.Taxi, Items = new[] { food.Line(10), rice.Line(5), furniture.Line(1) } };
                 Assert.True(s.ConfigureEmployeePurchase(s.MainShop.Buyer.Id, plan));
                 var quote = s.QuoteEmployeePurchase(s.MainShop.Buyer.Id);
                 Assert.IsNull(quote.Error, quote.Error);
                 Assert.True(s.DispatchEmployeePurchase(s.MainShop.Buyer.Id));
                 var trip = s.EmployeePurchaseTrips.Single();
                 s.AdvanceClock((int)(Math.Max(trip.ReturnAt, trip.DeliveryAt) - s.Clock.Now.TotalMinutes + 1));
-                Assert.AreEqual(2, s.MainShop.Locker.Food.IngredientCount(food.Id) + s.MainShop.Temp.Food.IngredientCount(food.Id));
-                Assert.AreEqual(1.5, s.MainShop.Locker.Food.RiceKg + s.MainShop.Temp.Food.RiceKg);
+                Assert.AreEqual(10, s.MainShop.Sim.Stock.GoodsCount(food.Id));
+                Assert.AreEqual(5, s.MainShop.Sim.Stock.GoodsCount(rice.Id));
                 Assert.AreEqual(1, s.MainShop.Locker.FurnitureCount(furniture.Id) + s.MainShop.Temp.FurnitureCount(furniture.Id));
                 Assert.Zero(s.EmployeePurchaseTrips.Count);
             }

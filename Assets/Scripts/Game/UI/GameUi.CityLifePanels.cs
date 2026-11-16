@@ -72,17 +72,17 @@ namespace PCShopSell.Game.UI
             {
                 Ui.Size(Ui.TextInput(w.Content, _cityMapSearch, "搜索地点名、街区、用途", value => { _cityMapSearch = value ?? ""; _cityMapPage = 0; w.RequestRebuild(); }), -1, 44);
                 var types = Ui.Row(w.Content, 40, 6);
-                void Type(string title, string key) => Ui.Size(Ui.Button(types, title, () => { _cityMapType = key; _cityMapPage = 0; w.Rebuild(); }, 17, _cityMapType == key ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1);
+                void Type(string title, string key) => Ui.Size(Ui.Button(types, title, () => { _cityMapType = key; _cityMapPage = 0; w.Rebuild(); }, 17, Ui.SelectedButton(_cityMapType == key)), -1, 40, 1);
                 Type("全部", null); Type("我的店", "my"); Type("已购物业", "property"); Type("娱乐活动", "venue"); Type("采购货源", "source"); Type("住处", "home");
                 var streets = S.City.Streets.Where(street => !GameSession.FirstChapterTrial || S.City.AgencyDistrictFor(street.id)?.id == "suburb").ToArray();
                 for (int i = 0; i < streets.Length; i += 5)
                 {
                     var row = Ui.Row(w.Content, 38, 6);
-                    if (i == 0) Ui.Size(Ui.Button(row, "全部街区", () => { _cityMapStreet = null; _cityMapPage = 0; w.Rebuild(); }, 16, _cityMapStreet == null ? Ui.ButtonHot : Ui.ButtonBg), -1, 38, 1);
+                    if (i == 0) Ui.Size(Ui.Button(row, "全部街区", () => { _cityMapStreet = null; _cityMapPage = 0; w.Rebuild(); }, 16, Ui.SelectedButton(_cityMapStreet == null)), -1, 38, 1);
                     foreach (var street in streets.Skip(i).Take(5))
                     {
                         string id = street.id;
-                        Ui.Size(Ui.Button(row, street.name, () => { _cityMapStreet = id; _cityMapPage = 0; w.Rebuild(); }, 16, _cityMapStreet == id ? Ui.ButtonHot : Ui.ButtonBg), -1, 38, 1);
+                        Ui.Size(Ui.Button(row, street.name, () => { _cityMapStreet = id; _cityMapPage = 0; w.Rebuild(); }, 16, Ui.SelectedButton(_cityMapStreet == id)), -1, 38, 1);
                     }
                 }
                 if (S.CityDefaultDestination != null && S.City.HasPlace(S.CityDefaultDestination))
@@ -239,7 +239,7 @@ namespace PCShopSell.Game.UI
                 {
                     var actions=Ui.Row(w.Content,38,6);
                     bool nearby=S.CitySamePlace(personId);
-                    Ui.Size(Ui.Button(actions,"现场交谈",()=>OpenPersonDialogue(personId),17,Ui.ButtonHot,nearby),-1,38,1).Tip(nearby?"与面前的人交谈":"需要实际到同一地点");
+                    Ui.Size(Ui.Button(actions,"现场交谈",()=>OpenPersonDialogue(personId),17,Ui.ButtonBg,nearby),-1,38,1).Tip(nearby?"与面前的人交谈":"需要实际到同一地点");
                     bool saved=S.SavedConversationContacts().Any(c=>c.Id==personId);
                     Ui.Size(Ui.Button(actions,"打电话",()=>OpenPersonDialogue(personId,parent:w,remote:true),17,Ui.ButtonBg,saved),-1,38,1).Tip(saved?"使用已交换的联系方式":"先当面交换联系方式");
                     string inviteBlocker = S.CityInviteBlocker(personId);
@@ -331,6 +331,11 @@ namespace PCShopSell.Game.UI
             }
             var running = S.RunningCityActivity;
             bool here = S.CurrentPlace?.Id == place.Id;
+            if (here && running?.VenueId == place.Id && S.CityActivityService(running)?.Id == "hike")
+            {
+                OpenCityActivityDetail(running.Id);
+                return;
+            }
             if (here && running?.VenueId == place.Id && GameSession.IsOutdoorMarketVisit(running))
             {
                 OpenOutdoorMarketVisit(running);
@@ -453,7 +458,7 @@ namespace PCShopSell.Game.UI
                 {
                     int index = i;
                     Ui.Size(Ui.Button(tabs, InvitationCategories[i], () => { category = index; ResetList(); },
-                        18, category == i ? Ui.ButtonHot : Ui.ButtonBg), i == 4 ? 150 : i == 3 ? 112 : 66);
+                        18, Ui.SelectedButton(category == i)), i == 4 ? 150 : i == 3 ? 112 : 66);
                 }
                 var filters = Ui.Row(w.Content, 40);
                 Ui.Size(Ui.Label(filters, "提升属性", 17), 76);
@@ -503,7 +508,7 @@ namespace PCShopSell.Game.UI
                 {
                     string liked = item.Interest == null ? "" : "  <color=#FFC966>· 对方喜欢</color>";
                     var button = Ui.Size(Ui.Button(list, $"<b>{item.Title}</b>{liked}\n{item.Info}", () =>
-                    { selectedId = item.Id; w.Rebuild(); }, 17, selected.Id == item.Id ? Ui.ButtonHot : Ui.ButtonBg), -1, 59);
+                    { selectedId = item.Id; w.Rebuild(); }, 17, Ui.SelectedButton(selected.Id == item.Id)), -1, 59);
                     button.GetComponentInChildren<Text>().alignment = TextAnchor.MiddleLeft;
                     button.name = "CityActivityOffer_" + item.Id;
                 }
@@ -598,7 +603,7 @@ namespace PCShopSell.Game.UI
                 return;
             }
             bool solo = activity.Participants.Length == 0;
-            bool animateOnOpen = true;
+            bool animateOnOpen = Application.isPlaying && _ctrl.isActiveAndEnabled;
             OpenWindow(solo ? "活动结算" : "相处结算", solo ? 780 : 960, 650, w =>
             {
                 var reveal = animateOnOpen ? new SettlementReveal() : null;
@@ -611,12 +616,15 @@ namespace PCShopSell.Game.UI
                 string venue = S.City.HasPlace(activity.VenueId) ? S.City.GetPlace(activity.VenueId).Name : activity.VenueId;
                 Para(heading, venue + " · " + GameSession.VenueServiceName(definition, Math.Max(0, activity.ServiceChoice)), 16, Ui.Dim);
 
-                var cost = SettlementCard(overview, "ActivityCost");
-                reveal?.Fade(cost, .04f);
-                Line(cost, activity.EntryCostRecorded ? "本次支出" : "参考费用", 15, Ui.Dim);
-                var amount = activity.EntryCostRecorded ? Money.FromCents(activity.EntryCostCents)
-                    : Money.FromYuan(definition?.PriceYuan ?? 0) * (activity.PlayerTreat ? activity.Participants.Length + 1 : 1);
-                Line(cost, amount.ToString(), 24, Ui.Accent);
+                if (definition?.Id != "hike" || activity.EntryCostCents > 0)
+                {
+                    var cost = SettlementCard(overview, "ActivityCost");
+                    reveal?.Fade(cost, .04f);
+                    Line(cost, activity.EntryCostRecorded ? "本次支出" : "参考费用", 15, Ui.Dim);
+                    var amount = activity.EntryCostRecorded ? Money.FromCents(activity.EntryCostCents)
+                        : Money.FromYuan(definition?.PriceYuan ?? 0) * (activity.PlayerTreat ? activity.Participants.Length + 1 : 1);
+                    Line(cost, amount.ToString(), 24, Ui.Accent);
+                }
 
                 var duration = SettlementCard(overview, "ActivityDuration");
                 reveal?.Fade(duration, .08f);
@@ -663,6 +671,9 @@ namespace PCShopSell.Game.UI
                         Line(memory, solo ? "体验内容" : "一起做过", 18, Ui.Accent);
                         Para(memory, string.Join("、", interactions), 17);
                     }
+                    if ((GameSession.IsInteractiveFishingActivity(activity) || GameSession.IsOnsiteSport(activity))
+                        && !string.IsNullOrWhiteSpace(activity.EventSettlementNote))
+                        Para(memory, activity.EventSettlementNote.Trim(), 17);
                     if (!string.IsNullOrWhiteSpace(activity.EndReason)) Para(memory, activity.EndReason, 16, Ui.Dim);
                 }
 
@@ -841,35 +852,46 @@ namespace PCShopSell.Game.UI
                     Line(w.Content,"邀请人："+S.CityPerson(a.HostId).Name,18,Ui.Accent);
                 foreach (var p in a.Participants) Line(w.Content, (S.CityPerson(p.PersonId)?.Name ?? "同行者") + " · " + CityParticipantText(p.Phase), 18);
                 bool signHelp = a.DefinitionId == GameSession.SignHelpActivityId;
+                bool parkWalk = def?.Id == "hike";
+                bool freeWalk = parkWalk && a.EntryCostCents == 0;
                 string payment = a.HostPays ? "邀请人请客" : a.EntryPaid ? "费用已支付" : a.PlayerTreat ? "你请客 · 到场点单后支付" : "费用尚未支付";
                 if (def?.EventOnly == true && !a.EntryPaid)
                     payment = a.HostPays ? "邀请人承担，本人免费" : "到场支付 " + S.CityActivityEntryPrice(def, Math.Max(0,a.ServiceChoice), a);
                 if (GameSession.OnsiteNumber(a.DefinitionId) == 56 && !a.EntryPaid) payment = "到球场后选择付款方式";
                 if (!string.IsNullOrEmpty(a.EventGiftId)) payment += a.EventGiftDelivered ? " · 伴手礼已送达" : " · 请带上已购买的伴手礼";
                 if (signHelp) payment = "义务帮忙 · " + a.Duration + " 分钟";
-                Para(w.Content, $"阶段 {a.Stage + 1}/3 · {payment} · 完成奖励 {(a.RewardApplied ? "已结算" : "尚未结算")}", 18);
+                if (freeWalk)
+                {
+                    if (a.State != CityActivityPhase.Running) Para(w.Content, "免费散步", 18);
+                }
+                else Para(w.Content, $"阶段 {a.Stage + 1}/3 · {payment} · 完成奖励 {(a.RewardApplied ? "已结算" : "尚未结算")}", 18);
                 if (a.State == CityActivityPhase.Running)
                 {
                     long remaining = Math.Max(0, a.ActualStart + a.Duration - S.Clock.Now.TotalMinutes);
-                    Line(w.Content, "预计剩余 " + remaining + " 游戏分钟；世界时间按原倍速推进。", 19);
-                    if (a.ServiceConfirmed) Line(w.Content, "已选项目 · " + GameSession.VenueServiceName(def, a.ServiceChoice), 18, Ui.Good);
+                    Line(w.Content, S.ManualActivityClockPaused
+                        ? "操作期间暂停游戏时钟，结束后结算时间。"
+                        : "预计剩余 " + remaining + " 游戏分钟；世界时间按原倍速推进。", 19);
+                    if (a.ServiceConfirmed)
+                        Line(w.Content, (parkWalk ? "散步路线 · " : "已选项目 · ") + GameSession.VenueServiceName(def, a.ServiceChoice), 18, Ui.Good);
                     Para(w.Content, a.Stage == 0 ? def?.StartText : S.CityActivityMidText(a), 19);
                     BuildPartnerActivityChoices(w, a);
                     BuildOutdoorBatchStatus(w, a);
-                    Ui.Size(Ui.Button(w.Content, signHelp ? "查看帮忙进度" : "打开场所菜单", () => GoToScheduledCityActivity(activityId), 18, Ui.ButtonHot,
-                        CityActivityMenuOrTravelBlocker(activityId) == null), -1, 44);
-                    if (def != null) for (int i = a.ServiceConfirmed ? def.ServiceCount : 0; i < def.Choices.Length; i++)
+                    if (!parkWalk)
+                        Ui.Size(Ui.Button(w.Content, signHelp ? "查看帮忙进度" : "打开场所菜单", () => GoToScheduledCityActivity(activityId), 18, Ui.ButtonBg,
+                            CityActivityMenuOrTravelBlocker(activityId) == null), -1, 44);
+                    if (def != null && (!parkWalk || a.Participants.Length > 0))
+                    for (int i = a.ServiceConfirmed ? def.ServiceCount : 0; i < def.Choices.Length; i++)
                     {
                         int index = i; bool done = a.Choices.Contains(index.ToString()) && !S.OutdoorRepeatChoice(a, index);
                         var outdoor = S.OutdoorActivityState(a.Id);
                         bool available = outdoor?.Pending == null;
                         if (outdoor?.Number == 69 && index >= 2 && index <= 4)
                             available &= outdoor.Visited >= 3 && index - 2 < outdoor.QuoteCents.Length;
-                        Ui.Size(Ui.Button(w.Content, (done ? "✓ " : "") + def.Choices[i], () => { CloseAllWindows(); S.ChooseCityActivity(activityId, index); }, 18, done ? Ui.ButtonBg : Ui.ButtonHot, available), -1, 44);
+                        Ui.Size(Ui.Button(w.Content, (done ? "✓ " : "") + def.Choices[i], () => { CloseAllWindows(); S.ChooseCityActivity(activityId, index); }, 18, Ui.SelectedButton(done), available), -1, 44);
                     }
                     BuildExhibitionActivity(w, a);
                     BuildOutdoorBatchProcurement(w, a);
-                    Ui.Size(Ui.Button(w.Content, "收起面板 / 继续活动", CloseAllWindows, 19, Ui.ButtonHot), -1, 46);
+                    Ui.Size(Ui.Button(w.Content, parkWalk ? "继续散步" : "收起面板 / 继续活动", CloseAllWindows, 19, Ui.ButtonBg), -1, 46);
                 }
                 else if (a.Active)
                 {
@@ -877,12 +899,19 @@ namespace PCShopSell.Game.UI
                     bool here = S.CurrentPlace?.Id == a.VenueId;
                     string early = !here && why == null ? S.CityActivityEarlyDepartureHint(a) : null;
                     string action = signHelp ? here ? "打开帮忙页面" : "前往手机店"
-                        : here ? GameSession.IsOnsiteActivity(a) || a.ServiceConfirmed ? "打开现场预约" : "打开菜单 / 选择服务" : "前往赴约";
+                        : !here ? "前往赴约"
+                        : parkWalk && !a.ServiceConfirmed ? "选择散步路线"
+                        : GameSession.IsOnsiteActivity(a) || a.ServiceConfirmed ? "打开现场预约" : "打开菜单 / 选择服务";
                     Ui.Size(Ui.Button(w.Content, action, () => GoToScheduledCityActivity(activityId), 19,
                         early == null ? Ui.ButtonHot : Ui.ButtonBg, why == null), -1, 46).Tip(early);
                     if (why != null) Para(w.Content, why, 16, Ui.Dim);
                 }
-                if (a.Active) Ui.Size(Ui.Button(w.Content, a.State == CityActivityPhase.Running ? "提前离开" : "取消预约", () => ConfirmBusiness("结束本次安排", a.EntryPaid ? "保留已发生费用和阶段效果，未完成阶段不给奖励。你仍留在实际场所，自行选择下一站。" : "尚未发生的活动费不扣除。取消预约与中途离开分别记录。", () => { CloseAllWindows(); S.CancelCityActivity(activityId, true); }), 18, Ui.Warn), -1, 44);
+                if (a.Active)
+                {
+                    bool runningNow = a.State == CityActivityPhase.Running;
+                    string end = runningNow ? parkWalk ? "结束散步" : "提前离开" : "取消预约";
+                    Ui.Size(Ui.Button(w.Content, end, () => ConfirmEndCityActivity(a, freeWalk), 18, Ui.Warn), -1, 44);
+                }
                 if(a.State==CityActivityPhase.Scheduled&&a.DefinitionId.StartsWith("expo_",StringComparison.Ordinal))
                     foreach(var participant in a.Participants)
                     {
@@ -894,11 +923,22 @@ namespace PCShopSell.Game.UI
                 {
                     string settlement = a.State == CityActivityPhase.NoShow ? "查看未赴约记录"
                         : a.Participants.Length == 0 ? "查看活动结算" : "查看相处结算";
-                    Ui.Size(Ui.Button(w.Content, settlement, () => OpenCityActivitySettlement(activityId), 19, Ui.ButtonHot), -1, 44);
+                    Ui.Size(Ui.Button(w.Content, settlement, () => OpenCityActivitySettlement(activityId), 19, Ui.ButtonBg), -1, 44);
                 }
                 if (a.EndReason != null) Para(w.Content, a.EndReason, 18, Ui.Dim);
             });
         }
+
+        private void ConfirmEndCityActivity(CityActivity activity, bool freeWalk)
+        {
+            bool running = activity.State == CityActivityPhase.Running;
+            string explanation = freeWalk
+                ? running ? "保留已有的阶段效果，提前结束时不结算完成奖励。" : "取消这次散步预约。"
+                : activity.EntryPaid ? "保留已发生费用和阶段效果，未完成阶段不给奖励。你仍留在实际场所，自行选择下一站。"
+                : "尚未发生的活动费不扣除。取消预约与中途离开分别记录。";
+            ConfirmBusiness("结束本次安排", explanation, () => { CloseAllWindows(); S.CancelCityActivity(activity.Id, true); });
+        }
+
         private static string CityParticipantText(CityParticipantPhase p) => p == CityParticipantPhase.NotDeparted ? "尚未出发" : p == CityParticipantPhase.Travelling ? "正在赴约" : p == CityParticipantPhase.Waiting ? "已到场等候" : p == CityParticipantPhase.Participating ? "正在参加" : "已离场";
 
         public void BuildCityLifeHud(Transform parent)
@@ -912,7 +952,14 @@ namespace PCShopSell.Game.UI
             var row = Ui.Row(_cityActivityHud, 40, 7);
             _cityActivityDetails = Ui.Size(Ui.Button(row, "日程详情", () => { if (_cityHudActivityId != null) OpenCityActivityDetail(_cityHudActivityId); }, 18), -1, 40, 1);
             _cityActivityGo = Ui.Size(Ui.Button(row, "前往赴约", () => { if (_cityHudActivityId != null) GoToScheduledCityActivity(_cityHudActivityId); }, 18, Ui.ButtonHot), -1, 40, 1);
-            _cityActivityEnd = Ui.Size(Ui.Button(row, "取消邀约", () => { if (_cityHudActivityId != null) OpenCityActivityDetail(_cityHudActivityId); }, 18, Ui.Warn), -1, 40, 1);
+            _cityActivityEnd = Ui.Size(Ui.Button(row, "取消邀约", () =>
+            {
+                if (_cityHudActivityId == null) return;
+                var running = S.RunningCityActivity;
+                if (running?.Id == _cityHudActivityId && S.CityActivityService(running)?.Id == "hike")
+                    ConfirmEndCityActivity(running, running.EntryCostCents == 0);
+                else OpenCityActivityDetail(_cityHudActivityId);
+            }, 18, Ui.Warn), -1, 40, 1);
             Ui.Size(Ui.Button(row, "收起", () =>
             {
                 if (_cityHudActivityId != null) _dismissedCityActivityHud.Add(_cityHudActivityId);
@@ -944,24 +991,28 @@ namespace PCShopSell.Game.UI
             _cityActivityHud.gameObject.SetActive(a != null);
             _cityHudActivityId = a?.Id;
             if (a == null) return;
-            bool onsite = GameSession.IsOnsiteActivity(a) || GameSession.IsTimedVenueSport(a);
+            var def = S.CityActivityService(a);
+            bool parkWalk = def?.Id == "hike";
+            bool running = a.State == CityActivityPhase.Running;
+            bool onsite = GameSession.IsOnsiteActivity(a) || GameSession.IsVenueSport(a);
             bool raceAid = GameSession.IsRaceAidActivity(a);
-            _cityActivityDetails.GetComponentInChildren<Text>().text = onsite && a.State == CityActivityPhase.Running ? "继续现场活动"
+            _cityActivityDetails.GetComponentInChildren<Text>().text = parkWalk && running ? "散步详情"
+                : onsite && running ? "继续现场活动"
                 : S.ActivityPartnerId(a) != null ? "约会详情"
                 : a.State == CityActivityPhase.Running ? a.HostPays ? "活动详情" : "本次消费" : "日程详情";
-            _cityActivityEnd.GetComponentInChildren<Text>().text = a.State == CityActivityPhase.Running ? "提前离开" : "取消邀约";
+            _cityActivityEnd.GetComponentInChildren<Text>().text = running ? parkWalk ? "结束散步" : "提前离开" : "取消邀约";
             bool here = S.CurrentPlace?.Id == a.VenueId;
             bool signHelp = a.DefinitionId == GameSession.SignHelpActivityId;
             bool travelling = !here && S.CityIntent?.ActivityId == a.Id && !S.CityIntent.Cancelled;
             bool early = a.State != CityActivityPhase.Running && !travelling && S.CityActivityEarlyDepartureHint(a) != null;
+            _cityActivityGo.gameObject.SetActive(!parkWalk || !running);
             _cityActivityGo.interactable = !travelling && CityActivityMenuOrTravelBlocker(a.Id) == null && !_ctrl.Placing;
-            _cityActivityGo.image.color = early && !here ? Ui.ButtonBg : Ui.ButtonHot;
+            Ui.SetButtonFill(_cityActivityGo, early && !here ? Ui.ButtonBg : Ui.ButtonHot);
             _cityActivityGo.GetComponentInChildren<Text>().text = travelling ? "正在前往"
                 : signHelp ? here ? "打开帮忙页面" : "前往手机店"
                 : raceAid ? here ? "继续陪诊" : "前往医院"
-                : here ? onsite ? "进入现场" : a.ServiceConfirmed && a.State != CityActivityPhase.Running ? "查看现场预约" : "打开菜单 / 服务" : "前往赴约";
+                : here ? onsite ? "进入现场" : a.ServiceConfirmed && !running ? "查看现场预约" : parkWalk ? "选择散步路线" : "打开菜单 / 服务" : "前往赴约";
             if (signHelp && a.State == CityActivityPhase.Running) _cityActivityDetails.GetComponentInChildren<Text>().text = "帮忙进度";
-            var def = S.CityActivityService(a);
             string phase = travelling ? "正在赴约" : GameSession.CityPhaseText(a.State);
             string time = a.State == CityActivityPhase.Running ? "剩余 " + Math.Max(0, a.ActualStart + a.Duration - S.Clock.Now.TotalMinutes) + " 分钟" : "预约 " + CityTime(a.ScheduledStart);
             string title = a.ServiceConfirmed && !raceAid ? GameSession.VenueServiceName(def, a.ServiceChoice) : def?.Name ?? a.DefinitionId;
@@ -971,9 +1022,11 @@ namespace PCShopSell.Game.UI
             else if (here && raceAid)
                 hint = a.Participants.All(p => p.Phase == CityParticipantPhase.Waiting || p.Phase == CityParticipantPhase.Participating)
                     ? "双方已到场，时间继续后开始陪诊。" : "已到医院，同行者到齐后自动开始陪诊。";
-            else if (early) hint = here ? signHelp ? "预约时间还早，临近约定时间再开始帮忙。" : onsite ? "请在约定时间到场开始。" : "预约时间还早，可以先查看场所菜单。" : "离约定时间还早，临近出发时间再前往。";
+            else if (early) hint = here ? signHelp ? "预约时间还早，临近约定时间再开始帮忙。" : onsite ? "请在约定时间到场开始。"
+                : parkWalk ? "预约时间还早，可以先看看步道。" : "预约时间还早，可以先查看场所菜单。" : "离约定时间还早，临近出发时间再前往。";
             else if (here) hint = signHelp ? "已经到店，点「打开帮忙页面」开始换招牌。" : onsite ? "已到场，点「进入现场」开始。"
-                : a.ServiceConfirmed ? "已到场，从现场预约开始。" : "已经到场。在菜单里选择服务，与同行者一起开始活动。";
+                : a.ServiceConfirmed ? "已到场，从现场预约开始。" : parkWalk ? "已到公园，可以选择散步路线。"
+                : "已经到场。在菜单里选择服务，与同行者一起开始活动。";
             else hint = "赴约时间临近；空闲时点击“前往赴约”出发。";
             _cityActivityHudText.text = title + " · " + phase + " · " + time + "\n" + hint;
         }

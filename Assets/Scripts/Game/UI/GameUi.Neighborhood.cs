@@ -12,7 +12,7 @@ namespace PCShopSell.Game.UI
         private void DrawNeighborhood(Window w)
         {
             var sections=Ui.Row(w.Content,40,6);
-            for(int i=0;i<4;i++){int tab=i;Ui.Size(Ui.Button(sections,new[]{"献血车","找家人","漏水维修","花灯会"}[i],()=>{_neighborhoodTab=tab;w.Rebuild();},17,_neighborhoodTab==i?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);}
+            for(int i=0;i<4;i++){int tab=i;Ui.Size(Ui.Button(sections,new[]{"献血车","找家人","漏水维修","花灯会"}[i],()=>{_neighborhoodTab=tab;w.Rebuild();},17,Ui.SelectedButton(_neighborhoodTab==i)),-1,38,1);}
             void Action(string info,string label,Action run,bool enabled=true)
             {var row=Ui.Row(w.Content,44,8);Ui.Size(Ui.Label(row,info,17),-1,42,1);Ui.Size(Ui.Button(row,label,run,17,Ui.ButtonBg,enabled),140,38);}
             void Go(string place){CloseAllWindows();_ctrl.GoToPlace(S.City.GetPlace(place));}
@@ -68,8 +68,8 @@ namespace PCShopSell.Game.UI
                 {
                     Action(S.FestivalOpen?"正在举办":"尚未开场，时间到后再来","前往花灯会",()=>Go(GameSession.LifeServicePlace));
                     var row=Ui.Row(w.Content,40,6);
-                    for(int tier=0;tier<2;tier++){int n=tier;Ui.Size(Ui.Button(row,tier==0?"纸艺 ¥300":"精制 ¥1,000",()=>{_lanternTier=n;w.Rebuild();},17,_lanternTier==tier?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);}
-                    var shapes=Ui.Row(w.Content,40,6);for(int i=0;i<3;i++){int style=i;Ui.Size(Ui.Button(shapes,new[]{"圆月","莲花","宫灯"}[i],()=>{_lanternStyle=style;w.Rebuild();},17,_lanternStyle==i?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);}
+                    for(int tier=0;tier<2;tier++){int n=tier;Ui.Size(Ui.Button(row,tier==0?"纸艺 ¥300":"精制 ¥1,000",()=>{_lanternTier=n;w.Rebuild();},17,Ui.SelectedButton(_lanternTier==tier)),-1,38,1);}
+                    var shapes=Ui.Row(w.Content,40,6);for(int i=0;i<3;i++){int style=i;Ui.Size(Ui.Button(shapes,new[]{"圆月","莲花","宫灯"}[i],()=>{_lanternStyle=style;w.Rebuild();},17,Ui.SelectedButton(_lanternStyle==i)),-1,38,1);}
                     Action("现场制作10分钟，开始时付款","开始做灯",()=>{if(S.BeginLanternCraft(_lanternTier,_lanternStyle))Start("lantern-craft");else Toast("请在花灯会开放时到现场，先完成已有制作。");});
                     foreach(var light in NeighborhoodGoods.Lanterns.Where(x=>S.Backpack.GiftCount(x.Id)>0))
                     {

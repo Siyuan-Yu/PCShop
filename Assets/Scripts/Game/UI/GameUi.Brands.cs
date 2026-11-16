@@ -38,16 +38,16 @@ namespace PCShopSell.Game.UI
             {
                 if (i == BrandKolTab && !kolAvailable) continue;
                 int tab = i;
-                Ui.Size(Ui.Button(tabs, names[i], () =>
+                Ui.Tab(tabs, names[i], () =>
                 {
                     _brandTab = tab;
                     _brandCreating = false;
                     _expoPage = "overview";
                     w.ResetScrollOnRebuild = true;
                     w.Rebuild();
-                }, 18, tab == _brandTab ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1);
+                }, tab == _brandTab, 140);
             }
-            if(S.DistrictCommerceActive)Ui.Size(Ui.Button(w.Content,"主线 · "+S.CurrentDistrictNode.Title,OpenDistrictStory,17,Ui.ButtonHot),-1,36);
+            if(S.DistrictCommerceActive)Ui.Size(Ui.Button(w.Content,"主线 · "+S.CurrentDistrictNode.Title,OpenDistrictStory,17,Ui.ButtonBg),-1,36);
             var body=Ui.Scroll(w.Content,690);
             if (_brandTab == BrandOverviewTab) { BuildBrandOverview(body, w, state); return; }
             if (_brandTab == BrandKolTab) { BuildKolBrandPage(body, w, state.Brands); return; }
@@ -58,7 +58,7 @@ namespace PCShopSell.Game.UI
             }
             if(!state.Brands.Any(b=>b.Id==_brandId))_brandId=state.Brands[0].Id;
             var brands=Ui.Row(body,38,5);
-            foreach(var item in state.Brands){string id=item.Id;Ui.Size(Ui.Button(brands,item.Name,()=>{_brandId=id;_expoPage="overview";_brandShop=null;_brandProduct=null;w.Rebuild();},18,id==_brandId?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);}
+            foreach(var item in state.Brands){string id=item.Id;Ui.Size(Ui.Button(brands,item.Name,()=>{_brandId=id;_expoPage="overview";_brandShop=null;_brandProduct=null;w.Rebuild();},18,Ui.SelectedButton(id==_brandId)),-1,38,1);}
             var brand=state.Brands.First(b=>b.Id==_brandId);
             Line(body,$"{brand.Name}  ·  知名度 {brand.Influence}  ·  口碑 {brand.Reputation}",21,Ui.Accent);
             if(_brandTab==BrandExpoTab)BuildQuarterlyExpo(body,w,brand,state);
@@ -105,7 +105,7 @@ namespace PCShopSell.Game.UI
         {
             var shops=S.MyShops.Where(s=>b.ShopIds.Contains(s.Place.Id)&&s.RetailKind==b.Kind).ToArray();
             if(!shops.Any(s=>s.Place.Id==_brandShop)){_brandShop=shops.FirstOrDefault()?.Place.Id;_brandProduct=null;}
-            var row=Ui.Row(body,36,4);foreach(var s in shops){string id=s.Place.Id;Ui.Size(Ui.Button(row,S.ShopTitle(s),()=>{_brandShop=id;_brandProduct=null;w.Rebuild();},16,id==_brandShop?Ui.ButtonHot:Ui.ButtonBg),-1,36,1);}
+            var row=Ui.Row(body,36,4);foreach(var s in shops){string id=s.Place.Id;Ui.Size(Ui.Button(row,S.ShopTitle(s),()=>{_brandShop=id;_brandProduct=null;w.Rebuild();},16,Ui.SelectedButton(id==_brandShop)),-1,36,1);}
             var products=S.BrandProducts(_brandShop).ToArray();if(!products.Contains(_brandProduct))_brandProduct=products.FirstOrDefault();
             Line(body,"参选商品 · 仅本店同业现货",17,Ui.Dim);
             if(products.Length==0){Para(body,"这家店暂无同业现货，请先采购。",18);return;}

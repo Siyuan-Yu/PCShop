@@ -39,12 +39,12 @@ namespace PCShopSell.Game.UI
                 var terms = Ui.Row(w.Content, 40, 6);
                 foreach (int term in new[] { 30, 60, 90 })
                     Ui.Size(Ui.Button(terms, term + "天", () => { days = term; w.Rebuild(); }, 17,
-                        days == term ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1);
+                        Ui.SelectedButton(days == term)), -1, 40, 1);
                 Line(w.Content, "品牌内容频率", 18, Ui.Accent);
                 var cadence = Ui.Row(w.Content, 40, 6);
                 foreach (int option in new[] { 1, 2, 7 })
                     Ui.Size(Ui.Button(cadence, KolFrequency(option), () => { frequency = option; w.Rebuild(); }, 17,
-                        frequency == option ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1);
+                        Ui.SelectedButton(frequency == option)), -1, 40, 1);
 
                 long fee = S.KolSigningFee(person, days);
                 Line(w.Content, $"一次性代言费 ¥{fee:N0} · 覆盖 {days} 天", 19, Ui.Accent);

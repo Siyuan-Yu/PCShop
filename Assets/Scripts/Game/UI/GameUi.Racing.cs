@@ -124,7 +124,8 @@ namespace PCShopSell.Game.UI
                     {
                         ProgressLine(w.Content, Quests.Get("racing_enrollment"), 17);
                         var (label, action) = QuestAction(QuestTarget.RacingEnrollment);
-                        Ui.Size(Ui.Button(w.Content, label, () => { w.Close(); action(); }, 18, Ui.ButtonHot), -1, 42);
+                        if (action != null)
+                            Ui.Size(Ui.Button(w.Content, label, () => { w.Close(); action(); }, 18, Ui.ButtonHot), -1, 42);
                     }
                     return;
                 }
@@ -160,7 +161,7 @@ namespace PCShopSell.Game.UI
                     break;
                 case RacingIntroStep.Drive:
                     destination = GameSession.StarterRaceTrackId;
-                    instruction = $"在城郊赛车报名点选入库车辆，买时长练习（¥{RacingSchedule.PracticeFee} 起）或参加正式比赛。";
+                    instruction = $"在城郊赛车报名点选入库车辆，按圈购买练习（¥{RacingSchedule.PracticeFee} 起）或参加正式比赛。";
                     break;
                 default: return;
             }
@@ -248,7 +249,7 @@ namespace PCShopSell.Game.UI
                     view.ChoosingVehicle = false;
                     w.ResetScrollOnRebuild = true;
                     w.Rebuild();
-                }, 17, day == date ? Ui.ButtonHot : Ui.ButtonBg), -1, 68);
+                }, 17, Ui.SelectedButton(day == date)), -1, 68);
                 button.GetComponentInChildren<Text>().alignment = TextAnchor.MiddleLeft;
             }
 
@@ -282,7 +283,7 @@ namespace PCShopSell.Game.UI
                     w.ResetScrollOnRebuild = true;
                     w.Rebuild();
                 }, 18,
-                    view.Tab == tab ? Ui.ButtonHot : Ui.ButtonBg), width, 40);
+                    Ui.SelectedButton(view.Tab == tab)), width, 40);
             }
         }
 
@@ -489,7 +490,7 @@ namespace PCShopSell.Game.UI
                 {
                     string reason = S.CollectorTrialBlocker;
                     Ui.Size(Ui.Button(list, "试驾顾若宁的收藏车 · 1 圈", () =>
-                    { if (S.StartCollectorTrial()) CloseWindowSilently(w); }, 18, Ui.ButtonHot, reason == null), -1, 44);
+                    { if (S.StartCollectorTrial()) CloseWindowSilently(w); }, 18, Ui.ButtonBg, reason == null), -1, 44);
                     if (reason != null) Line(list, reason, 15, Ui.Dim);
                 }
                 foreach (var booking in bookings)
@@ -499,7 +500,7 @@ namespace PCShopSell.Game.UI
                     string title = kind == "wet" ? "湿地训练 · ¥1,000 · 抓地 60%"
                         : kind == "rider" ? "吴磊一圈挑战 · 输家请 ¥2,000 夜宵" : "慈善赛 · ¥2,000 · 无奖金";
                     Ui.Size(Ui.Button(list, title, () =>
-                    { if (S.StartEventRace(kind, _raceSelection)) CloseWindowSilently(w); }, 18, Ui.ButtonHot, reason == null), -1, 44);
+                    { if (S.StartEventRace(kind, _raceSelection)) CloseWindowSilently(w); }, 18, Ui.ButtonBg, reason == null), -1, 44);
                     if (reason != null) Line(list, reason, 15, Ui.Dim);
                     Ui.Size(Ui.Button(list, "取消这项专属预约", () => { S.CancelEventRaceBooking(kind, booking.TrackId, booking.Day); w.Rebuild(); }, 16), -1, 34);
                 }
@@ -511,17 +512,18 @@ namespace PCShopSell.Game.UI
             if (record?.BestOnCurrentCourse == true) Line(list, $"{(practice ? "最快单圈" : "个人最佳")} · {record.BestSeconds:0.00} 秒", 16, Ui.Good);
             if (practice)
             {
-                Line(parent, "购买练习时长 · 选定车辆后直接上车", 18, Ui.Accent);
+                Line(parent, "购买练习圈数 · 驾驶时游戏时钟暂停，结束后按完成圈数结算时间", 18, Ui.Accent);
                 var passes = Ui.Row(parent, 64, 8);
                 foreach (var pass in RacingSchedule.PracticePasses)
                 {
-                    string reason = S.RacePracticePassBlocker(track.Id, _raceSelection, pass.Hours);
-                    var button = Ui.Size(Ui.Button(passes, $"<b>{pass.Hours} 小时 · ¥{pass.Price:N0}</b>\n{reason ?? "购买并驾驶"}", () =>
+                    string reason = S.RacePracticePassBlocker(track.Id, _raceSelection, pass.Laps);
+                    int hours = pass.Laps * CityLifeCatalog.ManualAttemptMinutes / 60;
+                    var button = Ui.Size(Ui.Button(passes, $"<b>{pass.Laps} 圈 · ¥{pass.Price:N0}</b>\n{reason ?? $"结算 {hours} 小时 · 购买并驾驶"}", () =>
                     {
-                        if (S.StartRacePracticePass(track.Id, _raceSelection, pass.Hours)) CloseWindowSilently(w);
+                        if (S.StartRacePracticePass(track.Id, _raceSelection, pass.Laps)) CloseWindowSilently(w);
                         else w.Rebuild();
-                    }, 16, Ui.ButtonHot, reason == null), 0, 64, 1);
-                    button.name = $"RacePracticePass_{pass.Hours}h";
+                    }, 16, Ui.ButtonBg, reason == null), 0, 64, 1);
+                    button.name = $"RacePracticePass_{pass.Laps}laps";
                 }
                 return;
             }
@@ -601,8 +603,8 @@ namespace PCShopSell.Game.UI
 
             float timingBottom = race.Opponents.Count > 0 ? 162 : 140;
             var timing = RaceHudSurface(_drivingHud, "RaceTiming", surface).Anchor(0, 1, 0, 1, 24, -timingBottom, -338, 24);
-            string mode = race.TimedPractice ? "自由练习" : race.Practice ? "计时练习" : RacingSchedule.Name(race.Meeting);
-            Ui.Label(timing, race.Track.Name + " · " + mode + " · 1×", 18, color: Ui.Dim)
+            string mode = race.PaidPractice ? "自由练习 · 时间暂停" : race.Practice ? "计时练习 · 1×" : RacingSchedule.Name(race.Meeting) + " · 1×";
+            Ui.Label(timing, race.Track.Name + " · " + mode, 18, color: Ui.Dim)
                 .rectTransform.Anchor(0, 1, 1, 1, 14, -36, 10, 8);
             _drivingLap = Ui.Label(timing, "", 36);
             _drivingLap.fontStyle = FontStyle.Bold;
@@ -676,11 +678,11 @@ namespace PCShopSell.Game.UI
         {
             var race = S.ActiveRace;
             if (race == null || _drivingHud == null) return;
-            _drivingLap.text = race.TimedPractice ? $"已完成 {race.Lap} 圈" : $"第 {Math.Min(race.Laps, race.Lap + 1)} / {race.Laps} 圈";
+            _drivingLap.text = race.PaidPractice ? $"已完成 {race.Lap} / {race.Laps} 圈" : $"第 {Math.Min(race.Laps, race.Lap + 1)} / {race.Laps} 圈";
             _drivingStats.text = race.Paused ? "已暂停"
                 : (race.Practice ? "" : $"第 {race.Position}/{race.CompetitorCount} 名　")
                     + $"{race.Elapsed + race.Penalty:0.0} 秒　碰撞 {race.Collisions}";
-            if (race.TimedPractice && race.Lap > 0) _drivingNearby.text = $"最快单圈 {race.BestLap:0.00} 秒";
+            if (race.PaidPractice && race.Lap > 0) _drivingNearby.text = $"最快单圈 {race.BestLap:0.00} 秒";
             if (race.Opponents.Count > 0)
             {
                 int closest = 0;

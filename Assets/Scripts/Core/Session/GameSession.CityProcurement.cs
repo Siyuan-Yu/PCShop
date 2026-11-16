@@ -145,7 +145,8 @@ namespace PCShopSell.Core.Session
             int stock = shop == null ? 0 : kind == PurchaseGoodsKind.Part && PartCatalog.Exists(productId) ? shop.Sim.Stock.CountAll(PartCatalog.Get(productId))
                 : RestaurantIngredientsOnly(shop) && kind == PurchaseGoodsKind.Rice ? (int)Math.Floor(KitchenRice(shop) / .5 + 1e-9)
                 : RestaurantIngredientsOnly(shop) && kind == PurchaseGoodsKind.Ingredient ? KitchenIngredientCount(shop, productId)
-                : RestaurantIngredientsOnly(shop) && kind == PurchaseGoodsKind.Gift && IsRawIngredientProduct(productId) ? RetailCount(shop.Fridge, Gifts.Get(productId))
+                : RestaurantIngredientsOnly(shop) && kind == PurchaseGoodsKind.Gift && productId == "produce:rice" ? RetailCount(shop.Locker, Gifts.Get(productId))
+                : RestaurantIngredientsOnly(shop) && kind == PurchaseGoodsKind.Gift && IsColdIngredientProduct(productId) ? RetailCount(shop.Fridge, Gifts.Get(productId))
                 : kind == PurchaseGoodsKind.Gift ? shop.Sim.Stock.GoodsCount(productId) : 0;
             // Materials for already reserved builds have left Stock. For other committed orders,
             // allocate remaining stock and supply to their deadline order before retail targets.

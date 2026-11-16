@@ -53,7 +53,7 @@ namespace PCShopSell.Game.UI
             var nav = Ui.Row(parent, 40, 8);
             foreach (var page in new[] { "我的代言人", "代言人市场", "专场记录" })
                 Ui.Size(Ui.Button(nav, page, () => { _kolPage = page; w.Rebuild(); }, 18,
-                    _kolPage == page ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1);
+                    Ui.SelectedButton(_kolPage == page)), -1, 40, 1);
             if (_kolPage == "代言人市场") { BuildKolMarket(parent, w); return; }
             if (_kolPage == "专场记录")
             {
@@ -93,7 +93,7 @@ namespace PCShopSell.Game.UI
                 string brandName = brands.FirstOrDefault(b => b.Id == c.BrandId)?.Name;
                 string status = brandName == null ? "待分配品牌" : brandName + " · " + (c.Enabled ? KolFrequency(c.FrequencyDays) : "未启用直播");
                 var pick = Ui.Size(Ui.Button(row, S.CityPerson(c.PersonId).Name + "\n" + status, () =>
-                    { _selectedKolContract = c.Id; w.Rebuild(); }, 16, c.Id == selected.Id ? Ui.ButtonHot : Ui.ButtonBg), -1, 66, 1);
+                    { _selectedKolContract = c.Id; w.Rebuild(); }, 16, Ui.SelectedButton(c.Id == selected.Id)), -1, 66, 1);
                 pick.name = "KolSelect_" + c.Id;
             }
 
@@ -138,7 +138,7 @@ namespace PCShopSell.Game.UI
             var cadence = Ui.Row(body, 40, 6);
             foreach (int days in new[] { 1, 2, 7 })
                 Ui.Size(Ui.Button(cadence, KolFrequency(days), () => { draft.FrequencyDays = days; w.Rebuild(); },
-                    17, draft.FrequencyDays == days ? Ui.ButtonHot : Ui.ButtonBg), -1, 40, 1);
+                    17, Ui.SelectedButton(draft.FrequencyDays == days)), -1, 40, 1);
 
             var timing = Ui.Row(body, 37, 6);
             Ui.Size(Ui.Label(timing, "固定直播时段", 16), 123, 37);

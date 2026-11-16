@@ -20,6 +20,23 @@ namespace PCShopSell.Tests
         }
         private static Place Source(GameSession s,string id)=>s.City.Places.First(p=>s.HasRetailWholesale(p)&&s.CityRetailGoodsAvailable(p,Gifts.Get(id)));
 
+        [Test]
+        public void FarmAndEmployeePurchasingOfferOnlyTheFiveMostCommonFish()
+        {
+            using var s = Make();
+            var farm = Source(s, "produce:rice");
+            var expected = new[] { "fish_crucian", "fish_carp", "fish_white_stripe", "fish_bream", "fish_topmouth_gudgeon" };
+            CollectionAssert.AreEquivalent(expected, FishingCatalog.Fish
+                .Where(fish => s.CityRetailGoodsAvailable(farm, Gifts.Get("produce:" + fish.Id))).Select(fish => fish.Id));
+            CollectionAssert.AreEquivalent(expected, s.EmployeePurchaseCatalog().Where(offer => offer.Source == farm && offer.Id.StartsWith("produce:fish_"))
+                .Select(offer => Gifts.Get(offer.Id).IngredientId));
+            GameSessionTests.Teleport(s, farm.Id);
+            var cash = s.Ledger.Balance;
+            Assert.False(s.BuyIngredient("fish_farmed_sturgeon", 10));
+            Assert.False(s.CartAddRetailWholesale(farm, "produce:fish_farmed_sturgeon", 10));
+            Assert.AreEqual(cash, s.Ledger.Balance);
+        }
+
         [TestCase("produce:rice",5)]
         [TestCase("produce:egg",10)]
         [TestCase(Gifts.Cig,10)]
@@ -65,7 +82,75 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void EmployeeCannotBuyDiscountedSmallQuantityButCanBuyRetailIngredients()
+        public void RestaurantWholesaleRiceLeavesFridgeRoomForEggs()
+        {
+            using var template = HomeTests.Make();
+            var city = template.City;
+            using var s = new GameSession(city, 7, Money.FromYuan(50000), GameTimestamp.From(new GameDate(0), 600),
+                startWithShop: false) { EventsEnabled = false };
+            GameSessionTests.Teleport(s, "agency");
+            Assert.True(s.SignRetailLease("pc", false, "restaurant"));
+            GameSessionTests.Teleport(s, "pc");
+            foreach (string id in GameSession.OpeningFurniture("restaurant"))
+                s.CurrentShop.Layout.Add(new PlacedFurniture { Id = id });
+            typeof(GameSession).GetMethod("UpdateShopFit", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).Invoke(s, null);
+            GameSessionTests.Teleport(s, "farm");
+            var farm = s.CurrentPlace;
+            Assert.AreSame(s.MainShop, s.CourierShop(true));
+            Assert.AreEqual("stock", s.CurrentQuest().Id);
+            Assert.False(s.BuyGift(Gifts.Fruit));
+            var fridge = s.MainShop.Fridge;
+            var fridgeCapacity = GameSession.FridgeCapacityOf(s.MainShop.Layout);
+            double eggWeight = 10 * Gifts.Get("produce:egg").WeightKg;
+            fridge.Food.Ingredient.Add(new FoodBatch
+            {
+                Id = "veg", Count = (int)((fridgeCapacity - eggWeight) / Backpack.IngredientKg("veg")),
+                ExpireDay = FoodBatch.NoExpiry
+            });
+            Assert.True(s.CartAddRetailWholesale(farm, "produce:rice", 5));
+            Assert.True(s.CartAddRetailWholesale(farm, "produce:egg", 10));
+            s.CartAllToTruck();
+            var payment = s.CartGoods + s.CartFreight(true);
+            var cash = s.Ledger.Balance;
+            var riceBefore = s.KitchenRice(s.MainShop);
+            var eggsBefore = s.KitchenIngredientCount(s.MainShop, "egg");
+            Assert.IsNull(s.CheckoutBlocker(true));
+            Assert.True(s.Checkout(true));
+            Assert.AreEqual(payment, cash - s.Ledger.Balance);
+            Assert.AreNotEqual("stock", s.CurrentQuest().Id);
+            s.AdvanceClock(s.CourierQuote(s.MainShop).minutes + 5);
+            Assert.AreEqual(riceBefore + 2.5, s.KitchenRice(s.MainShop), 1e-9);
+            Assert.AreEqual(eggsBefore + 10, s.KitchenIngredientCount(s.MainShop, "egg"));
+            Assert.Zero(fridge.Food.RiceKg);
+            Assert.AreEqual(fridgeCapacity, fridge.WeightKg, 1e-9);
+        }
+
+        [Test]
+        public void EmployeeDeliversRiceToRestaurantWarehouseWithoutAFridge()
+        {
+            using var s = Make();
+            GameSessionTests.Teleport(s, s.MainShop.Place.Id);
+            Assert.True(s.SetShopMainCategory("restaurant"));
+            var shop = s.MainShop;
+            shop.Layout.RemoveAll(p => FurnitureCatalog.Get(p.Id)?.Role == FurnitureRole.Fridge);
+            shop.Buyer = new Employee { Name = "进货员", DailyWageYuan = 100 };
+            CityTestPeople.AtAssignedWork(s, shop.Buyer);
+            var rice = s.EmployeePurchaseCatalog().First(o => o.Id == "produce:rice");
+            string employeeId = shop.Buyer.Id;
+            var plan = new EmployeePurchasePlan { Items = new[] { rice.Line(5) }, Transport = VehicleKind.Taxi };
+            Assert.True(s.ConfigureEmployeePurchase(employeeId, plan));
+            Assert.IsNull(s.QuoteEmployeePurchase(employeeId).Error);
+            Assert.True(s.DispatchEmployeePurchase(employeeId));
+            var trip = s.EmployeePurchaseTrips.Single();
+            double before = s.KitchenRice(shop);
+            s.AdvanceClock((int)(trip.DeliveryAt - s.Clock.Now.TotalMinutes) + 1);
+            Assert.AreEqual(before + 2.5, s.KitchenRice(shop));
+            Assert.Zero(shop.Fridge.Food.RiceKg);
+            Assert.AreEqual((int)(before / .5) + 5, s.ProcurementCoverageFor(shop.Place.Id, rice.Kind, rice.Id).FreeStock);
+        }
+
+        [Test]
+        public void EmployeeCatalogUsesWholesaleOnlyForFarmAndEnforcesMinimum()
         {
             using(var s=Make())
             {
@@ -73,11 +158,14 @@ namespace PCShopSell.Tests
                 CityTestPeople.AtAssignedWork(s,s.MainShop.Buyer);
                 var offers=s.EmployeePurchaseCatalog();
                 var wholesale=offers.First(o=>o.Kind==PurchaseGoodsKind.Gift&&o.Id==Gifts.Cig);
-                var retail=offers.First(o=>o.Kind==PurchaseGoodsKind.Ingredient);
+                var farm=offers.Where(o=>o.Source.Business==GameSession.FarmBusiness).ToArray();
+                Assert.That(farm, Is.Not.Empty);
+                Assert.True(farm.All(o=>o.Kind==PurchaseGoodsKind.Gift));
+                var vegetables=farm.First(o=>o.Id=="produce:veg");
                 var rice=offers.First(o=>o.Kind==PurchaseGoodsKind.Gift&&o.Id=="produce:rice");
                 var clothing=offers.First(o=>o.Kind==PurchaseGoodsKind.Gift&&ClothingProducts.IsClothing(o.Id));
                 Assert.AreEqual(10,s.PurchaseMinimum(wholesale));Assert.AreEqual(5,s.PurchaseMinimum(rice));
-                Assert.AreEqual(1,s.PurchaseMinimum(retail));Assert.AreEqual(1,s.PurchaseMinimum(clothing));
+                Assert.AreEqual(10,s.PurchaseMinimum(vegetables));Assert.AreEqual(1,s.PurchaseMinimum(clothing));
                 Assert.AreEqual(10,s.ProcurementSources(PurchaseGoodsKind.Gift,Gifts.Cig).First(o=>o.SupplierId==wholesale.Source.Id).Minimum);
                 string id=s.MainShop.Buyer.Id;
                 Assert.True(s.ConfigureEmployeePurchase(id,new EmployeePurchasePlan{Items=new[]{wholesale.Line(9)}}));

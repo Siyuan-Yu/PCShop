@@ -85,6 +85,7 @@ namespace PCShopSell.Core.Session
         public bool CityComicExpoOpen => CurrentPlace?.Id == "life_expo" && Clock.Today.Day >= 22 && Clock.Today.Day <= 24 && IsPlaceOpen(CurrentPlace);
         public bool CityRetailGoodsAvailable(Place source, GiftDef product) => source != null && product != null && !product.LimitedEdition
             && product.SoldAt == source.Business
+            && (source.Business != FarmBusiness || !FishingCatalog.RequiresCatch(product.IngredientId))
             && (!ClothingProducts.IsClothing(product.Id) || source.Id == "clothing_wholesale");
         public Money CityRetailWholesalePrice(Place source, GiftDef product)
         {
@@ -102,13 +103,13 @@ namespace PCShopSell.Core.Session
             return Math.Max(0, limit - used);
         }
         public int CitySupplierMinimum(string sourceId) => ActiveCityCompetition("terms").Any(e => e.SupplierId == sourceId && e.Response != "small") ? 3 : 1;
-        public bool HasDualRetailWholesale(Place source) => source!=null&&source.Kind==PlaceKind.Shop
+        private static bool UsesWholesalePackMinimum(Place source) => source!=null&&source.Kind==PlaceKind.Shop
             && (source.Business==FarmBusiness||source.Business==Gifts.TobaccoBusiness||source.Business==FastFoodBusiness);
         public int CitySupplierMinimum(string sourceId,string productId)
         {
             int minimum=CitySupplierMinimum(sourceId);
-            if(!City.HasPlace(sourceId)||!HasDualRetailWholesale(City.GetPlace(sourceId)))return minimum;
-            // Farm retail rice is sold in .25 kg increments; wholesale bags hold .5 kg.
+            if(!City.HasPlace(sourceId)||!UsesWholesalePackMinimum(City.GetPlace(sourceId)))return minimum;
+            // Wholesale rice is packed in half-kilogram bags.
             int regular=productId=="produce:rice"?5:10;
             return minimum*regular;
         }

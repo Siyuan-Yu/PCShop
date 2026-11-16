@@ -102,17 +102,9 @@ namespace PCShopSell.Core.Session
                             PartCatalog.CategoryName(p.Category));
                 if (ShopAt(source) != null || IsVacant(source) || VentureAt(source.Id) != null) continue;
                 foreach (var gift in Gifts.All.Where(g => g.SoldAt == source.Business && CityRetailGoodsAvailable(source, g)))
-                    Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Gift, Id = gift.Id, Name = gift.Name + (HasDualRetailWholesale(source) ? "（批发）" : ""),
+                    Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Gift, Id = gift.Id, Name = gift.Name + (UsesWholesalePackMinimum(source) ? "（批发）" : ""),
                         Price = CityRetailWholesalePrice(source, gift), UnitKg = gift.WeightKg, StockSpace = Stock.GoodsSpace(gift.Id, 1) },
                         ShelfKinds.ForGift(gift.Id)?.Name ?? "其他商品", ClothingProducts.SeasonGroup(gift.Id));
-                if (source.Business == FarmBusiness)
-                {
-                    Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Rice, Id = "rice", Name = "大米（零售，0.5千克/袋）",
-                        Price = Pantry.RicePricePerKg.Scale(0.5), UnitKg = 0.5 }, "米与食材");
-                    foreach (var ingredient in Ingredients.All)
-                        Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Ingredient, Id = ingredient.Id, Name = ingredient.Name + "（零售，" + ingredient.WeightKg.ToString("0.##") + "千克/份）",
-                            Price = ingredient.Price, UnitKg = Backpack.IngredientKg(ingredient.Id) }, "米与食材");
-                }
                 if (source.Business == MallBusiness)
                     foreach (var furniture in FurnitureCatalog.All.Where(f => !f.Starter))
                         Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Furniture, Id = furniture.Id, Name = furniture.Name,
@@ -131,26 +123,37 @@ namespace PCShopSell.Core.Session
                 .OrderBy(o => o.Price.Cents).FirstOrDefault();
         }
 
-        // Bind legacy plan-level sources and combine former counters that now share a market.
+        private bool IsFormerFarmRetailLine(PurchaseLine line, string sourceId) =>
+            (line.Kind == PurchaseGoodsKind.Rice || line.Kind == PurchaseGoodsKind.Ingredient)
+            && (string.IsNullOrEmpty(sourceId) || City.HasPlace(sourceId) && City.GetPlace(sourceId).Business == FarmBusiness);
+
+        // Bind old sources and combine entries that now refer to the same offer.
         public void PrepareEmployeePurchaseDraft(EmployeePurchasePlan plan, IReadOnlyList<PurchaseOffer> catalog = null)
         {
             catalog ??= EmployeePurchaseCatalog();
             var items = new List<PurchaseLine>();
-            var partsByMarket = new Dictionary<string, PurchaseLine>();
+            var combinedOffers = new Dictionary<string, PurchaseLine>();
             foreach (var line in plan.Items ?? Array.Empty<PurchaseLine>())
             {
                 if (line == null) continue;
                 var copy = line.Copy();
+                if (IsFormerFarmRetailLine(copy, copy.SourceId ?? plan.SourceId))
+                {
+                    copy.PartId = "produce:" + copy.PartId;
+                    copy.Kind = PurchaseGoodsKind.Gift;
+                    copy.ReservedByWeekday = null;
+                }
                 var offer = EmployeePurchaseOffer(copy, plan.SourceId, catalog);
                 if (offer != null) copy.SourceId = offer.Source.Id;
-                if (offer?.Kind == PurchaseGoodsKind.Part && partsByMarket.TryGetValue(offer.Key, out var combined))
+                bool canCombine = offer != null && (offer.Kind == PurchaseGoodsKind.Part || offer.Source.Business == FarmBusiness);
+                if (canCombine && combinedOffers.TryGetValue(offer.Key, out var combined))
                 {
                     combined.Count += copy.Count;
                     combined.BuyMaximum |= copy.BuyMaximum;
                     combined.ReservedByWeekday = null;
                     continue;
                 }
-                if (offer?.Kind == PurchaseGoodsKind.Part) partsByMarket.Add(offer.Key, copy);
+                if (canCombine) combinedOffers.Add(offer.Key, copy);
                 items.Add(copy);
             }
             plan.Items = items.ToArray();
@@ -222,8 +225,8 @@ namespace PCShopSell.Core.Session
                     return $"{source.Name}到达时未营业（{OpeningHoursText(source)}）";
                 return null;
             }
-            int open = source.Business == FarmBusiness ? FarmOpenMinute : StreetShopOpenMinute;
-            int close = source.Business == FarmBusiness ? FarmCloseMinute : StreetShopCloseMinute;
+            int open = StreetShopOpenMinute, close = StreetShopCloseMinute;
+            if (source.Business == FarmBusiness) CityVenueHours(source, out open, out close);
             if (arrivalMinute < open || arrivalMinute >= close)
                 return $"{source.Name}到达时未营业（每天 {Hm(open)}–{Hm(close)}）";
             return null;

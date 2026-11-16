@@ -54,6 +54,9 @@ namespace PCShopSell.Core.Session
         /// <summary>灰掉时显示的原因。</summary>
         public string DisabledReason;
 
+        /// <summary>只展示详情，返回后仍可选择当前事件的其他选项。</summary>
+        public string Details;
+
         /// <summary>执行选择，返回结果文字。</summary>
         public Func<GameSession, string> Apply;
         internal Func<GameSession, EventCgResult> ApplyCg;
@@ -830,7 +833,7 @@ namespace PCShopSell.Core.Session
                 if (shop.RetailKind == "secondhand")
                 {
                     var listed = shop.Sim.ShelfFillOf(ShelfKinds.Get("secondhand")).Resale.Select(offer => offer.Id).ToHashSet();
-                    foreach (var item in state.Used.Where(item => listed.Contains(item.Id)))
+                    foreach (var item in state.Used.Where(item => item.Product != ArtifactProduct && listed.Contains(item.Id)))
                         yield return new StudentOrderLine { Group = "used", Name = "二手旧物组合", Used = item,
                             Count = 1, Price = Money.FromYuan(item.Price), Cost = Money.FromYuan(item.Cost) };
                     yield break;
@@ -1002,8 +1005,8 @@ namespace PCShopSell.Core.Session
                     : person.LocationPlaceId == null && DistanceCity(PlayerPosition, new MapPoint(person.X, person.Y)) <= 6));
             return IllustratedEvent(template, $"路边有个钱包，里面有 ¥300 和一张留有联系方式的卡片。最近的失物代收点在{station.Name}。",
                 new EventCgFrame("wallet"),
-                ChooseCg("送到地铁站服务台", s => s.AcceptWalletReturn(station, null)),
-                ChooseCg("联系失主，约在地铁站归还", s => s.AcceptWalletReturn(station, owner.Id),
+                Choose("送到地铁站服务台", s => s.AcceptWalletReturn(station, null)),
+                Choose("联系失主，约在地铁站归还", s => s.AcceptWalletReturn(station, owner.Id),
                     _ => owner != null, "暂时找不到可联系的失主"),
                 ChooseCg("留下现金", s =>
                 {
@@ -1019,14 +1022,16 @@ namespace PCShopSell.Core.Session
                 }));
         }
 
-        private EventCgResult AcceptWalletReturn(Place station, string ownerId)
+        private string AcceptWalletReturn(Place station, string ownerId)
         {
             _walletDropOff = station.Id;
             _walletOwnerId = ownerId;
             _walletWaitedMinutes = 0;
+            if (AtWalletReturnStation) Time.SetPaused(false);
+            else BeginCityTravel(station.Id);
             string recipient = ownerId == null ? "交给站务员" : "当面交给失主";
-            return VisualResult($"归还钱包已加入日程。请前往{station.Name}，在站内等候 {WalletReturnWaitMinutes} 个游戏分钟，再{recipient}。",
-                "wallet", EventCgProp.Wallet, caption: $"归还钱包 · {station.Name}");
+            Say($"归还钱包已加入日程 · {station.Name}。请在站内等候 {WalletReturnWaitMinutes} 分钟，再{recipient}。");
+            return null;
         }
 
         private bool TickWalletOwner(CityPersonState person, long now)
@@ -1401,13 +1406,13 @@ namespace PCShopSell.Core.Session
 
         public bool IsChoiceEnabled(EventChoice c) => c.Enabled == null || c.Enabled(this);
 
-        /// <summary>做出选择。选项灰掉时返回 false。结果通过 Popup 告诉玩家。</summary>
+        /// <summary>结算事件选项。禁用或只供查看的选项不结算。结果通过 Popup 告诉玩家。</summary>
         public bool ResolveEvent(int choiceIndex)
         {
             EventDef def = PendingEvent;
             if (def == null || choiceIndex < 0 || choiceIndex >= def.Choices.Count) return false;
             EventChoice choice = def.Choices[choiceIndex];
-            if (!IsChoiceEnabled(choice)) return false;
+            if (choice.Details != null || !IsChoiceEnabled(choice)) return false;
             PendingEvent = null;
             if (choice.ApplyCg != null) ShowEventCg(def.Title, choice.ApplyCg(this));
             else

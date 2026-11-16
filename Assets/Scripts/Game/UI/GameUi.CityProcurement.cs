@@ -83,7 +83,7 @@ namespace PCShopSell.Game.UI
                     var row = PersonSummary(w.Content, S.PersonIdOf(person), person.Name, "进货员", 50);
                     bool selected = draft.EmployeeId == person.Id;
                     Ui.Size(Ui.Button(row, selected ? "已选 ✓" : "选择", () =>
-                    { draft.EmployeeId = person.Id; w.Rebuild(); }, 17, selected ? Ui.ButtonHot : Ui.ButtonBg), 110, 38);
+                    { draft.EmployeeId = person.Id; w.Rebuild(); }, 17, Ui.SelectedButton(selected)), 110, 38);
                 }
                 if (workers.Length == 0) Para(w.Content, "请先到员工管理安排本店进货员。", 16, Ui.Dim);
                 else Para(w.Content, S.ProcurementExecutorStatus(draft), 16, Ui.Accent);

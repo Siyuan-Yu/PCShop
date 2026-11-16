@@ -16,11 +16,11 @@ namespace PCShopSell.Tests
             using (var s = HomeTests.Make())
             {
                 GameSessionTests.Teleport(s, "farm"); var cash = s.Ledger.Balance;
-                Assert.True(s.CartAddRice(1)); Assert.True(s.CartAddIngredient("veg", 2));
-                Assert.AreEqual(2, s.CartBagKg); Assert.Zero(s.CartTruckKg);
+                Assert.True(s.CartAddRice(2.5)); Assert.True(s.CartAddIngredient("veg", 10));
+                Assert.AreEqual(7.5, s.CartBagKg); Assert.Zero(s.CartTruckKg);
                 Assert.AreEqual(Money.Zero, s.CartFreight(false)); Assert.AreEqual(cash, s.Ledger.Balance);
                 Assert.True(s.Checkout(false)); Assert.IsEmpty(s.Couriers);
-                Assert.AreEqual(1, s.Backpack.Food.RiceKg); Assert.AreEqual(2, s.Backpack.Food.IngredientCount("veg"));
+                Assert.AreEqual(2.5, s.Backpack.Food.RiceKg); Assert.AreEqual(10, s.Backpack.Food.IngredientCount("veg"));
             }
         }
 
@@ -29,12 +29,12 @@ namespace PCShopSell.Tests
         {
             using (var s = HomeTests.Make())
             {
-                GameSessionTests.Teleport(s, "farm"); s.Backpack.Food.RiceKg = 11.75;
-                Assert.True(s.CartAddRice(1));
-                Assert.AreEqual(.25, s.CartBagKg); Assert.AreEqual(.75, s.CartTruckKg);
-                s.CartAllToTruck(); Assert.True(s.CartAddRice(1));
-                Assert.AreEqual(.25, s.CartBagKg); Assert.AreEqual(1.75, s.CartTruckKg);
-                Assert.AreEqual(2, s.Cart.Single().Amount);
+                GameSessionTests.Teleport(s, "farm"); s.Backpack.Food.RiceKg = 11.5;
+                Assert.True(s.CartAddRice(2.5));
+                Assert.AreEqual(.5, s.CartBagKg); Assert.AreEqual(2, s.CartTruckKg);
+                s.CartAllToTruck(); Assert.True(s.CartAddRice(2.5));
+                Assert.AreEqual(.5, s.CartBagKg); Assert.AreEqual(4.5, s.CartTruckKg);
+                Assert.AreEqual(10, s.Cart.Single().Amount);
             }
         }
 
@@ -101,7 +101,7 @@ namespace PCShopSell.Tests
                 GameSessionTests.Teleport(s, "farm");
                 Assert.AreSame(branch, s.CourierShop(false));
                 s.SetCourierDest(null);
-                Assert.True(s.CartAddRice(1));
+                Assert.True(s.CartAddRice(2.5));
                 Assert.True(s.Checkout(false));
                 GameSessionTests.Teleport(s, "mall");
                 Assert.AreSame(branch, s.CourierShop(false), "自提结账没有改变最近一次送货地址");

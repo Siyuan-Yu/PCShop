@@ -65,7 +65,7 @@ namespace PCShopSell.Game.UI
 
             void UpdateSelection()
             {
-                foreach(var pair in listButtons)pair.Value.image.color=pair.Key==_assetPropertyId?Ui.ButtonHot:Ui.ButtonBg;
+                foreach (var pair in listButtons) Ui.SetButtonFill(pair.Value, Ui.SelectedButton(pair.Key == _assetPropertyId));
             }
             void PlacePopup()
             {
@@ -101,8 +101,8 @@ namespace PCShopSell.Game.UI
                 Ui.Clear(detail);listButtons.Clear();
                 Line(detail,"我的物业",21,Ui.Accent);
                 var tabs=Ui.Row(detail,38,5);
-                Ui.Size(Ui.Button(tabs,"我拥有的 · "+owned.Length,()=>{_assetPropertyListTab=0;RenderSide();},15,_assetPropertyListTab==0?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);
-                Ui.Size(Ui.Button(tabs,"我租的 · "+rented.Length,()=>{_assetPropertyListTab=1;RenderSide();},15,_assetPropertyListTab==1?Ui.ButtonHot:Ui.ButtonBg),-1,38,1);
+                Ui.Size(Ui.Button(tabs,"我拥有的 · "+owned.Length,()=>{_assetPropertyListTab=0;RenderSide();},15,Ui.SelectedButton(_assetPropertyListTab==0)),-1,38,1);
+                Ui.Size(Ui.Button(tabs,"我租的 · "+rented.Length,()=>{_assetPropertyListTab=1;RenderSide();},15,Ui.SelectedButton(_assetPropertyListTab==1)),-1,38,1);
                 var rows=_assetPropertyListTab==0?owned:rented;
                 long weeklyRent = rows.Sum(p => _assetPropertyListTab == 0 ? AssetPropertyRent(p) : AssetLeasedRent(p));
                 var total=Line(detail,(_assetPropertyListTab==0?"应收租金 ":"应付租金 ")+Money.FromCents(weeklyRent)+"/周",19,
@@ -117,7 +117,7 @@ namespace PCShopSell.Game.UI
                     long amount=mine?AssetPropertyRent(target):AssetLeasedRent(target);
                     string sub=AssetPropertyStatus(target,mine,!mine)+(amount>0?" · "+Money.FromCents(amount)+"/周":"");
                     var button=Ui.Size(Ui.Button(list,AssetPropertyName(target)+"\n<size=13>"+sub+"</size>",()=>ShowInfo(view.BuildingAt(target.Id)),15,
-                        target.Id==_assetPropertyId?Ui.ButtonHot:Ui.ButtonBg),-1,69);
+                        Ui.SelectedButton(target.Id==_assetPropertyId)),-1,69);
                     var text=button.GetComponentInChildren<Text>();text.alignment=TextAnchor.MiddleLeft;text.resizeTextForBestFit=true;text.resizeTextMinSize=12;text.resizeTextMaxSize=15;
                     button.name="AssetPropertyRow_"+target.Id;button.Tip("单击查看建筑信息，双击在地图上定位。\n"+S.City.StreetName(target.StreetId));
                     listButtons[target.Id]=button;
@@ -129,7 +129,7 @@ namespace PCShopSell.Game.UI
             {
                 zoom.text=(view.Zoom*100).ToString("0")+"%";
                 mapCaption.text=view.Region=="all"?"全城":S.City.AgencyDistricts.FirstOrDefault(d=>d.id==view.Region)?.name??"自由查看";
-                foreach(var pair in regionButtons)pair.button.image.color=pair.id==view.Region?Ui.ButtonHot:Ui.ButtonBg;
+                foreach (var pair in regionButtons) Ui.SetButtonFill(pair.button, Ui.SelectedButton(pair.id == view.Region));
                 PlacePopup();
             };
             RenderSide();view.Changed();

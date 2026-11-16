@@ -56,7 +56,7 @@ namespace PCShopSell.Game.UI
                         new ParcelEntry
                         {
                             Key = "rice", Id = "rice", Kind = ParcelKind.Rice, Name = "大米", Kg = GameSession.RiceBagKg,
-                            Detail = "也可以去农贸市场按千克买，更便宜。", Price = S.OnlinePrice(ParcelKind.Rice, "rice"),
+                            Detail = "农贸市场也可批发大米，每袋 0.5 千克，5 袋起订。", Price = S.OnlinePrice(ParcelKind.Rice, "rice"),
                         },
                     };
             }
@@ -90,7 +90,7 @@ namespace PCShopSell.Game.UI
                     {
                         if (n > 0) _parcelCart.Remove(e.Key); else _parcelCart[e.Key] = 1;
                         w.Rebuild();
-                    }, 16, n > 0 ? Ui.ButtonHot : Ui.ButtonBg), 184, 34);
+                    }, 16, Ui.SelectedButton(n > 0)), 184, 34);
                 }
                 else
                 {

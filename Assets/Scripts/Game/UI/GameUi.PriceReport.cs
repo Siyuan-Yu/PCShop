@@ -42,8 +42,8 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(nav, "下一期", () => { period++; w.Rebuild(); }, 17, Ui.ButtonBg, period < current), 110);
 
                 var tabs = Ui.Row(w.Content, 42);
-                Ui.Size(Ui.Button(tabs, "收支结算", () => { showPrices = false; w.Rebuild(); }, 19, !showPrices ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
-                Ui.Size(Ui.Button(tabs, "物价涨跌", () => { showPrices = true; w.Rebuild(); }, 19, showPrices ? Ui.ButtonHot : Ui.ButtonBg), -1, 42, 1);
+                Ui.Tab(tabs, "收支结算", () => { showPrices = false; w.Rebuild(); }, !showPrices);
+                Ui.Tab(tabs, "物价涨跌", () => { showPrices = true; w.Rebuild(); }, showPrices);
 
                 if (showPrices) BuildEconomicPriceSummary(w, start, end, selected, group =>
                 {
@@ -209,7 +209,7 @@ namespace PCShopSell.Game.UI
                         : "¥" + (prices[index] / 100).ToString("#,0.##");
                     var row = Ui.Row(parent, 32);
                     Ui.Size(Ui.Button(row, GameSession.PriceGroups[index] + "  ›", () => select(index), 16,
-                        selected == index ? Ui.ButtonHot : Ui.ButtonBg), -1, 30, 1);
+                        Ui.SelectedButton(selected == index)), -1, 30, 1);
                     EconomicStoreCell(row, Quote(baseline), Ui.TextColor);
                     EconomicStoreCell(row, Quote(closing), Ui.TextColor);
                     EconomicStoreCell(row, days.Length == 1 ? "—" : PriceMovement(changes[index]), PriceMovementColor(changes[index]));
