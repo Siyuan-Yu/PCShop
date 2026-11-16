@@ -5,26 +5,47 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
+        public void OpenMarketPanel() => OpenMarketView(0);
+
         private void OpenMarketView(int tab)
         {
             S.ReadNews();
-            OpenWorkspace("market", "market:" + tab, "物价", 1120, 850, w =>
+            int period = -1, selected = -1;
+            SwitchTab(tab);
+
+            void SwitchTab(int next)
+            {
+                tab = next;
+                OpenWorkspace("market", "market:" + tab, "物价", 1260, 850, Build, isTab: true);
+            }
+
+            void Build(Window w)
             {
                 var tabs = Ui.Row(w.Content, 38, 6);
                 string[] names = { "价格走势", "行业动态", "竞争事件", "模型目录" };
                 for (int i = 0; i < names.Length; i++)
                 {
                     int target = i;
-                    Ui.Tab(tabs, names[i], () => OpenMarketView(target), tab == i).name = "MarketTab_" + i;
+                    Ui.Tab(tabs, names[i], () => SwitchTab(target), tab == i).name = "MarketTab_" + i;
                 }
+                Ui.Size(Ui.Rect(tabs, "MarketTabSpacer"), 0, 38, 1);
+                Ui.Size(Ui.Button(tabs, "经济简报", OpenEconomicReport, 16), 124, 34).name = "MarketOpenEconomicReport";
                 switch (tab)
                 {
                     case 1: BuildIndustryNews(w); break;
                     case 2: BuildCompetitionMarket(w); break;
                     case 3: BuildModelCatalog(w); break;
-                    default: BuildPriceMarket(w); break;
+                    default:
+                        var (start, end, ongoing) = BuildEconomicPeriodNavigation(w, period, true, next => period = next);
+                        BuildEconomicPriceSummary(w.Content, start, end, ongoing, selected, group =>
+                        {
+                            selected = group;
+                            w.ResetScrollOnRebuild = true;
+                            w.Rebuild();
+                        });
+                        break;
                 }
-            }, isTab: true);
+            }
         }
 
         private void OpenCalendar(int? day = null)

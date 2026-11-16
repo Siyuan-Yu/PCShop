@@ -14,6 +14,8 @@ namespace PCShopSell.Core.Home
         public static readonly string[] AllKinds = RetailShopTypes.All;
         private static readonly IReadOnlyDictionary<string, string[]> OpeningRequirements =
             AllKinds.ToDictionary(kind => kind, GameSession.OpeningFurniture);
+        private static readonly string[] OpeningFurnitureFamilies =
+            { FurnitureCatalog.Shelf, FurnitureCatalog.FridgeSmall, PetShopCatalog.SmallHouse };
 
         /// <summary>开店基础款排在前面，之后是可替代的规格和专用设备。无关家具返回 -1。</summary>
         public static int ShopOrder(string kind, FurnitureDef item)
@@ -39,6 +41,30 @@ namespace PCShopSell.Core.Home
             AllKinds.Where(kind => ShopOrder(kind, item) >= 0).Select(RetailShopTypes.Name).ToArray();
 
         public static bool IsUniversal(FurnitureDef item) => AllKinds.All(kind => ShopOrder(kind, item) >= 0);
+
+        // Keep each family's original position in the catalogue, with its variants ordered by price.
+        public static IEnumerable<T> GroupPurchaseVariants<T>(IEnumerable<T> items, Func<T, FurnitureDef> getFurniture) =>
+            items.GroupBy(item => PurchaseFamily(getFurniture(item)))
+                .SelectMany(family => family.OrderBy(item => getFurniture(item)?.Price.Cents ?? 0));
+
+        private static string PurchaseFamily(FurnitureDef item)
+        {
+            if (item == null) return null;
+            foreach (string family in OpeningFurnitureFamilies)
+                if (GameSession.MatchesOpeningFurniture(family, item)) return family;
+            if (PetShopCatalog.IsToyFixture(item.Id)) return PetShopCatalog.ToyFixture(PetShopCatalog.IsDogToy(item.Id), 0);
+            if (item.Role == FurnitureRole.Bed) return FurnitureCatalog.BedBoard;
+            if (item.Role == FurnitureRole.Wardrobe && item.Id != FurnitureCatalog.FittingMirror) return FurnitureCatalog.WardrobeCloth;
+            if (item.Role == FurnitureRole.Storage) return FurnitureCatalog.HomeBox;
+            return item.Id switch
+            {
+                "aircon_large" => "aircon",
+                "shop_sofa" => "sofa",
+                "shop_plant" => "plant",
+                "shop_poster" => "poster",
+                _ => item.Id,
+            };
+        }
 
         /// <summary>家具城第一层的店型标签（不含「全部」，由界面自己加）。</summary>
         public static IReadOnlyList<string> Tabs() =>

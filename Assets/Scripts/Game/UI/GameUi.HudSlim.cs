@@ -83,7 +83,7 @@ namespace PCShopSell.Game.UI
             HudPanelButton(business, "员工", KeyCode.U, OpenEmployeesPanel, "各门店的员工、岗位与排班。").name = "HudEmployees";
             HudPanelButton(business, "资产", KeyCode.J, OpenBusinessPanel, "门店收支、物业与车辆。").name = "HudAssets";
             HudPanelButton(business, "采购", KeyCode.G, OpenCityProcurement, "商铺采购、补货目标、在途订单与直供协议。").name = "HudProcurement";
-            HudPanelButton(business, "物价", KeyCode.H, OpenMarketPanel, "查看品类价格指数、近期走势和经济简报。").name = "HudPrices";
+            HudPanelButton(business, "物价", KeyCode.H, OpenMarketPanel, "查看本期物价、历史涨跌和各品类报价走势。").name = "HudPrices";
             _brandButton = HudPanelButton(business, "品牌", KeyCode.L, OpenBrandOverview, "品牌、展会、代言人与直播。");
             _brandButton.name = "HudBrand";
             if (!GameSession.FirstChapterTrial)

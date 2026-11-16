@@ -429,6 +429,48 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void FurnitureMallKeepsVariantsTogetherAcrossShopTabs()
+        {
+            using var r = new Rig(HomeTests.Make(200000, 10 * 60));
+            GameSessionTests.Teleport(r.S, "mall");
+            r.Ui.OnEnteredPlace(r.S.CurrentPlace);
+            const string fieldPrefix = "QuantityValue_furn:";
+
+            void AssertAdjacent(params string[] ids)
+            {
+                var rows = r.Components<InputField>().Where(input => input.name.StartsWith(fieldPrefix))
+                    .Select(input => input.name.Substring(fieldPrefix.Length)).ToArray();
+                int first = Array.IndexOf(rows, ids[0]);
+                Assert.That(first, Is.GreaterThanOrEqualTo(0), ids[0]);
+                CollectionAssert.AreEqual(ids, rows.Skip(first).Take(ids.Length).ToArray());
+            }
+
+            var shelves = new[] { FurnitureCatalog.Shelf, FurnitureCatalog.RackStrong, FurnitureCatalog.RackHeavy };
+            var fridges = new[] { FurnitureCatalog.FridgeSmall, FurnitureCatalog.FridgeFamily, FurnitureCatalog.FridgeSide, FurnitureCatalog.FridgePremium };
+            r.Button("ShopTab_全部").onClick.Invoke();
+            AssertAdjacent(shelves);
+            AssertAdjacent(fridges);
+            AssertAdjacent("aircon", "aircon_large");
+            r.Button("ShopTab_facility_电器").onClick.Invoke();
+            AssertAdjacent(fridges);
+            r.Button("ShopTab_facility_非电器").onClick.Invoke();
+            AssertAdjacent(shelves);
+            r.Button("ShopTab_facility_全部").onClick.Invoke();
+            foreach (var kind in FurnitureShops.AllKinds)
+            {
+                r.Button("ShopTab_" + RetailShopTypes.Name(kind)).onClick.Invoke();
+                if (kind == "restaurant") AssertAdjacent(fridges);
+                else AssertAdjacent(shelves);
+                if (kind == PetShopCatalog.ShopKind)
+                {
+                    AssertAdjacent(PetShopCatalog.SmallHouse, PetShopCatalog.MediumHouse, PetShopCatalog.LargeHouse);
+                    AssertAdjacent(PetShopCatalog.ToyFixture(false, 0), PetShopCatalog.ToyFixture(false, 1), PetShopCatalog.ToyFixture(false, 2));
+                    AssertAdjacent(PetShopCatalog.ToyFixture(true, 0), PetShopCatalog.ToyFixture(true, 1), PetShopCatalog.ToyFixture(true, 2));
+                }
+            }
+        }
+
+        [Test]
         public void FurnitureFilterRoutesSharedCounterToMatchingShopAtCheckout()
         {
             using (var r = new Rig(HomeTests.Make(200000, 10 * 60)))
@@ -1071,6 +1113,60 @@ namespace PCShopSell.Tests
                 Assert.AreSame(window, r.Workspace("calendar"));
                 r.Ui.CloseAllWindows(); Assert.False(r.S.Time.IsHeld);
             }
+        }
+
+        [Test]
+        public void MarketOpensCurrentPriceReportAndCanBrowseHistoryAndGroups()
+        {
+            using var r = new Rig();
+            var clock = r.S.Clock;
+            clock.Restore(new GameDate(0), 600);
+            Assert.True(r.Ui.TryHotkey(KeyCode.H));
+            StringAssert.Contains("本期只有一份报价", r.Text);
+            Assert.False(r.Button("EconomicPrevPeriod").interactable);
+            r.Ui.CloseAllWindows();
+
+            for (int day = 1; day <= 8; day++)
+            {
+                clock.Restore(new GameDate(day - 1), GameTimestamp.MinutesPerDay - 1);
+                clock.Advance(1);
+            }
+            int food = Array.IndexOf(GameSession.PriceGroups, "米与食材");
+            r.S.PriceDays.Last().Prices[food] = r.S.PriceDays.Single(day => day.Day == 6).Prices[food] * 1.12;
+            r.Button("HudPrices").onClick.Invoke();
+            var market = r.Workspace("market");
+            string Range() => market.GetComponentsInChildren<Text>().Single(label => label.name == "EconomicPeriodRange").text;
+            StringAssert.Contains("进行中", Range());
+            StringAssert.Contains("最新报价", r.Text);
+            StringAssert.Contains("+12.00%", r.Text);
+            StringAssert.Contains("住宅与商铺", r.Text);
+            StringAssert.DoesNotContain("币圈热度", r.Text);
+            Assert.True(market.GetComponentsInChildren<RectTransform>().Any(rect => rect.name == "PriceTrend"));
+            Assert.True(r.S.EconomicReportPending);
+            Assert.False(r.Button("EconomicNextPeriod").interactable);
+
+            r.Button("EconomicPriceGroup_" + food).onClick.Invoke();
+            StringAssert.Contains("返回综合走势", r.Text);
+            r.Button("EconomicPrevPeriod").onClick.Invoke();
+            StringAssert.DoesNotContain("进行中", Range());
+            StringAssert.Contains("期末报价", r.Text);
+            r.Button("MarketTab_1").onClick.Invoke();
+            StringAssert.Contains("硬件新闻", r.Text);
+            StringAssert.Contains("小道消息", r.Text);
+            r.Button("MarketTab_0").onClick.Invoke();
+            Assert.AreSame(market, r.Workspace("market"));
+            StringAssert.DoesNotContain("进行中", Range());
+            r.Button("EconomicNextPeriod").onClick.Invoke();
+            StringAssert.Contains("进行中", Range());
+            r.ClickCaption("返回综合走势");
+            StringAssert.DoesNotContain("返回综合走势", r.Text);
+
+            r.Button("MarketOpenEconomicReport").onClick.Invoke();
+            StringAssert.Contains("现金收支", r.Text);
+            r.ClickCaption("物价涨跌");
+            var report = r.Components<Transform>().Single(t => t.name == "Window_经济简报");
+            Assert.True(report.GetComponentsInChildren<RectTransform>().Any(rect => rect.name == "PriceTrend"));
+            StringAssert.DoesNotContain("进行中", report.GetComponentsInChildren<Text>().Single(label => label.name == "EconomicPeriodRange").text);
         }
 
         [Test]

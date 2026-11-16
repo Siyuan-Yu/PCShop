@@ -9,6 +9,7 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         private const string OpeningStockMigrationFlag = "tutorial:opening-stock-purchase-checked";
+        private const string SecondhandShelfMigrationFlag = "tutorial:opening-secondhand-shelf-checked";
 
         // The rent reward marker is set by the prebuilt-shop setup, which already supplies stock.
         internal Place OpeningSupplyMarket => HasShop && OpeningRewardKind("rent") == null
@@ -40,6 +41,13 @@ namespace PCShopSell.Core.Session
                 || !(OpeningSupplyMarket is Place market)) return;
             Flags.Add(OpeningStockMigrationFlag);
             if (QuestCompleted("stock") && !HasOpeningStockPurchase(market)) Flags.Remove("tutorial:stock");
+        }
+
+        private void MigrateSecondhandShelfProgress()
+        {
+            if (!HasShop || RetailKind != "secondhand" || QuestCompleted("sale") || !Flags.Add(SecondhandShelfMigrationFlag)) return;
+            // Older saves marked this step complete when the shelf was merely placed.
+            if (ShelvesOfKind("secondhand") == 0) Flags.Remove("tutorial:shelf");
         }
 
         private const string OpeningChoicePrefix="shop:choose-kind:";

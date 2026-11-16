@@ -32,7 +32,7 @@ namespace PCShopSell.Game.UI
             {
                 case 0:
                 case 1:
-                    return FurnitureCatalog.Purchasable(tab == 1).Select(f => new ParcelEntry
+                    return FurnitureShops.GroupPurchaseVariants(FurnitureCatalog.Purchasable(tab == 1), f => f).Select(f => new ParcelEntry
                     {
                         Key = "furn:" + f.Id, Id = f.Id, Kind = ParcelKind.Furniture, Name = f.Name, Detail = f.Description, Kg = f.WeightKg,
                         Price = S.OnlinePrice(ParcelKind.Furniture, f.Id), Have = S.FurnitureInStock(f.Id) > 0 ? $"背包 ×{S.FurnitureInStock(f.Id)}" : "",

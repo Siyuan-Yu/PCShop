@@ -17,6 +17,7 @@ namespace PCShopSell.Game.UI
                 foreach(string series in ModelProducts.SeriesIds)Para(w.Content,IndustryCycles.ModelNews(series,day)+" · 参考行情 ×"+IndustryCycles.ModelFactor(series,day).ToString("0.##"),17);
                 double clothing=IndustryCycles.ClothingFactor(day);
                 Para(w.Content,clothing>1?"服装供给事件："+(clothing>1.4?"暴雨运输受阻，参考价上涨50%":"棉花减产，参考价上涨35%")+"。":"服装供给正常，日常参考价稳定；换季会显著改变需求。",17);
+            BuildHardwareMarketNews(w);
         }
         private void BuildIndustryBrief(Transform parent)
         {

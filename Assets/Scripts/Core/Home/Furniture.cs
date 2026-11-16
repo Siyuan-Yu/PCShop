@@ -221,7 +221,7 @@ namespace PCShopSell.Core.Home
                 }
             }
             Add(new FurnitureDef(LegacyRestaurantPass,"旧传菜台","旧版餐馆家具，可在装修时收起。",500,FurnitureSlot.Floor,1,.5,forShop:true,starter:true){WeightKg=20});
-            Add(new FurnitureDef("restaurant_table","餐馆餐桌","提供一个堂食桌位；上菜后用餐结账，需要收桌。",380,FurnitureSlot.Floor,.85,.85,true){WeightKg=15});
+            Add(new FurnitureDef("restaurant_table","餐馆餐桌","提供一个堂食桌位；上菜后用餐结账，需要收桌。",190,FurnitureSlot.Floor,.85,.85,true){WeightKg=15});
             Add(new FurnitureDef("used_buydesk","收购鉴定台","听说辞、出价收购；买下后才可鉴定。",650,FurnitureSlot.Floor,1.1,.6,true){WeightKg=25});
             Add(new FurnitureDef("used_display","二手销售展示台","每台展示4件已鉴定的旧物，按真实状态标价出售。",450,FurnitureSlot.Floor,1,.65,true){WeightKg=20});
             // ---- 出租屋：开局自带 ----

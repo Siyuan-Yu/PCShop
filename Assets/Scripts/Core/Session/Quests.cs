@@ -170,10 +170,11 @@ namespace PCShopSell.Core.Session
         private static string ShortFacilityList(string[] names) => string.Join("、", names.Take(2))
             + (names.Length > 2 ? $"等 {names.Length} 项" : "");
 
-        /// <summary>设置过摆什么的配件货架覆盖了几类配件。</summary>
+        /// <summary>开店引导所需的货架或专用经营设施是否设置完成。</summary>
         private static int ShelvesSet(GameSession s)
         {
             if (!s.HasShop) return 0;
+            if (s.RetailKind == "secondhand") return s.ShelvesOfKind("secondhand");
             if(s.IsSpecialBusiness(s.CurrentShop))return s.SpecialFitGap(s.CurrentShop)==null?1:0;
             if(s.RetailKind!="computer")return s.ShelfIndexes().Count(i=>s.ShelfKindAt(i)?.GiftIds.Any(id=>RetailShopTypes.Sells(s.RetailKind,id))==true);
             return FurnitureCatalog.ShelfCategories.Count(c => s.ShelvesOfKind(ShelfKinds.ForCategory(c).Id) > 0);
@@ -236,11 +237,26 @@ namespace PCShopSell.Core.Session
             }
             if(source==null||s.RetailKind=="computer")return source;
             var q=source.Copy();
-            if(q.Id=="shelf")
+            if (q.Id == "shelf")
             {
-                q.Title=s.IsSpecialBusiness(s.CurrentShop)?"准备经营设施":"设置第一个商品货架";
-                q.Short=s.IsSpecialBusiness(s.CurrentShop)?"按开店清单摆齐设施":"把货架设成与本店商品对应的品类";
-                q.Hint=s.IsSpecialBusiness(s.CurrentShop)?"设施摆齐后才可接待顾客。":"顾客只买货架上已陈列的商品。";
+                if (s.RetailKind == "secondhand")
+                {
+                    q.Title = "设置二手转售品货架";
+                    q.Short = $"把货架设成{K("二手转售品")}";
+                    q.Hint = "走到货架旁按 F，或在门店的库存页选择货架。点「选择摆什么」或「换品类」，在「零售商品」中选择「二手转售品」。";
+                }
+                else if (s.IsSpecialBusiness(s.CurrentShop))
+                {
+                    q.Title = "准备经营设施";
+                    q.Short = "按开店清单摆齐设施";
+                    q.Hint = "设施摆齐后才可接待顾客。";
+                }
+                else
+                {
+                    q.Title = "设置第一个商品货架";
+                    q.Short = "把货架设成与本店商品对应的品类";
+                    q.Hint = "顾客只买货架上已陈列的商品。";
+                }
             }
             if(q.Id=="stock")
             {

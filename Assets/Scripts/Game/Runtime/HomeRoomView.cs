@@ -319,44 +319,19 @@ namespace PCShopSell.Game.Runtime
             if (_homeWalkTarget != target) CancelBedWalk();
             _homeWalkTarget = target;
             Vector3 at = _owner.transform.localPosition;
-            foreach (var spot in _spots)
-                if (spot.Id == target && DistToRect(new Vector2(at.x, at.z), spot.Area) <= 0.6f) return 1;
+            bool NearTarget(Vector3 position, float distance)
+            {
+                var point = new Vector2(position.x, position.z);
+                foreach (var spot in _spots)
+                    if (spot.Id == target && DistToRect(point, spot.Area) <= distance) return true;
+                return false;
+            }
+            if (NearTarget(at, .6f)) return 1;
             if (_bedWalkPath == null)
             {
-                const float cell = 0.2f;
-                int nx = Mathf.FloorToInt((Width - 0.6f) / cell) + 1;
-                int nz = Mathf.FloorToInt((Depth - 0.6f) / cell) + 1;
-                Vector3 Point(int id) => new Vector3(0.3f + id % nx * cell, 0, 0.3f + id / nx * cell);
-                int start = Mathf.Clamp(Mathf.RoundToInt((at.x - 0.3f) / cell), 0, nx - 1)
-                    + nx * Mathf.Clamp(Mathf.RoundToInt((at.z - 0.3f) / cell), 0, nz - 1);
-                var previous = new int[nx * nz];
-                for (int i = 0; i < previous.Length; i++) previous[i] = -1;
-                var queue = new Queue<int>();
-                previous[start] = start; queue.Enqueue(start);
-                int goal = -1;
-                while (queue.Count > 0)
-                {
-                    int current = queue.Dequeue();
-                    Vector3 point = Point(current);
-                    foreach (var spot in _spots)
-                        if (spot.Id == target && !Blocked(point) && DistToRect(new Vector2(point.x, point.z), spot.Area) <= 0.55f)
-                        { goal = current; break; }
-                    if (goal >= 0) break;
-                    for (int direction = 0; direction < 4; direction++)
-                    {
-                        int x = current % nx + (direction == 0 ? 1 : direction == 1 ? -1 : 0);
-                        int z = current / nx + (direction == 2 ? 1 : direction == 3 ? -1 : 0);
-                        if (x < 0 || x >= nx || z < 0 || z >= nz) continue;
-                        int next = x + z * nx;
-                        if (previous[next] >= 0 || Blocked(Point(next))) continue;
-                        previous[next] = current; queue.Enqueue(next);
-                    }
-                }
-                if (goal < 0) return -1;
-                _bedWalkPath = new List<Vector3>();
-                for (int node = goal; node != start; node = previous[node]) _bedWalkPath.Add(Point(node));
-                _bedWalkPath.Add(Point(start));
-                _bedWalkPath.Reverse();
+                var walkArea = Rect.MinMaxRect(.3f, .3f, Width - .3f, Depth - .3f);
+                _bedWalkPath = CityRoomRoute.Find(at, walkArea, point => NearTarget(point, .55f), _furniture.Blockers);
+                if (_bedWalkPath == null) return -1;
                 _bedWalkIndex = 0;
             }
             // Exhausting a cached path is not proof of arrival: the owner or furniture may have moved.

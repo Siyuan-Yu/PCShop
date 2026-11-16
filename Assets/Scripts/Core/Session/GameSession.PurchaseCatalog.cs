@@ -106,7 +106,7 @@ namespace PCShopSell.Core.Session
                         Price = CityRetailWholesalePrice(source, gift), UnitKg = gift.WeightKg, StockSpace = Stock.GoodsSpace(gift.Id, 1) },
                         ShelfKinds.ForGift(gift.Id)?.Name ?? "其他商品", ClothingProducts.SeasonGroup(gift.Id));
                 if (source.Business == MallBusiness)
-                    foreach (var furniture in FurnitureCatalog.All.Where(f => !f.Starter))
+                    foreach (var furniture in FurnitureShops.GroupPurchaseVariants(FurnitureCatalog.All.Where(f => !f.Starter), f => f))
                         Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Furniture, Id = furniture.Id, Name = furniture.Name,
                             Price = furniture.Price, UnitKg = furniture.WeightKg }, "家具与货架", null, FurnitureShops.For(furniture));
             }

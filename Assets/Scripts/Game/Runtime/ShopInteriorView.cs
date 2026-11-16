@@ -708,7 +708,8 @@ namespace PCShopSell.Game.Runtime
             var at=_owner.transform.localPosition;
             if(_cityExitPath==null)
             {
-                _cityExitPath=CityRoomRoute.Find(at,new Vector3(_doorX,0,.6f),Width,Depth,Blocked);
+                var walkArea = Rect.MinMaxRect(.3f, .4f, Width - .3f, Depth - .3f);
+                _cityExitPath = CityRoomRoute.Find(at, walkArea, NearDoorAt, _decor.Blockers);
                 _cityExitIndex=0;if(_cityExitPath==null)return -1;
             }
             if (_cityExitIndex >= _cityExitPath.Count) return -1;
@@ -733,14 +734,9 @@ namespace PCShopSell.Game.Runtime
         }
 
         /// <summary>老板走到门口（够得着门，按 F 或者接着往外走就出门）。</summary>
-        public bool NearDoor
-        {
-            get
-            {
-                Vector3 p = _owner.transform.localPosition;
-                return Mathf.Abs(p.x - _doorX) < 0.9f && p.z < 1.1f;
-            }
-        }
+        public bool NearDoor => NearDoorAt(_owner.transform.localPosition);
+
+        private bool NearDoorAt(Vector3 point) => Mathf.Abs(point.x - _doorX) < .9f && point.z < 1.1f;
 
         public Vector3 DoorWorld => Origin + new Vector3(_doorX, 2.0f, 0f);
 
@@ -1247,7 +1243,7 @@ namespace PCShopSell.Game.Runtime
             ShopSimulation shop = s.PlayerShop;
             UpdateEmergencyLighting(climateShop?.EmergencyLighting ?? default, s.Clock.Today.TotalDays, s.Clock.Now.TotalMinutes);
             UpdateOpenLook(shop.IsOpen, realDt);
-            _decor.Sync(s.ShopLayout, s.ShopRoom);
+            if (_decor.Sync(s.ShopLayout, s.ShopRoom)) CancelCityDoorWalk();
             if (_fxVersion != _decor.Version) RebuildFixtures();
             _owner.SetActive(s.InPlayerShop);
             UpdateNearbyShelf(s.InPlayerShop);

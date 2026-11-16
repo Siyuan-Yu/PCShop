@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
@@ -370,54 +369,31 @@ namespace PCShopSell.Game.UI
 
         // ---------- 行情 ----------
 
-        public void OpenMarketPanel() => OpenMarketView(0);
-        private void BuildPriceMarket(Window w)
+        private void BuildHardwareMarketNews(Window w)
         {
-                Ui.Size(Ui.Button(w.Content, "经济简报 · 收支与物价", OpenEconomicReport, 17), -1, 34);
-
-                foreach (MacroFactor f in new[] { MacroFactor.Crypto, MacroFactor.AiDemand })
-                {
-                    RectTransform row = Ui.Row(w.Content, 28);
-                    double v = S.Market.FactorValue(f);
-                    Ui.Size(Ui.Label(row, HardwareMarket.FactorName(f), 18), 120);
-                    Ui.Bar(row, (float)(v + 1) / 2, v >= 0 ? Ui.Warn : Ui.Accent, 300, 14);
-                    Ui.Size(Ui.Label(row, $"{v:+0.00;-0.00}", 17, TextAnchor.MiddleLeft, Ui.Dim), 80);
-                }
-                Line(w.Content, "品类价格指数（1.00 = 基准价）及近 30 天走势：", 18);
-                foreach (PartCategory c in PartCatalog.Categories)
-                {
-                    RectTransform row = Ui.Row(w.Content, 30);
-                    double idx = S.Market.Index(c);
-                    Ui.Size(Ui.Label(row, PartCatalog.CategoryName(c), 18), 100);
-                    Ui.Size(Ui.Label(row, $"{idx:0.00}", 19, TextAnchor.MiddleLeft, idx > 1.05 ? Ui.Warn : idx < 0.95 ? Ui.Good : Ui.TextColor), 70);
-                    Ui.Size(Ui.Label(row, Sparkline(S.Market.History(c)), 18, TextAnchor.MiddleLeft, Ui.Dim), 300);
-                    int held = PartCatalog.All.Where(p => p.Category == c).Sum(p => S.PlayerShop.Stock.CountAll(p));
-                    int inbound = PartCatalog.All.Where(p => p.Category == c).Sum(p => S.PendingOnlineCount(p.Id));
-                    Ui.Size(Ui.Label(row, $"库存 {held} · 在途 {inbound}", 15, TextAnchor.MiddleLeft, Ui.Accent), 230);
-                }
-                if (S.Player.Intelligence >= 30)
-                    Line(w.Content, "研判提示：币圈主要影响显卡；AI 需求影响内存与显卡；新品上市压低旧 CPU 和主板。", 14, Ui.Accent);
-                Line(w.Content, "最近新闻：", 18);
-                RectTransform list = Ui.Scroll(w.Content, 150);
-                foreach (NewsItem n in S.Market.News.Reverse().Take(20))
-                {
-                    Text t = Ui.Label(list, $"<color=#ABB5A8>{n.Date}</color>  {n.Headline}", 17);
-                    Ui.Size(t, -1, 26);
-                }
-                if (S.Market.News.Count == 0) Ui.Size(Ui.Label(list, "暂时风平浪静。", 17, TextAnchor.MiddleLeft, Ui.Dim), -1, 26);
-                BuildTipsSection(w);
-        }
-
-        private static string Sparkline(System.Collections.Generic.IReadOnlyList<double> values)
-        {
-            const string blocks = "▁▂▃▄▅▆▇█";
-            var sb = new StringBuilder();
-            foreach (double v in values)
+            Line(w.Content, "电脑配件行情", 18, Ui.Accent);
+            string Factor(MacroFactor factor) => $"{HardwareMarket.FactorName(factor)} {S.Market.FactorValue(factor):+0.00;-0.00;0.00}";
+            Line(w.Content, $"{Factor(MacroFactor.Crypto)} · {Factor(MacroFactor.AiDemand)}", 16, Ui.Dim);
+            var header = Ui.Row(w.Content, 28);
+            Ui.Size(Ui.Label(header, "配件", 16, color: Ui.Dim), -1, 28, 1);
+            foreach (string label in new[] { "较常态报价", "库存", "在途" }) EconomicStoreCell(header, label, Ui.Dim);
+            foreach (PartCategory category in PartCatalog.Categories)
             {
-                int i = Mathf.Clamp(Mathf.RoundToInt((float)((v - 0.6) / 1.2 * 7)), 0, 7);
-                sb.Append(blocks[i]);
+                var row = Ui.Row(w.Content, 30);
+                Ui.Size(Ui.Label(row, PartCatalog.CategoryName(category), 17), -1, 30, 1);
+                double change = (S.Market.Index(category) - 1) * 100;
+                var parts = PartCatalog.All.Where(part => part.Category == category).ToArray();
+                EconomicStoreCell(row, PriceMovement(change), PriceMovementColor(change));
+                EconomicStoreCell(row, parts.Sum(part => S.PlayerShop.Stock.CountAll(part)).ToString(), Ui.TextColor);
+                EconomicStoreCell(row, parts.Sum(part => S.PendingOnlineCount(part.Id)).ToString(), Ui.TextColor);
             }
-            return sb.ToString();
+            if (S.Player.Intelligence >= 30)
+                Line(w.Content, "币圈主要影响显卡，AI 需求影响内存与显卡，新品上市压低旧 CPU 和主板。", 15, Ui.Dim);
+            Line(w.Content, "硬件新闻", 18, Ui.Accent);
+            foreach (NewsItem news in S.Market.News.Reverse().Take(20))
+                Line(w.Content, $"<color=#ABB5A8>{news.Date}</color>  {news.Headline}", 17);
+            if (S.Market.News.Count == 0) Line(w.Content, "暂无硬件新闻。", 16, Ui.Dim);
+            BuildTipsSection(w);
         }
 
         // ---------- 菜单 ----------

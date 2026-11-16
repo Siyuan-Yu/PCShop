@@ -109,6 +109,35 @@ namespace PCShopSell.Tests
             Assert.AreEqual("已摆 0/2 项", s.CurrentQuest().Progress(s));
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void SecondhandOpeningRequiresAResaleShelfEvenAfterLoadingOldProgress(bool legacySave)
+        {
+            using var s = Make(false);
+            GameSessionTests.Teleport(s, "agency");
+            Assert.True(s.SignRetailLease("pc", false, "secondhand"));
+            GameSessionTests.Teleport(s, "pc");
+            foreach (string id in GameSession.OpeningFurniture("secondhand"))
+                s.CurrentShop.Layout.Add(new PlacedFurniture { Id = id == FurnitureCatalog.Shelf ? FurnitureCatalog.RackHeavy : id });
+
+            var save = s.CreateSave();
+            if (legacySave)
+                save.flags = save.flags.Where(flag => flag != "tutorial:opening-secondhand-shelf-checked")
+                    .Append("tutorial:shelf").ToArray();
+            using var loaded = GameSession.Load(s.City, save);
+            Assert.AreEqual("shelf", loaded.CurrentQuest().Id);
+            StringAssert.Contains("二手转售品", loaded.CurrentQuest().Short);
+            Assert.False(loaded.QuestCompleted("shelf"));
+
+            int shelf = loaded.ShelfIndexes().Single();
+            Assert.True(loaded.SetShelfKind(shelf, ShelfKinds.ForCategory(PartCategory.Cpu).Id));
+            Assert.AreEqual("shelf", loaded.CurrentQuest().Id);
+            Assert.True(loaded.SetShelfKind(shelf, "secondhand"));
+            Assert.AreEqual("sale", loaded.CurrentQuest().Id);
+            using var reloaded = Reload(loaded);
+            Assert.True(reloaded.QuestCompleted("shelf"));
+        }
+
         [TestCase("computer")]
         [TestCase("restaurant")]
         [TestCase("clothing")]

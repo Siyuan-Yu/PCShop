@@ -211,6 +211,42 @@ namespace PCShopSell.Tests
                 Assert.NotNull(s.Trip);
             });
         }
+
+        [TestCase(3.74f, 4.28f)]
+        [TestCase(2.27f, 1.90f)]
+        public void ShopShortcutCanLeaveHomeFromTheEdgeOfFurniture(float x, float z)
+        {
+            WithHome((s, c, room, ui) =>
+            {
+                GameSessionTests.Teleport(s, s.Home.Id);
+                room.SetActive(true);
+                room.Update(s, 0, s.Clock.MinuteOfDay);
+                room.Root.Find("Owner").localPosition = new Vector3(x, 0, z);
+                Assert.False(room.Furniture.Blockers.Any(rect => rect.Contains(new Vector2(x, z))));
+                s.Time.SetSpeed(8);
+                s.Time.SetPaused(true);
+                ui.Canvases.SelectMany(canvas => canvas.GetComponentsInChildren<Button>())
+                    .Single(button => button.name == "ShortcutGo_0").onClick.Invoke();
+                Assert.False(s.Time.IsUserPaused);
+                for (int i = 0; i < 200 && c.InHome && s.CityIntent != null; i++) Frame(s, c, room);
+                Assert.False(c.InHome, "家具旁的合法站位必须能找到通往门口的路线");
+                Assert.NotNull(s.Trip);
+            });
+        }
+
+        [Test]
+        public void HomeDoorRouteCannotCrossFurnitureThatCompletelyBlocksTheWay()
+        {
+            WithHome((s, c, room, ui) =>
+            {
+                room.SetActive(true);
+                room.Update(s, 0, s.Clock.MinuteOfDay);
+                room.Root.Find("Owner").localPosition = new Vector3(2.2f, 0, 2.3f);
+                room.Furniture.Blockers.Add(new Rect(2.84f, 0, .04f, room.Depth));
+                Assert.AreEqual(-1, room.WalkToDoor(.15f));
+            });
+        }
+
         [Test]
         public void DoorPathCannotBeReusedAsSuccessfulBedArrivalAfterReentry()
         {

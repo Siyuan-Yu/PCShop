@@ -25,27 +25,13 @@ namespace PCShopSell.Game.UI
             bool showPrices = false;
             var window = OpenWindow("经济简报", 1260, 920, w =>
             {
-                int today = S.Clock.Today.TotalDays;
-                int span = S.EconomicReportPeriodDays;
-                int anchor = S.EconomicReportAnchorDay;
-                int first = S.PriceDays.FirstOrDefault()?.Day ?? today;
-                int earliest = (first - anchor) / span;
-                int current = (today - anchor) / span;
-                if (period < earliest) period = Math.Max(earliest, current - 1);
-                int start = anchor + period * span;
-                int end = Math.Min(today, start + span - 1);
-
-                var nav = Ui.Row(w.Content, 40);
-                Ui.Size(Ui.Button(nav, "上一期", () => { period--; w.Rebuild(); }, 17, Ui.ButtonBg, period > earliest), 110);
-                string range = $"{new GameDate(start)} — {new GameDate(end)}" + (period == current ? " · 进行中" : "");
-                Ui.Size(Ui.Label(nav, range, 18, TextAnchor.MiddleCenter), -1, -1, 1);
-                Ui.Size(Ui.Button(nav, "下一期", () => { period++; w.Rebuild(); }, 17, Ui.ButtonBg, period < current), 110);
+                var (start, end, ongoing) = BuildEconomicPeriodNavigation(w, period, false, next => period = next);
 
                 var tabs = Ui.Row(w.Content, 42);
                 Ui.Tab(tabs, "收支结算", () => { showPrices = false; w.Rebuild(); }, !showPrices);
                 Ui.Tab(tabs, "物价涨跌", () => { showPrices = true; w.Rebuild(); }, showPrices);
 
-                if (showPrices) BuildEconomicPriceSummary(w, start, end, selected, group =>
+                if (showPrices) BuildEconomicPriceSummary(w.Content, start, end, ongoing, selected, group =>
                 {
                     selected = group;
                     w.ResetScrollOnRebuild = true;
@@ -74,6 +60,34 @@ namespace PCShopSell.Game.UI
                 S.SetEconomicReportCadence(cadence);
                 window.Rebuild();
             }, opensUp: true), 120, 30);
+        }
+
+        private (int Start, int End, bool Ongoing) BuildEconomicPeriodNavigation(Window window, int period,
+            bool startAtCurrent, Action<int> select)
+        {
+            int today = S.Clock.Today.TotalDays;
+            int span = S.EconomicReportPeriodDays;
+            int anchor = S.EconomicReportAnchorDay;
+            int first = S.PriceDays.FirstOrDefault()?.Day ?? today;
+            int earliest = (first - anchor) / span;
+            int current = (today - anchor) / span;
+            if (period < 0) period = startAtCurrent ? current : current - 1;
+            period = Math.Max(earliest, Math.Min(current, period));
+            int start = anchor + period * span;
+            int end = Math.Min(today, start + span - 1);
+            bool ongoing = period == current;
+
+            var nav = Ui.Row(window.Content, 40);
+            void ChangePeriod(int next)
+            {
+                select(next);
+                window.Rebuild();
+            }
+            Ui.Size(Ui.Button(nav, "上一期", () => ChangePeriod(period - 1), 17, Ui.ButtonBg, period > earliest), 110).name = "EconomicPrevPeriod";
+            string range = $"{new GameDate(start)} — {new GameDate(end)}" + (ongoing ? " · 进行中" : "");
+            Ui.Size(Ui.Label(nav, range, 18, TextAnchor.MiddleCenter), -1, -1, 1).name = "EconomicPeriodRange";
+            Ui.Size(Ui.Button(nav, "下一期", () => ChangePeriod(period + 1), 17, Ui.ButtonBg, period < current), 110).name = "EconomicNextPeriod";
+            return (start, end, ongoing);
         }
 
         private void BuildEconomicCashSummary(Transform parent, GameDate from, GameDate to)
@@ -153,11 +167,10 @@ namespace PCShopSell.Game.UI
 
         private static string SignedReportCash(Money amount) => (amount.IsPositive ? "+" : "") + amount;
 
-        private void BuildEconomicPriceSummary(Window window, int start, int end, int selected, Action<int> select)
+        private void BuildEconomicPriceSummary(Transform parent, int start, int end, bool ongoing, int selected, Action<int> select)
         {
             var records = S.PriceDays;
             var days = records.Where(day => day.Day >= start && day.Day <= end).ToArray();
-            var parent = window.Content;
             if (days.Length == 0)
             {
                 Line(parent, "本期暂无价格记录。", 18, Ui.Dim);
@@ -179,7 +192,8 @@ namespace PCShopSell.Game.UI
             const double movementThreshold = 0.005;
 
             var cards = Ui.Row(parent, 84, 8);
-            AddPriceCard(cards, selected < 0 ? "综合物价" : GameSession.PriceGroups[selected], values[values.Length - 1] - 100);
+            double? change = days.Length > 1 ? values[values.Length - 1] - 100 : (double?)null;
+            AddPriceCard(cards, selected < 0 ? "综合物价" : GameSession.PriceGroups[selected], change);
             AddPriceCard(cards, "涨幅最大", changes[biggestRise] >= movementThreshold ? changes[biggestRise] : (double?)null, GameSession.PriceGroups[biggestRise]);
             AddPriceCard(cards, "跌幅最大", changes[biggestFall] <= -movementThreshold ? changes[biggestFall] : (double?)null, GameSession.PriceGroups[biggestFall]);
 
@@ -187,7 +201,8 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(heading, $"报价走势 · {new GameDate(days[0].Day)} — {new GameDate(days[days.Length - 1].Day)}", 17), -1, 34, 1);
             if (selected >= 0) Ui.Size(Ui.Button(heading, "返回综合走势", () => select(-1), 16), 140, 32);
             DrawPriceTrend(parent, days, values);
-            Para(parent, "基准报价为 100，综合物价按品类等权计算。房产一栏为挂牌报价指数，已签租约沿用签约价。", 15, Ui.Dim);
+            Para(parent, days.Length == 1 ? "本期只有一份报价，累计两天的记录后可比较涨跌。"
+                : "折线以基准日为 100，各品类等权计算综合物价。商品为品类参考均价，房产为挂牌报价指数。", 15, Ui.Dim);
 
             int propertyStart = GameSession.PropertyPriceGroupStart;
             DrawPriceGroupRows("住宅与商铺", propertyStart, changes.Length);
@@ -196,20 +211,21 @@ namespace PCShopSell.Game.UI
 
             void DrawPriceGroupRows(string title, int first, int last)
             {
+                bool property = first >= propertyStart;
                 var header = Ui.Row(parent, 28);
                 Ui.Size(Ui.Label(header, title, 18, color: Ui.Accent), -1, 28, 1);
-                foreach (string label in new[] { "基准报价", "期末报价", "本期涨跌" })
+                string unit = property ? "指数" : "报价";
+                foreach (string label in new[] { "基准" + unit, (ongoing ? "最新" : "期末") + unit, "本期涨跌" })
                     EconomicStoreCell(header, label, Ui.Dim);
                 for (int group = first; group < last; group++)
                 {
                     int index = group;
-                    bool property = index >= propertyStart;
                     string Quote(double[] prices) => property
                         ? (prices[index] / 100).ToString("0.00")
                         : "¥" + (prices[index] / 100).ToString("#,0.##");
                     var row = Ui.Row(parent, 32);
                     Ui.Size(Ui.Button(row, GameSession.PriceGroups[index] + "  ›", () => select(index), 16,
-                        Ui.SelectedButton(selected == index)), -1, 30, 1);
+                        Ui.SelectedButton(selected == index)), -1, 30, 1).name = "EconomicPriceGroup_" + index;
                     EconomicStoreCell(row, Quote(baseline), Ui.TextColor);
                     EconomicStoreCell(row, Quote(closing), Ui.TextColor);
                     EconomicStoreCell(row, days.Length == 1 ? "—" : PriceMovement(changes[index]), PriceMovementColor(changes[index]));
@@ -219,12 +235,12 @@ namespace PCShopSell.Game.UI
 
         private void AddPriceCard(Transform row, string title, double? change, string groupName = null)
         {
-            var card = Ui.Size(Ui.Panel(row, "PriceSummary", Ui.PanelBg2), -1, 84, 1).rectTransform;
+            var card = Ui.Size(Ui.Panel(row, "PriceSummary", Ui.PanelBg2), 0, 84, 1).rectTransform;
             Ui.VList(card, 1, 8);
-            Line(card, title, 15, Ui.Dim);
-            Line(card, change.HasValue ? PriceMovement(change.Value) : "—", 23,
-                change.HasValue ? PriceMovementColor(change.Value) : Ui.Dim);
-            if (change.HasValue && groupName != null) Line(card, groupName, 15);
+            Ui.Size(Line(card, title, 15, Ui.Dim), -1, 20);
+            Ui.Size(Line(card, change.HasValue ? PriceMovement(change.Value) : "—", 23,
+                change.HasValue ? PriceMovementColor(change.Value) : Ui.Dim), -1, 26);
+            if (change.HasValue && groupName != null) Ui.Size(Line(card, groupName, 15), -1, 20);
         }
 
         private static string PriceMovement(double change) => Math.Abs(change) < 0.005 ? "持平" : change.ToString("+0.00;-0.00") + "%";
@@ -237,7 +253,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(chart, -1, height + 36);
             var area = Ui.Rect(chart.transform, "Plot");
             area.anchorMin = area.anchorMax = new Vector2(0, 0);
-            area.pivot = Vector2.zero; area.anchoredPosition = new Vector2(24, 26); area.sizeDelta = new Vector2(width, height);
+            area.pivot = Vector2.zero; area.anchoredPosition = new Vector2(56, 26); area.sizeDelta = new Vector2(width, height);
             double min = Math.Min(100, values.Min()), max = Math.Max(100, values.Max());
             double pad = Math.Max(1, (max - min) * 0.15);
             min -= pad; max += pad;
@@ -246,9 +262,9 @@ namespace PCShopSell.Game.UI
                 float y = j * height / 2;
                 var grid = Ui.Panel(area, "Grid", new Color(1, 1, 1, 0.13f));
                 grid.rectTransform.Anchor(0, j / 2f, 1, j / 2f, 0, 0, 0, -1);
-                var label = Ui.Label(area, (min + (max - min) * j / 2).ToString("0.0"), 12, TextAnchor.MiddleLeft, Ui.Dim);
+                var label = Ui.Label(area, (min + (max - min) * j / 2).ToString("0.0"), 12, TextAnchor.MiddleRight, Ui.Dim);
                 label.rectTransform.anchorMin = label.rectTransform.anchorMax = Vector2.zero;
-                label.rectTransform.pivot = new Vector2(0, 0); label.rectTransform.anchoredPosition = new Vector2(0, y); label.rectTransform.sizeDelta = new Vector2(60, 18);
+                label.rectTransform.pivot = new Vector2(1, .5f); label.rectTransform.anchoredPosition = new Vector2(-8, y); label.rectTransform.sizeDelta = new Vector2(44, 18);
             }
             Vector2 previous = Vector2.zero;
             int dateStep = Math.Max(1, Mathf.CeilToInt((values.Length - 1) / 7f));

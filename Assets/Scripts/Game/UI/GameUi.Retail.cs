@@ -259,7 +259,7 @@ namespace PCShopSell.Game.UI
                 {
                     furnitureShopKind = FurnitureShops.AllKinds.First(k => RetailShopTypes.Name(k) == tab);
                     selectedOffers = offers.Select(o => (offer: o, order: FurnitureShops.ShopOrder(furnitureShopKind, o.Furniture)))
-                        .Where(x => x.order >= 0).OrderBy(x => x.order).ThenBy(x => x.offer.Price.Cents)
+                        .Where(x => x.order >= 0).OrderBy(x => x.order)
                         .Select(x => x.offer).ToList();
                 }
                 else selectedOffers = offers.Where(o => o.Group == tab).ToList();
@@ -267,6 +267,7 @@ namespace PCShopSell.Game.UI
             string facility = PurchaseFacets.All;
             if (mall)
             {
+                selectedOffers = FurnitureShops.GroupPurchaseVariants(selectedOffers, offer => offer.Furniture).ToList();
                 var facilityTabs = new[] { PurchaseFacets.All, "电器", "非电器", "装饰" }
                     .Where(group => group == PurchaseFacets.All || selectedOffers.Any(o => o.Group == group)).ToArray();
                 if (facilityTabs.Length > 2) facility = ShopTabs(w, source, facilityTabs, filterKey: "facility", label: "设施");
