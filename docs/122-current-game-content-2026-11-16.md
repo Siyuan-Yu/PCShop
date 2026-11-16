@@ -5,7 +5,7 @@
 ## 版本与运行
 
 - 当前源码在 Unity **2022.3.6f1** 中打开，主场景为 `Assets/Scenes/Main.unity`。打开主场景并进入 Play，可在主菜单开始游戏或读取存档。客户端默认窗口化，设置可调分辨率、音量和菜单语言。
-- GitHub 的 Windows x64 试玩包 `windows-20261116-184538` 对应提交 `b6abc9a`。完整解压后运行 `PCShopSell.exe`。本轮源码的改动待下次生成 Windows 试玩包。[Windows 下载](https://github.com/Siyuan-Yu/PCShop/releases/tag/windows-20261116-184538) · [该包的规则和校验记录](121-current-game-content-windows-2026-11-16.md)
+- Windows 测试包留在本机。需要验收构建时，可按[本地构建与验证](#本地构建与验证)生成 Windows x64 客户端。此前版本的测试结果见[构建归档](121-current-game-content-windows-2026-11-16.md)。
 
 | 本轮更新 | 当前规则 |
 | --- | --- |

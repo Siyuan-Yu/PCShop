@@ -1,10 +1,10 @@
-# PCShopSell 当前完整内容与 Windows 交付
+# PCShopSell Windows 构建与玩法归档
 
-更新于 2026 年 11 月 16 日。本文记录这次 Windows 试玩包实际包含的功能、规则和验收范围。早期专题按原版本保留，操作以本文和当前源码为准。项目仍在开发中。
+记录于 2026 年 11 月 16 日。本文归档提交 `b6abc9a` 的 Windows x64 构建、玩法和验收情况。现行规则和工程入口见[当前交接文档](122-current-game-content-2026-11-16.md)。
 
-## 下载与运行
+## 本地运行与构建记录
 
-从 [Windows x64 试玩包](https://github.com/Siyuan-Yu/PCShop/releases/tag/windows-20261116-184538) 下载 `PCShopSell-Windows-20261116-184538-full.zip`。完整解压到一个目录，再运行 `PCShopSell.exe`。首次启动从菜单开始新游戏或加载已有存档。客户端默认窗口化，设置可调分辨率、音量和菜单语言。
+从本机构建目录运行 `PCShopSell.exe`。首次启动可在菜单开始新游戏或加载已有存档。客户端默认窗口化，设置可调分辨率、音量和菜单语言。
 
 | 项目 | 构建记录 |
 | --- | --- |

@@ -4,8 +4,6 @@
 
 本轮更新包含住处装修、设施任务清单、农贸市场鱼类页签、装机和鱼餐派单频率、家具城营业时间，以及倍速和配送入口的界面调整。
 
-**已发布的 Windows 试玩包** · [下载 Windows x64](https://github.com/Siyuan-Yu/PCShop/releases/tag/windows-20261116-184538) · [该包的内容与校验记录](docs/121-current-game-content-windows-2026-11-16.md)
-
 **此前试玩交接（2026-11-16）**：[第 119 篇　试玩反馈、规则与验证](docs/119-playtest-fixes-and-handoff-2026-11-16.md)。涵盖快捷键、采购和二手店、银行和证券、到场预约、手动活动、赛车登记及四条赛道扩建。原有玩法全景见[第 118 篇](docs/118-current-project-handoff-2026-11-16.md)。
 
 **自定义目的地**已按原型接入 Unity。底栏可打开地点搜索、类型和街区筛选，从详情直接出发或保存快捷位。[第 120 篇　交互与验收](docs/120-custom-destination-picker.md)。
@@ -202,6 +200,8 @@ UI整理已落实：[第50篇：保留员工部分的UI整理](docs/50-ui-cleanu
 - `Assets/Scripts/Core`：纯 C# 逻辑（无 UnityEngine 依赖）
 - `Assets/Scripts/Game`：Unity 层
 - `Assets/Tests/EditMode`：单元测试
+
+Windows 测试包留在本机。GitHub 用于同步源码和文档，工程构建与验收见[当前交接文档](docs/122-current-game-content-2026-11-16.md#本地构建与验证)。
 
 运行测试（命令行）：
 
