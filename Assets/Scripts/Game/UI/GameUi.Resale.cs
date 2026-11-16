@@ -17,7 +17,7 @@ namespace PCShopSell.Game.UI
         private static UsedItem[][] PendingUsedItems(SpecialBusinessState state)
         {
             var pending = state.Used.Where(item => !item.Sold && !item.Listed).ToLookup(item =>
-                !item.Owned ? 0 : item.Inspected ? 2 : 1);
+                item.WaitingForPurchase ? 0 : item.Inspected ? 2 : 1);
             return Enumerable.Range(0, UsedDeskTabs.Length).Select(tab => pending[tab].ToArray()).ToArray();
         }
 
@@ -44,7 +44,15 @@ namespace PCShopSell.Game.UI
                 var label = Ui.Label(cell.transform, $"{UsedDeskTabs[i]} {pending[i].Length}", 16, TextAnchor.MiddleCenter);
                 label.rectTransform.Fill();
             }
-            Ui.Size(Ui.Button(card, "打开收购鉴定台  ›", OpenUsedDesk, 17, Ui.ButtonBg), -1, 36);
+            var openDesk = Ui.Size(Ui.Button(card, "打开收购鉴定台  ›", OpenUsedDesk, 17, Ui.ButtonHot), -1, 36);
+            openDesk.name = "OpenUsedDesk";
+            if (pending[0].Length > 0)
+            {
+                var dot = Ui.Label(openDesk.transform, "●", 18, TextAnchor.MiddleCenter, Ui.FlatDown);
+                dot.name = "UsedSellerWaitingDot";
+                dot.rectTransform.Anchor(1, .5f, 1, .5f, -32, -12, 12, -12);
+                dot.gameObject.AddComponent<Outline>().effectColor = Ui.PanelBg;
+            }
             BuildUsedDelegation(card, state);
             BuildUsedCheckout();
         }
@@ -143,9 +151,10 @@ namespace PCShopSell.Game.UI
                 var body = Ui.Row(w.Content, 350, 10);
                 var list = Ui.Scroll(body);
                 Ui.Size((RectTransform)list.parent.parent, 258, 350);
-                foreach (var item in items)
+                for (int i = 0; i < items.Length; i++)
                 {
-                    string subtitle = tab == 0 ? $"{UsedSellerName(item)} · 要价 ¥{item.Asking:N0}" :
+                    var item = items[i];
+                    string subtitle = tab == 0 ? $"第 {i + 1} 位 · {UsedSellerName(item)} · 要价 ¥{item.Asking:N0}" :
                         tab == 1 ? $"收购成本 ¥{item.Cost:N0}" : GameSession.UsedConditionName(item);
                     var entry = Ui.Size(Ui.Button(list, $"{UsedItemTitle(item)}\n{subtitle}",
                         () => Select(tab, item.Id), 16, Ui.SelectedButton(item.Id == selectedId)), -1, 60);
@@ -153,7 +162,6 @@ namespace PCShopSell.Game.UI
                 }
 
                 var detail = Ui.Size(Ui.Panel(body, "UsedItemDetail", Ui.PanelBg2), -1, 350, 1).rectTransform;
-                Ui.VList(detail, 8, 14);
                 BuildUsedItemAction(detail, selected, nextTab =>
                 {
                     RebuildDock();
@@ -162,9 +170,24 @@ namespace PCShopSell.Game.UI
             }, scrollContent: false);
         }
 
-        private void BuildUsedItemAction(Transform parent, UsedItem item, Action<int> refresh)
+        private void BuildUsedItemAction(RectTransform detail, UsedItem item, Action<int> refresh)
         {
+            var parent = Ui.Scroll(detail);
+            ((RectTransform)parent.parent.parent).Anchor(0, 0, 1, 1, 14, 64, 14, 14);
+            var actions = Ui.Rect(detail, "UsedItemActions").Anchor(0, 0, 1, 0, 14, 14, 14, -56);
             int id = item.Id;
+            void Primary(string name, string caption, Action action)
+            {
+                var button = Ui.Button(actions, caption, action, 17, Ui.ButtonHot);
+                button.name = name + id;
+                button.image.rectTransform.Anchor(0, 0, 1, 1, 0, 0, 96);
+            }
+            Button Secondary(string caption, Action action)
+            {
+                var button = Ui.Button(actions, caption, action, 16, Ui.Warn);
+                button.image.rectTransform.Anchor(1, 0, 1, 1, -90);
+                return button;
+            }
             var key = (S.CurrentShop.Place.Id, id);
             void Complete(bool succeeded, int nextTab)
             {
@@ -187,16 +210,15 @@ namespace PCShopSell.Game.UI
                     Line(parent, item.ArtifactIdentified ? "收购师判断 · " + GameSession.UsedConditionName(item)
                         : "收购师暂时看不准真伪。", 16, Ui.Dim);
                 var bid = UsedAmountEditor(parent, "我的报价", Draft(item.Asking), 1, 1, 1000000, SaveDraft);
-                var actions = Ui.Row(parent, 42);
-                Ui.Size(Ui.Button(actions, "出价收购", () => Complete(S.OfferUsedPrice(id, bid()), 1), 17, Ui.ButtonHot), -1, 42, 1);
-                Ui.Size(Ui.Button(actions, "拒收", () => Complete(S.DeclineUsedSeller(id), 0), 16, Ui.Warn), 90, 42)
+                Primary("BuyUsed_", "出价收购", () => Complete(S.OfferUsedPrice(id, bid()), 1));
+                Secondary("拒收", () => Complete(S.DeclineUsedSeller(id), 0))
                     .name = "DeclineUsed_" + id;
                 return;
             }
             if (!item.Inspected)
             {
                 Line(parent, $"收购成本 ¥{item.Cost:N0} · 尚未鉴定", 17, Ui.Dim);
-                Ui.Size(Ui.Button(parent, "检查状态", () => Complete(S.InspectUsed(id), 2), 17, Ui.ButtonBg), -1, 42);
+                Primary("InspectUsed_", "检查状态", () => Complete(S.InspectUsed(id), 2));
                 return;
             }
 
@@ -205,11 +227,18 @@ namespace PCShopSell.Game.UI
             if (GameSession.UsedSaleReputation(item) > 0)
                 Line(parent, $"顾客付款后 · 名望 +{GameSession.UsedSaleReputation(item):0.#}", 16, Ui.Good);
             var price = UsedAmountEditor(parent, "出售标价", Draft(Math.Max(1, item.Price)), 1, 1, 1000000, SaveDraft);
-            var listing = Ui.Row(parent, 42);
-            Ui.Size(Ui.Button(listing, "确认售价并上架", () => Complete(TryListUsedItem(id, price()), 2), 17, Ui.ButtonHot), -1, 42, 1)
-                .name = "ListUsed_" + id;
-            Ui.Size(Ui.Button(listing, "丢弃", () => ConfirmBusiness("丢弃旧物", "将损失这件旧物及收购成本。",
-                () => Complete(S.DiscardUsed(id), 2)), 16, Ui.Warn), 90, 42);
+            int NextQueuedTab()
+            {
+                var pending = PendingUsedItems(S.SpecialBusiness(S.CurrentShop.Place.Id));
+                if (pending[0].Length > 0) return 0;
+                return pending[1].Length > 0 ? 1 : 2;
+            }
+            Primary("ListUsed_", "确认售价并上架", () =>
+            {
+                if (TryListUsedItem(id, price())) Complete(true, NextQueuedTab());
+            });
+            Secondary("丢弃", () => ConfirmBusiness("丢弃旧物", "将损失这件旧物及收购成本。",
+                () => Complete(S.DiscardUsed(id), 2)));
         }
 
         private bool TryListUsedItem(int id, long price)

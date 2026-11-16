@@ -875,6 +875,52 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void UsedDeskButtonShowsAWarningDotWhileSellersAreWaiting()
+        {
+            using var r = new Rig();
+            Assert.True(r.S.SetShopMainCategory("secondhand"));
+            var shop = r.S.CurrentShop;
+            shop.Layout.Clear();
+            var furniture = GameSession.OpeningFurniture("secondhand");
+            for (int i = 0; i < furniture.Length; i++)
+                shop.Layout.Add(new PlacedFurniture { Id = furniture[i], X = i + 1, Z = 2 });
+            shop.Sim.ForcedClosed = false;
+            var state = r.S.SpecialBusiness(shop.Place.Id);
+            state.NextVisit = long.MaxValue;
+            r.Ui.OpenDock();
+            r.Ui.DebugSelectTab(0);
+
+            Transform WaitingDot() => r.Button("OpenUsedDesk").transform.Find("UsedSellerWaitingDot");
+            Assert.AreEqual(Ui.ButtonHot, r.Button("OpenUsedDesk").image.color);
+            Assert.IsNull(WaitingDot());
+
+            var seller = new UsedItem { Id = 1, Minimum = 20, ExpiresAt = r.S.Clock.Now.TotalMinutes + 60 };
+            state.Used.Add(seller);
+            r.Call("RefreshDock");
+            Assert.IsNotNull(WaitingDot());
+            Assert.False(WaitingDot().GetComponent<Text>().raycastTarget);
+
+            Assert.True(r.S.OfferUsedPrice(seller.Id, 40));
+            r.Call("RefreshDock");
+            Assert.IsNull(WaitingDot());
+            StringAssert.Contains("待鉴定 1", r.Text);
+
+            state.Used.Add(new UsedItem { Id = 2, ExpiresAt = seller.ExpiresAt });
+            r.Call("RefreshDock");
+            Assert.IsNotNull(WaitingDot());
+            Assert.True(r.S.DeclineUsedSeller(2));
+            r.Call("RefreshDock");
+            Assert.IsNull(WaitingDot());
+
+            state.Used.Add(new UsedItem { Id = 3, ExpiresAt = r.S.Clock.Now.TotalMinutes + 1 });
+            r.Call("RefreshDock");
+            Assert.IsNotNull(WaitingDot());
+            r.S.AdvanceClock(2);
+            r.Call("RefreshDock");
+            Assert.IsNull(WaitingDot());
+        }
+
+        [Test]
         public void GlobalPriceSliderOnlyCommitsOnExplicitConfirmation()
         {
             using (var r = new Rig())

@@ -664,6 +664,7 @@ namespace PCShopSell.Game.Runtime
         public void SetActive(bool on)
         {
             _root.gameObject.SetActive(on);
+            if (!on && _wasOn) ClearUsedSellerFigures();
             if (on && !_wasOn)
             {
                 _owner.transform.localPosition = new Vector3(_doorX, 0, 0.9f);
@@ -1012,14 +1013,13 @@ namespace PCShopSell.Game.Runtime
             }
             _assemblerStand = FindAssemblerStand();
             _salesStand = FindAssemblerStand(true);
-            if (_usedBuyDesk != null)
-                _usedSellerStand = FindStaffStand(UsedDeskStand(_usedBuyDesk, seller: true), System.Array.Empty<Vector3>());
             _shelfSpots.AddRange(deskSpots);
             _deskFront = _deskFoots.Count > 0 ? new Vector3(_deskFoots[0].center.x, 0, _deskFoots[0].yMin - 0.4f) : Vector3.zero;
             if (deskSpots.Count > 0) _deskFront = deskSpots[0] - Origin;
             // 顾客走路绕开所有地面家具（货架、柜台、展示桌、沙发……）
             foreach (Rect r in _decor.Blockers)
                 _walkAround.Add(Grow(new Rect(r.x + Origin.x,r.y + Origin.z,r.width,r.height),BodyRadius));
+            RebuildUsedSellerStands();
             _stockTimer = 0f;
         }
         /// <summary>营业：门头绿招牌、顶灯全亮；关门：门头变暗红、挂“休息中”牌 + 拦带、顶灯调暗。</summary>
@@ -1082,7 +1082,7 @@ namespace PCShopSell.Game.Runtime
                 }
                 var occupied = new List<Vector3>();
                 var usedDesk = session.CurrentShop.RetailKind == "secondhand" ? _usedBuyDesk : null;
-                if (usedDesk != null) occupied.Add(_usedSellerStand);
+                if (usedDesk != null) occupied.AddRange(_usedSellerStands);
                 foreach (var employee in staff.OrderBy(e => e.Role == EmployeeRole.Cashier ? 0
                     : usedDesk != null && e.Role == EmployeeRole.Appraiser ? 1 : 2))
                 {
@@ -1125,21 +1125,24 @@ namespace PCShopSell.Game.Runtime
             }
         }
 
-        private Vector3 FindStaffStand(Vector3 preferred, IReadOnlyList<Vector3> occupied)
+        private Vector3 FindStaffStand(Vector3 preferred, IReadOnlyList<Vector3> occupied) =>
+            TryFindIndoorStand(preferred, occupied, .24f, out var stand) ? stand : ClampIndoorNpc(Origin + preferred) - Origin;
+
+        private bool TryFindIndoorStand(Vector3 preferred, IReadOnlyList<Vector3> occupied, float clearance, out Vector3 best)
         {
-            Vector3 best = ClampIndoorNpc(Origin+preferred)-Origin;
+            best = default;
             float bestScore = float.PositiveInfinity;
             for (float x = BodyRadius; x <= Width - BodyRadius; x += .2f)
                 for (float z = BodyRadius; z <= Depth - BodyRadius; z += .2f)
                 {
                     var point = new Vector3(x, 0, z);
-                    if (_decor.Blockers.Any(r => new Rect(r.xMin - .24f, r.yMin - .24f, r.width + .48f, r.height + .48f).Contains(new Vector2(x, z)))
+                    if (_decor.Blockers.Any(r => Grow(r, clearance).Contains(new Vector2(x, z)))
                         || occupied.Any(p => (p - point).sqrMagnitude < .81f)) continue;
                     float score = (point - preferred).sqrMagnitude;
                     if (score >= bestScore) continue;
                     bestScore = score; best = point;
                 }
-            return best;
+            return !float.IsPositiveInfinity(bestScore);
         }
 
         private void BuildEmergencyFixture()
@@ -1252,7 +1255,7 @@ namespace PCShopSell.Game.Runtime
             foreach (GameObject g in _buildGlow) g.SetActive(building);
             UpdatePetBoardingView(s, realDt);
             UpdateStaff(s);
-            UpdateSpecialBusinessVisuals(s);
+            UpdateSpecialBusinessVisuals(s, dt);
             UpdateRestaurantPlayer(s);
 
             // Shelf meshes are presentation, not simulation. 8x must not rebuild
@@ -1818,6 +1821,7 @@ namespace PCShopSell.Game.Runtime
 
         public void Clear()
         {
+            ClearUsedSellerFigures();
             foreach (var v in _visitors.Values) Kill.It(v.Go);
             foreach (var v in _leaving) Kill.It(v.Go);
             _visitors.Clear();

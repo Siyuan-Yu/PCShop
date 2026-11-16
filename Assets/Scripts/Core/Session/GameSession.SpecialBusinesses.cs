@@ -19,6 +19,7 @@ namespace PCShopSell.Core.Session
         public long SalePrice,SoldAt;
         public bool Owned, Inspected, Listed, Sold;
         public bool ArtifactAssessmentMade, ArtifactIdentified;
+        public bool WaitingForPurchase => !Owned && !Listed && !Sold;
         public UsedItem Copy() => (UsedItem)MemberwiseClone();
     }
     [Serializable] public sealed class DiningOrder
@@ -67,6 +68,8 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         private readonly Dictionary<string,SpecialBusinessState> _specialBusinesses=new Dictionary<string,SpecialBusinessState>();
+        public const int UsedSellerQueueLimit = 5;
+        public const int UsedSellerWaitMinutes = 8 * 60;
         public const int ArtifactProduct = 4;
         public const double ArtifactSaleReputation = 1;
         public const int GenuineArtifactValue = 10000;
@@ -144,6 +147,9 @@ namespace PCShopSell.Core.Session
             if (shop.RetailKind == "restaurant")
                 return _specialBusinesses.TryGetValue(shop.Place.Id, out var state)
                     && state.Orders.Any(order => !order.IsFishOrder && GuestStillHere(order)) && CanServeSpecialShop(shop, Clock.Now, SpecialPlayer(shop));
+            if (shop.RetailKind == "secondhand" && _specialBusinesses.TryGetValue(shop.Place.Id, out var usedState)
+                && usedState.Used.Any(item => item.WaitingForPurchase) && CanServeSpecialShop(shop, Clock.Now, SpecialPlayer(shop)))
+                return true;
             return shop.Sim.ActiveCustomers.Count > 0 && shop.Sim.CanServeAt(Clock.Now, shop.Sim.PlayerPresent);
         }
 
@@ -166,13 +172,13 @@ namespace PCShopSell.Core.Session
                         bool canServe = CanServeSpecialShop(shop, now, SpecialPlayer(shop));
                         TickRestaurant(shop, state, now, inHours && canServe, canServe);
                     }
-                    else TickUsedShop(shop, state, now, SpecialOpen(shop, now));
+                    else TickUsedShop(shop, state, now);
                 }
             }
         }
         private UsedItem CreateSeller(SpecialBusinessState state,long now)
         {
-            var item = new UsedItem { Id = state.NextId++, Statement = Random.Next(0, 4), ExpiresAt = now + 90 };
+            var item = new UsedItem { Id = state.NextId++, Statement = Random.Next(0, 4), ExpiresAt = now + UsedSellerWaitMinutes };
             item.SellerId = Random.Next(0, SellerNames.Length);
             item.Personality = item.SellerId % SellerPersonalities.Length;
             if (Random.Chance(.02))
@@ -195,7 +201,7 @@ namespace PCShopSell.Core.Session
         private bool BuyUsed(OwnedShop shop,SpecialBusinessState state,UsedItem item,long bid,long at=-1)
         {
             long minute=at<0?Clock.Now.TotalMinutes:at;
-            if(item==null||item.Owned||item.ExpiresAt<minute||bid<1||bid>1000000)return false;
+            if(item==null||!item.WaitingForPurchase||item.ExpiresAt<=minute||bid<1||bid>1000000)return false;
             if(state.BudgetDay!=(int)(minute/1440)){state.BudgetDay=(int)(minute/1440);state.SpentToday=0;}
             if(bid<item.Minimum)return Fail("卖家没有接受这个报价，可提高报价或放弃。");
             if(state.Used.Count(i=>i.Owned&&!i.Sold)>=20)return Fail("最多暂存20件旧物，请先卖出或清理库存。");
@@ -205,13 +211,13 @@ namespace PCShopSell.Core.Session
         }
         public bool OfferUsedPrice(int id,long bid)
         {
-            if(!SpecialPlayer(CurrentShop)||CurrentShop.RetailKind!="secondhand"||!SpecialOpen(CurrentShop,Clock.Now))return Fail("请在营业中的二手店收购台操作。");
+            if(!SpecialPlayer(CurrentShop)||CurrentShop.RetailKind!="secondhand"||!CanServeSpecialShop(CurrentShop,Clock.Now,true))return Fail("请到可以接待卖家的二手旧物店办理收购。");
             var s=SpecialBusiness(CurrentShop.Place.Id);return BuyUsed(CurrentShop,s,s.Used.FirstOrDefault(i=>i.Id==id),bid);
         }
         public bool DeclineUsedSeller(int id)
         {
             if(!SpecialPlayer(CurrentShop))return false;var s=SpecialBusiness(CurrentShop.Place.Id);
-            bool removed=s.Used.RemoveAll(i=>i.Id==id&&!i.Owned)>0;
+            bool removed=s.Used.RemoveAll(i=>i.Id==id&&i.WaitingForPurchase)>0;
             if(removed)Say("已拒收，卖家带走物品，没有扣款。");return removed;
         }
         public bool InspectUsed(int id)
@@ -247,20 +253,23 @@ namespace PCShopSell.Core.Session
             return SpecialBusiness(CurrentShop.Place.Id).Used.RemoveAll(i=>i.Id==id&&i.Owned&&!i.Sold)>0;
         }
         public static double AppraiserAccuracy(int intelligence)=>.3+.006*Math.Max(0,Math.Min(100,intelligence));
-        private void TickUsedShop(OwnedShop shop,SpecialBusinessState state,GameTimestamp now,bool open)
+        private void TickUsedShop(OwnedShop shop,SpecialBusinessState state,GameTimestamp now)
         {
             long minute=now.TotalMinutes;
             if(state.BudgetDay!=now.Date.TotalDays){state.BudgetDay=now.Date.TotalDays;state.SpentToday=0;}
-            state.Used.RemoveAll(i=>!i.Owned&&i.ExpiresAt<minute);
-            if(!open)return;
-            if(minute>=state.NextVisit)
+            state.Used.RemoveAll(i=>i.WaitingForPurchase&&i.ExpiresAt<=minute);
+            bool inHours=shop.Sim.InHours(now);
+            if(!inHours&&!state.Used.Any(i=>i.WaitingForPurchase))return;
+            if(!CanServeSpecialShop(shop,now,SpecialPlayer(shop)))return;
+            if(inHours&&minute>=state.NextVisit)
             {
                 state.NextVisit=minute+(long)Math.Ceiling(SpecialVisitInterval(shop,45)/ShopPowerTraffic(shop,now));
-                if(!state.Used.Any(i=>!i.Owned)&&state.Used.Count(i=>i.Owned&&!i.Sold)<20)state.Used.Add(CreateSeller(state,minute));
+                if(state.Used.Count(i=>i.WaitingForPurchase)<UsedSellerQueueLimit&&state.Used.Count(i=>i.Owned&&!i.Sold)<20)
+                    state.Used.Add(CreateSeller(state,minute));
             }
             var worker=SpecialWorkers(shop,EmployeeRole.Appraiser,now).OrderByDescending(e=>e.Intelligence).FirstOrDefault();
             if(worker==null)return;
-            var seller=state.Used.FirstOrDefault(i=>!i.Owned&&i.ExpiresAt>minute);
+            var seller=state.Used.FirstOrDefault(i=>i.WaitingForPurchase);
             if (seller?.Product == ArtifactProduct && !seller.ArtifactAssessmentMade)
             {
                 seller.ArtifactAssessmentMade = true;

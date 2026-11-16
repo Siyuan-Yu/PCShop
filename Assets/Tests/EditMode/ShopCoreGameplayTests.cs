@@ -493,9 +493,25 @@ namespace PCShopSell.Tests
                     var refused=Seller(s);ui.OpenDock();ui.OpenUsedDesk();Button("DeclineUsed_"+refused.Id).onClick.Invoke();
                     Assert.IsEmpty(s.SpecialBusiness("pc").Used);
                     Assert.True(ui.CloseTopWindow());
-                    var item=Seller(s);Assert.True(s.OfferUsedPrice(item.Id,40));Assert.True(s.InspectUsed(item.Id));
-                    Assert.True(s.SetShelfKind(2,"drink"));
+                    var item=Seller(s);
+                    var nextSeller=Seller(s);
                     ui.OpenUsedDesk();
+                    Vector3[] Corners(string name)
+                    {
+                        Canvas.ForceUpdateCanvases();
+                        var corners = new Vector3[4];
+                        Button(name).image.rectTransform.GetWorldCorners(corners);
+                        Assert.Greater(Vector3.Distance(corners[0], corners[2]), 0);
+                        return corners;
+                    }
+                    var buyPosition = Corners("BuyUsed_" + item.Id);
+                    Button("BuyUsed_"+item.Id).onClick.Invoke();
+                    Assert.True(item.Owned);
+                    CollectionAssert.AreEqual(buyPosition, Corners("InspectUsed_" + item.Id));
+                    Button("InspectUsed_"+item.Id).onClick.Invoke();
+                    Assert.True(item.Inspected);
+                    CollectionAssert.AreEqual(buyPosition, Corners("ListUsed_" + item.Id));
+                    Assert.True(s.SetShelfKind(2,"drink"));
                     Button("ListUsed_"+item.Id).onClick.Invoke();
                     var warning = ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Transform>())
                         .Single(t=>t.name=="Window_暂时无法上架");
@@ -505,6 +521,7 @@ namespace PCShopSell.Tests
                     Assert.True(ui.CloseTopWindow());
                     Assert.True(s.SetShelfKind(2,"secondhand"));
                     Button("ListUsed_"+item.Id).onClick.Invoke();Assert.True(item.Listed);Assert.IsNull(Button("ListUsed_"+item.Id));
+                    CollectionAssert.AreEqual(buyPosition, Corners("BuyUsed_" + nextSeller.Id));
                     Assert.True(ui.CloseTopWindow());
                     ui.DebugSelectTab(2);
                     Assert.True(ui.Canvases.SelectMany(c=>c.GetComponentsInChildren<Transform>()).Any(t=>t.name=="UsedStock_"+item.Id));
@@ -516,6 +533,38 @@ namespace PCShopSell.Tests
                 }
                 finally{ui.CloseAllWindows();foreach(var canvas in ui.Canvases)UnityEngine.Object.DestroyImmediate(canvas.gameObject);UnityEngine.Object.DestroyImmediate(root);if(existing==null&&UnityEngine.EventSystems.EventSystem.current!=null)UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);}
             }
+        }
+
+        [Test]
+        public void UsedSellersQueueUpToFiveAndWaitEightHoursThroughSaveAndClosing()
+        {
+            using var s = Make("secondhand");
+            s.PlayerShop.Settings.BaseCustomersPerHour = 0;
+            var state = s.SpecialBusiness("pc");
+            long firstArrival = s.Clock.Now.TotalMinutes + 1;
+            for (int visit = 0; visit < GameSession.UsedSellerQueueLimit + 1; visit++)
+            {
+                state.NextVisit = s.Clock.Now.TotalMinutes + 1;
+                s.AdvanceClock(1);
+            }
+            Assert.AreEqual(5, state.Used.Count);
+            Assert.AreEqual(firstArrival + 8 * 60, state.Used[0].ExpiresAt);
+            state.NextVisit = s.Clock.Now.TotalMinutes + 1;
+            s.PlayerShop.SetHours(8 * 60, s.Clock.MinuteOfDay);
+            s.AdvanceClock(1);
+            Assert.True(s.ShopFinishingService(s.CurrentShop));
+            Assert.True(s.OfferUsedPrice(state.Used[2].Id, state.Used[2].Asking));
+            s.AdvanceClock(1);
+            Assert.AreEqual(4, state.Used.Count(item => item.WaitingForPurchase));
+
+            using var loaded = Reload(s);
+            var waiting = loaded.SpecialBusiness("pc").Used.Where(item => item.WaitingForPurchase).ToArray();
+            CollectionAssert.AreEqual(state.Used.Where(item => item.WaitingForPurchase).Select(item => item.Id), waiting.Select(item => item.Id));
+            loaded.AdvanceClock((int)(waiting[0].ExpiresAt - loaded.Clock.Now.TotalMinutes) - 1);
+            Assert.Contains(waiting[0], loaded.SpecialBusiness("pc").Used);
+            loaded.AdvanceClock(1);
+            Assert.False(loaded.SpecialBusiness("pc").Used.Contains(waiting[0]));
+            Assert.Contains(waiting[1], loaded.SpecialBusiness("pc").Used);
         }
         [Test] public void ListedUsedItemCannotSellWithoutOrdinaryCustomerCheckout()
         {
@@ -577,14 +626,19 @@ namespace PCShopSell.Tests
             Assert.True(s.ArrangeEmployeeWork(worker.Id, "pc", EmployeeRole.Appraiser));
             CityTestPeople.AtAssignedWork(s, worker);
             var seller = Seller(s);
+            var nextSeller = Seller(s);
             var desk = s.CurrentShop.Layout.Single(furniture => furniture.Id == "used_buydesk");
             var root = new GameObject("UsedDeskPositions");
             try
             {
                 var view = new PCShopSell.Game.Runtime.ShopInteriorView(root.transform, s.PlayerShop.Size);
+                void Walk()
+                {
+                    for (int i = 0; i < 60; i++) view.Update(s, .1f, .1f);
+                }
                 void CheckPositions(Vector3 back)
                 {
-                    view.Update(s, 0, 0);
+                    Walk();
                     var figures = root.GetComponentsInChildren<Transform>();
                     var appraiser = figures.Single(t => t.name == "ShopEmployee_" + worker.Id);
                     var visitor = figures.Single(t => t.name == "SpecialCustomer_seller:" + seller.Id);
@@ -593,6 +647,9 @@ namespace PCShopSell.Tests
                     Assert.That(Vector3.Dot(visitor.localPosition - center, back), Is.InRange(-1.1f, -.5f));
                     Assert.Greater(Vector3.Dot(appraiser.localRotation * Vector3.forward,
                         (center - appraiser.localPosition).normalized), .99f);
+                    var waiting = figures.Single(t => t.name == "SpecialCustomer_seller:" + nextSeller.Id);
+                    Assert.That(Vector3.Distance(visitor.localPosition, waiting.localPosition), Is.GreaterThan(.85f));
+                    Assert.That(waiting.localPosition.z, Is.GreaterThan(0));
                 }
 
                 desk.X = 2.5;
@@ -601,6 +658,28 @@ namespace PCShopSell.Tests
                 desk.X = 4;
                 desk.Rot = 1;
                 CheckPositions(Vector3.right);
+
+                var newSeller = Seller(s);
+                view.Update(s, 0, 0);
+                var newcomer = root.GetComponentsInChildren<Transform>().Single(t => t.name == "SpecialCustomer_seller:" + newSeller.Id);
+                Assert.Less(newcomer.localPosition.z, 0);
+                Assert.True(s.DeclineUsedSeller(seller.Id));
+                Walk();
+                var queue = root.GetComponentsInChildren<Transform>();
+                Assert.False(queue.Any(t => t.name == "SpecialCustomer_seller:" + seller.Id));
+                Assert.Greater(newcomer.localPosition.z, 0);
+                var head = queue.Single(t => t.name == "SpecialCustomer_seller:" + nextSeller.Id);
+                Assert.That(head.localPosition.x - (float)desk.X, Is.InRange(-1.1f, -.5f));
+
+                for (int i = 2; i < GameSession.UsedSellerQueueLimit; i++) Seller(s);
+                Walk();
+                var positions = root.GetComponentsInChildren<Transform>()
+                    .Where(t => t.name.StartsWith("SpecialCustomer_seller:")).Select(t => t.localPosition).ToArray();
+                Assert.AreEqual(GameSession.UsedSellerQueueLimit, positions.Length);
+                Assert.True(positions.All(position => position.z > 0));
+                for (int i = 0; i < positions.Length; i++)
+                    for (int j = i + 1; j < positions.Length; j++)
+                        Assert.Greater(Vector3.Distance(positions[i], positions[j]), .85f);
             }
             finally { UnityEngine.Object.DestroyImmediate(root); }
         }

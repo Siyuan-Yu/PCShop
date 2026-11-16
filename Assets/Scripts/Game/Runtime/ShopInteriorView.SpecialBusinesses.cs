@@ -15,7 +15,17 @@ namespace PCShopSell.Game.Runtime
         public Vector3 SpecialFurnitureWorld {get;private set;}
         public string SpecialFurnitureName {get;private set;}
         private PlacedFurniture _usedBuyDesk;
-        private Vector3 _usedSellerStand;
+        private readonly List<Vector3> _usedSellerStands = new List<Vector3>();
+        private readonly Dictionary<int, UsedSellerFigure> _usedSellers = new Dictionary<int, UsedSellerFigure>();
+        private readonly List<int> _departedUsedSellers = new List<int>();
+        private string _usedSellerShopId;
+
+        private sealed class UsedSellerFigure
+        {
+            public GameObject Figure;
+            public readonly NpcRoute Route = new NpcRoute();
+            public bool Waiting;
+        }
 
         private static Vector3 UsedDeskCenter(PlacedFurniture desk) => new Vector3((float)desk.X, 0, (float)desk.Z);
 
@@ -33,15 +43,97 @@ namespace PCShopSell.Game.Runtime
             if (direction.sqrMagnitude > .01f) person.localRotation = Quaternion.LookRotation(direction);
         }
 
+        private void RebuildUsedSellerStands()
+        {
+            _usedSellerStands.Clear();
+            if (_usedBuyDesk == null) return;
+
+            Vector3 front = UsedDeskStand(_usedBuyDesk, seller: true);
+            Vector3 direction = (front - UsedDeskCenter(_usedBuyDesk)).normalized;
+            var occupied = new List<Vector3>
+            {
+                UsedDeskStand(_usedBuyDesk, seller: false),
+                new Vector3(_doorX, 0, .7f),
+            };
+            Vector3 preferred = front;
+            for (int slot = 0; slot < GameSession.UsedSellerQueueLimit; slot++)
+            {
+                if (!TryFindIndoorStand(preferred, occupied, BodyRadius, out Vector3 stand)) break;
+                _usedSellerStands.Add(stand);
+                occupied.Add(stand);
+                preferred = stand + direction * .95f;
+                if (slot == 0 && _hasCounter)
+                {
+                    occupied.Add(QueueSpot(0) - Origin);
+                    occupied.Add(QueueSpot(1) - Origin);
+                }
+            }
+        }
+
+        private UsedItem UpdateUsedSellerQueue(SpecialBusinessState state, float dt)
+        {
+            if (_usedSellerShopId != state.ShopId) ClearUsedSellerFigures();
+            foreach (var actor in _usedSellers.Values) actor.Waiting = false;
+            UsedItem atDesk = null;
+            int slot = 0;
+            foreach (var seller in state.Used)
+            {
+                if (!seller.WaitingForPurchase) continue;
+                if (slot >= _usedSellerStands.Count) break;
+                Vector3 stand = _root.TransformPoint(_usedSellerStands[slot]);
+                if (!_usedSellers.TryGetValue(seller.Id, out var actor))
+                {
+                    var color = CrowdView.PersonClothing("used-seller-" + seller.SellerId);
+                    var figure = Prims.Figure(_root, "SpecialCustomer_seller:" + seller.Id, color, new Color(.95f, .8f, .65f), .95f);
+                    figure.transform.position = _usedSellerShopId != null ? _door : stand;
+                    actor = new UsedSellerFigure { Figure = figure };
+                    _usedSellers.Add(seller.Id, actor);
+                }
+                actor.Waiting = true;
+                Transform person = actor.Figure.transform;
+                if (MoveNpc(person, actor.Route, stand, dt * 3f, indoorGoal: true))
+                    FaceUsedDesk(person, _usedBuyDesk);
+                if (slot == 0 && (person.position - stand).sqrMagnitude < .1f)
+                {
+                    atDesk = seller;
+                    _emotes.Add(new EmoteInfo { Pos = person.position + Vector3.up * 2.05f, Text = "等候收购",
+                        Color = new Color(.12f, .13f, .16f), Size = 18, Bubble = true });
+                }
+                slot++;
+            }
+            _usedSellerShopId = state.ShopId;
+
+            _departedUsedSellers.Clear();
+            foreach (var entry in _usedSellers)
+            {
+                var actor = entry.Value;
+                if (!actor.Waiting && MoveNpc(actor.Figure.transform, actor.Route, _door, dt * 3f, indoorGoal: false))
+                {
+                    Kill.It(actor.Figure);
+                    _departedUsedSellers.Add(entry.Key);
+                }
+            }
+            foreach (int id in _departedUsedSellers) _usedSellers.Remove(id);
+            return atDesk;
+        }
+
+        private void ClearUsedSellerFigures()
+        {
+            foreach (var actor in _usedSellers.Values) Kill.It(actor.Figure);
+            _usedSellers.Clear();
+            _usedSellerShopId = null;
+        }
+
         private readonly Dictionary<string,GameObject> _specialFigures=new Dictionary<string,GameObject>();
         private readonly Dictionary<string,GameObject> _specialGoods=new Dictionary<string,GameObject>();
         public int NearbyDiningTable { get; private set; } = -1;
-        private void UpdateSpecialBusinessVisuals(GameSession session)
+        private void UpdateSpecialBusinessVisuals(GameSession session, float dt)
         {
             var shop=session.CurrentShop;
             NearSpecialFurniture=false;
             NearUsedBuyDesk=false;
             NearbyDiningTable = -1;
+            if (shop.RetailKind != "secondhand" || _usedBuyDesk == null) ClearUsedSellerFigures();
             if(!session.IsSpecialBusiness(shop)&&_specialFigures.Count==0&&_specialGoods.Count==0)return;
             if(session.IsSpecialBusiness(shop))
             {
@@ -122,7 +214,6 @@ namespace PCShopSell.Game.Runtime
                 else
                 {
                     var desk = _usedBuyDesk;
-                    var seller=state.Used.FirstOrDefault(i=>!i.Owned&&!i.Sold);
                     if(desk!=null)
                     {
                         var bounds = RoomPlanner.Footprint(session.ShopRoom,FurnitureCatalog.Get(desk.Id),desk);
@@ -132,11 +223,9 @@ namespace PCShopSell.Game.Runtime
                         NearUsedBuyDesk = Vector2.Distance(edge,new Vector2(player.x,player.z))<1.15f;
                         var center = UsedDeskCenter(desk);
                         UsedBuyDeskWorld = _root.TransformPoint(center + Vector3.up * 1.35f);
+                        var seller = UpdateUsedSellerQueue(state, dt);
                         if (seller != null)
-                        {
-                            FaceUsedDesk(Person("seller:" + seller.Id, _usedSellerStand), desk);
                             Good("offer:" + seller.Id, center + Vector3.up * .95f, new Color(.68f, .5f, .32f));
-                        }
                     }
                     var displays=shop.Layout.Where(p=>p.Id=="used_display").ToArray();int slot=0;
                     foreach(var item in state.Used.Where(i=>i.Owned&&!i.Listed&&!i.Sold))
