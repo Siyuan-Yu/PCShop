@@ -37,6 +37,7 @@ namespace PCShopSell.Core.Shop
     {
         public string shopId;
         public int nextCustomerId, checkoutMinutes, todayCustomers, todayLost;
+        public int nextCustomerBuildOrderDay;
         public long todaySalesCents;
         public double arrivalCredit, arrivalThreshold = 1;
 
@@ -55,6 +56,7 @@ namespace PCShopSell.Core.Shop
     {
         public CitySavedShopVisits SaveCityCustomers() => new CitySavedShopVisits {
             shopId = ShopId, nextCustomerId = _nextCustomerId, checkoutMinutes = _employeeBusyMinutes,
+            nextCustomerBuildOrderDay = _nextCustomerBuildOrderDay,
             todayCustomers = TodayCustomers, todayLost = TodayLost, todaySalesCents = TodaySales.Cents,
             arrivalCredit = _arrivalCredit, arrivalThreshold = _arrivalThreshold,
             queue = _queue.Select(c => c.Id).ToArray(),
@@ -109,6 +111,7 @@ namespace PCShopSell.Core.Shop
                 if (byId.TryGetValue(id, out var c) && c.State == CustomerState.WaitingCheckout && !_queue.Contains(c)) _queue.Add(c);
             foreach (var c in _active.Where(c => c.State == CustomerState.WaitingCheckout && !_queue.Contains(c))) _queue.Add(c);
             _nextCustomerId = Math.Max(Math.Max(1, data.nextCustomerId), byId.Count == 0 ? 1 : byId.Keys.Max() + 1);
+            if (data.nextCustomerBuildOrderDay > 0) _nextCustomerBuildOrderDay = data.nextCustomerBuildOrderDay;
             _employeeBusyMinutes = Math.Max(0, data.checkoutMinutes);
             TodayCustomers = Math.Max(0, data.todayCustomers); TodayLost = Math.Max(0, data.todayLost); TodaySales = Money.FromCents(Math.Max(0, data.todaySalesCents));
             _arrivalCredit = data.arrivalCredit >= -.35 && data.arrivalCredit <= 1.35 ? data.arrivalCredit : 0;

@@ -44,6 +44,7 @@ namespace PCShopSell.Core.Session
         public int NextId=1, BudgetDay=-1;
         public long NextVisit, Revenue, SpentToday;
         public long NextFishOrder;
+        public int LastFishOrderDayPlusOne;
         public int Paid, Lost;
         public int RestaurantArrivalDay = -1, RestaurantArrivalsToday;
         public int RestaurantVisitDay = -1;
@@ -80,7 +81,8 @@ namespace PCShopSell.Core.Session
         public static readonly long[] RecipePrices={36,44,56};
         public const int RestaurantFishOrderLimit = 2;
         public const int RestaurantFishOrderDays = 7;
-        private const int RestaurantFishOfferIntervalDays = 2;
+        private const int RestaurantFishSecondOfferGap = 4 * 60;
+        private const int LegacyFishOfferInterval = 2 * GameTimestamp.MinutesPerDay;
         public static string ConditionName(UsedCondition c)=>c==UsedCondition.Good?"好货":c==UsedCondition.Flawed?"瑕疵品":c==UsedCondition.Replica?"仿造品":"完全损坏";
         public static string UsedConditionName(UsedItem item) => item.Product == ArtifactProduct
             ? (item.Condition == UsedCondition.Good ? "真品文物" : "仿制文物") : ConditionName(item.Condition);
@@ -668,7 +670,12 @@ namespace PCShopSell.Core.Session
                 FishId = fish.Id, DueAt = minute + RestaurantFishOrderDays * GameTimestamp.MinutesPerDay,
                 Price = (long)Math.Round(RecipePrices[recipe] * state.MenuMarkup) + fish.DinnerSurcharge
             });
-            state.NextFishOrder = minute + RestaurantFishOfferIntervalDays * GameTimestamp.MinutesPerDay;
+            int dayPlusOne = (int)(minute / GameTimestamp.MinutesPerDay) + 1;
+            long nextDay = (long)dayPlusOne * GameTimestamp.MinutesPerDay;
+            long secondOffer = minute + RestaurantFishSecondOfferGap;
+            bool firstToday = state.LastFishOrderDayPlusOne != dayPlusOne;
+            state.NextFishOrder = firstToday && secondOffer < nextDay && Random.Chance(.5) ? secondOffer : nextDay;
+            state.LastFishOrderDayPlusOne = dayPlusOne;
         }
 
         private bool TrySeatRestaurantGuest(OwnedShop shop, SpecialBusinessState state, GameTimestamp now)
@@ -718,6 +725,12 @@ namespace PCShopSell.Core.Session
                 {
                     saved.Used=saved.Used??new List<UsedItem>();saved.Orders=saved.Orders??new List<DiningOrder>();saved.Workers=saved.Workers??new List<RestaurantWorker>();
                     var state=saved.Copy();var used=new HashSet<int>();
+                    if (state.LastFishOrderDayPlusOne == 0 && state.NextFishOrder >= LegacyFishOfferInterval && state.NextFishOrder != long.MaxValue)
+                    {
+                        // 旧存档保存的是上一单发出时间加两天。
+                        state.LastFishOrderDayPlusOne = (int)((state.NextFishOrder - LegacyFishOfferInterval) / GameTimestamp.MinutesPerDay) + 1;
+                        state.NextFishOrder = (long)state.LastFishOrderDayPlusOne * GameTimestamp.MinutesPerDay;
+                    }
                     state.Orders.RemoveAll(order => order.TableCleared);
                     foreach (var order in state.Orders.Where(o => o.Stage == DiningStage.Checkout))
                         order.CheckoutAt = Math.Min(order.CheckoutAt, Clock.Now.TotalMinutes);

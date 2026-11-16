@@ -12,6 +12,23 @@ namespace PCShopSell.Tests
     {
         private static CityLayout City()=>CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(Resources.Load<TextAsset>("Data/city_layout").text));
         private static GameSession Session(CityLayout city)=>new GameSession(city,123,Money.FromYuan(100000),GameTimestamp.From(new GameDate(5),600));
+        [Test] public void FurnitureMallOpensAtNineAndClosesAtMidnight()
+        {
+            var city = City();
+            using var session = Session(city);
+            var mall = city.Places.Single(place => place.Business == GameSession.MallBusiness);
+            Assert.AreEqual("每天 9:00–24:00", session.OpeningHoursText(mall));
+            var date = session.Clock.Today;
+            session.Clock.Restore(date, 9 * 60 - 1);
+            Assert.False(session.IsPlaceOpen(mall));
+            session.Clock.Restore(date, 9 * 60);
+            Assert.True(session.IsPlaceOpen(mall));
+            session.Clock.Restore(date, GameTimestamp.MinutesPerDay - 1);
+            Assert.True(session.IsPlaceOpen(mall));
+            session.Clock.Restore(date.AddDays(1));
+            Assert.False(session.IsPlaceOpen(mall));
+        }
+
         [Test] public void ConfirmedPlanHasFourAgencyDistrictsAndNoStarterShopStation()
         {
             var city=City();Assert.AreEqual(8,city.LayoutVersion);Assert.AreEqual(10,city.Streets.Count);

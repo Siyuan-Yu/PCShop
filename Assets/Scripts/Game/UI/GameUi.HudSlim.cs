@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using PCShopSell.Core.Session;
+using PCShopSell.Core.Time;
 
 namespace PCShopSell.Game.UI
 {
@@ -10,6 +12,52 @@ namespace PCShopSell.Game.UI
         private LayoutElement _hudShortcutsSize;
         private Button _brandButton;
         private float _fittedHudWidth;
+        private Button _pauseButton;
+        private Text _pauseLabel;
+        private readonly List<(Button button, int speed)> _speedButtons = new List<(Button, int)>();
+
+        private void BuildHudTimeControls(Transform parent)
+        {
+            const int padding = 3;
+            const int gap = 2;
+            const int pauseWidth = 72;
+            const int speedWidth = 40;
+            var panel = Ui.FlatPanel(parent, "HudTimeControls", Ui.FlatWell, Ui.FlatButtonEdge);
+            Ui.Size(panel, padding * 2 + pauseWidth + TimeController.Speeds.Length * (speedWidth + gap));
+            var controls = Ui.Row(panel.transform, 42, gap).Fill();
+            controls.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(padding, padding, 5, 5);
+
+            _pauseButton = Ui.Size(Ui.Button(controls, "暂停", () => S.Time.TogglePause(), 16), pauseWidth);
+            _pauseButton.name = "HudPauseTime";
+            _pauseLabel = _pauseButton.GetComponentInChildren<Text>();
+            _pauseLabel.rectTransform.Anchor(0, 0, 1, 1, padding, 0, padding, 0);
+            _pauseLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
+            _pauseButton.Tip(() => S.Time.IsHeld
+                ? "窗口打开或装修时自动暂停，结束后恢复。"
+                : S.Time.IsUserPaused ? "继续 · 快捷键 空格" : "暂停 · 快捷键 空格");
+            for (int i = 0; i < TimeController.Speeds.Length; i++)
+            {
+                int speed = TimeController.Speeds[i];
+                string label = TimeController.SpeedLabel(speed);
+                var button = Ui.Size(Ui.Button(controls, label, () => S.Time.SetSpeed(speed), 16), speedWidth);
+                button.name = "HudSpeed_" + speed;
+                var caption = button.GetComponentInChildren<Text>();
+                caption.rectTransform.Anchor(0, 0, 1, 1, padding, 0, padding, 0);
+                caption.horizontalOverflow = HorizontalWrapMode.Overflow;
+                button.Tip($"{label} 游戏速度 · 快捷键 {i + 1}");
+                _speedButtons.Add((button, speed));
+            }
+        }
+
+        private void RefreshHudTimeControls()
+        {
+            bool paused = !S.Time.IsRunning || S.OpeningClockFrozen || S.ManualActivityClockPaused;
+            Ui.SetButtonFill(_pauseButton, paused ? Ui.Warn : Ui.ButtonBg);
+            _pauseLabel.text = S.ManualActivityClockPaused ? "活动暂停" : S.Time.IsHeld ? "窗口暂停"
+                : S.Time.IsUserPaused ? "继续" : S.OpeningClockFrozen ? "教学暂停" : "暂停";
+            foreach (var (button, speed) in _speedButtons)
+                Ui.SetButtonFill(button, Ui.SelectedButton(S.Time.Speed == speed));
+        }
 
         private void BuildHudShortcuts(Transform parent)
         {

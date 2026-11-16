@@ -193,9 +193,15 @@ namespace PCShopSell.Game.UI
         }
 
         /// <summary>Finite choices without invoking a keyboard. The native list supports scroll and touch.</summary>
-        public static Dropdown Choice(Transform parent, IEnumerable<string> options, int selected, Action<int> choose, bool opensUp = false)
+        public static Dropdown Choice(Transform parent, IEnumerable<string> options, int selected, Action<int> choose,
+            bool opensUp = false, Color? bg = null)
         {
             var face=Panel(parent,"Choice",PanelBg2);
+            if (bg.HasValue)
+            {
+                face.color = bg.Value;
+                FlatBorder(face, FlatEdge(bg.Value, "Button"));
+            }
             var dropdown=face.gameObject.AddComponent<ChoiceDropdown>();dropdown.targetGraphic=face;
             var caption=Label(face.transform,"",18,TextAnchor.MiddleLeft);caption.rectTransform.Fill(8);caption.raycastTarget=false;
             caption.rectTransform.offsetMax=new Vector2(-25,-4);

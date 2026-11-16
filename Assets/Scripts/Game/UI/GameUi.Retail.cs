@@ -145,7 +145,9 @@ namespace PCShopSell.Game.UI
                     var item=product;string key="wholesale:"+item.Id;
                     int minimum = S.CitySupplierMinimum(source.Id, item.Id);
                     int available = Math.Min(100, S.CitySupplierRemaining(source.Id, item.Id));
-                    Offer(key,item.Name,ShelfKinds.ForGift(item.Id)?.Name??"商品",item.WeightKg,S.CityRetailWholesalePrice(source,item),
+                    string group = farm && FishingCatalog.Get(item.IngredientId) != null
+                        ? "鱼类" : ShelfKinds.ForGift(item.Id)?.Name ?? "商品";
+                    Offer(key,item.Name,group,item.WeightKg,S.CityRetailWholesalePrice(source,item),
                         (farm ? "" : "零售参考价 " + item.Price.Scale(IndustryCycles.GoodsFactor(item,S.Clock.Today.TotalDays)) + " · ")
                         + S.WholesaleMinimumText(source.Id,item.Id) + " · 今日可购 " + S.CitySupplierRemaining(source.Id,item.Id)
                         + (item.ShelfDays > 0 ? " · 保鲜 " + item.ShelfDays + " 天" : ""),

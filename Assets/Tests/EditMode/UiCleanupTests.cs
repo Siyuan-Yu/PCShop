@@ -129,9 +129,24 @@ namespace PCShopSell.Tests
             var purchase = (RectTransform)rig.Button("HudProcurement").transform;
             var price = (RectTransform)rig.Button("HudPrices").transform;
             var menu = (RectTransform)rig.Button("HudMenu").transform;
+            var timeControls = (RectTransform)row.Find("HudTimeControls");
+            var speeds = TimeController.Speeds.Select(speed => rig.Button("HudSpeed_" + speed)).ToArray();
+            var pause = rig.Button("HudPauseTime");
             Assert.AreSame(business, price.parent);
             Assert.AreEqual(purchase.GetSiblingIndex() + 1, price.GetSiblingIndex());
             Assert.AreEqual("物价 H", price.GetComponentInChildren<Text>().text);
+            Assert.AreEqual(Ui.ButtonHot, rig.Button("ShortcutGo_0").image.color);
+
+            speeds[0].onClick.Invoke();
+            Assert.AreEqual(TimeController.Speeds[0], rig.S.Time.Speed);
+            pause.onClick.Invoke();
+            Assert.True(rig.S.Time.IsUserPaused);
+            rig.Call("RefreshHudTimeControls");
+            Assert.AreEqual("继续", pause.GetComponentInChildren<Text>().text);
+            Assert.AreEqual(Ui.FlatRow, speeds[0].image.color);
+            rig.S.Time.Hold();
+            rig.Call("RefreshHudTimeControls");
+            Assert.AreEqual("窗口暂停", pause.GetComponentInChildren<Text>().text);
 
             Rect Bounds(RectTransform target)
             {
@@ -157,7 +172,20 @@ namespace PCShopSell.Tests
                 Assert.That(menuRect.yMax, Is.LessThanOrEqualTo(top.rect.yMax));
                 Assert.That(Bounds(price).width, Is.GreaterThan(0));
                 if (width == 1920) Assert.AreEqual(.365, Bounds(shortcuts).width / width, .005);
+
+                var firstSpeedRect = (RectTransform)speeds[0].transform;
+                foreach (var button in speeds)
+                {
+                    var rect = (RectTransform)button.transform;
+                    var caption = button.GetComponentInChildren<Text>();
+                    Assert.AreEqual(firstSpeedRect.rect.width, rect.rect.width, .1);
+                    Assert.AreEqual(Bounds(firstSpeedRect).center.y, Bounds(rect).center.y, .1);
+                    Assert.AreEqual(HorizontalWrapMode.Overflow, caption.horizontalOverflow);
+                    Assert.That(caption.preferredWidth, Is.LessThanOrEqualTo(caption.rectTransform.rect.width + 1));
+                }
+                Assert.That(Bounds((RectTransform)speeds.Last().transform).xMax, Is.LessThan(Bounds(timeControls).xMax));
             }
+            rig.S.Time.Release();
 
             rig.Button("HudPrices").onClick.Invoke();
             Assert.That(rig.Workspace("market").GetComponentsInChildren<Text>().Select(label => label.text), Does.Contain("价格走势"));
@@ -423,6 +451,7 @@ namespace PCShopSell.Tests
                 r.Button("QuantityPlus_furn:" + FurnitureCatalog.ShopCounter).onClick.Invoke();
                 r.Ui.RebuildWindows();
                 StringAssert.Contains(r.S.ShopTitle(branch) + "  ▼", r.Text);
+                Assert.AreEqual(Ui.ButtonHot, r.Button("CourierDestination").image.color);
 
                 r.Button("ShopTab_全部").onClick.Invoke();
                 StringAssert.Contains(r.S.ShopTitle(branch) + "  ▼", r.Text,
@@ -445,6 +474,7 @@ namespace PCShopSell.Tests
                 r.S.PlayerShop.Stock.ForceAddGoods(PetShopCatalog.CatFood, 2);
                 r.S.PlayerShop.Stock.ForceAddGoods(highFood, 1);
                 r.Ui.OpenTruckWindow();
+                Assert.AreEqual(Ui.ButtonHot, r.Button("CourierDestination").image.color);
 
                 Dropdown Filter() => r.Components<Dropdown>().Single(dropdown => dropdown.name == "TruckItemCategory");
                 Transform Item(string key) => r.Components<Transform>().SingleOrDefault(t => t.name == "TruckLoad_" + key);
@@ -1104,7 +1134,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void HomeDockCanCollapseStoreFurnitureAndOpenItsOwnResidenceTab()
+        public void HomeDockListsOnlyFurnitureInStorageAndOpensItsOwnResidenceTab()
         {
             using var r = new Rig();
             void Refresh() => r.Call("RefreshHomeDockVisibility", false);
@@ -1118,11 +1148,17 @@ namespace PCShopSell.Tests
             Assert.False(Visible("HomeDock"));
             r.Button("HomeDockToggle").onClick.Invoke();
             Assert.True(Visible("HomeDock"));
+            Assert.NotNull(r.Button("HomeDockBeginPlacement"));
 
             string id = r.S.HomeLayout[0].Id;
             int count = r.S.HomeLayout.Count;
             int stored = r.S.FurnitureToPlace(false, id);
-            r.Button("HomeDockStore_0").onClick.Invoke();
+            Assert.AreEqual(0, stored);
+            Assert.False(Visible("HomeDockPlace_" + id));
+            StringAssert.DoesNotContain("已摆放", r.Text);
+            StringAssert.DoesNotContain("收回", r.Text);
+            Assert.True(r.S.StoreFurniture(false, 0));
+            r.Call("RefreshHomeDock", false);
             Assert.AreEqual(count - 1, r.S.HomeLayout.Count);
             Assert.AreEqual(stored + 1, r.S.FurnitureToPlace(false, id));
             Assert.NotNull(r.Button("HomeDockPlace_" + id));
@@ -1244,6 +1280,46 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void OpeningFacilityTaskOnlyShowsRemainingItemsAndUsesOutlinedAction()
+        {
+            var layout = GameSessionTests.Layout();
+            layout.places = layout.places.Append(new LayoutPlaceData
+            {
+                id = "mall", name = "宜居家具城", kind = "shop", node = "dl", business = GameSession.MallBusiness,
+            }).ToArray();
+            var session = new GameSession(CityLayout.FromData(layout), 7, Money.FromYuan(30000),
+                GameTimestamp.From(new GameDate(0), 10 * 60), startWithShop: false);
+            using var rig = new Rig(session);
+            rig.Ui.QuestPopups = false;
+            GameSessionTests.Teleport(session, "agency");
+            Assert.True(session.SignRetailLease("pc", false, "restaurant"));
+            rig.Ui.DebugRefreshQuests();
+            var action = rig.Button("QuestPrimaryAction");
+            Assert.AreEqual(Ui.FlatRow, action.image.color);
+            Assert.AreEqual(Ui.FlatHotEdge, action.GetComponent<Outline>().effectColor);
+            StringAssert.Contains("已备 0/4 项", rig.Ui.QuestTrackerText);
+
+            session.DebugGiveFurniture(FurnitureCatalog.ShopCounter, 1);
+            rig.Ui.OpenQuestWindow();
+            var guide = rig.Components<Transform>().Single(item => item.name == "Window_当前任务");
+            string guideText = string.Join("\n", guide.GetComponentsInChildren<Text>().Select(item => item.text));
+            StringAssert.Contains("已备 1/4 项", guideText);
+            StringAssert.Contains("餐馆炒锅灶台", guideText);
+            StringAssert.DoesNotContain("收银台", guideText);
+            rig.Ui.CloseTopWindow();
+
+            foreach (string id in GameSession.OpeningFurniture("restaurant").Where(id => id != FurnitureCatalog.ShopCounter))
+                session.DebugGiveFurniture(id, 1);
+            session.CurrentShop.Layout.Add(new PlacedFurniture { Id = FurnitureCatalog.ShopCounter });
+            rig.Ui.DebugRefreshQuests();
+            Assert.AreEqual("place", session.CurrentQuest().Id);
+            StringAssert.Contains("已摆 1/4 项", rig.Ui.QuestTrackerText);
+            StringAssert.Contains("在店里摆放餐馆炒锅灶台", rig.Ui.QuestTrackerText);
+            StringAssert.DoesNotContain("收银台", rig.Ui.QuestTrackerText);
+            StringAssert.DoesNotContain("收银台", session.CurrentQuest().Hint);
+        }
+
+        [Test]
         public void FarmMarketOpensWholesaleAndAcceptsExactBagCounts()
         {
             using var r = new Rig(HomeTests.Make(5000000, 600));
@@ -1277,6 +1353,18 @@ namespace PCShopSell.Tests
             Assert.AreEqual(r.S.CitySupplierRemaining("farm", "produce:rice"), r.S.CartAmount(key));
             field.onEndEdit.Invoke("5");
 
+            string[] FishFields() => r.Components<InputField>()
+                .Select(input => input.name).Where(name => name.StartsWith("QuantityValue_wholesale:produce:fish_"))
+                .ToArray();
+            var availableFish = FishFields();
+            Assert.AreEqual(5, availableFish.Length);
+            r.Button("ShopTab_鱼类").onClick.Invoke();
+            CollectionAssert.AreEquivalent(availableFish, r.Components<InputField>().Select(input => input.name));
+            Assert.AreEqual(5, r.S.CartAmount(key), "切换鱼类页签时保留已选的大米");
+            r.Button("ShopTab_米与生鲜").onClick.Invoke();
+            Assert.IsEmpty(FishFields());
+            Assert.AreEqual("5", r.Components<InputField>().Single(input => input.name == "QuantityValue_" + key).text);
+
             r.S.Clock.Restore(r.S.Clock.Today, 23 * 60);
             r.Ui.RebuildWindows();
             field = r.Components<InputField>().Single(f => f.name == "QuantityValue_" + key);
@@ -1292,6 +1380,8 @@ namespace PCShopSell.Tests
             r.S.SetSmartphone(true);
             r.S.InstallApp(PhoneApps.Shop);
             r.Ui.OpenWholesaleApp();
+            var delivery = r.Components<Dropdown>().Single(dropdown => dropdown.name == "OnlineDeliveryDestination");
+            Assert.AreEqual(Ui.ButtonHot, delivery.targetGraphic.color);
             r.Components<InputField>().Single(f => f.name == "QuantityValue_wholesale_cpu0").onEndEdit.Invoke("8");
             Assert.That(r.S.Online.Pending, Is.Empty);
             r.Ui.RebuildWindows();

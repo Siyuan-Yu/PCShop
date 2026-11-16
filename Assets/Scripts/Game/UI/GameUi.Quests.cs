@@ -12,7 +12,7 @@ namespace PCShopSell.Game.UI
     {
         private Image _questPanel;
         private Text _questHeading, _questTitle, _questProgress, _questText, _questActionText;
-        private RectTransform _questProgressBar, _questProgressFill;
+        private RectTransform _questProgressBar, _questProgressFill, _questDetails;
         private Button _questActionButton;
         private Action _questAction;
         private string _questSeen;
@@ -60,12 +60,12 @@ namespace PCShopSell.Game.UI
             _questText.rectTransform.Anchor(0, 0, 1, 1, 16, 58, 16, 76);
             _questText.verticalOverflow = VerticalWrapMode.Truncate;
 
-            _questActionButton = Ui.Button(_questPanel.transform, "", ActivateQuestAction, 18, Ui.ButtonHot);
+            _questActionButton = Ui.Button(_questPanel.transform, "", ActivateQuestAction, 18, Ui.FlatRow);
             _questActionButton.name = "QuestPrimaryAction";
             _questActionText = _questActionButton.GetComponentInChildren<Text>();
             ((RectTransform)_questActionButton.transform).Anchor(0, 0, .74f, 0, 14, 12, 4, -49);
             var help = Ui.Button(_questPanel.transform, "详情", OpenTrackedQuestDetails, 16);
-            ((RectTransform)help.transform).Anchor(.74f, 0, 1, 0, 4, 12, 14, -49);
+            _questDetails = ((RectTransform)help.transform).Anchor(.74f, 0, 1, 0, 4, 12, 14, -49);
             var close = Ui.Button(_questPanel.transform, "×", () =>
             {
                 _questHidden = true;
@@ -170,7 +170,12 @@ namespace PCShopSell.Game.UI
             _questPanel.rectTransform.offsetMin = new Vector2(16, -(82 + textTop + 118));
             _questAction = action;
             _questActionText.text = actionLabel ?? "";
-            _questActionButton.gameObject.SetActive(action != null);
+            bool hasAction = action != null;
+            if (_questActionButton.gameObject.activeSelf != hasAction)
+            {
+                _questActionButton.gameObject.SetActive(hasAction);
+                _questDetails.Anchor(hasAction ? .74f : 0, 0, 1, 0, hasAction ? 4 : 14, 12, 14, -49);
+            }
         }
 
         private void OpenTrackedQuestDetails()
@@ -377,7 +382,7 @@ namespace PCShopSell.Game.UI
                     Para(w.Content, next.Short, 18);
                     ProgressLine(w.Content, next, 16);
                 }
-                Ui.Size(Ui.Button(w.Content, "继续游戏", w.Close, 18, Ui.ButtonHot), -1, 42);
+                Ui.Size(Ui.Button(w.Content, "继续游戏", w.Close, 18), -1, 42);
             }, onClosed: () => _questPopup = null);
         }
 
@@ -389,7 +394,7 @@ namespace PCShopSell.Game.UI
             {
                 int n = Quests.All.Count(x => S.QuestCompleted(x.Id));
                 Para(w.Content, $"暂时没有新任务（已完成 {n} 个）。继续经营，达到下一阶段的条件时会弹出新任务。", 20);
-                Ui.Size(Ui.Button(w.Content, "继续", w.Close, 18, Ui.ButtonHot), -1, 42);
+                Ui.Size(Ui.Button(w.Content, "继续", w.Close, 18), -1, 42);
                 return;
             }
             Line(w.Content, q.Title, 23, Ui.Accent);
@@ -401,7 +406,7 @@ namespace PCShopSell.Game.UI
             {
                 var (label, action) = QuestAction(q.Target);
                 if (action != null)
-                    Ui.Size(Ui.Button(w.Content, label, () => { w.Close(); action(); }, 18, Ui.ButtonHot), -1, 42);
+                    Ui.Size(Ui.Button(w.Content, label, () => { w.Close(); action(); }, 18, Ui.FlatRow), -1, 42);
                 else
                     Para(w.Content, S.RacingQualificationBlocker, 16, Ui.Warn);
                 return;
@@ -415,9 +420,9 @@ namespace PCShopSell.Game.UI
                     if (!S.CompleteQuestLesson(q.Id)) return;
                     w.Close();
                     UpdateQuestTracker();
-                }, 18, Ui.ButtonHot, canComplete), -1, 42);
+                }, 18, Ui.FlatRow, canComplete), -1, 42);
             }
-            else Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18, Ui.ButtonHot), -1, 42);
+            else Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 18), -1, 42);
         }
 
         private static void ResetGuideScroll(Window w)

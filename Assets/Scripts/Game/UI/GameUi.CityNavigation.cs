@@ -21,6 +21,7 @@ namespace PCShopSell.Game.UI
         }
         private readonly List<ShortcutMenu> _shortcutMenus=new List<ShortcutMenu>();
         private bool _shortcutSelectionExplained;
+        private const int OwnedShopShortcut = 0;
         private const int SleepShortcut = 4;
         // 0: owned shop, 1: wholesale sources, 2: agencies, 3: custom destination, 4: residence.
         private Place[] ShortcutPlaces(int kind)
@@ -31,13 +32,13 @@ namespace PCShopSell.Game.UI
                     .Concat(S.OwnedProperties.Where(p => S.City.HasPlace(p.PlaceId)).Select(p => S.City.GetPlace(p.PlaceId)))
                     .Distinct().Where(S.CanSleepAt).ToArray();
             if(kind==3)return S.City.PublicPlaces.ToArray();
-            if(kind==0)return S.MyShops.Select(s=>s.Place).ToArray();
+            if(kind==OwnedShopShortcut)return S.MyShops.Select(s=>s.Place).ToArray();
             if(kind==2)return S.City.Places.Where(p=>p.Kind==PlaceKind.Agency).ToArray();
             return S.City.Places.Where(p=>p.Id=="stall_cpu"||p.Business==GameSession.FarmBusiness||S.HasRetailWholesale(p)).ToArray();
         }
         private string ShortcutSelection(int kind) => kind switch
         {
-            0 => S.CityShopShortcut,
+            OwnedShopShortcut => S.CityShopShortcut,
             1 => S.CityMarketShortcut,
             3 => S.CityDefaultDestination,
             SleepShortcut => S.CityHomeShortcut,
@@ -53,7 +54,7 @@ namespace PCShopSell.Game.UI
         }
         private void SelectShortcut(int kind,Place place)
         {
-            if(kind==0)S.SetCityShopShortcut(place.Id);
+            if(kind==OwnedShopShortcut)S.SetCityShopShortcut(place.Id);
             else if(kind==SleepShortcut)S.SetCityHomeShortcut(place);
             else S.SetCityShortcut(place.Id,kind==2);
             RefreshShortcutMenus();
@@ -81,7 +82,7 @@ namespace PCShopSell.Game.UI
             caption.resizeTextForBestFit=true;caption.resizeTextMinSize=13;caption.resizeTextMaxSize=17;
             main.Tip(() =>
             {
-                if (kind == 0 && S.MyShopCount == 0) return "尚无店铺，租下或购入店铺后可使用。";
+                if (kind == OwnedShopShortcut && S.MyShopCount == 0) return "尚无店铺，租下或购入店铺后可使用。";
                 var place = SelectedShortcut(kind);
                 string address = place == null ? "暂无" : ShortcutPlaceAddress(kind, place);
                 return "当前目的地：" + address + (kind == SleepShortcut
@@ -120,7 +121,7 @@ namespace PCShopSell.Game.UI
         private string ShortcutPlaceName(int kind,Place place)
         {
             if (kind == SleepShortcut) return place == S.Home ? S.HomeTitle : place?.Name ?? "回家睡觉";
-            if(place==null)return kind==3?"自定目的地":kind==0?"我的店铺":kind==1?"批发市场":"中介";
+            if(place==null)return kind==3?"自定目的地":kind==OwnedShopShortcut?"我的店铺":kind==1?"批发市场":"中介";
             if(S.ShopAt(place) is OwnedShop shop)return S.ShopTitle(shop);
             return place.Id=="stall_cpu"?"电子批发市场":place.Name;
         }
@@ -161,7 +162,8 @@ namespace PCShopSell.Game.UI
                 menu.Stamp=stamp;menu.Places=places;
                 menu.Caption.text=caption;
                 menu.Main.interactable=menu.Kind==3||destination!=null;
-                menu.Caption.color=menu.Main.interactable?Ui.TextColor:Ui.Dim;
+                if (menu.Kind == OwnedShopShortcut)
+                    Ui.SetButtonFill(menu.Main, menu.Main.interactable ? Ui.ButtonHot : Ui.ButtonBg);
                 // Keep room for the other shortcuts when all destinations have long names.
                 float maxWidth = menu.Kind == SleepShortcut ? 124 : 172;
                 float width=Mathf.Clamp(menu.Caption.preferredWidth+20,Mathf.Max(100,menu.MinimumWidth),maxWidth);

@@ -124,9 +124,7 @@ namespace PCShopSell.Game.UI
         private const KeyCode NoticeHotkey = KeyCode.N;
         private int _unreadNotices;
         private Text _dateText, _cashText, _statsText, _placeText, _hintText, _cargoText, _chaseText;
-        private readonly List<(Button b, int speed)> _speedButtons = new List<(Button, int)>();
         private readonly List<(Button b, VehicleKind kind)> _vehicleButtons = new List<(Button, VehicleKind)>();
-        private Button _pauseButton;
         private float _slowTimer;
         private float _uiTime;
         private float _hudRefreshTimer;
@@ -261,19 +259,7 @@ namespace PCShopSell.Game.UI
             _cashText.resizeTextForBestFit=true;_cashText.resizeTextMinSize=17;_cashText.resizeTextMaxSize=24;
             cashButton.Tip("<b>总收支账本</b>：点击查看每天、每周、每月的全部收支和逐笔明细。\n资金紧张时可缩减经营、处置资产或打工继续，不会因现金为负自动清档。");
 
-            _pauseButton = Ui.Size(Ui.Button(row, "暂停", () => S.Time.TogglePause(), 16), 60);
-            _pauseButton.Tip(() => S.Time.IsHeld
-                ? "<b>已暂停</b>：弹出窗口或摆放家具时时间自动暂停，结束后恢复。\n店铺右侧各页签都可用顶部按钮暂停或继续。"
-                : S.Time.IsUserPaused ? "<b>继续</b>　快捷键：空格" : "<b>暂停</b>　快捷键：空格");
-            foreach (int sp in TimeController.Speeds)
-            {
-                int speed = sp;
-                string label = TimeController.SpeedLabel(speed);
-                Button b = Ui.Size(Ui.Button(row, label, () => S.Time.SetSpeed(speed), 17), speed < TimeController.DefaultSpeed ? 46 : 36);
-                int keyNo = System.Array.IndexOf(TimeController.Speeds, speed) + 1;
-                b.Tip($"<b>{label} 游戏速度</b>　快捷键：{keyNo}");
-                _speedButtons.Add((b, speed));
-            }
+            BuildHudTimeControls(row);
 
             _placeText = Ui.Size(Ui.Label(row, "", 17, TextAnchor.MiddleCenter), 150, -1, 1);
             _placeText.resizeTextForBestFit = true;
@@ -304,7 +290,7 @@ namespace PCShopSell.Game.UI
             _cargoText = Ui.Size(Ui.Label(brow, "", 16), 155);
             Ui.Size(Ui.Label(brow, "快捷前往：", 17), 90);
             BuildShortcutButton(brow, "回家睡觉", SleepShortcut, 108);
-            BuildShortcutButton(brow,"我的店铺",0,100);
+            BuildShortcutButton(brow,"我的店铺",OwnedShopShortcut,100);
             BuildShortcutButton(brow,"批发市场",1,100);
             BuildShortcutButton(brow,"中介",2,72);
             BuildShortcutButton(brow,"自定目的地",3,116);
@@ -354,11 +340,7 @@ namespace PCShopSell.Game.UI
             _cashText.text = S.Ledger.Balance.ToString();
             _cashText.color = S.Ledger.Balance.IsNegative ? Ui.Warn : Ui.Good;
 
-            bool paused = !S.Time.IsRunning || S.OpeningClockFrozen || S.ManualActivityClockPaused;
-            Ui.SetButtonFill(_pauseButton, paused ? Ui.Warn : Ui.ButtonBg);
-            _pauseButton.GetComponentInChildren<Text>().text = S.ManualActivityClockPaused ? "活动暂停" : S.Time.IsHeld ? "窗口暂停" : (S.Time.IsUserPaused ? "继续" : S.OpeningClockFrozen ? "教学暂停" : "暂停");
-            foreach (var (b, speed) in _speedButtons)
-                Ui.SetButtonFill(b, Ui.SelectedButton(!paused && S.Time.Speed == speed));
+            RefreshHudTimeControls();
 
             PlayerStats p = S.Player;
             UpdateHungerBanner(p.Hunger);

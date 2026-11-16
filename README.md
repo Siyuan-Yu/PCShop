@@ -1,8 +1,10 @@
 # PCShopSell（工作名）
 
-**当前完整版与 Windows 试玩包（2026-11-16）** · [完整玩法与工程交接](docs/121-current-game-content-windows-2026-11-16.md) · [下载 Windows x64](https://github.com/Siyuan-Yu/PCShop/releases/tag/windows-20261116-184538)
+**当前源码（2026-11-16）** · [完整玩法与工程交接](docs/122-current-game-content-2026-11-16.md)
 
-本版包含按次数结算的手动活动、门店名望与特殊订单、家具回收、居家与证券界面以及统一按钮样式。历史专题和此前版本的验收记录见下方索引。
+本轮更新包含住处装修、设施任务清单、农贸市场鱼类页签、装机和鱼餐派单频率、家具城营业时间，以及倍速和配送入口的界面调整。
+
+**已发布的 Windows 试玩包** · [下载 Windows x64](https://github.com/Siyuan-Yu/PCShop/releases/tag/windows-20261116-184538) · [该包的内容与校验记录](docs/121-current-game-content-windows-2026-11-16.md)
 
 **此前试玩交接（2026-11-16）**：[第 119 篇　试玩反馈、规则与验证](docs/119-playtest-fixes-and-handoff-2026-11-16.md)。涵盖快捷键、采购和二手店、银行和证券、到场预约、手动活动、赛车登记及四条赛道扩建。原有玩法全景见[第 118 篇](docs/118-current-project-handoff-2026-11-16.md)。
 
@@ -207,7 +209,7 @@ UI整理已落实：[第50篇：保留员工部分的UI整理](docs/50-ui-cleanu
 Unity.exe -batchmode -nographics -projectPath <项目路径> -runTests -testPlatform EditMode -testResults <结果.xml>
 ```
 
-最新性能相关 EditMode 回归95/95通过，覆盖范围和报告见第39、40篇；较大历史回归有已记录的基线失败，不代表全仓库通过。测试在隔离镜像执行，不修改正式存档。
+第 39、40 篇记录的性能专项 EditMode 回归通过 95 项。当前源码的联测范围和已知失败参见 [当前验证记录](docs/122-current-game-content-2026-11-16.md#验证与开发状态)。测试在隔离的工程副本中执行。
 
 ## 历史状态（2026-11-02）
 

@@ -226,7 +226,7 @@ namespace PCShopSell.Core.Session
                 return null;
             }
             int open = StreetShopOpenMinute, close = StreetShopCloseMinute;
-            if (source.Business == FarmBusiness) CityVenueHours(source, out open, out close);
+            if (source.Business == FarmBusiness || source.Business == MallBusiness) CityVenueHours(source, out open, out close);
             if (arrivalMinute < open || arrivalMinute >= close)
                 return $"{source.Name}到达时未营业（每天 {Hm(open)}–{Hm(close)}）";
             return null;

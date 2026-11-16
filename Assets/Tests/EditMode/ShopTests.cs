@@ -369,6 +369,36 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void CustomerBuildCooldownSurvivesCancellationAndSave()
+        {
+            var settings = BusySettings();
+            settings.BuildOrderChance = 1;
+            var r = Make(settings);
+            r.Shop.PlayerPresent = true;
+            r.Clock.Advance(20);
+            var first = r.Shop.Orders.Single();
+            Assert.True(r.Shop.CancelBuild(first.Id));
+            var state = UnityEngine.JsonUtility.FromJson<CitySavedShopVisits>(
+                UnityEngine.JsonUtility.ToJson(r.Shop.SaveCityCustomers()));
+            int nextDay = state.nextCustomerBuildOrderDay;
+            Assert.That(nextDay - first.PlacedAt.Date.TotalDays, Is.InRange(1, 2));
+
+            r.Shop.RestoreOrders(Array.Empty<BuildOrder>(), r.Shop.NextOrderId);
+            r.Shop.RestoreCityCustomers(state);
+            r.Clock.Advance(120);
+            Assert.IsEmpty(r.Shop.Orders);
+            for (int day = first.PlacedAt.Date.TotalDays + 1; day < nextDay; day++)
+            {
+                r.Clock.Restore(new GameDate(day), 600);
+                r.Clock.Advance(120);
+                Assert.IsEmpty(r.Shop.Orders);
+            }
+            r.Clock.Restore(new GameDate(nextDay), 600);
+            r.Clock.Advance(120);
+            Assert.AreEqual(nextDay, r.Shop.Orders.Single().PlacedAt.Date.TotalDays);
+        }
+
+        [Test]
         public void ShopLimitsCustomerOrdersSeparatelyFromTotalBuildUnits()
         {
             var settings = BusySettings();
@@ -376,6 +406,9 @@ namespace PCShopSell.Tests
             var r = Make(settings);
             r.Shop.Settings.BaseCustomersPerHour = 60;
             r.Shop.PlayerPresent = true;
+            r.Clock.Restore(new GameDate(1), 600);
+            r.Shop.RestoreOrders(Enumerable.Range(1, 5).Select(id => new BuildOrder(id, 0, Money.FromYuan(5000),
+                r.Clock.Now.AddMinutes(-1440), r.Clock.Now.AddMinutes(3 * 1440))), 6);
             r.Clock.Advance(120);
             Assert.AreEqual(5, r.Shop.CustomerBuildOrders);
             for (int i = 0; i < 7; i++)

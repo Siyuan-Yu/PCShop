@@ -221,6 +221,42 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void FishPreordersOfferOneOrTwoPerOpenDayEvenWhenDeclinedAndReloaded()
+        {
+            using var s = Make("restaurant");
+            var firstDay = s.Clock.Today;
+
+            int DeclineOffer(GameSession session, GameDate day, int minute)
+            {
+                var state = session.SpecialBusiness("pc");
+                session.Clock.Restore(day, minute);
+                state.NextVisit = session.Clock.Now.TotalMinutes + 1;
+                session.AdvanceClock(1);
+                var order = state.Orders.SingleOrDefault(o => o.IsFishOrder);
+                if (order == null) return 0;
+                Assert.True(session.DeclineRestaurantFishOrder(order.Id));
+                return 1;
+            }
+
+            Assert.AreEqual(1, DeclineOffer(s, firstDay, 600));
+            long nextOffer = s.SpecialBusiness("pc").NextFishOrder;
+            using var loaded = Reload(s);
+            Assert.AreEqual(nextOffer, loaded.SpecialBusiness("pc").NextFishOrder);
+            Assert.AreEqual(0, DeclineOffer(loaded, firstDay, 601));
+            Assert.AreEqual(nextOffer / GameTimestamp.MinutesPerDay == firstDay.TotalDays ? 1 : 0,
+                DeclineOffer(loaded, firstDay, 850));
+            Assert.AreEqual(0, DeclineOffer(loaded, firstDay, 1110));
+
+            for (int day = 1; day <= 6; day++)
+            {
+                var date = firstDay.AddDays(day);
+                Assert.AreEqual(1, DeclineOffer(loaded, date, 600));
+                Assert.That(DeclineOffer(loaded, date, 850), Is.InRange(0, 1));
+                Assert.AreEqual(0, DeclineOffer(loaded, date, 1110));
+            }
+        }
+
+        [Test]
         public void FishPreordersStopAtTwoAndFreeASlotAtTheDeadline()
         {
             using var s = Make("restaurant");

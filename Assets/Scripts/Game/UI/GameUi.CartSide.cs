@@ -135,8 +135,8 @@ namespace PCShopSell.Game.UI
                     {
                         Ui.Size(Ui.Label(destRow, "送到", 16, TextAnchor.MiddleLeft, Ui.Dim), 40);
                         if (S.CartRequiresHomeDelivery)
-                            Ui.Size(Ui.Label(destRow, "家里 · 居家办公台配送", 15), -1, 32, 1);
-                        else Ui.Size(Ui.Button(destRow, S.CourierDestName(dest) + "  ▼", () => OpenCourierDestMenu(w, dest, false), 15, Ui.ButtonBg), -1, 32, 1);
+                            Ui.Size(Ui.Label(destRow, "家里 · 居家办公台配送", 15, color: Ui.Accent), -1, 32, 1);
+                        else Ui.Size(CourierDestinationButton(destRow, w, dest, 15), -1, 32, 1);
                         Ui.Size(Ui.Label(destRow, $"约 {quote.minutes} 分钟", 14, TextAnchor.MiddleRight, Ui.Dim), 80);
                     }
                     else Ui.Size(Ui.Label(destRow, "全部自己背走，不叫车。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);

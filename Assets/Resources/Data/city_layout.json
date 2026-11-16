@@ -9963,6 +9963,8 @@
       "business": "家具",
       "street": "s_start",
       "explicitEntrance": true,
+      "openMinute": 540,
+      "closeMinute": 1440,
       "entranceX": 2.9165280807722174,
       "entranceY": -10.269047089879273,
       "width": 13.525114703523819,

@@ -31,7 +31,6 @@ namespace PCShopSell.Game
 
         /// <summary>手里这件是屋里原来就有的（可以收进纸箱）。</summary>
         public bool PlaceHoldsPlaced => _placeId != null && _placeIndex >= 0;
-        public int PlacedFurnitureSelection => _placeIndex;
         private Vector3? _homePlacementPoint;
         public bool HasHomePlacementTarget => Placing && !_placeShop && _homePlacementPoint.HasValue;
 

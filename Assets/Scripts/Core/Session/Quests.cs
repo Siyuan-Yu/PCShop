@@ -84,8 +84,7 @@ namespace PCShopSell.Core.Session
                 Id = "place", Title = "歇业装修，把设施摆好", Target = QuestTarget.Renovate,
                 Short = $"在店里{K("装修")}，摆好收银台和货架",
                 Hint = $"摆完{K("第二天开业")}。",
-                Done = s => FitDone(s, true),
-                Progress = s => FitText(s, true),
+                Done = s => s.HasShop && s.ShopFitList().Where(n => n.Required).All(n => n.Placed >= 1),
             },
             new QuestDef
             {
@@ -168,17 +167,8 @@ namespace PCShopSell.Core.Session
 
         // ---------- 判断用 ----------
 
-        private static bool FitDone(GameSession s, bool placedOnly)
-        {
-            if (!s.HasShop) return false;
-            return s.ShopFitList().Where(n => n.Required).All(n => (placedOnly ? n.Placed : n.Placed + n.Owned) >= 1);
-        }
-
-        private static string FitText(GameSession s, bool placedOnly)
-        {
-            if (!s.HasShop) return "先租铺子";
-            return string.Join("　", s.ShopFitList().Where(n => n.Required).Select(n => $"{n.Name} {Math.Min(1, placedOnly ? n.Placed : n.Placed + n.Owned)}/1"));
-        }
+        private static string ShortFacilityList(string[] names) => string.Join("、", names.Take(2))
+            + (names.Length > 2 ? $"等 {names.Length} 项" : "");
 
         /// <summary>设置过摆什么的配件货架覆盖了几类配件。</summary>
         private static int ShelvesSet(GameSession s)
@@ -204,16 +194,28 @@ namespace PCShopSell.Core.Session
                 meal.Short = s.Pantry.Cooking != null ? "等饭煮好，再吃或装进背包" : "吃一碗，或装一盒放进背包";
                 return meal;
             }
-            if(source?.Id=="mall" && s.HasShop)
+            if (source?.Id == "mall" && s.HasShop)
             {
-                var purchase=source.Copy();
-                var required=GameSession.OpeningFurniture(s.RetailKind).Select(FurnitureCatalog.Get).ToArray();
-                var missing=s.MissingOpeningFurniture().Select(FurnitureCatalog.Get).ToArray();
-                purchase.Title=RetailShopTypes.Name(s.RetailKind)+" · 购齐开店设施";
-                purchase.Short=missing.Length==0?"开店设施已备齐":"去家具城买"+string.Join("、",missing.Take(2).Select(f=>f.Name))+(missing.Length>2?"等 "+missing.Length+" 件":"");
-                purchase.Hint="采购清单\n"+string.Join("\n",required.Select(f=>(missing.Contains(f)?"待买  ":"已备  ")+f.Name+" ×1 · "+f.Price));
-                purchase.Progress=_=>"已备 "+(required.Length-missing.Length)+"/"+required.Length+" 项";
+                var purchase = source.Copy();
+                int required = GameSession.OpeningFurniture(s.RetailKind).Length;
+                var missing = s.MissingOpeningFurniture().Select(FurnitureCatalog.Get).ToArray();
+                purchase.Title = RetailShopTypes.Name(s.RetailKind) + " · 购齐开店设施";
+                purchase.Short = missing.Length == 0 ? "开店设施已备齐"
+                    : "去家具城买" + ShortFacilityList(missing.Select(f => f.Name).ToArray());
+                purchase.Hint = missing.Length == 0 ? purchase.Short
+                    : "还需购买\n" + string.Join("\n", missing.Select(f => f.Name + " ×1 · " + f.Price));
+                purchase.Progress = _ => $"已备 {required - missing.Length}/{required} 项";
                 return purchase;
+            }
+            if (source?.Id == "place" && s.HasShop)
+            {
+                var placement = source.Copy();
+                var required = s.ShopFitList().Where(n => n.Required).ToArray();
+                var remaining = required.Where(n => n.Placed == 0).Select(n => n.Name).ToArray();
+                placement.Short = remaining.Length == 0 ? "开店设施已摆齐" : "在店里摆放" + ShortFacilityList(remaining);
+                if (remaining.Length > 0) placement.Hint = "还需摆放\n" + string.Join("\n", remaining) + "\n\n" + source.Hint;
+                placement.Progress = _ => $"已摆 {required.Length - remaining.Length}/{required.Length} 项";
+                return placement;
             }
             if (source?.Id == "sale" && s.HasShop && s.IsRenovating)
             {
@@ -234,7 +236,6 @@ namespace PCShopSell.Core.Session
             }
             if(source==null||s.RetailKind=="computer")return source;
             var q=source.Copy();
-            if(q.Id=="place")q.Short="在店里装修，摆好"+string.Join("、",GameSession.OpeningFurniture(s.RetailKind).Select(id=>FurnitureCatalog.Get(id).Name));
             if(q.Id=="shelf")
             {
                 q.Title=s.IsSpecialBusiness(s.CurrentShop)?"准备经营设施":"设置第一个商品货架";

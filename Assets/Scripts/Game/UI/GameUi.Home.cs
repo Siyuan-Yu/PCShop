@@ -1166,7 +1166,7 @@ namespace PCShopSell.Game.UI
                 var delivery = Ui.Row(w.Content, 42, 8);
                 Ui.Size(Ui.Label(delivery, "送到", 17), 44);
                 Ui.Size(Ui.Choice(delivery, destinations.Select(S.CourierDestName), selected,
-                    index => { destination = destinations[index]; w.Rebuild(); }), 400, 40).name = "OnlineDeliveryDestination";
+                    index => { destination = destinations[index]; w.Rebuild(); }, bg: Ui.ButtonHot), 400, 40).name = "OnlineDeliveryDestination";
                 Ui.Size(Ui.Label(delivery, _onlineTab == 5 ? "次日 10:00 送达" : $"{GameSession.DeliveryDays} 天后送达",
                     16, color: Ui.Dim), -1, -1, 1);
                 if (_onlineTab == 5) { BuildOnline(w, destination); return; }
@@ -1376,7 +1376,6 @@ namespace PCShopSell.Game.UI
         private bool _homeDockCollapsed;
         private GameSession _homeDockSession;
         private string _homeDockResidence;
-        private string[] _homeDockPlaced = Array.Empty<string>();
         private KeyValuePair<string, int>[] _homeDockStored = Array.Empty<KeyValuePair<string, int>>();
         private bool HomeDockOpen => _homeDock != null && _homeDock.gameObject.activeSelf;
 
@@ -1440,12 +1439,10 @@ namespace PCShopSell.Game.UI
         {
             if (!HomeDockOpen) return;
             var stored = S.FurnitureToPlaceList(false).Where(entry => entry.Value > 0 && FurnitureCatalog.Get(entry.Key) != null).ToArray();
-            var placed = S.HomeLayout.Select(furniture => furniture.Id).ToArray();
             string tenure = S.HasResidentialLease(S.Home) ? "租住中" : "自有";
-            if (!force && _homeDockStored.SequenceEqual(stored) && _homeDockPlaced.SequenceEqual(placed)
+            if (!force && _homeDockStored.SequenceEqual(stored)
                 && _homeDockTitle.text == S.HomeTitle && _homeDockTenure.text == tenure) return;
             _homeDockStored = stored;
-            _homeDockPlaced = placed;
             _homeDockTitle.text = S.HomeTitle;
             _homeDockTenure.text = tenure;
             var scroll = _homeDockContent.parent.parent.GetComponent<ScrollRect>();
@@ -1456,7 +1453,12 @@ namespace PCShopSell.Game.UI
             _homePlacementStatus = null;
             _homePlacementConfirm = null;
             bool editing = _ctrl.Placing && !_ctrl.PlacingShop;
-            if (editing && _ctrl.PlaceId != null)
+            if (!editing)
+            {
+                Ui.Size(Ui.Button(_homeDockContent, "开始装修", () => StartPlacement(false), 17, Ui.ButtonHot), -1, 38)
+                    .name = "HomeDockBeginPlacement";
+            }
+            else if (_ctrl.PlaceId != null)
             {
                 Line(_homeDockContent, (_ctrl.PlaceHoldsPlaced ? "移动 · " : "摆放 · ") + FurnitureLabel(_ctrl.PlaceId, 1), 18, Ui.Accent);
                 _homePlacementStatus = Line(_homeDockContent, "", 16, Ui.Dim);
@@ -1468,6 +1470,10 @@ namespace PCShopSell.Game.UI
                 _homePlacementConfirm.name = "HomeDockConfirmPlacement";
                 Ui.Size(Ui.Button(actions, "取消", _ctrl.CancelPlacementSelection, 15), 60, 36).name = "HomeDockCancelPlacement";
                 UpdateHomePlacementStatus();
+            }
+            else
+            {
+                Para(_homeDockContent, "点击房间里的家具可移动，选中后按 X 收纳。", 15, Ui.Dim);
             }
 
             Line(_homeDockContent, $"可摆放家具  ·  {stored.Sum(entry => entry.Value)} 件", 17, Ui.Dim);
@@ -1482,28 +1488,6 @@ namespace PCShopSell.Game.UI
                 }, 16, Ui.ButtonBg), 74, 34).name = "HomeDockPlace_" + id;
             }
             if (stored.Length == 0) Line(_homeDockContent, "暂无可摆放家具", 15, Ui.Dim);
-            Line(_homeDockContent, $"已摆放  ·  {placed.Length} 件", 17, Ui.Dim);
-            for (int i = 0; i < placed.Length; i++)
-            {
-                int index = i;
-                string id = placed[index];
-                var row = HomeDockFurnitureRow(FurnitureLabel(id, 1), _ctrl.PlaceHoldsPlaced && _ctrl.PlacedFurnitureSelection == index);
-                bool StillHere() => _ctrl.InHome && index < S.HomeLayout.Count && S.HomeLayout[index].Id == id;
-                Ui.Size(Ui.Button(row, "移动", () =>
-                {
-                    if (!StillHere()) { RefreshHomeDock(force: true); return; }
-                    if ((_ctrl.Placing && !_ctrl.PlacingShop) || _ctrl.BeginPlacement(false))
-                        _ctrl.SelectPlacedFurniture(index);
-                }, 16), 62, 34).name = "HomeDockMove_" + index;
-                Ui.Size(Ui.Button(row, "收回", () =>
-                {
-                    if (!StillHere()) { RefreshHomeDock(force: true); return; }
-                    if (_ctrl.Placing && !_ctrl.PlacingShop) _ctrl.CancelPlacementSelection();
-                    S.StoreFurniture(false, index);
-                    RefreshHomeDock(force: true);
-                }, 16), 62, 34).name = "HomeDockStore_" + index;
-            }
-            if (placed.Length == 0) Line(_homeDockContent, "暂无已摆放家具", 15, Ui.Dim);
             if (editing)
             {
                 var history = Ui.Row(_homeDockContent, 36, 5);

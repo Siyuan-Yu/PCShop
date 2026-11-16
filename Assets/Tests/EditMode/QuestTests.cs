@@ -106,7 +106,7 @@ namespace PCShopSell.Tests
             foreach (string id in GameSession.OpeningFurniture(s.RetailKind)) s.DebugGiveFurniture(id, 1);
             Assert.AreEqual("place", s.CurrentQuest().Id);
             Assert.AreEqual(1, s.PlayerShop.Stock.CountAll(PartCatalog.Get("gpu0")), "家具城任务奖励显卡");
-            StringAssert.Contains("货架 0/1", s.CurrentQuest().Progress(s));
+            Assert.AreEqual("已摆 0/2 项", s.CurrentQuest().Progress(s));
         }
 
         [TestCase("computer")]

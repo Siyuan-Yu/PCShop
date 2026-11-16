@@ -224,7 +224,7 @@ namespace PCShopSell.Game.UI
             if (truckKg > 1e-9)
             {
                 Ui.Size(Ui.Label(destRow, "送到", 16, TextAnchor.MiddleLeft, Ui.Dim), 40);
-                Ui.Size(Ui.Button(destRow, S.CourierDestName(dest) + "  ▼", () => OpenCourierDestMenu(w, dest, false), 15, Ui.FlatWell), 300);
+                Ui.Size(CourierDestinationButton(destRow, w, dest, 15), 300);
                 Ui.Size(Ui.Label(destRow, $"约 {minutes} 分钟到，每辆面包车最多装 {GameSession.CourierCapacityKg:0} 千克", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
             }
             else Ui.Size(Ui.Label(destRow, "全部自己背走，不叫车。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, -1, 1);
@@ -302,6 +302,14 @@ namespace PCShopSell.Game.UI
             };
         }
 
+        private Button CourierDestinationButton(Transform parent, Window owner, OwnedShop destination, int fontSize, bool forTruck = false)
+        {
+            var button = Ui.Button(parent, S.CourierDestName(destination) + "  ▼",
+                () => OpenCourierDestMenu(owner, destination, forTruck), fontSize, Ui.ButtonHot);
+            button.name = "CourierDestination";
+            return button;
+        }
+
         /// <summary>“送到”下拉框：家里 + 每一家自己的店，各自的运费和大概多久到。forTruck 时不能选现在站的地方。</summary>
         private void OpenCourierDestMenu(Window owner, OwnedShop current, bool forTruck)
         {
@@ -343,7 +351,7 @@ namespace PCShopSell.Game.UI
                 OwnedShop dest = S.TruckDest;
                 RectTransform destRow = Ui.Row(w.Content, 42, 8);
                 Ui.Size(Ui.Label(destRow, "送到", 17, TextAnchor.MiddleLeft, Ui.Dim), 44);
-                Ui.Size(Ui.Button(destRow, S.CourierDestName(dest) + "  ▼", () => OpenCourierDestMenu(w, dest, true), 16, Ui.FlatWell), 320);
+                Ui.Size(CourierDestinationButton(destRow, w, dest, 16, forTruck: true), 320);
                 string destWhy = S.TruckDestBlocker;
                 (Money fee, int minutes) = S.CourierQuote(dest);
                 Ui.Size(Ui.Label(destRow, destWhy ?? $"每辆 {fee}，约 {minutes} 分钟到", 15, TextAnchor.MiddleLeft, destWhy != null ? Ui.Warn : Ui.Dim), -1, -1, 1);

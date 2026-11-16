@@ -310,6 +310,7 @@ namespace PCShopSell.Core.Shop
         private readonly List<ShopVisitDetail> _completedVisits = new List<ShopVisitDetail>();
         private readonly List<ShopCustomer> _queue = new List<ShopCustomer>();
         private readonly List<BuildOrder> _orders = new List<BuildOrder>();
+        private int _nextCustomerBuildOrderDay;
         private int _nextCustomerId = 1;
         private int _employeeBusyMinutes;
         private double _reputation;
@@ -842,6 +843,8 @@ namespace PCShopSell.Core.Shop
             foreach (var part in _orders.Select(o => o.Tier).Distinct().ToArray().SelectMany(PartCatalog.BuildList))
                 ReserveIncomingBuildPart(part);
             NextOrderId = nextOrderId;
+            _nextCustomerBuildOrderDay = _orders.Where(o => o.ContractId == null)
+                .Select(o => o.PlacedAt.Date.TotalDays + 1).DefaultIfEmpty(0).Max();
         }
 
         private void OnDayAdvanced(GameDate previous, GameDate today)
@@ -1066,16 +1069,18 @@ namespace PCShopSell.Core.Shop
                     return;
                 }
                 if (TryTakeDisplay(c, now)) return;
-                if (BuildOrdersUnlocked && CanTakeBuildOrders(1) && CustomerBuildOrders < CustomerBuildOrderLimit)
+                if (!IsGoodsShop && now.Date.TotalDays >= Math.Max(Settings.BuildOrdersStartDay, _nextCustomerBuildOrderDay)
+                    && CanTakeBuildOrders(1) && CustomerBuildOrders < CustomerBuildOrderLimit)
                 {
                     Money price = BuildPrice(c.BuildTier);
                     var order = new BuildOrder(NextOrderId++, c.BuildTier, price, now, now.AddMinutes(Settings.BuildOrderDueDays * GameTimestamp.MinutesPerDay));
                     AddBuildOrder(order);
+                    _nextCustomerBuildOrderDay = now.Date.TotalDays + Random.Next(1, 3);
                     OrderPlaced?.Invoke(order);
                     Leave(c, LeaveReason.OrderPlaced, countAsLost: false);
                     return;
                 }
-                // During the opening grace period, browse available parts instead of placing an order.
+                // 没到下一次委托或待交付订单已满，顾客继续浏览配件。
             }
 
             // 逛的时候顺手看一眼杂货架（只有少数人会买）
