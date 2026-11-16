@@ -55,6 +55,28 @@ namespace PCShopSell.Core.Session
             return true;
         }
 
+        public string CityDestinationTravelBlocker(Place target, out int minutes, out Money fare)
+        {
+            minutes = 0;
+            fare = Money.Zero;
+            if (target == null) return "请选择一个地点";
+            if (CurrentPlace == target) return "已在此处";
+            if (IsGameOver) return "当前无法出发";
+            if (CityActivityExclusive) return "请先结束当前活动";
+            if (LeaveBlocker is string leave) return leave;
+            if (DistrictAccessBlocker(target) is string district) return district;
+
+            var route = PlanTrip(target.NodeId, StandOf(target), out double meters);
+            if (route == null) return "当前路线不可达";
+            int blocked = BlockedDistrictOnTrip(route);
+            if (blocked > 0) return "路线经过尚未开放的" + DistrictName(blocked) + "片区";
+
+            minutes = Math.Max(1, route.EstimateRemainingMinutes(Time.SecondsPerMinuteAt1x));
+            if (Vehicle != VehicleKind.Taxi) return null;
+            fare = Vehicles.TaxiFare(meters);
+            return Ledger.CanAfford(fare) ? null : $"打车需 {fare}，现金不足";
+        }
+
         /// <summary>出发去某个地点，一直走到它门口的人行道上（到了再进门）。</summary>
         public bool GoTo(Place place) => GoTo(place.NodeId, StandOf(place));
 

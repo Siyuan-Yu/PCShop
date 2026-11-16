@@ -53,8 +53,7 @@ namespace PCShopSell.Game.UI
         }
         private void SelectShortcut(int kind,Place place)
         {
-            if(kind==3)S.SetCityDefault(place.Id);
-            else if(kind==0)S.SetCityShopShortcut(place.Id);
+            if(kind==0)S.SetCityShopShortcut(place.Id);
             else if(kind==SleepShortcut)S.SetCityHomeShortcut(place);
             else S.SetCityShortcut(place.Id,kind==2);
             RefreshShortcutMenus();
@@ -94,7 +93,7 @@ namespace PCShopSell.Game.UI
             {
                 var arrow=Ui.Size(Ui.Button(group,"▾",OpenCustomDestinationPicker,17),26,42);
                 arrow.name="ShortcutArrow_3";
-                arrow.Tip("打开地图选择目的地（只保存选择，不立即出发）");
+                arrow.Tip("搜索目的地、立即前往或保存到底栏。");
                 _shortcutMenus.Add(menu);return;
             }
             var dropdown=Ui.Choice(group,new[]{"暂无目的地"},0,index=>
@@ -173,10 +172,6 @@ namespace PCShopSell.Game.UI
                 menu.Dropdown.SetValueWithoutNotify(Mathf.Max(0,System.Array.FindIndex(places,p=>p.Id==selected)));
                 menu.Dropdown.RefreshShownValue();menu.Dropdown.interactable=places.Length>0;
             }
-        }
-        private void OpenCustomDestinationPicker()
-        {
-            OpenCityMap(place=>SelectShortcut(3,place));
         }
         private void OpenCityPlacePeople(PCShopSell.Core.World.Place place)
         {
