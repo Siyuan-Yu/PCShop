@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.World;
 
@@ -55,6 +56,20 @@ namespace PCShopSell.Core.Session
             new Category(VehicleKind.Van,"货车","v_cargo","motor_cars",2,-1,2),
             new Category(VehicleKind.Car,"轿车","c_city","motor_cars",2,2,3)
         };
+        private static readonly Dictionary<string, VehicleSpec> CommuteSpecs = All.Where(m => CanRace(m.Kind))
+            .ToDictionary(m => m.Id, m =>
+            {
+                var basic = Vehicles.Get(m.Kind);
+                // City traffic compresses the gap between factory top speeds. Keep the class's starter pace.
+                const double citySpeedShare = .35;
+                double multiplier = 1 + (m.Speed / Legacy(m.Kind).Speed - 1) * citySpeedShare;
+                return new VehicleSpec(m.Kind, m.Name, basic.SpeedPerMinute * multiplier, basic.CargoCapacity,
+                    m.Price, basic.VisualSpeed * multiplier, basic.Illegal);
+            });
+
+        public static VehicleSpec CommuteSpec(string modelId) =>
+            modelId != null && CommuteSpecs.TryGetValue(modelId, out var spec) ? spec : null;
+
         public static MotorModel Legacy(VehicleKind kind)=>Get(Categories.FirstOrDefault(c=>c.Kind==kind)?.DefaultModel);
         public static int ClassOf(VehicleKind kind)=>Categories.FirstOrDefault(c=>c.Kind==kind)?.Shape??-1;
         public static int RaceClass(VehicleKind kind)=>Categories.FirstOrDefault(c=>c.Kind==kind)?.Race??-1;

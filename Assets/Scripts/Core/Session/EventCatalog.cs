@@ -17,6 +17,12 @@ namespace PCShopSell.Core.Session
 
         private static bool CanPay(GameSession s, long yuan) => s.Ledger.Balance >= Y(yuan);
 
+        internal static bool IsIncomingInvitation(EventDef def) => def.Group == "activity" || def.Id is
+            "friend_meal" or "classmate_help" or "life_street_music" or "life_book_swap" or "life_old_friend_text" or "shop_neighbor_help"
+            or "race_xinglan_invite" or "race_zhixia_club" or "race_ruoning_rare" or "race_ming_lunch"
+            or "race_rider_bet" or "race_rematch" or "race_spectator" or "race_charity" or "race_night_ride"
+            or "race_prize_dinner" or "race_track_visit_rain" or "race_ning_study";
+
         /// <summary>从店里随机拿走一件货，返回名字；店里没货返回 null。</summary>
         internal static string LoseRandomItem(GameSession s)
         {

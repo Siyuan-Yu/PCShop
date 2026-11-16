@@ -9,16 +9,28 @@ namespace PCShopSell.Core.Session
     {
         public void SaveCityVisits(SaveData d)
         {
-            d.cityVisitsVersion = 1;
+            d.cityVisitsVersion = 2;
             d.cityShopVisits = _shops.Where(s => s.Rented).Select(s => s.Sim.SaveCityCustomers()).ToArray();
         }
+
+        private OwnedShop[] LegacyVisitShopOrder(SaveData d)
+        {
+            if (d.cityVisitsVersion != 1 || d.cityShopVisits == null || d.cityShopVisits.Any(row => string.IsNullOrEmpty(row?.shopId))) return null;
+            var shops = _shops.Where(s => s.Rented).ToArray();
+            // Version 1 wrote visit snapshots in the same order as the main shop and extra shops.
+            return shops.Length == d.cityShopVisits.Length ? shops : null;
+        }
+
         public void LoadCityVisits(SaveData d)
         {
             var restoredShops = new HashSet<string>();
+            var legacyOrder = LegacyVisitShopOrder(d);
             if (d.cityVisitsVersion > 0)
-                foreach (var data in d.cityShopVisits ?? Array.Empty<CitySavedShopVisits>())
+                foreach (var (saved, index) in (d.cityShopVisits ?? Array.Empty<CitySavedShopVisits>()).Select((row, i) => (row, i)))
                 {
-                    if (data?.shopId == null) continue;
+                    if (saved?.shopId == null) continue;
+                    var data = legacyOrder != null && saved.shopId != legacyOrder[index].Place.Id
+                        ? saved.WithShopId(legacyOrder[index].Place.Id) : saved;
                     if (!restoredShops.Add(data.shopId)) throw new InvalidOperationException("同一门店的来访存档重复：" + data.shopId);
                     var shop = _shops.FirstOrDefault(s => s.Rented && s.Place.Id == data.shopId);
                     shop?.Sim.RestoreCityCustomers(data);

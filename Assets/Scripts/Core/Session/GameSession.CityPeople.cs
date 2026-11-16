@@ -403,6 +403,7 @@ namespace PCShopSell.Core.Session
                     var pos=p.Route.Position(now);p.X=pos.X;p.Y=pos.Y;
                     if(now<p.Route.ArriveMinute)continue;
                     p.LocationPlaceId=p.Route.TargetPlaceId;p.Route=null;
+                    NotifyCityCustomerEntry(p);
                 }
                 if(TickDistrictMeetingPerson(p,now))continue;
                 if(TickMcnIntroduction(p,now))continue;
@@ -647,6 +648,7 @@ namespace PCShopSell.Core.Session
             if(p.LastStoryDay==Clock.Today.TotalDays||_staffStoryDay.TryGetValue(id,out int toldDay)&&toldDay==Clock.Today.TotalDays)return "今天已经聊了不少，改天再听下一段。";
             if(d.Stories==null||p.StoryChapter>=d.Stories.Length)return d.Goal;
             if(Relation(id)<5+p.StoryChapter*5)return "再熟悉一点，对方愿意慢慢讲自己的经历。";
+            if (!GreetPerson(id, remote)) return "现在无法和对方交谈。";
             string line=d.Stories[p.StoryChapter++];p.LastStoryDay=Clock.Today.TotalDays;
             AddSocialRelation(id, 2);
             RememberSocial(id,line);return line;

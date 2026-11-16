@@ -18,9 +18,10 @@ namespace PCShopSell.Core.Session
 
         public static string MetFlag(string npcId) => "met_" + npcId;
 
-        public bool IsMet(string npcId) => Flags.Contains(MetFlag(npcId));
+        public bool IsMet(string npcId) => !string.IsNullOrEmpty(npcId) && Flags.Contains(MetFlag(npcId));
 
-        public int Relation(string npcId) => _relations.TryGetValue(npcId, out double v) ? (int)Math.Floor(v) : 0;
+        private double RelationPoints(string npcId) => _relations.TryGetValue(npcId, out double points) ? points : 0;
+        public int Relation(string npcId) => (int)Math.Floor(RelationPoints(npcId));
 
         /// <summary>第一次认识。已认识则不变；初始交情不会拉低已有的。</summary>
         public void Meet(string npcId, double startRelation = 15)
@@ -30,27 +31,27 @@ namespace PCShopSell.Core.Session
             ApplyUpgrades();
         }
 
-        /// <summary>当面要联系方式至少要多熟（档口老板走进去就是脸熟，到这个数才好意思开口）。</summary>
-        public const int ContactMinRelation = 10;
-
-        /// <summary>现在能不能向他要联系方式；能返回 null。</summary>
-        public string ContactBlocker(string npcId)
+        private static readonly (string Id, int Familiarity)[] StartingContacts =
         {
-            if (Npcs.Get(npcId) == null && CityPerson(npcId) == null && Rosters.Get(npcId) == null && Residents.Get(npcId) == null) return "没这个人";
-            if(CityPersonState(npcId)!=null&&!CitySamePlace(npcId))return "需要当面交换联系方式";
-            if (IsMet(npcId)) return "已经存了联系方式";
-            if (Relation(npcId) < ContactMinRelation) return $"熟悉度 {ContactMinRelation}";
-            return null;
+            (ClassmateId, 35), (Npcs.Lin, 35), (Npcs.Jie, 16), (Npcs.Landlady, 12), ("res_cook", 14), ("res_grandpa", 12)
+        };
+
+        private void InitializeStartingContacts()
+        {
+            foreach (var (id, familiarity) in StartingContacts)
+                if (CityPerson(id) != null && !IsMet(id)) Meet(id, familiarity);
         }
 
-        /// <summary>和他聊天时当面要联系方式：成功后他才出现在通讯录里、能约出去、送礼。</summary>
-        public bool AskContact(string npcId)
+        private void RestoreConversationContacts()
         {
-            string blocker = ContactBlocker(npcId);
-            if (blocker != null) return Fail(blocker);
-            Meet(npcId, ContactMinRelation);
-            Say($"和{CityPerson(npcId)?.Name ?? Npcs.Get(npcId)?.Name ?? Rosters.Get(npcId)?.Name}互相留了联系方式，存进了通讯录。");
-            return true;
+            InitializeStartingContacts();
+            const string greetedPrefix = "greeted:";
+            foreach (string flag in Flags.Where(flag => flag.StartsWith(greetedPrefix, StringComparison.Ordinal)).ToArray())
+            {
+                string id = flag.Substring(greetedPrefix.Length);
+                if (!IsMet(id) && (CityPerson(id) != null || Npcs.Get(id) != null || Rosters.Get(id) != null || Residents.Get(id) != null))
+                    Meet(id, 0);
+            }
         }
 
         public void AddRelation(string npcId, double delta)

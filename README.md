@@ -1,8 +1,8 @@
-# PCShopSell（工作名）
+# 街角起家 · PCShopSell
 
-**当前源码（2026-11-16）** · [完整玩法与工程交接](docs/122-current-game-content-2026-11-16.md)
+**当前源码（2026-11-17）** · [本轮更新与工程交接](docs/123-playtest-update-2026-11-17.md) · [完整玩法总览](docs/122-current-game-content-2026-11-16.md)
 
-本轮更新包括物价简报式首页、二手店卖家排队与连续收购、二手转售品货架任务、餐桌降价、家具规格分组和室内快捷出门。住处装修、订单频率、营业时间和其他经营规则汇总在完整玩法文档中。
+本轮加入九格存档、物品缩略图、手机外卖、借款动作验证和证券买卖标记。鱼餐预订优先制作，各店的营业流水独立归属，现场手操活动统一在结束后结算游戏时间。邀约、物价、音效和旧存档兼容规则见本轮更新。
 
 **此前试玩交接（2026-11-16）**：[第 119 篇　试玩反馈、规则与验证](docs/119-playtest-fixes-and-handoff-2026-11-16.md)。涵盖快捷键、采购和二手店、银行和证券、到场预约、手动活动、赛车登记及四条赛道扩建。原有玩法全景见[第 118 篇](docs/118-current-project-handoff-2026-11-16.md)。
 
@@ -201,7 +201,7 @@ UI整理已落实：[第50篇：保留员工部分的UI整理](docs/50-ui-cleanu
 - `Assets/Scripts/Game`：Unity 层
 - `Assets/Tests/EditMode`：单元测试
 
-Windows 测试包留在本机。GitHub 用于同步源码和文档，工程构建与验收见[当前交接文档](docs/122-current-game-content-2026-11-16.md#本地构建与验证)。
+Windows 测试包留在本机。GitHub 用于同步源码和文档，打包、上传和测试分别遵循[项目操作规则](AGENTS.md)。工程入口见[本地构建与验证](docs/122-current-game-content-2026-11-16.md#本地构建与验证)。
 
 运行测试（命令行）：
 
@@ -209,7 +209,7 @@ Windows 测试包留在本机。GitHub 用于同步源码和文档，工程构�
 Unity.exe -batchmode -nographics -projectPath <项目路径> -runTests -testPlatform EditMode -testResults <结果.xml>
 ```
 
-第 39、40 篇记录的性能专项 EditMode 回归通过 95 项。当前源码的联测范围和已知失败参见 [当前验证记录](docs/122-current-game-content-2026-11-16.md#验证与开发状态)。测试在隔离的工程副本中执行。
+第 39、40 篇记录的性能专项 EditMode 回归通过 95 项。[11 月 16 日源码验证记录](docs/122-current-game-content-2026-11-16.md#验证与开发状态) · [本轮同步记录](docs/123-playtest-update-2026-11-17.md#工程入口与发布记录)
 
 ## 历史状态（2026-11-02）
 

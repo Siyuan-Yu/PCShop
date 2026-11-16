@@ -68,12 +68,14 @@ namespace PCShopSell.Core.Finance
         }
 
         /// <summary>经营现金口径；内部划转、借贷本金、投资交易永远不计入销售或经营净额。</summary>
-        public static CityFinanceSummary CitySummary(Ledger ledger, GameDate from, GameDate to, string shopId = null)
+        public static CityFinanceSummary CitySummary(Ledger ledger, GameDate from, GameDate to, string shopId = null, string salesAccountId = null)
         {
             var result = new CityFinanceSummary { From = from, To = to, ShopId = shopId };
             foreach (var e in ledger.Entries)
             {
-                if (e.Date < from || e.Date > to || (shopId != null && e.ShopId != shopId)) continue;
+                if (e.Date < from || e.Date > to) continue;
+                if (shopId != null && (e.Amount.IsPositive && IsOperatingSale(e)
+                    ? !IsShopSale(e, shopId, salesAccountId) : e.ShopId != shopId)) continue;
                 switch (e.BusinessKind)
                 {
                     case LedgerBusinessKind.Operating:
@@ -93,17 +95,23 @@ namespace PCShopSell.Core.Finance
         public const string RetailCategory = "零售";
         public const string BuildCategory = "装机";
 
-        public static bool IsOperatingSale(LedgerEntry entry) =>
-            entry.BusinessKind == LedgerBusinessKind.Operating
-            && (entry.Category == RetailCategory || entry.Category == BuildCategory || entry.Attribution?.TransactionKind == "销售");
+        public static bool IsOperatingSale(LedgerEntry entry) => IsOperatingSale(entry.Category, entry.Attribution);
 
-        public static List<DayFinance> OperatingDaily(Ledger ledger, GameDate today, int days, string shopId = null)
+        internal static bool IsOperatingSale(string category, LedgerAttribution attribution) =>
+            attribution?.BusinessKind == LedgerBusinessKind.Operating
+            && (category == RetailCategory || category == BuildCategory || attribution.TransactionKind == "销售");
+
+        public static bool IsShopSale(LedgerEntry entry, string shopId, string salesAccountId) =>
+            entry.Amount.IsPositive && IsOperatingSale(entry)
+            && (salesAccountId == null ? entry.ShopId == shopId : entry.Attribution.SalesAccountId == salesAccountId);
+
+        public static List<DayFinance> OperatingDaily(Ledger ledger, GameDate today, int days, string shopId = null, string salesAccountId = null)
         {
             var result = new List<DayFinance>();
             for (int i = days - 1; i >= 0; i--)
             {
                 int day = today.TotalDays - i; if (day < 0) continue;
-                var date = new GameDate(day); var summary = CitySummary(ledger, date, date, shopId);
+                var date = new GameDate(day); var summary = CitySummary(ledger, date, date, shopId, salesAccountId);
                 result.Add(new DayFinance { Date = date, Revenue = summary.Sales, Expense = summary.OperatingOut,
                     OtherIncome = summary.OperatingIn - summary.Sales });
             }

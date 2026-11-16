@@ -112,7 +112,7 @@ namespace PCShopSell.Core.Session
             {
                 string place=LifeServicePlace;
                 return EventScene(template,"歌手准备在街边唱一首歌，你可以约好到场听约10分钟。",
-                    Choose("听一首",_=>QueueLifeVisit("music","social_115","life_singer",place)),Choose("赶时间",_=>"没有预约或属性奖励。"));
+                    Choose("听一首",_=>QueueLifeVisit("music",StreetMusicActivityId,"life_singer",place)),Choose("赶时间",_=>"没有预约或属性奖励。"));
             }
             if(n==116)
             {
@@ -218,10 +218,13 @@ namespace PCShopSell.Core.Session
             if(t==null||t.Mode!=0||a?.State!=CityActivityPhase.Running||!LifeHere(t.Place)||!CitySamePlace(t.Person)||yuan is not (200 or 1000))return false;
             if(!Ledger.TryDebit(Clock.Today,"街头音乐打赏",Money.FromYuan(yuan),CityPerson(t.Person)?.Name))return false;t.Mode=1;return true;
         }
+        public const string StreetMusicActivityId = "social_115";
+        public const string NightSchoolActivityId = "social_119";
+
         public bool SingLifeMusic()
         {
             var t=_lifeTasks.FirstOrDefault(t=>t.Kind=="music"&&!t.Done);var a=_cityActivities.FirstOrDefault(a=>a.Id==t?.Activity);
-            if(t==null||t.Count!=0||a?.State!=CityActivityPhase.Running||!LifeHere(t.Place)||Clock.Now.TotalMinutes-a.ActualStart<5)return false;
+            if(t==null||t.Count!=0||a?.State!=CityActivityPhase.Running||!LifeHere(t.Place))return false;
             t.Count=Random.Chance(EventScript.ProgressiveChance(.4,(EffectiveCharm,45,.01)))?2:1;t.Message=t.Count==2?"合唱跟上了节奏。":"没有跟上节奏，仍可继续听。";Say(t.Message);return true;
         }
         public bool EnrollLifeCourse(int course,bool withNing)
@@ -229,7 +232,7 @@ namespace PCShopSell.Core.Session
             if(!Flags.Contains("life:school-invited")||course<0||course>2||Flags.Contains("life:course-completed:"+course)||!LifeHere(LifeServicePlace)||!LifeOpen(LifeServicePlace)||_lifeCourse!=null&&_lifeCourse.Lessons<4)return false;
             if(withNing&&!IsMet("life_ning"))return Fail("先认识顾宁才能邀请同行。");
             var people=withNing?new[]{"life_teacher","life_ning"}:new[]{"life_teacher"};
-            if(!Enumerable.Range(0,14).Any(d=>{long at=Clock.Today.AddDays(d).TotalDays*1440L+1140;return at>=Clock.Now.TotalMinutes+30&&CityActivityBlockerAt("social_119",people,at,false,LifeServicePlace)==null;}))return Fail("暂无共同晚课时段，未扣学费。");
+            if(!Enumerable.Range(0,14).Any(d=>{long at=Clock.Today.AddDays(d).TotalDays*1440L+1140;return at>=Clock.Now.TotalMinutes+30&&CityActivityBlockerAt(NightSchoolActivityId,people,at,false,LifeServicePlace)==null;}))return Fail("暂无共同晚课时段，未扣学费。");
             if(!Ledger.TryDebit(Clock.Today,"夜校学费",Money.FromYuan(1000),new[]{"经营记账","采购实务","沟通课程"}[course]))return false;
             _lifeCourse=new LifeCourseState{Course=course,WithNing=withNing,Paid=true};return BookLifeLesson();
         }
@@ -240,8 +243,8 @@ namespace PCShopSell.Core.Session
             for(int d=0;d<14;d++)
             {
                 long start=Clock.Today.AddDays(d).TotalDays*1440L+19*60;if(start<Clock.Now.TotalMinutes+30)continue;
-                if(CityActivityBlockerAt("social_119",people,start,false,LifeServicePlace)!=null)continue;
-                var a=ScheduleCityActivityAt("social_119",people,start,false,"night-course:"+_lifeSequence+":"+_lifeCourse.Lessons,LifeServicePlace);
+                if(CityActivityBlockerAt(NightSchoolActivityId,people,start,false,LifeServicePlace)!=null)continue;
+                var a=ScheduleCityActivityAt(NightSchoolActivityId,people,start,false,"night-course:"+_lifeSequence+":"+_lifeCourse.Lessons,LifeServicePlace);
                 if(a==null)continue;a.ServiceConfirmed=true;a.ServiceChoice=0;_lifeCourse.Activity=a.Id;
                 var t=NewLifeTask("lesson",LifeServicePlace,0);t.Activity=a.Id;t.Mode=-1;return true;
             }
@@ -259,10 +262,10 @@ namespace PCShopSell.Core.Session
         public bool AnswerLifeLesson(int choice)
         {
             var t=_lifeTasks.FirstOrDefault(t=>t.Kind=="lesson"&&t.Activity==_lifeCourse?.Activity&&!t.Done);var a=_cityActivities.FirstOrDefault(a=>a.Id==t?.Activity);
-            if(t==null||t.Mode>=0||choice<0||choice>2||a?.State!=CityActivityPhase.Running||!LifeHere(LifeServicePlace)||Clock.Now.TotalMinutes-a.ActualStart<30)return false;
+            if(t==null||t.Mode>=0||choice<0||choice>2||a?.State!=CityActivityPhase.Running||!LifeHere(LifeServicePlace))return false;
             t.Mode=choice;return true;
         }
-        private bool LifeActivityReady(CityActivity a)=>NeighborhoodActivityReady(a)&&(a.DefinitionId!="social_119"||_lifeTasks.Any(t=>t.Activity==a.Id&&t.Kind=="lesson"&&t.Mode>=0));
+        private bool LifeActivityReady(CityActivity a)=>NeighborhoodActivityReady(a)&&(a.DefinitionId!=NightSchoolActivityId||_lifeTasks.Any(t=>t.Activity==a.Id&&t.Kind=="lesson"&&t.Mode>=0));
         private void CompleteLifeActivity(CityActivity a)
         {
             var t=_lifeTasks.FirstOrDefault(t=>t.Activity==a.Id&&!t.Done);if(t==null)return;t.Done=true;
@@ -290,7 +293,6 @@ namespace PCShopSell.Core.Session
         private void TickLifeBatch(long now)
         {
             TickNeighborhood(now);
-            TickOnsitePlay(now);
             foreach(var t in _lifeTasks.Where(t=>!t.Done).ToArray())
             {
                 if(t.Activity!=null){var a=_cityActivities.FirstOrDefault(a=>a.Id==t.Activity);if(a==null||!a.Active){t.Done=true;if(t.Kind=="lesson"&&_lifeCourse?.Activity==t.Activity)_lifeCourse.Activity=null;}continue;}

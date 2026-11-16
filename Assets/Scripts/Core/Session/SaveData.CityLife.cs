@@ -141,7 +141,7 @@ namespace PCShopSell.Core.Session
             CityIntent=d.cityTravelIntent!=null&&City.HasPlace(d.cityTravelIntent.TargetPlaceId)&&!d.cityTravelIntent.Cancelled?d.cityTravelIntent:null;
             if(d.cityTrip!=null)
             {
-                Trip=PCShopSell.Core.Session.Trip.RestoreCityTrip(d.cityTrip,City);
+                Trip=PCShopSell.Core.Session.Trip.RestoreCityTrip(d.cityTrip,City,CurrentVehicle);
                 if(Trip!=null){CurrentPlace=null;_free=null;}
             }
             else if(d.cityPlayerOffNode&&CurrentPlace==null)_free=new MapPoint(d.cityPlayerX,d.cityPlayerY);

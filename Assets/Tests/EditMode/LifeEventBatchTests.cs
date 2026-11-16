@@ -80,7 +80,8 @@ namespace PCShopSell.Tests
         [Test] public void MusicHasRealAttendanceAndDoesNotTipOrRewardImmediately()
         {
             using var s=Make();Resolve(s,"life_street_music",0);var t=s.LifeTasks.Single(x=>x.Kind=="music");var a=s.CityActivities.Single(x=>x.Id==t.Activity);var cash=s.Ledger.Balance;
-            Assert.IsFalse(s.TipLifeMusic(200));Attend(s,a);Assert.IsTrue(s.TipLifeMusic(200));Assert.IsFalse(s.TipLifeMusic(1000));Assert.AreEqual(cash-Money.FromYuan(200),s.Ledger.Balance);s.AdvanceClock(11);Assert.AreEqual(CityActivityPhase.Completed,a.State,a.EndReason);
+            Assert.IsFalse(s.TipLifeMusic(200));Attend(s,a);Assert.IsTrue(s.TipLifeMusic(200));Assert.IsFalse(s.TipLifeMusic(1000));Assert.AreEqual(cash-Money.FromYuan(200),s.Ledger.Balance);
+            Assert.IsTrue(s.FinishManualCityActivity(a.Id));Assert.AreEqual(CityActivityPhase.Completed,a.State,a.EndReason);
         }
         [Test] public void PhoneChatBindsAnExistingFriendAndUsesFifteenRealMinutes()
         {
@@ -104,24 +105,33 @@ namespace PCShopSell.Tests
             using var s=Make();Resolve(s,"life_night_class",0);At(s,GameSession.LifeServicePlace);var cash=s.Ledger.Balance;int iq=s.Player.Intelligence;Assert.IsTrue(s.EnrollLifeCourse(0,false));Assert.AreEqual(cash-Money.FromYuan(1000),s.Ledger.Balance);Assert.IsFalse(s.EnrollLifeCourse(1,false));
             for(int lesson=0;lesson<4;lesson++)
             {
-                var a=s.CityActivities.Single(x=>x.Id==s.LifeCourse.Activity);Assert.AreEqual(1140,a.ScheduledStart%1440);Attend(s,a);Assert.IsFalse(s.AnswerLifeLesson(1));s.AdvanceClock(30);Assert.IsTrue(s.AnswerLifeLesson(new[]{1,0,2,1}[lesson]));Assert.IsFalse(s.AnswerLifeLesson(1));s.AdvanceClock(31);
+                var a=s.CityActivities.Single(x=>x.Id==s.LifeCourse.Activity);Assert.AreEqual(1140,a.ScheduledStart%1440);Attend(s,a);
+                var start = s.Clock.Now;
+                Assert.IsTrue(s.AnswerLifeLesson(new[]{1,0,2,1}[lesson]));
+                Assert.IsFalse(s.AnswerLifeLesson(1));
+                Assert.AreEqual(start, s.Clock.Now);
+                Assert.IsTrue(s.FinishManualCityActivity(a.Id));
+                Assert.AreEqual(start.AddMinutes(a.Duration), s.Clock.Now);
                 Assert.AreEqual(CityActivityPhase.Completed,a.State,a.EndReason);Assert.AreEqual(lesson+1,s.LifeCourse.Lessons);if(lesson<3)Assert.IsTrue(s.BookLifeLesson());
             }
             Assert.AreEqual(4,s.LifeCourse.Score);Assert.AreEqual(iq+2,s.Player.Intelligence);Assert.IsFalse(s.EnrollLifeCourse(0,false));
         }
         [Test] public void MissingClassAnswerDoesNotGrantALessonAndRebookingDoesNotChargeAgain()
         {
-            using var s=Make();Resolve(s,"life_night_class",0);At(s,GameSession.LifeServicePlace);Assert.IsTrue(s.EnrollLifeCourse(1,false));var a=s.CityActivities.Single(x=>x.Id==s.LifeCourse.Activity);Attend(s,a);s.AdvanceClock(61);Assert.AreEqual(0,s.LifeCourse.Lessons);var cash=s.Ledger.Balance;Assert.IsTrue(s.BookLifeLesson());Assert.AreEqual(cash,s.Ledger.Balance);
+            using var s=Make();Resolve(s,"life_night_class",0);At(s,GameSession.LifeServicePlace);Assert.IsTrue(s.EnrollLifeCourse(1,false));var a=s.CityActivities.Single(x=>x.Id==s.LifeCourse.Activity);Attend(s,a);
+            Assert.IsFalse(s.FinishManualCityActivity(a.Id));
+            Assert.IsTrue(s.CancelCityActivity(a.Id, early: true));
+            Assert.AreEqual(0,s.LifeCourse.Lessons);var cash=s.Ledger.Balance;Assert.IsTrue(s.BookLifeLesson());Assert.AreEqual(cash,s.Ledger.Balance);
         }
         [Test] public void ClassAnswerAndEnrollmentSurviveSavingMidLesson()
         {
             using var s=Make();Resolve(s,"life_night_class",0);At(s,GameSession.LifeServicePlace);Assert.IsTrue(s.EnrollLifeCourse(2,false));var a=s.CityActivities.Single(x=>x.Id==s.LifeCourse.Activity);
-            Attend(s,a);s.AdvanceClock(30);Assert.IsTrue(s.AnswerLifeLesson(2));using var loaded=Reload(s);loaded.AdvanceClock(31);
+            Attend(s,a);Assert.IsTrue(s.AnswerLifeLesson(2));using var loaded=Reload(s);Assert.IsTrue(loaded.FinishManualCityActivity(a.Id));
             Assert.AreEqual(1,loaded.LifeCourse.Lessons);Assert.AreEqual(1,loaded.LifeCourse.Score);Assert.IsTrue(loaded.BookLifeLesson());
         }
         [Test] public void LowCharmSingingRemainsSelectableButFailsWithoutAFreeCharmReward()
         {
-            using var s=Make();s.Player.Charm=10;Resolve(s,"life_street_music",0);var t=s.LifeTasks.Single(x=>x.Kind=="music");Attend(s,s.CityActivities.Single(x=>x.Id==t.Activity));s.AdvanceClock(5);
+            using var s=Make();s.Player.Charm=10;Resolve(s,"life_street_music",0);var t=s.LifeTasks.Single(x=>x.Kind=="music");Attend(s,s.CityActivities.Single(x=>x.Id==t.Activity));
             Assert.IsTrue(s.SingLifeMusic());Assert.AreEqual(1,s.LifeTasks.Single(x=>x.Id==t.Id).Count);Assert.AreEqual(10,s.Player.Charm);Assert.IsFalse(s.SingLifeMusic());
         }
         [Test] public void WalkingDogNeedsFootTravelAndDistanceAndCannotRewardATaxiRide()

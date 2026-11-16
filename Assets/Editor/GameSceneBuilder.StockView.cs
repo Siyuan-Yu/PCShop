@@ -65,7 +65,7 @@ namespace PCShopSell.EditorTools
             for (int i = 0; i < 6; i++) s.AdvanceClock(24 * 60);
             int lot = GameSession.StockLotSize; var ids = CityInvestments.All.Select(d => d.Id).ToArray();
             Log("TRADE " + s.TradeCityInvestment(ids[0], 3 * lot, true, true) + " SHORT " + s.OpenStockShort(ids[5], lot, true));
-            Log("LOAN " + s.BorrowAppLoan(50000, 1));
+            Log("LOAN " + BorrowForPreview(s, 50000, 1));
             s.DebugSetHomeWorkbench(true); Teleport(s, s.Home.Id);
             var ui = _game.Ui; var t = typeof(GameUi);
             void Tab(int n) => t.GetField("_workbenchTab", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(ui, n);
@@ -84,5 +84,14 @@ namespace PCShopSell.EditorTools
             Tab(3); ui.RebuildWindows(); Shot2("03-contacts");
             Log("WORKBENCH PAGES COMPLETE");
         });
+
+        private static bool BorrowForPreview(GameSession session, long yuan, int months, bool atBank = false)
+        {
+            var application = session.BeginLoanApplication(yuan, months, atBank);
+            if (application == null) return false;
+            while (application.NextGesture is LoanGesture gesture)
+                session.PerformLoanGesture(application, gesture);
+            return session.BorrowAppLoan(application);
+        }
     }
 }

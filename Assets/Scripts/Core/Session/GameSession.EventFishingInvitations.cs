@@ -25,7 +25,7 @@ namespace PCShopSell.Core.Session
                 var activity = s.ScheduleCityActivity(definition, new[] { person }, start, sourceId: "fishing-invitation:" + number + ":" + s._nextCityActivity);
                 if (activity == null) return "本次未约成，没有扣款。";
                 activity.HostId = person; activity.PlayerTreat = treat; activity.ServiceConfirmed = true; activity.ServiceChoice = 0;
-                return "已记入日程，实际到场开始后支付。到场才认识，完整完成后结算相处奖励。";
+                return "已记入日程，实际到场开始后支付。完成活动后结算相处奖励。";
             }
             return EventScene(template, body,
                 Choose($"确认赴约 · 我付 ¥{perPerson:N0}", s => Book(s, false), _ => start >= 0, "没有可赴约时段"),

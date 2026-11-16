@@ -47,6 +47,25 @@ namespace PCShopSell.Tests
         }
         private static void At(GameSession s,string id){s.StopTrip();typeof(GameSession).GetProperty("CurrentPlace").SetValue(s,s.City.GetPlace(id));typeof(GameSession).GetProperty("PlayerNodeId").SetValue(s,s.City.GetPlace(id).NodeId);}
         private static GameSession Reload(GameSession s)=>GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave())));
+        [Test] public void ChangingTheCommuteCarUpdatesSpeedWhileCarModeIsStillSelected()
+        {
+            using var s = Make();
+            At(s, GameSession.StarterRaceGarageId);
+            Assert.True(s.AcquireGarage(GameSession.StarterRaceGarageId));
+            At(s, "motor_cars");
+            Assert.True(s.BuyMotor("c_city"));
+            Assert.True(s.BuyMotor("c_su7", false, GameSession.StarterRaceGarageId));
+            Assert.True(s.SetVehicle(VehicleKind.Car));
+            double originalSpeed = s.CurrentVehicle.SpeedPerMinute;
+            var newerCar = s.Garage.Single(v => v.ModelId == "c_su7");
+            At(s, GameSession.StarterRaceGarageId);
+            Assert.True(s.SetMotorCommuter(newerCar.Id));
+            Assert.AreEqual(VehicleKind.Car, s.Vehicle);
+            Assert.AreEqual(MotorCatalog.Get("c_su7").Name, s.CurrentVehicle.Name);
+            Assert.Greater(s.CurrentVehicle.SpeedPerMinute, originalSpeed);
+            Assert.AreEqual("c_su7", s.CommuteMotorModelId(VehicleKind.Car));
+        }
+
         [Test] public void RacingEnrollmentRequiresCashAndNoLoansAndMustBeDoneAtGarage()
         {
             using var fixture = DistrictProgressionTests.Make();

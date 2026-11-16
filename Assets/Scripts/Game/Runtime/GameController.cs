@@ -44,6 +44,7 @@ namespace PCShopSell.Game
 
         private CameraRig _rig;
         private DayNightLighting _lighting;
+        private CityRainView _rain;
         private AvatarView _avatar;
         private PoliceView _police;
         private CrowdView _crowd;
@@ -56,6 +57,8 @@ namespace PCShopSell.Game
         private float _roomOverviewSize;
         private string _crowdPlace, _crowdActivity;
         private bool _autosaveDue, _wasPlayerWorking;
+        public int ActiveSaveSlot { get; private set; }
+        private string _saveCampaignId;
         private bool _bootstrapped;
         private bool _eventsOn;
         private bool _gameOverShown;
@@ -86,6 +89,9 @@ namespace PCShopSell.Game
             var search=new GameObject("CommunitySearch").AddComponent<CommunitySearchView>();
             search.transform.SetParent(transform,false);search.Initialize(this);
             _lighting = new DayNightLighting(Cam, FindSun(), FindVolume(), World.NightLights);
+            _rain = new GameObject("CityRain").AddComponent<CityRainView>();
+            _rain.transform.SetParent(transform, false);
+            _rain.Initialize(Cam);
 
             _actors = new GameObject("Actors").transform;
             _avatar = new AvatarView(_actors);
@@ -104,7 +110,7 @@ namespace PCShopSell.Game
             new GameSession(City, seed ?? (DefaultSeed + (ulong)DateTime.Now.Ticks % 100000), StartingCash,
                 GameTimestamp.From(new GameDate(0), GameSession.WakeUpMinute), true, false, false, startWithCookingTutorial: true);
 
-        private void StartSession(GameSession s)
+        private void StartSession(GameSession s, int saveSlot = 0, string campaignId = null)
         {
             if (PetFocusActive) ExitPetFocus();
             Ui?.CloseAllWindows();
@@ -119,6 +125,7 @@ namespace PCShopSell.Game
                 Session.ShopExpanded -= OnShopExpanded;
                 Session.TripArrived -= OnTripArrived;
                 Session.ShopCustomerArrived -= OnCustomerArrived;
+                Session.ShopGuestChanged -= OnShopGuestChanged;
                 Session.Clock.DayAdvanced -= OnDayAdvanced;
                 Session.CityTravelRequested-=OnCityTravelRequested;
                 Session.CityPlaceEntered-=OnCityPlaceEntered;
@@ -129,6 +136,8 @@ namespace PCShopSell.Game
             EnsureInterior(s.PlayerShop.Size);
 
             Session = s;
+            ActiveSaveSlot = saveSlot;
+            _saveCampaignId = campaignId ?? Guid.NewGuid().ToString("N");
             Ui.ResetGuideState();
             s.Notice += OnNotice;
             s.Failed += OnFailed;
@@ -140,6 +149,7 @@ namespace PCShopSell.Game
             s.EventsEnabled = !s.IsCityLifeTest && _eventsOn;
             s.TripArrived += OnTripArrived;
             s.ShopCustomerArrived += OnCustomerArrived;
+            s.ShopGuestChanged += OnShopGuestChanged;
             s.Clock.DayAdvanced += OnDayAdvanced;
             s.CityTravelRequested+=OnCityTravelRequested;
             s.CityPlaceEntered+=OnCityPlaceEntered;
@@ -186,25 +196,50 @@ namespace PCShopSell.Game
             Ui.ShowIntro();
         }
 
-        public bool SaveGame()
+        public bool SaveGame(int slot = 0)
         {
             if (!Session.CanSave) return false;
-            return SaveStore.TrySave(Session);
+            if (Session.IsCityLifeTest)
+            {
+                if (!SaveStore.TrySave(Session)) return false;
+            }
+            else
+            {
+                if (slot == 0 || !SaveStore.TrySave(Session, slot, campaignId: _saveCampaignId)) return false;
+                ActiveSaveSlot = slot;
+            }
+            SoundFx.Play(Sfx.Success);
+            return true;
         }
 
-        public void LoadGame(bool automatic = false) => TryLoadGame(automatic);
-
-        public bool TryLoadGame(bool automatic = false)
+        public bool TryLoadGame(int slot, bool automatic)
         {
-            GameSession s = SaveStore.Load(City, automatic);
-            if (s == null)
-            {
-                Ui.Toast(MenuLocalization.Get("load_failed_body"));
-                return false;
-            }
-            StartSession(s);
+            GameSession s = SaveStore.LoadSlot(City, slot, automatic, out string campaignId);
+            if (s == null) return false;
+            StartSession(s, slot, campaignId);
             Ui.Toast(MenuLocalization.Get(SaveStore.LastLoadMessage.Contains("备用") ? "loaded_backup" : "loaded"));
             return true;
+        }
+
+        private void SaveAutomatically()
+        {
+            if (Session.IsCityLifeTest)
+            {
+                Ui.Toast(SaveStore.TrySave(Session, true) ? "已自动存档。" : SaveStore.LastSaveMessage);
+                return;
+            }
+            int slot = ActiveSaveSlot != 0 ? ActiveSaveSlot : SaveStore.FirstEmptySlot;
+            if (slot == 0)
+            {
+                Ui.Toast(MenuLocalization.Get("autosave_slots_full"));
+                return;
+            }
+            if (SaveStore.TrySave(Session, slot, automatic: true, campaignId: _saveCampaignId))
+            {
+                ActiveSaveSlot = slot;
+                Ui.Toast(MenuLocalization.Format("autosaved_in_slot", slot.ToString("00")));
+            }
+            else Ui.Toast(SaveStore.LastSaveMessage);
         }
 
         /// <summary>前往某地并在到达后进入。已经在门口就直接进去。</summary>
@@ -325,7 +360,7 @@ namespace PCShopSell.Game
             if (_autosaveDue && Session.CanSave && !Session.IsGameOver)
             {
                 _autosaveDue = false;
-                Ui.Toast(SaveStore.TrySave(Session, true) ? "已自动存档。" : SaveStore.LastSaveMessage);
+                SaveAutomatically();
             }
             if (Session.IsGameOver && !_gameOverShown)
             {
@@ -429,11 +464,21 @@ namespace PCShopSell.Game
             {
                 _rig.Follow(FocusPoint(), dt);
             }
-            _lighting.Apply(Session.Clock.MinuteOfDay, room);
+            bool insideVenue = Session.CurrentPlace != null
+                && World.Places.TryGetValue(Session.CurrentPlace.Id, out var venue)
+                && venue.VenueInterior != null && venue.VenueInterior.activeInHierarchy;
+            UpdateWeather(room, room || insideVenue);
 
             bool chasing = Session.Police.AnyChasing;
             if (chasing && !_wasChasing) Ui.Toast("被交警发现了！");
             _wasChasing = chasing;
+        }
+
+        private void UpdateWeather(bool room, bool sheltered)
+        {
+            bool raining = Session.CityIsRaining && !sheltered;
+            _rain.Sync(raining);
+            _lighting.Apply(Session.Clock.MinuteOfDay, room, raining);
         }
 
         private bool _overview;
@@ -1040,7 +1085,11 @@ namespace PCShopSell.Game
 
         private void OnFailed(string m) => SoundFx.Play(Sfx.Error);
 
-        private void OnEventRaised(EventDef def) => Ui.ShowEvent(def);
+        private void OnEventRaised(EventDef def)
+        {
+            SoundFx.Play(Sfx.Notification);
+            Ui.ShowEvent(def);
+        }
 
         /// <summary>店内场景按店面大小重建（扩建、读档时用）。</summary>
         private void EnsureInterior(PCShopSell.Core.Shop.ShopSize size, bool rebuild = false)
@@ -1153,6 +1202,7 @@ namespace PCShopSell.Game
 
         private void OnTripArrived(string nodeId)
         {
+            SoundFx.Play(Sfx.Arrival);
             if (_pendingEnter != null && _pendingEnter.NodeId == nodeId) EnterPlace(_pendingEnter);
             _pendingEnter = null;
         }
@@ -1161,6 +1211,17 @@ namespace PCShopSell.Game
         {
             if (InInterior || _crowd == null || !World.Places.TryGetValue(shop.Id, out PlaceVisual pv)) return;
             _crowd.SendShopper((pv.Place.ExplicitEntrance ? pv.Entrance : pv.Entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZAt(pv.Entrance.x) - 0.3f)));
+        }
+
+        private void OnShopGuestChanged(Place shop, ShopGuestEvent change)
+        {
+            if (!InInterior || Session.CurrentPlace != shop || Ui.MainMenuOpen) return;
+            SoundFx.Play(change switch
+            {
+                ShopGuestEvent.Entered => Sfx.Bell,
+                ShopGuestEvent.Paid => Sfx.Coin,
+                _ => Sfx.ShopGuestLeaves
+            });
         }
 
         private void OnDayAdvanced(GameDate prev, GameDate today) => _autosaveDue = true;
@@ -1175,6 +1236,7 @@ namespace PCShopSell.Game
                 var go = new GameObject("Main Camera") { tag = "MainCamera" };
                 Cam = go.AddComponent<Camera>();
             }
+            if (FindObjectOfType<AudioListener>() == null) Cam.gameObject.AddComponent<AudioListener>();
             Cam.clearFlags = CameraClearFlags.SolidColor;
             Cam.allowHDR = true;
             Cam.allowMSAA = true;

@@ -69,11 +69,19 @@ namespace PCShopSell.Game.UI
                     Action(S.FestivalOpen?"正在举办":"尚未开场，时间到后再来","前往花灯会",()=>Go(GameSession.LifeServicePlace));
                     var row=Ui.Row(w.Content,40,6);
                     for(int tier=0;tier<2;tier++){int n=tier;Ui.Size(Ui.Button(row,tier==0?"纸艺 ¥300":"精制 ¥1,000",()=>{_lanternTier=n;w.Rebuild();},17,Ui.SelectedButton(_lanternTier==tier)),-1,38,1);}
-                    var shapes=Ui.Row(w.Content,40,6);for(int i=0;i<3;i++){int style=i;Ui.Size(Ui.Button(shapes,new[]{"圆月","莲花","宫灯"}[i],()=>{_lanternStyle=style;w.Rebuild();},17,Ui.SelectedButton(_lanternStyle==i)),-1,38,1);}
+                    var shapes=Ui.Row(w.Content,40,6);
+                    for(int i=0;i<3;i++)
+                    {
+                        int style=i;
+                        var button=Ui.Size(Ui.Button(shapes,new[]{"圆月","莲花","宫灯"}[i],()=>{_lanternStyle=style;w.Rebuild();},17,Ui.SelectedButton(_lanternStyle==i)),-1,38,1);
+                        ItemButtonPortrait(button,NeighborhoodGoods.Lanterns[_lanternTier*3+i].Id,30);
+                    }
                     Action("现场制作10分钟，开始时付款","开始做灯",()=>{if(S.BeginLanternCraft(_lanternTier,_lanternStyle))Start("lantern-craft");else Toast("请在花灯会开放时到现场，先完成已有制作。");});
                     foreach(var light in NeighborhoodGoods.Lanterns.Where(x=>S.Backpack.GiftCount(x.Id)>0))
                     {
-                        var item=light;var slots=Ui.Row(w.Content,40,6);Ui.Size(Ui.Label(slots,item.Name+" ×"+S.Backpack.GiftCount(item.Id),17),-1,38,1);
+                        var item=light;var slots=Ui.Row(w.Content,40,6);
+                        ItemPortrait(slots,item.Id,34);
+                        Ui.Size(Ui.Label(slots,item.Name+" ×"+S.Backpack.GiftCount(item.Id),17),0,38,1);
                         for(int i=0;i<3;i++){int slot=i;Ui.Size(Ui.Button(slots,"挂到"+(i+1)+"号位",()=>{S.HangFestivalLantern(item.Id,slot);w.Rebuild();},16,Ui.ButtonBg,festival.Hung[i]<0),125,38);}
                     }
                     if(festival.PendingRiddle>=0)

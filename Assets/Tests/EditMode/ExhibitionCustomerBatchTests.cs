@@ -35,7 +35,7 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.PrepareVenueCompanions(s.CurrentPlace)); s.AdvanceClock(3); Assert.AreEqual(CityActivityPhase.Running, a.State, a.EndReason);
         }
         private static void WalkAll(GameSession s, CityActivity a)
-        { for (int i = 0; i < 3; i++) { s.AdvanceClock(4); if (i < 2) Assert.IsTrue(s.ChooseCityActivity(a.Id, 1)); } }
+        { for (int i = 0; i < 3; i++) { OnsitePlayTests.StepManualActivity(s, 4); if (i < 2) Assert.IsTrue(s.ChooseCityActivity(a.Id, 1)); } }
         [TestCase(73)] [TestCase(74)] [TestCase(75)] [TestCase(77)]
         public void ExhibitionsUseTheActualCalendarAndAttendanceWithoutUpfrontRewards(int n)
         {
@@ -49,7 +49,7 @@ namespace PCShopSell.Tests
         [Test]
         public void ExhibitionOrdinaryVisitDoesNotRequireComputerShopButBusinessDoes()
         {
-            using var s = Make(false); var a = Accept(s, 73); Attend(s, a); s.AdvanceClock(4);
+            using var s = Make(false); var a = Accept(s, 73); Attend(s, a); OnsitePlayTests.StepManualActivity(s, 4);
             Assert.IsFalse(s.ChooseCityActivity(a.Id, 4)); Assert.IsTrue(s.ChooseCityActivity(a.Id, 2));
         }
         [Test]
@@ -58,33 +58,37 @@ namespace PCShopSell.Tests
             using var s = Make(); var a = Accept(s, 74, 1); Attend(s, a); var cash = s.Ledger.Balance;
             for (int sample = 1; sample <= 3; sample++)
             {
-                s.AdvanceClock(4); Assert.IsTrue(s.ChooseCityActivity(a.Id, sample + 1));
-                Assert.AreEqual(sample - 1, s.OutdoorActivityState(a.Id).Correct); s.AdvanceClock(5);
+                OnsitePlayTests.StepManualActivity(s, 4); Assert.IsTrue(s.ChooseCityActivity(a.Id, sample + 1));
+                Assert.AreEqual(sample - 1, s.OutdoorActivityState(a.Id).Correct); OnsitePlayTests.StepManualActivity(s, 5);
                 Assert.AreEqual(sample, s.OutdoorActivityState(a.Id).Correct); Assert.AreEqual(cash, s.Ledger.Balance);
                 if (sample < 3) Assert.IsTrue(s.ChooseCityActivity(a.Id, 1));
             }
-            using var loaded = Reload(s); loaded.AdvanceClock(100);
+            using var loaded = Reload(s); Assert.IsTrue(loaded.FinishManualCityActivity(a.Id));
             Assert.AreEqual(cash + Money.FromYuan(1500), loaded.Ledger.Balance);
             loaded.AdvanceClock(10); Assert.AreEqual(cash + Money.FromYuan(1500), loaded.Ledger.Balance);
         }
         [Test]
         public void IncorrectExhibitionWorkCanBeRetriedButIncompleteWorkDoesNotPay()
         {
-            using var s = Make(); var a = Accept(s, 74, 1); Attend(s, a); s.AdvanceClock(4);
-            Assert.IsTrue(s.ChooseCityActivity(a.Id, 4)); s.AdvanceClock(5); Assert.AreEqual(0, s.OutdoorActivityState(a.Id).Correct);
-            Assert.IsTrue(s.ChooseCityActivity(a.Id, 2)); s.AdvanceClock(5); Assert.AreEqual(1, s.OutdoorActivityState(a.Id).Correct);
-            var cash = s.Ledger.Balance; s.AdvanceClock(100); Assert.AreEqual(cash, s.Ledger.Balance); Assert.AreEqual(CityActivityPhase.Interrupted, a.State);
+            using var s = Make(); var a = Accept(s, 74, 1); Attend(s, a); OnsitePlayTests.StepManualActivity(s, 4);
+            Assert.IsTrue(s.ChooseCityActivity(a.Id, 4)); OnsitePlayTests.StepManualActivity(s, 5); Assert.AreEqual(0, s.OutdoorActivityState(a.Id).Correct);
+            Assert.IsTrue(s.ChooseCityActivity(a.Id, 2)); OnsitePlayTests.StepManualActivity(s, 5); Assert.AreEqual(1, s.OutdoorActivityState(a.Id).Correct);
+            var cash = s.Ledger.Balance;
+            Assert.IsFalse(s.FinishManualCityActivity(a.Id));
+            Assert.IsTrue(s.CancelCityActivity(a.Id, early: true));
+            Assert.AreEqual(cash, s.Ledger.Balance); Assert.AreEqual(CityActivityPhase.Interrupted, a.State);
         }
         [Test]
         public void ModelPurchaseAndChildGiftUseRealItemsAndRequireTheParentAtTheVenue()
         {
-            using var s = Make(); var a = Accept(s, 77); Attend(s, a); s.AdvanceClock(4);
+            using var s = Make(); var a = Accept(s, 77); Attend(s, a); OnsitePlayTests.StepManualActivity(s, 4);
             const string model = "model:harbor:skiff"; var cash = s.Ledger.Balance;
             Assert.IsTrue(s.BuyExhibitionModel(a.Id, model)); Assert.AreEqual(cash - Gifts.Get(model).Price, s.Ledger.Balance);
             Assert.AreEqual(1, s.Backpack.GiftCount(model)); Assert.IsTrue(s.GiftExhibitionModel(a.Id, model));
             Assert.AreEqual(0, s.Backpack.GiftCount(model)); Assert.IsFalse(s.GiftExhibitionModel(a.Id, model));
             Assert.IsFalse(s.Flags.Contains("exhibit:shenxiao-details"));
-            Assert.IsTrue(s.ChooseCityActivity(a.Id, 2)); s.AdvanceClock(5); s.ChooseCityActivity(a.Id, 1); s.AdvanceClock(4); s.ChooseCityActivity(a.Id, 1); s.AdvanceClock(4); s.AdvanceClock(130);
+            Assert.IsTrue(s.ChooseCityActivity(a.Id, 2)); OnsitePlayTests.StepManualActivity(s, 5); s.ChooseCityActivity(a.Id, 1); OnsitePlayTests.StepManualActivity(s, 4); s.ChooseCityActivity(a.Id, 1); OnsitePlayTests.StepManualActivity(s, 4);
+            Assert.IsTrue(s.FinishManualCityActivity(a.Id));
             Assert.IsTrue(s.Flags.Contains("exhibit:shenxiao-details"));
         }
         private static void PaidSale(GameSession s, bool cash = true)

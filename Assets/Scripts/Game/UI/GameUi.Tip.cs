@@ -46,6 +46,7 @@ namespace PCShopSell.Game.UI
         private void UpdateTip(float dt)
         {
             TipTarget hover = TipTarget.Hover;
+            if (OnsiteInputActive && hover != null && !hover.transform.IsChildOf(_modalCanvas.transform)) hover = null;
             if (hover != _tipFor)
             {
                 _tipFor = hover;
@@ -131,11 +132,16 @@ namespace PCShopSell.Game.UI
             "<b>名望</b>：你本人在行业里的名气，所有店共用。租大铺、开分店、直供和企业订单会用到名望。按时交付装机、优质代养结算和卖出真品文物可提高名望。\n" +
             "<b>本店知名度</b>：每家店各自一个，越高路过的顾客越愿意进店（在店铺页里看）。";
 
+        private static string TravelSpeedText(Core.Session.VehicleSpec vehicle)
+        {
+            double relativeSpeed = vehicle.SpeedPerMinute * CityTravelTiming.PlayerSpeedFactor(vehicle.Kind)
+                / (Core.Session.Vehicles.Walk.SpeedPerMinute * CityTravelTiming.PlayerWalkSpeedFactor);
+            return $"通勤速度 · 步行的 {relativeSpeed:0.##} 倍";
+        }
+
         private string VehicleTip(Core.Session.VehicleSpec v)
         {
-            double relativeSpeed = v.VisualSpeed*CityTravelTiming.PlayerSpeedFactor(v.Kind)
-                / (Core.Session.Vehicles.Walk.VisualSpeed*CityTravelTiming.PlayerWalkSpeedFactor);
-            string s = $"<b>{v.Name}</b>\n移动速度：步行的 {relativeSpeed:0.##} 倍　最多载 {v.CargoCapacity * Core.Home.Backpack.KgPerSpace:0} 千克";
+            string s = $"<b>{v.Name}</b>{(S.Vehicle == v.Kind ? "（当前使用）" : "")}\n{TravelSpeedText(v)}　最多载 {v.CargoCapacity * Core.Home.Backpack.KgPerSpace:0} 千克";
             if (v.Illegal) s += "\n<color=#D79780>城里不让上路，会被交警追</color>";
             if (v.Purchasable) s += "\n" + S.VehicleUsage(v.Kind);
             if (!S.CanUse(v.Kind)) s += v.Purchasable ? S.Owns(v.Kind) ? "\n当前没有空闲车辆，可在员工管理查看使用人。" : $"\n去车行购买：{v.Price}/台" : "\n暂时用不了";

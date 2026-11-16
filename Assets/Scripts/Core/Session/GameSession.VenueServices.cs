@@ -41,6 +41,7 @@ namespace PCShopSell.Core.Session
             return def?.Service(activity.ServiceChoice).Description ?? def?.MidText;
         }
         public const int CityArrivalWindowMinutes = 60;
+        private const int CityDepartureLeadHours = 6;
         public CityActivity PendingVenueActivity(Place place, string activityId = null) => FindPendingVenueActivity(place, activityId);
 
         private CityActivity FindPendingVenueActivity(Place place, string activityId = null, bool onsiteOnly = false)
@@ -107,23 +108,19 @@ namespace PCShopSell.Core.Session
         }
         public string CityActivityEarlyDepartureHint(CityActivity activity)
         {
-            if (IsRaceAidActivity(activity.DefinitionId)) return null;
-            long remaining = activity.ScheduledStart - Clock.Now.TotalMinutes;
-            if (remaining <= CityArrivalWindowMinutes || !City.HasPlace(activity.VenueId)) return null;
-            var venue = City.GetPlace(activity.VenueId);
-            int travel = CurrentPlace == venue ? 0 : CityTravelMinutes(venue);
-            if (travel >= int.MaxValue / 4) travel = 0;
-            long lead = (long)travel + CityArrivalWindowMinutes;
-            if (remaining <= lead) return null;
+            if (IsRaceAidActivity(activity.DefinitionId) || !City.HasPlace(activity.VenueId)) return null;
+            long departureMinute = activity.ScheduledStart - CityDepartureLeadHours * 60;
+            if (Clock.Now.TotalMinutes >= departureMinute) return null;
             var appointment = new GameTimestamp(activity.ScheduledStart);
-            var departure = appointment.AddMinutes(-lead);
-            return $"还早呢！预约时间是 {appointment}。\n按当前路程，最早可在 {departure} 出发。";
+            var departure = new GameTimestamp(departureMinute);
+            return $"预约时间是 {appointment}。\n可提前 {CityDepartureLeadHours} 小时出发，最早出发时间是 {departure}。";
         }
 
         public string CityActivityTravelBlocker(string id, bool checkDepartureTime = true)
         {
             var a = _cityActivities.FirstOrDefault(x => x.Id == id && x.Active);
             if (a == null) return "日程已经结束";
+            if (CityActivityRacingAccessBlocker(a.DefinitionId) is string racingBlocker) return racingBlocker;
             if (!City.HasPlace(a.VenueId)) return "找不到活动地点";
             if (CityActivityVenueAccessBlocker(City.GetPlace(a.VenueId)) is string access) return access;
             if (IsGameOver || _sleeping || IsWorking) return "正在休息或工作，当前不能出发";

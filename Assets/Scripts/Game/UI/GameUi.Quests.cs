@@ -3,6 +3,7 @@ using System.Linq;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.World;
+using PCShopSell.Game.Runtime;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -119,6 +120,7 @@ namespace PCShopSell.Game.UI
             if (_questInitialized && _questSeen != q?.Id && !S.IsGameOver)
             {
                 QuestDef done = _questSeen != null && S.QuestCompleted(_questSeen) ? Quests.Get(_questSeen) : null;
+                if (done != null) SoundFx.Play(Sfx.Success);
                 if (QuestPopups && (done != null || q != null))
                 {
                     _pendingDone = _pendingDone ?? done;
@@ -368,12 +370,21 @@ namespace PCShopSell.Game.UI
         private void OpenQuestPopup(QuestDef done, QuestDef next)
         {
             if (_questPopup != null && !_questPopup.Closed) _questPopup.Close();
+            bool animateOnOpen = true;
             _questPopup = OpenWindow(done != null ? "任务完成" : "新任务", 620, 420, w =>
             {
+                var reveal = animateOnOpen ? NewUiReveal() : null;
+                animateOnOpen = false;
                 if (done != null)
                 {
-                    Line(w.Content, "✓ " + done.Title, 23, Ui.Good);
-                    if (done.Reward != null) Para(w.Content, "获得：" + done.RewardText(S), 18, Ui.Accent);
+                    var title = Line(w.Content, "✓ " + done.Title, 23, Ui.Good);
+                    reveal?.Fade(title.transform, .03f);
+                    reveal?.Emphasize(title.transform, .03f);
+                    if (done.Reward != null)
+                    {
+                        var reward = Para(w.Content, "获得：" + done.RewardText(S), 18, Ui.Accent);
+                        reveal?.Fade(reward.transform, .09f);
+                    }
                 }
                 if (next != null)
                 {
@@ -383,6 +394,7 @@ namespace PCShopSell.Game.UI
                     ProgressLine(w.Content, next, 16);
                 }
                 Ui.Size(Ui.Button(w.Content, "继续游戏", w.Close, 18), -1, 42);
+                PlayUiReveal(reveal);
             }, onClosed: () => _questPopup = null);
         }
 

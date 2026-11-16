@@ -10,6 +10,7 @@ namespace PCShopSell.Game.UI
     {
         private Window _mainMenu;
         private bool _canResumeMainMenu;
+        private Texture2D _mainMenuCover;
         public bool MainMenuOpen => _mainMenu != null && !_mainMenu.Closed;
         private static string L(string key) => MenuLocalization.Get(key);
 
@@ -26,7 +27,7 @@ namespace PCShopSell.Game.UI
         }
         private void SetGameplayUiVisible(bool visible)
         {
-            foreach (var canvas in new[] { _hudCanvas, _labelCanvas, _dockCanvas, _toastCanvas, _tipCanvas })
+            foreach (var canvas in new[] { _hudCanvas, _labelCanvas, _dockCanvas, _toastCanvas, _invitationCanvas, _tipCanvas })
                 if (canvas != null) canvas.gameObject.SetActive(visible);
         }
 
@@ -35,47 +36,61 @@ namespace PCShopSell.Game.UI
             CloseAllWindows();
             _canResumeMainMenu = canResume;
             SetGameplayUiVisible(false);
-            _mainMenu = OpenWindow(L("game_title"), 1320, 850, BuildMainMenu, true, false, () =>
+            _mainMenu = OpenWindow(L("game_title"), 1280, 700, BuildMainMenu, true, false, () =>
             {
                 _mainMenu = null;
                 SetGameplayUiVisible(true);
-            }, allowDuringOpeningMeal: true);
+            }, scrollContent: false, allowDuringOpeningMeal: true, showTitleBar: false);
         }
 
         private void BuildMainMenu(Window w)
         {
-            MenuTitle(w, "game_title");
-            var body = Ui.Row(w.Content, 680, 36);
-            var hero = Ui.Rect(body, "MainMenuHero");
-            Ui.Size(hero, -1, 680, 1);
-            Ui.VList(hero, 20, 18);
-            Ui.Size(Ui.Label(hero, GameSession.FirstChapterTrial ? "PC SHOP 试玩版" : "PC SHOP", 60, TextAnchor.MiddleLeft, Ui.Accent), -1, 105);
-            Ui.Size(Ui.Label(hero, L("tagline"), 32, TextAnchor.MiddleLeft), -1, 100);
-            Para(hero, L("story"), 21, Ui.Dim);
-            var screen = Ui.Panel(hero, "MenuComputer", Ui.PanelBg2);
-            Ui.Size(screen, -1, 200);
-            var inset = Ui.Panel(screen.transform, "Monitor", new Color(.07f, .13f, .13f));
-            inset.rectTransform.Anchor(.12f, .15f, .88f, .85f);
-            Ui.Label(inset.transform, "> PET SHOP\n" + L("computer_line"), 25, TextAnchor.MiddleCenter, Ui.Good).rectTransform.Fill(16);
-            Ui.Size(Ui.Label(hero, L("development"), 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 36);
-
-            var actions = Ui.Panel(body, "MenuActions", Ui.PanelBg2).rectTransform;
-            Ui.Size(actions, 470, 680);
-            Ui.VList(actions, 12, 24);
-            Ui.Size(Ui.Label(actions, L("main_menu"), 25, TextAnchor.MiddleLeft, Ui.Accent), -1, 50);
-            if (_canResumeMainMenu) Ui.Size(Ui.Button(actions, L("resume"), () => _mainMenu.Close(), 22, Ui.ButtonHot), -1, 54);
-            Ui.Size(Ui.Button(actions, L("start"), () =>
+            var body = Ui.Row(w.Content, 668, 16);
+            var hero = Ui.Panel(body, "MenuCover", Ui.FlatWell).rectTransform;
+            Ui.Size(hero, 0, 668, 1);
+            if (_mainMenuCover == null) _mainMenuCover = Resources.Load<Texture2D>("Menu/CornerShopCover");
+            if (_mainMenuCover != null)
             {
-                if (_canResumeMainMenu) ConfirmMenuAction("new_game", "new_confirm", "start", _ctrl.NewGame);
+                var art = Ui.Rect(hero, "CoverArt").Fill().gameObject.AddComponent<RawImage>();
+                art.texture = _mainMenuCover;
+                art.raycastTarget = false;
+                float coverWidth = 1280 - 32 - 16 - 360;
+                float u = coverWidth / 668 * _mainMenuCover.height / _mainMenuCover.width;
+                art.uvRect = new Rect((1 - u) / 2, 0, u, 1);
+            }
+            var coverTitle = Ui.Label(hero, L("game_title"), 65, TextAnchor.MiddleLeft, new Color(1f, .94f, .80f));
+            coverTitle.fontStyle = FontStyle.Bold;
+            coverTitle.resizeTextForBestFit = true;
+            coverTitle.resizeTextMinSize = 36;
+            coverTitle.resizeTextMaxSize = 65;
+            coverTitle.rectTransform.Anchor(0, 1, .72f, 1, 50, -144, 20, 45);
+            var shadow = coverTitle.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(.02f, .03f, .07f, .88f);
+            shadow.effectDistance = new Vector2(2, -3);
+            var subtitle = Ui.Label(hero, L("tagline"), 23, TextAnchor.UpperLeft, Ui.TextColor);
+            subtitle.rectTransform.Anchor(0, 1, 1, 1, 54, -186, 50, 148);
+            if (GameSession.FirstChapterTrial)
+                Ui.Label(hero, L("trial_edition"), 17, TextAnchor.MiddleLeft, Ui.Accent)
+                    .rectTransform.Anchor(0, 1, 1, 1, 54, -225, 50, 190);
+
+            var actions = Ui.FlatPanel(body, "MenuActions").rectTransform;
+            Ui.Size(actions, 360, 668);
+            Ui.VList(actions, 12, 32).childAlignment = TextAnchor.MiddleCenter;
+            bool hasSaves = SaveStore.Exists;
+            if (_canResumeMainMenu)
+                Ui.Size(Ui.Button(actions, L("resume"), w.Close, 22, Ui.SelectedButton(true)), -1, 58);
+            Ui.Size(Ui.Button(actions, L(hasSaves || _canResumeMainMenu ? "new_game" : "start"), () =>
+            {
+                if (_canResumeMainMenu) ConfirmMenuAction("new_game", "new_confirm", "new_game", _ctrl.NewGame);
                 else _ctrl.NewGame();
-            }, 22, _canResumeMainMenu ? Ui.ButtonBg : Ui.ButtonHot), -1, 54);
-            Ui.Size(Ui.Button(actions, L("load"), () => OpenLoadMenu(false), 22, Ui.ButtonBg, SaveStore.Exists), -1, 54);
-            Ui.Size(Ui.Button(actions, L("settings"), OpenSettingsMenu, 22), -1, 54);
-            Ui.Size(Ui.Button(actions, L("about"), OpenAboutMenu, 22), -1, 54);
-            Ui.Size(Ui.Button(actions, L("help"), OpenHelpMenu, 22), -1, 54);
-            Ui.Size(Ui.Button(actions, L("quit"), OpenQuitMenu, 22, Ui.Warn), -1, 54);
-            Para(actions, SaveStore.Exists ? L("save_available") : L("no_saves"), 16, Ui.Dim);
-            Ui.Size(Ui.Label(actions, L("language_hint"), 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 35);
+            }, 22, Ui.SelectedButton(!_canResumeMainMenu && !hasSaves)), -1, 58);
+            Ui.Size(Ui.Button(actions, L("load"), () => OpenLoadMenu(_canResumeMainMenu), 22,
+                Ui.SelectedButton(!_canResumeMainMenu && hasSaves), hasSaves), -1, 58);
+            Ui.Size(Ui.Button(actions, L("settings"), OpenSettingsMenu, 20), -1, 50);
+            var links = Ui.Row(actions, 46, 10);
+            Ui.Size(Ui.Button(links, L("help"), OpenHelpMenu, 18), 0, -1, 1);
+            Ui.Size(Ui.Button(links, L("about"), OpenAboutMenu, 18), 0, -1, 1);
+            Ui.Size(Ui.Button(actions, L("quit"), OpenQuitMenu, 20), -1, 50);
         }
 
         public void OpenSettingsMenu()
@@ -115,32 +130,6 @@ namespace PCShopSell.Game.UI
             }, onClosed: PlayerPrefs.Save);
         }
 
-        public void OpenLoadMenu(bool confirmProgress = true)
-        {
-            OpenWindow(L("load"), 820, 570, w =>
-            {
-                MenuTitle(w, "load");
-                Para(w.Content, L("load_description"), 18);
-                foreach (bool automatic in new[] { false, true })
-                {
-                    bool slot = automatic;
-                    var info = SaveStore.InspectSlot(slot);
-                    Line(w.Content, L(slot ? "auto_save" : "manual_save"), 22, Ui.Accent);
-                    Para(w.Content, !info.Exists ? L("empty_slot") : info.SavedAt != null
-                        ? MenuLocalization.Format("save_time", info.SavedAt) : L("backup_available"), 17, Ui.Dim);
-                    Ui.Size(Ui.Button(w.Content, L(slot ? "load_auto" : "load_manual"), () =>
-                    {
-                        void Load()
-                        {
-                            if (!_ctrl.TryLoadGame(slot)) OpenMenuMessage("load_failed", "load_failed_body");
-                        }
-                        if (confirmProgress) ConfirmMenuAction("load", "load_confirm", "load", Load);
-                        else Load();
-                    }, 20, Ui.ButtonBg, info.Exists), -1, 48);
-                }
-            });
-        }
-
         public void OpenHelpMenu() => OpenWindow(L("help"), 900, 680, w =>
         {
             MenuTitle(w, "help");
@@ -163,17 +152,18 @@ namespace PCShopSell.Game.UI
         private void OpenMenuMessage(string title, string body) => OpenWindow(L(title), 640, 350, w =>
         {
             MenuTitle(w, title); Para(w.Content, L(body), 19);
-        });
+        }, allowDuringOpeningMeal: true);
 
-        private void ConfirmMenuAction(string title, string body, string action, Action confirmed)
+        private void ConfirmMenuAction(string title, string body, string action, Action confirmed, string bodyArgument = null)
         {
             OpenWindow(L(title), 660, 340, w =>
             {
-                MenuTitle(w, title); Para(w.Content, L(body), 20);
+                MenuTitle(w, title);
+                Para(w.Content, bodyArgument == null ? L(body) : MenuLocalization.Format(body, bodyArgument), 20);
                 var buttons = Ui.Row(w.Content, 50);
                 Ui.Size(Ui.Button(buttons, L("cancel"), w.Close, 20), -1, -1, 1);
                 Ui.Size(Ui.Button(buttons, L(action), () => { w.Close(); confirmed(); }, 20, Ui.Warn), -1, -1, 1);
-            });
+            }, allowDuringOpeningMeal: MainMenuOpen);
         }
 
         public void OpenQuitMenu() => ConfirmMenuAction("quit", (!MainMenuOpen || _canResumeMainMenu) ? "quit_unsaved" : "quit_confirm", "quit", () =>

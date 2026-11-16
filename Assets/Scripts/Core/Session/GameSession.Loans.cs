@@ -33,6 +33,30 @@ namespace PCShopSell.Core.Session
         public AppLoan Copy() => (AppLoan)MemberwiseClone();
     }
 
+    public enum LoanGesture { Nod, ShakeHead, Wave }
+
+    public sealed class LoanApplication
+    {
+        public const int GestureCount = 2;
+        public long AmountYuan { get; }
+        public int Months { get; }
+        public bool AtBank { get; }
+        public int CompletedGestures { get; internal set; }
+
+        private readonly LoanGesture _first, _second;
+        public LoanGesture? NextGesture => CompletedGestures == 0 ? _first :
+            CompletedGestures == 1 ? _second : (LoanGesture?)null;
+
+        internal LoanApplication(long yuan, int months, bool atBank, LoanGesture first, LoanGesture second)
+        {
+            AmountYuan = yuan;
+            Months = months;
+            AtBank = atBank;
+            _first = first;
+            _second = second;
+        }
+    }
+
     public sealed partial class GameSession
     {
         public const int AppLoanAmountStep = 100;
@@ -44,6 +68,8 @@ namespace PCShopSell.Core.Session
         public const int AppLoanMonthlyRatePercent = 20;
         private readonly List<AppLoan> _appLoans = new List<AppLoan>();
         private int _nextAppLoanId = 1;
+        private LoanApplication _loanApplication;
+        private int _loanChallengeVariant = 1;
         public IReadOnlyList<AppLoan> AppLoans => _appLoans;
         public long AppLoanCreditLimitYuan => Math.Min(AppLoanMaximumYuan, AppLoanBaseCreditYuan
             + (long)Math.Floor(Math.Max(0, Math.Min(PlayerShop.Reputation, AppLoanMaximumYuan / AppLoanCreditPerReputationYuan)))
@@ -54,10 +80,39 @@ namespace PCShopSell.Core.Session
         public Money LoanPayoff(AppLoan loan) => loan.Principal + loan.MonthlyInterest * loan.InterestMonthsAt(Clock.Today.TotalDays);
         public Money AppLoanDebt => Money.FromCents(_appLoans.Where(l => !l.Repaid).Sum(l => LoanPayoff(l).Cents));
         public bool HasOutstandingLoans => _appLoans.Any(loan => !loan.Repaid) || MortgageDebt.IsPositive;
-        public bool BorrowAppLoan(long yuan, int months, bool atBank = false)
+        public LoanApplication BeginLoanApplication(long yuan, int months, bool atBank = false)
         {
             string blocker = AppLoanOfferBlocker(yuan, months, atBank);
+            if (blocker != null) { Fail(blocker); return null; }
+            int first = _loanChallengeVariant / 2;
+            int second = (first + 1 + _loanChallengeVariant % 2) % 3;
+            _loanChallengeVariant = (_loanChallengeVariant + 1) % 6;
+            _loanApplication = new LoanApplication(yuan, months, atBank, (LoanGesture)first, (LoanGesture)second);
+            return _loanApplication;
+        }
+
+        public bool PerformLoanGesture(LoanApplication application, LoanGesture gesture)
+        {
+            if (application == null || _loanApplication != application || application.NextGesture != gesture) return false;
+            application.CompletedGestures++;
+            return true;
+        }
+
+        public void CancelLoanApplication(LoanApplication application)
+        {
+            if (_loanApplication == application) _loanApplication = null;
+        }
+
+        public bool BorrowAppLoan(LoanApplication application)
+        {
+            if (application == null || _loanApplication != application || application.NextGesture.HasValue)
+                return Fail("请先完成本次借款的动作验证。");
+            long yuan = application.AmountYuan;
+            int months = application.Months;
+            bool atBank = application.AtBank;
+            string blocker = AppLoanOfferBlocker(yuan, months, atBank);
             if (blocker != null) return Fail(blocker);
+            _loanApplication = null;
             var loan = new AppLoan { Id = _nextAppLoanId++, StartDay = Clock.Today.TotalDays, Months = months,
                 PrincipalCents = Money.FromYuan(yuan).Cents, AtBank = atBank };
             _appLoans.Add(loan);

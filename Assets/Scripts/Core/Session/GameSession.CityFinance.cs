@@ -16,9 +16,10 @@ namespace PCShopSell.Core.Session
         public CityFinanceSummary GetCityFinance(GameDate from, GameDate to, string shopId = null)
         {
             if (_cityFinanceRevision != Ledger.Revision) { _cityFinanceCache.Clear(); _cityFinanceRevision = Ledger.Revision; }
-            string key = from.TotalDays + ":" + to.TotalDays + ":" + (shopId ?? "*");
+            string accountId = ShopAt(shopId)?.SalesAccountId;
+            string key = from.TotalDays + ":" + to.TotalDays + ":" + (shopId ?? "*") + ":" + accountId;
             if (!_cityFinanceCache.TryGetValue(key, out var summary))
-                _cityFinanceCache[key] = summary = FinanceReport.CitySummary(Ledger, from, to, shopId);
+                _cityFinanceCache[key] = summary = FinanceReport.CitySummary(Ledger, from, to, shopId, accountId);
             return summary;
         }
 
@@ -104,9 +105,10 @@ namespace PCShopSell.Core.Session
 
         public void SaveCityFinance(SaveData d)
         {
-            d.cityFinanceVersion = 1;
+            d.cityFinanceVersion = 2;
             d.cityLedgerAttributions = Ledger.Entries.Select((e, index) => new SaveCityLedgerAttribution {
                 index = index, entryId = e.EntryId, businessKind = (int)e.BusinessKind, shopId = e.ShopId,
+                salesAccountId = e.Attribution?.SalesAccountId,
                 propertyId = e.Attribution?.PropertyId, activityId = e.Attribution?.ActivityId, sourceEventId = e.SourceEventId,
                 transactionKind = e.Attribution?.TransactionKind, productId = e.Attribution?.ProductId,
                 employeeId=e.Attribution?.EmployeeId,payrollWorkday=e.Attribution?.PayrollWorkday??-1,
@@ -120,9 +122,87 @@ namespace PCShopSell.Core.Session
             var entries = Ledger.Entries.Select((e, i) => {
                 if (!metadata.TryGetValue(i, out var m)) return new LedgerEntry(e.Date, e.Category, e.Amount, e.Memo, e.BalanceAfter, (i + 1).ToString(), LedgerAttribution.FromCategory(e.Category));
                 var a = new LedgerAttribution((LedgerBusinessKind)m.businessKind, m.shopId, m.propertyId, m.activityId, m.sourceEventId, m.transactionKind).Product(m.productId, m.quantity, m.unitCostCents).Payroll(m.employeeId,m.payrollWorkday);
+                if (!string.IsNullOrEmpty(m.salesAccountId)) a = a.AssignShopSale(m.shopId, m.salesAccountId);
                 return new LedgerEntry(e.Date, e.Category, e.Amount, e.Memo, e.BalanceAfter, m.entryId ?? (i + 1).ToString(), a);
             }).ToArray();
             Ledger.Restore(Ledger.Balance, entries);
+        }
+
+        private void RestoreLegacyShopSales(SaveData d)
+        {
+            if (d.cityFinanceVersion >= 2) return;
+
+            var receipts = _eventPaidReceipts
+                .Where(r => r.ShopId != null && r.Product != null && (r.CustomerId > 0 || r.Key?.Contains(":bulk:") == true))
+                .GroupBy(r => (r.Day, r.PaidCents, r.Product)).ToDictionary(group => group.Key, group => group.ToArray());
+            var sales = Ledger.Entries.Select((entry, index) => (entry, index))
+                .Where(row => row.entry.Amount.IsPositive && FinanceReport.IsOperatingSale(row.entry)).ToArray();
+            if (sales.Length == 0) return;
+
+            var matched = new Dictionary<int, EventPaidReceipt>();
+            var saleGroups = sales.Select(row => (row.index, Key: (row.entry.Date.TotalDays, row.entry.Amount.Cents, LegacyReceiptProduct(row.entry))))
+                .Where(row => row.Key.Item3 != null).GroupBy(row => row.Key);
+            foreach (var group in saleGroups)
+            {
+                // Receipts and ledger rows were appended in checkout order. Only match a complete group.
+                if (!receipts.TryGetValue(group.Key, out var paid) || group.Count() != paid.Length) continue;
+                int i = 0;
+                foreach (var row in group) matched.Add(row.index, paid[i++]);
+            }
+
+            var possiblyMisassigned = new Dictionary<string, int>();
+            var legacyOrder = LegacyVisitShopOrder(d);
+            if (legacyOrder != null)
+                for (int i = 0; i < legacyOrder.Length; i++)
+                {
+                    var shop = legacyOrder[i];
+                    string oldId = d.cityShopVisits[i].shopId;
+                    if (oldId == shop.Place.Id) continue;
+                    if (!possiblyMisassigned.TryGetValue(oldId, out int fromDay) || shop.SalesStartDay < fromDay)
+                        possiblyMisassigned[oldId] = shop.SalesStartDay;
+                }
+
+            var entries = Ledger.Entries.ToArray();
+            foreach (var (entry, index) in sales)
+            {
+                string shopId = entry.ShopId;
+                OwnedShop shop;
+                if (matched.TryGetValue(index, out var receipt))
+                {
+                    shopId = receipt.ShopId;
+                    shop = ShopAt(shopId);
+                    if (shop != null && (shop.Lease?.SignedDay ?? -1) != receipt.SignedDay) shop = null;
+                }
+                else
+                {
+                    if (shopId != null && IsSimulatedShopSale(entry)
+                        && possiblyMisassigned.TryGetValue(shopId, out int fromDay) && entry.Date.TotalDays >= fromDay)
+                        shopId = null; // Keep the cash entry without claiming it for a different storefront.
+                    shop = ShopAt(shopId);
+                    if (shop != null && entry.Date.TotalDays < shop.SalesStartDay) shop = null;
+                }
+                var attribution = entry.Attribution.AssignShopSale(shopId, shop?.SalesAccountId);
+                entries[index] = new LedgerEntry(entry.Date, entry.Category, entry.Amount, entry.Memo,
+                    entry.BalanceAfter, entry.EntryId, attribution);
+            }
+            Ledger.Restore(Ledger.Balance, entries);
+        }
+
+        private static bool IsSimulatedShopSale(LedgerEntry entry) =>
+            LegacyReceiptProduct(entry) != null
+            || entry.Category == FinanceReport.BuildCategory && entry.SourceEventId?.StartsWith("build:", StringComparison.Ordinal) == true;
+
+        private static readonly string[] ReceiptMemoSuffixes = { "（杂货）", "（二手转售）", "（盒装）", "（散件）", "（展示机）" };
+        private static string LegacyReceiptProduct(LedgerEntry entry)
+        {
+            if ((entry.Category != FinanceReport.RetailCategory && entry.Category != FinanceReport.BuildCategory)
+                || string.IsNullOrEmpty(entry.Memo)) return null;
+            foreach (var suffix in ReceiptMemoSuffixes)
+                if (entry.Memo.EndsWith(suffix, StringComparison.Ordinal))
+                    return entry.Memo.Substring(0, entry.Memo.Length - suffix.Length);
+            int separator = entry.Memo.IndexOf(" · ", StringComparison.Ordinal);
+            return entry.Category == FinanceReport.RetailCategory && separator >= 0 && entry.Memo.LastIndexOf(" ×", StringComparison.Ordinal) > separator + 3
+                ? entry.Memo.Substring(separator + 3) : null;
         }
     }
 }

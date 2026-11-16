@@ -564,6 +564,39 @@ namespace PCShopSell.Core.Session
         }
         public void ToggleMealDelivery() { if (!Flags.Remove("life:meal-delivery")) Flags.Add("life:meal-delivery"); }
 
+        public string OrderDeliveryMealBlocker(int tier)
+        {
+            string appBlocker = AppBlocker(PhoneApps.FoodDelivery);
+            if (appBlocker != null) return appBlocker;
+            if (tier < 0 || tier >= DeliveryMeals.Count) return "请选择一份外卖。";
+            if (IsGameOver || IsContractWorking || _sleeping || _eating || Racing || CityActivityExclusive)
+                return "请在当前工作或活动结束后点餐。";
+            if (Player.Hunger >= 95) return "现在还很饱，饿了再点餐。";
+            var price = Money.FromYuan(DeliveryMeals[tier].Price);
+            return Ledger.CanAfford(price) ? null : $"现金不足，这份外卖需要 {price}。";
+        }
+
+        public bool OrderDeliveryMeal(int tier)
+        {
+            if (OrderDeliveryMealBlocker(tier) is string blocker) return Fail(blocker);
+            var delivery = DeliveryMeals[tier];
+            if (!TryDeliverMeal(delivery, "手机点餐")) return Fail("现金不足，未下单。");
+            Say($"{delivery.Name}已送达并用餐，花费 ¥{delivery.Price}：{delivery.Effects}。");
+            return true;
+        }
+
+        private bool TryDeliverMeal(DeliveryMeal delivery, string orderSource)
+        {
+            if (!Ledger.TryDebit(Clock.Today, "餐饮", Money.FromYuan(delivery.Price), orderSource + " · " + delivery.Name))
+                return false;
+            _lastAutomaticMealMinute = Clock.Now.TotalMinutes;
+            Player.Hunger = Math.Min(100, Player.Hunger + delivery.Hunger);
+            Player.Health = Math.Max(0, Math.Min(100, Player.Health + delivery.Health));
+            ApplyDiet(0, delivery.Mood);
+            if (delivery.Energy > 0) Player.Energy = Math.Min(Player.MaxEnergy, Player.Energy + delivery.Energy);
+            return true;
+        }
+
         private bool HasAutomaticHomeMeal => CurrentPlace == Home && !OpeningMealTutorialPending && Pantry.CookedBowls > 0;
 
         private void EatMeal(string meal)
@@ -600,13 +633,8 @@ namespace PCShopSell.Core.Session
             if (MealDeliveryEnabled && HasSmartphone)
             {
                 var delivery = SelectedDeliveryMeal;
-                if (Ledger.TryDebit(Clock.Today, "餐饮", Money.FromYuan(delivery.Price), meal + " · " + delivery.Name))
+                if (TryDeliverMeal(delivery, meal))
                 {
-                    Player.Hunger = Math.Min(100, Player.Hunger + delivery.Hunger);
-                _lastAutomaticMealMinute=mealMinute;
-                    Player.Health = Math.Max(0, Math.Min(100, Player.Health + delivery.Health));
-                    ApplyDiet(0, delivery.Mood);
-                    if (delivery.Energy > 0) Player.Energy = Math.Min(Player.MaxEnergy, Player.Energy + delivery.Energy);
                     Say($"{meal}{delivery.Name}到了，花费 ¥{delivery.Price}：{delivery.Effects}。");
                     return;
                 }

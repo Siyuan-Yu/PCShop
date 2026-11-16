@@ -120,7 +120,7 @@ namespace PCShopSell.Game.Runtime
         private Vector3 CityPresentationPosition(GameSession session, CityPersonState person)
         {
             var point = person.Route != null
-                ? person.Route.Position(session.Clock.Now.TotalMinutes + session.Time.FractionalMinute)
+                ? person.Route.Position(session.CityPersonRouteTime(person))
                 : new PCShopSell.Core.World.MapPoint(person.X, person.Y);
             var result = _streets?.StreetPosition(point) ?? StreetWorldBuilder.ToWorld(point);
             return result + (IsNightRider(session, person) ? Vector3.up * .35f : Vector3.zero);

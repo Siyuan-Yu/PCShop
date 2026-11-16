@@ -196,10 +196,12 @@ namespace PCShopSell.Core.Session
             string appBlocker=AppBlocker(PhoneApps.Securities);if(appBlocker!=null)return Fail(appBlocker);
             string tradeBlocker=StockTradeBlocker(id,units,buy?"buy":"sell");if(tradeBlocker!=null)return Fail(tradeBlocker+"。");
             var e = _cityEquities.Find(x => x.Id == id);
+            long minute = Clock.Now.TotalMinutes;
+            long priceCents = CityInvestmentPrice(id).Cents;
             Money amount = CityInvestmentTradeTotal(id, units, buy); if (!amount.IsPositive) return Fail("交易金额不足以支付手续费。");
             if (buy && !acknowledgeReserve && CityInvestmentUsesReserve(id, units)) return Fail("这笔买入将动用未来必付款及资金保护额，请在投资确认页阅读预警后继续。");
             long held = CityInvestmentUnits(id); if (!buy && held < units) return Fail("不能卖出超过实际持仓的份额。");
-            string key = "investment:" + id + ":" + Clock.Now.TotalMinutes + ":" + _cityAssetEffects.Count;
+            string key = "investment:" + id + ":" + minute + ":" + _cityAssetEffects.Count;
             var attribution = LedgerAttribution.ForAsset(id, key);
             if (buy)
             {
@@ -216,7 +218,9 @@ namespace PCShopSell.Core.Session
                 else { e.Units -= units; e.CostCents -= soldCost; e.RealizedCents += amount.Cents - soldCost; }
             }
             ConsumeStockLiquidity(id,units);
-            _cityAssetEffects.Add(key); Say("交易完成，已按本次报价扣减可成交数量。"); return true;
+            _cityAssetEffects.Add(key);
+            RecordStockExecution(id, buy ? StockExecutionKind.Buy : StockExecutionKind.Sell, minute, priceCents, units);
+            Say("交易完成，已按本次报价扣减可成交数量。"); return true;
         }
         public void SaveCityAssets(SaveData d)
         {
@@ -270,11 +274,14 @@ namespace PCShopSell.Core.Session
                 _cityEquityLastDay = Clock.Today.TotalDays;
             }
             _stockMarket=d.stockMarket?.Copy()??new StockMarketState {LastMinute=Clock.Now.TotalMinutes,IndexPriceCents=HardwareMarketIndex.Cents,IndexPreviousCloseCents=HardwareMarketIndex.Cents};
+            if (_stockMarket.CompanyEventSeed == 0) _stockMarket.CompanyEventSeed = StockEventSeed(_cityEquityRandom.State);
             _stockMarket.LastMinute=Math.Min(Clock.Now.TotalMinutes,Math.Max(0,_stockMarket.LastMinute));
             _stockMarket.News=_stockMarket.News??Array.Empty<StockNews>();
             _stockMarket.IndexQuotes=_stockMarket.IndexQuotes??Array.Empty<StockQuote>();
             if(_stockMarket.IndexQuotes.Length==0)_stockMarket.IndexQuotes=new[]{new StockQuote{Minute=Clock.Now.TotalMinutes,PriceCents=_stockMarket.IndexPriceCents}};
             foreach(var e in _cityEquities)InitializeStockCompany(e);
+            if (d.stockMarket == null || _stockMarket.Version < StockMarketState.ExecutionHistoryVersion)
+                RestoreLegacyStockExecutions();
             EnsureVacantUnitListings(Clock.Today.TotalDays);
             TickCityAssets();
         }

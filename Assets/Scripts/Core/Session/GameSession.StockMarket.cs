@@ -29,6 +29,13 @@ namespace PCShopSell.Core.Session
     {
         private StockMarketState _stockMarket = new StockMarketState();
         private static readonly int[] StockSlots = {0,540,600,780,960};
+        private enum StockCompanyChange { NewLocations, HigherCosts, ChannelOrders, Returns, Efficiency, Cuts }
+        public const int StockEarlyMarketDays = 30;
+        public const int StockDailyLimitPercent = 20;
+        private const double EarlyStockSentimentMultiplier = 2.4;
+        private const double LaterStockSentimentMultiplier = 4;
+        private const double EarlyStockAnnouncementMultiplier = 1.5;
+        private const double LaterStockAnnouncementMultiplier = 2.25;
         public const int StockLotSize = 100;
         public const int StockOrderLimit = 1_000_000;
         public const double StockBorrowDailyRate = .0003;
@@ -42,6 +49,40 @@ namespace PCShopSell.Core.Session
         public Money StockTotalRealized => CityEquityRealized+Money.FromCents(CityFundRealizedCents)+StockShortRealized;
         public CityEquityState StockState(string id) => _cityEquities.Find(e=>e.Id==id);
         public StockQuote[] StockQuotes(string id) => id=="hardware"?_stockMarket.IndexQuotes:StockState(id)?.Quotes??Array.Empty<StockQuote>();
+        public StockExecution[] StockExecutions(string id, long from, bool shortMode) =>
+            _stockMarket.Executions.Where(e => e.StockId == id && e.Minute >= from && e.Minute <= Clock.Now.TotalMinutes
+                && shortMode == (e.Kind is StockExecutionKind.Short or StockExecutionKind.Cover or StockExecutionKind.ForcedCover)).ToArray();
+
+        private void RecordStockExecution(string id, StockExecutionKind kind, long minute, long priceCents, long units) =>
+            _stockMarket.Executions.Add(new StockExecution { StockId = id, Kind = kind, Minute = minute, PriceCents = priceCents, Units = units });
+
+        private void RestoreLegacyStockExecutions()
+        {
+            foreach (var entry in Ledger.Entries)
+            {
+                bool buy = entry.Category == "证券投资", sell = entry.Category == "证券赎回";
+                if ((!buy && !sell) || entry.SourceEventId == null) continue;
+                var source = entry.SourceEventId.Split(':');
+                if (source.Length != 4 || source[0] != "investment" || source[1] != entry.Attribution.PropertyId
+                    || !long.TryParse(source[2], out long minute) || minute < 0 || minute / 1440 != entry.Date.TotalDays
+                    || minute > Clock.Now.TotalMinutes || (buy ? !entry.Amount.IsNegative : !entry.Amount.IsPositive)) continue;
+
+                string id = source[1];
+                var quote = StockQuotes(id).LastOrDefault(q => q.Minute <= minute);
+                if (quote == null || quote.PriceCents <= 0) continue;
+                bool hardware = id == "hardware";
+                long cents = entry.Amount.Abs().Cents;
+                int feePerThousand = hardware ? 5 : 2;
+                decimal estimatedUnits = Math.Round(cents * 1000m / ((decimal)quote.PriceCents * (1000 + (buy ? feePerThousand : -feePerThousand))));
+                if (estimatedUnits < 1 || estimatedUnits > StockOrderLimit) continue;
+                long units = (long)estimatedUnits;
+                var gross = Money.FromCents(quote.PriceCents) * units;
+                var fee = CityInvestments.Fee(gross, hardware);
+                if ((buy ? gross + fee : gross - fee).Cents != cents) continue;
+                RecordStockExecution(id, buy ? StockExecutionKind.Buy : StockExecutionKind.Sell, minute, quote.PriceCents, units);
+            }
+            _stockMarket.Version = StockMarketState.ExecutionHistoryVersion;
+        }
         public bool StockWatched(string id) => id=="hardware"?_stockMarket.IndexWatched:StockState(id)?.Watched==true;
         public void ToggleStockWatch(string id)
         {if(id=="hardware")_stockMarket.IndexWatched=!_stockMarket.IndexWatched;else if(StockState(id)!=null)StockState(id).Watched=!StockState(id).Watched;}
@@ -69,6 +110,7 @@ namespace PCShopSell.Core.Session
         private void InitializeStockMarket(ulong seed)
         {
             _cityEquityRandom.State=new GameRandom(seed^0x75BA927CD315UL).State;
+            _stockMarket.CompanyEventSeed = StockEventSeed(seed);
             _stockMarket.LastMinute=Clock.Now.TotalMinutes;
             _stockMarket.IndexPriceCents=HardwareMarketIndex.Cents;
             _stockMarket.IndexPreviousCloseCents=_stockMarket.IndexPriceCents;
@@ -140,43 +182,79 @@ namespace PCShopSell.Core.Session
                 if(day%7==0)AddStockNews(e.Id,minute,"经营周报："+d.Name,e.LastReason+"。最近披露日营收 "+Money.FromCents(e.YesterdayRevenueCents)+"，利润 "+Money.FromCents(e.YesterdayProfitCents)+"。");
             }
         }
-        private double StockCompanyEvent(CityEquityState e,CityEquityDefinition d,long minute)
+        private static int StockEventSeed(ulong seed) => unchecked((int)(seed ^ (seed >> 32))) | 1;
+
+        // The rumor and the future quote consult the same announcement schedule.
+        private StockCompanyChange? ScheduledStockCompanyChange(string id, long minute)
         {
-            int type=_cityEquityRandom.Next(0,6);double shock;
+            ulong key = unchecked((ulong)(uint)_stockMarket.CompanyEventSeed * 0x9E3779B97F4A7C15UL
+                ^ (ulong)minute * 0xBF58476D1CE4E5B9UL ^ (ulong)(uint)ConversationSeed(id) * 0x94D049BB133111EBUL);
+            var eventRandom = new GameRandom(key);
+            if (!eventRandom.Chance(.035)) return null;
+            return (StockCompanyChange)eventRandom.Next(0, 6);
+        }
+
+        private static double StockAnnouncementShock(StockCompanyChange change) => change switch
+        {
+            StockCompanyChange.NewLocations => .018,
+            StockCompanyChange.HigherCosts => -.035,
+            StockCompanyChange.ChannelOrders => .028,
+            StockCompanyChange.Returns => -.04,
+            StockCompanyChange.Efficiency => .02,
+            _ => -.012
+        };
+
+        private void PublishStockCompanyChange(CityEquityState e, CityEquityDefinition d, long minute, StockCompanyChange change)
+        {
             string headline,detail;
-            switch(type)
+            switch(change)
             {
-                case 0:e.BusinessScale=Math.Min(2.5,e.BusinessScale*1.05);e.OperatingMargin=Math.Max(-.08,e.OperatingMargin-.012);shock=.018;
+                case StockCompanyChange.NewLocations:e.BusinessScale=Math.Min(2.5,e.BusinessScale*1.05);e.OperatingMargin=Math.Max(-.08,e.OperatingMargin-.012);
                     headline="新增营业网点";detail="公司投入新网点，销售规模扩大，新增租金与人工也压低了近期利润率。";break;
-                case 1:e.OperatingMargin=Math.Max(-.08,e.OperatingMargin-.025);shock=-.035;
+                case StockCompanyChange.HigherCosts:e.OperatingMargin=Math.Max(-.08,e.OperatingMargin-.025);
                     headline="成本上涨";detail="采购与人工支出增加，公司近期利润率下调。";break;
-                case 2:e.BusinessScale=Math.Min(2.5,e.BusinessScale*1.04);shock=.028;
+                case StockCompanyChange.ChannelOrders:e.BusinessScale=Math.Min(2.5,e.BusinessScale*1.04);
                     headline="新增渠道订单";detail="公司披露一批新增渠道订单，需求改善，最终收益仍取决于履约与成本。";break;
-                case 3:e.BusinessScale=Math.Max(.4,e.BusinessScale*.96);e.OperatingMargin=Math.Max(-.08,e.OperatingMargin-.008);shock=-.04;
+                case StockCompanyChange.Returns:e.BusinessScale=Math.Max(.4,e.BusinessScale*.96);e.OperatingMargin=Math.Max(-.08,e.OperatingMargin-.008);
                     headline="产品售后增加";detail="近期售后问题增加，订单和利润率承压，公司开始整改。";break;
-                case 4:e.OperatingMargin=Math.Min(.2,e.OperatingMargin+.015);shock=.02;
+                case StockCompanyChange.Efficiency:e.OperatingMargin=Math.Min(.2,e.OperatingMargin+.015);
                     headline="运营效率改善";detail="公司调整供应和人员安排，近期利润率有所改善。";break;
-                default:e.BusinessScale=Math.Max(.4,e.BusinessScale*.97);e.OperatingMargin=Math.Min(.2,e.OperatingMargin+.008);shock=-.012;
+                default:e.BusinessScale=Math.Max(.4,e.BusinessScale*.97);e.OperatingMargin=Math.Min(.2,e.OperatingMargin+.008);
                     headline="收缩低效业务";detail="公司缩减部分低效业务，营收规模减少，同时降低了运营负担。";break;
             }
             e.LastReason=headline+"；"+detail;
             AddStockNews(e.Id,minute,d.Name+"："+headline,detail+" 市场预期和短期交易情绪也会影响价格。");
-            return shock;
         }
+
+        private double StockFundamentalDrift(CityEquityState equity, CityEquityDefinition company, int day)
+        {
+            double profitability = Math.Max(.35, Math.Min(1.6, .6 + equity.OperatingMargin / company.Margin * .4));
+            double fair = company.BaseCents * equity.BusinessScale * StockIndustryFactor(company, day) * profitability;
+            return Math.Max(-.025, Math.Min(.025, (fair / equity.PriceCents - 1) * .035));
+        }
+
         private void RepriceStocks(int day,long minute)
         {
+            bool earlyMarket = day < StockEarlyMarketDays;
+            double sentimentMultiplier = earlyMarket ? EarlyStockSentimentMultiplier : LaterStockSentimentMultiplier;
+            double announcementMultiplier = earlyMarket ? EarlyStockAnnouncementMultiplier : LaterStockAnnouncementMultiplier;
             foreach(var e in _cityEquities)
             {
                 var d=CityInvestments.Get(e.Id);
                 // Gradual mean reversion plus public fundamentals and unpredictable market sentiment.
-                double profitability=Math.Max(.35,Math.Min(1.6,.6+e.OperatingMargin/d.Margin*.4));
-                double fair=d.BaseCents*e.BusinessScale*StockIndustryFactor(d,day)*profitability;
-                double shock=Math.Max(-.025,Math.Min(.025,(fair/e.PriceCents-1)*.035));
-                if(_cityEquityRandom.Chance(.035))shock+=StockCompanyEvent(e,d,minute);
+                double shock = StockFundamentalDrift(e, d, day);
+                if (ScheduledStockCompanyChange(e.Id, minute) is StockCompanyChange change)
+                {
+                    PublishStockCompanyChange(e, d, minute, change);
+                    shock += StockAnnouncementShock(change) * announcementMultiplier;
+                }
                 e.OperatingMargin+=(d.Margin-e.OperatingMargin)*.005;
-                shock+=_cityEquityRandom.Range(-d.Volatility,d.Volatility);
-                long next=(long)Math.Round(e.PriceCents*(1+shock));
-                e.PriceCents=Math.Max(100,Math.Min(1000000,Math.Max((long)Math.Ceiling(e.PreviousCloseCents*.9),Math.Min((long)Math.Floor(e.PreviousCloseCents*1.1),next))));
+                double volatility = d.Volatility * sentimentMultiplier;
+                shock+=_cityEquityRandom.Range(-volatility,volatility);
+                long next = (long)Math.Round(e.PriceCents * (1 + shock));
+                long maxMove = e.PreviousCloseCents * StockDailyLimitPercent / 100;
+                long dailyLimited = Math.Max(e.PreviousCloseCents - maxMove, Math.Min(e.PreviousCloseCents + maxMove, next));
+                e.PriceCents = Math.Max(100, Math.Min(1_000_000, dailyLimited));
                 e.AvailableUnits=d.Liquidity;
                 e.Quotes=AppendStockQuote(e.Quotes,minute,e.PriceCents);
                 e.History=e.Quotes.Select(q=>q.PriceCents).ToArray();
@@ -373,6 +451,7 @@ namespace PCShopSell.Core.Session
             Ledger.TryDebit(Clock.Today,"证券手续费",fee,StockName(id),LedgerAttribution.ForAsset(id,key+":fee"));
             e.ShortUnits+=units;e.ShortBasisCents+=gross.Cents;e.ShortMarginCents+=gross.Cents;e.ShortCollateralCents+=gross.Cents*2;e.ShortRealizedCents-=fee.Cents;
             ConsumeStockLiquidity(id,units);_cityAssetEffects.Add(key);
+            RecordStockExecution(id, StockExecutionKind.Short, Clock.Now.TotalMinutes, e.PriceCents, units);
             Say("已借股卖出：100%自有保证金与卖出所得均冻结，买回归还后释放；每天计借股费。");return true;
         }
         public bool CoverStockShort(string id,long units)
@@ -393,6 +472,7 @@ namespace PCShopSell.Core.Session
             else if(profit<0)Ledger.ForceDebit(date,"做空平仓损失",Money.FromCents(-profit),StockName(e.Id)+"（含平仓手续费）",LedgerAttribution.ForAsset(e.Id,key+":pnl"));
             e.ShortUnits-=units;e.ShortBasisCents-=basis;e.ShortMarginCents-=margin;e.ShortCollateralCents-=collateral;e.ShortRealizedCents+=basis-gross.Cents-fee.Cents;
             _cityAssetEffects.Add(key);
+            RecordStockExecution(e.Id, forced ? StockExecutionKind.ForcedCover : StockExecutionKind.Cover, minute, e.PriceCents, units);
             string message=StockName(e.Id)+(forced?"已自动买回平仓":"已买回归还")+units+"股，释放到账 "+Money.FromCents(net)+"。";
             if(forced)AddStockNews(e.Id,minute,"账户自动平仓",message+" 原因：担保比例达到130%警戒线或可用现金不足以支付持仓费用。");
             Say(message);

@@ -19,33 +19,35 @@ namespace PCShopSell.Tests
         }
         private static CityActivity Accept(GameSession s)
         {
-            var def=EventCatalog.All.Single(e=>e.Id=="friend_meal");
+            s.RaiseEvent("friend_meal");
+            var def = s.PendingEvent;
+            Assert.NotNull(def);
             StringAssert.Contains(s.CityPerson("res_coder").Name,def.Body);
-            def.Choices[0].Apply(s);
-            return s.CityActivities.Single(a=>a.SourceId.StartsWith("legacy-friend-meal:"));
+            Assert.IsTrue(s.ResolveEvent(0));
+            return s.CityActivities.Single(a=>a.SourceId.StartsWith("friend_meal:"));
         }
         private static void Step(GameSession s)
         {
             s.Player.Hunger=100;s.Player.Energy=100;s.Tick(.05);
         }
         [Test]
-        public void InvitationNamesRealClassmateAndCancellationDoesNotGrantContact()
+        public void InvitationUsesStartingClassmateContactAndCancellationDoesNotCharge()
         {
             using(var s=Make())
             {
-                Assert.NotNull(s.CityPersonState("res_coder"));Assert.False(s.IsMet("res_coder"));
+                Assert.NotNull(s.CityPersonState("res_coder"));Assert.True(s.IsMet("res_coder"));
                 var cash=s.Ledger.Balance;var a=Accept(s);
                 Assert.AreEqual("res_coder",a.HostId);
                 Assert.AreEqual("res_coder",a.Participants.Single().PersonId);
-                Assert.False(s.IsMet("res_coder"));Assert.AreEqual(cash,s.Ledger.Balance);
-                Assert.True(s.CancelCityActivity(a.Id));Assert.False(s.IsMet("res_coder"));
+                Assert.AreEqual(cash,s.Ledger.Balance);
+                Assert.True(s.CancelCityActivity(a.Id));Assert.AreEqual(cash,s.Ledger.Balance);
                 using(var loaded=GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
-                    Assert.False(loaded.IsMet("res_coder"));
+                    Assert.True(loaded.IsMet("res_coder"));
             }
         }
         [TestCase(false)]
         [TestCase(true)]
-        public void ContactRequiresCompletedRealDinnerAndPersistsAcrossReload(bool interrupt)
+        public void ClassmateRemainsInContactsWhenDinnerFinishesOrIsInterrupted(bool interrupt)
         {
             using(var s=Make())
             {
@@ -63,7 +65,7 @@ namespace PCShopSell.Tests
                 for(int i=0;i<1000&&a.Active&&a.State!=CityActivityPhase.Running;i++)Step(s);
                 Assert.AreEqual(CityActivityPhase.Running,a.State,a.EndReason);
                 Assert.AreEqual(a.VenueId,s.CityPersonState("res_coder").LocationPlaceId);
-                Assert.False(s.IsMet("res_coder"),"实际到场、开始聚餐时尚未互留联系方式");
+                Assert.True(s.IsMet("res_coder"));
                 using(var loaded=GameSession.Load(s.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
                 {
                     loaded.EventsEnabled=false;loaded.Time.SetSpeed(8);
@@ -72,7 +74,7 @@ namespace PCShopSell.Tests
                     if(interrupt)loaded.Leave();
                     for(int i=0;i<60000&&meal.Active;i++)Step(loaded);
                     Assert.AreEqual(interrupt?CityActivityPhase.Interrupted:CityActivityPhase.Completed,meal.State,meal.EndReason);
-                    Assert.AreEqual(!interrupt,loaded.IsMet("res_coder"));
+                    Assert.True(loaded.IsMet("res_coder"));
                     if(!interrupt)
                     {
                         Assert.True(loaded.SavedConversationContacts().Any(c=>c.Id=="res_coder"));
@@ -83,7 +85,7 @@ namespace PCShopSell.Tests
                         Assert.AreEqual(memories,loaded.MemoriesOf("res_coder").Count(m=>m.Text.Contains("留下了联系方式")));
                     }
                     using(var again=GameSession.Load(loaded.City,JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(loaded.CreateSave()))))
-                        Assert.AreEqual(!interrupt,again.IsMet("res_coder"));
+                        Assert.True(again.IsMet("res_coder"));
                 }
             }
         }

@@ -25,6 +25,8 @@ namespace PCShopSell.Core.Session
     {
         public string RetailKind = RetailShopTypes.Default;
         public string CustomName;
+        public string SalesAccountId { get; internal set; } = System.Guid.NewGuid().ToString("N");
+        public int SalesStartDay => Lease?.StartDay ?? 0;
         public Place Place;
         public ShopLease Lease;
         public bool OwnsProperty;
@@ -36,6 +38,7 @@ namespace PCShopSell.Core.Session
         public readonly List<AdditionalShopEmployee> AdditionalEmployees=new List<AdditionalShopEmployee>();
         public bool AutoBuild;
         public bool EmployeeBuilding;
+        internal readonly HashSet<string> WorkingAssemblers = new HashSet<string>();
         public int PendingDisplayTier = -1, PendingDisplayMinutes;
         public int RenovationDay = -1;
         public ShopEmergencyLighting EmergencyLighting;

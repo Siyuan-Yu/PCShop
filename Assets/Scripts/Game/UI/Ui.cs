@@ -138,12 +138,7 @@ namespace PCShopSell.Game.UI
             Image img = Panel(parent, "Button", bg ?? ButtonBg);
             var b = img.gameObject.AddComponent<FlatStyledButton>();
             b.targetGraphic = img;
-            ColorBlock cb = b.colors;
-            cb.highlightedColor = new Color(1.15f, 1.13f, 1.08f);
-            cb.fadeDuration = 0.12f;
-            cb.pressedColor = new Color(0.8f, 0.8f, 0.8f);
-            cb.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.6f);
-            b.colors = cb;
+            SteadyButtonFeedback(b);
             if (onClick != null)
             {
                 if(text=="+"||text=="−"||text=="-")
@@ -159,6 +154,17 @@ namespace PCShopSell.Game.UI
             b.SetCaption(t);
             b.interactable = interactable;
             return b;
+        }
+
+        internal static void SteadyButtonFeedback(Button button)
+        {
+            var colors = button.colors;
+            colors.highlightedColor = colors.normalColor;
+            colors.selectedColor = new Color(.96f, .96f, .96f);
+            colors.pressedColor = new Color(.87f, .87f, .87f);
+            colors.disabledColor = new Color(.5f, .5f, .5f, .6f);
+            colors.fadeDuration = 0;
+            button.colors = colors;
         }
 
         public static Text Notice(Transform parent, string message, int size = 18)
@@ -355,6 +361,10 @@ namespace PCShopSell.Game.UI
         }
 
         public static Slider Slider(Transform parent, float min, float max, float value, Action<float> onChange)
+            => Slider<Slider>(parent, min, max, value, onChange);
+
+        internal static T Slider<T>(Transform parent, float min, float max, float value, Action<float> onChange,
+            bool wholeNumbers = false) where T : Slider
         {
             RectTransform rt = Rect(parent, "Slider");
             Size(rt, -1, 28, 1);
@@ -366,12 +376,13 @@ namespace PCShopSell.Game.UI
             RectTransform handleArea = Rect(rt, "HandleArea").Anchor(0, 0, 1, 1, 8, 0, 8, 0);
             Image handle = Panel(handleArea, "Handle", Color.white);
             handle.rectTransform.sizeDelta = new Vector2(18, 0);
-            var s = rt.gameObject.AddComponent<Slider>();
+            var s = rt.gameObject.AddComponent<T>();
             s.fillRect = fill.rectTransform;
             s.handleRect = handle.rectTransform;
             s.targetGraphic = handle;
             s.minValue = min;
             s.maxValue = max;
+            s.wholeNumbers = wholeNumbers;
             s.value = value;
             s.onValueChanged.AddListener(v => onChange(v));
             return s;
@@ -448,6 +459,12 @@ namespace PCShopSell.Game.UI
     {
         public static int CancelFrame = -1;
         public bool IsChoiceOpen => transform.Find("Dropdown List")!=null;
+        internal static bool OpenInside(Transform root)
+        {
+            foreach (var choice in root.GetComponentsInChildren<ChoiceDropdown>())
+                if (choice.IsChoiceOpen) return true;
+            return false;
+        }
         public override void OnPointerClick(PointerEventData e) { base.OnPointerClick(e);FocusCurrent(); }
         public override void OnSubmit(BaseEventData e) { base.OnSubmit(e);FocusCurrent(); }
         public override void OnCancel(BaseEventData e) { base.OnCancel(e);CancelFrame=Time.frameCount; }

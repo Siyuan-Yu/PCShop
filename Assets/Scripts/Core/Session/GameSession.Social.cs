@@ -59,8 +59,7 @@ namespace PCShopSell.Core.Session
         // ---------- 认识档口老板 ----------
 
         /// <summary>
-        /// 第一次走进档口：只是脸熟（暗里的交情 10），<b>不会</b>自动存联系方式。
-        /// 要联系方式得等老板肯见你、点开和他聊天时当面开口要（<see cref="AskContact"/>）。
+        /// 第一次进档口只增加熟悉度。实际聊天后才自动保存联系方式。
         /// </summary>
         private void MeetStallOwner(Place stall)
         {
@@ -137,8 +136,7 @@ namespace PCShopSell.Core.Session
         {
             if (IsGameOver) return "游戏已经结束";
             if (string.IsNullOrEmpty(personId) || CityPersonState(personId) == null) return "找不到这位人物";
-            return InviteFamiliarityBlocker(personId)
-                ?? (IsMet(personId) || CitySamePlace(personId) ? null : "请当面邀请或先交换联系方式");
+            return !IsMet(personId) ? "先当面聊一聊" : InviteFamiliarityBlocker(personId);
         }
 
         public string InviteBlocker(string npcId, OutingSlot slot)

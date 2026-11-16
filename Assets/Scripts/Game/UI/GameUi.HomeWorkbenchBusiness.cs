@@ -279,14 +279,14 @@ namespace PCShopSell.Game.UI
                 {
                     string id = line.Key; var price = sim.GoodsPriceOf(id);
                     int intent = (int)Math.Round(sim.GoodsPurchaseIntentAtPrice(id, price.Yuan) * 100);
-                    var row = WbTable(right, new[] { Gifts.Get(id).Name, line.Value + " / " + (shelfStock.TryGetValue(id, out int back) ? back : line.Value), price.ToString(), intent + "%" }, widths);
+                    var row = WbTable(right, new[] { Gifts.Get(id).Name, line.Value + " / " + (shelfStock.TryGetValue(id, out int back) ? back : line.Value), price.ToString(), intent + "%" }, widths, itemKey: id);
                     Ui.Size(Ui.Button(row, "调价", () => OpenWorkbenchGoodsPrice(shop, id), 14, Ui.ButtonBg), 54, 28, 0).name = "WorkbenchGoods_" + id;
                 }
                 foreach (var line in fill.Parts)
                 {
                     var part = line.Part; bool boxed = line.Boxed; var price = sim.PriceOf(part, boxed);
                     int intent = (int)Math.Round(sim.PartPurchaseIntentAtPrice(part, boxed, price.Yuan) * 100);
-                    var row = WbTable(right, new[] { part.Name + (boxed ? "·盒装" : "·散件"), line.Count + " / " + sim.Stock.CountAll(part), price.ToString(), intent + "%" }, widths);
+                    var row = WbTable(right, new[] { part.Name + (boxed ? "·盒装" : "·散件"), line.Count + " / " + sim.Stock.CountAll(part), price.ToString(), intent + "%" }, widths, itemKey: part.Id);
                     Ui.Size(Ui.Button(row, "调价", () => OpenWorkbenchPartPrice(shop, part, boxed), 14, Ui.ButtonBg), 54, 28, 0).name = "WorkbenchPart_" + part.Id + (boxed ? "_b" : "_l");
                 }
             }

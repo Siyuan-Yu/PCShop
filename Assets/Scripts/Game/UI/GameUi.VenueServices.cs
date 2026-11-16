@@ -242,7 +242,8 @@ namespace PCShopSell.Game.UI
                 if (!S.StartVenueAppointment(booking.Id)) { w.Rebuild(); return; }
                 if (GameSession.IsOutdoorMarketVisit(booking)) { OpenOutdoorMarketVisit(booking); return; }
                 CloseAllWindows();
-                S.Time.SetPaused(false);
+                if (GameSession.IsManualPlayActivity(booking)) OpenCityActivityDetail(booking.Id);
+                else S.Time.SetPaused(false);
             }, 20, Ui.ButtonHot, why == null), -1, 48).name = "StartVenueAppointment";
         }
 

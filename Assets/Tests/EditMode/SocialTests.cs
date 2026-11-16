@@ -67,13 +67,34 @@ namespace PCShopSell.Tests
         private static void GoToStall(GameSession s) => GameSessionTests.Teleport(s, Stall);
 
         [Test]
-        public void EnteringOwnersStall_OnlyMakesYouFamiliar_ContactIsAskedForInPerson()
+        public void StartingContactsAndFirstConversationDetermineWhoCanSendInvitations()
+        {
+            using var s = MakeCitySocial();
+            CollectionAssert.AreEquivalent(new[] { "res_coder", Npcs.Lin, Npcs.Jie, Npcs.Landlady, "res_cook", "res_grandpa" },
+                s.SavedConversationContacts().Select(contact => contact.Id).ToArray());
+            var contactCheck = typeof(GameSession).GetMethod("HasIncomingInvitationContact",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            bool HasInviter(string eventId) => (bool)contactCheck.Invoke(s, new object[] { eventId });
+            Assert.IsTrue(HasInviter("friend_meal"));
+            const string hostId = "resident_dongyu";
+            Assert.IsFalse(HasInviter("act_court_dongyu"));
+            s.Flags.Add("heard:" + hostId);
+            Assert.IsFalse(HasInviter("act_court_dongyu"));
+            var host = s.CityPersonState(hostId);
+            host.Route = null;
+            host.LocationPlaceId = s.CurrentPlace.Id;
+            Assert.IsNotEmpty(s.CasualConversation(hostId));
+            Assert.IsTrue(HasInviter("act_court_dongyu"));
+            Assert.That(s.CityInviteBlocker(hostId), Does.Contain("熟悉度 10"));
+        }
+
+        [Test]
+        public void EnteringOwnersStallOnlyMakesYouFamiliarUntilFirstConversation()
         {
             GameSession s = Make();
             string popup = null;
             s.Popup += (title, body) => popup = title;
             Assert.IsFalse(s.IsMet(Npcs.Li));
-            Assert.IsNotNull(s.ContactBlocker(Npcs.Li), "没进过档口，不熟不好意思开口");
             GoToStall(s);
             Assert.IsFalse(s.IsMet(Npcs.Li), "进了档口、买了东西也不会自动有联系方式");
             Assert.AreEqual(10, s.Relation(Npcs.Li), "只是脸熟");
@@ -82,11 +103,13 @@ namespace PCShopSell.Tests
             s.BuyAtStall(stall, CpuPart(), 1);
             Assert.IsFalse(s.IsMet(Npcs.Li), "买东西不会存联系方式");
 
-            Assert.IsNull(s.ContactBlocker(Npcs.Li));
-            Assert.IsTrue(s.AskContact(Npcs.Li), "当面要才有");
+            var owner = s.CityPersonState(Npcs.Li);
+            owner.Route = null;
+            owner.LocationPlaceId = s.CurrentPlace.Id;
+            Assert.IsNotEmpty(s.CasualConversation(Npcs.Li));
             Assert.IsTrue(s.IsMet(Npcs.Li));
             Assert.AreEqual(10, s.Relation(Npcs.Li));
-            Assert.IsFalse(s.AskContact(Npcs.Li), "已经存了");
+            Assert.IsTrue(s.SavedConversationContacts().Any(c => c.Id == Npcs.Li));
         }
 
         [Test]
@@ -314,7 +337,11 @@ namespace PCShopSell.Tests
             GameSession s = Make();
             GoToStall(s);
             Place stall = s.City.GetPlace(Stall);
-            Assert.IsTrue(s.AskContact(Npcs.Li));
+            var owner = s.CityPersonState(Npcs.Li);
+            owner.Route = null;
+            owner.LocationPlaceId = s.CurrentPlace.Id;
+            s.CasualConversation(Npcs.Li);
+            Assert.IsTrue(s.IsMet(Npcs.Li));
             s.AddRelation(Npcs.Li, 80);
             s.BuyAtStall(stall, CpuPart(), 3);
             s.Backpack.AddGift(PCShopSell.Core.Home.Gifts.Cig, 1);

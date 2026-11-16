@@ -123,7 +123,8 @@ namespace PCShopSell.Core.Session
         public bool TravelTransportChosen;
         public bool WorkForEmployer;
         public bool ResultCaptured;
-        public int RelationBefore, RelationAfter, TrustBefore, TrustAfter;
+        public double RelationBefore, RelationAfter;
+        public int TrustBefore, TrustAfter;
         public bool RelationGainTracked;
         public double RelationGained;
         public VehicleKind TravelTransport;
@@ -138,11 +139,14 @@ namespace PCShopSell.Core.Session
         public string PlayerIntentId;
         public CityRoute PlayerVenueRoute;
         public long ScheduledStart, ActualStart = -1, ActualEnd = -1;
+        public double ManualOperationMinute;
         public long OccupiedFrom, OccupiedUntil;
         public bool EmployeeLeaveApproved;
         public int Duration, Grace = 60, Stage, Seat;
         public bool RendezvousReady;
         public string SettlementSummary;
+        public bool HasPartialSettlement;
+        public double PartialSettlementProgress;
         public int CommunityClueMask, CommunityClueShownMask;
         public long EntryCostCents;
         public bool EntryCostRecorded;
@@ -158,7 +162,8 @@ namespace PCShopSell.Core.Session
         public CityActivity Copy() => new CityActivity {Id=Id,DefinitionId=DefinitionId,SourceId=SourceId,VenueId=VenueId,HostId=HostId,
             EndReason=EndReason,ServiceDefinitionId=ServiceDefinitionId,ServiceConfirmed=ServiceConfirmed,ServiceChoice=ServiceChoice,PlayerIntentId=PlayerIntentId,PlayerVenueRoute=PlayerVenueRoute?.Copy(),OccupiedFrom=OccupiedFrom,OccupiedUntil=OccupiedUntil,EmployeeLeaveApproved=EmployeeLeaveApproved,ScheduledStart=ScheduledStart,ActualStart=ActualStart,ActualEnd=ActualEnd,
             EventGiftId=EventGiftId,EventGiftDelivered=EventGiftDelivered,EventSettlementNote=EventSettlementNote,
-            Duration=Duration,Grace=Grace,Stage=Stage,Seat=Seat,State=State,RendezvousReady=RendezvousReady,SettlementSummary=SettlementSummary,CommunityClueMask=CommunityClueMask,CommunityClueShownMask=CommunityClueShownMask,EntryCostCents=EntryCostCents,EntryCostRecorded=EntryCostRecorded,
+            Duration=Duration,Grace=Grace,Stage=Stage,Seat=Seat,State=State,ManualOperationMinute=ManualOperationMinute,RendezvousReady=RendezvousReady,SettlementSummary=SettlementSummary,CommunityClueMask=CommunityClueMask,CommunityClueShownMask=CommunityClueShownMask,EntryCostCents=EntryCostCents,EntryCostRecorded=EntryCostRecorded,
+            HasPartialSettlement=HasPartialSettlement,PartialSettlementProgress=PartialSettlementProgress,
             PlayerStatsBefore=PlayerStatsBefore?.ToArray(),PlayerStatsAfter=PlayerStatsAfter?.ToArray(),Reminder=Reminder,EntryPaid=EntryPaid,MealApplied=MealApplied,PlayerTreat=PlayerTreat,
             MidApplied=MidApplied,RewardApplied=RewardApplied,NoShowNoticeRead=NoShowNoticeRead,HostPays=HostPays,Choices=Choices?.ToArray()??Array.Empty<string>(),
             Participants=(Participants??Array.Empty<CityActivityParticipant>()).Select(p=>p.Copy()).ToArray()};

@@ -221,14 +221,14 @@ namespace PCShopSell.Game.UI
             }
             RefreshDockHeader();
             // Keep the current controls alive while the player is choosing or scrolling a dropdown.
-            if (ListScrollbar.PressedInside(_dock) || _dock.GetComponentsInChildren<ChoiceDropdown>().Any(choice=>choice.IsChoiceOpen)
+            if (ListScrollbar.PressedInside(_dock) || ChoiceDropdown.OpenInside(_dock)
                 || _dock.GetComponentsInChildren<InputField>().Any(input=>input.isFocused)) return;
             RefreshShopFitWarning();
             if((_tab==ShopTab.Stock || _tab==ShopTab.Pricing && _refreshPricing==null) && !AnyModalOpen && _stockViewSignature!=StockViewSignature())
             {RebuildDock();return;}
             if (_tab == ShopTab.Pricing && !AnyModalOpen && _refreshPricing != null)
             {
-                if (_pricingShop != S.PlayerShop || S.IsSpecialBusiness(S.CurrentShop)) RebuildDock();
+                if (_pricingShop != S.PlayerShop) RebuildDock();
                 else _refreshPricing();
                 return;
             }
@@ -309,7 +309,7 @@ namespace PCShopSell.Game.UI
             Ui.Clear(_dockContent);
             foreach (var (button, tab) in _tabButtons)
             {
-                button.GetComponentInChildren<Text>().text = tab == ShopTab.Orders && S.IsSpecialBusiness(S.CurrentShop)
+                button.GetComponentInChildren<Text>().text = tab == ShopTab.Orders && S.RetailKind == "secondhand"
                     ? "记录" : Tabs.First(t => t.tab == tab).name;
             }
             S.VisitQuestTarget(TargetFor(_tab));
@@ -397,7 +397,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Button(management, ownedShop.OwnsProperty ? "结束自营" : "退租店铺",
                 () => ConfirmCloseShop(ownedShop), 16, specialBusiness ? Ui.Warn : Ui.ButtonBg), 110, 38)
                 .name = "CloseShopCounter";
-            BuildCounterTotals(S.PlayerShop);
+            BuildCounterTotals(S.CurrentShop);
             BuildShopStanding(S.PlayerShop);
             if (specialBusiness) { BuildSpecialCounter(); return; }
             BuildIndustryBrief(C);
@@ -459,20 +459,20 @@ namespace PCShopSell.Game.UI
             });
         }
 
-        private void BuildCounterTotals(ShopSimulation shop)
+        private void BuildCounterTotals(OwnedShop ownedShop)
         {
-            var ownedShop = S.CurrentShop;
+            var shop = ownedShop.Sim;
             var row = Ui.Row(C, 90, 6);
             Metric("今日营业额", () =>
             {
-                RefreshShopSales(ownedShop.Place.Id);
+                RefreshShopSales(ownedShop);
                 return _shopSalesTotal.ToString();
             }, Ui.Good, () => OpenShopSalesDetails(ownedShop));
             Metric("今日进店", () => $"{ShopVisitTotal(ownedShop, false)} 人", Ui.TextColor, () => OpenShopVisitDetails(ownedShop, false),
                 () => $"预计 {S.ExpectedDailyShopEntrants(ownedShop.Place):N0} 人/日");
             Metric("今日流失", () => $"{ShopVisitTotal(ownedShop, true)} 人", Ui.Warn, () => OpenShopVisitDetails(ownedShop, true));
-            if (S.CurrentShop.RetailKind == "restaurant")
-                Metric("待收款", () => $"{S.RestaurantTablesAwaitingPayment(S.CurrentShop)} 桌", Ui.TextColor);
+            if (ownedShop.RetailKind == "restaurant")
+                Metric("待收款", () => $"{S.RestaurantTablesAwaitingPayment(ownedShop)} 桌", Ui.TextColor);
             else
                 Metric("排队结账", () => $"{shop.Queue.Count} 人", Ui.TextColor).Tip(() => PaymentText(shop.Accepted));
 
@@ -484,9 +484,7 @@ namespace PCShopSell.Game.UI
                 {
                     var button = card.gameObject.AddComponent<Button>();
                     button.targetGraphic = background;
-                    var colors = button.colors;
-                    colors.highlightedColor = new Color(1.18f, 1.18f, 1.18f);
-                    button.colors = colors;
+                    Ui.SteadyButtonFeedback(button);
                     button.onClick.AddListener(() => openDetails());
                 }
                 Ui.VList(card, 1, 9);
@@ -513,17 +511,17 @@ namespace PCShopSell.Game.UI
         private int _shopSalesEntryCount, _shopSalesRevision;
         private Money _shopSalesTotal;
 
-        private void RefreshShopSales(string shopId)
+        private void RefreshShopSales(OwnedShop shop)
         {
             var ledger = S.Ledger;
             var date = S.Clock.Today;
             int count = ledger.Entries.Count;
             // Each new ledger entry increments the revision once. A restore can replace existing rows.
-            if (_shopSalesLedger != ledger || _shopSalesId != shopId || _shopSalesDate != date
+            if (_shopSalesLedger != ledger || _shopSalesId != shop.SalesAccountId || _shopSalesDate != date
                 || ledger.Revision - _shopSalesRevision != count - _shopSalesEntryCount)
             {
                 _shopSalesLedger = ledger;
-                _shopSalesId = shopId;
+                _shopSalesId = shop.SalesAccountId;
                 _shopSalesDate = date;
                 _shopSalesEntryCount = 0;
                 _shopSalesTotal = Money.Zero;
@@ -533,7 +531,7 @@ namespace PCShopSell.Game.UI
             for (int i = _shopSalesEntryCount; i < count; i++)
             {
                 var entry = ledger.Entries[i];
-                if (entry.Date != date || entry.ShopId != shopId || !entry.Amount.IsPositive || !FinanceReport.IsOperatingSale(entry)) continue;
+                if (entry.Date != date || !FinanceReport.IsShopSale(entry, shop.Place.Id, shop.SalesAccountId)) continue;
                 _shopSales.Add(entry);
                 _shopSalesTotal += entry.Amount;
             }
@@ -543,17 +541,26 @@ namespace PCShopSell.Game.UI
 
         private void OpenShopSalesDetails(OwnedShop shop)
         {
-            RefreshShopSales(shop.Place.Id);
+            RefreshShopSales(shop);
             var entries = _shopSales.ToArray();
             var total = _shopSalesTotal;
             var date = _shopSalesDate;
             const int pageSize = 12;
             int pageCount = (entries.Length + pageSize - 1) / pageSize;
             int page = 0;
+            bool animateOnOpen = true;
             OpenWindow("今日营业额明细", 760, 670, w =>
             {
                 Line(w.Content, $"{S.ShopTitle(shop)} · {date}", 19, Ui.Accent);
-                Line(w.Content, $"实收 {total} · {entries.Length:N0} 笔", 24, Ui.Good);
+                string FormatTotal(Money amount) => $"实收 {amount} · {entries.Length:N0} 笔";
+                var totalLabel = Line(w.Content, FormatTotal(total), 24, Ui.Good);
+                if (animateOnOpen)
+                {
+                    animateOnOpen = false;
+                    var reveal = NewUiReveal();
+                    reveal?.CountMoney(totalLabel, total, FormatTotal);
+                    PlayUiReveal(reveal);
+                }
                 if (entries.Length == 0)
                 {
                     Line(w.Content, "今天暂无销售收款", 17, Ui.Dim);
@@ -737,11 +744,11 @@ namespace PCShopSell.Game.UI
                 var details = Ui.Panel(C,"ShelfItems_"+layoutIdx,Ui.PanelBg2).rectTransform;
                 Ui.VList(details,2,8);
                 foreach (var line in fill.Parts)
-                    ReadOnlyStock(details,line.Part.Name+(line.Boxed?" · 盒装":" · 散件"),line.Count,"ShelfPart_"+line.Part.Id+(line.Boxed?"_b":"_l"));
+                    ReadOnlyStock(details,line.Part.Id,line.Part.Name+(line.Boxed?" · 盒装":" · 散件"),line.Count,"ShelfPart_"+line.Part.Id+(line.Boxed?"_b":"_l"));
                 foreach (var line in fill.Goods)
-                    ReadOnlyStock(details,Gifts.Get(line.Key).Name,line.Value,"ShelfGoods_"+line.Key);
+                    ReadOnlyStock(details,line.Key,Gifts.Get(line.Key).Name,line.Value,"ShelfGoods_"+line.Key);
                 foreach (var offer in fill.Resale)
-                    ReadOnlyStock(details,offer.Name,1);
+                    ReadOnlyStock(details,"used:"+offer.Product,offer.Name,1);
                 if (fill.Total==0) Line(details,"这个货架是空的。",15,Ui.Dim);
             }
 
@@ -770,23 +777,25 @@ namespace PCShopSell.Game.UI
                 if(count<=0)continue;
                 rows++;
                 bool byWeight = item.Key == "rice";
-                var label = ReadOnlyStock(warehouse,item.Name,count,"WarehouseItem_"+item.Key,byWeight ? item.Kg : (double?)null);
+                var label = ReadOnlyStock(warehouse,item.Key,item.Name,count,"WarehouseItem_"+item.Key,byWeight ? item.Kg : (double?)null);
                 if (!byWeight) label.Tip($"每件 {item.Kg/item.Count:0.###} 千克");
             }
             if (S.RetailKind=="secondhand")
                 foreach (var item in S.SpecialBusiness(S.CurrentShop.Place.Id).Used.Where(i=>i.Owned&&!i.Sold&&!resaleOnShelf.Contains(i.Id)))
                 {
                     rows++;
-                    ReadOnlyStock(warehouse,GameSession.UsedNames[item.Product]+" #"+item.Id,1);
+                    ReadOnlyStock(warehouse,"used:"+item.Product,GameSession.UsedNames[item.Product]+" #"+item.Id,1);
                 }
             if(rows==0)Line(warehouse,"后仓是空的。",16,Ui.Dim);
         }
 
-        private static Text ReadOnlyStock(Transform parent,string name,int count,string rowName=null,double? totalKg=null)
+        private static Text ReadOnlyStock(Transform parent,string itemKey,string name,int count,string rowName=null,double? totalKg=null)
         {
-            var row = Ui.Row(parent,28,4);
+            var row = Ui.Row(parent,38,6);
+            row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
             if (rowName!=null) row.name = rowName;
-            var label = Ui.Size(Ui.Label(row,name,16,TextAnchor.MiddleLeft),-1,-1,1);
+            ItemPortrait(row,itemKey,34);
+            var label = Ui.Size(Ui.Label(row,name,16,TextAnchor.MiddleLeft),0,-1,1);
             if (totalKg.HasValue)
                 Ui.Size(Ui.Label(row,$"{totalKg.Value:0.##} 千克",16),90).name="StockQuantity";
             else StockCount(row,count);
@@ -804,6 +813,7 @@ namespace PCShopSell.Game.UI
             foreach(var item in items)
             {
                 var row=Ui.Row(section,56,4);row.name="FridgeItem_"+item.Key;
+                ItemPortrait(row,item.Key,46);
                 Ui.Size(Ui.Label(row,item.Name+"\n<size=14>冰箱 · "+item.Kg.ToString("0.##")+" 千克 · 永久保存</size>",16),-1,-1,1);
                 if(item.Key=="rice")Ui.Size(Ui.Label(row,item.Kg.ToString("0.##")+" 千克",16),90).name="StockQuantity";
                 else StockCount(row,item.Count);
@@ -852,11 +862,12 @@ namespace PCShopSell.Game.UI
             Ui.VList(editor, 4, 0);
             var list=Ui.Rect(C,"PricingProducts");Ui.VList(list,4,0);
             var empty = Line(list, "货架上暂无商品，陈列后可在这里调价。", 17, Ui.Dim);
-            PricingRow CreateRow(string key,string name,double kg,System.Func<double, Money> price,System.Func<long, double> intent,
+            PricingRow CreateRow(string key,string itemId,string name,double kg,System.Func<double, Money> price,System.Func<long, double> intent,
                 System.Action edit,System.Func<bool> own,System.Action follow)
             {
                 var view = new PricingRow { Root = Ui.Row(list, 86, 6) };
                 view.Root.name="Pricing_"+key;
+                ItemPortrait(view.Root,itemId,52);
                 var caption = Ui.Size(ProductText(view.Root, "", 16), -1, -1, 1);
                 var current=Ui.Size(Ui.Label(view.Root,"",16,TextAnchor.MiddleLeft,Ui.Good),104);
                 var editButton=Ui.Size(Ui.Button(view.Root,"调价",edit,16,Ui.ButtonBg),62,38);editButton.name="EditPrice_"+key;
@@ -892,7 +903,7 @@ namespace PCShopSell.Game.UI
                     if (!rows.TryGetValue(key, out var row))
                     {
                         var product = Gifts.Get(id);
-                        rows[key] = row = CreateRow(key, product.Name, product.WeightKg, markup => shop.GoodsPriceOf(id, markup),
+                        rows[key] = row = CreateRow(key, id, product.Name, product.WeightKg, markup => shop.GoodsPriceOf(id, markup),
                             yuan => shop.GoodsPurchaseIntentAtPrice(id, yuan), () => OpenWindow("调价 · " + product.Name, 600, 300, w =>
                             {
                                 Para(w.Content, product.Name + " · 调整时预览购买意愿，确定后保存售价。", 17);
@@ -909,7 +920,7 @@ namespace PCShopSell.Game.UI
                     string key = part.Id + (boxed ? "_boxed" : "_loose");
                     if (!rows.TryGetValue(key, out var row))
                     {
-                        rows[key] = row = CreateRow(key, part.Name + (boxed ? " · 盒装" : " · 散件"), PartUnitKg(part, boxed),
+                        rows[key] = row = CreateRow(key, part.Id, part.Name + (boxed ? " · 盒装" : " · 散件"), PartUnitKg(part, boxed),
                             markup => shop.PriceOf(part, boxed, markup), yuan => shop.PartPurchaseIntentAtPrice(part, boxed, yuan),
                             () => OpenWindow("调价 · " + part.Name, 600, 300, w =>
                             {
@@ -950,7 +961,7 @@ namespace PCShopSell.Game.UI
             string scope = shopId == null ? "全部门店" : S.ShopTitle(S.ShopAt(shopId));
             OpenWorkspace("finance-trend", shopId ?? "all", "经营趋势 · " + scope, 960, 680, w =>
             {
-                var days = PCShopSell.Core.Finance.FinanceReport.OperatingDaily(S.Ledger, S.Clock.Today, 14, shopId);
+                var days = FinanceReport.OperatingDaily(S.Ledger, S.Clock.Today, 14, shopId, S.ShopAt(shopId)?.SalesAccountId);
                 Money rev = Money.Zero, exp = Money.Zero, other = Money.Zero;
                 long max = 100;
                 foreach (var d in days)
@@ -1120,7 +1131,7 @@ namespace PCShopSell.Game.UI
             }
             Ui.Size(Ui.Button(C,"管理岗位与排班",OpenEmployeesPanel,17),-1,38);
             Line(C,"招聘",19,Ui.Accent);
-            Ui.Size(Ui.Button(C, S.JobAdDay >= 0 ? "招聘告示已贴，明天 9:00 再来一批人" : $"再贴招聘告示（{GameSession.JobAdFee}）", () =>
+            Ui.Size(Ui.Button(C, S.JobAdDay >= 0 ? "招聘告示已贴，明天 9:00 再来一批人" : $"贴招聘告示（{GameSession.JobAdFee}）", () =>
             {
                 S.PostJobAd(); RebuildDock();
             }, 18, Ui.ButtonHot, S.JobAdDay < 0), -1, 44);

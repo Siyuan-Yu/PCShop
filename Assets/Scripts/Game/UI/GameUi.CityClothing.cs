@@ -64,6 +64,7 @@ namespace PCShopSell.Game.UI
             foreach(var item in outfits.Skip(_cityClothingPage*size).Take(size))
             {
                 var o=item;var row=Ui.Row(w.Content,42,6);bool owned=S.OwnedOutfits.Contains(o.Id);
+                ItemPortrait(row, o.ProductId, 38);
                 Ui.Size(Ui.Label(row,o.Name+" · "+o.TierName+" · "+o.ComfortMinC+"—"+o.ComfortMaxC+"℃"+(buy?" · "+o.Price:owned?" · 已拥有":""),16),-1,42,1);
                 Ui.Size(Ui.Button(row,"试穿",()=>{_cityClothingPreview=o.Id;w.Rebuild();},16),78,40);
                 if(buy)Ui.Size(Ui.Button(row,owned?"已拥有":"柜台购买",()=>{S.BuyCityClothing(store,o.Id);w.Rebuild();},16,Ui.ButtonHot,!owned&&S.CurrentPlace==store&&S.IsPlaceOpen(store)&&S.Ledger.Balance>=o.Price),110,40);

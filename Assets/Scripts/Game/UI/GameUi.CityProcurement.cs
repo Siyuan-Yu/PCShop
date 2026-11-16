@@ -74,9 +74,11 @@ namespace PCShopSell.Game.UI
                 Para(w.Content, "库存低于下限时，由选中的进货员按库存阈值计划补到目标。", 17, Ui.Dim);
                 if (oldAutomatic) Para(w.Content, "原自动补货设置仍在生效，可改由员工负责或清除补货目标。", 16, Ui.Warn);
                 var target = Ui.Row(w.Content, 42); Ui.Size(Ui.Label(target, "常备目标", 17), 130);
-                QuantityStepper(w, target, "city_target_" + productId, draft.Target, 0, kind == PurchaseGoodsKind.Part ? GameSession.RestockMaxTarget : 100, 1, n => { draft.Target = (int)n; if (draft.Lower > draft.Target) draft.Lower = draft.Target; });
+                PurchaseQuantity(w, target, "city_target_" + productId, draft.Target, 0, kind == PurchaseGoodsKind.Part ? GameSession.RestockMaxTarget : 100,
+                    n => { draft.Target = (int)n; if (draft.Lower > draft.Target) draft.Lower = draft.Target; });
                 var lower = Ui.Row(w.Content, 42); Ui.Size(Ui.Label(lower, "补货下限", 17), 130);
-                QuantityStepper(w, lower, "city_lower_" + productId, draft.Lower < 0 ? (int)(draft.Target * .4) : draft.Lower, 0, draft.Target, 1, n => draft.Lower = (int)n);
+                PurchaseQuantity(w, lower, "city_lower_" + productId, draft.Lower < 0 ? (int)(draft.Target * .4) : draft.Lower,
+                    0, draft.Target, n => draft.Lower = (int)n);
                 foreach (var worker in workers)
                 {
                     var person = worker.Person;

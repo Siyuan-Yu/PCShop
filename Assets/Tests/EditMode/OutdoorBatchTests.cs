@@ -188,13 +188,13 @@ namespace PCShopSell.Tests
                 start.onClick.Invoke();
                 Assert.That(s.RunningCityActivity, Is.SameAs(activity));
                 Assert.That(s.Clock.Now, Is.EqualTo(now));
-                Assert.That(s.Time.IsRunning, Is.True);
+                Assert.That(s.ManualActivityClockPaused, Is.True);
                 Assert.That(ui.AnyModalOpen, Is.True);
                 Assert.That(Find("CityActivityChoice_1").interactable, Is.False);
 
                 for (int visited = 1; visited <= 3; visited++)
                 {
-                    s.AdvanceClock(4);
+                    OnsitePlayTests.StepManualActivity(s, 4);
                     Assert.That(s.OutdoorActivityState(activity.Id).Visited, Is.EqualTo(visited));
                     ui.RebuildWindows();
                     if (visited == 3) break;
@@ -203,10 +203,14 @@ namespace PCShopSell.Tests
                     now = s.Clock.Now;
                     next.onClick.Invoke();
                     Assert.That(s.Clock.Now, Is.EqualTo(now));
-                    Assert.That(s.Time.IsRunning, Is.True);
+                    Assert.That(s.ManualActivityClockPaused, Is.True);
                     Assert.That(ui.AnyModalOpen, Is.True);
                 }
-                s.AdvanceClock(activity.Duration);
+                var startTime = s.Clock.Now;
+                var finish = Find("FinishManualCityActivity");
+                Assert.That(finish.interactable, Is.True);
+                finish.onClick.Invoke();
+                Assert.That(s.Clock.Now, Is.EqualTo(startTime.AddMinutes(activity.Duration)));
                 Assert.That(activity.State, Is.EqualTo(CityActivityPhase.Completed));
                 Assert.That(s.OutdoorActivityState(activity.Id).OrderCount, Is.Zero);
                 Assert.That(s.Ledger.Balance, Is.EqualTo(cash));
@@ -249,12 +253,12 @@ namespace PCShopSell.Tests
         public void HikeNeedsActualWalkingAndContinuesAfterReloadWithoutDuplicateRewards()
         {
             using var s = Make(); var a = Accept(s, 62); Attend(s, a);
-            Assert.IsFalse(s.ChooseCityActivity(a.Id, 1)); s.AdvanceClock(6);
+            Assert.IsFalse(s.ChooseCityActivity(a.Id, 1)); OnsitePlayTests.StepManualActivity(s, 6);
             Assert.AreEqual(1, s.OutdoorActivityState(a.Id).Visited); Assert.IsTrue(s.ChooseCityActivity(a.Id, 1));
             using var loaded = Reload(s); var saved = loaded.CityActivities.Single(x => x.Id == a.Id);
-            loaded.AdvanceClock(6); Assert.AreEqual(2, loaded.OutdoorActivityState(a.Id).Visited);
-            Assert.IsTrue(loaded.ChooseCityActivity(a.Id, 1)); loaded.AdvanceClock(6);
-            Assert.AreEqual(3, loaded.OutdoorActivityState(a.Id).Visited); loaded.AdvanceClock(130);
+            OnsitePlayTests.StepManualActivity(loaded, 6); Assert.AreEqual(2, loaded.OutdoorActivityState(a.Id).Visited);
+            Assert.IsTrue(loaded.ChooseCityActivity(a.Id, 1)); OnsitePlayTests.StepManualActivity(loaded, 6);
+            Assert.AreEqual(3, loaded.OutdoorActivityState(a.Id).Visited); Assert.IsTrue(loaded.FinishManualCityActivity(a.Id));
             Assert.AreEqual(CityActivityPhase.Completed, saved.State); int relation = loaded.Relation(saved.Participants[0].PersonId);
             loaded.AdvanceClock(10); Assert.AreEqual(relation, loaded.Relation(saved.Participants[0].PersonId));
         }
@@ -262,19 +266,22 @@ namespace PCShopSell.Tests
         public void UnfinishedHikeDoesNotGrantCompletionRewards()
         {
             using var s = Make(); var a = Accept(s, 62); Attend(s, a); s.AdvanceClock(130);
+            Assert.AreEqual(CityActivityPhase.Running, a.State);
+            Assert.IsFalse(s.FinishManualCityActivity(a.Id));
+            Assert.IsTrue(s.CancelCityActivity(a.Id, early: true));
             Assert.AreEqual(CityActivityPhase.Interrupted, a.State); Assert.IsFalse(a.RewardApplied);
         }
         [Test]
         public void PlantAnswersAreAtTheSiteAndAreDifferentAcrossAllThreeSamples()
         {
             using var s = Make(); var a = Accept(s, 64); Attend(s, a);
-            Assert.IsFalse(s.ChooseCityActivity(a.Id, 1)); s.AdvanceClock(6);
+            Assert.IsFalse(s.ChooseCityActivity(a.Id, 1)); OnsitePlayTests.StepManualActivity(s, 6);
             Assert.IsTrue(s.ChooseCityActivity(a.Id, 1)); Assert.IsFalse(s.ChooseCityActivity(a.Id, 2));
-            Assert.IsTrue(s.ChooseCityActivity(a.Id, 5)); s.AdvanceClock(6);
+            Assert.IsTrue(s.ChooseCityActivity(a.Id, 5)); OnsitePlayTests.StepManualActivity(s, 6);
             Assert.IsTrue(s.ChooseCityActivity(a.Id, 1)); // Wrong answer on sample 2 remains a real choice.
-            Assert.IsTrue(s.ChooseCityActivity(a.Id, 5)); s.AdvanceClock(6); Assert.IsTrue(s.ChooseCityActivity(a.Id, 3));
+            Assert.IsTrue(s.ChooseCityActivity(a.Id, 5)); OnsitePlayTests.StepManualActivity(s, 6); Assert.IsTrue(s.ChooseCityActivity(a.Id, 3));
             Assert.AreEqual(2, s.OutdoorActivityState(a.Id).Correct); int before = s.Player.Intelligence;
-            s.AdvanceClock(100); Assert.AreEqual(before + 2, s.Player.Intelligence);
+            Assert.IsTrue(s.FinishManualCityActivity(a.Id)); Assert.AreEqual(before + 2, s.Player.Intelligence);
         }
         [Test]
         public void GuardDeliveryConsumesRealFoodOnceWithoutTakingTheGuardAway()
@@ -285,14 +292,14 @@ namespace PCShopSell.Tests
             Assert.IsFalse(s.ChooseCityActivity(a.Id, 1));
             s.Backpack.Food.Packed.Add(new FoodBatch { Id = "fast:rice", Name = "鸡肉蔬菜饭", Count = 1, ExpireDay = s.Clock.Today.TotalDays + 2, Hunger = 65 });
             Assert.IsTrue(s.ChooseCityActivity(a.Id, 1)); Assert.IsFalse(s.Backpack.Food.Packed.Any(b => b.Id == "fast:rice"));
-            Assert.IsTrue(s.OutdoorActivityState(a.Id).Delivered); s.AdvanceClock(25); Assert.AreEqual(CityActivityPhase.Completed, a.State);
+            Assert.IsTrue(s.OutdoorActivityState(a.Id).Delivered); Assert.IsTrue(s.FinishManualCityActivity(a.Id)); Assert.AreEqual(CityActivityPhase.Completed, a.State);
         }
         [Test]
         public void ComparisonNeedsThreeSameProductQuotesAndLowStatsCanStillTryAndFailNegotiating()
         {
             using var s = Make(); var a = Accept(s, 69); Attend(s, a);
             Assert.IsFalse(s.ChooseCityActivity(a.Id, 2));
-            for (int i = 0; i < 3; i++) { s.AdvanceClock(4); if (i < 2) Assert.IsTrue(s.ChooseCityActivity(a.Id, 1)); }
+            for (int i = 0; i < 3; i++) { OnsitePlayTests.StepManualActivity(s, 4); if (i < 2) Assert.IsTrue(s.ChooseCityActivity(a.Id, 1)); }
             var state = s.OutdoorActivityState(a.Id); Assert.AreEqual(3, state.Visited); Assert.AreEqual(2, state.QuoteCents.Length);
             Assert.AreNotEqual(state.QuoteSources[0], state.QuoteSources[1]); Assert.IsFalse(s.ChooseCityActivity(a.Id, 4));
             int best = Array.IndexOf(state.QuoteCents, state.QuoteCents.Min()); Assert.IsTrue(s.ChooseCityActivity(a.Id, best + 2));
@@ -301,9 +308,9 @@ namespace PCShopSell.Tests
         [Test]
         public void GpuTestTakesTimeThenPurchaseCreatesRealDeliveryAndCannotDuplicate()
         {
-            using var s = Make(); var a = Accept(s, 70); Attend(s, a); s.AdvanceClock(4);
+            using var s = Make(); var a = Accept(s, 70); Attend(s, a); OnsitePlayTests.StepManualActivity(s, 4);
             Assert.IsFalse(s.OrderOutdoorMarketGoods(a.Id, 3)); Assert.IsTrue(s.ChooseCityActivity(a.Id, 2));
-            Assert.IsFalse(s.OutdoorActivityState(a.Id).Tested); s.AdvanceClock(5); Assert.IsTrue(s.OutdoorActivityState(a.Id).Tested);
+            Assert.IsFalse(s.OutdoorActivityState(a.Id).Tested); OnsitePlayTests.StepManualActivity(s, 5); Assert.IsTrue(s.OutdoorActivityState(a.Id).Tested);
             var cash = s.Ledger.Balance; Assert.IsTrue(s.OrderOutdoorMarketGoods(a.Id, 3));
             Assert.Less(s.Ledger.Balance.Cents, cash.Cents); Assert.AreEqual(3, s.OutdoorActivityState(a.Id).OrderCount);
             Assert.IsTrue(s.Couriers.Any(c => c.Items.Any(i => i.Id == "gpu1" && i.Count == 3)));
@@ -313,7 +320,7 @@ namespace PCShopSell.Tests
         public void ComparisonCanPurchaseFromTheActualOnlineSourceInsteadOfTheLocalStall()
         {
             using var s = Make(); s.SetSmartphone(true); var a = Accept(s, 69); Attend(s, a);
-            for (int i = 0; i < 3; i++) { s.AdvanceClock(4); if (i < 2) s.ChooseCityActivity(a.Id, 1); }
+            for (int i = 0; i < 3; i++) { OnsitePlayTests.StepManualActivity(s, 4); if (i < 2) s.ChooseCityActivity(a.Id, 1); }
             Assert.IsTrue(s.SelectOutdoorPurchaseSource(a.Id, 1));
             Assert.IsTrue(s.OrderOutdoorMarketGoods(a.Id, 1));
             Assert.IsTrue(s.Online.Pending.Any(o => o.Lines.Any(l => l.PartId == "gpu1" && l.Count == 1)));
@@ -323,7 +330,7 @@ namespace PCShopSell.Tests
         {
             using var s = Make(); s.SetSmartphone(true); s.MainShop.Sim.Reputation = 30; s.Meet("zhou", 80);
             Assert.IsTrue(s.SignDirectAgreement()); var a = Accept(s, 69); Attend(s, a);
-            for (int i = 0; i < 3; i++) { s.AdvanceClock(4); if (i < 2) s.ChooseCityActivity(a.Id, 1); }
+            for (int i = 0; i < 3; i++) { OnsitePlayTests.StepManualActivity(s, 4); if (i < 2) s.ChooseCityActivity(a.Id, 1); }
             var state = s.OutdoorActivityState(a.Id); Assert.AreEqual(3, state.QuoteCents.Length); Assert.AreEqual("direct:zhou", state.QuoteSources[2]);
             Assert.IsTrue(s.SelectOutdoorPurchaseSource(a.Id, 2)); Assert.IsTrue(s.OrderOutdoorMarketGoods(a.Id, 3));
             Assert.AreEqual(3, s.OutdoorActivityState(a.Id).OrderCount);
@@ -331,10 +338,10 @@ namespace PCShopSell.Tests
         [Test]
         public void GpuCreditIsAnActualSavedDebtAndDeliveryAndChangingModelsRequiresRetesting()
         {
-            using var s = Make(); var a = Accept(s, 70); Attend(s, a); s.AdvanceClock(4);
-            Assert.IsTrue(s.ChooseCityActivity(a.Id, 2)); s.AdvanceClock(5);
+            using var s = Make(); var a = Accept(s, 70); Attend(s, a); OnsitePlayTests.StepManualActivity(s, 4);
+            Assert.IsTrue(s.ChooseCityActivity(a.Id, 2)); OnsitePlayTests.StepManualActivity(s, 5);
             Assert.IsTrue(s.SelectOutdoorMarketPart(a.Id, "gpu0")); Assert.IsFalse(s.OutdoorActivityState(a.Id).Tested);
-            Assert.IsFalse(s.OrderOutdoorMarketGoods(a.Id, 3)); Assert.IsTrue(s.ChooseCityActivity(a.Id, 2)); s.AdvanceClock(5);
+            Assert.IsFalse(s.OrderOutdoorMarketGoods(a.Id, 3)); Assert.IsTrue(s.ChooseCityActivity(a.Id, 2)); OnsitePlayTests.StepManualActivity(s, 5);
             s.Player.Intelligence = 100; s.Meet("wang", 100); Assert.IsTrue(s.ChooseCityActivity(a.Id, 3));
             Assert.IsTrue(s.OutdoorActivityState(a.Id).CreditGranted);
             var price = s.OutdoorMarketGoodsPrice(a.Id, 3); var cash = s.Ledger.Balance; var debts = s.SupplierDebtTotal;
@@ -342,14 +349,15 @@ namespace PCShopSell.Tests
             Assert.AreEqual(cash - price.Scale(.3), s.Ledger.Balance); Assert.AreEqual(debts + price - price.Scale(.3), s.SupplierDebtTotal);
             using var loaded = Reload(s); Assert.AreEqual(s.SupplierDebtTotal, loaded.SupplierDebtTotal);
             Assert.IsFalse(loaded.OrderOutdoorMarketGoods(a.Id, 3, true));
+            Assert.IsTrue(loaded.CancelCityActivity(a.Id, early: true));
             loaded.Clock.Restore(loaded.Clock.Today.AddDays(1), 599); loaded.AdvanceClock(1);
             Assert.AreEqual(3, loaded.MainShop.Sim.Stock.Count(PCShopSell.Core.Catalog.PartCatalog.Get("gpu0"), true));
         }
         [Test]
         public void LowAttributesCanChooseGpuCreditNegotiationButMustFailWithoutDebt()
         {
-            using var s = Make(); var a = Accept(s, 70); Attend(s, a); s.AdvanceClock(4);
-            s.ChooseCityActivity(a.Id, 2); s.AdvanceClock(5); s.Player.Intelligence = 1; var cash = s.Ledger.Balance;
+            using var s = Make(); var a = Accept(s, 70); Attend(s, a); OnsitePlayTests.StepManualActivity(s, 4);
+            s.ChooseCityActivity(a.Id, 2); OnsitePlayTests.StepManualActivity(s, 5); s.Player.Intelligence = 1; var cash = s.Ledger.Balance;
             Assert.IsTrue(s.ChooseCityActivity(a.Id, 3)); Assert.IsFalse(s.OutdoorActivityState(a.Id).CreditGranted);
             Assert.IsFalse(s.OrderOutdoorMarketGoods(a.Id, 3, true)); Assert.AreEqual(Money.Zero, s.SupplierDebtTotal); Assert.AreEqual(cash, s.Ledger.Balance);
         }

@@ -354,6 +354,34 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void QiaosongEarlySettlementGrantsEightyPercentOfTheBaseAffinityOnce()
+        {
+            using var s = Make();
+            var activity = Invite(s, 60);
+            var participant = activity.Participants.Single();
+            double fullReward = s.CityActivityService(activity).Service(activity.ServiceChoice).Relation;
+            Assert.That(fullReward, Is.GreaterThan(0));
+            for (int i = 0; i < 4; i++)
+            {
+                Cast(s);
+                WaitForBite(s);
+                for (int j = 0; j < 4; j++) s.AdvanceFishingInteraction(1, false);
+            }
+
+            Assert.That(s.CancelCityActivity(activity.Id, true), Is.True);
+            Assert.That(activity.State, Is.EqualTo(CityActivityPhase.Interrupted));
+            Assert.That(activity.HasPartialSettlement, Is.True);
+            Assert.That(activity.PartialSettlementProgress, Is.EqualTo(.8).Within(1e-9));
+            Assert.That(participant.RelationAfter - participant.RelationBefore, Is.EqualTo(fullReward * .8).Within(1e-9));
+            Assert.That(participant.TrustAfter, Is.EqualTo(participant.TrustBefore));
+            Assert.That(s.CancelCityActivity(activity.Id, true), Is.False);
+            using var loaded = Reload(s);
+            var settled = loaded.CityActivities.Single(item => item.Id == activity.Id);
+            Assert.That(settled.PartialSettlementProgress, Is.EqualTo(.8).Within(1e-9));
+            Assert.That(settled.Participants.Single().RelationAfter, Is.EqualTo(participant.RelationAfter).Within(1e-9));
+        }
+
+        [Test]
         public void EndingASessionReleasesTheBiteAndDoesNotGrantUnclaimedFish()
         {
             using var s = Make(); var a = Start(s); Catch(s);

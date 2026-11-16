@@ -225,7 +225,7 @@ namespace PCShopSell.Core.Session
         {
             if (!_mingAfterRace || EventRaised == null) return false;
             _mingAfterRace = false;
-            if (PersonHasWork(Ming)) return false;
+            if (IncomingInvitations == InvitationMode.DoNotDisturb || !IsMet(Ming) || PersonHasWork(Ming)) return false;
             Raise(EventScene(new EventDef { Id = "ming-race-meal", Title = "许明想赛后吃顿饭" },
                 "跑完后，许明问要不要找个地方吃饭，聊聊这场比赛。",
                 Choose("约个饭局", s => s.ScheduleLegacyCityMeeting(Ming, "dinner", "legacy-ming-race-meal:" + s.Clock.Today.TotalDays)),

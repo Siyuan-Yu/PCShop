@@ -34,7 +34,8 @@ namespace PCShopSell.Tests
             using (var s = Make())
             {
                 Assert.True(s.CanOpenFridge);
-                Assert.AreEqual(120, s.CurrentFridgeLimitKg);
+                Assert.AreEqual(240, s.CurrentFridgeLimitKg);
+                Assert.AreEqual(240, s.FridgeLimitKg(true));
                 Assert.True(s.EmployeePurchaseCatalog().Any(o => o.Id == FurnitureCatalog.Fridge));
             }
         }
@@ -237,13 +238,15 @@ namespace PCShopSell.Tests
         {
             using (var s = Make())
             {
-                s.HomeFridge.Food.Packed.Add(Meal("rice", 240));
-                s.Backpack.Food.Packed.Add(Meal("veg"));
+                s.HomeFridge.Food.Packed.Add(Meal("rice", 479));
+                s.Backpack.Food.Packed.Add(Meal("veg", 2));
+                Assert.True(s.MoveFridgeFood("lunch:veg", 1, true));
+                Assert.AreEqual(240, s.HomeFridge.WeightKg);
                 Assert.False(s.MoveFridgeFood("lunch:veg", 1, true));
                 Assert.AreEqual(1, s.Backpack.Lunchboxes);
-                Assert.AreEqual(240, s.HomeFridge.Lunchboxes);
-                Assert.False(s.MoveFridgeFood("lunch:rice", 240, false));
-                Assert.AreEqual(240, s.HomeFridge.Lunchboxes);
+                Assert.AreEqual(480, s.HomeFridge.Lunchboxes);
+                Assert.False(s.MoveFridgeFood("lunch:rice", 479, false));
+                Assert.AreEqual(480, s.HomeFridge.Lunchboxes);
             }
         }
 
@@ -271,13 +274,14 @@ namespace PCShopSell.Tests
             var tiers = FurnitureCatalog.All.Where(f => f.Role == FurnitureRole.Fridge).OrderBy(f => f.Price.Cents).ToArray();
             Assert.AreEqual(4, tiers.Length);
             CollectionAssert.AreEqual(new long[] { 1299, 2799, 5299, 7999 }, tiers.Select(f => f.Price.Yuan));
-            CollectionAssert.AreEqual(new double[] { 60, 120, 240, 360 }, tiers.Select(f => f.FridgeCapacityKg));
+            CollectionAssert.AreEqual(new double[] { 120, 240, 480, 720 }, tiers.Select(f => f.FridgeCapacityKg));
             using (var s = Make())
                 foreach (var tier in tiers)
                 {
                     Assert.True(FurnitureCatalog.Purchasable(false).Contains(tier));
                     Assert.True(FurnitureCatalog.Purchasable(true).Contains(tier));
                     Assert.True(s.EmployeePurchaseCatalog().Any(o => o.Id == tier.Id));
+                    StringAssert.Contains($"容量 {tier.FridgeCapacityKg:0} 千克", tier.Description);
                 }
         }
 
@@ -292,18 +296,18 @@ namespace PCShopSell.Tests
                     new SavePlaced { id = FurnitureCatalog.FridgeSide, x = 4, z = 1 } }).ToArray();
                 using (var s = GameSession.Load(source.City, data))
                 {
-                    Assert.AreEqual(420, s.CurrentFridgeLimitKg);
-                    s.HomeFridge.Food.Packed.Add(Meal("rice", 600)); // 300 kg.
+                    Assert.AreEqual(840, s.CurrentFridgeLimitKg);
+                    s.HomeFridge.Food.Packed.Add(Meal("rice", 1200)); // 600 kg.
                     int big = s.HomeLayout.ToList().FindIndex(p => p.Id == FurnitureCatalog.FridgeSide);
                     Assert.False(s.StoreFurniture(false, big));
                     int small = s.HomeLayout.ToList().FindIndex(p => p.Id == FurnitureCatalog.FridgeSmall);
                     Assert.True(s.StoreFurniture(false, small));
-                    Assert.AreEqual(360, s.CurrentFridgeLimitKg);
-                    Assert.AreEqual(600, s.HomeFridge.Lunchboxes);
+                    Assert.AreEqual(720, s.CurrentFridgeLimitKg);
+                    Assert.AreEqual(1200, s.HomeFridge.Lunchboxes);
                     using (var loaded = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
                     {
-                        Assert.AreEqual(360, loaded.CurrentFridgeLimitKg);
-                        Assert.AreEqual(600, loaded.HomeFridge.Lunchboxes);
+                        Assert.AreEqual(720, loaded.CurrentFridgeLimitKg);
+                        Assert.AreEqual(1200, loaded.HomeFridge.Lunchboxes);
                     }
                 }
             }
@@ -317,12 +321,12 @@ namespace PCShopSell.Tests
                 Assert.AreEqual("fridge", FurnitureCatalog.FridgeFamily);
                 var original = FurnitureCatalog.Get("fridge");
                 Assert.AreEqual(0.75, original.Width); Assert.AreEqual(0.7, original.Depth);
-                Assert.AreEqual(120, original.FridgeCapacityKg);
+                Assert.AreEqual(240, original.FridgeCapacityKg);
                 s.Backpack.Food.Packed.Add(Meal("veg"));
                 Assert.True(s.MoveFridgeFood("lunch:veg", 1, true));
                 using (var loaded = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(s.CreateSave()))))
                 {
-                    Assert.AreEqual(120, loaded.CurrentFridgeLimitKg);
+                    Assert.AreEqual(240, loaded.CurrentFridgeLimitKg);
                     Assert.AreEqual("青菜焖饭", loaded.HomeFridge.Food.Packed.Single().Name);
                     Assert.AreEqual(1, loaded.HomeFridge.Food.Packed.Single().ExpireDay);
                 }

@@ -276,11 +276,11 @@ namespace PCShopSell.Tests
         [TestCase("act_ktv_singer", "life_singer", 48, 0)]
         [TestCase("act_ktv_fuzhi", "resident_fuzhi", 49, -1500)]
         [TestCase("act_ktv_luoya", "resident_luoya", 50, 0)]
-        public void InvitationsOnlyMeetOnAttendanceAndSettleAtTheirRealVenue(string eventId, string personId, int number, int netCost)
+        public void InvitationsSettleAtTheirRealVenue(string eventId, string personId, int number, int netCost)
         {
-            using var s = Make(); Assert.IsFalse(s.IsMet(personId));
+            using var s = Make(); s.Meet(personId, 3);
             var balance = s.Ledger.Balance; var activity = Accept(s, eventId);
-            Assert.AreEqual(balance, s.Ledger.Balance); Assert.IsFalse(s.IsMet(personId));
+            Assert.AreEqual(balance, s.Ledger.Balance);
             if (number is 44 or 45 or 46 or 48 or 49) Assert.AreEqual(s.CityPersonState(personId).WorkPlaceId, activity.VenueId);
             if (number == 47) Assert.AreEqual(s.CityPersonState(personId).HomePlaceId, activity.VenueId);
             if (number == 43) Assert.IsEmpty(s.RaceInvitations);

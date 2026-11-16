@@ -39,7 +39,7 @@ namespace PCShopSell.Core.Session
                     var a = s.ScheduleCityActivity(definition, guests, found, sourceId: "exhibit:" + number + ":" + s._nextCityActivity);
                     if (a == null) return "日程已变化，本次未预约或扣款。";
                     a.HostId = person; a.HostPays = true; a.ServiceConfirmed = true; a.ServiceChoice = 0;
-                    return "已加入日程，实际到场才认识，按现场操作完成后再结算。";
+                    return "已加入日程，按预约时间到场，完成现场操作后结算。";
                 }, _ => found >= 0, "没有展期内双方可到场的时段"));
             }
             Offer("确认赴约 · 普通入场免费", "social_" + number);
@@ -79,18 +79,18 @@ namespace PCShopSell.Core.Session
             if (s.Number == 74 && a.ServiceDefinitionId == "social_74_work")
             {
                 if (s.Answers >= s.Visited) return Fail("这个展台已经完成，请去下一个展台。");
-                s.Mode = choice - 1; s.Pending = "expo_fix"; s.ReadyAt = Clock.Now.TotalMinutes + 5;
-                reply = "已选择处理方式，实际操作五分钟后检查结果。"; return true;
+                s.Mode = choice - 1; s.Pending = "expo_fix"; s.ReadyAt = (long)ManualOperationTime(a) + 5;
+                reply = "已选择处理方式，正在检查结果。"; return true;
             }
             if (s.Number == 73 && choice == 4)
             {
                 if (!HasOpenedComputerShop) return Fail("普通参观可以继续，商务采购需要先开办电脑店。");
-                s.Pending = "expo_talk"; s.ReadyAt = Clock.Now.TotalMinutes + 5; s.Mode = 4;
+                s.Pending = "expo_talk"; s.ReadyAt = (long)ManualOperationTime(a) + 5; s.Mode = 4;
                 reply = "开始核对实际进货渠道与企业试单条件；不会自动生成采购。"; return true;
             }
             if (s.Mode != 0 && s.Mode != choice) return Fail("本次已选择主要体验或反馈方向。");
-            s.Mode = choice; s.Pending = "expo_talk"; s.ReadyAt = Clock.Now.TotalMinutes + 5;
-            reply = s.Number == 75 ? "开始观察原型、体验结构或讨论反馈，五分钟后完成。" : s.Number == 77 ? "你和父亲一起听沈晓说、看模型细节，五分钟后完成这一段。" : "在当前展位实际体验交流五分钟。";
+            s.Mode = choice; s.Pending = "expo_talk"; s.ReadyAt = (long)ManualOperationTime(a) + 5;
+            reply = s.Number == 75 ? "开始观察原型、体验结构或讨论反馈。" : s.Number == 77 ? "你和父亲一起听沈晓说、看模型细节。" : "开始在当前展位体验交流。";
             return true;
         }
         private bool ExhibitionCompletionReady(CityActivity a, OutdoorBatchState s) => s.Visited >= 3 && s.Pending == null

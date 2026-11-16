@@ -2,15 +2,21 @@
   "entries": [
     {
       "key": "game_title",
-      "zh": "电脑城模拟器",
-      "ja": "PCショップ・シミュレーター",
-      "en": "PC Shop Simulator"
+      "zh": "街角起家",
+      "ja": "街角からはじめる店づくり",
+      "en": "From Corner to City"
     },
     {
       "key": "tagline",
-      "zh": "从街角小店，\n开始你的创业故事。",
-      "ja": "街角の小さな店から、\n自分だけの物語を。",
-      "en": "A small shop.\nA big dream."
+      "zh": "从第一家小店，到自己的商业版图",
+      "ja": "はじめての小さな店から、街じゅうへ",
+      "en": "Start with one shop. Grow across the city."
+    },
+    {
+      "key": "trial_edition",
+      "zh": "第一章试玩版",
+      "ja": "第1章 体験版",
+      "en": "Chapter One Demo"
     },
     {
       "key": "story",
@@ -163,6 +169,96 @@
       "en": "Choose a save. If it cannot be read, recovery will be attempted without deleting the original files."
     },
     {
+      "key": "pick_save_slot",
+      "zh": "选择存档位。之后的自动存档会保存在这个档位。",
+      "ja": "セーブ枠を選んでください。以後のオートセーブもこの枠に入ります。",
+      "en": "Choose a slot. Future autosaves will use this slot."
+    },
+    {
+      "key": "pick_load_slot",
+      "zh": "选择存档位。同一档位有手动档和自动档时，可选择读取哪个版本。",
+      "ja": "セーブ枠を選んでください。手動セーブとオートセーブがある場合は、読み込む方を選べます。",
+      "en": "Choose a slot. If both a manual save and an autosave exist, you can choose which to load."
+    },
+    {
+      "key": "save_slot_number",
+      "zh": "存档 {0}",
+      "ja": "セーブ {0}",
+      "en": "Save {0}"
+    },
+    {
+      "key": "current_save_slot",
+      "zh": "当前档位",
+      "ja": "使用中",
+      "en": "Current slot"
+    },
+    {
+      "key": "empty_save_slot",
+      "zh": "空档位",
+      "ja": "空きスロット",
+      "en": "Empty slot"
+    },
+    {
+      "key": "save_in_empty_slot",
+      "zh": "存到这里",
+      "ja": "ここにセーブ",
+      "en": "Save here"
+    },
+    {
+      "key": "unreadable_save_slot",
+      "zh": "存档无法读取",
+      "ja": "読み込み不可",
+      "en": "Save unreadable"
+    },
+    {
+      "key": "slot_game_date",
+      "zh": "第{0}年",
+      "ja": "{0}年目",
+      "en": "Year {0}"
+    },
+    {
+      "key": "slot_in_town",
+      "zh": "在街上",
+      "ja": "街中",
+      "en": "In town"
+    },
+    {
+      "key": "slot_versions",
+      "zh": "手动 / 自动",
+      "ja": "手動 / 自動",
+      "en": "Manual / Auto"
+    },
+    {
+      "key": "overwrite_save",
+      "zh": "覆盖存档",
+      "ja": "上書きセーブ",
+      "en": "Overwrite Save"
+    },
+    {
+      "key": "overwrite_save_prompt",
+      "zh": "要用当前进度覆盖 {0} 号档位吗？",
+      "ja": "枠 {0} に現在の進行状況を上書きしますか？",
+      "en": "Overwrite slot {0} with your current progress?"
+    },
+    {
+      "key": "saved_in_slot",
+      "zh": "已保存到 {0} 号档位。",
+      "ja": "枠 {0} にセーブしました。",
+      "en": "Saved to slot {0}."
+    },
+    {
+      "key": "autosaved_in_slot",
+      "zh": "已自动保存到 {0} 号档位。",
+      "ja": "枠 {0} にオートセーブしました。",
+      "en": "Autosaved to slot {0}."
+    },
+    {
+      "key": "autosave_slots_full",
+      "zh": "存档位已满，请在游戏菜单手动选择一个档位保存。",
+      "ja": "セーブ枠がいっぱいです。ゲームメニューから上書きする枠を選んでください。",
+      "en": "All save slots are full. Open the game menu to choose a slot to overwrite."
+    },
+    {
       "key": "manual_save",
       "zh": "手动存档",
       "ja": "手動セーブ",
@@ -272,9 +368,9 @@
     },
     {
       "key": "help_save_body",
-      "zh": "游戏内按 Esc 打开菜单，可手动存档。手动与自动存档分别保存；旅途中需先到达目的地再存档。设置中的语言独立保存，不随读档改变。",
-      "ja": "ゲーム中にEscでメニューを開き、手動セーブできます。手動・自動セーブは別々です。移動中は目的地に着いてからセーブしてください。言語設定はセーブデータとは別に保持されます。",
-      "en": "Press Esc during play to save manually. Manual saves and autosaves use separate files. Finish travelling before saving. Language preferences are stored separately from game saves."
+      "zh": "按 Esc 打开游戏菜单，从 9 个档位中选择一个保存。自动档跟随当前档位，可分别读取手动档或自动档。到达目的地后才能存档。",
+      "ja": "Escでゲームメニューを開き、9つの枠からセーブ先を選べます。手動セーブとオートセーブは同じ枠で個別に読み込めます。移動中は到着後にセーブしてください。",
+      "en": "Press Esc to choose one of nine save slots. The current slot holds separate manual and automatic saves. Finish travelling before saving."
     },
     {
       "key": "about_body",

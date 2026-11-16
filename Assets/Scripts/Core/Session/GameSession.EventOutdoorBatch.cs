@@ -80,7 +80,7 @@ namespace PCShopSell.Core.Session
                     var a = s.ScheduleCityActivityAt(definition, new[] { person }, start, false, "outdoor:" + n + ":" + s._nextCityActivity, place);
                     if (a == null) return "日程或条件变化，未预约、未扣款。";
                     a.HostId = person; a.HostPays = hostPays; a.PlayerTreat = treat; a.ServiceConfirmed = true; a.ServiceChoice = 0;
-                    return "已加入日程，到场才认识，开始时按确认的付款方式消费，实际完成后结算。";
+                    return "已加入日程，开始时按确认的付款方式消费，实际完成后结算。";
                 }, _ => start >= 0, "暂无双方可赴约的时段");
                 choices.Add(choice);
                 return (choice, start);
@@ -159,7 +159,8 @@ namespace PCShopSell.Core.Session
         }
         private void QueueOutdoorWalk(CityActivity a, OutdoorBatchState state, int node)
         {
-            var venue = City.GetPlace(a.VenueId); var door = DoorOf(venue); long now = Clock.Now.TotalMinutes;
+            var venue = City.GetPlace(a.VenueId); var door = DoorOf(venue);
+            long now = (long)ManualOperationTime(a);
             double yaw = venue.Heading * Math.PI / 180, lx = new[] { -.18, .20, .05 }[node % 3] * venue.Width;
             double lz = new[] { .18, .38, .57 }[node % 3] * venue.Depth;
             MapPoint Anchor(int seat) => new MapPoint(door.X + (lx + seat * .6) * Math.Cos(yaw) + lz * Math.Sin(yaw), door.Y - (lx + seat * .6) * Math.Sin(yaw) + lz * Math.Cos(yaw));
@@ -175,12 +176,11 @@ namespace PCShopSell.Core.Session
             state.Pending = "walk"; state.ReadyAt = a.PlayerVenueRoute.ArriveMinute;
             state.Message = "正前往第 " + (node + 1) + " 处现场。";
         }
-        public string OutdoorActivityStatus(string id, bool keepOpen = false)
+        public string OutdoorActivityStatus(string id)
         {
             var state = _outdoorBatch.FirstOrDefault(s => s.ActivityId == id); if (state == null) return null;
             if (state.Pending == null) return state.Message;
-            return state.Message + "\n还需 " + Math.Max(0, state.ReadyAt - Clock.Now.TotalMinutes) + " 游戏分钟"
-                + (keepOpen ? "。" : "；收起面板让时间继续。");
+            return state.Message + "\n现场步骤正在进行，游戏时间暂停。";
         }
         private void TickOutdoorBatch(long now)
         {
@@ -191,13 +191,23 @@ namespace PCShopSell.Core.Session
                 string task = state.Pending; state.Pending = null;
                 if (task == "walk")
                 {
+                    foreach (var participant in a.Participants)
+                    {
+                        var person = CityPersonState(participant.PersonId);
+                        if (person?.Route == null || person.Route.IntentId != participant.IntentId) continue;
+                        var destination = person.Route.Position(now);
+                        person.X = destination.X;
+                        person.Y = destination.Y;
+                        person.LocationPlaceId = a.VenueId;
+                        person.Route = null;
+                    }
                     state.Visited++;
                     if (state.Number == 64) state.Message = new[] {
                         "样株一：叶片有三条明显主脉，揉叶有清香。请选择树种；也可以先观察。",
                         "样株二：叶片革质、边缘细锯齿，枝间有小簇香花。请选择树种。",
                         "样株三：叶片像小扇子，叶脉放射展开。请选择树种。" }[Math.Min(2, state.Visited - 1)];
                     else if (state.Number == 63 && state.Mode > 1)
-                    { state.Pending = "work"; state.ReadyAt = now + 8; state.Message = "已到达任务现场，开始八分钟的维护操作。"; }
+                    { state.Pending = "work"; state.ReadyAt = now + 8; state.Message = "已到达任务现场，正在做维护。"; }
                     else if (state.Number is 71 or 72) state.Message = "已到青湾旧物市场第 " + state.Visited + " 个摊位。可现场学习，也可打开市场看货、购买或维修。";
                     else if (state.Number >= 73) ExhibitionNodeArrived(a, state);
                     else if (state.Number >= 68) CaptureOutdoorQuote(a, state);
@@ -262,8 +272,8 @@ namespace PCShopSell.Core.Session
             if (n == 61) { reply = choice == 1 ? "请打开池塘实际甩竿；钓到鱼后可选择当面赠送。" : "周国良讲起年轻时的河边生活，完整相处后记入人物经历。"; return true; }
             if (n == 62)
             {
-                if (choice == 1) { if (state.Visited >= 3) return Fail("路线已走完，可等待本场结束。"); QueueOutdoorWalk(a, state, state.Visited); }
-                if (choice == 2) { state.Pending = "rest"; state.ReadyAt = Clock.Now.TotalMinutes + 5; }
+                if (choice == 1) { if (state.Visited >= 3) return Fail("路线已走完，可以结束并结算。"); QueueOutdoorWalk(a, state, state.Visited); }
+                if (choice == 2) { state.Pending = "rest"; state.ReadyAt = (long)ManualOperationTime(a) + 5; }
                 if (choice == 3) { if (state.Visited >= 3) return Fail("路线已走完。"); state.Mode = 3; QueueOutdoorWalk(a, state, state.Visited); }
                 reply = "按所选路线实际行走或休息。"; return true;
             }
@@ -272,7 +282,7 @@ namespace PCShopSell.Core.Session
                 if (state.Mode != 0 && state.Mode != choice) return Fail("本场已选择主要任务，不能切换领取所有奖励。");
                 state.Mode = choice;
                 if (state.Visited == 0) QueueOutdoorWalk(a, state, choice - 1);
-                else if (choice > 1 && !a.Choices.Contains("outdoor-work")) { state.Pending = "work"; state.ReadyAt = Clock.Now.TotalMinutes + 8; }
+                else if (choice > 1 && !a.Choices.Contains("outdoor-work")) { state.Pending = "work"; state.ReadyAt = (long)ManualOperationTime(a) + 8; }
                 reply = state.Visited == 0 ? "先走到任务现场，到达后再次选择该任务开始操作。" : "正在现场操作，需要八分钟。"; return true;
             }
             if (n == 64)
@@ -291,8 +301,8 @@ namespace PCShopSell.Core.Session
             if (n is 65 or 67 || n == 66 && a.ServiceDefinitionId != "social_66_delivery")
             {
                 if (state.Mode != 0 && state.Mode != choice) return Fail("这次已经选定主要聊天方向。");
-                state.Mode = choice; state.Pending = "talk"; state.ReadyAt = Clock.Now.TotalMinutes + 5;
-                reply = choice == 2 ? "实际聊工作经历与经营；涉及配送合作仍需另下真实订单。" : "坐下来吃饭交流，五分钟后完成这一段。"; return true;
+                state.Mode = choice; state.Pending = "talk"; state.ReadyAt = (long)ManualOperationTime(a) + 5;
+                reply = choice == 2 ? "实际聊工作经历与经营；涉及配送合作仍需另下真实订单。" : "坐下来边吃边聊。"; return true;
             }
             if (n == 66)
             {
@@ -317,8 +327,8 @@ namespace PCShopSell.Core.Session
             }
             if (n == 70 && choice == 2)
             {
-                state.Pending = "test"; state.ReadyAt = Clock.Now.TotalMinutes + 5;
-                reply = "已开始上机核对所选型号，五分钟后显示核对结果。"; return true;
+                state.Pending = "test"; state.ReadyAt = (long)ManualOperationTime(a) + 5;
+                reply = "已开始上机核对所选型号。"; return true;
             }
             if ((n == 70 && choice == 3) || (n == 69 && choice == 5))
             {
@@ -361,10 +371,13 @@ namespace PCShopSell.Core.Session
             foreach (var source in d.outdoorBatch ?? Array.Empty<OutdoorBatchState>())
             {
                 var s = source.Copy();
+                if (string.IsNullOrEmpty(s.Pending)) s.Pending = null;
                 if (s.QuoteNames.Length != s.QuoteSources.Length) s.QuoteNames = s.QuoteSources.Select(id => City.GetPlace(id)?.Name ?? id).ToArray();
                 s.PurchaseSource = Math.Max(0, Math.Min(Math.Max(0, s.QuoteSources.Length - 1), s.PurchaseSource));
                 _outdoorBatch.Add(s);
             }
+            if (RunningCityActivity is CityActivity running && IsOutdoorBatchActivity(running) && OutdoorState(running) == null)
+                StartOutdoorBatch(running);
         }
     }
     public sealed partial class SaveData { public OutdoorBatchState[] outdoorBatch; }

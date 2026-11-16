@@ -31,6 +31,7 @@ namespace PCShopSell.Core.Session
     {
         public const string FishingVenueId = "life_fishing";
         public const string FishingAttendantId = "resident_luqiao";
+        private const double FishingProgressGainPerSecond = .19435;
         private FishingState _fishing;
         private int _fishingExperience, _fishCaughtTotal;
         public FishingState CurrentFishing => _fishing?.Copy();
@@ -181,7 +182,7 @@ namespace PCShopSell.Core.Session
                     _fishing.ControlPosition = Math.Max(half, Math.Min(1 - half, _fishing.ControlPosition + _fishing.ControlVelocity * dt));
                     if (_fishing.ControlPosition <= half || _fishing.ControlPosition >= 1 - half) _fishing.ControlVelocity = 0;
                     bool inside = Math.Abs(_fishing.FishPosition - _fishing.ControlPosition) <= half;
-                    _fishing.CatchProgress = Math.Max(0, Math.Min(1, _fishing.CatchProgress + dt * (inside ? .115 * 1.3 : -.095)));
+                    _fishing.CatchProgress = Math.Max(0, Math.Min(1, _fishing.CatchProgress + dt * (inside ? FishingProgressGainPerSecond : -.095)));
                     _fishing.LineTension = Math.Max(0, Math.Min(1, _fishing.LineTension + dt * (reelHeld ? (inside ? .045 : .17) : -.22)));
                     if (_fishing.LineTension >= 1) LoseFishingFish("收线太猛，鱼线拉断了；适时松开放线再试。");
                     else if (_fishing.CatchProgress <= 0 || _fishing.FightSeconds >= 60) LoseFishingFish("没有跟住鱼的挣扎，鱼脱钩了。");

@@ -184,6 +184,7 @@ namespace PCShopSell.Game.UI
             var row = Ui.Row(list, 56, 8);
             row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
             if (item.Short) row.gameObject.AddComponent<Image>().color = new Color(.42f, .17f, .15f, .22f);
+            ItemPortrait(row, offer.Id, 46);
             string sub = offer.Category + (cov.ContractMissing > 0 ? $" · 订单缺货 {cov.ContractMissing}" : "") + (cov.Claimed > 0 ? $" · 已安排 {cov.Claimed}" : "");
             var label = Ui.Label(row, offer.Name + "\n<size=14><color=#AAB4BB>" + sub + "</color></size>", 17, TextAnchor.MiddleLeft);
             label.verticalOverflow = VerticalWrapMode.Truncate;
@@ -195,10 +196,11 @@ namespace PCShopSell.Game.UI
             string key = offer.Kind + "_" + offer.Id;
             int max = offer.Kind == PurchaseGoodsKind.Part ? GameSession.RestockMaxTarget : 100;
             int lower = policy.Lower < 0 ? cov.Lower : policy.Lower;
-            QuantityStepper(w, row, "ptgt_" + key, cov.Target, 1, max, 1, n =>
-                EditProcurement(shop, offer, buyers, p => { p.Target = (int)n; if (p.Lower > p.Target || p.Lower < 0) p.Lower = Math.Min(p.Target, p.Lower < 0 ? (int)(p.Target * GameSession.RestockTriggerRatio) : p.Lower); }));
-            QuantityStepper(w, row, "plow_" + key, Math.Min(lower, cov.Target), 0, cov.Target, 1, n =>
-                EditProcurement(shop, offer, buyers, p => p.Lower = (int)n));
+            PurchaseQuantity(w, row, "ptgt_" + key, cov.Target, 1, max, n =>
+                EditProcurement(shop, offer, buyers, p => { p.Target = (int)n; if (p.Lower > p.Target || p.Lower < 0) p.Lower = Math.Min(p.Target, p.Lower < 0 ? (int)(p.Target * GameSession.RestockTriggerRatio) : p.Lower); }),
+                trackWidth: 72);
+            PurchaseQuantity(w, row, "plow_" + key, Math.Min(lower, cov.Target), 0, cov.Target, n =>
+                EditProcurement(shop, offer, buyers, p => p.Lower = (int)n), trackWidth: 72);
             string owner = policy.Primary == ProcurementMethod.Online1788 ? "网购自动" : buyers.FirstOrDefault(b => b.Person.Id == policy.EmployeeId)?.Person.Name ?? "未指定";
             var ownerButton = Ui.Size(Ui.Button(row, owner, () =>
             {
@@ -248,6 +250,7 @@ namespace PCShopSell.Game.UI
                 {
                     var pick = candidate;
                     var row = Ui.Row(list, 46, 8);
+                    ItemPortrait(row, pick.Offer.Id, 38);
                     Ui.Size(Ui.Label(row, pick.Offer.Name + "  <size=14><color=#AAB4BB>" + pick.Offer.Category + "</color></size>", 17, TextAnchor.MiddleLeft), -1, 40, 1);
                     Ui.Size(Ui.Button(row, "添加", () =>
                     {

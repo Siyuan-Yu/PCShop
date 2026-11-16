@@ -103,7 +103,7 @@ namespace PCShopSell.Core.Session
                 if (person.CandidateLeavesAt > Clock.Now.TotalMinutes) continue;
                 departed.Add(person.Name); _candidates.RemoveAt(i);
             }
-            if (departed.Count > 0) Say("应聘等待时间已到，" + string.Join("、", departed) + "离开了。需要招人可以再贴招聘告示。");
+            if (departed.Count > 0) Say("应聘等待时间已到，" + string.Join("、", departed) + "离开了。需要招人可以贴招聘告示。");
         }
 
         // ---------- 店里 ----------

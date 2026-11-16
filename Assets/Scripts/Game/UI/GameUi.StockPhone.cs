@@ -20,8 +20,9 @@ namespace PCShopSell.Game.UI
             new Color32(239,180,135,255), new Color32(149,216,151,255), new Color32(215,165,203,255),
             new Color32(142,216,239,255), new Color32(194,203,209,255)
         };
-        private const int StockQuoteGap = 6, StockQuoteWidth = 218, StockPositionWidth = 120;
-        private const int StockDraftWidth = 138, StockActionWidth = 74;
+        private const int StockQuoteGap = 6, StockQuoteWidth = 218, StockPositionWidth = 104;
+        private const int StockCostWidth = 100, StockDraftWidth = 116, StockActionWidth = 74;
+        private const int StockCashCardHeight = 68;
         private static readonly int[] StockLotSteps = { 1, 5, 25, 100 };
         private readonly Dictionary<string, long> _stockSpotDraft = new Dictionary<string, long>();
         private readonly Dictionary<string, long> _stockShortDraft = new Dictionary<string, long>();
@@ -31,6 +32,7 @@ namespace PCShopSell.Game.UI
         private StockPage _stockPage = StockPage.Exchange;
         private string _stockExpanded, _stockTradeFeedback;
         private bool _stockShortMode, _stockCandles, _stockWatchOnly, _stockHelp, _stockTradeFailed;
+        private bool _stockTradeRevealPending;
         private int _stockSort, _stockChartDays = 7, _stockLotStep;
         private Dictionary<string, long> StockDraft(bool shortMode) => shortMode ? _stockShortDraft : _stockSpotDraft;
         private int StockStep => StockLotSteps[_stockLotStep] * GameSession.StockLotSize;
@@ -100,6 +102,34 @@ namespace PCShopSell.Game.UI
             if (title != null) StockText(card, title, 18, Ui.Accent);
             return card;
         }
+        private static (Text amount, Text detail) StockCashCard(Transform parent, string amountName,
+            string title, int width, bool withDetail = false)
+        {
+            var card = Ui.Size(Ui.FlatPanel(parent, "StockCashCard", Ui.FlatWell, Ui.FlatHotEdge),
+                width, StockCashCardHeight, 0);
+            card.raycastTarget = false;
+            var layout = Ui.VList(card.rectTransform, 3, 0);
+            layout.padding = new RectOffset(12, 12, 5, 5);
+            var heading = Ui.Row(card.transform, 19, 8);
+            Ui.Size(Ui.Label(heading, title, 15, color: Ui.TextColor), 96, 19);
+            Text detail = null;
+            if (withDetail)
+            {
+                detail = Ui.Size(Ui.Label(heading, "", 14, TextAnchor.MiddleRight, Ui.Dim), 0, 19, 1);
+                detail.resizeTextForBestFit = true;
+                detail.resizeTextMinSize = 10;
+                detail.resizeTextMaxSize = 14;
+                detail.verticalOverflow = VerticalWrapMode.Truncate;
+            }
+            var amount = Ui.Size(Ui.Label(card.transform, "", 32, color: Ui.Accent), -1, 36);
+            amount.name = amountName;
+            amount.fontStyle = FontStyle.Bold;
+            amount.resizeTextForBestFit = true;
+            amount.resizeTextMinSize = 16;
+            amount.resizeTextMaxSize = 32;
+            amount.verticalOverflow = VerticalWrapMode.Truncate;
+            return (amount, detail);
+        }
         private static void StockFlex(Component component, float height)
         {
             var size = Ui.Size(component, 0, height, 1).GetComponent<LayoutElement>();
@@ -118,10 +148,13 @@ namespace PCShopSell.Game.UI
         private void BuildStockWorkspace(Window w)
         {
             var root = StockRoot(w);
-            var summary = Ui.Row(root, 48, 12);
+            var summary = Ui.Row(root, StockCashCardHeight, 12);
             var floating = StockUnrealized;
             var realized = S.StockTotalRealized;
-            StockFlex(Ui.Label(summary, "可用现金  " + S.Ledger.Balance, 19, color: Ui.Accent), 48);
+            var (cash, _) = StockCashCard(summary, "StockAvailableCash", "可用现金", 300);
+            var balance = S.Ledger.Balance;
+            cash.text = balance.ToString();
+            cash.color = balance.IsNegative ? Ui.FlatDown : Ui.Accent;
             StockFlex(Ui.Label(summary, "总浮动盈亏  " + floating, 18, color: floating.IsNegative ? Ui.Warn : Ui.Good), 48);
             StockFlex(Ui.Label(summary, "已实现盈亏  " + realized, 18, color: realized.IsNegative ? Ui.Warn : Ui.Good), 48);
             StockFlex(Ui.Label(summary, S.StockTradingStatus + "\n下次报价 " + S.StockNextQuote, 15, color: Ui.Dim), 48);
@@ -193,7 +226,8 @@ namespace PCShopSell.Game.UI
             help.Tip("交易规则");
             if (_stockHelp)
             {
-                StockText(root, "股票每手100股。表头倍率控制每次加减的手数，点「成交」统一结算。做空冻结自有保证金及卖出所得，每日借股费0.03%，担保比例≤130%时自动平仓。", 15, Ui.Dim);
+                StockText(root, $"个股单日涨跌上限为 ±{GameSession.StockDailyLimitPercent}%，第 {GameSession.StockEarlyMarketDays + 1} 天起波动加大。\n"
+                    + "股票每手100股。表头倍率控制每次加减的手数，点「成交」统一结算。做空冻结自有保证金及卖出所得，每日借股费0.03%，担保比例≤130%时自动平仓。", 15, Ui.Dim);
                 Ui.Size(Ui.Button(root, "账户与费用明细", OpenStockFees, 15), -1, 30);
             }
 
@@ -206,7 +240,8 @@ namespace PCShopSell.Game.UI
                 foreach (var refreshRow in refreshRows) refreshRow();
                 refreshNavigation();
                 var quote = shownQuote = S.PreviewStockBatch(draft, shortMode, calculateReserve: false);
-                net.text = "现金净变动  " + StockSignedMoney(quote.Net);
+                net.text = StockSignedMoney(quote.Net);
+                net.color = quote.Net.IsNegative ? Ui.FlatDown : quote.Net.IsPositive ? Ui.Good : Ui.TextColor;
                 fees.text = (draft.ContainsKey("hardware") ? "佣金 0.2% · 旧指数 0.5%" : "佣金 0.2%")
                     + (draft.Count > 0 ? " · " + quote.Fees : "");
                 bool ready = quote.Blocker == null;
@@ -238,6 +273,7 @@ namespace PCShopSell.Game.UI
             stepLabel = cycle.GetComponentInChildren<Text>();
             Ui.Size(Ui.Button(quotes, "涨跌", () => Sort(2), 15), 65, 31);
             StockCell(heading, shortMode ? "做空股数" : "我的持股", StockPositionWidth, Ui.Dim);
+            StockCell(heading, shortMode ? "开仓均价" : "成本价", StockCostWidth, Ui.Dim);
             StockCell(heading, "待成交", StockDraftWidth, Ui.Dim);
             Ui.Size(Ui.Label(heading, shortMode ? "做空" : "买入", 15, TextAnchor.MiddleCenter, Ui.Dim), StockActionWidth, 39);
             Ui.Size(Ui.Label(heading, shortMode ? "平仓" : "卖出", 15, TextAnchor.MiddleCenter, Ui.Dim), StockActionWidth, 39);
@@ -251,12 +287,8 @@ namespace PCShopSell.Game.UI
             foreach (string id in ids) refreshRows.Add(BuildStockRow(w, list, id, shortMode, Refresh));
             if (refreshRows.Count == 0) StockText(list, "暂无自选股票。", 16, Ui.Dim);
 
-            var footer = Ui.Row(root, 60, 10);
-            var totals = StockCard(footer);
-            Ui.Size(totals, 360, 58, 0);
-            fees = Ui.Label(totals, "", 14, color: Ui.Dim);
-            net = Ui.Label(totals, "", 19, color: Ui.Accent);
-            net.name = "StockBatchNet";
+            var footer = Ui.Row(root, StockCashCardHeight, 10);
+            (net, fees) = StockCashCard(footer, "StockBatchNet", "现金净变动", 360, withDetail: true);
             status = Ui.Label(footer, "", 16, TextAnchor.MiddleCenter);
             status.name = "StockTradeFeedback";
             StockFlex(status, 56);
@@ -271,6 +303,17 @@ namespace PCShopSell.Game.UI
             execute = Ui.Size(Ui.Button(footer, "成交！", () => ExecuteStockDraft(w, shortMode, shownQuote), 20, Ui.ButtonHot), 124, 46);
             execute.name = "StockBatchExecute";
             Refresh();
+            if (_stockTradeRevealPending)
+            {
+                _stockTradeRevealPending = false;
+                if (_stockTradeFeedback != null && !_stockTradeFailed)
+                {
+                    var reveal = NewUiReveal();
+                    reveal?.Fade(status.transform, 0);
+                    reveal?.Emphasize(status.transform, 0);
+                    PlayUiReveal(reveal);
+                }
+            }
         }
 
         private static Text StockCell(Transform row, string text, int width, Color? color = null) =>
@@ -331,6 +374,7 @@ namespace PCShopSell.Game.UI
             StockCell(row, S.CityInvestmentPrice(id).ToString(), 106);
             StockCell(row, change.ToString("+0.00%;-0.00%;0.00%"), StockQuoteWidth - 106 - StockQuoteGap, change < 0 ? Ui.Warn : Ui.Good);
             StockCell(row, held.ToString("N0"), StockPositionWidth);
+            StockCell(row, costText, StockCostWidth, cost.HasValue ? StockPriceGraphic.CostColor : Ui.Dim);
             var pending = StockCell(row, "—", StockDraftWidth, Ui.Dim);
             pending.name = "StockDraft_" + id;
             var plus = Ui.Size(Ui.Button(row, "+", () => StepStockDraft(id, shortMode, 1, refresh), 23, Ui.ButtonBg), StockActionWidth, 35);
@@ -363,8 +407,16 @@ namespace PCShopSell.Game.UI
         {
             var card = StockCard(parent);
             card.name = "StockDetails_" + id;
+            const int days = 7;
+            var executions = S.StockExecutions(id, StockRangeStart(days), _stockShortMode);
             var heading = Ui.Row(card, 34, 8);
             StockFlex(Ui.Label(heading, "近7天走势 · " + StockTitle(id), 18, color: Ui.Accent), 34);
+            if (executions.Length > 0)
+            {
+                Ui.Size(Ui.Label(heading, _stockShortMode ? "▲ 平仓" : "▲ 买入", 15, TextAnchor.MiddleCenter, StockPriceGraphic.BuyColor), 64, 30);
+                Ui.Size(Ui.Label(heading, _stockShortMode ? "▼ 做空" : "▼ 卖出", 15, TextAnchor.MiddleCenter, StockPriceGraphic.SellColor), 64, 30);
+                Ui.Size(Ui.Button(heading, "成交明细", () => OpenStockTradeHistory(id, executions), 15), 100, 32);
+            }
             Ui.Size(Ui.Button(heading, _stockCandles ? "切换折线" : "切换K线", () =>
             { _stockCandles = !_stockCandles; w.Rebuild(); }, 15), 110, 32);
 
@@ -377,9 +429,9 @@ namespace PCShopSell.Game.UI
             StockFlex(Ui.Label(figures, "浮动盈亏  " + (cost.HasValue ? profit.ToString() : "—"), 17,
                 color: profit.IsNegative ? Ui.Warn : Ui.Good), 34);
 
-            var quotes = StockQuotesInRange(id, 7);
+            var quotes = StockQuotesInRange(id, days);
             var graph = Ui.Size(Ui.Rect(card, "StockPriceLine"), -1, 218);
-            graph.gameObject.AddComponent<StockPriceGraphic>().Initialize(quotes, cost, _stockCandles);
+            graph.gameObject.AddComponent<StockPriceGraphic>().Initialize(quotes, cost, _stockCandles, executions);
             if (quotes.Length < 2) StockText(card, "近7天报价不足，后续随交易日更新。", 14, Ui.Dim);
 
             var stock = S.StockState(id);
@@ -398,6 +450,16 @@ namespace PCShopSell.Game.UI
                     16, color: ratio < 1.5 ? Ui.Warn : Ui.Dim), 34);
                 Ui.Size(Ui.Button(margin, "补充保证金", () => OpenStockMargin(w, id), 15), 126, 32);
             }
+        }
+
+        private void OpenStockTradeHistory(string id, StockExecution[] executions)
+        {
+            OpenWindow("成交明细 · " + StockTitle(id), 680, 520, w =>
+            {
+                foreach (var trade in executions.Reverse().OrderByDescending(e => e.Minute))
+                    Line(w.Content, StockPriceGraphic.ExecutionText(trade), 17,
+                        StockPriceGraphic.IsBuy(trade) ? StockPriceGraphic.BuyColor : StockPriceGraphic.SellColor);
+            });
         }
 
         private static void RevealStock(Window w, string id)
@@ -419,9 +481,11 @@ namespace PCShopSell.Game.UI
             scroll.content.anchoredPosition = position;
         }
 
+        private long StockRangeStart(int days) => Math.Max(0, S.Clock.Today.TotalDays - days + 1) * 1440L;
+
         private StockQuote[] StockQuotesInRange(string id, int days)
         {
-            long from = Math.Max(0, S.Clock.Today.TotalDays - days + 1) * 1440L;
+            long from = StockRangeStart(days);
             return S.StockQuotes(id).Where(q => q.Minute >= from).ToArray();
         }
 

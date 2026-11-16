@@ -18,29 +18,11 @@ namespace PCShopSell.Game.UI
         private static readonly Color ShelfBack = new Color(0.16f, 0.14f, 0.13f);
         private static readonly Color TagPaper = new Color(0.95f, 0.93f, 0.85f);
         private static readonly Color TagInk = new Color(0.16f, 0.16f, 0.18f);
-        private static readonly Color CardboardColor = new Color(0.78f, 0.62f, 0.4f);
-
-        private static Color PartColor(PartCategory c)
-        {
-            switch (c)
-            {
-                case PartCategory.Gpu: return new Color(0.14f, 0.14f, 0.17f);
-                case PartCategory.Cpu: return new Color(0.88f, 0.57f, 0.17f);
-                case PartCategory.Memory: return new Color(0.2f, 0.65f, 0.35f);
-                case PartCategory.Storage: return new Color(0.25f, 0.45f, 0.85f);
-                case PartCategory.PowerCase: return new Color(0.72f, 0.74f, 0.78f);
-                default: return new Color(0.62f, 0.2f, 0.26f);
-            }
-        }
-
         private static RectTransform Chip(Transform parent, Color c, float x0, float y0, float x1, float y1)
         {
             Image img = Ui.Panel(parent, "Chip", c);
             return img.rectTransform.Anchor(x0, y0, x1, y1);
         }
-
-        /// <summary>货架图标的比例尺：每厘米多少像素。所有配件用同一把尺，大小关系才对。</summary>
-        private const float CmPx = 2.4f;
 
         private static Sprite _circle;
 
@@ -60,145 +42,6 @@ namespace PCShopSell.Game.UI
             return _circle;
         }
 
-        /// <summary>像素矩形：坐标从父节点左下角算起。</summary>
-        private static void Rc(Transform parent, Color c, float x, float y, float w, float h)
-        {
-            RectTransform rt = Ui.Panel(parent, "r", c).rectTransform;
-            rt.anchorMin = rt.anchorMax = Vector2.zero;
-            rt.pivot = Vector2.zero;
-            rt.anchoredPosition = new Vector2(x, y);
-            rt.sizeDelta = new Vector2(w, h);
-        }
-
-        /// <summary>像素圆：圆心坐标 + 直径。</summary>
-        private static void Dot(Transform parent, Color c, float cx, float cy, float d)
-        {
-            Image img = Ui.Panel(parent, "o", c);
-            img.sprite = CircleSprite();
-            RectTransform rt = img.rectTransform;
-            rt.anchorMin = rt.anchorMax = Vector2.zero;
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(cx, cy);
-            rt.sizeDelta = new Vector2(d, d);
-        }
-
-        private static void Fan(Transform p, float cx, float cy, float d)
-        {
-            Dot(p, new Color(0.3f, 0.3f, 0.35f), cx, cy, d);
-            Dot(p, new Color(0.09f, 0.09f, 0.11f), cx, cy, d * 0.8f);
-            Rc(p, new Color(0.45f, 0.46f, 0.5f), cx - d * 0.36f, cy - 0.5f, d * 0.72f, 1f);
-            Rc(p, new Color(0.45f, 0.46f, 0.5f), cx - 0.5f, cy - d * 0.36f, 1f, d * 0.72f);
-            Dot(p, new Color(0.75f, 0.76f, 0.8f), cx, cy, d * 0.26f);
-        }
-
-        /// <summary>配件的真实尺寸（厘米，正面看过去的宽 × 高）。散件是配件本体，整盒是零售包装盒。</summary>
-        private static Vector2 PartCm(PartCategory cat, bool boxed)
-        {
-            switch (cat)
-            {
-                case PartCategory.Gpu: return boxed ? new Vector2(38, 17) : new Vector2(30, 13);
-                case PartCategory.Cpu: return boxed ? new Vector2(12, 13) : new Vector2(4.5f, 4.5f);
-                case PartCategory.Memory: return boxed ? new Vector2(15, 8) : new Vector2(13.3f, 3.2f);
-                case PartCategory.Storage: return boxed ? new Vector2(14, 10) : new Vector2(10, 7);
-                case PartCategory.PowerCase: return boxed ? new Vector2(24, 48) : new Vector2(21, 46);
-                default: return boxed ? new Vector2(34, 28) : new Vector2(30, 24.5f);
-            }
-        }
-
-        private static Vector2 IconSize(PartCategory cat, bool boxed)
-        {
-            Vector2 s = PartCm(cat, boxed) * CmPx;
-            return boxed ? s : new Vector2(Mathf.Max(s.x, 10f), Mathf.Max(s.y, 7f));
-        }
-
-        /// <summary>配件本体的插画，画在 w×h 像素里（比例按真实尺寸）。</summary>
-        private static void DrawPart(Transform root, PartCategory cat, float w, float h)
-        {
-            var gold = new Color(0.86f, 0.7f, 0.27f);
-            var silver = new Color(0.82f, 0.84f, 0.88f);
-            var dark = new Color(0.09f, 0.09f, 0.11f);
-            void F(Color c, float x0, float y0, float x1, float y1) => Rc(root, c, x0 * w, y0 * h, (x1 - x0) * w, (y1 - y0) * h);
-            switch (cat)
-            {
-                case PartCategory.Gpu:
-                    F(silver, 0, 0, 0.05f, 1);
-                    F(new Color(0.14f, 0.14f, 0.17f), 0.05f, 0.04f, 1, 0.96f);
-                    F(new Color(0.9f, 0.25f, 0.25f), 0.05f, 0.8f, 1, 0.92f);
-                    F(gold, 0.14f, 0, 0.6f, 0.1f);
-                    Fan(root, w * 0.31f, h * 0.46f, h * 0.66f);
-                    Fan(root, w * 0.7f, h * 0.46f, h * 0.66f);
-                    break;
-                case PartCategory.Cpu:
-                    F(new Color(0.24f, 0.5f, 0.34f), 0, 0, 1, 1);
-                    F(silver, 0.17f, 0.17f, 0.83f, 0.83f);
-                    F(new Color(0.93f, 0.94f, 0.96f), 0.3f, 0.3f, 0.7f, 0.7f);
-                    F(gold, 0, 0, 0.22f, 0.22f);
-                    break;
-                case PartCategory.Memory:
-                    F(new Color(0.14f, 0.55f, 0.3f), 0, 0.08f, 1, 0.9f);
-                    F(new Color(0.8f, 0.82f, 0.86f), 0, 0.9f, 1, 1);
-                    for (int i = 0; i < 4; i++) F(dark, 0.07f + i * 0.22f, 0.3f, 0.23f + i * 0.22f, 0.8f);
-                    F(gold, 0, 0, 1, 0.2f);
-                    break;
-                case PartCategory.Storage:
-                    F(new Color(0.22f, 0.4f, 0.8f), 0, 0, 0.88f, 1);
-                    F(new Color(0.14f, 0.28f, 0.6f), 0, 0, 0.88f, 0.16f);
-                    F(new Color(0.94f, 0.94f, 0.96f), 0.1f, 0.3f, 0.7f, 0.85f);
-                    F(new Color(0.2f, 0.22f, 0.3f), 0.15f, 0.55f, 0.55f, 0.68f);
-                    F(gold, 0.88f, 0.15f, 1, 0.85f);
-                    break;
-                case PartCategory.PowerCase:
-                    F(new Color(0.74f, 0.76f, 0.8f), 0, 0, 1, 1);
-                    F(new Color(0.5f, 0.52f, 0.56f), 0, 0.93f, 1, 1);
-                    F(dark, 0.14f, 0.82f, 0.86f, 0.85f);
-                    F(dark, 0.14f, 0.77f, 0.86f, 0.8f);
-                    F(dark, 0.08f, 0.02f, 0.92f, 0.14f);
-                    Fan(root, w * 0.5f, h * 0.42f, w * 0.62f);
-                    Dot(root, new Color(0.3f, 0.9f, 0.5f), w * 0.8f, h * 0.2f, 4);
-                    break;
-                default:
-                    F(new Color(0.55f, 0.18f, 0.24f), 0, 0, 1, 1);
-                    F(silver, 0.2f, 0.45f, 0.45f, 0.75f);
-                    F(dark, 0.2f, 0.45f, 0.45f, 0.49f);
-                    F(dark, 0.55f, 0.22f, 0.59f, 0.92f);
-                    F(dark, 0.62f, 0.22f, 0.66f, 0.92f);
-                    F(dark, 0.08f, 0.15f, 0.5f, 0.2f);
-                    F(silver, 0.72f, 0.1f, 0.84f, 0.25f);
-                    F(gold, 0.86f, 0.1f, 0.95f, 0.35f);
-                    F(silver, 0, 0.55f, 0.08f, 0.95f);
-                    break;
-            }
-        }
-
-        /// <summary>一件货的图标：散件是配件本体；整盒是后仓，正面印着配件图。大小按真实尺寸。</summary>
-        private static RectTransform PartIcon(Transform parent, PartCategory cat, bool boxed, float alpha = 1f)
-        {
-            Vector2 loose = IconSize(cat, false);
-            RectTransform root = Ui.Rect(parent, "Icon");
-            if (alpha < 1f) root.gameObject.AddComponent<CanvasGroup>().alpha = alpha;
-            if (!boxed)
-            {
-                root.sizeDelta = loose;
-                DrawPart(root, cat, loose.x, loose.y);
-                return root;
-            }
-            Vector2 box = PartCm(cat, true) * CmPx;
-            root.sizeDelta = box;
-            Rc(root, new Color(0.78f, 0.62f, 0.4f), 0, 0, box.x, box.y);
-            Rc(root, new Color(0.62f, 0.47f, 0.28f), 0, box.y * 0.86f, box.x, box.y * 0.14f);
-            Rc(root, PartColor(cat), 0, 0, box.x, Mathf.Max(3f, box.y * 0.1f));
-            float rx = box.x * 0.08f, ry = box.y * 0.14f, rw = box.x * 0.84f, rh = box.y * 0.68f;
-            Rc(root, new Color(0.96f, 0.94f, 0.88f), rx, ry, rw, rh);
-            float s = Mathf.Min(rw * 0.86f / loose.x, rh * 0.86f / loose.y);
-            RectTransform pic = Ui.Rect(root, "Pic");
-            pic.anchorMin = pic.anchorMax = Vector2.zero;
-            pic.pivot = new Vector2(0.5f, 0.5f);
-            pic.sizeDelta = loose;
-            pic.anchoredPosition = new Vector2(rx + rw / 2, ry + rh / 2);
-            pic.localScale = new Vector3(s, s, 1);
-            DrawPart(pic, cat, loose.x, loose.y);
-            return root;
-        }
         // ---------- 货架 ----------
 
         /// <summary>走到货架前按 F，可查看陈列商品、调价或更换品类。</summary>
@@ -308,15 +151,10 @@ namespace PCShopSell.Game.UI
             layout.padding = new RectOffset(12, 12, 8, 8);
             row.gameObject.AddComponent<Image>().color = ShelfBack;
 
-            var artwork = Ui.Size(Ui.Rect(row, "PartArtwork"), 72);
-            var icon = PartIcon(artwork, part.Category, boxed);
-            icon.anchorMin = icon.anchorMax = new Vector2(.5f, .5f);
-            icon.pivot = new Vector2(.5f, .5f);
-            icon.anchoredPosition = Vector2.zero;
-            float scale = Mathf.Min(1f, 60f / Mathf.Max(icon.sizeDelta.x, icon.sizeDelta.y));
-            icon.localScale = Vector3.one * scale;
+            layout.childForceExpandHeight = false;
+            ItemPortrait(row, part.Id, 64).name = "PartArtwork";
 
-            string details = $"{PartCatalog.TierName(part.Tier)} · 架上 {count} 件 · 每件 {PartUnitKg(part, boxed):0.##} 千克";
+            string details = $"{PartCatalog.TierName(part.Tier)} · {(boxed ? "盒装" : "散件")} · 架上 {count} 件 · 每件 {PartUnitKg(part, boxed):0.##} 千克";
             Ui.Size(Ui.Label(row, $"<b>{part.Name}</b>\n<size=15>{details}</size>", 20, TextAnchor.MiddleLeft), 0, -1, 1);
             var tag = ShelfSaleTag(w, row, part.Id + (boxed ? "_boxed" : "_loose"), shop.PriceOf(part, boxed).Yuan,
                 shop.PartPriceRange(part, boxed), value => shop.PartPurchaseIntentAtPrice(part, boxed, value),
@@ -425,12 +263,14 @@ namespace PCShopSell.Game.UI
             {
                 var product=Gifts.Get(item.Key);if(product==null)continue;
                 var row=Ui.Row(list,74,10);
+                ItemPortrait(row, product.Id, 54);
                 Ui.Size(ProductText(row,ProductLabel(product.Name,product.WeightKg,"陈列 "+item.Value+" 件"),18),-1,-1,1);
                 Ui.Size(Ui.Label(row,S.PlayerShop.GoodsPriceOf(item.Key).ToString(),20,TextAnchor.MiddleLeft,Ui.Good),100);
             }
             foreach(var line in fill.Parts)
             {
                 var row=Ui.Row(list,74,10);
+                ItemPortrait(row, line.Part.Id, 54);
                 Ui.Size(ProductText(row,ProductLabel(line.Part.Name,PartUnitKg(line.Part,line.Boxed),"陈列 "+line.Count+" 件"),18),-1,-1,1);
                 Ui.Size(Ui.Label(row,S.PlayerShop.PriceOf(line.Part,line.Boxed).ToString(),20,TextAnchor.MiddleLeft,Ui.Good),100);
             }
@@ -460,9 +300,10 @@ namespace PCShopSell.Game.UI
             Image screen = Ui.Panel(bezel.transform, "Screen", screens[tier]);
             screen.rectTransform.Fill(7);
             Text sn = Ui.Label(screen.transform, $"<b>{PartCatalog.TierName(tier)}整机</b>", 26, TextAnchor.MiddleCenter);
-            sn.rectTransform.Anchor(0, 0.55f, 1, 1);
+            FillItemPortrait(screen.transform, "pcbuild:" + tier).Anchor(.04f, .25f, .45f, .92f);
+            sn.rectTransform.Anchor(.46f, .55f, 1, 1);
             Text sp = Ui.Label(screen.transform, shop.BuildPrice(tier).ToString(), 30, TextAnchor.MiddleCenter, new Color(0.7f, 1f, 0.75f));
-            sp.rectTransform.Anchor(0, 0.25f, 1, 0.58f);
+            sp.rectTransform.Anchor(.46f, .25f, 1, .58f);
             int onShow = shop.DisplayCount(tier);
             string status = (onShow > 0 ? $"展台上 {onShow} 台 · " : "展台上没有 · ") + (ready ? "配件齐" : $"缺 {missing.Count} 样");
             Text ss = Ui.Label(screen.transform, status, 16,

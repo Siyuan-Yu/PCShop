@@ -26,11 +26,20 @@ namespace PCShopSell.Game.UI
             }
             var progress = S.OldMarketProgress;
             bool busy = progress.Pending != null;
+            bool manualVisit = S.ManualActivityClockPaused && S.RunningCityActivity?.VenueId == place.Id;
+            if (manualVisit)
+            {
+                w.LiveConversation = true;
+                w.LiveKey = () => S.OldMarketProgress.Pending ?? "";
+                w.LiveStamp = w.LiveKey();
+            }
             if (busy)
             {
                 string name = OldMarketCatalog.Get(progress.GoodsId)?.Name ?? "旧物";
-                Line(w.Content, name + " · " + (progress.Pending == "inspect" ? "查看中" : "修理中") + " · 还需" + progress.Remaining + "分钟", 18, Ui.Accent);
-                Ui.Size(Ui.Button(w.Content, "继续等待", () => { CloseWindowSilently(w); S.Time.SetPaused(false); }, 18, Ui.ButtonHot), -1, 44);
+                string time = manualVisit ? " · 游戏时间暂停" : " · 还需" + progress.Remaining + "分钟";
+                Line(w.Content, name + " · " + (progress.Pending == "inspect" ? "查看中" : "修理中") + time, 18, Ui.Accent);
+                if (!manualVisit)
+                    Ui.Size(Ui.Button(w.Content, "继续等待", () => { CloseWindowSilently(w); S.Time.SetPaused(false); }, 18, Ui.ButtonHot), -1, 44);
             }
             var tabs = Ui.Row(w.Content, 42, 6);
             for (int i = 0; i < 5; i++)
@@ -53,13 +62,14 @@ namespace PCShopSell.Game.UI
                 {
                     string key = item.Id;
                     var goods = OldMarketCatalog.All.First(g => g.Id == key || OldMarketCatalog.ItemId(g) == key);
-                    Line(w.Content, item.Name + " ×" + S.Backpack.GiftCount(key), 20, Ui.Accent);
+                    ItemLabel(w.Content, key, item.Name + " ×" + S.Backpack.GiftCount(key), 20, color: Ui.Accent);
                     var actions = Ui.Row(w.Content, 44, 8);
                     if (goods.Faulty && key == OldMarketCatalog.ItemId(goods))
                         Ui.Size(Ui.Button(actions, "请师傅修好 · ¥" + goods.RepairFee + " · 15分钟", () =>
                         {
                             if (!S.AskOldMarketRepair(goods.Id)) return;
-                            CloseWindowSilently(w); S.Time.SetPaused(false);
+                            if (manualVisit) w.RequestRebuild();
+                            else { CloseWindowSilently(w); S.Time.SetPaused(false); }
                         }, 17, Ui.ButtonHot, !busy), -1, 44, 1).name = "OldMarketRepair_" + goods.Id;
                     Ui.Size(Ui.Button(actions, "卖掉 · " + S.OldMarketBuybackPrice(key), () => { S.SellOldMarketGoods(key); w.Rebuild(); }, 18, Ui.ButtonBg, !busy), -1, 44, 1);
                 }
@@ -69,6 +79,7 @@ namespace PCShopSell.Game.UI
             {
                 var g = goods;
                 var row = Ui.Row(w.Content, 110, 16);
+                ItemPortrait(row, g.Id, 88);
                 row.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>().childForceExpandHeight = false;
                 var info = Ui.Rect(row, "OldMarketGoodsInfo"); Ui.VList(info, 4, 0); Ui.Size(info, -1, 104, 1);
                 Line(info, g.Name, 21, Ui.Accent);

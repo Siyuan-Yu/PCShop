@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
+using PCShopSell.Game.Runtime;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -78,6 +79,7 @@ namespace PCShopSell.Game.UI
             if (e.button != PointerEventData.InputButton.Left || Max <= 0 || (_button != null && !_button.interactable)) return;
             _source=this;_owner=Owner;_key=Key;_pressed=true;
             _held=0;_next=.4f;_steps=0;
+            SoundFx.Play(Sfx.Click);
             ApplyStep();
         }
         private void ApplyStep()
@@ -132,7 +134,9 @@ namespace PCShopSell.Game.UI
         {
             if(_pressed||Time.frameCount<=_releasedFrame+1)return;
             _button=GetComponent<Button>();
-            if(Max>0&&(_button==null||_button.interactable))Commit?.Invoke(1);
+            if (Max <= 0 || (_button != null && !_button.interactable)) return;
+            SoundFx.Play(Sfx.Click);
+            Commit?.Invoke(1);
         }
         public void OnBeginDrag(PointerEventData e) { }
         public void OnDrag(PointerEventData e) { }
@@ -176,7 +180,7 @@ namespace PCShopSell.Game.UI
         {
             RectTransform head = Ui.Row(parent, 34, 8);
             int kinds = S.Cart.Count;
-            Ui.Size(Ui.Label(head, kinds == 0 ? "<b>购物车</b>　还是空的，在商品旁点“+”选择数量"
+            Ui.Size(Ui.Label(head, kinds == 0 ? "<b>购物车</b>　还是空的，在商品旁选择数量"
                 : $"<b>购物车</b>　{kinds} 样 · 共 {S.CartKg:0.##} 千克", 18, TextAnchor.MiddleLeft, Ui.Accent), -1, -1, 1);
             if (kinds == 0) return;
             Ui.Size(Ui.Button(head, "清空", () => { S.ClearCart(); w.Rebuild(); }, 15, Ui.ButtonBg), 70);
@@ -184,6 +188,7 @@ namespace PCShopSell.Game.UI
             foreach(var line in S.Cart.Where(l=>l.Registered).ToArray())
             {
                 var item=line;var asset=Ui.Row(parent,48,8);
+                ItemPortrait(asset, item.Key, 42);
                 Ui.Size(ProductText(asset,item.Name+" ×"+item.Amount+" · "+item.Price+"\n<size=14>结账后登记为已购资产，不占背包或货车空间</size>",16),-1,-1,1);
                 Ui.Size(Ui.Button(asset,"移除",()=>{S.RemoveFromCart(item.Key,item.Amount);w.Rebuild();},15),64,38);
             }
@@ -246,13 +251,16 @@ namespace PCShopSell.Game.UI
             if(physical)Ui.Size(Ui.Button(pay, "背得动的都放背包", () => { S.CartFillBag(); w.Rebuild(); }, 15, Ui.ButtonBg), 170);
             if(physical)Ui.Size(Ui.Button(pay, "全部叫车", () => { S.CartAllToTruck(); w.Rebuild(); }, 15, Ui.ButtonBg), 110);
             string why = S.CheckoutBlocker(defaultToShop);
-            var checkout = Ui.Button(pay, why ?? "结账（付合计）", () =>
-            {
-                S.Checkout(defaultToShop);
-                w.Rebuild();
-            }, why == null ? 18 : 14, why == null ? Ui.ButtonHot : Ui.ButtonBg, why == null);
+            var checkout = Ui.Button(pay, why ?? "结账（付合计）", () => CheckoutCart(w, defaultToShop),
+                why == null ? 18 : 14, why == null ? Ui.ButtonHot : Ui.ButtonBg, why == null);
             checkout.name = "CartCheckout";
             Ui.Size(checkout, -1, -1, 1);
+        }
+
+        private void CheckoutCart(Window window, bool defaultToShop)
+        {
+            if (S.Checkout(defaultToShop)) SoundFx.Play(Sfx.Purchase);
+            window.Rebuild();
         }
 
         private static RectTransform CartColumnBox(Transform row, out RectTransform list)
@@ -288,6 +296,7 @@ namespace PCShopSell.Game.UI
             RectTransform card = Ui.Row(list, 68, 4);card.name="CartLine_"+l.Key+"_to_"+target.name;
             Image bg = card.gameObject.AddComponent<Image>();
             bg.color = CartCard;
+            ItemPortrait(card, l.Key, 44);
             string amountText = l.ByWeight ? $"{amount:0.##} 千克" : l.Key.StartsWith("ing:") ? $"{kg:0.##} 千克" : $"×{amount:0}";
             string price = l.UnitPrice != null ? $"　{l.UnitPrice().Scale(amount)}" : "";
             Ui.Size(ProductText(card, ProductLabel($"  {l.Name} {amountText}", l.UnitKg, $"本批 {kg:0.###} 千克{price}", l.ByWeight ? "每千克" : "每件"), 15), -1, -1, 1);
@@ -404,7 +413,11 @@ namespace PCShopSell.Game.UI
                 string why = S.TruckBlocker;
                 var send = Ui.Button(go, why ?? $"出发（运费 {S.TruckFreight}）", () =>
                 {
-                    if (S.DispatchTruck()) w.Close();
+                    if (S.DispatchTruck())
+                    {
+                        SoundFx.Play(Sfx.Purchase);
+                        w.Close();
+                    }
                     else w.Rebuild();
                 }, why == null ? 18 : 15, why == null ? Ui.ButtonHot : Ui.ButtonBg, why == null);
                 send.name = "TruckDispatch";
@@ -426,6 +439,7 @@ namespace PCShopSell.Game.UI
                 RectTransform card = Ui.Row(list, 38, 4);
                 card.name = "TruckLoad_" + item.Key;
                 card.gameObject.AddComponent<Image>().color = CartCard;
+                ItemPortrait(card, item.Key, 34);
                 string have = item.ByWeight ? $"{left:0.##} 千克" : $"×{left:0}";
                 Ui.Size(Ui.Label(card, $"  {item.Name} {have}<size=13><color=#A8B0BA>　{item.Where} · 每{(item.ByWeight ? "千克" : "件")} {item.UnitKg:0.##} 千克</color></size>", 15), -1, -1, 1);
                 HoldButton(w, card, "装车", Ui.ButtonBg, left, item.ByWeight ? "千克" : "件", n => S.AddToTruck(item.Key, n), 90, canLoad);

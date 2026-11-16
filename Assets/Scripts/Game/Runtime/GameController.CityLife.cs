@@ -2,6 +2,7 @@ using System;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.Common;
+using PCShopSell.Game.Runtime;
 using UnityEngine;
 
 namespace PCShopSell.Game
@@ -10,9 +11,21 @@ namespace PCShopSell.Game
     {
         private string _cityExitIntent;
         private SaveData _cityRealProgress;
+        private int _cityRealSaveSlot;
+        private string _cityRealCampaignId;
+
+        private void RememberRealProgress()
+        {
+            if (Session == null || Session.IsCityLifeTest) return;
+            _cityRealProgress = Session.CreateSave();
+            _cityRealSaveSlot = ActiveSaveSlot;
+            _cityRealCampaignId = _saveCampaignId;
+        }
         private void OnCityPlaceEntered(PCShopSell.Core.World.Place place, string activityId)
         {
-            if(place!=null&&Session.CurrentPlace==place)Ui.OnEnteredPlace(place, activityId);
+            if (place == null || Session.CurrentPlace != place) return;
+            SoundFx.Play(Sfx.Arrival);
+            Ui.OnEnteredPlace(place, activityId);
         }
         private void OnCityTravelRequested(CityTravelIntent intent)
         {
@@ -49,7 +62,7 @@ namespace PCShopSell.Game
         public void StartCityLifePreset(string scenario)
         {
             if(Session==null||!Session.CanSave){Ui.Toast("请先处理当前事件，再进入独立测试档。");return;}
-            if(!Session.IsCityLifeTest)_cityRealProgress=Session.CreateSave();
+            RememberRealProgress();
             var next=GameSession.CreateCityLifePreset(City,scenario);
             StartSession(next);Ui.CloseAllWindows();
             Ui.Toast("城市生活测试档："+scenario+"。保存使用独立测试槽，可从验收面板返回原进度。");
@@ -59,13 +72,13 @@ namespace PCShopSell.Game
             if(Session!=null&&!Session.CanSave){Ui.Toast("请先处理当前事件。");return;}
             var next=SaveStore.LoadCityLifeTest(City);
             if(next==null){Ui.Toast("没有可读取的测试档，原文件保留。");return;}
-            if(Session!=null&&!Session.IsCityLifeTest)_cityRealProgress=Session.CreateSave();
+            RememberRealProgress();
             StartSession(next);Ui.CloseAllWindows();Ui.Toast("已读取独立城市生活测试档。");
         }
         public void ReturnFromCityLifePreset()
         {
             if(_cityRealProgress==null){Ui.Toast("没有本次会话的原进度快照，请从主菜单加载正式存档。");return;}
-            var data=_cityRealProgress;_cityRealProgress=null;StartSession(GameSession.Load(City,data));Ui.CloseAllWindows();
+            var data=_cityRealProgress;_cityRealProgress=null;StartSession(GameSession.Load(City,data),_cityRealSaveSlot,_cityRealCampaignId);Ui.CloseAllWindows();
             Ui.Toast("已返回进入测试档前的原进度。");
         }
     }

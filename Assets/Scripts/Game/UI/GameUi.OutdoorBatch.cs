@@ -2,8 +2,6 @@ using System;
 using System.Linq;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Trade;
-using UnityEngine;
-using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
 {
@@ -15,7 +13,6 @@ namespace PCShopSell.Game.UI
         {
             var definition = S.CityActivityService(activity);
             CloseAllWindows();
-            S.Time.SetPaused(false);
             var window = OpenWindow(definition.Name, 1040, 860, w =>
             {
                 if (activity.State != CityActivityPhase.Running)
@@ -30,28 +27,13 @@ namespace PCShopSell.Game.UI
                 var state = S.OutdoorActivityState(activity.Id);
                 if (state == null) return;
                 Line(w.Content, $"走访进度 {state.Visited}/3", 22, Ui.Accent);
-                var time = Line(w.Content, "", 18, Ui.Dim);
-                var status = BuildOutdoorBatchStatus(w, activity, keepOpen: true);
-                long lastMinute = -1;
-                void RefreshStatus()
-                {
-                    long now = S.Clock.Now.TotalMinutes;
-                    if (now == lastMinute) return;
-                    lastMinute = now;
-                    time.text = $"活动剩余 {Math.Max(0, activity.ActualStart + activity.Duration - now)} 游戏分钟";
-                    status.text = S.OutdoorActivityStatus(activity.Id, keepOpen: true);
-                }
-                w.RefreshContent = RefreshStatus;
-                RefreshStatus();
+                Line(w.Content, $"游戏时间暂停 · 完成后结算 {activity.Duration} 分钟", 18, Ui.Dim);
+                BuildOutdoorBatchStatus(w, activity);
                 BuildMarketVisitChoices(w, activity, definition, state);
                 if (state.Pending == null && state.Visited > 0) BuildOutdoorBatchProcurement(w, activity);
-                Ui.Size(Ui.Button(w.Content, "提前离开", () =>
-                    ConfirmBusiness("结束本次走访", "保留已经发生的交易和阶段效果。", () =>
-                    {
-                        S.CancelCityActivity(activity.Id, true);
-                        w.RequestRebuild();
-                    }), 18, Ui.Warn), -1, 44);
-            }, holds: false);
+                BuildManualActivityFinish(w, activity);
+                Ui.Size(Ui.Button(w.Content, "提前离开", () => ConfirmEndCityActivity(activity, false), 18, Ui.Warn), -1, 44);
+            });
             if (window == null) return;
             window.LiveConversation = true;
             window.LiveKey = () =>
@@ -84,17 +66,24 @@ namespace PCShopSell.Game.UI
             }
         }
 
-        private Text BuildOutdoorBatchStatus(Window w, CityActivity activity, bool keepOpen = false)
+        private void BuildOutdoorBatchStatus(Window w, CityActivity activity)
         {
-            var state = S.OutdoorActivityState(activity.Id); if (state == null) return null;
-            var status = Para(w.Content, S.OutdoorActivityStatus(activity.Id, keepOpen), 18, Ui.Accent);
+            var state = S.OutdoorActivityState(activity.Id); if (state == null) return;
+            Para(w.Content, S.OutdoorActivityStatus(activity.Id), 18, Ui.Accent);
             if (state.Number == 64)
                 Line(w.Content, $"已看样株 {state.Visited}/3 · 已答 {state.Answers}/3 · 正确 {state.Correct}", 17, Ui.Dim);
-            if (state.Number < 68) return status;
+            if (state.Number < 68) return;
             if (state.QuoteSources.Length > 0)
                 for (int i = 0; i < state.QuoteSources.Length; i++)
                     Line(w.Content, $"报价 {i + 1} · {state.QuoteNames[i]} · ¥{state.QuoteCents[i] / 100.0:0.00}", 16);
-            return status;
+        }
+
+        private void BuildManualActivityFinish(Window w, CityActivity activity)
+        {
+            Ui.Size(Ui.Button(w.Content, $"结束并结算 · {activity.Duration} 分钟", () =>
+            {
+                if (S.FinishManualCityActivity(activity.Id)) CloseWindowSilently(w);
+            }, 19, Ui.ButtonHot, S.CanFinishManualCityActivity(activity.Id)), -1, 46).name = "FinishManualCityActivity";
         }
         private void BuildOutdoorBatchProcurement(Window w, CityActivity activity)
         {
@@ -103,8 +92,10 @@ namespace PCShopSell.Game.UI
             if (parts.Length == 0) return;
             Line(w.Content, "实际采购 · 不下单不会扣款或生成商品", 19, Ui.Accent);
             int selected = Array.FindIndex(parts, p => p.Id == state.PartId);
-            Ui.Size(Ui.Choice(w.Content, parts.Select(p => p.Name), Math.Max(0, selected), index =>
-            { S.SelectOutdoorMarketPart(activity.Id, parts[index].Id); w.RequestRebuild(); }), -1, 42);
+            var product = Ui.Row(w.Content, 52);
+            ItemPortrait(product, parts[Math.Max(0, selected)].Id, 48);
+            Ui.Size(Ui.Choice(product, parts.Select(p => p.Name), Math.Max(0, selected), index =>
+            { S.SelectOutdoorMarketPart(activity.Id, parts[index].Id); w.RequestRebuild(); }), 0, 42, 1);
             if (state.Number == 69 && state.QuoteSources.Length > 0)
                 Ui.Size(Ui.Choice(w.Content, state.QuoteNames, state.PurchaseSource, index =>
                 { S.SelectOutdoorPurchaseSource(activity.Id, index); w.RequestRebuild(); }), -1, 42);
@@ -113,7 +104,7 @@ namespace PCShopSell.Game.UI
             _outdoorPurchaseCount = Math.Max(minimum, _outdoorPurchaseCount);
             var countRow = Ui.Row(w.Content, 38, 12);
             Ui.Size(Ui.Label(countRow, "数量", 18), 52);
-            QuantityStepper(w, countRow, "outdoorPurchase", _outdoorPurchaseCount, minimum, 30, 1, value => _outdoorPurchaseCount = (int)value);
+            PurchaseQuantity(w, countRow, "outdoorPurchase", _outdoorPurchaseCount, minimum, 30, value => _outdoorPurchaseCount = (int)value);
             var price = S.OutdoorMarketGoodsPrice(activity.Id, _outdoorPurchaseCount);
             string delivery = source == Online1788.Shopping.Id ? "网购运费 " + Online1788.ShippingFee + "，按实际网购时间配送。"
                 : source == "direct:zhou" ? "协议直供至少3件，次日10点送店。"

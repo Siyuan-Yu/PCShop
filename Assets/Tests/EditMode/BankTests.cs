@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
@@ -36,6 +36,41 @@ namespace PCShopSell.Tests
         {
             s.Leave(); var bank = s.City.GetPlace(GameSession.BankPlaceId);
             s.ArriveAtNode(bank.NodeId); Assert.True(s.Enter(bank));
+        }
+
+        internal static bool BorrowVerified(GameSession session, long yuan, int months, bool atBank = false)
+        {
+            var application = session.BeginLoanApplication(yuan, months, atBank);
+            if (application == null) return false;
+            while (application.NextGesture is LoanGesture gesture)
+                Assert.True(session.PerformLoanGesture(application, gesture));
+            return session.BorrowAppLoan(application);
+        }
+
+        [Test]
+        public void LoanVerificationRequiresBothGesturesAndCanOnlyIssueOneLoan()
+        {
+            using var s = Make(true);
+            var startingCash = s.Ledger.Balance;
+            var application = s.BeginLoanApplication(1000, 1);
+            Assert.NotNull(application);
+            var first = application.NextGesture.Value;
+            Assert.False(s.PerformLoanGesture(application, (LoanGesture)(((int)first + 1) % 3)));
+            Assert.False(s.BorrowAppLoan(application));
+            Assert.AreEqual(startingCash, s.Ledger.Balance);
+            Assert.True(s.PerformLoanGesture(application, first));
+            Assert.False(s.BorrowAppLoan(application));
+            Assert.True(s.PerformLoanGesture(application, application.NextGesture.Value));
+            s.CancelLoanApplication(application);
+            Assert.False(s.BorrowAppLoan(application));
+            Assert.AreEqual(startingCash, s.Ledger.Balance);
+
+            application = s.BeginLoanApplication(1000, 1);
+            while (application.NextGesture is LoanGesture gesture)
+                Assert.True(s.PerformLoanGesture(application, gesture));
+            Assert.True(s.BorrowAppLoan(application));
+            Assert.False(s.BorrowAppLoan(application));
+            Assert.AreEqual(startingCash + Money.FromYuan(1000), s.Ledger.Balance);
         }
 
         [Test]
@@ -85,11 +120,11 @@ namespace PCShopSell.Tests
         public void BankLoan_WorksWithoutSmartphone_AndSharesTheSameTerms()
         {
             using var s = Make(false);
-            Assert.False(s.BorrowAppLoan(1000, 3), "没手机、不在银行借不了");
+            Assert.False(BorrowVerified(s, 1000, 3), "没手机、不在银行借不了");
             GoToBank(s);
-            Assert.False(s.BorrowAppLoan(1000, 3), "没手机不能走手机渠道");
+            Assert.False(BorrowVerified(s, 1000, 3), "没手机不能走手机渠道");
             Money cash = s.Ledger.Balance;
-            Assert.True(s.BorrowAppLoan(1000, 3, true));
+            Assert.True(BorrowVerified(s, 1000, 3, true));
             var loan = s.AppLoans.Single();
             Assert.IsTrue(loan.AtBank);
             Assert.AreEqual(cash + Money.FromYuan(1000), s.Ledger.Balance);
@@ -105,10 +140,10 @@ namespace PCShopSell.Tests
             GoToBank(s);
             s.PlayerShop.Reputation = 0.9;
             Assert.AreEqual(50000, s.AppLoanAvailableYuan);
-            Assert.False(s.BorrowAppLoan(50100, 3, true));
-            Assert.True(s.BorrowAppLoan(40000, 3, true));
-            Assert.False(s.BorrowAppLoan(10100, 3));
-            Assert.True(s.BorrowAppLoan(10000, 3));
+            Assert.False(BorrowVerified(s, 50100, 3, true));
+            Assert.True(BorrowVerified(s, 40000, 3, true));
+            Assert.False(BorrowVerified(s, 10100, 3));
+            Assert.True(BorrowVerified(s, 10000, 3));
             Assert.AreEqual(0, s.AppLoanAvailableYuan);
             s.PlayerShop.Reputation = 2.5;
             Assert.AreEqual(70000, s.AppLoanCreditLimitYuan);
@@ -132,7 +167,7 @@ namespace PCShopSell.Tests
         {
             using var s = Make(false);
             GoToBank(s);
-            Assert.True(s.BorrowAppLoan(50000, 3, true));
+            Assert.True(BorrowVerified(s, 50000, 3, true));
             var loan = s.AppLoans.Single();
             s.Clock.Restore(s.Clock.Today.AddDays(elapsedDays), s.Clock.MinuteOfDay);
             var cash = s.Ledger.Balance;
@@ -161,7 +196,7 @@ namespace PCShopSell.Tests
             using var s = Make(false);
             s.EventsEnabled = false;
             GoToBank(s);
-            Assert.True(s.BorrowAppLoan(50000, 3, true));
+            Assert.True(BorrowVerified(s, 50000, 3, true));
             s.Leave();
             GameSessionTests.Teleport(s, s.Home.Id);
             var root = new GameObject("BankReminderTest");
@@ -226,7 +261,7 @@ namespace PCShopSell.Tests
             s.Clock.Restore(new GameDate(6), 23 * 60);
             GoToBank(s);
             Assert.True(s.IsPlaceOpen(s.CurrentPlace));
-            Assert.True(s.BorrowAppLoan(1000, 1, true));
+            Assert.True(BorrowVerified(s, 1000, 1, true));
         }
 
         [Test]
@@ -234,7 +269,7 @@ namespace PCShopSell.Tests
         {
             using var s = Make(true);
             GoToBank(s);
-            Assert.True(s.BorrowAppLoan(1000, 1, true));
+            Assert.True(BorrowVerified(s, 1000, 1, true));
             Assert.True(s.BankDepositMoney(s.Ledger.Balance.Cents / 100 - 100));
             Money deposit = s.BankDeposit;
             Assert.IsTrue(s.Ledger.Balance < Money.FromYuan(1200));

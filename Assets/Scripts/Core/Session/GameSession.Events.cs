@@ -17,6 +17,8 @@ namespace PCShopSell.Core.Session
         None, Passed, Notice, Fine, Boxes, Camera, Sale, Wallet, Banknotes, Calendar, Takeout, Envelope, Meal, Stew
     }
 
+    public enum InvitationMode { Standard, More, DoNotDisturb }
+
     public sealed class EventCgFrame
     {
         public readonly string Background, PersonId, Caption;
@@ -99,6 +101,11 @@ namespace PCShopSell.Core.Session
 
         /// <summary>随机事件开关。游戏运行时打开，单元测试默认关闭，保证老测试的数值不受影响。</summary>
         public bool EventsEnabled { get; set; }
+        public InvitationMode IncomingInvitations { get; private set; }
+        public void SetInvitationMode(InvitationMode mode)
+        {
+            if (Enum.IsDefined(typeof(InvitationMode), mode)) IncomingInvitations = mode;
+        }
 
         /// <summary>等玩家做选择的事件。有它时不能存档。</summary>
         public EventDef PendingEvent { get; private set; }
@@ -134,14 +141,19 @@ namespace PCShopSell.Core.Session
             }
             _deferredRandomEventDay = 0;
             double chance = day < EventEarlyDays ? EventSlotChance * EventEarlyFactor : EventSlotChance;
-            if (!Random.Chance(chance)) return;
+            bool more = IncomingInvitations == InvitationMode.More;
+            if (!Random.Chance(more ? chance * 2 : chance)) return;
+            // The extra share of rolls can only deliver invitations. Ordinary events keep their original odds.
+            bool invitationOnly = more && Random.Chance(.5);
 
             var eligible = new List<EventDef>();
-            bool raceEventsAvailable = RacingUnlocked && RacingIntroduction == RacingIntroStep.Complete;
+            bool raceEventsAvailable = RacingAccessBlocker == null;
+            bool racingIntroComplete = raceEventsAvailable && RacingIntroduction == RacingIntroStep.Complete;
             foreach (EventDef def in EventCatalog.All)
             {
                 if (today.TotalDays < def.MinDay) continue;
-                if (def.Group == "race" && !raceEventsAvailable && def.Id != "race_spectator") continue;
+                if (def.Group == "race" && (!raceEventsAvailable || !racingIntroComplete && def.Id != "race_spectator")) continue;
+                if (EventCatalog.IsIncomingInvitation(def) && !HasIncomingInvitationContact(def.Id)) continue;
                 if (def.MaxDay >= 0 && today.TotalDays > def.MaxDay) continue;
                 if (_eventLastDay.TryGetValue(def.Id, out int last) && today.TotalDays - last < def.CooldownDays) continue;
                 if (def.When != null && !def.When(this)) continue;
@@ -156,10 +168,52 @@ namespace PCShopSell.Core.Session
             {
                 roll -= def.Weight;
                 if (roll >= 0) continue;
+                bool invitation = EventCatalog.IsIncomingInvitation(def);
+                if (invitationOnly && !invitation) return;
+                if (invitation && IncomingInvitations == InvitationMode.DoNotDisturb) return;
                 Raise(def, today);
-                if (PendingEvent != null) _randomEventDays.Add(day);
+                if (PendingEvent != null && !invitationOnly) _randomEventDays.Add(day);
                 return;
             }
+        }
+
+        private bool HasIncomingInvitationContact(string eventId)
+        {
+            int onsite = Array.IndexOf(OnsiteIds, eventId);
+            if (onsite >= 0) return IsMet(OnsitePeople[onsite]);
+            int outdoor = Array.IndexOf(OutdoorIds, eventId);
+            if (outdoor >= 0) return IsMet(OutdoorPeople[outdoor]);
+            int social = SocialBatchNumber(eventId);
+            if (social is >= 43 and <= 50) return IsMet(SocialBatchPeople[social - 41]);
+
+            return eventId switch
+            {
+                "race_prize_dinner" or "race_track_visit_rain" => true,
+                "race_rematch" => _lastEventRaceOpponents.Any(IsMet),
+                "life_old_friend_text" => LifeOldFriend() != null,
+                _ => IsMet(eventId switch
+                {
+                    "friend_meal" or "classmate_help" => ClassmateId,
+                    "shop_neighbor_help" => Npcs.Jie,
+                    "life_street_music" => "life_singer",
+                    "life_book_swap" => "life_librarian",
+                    "race_xinglan_invite" => Xinglan,
+                    "race_zhixia_club" or "race_spectator" or "race_charity" or "race_night_ride" => Zhixia,
+                    "race_ruoning_rare" => Ruoning,
+                    "race_ming_lunch" => Ming,
+                    "race_rider_bet" => Rider,
+                    "act_fishing_shaoan" => "resident_shaoan",
+                    "act_fishing_qiaosong" => "resident_qiaosong",
+                    "act_oldmarket_guwen" => "resident_guwen",
+                    "act_oldmarket_leiming" => "resident_leiming",
+                    "act_expo_curator" => ExhibitionHost(73),
+                    "act_expo_hanzheng" => ExhibitionHost(74),
+                    "act_comic_creator" => ExhibitionHost(75),
+                    "act_comic_ningxi" => "resident_ningxi",
+                    "act_comic_shenxiao" => ExhibitionHost(77),
+                    _ => null
+                })
+            };
         }
 
         /// <summary>直接触发某个事件（测试和脚本用）。</summary>
@@ -296,7 +350,8 @@ namespace PCShopSell.Core.Session
         private bool TryOfferLeisureInvitation()
         {
             long hour = Clock.Now.TotalMinutes / 60;
-            if (!EventsEnabled || FirstChapterTrial || EventRaised == null || EventCountOf(LeisureInvitationId) > 0
+            if (IncomingInvitations == InvitationMode.DoNotDisturb || !EventsEnabled || FirstChapterTrial
+                || EventRaised == null || EventCountOf(LeisureInvitationId) > 0
                 || _lastLeisureInvitationCheck == hour || Ledger.Balance < Money.FromYuan(50000)
                 || !HasShop || !QuestCompleted("sale")) return false;
             _lastLeisureInvitationCheck = hour;
@@ -655,14 +710,14 @@ namespace PCShopSell.Core.Session
                     return address.Length == 0 ? "你存下了林远航的号码。" : $"你存下了林远航的号码。他说自己住在{address}，住址已记到人物资料。";
                 }
                 return EventScene(template, $"发小林远航听说{ShopTitle(shop)}开张了，特意过来看看。",
-                    Choose("互留号码，约顿饭", s => Reconnect(s) + "\n" + s.ScheduleLegacyCityMeeting(personId, "dinner", "legacy-lin-reunion:" + s.Clock.Today.TotalDays)),
-                    Choose("互留号码，在店里聊会儿", s => Reconnect(s) + "你们在店里聊起了小时候的事。"));
+                    Choose("约顿饭", s => Reconnect(s) + "\n" + s.ScheduleLegacyCityMeeting(personId, "dinner", "legacy-lin-reunion:" + s.Clock.Today.TotalDays)),
+                    Choose("在店里聊会儿", s => Reconnect(s) + "你们在店里聊起了小时候的事。"));
             }
 
             shop = LandladyShop();
             if (shop == null) return null;
             return EventScene(template, $"李秀兰来看看{ShopTitle(shop)}，顺便问你刚接手铺面有没有什么不清楚的。",
-                Choose("问下次交租日，互留号码", s =>
+                Choose("问下次交租日", s =>
                 {
                     Mark();
                     s.Meet(personId, 22);
@@ -1453,6 +1508,7 @@ namespace PCShopSell.Core.Session
             SaveRacingBatchEvents(d);
             d.randomEventDays = _randomEventDays.ToArray();
             d.deferredRandomEventDay = _deferredRandomEventDay;
+            d.invitationMode = (int)IncomingInvitations;
             d.eventIds = _eventLastDay.Keys.ToArray();
             d.eventLastDays = d.eventIds.Select(k => _eventLastDay[k]).ToArray();
             d.eventCounts = d.eventIds.Select(EventCountOf).ToArray();
@@ -1496,6 +1552,8 @@ namespace PCShopSell.Core.Session
             _randomEventDays.Clear();
             if (d.randomEventDays != null) _randomEventDays.AddRange(d.randomEventDays);
             _deferredRandomEventDay = d.deferredRandomEventDay;
+            IncomingInvitations = InvitationMode.Standard;
+            SetInvitationMode((InvitationMode)d.invitationMode);
             _eventLastDay.Clear();
             _eventCount.Clear();
             int n = d.eventIds?.Length ?? 0;
@@ -1510,6 +1568,7 @@ namespace PCShopSell.Core.Session
 
     public sealed partial class SaveData
     {
+        public int invitationMode;
         public GameSession.RelativeReceivable relativeReceivable;
         public GameSession.LinLoanState linEventLoan;
         public int collectorTrialThrough;

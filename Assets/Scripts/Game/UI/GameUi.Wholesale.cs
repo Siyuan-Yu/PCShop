@@ -5,6 +5,7 @@ using PCShopSell.Core.Common;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Trade;
+using PCShopSell.Game.Runtime;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -47,20 +48,21 @@ namespace PCShopSell.Game.UI
                 row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
                 if (n > 0) row.gameObject.AddComponent<Image>().color = Ui.FlatRow;
                 int available = destination == null ? S.HomeBoxParts.CountAll(p) : destination.Sim.Stock.CountAll(p);
-                CompactProduct(row, p.Name, PartUnitKg(p), $"市价 {S.Market.PriceOf(p)} · 收货点有 {available}", false);
+                CompactProduct(row, p.Id, p.Name, PartUnitKg(p), $"市价 {S.Market.PriceOf(p)} · 收货点有 {available}", false);
                 Ui.Size(Ui.Label(row, $"{price}", 18, TextAnchor.MiddleLeft, Ui.Good), 90);
-                QuantityStepper(w, row, "wholesale_" + part.Id, n, 0, 1000, 1, value => _cart[part.Id] = (int)value);
+                PurchaseQuantity(w, row, "wholesale_" + part.Id, n, 0, 1000, value => _cart[part.Id] = (int)value);
             }
 
             var head = Ui.Row(side, 34, 8);
             Ui.Size(Ui.Label(head, picked.Count == 0 ? "<b>待下单</b>　还是空的" : $"<b>待下单</b>　{picked.Count} 样 · {space:0.#} 格", 20, TextAnchor.MiddleLeft, Ui.Accent), -1, -1, 1);
             if (picked.Count > 0) Ui.Size(Ui.Button(head, "清空", () => { _cart.Clear(); w.Rebuild(); }, 15, Ui.ButtonBg), 64, 30);
             RectTransform picks = GoodsList(side, 120);
-            if (picked.Count == 0) Para(picks, "在左边输入或加减数量。\n次日 10:00 统一送到收货点。", 16, Ui.Dim);
+            if (picked.Count == 0) Para(picks, "拖动滑杆或输入数量。\n次日 10:00 统一送到收货点。", 16, Ui.Dim);
             foreach (var item in picked)
             {
                 var part = item.part; var row = Ui.Row(picks, 46, 6);
                 row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+                ItemPortrait(row, part.Id, 42);
                 var label = Ui.Label(row, $"{part.Name} <color=#E8BE62>×{item.count}</color>\n<size=14><color=#AAB4BB>{item.price * item.count}</color></size>", 17, TextAnchor.MiddleLeft);
                 label.verticalOverflow = VerticalWrapMode.Truncate;
                 Ui.Size(label, -1, -1, 1);
@@ -73,7 +75,15 @@ namespace PCShopSell.Game.UI
             var order = Ui.Button(side, "下单", () =>
             {
                 var lines = _cart.Where(kv => kv.Value > 0).Select(kv => (PartCatalog.Get(kv.Key), kv.Value)).ToList();
-                void Place() { if (S.PlaceOnlineOrder(Online1788.Shopping.Id, lines, destination)) _cart.Clear(); w.Rebuild(); }
+                void Place()
+                {
+                    if (S.PlaceOnlineOrder(Online1788.Shopping.Id, lines, destination))
+                    {
+                        _cart.Clear();
+                        SoundFx.Play(Sfx.Purchase);
+                    }
+                    w.Rebuild();
+                }
                 bool covered = destination != null && lines.Any(l =>
                     S.PendingProcurementCount(destination, PurchaseGoodsKind.Part, l.Item1.Id)
                     + S.ClaimedProcurementCount(destination.Place.Id, PurchaseGoodsKind.Part, l.Item1.Id) > 0);

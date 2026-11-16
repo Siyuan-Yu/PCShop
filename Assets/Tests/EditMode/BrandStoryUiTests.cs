@@ -99,7 +99,7 @@ namespace PCShopSell.Tests
                     var knownBefore = p.KnownTopics.ToArray();
                     Find("聊聊").onClick.Invoke();
                     Assert.IsTrue(s.HasGreeted("momo"));
-                    Assert.IsFalse(s.IsMet("momo"));
+                    Assert.IsTrue(s.IsMet("momo"));
                     CollectionAssert.AreEqual(knownBefore, p.KnownTopics);
                     string introduction = Reply().text;
                     StringAssert.Contains("你好，我是", introduction);
@@ -112,14 +112,11 @@ namespace PCShopSell.Tests
                     Assert.IsFalse(Has("返回上一级"));
                     s.AddRelation("momo", 9 - s.Relation("momo"));
                     ui.RebuildWindows();
-                    Assert.IsFalse(Buttons().Single(b => ButtonText(b).StartsWith("要个联系方式")).interactable);
+                    Assert.IsFalse(Buttons().Single(b => ButtonText(b).StartsWith("邀请活动")).interactable);
                     s.AddRelation("momo", 1);
                     ui.RebuildWindows();
-                    Find("要个联系方式").onClick.Invoke();
-                    Assert.IsTrue(s.IsMet("momo"));
                     Assert.IsFalse(Buttons().Any(b => ButtonText(b).Contains("联系方式")));
-                    Assert.IsTrue(Has("邀请活动"));
-                    StringAssert.Contains("通讯录", Reply().text);
+                    Assert.IsTrue(Find("邀请活动").interactable);
                     s.AddRelation("momo", 60);
                     ui.RebuildWindows();
                     Assert.IsFalse(Has("表白"));

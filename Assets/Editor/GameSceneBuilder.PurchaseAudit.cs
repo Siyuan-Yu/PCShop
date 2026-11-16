@@ -146,7 +146,7 @@ namespace PCShopSell.EditorTools
             s.Clock.Restore(s.Clock.Today, 10 * 60);
             Teleport(s, GameSession.BankPlaceId);
             Log("BANK " + s.CurrentPlace?.Id + " blocker=" + (s.BankBlocker() ?? "none"));
-            Log("DEPOSIT " + s.BankDepositMoney(5000) + " LOAN " + s.BorrowAppLoan(2000, 2, true));
+            Log("DEPOSIT " + s.BankDepositMoney(5000) + " LOAN " + BorrowForPreview(s, 2000, 2, true));
             ui.CloseAllWindows();
             try { ui.OnEnteredPlace(s.CurrentPlace); } catch (System.Exception e) { Log("EXC1 " + e); }
             Frame(0.1f); _game.SnapCamera(); Shot("70-bank", 1920, 1080); Shot("70-bank", 1920, 1080);

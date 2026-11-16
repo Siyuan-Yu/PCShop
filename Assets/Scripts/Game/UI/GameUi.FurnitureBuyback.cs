@@ -82,7 +82,7 @@ namespace PCShopSell.Game.UI
                         else draft[furniture.Id] = quantity;
                     }
                     var row = Ui.Row(list, 62, 8);
-                    CompactProduct(row, furniture.Name, furniture.WeightKg, $"可回收 {item.Value} 件", false);
+                    CompactProduct(row, "furn:" + furniture.Id, furniture.Name, furniture.WeightKg, $"可回收 {item.Value} 件", false);
                     Ui.Size(Ui.Label(row, GameSession.FurnitureBuybackPrice(furniture).ToString(), 17, TextAnchor.MiddleRight, Ui.Good), 96, 62);
                     if (order != null)
                         Ui.Size(Ui.Label(row, "—", 16, TextAnchor.MiddleCenter, Ui.Dim), 184, 62);

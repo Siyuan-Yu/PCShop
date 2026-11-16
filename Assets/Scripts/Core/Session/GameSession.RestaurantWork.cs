@@ -48,6 +48,7 @@ namespace PCShopSell.Core.Session
     {
         public const string RestaurantPlayer="$player";
         public const int RestaurantOperationMinutes=2;
+        public const double RestaurantStandSpacing = .85;
         public static string RestaurantJobName(RestaurantJob job)=>job==RestaurantJob.Cook?"备料投锅":job==RestaurantJob.Plate?"出锅":job==RestaurantJob.Serve?"上菜":job==RestaurantJob.Clear?"收桌／清锅":"待命";
         public RestaurantWorker RestaurantActor(string shopId,string actor)=>_specialBusinesses.TryGetValue(shopId,out var state)?state.Workers.FirstOrDefault(w=>w.ActorId==actor):null;
         public void CancelPlayerRestaurantWork()
@@ -67,49 +68,108 @@ namespace PCShopSell.Core.Session
             _ => false
         });
 
-        // A grid route to the reachable edge of the actual furniture footprint, shared by on/off-screen staff.
-        private static List<(double x,double z)> RestaurantPath(OwnedShop shop,double x,double z,PlacedFurniture target)
+        private static RectD[] RestaurantObstacles(OwnedShop shop, RoomSpec room) =>
+            shop.Layout.Select(p => (Placement: p, Definition: FurnitureCatalog.Get(p.Id)))
+                .Where(v => v.Definition?.Slot == FurnitureSlot.Floor)
+                .Select(v => RoomPlanner.Footprint(room, v.Definition, v.Placement)).ToArray();
+
+        private static bool RestaurantOccupied(double x, double z, IReadOnlyList<(double x, double z)> stands) =>
+            stands.Any(p => RestaurantWorker.Distance(x, z, p.x, p.z) < RestaurantStandSpacing);
+
+        private static bool RestaurantBlocked(RectD[] obstacles, double x, double z, double clearance) =>
+            obstacles.Any(b => x >= b.MinX - clearance && x <= b.MaxX + clearance
+                && z >= b.MinZ - clearance && z <= b.MaxZ + clearance);
+
+        private static (double x, double z) RestaurantDestination(RestaurantWorker worker) =>
+            worker.PathX?.Length > 0 ? (worker.PathX.Last(), worker.PathZ.Last()) : (worker.X, worker.Z);
+
+        private static (double x, double z) FindRestaurantStand(OwnedShop shop, double x, double z,
+            IReadOnlyList<(double x, double z)> occupied)
         {
-            var room=RoomSpec.ForShop(shop.Sim.Size);const double cell=.25;
-            var blockers=shop.Layout.Select(p=>(p,d:FurnitureCatalog.Get(p.Id))).Where(v=>v.d?.Slot==FurnitureSlot.Floor)
-                .Select(v=>RoomPlanner.Footprint(room,v.d,v.p)).ToArray();
+            var room = RoomSpec.ForShop(shop.Sim.Size);
+            var obstacles = RestaurantObstacles(shop, room);
+            var best = (x, z);
+            double bestDistance = double.PositiveInfinity;
+            for (double xx = .5; xx <= room.Width - .5; xx += RoomPlanner.Grid)
+                for (double zz = .5; zz <= room.Depth - .5; zz += RoomPlanner.Grid)
+                {
+                    double distance = (xx - x) * (xx - x) + (zz - z) * (zz - z);
+                    if (distance >= bestDistance || RestaurantOccupied(xx, zz, occupied)
+                        || RestaurantBlocked(obstacles, xx, zz, .2)) continue;
+                    best = (xx, zz);
+                    bestDistance = distance;
+                }
+            return best;
+        }
+
+        // Reserve the standing point as well as the work surface so two reachable routes cannot end on each other.
+        private static List<(double x,double z)> RestaurantPath(OwnedShop shop,double x,double z,PlacedFurniture target,
+            IReadOnlyList<(double x, double z)> occupied)
+        {
+            var room=RoomSpec.ForShop(shop.Sim.Size);const double cell=RoomPlanner.Grid;
+            var blockers=RestaurantObstacles(shop,room);
             var area=RoomPlanner.Footprint(room,FurnitureCatalog.Get(target.Id),target);
-            bool Blocked(double xx,double zz)=>blockers.Any(b=>xx>=b.MinX&&xx<=b.MaxX&&zz>=b.MinZ&&zz<=b.MaxZ);
             double Near(double xx,double zz)=>Math.Sqrt(Math.Pow(Math.Max(0,Math.Max(area.MinX-xx,xx-area.MaxX)),2)+Math.Pow(Math.Max(0,Math.Max(area.MinZ-zz,zz-area.MaxZ)),2));
-            if(!Blocked(x,z)&&Near(x,z)<=.55)return new List<(double,double)>{(x,z)};
+            bool IsStand(double xx, double zz) => xx >= .43 && xx <= room.Width - .43 && zz >= .43 && zz <= room.Depth - .43
+                && Near(xx, zz) <= .55 && !RestaurantBlocked(blockers, xx, zz, 0) && !RestaurantOccupied(xx, zz, occupied);
+            bool canStay = IsStand(x, z);
+            if (canStay && !RestaurantBlocked(blockers, x, z, .2)) return new List<(double, double)> { (x, z) };
             int nx=(int)Math.Ceiling(room.Width/cell)+1,nz=(int)Math.Ceiling(room.Depth/cell)+1;
             int start=Math.Max(1,Math.Min(nx-2,(int)Math.Round(x/cell)))+nx*Math.Max(2,Math.Min(nz-2,(int)Math.Round(z/cell)));
-            var previous=Enumerable.Repeat(-1,nx*nz).ToArray();var queue=new Queue<int>();previous[start]=start;queue.Enqueue(start);int goal=-1;
+            var previous=Enumerable.Repeat(-1,nx*nz).ToArray();var queue=new Queue<int>();previous[start]=start;queue.Enqueue(start);
+            int goal = -1, fallback = -1;
             while(queue.Count>0)
             {
                 int current=queue.Dequeue();double xx=current%nx*cell,zz=current/nx*cell;
-                if(!Blocked(xx,zz)&&Near(xx,zz)<=.55){goal=current;break;}
+                if (IsStand(xx, zz))
+                {
+                    if (!RestaurantBlocked(blockers, xx, zz, .2)) { goal = current; break; }
+                    if (fallback < 0) fallback = current;
+                }
                 for(int dir=0;dir<4;dir++)
                 {
                     int ix=current%nx+(dir==0?1:dir==1?-1:0),iz=current/nx+(dir==2?1:dir==3?-1:0);
                     if(ix<1||iz<2||ix>=nx-1||iz>=nz-1)continue;
-                    int next=ix+iz*nx;if(previous[next]>=0||Blocked(ix*cell,iz*cell))continue;
+                    int next=ix+iz*nx;if(previous[next]>=0||RestaurantBlocked(blockers,ix*cell,iz*cell,0))continue;
                     previous[next]=current;queue.Enqueue(next);
                 }
             }
-            if(goal<0)return null;
+            if (goal < 0 && canStay) return new List<(double, double)> { (x, z) };
+            if (goal < 0) goal = fallback;
+            if (goal < 0) return null;
             var path=new List<(double,double)>();for(int node=goal;node!=start;node=previous[node])path.Add((node%nx*cell,node/nx*cell));
             path.Add((start%nx*cell,start/nx*cell));path.Reverse();path.Insert(0,(x,z));return path;
         }
-        private PlacedFurniture RestaurantStation(OwnedShop shop,DiningOrder order,RestaurantWorker worker)
+        private static PlacedFurniture RestaurantStation(OwnedShop shop,DiningOrder order,RestaurantWorker worker,out string id)
         {
-            string id=worker.Job==RestaurantJob.Cook||worker.Job==RestaurantJob.Plate?"restaurant_stove":
+            id=worker.Job==RestaurantJob.Cook||worker.Job==RestaurantJob.Plate?"restaurant_stove":
                 worker.Job==RestaurantJob.Serve?(worker.Phase==0?"restaurant_stove":"restaurant_table"):
                 order.Stage==DiningStage.Burnt?"restaurant_stove":"restaurant_table";
-            worker.Station=id;int index=id=="restaurant_table"?order.Table:id=="restaurant_stove"?Math.Max(0,worker.Stove):0;
-            var stations = shop.Layout.Where(p => p.Id == id);
+            string stationId = id;
+            int index = id == "restaurant_table" ? order.Table : Math.Max(0, worker.Stove);
+            var stations = shop.Layout.Where(p => p.Id == stationId);
             var target = stations.Skip(index).FirstOrDefault();
             return target ?? (id == "restaurant_stove" && order.Stage == DiningStage.Ready ? stations.FirstOrDefault() : null);
         }
-        private bool PlanRestaurantLeg(OwnedShop shop,DiningOrder order,RestaurantWorker worker,double minute)
+        public PlacedFurniture RestaurantWorkStation(OwnedShop shop, RestaurantWorker worker) =>
+            worker.Busy && _specialBusinesses.TryGetValue(shop.Place.Id, out var state)
+                ? RestaurantWorkStation(shop, state, worker) : null;
+
+        private static PlacedFurniture RestaurantWorkStation(OwnedShop shop, SpecialBusinessState state, RestaurantWorker worker)
         {
-            var target=RestaurantStation(shop,order,worker);if(target==null)return false;
-            var path=RestaurantPath(shop,worker.X,worker.Z,target);if(path==null)return false;
+            var order = state.Orders.Find(o => o.Id == worker.OrderId);
+            return order == null ? null : RestaurantStation(shop, order, worker, out _);
+        }
+
+        private bool PlanRestaurantLeg(OwnedShop shop,SpecialBusinessState state,DiningOrder order,RestaurantWorker worker,double minute)
+        {
+            var target=RestaurantStation(shop,order,worker,out var station);
+            if(target==null)return false;
+            var otherWorkers = state.Workers.Where(w => w != worker && w.Busy).ToArray();
+            if (otherWorkers.Any(w => RestaurantWorkStation(shop, state, w) == target)) return false;
+            var path=RestaurantPath(shop,worker.X,worker.Z,target,otherWorkers.Select(RestaurantDestination).ToArray());
+            if(path==null)return false;
+            worker.Station=station;
             worker.PathX=path.Select(p=>p.x).ToArray();worker.PathZ=path.Select(p=>p.z).ToArray();
             double length=0;for(int i=1;i<path.Count;i++)length+=RestaurantWorker.Distance(path[i-1].x,path[i-1].z,path[i].x,path[i].z);
             // Matches the indoor 4.8 units/real-second player pace; staff walk at 85% of that pace.
@@ -120,18 +180,19 @@ namespace PCShopSell.Core.Session
         {
             if(!JobMatches(job,order,(long)minute)||state.Workers.Any(w=>w!=worker&&w.Busy&&w.OrderId==order.Id))return false;
             if (job == RestaurantJob.Clear && order.Stage == DiningStage.Checkout && Furnished(shop, FurnitureCatalog.ShopCounter) == 0) return false;
-            int stove=order.Stove;
+            IEnumerable<int> stoves = new[] { order.Stove };
             if(job==RestaurantJob.Cook)
             {
-                if(Furnished(shop,"restaurant_stove")==0)return false;
-                if (RestaurantIngredientBlocker(shop, order) != null) return false;
-                var occupied=state.Orders.Where(o=>o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Burnt).Select(o=>o.Stove)
-                    .Concat(state.Workers.Where(w=>w.Busy&&w.Job==RestaurantJob.Cook).Select(w=>w.Stove)).ToArray();
-                stove=Enumerable.Range(0,Furnished(shop,"restaurant_stove")).FirstOrDefault(i=>!occupied.Contains(i));
-                if(occupied.Contains(stove))return false;
+                if (RestaurantIngredientBlocker(shop, state, order, (long)minute) != null) return false;
+                var occupied=state.Orders.Where(o=>o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Burnt).Select(o=>o.Stove);
+                stoves = Enumerable.Range(0,Furnished(shop,"restaurant_stove")).Except(occupied);
             }
-            worker.Job=job;worker.OrderId=order.Id;worker.Phase=0;worker.Stove=stove;worker.LayoutKey=RestaurantLayoutKey(shop);
-            if(PlanRestaurantLeg(shop,order,worker,minute))return true;
+            worker.Job=job;worker.OrderId=order.Id;worker.Phase=0;worker.LayoutKey=RestaurantLayoutKey(shop);
+            foreach (int stove in stoves)
+            {
+                worker.Stove = stove;
+                if (PlanRestaurantLeg(shop,state,order,worker,minute)) return true;
+            }
             worker.Job=RestaurantJob.None;return false;
         }
         public bool RequestRestaurantWork(int orderId,RestaurantJob job,double playerX,double playerZ)
@@ -159,13 +220,13 @@ namespace PCShopSell.Core.Session
             if(worker.Job==RestaurantJob.Serve){order.Stage=DiningStage.Eating;order.EatUntil=minute+15;return true;}
             return ClearRestaurantOrder(shop, state, order, new GameTimestamp(minute));
         }
-        private static bool RestaurantRoleHandles(EmployeeRole role, RestaurantJob job, DiningOrder order) => !order.IsFishOrder && (role switch
+        private static bool RestaurantRoleHandles(EmployeeRole role, RestaurantJob job, DiningOrder order) => role switch
         {
             EmployeeRole.Chef => job == RestaurantJob.Cook || job == RestaurantJob.Plate || job == RestaurantJob.Clear && order.Stage == DiningStage.Burnt,
-            EmployeeRole.Waiter => job == RestaurantJob.Serve && order.Stage == DiningStage.Ready
-                || job == RestaurantJob.Clear && order.Stage != DiningStage.Burnt,
+            EmployeeRole.Waiter => !order.IsFishOrder && (job == RestaurantJob.Serve && order.Stage == DiningStage.Ready
+                || job == RestaurantJob.Clear && order.Stage != DiningStage.Burnt),
             _ => false
-        });
+        };
 
         private void TickRestaurantWorkers(OwnedShop shop,SpecialBusinessState state,GameTimestamp now,bool canServe)
         {
@@ -195,7 +256,7 @@ namespace PCShopSell.Core.Session
                 int phases = worker.Job == RestaurantJob.Serve ? 2 : 1;
                 if(++worker.Phase<phases)
                 {
-                    if(!PlanRestaurantLeg(shop,order,worker,minute))
+                    if(!PlanRestaurantLeg(shop,state,order,worker,minute))
                     {worker.Job=RestaurantJob.None;if(worker.ActorId==RestaurantPlayer)Say("通往操作位置的路线被家具挡住了，请先留出通道。");}
                     continue;
                 }
@@ -205,17 +266,33 @@ namespace PCShopSell.Core.Session
             foreach(var (employee, role) in staff)
             {
                 var worker=state.Workers.FirstOrDefault(w=>w.ActorId==employee.Id);
-                if(worker==null){var room=RoomSpec.ForShop(shop.Sim.Size);worker=new RestaurantWorker{ActorId=employee.Id,X=room.Width-3,Z=.9};state.Workers.Add(worker);}
+                if(worker==null)
+                {
+                    var room=RoomSpec.ForShop(shop.Sim.Size);
+                    var occupied = state.Workers.Select(w => (w.X, w.Z))
+                        .Concat(state.Workers.Where(w => w.Busy).Select(RestaurantDestination)).ToArray();
+                    var stand = FindRestaurantStand(shop, room.Width - 3, .9, occupied);
+                    worker = new RestaurantWorker { ActorId = employee.Id, X = stand.x, Z = stand.z };
+                    state.Workers.Add(worker);
+                }
                 if(worker.Busy)continue;
                 foreach(var job in role == EmployeeRole.Chef ? new[]{RestaurantJob.Plate,RestaurantJob.Clear,RestaurantJob.Cook}
                     : new[]{RestaurantJob.Clear, RestaurantJob.Serve})
                 {
                     if (!canServe && job != RestaurantJob.Clear) continue;
-                    var candidates=state.Orders.Where(o=>JobMatches(job,o,minute)
-                        && RestaurantRoleHandles(role, job, o)).OrderBy(o=>o.Arrived);
+                    var candidates = state.Orders.Where(o => JobMatches(job, o, minute) && RestaurantRoleHandles(role, job, o))
+                        .OrderBy(o => !o.IsFishOrder).ThenBy(o => o.IsFishOrder ? o.DueAt : o.Arrived).ThenBy(o => o.Id);
                     bool assigned=false;foreach(var order in candidates)if(AssignRestaurantWork(shop,state,worker,order,job,minute)){assigned=true;break;}
                     if(assigned)break;
                 }
+            }
+            // Free up new destinations and restore distinct idle positions when loading older saves.
+            var reserved = state.Workers.Where(w => w.Busy).Select(RestaurantDestination).ToList();
+            foreach (var worker in state.Workers.Where(w => !w.Busy && w.ActorId != RestaurantPlayer))
+            {
+                if (RestaurantOccupied(worker.X, worker.Z, reserved))
+                    (worker.X, worker.Z) = FindRestaurantStand(shop, worker.X, worker.Z, reserved);
+                reserved.Add((worker.X, worker.Z));
             }
         }
     }

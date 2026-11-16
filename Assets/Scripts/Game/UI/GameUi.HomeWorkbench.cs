@@ -100,9 +100,17 @@ namespace PCShopSell.Game.UI
             // 大屏接近全屏：背后的 HUD 几乎压黑，看起来是一块独立的屏幕。
             var backdrop=_homeWorkbench.Root.GetComponent<Image>();if(backdrop!=null)backdrop.color=new Color(.02f,.03f,.05f,.94f);
             _homeWorkbench.LiveConversation=true;
-            _homeWorkbench.LiveKey=()=>S.CanUseHomeWorkbench?(S.Clock.Now.TotalMinutes/30)+":"+S.StockNextQuote+":"+S.Ledger.Revision+":"+S.WorkbenchAlerts.Count+":"+S.Player.Health+":"+S.Player.Hunger:"closed";
+            _homeWorkbench.LiveKey = WorkbenchViewKey;
             _homeWorkbench.LiveStamp=_homeWorkbench.LiveKey();
         }
+
+        private string WorkbenchViewKey()
+        {
+            if (!S.CanUseHomeWorkbench) return "closed";
+            string key = $"{S.Clock.Now.TotalMinutes / 30}:{S.Time.IsRunning}:{S.Time.Speed}:{S.StockNextQuote}:{S.Ledger.Revision}:{S.WorkbenchAlerts.Count}";
+            return _workbenchTab == 0 ? $"{key}:{S.Player.Health:0}:{S.Player.Hunger:0}" : key;
+        }
+
         private void BuildHomeWorkbench(Window w)
         {
             if(!S.CanUseHomeWorkbench){w.Close();return;}
@@ -111,7 +119,13 @@ namespace PCShopSell.Game.UI
             _wbClockText=WbText(title,S.Clock.Now+" · 在家",16);Ui.Size(_wbClockText,-1,28,1);
             Ui.Size(WbText(title,"现金 "+S.Ledger.Balance,18,Ui.Accent),230,28);
             Ui.Size(WbText(title,"净资产 "+S.NetWorth(),16),240,28);
-            Ui.Size(WbText(title,"压力 "+S.Player.Stress.ToString("0")+"/100",16,S.Player.Stress>=70?Ui.Warn:WbDim),130,28);
+            var stress = Ui.Size(WbText(title, "", 16), 130, 28);
+            w.RefreshContent = () =>
+            {
+                stress.text = $"压力 {S.Player.Stress:0}/100";
+                stress.color = S.Player.Stress >= 70 ? Ui.Warn : WbDim;
+            };
+            w.RefreshContent();
             BuildWorkbenchDayBar(w.Content);
             // 一级页签 + 时间控制挤在同一行：页签靠左，暂停/倍速/托管靠右。
             var nav=Ui.Row(w.Content,38,6);nav.name="WorkbenchNavigation";
@@ -133,6 +147,7 @@ namespace PCShopSell.Game.UI
                 case 2:BuildWorkbenchInvestments(body,w);break;
                 case 3:BuildWorkbenchContacts(body);break;
             }
+            if (w.LiveKey != null) w.LiveStamp = w.LiveKey();
         }
         private static Button WbMainTab(Transform parent,string label,Action action,string name,bool selected)
         {

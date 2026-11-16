@@ -88,6 +88,8 @@ namespace PCShopSell.Game.UI
         {
             var e = row.Person;
             if (row.Shop != null) Line(card, "工作地点 · " + S.ShopTitle(row.Shop), 16);
+            Line(card, "工作能力", 16, Ui.Dim);
+            BuildWorkAttributeRow(card, (e.Intelligence, GameSession.EmployeeCharm(e), e.Dexterity, e.Stamina));
             var (_, metric, detail) = EmployeeRolePreview(e, row.Role, row.Shop);
             if (row.Role != EmployeeRole.Unassigned) Line(card, metric, 17, Ui.Accent);
             Para(card, detail, 15, Ui.Dim);
@@ -108,6 +110,24 @@ namespace PCShopSell.Game.UI
                 + " · " + S.EmployeePurchaseNextText(e.Id) : "定期采购：未启用或已暂停", 15, Ui.Dim);
             Para(card, S.EmployeePurchaseStorageText(e.Id), 15, Ui.Accent);
             if (!string.IsNullOrEmpty(e.LastPurchaseNote)) Para(card, e.LastPurchaseNote, 15, Ui.Dim);
+        }
+
+        private static void BuildWorkAttributeRow(Transform parent, (int Intelligence, int Charm, int Dexterity, int Stamina) ratings)
+        {
+            var attributes = Ui.Row(parent, 48, 6);
+            void Attribute(string label, int score)
+            {
+                var card = Ui.Size(Ui.FlatPanel(attributes, label, Ui.FlatBand), 0, -1, 1);
+                Ui.Label(card.transform, label, 14, TextAnchor.MiddleCenter, Ui.Dim)
+                    .rectTransform.Anchor(0, .55f, 1, 1);
+                var value = Ui.Label(card.transform, score.ToString(), 20, TextAnchor.MiddleCenter, Ui.Accent);
+                value.fontStyle = FontStyle.Bold;
+                value.rectTransform.Anchor(0, 0, 1, .58f);
+            }
+            Attribute("智力", ratings.Intelligence);
+            Attribute("魅力", ratings.Charm);
+            Attribute("动手能力", ratings.Dexterity);
+            Attribute("体能", ratings.Stamina);
         }
 
         public void OpenEmployeeWork(string employeeId, Window parent = null)
@@ -324,6 +344,7 @@ namespace PCShopSell.Game.UI
                         int count = selected.TryGetValue(offerKey, out var lineItem) ? lineItem.Count : 0;
                         var capacity = S.SupplierAllocationPreview(employeeId, draft, offer);
                         int minimum = S.PurchaseMinimum(offer);
+                        int fixedMaximum = Math.Min(100, capacity.FixedMaximum);
                         int SelectedCount() => selected.TryGetValue(offerKey, out var item) ? item.Count : 0;
                         void Set(int value, bool maximumSelection = false)
                         {
@@ -348,13 +369,16 @@ namespace PCShopSell.Game.UI
                             details += $" · 库存 {worker.Shop.Sim.Stock.CountAll(PartCatalog.Get(offer.Id))} · 在途 {S.PendingPurchaseCount(worker.Shop, offer.Id)}";
                         else if (offer.Kind == PurchaseGoodsKind.Gift)
                             details += $" · 库存 {worker.Shop.Sim.Stock.GoodsCount(offer.Id)}";
-                        var label = CompactProduct(line, offer.Name, offer.UnitKg, details, false);
+                        var label = CompactProduct(line, offer.Id, offer.Name, offer.UnitKg, details, false);
                         label.Tip("该货源本型号日上限 " + S.PurchaseLimit(offer) + " · 今日实货剩余 " + S.PurchaseRemaining(offer) + "\n" + capacity.Allocation);
                         Ui.Size(Ui.Label(line, offer.Price + (offer.Kind == PurchaseGoodsKind.Rice ? "/袋" : offer.Kind == PurchaseGoodsKind.Ingredient ? "/份" : "/件"), 16, TextAnchor.MiddleLeft, Ui.Good), 110);
-                        QuantityStepper(w, line, offerKey, count, 0, Math.Max(count, capacity.FixedMaximum), 1,
-                            value => Set((int)value), readValue: () => SelectedCount());
-                        Ui.Size(Ui.Button(line, lineItem?.BuyMaximum == true ? "最大 ✓" : "最大", () => Set(100, true),
-                            15, Ui.ButtonBg, capacity.Maximum >= minimum), 62, 34).name = "PurchaseMaximum_" + offerKey;
+                        PurchaseQuantity(w, line, offerKey, count, 0, fixedMaximum,
+                            value => Set((int)value), canAdd: fixedMaximum >= minimum, minimumOrder: minimum, readValue: SelectedCount);
+                        bool buyMaximum = lineItem?.BuyMaximum == true;
+                        var maximum = Ui.Size(Ui.Button(line, buyMaximum ? "按日买满 ✓" : "按日买满", () => Set(100, true),
+                            15, Ui.SelectedButton(buyMaximum), capacity.Maximum >= minimum), 96, 34);
+                        maximum.name = "PurchaseMaximum_" + offerKey;
+                        maximum.Tip("按各采购日可用额度买满。滑杆用于设置固定件数。");
                     });
                 }
 
@@ -376,6 +400,7 @@ namespace PCShopSell.Game.UI
                     {
                         var row = Ui.Row(chosenList, 50, 6);
                         row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+                        ItemPortrait(row, item.ItemId, 42);
                         var label = Ui.Label(row, item.Name + " <color=#E8BE62>需补 " + item.Count + " 件</color>\n<size=13><color=#AAB4BB>" + item.SourceName + "</color></size>", 16, TextAnchor.MiddleLeft);
                         label.verticalOverflow = VerticalWrapMode.Truncate;
                         Ui.Size(label, -1, 46, 1); { var le = label.GetComponent<LayoutElement>(); le.minWidth = 0; le.preferredWidth = 0; }
@@ -391,9 +416,10 @@ namespace PCShopSell.Game.UI
                         var picked = choice;
                         var offer = S.EmployeePurchaseOffer(choice, catalog: catalog);
                         string key = GameSession.PurchaseKey(choice);
-                        string count = choice.BuyMaximum ? "最大" : "×" + choice.Count;
+                        string count = choice.BuyMaximum ? "按日买满" : "×" + choice.Count;
                         var row = Ui.Row(chosenList, 50, 4);
                         row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+                        ItemPortrait(row, offer?.Id ?? choice.PartId, 42);
                         var label = Ui.Label(row, GameSession.PurchaseItemName(choice) + " <color=#E8BE62>" + count + "</color>\n<size=13><color=#AAB4BB>" + (offer?.SupplierName ?? choice.SourceId ?? "自动选货源") + "</color></size>", 16, TextAnchor.MiddleLeft);
                         label.verticalOverflow = VerticalWrapMode.Truncate;
                         Ui.Size(label, -1, 46, 1); { var le = label.GetComponent<LayoutElement>(); le.minWidth = 0; le.preferredWidth = 0; }

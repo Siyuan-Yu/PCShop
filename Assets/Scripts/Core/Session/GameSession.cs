@@ -48,7 +48,11 @@ namespace PCShopSell.Core.Session
         public Place PlayerShopPlace
         {
             get => _focus.Place;
-            private set => _focus.Place = value;
+            private set
+            {
+                _focus.Place = value;
+                _focus.Sim.SetShopId(value.Id);
+            }
         }
 
         private readonly List<OwnedShop> _shops = new List<OwnedShop>();
@@ -106,7 +110,7 @@ namespace PCShopSell.Core.Session
             _homeLeaseSignedDay = start.Date.TotalDays;
             InitializePropertyMarket(seed);
             Player.EnergyChanged = SynchronizeEnergyExhaustion;
-            Ledger = new Ledger(openingCash);
+            Ledger = new Ledger(openingCash) { SalesAccountOfShop = id => ShopAt(id)?.SalesAccountId };
             Time = new TimeController();
             Market = new HardwareMarket(Random);
             Market.EnsureOutlook(start.Date);
@@ -152,14 +156,13 @@ namespace PCShopSell.Core.Session
             InitializeCityPeople();
             AssignCityHomes();
             InitializeExpansionResidents();
+            InitializeStartingContacts();
             InitializeCityClimate();
             TickCityRetail();
             TickSpecialBusinesses(start,start);
             RecordWorkbenchPrices();
             InitializeStockMarket(seed);
         }
-
-        public VehicleSpec CurrentVehicle => Vehicles.Get(Vehicle);
 
         /// <summary>玩家的画面坐标。</summary>
         public MapPoint PlayerPosition => Trip != null ? Trip.Position : CityActivityPlayerPosition() ?? (OffNode ? _free.Value : CurrentPlace!=null?StandOf(CurrentPlace):City.ViewPosition(PlayerNodeId));
@@ -174,7 +177,13 @@ namespace PCShopSell.Core.Session
         public int Tick(double realSeconds)
         {
             _manualMoving = false;
-            if (Racing || IsGameOver || !Time.IsRunning || DrinkTastingInProgress || ManualActivityClockPaused || realSeconds <= 0) return 0;
+            if (Racing || IsGameOver || realSeconds <= 0 || double.IsNaN(realSeconds)) return 0;
+            if (ManualActivityClockPaused)
+            {
+                TickManualActivity(realSeconds);
+                return 0;
+            }
+            if (!Time.IsRunning) return 0;
             // 开局做饭教学：世界时钟不自己走，玩家可以慢慢看；只有锅在焖饭时才走，否则饭永远焖不好。吃饭、装包这些操作自己会推进相应的分钟。
             if (OpeningClockFrozen) return 0;
             if (!_sleeping && !IsWorking && !CityActivityExclusive && !BrandExpoExclusive && PendingEvent == null && Trip == null
@@ -206,7 +215,7 @@ namespace PCShopSell.Core.Session
         /// <summary>推进时钟并处理推进中触发的晕倒、住院。所有改变时间的操作都走这里。</summary>
         public void AdvanceClock(int minutes)
         {
-            if (BrandExpoExclusive && !ExpoTimeAdvancing || ActiveRace?.PaidPractice == true || DrinkTastingInProgress
+            if (BrandExpoExclusive && !ExpoTimeAdvancing || ActiveRace?.PaidPractice == true
                 || ManualActivityClockPaused && !_settlingManualActivity) return;
             if (minutes <= 0) return;
             int interruption = _bodyInterruptVersion;
@@ -218,7 +227,7 @@ namespace PCShopSell.Core.Session
                 if (IsContractWorking && !WorkContract.Days[WorkContract.WorkingIndex].LunchServed)
                     step = (int)Math.Min(step, Math.Max(1, WorkMealAt - Clock.Now.TotalMinutes));
                 Clock.Advance(step); minutes -= step;
-                ProcessPending();
+                if (!_settlingManualActivity) ProcessPending();
                 if (_bodyInterruptVersion != interruption || ManualActivityClockPaused && !_settlingManualActivity) break;
             }
             TrackTempClocks();
@@ -555,7 +564,7 @@ namespace PCShopSell.Core.Session
             if (today.TotalDays == 4 && Online.Discover("s_zhou"))
             {
                 Meet(Npcs.Jie, 20);
-                Meet(Npcs.Zhou, 10);
+                Flags.Add("heard:" + Npcs.Zhou);
                 Popup?.Invoke("同行的建议", "隔壁手机店的老板说：进货可以找周维成聊聊，他熟悉电子市场，也能谈长期供货。");
             }
 

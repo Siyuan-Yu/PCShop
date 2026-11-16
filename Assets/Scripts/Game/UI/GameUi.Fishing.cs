@@ -138,8 +138,9 @@ namespace PCShopSell.Game.UI
                     var hitImage = dockHit.gameObject.AddComponent<Image>(); hitImage.color = Color.clear;
                     var hitButton = dockHit.gameObject.AddComponent<Button>(); hitButton.targetGraphic = hitImage;
                     hitButton.onClick.AddListener(() => { if (S.SelectFishingSpot(index)) w.Rebuild(); });
-                    Ui.Size(Ui.Button(baits, FishingCatalog.Baits[i] + " ×" + fish.Baits[i], () => { S.SelectFishingBait(index); w.Rebuild(); }, 17,
+                    var bait = Ui.Size(Ui.Button(baits, FishingCatalog.Baits[i] + " ×" + fish.Baits[i], () => { S.SelectFishingBait(index); w.Rebuild(); }, 17,
                         Ui.SelectedButton(fish.Bait == i)), -1, 36, 1);
+                    ItemButtonPortrait(bait, i == 0 ? "fishing:dough" : i == 1 ? "fishing:worm" : "fishing:lure", 28);
                 }
             }
             if (fish.Phase == FishingPhase.Ready || fish.Phase == FishingPhase.Charging)
@@ -186,7 +187,8 @@ namespace PCShopSell.Game.UI
             void Caption(string text, int font, int height, Color color)
                 => Ui.Size(Ui.Label(result, text, font, TextAnchor.MiddleCenter, color), -1, height);
             Caption("本次鱼获", 21, 28, Ui.Dim);
-            Caption(fish?.Name ?? "鱼已上岸", 44, 60, Ui.Accent);
+            if (fish == null) Caption("鱼已上岸", 44, 60, Ui.Accent);
+            else ItemLabel(result, fish.Id, fish.Name, 36, 56, Ui.Accent);
             if (fish != null)
                 Caption($"{fish.Rarity}  ·  {fish.Kg:0.##} 千克  ·  回收价 {Money.FromYuan(fish.SalePrice)}", 22, 32, Ui.TextColor);
 
@@ -278,6 +280,7 @@ namespace PCShopSell.Game.UI
                     if (!showAll && count == 0) continue;
                     hasFish = true;
                     var row = Ui.Row(list, 60, 10);
+                    ItemPortrait(row, fish.Id, 50);
                     string info = showAll
                         ? $"{fish.Rarity} · {new[] { "近岸", "中水", "远水" }[fish.Habitat]} · 偏好{FishingCatalog.Baits[fish.Bait]} · {fish.MovementName}"
                         : $"{fish.Kg:0.##} 千克/条 · 背包 {count} 条";

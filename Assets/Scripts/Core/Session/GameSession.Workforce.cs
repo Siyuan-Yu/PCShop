@@ -111,7 +111,7 @@ namespace PCShopSell.Core.Session
 
     public sealed class EmployeePurchaseQuoteLine
     {
-        public string Name, SourceName;
+        public string ItemId, Name, SourceName;
         public int Count;
         public Money Total;
         public double Kg;
@@ -132,7 +132,7 @@ namespace PCShopSell.Core.Session
         internal readonly List<(PurchaseOffer offer, PurchaseLine item)> Lines = new List<(PurchaseOffer, PurchaseLine)>();
         /// <summary>给界面看的只读明细：商品、货源、件数、小计。</summary>
         public IReadOnlyList<EmployeePurchaseQuoteLine> Preview => Lines.Select(l => new EmployeePurchaseQuoteLine
-        { Name = l.offer.Name, SourceName = l.offer.SupplierName, Count = l.item.Count, Total = l.offer.Price * l.item.Count, Kg = l.offer.UnitKg * l.item.Count }).ToArray();
+        { ItemId = l.offer.Id, Name = l.offer.Name, SourceName = l.offer.SupplierName, Count = l.item.Count, Total = l.offer.Price * l.item.Count, Kg = l.offer.UnitKg * l.item.Count }).ToArray();
     }
 
     public sealed partial class GameSession

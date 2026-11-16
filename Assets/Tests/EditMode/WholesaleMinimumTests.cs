@@ -53,6 +53,38 @@ namespace PCShopSell.Tests
             }
         }
 
+        [TestCase(Gifts.Soda)]
+        [TestCase(Gifts.Drink)]
+        public void FarmOffersRestaurantDrinksAndShipsThemAsRegularShelfStock(string id)
+        {
+            using var s = Make();
+            var shop = s.MainShop;
+            GameSessionTests.Teleport(s, shop.Place.Id);
+            Assert.True(s.SetShopMainCategory("restaurant"));
+            var farm = Source(s, "produce:rice");
+            var drink = Gifts.Get(id);
+            var offers = s.EmployeePurchaseCatalog().Where(offer => offer.Id == id).ToArray();
+            var farmOffer = offers.Single(offer => offer.Source == farm);
+            Assert.AreEqual("饮料", farmOffer.Category);
+            Assert.True(offers.Any(offer => offer.Source.Business == Gifts.TobaccoBusiness));
+            Assert.False(s.CityRetailGoodsAvailable(farm, Gifts.Get(Gifts.Wine)));
+
+            GameSessionTests.Teleport(s, farm.Id);
+            Assert.AreSame(shop, s.CourierShop(true));
+            int minimum = s.PurchaseMinimum(farmOffer);
+            Assert.AreEqual(10, minimum);
+            int quota = s.CitySupplierRemaining(farm.Id, id);
+            int before = shop.Sim.Stock.GoodsCount(id);
+            Assert.True(s.CartAddRetailWholesale(farm, id, minimum));
+            Assert.AreEqual(s.CityRetailWholesalePrice(farm, drink) * minimum, s.CartGoods);
+            s.CartAllToTruck();
+            int minutes = s.CourierQuote(shop).minutes;
+            Assert.True(s.Checkout(true));
+            Assert.AreEqual(quota - minimum, s.CitySupplierRemaining(farm.Id, id));
+            s.AdvanceClock(minutes + 5);
+            Assert.AreEqual(before + minimum, shop.Sim.Stock.GoodsCount(id));
+        }
+
         [Test]
         public void RetailCanStillBuyOneAndDifferentWholesaleProductsCannotMixToMeetMinimum()
         {

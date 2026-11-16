@@ -37,7 +37,7 @@ namespace PCShopSell.Game.UI
                 {
                     string id = product.Id;
                     int have = S.GoodsAvailableToList(id);
-                    Line(list, product.Name + $" · 手边 {have} 件 · 每件 {product.WeightKg:0.##} 千克", 18, Ui.Accent);
+                    ItemLabel(list, id, product.Name + $" · 手边 {have} 件 · 每件 {product.WeightKg:0.##} 千克", 18, color: Ui.Accent);
                     var row = Ui.Row(list, 38);
                     Ui.Size(Ui.Button(row, "入库 1 件", () => { StoreRetailGoods(id,1); w.Rebuild(); RebuildDock(); }, 17), -1, -1, 1);
                     Ui.Size(Ui.Button(row, "全部入库", () => { StoreRetailGoods(id,have); w.Rebuild(); RebuildDock(); }, 17, Ui.ButtonBg), -1, -1, 1);
@@ -78,6 +78,7 @@ namespace PCShopSell.Game.UI
             public string Key,Name,Group,Detail,Season;
             public FurnitureDef Furniture;
             public double Kg;
+            public int MinimumOrder;
             public Money Price;
             public Func<bool> Add;
             public Func<int, bool> AddCount;
@@ -127,8 +128,8 @@ namespace PCShopSell.Game.UI
             bool farm = source.Business == GameSession.FarmBusiness;
             string furnitureShopKind = null;
             var offers=new List<CarryOffer>();
-            void Offer(string key,string name,string group,double kg,Money price,string detail,Func<bool> add,Func<double> remaining=null,Action preview=null,string season=null,FurnitureDef furniture=null,Func<string> blocker=null,Func<int,bool> addCount=null)
-                =>offers.Add(new CarryOffer {Key=key,Name=name,Group=group,Kg=kg,Price=price,Detail=detail,Add=add,AddCount=addCount,Remaining=remaining,Preview=preview,Season=season,Furniture=furniture,Blocker=blocker});
+            void Offer(string key,string name,string group,double kg,Money price,string detail,Func<bool> add,Func<double> remaining=null,Action preview=null,string season=null,FurnitureDef furniture=null,Func<string> blocker=null,Func<int,bool> addCount=null,int minimumOrder=1)
+                =>offers.Add(new CarryOffer {Key=key,Name=name,Group=group,Kg=kg,Price=price,Detail=detail,Add=add,AddCount=addCount,Remaining=remaining,Preview=preview,Season=season,Furniture=furniture,Blocker=blocker,MinimumOrder=minimumOrder});
             if(expo)
             {
                 foreach(var item in ModelProducts.Limited)
@@ -140,7 +141,9 @@ namespace PCShopSell.Game.UI
             }
             else if(wholesale)
             {
-                foreach(var product in Gifts.All.Where(g=>S.CityRetailGoodsAvailable(source,g)))
+                var products = Gifts.All.Where(g => S.CityRetailGoodsAvailable(source, g));
+                if (farm) products = products.OrderBy(g => RetailProducts.IsDrink(g.Id));
+                foreach (var product in products)
                 {
                     var item=product;string key="wholesale:"+item.Id;
                     int minimum = S.CitySupplierMinimum(source.Id, item.Id);
@@ -154,7 +157,8 @@ namespace PCShopSell.Game.UI
                         null, () => (available < minimum ? 0 : available) - S.CartAmount(key),
                         season:ClothingProducts.SeasonGroup(item.Id),
                         addCount: count => S.CartAddRetailWholesale(source, item.Id,
-                            S.CartAmount(key) == 0 ? Math.Max(minimum, count) : count));
+                            S.CartAmount(key) == 0 ? Math.Max(minimum, count) : count),
+                        minimumOrder: minimum);
                 }
             }
             else if(source.Kind==PlaceKind.Wholesaler)
@@ -298,14 +302,18 @@ namespace PCShopSell.Game.UI
                 }
                 string detail=item.Season==null?item.Detail:item.Season+" · "+item.Detail;
                 if (blocker != null) detail = "<color=#E2AA8A>" + blocker + "</color> · " + detail;
-                CompactProduct(row,item.Name,item.Kg,detail,item.Kg<=0);
+                CompactProduct(row,item.Key,item.Name,item.Kg,detail,item.Kg<=0);
                 string price = item.Price.ToString();
-                if (farm) price += item.Key == "wholesale:produce:rice" ? "/袋"
-                    : item.Key == "wholesale:" + Gifts.Fruit ? "/箱" : "/份";
+                if (farm) price += item.Key switch
+                {
+                    "wholesale:produce:rice" => "/袋",
+                    "wholesale:" + Gifts.Fruit or "wholesale:" + Gifts.Drink => "/箱",
+                    "wholesale:" + Gifts.Soda => "/瓶",
+                    _ => "/份"
+                };
                 Ui.Size(Ui.Label(row,price,19,TextAnchor.MiddleLeft,Ui.Good),farm || item.Price.Yuan >= 1000000 ? 120 : 96);
                 if(item.Preview!=null)Ui.Size(Ui.Button(row,"试穿",item.Preview,16),68,38);
-                var setAmount = ShopQuantity(w, row, item.Key, item.Add, canAdd, max, item.AddCount, UpdateRow);
-                var stepper=row.Find("Quantity_"+item.Key);if(stepper!=null){var stepperSize=stepper.GetComponent<LayoutElement>();stepperSize.minWidth=184;stepperSize.flexibleWidth=0;}
+                var setAmount = ShopQuantity(w, row, item.Key, item.Add, canAdd, max, item.AddCount, UpdateRow, item.MinimumOrder);
                 if (supportsMaximum && limited)
                 {
                     maximum = Ui.Size(Ui.Button(row, "最大", () => setAmount(max), 15), 58, 34);

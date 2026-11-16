@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
@@ -13,6 +14,7 @@ namespace PCShopSell.Tests
         private static GameSession Make(double visualScale = 1)
         {
             var data = GameSessionTests.Layout(); data.distanceScale = visualScale;
+            data.places = data.places.Append(new LayoutPlaceData { id = "motor_cars", name = "汽车城", kind = "dealer", node = "dl" }).ToArray();
             foreach (var node in data.nodes) { node.x /= visualScale; node.y = (node.y + 20) / visualScale; }
             foreach (var edge in data.edges) if (edge.length > 0) edge.length /= visualScale;
             var s = new GameSession(CityLayout.FromData(data), 812, Money.FromYuan(100000), GameTimestamp.From(new GameDate(0), 600), false);
@@ -53,6 +55,56 @@ namespace PCShopSell.Tests
                 Assert.Greater(walked,0);Assert.AreEqual(walked*3/CityTravelTiming.PlayerWalkSpeedFactor,ridden,.0001);
                 Assert.AreEqual(ride.PlayerPosition.X,automatic.PlayerPosition.X,.0001);
                 Assert.AreEqual(walk.Clock.Now,ride.Clock.Now);Assert.AreEqual(ride.Clock.Now,automatic.Clock.Now);
+            }
+        }
+
+        [TestCase(VehicleKind.EBike, "e_city", "e_dash", "dealer")]
+        [TestCase(VehicleKind.Tricycle, "t_cargo", "t_sport", "dealer")]
+        [TestCase(VehicleKind.Car, "c_city", "c_su7", "motor_cars")]
+        public void ActualCommuteModelControlsManualSpeedAndRouteTime(VehicleKind kind, string basicModel, string fasterModel, string dealer)
+        {
+            using var basic = Make();
+            using var faster = Make();
+            using var manual = Make();
+            Prepare(basic, basicModel);
+            Prepare(faster, fasterModel);
+            Prepare(manual, fasterModel);
+
+            Assert.AreEqual(Vehicles.Get(kind).SpeedPerMinute, basic.CurrentVehicle.SpeedPerMinute, 1e-9);
+            Assert.Greater(faster.CurrentVehicle.SpeedPerMinute, basic.CurrentVehicle.SpeedPerMinute);
+            Assert.AreEqual(basic.CarryLimitKg, faster.CarryLimitKg);
+            Assert.True(basic.Estimate("mk", out double basicDistance, out int basicMinutes, out _));
+            Assert.True(faster.Estimate("mk", out double fasterDistance, out int fasterMinutes, out _));
+            Assert.AreEqual(basicDistance, fasterDistance, 1e-9);
+            Assert.Less(fasterMinutes, basicMinutes);
+            Assert.True(basic.GoTo("mk"));
+            Assert.True(faster.GoTo("mk"));
+            Assert.AreEqual(fasterMinutes, faster.Trip.EstimatedMinutes);
+            manual.SetSteer(-1, 0);
+            for (int i = 0; i < 30; i++) { basic.Tick(.02); faster.Tick(.02); manual.Tick(.02); }
+            Assert.Less(faster.Trip.RemainingGameMeters, basic.Trip.RemainingGameMeters);
+            Assert.AreEqual(faster.PlayerPosition.X, manual.PlayerPosition.X, .0001);
+            Assert.AreEqual(basic.Clock.Now, faster.Clock.Now);
+
+            using var restored = GameSession.Load(faster.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(faster.CreateSave())));
+            restored.EventsEnabled = false;
+            foreach (var officer in restored.Police.Officers) officer.OnDutyToday = false;
+            Assert.AreEqual(faster.Trip.Vehicle.Name, restored.Trip.Vehicle.Name);
+            Assert.AreEqual(faster.Trip.EstimatedMinutes, restored.Trip.EstimatedMinutes);
+            Assert.AreEqual(faster.Trip.RemainingGameMeters, restored.Trip.RemainingGameMeters, .00001);
+            faster.Tick(.02);
+            restored.Tick(.02);
+            Assert.AreEqual(faster.Trip.RemainingGameMeters, restored.Trip.RemainingGameMeters, .00001);
+
+            void Prepare(GameSession session, string model)
+            {
+                GameSessionTests.Teleport(session, dealer);
+                session.DebugAddCash(250000);
+                Assert.True(session.BuyMotor(model));
+                Assert.True(session.SetVehicle(kind));
+                session.Leave();
+                session.ArriveAtNode("st");
+                foreach (var officer in session.Police.Officers) officer.OnDutyToday = false;
             }
         }
         [Test] public void RealEdgeLengthControlsEtaNotCompressedDrawingLength()

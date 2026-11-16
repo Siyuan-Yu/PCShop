@@ -7,6 +7,8 @@ using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 using PCShopSell.Core.Finance;
+using PCShopSell.Game.Runtime;
+using UnityEngine;
 
 namespace PCShopSell.Tests
 {
@@ -211,6 +213,38 @@ namespace PCShopSell.Tests
             }
         }
         [Test]
+        public void OnlyTheEmployeeWorkingOnAnOrderAnimatesAtTheAssemblyBench()
+        {
+            using var s = Make();
+            var shop = s.CurrentShop;
+            var first = new Employee { Name = "装机员甲", DailyWageYuan = 180 };
+            var second = new Employee { Name = "装机员乙", DailyWageYuan = 180 };
+            shop.Assembler = first;
+            shop.AdditionalEmployees.Add(new AdditionalShopEmployee { Role = EmployeeRole.Assembler, Person = second });
+            CityTestPeople.AtAssignedWork(s, first);
+            CityTestPeople.AtAssignedWork(s, second);
+            if (!s.AutoBuildEnabled) s.ToggleAutoBuild();
+            s.PlayerShop.Settings.BuildOrdersStartDay = 0;
+            var order = Order(s);
+            s.AdvanceClock(1);
+            Assert.That(order.EmployeeMinutesLeft, Is.GreaterThan(0));
+            var root = new GameObject("AssemblyWorkers");
+            try
+            {
+                var view = new ShopInteriorView(root.transform, s.PlayerShop.Size);
+                view.Update(s, 0, 0);
+                var figures = root.GetComponentsInChildren<FigureMotion>();
+                var firstFigure = figures.Single(f => f.name == "ShopEmployee_" + first.Id);
+                var secondFigure = figures.Single(f => f.name == "ShopEmployee_" + second.Id);
+                Assert.That(firstFigure.WorkAction, Is.EqualTo(FigureWorkAction.Assemble));
+                Assert.That(secondFigure.WorkAction, Is.EqualTo(FigureWorkAction.None));
+                s.ToggleAutoBuild();
+                view.Update(s, 0, 0);
+                Assert.That(firstFigure.WorkAction, Is.EqualTo(FigureWorkAction.None));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
+        }
+        [Test]
         public void JsonRoundTripDoesNotInventUnhiredAssembler()
         {
             using (var s = Make())
@@ -239,6 +273,30 @@ namespace PCShopSell.Tests
                 Assert.Greater(s.Player.Hunger, 70);
                 using (var loaded = GameSession.Load(s.City, s.CreateSave())) Assert.IsTrue(loaded.MealDeliveryEnabled);
             }
+        }
+
+        [Test]
+        public void ManualMealDeliveryRequiresCashAndIsAvailableOnOlderSmartphoneSaves()
+        {
+            using var original = Make();
+            original.SetSmartphone(true);
+            original.Player.Hunger = 40;
+            var save = original.CreateSave();
+            save.apps = save.apps.Where(id => id != PhoneApps.FoodDelivery).ToArray();
+            using var session = GameSession.Load(original.City, save);
+            Assert.True(session.HasApp(PhoneApps.FoodDelivery));
+
+            session.SetSmartphone(false);
+            var cash = session.Ledger.Balance;
+            Assert.False(session.OrderDeliveryMeal(0));
+            Assert.AreEqual(cash, session.Ledger.Balance);
+            Assert.AreEqual(40, session.Player.Hunger);
+
+            session.SetSmartphone(true);
+            session.Ledger.ForceDebit(session.Clock.Today, "测试", cash - Money.FromYuan(24));
+            Assert.False(session.OrderDeliveryMeal(0));
+            Assert.AreEqual(Money.FromYuan(24), session.Ledger.Balance);
+            Assert.AreEqual(40, session.Player.Hunger);
         }
 
         [UnityEngine.TestTools.UnityTest]

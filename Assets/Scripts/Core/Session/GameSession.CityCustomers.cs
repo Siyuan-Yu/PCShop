@@ -49,6 +49,15 @@ namespace PCShopSell.Core.Session
         }
         public bool CityCustomerIsInside(ShopCustomer customer,string shopId) => string.IsNullOrEmpty(customer.PersonId)
             || CityPersonState(customer.PersonId) is CityPersonState p && p.Route==null&&p.LocationPlaceId==shopId;
+
+        private void NotifyCityCustomerEntry(CityPersonState person)
+        {
+            if (person.Task != CityPersonTask.Shopping || string.IsNullOrEmpty(person.VisitId)) return;
+            var shop = ShopAt(person.LocationPlaceId);
+            if (shop != null && shop.Sim.ActiveCustomers.Any(customer => customer.VisitId == person.VisitId))
+                ShopGuestChanged?.Invoke(shop.Place, ShopGuestEvent.Entered);
+        }
+
         private string CityRetailSeriesFor(string personId)
         {
             var person = CityPerson(personId);

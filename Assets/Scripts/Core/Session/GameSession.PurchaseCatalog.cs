@@ -101,7 +101,7 @@ namespace PCShopSell.Core.Session
                             UnitKg = Stock.SpaceOf(p, true, 1) * Backpack.KgPerSpace, StockSpace = Stock.SpaceOf(p, true, 1) },
                             PartCatalog.CategoryName(p.Category));
                 if (ShopAt(source) != null || IsVacant(source) || VentureAt(source.Id) != null) continue;
-                foreach (var gift in Gifts.All.Where(g => g.SoldAt == source.Business && CityRetailGoodsAvailable(source, g)))
+                foreach (var gift in Gifts.All.Where(g => CityRetailGoodsAvailable(source, g)))
                     Add(new PurchaseOffer { Source = source, Kind = PurchaseGoodsKind.Gift, Id = gift.Id, Name = gift.Name + (UsesWholesalePackMinimum(source) ? "（批发）" : ""),
                         Price = CityRetailWholesalePrice(source, gift), UnitKg = gift.WeightKg, StockSpace = Stock.GoodsSpace(gift.Id, 1) },
                         ShelfKinds.ForGift(gift.Id)?.Name ?? "其他商品", ClothingProducts.SeasonGroup(gift.Id));

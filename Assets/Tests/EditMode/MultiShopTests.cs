@@ -1,6 +1,7 @@
 using System.Linq;
 using NUnit.Framework;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Finance;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
@@ -341,13 +342,25 @@ namespace PCShopSell.Tests
         public void SecondLease_AsMove_StillRelocates()
         {
             GameSession s = GameSessionTests.Make(200000);
+            var day = s.Clock.Today;
+            s.Ledger.Credit(day, "零售", Money.FromYuan(100), attribution: LedgerAttribution.ForShop("pc"));
             s.PlayerShop.Reputation = 80;
             s.DebugAddListing("tea", 0, 60, Money.FromYuan(3000));
             GameSessionTests.Teleport(s, "agency");
             Assert.IsTrue(s.SignLease("tea"));
             Assert.AreEqual(1, s.MyShopCount);
             Assert.AreEqual("tea", s.PlayerShopPlace.Id);
+            Assert.AreEqual("tea", s.PlayerShop.ShopId);
             Assert.IsTrue(s.IsVacant(s.City.GetPlace("pc")));
+
+            s.DebugAddListing("pc", 0, 60, Money.FromYuan(3000));
+            Assert.IsTrue(s.SignRetailLease("pc", true, "secondhand"));
+            Assert.AreEqual(Money.Zero, s.GetCityFinance(day, day, "pc").Sales);
+            Assert.AreEqual(Money.FromYuan(100), s.GetCityFinance(day, day, "tea").Sales);
+            using var loaded = GameSession.Load(s.City, s.CreateSave());
+            Assert.AreEqual("tea", loaded.MainShop.Sim.ShopId);
+            Assert.AreEqual(Money.Zero, loaded.GetCityFinance(day, day, "pc").Sales);
+            Assert.AreEqual(Money.FromYuan(100), loaded.GetCityFinance(day, day, "tea").Sales);
         }
     }
 }

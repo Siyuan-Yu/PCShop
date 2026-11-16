@@ -43,7 +43,7 @@ namespace PCShopSell.Core.Session
         public string RemoteConversationBlocker(string id)
         {
             if(IsGameOver)return "现在不能交谈";
-            if(!IsMet(id))return "尚未交换联系方式";
+            if(!IsMet(id))return "先当面聊一聊，对方会自动加入通讯录";
             if(CityPerson(id)==null&&Npcs.Get(id)==null&&Rosters.Get(id)==null&&Residents.Get(id)==null)return "找不到这个联系人";
             return null;
         }
@@ -61,6 +61,7 @@ namespace PCShopSell.Core.Session
         {
             string why = AskAboutOthersBlocker(speakerId, targetId, remote);
             if (why != null) return why;
+            if (!GreetPerson(speakerId, remote)) return "现在无法和对方交谈。";
             var link = PersonCircle(speakerId).First(person => person.PersonId == targetId);
             var speaker = CityPersonState(speakerId); var target = CityPersonState(targetId);
             string name = CityPerson(speakerId)?.Name ?? "对方";
@@ -119,15 +120,14 @@ namespace PCShopSell.Core.Session
         public bool HasGreeted(string id) => IsMet(id) || Flags.Contains("greeted:" + id);
         public bool GreetPerson(string id, bool remote = false)
         {
-            if (CityPerson(id) == null && Npcs.Get(id) == null && Rosters.Get(id) == null && Residents.Get(id) == null) return false;
+            var person = CityPerson(id);
+            if (IsGameOver || person == null && Npcs.Get(id) == null && Rosters.Get(id) == null && Residents.Get(id) == null) return false;
             if(remote){if(RemoteConversationBlocker(id)!=null)return false;}
             else if (CityPersonState(id) != null && !CitySamePlace(id)) return false;
-            if (!HasGreeted(id))
+            if (!IsMet(id))
             {
-                Flags.Add("greeted:" + id);
-                int gain = 3 - Relation(id);
-                if (gain > 0) AddSocialRelation(id, gain);
-                RememberSocial(id, "第一次打招呼，互相认识了；尚未交换联系方式。");
+                Meet(id, 3);
+                Say($"已将{person?.Name ?? Npcs.Get(id)?.Name ?? Rosters.Get(id)?.Name}存入通讯录。");
             }
             _lifeContact[id] = Clock.Now.TotalMinutes;
             return true;
@@ -178,6 +178,10 @@ namespace PCShopSell.Core.Session
             bool firstConversation = !HasGreeted(id);
             if (!GreetPerson(id,remote)) return "现在无法和对方交谈。";
             var def = CityPerson(id);
+            int today = Clock.Today.TotalDays;
+            string chatKey = id + ":casual-conversation";
+            bool followup = _cityTopicDay.TryGetValue(chatKey, out int previousDay) && previousDay <= today;
+            _cityTopicDay[chatKey] = today;
             if (!remote && id == LuZhi) BeginLuPersonalStory();
             if (firstConversation)
             {
@@ -186,36 +190,42 @@ namespace PCShopSell.Core.Session
                 string name = def?.Name ?? npc?.Name ?? staff?.Name;
                 return npc?.FirstMeet ?? $"你好，我是{name}。以后见面打声招呼。";
             }
+            string text;
             if (def == null)
             {
                 var staff = Rosters.Get(id) ?? Residents.Get(id)?.Person;
-                return staff != null ? StaffChat(staff) : SmallTalk(id);
+                text = staff != null ? StaffChat(staff) : SmallTalk(id);
             }
-            int pick = (ConversationSeed(id) % 4 + Clock.Today.TotalDays % 4) % 4;
-            string topic = new[] { "work", "interest", "life", "friends" }[pick];
-            if (topic == "interest" && !ConversationTraits(id)[0].Known || topic == "friends" && Relation(id) < AskAboutOthersMinRelation) topic = "work";
-            string text = CityTalk(id, topic, remote);
-            if (Relation(id) >= 15 && Clock.Today.TotalDays % 5 == ConversationSeed(id) % 5)
+            else
             {
-                if (Npcs.All.Any(n=>n.Id==id))
-                {
-                    if (LifeBlocker(id) == null) text += "\n" + LifeTalk(id);
-                }
-                else if ((Rosters.Get(id) ?? Residents.Get(id)?.Person) is StaffDef staff)
-                {
-                    if (StaffStoryBlocker(id) == null) text += "\n" + StaffStory(staff);
-                }
-                else
-                {
-                    var state = CityPersonState(id); int previous = state.StoryChapter;
-                    string story = CityHearStory(id, remote);
-                    if (state.StoryChapter > previous) text += "\n" + story;
-                }
+                int pick = (ConversationSeed(id) % 4 + today % 4) % 4;
+                string topic = new[] { "work", "interest", "life", "friends" }[pick];
+                if (topic == "interest" && !ConversationTraits(id)[0].Known || topic == "friends" && Relation(id) < AskAboutOthersMinRelation) topic = "work";
+                text = CityTalk(id, topic, remote);
             }
             var person = CityPersonState(id);
+            if (followup || !remote && id == LuZhi)
+            {
+                string story = ContinueCasualStory(id, def, person, remote);
+                if (!string.IsNullOrEmpty(story)) text = string.IsNullOrEmpty(text) ? story : text + "\n\n" + story;
+            }
             if (person != null)
                 person.KnownTopics = person.KnownTopics.Union(ConversationTraits(id).Select((t, i) => t.Known ? "trait:" + i : null).Where(t => t != null)).ToArray();
             return text;
+        }
+
+        private string ContinueCasualStory(string id, CityPersonDefinition definition, CityPersonState person, bool remote)
+        {
+            int today = Clock.Today.TotalDays;
+            if (person?.LastStoryDay == today || _lifeDays.TryGetValue(id, out int heardDay) && heardDay == today
+                || _staffStoryDay.TryGetValue(id, out int staffDay) && staffDay == today) return null;
+            if (person != null && definition?.Stories != null && person.StoryChapter < definition.Stories.Length
+                && Relation(id) >= 5 + person.StoryChapter * 5)
+                return remote ? CityHearStory(id, true) : HearCityPersonalStory(id);
+
+            if (Npcs.Get(id) != null && LifeBlocker(id) == null) return LifeTalk(id);
+            var staff = Rosters.Get(id) ?? Residents.Get(id)?.Person;
+            return staff != null && StaffStoryBlocker(id) == null ? StaffStory(staff) : null;
         }
 
         private IEnumerable<FoodBatch> GiftableFoodBatches(bool meal) =>

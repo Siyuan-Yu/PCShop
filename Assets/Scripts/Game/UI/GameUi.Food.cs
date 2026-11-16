@@ -1,8 +1,10 @@
+using System;
 using System.Linq;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
 {
@@ -10,25 +12,98 @@ namespace PCShopSell.Game.UI
     {
         private void OpenMealDeliverySettings(Window parent)
         {
-            OpenWindow("缺饭时自动订餐", 780, 660, w =>
+            if (S.HasSmartphone) OpenMealDeliveryApp(parent, openSettings: true);
+            else OpenWindow("缺饭时自动订餐", 780, 550,
+                w => BuildMealDeliverySettings(w.Content, () => { w.Rebuild(); parent?.RequestRebuild(); }), scrollContent: false);
+        }
+
+        private void OpenMealDeliveryApp(Window parent = null, bool openSettings = false)
+        {
+            if (S.AppBlocker(PhoneApps.FoodDelivery) is string blocker) { Toast(blocker); return; }
+            bool automatic = openSettings;
+            string lastOrder = null;
+            OpenPhoneAppWindow("外卖", w =>
             {
-                Para(w.Content, "到饭点或饿了时，优先吃现有食物；没有可吃的食物时，按选定档位自动订一餐。", 18);
-                Ui.Size(Ui.Button(w.Content, S.MealDeliveryEnabled ? "自动订餐：开" : "自动订餐：关", () =>
-                { S.ToggleMealDelivery(); w.Rebuild(); parent?.RequestRebuild(); }, 19,
-                    Ui.SelectedButton(S.MealDeliveryEnabled), S.HasSmartphone), -1, 42);
-                if (!S.HasSmartphone) Para(w.Content, "需要先买智能手机才能开启自动订餐，可以先选择餐食。", 17, Ui.Warn);
-                for (int i = 0; i < GameSession.DeliveryMeals.Count; i++)
+                void Refresh() { w.Rebuild(); parent?.RequestRebuild(); }
+                var tabs = Ui.Row(w.Content, 42, 8);
+                Ui.Tab(tabs, "点餐", () => { automatic = false; w.Rebuild(); }, !automatic).name = "MealDeliveryOrderTab";
+                Ui.Tab(tabs, "自动订餐", () => { automatic = true; w.Rebuild(); }, automatic).name = "MealDeliveryAutoTab";
+                Ui.Size(Ui.Rect(tabs, "MealDeliveryTabSpacing"), 0, -1, 1);
+                Ui.Size(Ui.Button(tabs, "返回手机", () => { w.Close(); _phoneStoreWindow?.Close(); OpenPhone(); }, 16), 124, 36);
+
+                var columns = Ui.Row(w.Content, -1, 16);
+                columns.GetComponent<LayoutElement>().flexibleHeight = 1;
+                var columnsLayout = columns.GetComponent<HorizontalLayoutGroup>();
+                columnsLayout.childAlignment = TextAnchor.UpperLeft;
+                columnsLayout.childForceExpandHeight = false;
+                var menu = Ui.Size(Ui.Rect(columns, "MealDeliveryMenu"), 0, -1, 1);
+                Ui.VList(menu, 8, 0);
+                var details = Ui.Size(Ui.FlatPanel(columns, "MealDeliveryDetails", Ui.FlatBand), 380, -1, 0).rectTransform;
+                Ui.VList(details, 8, 16);
+                Line(details, "可用现金", 16, Ui.Dim);
+                Line(details, S.Ledger.Balance.ToString(), 28, Ui.Accent);
+                Line(details, $"当前饱腹  {S.Player.Hunger:0} / 100", 19);
+                if (automatic)
                 {
-                    int tier = i;
-                    var meal = GameSession.DeliveryMeals[i];
-                    string selected = S.MealDeliveryTier == tier ? "✓ 已选 · " : "";
-                    Ui.Size(Ui.Button(w.Content, $"{selected}{meal.Name} · ¥{meal.Price}/餐\n{meal.Effects}", () =>
-                    { S.SelectMealDeliveryTier(tier); w.Rebuild(); parent?.RequestRebuild(); }, 18,
-                        Ui.SelectedButton(S.MealDeliveryTier == tier)), -1, 76);
+                    BuildMealDeliverySettings(menu, Refresh);
+                    return;
                 }
-                Para(w.Content, "选择立即保存，点选不扣钱；实际订餐时扣费。余额不足时不下单，也不会自动换档。", 16, Ui.Dim);
-                Line(w.Content, "心情目前只记录；精力恢复不超过当前精力上限。", 15, Ui.Dim);
-            });
+
+                Para(menu, "付款后立即送达并用餐。", 17, Ui.Dim);
+                BuildMealDeliveryRows(menu, automatic: false, tier =>
+                {
+                    if (S.OrderDeliveryMeal(tier))
+                    {
+                        var meal = GameSession.DeliveryMeals[tier];
+                        lastOrder = $"{meal.Name}已送达 · 已支付 ¥{meal.Price:N0}";
+                    }
+                    Refresh();
+                });
+                if (lastOrder != null)
+                    Para(details, lastOrder, 17, Ui.Good).name = "MealDeliveryReceipt";
+                if (S.OrderDeliveryMealBlocker(0) is string orderBlocker)
+                    Para(details, orderBlocker, 16, Ui.Dim);
+            }, scrollContent: false);
+        }
+
+        private void BuildMealDeliverySettings(Transform parent, Action refresh)
+        {
+            bool enabled = S.MealDeliveryEnabled;
+            var header = Ui.Row(parent, 42, 10);
+            Ui.Size(Ui.Label(header, enabled ? "自动订餐已开启" : "自动订餐已关闭", 20), 0, 42, 1);
+            Ui.Size(Ui.Button(header, enabled ? "关闭自动订餐" : "开启自动订餐", () =>
+            {
+                S.ToggleMealDelivery();
+                refresh();
+            }, 17, Ui.SelectedButton(enabled), S.HasSmartphone), 148, 38).name = "MealDeliveryAutoToggle";
+            if (!S.HasSmartphone) Para(parent, "需要智能手机才能开启。可以先选好餐档。", 16, Ui.Warn);
+            Para(parent, "饭点或饿了时优先吃现有食物，缺餐时按选定档位点餐。", 17, Ui.Dim);
+            BuildMealDeliveryRows(parent, automatic: true, tier => { S.SelectMealDeliveryTier(tier); refresh(); });
+            Para(parent, "设置即时保存，实际下单时扣费。余额不足会跳过本次订餐。", 16, Ui.Dim);
+        }
+
+        private void BuildMealDeliveryRows(Transform parent, bool automatic, Action<int> choose)
+        {
+            for (int i = 0; i < GameSession.DeliveryMeals.Count; i++)
+            {
+                int tier = i;
+                var meal = GameSession.DeliveryMeals[tier];
+                bool selected = automatic && S.MealDeliveryTier == tier;
+                var card = Ui.Size(Ui.FlatPanel(parent, "DeliveryMealRow", Ui.FlatBand,
+                    selected ? Ui.FlatHotEdge : Ui.FlatCardEdge), -1, 66);
+                card.raycastTarget = false;
+                var row = Ui.Row(card.transform, 66, 12).Anchor(0, 0, 1, 1, 14, 0, 14, 0);
+                row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+                ItemPortrait(row, "delivery:" + tier, 56);
+                Ui.Size(Ui.Label(row, $"<b>{meal.Name}</b>\n<size=15>{meal.Effects}</size>", 19), 0, 54, 1);
+                Ui.Size(Ui.Label(row, $"¥{meal.Price:N0} / 餐", 20, TextAnchor.MiddleRight, Ui.Accent), 128, 40);
+                string blocker = automatic ? null : S.OrderDeliveryMealBlocker(tier);
+                string label = automatic ? selected ? "当前餐档 ✓" : "设为自动餐档" : "点这份";
+                var button = Ui.Size(Ui.Button(row, label, () => choose(tier), 17,
+                    automatic ? Ui.SelectedButton(selected) : Ui.ButtonHot, blocker == null), 148, 38);
+                button.name = (automatic ? "MealDeliveryAutoTier_" : "MealDeliveryOrder_") + tier;
+                if (blocker != null) button.Tip(blocker);
+            }
         }
 
         public void OpenFridgeWindow()
@@ -67,6 +142,7 @@ namespace PCShopSell.Game.UI
             {
                 var item = stack;
                 var row = Ui.Row(list, 64);
+                ItemPortrait(row, item.Key, 54);
                 string expiry = "";
                 if (item.Key.StartsWith("lunch:"))
                     expiry = " · " + (put ? FoodExpiryBadge.Countdown(item.Batches.Min(b => b.ExpireDay), S.Clock.Now.TotalMinutes) : "永久保存");

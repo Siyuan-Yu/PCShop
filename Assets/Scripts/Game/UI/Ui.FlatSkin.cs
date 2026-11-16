@@ -1,4 +1,6 @@
+using PCShopSell.Game.Runtime;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
@@ -84,6 +86,23 @@ namespace PCShopSell.Game.UI
             private Outline _edge;
             private bool _captionDimmed;
             private Color _enabledInk;
+
+            public override void OnPointerClick(PointerEventData eventData)
+            {
+                if (eventData.button == PointerEventData.InputButton.Left) PlayClick();
+                base.OnPointerClick(eventData);
+            }
+
+            public override void OnSubmit(BaseEventData eventData)
+            {
+                PlayClick();
+                base.OnSubmit(eventData);
+            }
+
+            private void PlayClick()
+            {
+                if (IsActive() && IsInteractable() && !TryGetComponent<HoldRepeat>(out _)) SoundFx.Play(Sfx.Click);
+            }
 
             public void SetCaption(Text caption)
             {

@@ -80,19 +80,19 @@ namespace PCShopSell.Game.UI
             RefreshQuantityContent();
         }
 
-        internal void RequestQuantityRebuild(bool fromInput)
+        internal void RequestQuantityRebuild(bool waitForPointer)
         {
-            _rebuildAfterQuantityEdit |= fromInput;
+            _rebuildAfterQuantityEdit |= waitForPointer;
             if (!RebuildPending) _quantityOnly = RefreshQuantityContent != null;
             RebuildPending = true;
         }
 
-        internal bool CanRebuildAfterQuantityEdit()
+        internal bool CanApplyPendingRebuild(bool pointerBusy)
         {
-            if (!_rebuildAfterQuantityEdit) return true;
-            // Keep the clicked button or next input alive through pointer up.
-            if (Input.GetMouseButton(0) || Input.GetMouseButtonUp(0)) return false;
-            return !HasFocusedInput();
+            if (ListScrollbar.PressedInside(Root)) return false;
+            if (_quantityOnly && RefreshQuantityContent != null && !_rebuildAfterQuantityEdit) return true;
+            // A full refresh must leave the active control alive through the click or edit.
+            return !pointerBusy && !HasFocusedInput() && !ChoiceDropdown.OpenInside(Root);
         }
 
         internal bool HasFocusedInput()
@@ -112,6 +112,7 @@ namespace PCShopSell.Game.UI
         private readonly Canvas _dockCanvas;
         private readonly Canvas _modalCanvas;
         private readonly Canvas _toastCanvas;
+        private readonly Canvas _invitationCanvas;
         private readonly List<Window> _windows = new List<Window>();
         private readonly List<(GameObject go, float until)> _toasts = new List<(GameObject, float)>();
         private readonly Dictionary<string, (RectTransform rt, Text text, Image plate, Outline textEdge)> _labels =
@@ -152,13 +153,14 @@ namespace PCShopSell.Game.UI
             _dockCanvas = Ui.CreateCanvas("UI_Dock", 20);
             _modalCanvas = Ui.CreateCanvas("UI_Modal", 30);
             _toastCanvas = Ui.CreateCanvas("UI_Toast", 25);
+            _invitationCanvas = Ui.CreateCanvas("UI_Invitation", 27);
             BuildHud();
             BuildOpeningMealGuide();
             BuildToasts();
             BuildTip();
         }
 
-        public IEnumerable<Canvas> Canvases => new[] { _labelCanvas, _hudCanvas, _dockCanvas, _modalCanvas, _toastCanvas, _tipCanvas, _tutorialCanvas };
+        public IEnumerable<Canvas> Canvases => new[] { _labelCanvas, _hudCanvas, _dockCanvas, _modalCanvas, _toastCanvas, _invitationCanvas, _tipCanvas, _tutorialCanvas };
 
         // ---------- 每帧 ----------
 
@@ -167,15 +169,17 @@ namespace PCShopSell.Game.UI
             if (S == null) return;
             UpdateFishingInteraction(dt);
             UpdateOnsitePlay(dt);
-            UpdateUpcomingScheduleHud();
             EnsureQuarterlyExpoWindow();
             _expoHudGate.interactable=!ExpoHudOpen;
             _labelCanvas.enabled=!ExpoHudOpen&&!_ctrl.PetFocusActive;
             RefreshShopDockVisibility();
             RefreshHomeDockVisibility();
+            UpdateUpcomingScheduleHud();
             UpdateLoanReminderHud();
+            PositionRightHudCards();
             RefreshWorkbenchAccess();
             HoldRepeat.AdvanceActiveHold(Time.unscaledDeltaTime);
+            bool pointerBusy = Input.GetMouseButton(0) || Input.GetMouseButtonUp(0);
             foreach (var window in _windows.ToArray())
             {
                 window.Fitter?.Fit();
@@ -187,7 +191,7 @@ namespace PCShopSell.Game.UI
                     string stamp = window.LiveKey?.Invoke();
                     if (stamp != window.LiveStamp) { window.LiveStamp = stamp; window.RequestRebuild(); }
                 }
-                if (window.RebuildPending && window.CanRebuildAfterQuantityEdit() && !ListScrollbar.PressedInside(window.Root))
+                if (window.RebuildPending && window.CanApplyPendingRebuild(pointerBusy))
                     window.ApplyPendingRebuild();
             }
             UpdateAutoExpoChoices();
@@ -203,6 +207,7 @@ namespace PCShopSell.Game.UI
             _uiTime += dt;
             _hudRefreshTimer -= dt;
             if (_hudRefreshTimer <= 0 || dt <= 0) { _hudRefreshTimer = .1f; UpdateHud(); }
+            UpdateHudCashMotion();
             if (dt <= 0) _labelContentAt = 0;
             UpdateCityLifeHud(dt);
             UpdateLabels();
@@ -221,7 +226,7 @@ namespace PCShopSell.Game.UI
                 RefreshShortcutMenus();
                 UpdateVehicleButtons();
                 UpdateQuestTracker();
-                if (!Input.GetMouseButton(0)) { RefreshDock(); RefreshHomeDock(); }
+                if (!pointerBusy) { RefreshDock(); RefreshHomeDock(); }
             }
         }
 
@@ -284,7 +289,7 @@ namespace PCShopSell.Game.UI
             {
                 var kind = vehicle.Kind;
                 var button = Ui.Size(Ui.Button(brow, vehicle.Name, () => S.SetVehicle(kind), 17), 72);
-                button.Tip(() => vehicle.Name + (S.Vehicle == kind ? "（当前使用）" : S.CanUse(kind) ? "：点击切换" : "：尚未购买或暂无空闲车辆"));
+                button.Tip(() => VehicleTip(S.CommuteVehicle(kind)));
                 _vehicleButtons.Add((button, kind));
             }
             _cargoText = Ui.Size(Ui.Label(brow, "", 16), 155);
@@ -297,7 +302,7 @@ namespace PCShopSell.Game.UI
             RefreshShortcutMenus();
 
             Ui.Size(Ui.Button(brow, "叫货车", OpenTruckWindow, 17), 100).Tip("打开货车装货单，选货物和目的地；手机通讯录里的入口也保留。");
-            BuildCityLifeHud(root);
+            BuildCityLifeHud();
             BuildShopDockToggle(root);
             BuildHomeDockToggle(root);
 
@@ -337,8 +342,7 @@ namespace PCShopSell.Game.UI
             _brandButton.gameObject.SetActive(S.BrandManagementUnlocked);
             FitHudTopRow();
             _dateText.text = (S.IsCityLifeTest?"测试 ":"")+$"{now.Date.Year}年{now.Date.Month}/{now.Date.Day} {Ui.WeekdayName(now.Date.Weekday)} {Ui.Hm(now.MinuteOfDay)}\n天气 · {S.WeatherSummary}";
-            _cashText.text = S.Ledger.Balance.ToString();
-            _cashText.color = S.Ledger.Balance.IsNegative ? Ui.Warn : Ui.Good;
+            SetHudCash(S.Ledger.Balance);
 
             RefreshHudTimeControls();
 
@@ -393,9 +397,18 @@ namespace PCShopSell.Game.UI
             else if (_ctrl.InHome) _hintText.text = _ctrl.HomeRoom.NearbyId != null ? $"<color=#DDC18B>按 F：{_ctrl.HomeRoom.NearbyLabel}</color>" : early ? "WASD 在屋里走动 · 靠近家具按 F 交互 · 摆放家具请打开右侧住处面板" : "";
             else if (S.CurrentPlace != null) _hintText.text = early ? "按 WASD 离开 · 空格暂停" : "";
             else _hintText.text = early ? "WASD 移动 · F 进入 · 空格暂停 · 右键拖动 / 滚轮缩放" : "";
-            _hintStrip.enabled = !string.IsNullOrEmpty(_hintText.text);
+            RefreshWorldHintVisibility();
 
             _chaseText.transform.parent.gameObject.SetActive(S.Police.AnyChasing && S.CurrentPlace == null);
+        }
+
+        private void RefreshWorldHintVisibility()
+        {
+            bool invitationShowsRoute = !_ctrl.Placing && _invitationCanvas.enabled && _cityActivityHud.gameObject.activeInHierarchy
+                && S.Trip != null && S.CityIntent is { Cancelled: false, ActivityId: not null } intent && intent.ActivityId == _cityHudActivityId;
+            bool show = !invitationShowsRoute && !string.IsNullOrEmpty(_hintText.text);
+            _hintStrip.enabled = show;
+            _hintText.enabled = show;
         }
 
         private static string Pct(double v) => v.ToString("0");
@@ -583,7 +596,7 @@ namespace PCShopSell.Game.UI
 
         private readonly System.Collections.Generic.List<ShopInteriorView.EmoteInfo> _emoteBuf = new System.Collections.Generic.List<ShopInteriorView.EmoteInfo>();
 
-        /// <summary>头顶的小字：店里顾客想买什么 / 为什么走了 / +¥；家里电饭锅饭好了一直跳着闪，直到把饭取完。</summary>
+        /// <summary>显示顾客行为和电饭锅取饭提醒。</summary>
         private void UpdateEmoteLabels()
         {
             int n = 0;
@@ -592,14 +605,11 @@ namespace PCShopSell.Game.UI
             AddPetHouseReminder();
             if (_ctrl.InHome && S.Pantry.CookedBowls > 0 && _ctrl.HomeRoom.CookerWorld is Vector3 cooker)
             {
-                float t = Time.unscaledTime;
-                float bob = Mathf.Abs(Mathf.Sin(t * 4f)) * 0.35f;
-                float blink = 0.35f + 0.65f * (0.5f + 0.5f * Mathf.Sin(t * 9f));
                 _emoteBuf.Add(new ShopInteriorView.EmoteInfo
                 {
-                    Pos = cooker + Vector3.up * bob,
+                    Pos = cooker,
                     Text = $"<b>饭好了！</b>\n<size=16>{S.Pantry.CookedBowls} 碗，按 F 取饭</size>",
-                    Color = new Color(1f, 0.85f, 0.25f, blink),
+                    Color = new Color(1f, 0.85f, 0.25f),
                     Size = 26,
                 });
             }
@@ -822,6 +832,7 @@ namespace PCShopSell.Game.UI
                 BuildEventCg(bg.transform, cg, 150);
             }
             _toasts.Add((bg.gameObject, _uiTime + 5f));
+            RevealAppearance(bg.transform, .18f, .25f);
             if (_toasts.Count > 3)
             {
                 Kill.It(_toasts[0].go);
@@ -899,8 +910,12 @@ namespace PCShopSell.Game.UI
             contentLayout.spacing = 8; contentLayout.padding = new RectOffset(16, 16, 16, 16);
             _windows.Add(w);
             if (holds) S?.Time.Hold();
+            // The opener can stay selected after a click. Keyboard submit must start inside the new modal.
+            var events = EventSystem.current;
+            if (events != null && !events.alreadySelecting) events.SetSelectedGameObject(null);
             w.Rebuild();
             RefreshWindowTimeStatus(w);
+            if (showTitleBar && !w.Closed) RevealAppearance(prt, .14f, .72f);
             return w;
         }
 

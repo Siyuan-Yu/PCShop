@@ -179,6 +179,7 @@ namespace PCShopSell.Game.Runtime
                 var state=session.SpecialBusiness(shop.Place.Id);
                 if(shop.RetailKind=="restaurant")
                 {
+                    if (dt > 0) UpdateRestaurantSounds(state);
                     var tables=shop.Layout.Where(p=>p.Id=="restaurant_table").ToArray();
                     foreach(var order in state.Orders.Where(o=>!o.TableCleared))
                         if(order.Table>=0&&order.Table<tables.Length)

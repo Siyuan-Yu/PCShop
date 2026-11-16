@@ -18,6 +18,7 @@ namespace PCShopSell.Core.Session
         public bool hasBusiness;
         public BusinessSave business;
         public string savedAt;
+        public string saveCampaignId;
         /// <summary>随机数状态（ulong 的十进制字符串，避免 JSON 精度问题）。</summary>
         public string rngState;
         public int day;
@@ -134,6 +135,7 @@ namespace PCShopSell.Core.Session
         // 租铺子：0 = 旧存档（按开局那间店、按店面大小算月租），1 = 租着铺子，2 = 还没租
         public int shopState;
         public string leasePlace;
+        public string shopSalesAccountId;
         public long leaseRentCents;
         public long leaseDepositCents;
         public int leaseStartDay;
@@ -291,6 +293,7 @@ namespace PCShopSell.Core.Session
         public ShopEmergencyLighting emergencyLighting;
         public double awareness, reputation;
         public string retailKind, customName;
+        public string salesAccountId;
         public GoodsLot[] goodsLots;
         public string place;
         public long rentCents, depositCents;

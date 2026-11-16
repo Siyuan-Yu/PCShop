@@ -57,13 +57,13 @@ namespace PCShopSell.Core.Session
             if (!HasSmartphone) return Fail(NoPhoneMessage);
             if (PhoneApps.Get(id) == null) return false;
             if (!_apps.Contains(PhoneApps.Store)) return Fail("应用商店不见了。");
-            if (_apps.Contains(id)) return Fail("已经装过了。");
+            if (HasApp(id)) return Fail("已经装过了。");
             _apps.Add(id);
             Say($"下载安装了「{PhoneApps.Get(id).Name}」。");
             return true;
         }
 
-        /// <summary>卸载（应用商店、通讯录、日历不能卸）。</summary>
+        /// <summary>卸载下载的应用。</summary>
         public bool UninstallApp(string id)
         {
             id = PhoneApps.Normalize(id);
@@ -79,9 +79,9 @@ namespace PCShopSell.Core.Session
             HasSmartphone = true;
             _apps.Clear();
             foreach (string id in PhoneApps.Preinstalled) _apps.Add(id);
-            Say("买了一部智能手机。里面只有应用商店、通讯录和日历，要网购先去应用商店下载 app。");
+            Say("买了一部智能手机。自带应用商店、通讯录、日历和外卖。网购可去应用商店下载。");
             if (!MealDeliveryEnabled)
-                Popup?.Invoke(MealDeliveryUnlockedTitle, "开启后，饭点或饿了时会优先吃手头的食物。没有可吃的食物时，才会按你选的价位自动下单。以后也可以在「我的 → 饮食 → 自动订餐」调整。");
+                Popup?.Invoke(MealDeliveryUnlockedTitle, "在「手机 → 外卖」可以直接点餐，也可以设置自动订餐。开启后，饭点或饿了时会优先吃手头的食物，缺餐时按选定价位下单。");
             return true;
         }
 

@@ -38,8 +38,9 @@ namespace PCShopSell.Game.UI
             right = side;
         }
 
-        private static Text CompactProduct(Transform row, string name, double kg, string detail, bool registered, string head = null)
+        private static Text CompactProduct(Transform row, string itemKey, string name, double kg, string detail, bool registered, string head = null)
         {
+            ItemPortrait(row, itemKey);
             string sub = head ?? (registered ? "登记为已购资产，不占背包或货车空间" : "每件 " + kg.ToString("0.###") + " 千克");
             if (!string.IsNullOrEmpty(detail)) sub += " · " + detail;
             var label = Ui.Label(row, name + "\n<size=14><color=#AAB4BB>" + sub + "</color></size>", 18, TextAnchor.MiddleLeft);
@@ -68,6 +69,7 @@ namespace PCShopSell.Game.UI
             var row = Ui.Row(list, 54, 6);
             row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
             row.name = "CartLine_" + line.Key + (moveText == "改叫车" ? "_bag" : "_truck");
+            ItemPortrait(row, line.Key, 42);
             string amountText = line.ByWeight ? $"{amount:0.##} 千克" : line.Key.StartsWith("ing:") ? $"{kg:0.##} 千克" : $"×{amount:0}";
             string price = line.UnitPrice != null ? " · " + line.UnitPrice().Scale(amount) : "";
             var label = Ui.Label(row, $"{line.Name} <color=#E8BE62>{amountText}</color>\n<size=14><color=#AAB4BB>{kg:0.###} 千克{price}</color></size>", 17, TextAnchor.MiddleLeft);
@@ -91,7 +93,7 @@ namespace PCShopSell.Game.UI
             var quote = S.QuoteCart(defaultToShop);
             if (kinds == 0)
             {
-                var hint = Ui.Label(side, "在左边输入或加减数量，加入购物车。\n能背的优先放背包，装不下的自动叫车。\n设备、车辆直接登记为已购资产。", 16, TextAnchor.UpperLeft, Ui.Dim);
+                var hint = Ui.Label(side, "拖动滑杆或输入数量，加入购物车。\n能背的优先放背包，装不下的自动叫车。\n设备、车辆直接登记为已购资产。", 16, TextAnchor.UpperLeft, Ui.Dim);
                 Ui.Size(hint, -1, -1, 0).GetComponent<LayoutElement>().flexibleHeight = 1;
             }
             else
@@ -104,6 +106,7 @@ namespace PCShopSell.Game.UI
                     {
                         var line = item; var row = Ui.Row(assetList, 46, 6);
                         row.name = "CartLine_" + line.Key + "_asset";
+                        ItemPortrait(row, line.Key, 40);
                         var label = Ui.Label(row, $"{line.Name} <color=#E8BE62>×{line.Amount:0.##}</color>\n<size=14><color=#AAB4BB>{line.Price}</color></size>", 17, TextAnchor.MiddleLeft);
                         label.verticalOverflow = VerticalWrapMode.Truncate;
                         Ui.Size(label, -1, -1, 1); { var le = label.GetComponent<LayoutElement>(); le.minWidth = 0; le.preferredWidth = 0; }
@@ -157,7 +160,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(bill, $"<b><color=#E8C77A>{goods + freight}</color></b>", 28, TextAnchor.MiddleRight), 190, 40);
 
             string why = quote.blocker;
-            var checkout = Ui.Button(side, why ?? "结账（付合计）", () => { S.Checkout(defaultToShop); w.Rebuild(); },
+            var checkout = Ui.Button(side, why ?? "结账（付合计）", () => CheckoutCart(w, defaultToShop),
                 why == null ? 22 : 15, why == null ? Ui.ButtonHot : Ui.ButtonBg, why == null);
             checkout.name = "CartCheckout";
             Ui.Size(checkout, -1, 54);

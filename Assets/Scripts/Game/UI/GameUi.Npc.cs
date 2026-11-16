@@ -86,10 +86,7 @@ namespace PCShopSell.Game.UI
             {
                 var b = imgRt.gameObject.AddComponent<Button>();
                 b.targetGraphic = raw;
-                ColorBlock cb = b.colors;
-                cb.highlightedColor = new Color(1.12f, 1.12f, 1.12f);
-                cb.pressedColor = new Color(0.8f, 0.8f, 0.8f);
-                b.colors = cb;
+                Ui.SteadyButtonFeedback(b);
                 b.onClick.AddListener(() => onClick());
             }
 
@@ -247,10 +244,7 @@ namespace PCShopSell.Game.UI
             {
                 var b = imgRt.gameObject.AddComponent<Button>();
                 b.targetGraphic = raw;
-                ColorBlock cb = b.colors;
-                cb.highlightedColor = new Color(1.15f, 1.15f, 1.15f);
-                cb.pressedColor = new Color(0.8f, 0.8f, 0.8f);
-                b.colors = cb;
+                Ui.SteadyButtonFeedback(b);
                 b.onClick.AddListener(() => onClick());
             }
 
@@ -503,20 +497,15 @@ namespace PCShopSell.Game.UI
                     options.Add(new TalkOpt { Label = "返回聊天", Act = () => { discussingPeople = false; ctx.W.ResetScrollOnRebuild = true; ctx.W.Rebuild(); } });
                     return options;
                 }
-                options.Add(new TalkOpt { Label = "聊聊", Hot = true, Blocker = canTalk ? null : "对方已离开", Act = () => Reply(S.CasualConversation(personId,remote)) });
-                if (definition?.Stories != null && definition.Stories.Length > 0)
-                    options.Add(new TalkOpt { Label = "听听你的经历", Blocker = canTalk ? null : "对方已离开",
-                        Act = () => Reply(remote ? S.CityHearStory(personId, true) : S.HearCityPersonalStory(personId)) });
+                options.Add(new TalkOpt { Label = "聊一聊", Hot = true, Blocker = canTalk ? null : "对方已离开", Act = () => Reply(S.CasualConversation(personId,remote)) });
+                options.Add(new TalkOpt { Label = "交流物价", Blocker = canTalk ? null : "对方已离开",
+                    Act = () => Reply(S.ExchangeMarketTalk(personId, remote, place)) });
                 options.Add(new TalkOpt { Label = "谈论别人", Blocker = S.AskAboutOthersBlocker(personId,remote:remote), Act = () =>
                 {
                     discussingPeople = true;
                     ctx.W.ResetScrollOnRebuild = true;
                     ctx.W.Rebuild();
                 } });
-                if (!S.IsMet(personId)) options.Add(new TalkOpt {
-                    Label = "要个联系方式", Blocker = !near ? "需要当面交换" : S.ContactBlocker(personId),
-                    Act = () => Reply(S.AskContact(personId) ? name + "：“好，咱们留个联系方式，以后可以联系。”\n已存入通讯录。" : S.ContactBlocker(personId) ?? "暂时没有交换成功。")
-                });
                 options.Add(new TalkOpt { Label = "送礼", Blocker = !near ? "需要当面送礼" : S.PersonGiftBlocker(personId), Act = () => OpenPersonGiftGrid(personId, name, ctx) });
                 if (definition != null)
                     options.Add(new TalkOpt { Label = "邀请活动", Blocker = canTalk ? S.CityInviteBlocker(personId) : "对方已离开", Act = () => OpenCityActivityChooser(personId) });
@@ -662,22 +651,6 @@ namespace PCShopSell.Game.UI
         private List<TalkOpt> NpcDialogueActions(NpcDef n,Place stall,Window parent,TalkCtx ctx)
         {
                 var o = new List<TalkOpt>();
-                if (!S.IsMet(n.Id))
-                {
-                    // 联系方式得当面要，不是进店买了东西就自动有
-                    o.Add(new TalkOpt
-                    {
-                        Label = "要个联系方式（存进通讯录）",
-                        Blocker = S.ContactBlocker(n.Id),
-                        Hot = true,
-                        Act = () =>
-                        {
-                            if (S.AskContact(n.Id)) ctx.Reply = n.Name + "：“行，存一下，以后有事打电话。”\n" + (n.FirstMeet ?? n.Intro);
-                            ctx.W.Rebuild();
-                            parent?.Rebuild();
-                        },
-                    });
-                }
                 o.Add(new TalkOpt
                 {
                     Label = "随便闲聊",

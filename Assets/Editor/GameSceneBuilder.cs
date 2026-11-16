@@ -1269,13 +1269,13 @@ namespace PCShopSell.EditorTools
             contactAtMarket.Route = null;
             contactAtMarket.LocationPlaceId = g.CurrentPlace.Id;
             Check(!g.IsMet(marketContact), "进市场、买东西不会自动存供货联系人的联系方式");
-            g.AddRelation(marketContact, Math.Max(0, PCShopSell.Core.Session.GameSession.ContactMinRelation - g.Relation(marketContact)));
             _game.Ui.CloseModalWindows();
             _game.Ui.OpenNpcWindow(PCShopSell.Core.Session.Npcs.Get(marketContact), g.CurrentPlace, null);
             Frame(0.05f);
             Shot("vs1_101_ask_contact");
             _game.Ui.CloseModalWindows();
-            Check(g.AskContact(marketContact) && g.IsMet(marketContact), "聊天时当面要联系方式");
+            g.CasualConversation(marketContact);
+            Check(g.IsMet(marketContact), "首次当面聊天自动存入通讯录");
             g.AddRelation(marketContact, 45);
             g.AskForTip(marketContact);
             _game.Ui.CloseModalWindows();

@@ -6,6 +6,7 @@ using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
 {
@@ -193,11 +194,11 @@ namespace PCShopSell.Game.UI
             });
         }
 
-        private void BrandMetric(Transform row, string label, string value)
+        private Text BrandMetric(Transform row, string label, string value)
         {
             var cell = Ui.Rect(row, "BrandMetric"); Ui.Size(cell, -1, 56, 1); Ui.VList(cell, 3, 0);
             Ui.Size(Ui.Label(cell, label, 15, color: Ui.Dim), -1, 22);
-            Ui.Size(Ui.Label(cell, value, 20, color: Ui.Accent), -1, 28);
+            return Ui.Size(Ui.Label(cell, value, 20, color: Ui.Accent), -1, 28);
         }
 
         private void OpenBrandRename(BrandRecord brand, Window overview)

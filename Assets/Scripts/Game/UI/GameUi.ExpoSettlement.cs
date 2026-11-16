@@ -16,8 +16,11 @@ namespace PCShopSell.Game.UI
             var e = S.BrandBusiness.Exhibits.FirstOrDefault(x => x.Id == id);
             if (e == null) return;
             if (_quarterlyExpoWindow != null && !_quarterlyExpoWindow.Closed) _quarterlyExpoWindow.Close();
+            bool animateOnOpen = true;
             OpenWindow("本届展会结算", 960, 800, w =>
             {
+                var reveal = animateOnOpen ? NewUiReveal() : null;
+                animateOnOpen = false;
                 var body = Ui.Scroll(w.Content, 610);
                 var peers = S.BrandBusiness.Exhibits.Where(x => x.Format == 2 && x.Day == e.Day && (x.Finished || x.Missed)).ToArray();
                 if (peers.Length > 1)
@@ -30,12 +33,16 @@ namespace PCShopSell.Game.UI
                     + " · " + new GameDate(e.Day) + "—" + new GameDate(e.Day + 3), 22, Ui.Accent);
                 if (e.Missed) Para(body, e.LastFeedback ?? "本届未完成参展，保留已发生的销售与费用。", 18, Ui.Warn);
                 var totals = Ui.Row(body, 60, 12);
-                BrandMetric(totals, "现场销售收入", Money.FromCents(e.RevenueCents).ToString());
+                var revenue = Money.FromCents(e.RevenueCents);
+                var revenueLabel = BrandMetric(totals, "现场销售收入", revenue.ToString());
+                reveal?.Fade(totals, .03f);
+                reveal?.CountMoney(revenueLabel, revenue, amount => amount.ToString());
                 BrandMetric(totals, "售出 / 备货", e.Products.Sum(p => p.Sold) + " / " + e.Products.Sum(p => p.Reserved) + "件");
                 BrandMetric(totals, "退回来源门店", e.Products.Sum(p => p.Reserved - p.Sold) + "件");
                 if (e.ResultRecorded)
                 {
                     var rewards = BrandCard(body, "本届品牌提升 · 已生效");
+                    reveal?.Fade(rewards, .13f);
                     var values = Ui.Row(rewards, 78, 16);
                     ExpoRewardMetric(values, "品牌知名度", e.InfluenceBefore, e.InfluenceAfter);
                     ExpoRewardMetric(values, "品牌口碑", e.ReputationBefore, e.ReputationAfter);
@@ -50,7 +57,7 @@ namespace PCShopSell.Game.UI
                         + " · 退回" + (product.Reserved - product.Sold) + "件", 17);
                 }
                 var costs = BrandCard(body, "本届费用与收支");
-                Line(costs, "商品销售收入  +" + Money.FromCents(e.RevenueCents) + "（已入账）", 20, Ui.Good);
+                Line(costs, "商品销售收入  +" + revenue + "（已入账）", 20, Ui.Good);
                 Line(costs, "已记录摊位费 " + finance.BoothPaid + " · 海报费 " + finance.PosterPaid, 18);
                 Line(costs, "实际站台费 " + Money.FromCents(e.ExpoWagesCents) + "（" + e.AttendanceDays + "天）", 18);
                 Line(costs, finance.FeesRecorded ? "现场收支 " + finance.CashNet : "费用记录不完整，暂不计算现场收支", 21, Ui.Accent);
@@ -72,6 +79,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(actions, "关闭结算", w.Close, 18), -1, 44, 1);
                 if (S.CurrentPlace?.Id == "life_expo")
                     Ui.Size(Ui.Button(actions, "离开展馆", () => { w.Close(); _ctrl.LeaveCurrentPlace(); }, 18, Ui.ButtonBg), -1, 44, 1);
+                PlayUiReveal(reveal);
             });
         }
 

@@ -7,7 +7,7 @@ namespace PCShopSell.Core.Session
 {
     /// <summary>
     /// 城郊银行：活期存款（月息 0.3%，按天复利计入存款）和柜台借款。
-    /// 借款走的是和手机“周转借款”同一套接口（<see cref="GameSession.BorrowAppLoan"/> / RepayAppLoan），
+    /// 柜台和手机借款共用申请、动作验证和还款流程。
     /// 利息、到期扣款、还款提醒都一样，只是给没有智能手机的玩家多一个办理渠道。
     /// </summary>
     public sealed partial class GameSession

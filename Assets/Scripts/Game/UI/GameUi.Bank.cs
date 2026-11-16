@@ -171,7 +171,7 @@ namespace PCShopSell.Game.UI
 
             var feedback = Para(w.Content, "", 15, Ui.FlatDown);
             AppLoan quote = null;
-            var apply = Ui.Size(Ui.Button(w.Content, "申请借款", () =>
+            var apply = Ui.Size(Ui.Button(w.Content, "申请借款 · 开始验证", () =>
             {
                 if (quote == null) return;
                 ConfirmLoanApplication(quote, true, () =>

@@ -24,7 +24,7 @@ namespace PCShopSell.Game.Runtime
         private readonly Vignette _vignette;
         private readonly FilmGrain _grain;
         private float _lastMinute = -1;
-        private bool _lastInterior;
+        private bool _lastInterior, _lastRain;
         private int _lastGlowCount = -1, _lastLampCount = -1;
 
         public DayNightLighting(Camera cam, Light sun, Volume volume, List<Light> lamps)
@@ -104,12 +104,13 @@ namespace PCShopSell.Game.Runtime
         }
 
         /// <param name="interior">在店里时用暖色室内光。</param>
-        public void Apply(float minuteOfDay, bool interior)
+        public void Apply(float minuteOfDay, bool interior, bool raining = false)
         {
             if (Mathf.Abs(minuteOfDay - _lastMinute) < 0.5f && interior == _lastInterior
-                && _lastGlowCount == Mats.NightGlow.Count && _lastLampCount == _lamps.Count) return;
+                && raining == _lastRain && _lastGlowCount == Mats.NightGlow.Count && _lastLampCount == _lamps.Count) return;
             _lastMinute = minuteOfDay;
             _lastInterior = interior;
+            _lastRain = raining;
             _lastGlowCount = Mats.NightGlow.Count;
             _lastLampCount = _lamps.Count;
 
@@ -117,6 +118,7 @@ namespace PCShopSell.Game.Runtime
             float night = NightFactor(minuteOfDay);
 
             _cam.backgroundColor = interior ? new Color(0.08f, 0.08f, 0.1f) : Color.Lerp(a.SkyColor, b.SkyColor, t);
+            if (raining) _cam.backgroundColor *= new Color(.84f, .9f, .95f, 1);
             Color ambient=interior?new Color(.65f,.65f,.62f):Color.Lerp(a.AmbientColor,b.AmbientColor,t);
             RenderSettings.ambientLight=ambient;
             RenderSettings.ambientSkyColor=ambient;
@@ -137,6 +139,12 @@ namespace PCShopSell.Game.Runtime
             _sun.shadowStrength = interior ? .55f : .78f;
             _skyFill.color=new Color(.72f,.82f,1f);_skyFill.intensity=interior?.42f:Mathf.Lerp(.66f,.26f,night);
             _bounceFill.color=new Color(1f,.92f,.78f);_bounceFill.intensity=interior?.24f:Mathf.Lerp(.35f,.12f,night);
+            if (raining)
+            {
+                _sun.intensity *= .55f;
+                _sun.shadowStrength *= .5f;
+                _bounceFill.intensity *= .7f;
+            }
 
             _bloom.intensity.Override(Mathf.Lerp(a.BloomIntensity, b.BloomIntensity, t));
             _bloom.threshold.Override(Mathf.Lerp(a.BloomThreshold, b.BloomThreshold, t));

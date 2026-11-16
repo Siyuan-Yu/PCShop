@@ -380,10 +380,20 @@ namespace PCShopSell.Game.UI
                         BagStack st = cells[idx].st;
                         bool sel = st.Key == selKey;
                         Color bg = sel ? Color.Lerp(st.Color, Color.white, 0.35f) : st.Color;
-                        string label = st.Key == "rice" ? $"<size=15>大米</size>\n<size=14>{st.Kg * cells[idx].n / st.Count:0.##}千克</size>" : cells[idx].n > 0 ? $"<size=15>{ShortName(st.Name)}</size>\n<size=11>每件 {st.Kg / st.Count:0.###} 千克</size>\n<size=12>×{cells[idx].n}</size>" : "<size=22>…</size>";
-                        var cell = Ui.Size(Ui.Button(row, label, () => onPick(st.Key), 14, bg), 80, 80);
+                        int count = cells[idx].n;
+                        int? expiry = cells[idx].expiry >= 0 ? cells[idx].expiry : null;
+                        var cell = Ui.Size(Ui.Button(row, ShortName(st.Name), () => onPick(st.Key), 13, bg), 80, 80);
                         cell.name="BagItem_"+st.Key;
-                        AddFoodExpiry(cell, st.Key, cells[idx].expiry);
+                        var title = cell.GetComponentInChildren<Text>();
+                        float band = expiry.HasValue ? .2f : .02f;
+                        title.rectTransform.Anchor(0, band, 1, band + .21f, 2, 0, 2, 0);
+                        FillItemPortrait(cell.transform, st.Key).Anchor(.18f, band + .21f, .82f, .98f);
+                        string amount = st.Key == "rice" ? $"{st.Kg * count / st.Count:0.##}kg" : count > 0 ? $"×{count}" : "…";
+                        var badge = Ui.Label(cell.transform, amount, 13, TextAnchor.MiddleRight);
+                        badge.rectTransform.Anchor(.05f, .74f, .95f, .98f);
+                        badge.gameObject.AddComponent<Outline>().effectColor = Ui.PanelBg;
+                        cell.Tip(st.Name);
+                        AddFoodExpiry(cell, st.Key, expiry);
                     }
                     else
                     {
@@ -703,7 +713,8 @@ namespace PCShopSell.Game.UI
             if (pan.CookedBowls > 0)
             {
                 Line(w.Content, $"饭煮好了 · 锅里有 {pan.CookedBowls} 碗", 18, Ui.Accent);
-                foreach (FoodBatch b in pan.Cooked) Line(w.Content, $"· {b.Name} ×{b.Count}  （{FoodExpiryBadge.Countdown(b.ExpireDay, S.Clock.Now.TotalMinutes)}）", 15, Ui.Dim);
+                foreach (FoodBatch b in pan.Cooked)
+                    ItemLabel(w.Content, "cooked:" + b.Id, $"{b.Name} ×{b.Count}  （{FoodExpiryBadge.Countdown(b.ExpireDay, S.Clock.Now.TotalMinutes)}）", 15, color: Ui.Dim);
                 RectTransform erow = Ui.Row(w.Content, 46);
                 erow.name = "OpeningMealTake";
                 var eat = Ui.Button(erow, "现在吃一碗", () =>
@@ -1227,6 +1238,7 @@ namespace PCShopSell.Game.UI
             {
                 FurnitureDef d = FurnitureCatalog.Get(l.Id);
                 RectTransform row = Ui.Row(stash, 40);
+                ItemPortrait(row, "furn:" + l.Id, 34);
                 Ui.Size(Ui.Label(row, $"{d.Name} ×{l.Count}　<size=14><color=#A8B0BA>每件 {d.WeightKg:0.##} 千克</color></size>", 17), -1, -1, 1);
                 bool fits = d.WeightKg <= S.FreeKg + 1e-9;
                 Ui.Size(Ui.Button(row, fits ? "搬走 1 件" : "装不下", () =>
@@ -1480,7 +1492,7 @@ namespace PCShopSell.Game.UI
             foreach (var entry in stored)
             {
                 string id = entry.Key;
-                var row = HomeDockFurnitureRow(FurnitureLabel(id, entry.Value), _ctrl.PlaceId == id && !_ctrl.PlaceHoldsPlaced);
+                var row = HomeDockFurnitureRow(id, FurnitureLabel(id, entry.Value), _ctrl.PlaceId == id && !_ctrl.PlaceHoldsPlaced);
                 Ui.Size(Ui.Button(row, "摆放", () =>
                 {
                     if (_ctrl.Placing && !_ctrl.PlacingShop) _ctrl.SelectStock(id);
@@ -1499,7 +1511,7 @@ namespace PCShopSell.Game.UI
             scroll.verticalNormalizedPosition = editing && _ctrl.PlaceId != null ? 1 : previousScroll;
         }
 
-        private RectTransform HomeDockFurnitureRow(string label, bool selected)
+        private RectTransform HomeDockFurnitureRow(string id, string label, bool selected)
         {
             var row = Ui.Row(_homeDockContent, 40, 5);
             var background = row.gameObject.AddComponent<Image>();
@@ -1508,6 +1520,7 @@ namespace PCShopSell.Game.UI
             var layout = row.GetComponent<HorizontalLayoutGroup>();
             layout.padding = new RectOffset(8, 5, 0, 0);
             layout.childForceExpandHeight = false;
+            ItemPortrait(row, "furn:" + id, 34);
             Ui.Size(Ui.Label(row, label, 16), 0, 34, 1);
             return row;
         }
@@ -1582,7 +1595,9 @@ namespace PCShopSell.Game.UI
                 if (def == null) continue;
                 any = true;
                 string id = def.Id;
-                Ui.Size(Ui.Button(_placePanel, $"{def.Name} ×{kv.Value}", () => _ctrl.SelectStock(id), 17, Ui.SelectedButton(_ctrl.PlaceId == id && !_ctrl.PlaceHoldsPlaced)), -1, 40);
+                var button = Ui.Size(Ui.Button(_placePanel, $"{def.Name} ×{kv.Value}", () => _ctrl.SelectStock(id), 17,
+                    Ui.SelectedButton(_ctrl.PlaceId == id && !_ctrl.PlaceHoldsPlaced)), -1, 40);
+                ItemButtonPortrait(button, "furn:" + id, 32);
             }
             if (!any) Ui.Size(Ui.Label(_placePanel, "空的。去家具城买，或者网购。", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 30);
 

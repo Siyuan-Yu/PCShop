@@ -71,7 +71,7 @@ namespace PCShopSell.Tests
                 s.Flags.Remove(GameSession.MetFlag("momo"));
                 s.BeginBrandStory(first[0].Id, true); Assert.AreEqual(0, s.BrandStories.Count, "No contact bypass");
                 MeetHere(s, "momo"); s.BeginBrandStory(first[0].Id);
-                Assert.True(s.HasGreeted("momo")); Assert.False(s.IsMet("momo"), "Talking does not exchange contact details");
+                Assert.True(s.HasGreeted("momo")); Assert.True(s.IsMet("momo"), "The first conversation saves the contact");
             }
         }
         [Test] public void PreparationIsLocalConsumesSelectedStockOnceAndDoesNotPayProfit()

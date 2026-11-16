@@ -356,7 +356,7 @@ namespace PCShopSell.Tests
             Assert.True(prepared.DebugPrepareDistrictPrerequisites(1));
             var date = prepared.Clock.Today;
             Assert.True(prepared.Ledger.TryDebit(date, "验收支出", Money.FromYuan(50000), "引荐门槛测试"));
-            Assert.True(prepared.BorrowAppLoan(40000, 3));
+            Assert.True(BankTests.BorrowVerified(prepared, 40000, 3));
             prepared.Ledger.Credit(date, "贷款到账", Money.FromYuan(10000), "朋友无息借款");
             var save = prepared.CreateSave();
             save.appLoans = save.appLoans.Append(new AppLoan

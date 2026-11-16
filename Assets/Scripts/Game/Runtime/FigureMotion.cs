@@ -3,6 +3,8 @@ using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
 {
+    public enum FigureWorkAction { None, Cook, Plate, Serve, Clear, Assemble }
+
     /// <summary>Procedural walking for the miniature figures. Only the visual rig moves; gameplay roots stay on the ground.</summary>
     public sealed class FigureMotion : MonoBehaviour
     {
@@ -17,8 +19,22 @@ namespace PCShopSell.Game.Runtime
         private Vector3 _reachTarget;
         private float _reachWeight, _reachCrouch;
         private int _reachArm = 1;
+        private FigureWorkAction _workAction;
+        private GameObject _spatula, _screwdriver;
         public string ActivityKind { get; set; }
         public int ActivityOption { get; set; } = -1;
+        public FigureWorkAction WorkAction
+        {
+            get => _workAction;
+            set
+            {
+                if (_workAction == value) return;
+                _workAction = value;
+                if (value == FigureWorkAction.Cook && _spatula == null) _spatula = CreateWorkTool(true);
+                if (value == FigureWorkAction.Assemble && _screwdriver == null) _screwdriver = CreateWorkTool(false);
+                ApplyPose();
+            }
+        }
         public bool Seated
         {
             get=>_seated;
@@ -62,6 +78,28 @@ namespace PCShopSell.Game.Runtime
             _reachCrouch = crouch;
             _reachArm = leftHand ? 0 : 1;
             ApplyPose();
+        }
+
+        private GameObject CreateWorkTool(bool cooking)
+        {
+            // The hand mesh is scaled, so attach to its shoulder and use the hand's center as the grip.
+            var tool = new GameObject(cooking ? "CookingSpatula" : "AssemblyScrewdriver");
+            tool.transform.SetParent(_arms[1], false);
+            tool.transform.localPosition = _hands[1].localPosition;
+            var steel = Mats.Lit(new Color(.73f, .76f, .79f));
+            if (cooking)
+            {
+                Prims.Box(tool.transform, "Handle", new Vector3(0, -.1f, -.055f), new Vector3(.055f, .30f, .055f),
+                    Mats.Lit(ArtDirection.Wood)).transform.localRotation = Quaternion.Euler(18, 0, 0);
+                Prims.Box(tool.transform, "Blade", new Vector3(0, -.25f, -.105f), new Vector3(.135f, .12f, .035f), steel);
+            }
+            else
+            {
+                Prims.Box(tool.transform, "Handle", new Vector3(0, -.02f, .04f), new Vector3(.075f, .075f, .12f),
+                    Mats.Lit(new Color(.9f, .5f, .14f)));
+                Prims.Box(tool.transform, "Bit", new Vector3(0, -.02f, -.07f), new Vector3(.033f, .033f, .13f), steel);
+            }
+            return tool;
         }
 
         public void ClearReachPose()
@@ -152,6 +190,9 @@ namespace PCShopSell.Game.Runtime
 
         private void ApplyPose()
         {
+            bool working = !_seated && _reachWeight <= 0 && _blend < .1f;
+            if (_spatula != null) _spatula.SetActive(working && _workAction == FigureWorkAction.Cook);
+            if (_screwdriver != null) _screwdriver.SetActive(working && _workAction == FigureWorkAction.Assemble);
             if(_seated)
             {
                 _visual.localPosition=Vector3.zero;Torso.localPosition=Vector3.zero;Torso.localRotation=Quaternion.Euler(-4,0,0);
@@ -208,6 +249,11 @@ namespace PCShopSell.Game.Runtime
                     arm.localRotation = Quaternion.Slerp(arm.localRotation, Quaternion.FromToRotation(Vector3.down, direction), _reachWeight);
                 return;
             }
+            if (working && _workAction != FigureWorkAction.None)
+            {
+                ApplyWorkPose();
+                return;
+            }
             if (!string.IsNullOrEmpty(ActivityKind) && _blend < .1f)
             {
                 if (ActivityKind == "court")
@@ -234,6 +280,36 @@ namespace PCShopSell.Game.Runtime
                 Torso.localRotation=Quaternion.Euler(energetic?8:0,Mathf.Sin(_idleTime*1.5f)*4,0);
                 _arms[0].localRotation=Quaternion.Euler(ActivityKind=="ktv"?-100+gesture:-45+gesture,0,-12);
                 _arms[1].localRotation=Quaternion.Euler(energetic?-65-gesture:-20-gesture,0,12);
+            }
+        }
+
+        private void ApplyWorkPose()
+        {
+            switch (_workAction)
+            {
+                case FigureWorkAction.Cook:
+                    float stir = _idleTime * 6f;
+                    Torso.localRotation = Quaternion.Euler(10, Mathf.Sin(stir) * 7, 0);
+                    _arms[0].localRotation = Quaternion.Euler(-91, -7, 12);
+                    _arms[1].localRotation = Quaternion.Euler(-100 + Mathf.Cos(stir) * 14, -21 + Mathf.Sin(stir) * 22, -13);
+                    break;
+                case FigureWorkAction.Assemble:
+                    float turn = _idleTime * 7f;
+                    float press = Mathf.Pow((1 + Mathf.Sin(turn * .5f)) * .5f, 2);
+                    Torso.localRotation = Quaternion.Euler(13 + 7 * press, -4, -3);
+                    _arms[0].localRotation = Quaternion.Euler(-99 + 4 * press, -8, 13);
+                    _arms[1].localRotation = Quaternion.Euler(-112 + 11 * press, -18 + Mathf.Sin(turn) * 5, -12);
+                    _screwdriver.transform.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(turn) * 35);
+                    break;
+                case FigureWorkAction.Plate:
+                case FigureWorkAction.Serve:
+                case FigureWorkAction.Clear:
+                    float lift = Mathf.Sin(_idleTime * 4f);
+                    float reach = _workAction == FigureWorkAction.Clear ? -53 : -72;
+                    Torso.localRotation = Quaternion.Euler(10 + lift * 4, 0, 0);
+                    _arms[0].localRotation = Quaternion.Euler(reach + lift * 13, 0, 12);
+                    _arms[1].localRotation = Quaternion.Euler(reach + lift * 13, 0, -12);
+                    break;
             }
         }
     }

@@ -11,7 +11,7 @@ namespace PCShopSell.Game.UI
     {
         private const int UpcomingScheduleLimit = 7;
         private const float UpcomingScheduleWidth = 330f;
-        private static readonly Vector2 UpcomingScheduleRestPosition = new Vector2(-16, -86);
+        private static readonly Vector2 RightHudRestPosition = new Vector2(-16, -86);
         private RectTransform _upcomingScheduleHud;
         private readonly Button[] _upcomingScheduleRows = new Button[UpcomingScheduleLimit];
         private readonly Text[] _upcomingScheduleTimes = new Text[UpcomingScheduleLimit], _upcomingScheduleTitles = new Text[UpcomingScheduleLimit];
@@ -26,7 +26,7 @@ namespace PCShopSell.Game.UI
             _upcomingScheduleHud = Ui.Panel(parent, "UpcomingScheduleHud", Ui.PanelBg).rectTransform;
             _upcomingScheduleHud.anchorMin = _upcomingScheduleHud.anchorMax = new Vector2(1, 1);
             _upcomingScheduleHud.pivot = new Vector2(1, 1);
-            _upcomingScheduleHud.anchoredPosition = UpcomingScheduleRestPosition;
+            _upcomingScheduleHud.anchoredPosition = RightHudRestPosition;
             _upcomingScheduleHud.sizeDelta = new Vector2(UpcomingScheduleWidth, 47 + 43 * UpcomingScheduleLimit);
             var border = _upcomingScheduleHud.gameObject.AddComponent<Outline>();
             border.effectColor = new Color(.4f, .45f, .49f); border.effectDistance = new Vector2(1, -1);
@@ -59,6 +59,29 @@ namespace PCShopSell.Game.UI
                 _upcomingScheduleTitles[index] = name;
             }
             _upcomingScheduleHud.gameObject.SetActive(false);
+        }
+
+        private void PositionRightHudCards()
+        {
+            var position = RightHudRestPosition;
+            var dock = DockOpen ? _dock : HomeDockOpen ? _homeDock : null;
+            if (dock != null)
+            {
+                position = new Vector2(dock.offsetMin.x - 10, dock.offsetMax.y);
+            }
+            else if (_shopDockToggle.gameObject.activeSelf || _homeDockToggle.gameObject.activeSelf)
+            {
+                position.y = -120;
+            }
+
+            if (_loanReminderHud.gameObject.activeSelf)
+            {
+                if (_loanReminderHud.anchoredPosition != position)
+                    _loanReminderHud.anchoredPosition = position;
+                position.y -= _loanReminderHud.rect.height + 8;
+            }
+            if (_upcomingScheduleHud.anchoredPosition != position)
+                _upcomingScheduleHud.anchoredPosition = position;
         }
 
         private void UpdateUpcomingScheduleHud()

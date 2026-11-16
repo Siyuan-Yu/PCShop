@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using PCShopSell.Core.Session;
 using UnityEngine;
 
@@ -6,6 +8,16 @@ namespace PCShopSell.Game.Runtime
     public sealed partial class ShopInteriorView
     {
         private bool _restaurantPlayerWorking;
+
+        private static void UpdateRestaurantSounds(SpecialBusinessState state)
+        {
+            if (state.Orders.Any(order => order.Stage == DiningStage.Cooking)
+                || state.Workers.Any(worker => worker.Job == RestaurantJob.Cook && worker.OperateUntil >= 0))
+                SoundFx.Play(Sfx.Cooking);
+            if (state.Orders.Any(order => !order.IsFishOrder && order.Stage == DiningStage.Eating))
+                SoundFx.Play(Sfx.Dining);
+        }
+
         private static void RestaurantCarry(GameObject figure,bool carrying)
         {
             var dish=figure.transform.Find("RestaurantCarriedDish");
@@ -16,23 +28,46 @@ namespace PCShopSell.Game.Runtime
             }
             if(dish!=null)dish.gameObject.SetActive(carrying);
         }
-        private void ApplyRestaurantActor(GameSession session,RestaurantWorker worker,GameObject figure)
+        private Vector3 RestaurantActorPosition(GameSession session, RestaurantWorker worker)
         {
             var pos=worker.Position(session.Clock.Now.TotalMinutes+session.Time.FractionalMinute);
-            var target=ClampIndoorNpc(Origin+new Vector3((float)pos.x,0,(float)pos.z))-Origin;
+            return ClampIndoorNpc(Origin+new Vector3((float)pos.x,0,(float)pos.z))-Origin;
+        }
+
+        private void ApplyRestaurantActor(GameSession session,RestaurantWorker worker,GameObject figure,List<Vector3> occupied = null)
+        {
+            var target = RestaurantActorPosition(session, worker);
+            if (occupied != null)
+            {
+                const float spacing = (float)GameSession.RestaurantStandSpacing;
+                if (occupied.Any(p => (p - target).sqrMagnitude < spacing * spacing)
+                    && TryFindIndoorStand(target, occupied, .2f, out var nearby, 1.3f)) target = nearby;
+                occupied.Add(target);
+            }
             var delta=target-figure.transform.localPosition;
             figure.transform.localPosition=target;
-            if(delta.sqrMagnitude>.00001f)figure.transform.localRotation=Quaternion.LookRotation(delta);
-            else if(worker.Busy&&worker.OperateUntil>=0)
+            bool operating = worker.Busy && worker.OperateUntil >= 0;
+            if (operating)
             {
-                var station=session.CurrentShop.Layout.Find(p=>p.Id==worker.Station);
+                var station=session.RestaurantWorkStation(session.CurrentShop,worker);
                 if(station!=null)
                 {
                     var face=new Vector3((float)station.X,0,(float)station.Z)-target;
                     if(face.sqrMagnitude>.001f)figure.transform.localRotation=Quaternion.LookRotation(face);
                 }
             }
-            var motion=figure.GetComponent<FigureMotion>();if(motion!=null)motion.ActivityKind=worker.Busy&&worker.OperateUntil>=0?"restaurant":null;
+            else if (worker.Busy && delta.sqrMagnitude > .00001f)
+                figure.transform.localRotation = Quaternion.LookRotation(delta);
+
+            var motion = figure.GetComponent<FigureMotion>();
+            motion.WorkAction = !operating ? FigureWorkAction.None : worker.Job switch
+            {
+                RestaurantJob.Cook => FigureWorkAction.Cook,
+                RestaurantJob.Plate => FigureWorkAction.Plate,
+                RestaurantJob.Serve => worker.Carrying ? FigureWorkAction.Serve : FigureWorkAction.Plate,
+                RestaurantJob.Clear => FigureWorkAction.Clear,
+                _ => FigureWorkAction.None
+            };
             RestaurantCarry(figure,worker.Carrying);
         }
         private void UpdateRestaurantPlayer(GameSession session)
@@ -42,7 +77,7 @@ namespace PCShopSell.Game.Runtime
             else
             {
                 RestaurantCarry(_owner,false);
-                if(_restaurantPlayerWorking)_owner.GetComponent<FigureMotion>().ActivityKind=null;
+                if(_restaurantPlayerWorking)_owner.GetComponent<FigureMotion>().WorkAction=FigureWorkAction.None;
             }
             _restaurantPlayerWorking=worker?.Busy==true;
         }

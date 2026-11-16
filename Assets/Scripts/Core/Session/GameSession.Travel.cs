@@ -13,6 +13,9 @@ namespace PCShopSell.Core.Session
 
         /// <summary>当前出行方式。载具永远跟着玩家。</summary>
         public VehicleKind Vehicle { get; private set; } = VehicleKind.Walk;
+        public VehicleSpec CurrentVehicle => CommuteVehicle(Vehicle);
+        public VehicleSpec CommuteVehicle(VehicleKind kind) =>
+            MotorCatalog.CommuteSpec(CommuteMotorModelId(kind)) ?? Vehicles.Get(kind);
 
         public bool TricycleImpounded => ImpoundedVehicleCount(VehicleKind.Tricycle) > 0;
 
@@ -34,7 +37,7 @@ namespace PCShopSell.Core.Session
             if (Trip != null) return Fail("在路上不能换交通方式。");
             if (!Owns(kind)) return Fail($"你还没有{Vehicles.Get(kind).Name}。");
             if (!CanUse(kind)) return Fail("没有可用的" + Vehicles.Get(kind).Name + "通勤车；请到车库设置，或等待员工归还、办理赎车。");
-            VehicleSpec v = Vehicles.Get(kind);
+            VehicleSpec v = CommuteVehicle(kind);
             if (CarriedKg > v.CargoCapacity * Backpack.KgPerSpace + 1e-9)
                 return Fail($"身上的东西太重（{CarriedKg:0.##} 千克），{v.Name}最多带 {v.CargoCapacity * Backpack.KgPerSpace:0.##} 千克。");
             Vehicle = kind;

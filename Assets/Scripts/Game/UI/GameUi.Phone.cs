@@ -66,7 +66,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(screen.transform, $"信号 ||||　　{GameSession.ClockText(S.Clock.MinuteOfDay)}", 17, TextAnchor.MiddleLeft, ink), -1, 28);
             Color lcd = new Color(0.22f, 0.33f, 0.20f);
             Ui.Size(Ui.Button(screen.transform, "1  通讯录", () => OpenContactsPanel(w), 20, lcd), -1, 54);
-            Ui.Size(Ui.Button(screen.transform, "3  上网（需智能手机）", null, 18, lcd, false), -1, 54);
+            Ui.Size(Ui.Button(screen.transform, "2  邀约设置", OpenInvitationSettings, 18, lcd), -1, 54);
 
             Color key = new Color(0.30f, 0.31f, 0.34f);
             string[] keys = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#" };
@@ -77,7 +77,8 @@ namespace PCShopSell.Game.UI
                 {
                     string k = keys[r * 3 + c];
                     int num = k.Length == 1 && char.IsDigit(k[0]) ? k[0] - '0' : -1;
-                    Ui.Size(Ui.Button(row, k, num == 1 ? (System.Action)(() => OpenContactsPanel(w)) : null, 24, key, num == 1), 100, -1, 1);
+                    Action action = num switch { 1 => () => OpenContactsPanel(w), 2 => OpenInvitationSettings, _ => null };
+                    Ui.Size(Ui.Button(row, k, action, 24, key, action != null), 100, -1, 1);
                 }
             }
 
@@ -92,7 +93,9 @@ namespace PCShopSell.Game.UI
             {
                 case PhoneApps.Store: return new Color(0.20f, 0.50f, 0.90f);
                 case PhoneApps.Contacts: return new Color(0.25f, 0.65f, 0.35f);
+                case PhoneApps.Settings: return new Color(0.64f, 0.73f, 0.80f);
                 case PhoneApps.Schedule: return new Color(0.90f, 0.45f, 0.25f);
+                case PhoneApps.FoodDelivery: return new Color(0.97f, 0.69f, 0.42f);
                 case PhoneApps.Shop: return new Color(0.88f, 0.28f, 0.35f);
                 case PhoneApps.Loans: return new Color(0.82f, 0.59f, 0.19f);
                 case PhoneApps.Live: return new Color(0.72f, 0.46f, 0.19f);
@@ -107,7 +110,9 @@ namespace PCShopSell.Game.UI
             {
                 case PhoneApps.Store: return "商";
                 case PhoneApps.Contacts: return "话";
+                case PhoneApps.Settings: return "设";
                 case PhoneApps.Schedule: return "历";
+                case PhoneApps.FoodDelivery: return "餐";
                 case PhoneApps.Shop: return "购";
                 case PhoneApps.Loans: return "借";
                 case PhoneApps.Live: return "播";
@@ -168,12 +173,37 @@ namespace PCShopSell.Game.UI
             switch (id)
             {
                 case PhoneApps.Contacts: OpenContactsPanel(w); break;
+                case PhoneApps.Settings: OpenInvitationSettings(); break;
                 case PhoneApps.Schedule: OpenSchedulePanel(); break;
+                case PhoneApps.FoodDelivery: OpenMealDeliveryApp(); break;
                 case PhoneApps.Shop: OpenOnlinePanel(); break;
                 case PhoneApps.Loans: OpenLoansApp(); break;
                 case PhoneApps.Live: OpenKolLobby(); break;
                 case PhoneApps.Securities: OpenCityInvestments(); break;
             }
+        }
+
+        private void OpenInvitationSettings()
+        {
+            OpenPhoneAppWindow("设置", w =>
+            {
+                var heading = Ui.Row(w.Content, 42, 8);
+                Ui.Size(Ui.Label(heading, "NPC 主动邀约", 22, color: Ui.Accent), 0, 42, 1);
+                Ui.Size(Ui.Button(heading, "返回手机", () => { w.Close(); _phoneStoreWindow?.Close(); }, 16), 124, 36);
+                var row = Ui.Row(w.Content, 76, 8);
+                AddMode(InvitationMode.More, "更多邀约", "随机邀约出现机会 ×2");
+                AddMode(InvitationMode.Standard, "标准", "按原有频率接收邀约");
+                AddMode(InvitationMode.DoNotDisturb, "免打扰", "暂停接收新的主动邀约");
+                Para(w.Content, "选择后立即生效。已经约好的活动可在日程中查看。", 16, Ui.Dim);
+
+                void AddMode(InvitationMode mode, string label, string detail)
+                {
+                    bool active = S.IncomingInvitations == mode;
+                    var button = Ui.Button(row, (active ? "✓ " : "") + label + "\n<size=15>" + detail + "</size>",
+                        () => { S.SetInvitationMode(mode); w.Rebuild(); }, 20, Ui.SelectedButton(active));
+                    Ui.Size(button, 0, 76, 1).name = "InvitationMode_" + mode;
+                }
+            }, scrollContent: false);
         }
 
         private void BuildPhoneStore(Window w)
@@ -261,7 +291,7 @@ namespace PCShopSell.Game.UI
             var met = S.SavedConversationContacts().ToList();
             if (met.Count == 0)
             {
-                Line(w.Content, "还没有联系人 · 熟悉度达到 30 后可当面交换号码", 17, Ui.Dim);
+                Line(w.Content, "还没有联系人 · 首次当面交谈后自动加入通讯录", 17, Ui.Dim);
                 return;
             }
             RectTransform list = flexible ? PhoneFlexibleScroll(w.Content, "MyContactsList") : Ui.Scroll(w.Content, 440);

@@ -8,7 +8,8 @@ namespace PCShopSell.Core.Finance
     public sealed class LedgerAttribution
     {
         public LedgerBusinessKind BusinessKind { get; }
-        public string ShopId { get; }
+        public string ShopId { get; private set; }
+        public string SalesAccountId { get; private set; }
         public string PropertyId { get; }
         public string ActivityId { get; }
         public string SourceEventId { get; }
@@ -30,7 +31,15 @@ namespace PCShopSell.Core.Finance
         private static string Clean(string value) => string.IsNullOrEmpty(value) ? null : value;
         public LedgerAttribution Product(string productId, int quantity, long unitCostCents) =>
             new LedgerAttribution(BusinessKind, ShopId, PropertyId, ActivityId, SourceEventId, TransactionKind)
-            { ProductId = Clean(productId), Quantity = Math.Max(0, quantity), UnitCostCents = Math.Max(0, unitCostCents), EmployeeId=EmployeeId, PayrollWorkday=PayrollWorkday };
+            { ProductId = Clean(productId), Quantity = Math.Max(0, quantity), UnitCostCents = Math.Max(0, unitCostCents),
+                EmployeeId = EmployeeId, PayrollWorkday = PayrollWorkday, SalesAccountId = SalesAccountId };
+        internal LedgerAttribution AssignShopSale(string shopId, string salesAccountId)
+        {
+            var copy = (LedgerAttribution)MemberwiseClone();
+            copy.ShopId = Clean(shopId);
+            copy.SalesAccountId = Clean(salesAccountId);
+            return copy;
+        }
         public static LedgerAttribution ForShop(string shopId, string sourceEventId = null, string transactionKind = null) =>
             new LedgerAttribution(LedgerBusinessKind.Operating, shopId, sourceEventId: sourceEventId, transactionKind: transactionKind);
         public static LedgerAttribution ForAsset(string propertyId = null, string sourceEventId = null, string transactionKind = null) =>

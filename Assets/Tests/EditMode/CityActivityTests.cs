@@ -113,16 +113,15 @@ namespace PCShopSell.Tests
             {
                 s.Clock.Restore(new GameDate(6), 21 * 60 + 53);
                 Assert.True(s.SetVehicle(VehicleKind.Taxi));
-                var venue = s.City.GetPlace("life_restaurant");
                 var appointment = GameTimestamp.From(s.Clock.Today.AddDays(1), 18 * 60 + 15);
                 var activity = s.ScheduleCityActivity("dinner", System.Array.Empty<string>(), appointment.TotalMinutes);
                 Assert.NotNull(activity);
-                var departure = appointment.AddMinutes(-s.CityTravelMinutes(venue) - GameSession.CityArrivalWindowMinutes);
+                var departure = appointment.AddMinutes(-6 * 60);
                 var cash = s.Ledger.Balance;
                 var location = s.CurrentPlace;
 
                 string hint = s.CityActivityTravelBlocker(activity.Id);
-                StringAssert.Contains("还早呢", hint);
+                StringAssert.Contains("可提前 6 小时出发", hint);
                 StringAssert.Contains(departure.ToString(), hint);
                 Assert.False(s.GoToCityActivity(activity.Id));
                 Assert.IsNull(s.CityIntent);

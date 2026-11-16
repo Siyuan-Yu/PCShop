@@ -64,7 +64,12 @@ namespace PCShopSell.Core.Session
         }
     }
     [Serializable] public sealed class SavedFixedSalePrice {public string ShopId,Key;public long Price;}
-    public sealed partial class SaveData { public SpecialBusinessState[] specialBusinesses; public SavedFixedSalePrice[] fixedSalePrices; }
+    public sealed partial class SaveData
+    {
+        public SpecialBusinessState[] specialBusinesses;
+        public SavedFixedSalePrice[] fixedSalePrices;
+        public int restaurantFishOrderPriceVersion;
+    }
     public sealed partial class GameSession
     {
         private readonly Dictionary<string,SpecialBusinessState> _specialBusinesses=new Dictionary<string,SpecialBusinessState>();
@@ -84,6 +89,8 @@ namespace PCShopSell.Core.Session
         public static readonly long[] RecipePrices={36,44,56};
         public const int RestaurantFishOrderLimit = 2;
         public const int RestaurantFishOrderDays = 7;
+        private const int RestaurantFishOrderPriceMultiplier = 2;
+        private const int RestaurantFishOrderPriceVersion = 1;
         private const int RestaurantFishSecondOfferGap = 4 * 60;
         private const int LegacyFishOfferInterval = 2 * GameTimestamp.MinutesPerDay;
         public static string ConditionName(UsedCondition c)=>c==UsedCondition.Good?"好货":c==UsedCondition.Flawed?"瑕疵品":c==UsedCondition.Replica?"仿造品":"完全损坏";
@@ -422,8 +429,47 @@ namespace PCShopSell.Core.Session
             Say($"{meal}在自己的餐厅吃了{RecipeNames[recipe]}，消耗本店大米 0.25 千克和{Ingredients.Get(RecipeIngredients[recipe]).Name} 1 份，饱腹 +{gain:0.#}。");
             return true;
         }
-        public string RestaurantIngredientBlocker(OwnedShop shop, DiningOrder order) =>
-            RestaurantIngredientBlocker(shop, order.Recipe, order.Fish);
+        public string RestaurantIngredientBlocker(OwnedShop shop, DiningOrder order)
+        {
+            _specialBusinesses.TryGetValue(shop.Place.Id, out var state);
+            return RestaurantIngredientBlocker(shop, state, order, Clock.Now.TotalMinutes);
+        }
+
+        private string RestaurantIngredientBlocker(OwnedShop shop, SpecialBusinessState state, DiningOrder order, long minute)
+        {
+            string missing = RestaurantIngredientBlocker(shop, order.Recipe, order.Fish);
+            if (missing != null || state == null) return missing;
+
+            var pending = state.Orders.Where(o => o.IsFishOrder && o.Stage == DiningStage.Waiting && minute < o.DueAt)
+                .OrderBy(o => o.DueAt).ThenBy(o => o.Id);
+            double rice = KitchenRice(shop);
+            Dictionary<string, int> reserved = null;
+            int Available(string id) => KitchenIngredientCount(shop, id)
+                - (reserved != null && reserved.TryGetValue(id, out int count) ? count : 0);
+            void Reserve(string id)
+            {
+                reserved ??= new Dictionary<string, int>();
+                reserved[id] = reserved.TryGetValue(id, out int count) ? count + 1 : 1;
+            }
+
+            // Keep ingredients in the fridge until a cook actually starts. Reserve only whole,
+            // currently cookable preorders so a missing fish cannot block the rest of the kitchen.
+            foreach (var preorder in pending)
+            {
+                if (preorder.Id == order.Id || rice < .25 - 1e-9) break;
+                string ingredient = RecipeIngredients[preorder.Recipe];
+                if (preorder.Fish == null || Available(ingredient) < 1 || Available(preorder.FishId) < 1) continue;
+                rice -= .25;
+                Reserve(ingredient);
+                Reserve(preorder.FishId);
+            }
+
+            if (reserved == null) return null;
+            string recipeIngredient = RecipeIngredients[order.Recipe];
+            if (rice < .25 - 1e-9) return "大米已优先留给鱼餐预订。";
+            if (Available(recipeIngredient) < 1) return Ingredients.Get(recipeIngredient).Name + "已优先留给鱼餐预订。";
+            return order.IsFishOrder && Available(order.FishId) < 1 ? "这条鱼已留给交期更早的预订。" : null;
+        }
 
         private string RestaurantIngredientBlocker(OwnedShop shop, int recipe, FishDefinition fish)
         {
@@ -451,8 +497,9 @@ namespace PCShopSell.Core.Session
             var used=state.Orders.Where(o=>o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Burnt).Select(o=>o.Stove).ToArray();
             if(stove<0)stove=Enumerable.Range(0,Furnished(shop,"restaurant_stove")).First(i=>!used.Contains(i));
             if(used.Contains(stove))return false;
-            if (!ConsumeRecipe(shop, order.Recipe, order.Fish))
-                return automatic ? false : Fail(RestaurantIngredientBlocker(shop, order));
+            if (RestaurantIngredientBlocker(shop, state, order, minute) is string missing)
+                return automatic ? false : Fail(missing);
+            if (!ConsumeRecipe(shop, order.Recipe, order.Fish)) return false;
             order.Stove=stove;order.Stage=DiningStage.Cooking;order.Started=minute;order.ReadyAt=minute+8;order.BurnAt=minute+38;return true;
         }
         public bool StartRestaurantCooking(int id)
@@ -577,12 +624,15 @@ namespace PCShopSell.Core.Session
             if (visit.CountedAsLost) state.Lost++;
         }
 
-        private static void RecordRestaurantLoss(SpecialBusinessState state, GameTimestamp now, int id, long arrived, LeaveReason reason) =>
+        private void RecordRestaurantLoss(OwnedShop shop, SpecialBusinessState state, GameTimestamp now, int id, long arrived, LeaveReason reason)
+        {
             RecordRestaurantVisit(state, now, new ShopVisitDetail
             {
                 CustomerId = id, ArrivalMinute = arrived, State = CustomerState.Left,
                 CountedAsLost = true, Reason = reason
             });
+            ShopGuestChanged?.Invoke(shop.Place, ShopGuestEvent.LeftWithoutPaying);
+        }
 
         private static string RestaurantSaleId(OwnedShop shop, DiningOrder order) =>
             $"meal:{shop.Place.Id}:{order.Arrived}:{order.Id}";
@@ -595,6 +645,7 @@ namespace PCShopSell.Core.Session
             state.Revenue+=order.Price;state.Paid++;order.Stage=DiningStage.Completed;
             shop.Sim.AdjustShopAwareness(ShopSimulation.SaleAwarenessGain);
             shop.Sim.AdjustShopReputation(.12);
+            ShopGuestChanged?.Invoke(shop.Place, ShopGuestEvent.Paid);
             if (order.IsFishOrder)
             {
                 shop.Sim.AdjustPersonalReputation(order.ReputationReward);
@@ -627,7 +678,7 @@ namespace PCShopSell.Core.Session
                 if (!shop.Sim.InHours(now) && !canServe && GuestStillHere(o))
                 {
                     o.Stage = DiningStage.Left;
-                    RecordRestaurantLoss(state, now, o.Id, o.Arrived, LeaveReason.ShopClosed);
+                    RecordRestaurantLoss(shop, state, now, o.Id, o.Arrived, LeaveReason.ShopClosed);
                     if (o.TableCleared) state.Orders.Remove(o);
                     continue;
                 }
@@ -635,7 +686,7 @@ namespace PCShopSell.Core.Session
                 if((o.Stage==DiningStage.Waiting||o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Ready||o.Stage==DiningStage.Burnt)&&minute-o.Arrived>=100)
                 {
                     o.Stage=DiningStage.Left;
-                    RecordRestaurantLoss(state, now, o.Id, o.Arrived, LeaveReason.MealWaitTimeout);
+                    RecordRestaurantLoss(shop, state, now, o.Id, o.Arrived, LeaveReason.MealWaitTimeout);
                     shop.Sim.AdjustShopReputation(-.3);
                 }
                 if(o.Stage==DiningStage.Eating&&minute>=o.EatUntil)
@@ -646,7 +697,7 @@ namespace PCShopSell.Core.Session
                 if(o.Stage==DiningStage.Checkout&&minute>=o.CheckoutAt+RestaurantCheckoutPatienceMinutes)
                 {
                     o.Stage=DiningStage.Left;
-                    RecordRestaurantLoss(state, now, o.Id, o.Arrived, LeaveReason.Impatient);
+                    RecordRestaurantLoss(shop, state, now, o.Id, o.Arrived, LeaveReason.Impatient);
                     shop.Sim.AdjustShopReputation(-.3);
                     if(o.TableCleared)state.Orders.Remove(o);
                 }
@@ -677,7 +728,7 @@ namespace PCShopSell.Core.Session
             {
                 Id = state.NextId++, Recipe = recipe, Table = -1, Stage = DiningStage.Waiting, Arrived = minute,
                 FishId = fish.Id, DueAt = minute + RestaurantFishOrderDays * GameTimestamp.MinutesPerDay,
-                Price = (long)Math.Round(RecipePrices[recipe] * state.MenuMarkup) + fish.DinnerSurcharge
+                Price = ((long)Math.Round(RecipePrices[recipe] * state.MenuMarkup) + fish.DinnerSurcharge) * RestaurantFishOrderPriceMultiplier
             });
             int dayPlusOne = (int)(minute / GameTimestamp.MinutesPerDay) + 1;
             long nextDay = (long)dayPlusOne * GameTimestamp.MinutesPerDay;
@@ -700,15 +751,16 @@ namespace PCShopSell.Core.Session
                 state.RestaurantArrivalsToday = 0;
             }
             state.RestaurantArrivalsToday++;
+            ShopGuestChanged?.Invoke(shop.Place, ShopGuestEvent.Entered);
             if (!Random.Chance(shop.Sim.MarkupPurchaseIntent(state.MenuMarkup)))
             {
-                RecordRestaurantLoss(state, now, state.NextId++, minute, LeaveReason.TooExpensive);
+                RecordRestaurantLoss(shop, state, now, state.NextId++, minute, LeaveReason.TooExpensive);
                 return true;
             }
             var recipes=Enumerable.Range(0,RecipeNames.Length).Where(i=>(state.RecipeMask&(1<<i))!=0).ToArray();
             if (recipes.Length == 0)
             {
-                RecordRestaurantLoss(state, now, state.NextId++, minute, LeaveReason.MenuUnavailable);
+                RecordRestaurantLoss(shop, state, now, state.NextId++, minute, LeaveReason.MenuUnavailable);
                 return true;
             }
             int recipe=recipes[Random.Next(0,recipes.Length)];
@@ -722,6 +774,7 @@ namespace PCShopSell.Core.Session
         }
         private void SaveSpecialBusinesses(SaveData d)
         {
+            d.restaurantFishOrderPriceVersion = RestaurantFishOrderPriceVersion;
             d.specialBusinesses=_specialBusinesses.Values.Select(s=>s.Copy()).ToArray();
             d.fixedSalePrices=MyShops.SelectMany(shop=>shop.Sim.FixedSalePrices.Select(p=>new SavedFixedSalePrice{ShopId=shop.Place.Id,Key=p.Key,Price=p.Value})).ToArray();
         }
@@ -741,6 +794,10 @@ namespace PCShopSell.Core.Session
                         state.NextFishOrder = (long)state.LastFishOrderDayPlusOne * GameTimestamp.MinutesPerDay;
                     }
                     state.Orders.RemoveAll(order => order.TableCleared);
+                    if (d.restaurantFishOrderPriceVersion < RestaurantFishOrderPriceVersion)
+                        foreach (var order in state.Orders.Where(o => o.IsFishOrder &&
+                            o.Stage is DiningStage.Waiting or DiningStage.Cooking or DiningStage.Ready or DiningStage.Burnt))
+                            order.Price *= RestaurantFishOrderPriceMultiplier;
                     foreach (var order in state.Orders.Where(o => o.Stage == DiningStage.Checkout))
                         order.CheckoutAt = Math.Min(order.CheckoutAt, Clock.Now.TotalMinutes);
                     foreach (var worker in state.Workers.Where(w => w.Station == FurnitureCatalog.LegacyRestaurantPass && w.Job == RestaurantJob.Plate && w.Phase == 1))

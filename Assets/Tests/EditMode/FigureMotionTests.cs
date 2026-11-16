@@ -135,5 +135,26 @@ namespace PCShopSell.Tests
             _motion.Advance(0);
             Assert.AreEqual(pose, knee.localRotation);
         }
+
+        [TestCase(FigureWorkAction.Cook, "CookingSpatula")]
+        [TestCase(FigureWorkAction.Assemble, "AssemblyScrewdriver")]
+        public void WorkActionsMoveTheArmsAndToolWhileStandingStill(FigureWorkAction action, string toolName)
+        {
+            var shoulder = _motion.Torso.Find("ShoulderR");
+            _motion.WorkAction = action;
+            var tool = shoulder.Find(toolName);
+            Assert.That(tool.gameObject.activeSelf, Is.True);
+            var start = shoulder.localRotation;
+            var initialToolRotation = tool.rotation;
+            var rootPosition = _figure.transform.position;
+            for (int i = 0; i < 16; i++) _motion.Advance(Dt, false);
+            Assert.AreEqual(start, shoulder.localRotation);
+            for (int i = 0; i < 16; i++) _motion.Advance(Dt);
+            Assert.That(Quaternion.Angle(start, shoulder.localRotation), Is.GreaterThan(5));
+            Assert.That(Quaternion.Angle(initialToolRotation, tool.rotation), Is.GreaterThan(5));
+            Assert.AreEqual(rootPosition, _figure.transform.position);
+            _motion.WorkAction = FigureWorkAction.None;
+            Assert.That(tool.gameObject.activeSelf, Is.False);
+        }
     }
 }

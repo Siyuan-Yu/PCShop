@@ -102,6 +102,7 @@ namespace PCShopSell.Core.Session
 
         public string CommuteMotorModelId(VehicleKind kind)
         {
+            if (!MotorCatalog.CanRace(kind)) return null;
             foreach(var vehicle in _garage)
                 if(vehicle.Commuter && MotorCatalog.Get(vehicle.ModelId).Kind==kind) return vehicle.ModelId;
             return null;

@@ -187,7 +187,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void NewPhone_OnlyHasStoreAndContacts_AppsDownloadedFree()
+        public void NewPhoneHasSystemAppsAndCanDownloadOthersForFree()
         {
             GameSession s = Make(false);
             GameSessionTests.Teleport(s, "phone");
@@ -195,6 +195,7 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.HasApp(PhoneApps.Store));
             Assert.IsTrue(s.HasApp(PhoneApps.Contacts));
             Assert.IsTrue(s.HasApp(PhoneApps.Schedule), "日历是自带的");
+            Assert.IsTrue(s.HasApp(PhoneApps.FoodDelivery), "外卖是自带的");
             foreach (string id in new[] { PhoneApps.Shop, PhoneApps.Wholesale })
                 Assert.IsFalse(s.HasApp(id), id);
             Money before = s.Ledger.Balance;

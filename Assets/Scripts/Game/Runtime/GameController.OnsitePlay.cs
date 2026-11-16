@@ -13,6 +13,7 @@ namespace PCShopSell.Game
         private Camera _onsiteCamera;
         private RenderTexture _onsiteTexture;
         private Transform _onsiteBall,_onsiteTarget,_onsiteDefender,_onsiteCup,_onsitePlayer;
+        private FigureMotion _onsiteShooterMotion;
         private LineRenderer _onsiteAim,_onsiteTrail;
         private string _onsiteSceneKey;
         public RenderTexture OnsiteTexture=>_onsiteTexture;
@@ -28,6 +29,7 @@ namespace PCShopSell.Game
             if(_onsiteScene==null||key!=_onsiteSceneKey)
             {
                 if(_onsiteScene!=null){_onsiteScene.SetActive(false);Kill.It(_onsiteScene);}_onsiteSceneKey=key;_onsiteBall=_onsiteTarget=_onsiteDefender=_onsiteCup=_onsitePlayer=null;_onsiteAim=_onsiteTrail=null;
+                _onsiteShooterMotion = null;
                 _onsiteScene=new GameObject("OnsitePlayableScene");_onsiteScene.transform.position=new Vector3(6000,0,6000);var root=_onsiteScene.transform;
                 if(_onsiteTexture==null){_onsiteTexture=new RenderTexture(1600,900,24);_onsiteTexture.Create();}
                 _onsiteCamera=new GameObject("OnsiteSceneCamera").AddComponent<Camera>();_onsiteCamera.transform.SetParent(root,false);_onsiteCamera.targetTexture=_onsiteTexture;
@@ -57,8 +59,22 @@ namespace PCShopSell.Game
                     foreach(float x in new[]{-8f,8f})Prims.Box(root,"Sideline",new Vector3(x,.015f,6),new Vector3(.08f,.025f,20),cream);
                     Prims.Box(root,"Backboard",new Vector3(0,3.5f,8.5f),new Vector3(1.8f,1.1f,.12f),cream);
                     Prims.Box(root,"HoopPost",new Vector3(0,1.6f,9),new Vector3(.2f,3.2f,.2f),sage);
-                    for(int i=0;i<12;i++){float a=i*Mathf.PI*2/12;Prims.Box(root,"Rim",new Vector3(Mathf.Cos(a)*.3f,3.05f,8+Mathf.Sin(a)*.3f),new Vector3(.14f,.07f,.14f),Mats.Lit(ArtDirection.Clay));}
-                    _onsiteBall=Prims.Shape(PrimitiveType.Sphere,root,"LiveBasketball",new Vector3(0,1.7f,0),Vector3.one*.35f,Mats.Lit(ArtDirection.Clay)).transform;
+                    var hoop = new Vector3(0, (float)OnsitePlayState.BasketballRimHeight, 8);
+                    var rim = Mats.Lit(ArtDirection.Clay);
+                    for (int i = 0; i < 12; i++)
+                    {
+                        float angle = i * Mathf.PI * 2 / 12;
+                        var edge = new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle));
+                        Prims.Box(root, "Rim", hoop + edge * .3f, new Vector3(.14f,.07f,.14f), rim);
+                        if (i % 2 != 0) continue;
+                        var top = hoop + edge * .3f;
+                        var bottom = hoop + edge * .24f - Vector3.up * .42f;
+                        var strand = Prims.Box(root, "NetStrand", (top + bottom) * .5f,
+                            new Vector3(.018f, Vector3.Distance(top, bottom), .018f), cream);
+                        strand.transform.localRotation = Quaternion.FromToRotation(Vector3.up, top - bottom);
+                    }
+                    _onsiteBall = Prims.Shape(PrimitiveType.Sphere, root, "LiveBasketball", Vector3.zero,
+                        Vector3.one * .42f, Mats.Lit(ArtDirection.Hex("F66A1B"))).transform;
                     string opponentId = Session.RunningCityActivity.Participants.FirstOrDefault()?.PersonId;
                     string opponentName = Session.CityPerson(opponentId)?.Name ?? "同行者";
                     var opponent = Prims.Figure(root, opponentName, opponentId == null ? ArtDirection.Sage : CrowdView.PersonClothing(opponentId), ArtDirection.Cream, 1);
@@ -66,7 +82,9 @@ namespace PCShopSell.Game
                     _onsiteDefender = opponent.transform;
                     opponent.GetComponent<FigureMotion>().LocomotionEnabled = false;
                     Prims.SignText(_onsiteDefender, opponentName, new Vector3(0, 2.2f, 0), 2.6f, .26f, ArtDirection.Cream);
-                    _onsitePlayer=Prims.Figure(root,"PlayerShooting",ArtDirection.Clay,ArtDirection.Cream,1).transform;_onsitePlayer.GetComponent<FigureMotion>().LocomotionEnabled=false;
+                    _onsitePlayer=Prims.Figure(root,"PlayerShooting",ArtDirection.Clay,ArtDirection.Cream,1).transform;
+                    _onsiteShooterMotion = _onsitePlayer.GetComponent<FigureMotion>();
+                    _onsiteShooterMotion.LocomotionEnabled = false;
                     _onsiteCamera.orthographic=true;_onsiteCamera.orthographicSize=9;_onsiteCamera.transform.localPosition=new Vector3(14,17,-10);_onsiteCamera.transform.LookAt(root.TransformPoint(new Vector3(0,1,4)));
                 }
                 else if(s.Number<=58)
@@ -90,24 +108,57 @@ namespace PCShopSell.Game
                 if(s.Number>=54&&s.Number<=58)
                 {
                     LineRenderer Line(string name,Color color,float width){var go=new GameObject(name);go.transform.SetParent(root,false);var line=go.AddComponent<LineRenderer>();line.useWorldSpace=false;line.startWidth=line.endWidth=width;line.material=Mats.Unlit(color);return line;}
-                    _onsiteAim=Line("AimDirection",ArtDirection.Cream,s.Number<=56?.06f:.3f);_onsiteTrail=Line("BallFlightTrail",ArtDirection.Brass,s.Number<=56?.045f:.35f);
+                    _onsiteAim=Line("AimDirection",ArtDirection.Cream,s.Number<=56?.06f:.3f);
+                    _onsiteTrail=Line("BallFlightTrail",s.Number<=56?ArtDirection.Hex("FFE193"):ArtDirection.Brass,s.Number<=56?.09f:.35f);
                 }
                 OnsiteLayer(root);
             }
             _onsiteScene.SetActive(true);var t=_onsiteScene.transform;
-            if(_onsiteBall!=null)_onsiteBall.localPosition=new Vector3((float)s.BallX,(float)s.BallY,(float)s.BallZ+(s.Number<=56&&s.Mode==1?2.8f:0));
+            bool basketball = s.Number is >= 54 and <= 56;
+            float origin = basketball ? (float)s.BasketballOriginZ : 0;
+            if(_onsiteBall!=null)_onsiteBall.localPosition=new Vector3((float)s.BallX,(float)s.BallY,(float)s.BallZ+origin);
             if(_onsiteDefender!=null)_onsiteDefender.localPosition=new Vector3((float)s.DefenderX,0,4.5f);
             if(_onsiteTarget!=null)_onsiteTarget.localPosition=new Vector3((float)s.TargetX,0,(float)s.TargetZ);
             if(_onsiteCup!=null)
             {_onsiteCup.localPosition=new Vector3(0,s.Pending is "sip" or "taste"?1.9f:1.5f,.8f);_onsiteCup.localRotation=Quaternion.Euler(s.Pending is "sip" or "taste"?-25:0,0,0);}
             if(_onsitePlayer!=null)
             {
-                float origin=s.Number<=56&&s.Mode==1?2.8f:0;_onsitePlayer.localPosition=new Vector3(-.55f,0,origin-.2f);
+                _onsitePlayer.localPosition=new Vector3(-.55f,0,origin-.2f);
+                if (_onsiteShooterMotion != null)
+                {
+                    float release = s.Phase == "flight" && !s.BasketballDrill ? Mathf.Clamp01(1 - (float)s.Flight / .32f) : 0;
+                    float step = s.BasketballDrill ? (float)s.BallZ : 0;
+                    _onsitePlayer.localPosition = new Vector3(-.41f, .22f * release, origin + step - .2f);
+                    var reach = s.BasketballDrill ? _onsiteBall.localPosition : new Vector3(0, 1.5f + .45f * release, origin + .16f);
+                    float reachWeight = s.Phase == "flight" && !s.BasketballDrill ? release : s.Phase == "result" ? 0 : 1;
+                    _onsiteShooterMotion.SetReachPose(t.TransformPoint(reach), reachWeight, s.BasketballDrill ? .22f : 0, false);
+                }
                 float power=s.Phase=="charging"?(float)s.Power:.65f;float range=s.Number<=56?(s.Mode==1?8:13)*power:new[]{100f,180,55}[s.Mode]*power*power;
-                float yaw=(float)s.Angle*Mathf.Deg2Rad;_onsiteAim.positionCount=2;_onsiteAim.SetPositions(new[]{new Vector3(0,.08f,origin),new Vector3(Mathf.Sin(yaw)*range+(float)s.Wind,.08f,origin+Mathf.Cos(yaw)*range)});
-                _onsiteTrail.positionCount=s.Phase is "flight" or "result"?32:0;
-                for(int i=0;i<_onsiteTrail.positionCount;i++)
-                {float f=(float)(s.Phase=="flight"?Math.Min(1,s.Flight/(s.Number<=56?1.4:2.6)):1)*i/31;float y=s.Number<=56?1.7f*(1-f)+3.05f*f+2.5f*Mathf.Sin(Mathf.PI*f):.2f+Mathf.Sin(Mathf.PI*f)*Mathf.Max(3,(float)s.Distance*.2f);_onsiteTrail.SetPosition(i,new Vector3((float)s.LandingX*f,y,origin+(float)s.LandingZ*f));}
+                bool showAim = !s.BasketballDrill && s.Phase != "flight";
+                _onsiteAim.positionCount = showAim ? 2 : 0;
+                if (showAim)
+                {
+                    float yaw = (float)s.Angle * Mathf.Deg2Rad;
+                    _onsiteAim.SetPosition(0, new Vector3(0, .08f, origin));
+                    _onsiteAim.SetPosition(1, new Vector3(Mathf.Sin(yaw) * range + (float)s.Wind, .08f, origin + Mathf.Cos(yaw) * range));
+                }
+                _onsiteTrail.positionCount = !s.BasketballDrill && s.Phase is ("flight" or "result") ? 32 : 0;
+                double flightDuration = basketball ? OnsitePlayState.BasketballFlightSeconds : 2.6;
+                double progress = s.Phase == "flight" ? Math.Min(1, s.Flight / flightDuration) : 1;
+                for (int i = 0; i < _onsiteTrail.positionCount; i++)
+                {
+                    double f = progress * i / 31;
+                    if (basketball)
+                    {
+                        var point = s.BasketballFlightPoint(f);
+                        _onsiteTrail.SetPosition(i, new Vector3((float)point.X, (float)point.Y, origin + (float)point.Z));
+                    }
+                    else
+                    {
+                        float y = .2f + Mathf.Sin(Mathf.PI * (float)f) * Mathf.Max(3, (float)s.Distance * .2f);
+                        _onsiteTrail.SetPosition(i, new Vector3((float)(s.LandingX * f), y, (float)(s.LandingZ * f)));
+                    }
+                }
             }
             if(s.Number==76)
             {

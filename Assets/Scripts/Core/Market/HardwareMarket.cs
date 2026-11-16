@@ -112,7 +112,7 @@ namespace PCShopSell.Core.Market
         public void OnNewDay(GameDate today)
         {
             for (int i = 0; i < _factor.Length; i++)
-                _factor[i] = Clamp(_factor[i] * 0.9 + _rng.Gaussian(0.05));
+                _factor[i] = Clamp(_factor[i] * 0.9 + _rng.Gaussian(0.065));
 
             ApplyBias(today);
             EnsureOutlook(today);
@@ -157,7 +157,7 @@ namespace PCShopSell.Core.Market
             {
                 bool planned = false;
                 foreach (var shock in _shocks) if (shock.category == category && shock.day > today.TotalDays) { planned = true; break; }
-                if (!planned) ScheduleShock(today.AddDays(2 + _rng.Next(0, 3)), category, (_rng.Chance(0.5) ? 1 : -1) * _rng.Range(0.06, 0.12));
+                if (!planned) ScheduleShock(today.AddDays(2 + _rng.Next(0, 3)), category, (_rng.Chance(0.5) ? 1 : -1) * _rng.Range(0.07, 0.13));
             }
         }
 

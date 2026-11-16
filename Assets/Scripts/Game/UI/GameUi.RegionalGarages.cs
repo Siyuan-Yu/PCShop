@@ -149,7 +149,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(summary, 0, -1, 1);
             Ui.VList(summary, 3, 0).childAlignment = TextAnchor.MiddleLeft;
             Line(summary, model.Name, 22);
-            Line(summary, "不占车位 · 通勤中不可参赛或练习", 16, Ui.Dim);
+            Line(summary, TravelSpeedText(MotorCatalog.CommuteSpec(model.Id)) + " · 不占车位", 16, Ui.Dim);
             bool hasSpace = S.GarageFreeSpaces(garage.Id) > 0;
             var park = Ui.Button(row, "停入车库", () => ConfirmBusiness("将通勤车停入车库？",
                 model.Name + "入库后将取消通勤用途，占用本区 1 个车位。",
@@ -321,7 +321,9 @@ namespace PCShopSell.Game.UI
             var garage = RegionalGarages.All[_assetMotorRegion]; var lease = S.GarageLease(garage.Id); var all = S.Garage;
             var commuters = all.Where(v => v.Commuter && MotorCatalog.RaceClass(MotorCatalog.Get(v.ModelId).Kind) == _assetMotorClass).ToArray();
             var commute = BusinessCard(w.Content, "通勤车辆 · 不占车库车位");
-            foreach (var v in commuters) MotorIdentity(commute, v.ModelId, MotorCatalog.Get(v.ModelId).Name, S.MotorLocationText(v));
+            foreach (var v in commuters)
+                MotorIdentity(commute, v.ModelId, MotorCatalog.Get(v.ModelId).Name,
+                    TravelSpeedText(MotorCatalog.CommuteSpec(v.ModelId)) + " · " + S.MotorLocationText(v));
             if (commuters.Length == 0) Line(commute, "这一分类尚未指定通勤车", 17, Ui.Dim);
             var info = BusinessCard(w.Content, garage.Name + " · 车位资产");
             Line(info,"已购 "+(lease?.OwnedSpaces??0)+"位 · 停车 "+S.ParkedMotorCount(garage.Id)+"辆 · 空余 "+S.GarageFreeSpaces(garage.Id)+"位",18,Ui.Accent);

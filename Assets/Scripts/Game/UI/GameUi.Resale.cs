@@ -159,6 +159,7 @@ namespace PCShopSell.Game.UI
                     var entry = Ui.Size(Ui.Button(list, $"{UsedItemTitle(item)}\n{subtitle}",
                         () => Select(tab, item.Id), 16, Ui.SelectedButton(item.Id == selectedId)), -1, 60);
                     entry.GetComponentInChildren<Text>().alignment = TextAnchor.MiddleLeft;
+                    ItemButtonPortrait(entry, "used:" + item.Product, 42);
                 }
 
                 var detail = Ui.Size(Ui.Panel(body, "UsedItemDetail", Ui.PanelBg2), -1, 350, 1).rectTransform;
@@ -198,7 +199,7 @@ namespace PCShopSell.Game.UI
             long Draft(long initial) => _usedPriceDrafts.TryGetValue(key, out long draft) ? draft : initial;
             void SaveDraft(long amount) => _usedPriceDrafts[key] = amount;
 
-            Line(parent, UsedItemTitle(item), 23, Ui.Accent);
+            ItemLabel(parent, "used:" + item.Product, UsedItemTitle(item), 23, 48, Ui.Accent);
             if (!item.Owned)
             {
                 Line(parent, $"{UsedSellerName(item)} · {GameSession.SellerPersonalities[item.Personality]}", 17);
@@ -320,12 +321,9 @@ namespace PCShopSell.Game.UI
                 int id=item.Id;bool reserved=S.UsedReserved(S.CurrentShop,id);
                 string status=reserved?"顾客已拿取 · 等待收银":onShelf.Contains(id)?"已上架 · 等待挑选":item.Listed?"等待货架空位":item.Inspected?"已鉴定 · 待定价上架":"待鉴定";
                 var card=Ui.Panel(container,"UsedStock_"+id,shelfOnly?ShelfBack:Ui.PanelBg2).rectTransform;Ui.VList(card,5,8);
-                if(shelfOnly)
-                {
-                    var icon=Ui.Rect(card,"UsedIllustration_"+id);Ui.Size(icon,-1,85);
-                    DrawUsedIcon(icon,item.Product);
-                }
-                Line(card,GameSession.UsedNames[item.Product]+" #"+id+" · "+status,17,Ui.Accent);
+                var title = Ui.Row(card, shelfOnly ? 68 : 46, 8);
+                ItemPortrait(title, "used:" + item.Product, shelfOnly ? 64 : 42).name = "UsedIllustration_" + id;
+                Ui.Size(Ui.Label(title, GameSession.UsedNames[item.Product] + " #" + id + " · " + status, 17, color: Ui.Accent), 0, -1, 1);
                 Line(card,(item.Inspected?GameSession.UsedConditionName(item):"状态待鉴定")+" · "+GameSession.UsedWeight(item).ToString("0.##")+" 千克 · 成本 ¥"+item.Cost+" · 标价 ¥"+item.Price,15);
                 var row=Ui.Row(card,34,5);
                 Ui.Size(Ui.Button(row,item.Listed?"调整售价":"定价并上架",()=>OpenUsedPrice(id,owner),16,Ui.ButtonBg,item.Inspected&&!reserved),-1,34,1);
@@ -335,21 +333,13 @@ namespace PCShopSell.Game.UI
             if(items.Length==0)Line(parent,"暂无二手转售库存。",16,Ui.Dim);
             if(!pricingOnly)BuildUsedSalesHistory(parent,state);
         }
-        private static void DrawUsedIcon(RectTransform root,int product)
-        {
-            Color dark=new Color(.22f,.25f,.24f),gold=new Color(.8f,.66f,.38f);
-            if(product==0){Chip(root,gold,.32f,.6f,.68f,.94f);Chip(root,dark,.48f,.18f,.52f,.65f);Chip(root,dark,.3f,.1f,.7f,.19f);}
-            else if(product==1){Chip(root,dark,.34f,.08f,.66f,.93f);Chip(root,Color.gray,.4f,.45f,.6f,.82f);Chip(root,Color.black,.43f,.17f,.57f,.4f);}
-            else if(product==2){Chip(root,new Color(.45f,.3f,.2f),.45f,.02f,.55f,.98f);Chip(root,gold,.35f,.3f,.65f,.72f);Chip(root,Color.white,.39f,.35f,.61f,.67f);Chip(root,dark,.49f,.47f,.51f,.62f);Chip(root,dark,.49f,.47f,.57f,.5f);}
-            else {Chip(root,gold,.4f,.3f,.6f,.85f);Chip(root,new Color(.55f,.38f,.23f),.3f,.1f,.7f,.3f);}
-        }
         private void OpenUsedPrice(int id,Window owner)
         {
             var item=S.SpecialBusiness(S.CurrentShop.Place.Id).Used.FirstOrDefault(i=>i.Id==id&&!i.Sold);if(item==null)return;
             long price=Math.Max(1,item.Price);
             OpenWindow("二手商品售价",600,330,w=>
             {
-                Line(w.Content,GameSession.UsedNames[item.Product]+" · "+GameSession.UsedConditionName(item),20,Ui.Accent);
+                ItemLabel(w.Content,"used:"+item.Product,GameSession.UsedNames[item.Product]+" · "+GameSession.UsedConditionName(item),20,color:Ui.Accent);
                 Line(w.Content,"收购成本 ¥"+item.Cost+" · 建议售价 ¥"+GameSession.UsedValue(item),17);
                 var row=Ui.Row(w.Content,40,6);
                 Ui.Size(Ui.Button(row,"−",()=>{price=Math.Max(1,price-1);w.Rebuild();},18),55);

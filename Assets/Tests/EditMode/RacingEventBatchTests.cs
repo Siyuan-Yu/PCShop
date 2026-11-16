@@ -168,21 +168,37 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void SpectatorBookingExistsBeforeUnlockAndOnlyRewardsCompletedAttendance()
+        public void SpectatorRequiresRegistrationAndContactAndOnlyRewardsAttendance()
         {
-            using var s = Make(); var data = s.CreateSave();
+            using var s = Make();
+            s.RaiseEvent("race_spectator");
+            Assert.IsNull(s.PendingEvent, "The host is still a stranger");
+            s.Meet("racer_1", 3);
+            var data = s.CreateSave();
             data.flags = data.flags.Where(f => f != "racing:access").ToArray();
-            using var loaded = GameSession.Load(s.City, data);
-            loaded.RaiseEvent("race_spectator"); Assert.NotNull(loaded.PendingEvent);
-            var intelligence = loaded.Player.Intelligence;
-            Assert.IsTrue(loaded.ResolveEvent(0));
-            var a = loaded.CityActivities.Single(x => x.DefinitionId == "race_watch");
-            Assert.IsFalse(loaded.IsMet("racer_1")); Assert.AreEqual(intelligence, loaded.Player.Intelligence);
-            loaded.Clock.Restore(new GameDate((int)(a.ScheduledStart / 1440)), (int)(a.ScheduledStart % 1440));
-            At(loaded, "race_0"); Assert.IsTrue(loaded.PrepareVenueCompanions(loaded.CurrentPlace));
-            loaded.AdvanceClock(61);
+            using var locked = GameSession.Load(s.City, data);
+            locked.RaiseEvent("race_spectator");
+            Assert.IsNull(locked.PendingEvent, "Even a contact must wait until racing is unlocked");
+
+            s.RaiseEvent("race_spectator");
+            Assert.NotNull(s.PendingEvent);
+            var intelligence = s.Player.Intelligence;
+            Assert.IsTrue(s.ResolveEvent(0));
+            var a = s.CityActivities.Single(x => x.DefinitionId == "race_watch");
+            Assert.AreEqual(intelligence, s.Player.Intelligence);
+
+            var legacy = s.CreateSave();
+            legacy.flags = legacy.flags.Where(f => f != "racing:access").ToArray();
+            using var restored = GameSession.Load(s.City, legacy);
+            Assert.AreEqual(CityActivityPhase.Cancelled, restored.CityActivities.Single(x => x.Id == a.Id).State);
+            Assert.AreEqual(s.Relation("racer_1"), restored.Relation("racer_1"));
+            Assert.AreEqual(s.Ledger.Balance, restored.Ledger.Balance);
+
+            s.Clock.Restore(new GameDate((int)(a.ScheduledStart / 1440)), (int)(a.ScheduledStart % 1440));
+            At(s, "race_0"); Assert.IsTrue(s.PrepareVenueCompanions(s.CurrentPlace));
+            s.AdvanceClock(61);
             Assert.AreEqual(CityActivityPhase.Completed, a.State);
-            Assert.IsTrue(loaded.IsMet("racer_1")); Assert.AreEqual(intelligence + 1, loaded.Player.Intelligence);
+            Assert.AreEqual(intelligence + 1, s.Player.Intelligence);
         }
 
         [Test]
@@ -202,6 +218,7 @@ namespace PCShopSell.Tests
             using var s = Make(); s.RaiseEvent("race_rematch"); Assert.IsNull(s.PendingEvent);
             var data = s.CreateSave(); data.lastEventRaceOpponents = new[] { "racer_2" };
             using var loaded = GameSession.Load(s.City, data);
+            loaded.Meet("racer_2", 3);
             loaded.RaiseEvent("race_rematch"); Assert.NotNull(loaded.PendingEvent); Assert.IsTrue(loaded.ResolveEvent(0));
             Assert.AreEqual("racer_2", loaded.RaceInvitations.Single().PersonId);
             s.RaiseEvent("race_rider_bet"); Assert.IsTrue(s.ResolveEvent(0)); var b = s.EventRaceBookings.Single();

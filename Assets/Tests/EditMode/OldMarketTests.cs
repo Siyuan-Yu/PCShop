@@ -103,10 +103,10 @@ namespace PCShopSell.Tests
             Assert.IsTrue(s.ResolveEvent(0)); var a = s.CityActivities.Last(x => x.Active); Assert.AreEqual(GameSession.OldMarketVenueId, a.VenueId);
             Assert.AreEqual(cash, s.Ledger.Balance); Assert.AreEqual(iq, s.Player.Intelligence);
             s.Clock.Restore(new GameDate((int)(a.ScheduledStart / 1440)), (int)(a.ScheduledStart % 1440)); At(s); s.PrepareVenueCompanions(s.CurrentPlace); s.AdvanceClock(3);
-            Assert.AreEqual(CityActivityPhase.Running, a.State, a.EndReason); s.AdvanceClock(4);
-            Assert.IsTrue(s.ChooseCityActivity(a.Id, 2)); s.AdvanceClock(5);
-            for (int i = 0; i < 2; i++) { Assert.IsTrue(s.ChooseCityActivity(a.Id, 1)); s.AdvanceClock(4); }
-            s.AdvanceClock(100); Assert.AreEqual(CityActivityPhase.Completed, a.State, a.EndReason);
+            Assert.AreEqual(CityActivityPhase.Running, a.State, a.EndReason); OnsitePlayTests.StepManualActivity(s, 4);
+            Assert.IsTrue(s.ChooseCityActivity(a.Id, 2)); OnsitePlayTests.StepManualActivity(s, 5);
+            for (int i = 0; i < 2; i++) { Assert.IsTrue(s.ChooseCityActivity(a.Id, 1)); OnsitePlayTests.StepManualActivity(s, 4); }
+            Assert.IsTrue(s.FinishManualCityActivity(a.Id)); Assert.AreEqual(CityActivityPhase.Completed, a.State, a.EndReason);
             Assert.AreEqual(iq + 1, s.Player.Intelligence); Assert.AreEqual(cash, s.Ledger.Balance);
         }
     }

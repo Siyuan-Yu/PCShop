@@ -45,15 +45,17 @@ namespace PCShopSell.Core.Session
             {
                 double oldShopRent = ShopRentFactor;
                 for (int i = 0; i < _propertyPriceFactors.Length; i++)
-                {
-                    double limit = i % 2 == 0 ? .035 : .025;
-                    double movement = _propertyPriceRandom.Range(-limit, limit);
-                    _propertyPriceFactors[i] = Math.Max(.5, Math.Min(2, _propertyPriceFactors[i] * (1 + movement)));
-                }
+                    _propertyPriceFactors[i] = NextPropertyPriceFactor(_propertyPriceFactors[i], i, _propertyPriceRandom);
                 foreach (var listing in _listings)
                     listing.Rent = Money.Max(Money.FromCents(1), listing.Rent.Scale(ShopRentFactor / oldShopRent));
                 _propertyPriceWeek++;
             }
+        }
+
+        private static double NextPropertyPriceFactor(double current, int index, GameRandom random)
+        {
+            double limit = index % 2 == 0 ? .042 : .03;
+            return Math.Max(.5, Math.Min(2, current * (1 + random.Range(-limit, limit))));
         }
 
         public Money PropertyMarketValue(OwnedProperty property)

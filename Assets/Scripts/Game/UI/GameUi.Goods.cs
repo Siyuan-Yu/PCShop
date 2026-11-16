@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Shop;
@@ -10,21 +10,6 @@ namespace PCShopSell.Game.UI
     /// <summary>货架窗口里杂货那一半：烟酒、饮料、点心、水果，列出货架上摆着的、后仓里的、手边能放进来的。</summary>
     public sealed partial class GameUi
     {
-        private static Color GoodsColor(string id)
-        {
-            switch (id)
-            {
-                case Gifts.Cig:
-                case Gifts.CigHi: return new Color(0.8f, 0.2f, 0.2f);
-                case Gifts.Wine:
-                case Gifts.Baijiu: return new Color(0.2f, 0.5f, 0.3f);
-                case Gifts.Drink:
-                case Gifts.Soda: return new Color(0.3f, 0.6f, 0.88f);
-                case Gifts.Snack: return new Color(0.9f, 0.62f, 0.25f);
-                default: return new Color(0.9f, 0.4f, 0.25f);
-            }
-        }
-
         private void BuildGoodsShelfBody(Window w, ShelfKind kind, ShelfFill fill)
         {
             var shop=S.PlayerShop;
@@ -60,13 +45,14 @@ namespace PCShopSell.Game.UI
             name.rectTransform.Anchor(.03f,.73f,.97f,.99f);
             Chip(rt,WoodLight,0,.38f,1,.4f);
             var items=Ui.Rect(rt,"GoodsIllustrations").Anchor(.04f,.4f,.96f,.73f);
-            int visible=Mathf.Min(3,count);
+            int visible=Mathf.Clamp(count,1,3);
             for(int i=0;i<visible;i++)
             {
                 var icon=Ui.Rect(items,"GoodsIcon_"+id+"_"+i).Anchor(i/3f+.02f,.03f,(i+1)/3f-.02f,.95f);
-                DrawShelfGoods(icon,id);
+                var art = FillItemPortrait(icon, id).Fill();
+                if(count==0)art.GetComponent<RawImage>().color = new Color(1,1,1,.55f);
             }
-            if(count==0)Ui.Label(items,stock>0?"暂无架上现货":"尚未上架",15,TextAnchor.MiddleCenter,Ui.Dim).rectTransform.Fill();
+            if(count==0)Ui.Label(items,stock>0?"暂无架上现货":"尚未上架",15,TextAnchor.MiddleCenter,Ui.Dim).rectTransform.Anchor(.34f,0,1,1);
             ShelfSaleTag(w,rt,"goods_"+id,shop.GoodsPriceOf(id).Yuan,shop.GoodsPriceRange(id),
                 value=>shop.GoodsPurchaseIntentAtPrice(id,value),value=>shop.SetGoodsSalePrice(id,value))
                 .Anchor(.04f,.14f,.96f,.36f);
@@ -82,50 +68,6 @@ namespace PCShopSell.Game.UI
                 name.fontSize=14;
             }
         }
-        private static void DrawShelfGoods(RectTransform root,string id)
-        {
-            var color=GoodsColor(id);
-            if(ClothingProducts.IsClothing(id))
-            {
-                var outfit=ClothingProducts.Outfit(id);
-                if(!ColorUtility.TryParseHtmlString("#"+outfit.ColorHex,out color))color=GoodsColor(id);
-                bool shortSleeve=outfit.VisualPreset=="short"||outfit.VisualPreset=="sport";
-                Chip(root,color,.24f,.4f,.76f,.94f);
-                Chip(root,color,.05f,shortSleeve?.66f:.41f,.25f,.89f);
-                Chip(root,color,.75f,shortSleeve?.66f:.41f,.95f,.89f);
-                Chip(root,ShelfBack,.39f,.86f,.61f,.99f);
-                var trousers=Color.Lerp(color,Color.black,.45f);
-                Chip(root,trousers,.27f,.03f,.47f,.39f);Chip(root,trousers,.53f,.03f,.73f,.39f);
-                if(outfit.VisualPreset=="winter"||outfit.VisualPreset=="jacket"||outfit.VisualPreset=="formal")
-                    Chip(root,Color.Lerp(color,Color.white,.45f),.48f,.4f,.52f,.85f);
-            }
-            else if(id.StartsWith("flower_"))
-            {
-                var green=new Color(.25f,.58f,.28f);
-                for(int i=0;i<3;i++)
-                {
-                    float x=.22f+i*.22f;
-                    Chip(root,green,x,.23f,x+.05f,.75f);
-                    Chip(root,id=="flower_sun"?new Color(.95f,.74f,.16f):id=="flower_lily"?TagPaper:color,x-.12f,.66f,x+.16f,.91f);
-                }
-                Chip(root,CardboardColor,.22f,.02f,.8f,.32f);
-            }
-            else if(id==Gifts.Drink||id==Gifts.Soda||id==Gifts.Wine||id==Gifts.Baijiu)
-            {
-                Chip(root,color,.2f,.03f,.8f,.72f);Chip(root,color,.35f,.7f,.65f,.92f);
-                Chip(root,WoodLight,.32f,.91f,.68f,.99f);Chip(root,TagPaper,.23f,.25f,.77f,.53f);
-            }
-            else if(ModelProducts.IsModel(id))
-            {
-                Chip(root,TagPaper,.05f,.02f,.95f,.95f);Chip(root,color,.12f,.1f,.88f,.87f);
-                Chip(root,TagInk,.34f,.5f,.66f,.77f);Chip(root,TagInk,.25f,.18f,.75f,.51f);
-            }
-            else
-            {
-                Chip(root,CardboardColor,.06f,.04f,.94f,.8f);Chip(root,color,.06f,.65f,.94f,.82f);
-                Chip(root,TagPaper,.17f,.23f,.83f,.58f);
-                Ui.Label(root,Gifts.Get(id)?.Name??"",11,TextAnchor.MiddleCenter,TagInk).rectTransform.Anchor(.17f,.23f,.83f,.58f);
-            }
-        }
+
     }
 }

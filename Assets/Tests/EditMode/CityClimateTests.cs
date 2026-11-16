@@ -6,6 +6,7 @@ using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
+using PCShopSell.Game.Runtime;
 using UnityEngine;
 
 namespace PCShopSell.Tests
@@ -36,6 +37,51 @@ namespace PCShopSell.Tests
             }
             Assert.AreEqual("春",CityWeather.Season(0));Assert.AreEqual("夏",CityWeather.Season(90*1440));
             Assert.AreEqual("秋",CityWeather.Season(180*1440));Assert.AreEqual("冬",CityWeather.Season(270*1440));
+        }
+        [Test]
+        public void RainFallsThroughTheOutdoorViewAndClearsWhenHidden()
+        {
+            var root = new GameObject("RainViewTest");
+            try
+            {
+                var camera = root.AddComponent<Camera>();
+                camera.orthographic = true;
+                camera.orthographicSize = 16f;
+                camera.aspect = 16f / 9;
+                camera.transform.rotation = Quaternion.Euler(35f, 45f, 0f);
+                camera.transform.position = -120f * camera.transform.forward;
+                var emitter = new GameObject("Rain");
+                var view = emitter.AddComponent<CityRainView>();
+                try
+                {
+                    view.Initialize(camera);
+                    var rain = emitter.GetComponent<ParticleSystem>();
+                    view.Sync(false);
+                    Assert.AreEqual(0, rain.particleCount);
+
+                    view.Sync(true);
+                    Assert.That(rain.particleCount, Is.GreaterThan(0));
+                    Assert.AreEqual(ParticleSystemSimulationSpace.World, rain.main.simulationSpace);
+                    var drops = new ParticleSystem.Particle[rain.main.maxParticles];
+                    var count = rain.GetParticles(drops);
+                    Assert.That(drops.Take(count).All(drop => drop.velocity.y < -16f), Is.True);
+                    float width = rain.shape.scale.x;
+                    camera.orthographicSize = 35f;
+                    view.Sync(true);
+                    Assert.Greater(rain.shape.scale.x, width);
+
+                    camera.transform.position += Vector3.right * 500f;
+                    view.Sync(true);
+                    count = rain.GetParticles(drops);
+                    Assert.That(count, Is.GreaterThan(0));
+                    Assert.That(drops.Take(count).All(drop => drop.position.x > 350f), Is.True);
+                    view.Sync(false);
+                    Assert.AreEqual(0, rain.particleCount);
+                    Assert.IsFalse(rain.isEmitting);
+                }
+                finally { UnityEngine.Object.DestroyImmediate(emitter); }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
         }
         [Test] public void NoRoomOrMeterSimulationCanBeCreatedByReadingOrAdvancing()
         {

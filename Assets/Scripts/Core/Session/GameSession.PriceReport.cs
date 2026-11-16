@@ -51,13 +51,14 @@ namespace PCShopSell.Core.Session
             if (_priceDays.Any(p => p.Day == day)) return;
             var prices = PartCatalog.Categories.Select(c => PartCatalog.All.Where(p => p.Category == c)
                 .Average(p => (double)Market.PriceOf(p).Cents)).ToList();
-            prices.Add(Ingredients.All.Where(i => !FishingCatalog.RequiresCatch(i.Id)).Select(i => (double)i.Price.Cents).Append(Pantry.RicePricePerKg.Cents).Average());
-            prices.Add(Gifts.All.Average(g => (double)g.Price.Cents));
+            prices.Add(Ingredients.All.Where(i => !FishingCatalog.RequiresCatch(i.Id)).Select(i => (double)i.Price.Cents)
+                .Append(Pantry.RicePricePerKg.Cents).Average() * IndustryCycles.WholesaleMarketFactor(FarmBusiness, day));
+            prices.Add(Gifts.All.Average(g => (double)g.Price.Cents) * IndustryCycles.WholesaleMarketFactor(Gifts.TobaccoBusiness, day));
             prices.Add(FurnitureCatalog.All.Where(f => !f.Starter).Average(f => (double)f.Price.Cents));
-            prices.Add(FastFoodCatalog.All.Average(f => (double)f.Price.Cents));
+            prices.Add(FastFoodCatalog.All.Average(f => (double)f.Price.Cents) * IndustryCycles.WholesaleMarketFactor(FastFoodBusiness, day));
             prices.Add(Vehicles.All.Where(v => v.Purchasable).Average(v => (double)v.Price.Cents));
             prices.Add(PhonePrice.Cents);
-            prices.Add(Outfits.All.Where(o => o.Price.IsPositive).Average(o => (double)o.Price.Cents));
+            prices.Add(ClothingProducts.All.Average(o => o.Price.Cents * IndustryCycles.GoodsFactor(o, day)));
             prices.AddRange(_propertyPriceFactors.Select(v => v * 10000));
             _priceDays.Add(new PriceDay { Day = day, Prices = prices.ToArray() });
             int elapsed = day - EconomicReportAnchorDay;

@@ -78,6 +78,7 @@ namespace PCShopSell.Game
                 _raceCameraFocus=entering?focus:Vector3.Lerp(_raceCameraFocus,focus,blend);
                 Cam.transform.SetPositionAndRotation(_raceCameraFocus-rotation*Vector3.forward*(Mathf.Lerp(RaceFollowDistance,RaceFastFollowDistance,speed)*_raceZoom),rotation);
             }
+            UpdateWeather(room: false, sheltered: false);
             Ui.UpdateDrivingHud();
             if(race.Finished)
             {

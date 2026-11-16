@@ -41,6 +41,7 @@ namespace PCShopSell.Core.Finance
         private readonly List<LedgerEntry> _entries = new List<LedgerEntry>();
         private readonly Dictionary<string, LedgerEntry> _sources = new Dictionary<string, LedgerEntry>();
         private long _nextEntryId = 1;
+        internal Func<string, string> SalesAccountOfShop { get; set; }
         public int Revision { get; private set; }
 
         public Money Balance { get; private set; }
@@ -150,6 +151,9 @@ namespace PCShopSell.Core.Finance
 
         private LedgerEntry Append(GameDate date, string category, Money signedAmount, string memo, LedgerAttribution attribution)
         {
+            if (signedAmount.IsPositive && attribution?.ShopId is string shopId && FinanceReport.IsOperatingSale(category, attribution)
+                && SalesAccountOfShop?.Invoke(shopId) is string accountId)
+                attribution = attribution.AssignShopSale(shopId, accountId);
             if (Existing(attribution, signedAmount, out var existing)) return existing;
             Balance += signedAmount;
             var entry = new LedgerEntry(date, category, signedAmount, memo, Balance, (_nextEntryId++).ToString(), attribution);

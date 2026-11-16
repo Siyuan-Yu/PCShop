@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -123,6 +124,34 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void StockMarketHasLargerMovesInBothDirectionsWithinDailyLimits()
+        {
+            using var s = Make();
+            var earlyChanges = new List<double>();
+            var laterChanges = new List<double>();
+            var intradayChanges = new List<double>();
+            int[] quoteHours = { 10, 13, 16 };
+            for (int dayIndex = 1; dayIndex <= 70; dayIndex++)
+            {
+                var day = new GameDate(dayIndex);
+                if (day.IsWeekend) continue;
+                foreach (int hour in quoteHours)
+                {
+                    s.Clock.Restore(day, hour * 60);
+                    s.TickCityAssets();
+                    var changes = CityInvestments.All.Select(stock => s.StockDayChange(stock.Id)).ToArray();
+                    intradayChanges.AddRange(changes);
+                    if (hour == 16) (dayIndex < 30 ? earlyChanges : laterChanges).AddRange(changes);
+                }
+            }
+
+            Assert.That(intradayChanges, Is.All.InRange(-.200001, .200001));
+            Assert.That(laterChanges.Max(), Is.GreaterThan(.10));
+            Assert.That(laterChanges.Min(), Is.LessThan(-.10));
+            Assert.That(laterChanges.Average(Math.Abs), Is.GreaterThan(earlyChanges.Average(Math.Abs) * 1.3));
+        }
+
+        [Test]
         public void StockBatchValidatesEveryOrderBeforeSellingAndUsesSaleProceedsForPurchase()
         {
             using var s = Make();
@@ -147,12 +176,33 @@ namespace PCShopSell.Tests
             Assert.AreEqual(cash, s.Ledger.Balance);
             Assert.AreEqual(lot, s.CityInvestmentUnits(sell));
             Assert.Zero(s.CityInvestmentUnits(buy));
+            Assert.That(s.StockExecutions(sell, 0, shortMode: false).Select(e => e.Kind), Is.EqualTo(new[] { StockExecutionKind.Buy }));
+            Assert.That(s.StockExecutions(buy, 0, shortMode: false), Is.Empty);
 
             buyer.AvailableUnits = available;
             Assert.True(s.TradeStockBatch(orders, shortMode: false, acknowledgeReserve: true));
             Assert.AreEqual(cash + net, s.Ledger.Balance);
             Assert.Zero(s.CityInvestmentUnits(sell));
             Assert.AreEqual(lot, s.CityInvestmentUnits(buy));
+
+            void CheckExecutions(GameSession restored)
+            {
+                Assert.That(restored.StockExecutions(sell, 0, shortMode: false).Select(e => e.Kind),
+                    Is.EqualTo(new[] { StockExecutionKind.Buy, StockExecutionKind.Sell }));
+                var fill = restored.StockExecutions(buy, 0, shortMode: false).Single();
+                Assert.AreEqual(StockExecutionKind.Buy, fill.Kind);
+                Assert.AreEqual(lot, fill.Units);
+                Assert.AreEqual(s.CityInvestmentPrice(buy).Cents, fill.PriceCents);
+                Assert.AreEqual(s.Clock.Now.TotalMinutes, fill.Minute);
+            }
+
+            var save = s.CreateSave();
+            using var loaded = GameSession.Load(s.City, save);
+            CheckExecutions(loaded);
+            save.stockMarket.Version = 1;
+            save.stockMarket.Executions.Clear();
+            using var legacy = GameSession.Load(s.City, save);
+            CheckExecutions(legacy);
         }
 
         [Test]
@@ -179,6 +229,9 @@ namespace PCShopSell.Tests
             Assert.Zero(s.StockState(cover).ShortUnits);
             Assert.AreEqual(lot, s.StockState(open).ShortUnits);
             Assert.AreEqual(s.CityInvestmentPrice(open) * lot, s.StockFrozenMargin);
+            Assert.That(s.StockExecutions(cover, 0, shortMode: true).Select(e => e.Kind),
+                Is.EqualTo(new[] { StockExecutionKind.Short, StockExecutionKind.Cover }));
+            Assert.That(s.StockExecutions(cover, 0, shortMode: false), Is.Empty);
         }
     }
 }

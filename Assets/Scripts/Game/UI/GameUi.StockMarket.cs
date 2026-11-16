@@ -175,6 +175,7 @@ namespace PCShopSell.Game.UI
         private void SetStockTradeFeedback(string label, string failure)
         {
             _stockTradeFailed = failure != null;
+            _stockTradeRevealPending = failure == null;
             _stockTradeFeedback = failure == null ? $"已完成 · {label}" : $"未完成 · {label} · {failure}";
         }
 

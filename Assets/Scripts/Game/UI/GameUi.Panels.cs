@@ -404,7 +404,7 @@ namespace PCShopSell.Game.UI
             {
                 MenuTitle(w, "game_menu");
                 Ui.Size(Ui.Button(w.Content, L("resume"), w.Close, 21, Ui.ButtonHot), -1, 50);
-                Ui.Size(Ui.Button(w.Content, L(S.CanSave ? "save" : "cannot_save"), () => Toast(L(_ctrl.SaveGame() ? "saved" : "save_failed")), 20, Ui.ButtonBg, S.CanSave), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L(S.CanSave ? "save" : "cannot_save"), OpenSaveMenu, 20, Ui.ButtonBg, S.CanSave), -1, 50);
                 Ui.Size(Ui.Button(w.Content, L("load"), () => OpenLoadMenu(), 20, Ui.ButtonBg, SaveStore.Exists), -1, 50);
                 Ui.Size(Ui.Button(w.Content, L("settings"), OpenSettingsMenu, 20), -1, 50);
                 Ui.Size(Ui.Button(w.Content, L("help"), OpenHelpMenu, 20), -1, 50);
@@ -499,7 +499,7 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, S.GameOverReason, 21);
                 Line(w.Content, $"坚持到了 {S.Clock.Today}。", 18, Ui.Dim);
                 Ui.Size(Ui.Button(w.Content, "重新开始", () => _ctrl.NewGame(), 20, Ui.ButtonHot), -1, 50);
-                Ui.Size(Ui.Button(w.Content, "读档", () => _ctrl.LoadGame(), 20, Ui.ButtonBg, SaveStore.Exists), -1, 50);
+                Ui.Size(Ui.Button(w.Content, L("load"), () => OpenLoadMenu(false), 20, Ui.ButtonBg, SaveStore.Exists), -1, 50);
             }, true, false);
         }
 

@@ -21,14 +21,17 @@ namespace PCShopSell.Core.Session
         private OldMarketState _oldMarket = new OldMarketState();
         public OldMarketState OldMarketProgress => _oldMarket.Copy();
         public bool AtOldMarket => CurrentPlace?.Id == OldMarketVenueId && ClosedReason(CurrentPlace) == null;
+        private bool OldMarketActivityRunning => RunningCityActivity?.VenueId == OldMarketVenueId && ManualActivityClockPaused;
+        private long OldMarketOperationTime => OldMarketActivityRunning
+            ? (long)ManualOperationTime(RunningCityActivity) : Clock.Now.TotalMinutes;
         public int OldMarketRemaining(string id) => OldMarketCatalog.Get(id) == null ? 0 : _oldMarket.StockDay != Clock.Today.TotalDays || !_oldMarket.Bought.Contains(id) ? 1 : 0;
         public bool OldMarketInspected(string id) => _oldMarket.Inspected.Contains(id);
         public Money OldMarketPrice(string id) { var g = OldMarketCatalog.Get(id); return g == null ? Money.Zero : Gifts.Get(OldMarketCatalog.ItemId(g)).Price; }
         public bool InspectOldMarketGoods(string id)
         {
             if (!AtOldMarket || OldMarketCatalog.Get(id) == null || _oldMarket.Pending != null) return Fail("请到营业中的旧物市场，先完成当前操作。");
-            _oldMarket.Pending = "inspect"; _oldMarket.GoodsId = id; _oldMarket.Remaining = 5; _oldMarket.LastMinute = Clock.Now.TotalMinutes;
-            _oldMarket.Message = "现场查看实物五分钟；收起面板后时间继续。"; return true;
+            _oldMarket.Pending = "inspect"; _oldMarket.GoodsId = id; _oldMarket.Remaining = 5; _oldMarket.LastMinute = OldMarketOperationTime;
+            _oldMarket.Message = OldMarketActivityRunning ? "正在现场查看实物。" : "现场查看实物五分钟；收起面板后时间继续。"; return true;
         }
         public bool BuyOldMarketGoods(string id)
         {
@@ -48,8 +51,8 @@ namespace PCShopSell.Core.Session
             if (!Ledger.TryDebit(Clock.Today, "旧物修理", Money.FromYuan(g.RepairFee), g.Name)) return Fail("修理费不够。");
             Backpack.TakeGift(OldMarketCatalog.ItemId(g)); ApplyCargoLimit();
             _oldMarket.Pending = "repair"; _oldMarket.GoodsId = id; _oldMarket.Choice = g.CorrectRepair;
-            _oldMarket.Remaining = 15; _oldMarket.LastMinute = Clock.Now.TotalMinutes;
-            _oldMarket.Message = "师傅正在修" + g.Name + "，需要15分钟。"; Say(_oldMarket.Message); return true;
+            _oldMarket.Remaining = 15; _oldMarket.LastMinute = OldMarketOperationTime;
+            _oldMarket.Message = "师傅正在修" + g.Name + (OldMarketActivityRunning ? "。" : "，需要15分钟。"); Say(_oldMarket.Message); return true;
         }
         public bool RepairOldMarketGoods(string id, int choice)
         {
@@ -60,8 +63,9 @@ namespace PCShopSell.Core.Session
             if (!Ledger.TryDebit(Clock.Today, "旧物维修耗材", Money.FromYuan(g.RepairFee), g.Name + " · " + OldMarketCatalog.RepairChoices[choice - 1])) return Fail("现金不足以支付本次耗材。");
             // Hold the actual faulty item at the workbench, preventing gifts/sales from duplicating it during repair.
             Backpack.TakeGift(OldMarketCatalog.ItemId(g)); ApplyCargoLimit();
-            _oldMarket.Pending = "repair"; _oldMarket.GoodsId = id; _oldMarket.Choice = choice; _oldMarket.Remaining = 10; _oldMarket.LastMinute = Clock.Now.TotalMinutes;
-            _oldMarket.Message = "实物已放在市场修理台，耗材已支付；在场操作十分钟。离开时暂停，回来可继续。"; return true;
+            _oldMarket.Pending = "repair"; _oldMarket.GoodsId = id; _oldMarket.Choice = choice; _oldMarket.Remaining = 10; _oldMarket.LastMinute = OldMarketOperationTime;
+            _oldMarket.Message = OldMarketActivityRunning ? "实物和耗材已就位，正在修理。"
+                : "实物已放在市场修理台，耗材已支付；在场操作十分钟。离开时暂停，回来可继续。"; return true;
         }
         public Money OldMarketBuybackPrice(string itemId) => Gifts.Get(itemId) is GiftDef g && itemId.StartsWith("oldmarket:", StringComparison.Ordinal) ? g.Price.Scale(.55) : Money.Zero;
         public bool SellOldMarketGoods(string itemId)
@@ -120,9 +124,9 @@ namespace PCShopSell.Core.Session
             reply = null;
             if (state.Pending != null) return Fail("请先完成当前行走或观察。");
             if (choice == 1) { if (state.Visited >= 3) return Fail("三个摊位已走完。"); QueueOutdoorWalk(a, state, state.Visited); reply = "正在走向下一个旧物摊位。"; return true; }
-            if (state.Tested) return Fail("本场主要学习已经完成，可以继续看货、购买或等活动结束。");
-            state.Pending = "oldmarket_talk"; state.Mode = choice; state.ReadyAt = Clock.Now.TotalMinutes + 5;
-            reply = a.DefinitionId == "social_71" ? "顾文与你现场观察机芯、核对走时或查问来历，五分钟后完成。" : "雷鸣在旧电子摊旁演示检测方法，五分钟后完成。购买和维修另选实物处理。"; return true;
+            if (state.Tested) return Fail("本场主要学习已经完成，可以继续看货或结束活动。");
+            state.Pending = "oldmarket_talk"; state.Mode = choice; state.ReadyAt = (long)ManualOperationTime(a) + 5;
+            reply = a.DefinitionId == "social_71" ? "顾文与你现场观察机芯、核对走时或查问来历。" : "雷鸣在旧电子摊旁演示检测方法。购买和维修另选实物处理。"; return true;
         }
         private void SaveOldMarket(SaveData d) => d.oldMarket = _oldMarket.Copy();
         private void RestoreOldMarket(SaveData d) => _oldMarket = d.oldMarket?.Copy() ?? new OldMarketState();

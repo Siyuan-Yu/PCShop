@@ -4,6 +4,7 @@ using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
+using PCShopSell.Game.Runtime;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -81,7 +82,7 @@ namespace PCShopSell.Game.UI
                 var row = Ui.Row(list, 62, 10);
                 row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
                 if (n > 0) row.gameObject.AddComponent<Image>().color = Ui.FlatRow;
-                CompactProduct(row, e.Name, e.Kg, e.Detail, false, e.Single ? "穿戴物品，不计背包负重" : null);
+                CompactProduct(row, e.Key, e.Name, e.Kg, e.Detail, false, e.Single ? "穿戴物品，不计背包负重" : null);
                 Ui.Size(Ui.Label(row, e.Price.ToString(), 18, TextAnchor.MiddleLeft, Ui.Good), 100);
                 if (e.Single)
                 {
@@ -95,7 +96,7 @@ namespace PCShopSell.Game.UI
                 else
                 {
                     Ui.Size(Ui.Label(row, e.Have ?? "", 14, TextAnchor.MiddleLeft, Ui.Dim), 76);
-                    QuantityStepper(w, row, "parcel_" + e.Key, n, 0, 100, 1, value => { if (value <= 0) _parcelCart.Remove(e.Key); else _parcelCart[e.Key] = (int)value; });
+                    PurchaseQuantity(w, row, "parcel_" + e.Key, n, 0, 100, value => { if (value <= 0) _parcelCart.Remove(e.Key); else _parcelCart[e.Key] = (int)value; });
                 }
             }
 
@@ -106,12 +107,13 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(head, picked.Length == 0 ? "<b>待下单</b>　还是空的" : $"<b>待下单</b>　{picked.Length} 样", 20, TextAnchor.MiddleLeft, Ui.Accent), -1, -1, 1);
             if (picked.Length > 0) Ui.Size(Ui.Button(head, "清空", () => { foreach (var e in entries) _parcelCart.Remove(e.Key); w.Rebuild(); }, 15, Ui.ButtonBg), 64, 30);
             var picks = GoodsList(side, 120);
-            if (picked.Length == 0) Para(picks, "在左边输入或加减数量。\n下单后几天送到所选地点。", 16, Ui.Dim);
+            if (picked.Length == 0) Para(picks, "拖动滑杆或输入数量。\n下单后几天送到所选地点。", 16, Ui.Dim);
             foreach (var item in picked)
             {
                 var e = item; int count = NumberOf(e);
                 var row = Ui.Row(picks, 46, 6);
                 row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+                ItemPortrait(row, e.Key, 42);
                 var label = Ui.Label(row, $"{e.Name} <color=#E8BE62>×{count}</color>\n<size=14><color=#AAB4BB>{e.Price * count}</color></size>", 17, TextAnchor.MiddleLeft);
                 label.verticalOverflow = VerticalWrapMode.Truncate;
                 Ui.Size(label, -1, -1, 1);
@@ -126,6 +128,7 @@ namespace PCShopSell.Game.UI
                     if (!S.OrderOnline(e.Kind, e.Id, e.Single ? 1 : NumberOf(e), destination)) break;
                     _parcelCart.Remove(e.Key);
                 }
+                if (picked.Length > 0 && picked.All(e => NumberOf(e) == 0)) SoundFx.Play(Sfx.Purchase);
                 w.Rebuild();
             }, 22, Ui.ButtonHot, picked.Length > 0);
             order.name = "OnlineOrder";

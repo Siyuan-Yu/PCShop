@@ -45,6 +45,13 @@ namespace PCShopSell.Core.Shop
         public ShopVisitDetail[] completedVisits;
         public int[] queue;
         public DayReportData day;
+
+        internal CitySavedShopVisits WithShopId(string id)
+        {
+            var copy = (CitySavedShopVisits)MemberwiseClone();
+            copy.shopId = id;
+            return copy;
+        }
     }
     [Serializable]
     public sealed class DayReportData

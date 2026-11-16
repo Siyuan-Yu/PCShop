@@ -1,6 +1,6 @@
 # PCShopSell Windows 构建与玩法归档
 
-记录于 2026 年 11 月 16 日。本文归档提交 `b6abc9a` 的 Windows x64 构建、玩法和验收情况。现行规则和工程入口见[当前交接文档](122-current-game-content-2026-11-16.md)。
+记录于 2026 年 11 月 16 日。本文归档提交 `b6abc9a` 的 Windows x64 构建、玩法和验收情况。后续改动见[最新源码更新](123-playtest-update-2026-11-17.md)。
 
 ## 本地运行与构建记录
 

@@ -120,6 +120,7 @@ namespace PCShopSell.Core.Session
 
                 shopStock = Lines(PlayerShop.Stock),
                 shopRetailKind = MainShop.RetailKind, pendingRetailKind = PendingRetailKind, shopCustomName = MainShop.CustomName,
+                shopSalesAccountId = MainShop.SalesAccountId,
                 shopEmergencyLighting = MainShop.EmergencyLighting,
                 shopGoodsLots = SaveRetailLots(PlayerShop),
                 shopGoodsIds = SaveRetailCounts(PlayerShop).Select(kv => kv.Key).ToArray(),
@@ -232,6 +233,7 @@ namespace PCShopSell.Core.Session
             _lastNewsReadDay = d.lastNewsReadDay;
 
             RestoreRealty(d);
+            if (!string.IsNullOrEmpty(d.shopSalesAccountId)) MainShop.SalesAccountId = d.shopSalesAccountId;
             _focus.RetailKind = HasShop
                 ? PCShopSell.Core.Home.RetailShopTypes.Valid(string.IsNullOrEmpty(d.shopRetailKind) ? "computer" : d.shopRetailKind)
                 : PCShopSell.Core.Home.RetailShopTypes.Default;
@@ -336,6 +338,7 @@ namespace PCShopSell.Core.Session
             RestoreFishing(d);
             RestoreOutdoorBatch(d);
             RestoreCustomerBatch(d);
+            RestoreLegacyShopSales(d);
             RestoreOldMarket(d);
             RestoreShopEventBatch(d);
             RestoreFinanceBatch(d);
@@ -360,6 +363,7 @@ namespace PCShopSell.Core.Session
             LoadWeeklySupplierPlans();
             LoadHomeWorkbench(d);
             LoadDistrictProgress(d);
+            RestoreConversationContacts();
             if (RacingGarageEntryBlocker(CurrentPlace?.Id) != null)
             {
                 _free = StandOf(CurrentPlace);

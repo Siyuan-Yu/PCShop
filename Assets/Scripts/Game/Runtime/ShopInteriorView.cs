@@ -155,6 +155,7 @@ namespace PCShopSell.Game.Runtime
         private Vector2 _counterSize = new Vector2(2.2f, 0.8f);
         private Rect _benchFoot;
         private Vector2 _benchPos;
+        private Vector3 _benchWorkPoint;
         private Vector3 _benchFront;
         private Vector3 _assemblerStand, _salesStand;
         private Vector3 _deskFront;
@@ -174,13 +175,7 @@ namespace PCShopSell.Game.Runtime
 
         private void OnCustomerLeft(ShopCustomer c) => _leaveReasons[c.Id] = c.Reason;
 
-        private void OnCustomerPaid(ShopCustomer c)
-        {
-            _payChannels[c.Id] = c.PaidWith;
-            SoundFx.Play(Sfx.Coin);
-        }
-
-        private void OnCustomerArrived(ShopCustomer c) => SoundFx.Play(Sfx.Bell);
+        private void OnCustomerPaid(ShopCustomer c) => _payChannels[c.Id] = c.PaidWith;
 
         private static string PayText(PayChannel p)
         {
@@ -211,10 +206,10 @@ namespace PCShopSell.Game.Runtime
         private void Hook(ShopSimulation shop)
         {
             if (_hooked == shop) return;
-            if (_hooked != null) { _hooked.CustomerLeft -= OnCustomerLeft; _hooked.CustomerPaid -= OnCustomerPaid; _hooked.CustomerArrived -= OnCustomerArrived; }
+            if (_hooked != null) { _hooked.CustomerLeft -= OnCustomerLeft; _hooked.CustomerPaid -= OnCustomerPaid; }
             _hooked = shop;
             _leaveReasons.Clear();
-            if (shop != null) { shop.CustomerLeft += OnCustomerLeft; shop.CustomerPaid += OnCustomerPaid; shop.CustomerArrived += OnCustomerArrived; }
+            if (shop != null) { shop.CustomerLeft += OnCustomerLeft; shop.CustomerPaid += OnCustomerPaid; }
         }
 
         /// <summary>某个品类的货架前（离 from 最近的那个）；没有这个品类的货架就随便一个。</summary>
@@ -1000,6 +995,7 @@ namespace PCShopSell.Game.Runtime
                         if (_hasBench) break;
                         _hasBench = true;
                         _benchPos = new Vector2(pos.x, pos.z);
+                        _benchWorkPoint = pos + rot * new Vector3(-.1f, 0, -.05f);
                         _benchFoot = e.Foot;
                         _benchFront = pos + front * 0.95f;
                         break;
@@ -1047,13 +1043,12 @@ namespace PCShopSell.Game.Runtime
             return best;
         }
 
-        private string AssemblerState(GameSession session)
+        private string AssemblerState(GameSession session, bool assembling)
         {
             if (!_hasBench) return "等待装机台";
             if (!session.AutoBuildEnabled) return "自动装机已关";
             var shop = session.PlayerShop;
-            foreach (var order in shop.Orders)
-                if (order.EmployeeMinutesLeft > 0) return "装机中";
+            if (assembling) return "装机中";
             if (shop.Orders.Count == 0) return "等待订单";
             foreach (var order in shop.Orders)
                 if (shop.MissingParts(order).Count == 0) return "准备装机";
@@ -1101,18 +1096,38 @@ namespace PCShopSell.Game.Runtime
                     occupied.Add(stand);
                     figure.transform.localPosition = stand;
                     Vector3 facing = employee.Role == EmployeeRole.Cashier ? _counterRot * Vector3.back
-                        : employee.Role == EmployeeRole.Assembler && _hasBench ? new Vector3(_benchPos.x, 0, _benchPos.y) - stand : Vector3.back;
+                        : employee.Role == EmployeeRole.Assembler && _hasBench ? _benchWorkPoint - stand : Vector3.back;
                     if (atUsedDesk) FaceUsedDesk(figure.transform, usedDesk);
                     else if (facing.sqrMagnitude > .01f) figure.transform.localRotation = Quaternion.LookRotation(facing);
                 }
             }
-            foreach (var employee in staff)
+            bool restaurant = session.CurrentShop.RetailKind == "restaurant";
+            var actors = staff.Select(employee => (Employee: employee, Worker: restaurant
+                ? session.RestaurantActor(session.CurrentShop.Place.Id, employee.Person.Id) : null));
+            List<Vector3> restaurantStands = null;
+            if (restaurant)
             {
+                // Keep working actors in place when a route crosses their position.
+                actors = actors.OrderBy(a => a.Worker == null ? 0 : a.Worker.Busy
+                    ? a.Worker.OperateUntil >= 0 ? 1 : 2 : 3);
+                restaurantStands = new List<Vector3>();
+                var player = session.RestaurantActor(session.CurrentShop.Place.Id, GameSession.RestaurantPlayer);
+                if (player?.Busy == true && player.OperateUntil >= 0)
+                    restaurantStands.Add(RestaurantActorPosition(session, player));
+            }
+            foreach (var (employee, restaurantWorker) in actors)
+            {
+                bool assembler = employee.Role == EmployeeRole.Assembler;
+                bool assembling = assembler && _hasBench && session.EmployeeAssembling(employee.Shop, employee.Person.Id);
                 var figure = _staffFigures[employee.Person.Id];
-                var restaurantWorker=session.RestaurantActor(session.CurrentShop.Place.Id,employee.Person.Id);
-                if(restaurantWorker!=null)ApplyRestaurantActor(session,restaurantWorker,figure);
-                else RestaurantCarry(figure,false);
-                string state = employee.Role == EmployeeRole.Assembler ? "\n" + AssemblerState(session) : "";
+                if (restaurantWorker != null) ApplyRestaurantActor(session,restaurantWorker,figure,restaurantStands);
+                else
+                {
+                    restaurantStands?.Add(figure.transform.localPosition);
+                    figure.GetComponent<FigureMotion>().WorkAction = assembling ? FigureWorkAction.Assemble : FigureWorkAction.None;
+                    RestaurantCarry(figure, false);
+                }
+                string state = assembler ? "\n" + AssemblerState(session, assembling) : "";
                 if(restaurantWorker?.Busy==true)state="\n"+(restaurantWorker.OperateUntil<0?"走向操作位置 · ":"操作中 · ")+GameSession.RestaurantJobName(restaurantWorker.Job);
                 _emotes.Add(new EmoteInfo { Pos = figure.transform.position + Vector3.up * 2.15f,
                     PersonId = session.PersonIdOf(employee.Person),
@@ -1124,12 +1139,13 @@ namespace PCShopSell.Game.Runtime
         private Vector3 FindStaffStand(Vector3 preferred, IReadOnlyList<Vector3> occupied) =>
             TryFindIndoorStand(preferred, occupied, .24f, out var stand) ? stand : ClampIndoorNpc(Origin + preferred) - Origin;
 
-        private bool TryFindIndoorStand(Vector3 preferred, IReadOnlyList<Vector3> occupied, float clearance, out Vector3 best)
+        private bool TryFindIndoorStand(Vector3 preferred, IReadOnlyList<Vector3> occupied, float clearance,
+            out Vector3 best, float searchRadius = float.PositiveInfinity)
         {
             best = default;
             float bestScore = float.PositiveInfinity;
-            for (float x = BodyRadius; x <= Width - BodyRadius; x += .2f)
-                for (float z = BodyRadius; z <= Depth - BodyRadius; z += .2f)
+            for (float x = Mathf.Max(BodyRadius, preferred.x - searchRadius); x <= Mathf.Min(Width - BodyRadius, preferred.x + searchRadius); x += .2f)
+                for (float z = Mathf.Max(BodyRadius, preferred.z - searchRadius); z <= Mathf.Min(Depth - BodyRadius, preferred.z + searchRadius); z += .2f)
                 {
                     var point = new Vector3(x, 0, z);
                     if (_decor.Blockers.Any(r => Grow(r, clearance).Contains(new Vector2(x, z)))

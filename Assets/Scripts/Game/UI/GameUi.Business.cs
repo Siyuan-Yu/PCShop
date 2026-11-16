@@ -168,7 +168,7 @@ namespace PCShopSell.Game.UI
                     index => { selected = index; w.Rebuild(); }), -1, 40);
                 var amount = Ui.Row(w.Content, 42, 8);
                 Ui.Size(Ui.Label(amount, "数量", 17), 100);
-                QuantityStepper(w, amount, "directQuantity", quantity, 3, 30, 1, value => quantity = (int)value);
+                PurchaseQuantity(w, amount, "directQuantity", quantity, 3, 30, value => quantity = (int)value);
                 Ui.Size(Ui.Choice(w.Content, new[] { "全款", "付 30% 首款，14 天内结清" }, credit ? 1 : 0,
                     index => { credit = index == 1; w.Rebuild(); }), -1, 40);
                 Money total = S.DirectPrice(part) * quantity;

@@ -18,18 +18,26 @@ namespace PCShopSell.Core.Session
         private int _manualBuildId = -1;
         private OwnedShop _manualDisplayShop;
         public bool AutoBuildEnabled => _focus.AutoBuild;
-        public void ToggleAutoBuild() => _focus.AutoBuild = !_focus.AutoBuild;
+        public void ToggleAutoBuild()
+        {
+            _focus.AutoBuild = !_focus.AutoBuild;
+            if (!_focus.AutoBuild) _focus.WorkingAssemblers.Clear();
+        }
+
+        public bool EmployeeAssembling(OwnedShop shop, string employeeId) => shop.WorkingAssemblers.Contains(employeeId);
 
         private static void ClearUnstaffedAssembly(OwnedShop shop)
         {
             if (shop.Assembler != null) return;
             shop.EmployeeBuilding = false;
+            shop.WorkingAssemblers.Clear();
             foreach (var order in shop.Sim.Orders) order.EmployeeMinutesLeft = 0;
         }
 
         private void UpdateEmployeeWork(GameTimestamp now)
         {
             _employeeBuilding = false;
+            _focus.WorkingAssemblers.Clear();
             var workers = ShopStaff(_focus, EmployeeRole.Assembler).Where(e => CityEmployeeAvailable(e, _focus)).ToArray();
             if (workers.Length == 0 || !AutoBuildEnabled) return;
             bool dedicated = ShopStaff(_focus, EmployeeRole.Cashier).Any(e => CityEmployeeAvailable(e, _focus));
@@ -50,7 +58,9 @@ namespace PCShopSell.Core.Session
                 handled.Add(order.Id);
                 _employeeBuilding |= !dedicated;
                 order.EmployeeMinutesLeft--;
-                if (order.EmployeeMinutesLeft <= 0)
+                if (order.EmployeeMinutesLeft > 0)
+                    _focus.WorkingAssemblers.Add(worker.Id);
+                else
                 {
                     if (!PlayerShop.CompleteBuild(order.Id, now)) continue;
                     worker.BuildsCompleted++;

@@ -98,9 +98,10 @@ namespace PCShopSell.Game.UI
         }
 
         /// <summary>表格行：第一格靠左并占满剩余宽度，其余格固定宽度、右对齐。header 为灰色小字表头。</summary>
-        private static RectTransform WbTable(Transform parent, string[] cells, float[] widths, bool header = false, Color[] inks = null, float height = 0)
+        private static RectTransform WbTable(Transform parent, string[] cells, float[] widths, bool header = false, Color[] inks = null, float height = 0, string itemKey = null)
         {
             var row = Ui.Row(parent, height > 0 ? height : header ? 22 : 34, 10);
+            if (itemKey != null) ItemPortrait(row, itemKey, 30);
             for (int i = 0; i < cells.Length; i++)
             {
                 Color ink = header ? WbDim : (inks != null && i < inks.Length && inks[i].a > 0 ? inks[i] : WbInk);
@@ -128,7 +129,7 @@ namespace PCShopSell.Game.UI
             if (click != null)
             {
                 var button = bar.gameObject.AddComponent<Button>(); button.targetGraphic = image; button.onClick.AddListener(() => click());
-                var colors = button.colors; colors.highlightedColor = new Color(1.25f, 1.25f, 1.25f); button.colors = colors;
+                Ui.SteadyButtonFeedback(button);
             }
             return bar;
         }
@@ -142,7 +143,7 @@ namespace PCShopSell.Game.UI
             layout.childControlWidth = layout.childControlHeight = true; layout.childForceExpandWidth = false; layout.childForceExpandHeight = true; layout.childAlignment = TextAnchor.MiddleLeft;
             Ui.Size(row, -1, 52, 0);
             var button = row.gameObject.AddComponent<Button>(); button.targetGraphic = image; button.onClick.AddListener(() => click());
-            var colors = button.colors; colors.highlightedColor = new Color(1.2f, 1.2f, 1.2f); button.colors = colors;
+            Ui.SteadyButtonFeedback(button);
             return row;
         }
 

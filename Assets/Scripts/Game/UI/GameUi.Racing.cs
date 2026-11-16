@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
@@ -54,7 +55,8 @@ namespace PCShopSell.Game.UI
         {
             var card=Ui.Panel(parent,"VehicleCard",Ui.PanelBg2).rectTransform;
             Ui.VList(card,8,12);
-            var header=Ui.Row(card,104,14);
+            var commuter = MotorCatalog.CommuteSpec(model.Id);
+            var header=Ui.Row(card,commuter == null ? 104 : 136,14);
             MotorThumbnail(header,model.Id,104);
             var details=Ui.Rect(header,"VehicleInfo");
             Ui.Size(details,0,-1,1).GetComponent<LayoutElement>().minWidth=0;
@@ -62,6 +64,7 @@ namespace PCShopSell.Game.UI
             Line(details,model.Name,20,Ui.Accent);
             Line(details,"¥"+model.Price.ToString("N0"),18,Ui.Accent);
             Line(details,$"极速 {model.Speed:0} km/h · 加速 {model.Acceleration:0.0}",17);
+            if (commuter != null) Line(details, TravelSpeedText(commuter), 16, Ui.Dim);
             return card;
         }
         private void BuildMotorDealer(Window w,Place p)
@@ -93,10 +96,13 @@ namespace PCShopSell.Game.UI
                     Line(card,S.MotorLocationText(v),16,Ui.Dim);
                     BuildMotorPerformance(card,MotorCatalog.Performance(v),v.Condition);string blocker=S.MotorWorkshopBlocker(v);if(blocker!=null)Line(card,blocker,15,Ui.Dim);
                     var row=Ui.Row(card,38,6);
+                    bool electric=MotorCatalog.ClassOf(model.Kind)==0;
+                    string[] partPortraits={electric?"motor:electric":"motor:engine",electric?"motor:battery":"motor:drive","motor:tyres","motor:steering"};
                     for(int part=0;part<4;part++)
                     {
                         int index=part;int level=MotorCatalog.Level(v,part);
-                        Ui.Size(Ui.Button(row,MotorCatalog.PartName(v,part)+" "+level+"/3"+(level<3?" · ¥"+MotorCatalog.UpgradePrice(v,part).ToString("N0"):""),()=>{S.UpgradeMotor(v.Id,index);w.Rebuild();},15,Ui.ButtonBg,blocker==null&&level<3),-1,38,1);
+                        var button=Ui.Size(Ui.Button(row,MotorCatalog.PartName(v,part)+" "+level+"/3"+(level<3?" · ¥"+MotorCatalog.UpgradePrice(v,part).ToString("N0"):""),()=>{S.UpgradeMotor(v.Id,index);w.Rebuild();},15,Ui.ButtonBg,blocker==null&&level<3),-1,38,1);
+                        ItemButtonPortrait(button,partPortraits[part],30);
                     }
                     var actions=Ui.Row(card,36,6);
                     Ui.Size(Ui.Button(actions,"修复车况 · ¥"+S.MotorRepairPrice(v).ToString("N0"),()=>{S.RepairMotor(v.Id);w.Rebuild();},16,Ui.ButtonBg,blocker==null&&v.Condition<100),-1,36,1);
@@ -595,6 +601,7 @@ namespace PCShopSell.Game.UI
             foreach (var w in _windows.ToArray()) CloseWindowSilently(w);
             CloseDock();
             _hudCanvas.enabled = false;
+            _invitationCanvas.enabled = false;
             _labelCanvas.enabled = false;
             _dockCanvas.enabled = false;
             _drivingHud = Ui.Rect(_modalCanvas.transform, "DrivingHud").Fill();
@@ -715,11 +722,15 @@ namespace PCShopSell.Game.UI
         {
             if(_drivingHud!=null)Kill.It(_drivingHud.gameObject);_drivingHud=null;
             _hudCanvas.enabled=true;_labelCanvas.enabled=true;_dockCanvas.enabled=true;
+            _invitationCanvas.enabled = true;
             var result = S.LastRaceSettlement;
+            bool animateOnOpen = true;
             OpenWindow(result?.Practice == true ? "练习结算" : "比赛结算", 980, 400, w =>
             {
+                var reveal = animateOnOpen ? NewUiReveal() : null;
+                animateOnOpen = false;
                 if (result == null) Para(w.Content, report, 20);
-                else BuildRaceSettlement(w.Content, result);
+                else BuildRaceSettlement(w.Content, result, reveal);
                 var footer = Ui.Row(w.Content, 40);
                 Ui.Size(Ui.Rect(footer, "FooterSpace"), 0, -1, 1);
                 Ui.Size(Ui.Button(footer, "回到赛场接待处", () =>
@@ -730,19 +741,24 @@ namespace PCShopSell.Game.UI
                 var panel = (RectTransform)w.Content.parent;
                 panel.sizeDelta = new Vector2(panel.sizeDelta.x, 50 + LayoutUtility.GetPreferredHeight(w.Content));
                 w.Fitter.Fit();
+                PlayUiReveal(reveal);
             }, scrollContent: false);
         }
 
-        private void BuildRaceSettlement(Transform content, RaceSettlement result)
+        private void BuildRaceSettlement(Transform content, RaceSettlement result, UiReveal reveal)
         {
             string mode = result.EventTitle ?? (result.Practice ? "计时练习" : RacingSchedule.Name(result.Meeting));
             Line(content, result.Track + " · " + mode + " · " + result.Vehicle, 21, Ui.Accent);
             var summary = Ui.Row(content, 50, 8);
+            reveal?.Fade(summary, .03f);
             string place = result.Abandoned ? (result.Practice ? "练习已结束" : "已退赛")
                 : result.Practice ? "练习完成" : $"第 {result.Position} / {result.Competitors} 名";
             Ui.Size(Ui.Label(summary, $"<b>{place}</b>", 28, TextAnchor.MiddleCenter, Ui.Accent), 0, 50, 1);
             if (!result.Practice)
-                Ui.Size(Ui.Label(summary, $"<b>奖金 ¥{result.Prize:N0}</b>", 24, TextAnchor.MiddleCenter, Ui.Good), 0, 50, 1);
+            {
+                var prize = Ui.Size(Ui.Label(summary, $"<b>奖金 ¥{result.Prize:N0}</b>", 24, TextAnchor.MiddleCenter, Ui.Good), 0, 50, 1);
+                reveal?.CountMoney(prize, Money.FromYuan(result.Prize), amount => "<b>奖金 " + amount + "</b>");
+            }
             Ui.Size(Ui.Label(summary, $"用时 {result.Seconds:0.00} 秒", 21, TextAnchor.MiddleCenter), 0, 50, 1);
             Line(content, $"罚时 {result.Penalty:0} 秒 · 碰撞 {result.Collisions} 次 · 车况 {result.Condition:0}%"
                 + (result.Injury > 0 ? $" · 健康 -{result.Injury:0}" : " · 未受伤")

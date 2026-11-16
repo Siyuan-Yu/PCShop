@@ -11,7 +11,7 @@ namespace PCShopSell.Core.Session
     public sealed class SaveCityLedgerAttribution
     {
         public int index, businessKind, quantity;
-        public string entryId, shopId, propertyId, activityId, sourceEventId, transactionKind, productId;
+        public string entryId, shopId, salesAccountId, propertyId, activityId, sourceEventId, transactionKind, productId;
         public long unitCostCents;
         public string employeeId;
         public int payrollWorkday = -1;

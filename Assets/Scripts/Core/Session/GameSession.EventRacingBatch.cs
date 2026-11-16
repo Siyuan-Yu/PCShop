@@ -42,15 +42,15 @@ namespace PCShopSell.Core.Session
 
         internal bool CanOfferRacingBatchEvent(string id)
         {
-            if (id == "race_spectator") return !RacingUnlocked && !IsMet(Zhixia)
-                && !_cityActivities.Any(a => a.Active && a.DefinitionId == "race_watch") && City.HasPlace(StarterRaceTrackId);
             if (RacingAccessBlocker != null) return false;
             switch (id)
             {
+                case "race_spectator": return IsMet(Zhixia) && CityPersonState(Zhixia) != null
+                    && !_cityActivities.Any(a => a.Active && a.DefinitionId == "race_watch") && City.HasPlace(StarterRaceTrackId);
                 case "race_rider_bet": return !_eventRaceBookings.Any(b => b.Kind == "rider" && b.Day >= Clock.Today.TotalDays)
                     && _riderMealPayer == null && FindEventRace(Rider) != null;
                 case "race_battery_old": return _garage.Any(v => BatteryEventVehicle(v) && !v.EventBatteryWorn);
-                case "race_rematch": return _lastEventRaceOpponents.Any(person => FindEventRace(person) != null);
+                case "race_rematch": return _lastEventRaceOpponents.Any(person => IsMet(person) && FindEventRace(person) != null);
                 case "race_sponsor_sticker": return RacingWins >= 2 && _garage.Any(v => MotorAvailable(v)
                     && MotorCatalog.CanRace(MotorCatalog.Get(v.ModelId).Kind) && v.SponsorRacesRemaining == 0);
                 case "race_crash_help": return _raceAidPerson != null && _raceAidDay == Clock.Today.TotalDays;
@@ -97,7 +97,7 @@ namespace PCShopSell.Core.Session
                 case "race_rider_bet": return BindBookedRace(template, Rider, "rider");
                 case "race_charity": return BindBookedRace(template, Zhixia, "charity");
                 case "race_rematch":
-                    foreach (string person in _lastEventRaceOpponents.Distinct())
+                    foreach (string person in _lastEventRaceOpponents.Where(IsMet).Distinct())
                     {
                         var offer = FindEventRace(person);
                         if (offer == null) continue;
@@ -126,7 +126,7 @@ namespace PCShopSell.Core.Session
                 case "race_crash_help":
                     return BindRaceAid(template);
                 case "race_spectator":
-                    return BindRacingActivity(template, "race_watch", Zhixia, "沈知夏邀请你到城郊赛车报名点观赛，尚未开放赛车也可以赴约。实际到场看满一小时后增加见识并认识她。", false);
+                    return BindRacingActivity(template, "race_watch", Zhixia, "沈知夏邀请你到城郊赛车报名点观赛。实际到场看满一小时后增加见识。", false);
                 case "race_night_ride":
                     return BindRacingActivity(template, "race_night", Zhixia, "沈知夏约你晚上带电动车到城郊赛场集合，沿场内安全路线休闲骑行 90 分钟，不竞速。19:00–21:30 可集合，气温低于 0℃或高于 35℃时取消，可重新约。", true);
                 case "race_maker_gear":
@@ -290,6 +290,7 @@ namespace PCShopSell.Core.Session
             long earliest = night ? (long)Clock.Today.TotalDays * 1440 + 19 * 60 : 0;
             long start = SuggestCityActivityStart(activityId, person, earliest);
             bool available = CityActivityBlocker(activityId, new[] { person }, start) == null;
+            if (!available && activityId == "race_watch") return null;
             return EventScene(template, body + "\n建议时间：" + new GameTimestamp(start),
                 Choose("确认赴约", s =>
                 {
@@ -470,7 +471,11 @@ namespace PCShopSell.Core.Session
             if (!HasGarage(StarterRaceGarageId)) _regionalGarages.Add(new RegionalGarageLease { PlaceId = StarterRaceGarageId, OwnedSpaces = 2 });
             Flags.Add(RacingAccessFlag);
             if (number == 32) _garage.First(v => MotorCatalog.Get(v.ModelId).Kind == VehicleKind.EBike).EventBatteryWorn = false;
-            if (number == 33) _lastEventRaceOpponents = new[] { Jingxing };
+            if (number == 33)
+            {
+                _lastEventRaceOpponents = new[] { Jingxing };
+                Meet(Jingxing, 0);
+            }
             if (number == 34 && RacingWins < 2) _raceRecords.Add(new RaceRecord { Key = "debug:event-wins", Wins = 2 });
             if (number == 35) { _raceAidPerson = Zhixia; _raceAidDay = Clock.Today.TotalDays; }
             if (number == 39)
@@ -478,11 +483,7 @@ namespace PCShopSell.Core.Session
                 var vehicle = _garage.First(v => MotorCatalog.Get(v.ModelId).Kind == VehicleKind.EBike);
                 vehicle.EventBatteryWorn = false; vehicle.Condition = 100; vehicle.GarageId = StarterRaceGarageId;
             }
-            if (number == 36)
-            {
-                Flags.Remove(RacingAccessFlag);
-                // Keep the production acquaintance record; only a fresh acceptance scene can test first meeting.
-            }
+            if (number == 36) Meet(Zhixia, 0);
         }
 #endif
     }

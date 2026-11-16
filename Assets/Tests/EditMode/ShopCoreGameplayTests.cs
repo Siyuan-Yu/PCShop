@@ -6,6 +6,7 @@ using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
+using PCShopSell.Game.Runtime;
 using UnityEngine;
 
 namespace PCShopSell.Tests
@@ -188,11 +189,12 @@ namespace PCShopSell.Tests
             using var s = Make("restaurant");
             var state = s.SpecialBusiness("pc");
             state.RecipeMask = 1;
+            state.MenuMarkup = 1.2;
             s.AdvanceClock(20);
             var order = state.Orders.Single(o => o.IsFishOrder);
             Assert.AreEqual(-1, order.Table);
             Assert.AreEqual(7 * GameTimestamp.MinutesPerDay, order.DueAt - order.Arrived);
-            Assert.AreEqual(36 + order.Fish.DinnerSurcharge, order.Price);
+            Assert.AreEqual(2 * (43 + order.Fish.DinnerSurcharge), order.Price);
             IngredientsFor(s);
             Assert.False(s.StartRestaurantCooking(order.Id));
             Assert.AreEqual(.25, s.KitchenRice(s.CurrentShop));
@@ -209,6 +211,7 @@ namespace PCShopSell.Tests
             var restored = loaded.SpecialBusiness("pc").Orders.Single(o => o.IsFishOrder);
             Assert.AreEqual(order.FishId, restored.FishId);
             Assert.AreEqual(order.DueAt, restored.DueAt);
+            Assert.AreEqual(order.Price, restored.Price);
             loaded.Clock.Restore(loaded.Clock.Today, 22 * 60 + 10);
             loaded.AdvanceClock(1);
             Assert.AreEqual(DiningStage.Ready, restored.Stage);
@@ -218,6 +221,28 @@ namespace PCShopSell.Tests
             Assert.False(loaded.HandInRestaurantFishOrder(order.Id));
             Assert.AreEqual(cash + Money.FromYuan(order.Price), loaded.Ledger.Balance);
             Assert.AreEqual(reputation + order.ReputationReward, loaded.PlayerShop.Reputation, .000001);
+        }
+
+        [Test]
+        public void LegacySaveDoublesPendingFishQuotesOnce()
+        {
+            using var s = Make("restaurant");
+            var state = s.SpecialBusiness("pc");
+            long now = s.Clock.Now.TotalMinutes;
+            state.Orders.Add(new DiningOrder { Id = 1, FishId = "fish_mandarin", Table = -1, Stage = DiningStage.Waiting, DueAt = now + 800, Price = 581 });
+            state.Orders.Add(new DiningOrder { Id = 2, FishId = "fish_mandarin", Table = -1, Stage = DiningStage.Ready, DueAt = now + 900, Price = 244 });
+            state.Orders.Add(new DiningOrder { Id = 3, Table = 0, Stage = DiningStage.Waiting, Price = 56 });
+            state.Revenue = 1200;
+            var save = s.CreateSave();
+            save.restaurantFishOrderPriceVersion = 0;
+
+            using var restored = GameSession.Load(s.City, JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(save)));
+            var restoredState = restored.SpecialBusiness("pc");
+            CollectionAssert.AreEqual(new long[] { 1162, 488, 56 }, restoredState.Orders.Select(o => o.Price));
+            Assert.AreEqual(1200, restoredState.Revenue);
+            Assert.AreEqual(581, save.specialBusinesses.Single(x => x.ShopId == "pc").Orders[0].Price);
+            using var reloaded = Reload(restored);
+            CollectionAssert.AreEqual(new long[] { 1162, 488, 56 }, reloaded.SpecialBusiness("pc").Orders.Select(o => o.Price));
         }
 
         [Test]
@@ -857,6 +882,71 @@ namespace PCShopSell.Tests
                 }
                 finally{UnityEngine.Object.DestroyImmediate(root);}
             }
+        }
+        [Test]
+        public void TwoChefsUseSeparateStandsAndFaceTheirOwnStovesWhenCooking()
+        {
+            using var s = Make("restaurant");
+            var shop = s.CurrentShop;
+            var stoves = new[]
+            {
+                shop.Layout.Single(p => p.Id == "restaurant_stove"),
+                new PlacedFurniture { Id = "restaurant_stove", X = 5.5, Z = 3.5 }
+            };
+            shop.Layout.Add(stoves[1]);
+            shop.Layout.Add(new PlacedFurniture { Id = "restaurant_table", X = 6.5, Z = 5 });
+            var chefs = new[] { new Employee { Name = "厨师甲", DailyWageYuan = 150 }, new Employee { Name = "厨师乙", DailyWageYuan = 150 } };
+            foreach (var chef in chefs)
+            {
+                shop.AdditionalEmployees.Add(new AdditionalShopEmployee { Role = EmployeeRole.Chef, Person = chef });
+                CityTestPeople.AtAssignedWork(s, chef);
+            }
+            var state = s.SpecialBusiness(shop.Place.Id);
+            state.NextVisit = long.MaxValue;
+            foreach (var chef in chefs)
+                state.Workers.Add(new RestaurantWorker { ActorId = chef.Id, X = 5, Z = .9 });
+            s.AdvanceClock(1);
+            var workers = chefs.Select(chef => s.RestaurantActor(shop.Place.Id, chef.Id)).ToArray();
+            Assert.That(Distance(workers[0].X, workers[0].Z, workers[1].X, workers[1].Z), Is.GreaterThanOrEqualTo(.85));
+
+            IngredientsFor(s, 2);
+            var orders = new[] { Order(s), Order(s, 2) };
+            orders[1].Table = 1;
+            s.AdvanceClock(1);
+            Assert.That(workers.All(w => w.Job == RestaurantJob.Cook), Is.True);
+            Assert.That(workers.Select(w => w.Stove), Is.EquivalentTo(new[] { 0, 1 }));
+            Assert.That(Distance(workers[0].PathX.Last(), workers[0].PathZ.Last(), workers[1].PathX.Last(), workers[1].PathZ.Last()),
+                Is.GreaterThanOrEqualTo(.85));
+            var root = new GameObject("TwoRestaurantWorkers");
+            try
+            {
+                var view = new ShopInteriorView(root.transform, s.PlayerShop.Size);
+                var sawCookPose = new bool[2];
+                for (int minute = 0; minute < 20 && !sawCookPose.All(seen => seen); minute++)
+                {
+                    view.Update(s, 0, 0);
+                    var figures = chefs.Select(chef => root.GetComponentsInChildren<FigureMotion>()
+                        .Single(f => f.name == "ShopEmployee_" + chef.Id)).ToArray();
+                    Assert.That(Vector3.Distance(figures[0].transform.position, figures[1].transform.position),
+                        Is.GreaterThanOrEqualTo(.84f));
+                    for (int i = 0; i < chefs.Length; i++)
+                    {
+                        if (workers[i].Job != RestaurantJob.Cook || workers[i].OperateUntil < 0) continue;
+                        var figure = figures[i];
+                        var stove = stoves[workers[i].Stove];
+                        var toStove = new Vector3((float)stove.X, 0, (float)stove.Z) - figure.transform.localPosition;
+                        Assert.That(Vector3.Dot(figure.transform.forward, toStove.normalized), Is.GreaterThan(.99));
+                        Assert.That(figure.WorkAction, Is.EqualTo(FigureWorkAction.Cook));
+                        sawCookPose[i] = true;
+                    }
+                    s.AdvanceClock(1);
+                }
+                Assert.That(sawCookPose, Is.All.True);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
+
+            static double Distance(double x, double z, double otherX, double otherZ) =>
+                Math.Sqrt(Math.Pow(x - otherX, 2) + Math.Pow(z - otherZ, 2));
         }
         [TestCase(true)]
         [TestCase(false)]

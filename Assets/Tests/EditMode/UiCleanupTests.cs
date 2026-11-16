@@ -11,7 +11,9 @@ using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 using PCShopSell.Game;
 using PCShopSell.Game.UI;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace PCShopSell.Tests
@@ -111,6 +113,49 @@ namespace PCShopSell.Tests
                     UnityEngine.Object.DestroyImmediate(UnityEngine.EventSystems.EventSystem.current.gameObject);
                 S.Dispose();
             }
+        }
+
+        [Test]
+        public void SpaceIsReservedFromUiSubmitWhileEnterAndControllerStillSubmit()
+        {
+            var settings = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/InputManager.asset").Single();
+            using var inputManager = new SerializedObject(settings);
+            var axes = inputManager.FindProperty("m_Axes");
+            var keys = Enumerable.Range(0, axes.arraySize).Select(axes.GetArrayElementAtIndex)
+                .Where(axis => axis.FindPropertyRelative("m_Name").stringValue == "Submit")
+                .SelectMany(axis => new[]
+                {
+                    axis.FindPropertyRelative("positiveButton").stringValue,
+                    axis.FindPropertyRelative("altPositiveButton").stringValue
+                }).ToArray();
+            CollectionAssert.DoesNotContain(keys, "space");
+            CollectionAssert.IsSubsetOf(new[] { "return", "enter", "joystick button 0" }, keys);
+        }
+
+        [UnityEngine.TestTools.UnityTest]
+        public System.Collections.IEnumerator OpeningEmployeePurchaseClearsTheOpenerSelection()
+        {
+            yield return new UnityEngine.TestTools.EnterPlayMode();
+            using (var r = new Rig())
+            {
+                r.S.CurrentShop.Buyer = new Employee { Name = "乔禾", DailyWageYuan = 120 };
+                r.Ui.OpenDock();
+                r.Ui.DebugSelectTab(5);
+                yield return null;
+                var arrange = r.Components<Button>().Single(b => b.GetComponentInChildren<Text>()?.text == "安排进货");
+                var events = EventSystem.current;
+                Assert.NotNull(events);
+                events.SetSelectedGameObject(arrange.gameObject);
+                Assert.AreSame(arrange.gameObject, events.currentSelectedGameObject);
+                ExecuteEvents.Execute(events.currentSelectedGameObject, new BaseEventData(events), ExecuteEvents.submitHandler);
+
+                Assert.IsTrue(r.S.Time.IsHeld);
+                Assert.IsNull(events.currentSelectedGameObject);
+                Assert.AreEqual(1, r.Components<Transform>().Count(t => t.name.StartsWith("Window_定期采购清单")));
+                Assert.IsTrue(r.Ui.CloseTopWindow());
+                Assert.IsFalse(r.S.Time.IsHeld);
+            }
+            yield return new UnityEngine.TestTools.ExitPlayMode();
         }
 
         [Test]
@@ -407,6 +452,42 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void PhoneDeliveryOrdersAndConfiguresAutomaticMealsIndependently()
+        {
+            using var rig = new Rig();
+            var session = rig.S;
+            session.SetSmartphone(true);
+            session.Player.Hunger = 40;
+            var cash = session.Ledger.Balance;
+            var order = GameSession.DeliveryMeals[2];
+
+            rig.Ui.OpenPhone();
+            rig.Button("PhoneApp_" + PhoneApps.FoodDelivery).onClick.Invoke();
+            rig.Button("MealDeliveryAutoTab").onClick.Invoke();
+            rig.Button("MealDeliveryAutoTier_1").onClick.Invoke();
+            Assert.AreEqual(1, session.MealDeliveryTier);
+            Assert.False(session.MealDeliveryEnabled);
+            Assert.AreEqual(cash, session.Ledger.Balance);
+
+            rig.Button("MealDeliveryOrderTab").onClick.Invoke();
+            rig.Button("MealDeliveryOrder_2").onClick.Invoke();
+            Assert.AreEqual(cash - Money.FromYuan(order.Price), session.Ledger.Balance);
+            Assert.AreEqual(100, session.Player.Hunger);
+            Assert.False(session.MealDeliveryEnabled);
+            Assert.AreEqual(1, session.MealDeliveryTier);
+            StringAssert.Contains(order.Name, rig.Components<Text>().Single(t => t.name == "MealDeliveryReceipt").text);
+            Assert.False(rig.Button("MealDeliveryOrder_2").interactable);
+
+            rig.Button("MealDeliveryAutoTab").onClick.Invoke();
+            rig.Button("MealDeliveryAutoToggle").onClick.Invoke();
+            Assert.True(session.MealDeliveryEnabled);
+            Assert.AreEqual(cash - Money.FromYuan(order.Price), session.Ledger.Balance);
+            using var loaded = GameSession.Load(session.City, session.CreateSave());
+            Assert.True(loaded.MealDeliveryEnabled);
+            Assert.AreEqual(1, loaded.MealDeliveryTier);
+        }
+
+        [Test]
         public void RacingAndNoticeHudShortcutsOpenTheirPanels()
         {
             using (var r = new Rig())
@@ -618,6 +699,14 @@ namespace PCShopSell.Tests
             s.RestockReserveYuan = cash.Cents / 100;
             r.Ui.OpenCityInvestments();
 
+            Text Amount(string name) => r.Components<Text>().Single(text => text.name == name);
+            Assert.AreEqual(cash.ToString(), Amount("StockAvailableCash").text);
+            Assert.AreEqual(Money.Zero.ToString(), Amount("StockBatchNet").text);
+            foreach (string amountName in new[] { "StockAvailableCash", "StockBatchNet" })
+            {
+                Assert.AreEqual(FontStyle.Bold, Amount(amountName).fontStyle);
+                Assert.GreaterOrEqual(Amount(amountName).fontSize, 28);
+            }
             Assert.IsEmpty(r.Components<InputField>());
             Assert.That(r.Components<Transform>().Any(item => item.name == "StockQuote_hardware"), Is.False);
             r.Button("StockDraftMore_" + id).onClick.Invoke();
@@ -625,15 +714,20 @@ namespace PCShopSell.Tests
             Assert.That(r.Button("StockQuickSellAll_" + id).interactable, Is.False);
             r.Button("StockQuickBuyMax_" + id).onClick.Invoke();
             Assert.That(s.Ledger.Balance, Is.EqualTo(cash));
+            Assert.AreEqual((Money.Zero - cost).ToString(), Amount("StockBatchNet").text);
+            Assert.AreEqual(Ui.FlatDown, Amount("StockBatchNet").color);
             r.Button("StockBatchExecute").onClick.Invoke();
             r.Button("StockReserveConfirm").onClick.Invoke();
             Assert.That(s.CityInvestmentUnits(id), Is.EqualTo(200));
             Assert.That(s.Ledger.Balance, Is.EqualTo(cash - cost));
+            Assert.AreEqual((cash - cost).ToString(), Amount("StockAvailableCash").text);
             var proceeds = s.CityInvestmentTradeTotal(id, 200, buy: false);
             r.Button("StockDraftMore_" + id).onClick.Invoke();
             Assert.That(r.Button("StockQuickBuyMax_" + id).interactable, Is.False);
             r.Button("StockQuickSellAll_" + id).onClick.Invoke();
             Assert.That(s.CityInvestmentUnits(id), Is.EqualTo(200));
+            Assert.AreEqual("+" + proceeds, Amount("StockBatchNet").text);
+            Assert.AreEqual(Ui.Good, Amount("StockBatchNet").color);
             r.Button("StockBatchExecute").onClick.Invoke();
             Assert.That(s.CityInvestmentUnits(id), Is.Zero);
             Assert.That(s.CityInvestmentCost(id), Is.EqualTo(Money.Zero));
@@ -869,7 +963,7 @@ namespace PCShopSell.Tests
         }
 
         [TestCase("restaurant")] [TestCase("secondhand")]
-        public void SpecialStoreCounterPricingAndRecordsHaveDistinctControls(string kind)
+        public void SpecialStoreCounterPricingAndOrdersOrRecordsHaveDistinctControls(string kind)
         {
             using (var r = new Rig())
             {
@@ -880,10 +974,36 @@ namespace PCShopSell.Tests
                 Assert.False(r.Components<Button>().Any(b => b.name == "ChillKitchenIngredients"));
                 StringAssert.DoesNotContain("每日收购预算", r.Text);
                 if (kind == "restaurant") Assert.NotNull(r.Button("SaveMenuMarkup"));
-                r.Ui.DebugSelectTab(3);
+                if (kind == "restaurant")
+                {
+                    var state = r.S.SpecialBusiness(r.S.CurrentShop.Place.Id);
+                    state.Paid = 334;
+                    state.Revenue = 15092;
+                    state.Lost = 89;
+                    state.Orders.Add(new DiningOrder { Id = 1, Table = 0, Recipe = 0, Price = 36, Stage = DiningStage.Waiting });
+                    state.Orders.Add(new DiningOrder { Id = 2, Table = 1, Recipe = 0, Price = 36, Stage = DiningStage.Left });
+                    state.Orders.Add(new DiningOrder { Id = 3, Table = 2, Recipe = 0, Price = 36, Stage = DiningStage.Completed, TableCleared = true });
+                }
+                r.ClickCaption(kind == "restaurant" ? "订单" : "记录");
                 Assert.False(r.Components<Button>().Any(b => b.name == "SaveMenuMarkup" || b.name == "ChillKitchenIngredients"));
                 StringAssert.DoesNotContain("每日收购预算", r.Text);
-                StringAssert.Contains(kind == "restaurant" ? "当前桌单" : "收购与售出记录", r.Text);
+                if (kind == "restaurant")
+                {
+                    StringAssert.Contains("当前桌单 2 单", r.Text);
+                    StringAssert.Contains("1号桌 · 青菜炒饭 · ¥36 · 待备料", r.Text);
+                    StringAssert.Contains("2号桌 · 青菜炒饭 · ¥36 · 顾客已离开 · 待收桌", r.Text);
+                    StringAssert.DoesNotContain("3号桌", r.Text);
+                    StringAssert.DoesNotContain("累计成交", r.Text);
+                    StringAssert.DoesNotContain("营业收入", r.Text);
+                    StringAssert.DoesNotContain("累计流失", r.Text);
+                    r.ClickCaption("返回柜台处理桌单");
+                    Assert.NotNull(r.Button("ShopMainCategory"));
+                }
+                else
+                {
+                    StringAssert.Contains("收购与售出记录", r.Text);
+                    StringAssert.Contains("累计成交", r.Text);
+                }
             }
         }
 
@@ -1026,6 +1146,27 @@ namespace PCShopSell.Tests
         }
 
         [Test]
+        public void DeferredWindowRefreshKeepsThePressedButtonAndHoverDoesNotChangeItsTint()
+        {
+            using var r = new Rig();
+            var window = r.Ui.OpenWindow("刷新测试", 440, 280, w =>
+                Ui.Button(w.Content, "测试操作", null).name = "RefreshTestAction");
+            var action = r.Button("RefreshTestAction");
+            Assert.AreEqual(action.colors.normalColor, action.colors.highlightedColor);
+            Assert.AreEqual(0, action.colors.fadeDuration);
+            Assert.AreNotEqual(action.colors.normalColor, action.colors.pressedColor);
+            Assert.AreNotEqual(action.colors.normalColor, action.colors.disabledColor);
+
+            var canRefresh = typeof(Window).GetMethod("CanApplyPendingRebuild", BindingFlags.Instance | BindingFlags.NonPublic);
+            window.RequestRebuild();
+            Assert.False((bool)canRefresh.Invoke(window, new object[] { true }));
+            Assert.AreSame(action, r.Button("RefreshTestAction"));
+            Assert.True((bool)canRefresh.Invoke(window, new object[] { false }));
+            typeof(Window).GetMethod("ApplyPendingRebuild", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(window, null);
+            Assert.AreNotSame(action, r.Button("RefreshTestAction"));
+        }
+
+        [Test]
         public void FishChoicesAndPreordersShowTheirEffectsAndDeadline()
         {
             using var r = new Rig(HomeTests.Make());
@@ -1047,12 +1188,13 @@ namespace PCShopSell.Tests
             r.S.SpecialBusiness("pc").Orders.Add(new DiningOrder
             {
                 Id = 1, Recipe = 0, Table = -1, FishId = fish.Id, DueAt = due.TotalMinutes,
-                Stage = DiningStage.Waiting, Price = 36 + fish.DinnerSurcharge
+                Stage = DiningStage.Waiting, Price = 2 * (36 + fish.DinnerSurcharge)
             });
             r.Ui.OpenDock();
             r.Ui.DebugSelectTab(3);
             StringAssert.Contains("鱼餐预订 1 / 2", r.Text);
             StringAssert.Contains("青菜炒饭 + 鳜鱼", r.Text);
+            StringAssert.Contains($"¥{2 * (36 + fish.DinnerSurcharge):N0}", r.Text);
             StringAssert.Contains("交付名望 +0.65", r.Text);
             StringAssert.Contains("交期 " + due, r.Text);
         }
@@ -1067,9 +1209,18 @@ namespace PCShopSell.Tests
                 StringAssert.Contains("青菜炒饭 · ¥36", r.Text);
                 StringAssert.Contains("鸡蛋炒饭 · ¥44", r.Text);
                 StringAssert.Contains("肉末炒饭 · ¥56", r.Text);
-                r.Components<Slider>().Single(s => s.name == "MenuMarkupSlider").value = 1.7f;
+                var slider = r.Components<Slider>().Single(s => s.name == "MenuMarkupSlider");
+                var save = r.Button("SaveMenuMarkup");
+                slider.value = 1.7f;
+                r.S.PlayerShop.Stock.ForceAddGoods(Gifts.Soda, 1);
+                r.Call("RefreshDock");
+                Assert.AreSame(slider, r.Components<Slider>().Single(s => s.name == "MenuMarkupSlider"));
+                Assert.AreSame(save, r.Button("SaveMenuMarkup"));
+                Assert.True(save.interactable);
                 Assert.AreEqual(original, state.MenuMarkup);
-                r.Button("SaveMenuMarkup").onClick.Invoke(); Assert.AreEqual(1.7, state.MenuMarkup, 1e-9);
+                save.onClick.Invoke(); Assert.AreEqual(1.7, state.MenuMarkup, 1e-9);
+                Assert.AreSame(save, r.Button("SaveMenuMarkup"));
+                Assert.False(save.interactable);
                 StringAssert.Contains("青菜炒饭 · ¥61", r.Text);
             }
         }
@@ -1506,6 +1657,17 @@ namespace PCShopSell.Tests
             r.Button("ShopTab_米与生鲜").onClick.Invoke();
             Assert.IsEmpty(FishFields());
             Assert.AreEqual("5", r.Components<InputField>().Single(input => input.name == "QuantityValue_" + key).text);
+
+            r.Button("ShopTab_饮料").onClick.Invoke();
+            string sodaKey = "wholesale:" + Gifts.Soda;
+            var drinks = r.Components<InputField>();
+            CollectionAssert.AreEquivalent(new[] { "QuantityValue_" + sodaKey, "QuantityValue_wholesale:" + Gifts.Drink },
+                drinks.Select(input => input.name));
+            drinks.Single(input => input.name == "QuantityValue_" + sodaKey).onEndEdit.Invoke("10");
+            Assert.AreEqual(10, r.S.CartAmount(sodaKey));
+            Assert.AreEqual(5, r.S.CartAmount(key));
+            Assert.That(r.Text, Does.Contain("/瓶").And.Contain("/箱"));
+            r.Button("ShopTab_米与生鲜").onClick.Invoke();
 
             r.S.Clock.Restore(r.S.Clock.Today, 23 * 60);
             r.Ui.RebuildWindows();

@@ -32,7 +32,13 @@ namespace PCShopSell.Tests
         private static void Finish(GameSession s,CityActivity a)
         {
             if (GameSession.IsOnsiteSport(a)) Assert.True(s.FinishOnsiteSport());
-            else s.AdvanceClock((int)Math.Max(1,a.ActualStart+a.Duration-s.Clock.Now.TotalMinutes));
+            else Assert.True(s.FinishManualCityActivity(a.Id));
+        }
+        internal static void StepManualActivity(GameSession session, int steps)
+        {
+            var start = session.Clock.Now;
+            for (int i = 0; i < steps; i++) Assert.Zero(session.Tick(.25));
+            Assert.AreEqual(start, session.Clock.Now);
         }
         private static void Shot(GameSession s,int mode,double power=.615,double angle=0)
         {
@@ -98,7 +104,17 @@ namespace PCShopSell.Tests
             using var s=Make();var cash=s.Ledger.Balance;int orders=s.CityReferrals.Count;var a=Book(s,n);Assert.IsNull(s.CurrentOnsite);Assert.AreEqual(cash,s.Ledger.Balance);Assert.AreEqual(orders,s.CityReferrals.Count);Attend(s,a);Assert.AreEqual(n,s.CurrentOnsite.Number);
         }
         [Test] public void StandingStillDoesNotCompleteTheMissingOnsiteTask()
-        {using var s=Make();var a=Book(s,52);Attend(s,a);Finish(s,a);Assert.AreEqual(CityActivityPhase.Interrupted,a.State);Assert.IsFalse(a.RewardApplied);}
+        {
+            using var s = Make(); var a = Book(s, 52); Attend(s, a);
+            var start = s.Clock.Now;
+            s.Time.SetPaused(false);
+            StepManualActivity(s, 100);
+            s.AdvanceClock(180);
+            Assert.AreEqual(start, s.Clock.Now);
+            Assert.IsFalse(s.FinishManualCityActivity(a.Id));
+            Assert.AreEqual(CityActivityPhase.Running, a.State);
+            Assert.IsFalse(a.RewardApplied);
+        }
         [Test] public void TastingFreezesTimeUntilThreeDifferentDrinksThenSettlesNinetyMinutesOnce()
         {
             using var s = Make();
@@ -164,6 +180,10 @@ namespace PCShopSell.Tests
             Assert.That(s.Clock.Now, Is.EqualTo(start));
             Assert.That(activity.State, Is.EqualTo(CityActivityPhase.Interrupted));
             Assert.That(activity.RewardApplied, Is.False);
+            Assert.That(activity.PartialSettlementProgress, Is.EqualTo(1d / 3).Within(1e-9));
+            var participant = activity.Participants.Single();
+            var fullReward = s.CityActivityService(activity).Service(activity.ServiceChoice).Relation;
+            Assert.That(participant.RelationAfter - participant.RelationBefore, Is.EqualTo(fullReward / 3d).Within(1e-9));
         }
         [TestCase(0,600)] [TestCase(1,2400)] [TestCase(2,0)] [TestCase(3,1800)]
         public void GroupPaymentUsesActualFourPersonBillAndCorrectHost(int choice,int fee)
@@ -172,27 +192,77 @@ namespace PCShopSell.Tests
         }
         [Test] public void GroupTopicsBindTheActualPersonAndCannotBeSpammed()
         {
-            using var s=Make();var a=Book(s,52,2);Attend(s,a);string person=a.Participants[0].PersonId;int before=s.Relation(person);Assert.IsTrue(s.TalkOnsiteGuest(0,0));s.AdvanceClock(3);Assert.AreEqual(before+3,s.Relation(person));Assert.IsFalse(s.TalkOnsiteGuest(0,2));
-            for(int i=1;i<3;i++){Assert.IsTrue(s.TalkOnsiteGuest(i,i));s.AdvanceClock(3);}Finish(s,a);Assert.AreEqual(CityActivityPhase.Completed,a.State);
+            using var s = Make(); var a = Book(s, 52, 2); Attend(s, a);
+            var start = s.Clock.Now;
+            string person = a.Participants[0].PersonId;
+            int before = s.Relation(person);
+            Assert.IsTrue(s.TalkOnsiteGuest(0, 0));
+            StepManualActivity(s, 3);
+            Assert.AreEqual(before + 3, s.Relation(person));
+            Assert.IsFalse(s.TalkOnsiteGuest(0, 2));
+            for (int i = 1; i < 3; i++)
+            {
+                Assert.IsTrue(s.TalkOnsiteGuest(i, i));
+                StepManualActivity(s, 3);
+            }
+            Finish(s, a);
+            Assert.AreEqual(start.AddMinutes(a.Duration), s.Clock.Now);
+            Assert.AreEqual(CityActivityPhase.Completed, a.State);
+            Assert.IsFalse(s.FinishManualCityActivity(a.Id));
             foreach (var guest in a.Participants) Assert.That(guest.RelationAfter - guest.RelationBefore, Is.EqualTo(7));
         }
         [TestCase(1,0,0,true)] [TestCase(0,0,0,false)] [TestCase(1,1,0,false)] [TestCase(1,0,1,false)]
         public void MixingRequiresRealPreparationAndForcedTastingWithWrongRecipePenalty(int basis,int flavor,int sweet,bool correct)
         {
-            using var s=Make();var a=Book(s,53);Attend(s,a);s.SetOnsiteRecipe(0,basis);s.SetOnsiteRecipe(1,flavor);s.SetOnsiteRecipe(2,sweet);Assert.IsTrue(s.MixOnsiteDrink());Assert.IsFalse(s.TasteOnsiteMix());s.AdvanceClock(5);Assert.AreEqual("mixed",s.CurrentOnsite.Phase);Assert.IsFalse(s.MixOnsiteDrink());
-            s.Player.Health=80;Assert.IsTrue(s.TasteOnsiteMix());s.AdvanceClock(2);Assert.AreEqual(correct?1:0,s.CurrentOnsite.Success);Assert.AreEqual(1,s.CurrentOnsite.Attempts);Assert.IsFalse(s.TasteOnsiteMix());if(!correct)Assert.Less(s.Player.Health,79);Finish(s,a);Assert.AreEqual(CityActivityPhase.Completed,a.State);
+            using var s=Make();var a=Book(s,53);Attend(s,a);s.SetOnsiteRecipe(0,basis);s.SetOnsiteRecipe(1,flavor);s.SetOnsiteRecipe(2,sweet);Assert.IsTrue(s.MixOnsiteDrink());Assert.IsFalse(s.TasteOnsiteMix());StepManualActivity(s,5);Assert.AreEqual("mixed",s.CurrentOnsite.Phase);Assert.IsFalse(s.MixOnsiteDrink());
+            s.Player.Health=80;Assert.IsTrue(s.TasteOnsiteMix());StepManualActivity(s,2);Assert.AreEqual(correct?1:0,s.CurrentOnsite.Success);Assert.AreEqual(1,s.CurrentOnsite.Attempts);Assert.IsFalse(s.TasteOnsiteMix());if(!correct)Assert.Less(s.Player.Health,79);Finish(s,a);Assert.AreEqual(CityActivityPhase.Completed,a.State);
         }
         [Test] public void MixedDrinkAndRemainingTasteTimeSurviveJson()
         {
-            using var s=Make();var a=Book(s,53);Attend(s,a);s.SetOnsiteRecipe(0,1);s.MixOnsiteDrink();s.AdvanceClock(5);s.TasteOnsiteMix();s.AdvanceClock(1);using var loaded=Reload(s);Assert.AreEqual("taste",loaded.CurrentOnsite.Pending);loaded.AdvanceClock(1);Assert.AreEqual(1,loaded.CurrentOnsite.Success);Assert.IsFalse(loaded.TasteOnsiteMix());
+            using var s=Make();var a=Book(s,53);Attend(s,a);s.SetOnsiteRecipe(0,1);s.MixOnsiteDrink();StepManualActivity(s,5);s.TasteOnsiteMix();StepManualActivity(s,1);using var loaded=Reload(s);Assert.AreEqual("taste",loaded.CurrentOnsite.Pending);StepManualActivity(loaded,1);Assert.AreEqual(1,loaded.CurrentOnsite.Success);Assert.IsFalse(loaded.TasteOnsiteMix());
         }
         [Test] public void BasketballUsesActualAimPowerFlightAndDistinctTrainingModes()
         {
-            using var s=Make();var a=Book(s,54);Attend(s,a);Shot(s,0);Assert.AreEqual(1,s.CurrentOnsite.Success);Shot(s,0,.2,30);Assert.AreEqual(1,s.CurrentOnsite.Success);Shot(s,1,.65);Assert.AreEqual(3,s.CurrentOnsite.Round);Finish(s,a);Assert.AreEqual(CityActivityPhase.Completed,a.State);
+            using var s = Make();
+            var a = Book(s, 54);
+            Attend(s, a);
+            Shot(s, 0);
+            Assert.AreEqual(OnsiteSportResult.Success, s.CurrentOnsite.LastSportResult);
+            Assert.AreEqual(1, s.CurrentOnsite.Success);
+            Shot(s, 0, .2, 30);
+            Assert.AreEqual(OnsiteSportResult.Miss, s.CurrentOnsite.LastSportResult);
+            Assert.AreEqual(1, s.CurrentOnsite.Success);
+            Shot(s, 1, .65);
+            Assert.AreEqual(3, s.CurrentOnsite.Round);
+            Finish(s, a);
+            Assert.AreEqual(CityActivityPhase.Completed, a.State);
         }
         [Test] public void NewFloorNeedsAllThreeExercisesAndActualFeedback()
         {
-            using var s=Make();var a=Book(s,55);Attend(s,a);Assert.IsFalse(s.OnsiteCourtFeedback(0));Shot(s,0,.55);Shot(s,1,.7);Shot(s,2);Assert.AreEqual(7,s.CurrentOnsite.Mask);Assert.IsTrue(s.OnsiteCourtFeedback(1));Finish(s,a);Assert.AreEqual(CityActivityPhase.Completed,a.State);
+            using var s = Make();
+            var a = Book(s, 55);
+            Attend(s, a);
+            Assert.AreEqual(2, s.CurrentOnsite.Mode);
+            Assert.IsFalse(s.OnsiteCourtFeedback(0));
+            Assert.IsTrue(s.BeginOnsiteCharge());
+            for (int i = 0; i < 615; i++) s.StepOnsiteSport(.001);
+            Assert.IsTrue(s.ReleaseOnsiteShot());
+            s.StepOnsiteSport(.1);
+            Assert.That(s.CurrentOnsite.BallZ, Is.GreaterThan(0));
+            Assert.That(s.CurrentOnsite.BallY, Is.GreaterThan(OnsitePlayState.BasketballReleaseHeight));
+            for (int i = 0; i < 14 && s.CurrentOnsite.Phase == "flight"; i++) s.StepOnsiteSport(.1);
+            Assert.AreEqual(OnsiteSportResult.Success, s.CurrentOnsite.LastSportResult);
+            Assert.That(s.CurrentOnsite.BallZ, Is.EqualTo(8).Within(.001));
+            Assert.That(s.CurrentOnsite.BallY, Is.EqualTo(OnsitePlayState.BasketballRimHeight).Within(.001));
+            s.StepOnsiteSport(.1);
+            Assert.That(s.CurrentOnsite.BallY, Is.LessThan(OnsitePlayState.BasketballRimHeight));
+            Shot(s, 0, .55);
+            StringAssert.Contains("练习成功", s.CurrentOnsite.Message);
+            Shot(s, 1, .7);
+            Assert.AreEqual(7, s.CurrentOnsite.Mask);
+            Assert.IsTrue(s.OnsiteCourtFeedback(1));
+            Finish(s, a);
+            Assert.AreEqual(CityActivityPhase.Completed, a.State);
         }
         [Test] public void TeacherGameNeedsFivePhysicalPossessions()
         {using var s=Make();var a=Book(s,56);Attend(s,a);for(int i=0;i<5;i++)Shot(s,i%2);Assert.AreEqual(5,s.CurrentOnsite.Round);Finish(s,a);Assert.AreEqual(CityActivityPhase.Completed,a.State);}
@@ -223,8 +293,8 @@ namespace PCShopSell.Tests
         public void TastingDialogueUsesNaturalFeelingsAndAppliesAttributesAfterDrinking(int choice,bool pleasant)
         {
             using var s=Make();var a=Book(s,53);Attend(s,a);s.Player.Intelligence=20;
-            Assert.IsTrue(s.ChooseTastingDialogue(choice));Assert.IsFalse(s.ChooseTastingDialogue(0));Assert.IsFalse(s.TasteOnsiteMix());s.AdvanceClock(5);
-            Assert.IsFalse(s.ChooseTastingDialogue(0));Assert.IsTrue(s.TasteOnsiteMix());Assert.AreEqual(20,s.Player.Intelligence);s.Player.Health=80;s.AdvanceClock(2);
+            Assert.IsTrue(s.ChooseTastingDialogue(choice));Assert.IsFalse(s.ChooseTastingDialogue(0));Assert.IsFalse(s.TasteOnsiteMix());StepManualActivity(s,5);
+            Assert.IsFalse(s.ChooseTastingDialogue(0));Assert.IsTrue(s.TasteOnsiteMix());Assert.AreEqual(20,s.Player.Intelligence);s.Player.Health=80;StepManualActivity(s,2);
             string result=s.CurrentOnsite.Message;Assert.That(result,Does.Contain(pleasant?"味道简直完美":"味道有点奇怪"));
             foreach(string text in new[]{"正确","错误","配方不符","剩余材料","已试喝"})Assert.That(result,Does.Not.Contain(text));
             Assert.AreEqual(pleasant?21:20,s.Player.Intelligence);if(!pleasant)Assert.Less(s.Player.Health,79);
@@ -233,8 +303,8 @@ namespace PCShopSell.Tests
         }
         [Test] public void PleasantTastingLearningIsNotGrantedTwiceAfterSaveOrRepeat()
         {
-            using var s=Make();var a=Book(s,53);Attend(s,a);s.Player.Intelligence=20;s.ChooseTastingDialogue(0);s.AdvanceClock(5);s.TasteOnsiteMix();s.AdvanceClock(2);Assert.AreEqual(21,s.Player.Intelligence);
-            using var loaded=Reload(s);Assert.IsTrue(loaded.ChooseTastingDialogue(0));loaded.AdvanceClock(5);loaded.TasteOnsiteMix();loaded.AdvanceClock(2);Assert.AreEqual(21,loaded.Player.Intelligence);
+            using var s=Make();var a=Book(s,53);Attend(s,a);s.Player.Intelligence=20;s.ChooseTastingDialogue(0);StepManualActivity(s,5);s.TasteOnsiteMix();StepManualActivity(s,2);Assert.AreEqual(21,s.Player.Intelligence);
+            using var loaded=Reload(s);Assert.IsTrue(loaded.ChooseTastingDialogue(0));StepManualActivity(loaded,5);loaded.TasteOnsiteMix();StepManualActivity(loaded,2);Assert.AreEqual(21,loaded.Player.Intelligence);
         }
     }
 }

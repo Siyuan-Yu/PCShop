@@ -316,7 +316,8 @@ namespace PCShopSell.Core.Shop
         private double _reputation;
         private double _markup = 1.15;
 
-        public string ShopId { get; }
+        public string ShopId { get; private set; }
+        internal void SetShopId(string shopId) => ShopId = shopId;
         public ShopSettings Settings { get; }
         public GameRandom Random { get; }
         public Stock Stock { get; }
@@ -735,7 +736,8 @@ namespace PCShopSell.Core.Shop
             GameTimestamp at = completedAt ?? _clock.Now;
             if (o == null || at >= o.DueAt || !o.PartsReserved) return false;
             _orders.Remove(o);
-            _ledger.Credit(at.Date, BuildCategory, o.Price, $"{PartCatalog.TierName(o.Tier)}整机", LedgerAttribution.ForShop(ShopId, "build:" + ShopId + ":" + o.Id, "销售"));
+            string orderScope = _ledger.SalesAccountOfShop?.Invoke(ShopId) ?? ShopId;
+            _ledger.Credit(at.Date, BuildCategory, o.Price, $"{PartCatalog.TierName(o.Tier)}整机", LedgerAttribution.ForShop(ShopId, "build:" + orderScope + ":" + o.Id, "销售"));
             TodaySales += o.Price;
             AdjustShopAwareness(BuildAwarenessGain);
             AdjustPersonalReputation(o.ReputationReward);

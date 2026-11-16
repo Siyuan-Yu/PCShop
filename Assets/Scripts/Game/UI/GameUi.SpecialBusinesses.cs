@@ -4,6 +4,7 @@ using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
 {
@@ -97,7 +98,7 @@ namespace PCShopSell.Game.UI
                         _ => "顾客已离开"
                     };
                 }
-                Line(C,(order.Table+1)+"号桌 · "+GameSession.RecipeNames[order.Recipe]+" · ¥"+order.Price,17,Ui.Accent);
+                ItemLabel(C,"recipe:"+order.Recipe,(order.Table+1)+"号桌 · "+GameSession.RecipeNames[order.Recipe]+" · ¥"+order.Price,17,color:Ui.Accent);
                 CounterText(Status, 16, order.Stage == DiningStage.Burnt ? Ui.Warn : Ui.Good);
                 bool playerBusy=state.Workers.Any(w=>w.ActorId==GameSession.RestaurantPlayer&&w.Busy);
                 if(assigned!=null)
@@ -128,31 +129,80 @@ namespace PCShopSell.Game.UI
         {
             var state=S.SpecialBusiness(S.CurrentShop.Place.Id);
             if(S.RetailKind=="secondhand") { BuildUsedStock(C,pricingOnly:true); return; }
+            _pricingShop = S.PlayerShop;
             Line(C,"菜单与饮料定价",20,Ui.Accent);
-            for(int recipe=0;recipe<GameSession.RecipeNames.Length;recipe++)
+            var recipes = new Button[GameSession.RecipeNames.Length];
+            for (int recipe = 0; recipe < recipes.Length; recipe++)
             {
-                int selected=recipe;bool enabled=(state.RecipeMask&(1<<selected))!=0;
-                Ui.Size(Ui.Button(C,(enabled?"✓ 供应 ":"暂停 ")+GameSession.RecipeNames[selected]+" · ¥"+Math.Round(GameSession.RecipePrices[selected]*state.MenuMarkup),()=>{state.RecipeMask^=1<<selected;RebuildDock();},16,Ui.SelectedButton(enabled)),-1,34);
+                int selected = recipe;
+                recipes[recipe] = Ui.Size(Ui.Button(C, "", () =>
+                {
+                    state.RecipeMask ^= 1 << selected;
+                    RefreshRecipes();
+                }, 16), -1, 40);
+                ItemButtonPortrait(recipes[recipe], "recipe:" + recipe, 32);
             }
-            BuildMenuMarkupEditor(state);
-            BuildRestaurantDrinkPricing();
+            void RefreshRecipes()
+            {
+                for (int recipe = 0; recipe < recipes.Length; recipe++)
+                {
+                    bool enabled = (state.RecipeMask & (1 << recipe)) != 0;
+                    var button = recipes[recipe];
+                    button.GetComponentInChildren<Text>().text = (enabled ? "✓ 供应 " : "暂停 ") + GameSession.RecipeNames[recipe]
+                        + " · ¥" + Math.Round(GameSession.RecipePrices[recipe] * state.MenuMarkup);
+                    Ui.SetButtonFill(button, Ui.SelectedButton(enabled));
+                }
+            }
+
+            var refreshMenu = BuildMenuMarkupEditor(state, RefreshRecipes);
+            var refreshDrinks = BuildRestaurantDrinkPricing();
+            _refreshPricing = () => { RefreshRecipes(); refreshMenu(); refreshDrinks(); };
+            _refreshPricing();
         }
-        private void BuildMenuMarkupEditor(SpecialBusinessState state)
+
+        private Action BuildMenuMarkupEditor(SpecialBusinessState state, Action refreshRecipes)
         {
-            string key="menu:"+S.CurrentShop.Place.Id;
-            double draft=_multiplierDrafts.TryGetValue(key,out var previous)?previous:state.MenuMarkup;var label=Line(C,"",17,Ui.Good);UnityEngine.UI.Button save=null;
-            void Preview(){label.text=$"菜单售价 {draft:0.0}× · 购买意愿 {S.PlayerShop.MarkupPurchaseIntent(draft)*100:0}%";if(save!=null)save.interactable=Math.Abs(draft-state.MenuMarkup)>.001;}
-            Ui.Slider(C,.8f,(float)PCShopSell.Core.Shop.ShopSettings.MaxMarkup,(float)draft,v=>{draft=Math.Round(v*10)/10;_multiplierDrafts[key]=draft;Preview();}).name="MenuMarkupSlider";
-            save=Ui.Size(Ui.Button(C,"确认菜单售价",()=>{state.MenuMarkup=draft;_multiplierDrafts.Remove(key);RebuildDock();},17,Ui.ButtonHot,false),-1,36);
-            save.name="SaveMenuMarkup";Preview();
+            string key = "menu:" + S.CurrentShop.Place.Id;
+            var shop = S.PlayerShop;
+            double Draft() => _multiplierDrafts.TryGetValue(key, out var previous) ? previous : state.MenuMarkup;
+            double draft = Draft();
+            var label = Line(C, "", 17, Ui.Good);
+            Button save = null;
+            void Preview()
+            {
+                label.text = $"菜单售价 {draft:0.0}× · 购买意愿 {shop.MarkupPurchaseIntent(draft) * 100:0}%";
+                if (save != null) save.interactable = Math.Abs(draft - state.MenuMarkup) > .001;
+            }
+            var slider = Ui.Slider(C, .8f, (float)PCShopSell.Core.Shop.ShopSettings.MaxMarkup, (float)draft, value =>
+            {
+                draft = Math.Round(value * 10) / 10;
+                _multiplierDrafts[key] = draft;
+                Preview();
+            });
+            slider.name = "MenuMarkupSlider";
+            save = Ui.Size(Ui.Button(C, "确认菜单售价", () =>
+            {
+                state.MenuMarkup = draft;
+                _multiplierDrafts.Remove(key);
+                slider.SetValueWithoutNotify((float)draft);
+                refreshRecipes();
+                Preview();
+            }, 17, Ui.ButtonHot, false), -1, 36);
+            save.name = "SaveMenuMarkup";
             Line(C,"供应开关即时生效，调整价格后请确认。",14,Ui.Dim);
+            return () =>
+            {
+                draft = Draft();
+                slider.SetValueWithoutNotify((float)draft);
+                Preview();
+            };
         }
         private void BuildSpecialOrders()
         {
             var state=S.SpecialBusiness(S.CurrentShop.Place.Id);
-            CounterText(() => $"累计成交 {state.Paid} 单 · 营业收入 ¥{state.Revenue}", 19, Ui.Accent);
             if(S.RetailKind=="secondhand")
             {
+                CounterText(() => $"累计成交 {state.Paid} 单 · 营业收入 ¥{state.Revenue}", 19, Ui.Accent);
                 Line(C,"收购与售出记录",18,Ui.Accent);
                 foreach (var item in state.Used.Where(i => i.Owned).Reverse())
                 {
@@ -162,29 +212,44 @@ namespace PCShopSell.Game.UI
                 if(!state.Used.Any(i=>i.Owned))Line(C,"暂无收购记录。",16,Ui.Dim);
                 return;
             }
-            var fishOrders = state.Orders.Where(o => o.IsFishOrder).OrderBy(o => o.DueAt).ToArray();
+            var fishOrders = state.Orders.Where(o => o.IsFishOrder).OrderBy(o => o.DueAt).ThenBy(o => o.Id).ToArray();
             Line(C, $"鱼餐预订 {fishOrders.Length} / {GameSession.RestaurantFishOrderLimit}", 19, Ui.Accent);
             if (fishOrders.Length == 0) Line(C, "当前没有鱼餐预订。", 16, Ui.Dim);
+            else Line(C, "厨师按交期优先制作备齐的预订。出锅后可交付收款。", 15, Ui.Dim);
             foreach (var order in fishOrders) BuildFishOrder(state, order);
-            CounterText(() => $"当前桌单 {state.Orders.Count(o => !o.IsFishOrder)} · 累计流失 {state.Lost}", 17);
-            foreach(var order in state.Orders.Where(o => !o.IsFishOrder).OrderBy(o=>o.Table))
+
+            var tableOrders = state.Orders.Where(o => !o.IsFishOrder && !o.TableCleared).OrderBy(o => o.Table).ToArray();
+            Line(C, $"当前桌单 {tableOrders.Length} 单", 19, Ui.Accent);
+            foreach (var order in tableOrders)
             {
-                string status=order.Stage==DiningStage.Waiting?"待备料":order.Stage==DiningStage.Cooking?"烹饪中":order.Stage==DiningStage.Ready?"待上菜":order.Stage==DiningStage.Eating?"用餐中":order.Stage==DiningStage.Checkout?"待收桌收款":order.Stage==DiningStage.Completed?"已付款":order.Stage==DiningStage.Burnt?"已焦糊":"已离开";
-                Line(C,$"{order.Table+1}号桌 · {GameSession.RecipeNames[order.Recipe]} · ¥{order.Price} · {status}",17);
+                string status = order.Stage switch
+                {
+                    DiningStage.Waiting => "待备料",
+                    DiningStage.Cooking => "烹饪中",
+                    DiningStage.Ready => "待上菜",
+                    DiningStage.Eating => "用餐中",
+                    DiningStage.Checkout => "待收桌收款",
+                    DiningStage.Completed => "已付款 · 待收桌",
+                    DiningStage.Burnt => "已焦糊",
+                    _ => "顾客已离开 · 待收桌"
+                };
+                ItemLabel(C, "recipe:" + order.Recipe, $"{order.Table + 1}号桌 · {order.DishName} · ¥{order.Price} · {status}", 17);
             }
-            if(!state.Orders.Any(o => !o.IsFishOrder))Line(C,"当前没有桌单。",16,Ui.Dim);
+            if (tableOrders.Length == 0) Line(C, "当前没有桌单。", 16, Ui.Dim);
             Ui.Size(Ui.Button(C,"返回柜台处理桌单",()=>SelectTab(ShopTab.Counter),17),-1,38);
         }
 
         private void BuildFishOrder(SpecialBusinessState state, DiningOrder order)
         {
-            Line(C, $"{order.DishName} · ¥{order.Price:N0} · 交付名望 +{order.ReputationReward:0.##}", 18, Ui.Accent);
+            ItemLabel(C, order.Fish?.Id ?? "meal:fish", $"{order.DishName} · ¥{order.Price:N0} · 交付名望 +{order.ReputationReward:0.##}", 18, color: Ui.Accent);
             Line(C, $"交期 {new GameTimestamp(order.DueAt)} · {order.Fish?.Rarity}", 15, Ui.Dim);
             var worker = state.Workers.FirstOrDefault(w => w.Busy && w.OrderId == order.Id);
             bool canWork = !state.Workers.Any(w => w.Busy && w.ActorId == GameSession.RestaurantPlayer);
             if (worker != null)
             {
-                Line(C, "正在" + GameSession.RestaurantJobName(worker.Job), 16, Ui.Good);
+                string who = worker.ActorId == GameSession.RestaurantPlayer ? "你" : S.FindEmployee(worker.ActorId)?.Person.Name ?? "厨师";
+                string progress = worker.OperateUntil < 0 ? "正前往灶台" : "正在" + GameSession.RestaurantJobName(worker.Job);
+                Line(C, who + " · " + progress, 16, Ui.Good);
                 return;
             }
 

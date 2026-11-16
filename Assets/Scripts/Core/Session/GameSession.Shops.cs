@@ -11,6 +11,8 @@ using PCShopSell.Core.World;
 
 namespace PCShopSell.Core.Session
 {
+    public enum ShopGuestEvent { Entered, LeftWithoutPaying, Paid }
+
     /// <summary>
     /// 同时经营几家自营电脑店。每家店的货、货架、员工、升级、补货目标各管各的，知名度和现金共用。
     /// 会话里 PlayerShop / Lease / PlayerShopPlace / Employee 等指的都是“当前这家店”：人进了哪家店就切到哪家，
@@ -30,6 +32,7 @@ namespace PCShopSell.Core.Session
 
         /// <summary>任何一家自营店来了顾客（街上让路人走进那家店的门）。</summary>
         public event Action<Place, ShopCustomer> ShopCustomerArrived;
+        public event Action<Place, ShopGuestEvent> ShopGuestChanged;
 
         /// <summary>已经租下的自营店，第一家是主店。</summary>
         public IReadOnlyList<OwnedShop> MyShops => _shops.Where(s => s.Rented).ToList();
@@ -103,7 +106,12 @@ namespace PCShopSell.Core.Session
             {
                 if (shop.Rented) Notice?.Invoke((MyShopCount > 1 ? ShopTitle(shop) + " " : "") + DayReportText(r));
             };
-            sim.CustomerArrived += c => {BindCityCustomer(shop,c);RecordBrandShopVisit(shop,c);ShopCustomerArrived?.Invoke(shop.Place, c);};
+            sim.CustomerArrived += c =>
+            {
+                BindCityCustomer(shop, c);
+                if (RecordBrandShopVisit(shop, c)) ShopGuestChanged?.Invoke(shop.Place, ShopGuestEvent.Entered);
+                ShopCustomerArrived?.Invoke(shop.Place, c);
+            };
             sim.CustomerCanBrowse = c =>
             {
                 bool inside = RecordBrandShopVisit(shop, c);
@@ -116,6 +124,8 @@ namespace PCShopSell.Core.Session
             sim.CustomerReadyToPay += c => ReserveFlashPrice(shop, c);
             sim.CustomerLeft += c =>
             {
+                if (c.Reason != LeaveReason.OrderPlaced && CityCustomerIsInside(c, shop.Place.Id))
+                    ShopGuestChanged?.Invoke(shop.Place, ShopGuestEvent.LeftWithoutPaying);
                 ReleaseFlashPrice(shop, c);
                 ShowReferralOutcome(shop, c, false);
                 ReleaseCityCustomer(c);
@@ -129,9 +139,15 @@ namespace PCShopSell.Core.Session
                 CompleteUsedSale(shop, c);
                 RecordEventPaidReceipt(shop, c);
                 RecordFinanceSale(shop, c);
+                ShopGuestChanged?.Invoke(shop.Place, ShopGuestEvent.Paid);
             };
             sim.BulkSalePaid += (id, name, total) => RecordAggregateReceipt(shop, "bulk:" + id, name, total, Clock.Today.TotalDays);
-            sim.OrderCompleted += o => { Flags.Add("tutorial:build"); ContractOrderResult(shop, o, true); };
+            sim.OrderCompleted += o =>
+            {
+                Flags.Add("tutorial:build");
+                ContractOrderResult(shop, o, true);
+                ShopGuestChanged?.Invoke(shop.Place, ShopGuestEvent.Paid);
+            };
             sim.OrderCancelled += o => ContractOrderResult(shop, o, false);
             sim.OrderExpired += o => ContractOrderResult(shop, o, false);
             sim.OrderPlaced += o => Notice?.Invoke($"{(MyShopCount > 1 ? ShopTitle(shop) : "")}新装机订单：{PartCatalog.TierName(o.Tier)}整机 {o.Price}，{sim.Settings.BuildOrderDueDays} 天内交付。");
@@ -272,6 +288,7 @@ namespace PCShopSell.Core.Session
             return new SaveShop
             {
                 retailKind = s.RetailKind, customName = s.CustomName, goodsLots = SaveRetailLots(sim),
+                salesAccountId = s.SalesAccountId,
                 emergencyLighting = s.EmergencyLighting,
                 awareness = sim.Awareness, reputation = sim.ShopReputation,
                 place = s.Place.Id,
@@ -317,6 +334,7 @@ namespace PCShopSell.Core.Session
             if (d == null || !City.HasPlace(d.place) || _shops.Any(x => x.Place.Id == d.place)) return;
             Place place = City.GetPlace(d.place);
             var shop = new OwnedShop { Place = place, RetailKind = RetailShopTypes.Valid(string.IsNullOrEmpty(d.retailKind) ? "computer" : d.retailKind), CustomName = d.customName };
+            if (!string.IsNullOrEmpty(d.salesAccountId)) shop.SalesAccountId = d.salesAccountId;
             shop.EmergencyLighting = d.emergencyLighting;
             shop.Lease = new ShopLease { PlaceId = place.Id, Rent = Money.FromCents(d.rentCents), Deposit = Money.FromCents(d.depositCents), StartDay = d.startDay, SignedDay = d.signedDay };
             shop.Sim = CreateShopSim(shop);

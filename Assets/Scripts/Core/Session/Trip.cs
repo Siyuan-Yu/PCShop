@@ -23,9 +23,9 @@ namespace PCShopSell.Core.Session
         internal CitySavedTrip SaveCityTrip() => new CitySavedTrip {xs=_points.ConvertAll(p=>p.X).ToArray(),ys=_points.ConvertAll(p=>p.Y).ToArray(),
             viewLengths=_viewLen.ToArray(),gameLengths=_gameLen.ToArray(),nodeAt=_nodeAt.ToArray(),target=TargetNode,segment=_segment,
             vehicle=(int)Vehicle.Kind,progress=_segmentProgress,viewDone=_viewMetersDone,firstRoadOtherEnd=_firstRoadOtherEnd};
-        private Trip(CitySavedTrip d, CityLayout city)
+        private Trip(CitySavedTrip d, CityLayout city, VehicleSpec vehicle)
         {
-            TargetNode=d.target;Vehicle=Vehicles.Get((VehicleKind)d.vehicle);
+            TargetNode=d.target;Vehicle=vehicle;
             for(int i=0;i<d.xs.Length;i++)_points.Add(new MapPoint(d.xs[i],d.ys[i]));
             _viewLen.AddRange(d.viewLengths.Select(v=>Math.Max(1e-8,v)));
             // Recalibrate saved routes without changing their displayed position/progress.
@@ -37,14 +37,14 @@ namespace PCShopSell.Core.Session
             _segment=Math.Max(0,Math.Min(d.segment,_viewLen.Count));_segmentProgress=Arrived?0:Math.Min(_viewLen[_segment],Math.Max(0,d.progress));_viewMetersDone=Math.Max(0,d.viewDone);
             TotalViewMeters=_viewLen.Sum();TotalGameMeters=_gameLen.Sum();UpdatePosition();UpdateDirection();
         }
-        internal static Trip RestoreCityTrip(CitySavedTrip d,CityLayout city)
+        internal static Trip RestoreCityTrip(CitySavedTrip d,CityLayout city,VehicleSpec vehicle)
         {
             if(d==null||!city.Map.HasNode(d.target)||d.xs==null||d.ys==null||d.xs.Length<1||d.xs.Length!=d.ys.Length
                 ||d.viewLengths?.Length!=d.xs.Length-1||d.gameLengths?.Length!=d.xs.Length-1||d.nodeAt?.Length!=d.xs.Length)return null;
             if (double.IsNaN(d.progress) || double.IsInfinity(d.progress) || double.IsNaN(d.viewDone) || double.IsInfinity(d.viewDone)
                 || d.xs.Any(v=>double.IsNaN(v)||double.IsInfinity(v)) || d.ys.Any(v=>double.IsNaN(v)||double.IsInfinity(v))
                 || d.viewLengths.Any(v=>double.IsNaN(v)||double.IsInfinity(v)||v<0) || d.gameLengths.Any(v=>double.IsNaN(v)||double.IsInfinity(v)||v<0)) return null;
-            return new Trip(d, city);
+            return new Trip(d, city, vehicle);
         }
 
         public VehicleSpec Vehicle { get; internal set; }

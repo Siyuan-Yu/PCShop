@@ -10,10 +10,16 @@ namespace PCShopSell.Game.Runtime
         Bell,
         Error,
         Success,
+        Purchase,
+        Arrival,
+        Notification,
+        ShopGuestLeaves,
+        Cooking,
+        Dining,
     }
 
     /// <summary>
-    /// 程序合成的小音效（没有任何音频资源）：点按钮、收钱、门铃、出错、完成。
+    /// 程序合成并缓存短音效。
     /// 音量与静音存在 PlayerPrefs，菜单里可调。批处理（自动测试）下不出声。
     /// </summary>
     public static class SoundFx
@@ -24,29 +30,51 @@ namespace PCShopSell.Game.Runtime
 
         private static AudioSource _source;
         private static readonly AudioClip[] Clips = new AudioClip[Enum.GetValues(typeof(Sfx)).Length];
-        private static float _lastClick;
+        private static readonly float[] NextPlayTime = new float[Clips.Length];
 
         public static bool Muted
         {
             get => PlayerPrefs.GetInt(MuteKey, 0) == 1;
-            set => PlayerPrefs.SetInt(MuteKey, value ? 1 : 0);
+            set
+            {
+                PlayerPrefs.SetInt(MuteKey, value ? 1 : 0);
+                if (value && _source != null) _source.Stop();
+            }
         }
 
         /// <summary>0 ~ 1，默认 0.6。</summary>
         public static float Volume
         {
             get => Mathf.Clamp01(PlayerPrefs.GetFloat(VolumeKey, 0.6f));
-            set => PlayerPrefs.SetFloat(VolumeKey, Mathf.Clamp01(value));
+            set
+            {
+                float volume = Mathf.Clamp01(value);
+                PlayerPrefs.SetFloat(VolumeKey, volume);
+                if (_source != null) _source.volume = volume;
+            }
         }
 
         public static void Play(Sfx sfx)
         {
-            if (Muted || Application.isBatchMode || Volume <= 0.001f) return;
-            if (sfx == Sfx.Click)
+            if (!Application.isPlaying || Application.isBatchMode) return;
+            int index = (int)sfx;
+            float now = Time.unscaledTime;
+            if (now < NextPlayTime[index] || Muted || Volume <= 0.001f) return;
+            var (gain, cooldown) = sfx switch
             {
-                if (Time.unscaledTime - _lastClick < 0.04f) return;
-                _lastClick = Time.unscaledTime;
-            }
+                Sfx.Click => (0.32f, 0.065f),
+                Sfx.Coin => (0.78f, 0.28f),
+                Sfx.Bell => (0.56f, 0.8f),
+                Sfx.Error => (0.68f, 0.25f),
+                Sfx.Arrival => (0.62f, 0.35f),
+                Sfx.Notification => (0.60f, 0.30f),
+                Sfx.ShopGuestLeaves => (0.55f, 0.85f),
+                Sfx.Cooking => (0.45f, 1.7f),
+                Sfx.Dining => (0.38f, 3.2f),
+                _ => (0.80f, 0.20f),
+            };
+            NextPlayTime[index] = now + cooldown;
+
             if (_source == null)
             {
                 var go = new GameObject("SoundFx");
@@ -54,32 +82,69 @@ namespace PCShopSell.Game.Runtime
                 _source = go.AddComponent<AudioSource>();
                 _source.playOnAwake = false;
                 _source.spatialBlend = 0f;
+                _source.volume = Volume;
             }
-            AudioClip clip = Clips[(int)sfx];
-            if (clip == null) clip = Clips[(int)sfx] = Make(sfx);
-            _source.PlayOneShot(clip, Volume * (sfx == Sfx.Click ? 0.5f : 1f));
+            AudioClip clip = Clips[index];
+            if (clip == null) clip = Clips[index] = Make(sfx);
+            _source.PlayOneShot(clip, gain);
         }
 
         private static AudioClip Make(Sfx sfx)
         {
             switch (sfx)
             {
-                case Sfx.Click: return Build("click", 0.05f, t => Tone(1500, t, 60) * 0.5f + Tone(900, t, 70) * 0.5f);
+                case Sfx.Click:
+                    return Build("click", 0.045f, t => 0.35f * Tone(1040, t, 70) + 0.65f * Tone(560, t, 85));
                 case Sfx.Coin:
-                    return Build("coin", 0.42f, t => t < 0.09f ? Tone(1319, t, 10) : Tone(1760, t - 0.09f, 7) + 0.3f * Tone(3520, t - 0.09f, 12));
+                    return Build("coin", 0.25f, t => 0.75f * Tone(1319, t, 23) + Chime(1760, t, 0.065f, 22));
                 case Sfx.Bell:
-                    return Build("bell", 0.9f, t => (Tone(880, t, 4) + 0.5f * Tone(1760, t, 6) + 0.25f * Tone(2640, t, 9)) * 0.7f);
+                    return Build("bell", 0.50f, t => 0.75f * Chime(880, t, 0, 10) + 0.55f * Chime(659, t, 0.11f, 12));
                 case Sfx.Error:
-                    return Build("error", 0.22f, t => Mathf.Sign(Mathf.Sin(2 * Mathf.PI * 170 * t)) * Mathf.Exp(-9 * t) * 0.35f);
-                default:
-                    return Build("success", 0.7f, t =>
+                    return Build("error", 0.17f, t => 0.6f * Tone(311, t, 22) + 0.6f * Chime(220, t, 0.055f, 26));
+                case Sfx.Purchase:
+                    return Build("purchase", 0.24f, t => 0.75f * Chime(523, t, 0, 22) + 0.75f * Chime(698, t, 0.068f, 19));
+                case Sfx.Arrival:
+                    return Build("arrival", 0.28f, t => 0.65f * Chime(784, t, 0, 17) + 0.55f * Chime(659, t, 0.085f, 16));
+                case Sfx.Notification:
+                    return Build("notification", 0.19f, t => 0.7f * Chime(880, t, 0, 20) + 0.6f * Chime(1047, t, 0.065f, 22));
+                case Sfx.ShopGuestLeaves:
+                    return Build("shop-door-out", 0.33f, t => 0.62f * Chime(587, t, 0, 15)
+                        + 0.30f * Chime(440, t, 0.09f, 17) + 0.52f * Chime(110, t, 0.12f, 35));
+                case Sfx.Cooking:
+                    return Build("pan-sizzle", 0.85f, t =>
                     {
-                        float[] f = { 523.25f, 659.25f, 783.99f, 1046.5f };
-                        float v = 0;
-                        for (int i = 0; i < f.Length; i++) if (t >= i * 0.1f) v += Tone(f[i], t - i * 0.1f, 5) * 0.5f;
-                        return v;
+                        float sizzle = Noise(t, Rate) * (0.34f + 0.14f * Mathf.Sin(t * 38f)) + 0.10f * Noise(t, 8300);
+                        float envelope = Mathf.Min(1f, t * 16f) * Mathf.Clamp01((.85f - t) * 5f);
+                        return sizzle * envelope + 0.28f * Chime(1020, t, .14f, 47) + 0.20f * Chime(760, t, .58f, 42);
                     });
+                case Sfx.Dining:
+                    return Build("dining", 0.65f, t => 0.40f * Chime(1680, t, 0, 54) + 0.25f * Chime(2180, t, 0.09f, 58)
+                        + 0.35f * Bite(t, .19f, .14f) + 0.29f * Bite(t, .39f, .15f));
+                default:
+                    return Build("success", 0.39f, t => 0.7f * Chime(523, t, 0, 15) + 0.7f * Chime(659, t, 0.065f, 15)
+                        + 0.7f * Chime(784, t, 0.13f, 15) + 0.65f * Chime(1047, t, 0.196f, 13));
             }
+        }
+
+        private static float Bite(float t, float start, float length)
+        {
+            float elapsed = t - start;
+            if (elapsed < 0 || elapsed >= length) return 0;
+            return Mathf.Sin(Mathf.PI * elapsed / length) * (0.58f * Noise(t, 4500) + 0.42f * Noise(t, 1800));
+        }
+
+        private static float Noise(float t, int samplesPerSecond)
+        {
+            uint bits = (uint)(t * samplesPerSecond);
+            bits = unchecked((bits ^ (bits >> 16)) * 0x7FEB352DU);
+            bits = unchecked((bits ^ (bits >> 15)) * 0x846CA68BU);
+            return ((bits ^ (bits >> 16)) & 0xFFFFU) / 32767.5f - 1f;
+        }
+
+        private static float Chime(float freq, float t, float start, float decay)
+        {
+            float elapsed = t - start;
+            return elapsed < 0 ? 0 : Tone(freq, elapsed, decay) + 0.20f * Tone(2 * freq, elapsed, decay * 1.5f);
         }
 
         /// <summary>带指数衰减的正弦。</summary>

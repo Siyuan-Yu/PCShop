@@ -5,7 +5,9 @@ using System.Linq;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
+using PCShopSell.Game.Runtime;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
@@ -52,20 +54,6 @@ namespace PCShopSell.Game.UI
             bool visible = _loanReminderHasPending && !MainMenuOpen && !S.IsGameOver && !ExpoHudOpen;
             if (_loanReminderHud.gameObject.activeSelf != visible)
                 _loanReminderHud.gameObject.SetActive(visible);
-
-            Vector2 schedulePosition = UpcomingScheduleRestPosition;
-            if (_homeDockToggle.gameObject.activeSelf)
-                schedulePosition = new Vector2(HomeDockOpen ? -(HomeDockWidth + 10) : schedulePosition.x, -120);
-            if (visible)
-            {
-                Vector2 position = schedulePosition;
-                if (_shopDockToggle.gameObject.activeSelf) position.y = -120;
-                if (DockOpen) position.x = -(ShopDockWidth + 10);
-                else schedulePosition.y = position.y - LoanReminderHeight - 8;
-                if (_loanReminderHud.anchoredPosition != position) _loanReminderHud.anchoredPosition = position;
-            }
-            if (_upcomingScheduleHud.anchoredPosition != schedulePosition)
-                _upcomingScheduleHud.anchoredPosition = schedulePosition;
         }
 
         private void RefreshLoanReminder(int today)
@@ -140,13 +128,123 @@ namespace PCShopSell.Game.UI
 
         private void ConfirmLoanApplication(AppLoan quote, bool atBank, Action completed)
         {
-            ConfirmBusiness("确认借款",
-                $"到账 {quote.Principal}，期限 {quote.Months} 个月。每月利息 {quote.MonthlyInterest}。\n"
-                + $"首月内结清 {S.LoanPayoff(quote)}。{new GameDate(quote.DueDay)} 到期自动扣除本息 {quote.TotalDue}，总余额不足可扣为负数。", () =>
+            if (OpeningMealRestricted) return;
+            var session = S;
+            var application = session.BeginLoanApplication(quote.Principal.Yuan, quote.Months, atBank);
+            if (application == null) return;
+            AvatarPreview preview = null;
+            const float motionSeconds = .56f;
+            LoanGesture? moving = null;
+            float motionStart = 0;
+            string feedback = "";
+            bool correct = false;
+
+            OpenWindow(atBank ? "柜台借款 · 动作验证" : "手机借款 · 动作验证", 760, 570, w =>
+            {
+                Line(w.Content, $"预计到账 {quote.Principal} · 期限 {quote.Months} 个月 · 每月利息 {quote.MonthlyInterest}", 20, Ui.Accent);
+                Para(w.Content, $"首月内结清 {session.LoanPayoff(quote)}。{new GameDate(quote.DueDay)} 到期自动扣除本息 {quote.TotalDue}，总余额不足可扣为负数。", 16, Ui.Dim);
+
+                var row = Ui.Row(w.Content, 244, 18);
+                var frame = Ui.Size(Ui.FlatPanel(row, "LoanVerificationPreview", Ui.FlatWell, Ui.FlatHotEdge), 192, 244);
+                frame.raycastTarget = true;
+                if (CanAnimateUi && SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
                 {
-                    if (S.BorrowAppLoan(quote.Principal.Yuan, quote.Months, atBank)) completed();
-                });
+                    if (preview == null)
+                    {
+                        preview = new AvatarPreview(verification: true);
+                        preview.PrepareVerification(session.Outfit.Id);
+                    }
+                    var view = Ui.Rect(frame.transform, "LoanVerificationAvatar").Fill(2).gameObject.AddComponent<RawImage>();
+                    view.texture = preview.Texture;
+                    view.raycastTarget = false;
+                }
+                var instructions = Ui.Size(Ui.Rect(row, "LoanVerificationInstructions"), 0, 244, 1);
+                Ui.VList(instructions, 8, 8);
+                var progress = Line(instructions, "", 16, Ui.Accent);
+                var prompt = Line(instructions, "", 28);
+                var hint = Para(instructions, "", 17, Ui.Dim);
+                var response = Para(instructions, "", 17, Ui.Good);
+                var gestures = Ui.Row(w.Content, 43, 8);
+                var buttons = new List<Button>();
+                foreach (var gesture in new[] { LoanGesture.Nod, LoanGesture.ShakeHead, LoanGesture.Wave })
+                {
+                    var button = Ui.Size(Ui.Button(gestures, LoanGestureName(gesture), () => Perform(gesture), 18), 0, 43, 1);
+                    button.name = "LoanGesture_" + gesture;
+                    buttons.Add(button);
+                }
+                var actions = Ui.Row(w.Content, 46, 8);
+                Ui.Size(Ui.Button(actions, "取消申请", w.Close, 17), 150, 46);
+                var submit = Ui.Size(Ui.Button(actions, $"确认借款 · 到账 {quote.Principal}", () =>
+                {
+                    if (w.Closed || moving.HasValue || S != session) return;
+                    if (!session.BorrowAppLoan(application))
+                    {
+                        feedback = session.AppLoanOfferBlocker(application.AmountYuan, application.Months, atBank) ?? "请重新发起借款申请。";
+                        correct = false;
+                        Refresh();
+                        return;
+                    }
+                    w.Close();
+                    completed();
+                }, 19, Ui.ButtonHot), 0, 46, 1);
+                submit.name = "LoanVerificationSubmit";
+                frame.gameObject.AddComponent<LoanGestureInput>().Perform = Perform;
+
+                void Perform(LoanGesture gesture)
+                {
+                    if (w.Closed || moving.HasValue || !application.NextGesture.HasValue || S != session) return;
+                    correct = session.PerformLoanGesture(application, gesture);
+                    feedback = correct ? "动作已识别" : "动作和提示不一致，再试一次。";
+                    if (preview != null)
+                    {
+                        moving = gesture;
+                        motionStart = Time.unscaledTime;
+                    }
+                    Refresh();
+                }
+
+                void Refresh()
+                {
+                    var next = application.NextGesture;
+                    string blocker = next.HasValue ? null : session.AppLoanOfferBlocker(application.AmountYuan, application.Months, atBank);
+                    progress.text = $"动作验证 {application.CompletedGestures} / {LoanApplication.GestureCount}";
+                    prompt.text = moving.HasValue ? "正在识别…" : next.HasValue ? "请" + LoanGestureName(next.Value) : "验证通过";
+                    hint.text = moving.HasValue ? "" : next.HasValue
+                        ? LoanGestureHint(next.Value) + "，也可点下方的动作按钮。"
+                        : "确认后发放这笔借款。";
+                    response.text = moving.HasValue ? "" : blocker ?? feedback;
+                    response.color = blocker == null && correct ? Ui.Good : Ui.Warn;
+                    foreach (var button in buttons) button.interactable = !moving.HasValue && next.HasValue;
+                    submit.interactable = !moving.HasValue && !next.HasValue && blocker == null;
+                }
+
+                w.RefreshContent = () =>
+                {
+                    if (!moving.HasValue) return;
+                    float fraction = Mathf.Clamp01((Time.unscaledTime - motionStart) / motionSeconds);
+                    preview.RenderGesture(moving.Value, fraction);
+                    if (fraction < 1) return;
+                    moving = null;
+                    Refresh();
+                };
+                Refresh();
+            }, onClosed: () =>
+            {
+                session.CancelLoanApplication(application);
+                preview?.Destroy();
+            }, scrollContent: false);
         }
+
+        private static string LoanGestureName(LoanGesture gesture) => gesture switch
+        {
+            LoanGesture.Nod => "点头", LoanGesture.ShakeHead => "摇头", _ => "挥手"
+        };
+
+        private static string LoanGestureHint(LoanGesture gesture) => gesture switch
+        {
+            LoanGesture.Nod => "在角色画面上下拖动", LoanGesture.ShakeHead => "在角色画面左右拖动",
+            _ => "在角色画面斜向上拖动"
+        };
 
         private void ConfirmLoanRepayment(Window w, AppLoan loan, bool atBank = false)
         {
@@ -223,8 +321,7 @@ namespace PCShopSell.Game.UI
             var interest = Line(w.Content, "", 19);
             var due = Line(w.Content, "", 21, Ui.Warn);
             AppLoan quote = null;
-            var apply = Ui.Size(Ui.Button(w.Content, "申请借款", null, 19, Ui.ButtonHot), -1, 46);
-            var applyText = apply.GetComponentInChildren<Text>();
+            var apply = Ui.Size(Ui.Button(w.Content, "申请借款 · 开始验证", null, 19, Ui.ButtonHot), -1, 46);
             apply.onClick.AddListener(() =>
             {
                 RefreshQuote(input.text);
@@ -278,8 +375,37 @@ namespace PCShopSell.Game.UI
                 interest.text = valid ? $"首月内结清 {S.LoanPayoff(quote)} · 到期利息 {quote.TermInterest}" : "";
                 due.text = valid ? $"到期日 {new GameDate(quote.DueDay)} · 自动扣款 {quote.TotalDue}" : "";
                 apply.interactable = valid;
-                applyText.text = valid ? "申请借款 · 到账 " + quote.Principal : "申请借款";
             }
         }
+    }
+
+    internal sealed class LoanGestureInput : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
+    {
+        public Action<LoanGesture> Perform;
+        private Vector2 _start;
+        private bool _tracking;
+        private int _pointerId;
+
+        public void OnPointerDown(PointerEventData e)
+        {
+            if (_tracking || e.button != PointerEventData.InputButton.Left) return;
+            _tracking = RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)transform, e.position, e.pressEventCamera, out _start);
+            _pointerId = e.pointerId;
+        }
+
+        public void OnPointerUp(PointerEventData e)
+        {
+            if (!_tracking || e.pointerId != _pointerId || e.button != PointerEventData.InputButton.Left) return;
+            _tracking = false;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)transform, e.position, e.pressEventCamera, out var end)) return;
+            Vector2 delta = end - _start;
+            if (delta.sqrMagnitude < 32 * 32) return;
+            float horizontal = Mathf.Abs(delta.x), vertical = Mathf.Abs(delta.y);
+            if (vertical > horizontal * 1.35f) Perform?.Invoke(LoanGesture.Nod);
+            else if (horizontal > vertical * 1.35f) Perform?.Invoke(LoanGesture.ShakeHead);
+            else if (delta.y > 0) Perform?.Invoke(LoanGesture.Wave);
+        }
+
+        private void OnDisable() => _tracking = false;
     }
 }
