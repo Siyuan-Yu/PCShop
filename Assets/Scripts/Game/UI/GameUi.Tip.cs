@@ -24,7 +24,7 @@ namespace PCShopSell.Game.UI
         private void BuildTip()
         {
             _tipCanvas = Ui.CreateCanvas("UI_Tip", 60);
-            Image panel = Ui.Panel(_tipCanvas.transform, "Toast", new Color(0.07f, 0.11f, 0.1f, 0.97f));
+            Image panel = Ui.Panel(_tipCanvas.transform, "Toast", Ui.PanelBg);
             panel.raycastTarget = false;
             _tipPanel = panel.rectTransform;
             _tipPanel.anchorMin = _tipPanel.anchorMax = new Vector2(0.5f, 0.5f);
@@ -142,7 +142,7 @@ namespace PCShopSell.Game.UI
         private string VehicleTip(Core.Session.VehicleSpec v)
         {
             string s = $"<b>{v.Name}</b>{(S.Vehicle == v.Kind ? "（当前使用）" : "")}\n{TravelSpeedText(v)}　最多载 {v.CargoCapacity * Core.Home.Backpack.KgPerSpace:0} 千克";
-            if (v.Illegal) s += "\n<color=#D79780>城里不让上路，会被交警追</color>";
+            if (v.Illegal) s += "\n<color=#9C4634>城里不让上路，会被交警追</color>";
             if (v.Purchasable) s += "\n" + S.VehicleUsage(v.Kind);
             if (!S.CanUse(v.Kind)) s += v.Purchasable ? S.Owns(v.Kind) ? "\n当前没有空闲车辆，可在员工管理查看使用人。" : $"\n去车行购买：{v.Price}/台" : "\n暂时用不了";
             return s;

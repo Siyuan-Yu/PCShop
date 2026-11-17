@@ -5,22 +5,22 @@ using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
 {
-    /// <summary>居家工作台的小组件：数值行、进度条行、状态标签、表格行、可点击分组条。风格对应设计稿的平面深蓝样式。</summary>
+    /// <summary>居家工作台的小组件：数值行、进度条行、状态标签、表格行、可点击分组条。</summary>
     public sealed partial class GameUi
     {
-        private static readonly Color WbRowOpen = new Color32(0x4A, 0x3F, 0x25, 255);
+        private static Color WbRowOpen => Ui.PendingSurface;
 
         private static Color WbKindFill(char kind)
         {
-            switch (kind) { case 'r': return new Color32(0x5A, 0x2F, 0x2A, 255); case 'y': return new Color32(0x54, 0x45, 0x1F, 255); case 'g': return new Color32(0x2A, 0x4A, 0x38, 255); default: return new Color32(0x33, 0x46, 0x5F, 255); }
+            return kind switch { 'r' => Ui.WarningSurface, 'y' => Ui.PendingSurface, 'g' => Ui.SuccessSurface, _ => Ui.InfoSurface };
         }
         private static Color WbKindEdge(char kind)
         {
-            switch (kind) { case 'r': return new Color32(0xB5, 0x60, 0x3E, 255); case 'y': return Ui.ButtonHot; case 'g': return new Color32(0x4F, 0x9B, 0x6A, 255); default: return Ui.FlatWellEdge; }
+            return kind switch { 'r' => Ui.Warn, 'y' => Ui.FlatHotEdge, 'g' => Ui.Good, _ => Ui.FlatWellEdge };
         }
         private static Color WbKindInk(char kind)
         {
-            switch (kind) { case 'r': return new Color32(0xF0, 0xB0, 0xA0, 255); case 'y': return new Color32(0xF0, 0xD8, 0x90, 255); case 'g': return Ui.Good; default: return Ui.FlatInk; }
+            return kind switch { 'r' => Ui.Warn, 'y' => Ui.Accent, 'g' => Ui.Good, _ => Ui.InfoInk };
         }
 
         /// <summary>金色小标题。</summary>
@@ -48,7 +48,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(b, -1, height); return b;
         }
 
-        /// <summary>小号分段切换（周期等筛选）：选中浅蓝底加金字。</summary>
+        /// <summary>小号分段切换（周期等筛选）：选中使用琥珀色。</summary>
         private static void WbSegment(Transform row, string[] labels, int selected, Action<int> pick, string namePrefix, float width = 76, float height = 28)
         {
             for (int i = 0; i < labels.Length; i++) { int n = i; WbSubTab(row, labels[i], () => pick(n), namePrefix + i, selected == i, width, height); }
@@ -69,7 +69,7 @@ namespace PCShopSell.Game.UI
 
         private static void WbDivider(RectTransform row, Color? color = null)
         {
-            var line = Ui.Panel(row, "Divider", color ?? new Color32(0x2F, 0x42, 0x62, 255)); line.raycastTarget = false;
+            var line = Ui.Panel(row, "Divider", color ?? Ui.Edge); line.raycastTarget = false;
             line.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             line.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -1);
         }
@@ -109,7 +109,7 @@ namespace PCShopSell.Game.UI
                 text.horizontalOverflow = i == 0 ? HorizontalWrapMode.Wrap : HorizontalWrapMode.Overflow;
                 if (i == 0) Ui.Size(text, 0, -1, 1); else Ui.Size(text, widths[i - 1], -1, 0);
             }
-            if (!header) WbDivider(row, new Color32(0x2A, 0x3A, 0x55, 255));
+            if (!header) WbDivider(row, Ui.Edge);
             return row;
         }
 

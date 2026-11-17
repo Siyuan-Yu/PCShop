@@ -47,7 +47,10 @@ namespace PCShopSell.Game
                     Prims.SignText(root,"灯塔吧台",new Vector3(0,3.5f,4.7f),7,.5f,ArtDirection.Cream);
                     var a=Session.RunningCityActivity;for(int i=0;i<a.Participants.Length;i++)
                     {
-                        var p=a.Participants[i];var figure=Prims.Figure(root,Session.CityPerson(p.PersonId)?.Name,CrowdView.PersonClothing(p.PersonId),ArtDirection.Cream,1);
+                        var p = a.Participants[i];
+                        var figure = Prims.FigureForPerson(root, Session.CityPerson(p.PersonId)?.Name,
+                            CrowdView.PersonClothing(p.PersonId), ArtDirection.Cream, 1, p.PersonId);
+                        CityNpcClothing.Apply(figure, Session, p.PersonId);
                         figure.transform.localPosition=new Vector3(-2.5f+i*2.5f,0,2.5f);figure.GetComponent<FigureMotion>().LocomotionEnabled=false;
                         Prims.SignText(root,Session.CityPerson(p.PersonId)?.Name,new Vector3(-2.5f+i*2.5f,2.1f,2.5f),2.4f,.3f,ArtDirection.Cream);
                     }
@@ -77,12 +80,13 @@ namespace PCShopSell.Game
                         Vector3.one * .42f, Mats.Lit(ArtDirection.Hex("F66A1B"))).transform;
                     string opponentId = Session.RunningCityActivity.Participants.FirstOrDefault()?.PersonId;
                     string opponentName = Session.CityPerson(opponentId)?.Name ?? "同行者";
-                    var opponent = Prims.Figure(root, opponentName, opponentId == null ? ArtDirection.Sage : CrowdView.PersonClothing(opponentId), ArtDirection.Cream, 1);
+                    var opponent = Prims.FigureForPerson(root, opponentName, opponentId == null ? ArtDirection.Sage : CrowdView.PersonClothing(opponentId),
+                        ArtDirection.Cream, 1, opponentId);
                     if (opponentId != null) CityNpcClothing.Apply(opponent, Session, opponentId);
                     _onsiteDefender = opponent.transform;
                     opponent.GetComponent<FigureMotion>().LocomotionEnabled = false;
                     Prims.SignText(_onsiteDefender, opponentName, new Vector3(0, 2.2f, 0), 2.6f, .26f, ArtDirection.Cream);
-                    _onsitePlayer=Prims.Figure(root,"PlayerShooting",ArtDirection.Clay,ArtDirection.Cream,1).transform;
+                    _onsitePlayer=Prims.Figure(root,"PlayerShooting",ArtDirection.Clay,ArtDirection.Cream,1,FigureAppearance.Player).transform;
                     _onsiteShooterMotion = _onsitePlayer.GetComponent<FigureMotion>();
                     _onsiteShooterMotion.LocomotionEnabled = false;
                     _onsiteCamera.orthographic=true;_onsiteCamera.orthographicSize=9;_onsiteCamera.transform.localPosition=new Vector3(14,17,-10);_onsiteCamera.transform.LookAt(root.TransformPoint(new Vector3(0,1,4)));
@@ -95,7 +99,7 @@ namespace PCShopSell.Game
                     Prims.Shape(PrimitiveType.Cylinder,_onsiteTarget,"TargetCircle",new Vector3(0,.03f,0),new Vector3(16,.04f,16),wood);
                     Prims.Box(_onsiteTarget,"FlagPole",new Vector3(0,2,0),new Vector3(.2f,4,.2f),cream);Prims.Box(_onsiteTarget,"Flag",new Vector3(1,3.5f,0),new Vector3(2,1,.1f),Mats.Lit(ArtDirection.Clay));
                     _onsiteBall=Prims.Shape(PrimitiveType.Sphere,root,"LiveGolfBall",new Vector3(0,.3f,0),Vector3.one*1.1f,cream).transform;
-                    _onsitePlayer=Prims.Figure(root,"PlayerGolfing",ArtDirection.Clay,ArtDirection.Cream,1).transform;_onsitePlayer.localScale=Vector3.one*2.5f;_onsitePlayer.GetComponent<FigureMotion>().LocomotionEnabled=false;
+                    _onsitePlayer=Prims.Figure(root,"PlayerGolfing",ArtDirection.Clay,ArtDirection.Cream,1,FigureAppearance.Player).transform;_onsitePlayer.localScale=Vector3.one*2.5f;_onsitePlayer.GetComponent<FigureMotion>().LocomotionEnabled=false;
                     _onsiteCamera.orthographic=true;_onsiteCamera.orthographicSize=83;_onsiteCamera.transform.localPosition=new Vector3(90,135,-45);_onsiteCamera.transform.LookAt(root.TransformPoint(new Vector3(0,0,75)));
                 }
                 else

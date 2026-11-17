@@ -605,7 +605,7 @@ namespace PCShopSell.Game.UI
             _labelCanvas.enabled = false;
             _dockCanvas.enabled = false;
             _drivingHud = Ui.Rect(_modalCanvas.transform, "DrivingHud").Fill();
-            Color surface = new Color(.06f, .085f, .12f, .88f);
+            Color surface = Ui.Chrome;
             var race = S.ActiveRace;
 
             float timingBottom = race.Opponents.Count > 0 ? 162 : 140;
@@ -672,9 +672,9 @@ namespace PCShopSell.Game.UI
         {
             label = Ui.Label(parent, title, 20);
             label.rectTransform.Anchor(0, 1, 0, 1, 14, -top - 24, -62, top);
-            var rail = RaceHudSurface(parent, title + "Bar", new Color(.27f, .32f, .37f));
+            var rail = RaceHudSurface(parent, title + "Bar", Ui.ChromeButton);
             rail.Anchor(0, 1, 1, 1, 68, -top - 22, 14, top + 2);
-            var track = RaceHudSurface(rail, "Track", new Color(.09f, .125f, .17f)).Fill(2);
+            var track = RaceHudSurface(rail, "Track", Ui.ChromeWell).Fill(2);
             var fill = Ui.Panel(track, "PedalFill", color);
             fill.raycastTarget = false;
             fill.rectTransform.Anchor(0, 0, 0, 1);

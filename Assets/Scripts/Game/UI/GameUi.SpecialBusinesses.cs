@@ -70,7 +70,13 @@ namespace PCShopSell.Game.UI
             var shop=S.CurrentShop;
             if (S.CanOpenFridge)
             {
-                var storage = Ui.Row(C, 34, 6);
+                var storage = Ui.Row(C, 40, 6);
+                var storageLayout = storage.GetComponent<HorizontalLayoutGroup>();
+                storageLayout.padding = new RectOffset(9, 5, 3, 3);
+                var surface = storage.gameObject.AddComponent<Image>();
+                surface.color = Ui.PanelBg2;
+                surface.raycastTarget = false;
+                Ui.Round(surface);
                 var fill = Ui.Size(Ui.Label(storage, "", 15, color: Ui.Dim), -1, 34, 1);
                 void RefreshFridge() => fill.text = $"冰箱 {shop.Fridge.WeightKg:0.##} / {S.CurrentFridgeLimitKg:0.##} 千克";
                 RefreshFridge();
@@ -90,6 +96,10 @@ namespace PCShopSell.Game.UI
             _counterRefresh.Add(RefreshDrinks);
 
             var fish = Ui.Size(Ui.Button(C, "", () => SelectTab(ShopTab.Orders), 16), -1, 36).GetComponentInChildren<Text>();
+            var tablesHeader = Ui.Row(C, 25);
+            var label = Ui.Size(Ui.Label(tablesHeader, "餐桌", 17), 0, 25, 1);
+            label.fontStyle = FontStyle.Bold;
+            var tableSummary = Ui.Size(Ui.Label(tablesHeader, "", 14, TextAnchor.MiddleRight, Ui.Dim), 160, 25);
             int tableCount = RestaurantCounterSlots(state);
             var orders = new DiningOrder[tableCount];
             var workers = new Dictionary<int, RestaurantWorker>();
@@ -111,6 +121,7 @@ namespace PCShopSell.Game.UI
                         orders[order.Table] ??= order;
                 }
                 fish.text = $"查看鱼餐预订 · {fishOrders} 单";
+                tableSummary.text = $"{orders.Count(order => order != null)} / {tableCount} 桌有订单";
                 workers.Clear();
                 bool playerBusy = false;
                 foreach (var worker in state.Workers)
@@ -146,21 +157,35 @@ namespace PCShopSell.Game.UI
             SpecialBusinessState state, int table, Action refresh)
         {
             // Keep each physical table's space reserved, including when it has no guest or action.
-            var slot = Ui.Size(Ui.Rect(C, "RestaurantTable_" + table), -1, 100);
-            Ui.VList(slot, 2, 0);
-            var heading = Ui.Row(slot, 36, 8);
-            heading.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
-            var icon = Ui.Size(Ui.Rect(heading, "DishPortrait"), 34, 34);
-            var title = Ui.Size(Ui.Label(heading, "", 17), 0, -1, 1);
-            var status = Ui.Size(Ui.Label(slot, "", 16), -1, 26);
+            var slot = Ui.Row(C, 70, 8);
+            slot.name = "RestaurantTable_" + table;
+            var layout = slot.GetComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(8, 8, 5, 5);
+            layout.childForceExpandHeight = false;
+            var surface = slot.gameObject.AddComponent<Image>();
+            surface.color = Ui.PanelBg2;
+            surface.raycastTarget = false;
+            Ui.Round(surface);
+            Ui.FlatBorder(surface, Ui.Edge);
+
+            var icon = Ui.Size(Ui.Rect(slot, "DishPortrait"), 44, 44);
+            var details = Ui.Size(Ui.Rect(slot, "TableDetails"), 0, 52, 1);
+            Ui.VList(details, 1, 0);
+            var title = Ui.Size(Ui.Label(details, "", 17), -1, 25);
+            title.fontStyle = FontStyle.Bold;
+            title.verticalOverflow = VerticalWrapMode.Truncate;
+            var status = Ui.Size(Ui.Label(details, "", 14), -1, 24);
+            status.resizeTextForBestFit = true;
+            status.resizeTextMinSize = 12;
+            status.resizeTextMaxSize = 14;
             status.verticalOverflow = VerticalWrapMode.Truncate;
-            var bar = Ui.Row(slot, 34);
+            var bar = Ui.Size(Ui.Rect(slot, "TableAction"), 134, 38);
             string tableName = $"{table + 1}号桌";
             int recipe = -1;
             DiningOrder displayed = null;
             RestaurantJob job = RestaurantJob.None;
             bool cancel = false;
-            var action = Ui.Size(Ui.Button(bar, "", () =>
+            var action = Ui.Button(bar, "", () =>
             {
                 if (displayed == null) return;
                 if (cancel)
@@ -170,7 +195,8 @@ namespace PCShopSell.Game.UI
                 }
                 else if (job != RestaurantJob.None) _ctrl.RequestRestaurantWork(displayed.Id, job);
                 refresh();
-            }, 17), -1, 34, 1);
+            }, 15, Ui.ButtonHot);
+            action.image.rectTransform.Fill();
             var caption = action.GetComponentInChildren<Text>();
 
             return (order, assigned, playerBusy, now) =>
@@ -184,9 +210,11 @@ namespace PCShopSell.Game.UI
                     if (recipe >= 0) FillItemPortrait(icon, "recipe:" + recipe).Fill();
                 }
                 title.text = order == null ? tableName : $"{tableName} · {order.DishName} · ¥{order.Price}";
-                title.color = order == null ? Ui.Dim : Ui.Accent;
+                title.color = order == null ? Ui.Dim : Ui.TextColor;
                 status.text = RestaurantTableStatus(order, assigned, now);
-                status.color = order == null ? Ui.Dim : order.Stage == DiningStage.Burnt ? Ui.Warn : Ui.Good;
+                status.color = order == null || order.Stage == DiningStage.Eating ? Ui.Dim
+                    : order.Stage == DiningStage.Burnt ? Ui.Warn
+                    : order.Stage == DiningStage.Waiting ? Ui.Accent : Ui.Good;
                 cancel = assigned?.ActorId == GameSession.RestaurantPlayer;
                 var (nextJob, label) = order?.Stage switch
                 {
@@ -201,7 +229,9 @@ namespace PCShopSell.Game.UI
                 job = nextJob;
                 caption.text = cancel ? "取消本次操作" : label;
                 bool ready = order?.Stage != DiningStage.Cooking || (now >= order.ReadyAt && now < order.BurnAt);
-                action.interactable = cancel || (job != RestaurantJob.None && assigned == null && !playerBusy && ready);
+                bool available = cancel || (job != RestaurantJob.None && assigned == null && !playerBusy && ready);
+                Ui.SetButtonFill(action, cancel ? Ui.Warn : available ? Ui.ButtonHot : Ui.ButtonBg);
+                action.interactable = available;
                 action.gameObject.SetActive(cancel || job != RestaurantJob.None);
             };
         }

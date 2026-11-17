@@ -95,7 +95,7 @@ namespace PCShopSell.Game.UI
         {
             if (_cursorBox == null)
             {
-                Image bg = Ui.Panel(_labelCanvas.transform, "EditCursor", new Color(0.05f, 0.07f, 0.1f, 0.88f));
+                Image bg = Ui.Panel(_labelCanvas.transform, "EditCursor", Ui.Chrome);
                 bg.raycastTarget = false;
                 _cursorBox = bg.rectTransform;
                 _cursorBox.anchorMin = _cursorBox.anchorMax = Vector2.zero;

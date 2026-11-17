@@ -155,7 +155,7 @@ namespace PCShopSell.Game.Runtime
             Label(_live,"观众互动",LocalPoint("aisle")+new Vector3(0,2,0),4,.5f,ArtDirection.Ink);
             foreach(string id in presenters)
             {
-                var host=Prims.Figure(_live,"SignedKol_"+id,CrowdView.PersonClothing(id),new Color(.92f,.76f,.61f),1.15f);host.AddComponent<ExpoKolMarker>().PersonId=id;
+                var host=Prims.FigureForPerson(_live,"SignedKol_"+id,CrowdView.PersonClothing(id),new Color(.92f,.76f,.61f),1.15f,id);host.AddComponent<ExpoKolMarker>().PersonId=id;
                 CityNpcClothing.Apply(host,_session,id);var motion=host.GetComponent<FigureMotion>();motion.ActivityKind="expo";motion.PresentationAnimation=true;
                 Label(host.transform,_session.CityPerson(id).Name,new Vector3(0,2.05f,0),2.3f,.35f,ArtDirection.Ink);
                 if (endorsers.Contains(id)) Label(host.transform,"品牌代言人",new Vector3(0,2.48f,0),2.6f,.36f,ArtDirection.Brass);

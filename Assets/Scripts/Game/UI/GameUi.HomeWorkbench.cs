@@ -59,7 +59,7 @@ namespace PCShopSell.Game.UI
         private static void WbVital(Transform parent,string label,double value,double max)
         {
             WbText(parent,label+" "+value.ToString("0")+" / "+max.ToString("0"),17);
-            var track=Ui.Panel(parent,"Vital_"+label,new Color32(21,28,38,255)).rectTransform;Ui.Size(track,-1,8);
+            var track=Ui.Panel(parent,"Vital_"+label,Ui.Edge).rectTransform;Ui.Size(track,-1,8);
             Ui.Panel(track,"Value",Ui.Accent).rectTransform.Anchor(0,0,(float)Math.Max(0,Math.Min(1,value/Math.Max(1,max))),1);
         }
         private static RectTransform WbPriceGraph(Transform parent,WorkbenchPriceDay[] data,float height)
@@ -98,7 +98,7 @@ namespace PCShopSell.Game.UI
             if(_homeWorkbench!=null)return;
             _homeWorkbench=OpenWindow("居家工作台",1780,1000,BuildHomeWorkbench,holds:false,onClosed:()=>_homeWorkbench=null,scrollContent:false);
             // 大屏接近全屏：背后的 HUD 几乎压黑，看起来是一块独立的屏幕。
-            var backdrop=_homeWorkbench.Root.GetComponent<Image>();if(backdrop!=null)backdrop.color=new Color(.02f,.03f,.05f,.94f);
+            var backdrop=_homeWorkbench.Root.GetComponent<Image>();if(backdrop!=null)backdrop.color=Ui.ChromeWell;
             _homeWorkbench.LiveConversation=true;
             _homeWorkbench.LiveKey = WorkbenchViewKey;
             _homeWorkbench.LiveStamp=_homeWorkbench.LiveKey();
@@ -168,12 +168,12 @@ namespace PCShopSell.Game.UI
         {
             var row=Ui.Row(parent,10,0);row.name="WorkbenchDayBar";
             var holder=Ui.Rect(row,"DayTrack");Ui.Size(holder,-1,10,1);
-            var back=Ui.Panel(holder,"DayTrackBack",new Color32(58,74,99,255));back.raycastTarget=false;back.rectTransform.Anchor(0,.5f,1,.5f,0,-4,0,-4);
+            var back=Ui.Panel(holder,"DayTrackBack",Ui.PendingSurface);back.raycastTarget=false;back.rectTransform.Anchor(0,.5f,1,.5f,0,-4,0,-4);
             foreach(var night in new[]{(0f,.25f),(22f/24f,1f)})
-            {var shade=Ui.Panel(back.transform,"Night",new Color32(24,30,42,255));shade.raycastTarget=false;shade.rectTransform.Anchor(night.Item1,0,night.Item2,1);}
+            {var shade=Ui.Panel(back.transform,"Night",Ui.ChromeButton);shade.raycastTarget=false;shade.rectTransform.Anchor(night.Item1,0,night.Item2,1);}
             _wbDayFill=Ui.Panel(back.transform,"DayFill",Ui.ButtonHot);_wbDayFill.raycastTarget=false;_wbDayFill.rectTransform.Anchor(0,0,0,1);
             foreach(float tick in new[]{.25f,.5f,.75f}){var line=Ui.Panel(back.transform,"Tick",new Color(0,0,0,.35f));line.raycastTarget=false;line.rectTransform.Anchor(tick,0,tick,1,-.5f,0,-.5f,0);}
-            var marker=Ui.Panel(holder,"DayNow",Color.white);marker.raycastTarget=false;_wbDayMarker=marker.rectTransform;_wbDayMarker.Anchor(0,0,0,1,-1.5f,0,-1.5f,0);
+            var marker=Ui.Panel(holder,"DayNow",Ui.Accent);marker.raycastTarget=false;_wbDayMarker=marker.rectTransform;_wbDayMarker.Anchor(0,0,0,1,-1.5f,0,-1.5f,0);
             UpdateWorkbenchDayBar();
         }
         private void UpdateWorkbenchDayBar()

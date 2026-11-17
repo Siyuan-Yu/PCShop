@@ -115,8 +115,8 @@ namespace PCShopSell.Game.UI
         private readonly Canvas _invitationCanvas;
         private readonly List<Window> _windows = new List<Window>();
         private readonly List<(GameObject go, float until)> _toasts = new List<(GameObject, float)>();
-        private readonly Dictionary<string, (RectTransform rt, Text text, Image plate, Outline textEdge)> _labels =
-            new Dictionary<string, (RectTransform, Text, Image, Outline)>();
+        private readonly Dictionary<string, (RectTransform rt, Text text, Button button, Outline textEdge)> _labels =
+            new Dictionary<string, (RectTransform, Text, Button, Outline)>();
         private readonly List<(RectTransform rt, Text text, Button button)> _queueLabels = new List<(RectTransform, Text, Button)>();
         private RectTransform _toastList;
 
@@ -237,13 +237,13 @@ namespace PCShopSell.Game.UI
         private void BuildHud()
         {
             Transform root = _hudCanvas.transform;
-            Image top = Ui.Panel(root, "TopBar", Ui.PanelBg);
-            top.rectTransform.Anchor(0, 1, 1, 1, 0, -64, 0, 0);
+            Image top = Ui.Panel(root, "TopBar", Ui.Chrome);
+            top.rectTransform.Anchor(0, 1, 1, 1, 12, -72, 12, 8);
             RectTransform row = Ui.Rect(top.transform, "Row").Fill();
             _hudTopRow = row;
             var h = row.gameObject.AddComponent<HorizontalLayoutGroup>();
-            h.padding = new RectOffset(12, 12, 8, 8);
-            h.spacing = 4;
+            h.padding = new RectOffset(10, 10, 7, 7);
+            h.spacing = 7;
             h.childControlWidth = true;
             h.childControlHeight = true;
             h.childForceExpandWidth = false;
@@ -256,7 +256,7 @@ namespace PCShopSell.Game.UI
             _dateText.horizontalOverflow=HorizontalWrapMode.Overflow;
             _dateText.resizeTextForBestFit=true;_dateText.resizeTextMinSize=17;_dateText.resizeTextMaxSize=20;
             weatherButton.Tip(()=>"点击查看天气预报与穿衣建议\n"+S.Clock.Today+" "+Ui.WeekdayName(S.Clock.Today.Weekday)+"\n"+S.CityWeatherForecast);
-            var cashButton = Ui.Size(Ui.Button(row, "", OpenLedger, 24), 136);
+            var cashButton = Ui.Size(Ui.Button(row, "", OpenLedger, 24), 160);
             _cashText = cashButton.GetComponentInChildren<Text>();
             _cashText.fontStyle = FontStyle.Bold;
             _cashText.alignment = TextAnchor.MiddleLeft;
@@ -270,17 +270,17 @@ namespace PCShopSell.Game.UI
             _placeText.resizeTextForBestFit = true;
             _placeText.resizeTextMinSize = 14;
             _placeText.resizeTextMaxSize = 17;
-            _statsText = Ui.Size(Ui.Label(row, "", 15, TextAnchor.MiddleLeft, Ui.Dim), 215);
+            _statsText = Ui.Size(Ui.Label(row, "", 15, TextAnchor.MiddleLeft, Ui.Dim), 248);
             _statsText.Tip(StatsTip);
             BuildHudShortcuts(row);
 
-            Image bottom = Ui.Panel(root, "BottomBar", Ui.PanelBg);
+            Image bottom = Ui.Panel(root, "BottomBar", Ui.Chrome);
             _travelBar = bottom.gameObject;
-            bottom.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -58);
+            bottom.rectTransform.Anchor(0, 0, 1, 0, 12, 8, 12, -63);
             RectTransform brow = Ui.Rect(bottom.transform, "Row").Fill();
             var bh = brow.gameObject.AddComponent<HorizontalLayoutGroup>();
-            bh.padding = new RectOffset(12, 12, 8, 8);
-            bh.spacing = 8;
+            bh.padding = new RectOffset(10, 10, 6, 6);
+            bh.spacing = 6;
             bh.childControlWidth = true;
             bh.childControlHeight = true;
             bh.childForceExpandWidth = false;
@@ -301,15 +301,17 @@ namespace PCShopSell.Game.UI
             BuildShortcutButton(brow,"自定目的地",3,116);
             RefreshShortcutMenus();
 
+            Ui.Size(Ui.Rect(brow, "TravelBarSpace"), 0, -1, 1);
             Ui.Size(Ui.Button(brow, "叫货车", OpenTruckWindow, 17), 100).Tip("打开货车装货单，选货物和目的地；手机通讯录里的入口也保留。");
             BuildCityLifeHud();
             BuildShopDockToggle(root);
             BuildHomeDockToggle(root);
 
-            Image hint = Ui.Panel(root, "HintStrip", new Color(.13f,.17f,.22f,.95f));
+            Image hint = Ui.Panel(root, "HintStrip", Ui.Chrome);
             _worldHintStrip = hint.gameObject;
             _hintStrip = hint;
-            hint.rectTransform.Anchor(0, 0, 0, 0, 16, 70, -1136, -122);
+            hint.rectTransform.pivot = new Vector2(0, .5f);
+            hint.rectTransform.Anchor(0, 0, 0, 0, 16, 70, -500, -108);
             hint.raycastTarget = false;
             _hintText = Ui.Label(hint.transform, "", 16, TextAnchor.MiddleLeft, Ui.TextColor);
             _hintText.rectTransform.Fill(10);
@@ -341,7 +343,9 @@ namespace PCShopSell.Game.UI
             UpdateSleepBanner();
             _brandButton.gameObject.SetActive(S.BrandManagementUnlocked);
             FitHudTopRow();
-            _dateText.text = (S.IsCityLifeTest?"测试 ":"")+$"{now.Date.Year}年{now.Date.Month}/{now.Date.Day} {Ui.WeekdayName(now.Date.Weekday)} {Ui.Hm(now.MinuteOfDay)}\n天气 · {S.WeatherSummary}";
+            _dateText.text = (S.IsCityLifeTest ? "测试 " : "") +
+                $"<size=15>{now.Date.Year}年{now.Date.Month}/{now.Date.Day} {Ui.WeekdayName(now.Date.Weekday)}</size>\n" +
+                $"<b>{Ui.Hm(now.MinuteOfDay)}</b>  <size=13>{S.WeatherSummary}</size>";
             SetHudCash(S.Ledger.Balance);
 
             RefreshHudTimeControls();
@@ -349,9 +353,9 @@ namespace PCShopSell.Game.UI
             PlayerStats p = S.Player;
             UpdateHungerBanner(p.Hunger);
             string stress = $"压力 {p.Stress:0}";
-            if (p.Stress >= PlayerStats.HighStressThreshold) stress = $"<b><color=#D79780>{stress}</color></b>";
-            _statsText.text = $"{HungerHudText(p.Hunger)} · 健康 {Pct(p.Health)} · {stress}\n" + (S.EnergyExhausted
-                ? $"<b><color=#D79780>精力耗尽 · {S.EnergyAwakeMinutesLeft/60}:{S.EnergyAwakeMinutesLeft%60:00}</color></b>"
+            if (p.Stress >= PlayerStats.HighStressThreshold) stress = $"<b><color=#9C4634>{stress}</color></b>";
+            _statsText.text = $"{HungerHudText(p.Hunger)}  健康 {Pct(p.Health)}  {stress}\n" + (S.EnergyExhausted
+                ? $"<b><color=#9C4634>精力耗尽 · {S.EnergyAwakeMinutesLeft/60}:{S.EnergyAwakeMinutesLeft%60:00}</color></b>"
                 : $"精力 {Pct(p.Energy)}/{p.MaxEnergy:0} · 名望 {S.PlayerShop.Reputation:0.0}");
 
             string where;
@@ -388,7 +392,7 @@ namespace PCShopSell.Game.UI
                 _hintText.text = $"<color=#DDC18B>按 F {(S.CanSleepAt(residence) ? "回家" : "查看住户")} · {S.PlaceTitle(residence)}</color>";
             else if (S.NearbyPlace != null)
                 _hintText.text = S.ClosedReason(S.NearbyPlace) is string closed
-                    ? $"<color=#D79780>{closed}</color>"
+                    ? $"<color=#9C4634>{closed}</color>"
                     : $"<color=#DDC18B>按 F 进入 {S.PlaceTitle(S.NearbyPlace)}</color>";
             else if (_ctrl.InVisit)
                 _hintText.text = _ctrl.VisitRoom?.NearbyLabel is string visitHint
@@ -409,6 +413,12 @@ namespace PCShopSell.Game.UI
             bool show = !invitationShowsRoute && !string.IsNullOrEmpty(_hintText.text);
             _hintStrip.enabled = show;
             _hintText.enabled = show;
+            if (show && _lastHintWidthText != _hintText.text)
+            {
+                _lastHintWidthText = _hintText.text;
+                float width = Mathf.Clamp(_hintText.preferredWidth + 24, 120, 1040);
+                _hintStrip.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
+            }
         }
 
         private static string Pct(double v) => v.ToString("0");
@@ -422,7 +432,6 @@ namespace PCShopSell.Game.UI
                 b.gameObject.SetActive(can || S.Vehicle == kind || kind <= VehicleKind.Taxi || S.ImpoundedVehicleCount(kind) > 0);
                 Ui.SetButtonFill(b, Ui.SelectedButton(S.Vehicle == kind));
                 Text t = b.GetComponentInChildren<Text>();
-                t.color = can ? Ui.TextColor : Ui.Dim;
                 string name = Vehicles.Get(kind).Name;
                 if (S.ImpoundedVehicleCount(kind) > 0 && !can) name = kind == VehicleKind.Tricycle ? "三轮(扣)" : "电驴(扣)";
                 t.text = name;
@@ -481,7 +490,7 @@ namespace PCShopSell.Game.UI
                     var textEdge = text.gameObject.AddComponent<Outline>();
                     textEdge.effectColor = new Color(0.07f, 0.10f, 0.13f, 0.9f);
                     textEdge.effectDistance = new Vector2(1f, -1f);
-                    label = (rt, text, b.image, textEdge);
+                    label = (rt, text, b, textEdge);
                     _labels[kv.Key] = label;
                 }
 
@@ -504,11 +513,12 @@ namespace PCShopSell.Game.UI
                 if (shop != null) width = Mathf.Max(width, S.ShopTitle(shop).Length * 18 + 18);
                 label.rt.sizeDelta = new Vector2(width, residential ? 38 : major ? 52 : 30);
                 label.text.fontSize = plain ? 14 : major ? 18 : 15;
-                label.text.color = plain ? Ui.Dim : Ui.TextColor;
+                Color plate = LabelColor(location, major);
                 label.textEdge.enabled = plain;
                 label.text.raycastTarget = plain;
-                label.plate.enabled = !plain;
-                if (!plain) label.plate.color = LabelColor(location, major);
+                label.button.image.enabled = !plain;
+                if (!plain) Ui.SetButtonFill(label.button, plate);
+                Ui.UseCaptionInk(label.button, plain ? Ui.ChromeDim : Ui.ReadableInk(S.IsMyShop(location) ? Ui.Accent : Ui.TextColor, plate));
             }
         }
 
@@ -534,13 +544,14 @@ namespace PCShopSell.Game.UI
         private Color LabelColor(Place p, bool important)
         {
             var venture = S.VentureAt(p.Id);
-            if (venture != null) return venture.Paused ? Ui.Warn : Ui.ButtonHot;
-            if (S.IsPlayerPropertyOccupied(p.Id)) return Ui.ButtonHot;
-            if (S.IsMyShop(p)) return new Color(0.1f, 0.55f, 0.5f, 0.92f);
-            if (S.IsVacant(p)) return new Color(0.75f, 0.42f, 0.1f, 0.9f);
-            if (p.Kind == PlaceKind.Agency) return new Color(0.15f, 0.35f, 0.7f, 0.92f);
-            if (p.Business == GameSession.BankBusiness) return new Color(0.40f, 0.24f, 0.65f, 0.92f);
-            return new Color(0.1f, 0.12f, 0.16f, important ? 0.85f : 0.6f);
+            if (venture != null) return venture.Paused ? Ui.WarningSurface : Ui.PendingSurface;
+            if (S.IsPlayerPropertyOccupied(p.Id) && !S.IsMyShop(p)) return Ui.PendingSurface;
+            if (S.IsMyShop(p)) return Ui.Chrome;
+            if (S.IsVacant(p)) return Ui.PendingSurface;
+            if (p.Kind == PlaceKind.Agency || p.Business == GameSession.BankBusiness) return Ui.InfoSurface;
+            var surface = Ui.Chrome;
+            surface.a = important ? .94f : .86f;
+            return surface;
         }
 
         private RectTransform _playerMark;
@@ -550,7 +561,7 @@ namespace PCShopSell.Game.UI
         {
             if (_playerMark == null)
             {
-                Button b = Ui.Button(_labelCanvas.transform, "我", null, 16, new Color(0.95f, 0.75f, 0.1f, 0.9f));
+                Button b = Ui.Button(_labelCanvas.transform, "我", null, 16, Ui.ButtonHot);
                 b.image.raycastTarget = false;
                 foreach (Text t in b.GetComponentsInChildren<Text>()) t.raycastTarget = false;
                 _playerMark = (RectTransform)b.transform;
@@ -572,7 +583,7 @@ namespace PCShopSell.Game.UI
         private string LabelText(Place p)
         {
             var venture = S.VentureAt(p.Id);
-            if (venture != null) return S.PlaceTitle(p) + (venture.Paused ? "\n<size=13><color=#D79780>停业 · 点击管理</color></size>" : "\n<size=13>营业中 · 点击管理</size>");
+            if (venture != null) return S.PlaceTitle(p) + (venture.Paused ? "\n<size=13><color=#9C4634>停业 · 点击管理</color></size>" : "\n<size=13>营业中 · 点击管理</size>");
             if (p.Id == S.ParkPlaceId) return "电脑乐园\n<size=13>点击查看布局</size>";
             if (S.IsPlayerPropertyOccupied(p.Id) && !S.IsMyShop(p)) return "我的物业\n<size=13>托管出租中</size>";
             switch (p.Kind)
@@ -584,7 +595,7 @@ namespace PCShopSell.Game.UI
                 case PlaceKind.Shop when S.IsMyShop(p):
                     return S.PlaceTitle(p) + (S.IsPlaceOpen(p) ? "\n<size=13><color=#A9C9A9>营业中</color></size>" : "\n<size=13>关门</size>");
                 case PlaceKind.Agency:
-                    return p.Name + (!S.IsPlaceOpen(p) ? "\n<size=13><color=#D79780>已打烊</color></size>" : S.HasShop ? "" : "\n<size=13><color=#DDC18B>先来这里租铺子</color></size>");
+                    return p.Name + (!S.IsPlaceOpen(p) ? "\n<size=13><color=#9C4634>已打烊</color></size>" : S.HasShop ? "" : "\n<size=13><color=#80551F>先来这里租铺子</color></size>");
                 default:
                     return S.PlaceTitle(p) + (p.Kind == PlaceKind.Shop && !S.IsVacant(p) && !S.IsPlaceOpen(p) ? "\n<size=13><color=#D79780>已打烊</color></size>" : "");
             }
@@ -677,7 +688,7 @@ namespace PCShopSell.Game.UI
         /// <summary>白底圆角的对话气泡，底下一个小尖角指着说话的人；大小跟着字数走。</summary>
         private (RectTransform, Text) NewBubble()
         {
-            Color bg = new Color(0.98f, 0.97f, 0.93f, 0.96f);
+            Color bg = new Color(Ui.PanelBg.r, Ui.PanelBg.g, Ui.PanelBg.b, .96f);
             Image panel = Ui.Panel(_labelCanvas.transform, "Bubble", bg);
             panel.raycastTarget = false;
             RectTransform rt = panel.rectTransform;
@@ -692,7 +703,6 @@ namespace PCShopSell.Game.UI
             var fit = panel.gameObject.AddComponent<ContentSizeFitter>();
             fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            panel.gameObject.AddComponent<Outline>().effectColor = new Color(.025f,.035f,.06f,.48f);
 
             Image tail = Ui.Panel(rt, "Tail", bg);
             tail.raycastTarget = false;
@@ -786,6 +796,7 @@ namespace PCShopSell.Game.UI
 
         private readonly List<string> _noticeHistory = new List<string>();
         private Image _hintStrip;
+        private string _lastHintWidthText;
         private int _hintBaseDay = int.MinValue / 2;
         private string _lastToast;
         private float _lastToastAt;
@@ -812,7 +823,7 @@ namespace PCShopSell.Game.UI
             _unreadNotices++;
             _noticeHistory.Add((S == null ? "" : S.Clock.Now + "　") + message);
             if (_noticeHistory.Count > 150) _noticeHistory.RemoveAt(0);
-            Image bg = Ui.Panel(_toastList, "Toast", new Color(.13f,.17f,.22f,.96f));
+            Image bg = Ui.Panel(_toastList, "Toast", Ui.PanelBg);
             var fit = bg.gameObject.AddComponent<VerticalLayoutGroup>();
             fit.padding = new RectOffset(14, 14, 10, 10);
             fit.childControlHeight = true;
@@ -867,7 +878,7 @@ namespace PCShopSell.Game.UI
             var w = new Window { Builder = builder, Holds = holds, Owner = this, OnClosed = onClosed, Closable = closable };
             w.OpeningMealSystem = system;
             Image dim = Ui.Panel(_modalCanvas.transform, "Window_" + title,
-                fullScreen ? Ui.FlatWell : new Color(.025f,.035f,.06f,.48f));
+                fullScreen ? Ui.ChromeWell : Ui.WorldShade);
             w.Root = dim.rectTransform.Fill();
             RectTransform prt = w.Root;
             if (!fullScreen)
@@ -883,7 +894,7 @@ namespace PCShopSell.Game.UI
             const float titleBarHeight = 50;
             if (showTitleBar)
             {
-                Image bar = Ui.Panel(prt, "TitleBar", Ui.PanelBg2);
+                Image bar = Ui.Panel(prt, "TitleBar", Color.clear);
                 bar.rectTransform.Anchor(0, 1, 1, 1, 0, -titleBarHeight, 0, 0);
                 w.TitleText = Ui.Label(bar.transform, title, 24);
                 w.TitleText.rectTransform.Anchor(0, 0, 1, 1, 24, 0, 112, 0);
@@ -891,7 +902,9 @@ namespace PCShopSell.Game.UI
                 w.TitleText.rectTransform.offsetMax = new Vector2(-220, w.TitleText.rectTransform.offsetMax.y);
                 w.TimeStatusText = Ui.Label(bar.transform, "", 13, TextAnchor.MiddleRight, Ui.Dim);
                 w.TimeStatusText.rectTransform.Anchor(1, 0, 1, 1, -216, 0, 112, 0);
-                Ui.Panel(prt, "BrassRule", Ui.Accent).rectTransform.Anchor(0, 1, 1, 1, 20, -51, 20, 49);
+                var rule = Ui.Panel(prt, "TitleDivider", Ui.Edge);
+                rule.rectTransform.Anchor(0, 1, 1, 1, 16, -50, 16, 49);
+                rule.raycastTarget = false;
                 if (closable)
                 {
                     Button close = Ui.Button(bar.transform, MenuLocalization.Get("close"), w.Close, 18);
@@ -1070,7 +1083,7 @@ namespace PCShopSell.Game.UI
                 void AddChoice(EventChoice c, int idx)
                 {
                     bool ok = S.IsChoiceEnabled(c);
-                    string label = ok ? c.Text : $"{c.Text}\n<size=14><color=#D79780>{c.DisabledReason}</color></size>";
+                    string label = ok ? c.Text : $"{c.Text}\n<size=14><color=#9C4634>{c.DisabledReason}</color></size>";
                     Ui.Size(Ui.Button(w.Content, label, () => SelectChoice(w, idx), 19,
                         interactable: ok), -1, ok ? 46 : 58);
                 }

@@ -4,54 +4,69 @@ namespace PCShopSell.Game.Runtime
 {
     public sealed partial class StreetWorldBuilder
     {
+        private static float ResidenceArtHeight(float height,int tier,int seed)
+            => Mathf.Clamp(Mathf.Round(height*.65f/2.8f),3,tier>1?5:4)*2.8f;
+
         private void ReferenceResidence(Transform root,float w,float d,float h,int tier,int seed)
         {
-            Color stone=ArtDirection.Hex(tier>1?"CBC8BD":"B9B6A6");
-            Color blue=ArtDirection.Hex(tier>1?"4F697D":"657B88");
-            var masonry=IndustrialMaterials.Surface("concrete",stone,new Vector2(3,4));var glass=Mats.Lit(blue,.58f,.08f);
-            Prims.Box(root,"ResidenceGarden",new Vector3(0,.04f,d/2),new Vector3(w,.08f,d),Mats.Lit(ArtDirection.Hex("78865D")));
-            Prims.Box(root,"ResidenceForecourt",new Vector3(0,.10f,d*.15f),new Vector3(w*.86f,.12f,d*.30f),Mats.Lit(Sidewalk));
-            Prims.Box(root,"Podium",new Vector3(0,1.05f,d*.59f),new Vector3(w*.87f,2.1f,d*.75f),masonry,true);
-            int count=w>21?2:1;float towerW=count==2?w*.34f:w*.64f,towerD=d*.69f;
-            for(int i=0;i<count;i++)
-            {
-                var tower=new GameObject("ResidentialTower").transform;tower.SetParent(root,false);
-                tower.localPosition=new Vector3(count==2?(i==0?-1:1)*w*.235f:0,0,d*.59f);
-                float top=h-(i==1?2.4f:0),height=top-2.1f;
-                Prims.Box(tower,"TowerBody",new Vector3(0,2.1f+height/2,0),new Vector3(towerW,height,towerD),masonry,true);
-                for(int side=0;side<4;side++)
-                {
-                    var face=new GameObject("TowerElevation").transform;face.SetParent(tower,false);face.localRotation=Quaternion.Euler(0,side*90,0);
-                    float width=side%2==0?towerW:towerD,depth=side%2==0?towerD:towerW;
-                    WindowFace(face,new Vector3(0,2.1f+height/2,-depth/2-.025f),width-.55f,height-.8f,stone,false);
-                    foreach(int edge in new[]{-1,1})
-                        Prims.Box(face,"StonePier",new Vector3(edge*(width/2-.17f),top/2,-depth/2-.10f),new Vector3(.27f,top,.20f),masonry);
-                }
-                for(float y=4.5f;y<top-.8f;y+=2.8f)
-                {
-                    Prims.Box(tower,"FloorCornice",new Vector3(0,y,0),new Vector3(towerW+.28f,.16f,towerD+.28f),masonry);
-                    if(tier>1)
-                    {
-                        Prims.Box(tower,"BalconySlab",new Vector3(0,y,-towerD/2-.32f),new Vector3(towerW*.55f,.16f,.8f),masonry);
-                        Prims.Box(tower,"BlueBalconyRail",new Vector3(0,y+.4f,-towerD/2-.7f),new Vector3(towerW*.55f,.64f,.07f),glass);
-                        Prims.Box(tower,"BalconyRailCap",new Vector3(0,y+.74f,-towerD/2-.7f),new Vector3(towerW*.57f,.09f,.1f),masonry);
-                    }
-                }
-                Prims.Box(tower,"CrownCornice",new Vector3(0,top+.1f,0),new Vector3(towerW+.65f,.28f,towerD+.65f),masonry);
-                Prims.Box(tower,"SetbackPenthouse",new Vector3(0,top+.7f,towerD*.12f),new Vector3(towerW*.67f,1.2f,towerD*.58f),masonry);
-                CityArchitecture.Roof(tower,new Vector3(0,top+1.32f,towerD*.12f),towerW*.71f,towerD*.64f,.65f,blue);
-                foreach(int side in new[]{-1,1})
-                    Prims.Box(tower,"RoofGarden",new Vector3(side*towerW*.37f,top+.38f,0),new Vector3(.6f,.35f,towerD*.68f),Mats.Lit(ArtDirection.Hex("5B714D")));
-            }
-            Prims.Box(root,"LobbyGlass",new Vector3(0,1.05f,d*.215f-.06f),new Vector3(w*.34f,1.85f,.1f),glass);
-            Prims.Box(root,"LobbyCanopy",new Vector3(0,2.2f,d*.17f),new Vector3(w*.46f,.2f,d*.15f),masonry);
-            Prims.Box(root,"EntryWalk",new Vector3(0,.13f,d*.10f),new Vector3(1.8f,.1f,d*.2f),Mats.Lit(Sidewalk));
+            // Compact residential blocks with real recessed bays and balconies replace repeated thin towers.
+            float top=ResidenceArtHeight(h,tier,seed),bw=w*.83f,bd=d*.66f,center=d*.62f;
+            Color wall=ArtDirection.Hex(seed%3==0?"E2CBA6":seed%3==1?"D7CBB6":"DCC2A6");
+            Color trim=ArtDirection.Hex("E8D6B9"),blue=ArtDirection.Hex(tier>1?"527F91":"517791");
+            var masonry=IndustrialMaterials.Surface("concrete",wall,new Vector2(w/5,top/4));
+            Prims.Box(root,"ResidenceGarden",new Vector3(0,.035f,d/2),new Vector3(w,.07f,d),
+                IndustrialMaterials.Surface("meadow",Grass,new Vector2(w/10,d/10)));
+            Prims.Box(root,"Low-rise residential body",new Vector3(0,top/2,center),new Vector3(bw,top,bd),masonry,true);
+            var detail=new MiniatureDetailMesh();var stone=Mats.Lit(trim);var roof=Mats.Lit(blue,.24f);
+            detail.Box(new Vector3(0,.18f,center),new Vector3(bw+.4f,.36f,bd+.4f),stone);
+            detail.Box(new Vector3(0,top+.13f,center),new Vector3(bw+.65f,.26f,bd+.65f),stone);
+            detail.Box(new Vector3(0,top+.28f,center),new Vector3(bw-.38f,.10f,bd-.38f),roof);
             foreach(int side in new[]{-1,1})
             {
-                CityVegetation.Build(root,new Vector3(side*w*.36f,0,d*.14f),seed+side);
-                Prims.Box(root,"EntryFlowerBed",new Vector3(side*w*.26f,.24f,.45f),new Vector3(w*.23f,.45f,.65f),Mats.Lit(ArtDirection.Hex("62754E")));
-                for(int j=-1;j<=1;j++)Prims.Shape(PrimitiveType.Sphere,root,"EntryFlowers",new Vector3(side*w*.26f+j*w*.06f,.53f,.45f),Vector3.one*.28f,Mats.Lit(ArtDirection.Hex("EAB24E")));
+                detail.Box(new Vector3(side*(bw/2-.08f),top+.50f,center),new Vector3(.20f,.60f,bd+.2f),stone);
+                detail.Box(new Vector3(0,top+.50f,center+side*(bd/2-.08f)),new Vector3(bw,.60f,.20f),stone);
+                detail.Box(new Vector3(side*(bw/2-.1f),top/2,center-bd/2-.11f),new Vector3(.28f,top,.23f),stone);
             }
+            float accessW=Mathf.Min(3.2f,bw*.25f),accessD=Mathf.Min(3.0f,bd*.28f);
+            detail.Box(new Vector3(bw*.20f,top+.86f,center+bd*.23f),new Vector3(accessW,1.15f,accessD),stone);
+            detail.Box(new Vector3(bw*.20f,top+1.48f,center+bd*.23f),new Vector3(accessW+.24f,.13f,accessD+.24f),roof);
+            for(int face=0;face<4;face++)
+            {
+                var elevation=new GameObject("Residential framed elevation").transform;elevation.SetParent(root,false);
+                elevation.localPosition=new Vector3(0,0,center);elevation.localRotation=Quaternion.Euler(0,face*90,0);
+                float width=face%2==0?bw:bd,depth=face%2==0?bd:bw;
+                var facade=new MiniatureDetailMesh();
+                int columns=Mathf.Clamp(Mathf.FloorToInt(width/3.5f),2,5),floors=Mathf.RoundToInt(top/2.8f);
+                float spacing=width/(columns+.25f),windowW=Mathf.Min(2.2f,spacing*.64f);
+                for(int floor=0;floor<floors;floor++)
+                {
+                    float y=1.6f+floor*2.8f;
+                    for(int col=0;col<columns;col++)
+                    {
+                        float x=(col-(columns-1)*.5f)*spacing;
+                        if(floor==0&&face==0&&Mathf.Abs(x)<2)continue;
+                        facade.Window(new Vector3(x,y,-depth/2-.015f),windowW,1.65f,trim,(seed+col+floor*3+face)%4!=0);
+                        if(floor>0&&(face==0||face==2)&&col%2==(floor+seed)%2)
+                            facade.Balcony(new Vector3(x,y-1.0f,-depth/2),windowW+.40f,seed+floor+col);
+                    }
+                    if(floor>0)facade.Box(new Vector3(0,y-1.40f,-depth/2-.05f),new Vector3(width+.15f,.12f,.2f),stone);
+                }
+                facade.Build(elevation,"Window reveals, balcony railings and flowers");
+            }
+            float front=center-bd/2;
+            detail.Window(new Vector3(0,1.3f,front-.04f),1.65f,2.35f,trim,true);
+            detail.Box(new Vector3(0,2.66f,front-.75f),new Vector3(3.2f,.16f,1.6f),roof);
+            detail.Box(new Vector3(0,.08f,front/2),new Vector3(2,.12f,front+.7f),
+                IndustrialMaterials.Surface("paving",Sidewalk,Vector2.one));
+            foreach(int side in new[]{-1,1})
+            {
+                detail.FlowerBed(new Vector3(side*w*.28f,.02f,.75f),w*.28f,.85f,seed+side);
+                detail.FlowerBed(new Vector3(side*w*.32f,.02f,front*.72f),w*.20f,.70f,seed+side+3,false);
+                CityVegetation.Build(root,new Vector3(side*w*.36f,0,front*.43f),seed+side+4);
+                // Knee-high garden wall with an open central route to the original door.
+                detail.Box(new Vector3(side*(w*.27f+.5f),.26f,.10f),new Vector3(w*.46f-1,.52f,.22f),stone);
+            }
+            detail.Build(root,"Residential architecture and front garden");
         }
     }
 }

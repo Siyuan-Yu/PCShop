@@ -138,7 +138,7 @@ namespace PCShopSell.Game.UI
 
         private static Color CalendarItemColor(CalendarItem item) => item.Completed ? Ui.Dim
             : item.Entry.Kind == "brand_expo" || item.Entry.Kind == "expo_order" ? Ui.Accent
-            : item.Entry.Kind == "kol_live" ? new Color(.72f, .81f, .9f) : item.Entry.Kind == "loan" ? Ui.FlatDown : Ui.Good;
+            : item.Entry.Kind == "kol_live" ? Ui.InfoInk : item.Entry.Kind == "loan" ? Ui.FlatDown : Ui.Good;
 
         private List<CalendarItem> CalendarMonthItems(int first)
         {

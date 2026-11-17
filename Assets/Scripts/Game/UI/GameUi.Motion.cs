@@ -56,8 +56,8 @@ namespace PCShopSell.Game.UI
 
         private void WriteHudCash(Money balance)
         {
-            _cashText.text = balance.ToString();
-            _cashText.color = balance.IsNegative ? Ui.Warn : Ui.Good;
+            _cashText.text = "<size=13><color=#CDC5B1>可用现金</color></size>\n" + balance;
+            _cashText.color = balance.IsNegative ? Ui.ChromeWarn : Ui.ChromeGold;
         }
 
         private static float EaseOut(float progress) => progress * (2f - progress);
@@ -72,7 +72,8 @@ namespace PCShopSell.Game.UI
 
             public void Fade(Transform target, float delay, float duration = .20f, float initialOpacity = .34f)
             {
-                var group = target.gameObject.GetComponent<CanvasGroup>() ?? target.gameObject.AddComponent<CanvasGroup>();
+                var group = target.GetComponent<CanvasGroup>();
+                if (group == null) group = target.gameObject.AddComponent<CanvasGroup>();
                 float opacity = group.alpha;
                 Add(target, delay, duration, progress => group.alpha = opacity * Mathf.Lerp(initialOpacity, 1, progress));
             }

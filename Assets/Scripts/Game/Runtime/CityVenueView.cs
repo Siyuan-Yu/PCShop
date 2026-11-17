@@ -11,7 +11,9 @@ namespace PCShopSell.Game.Runtime
         {
             string kind = (p.Business ?? "").Replace("venue_", "");
             Color floor = kind == "court" || kind == "golf" || kind == "park" || kind == "hike" ? ArtDirection.Sage : ArtDirection.Cream;
-            var body = Prims.Box(root, "Body", new Vector3(0, .045f, depth / 2 - 1), new Vector3(width, .09f, depth + 6), Mats.Lit(floor), true);
+            bool lawn=kind=="golf"||kind=="park"||kind=="hike";
+            var ground=IndustrialMaterials.Surface(lawn?"meadow":"paving",lawn?ArtDirection.Hex("7D9859"):floor,new Vector2(width/14,depth/14));
+            var body = Prims.Box(root, "Body", new Vector3(0, .045f, depth / 2 - 1), new Vector3(width, .09f, depth + 6), ground, true);
             body.AddComponent<PlaceMarker>().PlaceId = p.Id;
             bool outside=kind=="court"||kind=="golf"||kind=="park"||kind=="hike";
             if(outside)
@@ -46,6 +48,15 @@ namespace PCShopSell.Game.Runtime
             // Arrival/meeting positions deliberately remain in the open forecourt, not behind a wall.
             Bench(root, new Vector3(-3.2f, 0, -1.4f), ArtDirection.Sage);
             Bench(root, new Vector3(3.2f, 0, -1.4f), ArtDirection.Clay);
+            var planting=new MiniatureDetailMesh();
+            foreach(int side in new[]{-1,1})
+            {
+                planting.FlowerBed(new Vector3(side*(width*.5f-1.4f),.10f,-1.7f),1.9f,.8f,side+4);
+                if(outside)
+                    for(float z=depth*.35f;z<depth-.8f;z+=3.6f)
+                        planting.FlowerBed(new Vector3(side*(width*.5f-.43f),.10f,z),.65f,1.6f,(int)z+side,false);
+            }
+            planting.Build(root,"Venue flower borders");
         }
         private static void OldMarket(Transform root, float width, float depth)
         {
@@ -71,20 +82,30 @@ namespace PCShopSell.Game.Runtime
         private static void FishingPark(Transform root, float width, float depth)
         {
             Prims.Box(root,"FishingPondBank",new Vector3(width*.14f,.12f,depth*.63f),new Vector3(width*.63f,.18f,depth*.61f),Mats.Lit(ArtDirection.Cream));
-            Prims.Box(root,"FishingPondWater",new Vector3(width*.14f,.225f,depth*.63f),new Vector3(width*.58f,.025f,depth*.55f),Mats.Lit(new Color(.25f,.56f,.63f)));
-            Prims.Box(root,"ParkWalkingTrail",new Vector3(-width*.36f,.12f,depth*.5f),new Vector3(2,.12f,depth*.88f),Mats.Lit(ArtDirection.Cream));
+            Prims.Box(root,"FishingPondWater",new Vector3(width*.14f,.225f,depth*.63f),new Vector3(width*.58f,.025f,depth*.55f),IndustrialMaterials.GardenWater());
+            Prims.Box(root,"ParkWalkingTrail",new Vector3(-width*.36f,.12f,depth*.5f),new Vector3(2,.12f,depth*.88f),IndustrialMaterials.Surface("paving",ArtDirection.Cream,new Vector2(.5f,depth/4)));
             Prims.Box(root,"FishingReception",new Vector3(-width*.32f,.6f,depth*.3f),new Vector3(2,1.2f,1.2f),Mats.Lit(ArtDirection.Wood));
             Prims.SignText(root,"青湾垂钓场 · 租杆 / 鱼获回收",new Vector3(-width*.29f,2,depth*.28f),width*.38f,.48f,ArtDirection.Cream);
             for (int i = 0; i < 3; i++)
             {
                 float x = new[] { -.10f, .12f, .34f }[i] * width;
-                Prims.Box(root,"FishingDeck_"+i,new Vector3(x,.32f,depth*.36f),new Vector3(1.9f,.15f,2.5f),Mats.Lit(ArtDirection.Wood));
+                Prims.Box(root,"FishingDeck_"+i,new Vector3(x,.32f,depth*.36f),new Vector3(1.9f,.15f,2.5f),IndustrialMaterials.Surface("wood",ArtDirection.Wood,new Vector2(1,2)));
                 Prims.Box(root,"FishingSeat_"+i,new Vector3(x,.52f,depth*.25f),new Vector3(.8f,.45f,.65f),Mats.Lit(ArtDirection.Sage));
                 Prims.Shape(PrimitiveType.Cylinder,root,"FishingBucket_"+i,new Vector3(x+.65f,.5f,depth*.27f),new Vector3(.5f,.45f,.5f),Mats.Lit(ArtDirection.Blue));
                 var rod=Prims.Box(root,"FishingRod_"+i,new Vector3(x,1,depth*.36f),new Vector3(.045f,.045f,2.6f),Mats.Lit(ArtDirection.Ink));rod.transform.localRotation=Quaternion.Euler(-12,0,0);
                 Prims.Shape(PrimitiveType.Sphere,root,"FishingFloat_"+i,new Vector3(x,.31f,depth*.49f),new Vector3(.16f,.23f,.16f),Mats.Lit(ArtDirection.Brass));
                 Prims.SignText(root,FishingCatalog.Spots[i],new Vector3(x,1.2f,depth*.23f),2,.35f,ArtDirection.Cream);
             }
+            var garden=new MiniatureDetailMesh();
+            for(int i=0;i<5;i++)
+                garden.FlowerBed(new Vector3(-width*.12f+i*width*.13f,.10f,depth*.96f),width*.11f,.65f,i,false);
+            foreach(float z in new[]{depth*.12f,depth*.69f,depth*.91f})
+                CityVegetation.Build(root,new Vector3(-width*.46f,.10f,z),(int)z);
+            var wood=IndustrialMaterials.Surface("wood",ArtDirection.Hex("A78052"),Vector2.one);
+            var shelter=new Vector3(-width*.29f,0,depth*.28f);
+            foreach(int side in new[]{-1,1})garden.Box(shelter+new Vector3(side*1.4f,1.6f,.9f),new Vector3(.14f,3.2f,.14f),wood);
+            for(int i=-4;i<=4;i++)garden.Box(shelter+new Vector3(i*.36f,3.25f,.1f),new Vector3(.18f,.17f,2.9f),wood);
+            garden.Build(root,"Fishing garden and reception pergola");
         }
 
         private static void Clothing(Transform root,float width,float depth)
@@ -168,6 +189,8 @@ namespace PCShopSell.Game.Runtime
         }
         private static void Court(Transform root, float width, float depth)
         {
+            Prims.Box(root,"CourtPlayingSurface",new Vector3(0,.105f,depth/2),new Vector3(width-1.4f,.025f,depth-.6f),
+                IndustrialMaterials.Surface("concrete",ArtDirection.Hex("4A857A"),new Vector2(width/10,depth/10)));
             var white = Mats.Unlit(ArtDirection.Cream);
             foreach (int side in new[] { -1, 1 })
             {
@@ -177,11 +200,51 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(root, "CenterLine", new Vector3(0, .13f, depth / 2), new Vector3(width - 2, .03f, .08f), white);
             Prims.Box(root, "HoopPost", new Vector3(0, 1.7f, depth - .8f), new Vector3(.12f, 3.4f, .12f), Mats.Lit(ArtDirection.Ink));
             Prims.Box(root, "Backboard", new Vector3(0, 3.1f, depth - 1.05f), new Vector3(1.7f, 1, .12f), white);
-            Prims.Shape(PrimitiveType.Cylinder, root, "Hoop", new Vector3(0, 2.8f, depth - 1.5f), new Vector3(.72f, .04f, .72f), Mats.Lit(ArtDirection.Clay));
+            var court=new MiniatureDetailMesh();
+            var rim=Mats.Lit(ArtDirection.Clay);var net=Mats.Lit(ArtDirection.Cream);
+            for(int i=0;i<24;i++)
+            {
+                float a=i*Mathf.PI*2/24,b=(i+1)*Mathf.PI*2/24;
+                var from=new Vector3(Mathf.Cos(a)*.36f,2.8f,depth-1.5f+Mathf.Sin(a)*.36f);
+                var to=new Vector3(Mathf.Cos(b)*.36f,2.8f,depth-1.5f+Mathf.Sin(b)*.36f);
+                court.Box((from+to)/2,new Vector3(.04f,.04f,Vector3.Distance(from,to)+.01f),rim,Quaternion.LookRotation(to-from));
+                if(i%3==0)
+                {
+                    var end=new Vector3(Mathf.Cos(a)*.23f,2.38f,depth-1.5f+Mathf.Sin(a)*.23f);
+                    court.Box((from+end)/2,new Vector3(.015f,.015f,Vector3.Distance(from,end)),net,Quaternion.LookRotation(end-from));
+                }
+            }
+            float circleRadius=Mathf.Min(1.8f,width*.15f);
+            for(int i=0;i<40;i++)
+            {
+                float a=i*Mathf.PI*2/40,b=(i+1)*Mathf.PI*2/40;
+                var from=new Vector3(Mathf.Cos(a)*circleRadius,.133f,depth/2+Mathf.Sin(a)*circleRadius);
+                var to=new Vector3(Mathf.Cos(b)*circleRadius,.133f,depth/2+Mathf.Sin(b)*circleRadius);
+                court.Box((from+to)/2,new Vector3(.07f,.012f,Vector3.Distance(from,to)+.015f),white,Quaternion.LookRotation(to-from));
+            }
+            foreach(int side in new[]{-1,1})
+                court.Box(new Vector3(side*2,.133f,depth-2.5f),new Vector3(.08f,.012f,4),white);
+            court.Box(new Vector3(0,.133f,depth-4.5f),new Vector3(4,.012f,.08f),white);
+            court.Build(root,"Court markings and open hoop net");
             Prims.Shape(PrimitiveType.Sphere, root, "Basketball", new Vector3(-1, .37f, depth / 2), Vector3.one * .58f, Mats.Lit(ArtDirection.Clay));
         }
         private static void Golf(Transform root, float width, float depth)
         {
+            Prims.Shape(PrimitiveType.Cylinder,root,"PuttingGreen",new Vector3(0,.11f,depth*.76f),new Vector3(width*.63f,.025f,depth*.32f),
+                IndustrialMaterials.Surface("meadow",ArtDirection.Hex("A9BA6C"),new Vector2(2,2)));
+            foreach(int side in new[]{-1,1})
+            {
+                Prims.Shape(PrimitiveType.Cylinder,root,"PracticeBunkerRim",new Vector3(side*width*.32f,.10f,depth*.63f),new Vector3(width*.18f,.025f,depth*.20f),Mats.Lit(ArtDirection.Hex("6F934D")));
+                Prims.Shape(PrimitiveType.Cylinder,root,"PracticeBunkerSand",new Vector3(side*width*.32f,.13f,depth*.63f),new Vector3(width*.15f,.025f,depth*.17f),
+                    IndustrialMaterials.Surface("concrete",ArtDirection.Hex("E0C99D"),Vector2.one));
+            }
+            var canopy=new MiniatureDetailMesh();var wood=IndustrialMaterials.Surface("wood",ArtDirection.Hex("AC875B"),Vector2.one);
+            foreach(int side in new[]{-1,1})
+                canopy.Box(new Vector3(side*5.2f,1.7f,1.6f),new Vector3(.16f,3.4f,.16f),wood);
+            canopy.Box(new Vector3(0,3.4f,1.6f),new Vector3(10.6f,.20f,.18f),wood);
+            for(float x=-5.2f;x<=5.3f;x+=.65f)
+                canopy.Box(new Vector3(x,3.6f,1.6f),new Vector3(.16f,.16f,3.2f),wood);
+            canopy.Build(root,"Golf timber practice pergola");
             for (int i = -1; i <= 1; i++)
             {
                 Prims.Box(root, "PracticeMat", new Vector3(i * 3, .14f, 1.6f), new Vector3(2, .08f, 2.4f), Mats.Lit(new Color(.21f, .42f, .3f)));
@@ -202,7 +265,7 @@ namespace PCShopSell.Game.Runtime
             {
                 var stone=Mats.Lit(ArtDirection.Cream);
                 Prims.Shape(PrimitiveType.Cylinder,root,"LakeShore",new Vector3(0,.12f,depth*.53f),new Vector3(width*.65f,.12f,depth*.63f),stone);
-                Prims.Shape(PrimitiveType.Cylinder,root,"GardenLake",new Vector3(0,.25f,depth*.53f),new Vector3(width*.61f,.025f,depth*.57f),Mats.Lit(ArtDirection.Hex("479FB3")));
+                Prims.Shape(PrimitiveType.Cylinder,root,"GardenLake",new Vector3(0,.25f,depth*.53f),new Vector3(width*.61f,.025f,depth*.57f),IndustrialMaterials.GardenWater());
                 foreach(int side in new[]{-1,1})
                 {
                     Prims.Box(root,"LakesideWalk",new Vector3(0,.16f,depth*(side<0?.13f:.91f)),new Vector3(width*.9f,.08f,1.8f),stone);

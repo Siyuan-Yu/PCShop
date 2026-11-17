@@ -18,7 +18,7 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, $"散客装机单有 {shop.Settings.BuildOrderDueDays} 天交期。请按工单上的剩余时间交付，逾期会扣名望。", 15, Ui.Dim);
 
                 // 台面：深色桌面，每张装机单是一张工单卡
-                Image desk = Ui.Panel(w.Content, "Desk", new Color(0.12f, 0.13f, 0.16f));
+                Image desk = Ui.Panel(w.Content, "Desk", Ui.Chrome);
                 Ui.Size(desk, -1, 470);
                 RectTransform list = Ui.Scroll(desk.transform, 470);
                 list.parent.parent.GetComponent<RectTransform>().Fill();
@@ -32,7 +32,7 @@ namespace PCShopSell.Game.UI
                     BuildOrder order = o;
                     List<PartDef> missing = S.MissingParts(order);
                     long left = S.Clock.Now.MinutesUntil(order.DueAt);
-                    Image card = Ui.Panel(list, "Order", new Color(0.93f, 0.91f, 0.84f));
+                    Image card = Ui.Panel(list, "Order", Ui.PanelBg2);
                     var v = Ui.VList(card.rectTransform, 2, 10);
                     Color ink = new Color(0.16f, 0.16f, 0.18f);
                     string urgent = left < 12 * 60 ? "<color=#B33A2A>（快到期了！）</color>" : "";

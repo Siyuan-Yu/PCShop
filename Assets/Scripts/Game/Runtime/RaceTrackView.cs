@@ -20,7 +20,8 @@ namespace PCShopSell.Game.Runtime
             Track=track;transform.position=new Vector3((float)track.X,.65f,(float)track.Y);
             var scenery=new GameObject("CircuitScenery").transform;scenery.SetParent(transform,false);
             Prims.Box(scenery,"IslandBank",Vector3.down*.4f,new Vector3((float)track.Width+10,.7f,(float)track.Depth+10),Mats.Lit(ArtDirection.Hex("B9AD8B")));
-            Prims.Box(scenery,"Infield",Vector3.zero,new Vector3((float)track.Width,.15f,(float)track.Depth),Mats.Lit(ArtDirection.Sage));
+            Prims.Box(scenery,"Infield",Vector3.zero,new Vector3((float)track.Width,.15f,(float)track.Depth),
+                IndustrialMaterials.Surface("meadow",ArtDirection.Hex("7D9859"),new Vector2((float)track.Width/20,(float)track.Depth/20)));
             var resources=gameObject.AddComponent<CityLandscapeResources>();
             Ribbon(scenery,(float)track.HalfRoad+1.3f,.14f,Mats.Lit(ArtDirection.Cream),resources);
             Ribbon(scenery,(float)track.HalfRoad,.18f,Mats.Lit(ArtDirection.Hex("39434A")),resources);
@@ -34,6 +35,7 @@ namespace PCShopSell.Game.Runtime
                     new Vector3(24, .7f, 2), Mats.Lit(i % 2 == 0 ? ArtDirection.Wood : ArtDirection.Cream));
             Prims.Box(scenery, "PitOffice", pit + Vector3.up * 2.2f, new Vector3(12, 4.3f, 6), Mats.Lit(ArtDirection.Cream));
             Prims.Box(scenery, "PitRoof", pit + Vector3.up * 4.5f, new Vector3(14, .5f, 8), Mats.Lit(ArtDirection.Blue));
+            BuildCircuitGarden(scenery,stand,pit);
             if (starter) BuildStarterLandmarks(scenery, resources);
             if (track.Kerbs.Length > 0) BuildKerbs(scenery, resources);
             for(int i=0;i<4;i++){Prims.Box(scenery,"FloodlightPole",new Vector3((i%2==0?-1:1)*(float)track.Width*.43f,4,(i<2?-1:1)*(float)track.Depth*.43f),new Vector3(.3f,8,.3f),Mats.Lit(ArtDirection.Ink));}
@@ -41,6 +43,46 @@ namespace PCShopSell.Game.Runtime
             _moving=new GameObject("RaceVehicles").transform;_moving.SetParent(transform,false);_moving.gameObject.SetActive(false);
         }
         private Vector3 Point(int i){var p=Track.Points[i%Track.Points.Length];return new Vector3((float)p.X,0,(float)p.Y);}
+
+        private void BuildCircuitGarden(Transform scenery,Vector3 stand,Vector3 pit)
+        {
+            var details=new MiniatureDetailMesh();
+            var timber=IndustrialMaterials.Surface("wood",ArtDirection.Hex("A77E50"),Vector2.one);
+            var metal=Mats.Lit(ArtDirection.Hex("405363"));
+            for(int row=0;row<4;row++)for(int seat=-5;seat<=5;seat++)
+            {
+                var at=stand+new Vector3(seat*2,1.1f+row*.6f,row*2);
+                details.Box(at,new Vector3(1.5f,.12f,.65f),timber);
+                details.Box(at+new Vector3(0,.38f,.32f),new Vector3(1.5f,.6f,.10f),timber);
+            }
+            foreach(int side in new[]{-1,1})
+            {
+                details.Box(stand+new Vector3(side*12,3,3),new Vector3(.18f,6,.18f),metal);
+                details.FlowerBed(pit+new Vector3(side*4.3f,.12f,-3.7f),2.5f,.8f,side+9);
+            }
+            details.Box(stand+new Vector3(0,6.2f,3),new Vector3(26,.25f,9),Mats.Lit(ArtDirection.Hex("597587")));
+            details.Window(pit+new Vector3(-3,2.5f,-3.15f),2.7f,1.7f,ArtDirection.Cream,true);
+            details.Window(pit+new Vector3(3,2.5f,-3.15f),2.7f,1.7f,ArtDirection.Cream,true);
+            // Only decorate clear infield: the driving ribbon and runoff stay empty.
+            for(float x=-(float)Track.Width*.33f;x<(float)Track.Width*.34f;x+=13)
+            for(float z=-(float)Track.Depth*.30f;z<(float)Track.Depth*.31f;z+=13)
+            {
+                var at=new Vector3(x,.10f,z);
+                if(Mathf.Abs(x-stand.x)<16&&Mathf.Abs(z-stand.z-3)<10 || Mathf.Abs(x-pit.x)<10&&Mathf.Abs(z-pit.z)<8)continue;
+                float clearance=float.MaxValue;
+                for(int i=0;i<Track.Points.Length;i++)
+                {
+                    var a=Point(i);var direction=Point(i+1)-a;
+                    var closest=a+direction*Mathf.Clamp01(Vector3.Dot(at-a,direction)/Mathf.Max(.001f,direction.sqrMagnitude));
+                    clearance=Mathf.Min(clearance,Vector3.Distance(at,closest));
+                }
+                if(clearance<(float)Track.HalfRoad+7)continue;
+                int seed=Mathf.RoundToInt(x*7+z*13);
+                CityVegetation.Build(scenery,at,seed);
+                details.FlowerBed(at+Vector3.forward*1.5f,2.8f,1.3f,seed,false);
+            }
+            details.Build(scenery,"Circuit seating, windows and gardens");
+        }
 
         private void BuildStartingGantry(Transform scenery)
         {

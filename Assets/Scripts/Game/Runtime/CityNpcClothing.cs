@@ -84,107 +84,36 @@ namespace PCShopSell.Game.Runtime
         {
             if (figure == null || session == null || string.IsNullOrEmpty(personId) || figure.GetComponent<CityNpcClothing>() != null) return;
             var motion = figure.GetComponent<FigureMotion>();
-            if (motion == null || motion.Torso == null) return;
+            if (motion == null || motion.Appearance != FigureAppearance.Npc) return;
+            var model = figure.GetComponent<PlayerCharacterModel>();
+            if (model == null) return;
 
             figure.AddComponent<CityNpcClothing>();
+            double temperature = session.CityOutdoorTemperature(session.Clock.Today.TotalDays * 1440L + 8 * 60);
             uint hash = 0;
             foreach (char c in personId) hash = unchecked(hash * 31 + c);
             if (!NamedStyles.TryGetValue(personId, out var style)) style = CasualStyles[(int)(hash % (uint)CasualStyles.Length)];
             var choices = Palettes[(int)style];
             var palette = choices[SignaturePalettes.TryGetValue(personId, out int index) ? index : (int)(hash % (uint)choices.Length)];
-            double temperature = session.CityOutdoorTemperature(session.Clock.Today.TotalDays * 1440L + 8 * 60);
-            bool winter = temperature < 12;
-            string baseCut = winter ? "winter_basic" : temperature >= 26 ? "cotton_short" : "shirt";
-            Prims.Dress(figure, baseCut, palette.Top, palette.Trousers, standardTrim: false);
-            AddDetails(motion.Torso, style, palette, winter);
-        }
-
-        private static void AddDetails(Transform torso, Style style, Palette palette, bool winter)
-        {
-            float front = winter ? .183f : .138f;
-            float width = winter ? .49f : .397f;
-
-            void Detail(string name, float x, float y, float z, float w, float h, float d, Color color, float angle = 0)
+            string cut = personId switch
             {
-                var part = Prims.Box(torso, "Outfit_" + name, new Vector3(x, y, z), new Vector3(w, h, d), Mats.Lit(color));
-                part.transform.localRotation = Quaternion.Euler(0, 0, angle);
-            }
-
-            void Front(string name, float x, float y, float w, float h, Color color, float angle = 0, bool layered = false) =>
-                Detail(name, x, y, front + (layered ? .024f : .015f), w, h, .035f, color, angle);
-
-            void Collar(float w, float depth, Color color) => Detail("Collar", 0, 1.097f, 0, w, .077f, depth, color);
-
-            switch (style)
-            {
-                case Style.Tailored:
-                    Collar(.23f, .24f, palette.Layer);
-                    Front("WrapLapel", -.048f, .925f, .13f, .31f, palette.Layer, 27);
-                    Front("LapelPin", .115f, .94f, .042f, .048f, palette.Accent, 30);
-                    break;
-                case Style.Sweet:
-                    Collar(.29f, .28f, palette.Accent);
-                    Front("PinaforeBodice", 0, .70f, .28f, .31f, palette.Layer);
-                    Front("LeftStrap", -.097f, .956f, .05f, .26f, palette.Layer);
-                    Front("RightStrap", .097f, .956f, .05f, .26f, palette.Layer);
-                    Front("EnamelPin", -.084f, .90f, .055f, .045f, palette.Accent, layered: true);
-                    break;
-                case Style.Dark:
-                    Collar(.23f, .22f, palette.Top);
-                    Front("SatinPanel", .033f, .814f, .21f, .49f, palette.Layer, -8);
-                    Front("SilverFastener", .052f, .94f, .10f, .033f, palette.Accent, -10, layered: true);
-                    break;
-                case Style.Punk:
-                    Front("TartanInset", -.063f, .825f, .17f, .46f, palette.Layer, -9);
-                    Front("DiagonalZip", .035f, .821f, .025f, .48f, palette.Accent, -20, layered: true);
-                    Front("ShoulderPatch", -.125f, 1.03f, .078f, .064f, palette.Accent, 12, layered: true);
-                    break;
-                case Style.Atelier:
-                    Front("Undershirt", 0, .827f, .135f, .50f, palette.Layer);
-                    Front("ChestPocket", .121f, .90f, .094f, .125f, palette.Top * .85f);
-                    Front("MakerPin", -.115f, .98f, .053f, .049f, palette.Accent, 22);
-                    break;
-                case Style.Cosplay:
-                    Detail("Mantle", 0, 1.035f, -.048f, width, .16f, front * 2 + .20f, palette.Top);
-                    Collar(.235f, .21f, palette.Layer);
-                    Front("MantleTrim", 0, .967f, width * .92f, .032f, palette.Accent);
-                    Front("CapeClasp", 0, .932f, .084f, .079f, palette.Accent, 45, layered: true);
-                    break;
-                case Style.Outdoor:
-                    Detail("WeatherYoke", 0, 1.03f, 0, width, .135f, front * 2 + .02f, palette.Layer);
-                    Collar(.24f, .24f, palette.Layer);
-                    Front("UtilityStrap", -.02f, .808f, .045f, .51f, palette.Layer, 28);
-                    Front("PullTab", .109f, .914f, .034f, .092f, palette.Accent);
-                    break;
-                case Style.Varsity:
-                    Collar(.28f, .24f, palette.Layer);
-                    Detail("ContrastYoke", 0, 1.021f, 0, width, .112f, front * 2 + .024f, palette.Layer);
-                    Detail("RibbedHem", 0, .569f, 0, width, .069f, front * 2 + .022f, palette.Layer);
-                    Front("VarsityPatch", .116f, .919f, .068f, .072f, palette.Accent);
-                    break;
-                case Style.Track:
-                    Collar(.24f, .27f, palette.Layer);
-                    Detail("RacingStripe", 0, .924f, 0, width, .09f, front * 2 + .022f, palette.Layer);
-                    Detail("ContrastPiping", 0, .849f, 0, width, .034f, front * 2 + .025f, palette.Accent);
-                    Front("ZipPull", .028f, .984f, .034f, .103f, palette.Accent);
-                    break;
-                case Style.Workwear:
-                    Collar(.29f, .24f, palette.Layer);
-                    Front("PocketLeft", -.106f, .866f, .124f, .131f, palette.Layer);
-                    Front("PocketRight", .106f, .866f, .124f, .131f, palette.Layer);
-                    Front("PocketTab", .109f, .923f, .066f, .044f, palette.Accent, layered: true);
-                    break;
-                case Style.Classic:
-                    Collar(.235f, .24f, palette.Layer);
-                    Front("FineKnit", 0, .803f, .15f, .46f, palette.Layer);
-                    Front("Scarf", -.058f, .966f, .077f, .25f, palette.Accent, 20, layered: true);
-                    break;
-                case Style.Street:
-                    Detail("ColorBlock", 0, .933f, 0, width, .19f, front * 2 + .023f, palette.Layer);
-                    Front("CrossbodyStrap", 0, .807f, .052f, .49f, palette.Accent, -30);
-                    Front("CrossbodyBag", .109f, .674f, .163f, .16f, palette.Accent, layered: true);
-                    break;
-            }
+                "keeper_phone2" or "life_bartender" or "life_chef" or "res_baker" or "res_cook" or "res_wang"
+                    or "resident_luhai" or "resident_pancheng" => "apron",
+                "res_auntie" or "keeper_agent" => "formal",
+                "res_rider" or "keeper_farm" => "uniform",
+                _ when style == Style.Track => "track",
+                _ when temperature < 12 => "coat",
+                _ when temperature >= 26 => "short",
+                _ when style == Style.Tailored => "formal",
+                _ => "jacket"
+            };
+            if (personId == "keeper_agent") palette = new Palette("4C607C", "E4DBCD", "D5AA68", "323645");
+            if (personId == "landlady") palette = new Palette("9C484D", "E4CEB9", "C99868", "494044");
+            if (personId == "res_rider") palette = new Palette("C48B36", "323546", "F2E5BE", "3B4049");
+            if (personId == "life_chef") palette = new Palette("DDD0BC", "433C41", "A35449", "393A43");
+            if (personId == "res_grandpa") palette = new Palette("A28A6E", "CBC1B5", "D9C9AC", "49515A");
+            if (personId == "staff_mall") palette = new Palette("B39A8E", "53444B", "DDC6A3", "3F3742");
+            model.DressNpc(cut, palette.Top, palette.Trousers, palette.Layer, palette.Accent);
         }
     }
 }

@@ -186,11 +186,11 @@ namespace PCShopSell.Game.UI
             if (item.Short) row.gameObject.AddComponent<Image>().color = new Color(.42f, .17f, .15f, .22f);
             ItemPortrait(row, offer.Id, 46);
             string sub = offer.Category + (cov.ContractMissing > 0 ? $" · 订单缺货 {cov.ContractMissing}" : "") + (cov.Claimed > 0 ? $" · 已安排 {cov.Claimed}" : "");
-            var label = Ui.Label(row, offer.Name + "\n<size=14><color=#AAB4BB>" + sub + "</color></size>", 17, TextAnchor.MiddleLeft);
+            var label = Ui.Label(row, offer.Name + "\n<size=14><color=#655E52>" + sub + "</color></size>", 17, TextAnchor.MiddleLeft);
             label.verticalOverflow = VerticalWrapMode.Truncate;
             Ui.Size(label, -1, 52, 1);
             { var le = label.GetComponent<LayoutElement>(); le.minWidth = 0; le.preferredWidth = 0; }
-            Ui.Size(Ui.Label(row, cov.FreeStock.ToString(), 18, TextAnchor.MiddleCenter, cov.FreeStock <= 0 ? Ui.Warn : Color.white), 60, 52);
+            Ui.Size(Ui.Label(row, cov.FreeStock.ToString(), 18, TextAnchor.MiddleCenter, cov.FreeStock <= 0 ? Ui.Warn : Ui.TextColor), 60, 52);
             int transit = cov.InTransit + cov.Claimed;
             Ui.Size(Ui.Label(row, transit > 0 ? transit.ToString() : "—", 18, TextAnchor.MiddleCenter, transit > 0 ? Ui.Good : Ui.Dim), 60, 52);
             string key = offer.Kind + "_" + offer.Id;
@@ -251,7 +251,7 @@ namespace PCShopSell.Game.UI
                     var pick = candidate;
                     var row = Ui.Row(list, 46, 8);
                     ItemPortrait(row, pick.Offer.Id, 38);
-                    Ui.Size(Ui.Label(row, pick.Offer.Name + "  <size=14><color=#AAB4BB>" + pick.Offer.Category + "</color></size>", 17, TextAnchor.MiddleLeft), -1, 40, 1);
+                    Ui.Size(Ui.Label(row, pick.Offer.Name + "  <size=14><color=#655E52>" + pick.Offer.Category + "</color></size>", 17, TextAnchor.MiddleLeft), -1, 40, 1);
                     Ui.Size(Ui.Button(row, "添加", () =>
                     {
                         int target = Math.Min(6, pick.Offer.Kind == PurchaseGoodsKind.Part ? GameSession.RestockMaxTarget : 100);

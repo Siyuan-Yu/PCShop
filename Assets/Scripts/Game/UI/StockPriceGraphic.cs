@@ -11,8 +11,9 @@ namespace PCShopSell.Game.UI
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class StockPriceGraphic : MaskableGraphic
     {
-        internal static readonly Color CostColor = new Color32(160, 208, 238, 255);
-        internal static readonly Color BuyColor = Ui.Good, SellColor = new Color32(243, 156, 156, 255);
+        internal static Color CostColor => Ui.InfoInk;
+        internal static Color BuyColor => Ui.Good;
+        internal static Color SellColor => Ui.Warn;
         private StockQuote[][] _series = Array.Empty<StockQuote[]>();
         private Color[] _colors = Array.Empty<Color>();
         private (long minute, long open, long high, long low, long close)[] _candles =

@@ -20,9 +20,9 @@ namespace PCShopSell.Game.UI
                                        (S.RentHikes > 0 ? $"（已涨租 {S.RentHikes} 次）" : ""), 16, TextAnchor.MiddleLeft, Ui.Dim), -1, 28);
                 foreach (GoalLine g in S.Goals())
                 {
-                    string mark = g.State == GoalState.Passed ? "<color=#A9C9A9>✔ 达成</color>" :
-                        g.State == GoalState.Failed ? "<color=#D79780>✘ 未达成</color>" : "<color=#ABB5A8>进行中</color>";
-                    Text t = Ui.Label(list, $"<b>{g.Title}</b>  {mark}\n<size=15>{g.Goal}</size>\n<size=15><color=#ABB5A8>{g.Progress}</color></size>", 18);
+                    string mark = g.State == GoalState.Passed ? "<color=#386047>✔ 达成</color>" :
+                        g.State == GoalState.Failed ? "<color=#9C4634>✘ 未达成</color>" : "<color=#655E52>进行中</color>";
+                    Text t = Ui.Label(list, $"<b>{g.Title}</b>  {mark}\n<size=15>{g.Goal}</size>\n<size=15><color=#655E52>{g.Progress}</color></size>", 18);
                     Ui.Size(t, -1, 82);
                 }
                 if (S.EndingId != null)

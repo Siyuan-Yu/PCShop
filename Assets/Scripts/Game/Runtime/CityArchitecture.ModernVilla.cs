@@ -7,11 +7,13 @@ namespace PCShopSell.Game.Runtime
         private static void ModernGardenVilla(Transform root,float w,float d,float configuredHeight,int seed)
         {
             int variant=(seed&int.MaxValue)%3;
-            Color white=ArtDirection.Hex(variant==0?"D9D8CE":variant==1?"CBC5B8":"BDC5CB");
-            Color dark=ArtDirection.Hex("303C48"),wood=ArtDirection.Hex("866849"),paving=ArtDirection.Hex("B5B8B1");
-            float floor=2.7f,h=floor*4,bw=w*.72f,bd=d*.37f,z=d*.73f,front=z-bd/2;
-            Box(root,"PrivateEstateLawn",new Vector3(0,.045f,d/2),new Vector3(w,.09f,d),ArtDirection.Hex("71815A"));
-            Box(root,"StoneTerrace",new Vector3(0,.14f,d*.37f),new Vector3(w*.85f,.18f,d*.36f),paving);
+            Color white=ArtDirection.Hex(variant==0?"E4D7C3":variant==1?"D7C6AE":"C9D0CD");
+            Color dark=ArtDirection.Hex("3D5365"),wood=ArtDirection.Hex("A37955"),paving=ArtDirection.Hex("D5C6AB");
+            float floor=2.7f,h=floor*3,bw=w*.72f,bd=d*.37f,z=d*.73f,front=z-bd/2;
+            Prims.Box(root,"PrivateEstateLawn",new Vector3(0,.045f,d/2),new Vector3(w,.09f,d),
+                IndustrialMaterials.Surface("meadow",Lawn,new Vector2(w/25,d/25)));
+            Prims.Box(root,"StoneTerrace",new Vector3(0,.14f,d*.37f),new Vector3(w*.85f,.18f,d*.36f),
+                IndustrialMaterials.Surface("paving",paving,new Vector2(w/5,d/10)));
             Box(root,"GroundFloor",new Vector3(0,floor/2+.2f,z),new Vector3(bw,floor,bd),white,true);
             Box(root,"GroundFloorPlinth",new Vector3(0,.26f,z),new Vector3(bw+.3f,.3f,bd+.25f),dark);
             // A smaller, shifted upper storey leaves a real terrace and an overhanging wing.
@@ -30,7 +32,7 @@ namespace PCShopSell.Game.Runtime
             ModernGlazing(root,new Vector3(upperX,floor+1.72f,z+upperD/2+.065f),upperW*.70f,2,180,dark);
             // Two progressively recessed levels preserve the villa's terraced silhouette.
             float topW=upperW,topD=upperD,topX=upperX,topZ=z;
-            for(int level=2;level<4;level++)
+            for(int level=2;level<3;level++)
             {
                 topW=upperW*(level==2?.90f:.73f);
                 topD=upperD*(level==2?.86f:.72f);
@@ -66,8 +68,8 @@ namespace PCShopSell.Game.Runtime
             // Every property gets a conspicuous private swimming pool, including the smallest lots.
             float poolW=w*.43f,poolD=d*.22f,poolX=-w*.15f,poolZ=d*.28f;
             Box(root,"PoolCoping",new Vector3(poolX,.29f,poolZ),new Vector3(poolW+.5f,.22f,poolD+.5f),white);
-            Box(root,"PoolDeepWater",new Vector3(poolX,.405f,poolZ),new Vector3(poolW,.025f,poolD),ArtDirection.Hex("386C7D"));
-            Box(root,"PoolShallowShelf",new Vector3(poolX-poolW*.37f,.423f,poolZ),new Vector3(poolW*.23f,.015f,poolD*.95f),ArtDirection.Hex("709CA7"));
+            Prims.Box(root,"PoolDeepWater",new Vector3(poolX,.405f,poolZ),new Vector3(poolW,.025f,poolD),IndustrialMaterials.GardenWater());
+
             var water=Mats.Lit(ArtDirection.Hex("91B0B5"),.7f,.12f);
             for(int i=0;i<7;i++)
                 Prims.Box(root,"WaterGlint",new Vector3(poolX+Mathf.Sin(i*2.1f)*poolW*.27f,.43f,poolZ+(i-3)*poolD*.12f),new Vector3(poolW*(i%2==0?.15f:.09f),.008f,.035f),water);
@@ -86,12 +88,24 @@ namespace PCShopSell.Game.Runtime
             for(int i=0;i<8;i++)Box(root,"PergolaSlat",new Vector3(pergolaX-pergolaW/2+i*pergolaW/7,3.05f,pergolaZ),new Vector3(.13f,.16f,pergolaD+.4f),wood);
             Box(root,"OutdoorSofa",new Vector3(pergolaX,.65f,pergolaZ+pergolaD*.23f),new Vector3(pergolaW*.8f,.65f,.65f),white);
             Box(root,"OutdoorTable",new Vector3(pergolaX,.5f,pergolaZ-.3f),new Vector3(pergolaW*.45f,.17f,.65f),dark);
+            var garden=new MiniatureDetailMesh();
+            foreach(int edge in new[]{-1,1})
+            {
+                garden.FlowerBed(new Vector3(edge*w*.28f,.48f,.85f),w*.28f,1.0f,seed+edge);
+                for(float along=d*.21f;along<d*.91f;along+=1.25f)
+                {
+                    garden.Lobe(new Vector3(edge*(w/2-.75f),.70f,along),new Vector3(.60f,.65f,.78f),Mats.Lit(Hedge),Mathf.RoundToInt(along));
+                    garden.FlowerBed(new Vector3(edge*(w/2-.70f),.73f,along),.95f,1.20f,seed+Mathf.RoundToInt(along),false);
+                }
+            }
+            garden.FlowerBed(new Vector3(upperX,floor*2+.76f,z-upperD/2-.10f),upperW*.74f,.70f,seed+6);
+            garden.Build(root,"Layered villa gardens and terrace planters");
             // Boundary, entrance and planting stay inside the original plot and leave its door aisle open.
             foreach(int side in new[]{-1,1})
             {
-                Box(root,"EstateBoundary",new Vector3(side*(w/2-.15f),.65f,d/2),new Vector3(.25f,1.3f,d),white);
-                Box(root,"BoundaryPlanting",new Vector3(side*(w/2-.6f),.62f,d*.65f),new Vector3(.55f,1.15f,d*.65f),Hedge);
-                Box(root,"EntranceWall",new Vector3(side*(w*.27f+.5f),.65f,.22f),new Vector3(w*.46f-1,1.3f,.3f),white);
+                Box(root,"EstateBoundary",new Vector3(side*(w/2-.15f),.44f,d/2),new Vector3(.25f,.88f,d),white);
+
+                Box(root,"EntranceWall",new Vector3(side*(w*.27f+.5f),.44f,.22f),new Vector3(w*.46f-1,.88f,.3f),white);
                 Box(root,"EntryPier",new Vector3(side*1.05f,.9f,.22f),new Vector3(.35f,1.8f,.4f),dark);
                 Prims.Box(root,"EntryLight",new Vector3(side*1.05f,1.4f,-.005f),new Vector3(.12f,.45f,.035f),Mats.Glow(white,new Color(1,.75f,.4f)));
                 CityVegetation.Build(root,new Vector3(side*w*.40f,0,d*.82f),seed+side);
@@ -109,7 +123,8 @@ namespace PCShopSell.Game.Runtime
         {
             var root=new GameObject("FloorToCeilingGlazing").transform;root.SetParent(parent,false);root.localPosition=at;root.localRotation=Quaternion.Euler(0,yaw,0);
             Box(root,"RecessFrame",Vector3.zero,new Vector3(width+.18f,height+.18f,.15f),frame);
-            Prims.Box(root,"ReflectiveGlass",new Vector3(0,0,-.09f),new Vector3(width,height,.04f),Mats.Glow(ArtDirection.Hex("477E91"),new Color(.55f,.43f,.26f)));
+            Prims.Box(root,"ReflectiveGlass",new Vector3(0,0,-.09f),new Vector3(width,height,.04f),
+                Mats.Glow(ArtDirection.Hex("547B94"),new Color(1.50f,.86f,.35f)));
             Box(root,"SkyReflection",new Vector3(0,height*.28f,-.115f),new Vector3(width,height*.22f,.012f),ArtDirection.Hex("6DABB9"));
             int panes=Mathf.Max(2,Mathf.RoundToInt(width/1.7f));
             for(int i=1;i<panes;i++)Box(root,"SlenderMullion",new Vector3(-width/2+i*width/panes,0,-.13f),new Vector3(.065f,height,.06f),frame);

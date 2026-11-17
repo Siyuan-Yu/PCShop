@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Shop;
 using PCShopSell.Core.World;
@@ -78,14 +79,14 @@ namespace PCShopSell.Game.Runtime
 
         private float FrontZ = (float)GameSession.LinkFrontY;
 
-        private static readonly Color Asphalt = ArtDirection.Hex("515C65");
-        private static readonly Color Sidewalk = ArtDirection.Hex("B9B5A9");
-        private static readonly Color Grass = ArtDirection.Hex("7D8E62");
+        private static readonly Color Asphalt = ArtDirection.Hex("485660");
+        private static readonly Color Sidewalk = ArtDirection.Hex("CDBB9F");
+        private static readonly Color Grass = ArtDirection.Hex("7D9859");
         private static readonly Color[] Facades =
         {
-            ArtDirection.Hex("B6AB96"), ArtDirection.Hex("99A29A"), ArtDirection.Hex("C3BAA6"),
-            ArtDirection.Hex("AD907E"), ArtDirection.Hex("969B87"), ArtDirection.Hex("B19B7B"),
-            ArtDirection.Hex("8293A0"), ArtDirection.Hex("BAB5A5"),
+            ArtDirection.Hex("D7BC9C"), ArtDirection.Hex("B6B7A4"), ArtDirection.Hex("E1CDB0"),
+            ArtDirection.Hex("BF957D"), ArtDirection.Hex("B3B598"), ArtDirection.Hex("C9AC88"),
+            ArtDirection.Hex("A6B5BD"), ArtDirection.Hex("D5C5AF"),
         };
         private static readonly Color[] SignColors =
         {
@@ -96,6 +97,7 @@ namespace PCShopSell.Game.Runtime
         private readonly CityLayout _city;
         private readonly System.Random _rng;
         private Transform _root;
+        private HashSet<string> _trialRoadNodes;
         private int _shopNeonCount;
         private PlaceVisual _cur;
 
@@ -114,14 +116,62 @@ namespace PCShopSell.Game.Runtime
 
         public Vector3 NodeWorld(string nodeId) => ToWorld(_city.ViewPosition(nodeId));
 
+        private void LimitTrialScenery()
+        {
+            if (!GameSession.FirstChapterTrial || !_city.IsLakeCity) return;
+            var gates = DistrictRoadGate.ForCity(_city);
+            if (gates.Count == 0) return;
+
+            // The road graph remains intact for saves and city simulation.
+            var home = _city.GetPlace(StarterHome).NodeId;
+            _trialRoadNodes = new HashSet<string> { home };
+            var frontier = new Queue<string>();
+            frontier.Enqueue(home);
+            while (frontier.Count > 0)
+            {
+                var node = frontier.Dequeue();
+                foreach (var edge in _city.Map.NeighborsOf(node))
+                {
+                    if (gates.Any(gate => (node == gate.FromNode && edge.To == gate.ToNode)
+                        || (node == gate.ToNode && edge.To == gate.FromNode))) continue;
+                    if (_trialRoadNodes.Add(edge.To)) frontier.Enqueue(edge.To);
+                }
+            }
+        }
+
+        private bool BuildsRoad(string a, string b) =>
+            _trialRoadNodes == null || _trialRoadNodes.Contains(a) || _trialRoadNodes.Contains(b);
+
+        private bool BuildsStreet(string street)
+        {
+            if (_trialRoadNodes == null) return true;
+            var district = _city.AgencyDistrictFor(street);
+            return district == null || district.id == "outskirts";
+        }
+
+        private bool BuildsPlace(Place place) =>
+            _trialRoadNodes == null || (_trialRoadNodes.Contains(place.NodeId) && BuildsStreet(place.StreetId));
+
+        private bool BuildsLakeSceneryAt(Vector3 localPoint)
+        {
+            if (_trialRoadNodes == null) return true;
+            var point = localPoint * LakeScale;
+            const float sceneryMargin = 110;
+            return point.x >= CityBounds.min.x - sceneryMargin && point.x <= CityBounds.max.x + sceneryMargin
+                && point.z >= CityBounds.min.z - sceneryMargin && point.z <= CityBounds.max.z + sceneryMargin;
+        }
+
         public GameObject Build()
         {
             Mats.ClearNightGlow();
             _root = new GameObject("City").transform;
 
-            CityBounds = BoundsOf(_city);
-            var ground = Prims.Box(_root, "Ground", new Vector3(CityBounds.center.x, -0.06f, CityBounds.center.z),
-                new Vector3(CityBounds.size.x, 0.1f, CityBounds.size.z), Mats.LitTex(Grass, new Vector2(CityBounds.size.x / 7, CityBounds.size.z / 7), 0.05f), true);
+            LimitTrialScenery();
+            CityBounds = BoundsOf(_city, _trialRoadNodes);
+            var groundBounds = _trialRoadNodes == null ? CityBounds : BoundsOf(_city);
+            var ground = Prims.Box(_root, "Ground", new Vector3(groundBounds.center.x, -0.06f, groundBounds.center.z),
+                new Vector3(groundBounds.size.x, 0.1f, groundBounds.size.z),
+                IndustrialMaterials.Surface("meadow",Grass,new Vector2(groundBounds.size.x/11,groundBounds.size.z/11)),true);
             ground.AddComponent<GroundMarker>();
 
             if(_city.LayoutVersion>=7){BuildPlannedCity();return _root.gameObject;}

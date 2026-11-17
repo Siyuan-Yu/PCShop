@@ -305,7 +305,8 @@ namespace PCShopSell.Game.Runtime
                 _petOwnersHere.Add(stay.OwnerId,stay);
                 if (!_petOwners.TryGetValue(stay.OwnerId,out var actor))
                 {
-                    actor = Prims.Figure(_root,"PetOwner_"+stay.OwnerId,new Color(.43f,.56f,.67f),new Color(.91f,.74f,.58f),.93f);
+                    actor = Prims.FigureForPerson(_root,"PetOwner_"+stay.OwnerId,new Color(.43f,.56f,.67f),
+                        new Color(.91f,.74f,.58f),.93f, stay.OwnerId);
                     actor.AddComponent<CityPersonMarker>().PersonId = stay.OwnerId;
                     CityNpcClothing.Apply(actor,session,stay.OwnerId);
                     actor.transform.localPosition = new Vector3(_doorX,0,1.15f);

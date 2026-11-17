@@ -176,7 +176,7 @@ namespace PCShopSell.Game.Runtime
             BuildDoor();
 
             _furniture = new RoomFurniture(_root);
-            _owner = Prims.Figure(_root, "Owner", new Color(0.95f, 0.55f, 0.15f), new Color(0.95f, 0.8f, 0.65f), 1.05f);
+            _owner = Prims.Figure(_root, "Owner", ArtDirection.Clay, new Color(0.95f, 0.8f, 0.65f), 1.05f, FigureAppearance.Player);
             ResetOwner();
         }
 
@@ -422,8 +422,8 @@ namespace PCShopSell.Game.Runtime
                 string name = session.CityPerson(id).Name;
                 if (!_visitResidents.TryGetValue(id, out var figure))
                 {
-                    figure = Prims.Figure(_root, "VisitResident_" + id, CrowdView.PersonClothing(id),
-                        new Color(.92f, .78f, .62f), .95f);
+                    figure = Prims.FigureForPerson(_root, "VisitResident_" + id, CrowdView.PersonClothing(id),
+                        new Color(.92f, .78f, .62f), .95f, id);
                     figure.AddComponent<CityPersonMarker>().PersonId = id;
                     CityNpcClothing.Apply(figure, session, id);
                     Prims.SignText(figure.transform, name, Vector3.up * 1.85f, 1.8f, .26f, ArtDirection.Cream);
@@ -551,8 +551,8 @@ namespace PCShopSell.Game.Runtime
             Vector3 door = new Vector3(Width - 0.55f, 0, 1.0f);
             if (_repairman == null)
             {
-                _repairman = Prims.Figure(_root, "Repairman", new Color(0.2f, 0.4f, 0.65f), new Color(0.9f, 0.75f, 0.6f), 1.05f);
-                Prims.Shape(PrimitiveType.Sphere, _repairman.transform, "Hat", new Vector3(0, 1.45f, 0) * 1.05f, new Vector3(0.38f, 0.2f, 0.38f) * 1.05f, Mats.Lit(new Color(0.95f, 0.8f, 0.1f)));
+                _repairman = Prims.FigureForPerson(_root, "Repairman", new Color(0.2f, 0.4f, 0.65f),
+                    new Color(0.9f, 0.75f, 0.6f), 1.05f, "service_repair");
                 Prims.Box(_repairman.transform, "Toolbox", new Vector3(0.28f, 0.12f, 0.1f) * 1.05f, new Vector3(0.28f, 0.2f, 0.16f) * 1.05f, Mats.Lit(new Color(0.8f, 0.15f, 0.1f)));
             }
             if (!_repairmanIn)

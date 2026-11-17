@@ -9,13 +9,13 @@ namespace PCShopSell.Game.Runtime
 {
     public sealed partial class StreetWorldBuilder
     {
-        public static Bounds BoundsOf(CityLayout city)
+        public static Bounds BoundsOf(CityLayout city, HashSet<string> nodes = null)
         {
-            var points = city.Map.Nodes.Select(n => ToWorld(city.ViewPosition(n.Id))).ToArray();
+            var points = city.Map.Nodes.Where(n => nodes == null || nodes.Contains(n.Id)).Select(n => ToWorld(city.ViewPosition(n.Id))).ToArray();
             if (points.Length == 0) return new Bounds(Vector3.zero, new Vector3(100, 25, 100));
             var bounds = new Bounds(points[0], Vector3.zero);
             foreach (var point in points) bounds.Encapsulate(point);
-            foreach (var p in city.Places.Where(p => p.ExplicitEntrance))
+            foreach (var p in city.Places.Where(p => p.ExplicitEntrance && (nodes == null || nodes.Contains(p.NodeId))))
             {
                 var node = ToWorld(city.ViewPosition(p.NodeId));
                 bounds.Encapsulate(node + new Vector3((float)p.EntranceX, 15, (float)p.EntranceY));

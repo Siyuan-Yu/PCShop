@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using PCShopSell.Game.Procedural;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -107,7 +107,8 @@ namespace PCShopSell.Game.Runtime
         public void Apply(float minuteOfDay, bool interior, bool raining = false)
         {
             if (Mathf.Abs(minuteOfDay - _lastMinute) < 0.5f && interior == _lastInterior
-                && raining == _lastRain && _lastGlowCount == Mats.NightGlow.Count && _lastLampCount == _lamps.Count) return;
+                && raining == _lastRain
+                && _lastGlowCount == Mats.NightGlow.Count && _lastLampCount == _lamps.Count) return;
             _lastMinute = minuteOfDay;
             _lastInterior = interior;
             _lastRain = raining;
@@ -136,8 +137,8 @@ namespace PCShopSell.Game.Runtime
             _sun.color = interior ? new Color(1f, 0.93f, 0.82f) : Color.Lerp(a.SunColor, b.SunColor, t);
             _sun.intensity = interior ? 0.85f : Mathf.Lerp(a.SunIntensity, b.SunIntensity, t);
             _sun.transform.rotation = Quaternion.Euler(interior ? new Vector3(65f, 135f, 0) : Vector3.Lerp(a.SunEuler, b.SunEuler, t));
-            _sun.shadowStrength = interior ? .55f : .78f;
-            _skyFill.color=new Color(.72f,.82f,1f);_skyFill.intensity=interior?.42f:Mathf.Lerp(.66f,.26f,night);
+            _sun.shadowStrength = interior ? .55f : Mathf.Lerp(.74f,.64f,night);
+            _skyFill.color=new Color(.76f,.86f,1f);_skyFill.intensity=interior?.42f:Mathf.Lerp(.42f,.26f,night);
             _bounceFill.color=new Color(1f,.92f,.78f);_bounceFill.intensity=interior?.24f:Mathf.Lerp(.35f,.12f,night);
             if (raining)
             {
@@ -149,15 +150,15 @@ namespace PCShopSell.Game.Runtime
             _bloom.intensity.Override(Mathf.Lerp(a.BloomIntensity, b.BloomIntensity, t));
             _bloom.threshold.Override(Mathf.Lerp(a.BloomThreshold, b.BloomThreshold, t));
             _grade.postExposure.Override(Mathf.Lerp(a.Exposure, b.Exposure, t));
-            _grade.saturation.Override(Mathf.Lerp(a.Saturation, b.Saturation, t));
+            _grade.saturation.Override(Mathf.Lerp(a.Saturation, b.Saturation, t) + (interior ? 0 : (1-night)*5));
             _grade.contrast.Override(Mathf.Lerp(a.Contrast, b.Contrast, t));
             _vignette.intensity.Override(Mathf.Lerp(a.Vignette, b.Vignette, t));
             _grain.intensity.Override(Mathf.Lerp(a.FilmGrain, b.FilmGrain, t));
 
             float glow = Mathf.Lerp(0.08f, 1f, night);
-            foreach (var (mat, baseEmission) in Mats.NightGlow)
+            foreach (var (mat, baseEmission, daylight) in Mats.NightGlow)
             {
-                if (mat != null) mat.SetColor("_EmissionColor", baseEmission * glow);
+                if (mat != null) mat.SetColor("_EmissionColor", baseEmission * Mathf.Max(glow,daylight));
             }
             foreach (Light l in _lamps)
             {

@@ -1,5 +1,6 @@
 using System.Linq;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
@@ -60,6 +61,7 @@ namespace PCShopSell.Game
         public int ActiveSaveSlot { get; private set; }
         private string _saveCampaignId;
         private bool _bootstrapped;
+        private bool _enteringWorld;
         private bool _eventsOn;
         private bool _gameOverShown;
 
@@ -80,9 +82,25 @@ namespace PCShopSell.Game
             var json = Resources.Load<TextAsset>("Data/city_layout");
             City = CityLayout.FromData(JsonUtility.FromJson<CityLayoutData>(json.text));
 
+            if (showMenus && GameSession.FirstChapterTrial)
+            {
+                Ui = new GameUi(this);
+                Ui.ShowMainMenu();
+                return;
+            }
+
+            BuildWorld();
+            StartSession(NewSession(seed));
+            if (showMenus) Ui.ShowMainMenu();
+        }
+
+        private void BuildWorld()
+        {
             SetupRendering();
-            World = new StreetWorldBuilder(City, 7);
-            World.Build();
+            var world = new StreetWorldBuilder(City, 7);
+            world.Build();
+            World = world;
+            _rig.SetCityBounds(world.CityBounds);
             var checkpoints = new GameObject("DistrictCheckpoints").AddComponent<DistrictGateView>();
             checkpoints.transform.SetParent(transform, false);
             checkpoints.Initialize(this);
@@ -97,13 +115,7 @@ namespace PCShopSell.Game
             _avatar = new AvatarView(_actors);
             Interior = new ShopInteriorView(_actors, City.PlayerShop().Size);
             HomeRoom = new HomeRoomView(_actors);
-            Ui = new GameUi(this);
-
-            StartSession(NewSession(seed));
-            if (showMenus)
-            {
-                Ui.ShowMainMenu();
-            }
+            Ui ??= new GameUi(this);
         }
 
         private GameSession NewSession(ulong? seed = null) =>
@@ -168,8 +180,10 @@ namespace PCShopSell.Game
 
             if (_crowd == null)
             {
-                Vector3 entrance = World.Places[s.PlayerShopPlace.Id].Entrance;
-                Vector3 door = World.Places[s.PlayerShopPlace.Id].Place.ExplicitEntrance ? entrance : entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZAt(entrance.x) - 0.3f);
+                Vector3 door = World.NodeWorld(s.PlayerShopPlace.NodeId);
+                if (World.Places.TryGetValue(s.PlayerShopPlace.Id, out var visual))
+                    door = visual.Place.ExplicitEntrance ? visual.Entrance
+                        : visual.Entrance + new Vector3(0, 0, StreetWorldBuilder.FrontZAt(visual.Entrance.x) - 0.3f);
                 _crowd = new CrowdView(_actors, -95, 100, door);
             }
             SyncCrowdDoor();
@@ -190,10 +204,40 @@ namespace PCShopSell.Game
 
         // ---------- 对 UI 暴露的操作 ----------
 
-        public void NewGame()
+        public void NewGame() => EnterGame(() =>
         {
             StartSession(NewSession());
             Ui.ShowIntro();
+        });
+
+        internal void EnterGame(Action enter)
+        {
+            if (_enteringWorld) return;
+            if (World != null)
+            {
+                enter();
+                return;
+            }
+            _enteringWorld = true;
+            StartCoroutine(EnterFirstTrialSession(enter));
+        }
+
+        private IEnumerator EnterFirstTrialSession(Action enter)
+        {
+            var loading = Ui.ShowTrialWorldLoading();
+            // Give the browser a rendered frame before synchronous mesh creation.
+            yield return null;
+            yield return null;
+            try
+            {
+                BuildWorld();
+                enter();
+            }
+            finally
+            {
+                loading.Close();
+                _enteringWorld = false;
+            }
         }
 
         public bool SaveGame(int slot = 0)
@@ -347,7 +391,12 @@ namespace PCShopSell.Game
 
         private void Update()
         {
-            if (!_bootstrapped || Session == null) return;
+            if (!_bootstrapped) return;
+            if (Session == null)
+            {
+                if (Input.GetKeyDown(KeyCode.Escape)) Ui?.CloseTopWindow();
+                return;
+            }
             float dt = Time.unscaledDeltaTime;
             if(UpdateRacing(dt))return;
             HandleKeys();
@@ -1244,7 +1293,6 @@ namespace PCShopSell.Game
             extra.renderPostProcessing = true;
             extra.antialiasing = AntialiasingMode.FastApproximateAntialiasing;
             _rig = new CameraRig(Cam);
-            _rig.SetCityBounds(City);
         }
 
         private static Light FindSun()

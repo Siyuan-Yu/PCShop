@@ -63,7 +63,7 @@ namespace PCShopSell.Game.UI
                 var part = item.part; var row = Ui.Row(picks, 46, 6);
                 row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
                 ItemPortrait(row, part.Id, 42);
-                var label = Ui.Label(row, $"{part.Name} <color=#E8BE62>×{item.count}</color>\n<size=14><color=#AAB4BB>{item.price * item.count}</color></size>", 17, TextAnchor.MiddleLeft);
+                var label = Ui.Label(row, $"{part.Name} <color=#80551F>×{item.count}</color>\n<size=14><color=#655E52>{item.price * item.count}</color></size>", 17, TextAnchor.MiddleLeft);
                 label.verticalOverflow = VerticalWrapMode.Truncate;
                 Ui.Size(label, -1, -1, 1);
                 Ui.Size(Ui.Button(row, "移除", () => { _cart.Remove(part.Id); w.Rebuild(); }, 15, Ui.ButtonBg), 58, 34);
@@ -71,7 +71,7 @@ namespace PCShopSell.Game.UI
             Ui.Size(Ui.Label(side, $"送到 {S.CourierDestName(destination)}　运费 {Online1788.ShippingFee}", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 28);
             var couponDiscount = S.EventProcurementCouponQuote(total - Online1788.ShippingFee, destination == null);
             if (couponDiscount.IsPositive) Ui.Size(Ui.Label(side, "采购券 −¥500 · 取消后不退券", 15, TextAnchor.MiddleLeft, Ui.Good), -1, 28);
-            Ui.Size(Ui.Label(side, $"合计 <b><color=#E8C77A>{total - couponDiscount}</color></b>", 28, TextAnchor.MiddleRight), -1, 40);
+            Ui.Size(Ui.Label(side, $"合计 <b><color=#80551F>{total - couponDiscount}</color></b>", 28, TextAnchor.MiddleRight), -1, 40);
             var order = Ui.Button(side, "下单", () =>
             {
                 var lines = _cart.Where(kv => kv.Value > 0).Select(kv => (PartCatalog.Get(kv.Key), kv.Value)).ToList();

@@ -391,7 +391,7 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, "币圈主要影响显卡，AI 需求影响内存与显卡，新品上市压低旧 CPU 和主板。", 15, Ui.Dim);
             Line(w.Content, "硬件新闻", 18, Ui.Accent);
             foreach (NewsItem news in S.Market.News.Reverse().Take(20))
-                Line(w.Content, $"<color=#ABB5A8>{news.Date}</color>  {news.Headline}", 17);
+                Line(w.Content, $"<color=#655E52>{news.Date}</color>  {news.Headline}", 17);
             if (S.Market.News.Count == 0) Line(w.Content, "暂无硬件新闻。", 16, Ui.Dim);
             BuildTipsSection(w);
         }

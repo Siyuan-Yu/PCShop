@@ -91,7 +91,7 @@ namespace PCShopSell.Game.UI
                 {
                     CloseAllWindows();
                     S.Time.SetPaused(false);
-                    _workScreen = Ui.Panel(_modalCanvas.transform, "PlayerWorkScreen", new Color(0.05f, 0.1f, 0.09f, 0.98f));
+                    _workScreen = Ui.Panel(_modalCanvas.transform, "PlayerWorkScreen", Ui.ChromeWell);
                     _workScreen.rectTransform.Fill();
                     var panel = Ui.Panel(_workScreen.transform, "WorkPanel", Ui.PanelBg);
                     panel.rectTransform.anchorMin = panel.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);

@@ -60,11 +60,14 @@ namespace PCShopSell.Game.Runtime
             root.SetParent(parent,false);root.localPosition=new Vector3(area.center.x,0,area.center.y);
             float w=area.width,d=area.height;
             var stone=Mats.Lit(ArtDirection.Hex("D4CDB0"));
-            Prims.Box(root,"GardenLawn",new Vector3(0,.04f,0),new Vector3(w,.08f,d),Mats.Lit(ArtDirection.Hex("88A668")));
+            Prims.Box(root,"GardenLawn",new Vector3(0,.04f,0),new Vector3(w,.08f,d),
+                IndustrialMaterials.Surface("meadow",Grass,new Vector2(w/22,d/22)));
             foreach(int side in new[]{-1,1})
             {
-                Prims.Box(root,"PerimeterWalk",new Vector3(0,.10f,side*(d/2-1)),new Vector3(w, .08f,1.5f),stone);
-                Prims.Box(root,"PerimeterWalk",new Vector3(side*(w/2-1),.10f,0),new Vector3(1.5f,.08f,d),stone);
+                Prims.Box(root,"PerimeterWalk",new Vector3(0,.10f,side*(d/2-1)),new Vector3(w, .08f,1.5f),
+                    IndustrialMaterials.Surface("paving",Sidewalk,new Vector2(w/4,.45f)));
+                Prims.Box(root,"PerimeterWalk",new Vector3(side*(w/2-1),.10f,0),new Vector3(1.5f,.08f,d),
+                    IndustrialMaterials.Surface("paving",Sidewalk,new Vector2(.45f,d/4)));
                 for(int i=-1;i<=1;i++)
                 {
                     CityVegetation.Build(root,new Vector3(i*w*.3f,0,side*(d/2-3)),i+5);
@@ -74,7 +77,7 @@ namespace PCShopSell.Game.Runtime
             if(lake)
             {
                 Prims.Shape(PrimitiveType.Cylinder,root,"LakeStoneBank",new Vector3(0,.12f,0),new Vector3(w*.68f,.14f,d*.63f),stone);
-                Prims.Shape(PrimitiveType.Cylinder,root,"LakeWater",new Vector3(0,.27f,0),new Vector3(w*.63f,.025f,d*.57f),Mats.Lit(ArtDirection.Hex("479FB3")));
+                Prims.Shape(PrimitiveType.Cylinder,root,"LakeWater",new Vector3(0,.27f,0),new Vector3(w*.63f,.025f,d*.57f),IndustrialMaterials.GardenWater());
                 Prims.Box(root,"LakesideDeck",new Vector3(w*.21f,.36f,-d*.23f),new Vector3(5,.18f,3),Mats.Lit(ArtDirection.Wood));
             }
             else
@@ -82,7 +85,7 @@ namespace PCShopSell.Game.Runtime
                 Prims.Box(root,"GardenCrossPath",new Vector3(0,.13f,0),new Vector3(w,.07f,1.5f),stone);
                 Prims.Box(root,"GardenCrossPath",new Vector3(0,.13f,0),new Vector3(1.5f,.07f,d),stone);
                 Prims.Shape(PrimitiveType.Cylinder,root,"FountainBasin",new Vector3(0,.3f,0),new Vector3(5,.35f,5),stone);
-                Prims.Shape(PrimitiveType.Cylinder,root,"FountainWater",new Vector3(0,.67f,0),new Vector3(4.3f,.025f,4.3f),Mats.Lit(ArtDirection.Hex("5FB4C7")));
+                Prims.Shape(PrimitiveType.Cylinder,root,"FountainWater",new Vector3(0,.67f,0),new Vector3(4.3f,.025f,4.3f),IndustrialMaterials.GardenWater());
                 Prims.Shape(PrimitiveType.Cylinder,root,"FountainPedestal",new Vector3(0,1,0),new Vector3(.6f,.6f,.6f),stone);
                 Prims.Shape(PrimitiveType.Sphere,root,"FountainCrown",new Vector3(0,1.65f,0),new Vector3(1.5f,.3f,1.5f),stone);
             }

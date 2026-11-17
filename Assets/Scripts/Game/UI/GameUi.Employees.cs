@@ -401,7 +401,7 @@ namespace PCShopSell.Game.UI
                         var row = Ui.Row(chosenList, 50, 6);
                         row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
                         ItemPortrait(row, item.ItemId, 42);
-                        var label = Ui.Label(row, item.Name + " <color=#E8BE62>需补 " + item.Count + " 件</color>\n<size=13><color=#AAB4BB>" + item.SourceName + "</color></size>", 16, TextAnchor.MiddleLeft);
+                        var label = Ui.Label(row, item.Name + " <color=#80551F>需补 " + item.Count + " 件</color>\n<size=13><color=#655E52>" + item.SourceName + "</color></size>", 16, TextAnchor.MiddleLeft);
                         label.verticalOverflow = VerticalWrapMode.Truncate;
                         Ui.Size(label, -1, 46, 1); { var le = label.GetComponent<LayoutElement>(); le.minWidth = 0; le.preferredWidth = 0; }
                         Ui.Size(Ui.Label(row, item.Total.ToString(), 16, TextAnchor.MiddleRight, Ui.Good), 100, 46);
@@ -420,7 +420,7 @@ namespace PCShopSell.Game.UI
                         var row = Ui.Row(chosenList, 50, 4);
                         row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
                         ItemPortrait(row, offer?.Id ?? choice.PartId, 42);
-                        var label = Ui.Label(row, GameSession.PurchaseItemName(choice) + " <color=#E8BE62>" + count + "</color>\n<size=13><color=#AAB4BB>" + (offer?.SupplierName ?? choice.SourceId ?? "自动选货源") + "</color></size>", 16, TextAnchor.MiddleLeft);
+                        var label = Ui.Label(row, GameSession.PurchaseItemName(choice) + " <color=#80551F>" + count + "</color>\n<size=13><color=#655E52>" + (offer?.SupplierName ?? choice.SourceId ?? "自动选货源") + "</color></size>", 16, TextAnchor.MiddleLeft);
                         label.verticalOverflow = VerticalWrapMode.Truncate;
                         Ui.Size(label, -1, 46, 1); { var le = label.GetComponent<LayoutElement>(); le.minWidth = 0; le.preferredWidth = 0; }
                         Ui.Size(Ui.Label(row, offer == null ? "不可用" : (offer.Price * choice.Count).ToString(), 15, TextAnchor.MiddleRight, offer == null ? Ui.Warn : Ui.Good), 84, 46);

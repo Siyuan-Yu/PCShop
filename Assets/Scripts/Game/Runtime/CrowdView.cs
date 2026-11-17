@@ -343,7 +343,8 @@ namespace PCShopSell.Game.Runtime
         {
             int seed = r == null ? _rng.Next() : StableHash(r.Id);
             var look = new System.Random(seed);
-            GameObject go = Prims.Figure(_parent, r == null ? "Shopper" : "Resident_" + r.Id, Clothes[look.Next(Clothes.Length)], new Color(0.92f, 0.78f, 0.62f), 0.95f);
+            GameObject go = Prims.FigureForPerson(_parent, r == null ? "Shopper" : "Resident_" + r.Id,
+                Clothes[look.Next(Clothes.Length)], new Color(.92f, .78f, .62f), .95f, r?.Id, seed.ToString());
             go.transform.position = at;
             if (r != null)
             {

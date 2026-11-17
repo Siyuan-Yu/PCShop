@@ -10,37 +10,44 @@ namespace PCShopSell.Game.UI
     public static partial class Ui
     {
         public static Color Gold => Accent;
-        public static readonly Color PanelBg = Tone("1B2840");
-        public static readonly Color PanelBg2 = Tone("223350");
-        public static readonly Color Accent = Tone("E8BE62");
-        public static readonly Color ButtonBg = Tone("27384F");
-        public static readonly Color ButtonHot = Tone("9F7B36");
-        public static readonly Color Warn = Tone("B5603E");
-        public static readonly Color Good = Tone("B6D578");
-        public static readonly Color Dim = Tone("AAB4BB");
-        public static readonly Color TextColor = Tone("ECE8DF");
-        public static readonly Color Edge = Tone("3D516B");
-        public static readonly Color WarningSurface = Tone("4B302A");
+        public static readonly Color PanelBg = Tone("FBF6E9");
+        public static readonly Color PanelBg2 = Tone("F2EADB");
+        public static readonly Color Accent = Tone("80551F");
+        public static readonly Color ButtonBg = Tone("F7EFDE");
+        public static readonly Color ButtonHot = Tone("F1BF68");
+        public static readonly Color Warn = Tone("9C4634");
+        public static readonly Color Good = Tone("386047");
+        public static readonly Color Dim = Tone("655E52");
+        public static readonly Color TextColor = Tone("292E28");
+        public static readonly Color Edge = Tone("DED3BE");
+        public static readonly Color WarningSurface = Tone("FAE7DA");
         private static Color Tone(string hex) { ColorUtility.TryParseHtmlString("#" + hex, out var c); return c; }
-        private static Sprite _card;
-        private static Sprite Card
+        private static Sprite _roundedPlate;
+        private static Sprite RoundedPlate
         {
             get
             {
-                if (_card != null) return _card;
-                const int n = 64; const float radius = 7;
-                var texture = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Brushed steel UI plate", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-                var pixels = new Color[n * n];
-                for (int y = 0; y < n; y++) for (int x = 0; x < n; x++)
+                if (_roundedPlate != null) return _roundedPlate;
+                const int n = 32, radius = 9;
+                var texture = new Texture2D(n, n, TextureFormat.RGBA32, false)
+                    { name = "PETSHOP rounded UI", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                var pixels = new Color32[n * n];
+                for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
                 {
-                    float dx = Mathf.Max(Mathf.Abs(x - 31.5f) - (32 - radius), 0);
-                    float dy = Mathf.Max(Mathf.Abs(y - 31.5f) - (32 - radius), 0);
-                    float edge=Mathf.Min(Mathf.Min(x,63-x),Mathf.Min(y,63-y));
-                    float shade=edge<2? .72f: edge<4?1f:Mathf.Lerp(.88f,1f,y/63f);
-                    pixels[y * n + x] = new Color(shade,shade,shade, Mathf.Clamp01(radius - Mathf.Sqrt(dx * dx + dy * dy)));
+                    float dx = Mathf.Max(Mathf.Abs(x + .5f - n / 2f) - (n / 2f - radius), 0);
+                    float dy = Mathf.Max(Mathf.Abs(y + .5f - n / 2f) - (n / 2f - radius), 0);
+                    float inside = Mathf.Min(Mathf.Min(x + .5f, n - x - .5f), Mathf.Min(y + .5f, n - y - .5f));
+                    inside = Mathf.Min(inside, radius - Mathf.Sqrt(dx * dx + dy * dy));
+                    byte alpha = (byte)Mathf.RoundToInt(255 * Mathf.Clamp01(inside + .35f));
+                    // Bake the subtle default stroke into the shared sprite so lists do not need an Outline per cell.
+                    byte shade = (byte)Mathf.RoundToInt(Mathf.Lerp(224, 255, Mathf.Clamp01(inside - .35f)));
+                    pixels[y * n + x] = new Color32(shade, shade, shade, alpha);
                 }
-                texture.SetPixels(pixels); texture.Apply();
-                return _card = Sprite.Create(texture, new Rect(0, 0, n, n), Vector2.one * 0.5f, 100, 0, SpriteMeshType.FullRect, new Vector4(12, 12, 12, 12));
+                texture.SetPixels32(pixels);
+                texture.Apply(false, true);
+                return _roundedPlate = Sprite.Create(texture, new Rect(0, 0, n, n), Vector2.one * .5f,
+                    100, 0, SpriteMeshType.FullRect, Vector4.one * radius);
             }
         }
 
@@ -112,8 +119,7 @@ namespace PCShopSell.Game.UI
             RectTransform rt = Rect(parent, name);
             var img = rt.gameObject.AddComponent<Image>();
             img.color = color;
-            // 全游戏统一的平面深蓝样式：方角、细描边，没有拉丝钢板贴图和投影。
-            if (IsFlatSkinned(name)) SkinFlat(img, name, color);
+            SkinSurface(img, name, color);
             return img;
         }
 
@@ -125,7 +131,7 @@ namespace PCShopSell.Game.UI
             t.text = text;
             t.fontSize = size;
             t.alignment = align;
-            t.color = color ?? TextColor;
+            t.color = ReadableInk(color ?? TextColor, SurfaceBehind(parent));
             t.horizontalOverflow = HorizontalWrapMode.Wrap;
             t.verticalOverflow = VerticalWrapMode.Overflow;
             t.raycastTarget = false;
@@ -151,7 +157,7 @@ namespace PCShopSell.Game.UI
             }
             Text t = Label(img.transform, text, size, TextAnchor.MiddleCenter);
             t.rectTransform.Fill(6);
-            b.SetCaption(t);
+            b.SetCaption(t, bg ?? ButtonBg);
             b.interactable = interactable;
             return b;
         }
@@ -159,10 +165,10 @@ namespace PCShopSell.Game.UI
         internal static void SteadyButtonFeedback(Button button)
         {
             var colors = button.colors;
-            colors.highlightedColor = colors.normalColor;
-            colors.selectedColor = new Color(.96f, .96f, .96f);
-            colors.pressedColor = new Color(.87f, .87f, .87f);
-            colors.disabledColor = new Color(.5f, .5f, .5f, .6f);
+            colors.highlightedColor = new Color(1.08f, 1.08f, 1.08f);
+            colors.selectedColor = new Color(.95f, .95f, .95f);
+            colors.pressedColor = new Color(.89f, .89f, .89f);
+            colors.disabledColor = new Color(.82f, .82f, .82f, .62f);
             colors.fadeDuration = 0;
             button.colors = colors;
         }
@@ -176,7 +182,7 @@ namespace PCShopSell.Game.UI
             rail.rectTransform.Anchor(0, 0, 0, 1, 0, 4, -4, 4);
             rail.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             rail.raycastTarget = false;
-            var label = Label(panel.transform, message, size, TextAnchor.MiddleLeft, Tone("F2B39C"));
+            var label = Label(panel.transform, message, size, TextAnchor.MiddleLeft, Warn);
             label.fontStyle = FontStyle.Bold;
             return label;
         }
@@ -205,8 +211,9 @@ namespace PCShopSell.Game.UI
             var face=Panel(parent,"Choice",PanelBg2);
             if (bg.HasValue)
             {
-                face.color = bg.Value;
-                FlatBorder(face, FlatEdge(bg.Value, "Button"));
+                bool dark = Dark(SurfaceBehind(parent));
+                face.color = ControlFill(bg.Value, dark);
+                FlatBorder(face, SurfaceEdge(face.color, "Choice"));
             }
             var dropdown=face.gameObject.AddComponent<ChoiceDropdown>();dropdown.targetGraphic=face;
             var caption=Label(face.transform,"",18,TextAnchor.MiddleLeft);caption.rectTransform.Fill(8);caption.raycastTarget=false;
@@ -309,7 +316,7 @@ namespace PCShopSell.Game.UI
 
         public static RectTransform Scroll(Transform parent, float height = -1, bool autoSize = true)
         {
-            Image bg = Panel(parent, "Scroll", new Color(0, 0, 0, 0.18f));
+            Image bg = Panel(parent, "Scroll", Color.clear);
             if (height >= 0) Size(bg, -1, height);
             RectTransform viewport = Rect(bg.transform, "Viewport").Fill();
             viewport.gameObject.AddComponent<RectMask2D>();
@@ -335,11 +342,11 @@ namespace PCShopSell.Game.UI
             // A fixed gutter keeps controls clear of the scrollbar without reflowing the list as it changes.
             viewport.offsetMax = new Vector2(-scrollbarWidth - 4, viewport.offsetMax.y);
 
-            var track = Panel(frame, "VerticalScrollbar", Tone("141E31"));
+            var track = Panel(frame, "VerticalScrollbar", Tone("ECE3D1"));
             track.rectTransform.Anchor(1, 0, 1, 1, -scrollbarWidth - 2, 2, 2, 2);
             var slidingArea = Rect(track.transform, "SlidingArea").Fill(2);
             slidingArea.gameObject.AddComponent<RectMask2D>();
-            var handle = Panel(slidingArea, "Handle", Tone("5E7699"));
+            var handle = Panel(slidingArea, "Handle", Tone("9B8865"));
             // Scrollbar drives anchors but leaves offsets unchanged.
             handle.rectTransform.Fill();
             handle.raycastTarget = false;
@@ -368,13 +375,14 @@ namespace PCShopSell.Game.UI
         {
             RectTransform rt = Rect(parent, "Slider");
             Size(rt, -1, 28, 1);
-            Image bg = Panel(rt, "Bg", new Color(0.2f, 0.22f, 0.26f));
+            Image bg = Panel(rt, "Bg", PanelBg2);
             bg.rectTransform.Anchor(0, 0.35f, 1, 0.65f);
             RectTransform fillArea = Rect(rt, "FillArea").Anchor(0, 0.35f, 1, 0.65f, 8, 0, 8, 0);
-            Image fill = Panel(fillArea, "Fill", Accent);
+            Image fill = Panel(fillArea, "Fill", ButtonHot);
             fill.rectTransform.Fill();
             RectTransform handleArea = Rect(rt, "HandleArea").Anchor(0, 0, 1, 1, 8, 0, 8, 0);
-            Image handle = Panel(handleArea, "Handle", Color.white);
+            Image handle = Panel(handleArea, "Handle", ChromeButton);
+            Round(handle);
             handle.rectTransform.sizeDelta = new Vector2(18, 0);
             var s = rt.gameObject.AddComponent<T>();
             s.fillRect = fill.rectTransform;
@@ -391,7 +399,7 @@ namespace PCShopSell.Game.UI
         /// <summary>横向进度条（0~1）。</summary>
         public static Image Bar(Transform parent, float value, Color color, float width = 120, float height = 12)
         {
-            Image bg = Panel(parent, "Bar", new Color(0.2f, 0.2f, 0.24f));
+            Image bg = Panel(parent, "Bar", Edge);
             Size(bg, width, height);
             Image fill = Panel(bg.transform, "Fill", color);
             fill.rectTransform.Anchor(0, 0, Mathf.Clamp01(value), 1);

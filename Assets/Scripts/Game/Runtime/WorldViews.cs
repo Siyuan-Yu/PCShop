@@ -26,7 +26,7 @@ namespace PCShopSell.Game.Runtime
         public float MaxSize = 60f;
         private Bounds? _cityBounds;
 
-        public void SetCityBounds(CityLayout city) => _cityBounds = StreetWorldBuilder.BoundsOf(city);
+        public void SetCityBounds(Bounds bounds) => _cityBounds = bounds;
 
         public CameraRig(Camera cam)
         {
@@ -181,7 +181,7 @@ namespace PCShopSell.Game.Runtime
         {
             _root = new GameObject("Player");
             _root.transform.SetParent(parent, false);
-            _figure = Prims.Figure(_root.transform, "Figure", new Color(0.95f, 0.55f, 0.15f), new Color(0.95f, 0.8f, 0.65f), 1.1f);
+            _figure = Prims.Figure(_root.transform, "Figure", ArtDirection.Clay, new Color(0.95f, 0.8f, 0.65f), 1.1f, FigureAppearance.Player);
             _motion = _figure.GetComponent<FigureMotion>();
             Prims.Shape(PrimitiveType.Cylinder, _root.transform, "Ring", new Vector3(0, 0.03f, 0), new Vector3(1.4f, 0.01f, 1.4f), Mats.Unlit(new Color(1f, 0.85f, 0.2f, 0.6f)));
 
@@ -273,9 +273,8 @@ namespace PCShopSell.Game.Runtime
             Mesh fan = Prims.Fan((float)Officer.SightRange, (float)Officer.SightHalfAngleDeg);
             foreach (Officer o in police.Officers)
             {
-                GameObject go = Prims.Figure(parent, "Officer_" + o.RouteId, new Color(0.15f, 0.25f, 0.55f), new Color(0.9f, 0.75f, 0.6f), 1.1f);
-                Prims.Box(go.transform, "Vest", new Vector3(0, 0.75f, 0), new Vector3(0.52f, 0.4f, 0.42f), Mats.Glow(new Color(0.9f, 0.9f, 0.2f), new Color(1.5f, 1.5f, 0.2f), false));
-                Prims.Shape(PrimitiveType.Cylinder, go.transform, "Cap", new Vector3(0, 1.55f, 0), new Vector3(0.36f, 0.06f, 0.36f), Mats.Lit(Color.white));
+                GameObject go = Prims.FigureForPerson(parent, "Officer_" + o.RouteId, new Color(0.15f, 0.25f, 0.55f),
+                    new Color(0.9f, 0.75f, 0.6f), 1.1f, "service_officer");
                 var coneGo = new GameObject("Cone");
                 coneGo.transform.SetParent(go.transform, false);
                 coneGo.transform.localPosition = new Vector3(0, 0.08f, 0);

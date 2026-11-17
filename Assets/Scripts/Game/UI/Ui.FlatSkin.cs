@@ -5,26 +5,37 @@ using UnityEngine.UI;
 
 namespace PCShopSell.Game.UI
 {
-    /// <summary>
-    /// 全游戏统一的平面深蓝皮肤：方角、1px 描边、深海军蓝底、金色强调。
-    /// 底色来自 PanelBg / PanelBg2 / ButtonBg，这里只负责描边和少量专用色。
-    /// </summary>
+    /// <summary>暖米色窗口、墨绿灰常驻栏，以及共享的控件颜色和形状。</summary>
     public static partial class Ui
     {
-        public static readonly Color FlatWindow = PanelBg;
-        public static readonly Color FlatCard = PanelBg2;
-        public static readonly Color FlatButton = ButtonBg;
-        public static readonly Color FlatCardEdge = Tone("37496A");
-        public static readonly Color FlatButtonEdge = Tone("3D516B");
-        public static readonly Color FlatHotEdge = Tone("C9A14F");
-        public static readonly Color FlatWell = Tone("101A2C");
-        public static readonly Color FlatWellEdge = Tone("4A5B75");
-        public static readonly Color FlatHeader = PanelBg2;
-        public static readonly Color FlatBand = Tone("18243A");
-        public static readonly Color FlatRow = Tone("2A3C58");
-        public static readonly Color FlatInk = Tone("E6DCC3");
-        public static readonly Color FlatUp = Tone("6FCF8E");
-        public static readonly Color FlatDown = Tone("E0705A");
+        public static Color FlatWindow => PanelBg;
+        public static Color FlatCard => PanelBg2;
+        public static Color FlatButton => ButtonBg;
+        public static Color FlatHeader => PanelBg2;
+        public static Color FlatInk => TextColor;
+        public static Color FlatUp => Good;
+        public static Color FlatDown => Warn;
+        public static readonly Color FlatCardEdge = Tone("DED3BE");
+        public static readonly Color FlatButtonEdge = Tone("D5C8AE");
+        public static readonly Color FlatHotEdge = Tone("B4884A");
+        public static readonly Color FlatWell = Tone("FFF9EC");
+        public static readonly Color FlatWellEdge = Tone("D3C4A8");
+        public static readonly Color FlatBand = Tone("EFE7D7");
+        public static readonly Color FlatRow = Tone("EED5A6");
+        public static readonly Color Chrome = Tone("292F2C");
+        public static readonly Color ChromeWell = Tone("1D2421");
+        public static readonly Color ChromeButton = Tone("3A4339");
+        public static readonly Color ChromeEdge = Tone("575B4B");
+        public static readonly Color ChromeInk = Tone("FFF4DE");
+        public static readonly Color ChromeDim = Tone("CDC5B1");
+        public static readonly Color ChromeGold = Tone("F2CE82");
+        public static readonly Color ChromeGood = Tone("B7D3A8");
+        public static readonly Color ChromeWarn = Tone("F3AA93");
+        public static readonly Color SuccessSurface = Tone("E3ECDE");
+        public static readonly Color PendingSurface = Tone("F3E4C6");
+        public static readonly Color InfoInk = Tone("42667A");
+        public static readonly Color InfoSurface = Tone("E3EBE9");
+        public static readonly Color WorldShade = Tone("1A251C87");
 
         public static Color SelectedButton(bool selected) => selected ? FlatRow : ButtonBg;
 
@@ -33,33 +44,75 @@ namespace PCShopSell.Game.UI
 
         public static void SetButtonFill(Button button, Color fill)
         {
-            if (button is FlatStyledButton styled && styled.image.color != fill)
+            if (button is FlatStyledButton styled)
                 styled.ApplyFill(fill);
         }
 
-        private static bool Same(Color a, Color b) =>
-            Mathf.Abs(a.r - b.r) < .004f && Mathf.Abs(a.g - b.g) < .004f && Mathf.Abs(a.b - b.b) < .004f && Mathf.Abs(a.a - b.a) < .004f;
-
-        private static bool IsFlatSkinned(string name) =>
-            name == "Button" || name == "Panel" || name == "ShopDock" || name == "Toast" || name == "Bubble" || name == "QuestTracker"
-            || name == "Portrait" || name == "TopBar" || name == "BottomBar" || name == "TitleBar" || name == "Choice" || name == "Input";
-
-        private static void SkinFlat(Image image, string name, Color color)
+        internal static Color SurfaceBehind(Transform parent)
         {
-            if (name == "Choice" || name == "Input") image.color = FlatWell;
-            if (name == "TitleBar") return;
-            bool window = name == "Panel" && Same(color, PanelBg);
-            FlatBorder(image, FlatEdge(color, name), window ? 2 : 1);
+            for (var node = parent; node != null; node = node.parent)
+            {
+                if (node.TryGetComponent<Image>(out var image) && image.color.a >= .58f)
+                    return image.color;
+            }
+            return PanelBg;
         }
 
-        private static Color FlatEdge(Color color, string name)
+        private static bool Dark(Color color) => color.r * .2126f + color.g * .7152f + color.b * .0722f < .43f;
+
+        internal static Color ReadableInk(Color ink, Color surface)
         {
-            if (name == "Choice" || name == "Input" || (name == "Button" && Same(color, FlatWell))) return FlatWellEdge;
-            if (name != "Button" && name != "Panel") return FlatCardEdge;
-            if (Same(color, ButtonHot) || Same(color, Accent) || (name == "Button" && Same(color, FlatRow))) return FlatHotEdge;
-            if (Same(color, Warn)) return Tone("D9775A");
-            if (Same(color, PanelBg)) return ButtonHot;
-            if (Same(color, PanelBg2)) return FlatCardEdge;
+            if (!Dark(surface)) return ink;
+            if (ink == TextColor) return ChromeInk;
+            if (ink == Dim) return ChromeDim;
+            if (ink == Accent) return ChromeGold;
+            if (ink == Good) return ChromeGood;
+            if (ink == Warn) return ChromeWarn;
+            return ink;
+        }
+
+        private static Color ControlFill(Color color, bool dark)
+        {
+            if (color == Accent) return ButtonHot;
+            if (color == Warn) return dark ? Warn : WarningSurface;
+            if (!dark) return color;
+            if (color == ButtonBg || color == PanelBg2) return ChromeButton;
+            if (color == FlatWell) return ChromeWell;
+            if (color == FlatRow) return Tone("514832");
+            return color;
+        }
+
+        private static bool PlateColor(Color color) => color == PanelBg || color == PanelBg2 || color == FlatBand
+            || color == Chrome || color == ChromeWell || color == ChromeButton || color == WarningSurface
+            || color == PendingSurface || color == SuccessSurface || color == InfoSurface;
+
+        private static void SkinSurface(Image image, string name, Color color)
+        {
+            if (name == "TitleBar" || name.StartsWith("Window_", System.StringComparison.Ordinal)) return;
+            if (name == "Choice" || name == "Input")
+                image.color = ControlFill(FlatWell, Dark(SurfaceBehind(image.transform.parent)));
+            if (name == "Button" || name == "Choice" || name == "Input" || name == "Panel"
+                || name == "Portrait" || name == "Toast" || name == "Bubble" || PlateColor(color))
+            {
+                Round(image);
+                if (name == "TopBar" || name == "BottomBar") FlatBorder(image, ChromeEdge);
+            }
+        }
+
+        internal static void Round(Image image)
+        {
+            image.sprite = RoundedPlate;
+            image.type = Image.Type.Sliced;
+        }
+
+        private static Color SurfaceEdge(Color color, string name)
+        {
+            if (color.a <= .01f) return Color.clear;
+            if (color == ButtonHot || color == FlatRow) return FlatHotEdge;
+            if (color == WarningSurface || color == Warn) return Tone("C98569");
+            if (Dark(color)) return ChromeEdge;
+            if (name == "Choice" || name == "Input" || color == FlatWell) return FlatWellEdge;
+            if (PlateColor(color) || name == "Panel") return FlatCardEdge;
             return FlatButtonEdge;
         }
 
@@ -69,23 +122,39 @@ namespace PCShopSell.Game.UI
             var line = graphic.GetComponent<Outline>() ?? graphic.gameObject.AddComponent<Outline>();
             line.effectColor = edge;
             line.effectDistance = new Vector2(width, -width);
-            line.useGraphicAlpha = false;
+            line.useGraphicAlpha = graphic is Image;
         }
 
         /// <summary>平面卡片：底色 + 细描边。</summary>
         public static Image FlatPanel(Transform parent, string name, Color? fill = null, Color? edge = null)
         {
             var image = Panel(parent, name, fill ?? FlatCard);
+            Round(image);
             FlatBorder(image, edge ?? FlatCardEdge);
             return image;
+        }
+
+        internal static void UseCaptionInk(Button button, Color ink)
+        {
+            if (button is FlatStyledButton styled) styled.SetInk(ink);
+        }
+
+        internal static void UseCaptionIcon(Button button, Image icon)
+        {
+            if (button is FlatStyledButton styled) styled.SetIcon(icon);
         }
 
         private sealed class FlatStyledButton : Button
         {
             private Text _caption;
+            private Image _icon;
             private Outline _edge;
             private bool _captionDimmed;
+            private bool _darkParent;
+            private Color? _fixedInk;
             private Color _enabledInk;
+            private Color _disabledInk;
+            private Color? _requestedFill;
 
             public override void OnPointerClick(PointerEventData eventData)
             {
@@ -104,23 +173,53 @@ namespace PCShopSell.Game.UI
                 if (IsActive() && IsInteractable() && !TryGetComponent<HoldRepeat>(out _)) SoundFx.Play(Sfx.Click);
             }
 
-            public void SetCaption(Text caption)
+            public void SetCaption(Text caption, Color fill)
             {
                 _caption = caption;
-                _edge = GetComponent<Outline>();
-                _edge.useGraphicAlpha = true;
-                ApplyFill(image.color);
+                _darkParent = Dark(SurfaceBehind(transform.parent));
+                ApplyFill(fill);
             }
 
             public void ApplyFill(Color fill)
             {
-                image.color = fill;
-                _edge.effectColor = FlatEdge(fill, "Button");
-                bool selected = Same(fill, FlatRow);
-                _enabledInk = selected ? Accent : TextColor;
-                _caption.color = _captionDimmed ? Dim : _enabledInk;
-                _caption.fontStyle = selected || Same(fill, ButtonHot) || Same(fill, Accent)
+                Color face = ControlFill(fill, _darkParent);
+                if (_requestedFill == fill && image.color == face) return;
+                _requestedFill = fill;
+                image.color = face;
+                if (fill == ButtonHot || fill == Accent || fill == FlatRow || fill == Warn)
+                {
+                    var edge = _darkParent && fill == FlatRow ? FlatHotEdge : SurfaceEdge(face, "Button");
+                    FlatBorder(image, edge);
+                    _edge = GetComponent<Outline>();
+                    _edge.enabled = true;
+                }
+                else if (_edge != null) _edge.enabled = false;
+                Color under = face.a < .58f && _darkParent ? Chrome : face;
+                Color ink = fill == Warn ? Warn : fill == FlatRow ? Accent : TextColor;
+                _enabledInk = _fixedInk ?? ReadableInk(ink, under);
+                _disabledInk = ReadableInk(Dim, under);
+                UpdateInk();
+                _caption.fontStyle = fill == FlatRow || fill == ButtonHot || fill == Accent
                     ? FontStyle.Bold : FontStyle.Normal;
+            }
+
+            public void SetInk(Color ink)
+            {
+                _fixedInk = ink;
+                _enabledInk = ink;
+                UpdateInk();
+            }
+
+            public void SetIcon(Image icon)
+            {
+                _icon = icon;
+                UpdateInk();
+            }
+
+            private void UpdateInk()
+            {
+                _caption.color = _captionDimmed ? _disabledInk : _enabledInk;
+                if (_icon != null) _icon.color = _caption.color;
             }
 
             protected override void DoStateTransition(SelectionState state, bool instant)
@@ -129,13 +228,9 @@ namespace PCShopSell.Game.UI
                 if (_caption == null) return;
                 bool dimmed = state == SelectionState.Disabled;
                 if (dimmed == _captionDimmed) return;
-                if (dimmed)
-                {
-                    _enabledInk = _caption.color;
-                    _caption.color = Dim;
-                }
-                else _caption.color = _enabledInk;
+                if (dimmed) _enabledInk = _caption.color;
                 _captionDimmed = dimmed;
+                UpdateInk();
             }
         }
     }

@@ -197,7 +197,7 @@ namespace PCShopSell.Game.UI
                         bool installed = placed.Contains(required.Category);
                         string socket = required.Socket == null ? "" : "\n<size=13>接口 " + required.Socket + "</size>";
                         requirementLabels[required.Category].text = $"<b>{PartCatalog.CategoryName(required.Category)}</b> · "
-                            + (installed ? "<color=#A9C9A9>✓ 已装</color>" : "<color=#DDC18B>待装</color>")
+                            + (installed ? "<color=#386047>✓ 已装</color>" : "<color=#80551F>待装</color>")
                             + "\n" + required.Name + socket;
                     }
                     if (finish != null) finish.interactable = placed.Count == 6;
@@ -261,7 +261,7 @@ namespace PCShopSell.Game.UI
                         rt.anchorMax = Vector2.one;
                         rt.offsetMin = new Vector2(6, 6);
                         rt.offsetMax = new Vector2(-6, -6);
-                        dc.GetComponent<Image>().color = new Color(0.2f, 0.55f, 0.45f);
+                        dc.GetComponent<Image>().color = Ui.SuccessSurface;
                         Destroy(dc);
                         UpdateStatus();
                         return true;

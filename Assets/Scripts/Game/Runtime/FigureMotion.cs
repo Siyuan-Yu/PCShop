@@ -11,7 +11,7 @@ namespace PCShopSell.Game.Runtime
         private static readonly List<FigureMotion> Active = new List<FigureMotion>();
         private Transform _visual;
         private readonly Transform[] _hips = new Transform[2], _knees = new Transform[2], _feet = new Transform[2], _arms = new Transform[2], _hands = new Transform[2];
-        private readonly List<Renderer> _pants = new List<Renderer>(), _sleeves = new List<Renderer>();
+        private readonly Transform[] _elbows = new Transform[2];
         private Vector3 _previousPosition;
         private float _phase, _blend, _idleTime, _scale;
         private bool _sampled, _locomotion = true;
@@ -42,6 +42,7 @@ namespace PCShopSell.Game.Runtime
         }
 
         public Transform Torso { get; private set; }
+        internal FigureAppearance Appearance { get; private set; }
         public Transform ReachingHand => _hands[_reachArm];
         public float WalkBlend => _blend;
         public bool LocomotionEnabled
@@ -50,11 +51,12 @@ namespace PCShopSell.Game.Runtime
             set { if (_locomotion == value) return; _locomotion = value; ResetMotion(); }
         }
 
-        public void Initialize(Transform visual, Transform torso, float scale)
+        internal void Initialize(Transform visual, Transform torso, float scale, FigureAppearance appearance)
         {
             _visual = visual;
             Torso = torso;
             _scale = scale;
+            Appearance = appearance;
             for (int i = 0; i < 2; i++)
             {
                 string side = i == 0 ? "L" : "R";
@@ -62,10 +64,8 @@ namespace PCShopSell.Game.Runtime
                 _knees[i] = _hips[i].Find("Knee" + side);
                 _feet[i] = _knees[i].Find("Foot" + side);
                 _arms[i] = torso.Find("Shoulder" + side);
-                _hands[i] = _arms[i].Find("Hand");
-                _pants.Add(_hips[i].Find("Leg" + side).GetComponent<Renderer>());
-                _pants.Add(_knees[i].Find("Shin" + side).GetComponent<Renderer>());
-                _sleeves.Add(_arms[i].Find("Sleeve" + side).GetComponent<Renderer>());
+                _elbows[i] = _arms[i].Find("Elbow");
+                _hands[i] = _elbows[i].Find("Hand");
             }
             if (!Active.Contains(this)) Active.Add(this); // Also register in edit-mode rendering.
             ResetMotion();
@@ -82,10 +82,8 @@ namespace PCShopSell.Game.Runtime
 
         private GameObject CreateWorkTool(bool cooking)
         {
-            // The hand mesh is scaled, so attach to its shoulder and use the hand's center as the grip.
             var tool = new GameObject(cooking ? "CookingSpatula" : "AssemblyScrewdriver");
-            tool.transform.SetParent(_arms[1], false);
-            tool.transform.localPosition = _hands[1].localPosition;
+            tool.transform.SetParent(_hands[1], false);
             var steel = Mats.Lit(new Color(.73f, .76f, .79f));
             if (cooking)
             {
@@ -107,26 +105,6 @@ namespace PCShopSell.Game.Runtime
             if (_reachWeight <= 0) return;
             _reachWeight = 0;
             ResetMotion();
-        }
-
-        public void RecolorLimbs(Material pants, Material sleeves)
-        {
-            foreach (var r in _pants) r.sharedMaterial = pants;
-            foreach (var r in _sleeves) r.sharedMaterial = sleeves;
-        }
-        public void SetClothingCut(bool shortSleeve, bool shortPants, bool thick, Material skin)
-        {
-            for(int i=0;i<2;i++)
-            {
-                var sleeve=_sleeves[i].transform;
-                sleeve.localPosition=new Vector3(0,shortSleeve?-.075f:-.175f,0);
-                sleeve.localScale=new Vector3(thick?.20f:.15f,shortSleeve?.15f:.35f,thick?.28f:.23f);
-                var forearm=_arms[i].Find("ClothingForearm");
-                if(forearm==null)forearm=Prims.Box(_arms[i],"ClothingForearm",new Vector3(0,-.255f,0),new Vector3(.12f,.22f,.18f),skin).transform;
-                forearm.gameObject.SetActive(shortSleeve);
-                forearm.GetComponent<Renderer>().sharedMaterial=skin;
-                if(shortPants)_pants[i*2+1].sharedMaterial=skin;
-            }
         }
 
         private void OnEnable() { if (!Active.Contains(this)) Active.Add(this); ResetMotion(); }
@@ -191,11 +169,16 @@ namespace PCShopSell.Game.Runtime
         private void ApplyPose()
         {
             bool working = !_seated && _reachWeight <= 0 && _blend < .1f;
+            const float hipHeight = PlayerCharacterModel.HipHeight;
+            const float segment = PlayerCharacterModel.LegSegment;
+            const float ankle = PlayerCharacterModel.AnkleHeight;
             if (_spatula != null) _spatula.SetActive(working && _workAction == FigureWorkAction.Cook);
             if (_screwdriver != null) _screwdriver.SetActive(working && _workAction == FigureWorkAction.Assemble);
             if(_seated)
             {
-                _visual.localPosition=Vector3.zero;Torso.localPosition=Vector3.zero;Torso.localRotation=Quaternion.Euler(-4,0,0);
+                float seatOffset = hipHeight - segment - ankle - .23f;
+                _visual.localPosition = Vector3.down * (seatOffset * _scale);
+                Torso.localPosition=Vector3.zero;Torso.localRotation=Quaternion.Euler(-4,0,0);
                 for(int i=0;i<2;i++)
                 {
                     _hips[i].localRotation=Quaternion.Euler(-90,0,0);
@@ -203,6 +186,7 @@ namespace PCShopSell.Game.Runtime
                     _feet[i].localRotation=Quaternion.identity;
                     float gesture=string.IsNullOrEmpty(ActivityKind)?0:Mathf.Sin(_idleTime*2.2f+i*1.4f)*12f;
                     _arms[i].localRotation=Quaternion.Euler(-35+gesture,0,i==0?-8:8);
+                    SetElbow(i, 26 + gesture * .4f);
                 }
                 return;
             }
@@ -216,20 +200,22 @@ namespace PCShopSell.Game.Runtime
                 float footZ = -Mathf.Sin(phase) * .21f * _blend;
                 float lift = Mathf.Pow(Mathf.Max(0, -Mathf.Cos(phase)), 1.4f) * .13f * _blend;
                 // Two equal leg segments solve to a level foot. The supporting shoe stays at ground height.
-                float down = .56f + bob - (.08f + lift);
-                float reach = Mathf.Clamp(Mathf.Sqrt(down * down + footZ * footZ), .05f, .4999f);
-                float knee = 2f * Mathf.Acos(reach / .5f) * Mathf.Rad2Deg;
+                float down = hipHeight + bob - (ankle + lift);
+                float reach = Mathf.Clamp(Mathf.Sqrt(down * down + footZ * footZ), .05f, 2 * segment);
+                float knee = 2f * Mathf.Acos(reach / (2 * segment)) * Mathf.Rad2Deg;
                 float hip = Mathf.Atan2(-footZ, down) * Mathf.Rad2Deg - knee * .5f;
                 _hips[i].localRotation = Quaternion.Euler(hip, 0, 0);
                 _knees[i].localRotation = Quaternion.Euler(knee, 0, 0);
                 _feet[i].localRotation = Quaternion.Euler(-hip - knee, 0, 0);
-                float arm = -Mathf.Sin(phase) * 26f * _blend;
-                _arms[i].localRotation = Quaternion.Euler(arm, 0, i == 0 ? -8f : 8f);
+                float arm = -Mathf.Sin(phase) * 19f * _blend;
+                const float armSpread = 1.5f;
+                _arms[i].localRotation = Quaternion.Euler(arm, 0, i == 0 ? -armSpread : armSpread);
+                SetElbow(i, 6 + (5 - 5 * Mathf.Sin(phase)) * _blend);
             }
             if (_reachWeight > 0)
             {
                 float bend = 68f * _reachCrouch * _reachWeight;
-                _visual.localPosition = Vector3.down * (.5f * (1f - Mathf.Cos(bend * Mathf.Deg2Rad)) * _scale);
+                _visual.localPosition = Vector3.down * (2 * segment * (1f - Mathf.Cos(bend * Mathf.Deg2Rad)) * _scale);
                 Torso.localRotation = Quaternion.Euler(24f * _reachCrouch * _reachWeight, 0, 0);
                 if (bend > 0)
                 {
@@ -241,12 +227,17 @@ namespace PCShopSell.Game.Runtime
                     }
                 }
                 int other = 1 - _reachArm;
+                SetElbow(other, 24 * _reachCrouch * _reachWeight);
+                SetElbow(_reachArm, 4);
                 _arms[other].localRotation = Quaternion.Slerp(_arms[other].localRotation,
                     Quaternion.Euler(-24, 0, other == 0 ? -17 : 17), _reachWeight * _reachCrouch);
                 var arm = _arms[_reachArm];
                 Vector3 direction = Torso.InverseTransformPoint(_reachTarget) - arm.localPosition;
                 if (direction.sqrMagnitude > .0001f)
-                    arm.localRotation = Quaternion.Slerp(arm.localRotation, Quaternion.FromToRotation(Vector3.down, direction), _reachWeight);
+                {
+                    Vector3 rest = _elbows[_reachArm].localPosition;
+                    arm.localRotation = Quaternion.Slerp(arm.localRotation, Quaternion.FromToRotation(rest, direction), _reachWeight);
+                }
                 return;
             }
             if (working && _workAction != FigureWorkAction.None)
@@ -264,6 +255,8 @@ namespace PCShopSell.Game.Runtime
                     _visual.localPosition += Vector3.up * (shooting ? .09f * release * _scale : 0);
                     _arms[0].localRotation = Quaternion.Euler(shooting ? -67 - 83 * release : -44 - 48 * release, 0, -10);
                     _arms[1].localRotation = Quaternion.Euler(shooting ? -60 - 62 * release : -44 - 48 * release, 0, 10);
+                    SetElbow(0, shooting ? 66 - 48 * release : 30);
+                    SetElbow(1, shooting ? 57 - 36 * release : 34);
                     return;
                 }
                 if (ActivityKind == "golf")
@@ -280,11 +273,15 @@ namespace PCShopSell.Game.Runtime
                 Torso.localRotation=Quaternion.Euler(energetic?8:0,Mathf.Sin(_idleTime*1.5f)*4,0);
                 _arms[0].localRotation=Quaternion.Euler(ActivityKind=="ktv"?-100+gesture:-45+gesture,0,-12);
                 _arms[1].localRotation=Quaternion.Euler(energetic?-65-gesture:-20-gesture,0,12);
+                SetElbow(0, 31 + gesture);
+                SetElbow(1, 18 - gesture * .5f);
             }
         }
 
         private void ApplyWorkPose()
         {
+            SetElbow(0, 12);
+            SetElbow(1, 12);
             switch (_workAction)
             {
                 case FigureWorkAction.Cook:
@@ -311,6 +308,12 @@ namespace PCShopSell.Game.Runtime
                     _arms[1].localRotation = Quaternion.Euler(reach + lift * 13, 0, -12);
                     break;
             }
+        }
+
+        private void SetElbow(int side, float degrees)
+        {
+            if (_elbows[side] != null)
+                _elbows[side].localRotation = Quaternion.Euler(-degrees, 0, 0);
         }
     }
 }

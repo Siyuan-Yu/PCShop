@@ -22,7 +22,7 @@ namespace PCShopSell.Game.UI
             const int gap = 2;
             const int pauseWidth = 72;
             const int speedWidth = 40;
-            var panel = Ui.FlatPanel(parent, "HudTimeControls", Ui.FlatWell, Ui.FlatButtonEdge);
+            var panel = Ui.FlatPanel(parent, "HudTimeControls", Ui.ChromeWell, Ui.ChromeEdge);
             Ui.Size(panel, padding * 2 + pauseWidth + TimeController.Speeds.Length * (speedWidth + gap));
             var controls = Ui.Row(panel.transform, 42, gap).Fill();
             controls.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(padding, padding, 5, 5);
@@ -52,11 +52,11 @@ namespace PCShopSell.Game.UI
         private void RefreshHudTimeControls()
         {
             bool paused = !S.Time.IsRunning || S.OpeningClockFrozen || S.ManualActivityClockPaused;
-            Ui.SetButtonFill(_pauseButton, paused ? Ui.Warn : Ui.ButtonBg);
+            Ui.SetButtonFill(_pauseButton, paused ? Ui.FlatRow : Ui.ButtonBg);
             _pauseLabel.text = S.ManualActivityClockPaused ? "活动暂停" : S.Time.IsHeld ? "窗口暂停"
                 : S.Time.IsUserPaused ? "继续" : S.OpeningClockFrozen ? "教学暂停" : "暂停";
             foreach (var (button, speed) in _speedButtons)
-                Ui.SetButtonFill(button, Ui.SelectedButton(S.Time.Speed == speed));
+                Ui.SetButtonFill(button, S.Time.Speed == speed ? Ui.ButtonHot : Ui.ButtonBg);
         }
 
         private void BuildHudShortcuts(Transform parent)

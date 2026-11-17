@@ -19,18 +19,18 @@ namespace PCShopSell.Game.UI
             var list = S.ShopFitList();
             string gap = S.ShopFitGap();
             sb.Append(gap == null
-                ? "<color=#A9C9A9>开业条件满足：收银台和货架都摆好了。</color>"
-                : $"<color=#D79780>还不能开业，差：{gap}。</color>");
+                ? "<color=#386047>开业条件满足：收银台和货架都摆好了。</color>"
+                : $"<color=#9C4634>还不能开业，差：{gap}。</color>");
 
             FixtureNeed counter = list.First(n => n.Kind == FixtureKind.Counter);
             sb.Append('\n').Append(FitLine(counter, "收银台", true));
 
             FixtureNeed shelf = list.First(n => n.Kind == FixtureKind.Shelf);
-            string shelfState = shelf.Placed >= shelf.Want ? "<color=#A9C9A9>✓</color>" : shelf.Placed >= FurnitureCatalog.MinShelves ? "<color=#DDC18B>◐</color>" : "<color=#D79780>✗</color>";
+            string shelfState = shelf.Placed >= shelf.Want ? "<color=#386047>✓</color>" : shelf.Placed >= FurnitureCatalog.MinShelves ? "<color=#80551F>◐</color>" : "<color=#9C4634>✗</color>";
             sb.Append(S.RetailKind == "computer" ? $"\n{shelfState} 货架（建议 6 个：每类配件一个，至少一个）已摆 {shelf.Placed}/{shelf.Want}" : $"\n{shelfState} 商品货架（至少一个，按销售品类设置）已摆 {shelf.Placed} 个");
             if (shelf.Owned > 0) sb.Append($"，买了没摆 {shelf.Owned} 个");
             int unset = S.ShelfIndexes().Count(ix => S.ShelfKindAt(ix) == null);
-            if (unset > 0) sb.Append($"<color=#ABB5A8>　{unset} 个货架还没设置摆什么（去“库存”页设置）</color>");
+            if (unset > 0) sb.Append($"<color=#655E52>　{unset} 个货架还没设置摆什么（去“库存”页设置）</color>");
 
             if (S.IsPetShop(S.CurrentShop))
                 sb.Append('\n').Append(FitLine(list.First(n => n.FurnitureId == PetShopCatalog.SmallHouse), "宠物屋（接代养用）", true));
@@ -41,7 +41,7 @@ namespace PCShopSell.Game.UI
 
         private static string FitLine(FixtureNeed n, string label, bool required)
         {
-            string mark = n.Placed >= n.Want ? "<color=#A9C9A9>✓</color>" : required ? "<color=#D79780>✗</color>" : "<color=#DDC18B>○</color>";
+            string mark = n.Placed >= n.Want ? "<color=#386047>✓</color>" : required ? "<color=#9C4634>✗</color>" : "<color=#80551F>○</color>";
             string s = $"{mark} {label}　已摆 {n.Placed}/{n.Want}";
             if (n.Owned > 0) s += $"，买了没摆 {n.Owned} 个";
             return s;
@@ -56,14 +56,14 @@ namespace PCShopSell.Game.UI
 
         private void BuildShopFitWarning()
         {
-            _shopFitWarning = Ui.Panel(_dock, "ShopFitWarning", new Color32(91, 47, 31, 255)).rectTransform
+            _shopFitWarning = Ui.Panel(_dock, "ShopFitWarning", Ui.WarningSurface).rectTransform
                 .Anchor(0, 0, 1, 0, 12, DockContentBottom, 12, -(DockContentBottom + ShopFitWarningMinHeight));
-            var highlight = new Color32(255, 198, 134, 255);
+            var highlight = Ui.Warn;
             Ui.Panel(_shopFitWarning, "Accent", highlight).rectTransform.Anchor(0, 0, 0, 1, 0, 0, -4, 0);
             _shopFitTitle = Ui.Label(_shopFitWarning, "", 21, color: highlight);
             _shopFitTitle.fontStyle = FontStyle.Bold;
             _shopFitTitle.rectTransform.Anchor(0, 1, 1, 1, 14, -31, 148, 6);
-            _shopFitDetail = Ui.Label(_shopFitWarning, "", 17, TextAnchor.UpperLeft, Color.white);
+            _shopFitDetail = Ui.Label(_shopFitWarning, "", 17, TextAnchor.UpperLeft, Ui.TextColor);
             _shopFitDetail.rectTransform.Anchor(0, 0, 1, 1, 14, ShopFitDetailBottom, 148, ShopFitDetailTop);
             var action = Ui.Button(_shopFitWarning, "去装修", GoToShopFitAction, 17, Ui.ButtonHot);
             action.name = "ShopFitWarningAction";

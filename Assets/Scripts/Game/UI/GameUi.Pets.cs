@@ -215,7 +215,7 @@ namespace PCShopSell.Game.UI
             _travelBar.SetActive(false);
             _worldHintStrip.SetActive(false);
             _labelCanvas.enabled = false;
-            _petFocusHud = Ui.Panel(_modalCanvas.transform,"PetFocusHud",new Color(.09f,.13f,.16f,.94f)).rectTransform;
+            _petFocusHud = Ui.Panel(_modalCanvas.transform,"PetFocusHud",Ui.Chrome).rectTransform;
             _petFocusHud.Anchor(0,0,1,0,20,18,20,-258);
             Ui.VList(_petFocusHud,6,9);
             var title = Ui.Row(_petFocusHud,36,8);

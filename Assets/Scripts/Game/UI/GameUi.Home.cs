@@ -430,7 +430,7 @@ namespace PCShopSell.Game.UI
 
                 BagStack pick = stacks.FirstOrDefault(s => s.Key == _bagSel);
                 if (pick != null)
-                    Para(w.Content, $"<b>{pick.Name}</b> ×{pick.Count}　占 {Mathf.Max(1, Mathf.CeilToInt((float)(pick.Space - 1e-6)))} 格　{pick.Kg:0.##} 千克\n<color=#ABB5A8>{pick.Kind}</color>", 17);
+                    Para(w.Content, $"<b>{pick.Name}</b> ×{pick.Count}　占 {Mathf.Max(1, Mathf.CeilToInt((float)(pick.Space - 1e-6)))} 格　{pick.Kg:0.##} 千克\n<color=#655E52>{pick.Kind}</color>", 17);
                 else
                     Line(w.Content, stacks.Count == 0 ? "背包是空的 · 去市场 / 农贸 / 网购添置" : "点一格看详情", 17, Ui.Dim);
 
@@ -696,7 +696,7 @@ namespace PCShopSell.Game.UI
             {
                 long left = pan.CookMinutesLeft(S.Clock.Now.TotalMinutes);
                 int readyMinuteOfDay = (int)(pan.Cooking.ReadyMinute % (24 * 60));
-                Line(w.Content, $"<color=#DDC18B>正在焖饭：{pan.Cooking.Batch.Name}，约 {pan.Cooking.Batch.Count} 碗</color>", 20);
+                Line(w.Content, $"<color=#80551F>正在焖饭：{pan.Cooking.Batch.Name}，约 {pan.Cooking.Batch.Count} 碗</color>", 20);
                 Line(w.Content, $"还剩 {left} 分钟（{readyMinuteOfDay / 60:00}:{readyMinuteOfDay % 60:00} 好）。焖好之前锅盖打不开。", 17);
                 if (S.OpeningMealTutorialPending)
                 {
@@ -1228,7 +1228,7 @@ namespace PCShopSell.Game.UI
             return list;
         }
 
-        private static readonly Color CellFree = new Color(0.16f, 0.18f, 0.22f);
+        private static Color CellFree => Ui.PanelBg2;
 
         /// <summary>以前寄存在店里的货：自己来搬（装不下就分几趟），或者全叫货车送回家。</summary>
         private void BuildMallStash(Window w, RectTransform stash)
@@ -1239,7 +1239,7 @@ namespace PCShopSell.Game.UI
                 FurnitureDef d = FurnitureCatalog.Get(l.Id);
                 RectTransform row = Ui.Row(stash, 40);
                 ItemPortrait(row, "furn:" + l.Id, 34);
-                Ui.Size(Ui.Label(row, $"{d.Name} ×{l.Count}　<size=14><color=#A8B0BA>每件 {d.WeightKg:0.##} 千克</color></size>", 17), -1, -1, 1);
+                Ui.Size(Ui.Label(row, $"{d.Name} ×{l.Count}　<size=14><color=#655E52>每件 {d.WeightKg:0.##} 千克</color></size>", 17), -1, -1, 1);
                 bool fits = d.WeightKg <= S.FreeKg + 1e-9;
                 Ui.Size(Ui.Button(row, fits ? "搬走 1 件" : "装不下", () =>
                 {
@@ -1363,8 +1363,8 @@ namespace PCShopSell.Game.UI
                 bool owned = S.HasUpgrade(u.Id);
                 string blocker = owned ? null : S.UpgradeBlocker(u);
                 RectTransform row = Ui.Row(parent, blocker != null ? 96 : 76);
-                string tail = blocker != null ? $"\n<size=14><color=#D79780>{blocker}</color></size>" : "";
-                Ui.Size(Ui.Label(row, $"{u.Name}\n<size=13><color=#A8B0BA>购买后安装，不占背包</color></size>\n<size=13>{u.Description}</size>{tail}", 17), 400);
+                string tail = blocker != null ? $"\n<size=14><color=#9C4634>{blocker}</color></size>" : "";
+                Ui.Size(Ui.Label(row, $"{u.Name}\n<size=13><color=#655E52>购买后安装，不占背包</color></size>\n<size=13>{u.Description}</size>{tail}", 17), 400);
                 Ui.Size(Ui.Label(row, u.Price.ToString(), 19, TextAnchor.MiddleLeft, Ui.Good), 90);
                 Ui.Size(Ui.Button(row, owned ? "已装好" : "买", () =>
                 {
@@ -1618,8 +1618,8 @@ namespace PCShopSell.Game.UI
             if (_placePanel == null || !_placePanel.gameObject.activeSelf || _placeStatus == null) return;
             if (!_ctrl.Placing) return;
             if (_ctrl.PlaceId == null) _placeStatus.text = "选一件背包里的家具，或者点屋里的家具拿起来挪。";
-            else if (_ctrl.PlaceError == null) _placeStatus.text = "<color=#A9C9A9>这里可以放，点左键。</color>";
-            else _placeStatus.text = "<color=#D79780>" + _ctrl.PlaceError + "</color>";
+            else if (_ctrl.PlaceError == null) _placeStatus.text = "<color=#386047>这里可以放，点左键。</color>";
+            else _placeStatus.text = "<color=#9C4634>" + _ctrl.PlaceError + "</color>";
         }
 
         // ---------- 头顶的“可以交互”提示 ----------
@@ -1632,7 +1632,7 @@ namespace PCShopSell.Game.UI
         {
             if (_interactBox == null)
             {
-                Image bg = Ui.Panel(_labelCanvas.transform, "InteractLabel", new Color(0.07f, 0.08f, 0.1f, 0.9f));
+                Image bg = Ui.Panel(_labelCanvas.transform, "InteractLabel", Ui.Chrome);
                 bg.raycastTarget = false;
                 _interactBox = bg.rectTransform;
                 _interactBox.anchorMin = _interactBox.anchorMax = Vector2.zero;

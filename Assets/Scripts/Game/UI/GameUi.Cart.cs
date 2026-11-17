@@ -244,7 +244,7 @@ namespace PCShopSell.Game.UI
                 : cars == 0 ? "运费 ¥0（装上刚叫的车）" : "运费：有一件一车装不下";
             Image bill = Ui.Panel(parent, "CartBill", CartColumn);
             Ui.Size(bill, -1, 44);
-            Text billText = Ui.Label(bill.transform, $"货款 {goods}　＋　{freightText}　＝　<b><color=#E8C77A>合计 {total}</color></b>", 19, TextAnchor.MiddleCenter);
+            Text billText = Ui.Label(bill.transform, $"货款 {goods}　＋　{freightText}　＝　<b><color=#80551F>合计 {total}</color></b>", 19, TextAnchor.MiddleCenter);
             billText.rectTransform.Fill();
 
             RectTransform pay = Ui.Row(parent, 46, 8);
@@ -314,7 +314,7 @@ namespace PCShopSell.Game.UI
         private Button CourierDestinationButton(Transform parent, Window owner, OwnedShop destination, int fontSize, bool forTruck = false)
         {
             var button = Ui.Button(parent, S.CourierDestName(destination) + "  ▼",
-                () => OpenCourierDestMenu(owner, destination, forTruck), fontSize, Ui.ButtonHot);
+                () => OpenCourierDestMenu(owner, destination, forTruck), fontSize, Ui.FlatRow);
             button.name = "CourierDestination";
             return button;
         }
@@ -441,7 +441,7 @@ namespace PCShopSell.Game.UI
                 card.gameObject.AddComponent<Image>().color = CartCard;
                 ItemPortrait(card, item.Key, 34);
                 string have = item.ByWeight ? $"{left:0.##} 千克" : $"×{left:0}";
-                Ui.Size(Ui.Label(card, $"  {item.Name} {have}<size=13><color=#A8B0BA>　{item.Where} · 每{(item.ByWeight ? "千克" : "件")} {item.UnitKg:0.##} 千克</color></size>", 15), -1, -1, 1);
+                Ui.Size(Ui.Label(card, $"  {item.Name} {have}<size=13><color=#655E52>　{item.Where} · 每{(item.ByWeight ? "千克" : "件")} {item.UnitKg:0.##} 千克</color></size>", 15), -1, -1, 1);
                 HoldButton(w, card, "装车", Ui.ButtonBg, left, item.ByWeight ? "千克" : "件", n => S.AddToTruck(item.Key, n), 90, canLoad);
                 var drag = card.gameObject.AddComponent<CartDragItem>();
                 drag.Dropped = (pos, cam) =>

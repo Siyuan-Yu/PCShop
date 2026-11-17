@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -12,20 +12,25 @@ namespace PCShopSell.Game.Runtime
         private static Shader _unlit;
 
         /// <summary>夜里要亮起来的材质：原始发光色。由昼夜灯光按时间调亮度。</summary>
-        public static readonly List<(Material mat, Color baseEmission)> NightGlow = new List<(Material, Color)>();
+        public static readonly List<(Material mat, Color baseEmission, float daylight)> NightGlow = new List<(Material, Color, float)>();
 
         private static Shader LitShader => _lit != null ? _lit : (_lit = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
         private static Shader UnlitShader => _unlit != null ? _unlit : (_unlit = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color"));
 
-        public static Material Lit(Color c, float smoothness = 0.2f, float metallic = 0f)
+        public static Material Lit(Color c, float smoothness = 0.2f, float metallic = 0f, bool receiveShadows = true)
         {
-            string key = $"L{c}{smoothness}{metallic}";
+            string key = $"L{c}{smoothness}{metallic}{receiveShadows}";
             if (Cache.TryGetValue(key, out Material m) && m != null) return m;
             m = new Material(LitShader) { name = key };
             m.SetColor("_BaseColor", c);
             m.color = c;
             m.SetFloat("_Smoothness", smoothness);
             m.SetFloat("_Metallic", metallic);
+            if (!receiveShadows && m.HasProperty("_ReceiveShadows"))
+            {
+                m.SetFloat("_ReceiveShadows", 0f);
+                m.EnableKeyword("_RECEIVE_SHADOWS_OFF");
+            }
             Cache[key] = m;
             return m;
         }
@@ -35,7 +40,11 @@ namespace PCShopSell.Game.Runtime
         {
             emission *= 0.5f;
             string key = $"G{baseColor}{emission}{nightOnly}";
-            if (Cache.TryGetValue(key, out Material m) && m != null) return m;
+            if (Cache.TryGetValue(key, out Material m) && m != null)
+            {
+                if (nightOnly) RegisterGlow(m,emission,.08f);
+                return m;
+            }
             m = new Material(LitShader) { name = key };
             m.SetColor("_BaseColor", baseColor);
             m.color = baseColor;
@@ -44,7 +53,7 @@ namespace PCShopSell.Game.Runtime
             m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             m.SetColor("_EmissionColor", emission);
             Cache[key] = m;
-            if (nightOnly) NightGlow.Add((m, emission));
+            if (nightOnly) RegisterGlow(m,emission,.08f);
             return m;
         }
 
@@ -72,7 +81,16 @@ namespace PCShopSell.Game.Runtime
             m.renderQueue = (int)RenderQueue.Transparent;
         }
 
-        public static void ClearNightGlow() => NightGlow.Clear();
+        private static readonly HashSet<Material> NightGlowMaterials=new HashSet<Material>();
+        private static void RegisterGlow(Material material,Color emission,float daylight)
+        {
+            if (NightGlowMaterials.Add(material)) NightGlow.Add((material,emission,daylight));
+        }
+        public static void ClearNightGlow()
+        {
+            NightGlowMaterials.Clear();
+            NightGlow.Clear();
+        }
 
         private static Texture2D _roofTiles;
         public static Material TileRoof(Color color)
@@ -156,7 +174,7 @@ namespace PCShopSell.Game.Runtime
                 for (int cx = 0; cx < cells; cx++)
                 {
                     bool lit = rng.NextDouble() < 0.55;
-                    var warm = rng.NextDouble() < 0.8 ? new Color32(255, 214, 140, 255) : new Color32(150, 215, 255, 255);
+                    var warm = rng.NextDouble() < 0.88 ? new Color32(255, 197, 111, 255) : new Color32(175, 215, 249, 255);
                     for (int y = 0; y < cell; y++)
                         for (int x = 0; x < cell; x++)
                         {
@@ -173,7 +191,7 @@ namespace PCShopSell.Game.Runtime
                                 albedo=(Color32)((Color)albedo*mortar);
                             }
                             a[py * n + px] = albedo;
-                            float curtain=(x<17||x>46)?.62f:1f;
+                            float curtain=(x<17||x>46)?.58f:Mathf.Lerp(.65f,1f,Mathf.Sin(Mathf.PI*y/cell));
                             e[py * n + px] = pane && !mullion && lit ? (Color32)((Color)warm * curtain) : new Color32(0, 0, 0, 255);
                         }
                 }
@@ -203,8 +221,8 @@ namespace PCShopSell.Game.Runtime
             m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             m.SetTexture("_EmissionMap", _windowEmission);
             Color baseEmission = new Color(2.3f, 1.55f, .68f);
-            m.SetColor("_EmissionColor", baseEmission * 0.08f);
-            NightGlow.Add((m, baseEmission));
+            m.SetColor("_EmissionColor", baseEmission * .19f);
+            RegisterGlow(m,baseEmission,.19f);
             return m;
         }
     }
@@ -272,116 +290,69 @@ namespace PCShopSell.Game.Runtime
             return root.gameObject;
         }
 
-        /// <summary>低多边形小人：有清晰衣着和肢体轮廓，脚底在原点。</summary>
-        public static GameObject Figure(Transform parent, string name, Color body, Color head, float scale = 1f)
+        /// <summary>Articulated 3D character with its gameplay root at foot level.</summary>
+        public static GameObject Figure(Transform parent, string name, Color body, Color head, float scale = 1f) =>
+            FigureForPerson(parent, name, body, head, scale, null);
+
+        internal static GameObject FigureForPerson(Transform parent, string name, Color body, Color head,
+            float scale, string personId, string appearanceSeed = null)
         {
+            var appearance = NpcLook.ForPerson(personId);
+            return BuildFigure(parent, name, body, head, scale, appearance, personId, appearanceSeed);
+        }
+
+        internal static GameObject Figure(Transform parent, string name, Color body, Color head,
+            float scale, FigureAppearance appearance) =>
+            BuildFigure(parent, name, body, head, scale, appearance, null, null);
+
+        private static GameObject BuildFigure(Transform parent, string name, Color body, Color head,
+            float scale, FigureAppearance appearance, string personId, string appearanceSeed)
+        {
+            var npc = appearance == FigureAppearance.Npc
+                ? NpcLook.Select(personId, appearanceSeed ?? name, head, body) : default;
+            float width = 1f;
+            switch (appearance)
+            {
+                case FigureAppearance.Npc: scale *= npc.Height; width = npc.Width; break;
+                case FigureAppearance.PhoneClerk: scale *= .94f; break;
+                case FigureAppearance.Florist: scale *= .96f; break;
+                case FigureAppearance.Coach: scale *= 1.03f; break;
+            }
+
             var root = new GameObject(name);
             root.transform.SetParent(parent, false);
-            Transform Joint(Transform parentJoint, string id, Vector3 at)
+            var visual = new GameObject("Visual").transform;
+            visual.SetParent(root.transform, false);
+            visual.localScale = new Vector3(scale * width, scale, scale);
+            var torso = new GameObject("Torso").transform;
+            torso.SetParent(visual, false);
+
+            var model = root.AddComponent<PlayerCharacterModel>();
+            model.Build(visual, torso, appearance, npc);
+            root.AddComponent<FigureMotion>().Initialize(visual, torso, scale, appearance);
+            if (appearance == FigureAppearance.Player)
+                Dress(root, "tee");
+            else if (appearance == FigureAppearance.Npc)
             {
-                var joint = new GameObject(id).transform;
-                joint.SetParent(parentJoint, false);
-                joint.localPosition = at;
-                return joint;
+                string cut = personId switch
+                {
+                    "service_officer" => "patrol",
+                    "service_repair" or "CommunityRoofWorker" => "uniform",
+                    _ => "jacket"
+                };
+                Color accent = cut == "patrol" ? ArtDirection.Hex("DBC84C") : ArtDirection.Brass;
+                model.DressNpc(cut, body, ArtDirection.Hex("3E4350"), ArtDirection.Hex("E5DACC"), accent);
             }
-            Transform visual = Joint(root.transform, "Visual", Vector3.zero);
-            visual.localScale = Vector3.one * scale;
-            Transform t = Joint(visual, "Torso", Vector3.zero);
-            Color shirt = Color.Lerp(body, ArtDirection.Ink, 0.12f);
-            GameObject Part(string id, Vector3 p, Vector3 sz, Color c) => Box(t, id, p, sz, Mats.Lit(c, 0.12f));
-            Part("Body", new Vector3(0, 0.82f, 0), new Vector3(0.39f, 0.57f, 0.27f), shirt);
-            foreach (int side in new[] { -1, 1 })
-            {
-                string suffix = side < 0 ? "L" : "R";
-                Transform hip = Joint(visual, "Hip" + suffix, new Vector3(side * .105f, .56f, 0));
-                Box(hip, "Leg" + suffix, new Vector3(0, -.125f, 0), new Vector3(.16f, .25f, .22f), Mats.Lit(ArtDirection.Ink));
-                Transform knee = Joint(hip, "Knee" + suffix, new Vector3(0, -.25f, 0));
-                Box(knee, "Shin" + suffix, new Vector3(0, -.125f, 0), new Vector3(.15f, .25f, .20f), Mats.Lit(ArtDirection.Ink));
-                Transform foot = Joint(knee, "Foot" + suffix, new Vector3(0, -.25f, 0));
-                Box(foot, "Shoe", new Vector3(0, -.005f, .055f), new Vector3(.18f, .15f, .31f), Mats.Lit(ArtDirection.Hex("423F38")));
-                Transform shoulder = Joint(t, "Shoulder" + suffix, new Vector3(side * .245f, 1.025f, 0));
-                Box(shoulder, "Sleeve" + suffix, new Vector3(0, -.175f, 0), new Vector3(.15f, .35f, .23f), Mats.Lit(shirt));
-                Box(shoulder, "Hand", new Vector3(0, -.405f, .015f), new Vector3(.12f, .16f, .15f), Mats.Lit(head));
-            }
-            Part("Neck", new Vector3(0, 1.13f, 0), new Vector3(0.12f, 0.12f, 0.12f), head);
-            Shape(PrimitiveType.Sphere, t, "Head", new Vector3(0, 1.3f, 0), Vector3.one * 0.32f, Mats.Lit(head));
-            Shape(PrimitiveType.Sphere, t, "Hair", new Vector3(0, 1.425f, -0.025f), new Vector3(0.35f, 0.18f, 0.34f), Mats.Lit(ArtDirection.Hex("443B32")));
-            Part("Fringe", new Vector3(-0.06f, 1.405f, 0.105f), new Vector3(0.22f, 0.09f, 0.1f), ArtDirection.Hex("443B32"));
-            Part("Nose", new Vector3(0, 1.29f, 0.164f), new Vector3(0.045f, 0.05f, 0.05f), head);
-            foreach (int side in new[] { -1, 1 }) Part("Eye", new Vector3(side * 0.065f, 1.34f, 0.143f), new Vector3(0.023f, 0.026f, 0.015f), ArtDirection.Ink);
-            root.AddComponent<FigureMotion>().Initialize(visual, t, scale);
             return root;
         }
 
-        /// <summary>
-        /// 按衣服给 Figure 换装：T 恤（橙）/ 衬衫（白）/ 夹克（棕）/ 西装（深灰 + 领带），
-        /// 同时给所有小人统一加上裤子和头发。可以反复调用，旧的衣着配件会被换掉。
-        /// </summary>
-        public static void Dress(GameObject figure, string outfitId, Color? identityColor = null,
-            Color? trouserColor = null, bool standardTrim = true)
+        /// <summary>Equip the player's current outfit on the shared character rig.</summary>
+        public static void Dress(GameObject figure, string outfitId)
         {
-            var motion = figure.GetComponent<FigureMotion>();
-            Transform t = motion.Torso;
-            Transform body = t.Find("Body");
-            Transform head = t.Find("Head");
-            if (body == null || head == null) return;
-            float s = head.localScale.x / 0.32f;
-            for (int i = t.childCount - 1; i >= 0; i--)
-            {
-                Transform c = t.GetChild(i);
-                if (!c.name.StartsWith("Outfit_")) continue;
-                c.gameObject.SetActive(false);
-                Kill.It(c.gameObject);
-            }
-
-            var outfit=PCShopSell.Core.Session.Outfits.Get(outfitId)??PCShopSell.Core.Session.Outfits.Get("tee");
-            Color top, pants;
-            switch (outfitId)
-            {
-                case "shirt": top = new Color(0.92f, 0.93f, 0.95f); pants = new Color(0.20f, 0.22f, 0.30f); break;
-                case "jacket": top = new Color(0.36f, 0.27f, 0.18f); pants = new Color(0.18f, 0.22f, 0.35f); break;
-                case "suit": top = new Color(0.17f, 0.19f, 0.26f); pants = new Color(0.14f, 0.15f, 0.20f); break;
-                default: top = ArtDirection.Clay; pants = new Color(0.30f, 0.35f, 0.45f); break;
-            }
-            top=identityColor??ArtDirection.Hex(outfit.ColorHex);
-            body.GetComponent<Renderer>().sharedMaterial = Mats.Lit(top);
-            bool winter = outfit.VisualPreset == "winter";
-            body.localScale = new Vector3(winter ? .48f : .39f, .57f, winter ? .36f : .27f);
-
-            void Add(string n, Vector3 p, Vector3 sz, Color c) => Box(t, "Outfit_" + n, p * s, sz * s, Mats.Lit(c));
-            motion.RecolorLimbs(Mats.Lit(trouserColor ?? pants), Mats.Lit(top));
-            bool shortCut=outfit.VisualPreset=="short"||outfit.VisualPreset=="sport";
-            motion.SetClothingCut(shortCut, shortCut, winter, head.GetComponent<Renderer>().sharedMaterial);
-            if (winter)
-                Add("CoatHem",new Vector3(0,.50f,0),new Vector3(.49f,.20f,.36f),top);
-
-            if (!standardTrim) return;
-            if (winter)
-            {
-                Add("PaddedCollar",new Vector3(0,1.06f,0),new Vector3(.35f,.13f,.32f),top*.8f);
-                Add("WinterZip",new Vector3(0,.78f,.19f),new Vector3(.025f,.58f,.02f),ArtDirection.Cream);
-            }
-            if(outfit.VisualPreset=="sport"||outfit.VisualPreset=="sport_long")
-                Add("SportStripe",new Vector3(-.10f,.80f,.145f),new Vector3(.04f,.46f,.02f),ArtDirection.Cream);
-
-            switch (outfit.VisualPreset)
-            {
-                case "long":
-                    Add("Collar", new Vector3(0, 1.0f, 0.0f), new Vector3(0.26f, 0.06f, 0.2f), Color.white);
-                    Add("Buttons", new Vector3(0, 0.7f, 0.17f), new Vector3(0.03f, 0.5f, 0.02f), new Color(0.7f, 0.72f, 0.78f));
-                    break;
-                case "jacket":
-                    Add("Collar", new Vector3(0, 1.0f, 0.0f), new Vector3(0.3f, 0.07f, 0.24f), new Color(0.28f, 0.2f, 0.13f));
-                    Add("Zip", new Vector3(0, 0.66f, 0.17f), new Vector3(0.03f, 0.6f, 0.02f), new Color(0.8f, 0.78f, 0.7f));
-                    Add("Pocket", new Vector3(0.12f, 0.45f, 0.14f), new Vector3(0.1f, 0.12f, 0.03f), new Color(0.28f, 0.2f, 0.13f));
-                    break;
-                case "formal":
-                    Add("Shirt", new Vector3(0, 0.82f, 0.16f), new Vector3(0.11f, 0.34f, 0.02f), Color.white);
-                    Add("Tie", new Vector3(0, 0.74f, 0.175f), new Vector3(0.05f, 0.36f, 0.02f), new Color(0.75f, 0.12f, 0.15f));
-                    Add("LapelL", new Vector3(-0.08f, 0.8f, 0.165f), new Vector3(0.05f, 0.34f, 0.02f), new Color(0.1f, 0.11f, 0.15f));
-                    Add("LapelR", new Vector3(0.08f, 0.8f, 0.165f), new Vector3(0.05f, 0.34f, 0.02f), new Color(0.1f, 0.11f, 0.15f));
-                    break;
-            }
+            var outfit = PCShopSell.Core.Session.Outfits.Get(outfitId) ?? PCShopSell.Core.Session.Outfits.Get("tee");
+            Color top = ArtDirection.Hex(outfit.Id == "tee" ? "B85E42" : outfit.ColorHex);
+            Color trousers = ArtDirection.Hex(outfit.VisualPreset == "formal" ? "303040" : "34394F");
+            figure.GetComponent<PlayerCharacterModel>().Dress(outfit.VisualPreset, top, trousers);
         }
 
         /// <summary>扇形网格（视野锥），在 XZ 平面，朝 +Z。</summary>

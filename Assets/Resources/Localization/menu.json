@@ -19,6 +19,12 @@
       "en": "Chapter One Demo"
     },
     {
+      "key": "loading_trial_world",
+      "zh": "正在布置城郊街区…",
+      "ja": "郊外の街を準備中…",
+      "en": "Preparing the outskirts…"
+    },
+    {
       "key": "story",
       "zh": "备好第一批宠物用品，迎来第一位顾客。\n在这条商业街上，经营一家属于自己的店。",
       "ja": "ペット用品を仕入れて、最初のお客様を迎えよう。\nこの商店街で、自分だけのお店を育てよう。",

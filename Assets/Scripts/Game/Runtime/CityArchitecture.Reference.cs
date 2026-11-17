@@ -1,13 +1,13 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
 {
     public static partial class CityArchitecture
     {
-        private static readonly Color Glass = ArtDirection.Hex("526977");
-        private static readonly Color Limestone = ArtDirection.Hex("CEC9BA");
-        private static readonly Color Lawn = ArtDirection.Hex("7B8C60");
-        private static readonly Color Hedge = ArtDirection.Hex("617747");
+        private static readonly Color Glass = ArtDirection.Hex("48677C");
+        private static readonly Color Limestone = ArtDirection.Hex("DED0BC");
+        private static readonly Color Lawn = ArtDirection.Hex("91AB62");
+        private static readonly Color Hedge = ArtDirection.Hex("688B47");
 
         // Closed roof volume: no open triangles or intersecting wafer-thin roof slabs.
         private static void HipRoof(Transform root,Vector3 at,float w,float d,float rise,Color color)
@@ -20,10 +20,13 @@ namespace PCShopSell.Game.Runtime
             int[] faces={0,4,1, 1,4,5, 1,5,2, 2,5,3, 3,5,4, 3,4,0, 0,1,2, 0,2,3};
             var vertices=new Vector3[faces.Length];var triangles=new int[faces.Length];
             for(int i=0;i<faces.Length;i++){vertices[i]=p[faces[i]];triangles[i]=i;}
-            var uv=new Vector2[vertices.Length];for(int i=0;i<uv.Length;i++)uv[i]=new Vector2(vertices[i].x*.9f,vertices[i].z*1.4f);
+            var uv=new Vector2[vertices.Length];for(int i=0;i<uv.Length;i++)uv[i]=new Vector2(vertices[i].x*.32f,vertices[i].z*.32f);
             var mesh=new Mesh{name="VillaHipRoof"};mesh.vertices=vertices;mesh.triangles=triangles;mesh.uv=uv;
             mesh.RecalculateNormals();mesh.RecalculateBounds();
-            go.GetComponent<MeshFilter>().sharedMesh=mesh;go.GetComponent<Renderer>().sharedMaterial=Mats.TileRoof(color);
+            go.GetComponent<MeshFilter>().sharedMesh=mesh;
+            go.GetComponent<Renderer>().sharedMaterial=IndustrialMaterials.Surface("claytiles",color,Vector2.one);
+            var owner=root.GetComponent<CityLandscapeResources>()??root.gameObject.AddComponent<CityLandscapeResources>();owner.Owned.Add(mesh);
+            SculptedRoofTiles(root,at,w,d,rise,color,true);
             Box(root,"RoofRidge",at+Vector3.up*rise,new Vector3(.16f,.14f,d*.57f),color);
         }
         public static void Roof(Transform root,Vector3 at,float w,float d,float rise,Color color)=>HipRoof(root,at,w,d,rise,color);
@@ -33,7 +36,8 @@ namespace PCShopSell.Game.Runtime
             root.localPosition=at;root.localRotation=Quaternion.Euler(0,yaw,0);
             Box(root,"StoneSurround",Vector3.zero,new Vector3(width+.23f,height+.23f,.15f),Limestone);
             bool lit=(Mathf.RoundToInt(at.x*7+at.y*11+at.z*3)&3)!=0;
-            Prims.Box(root,"BlueGlass",new Vector3(0,0,-.09f),new Vector3(width,height,.04f),lit?Mats.Glow(Glass,new Color(1.3f,.88f,.42f)):Mats.Lit(Glass,.5f));
+            Prims.Box(root,"BlueGlass",new Vector3(0,0,-.09f),new Vector3(width,height,.04f),
+                lit?IndustrialMaterials.LamplitWindow():Mats.Lit(Glass,.5f));
             Box(root,"Mullion",new Vector3(0,0,-.12f),new Vector3(.065f,height,.05f),Limestone);
             Box(root,"Transom",new Vector3(0,height*.1f,-.12f),new Vector3(width,.065f,.05f),Limestone);
         }
@@ -42,7 +46,8 @@ namespace PCShopSell.Game.Runtime
         public static void ReferenceFacade(Transform root,string model,int tier,float w,float d,float h,int seed)
         {
             if(model=="oldhome" && h<=8)
-                HipRoof(root,new Vector3(0,h+.32f,d/2),w+.45f,d+.45f,Mathf.Min(1.1f,w*.13f),ArtDirection.Hex("8F705B"));
+                HipRoof(root,new Vector3(0,h+.32f,d/2),w+.45f,d+.45f,Mathf.Min(1.65f,w*.15f),
+                    ArtDirection.Hex(seed%4==0?"536783":seed%3==0?"A66E49":"B66D45"));
             if(model=="luxury_apartment"||model=="apartment")
             {
                 // Cream piers, blue bay glazing and stepped crowns follow the reference's towers.
@@ -59,7 +64,8 @@ namespace PCShopSell.Game.Runtime
             }
             if(model=="shop" && tier==0)
             {
-                HipRoof(root,new Vector3(0,h+.32f,d/2),w+.5f,d+.5f,1.15f,ArtDirection.Hex("53606A"));
+                HipRoof(root,new Vector3(0,h+.32f,d/2),w+.5f,d+.5f,1.15f,
+                    Color.Lerp(StreetWorldBuilder.DistrictFacadeAccent(tier,seed),ArtDirection.Hex("40516B"),.42f));
                 foreach(int side in new[]{-1,1})
                 {
                     var at=new Vector3(side*w*.25f,h+.97f,d*.24f);

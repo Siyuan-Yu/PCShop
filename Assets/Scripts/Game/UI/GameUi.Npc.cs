@@ -171,7 +171,8 @@ namespace PCShopSell.Game.UI
                 .Where(person => S.CityPerson(person.PersonId) != null).ToArray();
 
             var body=Ui.Row(w.Content,bodyHeight,12);
-            var people=Ui.Rect(body,"People");Ui.VList(people,8,0);
+            var people = Ui.FlatPanel(body, "People", Ui.PanelBg2).rectTransform;
+            Ui.VList(people, 8, 5);
             // Override the vertical group's flexible width: the roster must not share
             // spare horizontal space with the goods column, especially with a ScrollRect.
             var peopleSize=Ui.Size(people,rosterWidth,-1,0).GetComponent<LayoutElement>();

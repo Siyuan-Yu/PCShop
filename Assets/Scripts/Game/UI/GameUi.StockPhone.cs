@@ -15,10 +15,10 @@ namespace PCShopSell.Game.UI
         private static readonly string[] StockIds = CityInvestments.All.Select(d => d.Id).Append("hardware").ToArray();
         private static readonly Color[] StockChartColors =
         {
-            new Color32(241,198,114,255), new Color32(140,208,198,255), new Color32(201,164,242,255),
-            new Color32(243,156,156,255), new Color32(136,181,236,255), new Color32(214,223,142,255),
-            new Color32(239,180,135,255), new Color32(149,216,151,255), new Color32(215,165,203,255),
-            new Color32(142,216,239,255), new Color32(194,203,209,255)
+            new Color32(151,96,31,255), new Color32(42,111,101,255), new Color32(114,78,147,255),
+            new Color32(165,65,64,255), new Color32(56,97,151,255), new Color32(105,107,42,255),
+            new Color32(161,82,46,255), new Color32(48,116,69,255), new Color32(147,71,117,255),
+            new Color32(35,113,132,255), new Color32(82,92,94,255)
         };
         private const int StockQuoteGap = 6, StockQuoteWidth = 218, StockPositionWidth = 104;
         private const int StockCostWidth = 100, StockDraftWidth = 116, StockActionWidth = 74;

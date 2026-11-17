@@ -513,7 +513,7 @@ namespace PCShopSell.Game.UI
                 var selected = items[Math.Max(0, selectedIndex)];
                 foreach (var item in items)
                 {
-                    string liked = item.Interest == null ? "" : "  <color=#FFC966>· 对方喜欢</color>";
+                    string liked = item.Interest == null ? "" : "  <color=#80551F>· 对方喜欢</color>";
                     var button = Ui.Size(Ui.Button(list, $"<b>{item.Title}</b>{liked}\n{item.Info}", () =>
                     { selectedId = item.Id; w.Rebuild(); }, 17, Ui.SelectedButton(selected.Id == item.Id)), -1, 59);
                     button.GetComponentInChildren<Text>().alignment = TextAnchor.MiddleLeft;

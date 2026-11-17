@@ -43,6 +43,13 @@ namespace PCShopSell.Game.UI
             }, scrollContent: false, allowDuringOpeningMeal: true, showTitleBar: false, fullScreen: true);
         }
 
+        internal Window ShowTrialWorldLoading() => OpenWindow(L("loading_trial_world"), 1920, 1080, w =>
+        {
+            Ui.Label(w.Content, L("loading_trial_world"), 32, TextAnchor.MiddleCenter, Ui.Accent)
+                .rectTransform.Fill();
+        }, holds: false, closable: false, scrollContent: false, allowDuringOpeningMeal: true,
+            showTitleBar: false, fullScreen: true);
+
         private void BuildMainMenu(Window w)
         {
             var cover = Ui.Rect(w.Content, "MenuCover").Fill();
@@ -73,7 +80,7 @@ namespace PCShopSell.Game.UI
             subtitle.resizeTextMaxSize = 27;
             subtitle.rectTransform.Anchor(.052f, .631f, .44f, .685f);
             if (GameSession.FirstChapterTrial)
-                Ui.Label(w.Content, L("trial_edition"), 17, TextAnchor.MiddleLeft, Ui.Accent)
+                Ui.Label(w.Content, L("trial_edition"), 17, TextAnchor.MiddleLeft, Ui.ChromeGold)
                     .rectTransform.Anchor(.052f, .596f, .44f, .631f);
 
             var actions = Ui.Rect(w.Content, "MenuActions").Anchor(.048f, .12f, .222f, _canResumeMainMenu ? .59f : .556f);
@@ -99,17 +106,9 @@ namespace PCShopSell.Game.UI
             bool emphasized = false, bool interactable = true, bool link = false)
         {
             int size = link ? 25 : 31;
-            var button = Ui.Button(parent, L(key), click, size, emphasized ? Ui.ButtonHot : Ui.FlatWell, interactable);
-            var fill = button.image.color;
-            fill.a = link ? 0 : emphasized ? .60f : .57f;
-            button.image.color = fill;
-            var edge = button.GetComponent<Outline>();
-            edge.enabled = !link;
-            edge.useGraphicAlpha = false;
-            edge.effectColor = emphasized ? Ui.Accent : Ui.FlatButtonEdge;
-            if (emphasized) edge.effectDistance = new Vector2(2, -2);
+            Color fill = emphasized ? Ui.ButtonHot : link ? Color.clear : Ui.ChromeButton;
+            var button = Ui.Button(parent, L(key), click, size, fill, interactable);
             var caption = button.GetComponentInChildren<Text>();
-            if (interactable) caption.color = new Color(1f, .92f, .78f);
             caption.alignment = TextAnchor.MiddleLeft;
             caption.resizeTextForBestFit = true;
             caption.resizeTextMinSize = 16;

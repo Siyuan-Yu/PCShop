@@ -107,14 +107,14 @@ namespace PCShopSell.Game.UI
             long totalIn = scope.Sum(r => r.IncomeCents), totalOut = scope.Sum(r => r.ExpenseCents);
             var cards = Ui.Row(main, 160, 8);
             BuildAssetMoneyCard(cards, "收入", totalIn, Ui.Good, income);
-            BuildAssetMoneyCard(cards, "支出", totalOut, new Color32(233, 178, 150, 255), expense);
+            BuildAssetMoneyCard(cards, "支出", totalOut, Ui.Warn, expense);
             var net = Ui.Panel(cards, "AssetNet", Ui.PanelBg2).rectTransform; Ui.Size(net, -1, 160, 1); Ui.VList(net, 3, 10);
             Line(net, "收支差额", 16, Ui.Dim);
             var netAmount=Line(net,(totalIn>=totalOut?"+":"−")+Money.FromCents(Math.Abs(totalIn-totalOut)),27,Ui.Accent);
             netAmount.resizeTextForBestFit=true;netAmount.resizeTextMinSize=17;netAmount.resizeTextMaxSize=27;
             net.Tip("收入 − 支出，按实际收付统计。含进货付款，所以差额不等于利润。");
             var legend = Ui.Row(main, 22); Ui.Size(Ui.Label(legend, "每日收支", 17), -1, 22, 1);
-            Ui.Size(Ui.Label(legend, "● 收入", 15, TextAnchor.MiddleRight, Ui.Good), 80); Ui.Size(Ui.Label(legend, "● 支出  ·  元", 15, TextAnchor.MiddleRight, new Color32(233,178,150,255)), 135);
+            Ui.Size(Ui.Label(legend, "● 收入", 15, TextAnchor.MiddleRight, Ui.Good), 80); Ui.Size(Ui.Label(legend, "● 支出  ·  元", 15, TextAnchor.MiddleRight, Ui.Warn), 135);
             int dayCount = S.Clock.Today.TotalDays - from.TotalDays + 1;
             long[] ins = Enumerable.Range(0, dayCount).Select(i => scope.Sum(r => r.IncomeDays[i])).ToArray();
             long[] outs = Enumerable.Range(0, dayCount).Select(i => scope.Sum(r => r.ExpenseDays[i])).ToArray();
@@ -131,7 +131,7 @@ namespace PCShopSell.Game.UI
                     { _assetStoreId = report.Id; _assetStreet = report.StreetId; _assetKind = report.Kind; w.Rebuild(); }, 17,
                     Ui.SelectedButton(_assetStoreId == report.Id)), -1, 57, 1);
                 select.name = "AssetStore_" + report.Id;
-                foreach (var pair in new[] { (report.IncomeCents, Ui.Good), (report.ExpenseCents, (Color)new Color32(233,178,150,255)), (report.IncomeCents-report.ExpenseCents, Ui.Accent) })
+                foreach (var pair in new[] { (report.IncomeCents, Ui.Good), (report.ExpenseCents, Ui.Warn), (report.IncomeCents-report.ExpenseCents, Ui.Accent) })
                     Ui.Size(Ui.Label(row, Money.FromCents(pair.Item1).ToString(), 17, TextAnchor.MiddleRight, pair.Item2), 127, 55);
                 BuildAssetTrend(row, report.IncomeDays, report.ExpenseDays, report.FirstDay, 34, true);
             }

@@ -37,7 +37,7 @@ namespace PCShopSell.Game.UI
             var panel=w.Root.Find("Panel") as RectTransform;if(w.Fitter!=null)w.Fitter.enabled=false;if(panel!=null){panel.localScale=Vector3.one;panel.Fill();}
             w.Content.GetComponent<VerticalLayoutGroup>().enabled=false;w.Content.Fill();
             _ctrl.RenderOnsiteScene();var view=Ui.Rect(w.Content,"ActualOnsiteScene");view.Fill();var raw=view.gameObject.AddComponent<RawImage>();raw.texture=_ctrl.OnsiteTexture;raw.raycastTarget=false;
-            var header=Ui.Panel(w.Content,"OnsiteHeader",new Color(.06f,.1f,.16f,.94f));header.rectTransform.Anchor(0,.91f,1,1);
+            var header=Ui.Panel(w.Content,"OnsiteHeader",Ui.Chrome);header.rectTransform.Anchor(0,.91f,1,1);
             Ui.Label(header.transform,S.CityActivityService(S.RunningCityActivity)?.Name,27,color:Ui.Accent).rectTransform.Anchor(.02f,0,.53f,1);
             var activity = S.RunningCityActivity;
             bool sport = GameSession.IsOnsiteSport(activity);
@@ -84,7 +84,7 @@ namespace PCShopSell.Game.UI
                 if (practice) { if (S.FinishOnsiteSport()) ReturnFromOnsitePlay(); }
                 else QuitActivity();
             }, 19, Ui.ButtonBg, !practice || S.CanFinishOnsiteSport).GetComponent<RectTransform>().Anchor(.85f,.18f,.985f,.8f);
-            var body=Ui.Panel(w.Content,"OnsiteActions",new Color(.06f,.1f,.16f,.94f));body.rectTransform.Anchor(.70f,.20f,1,.90f);
+            var body=Ui.Panel(w.Content,"OnsiteActions",Ui.Chrome);body.rectTransform.Anchor(.70f,.20f,1,.90f);
             var list=Ui.Rect(body.transform,"Actions");list.Anchor(0,0,1,1,16,12,16,12);var layout=list.gameObject.AddComponent<VerticalLayoutGroup>();layout.spacing=5;layout.childControlHeight=true;layout.childControlWidth=true;layout.childForceExpandHeight=false;
             void Label(string text)=>Ui.Size(Ui.Label(list,text,18),-1,34);
             void Button(string label, Action action, bool enabled = true, bool selected = false)
@@ -174,7 +174,7 @@ namespace PCShopSell.Game.UI
                 Button("曝光："+new[]{"偏暗","正常","偏亮"}[(int)s.Exposure],()=>Frame(s.PhotoYaw,s.PhotoPitch,s.PhotoDistance,s.PhotoOffset,((int)s.Exposure+1)%3));
                 Button("拍照并保存",()=>{if(!_ctrl.CaptureOnsitePhoto())Toast("照片未保存，请检查现场、相机和写入空间。");});Button("查看相册",OpenOnsiteAlbum);
             }
-            var rail=Ui.Panel(w.Content,"OnsiteBottom",new Color(.06f,.1f,.16f,.97f));rail.rectTransform.Anchor(0,0,1,.19f);
+            var rail=Ui.Panel(w.Content,"OnsiteBottom",Ui.Chrome);rail.rectTransform.Anchor(0,0,1,.19f);
             _onsiteStatus=Ui.Label(rail.transform,_onsiteRoundResult == null ? s.Message : "",21,color:Ui.Accent);_onsiteStatus.rectTransform.Anchor(.025f,s.Number==53?.18f:.48f,.70f,.98f);
             _onsiteReadout=Ui.Label(rail.transform,"",18);_onsiteReadout.rectTransform.Anchor(.025f,.10f,.70f,.48f);
             if (readyToFinish)

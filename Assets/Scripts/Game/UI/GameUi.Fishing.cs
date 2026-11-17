@@ -86,7 +86,7 @@ namespace PCShopSell.Game.UI
             _fishingWater = water.gameObject.AddComponent<FishingWaterGraphic>(); _fishingWater.raycastTarget = true;
             water.gameObject.AddComponent<FishingHoldInput>().Held = value => _fishingPointerHeld = value;
             _fishingWater.State = fish;
-            var header = Ui.Panel(w.Content, "FishingSceneHeader", new Color(.07f, .13f, .14f, .92f));
+            var header = Ui.Panel(w.Content, "FishingSceneHeader", Ui.Chrome);
             header.rectTransform.Anchor(0, 1, 1, 1, 0, -88, 0, 0);
             Ui.Label(header.transform, "青湾垂钓场", 32, color: Ui.Accent).rectTransform.Anchor(0, 0, .33f, 1, 34, 12, 0, 12);
             Ui.Label(header.transform, $"剩余 {S.ManualAttemptsLeft} 次 · 本场钓获 {fish?.Catches ?? 0} 条 · 时间暂停", 18, TextAnchor.MiddleCenter)
@@ -109,7 +109,7 @@ namespace PCShopSell.Game.UI
             }
             _fishingStatus = Ui.Label(w.Content, S.FishingHint, 22, color: Ui.TextColor);
             _fishingStatus.rectTransform.Anchor(.08f, .80f, .83f, .87f);
-            var rail = Ui.Panel(w.Content, "FishingControls", new Color(.06f, .13f, .15f, .97f));
+            var rail = Ui.Panel(w.Content, "FishingControls", Ui.Chrome);
             rail.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -164);
             _fishingReadout = Ui.Label(rail.transform, "", 20, color: Ui.Accent);
             _fishingReadout.rectTransform.Anchor(.025f, .72f, .70f, .99f);
@@ -178,7 +178,7 @@ namespace PCShopSell.Game.UI
         private void BuildFishingCatchResult(Window w, FishingState state)
         {
             var fish = FishingCatalog.Get(state.PendingFishId);
-            var shade = Ui.Panel(w.Content, "FishingCatchBackdrop", new Color(.025f, .035f, .06f, .56f));
+            var shade = Ui.Panel(w.Content, "FishingCatchBackdrop", Ui.WorldShade);
             shade.rectTransform.Fill();
             var result = Ui.Panel(shade.transform, "FishingCatchResult", Ui.PanelBg2).rectTransform;
             result.Anchor(.26f, .33f, .74f, .67f);

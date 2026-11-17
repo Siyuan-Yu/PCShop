@@ -10,9 +10,11 @@ namespace PCShopSell.Game.Runtime
             // A compact annex beside the existing reception, not a new parking island.
             float w=(float)p.Width,d=(float)p.Depth;
             Prims.Box(root,"GarageFoundation",new Vector3(0,.12f,d*.5f),new Vector3(w+.5f,.45f,d+.5f),Mats.Lit(ArtDirection.Hex("858B77")));
-            var body=Prims.Box(root,"GarageAnnex",new Vector3(0,1.8f,d*.5f),new Vector3(w,3.6f,d),Mats.Lit(ArtDirection.Cream),true);
+            var body=Prims.Box(root,"GarageAnnex",new Vector3(0,1.8f,d*.5f),new Vector3(w,3.6f,d),
+                IndustrialMaterials.Surface("brick",ArtDirection.Hex("D6BE9E"),new Vector2(w/4,1.2f)),true);
             body.AddComponent<PlaceMarker>().PlaceId=p.Id;
-            Prims.Box(root,"GarageRoof",new Vector3(0,3.7f,d*.5f),new Vector3(w+.4f,.25f,d+.4f),Mats.Lit(ArtDirection.Ink));
+            Prims.Box(root,"GarageRoof",new Vector3(0,3.7f,d*.5f),new Vector3(w+.4f,.25f,d+.4f),
+                IndustrialMaterials.Surface("metal",ArtDirection.Hex("48627A"),new Vector2(w/4,d/5)));
             Prims.Box(root,"RollerDoor",new Vector3(0,1.5f,-.06f),new Vector3(w-1,2.8f,.15f),Mats.Lit(ArtDirection.Blue));
             for(int i=0;i<7;i++)Prims.Box(root,"DoorSlat",new Vector3(0,.35f+i*.36f,-.16f),new Vector3(w-1,.035f,.025f),Mats.Lit(ArtDirection.Ink));
             Prims.SignText(root,"车库",new Vector3(0,3.2f,-.2f),w-.7f,.45f,ArtDirection.Cream);
@@ -117,7 +119,31 @@ namespace PCShopSell.Game.Runtime
             if (vertices.Count > 0) LandscapeMesh(root, "RaceAccessCauseway", vertices, triangles, Mats.Lit(ArtDirection.Hex("858B77")));
             float scale=(float)_city.ExpansionScale;
             float bankTop = LakeAccessHeight(_city) - .015f;
-            Prims.Box(root,"StarterMotorHubBank",new Vector3(-550*scale,(bankTop+bottom)*.5f,-135*scale),new Vector3(65*scale,bankTop-bottom,65*scale),Mats.Lit(ArtDirection.Sage));
+            Prims.Box(root,"StarterMotorHubBank",new Vector3(-550*scale,(bankTop+bottom)*.5f,-135*scale),new Vector3(65*scale,bankTop-bottom,65*scale),
+                IndustrialMaterials.Surface("meadow",ArtDirection.Hex("7D9859"),new Vector2(4,4)));
+            var planting=new MiniatureDetailMesh();
+            var hub=new Vector3(-550*scale,bankTop,-135*scale);
+            int seed=0;
+            foreach(int side in new[]{-1,1})for(float offset=-26*scale;offset<27*scale;offset+=9)
+            {
+                var at=hub+new Vector3(side*29*scale,0,offset);
+                var p2=new Vector2(at.x,at.z);
+                var probe=RoadSurfaceGeometry.Strip(p2-Vector2.up*3,p2+Vector2.up*3,6);
+                bool clear=true;
+                foreach(int id in _streetPavementEnvelopes.Nearby(probe))
+                    if(RoadSurfaceGeometry.Intersect(probe,_streetPavementEnvelopes.Polygons[id]).Length>=3){clear=false;break;}
+                if(!clear)continue;
+                foreach(var place in _city.PublicPlaces)
+                {
+                    var door=NodeWorld(place.NodeId)+new Vector3((float)place.EntranceX,0,(float)place.EntranceY);
+                    var local=Quaternion.Euler(0,-(float)place.Heading,0)*(at-door);
+                    if(Mathf.Abs(local.x)<(float)place.Width/2+4&&local.z>-5&&local.z<(float)place.Depth+4){clear=false;break;}
+                }
+                if(!clear)continue;
+                CityVegetation.Build(root,at,seed++);
+                planting.FlowerBed(at+Vector3.forward*1.6f,2.5f,1.2f,seed,false);
+            }
+            planting.Build(root,"Motor hub waterside planting");
             StaticBatchingUtility.Combine(root.gameObject);
         }
     }

@@ -9,7 +9,7 @@ namespace PCShopSell.Game.UI
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class AssetTrendGraphic : MaskableGraphic
     {
-        internal static readonly Color ExpenseColor = new Color32(233, 178, 150, 255);
+        internal static Color ExpenseColor => Ui.Warn;
 
         protected override void OnEnable()
         {

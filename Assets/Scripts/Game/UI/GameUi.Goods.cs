@@ -64,7 +64,7 @@ namespace PCShopSell.Game.UI
             HoldButton(w,row,"收回",Ui.ButtonBg,stock,"件",n=>S.UnlistGoods(id,(int)n),66,stock>0);
             if(goods.ShelfDays>0&&stock>0)
             {
-                name.text+="\n<size=12><color=#E7BD73>最早到期："+S.GoodsExpiryText(id)+"</color></size>";
+                name.text+="\n<size=12><color=#80551F>最早到期："+S.GoodsExpiryText(id)+"</color></size>";
                 name.fontSize=14;
             }
         }

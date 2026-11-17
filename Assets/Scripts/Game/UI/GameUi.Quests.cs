@@ -44,13 +44,19 @@ namespace PCShopSell.Game.UI
         private void BuildQuestTracker(Transform root)
         {
             _questPanel = Ui.Panel(root, "QuestTracker", Ui.PanelBg);
-            _questPanel.rectTransform.Anchor(0, 1, 0, 1, 16, -332, -456, 82);
+            _questPanel.rectTransform.Anchor(0, 1, 0, 1, 16, -332, -420, 82);
+            var rail = Ui.Panel(_questPanel.transform, "TaskRail", Ui.FlatHotEdge);
+            rail.rectTransform.Anchor(0, 0, 0, 1, 1, 8, -4, 8);
+            rail.raycastTarget = false;
 
-            _questHeading = Ui.Label(_questPanel.transform, "", 17, color: Ui.Warn);
+            _questHeading = Ui.Label(_questPanel.transform, "", 17, color: Ui.Accent);
             _questHeading.fontStyle = FontStyle.Bold;
             _questHeading.rectTransform.Anchor(0, 1, 1, 1, 16, -37, 46, 10);
             _questTitle = Ui.Label(_questPanel.transform, "", 22);
             _questTitle.fontStyle = FontStyle.Bold;
+            _questTitle.resizeTextForBestFit = true;
+            _questTitle.resizeTextMinSize = 16;
+            _questTitle.resizeTextMaxSize = 22;
             _questTitle.rectTransform.Anchor(0, 1, 1, 1, 16, -70, 16, 37);
             _questProgress = Ui.Label(_questPanel.transform, "", 16, color: Ui.Good);
             _questProgress.rectTransform.Anchor(0, 1, 1, 1, 16, -96, 16, 72);
@@ -61,7 +67,7 @@ namespace PCShopSell.Game.UI
             _questText.rectTransform.Anchor(0, 0, 1, 1, 16, 58, 16, 76);
             _questText.verticalOverflow = VerticalWrapMode.Truncate;
 
-            _questActionButton = Ui.Button(_questPanel.transform, "", ActivateQuestAction, 18, Ui.FlatRow);
+            _questActionButton = Ui.Button(_questPanel.transform, "", ActivateQuestAction, 18, Ui.ButtonHot);
             _questActionButton.name = "QuestPrimaryAction";
             _questActionText = _questActionButton.GetComponentInChildren<Text>();
             ((RectTransform)_questActionButton.transform).Anchor(0, 0, .74f, 0, 14, 12, 4, -49);
@@ -127,7 +133,7 @@ namespace PCShopSell.Game.UI
                     _pendingNext = q;
                     _popupPending = true;
                 }
-                else if (done != null) Toast($"<color=#A9C9A9>完成：{done.Title}</color>" + (q != null ? $"\n接下来：{q.Title}" : "\n继续经营小店吧。"));
+                else if (done != null) Toast($"<color=#386047>完成：{done.Title}</color>" + (q != null ? $"\n接下来：{q.Title}" : "\n继续经营小店吧。"));
                 else if (q != null) Toast("新任务：" + q.Title);
             }
             // Wait until result popups (e.g. "签约成功") are dismissed, so they read first.
@@ -167,8 +173,8 @@ namespace PCShopSell.Game.UI
             if (completion.HasValue) _questProgressFill.Anchor(0, 0, Mathf.Clamp01(completion.Value), 1);
             float textTop = completion.HasValue ? 116 : showProgress ? 99 : 77;
             _questText.rectTransform.offsetMax = new Vector2(-16, -textTop);
-            _questText.text = "<b><color=#A9C9A9>下一步</color></b>　" + next
-                + (string.IsNullOrEmpty(status) ? "" : "\n<size=15><color=#AAB4BB>" + status + "</color></size>");
+            _questText.text = "<b><color=#386047>下一步</color></b>　" + QuestPaperInk(next)
+                + (string.IsNullOrEmpty(status) ? "" : "\n<size=15><color=#655E52>" + status + "</color></size>");
             _questPanel.rectTransform.offsetMin = new Vector2(16, -(82 + textTop + 118));
             _questAction = action;
             _questActionText.text = actionLabel ?? "";
@@ -179,6 +185,8 @@ namespace PCShopSell.Game.UI
                 _questDetails.Anchor(hasAction ? .74f : 0, 0, 1, 0, hasAction ? 4 : 14, 12, 14, -49);
             }
         }
+
+        private static string QuestPaperInk(string text) => text?.Replace("<color=#FFC966>", "<color=#80551F>");
 
         private void OpenTrackedQuestDetails()
         {
@@ -412,7 +420,7 @@ namespace PCShopSell.Game.UI
             }
             Line(w.Content, q.Title, 23, Ui.Accent);
             Para(w.Content, GuideLocation(q.Target), 17, Ui.Accent);
-            Para(w.Content, q.Hint, 18);
+            Para(w.Content, QuestPaperInk(q.Hint), 18);
             if (q.Reward != null) Para(w.Content, "完成奖励：" + q.RewardText(S), 16, Ui.Good);
             ProgressLine(w.Content, q, 16);
             if (q.Target == QuestTarget.RacingEnrollment)
@@ -462,7 +470,7 @@ namespace PCShopSell.Game.UI
             if (target == QuestTarget.Market && S.ShopSupplyMarketId(S.RetailKind) is string marketId)
             {
                 var market = S.PurchaseDestination(S.City.GetPlace(marketId));
-                return $"地点：{S.City.StreetName(market.StreetId)} · <color=#FFC966>{market.Name}</color>";
+                return $"地点：{S.City.StreetName(market.StreetId)} · <color=#80551F>{market.Name}</color>";
             }
             if(S.RetailKind!="computer")
             {
@@ -474,20 +482,20 @@ namespace PCShopSell.Game.UI
             {
                 case QuestTarget.Cooker: return "位置：家里 · 电饭锅";
                 case QuestTarget.Bed: return "位置：家里 · 床边";
-                case QuestTarget.Agency: return "地点：商业街 · <color=#FFC966>安居房产中介</color>";
+                case QuestTarget.Agency: return "地点：商业街 · <color=#80551F>安居房产中介</color>";
                 case QuestTarget.Renovate: return "位置：自己的店 → 右侧“装修”页";
                 case QuestTarget.Stock: return "位置：自己的店 · 货架";
-                case QuestTarget.Market: return "地点：<color=#FFC966>电子市场</color> · 配件档口";
+                case QuestTarget.Market: return "地点：<color=#80551F>电子市场</color> · 配件档口";
                 case QuestTarget.Counter: return "位置：自己的店 · 收银台";
                 case QuestTarget.Staff: return "位置：自己的店 → 右侧“员工”页";
-                case QuestTarget.PhoneShop: return "地点：商业街 · <color=#FFC966>手机店</color>";
+                case QuestTarget.PhoneShop: return "地点：商业街 · <color=#80551F>手机店</color>";
                 case QuestTarget.CommunityGoal: return "片区：城郊";
                 case QuestTarget.RacingEnrollment: return "地点：城郊赛场车库";
                 case QuestTarget.ScooterDealer:
                     return ScooterDealer is Place dealer
-                        ? $"地点：{S.City.StreetName(dealer.StreetId)} · <color=#FFC966>{dealer.Name}</color>"
+                        ? $"地点：{S.City.StreetName(dealer.StreetId)} · <color=#80551F>{dealer.Name}</color>"
                         : "";
-                case QuestTarget.Mall: return "地点：商业街 · <color=#FFC966>宜居家具城</color>";
+                case QuestTarget.Mall: return "地点：商业街 · <color=#80551F>宜居家具城</color>";
                 case QuestTarget.Upgrades: return "设备在街上的对应商店购买，家具在店铺“装修”页摆放。";
                 case QuestTarget.Pricing: return "位置：自己的店 → 右侧“定价”页";
                 case QuestTarget.Orders: return "位置：自己的店 → 右侧“订单”页";

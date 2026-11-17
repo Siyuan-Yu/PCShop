@@ -93,9 +93,9 @@ namespace PCShopSell.Game.UI
             {
                 case PhoneApps.Store: return new Color(0.20f, 0.50f, 0.90f);
                 case PhoneApps.Contacts: return new Color(0.25f, 0.65f, 0.35f);
-                case PhoneApps.Settings: return new Color(0.64f, 0.73f, 0.80f);
+                case PhoneApps.Settings: return Ui.InfoInk;
                 case PhoneApps.Schedule: return new Color(0.90f, 0.45f, 0.25f);
-                case PhoneApps.FoodDelivery: return new Color(0.97f, 0.69f, 0.42f);
+                case PhoneApps.FoodDelivery: return Ui.Accent;
                 case PhoneApps.Shop: return new Color(0.88f, 0.28f, 0.35f);
                 case PhoneApps.Loans: return new Color(0.82f, 0.59f, 0.19f);
                 case PhoneApps.Live: return new Color(0.72f, 0.46f, 0.19f);
@@ -136,7 +136,7 @@ namespace PCShopSell.Game.UI
         private void BuildPhoneDesktop(Window w)
         {
 
-            Image wall = Ui.Panel(w.Content, "Wallpaper", new Color(0.10f, 0.20f, 0.36f));
+            Image wall = Ui.Panel(w.Content, "Wallpaper", Ui.FlatBand);
             Ui.Size(wall).GetComponent<LayoutElement>().flexibleHeight=1;
             Ui.VList(wall.rectTransform, 14, 14);
             var apps = PhoneApps.All.Where(a => S.HasApp(a.Id)).ToList();
@@ -226,7 +226,7 @@ namespace PCShopSell.Game.UI
                     icon.raycastTarget = false;
                     if (app.Id == PhoneApps.Securities) BuildStockAppBars(icon.transform, false);
                     else Ui.Label(icon.transform, AppGlyph(app.Id), 28, TextAnchor.MiddleCenter, AppColor(app.Id)).rectTransform.Fill();
-                    Ui.Size(Ui.Label(card, $"<b>{app.Name}</b>\n<size=15><color=#ABB5A8>{app.Description}</color></size>", 18), 0, 84, 1);
+                    Ui.Size(Ui.Label(card, $"<b>{app.Name}</b>\n<size=15><color=#655E52>{app.Description}</color></size>", 18), 0, 84, 1);
                     Ui.Size(Ui.Button(card, installed ? "打开" : "下载", () =>
                     {
                         if (installed) LaunchApp(w, app.Id);

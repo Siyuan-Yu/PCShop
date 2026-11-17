@@ -55,22 +55,26 @@ namespace PCShopSell.Game.UI
                 NavigationIcons[title] = sprite;
             }
             var label = button.GetComponentInChildren<Text>();
-            var content = Rect(button.transform, "NavigationContent").Fill(2);
-            HorizontalOrVerticalLayoutGroup layout = stacked
-                ? (HorizontalOrVerticalLayoutGroup)content.gameObject.AddComponent<VerticalLayoutGroup>()
-                : content.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.childControlWidth = layout.childControlHeight = true;
-            layout.childForceExpandWidth = layout.childForceExpandHeight = false;
-            layout.spacing = 3;
-
-            var icon = Rect(content, "NavigationIcon").gameObject.AddComponent<Image>();
+            var icon = Rect(button.transform, "NavigationIcon").gameObject.AddComponent<Image>();
             icon.sprite = sprite;
             icon.color = label.color;
             icon.raycastTarget = false;
-            Size(icon, 14, 14);
-            label.horizontalOverflow = HorizontalWrapMode.Overflow;
-            label.rectTransform.SetParent(content, false);
+            UseCaptionIcon(button, icon);
+            if (stacked)
+            {
+                icon.rectTransform.Anchor(.5f, .53f, .5f, 1, -8, 1, -8, 2);
+                label.rectTransform.Anchor(0, 0, 1, .52f, 2, 1, 2, 0);
+            }
+            else
+            {
+                icon.rectTransform.Anchor(0, .5f, 0, .5f, 7, -6.5f, -20, -6.5f);
+                label.rectTransform.Anchor(0, 0, 1, 1, 24, 1, 4, 1);
+            }
+            label.alignment = stacked ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = 11;
+            label.resizeTextMaxSize = label.fontSize;
         }
     }
 }

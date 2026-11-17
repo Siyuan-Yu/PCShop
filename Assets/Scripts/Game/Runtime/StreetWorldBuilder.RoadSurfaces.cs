@@ -72,7 +72,7 @@ namespace PCShopSell.Game.Runtime
                 return Mathf.Lerp(GroundStreetY, Deck, fraction);
             }
 
-            public void AddSurface(SurfaceMesh mesh, List<Vector2[]> pieces, float lift = 0)
+            public void AddSurface(SurfaceMesh mesh, List<Vector2[]> pieces, float lift = 0, bool alignToStreet = false)
             {
                 if (RampLength > 0)
                 {
@@ -81,19 +81,24 @@ namespace PCShopSell.Game.Runtime
                     foreach (float distance in RampBoundaries())
                         pieces = RoadSurfaceGeometry.SplitAt(pieces, A + direction * distance, across);
                 }
-                mesh.Add(pieces, point => HeightAt(point) + lift);
+                mesh.Add(pieces, point => HeightAt(point) + lift, alignToStreet ? Direction : Vector2.right);
             }
         }
         sealed class SurfaceMesh
         {
             readonly List<Vector3> vertices=new List<Vector3>();readonly List<int> triangles=new List<int>();readonly List<Vector2> uv=new List<Vector2>();
-            public void Add(IEnumerable<Vector2[]> polygons, System.Func<Vector2, float> height)
+            public void Add(IEnumerable<Vector2[]> polygons, System.Func<Vector2, float> height, Vector2 tileAlong)
             {
+                var tileAcross = new Vector2(-tileAlong.y,tileAlong.x);
                 foreach(var p in polygons)
                 {
                     if(RoadSurfaceGeometry.Area(p)<.0001f)continue;
                     int offset=vertices.Count;
-                    foreach(var v in p){vertices.Add(new Vector3(v.x,height(v),v.y));uv.Add(v/4);}
+                    foreach(var v in p)
+                    {
+                        vertices.Add(new Vector3(v.x,height(v),v.y));
+                        uv.Add(new Vector2(Vector2.Dot(v,tileAlong),Vector2.Dot(v,tileAcross))/4);
+                    }
                     for(int i=1;i+1<p.Length;i++){triangles.Add(offset);triangles.Add(offset+i+1);triangles.Add(offset+i);}
                 }
             }
@@ -115,6 +120,7 @@ namespace PCShopSell.Game.Runtime
             foreach(var n in _city.Map.Nodes)foreach(var e in _city.Map.NeighborsOf(n.Id))
             {
                 string key=string.CompareOrdinal(n.Id,e.To)<0?n.Id+"|"+e.To:e.To+"|"+n.Id;if(!seen.Add(key))continue;
+                if (!BuildsRoad(n.Id, e.To)) continue;
                 var a=NodeWorld(n.Id);var b=NodeWorld(e.To);if((b-a).sqrMagnitude<.01f)continue;
                 bool raisedA = IsLakeAccessNode(n.Id), raisedB = IsLakeAccessNode(e.To);
                 float width = PlannedRoadWidth(a, b);
@@ -162,14 +168,14 @@ namespace PCShopSell.Game.Runtime
             void Pavement(Vector2[] p, StreetSegment street)
             {
                 var parts=roadIndex.Cut(new List<Vector2[]>{p},p);parts=pavingIndex.Cut(parts,p);
-                street.AddSurface(paving, parts);pavingIndex.Add(p);
+                street.AddSurface(paving, parts, alignToStreet:true);pavingIndex.Add(p);
             }
             foreach (var s in segments)
             {
                 Pavement(_streetPavementEnvelopes.Polygons[s.PavingIndex], s);
                 if (s.Raised) _lakeAccessSurfaces.Add(s);
             }
-            foreach(var p in _city.PublicPlaces)
+            foreach(var p in _city.PublicPlaces.Where(BuildsPlace))
             {
                 var a=NodeWorld(p.NodeId);var b=a+new Vector3((float)p.EntranceX,0,(float)p.EntranceY);
                 if ((a-b).sqrMagnitude <= .01f) continue;
@@ -258,9 +264,102 @@ namespace PCShopSell.Game.Runtime
                 }
             }
             roads.Build(root,"RoadSurface",IndustrialMaterials.Surface("asphalt",Asphalt,Vector2.one),resources);
-            paving.Build(root,"PavementSurface",Mats.Lit(Sidewalk),resources);
+            paving.Build(root,"PavementSurface",IndustrialMaterials.Surface("paving",Sidewalk,new Vector2(1.25f,1.25f)),resources);
             white.Build(root,"RoadBoundaryLines",Mats.Lit(ArtDirection.Cream),resources);
             yellow.Build(root,"LaneMarkings",Mats.Lit(ArtDirection.Brass),resources);
+            BuildStreetVerge(root,segments,pavingIndex);
+        }
+
+        private void BuildStreetVerge(Transform parent,List<StreetSegment> streets,RoadSurfaceGeometry.Index paving)
+        {
+            var reserved=new RoadSurfaceGeometry.Index();
+            void Reserve(Vector2 at,float heading,float width,float depth)
+            {
+                var angle=heading*Mathf.Deg2Rad;
+                var back=new Vector2(Mathf.Sin(angle),Mathf.Cos(angle));
+                reserved.Add(RoadSurfaceGeometry.Strip(at-back*.8f,at+back*(depth+.8f),width+1.7f));
+            }
+            foreach(var p in _city.PublicPlaces.Where(BuildsPlace))
+            {
+                var at=NodeWorld(p.NodeId);
+                Reserve(new Vector2(at.x+(float)p.EntranceX,at.z+(float)p.EntranceY),
+                    (float)p.Heading,(float)p.Width,(float)p.Depth);
+            }
+            foreach(var b in _city.Blocks) Reserve(new Vector2((float)b.x,(float)b.y),(float)b.heading,(float)b.width,(float)b.depth);
+            foreach(var parcel in _city.LakeParcels) Reserve(new Vector2((float)parcel.x,(float)parcel.y),
+                (float)parcel.heading,(float)parcel.width,(float)parcel.depth);
+            var shore=SmoothShore();
+            var details=new Dictionary<Vector2Int,ForestChunk>();
+            var gardens=new Dictionary<Vector2Int,MiniatureDetailMesh>();
+            var treeLeaf=Mats.Lit(ArtDirection.Hex("577D35"),.04f);
+            var treeTips=Mats.Lit(ArtDirection.Hex("A5B742"),.04f);
+            var treeBark=Mats.Lit(ArtDirection.Hex("866342"),.06f);
+            bool Overlaps(RoadSurfaceGeometry.Index index,Vector2[] probe) =>
+                index.Nearby(probe).Any(id=>RoadSurfaceGeometry.Intersect(probe,index.Polygons[id]).Length>=3);
+            foreach(var street in streets)
+            {
+                if(street.Raised||street.Length<8)continue;
+                var direction=street.Direction;
+                var across=new Vector2(-direction.y,direction.x);
+                int seed=(Mathf.RoundToInt(street.A.x*5)^Mathf.RoundToInt(street.A.y*13))&1023;
+                float spacing=12f;
+                for(float along=4.8f+seed%4;along<street.Length-3.8f;along+=spacing)
+                for(int side=-1;side<=1;side+=2)
+                {
+                    var pos=street.A+direction*along+across*side*(street.PavedWidth*.5f+3.0f+seed%3*.2f);
+                    var world=new Vector3(pos.x,0,pos.y);
+                    var lakePoint=world/LakeScale;
+                    if(MountainHeight(lakePoint.x,lakePoint.z)>.04f||WithinLake(lakePoint,shore))continue;
+                    var probe=RoadSurfaceGeometry.Strip(pos-direction*2.65f,pos+direction*2.65f,5.3f);
+                    if(Overlaps(paving,probe)||Overlaps(reserved,probe))continue;
+                    var key=new Vector2Int(Mathf.FloorToInt(pos.x/96),Mathf.FloorToInt(pos.y/96));
+                    if(!details.TryGetValue(key,out var chunk)){chunk=new ForestChunk();details.Add(key,chunk);}
+                    if(!gardens.TryGetValue(key,out var garden)){garden=new MiniatureDetailMesh();gardens.Add(key,garden);}
+                    var leaf= garden.Part(treeLeaf); var tips=garden.Part(treeTips);var bark=garden.Part(treeBark);
+                    CityVegetation.AppendTree(leaf.V,leaf.T,tips.V,tips.T,bark.V,bark.T,world,5.4f+seed%3*.35f,false,seed%12);
+                    garden.FlowerBed(world+new Vector3(.35f,0,.4f),2.2f,1.35f,seed,false);
+                    var pole=Mats.Lit(ArtDirection.Hex("46515A"),.25f);
+                    var lamp=world-new Vector3(across.x,0,across.y)*side*1.8f;
+                    garden.Box(lamp+Vector3.up*.13f,new Vector3(.40f,.26f,.40f),pole);
+                    garden.Box(lamp+Vector3.up*1.9f,new Vector3(.11f,3.8f,.11f),pole);
+                    garden.Box(lamp+Vector3.up*3.90f,new Vector3(.42f,.55f,.42f),
+                        Mats.Glow(ArtDirection.Hex("F4CA80"),new Color(2.8f,1.7f,.65f)));
+                    garden.Box(lamp+Vector3.up*4.23f,new Vector3(.62f,.14f,.62f),pole);
+                    if(seed%3==0)
+                    {
+                        var bench=world+new Vector3(direction.x,0,direction.y)*1.6f;
+                        var rotation=Quaternion.LookRotation(new Vector3(across.x*side,0,across.y*side));
+                        var timber=Mats.Lit(ArtDirection.Hex("B48B55"));
+                        for(int slat=0;slat<3;slat++)
+                            garden.Box(bench+Vector3.up*.48f+rotation*new Vector3(0,0,(slat-1)*.18f),new Vector3(1.65f,.095f,.14f),timber,rotation);
+                        garden.Box(bench+Vector3.up*.82f+rotation*new Vector3(0,0,.30f),new Vector3(1.65f,.53f,.10f),timber,rotation);
+                        foreach(int leg in new[]{-1,1})garden.Box(bench+Vector3.up*.23f+rotation*new Vector3(leg*.62f,0,0),new Vector3(.13f,.46f,.48f),pole,rotation);
+                    }
+                    for(int j=0;j<3;j++)
+                    {
+                        float angle=seed*.45f+j*2.39996f;
+                        var at=world+new Vector3(Mathf.Sin(angle),.025f,Mathf.Cos(angle))*(.13f+j*.08f);
+                        var width=new Vector3(Mathf.Cos(angle),0,-Mathf.Sin(angle))*.10f;
+                        var tip=at+Vector3.up*(.20f+j*.055f)+width*.58f;
+                        var vertices=chunk.Vertices[j%2];var triangles=chunk.Triangles[j%2];
+                        int start=vertices.Count;
+                        vertices.Add(at-width);vertices.Add(at+width);vertices.Add(tip);
+                        vertices.Add(at+width);vertices.Add(at-width);vertices.Add(tip);
+                        for(int k=0;k<6;k++)triangles.Add(start+k);
+                        if(j==1&&seed%3==0)
+                            AddCrown(chunk.Vertices[2],chunk.Triangles[2],tip,
+                                new Vector3(.065f,.05f,.065f),false);
+                    }
+                    seed=(seed*113+91)&1023;
+                }
+            }
+            foreach(var pair in gardens)pair.Value.Build(parent,$"Street planting {pair.Key.x}/{pair.Key.y}");
+            string[] colors={"54793D","9DAA58","E2B66C"};
+            foreach(var pair in details)
+                for(int i=0;i<colors.Length;i++)
+                    if(pair.Value.Vertices[i].Count>0)
+                        LandscapeMesh(parent,$"Verge_{pair.Key.x}_{pair.Key.y}_{i}",pair.Value.Vertices[i],pair.Value.Triangles[i],
+                            Mats.Lit(ArtDirection.Hex(colors[i])));
         }
     }
 }

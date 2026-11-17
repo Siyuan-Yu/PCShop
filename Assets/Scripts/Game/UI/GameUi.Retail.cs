@@ -283,6 +283,18 @@ namespace PCShopSell.Game.UI
             }
             string season=hasSeason?ShopTabs(w,source,new[]{PurchaseFacets.All,"春秋装","夏装","冬装"},filterKey:"season",label:"季节"):PurchaseFacets.All;
             if(hasSeason)Line(w.Content,"当前"+CityWeather.Season(S.Clock.Now.TotalMinutes)+"季 · 应季服装需求较多，反季服装仍有需求。",16,Ui.Dim);
+            if (farm)
+            {
+                var columnLabels = Ui.Row(w.Content, 27, 10);
+                columnLabels.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(6, 20, 0, 0);
+                var strip = columnLabels.gameObject.AddComponent<Image>();
+                strip.color = Ui.PanelBg2;
+                strip.raycastTarget = false;
+                Ui.Round(strip);
+                Ui.Size(Ui.Label(columnLabels, "商品", 14, color: Ui.Dim), 0, -1, 1);
+                Ui.Size(Ui.Label(columnLabels, "批发单价", 14, color: Ui.Dim), 120);
+                Ui.Size(Ui.Label(columnLabels, "订购数量", 14, TextAnchor.MiddleCenter, Ui.Dim), 252);
+            }
             var list=GoodsList(w.Content);
             var visible=selectedOffers.Where(o=>(facility==PurchaseFacets.All || o.Group==facility)
                 && (season==PurchaseFacets.All || o.Season==season)).ToList();
@@ -300,14 +312,15 @@ namespace PCShopSell.Game.UI
                 var row=Ui.Row(list,68,10);row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight=false;
                 var highlight = row.gameObject.AddComponent<Image>();
                 highlight.raycastTarget = false;
+                Ui.Round(highlight);
                 Button maximum = null;
                 void UpdateRow(double value)
                 {
-                    highlight.color = value > 0 ? Ui.FlatRow : Color.clear;
+                    highlight.color = value > 0 ? Ui.PendingSurface : Ui.PanelBg;
                     if (maximum != null) maximum.interactable = canAdd && value < max;
                 }
                 string detail=item.Season==null?item.Detail:item.Season+" · "+item.Detail;
-                if (blocker != null) detail = "<color=#E2AA8A>" + blocker + "</color> · " + detail;
+                if (blocker != null) detail = "<color=#9C4634>" + blocker + "</color> · " + detail;
                 CompactProduct(row,item.Key,item.Name,item.Kg,detail,item.Kg<=0);
                 string price = item.Price.ToString();
                 if (farm) price += item.Key switch
@@ -319,7 +332,8 @@ namespace PCShopSell.Game.UI
                 };
                 Ui.Size(Ui.Label(row,price,19,TextAnchor.MiddleLeft,Ui.Good),farm || item.Price.Yuan >= 1000000 ? 120 : 96);
                 if(item.Preview!=null)Ui.Size(Ui.Button(row,"试穿",item.Preview,16),68,38);
-                var setAmount = ShopQuantity(w, row, item.Key, item.Add, canAdd, max, item.AddCount, UpdateRow, item.MinimumOrder);
+                var setAmount = ShopQuantity(w, row, item.Key, item.Add, canAdd, max, item.AddCount, UpdateRow,
+                    item.MinimumOrder, showSlider: !farm);
                 if (supportsMaximum && limited)
                 {
                     maximum = Ui.Size(Ui.Button(row, "最大", () => setAmount(max), 15), 58, 34);

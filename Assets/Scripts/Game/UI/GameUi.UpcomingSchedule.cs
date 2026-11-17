@@ -28,13 +28,11 @@ namespace PCShopSell.Game.UI
             _upcomingScheduleHud.pivot = new Vector2(1, 1);
             _upcomingScheduleHud.anchoredPosition = RightHudRestPosition;
             _upcomingScheduleHud.sizeDelta = new Vector2(UpcomingScheduleWidth, 47 + 43 * UpcomingScheduleLimit);
-            var border = _upcomingScheduleHud.gameObject.AddComponent<Outline>();
-            border.effectColor = new Color(.4f, .45f, .49f); border.effectDistance = new Vector2(1, -1);
             var title = Ui.Label(_upcomingScheduleHud, "接下来的安排", 18);
             title.rectTransform.Anchor(0, 1, .7f, 1, 14, -38, 0, 8);
             var range = Ui.Label(_upcomingScheduleHud, "未来7天", 13, TextAnchor.MiddleRight, Ui.Dim);
             range.rectTransform.Anchor(.7f, 1, 1, 1, 0, -38, 14, 8);
-            var divider = Ui.Panel(_upcomingScheduleHud, "UpcomingDivider", new Color(.33f, .39f, .43f));
+            var divider = Ui.Panel(_upcomingScheduleHud, "UpcomingDivider", Ui.Edge);
             divider.raycastTarget = false;
             divider.rectTransform.Anchor(0, 1, 1, 1, 12, -41, 12, 40);
             for (int index = 0; index < UpcomingScheduleLimit; index++)

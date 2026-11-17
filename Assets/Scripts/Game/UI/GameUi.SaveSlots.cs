@@ -149,10 +149,10 @@ namespace PCShopSell.Game.UI
                 OpenMenuMessage("load_failed", "load_failed_body");
                 return;
             }
-            void Load()
+            void Load() => _ctrl.EnterGame(() =>
             {
                 if (!_ctrl.TryLoadGame(slot, version.Automatic)) OpenMenuMessage("load_failed", "load_failed_body");
-            }
+            });
             if (confirmProgress) ConfirmMenuAction("load", "load_confirm", "load", Load);
             else Load();
         }

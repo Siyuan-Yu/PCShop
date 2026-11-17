@@ -249,7 +249,7 @@ namespace PCShopSell.Game.UI
         private void DrawPriceTrend(Transform parent, PriceDay[] days, double[] values)
         {
             const float width = 1110, height = 158;
-            var chart = Ui.Panel(parent, "PriceTrend", new Color(0, 0, 0, 0.22f));
+            var chart = Ui.Panel(parent, "PriceTrend", Ui.PanelBg2);
             Ui.Size(chart, -1, height + 36);
             var area = Ui.Rect(chart.transform, "Plot");
             area.anchorMin = area.anchorMax = new Vector2(0, 0);
@@ -260,7 +260,7 @@ namespace PCShopSell.Game.UI
             for (int j = 0; j <= 2; j++)
             {
                 float y = j * height / 2;
-                var grid = Ui.Panel(area, "Grid", new Color(1, 1, 1, 0.13f));
+                var grid = Ui.Panel(area, "Grid", Ui.Edge);
                 grid.rectTransform.Anchor(0, j / 2f, 1, j / 2f, 0, 0, 0, -1);
                 var label = Ui.Label(area, (min + (max - min) * j / 2).ToString("0.0"), 12, TextAnchor.MiddleRight, Ui.Dim);
                 label.rectTransform.anchorMin = label.rectTransform.anchorMax = Vector2.zero;

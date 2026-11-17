@@ -25,7 +25,7 @@ namespace PCShopSell.Game.Runtime
             _root = new GameObject("AvatarPreview");
             _root.transform.position = Origin + Vector3.right * (verification ? 80 : portrait ? 40 : 0);
 
-            _figure = Prims.Figure(_root.transform, "Figure", new Color(0.95f, 0.55f, 0.15f), new Color(0.95f, 0.8f, 0.65f), 1.1f);
+            _figure = Prims.Figure(_root.transform, "Figure", ArtDirection.Clay, new Color(0.95f, 0.8f, 0.65f), 1.1f, FigureAppearance.Player);
             _figure.transform.localRotation = Quaternion.Euler(0, -22f, 0);
             Prims.Shape(PrimitiveType.Cylinder, _root.transform, "Floor", new Vector3(0, -0.02f, 0), new Vector3(2.4f, 0.02f, 2.4f), Mats.Lit(new Color(0.33f, 0.31f, 0.3f)));
 
@@ -82,15 +82,7 @@ namespace PCShopSell.Game.Runtime
             var motion = _figure.GetComponent<FigureMotion>();
             motion.LocomotionEnabled = false;
             var torso = motion.Torso;
-            _gestureHead = new GameObject("GestureHead").transform;
-            _gestureHead.SetParent(torso, false);
-            _gestureHead.localPosition = torso.Find("Head").localPosition;
-            for (int i = torso.childCount - 1; i >= 0; i--)
-            {
-                var part = torso.GetChild(i);
-                if (part.name is "Head" or "Hair" or "Fringe" or "Nose" or "Eye")
-                    part.SetParent(_gestureHead, true);
-            }
+            _gestureHead = torso.Find("Head");
             _waveArm = torso.Find("ShoulderR");
             _waveArmRest = _waveArm.localRotation;
             _cam.Render();

@@ -19,10 +19,10 @@ namespace PCShopSell.Game
         {
             var go=NeighborhoodView(id,parent);go.transform.localPosition=position;
             if(go.transform.childCount>0)return;
-            float size=child?.65f:1;
-            Prims.Shape(PrimitiveType.Capsule,go.transform,"Body",new Vector3(0,.7f*size,0),new Vector3(.5f,.7f,.5f)*size,Mats.Lit(child?ArtDirection.Clay:ArtDirection.Blue));
-            Prims.Shape(PrimitiveType.Sphere,go.transform,"Head",new Vector3(0,1.48f*size,0),Vector3.one*.38f*size,Mats.Lit(ArtDirection.Cream));
-            Prims.SignText(go.transform,label,new Vector3(0,1.9f*size,0),2,.25f,ArtDirection.Cream);
+            float scale = child ? .79f : 1f;
+            Prims.FigureForPerson(go.transform, "Character", child ? ArtDirection.Clay : ArtDirection.Blue,
+                ArtDirection.Cream, scale, id);
+            Prims.SignText(go.transform,label,new Vector3(0,child ? 1.25f : 1.9f,0),2,.25f,ArtDirection.Cream);
         }
         private void NeighborhoodWorkerView(string id,NeighborhoodWorker worker,bool show)
         {

@@ -640,7 +640,7 @@ namespace PCShopSell.Game.Runtime
 
             // 铺子租下来是空的：货架、收银台、展示桌、装机操作台都是玩家自己买、自己摆的家具，
             // 摆好后由 RebuildFixtures 从布局里认出来（顾客逛哪、排队站哪、老板站哪都跟着摆放走）。
-            _owner = Prims.Figure(_root, "Owner", new Color(0.95f, 0.55f, 0.15f), new Color(0.95f, 0.8f, 0.65f), 1.05f);
+            _owner = Prims.Figure(_root, "Owner", ArtDirection.Clay, new Color(0.95f, 0.8f, 0.65f), 1.05f, FigureAppearance.Player);
             _owner.transform.localPosition = new Vector3(_doorX = doorX, 0, 0.9f);
             _owner.transform.localRotation = Quaternion.LookRotation(Vector3.forward);
 
@@ -1080,8 +1080,8 @@ namespace PCShopSell.Game.Runtime
                     string personId = session.PersonIdOf(employee.Person);
                     if (!_staffFigures.TryGetValue(employee.Person.Id, out var figure))
                     {
-                        figure = Prims.Figure(_root, "ShopEmployee_" + employee.Person.Id,
-                            CrowdView.PersonClothing(personId), new Color(.95f, .8f, .65f), 1f);
+                        figure = Prims.FigureForPerson(_root, "ShopEmployee_" + employee.Person.Id,
+                            CrowdView.PersonClothing(personId), new Color(.95f, .8f, .65f), 1f, personId);
                         figure.AddComponent<CityPersonMarker>().PersonId = personId;
                         CityNpcClothing.Apply(figure, session, personId);
                         _staffFigures.Add(employee.Person.Id, figure);
@@ -1378,7 +1378,9 @@ namespace PCShopSell.Game.Runtime
                     Color[] skins = { new Color(0.92f, 0.78f, 0.62f), new Color(0.85f, 0.66f, 0.5f), new Color(0.98f, 0.84f, 0.72f) };
                     v = new Visitor
                     {
-                        Go = Prims.Figure(_root, "Customer" + c.Id, new Color(shirt.r * shade, shirt.g * shade, shirt.b * shade), person != null ? skins[0] : skins[c.Id % skins.Length], person != null ? .95f : 0.9f + (c.Id * 53 % 100) / 100f * 0.15f),
+                        Go = Prims.FigureForPerson(_root, "Customer" + c.Id, new Color(shirt.r * shade, shirt.g * shade, shirt.b * shade),
+                            person != null ? skins[0] : skins[c.Id % skins.Length], person != null ? .95f : .9f + (c.Id * 53 % 100) / 100f * .15f,
+                            person?.Id),
                         Profile = profile, PersonId = c.PersonId,
                     };
                     v.Go.transform.position = StreetSpawn();

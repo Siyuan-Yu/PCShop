@@ -52,7 +52,7 @@ namespace PCShopSell.Game.UI
                 }
                 else
                 {
-                    var holder = Ui.Panel(canvas, "ParticipantPortrait", new Color(.07f, .09f, .13f, .88f));
+                    var holder = Ui.Panel(canvas, "ParticipantPortrait", Ui.Chrome);
                     holder.raycastTarget = false;
                     holder.rectTransform.Anchor(.77f, .08f, .975f, .90f, 0, 0, 0, 0);
                     var portrait = FitPortrait(holder.rectTransform, person.Id, 6);
@@ -66,7 +66,7 @@ namespace PCShopSell.Game.UI
 
         private static void EventCgCaption(Transform parent, string caption, float left, float right, TextAnchor alignment)
         {
-            var strip = Ui.Panel(parent, "IllustrationCaption", new Color(.04f, .06f, .09f, .93f));
+            var strip = Ui.Panel(parent, "IllustrationCaption", Ui.Chrome);
             strip.raycastTarget = false;
             strip.rectTransform.Anchor(left, 0f, right, 0f, 0, 10, 0, -43);
             var label = Ui.Label(strip.transform, caption, 16, alignment);

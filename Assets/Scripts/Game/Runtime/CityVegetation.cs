@@ -1,73 +1,92 @@
-﻿using UnityEngine;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace PCShopSell.Game.Runtime
 {
     public static class CityVegetation
     {
-        private static Mesh _crown;
-        private static Mesh _cone;
-        private static Mesh Crown
+        private static readonly Dictionary<int,Mesh[]> Trees=new Dictionary<int,Mesh[]>();
+        public static void Build(Transform parent,Vector3 at,int variant=0,bool warmPalette=false)
         {
-            get
+            int seed=(variant&int.MaxValue)%12;
+            bool blossom=seed==3||seed==9;
+            if(!Trees.TryGetValue(seed,out var meshes)||meshes[0]==null)
             {
-                if(_crown!=null)return _crown;
-                _crown=RoundedCrown();return _crown;
+                var v=new[]{new List<Vector3>(),new List<Vector3>(),new List<Vector3>()};
+                var t=new[]{new List<int>(),new List<int>(),new List<int>()};
+                AppendTree(v[0],t[0],v[1],t[1],v[2],t[2],Vector3.zero,4.2f,seed==8,seed);
+                meshes=new Mesh[3];
+                for(int i=0;i<3;i++)
+                { var m=new Mesh{name="Miniature tree "+seed+"/"+i};m.SetVertices(v[i]);m.SetTriangles(t[i],0);m.RecalculateNormals();if(i<2)SoftenLeafNormals(m);m.RecalculateBounds();meshes[i]=m; }
+                Trees[seed]=meshes;
+            }
+            Color bottom=ArtDirection.Hex(blossom?"B97891":seed%3==0?"537C34":"608535");
+            Color top=ArtDirection.Hex(blossom?"E9ADC2":warmPalette?"B4BC43":"A5B742");
+            var materials=new[]{Mats.Lit(bottom,.04f),Mats.Lit(top,.04f),Mats.Lit(ArtDirection.Hex("866342"),.06f)};
+            var root=new GameObject("Branched garden tree").transform;root.SetParent(parent,false);root.localPosition=at;
+            root.localScale=Vector3.one*(.92f+seed%5*.06f);
+            root.localRotation=Quaternion.Euler(0,seed*53,0);
+            for(int i=0;i<3;i++)
+            {
+                var go=new GameObject(i==2?"Branch structure":"Layered leaf clusters",typeof(MeshFilter),typeof(MeshRenderer));
+                go.transform.SetParent(root,false);go.GetComponent<MeshFilter>().sharedMesh=meshes[i];go.GetComponent<Renderer>().sharedMaterial=materials[i];
             }
         }
-        public static void Build(Transform parent,Vector3 at,int variant=0)
+        private static void SoftenLeafNormals(Mesh mesh)
         {
-            int seed=variant&int.MaxValue;float scale=.9f+(seed%5)*.08f;
-            Prims.Box(parent,"TreeTrunk",at+Vector3.up*1.25f*scale,new Vector3(.24f,2.5f,.24f)*scale,Mats.Lit(ArtDirection.Hex("6E5842")));
-            Color leaf=seed%3==0?ArtDirection.Hex("738343"):seed%3==1?ArtDirection.Hex("8B9654"):ArtDirection.Hex("4E6B4B");
-            if(seed%4==0)
+            var vertices=mesh.vertices;var normals=mesh.normals;
+            var sums=new Dictionary<Vector3Int,Vector3>();
+            for(int i=0;i<vertices.Length;i++)
+            { var key=Vector3Int.RoundToInt(vertices[i]*10000);sums.TryGetValue(key,out var sum);sums[key]=sum+normals[i]; }
+            for(int i=0;i<vertices.Length;i++)
+                normals[i]=Vector3.Lerp(normals[i],sums[Vector3Int.RoundToInt(vertices[i]*10000)].normalized,.56f).normalized;
+            mesh.normals=normals;
+        }
+        // Nearby garden trees and spatially batched woodland share the same silhouette.
+        internal static void AppendTree(List<Vector3> v,List<int> t,List<Vector3> tips,List<int> tipIndices,
+            List<Vector3> trunks,List<int> trunkIndices,Vector3 p,float height,bool conifer,int seed,bool woodland=false)
+        {
+            seed = (seed & int.MaxValue) % 1024;
+            Vector3 bend=p+new Vector3(.035f*height,height*.35f,0);
+            MiniatureDetailMesh.Branch(trunks,trunkIndices,p,bend,height*.047f,height*.028f);
+            MiniatureDetailMesh.Branch(trunks,trunkIndices,bend,p+new Vector3(-.025f*height,height*.81f,.02f*height),height*.028f,height*.009f);
+            for(int j=0;j<3;j++)
             {
-                if(_cone==null)_cone=ConiferCrown();
-                for(int i=0;i<3;i++)CrownPart(parent,_cone,at+new Vector3(0,1.5f+i*.65f,0)*scale,new Vector3(1.1f-i*.23f,1.55f,1.1f-i*.23f)*scale,Color.Lerp(leaf,ArtDirection.Hex("A4A66C"),i*.10f));
+                float a=j*2.1f+seed;
+                MiniatureDetailMesh.Branch(trunks,trunkIndices,p+new Vector3(Mathf.Cos(a)*height*.075f,.02f,Mathf.Sin(a)*height*.075f),
+                    p+Vector3.up*height*.13f,height*.018f,height*.035f);
             }
-            else
+            int lobes=conifer?17:21;
+            for(int j=0;j<lobes;j++)
             {
-                CrownPart(parent,Crown,at+new Vector3(-.35f,2.55f,0)*scale,new Vector3(1.22f,1.4f,1.22f)*scale,leaf);
-                CrownPart(parent,Crown,at+new Vector3(.48f,3.1f,.1f)*scale,new Vector3(.95f,1.3f,1.0f)*scale,Color.Lerp(leaf,ArtDirection.Hex("A8AA71"),.20f));
-                CrownPart(parent,Crown,at+new Vector3(.5f,2.25f,-.35f)*scale,new Vector3(.85f,.85f,.9f)*scale,leaf);
-                for(int cluster=0;cluster<4;cluster++)
+                int group=j/3;
+                float a=group*2.39996f+seed*.61f;
+                float level=group%3*.12f;
+                Vector3 center;
+                float size;
+                if(conifer)
                 {
-                    float angle=cluster*Mathf.PI*.5f;
-                    CrownPart(parent,Crown,at+new Vector3(Mathf.Cos(angle)*.75f,3.2f+(cluster%2)*.35f,Mathf.Sin(angle)*.65f)*scale,new Vector3(.53f,.65f,.54f)*scale,Color.Lerp(leaf,ArtDirection.Cream,.08f));
+                    float t0=j/(float)(lobes-1);
+                    center=p+height*new Vector3(Mathf.Cos(j*2.4f)*(.26f*(1-t0)+.02f),.44f+t0*.44f,Mathf.Sin(j*2.4f)*(.26f*(1-t0)+.02f));
+                    size=height*(.10f+(1-t0)*.06f);
                 }
+                else
+                {
+                    float radial=group==6?.05f:.24f;
+                    center=p+height*new Vector3(Mathf.Cos(a)*radial,.54f+level,Mathf.Sin(a)*radial);
+                    float da=a+(j%3)*2.1f;
+                    center+=height*new Vector3(Mathf.Cos(da)*.085f,(j%3)*.027f,Mathf.Sin(da)*.085f);
+                    if(group==6)center.y=p.y+height*.84f;
+                    size=height*(.14f+(j%3)*.018f);
+                }
+                var radius=new Vector3(size,size*.88f,size*.94f);
+                bool lit=(group%3!=0&&j%3!=0)||group==6;
+                MiniatureDetailMesh.Lobe(lit?tips:v,lit?tipIndices:t,center,radius,j+seed,woodland);
+                if(j%3==0)
+                    MiniatureDetailMesh.Branch(trunks,trunkIndices,p+Vector3.up*height*(.32f+level*.6f),center,
+                        height*.020f,height*.006f);
             }
-            Prims.Shape(PrimitiveType.Cylinder,parent,"TreeBed",at+new Vector3(0,.055f,0),new Vector3(1.35f,.055f,1.35f),Mats.Lit(ArtDirection.Hex("738057")));
-        }
-        private static void CrownPart(Transform parent,Mesh mesh,Vector3 at,Vector3 scale,Color color)
-        {
-            var go=new GameObject("SculptedCanopy",typeof(MeshFilter),typeof(MeshRenderer));go.transform.SetParent(parent,false);
-            go.transform.localPosition=at;go.transform.localScale=scale;
-            go.GetComponent<MeshFilter>().sharedMesh=mesh;go.GetComponent<Renderer>().sharedMaterial=Mats.Lit(color,.12f);
-        }
-        private static Mesh RoundedCrown()
-        {
-            const int rings=6,sides=10;var vertices=new Vector3[(rings+1)*(sides+1)];var indices=new int[rings*sides*6];int t=0;
-            for(int y=0;y<=rings;y++)for(int x=0;x<=sides;x++)
-            {
-                float phi=Mathf.PI*y/rings,theta=2*Mathf.PI*x/sides;
-                vertices[y*(sides+1)+x]=new Vector3(Mathf.Sin(phi)*Mathf.Cos(theta),Mathf.Cos(phi),Mathf.Sin(phi)*Mathf.Sin(theta));
-            }
-            for(int y=0;y<rings;y++)for(int x=0;x<sides;x++)
-            {
-                int a=y*(sides+1)+x,b=a+sides+1;
-                indices[t++]=a;indices[t++]=a+1;indices[t++]=b;indices[t++]=b;indices[t++]=a+1;indices[t++]=b+1;
-            }
-            var mesh=new Mesh{name="RoundedMiniatureCanopy"};mesh.vertices=vertices;mesh.triangles=indices;mesh.RecalculateNormals();mesh.RecalculateBounds();return mesh;
-        }
-        private static Mesh ConiferCrown()
-        {
-            const int sides=10;var vertices=new Vector3[sides*3];var indices=new int[vertices.Length];
-            for(int i=0;i<sides;i++)
-            {
-                float a=i*Mathf.PI*2/sides,b=(i+1)*Mathf.PI*2/sides;
-                vertices[i*3]=new Vector3(0,1,0);vertices[i*3+1]=new Vector3(Mathf.Cos(b),0,Mathf.Sin(b));vertices[i*3+2]=new Vector3(Mathf.Cos(a),0,Mathf.Sin(a));
-            }
-            for(int i=0;i<indices.Length;i++)indices[i]=i;
-            var mesh=new Mesh{name="LayeredConiferCanopy"};mesh.vertices=vertices;mesh.triangles=indices;mesh.RecalculateNormals();mesh.RecalculateBounds();return mesh;
+
         }
     }
 }

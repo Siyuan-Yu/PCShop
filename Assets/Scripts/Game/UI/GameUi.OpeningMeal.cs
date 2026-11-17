@@ -107,7 +107,7 @@ namespace PCShopSell.Game.UI
         private Text _guideTitle, _guideBody, _guideFoot;
         private readonly Image[] _guideDots = new Image[3];
 
-        private static readonly Color GuideDimColor = new Color(0.02f, 0.04f, 0.08f, 0.78f);
+        private static readonly Color GuideDimColor = new Color(.10f, .15f, .11f, .78f);
         private static readonly Vector2 GuideHoleSize = new Vector2(260, 230);
 
         private const float GuideFrameWidth = 4;
@@ -143,7 +143,7 @@ namespace PCShopSell.Game.UI
             _guideHole = Ui.Rect(_guideRoot, "GuideHole");
             _guideHole.anchorMin = _guideHole.anchorMax = Vector2.zero; _guideHole.pivot = Vector2.zero;
 
-            var arrow = Ui.Label(_guideRoot, "▼ 电饭锅", 26, TextAnchor.LowerCenter, Ui.Accent);
+            var arrow = Ui.Label(_guideRoot, "▼ 电饭锅", 26, TextAnchor.LowerCenter, Ui.ChromeGold);
             arrow.fontStyle = FontStyle.Bold; arrow.raycastTarget = false;
             arrow.horizontalOverflow = HorizontalWrapMode.Overflow; arrow.verticalOverflow = VerticalWrapMode.Overflow;
             arrow.gameObject.AddComponent<Shadow>().effectColor = new Color(0, 0, 0, 0.9f);
@@ -171,7 +171,7 @@ namespace PCShopSell.Game.UI
             _guideBody = Ui.Label(_guideCard, "", 20, TextAnchor.UpperLeft);
             _guideBody.raycastTarget = false;
             _guideBody.rectTransform.Anchor(0, 0, 1, 1, 22, 44, 22, 56);
-            _guideFoot = Ui.Label(_guideCard, "", 17, TextAnchor.MiddleLeft, new Color32(0xE0, 0x9A, 0x82, 255));
+            _guideFoot = Ui.Label(_guideCard, "", 17, TextAnchor.MiddleLeft, Ui.Warn);
             _guideFoot.raycastTarget = false;
             _guideFoot.rectTransform.Anchor(0, 0, 1, 0, 22, 10, 22, -38);
             _openingMealIntroNext = Ui.Button(_guideCard, "先找点吃的", () =>

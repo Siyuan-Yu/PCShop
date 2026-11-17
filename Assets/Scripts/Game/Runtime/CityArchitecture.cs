@@ -25,17 +25,20 @@ namespace PCShopSell.Game.Runtime
         public static void Venue(Transform root,Place p,float w,float d)
         {
             float h=VenueHeight(p);string kind=p.Business??"";
-            Color wall=p.Tier==3?ArtDirection.Cream:p.Tier==2?ArtDirection.Blue:ArtDirection.Hex("D4C5AA");
+            StreetLife(root,w,d,h,p.Name.Length,true);
+            Color wall=p.Tier>=2?ArtDirection.Hex("D9CBB8"):ArtDirection.Hex("D6BC9D");
             Color accent=p.Model=="warehouse"?ArtDirection.Blue:kind=="venue_ktv"?ArtDirection.Hex("776088"):kind=="venue_bar"?ArtDirection.Hex("394B50"):kind=="venue_expo"?ArtDirection.Blue:ArtDirection.Clay;
             Box(root,"HallBack",new Vector3(0,h/2,d-.2f),new Vector3(w,h,.4f),wall,true);
             foreach(int side in new[]{-1,1})Box(root,"HallSide",new Vector3(side*(w/2-.2f),h/2,d/2),new Vector3(.4f,h,d),wall,true);
             // A genuine frontage, with an open central doorway, rather than an empty room and sign.
             float door=2.6f,wing=(w-door)/2;
             foreach(int side in new[]{-1,1})
-                Box(root,"StreetFacade",new Vector3(side*(door/2+wing/2),h/2,0),new Vector3(wing,h,.35f),wall,true);
+                Prims.Box(root,"StreetFacade",new Vector3(side*(door/2+wing/2),h/2,0),new Vector3(wing,h,.35f),
+                    IndustrialMaterials.Surface("brick",wall,new Vector2(wing/4,h/3)),true);
             Box(root,"DoorLintel",new Vector3(0,(h+2.8f)/2,0),new Vector3(door,h-2.8f,.35f),wall);
             Box(root,"EntranceGlass",new Vector3(0,1.35f,-.03f),new Vector3(2.2f,2.7f,.08f),ArtDirection.Hex("42646A"));
-            Box(root,"RoofSlab",new Vector3(0,h+.12f,d/2),new Vector3(w+.35f,.25f,d+.35f),accent);
+            Prims.Box(root,"RoofSlab",new Vector3(0,h+.12f,d/2),new Vector3(w+.35f,.25f,d+.35f),
+                IndustrialMaterials.Surface("metal",accent,new Vector2(w/5,d/6)));
             // Wrap the shell in architectural detail on every visible elevation.
             for(int elevation=0;elevation<4;elevation++)
             {
@@ -71,8 +74,9 @@ namespace PCShopSell.Game.Runtime
             {
                 float x=side*w*.29f,y=1.6f+floor*2.7f+(floor>0?2:0);
                 if(y>h-.8f)continue;
-                Box(root,"FrontWindow",new Vector3(x,y,-.21f),new Vector3(w*.23f,1.5f,.09f),ArtDirection.Hex("4D7079"));
-                Box(root,"WindowSill",new Vector3(x,y-.8f,-.25f),new Vector3(w*.25f,.12f,.18f),ArtDirection.Cream);
+                var window=new MiniatureDetailMesh();
+                window.Window(new Vector3(x,y,-.21f),w*.23f,1.5f,ArtDirection.Cream,true);
+                window.Build(root,"Venue display window");
             }
             Box(root,"DoorCanopy",new Vector3(0,2.9f,-.65f),new Vector3(4,.22f,1.3f),p.Tier>1?ArtDirection.Brass:accent);
             if(p.Model=="warehouse")

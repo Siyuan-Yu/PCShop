@@ -117,7 +117,7 @@ namespace PCShopSell.Game.UI
                 var hold = button.gameObject.AddComponent<HoldRepeat>();
                 hold.Owner = w;
                 hold.Key = button.name;
-                hold.Commit = n => Apply(trackWidth > 0 && direction < 0 && min == 0 && current <= minimumOrder
+                hold.Commit = n => Apply(direction < 0 && minimumOrder > 1 && min == 0 && current <= minimumOrder
                     ? 0 : current + direction * n * step, false);
                 button.onClick.AddListener(hold.ClickOnce);
                 button.Tip("点一下调整一档；按住连续调整，越按越快。按下立即应用。");
@@ -139,7 +139,8 @@ namespace PCShopSell.Game.UI
             {
                 if (w.Closed) return;
                 double next = Math.Max(min, Math.Min(limit, target));
-                if (trackWidth > 0 && next > 0 && next < minimumOrder) next = limit >= minimumOrder ? minimumOrder : 0;
+                if (minimumOrder > 1 && min == 0 && next > 0 && next < minimumOrder)
+                    next = limit >= minimumOrder ? minimumOrder : 0;
                 if (!canAdd) next = Math.Min(current, next);
                 if (Math.Abs(next - current) > 1e-9)
                 {
@@ -160,7 +161,8 @@ namespace PCShopSell.Game.UI
                 trackWidth: trackWidth, minimumOrder: minimumOrder);
 
         private Action<double> ShopQuantity(Window w, Transform row, string key, Func<bool> add, bool enabled,
-            double? maxAmount = null, Func<int, bool> addCount = null, Action<double> changed = null, int minimumOrder = 1)
+            double? maxAmount = null, Func<int, bool> addCount = null, Action<double> changed = null, int minimumOrder = 1,
+            bool showSlider = true)
         {
             if (row.Find("Quantity_" + key) != null) return null;
             double amount = S.CartAmount(key);
@@ -181,7 +183,8 @@ namespace PCShopSell.Game.UI
                     double before = S.CartAmount(key);
                     if (!add() || S.CartAmount(key) <= before) break;
                 }
-            }, canAdd: enabled, minimumOrder: minimumOrder, readValue: () => S.CartAmount(key), changed: changed);
+            }, canAdd: enabled, minimumOrder: minimumOrder, readValue: () => S.CartAmount(key), changed: changed,
+                trackWidth: showSlider ? 112 : 0);
         }
 
         private int OnlineQuantity(Window w, Transform row, string key)

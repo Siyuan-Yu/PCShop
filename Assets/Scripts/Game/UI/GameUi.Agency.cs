@@ -17,10 +17,10 @@ namespace PCShopSell.Game.UI
         private string _agencyQuotePlaceId;
         private bool _agencyPurchaseSelected;
         private AgencyStreetMap.ViewState _agencyViewState = new AgencyStreetMap.ViewState();
-        private static readonly Color AgencyPaper = new Color32(230, 224, 207, 255);
-        private static readonly Color AgencyInk = new Color32(46, 66, 61, 255);
-        private static readonly Color AgencyMuted = new Color32(106, 115, 100, 255);
-        private static readonly Color AgencyFuture = new Color32(157, 113, 66, 255);
+        private static readonly Color AgencyPaper = Ui.PanelBg2;
+        private static readonly Color AgencyInk = Ui.TextColor;
+        private static readonly Color AgencyMuted = Ui.Dim;
+        private static readonly Color AgencyFuture = Ui.Accent;
         private string AgencyDiscountPercent => $"{S.AgentDiscount * 100:0.#}%";
         private static string NewShopHours => $"{Ui.Hm(ShopSimulation.DefaultOpenMinute)}–{Ui.Hm(ShopSimulation.DefaultCloseMinute)}";
 
@@ -69,7 +69,7 @@ namespace PCShopSell.Game.UI
             string coverage=district==null?S.City.StreetName(agency.StreetId):string.Join("、",district.streets.Select(S.City.StreetName));
             string detail = _agencyResidential ? "当前住处：" + S.HomeTitle
                 : $"与{Rosters.AgentChen.Name}的熟悉度 {S.AgentRapport} · 中介费减免 {AgencyDiscountPercent}";
-            Ui.Size(Ui.Label(header, $"<b>{S.City.AgencyCoverageName(agency)} · 本片区房源</b>　现金 {S.Ledger.Balance}\n<size=16>负责：{coverage}\n<color=#ABB5A8>{detail}</color></size>", 20), -1, 62, 1);
+            Ui.Size(Ui.Label(header, $"<b>{S.City.AgencyCoverageName(agency)} · 本片区房源</b>　现金 {S.Ledger.Balance}\n<size=16>负责：{coverage}\n<color=#655E52>{detail}</color></size>", 20), -1, 62, 1);
             if (_agencyResidential || !BusinessUnlocked || S.DistrictAccessBlocker(agency) != null) return;
             void OpenSection(int section)
             {
@@ -205,7 +205,7 @@ namespace PCShopSell.Game.UI
             var footfall = Ui.FlatPanel(overview, "AgencyFootfall", Ui.FlatWell, Ui.FlatWellEdge);
             Ui.Size(footfall, -1, 44);
             var entrants = S.ExpectedDailyShopEntrants(p, CompetitionPreviewKind(p));
-            var dailyEntrants = Ui.Label(footfall.transform, $"预计每日入店　<size=27><b><color=#C5DE89>{entrants:N0}</color></b></size> 人", 18);
+            var dailyEntrants = Ui.Label(footfall.transform, $"预计每日入店　<size=27><b><color=#386047>{entrants:N0}</color></b></size> 人", 18);
             dailyEntrants.name = "AgencyDailyEntrants";
             dailyEntrants.rectTransform.Fill(10);
             Ui.Size(Ui.Button(overview, dedicatedVenue ? "场地详情 ›" : "商圈详情与试算 ›", () =>
@@ -299,14 +299,14 @@ namespace PCShopSell.Game.UI
 
         private void AgencyEntryWarning(Transform parent, int openDay)
         {
-            var warning = Ui.Panel(parent, "AgencyEntryWarning", new Color32(79, 43, 27, 255));
+            var warning = Ui.Panel(parent, "AgencyEntryWarning", Ui.WarningSurface);
             Ui.Size(warning, -1, 82);
-            var accent = new Color32(255, 184, 104, 255);
+            var accent = Ui.Warn;
             Ui.Panel(warning.transform, "WarningStripe", accent).rectTransform.Anchor(0, 0, 0, 1, 0, 0, -5, 0);
             var heading = Ui.Label(warning.transform, $"<b>{S.ShopHandoverText(openDay)}</b>", 25, TextAnchor.MiddleLeft, accent);
             heading.name = "AgencyEntryCountdown";
             heading.rectTransform.Anchor(0, .48f, 1, 1, 14, 0, 8, 2);
-            var detail = Ui.Label(warning.transform, "交房后可入驻，房租从签约当天开始计算。", 14, TextAnchor.UpperLeft, new Color32(255, 222, 181, 255));
+            var detail = Ui.Label(warning.transform, "交房后可入驻，房租从签约当天开始计算。", 14, TextAnchor.UpperLeft, Ui.TextColor);
             detail.rectTransform.Anchor(0, 0, 1, .48f, 14, 5, 8, 0);
         }
 

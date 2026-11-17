@@ -16,6 +16,7 @@ namespace PCShopSell.Game.Runtime
             _game=game;
             foreach(var gate in DistrictRoadGate.ForCity(game.City))
             {
+                if (GameSession.FirstChapterTrial && gate.Tier > 1) continue;
                 var root=new GameObject("DistrictCheckpoint_"+gate.Tier);
                 root.transform.SetParent(transform,false);
                 root.transform.position=StreetWorldBuilder.ToWorld(gate.Center);
@@ -36,7 +37,8 @@ namespace PCShopSell.Game.Runtime
                 var textObject=new GameObject("Label",typeof(UnityEngine.UI.Text));textObject.transform.SetParent(rect,false);
                 var label=textObject.GetComponent<UnityEngine.UI.Text>();
                 label.font=UI.Ui.Font;label.fontSize=42;label.alignment=TextAnchor.MiddleCenter;label.color=new Color(1,.87f,.55f);label.raycastTarget=false;
-                label.text="通往"+GameSession.DistrictName(gate.Tier)+" · 完成主线后放行";
+                label.text = GameSession.FirstChapterTrial ? "试玩区域边界"
+                    : "通往" + GameSession.DistrictName(gate.Tier) + " · 完成主线后放行";
                 var labelRect=label.rectTransform;labelRect.anchorMin=Vector2.zero;labelRect.anchorMax=Vector2.one;labelRect.offsetMin=Vector2.zero;labelRect.offsetMax=Vector2.zero;
                 _barriers.Add(root);_tiers.Add(gate.Tier);
             }

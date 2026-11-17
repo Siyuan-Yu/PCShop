@@ -37,7 +37,7 @@ namespace PCShopSell.Game.UI
             if (_contactSel != null && people.All(c => c.Id != _contactSel)) _contactSel = null;
 
             RectTransform body = Ui.Row(w.Content, height, 12);
-            Image graph = Ui.Panel(body, "Graph", new Color(0.08f, 0.1f, 0.13f, 1f));
+            Image graph = Ui.Panel(body, "Graph", Ui.ChromeWell);
             Ui.Size(graph, width, height, 0);
             graph.GetComponent<LayoutElement>().minWidth = width;
             BuildContactGraph(graph.rectTransform, people, w, new Vector2(width / GraphWidth, height / GraphHeight),

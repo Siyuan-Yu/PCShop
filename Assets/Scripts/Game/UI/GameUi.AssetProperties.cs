@@ -139,7 +139,7 @@ namespace PCShopSell.Game.UI
                 if(focused!=null){ShowInfo(view.BuildingAt(focused.Id));view.FocusPlace(focused);}
                 _assetFocusProperty=false;
             }
-            var legend=Ui.Label(stage,"<color=#E8BE62>■ 已购买</color>　<color=#67B5D8>■ 我租用的</color>　<color=#697C6C>■ 其他建筑</color>　· 点建筑查看",14,TextAnchor.MiddleLeft,Ui.Dim);
+            var legend=Ui.Label(stage,"<color=#80551F>■ 已购买</color>　<color=#67B5D8>■ 我租用的</color>　<color=#697C6C>■ 其他建筑</color>　· 点建筑查看",14,TextAnchor.MiddleLeft,Ui.Dim);
             legend.rectTransform.Anchor(0,0,1,0,0,0,290,-23);
             Line(w.Content,"点击建筑查看基本信息；右侧单击选中、双击聚焦。滚轮缩放、拖动查看。",15,Ui.Dim);
         }

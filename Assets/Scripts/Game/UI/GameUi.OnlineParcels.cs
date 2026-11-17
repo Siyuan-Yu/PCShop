@@ -114,13 +114,13 @@ namespace PCShopSell.Game.UI
                 var row = Ui.Row(picks, 46, 6);
                 row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
                 ItemPortrait(row, e.Key, 42);
-                var label = Ui.Label(row, $"{e.Name} <color=#E8BE62>×{count}</color>\n<size=14><color=#AAB4BB>{e.Price * count}</color></size>", 17, TextAnchor.MiddleLeft);
+                var label = Ui.Label(row, $"{e.Name} <color=#80551F>×{count}</color>\n<size=14><color=#655E52>{e.Price * count}</color></size>", 17, TextAnchor.MiddleLeft);
                 label.verticalOverflow = VerticalWrapMode.Truncate;
                 Ui.Size(label, -1, -1, 1);
                 Ui.Size(Ui.Button(row, "移除", () => { _parcelCart.Remove(e.Key); w.Rebuild(); }, 15, Ui.ButtonBg), 58, 34);
             }
             Ui.Size(Ui.Label(side, $"送到 {S.CourierDestName(destination)} · {GameSession.DeliveryDays} 天后送达", 15, TextAnchor.MiddleLeft, Ui.Dim), -1, 28);
-            Ui.Size(Ui.Label(side, $"合计 <b><color=#E8C77A>{total}</color></b>", 28, TextAnchor.MiddleRight), -1, 40);
+            Ui.Size(Ui.Label(side, $"合计 <b><color=#80551F>{total}</color></b>", 28, TextAnchor.MiddleRight), -1, 40);
             var order = Ui.Button(side, "下单", () =>
             {
                 foreach (var e in entries.Where(e => NumberOf(e) > 0))

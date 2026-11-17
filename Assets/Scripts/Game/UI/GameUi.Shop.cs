@@ -35,6 +35,7 @@ namespace PCShopSell.Game.UI
         private RectTransform _dock;
         private RectTransform _dockContent;
         private Text _dockTitle, _dockStatus;
+        private Image _dockStatusPlate;
         private GameObject _staffPurchaseAlert;
         private readonly List<(Button b, ShopTab tab)> _tabButtons = new List<(Button, ShopTab)>();
         private ShopTab _tab = ShopTab.Counter;
@@ -91,8 +92,11 @@ namespace PCShopSell.Game.UI
             var rename = Ui.Size(Ui.Button(titleRow, "改名", () => OpenShopRename(S.CurrentShop), 16), 76, 34);
             rename.name = "RenameShop";
             rename.GetComponent<LayoutElement>().minWidth = 76;
-            _dockStatus = Ui.Label(_dock, "", 16, TextAnchor.MiddleRight);
-            _dockStatus.rectTransform.Anchor(1, 1, 1, 1, -110, -49, 16, 6);
+            _dockStatusPlate = Ui.Panel(_dock, "ShopOpenStatus", Ui.SuccessSurface);
+            _dockStatusPlate.rectTransform.Anchor(1, 1, 1, 1, -117, -40, 15, 12);
+            _dockStatusPlate.raycastTarget = false;
+            _dockStatus = Ui.Label(_dockStatusPlate.transform, "", 15, TextAnchor.MiddleCenter);
+            _dockStatus.rectTransform.Fill(2);
 
             RectTransform tabs = Ui.Rect(_dock, "Tabs").Anchor(0, 1, 1, 1, 12, -93, 12, 52);
             var h = tabs.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -191,6 +195,7 @@ namespace PCShopSell.Game.UI
             bool finishing = !open && S.ShopFinishingService(S.CurrentShop);
             _dockStatus.text = open ? "● 营业中" : finishing ? "● 打烊收尾" : "● 已关门";
             _dockStatus.color = open ? Ui.Good : finishing ? Ui.Accent : Ui.Warn;
+            _dockStatusPlate.color = open ? Ui.SuccessSurface : finishing ? Ui.PendingSurface : Ui.WarningSurface;
             RefreshStaffPurchaseAlert();
         }
 
@@ -282,8 +287,8 @@ namespace PCShopSell.Game.UI
         {
             long waited = customer.WaitingSince.MinutesUntil(S.Clock.Now);
             double? seconds = S.PlayerShop.CheckoutElapsedSeconds(customer);
-            string patience = seconds.HasValue ? (seconds.Value >= 12 ? $"<color=#D79780>已等 {seconds.Value:0} 秒，请尽快结账</color>" : $"已等 {seconds.Value:0} 秒") : $"等了 {waited} 游戏分钟";
-            return $"{customer.ItemName}（{(customer.DisplayTier >= 0 ? "展示机" : customer.GoodsId != null ? "杂货" : customer.ItemBoxed ? "盒装" : "散件")}） <color=#A9C9A9>{customer.Spend}</color>\n<size=14>{patience}</size>";
+            string patience = seconds.HasValue ? (seconds.Value >= 12 ? $"<color=#9C4634>已等 {seconds.Value:0} 秒，请尽快结账</color>" : $"已等 {seconds.Value:0} 秒") : $"等了 {waited} 游戏分钟";
+            return $"{customer.ItemName}（{(customer.DisplayTier >= 0 ? "展示机" : customer.GoodsId != null ? "杂货" : customer.ItemBoxed ? "盒装" : "散件")}） <color=#386047>{customer.Spend}</color>\n<size=14>{patience}</size>";
         }
 
         private ShopTab? _scrollTab;
@@ -416,7 +421,7 @@ namespace PCShopSell.Game.UI
 
             bool atCounter = _ctrl.Interior != null && _ctrl.Interior.NearCounter;
             if (shop.Queue.Count > 0)
-                CounterText(() => _ctrl.Interior != null && _ctrl.Interior.NearCounter ? "按 F 或点「结账」收款" : "<b><color=#D79780>请到收银台后方结账</color></b>", 17);
+                CounterText(() => _ctrl.Interior != null && _ctrl.Interior.NearCounter ? "按 F 或点「结账」收款" : "<b><color=#9C4634>请到收银台后方结账</color></b>", 17);
             RectTransform list = Ui.Scroll(C, shop.Queue.Count == 0 ? 45 : Mathf.Clamp(shop.Queue.Count * 50, 100, fitBanner ? 200 : 280));
             foreach (ShopCustomer c in shop.Queue)
             {
@@ -730,7 +735,7 @@ namespace PCShopSell.Game.UI
                 ShelfFill fill = shop.ShelfFillAt(layoutIdx,sk) ?? new ShelfFill(sk,sdef.ShelfKg,sdef.ShelfItems);
                 string tier = sdef != null && sdef.ShelfKg > ShelfKinds.CapacityKg ? (sdef.ShelfKg >= 160 ? "重型" : "加固") : "普通";
                 RectTransform srow = Ui.Row(C, 38, 4);
-                Ui.Size(Ui.Label(srow, $"<b>{si + 1}号</b> <size=12><color=#ABB5A8>{tier}</color></size>", 16, TextAnchor.MiddleLeft), 78);
+                Ui.Size(Ui.Label(srow, $"<b>{si + 1}号</b> <size=12><color=#655E52>{tier}</color></size>", 16, TextAnchor.MiddleLeft), 78);
                 Ui.Size(Ui.Button(srow, sk == null ? "选择摆什么 ▾" : sk.Name + "  ▾", () => OpenShelfKindChooser(layoutIdx), 16, sk == null ? Ui.Warn : Ui.ButtonBg), 150);
                 string load = $"{fill.UsedKg:0.##}/{fill.CapacityKg:0} 千克\n{fill.Total}/{fill.CapacityItems} 件" + (fill.Full ? " · 已满" : "");
                 Ui.Size(Ui.Label(srow, load, 14, TextAnchor.MiddleLeft, fill.Full ? Ui.Warn : Ui.Dim), 154).name = $"ShelfCapacity_{layoutIdx}";
@@ -972,10 +977,10 @@ namespace PCShopSell.Game.UI
                     max = System.Math.Max(max, System.Math.Max(d.Revenue.Cents, d.Expense.Cents));
                 }
                 Line(w.Content, $"近 {days.Count} 天：销售 {rev}　经营支出 {exp}　经营现金净额 {rev + other - exp}", 19);
-                Line(w.Content, "<color=#A9C9A9>■</color> 销售收款　<color=#D79780>■</color> 经营支出", 15, Ui.Dim);
+                Line(w.Content, "<color=#386047>■</color> 销售收款　<color=#9C4634>■</color> 经营支出", 15, Ui.Dim);
 
                 Line(w.Content, $"{scope} · 其他经营收款 {other}；个人消费、借款和押金不计入本图。", 15, Ui.Dim);
-                Image plot = Ui.Panel(w.Content, "Chart", new Color(0, 0, 0, 0.22f));
+                Image plot = Ui.Panel(w.Content, "Chart", Ui.PanelBg2);
                 Ui.Size(plot, -1, 380);
                 var h = plot.gameObject.AddComponent<HorizontalLayoutGroup>();
                 h.padding = new RectOffset(8, 8, 8, 8);
@@ -994,7 +999,7 @@ namespace PCShopSell.Game.UI
                     float he = d.Expense.Cents <= 0 ? 0 : Mathf.Max(0.01f, (float)d.Expense.Cents / max);
                     Ui.Panel(area, "Rev", Ui.Good).rectTransform.Anchor(0.05f, 0, 0.48f, hr);
                     Ui.Panel(area, "Exp", Ui.Warn).rectTransform.Anchor(0.52f, 0, 0.95f, he);
-                    Text lbl = Ui.Label(col, $"{d.Date.Month}/{d.Date.Day}\n<size=11><color=#A9C9A9>{(d.Revenue.IsZero ? "-" : "¥" + d.Revenue.Yuan)}</color></size>\n<size=11><color=#D79780>{(d.Expense.IsZero ? "-" : "¥" + d.Expense.Yuan)}</color></size>", 12, TextAnchor.UpperCenter);
+                    Text lbl = Ui.Label(col, $"{d.Date.Month}/{d.Date.Day}\n<size=11><color=#386047>{(d.Revenue.IsZero ? "-" : "¥" + d.Revenue.Yuan)}</color></size>\n<size=11><color=#9C4634>{(d.Expense.IsZero ? "-" : "¥" + d.Expense.Yuan)}</color></size>", 12, TextAnchor.UpperCenter);
                     lbl.rectTransform.Anchor(0, 0, 1, 0, 0, 0, 0, -40);
                 }
 
@@ -1022,11 +1027,11 @@ namespace PCShopSell.Game.UI
                 BuildOrder order = o;
                 List<PartDef> missing = S.MissingParts(o);
                 long left = S.Clock.Now.MinutesUntil(o.DueAt);
-                Text head = Ui.Label(list, $"<b>{PartCatalog.TierName(o.Tier)}整机</b>  报价 <color=#A9C9A9>{o.Price}</color>  剩 {left / 60} 小时", 18);
+                Text head = Ui.Label(list, $"<b>{PartCatalog.TierName(o.Tier)}整机</b>  报价 <color=#386047>{o.Price}</color>  剩 {left / 60} 小时", 18);
                 Ui.Size(head, -1, 28);
                 foreach (PartDef p in PartCatalog.BuildList(o.Tier))
                 {
-                    string status = order.HasReservedPart(p) ? "<color=#A9C9A9>已预留</color>" : "<color=#D79780>缺货</color>";
+                    string status = order.HasReservedPart(p) ? "<color=#386047>已预留</color>" : "<color=#9C4634>缺货</color>";
                     Ui.Size(Ui.Label(list, $"   {PartCatalog.CategoryName(p.Category)}：{p.Name} · {status}", 16), -1, 22);
                 }
                 string action = missing.Count > 0 ? $"还缺 {missing.Count} 样配件" :
@@ -1064,8 +1069,8 @@ namespace PCShopSell.Game.UI
             {
                 bool owned = S.HasUpgrade(u.Id);
                 string blocker = owned ? null : S.UpgradeBlocker(u);
-                string status = owned ? "<color=#A9C9A9>已装好</color>"
-                    : $"{u.Price}　去<color=#DDC18B>{u.SoldAtName}</color>买" + (blocker != null && blocker != "钱不够" ? $"　<color=#D79780>{blocker}</color>" : "");
+                string status = owned ? "<color=#386047>已装好</color>"
+                    : $"{u.Price}　去<color=#80551F>{u.SoldAtName}</color>买" + (blocker != null && blocker != "钱不够" ? $"　<color=#9C4634>{blocker}</color>" : "");
                 Para(list, $"<b>{u.Name}</b>　{status}\n<size=14>{u.Description}</size>", 17);
             }
             Para(list, "智能手机、收款码、自助结账、监控在街上的手机店；招牌灯箱、空调和更大更结实的货架在宜居家具城。自助结账一年目标达标也会赠送。", 14, Ui.Dim);

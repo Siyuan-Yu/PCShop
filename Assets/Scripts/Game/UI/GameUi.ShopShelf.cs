@@ -192,7 +192,7 @@ namespace PCShopSell.Game.UI
                 Para(w.Content, "整机售价 = 同套配件盒装分卖总价 × 1.20 + 装机手工费。配件调价会同步影响新整机报价。", 15, Ui.Accent);
                 Line(w.Content, $"展台上 <b>{shown}/{shop.DisplaySlots}</b> 台　·　想买整机的顾客占 <b>{shop.BuildChance:P0}</b>（展台空着时 {shop.Settings.BuildOrderChance:P0}）", 17);
 
-                Image table = Ui.Panel(w.Content, "Table", new Color(0.11f, 0.12f, 0.14f));
+                Image table = Ui.Panel(w.Content, "Table", Ui.FlatBand);
                 Ui.Size(table, -1, 470);
                 RectTransform row = Ui.Row(table.transform, 470, 10);
                 row.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(10, 10, 10, 10);
@@ -290,7 +290,7 @@ namespace PCShopSell.Game.UI
                 new Color(0.42f, 0.24f, 0.62f),
             };
 
-            Image col = Ui.Panel(row, "Stand", new Color(0.16f, 0.17f, 0.2f));
+            Image col = Ui.Panel(row, "Stand", Ui.PanelBg2);
             Ui.Size(col, 294, 450);
             RectTransform rt = col.rectTransform;
 
