@@ -17,7 +17,7 @@ public static class WebGlTrialBuild
             string output = Path.GetFullPath(args[index + 1]);
             if (Directory.Exists(output) || File.Exists(output)) throw new IOException("Build output already exists: " + output);
 
-            PlayerSettings.productName = "PCShop 试玩版";
+            PlayerSettings.productName = "PETSHOP 试玩版";
             PlayerSettings.defaultScreenWidth = 1280;
             PlayerSettings.defaultScreenHeight = 720;
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;

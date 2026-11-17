@@ -10,6 +10,7 @@ namespace PCShopSell.Game.Runtime
     {
         private float LakeScale=>_city.LakeSceneScale;
         private const float LakeWaterLevel = .21f;
+        private const float LakeBridgeHalfWidth = 6;
         internal static float LakeAccessHeight(PCShopSell.Core.World.CityLayout city) =>
             Mathf.Max(.25f, LakeWaterLevel * city.LakeSceneScale + .06f);
         private Vector3 LakeNode(string id)=>NodeWorld(id)/LakeScale;
@@ -34,6 +35,8 @@ namespace PCShopSell.Game.Runtime
             BuildShoreFurniture(root,shore);
             BuildLakeIslands(root);
             BuildRaceCauseways();
+            _streetRoadEnvelopes = null;
+            _streetPavementEnvelopes = null;
         }
 
         private List<Vector3> SmoothShore()
@@ -205,39 +208,136 @@ namespace PCShopSell.Game.Runtime
         private void BuildClosedLakeBridge(Transform parent,PCShopSell.Core.World.LayoutLakeBridge bridge)
         {
             var root=new GameObject(bridge.id+"_Closed").transform;root.SetParent(parent,false);
-            var points=bridge.points.Select(p=>new Vector3((float)p.x,0,(float)p.y)/LakeScale).ToArray();
-            float total=0;for(int i=1;i<points.Length;i++)total+=Vector3.Distance(points[i-1],points[i]);
-            float traveled=0,peak=bridge.requiredTier==2?5.5f:13.5f;
-            for(int i=1;i<points.Length;i++)
+            var route = bridge.points.Select(p => new Vector3((float)p.x, 0, (float)p.y) / LakeScale).ToArray();
+            if (route.Length < 2) return;
+            float routeLength = 0;
+            for (int i = 1; i < route.Length; i++) routeLength += Vector3.Distance(route[i - 1], route[i]);
+            if (routeLength < .001f) return;
+
+            // Keep both landings level until the deck is beyond the street.
+            float landing = Mathf.Min(12, routeLength * .2f);
+            var sections = new List<Vector3> { route[0] };
+            float walked = 0;
+            var landingBounds = new[] { landing, routeLength - landing };
+            for (int i = 1; i < route.Length; i++)
             {
-                Vector3 a=points[i-1],b=points[i];float length=Vector3.Distance(a,b),start=traveled;
-                float ha=.35f+peak*Mathf.Sin(Mathf.PI*traveled/total);traveled+=length;
-                float hb=.35f+peak*Mathf.Sin(Mathf.PI*traveled/total);a.y=ha;b.y=hb;
-                var deck=Prims.Box(root,"ConcreteBridgeDeck",(a+b)*.5f-Vector3.up*.35f,new Vector3(12,.7f,Vector3.Distance(a,b)+.5f),Mats.Lit(ArtDirection.Hex("C9CCBE")));
-                deck.transform.rotation=Quaternion.LookRotation(b-a);
-                var road=Prims.Box(root,"BridgeAsphalt",(a+b)*.5f+Vector3.up*.025f,new Vector3(8,.08f,Vector3.Distance(a,b)+.1f),Mats.Lit(Asphalt));road.transform.rotation=deck.transform.rotation;
-                Vector3 right=Vector3.Cross(Vector3.up,(b-a).normalized);
-                for(float s=Mathf.Ceil(start/5)*5-start;s<length;s+=5)
+                float span = Vector3.Distance(route[i - 1], route[i]);
+                if (span < .001f) continue;
+                foreach (float at in landingBounds)
+                    if (at > walked + .001f && at < walked + span - .001f)
+                        sections.Add(Vector3.Lerp(route[i - 1], route[i], (at - walked) / span));
+                sections.Add(route[i]);
+                walked += span;
+            }
+            var points = sections.ToArray();
+            var distance = new float[points.Length];
+            var normals = new Vector3[points.Length - 1];
+            for (int i = 0; i < normals.Length; i++)
+            {
+                var span = points[i + 1] - points[i];
+                normals[i] = Vector3.Cross(Vector3.up, span.normalized);
+                distance[i + 1] = distance[i] + span.magnitude;
+            }
+            float total = distance[points.Length - 1];
+            if (total < .001f) return;
+            float peak = bridge.requiredTier == 2 ? 5.5f : 13.5f;
+            var right = new Vector3[points.Length];
+            for (int i = 0; i < points.Length; i++)
+            {
+                // Both spans use the same cross-section at each bend.
+                var before = normals[Mathf.Max(0, i - 1)];
+                var after = normals[Mathf.Min(i, normals.Length - 1)];
+                var bisector = (before + after).normalized;
+                right[i] = bisector / Mathf.Max(.5f, Vector3.Dot(bisector, after));
+                float fraction = Mathf.InverseLerp(landing, total - landing, distance[i]);
+                points[i].y = GroundStreetY / LakeScale + peak * Mathf.Max(0, Mathf.Sin(Mathf.PI * fraction));
+            }
+
+            const float deckHalfWidth = LakeBridgeHalfWidth;
+            const float asphaltHalfWidth = 4;
+            const float railCenter = 5.65f;
+            const float asphaltLift = .007f;
+            var deck = new BridgeMesh();
+            var asphalt = new BridgeMesh();
+            var rail = new BridgeMesh();
+            var markings = new BridgeMesh();
+            float gateInset = Mathf.Min(5, total * .2f);
+            var sides = new[] { -1, 1 };
+            for (int i = 1; i < points.Length; i++)
+            {
+                float start = distance[i - 1], end = distance[i], length = end - start;
+                if (length < .001f) continue;
+                Vector3 Section(float at, float lateral, float lift = 0)
                 {
-                    Vector3 pos=Vector3.Lerp(a,b,s/length);
-                    var dash=Prims.Box(root,"BridgeLaneMark",pos+Vector3.up*.08f,new Vector3(.14f,.02f,2.3f),Mats.Lit(ArtDirection.Cream));dash.transform.rotation=deck.transform.rotation;
-                    foreach(int side in new[]{-1,1})
-                    {
-                        Prims.Box(root,"Baluster",pos+right*side*5.65f+Vector3.up*.7f,new Vector3(.17f,1.4f,.17f),Mats.Lit(ArtDirection.Cream));
-                        if(Mathf.RoundToInt((start+s)/5)%5==0)LakeLamp(root,pos+right*side*5.1f);
-                    }
-                    if(Mathf.RoundToInt((start+s)/5)%6==0&&pos.y>2)
-                        Prims.Shape(PrimitiveType.Cylinder,root,"BridgePier",new Vector3(pos.x,pos.y*.5f-.5f,pos.z),new Vector3(2.2f,pos.y*.5f,2.2f),Mats.Lit(ArtDirection.Hex("B7BBAF")));
+                    float fraction = (at - start) / length;
+                    return Vector3.Lerp(points[i - 1], points[i], fraction)
+                        + Vector3.Lerp(right[i - 1], right[i], fraction) * lateral + Vector3.up * lift;
                 }
-                foreach(int side in new[]{-1,1})
+                void Top(BridgeMesh mesh, float from, float to, float left, float rightEdge, float lift, bool trimAtStreet = false)
                 {
-                    var rail=Prims.Box(root,"ContinuousRailing",(a+b)*.5f+right*side*5.65f+Vector3.up*1.4f,new Vector3(.22f,.18f,Vector3.Distance(a,b)+.5f),Mats.Lit(ArtDirection.Cream));rail.transform.rotation=deck.transform.rotation;
+                    var a = Section(from, left, lift);
+                    var b = Section(to, left, lift);
+                    var c = Section(to, rightEdge, lift);
+                    var d = Section(from, rightEdge, lift);
+                    if (trimAtStreet && (from < landing + 4 || to > total - landing - 4))
+                        mesh.QuadOutsideStreets(a, b, c, d, _streetRoadEnvelopes, LakeScale);
+                    else
+                        mesh.Quad(a, b, c, d);
+                }
+                void Side(BridgeMesh mesh, float from, float to, float edge, float low, float high, int facing)
+                {
+                    if (facing > 0) mesh.Quad(Section(from, edge, low), Section(from, edge, high),
+                        Section(to, edge, high), Section(to, edge, low));
+                    else mesh.Quad(Section(to, edge, low), Section(to, edge, high),
+                        Section(from, edge, high), Section(from, edge, low));
+                }
+                Top(deck, start, end, -deckHalfWidth, -asphaltHalfWidth, asphaltLift, true);
+                Top(deck, start, end, asphaltHalfWidth, deckHalfWidth, asphaltLift, true);
+                Top(asphalt, start, end, -asphaltHalfWidth, asphaltHalfWidth, asphaltLift, true);
+                float railStart = Mathf.Max(start, gateInset), railEnd = Mathf.Min(end, total - gateInset);
+                foreach (int side in sides)
+                {
+                    Side(deck, start, end, deckHalfWidth * side, -.7f, asphaltLift, side);
+                    if (railStart >= railEnd) continue;
+                    float left = side * railCenter - .11f, rightEdge = side * railCenter + .11f;
+                    Top(rail, railStart, railEnd, left, rightEdge, 1.49f);
+                    Side(rail, railStart, railEnd, left, 1.31f, 1.49f, -1);
+                    Side(rail, railStart, railEnd, rightEdge, 1.31f, 1.49f, 1);
+                }
+
+                for (int mark = Mathf.FloorToInt(start / 5); mark * 5 < end; mark++)
+                {
+                    float station = mark * 5;
+                    float from = Mathf.Max(railStart, station), to = Mathf.Min(railEnd, station + 2.3f);
+                    if (to > from) Top(markings, from, to, -.07f, .07f, asphaltLift + .014f);
+                    if (station < railStart || station >= railEnd) continue;
+                    foreach (int side in sides)
+                    {
+                        Prims.Box(root, "Baluster", Section(station, side * railCenter, .7f),
+                            new Vector3(.17f, 1.4f, .17f), Mats.Lit(ArtDirection.Cream));
+                        if (mark % 5 == 0) LakeLamp(root, Section(station, side * 5.1f));
+                    }
+                    var pos = Section(station, 0);
+                    if (mark % 6 == 0 && pos.y > 2)
+                        Prims.Shape(PrimitiveType.Cylinder, root, "BridgePier", new Vector3(pos.x, pos.y * .5f - .5f, pos.z),
+                            new Vector3(2.2f, pos.y * .5f, 2.2f), Mats.Lit(ArtDirection.Hex("B7BBAF")));
                 }
             }
-            foreach(int end in new[]{0,points.Length-1})
+            LandscapeMesh(root, "ConcreteBridgeDeck", deck.Vertices, deck.Triangles, Mats.Lit(ArtDirection.Hex("C9CCBE")));
+            LandscapeMesh(root, "BridgeAsphalt", asphalt.Vertices, asphalt.Triangles, IndustrialMaterials.Surface("asphalt", Asphalt, Vector2.one));
+            LandscapeMesh(root, "ContinuousRailing", rail.Vertices, rail.Triangles, Mats.Lit(ArtDirection.Cream));
+            LandscapeMesh(root, "BridgeLaneMark", markings.Vertices, markings.Triangles, Mats.Lit(ArtDirection.Cream));
+            foreach (int end in new[] { 0, points.Length - 1 })
             {
-                Vector3 p=points[end];var gate=new GameObject("ClosedBridgeGate").transform;gate.SetParent(root,false);gate.position=p;
-                gate.localRotation=Quaternion.LookRotation(points[end==0?1:end-1]-p);gate.localPosition=p;
+                float at = end == 0 ? gateInset : total - gateInset;
+                int span = 1;
+                while (span < points.Length - 1 && distance[span] < at) span++;
+                var forward = points[span] - points[span - 1];
+                var gate = new GameObject("ClosedBridgeGate").transform;
+                gate.SetParent(root, false);
+                gate.localPosition = Vector3.Lerp(points[span - 1], points[span], Mathf.InverseLerp(distance[span - 1], distance[span], at));
+                forward.y = 0;
+                gate.localRotation = Quaternion.LookRotation(end == 0 ? forward : -forward);
                 foreach(int side in new[]{-1,1})Prims.Box(gate,"GatePost",new Vector3(side*5,1.5f,0),new Vector3(.6f,3,.6f),Mats.Lit(ArtDirection.Ink),true);
                 Prims.Box(gate,"ClosedBarrier",new Vector3(0,1.1f,0),new Vector3(10,.5f,.35f),Mats.Lit(ArtDirection.Clay),true);
                 for(int i=-4;i<=4;i++)Prims.Box(gate,"BarrierStripe",new Vector3(i,1.1f,-.19f),new Vector3(.4f,.5f,.03f),Mats.Lit(ArtDirection.Cream));
@@ -245,6 +345,65 @@ namespace PCShopSell.Game.Runtime
                 Prims.SignText(gate,bridge.name+" · 暂未开放",new Vector3(0,3.4f,-.18f),9.5f,1.2f,ArtDirection.Cream);
             }
             StaticBatchingUtility.Combine(root.gameObject);
+        }
+
+        private sealed class BridgeMesh
+        {
+            public readonly List<Vector3> Vertices = new List<Vector3>();
+            public readonly List<int> Triangles = new List<int>();
+
+            public void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d)
+            {
+                int first = Vertices.Count;
+                Vertices.Add(a);
+                Vertices.Add(b);
+                Vertices.Add(c);
+                Vertices.Add(d);
+                Triangles.Add(first);
+                Triangles.Add(first + 1);
+                Triangles.Add(first + 2);
+                Triangles.Add(first);
+                Triangles.Add(first + 2);
+                Triangles.Add(first + 3);
+            }
+
+            public void QuadOutsideStreets(Vector3 a, Vector3 b, Vector3 c, Vector3 d,
+                RoadSurfaceGeometry.Index streets, float scale)
+            {
+                // Clip the two faces before lifting them back to the bridge grade.
+                AddFace(a, b, c);
+                AddFace(a, c, d);
+
+                Vector2 Plan(Vector3 point) => new Vector2(point.x, point.z) * scale;
+                float Cross(Vector2 x, Vector2 y) => x.x * y.y - x.y * y.x;
+
+                void AddFace(Vector3 start, Vector3 middle, Vector3 end)
+                {
+                    var origin = Plan(start);
+                    var u = Plan(middle) - origin;
+                    var v = Plan(end) - origin;
+                    float area = Cross(u, v);
+                    if (Mathf.Abs(area) < .0001f) return;
+                    var outline = new[] { origin, Plan(end), Plan(middle) };
+                    foreach (var piece in streets.Cut(new List<Vector2[]> { outline }, outline))
+                    {
+                        int first = Vertices.Count;
+                        foreach (var point in piece)
+                        {
+                            var delta = point - origin;
+                            float height = start.y + (middle.y - start.y) * Cross(delta, v) / area
+                                + (end.y - start.y) * Cross(u, delta) / area;
+                            Vertices.Add(new Vector3(point.x / scale, height, point.y / scale));
+                        }
+                        for (int i = 1; i + 1 < piece.Length; i++)
+                        {
+                            Triangles.Add(first);
+                            Triangles.Add(first + i + 1);
+                            Triangles.Add(first + i);
+                        }
+                    }
+                }
+            }
         }
         private static void LakeLamp(Transform root,Vector3 p)
         {
@@ -254,6 +413,17 @@ namespace PCShopSell.Game.Runtime
         private void BuildShoreFurniture(Transform root,List<Vector3> shore)
         {
             var detail=new GameObject("ShorePromenades").transform;detail.SetParent(root,false);
+            var bridgeSpans = new List<(Vector3 A, Vector3 B)>();
+            foreach (var bridge in _city.LakeBridges)
+            {
+                var points = bridge.points.Select(p => new Vector3((float)p.x, 0, (float)p.y) / LakeScale).ToArray();
+                for (int i = 1; i < points.Length; i++) bridgeSpans.Add((points[i - 1], points[i]));
+            }
+            bool NearBridge(Vector3 point, float margin)
+            {
+                point.y = 0;
+                return bridgeSpans.Any(span => SegmentDistance(point, span.A, span.B) < LakeBridgeHalfWidth + margin);
+            }
             var reeds=new List<Vector3>();var reedTriangles=new List<int>();
             for(int i=0;i<shore.Count;i+=2)
             {
@@ -262,6 +432,7 @@ namespace PCShopSell.Game.Runtime
                 for(int j=0;j<12;j++)
                 {
                     var p=shore[i]+inward*(.6f+j%3*.7f)+new Vector3(Mathf.Sin(j*2.7f)*2,.7f,Mathf.Cos(j*1.9f)*2);
+                    if (NearBridge(p, 1)) continue;
                     AddCrown(reeds,reedTriangles,p,new Vector3(.12f,.8f+j%3*.3f,.12f),true);
                 }
             }
@@ -273,7 +444,7 @@ namespace PCShopSell.Game.Runtime
             {
                 Vector3 outward=(shore[i]-new Vector3(-25,0,90)).normalized;
                 Vector3 p=shore[i]+outward*6;
-                if(roads.Any(r=>SegmentDistance(p,r.a,r.b)<7))continue;
+                if(NearBridge(p, 4) || roads.Any(r=>SegmentDistance(p,r.a,r.b)<7))continue;
                 var tree=new GameObject("LakeshoreFloweringTree").transform;tree.SetParent(detail,false);tree.localPosition=p;tree.localScale=Vector3.one*2;
                 CityVegetation.Build(tree,Vector3.zero,i+1);
                 if(i%6==0)foreach(var renderer in tree.GetComponentsInChildren<MeshRenderer>())
@@ -292,6 +463,7 @@ namespace PCShopSell.Game.Runtime
                 for(int j=0;j<3;j++)
                 {
                     Vector3 at=p+toward*(2+j*1.3f)+new Vector3(j,0,0);
+                    if (NearBridge(at, 1)) continue;
                     Prims.Shape(PrimitiveType.Sphere,detail,"ShoreRock",at+Vector3.up*.3f,new Vector3(1.7f,.9f,1.3f),Mats.Lit(ArtDirection.Hex("A5AE8D")));
                 }
             }

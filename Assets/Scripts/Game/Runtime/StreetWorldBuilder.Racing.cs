@@ -50,30 +50,73 @@ namespace PCShopSell.Game.Runtime
         {
             var root=new GameObject("LakeRaceCauseways").transform;root.SetParent(_root,false);
             root.gameObject.AddComponent<CityLandscapeResources>();
-            float top = LakeAccessHeight(_city) - .01f;
             const float bottom = -.30f;
             var vertices = new List<Vector3>();
             var triangles = new List<int>();
             foreach (var segment in _lakeAccessSurfaces)
             {
-                // Match the rounded paving footprint and let the shared street mesh own the top.
-                var outline = RoadSurfaceGeometry.Road(segment.A, segment.B, segment.Width);
+                var outline = _streetPavementEnvelopes.Polygons[segment.PavingIndex];
                 for (int i = 0; i < outline.Length; i++)
                 {
                     var a = outline[i];
                     var b = outline[(i + 1) % outline.Length];
-                    int start = vertices.Count;
-                    vertices.Add(new Vector3(a.x, bottom, a.y));
-                    vertices.Add(new Vector3(a.x, top, a.y));
-                    vertices.Add(new Vector3(b.x, bottom, b.y));
-                    vertices.Add(new Vector3(b.x, top, b.y));
-                    triangles.Add(start); triangles.Add(start + 1); triangles.Add(start + 2);
-                    triangles.Add(start + 2); triangles.Add(start + 1); triangles.Add(start + 3);
+                    var delta = b - a;
+                    var outward = new Vector2(delta.y, -delta.x).normalized * .015f;
+                    var probe = RoadSurfaceGeometry.Strip(a + outward, b + outward, .02f);
+                    var covered = new List<(float From, float To)>();
+                    foreach (int id in _streetPavementEnvelopes.Nearby(probe))
+                    {
+                        if (id == segment.PavingIndex) continue;
+                        if (RoadSurfaceGeometry.ClipSegment(a + outward, b + outward,
+                            _streetPavementEnvelopes.Polygons[id], out float from, out float to))
+                            covered.Add((from, to));
+                    }
+                    covered.Sort((left, right) => left.From.CompareTo(right.From));
+                    float start = 0;
+                    foreach (var interval in covered)
+                    {
+                        AddExposedWall(start, interval.From);
+                        start = Mathf.Max(start, interval.To);
+                    }
+                    AddExposedWall(start, 1);
+
+                    void AddExposedWall(float from, float to)
+                    {
+                        if (to <= from + .00001f) return;
+                        var cuts = new List<float> { from, to };
+                        var direction = segment.Direction;
+                        float alongDelta = Vector2.Dot(delta, direction);
+                        if (Mathf.Abs(alongDelta) > .0001f)
+                        {
+                            float alongA = Vector2.Dot(a - segment.A, direction);
+                            foreach (float distance in segment.RampBoundaries())
+                            {
+                                float cut = (distance - alongA) / alongDelta;
+                                if (cut > from && cut < to) cuts.Add(cut);
+                            }
+                            cuts.Sort();
+                        }
+                        for (int j = 1; j < cuts.Count; j++)
+                        {
+                            var left = a + delta * cuts[j - 1];
+                            var right = a + delta * cuts[j];
+                            float leftHeight = segment.HeightAt(left);
+                            float rightHeight = segment.HeightAt(right);
+                            if (Mathf.Max(leftHeight, rightHeight) <= GroundStreetY + .001f) continue;
+                            int index = vertices.Count;
+                            vertices.Add(new Vector3(left.x, bottom, left.y));
+                            vertices.Add(new Vector3(left.x, leftHeight, left.y));
+                            vertices.Add(new Vector3(right.x, bottom, right.y));
+                            vertices.Add(new Vector3(right.x, rightHeight, right.y));
+                            triangles.Add(index); triangles.Add(index + 1); triangles.Add(index + 2);
+                            triangles.Add(index + 2); triangles.Add(index + 1); triangles.Add(index + 3);
+                        }
+                    }
                 }
             }
             if (vertices.Count > 0) LandscapeMesh(root, "RaceAccessCauseway", vertices, triangles, Mats.Lit(ArtDirection.Hex("858B77")));
             float scale=(float)_city.ExpansionScale;
-            float bankTop = top - .005f;
+            float bankTop = LakeAccessHeight(_city) - .015f;
             Prims.Box(root,"StarterMotorHubBank",new Vector3(-550*scale,(bankTop+bottom)*.5f,-135*scale),new Vector3(65*scale,bankTop-bottom,65*scale),Mats.Lit(ArtDirection.Sage));
             StaticBatchingUtility.Combine(root.gameObject);
         }

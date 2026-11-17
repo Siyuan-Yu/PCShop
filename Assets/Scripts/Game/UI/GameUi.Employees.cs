@@ -373,7 +373,7 @@ namespace PCShopSell.Game.UI
                         label.Tip("该货源本型号日上限 " + S.PurchaseLimit(offer) + " · 今日实货剩余 " + S.PurchaseRemaining(offer) + "\n" + capacity.Allocation);
                         Ui.Size(Ui.Label(line, offer.Price + (offer.Kind == PurchaseGoodsKind.Rice ? "/袋" : offer.Kind == PurchaseGoodsKind.Ingredient ? "/份" : "/件"), 16, TextAnchor.MiddleLeft, Ui.Good), 110);
                         PurchaseQuantity(w, line, offerKey, count, 0, fixedMaximum,
-                            value => Set((int)value), canAdd: fixedMaximum >= minimum, minimumOrder: minimum, readValue: SelectedCount);
+                            value => Set((int)value), canAdd: fixedMaximum >= minimum, minimumOrder: minimum, readValue: () => SelectedCount());
                         bool buyMaximum = lineItem?.BuyMaximum == true;
                         var maximum = Ui.Size(Ui.Button(line, buyMaximum ? "按日买满 ✓" : "按日买满", () => Set(100, true),
                             15, Ui.SelectedButton(buyMaximum), capacity.Maximum >= minimum), 96, 34);

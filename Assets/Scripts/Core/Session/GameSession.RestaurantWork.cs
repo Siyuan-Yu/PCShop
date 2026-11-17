@@ -183,7 +183,7 @@ namespace PCShopSell.Core.Session
             IEnumerable<int> stoves = new[] { order.Stove };
             if(job==RestaurantJob.Cook)
             {
-                if (RestaurantIngredientBlocker(shop, state, order, (long)minute) != null) return false;
+                if (RestaurantOrderIngredients(shop, state, order, (long)minute).Blocker != null) return false;
                 var occupied=state.Orders.Where(o=>o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Burnt).Select(o=>o.Stove);
                 stoves = Enumerable.Range(0,Furnished(shop,"restaurant_stove")).Except(occupied);
             }

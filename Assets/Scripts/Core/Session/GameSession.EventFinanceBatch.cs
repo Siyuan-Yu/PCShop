@@ -204,11 +204,14 @@ namespace PCShopSell.Core.Session
             if (flash != null && Clock.Now.TotalMinutes < flash.Until) flash.Remaining++;
             _eventFlashReservations.Remove(r);
         }
-        private void ReverseCompensatedMemberPoints(EventPaidReceipt receipt, long cents)
+        private void ReverseCompensatedMemberPoints(EventPaidReceipt receipt)
         {
             var member = _eventMembers.FirstOrDefault(m => m.ShopId == receipt.ShopId && m.SignedDay == receipt.SignedDay && m.PersonId == receipt.PersonId);
             if (member == null) return;
-            long before = member.NetPaid / 10000; member.NetPaid = Math.Max(0, member.NetPaid - cents); member.Points -= (int)(before - member.NetPaid / 10000);
+            // Reverse the purchase's points. The additional compensation does not offset other purchases.
+            long before = member.NetPaid / 10000;
+            member.NetPaid = Math.Max(0, member.NetPaid - receipt.PaidCents);
+            member.Points -= (int)(before - member.NetPaid / 10000);
         }
         private Money ProcurementCouponDiscount(OnlineOrder order, Money total)
         {

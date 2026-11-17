@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using PCShopSell.Core.Home;
+using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
 using PCShopSell.Core.Time;
 using UnityEngine;
@@ -40,6 +42,9 @@ namespace PCShopSell.Game.UI
             if (S.RetailKind == "secondhand")
                 return string.Join(",", state.Used.Select(i => $"{i.Id}:{i.Owned}:{i.Inspected}:{i.Listed}:{i.Sold}:{i.Price}:{i.SalePrice}"));
 
+            if (_tab == ShopTab.Counter)
+                return $"{RestaurantCounterSlots(state)}:{S.CanOpenFridge}";
+
             string orders = string.Join(",", state.Orders.Select(o => $"{o.Id}:{o.Table}:{o.Recipe}:{o.FishId}:{o.Price}:{o.Stage}:{o.TableCleared}"));
 
             long now = S.Clock.Now.TotalMinutes;
@@ -73,57 +78,156 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(storage, "打开冰箱", OpenFridgeWindow, 15), 96, 34);
             }
 
-            int fishOrders = state.Orders.Count(order => order.IsFishOrder);
-            if (fishOrders > 0)
-                Ui.Size(Ui.Button(C, $"查看鱼餐预订 · {fishOrders} 单", () => SelectTab(ShopTab.Orders), 16), -1, 36);
-            foreach(var order in state.Orders.Where(o=>!o.IsFishOrder&&!o.TableCleared).OrderBy(o=>o.Stage==DiningStage.Cooking&&S.Clock.Now.TotalMinutes>=o.ReadyAt?0:o.Stage==DiningStage.Burnt?1:o.Stage==DiningStage.Ready?2:o.Stage==DiningStage.Waiting?3:4).ToArray())
+            var drinkShelf = ShelfKinds.Get("drink");
+            var drinks = Line(C, "", 15, Ui.Dim);
+            void RefreshDrinks()
             {
-                int id=order.Id;long now=S.Clock.Now.TotalMinutes;
-                var assigned=state.Workers.FirstOrDefault(w=>w.Busy&&w.OrderId==id);
-                string Status()
-                {
-                    long minute = S.Clock.Now.TotalMinutes;
-                    if (assigned?.Carrying == true) return "正在送往餐桌";
-                    if (order.Stage == DiningStage.Cooking)
-                        return minute < order.ReadyAt ? $"烹饪中 · 还有{order.ReadyAt - minute}分钟熟"
-                            : $"可出锅 · 距焦糊{Math.Max(0, order.BurnAt - minute)}分钟";
-                    return order.Stage switch
-                    {
-                        DiningStage.Waiting => "等待烹饪",
-                        DiningStage.Ready => "已出锅 · 待上菜",
-                        DiningStage.Eating => "正在用餐",
-                        DiningStage.Checkout => "用餐完毕 · 待收桌收款",
-                        DiningStage.Completed => "已付款 · 待收桌",
-                        DiningStage.Burnt => "焦糊，需重做",
-                        _ => "顾客已离开"
-                    };
-                }
-                ItemLabel(C,"recipe:"+order.Recipe,(order.Table+1)+"号桌 · "+GameSession.RecipeNames[order.Recipe]+" · ¥"+order.Price,17,color:Ui.Accent);
-                CounterText(Status, 16, order.Stage == DiningStage.Burnt ? Ui.Warn : Ui.Good);
-                bool playerBusy=state.Workers.Any(w=>w.ActorId==GameSession.RestaurantPlayer&&w.Busy);
-                if(assigned!=null)
-                {
-                    string who=assigned.ActorId==GameSession.RestaurantPlayer?"你":S.FindEmployee(assigned.ActorId)?.Person.Name??"员工";
-                    string target=FurnitureCatalog.Get(assigned.Station)?.Name??"操作位置";
-                    Line(C,who+"："+(assigned.OperateUntil<0?"前往"+target:"正在"+GameSession.RestaurantJobName(assigned.Job)),15,Ui.Good);
-                    if(assigned.ActorId==GameSession.RestaurantPlayer)Ui.Button(C,"取消本次操作",()=>{S.CancelPlayerRestaurantWork();RebuildDock();},15);
-                }
-                void Request(RestaurantJob job){_ctrl.RequestRestaurantWork(id,job);RebuildDock();}
-                bool canRequest=assigned==null&&!playerBusy;
-                if (order.Stage is not (DiningStage.Waiting or DiningStage.Cooking or DiningStage.Ready) && !order.NeedsClearing) continue;
-                var bar=Ui.Row(C,36,4);
-                if(order.Stage==DiningStage.Waiting)Ui.Size(Ui.Button(bar,"备料投锅",()=>Request(RestaurantJob.Cook),17,Ui.ButtonBg,canRequest),-1,36,1);
-                if (order.Stage == DiningStage.Cooking)
-                {
-                    bool CanServe(long minute) => canRequest && minute >= order.ReadyAt && minute < order.BurnAt;
-                    var serve = Ui.Size(Ui.Button(bar, "出锅上菜", () => Request(RestaurantJob.Serve), 17, Ui.ButtonBg, CanServe(now)), -1, 36, 1);
-                    _counterRefresh.Add(() => serve.interactable = CanServe(S.Clock.Now.TotalMinutes));
-                }
-                if(order.Stage==DiningStage.Ready)Ui.Size(Ui.Button(bar,"上菜",()=>Request(RestaurantJob.Serve),17,Ui.ButtonBg,canRequest),-1,36,1);
-                if(order.NeedsClearing)
-                    Ui.Size(Ui.Button(bar,order.Stage==DiningStage.Burnt?"倒掉重做":order.Stage==DiningStage.Checkout?"收桌并收款":"收桌",()=>Request(RestaurantJob.Clear),17,Ui.ButtonBg,canRequest),-1,36,1);
+                bool stocked = shop.Sim.ShelfFillOf(drinkShelf).Goods.Any(line => line.Value > 0 && RetailProducts.IsDrink(line.Key));
+                drinks.text = stocked ? "饮料已上架 · 堂食顾客可加购" : "上架饮料后，堂食顾客可加购，有机会多赚一笔。";
+                drinks.color = stocked ? Ui.Dim : Ui.Accent;
             }
-            if(!state.Orders.Any(o => !o.IsFishOrder && !o.TableCleared)) Line(C, "暂无在桌订单", 16, Ui.Dim);
+            RefreshDrinks();
+            _counterRefresh.Add(RefreshDrinks);
+
+            var fish = Ui.Size(Ui.Button(C, "", () => SelectTab(ShopTab.Orders), 16), -1, 36).GetComponentInChildren<Text>();
+            int tableCount = RestaurantCounterSlots(state);
+            var orders = new DiningOrder[tableCount];
+            var workers = new Dictionary<int, RestaurantWorker>();
+            var refreshTables = new Action<DiningOrder, RestaurantWorker, bool, long>[tableCount];
+            for (int table = 0; table < tableCount; table++)
+                refreshTables[table] = BuildRestaurantTableSlot(state, table, RefreshTables);
+            if (tableCount == 0) Line(C, "暂无餐桌", 16, Ui.Dim);
+            RefreshTables();
+            _counterRefresh.Add(RefreshTables);
+
+            void RefreshTables()
+            {
+                Array.Clear(orders, 0, orders.Length);
+                int fishOrders = 0;
+                foreach (var order in state.Orders)
+                {
+                    if (order.IsFishOrder) fishOrders++;
+                    else if (!order.TableCleared && order.Table >= 0 && order.Table < orders.Length)
+                        orders[order.Table] ??= order;
+                }
+                fish.text = $"查看鱼餐预订 · {fishOrders} 单";
+                workers.Clear();
+                bool playerBusy = false;
+                foreach (var worker in state.Workers)
+                {
+                    if (!worker.Busy) continue;
+                    playerBusy |= worker.ActorId == GameSession.RestaurantPlayer;
+                    if (!workers.ContainsKey(worker.OrderId)) workers.Add(worker.OrderId, worker);
+                }
+                long now = S.Clock.Now.TotalMinutes;
+                for (int table = 0; table < orders.Length; table++)
+                {
+                    var order = orders[table];
+                    RestaurantWorker assigned = null;
+                    if (order != null) workers.TryGetValue(order.Id, out assigned);
+                    refreshTables[table](order, assigned, playerBusy, now);
+                }
+            }
+        }
+
+        private int RestaurantCounterSlots(SpecialBusinessState state)
+        {
+            var shop = S.CurrentShop;
+            int limit = GameSession.RestaurantTableLimit(shop.Sim.Size);
+            int count = Math.Min(limit, GameSession.RestaurantTablesPlaced(shop));
+            // Retain table orders that still need clearing after a layout change.
+            foreach (var order in state.Orders)
+                if (!order.IsFishOrder && !order.TableCleared && order.Table >= count && order.Table < limit)
+                    count = order.Table + 1;
+            return count;
+        }
+
+        private Action<DiningOrder, RestaurantWorker, bool, long> BuildRestaurantTableSlot(
+            SpecialBusinessState state, int table, Action refresh)
+        {
+            // Keep each physical table's space reserved, including when it has no guest or action.
+            var slot = Ui.Size(Ui.Rect(C, "RestaurantTable_" + table), -1, 100);
+            Ui.VList(slot, 2, 0);
+            var heading = Ui.Row(slot, 36, 8);
+            heading.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
+            var icon = Ui.Size(Ui.Rect(heading, "DishPortrait"), 34, 34);
+            var title = Ui.Size(Ui.Label(heading, "", 17), 0, -1, 1);
+            var status = Ui.Size(Ui.Label(slot, "", 16), -1, 26);
+            status.verticalOverflow = VerticalWrapMode.Truncate;
+            var bar = Ui.Row(slot, 34);
+            string tableName = $"{table + 1}号桌";
+            int recipe = -1;
+            DiningOrder displayed = null;
+            RestaurantJob job = RestaurantJob.None;
+            bool cancel = false;
+            var action = Ui.Size(Ui.Button(bar, "", () =>
+            {
+                if (displayed == null) return;
+                if (cancel)
+                {
+                    if (state.Workers.Any(w => w.Busy && w.ActorId == GameSession.RestaurantPlayer && w.OrderId == displayed.Id))
+                        S.CancelPlayerRestaurantWork();
+                }
+                else if (job != RestaurantJob.None) _ctrl.RequestRestaurantWork(displayed.Id, job);
+                refresh();
+            }, 17), -1, 34, 1);
+            var caption = action.GetComponentInChildren<Text>();
+
+            return (order, assigned, playerBusy, now) =>
+            {
+                displayed = order;
+                int currentRecipe = order?.Recipe ?? -1;
+                if (currentRecipe != recipe)
+                {
+                    recipe = currentRecipe;
+                    Ui.Clear(icon);
+                    if (recipe >= 0) FillItemPortrait(icon, "recipe:" + recipe).Fill();
+                }
+                title.text = order == null ? tableName : $"{tableName} · {order.DishName} · ¥{order.Price}";
+                title.color = order == null ? Ui.Dim : Ui.Accent;
+                status.text = RestaurantTableStatus(order, assigned, now);
+                status.color = order == null ? Ui.Dim : order.Stage == DiningStage.Burnt ? Ui.Warn : Ui.Good;
+                cancel = assigned?.ActorId == GameSession.RestaurantPlayer;
+                var (nextJob, label) = order?.Stage switch
+                {
+                    DiningStage.Waiting => (RestaurantJob.Cook, "备料投锅"),
+                    DiningStage.Cooking => (RestaurantJob.Serve, "出锅上菜"),
+                    DiningStage.Ready => (RestaurantJob.Serve, "上菜"),
+                    DiningStage.Burnt => (RestaurantJob.Clear, "倒掉重做"),
+                    DiningStage.Checkout => (RestaurantJob.Clear, "收桌并收款"),
+                    DiningStage.Completed or DiningStage.Left => (RestaurantJob.Clear, "收桌"),
+                    _ => (RestaurantJob.None, "")
+                };
+                job = nextJob;
+                caption.text = cancel ? "取消本次操作" : label;
+                bool ready = order?.Stage != DiningStage.Cooking || (now >= order.ReadyAt && now < order.BurnAt);
+                action.interactable = cancel || (job != RestaurantJob.None && assigned == null && !playerBusy && ready);
+                action.gameObject.SetActive(cancel || job != RestaurantJob.None);
+            };
+        }
+
+        private string RestaurantTableStatus(DiningOrder order, RestaurantWorker assigned, long now)
+        {
+            if (order == null) return "空桌";
+            if (assigned != null)
+            {
+                string who = assigned.ActorId == GameSession.RestaurantPlayer ? "你" : S.FindEmployee(assigned.ActorId)?.Person.Name ?? "员工";
+                if (assigned.Carrying) return who + " · 正在送往餐桌";
+                string target = FurnitureCatalog.Get(assigned.Station)?.Name ?? "操作位置";
+                return who + " · " + (assigned.OperateUntil < 0 ? "前往" + target : "正在" + GameSession.RestaurantJobName(assigned.Job));
+            }
+            return order.Stage switch
+            {
+                DiningStage.Waiting => "等待烹饪",
+                DiningStage.Cooking => now < order.ReadyAt ? $"烹饪中 · 还有{order.ReadyAt - now}分钟熟"
+                    : $"可出锅 · 距焦糊{Math.Max(0, order.BurnAt - now)}分钟",
+                DiningStage.Ready => "已出锅 · 待上菜",
+                DiningStage.Eating => "正在用餐",
+                DiningStage.Checkout => "用餐完毕 · 待收桌收款",
+                DiningStage.Completed => "已付款 · 待收桌",
+                DiningStage.Burnt => "焦糊，需重做",
+                _ => "顾客已离开"
+            };
         }
         private void BuildSpecialPricing()
         {
@@ -234,6 +338,18 @@ namespace PCShopSell.Game.UI
                     _ => "顾客已离开 · 待收桌"
                 };
                 ItemLabel(C, "recipe:" + order.Recipe, $"{order.Table + 1}号桌 · {order.DishName} · ¥{order.Price} · {status}", 17);
+                if (order.Stage == DiningStage.Waiting)
+                {
+                    var stock = Para(C, "", 15, Ui.Warn);
+                    void RefreshIngredients()
+                    {
+                        string blocker = S.RestaurantIngredientBlocker(S.CurrentShop, order);
+                        stock.text = blocker ?? "";
+                        stock.gameObject.SetActive(blocker != null);
+                    }
+                    RefreshIngredients();
+                    _counterRefresh.Add(RefreshIngredients);
+                }
             }
             if (tableOrders.Length == 0) Line(C, "当前没有桌单。", 16, Ui.Dim);
             Ui.Size(Ui.Button(C,"返回柜台处理桌单",()=>SelectTab(ShopTab.Counter),17),-1,38);
@@ -241,8 +357,9 @@ namespace PCShopSell.Game.UI
 
         private void BuildFishOrder(SpecialBusinessState state, DiningOrder order)
         {
-            ItemLabel(C, order.Fish?.Id ?? "meal:fish", $"{order.DishName} · ¥{order.Price:N0} · 交付名望 +{order.ReputationReward:0.##}", 18, color: Ui.Accent);
-            Line(C, $"交期 {new GameTimestamp(order.DueAt)} · {order.Fish?.Rarity}", 15, Ui.Dim);
+            var fish = order.Fish;
+            ItemLabel(C, fish?.Id ?? "meal:fish", $"{order.DishName} · ¥{order.Price:N0} · 交付名望 +{order.ReputationReward:0.##}", 18, color: Ui.Accent);
+            Line(C, $"交期 {new GameTimestamp(order.DueAt)} · {fish?.Rarity}", 15, Ui.Dim);
             var worker = state.Workers.FirstOrDefault(w => w.Busy && w.OrderId == order.Id);
             bool canWork = !state.Workers.Any(w => w.Busy && w.ActorId == GameSession.RestaurantPlayer);
             if (worker != null)
@@ -260,14 +377,31 @@ namespace PCShopSell.Game.UI
             {
                 case DiningStage.Waiting:
                     var cook = Ui.Size(Ui.Button(row, "备料投锅", () => Request(RestaurantJob.Cook), 16, Ui.ButtonBg), -1, 36, 1);
+                    var venue = S.City.HasPlace(GameSession.FishingVenueId) ? S.City.GetPlace(GameSession.FishingVenueId) : null;
+                    bool hasFishInBackpack = false;
+                    var source = Ui.Size(Ui.Button(row, "去钓鱼", () =>
+                    {
+                        if (hasFishInBackpack) OpenFridgeWindow();
+                        else if (venue != null)
+                        {
+                            CloseAllWindows();
+                            _ctrl.GoToPlace(venue);
+                        }
+                    }, 16, Ui.ButtonHot), -1, 36, 1);
+                    var sourceLabel = source.GetComponentInChildren<Text>();
                     Ui.Size(Ui.Button(row, "拒绝预订", () => { S.DeclineRestaurantFishOrder(order.Id); RebuildDock(); }, 16), -1, 36, 1);
-                    var stock = Line(C, "", 15, Ui.Dim);
+                    var stock = Para(C, "", 15, Ui.Dim);
+                    stock.transform.SetSiblingIndex(row.GetSiblingIndex());
                     void RefreshIngredients()
                     {
-                        string missing = S.RestaurantIngredientBlocker(S.CurrentShop, order);
-                        stock.text = missing ?? $"备料齐全 · {order.Fish?.Name} 1 条";
+                        var (missing, missingFish) = S.RestaurantOrderIngredients(S.CurrentShop, order);
+                        hasFishInBackpack = missingFish && S.Backpack.Food.IngredientCount(fish.Id) > 0;
+                        stock.text = hasFishInBackpack ? missing + $"背包已有{fish.Name}，可以存进门店冰箱。"
+                            : missing ?? $"备料齐全 · {fish?.Name} 1 条";
                         stock.color = missing == null ? Ui.Dim : Ui.Warn;
                         cook.interactable = canWork && missing == null;
+                        sourceLabel.text = hasFishInBackpack ? "打开冰箱" : "去钓鱼";
+                        source.gameObject.SetActive(missingFish && (hasFishInBackpack || venue != null));
                     }
                     RefreshIngredients();
                     _counterRefresh.Add(RefreshIngredients);

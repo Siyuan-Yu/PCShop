@@ -195,12 +195,17 @@ namespace PCShopSell.Tests
             Assert.AreEqual(-1, order.Table);
             Assert.AreEqual(7 * GameTimestamp.MinutesPerDay, order.DueAt - order.Arrived);
             Assert.AreEqual(2 * (43 + order.Fish.DinnerSurcharge), order.Price);
+            var shortage = s.RestaurantOrderIngredients(s.CurrentShop, order);
+            Assert.True(shortage.MissingFish);
+            StringAssert.Contains("后仓缺大米 0.25 千克", shortage.Blocker);
+            StringAssert.Contains("冰箱缺青菜 1 份、" + order.Fish.Name + " 1 条", shortage.Blocker);
             IngredientsFor(s);
             Assert.False(s.StartRestaurantCooking(order.Id));
             Assert.AreEqual(.25, s.KitchenRice(s.CurrentShop));
             Assert.AreEqual(1, s.KitchenIngredientCount(s.CurrentShop, "veg"));
             s.Backpack.Food.AddIngredient(order.FishId, 1);
             Assert.True(s.MoveFridgeFood("ing:" + order.FishId, 1, true));
+            Assert.IsNull(s.RestaurantIngredientBlocker(s.CurrentShop, order));
             Assert.True(s.StartRestaurantCooking(order.Id));
             Assert.Zero(s.KitchenIngredientCount(s.CurrentShop, order.FishId));
             Assert.False(s.HandInRestaurantFishOrder(order.Id));
@@ -310,13 +315,22 @@ namespace PCShopSell.Tests
             using(var s=Make("restaurant"))
             {
                 IngredientsFor(s);var order=Order(s);Assert.True(s.StartRestaurantCooking(order.Id));s.Clock.Advance(38);
-                Assert.AreEqual(DiningStage.Burnt,order.Stage);Assert.False(s.PlateRestaurantOrder(order.Id));Assert.True(s.ClearRestaurantOrder(order.Id));
+                Assert.AreEqual(DiningStage.Burnt,order.Stage);Assert.False(s.PlateRestaurantOrder(order.Id));
+                s.Clock.Advance(82);
+                Assert.True(s.ClearRestaurantOrder(order.Id));
+                Assert.AreEqual(DiningStage.Waiting, order.Stage);
                 Assert.False(s.StartRestaurantCooking(order.Id));Assert.Zero(s.SpecialBusiness("pc").Revenue);
             }
         }
-        [Test] public void HungryWaitingCustomerLeavesWithoutIncome()
+        [Test] public void WaitingCustomerLeavesWithoutIncomeAfterFourHours()
         {
-            using(var s=Make("restaurant")){var order=Order(s);s.Clock.Advance(100);Assert.AreEqual(DiningStage.Left,order.Stage);Assert.Zero(s.SpecialBusiness("pc").Revenue);}
+            using var s = Make("restaurant");
+            var order = Order(s);
+            s.Clock.Advance(4 * 60 - 1);
+            Assert.AreEqual(DiningStage.Waiting, order.Stage);
+            s.Clock.Advance(1);
+            Assert.AreEqual(DiningStage.Left, order.Stage);
+            Assert.Zero(s.SpecialBusiness("pc").Revenue);
         }
         [Test] public void InFlightCookingSurvivesJsonWithoutRefreshingFireOrDuplicatingPayment()
         {

@@ -68,13 +68,14 @@ namespace PCShopSell.Game.UI
         public void OpenCityMap()
         {
             _cityMapPage = 0;
+            var trialNodes = GameSession.FirstChapterTrial ? TrialCityMapNodes() : null;
             OpenWindow(GameSession.FirstChapterTrial ? "城郊地图" : "十街地图", 1110, 790, w =>
             {
                 Ui.Size(Ui.TextInput(w.Content, _cityMapSearch, "搜索地点名、街区、用途", value => { _cityMapSearch = value ?? ""; _cityMapPage = 0; w.RequestRebuild(); }), -1, 44);
                 var types = Ui.Row(w.Content, 40, 6);
                 void Type(string title, string key) => Ui.Size(Ui.Button(types, title, () => { _cityMapType = key; _cityMapPage = 0; w.Rebuild(); }, 17, Ui.SelectedButton(_cityMapType == key)), -1, 40, 1);
                 Type("全部", null); Type("我的店", "my"); Type("已购物业", "property"); Type("娱乐活动", "venue"); Type("采购货源", "source"); Type("住处", "home");
-                var streets = S.City.Streets.Where(street => !GameSession.FirstChapterTrial || S.City.AgencyDistrictFor(street.id)?.id == "suburb").ToArray();
+                var streets = S.City.Streets.Where(street => !GameSession.FirstChapterTrial || S.City.AgencyDistrictFor(street.id)?.id == "outskirts").ToArray();
                 for (int i = 0; i < streets.Length; i += 5)
                 {
                     var row = Ui.Row(w.Content, 38, 6);
@@ -88,7 +89,7 @@ namespace PCShopSell.Game.UI
                 if (S.CityDefaultDestination != null && S.City.HasPlace(S.CityDefaultDestination))
                     Line(w.Content, "底栏自定目的地：" + CityMapPlaceName(S.City.GetPlace(S.CityDefaultDestination)), 17, Ui.Accent);
                 if (S.CityIntent != null || S.Trip != null) Ui.Size(Ui.Button(w.Content, "取消当前路线（预约保留）", () => { S.StopTrip(); S.CancelCityTravel(); w.Rebuild(); }, 18, Ui.Warn), -1, 42);
-                BuildCityRouteMap(w.Content);
+                BuildCityRouteMap(w.Content, trialNodes);
                 var places = CityMapPlaces().Where(p => (_cityMapStreet == null || p.StreetId == _cityMapStreet) && CityMapTypeMatches(p)
                     && (_cityMapSearch.Length == 0 || (CityMapPlaceName(p) + " " + CityMapPlaceType(p) + " " + S.City.StreetName(p.StreetId)).IndexOf(_cityMapSearch, StringComparison.OrdinalIgnoreCase) >= 0))
                     .OrderBy(CityMapPriority).ThenBy(p => p.StreetId).ThenBy(CityMapPlaceName).ToArray();
@@ -108,9 +109,30 @@ namespace PCShopSell.Game.UI
             });
         }
 
-        private void BuildCityRouteMap(Transform parent)
+        private HashSet<string> TrialCityMapNodes()
         {
-            var nodes = S.City.Map.Nodes.ToArray(); if (nodes.Length == 0) return;
+            string start = S.City.HasPlace("agency") ? S.City.GetPlace("agency").NodeId : S.Home.NodeId;
+            var visible = new HashSet<string>(StringComparer.Ordinal) { start };
+            var pending = new Queue<string>();
+            pending.Enqueue(start);
+            while (pending.Count > 0)
+            {
+                string node = pending.Dequeue();
+                var from = S.City.ViewPosition(node);
+                foreach (var edge in S.City.Map.NeighborsOf(node))
+                {
+                    if (visible.Contains(edge.To) || S.TryDistrictRoadStop(from, S.City.ViewPosition(edge.To), out _, out _)) continue;
+                    visible.Add(edge.To);
+                    pending.Enqueue(edge.To);
+                }
+            }
+            return visible;
+        }
+
+        private void BuildCityRouteMap(Transform parent, HashSet<string> trialNodes)
+        {
+            var nodes = S.City.Map.Nodes.Where(node => trialNodes == null || trialNodes.Contains(node.Id)).ToArray();
+            if (nodes.Length == 0) return;
             double minX = nodes.Min(n => n.X), minY = nodes.Min(n => n.Y), width = Math.Max(1, nodes.Max(n => n.X) - minX), height = Math.Max(1, nodes.Max(n => n.Y) - minY);
             Vector2 Point(double x, double y) => new Vector2(.05f + .9f * (float)((x - minX) / width), .08f + .84f * (float)((y - minY) / height));
             var background = Ui.Panel(parent, "CityRouteMap", Ui.PanelBg2).rectTransform; Ui.Size(background, -1, 240);
@@ -119,7 +141,7 @@ namespace PCShopSell.Game.UI
             var segments = new List<Vector2>();
             foreach (var node in nodes) foreach (var edge in S.City.Map.NeighborsOf(node.Id))
             {
-                if (string.CompareOrdinal(node.Id, edge.To) >= 0) continue;
+                if (string.CompareOrdinal(node.Id, edge.To) >= 0 || (trialNodes != null && !trialNodes.Contains(edge.To))) continue;
                 var other = S.City.Map.GetNode(edge.To); segments.Add(Point(node.X, node.Y)); segments.Add(Point(other.X, other.Y));
             }
             graphic.SetSegments(segments);
@@ -588,18 +610,29 @@ namespace PCShopSell.Game.UI
                 return;
             }
             bool solo = activity.Participants.Length == 0;
+            var definition = S.CityActivityService(activity);
+            int choice = Math.Max(0, activity.ServiceChoice);
+            string service = GameSession.VenueServiceName(definition, choice);
+            EventCgFrame illustration = null;
+            if (activity.State == CityActivityPhase.Completed && activity.MealApplied
+                && activity.HostId != null && activity.Participants.Any(p => p.PersonId == activity.HostId)
+                && (activity.SourceId?.StartsWith("friend_meal:", StringComparison.Ordinal) == true
+                    || activity.SourceId?.StartsWith("classmate_help:", StringComparison.Ordinal) == true))
+            {
+                var dishProp = definition?.Id == "dinner" ? (choice == 0 ? EventCgProp.Meal : EventCgProp.Stew) : EventCgProp.None;
+                illustration = new EventCgFrame("friend_meal", dishProp, activity.HostId, service, seated: true);
+            }
             bool animateOnOpen = true;
-            OpenWindow(solo ? "活动结算" : "相处结算", solo ? 780 : 960, 650, w =>
+            OpenWindow(solo ? "活动结算" : "相处结算", illustration != null ? 1180 : solo ? 780 : 960, 650, w =>
             {
                 var reveal = animateOnOpen ? NewUiReveal() : null;
                 animateOnOpen = false;
-                var definition = S.CityActivityService(activity);
-                var overview = Ui.Row(w.Content, 98, 14);
+                var overview = Ui.Row(w.Content, illustration != null ? 84 : 98, 14);
                 var heading = SettlementCard(overview, "ActivityOverview", 2);
                 reveal?.Fade(heading, 0f);
                 Line(heading, definition?.Name ?? "活动", 24);
                 string venue = S.City.HasPlace(activity.VenueId) ? S.City.GetPlace(activity.VenueId).Name : activity.VenueId;
-                Para(heading, venue + " · " + GameSession.VenueServiceName(definition, Math.Max(0, activity.ServiceChoice)), 16, Ui.Dim);
+                Para(heading, venue + " · " + service, 16, Ui.Dim);
 
                 if (definition?.Id != "hike" || activity.EntryCostCents > 0)
                 {
@@ -619,36 +652,51 @@ namespace PCShopSell.Game.UI
                     ? $"{activity.ActualEnd - activity.ActualStart} 分钟" : "—";
                 Line(duration, minutes, 24);
 
-                var body = Ui.Scroll(w.Content);
-                Ui.Size((RectTransform)body.parent.parent, -1, 0).GetComponent<LayoutElement>().flexibleHeight = 1;
-                var bodyLayout = body.GetComponent<VerticalLayoutGroup>();
-                bodyLayout.spacing = 10;
-                bodyLayout.padding = new RectOffset(0, 2, 2, 2);
-                if (activity.State == CityActivityPhase.Completed && activity.MealApplied
-                    && activity.HostId != null && activity.Participants.Any(p => p.PersonId == activity.HostId)
-                    && (activity.SourceId?.StartsWith("friend_meal:", System.StringComparison.Ordinal) == true
-                        || activity.SourceId?.StartsWith("classmate_help:", System.StringComparison.Ordinal) == true))
+                RectTransform details;
+                RectTransform memoryColumn;
+                if (illustration != null)
                 {
-                    int choice = Math.Max(0, activity.ServiceChoice);
-                    string dish = GameSession.VenueServiceName(definition, choice);
-                    var dishProp = definition?.Id == "dinner" ? (choice == 0 ? EventCgProp.Meal : EventCgProp.Stew) : EventCgProp.None;
-                    BuildEventCg(body, new EventCgFrame("friend_meal", dishProp, activity.HostId, dish, seated: true), 320);
+                    const float imageWidth = 608;
+                    var spread = Ui.Row(w.Content, -1, 12);
+                    var layout = spread.GetComponent<HorizontalLayoutGroup>();
+                    layout.childAlignment = TextAnchor.UpperLeft;
+                    layout.childForceExpandHeight = false;
+
+                    memoryColumn = Ui.Size(Ui.Rect(spread, "ActivityIllustrationColumn"), imageWidth, -1, 0);
+                    Ui.VList(memoryColumn, 8, 0);
+                    BuildEventCg(memoryColumn, illustration, imageWidth * 9 / 16);
+
+                    details = Ui.Size(Ui.Rect(spread, "ActivityResultsColumn"), 0, -1, 1);
+                    Ui.VList(details, 8, 0);
                 }
+                else
+                {
+                    details = memoryColumn = Ui.Scroll(w.Content);
+                    Ui.Size((RectTransform)details.parent.parent, -1, 0).GetComponent<LayoutElement>().flexibleHeight = 1;
+                    var bodyLayout = details.GetComponent<VerticalLayoutGroup>();
+                    bodyLayout.spacing = 10;
+                    bodyLayout.padding = new RectOffset(0, 2, 2, 2);
+                }
+
                 if (activity.PlayerStatsAfter == null || activity.PlayerStatsAfter.Length == 0)
                 {
-                    var summary = Para(body, activity.SettlementSummary, 17);
+                    var summary = Para(details, activity.SettlementSummary, 17);
                     reveal?.Fade(summary.transform, .12f);
                 }
                 else
                 {
-                    var results = Ui.Row(body, -1, 12);
-                    var layout = results.GetComponent<HorizontalLayoutGroup>();
-                    layout.childAlignment = TextAnchor.UpperLeft;
-                    layout.childForceExpandHeight = false;
-                    if (!solo) BuildActivityRelationshipResults(results, activity, reveal);
+                    var results = details;
+                    if (illustration == null)
+                    {
+                        results = Ui.Row(details, -1, 12);
+                        var layout = results.GetComponent<HorizontalLayoutGroup>();
+                        layout.childAlignment = TextAnchor.UpperLeft;
+                        layout.childForceExpandHeight = false;
+                    }
+                    if (!solo) BuildActivityRelationshipResults(results, activity, reveal, portraitWidth: illustration != null ? 76 : 104);
                     BuildActivityPersonalResults(results, activity, reveal);
 
-                    var memory = SettlementCard(body, "ActivityMemory");
+                    var memory = SettlementCard(memoryColumn, "ActivityMemory");
                     reveal?.Fade(memory, .28f);
                     string[] interactions = (activity.Choices ?? Array.Empty<string>())
                         .Select(key => GameSession.CityActivityChoiceText(definition, key)).Where(choice => choice != null).ToArray();
@@ -657,7 +705,7 @@ namespace PCShopSell.Game.UI
                         Line(memory, solo ? "体验内容" : "一起做过", 18, Ui.Accent);
                         Para(memory, string.Join("、", interactions), 17);
                     }
-                    if ((GameSession.IsInteractiveFishingActivity(activity) || GameSession.IsOnsiteSport(activity))
+                    if ((illustration != null || GameSession.IsInteractiveFishingActivity(activity) || GameSession.IsOnsiteSport(activity))
                         && !string.IsNullOrWhiteSpace(activity.EventSettlementNote))
                         Para(memory, activity.EventSettlementNote.Trim(), 17);
                     if (!string.IsNullOrWhiteSpace(activity.EndReason)) Para(memory, activity.EndReason, 16, Ui.Dim);
@@ -669,6 +717,7 @@ namespace PCShopSell.Game.UI
                     : completed && !solo ? "已记入人脉记录" : GameSession.CityPhaseText(activity.State);
                 Ui.Size(Ui.Label(footer, status, 16, TextAnchor.MiddleLeft, completed ? Ui.Good : Ui.FlatDown), 0, -1, 1);
                 Ui.Size(Ui.Button(footer, solo ? "完成" : "收好这段回忆", w.Close, 18, Ui.ButtonHot), 200, 44);
+                if (illustration != null) FitWindowToContent(w);
                 PlayUiReveal(reveal);
             }, onClosed: () => OpenCommunityActivityClue(activityId), scrollContent: false);
         }
@@ -710,9 +759,10 @@ namespace PCShopSell.Game.UI
             {
                 var person = SettlementCard(card, "ActivityCompanion");
                 person.GetComponent<Image>().color = Ui.FlatBand;
-                var row = Ui.Row(person, portraitWidth * 1.3f, 14);
+                var row = Ui.Row(person, -1, 14);
+                row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = false;
                 var portrait = Ui.FlatPanel(row, "CompanionPortrait");
-                Ui.Size(portrait, portraitWidth);
+                Ui.Size(portrait, portraitWidth, portraitWidth * 1.3f);
                 FitPortrait(portrait.rectTransform, participant.PersonId, 2);
                 var details = Ui.Rect(row, "CompanionDetails");
                 Ui.Size(details, 0, -1, 1);

@@ -534,8 +534,7 @@ namespace PCShopSell.Core.Session
             if (offer.Recipe >= 0)
             {
                 if (SpecialFitGap(shop) != null) return "请先备齐餐馆设施。";
-                return KitchenRice(shop) >= .25 * offer.Count && KitchenIngredientCount(shop, RecipeIngredients[offer.Recipe]) >= offer.Count
-                    ? null : "店里的大米或食材不足。";
+                return RestaurantIngredientBlocker(shop, offer.Recipe, fish: null, servings: offer.Count);
             }
             if (offer.UsedIds != null)
             {

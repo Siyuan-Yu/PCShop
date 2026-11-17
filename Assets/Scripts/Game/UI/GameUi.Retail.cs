@@ -236,7 +236,8 @@ namespace PCShopSell.Game.UI
                         ()=>S.HasUpgrade(item.Id)?0:Math.Max(0,1-S.CartAmount("upgrade:"+item.Id)), blocker: () => S.UpgradeBlocker(item));
                 }
             bool storeOpen = S.IsPlaceOpen(source);
-            Line(w.Content,(farm ? "批发采购 · " : "商品购买 · ")+(storeOpen?"营业中 · ":"已打烊 · ")+S.OpeningHoursText(source),19,Ui.Accent);
+            string purchaseLimit = mall ? $" · 每款每单限购 {GameSession.MallFurniturePurchaseLimit} 件" : "";
+            Line(w.Content,(farm ? "批发采购 · " : "商品购买 · ")+(storeOpen?"营业中 · ":"已打烊 · ")+S.OpeningHoursText(source)+purchaseLimit,19,Ui.Accent);
             if (source.Kind == PlaceKind.Wholesaler)
                 Line(w.Content, "按配件分类选货。同型号统一报价，每日库存由全市场共用。", 14, Ui.Dim);
             var links=Ui.Row(w.Content,36,6);
@@ -276,6 +277,10 @@ namespace PCShopSell.Game.UI
                     .Where(group => group == PurchaseFacets.All || selectedOffers.Any(o => o.Group == group)).ToArray();
                 if (facilityTabs.Length > 2) facility = ShopTabs(w, source, facilityTabs, filterKey: "facility", label: "设施");
             }
+            else if (source.Business == GameSession.PhoneBusiness)
+            {
+                selectedOffers = selectedOffers.OrderBy(offer => offer.Price.Cents).ToList();
+            }
             string season=hasSeason?ShopTabs(w,source,new[]{PurchaseFacets.All,"春秋装","夏装","冬装"},filterKey:"season",label:"季节"):PurchaseFacets.All;
             if(hasSeason)Line(w.Content,"当前"+CityWeather.Season(S.Clock.Now.TotalMinutes)+"季 · 应季服装需求较多，反季服装仍有需求。",16,Ui.Dim);
             var list=GoodsList(w.Content);
@@ -289,7 +294,8 @@ namespace PCShopSell.Game.UI
                 double amount = S.CartAmount(item.Key);
                 bool limited = !double.IsInfinity(remaining);
                 string blocker = storeOpen && remaining > 0 ? item.Blocker?.Invoke() : null;
-                double max = limited ? amount + Math.Max(0, remaining) : 1000;
+                double max = limited ? amount + Math.Max(0, remaining)
+                    : mall && item.Furniture != null ? GameSession.MallFurniturePurchaseLimit : 1000;
                 bool canAdd = storeOpen && max > 0 && blocker == null;
                 var row=Ui.Row(list,68,10);row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight=false;
                 var highlight = row.gameObject.AddComponent<Image>();

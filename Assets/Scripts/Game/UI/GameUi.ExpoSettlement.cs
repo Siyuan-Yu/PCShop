@@ -51,8 +51,8 @@ namespace PCShopSell.Game.UI
                 var finance = S.GetExpoFinance(e.Id);
                 foreach (var product in e.Products)
                 {
-                    bool recorded = finance.ProductSales.TryGetValue(product.ProductId, out var revenue);
-                    string income = recorded || product.Sold == 0 ? revenue.ToString() : "历史金额待核对";
+                    bool recorded = finance.ProductSales.TryGetValue(product.ProductId, out var productRevenue);
+                    string income = recorded || product.Sold == 0 ? productRevenue.ToString() : "历史金额待核对";
                     Line(goods, S.BrandProductName(product.ProductId) + " · 售出" + product.Sold + "件 · 收入 " + income
                         + " · 退回" + (product.Reserved - product.Sold) + "件", 17);
                 }

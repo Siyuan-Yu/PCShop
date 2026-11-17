@@ -181,23 +181,45 @@ namespace PCShopSell.Core.Session
             TickCityActivities(Clock.Now.TotalMinutes);
             return activity.State == CityActivityPhase.Running;
         }
-        private EventPaidReceipt ComplaintReceipt() => _eventPaidReceipts.FirstOrDefault(r => !r.BadReview && r.Day >= Clock.Today.TotalDays - 7 && ReceiptShop(r) != null);
+        private EventPaidReceipt ComplaintReceipt() => _eventPaidReceipts.FirstOrDefault(r =>
+            !r.BadReview && r.PaidCents > 0 && r.Day >= Clock.Today.TotalDays - 7 && ReceiptShop(r) != null);
+
+        private Money ComplaintPaidTotal(EventPaidReceipt receipt)
+        {
+            var paid = Money.FromCents(receipt.PaidCents);
+            if (receipt.RetailKind != "restaurant") return paid;
+
+            // Meal receipts record the dish. The add-on is a separate ledger entry for the same table order.
+            string receiptPrefix = $"{receipt.ShopId}:{receipt.SignedDay}:{receipt.RetailKind}:{receipt.Day}:meal:";
+            if (receipt.Key?.StartsWith(receiptPrefix, StringComparison.Ordinal) != true) return paid;
+            string orderId = receipt.Key.Substring(receiptPrefix.Length);
+            string drinkPrefix = "meal:" + receipt.ShopId + ":";
+            string drinkSuffix = ":" + orderId + ":drink";
+            string legacyDrinkId = "meal" + drinkSuffix;
+            var drink = Ledger.Entries.LastOrDefault(entry =>
+                entry.ShopId == receipt.ShopId && entry.Date.TotalDays == receipt.Day && entry.Amount.IsPositive
+                && entry.SourceEventId is string source && (source == legacyDrinkId
+                    || (source.StartsWith(drinkPrefix, StringComparison.Ordinal) && source.EndsWith(drinkSuffix, StringComparison.Ordinal))));
+            return paid + drink.Amount;
+        }
+
         private EventDef BindReceiptComplaint(EventDef template)
         {
             var receipt = ComplaintReceipt(); var shop = ReceiptShop(receipt);
-            Money compensation = Money.FromCents(receipt.PaidCents).Scale(.1); if (compensation > Money.FromYuan(500)) compensation = Money.FromYuan(500);
+            Money paid = ComplaintPaidTotal(receipt);
+            Money compensation = paid * 2;
             string Reply(string mode)
             {
                 if (receipt.BadReview || ReceiptShop(receipt) != shop) return "这条评价已处理或门店已变化。";
                 if (mode == "pay" && !Ledger.TryDebit(Clock.Today, "顾客补偿", compensation, receipt.Product, LedgerAttribution.ForShop(shop.Place.Id))) return "现金不足，尚未补偿。";
-                if (mode == "pay") ReverseCompensatedMemberPoints(receipt, compensation.Cents);
+                if (mode == "pay") ReverseCompensatedMemberPoints(receipt);
                 receipt.BadReview = true;
                 var t = AddShopTask("complaint", shop); t.At = Clock.Now.TotalMinutes + 1440; t.Started = true;
                 t.Message = mode == "pay" ? "补偿已到账，顾客收到处理说明；原评价是否修改由对方决定。" : mode == "ask" ? "已收到具体使用反馈，留作改进记录；没有直接删除评价。" : "已公开回复，说明售后处理方式；原评价保留。";
                 return mode == "pay" ? "已支付" + compensation + "并提交处理说明，明天查看反馈。" : "已联系顾客，明天查看反馈。";
             }
-            return EventScene(template, "一位购买过" + receipt.Product + "的顾客评价体验一般，实付" + Money.FromCents(receipt.PaidCents) + "。",
-                Choose("了解具体问题", _ => Reply("ask")), Choose("协商补偿 · " + compensation, _ => Reply("pay"), s => s.Ledger.CanAfford(compensation), "现金不足"), Choose("公开回复", _ => Reply("reply")));
+            return EventScene(template, "一位购买过" + receipt.Product + "的顾客评价体验一般，本单实付" + paid + "。",
+                Choose("了解具体问题", _ => Reply("ask")), Choose("按实付双倍赔偿 · " + compensation, _ => Reply("pay"), s => s.Ledger.CanAfford(compensation), "现金不足"), Choose("公开回复", _ => Reply("reply")));
         }
         private EventDef BindStudentOrderQuote(EventDef template)
         {

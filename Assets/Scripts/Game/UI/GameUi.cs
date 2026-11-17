@@ -854,26 +854,31 @@ namespace PCShopSell.Game.UI
 
         // ---------- 窗口 ----------
 
-        public Window OpenWindow(string title, float width, float height, Action<Window> builder, bool holds = true, bool closable = true, Action onClosed = null, bool scrollContent = true, bool allowDuringOpeningMeal = false, bool systemWindow = false, bool showTitleBar = true)
+        public Window OpenWindow(string title, float width, float height, Action<Window> builder, bool holds = true, bool closable = true, Action onClosed = null, bool scrollContent = true, bool allowDuringOpeningMeal = false, bool systemWindow = false, bool showTitleBar = true, bool fullScreen = false)
         {
             bool system = systemWindow || _windows.Any(window => window.OpeningMealSystem && !window.Closed);
             if (OpeningMealRestricted && !allowDuringOpeningMeal && !system)
             {
                 title = "先做饭"; width = 700; height = 390; holds = true; closable = true; onClosed = null; scrollContent = true;
                 showTitleBar = true;
+                fullScreen = false;
                 builder = BuildOpeningMealReminder;
             }
             var w = new Window { Builder = builder, Holds = holds, Owner = this, OnClosed = onClosed, Closable = closable };
             w.OpeningMealSystem = system;
-            Image dim = Ui.Panel(_modalCanvas.transform, "Window_" + title, new Color(.025f,.035f,.06f,.48f));
-            dim.rectTransform.Fill();
-            Image panel = Ui.Panel(dim.transform, "Panel", Ui.PanelBg);
-            RectTransform prt = panel.rectTransform;
-            prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0.5f);
-            prt.sizeDelta = new Vector2(width, height);
-            w.Fitter = prt.gameObject.AddComponent<WindowFit>();
-            w.Fitter.Fit();
-            prt.anchoredPosition = new Vector2(0, -10 * _windows.Count);
+            Image dim = Ui.Panel(_modalCanvas.transform, "Window_" + title,
+                fullScreen ? Ui.FlatWell : new Color(.025f,.035f,.06f,.48f));
+            w.Root = dim.rectTransform.Fill();
+            RectTransform prt = w.Root;
+            if (!fullScreen)
+            {
+                prt = Ui.Panel(dim.transform, "Panel", Ui.PanelBg).rectTransform;
+                prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0.5f);
+                prt.sizeDelta = new Vector2(width, height);
+                w.Fitter = prt.gameObject.AddComponent<WindowFit>();
+                w.Fitter.Fit();
+                prt.anchoredPosition = new Vector2(0, -10 * _windows.Count);
+            }
 
             const float titleBarHeight = 50;
             if (showTitleBar)
@@ -894,7 +899,6 @@ namespace PCShopSell.Game.UI
                 }
             }
 
-            w.Root = dim.rectTransform;
             float topInset = showTitleBar ? titleBarHeight : 0;
             if(scrollContent)
             {
@@ -904,10 +908,13 @@ namespace PCShopSell.Game.UI
             else
             {
                 w.Content = Ui.Rect(prt,"FixedContent").Anchor(0,0,1,1,0,0,0,topInset);
-                Ui.VList(w.Content);
+                if (!fullScreen) Ui.VList(w.Content);
             }
-            var contentLayout = w.Content.GetComponent<VerticalLayoutGroup>();
-            contentLayout.spacing = 8; contentLayout.padding = new RectOffset(16, 16, 16, 16);
+            if (w.Content.TryGetComponent<VerticalLayoutGroup>(out var contentLayout))
+            {
+                contentLayout.spacing = 8;
+                contentLayout.padding = new RectOffset(16, 16, 16, 16);
+            }
             _windows.Add(w);
             if (holds) S?.Time.Hold();
             // The opener can stay selected after a click. Keyboard submit must start inside the new modal.
@@ -924,6 +931,15 @@ namespace PCShopSell.Game.UI
             if (w.TimeStatusText == null) return;
             w.TimeStatusText.text = w.TimeStatusOverride
                 ?? (S?.Time.IsRunning == true && !S.OpeningClockFrozen && !S.ManualActivityClockPaused ? "时间在推进" : "时间已暂停");
+        }
+
+        private static void FitWindowToContent(Window w)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(w.Content);
+            var panel = (RectTransform)w.Content.parent;
+            float chromeHeight = panel.rect.height - w.Content.rect.height;
+            panel.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, chromeHeight + LayoutUtility.GetPreferredHeight(w.Content));
+            w.Fitter.Fit();
         }
 
         public void CloseWindow(Window w)
@@ -970,7 +986,8 @@ namespace PCShopSell.Game.UI
             {
                 if (cg != null)
                 {
-                    BuildEventCg(w.Content, cg, 385);
+                    float width = w.Content.rect.width - w.Content.GetComponent<VerticalLayoutGroup>().padding.horizontal;
+                    BuildEventCg(w.Content, cg, width * 9 / 16);
                     Para(w.Content, body, 20);
                 }
                 else if (purchaseResult) Ui.Label(Ui.Scroll(w.Content, 230), body, 19, TextAnchor.UpperLeft);
@@ -990,7 +1007,8 @@ namespace PCShopSell.Game.UI
                     Ui.Size(Ui.Button(actions, "知道了", w.Close, 20, Ui.ButtonHot), -1, 48, 1);
                 }
                 else Ui.Size(Ui.Button(w.Content, "知道了", w.Close, 20, Ui.ButtonHot), -1, 48);
-            }));
+                if (cg != null) FitWindowToContent(w);
+            }, scrollContent: cg == null));
         }
 
         /// <summary>随机事件：必须选一个选项才能继续（不可关闭）。</summary>

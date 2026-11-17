@@ -429,20 +429,19 @@ namespace PCShopSell.Core.Session
             Say($"{meal}在自己的餐厅吃了{RecipeNames[recipe]}，消耗本店大米 0.25 千克和{Ingredients.Get(RecipeIngredients[recipe]).Name} 1 份，饱腹 +{gain:0.#}。");
             return true;
         }
-        public string RestaurantIngredientBlocker(OwnedShop shop, DiningOrder order)
+        public string RestaurantIngredientBlocker(OwnedShop shop, DiningOrder order) =>
+            RestaurantOrderIngredients(shop, order).Blocker;
+
+        public (string Blocker, bool MissingFish) RestaurantOrderIngredients(OwnedShop shop, DiningOrder order)
         {
             _specialBusinesses.TryGetValue(shop.Place.Id, out var state);
-            return RestaurantIngredientBlocker(shop, state, order, Clock.Now.TotalMinutes);
+            return RestaurantOrderIngredients(shop, state, order, Clock.Now.TotalMinutes);
         }
 
-        private string RestaurantIngredientBlocker(OwnedShop shop, SpecialBusinessState state, DiningOrder order, long minute)
+        private (string Blocker, bool MissingFish) RestaurantOrderIngredients(OwnedShop shop, SpecialBusinessState state, DiningOrder order, long minute)
         {
-            string missing = RestaurantIngredientBlocker(shop, order.Recipe, order.Fish);
-            if (missing != null || state == null) return missing;
-
-            var pending = state.Orders.Where(o => o.IsFishOrder && o.Stage == DiningStage.Waiting && minute < o.DueAt)
-                .OrderBy(o => o.DueAt).ThenBy(o => o.Id);
-            double rice = KitchenRice(shop);
+            double riceStock = KitchenRice(shop);
+            double rice = riceStock;
             Dictionary<string, int> reserved = null;
             int Available(string id) => KitchenIngredientCount(shop, id)
                 - (reserved != null && reserved.TryGetValue(id, out int count) ? count : 0);
@@ -454,30 +453,50 @@ namespace PCShopSell.Core.Session
 
             // Keep ingredients in the fridge until a cook actually starts. Reserve only whole,
             // currently cookable preorders so a missing fish cannot block the rest of the kitchen.
-            foreach (var preorder in pending)
+            if (state != null)
             {
-                if (preorder.Id == order.Id || rice < .25 - 1e-9) break;
-                string ingredient = RecipeIngredients[preorder.Recipe];
-                if (preorder.Fish == null || Available(ingredient) < 1 || Available(preorder.FishId) < 1) continue;
-                rice -= .25;
-                Reserve(ingredient);
-                Reserve(preorder.FishId);
+                var pending = state.Orders.Where(o => o.IsFishOrder && o.Stage == DiningStage.Waiting && minute < o.DueAt)
+                    .OrderBy(o => o.DueAt).ThenBy(o => o.Id);
+                foreach (var preorder in pending)
+                {
+                    if (preorder.Id == order.Id || rice < .25 - 1e-9) break;
+                    string preorderIngredient = RecipeIngredients[preorder.Recipe];
+                    if (preorder.Fish == null || Available(preorderIngredient) < 1 || Available(preorder.FishId) < 1) continue;
+                    rice -= .25;
+                    Reserve(preorderIngredient);
+                    Reserve(preorder.FishId);
+                }
             }
 
-            if (reserved == null) return null;
             string recipeIngredient = RecipeIngredients[order.Recipe];
-            if (rice < .25 - 1e-9) return "大米已优先留给鱼餐预订。";
-            if (Available(recipeIngredient) < 1) return Ingredients.Get(recipeIngredient).Name + "已优先留给鱼餐预订。";
-            return order.IsFishOrder && Available(order.FishId) < 1 ? "这条鱼已留给交期更早的预订。" : null;
+            int ingredient = Available(recipeIngredient);
+            var fish = order.Fish;
+            int fishCount = fish == null ? 0 : Available(fish.Id);
+            bool missingFish = fish != null && fishCount < 1;
+            string blocker = RestaurantShortage(order.Recipe, 1, fish, rice, ingredient, fishCount);
+            if (reserved != null && ((rice < .25 - 1e-9 && rice < riceStock)
+                || (ingredient < 1 && reserved.ContainsKey(recipeIngredient))
+                || (missingFish && reserved.ContainsKey(fish.Id))))
+                blocker += "部分库存已留给优先预订。";
+            return (blocker, missingFish);
         }
 
-        private string RestaurantIngredientBlocker(OwnedShop shop, int recipe, FishDefinition fish)
+        private string RestaurantIngredientBlocker(OwnedShop shop, int recipe, FishDefinition fish, int servings = 1) =>
+            RestaurantShortage(recipe, servings, fish, KitchenRice(shop), KitchenIngredientCount(shop, RecipeIngredients[recipe]),
+                fish == null ? 0 : KitchenIngredientCount(shop, fish.Id));
+
+        private static string RestaurantShortage(int recipe, int servings, FishDefinition fish, double rice, int ingredient, int fishCount)
         {
-            string id = RecipeIngredients[recipe];
-            if (KitchenRice(shop) < .25 - 1e-9) return "后仓需要大米 0.25 千克。";
-            if (KitchenIngredientCount(shop, id) < 1) return "冰箱需要" + Ingredients.Get(id).Name + " 1 份。";
-            return fish != null && KitchenIngredientCount(shop, fish.Id) < 1
-                ? "冰箱需要" + fish.Name + " 1 条。" : null;
+            double riceShort = .25 * servings - rice;
+            int ingredientShort = servings - ingredient;
+            int fishShort = fish == null ? 0 : servings - fishCount;
+            if (riceShort <= 1e-9 && ingredientShort <= 0 && fishShort <= 0) return null;
+
+            string pantry = riceShort > 1e-9 ? $"后仓缺大米 {riceShort:0.###} 千克。" : "";
+            string fridge = ingredientShort > 0 ? $"{Ingredients.Get(RecipeIngredients[recipe]).Name} {ingredientShort} 份" : "";
+            if (fishShort > 0)
+                fridge += (fridge.Length == 0 ? "" : "、") + $"{fish.Name} {fishShort} 条";
+            return pantry + (fridge.Length == 0 ? "" : "冰箱缺" + fridge + "。");
         }
 
         private bool ConsumeRecipe(OwnedShop shop,int recipe, FishDefinition fish = null)
@@ -497,7 +516,7 @@ namespace PCShopSell.Core.Session
             var used=state.Orders.Where(o=>o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Burnt).Select(o=>o.Stove).ToArray();
             if(stove<0)stove=Enumerable.Range(0,Furnished(shop,"restaurant_stove")).First(i=>!used.Contains(i));
             if(used.Contains(stove))return false;
-            if (RestaurantIngredientBlocker(shop, state, order, minute) is string missing)
+            if (RestaurantOrderIngredients(shop, state, order, minute).Blocker is string missing)
                 return automatic ? false : Fail(missing);
             if (!ConsumeRecipe(shop, order.Recipe, order.Fish)) return false;
             order.Stove=stove;order.Stage=DiningStage.Cooking;order.Started=minute;order.ReadyAt=minute+8;order.BurnAt=minute+38;return true;
@@ -558,7 +577,7 @@ namespace PCShopSell.Core.Session
         {
             if(order?.NeedsClearing!=true)return false;
             if (order.Stage == DiningStage.Burnt
-                && (order.IsFishOrder ? now.TotalMinutes < order.DueAt : now.TotalMinutes - order.Arrived < 100))
+                && (order.IsFishOrder ? now.TotalMinutes < order.DueAt : now.TotalMinutes - order.Arrived < RestaurantMealPatienceMinutes))
             { order.Stage = DiningStage.Waiting; order.Stove = -1; return true; }
             if (order.Stage == DiningStage.Checkout)
             {
@@ -568,6 +587,7 @@ namespace PCShopSell.Core.Session
             return state.Orders.Remove(order);
         }
 
+        private const int RestaurantMealPatienceMinutes = 4 * 60;
         private const int RestaurantCheckoutPatienceMinutes = 60;
 
         public int RestaurantTablesAwaitingPayment(OwnedShop shop) => shop?.RetailKind=="restaurant"
@@ -683,7 +703,8 @@ namespace PCShopSell.Core.Session
                     continue;
                 }
                 if(o.Stage==DiningStage.Cooking&&minute>=o.BurnAt)o.Stage=DiningStage.Burnt;
-                if((o.Stage==DiningStage.Waiting||o.Stage==DiningStage.Cooking||o.Stage==DiningStage.Ready||o.Stage==DiningStage.Burnt)&&minute-o.Arrived>=100)
+                if ((o.Stage is DiningStage.Waiting or DiningStage.Cooking or DiningStage.Ready or DiningStage.Burnt)
+                    && minute - o.Arrived >= RestaurantMealPatienceMinutes)
                 {
                     o.Stage=DiningStage.Left;
                     RecordRestaurantLoss(shop, state, now, o.Id, o.Arrived, LeaveReason.MealWaitTimeout);

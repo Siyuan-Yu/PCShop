@@ -137,10 +137,18 @@ namespace PCShopSell.Game.UI
             if (offer.RetailKind == "computer") Para(body, "到该店的订单页装机并交付。", 16, Ui.Dim);
             else
             {
-                string blocker = S.IndustryReferralBlocker(offer, true);
-                if (blocker != null) Para(body, blocker, 15, Ui.Dim);
-                Ui.Size(Ui.Button(body, "交付订单", () => { S.DeliverIndustryReferral(offer.Id); refresh(); },
-                    17, Ui.ButtonHot, blocker == null), -1, 42);
+                var reason = Para(body, "", 15, offer.Recipe >= 0 ? Ui.Warn : Ui.Dim);
+                var deliver = Ui.Size(Ui.Button(body, "交付订单", () => { S.DeliverIndustryReferral(offer.Id); refresh(); },
+                    17, Ui.ButtonHot), -1, 42);
+                void RefreshDelivery()
+                {
+                    string blocker = S.IndustryReferralBlocker(offer, true);
+                    reason.text = blocker ?? "";
+                    reason.gameObject.SetActive(blocker != null);
+                    deliver.interactable = blocker == null;
+                }
+                RefreshDelivery();
+                if (!showShop && offer.Recipe >= 0) _counterRefresh.Add(RefreshDelivery);
             }
         }
         private void CityStoryPersonActions(Transform content,string personId,Window parent,string role)

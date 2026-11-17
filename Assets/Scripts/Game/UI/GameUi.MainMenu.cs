@@ -27,7 +27,7 @@ namespace PCShopSell.Game.UI
         }
         private void SetGameplayUiVisible(bool visible)
         {
-            foreach (var canvas in new[] { _hudCanvas, _labelCanvas, _dockCanvas, _toastCanvas, _invitationCanvas, _tipCanvas })
+            foreach (var canvas in new[] { _hudCanvas, _labelCanvas, _dockCanvas, _toastCanvas, _invitationCanvas, _tutorialCanvas, _tipCanvas })
                 if (canvas != null) canvas.gameObject.SetActive(visible);
         }
 
@@ -36,61 +36,89 @@ namespace PCShopSell.Game.UI
             CloseAllWindows();
             _canResumeMainMenu = canResume;
             SetGameplayUiVisible(false);
-            _mainMenu = OpenWindow(L("game_title"), 1280, 700, BuildMainMenu, true, false, () =>
+            _mainMenu = OpenWindow(L("game_title"), 1920, 1080, BuildMainMenu, true, false, () =>
             {
                 _mainMenu = null;
                 SetGameplayUiVisible(true);
-            }, scrollContent: false, allowDuringOpeningMeal: true, showTitleBar: false);
+            }, scrollContent: false, allowDuringOpeningMeal: true, showTitleBar: false, fullScreen: true);
         }
 
         private void BuildMainMenu(Window w)
         {
-            var body = Ui.Row(w.Content, 668, 16);
-            var hero = Ui.Panel(body, "MenuCover", Ui.FlatWell).rectTransform;
-            Ui.Size(hero, 0, 668, 1);
-            if (_mainMenuCover == null) _mainMenuCover = Resources.Load<Texture2D>("Menu/CornerShopCover");
+            var cover = Ui.Rect(w.Content, "MenuCover").Fill();
+            cover.gameObject.AddComponent<RectMask2D>();
+            if (_mainMenuCover == null) _mainMenuCover = Resources.Load<Texture2D>("Menu/PetShopMenuCover");
             if (_mainMenuCover != null)
             {
-                var art = Ui.Rect(hero, "CoverArt").Fill().gameObject.AddComponent<RawImage>();
+                var art = Ui.Rect(cover, "CoverArt").Fill().gameObject.AddComponent<RawImage>();
                 art.texture = _mainMenuCover;
                 art.raycastTarget = false;
-                float coverWidth = 1280 - 32 - 16 - 360;
-                float u = coverWidth / 668 * _mainMenuCover.height / _mainMenuCover.width;
-                art.uvRect = new Rect((1 - u) / 2, 0, u, 1);
+                var fitter = art.gameObject.AddComponent<AspectRatioFitter>();
+                fitter.aspectRatio = _mainMenuCover.width / (float)_mainMenuCover.height;
+                fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
             }
-            var coverTitle = Ui.Label(hero, L("game_title"), 65, TextAnchor.MiddleLeft, new Color(1f, .94f, .80f));
+
+            var coverTitle = Ui.Label(w.Content, L("game_title"), 132, TextAnchor.MiddleLeft, new Color(1f, .94f, .80f));
             coverTitle.fontStyle = FontStyle.Bold;
             coverTitle.resizeTextForBestFit = true;
-            coverTitle.resizeTextMinSize = 36;
-            coverTitle.resizeTextMaxSize = 65;
-            coverTitle.rectTransform.Anchor(0, 1, .72f, 1, 50, -144, 20, 45);
+            coverTitle.resizeTextMinSize = 30;
+            coverTitle.resizeTextMaxSize = 132;
+            coverTitle.rectTransform.Anchor(.048f, .682f, .445f, .84f);
             var shadow = coverTitle.gameObject.AddComponent<Shadow>();
             shadow.effectColor = new Color(.02f, .03f, .07f, .88f);
-            shadow.effectDistance = new Vector2(2, -3);
-            var subtitle = Ui.Label(hero, L("tagline"), 23, TextAnchor.UpperLeft, Ui.TextColor);
-            subtitle.rectTransform.Anchor(0, 1, 1, 1, 54, -186, 50, 148);
+            shadow.effectDistance = new Vector2(3, -4);
+            var subtitle = Ui.Label(w.Content, L("tagline"), 27, TextAnchor.MiddleLeft, new Color(1f, .86f, .69f));
+            subtitle.resizeTextForBestFit = true;
+            subtitle.resizeTextMinSize = 16;
+            subtitle.resizeTextMaxSize = 27;
+            subtitle.rectTransform.Anchor(.052f, .631f, .44f, .685f);
             if (GameSession.FirstChapterTrial)
-                Ui.Label(hero, L("trial_edition"), 17, TextAnchor.MiddleLeft, Ui.Accent)
-                    .rectTransform.Anchor(0, 1, 1, 1, 54, -225, 50, 190);
+                Ui.Label(w.Content, L("trial_edition"), 17, TextAnchor.MiddleLeft, Ui.Accent)
+                    .rectTransform.Anchor(.052f, .596f, .44f, .631f);
 
-            var actions = Ui.FlatPanel(body, "MenuActions").rectTransform;
-            Ui.Size(actions, 360, 668);
-            Ui.VList(actions, 12, 32).childAlignment = TextAnchor.MiddleCenter;
+            var actions = Ui.Rect(w.Content, "MenuActions").Anchor(.048f, .12f, .222f, _canResumeMainMenu ? .59f : .556f);
+            Ui.VList(actions, 14, 0);
             bool hasSaves = SaveStore.Exists;
             if (_canResumeMainMenu)
-                Ui.Size(Ui.Button(actions, L("resume"), w.Close, 22, Ui.SelectedButton(true)), -1, 58);
-            Ui.Size(Ui.Button(actions, L(hasSaves || _canResumeMainMenu ? "new_game" : "start"), () =>
+                Ui.Size(MainMenuAction(actions, "resume", w.Close, emphasized: true), -1, 66);
+            Ui.Size(MainMenuAction(actions, hasSaves || _canResumeMainMenu ? "new_game" : "start", () =>
             {
                 if (_canResumeMainMenu) ConfirmMenuAction("new_game", "new_confirm", "new_game", _ctrl.NewGame);
                 else _ctrl.NewGame();
-            }, 22, Ui.SelectedButton(!_canResumeMainMenu && !hasSaves)), -1, 58);
-            Ui.Size(Ui.Button(actions, L("load"), () => OpenLoadMenu(_canResumeMainMenu), 22,
-                Ui.SelectedButton(!_canResumeMainMenu && hasSaves), hasSaves), -1, 58);
-            Ui.Size(Ui.Button(actions, L("settings"), OpenSettingsMenu, 20), -1, 50);
-            var links = Ui.Row(actions, 46, 10);
-            Ui.Size(Ui.Button(links, L("help"), OpenHelpMenu, 18), 0, -1, 1);
-            Ui.Size(Ui.Button(links, L("about"), OpenAboutMenu, 18), 0, -1, 1);
-            Ui.Size(Ui.Button(actions, L("quit"), OpenQuitMenu, 20), -1, 50);
+            }, emphasized: !_canResumeMainMenu && !hasSaves), -1, 66);
+            Ui.Size(MainMenuAction(actions, "load", () => OpenLoadMenu(_canResumeMainMenu),
+                emphasized: !_canResumeMainMenu && hasSaves, interactable: hasSaves), -1, 66);
+            Ui.Size(MainMenuAction(actions, "settings", OpenSettingsMenu), -1, 66);
+            var links = Ui.Row(actions, 42, 8);
+            Ui.Size(MainMenuAction(links, "help", OpenHelpMenu, link: true), 0, -1, 1);
+            Ui.Size(MainMenuAction(links, "about", OpenAboutMenu, link: true), 0, -1, 1);
+            Ui.Size(MainMenuAction(actions, "quit", OpenQuitMenu, link: true), -1, 40);
+        }
+
+        private static Button MainMenuAction(Transform parent, string key, Action click,
+            bool emphasized = false, bool interactable = true, bool link = false)
+        {
+            int size = link ? 25 : 31;
+            var button = Ui.Button(parent, L(key), click, size, emphasized ? Ui.ButtonHot : Ui.FlatWell, interactable);
+            var fill = button.image.color;
+            fill.a = link ? 0 : emphasized ? .60f : .57f;
+            button.image.color = fill;
+            var edge = button.GetComponent<Outline>();
+            edge.enabled = !link;
+            edge.useGraphicAlpha = false;
+            edge.effectColor = emphasized ? Ui.Accent : Ui.FlatButtonEdge;
+            if (emphasized) edge.effectDistance = new Vector2(2, -2);
+            var caption = button.GetComponentInChildren<Text>();
+            if (interactable) caption.color = new Color(1f, .92f, .78f);
+            caption.alignment = TextAnchor.MiddleLeft;
+            caption.resizeTextForBestFit = true;
+            caption.resizeTextMinSize = 16;
+            caption.resizeTextMaxSize = size;
+            caption.rectTransform.Anchor(0, 0, 1, 1, link ? 12 : 32, 0, 12);
+            var feedback = button.colors;
+            feedback.highlightedColor = new Color(1.17f, 1.17f, 1.17f);
+            button.colors = feedback;
+            return button;
         }
 
         public void OpenSettingsMenu()

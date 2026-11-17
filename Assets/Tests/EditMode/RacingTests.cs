@@ -189,8 +189,11 @@ namespace PCShopSell.Tests
             Assert.That(s.Clock.Now.TotalMinutes, Is.EqualTo(start));
             race.Lap = race.Laps - 1;
             race.Next = 0;
-            race.X = race.Track.Points[0].X;
+            race.X = race.Track.Points[0].X - 1;
             race.Y = race.Track.Points[0].Y;
+            race.Step(.02, 0, 0);
+            Assert.That(race.Finished, Is.False);
+            race.X = race.Track.Points[0].X;
             race.Step(.02, 0, 0);
             Assert.That(race.Lap, Is.EqualTo(race.Laps));
             Assert.That(race.Finished, Is.True);
@@ -309,18 +312,18 @@ namespace PCShopSell.Tests
             var r=new RaceSimulation(RaceTracks.All[tier],MotorCatalog.Get(model),true);Drive(r);
             Assert.That(r.Abandoned,Is.False,$"{model} {tier}: lap {r.Lap}, next {r.Next}, collisions {r.Collisions}");Assert.That(r.Finished,Is.True);Assert.That(r.Lap,Is.EqualTo(r.Track.Laps));
         }
-        [TestCase(0, 10, 279.72)]
-        [TestCase(1, 14, 360.25)]
-        [TestCase(2, 14, 463.68)]
-        [TestCase(3, 14, 557.47)]
+        [TestCase(0, 20, 416.175)]
+        [TestCase(1, 28, 540.375)]
+        [TestCase(2, 28, 695.52)]
+        [TestCase(3, 28, 836.205)]
         public void ResizedTrackKeepsItsReceptionClearAndHasTheRequestedDrivingDimensions(
-            int tier, double previousRoadWidth, double previousLapLength)
+            int tier, double roadWidth, double lapLength)
         {
             using var s = DistrictProgressionTests.Make();
             var track = RaceTracks.Get(RaceTracks.All[tier].Id, s.City);
             var race = new RaceSimulation(track, MotorCatalog.Get("e_city"), true);
-            Assert.That(track.HalfRoad * 2, Is.EqualTo(previousRoadWidth * 2));
-            Assert.That(race.Length, Is.EqualTo(previousLapLength * 1.5).Within(.01));
+            Assert.That(track.HalfRoad * 2, Is.EqualTo(roadWidth));
+            Assert.That(race.Length, Is.EqualTo(lapLength).Within(.01));
 
             foreach (var point in track.Points)
             {
@@ -362,16 +365,21 @@ namespace PCShopSell.Tests
             using var initial = Make();
             var vehicle = PrepareStarterScooter(initial);
             var save = initial.CreateSave();
-            save.racing.Records = new[] { new RaceRecord { Key = "race_0:0:practice", BestSeconds = 1, Wins = 3, Starts = 4 } };
+            save.racing.Records = new[]
+            {
+                new RaceRecord { Key = "race_0:0:practice", BestCourseRevision = 1, BestSeconds = 1, Wins = 3, Starts = 4 },
+                new RaceRecord { Key = "race_1:0:practice", BestCourseRevision = 1, BestSeconds = 2 }
+            };
             using var s = GameSession.Load(initial.City, save);
             At(s, GameSession.StarterRaceTrackId);
-            Assert.That(s.RacingRecords.Single().BestOnCurrentCourse, Is.False);
+            Assert.That(s.RacingRecords.Single(r => r.Key.StartsWith("race_0:")).BestOnCurrentCourse, Is.False);
+            Assert.That(s.RacingRecords.Single(r => r.Key.StartsWith("race_1:")).BestOnCurrentCourse, Is.True);
             Assert.That(s.StartRace(GameSession.StarterRaceTrackId, vehicle, true), Is.True);
             Drive(s.ActiveRace);
             Assert.That(s.ActiveRace.Abandoned, Is.False);
             s.FinishRace();
             using var loaded = Reload(s);
-            var record = loaded.RacingRecords.Single();
+            var record = loaded.RacingRecords.Single(r => r.Key.StartsWith("race_0:"));
             Assert.That(record.BestOnCurrentCourse, Is.True);
             Assert.That(record.BestSeconds, Is.GreaterThan(1));
             Assert.That(record.Wins, Is.EqualTo(3));

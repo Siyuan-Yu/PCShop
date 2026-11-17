@@ -148,7 +148,7 @@ namespace PCShopSell.Core.Session
             },
             new QuestDef
             {
-                Id = "community_goal", Title = "城郊到社区 · 引荐条件", Target = QuestTarget.CommunityGoal,
+                Id = "community_goal", Title = GameSession.FirstChapterTrial ? "城郊经营目标" : "城郊到社区 · 引荐条件", Target = QuestTarget.CommunityGoal,
                 Short = "扩大城郊经营，结清贷款并攒够自有现金",
                 Hint = $"在城郊开业至少 {DistrictNarrativeCatalog.CommunityShopMinimum} 家门店，结清所有贷款，自有现金达到 "
                     + $"{DistrictNarrativeCatalog.CommunityCashMinimumYuan / 10_000} 万元。门店打烊后仍计入，装修当天的门店从次日开始计。\n"

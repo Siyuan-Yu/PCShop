@@ -53,7 +53,20 @@ namespace PCShopSell.Game.UI
             var node=S.CurrentDistrictNode;
             if(node==null)
             {
-                if(S.DistrictInvitationStatus==null)return;
+                if (S.FirstChapterTrialCompleted)
+                {
+                    Para(content, "试玩主线已完成 · 可以留在城郊继续经营。", 18, Ui.Good);
+                    return;
+                }
+                if (S.DistrictInvitationStatus == null)
+                {
+                    if (GameSession.FirstChapterTrial && S.CurrentQuest()?.Target != QuestTarget.CommunityGoal)
+                    {
+                        Line(content, "城郊试玩主线", 19, Ui.Accent);
+                        ProgressLine(content, Quests.Get("community_goal"), 16);
+                    }
+                    return;
+                }
                 Para(content,"主线 · 等待联系\n"+S.DistrictInvitationStatus,18,Ui.Accent);
                 Ui.Size(Ui.Button(content,"查看主线等待详情",OpenDistrictStory,18),-1,40).name="DistrictStoryMessage";
                 return;

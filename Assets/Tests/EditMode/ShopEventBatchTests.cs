@@ -4,6 +4,7 @@ using NUnit.Framework;
 using UnityEngine;
 using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
+using PCShopSell.Core.Finance;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Inventory;
 using PCShopSell.Core.Session;
@@ -187,15 +188,47 @@ namespace PCShopSell.Tests
                     arrived = s.Clock.Now.TotalMinutes - 5, ready = s.Clock.Now.TotalMinutes - 2, waiting = s.Clock.Now.TotalMinutes - 1, spendCents = cents, goodsExpiry = -1 } } });
             Assert.GreaterOrEqual(shop.Sim.Checkout(7), 0);
         }
-        [TestCase(50000, 5000)] [TestCase(1000000, 50000)]
-        public void ComplaintNeedsARealReceiptAndCompensationIsTenPercentCappedAt500(long paid, long expected)
+        [TestCase(50025, 100050)] [TestCase(1000000, 2000000)]
+        public void ComplaintNeedsARealReceiptAndPaysTwiceTheActualSpend(long paid, long expected)
         {
             using var s = Make(); s.RaiseEvent("shop_complaint_online"); Assert.IsNull(s.PendingEvent); Sale(s, paid); var cash = s.Ledger.Balance;
-            Resolve(s, "shop_complaint_online", 1); Assert.AreEqual(cash.Cents - expected, s.Ledger.Balance.Cents);
+            s.RaiseEvent("shop_complaint_online");
+            Assert.NotNull(s.PendingEvent);
+            Assert.That(s.PendingEvent.Choices[1].Text, Does.Contain(Money.FromCents(expected).ToString()));
+            Assert.IsTrue(s.ResolveEvent(1)); Assert.AreEqual(cash.Cents - expected, s.Ledger.Balance.Cents);
             using var loaded = Reload(s); loaded.RaiseEvent("shop_complaint_online"); Assert.IsNull(loaded.PendingEvent);
             var t = loaded.ShopEventTasks.Single(x => x.Kind == "complaint"); AtTime(loaded, t.At - 1); loaded.AdvanceClock(1);
             Assert.IsFalse(loaded.ShopEventTasks.Any(x => x.Kind == "complaint")); Assert.AreEqual(1, loaded.Ledger.Entries.Count(e => e.Category == "顾客补偿"));
         }
+
+        [TestCase("meal:8:drink")]
+        [TestCase("meal:{shop}:61130:8:drink")]
+        public void RestaurantComplaintIncludesTheDrinkFromTheSavedTableOrder(string drinkSource)
+        {
+            using var s = Make();
+            var shop = s.MainShop;
+            shop.RetailKind = shop.Sim.RetailKind = "restaurant";
+            string shopId = shop.Place.Id;
+            int signedDay = shop.Lease?.SignedDay ?? -1;
+            int day = s.Clock.Today.TotalDays;
+            var meal = Money.FromYuan(44);
+            var drink = Money.FromCents(550);
+            s.Ledger.Credit(s.Clock.Today, "餐饮", meal);
+            s.Ledger.Credit(s.Clock.Today, "零售", drink, attribution: LedgerAttribution.ForShop(shopId, drinkSource.Replace("{shop}", shopId), "销售"));
+            s.Ledger.Credit(s.Clock.Today, "零售", drink, attribution: LedgerAttribution.ForShop(shopId, "meal:18:drink", "销售"));
+            var save = s.CreateSave();
+            save.eventPaidReceipts = new[] { new EventPaidReceipt
+            {
+                Key = $"{shopId}:{signedDay}:restaurant:{day}:meal:8", ShopId = shopId, SignedDay = signedDay,
+                RetailKind = "restaurant", Day = day, Product = "鸡蛋炒饭", PaidCents = meal.Cents
+            } };
+
+            using var loaded = GameSession.Load(s.City, save);
+            var balance = loaded.Ledger.Balance;
+            Resolve(loaded, "shop_complaint_online", 1);
+            Assert.AreEqual(balance - (meal + drink) * 2, loaded.Ledger.Balance);
+        }
+
         [TestCase(0, 1, 9500)] [TestCase(1, 3, 9000)] [TestCase(2, 1, 10000)]
         public void StudentOrderUsesRealPriceAndInventoryAndPaysOnlyAfterDelivery(int choice, int count, int bps)
         {

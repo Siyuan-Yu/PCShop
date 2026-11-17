@@ -22,13 +22,20 @@ namespace PCShopSell.Game.Runtime
             Prims.Box(scenery,"IslandBank",Vector3.down*.4f,new Vector3((float)track.Width+10,.7f,(float)track.Depth+10),Mats.Lit(ArtDirection.Hex("B9AD8B")));
             Prims.Box(scenery,"Infield",Vector3.zero,new Vector3((float)track.Width,.15f,(float)track.Depth),Mats.Lit(ArtDirection.Sage));
             var resources=gameObject.AddComponent<CityLandscapeResources>();
-            Ribbon(scenery,track,(float)track.HalfRoad+1.3f,.14f,Mats.Lit(ArtDirection.Cream),resources);
-            Ribbon(scenery,track,(float)track.HalfRoad,.18f,Mats.Lit(ArtDirection.Hex("39434A")),resources);
+            Ribbon(scenery,(float)track.HalfRoad+1.3f,.14f,Mats.Lit(ArtDirection.Cream),resources);
+            Ribbon(scenery,(float)track.HalfRoad,.18f,Mats.Lit(ArtDirection.Hex("39434A")),resources);
             BuildBarriers(scenery, resources);
             BuildStartingGantry(scenery);
-            for(int i=0;i<4;i++)Prims.Box(scenery,"Grandstand",new Vector3(-10,.6f+i*.6f,i*2),new Vector3(24,.7f,2),Mats.Lit(i%2==0?ArtDirection.Wood:ArtDirection.Cream));
-            Prims.Box(scenery,"PitOffice",new Vector3(15,2.2f,8),new Vector3(12,4.3f,6),Mats.Lit(ArtDirection.Cream));
-            Prims.Box(scenery,"PitRoof",new Vector3(15,4.5f,8),new Vector3(14,.5f,8),Mats.Lit(ArtDirection.Blue));
+            bool starter = track.Tier == 0;
+            var stand = starter ? new Vector3(-35, 0, -19) : new Vector3(-10, 0, 0);
+            var pit = starter ? new Vector3(-11.5f, 0, -14) : new Vector3(15, 0, 8);
+            for (int i = 0; i < 4; i++)
+                Prims.Box(scenery, "Grandstand", stand + new Vector3(0, .6f + i * .6f, i * 2),
+                    new Vector3(24, .7f, 2), Mats.Lit(i % 2 == 0 ? ArtDirection.Wood : ArtDirection.Cream));
+            Prims.Box(scenery, "PitOffice", pit + Vector3.up * 2.2f, new Vector3(12, 4.3f, 6), Mats.Lit(ArtDirection.Cream));
+            Prims.Box(scenery, "PitRoof", pit + Vector3.up * 4.5f, new Vector3(14, .5f, 8), Mats.Lit(ArtDirection.Blue));
+            if (starter) BuildStarterLandmarks(scenery, resources);
+            if (track.Kerbs.Length > 0) BuildKerbs(scenery, resources);
             for(int i=0;i<4;i++){Prims.Box(scenery,"FloodlightPole",new Vector3((i%2==0?-1:1)*(float)track.Width*.43f,4,(i<2?-1:1)*(float)track.Depth*.43f),new Vector3(.3f,8,.3f),Mats.Lit(ArtDirection.Ink));}
             StaticBatchingUtility.Combine(scenery.gameObject);
             _moving=new GameObject("RaceVehicles").transform;_moving.SetParent(transform,false);_moving.gameObject.SetActive(false);
@@ -44,7 +51,8 @@ namespace PCShopSell.Game.Runtime
             float halfRoad = (float)Track.HalfRoad;
             float postOffset = halfRoad + 1.65f;
             var metal = Mats.Lit(ArtDirection.Ink);
-            Prims.Box(gantry, "StartFinish", Vector3.up * .22f, new Vector3(2 * halfRoad, .04f, 1.2f), Mats.Lit(ArtDirection.Cream));
+            if (Track.Tier == 0) BuildStarterGrid(gantry);
+            else Prims.Box(gantry, "StartFinish", Vector3.up * .22f, new Vector3(2 * halfRoad, .04f, 1.2f), Mats.Lit(ArtDirection.Cream));
             foreach (int side in new[] { -1, 1 })
             {
                 float x = side * postOffset;
@@ -62,6 +70,66 @@ namespace PCShopSell.Game.Runtime
                 var lamp = Prims.Shape(PrimitiveType.Sphere, signals, $"StartSignal{i + 1}",
                     new Vector3((i - 1) * 1.02f, 5.12f, -.58f), new Vector3(.74f, .74f, .28f), Mats.Lit(ArtDirection.Ink));
                 _startLamps[i] = lamp.GetComponent<Renderer>();
+            }
+        }
+
+        private void BuildStarterGrid(Transform gantry)
+        {
+            const int columns = 16;
+            float halfRoad = (float)Track.HalfRoad;
+            float tile = 2 * halfRoad / columns;
+            var white = Mats.Lit(ArtDirection.Cream);
+            var dark = Mats.Lit(ArtDirection.Hex("526476"));
+            for (int column = 0; column < columns; column++)
+            for (int row = 0; row < 2; row++)
+                Prims.Box(gantry, "StartFinish", new Vector3(-halfRoad + tile * (column + .5f), .194f, row * .6f - .3f),
+                    new Vector3(tile, .02f, .6f), (column + row) % 2 == 0 ? white : dark);
+
+            PaintSlot(0, (float)RaceSimulation.PlayerGridDistance, Mats.Lit(ArtDirection.Brass));
+            for (int i = 0; i < RaceSimulation.RivalCount; i++)
+                PaintSlot((float)RaceSimulation.RivalLaneOffset(i, halfRoad), (float)RaceSimulation.RivalGridDistance(i), white);
+
+            void PaintSlot(float x, float z, Material color)
+            {
+                foreach (float side in new[] { -1f, 1f })
+                {
+                    Prims.Box(gantry, "GridSlot", new Vector3(x + side, .194f, z), new Vector3(.1f, .02f, 3), color);
+                    Prims.Box(gantry, "GridSlot", new Vector3(x, .194f, z + side * 1.5f), new Vector3(2.1f, .02f, .1f), color);
+                }
+            }
+        }
+
+        private static void BuildStarterLandmarks(Transform scenery, CityLandscapeResources resources)
+        {
+            var rubber = Mats.Lit(ArtDirection.Hex("33383D"));
+            var hollow = Mats.Lit(ArtDirection.Hex("171E24"));
+            foreach (var (x, z, radius, layers) in new[] { (54f, -22f, 1.45f, 2), (57.4f, -20.5f, 1.3f, 2),
+                (56.5f, -26f, 1.6f, 3), (60f, -24f, 1.2f, 1) })
+            {
+                for (int layer = 0; layer < layers; layer++)
+                    Prims.Shape(PrimitiveType.Cylinder, scenery, "OldTyre", new Vector3(x, .25f + layer * .3f, z),
+                        new Vector3(radius * 2, .15f, radius * 2), rubber);
+                Prims.Shape(PrimitiveType.Cylinder, scenery, "TyreWell", new Vector3(x, .395f + (layers - 1) * .3f, z),
+                    new Vector3(radius * 1.15f, .012f, radius * 1.15f), hollow);
+            }
+
+            var arrow = new Mesh { name = "StarterDirectionArrow" };
+            arrow.vertices = new[] { new Vector3(-.32f, 0, -1.7f), new Vector3(-.32f, 0, .25f),
+                new Vector3(-1.06f, 0, .25f), new Vector3(0, 0, 1.65f), new Vector3(1.06f, 0, .25f),
+                new Vector3(.32f, 0, .25f), new Vector3(.32f, 0, -1.7f) };
+            arrow.triangles = new[] { 0, 1, 5, 0, 5, 6, 2, 3, 4 };
+            arrow.RecalculateNormals();
+            arrow.RecalculateBounds();
+            resources.Owned.Add(arrow);
+            foreach (var (x, z, yaw) in new[] { (0f, -47f, 90f), (76f, -22f, 0f), (19f, 21f, -34f),
+                (-33f, 42f, -90f), (-76f, -6f, 180f) })
+            {
+                var mark = new GameObject("DirectionArrow", typeof(MeshFilter), typeof(MeshRenderer));
+                mark.transform.SetParent(scenery, false);
+                mark.transform.localPosition = new Vector3(x, .195f, z);
+                mark.transform.localRotation = Quaternion.Euler(0, yaw, 0);
+                mark.GetComponent<MeshFilter>().sharedMesh = arrow;
+                mark.GetComponent<MeshRenderer>().sharedMaterial = Mats.Lit(ArtDirection.Cream);
             }
         }
 
@@ -208,10 +276,62 @@ namespace PCShopSell.Game.Runtime
                 go.GetComponent<MeshRenderer>().sharedMaterials = new[] { Mats.Lit(ArtDirection.Clay), Mats.Lit(ArtDirection.Cream) };
             }
         }
-        private static void Ribbon(Transform parent,RaceTrack t,float half,float height,Material mat,CityLandscapeResources resources)
+        private Vector3 RoadNormal(int index)
         {
-            int n=t.Points.Length;var v=new Vector3[n*2];var tri=new int[n*6];
-            for(int i=0;i<n;i++){var prev=t.Points[(i+n-1)%n];var next=t.Points[(i+1)%n];var tangent=new Vector3((float)(next.X-prev.X),0,(float)(next.Y-prev.Y)).normalized;var normal=Vector3.Cross(Vector3.up,tangent);var at=new Vector3((float)t.Points[i].X,height,(float)t.Points[i].Y);v[i*2]=at-normal*half;v[i*2+1]=at+normal*half;int j=(i+1)%n;int k=i*6;tri[k]=i*2;tri[k+1]=j*2;tri[k+2]=i*2+1;tri[k+3]=i*2+1;tri[k+4]=j*2;tri[k+5]=j*2+1;}
+            var tangent = (Point(index + 1) - Point(index + Track.Points.Length - 1)).normalized;
+            return Vector3.Cross(Vector3.up, tangent);
+        }
+
+        private void BuildKerbs(Transform parent, CityLandscapeResources resources)
+        {
+            var vertices = new List<Vector3>();
+            var faces = new[] { new List<int>(), new List<int>() };
+            const float stripeLength = 2.6f;
+            foreach (var (first, last, side) in Track.Kerbs)
+            {
+                float inner = (float)Track.HalfRoad - .12f, outer = (float)Track.HalfRoad + 1.2f;
+                float left = side > 0 ? inner : -outer, right = side > 0 ? outer : -inner;
+                float travelled = 0;
+                for (int i = first; i < last; i++)
+                {
+                    var a = Point(i) + Vector3.up * .193f;
+                    var b = Point(i + 1) + Vector3.up * .193f;
+                    var normalA = RoadNormal(i);
+                    var normalB = RoadNormal(i + 1);
+                    float length = Vector3.Distance(a, b);
+                    float end = travelled + length;
+                    for (int stripe = Mathf.FloorToInt(travelled / stripeLength); stripe * stripeLength < end; stripe++)
+                    {
+                        float from = (Mathf.Max(travelled, stripe * stripeLength) - travelled) / length;
+                        float to = (Mathf.Min(end, (stripe + 1) * stripeLength) - travelled) / length;
+                        if (to <= from) continue;
+                        int start = vertices.Count;
+                        vertices.Add(Vector3.Lerp(a + normalA * left, b + normalB * left, from));
+                        vertices.Add(Vector3.Lerp(a + normalA * left, b + normalB * left, to));
+                        vertices.Add(Vector3.Lerp(a + normalA * right, b + normalB * right, to));
+                        vertices.Add(Vector3.Lerp(a + normalA * right, b + normalB * right, from));
+                        faces[stripe % 2].AddRange(new[] { start, start + 1, start + 2, start, start + 2, start + 3 });
+                    }
+                    travelled = end;
+                }
+            }
+            var mesh = new Mesh { name = "RaceKerbs", subMeshCount = 2 };
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(faces[0], 0);
+            mesh.SetTriangles(faces[1], 1);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            resources.Owned.Add(mesh);
+            var kerbs = new GameObject("Kerbs", typeof(MeshFilter), typeof(MeshRenderer));
+            kerbs.transform.SetParent(parent, false);
+            kerbs.GetComponent<MeshFilter>().sharedMesh = mesh;
+            kerbs.GetComponent<MeshRenderer>().sharedMaterials = new[] { Mats.Lit(ArtDirection.Clay), Mats.Lit(ArtDirection.Cream) };
+        }
+
+        private void Ribbon(Transform parent,float half,float height,Material mat,CityLandscapeResources resources)
+        {
+            int n=Track.Points.Length;var v=new Vector3[n*2];var tri=new int[n*6];
+            for(int i=0;i<n;i++){var normal=RoadNormal(i);var at=Point(i)+Vector3.up*height;v[i*2]=at-normal*half;v[i*2+1]=at+normal*half;int j=(i+1)%n;int k=i*6;tri[k]=i*2;tri[k+1]=j*2;tri[k+2]=i*2+1;tri[k+3]=i*2+1;tri[k+4]=j*2;tri[k+5]=j*2+1;}
             var mesh=new Mesh{name="RaceRoad"};mesh.vertices=v;mesh.triangles=tri;mesh.RecalculateNormals();mesh.RecalculateBounds();resources.Owned.Add(mesh);
             var go=new GameObject("RoadRibbon",typeof(MeshFilter),typeof(MeshRenderer));go.transform.SetParent(parent,false);go.GetComponent<MeshFilter>().sharedMesh=mesh;go.GetComponent<MeshRenderer>().sharedMaterial=mat;
         }

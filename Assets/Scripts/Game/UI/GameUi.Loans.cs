@@ -166,15 +166,10 @@ namespace PCShopSell.Game.UI
                 var response = Para(instructions, "", 17, Ui.Good);
                 var gestures = Ui.Row(w.Content, 43, 8);
                 var buttons = new List<Button>();
-                foreach (var gesture in new[] { LoanGesture.Nod, LoanGesture.ShakeHead, LoanGesture.Wave })
-                {
-                    var button = Ui.Size(Ui.Button(gestures, LoanGestureName(gesture), () => Perform(gesture), 18), 0, 43, 1);
-                    button.name = "LoanGesture_" + gesture;
-                    buttons.Add(button);
-                }
                 var actions = Ui.Row(w.Content, 46, 8);
                 Ui.Size(Ui.Button(actions, "取消申请", w.Close, 17), 150, 46);
-                var submit = Ui.Size(Ui.Button(actions, $"确认借款 · 到账 {quote.Principal}", () =>
+                var submit = Ui.Size(Ui.Button(actions, $"确认借款 · 到账 {quote.Principal}", null, 19, Ui.ButtonHot), 0, 46, 1);
+                submit.onClick.AddListener(() =>
                 {
                     if (w.Closed || moving.HasValue || S != session) return;
                     if (!session.BorrowAppLoan(application))
@@ -186,8 +181,14 @@ namespace PCShopSell.Game.UI
                     }
                     w.Close();
                     completed();
-                }, 19, Ui.ButtonHot), 0, 46, 1);
+                });
                 submit.name = "LoanVerificationSubmit";
+                foreach (var gesture in new[] { LoanGesture.Nod, LoanGesture.ShakeHead, LoanGesture.Wave })
+                {
+                    var button = Ui.Size(Ui.Button(gestures, LoanGestureName(gesture), () => Perform(gesture), 18), 0, 43, 1);
+                    button.name = "LoanGesture_" + gesture;
+                    buttons.Add(button);
+                }
                 frame.gameObject.AddComponent<LoanGestureInput>().Perform = Perform;
 
                 void Perform(LoanGesture gesture)

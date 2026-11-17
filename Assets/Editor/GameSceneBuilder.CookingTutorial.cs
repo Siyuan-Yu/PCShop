@@ -166,7 +166,8 @@ namespace PCShopSell.EditorTools
             ui.CloseAllWindows();
             ui.OnEnteredPlace(s.CurrentPlace);
             Check(Tab("全部")?.image.color == Ui.ButtonHot, "再次打开家具城默认全部");
-            Check(_game.SaveGame() && _game.TryLoadGame(), "家具城重开测试存档可读");
+            const int smokeSaveSlot = 1;
+            Check(_game.SaveGame(smokeSaveSlot) && _game.TryLoadGame(smokeSaveSlot, automatic: false), "家具城重开测试存档可读");
             Check(Tab("全部")?.image.color == Ui.ButtonHot, "重新读档后家具城仍默认全部");
         }
 

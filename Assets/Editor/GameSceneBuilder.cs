@@ -1031,7 +1031,7 @@ namespace PCShopSell.EditorTools
             using (var recovered = SaveStore.Load(s.City))
                 Check(recovered != null && recovered.Ledger.Balance == s.Ledger.Balance && SaveStore.LastLoadMessage.Contains("备用"), "主存档损坏时可从备份恢复");
             File.WriteAllText(SaveStore.PathOf, manualJson);
-            _game.LoadGame();
+            Check(_game.TryLoadGame(1, automatic: false), "读回手动存档");
             Check(_game.Session.Ledger.Balance == s.Ledger.Balance, "读档后余额一致");
 
             // 快进一个月：睡觉循环
@@ -1360,7 +1360,7 @@ namespace PCShopSell.EditorTools
             staffSave.hasAssembler = true;
             staffSave.assembler = new SaveEmployee { name = "装机小王", wage = 210, checkoutMinutes = 3, buildsCompleted = 8 };
             File.WriteAllText(SaveStore.PathOf, JsonUtility.ToJson(staffSave));
-            _game.LoadGame();
+            Check(_game.TryLoadGame(1, automatic: false), "读回员工验收档");
             var staffed = _game.Session;
             staffed.Clock.Restore(staffed.Clock.Today, 14 * 60);
             Teleport(staffed, staffed.PlayerShopPlace.Id);
@@ -1669,7 +1669,7 @@ namespace PCShopSell.EditorTools
                     rentCents = Money.FromYuan(30000 - i * 4000).Cents,
                     openDay = s.Clock.Today.TotalDays + (i % 2 == 0 ? 0 : 15), closeDay = s.Clock.Today.TotalDays + 45 }).ToArray();
             File.WriteAllText(SaveStore.PathOf, JsonUtility.ToJson(dense));
-            _game.LoadGame();
+            Check(_game.TryLoadGame(1, automatic: false), "读回中介验收档");
             s = _game.Session;
             Teleport(s, "agency");
             _game.Ui.OnEnteredPlace(s.CurrentPlace);

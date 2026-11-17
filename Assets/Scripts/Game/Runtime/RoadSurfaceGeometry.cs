@@ -45,6 +45,43 @@ namespace PCShopSell.Game.Runtime
             }
             return result;
         }
+        internal static Vector2[] Intersect(IReadOnlyList<Vector2> subject, IReadOnlyList<Vector2> clip)
+        {
+            IReadOnlyList<Vector2> remaining = subject;
+            for (int i = 0; i < clip.Count && remaining.Count >= 3; i++)
+                remaining = Half(remaining, clip[i], clip[(i + 1) % clip.Count], true);
+            return remaining.Count >= 3 ? new List<Vector2>(remaining).ToArray() : Array.Empty<Vector2>();
+        }
+
+        internal static List<Vector2[]> SplitAt(List<Vector2[]> pieces, Vector2 point, Vector2 line)
+        {
+            var result = new List<Vector2[]>();
+            foreach (var piece in pieces)
+            {
+                var left = Half(piece, point, point + line, true);
+                var right = Half(piece, point, point + line, false);
+                if (Area(left) > .0001f) result.Add(left.ToArray());
+                if (Area(right) > .0001f) result.Add(right.ToArray());
+            }
+            return result;
+        }
+
+        internal static bool ClipSegment(Vector2 a, Vector2 b, IReadOnlyList<Vector2> polygon, out float first, out float last)
+        {
+            first = 0;
+            last = 1;
+            for (int i = 0; i < polygon.Count; i++)
+            {
+                var start = polygon[i];
+                var edge = polygon[(i + 1) % polygon.Count] - start;
+                double begin = Cross(edge, a - start), end = Cross(edge, b - start);
+                if (begin < 0 && end < 0) return false;
+                if (begin < 0) first = Mathf.Max(first, (float)(begin / (begin - end)));
+                if (end < 0) last = Mathf.Min(last, (float)(begin / (begin - end)));
+                if (first >= last) return false;
+            }
+            return true;
+        }
         public static List<Vector2[]> Subtract(IReadOnlyList<Vector2> subject,IReadOnlyList<Vector2> clip)
         {
             var pieces=new List<Vector2[]>();IReadOnlyList<Vector2> remaining=subject;

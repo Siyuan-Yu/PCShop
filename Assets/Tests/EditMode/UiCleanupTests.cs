@@ -540,8 +540,8 @@ namespace PCShopSell.Tests
             foreach (var kind in FurnitureShops.AllKinds)
             {
                 r.Button("ShopTab_" + RetailShopTypes.Name(kind)).onClick.Invoke();
+                AssertAdjacent(shelves);
                 if (kind == "restaurant") AssertAdjacent(fridges);
-                else AssertAdjacent(shelves);
                 if (kind == PetShopCatalog.ShopKind)
                 {
                     AssertAdjacent(PetShopCatalog.SmallHouse, PetShopCatalog.MediumHouse, PetShopCatalog.LargeHouse);
@@ -1005,6 +1005,53 @@ namespace PCShopSell.Tests
                     StringAssert.Contains("累计成交", r.Text);
                 }
             }
+        }
+
+        [Test]
+        public void RestaurantCounterKeepsTableRowsAndScrollPositionWhenOrdersChange()
+        {
+            using var r = new Rig();
+            Assert.True(r.S.SetShopMainCategory("restaurant"));
+            var shop = r.S.CurrentShop;
+            for (int i = GameSession.RestaurantTablesPlaced(shop); i < 8; i++)
+                shop.Layout.Add(new PlacedFurniture { Id = "restaurant_table", X = 1 + i % 4, Z = 2 + i / 4 });
+
+            var state = r.S.SpecialBusiness(shop.Place.Id);
+            long now = r.S.Clock.Now.TotalMinutes;
+            var first = new DiningOrder { Id = 1, Table = 0, Stage = DiningStage.Checkout };
+            var last = new DiningOrder { Id = 2, Table = 7, Stage = DiningStage.Cooking, ReadyAt = now + 1, BurnAt = now + 30 };
+            state.Orders.AddRange(new[] { last, first });
+            r.Ui.OpenDock();
+            r.Ui.DebugSelectTab(0);
+
+            RectTransform Row(int table) => r.Components<RectTransform>().Single(rect => rect.name == "RestaurantTable_" + table);
+            var firstRow = Row(0);
+            var lastRow = Row(7);
+            var lastAction = lastRow.GetComponentInChildren<Button>();
+            var scroll = firstRow.GetComponentInParent<ScrollRect>();
+            Canvas.ForceUpdateCanvases();
+            scroll.verticalNormalizedPosition = .5f;
+            var offset = scroll.content.anchoredPosition;
+            var actionPosition = lastAction.transform.position;
+            Assert.Less(firstRow.GetSiblingIndex(), lastRow.GetSiblingIndex());
+            Assert.False(lastAction.interactable);
+
+            last.ReadyAt = now;
+            r.Call("RefreshDock");
+            Assert.True(lastAction.interactable);
+            first.TableCleared = true;
+            last.Stage = DiningStage.Checkout;
+            state.Orders.Add(new DiningOrder { Id = 3, FishId = "test-fish", Table = -1 });
+            r.Call("RefreshDock");
+            Canvas.ForceUpdateCanvases();
+
+            Assert.AreSame(firstRow, Row(0));
+            Assert.AreSame(lastAction, Row(7).GetComponentInChildren<Button>());
+            Assert.AreEqual(offset, scroll.content.anchoredPosition);
+            Assert.AreEqual(actionPosition, lastAction.transform.position);
+            Assert.That(firstRow.GetComponentsInChildren<Text>().Select(label => label.text), Does.Contain("空桌"));
+            Assert.AreEqual("收桌并收款", lastAction.GetComponentInChildren<Text>().text);
+            StringAssert.Contains("查看鱼餐预订 · 1 单", r.Text);
         }
 
         [Test]

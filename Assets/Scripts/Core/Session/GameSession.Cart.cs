@@ -64,6 +64,8 @@ namespace PCShopSell.Core.Session
     {
         /// <summary>通讯录里随时能叫的货车司机。</summary>
         public const string TruckDriverName = "货车司机老蔡";
+        public const int MallFurniturePurchaseLimit = 50;
+        private static readonly string MallFurnitureLimitMessage = $"家具城每款家具单次限购 {MallFurniturePurchaseLimit} 件";
 
         private readonly List<CartLine> _cart = new List<CartLine>();
         private readonly List<CartLine> _truck = new List<CartLine>();
@@ -288,14 +290,17 @@ namespace PCShopSell.Core.Session
                 return true;
             }
             if (!AtMall) return Fail("要去家具城才能买。");
+            string furnitureKey = "furn:" + d.Id;
+            if (CartAmount(furnitureKey) >= MallFurniturePurchaseLimit) return Fail(MallFurnitureLimitMessage + "。");
             PutLine(_cart, new CartLine
             {
-                Key = "furn:" + d.Id,
+                Key = furnitureKey,
                 Name = d.Name,
                 UnitKg = d.WeightKg,
                 UnitPrice = () => d.Price,
                 Furniture = d,
                 DeliveryShopKind = FurnitureShops.ShopOrder(shopKind, d) >= 0 ? shopKind : null,
+                Blocker = () => CartAmount(furnitureKey) > MallFurniturePurchaseLimit ? MallFurnitureLimitMessage : null,
                 Run = n =>
                 {
                     bool all = true;

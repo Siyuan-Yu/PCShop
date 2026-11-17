@@ -361,7 +361,7 @@ namespace PCShopSell.Game.UI
         {
             if(S.IsOwnedVenue(S.CurrentPlace)){OpenVenueManagement(S.CurrentPlace);return;}
             UpdateQuestTracker();
-            if (S.CurrentQuest() == null && S.CurrentDistrictNode == null && S.DistrictInvitationStatus == null) return;
+            if (S.CurrentQuest() == null && S.CurrentDistrictNode == null && S.DistrictInvitationStatus == null && !S.FirstChapterTrialCompleted) return;
             if (_questWindow != null && !_questWindow.Closed) { _questWindow.Rebuild(); return; }
             _questWindow = OpenWindow("当前任务", 700, 520, BuildGuideWindow, onClosed: () => _questWindow = null);
         }
@@ -405,7 +405,8 @@ namespace PCShopSell.Game.UI
             if (q == null)
             {
                 int n = Quests.All.Count(x => S.QuestCompleted(x.Id));
-                Para(w.Content, $"暂时没有新任务（已完成 {n} 个）。继续经营，达到下一阶段的条件时会弹出新任务。", 20);
+                if (!S.FirstChapterTrialCompleted)
+                    Para(w.Content, $"暂时没有新任务（已完成 {n} 个）。继续经营，达到下一阶段的条件时会弹出新任务。", 20);
                 Ui.Size(Ui.Button(w.Content, "继续", w.Close, 18), -1, 42);
                 return;
             }

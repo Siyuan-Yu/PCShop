@@ -14,7 +14,16 @@ namespace PCShopSell.Core.Session
         public string Key;
         public double BestSeconds;
         public int Wins, Starts, BestCourseRevision;
-        public bool BestOnCurrentCourse => BestSeconds > 0 && BestCourseRevision == RaceTracks.CourseRevision;
+        public bool BestOnCurrentCourse
+        {
+            get
+            {
+                if (Key == null) return false;
+                int separator = Key.IndexOf(':');
+                return BestSeconds > 0 && separator > 0
+                    && RaceTracks.Get(Key.Substring(0, separator))?.CourseRevision == BestCourseRevision;
+            }
+        }
         public RaceRecord Copy() => (RaceRecord)MemberwiseClone();
     }
     [Serializable] public sealed class RacingSave
@@ -256,7 +265,7 @@ namespace PCShopSell.Core.Session
             if (best)
             {
                 record.BestSeconds = recordTime;
-                record.BestCourseRevision = RaceTracks.CourseRevision;
+                record.BestCourseRevision = r.Track.CourseRevision;
             }
             int position = r.Practice || r.Abandoned ? 0 : r.Position;
             long prize = r.Meeting == RaceMeeting.None ? 0 : r.PrizeForPosition(position);

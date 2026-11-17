@@ -144,6 +144,7 @@ namespace PCShopSell.Core.Session
         private bool QuestStageReady(QuestDef q)
         {
             if (IsGameOver) return false;
+            if (FirstChapterTrial && (q.Target == QuestTarget.Park || q.Target == QuestTarget.Creators)) return false;
             if (q.Chapter == 0)
             {
                 // Basic instructions follow actual opening progress, never an old manually pinned task.

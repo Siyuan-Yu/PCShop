@@ -11,7 +11,9 @@ namespace PCShopSell.Core.Session
         public readonly RaceTrack Track; public readonly MotorModel Model; public readonly bool Practice;
         public readonly RaceMeeting Meeting;
         public const int RivalCount=10;
-        private const double StartingGridOffset = 7;
+        public const double PlayerGridDistance = -7;
+        public static double RivalGridDistance(int index) => PlayerGridDistance - 5 * (1 + index / 2);
+        public static double RivalLaneOffset(int index, double halfRoad) => (index % 2 == 0 ? -1 : 1) * Math.Min(2.4, halfRoad * .42);
         public double X,Y,Heading,Speed,Elapsed,Penalty,Damage,Countdown=3,BestLap=double.MaxValue;
         public int Next=1,Passed,Lap,Collisions,Recoveries; public bool Finished,Abandoned,Paused;
         public double EventBatteryFailureAt = -1;
@@ -60,7 +62,7 @@ namespace PCShopSell.Core.Session
             double major = Meeting == RaceMeeting.Major ? .06 : 0;
             for (int i = 0; i < RivalProgress.Length; i++)
             {
-                RivalProgress[i] = -StartingGridOffset - 5 * (1 + i / 2);
+                RivalProgress[i] = RivalGridDistance(i);
                 var motor = RivalMotor(i);
                 double pace = i < Opponents.Count ? Opponents[i].Pace : .79 + i * .011;
                 double skill = Math.Min(1, pace + .015 * Track.Tier + major);
@@ -69,10 +71,10 @@ namespace PCShopSell.Core.Session
             }
             for(int i=0;i<track.Points.Length;i++)_cumulative[i+1]=_cumulative[i]+Distance(track.Points[i],track.Points[(i+1)%track.Points.Length]);
             Length = _cumulative[track.Points.Length];
-            var start = AtDistance(-StartingGridOffset, out Heading);
+            var start = AtDistance(PlayerGridDistance, out Heading);
             X = start.X;
             Y = start.Y;
-            Progress = -StartingGridOffset;
+            Progress = PlayerGridDistance;
         }
         public static double Distance(MapPoint a,MapPoint b)=>Math.Sqrt((a.X-b.X)*(a.X-b.X)+(a.Y-b.Y)*(a.Y-b.Y));
         public void Step(double seconds,double throttle,double steer,bool handbrake=false)
@@ -112,7 +114,14 @@ namespace PCShopSell.Core.Session
                 _driftAngle*=.4;
             }
             var goal=Track.Points[Next];
-            if(Distance(new MapPoint(X,Y),goal)<Track.HalfRoad+1)
+            bool reached = Distance(new MapPoint(X, Y), goal) < Track.HalfRoad + 1;
+            if (reached && Next == 0 && Track.Tier == 0)
+            {
+                // Count the lap at the painted line on the starter straight.
+                var alongStraight = Track.Points[1];
+                reached = (X - goal.X) * (alongStraight.X - goal.X) + (Y - goal.Y) * (alongStraight.Y - goal.Y) >= 0;
+            }
+            if (reached)
             {
                 Passed++;Next=(Next+1)%Track.Points.Length;
                 if (Next == 1)
@@ -128,7 +137,7 @@ namespace PCShopSell.Core.Session
             double dx=b.X-a.X,dy=b.Y-a.Y;
             double segmentLength = _cumulative[prev + 1] - _cumulative[prev];
             double along = ((X-a.X)*dx+(Y-a.Y)*dy)/Math.Max(.001,segmentLength*segmentLength);
-            double firstGridProgress = Passed == 0 ? -StartingGridOffset : 0;
+            double firstGridProgress = Passed == 0 ? PlayerGridDistance : 0;
             Progress = Lap * Length + _cumulative[prev] + Math.Max(firstGridProgress, Math.Min(segmentLength, segmentLength * along));
             if(Finished)Progress=Laps*Length;
             if(!Practice)AdvanceRivals(dt,Elapsed+Penalty-dt);
@@ -192,7 +201,7 @@ namespace PCShopSell.Core.Session
         private void ResetPosition(){int prev=(Next+Track.Points.Length-1)%Track.Points.Length;var p=Track.Points[prev];var q=Track.Points[Next];X=p.X;Y=p.Y;Heading=Math.Atan2(q.X-p.X,q.Y-p.Y);Speed=0;_driftAngle=0;}
         public MapPoint RivalPosition(int i,out double heading)
         {
-            var p=AtDistance(RivalProgress[i],out heading);double lane=(i%2==0?-1:1)*Math.Min(2.4,Track.HalfRoad*.42);
+            var p=AtDistance(RivalProgress[i],out heading);double lane=RivalLaneOffset(i, Track.HalfRoad);
             return new MapPoint(p.X+Math.Cos(heading)*lane,p.Y-Math.Sin(heading)*lane);
         }
         public int PrizeForPosition(int position)
