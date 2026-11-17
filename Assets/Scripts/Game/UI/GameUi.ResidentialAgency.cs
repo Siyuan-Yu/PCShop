@@ -147,9 +147,16 @@ namespace PCShopSell.Game.UI
             }
             Money rent = S.ResidentialRent(p);
             AgencyFeeLine(settlement, "首周租金", rent.ToString());
-            AgencyPaymentSummary(settlement, rent, "确认租赁", () => ConfirmHousing(parent, p, "确认租赁", rent,
-                "签约时付首周租金，此后每七天按签约价扣款。租下后可入住，原有住处继续保留。",
-                () => S.SignResidentialLease(id)), "ResidenceRent", S.ResidentialLeaseBlocker(id));
+            AgencyPaymentSummary(settlement, rent, "确认租赁", () =>
+                OpenPropertyContract("住宅租赁合同", p.Name, "签约后可入住", rent,
+                    fees => AgencyFeeLine(fees, "首周租金", rent.ToString()),
+                    $"签约后<b>每七天缴纳 {rent}</b>。租下后可入住，原有住处继续保留。", false, () =>
+                    {
+                        if (S.ResidentialRent(p) == rent) return S.SignResidentialLease(id);
+                        Toast("租金有变化，请重新核对。");
+                        return false;
+                    }, parent.Rebuild, "ResidenceConfirm", S.ResidentialLeaseBlocker(id)),
+                "ResidenceRent", S.ResidentialLeaseBlocker(id));
         }
 
         private void OpenResidentialAgencyDetails(Place place)
@@ -176,14 +183,25 @@ namespace PCShopSell.Game.UI
             string action=selfUse?(leased?"全款买下这套租房":"全款购买住宅"):"全款购买产权";
             var due=S.ResidentialPurchaseDue(p.Id,false,selfUse,keepCurrentResidence:true);
             var price = S.ResidentialPrice(p);
-            string terms=!selfUse?"保留原住户，购入七天后开始收周租。"
-                :leased?"买下后，这套住宅停止缴纳周租。":"买下后即可入住，默认住处保留。";
-            AgencyFeeLine(settlement, "全款售价", price.ToString());
-            if (due > price) AgencyFeeLine(settlement, "交易费", (due - price).ToString());
+            string terms = !selfUse ? "保留原住户，<b>购入七天后开始收周租</b>。"
+                : leased ? "买下后，<b>这套住宅停止缴纳周租</b>。" : "买下后即可入住，默认住处保留。";
+            void Quote(Transform fees)
+            {
+                AgencyFeeLine(fees, "全款售价", price.ToString());
+                if (due > price) AgencyFeeLine(fees, "交易费", (due - price).ToString());
+            }
+            Quote(settlement);
             if (!selfUse) Line(settlement, "带住户购买 · 购入七天后开始收租", 16, Ui.Dim);
             AgencyPaymentSummary(settlement, due, action,
-                ()=>ConfirmHousing(window,p,action,due,terms+"\n月维护 "+price.Scale(.001),
-                ()=>S.BuyResidentialHome(p.Id,false,selfUse,keepCurrentResidence:true)),selfUse?"ResidenceBuyCash":null,
+                () => OpenPropertyContract("住宅买卖合同", p.Name, selfUse ? "自住住宅" : "带住户购买产权", due, Quote,
+                    terms + $"\n<b>月维护费 {price.Scale(.001)}</b>。", true, () =>
+                    {
+                        if (S.ResidentialPrice(p) == price && S.ResidentialPurchaseDue(p.Id, false, selfUse, keepCurrentResidence: true) == due)
+                            return S.BuyResidentialHome(p.Id, false, selfUse, keepCurrentResidence: true);
+                        Toast("房价或费用有变化，请重新核对。");
+                        return false;
+                    }, window.Rebuild, "ResidenceConfirm",
+                    S.ResidentialTradeBlocker(p.Id, true, false, selfUse, keepCurrentResidence: true)), selfUse ? "ResidenceBuyCash" : null,
                 S.ResidentialTradeBlocker(p.Id,true,false,selfUse,keepCurrentResidence:true));
         }
         private void ConfirmHousing(Window parent,Place p,string title,Money due,string terms,Func<bool> action)

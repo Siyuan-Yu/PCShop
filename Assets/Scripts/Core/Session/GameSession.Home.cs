@@ -189,9 +189,6 @@ namespace PCShopSell.Core.Session
                     id = "rice";
                     break;
             }
-            double coldKg = kind == ParcelKind.Gift && IsColdIngredientProduct(id) ? Gifts.Get(id).WeightKg * count : 0;
-            if (RestaurantColdStorageBlocker(destination, coldKg) is string coldStorageBlocker)
-                return Fail(coldStorageBlocker + "。");
             Money total = OnlinePrice(kind, id) * count;
             var attribution = destination == null || kind == ParcelKind.Outfit ? null
                 : kind == ParcelKind.Furniture
@@ -383,7 +380,8 @@ namespace PCShopSell.Core.Session
             if (index < 0 || index >= l.Count || !CanEdit(shop)) return false;
             if (shop && PetShopCatalog.HouseCapacity(l[index].Id) > 0 && PetsStaying(_focus))
                 return Fail("宠物屋里还有客人。可以摆放更大的宠物屋直接替换。");
-            if (FurnitureCatalog.Get(l[index].Id)?.Role == FurnitureRole.Fridge && FridgeOf(shop).WeightKg > FridgeLimitKg(shop) - FurnitureCatalog.Get(l[index].Id).FridgeCapacityKg + 1e-9)
+            if (FurnitureCatalog.Get(l[index].Id)?.Role == FurnitureRole.Fridge
+                && FridgeOf(shop).WeightKg > FridgeCapacityOf(l.Where((_, i) => i != index)) + 1e-9)
                 return Fail("冰箱里还有食物，先取出一些再收起冰箱。不能丢失冷藏食物。");
             RememberLayout(shop);
             string id = l[index].Id;
@@ -874,7 +872,9 @@ namespace PCShopSell.Core.Session
             _homeLayout.AddRange(FromSave(h.homeLayout));
             _shopLayout.AddRange(FromSave(h.shopLayout));
             foreach (SaveParcel p in h.parcels ?? Array.Empty<SaveParcel>())
-                _parcels.Add(new Parcel { Kind = (ParcelKind)p.kind, Id = p.id, Count = p.count, DueDay = p.dueDay, ToShop = p.toShop, ShopId = p.shopId });
+                _parcels.Add(new Parcel { Kind = (ParcelKind)p.kind,
+                    Id = (ParcelKind)p.kind == ParcelKind.Furniture ? FurnitureCatalog.Canonical(p.id) : p.id,
+                    Count = p.count, DueDay = p.dueDay, ToShop = p.toShop, ShopId = p.shopId });
             FromSave(h.cooked, Pantry.Cooked);
             Pantry.Cooking = null;
             if (h.cooking != null && h.cooking.Length > 0)

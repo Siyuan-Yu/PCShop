@@ -85,7 +85,11 @@ namespace PCShopSell.Core.Session
         {
             if (def.IngredientId != null) return Pantry.TakeBowl(bag.Food.Ingredient, def.IngredientId);
             if (def.MealId != null) return Pantry.TakeBowl(bag.Food.Packed, def.Id);
-            if (def.Id == "produce:rice") { if (bag.Food.RiceKg < 0.5) return null; bag.Food.RiceKg -= 0.5; }
+            if (def.Id == "produce:rice")
+            {
+                if (bag.Food.RiceKg < .5 - 1e-9) return null;
+                bag.Food.RiceKg = Math.Max(0, bag.Food.RiceKg - .5);
+            }
             else if (!bag.TakeGift(def.Id)) return null;
             return new FoodBatch { Id = def.Id, Count = 1, ExpireDay = -1 };
         }

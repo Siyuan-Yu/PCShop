@@ -99,7 +99,7 @@ namespace PCShopSell.Game.UI
                 var payoff = S.LoanPayoff(loan);
                 WbTodo(list, "借款 #" + loan.Id + (days <= 0 ? " 已到期" : " · " + days + " 天后到期") + " · " + payoff,
                     S.Ledger.CanAfford(payoff) ? "现金充足，可在手机借款里还款" : "现金不足，缺 " + (payoff - S.Ledger.Balance),
-                    days <= 3 ? Ui.Warn : Ui.Accent, "去还款", OpenLoansApp, "WorkbenchLoan_" + loan.Id); count++;
+                    days <= 3 ? Ui.Warn : Ui.Accent, "去还款", () => OpenLoansApp(showRecords: true), "WorkbenchLoan_" + loan.Id); count++;
             }
             foreach (string id in StockIds.Where(id => id != "hardware"))
             {
@@ -352,7 +352,7 @@ namespace PCShopSell.Game.UI
             var autoRow = Ui.Row(body, 32, 8); WbAction(autoRow, "切换员工自动装机", () => { S.ToggleAutoBuildAt(shop); w.RequestRebuild(); }, "WorkbenchAutoBuild_" + shop.Place.Id, 170); WbFlex(autoRow);
             foreach (var order in shop.Sim.Orders)
             {
-                WbText(body, PartCatalog.TierName(order.Tier) + "整机 · " + order.Price + " · 截止 " + order.DueAt, 18);
+                WbText(body, $"{PartCatalog.TierName(order.Tier)}整机 · {order.Price} · {S.Clock.OrderDeadlineText(order.DueAt.TotalMinutes)}", 18);
                 WbText(body, order.EmployeeMinutesLeft > 0 ? $"员工装机剩余 {order.EmployeeMinutesLeft} 分钟" :
                     order.PartsReserved ? "配件已备齐 · 等待装机" : "等待配件", 15, WbDim);
                 foreach (var part in PartCatalog.BuildList(order.Tier))

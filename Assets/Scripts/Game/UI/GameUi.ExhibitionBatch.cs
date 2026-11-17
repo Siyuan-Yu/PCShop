@@ -40,7 +40,14 @@ namespace PCShopSell.Game.UI
             {
                 var receipt = item;
                 Para(w.Content, (S.City.GetPlace(receipt.ShopId)?.Name ?? receipt.ShopId) + " · " + receipt.Product + " · " + Money.FromCents(receipt.ChangeCents), 16);
-                Ui.Size(Ui.Button(w.Content, "补还这笔差额", () => { S.RefundEventChange(receipt.Key); w.RequestRebuild(); }, 17, Ui.ButtonHot,
+                Ui.Size(Ui.Button(w.Content, "补还这笔差额", () =>
+                {
+                    if (S.RefundEventChange(receipt.Key))
+                        Popup("找零已补还", $"已退还 {Money.FromCents(receipt.ChangeCents)}，这笔待退款已结清。");
+                    else
+                        Popup("找零尚未补还", "这笔待退款仍保留。请核对现金，并到对应门店办理。");
+                    w.RequestRebuild();
+                }, 17, Ui.ButtonHot,
                     S.ShopAt(receipt.ShopId) == null || S.CurrentPlace?.Id == receipt.ShopId), -1, 36);
             }
         }

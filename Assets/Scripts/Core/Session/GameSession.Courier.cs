@@ -309,8 +309,6 @@ namespace PCShopSell.Core.Session
         /// </summary>
         private bool Ship(OwnedShop dest, string category, Money goods, string what, CourierItem item, string verb)
         {
-            if (IsColdIngredientDelivery(item) && RestaurantColdStorageBlocker(dest, CourierItemKg(item)) is string coldStorageBlocker)
-                return Fail(coldStorageBlocker + "。");
             var plan = PlanLoad(item, dest);
             if (plan == null) return Fail($"单件就超过一辆面包车能装的 {CourierCapacityKg:0} 千克。");
             int newCars = plan.Count(p => p.run == null);
@@ -521,7 +519,7 @@ namespace PCShopSell.Core.Session
                     run.Items.Add(new CourierItem
                     {
                         Kind = kind,
-                        Id = id,
+                        Id = kind == CourierItemKind.Furniture ? FurnitureCatalog.Canonical(id) : id,
                         Count = s.counts != null && i < s.counts.Length ? s.counts[i] : 0,
                         Kg = s.kilos != null && i < s.kilos.Length ? s.kilos[i] : 0,
                         Boxed = s.boxed != null && i < s.boxed.Length && s.boxed[i],

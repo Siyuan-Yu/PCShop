@@ -110,21 +110,37 @@ namespace PCShopSell.Game.UI
         private void CityPropertyConfirm(string id, bool mortgage, Window parent)
         {
             var q = S.PreviewCityPropertyPurchase(id, mortgage); if (q == null) return;
-            string why = S.CityPropertyPurchaseBlocker(id, mortgage);
-            string terms = q.Address + "\n使用方：" + q.Tenant + $"\n房价 {q.Price} + 交易费 {q.Fee}\n抵扣押金 {q.DepositCredit}、本周未使用租金 {q.PrepaidCredit}\n本次付款 {q.TotalDue}，付款后现金 {q.CashAfter}"
-                + "\n全款购买。"
-                + $"\n月维护费 {q.Price.Scale(.001)}。"
-                + (why == null ? "\n原经营资产与租户不转移给买方。" : "\n当前不能成交：" + why);
-            CityAssetConfirm("物业购买结算预览", terms, () => S.BuyProperty(id, mortgage), parent, why == null, S.City.GetPlace(id));
+            var place = S.City.GetPlace(id);
+            bool atAgency = S.InAgency && S.AgencyServes(S.CurrentPlace, place);
+            string why = atAgency ? S.CityPropertyPurchaseBlocker(id, mortgage) : "请到房源所属中介签约。";
+            string terms = $"全款购买。<b>月维护费 {q.Price.Scale(.001)}</b>。\n"
+                + (q.IsSelfUse ? "过户后停止缴纳原周租，现有经营保留。"
+                    : q.HasTenant ? "原商户继续经营，商品和员工仍归租户。" : "过户后可自营或登记出租。");
+            OpenPropertyContract("商铺买卖合同", q.Address, $"使用方 · {q.Tenant}", q.TotalDue, fees =>
+                {
+                    AgencyFeeLine(fees, "全款售价", q.Price.ToString());
+                    AgencyFeeLine(fees, "交易费", q.Fee.ToString());
+                    if (q.DepositCredit.IsPositive) AgencyFeeLine(fees, "抵扣押金", "− " + q.DepositCredit);
+                    if (q.PrepaidCredit.IsPositive) AgencyFeeLine(fees, "抵扣未用租金", "− " + q.PrepaidCredit);
+                }, terms, true, () =>
+                {
+                    var live = S.PreviewCityPropertyPurchase(id, mortgage);
+                    if (live == null || live.TotalDue != q.TotalDue || live.Price != q.Price || live.Tenant != q.Tenant)
+                    {
+                        Toast("房源或费用有变化，请重新核对。");
+                        return false;
+                    }
+                    return S.BuyProperty(id, mortgage);
+                }, () => parent?.Rebuild(), "PropertyConfirmPurchase", why,
+                referral: atAgency ? null : content =>
+                    Ui.Size(Ui.Button(content, "前往房源所属中介", () => GoToPropertyAgency(place), 17), -1, 38).name = "PropertyAgency");
         }
-        private void CityAssetConfirm(string title, string terms, Func<bool> action, Window parent, bool enabled = true, Place property = null)
+        private void CityAssetConfirm(string title, string terms, Func<bool> action, Window parent, bool enabled = true)
         {
             bool submitted = false;
             OpenWindow(title, 780, 530, confirmation =>
             {
                 Para(confirmation.Content, terms, 19);
-                if(property!=null&&(!S.InAgency||!S.AgencyServes(S.CurrentPlace,property)))
-                    Ui.Size(Ui.Button(confirmation.Content,"前往房源所属中介",()=>GoToPropertyAgency(property),17),-1,38).name="PropertyAgency";
                 Ui.Size(Ui.Button(confirmation.Content, "确认办理", () => { if (submitted) return; submitted = true; if (action()) { confirmation.Close(); parent?.Rebuild(); } else submitted = false; }, 19, Ui.Warn, enabled), -1, 48);
                 Ui.Size(Ui.Button(confirmation.Content, "返回", confirmation.Close, 19), -1, 44);
             });

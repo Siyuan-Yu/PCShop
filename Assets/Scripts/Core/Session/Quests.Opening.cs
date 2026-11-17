@@ -141,9 +141,9 @@ namespace PCShopSell.Core.Session
             if(legacy&&kind=="computer")return;
             if(kind=="restaurant")
             {
-                var food=CurrentShop.Locker.Food;food.RiceKg+=2;
-                foreach(string ingredient in RecipeIngredients)
-                    food.AddIngredient(ingredient, 4);
+                UnpackRestaurantIngredient(CurrentShop, new CourierItem { Kind = CourierItemKind.Rice, Kg = 2 });
+                foreach (string ingredient in RecipeIngredients)
+                    UnpackRestaurantIngredient(CurrentShop, new CourierItem { Kind = CourierItemKind.Ingredient, Id = ingredient, Count = 4 });
             }
             else if(kind=="secondhand")
             {

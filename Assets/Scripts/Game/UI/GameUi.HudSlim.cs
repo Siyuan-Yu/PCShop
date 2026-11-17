@@ -8,6 +8,8 @@ namespace PCShopSell.Game.UI
 {
     public sealed partial class GameUi
     {
+        private const KeyCode QuestHotkey = KeyCode.R;
+
         private RectTransform _hudTopRow;
         private LayoutElement _hudShortcutsSize;
         private Button _brandButton;
@@ -76,18 +78,18 @@ namespace PCShopSell.Game.UI
             HudPanelButton(daily, "我的", KeyCode.M, OpenMyPanel, "身体状况、住处、饮食与人物关系。", bg: Ui.SelectedButton(true));
             HudPanelButton(daily, "背包", KeyCode.B, ToggleBackpack, "身上带的货和负重；在家或店里一键全放下。");
             HudPanelButton(daily, "手机", KeyCode.P, OpenPhone, "通讯录与智能手机应用。");
-            HudPanelButton(daily, "任务", KeyCode.T, OpenQuests, "当前任务与待办；左上角的任务条收起后可从这里再打开。");
+            HudPanelButton(daily, "任务", QuestHotkey, OpenQuests, "当前任务与待办；左上角的任务条收起后可从这里再打开。");
             HudPanelButton(daily, "日程", KeyCode.C, OpenSchedulePanel, "按天查看已经安排的事项。").name = "HudCalendar";
             _noticeButtonText = HudPanelButton(daily, "通知", NoticeHotkey, OpenNoticeHistory, "查看本次会话的通知记录。").GetComponentInChildren<Text>();
 
-            HudPanelButton(business, "员工", KeyCode.U, OpenEmployeesPanel, "各门店的员工、岗位与排班。").name = "HudEmployees";
-            HudPanelButton(business, "资产", KeyCode.J, OpenBusinessPanel, "门店收支、物业与车辆。").name = "HudAssets";
+            HudPanelButton(business, "员工", KeyCode.H, OpenEmployeesPanel, "各门店的员工、岗位与排班。").name = "HudEmployees";
+            HudPanelButton(business, "资产", KeyCode.O, OpenBusinessPanel, "门店收支、物业与车辆。").name = "HudAssets";
             HudPanelButton(business, "采购", KeyCode.G, OpenCityProcurement, "商铺采购、补货目标、在途订单与直供协议。").name = "HudProcurement";
-            HudPanelButton(business, "物价", KeyCode.H, OpenMarketPanel, "查看本期物价、历史涨跌和各品类报价走势。").name = "HudPrices";
+            HudPanelButton(business, "物价", KeyCode.I, OpenMarketPanel, "查看本期物价、历史涨跌和各品类报价走势。").name = "HudPrices";
             _brandButton = HudPanelButton(business, "品牌", KeyCode.L, OpenBrandOverview, "品牌、展会、代言人与直播。");
             _brandButton.name = "HudBrand";
             if (!GameSession.FirstChapterTrial)
-                HudPanelButton(business, "赛车", KeyCode.R, OpenRacingDestinations, "赛场开放条件、入门路线与比赛安排。").name = "HudRacing";
+                HudPanelButton(business, "赛车", KeyCode.T, OpenRacingDestinations, "赛场开放条件、入门路线与比赛安排。").name = "HudRacing";
 
             Ui.Size(HudPanelButton(shortcuts, "菜单", KeyCode.Escape, OpenSystemPanel, "存档、读档、重新开始和音效设置。"), 54, -1, 0).name = "HudMenu";
         }

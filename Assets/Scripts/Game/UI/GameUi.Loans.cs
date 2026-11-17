@@ -101,10 +101,12 @@ namespace PCShopSell.Game.UI
             }
             if (AnyModalOpen) return;
             if (S.BankPlace != null) _ctrl.GoToPlace(S.BankPlace);
-            else OpenLoansApp();
+            else OpenLoansApp(showRecords: true);
         }
 
-        private void OpenLoansApp()
+        private void OpenLoansApp() => OpenLoansApp(showRecords: false);
+
+        private void OpenLoansApp(bool showRecords)
         {
             string blocker = S.AppBlocker(PhoneApps.Loans);
             if (blocker != null)
@@ -112,8 +114,8 @@ namespace PCShopSell.Game.UI
                 Toast(S.HasSmartphone ? blocker : "没有智能手机，借款和还款请到「城郊银行」柜台办理。");
                 return;
             }
-            string amountDraft = _loanAmountYuan.ToString();
-            OpenPhoneAppWindow("周转借款", w => BuildLoanDesk(w, amountDraft, text => amountDraft = text));
+            var draft = new PhoneLoanDeskDraft { Amount = _loanAmountYuan.ToString(), ShowRecords = showRecords };
+            OpenPhoneAppWindow("周转借款", w => BuildLoanDesk(w, draft), scrollContent: false);
         }
 
         private AppLoan LoanQuote(long yuan, int months) => new AppLoan
@@ -142,7 +144,7 @@ namespace PCShopSell.Game.UI
             OpenWindow(atBank ? "柜台借款 · 动作验证" : "手机借款 · 动作验证", 760, 570, w =>
             {
                 Line(w.Content, $"预计到账 {quote.Principal} · 期限 {quote.Months} 个月 · 每月利息 {quote.MonthlyInterest}", 20, Ui.Accent);
-                Para(w.Content, $"首月内结清 {session.LoanPayoff(quote)}。{new GameDate(quote.DueDay)} 到期自动扣除本息 {quote.TotalDue}，总余额不足可扣为负数。", 16, Ui.Dim);
+                Para(w.Content, $"首月内结清 {Ui.Emphasize(session.LoanPayoff(quote).ToString())}。{new GameDate(quote.DueDay)} 到期自动扣除本息 {Ui.Emphasize(quote.TotalDue.ToString())}，总余额不足{Ui.Emphasize("可扣为负数", Ui.Warn)}。", 16, Ui.Dim);
 
                 var row = Ui.Row(w.Content, 244, 18);
                 var frame = Ui.Size(Ui.FlatPanel(row, "LoanVerificationPreview", Ui.FlatWell, Ui.FlatHotEdge), 192, 244);
@@ -287,63 +289,107 @@ namespace PCShopSell.Game.UI
                 Ui.ButtonHot, !shortfall.IsPositive && (!atBank || S.BankBlocker() == null)), 120, 36);
             repay.name = (atBank ? "BankRepay_" : "AppLoanRepay_") + loan.Id;
             string accrued = loan.NoInterest ? "无息" : $"按 {loan.InterestMonthsAt(S.Clock.Today.TotalDays)} 个月计息 {payoff - loan.Principal}";
-            Para(card, $"{accrued} · {new GameDate(loan.DueDay)} 到期应还 {loan.TotalDue}（含利息 {loan.TermInterest}）", 16, Ui.Dim);
+            Para(card, $"{accrued} · {new GameDate(loan.DueDay)} 到期应还 {Ui.Emphasize(loan.TotalDue.ToString())}（含利息 {loan.TermInterest}）", 16, Ui.Dim);
             if (shortfall.IsPositive) Line(card, $"今天结清还差 {shortfall}", 15, Ui.Warn);
             else if (loan.TotalDue > payoff) Line(card, $"现在结清可少付利息 {loan.TotalDue - payoff}", 15, Ui.Good);
         }
 
-        private void BuildLoanDesk(Window w, string amountDraft, Action<string> saveDraft)
+        private sealed class PhoneLoanDeskDraft
         {
-            Line(w.Content, $"当前现金 {S.Ledger.Balance}    贷款待还 {S.AppLoanDebt}", 21, Ui.Accent);
-            BuildLoanCredit(w.Content);
-            Para(w.Content, $"月息 {GameSession.AppLoanMonthlyRatePercent}%。" + LoanInterestRules
-                + "到期自动扣款，现金不足时先划转活期存款。", 15, Ui.Dim);
-            var amountRow = Ui.Row(w.Content, 40);
-            Ui.Size(Ui.Label(amountRow, "借款金额", 18), 120);
-            var amountControls = Ui.Row(amountRow, 36, 4);
-            Ui.Size(amountControls, 222, 36);
-            var input = Ui.Size(BankAmountInput(amountControls, "QuantityValue_appLoanAmount", amountDraft, 8), 138, 36, 0);
+            public string Amount;
+            public bool ShowRecords, ShowRules;
+        }
+
+        private void BuildLoanDesk(Window w, PhoneLoanDeskDraft draft)
+        {
+            const int overviewHeight = 116;
+            var overview = Ui.Row(w.Content, overviewHeight, 12);
+            LoanOverviewCard("PhoneLoanCredit", "当前可借", Money.FromYuan(S.AppLoanAvailableYuan), Ui.Accent,
+                $"总额度 {Money.FromYuan(S.AppLoanCreditLimitYuan)} · 与柜台共用");
+            Money cash = S.Ledger.Balance;
+            LoanOverviewCard("PhoneLoanCash", "当前现金", cash, cash.IsNegative ? Ui.Warn : Ui.TextColor,
+                $"贷款待还 {S.AppLoanDebt}");
+
+            var tabs = Ui.Row(w.Content, 40, 6);
+            Ui.Tab(tabs, "申请借款", () => ChangePage(false), !draft.ShowRecords).name = "PhoneLoanApplyTab";
+            Ui.Tab(tabs, "我的贷款", () => ChangePage(true), draft.ShowRecords).name = "PhoneLoanRecordsTab";
+            if (draft.ShowRecords) BuildPhoneLoanRecords(w);
+            else BuildPhoneLoanApplication(w, draft);
+
+            void ChangePage(bool showRecords)
+            {
+                if (draft.ShowRecords == showRecords) return;
+                draft.ShowRecords = showRecords;
+                w.Rebuild();
+            }
+
+            void LoanOverviewCard(string name, string label, Money value, Color ink, string detail)
+            {
+                var card = Ui.Size(Ui.FlatPanel(overview, name, Ui.FlatBand), 0, overviewHeight, 1).rectTransform;
+                Ui.VList(card, 0, 10);
+                Line(card, label, 15, Ui.Dim);
+                Line(card, value.ToString(), 26, ink);
+                Line(card, detail, 15, Ui.Dim);
+            }
+        }
+
+        private void BuildPhoneLoanApplication(Window w, PhoneLoanDeskDraft draft)
+        {
+            var columns = Ui.Row(w.Content, 304, 12);
+            var form = Ui.Size(Ui.FlatPanel(columns, "PhoneLoanForm"), 0, 304, 1).rectTransform;
+            var preview = Ui.Size(Ui.FlatPanel(columns, "PhoneLoanPreview", Ui.FlatBand), 0, 304, 1).rectTransform;
+            Ui.VList(form, 5, 12);
+            Ui.VList(preview, 5, 12);
+            Line(form, "选择金额和期限", 21, Ui.Accent);
+            Line(form, $"借款金额（每 ¥{GameSession.AppLoanAmountStep:N0} 一档）", 17);
+            var amountControls = Ui.Row(form, 38, 5);
+            var input = BankAmountInput(amountControls, "QuantityValue_appLoanAmount", draft.Amount, 8);
             input.textComponent.alignment = TextAnchor.MiddleCenter;
             var less = AmountButton("−", -1, "QuantityMinus_appLoanAmount");
             less.transform.SetAsFirstSibling();
             var more = AmountButton("+", 1, "QuantityPlus_appLoanAmount");
-            Line(amountRow, $"元 · 每 ¥{GameSession.AppLoanAmountStep:N0} 一档", 15, Ui.Dim);
-            var presets = Ui.Row(w.Content, 34);
-            foreach (long amount in new long[] { 1000, 5000, 10000, 50000 }.Where(yuan => yuan <= S.AppLoanAvailableYuan))
+            var presets = Ui.Row(form, 34);
+            foreach (long amount in new long[] { 1000, 5000, 10000, 50000 })
             {
                 long selectedAmount = amount;
-                Ui.Size(Ui.Button(presets, "¥" + amount.ToString("N0"), () => input.text = selectedAmount.ToString(), 17), -1, -1, 1);
+                Ui.Size(Ui.Button(presets, "¥" + amount.ToString("N0"), () => input.text = selectedAmount.ToString(),
+                    17, Ui.ButtonBg, amount <= S.AppLoanAvailableYuan), 0, 34, 1);
             }
-            var monthsRow = Ui.Row(w.Content, 40);
-            Ui.Size(Ui.Label(monthsRow, "借款期限", 18), 120);
-            QuantityStepper(w, monthsRow, "appLoanMonths", _loanMonths, 1, GameSession.AppLoanMaximumMonths, 1,
-                v => _loanMonths = (int)v, unit: "个月");
-            var principal = Line(w.Content, "", 19);
-            var interest = Line(w.Content, "", 19);
-            var due = Line(w.Content, "", 21, Ui.Warn);
+
+            Line(form, "借款期限", 17);
+
+            Line(preview, "还款预览", 21, Ui.Accent);
+            var principal = BankQuoteRow(preview, "到账本金", Ui.TextColor);
+            var interest = BankQuoteRow(preview, $"到期利息 · 月息 {GameSession.AppLoanMonthlyRatePercent}%", Ui.TextColor);
+            var early = BankQuoteRow(preview, "首月内结清", Ui.Good);
+            var dueCard = Ui.Size(Ui.FlatPanel(preview, "PhoneLoanDue", Ui.FlatWell, Ui.FlatHotEdge), -1, 90).rectTransform;
+            Ui.VList(dueCard, 1, 9);
+            var due = BankQuoteRow(dueCard, "到期应还", Ui.Accent);
+            due.value.fontSize = 25;
+            var date = Line(dueCard, "", 15, Ui.Dim);
+
+            var feedback = Line(w.Content, "", 16, Ui.Warn);
             AppLoan quote = null;
             var apply = Ui.Size(Ui.Button(w.Content, "申请借款 · 开始验证", null, 19, Ui.ButtonHot), -1, 46);
+            apply.name = "PhoneLoanApply";
             apply.onClick.AddListener(() =>
             {
                 RefreshQuote(input.text);
-                if (quote != null) ConfirmLoanApplication(quote, false, w.Rebuild);
+                if (quote == null) return;
+                ConfirmLoanApplication(quote, false, () =>
+                {
+                    draft.ShowRecords = true;
+                    w.Rebuild();
+                });
             });
+            var months = Ui.Size(Ui.Choice(form, Enumerable.Range(1, GameSession.AppLoanMaximumMonths).Select(n => n + " 个月"),
+                _loanMonths - 1, i => { _loanMonths = i + 1; RefreshQuote(input.text); }), -1, 38);
+            months.name = "PhoneLoanMonths";
             input.onValueChanged.AddListener(RefreshQuote);
             RefreshQuote(input.text);
-            Line(w.Content, "我的贷款", 20, Ui.Accent);
-            var list = Ui.Scroll(w.Content, 260);
-            if (S.AppLoans.Count == 0) Line(list, "暂无借款记录。", 17, Ui.Dim);
-            foreach (var loan in LoanRecords())
-            {
-                BuildLoanRecord(list, w, loan, atBank: false);
-                if (!loan.Repaid && S.IsClassmateLoan(loan) && loan.ExtensionDays == 0)
-                {
-                    string reason = S.FriendLoanExtensionBlocker(loan);
-                    Ui.Size(Ui.Button(list, "和陈志衡商量延期 30 天", () => { if (S.ExtendFriendLoan(loan.Id)) w.Rebuild(); },
-                        17, Ui.ButtonBg, reason == null), -1, 38);
-                    if (reason != null) Line(list, reason, 15, Ui.Dim);
-                }
-            }
+            BankDisclosure(w, "额度、扣款与提前结清规则", draft.ShowRules, () => draft.ShowRules = !draft.ShowRules,
+                $"基础额度 {Money.FromYuan(GameSession.AppLoanBaseCreditYuan)}，名望每满 1 点增加 {Money.FromYuan(GameSession.AppLoanCreditPerReputationYuan)}，最高 {Money.FromYuan(GameSession.AppLoanMaximumYuan)}。\n"
+                + LoanInterestRules + "到期自动扣款，现金不足时先划转活期存款。");
 
             Button AmountButton(string label, int direction, string key)
             {
@@ -363,7 +409,7 @@ namespace PCShopSell.Game.UI
 
             void RefreshQuote(string amount)
             {
-                saveDraft(amount);
+                draft.Amount = amount;
                 long.TryParse(amount, NumberStyles.None, CultureInfo.InvariantCulture, out long yuan);
                 string blocker = S.AppLoanOfferBlocker(yuan, _loanMonths, atBank: false);
                 bool valid = blocker == null;
@@ -372,10 +418,33 @@ namespace PCShopSell.Game.UI
                 long available = S.AppLoanAvailableYuan;
                 less.interactable = available > 0 && (!valid || yuan > GameSession.AppLoanAmountStep);
                 more.interactable = available > 0 && (!valid || yuan < available);
-                principal.text = valid ? $"到账本金 {quote.Principal} · 每月利息 {quote.MonthlyInterest}" : blocker;
-                interest.text = valid ? $"首月内结清 {S.LoanPayoff(quote)} · 到期利息 {quote.TermInterest}" : "";
-                due.text = valid ? $"到期日 {new GameDate(quote.DueDay)} · 自动扣款 {quote.TotalDue}" : "";
+                principal.value.text = valid ? quote.Principal.ToString() : "—";
+                interest.value.text = valid ? quote.TermInterest.ToString() : "—";
+                early.value.text = valid ? S.LoanPayoff(quote).ToString() : "—";
+                due.value.text = valid ? quote.TotalDue.ToString() : "—";
+                date.text = valid ? $"{new GameDate(quote.DueDay)} 自动扣款" : "";
+                feedback.text = blocker ?? "";
+                feedback.gameObject.SetActive(!valid);
                 apply.interactable = valid;
+            }
+        }
+
+        private void BuildPhoneLoanRecords(Window w)
+        {
+            if (S.AppLoans.Count == 0)
+            {
+                Line(w.Content, "暂无借款记录。", 17, Ui.Dim);
+                return;
+            }
+            var list = Ui.Scroll(w.Content, PhoneAppHeight - 266);
+            foreach (var loan in LoanRecords())
+            {
+                BuildLoanRecord(list, w, loan, atBank: false);
+                if (loan.Repaid || !S.IsClassmateLoan(loan) || loan.ExtensionDays != 0) continue;
+                string reason = S.FriendLoanExtensionBlocker(loan);
+                Ui.Size(Ui.Button(list, "和陈志衡商量延期 30 天", () => { if (S.ExtendFriendLoan(loan.Id)) w.Rebuild(); },
+                    17, Ui.ButtonBg, reason == null), -1, 38);
+                if (reason != null) Line(list, reason, 15, Ui.Dim);
             }
         }
     }

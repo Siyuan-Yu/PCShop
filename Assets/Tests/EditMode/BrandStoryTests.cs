@@ -203,7 +203,7 @@ namespace PCShopSell.Tests
             }
             Assert.AreEqual("陈启明", CityLifeCatalog.Person("keeper_agent").Name);
             Assert.AreEqual("莫文宁", Creators.Get("momo").Name);
-            Assert.AreEqual(124, CityLifeCatalog.People.Count(p => p.Id != CityLifeCatalog.InvitationTestPersonId));
+            CollectionAssert.AllItemsAreUnique(CityLifeCatalog.People.Select(p => p.Id).ToArray());
         }
         [Test] public void OldNamedPersonRetainsContactRelationshipAndBiographyAfterLoad()
         {

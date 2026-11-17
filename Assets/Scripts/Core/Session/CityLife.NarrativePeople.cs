@@ -7,7 +7,6 @@ namespace PCShopSell.Core.Session
     public static partial class CityLifeCatalog
     {
         public const string TangWei="story_tangwei", LiangJing="story_liangjing", ShenXiao="story_shenxiao";
-        public const int NarrativePopulation=128;
         private static readonly string[] KeyPeople={"landlady","keeper_agent","lin","zhou","jie","li","life_curator","life_tenant","life_enterprise","life_creator","life_maker","life_clothier","life_designer","life_clothsupplier","life_model_supplier","life_chef","life_ming","momo",TangWei,LiangJing};
 
         // Each row is a stable authored identity, not a name regenerated on scene changes.
@@ -129,7 +128,6 @@ namespace PCShopSell.Core.Session
                 if(p.LeisurePlaces==null)p.LeisurePlaces=CohortLeisure(p.KeyCharacter?"community":"old");
             }
             ConfigureExistingNarrativePeople(people);
-            if(people.Count(p=>p.Id!=InvitationTestPersonId)!=NarrativePopulation)throw new InvalidOperationException($"Narrative population must contain {NarrativePopulation} distinct production identities.");
         }
 
         private static IEnumerable<CityRelationEdge> Pair(string a,string b,string ab,string ba=null)

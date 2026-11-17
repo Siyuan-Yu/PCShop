@@ -63,7 +63,7 @@ namespace PCShopSell.Game.Runtime
             // Cover the ground visible to the camera, including the upstream side where high drops project into view.
             Vector3 forward = _camera.transform.forward;
             float slope = Mathf.Max(.2f, -forward.y);
-            float groundDistance = Mathf.Clamp(_camera.transform.position.y / slope, 5f, 160f);
+            float groundDistance = Mathf.Clamp(_camera.transform.position.y / slope, 5f, _camera.farClipPlane);
             Vector3 center = _camera.transform.position + forward * groundDistance;
             Vector3 groundForward = Vector3.ProjectOnPlane(forward, Vector3.up).normalized;
             float halfHeight = _camera.orthographic ? _camera.orthographicSize

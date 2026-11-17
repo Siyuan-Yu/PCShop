@@ -36,7 +36,7 @@ namespace PCShopSell.Game.UI
                     var v = Ui.VList(card.rectTransform, 2, 10);
                     Color ink = new Color(0.16f, 0.16f, 0.18f);
                     string urgent = left < 12 * 60 ? "<color=#B33A2A>（快到期了！）</color>" : "";
-                    Text head = Ui.Label(card.transform, $"<b>装机单 #{order.Id}　{PartCatalog.TierName(order.Tier)}整机</b>　报价 <b>{order.Price}</b>　剩 {left / 60} 小时 {urgent}", 18, TextAnchor.MiddleLeft, ink);
+                    Text head = Ui.Label(card.transform, $"<b>装机单 #{order.Id}　{PartCatalog.TierName(order.Tier)}整机</b>　报价 <b>{order.Price}</b>　{S.Clock.OrderDeadlineText(order.DueAt.TotalMinutes)} {urgent}", 18, TextAnchor.MiddleLeft, ink);
                     Ui.Size(head, -1, 30);
                     foreach (PartDef p in PartCatalog.BuildList(order.Tier))
                     {

@@ -425,7 +425,12 @@ namespace PCShopSell.Core.Session
                 else p.WorkPlaceId=d.Recruitable?null:d.WorkId==d.HomeId&&City.HasPlace(p.HomePlaceId)?p.HomePlaceId:City.HasPlace(d.WorkId)?d.WorkId:null;
                 candidates.TryGetValue(p.PersonId,out var candidate);
                 bool shift=employee!=null?employee.OnDuty(Clock.Now):AuthoredCityWorkAt(p,now);
-                if(employee==null&&shift&&p.WorkPlaceId!=p.HomePlaceId&&!IsPlaceOpen(City.GetPlace(p.WorkPlaceId)))shift=false;
+                if (employee == null && shift && p.WorkPlaceId != p.HomePlaceId)
+                {
+                    var workplace = City.GetPlace(p.WorkPlaceId);
+                    // The bank opens when a teller arrives, so its doors cannot gate their shift.
+                    if (workplace.Business != BankBusiness && !IsPlaceOpen(workplace)) shift = false;
+                }
                 if (!CandidateAvailable(candidate) && TickRaceAttendee(p, now, employee != null && shift)) continue;
                 if (!CandidateAvailable(candidate) && TickPetOwnerVisit(p, now, shift)) continue;
                 if (!shift && candidate == null && TickWalletOwner(p, now)) continue;

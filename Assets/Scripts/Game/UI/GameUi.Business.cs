@@ -4,6 +4,7 @@ using PCShopSell.Core.Catalog;
 using PCShopSell.Core.Common;
 using PCShopSell.Core.Home;
 using PCShopSell.Core.Session;
+using PCShopSell.Core.Shop;
 using PCShopSell.Core.Time;
 using PCShopSell.Core.World;
 using UnityEngine;
@@ -202,7 +203,7 @@ namespace PCShopSell.Game.UI
                 Para(card,$"当前配件市价合计 {reference}（不是实际采购成本）。交期 {c.Count+2} 天；" + (community ? "社区团购按实收货款结算，保证金为零。" : "未交付部分会扣对应保证金。") + "手头零售订单也会占用工时。",15,Ui.Dim);
                 if(c.Accepted)
                 {
-                    Line(card,$"交付 {c.Completed}/{c.Count}    失败 {c.Failed}    {(c.Settled ? "已结案" : "截止 "+new GameTimestamp(c.DueMinute))}",17,c.Settled ? Ui.Dim : Ui.Good);
+                    Line(card,$"交付 {c.Completed}/{c.Count}    失败 {c.Failed}    {(c.Settled ? "已结案" : S.Clock.OrderDeadlineText(c.DueMinute))}",17,c.Settled ? Ui.Dim : Ui.Good);
                     if(!c.Settled) Ui.Size(Ui.Button(card,"终止剩余订单…",()=>ConfirmBusiness("终止企业订单", "尚未交付的订单会取消，已领用配件返回散件库存，未履约部分保证金不退。",()=>{S.CancelEnterprise(c.Id);w.Rebuild();}),16,Ui.Warn),-1,36);
                 }
                 else
@@ -249,7 +250,29 @@ namespace PCShopSell.Game.UI
                 var l=listing;string why=S.VentureBlocker(l.PlaceId,chosen.Id);var c=BusinessCard(w.Content,S.City.GetPlace(l.PlaceId).Name+" · "+GameSession.SizeName(l.Size));
                 Line(c,$"周租 {l.Rent}    开办现金合计 {S.VentureOpeningCost(l,chosen)}",17);
                 if(why!=null) Para(c,why,15,Ui.Dim);
-                Ui.Size(Ui.Button(c,"在这里开设"+chosen.Name+"…",()=>ConfirmBusiness("开设"+chosen.Name,$"支付 {S.VentureOpeningCost(l,chosen)}。"+(chosen.HardwareCount>0 ? $"另从主店调拨 {chosen.HardwareCount} 套{PartCatalog.TierName(chosen.HardwareTier)}配件，不会返还成散件。" : "")+"每日结算从次日开始。",()=>{S.OpenVenture(l.PlaceId,chosen.Id);w.Rebuild();}),17,Ui.ButtonHot,S.InAgency && why==null),-1,40);
+                Ui.Size(Ui.Button(c, "在这里开设" + chosen.Name + "…", () =>
+                {
+                    var due = S.VentureOpeningCost(l, chosen);
+                    string terms = $"签约后<b>每七天缴纳 {l.Rent}</b>。每日经营结算从次日开始。";
+                    if (chosen.HardwareCount > 0)
+                        terms += $"\n另从主店调拨 {chosen.HardwareCount} 套{PartCatalog.TierName(chosen.HardwareTier)}配件，不会返还成散件。";
+                    OpenPropertyContract("分店租赁合同", UnitName(S.ListingPlace(l)), $"{GameSession.SizeName(l.Size)} · {chosen.Name}",
+                        due, fees =>
+                        {
+                            AgencyFeeLine(fees, "首周租金", l.Rent.ToString());
+                            AgencyFeeLine(fees, "押金", RealEstate.Deposit(l.Rent).ToString());
+                            AgencyFeeLine(fees, "中介费", S.AgentFeeFor(l.Rent).ToString());
+                            AgencyFeeLine(fees, "装修设备", Money.FromYuan(chosen.Capital).ToString());
+                            AgencyFeeLine(fees, "周转金", Money.FromYuan(5000).ToString());
+                        }, terms, false, () =>
+                        {
+                            var live = S.Listings.FirstOrDefault(a => a.PlaceId == l.PlaceId);
+                            if (live != null && S.VentureOpeningCost(live, chosen) == due)
+                                return S.OpenVenture(l.PlaceId, chosen.Id);
+                            Toast("房源或费用有变化，请重新核对。");
+                            return false;
+                        }, w.Rebuild, "VentureConfirmLease", S.VentureBlocker(l.PlaceId, chosen.Id));
+                }, 17, Ui.ButtonHot, S.InAgency && why == null), -1, 40);
             }
         }
         private void BuildCreators(Window w)

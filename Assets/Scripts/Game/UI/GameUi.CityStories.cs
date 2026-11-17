@@ -41,7 +41,7 @@ namespace PCShopSell.Game.UI
                     else if(story.Stage==3)
                     {
                         var order=S.EnterpriseContracts.FirstOrDefault(c=>c.Id==story.OrderSource);
-                        if(order!=null)Para(body,$"{order.Client}：已交付 {order.Completed}/{order.Count} · 未履约 {order.Failed} · 交期 {new GameTimestamp(order.DueMinute)}",18,Ui.Accent);
+                        if(order!=null)Para(body,$"{order.Client}：已交付 {order.Completed}/{order.Count} · 未履约 {order.Failed} · {(order.Settled ? "已结案" : S.Clock.OrderDeadlineText(order.DueMinute))}",18,Ui.Accent);
                         Ui.Size(Ui.Button(body,"查看采购与补货",OpenCityProcurement,18),-1,44);
                         if(S.City.HasPlace(story.ShopId))Ui.Size(Ui.Button(body,"返回承担交付的店",()=>{CloseModalWindows();S.BeginCityTravel(story.ShopId);},18),-1,44);
                     }
@@ -133,7 +133,8 @@ namespace PCShopSell.Game.UI
                     16, Ui.ButtonBg), -1, 36);
                 return;
             }
-            Para(body, $"交期 {new GameTimestamp(offer.DueMinute)}", 16, Ui.Dim);
+            if (showShop) Para(body, S.Clock.OrderDeadlineText(offer.DueMinute), 16, Ui.Dim);
+            else CounterText(() => S.Clock.OrderDeadlineText(offer.DueMinute), 16, Ui.Dim);
             if (offer.RetailKind == "computer") Para(body, "到该店的订单页装机并交付。", 16, Ui.Dim);
             else
             {

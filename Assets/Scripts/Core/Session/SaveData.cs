@@ -120,6 +120,8 @@ namespace PCShopSell.Core.Session
         public int[] randomEventDays;
         public int deferredRandomEventDay;
         public long bankDepositCents, bankInterestCents;
+        // One-based game day. Old saves default to zero, which means no daily reminder has been shown.
+        public int negativeCashBankReminderDayNumber;
         public double bankFraction;
         public int[] eventCounts;
         public long weekendWorkEnds;

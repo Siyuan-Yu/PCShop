@@ -13,9 +13,35 @@ namespace PCShopSell.Game.UI
     {
         private void CheckEconomicReport()
         {
-            if (S.EconomicReportPending && S.EconomicReportAutomatic && !S.IsGameOver && !S.IsWorking
-                && !S.Racing && !S.CityActivityExclusive && !AnyModalOpen && !_ctrl.Placing && S.Trip == null && S.PendingEvent == null)
-                OpenEconomicReport();
+            if (S.IsGameOver || S.IsWorking || S.Racing || S.CityActivityExclusive || AnyModalOpen || PopupOpen
+                || S.OpeningAgencyGuidePending || OpeningMealRestricted || _ctrl.Placing || _ctrl.PetFocusActive
+                || S.Trip != null || S.PendingEvent != null)
+                return;
+            if (S.MarketPriceAlerts.Count > 0) OpenMarketPriceAlert();
+            else if (S.EconomicReportPending && S.EconomicReportAutomatic) OpenEconomicReport();
+        }
+
+        private void OpenMarketPriceAlert()
+        {
+            var moves = S.MarketPriceAlerts;
+            var day = new GameDate(S.MarketPriceAlertDay);
+            S.DismissMarketPriceAlert();
+            OpenWindow("物价异动", 640, Mathf.Min(680, 228 + moves.Count * 34), w =>
+            {
+                Line(w.Content, $"{day} · 较前一日", 18, Ui.Dim);
+                foreach (var move in moves)
+                {
+                    var row = Ui.Row(w.Content, 34, 10);
+                    Ui.Size(Ui.Label(row, move.Name, 18), -1, -1, 1);
+                    var label = Ui.Label(row, $"{(move.Change > 0 ? "上涨" : "下跌")} {Math.Abs(move.Change):0.##%}",
+                        19, TextAnchor.MiddleRight, move.Change > 0 ? Ui.Warn : Ui.Good);
+                    label.fontStyle = FontStyle.Bold;
+                    Ui.Size(label, 154, -1);
+                }
+                var actions = Ui.Row(w.Content, 42, 8);
+                Ui.Size(Ui.Button(actions, "知道了", w.Close, 17), -1, 42, 1);
+                Ui.Size(Ui.Button(actions, "查看物价", () => { w.Close(); OpenMarketPanel(); }, 17, Ui.ButtonHot), -1, 42, 1);
+            });
         }
 
         private void OpenEconomicReport()

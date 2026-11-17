@@ -249,9 +249,9 @@ namespace PCShopSell.Game.UI
                 if (_staffStructure != StaffStructure(S.EmployeesForShop(S.CurrentShop))) RebuildDock();
                 else foreach (var refresh in _staffRefresh) refresh();
             }
-            else if (_tab == ShopTab.Orders && !S.PlayerShop.IsGoodsShop && !AnyModalOpen)
+            else if (_tab == ShopTab.Orders && !AnyModalOpen)
             {
-                if (_buildOrdersSignature != BuildOrdersSignature()) RebuildDock();
+                if (!S.PlayerShop.IsGoodsShop && _buildOrdersSignature != BuildOrdersSignature()) RebuildDock();
                 else foreach (var refresh in _counterRefresh) refresh();
             }
         }
@@ -259,7 +259,7 @@ namespace PCShopSell.Game.UI
         private string _counterStructure;
         private string _buildOrdersSignature;
         private string BuildOrdersSignature() => string.Join(";", S.PlayerShop.Orders.Select(o =>
-            $"{o.Id}:{S.PlayerShop.MissingParts(o).Count}:{o.EmployeeMinutesLeft > 0}:{S.Clock.Now.MinutesUntil(o.DueAt) / 60}"));
+            $"{o.Id}:{S.PlayerShop.MissingParts(o).Count}:{o.EmployeeMinutesLeft > 0}"));
         private readonly List<System.Action> _counterRefresh = new List<System.Action>();
         private string CounterStructure()
         {
@@ -324,7 +324,7 @@ namespace PCShopSell.Game.UI
                 case ShopTab.Stock: BuildStock(); break;
                 case ShopTab.Pricing: BuildPricing(); break;
                 case ShopTab.Orders:
-                    BuildIndustryReferralOrders(C, S.CurrentShop);
+                    if (S.RetailKind != "restaurant") BuildIndustryReferralOrders(C, S.CurrentShop);
                     if (S.IsPetShop(S.CurrentShop)) BuildPetOrders();
                     else if (S.IsSpecialBusiness(S.CurrentShop)) BuildSpecialOrders();
                     else BuildOrders();
@@ -812,7 +812,8 @@ namespace PCShopSell.Game.UI
         private void BuildRestaurantFridgeStock()
         {
             var fridge=S.CurrentShop.Fridge;
-            Line(C,$"冰箱库存 · {fridge.WeightKg:0.##}/{S.CurrentFridgeLimitKg:0} 千克",19,Ui.Accent).name="StockFridgeHeading";
+            Line(C, S.CanOpenFridge ? "冰箱库存 · " + FridgeLoadText(fridge.WeightKg, S.CurrentFridgeLimitKg)
+                : "冰箱库存 · 尚未摆放", 19, Ui.Accent).name = "StockFridgeHeading";
             var section=Ui.Rect(C,"StockFridgeSection");Ui.VList(section,4,0);
             var items=CollectStacks(fridge,new Stock(0)).Where(item=>item.Count>0).ToArray();
             foreach(var item in items)
@@ -823,8 +824,8 @@ namespace PCShopSell.Game.UI
                 if(item.Key=="rice")Ui.Size(Ui.Label(row,item.Kg.ToString("0.##")+" 千克",16),90).name="StockQuantity";
                 else StockCount(row,item.Count);
             }
-            if(items.Length==0)Line(section,S.CanOpenFridge?"冰箱是空的。":"尚未摆放冰箱。",16,Ui.Dim);
-            Ui.Size(Ui.Button(section,"管理冰箱",OpenFridgeWindow,16,Ui.ButtonBg,S.CanOpenFridge),-1,34);
+            if (items.Length == 0 && S.CanOpenFridge) Line(section, "冰箱是空的。", 16, Ui.Dim);
+            Ui.Size(Ui.Button(section, "管理食材", OpenFridgeWindow, 16, Ui.ButtonBg), -1, 34);
         }
 
         // ---------- 定价 ----------
@@ -1026,8 +1027,7 @@ namespace PCShopSell.Game.UI
             {
                 BuildOrder order = o;
                 List<PartDef> missing = S.MissingParts(o);
-                long left = S.Clock.Now.MinutesUntil(o.DueAt);
-                Text head = Ui.Label(list, $"<b>{PartCatalog.TierName(o.Tier)}整机</b>  报价 <color=#386047>{o.Price}</color>  剩 {left / 60} 小时", 18);
+                Text head = CounterText(() => $"<b>{PartCatalog.TierName(order.Tier)}整机</b>  报价 <color=#386047>{order.Price}</color>  {S.Clock.OrderDeadlineText(order.DueAt.TotalMinutes)}", 18);
                 Ui.Size(head, -1, 28);
                 foreach (PartDef p in PartCatalog.BuildList(o.Tier))
                 {

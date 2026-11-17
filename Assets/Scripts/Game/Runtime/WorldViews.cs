@@ -139,15 +139,21 @@ namespace PCShopSell.Game.Runtime
 
         private void Apply()
         {
-            if (!_locked && !_edit && _cityBounds.HasValue)
-            {
-                var b = _cityBounds.Value;
-                _focus.x = Mathf.Clamp(_focus.x, b.min.x, b.max.x);
-                _focus.z = Mathf.Clamp(_focus.z, b.min.z, b.max.z);
-            }
             _cam.orthographicSize = Mathf.Lerp(_cam.orthographicSize, Size, 0.25f);
-            _cam.transform.rotation = _curRot;
-            _cam.transform.position = _focus - _curRot * Vector3.forward * 120f;
+            Vector3 forward = _curRot * Vector3.forward;
+            float distance = 120f;
+            if (!_locked && !_edit && _cityBounds is Bounds bounds)
+            {
+                _focus.x = Mathf.Clamp(_focus.x, bounds.min.x, bounds.max.x);
+                _focus.z = Mathf.Clamp(_focus.z, bounds.min.z, bounds.max.z);
+
+                // Keep the bottom of the near plane above street geometry at shallow angles.
+                float lowerEdge = _cam.orthographicSize * (_curRot * Vector3.up).y;
+                float clearance = bounds.max.y + 1f - _focus.y;
+                float requiredDistance = _cam.nearClipPlane + (lowerEdge + clearance) / -forward.y;
+                distance = Mathf.Max(distance, requiredDistance);
+            }
+            _cam.transform.SetPositionAndRotation(_focus - forward * distance, _curRot);
         }
     }
 

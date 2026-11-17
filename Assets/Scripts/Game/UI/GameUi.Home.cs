@@ -223,9 +223,8 @@ namespace PCShopSell.Game.UI
             else
             {
                 bool toShelf = shop && key.StartsWith("part:");
-                bool toFridge = shop && S.RetailKind == "restaurant" && (key == "rice" || key.StartsWith("ing:"));
-                Ui.Size(Ui.Button(bottom, toFridge ? "存入冰箱" : toShelf ? "上货架一件" : "放" + one, () => { S.StoreInBox(key); w.Rebuild(); }, 16, Ui.ButtonBg), 100);
-                Ui.Size(Ui.Button(bottom, toFridge ? "全部存入冰箱" : toShelf ? "全上货架" : "全放进去", () => { S.StoreInBox(key, n); w.Rebuild(); }, 16, Ui.ButtonBg), 120);
+                Ui.Size(Ui.Button(bottom, toShelf ? "上货架一件" : "放" + one, () => { S.StoreInBox(key); w.Rebuild(); }, 16, Ui.ButtonBg), 100);
+                Ui.Size(Ui.Button(bottom, toShelf ? "全上货架" : "全放进去", () => { S.StoreInBox(key, n); w.Rebuild(); }, 16, Ui.ButtonBg), 120);
                 if (shop && key.StartsWith("gift:"))
                 {
                     string gid = key.Substring(5);
@@ -336,6 +335,8 @@ namespace PCShopSell.Game.UI
             return name.Length > 5 ? name.Substring(0, 5) : name;
         }
 
+        private static readonly Color BagBadgeSurface = new Color32(35, 43, 38, 255);
+
         /// <summary>一格一格的背包格子：8 列，一叠东西占几格就画几格。</summary>
         private RectTransform BagGrid(Transform parent, System.Collections.Generic.List<BagStack> stacks, int capacity, string selKey, System.Action<string> onPick, float height,bool compact=false)
         {
@@ -379,27 +380,40 @@ namespace PCShopSell.Game.UI
                     {
                         BagStack st = cells[idx].st;
                         bool sel = st.Key == selKey;
-                        Color bg = sel ? Color.Lerp(st.Color, Color.white, 0.35f) : st.Color;
+                        Color bg = sel ? Ui.SelectedButton(true) : Color.Lerp(Ui.PanelBg2, st.Color, .18f);
                         int count = cells[idx].n;
                         int? expiry = cells[idx].expiry >= 0 ? cells[idx].expiry : null;
-                        var cell = Ui.Size(Ui.Button(row, ShortName(st.Name), () => onPick(st.Key), 13, bg), 80, 80);
+                        var cell = Ui.Size(Ui.Button(row, ShortName(st.Name), () => onPick(st.Key), 14, bg), 80, 80);
                         cell.name="BagItem_"+st.Key;
+                        Ui.FlatBorder(cell.image, sel ? Ui.Accent : st.Color, sel ? 2 : 1);
                         var title = cell.GetComponentInChildren<Text>();
+                        title.fontStyle = FontStyle.Bold;
                         float band = expiry.HasValue ? .2f : .02f;
                         title.rectTransform.Anchor(0, band, 1, band + .21f, 2, 0, 2, 0);
                         FillItemPortrait(cell.transform, st.Key).Anchor(.18f, band + .21f, .82f, .98f);
                         string amount = st.Key == "rice" ? $"{st.Kg * count / st.Count:0.##}kg" : count > 0 ? $"×{count}" : "…";
-                        var badge = Ui.Label(cell.transform, amount, 13, TextAnchor.MiddleRight);
-                        badge.rectTransform.Anchor(.05f, .74f, .95f, .98f);
-                        badge.gameObject.AddComponent<Outline>().effectColor = Ui.PanelBg;
+                        var quantity = Ui.Panel(cell.transform, "BagQuantity", BagBadgeSurface);
+                        quantity.raycastTarget = false;
+                        float badgeWidth = Mathf.Clamp(7 * amount.Length + 8, 24, 72);
+                        quantity.rectTransform.Anchor(1, 1, 1, 1, -badgeWidth - 2, -21, 2, 2);
+                        var badge = Ui.Label(quantity.transform, amount, 14, TextAnchor.MiddleCenter, Color.white);
+                        badge.fontStyle = FontStyle.Bold;
+                        badge.resizeTextForBestFit = true;
+                        badge.resizeTextMinSize = 10;
+                        badge.resizeTextMaxSize = 14;
+                        badge.horizontalOverflow = HorizontalWrapMode.Overflow;
+                        badge.rectTransform.Fill(1);
                         cell.Tip(st.Name);
                         AddFoodExpiry(cell, st.Key, expiry);
                     }
                     else
                     {
                         bool beyond = idx >= capacity;
-                        Image empty = Ui.Panel(row, "Empty", beyond ? new Color(0.35f, 0.12f, 0.12f, 0.6f) : new Color(1, 1, 1, 0.07f));
+                        Color fill = beyond ? Color.Lerp(Ui.FlatBand, Ui.Warn, .18f) : Ui.FlatBand;
+                        Image empty = Ui.FlatPanel(row, "Empty", fill, beyond ? Ui.Warn : Ui.FlatWellEdge);
                         Ui.Size(empty, 80, 80);
+                        if (beyond)
+                            Ui.Label(empty.transform, "—", 18, TextAnchor.MiddleCenter, Ui.Dim).rectTransform.Fill();
                     }
                 }
             }

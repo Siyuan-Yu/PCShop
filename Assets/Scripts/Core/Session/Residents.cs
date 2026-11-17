@@ -167,7 +167,7 @@ namespace PCShopSell.Core.Session
                     "哎，你好你好。存取款和借款都可以在城郊银行办，有什么拿不准的可以问我。",
                     "借款之前先看清到期日和总金额。这两笔数弄明白了，再决定借多少。",
                     "我还是爱逛农贸市场。现在下班了顺路去，就看王桂芬还留了什么菜。"),
-                GameSession.BankPlaceId, H(9), H(17), false, new[] { H(7), H(18.5) }, new[]
+                GameSession.BankPlaceId, H(8), H(20), false, new[] { H(20.25), H(20.75) }, new[]
                 {
                     "张淑琴跟王桂芬是二十年的老姐妹。到银行上班以后，她们常约在下班后见面聊几句。",
                     "她闺女在外企上班，给她买了智能手机，她现在最爱刷短视频。",
@@ -213,6 +213,16 @@ namespace PCShopSell.Core.Session
                     "他说爸妈只准他周末玩一小时电脑：“可我想学编程，不只是打游戏。”",
                     "他把压岁钱都存在一个铁盒子里：“等攒够了，我第一个来你家买。”",
                 }),
+            new ResidentDef(P(CityLifeCatalog.BankNightTellerId, "林晓宁", "银行夜班柜员",
+                    "晚上好，我是夜班柜员。存取款、借款和还款都可以找我。",
+                    "来借周转款的话，先看看什么时候扣款，给店里留点进货的钱。",
+                    "早上八点交班，回家前我会在街上买点早餐。"),
+                GameSession.BankPlaceId, H(20), H(8), false, new[] { H(8.25), H(8.75) }, new[]
+                {
+                    "林晓宁以前在便利店值夜班，习惯了天亮再下班。",
+                    "她和张淑琴交班时会把柜台的待办逐笔对一遍。",
+                    "下班路上她常去吃一碗热面，白天补觉，傍晚再出门。",
+                }),
         };
 
         public static ResidentDef Get(string id)
@@ -236,7 +246,8 @@ namespace PCShopSell.Core.Session
 
         /// <summary>这个人现在是否在店里上班（出门吃午饭的时段不算）。</summary>
         public static bool AtWork(ResidentDef r, int minuteOfDay) =>
-            r.WorkPlaceId != null && minuteOfDay >= r.WorkStart && minuteOfDay < r.WorkEnd && TripAt(r, minuteOfDay) == null;
+            r.WorkPlaceId != null && r.WorkStart != r.WorkEnd
+            && GameSession.CityWithinHours(minuteOfDay, r.WorkStart, r.WorkEnd) && TripAt(r, minuteOfDay) == null;
     }
 
     public sealed partial class GameSession

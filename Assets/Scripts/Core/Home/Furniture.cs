@@ -132,8 +132,6 @@ namespace PCShopSell.Core.Home
         public const string Fridge = "fridge"; // Stable ID of the existing refrigerator.
         public const string FridgeSmall = "fridge_small";
         public const string FridgeFamily = Fridge;
-        public const string FridgeSide = "fridge_side";
-        public const string FridgePremium = "fridge_premium";
         public const string BedBoard = "bed_board";
         public const string WardrobeCloth = "wardrobe_cloth";
         public const string ClothingRack = "clothing_rack";
@@ -174,7 +172,12 @@ namespace PCShopSell.Core.Home
         public static readonly Money ShelfPrice = Money.FromYuan(300);
 
         /// <summary>老版本按类别分的货架 id（"shelf_gpu"、"shelf_goods"……）统一当成现在的货架。</summary>
-        public static string Canonical(string id) => id==ClothingRack || id==ClothingFold || id != null && id.StartsWith("shelf_", StringComparison.Ordinal) ? Shelf : id;
+        public static string Canonical(string id)
+        {
+            // Retired refrigerators in existing saves keep their contents in the shared cold storage.
+            if (id is "fridge_side" or "fridge_premium") return Fridge;
+            return id == ClothingRack || id == ClothingFold || id != null && id.StartsWith("shelf_", StringComparison.Ordinal) ? Shelf : id;
+        }
 
         /// <summary>老货架 id 对应的货类（显卡货架 → "gpu"；杂货架没有对应的类，返回 null）。</summary>
         public static string LegacyShelfKind(string id) =>
@@ -235,10 +238,8 @@ namespace PCShopSell.Core.Home
             Add(new FurnitureDef("fan_fixed", "电风扇（修好了）", "热天改善所在室内的舒适体验；固定水电¥10/月。", 0, FurnitureSlot.Floor, 0.45, 0.45, false, true) { SleepBonus = 0, Utilities = Money.FromYuan(10) });
             Add(new FurnitureDef("junk", "纸箱和塑料盆", "搬家时留下的杂物。这个纸箱可打开家中不限容量的后仓：靠近按 F，或按 B 查看背包和后仓。", 0, FurnitureSlot.Floor, 0.9, 0.9, false, true) { Role = FurnitureRole.Storage });
 
-            Add(new FurnitureDef(FridgeSmall, "单门小冰箱", "入门款。容量 120 千克，占地小；家和店里都能摆。食物在冰箱里永久保存；取出后继续计算剩余保质期。", 1299, FurnitureSlot.Floor, 0.55, 0.6) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 120, WeightKg = 28, Utilities = Money.FromYuan(15) });
-            Add(new FurnitureDef(FridgeFamily, "家用双门冰箱", "上下双门。容量 240 千克，适合日常备餐；家和店里都能摆。食物在冰箱里永久保存；取出后继续计算剩余保质期。", 2799, FurnitureSlot.Floor, 0.75, 0.7) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 240, WeightKg = 48, Utilities = Money.FromYuan(20) });
-            Add(new FurnitureDef(FridgeSide, "对开门大冰箱", "左右对开门。容量 480 千克，可囤更多饭菜饮料；家和店里都能摆。食物在冰箱里永久保存；取出后继续计算剩余保质期。", 5299, FurnitureSlot.Floor, 1.15, 0.75) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 480, WeightKg = 85, Utilities = Money.FromYuan(30) });
-            Add(new FurnitureDef(FridgePremium, "高端四门冰箱", "高端四门大容量款。容量 720 千克，适合大量备餐；家和店里都能摆。食物在冰箱里永久保存；取出后继续计算剩余保质期。", 7999, FurnitureSlot.Floor, 1.3, 0.85) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 720, WeightKg = 120, Utilities = Money.FromYuan(40) });
+            Add(new FurnitureDef(FridgeSmall, "单门冰箱", "容量 500 千克。家和店里都能摆；取出食物后继续计算剩余保质期。", 1299, FurnitureSlot.Floor, 0.55, 0.6) { Role = FurnitureRole.Fridge, FridgeCapacityKg = 500, WeightKg = 28, Utilities = Money.FromYuan(15) });
+            Add(new FurnitureDef(FridgeFamily, "双门冰箱", "容量不限。家和店里都能摆；取出食物后继续计算剩余保质期。", 2799, FurnitureSlot.Floor, 0.75, 0.7) { Role = FurnitureRole.Fridge, FridgeCapacityKg = double.PositiveInfinity, WeightKg = 48, Utilities = Money.FromYuan(20) });
 
             // ---- 出租屋：可以买 ----
             Add(new FurnitureDef("bed_spring", "弹簧床", "有像样的床垫，睡着不硌人。睡眠质量 ×1.12。", 900, FurnitureSlot.Floor, 2.0, 1.1) { Role = FurnitureRole.Bed, BedQuality = 1.12 });

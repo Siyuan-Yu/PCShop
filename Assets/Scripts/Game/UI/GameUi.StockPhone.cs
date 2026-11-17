@@ -227,7 +227,7 @@ namespace PCShopSell.Game.UI
             if (_stockHelp)
             {
                 StockText(root, $"个股单日涨跌上限为 ±{GameSession.StockDailyLimitPercent}%，第 {GameSession.StockEarlyMarketDays + 1} 天起波动加大。\n"
-                    + "股票每手100股。表头倍率控制每次加减的手数，点「成交」统一结算。做空冻结自有保证金及卖出所得，每日借股费0.03%，担保比例≤130%时自动平仓。", 15, Ui.Dim);
+                    + $"股票每手 {Ui.Emphasize("100 股")}。表头倍率控制每次加减的手数，点{Ui.Emphasize("「成交」")}统一结算。做空冻结自有保证金及卖出所得，每日借股费 0.03%，{Ui.Emphasize("担保比例≤130%时自动平仓", Ui.Warn)}。", 15, Ui.Dim);
                 Ui.Size(Ui.Button(root, "账户与费用明细", OpenStockFees, 15), -1, 30);
             }
 

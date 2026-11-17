@@ -17,12 +17,28 @@ namespace PCShopSell.Core.Session
         public PriceDay Copy() => new PriceDay { Day = Day, Prices = (double[])Prices.Clone() };
     }
 
+    [Serializable]
+    public sealed class MarketPriceMove
+    {
+        public string Name;
+        public double Change;
+    }
+
+    public sealed partial class SaveData
+    {
+        public int marketPriceAlertDay;
+        public MarketPriceMove[] marketPriceAlerts;
+    }
+
     public sealed partial class GameSession
     {
         public static readonly string[] PriceGroups = PartCatalog.Categories.Select(PartCatalog.CategoryName)
             .Concat(new[] { "米与食材", "烟酒饮料与礼品", "家具与货架", "快餐", "载具", "智能手机", "服装", "住宅售价", "住宅周租", "商铺售价", "商铺周租" }).ToArray();
         public static int PropertyPriceGroupStart => PriceGroups.Length - 4;
         private readonly List<PriceDay> _priceDays = new List<PriceDay>();
+        public const double MarketPriceAlertThreshold = .10;
+        public int MarketPriceAlertDay { get; private set; }
+        public IReadOnlyList<MarketPriceMove> MarketPriceAlerts { get; private set; } = Array.Empty<MarketPriceMove>();
         private const string EconomicReportDisabled = "economy-report:disabled";
         public IReadOnlyList<PriceDay> PriceDays => _priceDays;
         public EconomicReportCadence ReportCadence { get; private set; }
@@ -45,7 +61,7 @@ namespace PCShopSell.Core.Session
         }
         public void DismissEconomicReport() => EconomicReportPending = false;
 
-        private void RecordPriceDay()
+        private void RecordPriceDay(bool announceMoves = false)
         {
             int day = Clock.Today.TotalDays;
             if (_priceDays.Any(p => p.Day == day)) return;
@@ -60,7 +76,10 @@ namespace PCShopSell.Core.Session
             prices.Add(PhonePrice.Cents);
             prices.Add(ClothingProducts.All.Average(o => o.Price.Cents * IndustryCycles.GoodsFactor(o, day)));
             prices.AddRange(_propertyPriceFactors.Select(v => v * 10000));
+            var yesterday = _priceDays.LastOrDefault();
             _priceDays.Add(new PriceDay { Day = day, Prices = prices.ToArray() });
+            if (announceMoves && yesterday?.Day == day - 1)
+                RecordMarketPriceMoves(day, yesterday.Prices, prices);
             int elapsed = day - EconomicReportAnchorDay;
             if (EconomicReportAutomatic && _priceDays.Count > 1 && elapsed > 0 && elapsed % EconomicReportPeriodDays == 0)
             {
@@ -68,6 +87,33 @@ namespace PCShopSell.Core.Session
                 Notice?.Invoke("新一期经济简报已出，可在“物价 → 经济简报”查看收支结算与物价涨跌。");
             }
         }
+
+        private void RecordMarketPriceMoves(int day, double[] previous, List<double> current)
+        {
+            var moves = new List<MarketPriceMove>();
+            void Compare(string name, double before, double after)
+            {
+                if (before <= 0) return;
+                double change = after / before - 1;
+                if (Math.Abs(change) > MarketPriceAlertThreshold + 1e-9)
+                    moves.Add(new MarketPriceMove { Name = name, Change = change });
+            }
+            for (int i = 0; i < PriceGroups.Length; i++)
+                Compare(PriceGroups[i], previous[i], current[i]);
+
+            // Products in a model series share their wholesale multiplier.
+            foreach (string series in ModelProducts.SeriesIds)
+                Compare(ModelProducts.SeriesName(series) + "（模型批发）",
+                    IndustryCycles.ModelFactor(series, day - 1), IndustryCycles.ModelFactor(series, day));
+
+            if (moves.Count == 0) return;
+            MarketPriceAlertDay = day;
+            MarketPriceAlerts = moves.OrderByDescending(move => Math.Abs(move.Change)).ToArray();
+            Notice?.Invoke(new GameDate(day) + "物价异动：" + string.Join("、", moves.Select(move =>
+                $"{move.Name} {move.Change:+0.#%;-0.#%}")));
+        }
+
+        public void DismissMarketPriceAlert() => MarketPriceAlerts = Array.Empty<MarketPriceMove>();
 
         private void RestorePriceReports(SaveData data)
         {
@@ -83,6 +129,8 @@ namespace PCShopSell.Core.Session
             ReportCadence = Enum.IsDefined(typeof(EconomicReportCadence), data.economicReportCadence)
                 ? (EconomicReportCadence)data.economicReportCadence : EconomicReportCadence.Weekly;
             EconomicReportPending = data.weeklyPricesPending && EconomicReportAutomatic;
+            MarketPriceAlertDay = data.marketPriceAlertDay;
+            MarketPriceAlerts = data.marketPriceAlerts ?? Array.Empty<MarketPriceMove>();
             RecordPriceDay();
         }
     }

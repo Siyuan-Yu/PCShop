@@ -185,6 +185,7 @@ namespace PCShopSell.Core.Session
     public static partial class CityLifeCatalog
     {
         public const string BankTellerId = "res_auntie";
+        public const string BankNightTellerId = "res_bank_night";
         public const string InvitationTestPersonId = "life_invitation_test";
         private static List<CityPersonDefinition> _people;
         public static IReadOnlyList<CityPersonDefinition> People => _people ?? (_people=BuildPeople());
@@ -292,7 +293,8 @@ namespace PCShopSell.Core.Session
             foreach(var r in Residents.All)
             {
                 var stories=r.Stories??new[]{r.Person.LineFor(0),r.Person.LineFor(1),r.Person.LineFor(2)};
-                result.Add(new CityPersonDefinition {Id=r.Id,Name=r.Person.Name,Role=r.Person.Role,HomeId=Home(i++),WorkId=r.WorkPlaceId,
+                string home = r.Id == BankNightTellerId ? Home(0) : Home(i++);
+                result.Add(new CityPersonDefinition {Id=r.Id,Name=r.Person.Name,Role=r.Person.Role,HomeId=home,WorkId=r.WorkPlaceId,
                     WorkStart=r.WorkStart,WorkEnd=r.WorkEnd,Interest=Interest(i),Goal=stories.LastOrDefault()??"把日子过安稳。",Experience=stories[0],
                     Topics=new[]{r.Person.LineFor(0),r.Person.LineFor(1),r.Person.LineFor(2),stories[0]},Stories=stories,
                     Age = r.Id switch
@@ -301,6 +303,7 @@ namespace PCShopSell.Core.Session
                         "res_grandpa" => 67,
                         "res_student" => 21,
                         "res_auntie" => 42,
+                        BankNightTellerId => 28,
                         "res_mom" => 33,
                         "res_coder" => 31,
                         _ => 26 + i % 28,

@@ -124,8 +124,8 @@ namespace PCShopSell.Core.Session
             if (!City.HasPlace(a.VenueId)) return "找不到活动地点";
             if (CityActivityVenueAccessBlocker(City.GetPlace(a.VenueId)) is string access) return access;
             if (IsGameOver || _sleeping || IsWorking) return "正在休息或工作，当前不能出发";
+            if (Racing) return "请先完成或退出当前比赛。";
             if (CityActivityExclusive) return "正在参加活动，请先结束当前活动";
-            if (Trip != null || CityIntent != null) return "正在前往目的地，请先完成或取消当前行程";
             return LeaveBlocker ?? (checkDepartureTime ? CityActivityEarlyDepartureHint(a) : null);
         }
         public string VenueServiceBlocker(string definitionId, int choice, string activityId = null)

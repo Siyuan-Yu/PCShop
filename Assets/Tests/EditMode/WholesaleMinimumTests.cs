@@ -113,8 +113,9 @@ namespace PCShopSell.Tests
             }
         }
 
-        [Test]
-        public void RestaurantWholesaleRiceLeavesFridgeRoomForEggs()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void RestaurantWholesaleDeliversToWarehouseWhenFridgeIsMissingOrFull(bool hasFridge)
         {
             using var template = HomeTests.Make();
             var city = template.City;
@@ -133,28 +134,25 @@ namespace PCShopSell.Tests
             Assert.False(s.BuyGift(Gifts.Fruit));
             var fridge = s.MainShop.Fridge;
             var fridgeCapacity = GameSession.FridgeCapacityOf(s.MainShop.Layout);
-            double eggWeight = 10 * Gifts.Get("produce:egg").WeightKg;
-            fridge.Food.Ingredient.Add(new FoodBatch
-            {
-                Id = "veg", Count = (int)((fridgeCapacity - eggWeight) / Backpack.IngredientKg("veg")),
-                ExpireDay = FoodBatch.NoExpiry
-            });
+            if (hasFridge) fridge.Food.RiceKg += fridgeCapacity - fridge.WeightKg;
+            else s.MainShop.Layout.RemoveAll(p => FurnitureCatalog.Get(p.Id)?.Role == FurnitureRole.Fridge);
             Assert.True(s.CartAddRetailWholesale(farm, "produce:rice", 5));
             Assert.True(s.CartAddRetailWholesale(farm, "produce:egg", 10));
             s.CartAllToTruck();
             var payment = s.CartGoods + s.CartFreight(true);
             var cash = s.Ledger.Balance;
-            var riceBefore = s.KitchenRice(s.MainShop);
-            var eggsBefore = s.KitchenIngredientCount(s.MainShop, "egg");
+            var locker = s.MainShop.Locker.Food;
+            var riceBefore = locker.RiceKg;
+            var eggsBefore = locker.IngredientCount("egg");
+            var fridgeWeight = fridge.WeightKg;
             Assert.IsNull(s.CheckoutBlocker(true));
             Assert.True(s.Checkout(true));
             Assert.AreEqual(payment, cash - s.Ledger.Balance);
             Assert.AreNotEqual("stock", s.CurrentQuest().Id);
             s.AdvanceClock(s.CourierQuote(s.MainShop).minutes + 5);
-            Assert.AreEqual(riceBefore + 2.5, s.KitchenRice(s.MainShop), 1e-9);
-            Assert.AreEqual(eggsBefore + 10, s.KitchenIngredientCount(s.MainShop, "egg"));
-            Assert.Zero(fridge.Food.RiceKg);
-            Assert.AreEqual(fridgeCapacity, fridge.WeightKg, 1e-9);
+            Assert.AreEqual(riceBefore + 2.5, locker.RiceKg, 1e-9);
+            Assert.AreEqual(eggsBefore + 10, locker.IngredientCount("egg"));
+            Assert.AreEqual(fridgeWeight, fridge.WeightKg, 1e-9);
         }
 
         [Test]
@@ -174,9 +172,10 @@ namespace PCShopSell.Tests
             Assert.IsNull(s.QuoteEmployeePurchase(employeeId).Error);
             Assert.True(s.DispatchEmployeePurchase(employeeId));
             var trip = s.EmployeePurchaseTrips.Single();
-            double before = s.KitchenRice(shop);
+            double before = shop.Locker.Food.RiceKg;
             s.AdvanceClock((int)(trip.DeliveryAt - s.Clock.Now.TotalMinutes) + 1);
-            Assert.AreEqual(before + 2.5, s.KitchenRice(shop));
+            Assert.AreEqual(before + 2.5, shop.Locker.Food.RiceKg);
+            Assert.Zero(s.KitchenRice(shop));
             Assert.Zero(shop.Fridge.Food.RiceKg);
             Assert.AreEqual((int)(before / .5) + 5, s.ProcurementCoverageFor(shop.Place.Id, rice.Kind, rice.Id).FreeStock);
         }

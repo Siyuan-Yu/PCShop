@@ -60,6 +60,7 @@ namespace PCShopSell.Game.Runtime
             public string Label;
             public Rect Area;
             public float Height;
+            public PlacedFurniture Furniture;
         }
 
         private readonly Transform _root;
@@ -76,8 +77,10 @@ namespace PCShopSell.Game.Runtime
         private Vector3 _repairWork;
         private bool _repairmanIn;
         private bool _sitting;
-        private Vector3 _standPos;
-        private Rect _seatArea;
+        private float _seatProgress, _seatHeight;
+        private Vector3 _standPos, _seatPos;
+        private Quaternion _standRotation, _seatRotation;
+        private PlacedFurniture _nearbySeat;
 
         /// <summary>老板脚边最近的、够得着的互动点 ID；没有则为空。</summary>
         public string NearbyId { get; private set; }
@@ -210,6 +213,7 @@ namespace PCShopSell.Game.Runtime
         {
             if (!_furniture.Sync(s.HomeLayout, Room)) return;
             CancelBedWalk();
+            StandUp();
             _spots.Clear();
             bool hasBed = false;
             foreach (PlacedFurniture p in s.HomeLayout)
@@ -224,6 +228,7 @@ namespace PCShopSell.Game.Runtime
                 {
                     Id = id,
                     Label = label,
+                    Furniture = def.Role == FurnitureRole.Seat ? p : null,
                     Area = new Rect((float)f.MinX, (float)f.MinZ, (float)(f.MaxX - f.MinX), (float)(f.MaxZ - f.MinZ)),
                     Height = def.Role == FurnitureRole.Bed ? 1.1f : def.Role == FurnitureRole.Wardrobe ? 2.2f : def.Role == FurnitureRole.Seat || def.Role == FurnitureRole.Broken || def.Role == FurnitureRole.Storage ? 1.0f : 1.5f,
                 });
@@ -237,40 +242,73 @@ namespace PCShopSell.Game.Runtime
 
         public bool IsSitting => _sitting;
 
-        /// <summary>坐下 / 站起来：只是个动作，没有任何数值效果。坐下时挪到最近那个座位上，站起来回到原来站的地方。</summary>
+        /// <summary>坐下或起身，起身后回到原来的站位。</summary>
         public void ToggleSit()
         {
-            Transform tr = _owner.transform;
-            if (_sitting)
+            if (_sitting || _seatProgress > 0)
             {
-                StandUp();
+                _sitting = !_sitting;
                 return;
             }
-            if (NearbyId != Seat) return;
+            if (NearbyId != Seat || _nearbySeat == null) return;
+
+            Transform tr = _owner.transform;
             _standPos = tr.localPosition;
+            _standRotation = tr.localRotation;
+            _seatPos = new Vector3((float)_nearbySeat.X, 0f, (float)_nearbySeat.Z);
+            bool sofa = _nearbySeat.Id == "sofa";
+            _seatHeight = sofa ? FurnitureVisuals.SofaSeatHeight : FurnitureVisuals.StoolSeatHeight;
+            if (sofa)
+                _seatRotation = Quaternion.Euler(0, 90f * _nearbySeat.Rot + 180f, 0);
+            else
+            {
+                Vector3 facing = _standPos - _seatPos;
+                facing.y = 0;
+                _seatRotation = facing.sqrMagnitude > 1e-4f ? Quaternion.LookRotation(facing) : _standRotation;
+            }
             _sitting = true;
             _owner.GetComponent<FigureMotion>().LocomotionEnabled = false;
-            Vector3 c = new Vector3(_seatArea.center.x, 0f, _seatArea.center.y);
-            tr.localPosition = c;
-            tr.localScale = new Vector3(1f, 0.72f, 1f);
-            Vector3 toCenter = new Vector3(Width / 2 - c.x, 0, Depth / 2 - c.z);
-            if (toCenter.sqrMagnitude > 1e-4f) tr.localRotation = Quaternion.LookRotation(toCenter);
+        }
+
+        private void UpdateSeat(float dt)
+        {
+            float target = _sitting ? 1f : 0f;
+            if (_seatProgress == target) return;
+            _seatProgress = Mathf.MoveTowards(_seatProgress, target, dt / .32f);
+            if (_seatProgress == 0)
+            {
+                RestoreStandingPose();
+                return;
+            }
+            float blend = Mathf.SmoothStep(0, 1, _seatProgress);
+            Transform tr = _owner.transform;
+            tr.localPosition = Vector3.Lerp(_standPos, _seatPos, blend);
+            tr.localRotation = Quaternion.Slerp(_standRotation, _seatRotation, Mathf.SmoothStep(0, 1, _seatProgress * 1.6f));
+            _owner.GetComponent<FigureMotion>().SetFurnitureSeatPose(_seatHeight, blend);
         }
 
         private void StandUp()
         {
-            if (!_sitting) return;
+            if (!_sitting && _seatProgress == 0) return;
             _sitting = false;
+            _seatProgress = 0;
+            RestoreStandingPose();
+        }
+
+        private void RestoreStandingPose()
+        {
             Transform tr = _owner.transform;
-            _owner.GetComponent<FigureMotion>().LocomotionEnabled = true;
-            tr.localScale = Vector3.one;
             tr.localPosition = _standPos;
+            tr.localRotation = _standRotation;
+            var motion = _owner.GetComponent<FigureMotion>();
+            motion.SetFurnitureSeatPose(0, 0);
+            motion.LocomotionEnabled = true;
         }
 
         public void ResetOwner()
         {
             CancelBedWalk();
-            _sitting = false;
+            StandUp();
             _owner.GetComponent<FigureMotion>().LocomotionEnabled = true;
             _owner.GetComponent<FigureMotion>().ResetMotion();
             _owner.transform.localScale = Vector3.one;
@@ -469,6 +507,7 @@ namespace PCShopSell.Game.Runtime
                 Prims.Dress(_owner, _dressed);
             }
             SyncFurniture(s);
+            UpdateSeat(realDt);
             foreach (var furniture in _furniture.Entries)
             {
                 if (furniture.Def.Role != FurnitureRole.Cooker) continue;
@@ -489,6 +528,7 @@ namespace PCShopSell.Game.Runtime
             string best = null, label = null;
             Vector3 world = Vector3.zero;
             float bestDist = 0.75f;
+            _nearbySeat = null;
             foreach (Spot sp in _spots)
             {
                 float dd = DistToRect(at, sp.Area);
@@ -497,20 +537,15 @@ namespace PCShopSell.Game.Runtime
                     bestDist = dd;
                     best = sp.Id;
                     label = sp.Label;
+                    _nearbySeat = sp.Furniture;
                     world = Origin + new Vector3(sp.Area.center.x, sp.Height, sp.Area.center.y);
                 }
             }
-            if (_sitting)
+            if (_sitting || _seatProgress > 0)
             {
                 best = Seat;
-                label = "站起来";
+                label = _sitting ? "站起来" : "坐下";
                 world = _owner.transform.localPosition + new Vector3(0, 1.2f, 0) + Origin;
-            }
-            else if (best == Seat)
-            {
-                foreach (Spot sp in _spots)
-                    if (sp.Id == Seat && DistToRect(at, sp.Area) <= bestDist + 1e-4f) _seatArea = sp.Area;
-                label = "坐下";
             }
             if (best == Repair && s.RepairmanAtWork != null) label = "师傅正在修…";
             if (best == Cooker && s.Pantry.Cooking != null) label = "正在煮饭：还剩" + s.Pantry.CookMinutesLeft(s.Clock.Now.TotalMinutes) + "分钟";

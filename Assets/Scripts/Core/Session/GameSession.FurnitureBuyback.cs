@@ -38,7 +38,12 @@ namespace PCShopSell.Core.Session
         {
             var copy = (FurnitureBuybackOrder)MemberwiseClone();
             copy.Lines = (Lines ?? Array.Empty<FurnitureBuybackLine>()).Where(line => line != null)
-                .Select(line => line.Copy()).ToArray();
+                .Select(line =>
+                {
+                    var copiedLine = line.Copy();
+                    copiedLine.FurnitureId = FurnitureCatalog.Canonical(line.FurnitureId);
+                    return copiedLine;
+                }).ToArray();
             return copy;
         }
     }

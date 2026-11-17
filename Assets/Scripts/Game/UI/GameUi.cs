@@ -203,6 +203,7 @@ namespace PCShopSell.Game.UI
             UpdateWorkScreen();
             if (S.IsWorking) return;
             CheckNegativeCashBankReminder();
+            CheckCustomerEventFeedback();
             CheckEconomicReport();
             _uiTime += dt;
             _hudRefreshTimer -= dt;

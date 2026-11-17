@@ -36,7 +36,7 @@ namespace PCShopSell.Game.UI
             OpenWindow("现金不足", 630, 300, w =>
             {
                 Line(w.Content, $"当前现金 {S.Ledger.Balance}", 23, Ui.Warn);
-                Para(w.Content, $"需要周转时，可以到{bank.Name}柜台借款。银行 24 小时营业，柜台借款无需智能手机。", 18);
+                Para(w.Content, $"需要周转时，可以到{bank.Name}柜台借款。银行设有日夜班，有柜员在岗时就能办理。柜台借款无需智能手机。", 18);
                 var actions = Ui.Row(w.Content, 42, 8);
                 Ui.Size(Ui.Button(actions, atBank ? "查看借款" : "前往" + bank.Name, () =>
                 {
@@ -62,7 +62,15 @@ namespace PCShopSell.Game.UI
             {
                 _bankWindow = w;
                 _bankDraft = draft;
-                Line(w.Content, "24 小时营业", 17, Ui.Good);
+                var teller = S.BankTellerOnDuty(bank);
+                if (teller == null)
+                {
+                    Line(w.Content, "柜员暂未到岗，柜台暂停办理。", 17, Ui.Warn);
+                    return;
+                }
+                var person = S.CityPerson(teller.PersonId);
+                string shift = $"{person.WorkStart / 60:00}:{person.WorkStart % 60:00}–{person.WorkEnd / 60:00}:{person.WorkEnd % 60:00}";
+                Line(w.Content, $"当班柜员 · {person.Name} · {shift}", 17, Ui.Good);
                 BuildBank(w, draft);
             }, 1000, 710);
         }

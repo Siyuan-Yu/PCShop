@@ -35,7 +35,7 @@ namespace PCShopSell.Tests
             s.EventsEnabled = false;
             GameSessionTests.Teleport(s, "mall");
             var shop = s.MainShop;
-            string id = FurnitureCatalog.FridgePremium;
+            string id = FurnitureCatalog.HomeWorkbench;
             shop.Locker.AddFurniture(id, 4);
             var selection = new Dictionary<string, int> { [id] = 3 };
             var route = Pathfinder.FindPath(s.City.Map, shop.Place.NodeId, s.CurrentPlace.NodeId);
@@ -47,7 +47,7 @@ namespace PCShopSell.Tests
             Money cash = s.Ledger.Balance;
             var quote = s.QuoteFurnitureBuyback(shop.Place.Id, selection, out string blocker);
             Assert.That(blocker, Is.Null);
-            Assert.That(quote.Trucks, Is.EqualTo(3), "单件 120 千克，不能把一件家具拆到两辆车里");
+            Assert.That(quote.Trucks, Is.EqualTo(3), "单件 160 千克，不能把一件家具拆到两辆车里");
             Assert.That(quote.Freight, Is.EqualTo(fee));
             Assert.That(quote.Payout, Is.EqualTo(payout));
             Assert.That(quote.DueMinute, Is.EqualTo(due));
@@ -98,7 +98,7 @@ namespace PCShopSell.Tests
             s.EventsEnabled = false;
             GameSessionTests.Teleport(s, "mall");
             var shop = s.MainShop;
-            string id = FurnitureCatalog.FridgePremium;
+            string id = FurnitureCatalog.Fridge;
             var selection = new Dictionary<string, int> { [id] = 1 };
             s.Backpack.AddFurniture(id, 1);
             s.HomeBox.AddFurniture(id, 1);

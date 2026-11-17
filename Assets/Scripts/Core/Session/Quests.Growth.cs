@@ -82,12 +82,12 @@ namespace PCShopSell.Core.Session
         private static string BuildProgress(GameSession s)
         {
             var order = s.PlayerShop.Orders.OrderBy(o => o.DueAt.TotalMinutes).FirstOrDefault();
-            return order == null ? null : $"订单 #{order.Id} · 剩余 {Math.Max(0, s.Clock.Now.MinutesUntil(order.DueAt) / 60)} 小时";
+            return order == null ? null : $"订单 #{order.Id} · {s.Clock.OrderDeadlineText(order.DueAt.TotalMinutes)}";
         }
         private static string EnterpriseProgress(GameSession s)
         {
             var active = s.EnterpriseContracts.FirstOrDefault(c => !c.PersonalReferral && c.Accepted && !c.Settled);
-            return active == null ? null : $"已交 {active.Completed}/{active.Count} · 剩余 {Math.Max(0, (active.DueMinute - s.Clock.Now.TotalMinutes) / 60)} 小时";
+            return active == null ? null : $"已交 {active.Completed}/{active.Count} · {s.Clock.OrderDeadlineText(active.DueMinute)}";
         }
         private static string ParkProgress(GameSession s) =>
             s.HasPark && s.Clock.Today.TotalDays < s.ParkReadyDay ? $"改造中，还需 {s.ParkReadyDay - s.Clock.Today.TotalDays} 天" : null;
@@ -152,7 +152,7 @@ namespace PCShopSell.Core.Session
                     return false;
                 return Quests.All.TakeWhile(x => x.Id != q.Id).All(x => QuestCompleted(x.Id));
             }
-            if (!HasShop || Quests.All.Any(x => x.Chapter == 0 && !QuestCompleted(x.Id))) return false;
+            if (FirstChapterTrial || !HasShop || Quests.All.Any(x => x.Chapter == 0 && !QuestCompleted(x.Id))) return false;
             // Once a real milestone has issued a task, a temporary cash/reputation dip won't erase it.
             if (Flags.Contains("tutorial:issued:" + q.Id)) return true;
             switch (q.Id)

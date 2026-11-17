@@ -179,7 +179,7 @@ namespace PCShopSell.Tests
             var pause = rig.Button("HudPauseTime");
             Assert.AreSame(business, price.parent);
             Assert.AreEqual(purchase.GetSiblingIndex() + 1, price.GetSiblingIndex());
-            Assert.AreEqual("物价 H", price.GetComponentInChildren<Text>().text);
+            Assert.AreEqual("物价 I", price.GetComponentInChildren<Text>().text);
             Assert.AreEqual(Ui.ButtonHot, rig.Button("ShortcutGo_0").image.color);
 
             speeds[0].onClick.Invoke();
@@ -235,7 +235,7 @@ namespace PCShopSell.Tests
             rig.Button("HudPrices").onClick.Invoke();
             Assert.That(rig.Workspace("market").GetComponentsInChildren<Text>().Select(label => label.text), Does.Contain("价格走势"));
             rig.Ui.CloseAllWindows();
-            Assert.True(rig.Ui.TryHotkey(KeyCode.H));
+            Assert.True(rig.Ui.TryHotkey(KeyCode.I));
             Assert.NotNull(rig.Workspace("market"));
         }
 
@@ -493,13 +493,13 @@ namespace PCShopSell.Tests
             using (var r = new Rig())
             {
                 if (GameSession.FirstChapterTrial)
-                    Assert.False(r.Ui.TryHotkey(KeyCode.R));
+                    Assert.False(r.Ui.TryHotkey(KeyCode.T));
                 else
                 {
                     var racing = r.Button("HudRacing");
-                    Assert.AreEqual("赛车 R", racing.GetComponentInChildren<Text>().text);
+                    Assert.AreEqual("赛车 T", racing.GetComponentInChildren<Text>().text);
                     Assert.NotNull(racing.GetComponentInChildren<HorizontalLayoutGroup>().transform.Find("NavigationIcon").GetComponent<Image>().sprite);
-                    Assert.True(r.Ui.TryHotkey(KeyCode.R));
+                    Assert.True(r.Ui.TryHotkey(KeyCode.T));
                     Assert.True(r.Components<Transform>().Any(t => t.name == "Window_湖区赛车"));
                     Assert.False(r.Ui.TryHotkey(KeyCode.N));
                     Assert.True(r.Ui.CloseTopWindow());
@@ -527,7 +527,7 @@ namespace PCShopSell.Tests
             }
 
             var shelves = new[] { FurnitureCatalog.Shelf, FurnitureCatalog.RackStrong, FurnitureCatalog.RackHeavy };
-            var fridges = new[] { FurnitureCatalog.FridgeSmall, FurnitureCatalog.FridgeFamily, FurnitureCatalog.FridgeSide, FurnitureCatalog.FridgePremium };
+            var fridges = new[] { FurnitureCatalog.FridgeSmall, FurnitureCatalog.FridgeFamily };
             r.Button("ShopTab_全部").onClick.Invoke();
             AssertAdjacent(shelves);
             AssertAdjacent(fridges);
@@ -1319,7 +1319,7 @@ namespace PCShopSell.Tests
             using var r = new Rig();
             var clock = r.S.Clock;
             clock.Restore(new GameDate(0), 600);
-            Assert.True(r.Ui.TryHotkey(KeyCode.H));
+            Assert.True(r.Ui.TryHotkey(KeyCode.I));
             StringAssert.Contains("本期只有一份报价", r.Text);
             Assert.False(r.Button("EconomicPrevPeriod").interactable);
             r.Ui.CloseAllWindows();
@@ -1514,7 +1514,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void RestaurantStockShowsRiceInWarehouseAndFridgeDoesNotOfferToStoreIt()
+        public void RestaurantFoodStorageShowsAllThreeSourcesAndTransfersWarehouseRice()
         {
             using var r = new Rig();
             Assert.True(r.S.SetShopMainCategory("restaurant"));
@@ -1532,9 +1532,15 @@ namespace PCShopSell.Tests
             Assert.That(r.Components<RectTransform>().Any(row => row.name == "FridgeItem_rice"), Is.False);
 
             r.Ui.OpenFridgeWindow();
-            var fridge = r.Components<RectTransform>().Single(panel => panel.name.StartsWith("Window_冰箱 ·"));
-            Assert.That(fridge.GetComponentsInChildren<Button>().Any(button =>
-                button.GetComponentInChildren<Text>()?.text == "全部存入"), Is.False);
+            var fridge = r.Components<RectTransform>().Single(panel => panel.name.StartsWith("Window_管理食材 ·"));
+            var rows = fridge.GetComponentsInChildren<RectTransform>();
+            Assert.That(rows.Any(row => row.name == "FoodStorage_Fridge_ing:tofu"), Is.True);
+            Assert.That(rows.Any(row => row.name == "FoodStorage_Backpack_rice"), Is.True);
+            var rice = rows.Single(row => row.name == "FoodStorage_Warehouse_rice");
+            rice.GetComponentsInChildren<Button>().Single(button =>
+                button.GetComponentInChildren<Text>()?.text == "全部存入冰箱").onClick.Invoke();
+            Assert.That(shop.Fridge.Food.RiceKg, Is.EqualTo(121.5));
+            Assert.That(shop.Locker.Food.RiceKg, Is.Zero);
         }
 
         [Test]

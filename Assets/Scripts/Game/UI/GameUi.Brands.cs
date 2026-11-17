@@ -92,13 +92,16 @@ namespace PCShopSell.Game.UI
             Line(body,"待交付订单",22,Ui.Accent);
             foreach(var o in state.Orders.Where(o=>o.BrandId==brand.Id&&!o.Done&&!o.Failed))
             {
-                Line(body,$"{S.BrandProductName(o.ProductId)} ×{o.Count} · 截止 {new GameDate(o.Due)}",18);
+                Line(body, $"{S.BrandProductName(o.ProductId)} ×{o.Count} · {BrandOrderDeadline(o)}", 18);
                 Para(body,$"从 {S.PlaceTitle(S.City.GetPlace(o.ShopId))} 发货 · 货款 {Money.FromCents(o.UnitCents*o.Count)} · 运费¥30",16);
                 if(o.Shipped)Para(body,"运输中 · 剩余约 "+Math.Max(0,o.Arrival-S.Clock.Now.TotalMinutes)+" 分钟，到货后结算",17,Ui.Good);
                 else BrandButton(body,"从指定门店发货 · 到货后结算",()=>S.FulfilBrandOrder(o.Id),w);
             }
             Para(body,$"已交付 {state.Orders.Count(o=>o.BrandId==brand.Id&&o.Done)} 单 · 逾期 {state.Orders.Count(o=>o.BrandId==brand.Id&&o.Failed)} 单",16,Ui.Dim);
         }
+        private string BrandOrderDeadline(BrandOrder order) => order.Done ? "已交付"
+            : order.Failed ? "已过交期" : S.Clock.OrderDeadlineText((order.Due + 1L) * GameClock.MinutesPerDay);
+
         private static string BrandFocusLabel(string f)=>f=="buyers"?"采购洽谈":f=="media"?"媒体接待":"设计展示";
         private void OpenBrandContact(string person)=>OpenPersonDialogue(person,remote:!S.CitySamePlace(person)&&S.RemoteConversationBlocker(person)==null);
         private void BuildBrandStockChoice(Transform body,Window w,BrandRecord b)

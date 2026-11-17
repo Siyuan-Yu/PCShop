@@ -330,10 +330,17 @@ namespace PCShopSell.Core.Session
                     if (t.Kind == "audit" && t.Started && changed != null && (changed.Lease?.SignedDay ?? -1) == t.SignedDay)
                         changed.Sim.ForcedClosed = t.Status == "原已歇业" || changed.RenovationDay == Clock.Today.TotalDays;
                     if (t.Kind == "design" && t.Paid > 0) Ledger.Credit(Clock.Today, "设计退款", Money.FromCents(t.Paid), "原门店已停用");
+                    if (t.Kind == "complaint")
+                        QueueCustomerFeedback("售后跟进结束", "原门店的经营状态已变化，这次顾客反馈不再跟进。");
                     t.Done = true; continue;
                 }
                 if (t.Kind == "sample" && t.Status == "在途" && now >= t.At) { t.Status = "已到店"; Say("试用样品已送到" + ShopTitle(shop) + "，可在经营待办试用、归还或买下。"); }
-                if (t.Kind == "complaint" && now >= t.At) { t.Done = true; Say(t.Message); continue; }
+                if (t.Kind == "complaint" && now >= t.At)
+                {
+                    t.Done = true;
+                    QueueCustomerFeedback("顾客反馈", ShopTitle(shop) + "的售后处理有了回复。\n" + t.Message);
+                    continue;
+                }
                 if (t.Kind == "evening" && now >= t.At && Clock.MinuteOfDay >= 1080 && shop.Sim.IsOpen)
                 { _flyerCampaigns.Add(new FlyerCampaign { ShopId = shop.Place.Id, RetailKind = shop.RetailKind, StartDay = Clock.Today.TotalDays, Remaining = 4, NextVisit = now + 1 }); t.Done = true; continue; }
                 if (!t.Started) continue;

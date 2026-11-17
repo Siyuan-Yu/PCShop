@@ -242,8 +242,8 @@ namespace PCShopSell.Game.UI
                 _openingMealFocus = background ? "ArrivalStory" : "HungerStory";
                 _openingMealIntroNext.GetComponentInChildren<Text>().text = background ? "看看房间" : "找点吃的";
                 text = background
-                    ? ("换个地方，重新开始", $"公司裁员，你失去了上一份工作。\n你带着不多的行李来到城郊，暂时租下了这间老旧的小屋。\n现在手头还有 <b>{S.Ledger.Balance}</b>，往后的日子得慢慢打算。\n先放下行李，看看这个暂时属于自己的落脚处吧。")
-                    : ("肚子有点饿了", "在房间里走了几步，你才发觉自己一路奔波，还没有好好吃过东西。\n肚子饿得直叫。桌上放着电饭锅，家里也还有大米。\n先别急着出门，给自己做顿热饭吧。");
+                    ? ("换个地方，重新开始", $"公司裁员，你失去了上一份工作。\n你带着不多的行李来到{Ui.Emphasize("城郊")}，暂时租下了这间老旧的小屋。\n现在手头还有 {Ui.Emphasize(S.Ledger.Balance.ToString())}，往后的日子得慢慢打算。\n先放下行李，看看这个暂时属于自己的落脚处吧。")
+                    : ("肚子有点饿了", $"在房间里走了几步，你才发觉自己一路奔波，还没有好好吃过东西。\n肚子饿得直叫。桌上放着{Ui.Emphasize("电饭锅")}，家里也还有大米。\n先别急着出门，给自己做顿热饭吧。");
             }
             else if (movement)
             {
@@ -254,7 +254,7 @@ namespace PCShopSell.Game.UI
                 foreach (var dot in _guideDots) dot.gameObject.SetActive(false);
                 Vector3 sp = _ctrl.Cam.WorldToScreenPoint(_ctrl.HomeRoom.OwnerWorld + Vector3.up * .8f);
                 if (sp.z > 0) { var c = GuidePoint(canvasRt, sp, size); hole = new Rect(c - new Vector2(280, 190), new Vector2(560, 380)); hasHole = true; }
-                text = ("先在房间里走走", "按 <b>W / A / S / D</b> 移动，也可以用 <b>方向键</b>。\n试着离开门边，往房间里走几步。\n人物真正走动后，故事会继续。");
+                text = ("先在房间里走走", $"按 {Ui.Emphasize("W / A / S / D")} 移动，也可以用 {Ui.Emphasize("方向键")}。\n试着离开门边，往房间里走几步。\n人物真正走动后，故事会继续。");
                 _guideFoot.text = "不用点击物品 · 先熟悉移动";
             }
             else if (cookerOpen)
@@ -285,7 +285,7 @@ namespace PCShopSell.Game.UI
                     float x = size.x - panelRight - 36 >= width ? panelRight + 18 : Mathf.Max(12, panelLeft - width - 18);
                     GuideRect(_guideCard, x, Mathf.Clamp(hole.center.y - 135, 80, size.y - 320), width, 270);
                 }
-                _guideFoot.text = "只需点击高亮区域 · Esc 可暂时关闭窗口";
+                _guideFoot.text = $"只需点击高亮区域 · {Ui.Emphasize("Esc")} 可暂时关闭窗口";
             }
             else
             {
@@ -293,7 +293,7 @@ namespace PCShopSell.Game.UI
                 Vector3 sp = _ctrl.HomeRoom.CookerWorld is Vector3 cooker ? _ctrl.Cam.WorldToScreenPoint(cooker + Vector3.down * .45f) : new Vector3(0, 0, -1);
                 if (sp.z > 0) { Vector2 c = GuidePoint(canvasRt, sp, size); hole = new Rect(c - GuideHoleSize * .5f, GuideHoleSize); hasHole = true; }
                 GuideRect(_guideCard, (size.x - 880) * .5f, 150, 880, string.IsNullOrEmpty(text.body) ? 96 : 220);
-                _guideFoot.text = "先做饭再做其他事 · WASD / 方向键走路，F 交互；Esc 打开系统菜单。";
+                _guideFoot.text = $"先做饭再做其他事 · {Ui.Emphasize("WASD / 方向键")} 走路，{Ui.Emphasize("F")} 交互；Esc 打开系统菜单。";
             }
             DrawGuideSpotlight(size, hasHole ? (Rect?)hole : null);
             _guideTitle.text = text.title; _guideBody.text = text.body;
@@ -388,12 +388,12 @@ namespace PCShopSell.Game.UI
 
         private (string title, string body) OpeningMealControlText(int step)
         {
-            if (step == 1) return ("第 4 步 · 等饭焖好", $"饭正在焖，还剩约 <b>{S.Pantry.CookMinutesLeft(S.Clock.Now.TotalMinutes)} 分钟</b>。\n点高亮的 <b>“等到饭好”</b>，推进到这锅饭煮好。\n食材已经下锅，不需要再放一次。");
-            if (step == 2) return ("第 5 步 · 先吃一碗", "饭煮好了，先照顾好自己。\n点 <b>“现在吃一碗”</b>，恢复饱腹。\n吃完后，再把剩饭带上。");
-            if (step == 3) return ("第 6 步 · 带上剩饭", "肚子不饿了，带上剩饭作午饭。\n点 <b>“全部装进背包”</b>。\n饭点或饿了会自动吃，不用手动操作。");
-            if (_openingMealCookStage == 0) return ("第 1 步 · 选米量", $"点击高亮区域里的米量。\n第一次推荐 <b>0.5 千克</b>，大约能做 <b>{PCShopSell.Core.Home.Pantry.BowlsPerKg / 2} 碗饭</b>。\n大米自动从背包和家中后仓取用，现在选择不会扣食材。");
-            if (_openingMealCookStage == 1) return ("第 2 步 · 选做法", "点击高亮区域里的做法。\n先学做 <b>白饭</b> 就可以，不需要额外配菜。\n有食材时也能选择焖饭；灰色选项表示食材不足。");
-            return ("第 3 步 · 开始焖饭", $"确认选好 <b>{_cookKg:0.##} 千克大米</b>和做法后，点击高亮的 <b>“开始焖饭”</b>。\n这时才会消耗所选食材，约 <b>{PCShopSell.Core.Home.Pantry.CookMinutes} 分钟</b>后做好。");
+            if (step == 1) return ("第 4 步 · 等饭焖好", $"饭正在焖，还剩约 {Ui.Emphasize($"{S.Pantry.CookMinutesLeft(S.Clock.Now.TotalMinutes)} 分钟")}。\n点高亮的 {Ui.Emphasize("“等到饭好”")}，推进到这锅饭煮好。\n食材已经下锅，不需要再放一次。");
+            if (step == 2) return ("第 5 步 · 先吃一碗", $"饭煮好了，先照顾好自己。\n点 {Ui.Emphasize("“现在吃一碗”")}，恢复饱腹。\n吃完后，再把剩饭带上。");
+            if (step == 3) return ("第 6 步 · 带上剩饭", $"肚子不饿了，带上剩饭作午饭。\n点 {Ui.Emphasize("“全部装进背包”")}。\n饭点或饿了会自动吃，不用手动操作。");
+            if (_openingMealCookStage == 0) return ("第 1 步 · 选米量", $"点击高亮区域里的米量。\n第一次推荐 {Ui.Emphasize("0.5 千克")}，大约能做 {Ui.Emphasize($"{PCShopSell.Core.Home.Pantry.BowlsPerKg / 2} 碗饭")}。\n大米自动从背包和家中后仓取用，现在选择不会扣食材。");
+            if (_openingMealCookStage == 1) return ("第 2 步 · 选做法", $"点击高亮区域里的做法。\n先学做 {Ui.Emphasize("白饭")} 就可以，不需要额外配菜。\n有食材时也能选择焖饭；灰色选项表示食材不足。");
+            return ("第 3 步 · 开始焖饭", $"确认选好 {Ui.Emphasize($"{_cookKg:0.##} 千克大米")}和做法后，点击高亮的 {Ui.Emphasize("“开始焖饭”")}。\n这时才会消耗所选食材，约 {Ui.Emphasize($"{PCShopSell.Core.Home.Pantry.CookMinutes} 分钟")}后做好。");
         }
 
         private Camera TutorialCam => _tutorialCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _tutorialCanvas.worldCamera;
@@ -407,11 +407,11 @@ namespace PCShopSell.Game.UI
                 case 1:
                     long left = S.Pantry.Cooking != null ? S.Pantry.CookMinutesLeft(S.Clock.Now.TotalMinutes) : 0;
                     return ("第 2 步 · 等饭焖好",
-                        $"饭正在焖，还要约 <b>{left}</b> 分钟，焖好之前锅盖打不开。\n在电饭锅窗口点 <b>“等到饭好”</b>，只推进剩余时间，不会提前获得熟饭。\n也可以关窗等候；这段教学先不做其他事情。");
+                        $"饭正在焖，还要约 {Ui.Emphasize($"{left} 分钟")}，焖好之前锅盖打不开。\n在电饭锅窗口点 {Ui.Emphasize("“等到饭好”")}，只推进剩余时间，不会提前获得熟饭。\n也可以关窗等候；这段教学先不做其他事情。");
                 case 2:
                     return ("饭好了 · 先吃一碗",
-                        "饭好了！打开电饭锅，点 <b>“现在吃一碗”</b>，消耗一碗并恢复饱腹。\n吃完后还要把剩饭全部装进背包，留作午饭。");
-                default: return ("吃饱了 · 带上剩饭", "再次打开电饭锅，点击 <b>“全部装进背包”</b>。\n带上饭盒，之后饭点或饿了会自动吃。装完后就可以出门了。");
+                        $"饭好了！打开电饭锅，点 {Ui.Emphasize("“现在吃一碗”")}，消耗一碗并恢复饱腹。\n吃完后还要把剩饭全部装进背包，留作午饭。");
+                default: return ("吃饱了 · 带上剩饭", $"再次打开电饭锅，点击 {Ui.Emphasize("“全部装进背包”")}。\n带上饭盒，之后饭点或饿了会自动吃。装完后就可以出门了。");
             }
         }
 

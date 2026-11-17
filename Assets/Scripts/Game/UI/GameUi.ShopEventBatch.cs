@@ -10,8 +10,17 @@ namespace PCShopSell.Game.UI
     {
         public void OpenShopEventTasks() => OpenWindow("经营待办", 850, 700, BuildShopEventTasks);
 
+        private void CheckCustomerEventFeedback()
+        {
+            if (AnyModalOpen || S.IsGameOver || S.IsWorking || S.Racing || S.CityActivityExclusive || S.Trip != null
+                || S.PendingEvent != null || S.OpeningAgencyGuidePending || OpeningMealRestricted || _ctrl.Placing || _ctrl.PetFocusActive)
+                return;
+            var feedback = S.TakeCustomerFeedback();
+            if (feedback != null) Popup(feedback.Title, feedback.Body);
+        }
+
         private bool HasShopEventFollowUps() => S.ShopEventTasks.Length > 0
-            || S.ScratchTicket is EventScratchTicket { Paid: false }
+            || S.ScratchTicket != null
             || S.HospitalPolicyUntil > 0 || S.PrivateInvestments.Length > 0
             || S.EventBills.Any(bill => bill.CreditCents > 0 || S.EventBillRefundDue(bill.Id) > 0)
             || S.EventCoupon != null || S.EventFlashSales.Length > 0 || S.Flags.Contains("event-idle-sale")

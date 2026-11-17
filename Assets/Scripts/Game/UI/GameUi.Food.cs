@@ -79,7 +79,7 @@ namespace PCShopSell.Game.UI
             if (!S.HasSmartphone) Para(parent, "需要智能手机才能开启。可以先选好餐档。", 16, Ui.Warn);
             Para(parent, "饭点或饿了时优先吃现有食物，缺餐时按选定档位点餐。", 17, Ui.Dim);
             BuildMealDeliveryRows(parent, automatic: true, tier => { S.SelectMealDeliveryTier(tier); refresh(); });
-            Para(parent, "设置即时保存，实际下单时扣费。余额不足会跳过本次订餐。", 16, Ui.Dim);
+            Para(parent, $"设置即时保存，{Ui.Emphasize("实际下单时扣费")}。{Ui.Emphasize("余额不足", Ui.Warn)}会跳过本次订餐。", 16, Ui.Dim);
         }
 
         private void BuildMealDeliveryRows(Transform parent, bool automatic, Action<int> choose)
@@ -106,50 +106,96 @@ namespace PCShopSell.Game.UI
             }
         }
 
+        private static string FridgeLoadText(double usedKg, double capacityKg) =>
+            double.IsPositiveInfinity(capacityKg) ? $"{usedKg:0.##} 千克（容量不限）" : $"{usedKg:0.##} / {capacityKg:0.##} 千克";
+
         public void OpenFridgeWindow()
         {
-            if (!S.CanOpenFridge) { Toast("这里还没有摆冰箱。家具城有售，可摆在家或自己的店里。"); return; }
             bool shop = S.InPlayerShop;
+            bool restaurant = shop && S.RetailKind == "restaurant";
+            if (!restaurant && !S.CanOpenFridge) { Toast("这里还没有摆冰箱。家具城有售，可摆在家或自己的店里。"); return; }
             string placeId = S.CurrentPlace.Id;
-            OpenWindow("冰箱 · " + (shop ? S.ShopTitle(S.CurrentShop) : "家里"), 900, 790, w =>
+            var pages = new int[3];
+            OpenCompactWindow((restaurant ? "管理食材 · " : "冰箱 · ") + (shop ? S.ShopTitle(S.CurrentShop) : "家里"), 900, w =>
             {
-                if (!S.CanOpenFridge || S.CurrentPlace.Id != placeId) { w.Close(); return; }
-                Line(w.Content, $"已放 {S.CurrentFridge.WeightKg:0.##}/{S.CurrentFridgeLimitKg:0} 千克· 共 {S.FridgeCount(shop)} 台", 18, Ui.Accent);
-                var layout = shop ? S.ShopLayout : S.HomeLayout;
-                Para(w.Content, string.Join(" · ", layout.Select(p => FurnitureCatalog.Get(p.Id)).Where(d => d?.Role == FurnitureRole.Fridge).GroupBy(d => d.Id)
-                    .Select(g => g.First().Name + " ×" + g.Count() + "（每台 " + g.First().FridgeCapacityKg.ToString("0") + " 千克）")), 15, Ui.Dim);
-                string storage = shop && S.RetailKind == "restaurant"
-                    ? "大米存入门店后仓。冰箱可放熟饭、其他食材和饮料。"
-                    : "可放熟饭、食材、米和饮料。食材随处都能长期保存。";
-                Para(w.Content, storage + "成品在冰箱里暂停保质期，取出后继续计时。到饭点或饿了时，会自动吃冰箱里的即食食物。", 16, Ui.Dim);
+                if (S.CurrentPlace?.Id != placeId || (!restaurant && !S.CanOpenFridge)) { w.Close(); return; }
+                bool warehouse = S.HasWarehouseHere;
+                Para(w.Content, restaurant
+                    ? "厨房只从冰箱取料，大米也需要放进去。送货时冰箱装不下的食材会留在门店后仓。"
+                    : "成品在冰箱里暂停保质期，取出后继续计时。", 16, Ui.Dim);
                 if (!shop && S.Pantry.CookedBowls > 0)
                     Ui.Size(Ui.Button(w.Content, "把锅里的饭全部放入冰箱", () => { S.ChillCookedFood(S.Pantry.CookedBowls); w.Rebuild(); }, 17, Ui.ButtonHot), -1, 38);
-                Line(w.Content, "冰箱里的食物（取出到背包后可吃）", 18, Ui.Accent);
-                BuildFridgeFoodRows(w, S.CurrentFridge, false, 205);
-                Line(w.Content, "背包里的食物（选择存入）", 18, Ui.Accent);
-                BuildFridgeFoodRows(w, S.Backpack, true, 205);
-                Line(w.Content, $"营养 {S.Player.Nutrition:0.#}/100 · 心情 {S.Player.Mood:0.#}/100。当前只记录，不影响健康、精力或经营。", 16, Ui.Dim);
+                Line(w.Content, S.CanOpenFridge ? "冰箱 · " + FridgeLoadText(S.CurrentFridge.WeightKg, S.CurrentFridgeLimitKg)
+                    : "冰箱 · 尚未摆放", 18, Ui.Accent);
+                if (S.CanOpenFridge)
+                    BuildFridgeFoodRows(w, S.CurrentFridge, FoodStorageSource.Fridge, warehouse, pages);
+                else
+                    Para(w.Content, "可先从农贸市场进货，摆好冰箱后再把后仓食材移进去。", 16, Ui.Dim);
+                if (warehouse)
+                {
+                    Line(w.Content, "后仓", 18, Ui.Accent);
+                    BuildFridgeFoodRows(w, shop ? S.ShopLocker : S.HomeBox, FoodStorageSource.Warehouse, true, pages);
+                }
+                Line(w.Content, "背包", 18, Ui.Accent);
+                BuildFridgeFoodRows(w, S.Backpack, FoodStorageSource.Backpack, warehouse, pages);
             });
         }
 
-        private void BuildFridgeFoodRows(Window w, Backpack bag, bool put, float height)
+        private enum FoodStorageSource { Fridge, Warehouse, Backpack }
+
+        private void BuildFridgeFoodRows(Window w, Backpack bag, FoodStorageSource source, bool warehouse, int[] pages)
         {
-            var list = Ui.Scroll(w.Content, height);
-            var food = CollectStacks(bag, new Stock(0)).Where(s => (s.Key == "rice" || s.Key.StartsWith("ing:") || s.Key.StartsWith("lunch:")
-                || (s.Key.StartsWith("gift:") && !Gifts.IsCigarette(s.Key.Substring(5)))) && (!put || S.FridgeAcceptsFood(s.Key))).ToList();
-            if (food.Count == 0) { Para(list, put ? "背包里没有可存入的食物。可先做饭或去农贸市场、烟酒茶行购买。" : "冰箱是空的。", 16, Ui.Dim); return; }
-            foreach (var stack in food)
+            const int pageSize = 3;
+            var food = CollectStacks(bag, new Stock(0)).Where(s => S.FridgeAcceptsFood(s.Key)).ToArray();
+            if (food.Length == 0) { Para(w.Content, "这里没有食材或食物。", 16, Ui.Dim); return; }
+            int pageCount = (food.Length + pageSize - 1) / pageSize;
+            int page = pages[(int)source] = Mathf.Clamp(pages[(int)source], 0, pageCount - 1);
+            foreach (var item in food.Skip(page * pageSize).Take(pageSize))
             {
-                var item = stack;
-                var row = Ui.Row(list, 64);
-                ItemPortrait(row, item.Key, 54);
+                var row = Ui.Row(w.Content, 46);
+                row.name = $"FoodStorage_{source}_{item.Key}";
+                ItemPortrait(row, item.Key, 42);
+                bool inFridge = source == FoodStorageSource.Fridge;
+                bool inWarehouse = source == FoodStorageSource.Warehouse;
+                bool rice = item.Key == "rice";
+                string unit = rice ? " 千克" : " 份";
                 string expiry = "";
                 if (item.Key.StartsWith("lunch:"))
-                    expiry = " · " + (put ? FoodExpiryBadge.Countdown(item.Batches.Min(b => b.ExpireDay), S.Clock.Now.TotalMinutes) : "永久保存");
-                Ui.Size(Ui.Label(row, item.Name + " ×" + item.Count + "\n<size=14>" + item.Kg.ToString("0.##") + " 千克" + expiry + "</size>", 17), -1, -1, 1);
-                Ui.Size(Ui.Button(row, put ? "存入 1 份" : "取出 1 份", () => { S.MoveFridgeFood(item.Key, 1, put); w.Rebuild(); }, 16), 130);
-                Ui.Size(Ui.Button(row, put ? "全部存入" : "全部取出", () => { S.MoveFridgeFood(item.Key, item.Count, put); w.Rebuild(); }, 16, Ui.ButtonHot), 130);
+                    expiry = " · " + (inFridge ? "永久保存" : FoodExpiryBadge.Countdown(item.Batches.Min(b => b.ExpireDay), S.Clock.Now.TotalMinutes));
+                Ui.Size(Ui.Label(row, $"{item.Name}{(rice ? "" : " ×" + item.Count)}\n<size=14>{item.Kg:0.##} 千克{expiry}</size>", 17), -1, -1, 1);
+                void Transfer(int count)
+                {
+                    if (inWarehouse) S.MoveFridgeWarehouseFood(item.Key, count, true);
+                    else S.MoveFridgeFood(item.Key, count, !inFridge);
+                    w.Rebuild();
+                    RebuildDock();
+                }
+                if (S.CanOpenFridge)
+                {
+                    Ui.Size(Ui.Button(row, (inFridge ? "取出 1" : "存入 1") + unit, () => Transfer(1), 16), 118);
+                    Ui.Size(Ui.Button(row, inFridge ? "全部取到背包" : "全部存入冰箱", () => Transfer(item.Count), 16, Ui.ButtonHot), 124);
+                }
+                if (inWarehouse)
+                    Ui.Size(Ui.Button(row, "取出 1" + unit + "到背包", () =>
+                    {
+                        S.TakeFromBox(item.Key);
+                        w.Rebuild();
+                        RebuildDock();
+                    }, 16), 150);
+                if (warehouse && !inWarehouse)
+                    Ui.Size(Ui.Button(row, "全部放后仓", () =>
+                    {
+                        if (inFridge) S.MoveFridgeWarehouseFood(item.Key, item.Count, false);
+                        else S.StoreInBox(item.Key, item.Count);
+                        w.Rebuild();
+                        RebuildDock();
+                    }, 16), 118);
             }
+            BuildCompactPageControls(w.Content, page, pageCount, value =>
+            {
+                pages[(int)source] = value;
+                w.Rebuild();
+            });
         }
     }
 }

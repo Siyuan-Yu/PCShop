@@ -49,7 +49,7 @@ namespace PCShopSell.Core.Session
             d.payrollDays=_employeePayroll.Select(p=>p.Copy()).ToArray();
             d.pendingDisplays=_shops.Where(s=>s.PendingDisplayTier>=0).Select(s=>new CityPendingDisplay{ShopId=s.Place.Id,Tier=s.PendingDisplayTier,Minutes=s.PendingDisplayMinutes}).ToArray();
             d.cityLastAutomaticMealMinute=_lastAutomaticMealMinute;
-            d.cityLifeVersion=3;d.cityLifeTest=IsCityLifeTest;d.cityPeople=_cityPeople.Values.Select(p=>p.Copy()).ToArray();
+            d.cityLifeVersion=4;d.cityLifeTest=IsCityLifeTest;d.cityPeople=_cityPeople.Values.Select(p=>p.Copy()).ToArray();
             d.cityExtraPeople=_cityExtraDefinitions.Values.ToArray();d.cityNextVisit=_nextCityVisit;
             d.cityActivities=_cityActivities.Select(a=>a.Copy()).ToArray();d.cityStories=_cityStories.Select(a=>a.Copy()).ToArray();
             d.cityRomanceStateRecorded = true;
@@ -83,9 +83,10 @@ namespace PCShopSell.Core.Session
                 if(copy.Route!=null&&(!City.HasPlace(copy.Route.TargetPlaceId)||copy.Route.X==null||copy.Route.Y==null||copy.Route.X.Length<2||copy.Route.Y.Length!=copy.Route.X.Length))
                     copy.Route=null;
                 RefreshElectronicsMarketWorkplace(copy);
-                if (copy.PersonId == CityLifeCatalog.BankTellerId && copy.WorkPlaceId == null && BankPlace is Place bank)
+                if (copy.PersonId == CityLifeCatalog.BankTellerId && (copy.WorkPlaceId == null || d.cityLifeVersion < 4)
+                    && BankPlace is Place bank)
                 {
-                    // Existing saves predate this resident's job at the bank.
+                    // Align older saves with the teller's new shift once; keep subsequent saved routes.
                     copy.WorkPlaceId = bank.Id;
                     if (string.IsNullOrEmpty(copy.ActivityId) && string.IsNullOrEmpty(copy.VisitId)
                         && AuthoredCityWorkAt(copy, Clock.Now.TotalMinutes))

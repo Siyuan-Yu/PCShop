@@ -35,7 +35,6 @@ namespace PCShopSell.Core.Session
         /// <summary>结账时真正去做：买下 / 从原处拿出来装车。</summary>
         internal Func<double, bool> Run;
         internal Func<string> Blocker;
-        internal bool NeedsColdStorage;
         internal FurnitureDef Furniture;
         internal string DeliveryShopKind;
 
@@ -209,7 +208,6 @@ namespace PCShopSell.Core.Session
             PutLine(_cart,new CartLine {
                 Key=key,Name=product.Name,UnitKg=product.WeightKg,UnitPrice=()=>CityRetailWholesalePrice(source,product),
                 DeliveryShopKind=RetailShopTypes.GoodsKind(id),
-                NeedsColdStorage=IsColdIngredientProduct(id),
                 Blocker=()=>CurrentPlace!=source || !IsPlaceOpen(source)?"货源已经打烊或不在这里":
                     CartAmount(key)<CitySupplierMinimum(source.Id,id)?product.Name+" · "+WholesaleMinimumText(source.Id,id):
                     CartAmount(key)>CitySupplierRemaining(source.Id,id)?product.Name+"超过本日剩余配额":null,
@@ -355,9 +353,6 @@ namespace PCShopSell.Core.Session
                 double bagKg = CartBagKg, free = FreeKg;
                 if (bagKg > free + 1e-9)
                     return $"背包放不下：拖进背包的有 {bagKg:0.##} 千克，{CurrentVehicle.Name}还能背 {free:0.##} 千克。拖一些回去叫车";
-                if (needsTruck && RestaurantColdStorageBlocker(dest,
-                    _cart.Where(line => line.NeedsColdStorage).Sum(line => line.TruckKg)) is string storageBlocker)
-                    return storageBlocker;
                 if (cars < 0) return $"有一件超过一辆面包车能装的 {CourierCapacityKg:0} 千克";
                 Money due = goods + fee * cars;
                 return Ledger.Balance < due ? $"一共要 {due}，钱不够" : null;

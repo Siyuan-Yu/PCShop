@@ -57,7 +57,7 @@ namespace PCShopSell.Game.Runtime
                 foreach (string id in ids) styles.Add(id, style);
             }
 
-            Assign(Style.Tailored, "staff_mall", "keeper_dealer", "keeper_agent", "res_auntie", "li", "qian", "life_enterprise",
+            Assign(Style.Tailored, "staff_mall", "keeper_dealer", "keeper_agent", "res_auntie", "res_bank_night", "li", "qian", "life_enterprise",
                 "life_curator", "life_designer", "story_tangwei", "story_liangjing", "resident_chenxia", "resident_jiyun",
                 "resident_rongke", "resident_xiaqing", "resident_wenbo", "resident_siyu", "resident_jiangning", "racer_3");
             Assign(Style.Sweet, "keeper_phone", "life_ning", "resident_dengyue", "resident_luwei", "resident_xuwei");

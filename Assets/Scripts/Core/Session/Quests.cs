@@ -21,6 +21,7 @@ namespace PCShopSell.Core.Session
         public int Chapter;
         public QuestTarget Target;
         public bool Lesson;
+        public bool QuietTransition;
         public Func<GameSession, bool> LessonReady;
 
         public string Title;
@@ -138,10 +139,19 @@ namespace PCShopSell.Core.Session
             },
             new QuestDef
             {
+                Id = "second_shop", Title = "开第二家店", Target = QuestTarget.Agency,
+                Short = $"去{K("中介")}找间新铺，筹备第二家店",
+                Hint = "手头周转得开时，可以去中介签下一间新铺并选好店型。摆齐开业设施后，门店从装修次日起计入进度。",
+                QuietTransition = true,
+                Done = s => s.RacingUnlocked || s.OperatingStorefrontCount >= 2,
+                Progress = s => $"已开业 {Math.Min(s.OperatingStorefrontCount, 2)}/2 家",
+            },
+            new QuestDef
+            {
                 Id = "racing_enrollment", Title = "办理赛车登记", Target = QuestTarget.RacingEnrollment,
                 Short = "到城郊赛场车库门口按 F，找负责人办理登记",
-                Hint = $"结清所有贷款，攒够 {Money.FromYuan(GameSession.RacingCashMinimumYuan)} 自有现金后，"
-                    + "到城郊赛场车库门口按 F，再找负责人免费办理登记。办完即可解锁赛车。",
+                Hint = $"{K("结清所有贷款")}，攒够 {K($"{Money.FromYuan(GameSession.RacingCashMinimumYuan)} 自有现金")}后，"
+                    + $"到{K("城郊赛场车库")}门口按 F，再找负责人免费办理登记。办完即可解锁赛车。",
                 Done = s => !s.RacingEnrollmentAvailable || s.RacingUnlocked,
                 Progress = s => $"自有现金 {s.CommunityOwnCash} / {Money.FromYuan(GameSession.RacingCashMinimumYuan)}"
                     + $" · {(s.HasOutstandingLoans ? "有待还贷款" : "无贷款")}",
@@ -150,10 +160,11 @@ namespace PCShopSell.Core.Session
             {
                 Id = "community_goal", Title = GameSession.FirstChapterTrial ? "城郊经营目标" : "城郊到社区 · 引荐条件", Target = QuestTarget.CommunityGoal,
                 Short = "扩大城郊经营，结清贷款并攒够自有现金",
-                Hint = $"在城郊开业至少 {DistrictNarrativeCatalog.CommunityShopMinimum} 家门店，结清所有贷款，自有现金达到 "
-                    + $"{DistrictNarrativeCatalog.CommunityCashMinimumYuan / 10_000} 万元。门店打烊后仍计入，装修当天的门店从次日开始计。\n"
-                    + $"三项同时达标后，李秀兰将在 {DistrictNarrativeCatalog.InvitationDelayDays} 天后主动联系。",
-                Done = s => !s.City.IsLakeCity || s.CommunityInvitationScheduledOrStarted,
+                Hint = $"在城郊{K($"开业至少 {DistrictNarrativeCatalog.CommunityShopMinimum} 家门店")}，{K("结清所有贷款")}，{K($"自有现金达到 {DistrictNarrativeCatalog.CommunityCashMinimumYuan / 10_000} 万元")}。"
+                    + "门店打烊后仍计入，装修当天的门店从次日开始计。\n"
+                    + (GameSession.FirstChapterTrial ? "三项同时达标即可完成试玩主线，可继续在城郊经营。"
+                        : $"三项同时达标后，李秀兰将在 {DistrictNarrativeCatalog.InvitationDelayDays} 天后主动联系。"),
+                Done = s => !s.City.IsLakeCity || (GameSession.FirstChapterTrial ? s.FirstChapterTrialCompleted : s.CommunityInvitationScheduledOrStarted),
                 Progress = s => $"城郊开业 {s.DistrictOperatingShops(0)}/{DistrictNarrativeCatalog.CommunityShopMinimum} 家 · "
                     + $"自有现金 {s.CommunityOwnCash} / {DistrictNarrativeCatalog.CommunityCashMinimumYuan / 10_000} 万元\n"
                     + (s.HasOutstandingLoans ? "贷款：待结清" : "贷款：无"),
@@ -166,9 +177,6 @@ namespace PCShopSell.Core.Session
         private static string K(string text) => "<color=#FFC966>" + text + "</color>";
 
         // ---------- 判断用 ----------
-
-        private static string ShortFacilityList(string[] names) => string.Join("、", names.Take(2))
-            + (names.Length > 2 ? $"等 {names.Length} 项" : "");
 
         /// <summary>开店引导所需的货架或专用经营设施是否设置完成。</summary>
         private static int ShelvesSet(GameSession s)
@@ -202,7 +210,7 @@ namespace PCShopSell.Core.Session
                 var missing = s.MissingOpeningFurniture().Select(FurnitureCatalog.Get).ToArray();
                 purchase.Title = RetailShopTypes.Name(s.RetailKind) + " · 购齐开店设施";
                 purchase.Short = missing.Length == 0 ? "开店设施已备齐"
-                    : "去家具城买" + ShortFacilityList(missing.Select(f => f.Name).ToArray());
+                    : "去家具城买" + string.Join("、", missing.Select(f => f.Name));
                 purchase.Hint = missing.Length == 0 ? purchase.Short
                     : "还需购买\n" + string.Join("\n", missing.Select(f => f.Name + " ×1 · " + f.Price));
                 purchase.Progress = _ => $"已备 {required - missing.Length}/{required} 项";
@@ -213,7 +221,7 @@ namespace PCShopSell.Core.Session
                 var placement = source.Copy();
                 var required = s.ShopFitList().Where(n => n.Required).ToArray();
                 var remaining = required.Where(n => n.Placed == 0).Select(n => n.Name).ToArray();
-                placement.Short = remaining.Length == 0 ? "开店设施已摆齐" : "在店里摆放" + ShortFacilityList(remaining);
+                placement.Short = remaining.Length == 0 ? "开店设施已摆齐" : "在店里摆放" + string.Join("、", remaining);
                 if (remaining.Length > 0) placement.Hint = "还需摆放\n" + string.Join("\n", remaining) + "\n\n" + source.Hint;
                 placement.Progress = _ => $"已摆 {required.Length - remaining.Length}/{required.Length} 项";
                 return placement;
@@ -231,7 +239,7 @@ namespace PCShopSell.Core.Session
                 var purchase = source.Copy();
                 purchase.Short = $"去{K(market.Name)}买第一批货";
                 purchase.Hint = s.RetailKind == "restaurant"
-                    ? "按起订量批发大米或配菜，可自提或叫车送到餐馆。大米进后仓，配菜进冰箱。"
+                    ? "按起订量批发大米或配菜，可自提或叫车送到餐馆。做饭前把后仓和背包里的食材放进冰箱。"
                     : "挑选本店能卖的商品并结账。可以自己带回店入库，也可以叫货车送到店。";
                 return purchase;
             }

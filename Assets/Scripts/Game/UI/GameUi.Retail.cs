@@ -28,7 +28,7 @@ namespace PCShopSell.Game.UI
             {
                 if (!S.InPlayerShop) { w.Close(); return; }
                 Para(w.Content, S.RetailKind == "restaurant"
-                    ? "大米存进后仓，配菜存进冰箱。饮料等商品按货架品类和容量自动陈列。"
+                    ? "食材优先存入冰箱，未摆冰箱或装不下时放进门店后仓。饮料等商品按货架品类和容量自动陈列。"
                     : "将手边商品转入经营库存；货架按所选品类和容量自动陈列，余货留在后仓。", 18);
                 var items = Gifts.All.Where(g => S.GoodsAvailableToList(g.Id) > 0).ToArray();
                 var list = Ui.Scroll(w.Content, 510);

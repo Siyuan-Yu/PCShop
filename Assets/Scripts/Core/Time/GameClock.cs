@@ -77,6 +77,19 @@ namespace PCShopSell.Core.Time
             return (minuteOfDay - MinuteOfDay + MinutesPerDay) % MinutesPerDay;
         }
 
+        /// <summary>按当前游戏时钟显示订单交期。</summary>
+        public string OrderDeadlineText(long dueMinute)
+        {
+            long left = dueMinute - Now.TotalMinutes;
+            if (left <= 0) return left == 0 ? "已到交期" : "已过交期";
+            long days = left / MinutesPerDay;
+            long hours = left % MinutesPerDay / 60;
+            long minutes = left % 60;
+            return ("剩余 " + (days > 0 ? $"{days} 天 " : "")
+                + (hours > 0 ? $"{hours} 小时 " : "")
+                + (minutes > 0 ? $"{minutes} 分钟" : "")).TrimEnd();
+        }
+
         /// <summary>推进到下一次出现指定时刻（例如睡到早上 8:00）。</summary>
         public void AdvanceTo(int minuteOfDay)
         {

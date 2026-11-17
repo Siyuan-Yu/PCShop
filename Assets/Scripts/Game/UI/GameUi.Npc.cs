@@ -293,6 +293,7 @@ namespace PCShopSell.Game.UI
         {
             var ctx = new TalkCtx { Reply = firstReply };
             var paper = new Color32(242, 230, 205, 255);
+            var ink = new Color32(41, 46, 40, 255);
             OpenWindow(name + "　" + role, replyOnly ? 700 : 930, replyOnly ? 660 : 520, w =>
             {
                 ctx.W = w;
@@ -330,12 +331,12 @@ namespace PCShopSell.Game.UI
                 string district = replyOnly ? null : DistrictDialogueContext(portraitId);
                 string currentGreeting = S.IsPlayerPartner(portraitId) ? "你来了，正好想跟你说会儿话。" : greeting;
                 string text = ctx.Reply ?? (nearby ? district ?? currentGreeting : "对方已经离开了，等下次见面再聊吧。");
-                var line = Para(replyBody, text, 22, Ui.PanelBg);
+                var line = Para(replyBody, text, 22, ink);
                 line.name = "DialogueReplyText";
                 line.lineSpacing = 1.2f;
                 if (ctx.Reply == null && nearby && district != null &&
                     S.DistrictStoryState.MeetingNodeId == S.CurrentDistrictNode?.Id)
-                    Para(replyBody, S.DistrictMeetingDescription, 17, Ui.PanelBg);
+                    Para(replyBody, S.DistrictMeetingDescription, 17, ink);
 
                 if (replyOnly)
                     Ui.Size(Ui.Button(w.Content, replyConfirm, w.Close, 18, Ui.ButtonHot), -1, 42);

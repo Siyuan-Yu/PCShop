@@ -81,7 +81,7 @@ namespace PCShopSell.Core.Session
             foreach (string id in PhoneApps.Preinstalled) _apps.Add(id);
             Say("买了一部智能手机。自带应用商店、通讯录、日历和外卖。网购可去应用商店下载。");
             if (!MealDeliveryEnabled)
-                Popup?.Invoke(MealDeliveryUnlockedTitle, "在「手机 → 外卖」可以直接点餐，也可以设置自动订餐。开启后，饭点或饿了时会优先吃手头的食物，缺餐时按选定价位下单。");
+                Popup?.Invoke(MealDeliveryUnlockedTitle, "打开手机里的「外卖」，就能点餐或设置自动订餐。开启后，饭点或饿了时会优先吃手头的食物，缺餐时按选定价位下单。");
             return true;
         }
 
@@ -197,7 +197,7 @@ namespace PCShopSell.Core.Session
         public Backpack ShopLocker => _focus.Locker;
 
         /// <summary>现在站的地方的储物处：家里、店里都是后仓；别处为 null。</summary>
-        public bool HasWarehouseHere => AtHome ? HomeBoxes>0 : InPlayerShop && ShopBoxes>0;
+        public bool HasWarehouseHere => AtHome ? HomeBoxes > 0 : InPlayerShop && (ShopBoxes > 0 || RestaurantIngredientsOnly(_focus));
         public string StorageName => HasWarehouseHere ? "后仓" : null;
 
         /// <summary>
@@ -219,39 +219,20 @@ namespace PCShopSell.Core.Session
         {
             if(!HasWarehouseHere)return Fail("这里还没摆纸箱，摆一个纸箱后才能使用后仓。");
             if (!CanStoreBackpackInWarehouse) return Fail("没有可批量入库的物品。即食食物留在背包里。");
-            bool restaurant = InPlayerShop && RestaurantIngredientsOnly(_focus);
             var packagedIngredients = Backpack.GiftLines.Where(item => IsRawIngredientProduct(item.Key)).ToArray();
-            bool hasRice = Backpack.Food.RiceKg > 1e-9 || packagedIngredients.Any(item => item.Key == "produce:rice");
-            double coldKg = Backpack.Food.Ingredient.Sum(batch => batch.Count * Backpack.IngredientKg(batch.Id))
-                + packagedIngredients.Where(item => IsColdIngredientProduct(item.Key)).Sum(item => item.Value * Gifts.Get(item.Key).WeightKg);
-            string ingredientBlocker = restaurant ? RestaurantColdStorageBlocker(_focus, coldKg) : null;
-            if (ingredientBlocker != null && !hasRice && !HasBulkStorageItems)
-                return Fail(ingredientBlocker + "，食材留在背包里。");
 
             var storage=InPlayerShop?ShopLocker:HomeBox;
             var parts=InPlayerShop?PlayerShop.Stock:HomeBoxParts;
             foreach(var line in Cargo.Lines().ToArray())
                 if(Cargo.TryRemove(line.Part,line.Boxed,line.Count))parts.ForceAdd(line.Part,line.Boxed,line.Count);
             MergeStorage(Backpack,storage,includeFood:false);
-            if (restaurant) MoveStoredRice(Backpack.Food, storage.Food);
-            if (ingredientBlocker == null)
-            {
-                var ingredientStorage = restaurant ? _focus.Fridge : storage;
-                MergePantryIngredients(Backpack.Food, ingredientStorage.Food);
-                if (restaurant && coldKg > 1e-9) Chill(ingredientStorage);
-            }
+            MergePantryIngredients(Backpack.Food, storage.Food);
             foreach (var item in packagedIngredients)
-            {
-                bool chill = restaurant && IsColdIngredientProduct(item.Key);
-                if (chill && ingredientBlocker != null) continue;
                 if (Backpack.TakeGift(item.Key, item.Value))
-                    AddRetailToBag(chill ? _focus.Fridge : storage, Gifts.Get(item.Key), item.Value, FoodBatch.NoExpiry, chill);
-            }
+                    AddRetailToBag(storage, Gifts.Get(item.Key), item.Value, FoodBatch.NoExpiry);
             if(InPlayerShop)ListAutomaticShopGoods(out _,includeFood:false);
             ApplyCargoLimit();
-            Say(ingredientBlocker != null ? $"可入库的物品已放入后仓。{ingredientBlocker}，其余食材留在背包里。"
-                : restaurant && coldKg > 1e-9 ? (hasRice ? "大米已放入后仓，冷藏食材已放入冰箱。" : "冷藏食材已放入冰箱。")
-                : "物品已放入后仓，即食食物留在背包里。");
+            Say("物品已放入后仓，即食食物留在背包里。");
             return true;
         }
 
@@ -262,14 +243,12 @@ namespace PCShopSell.Core.Session
             if (!AtHome && !shop) return Fail("要在家里或自己的店里才能放东西。");
             StoredKey sk = ParseStored(key);
             if (sk == null) return false;
-            bool toFridge = intoBox && shop && RestaurantIngredientsOnly(_focus) && sk.Kind == "ing";
-            if (toFridge && RestaurantFridgeRequired(_focus) is string coldStorageBlocker) return Fail(coldStorageBlocker + "。");
-            if (!toFridge && !HasWarehouseHere) return Fail("这里还没摆纸箱，摆一个纸箱后才能使用后仓。");
+            if (!HasWarehouseHere) return Fail("这里还没摆纸箱，摆一个纸箱后才能使用后仓。");
             const string storeName = "后仓";
-            Backpack store = toFridge ? _focus.Fridge : shop ? ShopLocker : HomeBox;
+            Backpack store = shop ? ShopLocker : HomeBox;
             Stock storeParts = shop ? PlayerShop.Stock : HomeBoxParts;
-            double limit = toFridge ? CurrentFridgeLimitKg : shop ? ShopLockerLimitKg : HomeBoxLimitKg;
-            double storeKg = toFridge ? store.WeightKg : shop ? ShopLocker.WeightKg : HomeBoxKg;
+            double limit = shop ? ShopLockerLimitKg : HomeBoxLimitKg;
+            double storeKg = shop ? ShopLocker.WeightKg : HomeBoxKg;
             Backpack from = intoBox ? Backpack : store, to = intoBox ? store : Backpack;
             Stock fromParts = intoBox ? Cargo : storeParts, toParts = intoBox ? storeParts : Cargo;
             double have = StoredHave(sk, from, fromParts);
@@ -282,14 +261,13 @@ namespace PCShopSell.Core.Session
                     return Fail("店里货架放不下了（拆掉包装能省地方）。");
             }
             else if (intoBox && storeKg + kg > limit + 1e-9)
-                return Fail(toFridge ? "冰箱放不下这些食材。" : BoxFullText(limit, storeKg, kg));
+                return Fail(BoxFullText(limit, storeKg, kg));
             if (!intoBox && !CanCarry(kg)) return false;
 
             StoredMove(sk, amount, from, fromParts, to, toParts);
-            if (toFridge) Chill(store);
             ApplyCargoLimit();
             string qty = sk.Rice ? $" {amount:0.##} 千克" : amount > 1 ? "×" + (int)Math.Round(amount) : "";
-            string where = toFridge ? "冰箱里" : shop && sk.Part != null ? "货架上" : storeName + "里";
+            string where = shop && sk.Part != null ? "货架上" : storeName + "里";
             Say(intoBox ? $"把「{sk.Name}」{qty}放到了{where}。" : $"从{where}拿了「{sk.Name}」{qty}放进背包。");
             return true;
         }
@@ -319,15 +297,6 @@ namespace PCShopSell.Core.Session
             switch (to)
             {
                 case "box":
-                    if (shop && RestaurantIngredientsOnly(_focus) && sk.Kind == "ing")
-                    {
-                        if (RestaurantFridgeRequired(_focus) is string coldStorageBlocker) return Fail(coldStorageBlocker + "。");
-                        if (kg > RestaurantFridgeRoom(_focus) + 1e-9) return Fail("冰箱放不下这些食材。");
-                        StoredMove(sk, amount, temp, tempParts, _focus.Fridge, null);
-                        Chill(_focus.Fridge);
-                        Say($"把「{sk.Name}」{qty}从临时存放放进了冰箱。");
-                        break;
-                    }
                     if (shop && sk.Part != null)
                     {
                         if (PlayerShop.Stock.FreeSpace + 1e-9 < Stock.SpaceOf(sk.Part, sk.Boxed, (int)Math.Round(amount)))
@@ -371,8 +340,7 @@ namespace PCShopSell.Core.Session
                 {
                     StoredKey sk = ParseStored(key);
                     double have = StoredHave(sk, shop ? ShopTemp : HomeTemp, shop ? null : HomeTempParts);
-                    double room = shop && RestaurantIngredientsOnly(_focus) && sk.Kind == "ing"
-                        ? RestaurantFridgeRoom(_focus) : shop && sk.Part != null ? double.MaxValue : BoxRoomKg(shop);
+                    double room = shop && sk.Part != null ? double.MaxValue : BoxRoomKg(shop);
                     int fit = (int)Math.Floor(Math.Min(have, sk.UnitKg <= 1e-9 ? have : room / sk.UnitKg) + 1e-9);
                     for (int n = fit; n > 0; n--)
                         if (MoveTemp(key, n, "box"))
@@ -623,9 +591,9 @@ namespace PCShopSell.Core.Session
                     moved++;
                 }
             }
-            foreach (string id in restaurant ? Enumerable.Empty<string>() : food.Ingredient.Select(b => b.Id).Distinct().ToList())
+            foreach (string id in food.Ingredient.Select(b => b.Id).Distinct().ToList())
             {
-                if(HasAutomaticGoodsShelf("produce:"+id))continue;
+                if (!restaurant && HasAutomaticGoodsShelf("produce:" + id)) continue;
                 int have = food.IngredientCount(id);
                 int n = have;
                 if (n < have) full = true;

@@ -16,6 +16,7 @@ namespace PCShopSell.Game.Runtime
         private float _phase, _blend, _idleTime, _scale;
         private bool _sampled, _locomotion = true;
         private bool _seated;
+        private float _furnitureSeatHeight, _furnitureSeatBlend;
         private Vector3 _reachTarget;
         private float _reachWeight, _reachCrouch;
         private int _reachArm = 1;
@@ -44,6 +45,14 @@ namespace PCShopSell.Game.Runtime
         public Transform Torso { get; private set; }
         internal FigureAppearance Appearance { get; private set; }
         public Transform ReachingHand => _hands[_reachArm];
+
+        internal void SetFurnitureSeatPose(float height, float blend)
+        {
+            _furnitureSeatHeight = height;
+            _furnitureSeatBlend = blend;
+            ApplyPose();
+        }
+
         public float WalkBlend => _blend;
         public bool LocomotionEnabled
         {
@@ -168,12 +177,17 @@ namespace PCShopSell.Game.Runtime
 
         private void ApplyPose()
         {
-            bool working = !_seated && _reachWeight <= 0 && _blend < .1f;
+            bool working = !_seated && _furnitureSeatBlend <= 0 && _reachWeight <= 0 && _blend < .1f;
             const float hipHeight = PlayerCharacterModel.HipHeight;
             const float segment = PlayerCharacterModel.LegSegment;
             const float ankle = PlayerCharacterModel.AnkleHeight;
             if (_spatula != null) _spatula.SetActive(working && _workAction == FigureWorkAction.Cook);
             if (_screwdriver != null) _screwdriver.SetActive(working && _workAction == FigureWorkAction.Assemble);
+            if (_furnitureSeatBlend > 0)
+            {
+                ApplyFurnitureSeatPose();
+                return;
+            }
             if(_seated)
             {
                 float seatOffset = hipHeight - segment - ankle - .23f;
@@ -275,6 +289,37 @@ namespace PCShopSell.Game.Runtime
                 _arms[1].localRotation=Quaternion.Euler(energetic?-65-gesture:-20-gesture,0,12);
                 SetElbow(0, 31 + gesture);
                 SetElbow(1, 18 - gesture * .5f);
+            }
+        }
+
+        private void ApplyFurnitureSeatPose()
+        {
+            const float thighBend = 79f;
+            const float segment = PlayerCharacterModel.LegSegment;
+            const float ankle = PlayerCharacterModel.AnkleHeight;
+            const float hip = PlayerCharacterModel.HipHeight;
+            float blend = _furnitureSeatBlend;
+            float seatedHip = _furnitureSeatHeight / _scale + .025f;
+            float thighDrop = segment * Mathf.Cos(thighBend * Mathf.Deg2Rad);
+            float shinBend = Mathf.Acos(Mathf.Clamp01((seatedHip - ankle - thighDrop) / segment)) * Mathf.Rad2Deg;
+            float thigh = thighBend * blend;
+            float shin = shinBend * blend;
+            float pelvisHeight = ankle + segment * (Mathf.Cos(thigh * Mathf.Deg2Rad) + Mathf.Cos(shin * Mathf.Deg2Rad));
+            float seatCorrection = seatedHip - (ankle + thighDrop + segment * Mathf.Cos(shinBend * Mathf.Deg2Rad));
+            _visual.localPosition = Vector3.up * ((pelvisHeight - hip + seatCorrection * blend) * _scale);
+
+            // Lean during the transition, then settle upright with the hands over the thighs.
+            float lean = 4f * blend + 15f * Mathf.Sin(Mathf.PI * blend);
+            Torso.localRotation = Quaternion.Euler(lean, 0, 0);
+            Vector3 pelvis = Vector3.up * hip;
+            Torso.localPosition = pelvis - Torso.localRotation * pelvis;
+            for (int i = 0; i < 2; i++)
+            {
+                _hips[i].localRotation = Quaternion.Euler(-thigh, 0, 0);
+                _knees[i].localRotation = Quaternion.Euler(thigh - shin, 0, 0);
+                _feet[i].localRotation = Quaternion.Euler(shin, 0, 0);
+                _arms[i].localRotation = Quaternion.Euler(-28f * blend, 0, (i == 0 ? -1 : 1) * (1.5f + 4f * blend));
+                SetElbow(i, 6f + 19f * blend);
             }
         }
 

@@ -153,8 +153,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(orderPreview, 250, 560);
                 Ui.VList(orderPreview.rectTransform, 6, 12);
                 Line(orderPreview.transform, $"订单 #{order.Id} · 配置要求", 19, Ui.Accent);
-                long minutesLeft = System.Math.Max(0, S.Clock.Now.MinutesUntil(order.DueAt));
-                Line(orderPreview.transform, $"交付剩余 {minutesLeft / 60} 小时 {minutesLeft % 60} 分钟", 15, Ui.Dim);
+                Line(orderPreview.transform, S.Clock.OrderDeadlineText(order.DueAt.TotalMinutes), 15, Ui.Dim);
                 var requirementLabels = new Dictionary<PartCategory, Text>();
                 var buildSteps = new[] { PartCategory.Motherboard, PartCategory.Cpu, PartCategory.Memory,
                     PartCategory.Gpu, PartCategory.Storage, PartCategory.PowerCase };

@@ -36,9 +36,11 @@ namespace PCShopSell.Game.UI
         private void AddFoodExpiry(Button cell, string key, int? day)
         {
             if (!day.HasValue) return;
-            var panel = Ui.Panel(cell.transform, "ExpiryBadge_" + key, new Color(.07f, .12f, .1f, .88f));
-            panel.rectTransform.Anchor(.05f, .01f, .98f, .20f);
-            var label = Ui.Label(panel.transform, "", 11, TextAnchor.MiddleRight); label.rectTransform.Fill(2);
+            var panel = Ui.Panel(cell.transform, "ExpiryBadge_" + key, BagBadgeSurface);
+            panel.rectTransform.Anchor(.03f, .02f, .97f, .20f);
+            var label = Ui.Label(panel.transform, "", 13, TextAnchor.MiddleCenter);
+            label.fontStyle = FontStyle.Bold;
+            label.rectTransform.Fill();
             var badge = panel.gameObject.AddComponent<FoodExpiryBadge>();
             badge.Now = () => S.Clock.Now.TotalMinutes; badge.ExpireDay = day; badge.Label = label; badge.Refresh();
             panel.rectTransform.Tip("第" + (day.Value + 1) + "天结束时到期。同种食物优先使用最早到期的批次。");

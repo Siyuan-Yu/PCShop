@@ -41,7 +41,7 @@ namespace PCShopSell.Game.UI
             var missing = S.UncoveredBuildProcurement(shop, order);
             OpenWindow("订单采购清单", 760, 550, w =>
             {
-                Line(w.Content, $"订单 #{order.Id} · 剩余 {S.Clock.Now.MinutesUntil(order.DueAt) / 60} 小时", 18);
+                Line(w.Content, $"订单 #{order.Id} · {S.Clock.OrderDeadlineText(order.DueAt.TotalMinutes)}", 18);
                 foreach (var p in missing) ItemLabel(w.Content, p.Id, $"{p.Name} ×1　送店在途 {S.PendingOnlineCount(p.Id)} 件");
                 if (missing.Count == 0) Line(w.Content, order.PartsReserved ? "配件已备齐，可以开始装机。" : "缺件已有采购安排。", 18, Ui.Good);
                 Ui.Size(Ui.Button(w.Content, "加入采购员定期清单", () => ChooseOrderBuyer(order, shop, w), 18, Ui.ButtonBg, missing.Count > 0), -1, 44);

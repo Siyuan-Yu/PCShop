@@ -34,7 +34,7 @@ namespace PCShopSell.Tests
         }
         private static void IngredientsFor(GameSession s,int portions=1)
         {
-            s.CurrentShop.Locker.Food.RiceKg=portions*.25;
+            s.CurrentShop.Fridge.Food.RiceKg=portions*.25;
             s.CurrentShop.Fridge.Food.Ingredient.Add(new FoodBatch{Id="veg",Name="青菜",Count=portions,ExpireDay=s.Clock.Today.TotalDays+2});
         }
         [Test]
@@ -43,7 +43,7 @@ namespace PCShopSell.Tests
             using(var s=Make("restaurant"))
             {
                 var shop=s.CurrentShop;var state=s.SpecialBusiness(shop.Place.Id);state.NextVisit=long.MaxValue;
-                shop.Locker.Food.RiceKg=.5;
+                shop.Fridge.Food.RiceKg=.5;
                 shop.Fridge.Food.Ingredient.Add(new FoodBatch{Id="egg",Name="鸡蛋",Count=2,ExpireDay=30});
                 var cash=s.Ledger.Balance;s.Player.Hunger=20;
                 s.AdvanceClock(1);
@@ -70,7 +70,7 @@ namespace PCShopSell.Tests
                 Assert.AreEqual(100,s.Player.Hunger,1e-6);
                 Assert.AreEqual(.25,s.KitchenRice(shop),1e-6);
                 Assert.AreEqual(3,s.KitchenIngredientCount(shop,"veg")+s.KitchenIngredientCount(shop,"egg"));
-                shop.Locker.Food.RiceKg=.1;s.Backpack.Food.Packed.Clear();s.Player.Hunger=20;s.AdvanceClock(31);
+                shop.Fridge.Food.RiceKg=.1;s.Backpack.Food.Packed.Clear();s.Player.Hunger=20;s.AdvanceClock(31);
                 Assert.Less(s.Player.Hunger,20);Assert.AreEqual(.1,s.KitchenRice(shop),1e-6);
                 Assert.AreEqual(3,s.KitchenIngredientCount(shop,"veg")+s.KitchenIngredientCount(shop,"egg"));
             }
@@ -1071,7 +1071,9 @@ namespace PCShopSell.Tests
                 s.Backpack.Food.Ingredient.Add(new FoodBatch{Id="veg",Name="青菜",Count=1,ExpireDay=16});
                 s.Backpack.AddGift("produce:veg",2);
                 Assert.True(s.StoreBackpackInWarehouse());
-                Assert.AreEqual(1,s.KitchenRice(s.CurrentShop));Assert.AreEqual(0,s.CurrentShop.Fridge.Food.RiceKg);
+                Assert.True(s.MoveFridgeWarehouseFood("rice", 1, true));
+                Assert.True(s.MoveFridgeWarehouseFood("ing:veg", 3, true));
+                Assert.AreEqual(1,s.KitchenRice(s.CurrentShop));Assert.Zero(s.ShopLocker.Food.RiceKg);
                 Assert.AreEqual(3,s.CurrentShop.Fridge.Food.Ingredient.Sum(b=>b.Count));
                 Assert.IsEmpty(s.Backpack.Food.Ingredient);Assert.Zero(s.Backpack.GiftCount("produce:veg"));
                 Assert.True(s.CurrentShop.Fridge.Food.Ingredient.All(b=>b.Chilled));Assert.False(s.StoreBackpackInWarehouse());
@@ -1085,14 +1087,15 @@ namespace PCShopSell.Tests
                 s.CurrentShop.Layout.Add(new PlacedFurniture { Id = FurnitureCatalog.ShopBox, X = 1, Z = 3 });
                 s.Backpack.Food.RiceKg=1;
                 s.Backpack.Food.Ingredient.Add(new FoodBatch{Id="veg",Name="青菜",Count=2,ExpireDay=16});
-                Assert.True(s.StoreBackpackInWarehouse(),"装修歇业不应该阻止使用已摆放的冰箱整理食材");
-                Assert.AreEqual(1,s.KitchenRice(s.CurrentShop));Assert.AreEqual(0,s.CurrentShop.Fridge.Food.RiceKg);
+                Assert.True(s.MoveFridgeFood("rice", 1, true));
+                Assert.True(s.MoveFridgeFood("ing:veg", 2, true), "装修歇业不应该阻止使用已摆放的冰箱整理食材");
+                Assert.AreEqual(1,s.KitchenRice(s.CurrentShop));Assert.Zero(s.ShopLocker.Food.RiceKg);
                 Assert.AreEqual(2,s.CurrentShop.Fridge.Food.Ingredient.Sum(b=>b.Count));
                 Assert.True(s.CurrentShop.Fridge.Food.Ingredient.All(b=>b.Chilled));
                 Assert.True(s.IsRenovating);Assert.True(s.PlayerShop.ForcedClosed);Assert.False(s.SpecialOpen(s.CurrentShop,s.Clock.Now));
             }
         }
-        [Test] public void KitchenCanStoreRiceWhileOtherIngredientsWaitForAFridge()
+        [Test] public void RestaurantStoresIngredientsInWarehouseBeforeInstallingFridge()
         {
             using(var s=Make("restaurant"))
             {
@@ -1101,46 +1104,48 @@ namespace PCShopSell.Tests
                 s.Backpack.Food.Ingredient.Add(new FoodBatch { Id = "veg", Count = 2 });
                 s.CurrentShop.Layout.RemoveAll(p=>FurnitureCatalog.Get(p.Id)?.Role==FurnitureRole.Fridge);
                 Assert.True(s.StoreBackpackInWarehouse());
-                Assert.AreEqual(1,s.KitchenRice(s.CurrentShop));
+                Assert.Zero(s.KitchenRice(s.CurrentShop));
+                Assert.AreEqual(1, s.ShopLocker.Food.RiceKg);
                 Assert.Zero(s.Backpack.Food.RiceKg);
-                Assert.AreEqual(2,s.Backpack.Food.IngredientCount("veg"));
+                Assert.AreEqual(2,s.ShopLocker.Food.IngredientCount("veg"));
                 Assert.False(s.StoreBackpackInWarehouse());
                 s.CurrentShop.Layout.Add(new PlacedFurniture{Id=FurnitureCatalog.Fridge,X=1,Z=2});
-                Assert.True(s.StoreBackpackInWarehouse());
-                Assert.Zero(s.CurrentShop.Fridge.Food.RiceKg);
+                StringAssert.Contains("冰箱", s.RestaurantIngredientBlocker(s.CurrentShop, Order(s)));
+                Assert.True(s.MoveFridgeWarehouseFood("rice", 1, true));
+                Assert.True(s.MoveFridgeWarehouseFood("ing:veg", 2, true));
+                Assert.AreEqual(1, s.KitchenRice(s.CurrentShop));
                 Assert.AreEqual(2,s.KitchenIngredientCount(s.CurrentShop,"veg"));
                 Assert.Zero(s.Backpack.Food.IngredientCount("veg"));
             }
         }
 
         [Test]
-        public void RestaurantRiceMovesByHandWithoutUsingFridgeSpace()
+        public void RestaurantRiceMovesBetweenBackpackWarehouseAndFridge()
         {
             using var s = Make("restaurant");
             var shop = s.CurrentShop;
             shop.Layout.Add(new PlacedFurniture { Id = FurnitureCatalog.ShopBox, X = 1, Z = 3 });
             s.Backpack.Food.RiceKg = 2.5;
-            Assert.False(s.MoveFridgeFood("rice", 1, true));
+            Assert.True(s.MoveFridgeFood("rice", 1, true));
             Assert.True(s.StoreInBox("rice"));
             Assert.AreEqual(1, s.KitchenRice(shop));
             Assert.True(s.UnloadBackpack());
-            Assert.AreEqual(2.5, s.KitchenRice(shop));
+            Assert.AreEqual(1.5, shop.Locker.Food.RiceKg);
             shop.Temp.Food.RiceKg = .5;
             Assert.True(s.MoveTemp("rice", 1, "box"));
-            Assert.AreEqual(3, s.KitchenRice(shop));
+            Assert.AreEqual(2, shop.Locker.Food.RiceKg);
             Assert.True(s.TakeFromBox("rice"));
-            Assert.AreEqual(2, s.KitchenRice(shop));
             Assert.AreEqual(1, s.Backpack.Food.RiceKg);
-            Assert.AreEqual(2, s.GoodsAvailableToList("produce:rice"));
-            Assert.True(s.ListGoods("produce:rice", 2));
+            Assert.True(s.MoveFridgeWarehouseFood("rice", 1, true));
+            Assert.True(s.MoveFridgeFood("rice", 1, true));
             Assert.AreEqual(3, s.KitchenRice(shop));
+            Assert.AreEqual(3, shop.Fridge.WeightKg);
             Assert.Zero(s.GoodsAvailableToList("produce:rice"));
             Assert.Zero(shop.Sim.Stock.GoodsCount("produce:rice"));
-            Assert.Zero(shop.Fridge.WeightKg);
         }
 
         [Test]
-        public void LegacyRestaurantRiceMovesIntoItsOwnWarehouseOnlyOnce()
+        public void LegacyRestaurantRiceStaysInItsStorageAndShelfRiceMovesToWarehouse()
         {
             using var s = Make("restaurant");
             var shop = s.CurrentShop;
@@ -1154,8 +1159,8 @@ namespace PCShopSell.Tests
             using var reloaded = Reload(loaded);
             foreach (var session in new[] { loaded, reloaded })
             {
-                Assert.AreEqual(133.25, session.KitchenRice(session.MainShop));
-                Assert.Zero(session.MainShop.Fridge.Food.RiceKg);
+                Assert.AreEqual(121.5, session.KitchenRice(session.MainShop));
+                Assert.AreEqual(11.75, session.MainShop.Locker.Food.RiceKg);
                 Assert.Zero(session.MainShop.Temp.Food.RiceKg);
                 Assert.Zero(session.MainShop.Sim.Stock.GoodsCount("produce:rice"));
                 Assert.AreEqual(2, session.KitchenIngredientCount(session.MainShop, "veg"));
@@ -1164,7 +1169,7 @@ namespace PCShopSell.Tests
         }
 
         [Test]
-        public void OnlineRiceReachesRestaurantWithoutAFridge()
+        public void OnlineIngredientsReachRestaurantWarehouseWithoutAFridge()
         {
             using var s = Make("restaurant");
             var shop = s.CurrentShop;
@@ -1172,9 +1177,11 @@ namespace PCShopSell.Tests
             Assert.That(s.CanOpenFridge, Is.False);
             Assert.True(s.OrderOnline(ParcelKind.Rice, "rice", 2, shop));
             Assert.True(s.OrderOnline(ParcelKind.Gift, "produce:rice", 3, shop));
-            Assert.False(s.OrderOnline(ParcelKind.Gift, "produce:veg", 1, shop));
+            Assert.True(s.OrderOnline(ParcelKind.Gift, "produce:veg", 1, shop));
             s.Clock.Advance(GameSession.DeliveryDays * 1440);
-            Assert.AreEqual(11.5, s.KitchenRice(shop));
+            Assert.AreEqual(11.5, shop.Locker.Food.RiceKg);
+            Assert.AreEqual(1, shop.Locker.Food.IngredientCount("veg"));
+            Assert.Zero(s.KitchenRice(shop));
             Assert.Zero(shop.Fridge.Food.RiceKg);
         }
         [Test] public void PausingAllRecipesStopsNewOrdersAndOpenStatusDoesNotEnableRetailSimulation()

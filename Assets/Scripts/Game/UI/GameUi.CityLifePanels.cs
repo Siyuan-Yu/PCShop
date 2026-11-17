@@ -570,7 +570,7 @@ namespace PCShopSell.Game.UI
                 Line(w.Content, venue.Name + " · " + S.City.StreetName(venue.StreetId) + " · " + CityPlaceHours(venue), 20, Ui.Accent);
                 Line(w.Content, $"{def.Minutes} 分钟 · 参考价 {S.VenuePriceRange(def)}", 18);
                 int journey = S.CityTravelMinutes(venue);
-                Line(w.Content, journey >= int.MaxValue / 8 ? "当前路线不可达" : $"路程约 {journey} 分钟 · 到场后付费", 16, Ui.Dim);
+                Line(w.Content, journey >= int.MaxValue / 8 ? "当前路线不可达" : $"路程约 {Ui.Emphasize($"{journey} 分钟")} · 到场后付费", 16, Ui.Dim);
                 var date=Ui.Row(w.Content,42,8);Ui.Size(Ui.Label(date,"日期",18),65);
                 int today=(int)(earliestStart/1440);
                 int days=Math.Max(36,(int)(proposed/1440)-today+1);
@@ -873,7 +873,7 @@ namespace PCShopSell.Game.UI
                     long remaining = Math.Max(0, a.ActualStart + a.Duration - S.Clock.Now.TotalMinutes);
                     bool manual = GameSession.IsManualPlayActivity(a);
                     Line(w.Content, manual
-                        ? $"游戏时间暂停 · 完成后结算 {a.Duration} 分钟"
+                        ? $"游戏时间暂停 · 完成后结算 {Ui.Emphasize($"{a.Duration} 分钟")}"
                         : "预计剩余 " + remaining + " 游戏分钟；世界时间按原倍速推进。", 19);
                     if (a.ServiceConfirmed)
                         Line(w.Content, (parkWalk ? "散步路线 · " : "已选项目 · ") + GameSession.VenueServiceName(def, a.ServiceChoice), 18, Ui.Good);
@@ -1067,7 +1067,8 @@ namespace PCShopSell.Game.UI
             else if (here) hint = signHelp ? "已经到店，点「打开帮忙页面」开始换招牌。" : onsite ? "已到场，点「进入现场」开始。"
                 : a.ServiceConfirmed ? "已到场，从现场预约开始。" : parkWalk ? "已到公园，可以选择散步路线。"
                 : "已经到场。在菜单里选择服务，与同行者一起开始活动。";
-            else hint = "赴约时间临近；空闲时点击“前往赴约”出发。";
+            else hint = S.Trip != null || S.CityIntent != null ? "点击「前往赴约」可切换当前路线。"
+                : "赴约时间临近，点击「前往赴约」出发。";
             _cityActivityHudText.text = title + " · " + phase + " · " + time + "\n" + hint;
         }
 

@@ -19,6 +19,14 @@ namespace PCShopSell.Core.Session
     public sealed partial class GameSession
     {
         private readonly List<EventPaidReceipt> _eventPaidReceipts = new List<EventPaidReceipt>();
+        private readonly Queue<CustomerEventFeedback> _customerEventFeedback = new Queue<CustomerEventFeedback>();
+
+        private void QueueCustomerFeedback(string title, string body) =>
+            _customerEventFeedback.Enqueue(new CustomerEventFeedback { Title = title, Body = body });
+
+        public CustomerEventFeedback TakeCustomerFeedback() =>
+            _customerEventFeedback.Count > 0 ? _customerEventFeedback.Dequeue() : null;
+
         public IReadOnlyList<EventPaidReceipt> PendingChangeRefunds => _eventPaidReceipts.Where(r => r.ChangeRecorded && !r.Refunded).Select(r => r.Copy()).ToArray();
         public Money ChangeRefundDebt => Money.FromCents(_eventPaidReceipts.Where(r => r.ChangeRecorded && !r.Refunded).Sum(r => r.ChangeCents));
         private void RecordAggregateReceipt(OwnedShop shop, string saleId, string product, Money paid, int day)
@@ -95,9 +103,16 @@ namespace PCShopSell.Core.Session
             {
                 var shop = ReceiptShop(r);
                 if (r.RefundAt > 0 && now >= r.RefundAt && shop != null && CurrentPlace?.Id == shop.Place.Id && shop.Sim.IsOpen && Ledger.CanAfford(Money.FromCents(r.ChangeCents)))
-                { if (RefundEventChange(r.Key)) Say("顾客已按约取回找零差额。"); }
+                {
+                    if (RefundEventChange(r.Key))
+                        QueueCustomerFeedback("顾客已取回找零", $"{ShopTitle(shop)}的顾客已按约取回 {Money.FromCents(r.ChangeCents)}，待退款已结清。");
+                }
                 if (!r.Refunded && !r.ComplaintApplied && Clock.Today.TotalDays >= r.ChangeDay + 2 && shop != null)
-                { r.ComplaintApplied = true; shop.Sim.AdjustShopReputation(-2); Say("未处理的找零差额引来顾客投诉，该店口碑 −2，仍需退还。"); }
+                {
+                    r.ComplaintApplied = true;
+                    shop.Sim.AdjustShopReputation(-2);
+                    QueueCustomerFeedback("顾客投诉", $"{ShopTitle(shop)}的顾客因少找零钱提出投诉，门店口碑 −2。仍需退还 {Money.FromCents(r.ChangeCents)}。");
+                }
             }
         }
         private EventDef BindCommunityBulkOrder(EventDef template)
@@ -125,8 +140,31 @@ namespace PCShopSell.Core.Session
                 Choose("坚持原价 · 低于魅力45或智力50必定谈失败", _ => Record(10000)),
                 Choose("这单不接", _ => "本次拒单，没有钱款和库存变化。"));
         }
-        private void SaveCustomerBatch(SaveData d) => d.eventPaidReceipts = _eventPaidReceipts.Select(r => r.Copy()).ToArray();
-        private void RestoreCustomerBatch(SaveData d) { _eventPaidReceipts.Clear(); _eventPaidReceipts.AddRange((d.eventPaidReceipts ?? Array.Empty<EventPaidReceipt>()).Select(r => r.Copy())); }
+        private void SaveCustomerBatch(SaveData d)
+        {
+            d.eventPaidReceipts = _eventPaidReceipts.Select(r => r.Copy()).ToArray();
+            d.customerEventFeedback = _customerEventFeedback.ToArray();
+        }
+
+        private void RestoreCustomerBatch(SaveData d)
+        {
+            _eventPaidReceipts.Clear();
+            _eventPaidReceipts.AddRange((d.eventPaidReceipts ?? Array.Empty<EventPaidReceipt>()).Select(r => r.Copy()));
+            _customerEventFeedback.Clear();
+            foreach (var feedback in d.customerEventFeedback ?? Array.Empty<CustomerEventFeedback>())
+                if (feedback != null) _customerEventFeedback.Enqueue(feedback);
+        }
     }
-    public sealed partial class SaveData { public EventPaidReceipt[] eventPaidReceipts; }
+
+    [Serializable]
+    public sealed class CustomerEventFeedback
+    {
+        public string Title, Body;
+    }
+
+    public sealed partial class SaveData
+    {
+        public EventPaidReceipt[] eventPaidReceipts;
+        public CustomerEventFeedback[] customerEventFeedback;
+    }
 }

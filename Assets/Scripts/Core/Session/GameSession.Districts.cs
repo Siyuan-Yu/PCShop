@@ -27,7 +27,8 @@ namespace PCShopSell.Core.Session
 #endif
             }
         }
-        public bool FirstChapterTrialCompleted => FirstChapterTrial && DistrictNodeCompleted("community.trial");
+        private const string FirstChapterTrialCompletedFlag = "trial:first-chapter-completed";
+        public bool FirstChapterTrialCompleted => FirstChapterTrial && Flags.Contains(FirstChapterTrialCompletedFlag);
         public int DistrictAccessTier => FirstChapterTrial ? 0 : _district.UnlockedTier;
         public DistrictProgress DistrictStoryState => _district.Copy();
         public static string DistrictName(int tier) => new[] { "城郊", "社区", "公园", "花园" }[Math.Max(0,Math.Min(3,tier))];
@@ -84,9 +85,15 @@ namespace PCShopSell.Core.Session
         internal bool CommunityInvitationScheduledOrStarted =>
             _district.PendingChapter == 1 || _district.Chapter >= 1 || DistrictAccessTier >= 1;
         public bool DistrictNodeCompleted(string id) => _district.Completed.Contains(id);
-        public int DistrictOperatingShops(int tier) => MyShops.Count(s => DistrictTierOf(s.Place)==tier
-            && (IsDedicatedVenue(s.Place) ? VenueOperation(s.Place.Id)?.Accepting==true : !s.Sim.NotFitted)
-            && s.RenovationDay < Clock.Today.TotalDays && !Flags.Contains(OpeningChoicePrefix+s.Place.Id));
+        private bool ShopReadyForOperation(OwnedShop shop) => shop.Rented
+            && shop.RenovationDay < Clock.Today.TotalDays && !Flags.Contains(OpeningChoicePrefix + shop.Place.Id);
+
+        internal int OperatingStorefrontCount => _shops.Count(shop => ShopReadyForOperation(shop)
+            && !IsDedicatedVenue(shop.Place) && !shop.Sim.NotFitted);
+
+        public int DistrictOperatingShops(int tier) => _shops.Count(shop => ShopReadyForOperation(shop)
+            && DistrictTierOf(shop.Place) == tier
+            && (IsDedicatedVenue(shop.Place) ? VenueOperation(shop.Place.Id)?.Accepting == true : !shop.Sim.NotFitted));
         public Money CommunityOwnCash => Ledger.Balance - Money.FromCents(_appLoans.Where(loan => !loan.Repaid).Sum(loan => loan.PrincipalCents));
 
         public string DistrictPrerequisiteBlocker(int chapter)
@@ -117,6 +124,13 @@ namespace PCShopSell.Core.Session
         public void RefreshDistrictNarrative()
         {
             if (!City.IsLakeCity || IsGameOver) return;
+            if (FirstChapterTrial)
+            {
+                if (FirstChapterTrialCompleted || DistrictPrerequisiteBlocker(1) != null) return;
+                Flags.Add(FirstChapterTrialCompletedFlag);
+                Show("试玩主线已完成", $"你在城郊开业了 {DistrictOperatingShops(0)} 家店，自有现金达到了 {Money.FromYuan(DistrictNarrativeCatalog.CommunityCashMinimumYuan)}，也已结清贷款。\n\n感谢试玩！你可以留在城郊继续经营。");
+                return;
+            }
             if(CommunitySearchActive && _district.CommunityPieces==7)CompleteDistrictNode();
             if(_district.NodeId=="community.trial" && _district.MeetingNodeId!=_district.NodeId
                 && CanDeliverCommunityPages && CityPersonState(CityLifeCatalog.TangWei) is CityPersonState receiver
@@ -125,7 +139,7 @@ namespace PCShopSell.Core.Session
             RefreshDistrictCommerce();
             if(CurrentDistrictNode!=null)return;
             int chapter = _district.Chapter+1;
-            if (chapter > (FirstChapterTrial ? 1 : 3)) return;
+            if (chapter > 3) return;
             if (_district.PendingChapter!=chapter)
             {
                 if (DistrictPrerequisiteBlocker(chapter)!=null) return;
@@ -426,8 +440,6 @@ namespace PCShopSell.Core.Session
             var chain=ActiveDistrictChain(_district.Chapter);int index=Array.IndexOf(chain,node.Id)+1;
             _district.NodeId=index<chain.Length?chain[index]:null;
             Say("主线完成："+node.Title+(CurrentDistrictNode==null?"":"。下一条消息："+CurrentDistrictNode.Title));
-            if (node.Id == "community.trial" && FirstChapterTrial)
-                Show("试玩主线已完成", "你找齐三页商铺图，并交还给了唐蔚。感谢试玩！\n\n你可以留在城郊继续经营和探索。");
         }
         private void GrantDistrictAccess(int tier)
         {
@@ -574,6 +586,14 @@ namespace PCShopSell.Core.Session
         private void LoadDistrictProgress(SaveData data)
         {
             _district=data.districtProgress?.Copy()??new DistrictProgress();
+            if (FirstChapterTrial)
+            {
+                // Earlier trial saves could start the introduction only after meeting the same business goals.
+                if (_district.PendingChapter == 1 || _district.Chapter >= 1)
+                    Flags.Add(FirstChapterTrialCompletedFlag);
+                _district = new DistrictProgress();
+                return;
+            }
             _district.UnlockedTier=Math.Max(0,Math.Min(3,_district.UnlockedTier));
             _district.Chapter=Math.Max(0,Math.Min(3,_district.Chapter));
             if(CurrentDistrictNode==null)

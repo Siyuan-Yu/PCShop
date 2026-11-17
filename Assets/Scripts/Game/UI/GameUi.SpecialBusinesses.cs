@@ -63,37 +63,103 @@ namespace PCShopSell.Game.UI
         }
         private void OpenRestaurantHelp() =>
             OpenWorkspace("help", "餐馆经营", "餐馆经营", 720, 580, w =>
-                Para(w.Content, "大米存后仓，其他食材存冰箱，备料时自动取用。灶台下锅后，8分钟熟，38分钟焦糊。出锅后直接上菜。服务员可上菜、收桌并收款，你也可以到餐桌旁按 F 或在柜台面板收桌。店里需要摆放收银台才能收款。", 18));
+                Para(w.Content, "厨房只从冰箱取用大米、配菜和鱼。后仓食材可在「管理食材」里移入冰箱。灶台下锅后，8分钟熟，38分钟焦糊。出锅后直接上菜。服务员可上菜、收桌并收款，你也可以到餐桌旁按 F 或在柜台面板收桌。店里需要摆放收银台才能收款。", 18));
+
+        private void BuildRestaurantStorageNotice(OwnedShop shop, SpecialBusinessState state)
+        {
+            var panel = Ui.Size(Ui.FlatPanel(C, "RestaurantStorageNotice"), -1, 58);
+            var row = Ui.Row(panel.transform, 58, 8).Fill(6);
+            var messages = Ui.Size(Ui.Rect(row, "RestaurantStorageDetails"), 0, -1, 1);
+            Ui.VList(messages, 0, 0);
+            var title = Ui.Size(Ui.Label(messages, "", 16), -1, 24);
+            title.name = "RestaurantStorageHeadline";
+            title.fontStyle = FontStyle.Bold;
+            title.resizeTextForBestFit = true;
+            title.resizeTextMinSize = 12;
+            title.resizeTextMaxSize = 16;
+            title.verticalOverflow = VerticalWrapMode.Truncate;
+            var detail = Ui.Size(Ui.Label(messages, "", 14, color: Ui.Dim), -1, 20);
+            detail.resizeTextForBestFit = true;
+            detail.resizeTextMinSize = 12;
+            detail.resizeTextMaxSize = 14;
+            detail.verticalOverflow = VerticalWrapMode.Truncate;
+            Ui.Size(Ui.Button(row, "管理食材", OpenFridgeWindow, 15), 92);
+
+            void Refresh()
+            {
+                bool hasFridge = S.CanOpenFridge;
+                double weight = shop.Fridge.WeightKg;
+                var missing = new System.Collections.Generic.List<(string Name, bool InWarehouse)>();
+                long now = S.Clock.Now.TotalMinutes;
+                if (hasFridge)
+                {
+                    int neededRecipes = state.RecipeMask;
+                    foreach (var order in state.Orders)
+                    {
+                        if (order.Stage != DiningStage.Waiting || order.TableCleared
+                            || (order.IsFishOrder && now >= order.DueAt)) continue;
+                        neededRecipes |= 1 << order.Recipe;
+                    }
+                    if (neededRecipes != 0 && S.KitchenRice(shop) < .25 - 1e-9)
+                        missing.Add(("大米", shop.Locker.Food.RiceKg > 1e-9));
+                    for (int recipe = 0; recipe < GameSession.RecipeIngredients.Length; recipe++)
+                    {
+                        string id = GameSession.RecipeIngredients[recipe];
+                        if ((neededRecipes & (1 << recipe)) != 0 && S.KitchenIngredientCount(shop, id) < 1)
+                            missing.Add((Ingredients.Get(id).Name, shop.Locker.Food.IngredientCount(id) > 0));
+                    }
+                    foreach (var order in state.Orders.Where(o => o.IsFishOrder && o.Stage == DiningStage.Waiting && now < o.DueAt)
+                                 .GroupBy(o => o.FishId).Select(orders => orders.First()))
+                    {
+                        if (order.Fish != null && S.KitchenIngredientCount(shop, order.FishId) < 1)
+                            missing.Add((order.Fish.Name, shop.Locker.Food.IngredientCount(order.FishId) > 0));
+                    }
+                }
+
+                bool empty = weight <= 1e-9;
+                bool warning = !hasFridge || empty || missing.Count > 0;
+                Color surface = warning ? Ui.WarningSurface : Ui.PanelBg2;
+                if (panel.color != surface)
+                {
+                    panel.color = surface;
+                    Ui.FlatBorder(panel, warning ? Ui.Warn : Ui.FlatCardEdge);
+                }
+                string missingNames = string.Join("、", missing.Select(item => item.Name));
+                string warehouseNames = string.Join("、", missing.Where(item => item.InWarehouse).Select(item => item.Name));
+                title.text = !hasFridge ? "尚未摆放冰箱"
+                    : empty ? (missing.Count > 0 ? "冰箱空了 · 缺 " + missingNames : "冰箱空了")
+                    : missing.Count > 0 ? "冰箱缺料 · " + missingNames : "冰箱库存";
+                detail.text = !hasFridge ? "摆好冰箱后，可从后仓移入食材。"
+                    : warehouseNames.Length > 0 ? $"后仓有{warehouseNames}，可直接移入冰箱。"
+                    : missing.Count > 0 ? "补齐后才能制作相应菜品。"
+                    : FridgeLoadText(weight, S.CurrentFridgeLimitKg);
+            }
+
+            Refresh();
+            _counterRefresh.Add(Refresh);
+        }
+
+        private void BuildRestaurantDrinkNotice(OwnedShop shop)
+        {
+            var kind = ShelfKinds.Get("drink");
+            var notice = Line(C, "", 15, Ui.Dim);
+            void Refresh()
+            {
+                bool displayed = shop.Sim.ShelfFillOf(kind).Goods.Any(line => line.Value > 0 && RetailProducts.IsDrink(line.Key));
+                bool stocked = kind.GiftIds.Any(id => shop.Sim.Stock.GoodsCount(id) > 0);
+                notice.text = displayed ? "饮料已上架 · 堂食顾客可加购"
+                    : stocked ? "饮料有库存 · 暂未陈列到货架" : "饮料缺货 · 暂停堂食加购";
+                notice.color = displayed ? Ui.Dim : Ui.Accent;
+            }
+            Refresh();
+            _counterRefresh.Add(Refresh);
+        }
 
         private void BuildRestaurantCounter(SpecialBusinessState state)
         {
-            var shop=S.CurrentShop;
-            if (S.CanOpenFridge)
-            {
-                var storage = Ui.Row(C, 40, 6);
-                var storageLayout = storage.GetComponent<HorizontalLayoutGroup>();
-                storageLayout.padding = new RectOffset(9, 5, 3, 3);
-                var surface = storage.gameObject.AddComponent<Image>();
-                surface.color = Ui.PanelBg2;
-                surface.raycastTarget = false;
-                Ui.Round(surface);
-                var fill = Ui.Size(Ui.Label(storage, "", 15, color: Ui.Dim), -1, 34, 1);
-                void RefreshFridge() => fill.text = $"冰箱 {shop.Fridge.WeightKg:0.##} / {S.CurrentFridgeLimitKg:0.##} 千克";
-                RefreshFridge();
-                _counterRefresh.Add(RefreshFridge);
-                Ui.Size(Ui.Button(storage, "打开冰箱", OpenFridgeWindow, 15), 96, 34);
-            }
-
-            var drinkShelf = ShelfKinds.Get("drink");
-            var drinks = Line(C, "", 15, Ui.Dim);
-            void RefreshDrinks()
-            {
-                bool stocked = shop.Sim.ShelfFillOf(drinkShelf).Goods.Any(line => line.Value > 0 && RetailProducts.IsDrink(line.Key));
-                drinks.text = stocked ? "饮料已上架 · 堂食顾客可加购" : "上架饮料后，堂食顾客可加购，有机会多赚一笔。";
-                drinks.color = stocked ? Ui.Dim : Ui.Accent;
-            }
-            RefreshDrinks();
-            _counterRefresh.Add(RefreshDrinks);
+            var shop = S.CurrentShop;
+            BuildRestaurantStorageNotice(shop, state);
+            BuildRestaurantDrinkNotice(shop);
 
             var fish = Ui.Size(Ui.Button(C, "", () => SelectTab(ShopTab.Orders), 16), -1, 36).GetComponentInChildren<Text>();
             var tablesHeader = Ui.Row(C, 25);
@@ -185,6 +251,7 @@ namespace PCShopSell.Game.UI
             DiningOrder displayed = null;
             RestaurantJob job = RestaurantJob.None;
             bool cancel = false;
+            string ingredientBlocker = null;
             var action = Ui.Button(bar, "", () =>
             {
                 if (displayed == null) return;
@@ -197,6 +264,7 @@ namespace PCShopSell.Game.UI
                 refresh();
             }, 15, Ui.ButtonHot);
             action.image.rectTransform.Fill();
+            action.Tip(() => ingredientBlocker);
             var caption = action.GetComponentInChildren<Text>();
 
             return (order, assigned, playerBusy, now) =>
@@ -211,8 +279,11 @@ namespace PCShopSell.Game.UI
                 }
                 title.text = order == null ? tableName : $"{tableName} · {order.DishName} · ¥{order.Price}";
                 title.color = order == null ? Ui.Dim : Ui.TextColor;
-                status.text = RestaurantTableStatus(order, assigned, now);
-                status.color = order == null || order.Stage == DiningStage.Eating ? Ui.Dim
+                ingredientBlocker = order?.Stage == DiningStage.Waiting && assigned == null
+                    ? S.RestaurantIngredientBlocker(S.CurrentShop, order) : null;
+                status.text = ingredientBlocker ?? RestaurantTableStatus(order, assigned, now);
+                status.color = ingredientBlocker != null ? Ui.Warn
+                    : order == null || order.Stage == DiningStage.Eating ? Ui.Dim
                     : order.Stage == DiningStage.Burnt ? Ui.Warn
                     : order.Stage == DiningStage.Waiting ? Ui.Accent : Ui.Good;
                 cancel = assigned?.ActorId == GameSession.RestaurantPlayer;
@@ -227,9 +298,9 @@ namespace PCShopSell.Game.UI
                     _ => (RestaurantJob.None, "")
                 };
                 job = nextJob;
-                caption.text = cancel ? "取消本次操作" : label;
+                caption.text = cancel ? "取消本次操作" : ingredientBlocker != null ? "备料不足" : label;
                 bool ready = order?.Stage != DiningStage.Cooking || (now >= order.ReadyAt && now < order.BurnAt);
-                bool available = cancel || (job != RestaurantJob.None && assigned == null && !playerBusy && ready);
+                bool available = cancel || (job != RestaurantJob.None && assigned == null && !playerBusy && ready && ingredientBlocker == null);
                 Ui.SetButtonFill(action, cancel ? Ui.Warn : available ? Ui.ButtonHot : Ui.ButtonBg);
                 action.interactable = available;
                 action.gameObject.SetActive(cancel || job != RestaurantJob.None);
@@ -349,47 +420,15 @@ namespace PCShopSell.Game.UI
             var fishOrders = state.Orders.Where(o => o.IsFishOrder).OrderBy(o => o.DueAt).ThenBy(o => o.Id).ToArray();
             Line(C, $"鱼餐预订 {fishOrders.Length} / {GameSession.RestaurantFishOrderLimit}", 19, Ui.Accent);
             if (fishOrders.Length == 0) Line(C, "当前没有鱼餐预订。", 16, Ui.Dim);
-            else Line(C, "厨师按交期优先制作备齐的预订。出锅后可交付收款。", 15, Ui.Dim);
+            else Line(C, $"厨师按交期{Ui.Emphasize("优先制作备齐的预订")}。出锅后可交付收款。", 15, Ui.Dim);
             foreach (var order in fishOrders) BuildFishOrder(state, order);
-
-            var tableOrders = state.Orders.Where(o => !o.IsFishOrder && !o.TableCleared).OrderBy(o => o.Table).ToArray();
-            Line(C, $"当前桌单 {tableOrders.Length} 单", 19, Ui.Accent);
-            foreach (var order in tableOrders)
-            {
-                string status = order.Stage switch
-                {
-                    DiningStage.Waiting => "待备料",
-                    DiningStage.Cooking => "烹饪中",
-                    DiningStage.Ready => "待上菜",
-                    DiningStage.Eating => "用餐中",
-                    DiningStage.Checkout => "待收桌收款",
-                    DiningStage.Completed => "已付款 · 待收桌",
-                    DiningStage.Burnt => "已焦糊",
-                    _ => "顾客已离开 · 待收桌"
-                };
-                ItemLabel(C, "recipe:" + order.Recipe, $"{order.Table + 1}号桌 · {order.DishName} · ¥{order.Price} · {status}", 17);
-                if (order.Stage == DiningStage.Waiting)
-                {
-                    var stock = Para(C, "", 15, Ui.Warn);
-                    void RefreshIngredients()
-                    {
-                        string blocker = S.RestaurantIngredientBlocker(S.CurrentShop, order);
-                        stock.text = blocker ?? "";
-                        stock.gameObject.SetActive(blocker != null);
-                    }
-                    RefreshIngredients();
-                    _counterRefresh.Add(RefreshIngredients);
-                }
-            }
-            if (tableOrders.Length == 0) Line(C, "当前没有桌单。", 16, Ui.Dim);
-            Ui.Size(Ui.Button(C,"返回柜台处理桌单",()=>SelectTab(ShopTab.Counter),17),-1,38);
         }
 
         private void BuildFishOrder(SpecialBusinessState state, DiningOrder order)
         {
             var fish = order.Fish;
             ItemLabel(C, fish?.Id ?? "meal:fish", $"{order.DishName} · ¥{order.Price:N0} · 交付名望 +{order.ReputationReward:0.##}", 18, color: Ui.Accent);
-            Line(C, $"交期 {new GameTimestamp(order.DueAt)} · {fish?.Rarity}", 15, Ui.Dim);
+            CounterText(() => $"{S.Clock.OrderDeadlineText(order.DueAt)} · {fish?.Rarity}", 15, Ui.Dim);
             var worker = state.Workers.FirstOrDefault(w => w.Busy && w.OrderId == order.Id);
             bool canWork = !state.Workers.Any(w => w.Busy && w.ActorId == GameSession.RestaurantPlayer);
             if (worker != null)

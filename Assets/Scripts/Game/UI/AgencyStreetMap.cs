@@ -48,6 +48,7 @@ namespace PCShopSell.Game.UI
         private Vector3 _overview;
         private float _overviewSize;
         private Bounds _cityBounds;
+        private Bounds? _districtFrame;
         private HashSet<string> _placeIds;
         private HashSet<string> _selectableIds;
         private bool _dragged;
@@ -58,6 +59,7 @@ namespace PCShopSell.Game.UI
         public float Height { get; private set; }
         public float Zoom => _state.Zoom;
         public bool CanSelect(string id)=>id!=null&&_selectableIds!=null&&_selectableIds.Contains(id);
+        internal bool ShowsPlace(string id) => id != null && _placeIds != null && _placeIds.Contains(id);
         public static Place[] DistrictPlaces(GameSession session,Place agency)=>session.City.Places
             .Where(p=>session.AgencyServes(agency,p)).OrderBy(p=>session.City.ViewPosition(p.NodeId).X).ToArray();
 
@@ -66,6 +68,7 @@ namespace PCShopSell.Game.UI
             _overview = center;
             _overviewSize = radius * 1.15f;
             _cityBounds = new Bounds(center, new Vector3(radius * 3, 20, radius * 3));
+            _districtFrame = null;
             _state.Zoom = 1; _state.Offset = Vector2.zero;
             RequestMapRender();
         }
@@ -94,10 +97,13 @@ namespace PCShopSell.Game.UI
             bool hasBounds = false;
             var bounds = new Bounds(Vector3.zero, Vector3.zero);
             var shopBounds = new List<Bounds>();
+            var localBounds = new List<Bounds>();
             foreach (var unit in units)
             {
                 if (!game.World.Places.TryGetValue(unit.Id, out var visual)) continue;
                 var buildingBounds = BoundsOf(visual);
+                localBounds.Add(buildingBounds);
+                localBounds.Add(new Bounds(visual.Entrance, Vector3.zero));
                 if (!hasBounds) { bounds = buildingBounds; hasBounds = true; }
                 else bounds.Encapsulate(buildingBounds);
                 bounds.Encapsulate(game.World.NodeWorld(unit.NodeId));
@@ -115,6 +121,12 @@ namespace PCShopSell.Game.UI
             var projected = ProjectedBuildingBounds(shopBounds, _camera.transform.rotation);
             _overview = _camera.transform.rotation * projected.center;
             _overviewSize = Mathf.Max(12, Mathf.Max(projected.extents.y, projected.extents.x / _camera.aspect) * 1.12f + 2);
+            var districtFrame = ProjectedBuildingBounds(localBounds.Count == 0 ? shopBounds : localBounds, _camera.transform.rotation);
+            // Leave enough street frontage to frame properties along the district boundary.
+            districtFrame.Expand(new Vector3(32f * _camera.aspect, 32f, 0));
+            districtFrame.Encapsulate(new Bounds(projected.center, new Vector3(
+                2 * _overviewSize * _camera.aspect, 2 * _overviewSize, 0)));
+            _districtFrame = districtFrame;
             _texture = new RenderTexture(Mathf.RoundToInt(width), Mathf.RoundToInt(height), 24)
             { name = "AgencyStreetOverview", filterMode = FilterMode.Bilinear };
             _camera.targetTexture = _texture;
@@ -204,12 +216,30 @@ namespace PCShopSell.Game.UI
 
         private void ApplyCamera()
         {
-            // Clamp the target to the real district, so edge properties can still
-            // be centred rather than pinned against the viewport edge when zoomed.
-            _state.Offset.x = Mathf.Clamp(_state.Offset.x, _cityBounds.min.x - _overview.x, _cityBounds.max.x - _overview.x);
-            _state.Offset.y = Mathf.Clamp(_state.Offset.y, _cityBounds.min.z - _overview.z, _cityBounds.max.z - _overview.z);
-            _camera.orthographicSize = _overviewSize / _state.Zoom;
-            _camera.transform.position = _overview + new Vector3(_state.Offset.x, 0, _state.Offset.y) - _camera.transform.forward * 240;
+            float halfHeight = _overviewSize / _state.Zoom;
+            var cameraTransform = _camera.transform;
+            Vector3 target = _overview + new Vector3(_state.Offset.x, 0, _state.Offset.y);
+            if (_districtFrame is Bounds frame)
+            {
+                Vector3 right = cameraTransform.right;
+                Vector3 up = cameraTransform.up;
+                Vector3 groundUp = Vector3.ProjectOnPlane(up, Vector3.up);
+                float x = Vector3.Dot(target, right);
+                float y = Vector3.Dot(target, up);
+                float panX = Mathf.Max(0, frame.extents.x - halfHeight * _camera.aspect);
+                float panY = Mathf.Max(0, frame.extents.y - halfHeight);
+                float clampedX = Mathf.Clamp(x, frame.center.x - panX, frame.center.x + panX);
+                float clampedY = Mathf.Clamp(y, frame.center.y - panY, frame.center.y + panY);
+                target += right * (clampedX - x) + groundUp * ((clampedY - y) / groundUp.sqrMagnitude);
+            }
+            else
+            {
+                target.x = Mathf.Clamp(target.x, _cityBounds.min.x, _cityBounds.max.x);
+                target.z = Mathf.Clamp(target.z, _cityBounds.min.z, _cityBounds.max.z);
+            }
+            _state.Offset = new Vector2(target.x - _overview.x, target.z - _overview.z);
+            _camera.orthographicSize = halfHeight;
+            cameraTransform.position = target - cameraTransform.forward * 240;
         }
 
         private void RequestMapRender(bool notify = true)
@@ -304,6 +334,7 @@ namespace PCShopSell.Game.UI
         public void ResetView() { _state.Zoom = 1; _state.Offset = Vector2.zero; RequestMapRender(); }
         public void Focus(Place p)
         {
+            if (!ShowsPlace(p?.Id)) return;
             Vector3 at = _game.World.Places.TryGetValue(p.Id, out var place) ? place.Entrance : _game.World.NodeWorld(p.NodeId);
             float size = _game.World.Places.TryGetValue(p.Id, out var visual)
                 ? Mathf.Max(14, Mathf.Max(BoundsOf(visual).size.x, BoundsOf(visual).size.z) * 1.3f) : 18;

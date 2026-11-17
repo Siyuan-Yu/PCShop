@@ -18,6 +18,9 @@ namespace PCShopSell.Core.Session
     {
         public int Id, PrizeYuan; public bool Paid;
         public bool[] Cleared = new bool[144];
+        public string ResultText => PrizeYuan > 0
+            ? $"这张刮刮乐中了 {Money.FromYuan(PrizeYuan)}，奖金已到账。"
+            : "这张刮刮乐没有中奖。";
         public EventScratchTicket Copy() { var t = (EventScratchTicket)MemberwiseClone(); t.Cleared = (bool[])Cleared.Clone(); return t; }
     }
     [Serializable] public sealed class EventPrivateInvestment
@@ -167,7 +170,8 @@ namespace PCShopSell.Core.Session
             _eventTicket.Paid = true;
             if (_eventTicket.PrizeYuan > 0) Ledger.Credit(Clock.Today, "刮刮乐中奖", Money.FromYuan(_eventTicket.PrizeYuan), "刮刮乐#" + _eventTicket.Id,
                 new LedgerAttribution(LedgerBusinessKind.Personal, sourceEventId: "scratch-prize:" + _eventTicket.Id));
-            Say(_eventTicket.PrizeYuan > 0 ? "领到奖金¥" + _eventTicket.PrizeYuan + "。" : "这张没有中奖。"); return true;
+            Show("刮刮乐结果", _eventTicket.ResultText);
+            return true;
         }
         public bool BuyHospitalPolicy()
         {

@@ -143,10 +143,12 @@ namespace PCShopSell.Core.Session
         {
             var shop = ShopAt(shopId); var policy = ProcurementPolicyFor(shopId, kind, productId);
             int stock = shop == null ? 0 : kind == PurchaseGoodsKind.Part && PartCatalog.Exists(productId) ? shop.Sim.Stock.CountAll(PartCatalog.Get(productId))
-                : RestaurantIngredientsOnly(shop) && kind == PurchaseGoodsKind.Rice ? (int)Math.Floor(KitchenRice(shop) / .5 + 1e-9)
-                : RestaurantIngredientsOnly(shop) && kind == PurchaseGoodsKind.Ingredient ? KitchenIngredientCount(shop, productId)
-                : RestaurantIngredientsOnly(shop) && kind == PurchaseGoodsKind.Gift && productId == "produce:rice" ? RetailCount(shop.Locker, Gifts.Get(productId))
-                : RestaurantIngredientsOnly(shop) && kind == PurchaseGoodsKind.Gift && IsColdIngredientProduct(productId) ? RetailCount(shop.Fridge, Gifts.Get(productId))
+                : RestaurantIngredientsOnly(shop) && (kind == PurchaseGoodsKind.Rice || kind == PurchaseGoodsKind.Gift && productId == "produce:rice")
+                    ? (int)Math.Floor((shop.Fridge.Food.RiceKg + shop.Locker.Food.RiceKg) / .5 + 1e-9)
+                : RestaurantIngredientsOnly(shop) && kind == PurchaseGoodsKind.Ingredient
+                    ? shop.Fridge.Food.IngredientCount(productId) + shop.Locker.Food.IngredientCount(productId)
+                : RestaurantIngredientsOnly(shop) && kind == PurchaseGoodsKind.Gift && IsColdIngredientProduct(productId)
+                    ? RetailCount(shop.Fridge, Gifts.Get(productId)) + RetailCount(shop.Locker, Gifts.Get(productId))
                 : kind == PurchaseGoodsKind.Gift ? shop.Sim.Stock.GoodsCount(productId) : 0;
             // Materials for already reserved builds have left Stock. For other committed orders,
             // allocate remaining stock and supply to their deadline order before retail targets.

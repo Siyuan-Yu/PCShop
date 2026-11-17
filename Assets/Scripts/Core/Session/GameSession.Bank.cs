@@ -20,6 +20,7 @@ namespace PCShopSell.Core.Session
 
         private long _bankDepositCents, _bankInterestCents;
         private double _bankFraction;
+        private int _lastNegativeCashBankReminderDayNumber;
 
         public Money BankDeposit => Money.FromCents(_bankDepositCents);
         /// <summary>存款累计收到的利息。</summary>
@@ -27,16 +28,38 @@ namespace PCShopSell.Core.Session
         public bool AtBank => CurrentPlace != null && CurrentPlace.Business == BankBusiness;
         public Place BankPlace => City.HasPlace(BankPlaceId) ? City.GetPlace(BankPlaceId) : null;
 
-        public bool TryTakeNegativeCashBankReminder() =>
-            Ledger.Balance.IsNegative && BankPlace != null && Flags.Add("bank:negative-cash-reminder");
+        public CityPersonState BankTellerOnDuty(Place bank)
+        {
+            if (bank == null) return null;
+            return TellerAtCounter(CityLifeCatalog.BankTellerId) ?? TellerAtCounter(CityLifeCatalog.BankNightTellerId);
+
+            CityPersonState TellerAtCounter(string id)
+            {
+                var person = CityPersonState(id);
+                return person?.LocationPlaceId == bank.Id && person.WorkPlaceId == bank.Id
+                    && person.Task == CityPersonTask.Working && CityPersonInside(person)
+                    && AuthoredCityWorkAt(person, Clock.Now.TotalMinutes) ? person : null;
+            }
+        }
+
+        private string BankClosureReason(Place bank) =>
+            BankTellerOnDuty(bank) == null ? $"{bank.Name}暂时没有柜员在岗，柜台暂停办理。" : null;
+
+        public bool TryTakeNegativeCashBankReminder()
+        {
+            int dayNumber = Clock.Today.TotalDays + 1;
+            if (_lastNegativeCashBankReminderDayNumber == dayNumber || !Ledger.Balance.IsNegative || BankPlace == null)
+                return false;
+            _lastNegativeCashBankReminderDayNumber = dayNumber;
+            return true;
+        }
 
         /// <summary>为什么现在办不了银行业务；能办返回 null。</summary>
         public string BankBlocker()
         {
             if (IsGameOver || IsWorking) return "当前不能办理银行业务。";
             if (!AtBank) return "请到城郊银行柜台办理。";
-            if (!IsPlaceOpen(CurrentPlace)) return "银行已打烊，营业时间 " + OpeningHoursText(CurrentPlace) + "。";
-            return null;
+            return BankClosureReason(CurrentPlace);
         }
 
         public bool BankDepositMoney(long yuan)
@@ -103,6 +126,7 @@ namespace PCShopSell.Core.Session
             _bankDepositCents = Math.Max(0, data.bankDepositCents);
             _bankInterestCents = Math.Max(0, data.bankInterestCents);
             _bankFraction = double.IsNaN(data.bankFraction) || data.bankFraction < 0 || data.bankFraction >= 1 ? 0 : data.bankFraction;
+            _lastNegativeCashBankReminderDayNumber = data.negativeCashBankReminderDayNumber;
         }
     }
 }

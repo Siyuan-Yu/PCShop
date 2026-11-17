@@ -130,8 +130,10 @@ namespace PCShopSell.Core.Session
             if (!InPlayerShop) return 0;
             var definition = Gifts.Get(giftId);
             int carried = RetailCount(Backpack, definition);
-            return RestaurantIngredientsOnly(_focus) && giftId == "produce:rice"
-                ? carried : carried + RetailCount(ShopLocker, definition);
+            int stored = RetailCount(ShopLocker, definition);
+            if (RestaurantIngredientsOnly(_focus) && IsRawIngredientProduct(giftId))
+                stored = FridgeUnitsThatFit(RestaurantFridgeRoom(_focus), definition.WeightKg, stored);
+            return carried + stored;
         }
 
         /// <summary>店里能放进后仓的杂货一共有几件。</summary>
@@ -150,25 +152,17 @@ namespace PCShopSell.Core.Session
             if (have < count) return Fail($"手边只有 {have} 件「{g.Name}」。");
             if (RestaurantIngredientsOnly(_focus) && IsRawIngredientProduct(giftId))
             {
-                if (giftId == "produce:rice")
-                {
-                    Backpack.Food.RiceKg = Math.Max(0, Backpack.Food.RiceKg - count * g.WeightKg);
-                    AddRetailToBag(ShopLocker, g, count, FoodBatch.NoExpiry);
-                    ApplyCargoLimit();
-                    if (notify) Say("大米已存放在门店后仓。");
-                    return true;
-                }
-                string blocker = RestaurantFridgeRequired(_focus);
-                if (blocker != null) return Fail(blocker + "。");
-                if (g.WeightKg * count > RestaurantFridgeRoom(_focus) + 1e-9) return Fail("冰箱放不下这些食材。");
+                int fits = FridgeUnitsThatFit(RestaurantFridgeRoom(_focus), g.WeightKg, count);
                 for (int i = 0; i < count; i++)
                 {
-                    var source = RetailCount(ShopLocker, g) > 0 ? ShopLocker : Backpack;
+                    bool chill = i < fits;
+                    var source = chill && RetailCount(ShopLocker, g) > 0 ? ShopLocker : Backpack;
                     var batch = TakeRetailFromBag(source, g);
-                    AddRetailToBag(_focus.Fridge, g, 1, batch.ExpireDay, chilled: true);
+                    AddRetailToBag(chill ? _focus.Fridge : ShopLocker, g, 1, batch.ExpireDay, chill);
                 }
                 ApplyCargoLimit();
-                if (notify) Say($"把「{g.Name}」×{count} 放进了冰箱。");
+                if (notify) Say(fits == 0 ? $"「{g.Name}」×{count} 已放入后仓。" : fits == count
+                    ? $"「{g.Name}」×{count} 已放入冰箱。" : $"「{g.Name}」×{fits} 已放入冰箱，其余已放入后仓。");
                 return true;
             }
             if (!PlayerShop.Stock.CanAddGoods(giftId, count)) return Fail("店里放不下了（仓位不够）。");

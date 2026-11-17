@@ -72,7 +72,7 @@ namespace PCShopSell.Game.UI
                 {
                     Line(body, "获得采购订单 · 需另备货交付", 20, Ui.Good);
                     foreach (var order in orders)
-                        Line(body, S.BrandProductName(order.ProductId) + " ×" + order.Count + " · 截止 " + new GameDate(order.Due), 17);
+                        Line(body, $"{S.BrandProductName(order.ProductId)} ×{order.Count} · {BrandOrderDeadline(order)}", 17);
                     Ui.Size(Ui.Button(body, "查看本届采购订单", () => { w.Close(); OpenExpoOrders(id); }, 18, Ui.ButtonBg), -1, 42);
                 }
                 var actions = Ui.Row(w.Content, 44, 10);
@@ -102,7 +102,8 @@ namespace PCShopSell.Game.UI
                 foreach (var order in orders)
                 {
                     var card = BrandCard(list, S.BrandProductName(order.ProductId) + " ×" + order.Count);
-                    Line(card, "货款 " + Money.FromCents(order.UnitCents * order.Count) + " · 截止 " + new GameDate(order.Due), 19);
+                    Line(card, $"货款 {Money.FromCents(order.UnitCents * order.Count)}"
+                        + (order.Done || order.Failed ? "" : $" · {BrandOrderDeadline(order)}"), 19);
                     Line(card, "供货门店：" + S.PlaceTitle(S.City.GetPlace(order.ShopId)), 17);
                     Line(card, "现货 " + S.BrandProductCount(order.ShopId, order.ProductId) + "件 · 运费¥30 · 到货后结算货款", 16, Ui.Dim);
                     if (order.Done || order.Failed) Line(card, order.Done ? "已交付并结算" : "订单已逾期", 18, order.Done ? Ui.Good : Ui.Warn);

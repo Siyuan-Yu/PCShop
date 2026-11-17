@@ -169,7 +169,10 @@ namespace PCShopSell.Core.Session
             SaveGrowth(d);
             d.appLoans = _appLoans.Select(l => l.Copy()).ToArray();
             d.bankDepositCents = _bankDepositCents; d.bankInterestCents = _bankInterestCents; d.bankFraction = _bankFraction;
+            d.negativeCashBankReminderDayNumber = _lastNegativeCashBankReminderDayNumber;
             d.priceDays = _priceDays.Select(p => p.Copy()).ToArray();
+            d.marketPriceAlertDay = MarketPriceAlertDay;
+            d.marketPriceAlerts = MarketPriceAlerts.ToArray();
             SavePropertyMarket(d);
             d.economicReportCadence = (int)ReportCadence;
             d.weeklyPricesPending = EconomicReportPending;

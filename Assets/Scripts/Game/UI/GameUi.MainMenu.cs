@@ -11,6 +11,9 @@ namespace PCShopSell.Game.UI
         private Window _mainMenu;
         private bool _canResumeMainMenu;
         private Texture2D _mainMenuCover;
+        private const float MenuLeft = .054f;
+        private static readonly Color MenuButtonFill = new Color32(38, 54, 70, 255);
+        private static readonly Color MenuButtonEdge = new Color32(117, 128, 138, 255);
         public bool MainMenuOpen => _mainMenu != null && !_mainMenu.Closed;
         private static string L(string key) => MenuLocalization.Get(key);
 
@@ -70,7 +73,7 @@ namespace PCShopSell.Game.UI
             coverTitle.resizeTextForBestFit = true;
             coverTitle.resizeTextMinSize = 30;
             coverTitle.resizeTextMaxSize = 132;
-            coverTitle.rectTransform.Anchor(.048f, .682f, .445f, .84f);
+            coverTitle.rectTransform.Anchor(MenuLeft, .682f, .445f, .84f);
             var shadow = coverTitle.gameObject.AddComponent<Shadow>();
             shadow.effectColor = new Color(.02f, .03f, .07f, .88f);
             shadow.effectDistance = new Vector2(3, -4);
@@ -78,42 +81,48 @@ namespace PCShopSell.Game.UI
             subtitle.resizeTextForBestFit = true;
             subtitle.resizeTextMinSize = 16;
             subtitle.resizeTextMaxSize = 27;
-            subtitle.rectTransform.Anchor(.052f, .631f, .44f, .685f);
+            subtitle.rectTransform.Anchor(MenuLeft, .631f, .44f, .685f);
             if (GameSession.FirstChapterTrial)
                 Ui.Label(w.Content, L("trial_edition"), 17, TextAnchor.MiddleLeft, Ui.ChromeGold)
-                    .rectTransform.Anchor(.052f, .596f, .44f, .631f);
+                    .rectTransform.Anchor(MenuLeft, .596f, .44f, .631f);
 
-            var actions = Ui.Rect(w.Content, "MenuActions").Anchor(.048f, .12f, .222f, _canResumeMainMenu ? .59f : .556f);
-            Ui.VList(actions, 14, 0);
+            var actions = Ui.Rect(w.Content, "MenuActions").Anchor(MenuLeft, .12f, MenuLeft + .25f,
+                GameSession.FirstChapterTrial ? .567f : .589f);
+            Ui.VList(actions, 15, 0);
+            const float actionHeight = 76f;
             bool hasSaves = SaveStore.Exists;
             if (_canResumeMainMenu)
-                Ui.Size(MainMenuAction(actions, "resume", w.Close, emphasized: true), -1, 66);
+                Ui.Size(MainMenuAction(actions, "resume", w.Close, emphasized: true), -1, actionHeight);
             Ui.Size(MainMenuAction(actions, hasSaves || _canResumeMainMenu ? "new_game" : "start", () =>
             {
                 if (_canResumeMainMenu) ConfirmMenuAction("new_game", "new_confirm", "new_game", _ctrl.NewGame);
                 else _ctrl.NewGame();
-            }, emphasized: !_canResumeMainMenu && !hasSaves), -1, 66);
+            }, emphasized: !_canResumeMainMenu && !hasSaves), -1, actionHeight);
             Ui.Size(MainMenuAction(actions, "load", () => OpenLoadMenu(_canResumeMainMenu),
-                emphasized: !_canResumeMainMenu && hasSaves, interactable: hasSaves), -1, 66);
-            Ui.Size(MainMenuAction(actions, "settings", OpenSettingsMenu), -1, 66);
-            var links = Ui.Row(actions, 42, 8);
-            Ui.Size(MainMenuAction(links, "help", OpenHelpMenu, link: true), 0, -1, 1);
-            Ui.Size(MainMenuAction(links, "about", OpenAboutMenu, link: true), 0, -1, 1);
-            Ui.Size(MainMenuAction(actions, "quit", OpenQuitMenu, link: true), -1, 40);
+                emphasized: !_canResumeMainMenu && hasSaves, interactable: hasSaves), -1, actionHeight);
+            Ui.Size(MainMenuAction(actions, "settings", OpenSettingsMenu), -1, actionHeight);
+            var secondary = Ui.Row(actions, 68, 15);
+            Ui.Size(MainMenuAction(secondary, "help", OpenHelpMenu, compact: true), 0, -1, 1);
+            Ui.Size(MainMenuAction(secondary, "about", OpenAboutMenu, compact: true), 0, -1, 1);
+            Ui.Size(MainMenuAction(secondary, "quit", OpenQuitMenu, compact: true), 0, -1, 1);
         }
 
         private static Button MainMenuAction(Transform parent, string key, Action click,
-            bool emphasized = false, bool interactable = true, bool link = false)
+            bool emphasized = false, bool interactable = true, bool compact = false)
         {
-            int size = link ? 25 : 31;
-            Color fill = emphasized ? Ui.ButtonHot : link ? Color.clear : Ui.ChromeButton;
+            int size = compact ? 23 : 31;
+            Color fill = emphasized ? Ui.ButtonHot : MenuButtonFill;
             var button = Ui.Button(parent, L(key), click, size, fill, interactable);
+            Ui.FlatBorder(button.image, emphasized ? Ui.FlatHotEdge : MenuButtonEdge);
             var caption = button.GetComponentInChildren<Text>();
-            caption.alignment = TextAnchor.MiddleLeft;
+            caption.alignment = compact ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft;
             caption.resizeTextForBestFit = true;
-            caption.resizeTextMinSize = 16;
+            caption.resizeTextMinSize = compact ? 13 : 16;
             caption.resizeTextMaxSize = size;
-            caption.rectTransform.Anchor(0, 0, 1, 1, link ? 12 : 32, 0, 12);
+            caption.rectTransform.Anchor(0, 0, 1, 1, compact ? 8 : 26, 0, emphasized ? 56 : 8);
+            if (emphasized)
+                Ui.Label(button.transform, "›", 38, TextAnchor.MiddleCenter, Ui.TextColor)
+                    .rectTransform.Anchor(1, 0, 1, 1, -52, 0, 14);
             var feedback = button.colors;
             feedback.highlightedColor = new Color(1.17f, 1.17f, 1.17f);
             button.colors = feedback;

@@ -79,7 +79,12 @@ namespace PCShopSell.Game.UI
                     var view = raw.gameObject.AddComponent<AgencyStreetMap>();
                     var state = new AgencyStreetMap.ViewState();
                     var center = S.DoorOf(place); double range = S.ShopCompetitionRadiusWorld * 1.6;
-                    var units = S.City.Places.Where(p => { var d = S.DoorOf(p); return System.Math.Abs(d.X-center.X) <= range && System.Math.Abs(d.Y-center.Y) <= range; }).ToArray();
+                    var units = S.City.Places.Where(p =>
+                    {
+                        if (agencyDetails && !S.AgencyServes(S.CurrentPlace, p)) return false;
+                        var d = S.DoorOf(p);
+                        return System.Math.Abs(d.X - center.X) <= range && System.Math.Abs(d.Y - center.Y) <= range;
+                    }).ToArray();
                     view.Initialize(_ctrl, state, units, 1120, 560);
                     view.FrameArea(new Vector3((float)center.X, .2f, (float)center.Y), (float)S.ShopCompetitionRadiusWorld);
                     var overlay = Ui.Rect(raw, "CompetitionAnnotations").Fill();
@@ -96,6 +101,7 @@ namespace PCShopSell.Game.UI
             var competitors = new HashSet<string>(S.NearbyCompetingShops(place, CompetitionPreviewKind(place)).Select(s => s.Place.Id));
             void Mark(Place target, string name, string kind, bool selected)
             {
+                if (!view.ShowsPlace(target.Id)) return;
                 if (!_ctrl.World.Places.TryGetValue(target.Id, out var building)) return;
                 var bounds = AgencyStreetMap.BuildingBounds(building);
                 var point = view.Project(new Vector3(bounds.center.x, bounds.max.y + 1, bounds.center.z));

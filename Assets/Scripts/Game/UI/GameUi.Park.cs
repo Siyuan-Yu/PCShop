@@ -25,7 +25,24 @@ namespace PCShopSell.Game.UI
                     var l=listing;var c=BusinessCard(w.Content,S.City.GetPlace(l.PlaceId).Name+" · 园区候选地");
                     Line(c,$"物业价格 {S.ParkLandPrice(l)} + 公共区改造 ¥50,000",17);
                     string why=S.ParkPurchaseBlocker(l);if(why!=null)Para(c,why,16,Ui.Dim);
-                    Ui.Size(Ui.Button(c,"购入并开始改造…",()=>ConfirmBusiness("建设电脑乐园",$"支付 {S.ParkLandPrice(l)+Money.FromYuan(50000)}，7 天后可招商。园区每月维护费 {S.ParkLandPrice(l).Scale(.001)}，各铺位另需装修和周转金。",()=>{S.BuyPark(l.PlaceId);w.Rebuild();}),18,Ui.ButtonHot,S.InAgency && why==null),-1,42);
+                    Ui.Size(Ui.Button(c, "购入并开始改造…", () =>
+                    {
+                        Money price = S.ParkLandPrice(l);
+                        Money renovation = Money.FromYuan(50000);
+                        OpenPropertyContract("园区购置合同", UnitName(S.ListingPlace(l)), "大型物业 · 电脑乐园", price + renovation,
+                            fees =>
+                            {
+                                AgencyFeeLine(fees, "物业售价", price.ToString());
+                                AgencyFeeLine(fees, "公共区改造费", renovation.ToString());
+                            }, $"签约后开始改造，<b>7 天后可招商</b>。园区每月维护费 {price.Scale(.001)}，各铺位另需装修及周转金。",
+                            true, () =>
+                            {
+                                var live = S.Listings.FirstOrDefault(a => a.PlaceId == l.PlaceId);
+                                if (live != null && S.ParkLandPrice(live) == price) return S.BuyPark(l.PlaceId);
+                                Toast("房源或费用有变化，请重新核对。");
+                                return false;
+                            }, w.Rebuild, "ParkConfirmPurchase", S.ParkPurchaseBlocker(l));
+                    }, 18, Ui.ButtonHot, S.InAgency && why == null), -1, 42);
                 }
                 if (local.Length == 0) Para(w.Content, S.InAgency ? "本片区当前没有大型铺面挂牌。" : "当前开放片区没有大型铺面挂牌。", 17, Ui.Dim);
                 return;

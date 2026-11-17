@@ -77,7 +77,7 @@ namespace PCShopSell.Game.UI
             {
                 _questHidden = true;
                 UpdateQuestTracker();
-                Toast("任务条收起来了，点顶栏“任务”（或按 T）随时再打开。");
+                Toast($"任务条收起来了，点顶栏“任务”（或按 {HotkeyLabel(QuestHotkey)}）随时再打开。");
             }, 20);
             ((RectTransform)close.transform).Anchor(1, 1, 1, 1, -38, -36, 6, 6);
             close.Tip("收起任务条（顶栏“任务”按钮可重新打开）");
@@ -97,6 +97,13 @@ namespace PCShopSell.Game.UI
         /// <summary>顶栏“任务”按钮：打开当前任务说明，并重新显示左上角的任务条。</summary>
         public void OpenQuests()
         {
+            if (S.FirstChapterTrialCompleted)
+            {
+                _questHidden = false;
+                UpdateQuestTracker();
+                OpenDistrictStory();
+                return;
+            }
             if(S.IsOwnedVenue(S.CurrentPlace)){OpenVenueManagement(S.CurrentPlace);return;}
             _questHidden = false;
             UpdateQuestTracker();
@@ -115,7 +122,7 @@ namespace PCShopSell.Game.UI
         {
             if (_questPanel == null) return;
             if (OpeningMealPreludePending) { _questPanel.gameObject.SetActive(false); return; }
-            if(S.IsOwnedVenue(S.CurrentPlace))
+            if(!S.FirstChapterTrialCompleted && S.IsOwnedVenue(S.CurrentPlace))
             {
                 _questPanel.gameObject.SetActive(!_questHidden&&!S.IsGameOver&&!_ctrl.Placing);
                 SetQuestCard("场馆经营", S.VenueBusinessName(S.CurrentPlace), "设置价格和营业时间，安排值守后开启接客。",
@@ -127,7 +134,9 @@ namespace PCShopSell.Game.UI
             {
                 QuestDef done = _questSeen != null && S.QuestCompleted(_questSeen) ? Quests.Get(_questSeen) : null;
                 if (done != null) SoundFx.Play(Sfx.Success);
-                if (QuestPopups && (done != null || q != null))
+                if (S.FirstChapterTrialCompleted && q == null) done = null; // The trial has its own completion popup.
+                if (QuestPopups && (done != null || q != null)
+                    && q?.QuietTransition != true && done?.QuietTransition != true)
                 {
                     _pendingDone = _pendingDone ?? done;
                     _pendingNext = q;
@@ -147,10 +156,12 @@ namespace PCShopSell.Game.UI
             _questSeen = q?.Id;
             var district = S.CurrentDistrictNode;
             string invitation = S.DistrictInvitationStatus;
-            bool visible = (q != null || district != null || invitation != null) && !_questHidden && !S.IsGameOver && !_ctrl.Placing;
+            bool visible = (q != null || district != null || invitation != null || S.FirstChapterTrialCompleted) && !_questHidden && !S.IsGameOver && !_ctrl.Placing;
             _questPanel.gameObject.SetActive(visible);
             if (!visible) return;
-            if (district != null) UpdateDistrictQuestCard(district);
+            if (S.FirstChapterTrialCompleted)
+                SetQuestCard("试玩完成", "城郊经营目标已达成", "可以继续在城郊经营。", progress: "5 家店 · 100 万元自有现金 · 无贷款");
+            else if (district != null) UpdateDistrictQuestCard(district);
             else if (invitation != null) SetQuestCard("主线 · 等待联系", "等待街区引荐", invitation,
                 "引荐条件已达成");
             else
@@ -190,7 +201,7 @@ namespace PCShopSell.Game.UI
 
         private void OpenTrackedQuestDetails()
         {
-            if (!S.IsOwnedVenue(S.CurrentPlace) && (S.CurrentDistrictNode != null || S.DistrictInvitationStatus != null))
+            if (S.FirstChapterTrialCompleted || !S.IsOwnedVenue(S.CurrentPlace) && (S.CurrentDistrictNode != null || S.DistrictInvitationStatus != null))
                 OpenDistrictStory();
             else OpenQuestWindow();
         }
@@ -482,7 +493,10 @@ namespace PCShopSell.Game.UI
             {
                 case QuestTarget.Cooker: return "位置：家里 · 电饭锅";
                 case QuestTarget.Bed: return "位置：家里 · 床边";
-                case QuestTarget.Agency: return "地点：商业街 · <color=#80551F>安居房产中介</color>";
+                case QuestTarget.Agency:
+                    return S.City.HasPlace("agency") && S.City.GetPlace("agency") is Place agency
+                        ? $"地点：{S.City.StreetName(agency.StreetId)} · <color=#80551F>{agency.Name}</color>"
+                        : "";
                 case QuestTarget.Renovate: return "位置：自己的店 → 右侧“装修”页";
                 case QuestTarget.Stock: return "位置：自己的店 · 货架";
                 case QuestTarget.Market: return "地点：<color=#80551F>电子市场</color> · 配件档口";

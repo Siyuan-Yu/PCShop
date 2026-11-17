@@ -314,43 +314,25 @@ namespace PCShopSell.Core.Session
         private static bool IsRawIngredientDelivery(CourierItem item) =>
             IsRiceDelivery(item) || IsColdIngredientDelivery(item);
 
-        private static string RestaurantFridgeRequired(OwnedShop shop) =>
-            RestaurantIngredientsOnly(shop) && FridgeCapacityOf(shop.Layout) <= 0
-                ? "餐馆要先摆放冰箱才能收需冷藏的食材" : null;
-
         private static double RestaurantFridgeRoom(OwnedShop shop) =>
             Math.Max(0, FridgeCapacityOf(shop.Layout) - shop.Fridge.WeightKg);
 
-        private string RestaurantColdStorageBlocker(OwnedShop shop, double kg)
-        {
-            if (kg <= 1e-9 || !RestaurantIngredientsOnly(shop)) return null;
-            if (RestaurantFridgeRequired(shop) is string missing) return missing;
-            string shopId = shop.Place.Id;
-            double incoming = _couriers.Where(run => run.ToShop && DeliveryShop(run.ShopId) == shop)
-                .Sum(run => run.Items.Where(IsColdIngredientDelivery).Sum(CourierItemKg))
-                + _employeeTrips.Where(trip => !trip.Delivered && DeliveryShop(trip.ShopId) == shop)
-                    .Sum(trip => trip.Items.Select(PurchaseCourierItem).Where(IsColdIngredientDelivery).Sum(CourierItemKg))
-                + _parcels.Where(parcel => parcel.ToShop && parcel.ShopId == shopId
-                    && parcel.Kind == ParcelKind.Gift && IsColdIngredientProduct(parcel.Id))
-                    .Sum(parcel => Gifts.Get(parcel.Id).WeightKg * parcel.Count);
-            double room = Math.Max(0, RestaurantFridgeRoom(shop) - incoming);
-            return kg <= room + 1e-9 ? null : $"冰箱扣除在途食材后还能放 {room:0.##} 千克，本次需要 {kg:0.##} 千克";
-        }
-
         private string UnpackRestaurantIngredient(OwnedShop shop, CourierItem item)
         {
+            double room = RestaurantFridgeRoom(shop);
+            string Destination(double cold, double stored) => stored <= 1e-9 ? "已放入冰箱"
+                : cold <= 1e-9 ? "已放入门店后仓" : "冰箱放不下的部分已放入门店后仓";
             if (IsRiceDelivery(item))
             {
                 double kg = CourierItemKg(item);
-                shop.Locker.Food.RiceKg += kg;
-                return $"大米 {kg:0.##} 千克（已放进门店后仓）";
+                double cold = Math.Min(room, kg);
+                shop.Fridge.Food.RiceKg += cold;
+                shop.Locker.Food.RiceKg += kg - cold;
+                return $"大米 {kg:0.##} 千克（{Destination(cold, kg - cold)}）";
             }
-            double room = RestaurantFridgeRoom(shop);
-            string Destination(double overflow) => overflow <= 1e-9 ? "已放入冰箱"
-                : room <= 1e-9 ? "冰箱未摆放或已满，已送回家中后仓" : "冰箱装不下的部分已送回家中后仓";
             var product = Gifts.Get(item.Id);
             int count = item.Count;
-            int fits = count <= 0 ? 0 : Math.Min(count, (int)Math.Floor(room / (CourierItemKg(item) / count) + 1e-9));
+            int fits = count <= 0 ? 0 : FridgeUnitsThatFit(room, CourierItemKg(item) / count, count);
             string name = item.Kind == CourierItemKind.Ingredient ? Ingredients.Get(item.Id)?.Name ?? item.Id : product.Name;
             void Add(Backpack bag, int units, bool chilled)
             {
@@ -360,54 +342,29 @@ namespace PCShopSell.Core.Session
                 else AddRetailToBag(bag, product, units, FoodBatch.NoExpiry, chilled);
             }
             Add(shop.Fridge, fits, true);
-            Add(HomeBox, count - fits, false);
-            return $"{name}×{count}（{Destination(count - fits)}）";
+            Add(shop.Locker, count - fits, false);
+            return $"{name}×{count}（{Destination(fits, count - fits)}）";
         }
 
         private void NormalizeRestaurantIngredientStorage(OwnedShop shop)
         {
             if (!RestaurantIngredientsOnly(shop)) return;
-            var fridge = shop.Fridge;
-            MoveStoredRice(fridge.Food, shop.Locker.Food);
-            MoveStoredRice(shop.Temp.Food, shop.Locker.Food);
             const string packagedRice = "produce:rice";
             var rice = Gifts.Get(packagedRice);
-            foreach (var bag in new[] { shop.Locker, shop.Temp, fridge })
+            foreach (var bag in new[] { shop.Locker, shop.Temp, shop.Fridge })
             {
                 int count = bag.GiftCount(packagedRice);
                 if (count > 0 && bag.TakeGift(packagedRice, count))
-                    AddRetailToBag(shop.Locker, rice, count, FoodBatch.NoExpiry);
+                    AddRetailToBag(bag, rice, count, FoodBatch.NoExpiry);
             }
-            int packagedStock = shop.Sim.Stock.GoodsCount(packagedRice);
-            if (packagedStock > 0 && shop.Sim.Stock.TryRemoveGoods(packagedRice, packagedStock))
-                AddRetailToBag(shop.Locker, rice, packagedStock, FoodBatch.NoExpiry);
-
-            double capacity = FridgeCapacityOf(shop.Layout);
-            if (capacity <= 0) return;
-            foreach(var bag in new[]{shop.Locker,shop.Temp})
+            foreach (var line in shop.Sim.Stock.GoodsLines().Where(line => IsRawIngredientProduct(line.Key)).ToArray())
             {
-                foreach(var batch in bag.Food.Ingredient.ToArray())
-                {
-                    double unit=Backpack.IngredientKg(batch.Id);int fit=Math.Min(batch.Count,(int)Math.Floor(Math.Max(0,capacity-fridge.WeightKg)/unit+1e-9));
-                    if(fit<1)continue;var copy=batch.Clone();copy.Count=fit;fridge.Food.Ingredient.Add(copy);batch.Count-=fit;if(batch.Count==0)bag.Food.Ingredient.Remove(batch);
-                }
+                if (shop.Sim.Stock.TryRemoveGoods(line.Key, line.Value))
+                    AddRetailToBag(shop.Locker, Gifts.Get(line.Key), line.Value, FoodBatch.NoExpiry);
             }
-            foreach(var line in shop.Sim.Stock.GoodsLines().ToArray())
-            {
-                if (!IsColdIngredientProduct(line.Key)) continue;
-                var product=Gifts.Get(line.Key);
-                int fit=Math.Min(line.Value,(int)Math.Floor(Math.Max(0,capacity-fridge.WeightKg)/product.WeightKg+1e-9));
-                for(int n=0;n<fit;n++)
-                {
-                    int expiry=shop.Sim.Stock.GoodsExpiry(product.Id);bool chilled=shop.Sim.Stock.GoodsChilled(product.Id);
-                    if(!shop.Sim.Stock.TryRemoveGoods(product.Id,1))break;
-                    AddRetailToBag(fridge,product,1,expiry,chilled);
-                }
-            }
-            Chill(fridge);
         }
-        public int KitchenIngredientCount(OwnedShop shop,string id) => shop.Fridge.Food.IngredientCount(id);
-        public double KitchenRice(OwnedShop shop) => shop.Locker.Food.RiceKg;
+        public int KitchenIngredientCount(OwnedShop shop,string id) => FridgeCapacityOf(shop.Layout) > 0 ? shop.Fridge.Food.IngredientCount(id) : 0;
+        public double KitchenRice(OwnedShop shop) => FridgeCapacityOf(shop.Layout) > 0 ? shop.Fridge.Food.RiceKg : 0;
         private int[] RestaurantMealChoices()
         {
             var shop=CurrentShop;
@@ -492,7 +449,7 @@ namespace PCShopSell.Core.Session
             int fishShort = fish == null ? 0 : servings - fishCount;
             if (riceShort <= 1e-9 && ingredientShort <= 0 && fishShort <= 0) return null;
 
-            string pantry = riceShort > 1e-9 ? $"后仓缺大米 {riceShort:0.###} 千克。" : "";
+            string pantry = riceShort > 1e-9 ? $"冰箱缺大米 {riceShort:0.###} 千克。" : "";
             string fridge = ingredientShort > 0 ? $"{Ingredients.Get(RecipeIngredients[recipe]).Name} {ingredientShort} 份" : "";
             if (fishShort > 0)
                 fridge += (fridge.Length == 0 ? "" : "、") + $"{fish.Name} {fishShort} 条";
@@ -503,7 +460,7 @@ namespace PCShopSell.Core.Session
         {
             string id=RecipeIngredients[recipe];
             if (RestaurantIngredientBlocker(shop, recipe, fish) != null) return false;
-            shop.Locker.Food.RiceKg = Math.Max(0, KitchenRice(shop) - .25);
+            shop.Fridge.Food.RiceKg = Math.Max(0, shop.Fridge.Food.RiceKg - .25);
             Pantry.TakeBowl(shop.Fridge.Food.Ingredient, id);
             if (fish != null) Pantry.TakeBowl(shop.Fridge.Food.Ingredient, fish.Id);
             return true;

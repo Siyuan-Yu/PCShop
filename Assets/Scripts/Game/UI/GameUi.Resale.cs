@@ -305,33 +305,50 @@ namespace PCShopSell.Game.UI
             Line(parent, $"已售出 · {UsedItemTitle(sold)} · 收入 ¥{price:N0} · 成本 ¥{sold.Cost:N0} · 毛利 ¥{price - sold.Cost:N0}{reward}",
                 15, price >= sold.Cost ? Ui.Good : Ui.Warn).name = "UsedSold_" + sold.Id;
         }
-        private void BuildUsedStock(Transform parent,Window owner=null,bool shelfOnly=false,bool pricingOnly=false,int[] displayed=null)
+        private void BuildUsedStock(Transform parent, Window owner = null, bool shelfOnly = false, bool pricingOnly = false,
+            int[] displayed = null, int shelfPage = 0, Action<int> changeShelfPage = null)
         {
             var state=S.SpecialBusiness(S.CurrentShop.Place.Id);
             var onShelf=S.PlayerShop.ShelfFillOf(ShelfKinds.Get("secondhand")).Resale.Select(i=>i.Id).ToArray();
             Line(parent,pricingOnly?"二手商品定价":"二手转售库存",19,Ui.Accent);
             var items=state.Used.Where(i=>i.Owned&&!i.Sold&&(!shelfOnly||(displayed??onShelf).Contains(i.Id))&&(!pricingOnly||i.Inspected)).ToArray();
+            const int pageSize = 4;
+            int pages = Math.Max(1, (items.Length + pageSize - 1) / pageSize);
+            shelfPage = Mathf.Clamp(shelfPage, 0, pages - 1);
             Transform container=parent;
-            if(shelfOnly)
+            if (shelfOnly && items.Length > 0)
             {
-                var frame=Ui.Panel(parent,"UsedShelf",WoodDark).rectTransform;Ui.VList(frame,8,10);container=frame;
+                var frame = Ui.FlatPanel(parent, "UsedShelf", Ui.FlatBand).rectTransform;
+                Ui.VList(frame, 8, 10);
+                container = frame;
+                items = items.Skip(shelfPage * pageSize).Take(pageSize).ToArray();
             }
             foreach(var item in items)
             {
                 int id=item.Id;bool reserved=S.UsedReserved(S.CurrentShop,id);
                 string status=reserved?"顾客已拿取 · 等待收银":onShelf.Contains(id)?"已上架 · 等待挑选":item.Listed?"等待货架空位":item.Inspected?"已鉴定 · 待定价上架":"待鉴定";
-                var card=Ui.Panel(container,"UsedStock_"+id,shelfOnly?ShelfBack:Ui.PanelBg2).rectTransform;Ui.VList(card,5,8);
-                var title = Ui.Row(card, shelfOnly ? 68 : 46, 8);
-                ItemPortrait(title, "used:" + item.Product, shelfOnly ? 64 : 42).name = "UsedIllustration_" + id;
+                var card = (shelfOnly ? Ui.FlatPanel(container, "UsedStock_" + id, Ui.PanelBg)
+                    : Ui.Panel(container, "UsedStock_" + id, Ui.PanelBg2)).rectTransform;
+                Ui.VList(card, 5, 8);
+                var title = Ui.Row(card, 46, 8);
+                ItemPortrait(title, "used:" + item.Product, 42).name = "UsedIllustration_" + id;
                 Ui.Size(Ui.Label(title, GameSession.UsedNames[item.Product] + " #" + id + " · " + status, 17, color: Ui.Accent), 0, -1, 1);
                 Line(card,(item.Inspected?GameSession.UsedConditionName(item):"状态待鉴定")+" · "+GameSession.UsedWeight(item).ToString("0.##")+" 千克 · 成本 ¥"+item.Cost+" · 标价 ¥"+item.Price,15);
                 var row=Ui.Row(card,34,5);
                 Ui.Size(Ui.Button(row,item.Listed?"调整售价":"定价并上架",()=>OpenUsedPrice(id,owner),16,Ui.ButtonBg,item.Inspected&&!reserved),-1,34,1);
                 if(item.Listed)Ui.Size(Ui.Button(row,"下架",()=>{S.UnlistUsedItem(id);owner?.Rebuild();RebuildDock();},16,Ui.ButtonBg,!reserved),85,34);
-                if(shelfOnly)Ui.Size(Ui.Panel(container,"Plank",WoodLight),-1,10);
             }
             if(items.Length==0)Line(parent,"暂无二手转售库存。",16,Ui.Dim);
-            if(!pricingOnly)BuildUsedSalesHistory(parent,state);
+            if (shelfOnly)
+            {
+                BuildCompactPageControls(parent, shelfPage, pages, changeShelfPage);
+                var sales = state.Used.Where(i => i.Sold).Reverse().Take(5).ToArray();
+                if (sales.Length > 0) BuildUsedSale(parent, sales[0]);
+                if (sales.Length > 1)
+                    Ui.Size(Ui.Button(parent, "查看最近成交", () => OpenCompactWindow("最近成交", 780,
+                        w => BuildUsedSalesHistory(w.Content, state)), 16), -1, 34);
+            }
+            else if (!pricingOnly) BuildUsedSalesHistory(parent, state);
         }
         private void OpenUsedPrice(int id,Window owner)
         {

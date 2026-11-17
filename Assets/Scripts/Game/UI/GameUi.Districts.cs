@@ -77,7 +77,7 @@ namespace PCShopSell.Game.UI
         {
             S.RefreshDistrictNarrative();
             if(_districtStoryWindow!=null){_districtStoryWindow.Rebuild();return;}
-            _districtStoryWindow=OpenWindow("主线 · 街区引荐",820,700,w=>
+            _districtStoryWindow=OpenWindow(GameSession.FirstChapterTrial ? "城郊经营目标" : "主线 · 街区引荐",820,700,w=>
             {
                 var node=S.CurrentDistrictNode;var state=S.DistrictStoryState;
                 Line(w.Content,"道路已开放至："+GameSession.DistrictName(S.DistrictAccessTier),20,Ui.Good);
@@ -85,12 +85,15 @@ namespace PCShopSell.Game.UI
                 {
                     if (S.FirstChapterTrialCompleted)
                     {
-                        Para(w.Content, "试玩主线已完成 · 已向唐蔚交付三页商铺图。你可以继续在城郊经营。", 18, Ui.Good);
+                        Para(w.Content, "试玩主线已完成", 24, Ui.Good);
+                        Para(w.Content, "已达成：城郊至少 5 家开业门店、自有现金 100 万元、无未偿还贷款。", 18);
+                        Para(w.Content, "你可以继续在城郊经营。后续片区在完整版中开放。", 18);
+                        Ui.Size(Ui.Button(w.Content, "继续经营", w.Close, 18, Ui.ButtonHot), -1, 42);
                         return;
                     }
                     if(state.PendingChapter>0)
                     {
-                        Para(w.Content,S.DistrictInvitationStatus+"\n从首次达标起等待满72小时；到期时若正在睡觉，会改为醒来2小时后主动联系。资金随后减少不会取消邀请。关闭窗口后时间才会继续。",18);
+                        Para(w.Content,S.DistrictInvitationStatus+$"\n从首次达标起等待满 {Ui.Emphasize($"{DistrictNarrativeCatalog.InvitationDelayDays * 24} 小时")}；到期时若正在睡觉，会改为醒来 2 小时后主动联系。资金随后减少不会取消邀请。关闭窗口后时间才会继续。",18);
                         return;
                     }
                     Para(w.Content,S.DistrictAccessTier==3?"三段引荐已完成，可以继续经营和人物探索。":S.DistrictPrerequisiteBlocker(state.Chapter+1)??"继续经营，留意新的主线邀请。",18);
@@ -106,7 +109,7 @@ namespace PCShopSell.Game.UI
                 {
                     Line(body,"李秀兰发来的消息 · 等待你的回复",18,Ui.Good);
                     Para(body,node.Dialogue,19);
-                    Para(body,"回复后，亲自找到陈启明，请他帮忙约唐蔚。约好后才会显示会面时间和地点。",17);
+                    Para(body,$"回复后，亲自找到{Ui.Emphasize("陈启明")}，请他帮忙约{Ui.Emphasize("唐蔚")}。约好后才会显示会面时间和地点。",17);
                     Ui.Size(Ui.Button(body,"回复李秀兰：好，麻烦你帮我联系陈启明",()=>
                     {
                         S.BeginDistrictMeeting(node.Id,"accept");w.Rebuild();

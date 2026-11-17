@@ -21,6 +21,9 @@ namespace PCShopSell.Game.UI
         public static readonly Color TextColor = Tone("292E28");
         public static readonly Color Edge = Tone("DED3BE");
         public static readonly Color WarningSurface = Tone("FAE7DA");
+        internal static string Emphasize(string text, Color? color = null) =>
+            $"<b><color=#{ColorUtility.ToHtmlStringRGB(color ?? Accent)}>{text}</color></b>";
+
         private static Color Tone(string hex) { ColorUtility.TryParseHtmlString("#" + hex, out var c); return c; }
         private static Sprite _roundedPlate;
         private static Sprite RoundedPlate
@@ -426,6 +429,18 @@ namespace PCShopSell.Game.UI
     }
     internal sealed class VerticalListScrollRect : ScrollRect
     {
+        public override void OnScroll(PointerEventData eventData)
+        {
+            // Short child lists should not consume wheel input meant for their parent.
+            if (viewport != null && content != null && content.rect.height <= viewport.rect.height + .5f)
+            {
+                if (transform.parent != null)
+                    ExecuteEvents.ExecuteHierarchy(transform.parent.gameObject, eventData, ExecuteEvents.scrollHandler);
+                return;
+            }
+            base.OnScroll(eventData);
+        }
+
         protected override void LateUpdate()
         {
             base.LateUpdate();

@@ -18,6 +18,8 @@ namespace PCShopSell.Game.Runtime
     public static class FurnitureVisuals
     {
         private static readonly Color Metal = new Color(0.22f, 0.22f, 0.25f);
+        internal const float StoolSeatHeight = .4f;
+        internal const float SofaSeatHeight = .45f;
 
         public static GameObject Build(Transform parent, FurnitureDef def, bool collider, string shelfKind = null)
         {
@@ -49,12 +51,11 @@ namespace PCShopSell.Game.Runtime
                 case FurnitureCatalog.WardrobeCloth: Wardrobe(root, w, d, c, false); break;
                 case "wardrobe_wood": Wardrobe(root, w, d, c, true); break;
                 case FurnitureCatalog.FridgeSmall:
-                case FurnitureCatalog.Fridge:
-                case FurnitureCatalog.FridgeSide:
-                case FurnitureCatalog.FridgePremium: Fridge(root, def, c); break;
+                case FurnitureCatalog.Fridge: Fridge(root, def, c); break;
                 case FurnitureCatalog.TableCooker: TableCooker(root, w, d, c); break;
                 case "stool":
-                    Prims.Shape(PrimitiveType.Cylinder, root, "Stool", new Vector3(0, 0.2f, 0), new Vector3(0.34f, 0.2f, 0.34f), Mats.Lit(new Color(0.7f, 0.25f, 0.2f), 0.3f), c);
+                    Prims.Shape(PrimitiveType.Cylinder, root, "Stool", new Vector3(0, StoolSeatHeight / 2, 0),
+                        new Vector3(.34f, StoolSeatHeight / 2, .34f), Mats.Lit(new Color(.7f, .25f, .2f), .3f), c);
                     break;
                 case "fan_broken": Fan(root, c, true); break;
                 case "fan_new":
@@ -121,25 +122,18 @@ namespace PCShopSell.Game.Runtime
         {
             float w = (float)def.Width, d = (float)def.Depth;
             bool small = def.Id == FurnitureCatalog.FridgeSmall;
-            bool side = def.Id == FurnitureCatalog.FridgeSide;
-            bool premium = def.Id == FurnitureCatalog.FridgePremium;
-            float height = small ? 1.15f : premium ? 1.95f : 1.8f;
-            int columns = side || premium ? 2 : 1;
-            int rows = small || side ? 1 : 2;
-            Color body = premium ? new Color(0.27f, 0.31f, 0.33f) : new Color(0.8f, 0.86f, 0.85f);
-            Color door = premium ? new Color(0.42f, 0.47f, 0.48f) : side ? new Color(0.7f, 0.76f, 0.77f) : new Color(0.92f, 0.95f, 0.93f);
+            float height = small ? 1.15f : 1.8f;
+            int rows = small ? 1 : 2;
+            Color body = new Color(0.8f, 0.86f, 0.85f);
+            Color door = new Color(0.92f, 0.95f, 0.93f);
             Prims.Box(root, "FridgeBody", new Vector3(0, height / 2, 0), new Vector3(w, height, d), Mats.Lit(body), collider);
             for (int y = 0; y < rows; y++)
-                for (int x = 0; x < columns; x++)
-                {
-                    float dw = w / columns, dh = height / rows;
-                    float cx = -w / 2 + dw * (x + 0.5f), cy = dh * (y + 0.5f);
-                    Prims.Box(root, "FridgeDoor_" + x + "_" + y, new Vector3(cx, cy, -d / 2 - 0.015f), new Vector3(dw - 0.025f, dh - 0.025f, 0.04f), Mats.Lit(door), false);
-                    float hx = columns == 1 ? w / 2 - 0.09f : x == 0 ? -0.045f : 0.045f;
-                    Prims.Box(root, "FridgeHandle_" + x + "_" + y, new Vector3(hx, cy, -d / 2 - 0.065f), new Vector3(0.035f, Mathf.Min(0.28f, dh / 3), 0.05f), Mats.Lit(Metal), false);
-                }
-            if (premium)
-                Prims.Box(root, "FridgeDisplay", new Vector3(-w * 0.23f, height * 0.78f, -d / 2 - 0.04f), new Vector3(0.11f, 0.17f, 0.015f), Mats.Glow(new Color(0.12f, 0.4f, 0.5f), new Color(0.1f, 0.8f, 1f), false));
+            {
+                float dh = height / rows;
+                float cy = dh * (y + 0.5f);
+                Prims.Box(root, "FridgeDoor_0_" + y, new Vector3(0, cy, -d / 2 - 0.015f), new Vector3(w - 0.025f, dh - 0.025f, 0.04f), Mats.Lit(door), false);
+                Prims.Box(root, "FridgeHandle_0_" + y, new Vector3(w / 2 - 0.09f, cy, -d / 2 - 0.065f), new Vector3(0.035f, Mathf.Min(0.28f, dh / 3), 0.05f), Mats.Lit(Metal), false);
+            }
         }
 
         /// <summary>把模型摆到房间里的位置上。</summary>
@@ -334,7 +328,7 @@ namespace PCShopSell.Game.Runtime
         {
             Material m = Mats.Lit(color, 0.1f);
             Material dark = Mats.Lit(color * 0.82f, 0.1f);
-            Prims.Box(r, "Seat", new Vector3(0, 0.25f, 0), new Vector3(w, 0.4f, d), m, c);
+            Prims.Box(r, "Seat", new Vector3(0, SofaSeatHeight - .2f, 0), new Vector3(w, .4f, d), m, c);
             Prims.Box(r, "Back", new Vector3(0, 0.6f, d / 2 - 0.1f), new Vector3(w, 0.5f, 0.2f), dark);
             Prims.Box(r, "ArmL", new Vector3(-w / 2 + 0.1f, 0.45f, 0), new Vector3(0.2f, 0.4f, d), dark);
             Prims.Box(r, "ArmR", new Vector3(w / 2 - 0.1f, 0.45f, 0), new Vector3(0.2f, 0.4f, d), dark);

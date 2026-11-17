@@ -96,7 +96,7 @@ namespace PCShopSell.EditorTools
             Frame(.05f);
             Snap("09-first-departure");
             Check(s.OpeningAgencyGuidePending && s.CurrentPlace == null && s.Time.IsHeld, "首次出门时暂停并引导前往中介");
-            Check(ui.TryHotkey(KeyCode.T) && !ui.AnyModalOpen, "首次出门拦截任务快捷键");
+            Check(ui.TryHotkey(KeyCode.R) && !ui.AnyModalOpen, "首次出门拦截任务快捷键");
             Check(ui.TryHotkey(KeyCode.Escape) && ui.AnyModalOpen, "首次出门保留系统菜单");
             ui.CloseAllWindows();
             Frame(.05f);
@@ -217,7 +217,7 @@ namespace PCShopSell.EditorTools
                 Check(ui.Canvases.SelectMany(c => c.GetComponentsInChildren<Text>()).Any(t => t.text == "先做饭"), "直接入口与快捷键统一提示先做饭");
                 ui.CloseAllWindows();
             }
-            foreach (var key in new[] { KeyCode.M, KeyCode.P, KeyCode.C, KeyCode.J, KeyCode.H, KeyCode.T })
+            foreach (var key in new[] { KeyCode.M, KeyCode.P, KeyCode.C, KeyCode.O, KeyCode.I, KeyCode.R })
             {
                 Check(ui.TryHotkey(key) && !ui.AnyModalOpen, "快捷键仅提示先做饭 " + key);
             }

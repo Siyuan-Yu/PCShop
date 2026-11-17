@@ -15,6 +15,10 @@ namespace PCShopSell.Core.Session
         public bool CanOpenFridge => (AtHome || InPlayerShop) && FridgeCount(InPlayerShop) > 0;
         public Backpack CurrentFridge => FridgeOf(InPlayerShop);
         public double CurrentFridgeLimitKg => FridgeLimitKg(InPlayerShop);
+
+        private static int FridgeUnitsThatFit(double roomKg, double unitKg, int requested) =>
+            unitKg <= 0 ? requested : (int)Math.Min(requested, Math.Floor(Math.Max(0, roomKg) / unitKg + 1e-9));
+
         private static bool HasMeal(System.Collections.Generic.List<FoodBatch> food) =>
             food.Any(b => b.Count > 0 && FastFoodCatalog.Packed(b.Id)?.Drink != true);
         private bool HasFridgeMeal => CanOpenFridge && HasMeal(CurrentFridge.Food.Packed);
@@ -69,8 +73,7 @@ namespace PCShopSell.Core.Session
         private static bool FridgeKey(string key) => key == "rice" || key == "lunch" || key.StartsWith("lunch:") || key.StartsWith("ing:")
             || (key.StartsWith("gift:") && Gifts.Get(key.Substring(5)) != null && !Gifts.IsCigarette(key.Substring(5)));
 
-        public bool FridgeAcceptsFood(string key) => !string.IsNullOrEmpty(key) && FridgeKey(key)
-            && !(InPlayerShop && RestaurantIngredientsOnly(_focus) && (key == "rice" || key == "gift:produce:rice"));
+        public bool FridgeAcceptsFood(string key) => !string.IsNullOrEmpty(key) && FridgeKey(key);
 
         // Keep legacy chilled metadata, but refrigeration no longer grants a one-time expiry bonus.
         private static void Chill(Backpack bag)
@@ -79,32 +82,45 @@ namespace PCShopSell.Core.Session
             { b.Chilled = true; }
         }
 
-        public bool MoveFridgeFood(string key, int count, bool intoFridge)
+        public bool MoveFridgeFood(string key, int count, bool intoFridge) => MoveFridgeFood(key, count, intoFridge, false);
+
+        public bool MoveFridgeWarehouseFood(string key, int count, bool intoFridge) => MoveFridgeFood(key, count, intoFridge, true);
+
+        private bool MoveFridgeFood(string key, int count, bool intoFridge, bool warehouse)
         {
             if (!CanOpenFridge) return Fail("要在摆有冰箱的家或自己的店里存取食物。");
             if (string.IsNullOrEmpty(key) || !FridgeKey(key) || count <= 0) return Fail("冰箱只放食物和饮料。");
-            if (intoFridge && !FridgeAcceptsFood(key)) return Fail("餐馆的大米存放在门店后仓。");
+            if (warehouse && !HasWarehouseHere) return Fail("这里还没有可用的后仓。");
             var sk = ParseStored(key);
             if (sk == null) return false;
-            var from = intoFridge ? Backpack : CurrentFridge;
-            var to = intoFridge ? CurrentFridge : Backpack;
+            var other = warehouse ? BoxOf(InPlayerShop) : Backpack;
+            var from = intoFridge ? other : CurrentFridge;
+            var to = intoFridge ? CurrentFridge : other;
             double amount = Math.Min(count, StoredHave(sk, from, null));
             if (amount <= 0) return Fail("没有这种食物。");
             double kg = amount * sk.UnitKg;
             if (intoFridge && CurrentFridge.WeightKg + kg > CurrentFridgeLimitKg + 1e-9) return Fail("冰箱放不下了，可减少数量或再摆一台冰箱。");
-            if (!intoFridge && !CanCarry(kg)) return false;
-            StoredMove(sk, amount, from, null, to, null);
+            if (!intoFridge && !warehouse && !CanCarry(kg)) return false;
+            if (intoFridge && sk.Kind == "gift" && IsRawIngredientProduct(sk.Id))
+            {
+                int units = (int)amount;
+                from.TakeGift(sk.Id, units);
+                AddRetailToBag(to, Gifts.Get(sk.Id), units, FoodBatch.NoExpiry, chilled: true);
+            }
+            else StoredMove(sk, amount, from, null, to, null);
             if (intoFridge) Chill(CurrentFridge);
             ApplyCargoLimit();
-            Say((intoFridge ? "放入冰箱：" : "从冰箱取出：") + sk.Name + "×" + amount.ToString("0.#") + "。");
+            string destination = intoFridge ? "冰箱" : warehouse ? "后仓" : "背包";
+            string quantity = sk.Rice ? $" {amount:0.##} 千克" : $"×{amount:0}";
+            Say($"「{sk.Name}」{quantity}已移到{destination}。");
             return true;
         }
 
         public bool ChillCookedFood(int count)
         {
             if (!AtHome || !CanOpenFridge) return Fail("要在家里摆好冰箱后存饭。");
-            int fit = (int)Math.Floor((CurrentFridgeLimitKg - CurrentFridge.WeightKg) / Backpack.LunchboxKg + 1e-9);
-            count = Math.Min(Math.Min(count, fit), Pantry.CookedBowls);
+            count = FridgeUnitsThatFit(CurrentFridgeLimitKg - CurrentFridge.WeightKg,
+                Backpack.LunchboxKg, Math.Min(count, Pantry.CookedBowls));
             if (count <= 0) return Fail("锅里没有饭，或冰箱装不下了。");
             for (int i = 0; i < count; i++) CurrentFridge.Food.Packed.Add(Pantry.TakeBowl(Pantry.Cooked));
             Chill(CurrentFridge);

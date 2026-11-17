@@ -626,7 +626,7 @@ namespace PCShopSell.Core.Session
                     for (int i = 0; i < offer.Count; i++) target.Sim.AddContractOrder(build.Id, build.Tier,
                         Money.FromCents(build.UnitCents + (i < offer.Total.Cents % offer.Count ? 1 : 0)), due);
                 }
-                Say($"已接受{offer.Client}的订单，交期 {due}。");
+                Say($"已接受{offer.Client}的订单，须在 {days} 天内交付。");
                 return true;
             }
             var shop=MyShops.FirstOrDefault(s=>s.RetailKind=="computer");if(shop==null)return Fail("需要一家电脑店承担订单。");

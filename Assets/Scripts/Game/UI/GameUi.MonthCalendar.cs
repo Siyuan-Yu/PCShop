@@ -257,7 +257,7 @@ namespace PCShopSell.Game.UI
                 ActionButton("前往住处", () => { CloseAllWindows(); _ctrl.GoToPlace(S.Home); });
             if (e.Kind == "work" && S.WorkPlace != null)
                 ActionButton("前往打工地点", () => { CloseAllWindows(); _ctrl.GoToPlace(S.WorkPlace); });
-            if (e.Kind == "loan") ActionButton("查看贷款", OpenLoansApp);
+            if (e.Kind == "loan") ActionButton("查看贷款", () => OpenLoansApp(showRecords: true));
             if (e.Kind == "wallet_return" && S.WalletReturnStation is Place station)
                 ActionButton(S.CurrentPlace == station ? "查看站内交接" : "前往地铁站", OpenWalletReturnDestination);
             else if (!item.Completed && e.DestinationId != null && S.City.HasPlace(e.DestinationId))

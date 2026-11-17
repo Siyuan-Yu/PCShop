@@ -10,8 +10,9 @@ namespace PCShopSell.Game.UI
             Func<long, double> intentAtPrice, Action<long> setPrice, PCShopSell.Core.Shop.ShopSimulation pricingShop=null)
         {
             var shop=pricingShop??S.PlayerShop;
-            var tag = Ui.Panel(parent, "PriceTag_" + key, TagPaper);
-            var valueLabel = Ui.Label(tag.transform, "¥" + price, 17, TextAnchor.MiddleCenter, TagInk);
+            var tag = Ui.FlatPanel(parent, "PriceTag_" + key, Ui.FlatWell, Ui.FlatWellEdge);
+            var valueLabel = Ui.Label(tag.transform, "¥" + price, 18, TextAnchor.MiddleCenter, Ui.Accent);
+            valueLabel.fontStyle = FontStyle.Bold;
             valueLabel.name = "SalePrice_" + key;
             valueLabel.rectTransform.Anchor(.18f, .43f, .61f, .98f);
             long draft = price;
@@ -48,7 +49,7 @@ namespace PCShopSell.Game.UI
             }
             void PriceButton(string label, int direction, float x0, float x1)
             {
-                var button = Ui.Button(tag.transform, label, null, 20, WoodLight);
+                var button = Ui.Button(tag.transform, label, null, 18, Ui.ButtonBg);
                 button.name = "Price" + (direction > 0 ? "Plus_" : "Minus_") + key;
                 ((RectTransform)button.transform).Anchor(x0, .43f, x1, .98f);
                 var hold = button.gameObject.AddComponent<HoldRepeat>();
@@ -61,12 +62,11 @@ namespace PCShopSell.Game.UI
             }
             PriceButton("−", -1, .01f, .17f);
             PriceButton("+", 1, .62f, .78f);
-            confirm = Ui.Button(tag.transform, "确定", () => { setPrice(draft); w.RequestRebuild(); }, 11, Ui.ButtonHot, false);
+            confirm = Ui.Button(tag.transform, "确定", () => { setPrice(draft); w.RequestRebuild(); }, 13, Ui.ButtonHot, false);
             confirm.name = "ConfirmPrice_" + key;
-            confirm.GetComponentInChildren<Text>().color = Ui.TextColor;
             confirm.Tip("确认这个商品的当前售价。");
             ((RectTransform)confirm.transform).Anchor(.8f, .43f, .99f, .98f);
-            demand = Ui.Label(tag.transform, "", 13, TextAnchor.MiddleCenter, TagInk);
+            demand = Ui.Label(tag.transform, "", 13, TextAnchor.MiddleCenter, Ui.Dim);
             demand.name = "PurchaseIntent_" + key;
             tag.Tip(()=>"购买意愿已计入当前有效加成。\n"+
                 $"在岗销售员：+{shop.SalesPurchaseIntentBonus*100:0.#}个百分点。"+

@@ -326,6 +326,7 @@ namespace PCShopSell.Core.Session
         {
             string districtBlock = DistrictAccessBlocker(p);
             if (districtBlock != null) return districtBlock;
+            if (p?.Business == BankBusiness) return BankClosureReason(p);
             if (p != null && RaceTracks.Get(p.Id) != null && RacingAccessBlocker is string racingBlock) return racingBlock;
             if (RacingGarageEntryBlocker(p?.Id) is string garageBlock) return garageBlock;
             if (p?.Kind == PlaceKind.Home && CanSleepAt(p)) return null;
@@ -364,6 +365,7 @@ namespace PCShopSell.Core.Session
         public bool IsPlaceOpen(Place p)
         {
             if (p == null) return false;
+            if (p.Business == BankBusiness) return BankTellerOnDuty(p) != null;
             if(NeighborhoodVenueFits(p,Clock.Now.TotalMinutes,1))return true;
             var track=RaceTracks.Get(p.Id);if(track!=null)return RacingUnlocked&&track.IsOpenAt(Clock.MinuteOfDay);
             if (RacingGarageEntryBlocker(p.Id) != null) return false;
@@ -528,7 +530,7 @@ namespace PCShopSell.Core.Session
         {
             TickPropertyMarket();
             Market.OnNewDay(today);
-            RecordPriceDay();
+            RecordPriceDay(announceMoves: true);
             if (Market.News.Count > 0)
             {
                 NewsItem last = Market.News[Market.News.Count - 1];
@@ -580,7 +582,7 @@ namespace PCShopSell.Core.Session
                     return;
                 }
                 if (WorkPayGrace) { Say("现金为负，请按时打工，工资每天收工后到账；也可以处置持仓和合格资产。"); return; }
-                if ((NegativeCashDays == 1 && BankPlace == null) || NegativeCashDays % 3 == 0)
+                if (BankPlace == null && (NegativeCashDays == 1 || NegativeCashDays % 3 == 0))
                     Popup?.Invoke("资金告急", $"账上是负数（{Ledger.Balance}），已持续 {NegativeCashDays} 天。请暂停非必要采购、卖出持仓、处置可售资产或打工恢复现金。关系与经营经历会保留，真实到期账单仍需支付。");
             }
             else

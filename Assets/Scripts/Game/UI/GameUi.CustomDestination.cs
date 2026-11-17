@@ -173,8 +173,8 @@ namespace PCShopSell.Game.UI
                 {
                     hours.text = DestinationOpeningText(place);
                     string blocker = S.CityDestinationTravelBlocker(place, out int minutes, out var fare);
-                    travel.text = "出行 · " + (blocker ?? $"{S.CurrentVehicle.Name} · 约 {minutes} 分钟"
-                        + (fare.IsPositive ? $" · {fare}" : ""));
+                    travel.text = "出行 · " + (blocker ?? $"{S.CurrentVehicle.Name} · 约 {Ui.Emphasize($"{minutes} 分钟")}"
+                        + (fare.IsPositive ? $" · {Ui.Emphasize(fare.ToString())}" : ""));
                     travel.color = blocker == null || S.CurrentPlace == place ? Ui.TextColor : Ui.Warn;
                     go.interactable = blocker == null;
                 }

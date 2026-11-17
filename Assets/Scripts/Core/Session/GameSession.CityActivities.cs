@@ -316,6 +316,17 @@ namespace PCShopSell.Core.Session
             var a=_cityActivities.FirstOrDefault(x=>x.Id==id&&x.Active);
             if(a==null)return Fail("活动已结束或无效");
             string why = CityActivityTravelBlocker(id); if (why != null) return Fail(why);
+            if (CityIntent is { Cancelled: false } intent && intent.TargetPlaceId == a.VenueId)
+            {
+                intent.ActivityId = a.Id;
+                intent.EnterOnArrival = !RacingGarageRegistrationOnly(a.VenueId);
+                a.PlayerIntentId = intent.Id;
+                Time.SetPaused(false);
+                return true;
+            }
+            // Keep the current trip and its arrival instructions if the new route is unavailable.
+            if (Trip != null && CityDestinationTravelBlocker(City.GetPlace(a.VenueId), out _, out _) is string rerouteBlocker)
+                return Fail(rerouteBlocker);
             return BeginCityTravel(a.VenueId,a.Id);
         }
         public bool BeginCityTravel(string placeId,string activityId=null,bool enter=true)

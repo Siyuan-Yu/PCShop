@@ -227,7 +227,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(w.Content,"切换员工自动装机",()=>{S.ToggleAutoBuildAt(shop);w.Rebuild();},18),-1,40).name="WorkbenchAutoBuild_"+shop.Place.Id;
                 foreach(var order in shop.Sim.Orders)
                 {
-                    Line(w.Content,PartCatalog.TierName(order.Tier)+"整机 · "+order.Price+" · 截止 "+order.DueAt,20);
+                    Line(w.Content, $"{PartCatalog.TierName(order.Tier)}整机 · {order.Price} · {S.Clock.OrderDeadlineText(order.DueAt.TotalMinutes)}", 20);
                     Line(w.Content, order.EmployeeMinutesLeft > 0 ? $"员工装机剩余 {order.EmployeeMinutesLeft} 分钟" :
                         order.PartsReserved ? "配件已备齐 · 等待装机" : "等待配件", 17);
                     foreach (var part in PartCatalog.BuildList(order.Tier))

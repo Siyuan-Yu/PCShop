@@ -11,10 +11,14 @@ namespace PCShopSell.Game.UI
         private void BuildMoneyEventTasks(Window w)
         {
             var ticket = S.ScratchTicket;
-            if (ticket != null && !ticket.Paid)
+            if (ticket != null)
             {
-                var row = Ui.Row(w.Content, 38, 8); Ui.Size(Ui.Label(row, "刮刮乐 · 尚未兑付", 18), -1, 38, 1);
-                Ui.Size(Ui.Button(row, "刮开", OpenEventScratch, 17), 90, 38);
+                var row = Ui.Row(w.Content, 38, 8);
+                Ui.Size(Ui.Label(row, ticket.Paid ? "刮刮乐 · 已开奖" : "刮刮乐 · 尚未兑付", 18), -1, 38, 1);
+                if (ticket.Paid)
+                    Ui.Size(Ui.Button(row, "查看结果", () => Popup("刮刮乐结果", ticket.ResultText), 17), 108, 38);
+                else
+                    Ui.Size(Ui.Button(row, "刮开", () => OpenEventScratch(w), 17), 108, 38);
             }
             Line(w.Content, "住院保障 · " + (S.HasHospitalCoverage ? "有效至 " + new GameTimestamp(S.HospitalPolicyUntil) + " · 报销80%，不封顶" : "未生效或已到期"), 17);
             if (S.HospitalPolicyUntil > 0)
@@ -41,7 +45,7 @@ namespace PCShopSell.Game.UI
                 Ui.Size(Ui.Button(row, "查看", OpenEventIdleSale, 17), 90, 38);
             }
         }
-        public void OpenEventScratch()
+        public void OpenEventScratch(Window owner = null)
         {
             OpenWindow("刮刮乐", 760, 400, w =>
             {
@@ -54,7 +58,13 @@ namespace PCShopSell.Game.UI
                 var cover = Ui.Rect(area, "ScratchCover"); cover.anchorMin = Vector2.zero; cover.anchorMax = Vector2.one; cover.offsetMin = cover.offsetMax = Vector2.zero;
                 var graphic = cover.gameObject.AddComponent<ScratchTicketGraphic>(); graphic.Session = S;
                 var row = Ui.Row(w.Content, 40, 8); var status = Ui.Size(Ui.Label(row, "", 18), -1, 40, 1);
-                var claim = Ui.Button(row, "兑奖", () => { if (S.ClaimEventScratch()) w.Rebuild(); }, 18); Ui.Size(claim, 100, 40);
+                var claim = Ui.Button(row, "兑奖", () =>
+                {
+                    if (!S.ClaimEventScratch()) return;
+                    w.Rebuild();
+                    owner?.RequestRebuild();
+                }, 18);
+                Ui.Size(claim, 100, 40);
                 void Refresh() { var t = S.ScratchTicket; status.text = t.Paid ? (t.PrizeYuan > 0 ? "奖金已到账" : "本张未中奖") : "已刮开 " + (t.Cleared.Count(c => c) * 100 / 144) + "%"; claim.interactable = S.CanClaimScratch; }
                 graphic.Changed = Refresh; Refresh(); graphic.SetVerticesDirty();
             });
